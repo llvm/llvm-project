@@ -1,4 +1,4 @@
-; REQUIRES: x86
+; REQUIRES: x86-registered-target
 ; RUN: opt -loop-reduce -S < %s | FileCheck %s
 
 ; Strength reduction analysis here relies on IV Users analysis, that

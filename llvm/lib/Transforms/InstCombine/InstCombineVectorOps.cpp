@@ -440,7 +440,7 @@ static void replaceExtractElements(InsertElementInst *InsElt,
     if (!OldExt || OldExt->getParent() != WideVec->getParent())
       continue;
     auto *NewExt = ExtractElementInst::Create(WideVec, OldExt->getOperand(1));
-    NewExt->insertAfter(WideVec);
+    NewExt->insertAfter(OldExt);
     IC.replaceInstUsesWith(*OldExt, NewExt);
   }
 }

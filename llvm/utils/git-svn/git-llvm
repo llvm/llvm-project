@@ -36,14 +36,19 @@ GIT_TO_SVN_DIR = {
     for d in [
         'clang-tools-extra',
         'compiler-rt',
+        'debuginfo-tests',
         'dragonegg',
         'klee',
         'libclc',
         'libcxx',
         'libcxxabi',
+        'libunwind',
         'lld',
         'lldb',
+        'llgo',
         'llvm',
+        'openmp',
+        'parallel-libs',
         'polly',
     ]
 }

@@ -62,8 +62,6 @@
 #if SANITIZER_FREEBSD
 #include <sys/exec.h>
 #include <sys/sysctl.h>
-#include <vm/vm_param.h>
-#include <vm/pmap.h>
 #include <machine/atomic.h>
 extern "C" {
 // <sys/umtx.h> must be included after <errno.h> and <sys/types.h> on
@@ -75,6 +73,16 @@ extern char **environ;  // provided by crt1
 
 #if !SANITIZER_ANDROID
 #include <sys/signal.h>
+#endif
+
+#ifndef __GLIBC_PREREQ
+#define __GLIBC_PREREQ(x, y) 0
+#endif
+
+#if SANITIZER_LINUX && __GLIBC_PREREQ(2, 16)
+# define SANITIZER_USE_GETAUXVAL 1
+#else
+# define SANITIZER_USE_GETAUXVAL 0
 #endif
 
 #if SANITIZER_USE_GETAUXVAL
@@ -227,7 +235,8 @@ static void kernel_stat_to_stat(struct kernel_stat *in, struct stat *out) {
 
 uptr internal_stat(const char *path, void *buf) {
 #if SANITIZER_FREEBSD
-  return internal_syscall(SYSCALL(stat), path, buf);
+  return internal_syscall(SYSCALL(fstatat), AT_FDCWD, (uptr)path,
+                          (uptr)buf, 0);
 #elif SANITIZER_USES_CANONICAL_LINUX_SYSCALLS
   return internal_syscall(SYSCALL(newfstatat), AT_FDCWD, (uptr)path,
                           (uptr)buf, 0);
@@ -251,7 +260,8 @@ uptr internal_stat(const char *path, void *buf) {
 
 uptr internal_lstat(const char *path, void *buf) {
 #if SANITIZER_FREEBSD
-  return internal_syscall(SYSCALL(lstat), path, buf);
+  return internal_syscall(SYSCALL(fstatat), AT_FDCWD, (uptr)path,
+                          (uptr)buf, AT_SYMLINK_NOFOLLOW);
 #elif SANITIZER_USES_CANONICAL_LINUX_SYSCALLS
   return internal_syscall(SYSCALL(newfstatat), AT_FDCWD, (uptr)path,
                          (uptr)buf, AT_SYMLINK_NOFOLLOW);
@@ -594,7 +604,9 @@ uptr internal_getppid() {
 }
 
 uptr internal_getdents(fd_t fd, struct linux_dirent *dirp, unsigned int count) {
-#if SANITIZER_USES_CANONICAL_LINUX_SYSCALLS
+#if SANITIZER_FREEBSD
+  return internal_syscall(SYSCALL(getdirentries), fd, (uptr)dirp, count, NULL);
+#elif SANITIZER_USES_CANONICAL_LINUX_SYSCALLS
   return internal_syscall(SYSCALL(getdents64), fd, (uptr)dirp, count);
 #else
   return internal_syscall(SYSCALL(getdents), fd, (uptr)dirp, count);

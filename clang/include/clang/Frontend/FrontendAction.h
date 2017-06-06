@@ -176,10 +176,10 @@ public:
   virtual TranslationUnitKind getTranslationUnitKind() { return TU_Complete; }
 
   /// \brief Does this action support use with PCH?
-  virtual bool hasPCHSupport() const { return !usesPreprocessorOnly(); }
+  virtual bool hasPCHSupport() const { return true; }
 
   /// \brief Does this action support use with AST files?
-  virtual bool hasASTFileSupport() const { return !usesPreprocessorOnly(); }
+  virtual bool hasASTFileSupport() const { return true; }
 
   /// \brief Does this action support use with IR files?
   virtual bool hasIRSupport() const { return false; }

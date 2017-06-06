@@ -1376,3 +1376,7 @@ XT<int> xt{};
 
 
 }
+
+void PR33318(int i) {
+  [&](auto) { static_assert(&i != nullptr, ""); }(0); // expected-warning 2{{always true}} expected-note {{instantiation}}
+}

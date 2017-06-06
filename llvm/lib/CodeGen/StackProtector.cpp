@@ -21,6 +21,7 @@
 #include "llvm/Analysis/OptimizationDiagnosticInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/StackProtector.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
@@ -90,6 +91,11 @@ void StackProtector::adjustForColoring(const AllocaInst *From,
     else if (I->second != SSPLK_LargeArray && Kind != SSPLK_AddrOf)
       I->second = Kind;
   }
+}
+
+void StackProtector::getAnalysisUsage(AnalysisUsage &AU) const {
+  AU.addRequired<TargetPassConfig>();
+  AU.addPreserved<DominatorTreeWrapperPass>();
 }
 
 bool StackProtector::runOnFunction(Function &Fn) {

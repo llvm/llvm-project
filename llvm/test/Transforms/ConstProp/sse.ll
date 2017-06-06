@@ -1,5 +1,5 @@
 ; RUN: opt < %s -constprop -S | FileCheck %s
-; REQUIRES: x86
+; REQUIRES: x86-registered-target
 
 define i1 @test_sse_cvts_exact() nounwind readnone {
 ; CHECK-LABEL: @test_sse_cvts_exact(

@@ -489,6 +489,8 @@ __isl_give isl_mat *isl_basic_set_reduced_basis(__isl_keep isl_basic_set *bset);
 
 __isl_give isl_basic_set *isl_basic_set_coefficients(
 	__isl_take isl_basic_set *bset);
+__isl_give isl_basic_set_list *isl_basic_set_list_coefficients(
+	__isl_take isl_basic_set_list *list);
 __isl_give isl_basic_set *isl_set_coefficients(__isl_take isl_set *set);
 __isl_give isl_basic_set *isl_basic_set_solutions(
 	__isl_take isl_basic_set *bset);

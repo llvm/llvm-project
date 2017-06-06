@@ -550,6 +550,8 @@ public:
 
   bool isRelocatableObject() const override;
 
+  StringRef mapDebugSectionName(StringRef Name) const override;
+
   bool hasPageZeroSegment() const { return HasPageZeroSegment; }
 
   static bool classof(const Binary *v) {

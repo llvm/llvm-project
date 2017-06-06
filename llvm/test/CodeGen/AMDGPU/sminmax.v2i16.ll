@@ -10,11 +10,11 @@
 
 ; VI: v_sub_i32_e32
 ; VI-DAG: v_sub_i32_e32
-; VI: v_max_i32_sdwa v{{[0-9]+}}, sext(v{{[0-9]+}}), v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
-; VI: v_max_i32_sdwa v{{[0-9]+}}, sext(v{{[0-9]+}}), v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; VI: v_max_i32_sdwa v{{[0-9]+}}, v{{[0-9]+}}, sext(v{{[0-9]+}}) dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; VI: v_max_i32_sdwa v{{[0-9]+}}, v{{[0-9]+}}, sext(v{{[0-9]+}}) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; VI: v_add_i32_e32
 ; VI: v_add_i32_e32
-; VI: v_or_b32_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; VI: v_or_b32_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 
 ; CI: v_sub_i32_e32
 ; CI-DAG: v_sub_i32_e32
@@ -47,7 +47,7 @@ define amdgpu_kernel void @s_abs_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> %
 ; VI: v_max_i16_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 ; VI: v_max_i16_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 ; VI: v_add_u16_e32 v{{[0-9]+}}, 2, v{{[0-9]+}}
-; VI: v_add_u16_sdwa v{{[0-9]+}}, [[TWO]], v{{[0-9]+}}  dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; VI: v_add_u16_sdwa v{{[0-9]+}}, v{{[0-9]+}}, [[TWO]]  dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; VI-NOT: v_and_b32
 ; VI: v_or_b32_e32
 define amdgpu_kernel void @v_abs_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %src) #0 {

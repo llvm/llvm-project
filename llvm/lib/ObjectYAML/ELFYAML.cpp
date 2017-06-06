@@ -424,12 +424,6 @@ void ScalarBitSetTraits<ELFYAML::ELF_SHF>::bitset(IO &IO,
   case ELF::EM_ARM:
     BCase(SHF_ARM_PURECODE);
     break;
-  case ELF::EM_AMDGPU:
-    BCase(SHF_AMDGPU_HSA_GLOBAL);
-    BCase(SHF_AMDGPU_HSA_READONLY);
-    BCase(SHF_AMDGPU_HSA_CODE);
-    BCase(SHF_AMDGPU_HSA_AGENT);
-    break;
   case ELF::EM_HEXAGON:
     BCase(SHF_HEX_GPREL);
     break;

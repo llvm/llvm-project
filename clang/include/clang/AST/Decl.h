@@ -1829,14 +1829,15 @@ public:
     return getBody(Definition);
   }
 
-  /// isThisDeclarationADefinition - Returns whether this specific
-  /// declaration of the function is also a definition. This does not
-  /// determine whether the function has been defined (e.g., in a
-  /// previous definition); for that information, use isDefined. Note
-  /// that this returns false for a defaulted function unless that function
-  /// has been implicitly defined (possibly as deleted).
+  /// Returns whether this specific declaration of the function is also a
+  /// definition that does not contain uninstantiated body.
+  ///
+  /// This does not determine whether the function has been defined (e.g., in a
+  /// previous definition); for that information, use isDefined.
+  ///
   bool isThisDeclarationADefinition() const {
-    return IsDeleted || Body || IsLateTemplateParsed;
+    return IsDeleted || IsDefaulted || Body || IsLateTemplateParsed ||
+      hasDefiningAttr();
   }
 
   /// doesThisDeclarationHaveABody - Returns whether this specific

@@ -51,9 +51,9 @@ name:            test_add_i64
 legalized:       true
 regBankSelected: true
 # ALL:      registers:
-# ALL-NEXT:  - { id: 0, class: gr64 }
-# ALL-NEXT:  - { id: 1, class: gr64 }
-# ALL-NEXT:  - { id: 2, class: gr64 }
+# ALL-NEXT:  - { id: 0, class: gr64, preferred-register: '' }
+# ALL-NEXT:  - { id: 1, class: gr64, preferred-register: '' }
+# ALL-NEXT:  - { id: 2, class: gr64, preferred-register: '' }
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
@@ -78,9 +78,9 @@ name:            test_add_i32
 legalized:       true
 regBankSelected: true
 # ALL:      registers:
-# ALL-NEXT:  - { id: 0, class: gr32 }
-# ALL-NEXT:  - { id: 1, class: gr32 }
-# ALL-NEXT:  - { id: 2, class: gr32 }
+# ALL-NEXT:  - { id: 0, class: gr32, preferred-register: '' }
+# ALL-NEXT:  - { id: 1, class: gr32, preferred-register: '' }
+# ALL-NEXT:  - { id: 2, class: gr32, preferred-register: '' }
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
@@ -106,9 +106,9 @@ legalized:       true
 regBankSelected: true
 selected:        false
 # ALL:      registers:
-# ALL-NEXT:  - { id: 0, class: gr16 }
-# ALL-NEXT:  - { id: 1, class: gr16 }
-# ALL-NEXT:  - { id: 2, class: gr16 }
+# ALL-NEXT:  - { id: 0, class: gr16, preferred-register: '' }
+# ALL-NEXT:  - { id: 1, class: gr16, preferred-register: '' }
+# ALL-NEXT:  - { id: 2, class: gr16, preferred-register: '' }
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
@@ -135,9 +135,9 @@ legalized:       true
 regBankSelected: true
 selected:        false
 # ALL:      registers:
-# ALL-NEXT:  - { id: 0, class: gr8 }
-# ALL-NEXT:  - { id: 1, class: gr8 }
-# ALL-NEXT:  - { id: 2, class: gr8 }
+# ALL-NEXT:  - { id: 0, class: gr8, preferred-register: '' }
+# ALL-NEXT:  - { id: 1, class: gr8, preferred-register: '' }
+# ALL-NEXT:  - { id: 2, class: gr8, preferred-register: '' }
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
@@ -165,12 +165,12 @@ regBankSelected: true
 selected:        false
 tracksRegLiveness: true
 # ALL: registers:
-# NO_AVX512F-NEXT:  - { id: 0, class: fr32 }
-# NO_AVX512F-NEXT:  - { id: 1, class: fr32 }
-# NO_AVX512F-NEXT:  - { id: 2, class: fr32 }
-# AVX512ALL-NEXT:  - { id: 0, class: fr32x }
-# AVX512ALL-NEXT:  - { id: 1, class: fr32x }
-# AVX512ALL-NEXT:  - { id: 2, class: fr32x }
+# NO_AVX512F-NEXT:  - { id: 0, class: fr32, preferred-register: '' }
+# NO_AVX512F-NEXT:  - { id: 1, class: fr32, preferred-register: '' }
+# NO_AVX512F-NEXT:  - { id: 2, class: fr32, preferred-register: '' }
+# AVX512ALL-NEXT:  - { id: 0, class: fr32x, preferred-register: '' }
+# AVX512ALL-NEXT:  - { id: 1, class: fr32x, preferred-register: '' }
+# AVX512ALL-NEXT:  - { id: 2, class: fr32x, preferred-register: '' }
 registers:
   - { id: 0, class: vecr }
   - { id: 1, class: vecr }
@@ -200,12 +200,12 @@ regBankSelected: true
 selected:        false
 tracksRegLiveness: true
 # ALL: registers:
-# NO_AVX512F-NEXT:  - { id: 0, class: fr64 }
-# NO_AVX512F-NEXT:  - { id: 1, class: fr64 }
-# NO_AVX512F-NEXT:  - { id: 2, class: fr64 }
-# AVX512ALL-NEXT:  - { id: 0, class: fr64x }
-# AVX512ALL-NEXT:  - { id: 1, class: fr64x }
-# AVX512ALL-NEXT:  - { id: 2, class: fr64x }
+# NO_AVX512F-NEXT:  - { id: 0, class: fr64, preferred-register: '' }
+# NO_AVX512F-NEXT:  - { id: 1, class: fr64, preferred-register: '' }
+# NO_AVX512F-NEXT:  - { id: 2, class: fr64, preferred-register: '' }
+# AVX512ALL-NEXT:  - { id: 0, class: fr64x, preferred-register: '' }
+# AVX512ALL-NEXT:  - { id: 1, class: fr64x, preferred-register: '' }
+# AVX512ALL-NEXT:  - { id: 2, class: fr64x, preferred-register: '' }
 registers:
   - { id: 0, class: vecr }
   - { id: 1, class: vecr }
@@ -235,12 +235,12 @@ regBankSelected: true
 selected:        false
 tracksRegLiveness: true
 # ALL: registers:
-# NO_AVX512VL-NEXT:  - { id: 0, class: vr128 }
-# NO_AVX512VL-NEXT:  - { id: 1, class: vr128 }
-# NO_AVX512VL-NEXT:  - { id: 2, class: vr128 }
-# AVX512VL-NEXT:  - { id: 0, class: vr128x }
-# AVX512VL-NEXT:  - { id: 1, class: vr128x }
-# AVX512VL-NEXT:  - { id: 2, class: vr128x }
+# NO_AVX512VL-NEXT:  - { id: 0, class: vr128, preferred-register: '' }
+# NO_AVX512VL-NEXT:  - { id: 1, class: vr128, preferred-register: '' }
+# NO_AVX512VL-NEXT:  - { id: 2, class: vr128, preferred-register: '' }
+# AVX512VL-NEXT:  - { id: 0, class: vr128x, preferred-register: '' }
+# AVX512VL-NEXT:  - { id: 1, class: vr128x, preferred-register: '' }
+# AVX512VL-NEXT:  - { id: 2, class: vr128x, preferred-register: '' }
 registers:
   - { id: 0, class: vecr }
   - { id: 1, class: vecr }
@@ -271,12 +271,12 @@ regBankSelected: true
 selected:        false
 tracksRegLiveness: true
 # ALL: registers:
-# NO_AVX512VL-NEXT:  - { id: 0, class: vr128 }
-# NO_AVX512VL-NEXT:  - { id: 1, class: vr128 }
-# NO_AVX512VL-NEXT:  - { id: 2, class: vr128 }
-# AVX512VL-NEXT:  - { id: 0, class: vr128x }
-# AVX512VL-NEXT:  - { id: 1, class: vr128x }
-# AVX512VL-NEXT:  - { id: 2, class: vr128x }
+# NO_AVX512VL-NEXT:  - { id: 0, class: vr128, preferred-register: '' }
+# NO_AVX512VL-NEXT:  - { id: 1, class: vr128, preferred-register: '' }
+# NO_AVX512VL-NEXT:  - { id: 2, class: vr128, preferred-register: '' }
+# AVX512VL-NEXT:  - { id: 0, class: vr128x, preferred-register: '' }
+# AVX512VL-NEXT:  - { id: 1, class: vr128x, preferred-register: '' }
+# AVX512VL-NEXT:  - { id: 2, class: vr128x, preferred-register: '' }
 registers:
   - { id: 0, class: vecr }
   - { id: 1, class: vecr }

@@ -1,0 +1,76 @@
+RUN: llvm-dwarfdump %p/Inputs/dwarfdump-str-offsets.x86_64.o | FileCheck %s
+
+; We are using a hand-constructed object file and are interest in the correct
+; diplay of the DW_str_offsetsbase attribute, the correct display of strings
+; and the dump of the .debug_str_offsets[.dwo] table.
+;
+; Abbreviation for DW_AT_str_offsets_base
+CHECK:      .debug_abbrev contents:
+CHECK-NOT:  contents:
+CHECK:      DW_TAG_compile_unit
+CHECK-NOT:  DW_TAG
+CHECK:      DW_AT_str_offsets_base DW_FORM_sec_offset
+
+; Verify that strings are displayed correctly as indexed strings
+CHECK:      .debug_info contents:
+CHECK-NOT:  contents:     
+CHECK:      DW_TAG_compile_unit
+CHECK-NEXT: DW_AT_producer [DW_FORM_strx] ( indexed (00000000) string = "Handmade DWARF producer")
+CHECK-NEXT: DW_AT_name [DW_FORM_strx] ( indexed (00000001) string = "Compile_Unit_1")
+CHECK-NEXT: DW_AT_str_offsets_base [DW_FORM_sec_offset] (0x00000008)
+CHECK-NEXT: DW_AT_comp_dir [DW_FORM_strx] ( indexed (00000002) string = "/home/test/CU1")
+
+; Second compile unit (b.cpp)
+CHECK:      DW_TAG_compile_unit
+CHECK-NEXT: DW_AT_producer [DW_FORM_strx] ( indexed (00000000) string = "Handmade DWARF producer")
+CHECK-NEXT: DW_AT_name [DW_FORM_strx] ( indexed (00000001) string = "Compile_Unit_2")
+CHECK-NEXT: DW_AT_str_offsets_base [DW_FORM_sec_offset] (0x0000001c)
+CHECK-NEXT: DW_AT_comp_dir [DW_FORM_strx] ( indexed (00000002) string = "/home/test/CU2")
+
+; The split CU
+CHECK:      .debug_info.dwo contents:
+CHECK-NOT:  contents:
+CHECK:      DW_TAG_compile_unit
+CHECK-NEXT: DW_AT_producer [DW_FORM_strx] ( indexed (00000000) string = "Handmade split DWARF producer")
+CHECK-NEXT: DW_AT_name [DW_FORM_strx] ( indexed (00000001) string = "V5_split_compile_unit")
+CHECK-NEXT: DW_AT_str_offsets_base [DW_FORM_sec_offset] (0x00000008)
+CHECK-NEXT: DW_AT_comp_dir [DW_FORM_strx] ( indexed (00000002) string = "/home/test/splitCU")
+
+; The type unit
+CHECK:      .debug_types contents:
+CHECK:      DW_TAG_type_unit
+CHECK-NEXT: DW_AT_name [DW_FORM_strx] ( indexed (00000000) string = "Type_Unit")
+CHECK-NEXT: DW_AT_str_offsets_base [DW_FORM_sec_offset]       (0x00000030)
+CHECK:      DW_TAG_structure_type
+CHECK-NEXT: DW_AT_name [DW_FORM_strx] ( indexed (00000001) string = "MyStruct")
+
+; The split type unit
+CHECK:      .debug_types.dwo contents:
+CHECK:      DW_TAG_type_unit
+CHECK-NEXT: DW_AT_name [DW_FORM_strx] ( indexed (00000000) string = "V5_split_type_unit")
+CHECK-NEXT: DW_AT_str_offsets_base [DW_FORM_sec_offset]       (0x0000001c)
+CHECK:      DW_TAG_structure_type
+CHECK-NEXT: DW_AT_name [DW_FORM_strx] ( indexed (00000001) string = "V5_split_Mystruct")
+
+; The .debug_str_offsets section
+CHECK:      .debug_str_offsets contents:
+CHECK-NEXT: 0x00000000: Contribution size = 12, Version = 5
+CHECK-NEXT: 0x00000008: 00000000 "Handmade DWARF producer"
+CHECK-NEXT: 0x0000000c: 00000018 "Compile_Unit_1"
+CHECK-NEXT: 0x00000010: 00000027 "/home/test/CU1"
+CHECK-NEXT: 0x00000014: Contribution size = 12, Version = 5
+CHECK-NEXT: 0x0000001c: 00000000 "Handmade DWARF producer"
+CHECK-NEXT: 0x00000020: 00000036 "Compile_Unit_2"
+CHECK-NEXT: 0x00000024: 00000045 "/home/test/CU2"
+CHECK-NEXT: 0x00000028: Contribution size = 8, Version = 5
+CHECK-NEXT: 0x00000030: 00000054 "Type_Unit"
+CHECK-NEXT: 0x00000034: 0000005e "MyStruct"
+
+CHECK:      .debug_str_offsets.dwo contents:
+CHECK-NEXT: 0x00000000: Contribution size = 12, Version = 5
+CHECK-NEXT: 0x00000008: 00000000 "Handmade split DWARF producer"
+CHECK-NEXT: 0x0000000c: 0000001e "V5_split_compile_unit"
+CHECK-NEXT: 0x00000010: 00000034 "/home/test/splitCU"
+CHECK-NEXT: 0x00000014: Contribution size = 8, Version = 5
+CHECK-NEXT: 0x0000001c: 00000047 "V5_split_type_unit"
+CHECK-NEXT: 0x00000020: 0000005a "V5_split_Mystruct"

@@ -59,18 +59,15 @@ std::unique_ptr<Module> parseMIR(LLVMContext &Context,
   if (!MIR)
     return nullptr;
 
-  std::unique_ptr<Module> M = MIR->parseLLVMModule();
+  std::unique_ptr<Module> M = MIR->parseIRModule();
   if (!M)
     return nullptr;
 
   M->setDataLayout(TM.createDataLayout());
 
-  Function *F = M->getFunction(FuncName);
-  if (!F)
-    return nullptr;
-
   MachineModuleInfo *MMI = new MachineModuleInfo(&TM);
-  MMI->setMachineFunctionInitializer(MIR.get());
+  if (MIR->parseMachineFunctions(*M, *MMI))
+    return nullptr;
   PM.add(MMI);
 
   return M;
@@ -154,6 +151,7 @@ body: |
   std::unique_ptr<MIRParser> MIR;
   std::unique_ptr<Module> M = parseMIR(Context, PM, MIR, *TM, MIRString,
                                        "func");
+  assert(M && "MIR parsing successfull");
 
   PM.add(new TestPass(T));
 

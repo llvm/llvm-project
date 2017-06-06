@@ -73,8 +73,8 @@
 name:            test_add_s32
 legalized:       true
 # CHECK: registers:
-# CHECK:   - { id: 0, class: gpr }
-# CHECK:   - { id: 1, class: gpr }
+# CHECK:   - { id: 0, class: gpr, preferred-register: '' }
+# CHECK:   - { id: 1, class: gpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -92,8 +92,8 @@ body: |
 name:            test_add_v4s32
 legalized:       true
 # CHECK: registers:
-# CHECK:   - { id: 0, class: fpr }
-# CHECK:   - { id: 1, class: fpr }
+# CHECK:   - { id: 0, class: fpr, preferred-register: '' }
+# CHECK:   - { id: 1, class: fpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -111,8 +111,8 @@ body: |
 name:            test_sub_s32
 legalized:       true
 # CHECK: registers:
-# CHECK:   - { id: 0, class: gpr }
-# CHECK:   - { id: 1, class: gpr }
+# CHECK:   - { id: 0, class: gpr, preferred-register: '' }
+# CHECK:   - { id: 1, class: gpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -130,8 +130,8 @@ body: |
 name:            test_sub_v4s32
 legalized:       true
 # CHECK: registers:
-# CHECK:   - { id: 0, class: fpr }
-# CHECK:   - { id: 1, class: fpr }
+# CHECK:   - { id: 0, class: fpr, preferred-register: '' }
+# CHECK:   - { id: 1, class: fpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -149,8 +149,8 @@ body: |
 name:            test_mul_s32
 legalized:       true
 # CHECK: registers:
-# CHECK:   - { id: 0, class: gpr }
-# CHECK:   - { id: 1, class: gpr }
+# CHECK:   - { id: 0, class: gpr, preferred-register: '' }
+# CHECK:   - { id: 1, class: gpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -168,8 +168,8 @@ body: |
 name:            test_mul_v4s32
 legalized:       true
 # CHECK: registers:
-# CHECK:   - { id: 0, class: fpr }
-# CHECK:   - { id: 1, class: fpr }
+# CHECK:   - { id: 0, class: fpr, preferred-register: '' }
+# CHECK:   - { id: 1, class: fpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -187,8 +187,8 @@ body: |
 name:            test_and_s32
 legalized:       true
 # CHECK: registers:
-# CHECK:   - { id: 0, class: gpr }
-# CHECK:   - { id: 1, class: gpr }
+# CHECK:   - { id: 0, class: gpr, preferred-register: '' }
+# CHECK:   - { id: 1, class: gpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -206,8 +206,8 @@ body: |
 name:            test_and_v4s32
 legalized:       true
 # CHECK: registers:
-# CHECK:   - { id: 0, class: fpr }
-# CHECK:   - { id: 1, class: fpr }
+# CHECK:   - { id: 0, class: fpr, preferred-register: '' }
+# CHECK:   - { id: 1, class: fpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -225,8 +225,8 @@ body: |
 name:            test_or_s32
 legalized:       true
 # CHECK: registers:
-# CHECK:   - { id: 0, class: gpr }
-# CHECK:   - { id: 1, class: gpr }
+# CHECK:   - { id: 0, class: gpr, preferred-register: '' }
+# CHECK:   - { id: 1, class: gpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -244,8 +244,8 @@ body: |
 name:            test_or_v4s32
 legalized:       true
 # CHECK: registers:
-# CHECK:   - { id: 0, class: fpr }
-# CHECK:   - { id: 1, class: fpr }
+# CHECK:   - { id: 0, class: fpr, preferred-register: '' }
+# CHECK:   - { id: 1, class: fpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -263,8 +263,8 @@ body: |
 name:            test_xor_s32
 legalized:       true
 # CHECK: registers:
-# CHECK:   - { id: 0, class: gpr }
-# CHECK:   - { id: 1, class: gpr }
+# CHECK:   - { id: 0, class: gpr, preferred-register: '' }
+# CHECK:   - { id: 1, class: gpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -282,8 +282,8 @@ body: |
 name:            test_xor_v4s32
 legalized:       true
 # CHECK: registers:
-# CHECK:   - { id: 0, class: fpr }
-# CHECK:   - { id: 1, class: fpr }
+# CHECK:   - { id: 0, class: fpr, preferred-register: '' }
+# CHECK:   - { id: 1, class: fpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -301,8 +301,8 @@ body: |
 name:            test_shl_s32
 legalized:       true
 # CHECK: registers:
-# CHECK:   - { id: 0, class: gpr }
-# CHECK:   - { id: 1, class: gpr }
+# CHECK:   - { id: 0, class: gpr, preferred-register: '' }
+# CHECK:   - { id: 1, class: gpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -320,8 +320,8 @@ body: |
 name:            test_shl_v4s32
 legalized:       true
 # CHECK: registers:
-# CHECK:   - { id: 0, class: fpr }
-# CHECK:   - { id: 1, class: fpr }
+# CHECK:   - { id: 0, class: fpr, preferred-register: '' }
+# CHECK:   - { id: 1, class: fpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -339,8 +339,8 @@ body: |
 name:            test_lshr_s32
 legalized:       true
 # CHECK: registers:
-# CHECK:   - { id: 0, class: gpr }
-# CHECK:   - { id: 1, class: gpr }
+# CHECK:   - { id: 0, class: gpr, preferred-register: '' }
+# CHECK:   - { id: 1, class: gpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -358,8 +358,8 @@ body: |
 name:            test_ashr_s32
 legalized:       true
 # CHECK: registers:
-# CHECK:   - { id: 0, class: gpr }
-# CHECK:   - { id: 1, class: gpr }
+# CHECK:   - { id: 0, class: gpr, preferred-register: '' }
+# CHECK:   - { id: 1, class: gpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -377,8 +377,8 @@ body: |
 name:            test_sdiv_s32
 legalized:       true
 # CHECK: registers:
-# CHECK:   - { id: 0, class: gpr }
-# CHECK:   - { id: 1, class: gpr }
+# CHECK:   - { id: 0, class: gpr, preferred-register: '' }
+# CHECK:   - { id: 1, class: gpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -396,8 +396,8 @@ body: |
 name:            test_udiv_s32
 legalized:       true
 # CHECK: registers:
-# CHECK:   - { id: 0, class: gpr }
-# CHECK:   - { id: 1, class: gpr }
+# CHECK:   - { id: 0, class: gpr, preferred-register: '' }
+# CHECK:   - { id: 1, class: gpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -415,8 +415,8 @@ body: |
 name:            test_anyext_s64_s32
 legalized:       true
 # CHECK: registers:
-# CHECK:   - { id: 0, class: gpr }
-# CHECK:   - { id: 1, class: gpr }
+# CHECK:   - { id: 0, class: gpr, preferred-register: '' }
+# CHECK:   - { id: 1, class: gpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -434,8 +434,8 @@ body: |
 name:            test_sext_s64_s32
 legalized:       true
 # CHECK: registers:
-# CHECK:   - { id: 0, class: gpr }
-# CHECK:   - { id: 1, class: gpr }
+# CHECK:   - { id: 0, class: gpr, preferred-register: '' }
+# CHECK:   - { id: 1, class: gpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -453,8 +453,8 @@ body: |
 name:            test_zext_s64_s32
 legalized:       true
 # CHECK: registers:
-# CHECK:   - { id: 0, class: gpr }
-# CHECK:   - { id: 1, class: gpr }
+# CHECK:   - { id: 0, class: gpr, preferred-register: '' }
+# CHECK:   - { id: 1, class: gpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -472,8 +472,8 @@ body: |
 name:            test_trunc_s32_s64
 legalized:       true
 # CHECK: registers:
-# CHECK:   - { id: 0, class: gpr }
-# CHECK:   - { id: 1, class: gpr }
+# CHECK:   - { id: 0, class: gpr, preferred-register: '' }
+# CHECK:   - { id: 1, class: gpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -491,7 +491,7 @@ body: |
 name:            test_constant_s32
 legalized:       true
 # CHECK: registers:
-# CHECK:   - { id: 0, class: gpr }
+# CHECK:   - { id: 0, class: gpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
 body: |
@@ -505,7 +505,7 @@ body: |
 name:            test_constant_p0
 legalized:       true
 # CHECK: registers:
-# CHECK:   - { id: 0, class: gpr }
+# CHECK:   - { id: 0, class: gpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
 body: |
@@ -519,8 +519,8 @@ body: |
 name:            test_icmp_s32
 legalized:       true
 # CHECK: registers:
-# CHECK:   - { id: 0, class: gpr }
-# CHECK:   - { id: 1, class: gpr }
+# CHECK:   - { id: 0, class: gpr, preferred-register: '' }
+# CHECK:   - { id: 1, class: gpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -538,8 +538,8 @@ body: |
 name:            test_icmp_p0
 legalized:       true
 # CHECK: registers:
-# CHECK:   - { id: 0, class: gpr }
-# CHECK:   - { id: 1, class: gpr }
+# CHECK:   - { id: 0, class: gpr, preferred-register: '' }
+# CHECK:   - { id: 1, class: gpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -557,7 +557,7 @@ body: |
 name:            test_frame_index_p0
 legalized:       true
 # CHECK: registers:
-# CHECK:   - { id: 0, class: gpr }
+# CHECK:   - { id: 0, class: gpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
 stack:
@@ -573,8 +573,8 @@ body: |
 name:            test_ptrtoint_s64_p0
 legalized:       true
 # CHECK: registers:
-# CHECK:   - { id: 0, class: gpr }
-# CHECK:   - { id: 1, class: gpr }
+# CHECK:   - { id: 0, class: gpr, preferred-register: '' }
+# CHECK:   - { id: 1, class: gpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -592,8 +592,8 @@ body: |
 name:            test_inttoptr_p0_s64
 legalized:       true
 # CHECK: registers:
-# CHECK:   - { id: 0, class: gpr }
-# CHECK:   - { id: 1, class: gpr }
+# CHECK:   - { id: 0, class: gpr, preferred-register: '' }
+# CHECK:   - { id: 1, class: gpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -611,8 +611,8 @@ body: |
 name:            test_load_s32_p0
 legalized:       true
 # CHECK: registers:
-# CHECK:   - { id: 0, class: gpr }
-# CHECK:   - { id: 1, class: gpr }
+# CHECK:   - { id: 0, class: gpr, preferred-register: '' }
+# CHECK:   - { id: 1, class: gpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -630,8 +630,8 @@ body: |
 name:            test_store_s32_p0
 legalized:       true
 # CHECK: registers:
-# CHECK:   - { id: 0, class: gpr }
-# CHECK:   - { id: 1, class: gpr }
+# CHECK:   - { id: 0, class: gpr, preferred-register: '' }
+# CHECK:   - { id: 1, class: gpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -651,8 +651,8 @@ body: |
 name:            test_fadd_s32
 legalized:       true
 # CHECK: registers:
-# CHECK:   - { id: 0, class: fpr }
-# CHECK:   - { id: 1, class: fpr }
+# CHECK:   - { id: 0, class: fpr, preferred-register: '' }
+# CHECK:   - { id: 1, class: fpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -670,8 +670,8 @@ body: |
 name:            test_fsub_s32
 legalized:       true
 # CHECK: registers:
-# CHECK:   - { id: 0, class: fpr }
-# CHECK:   - { id: 1, class: fpr }
+# CHECK:   - { id: 0, class: fpr, preferred-register: '' }
+# CHECK:   - { id: 1, class: fpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -689,8 +689,8 @@ body: |
 name:            test_fmul_s32
 legalized:       true
 # CHECK: registers:
-# CHECK:   - { id: 0, class: fpr }
-# CHECK:   - { id: 1, class: fpr }
+# CHECK:   - { id: 0, class: fpr, preferred-register: '' }
+# CHECK:   - { id: 1, class: fpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -708,8 +708,8 @@ body: |
 name:            test_fdiv_s32
 legalized:       true
 # CHECK: registers:
-# CHECK:   - { id: 0, class: fpr }
-# CHECK:   - { id: 1, class: fpr }
+# CHECK:   - { id: 0, class: fpr, preferred-register: '' }
+# CHECK:   - { id: 1, class: fpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -727,8 +727,8 @@ body: |
 name:            test_fpext_s64_s32
 legalized:       true
 # CHECK: registers:
-# CHECK:   - { id: 0, class: fpr }
-# CHECK:   - { id: 1, class: fpr }
+# CHECK:   - { id: 0, class: fpr, preferred-register: '' }
+# CHECK:   - { id: 1, class: fpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -746,8 +746,8 @@ body: |
 name:            test_fptrunc_s32_s64
 legalized:       true
 # CHECK: registers:
-# CHECK:   - { id: 0, class: fpr }
-# CHECK:   - { id: 1, class: fpr }
+# CHECK:   - { id: 0, class: fpr, preferred-register: '' }
+# CHECK:   - { id: 1, class: fpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -765,7 +765,7 @@ body: |
 name:            test_fconstant_s32
 legalized:       true
 # CHECK: registers:
-# CHECK:   - { id: 0, class: fpr }
+# CHECK:   - { id: 0, class: fpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
 body: |
@@ -779,8 +779,8 @@ body: |
 name:            test_fcmp_s32
 legalized:       true
 # CHECK: registers:
-# CHECK:   - { id: 0, class: fpr }
-# CHECK:   - { id: 1, class: gpr }
+# CHECK:   - { id: 0, class: fpr, preferred-register: '' }
+# CHECK:   - { id: 1, class: gpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -798,8 +798,8 @@ body: |
 name:            test_sitofp_s64_s32
 legalized:       true
 # CHECK: registers:
-# CHECK:   - { id: 0, class: gpr }
-# CHECK:   - { id: 1, class: fpr }
+# CHECK:   - { id: 0, class: gpr, preferred-register: '' }
+# CHECK:   - { id: 1, class: fpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -817,8 +817,8 @@ body: |
 name:            test_uitofp_s32_s64
 legalized:       true
 # CHECK: registers:
-# CHECK:   - { id: 0, class: gpr }
-# CHECK:   - { id: 1, class: fpr }
+# CHECK:   - { id: 0, class: gpr, preferred-register: '' }
+# CHECK:   - { id: 1, class: fpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -836,8 +836,8 @@ body: |
 name:            test_fptosi_s64_s32
 legalized:       true
 # CHECK: registers:
-# CHECK:   - { id: 0, class: fpr }
-# CHECK:   - { id: 1, class: gpr }
+# CHECK:   - { id: 0, class: fpr, preferred-register: '' }
+# CHECK:   - { id: 1, class: gpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -855,8 +855,8 @@ body: |
 name:            test_fptoui_s32_s64
 legalized:       true
 # CHECK: registers:
-# CHECK:   - { id: 0, class: fpr }
-# CHECK:   - { id: 1, class: gpr }
+# CHECK:   - { id: 0, class: fpr, preferred-register: '' }
+# CHECK:   - { id: 1, class: gpr, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }

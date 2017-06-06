@@ -840,7 +840,9 @@ Decl *Parser::ParseStaticAssertDeclaration(SourceLocation &DeclEnd){
     return nullptr;
   }
 
-  ExprResult AssertExpr(ParseConstantExpression());
+  EnterExpressionEvaluationContext ConstantEvaluated(
+      Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated);
+  ExprResult AssertExpr(ParseConstantExpressionInExprEvalContext());
   if (AssertExpr.isInvalid()) {
     SkipMalformedDecl();
     return nullptr;

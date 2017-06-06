@@ -151,9 +151,9 @@ func NewTypeMap(pkg *ssa.Package, llvmtm *llvmTypeMap, module llvm.Module, r *ru
 		hashDescriptorName := hashFnName + "_descriptor"
 		equalFnName := "__go_type_equal_" + typeAlgs.Name
 		equalDescriptorName := equalFnName + "_descriptor"
-		typeAlgs.hash = llvm.AddGlobal(tm.module, tm.hashFnType, hashFnName)
+		typeAlgs.hash = llvm.AddFunction(tm.module, hashFnName, tm.hashFnType)
 		typeAlgs.hashDescriptor = llvm.AddGlobal(tm.module, tm.funcValType, hashDescriptorName)
-		typeAlgs.equal = llvm.AddGlobal(tm.module, tm.equalFnType, equalFnName)
+		typeAlgs.equal = llvm.AddFunction(tm.module, equalFnName, tm.equalFnType)
 		typeAlgs.equalDescriptor = llvm.AddGlobal(tm.module, tm.funcValType, equalDescriptorName)
 	}
 

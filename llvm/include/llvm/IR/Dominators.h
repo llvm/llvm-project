@@ -66,6 +66,7 @@ public:
     return End;
   }
 
+  /// Check if this is the only edge between Start and End.
   bool isSingleEdge() const;
 };
 
@@ -143,6 +144,11 @@ public:
   bool dominates(const Instruction *Def, const Use &U) const;
   bool dominates(const Instruction *Def, const Instruction *User) const;
   bool dominates(const Instruction *Def, const BasicBlock *BB) const;
+
+  /// Return true if an edge dominates a use.
+  ///
+  /// If BBE is not a unique edge between start and end of the edge, it can
+  /// never dominate the use.
   bool dominates(const BasicBlockEdge &BBE, const Use &U) const;
   bool dominates(const BasicBlockEdge &BBE, const BasicBlock *BB) const;
 

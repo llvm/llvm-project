@@ -229,6 +229,13 @@ public:
     return !BaseGV && BaseOffset == 0 && (Scale == 0 || Scale == 1);
   }
 
+  bool isLSRCostLess(TTI::LSRCost &C1, TTI::LSRCost &C2) {
+    return std::tie(C1.NumRegs, C1.AddRecCost, C1.NumIVMuls, C1.NumBaseAdds,
+                    C1.ScaleCost, C1.ImmCost, C1.SetupCost) <
+           std::tie(C2.NumRegs, C2.AddRecCost, C2.NumIVMuls, C2.NumBaseAdds,
+                    C2.ScaleCost, C2.ImmCost, C2.SetupCost);
+  }
+
   bool isLegalMaskedStore(Type *DataType) { return false; }
 
   bool isLegalMaskedLoad(Type *DataType) { return false; }

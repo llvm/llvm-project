@@ -1683,6 +1683,42 @@ def Section : InheritableAttr {
   let Documentation = [SectionDocs];
 }
 
+def PragmaClangBSSSection : InheritableAttr {
+  // This attribute has no spellings as it is only ever created implicitly.
+  let Spellings = [];
+  let Args = [StringArgument<"Name">];
+  let Subjects = SubjectList<[GlobalVar], ErrorDiag,
+                             "ExpectedFunctionMethodOrGlobalVar">;
+  let Documentation = [Undocumented];
+}
+
+def PragmaClangDataSection : InheritableAttr {
+  // This attribute has no spellings as it is only ever created implicitly.
+  let Spellings = [];
+  let Args = [StringArgument<"Name">];
+  let Subjects = SubjectList<[GlobalVar], ErrorDiag,
+                             "ExpectedFunctionMethodOrGlobalVar">;
+  let Documentation = [Undocumented];
+}
+
+def PragmaClangRodataSection : InheritableAttr {
+  // This attribute has no spellings as it is only ever created implicitly.
+  let Spellings = [];
+  let Args = [StringArgument<"Name">];
+  let Subjects = SubjectList<[GlobalVar], ErrorDiag,
+                             "ExpectedFunctionMethodOrGlobalVar">;
+  let Documentation = [Undocumented];
+}
+
+def PragmaClangTextSection : InheritableAttr {
+  // This attribute has no spellings as it is only ever created implicitly.
+  let Spellings = [];
+  let Args = [StringArgument<"Name">];
+  let Subjects = SubjectList<[Function], ErrorDiag,
+                             "ExpectedFunctionMethodOrGlobalVar">;
+  let Documentation = [Undocumented];
+}
+
 def Sentinel : InheritableAttr {
   let Spellings = [GCC<"sentinel">];
   let Args = [DefaultIntArgument<"Sentinel", 0>,

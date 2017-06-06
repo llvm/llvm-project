@@ -23,6 +23,9 @@
 // incorporates the map structure.
 # define GET_LINK_MAP_BY_DLOPEN_HANDLE(handle) \
     ((link_map*)((handle) == nullptr ? nullptr : ((char*)(handle) + 544)))
+// Get sys/_types.h, because that tells us whether 64-bit inodes are
+// used in struct dirent below.
+#include <sys/_types.h>
 #else
 # define GET_LINK_MAP_BY_DLOPEN_HANDLE(handle) ((link_map*)(handle))
 #endif  // !SANITIZER_FREEBSD
@@ -485,7 +488,12 @@ namespace __sanitizer {
   };
 #elif SANITIZER_FREEBSD
   struct __sanitizer_dirent {
+#if defined(__INO64)
+    unsigned long long d_fileno;
+    unsigned long long d_off;
+#else
     unsigned int d_fileno;
+#endif
     unsigned short d_reclen;
     // more fields that we don't care about
   };

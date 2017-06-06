@@ -734,7 +734,6 @@ void GCNPassConfig::addMachineSSAOptimization() {
   addPass(&SIFoldOperandsID);
   addPass(&DeadMachineInstructionElimID);
   addPass(&SILoadStoreOptimizerID);
-  addPass(createSIShrinkInstructionsPass());
   if (EnableSDWAPeephole) {
     addPass(&SIPeepholeSDWAID);
     addPass(&MachineLICMID);
@@ -742,6 +741,7 @@ void GCNPassConfig::addMachineSSAOptimization() {
     addPass(&SIFoldOperandsID);
     addPass(&DeadMachineInstructionElimID);
   }
+  addPass(createSIShrinkInstructionsPass());
 }
 
 bool GCNPassConfig::addILPOpts() {

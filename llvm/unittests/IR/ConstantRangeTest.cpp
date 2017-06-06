@@ -187,6 +187,23 @@ TEST_F(ConstantRangeTest, Trunc) {
   EXPECT_EQ(TOne, ConstantRange(One.getLower().trunc(10),
                                 One.getUpper().trunc(10)));
   EXPECT_TRUE(TSome.isFullSet());
+  EXPECT_TRUE(TWrap.isFullSet());
+
+  // trunc([2, 5), 3->2) = [2, 1)
+  ConstantRange TwoFive(APInt(3, 2), APInt(3, 5));
+  EXPECT_EQ(TwoFive.truncate(2), ConstantRange(APInt(2, 2), APInt(2, 1)));
+
+  // trunc([2, 6), 3->2) = full
+  ConstantRange TwoSix(APInt(3, 2), APInt(3, 6));
+  EXPECT_TRUE(TwoSix.truncate(2).isFullSet());
+
+  // trunc([5, 7), 3->2) = [1, 3)
+  ConstantRange FiveSeven(APInt(3, 5), APInt(3, 7));
+  EXPECT_EQ(FiveSeven.truncate(2), ConstantRange(APInt(2, 1), APInt(2, 3)));
+
+  // trunc([7, 1), 3->2) = [3, 1)
+  ConstantRange SevenOne(APInt(3, 7), APInt(3, 1));
+  EXPECT_EQ(SevenOne.truncate(2), ConstantRange(APInt(2, 3), APInt(2, 1)));
 }
 
 TEST_F(ConstantRangeTest, ZExt) {

@@ -241,6 +241,9 @@ void MCObjectFileInfo::initMachOMCObjectFileInfo(const Triple &T) {
   DwarfStrSection =
       Ctx->getMachOSection("__DWARF", "__debug_str", MachO::S_ATTR_DEBUG,
                            SectionKind::getMetadata(), "info_string");
+  DwarfStrOffSection =
+      Ctx->getMachOSection("__DWARF", "__debug_str_offs", MachO::S_ATTR_DEBUG,
+                           SectionKind::getMetadata(), "section_str_off");
   DwarfLocSection =
       Ctx->getMachOSection("__DWARF", "__debug_loc", MachO::S_ATTR_DEBUG,
                            SectionKind::getMetadata(), "section_debug_loc");
@@ -557,6 +560,11 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T) {
   DwarfAccelTypesSection =
       Ctx->getELFSection(".apple_types", ELF::SHT_PROGBITS, 0);
 
+  // String Offset and Address Sections
+  DwarfStrOffSection =
+      Ctx->getELFSection(".debug_str_offsets", DebugSecType, 0);
+  DwarfAddrSection = Ctx->getELFSection(".debug_addr", DebugSecType, 0);
+
   // Fission Sections
   DwarfInfoDWOSection =
       Ctx->getELFSection(".debug_info.dwo", DebugSecType, 0);
@@ -573,7 +581,6 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T) {
       Ctx->getELFSection(".debug_loc.dwo", DebugSecType, 0);
   DwarfStrOffDWOSection =
       Ctx->getELFSection(".debug_str_offsets.dwo", DebugSecType, 0);
-  DwarfAddrSection = Ctx->getELFSection(".debug_addr", DebugSecType, 0);
 
   // DWP Sections
   DwarfCUIndexSection =
@@ -695,6 +702,11 @@ void MCObjectFileInfo::initCOFFMCObjectFileInfo(const Triple &T) {
       COFF::IMAGE_SCN_MEM_DISCARDABLE | COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
           COFF::IMAGE_SCN_MEM_READ,
       SectionKind::getMetadata(), "info_string");
+  DwarfStrOffSection = Ctx->getCOFFSection(
+      ".debug_str_offsets",
+      COFF::IMAGE_SCN_MEM_DISCARDABLE | COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
+          COFF::IMAGE_SCN_MEM_READ,
+      SectionKind::getMetadata(), "section_str_off");
   DwarfLocSection = Ctx->getCOFFSection(
       ".debug_loc",
       COFF::IMAGE_SCN_MEM_DISCARDABLE | COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
@@ -749,7 +761,7 @@ void MCObjectFileInfo::initCOFFMCObjectFileInfo(const Triple &T) {
       ".debug_str_offsets.dwo",
       COFF::IMAGE_SCN_MEM_DISCARDABLE | COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
           COFF::IMAGE_SCN_MEM_READ,
-      SectionKind::getMetadata());
+      SectionKind::getMetadata(), "section_str_off_dwo");
   DwarfAddrSection = Ctx->getCOFFSection(
       ".debug_addr",
       COFF::IMAGE_SCN_MEM_DISCARDABLE | COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |

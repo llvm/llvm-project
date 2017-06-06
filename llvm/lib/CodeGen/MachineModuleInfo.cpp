@@ -13,7 +13,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineFunctionInitializer.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/BasicBlock.h"
@@ -259,7 +258,14 @@ void MachineModuleInfo::addPersonality(const Function *Personality) {
 
 /// \}
 
-MachineFunction &MachineModuleInfo::getMachineFunction(const Function &F) {
+MachineFunction *
+MachineModuleInfo::getMachineFunction(const Function &F) const {
+  auto I = MachineFunctions.find(&F);
+  return I != MachineFunctions.end() ? I->second.get() : nullptr;
+}
+
+MachineFunction &
+MachineModuleInfo::getOrCreateMachineFunction(const Function &F) {
   // Shortcut for the common case where a sequence of MachineFunctionPasses
   // all query for the same Function.
   if (LastRequest == &F)
@@ -273,10 +279,6 @@ MachineFunction &MachineModuleInfo::getMachineFunction(const Function &F) {
     MF = new MachineFunction(&F, TM, NextFnNum++, *this);
     // Update the set entry.
     I.first->second.reset(MF);
-
-    if (MFInitializer)
-      if (MFInitializer->initializeMachineFunction(*MF))
-        report_fatal_error("Unable to initialize machine function");
   } else {
     MF = I.first->second.get();
   }

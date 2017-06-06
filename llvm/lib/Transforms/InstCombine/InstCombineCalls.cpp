@@ -1373,10 +1373,6 @@ static Instruction *foldCttzCtlz(IntrinsicInst &II, InstCombiner &IC) {
           II.getIntrinsicID() == Intrinsic::ctlz) &&
          "Expected cttz or ctlz intrinsic");
   Value *Op0 = II.getArgOperand(0);
-  // FIXME: Try to simplify vectors of integers.
-  auto *IT = dyn_cast<IntegerType>(Op0->getType());
-  if (!IT)
-    return nullptr;
 
   KnownBits Known = IC.computeKnownBits(Op0, 0, &II);
 
@@ -1392,7 +1388,7 @@ static Instruction *foldCttzCtlz(IntrinsicInst &II, InstCombiner &IC) {
   // FIXME: This should be in InstSimplify because we're replacing an
   // instruction with a constant.
   if (PossibleZeros == DefiniteZeros) {
-    auto *C = ConstantInt::get(IT, DefiniteZeros);
+    auto *C = ConstantInt::get(Op0->getType(), DefiniteZeros);
     return IC.replaceInstUsesWith(II, C);
   }
 

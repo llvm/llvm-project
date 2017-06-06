@@ -136,13 +136,13 @@ struct bad_decls {
 };
 
 struct DefaultDelete {
-  DefaultDelete() = default; // expected-note {{previous declaration is here}}
+  DefaultDelete() = default; // expected-note {{previous definition is here}}
   DefaultDelete() = delete; // expected-error {{constructor cannot be redeclared}}
 
-  ~DefaultDelete() = default; // expected-note {{previous declaration is here}}
+  ~DefaultDelete() = default; // expected-note {{previous definition is here}}
   ~DefaultDelete() = delete; // expected-error {{destructor cannot be redeclared}}
 
-  DefaultDelete &operator=(const DefaultDelete &) = default; // expected-note {{previous declaration is here}}
+  DefaultDelete &operator=(const DefaultDelete &) = default; // expected-note {{previous definition is here}}
   DefaultDelete &operator=(const DefaultDelete &) = delete; // expected-error {{class member cannot be redeclared}}
 };
 

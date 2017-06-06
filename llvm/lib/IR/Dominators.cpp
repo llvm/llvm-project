@@ -150,12 +150,6 @@ bool DominatorTree::dominates(const Instruction *Def,
 
 bool DominatorTree::dominates(const BasicBlockEdge &BBE,
                               const BasicBlock *UseBB) const {
-  // Assert that we have a single edge. We could handle them by simply
-  // returning false, but since isSingleEdge is linear on the number of
-  // edges, the callers can normally handle them more efficiently.
-  assert(BBE.isSingleEdge() &&
-         "This function is not efficient in handling multiple edges");
-
   // If the BB the edge ends in doesn't dominate the use BB, then the
   // edge also doesn't.
   const BasicBlock *Start = BBE.getStart();
@@ -188,11 +182,17 @@ bool DominatorTree::dominates(const BasicBlockEdge &BBE,
   // trivially dominates itself, so we only have to find if it dominates the
   // other predecessors. Since the only way out of X is via NormalDest, X can
   // only properly dominate a node if NormalDest dominates that node too.
+  int IsDuplicateEdge = 0;
   for (const_pred_iterator PI = pred_begin(End), E = pred_end(End);
        PI != E; ++PI) {
     const BasicBlock *BB = *PI;
-    if (BB == Start)
+    if (BB == Start) {
+      // If there are multiple edges between Start and End, by definition they
+      // can't dominate anything.
+      if (IsDuplicateEdge++)
+        return false;
       continue;
+    }
 
     if (!dominates(End, BB))
       return false;
@@ -201,12 +201,6 @@ bool DominatorTree::dominates(const BasicBlockEdge &BBE,
 }
 
 bool DominatorTree::dominates(const BasicBlockEdge &BBE, const Use &U) const {
-  // Assert that we have a single edge. We could handle them by simply
-  // returning false, but since isSingleEdge is linear on the number of
-  // edges, the callers can normally handle them more efficiently.
-  assert(BBE.isSingleEdge() &&
-         "This function is not efficient in handling multiple edges");
-
   Instruction *UserInst = cast<Instruction>(U.getUser());
   // A PHI in the end of the edge is dominated by it.
   PHINode *PN = dyn_cast<PHINode>(UserInst);

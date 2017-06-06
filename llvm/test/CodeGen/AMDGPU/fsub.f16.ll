@@ -78,7 +78,7 @@ entry:
 ; SI: v_or_b32_e32 v[[R_V2_F16:[0-9]+]], v[[R_F16_HI]], v[[R_F16_0]]
 
 ; VI-DAG: v_subrev_f16_e32 v[[R_F16_0:[0-9]+]], v[[B_V2_F16]], v[[A_V2_F16]]
-; VI-DAG: v_subrev_f16_sdwa v[[R_F16_HI:[0-9]+]], v[[B_V2_F16]], v[[A_V2_F16]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-DAG: v_sub_f16_sdwa v[[R_F16_HI:[0-9]+]], v[[A_V2_F16]], v[[B_V2_F16]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
 ; VI: v_or_b32_e32 v[[R_V2_F16:[0-9]+]], v[[R_F16_HI]], v[[R_F16_0]]
 
 ; GFX9: v_pk_add_f16 v[[R_V2_F16:[0-9]+]], v[[A_V2_F16]], v[[B_V2_F16]] neg_lo:[0,1] neg_hi:[0,1]
@@ -146,7 +146,7 @@ entry:
 ; SI: v_or_b32_e32 v[[R_V2_F16:[0-9]+]], v[[R_F16_HI]], v[[R_F16_0]]
 
 ; VI-DAG: v_mov_b32_e32 [[CONSTM1:v[0-9]+]], 0xbc00
-; VI-DAG: v_add_f16_sdwa v[[R_F16_HI:[0-9]+]], [[CONSTM1]], v[[A_V2_F16]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; VI-DAG: v_add_f16_sdwa v[[R_F16_HI:[0-9]+]], v[[A_V2_F16]], [[CONSTM1]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; VI-DAG: v_add_f16_e32 v[[R_F16_0:[0-9]+]], -2.0, v[[A_V2_F16]]
 ; VI: v_or_b32_e32 v[[R_V2_F16:[0-9]+]], v[[R_F16_HI]], v[[R_F16_0]]
 

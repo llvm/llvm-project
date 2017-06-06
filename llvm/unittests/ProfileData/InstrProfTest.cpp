@@ -1024,6 +1024,6 @@ TEST_F(SparseInstrProfTest, preserve_no_records) {
 }
 
 INSTANTIATE_TEST_CASE_P(MaybeSparse, MaybeSparseInstrProfTest,
-                        ::testing::Bool());
+                        ::testing::Bool(),);
 
 } // end anonymous namespace

@@ -1004,6 +1004,8 @@ protected:
                                       const ObjCInterfaceDecl *ID,
                                       ObjCCommonTypesHelper &ObjCTypes);
 
+  std::string GetSectionName(StringRef Section, StringRef MachOAttributes);
+
 public:
   /// CreateMetadataVar - Create a global variable with internal
   /// linkage for use by the Objective-C runtime.
@@ -4786,6 +4788,27 @@ llvm::Value *CGObjCMac::EmitIvarOffset(CodeGen::CodeGenFunction &CGF,
 
 /* *** Private Interface *** */
 
+std::string CGObjCCommonMac::GetSectionName(StringRef Section,
+                                            StringRef MachOAttributes) {
+  switch (CGM.getTriple().getObjectFormat()) {
+  default:
+    llvm_unreachable("unexpected object file format");
+  case llvm::Triple::MachO: {
+    if (MachOAttributes.empty())
+      return ("__DATA," + Section).str();
+    return ("__DATA," + Section + "," + MachOAttributes).str();
+  }
+  case llvm::Triple::ELF:
+    assert(Section.substr(0, 2) == "__" &&
+           "expected the name to begin with __");
+    return Section.substr(2).str();
+  case llvm::Triple::COFF:
+    assert(Section.substr(0, 2) == "__" &&
+           "expected the name to begin with __");
+    return ("." + Section.substr(2) + "$B").str();
+  }
+}
+
 /// EmitImageInfo - Emit the image info marker used to encode some module
 /// level information.
 ///
@@ -4809,9 +4832,10 @@ enum ImageInfoFlags {
 
 void CGObjCCommonMac::EmitImageInfo() {
   unsigned version = 0; // Version is unused?
-  const char *Section = (ObjCABI == 1) ?
-    "__OBJC, __image_info,regular" :
-    "__DATA, __objc_imageinfo, regular, no_dead_strip";
+  std::string Section =
+      (ObjCABI == 1)
+          ? "__OBJC,__image_info,regular"
+          : GetSectionName("__objc_imageinfo", "regular,no_dead_strip");
 
   // Generate module-level named metadata to convey this information to the
   // linker and code-gen.
@@ -4822,7 +4846,7 @@ void CGObjCCommonMac::EmitImageInfo() {
   Mod.addModuleFlag(llvm::Module::Error, "Objective-C Image Info Version",
                     version);
   Mod.addModuleFlag(llvm::Module::Error, "Objective-C Image Info Section",
-                    llvm::MDString::get(VMContext,Section));
+                    llvm::MDString::get(VMContext, Section));
 
   if (CGM.getLangOpts().getGC() == LangOptions::NonGC) {
     // Non-GC overrides those files which specify GC.
@@ -5930,17 +5954,21 @@ void CGObjCNonFragileABIMac::FinishNonFragileABIModule() {
   }
 
   AddModuleClassList(DefinedClasses, "OBJC_LABEL_CLASS_$",
-                     "__DATA, __objc_classlist, regular, no_dead_strip");
+                     GetSectionName("__objc_classlist",
+                                    "regular,no_dead_strip"));
 
   AddModuleClassList(DefinedNonLazyClasses, "OBJC_LABEL_NONLAZY_CLASS_$",
-                     "__DATA, __objc_nlclslist, regular, no_dead_strip");
+                     GetSectionName("__objc_nlclslist",
+                                    "regular,no_dead_strip"));
 
   // Build list of all implemented category addresses in array
   // L_OBJC_LABEL_CATEGORY_$.
   AddModuleClassList(DefinedCategories, "OBJC_LABEL_CATEGORY_$",
-                     "__DATA, __objc_catlist, regular, no_dead_strip");
+                     GetSectionName("__objc_catlist",
+                                    "regular,no_dead_strip"));
   AddModuleClassList(DefinedNonLazyCategories, "OBJC_LABEL_NONLAZY_CATEGORY_$",
-                     "__DATA, __objc_nlcatlist, regular, no_dead_strip");
+                     GetSectionName("__objc_nlcatlist",
+                                    "regular,no_dead_strip"));
 
   EmitImageInfo();
 }
@@ -6359,7 +6387,8 @@ llvm::Value *CGObjCNonFragileABIMac::GenerateProtocolRef(CodeGenFunction &CGF,
     llvm::GlobalValue::WeakAnyLinkage,
     Init,
     ProtocolName);
-  PTGV->setSection("__DATA, __objc_protorefs, coalesced, no_dead_strip");
+  PTGV->setSection(GetSectionName("__objc_protorefs",
+                                  "coalesced,no_dead_strip"));
   PTGV->setVisibility(llvm::GlobalValue::HiddenVisibility);
   PTGV->setAlignment(Align.getQuantity());
   CGM.addCompilerUsedGlobal(PTGV);
@@ -6818,8 +6847,8 @@ llvm::Constant *CGObjCNonFragileABIMac::GetOrEmitProtocol(
     PTGV->setComdat(CGM.getModule().getOrInsertComdat(ProtocolRef));
   PTGV->setAlignment(
     CGM.getDataLayout().getABITypeAlignment(ObjCTypes.ProtocolnfABIPtrTy));
-  if (CGM.getTriple().isOSBinFormatMachO())
-    PTGV->setSection("__DATA, __objc_protolist, coalesced, no_dead_strip");
+  PTGV->setSection(GetSectionName("__objc_protolist",
+                                  "coalesced,no_dead_strip"));
   PTGV->setVisibility(llvm::GlobalValue::HiddenVisibility);
   CGM.addCompilerUsedGlobal(PTGV);
   return Entry;
@@ -7015,7 +7044,7 @@ CGObjCNonFragileABIMac::EmitVTableMessageSend(CodeGenFunction &CGF,
                                               /*constant*/ false,
                                         llvm::GlobalValue::WeakAnyLinkage);
     messageRef->setVisibility(llvm::GlobalValue::HiddenVisibility);
-    messageRef->setSection("__DATA, __objc_msgrefs, coalesced");
+    messageRef->setSection(GetSectionName("__objc_msgrefs", "coalesced"));
   }
   
   bool requiresnullCheck = false;
@@ -7126,7 +7155,8 @@ CGObjCNonFragileABIMac::EmitClassRefFromId(CodeGenFunction &CGF,
                                      false, llvm::GlobalValue::PrivateLinkage,
                                      ClassGV, "OBJC_CLASSLIST_REFERENCES_$_");
     Entry->setAlignment(Align.getQuantity());
-    Entry->setSection("__DATA, __objc_classrefs, regular, no_dead_strip");
+    Entry->setSection(GetSectionName("__objc_classrefs",
+                                     "regular,no_dead_strip"));
     CGM.addCompilerUsedGlobal(Entry);
   }
   return CGF.Builder.CreateAlignedLoad(Entry, Align);
@@ -7160,7 +7190,8 @@ CGObjCNonFragileABIMac::EmitSuperClassRef(CodeGenFunction &CGF,
                                      false, llvm::GlobalValue::PrivateLinkage,
                                      ClassGV, "OBJC_CLASSLIST_SUP_REFS_$_");
     Entry->setAlignment(Align.getQuantity());
-    Entry->setSection("__DATA, __objc_superrefs, regular, no_dead_strip");
+    Entry->setSection(GetSectionName("__objc_superrefs",
+                                     "regular,no_dead_strip"));
     CGM.addCompilerUsedGlobal(Entry);
   }
   return CGF.Builder.CreateAlignedLoad(Entry, Align);
@@ -7182,7 +7213,8 @@ llvm::Value *CGObjCNonFragileABIMac::EmitMetaClassRef(CodeGenFunction &CGF,
                                      MetaClassGV, "OBJC_CLASSLIST_SUP_REFS_$_");
     Entry->setAlignment(Align.getQuantity());
 
-    Entry->setSection("__DATA, __objc_superrefs, regular, no_dead_strip");
+    Entry->setSection(GetSectionName("__objc_superrefs",
+                                     "regular,no_dead_strip"));
     CGM.addCompilerUsedGlobal(Entry);
   }
 
@@ -7278,7 +7310,8 @@ Address CGObjCNonFragileABIMac::EmitSelectorAddr(CodeGenFunction &CGF,
                                      false, llvm::GlobalValue::PrivateLinkage,
                                      Casted, "OBJC_SELECTOR_REFERENCES_");
     Entry->setExternallyInitialized(true);
-    Entry->setSection("__DATA, __objc_selrefs, literal_pointers, no_dead_strip");
+    Entry->setSection(GetSectionName("__objc_selrefs",
+                                     "literal_pointers,no_dead_strip"));
     Entry->setAlignment(Align.getQuantity());
     CGM.addCompilerUsedGlobal(Entry);
   }

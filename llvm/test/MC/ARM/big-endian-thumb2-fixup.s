@@ -47,3 +47,9 @@ ldst_precel_12_label:
 	nop
 adr_pcrel_12_label:
 
+@ARM::fixup_t2_so_imm
+.section s_t2_so_imm,"ax",%progbits
+// CHECK-LABEL: Contents of section s_t2_so_imm
+// CHECK: 0000 f1033337
+	add r3, r3,val
+.equ val,0x37373737

@@ -25,7 +25,6 @@
 namespace llvm {
 
 class GlobalValue;
-class MachineFunctionInitializer;
 class Mangler;
 class MCAsmInfo;
 class MCContext;
@@ -227,8 +226,7 @@ public:
       PassManagerBase &, raw_pwrite_stream &, CodeGenFileType,
       bool /*DisableVerify*/ = true, AnalysisID /*StartBefore*/ = nullptr,
       AnalysisID /*StartAfter*/ = nullptr, AnalysisID /*StopBefore*/ = nullptr,
-      AnalysisID /*StopAfter*/ = nullptr,
-      MachineFunctionInitializer * /*MFInitializer*/ = nullptr) {
+      AnalysisID /*StopAfter*/ = nullptr) {
     return true;
   }
 
@@ -289,8 +287,7 @@ public:
       PassManagerBase &PM, raw_pwrite_stream &Out, CodeGenFileType FileType,
       bool DisableVerify = true, AnalysisID StartBefore = nullptr,
       AnalysisID StartAfter = nullptr, AnalysisID StopBefore = nullptr,
-      AnalysisID StopAfter = nullptr,
-      MachineFunctionInitializer *MFInitializer = nullptr) override;
+      AnalysisID StopAfter = nullptr) override;
 
   /// Add passes to the specified pass manager to get machine code emitted with
   /// the MCJIT. This method returns true if machine code is not supported. It
@@ -305,6 +302,11 @@ public:
   /// remove this at some point and always enable the verifier when
   /// EXPENSIVE_CHECKS is enabled.
   virtual bool isMachineVerifierClean() const { return true; }
+
+  /// \brief Adds an AsmPrinter pass to the pipeline that prints assembly or
+  /// machine code from the MI representation.
+  bool addAsmPrinter(PassManagerBase &PM, raw_pwrite_stream &Out,
+                     CodeGenFileType FileTYpe, MCContext &Context);
 };
 
 } // end namespace llvm

@@ -98,6 +98,7 @@ const MCFixupKindInfo &ARMAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       {"fixup_t2_movt_hi16", 0, 20, 0},
       {"fixup_t2_movw_lo16", 0, 20, 0},
       {"fixup_arm_mod_imm", 0, 12, 0},
+      {"fixup_t2_so_imm", 0, 26, 0},
   };
   const static MCFixupKindInfo InfosBE[ARM::NumTargetFixupKinds] = {
       // This table *must* be in the order that the fixup_* kinds are defined in
@@ -148,6 +149,7 @@ const MCFixupKindInfo &ARMAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       {"fixup_t2_movt_hi16", 12, 20, 0},
       {"fixup_t2_movw_lo16", 12, 20, 0},
       {"fixup_arm_mod_imm", 20, 12, 0},
+      {"fixup_t2_so_imm", 26, 6, 0},
   };
 
   if (Kind < FirstTargetFixupKind)
@@ -693,6 +695,22 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
       return 0;
     }
     return Value;
+  case ARM::fixup_t2_so_imm:
+    Value = ARM_AM::getT2SOImmVal(Value);
+    if ((int64_t)Value < 0) {
+      Ctx.reportError(Fixup.getLoc(), "out of range immediate fixup value");
+      return 0;
+    }
+    // Value will contain a 12-bit value broken up into a 4-bit shift in bits
+    // 11:8 and the 8-bit immediate in 0:7. The instruction has the immediate
+    // in 0:7. The 4-bit shift is split up into i:imm3 where i is placed at bit
+    // 10 of the upper half-word and imm3 is placed at 14:12 of the lower
+    // half-word.
+    uint64_t EncValue = 0;
+    EncValue |= (Value & 0x800) << 15;
+    EncValue |= (Value & 0x700) << 4;
+    EncValue |= (Value & 0xff);
+    return swapHalfWords(EncValue, IsLittleEndian);
   }
 }
 
@@ -792,6 +810,7 @@ static unsigned getFixupKindNumBytes(unsigned Kind) {
   case ARM::fixup_arm_movw_lo16:
   case ARM::fixup_t2_movt_hi16:
   case ARM::fixup_t2_movw_lo16:
+  case ARM::fixup_t2_so_imm:
     return 4;
 
   case FK_SecRel_2:
@@ -844,6 +863,7 @@ static unsigned getFixupKindContainerSizeBytes(unsigned Kind) {
   case ARM::fixup_t2_movt_hi16:
   case ARM::fixup_t2_movw_lo16:
   case ARM::fixup_arm_mod_imm:
+  case ARM::fixup_t2_so_imm:
     // Instruction size is 4 bytes.
     return 4;
   }

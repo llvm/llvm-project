@@ -293,6 +293,8 @@ GlobalVariable::GlobalVariable(Type *Ty, bool constant, LinkageTypes Link,
                    InitVal != nullptr, Link, Name, AddressSpace),
       isConstantGlobal(constant),
       isExternallyInitializedConstant(isExternallyInitialized) {
+  assert(!Ty->isFunctionTy() && PointerType::isValidElementType(Ty) &&
+         "invalid type for global variable");
   setThreadLocalMode(TLMode);
   if (InitVal) {
     assert(InitVal->getType() == Ty &&
@@ -311,6 +313,8 @@ GlobalVariable::GlobalVariable(Module &M, Type *Ty, bool constant,
                    InitVal != nullptr, Link, Name, AddressSpace),
       isConstantGlobal(constant),
       isExternallyInitializedConstant(isExternallyInitialized) {
+  assert(!Ty->isFunctionTy() && PointerType::isValidElementType(Ty) &&
+         "invalid type for global variable");
   setThreadLocalMode(TLMode);
   if (InitVal) {
     assert(InitVal->getType() == Ty &&

@@ -260,3 +260,26 @@ bb2:
   %ins2 = insertelement <4 x float> %ins1, float %ext1, i32 3
   ret <4 x float> %ins2
 }
+
+; Don't insert extractelements from the wider vector before the def of the index operand.
+
+define <4 x i32> @extractelt_insertion(<2 x i32> %x, i32 %y) {
+; CHECK-LABEL: @extractelt_insertion(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <2 x i32> [[X:%.*]], <2 x i32> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; CHECK-NEXT:    [[B:%.*]] = shufflevector <4 x i32> <i32 0, i32 0, i32 0, i32 undef>, <4 x i32> [[TMP0]], <4 x i32> <i32 0, i32 1, i32 2, i32 5>
+; CHECK-NEXT:    [[C:%.*]] = add i32 [[Y:%.*]], 3
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i32> [[TMP0]], i32 [[C]]
+; CHECK-NEXT:    [[E:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[E]], <4 x i32> [[B]], <4 x i32> zeroinitializer
+; CHECK-NEXT:    ret <4 x i32> [[RET]]
+;
+entry:
+  %a = extractelement <2 x i32> %x, i32 1
+  %b = insertelement <4 x i32> zeroinitializer, i32 %a, i64 3
+  %c = add i32 %y, 3
+  %d = extractelement <2 x i32> %x, i32 %c
+  %e = icmp eq i32 %d, 0
+  %ret = select i1 %e, <4 x i32> %b, <4 x i32> zeroinitializer
+  ret <4 x i32> %ret
+}

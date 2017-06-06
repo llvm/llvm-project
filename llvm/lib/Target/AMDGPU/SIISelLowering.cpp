@@ -2604,7 +2604,7 @@ SDValue SITargetLowering::lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
 
   SDValue FpToFp16 = DAG.getNode(ISD::FP_TO_FP16, DL, MVT::i32, Src);
   SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, FpToFp16);
-  return DAG.getNode(ISD::BITCAST, DL, MVT::f16, Trunc);;
+  return DAG.getNode(ISD::BITCAST, DL, MVT::f16, Trunc);
 }
 
 SDValue SITargetLowering::lowerTRAP(SDValue Op, SelectionDAG &DAG) const {

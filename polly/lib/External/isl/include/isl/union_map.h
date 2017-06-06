@@ -194,6 +194,8 @@ __isl_give isl_union_map *isl_union_set_identity(__isl_take isl_union_set *uset)
 __isl_give isl_union_map *isl_union_map_project_out(
 	__isl_take isl_union_map *umap,
 	enum isl_dim_type type, unsigned first, unsigned n);
+__isl_give isl_union_map *isl_union_map_remove_divs(
+	__isl_take isl_union_map *bmap);
 
 __isl_export
 isl_bool isl_union_map_is_empty(__isl_keep isl_union_map *umap);

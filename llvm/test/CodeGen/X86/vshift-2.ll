@@ -28,12 +28,9 @@ define void @shift1b(<2 x i64> %val, <2 x i64>* %dst, i64 %amt) nounwind {
 ; X32-LABEL: shift1b:
 ; X32:       # BB#0: # %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X32-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,0,1,1]
-; X32-NEXT:    movd {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; X32-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,0,1,1]
-; X32-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
-; X32-NEXT:    psrlq %xmm2, %xmm0
+; X32-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
+; X32-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,1,0,1]
+; X32-NEXT:    psrlq %xmm1, %xmm0
 ; X32-NEXT:    movdqa %xmm0, (%eax)
 ; X32-NEXT:    retl
 ;

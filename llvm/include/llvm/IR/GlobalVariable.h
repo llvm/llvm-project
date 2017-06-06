@@ -235,6 +235,13 @@ public:
     Attrs = A;
   }
 
+  /// Check if section name is present
+  bool hasImplicitSection() const {
+    return getAttributes().hasAttribute("bss-section") ||
+           getAttributes().hasAttribute("data-section") ||
+           getAttributes().hasAttribute("rodata-section");
+  }
+
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static inline bool classof(const Value *V) {
     return V->getValueID() == Value::GlobalVariableVal;

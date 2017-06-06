@@ -156,7 +156,7 @@ template <class ELFT> void SymbolTable<ELFT>::trace(StringRef Name) {
 
 // Rename SYM as __wrap_SYM. The original symbol is preserved as __real_SYM.
 // Used to implement --wrap.
-template <class ELFT> void SymbolTable<ELFT>::wrap(StringRef Name) {
+template <class ELFT> void SymbolTable<ELFT>::addSymbolWrap(StringRef Name) {
   SymbolBody *B = find(Name);
   if (!B)
     return;
@@ -164,16 +164,16 @@ template <class ELFT> void SymbolTable<ELFT>::wrap(StringRef Name) {
   Symbol *Real = addUndefined(Saver.save("__real_" + Name));
   Symbol *Wrap = addUndefined(Saver.save("__wrap_" + Name));
 
-  // We rename symbols by replacing the old symbol's SymbolBody with the new
-  // symbol's SymbolBody. This causes all SymbolBody pointers referring to the
-  // old symbol to instead refer to the new symbol.
-  memcpy(Real->Body.buffer, Sym->Body.buffer, sizeof(Sym->Body));
-  memcpy(Sym->Body.buffer, Wrap->Body.buffer, sizeof(Wrap->Body));
+  // Tell LTO not to eliminate this symbol
+  Wrap->IsUsedInRegularObj = true;
+
+  Config->RenamedSymbols[Real] = RenamedSymbol{Sym, Real->Binding};
+  Config->RenamedSymbols[Sym] = RenamedSymbol{Wrap, Sym->Binding};
 }
 
 // Creates alias for symbol. Used to implement --defsym=ALIAS=SYM.
-template <class ELFT>
-void SymbolTable<ELFT>::alias(StringRef Alias, StringRef Name) {
+template <class ELFT> void SymbolTable<ELFT>::addSymbolAlias(StringRef Alias,
+                                                             StringRef Name) {
   SymbolBody *B = find(Name);
   if (!B) {
     error("-defsym: undefined symbol: " + Name);
@@ -181,7 +181,27 @@ void SymbolTable<ELFT>::alias(StringRef Alias, StringRef Name) {
   }
   Symbol *Sym = B->symbol();
   Symbol *AliasSym = addUndefined(Alias);
-  memcpy(AliasSym->Body.buffer, Sym->Body.buffer, sizeof(AliasSym->Body));
+
+  // Tell LTO not to eliminate this symbol
+  Sym->IsUsedInRegularObj = true;
+  Config->RenamedSymbols[AliasSym] = RenamedSymbol{Sym, AliasSym->Binding};
+}
+
+// Apply symbol renames created by -wrap and -defsym. The renames are created
+// before LTO in addSymbolWrap() and addSymbolAlias() to have a chance to inform
+// LTO (if LTO is running) not to include these symbols in IPO. Now that the
+// symbols are finalized, we can perform the replacement.
+template <class ELFT> void SymbolTable<ELFT>::applySymbolRenames() {
+  for (auto &KV : Config->RenamedSymbols) {
+    Symbol *Sym = KV.first;
+    Symbol *Rename = KV.second.Target;
+    Sym->Binding = KV.second.OrigBinding;
+
+    // We rename symbols by replacing the old symbol's SymbolBody with the new
+    // symbol's SymbolBody. This causes all SymbolBody pointers referring to the
+    // old symbol to instead refer to the new symbol.
+    memcpy(Sym->Body.buffer, Rename->Body.buffer, sizeof(Sym->Body));
+  }
 }
 
 static uint8_t getMinVisibility(uint8_t VA, uint8_t VB) {

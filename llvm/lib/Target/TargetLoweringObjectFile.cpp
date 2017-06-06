@@ -240,6 +240,20 @@ MCSection *TargetLoweringObjectFile::SectionForGlobal(
   if (GO->hasSection())
     return getExplicitSectionGlobal(GO, Kind, TM);
 
+  if (auto *GVar = dyn_cast<GlobalVariable>(GO)) {
+    auto Attrs = GVar->getAttributes();
+    if ((Attrs.hasAttribute("bss-section") && Kind.isBSS()) ||
+        (Attrs.hasAttribute("data-section") && Kind.isData()) ||
+        (Attrs.hasAttribute("rodata-section") && Kind.isReadOnly()))  {
+       return getExplicitSectionGlobal(GO, Kind, TM);
+    }
+  }
+
+  if (auto *F = dyn_cast<Function>(GO)) {
+    if (F->hasFnAttribute("implicit-section-name"))
+      return getExplicitSectionGlobal(GO, Kind, TM);
+  }
+
   // Use default section depending on the 'type' of global
   return SelectSectionForGlobal(GO, Kind, TM);
 }

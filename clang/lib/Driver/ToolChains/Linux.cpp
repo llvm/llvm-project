@@ -822,8 +822,9 @@ SanitizerMask Linux::getSupportedSanitizers() const {
   const bool IsAArch64 = getTriple().getArch() == llvm::Triple::aarch64 ||
                          getTriple().getArch() == llvm::Triple::aarch64_be;
   const bool IsArmArch = getTriple().getArch() == llvm::Triple::arm ||
-                         llvm::Triple::thumb || llvm::Triple::armeb ||
-                         llvm::Triple::thumbeb;
+                         getTriple().getArch() == llvm::Triple::thumb ||
+                         getTriple().getArch() == llvm::Triple::armeb ||
+                         getTriple().getArch() == llvm::Triple::thumbeb;
   SanitizerMask Res = ToolChain::getSupportedSanitizers();
   Res |= SanitizerKind::Address;
   Res |= SanitizerKind::Fuzzer;

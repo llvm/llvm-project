@@ -327,33 +327,6 @@ void initDefaultAMDKernelCodeT(amd_kernel_code_t &Header,
   Header.private_segment_alignment = 4;
 }
 
-MCSection *getHSATextSection(MCContext &Ctx) {
-  return Ctx.getELFSection(".hsatext", ELF::SHT_PROGBITS,
-                           ELF::SHF_ALLOC | ELF::SHF_WRITE |
-                           ELF::SHF_EXECINSTR |
-                           ELF::SHF_AMDGPU_HSA_AGENT |
-                           ELF::SHF_AMDGPU_HSA_CODE);
-}
-
-MCSection *getHSADataGlobalAgentSection(MCContext &Ctx) {
-  return Ctx.getELFSection(".hsadata_global_agent", ELF::SHT_PROGBITS,
-                           ELF::SHF_ALLOC | ELF::SHF_WRITE |
-                           ELF::SHF_AMDGPU_HSA_GLOBAL |
-                           ELF::SHF_AMDGPU_HSA_AGENT);
-}
-
-MCSection *getHSADataGlobalProgramSection(MCContext &Ctx) {
-  return  Ctx.getELFSection(".hsadata_global_program", ELF::SHT_PROGBITS,
-                            ELF::SHF_ALLOC | ELF::SHF_WRITE |
-                            ELF::SHF_AMDGPU_HSA_GLOBAL);
-}
-
-MCSection *getHSARodataReadonlyAgentSection(MCContext &Ctx) {
-  return Ctx.getELFSection(".hsarodata_readonly_agent", ELF::SHT_PROGBITS,
-                           ELF::SHF_ALLOC | ELF::SHF_AMDGPU_HSA_READONLY |
-                           ELF::SHF_AMDGPU_HSA_AGENT);
-}
-
 bool isGroupSegment(const GlobalValue *GV, AMDGPUAS AS) {
   return GV->getType()->getAddressSpace() == AS.LOCAL_ADDRESS;
 }

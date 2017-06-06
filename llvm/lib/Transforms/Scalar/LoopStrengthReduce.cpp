@@ -950,39 +950,37 @@ namespace {
 
 /// This class is used to measure and compare candidate formulae.
 class Cost {
-  /// TODO: Some of these could be merged. Also, a lexical ordering
-  /// isn't always optimal.
-  unsigned Insns;
-  unsigned NumRegs;
-  unsigned AddRecCost;
-  unsigned NumIVMuls;
-  unsigned NumBaseAdds;
-  unsigned ImmCost;
-  unsigned SetupCost;
-  unsigned ScaleCost;
+  TargetTransformInfo::LSRCost C;
 
 public:
-  Cost()
-    : Insns(0), NumRegs(0), AddRecCost(0), NumIVMuls(0), NumBaseAdds(0),
-      ImmCost(0), SetupCost(0), ScaleCost(0) {}
+  Cost() {
+    C.Insns = 0;
+    C.NumRegs = 0;
+    C.AddRecCost = 0;
+    C.NumIVMuls = 0;
+    C.NumBaseAdds = 0;
+    C.ImmCost = 0;
+    C.SetupCost = 0;
+    C.ScaleCost = 0;
+  }
 
-  bool operator<(const Cost &Other) const;
+  bool isLess(Cost &Other, const TargetTransformInfo &TTI);
 
   void Lose();
 
 #ifndef NDEBUG
   // Once any of the metrics loses, they must all remain losers.
   bool isValid() {
-    return ((Insns | NumRegs | AddRecCost | NumIVMuls | NumBaseAdds
-             | ImmCost | SetupCost | ScaleCost) != ~0u)
-      || ((Insns & NumRegs & AddRecCost & NumIVMuls & NumBaseAdds
-           & ImmCost & SetupCost & ScaleCost) == ~0u);
+    return ((C.Insns | C.NumRegs | C.AddRecCost | C.NumIVMuls | C.NumBaseAdds
+             | C.ImmCost | C.SetupCost | C.ScaleCost) != ~0u)
+      || ((C.Insns & C.NumRegs & C.AddRecCost & C.NumIVMuls & C.NumBaseAdds
+           & C.ImmCost & C.SetupCost & C.ScaleCost) == ~0u);
   }
 #endif
 
   bool isLoser() {
     assert(isValid() && "invalid cost");
-    return NumRegs == ~0u;
+    return C.NumRegs == ~0u;
   }
 
   void RateFormula(const TargetTransformInfo &TTI,
@@ -1170,10 +1168,10 @@ void Cost::RateRegister(const SCEV *Reg,
       }
 
       // Otherwise, it will be an invariant with respect to Loop L.
-      ++NumRegs;
+      ++C.NumRegs;
       return;
     }
-    AddRecCost += 1; /// TODO: This should be a function of the stride.
+    C.AddRecCost += 1; /// TODO: This should be a function of the stride.
 
     // Add the step value register, if it needs one.
     // TODO: The non-affine case isn't precisely modeled here.
@@ -1185,7 +1183,7 @@ void Cost::RateRegister(const SCEV *Reg,
       }
     }
   }
-  ++NumRegs;
+  ++C.NumRegs;
 
   // Rough heuristic; favor registers which don't require extra setup
   // instructions in the preheader.
@@ -1194,9 +1192,9 @@ void Cost::RateRegister(const SCEV *Reg,
       !(isa<SCEVAddRecExpr>(Reg) &&
         (isa<SCEVUnknown>(cast<SCEVAddRecExpr>(Reg)->getStart()) ||
          isa<SCEVConstant>(cast<SCEVAddRecExpr>(Reg)->getStart()))))
-    ++SetupCost;
+    ++C.SetupCost;
 
-  NumIVMuls += isa<SCEVMulExpr>(Reg) &&
+  C.NumIVMuls += isa<SCEVMulExpr>(Reg) &&
                SE.hasComputableLoopEvolution(Reg, L);
 }
 
@@ -1229,9 +1227,9 @@ void Cost::RateFormula(const TargetTransformInfo &TTI,
                        SmallPtrSetImpl<const SCEV *> *LoserRegs) {
   assert(F.isCanonical(*L) && "Cost is accurate only for canonical formula");
   // Tally up the registers.
-  unsigned PrevAddRecCost = AddRecCost;
-  unsigned PrevNumRegs = NumRegs;
-  unsigned PrevNumBaseAdds = NumBaseAdds;
+  unsigned PrevAddRecCost = C.AddRecCost;
+  unsigned PrevNumRegs = C.NumRegs;
+  unsigned PrevNumBaseAdds = C.NumBaseAdds;
   if (const SCEV *ScaledReg = F.ScaledReg) {
     if (VisitedRegs.count(ScaledReg)) {
       Lose();
@@ -1251,45 +1249,51 @@ void Cost::RateFormula(const TargetTransformInfo &TTI,
       return;
   }
 
-  // Treat every new register that exceeds TTI.getNumberOfRegisters() - 1 as
-  // additional instruction (at least fill).
-  unsigned TTIRegNum = TTI.getNumberOfRegisters(false) - 1;
-  if (NumRegs > TTIRegNum) {
-    // Cost already exceeded TTIRegNum, then only newly added register can add
-    // new instructions.
-    if (PrevNumRegs > TTIRegNum)
-      Insns += (NumRegs - PrevNumRegs);
-    else
-      Insns += (NumRegs - TTIRegNum);
-  }
-
   // Determine how many (unfolded) adds we'll need inside the loop.
   size_t NumBaseParts = F.getNumRegs();
   if (NumBaseParts > 1)
     // Do not count the base and a possible second register if the target
     // allows to fold 2 registers.
-    NumBaseAdds +=
+    C.NumBaseAdds +=
         NumBaseParts - (1 + (F.Scale && isAMCompletelyFolded(TTI, LU, F)));
-  NumBaseAdds += (F.UnfoldedOffset != 0);
+  C.NumBaseAdds += (F.UnfoldedOffset != 0);
 
   // Accumulate non-free scaling amounts.
-  ScaleCost += getScalingFactorCost(TTI, LU, F, *L);
+  C.ScaleCost += getScalingFactorCost(TTI, LU, F, *L);
 
   // Tally up the non-zero immediates.
   for (const LSRFixup &Fixup : LU.Fixups) {
     int64_t O = Fixup.Offset;
     int64_t Offset = (uint64_t)O + F.BaseOffset;
     if (F.BaseGV)
-      ImmCost += 64; // Handle symbolic values conservatively.
+      C.ImmCost += 64; // Handle symbolic values conservatively.
                      // TODO: This should probably be the pointer size.
     else if (Offset != 0)
-      ImmCost += APInt(64, Offset, true).getMinSignedBits();
+      C.ImmCost += APInt(64, Offset, true).getMinSignedBits();
 
     // Check with target if this offset with this instruction is
     // specifically not supported.
     if ((isa<LoadInst>(Fixup.UserInst) || isa<StoreInst>(Fixup.UserInst)) &&
         !TTI.isFoldableMemAccessOffset(Fixup.UserInst, Offset))
-      NumBaseAdds++;
+      C.NumBaseAdds++;
+  }
+
+  // If we don't count instruction cost exit here.
+  if (!InsnsCost) {
+    assert(isValid() && "invalid cost");
+    return;
+  }
+
+  // Treat every new register that exceeds TTI.getNumberOfRegisters() - 1 as
+  // additional instruction (at least fill).
+  unsigned TTIRegNum = TTI.getNumberOfRegisters(false) - 1;
+  if (C.NumRegs > TTIRegNum) {
+    // Cost already exceeded TTIRegNum, then only newly added register can add
+    // new instructions.
+    if (PrevNumRegs > TTIRegNum)
+      C.Insns += (C.NumRegs - PrevNumRegs);
+    else
+      C.Insns += (C.NumRegs - TTIRegNum);
   }
 
   // If ICmpZero formula ends with not 0, it could not be replaced by
@@ -1302,55 +1306,54 @@ void Cost::RateFormula(const TargetTransformInfo &TTI,
   // For {-10, +, 1}:
   // i = i + 1;
   if (LU.Kind == LSRUse::ICmpZero && !F.hasZeroEnd())
-    Insns++;
+    C.Insns++;
   // Each new AddRec adds 1 instruction to calculation.
-  Insns += (AddRecCost - PrevAddRecCost);
+  C.Insns += (C.AddRecCost - PrevAddRecCost);
 
   // BaseAdds adds instructions for unfolded registers.
   if (LU.Kind != LSRUse::ICmpZero)
-    Insns += NumBaseAdds - PrevNumBaseAdds;
+    C.Insns += C.NumBaseAdds - PrevNumBaseAdds;
   assert(isValid() && "invalid cost");
 }
 
 /// Set this cost to a losing value.
 void Cost::Lose() {
-  Insns = ~0u;
-  NumRegs = ~0u;
-  AddRecCost = ~0u;
-  NumIVMuls = ~0u;
-  NumBaseAdds = ~0u;
-  ImmCost = ~0u;
-  SetupCost = ~0u;
-  ScaleCost = ~0u;
+  C.Insns = ~0u;
+  C.NumRegs = ~0u;
+  C.AddRecCost = ~0u;
+  C.NumIVMuls = ~0u;
+  C.NumBaseAdds = ~0u;
+  C.ImmCost = ~0u;
+  C.SetupCost = ~0u;
+  C.ScaleCost = ~0u;
 }
 
 /// Choose the lower cost.
-bool Cost::operator<(const Cost &Other) const {
-  if (InsnsCost && Insns != Other.Insns)
-    return Insns < Other.Insns;
-  return std::tie(NumRegs, AddRecCost, NumIVMuls, NumBaseAdds, ScaleCost,
-                  ImmCost, SetupCost) <
-         std::tie(Other.NumRegs, Other.AddRecCost, Other.NumIVMuls,
-                  Other.NumBaseAdds, Other.ScaleCost, Other.ImmCost,
-                  Other.SetupCost);
+bool Cost::isLess(Cost &Other, const TargetTransformInfo &TTI) {
+  if (InsnsCost.getNumOccurrences() > 0 && InsnsCost &&
+      C.Insns != Other.C.Insns)
+    return C.Insns < Other.C.Insns;
+  return TTI.isLSRCostLess(C, Other.C);
 }
 
 void Cost::print(raw_ostream &OS) const {
-  OS << Insns << " instruction" << (Insns == 1 ? " " : "s ");
-  OS << NumRegs << " reg" << (NumRegs == 1 ? "" : "s");
-  if (AddRecCost != 0)
-    OS << ", with addrec cost " << AddRecCost;
-  if (NumIVMuls != 0)
-    OS << ", plus " << NumIVMuls << " IV mul" << (NumIVMuls == 1 ? "" : "s");
-  if (NumBaseAdds != 0)
-    OS << ", plus " << NumBaseAdds << " base add"
-       << (NumBaseAdds == 1 ? "" : "s");
-  if (ScaleCost != 0)
-    OS << ", plus " << ScaleCost << " scale cost";
-  if (ImmCost != 0)
-    OS << ", plus " << ImmCost << " imm cost";
-  if (SetupCost != 0)
-    OS << ", plus " << SetupCost << " setup cost";
+  if (InsnsCost)
+    OS << C.Insns << " instruction" << (C.Insns == 1 ? " " : "s ");
+  OS << C.NumRegs << " reg" << (C.NumRegs == 1 ? "" : "s");
+  if (C.AddRecCost != 0)
+    OS << ", with addrec cost " << C.AddRecCost;
+  if (C.NumIVMuls != 0)
+    OS << ", plus " << C.NumIVMuls << " IV mul"
+       << (C.NumIVMuls == 1 ? "" : "s");
+  if (C.NumBaseAdds != 0)
+    OS << ", plus " << C.NumBaseAdds << " base add"
+       << (C.NumBaseAdds == 1 ? "" : "s");
+  if (C.ScaleCost != 0)
+    OS << ", plus " << C.ScaleCost << " scale cost";
+  if (C.ImmCost != 0)
+    OS << ", plus " << C.ImmCost << " imm cost";
+  if (C.SetupCost != 0)
+    OS << ", plus " << C.SetupCost << " setup cost";
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -4105,7 +4108,7 @@ void LSRInstance::FilterOutUndesirableDedicatedRegisters() {
         Cost CostBest;
         Regs.clear();
         CostBest.RateFormula(TTI, Best, Regs, VisitedRegs, L, SE, DT, LU);
-        if (CostF < CostBest)
+        if (CostF.isLess(CostBest, TTI))
           std::swap(F, Best);
         DEBUG(dbgs() << "  Filtering out formula "; F.print(dbgs());
               dbgs() << "\n"
@@ -4573,7 +4576,7 @@ void LSRInstance::SolveRecurse(SmallVectorImpl<const Formula *> &Solution,
     NewCost = CurCost;
     NewRegs = CurRegs;
     NewCost.RateFormula(TTI, F, NewRegs, VisitedRegs, L, SE, DT, LU);
-    if (NewCost < SolutionCost) {
+    if (NewCost.isLess(SolutionCost, TTI)) {
       Workspace.push_back(&F);
       if (Workspace.size() != Uses.size()) {
         SolveRecurse(Solution, SolutionCost, Workspace, NewCost,

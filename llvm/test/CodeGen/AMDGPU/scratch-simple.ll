@@ -12,8 +12,10 @@
 ; GCN-DAG: v_lshlrev_b32_e32 [[BYTES:v[0-9]+]], 2, v0
 ; GCN-DAG: v_and_b32_e32 [[CLAMP_IDX:v[0-9]+]], 0x1fc, [[BYTES]]
 
-; GCN-DAG: v_or_b32_e32 [[LO_OFF:v[0-9]+]], 0x200, [[CLAMP_IDX]]
-; GCN-DAG: v_or_b32_e32 [[HI_OFF:v[0-9]+]], 0x400, [[CLAMP_IDX]]
+; GCN-DAG: v_mov_b32_e32 [[C200:v[0-9]+]], 0x200
+; GCN-DAG: v_mov_b32_e32 [[C400:v[0-9]+]], 0x400
+; GCN-DAG: v_or_b32_e32 [[LO_OFF:v[0-9]+]], [[C200]], [[CLAMP_IDX]]
+; GCN-DAG: v_or_b32_e32 [[HI_OFF:v[0-9]+]], [[C400]], [[CLAMP_IDX]]
 
 ; GCN: buffer_load_dword {{v[0-9]+}}, [[LO_OFF]], {{s\[[0-9]+:[0-9]+\]}}, [[SWO]] offen
 ; GCN: buffer_load_dword {{v[0-9]+}}, [[HI_OFF]], {{s\[[0-9]+:[0-9]+\]}}, [[SWO]] offen

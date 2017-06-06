@@ -3,8 +3,8 @@
 
 ; CHECK-LABEL: name: debug_declare
 ; CHECK: stack:
-; CHECK:    - { id: {{.*}}, name: in.addr, offset: {{.*}}, size: {{.*}}, alignment: {{.*}}, di-variable: '!11',
-; CHECK-NEXT:   di-expression: '!12', di-location: '!13' }
+; CHECK:    - { id: {{.*}}, name: in.addr, type: default, offset: 0, size: {{.*}}, alignment: {{.*}}, 
+; CHECK-NEXT: callee-saved-register: '', di-variable: '!11', di-expression: '!12',
 ; CHECK: DBG_VALUE debug-use %0(s32), debug-use _, !11, !12, debug-location !13
 define void @debug_declare(i32 %in) #0 !dbg !7 {
 entry:

@@ -722,6 +722,10 @@ public:
 
   void clearIDTables();
 
+  /// Initialize this source manager suitably to replay the compilation
+  /// described by \p Old. Requires that \p Old outlive \p *this.
+  void initializeForReplay(const SourceManager &Old);
+
   DiagnosticsEngine &getDiagnostics() const { return Diag; }
 
   FileManager &getFileManager() const { return FileMgr; }

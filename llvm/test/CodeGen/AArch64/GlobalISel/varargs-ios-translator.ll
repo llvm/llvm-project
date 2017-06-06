@@ -4,7 +4,7 @@ define void @test_varargs_sentinel(i8* %list, i64, i64, i64, i64, i64, i64, i64,
                                    i32, ...) {
 ; CHECK-LABEL: name: test_varargs_sentinel
 ; CHECK: fixedStack:
-; CHECK:   - { id: [[VARARGS_SLOT:[0-9]+]], offset: 8
+; CHECK:   - { id: [[VARARGS_SLOT:[0-9]+]], type: default, offset: 8
 ; CHECK: body:
 ; CHECK:   [[LIST:%[0-9]+]] = COPY %x0
 ; CHECK:   [[VARARGS_AREA:%[0-9]+]] = ADDXri %fixed-stack.[[VARARGS_SLOT]], 0, 0

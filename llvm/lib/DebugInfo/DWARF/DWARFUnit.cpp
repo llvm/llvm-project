@@ -33,8 +33,9 @@ using namespace dwarf;
 
 void DWARFUnitSectionBase::parse(DWARFContext &C, const DWARFSection &Section) {
   parseImpl(C, Section, C.getDebugAbbrev(), &C.getRangeSection(),
-            C.getStringSection(), StringRef(), &C.getAddrSection(),
-            C.getLineSection().Data, C.isLittleEndian(), false);
+            C.getStringSection(), C.getStringOffsetSection(),
+            &C.getAddrSection(), C.getLineSection().Data, C.isLittleEndian(),
+            false);
 }
 
 void DWARFUnitSectionBase::parseDWO(DWARFContext &C,
@@ -48,19 +49,14 @@ void DWARFUnitSectionBase::parseDWO(DWARFContext &C,
 
 DWARFUnit::DWARFUnit(DWARFContext &DC, const DWARFSection &Section,
                      const DWARFDebugAbbrev *DA, const DWARFSection *RS,
-                     StringRef SS, StringRef SOS, const DWARFSection *AOS,
-                     StringRef LS, bool LE, bool IsDWO,
+                     StringRef SS, const DWARFSection &SOS,
+                     const DWARFSection *AOS, StringRef LS, bool LE, bool IsDWO,
                      const DWARFUnitSectionBase &UnitSection,
                      const DWARFUnitIndex::Entry *IndexEntry)
     : Context(DC), InfoSection(Section), Abbrev(DA), RangeSection(RS),
-      LineSection(LS), StringSection(SS), StringOffsetSection([&]() {
-        if (IndexEntry)
-          if (const auto *C = IndexEntry->getOffset(DW_SECT_STR_OFFSETS))
-            return SOS.slice(C->Offset, C->Offset + C->Length);
-        return SOS;
-      }()),
-      AddrOffsetSection(AOS), isLittleEndian(LE), isDWO(IsDWO),
-      UnitSection(UnitSection), IndexEntry(IndexEntry) {
+      LineSection(LS), StringSection(SS), StringOffsetSection(SOS),
+      StringOffsetSectionBase(0), AddrOffsetSection(AOS), isLittleEndian(LE),
+      isDWO(IsDWO), UnitSection(UnitSection), IndexEntry(IndexEntry) {
   clear();
 }
 
@@ -77,15 +73,23 @@ bool DWARFUnit::getAddrOffsetSectionItem(uint32_t Index,
 }
 
 bool DWARFUnit::getStringOffsetSectionItem(uint32_t Index,
-                                                  uint32_t &Result) const {
-  // FIXME: string offset section entries are 8-byte for DWARF64.
-  const uint32_t ItemSize = 4;
-  uint32_t Offset = Index * ItemSize;
-  if (StringOffsetSection.size() < Offset + ItemSize)
+                                           uint64_t &Result) const {
+  unsigned ItemSize = getFormat() == DWARF64 ? 8 : 4;
+  uint32_t Offset = StringOffsetSectionBase + Index * ItemSize;
+  if (StringOffsetSection.Data.size() < Offset + ItemSize)
     return false;
-  DataExtractor DA(StringOffsetSection, isLittleEndian, 0);
-  Result = DA.getU32(&Offset);
+  DataExtractor DA(StringOffsetSection.Data, isLittleEndian, 0);
+  Result = ItemSize == 4 ? DA.getU32(&Offset) : DA.getU64(&Offset);
   return true;
+}
+
+uint64_t DWARFUnit::getStringOffsetSectionRelocation(uint32_t Index) const {
+  unsigned ItemSize = getFormat() == DWARF64 ? 8 : 4;
+  uint64_t ByteOffset = StringOffsetSectionBase + Index * ItemSize;
+  RelocAddrMap::const_iterator AI = getStringOffsetsRelocMap().find(ByteOffset);
+  if (AI != getStringOffsetsRelocMap().end())
+    return AI->second.Value;
+  return 0;
 }
 
 bool DWARFUnit::extractImpl(DataExtractor debug_info, uint32_t *offset_ptr) {
@@ -118,6 +122,9 @@ bool DWARFUnit::extractImpl(DataExtractor debug_info, uint32_t *offset_ptr) {
 
   if (!LengthOK || !VersionOK || !AddrSizeOK)
     return false;
+
+  // Keep track of the highest DWARF version we encounter across all units.
+  Context.setMaxVersionIfGreater(Version);
 
   Abbrevs = Abbrev->getAbbreviationDeclarationSet(AbbrOffset);
   return Abbrevs != nullptr;
@@ -242,6 +249,17 @@ size_t DWARFUnit::extractDIEsIfNeeded(bool CUDieOnly) {
       setBaseAddress(*BaseAddr);
     AddrOffsetSectionBase = toSectionOffset(UnitDie.find(DW_AT_GNU_addr_base), 0);
     RangeSectionBase = toSectionOffset(UnitDie.find(DW_AT_rnglists_base), 0);
+
+    // In general, we derive the offset of the unit's contibution to the
+    // debug_str_offsets{.dwo} section from the unit DIE's
+    // DW_AT_str_offsets_base attribute. In dwp files we add to it the offset
+    // we get from the index table.
+    StringOffsetSectionBase =
+        toSectionOffset(UnitDie.find(DW_AT_str_offsets_base), 0);
+    if (IndexEntry)
+      if (const auto *C = IndexEntry->getOffset(DW_SECT_STR_OFFSETS))
+        StringOffsetSectionBase += C->Offset;
+
     // Don't fall back to DW_AT_GNU_ranges_base: it should be ignored for
     // skeleton CU DIE, so that DWARF users not aware of it are not broken.
   }

@@ -5,13 +5,13 @@
 // RUN:     --sysroot=%S/Inputs/baremetal_arm \
 // RUN:   | FileCheck --check-prefix=CHECK-V6M-C %s
 // CHECK-V6M-C: "[[PREFIX_DIR:.*]]{{[/\\]+}}{{[^/^\\]+}}{{[/\\]+}}clang{{.*}}" "-cc1" "-triple" "thumbv6m-none--eabi"
-// CHECK-V6M-C-SAME: "-resource-dir" "[[PREFIX_DIR]]{{[/\\]+}}lib{{(64)?}}{{[/\\]+}}clang{{[/\\]+}}[[VERSION:[^"]*]]"
+// CHECK-V6M-C-SAME: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
 // CHECK-V6M-C-SAME: "-isysroot" "[[SYSROOT:[^"]*]]"
 // CHECK-V6M-C-SAME: "-internal-isystem" "[[SYSROOT]]{{[/\\]+}}include{{[/\\]+}}c++{{[/\\]+}}v1"
 // CHECk-V6M-C-SAME: "-internal-isystem" "[[SYSROOT]]{{[/\\]+}}include"
 // CHECK-V6M-C-SAME: "-x" "c++" "{{.*}}baremetal.cpp"
 // CHECK-V6M-C-NEXT: "{{[^"]*}}ld.lld" "{{.*}}.o" "-Bstatic"
-// CHECK-V6M-C-SAME: "-L[[PREFIX_DIR]]{{[/\\]+}}lib{{(64)?}}{{[/\\]+}}clang{{[/\\]+}}[[VERSION]]{{[/\\]+}}lib{{[/\\]+}}baremetal"
+// CHECK-V6M-C-SAME: "-L[[RESOURCE_DIR:[^"]+]]{{[/\\]+}}lib{{[/\\]+}}baremetal"
 // CHECK-V6M-C-SAME: "-T" "semihosted.lds" "-Lsome{{[/\\]+}}directory{{[/\\]+}}user{{[/\\]+}}asked{{[/\\]+}}for"
 // CHECK-V6M-C-SAME: "-lc" "-lm" "-lclang_rt.builtins-armv6m.a"
 // CHECK-V6M-C-SAME: "-o" "{{.*}}.o"

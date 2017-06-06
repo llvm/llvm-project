@@ -658,6 +658,9 @@ val is_opaque : lltype -> bool
 
 (** {7 Operations on pointer, vector, and array types} *)
 
+(** [subtypes ty] returns [ty]'s subtypes *)
+val subtypes : lltype -> lltype array
+
 (** [array_type ty n] returns the array type containing [n] elements of type
     [ty]. See the method [llvm::ArrayType::get]. *)
 val array_type : lltype -> int -> lltype

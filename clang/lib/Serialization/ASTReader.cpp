@@ -4918,6 +4918,7 @@ ASTReader::ReadSubmoduleBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
         }
 
         CurrentModule->setASTFile(F.File);
+        CurrentModule->PresumedModuleMapFile = F.ModuleMapPath;
       }
 
       CurrentModule->Kind = ModuleKind;
@@ -5211,6 +5212,8 @@ bool ASTReader::ParseHeaderSearchOptions(const RecordData &Record,
   HSOpts.ModuleCachePath = ReadString(Record, Idx);
   HSOpts.ModuleUserBuildPath = ReadString(Record, Idx);
   HSOpts.DisableModuleHash = Record[Idx++];
+  HSOpts.ImplicitModuleMaps = Record[Idx++];
+  HSOpts.ModuleMapFileHomeIsCwd = Record[Idx++];
   HSOpts.UseBuiltinIncludes = Record[Idx++];
   HSOpts.UseStandardSystemIncludes = Record[Idx++];
   HSOpts.UseStandardCXXIncludes = Record[Idx++];

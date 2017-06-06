@@ -292,6 +292,9 @@ public:
       return std::error_code();
     }
 
+  /// Maps a debug section name to a standard DWARF section name.
+  virtual StringRef mapDebugSectionName(StringRef Name) const { return Name; }
+
   /// True if this is a relocatable object (.o/.obj).
   virtual bool isRelocatableObject() const = 0;
 

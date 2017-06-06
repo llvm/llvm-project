@@ -787,7 +787,7 @@ public:
 
   /// \returns VGPR allocation granularity supported by the subtarget.
   unsigned getVGPRAllocGranule() const {
-    return AMDGPU::IsaInfo::getVGPRAllocGranule(getFeatureBits());;
+    return AMDGPU::IsaInfo::getVGPRAllocGranule(getFeatureBits());
   }
 
   /// \returns VGPR encoding granularity supported by the subtarget.

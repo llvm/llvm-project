@@ -1601,6 +1601,8 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, ASTContext &Context,
   AddString(HSOpts.ModuleCachePath, Record);
   AddString(HSOpts.ModuleUserBuildPath, Record);
   Record.push_back(HSOpts.DisableModuleHash);
+  Record.push_back(HSOpts.ImplicitModuleMaps);
+  Record.push_back(HSOpts.ModuleMapFileHomeIsCwd);
   Record.push_back(HSOpts.UseBuiltinIncludes);
   Record.push_back(HSOpts.UseStandardSystemIncludes);
   Record.push_back(HSOpts.UseStandardCXXIncludes);

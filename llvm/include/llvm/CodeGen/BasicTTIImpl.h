@@ -117,6 +117,10 @@ public:
     return getTLI()->isLegalAddressingMode(DL, AM, Ty, AddrSpace);
   }
 
+  bool isLSRCostLess(TTI::LSRCost C1, TTI::LSRCost C2) {
+    return TargetTransformInfoImplBase::isLSRCostLess(C1, C2);
+  }
+
   int getScalingFactorCost(Type *Ty, GlobalValue *BaseGV, int64_t BaseOffset,
                            bool HasBaseReg, int64_t Scale, unsigned AddrSpace) {
     TargetLoweringBase::AddrMode AM;

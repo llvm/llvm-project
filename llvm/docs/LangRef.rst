@@ -6691,15 +6691,14 @@ Semantics:
 The value produced is ``op1`` \* 2\ :sup:`op2` mod 2\ :sup:`n`,
 where ``n`` is the width of the result. If ``op2`` is (statically or
 dynamically) equal to or larger than the number of bits in
-``op1``, the result is undefined. If the arguments are vectors, each
-vector element of ``op1`` is shifted by the corresponding shift amount
-in ``op2``.
+``op1``, this instruction returns a :ref:`poison value <poisonvalues>`.
+If the arguments are vectors, each vector element of ``op1`` is shifted
+by the corresponding shift amount in ``op2``.
 
-If the ``nuw`` keyword is present, then the shift produces a :ref:`poison
-value <poisonvalues>` if it shifts out any non-zero bits. If the
-``nsw`` keyword is present, then the shift produces a :ref:`poison
-value <poisonvalues>` if it shifts out any bits that disagree with the
-resultant sign bit.
+If the ``nuw`` keyword is present, then the shift produces a poison
+value if it shifts out any non-zero bits.
+If the ``nsw`` keyword is present, then the shift produces a poison
+value it shifts out any bits that disagree with the resultant sign bit.
 
 Example:
 """"""""
@@ -6742,13 +6741,12 @@ Semantics:
 This instruction always performs a logical shift right operation. The
 most significant bits of the result will be filled with zero bits after
 the shift. If ``op2`` is (statically or dynamically) equal to or larger
-than the number of bits in ``op1``, the result is undefined. If the
-arguments are vectors, each vector element of ``op1`` is shifted by the
-corresponding shift amount in ``op2``.
+than the number of bits in ``op1``, this instruction returns a :ref:`poison
+value <poisonvalues>`. If the arguments are vectors, each vector element
+of ``op1`` is shifted by the corresponding shift amount in ``op2``.
 
 If the ``exact`` keyword is present, the result value of the ``lshr`` is
-a :ref:`poison value <poisonvalues>` if any of the bits shifted out are
-non-zero.
+a poison value if any of the bits shifted out are non-zero.
 
 Example:
 """"""""
@@ -6793,13 +6791,12 @@ Semantics:
 This instruction always performs an arithmetic shift right operation,
 The most significant bits of the result will be filled with the sign bit
 of ``op1``. If ``op2`` is (statically or dynamically) equal to or larger
-than the number of bits in ``op1``, the result is undefined. If the
-arguments are vectors, each vector element of ``op1`` is shifted by the
-corresponding shift amount in ``op2``.
+than the number of bits in ``op1``, this instruction returns a :ref:`poison
+value <poisonvalues>`. If the arguments are vectors, each vector element
+of ``op1`` is shifted by the corresponding shift amount in ``op2``.
 
 If the ``exact`` keyword is present, the result value of the ``ashr`` is
-a :ref:`poison value <poisonvalues>` if any of the bits shifted out are
-non-zero.
+a poison value if any of the bits shifted out are non-zero.
 
 Example:
 """"""""

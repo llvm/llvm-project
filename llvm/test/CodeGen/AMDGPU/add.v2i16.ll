@@ -66,7 +66,7 @@ define amdgpu_kernel void @s_test_add_v2i16_kernarg(<2 x i16> addrspace(1)* %out
 
 ; VI-DAG: v_add_u16_e32 v{{[0-9]+}}, 0x7b, v{{[0-9]+}}
 ; VI-DAG: v_mov_b32_e32 v[[SCONST:[0-9]+]], 0x1c8
-; VI-DAG: v_add_u16_sdwa v{{[0-9]+}}, v[[SCONST]], v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; VI-DAG: v_add_u16_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v[[SCONST]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 define amdgpu_kernel void @v_test_add_v2i16_constant(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in0) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.out = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %out, i32 %tid
@@ -84,7 +84,7 @@ define amdgpu_kernel void @v_test_add_v2i16_constant(<2 x i16> addrspace(1)* %ou
 
 ; VI-DAG: v_add_u16_e32 v{{[0-9]+}}, 0xfffffcb3, v{{[0-9]+}}
 ; VI-DAG: v_mov_b32_e32 v[[SCONST:[0-9]+]], 0xfffffc21
-; VI-DAG: v_add_u16_sdwa v{{[0-9]+}}, v[[SCONST]], v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; VI-DAG: v_add_u16_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v[[SCONST]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 define amdgpu_kernel void @v_test_add_v2i16_neg_constant(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in0) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.out = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %out, i32 %tid
@@ -101,7 +101,7 @@ define amdgpu_kernel void @v_test_add_v2i16_neg_constant(<2 x i16> addrspace(1)*
 ; VI: v_mov_b32_e32 v[[SCONST:[0-9]+]], -1
 ; VI: flat_load_ushort [[LOAD0:v[0-9]+]]
 ; VI: flat_load_ushort [[LOAD1:v[0-9]+]]
-; VI-DAG: v_add_u16_sdwa v{{[0-9]+}}, v[[SCONST]], [[LOAD0]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; VI-DAG: v_add_u16_sdwa v{{[0-9]+}}, [[LOAD0]], v[[SCONST]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; VI-DAG: v_add_u16_e32 v{{[0-9]+}}, -1, [[LOAD1]]
 ; VI: v_or_b32_e32
 define amdgpu_kernel void @v_test_add_v2i16_inline_neg1(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in0) #1 {
@@ -140,7 +140,7 @@ define amdgpu_kernel void @v_test_add_v2i16_inline_lo_zero_hi(<2 x i16> addrspac
 
 ; VI-NOT: v_add_u16
 ; VI: v_mov_b32_e32 v[[K:[0-9]+]], 0x3f80
-; VI: v_add_u16_sdwa v{{[0-9]+}}, v[[K]], v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; VI: v_add_u16_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v[[K]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; VI-NOT: v_add_u16
 ; VI: v_or_b32_e32
 define amdgpu_kernel void @v_test_add_v2i16_inline_fp_split(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in0) #1 {

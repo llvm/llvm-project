@@ -226,54 +226,62 @@ class TwinePrinter:
 
     return s
 
+  def is_twine_kind(self, kind, expected):
+    if not kind.endswith(expected):
+      return False
+    # apparently some GDB versions add the NodeKind:: namespace
+    # (happens for me on GDB 7.11)
+    return kind in ('llvm::Twine::' + expected,
+                    'llvm::Twine::NodeKind::' + expected)
+
   def string_from_child(self, child, kind):
     '''Return the string representation of the Twine::Child child.'''
 
-    if kind in ('llvm::Twine::EmptyKind', 'llvm::Twine::NullKind'):
+    if self.is_twine_kind(kind, 'EmptyKind') or self.is_twine_kind(kind, 'NullKind'):
       return ''
 
-    if kind == 'llvm::Twine::TwineKind':
+    if self.is_twine_kind(kind, 'TwineKind'):
       return self.string_from_twine_object(child['twine'].dereference())
 
-    if kind == 'llvm::Twine::CStringKind':
+    if self.is_twine_kind(kind, 'CStringKind'):
       return child['cString'].string()
 
-    if kind == 'llvm::Twine::StdStringKind':
+    if self.is_twine_kind(kind, 'StdStringKind'):
       val = child['stdString'].dereference()
       return self.string_from_pretty_printer_lookup(val)
 
-    if kind == 'llvm::Twine::StringRefKind':
+    if self.is_twine_kind(kind, 'StringRefKind'):
       val = child['stringRef'].dereference()
       pp = StringRefPrinter(val)
       return pp.to_string()
 
-    if kind == 'llvm::Twine::SmallStringKind':
+    if self.is_twine_kind(kind, 'SmallStringKind'):
       val = child['smallString'].dereference()
       pp = SmallStringPrinter(val)
       return pp.to_string()
 
-    if kind == 'llvm::Twine::CharKind':
+    if self.is_twine_kind(kind, 'CharKind'):
       return chr(child['character'])
 
-    if kind == 'llvm::Twine::DecUIKind':
+    if self.is_twine_kind(kind, 'DecUIKind'):
       return str(child['decUI'])
 
-    if kind == 'llvm::Twine::DecIKind':
+    if self.is_twine_kind(kind, 'DecIKind'):
       return str(child['decI'])
 
-    if kind == 'llvm::Twine::DecULKind':
+    if self.is_twine_kind(kind, 'DecULKind'):
       return str(child['decUL'].dereference())
 
-    if kind == 'llvm::Twine::DecLKind':
+    if self.is_twine_kind(kind, 'DecLKind'):
       return str(child['decL'].dereference())
 
-    if kind == 'llvm::Twine::DecULLKind':
+    if self.is_twine_kind(kind, 'DecULLKind'):
       return str(child['decULL'].dereference())
 
-    if kind == 'llvm::Twine::DecLLKind':
+    if self.is_twine_kind(kind, 'DecLLKind'):
       return str(child['decLL'].dereference())
 
-    if kind == 'llvm::Twine::UHexKind':
+    if self.is_twine_kind(kind, 'UHexKind'):
       val = child['uHex'].dereference()
       return hex(int(val))
 
