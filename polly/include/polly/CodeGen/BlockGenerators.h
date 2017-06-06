@@ -795,10 +795,17 @@ public:
                 __isl_keep isl_id_to_ast_expr *IdToAstExp);
 
 private:
-  /// A map from old to new blocks in the region.
-  DenseMap<BasicBlock *, BasicBlock *> BlockMap;
+  /// A map from old to the first new block in the region, that was created to
+  /// model the old basic block.
+  DenseMap<BasicBlock *, BasicBlock *> StartBlockMap;
 
-  /// The "BBMaps" for the whole region (one for each block).
+  /// A map from old to the last new block in the region, that was created to
+  /// model the old basic block.
+  DenseMap<BasicBlock *, BasicBlock *> EndBlockMap;
+
+  /// The "BBMaps" for the whole region (one for each block). In case a basic
+  /// block is code generated to multiple basic blocks (e.g., for partial
+  /// writes), the StartBasic is used as index for the RegionMap.
   DenseMap<BasicBlock *, ValueMapT> RegionMaps;
 
   /// Mapping to remember PHI nodes that still need incoming values.

@@ -15,6 +15,7 @@
 #ifndef LLVM_IR_IRBUILDER_H
 #define LLVM_IR_IRBUILDER_H
 
+#include "llvm-c/Types.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/StringRef.h"
@@ -41,11 +42,10 @@
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/Casting.h"
-#include "llvm-c/Types.h"
+#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
-#include <algorithm>
 #include <functional>
 
 namespace llvm {
@@ -434,6 +434,28 @@ public:
                          MDNode *TBAAStructTag = nullptr,
                          MDNode *ScopeTag = nullptr,
                          MDNode *NoAliasTag = nullptr);
+
+  /// \brief Create and insert an atomic memcpy between the specified
+  /// pointers.
+  ///
+  /// If the pointers aren't i8*, they will be converted.  If a TBAA tag is
+  /// specified, it will be added to the instruction. Likewise with alias.scope
+  /// and noalias tags.
+  CallInst *CreateElementAtomicMemCpy(
+      Value *Dst, Value *Src, uint64_t NumElements, uint32_t ElementSize,
+      MDNode *TBAATag = nullptr, MDNode *TBAAStructTag = nullptr,
+      MDNode *ScopeTag = nullptr, MDNode *NoAliasTag = nullptr) {
+    return CreateElementAtomicMemCpy(Dst, Src, getInt64(NumElements),
+                                     ElementSize, TBAATag, TBAAStructTag,
+                                     ScopeTag, NoAliasTag);
+  }
+
+  CallInst *CreateElementAtomicMemCpy(Value *Dst, Value *Src,
+                                      Value *NumElements, uint32_t ElementSize,
+                                      MDNode *TBAATag = nullptr,
+                                      MDNode *TBAAStructTag = nullptr,
+                                      MDNode *ScopeTag = nullptr,
+                                      MDNode *NoAliasTag = nullptr);
 
   /// \brief Create and insert a memmove between the specified
   /// pointers.

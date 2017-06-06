@@ -14,7 +14,6 @@
 #include "llvm/Support/YAMLTraits.h"
 #include "gtest/gtest.h"
 
-
 using llvm::yaml::Input;
 using llvm::yaml::Output;
 using llvm::yaml::IO;

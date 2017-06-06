@@ -19,8 +19,8 @@
 #include "llvm/Analysis/DivergenceAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryDependenceAnalysis.h"
-#include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstVisitor.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 

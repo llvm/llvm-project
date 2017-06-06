@@ -15,8 +15,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PPC.h"
 #include "MCTargetDesc/PPCPredicates.h"
+#include "PPC.h"
 #include "PPCInstrBuilder.h"
 #include "PPCInstrInfo.h"
 #include "PPCSubtarget.h"

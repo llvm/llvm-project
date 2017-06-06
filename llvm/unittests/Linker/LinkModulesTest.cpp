@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm-c/Core.h"
+#include "llvm-c/Linker.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/BasicBlock.h"
@@ -16,8 +18,6 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Linker/Linker.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm-c/Core.h"
-#include "llvm-c/Linker.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;

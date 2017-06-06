@@ -7,10 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/Config/config.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/Config/config.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/StringSaver.h"

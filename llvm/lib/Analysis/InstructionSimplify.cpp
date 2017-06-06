@@ -3884,8 +3884,11 @@ static Value *SimplifyGEPInst(Type *SrcTy, ArrayRef<Value *> Ops,
   if (!all_of(Ops, [](Value *V) { return isa<Constant>(V); }))
     return nullptr;
 
-  return ConstantExpr::getGetElementPtr(SrcTy, cast<Constant>(Ops[0]),
-                                        Ops.slice(1));
+  auto *CE = ConstantExpr::getGetElementPtr(SrcTy, cast<Constant>(Ops[0]),
+                                            Ops.slice(1));
+  if (auto *CEFolded = ConstantFoldConstant(CE, Q.DL))
+    return CEFolded;
+  return CE;
 }
 
 Value *llvm::SimplifyGEPInst(Type *SrcTy, ArrayRef<Value *> Ops,

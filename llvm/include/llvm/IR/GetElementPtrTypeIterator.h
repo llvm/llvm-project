@@ -21,9 +21,9 @@
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/User.h"
 #include "llvm/Support/Casting.h"
-#include <cassert> 
+#include <cassert>
 #include <cstddef>
-#include <cstdint> 
+#include <cstdint>
 #include <iterator>
 
 namespace llvm {

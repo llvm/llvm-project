@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "gtest/gtest.h"
 #include "llvm/ADT/PointerEmbeddedInt.h"
+#include "gtest/gtest.h"
 using namespace llvm;
 
 namespace {

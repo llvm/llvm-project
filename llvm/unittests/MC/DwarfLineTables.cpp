@@ -7,12 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/Dwarf.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/Support/Dwarf.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "gtest/gtest.h"

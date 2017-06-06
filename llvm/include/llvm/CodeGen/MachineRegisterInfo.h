@@ -18,9 +18,9 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IndexedMap.h"
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/CodeGen/GlobalISel/RegisterBank.h"
 #include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -30,13 +30,13 @@
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/Target/TargetRegisterInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
-#include <vector>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
 #include <memory>
 #include <utility>
+#include <vector>
 
 namespace llvm {
 

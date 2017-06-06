@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "NVPTX.h"
 #include "MCTargetDesc/NVPTXBaseInfo.h"
+#include "NVPTX.h"
 #include "NVPTXUtilities.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/Constants.h"

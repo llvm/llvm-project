@@ -14,10 +14,10 @@
 #ifndef LLVM_EXECUTIONENGINE_RTDYLDMEMORYMANAGER_H
 #define LLVM_EXECUTIONENGINE_RTDYLDMEMORYMANAGER_H
 
+#include "llvm-c/ExecutionEngine.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/RuntimeDyld.h"
 #include "llvm/Support/CBindingWrapping.h"
-#include "llvm-c/ExecutionEngine.h"
 #include <cstddef>
 #include <cstdint>
 #include <string>

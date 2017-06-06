@@ -414,6 +414,8 @@ bool X86FastISel::X86FastEmitLoad(EVT VT, X86AddressMode &AM,
     assert(HasAVX);
     if (IsNonTemporal && Alignment >= 32 && HasAVX2)
       Opc = HasVLX ? X86::VMOVNTDQAZ256rm : X86::VMOVNTDQAYrm;
+    else if (IsNonTemporal && Alignment >= 16)
+      return false; // Force split for X86::VMOVNTDQArm
     else if (Alignment >= 32)
       Opc = HasVLX ? X86::VMOVAPSZ256rm : X86::VMOVAPSYrm;
     else
@@ -424,6 +426,8 @@ bool X86FastISel::X86FastEmitLoad(EVT VT, X86AddressMode &AM,
     assert(HasAVX);
     if (IsNonTemporal && Alignment >= 32 && HasAVX2)
       Opc = X86::VMOVNTDQAYrm;
+    else if (IsNonTemporal && Alignment >= 16)
+      return false; // Force split for X86::VMOVNTDQArm
     else if (Alignment >= 32)
       Opc = HasVLX ? X86::VMOVAPDZ256rm : X86::VMOVAPDYrm;
     else
@@ -437,6 +441,8 @@ bool X86FastISel::X86FastEmitLoad(EVT VT, X86AddressMode &AM,
     assert(HasAVX);
     if (IsNonTemporal && Alignment >= 32 && HasAVX2)
       Opc = X86::VMOVNTDQAYrm;
+    else if (IsNonTemporal && Alignment >= 16)
+      return false; // Force split for X86::VMOVNTDQArm
     else if (Alignment >= 32)
       Opc = HasVLX ? X86::VMOVDQA64Z256rm : X86::VMOVDQAYrm;
     else

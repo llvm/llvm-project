@@ -11,10 +11,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MipsSEFrameLowering.h"
 #include "MCTargetDesc/MipsABIInfo.h"
 #include "MipsMachineFunction.h"
 #include "MipsRegisterInfo.h"
-#include "MipsSEFrameLowering.h"
 #include "MipsSEInstrInfo.h"
 #include "MipsSubtarget.h"
 #include "llvm/ADT/BitVector.h"

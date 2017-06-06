@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AMDGPU.h"
 #include "AMDGPUTargetStreamer.h"
+#include "AMDGPU.h"
 #include "SIDefines.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "Utils/AMDKernelCodeTUtils.h"

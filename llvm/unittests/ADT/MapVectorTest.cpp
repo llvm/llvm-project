@@ -7,9 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "gtest/gtest.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/iterator_range.h"
+#include "gtest/gtest.h"
 #include <utility>
 
 using namespace llvm;

@@ -18,8 +18,8 @@
 
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/ScalarEvolution.h"
-#include "llvm/Transforms/Utils/ValueMapper.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
+#include "llvm/Transforms/Utils/ValueMapper.h"
 
 namespace llvm {
 

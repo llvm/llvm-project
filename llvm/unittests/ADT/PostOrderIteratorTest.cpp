@@ -6,10 +6,10 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-#include "gtest/gtest.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
+#include "gtest/gtest.h"
 using namespace llvm;
 
 namespace {

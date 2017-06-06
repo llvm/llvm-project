@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CodeGen/Passes.h"
 #include "AllocationOrder.h"
 #include "LiveDebugVariables.h"
 #include "RegAllocBase.h"
@@ -28,6 +27,7 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/RegAllocRegistry.h"
 #include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/PassAnalysisSupport.h"

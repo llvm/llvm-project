@@ -682,18 +682,24 @@ bool JSONImporter::importArrays(Scop &S, Json::Value &JScop) {
   for (auto &SAI : S.arrays()) {
     if (!SAI->isArrayKind())
       continue;
-    if (ArrayIdx + 1 > Arrays.size())
+    if (ArrayIdx + 1 > Arrays.size()) {
+      errs() << "Not enough array entries in JScop file.\n";
       return false;
-    if (!areArraysEqual(SAI, Arrays[ArrayIdx]))
+    }
+    if (!areArraysEqual(SAI, Arrays[ArrayIdx])) {
+      errs() << "No match for array '" << SAI->getName() << "' in JScop.\n";
       return false;
+    }
     ArrayIdx++;
   }
 
   for (; ArrayIdx < Arrays.size(); ArrayIdx++) {
     auto *ElementType = parseTextType(Arrays[ArrayIdx]["type"].asCString(),
                                       S.getSE()->getContext());
-    if (!ElementType)
+    if (!ElementType) {
+      errs() << "Error while parsing element type for new array.\n";
       return false;
+    }
     std::vector<unsigned> DimSizes;
     for (unsigned i = 0; i < Arrays[ArrayIdx]["sizes"].size(); i++)
       DimSizes.push_back(std::stoi(Arrays[ArrayIdx]["sizes"][i].asCString()));

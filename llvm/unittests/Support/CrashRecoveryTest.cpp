@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/CrashRecoveryContext.h"
 #include "gtest/gtest.h"
 
 #ifdef LLVM_ON_WIN32

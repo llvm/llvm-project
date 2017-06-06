@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "gtest/gtest.h"
 #include "llvm/ADT/FoldingSet.h"
+#include "gtest/gtest.h"
 #include <string>
 
 using namespace llvm;

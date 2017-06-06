@@ -28,8 +28,8 @@
 #include "llvm/Support/Mutex.h"
 #include "llvm/Support/SwapByteOrder.h"
 #include <map>
-#include <unordered_map>
 #include <system_error>
+#include <unordered_map>
 
 using namespace llvm;
 using namespace llvm::object;

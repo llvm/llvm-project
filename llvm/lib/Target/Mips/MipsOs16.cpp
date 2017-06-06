@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/IR/Instructions.h"
 #include "Mips.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"

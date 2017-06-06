@@ -10,11 +10,11 @@
 #ifndef LLVM_DEBUGINFO_DWARF_DWARFUNIT_H
 #define LLVM_DEBUGINFO_DWARF_DWARFUNIT_H
 
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/ADT/Optional.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugInfoEntry.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugRangeList.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
@@ -29,9 +29,9 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <map>
 #include <memory>
 #include <vector>
-#include <map>
 
 namespace llvm {
 

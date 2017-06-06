@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/MC/MCContext.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
@@ -14,7 +15,6 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCCodeView.h"
-#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFragment.h"
@@ -31,15 +31,15 @@
 #include "llvm/MC/MCSymbolMachO.h"
 #include "llvm/MC/MCSymbolWasm.h"
 #include "llvm/MC/SectionKind.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/COFF.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ELF.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdlib>
 #include <tuple>

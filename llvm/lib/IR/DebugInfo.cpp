@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/None.h"
@@ -20,7 +21,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"

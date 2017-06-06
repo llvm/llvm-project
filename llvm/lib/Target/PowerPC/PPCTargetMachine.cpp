@@ -11,11 +11,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "PPCTargetMachine.h"
 #include "MCTargetDesc/PPCMCTargetDesc.h"
 #include "PPC.h"
 #include "PPCSubtarget.h"
 #include "PPCTargetObjectFile.h"
-#include "PPCTargetMachine.h"
 #include "PPCTargetTransformInfo.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"

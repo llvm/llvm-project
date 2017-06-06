@@ -21,7 +21,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/Utils/UnrollLoop.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/LoopIterator.h"
@@ -37,6 +36,7 @@
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
+#include "llvm/Transforms/Utils/UnrollLoop.h"
 #include <algorithm>
 
 using namespace llvm;

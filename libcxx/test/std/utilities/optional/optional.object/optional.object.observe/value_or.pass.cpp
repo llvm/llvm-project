@@ -10,7 +10,7 @@
 // UNSUPPORTED: c++98, c++03, c++11, c++14
 // <optional>
 
-// template <class U> T optional<T>::value_or(U&& v) &&;
+// template <class U> constexpr T optional<T>::value_or(U&& v) &&;
 
 #include <optional>
 #include <type_traits>
@@ -26,22 +26,22 @@ struct Y
 {
     int i_;
 
-    Y(int i) : i_(i) {}
+    constexpr Y(int i) : i_(i) {}
 };
 
 struct X
 {
     int i_;
 
-    X(int i) : i_(i) {}
-    X(X&& x) : i_(x.i_) {x.i_ = 0;}
-    X(const Y& y) : i_(y.i_) {}
-    X(Y&& y) : i_(y.i_+1) {}
+    constexpr X(int i) : i_(i) {}
+    constexpr X(X&& x) : i_(x.i_) {x.i_ = 0;}
+    constexpr X(const Y& y) : i_(y.i_) {}
+    constexpr X(Y&& y) : i_(y.i_+1) {}
     friend constexpr bool operator==(const X& x, const X& y)
         {return x.i_ == y.i_;}
 };
 
-int main()
+constexpr int test()
 {
     {
         optional<X> opt(in_place, 2);
@@ -65,4 +65,10 @@ int main()
         assert(std::move(opt).value_or(Y(3)) == 4);
         assert(!opt);
     }
+    return 0;
+}
+
+int main()
+{
+    static_assert(test() == 0);
 }

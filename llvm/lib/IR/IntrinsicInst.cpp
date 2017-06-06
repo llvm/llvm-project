@@ -21,8 +21,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Metadata.h"

@@ -21,9 +21,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PPCInstrInfo.h"
 #include "PPC.h"
 #include "PPCInstrBuilder.h"
+#include "PPCInstrInfo.h"
 #include "PPCTargetMachine.h"
 #include "llvm/CodeGen/LiveIntervalAnalysis.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"

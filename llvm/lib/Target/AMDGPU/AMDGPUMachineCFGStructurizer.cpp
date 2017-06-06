@@ -12,8 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
-#include "SIInstrInfo.h"
 #include "AMDGPUSubtarget.h"
+#include "SIInstrInfo.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SetVector.h"

@@ -14,8 +14,8 @@
 #ifndef LLVM_TRANSFORMS_IPO_FUNCTIONATTRS_H
 #define LLVM_TRANSFORMS_IPO_FUNCTIONATTRS_H
 
-#include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
+#include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {

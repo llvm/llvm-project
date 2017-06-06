@@ -2,11 +2,11 @@
 // License. See LICENSE.TXT for details.
 
 // Test that we can find the minimal item in the corpus (3 bytes: "FUZ").
-#include <cstdint>
-#include <cstdlib>
 #include <cstddef>
-#include <cstring>
+#include <cstdint>
 #include <cstdio>
+#include <cstdlib>
+#include <cstring>
 
 static volatile int Sink;
 

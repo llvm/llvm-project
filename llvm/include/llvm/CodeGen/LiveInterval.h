@@ -23,9 +23,9 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/IntEqClasses.h"
-#include "llvm/ADT/iterator_range.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/Support/Allocator.h"

@@ -17,8 +17,8 @@
 #define LLVM_ADT_PRIORITYWORKLIST_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Compiler.h"
 #include <algorithm>
 #include <cassert>

@@ -11,10 +11,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "gtest/gtest.h"
-#include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/PointerIntPair.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
+#include "gtest/gtest.h"
 
 using namespace llvm;
 

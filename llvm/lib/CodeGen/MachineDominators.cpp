@@ -13,8 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/MachineDominators.h"
-#include "llvm/CodeGen/Passes.h"
 #include "llvm/ADT/SmallBitVector.h"
+#include "llvm/CodeGen/Passes.h"
 #include "llvm/Support/CommandLine.h"
 
 using namespace llvm;

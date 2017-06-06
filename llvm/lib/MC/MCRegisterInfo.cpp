@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
 #include <cassert>

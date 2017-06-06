@@ -38,7 +38,6 @@ using namespace llvm;
 
 #include "AMDGPUGenMCPseudoLowering.inc"
 
-
 AMDGPUMCInstLower::AMDGPUMCInstLower(MCContext &ctx, const AMDGPUSubtarget &st,
                                      const AsmPrinter &ap):
   Ctx(ctx), ST(st), AP(ap) { }

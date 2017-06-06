@@ -3,9 +3,9 @@
 
 // Simple test for a cutom mutator.
 #include <assert.h>
+#include <cstddef>
 #include <cstdint>
 #include <cstdlib>
-#include <cstddef>
 #include <iostream>
 
 #include "FuzzerInterface.h"

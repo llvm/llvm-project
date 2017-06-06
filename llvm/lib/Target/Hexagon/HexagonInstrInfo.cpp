@@ -11,9 +11,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "HexagonInstrInfo.h"
 #include "Hexagon.h"
 #include "HexagonHazardRecognizer.h"
-#include "HexagonInstrInfo.h"
 #include "HexagonRegisterInfo.h"
 #include "HexagonSubtarget.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -57,9 +57,9 @@ using namespace llvm;
 
 #define GET_INSTRINFO_CTOR_DTOR
 #define GET_INSTRMAP_INFO
-#include "HexagonGenInstrInfo.inc"
-#include "HexagonGenDFAPacketizer.inc"
 #include "HexagonDepTimingClasses.h"
+#include "HexagonGenDFAPacketizer.inc"
+#include "HexagonGenInstrInfo.inc"
 
 cl::opt<bool> ScheduleInlineAsm("hexagon-sched-inline-asm", cl::Hidden,
   cl::init(false), cl::desc("Do not consider inline-asm a scheduling/"

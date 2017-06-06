@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Object/IRSymtab.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -23,14 +24,13 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/StringTableBuilder.h"
-#include "llvm/Object/IRSymtab.h"
 #include "llvm/Object/ModuleSymbolTable.h"
 #include "llvm/Object/SymbolicFile.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/StringSaver.h"
+#include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <string>
 #include <utility>

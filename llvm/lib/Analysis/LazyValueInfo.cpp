@@ -364,7 +364,6 @@ namespace {
   /// This is the cache kept by LazyValueInfo which
   /// maintains information about queries across the clients' queries.
   class LazyValueInfoCache {
-    friend class LazyValueInfoAnnotatedWriter;
     /// This is all of the cached block information for exactly one Value*.
     /// The entries are sorted by the BasicBlock* of the
     /// entries, allowing us to do a lookup with a binary search.
@@ -384,7 +383,6 @@ namespace {
     /// don't spend time removing unused blocks from our caches.
     DenseSet<PoisoningVH<BasicBlock> > SeenBlocks;
 
-  protected:
     /// This is all of the cached information for all values,
     /// mapped from Value* to key information.
     DenseMap<Value *, std::unique_ptr<ValueCacheEntryTy>> ValueCache;
@@ -443,7 +441,6 @@ namespace {
       return BBI->second;
     }
 
-    void printCache(Function &F, raw_ostream &OS);
     /// clear - Empty the cache.
     void clear() {
       SeenBlocks.clear();
@@ -465,61 +462,6 @@ namespace {
 
     friend struct LVIValueHandle;
   };
-}
-
-
-namespace {
-
-  /// An assembly annotator class to print LazyValueCache information in
-  /// comments.
-  class LazyValueInfoAnnotatedWriter : public AssemblyAnnotationWriter {
-    const LazyValueInfoCache* LVICache;
-
-  public:
-    LazyValueInfoAnnotatedWriter(const LazyValueInfoCache *L) : LVICache(L) {}
-
-    virtual void emitBasicBlockStartAnnot(const BasicBlock *BB,
-                                          formatted_raw_ostream &OS) {
-      auto ODI = LVICache->OverDefinedCache.find(const_cast<BasicBlock*>(BB));
-      if (ODI == LVICache->OverDefinedCache.end())
-        return;
-      OS << "; OverDefined values for block are: \n";
-      for (auto *V : ODI->second)
-        OS << ";" << *V << "\n";
-
-      // Find if there are latticevalues defined for arguments of the function.
-      auto *F = const_cast<Function *>(BB->getParent());
-      for (auto &Arg : F->args()) {
-        auto VI = LVICache->ValueCache.find_as(&Arg);
-        if (VI == LVICache->ValueCache.end())
-          continue;
-        auto BBI = VI->second->BlockVals.find(const_cast<BasicBlock *>(BB));
-        if (BBI != VI->second->BlockVals.end())
-          OS << "; CachedLatticeValue for: '" << *VI->first << "' is: '"
-             << BBI->second << "'\n";
-      }
-    }
-
-    virtual void emitInstructionAnnot(const Instruction *I,
-                                      formatted_raw_ostream &OS) {
-
-      auto VI = LVICache->ValueCache.find_as(const_cast<Instruction *>(I));
-      if (VI == LVICache->ValueCache.end())
-        return;
-      OS << "; CachedLatticeValues for: '" << *VI->first << "'\n";
-      for (auto &BV : VI->second->BlockVals) {
-        OS << "; at beginning of BasicBlock: '";
-        BV.first->printAsOperand(OS, false);
-        OS << "' LatticeVal: '" << BV.second << "' \n";
-      }
-    }
-};
-}
-
-void LazyValueInfoCache::printCache(Function &F, raw_ostream &OS) {
-  LazyValueInfoAnnotatedWriter Writer(this);
-  F.print(OS, &Writer);
-
 }
 
 void LazyValueInfoCache::eraseValue(Value *V) {
@@ -615,6 +557,30 @@ void LazyValueInfoCache::threadEdgeImpl(BasicBlock *OldSucc,
   }
 }
 
+
+namespace {
+/// An assembly annotator class to print LazyValueCache information in
+/// comments.
+class LazyValueInfoImpl;
+class LazyValueInfoAnnotatedWriter : public AssemblyAnnotationWriter {
+  LazyValueInfoImpl *LVIImpl;
+  // While analyzing which blocks we can solve values for, we need the dominator
+  // information. Since this is an optional parameter in LVI, we require this
+  // DomTreeAnalysis pass in the printer pass, and pass the dominator
+  // tree to the LazyValueInfoAnnotatedWriter.
+  DominatorTree &DT;
+
+public:
+  LazyValueInfoAnnotatedWriter(LazyValueInfoImpl *L, DominatorTree &DTree)
+      : LVIImpl(L), DT(DTree) {}
+
+  virtual void emitBasicBlockStartAnnot(const BasicBlock *BB,
+                                        formatted_raw_ostream &OS);
+
+  virtual void emitInstructionAnnot(const Instruction *I,
+                                    formatted_raw_ostream &OS);
+};
+}
 namespace {
   // The actual implementation of the lazy analysis and update.  Note that the
   // inheritance from LazyValueInfoCache is intended to be temporary while
@@ -693,9 +659,10 @@ namespace {
       TheCache.clear();
     }
 
-    /// Printing the LazyValueInfoCache.
-    void printCache(Function &F, raw_ostream &OS) {
-       TheCache.printCache(F, OS);
+    /// Printing the LazyValueInfo Analysis.
+    void printLVI(Function &F, DominatorTree &DTree, raw_ostream &OS) {
+        LazyValueInfoAnnotatedWriter Writer(this, DTree);
+        F.print(OS, &Writer);
     }
 
     /// This is part of the update interface to inform the cache
@@ -713,6 +680,7 @@ namespace {
         : AC(AC), DL(DL), DT(DT) {}
   };
 } // end anonymous namespace
+
 
 void LazyValueInfoImpl::solve() {
   SmallVector<std::pair<BasicBlock *, Value *>, 8> StartingStack(
@@ -1890,10 +1858,63 @@ void LazyValueInfo::eraseBlock(BasicBlock *BB) {
 }
 
 
-void LazyValueInfo::printCache(Function &F, raw_ostream &OS) {
+void LazyValueInfo::printLVI(Function &F, DominatorTree &DTree, raw_ostream &OS) {
   if (PImpl) {
-    getImpl(PImpl, AC, DL, DT).printCache(F, OS);
+    getImpl(PImpl, AC, DL, DT).printLVI(F, DTree, OS);
   }
+}
+
+// Print the LVI for the function arguments at the start of each basic block.
+void LazyValueInfoAnnotatedWriter::emitBasicBlockStartAnnot(
+    const BasicBlock *BB, formatted_raw_ostream &OS) {
+  // Find if there are latticevalues defined for arguments of the function.
+  auto *F = BB->getParent();
+  for (auto &Arg : F->args()) {
+    LVILatticeVal Result = LVIImpl->getValueInBlock(
+        const_cast<Argument *>(&Arg), const_cast<BasicBlock *>(BB));
+    if (Result.isUndefined())
+      continue;
+    OS << "; LatticeVal for: '" << Arg << "' is: " << Result << "\n";
+  }
+}
+
+// This function prints the LVI analysis for the instruction I at the beginning
+// of various basic blocks. It relies on calculated values that are stored in
+// the LazyValueInfoCache, and in the absence of cached values, recalculte the
+// LazyValueInfo for `I`, and print that info.
+void LazyValueInfoAnnotatedWriter::emitInstructionAnnot(
+    const Instruction *I, formatted_raw_ostream &OS) {
+
+  auto *ParentBB = I->getParent();
+  SmallPtrSet<const BasicBlock*, 16> BlocksContainingLVI;
+  // We can generate (solve) LVI values only for blocks that are dominated by
+  // the I's parent. However, to avoid generating LVI for all dominating blocks,
+  // that contain redundant/uninteresting information, we print LVI for
+  // blocks that may use this LVI information (such as immediate successor
+  // blocks, and blocks that contain uses of `I`).
+  auto printResult = [&](const BasicBlock *BB) {
+    if (!BlocksContainingLVI.insert(BB).second)
+      return;
+    LVILatticeVal Result = LVIImpl->getValueInBlock(
+        const_cast<Instruction *>(I), const_cast<BasicBlock *>(BB));
+      OS << "; LatticeVal for: '" << *I << "' in BB: '";
+      BB->printAsOperand(OS, false);
+      OS << "' is: " << Result << "\n";
+  };
+
+  printResult(ParentBB);
+  // Print the LVI analysis results for the the immediate successor blocks, that
+  // are dominated by `ParentBB`.
+  for (auto *BBSucc : successors(ParentBB))
+    if (DT.dominates(ParentBB, BBSucc))
+      printResult(BBSucc);
+
+  // Print LVI in blocks where `I` is used.
+  for (auto *U : I->users())
+    if (auto *UseI = dyn_cast<Instruction>(U))
+      if (!isa<PHINode>(UseI) || DT.dominates(ParentBB, UseI->getParent()))
+        printResult(UseI->getParent());
+
 }
 
 namespace {
@@ -1908,12 +1929,16 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
     AU.addRequired<LazyValueInfoWrapperPass>();
+    AU.addRequired<DominatorTreeWrapperPass>();
   }
 
+  // Get the mandatory dominator tree analysis and pass this in to the
+  // LVIPrinter. We cannot rely on the LVI's DT, since it's optional.
   bool runOnFunction(Function &F) override {
     dbgs() << "LVI for function '" << F.getName() << "':\n";
     auto &LVI = getAnalysis<LazyValueInfoWrapperPass>().getLVI();
-    LVI.printCache(F, dbgs());
+    auto &DTree = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+    LVI.printLVI(F, DTree, dbgs());
     return false;
   }
 };

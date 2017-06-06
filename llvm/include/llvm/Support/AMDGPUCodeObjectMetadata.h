@@ -14,8 +14,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_AMDGPU_MCTARGETDESC_AMDGPUCODEOBJECTMETADATA_H
-#define LLVM_LIB_TARGET_AMDGPU_MCTARGETDESC_AMDGPUCODEOBJECTMETADATA_H
+#ifndef LLVM_SUPPORT_AMDGPUCODEOBJECTMETADATA_H
+#define LLVM_SUPPORT_AMDGPUCODEOBJECTMETADATA_H
 
 #include <cstdint>
 #include <string>
@@ -419,4 +419,4 @@ struct Metadata final {
 } // end namespace AMDGPU
 } // end namespace llvm
 
-#endif // LLVM_LIB_TARGET_AMDGPU_MCTARGETDESC_AMDGPUCODEOBJECTMETADATA_H
+#endif // LLVM_SUPPORT_AMDGPUCODEOBJECTMETADATA_H

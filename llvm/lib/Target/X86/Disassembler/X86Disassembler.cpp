@@ -74,8 +74,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "X86DisassemblerDecoder.h"
 #include "MCTargetDesc/X86MCTargetDesc.h"
+#include "X86DisassemblerDecoder.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCExpr.h"

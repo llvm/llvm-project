@@ -11,12 +11,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CodeGen/SchedulerRegistry.h"
 #include "InstrEmitter.h"
 #include "ScheduleDAGSDNodes.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/SchedulerRegistry.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InlineAsm.h"

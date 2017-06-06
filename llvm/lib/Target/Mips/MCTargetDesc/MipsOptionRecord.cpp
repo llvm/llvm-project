@@ -7,9 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MipsOptionRecord.h"
 #include "MipsABIInfo.h"
 #include "MipsELFStreamer.h"
-#include "MipsOptionRecord.h"
 #include "MipsTargetStreamer.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"

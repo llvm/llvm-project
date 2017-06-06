@@ -15,11 +15,11 @@
 //===---------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/Analysis.h"
+#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
-#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Target/TargetInstrInfo.h"

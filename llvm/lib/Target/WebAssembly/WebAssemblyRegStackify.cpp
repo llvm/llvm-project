@@ -20,8 +20,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "WebAssembly.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h" // for WebAssembly::ARGUMENT_*
+#include "WebAssembly.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblySubtarget.h"
 #include "WebAssemblyUtilities.h"

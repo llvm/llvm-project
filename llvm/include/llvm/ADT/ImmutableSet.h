@@ -16,16 +16,16 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FoldingSet.h"
-#include "llvm/ADT/iterator.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/iterator.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
-#include <functional>
-#include <vector>
 #include <cstdint>
+#include <functional>
 #include <iterator>
 #include <new>
+#include <vector>
 
 namespace llvm {
 

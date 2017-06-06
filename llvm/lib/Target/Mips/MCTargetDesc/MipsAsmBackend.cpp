@@ -12,8 +12,8 @@
 //===----------------------------------------------------------------------===//
 //
 
-#include "MCTargetDesc/MipsFixupKinds.h"
 #include "MCTargetDesc/MipsAsmBackend.h"
+#include "MCTargetDesc/MipsFixupKinds.h"
 #include "MCTargetDesc/MipsMCExpr.h"
 #include "MCTargetDesc/MipsMCTargetDesc.h"
 #include "llvm/MC/MCAsmBackend.h"

@@ -8,8 +8,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/Path.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Errc.h"

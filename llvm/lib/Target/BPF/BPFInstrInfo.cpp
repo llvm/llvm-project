@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "BPF.h"
 #include "BPFInstrInfo.h"
+#include "BPF.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"

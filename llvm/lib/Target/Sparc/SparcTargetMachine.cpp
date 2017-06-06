@@ -11,9 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "SparcTargetMachine.h"
-#include "SparcTargetObjectFile.h"
-#include "Sparc.h"
 #include "LeonPasses.h"
+#include "Sparc.h"
+#include "SparcTargetObjectFile.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/LegacyPassManager.h"

@@ -13,18 +13,18 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Support/SourceMgr.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/Locale.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/SMLoc.h"
-#include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>

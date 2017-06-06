@@ -39,6 +39,8 @@
 
 #if defined(_MSC_VER)
 #include <Windows.h>
+
+// This must be included after windows.h.
 #include <DbgHelp.h>
 #pragma comment(lib, "dbghelp.lib")
 

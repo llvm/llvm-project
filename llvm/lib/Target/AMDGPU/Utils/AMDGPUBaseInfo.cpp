@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AMDGPU.h"
 #include "AMDGPUBaseInfo.h"
+#include "AMDGPU.h"
 #include "SIDefines.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
@@ -37,7 +37,6 @@
 #include <utility>
 
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
-
 
 #define GET_INSTRINFO_NAMED_OPS
 #include "AMDGPUGenInstrInfo.inc"

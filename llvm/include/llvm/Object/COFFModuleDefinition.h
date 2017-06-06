@@ -20,8 +20,8 @@
 #ifndef LLVM_OBJECT_COFF_MODULE_DEFINITION_H
 #define LLVM_OBJECT_COFF_MODULE_DEFINITION_H
 
-#include "llvm/Object/COFFImportFile.h"
 #include "llvm/Object/COFF.h"
+#include "llvm/Object/COFFImportFile.h"
 
 namespace llvm {
 namespace object {

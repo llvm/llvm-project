@@ -12,12 +12,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "FuzzerTracePC.h"
 #include "FuzzerCorpus.h"
 #include "FuzzerDefs.h"
 #include "FuzzerDictionary.h"
 #include "FuzzerExtFunctions.h"
 #include "FuzzerIO.h"
-#include "FuzzerTracePC.h"
 #include "FuzzerUtil.h"
 #include "FuzzerValueBitMap.h"
 #include <map>

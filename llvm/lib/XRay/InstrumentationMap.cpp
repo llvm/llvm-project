@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/XRay/InstrumentationMap.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -22,7 +23,6 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/YAMLTraits.h"
-#include "llvm/XRay/InstrumentationMap.h"
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>

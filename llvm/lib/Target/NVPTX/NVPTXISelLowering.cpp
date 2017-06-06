@@ -12,9 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "NVPTXISelLowering.h"
 #include "MCTargetDesc/NVPTXBaseInfo.h"
 #include "NVPTX.h"
-#include "NVPTXISelLowering.h"
 #include "NVPTXSection.h"
 #include "NVPTXSubtarget.h"
 #include "NVPTXTargetMachine.h"

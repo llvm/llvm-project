@@ -5998,20 +5998,6 @@ void SelectionDAGBuilder::LowerCallTo(ImmutableCallSite CS, SDValue Callee,
   }
 }
 
-/// Return true if it only matters that the value is equal or not-equal to zero.
-static bool IsOnlyUsedInZeroEqualityComparison(const Value *V) {
-  for (const User *U : V->users()) {
-    if (const ICmpInst *IC = dyn_cast<ICmpInst>(U))
-      if (IC->isEquality())
-        if (const Constant *C = dyn_cast<Constant>(IC->getOperand(1)))
-          if (C->isNullValue())
-            continue;
-    // Unknown instruction.
-    return false;
-  }
-  return true;
-}
-
 static SDValue getMemCmpLoad(const Value *PtrVal, MVT LoadVT,
                              SelectionDAGBuilder &Builder) {
 
@@ -6098,7 +6084,7 @@ bool SelectionDAGBuilder::visitMemCmpCall(const CallInst &I) {
 
   // memcmp(S1,S2,2) != 0 -> (*(short*)LHS != *(short*)RHS)  != 0
   // memcmp(S1,S2,4) != 0 -> (*(int*)LHS != *(int*)RHS)  != 0
-  if (!CSize || !IsOnlyUsedInZeroEqualityComparison(&I))
+  if (!CSize || !isOnlyUsedInZeroEqualityComparison(&I))
     return false;
 
   // If the target has a fast compare for the given size, it will return a

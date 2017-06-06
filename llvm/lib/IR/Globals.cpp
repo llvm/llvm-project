@@ -12,10 +12,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "LLVMContextImpl.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Triple.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/ConstantRange.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalValue.h"
@@ -24,7 +25,6 @@
 #include "llvm/IR/Operator.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "LLVMContextImpl.h"
 using namespace llvm;
 
 //===----------------------------------------------------------------------===//

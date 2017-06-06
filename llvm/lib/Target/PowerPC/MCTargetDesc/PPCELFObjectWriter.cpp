@@ -7,9 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/PPCMCTargetDesc.h"
 #include "MCTargetDesc/PPCFixupKinds.h"
 #include "MCTargetDesc/PPCMCExpr.h"
+#include "MCTargetDesc/PPCMCTargetDesc.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCExpr.h"

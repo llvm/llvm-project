@@ -468,6 +468,10 @@ bool TargetTransformInfo::getTgtMemIntrinsic(IntrinsicInst *Inst,
   return TTIImpl->getTgtMemIntrinsic(Inst, Info);
 }
 
+unsigned TargetTransformInfo::getAtomicMemIntrinsicMaxElementSize() const {
+  return TTIImpl->getAtomicMemIntrinsicMaxElementSize();
+}
+
 Value *TargetTransformInfo::getOrCreateResultFromMemIntrinsic(
     IntrinsicInst *Inst, Type *ExpectedType) const {
   return TTIImpl->getOrCreateResultFromMemIntrinsic(Inst, ExpectedType);

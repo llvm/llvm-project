@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/MC/MCStreamer.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
@@ -21,19 +22,18 @@
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSectionCOFF.h"
-#include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCWin64EH.h"
 #include "llvm/MC/MCWinEH.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/COFF.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
-#include <cstdlib>
 #include <cassert>
 #include <cstdint>
+#include <cstdlib>
 #include <utility>
 
 using namespace llvm;

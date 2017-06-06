@@ -12,12 +12,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "R600InstrInfo.h"
 #include "AMDGPU.h"
 #include "AMDGPUInstrInfo.h"
 #include "AMDGPUSubtarget.h"
 #include "R600Defines.h"
 #include "R600FrameLowering.h"
-#include "R600InstrInfo.h"
 #include "R600RegisterInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/BitVector.h"
@@ -35,8 +35,8 @@
 #include "llvm/Target/TargetSubtargetInfo.h"
 #include <algorithm>
 #include <cassert>
-#include <cstring>
 #include <cstdint>
+#include <cstring>
 #include <iterator>
 #include <utility>
 #include <vector>

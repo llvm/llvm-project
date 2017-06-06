@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "NVPTX.h"
 #include "NVPTXInstrInfo.h"
+#include "NVPTX.h"
 #include "NVPTXTargetMachine.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/MachineFunction.h"

@@ -13,8 +13,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SystemZTargetMachine.h"
 #include "SystemZMachineFunctionInfo.h"
+#include "SystemZTargetMachine.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"

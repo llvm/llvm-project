@@ -8,10 +8,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/LazyCallGraph.h"
-#include "llvm/ADT/ScopeExit.h"
-#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/Instructions.h"

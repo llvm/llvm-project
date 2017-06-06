@@ -14,8 +14,8 @@
 #ifndef LLVM_CODEGEN_MACHINEOPERAND_H
 #define LLVM_CODEGEN_MACHINEOPERAND_H
 
-#include "llvm/Support/DataTypes.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/Support/DataTypes.h"
 #include <cassert>
 
 namespace llvm {

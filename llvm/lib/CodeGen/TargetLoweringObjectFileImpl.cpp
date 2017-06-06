@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -19,7 +20,6 @@
 #include "llvm/ADT/Triple.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
-#include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/IR/Comdat.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
@@ -46,9 +46,9 @@
 #include "llvm/MC/MCValue.h"
 #include "llvm/MC/SectionKind.h"
 #include "llvm/ProfileData/InstrProf.h"
+#include "llvm/Support/COFF.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CodeGen.h"
-#include "llvm/Support/COFF.h"
 #include "llvm/Support/Dwarf.h"
 #include "llvm/Support/ELF.h"
 #include "llvm/Support/ErrorHandling.h"

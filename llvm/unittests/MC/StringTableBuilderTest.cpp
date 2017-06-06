@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/SmallString.h"
 #include "llvm/MC/StringTableBuilder.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Endian.h"
 #include "gtest/gtest.h"
 #include <string>

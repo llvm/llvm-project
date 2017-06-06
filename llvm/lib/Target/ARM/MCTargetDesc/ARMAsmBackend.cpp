@@ -7,14 +7,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/ARMMCTargetDesc.h"
-#include "MCTargetDesc/ARMAddressingModes.h"
 #include "MCTargetDesc/ARMAsmBackend.h"
+#include "MCTargetDesc/ARMAddressingModes.h"
 #include "MCTargetDesc/ARMAsmBackendDarwin.h"
 #include "MCTargetDesc/ARMAsmBackendELF.h"
 #include "MCTargetDesc/ARMAsmBackendWinCOFF.h"
 #include "MCTargetDesc/ARMBaseInfo.h"
 #include "MCTargetDesc/ARMFixupKinds.h"
+#include "MCTargetDesc/ARMMCTargetDesc.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
@@ -695,7 +695,7 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
       return 0;
     }
     return Value;
-  case ARM::fixup_t2_so_imm:
+  case ARM::fixup_t2_so_imm: {
     Value = ARM_AM::getT2SOImmVal(Value);
     if ((int64_t)Value < 0) {
       Ctx.reportError(Fixup.getLoc(), "out of range immediate fixup value");
@@ -711,6 +711,7 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
     EncValue |= (Value & 0x700) << 4;
     EncValue |= (Value & 0xff);
     return swapHalfWords(EncValue, IsLittleEndian);
+  }
   }
 }
 

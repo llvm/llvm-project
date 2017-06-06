@@ -12,14 +12,14 @@
 // Diagnostics reporting is still done as part of the LLVMContext.
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/iterator_range.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
-#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
@@ -32,8 +32,8 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/Regex.h"
+#include "llvm/Support/raw_ostream.h"
 #include <atomic>
 #include <cassert>
 #include <memory>

@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/X86BaseInfo.h"
 #include "X86ATTInstPrinter.h"
+#include "MCTargetDesc/X86BaseInfo.h"
 #include "X86InstComments.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"

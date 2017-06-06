@@ -10,9 +10,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "FuzzerCorpus.h"
+#include "FuzzerIO.h"
 #include "FuzzerInterface.h"
 #include "FuzzerInternal.h"
-#include "FuzzerIO.h"
 #include "FuzzerMutate.h"
 #include "FuzzerRandom.h"
 #include "FuzzerShmem.h"

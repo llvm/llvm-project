@@ -65,10 +65,10 @@
 /// ultimately led to the creation of an illegal COPY.
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/DenseSet.h"
 #include "AMDGPU.h"
 #include "AMDGPUSubtarget.h"
 #include "SIInstrInfo.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"

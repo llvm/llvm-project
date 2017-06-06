@@ -12,8 +12,8 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/TargetParser.h"
 #include "llvm/Support/Host.h"
+#include "llvm/Support/TargetParser.h"
 #include <cstring>
 using namespace llvm;
 

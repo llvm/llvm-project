@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Triple.h"
@@ -24,11 +24,11 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/SectionKind.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/MachO.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>

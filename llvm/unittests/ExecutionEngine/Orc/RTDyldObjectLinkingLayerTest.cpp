@@ -7,13 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
 #include "OrcTestCommon.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
-#include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
 #include "llvm/ExecutionEngine/Orc/LambdaResolver.h"
 #include "llvm/ExecutionEngine/Orc/NullResolver.h"
-#include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
+#include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/LLVMContext.h"
 #include "gtest/gtest.h"

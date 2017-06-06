@@ -11,14 +11,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/IR/Function.h"
 #include "LLVMContextImpl.h"
 #include "SymbolTableListTraitsImpl.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/None.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/ValueTypes.h"
@@ -29,7 +30,6 @@
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
-#include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instruction.h"
