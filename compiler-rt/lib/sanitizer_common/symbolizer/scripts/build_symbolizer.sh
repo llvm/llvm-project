@@ -129,7 +129,7 @@ if [[ ! -d ${LLVM_BUILD} ]]; then
   $LLVM_SRC
 fi
 cd ${LLVM_BUILD}
-ninja LLVMSymbolize LLVMObject LLVMDebugInfoDWARF LLVMSupport LLVMDebugInfoPDB LLVMMC
+ninja LLVMSymbolize LLVMObject LLVMBinaryFormat LLVMDebugInfoDWARF LLVMSupport LLVMDebugInfoPDB LLVMMC
 
 cd ${BUILD_DIR}
 rm -rf ${SYMBOLIZER_BUILD}
@@ -148,6 +148,7 @@ $SCRIPT_DIR/ar_to_bc.sh $LIBCXX_BUILD/lib/libc++.a \
                         $LIBCXX_BUILD/lib/libc++abi.a \
                         $LLVM_BUILD/lib/libLLVMSymbolize.a \
                         $LLVM_BUILD/lib/libLLVMObject.a \
+                        $LLVM_BUILD/lib/libLLVMBinaryFormat.a \
                         $LLVM_BUILD/lib/libLLVMDebugInfoDWARF.a \
                         $LLVM_BUILD/lib/libLLVMSupport.a \
                         $LLVM_BUILD/lib/libLLVMDebugInfoPDB.a \

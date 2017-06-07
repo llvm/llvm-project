@@ -19,6 +19,7 @@ def immZExt4 : ImmLeaf<i32, [{return isUInt<4>(Imm);}]>;
 def immZExt8 : ImmLeaf<i32, [{return isUInt<8>(Imm);}]>;
 def immZExt10 : ImmLeaf<i32, [{return isUInt<10>(Imm);}]>;
 def immSExt6 : ImmLeaf<i32, [{return isInt<6>(Imm);}]>;
+def immSExt10 : ImmLeaf<i32, [{return isInt<10>(Imm);}]>;
 
 // Mips-specific dsp nodes
 def SDT_MipsExtr : SDTypeProfile<1, 2, [SDTCisVT<0, i32>, SDTCisSameAs<0, 1>,
@@ -851,8 +852,8 @@ class PACKRL_PH_DESC : CMP_EQ_QB_R3_DESC_BASE<"packrl.ph", int_mips_packrl_ph,
 class REPL_QB_DESC : REPL_DESC_BASE<"repl.qb", int_mips_repl_qb, uimm8,
                                     immZExt8, NoItinerary, DSPROpnd>;
 
-class REPL_PH_DESC : REPL_DESC_BASE<"repl.ph", int_mips_repl_ph, uimm10,
-                                    immZExt10, NoItinerary, DSPROpnd>;
+class REPL_PH_DESC : REPL_DESC_BASE<"repl.ph", int_mips_repl_ph, simm10,
+                                    immSExt10, NoItinerary, DSPROpnd>;
 
 class REPLV_QB_DESC : ABSQ_S_PH_R2_DESC_BASE<"replv.qb", int_mips_repl_qb,
                                              NoItinerary, DSPROpnd, GPR32Opnd>;

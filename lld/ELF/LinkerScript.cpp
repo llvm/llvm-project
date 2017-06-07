@@ -431,6 +431,8 @@ void LinkerScript::processCommands(OutputSectionFactory &Factory) {
       if (OutputSection *Sec = Cmd->Sec) {
         assert(Sec->SectionIndex == INT_MAX);
         Sec->SectionIndex = I;
+        if (Cmd->Noload)
+          Sec->Type = SHT_NOBITS;
         SecToCommand[Sec] = Cmd;
       }
     }

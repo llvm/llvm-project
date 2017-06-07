@@ -124,17 +124,12 @@ MemoryAccess *MemorySSAUpdater::getPreviousDefInBlock(MemoryAccess *MA) {
         return &*Iter;
     } else {
       // Otherwise, have to walk the all access iterator.
-      auto Iter = MA->getReverseIterator();
-      ++Iter;
-      while (&*Iter != &*Defs->begin()) {
-        if (!isa<MemoryUse>(*Iter))
-          return &*Iter;
-        --Iter;
-      }
-      // At this point it must be pointing at firstdef
-      assert(&*Iter == &*Defs->begin() &&
-             "Should have hit first def walking backwards");
-      return &*Iter;
+      auto End = MSSA->getWritableBlockAccesses(MA->getBlock())->rend();
+      for (auto &U : make_range(++MA->getReverseIterator(), End))
+        if (!isa<MemoryUse>(U))
+          return cast<MemoryAccess>(&U);
+      // Note that if MA comes before Defs->begin(), we won't hit a def.
+      return nullptr;
     }
   }
   return nullptr;

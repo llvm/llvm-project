@@ -10,6 +10,7 @@
 #ifndef utility_TaskPool_h_
 #define utility_TaskPool_h_
 
+#include "llvm/ADT/STLExtras.h"
 #include <functional> // for bind, function
 #include <future>
 #include <list>
@@ -86,6 +87,6 @@ template <> struct TaskPool::RunTaskImpl<> {
 // 'batch_size' numbers at a time to work on, so for very fast functions, batch
 // should be large enough to avoid too much cache line contention.
 void TaskMapOverInt(size_t begin, size_t end,
-                    std::function<void(size_t)> const &func);
+                    const llvm::function_ref<void(size_t)> &func);
 
 #endif // #ifndef utility_TaskPool_h_

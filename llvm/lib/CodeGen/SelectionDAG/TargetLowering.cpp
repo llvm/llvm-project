@@ -2166,7 +2166,7 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
           return DAG.getSetCC(dl, VT, N0.getOperand(1), N1.getOperand(1), Cond);
         if (N0.getOperand(1) == N1.getOperand(1))
           return DAG.getSetCC(dl, VT, N0.getOperand(0), N1.getOperand(0), Cond);
-        if (DAG.isCommutativeBinOp(N0.getOpcode())) {
+        if (isCommutativeBinOp(N0.getOpcode())) {
           // If X op Y == Y op X, try other combinations.
           if (N0.getOperand(0) == N1.getOperand(1))
             return DAG.getSetCC(dl, VT, N0.getOperand(1), N1.getOperand(0),
@@ -2230,7 +2230,7 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
           return DAG.getSetCC(dl, VT, N0.getOperand(1),
                               DAG.getConstant(0, dl, N0.getValueType()), Cond);
         if (N0.getOperand(1) == N1) {
-          if (DAG.isCommutativeBinOp(N0.getOpcode()))
+          if (isCommutativeBinOp(N0.getOpcode()))
             return DAG.getSetCC(dl, VT, N0.getOperand(0),
                                 DAG.getConstant(0, dl, N0.getValueType()),
                                 Cond);
@@ -2257,7 +2257,7 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
         return DAG.getSetCC(dl, VT, N1.getOperand(1),
                         DAG.getConstant(0, dl, N1.getValueType()), Cond);
       if (N1.getOperand(1) == N0) {
-        if (DAG.isCommutativeBinOp(N1.getOpcode()))
+        if (isCommutativeBinOp(N1.getOpcode()))
           return DAG.getSetCC(dl, VT, N1.getOperand(0),
                           DAG.getConstant(0, dl, N1.getValueType()), Cond);
         if (N1.getNode()->hasOneUse()) {

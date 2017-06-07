@@ -1,4 +1,9 @@
-// RUN: %check_clang_tidy %s cert-err58-cpp %t -- -- -std=c++11 -target x86_64-pc-linux-gnu
+// RUN: clang-tidy %s -checks="-*,cert-err58-cpp" -- -std=c++11 -target x86_64-pc-linux-gnu \
+// RUN:   | FileCheck %s -check-prefix=CHECK-EXCEPTIONS \
+// RUN:   -implicit-check-not="{{warning|error}}:"
+// RUN: clang-tidy %s -checks="-*,cert-err58-cpp" -- -fno-exceptions -std=c++11 -target x86_64-pc-linux-gnu \
+// RUN:   | FileCheck %s -allow-empty -check-prefix=CHECK-NONEXCEPTIONS \
+// RUN:   -implicit-check-not="{{warning|error}}:"
 
 struct S {
   S() noexcept(false);
@@ -52,39 +57,49 @@ UserConv_Bad some_bad_func() noexcept;
 UserConv_Good some_good_func() noexcept;
 
 S s;
-// CHECK-MESSAGES: :[[@LINE-1]]:3: warning: initialization of 's' with static storage duration may throw an exception that cannot be caught [cert-err58-cpp]
-// CHECK-MESSAGES: 4:3: note: possibly throwing constructor declared here
+// CHECK-EXCEPTIONS: :[[@LINE-1]]:3: warning: initialization of 's' with static storage duration may throw an exception that cannot be caught [cert-err58-cpp]
+// CHECK-EXCEPTIONS: 9:3: note: possibly throwing constructor declared here
+// CHECK-NONEXCEPTIONS-NOT: warning:
 T t; // ok
 U u;
-// CHECK-MESSAGES: :[[@LINE-1]]:3: warning: initialization of 'u' with static storage duration may throw an exception that cannot be caught
-// CHECK-MESSAGES: 12:3: note: possibly throwing constructor declared here
+// CHECK-EXCEPTIONS: :[[@LINE-1]]:3: warning: initialization of 'u' with static storage duration may throw an exception that cannot be caught
+// CHECK-EXCEPTIONS: 17:3: note: possibly throwing constructor declared here
+// CHECK-NONEXCEPTIONS-NOT: warning:
 V v("v");
-// CHECK-MESSAGES: :[[@LINE-1]]:3: warning: initialization of 'v' with static storage duration may throw an exception that cannot be caught
-// CHECK-MESSAGES: 16:12: note: possibly throwing constructor declared here
+// CHECK-EXCEPTIONS: :[[@LINE-1]]:3: warning: initialization of 'v' with static storage duration may throw an exception that cannot be caught
+// CHECK-EXCEPTIONS: 21:12: note: possibly throwing constructor declared here
+// CHECK-NONEXCEPTIONS-NOT: warning:
 W w;
-// CHECK-MESSAGES: :[[@LINE-1]]:3: warning: initialization of 'w' with static storage duration may throw an exception that cannot be caught
-// CHECK-MESSAGES: 24:3: note: possibly throwing constructor declared here
+// CHECK-EXCEPTIONS: :[[@LINE-1]]:3: warning: initialization of 'w' with static storage duration may throw an exception that cannot be caught
+// CHECK-EXCEPTIONS: 29:3: note: possibly throwing constructor declared here
+// CHECK-NONEXCEPTIONS-NOT: warning:
 X x1(S{});
-// CHECK-MESSAGES: :[[@LINE-1]]:3: warning: initialization of 'x1' with static storage duration may throw an exception that cannot be caught
-// CHECK-MESSAGES: 4:3: note: possibly throwing constructor declared here
+// CHECK-EXCEPTIONS: :[[@LINE-1]]:3: warning: initialization of 'x1' with static storage duration may throw an exception that cannot be caught
+// CHECK-EXCEPTIONS: 9:3: note: possibly throwing constructor declared here
+// CHECK-NONEXCEPTIONS-NOT: warning:
 X x2;
-// CHECK-MESSAGES: :[[@LINE-1]]:3: warning: initialization of 'x2' with static storage duration may throw an exception that cannot be caught
-// CHECK-MESSAGES: 4:3: note: possibly throwing constructor declared here
+// CHECK-EXCEPTIONS: :[[@LINE-1]]:3: warning: initialization of 'x2' with static storage duration may throw an exception that cannot be caught
+// CHECK-EXCEPTIONS: 9:3: note: possibly throwing constructor declared here
+// CHECK-NONEXCEPTIONS-NOT: warning:
 Y y;
-// CHECK-MESSAGES: :[[@LINE-1]]:3: warning: initialization of 'y' with static storage duration may throw an exception that cannot be caught
-// CHECK-MESSAGES: 31:8: note: possibly throwing constructor declared here
+// CHECK-EXCEPTIONS: :[[@LINE-1]]:3: warning: initialization of 'y' with static storage duration may throw an exception that cannot be caught
+// CHECK-EXCEPTIONS: 36:8: note: possibly throwing constructor declared here
+// CHECK-NONEXCEPTIONS-NOT: warning:
 Z z;
 
 int i = f();
-// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: initialization of 'i' with static storage duration may throw an exception that cannot be caught
-// CHECK-MESSAGES: 39:5: note: possibly throwing function declared here
+// CHECK-EXCEPTIONS: :[[@LINE-1]]:5: warning: initialization of 'i' with static storage duration may throw an exception that cannot be caught
+// CHECK-EXCEPTIONS: 44:5: note: possibly throwing function declared here
+// CHECK-NONEXCEPTIONS-NOT: warning:
 int j = g();
-// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: initialization of 'j' with static storage duration may throw an exception that cannot be caught
-// CHECK-MESSAGES: 40:5: note: possibly throwing function declared here
+// CHECK-EXCEPTIONS: :[[@LINE-1]]:5: warning: initialization of 'j' with static storage duration may throw an exception that cannot be caught
+// CHECK-EXCEPTIONS: 45:5: note: possibly throwing function declared here
+// CHECK-NONEXCEPTIONS-NOT: warning:
 int k = h();
 int l = some_bad_func();
-// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: initialization of 'l' with static storage duration may throw an exception that cannot be caught
-// CHECK-MESSAGES: 44:3: note: possibly throwing function declared here
+// CHECK-EXCEPTIONS: :[[@LINE-1]]:5: warning: initialization of 'l' with static storage duration may throw an exception that cannot be caught
+// CHECK-EXCEPTIONS: 49:3: note: possibly throwing function declared here
+// CHECK-NONEXCEPTIONS-NOT: warning:
 int m = some_good_func();
 
 typedef decltype(sizeof(int)) size_t;
@@ -92,18 +107,22 @@ inline void *operator new(size_t sz, void *here) noexcept { return here; }
 char n[sizeof(int)];
 int *o = new (n) int();
 int *p = new int();
-// CHECK-MESSAGES: :[[@LINE-1]]:6: warning: initialization of 'p' with static storage duration may throw an exception that cannot be caught
-
+// CHECK-EXCEPTIONS: :[[@LINE-1]]:6: warning: initialization of 'p' with static storage duration may throw an exception that cannot be caught
+// CHECK-NONEXCEPTIONS-NOT: warning:
 
 thread_local S s3;
-// CHECK-MESSAGES: :[[@LINE-1]]:16: warning: initialization of 's3' with thread_local storage duration may throw an exception that cannot be caught
+// CHECK-EXCEPTIONS: :[[@LINE-1]]:16: warning: initialization of 's3' with thread_local storage duration may throw an exception that cannot be caught
+// CHECK-NONEXCEPTIONS-NOT: warning:
 thread_local T t3; // ok
 thread_local U u3;
-// CHECK-MESSAGES: :[[@LINE-1]]:16: warning: initialization of 'u3' with thread_local storage duration may throw an exception that cannot be caught
+// CHECK-EXCEPTIONS: :[[@LINE-1]]:16: warning: initialization of 'u3' with thread_local storage duration may throw an exception that cannot be caught
+// CHECK-NONEXCEPTIONS-NOT: warning:
 thread_local V v3("v");
-// CHECK-MESSAGES: :[[@LINE-1]]:16: warning: initialization of 'v3' with thread_local storage duration may throw an exception that cannot be caught
+// CHECK-EXCEPTIONS: :[[@LINE-1]]:16: warning: initialization of 'v3' with thread_local storage duration may throw an exception that cannot be caught
+// CHECK-NONEXCEPTIONS-NOT: warning:
 thread_local W w3;
-// CHECK-MESSAGES: :[[@LINE-1]]:16: warning: initialization of 'w3' with thread_local storage duration may throw an exception that cannot be caught
+// CHECK-EXCEPTIONS: :[[@LINE-1]]:16: warning: initialization of 'w3' with thread_local storage duration may throw an exception that cannot be caught
+// CHECK-NONEXCEPTIONS-NOT: warning:
 
 void f(S s1, T t1, U u1, V v1, W w1) { // ok, ok, ok, ok, ok
   S s2; // ok
@@ -127,29 +146,37 @@ void f(S s1, T t1, U u1, V v1, W w1) { // ok, ok, ok, ok, ok
 
 namespace {
 S s;
-// CHECK-MESSAGES: :[[@LINE-1]]:3: warning: initialization of 's' with static storage duration may throw an exception that cannot be caught [cert-err58-cpp]
-// CHECK-MESSAGES: 4:3: note: possibly throwing constructor declared here
+// CHECK-EXCEPTIONS: :[[@LINE-1]]:3: warning: initialization of 's' with static storage duration may throw an exception that cannot be caught [cert-err58-cpp]
+// CHECK-EXCEPTIONS: 9:3: note: possibly throwing constructor declared here
+// CHECK-NONEXCEPTIONS-NOT: warning:
 T t; // ok
 U u;
-// CHECK-MESSAGES: :[[@LINE-1]]:3: warning: initialization of 'u' with static storage duration may throw an exception that cannot be caught
-// CHECK-MESSAGES: 12:3: note: possibly throwing constructor declared here
+// CHECK-EXCEPTIONS: :[[@LINE-1]]:3: warning: initialization of 'u' with static storage duration may throw an exception that cannot be caught
+// CHECK-EXCEPTIONS: 17:3: note: possibly throwing constructor declared here
+// CHECK-NONEXCEPTIONS-NOT: warning:
 V v("v");
-// CHECK-MESSAGES: :[[@LINE-1]]:3: warning: initialization of 'v' with static storage duration may throw an exception that cannot be caught
-// CHECK-MESSAGES: 16:12: note: possibly throwing constructor declared here
+// CHECK-EXCEPTIONS: :[[@LINE-1]]:3: warning: initialization of 'v' with static storage duration may throw an exception that cannot be caught
+// CHECK-EXCEPTIONS: 21:12: note: possibly throwing constructor declared here
+// CHECK-NONEXCEPTIONS-NOT: warning:
 W w;
-// CHECK-MESSAGES: :[[@LINE-1]]:3: warning: initialization of 'w' with static storage duration may throw an exception that cannot be caught
-// CHECK-MESSAGES: 24:3: note: possibly throwing constructor declared here
+// CHECK-EXCEPTIONS: :[[@LINE-1]]:3: warning: initialization of 'w' with static storage duration may throw an exception that cannot be caught
+// CHECK-EXCEPTIONS: 29:3: note: possibly throwing constructor declared here
+// CHECK-NONEXCEPTIONS-NOT: warning:
 
 thread_local S s3;
-// CHECK-MESSAGES: :[[@LINE-1]]:16: warning: initialization of 's3' with thread_local storage duration may throw an exception that cannot be caught
+// CHECK-EXCEPTIONS: :[[@LINE-1]]:16: warning: initialization of 's3' with thread_local storage duration may throw an exception that cannot be caught
+// CHECK-NONEXCEPTIONS-NOT: warning:
 thread_local T t3; // ok
 thread_local U u3;
-// CHECK-MESSAGES: :[[@LINE-1]]:16: warning: initialization of 'u3' with thread_local storage duration may throw an exception that cannot be caught
+// CHECK-EXCEPTIONS: :[[@LINE-1]]:16: warning: initialization of 'u3' with thread_local storage duration may throw an exception that cannot be caught
+// CHECK-NONEXCEPTIONS-NOT: warning:
 thread_local V v3("v");
-// CHECK-MESSAGES: :[[@LINE-1]]:16: warning: initialization of 'v3' with thread_local storage duration may throw an exception that cannot be caught
+// CHECK-EXCEPTIONS: :[[@LINE-1]]:16: warning: initialization of 'v3' with thread_local storage duration may throw an exception that cannot be caught
+// CHECK-NONEXCEPTIONS-NOT: warning:
 thread_local W w3;
-// CHECK-MESSAGES: :[[@LINE-1]]:16: warning: initialization of 'w3' with thread_local storage duration may throw an exception that cannot be caught
-};
+// CHECK-EXCEPTIONS: :[[@LINE-1]]:16: warning: initialization of 'w3' with thread_local storage duration may throw an exception that cannot be caught
+// CHECK-NONEXCEPTIONS-NOT: warning:
+}; // namespace
 
 class Statics {
   static S s; // warn when initialized
@@ -180,15 +207,19 @@ class Statics {
 };
 
 S Statics::s;
-// CHECK-MESSAGES: :[[@LINE-1]]:12: warning: initialization of 's' with static storage duration may throw an exception that cannot be caught [cert-err58-cpp]
-// CHECK-MESSAGES: 4:3: note: possibly throwing constructor declared here
+// CHECK-EXCEPTIONS: :[[@LINE-1]]:12: warning: initialization of 's' with static storage duration may throw an exception that cannot be caught [cert-err58-cpp]
+// CHECK-EXCEPTIONS: 9:3: note: possibly throwing constructor declared here
+// CHECK-NONEXCEPTIONS-NOT: warning:
 T Statics::t;
 U Statics::u;
-// CHECK-MESSAGES: :[[@LINE-1]]:12: warning: initialization of 'u' with static storage duration may throw an exception that cannot be caught
-// CHECK-MESSAGES: 12:3: note: possibly throwing constructor declared here
+// CHECK-EXCEPTIONS: :[[@LINE-1]]:12: warning: initialization of 'u' with static storage duration may throw an exception that cannot be caught
+// CHECK-EXCEPTIONS: 17:3: note: possibly throwing constructor declared here
+// CHECK-NONEXCEPTIONS-NOT: warning:
 V Statics::v("v");
-// CHECK-MESSAGES: :[[@LINE-1]]:12: warning: initialization of 'v' with static storage duration may throw an exception that cannot be caught
-// CHECK-MESSAGES: 16:12: note: possibly throwing constructor declared here
+// CHECK-EXCEPTIONS: :[[@LINE-1]]:12: warning: initialization of 'v' with static storage duration may throw an exception that cannot be caught
+// CHECK-EXCEPTIONS: 21:12: note: possibly throwing constructor declared here
+// CHECK-NONEXCEPTIONS-NOT: warning:
 W Statics::w;
-// CHECK-MESSAGES: :[[@LINE-1]]:12: warning: initialization of 'w' with static storage duration may throw an exception that cannot be caught
-// CHECK-MESSAGES: 24:3: note: possibly throwing constructor declared here
+// CHECK-EXCEPTIONS: :[[@LINE-1]]:12: warning: initialization of 'w' with static storage duration may throw an exception that cannot be caught
+// CHECK-EXCEPTIONS: 29:3: note: possibly throwing constructor declared here
+// CHECK-NONEXCEPTIONS-NOT: warning:

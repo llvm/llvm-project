@@ -33,7 +33,7 @@ def html_file_name(filename):
     return filename.replace('/', '_') + ".html"
 
 def make_link(File, Line):
-    return "{}#L{}".format(html_file_name(File), Line)
+    return "\"{}#L{}\"".format(html_file_name(File), Line)
 
 
 class Remark(yaml.YAMLObject):

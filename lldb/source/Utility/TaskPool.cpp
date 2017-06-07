@@ -75,7 +75,7 @@ void TaskPoolImpl::Worker(TaskPoolImpl *pool) {
 }
 
 void TaskMapOverInt(size_t begin, size_t end,
-                    std::function<void(size_t)> const &func) {
+                    const llvm::function_ref<void(size_t)> &func) {
   std::atomic<size_t> idx{begin};
   size_t num_workers =
       std::min<size_t>(end, std::thread::hardware_concurrency());

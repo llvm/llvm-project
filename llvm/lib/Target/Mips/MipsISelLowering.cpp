@@ -470,8 +470,9 @@ MipsTargetLowering::createFastISel(FunctionLoweringInfo &funcInfo,
                      !Subtarget.hasMips32r6() && !Subtarget.inMips16Mode() &&
                      !Subtarget.inMicroMipsMode();
 
-  // Disable if we don't generate PIC or the ABI isn't O32.
-  if (!TM.isPositionIndependent() || !TM.getABI().IsO32())
+  // Disable if either of the following is true:
+  // We do not generate PIC, the ABI is not O32, LargeGOT is being used.
+  if (!TM.isPositionIndependent() || !TM.getABI().IsO32() || LargeGOT)
     UseFastISel = false;
 
   return UseFastISel ? Mips::createFastISel(funcInfo, libInfo) : nullptr;
