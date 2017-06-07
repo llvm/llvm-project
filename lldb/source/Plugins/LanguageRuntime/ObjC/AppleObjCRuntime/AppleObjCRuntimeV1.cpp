@@ -171,6 +171,7 @@ UtilityFunction *AppleObjCRuntimeV1::CreateObjectChecker(const char *name) {
                   "           \n",
                   name);
   assert(strformatsize < (int)sizeof(buf->contents));
+  (void)strformatsize;
 
   Status error;
   return GetTargetRef().GetUtilityFunctionForLanguage(

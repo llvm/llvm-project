@@ -21,24 +21,25 @@
 ///                  | normalized |
 ///                  +------------+
 
-#include "MachONormalizedFile.h"
 #include "ArchHandler.h"
+#include "MachONormalizedFile.h"
 #include "MachONormalizedFileBinaryUtils.h"
 #include "lld/Core/Error.h"
 #include "lld/Core/LLVM.h"
 #include "lld/Core/SharedLibraryFile.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/BinaryFormat/MachO.h"
+#include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/Host.h"
-#include "llvm/Support/MachO.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 #include <functional>
@@ -46,6 +47,7 @@
 
 using namespace llvm::MachO;
 using llvm::object::ExportEntry;
+using llvm::file_magic;
 using llvm::object::MachOObjectFile;
 
 namespace lld {
@@ -531,8 +533,7 @@ public:
   MachOObjectReader(MachOLinkingContext &ctx) : _ctx(ctx) {}
 
   bool canParse(file_magic magic, MemoryBufferRef mb) const override {
-    return (magic == llvm::sys::fs::file_magic::macho_object &&
-            mb.getBufferSize() > 32);
+    return (magic == file_magic::macho_object && mb.getBufferSize() > 32);
   }
 
   ErrorOr<std::unique_ptr<File>>
@@ -553,8 +554,8 @@ public:
 
   bool canParse(file_magic magic, MemoryBufferRef mb) const override {
     switch (magic) {
-    case llvm::sys::fs::file_magic::macho_dynamically_linked_shared_lib:
-    case llvm::sys::fs::file_magic::macho_dynamically_linked_shared_lib_stub:
+    case file_magic::macho_dynamically_linked_shared_lib:
+    case file_magic::macho_dynamically_linked_shared_lib_stub:
       return mb.getBufferSize() > 32;
     default:
       return false;

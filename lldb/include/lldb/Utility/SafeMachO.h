@@ -114,6 +114,6 @@
 #undef CPU_SUBTYPE_MC980000_ALL
 #undef CPU_SUBTYPE_MC98601
 
-#include "llvm/Support/MachO.h"
+#include "llvm/BinaryFormat/MachO.h"
 
 #endif // liblldb_SafeMachO_h_

@@ -28,6 +28,8 @@
 #include "isl/ctx.h"
 #include "isl/set.h"
 
+#include "isl-noexceptions.h"
+
 #include <deque>
 #include <forward_list>
 
@@ -1898,8 +1900,7 @@ private:
   MemoryAccess *lookupBasePtrAccess(MemoryAccess *MA);
 
   /// Check if the base ptr of @p MA is in the SCoP but not hoistable.
-  bool hasNonHoistableBasePtrInScop(MemoryAccess *MA,
-                                    __isl_keep isl_union_map *Writes);
+  bool hasNonHoistableBasePtrInScop(MemoryAccess *MA, isl::union_map Writes);
 
   /// Create equivalence classes for required invariant accesses.
   ///
@@ -1922,8 +1923,7 @@ private:
   ///
   /// @return Return the context under which the access cannot be hoisted or a
   ///         nullptr if it cannot be hoisted at all.
-  __isl_give isl_set *getNonHoistableCtx(MemoryAccess *Access,
-                                         __isl_keep isl_union_map *Writes);
+  isl::set getNonHoistableCtx(MemoryAccess *Access, isl::union_map Writes);
 
   /// Verify that all required invariant loads have been hoisted.
   ///

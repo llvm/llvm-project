@@ -897,7 +897,7 @@ public:
 
     template <class _Up>
     _LIBCPP_INLINE_VISIBILITY
-    value_type value_or(_Up&& __v) &&
+    constexpr value_type value_or(_Up&& __v) &&
     {
         static_assert(is_move_constructible_v<value_type>,
                       "optional<T>::value_or: T must be move constructible");

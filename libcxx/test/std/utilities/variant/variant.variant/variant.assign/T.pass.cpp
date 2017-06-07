@@ -68,6 +68,28 @@ struct ThrowsCtorT {
   }
 };
 
+struct MoveCrashes {
+  int value;
+  MoveCrashes(int v = 0) noexcept : value{v} {}
+  MoveCrashes(MoveCrashes &&) noexcept { assert(false); }
+  MoveCrashes &operator=(MoveCrashes &&) noexcept { assert(false); return *this; }
+  MoveCrashes &operator=(int v) noexcept {
+    value = v;
+    return *this;
+  }
+};
+
+struct ThrowsCtorTandMove {
+  int value;
+  ThrowsCtorTandMove() : value(0) {}
+  ThrowsCtorTandMove(int) noexcept(false) { throw 42; }
+  ThrowsCtorTandMove(ThrowsCtorTandMove &&) noexcept(false) { assert(false); }
+  ThrowsCtorTandMove &operator=(int v) noexcept {
+    value = v;
+    return *this;
+  }
+};
+
 struct ThrowsAssignT {
   int value;
   ThrowsAssignT() : value(0) {}
@@ -126,7 +148,7 @@ void test_T_assignment_sfinae() {
     using V = std::variant<int, const int &>;
     static_assert(!std::is_assignable<V, int>::value, "ambiguous");
   }
-#endif
+#endif // TEST_VARIANT_HAS_NO_REFERENCES
 }
 
 void test_T_assignment_basic() {
@@ -163,7 +185,7 @@ void test_T_assignment_basic() {
     assert(v.index() == 2);
     assert(std::get<2>(v) == 42);
   }
-#endif
+#endif // TEST_VARIANT_HAS_NO_REFERENCES
 }
 
 void test_T_assignment_performs_construction() {
@@ -174,9 +196,15 @@ void test_T_assignment_performs_construction() {
     V v(std::in_place_type<std::string>, "hello");
     try {
       v = 42;
+      assert(false);
     } catch (...) { /* ... */
     }
+#ifdef _LIBCPP_VERSION // LWG2904
     assert(v.valueless_by_exception());
+#else // _LIBCPP_VERSION
+    assert(v.index() == 0);
+    assert(std::get<0>(v) == "hello");
+#endif // _LIBCPP_VERSION
   }
   {
     using V = std::variant<ThrowsAssignT, std::string>;
@@ -185,7 +213,29 @@ void test_T_assignment_performs_construction() {
     assert(v.index() == 0);
     assert(std::get<0>(v).value == 42);
   }
-#endif
+#ifdef _LIBCPP_VERSION // LWG2904
+  {
+    // Test that nothrow direct construction is preferred to nothrow move.
+    using V = std::variant<MoveCrashes, std::string>;
+    V v(std::in_place_type<std::string>, "hello");
+    v = 42;
+    assert(v.index() == 0);
+    assert(std::get<0>(v).value == 42);
+  }
+  {
+    // Test that throwing direct construction is preferred to copy-and-move when
+    // move can throw.
+    using V = std::variant<ThrowsCtorTandMove, std::string>;
+    V v(std::in_place_type<std::string>, "hello");
+    try {
+      v = 42;
+      assert(false);
+    } catch(...) { /* ... */
+    }
+    assert(v.valueless_by_exception());
+  }
+#endif // _LIBCPP_VERSION // LWG2904
+#endif // TEST_HAS_NO_EXCEPTIONS
 }
 
 void test_T_assignment_performs_assignment() {
@@ -227,7 +277,7 @@ void test_T_assignment_performs_assignment() {
     assert(v.index() == 1);
     assert(std::get<1>(v).value == 100);
   }
-#endif
+#endif // TEST_HAS_NO_EXCEPTIONS
 }
 
 int main() {

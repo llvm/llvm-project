@@ -78,7 +78,6 @@ public:
   void sort(std::function<int(InputSectionBase *S)> Order);
   void sortInitFini();
   void sortCtorsDtors();
-  template <class ELFT> void finalize();
   void assignOffsets();
   std::vector<InputSection *> Sections;
 

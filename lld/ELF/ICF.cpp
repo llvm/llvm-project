@@ -78,8 +78,8 @@
 #include "SymbolTable.h"
 #include "Threads.h"
 #include "llvm/ADT/Hashing.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Object/ELF.h"
-#include "llvm/Support/ELF.h"
 #include <algorithm>
 #include <atomic>
 

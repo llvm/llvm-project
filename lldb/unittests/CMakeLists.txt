@@ -68,6 +68,7 @@ add_subdirectory(Signals)
 add_subdirectory(Symbol)
 add_subdirectory(SymbolFile)
 add_subdirectory(Target)
+add_subdirectory(tools)
 add_subdirectory(UnwindAssembly)
 add_subdirectory(Utility)
 

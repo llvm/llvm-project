@@ -134,7 +134,8 @@ private:
     auto TargetsSpace = Targets.get_space();
 
     bool Started = Stmt->isRegionStmt();
-    for (auto *Acc : *Stmt) {
+    auto Accesses = getAccessesInOrder(*Stmt);
+    for (auto *Acc : Accesses) {
       if (Acc->isLatestScalarKind())
         continue;
 
