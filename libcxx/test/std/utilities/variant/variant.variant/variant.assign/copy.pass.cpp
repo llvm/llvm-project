@@ -224,13 +224,7 @@ void test_copy_assignment_sfinae() {
   }
   {
     using V = std::variant<int, CopyOnly>;
-#ifdef _LIBCPP_VERSION // LWG2904
-    // variant only provides copy assignment when both the copy and move
-    // constructors are well formed
-    static_assert(!std::is_copy_assignable<V>::value, "");
-#else // _LIBCPP_VERSION // LWG2904
     static_assert(std::is_copy_assignable<V>::value, "");
-#endif // _LIBCPP_VERSION // LWG2904
   }
   {
     using V = std::variant<int, NoCopy>;
@@ -263,12 +257,10 @@ void test_copy_assignment_sfinae() {
     using V = std::variant<int, TCopyAssignNTMoveAssign>;
     static_assert(std::is_trivially_copy_assignable<V>::value, "");
   }
-#ifndef _LIBCPP_VERSION // LWG2904
   {
     using V = std::variant<int, CopyOnly>;
     static_assert(std::is_trivially_copy_assignable<V>::value, "");
   }
-#endif // _LIBCPP_VERSION
 }
 
 void test_copy_assignment_empty_empty() {
@@ -487,41 +479,21 @@ void test_copy_assignment_different_index() {
       assert(false);
     } catch (...) { /* ... */
     }
-#ifdef _LIBCPP_VERSION // LWG2904
-    // Test that if copy construction throws then original value is unchanged.
-    assert(v1.index() == 2);
-    assert(std::get<2>(v1) == "hello");
-#else // _LIBCPP_VERSION // LWG2904
     // Test that copy construction is used directly if move construction may throw,
     // resulting in a valueless variant if copy throws.
     assert(v1.valueless_by_exception());
-#endif // _LIBCPP_VERSION // LWG2904
   }
   {
     using V = std::variant<int, MoveThrows, std::string>;
     V v1(std::in_place_type<std::string>, "hello");
     V v2(std::in_place_type<MoveThrows>);
     assert(MoveThrows::alive == 1);
-#ifdef _LIBCPP_VERSION // LWG2904
-    // Test that if move construction throws then the variant is left
-    // valueless by exception.
-    try {
-      v1 = v2;
-      assert(false);
-    } catch (...) { /* ... */
-    }
-    assert(v1.valueless_by_exception());
-    assert(v2.index() == 1);
-    assert(MoveThrows::alive == 1);
-#else // _LIBCPP_VERSION // LWG2904
     // Test that copy construction is used directly if move construction may throw.
     v1 = v2;
     assert(v1.index() == 1);
     assert(v2.index() == 1);
     assert(MoveThrows::alive == 2);
-#endif // _LIBCPP_VERSION // LWG2904
   }
-#ifndef _LIBCPP_VERSION // LWG2904
   {
     // Test that direct copy construction is preferred when it cannot throw.
     using V = std::variant<int, CopyCannotThrow, std::string>;
@@ -533,7 +505,6 @@ void test_copy_assignment_different_index() {
     assert(v2.index() == 1);
     assert(CopyCannotThrow::alive == 2);
   }
-#endif // _LIBCPP_VERSION // LWG2904
   {
     using V = std::variant<int, CopyThrows, std::string>;
     V v1(std::in_place_type<CopyThrows>);

@@ -358,7 +358,6 @@ struct __traits {
 
   static constexpr _Trait __copy_assignable_trait = __common_trait(
       {__copy_constructible_trait,
-       __move_constructible_trait,
        __trait<_Types, is_trivially_copy_assignable, is_copy_assignable>...});
 
   static constexpr _Trait __move_assignable_trait = __common_trait(
@@ -877,25 +876,24 @@ public:
   }
 
 protected:
-  template <bool _CopyAssign, size_t _Ip, class _Tp, class _Arg>
+  template <size_t _Ip, class _Tp, class _Arg>
   inline _LIBCPP_INLINE_VISIBILITY
-  void __assign_alt(__alt<_Ip, _Tp>& __a,
-                    _Arg&& __arg,
-                    bool_constant<_CopyAssign> __tag) {
+  void __assign_alt(__alt<_Ip, _Tp>& __a, _Arg&& __arg) {
     if (this->index() == _Ip) {
       __a.__value = _VSTD::forward<_Arg>(__arg);
     } else {
       struct {
         void operator()(true_type) const {
-          __this->__emplace<_Ip>(_Tp(_VSTD::forward<_Arg>(__arg)));
+          __this->__emplace<_Ip>(_VSTD::forward<_Arg>(__arg));
         }
         void operator()(false_type) const {
-          __this->__emplace<_Ip>(_VSTD::forward<_Arg>(__arg));
+          __this->__emplace<_Ip>(_Tp(_VSTD::forward<_Arg>(__arg)));
         }
         __assignment* __this;
         _Arg&& __arg;
       } __impl{this, _VSTD::forward<_Arg>(__arg)};
-      __impl(__tag);
+      __impl(bool_constant<is_nothrow_constructible_v<_Tp, _Arg> ||
+                           !is_nothrow_move_constructible_v<_Tp>>{});
     }
   }
 
@@ -912,8 +910,7 @@ protected:
           [this](auto& __this_alt, auto&& __that_alt) {
             this->__assign_alt(
                 __this_alt,
-                _VSTD::forward<decltype(__that_alt)>(__that_alt).__value,
-                is_lvalue_reference<_That>{});
+                _VSTD::forward<decltype(__that_alt)>(__that_alt).__value);
           },
           *this, _VSTD::forward<_That>(__that));
     }
@@ -1013,8 +1010,7 @@ public:
   inline _LIBCPP_INLINE_VISIBILITY
   void __assign(_Arg&& __arg) {
     this->__assign_alt(__access::__base::__get_alt<_Ip>(*this),
-                       _VSTD::forward<_Arg>(__arg),
-                       false_type{});
+                       _VSTD::forward<_Arg>(__arg));
   }
 
   inline _LIBCPP_INLINE_VISIBILITY
@@ -1088,7 +1084,6 @@ class _LIBCPP_TEMPLATE_VIS variant
           __all<is_move_constructible_v<_Types>...>::value>,
       private __sfinae_assign_base<
           __all<(is_copy_constructible_v<_Types> &&
-                 is_move_constructible_v<_Types> &&
                  is_copy_assignable_v<_Types>)...>::value,
           __all<(is_move_constructible_v<_Types> &&
                  is_move_assignable_v<_Types>)...>::value> {

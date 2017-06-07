@@ -101,18 +101,6 @@ StringRef elf::getOutputSectionName(StringRef Name) {
   if (Config->Relocatable)
     return Name;
 
-  // If -emit-relocs is given (which is rare), we need to copy
-  // relocation sections to the output. If input section .foo is
-  // output as .bar, we want to rename .rel.foo .rel.bar as well.
-  if (Config->EmitRelocs) {
-    for (StringRef V : {".rel.", ".rela."}) {
-      if (Name.startswith(V)) {
-        StringRef Inner = getOutputSectionName(Name.substr(V.size() - 1));
-        return Saver.save(V.drop_back() + Inner);
-      }
-    }
-  }
-
   for (StringRef V :
        {".text.", ".rodata.", ".data.rel.ro.", ".data.", ".bss.rel.ro.",
         ".bss.", ".init_array.", ".fini_array.", ".ctors.", ".dtors.", ".tbss.",
@@ -1237,6 +1225,12 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     if (SS->getParent() && !SS->empty())
       SS->getParent()->assignOffsets();
 
+  if (!Script->Opt.HasSections)
+    Script->fabricateDefaultCommands();
+  for (BaseCommand *Base : Script->Opt.Commands)
+    if (auto *Cmd = dyn_cast<OutputSectionCommand>(Base))
+      OutputSectionCommands.push_back(Cmd);
+
   // Dynamic section must be the last one in this list and dynamic
   // symbol table section (DynSymTab) must be the first one.
   applySynthetic({InX::DynSymTab,    InX::Bss,           InX::BssRelRo,
@@ -1265,13 +1259,6 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
                      [](SyntheticSection *SS) { SS->updateAllocSize(); });
   }
 
-  if (!Script->Opt.HasSections)
-    Script->fabricateDefaultCommands();
-  else
-    Script->synchronize();
-  for (BaseCommand *Base : Script->Opt.Commands)
-    if (auto *Cmd = dyn_cast<OutputSectionCommand>(Base))
-      OutputSectionCommands.push_back(Cmd);
   clearOutputSections();
 
   // Fill other section headers. The dynamic table is finalized

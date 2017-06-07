@@ -894,7 +894,7 @@ the configuration (without a prefix: ``Auto``).
          ? firstValue
          : SecondValueVeryVeryVeryVeryLong;
 
-     true:
+     false:
      veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongDescription ?
          firstValue :
          SecondValueVeryVeryVeryVeryLong;

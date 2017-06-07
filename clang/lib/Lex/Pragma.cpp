@@ -1408,18 +1408,8 @@ struct PragmaModuleBeginHandler : public PragmaHandler {
     }
 
     // If the module isn't available, it doesn't make sense to enter it.
-    if (!M->isAvailable()) {
-      Module::Requirement Requirement;
-      Module::UnresolvedHeaderDirective MissingHeader;
-      (void)M->isAvailable(PP.getLangOpts(), PP.getTargetInfo(),
-                           Requirement, MissingHeader);
-      if (MissingHeader.FileNameLoc.isValid()) {
-        PP.Diag(MissingHeader.FileNameLoc, diag::err_module_header_missing)
-          << MissingHeader.IsUmbrella << MissingHeader.FileName;
-      } else {
-        PP.Diag(M->DefinitionLoc, diag::err_module_unavailable)
-          << M->getFullModuleName() << Requirement.second << Requirement.first;
-      }
+    if (Preprocessor::checkModuleIsAvailable(
+            PP.getLangOpts(), PP.getTargetInfo(), PP.getDiagnostics(), M)) {
       PP.Diag(BeginLoc, diag::note_pp_module_begin_here)
         << M->getTopLevelModuleName();
       return;

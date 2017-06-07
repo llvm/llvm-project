@@ -486,6 +486,8 @@ namespace {
 class ASTInfoCollector : public ASTReaderListener {
   Preprocessor &PP;
   ASTContext &Context;
+  HeaderSearchOptions &HSOpts;
+  PreprocessorOptions &PPOpts;
   LangOptions &LangOpt;
   std::shared_ptr<TargetOptions> &TargetOpts;
   IntrusiveRefCntPtr<TargetInfo> &Target;
@@ -493,11 +495,14 @@ class ASTInfoCollector : public ASTReaderListener {
 
   bool InitializedLanguage;
 public:
-  ASTInfoCollector(Preprocessor &PP, ASTContext &Context, LangOptions &LangOpt,
+  ASTInfoCollector(Preprocessor &PP, ASTContext &Context,
+                   HeaderSearchOptions &HSOpts, PreprocessorOptions &PPOpts,
+                   LangOptions &LangOpt,
                    std::shared_ptr<TargetOptions> &TargetOpts,
                    IntrusiveRefCntPtr<TargetInfo> &Target, unsigned &Counter)
-      : PP(PP), Context(Context), LangOpt(LangOpt), TargetOpts(TargetOpts),
-        Target(Target), Counter(Counter), InitializedLanguage(false) {}
+      : PP(PP), Context(Context), HSOpts(HSOpts), PPOpts(PPOpts),
+        LangOpt(LangOpt), TargetOpts(TargetOpts), Target(Target),
+        Counter(Counter), InitializedLanguage(false) {}
 
   bool ReadLanguageOptions(const LangOptions &LangOpts, bool Complain,
                            bool AllowCompatibleDifferences) override {
@@ -508,6 +513,20 @@ public:
     InitializedLanguage = true;
     
     updated();
+    return false;
+  }
+
+  virtual bool ReadHeaderSearchOptions(const HeaderSearchOptions &HSOpts,
+                                       StringRef SpecificModuleCachePath,
+                                       bool Complain) override {
+    this->HSOpts = HSOpts;
+    return false;
+  }
+
+  virtual bool
+  ReadPreprocessorOptions(const PreprocessorOptions &PPOpts, bool Complain,
+                          std::string &SuggestedPredefines) override {
+    this->PPOpts = PPOpts;
     return false;
   }
 
@@ -685,11 +704,10 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
                                          AST->getDiagnostics(),
                                          AST->getLangOpts(),
                                          /*Target=*/nullptr));
-
-  auto PPOpts = std::make_shared<PreprocessorOptions>();
+  AST->PPOpts = std::make_shared<PreprocessorOptions>();
 
   for (const auto &RemappedFile : RemappedFiles)
-    PPOpts->addRemappedFile(RemappedFile.first, RemappedFile.second);
+    AST->PPOpts->addRemappedFile(RemappedFile.first, RemappedFile.second);
 
   // Gather Info for preprocessor construction later on.
 
@@ -697,7 +715,7 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
   unsigned Counter;
 
   AST->PP = std::make_shared<Preprocessor>(
-      std::move(PPOpts), AST->getDiagnostics(), *AST->LangOpts,
+      AST->PPOpts, AST->getDiagnostics(), *AST->LangOpts,
       AST->getSourceManager(), *AST->PCMCache, HeaderInfo, *AST,
       /*IILookup=*/nullptr,
       /*OwnsHeaderSearch=*/false);
@@ -717,8 +735,8 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
                               AllowPCHWithCompilerErrors);
 
   AST->Reader->setListener(llvm::make_unique<ASTInfoCollector>(
-      *AST->PP, Context, *AST->LangOpts, AST->TargetOpts, AST->Target,
-      Counter));
+      *AST->PP, Context, *AST->HSOpts, *AST->PPOpts, *AST->LangOpts,
+      AST->TargetOpts, AST->Target, Counter));
 
   // Attach the AST reader to the AST context as an external AST
   // source, so that declarations will be deserialized from the

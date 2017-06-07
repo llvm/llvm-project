@@ -443,26 +443,9 @@ static Module *prepareToBuildModule(CompilerInstance &CI,
   }
 
   // Check whether we can build this module at all.
-  clang::Module::Requirement Requirement;
-  clang::Module::UnresolvedHeaderDirective MissingHeader;
-  clang::Module *ShadowingModule = nullptr;
-  if (!M->isAvailable(CI.getLangOpts(), CI.getTarget(), Requirement,
-                      MissingHeader, ShadowingModule)) {
-
-    assert(!ShadowingModule &&
-           "lookup of module by name should never find shadowed module");
-
-    if (MissingHeader.FileNameLoc.isValid()) {
-      CI.getDiagnostics().Report(MissingHeader.FileNameLoc,
-                                 diag::err_module_header_missing)
-        << MissingHeader.IsUmbrella << MissingHeader.FileName;
-    } else {
-      CI.getDiagnostics().Report(diag::err_module_unavailable)
-        << M->getFullModuleName() << Requirement.second << Requirement.first;
-    }
-
+  if (Preprocessor::checkModuleIsAvailable(CI.getLangOpts(), CI.getTarget(),
+                                           CI.getDiagnostics(), M))
     return nullptr;
-  }
 
   // Inform the preprocessor that includes from within the input buffer should
   // be resolved relative to the build directory of the module map file.
@@ -560,6 +543,8 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
 
     // Options relating to how we treat the input (but not what we do with it)
     // are inherited from the AST unit.
+    CI.getHeaderSearchOpts() = AST->getHeaderSearchOpts();
+    CI.getPreprocessorOpts() = AST->getPreprocessorOpts();
     CI.getLangOpts() = AST->getLangOpts();
 
     // Preload all the module files loaded transitively by the AST unit.
@@ -569,6 +554,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
         if (&MF != &MM.getPrimaryModule())
           CI.getFrontendOpts().ModuleFiles.push_back(MF.FileName);
     }
+    // FIXME: Preload module maps loaded by the AST unit.
 
     // Set the shared objects, these are reset when we finish processing the
     // file, otherwise the CompilerInstance will happily destroy them.
@@ -868,13 +854,6 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     else
       CI.getDiagnostics().Report(diag::err_module_map_not_found) << Filename;
   }
-
-  // Add a module declaration scope so that modules from -fmodule-map-file
-  // arguments may shadow modules found implicitly in search paths.
-  CI.getPreprocessor()
-      .getHeaderSearchInfo()
-      .getModuleMap()
-      .finishModuleDeclarationScope();
 
   // If we were asked to load any module files, do so now.
   for (const auto &ModuleFile : CI.getFrontendOpts().ModuleFiles)

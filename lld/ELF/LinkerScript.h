@@ -134,6 +134,7 @@ struct OutputSectionCommand : BaseCommand {
   ConstraintKind Constraint = ConstraintKind::NoConstraint;
   std::string Location;
   std::string MemoryRegionName;
+  bool Noload = false;
 
   template <class ELFT> void finalize();
   template <class ELFT> void writeTo(uint8_t *Buf);
@@ -281,7 +282,6 @@ public:
   void assignOffsets(OutputSectionCommand *Cmd);
   void placeOrphanSections();
   void processNonSectionCommands();
-  void synchronize();
   void assignAddresses(std::vector<PhdrEntry> &Phdrs,
                        ArrayRef<OutputSectionCommand *> OutputSectionCommands);
 

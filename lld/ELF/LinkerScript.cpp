@@ -431,6 +431,8 @@ void LinkerScript::processCommands(OutputSectionFactory &Factory) {
       if (OutputSection *Sec = Cmd->Sec) {
         assert(Sec->SectionIndex == INT_MAX);
         Sec->SectionIndex = I;
+        if (Cmd->Noload)
+          Sec->Type = SHT_NOBITS;
         SecToCommand[Sec] = Cmd;
       }
     }
@@ -867,51 +869,6 @@ void LinkerScript::processNonSectionCommands() {
       assignSymbol(Cmd, false);
     else if (auto *Cmd = dyn_cast<AssertCommand>(Base))
       Cmd->Expression();
-  }
-}
-
-// Do a last effort at synchronizing the linker script "AST" and the section
-// list. This is needed to account for last minute changes, like adding a
-// .ARM.exidx terminator and sorting SHF_LINK_ORDER sections.
-//
-// FIXME: We should instead create the "AST" earlier and the above changes would
-// be done directly in the "AST".
-//
-// This can only handle new sections being added and sections being reordered.
-void LinkerScript::synchronize() {
-  for (BaseCommand *Base : Opt.Commands) {
-    auto *Cmd = dyn_cast<OutputSectionCommand>(Base);
-    if (!Cmd)
-      continue;
-    ArrayRef<InputSection *> Sections = Cmd->Sec->Sections;
-    std::vector<InputSection **> ScriptSections;
-    DenseSet<InputSection *> ScriptSectionsSet;
-    for (BaseCommand *Base : Cmd->Commands) {
-      auto *ISD = dyn_cast<InputSectionDescription>(Base);
-      if (!ISD)
-        continue;
-      for (InputSection *&IS : ISD->Sections) {
-        if (IS->Live) {
-          ScriptSections.push_back(&IS);
-          ScriptSectionsSet.insert(IS);
-        }
-      }
-    }
-    std::vector<InputSection *> Missing;
-    for (InputSection *IS : Sections)
-      if (!ScriptSectionsSet.count(IS))
-        Missing.push_back(IS);
-    if (!Missing.empty()) {
-      auto ISD = make<InputSectionDescription>("");
-      ISD->Sections = Missing;
-      Cmd->Commands.push_back(ISD);
-      for (InputSection *&IS : ISD->Sections)
-        if (IS->Live)
-          ScriptSections.push_back(&IS);
-    }
-    assert(ScriptSections.size() == Sections.size());
-    for (int I = 0, N = Sections.size(); I < N; ++I)
-      *ScriptSections[I] = Sections[I];
   }
 }
 

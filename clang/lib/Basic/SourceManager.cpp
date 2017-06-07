@@ -73,11 +73,11 @@ void ContentCache::replaceBuffer(llvm::MemoryBuffer *B, bool DoNotFree) {
     Buffer.setInt(DoNotFree? DoNotFreeFlag : 0);
     return;
   }
-  
+
   if (shouldFreeBuffer())
     delete Buffer.getPointer();
   Buffer.setPointer(B);
-  Buffer.setInt(DoNotFree? DoNotFreeFlag : 0);
+  Buffer.setInt((B && DoNotFree) ? DoNotFreeFlag : 0);
 }
 
 llvm::MemoryBuffer *ContentCache::getBuffer(DiagnosticsEngine &Diag,
@@ -362,9 +362,11 @@ void SourceManager::initializeForReplay(const SourceManager &Old) {
   // Set up our main file ID as a copy of the old source manager's main file.
   const SLocEntry &OldMainFile = Old.getSLocEntry(Old.getMainFileID());
   assert(OldMainFile.isFile() && "main file is macro expansion?");
-  setMainFileID(createFileID(
-      CloneContentCache(OldMainFile.getFile().getContentCache()),
-      SourceLocation(), OldMainFile.getFile().getFileCharacteristic(), 0, 0));
+  auto *MainCC = CloneContentCache(OldMainFile.getFile().getContentCache());
+  MemBufferInfos.push_back(MainCC);
+  setMainFileID(createFileID(MainCC, SourceLocation(),
+                             OldMainFile.getFile().getFileCharacteristic(),
+                             0, 0));
 
   // Ensure all SLocEntries are loaded from the external source.
   for (unsigned I = 0, N = Old.LoadedSLocEntryTable.size(); I != N; ++I)

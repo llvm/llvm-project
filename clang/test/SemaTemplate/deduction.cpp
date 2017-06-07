@@ -305,11 +305,11 @@ namespace nullptr_deduction {
 
   template<typename T, T v> struct X {};
   template<typename T, T v> void f(X<T, v>) {
-    static_assert(!v, "");
+    static_assert(!v, ""); // expected-warning 2{{implicit conversion of nullptr constant to 'bool'}}
   }
   void g() {
-    f(X<int*, nullptr>());
-    f(X<nullptr_t, nullptr>());
+    f(X<int*, nullptr>()); // expected-note {{instantiation of}}
+    f(X<nullptr_t, nullptr>()); // expected-note {{instantiation of}}
   }
 
   template<template<typename T, T> class X, typename T, typename U, int *P>

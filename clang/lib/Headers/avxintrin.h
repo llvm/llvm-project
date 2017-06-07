@@ -3603,7 +3603,7 @@ _mm256_stream_si256(__m256i *__a, __m256i __b)
 ///
 /// \param __a
 ///    A pointer to a 32-byte aligned memory location that will receive the
-///    integer values.
+///    double-precision floating-point values.
 /// \param __b
 ///    A 256-bit vector of [4 x double] containing the values to be moved.
 static __inline void __DEFAULT_FN_ATTRS

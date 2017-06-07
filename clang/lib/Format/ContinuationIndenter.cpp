@@ -1036,8 +1036,8 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
                                         State.Stack.back().NestedBlockIndent);
   if (Current.isOneOf(tok::l_brace, TT_ArrayInitializerLSquare)) {
     if (Current.opensBlockOrBlockTypeList(Style)) {
-      NewIndent = State.Stack.back().NestedBlockIndent + Style.IndentWidth;
-      NewIndent = std::min(State.Column + 2, NewIndent);
+      NewIndent = Style.IndentWidth +
+                  std::min(State.Column, State.Stack.back().NestedBlockIndent);
     } else {
       NewIndent = State.Stack.back().LastSpace + Style.ContinuationIndentWidth;
     }

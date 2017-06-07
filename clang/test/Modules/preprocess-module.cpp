@@ -49,6 +49,14 @@
 // RUN: %clang_cc1 -fmodules -fmodule-name=file -fmodule-file=%t/fwd.pcm -x c++-module-map-cpp-output %t/file.rewrite.ii -emit-module -o %t/file.rewrite.pcm
 // RUN: %clang_cc1 -fmodules -fmodule-file=%t/file.rewrite.pcm %s -I%t -verify -fno-modules-error-recovery -DFILE_REWRITE
 // RUN: %clang_cc1 -fmodules -fmodule-file=%t/file.rewrite.pcm %s -I%t -verify -fno-modules-error-recovery -DFILE_REWRITE -DINCLUDE -I%S/Inputs/preprocess
+//
+// Check that language / header search options are ignored when preprocessing from a .pcm file.
+// RUN: %clang_cc1 %t/file.pcm -E -frewrite-includes -o %t/file.rewrite.ii.2
+// RUN: cmp %t/file.rewrite.ii %t/file.rewrite.ii.2
+//
+// RUN: %clang_cc1 -fmodules -fmodule-name=file -fmodule-file=%t/fwd.pcm -I%S/Inputs/preprocess %t/file.pcm -E -o %t/file.no-rewrite.ii
+// RUN: %clang_cc1 %t/file.pcm -E -o %t/file.no-rewrite.ii.2 -Dstruct=error
+// RUN: cmp %t/file.no-rewrite.ii %t/file.no-rewrite.ii.2
 
 // == module map
 // CHECK: # 1 "{{.*}}module.modulemap"

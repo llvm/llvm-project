@@ -2350,6 +2350,25 @@ namespace {
   };
 }
 
+bool Sema::usesPartialOrExplicitSpecialization(
+    SourceLocation Loc, ClassTemplateSpecializationDecl *ClassTemplateSpec) {
+  if (ClassTemplateSpec->getTemplateSpecializationKind() ==
+      TSK_ExplicitSpecialization)
+    return true;
+
+  SmallVector<ClassTemplatePartialSpecializationDecl *, 4> PartialSpecs;
+  ClassTemplateSpec->getSpecializedTemplate()
+                   ->getPartialSpecializations(PartialSpecs);
+  for (unsigned I = 0, N = PartialSpecs.size(); I != N; ++I) {
+    TemplateDeductionInfo Info(Loc);
+    if (!DeduceTemplateArguments(PartialSpecs[I],
+                                 ClassTemplateSpec->getTemplateArgs(), Info))
+      return true;
+  }
+
+  return false;
+}
+
 /// Get the instantiation pattern to use to instantiate the definition of a
 /// given ClassTemplateSpecializationDecl (either the pattern of the primary
 /// template or of a partial specialization).

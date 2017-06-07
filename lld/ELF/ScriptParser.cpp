@@ -568,10 +568,20 @@ ScriptParser::readOutputSectionDescription(StringRef OutSec) {
   OutputSectionCommand *Cmd =
       Script->createOutputSectionCommand(OutSec, getCurrentLocation());
 
-  // Read an address expression.
-  // https://sourceware.org/binutils/docs/ld/Output-Section-Address.html
-  if (peek() != ":")
-    Cmd->AddrExpr = readExpr();
+  if (peek() != ":") {
+    // Read an address expression.
+    // https://sourceware.org/binutils/docs/ld/Output-Section-Address.html
+    if (peek() != "(")
+      Cmd->AddrExpr = readExpr();
+
+    // Read a section type. Currently, only NOLOAD is supported.
+    // https://sourceware.org/binutils/docs/ld/Output-Section-Type.html
+    if (consume("(")) {
+      expect("NOLOAD");
+      expect(")");
+      Cmd->Noload = true;
+    }
+  }
 
   expect(":");
 
