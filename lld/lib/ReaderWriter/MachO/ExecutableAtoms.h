@@ -13,7 +13,7 @@
 #include "Atoms.h"
 #include "File.h"
 
-#include "llvm/Support/MachO.h"
+#include "llvm/BinaryFormat/MachO.h"
 
 #include "lld/Core/DefinedAtom.h"
 #include "lld/Core/File.h"

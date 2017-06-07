@@ -11,6 +11,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -917,86 +918,6 @@ TEST_F(FileSystemTest, Remove) {
 
   ASSERT_NO_ERROR(fs::remove_directories(BaseDir));
   ASSERT_FALSE(fs::exists(BaseDir));
-}
-
-const char archive[] = "!<arch>\x0A";
-const char bitcode[] = "\xde\xc0\x17\x0b";
-const char coff_object[] = "\x00\x00......";
-const char coff_bigobj[] = "\x00\x00\xff\xff\x00\x02......"
-    "\xc7\xa1\xba\xd1\xee\xba\xa9\x4b\xaf\x20\xfa\xf6\x6a\xa4\xdc\xb8";
-const char coff_import_library[] = "\x00\x00\xff\xff....";
-const char elf_relocatable[] = { 0x7f, 'E', 'L', 'F', 1, 2, 1, 0, 0,
-                                 0,    0,   0,   0,   0, 0, 0, 0, 1 };
-const char macho_universal_binary[] = "\xca\xfe\xba\xbe...\x00";
-const char macho_object[] =
-    "\xfe\xed\xfa\xce........\x00\x00\x00\x01............";
-const char macho_executable[] =
-    "\xfe\xed\xfa\xce........\x00\x00\x00\x02............";
-const char macho_fixed_virtual_memory_shared_lib[] =
-    "\xfe\xed\xfa\xce........\x00\x00\x00\x03............";
-const char macho_core[] =
-    "\xfe\xed\xfa\xce........\x00\x00\x00\x04............";
-const char macho_preload_executable[] =
-    "\xfe\xed\xfa\xce........\x00\x00\x00\x05............";
-const char macho_dynamically_linked_shared_lib[] =
-    "\xfe\xed\xfa\xce........\x00\x00\x00\x06............";
-const char macho_dynamic_linker[] =
-    "\xfe\xed\xfa\xce........\x00\x00\x00\x07............";
-const char macho_bundle[] =
-    "\xfe\xed\xfa\xce........\x00\x00\x00\x08............";
-const char macho_dsym_companion[] =
-    "\xfe\xed\xfa\xce........\x00\x00\x00\x0a............";
-const char macho_kext_bundle[] =
-    "\xfe\xed\xfa\xce........\x00\x00\x00\x0b............";
-const char windows_resource[] = "\x00\x00\x00\x00\x020\x00\x00\x00\xff";
-const char macho_dynamically_linked_shared_lib_stub[] =
-    "\xfe\xed\xfa\xce........\x00\x00\x00\x09............";
-
-TEST_F(FileSystemTest, Magic) {
-  struct type {
-    const char *filename;
-    const char *magic_str;
-    size_t magic_str_len;
-    fs::file_magic magic;
-  } types[] = {
-#define DEFINE(magic)                                           \
-    { #magic, magic, sizeof(magic), fs::file_magic::magic }
-    DEFINE(archive),
-    DEFINE(bitcode),
-    DEFINE(coff_object),
-    { "coff_bigobj", coff_bigobj, sizeof(coff_bigobj), fs::file_magic::coff_object },
-    DEFINE(coff_import_library),
-    DEFINE(elf_relocatable),
-    DEFINE(macho_universal_binary),
-    DEFINE(macho_object),
-    DEFINE(macho_executable),
-    DEFINE(macho_fixed_virtual_memory_shared_lib),
-    DEFINE(macho_core),
-    DEFINE(macho_preload_executable),
-    DEFINE(macho_dynamically_linked_shared_lib),
-    DEFINE(macho_dynamic_linker),
-    DEFINE(macho_bundle),
-    DEFINE(macho_dynamically_linked_shared_lib_stub),
-    DEFINE(macho_dsym_companion),
-    DEFINE(macho_kext_bundle),
-    DEFINE(windows_resource)
-#undef DEFINE
-    };
-
-  // Create some files filled with magic.
-  for (type *i = types, *e = types + (sizeof(types) / sizeof(type)); i != e;
-                                                                     ++i) {
-    SmallString<128> file_pathname(TestDirectory);
-    path::append(file_pathname, i->filename);
-    std::error_code EC;
-    raw_fd_ostream file(file_pathname, EC, sys::fs::F_None);
-    ASSERT_FALSE(file.has_error());
-    StringRef magic(i->magic_str, i->magic_str_len);
-    file << magic;
-    file.close();
-    EXPECT_EQ(i->magic, fs::identify_magic(magic));
-    ASSERT_NO_ERROR(fs::remove(Twine(file_pathname)));
-  }
 }
 
 #ifdef LLVM_ON_WIN32

@@ -3187,12 +3187,9 @@ MemoryAccess *Scop::lookupBasePtrAccess(MemoryAccess *MA) {
 }
 
 bool Scop::hasNonHoistableBasePtrInScop(MemoryAccess *MA,
-                                        __isl_keep isl_union_map *Writes) {
+                                        isl::union_map Writes) {
   if (auto *BasePtrMA = lookupBasePtrAccess(MA)) {
-    auto *NHCtx = getNonHoistableCtx(BasePtrMA, Writes);
-    bool Hoistable = NHCtx != nullptr;
-    isl_set_free(NHCtx);
-    return !Hoistable;
+    return getNonHoistableCtx(BasePtrMA, Writes).is_null();
   }
 
   Value *BaseAddr = MA->getOriginalBaseAddr();
@@ -3883,8 +3880,7 @@ void Scop::addInvariantLoads(ScopStmt &Stmt, InvariantAccessesTy &InvMAs) {
   isl_set_free(DomainCtx);
 }
 
-__isl_give isl_set *Scop::getNonHoistableCtx(MemoryAccess *Access,
-                                             __isl_keep isl_union_map *Writes) {
+isl::set Scop::getNonHoistableCtx(MemoryAccess *Access, isl::union_map Writes) {
   // TODO: Loads that are not loop carried, hence are in a statement with
   //       zero iterators, are by construction invariant, though we
   //       currently "hoist" them anyway. This is necessary because we allow
@@ -3911,49 +3907,41 @@ __isl_give isl_set *Scop::getNonHoistableCtx(MemoryAccess *Access,
   if (hasNonHoistableBasePtrInScop(Access, Writes))
     return nullptr;
 
-  isl_map *AccessRelation = Access->getAccessRelation();
-  assert(!isl_map_is_empty(AccessRelation));
+  isl::map AccessRelation = give(Access->getAccessRelation());
+  assert(!AccessRelation.is_empty());
 
-  if (isl_map_involves_dims(AccessRelation, isl_dim_in, 0,
-                            Stmt.getNumIterators())) {
-    isl_map_free(AccessRelation);
+  if (AccessRelation.involves_dims(isl::dim::in, 0, Stmt.getNumIterators()))
     return nullptr;
-  }
 
-  AccessRelation = isl_map_intersect_domain(AccessRelation, Stmt.getDomain());
-  isl_set *SafeToLoad;
+  AccessRelation = AccessRelation.intersect_domain(give(Stmt.getDomain()));
+  isl::set SafeToLoad;
 
   auto &DL = getFunction().getParent()->getDataLayout();
   if (isSafeToLoadUnconditionally(LI->getPointerOperand(), LI->getAlignment(),
                                   DL)) {
-    SafeToLoad =
-        isl_set_universe(isl_space_range(isl_map_get_space(AccessRelation)));
-    isl_map_free(AccessRelation);
+    SafeToLoad = isl::set::universe(AccessRelation.get_space().range());
   } else if (BB != LI->getParent()) {
     // Skip accesses in non-affine subregions as they might not be executed
     // under the same condition as the entry of the non-affine subregion.
-    isl_map_free(AccessRelation);
     return nullptr;
   } else {
-    SafeToLoad = isl_map_range(AccessRelation);
+    SafeToLoad = AccessRelation.range();
   }
 
-  isl_union_map *Written = isl_union_map_intersect_range(
-      isl_union_map_copy(Writes), isl_union_set_from_set(SafeToLoad));
-  auto *WrittenCtx = isl_union_map_params(Written);
-  bool IsWritten = !isl_set_is_empty(WrittenCtx);
+  isl::union_map Written = Writes.intersect_range(SafeToLoad);
+  isl::set WrittenCtx = Written.params();
+  bool IsWritten = !WrittenCtx.is_empty();
 
   if (!IsWritten)
     return WrittenCtx;
 
-  WrittenCtx = isl_set_remove_divs(WrittenCtx);
-  bool TooComplex = isl_set_n_basic_set(WrittenCtx) >= MaxDisjunctsInDomain;
-  if (TooComplex || !isRequiredInvariantLoad(LI)) {
-    isl_set_free(WrittenCtx);
+  WrittenCtx = WrittenCtx.remove_divs();
+  bool TooComplex =
+      isl_set_n_basic_set(WrittenCtx.get()) >= MaxDisjunctsInDomain;
+  if (TooComplex || !isRequiredInvariantLoad(LI))
     return nullptr;
-  }
 
-  addAssumption(INVARIANTLOAD, isl_set_copy(WrittenCtx), LI->getDebugLoc(),
+  addAssumption(INVARIANTLOAD, WrittenCtx.copy(), LI->getDebugLoc(),
                 AS_RESTRICTION);
   return WrittenCtx;
 }
@@ -3974,20 +3962,19 @@ void Scop::hoistInvariantLoads() {
   if (!PollyInvariantLoadHoisting)
     return;
 
-  isl_union_map *Writes = getWrites();
+  isl::union_map Writes = give(getWrites());
   for (ScopStmt &Stmt : *this) {
     InvariantAccessesTy InvariantAccesses;
 
     for (MemoryAccess *Access : Stmt)
-      if (auto *NHCtx = getNonHoistableCtx(Access, Writes))
-        InvariantAccesses.push_back({Access, NHCtx});
+      if (isl::set NHCtx = getNonHoistableCtx(Access, Writes))
+        InvariantAccesses.push_back({Access, NHCtx.release()});
 
     // Transfer the memory access from the statement to the SCoP.
     for (auto InvMA : InvariantAccesses)
       Stmt.removeMemoryAccess(InvMA.MA);
     addInvariantLoads(Stmt, InvariantAccesses);
   }
-  isl_union_map_free(Writes);
 }
 
 /// Find the canonical scop array info object for a set of invariant load

@@ -1203,7 +1203,7 @@ size_t CheckString::CheckDag(const SourceMgr &SM, StringRef Buffer,
       // If there's CHECK-NOTs between two CHECK-DAGs or from CHECK to
       // CHECK-DAG, verify that there's no 'not' strings occurred in that
       // region.
-      StringRef SkippedRegion = Buffer.substr(LastPos, MatchPos);
+      StringRef SkippedRegion = Buffer.slice(LastPos, MatchPos);
       if (CheckNot(SM, SkippedRegion, NotStrings, VariableTable))
         return StringRef::npos;
       // Clear "not strings".

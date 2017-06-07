@@ -1,4 +1,4 @@
-//===- unittest/Support/DwarfTest.cpp - Dwarf support tests ---------------===//
+//===- unittest/BinaryFormat/DwarfTest.cpp - Dwarf support tests ----------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,7 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/Dwarf.h"
+#include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/ADT/StringRef.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;

@@ -216,7 +216,7 @@ void MachODumper::dumpLoadCommands(std::unique_ptr<MachOYAML::Object> &Y) {
         MachO::swapStruct(LC.Data.load_command_data);
       EndPtr = processLoadCommandData<MachO::load_command>(LC, LoadCmd);
       break;
-#include "llvm/Support/MachO.def"
+#include "llvm/BinaryFormat/MachO.def"
     }
     auto RemainingBytes = LoadCmd.C.cmdsize - (EndPtr - LoadCmd.Ptr);
     if (!std::all_of(EndPtr, &EndPtr[RemainingBytes],

@@ -13,13 +13,12 @@
 #include "lld/Core/LLVM.h"
 #include "lld/Core/Reference.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <memory>
 #include <vector>
-
-using llvm::sys::fs::file_magic;
 
 namespace llvm {
 namespace yaml {
@@ -45,7 +44,7 @@ public:
   /// The method is called with:
   /// 1) the file_magic enumeration returned by identify_magic()
   /// 2) the whole file content buffer if the above is not enough.
-  virtual bool canParse(file_magic magic, MemoryBufferRef mb) const = 0;
+  virtual bool canParse(llvm::file_magic magic, MemoryBufferRef mb) const = 0;
 
   /// \brief Parse a supplied buffer (already filled with the contents of a
   /// file) and create a File object.

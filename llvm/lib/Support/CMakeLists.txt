@@ -58,7 +58,6 @@ add_llvm_library(LLVMSupport
   DebugCounter.cpp
   DeltaAlgorithm.cpp
   DAGDeltaAlgorithm.cpp
-  Dwarf.cpp
   Error.cpp
   ErrorHandling.cpp
   FileUtilities.cpp

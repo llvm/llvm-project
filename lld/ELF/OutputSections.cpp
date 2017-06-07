@@ -16,7 +16,7 @@
 #include "SyntheticSections.h"
 #include "Target.h"
 #include "Threads.h"
-#include "llvm/Support/Dwarf.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SHA1.h"
@@ -280,6 +280,20 @@ void OutputSectionFactory::addInputSec(InputSectionBase *IS,
   if (IS->Type == SHT_GROUP) {
     OutputSection *Out = nullptr;
     addInputSec(IS, OutsecName, Out);
+    return;
+  }
+
+  // Imagine .zed : { *(.foo) *(.bar) } script. Both foo and bar may have
+  // relocation sections .rela.foo and .rela.bar for example. Most tools do
+  // not allow multiple REL[A] sections for output section. Hence we
+  // should combine these relocation sections into single output.
+  // We skip synthetic sections because it can be .rela.dyn/.rela.plt or any
+  // other REL[A] sections created by linker itself.
+  if (!isa<SyntheticSection>(IS) &&
+      (IS->Type == SHT_REL || IS->Type == SHT_RELA)) {
+    auto *Sec = cast<InputSection>(IS);
+    OutputSection *Out = Sec->getRelocatedSection()->getOutputSection();
+    addInputSec(IS, OutsecName, Out->RelocationSection);
     return;
   }
 

@@ -12,10 +12,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ObjectYAML/MachOYAML.h"
+#include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/Host.h"
-#include "llvm/Support/MachO.h"
 
 #include <string.h> // For memcpy, memset and strnlen.
 
@@ -252,7 +252,7 @@ void MappingTraits<MachOYAML::LoadCommand>::mapping(
     break;
 
   switch (LoadCommand.Data.load_command_data.cmd) {
-#include "llvm/Support/MachO.def"
+#include "llvm/BinaryFormat/MachO.def"
   }
   IO.mapOptional("PayloadBytes", LoadCommand.PayloadBytes);
   IO.mapOptional("ZeroPadBytes", LoadCommand.ZeroPadBytes, (uint64_t)0ull);

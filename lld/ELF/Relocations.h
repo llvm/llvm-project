@@ -127,11 +127,13 @@ public:
 
 private:
   void mergeThunks();
-  ThunkSection *getOSThunkSec(OutputSection *OS);
+  ThunkSection *getOSThunkSec(OutputSection *OS,
+                              std::vector<InputSection *> *ISR);
   ThunkSection *getISThunkSec(InputSection *IS, OutputSection *OS);
   void forEachExecInputSection(
       ArrayRef<OutputSection *> OutputSections,
-      std::function<void(OutputSection *, InputSection *)> Fn);
+      std::function<void(OutputSection *, std::vector<InputSection *> *,
+                         InputSection *)> Fn);
   std::pair<Thunk *, bool> getThunk(SymbolBody &Body, uint32_t Type);
 
   // Track Symbols that already have a Thunk

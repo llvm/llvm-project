@@ -232,16 +232,6 @@ template <class T> scc_iterator<T> scc_end(const T &G) {
   return scc_iterator<T>::end(G);
 }
 
-/// \brief Construct the begin iterator for a deduced graph type T's Inverse<T>.
-template <class T> scc_iterator<Inverse<T>> scc_begin(const Inverse<T> &G) {
-  return scc_iterator<Inverse<T>>::begin(G);
-}
-
-/// \brief Construct the end iterator for a deduced graph type T's Inverse<T>.
-template <class T> scc_iterator<Inverse<T>> scc_end(const Inverse<T> &G) {
-  return scc_iterator<Inverse<T>>::end(G);
-}
-
 } // end namespace llvm
 
 #endif // LLVM_ADT_SCCITERATOR_H

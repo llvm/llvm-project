@@ -16,6 +16,8 @@
 #include "MCTargetDesc/ARMFixupKinds.h"
 #include "MCTargetDesc/ARMMCTargetDesc.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/BinaryFormat/ELF.h"
+#include "llvm/BinaryFormat/MachO.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
@@ -31,10 +33,8 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/ELF.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/MachO.h"
 #include "llvm/Support/TargetParser.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
@@ -723,16 +723,17 @@ void ARMAsmBackend::processFixupValue(const MCAssembler &Asm,
                                       bool &IsResolved) {
   const MCSymbolRefExpr *A = Target.getSymA();
   const MCSymbol *Sym = A ? &A->getSymbol() : nullptr;
+  const unsigned FixupKind = Fixup.getKind() ;
   // MachO (the only user of "Value") tries to make .o files that look vaguely
   // pre-linked, so for MOVW/MOVT and .word relocations they put the Thumb bit
   // into the addend if possible. Other relocation types don't want this bit
   // though (branches couldn't encode it if it *was* present, and no other
   // relocations exist) and it can interfere with checking valid expressions.
-  if ((unsigned)Fixup.getKind() == FK_Data_4 ||
-      (unsigned)Fixup.getKind() == ARM::fixup_arm_movw_lo16 ||
-      (unsigned)Fixup.getKind() == ARM::fixup_arm_movt_hi16 ||
-      (unsigned)Fixup.getKind() == ARM::fixup_t2_movw_lo16 ||
-      (unsigned)Fixup.getKind() == ARM::fixup_t2_movt_hi16) {
+  if (FixupKind == FK_Data_4 ||
+      FixupKind == ARM::fixup_arm_movw_lo16 ||
+      FixupKind == ARM::fixup_arm_movt_hi16 ||
+      FixupKind == ARM::fixup_t2_movw_lo16 ||
+      FixupKind == ARM::fixup_t2_movt_hi16) {
     if (Sym) {
       if (Asm.isThumbFunc(Sym))
         Value |= 1;
@@ -748,23 +749,27 @@ void ARMAsmBackend::processFixupValue(const MCAssembler &Asm,
     // linker can handle it. GNU AS produces an error in this case.
     if (Sym->isExternal() || Value >= 0x400004)
       IsResolved = false;
-    // When an ARM function is called from a Thumb function, produce a
-    // relocation so the linker will use the correct branch instruction for ELF
-    // binaries.
-    if (Sym->isELF()) {
-      unsigned Type = dyn_cast<MCSymbolELF>(Sym)->getType();
-      if ((Type == ELF::STT_FUNC || Type == ELF::STT_GNU_IFUNC) &&
-          !Asm.isThumbFunc(Sym))
+  }
+  // Create relocations for unconditional branches to function symbols with
+  // different execution mode in ELF binaries.
+  if (Sym && Sym->isELF()) {
+    unsigned Type = dyn_cast<MCSymbolELF>(Sym)->getType();
+    if ((Type == ELF::STT_FUNC || Type == ELF::STT_GNU_IFUNC)) {
+      if (Asm.isThumbFunc(Sym) && (FixupKind == ARM::fixup_arm_uncondbranch))
+        IsResolved = false;
+      if (!Asm.isThumbFunc(Sym) && (FixupKind == ARM::fixup_arm_thumb_br ||
+                                    FixupKind == ARM::fixup_arm_thumb_bl ||
+                                    FixupKind == ARM::fixup_t2_uncondbranch))
         IsResolved = false;
     }
   }
   // We must always generate a relocation for BL/BLX instructions if we have
   // a symbol to reference, as the linker relies on knowing the destination
   // symbol's thumb-ness to get interworking right.
-  if (A && ((unsigned)Fixup.getKind() == ARM::fixup_arm_thumb_blx ||
-            (unsigned)Fixup.getKind() == ARM::fixup_arm_blx ||
-            (unsigned)Fixup.getKind() == ARM::fixup_arm_uncondbl ||
-            (unsigned)Fixup.getKind() == ARM::fixup_arm_condbl))
+  if (A && (FixupKind == ARM::fixup_arm_thumb_blx ||
+            FixupKind == ARM::fixup_arm_blx ||
+            FixupKind == ARM::fixup_arm_uncondbl ||
+            FixupKind == ARM::fixup_arm_condbl))
     IsResolved = false;
 }
 

@@ -2391,7 +2391,7 @@ static void setLimitsForBinOp(BinaryOperator &BO, APInt &Lower, APInt &Upper) {
   const APInt *C;
   switch (BO.getOpcode()) {
   case Instruction::Add:
-    if (match(BO.getOperand(1), m_APInt(C)) && *C != 0) {
+    if (match(BO.getOperand(1), m_APInt(C)) && !C->isNullValue()) {
       // FIXME: If we have both nuw and nsw, we should reduce the range further.
       if (BO.hasNoUnsignedWrap()) {
         // 'add nuw x, C' produces [C, UINT_MAX].
@@ -2429,7 +2429,7 @@ static void setLimitsForBinOp(BinaryOperator &BO, APInt &Lower, APInt &Upper) {
       Upper = APInt::getSignedMaxValue(Width).ashr(*C) + 1;
     } else if (match(BO.getOperand(0), m_APInt(C))) {
       unsigned ShiftAmount = Width - 1;
-      if (*C != 0 && BO.isExact())
+      if (!C->isNullValue() && BO.isExact())
         ShiftAmount = C->countTrailingZeros();
       if (C->isNegative()) {
         // 'ashr C, x' produces [C, C >> (Width-1)]
@@ -2450,7 +2450,7 @@ static void setLimitsForBinOp(BinaryOperator &BO, APInt &Lower, APInt &Upper) {
     } else if (match(BO.getOperand(0), m_APInt(C))) {
       // 'lshr C, x' produces [C >> (Width-1), C].
       unsigned ShiftAmount = Width - 1;
-      if (*C != 0 && BO.isExact())
+      if (!C->isNullValue() && BO.isExact())
         ShiftAmount = C->countTrailingZeros();
       Lower = C->lshr(ShiftAmount);
       Upper = *C + 1;
@@ -2512,7 +2512,7 @@ static void setLimitsForBinOp(BinaryOperator &BO, APInt &Lower, APInt &Upper) {
     break;
 
   case Instruction::UDiv:
-    if (match(BO.getOperand(1), m_APInt(C)) && *C != 0) {
+    if (match(BO.getOperand(1), m_APInt(C)) && !C->isNullValue()) {
       // 'udiv x, C' produces [0, UINT_MAX / C].
       Upper = APInt::getMaxValue(Width).udiv(*C) + 1;
     } else if (match(BO.getOperand(0), m_APInt(C))) {
@@ -2827,14 +2827,14 @@ static Value *simplifyICmpWithBinOp(CmpInst::Predicate Pred, Value *LHS,
         // - CI2 is one
         // - CI isn't zero
         if (LBO->hasNoSignedWrap() || LBO->hasNoUnsignedWrap() ||
-            *CI2Val == 1 || !CI->isZero()) {
+            CI2Val->isOneValue() || !CI->isZero()) {
           if (Pred == ICmpInst::ICMP_EQ)
             return ConstantInt::getFalse(RHS->getContext());
           if (Pred == ICmpInst::ICMP_NE)
             return ConstantInt::getTrue(RHS->getContext());
         }
       }
-      if (CIVal->isSignMask() && *CI2Val == 1) {
+      if (CIVal->isSignMask() && CI2Val->isOneValue()) {
         if (Pred == ICmpInst::ICMP_UGT)
           return ConstantInt::getFalse(RHS->getContext());
         if (Pred == ICmpInst::ICMP_ULE)

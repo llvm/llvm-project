@@ -96,7 +96,8 @@ private:
 
   FixedStreamArray<support::ulittle16_t> DbgStreams;
 
-  PdbRaw_DbiSecContribVer SectionContribVersion;
+  PdbRaw_DbiSecContribVer SectionContribVersion =
+      PdbRaw_DbiSecContribVer::DbiSecContribVer60;
   FixedStreamArray<SectionContrib> SectionContribs;
   FixedStreamArray<SectionContrib2> SectionContribs2;
   FixedStreamArray<SecMapEntry> SectionMap;

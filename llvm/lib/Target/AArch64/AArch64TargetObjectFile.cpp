@@ -9,12 +9,12 @@
 
 #include "AArch64TargetObjectFile.h"
 #include "AArch64TargetMachine.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCValue.h"
-#include "llvm/Support/Dwarf.h"
 using namespace llvm;
 using namespace dwarf;
 

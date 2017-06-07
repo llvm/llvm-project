@@ -221,14 +221,14 @@ void DWARFContext::dump(raw_ostream &OS, DIDumpOptions DumpOpts){
   if (DumpType == DIDT_All || DumpType == DIDT_Info) {
     OS << "\n.debug_info contents:\n";
     for (const auto &CU : compile_units())
-      CU->dump(OS);
+      CU->dump(OS, DumpOpts);
   }
 
   if ((DumpType == DIDT_All || DumpType == DIDT_InfoDwo) &&
       getNumDWOCompileUnits()) {
     OS << "\n.debug_info.dwo contents:\n";
     for (const auto &DWOCU : dwo_compile_units())
-      DWOCU->dump(OS);
+      DWOCU->dump(OS, DumpOpts);
   }
 
   if ((DumpType == DIDT_All || DumpType == DIDT_Types) && getNumTypeUnits()) {

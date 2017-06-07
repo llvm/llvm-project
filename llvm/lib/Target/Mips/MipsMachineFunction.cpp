@@ -40,7 +40,11 @@ unsigned MipsFunctionInfo::getGlobalBaseReg() {
   const TargetRegisterClass *RC =
       STI.inMips16Mode()
           ? &Mips::CPU16RegsRegClass
-          : static_cast<const MipsTargetMachine &>(MF.getTarget())
+          : STI.inMicroMipsMode()
+                ? STI.hasMips64()
+                      ? &Mips::GPRMM16_64RegClass
+                      : &Mips::GPRMM16RegClass
+                : static_cast<const MipsTargetMachine &>(MF.getTarget())
                           .getABI()
                           .IsN64()
                       ? &Mips::GPR64RegClass

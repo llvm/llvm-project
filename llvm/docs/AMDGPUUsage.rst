@@ -1468,9 +1468,9 @@ CP microcode requires the Kernel descritor to be allocated on 64 byte alignment.
   .. table:: compute_pgm_rsrc1 for GFX6-GFX9
      :name: amdgpu-amdhsa-compute_pgm_rsrc1_t-gfx6-gfx9-table
 
-     ======= ======= =============================== ===========================
+     ======= ======= =============================== ===========================================================================
      Bits    Size    Field Name                      Description
-     ======= ======= =============================== ===========================
+     ======= ======= =============================== ===========================================================================
      5:0     6 bits  granulated_workitem_vgpr_count  Number of vector registers
                                                      used by each work-item,
                                                      granularity is device
@@ -1626,16 +1626,16 @@ CP microcode requires the Kernel descritor to be allocated on 64 byte alignment.
                                                      ``COMPUTE_PGM_RSRC1.CDBG_USER``.
      31:26   6 bits                                  Reserved. Must be 0.
      32      **Total size 4 bytes**
-     ======= ===================================================================
+     ======= ===================================================================================================================
 
 ..
 
   .. table:: compute_pgm_rsrc2 for GFX6-GFX9
      :name: amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx9-table
 
-     ======= ======= =============================== ===========================
+     ======= ======= =============================== ===========================================================================
      Bits    Size    Field Name                      Description
-     ======= ======= =============================== ===========================
+     ======= ======= =============================== ===========================================================================
      0       1 bit   enable_sgpr_private_segment     Enable the setup of the
                      _wave_offset                    SGPR wave scratch offset
                                                      system register (see
@@ -1783,7 +1783,7 @@ CP microcode requires the Kernel descritor to be allocated on 64 byte alignment.
                                                      only)
      31      1 bit                                   Reserved. Must be 0.
      32      **Total size 4 bytes.**
-     ======= ===================================================================
+     ======= ===================================================================================================================
 
 ..
 
@@ -2549,7 +2549,7 @@ coherent) and so the L2 cache will coherent with the CPU and other agents.
                                                              always generate
                                                              (see comment for
                                                              previous fence).
-							   - Could be split into
+                                                           - Could be split into
                                                              separate s_waitcnt
                                                              vmcnt(0) and
                                                              s_waitcnt

@@ -12,6 +12,10 @@ add r11, r3, r4
 add r10, r1, r2
 mul r5, r10, r11
 
+# begin
+# end
+xor
+
 ; CHECK-DAG: add [[REG1:r[0-9]+]], r1, r2
 ; CHECK-DAG: add [[REG2:r[0-9]+]], r3, r4
 ; CHECK: mul r5, [[REG1]], [[REG2]]
@@ -24,3 +28,8 @@ mul r5, r10, r11
 ; CHECK-DAG: add [[REG2:r[0-9]+]], r3, r4
 ; CHECK-NOT: xor
 ; CHECK-DAG: mul r5, [[REG1]], [[REG2]]
+
+; CHECK-DAG: begin
+; CHECK-NOT: xor
+; CHECK-DAG: end
+; CHECK: xor

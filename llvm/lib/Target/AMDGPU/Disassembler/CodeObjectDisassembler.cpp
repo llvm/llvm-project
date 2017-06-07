@@ -29,7 +29,6 @@
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Object/ELFObjectFile.h"
-#include "llvm/Support/ELF.h"
 #include "llvm/Support/TargetRegistry.h"
 
 #define DEBUG_TYPE "amdgpu-disassembler"

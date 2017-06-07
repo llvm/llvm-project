@@ -392,6 +392,11 @@ public:
   /// not.
   bool isNullValue() const { return !*this; }
 
+  /// \brief Determine if this is a value of 1.
+  ///
+  /// This checks to see if the value of this APInt is one.
+  bool isOneValue() const { return getActiveBits() == 1; }
+
   /// \brief Determine if this is the largest unsigned value.
   ///
   /// This checks to see if the value of this APInt is the maximum unsigned

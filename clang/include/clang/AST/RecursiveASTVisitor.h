@@ -1021,8 +1021,12 @@ DEF_TRAVERSE_TYPE(DeducedTemplateSpecializationType, {
 DEF_TRAVERSE_TYPE(RecordType, {})
 DEF_TRAVERSE_TYPE(EnumType, {})
 DEF_TRAVERSE_TYPE(TemplateTypeParmType, {})
-DEF_TRAVERSE_TYPE(SubstTemplateTypeParmType, {})
-DEF_TRAVERSE_TYPE(SubstTemplateTypeParmPackType, {})
+DEF_TRAVERSE_TYPE(SubstTemplateTypeParmType, {
+  TRY_TO(TraverseType(T->getReplacementType()));
+})
+DEF_TRAVERSE_TYPE(SubstTemplateTypeParmPackType, {
+  TRY_TO(TraverseTemplateArgument(T->getArgumentPack()));
+})
 
 DEF_TRAVERSE_TYPE(TemplateSpecializationType, {
   TRY_TO(TraverseTemplateName(T->getTemplateName()));
@@ -1249,8 +1253,12 @@ DEF_TRAVERSE_TYPELOC(DeducedTemplateSpecializationType, {
 DEF_TRAVERSE_TYPELOC(RecordType, {})
 DEF_TRAVERSE_TYPELOC(EnumType, {})
 DEF_TRAVERSE_TYPELOC(TemplateTypeParmType, {})
-DEF_TRAVERSE_TYPELOC(SubstTemplateTypeParmType, {})
-DEF_TRAVERSE_TYPELOC(SubstTemplateTypeParmPackType, {})
+DEF_TRAVERSE_TYPELOC(SubstTemplateTypeParmType, {
+  TRY_TO(TraverseType(TL.getTypePtr()->getReplacementType()));
+})
+DEF_TRAVERSE_TYPELOC(SubstTemplateTypeParmPackType, {
+  TRY_TO(TraverseTemplateArgument(TL.getTypePtr()->getArgumentPack()));
+})
 
 // FIXME: use the loc for the template name?
 DEF_TRAVERSE_TYPELOC(TemplateSpecializationType, {

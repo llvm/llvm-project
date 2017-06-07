@@ -16,7 +16,6 @@
 #define LLVM_ANALYSIS_CFLGRAPH_H
 
 #include "AliasAnalysisSummary.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/Instructions.h"

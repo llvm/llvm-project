@@ -153,6 +153,87 @@ entry:
   ret i32 %sum
 }
 
+define i8 @test_and_i8(i8 %x, i8 %y) {
+; CHECK-LABEL: test_and_i8:
+; CHECK: and r0, r0, r1
+; CHECK: bx lr
+entry:
+  %sum = and i8 %x, %y
+  ret i8 %sum
+}
+
+define i16 @test_and_i16(i16 %x, i16 %y) {
+; CHECK-LABEL: test_and_i16:
+; CHECK: and r0, r0, r1
+; CHECK: bx lr
+entry:
+  %sum = and i16 %x, %y
+  ret i16 %sum
+}
+
+define i32 @test_and_i32(i32 %x, i32 %y) {
+; CHECK-LABEL: test_and_i32:
+; CHECK: and r0, r0, r1
+; CHECK: bx lr
+entry:
+  %sum = and i32 %x, %y
+  ret i32 %sum
+}
+
+define i8 @test_or_i8(i8 %x, i8 %y) {
+; CHECK-LABEL: test_or_i8:
+; CHECK: orr r0, r0, r1
+; CHECK: bx lr
+entry:
+  %sum = or i8 %x, %y
+  ret i8 %sum
+}
+
+define i16 @test_or_i16(i16 %x, i16 %y) {
+; CHECK-LABEL: test_or_i16:
+; CHECK: orr r0, r0, r1
+; CHECK: bx lr
+entry:
+  %sum = or i16 %x, %y
+  ret i16 %sum
+}
+
+define i32 @test_or_i32(i32 %x, i32 %y) {
+; CHECK-LABEL: test_or_i32:
+; CHECK: orr r0, r0, r1
+; CHECK: bx lr
+entry:
+  %sum = or i32 %x, %y
+  ret i32 %sum
+}
+
+define i8 @test_xor_i8(i8 %x, i8 %y) {
+; CHECK-LABEL: test_xor_i8:
+; CHECK: eor r0, r0, r1
+; CHECK: bx lr
+entry:
+  %sum = xor i8 %x, %y
+  ret i8 %sum
+}
+
+define i16 @test_xor_i16(i16 %x, i16 %y) {
+; CHECK-LABEL: test_xor_i16:
+; CHECK: eor r0, r0, r1
+; CHECK: bx lr
+entry:
+  %sum = xor i16 %x, %y
+  ret i16 %sum
+}
+
+define i32 @test_xor_i32(i32 %x, i32 %y) {
+; CHECK-LABEL: test_xor_i32:
+; CHECK: eor r0, r0, r1
+; CHECK: bx lr
+entry:
+  %sum = xor i32 %x, %y
+  ret i32 %sum
+}
+
 define i32 @test_stack_args_i32(i32 %p0, i32 %p1, i32 %p2, i32 %p3, i32 %p4, i32 %p5) {
 ; CHECK-LABEL: test_stack_args_i32:
 ; CHECK: add [[P5ADDR:r[0-9]+]], sp, #4
@@ -272,8 +353,7 @@ define arm_aapcscc double @test_double_softfp(double %f0, double %f1) {
 ; CHECK-DAG: vmov [[F0:d[0-9]+]], r0, r1
 ; CHECK-DAG: vmov [[F1:d[0-9]+]], r2, r3
 ; CHECK: vadd.f64 [[FV:d[0-9]+]], [[F0]], [[F1]]
-; CHECK: vmov.32 r0, [[FV]][0]
-; CHECK: vmov.32 r1, [[FV]][1]
+; CHECK: vmov r0, r1, [[FV]]
 ; CHECK: bx lr
 entry:
   %v = fadd double %f0, %f1

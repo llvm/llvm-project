@@ -1478,9 +1478,9 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
   if (!CondVal->getType()->isVectorTy() && !AC.assumptions().empty()) {
     KnownBits Known(1);
     computeKnownBits(CondVal, Known, 0, &SI);
-    if (Known.One == 1)
+    if (Known.One.isOneValue())
       return replaceInstUsesWith(SI, TrueVal);
-    if (Known.Zero == 1)
+    if (Known.Zero.isOneValue())
       return replaceInstUsesWith(SI, FalseVal);
   }
 

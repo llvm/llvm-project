@@ -1860,6 +1860,7 @@ static void AddOrdinaryNameResults(Sema::ParserCompletionContext CCC,
 
     AddStaticAssertResult(Builder, Results, SemaRef.getLangOpts());
   }
+  LLVM_FALLTHROUGH;
 
   // Fall through (for statement expressions).
   case Sema::PCC_ForInit:

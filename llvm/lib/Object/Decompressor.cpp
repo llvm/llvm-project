@@ -8,10 +8,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Object/Decompressor.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/DataExtractor.h"
-#include "llvm/Support/ELF.h"
 #include "llvm/Support/Endian.h"
 
 using namespace llvm;

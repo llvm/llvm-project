@@ -14,12 +14,12 @@
 #include "llvm/IR/DIBuilder.h"
 #include "LLVMContextImpl.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/Dwarf.h"
 
 using namespace llvm;
 using namespace llvm::dwarf;

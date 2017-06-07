@@ -16,8 +16,8 @@
 #ifndef LLVM_OBJECTYAML_WASMYAML_H
 #define LLVM_OBJECTYAML_WASMYAML_H
 
+#include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/ObjectYAML/YAML.h"
-#include "llvm/Support/Wasm.h"
 
 namespace llvm {
 namespace WasmYAML {

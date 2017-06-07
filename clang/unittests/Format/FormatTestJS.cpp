@@ -1226,6 +1226,12 @@ TEST_F(FormatTestJS, UnionIntersectionTypes) {
   verifyFormat("let x: Bar|Baz;");
   verifyFormat("let x: Bar<X>|Baz;");
   verifyFormat("let x: (Foo|Bar)[];");
+  verifyFormat("type X = {\n"
+               "  a: Foo|Bar;\n"
+               "};");
+  verifyFormat("export type X = {\n"
+               "  a: Foo|Bar;\n"
+               "};");
 }
 
 TEST_F(FormatTestJS, ClassDeclarations) {

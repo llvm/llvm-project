@@ -10,7 +10,7 @@
 #include "ObjectFilePECOFF.h"
 #include "WindowsMiniDump.h"
 
-#include "llvm/Support/COFF.h"
+#include "llvm/BinaryFormat/COFF.h"
 
 #include "lldb/Core/ArchSpec.h"
 #include "lldb/Core/FileSpecList.h"

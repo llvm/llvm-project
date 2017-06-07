@@ -598,7 +598,7 @@ struct TargetRegistry {
 
   /// printRegisteredTargetsForVersion - Print the registered targets
   /// appropriately for inclusion in a tool's version output.
-  static void printRegisteredTargetsForVersion();
+  static void printRegisteredTargetsForVersion(raw_ostream &OS);
 
   /// @name Registry Access
   /// @{

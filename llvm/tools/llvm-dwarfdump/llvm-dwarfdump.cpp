@@ -84,6 +84,8 @@ static cl::opt<bool> Verify("verify", cl::desc("Verify the DWARF debug info"));
 static cl::opt<bool> Quiet("quiet",
                            cl::desc("Use with -verify to not emit to STDOUT."));
 
+static cl::opt<bool> Brief("brief", cl::desc("Print fewer low-level details"));
+
 static void error(StringRef Filename, std::error_code EC) {
   if (!EC)
     return;
@@ -101,6 +103,7 @@ static void DumpObjectFile(ObjectFile &Obj, Twine Filename) {
   DIDumpOptions DumpOpts;
   DumpOpts.DumpType = DumpType;
   DumpOpts.SummarizeTypes = SummarizeTypes;
+  DumpOpts.Brief = Brief;
   DICtx->dump(outs(), DumpOpts);
 }
 

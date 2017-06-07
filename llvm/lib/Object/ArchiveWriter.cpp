@@ -14,6 +14,7 @@
 #include "llvm/Object/ArchiveWriter.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/BinaryFormat/Magic.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/ObjectFile.h"
@@ -290,7 +291,7 @@ writeSymbolTable(raw_fd_ostream &Out, object::Archive::Kind Kind,
     MemoryBufferRef MemberBuffer = Members[MemberNum].Buf->getMemBufferRef();
     Expected<std::unique_ptr<object::SymbolicFile>> ObjOrErr =
         object::SymbolicFile::createSymbolicFile(
-            MemberBuffer, sys::fs::file_magic::unknown, &Context);
+            MemberBuffer, llvm::file_magic::unknown, &Context);
     if (!ObjOrErr) {
       // FIXME: check only for "not an object file" errors.
       consumeError(ObjOrErr.takeError());

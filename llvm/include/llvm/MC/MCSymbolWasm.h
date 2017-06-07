@@ -9,8 +9,8 @@
 #ifndef LLVM_MC_MCSYMBOLWASM_H
 #define LLVM_MC_MCSYMBOLWASM_H
 
+#include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/MC/MCSymbol.h"
-#include "llvm/Support/Wasm.h"
 
 namespace llvm {
 class MCSymbolWasm : public MCSymbol {

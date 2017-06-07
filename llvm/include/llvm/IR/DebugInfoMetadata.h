@@ -22,9 +22,9 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/Dwarf.h"
 #include <cassert>
 #include <climits>
 #include <cstddef>
@@ -148,7 +148,7 @@ public:
 /// Tagged DWARF-like metadata node.
 ///
 /// A metadata node with a DWARF tag (i.e., a constant named \c DW_TAG_*,
-/// defined in llvm/Support/Dwarf.h).  Called \a DINode because it's
+/// defined in llvm/BinaryFormat/Dwarf.h).  Called \a DINode because it's
 /// potentially used for non-DWARF output.
 class DINode : public MDNode {
   friend class LLVMContextImpl;
@@ -2642,7 +2642,8 @@ public:
 /// Macro Info DWARF-like metadata node.
 ///
 /// A metadata node with a DWARF macro info (i.e., a constant named
-/// \c DW_MACINFO_*, defined in llvm/Support/Dwarf.h).  Called \a DIMacroNode
+/// \c DW_MACINFO_*, defined in llvm/BinaryFormat/Dwarf.h).  Called \a
+/// DIMacroNode
 /// because it's potentially used for non-DWARF output.
 class DIMacroNode : public MDNode {
   friend class LLVMContextImpl;

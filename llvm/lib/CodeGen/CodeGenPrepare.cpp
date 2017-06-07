@@ -1668,6 +1668,8 @@ class MemCmpExpansion {
   void setupEndBlockPHINodes();
   void emitLoadCompareBlock(unsigned Index, int LoadSize, int GEPIndex,
                             bool IsLittleEndian);
+  Value *getCompareLoadPairs(unsigned Index, unsigned Size,
+                             unsigned &NumBytesProcessed, IRBuilder<> &Builder);
   void emitLoadCompareBlockMultipleLoads(unsigned Index, unsigned Size,
                                          unsigned &NumBytesProcessed);
   void emitLoadCompareByteBlock(unsigned Index, int GEPIndex);
@@ -1742,7 +1744,7 @@ void MemCmpExpansion::createResultBlock() {
 }
 
 // This function creates the IR instructions for loading and comparing 1 byte.
-// It loads 1 byte from each source of the memcmp paramters with the given
+// It loads 1 byte from each source of the memcmp parameters with the given
 // GEPIndex. It then subtracts the two loaded values and adds this result to the
 // final phi node for selecting the memcmp result.
 void MemCmpExpansion::emitLoadCompareByteBlock(unsigned Index, int GEPIndex) {
@@ -1799,11 +1801,12 @@ unsigned MemCmpExpansion::getLoadSize(unsigned Size) {
   return MinAlign(PowerOf2Floor(Size), MaxLoadSize);
 }
 
-void MemCmpExpansion::emitLoadCompareBlockMultipleLoads(
-    unsigned Index, unsigned Size, unsigned &NumBytesProcessed) {
-
-  IRBuilder<> Builder(CI->getContext());
-
+/// Generate an equality comparison for one or more pairs of loaded values.
+/// This is used in the case where the memcmp() call is compared equal or not
+/// equal to zero.
+Value *MemCmpExpansion::getCompareLoadPairs(unsigned Index, unsigned Size,
+                                            unsigned &NumBytesProcessed,
+                                            IRBuilder<> &Builder) {
   std::vector<Value *> XorList, OrList;
   Value *Diff;
 
@@ -1812,7 +1815,7 @@ void MemCmpExpansion::emitLoadCompareBlockMultipleLoads(
   unsigned NumLoads = std::min(NumLoadsRemaining, NumLoadsPerBlock);
 
   Builder.SetInsertPoint(LoadCmpBlocks[Index]);
-
+  Value *Cmp = nullptr;
   for (unsigned i = 0; i < NumLoads; ++i) {
     unsigned LoadSize = getLoadSize(RemainingBytes);
     unsigned GEPIndex = NumBytesProcessed / LoadSize;
@@ -1846,9 +1849,16 @@ void MemCmpExpansion::emitLoadCompareBlockMultipleLoads(
       LoadSrc1 = Builder.CreateZExtOrTrunc(LoadSrc1, MaxLoadType);
       LoadSrc2 = Builder.CreateZExtOrTrunc(LoadSrc2, MaxLoadType);
     }
-    Diff = Builder.CreateXor(LoadSrc1, LoadSrc2);
-    Diff = Builder.CreateZExtOrTrunc(Diff, MaxLoadType);
-    XorList.push_back(Diff);
+    if (NumLoads != 1) {
+      // If we have multiple loads per block, we need to generate a composite
+      // comparison using xor+or.
+      Diff = Builder.CreateXor(LoadSrc1, LoadSrc2);
+      Diff = Builder.CreateZExtOrTrunc(Diff, MaxLoadType);
+      XorList.push_back(Diff);
+    } else {
+      // If there's only one load per block, we just compare the loaded values.
+      Cmp = Builder.CreateICmpNE(LoadSrc1, LoadSrc2);
+    }
   }
 
   auto pairWiseOr = [&](std::vector<Value *> &InList) -> std::vector<Value *> {
@@ -1862,16 +1872,25 @@ void MemCmpExpansion::emitLoadCompareBlockMultipleLoads(
     return OutList;
   };
 
-  // Pairwise OR the XOR results.
-  OrList = pairWiseOr(XorList);
+  if (!Cmp) {
+    // Pairwise OR the XOR results.
+    OrList = pairWiseOr(XorList);
 
-  // Pairwise OR the OR results until one result left.
-  while (OrList.size() != 1) {
-    OrList = pairWiseOr(OrList);
+    // Pairwise OR the OR results until one result left.
+    while (OrList.size() != 1) {
+      OrList = pairWiseOr(OrList);
+    }
+    Cmp = Builder.CreateICmpNE(OrList[0], ConstantInt::get(Diff->getType(), 0));
   }
 
-  Value *Cmp = Builder.CreateICmp(ICmpInst::ICMP_NE, OrList[0],
-                                  ConstantInt::get(Diff->getType(), 0));
+  return Cmp;
+}
+
+void MemCmpExpansion::emitLoadCompareBlockMultipleLoads(
+    unsigned Index, unsigned Size, unsigned &NumBytesProcessed) {
+  IRBuilder<> Builder(CI->getContext());
+  Value *Cmp = getCompareLoadPairs(Index, Size, NumBytesProcessed, Builder);
+
   BasicBlock *NextBB = (Index == (LoadCmpBlocks.size() - 1))
                            ? EndBlock
                            : LoadCmpBlocks[Index + 1];
@@ -2008,17 +2027,17 @@ void MemCmpExpansion::emitMemCmpResultBlock(bool IsLittleEndian) {
 
 int MemCmpExpansion::calculateNumBlocks(unsigned Size) {
   int NumBlocks = 0;
-  bool haveOneByteLoad = false;
+  bool HaveOneByteLoad = false;
   unsigned RemainingSize = Size;
   unsigned LoadSize = MaxLoadSize;
   while (RemainingSize) {
     if (LoadSize == 1)
-      haveOneByteLoad = true;
+      HaveOneByteLoad = true;
     NumBlocks += RemainingSize / LoadSize;
     RemainingSize = RemainingSize % LoadSize;
     LoadSize = LoadSize / 2;
   }
-  NumBlocksNonOneByte = haveOneByteLoad ? (NumBlocks - 1) : NumBlocks;
+  NumBlocksNonOneByte = HaveOneByteLoad ? (NumBlocks - 1) : NumBlocks;
 
   if (IsUsedForZeroCmp)
     NumBlocks = NumBlocks / NumLoadsPerBlock +
@@ -2049,9 +2068,8 @@ Value *MemCmpExpansion::getMemCmpExpansionZeroCase(unsigned Size,
   unsigned NumBytesProcessed = 0;
   // This loop populates each of the LoadCmpBlocks with the IR sequence to
   // handle multiple loads per block.
-  for (unsigned i = 0; i < NumBlocks; ++i) {
+  for (unsigned i = 0; i < NumBlocks; ++i)
     emitLoadCompareBlockMultipleLoads(i, Size, NumBytesProcessed);
-  }
 
   emitMemCmpResultBlock(IsLittleEndian);
   return PhiRes;
@@ -2067,9 +2085,8 @@ Value *MemCmpExpansion::getMemCmpExpansion(bool IsLittleEndian) {
   int LoadSize = MaxLoadSize;
   int NumBytesToBeProcessed = Size;
 
-  if (IsUsedForZeroCmp) {
+  if (IsUsedForZeroCmp)
     return getMemCmpExpansionZeroCase(Size, IsLittleEndian);
-  }
 
   unsigned Index = 0;
   // This loop calls emitLoadCompareBlock for comparing SizeVal bytes of the two

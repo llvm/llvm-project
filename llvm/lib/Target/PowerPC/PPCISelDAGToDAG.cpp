@@ -2824,6 +2824,20 @@ SDValue PPCDAGToDAGISel::get32BitZExtCompare(SDValue LHS, SDValue RHS,
     return SDValue(CurDAG->getMachineNode(PPC::RLWINM, dl, MVT::i32,
                                           ShiftOps), 0);
   }
+  case ISD::SETNE: {
+    // (zext (setcc %a, %b, setne)) -> (xor (lshr (cntlzw (xor %a, %b)), 5), 1)
+    // (zext (setcc %a, 0, setne))  -> (xor (lshr (cntlzw %a), 5), 1)
+    SDValue Xor = IsRHSZero ? LHS :
+      SDValue(CurDAG->getMachineNode(PPC::XOR, dl, MVT::i32, LHS, RHS), 0);
+    SDValue Clz =
+      SDValue(CurDAG->getMachineNode(PPC::CNTLZW, dl, MVT::i32, Xor), 0);
+    SDValue ShiftOps[] = { Clz, getI32Imm(27, dl), getI32Imm(5, dl),
+      getI32Imm(31, dl) };
+    SDValue Shift =
+      SDValue(CurDAG->getMachineNode(PPC::RLWINM, dl, MVT::i32, ShiftOps), 0);
+    return SDValue(CurDAG->getMachineNode(PPC::XORI, dl, MVT::i32, Shift,
+                                          getI32Imm(1, dl)), 0);
+  }
   }
 }
 
@@ -2850,6 +2864,27 @@ SDValue PPCDAGToDAGISel::get32BitSExtCompare(SDValue LHS, SDValue RHS,
     return SDValue(CurDAG->getMachineNode(PPC::SRADI_32, dl, MVT::i32, Sldi,
                                           getI32Imm(63, dl)), 0);
   }
+  case ISD::SETNE: {
+    // Bitwise xor the operands, count leading zeros, shift right by 5 bits and
+    // flip the bit, finally take 2's complement.
+    // (sext (setcc %a, %b, setne)) ->
+    //   (neg (xor (lshr (ctlz (xor %a, %b)), 5), 1))
+    // Same as above, but the first xor is not needed.
+    // (sext (setcc %a, 0, setne)) ->
+    //   (neg (xor (lshr (ctlz %a), 5), 1))
+    SDValue Xor = IsRHSZero ? LHS :
+      SDValue(CurDAG->getMachineNode(PPC::XOR, dl, MVT::i32, LHS, RHS), 0);
+    SDValue Clz =
+      SDValue(CurDAG->getMachineNode(PPC::CNTLZW, dl, MVT::i32, Xor), 0);
+    SDValue ShiftOps[] =
+      { Clz, getI32Imm(27, dl), getI32Imm(5, dl), getI32Imm(31, dl) };
+    SDValue Shift =
+      SDValue(CurDAG->getMachineNode(PPC::RLWINM, dl, MVT::i32, ShiftOps), 0);
+    SDValue Xori =
+      SDValue(CurDAG->getMachineNode(PPC::XORI, dl, MVT::i32, Shift,
+                                     getI32Imm(1, dl)), 0);
+    return SDValue(CurDAG->getMachineNode(PPC::NEG, dl, MVT::i32, Xori), 0);
+  }
   }
 }
 
@@ -2871,6 +2906,19 @@ SDValue PPCDAGToDAGISel::get64BitZExtCompare(SDValue LHS, SDValue RHS,
     return SDValue(CurDAG->getMachineNode(PPC::RLDICL, dl, MVT::i64, Clz,
                                           getI64Imm(58, dl), getI64Imm(63, dl)),
                    0);
+  }
+  case ISD::SETNE: {
+    // {addc.reg, addc.CA} = (addcarry (xor %a, %b), -1)
+    // (zext (setcc %a, %b, setne)) -> (sube addc.reg, addc.reg, addc.CA)
+    // {addcz.reg, addcz.CA} = (addcarry %a, -1)
+    // (zext (setcc %a, 0, setne)) -> (sube addcz.reg, addcz.reg, addcz.CA)
+    SDValue Xor = IsRHSZero ? LHS :
+      SDValue(CurDAG->getMachineNode(PPC::XOR8, dl, MVT::i64, LHS, RHS), 0);
+    SDValue AC =
+      SDValue(CurDAG->getMachineNode(PPC::ADDIC8, dl, MVT::i64, MVT::Glue,
+                                     Xor, getI32Imm(~0U, dl)), 0);
+    return SDValue(CurDAG->getMachineNode(PPC::SUBFE8, dl, MVT::i64, AC,
+                                          Xor, AC.getValue(1)), 0);
   }
   }
 }
@@ -2895,6 +2943,19 @@ SDValue PPCDAGToDAGISel::get64BitSExtCompare(SDValue LHS, SDValue RHS,
                                      AddInput, getI32Imm(~0U, dl)), 0);
     return SDValue(CurDAG->getMachineNode(PPC::SUBFE8, dl, MVT::i64, Addic,
                                           Addic, Addic.getValue(1)), 0);
+  }
+  case ISD::SETNE: {
+    // {subfc.reg, subfc.CA} = (subcarry 0, (xor %a, %b))
+    // (sext (setcc %a, %b, setne)) -> (sube subfc.reg, subfc.reg, subfc.CA)
+    // {subfcz.reg, subfcz.CA} = (subcarry 0, %a)
+    // (sext (setcc %a, 0, setne)) -> (sube subfcz.reg, subfcz.reg, subfcz.CA)
+    SDValue Xor = IsRHSZero ? LHS :
+      SDValue(CurDAG->getMachineNode(PPC::XOR8, dl, MVT::i64, LHS, RHS), 0);
+    SDValue SC =
+      SDValue(CurDAG->getMachineNode(PPC::SUBFIC8, dl, MVT::i64, MVT::Glue,
+                                     Xor, getI32Imm(0, dl)), 0);
+    return SDValue(CurDAG->getMachineNode(PPC::SUBFE8, dl, MVT::i64, SC,
+                                          SC, SC.getValue(1)), 0);
   }
   }
 }
