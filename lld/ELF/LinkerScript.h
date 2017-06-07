@@ -42,15 +42,14 @@ struct ExprValue {
   uint64_t Val;
   bool ForceAbsolute;
   uint64_t Alignment = 1;
+  std::string Loc;
 
   ExprValue(SectionBase *Sec, bool ForceAbsolute, uint64_t Val,
-            uint64_t Alignment)
-      : Sec(Sec), Val(Val), ForceAbsolute(ForceAbsolute), Alignment(Alignment) {
-  }
-  ExprValue(SectionBase *Sec, bool ForceAbsolute, uint64_t Val)
-      : Sec(Sec), Val(Val), ForceAbsolute(ForceAbsolute) {}
-  ExprValue(SectionBase *Sec, uint64_t Val) : ExprValue(Sec, false, Val) {}
-  ExprValue(uint64_t Val) : ExprValue(nullptr, Val) {}
+            const Twine &Loc)
+      : Sec(Sec), Val(Val), ForceAbsolute(ForceAbsolute), Loc(Loc.str()) {}
+  ExprValue(SectionBase *Sec, uint64_t Val, const Twine &Loc)
+      : ExprValue(Sec, false, Val, Loc) {}
+  ExprValue(uint64_t Val) : ExprValue(nullptr, Val, "") {}
   bool isAbsolute() const { return ForceAbsolute || Sec == nullptr; }
   uint64_t getValue() const;
   uint64_t getSecAddr() const;

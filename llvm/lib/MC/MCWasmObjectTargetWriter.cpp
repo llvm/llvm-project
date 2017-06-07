@@ -17,11 +17,5 @@ using namespace llvm;
 MCWasmObjectTargetWriter::MCWasmObjectTargetWriter(bool Is64Bit_)
     : Is64Bit(Is64Bit_) {}
 
-bool MCWasmObjectTargetWriter::needsRelocateWithSymbol(const MCSymbol &Sym,
-                                                       unsigned Type) const {
-  return false;
-}
-
-void MCWasmObjectTargetWriter::sortRelocs(
-    const MCAssembler &Asm, std::vector<WasmRelocationEntry> &Relocs) {
-}
+// Pin the vtable to this object file
+MCWasmObjectTargetWriter::~MCWasmObjectTargetWriter() = default;

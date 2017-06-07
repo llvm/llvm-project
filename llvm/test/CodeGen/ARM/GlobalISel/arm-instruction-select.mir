@@ -28,6 +28,8 @@
   define void @test_sdiv_s32() #2 { ret void }
   define void @test_udiv_s32() #2 { ret void }
 
+  define void @test_and_s32() { ret void }
+
   define void @test_load_from_stack() { ret void }
   define void @test_load_f32() #0 { ret void }
   define void @test_load_f64() #0 { ret void }
@@ -775,6 +777,39 @@ body:             |
 
     %2(s32) = G_UDIV %0, %1
     ; CHECK: [[VREGRES:%[0-9]+]] = UDIV [[VREGX]], [[VREGY]], 14, _
+
+    %r0 = COPY %2(s32)
+    ; CHECK: %r0 = COPY [[VREGRES]]
+
+    BX_RET 14, _, implicit %r0
+    ; CHECK: BX_RET 14, _, implicit %r0
+...
+---
+name:            test_and_s32
+# CHECK-LABEL: name: test_and_s32
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+# CHECK: id: 0, class: gpr
+# CHECK: id: 1, class: gpr
+# CHECK: id: 2, class: gpr
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(s32) = COPY %r0
+    ; CHECK: [[VREGX:%[0-9]+]] = COPY %r0
+
+    %1(s32) = COPY %r1
+    ; CHECK: [[VREGY:%[0-9]+]] = COPY %r1
+
+    %2(s32) = G_AND %0, %1
+    ; CHECK: [[VREGRES:%[0-9]+]] = ANDrr [[VREGX]], [[VREGY]], 14, _
 
     %r0 = COPY %2(s32)
     ; CHECK: %r0 = COPY [[VREGRES]]

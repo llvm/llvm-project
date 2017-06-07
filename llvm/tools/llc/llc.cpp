@@ -62,6 +62,9 @@ static cl::opt<std::string>
 InputFilename(cl::Positional, cl::desc("<input bitcode>"), cl::init("-"));
 
 static cl::opt<std::string>
+InputLanguage("x", cl::desc("Input language ('ir' or 'mir')"));
+
+static cl::opt<std::string>
 OutputFilename("o", cl::desc("Output filename"), cl::value_desc("filename"));
 
 static cl::opt<unsigned>
@@ -335,6 +338,12 @@ int main(int argc, char **argv) {
         llvm::make_unique<yaml::Output>(YamlFile->os()));
   }
 
+  if (InputLanguage != "" && InputLanguage != "ir" &&
+      InputLanguage != "mir") {
+    errs() << argv[0] << "Input language must be '', 'IR' or 'MIR'\n";
+    return 1;
+  }
+
   // Compile the module TimeCompilations times to give better compile time
   // metrics.
   for (unsigned I = TimeCompilations; I; --I)
@@ -398,7 +407,8 @@ static int compileModule(char **argv, LLVMContext &Context) {
 
   // If user just wants to list available options, skip module loading
   if (!SkipModule) {
-    if (StringRef(InputFilename).endswith_lower(".mir")) {
+    if (InputLanguage == "mir" ||
+        (InputLanguage == "" && StringRef(InputFilename).endswith(".mir"))) {
       MIR = createMIRParserFromFile(InputFilename, Err, Context);
       if (MIR)
         M = MIR->parseIRModule();

@@ -17,13 +17,13 @@
 
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/Type.h"
-#include "llvm/Analysis/VectorUtils.h"
 
 namespace llvm {
 
@@ -425,6 +425,15 @@ public:
 
   bool getTgtMemIntrinsic(IntrinsicInst *Inst, MemIntrinsicInfo &Info) {
     return false;
+  }
+
+  unsigned getAtomicMemIntrinsicMaxElementSize() const {
+    // Note for overrides: You must ensure for all element unordered-atomic
+    // memory intrinsics that all power-of-2 element sizes up to, and
+    // including, the return value of this method have a corresponding
+    // runtime lib call. These runtime lib call definitions can be found
+    // in RuntimeLibcalls.h
+    return 0;
   }
 
   Value *getOrCreateResultFromMemIntrinsic(IntrinsicInst *Inst,

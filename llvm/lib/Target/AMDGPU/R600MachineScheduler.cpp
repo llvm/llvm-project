@@ -13,11 +13,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "R600MachineScheduler.h"
-#include "R600InstrInfo.h"
 #include "AMDGPUSubtarget.h"
+#include "R600InstrInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/Pass.h"
 #include "llvm/IR/LegacyPassManager.h"
+#include "llvm/Pass.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;

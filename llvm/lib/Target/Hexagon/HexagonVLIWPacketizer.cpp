@@ -16,10 +16,10 @@
 // prune the dependence.
 //
 //===----------------------------------------------------------------------===//
+#include "HexagonVLIWPacketizer.h"
 #include "HexagonRegisterInfo.h"
 #include "HexagonSubtarget.h"
 #include "HexagonTargetMachine.h"
-#include "HexagonVLIWPacketizer.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"

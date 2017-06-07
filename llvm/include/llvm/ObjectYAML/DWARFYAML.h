@@ -16,8 +16,8 @@
 #ifndef LLVM_OBJECTYAML_DWARFYAML_H
 #define LLVM_OBJECTYAML_DWARFYAML_H
 
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/ObjectYAML/YAML.h"
-#include "llvm/Support/Dwarf.h"
 
 namespace llvm {
 namespace DWARFYAML {
@@ -241,7 +241,7 @@ template <> struct MappingTraits<DWARFYAML::InitialLength> {
 
 template <> struct ScalarEnumerationTraits<dwarf::Tag> {
   static void enumeration(IO &io, dwarf::Tag &value) {
-#include "llvm/Support/Dwarf.def"
+#include "llvm/BinaryFormat/Dwarf.def"
     io.enumFallback<Hex16>(value);
   }
 };
@@ -251,7 +251,7 @@ template <> struct ScalarEnumerationTraits<dwarf::Tag> {
 
 template <> struct ScalarEnumerationTraits<dwarf::LineNumberOps> {
   static void enumeration(IO &io, dwarf::LineNumberOps &value) {
-#include "llvm/Support/Dwarf.def"
+#include "llvm/BinaryFormat/Dwarf.def"
     io.enumFallback<Hex8>(value);
   }
 };
@@ -261,7 +261,7 @@ template <> struct ScalarEnumerationTraits<dwarf::LineNumberOps> {
 
 template <> struct ScalarEnumerationTraits<dwarf::LineNumberExtendedOps> {
   static void enumeration(IO &io, dwarf::LineNumberExtendedOps &value) {
-#include "llvm/Support/Dwarf.def"
+#include "llvm/BinaryFormat/Dwarf.def"
     io.enumFallback<Hex16>(value);
   }
 };
@@ -271,7 +271,7 @@ template <> struct ScalarEnumerationTraits<dwarf::LineNumberExtendedOps> {
 
 template <> struct ScalarEnumerationTraits<dwarf::Attribute> {
   static void enumeration(IO &io, dwarf::Attribute &value) {
-#include "llvm/Support/Dwarf.def"
+#include "llvm/BinaryFormat/Dwarf.def"
     io.enumFallback<Hex16>(value);
   }
 };
@@ -281,7 +281,7 @@ template <> struct ScalarEnumerationTraits<dwarf::Attribute> {
 
 template <> struct ScalarEnumerationTraits<dwarf::Form> {
   static void enumeration(IO &io, dwarf::Form &value) {
-#include "llvm/Support/Dwarf.def"
+#include "llvm/BinaryFormat/Dwarf.def"
     io.enumFallback<Hex16>(value);
   }
 };
@@ -291,7 +291,7 @@ template <> struct ScalarEnumerationTraits<dwarf::Form> {
 
 template <> struct ScalarEnumerationTraits<dwarf::UnitType> {
   static void enumeration(IO &io, dwarf::UnitType &value) {
-#include "llvm/Support/Dwarf.def"
+#include "llvm/BinaryFormat/Dwarf.def"
     io.enumFallback<Hex8>(value);
   }
 };

@@ -3,9 +3,9 @@
 
 // Simple test for a fuzzer. The fuzzer must find several narrow ranges.
 #include <cstdint>
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <cstdio>
 
 extern int AllLines[];
 

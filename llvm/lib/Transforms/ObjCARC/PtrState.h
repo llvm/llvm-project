@@ -21,8 +21,8 @@
 #include "llvm/Analysis/ObjCARCInstKind.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Value.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
 namespace objcarc {

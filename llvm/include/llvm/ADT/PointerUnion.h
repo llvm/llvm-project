@@ -19,8 +19,8 @@
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
 #include <cassert>
-#include <cstdint>
 #include <cstddef>
+#include <cstdint>
 
 namespace llvm {
 

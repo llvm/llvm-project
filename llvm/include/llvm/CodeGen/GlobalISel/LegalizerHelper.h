@@ -22,8 +22,8 @@
 #define LLVM_CODEGEN_GLOBALISEL_MACHINELEGALIZEHELPER_H
 
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
-#include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/LowLevelType.h"
+#include "llvm/CodeGen/MachineFunctionPass.h"
 
 namespace llvm {
 // Forward declarations.

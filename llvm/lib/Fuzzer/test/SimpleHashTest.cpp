@@ -5,9 +5,9 @@
 // and then compares the last 4 bytes with the computed value.
 // A fuzzer with cmp traces is expected to defeat this check.
 #include <cstdint>
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <cstdio>
 
 // A modified jenkins_one_at_a_time_hash initialized by non-zero,
 // so that simple_hash(0) != 0. See also

@@ -15,11 +15,11 @@
 #define LLVM_ADT_STRINGEXTRAS_H
 
 #include "llvm/ADT/StringRef.h"
-#include <iterator>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <iterator>
 #include <string>
 #include <utility>
 

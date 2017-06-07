@@ -10,8 +10,8 @@
 
 #define DEBUG_TYPE "hexagon-pei"
 
-#include "HexagonBlockRanges.h"
 #include "HexagonFrameLowering.h"
+#include "HexagonBlockRanges.h"
 #include "HexagonInstrInfo.h"
 #include "HexagonMachineFunctionInfo.h"
 #include "HexagonRegisterInfo.h"

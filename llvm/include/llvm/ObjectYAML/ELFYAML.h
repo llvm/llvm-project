@@ -16,8 +16,8 @@
 #ifndef LLVM_OBJECTYAML_ELFYAML_H
 #define LLVM_OBJECTYAML_ELFYAML_H
 
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/ObjectYAML/YAML.h"
-#include "llvm/Support/ELF.h"
 
 namespace llvm {
 namespace ELFYAML {

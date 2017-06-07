@@ -1,4 +1,4 @@
-//===-- llvm/Support/Dwarf.h ---Dwarf Constants------------------*- C++ -*-===//
+//===-- llvm/BinaryFormat/Dwarf.h ---Dwarf Constants-------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -17,8 +17,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_SUPPORT_DWARF_H
-#define LLVM_SUPPORT_DWARF_H
+#ifndef LLVM_BINARYFORMAT_DWARF_H
+#define LLVM_BINARYFORMAT_DWARF_H
 
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
@@ -37,7 +37,7 @@ namespace dwarf {
 // enumeration base type.
 
 enum LLVMConstants : uint32_t {
-  // LLVM mock tags (see also llvm/Support/Dwarf.def).
+  // LLVM mock tags (see also llvm/BinaryFormat/Dwarf.def).
   DW_TAG_invalid = ~0U,        // Tag for invalid results.
   DW_VIRTUALITY_invalid = ~0U, // Virtuality for invalid results.
   DW_MACINFO_invalid = ~0U,    // Macinfo type for invalid results.
@@ -48,7 +48,7 @@ enum LLVMConstants : uint32_t {
   DW_PUBNAMES_VERSION = 2, // Section version number for .debug_pubnames.
   DW_ARANGES_VERSION = 2,  // Section version number for .debug_aranges.
   // Identifiers we use to distinguish vendor extensions.
-  DWARF_VENDOR_DWARF = 0,  // Defined in v2 or later of the DWARF standard.
+  DWARF_VENDOR_DWARF = 0, // Defined in v2 or later of the DWARF standard.
   DWARF_VENDOR_APPLE = 1,
   DWARF_VENDOR_BORLAND = 2,
   DWARF_VENDOR_GNU = 3,
@@ -64,7 +64,7 @@ const uint64_t DW64_CIE_ID = UINT64_MAX;
 
 enum Tag : uint16_t {
 #define HANDLE_DW_TAG(ID, NAME, VERSION, VENDOR) DW_TAG_##NAME = ID,
-#include "llvm/Support/Dwarf.def"
+#include "llvm/BinaryFormat/Dwarf.def"
   DW_TAG_lo_user = 0x4080,
   DW_TAG_hi_user = 0xffff,
   DW_TAG_user_base = 0x1000 // Recommended base for user tags.
@@ -101,20 +101,20 @@ inline bool isType(Tag T) {
 /// Attributes.
 enum Attribute : uint16_t {
 #define HANDLE_DW_AT(ID, NAME, VERSION, VENDOR) DW_AT_##NAME = ID,
-#include "llvm/Support/Dwarf.def"
+#include "llvm/BinaryFormat/Dwarf.def"
   DW_AT_lo_user = 0x2000,
   DW_AT_hi_user = 0x3fff,
 };
 
 enum Form : uint16_t {
 #define HANDLE_DW_FORM(ID, NAME, VERSION, VENDOR) DW_FORM_##NAME = ID,
-#include "llvm/Support/Dwarf.def"
- DW_FORM_lo_user = 0x1f00, ///< Not specified by DWARF.
+#include "llvm/BinaryFormat/Dwarf.def"
+  DW_FORM_lo_user = 0x1f00, ///< Not specified by DWARF.
 };
 
 enum LocationAtom {
 #define HANDLE_DW_OP(ID, NAME, VERSION, VENDOR) DW_OP_##NAME = ID,
-#include "llvm/Support/Dwarf.def"
+#include "llvm/BinaryFormat/Dwarf.def"
   DW_OP_lo_user = 0xe0,
   DW_OP_hi_user = 0xff,
   DW_OP_LLVM_fragment = 0x1000 ///< Only used in LLVM metadata.
@@ -122,7 +122,7 @@ enum LocationAtom {
 
 enum TypeKind {
 #define HANDLE_DW_ATE(ID, NAME, VERSION, VENDOR) DW_ATE_##NAME = ID,
-#include "llvm/Support/Dwarf.def"
+#include "llvm/BinaryFormat/Dwarf.def"
   DW_ATE_lo_user = 0x80,
   DW_ATE_hi_user = 0xff
 };
@@ -161,19 +161,19 @@ enum VisibilityAttribute {
 
 enum VirtualityAttribute {
 #define HANDLE_DW_VIRTUALITY(ID, NAME) DW_VIRTUALITY_##NAME = ID,
-#include "llvm/Support/Dwarf.def"
+#include "llvm/BinaryFormat/Dwarf.def"
   DW_VIRTUALITY_max = 0x02
 };
 
 enum DefaultedMemberAttribute {
 #define HANDLE_DW_DEFAULTED(ID, NAME) DW_DEFAULTED_##NAME = ID,
-#include "llvm/Support/Dwarf.def"
+#include "llvm/BinaryFormat/Dwarf.def"
   DW_DEFAULTED_max = 0x02
 };
 
 enum SourceLanguage {
 #define HANDLE_DW_LANG(ID, NAME, VERSION, VENDOR) DW_LANG_##NAME = ID,
-#include "llvm/Support/Dwarf.def"
+#include "llvm/BinaryFormat/Dwarf.def"
   DW_LANG_lo_user = 0x8000,
   DW_LANG_hi_user = 0xffff
 };
@@ -187,9 +187,9 @@ enum CaseSensitivity {
 };
 
 enum CallingConvention {
-  // Calling convention codes
+// Calling convention codes
 #define HANDLE_DW_CC(ID, NAME) DW_CC_##NAME = ID,
-#include "llvm/Support/Dwarf.def"
+#include "llvm/BinaryFormat/Dwarf.def"
   DW_CC_lo_user = 0x40,
   DW_CC_hi_user = 0xff
 };
@@ -217,20 +217,20 @@ enum DiscriminantList {
 /// Line Number Standard Opcode Encodings.
 enum LineNumberOps : uint8_t {
 #define HANDLE_DW_LNS(ID, NAME) DW_LNS_##NAME = ID,
-#include "llvm/Support/Dwarf.def"
+#include "llvm/BinaryFormat/Dwarf.def"
 };
 
 /// Line Number Extended Opcode Encodings.
 enum LineNumberExtendedOps {
 #define HANDLE_DW_LNE(ID, NAME) DW_LNE_##NAME = ID,
-#include "llvm/Support/Dwarf.def"
+#include "llvm/BinaryFormat/Dwarf.def"
   DW_LNE_lo_user = 0x80,
   DW_LNE_hi_user = 0xff
 };
 
 enum LineNumberEntryFormat {
 #define HANDLE_DW_LNCT(ID, NAME) DW_LNCT_##NAME = ID,
-#include "llvm/Support/Dwarf.def"
+#include "llvm/BinaryFormat/Dwarf.def"
   DW_LNCT_lo_user = 0x2000,
   DW_LNCT_hi_user = 0x3fff,
 };
@@ -247,7 +247,7 @@ enum MacinfoRecordType {
 /// DWARF v5 macro information entry type encodings.
 enum MacroEntryType {
 #define HANDLE_DW_MACRO(ID, NAME) DW_MACRO_##NAME = ID,
-#include "llvm/Support/Dwarf.def"
+#include "llvm/BinaryFormat/Dwarf.def"
   DW_MACRO_lo_user = 0xe0,
   DW_MACRO_hi_user = 0xff
 };
@@ -255,14 +255,13 @@ enum MacroEntryType {
 /// DWARF v5 range list entry encoding values.
 enum RangeListEntries {
 #define HANDLE_DW_RLE(ID, NAME) DW_RLE_##NAME = ID,
-#include "llvm/Support/Dwarf.def"
+#include "llvm/BinaryFormat/Dwarf.def"
 };
-
 
 /// Call frame instruction encodings.
 enum CallFrameInfo {
 #define HANDLE_DW_CFA(ID, NAME) DW_CFA_##NAME = ID,
-#include "llvm/Support/Dwarf.def"
+#include "llvm/BinaryFormat/Dwarf.def"
   DW_CFA_extended = 0x00,
 
   DW_CFA_lo_user = 0x1c,
@@ -310,13 +309,13 @@ enum LocationListEntry : unsigned char {
 /// Keep this list in sync with clang's DeclSpec.h ObjCPropertyAttributeKind!
 enum ApplePropertyAttributes {
 #define HANDLE_DW_APPLE_PROPERTY(ID, NAME) DW_APPLE_PROPERTY_##NAME = ID,
-#include "llvm/Support/Dwarf.def"
+#include "llvm/BinaryFormat/Dwarf.def"
 };
 
 /// Constants for unit types in DWARF v5.
 enum UnitType : unsigned char {
 #define HANDLE_DW_UT(ID, NAME) DW_UT_##NAME = ID,
-#include "llvm/Support/Dwarf.def"
+#include "llvm/BinaryFormat/Dwarf.def"
   DW_UT_lo_user = 0x80,
   DW_UT_hi_user = 0xff
 };
@@ -355,10 +354,7 @@ enum GDBIndexEntryKind {
   GIEK_UNUSED7
 };
 
-enum GDBIndexEntryLinkage {
-  GIEL_EXTERNAL,
-  GIEL_STATIC
-};
+enum GDBIndexEntryLinkage { GIEL_EXTERNAL, GIEL_STATIC };
 
 /// \defgroup DwarfConstantsDumping Dwarf constants dumping functions
 ///
@@ -470,8 +466,8 @@ struct PubIndexEntryDescriptor {
   /* implicit */ PubIndexEntryDescriptor(GDBIndexEntryKind Kind)
       : Kind(Kind), Linkage(GIEL_EXTERNAL) {}
   explicit PubIndexEntryDescriptor(uint8_t Value)
-      : Kind(static_cast<GDBIndexEntryKind>((Value & KIND_MASK) >>
-                                            KIND_OFFSET)),
+      : Kind(
+            static_cast<GDBIndexEntryKind>((Value & KIND_MASK) >> KIND_OFFSET)),
         Linkage(static_cast<GDBIndexEntryLinkage>((Value & LINKAGE_MASK) >>
                                                   LINKAGE_OFFSET)) {}
   uint8_t toBits() const {

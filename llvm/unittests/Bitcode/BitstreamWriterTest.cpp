@@ -7,9 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Bitcode/BitstreamWriter.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/Bitcode/BitstreamWriter.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;

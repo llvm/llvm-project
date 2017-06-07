@@ -22,6 +22,8 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <windows.h>
+
+// This must be included after windows.h.
 #include <Psapi.h>
 
 namespace fuzzer {

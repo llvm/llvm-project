@@ -17,5 +17,6 @@ add_lldb_library(lldbPluginProcessElfCore PLUGIN
     lldbPluginObjectFileELF
     lldbPluginProcessUtility
   LINK_COMPONENTS
+    BinaryFormat
     Support
   )

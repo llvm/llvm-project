@@ -13,10 +13,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <cstdarg>   /* for va_*()       */
-#include <cstdio>    /* for vsnprintf()  */
-#include <cstdlib>   /* for exit()       */
-#include <cstring>   /* for memset()     */
+#include <cstdarg> /* for va_*()       */
+#include <cstdio>  /* for vsnprintf()  */
+#include <cstdlib> /* for exit()       */
+#include <cstring> /* for memset()     */
 
 #include "X86DisassemblerDecoder.h"
 

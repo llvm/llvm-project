@@ -172,12 +172,12 @@ Instruction *InstCombiner::OptAndOp(BinaryOperator *Op,
         const APInt& AddRHS = OpRHS->getValue();
 
         // Check to see if any bits below the one bit set in AndRHSV are set.
-        if ((AddRHS & (AndRHSV-1)) == 0) {
+        if ((AddRHS & (AndRHSV - 1)).isNullValue()) {
           // If not, the only thing that can effect the output of the AND is
           // the bit specified by AndRHSV.  If that bit is set, the effect of
           // the XOR is to toggle the bit.  If it is clear, then the ADD has
           // no effect.
-          if ((AddRHS & AndRHSV) == 0) { // Bit is not set, noop
+          if ((AddRHS & AndRHSV).isNullValue()) { // Bit is not set, noop
             TheAnd.setOperand(0, X);
             return &TheAnd;
           } else {
@@ -641,7 +641,7 @@ static Value *foldLogOpOfMaskedICmps(ICmpInst *LHS, ICmpInst *RHS, bool IsAnd,
     // If there is a conflict, we should actually return a false for the
     // whole construct.
     if (((BCst->getValue() & DCst->getValue()) &
-         (CCst->getValue() ^ ECst->getValue())) != 0)
+         (CCst->getValue() ^ ECst->getValue())).getBoolValue())
       return ConstantInt::get(LHS->getType(), !IsAnd);
 
     Value *NewOr1 = Builder->CreateOr(B, D);
@@ -748,7 +748,7 @@ foldAndOrOfEqualityCmpsWithConstants(ICmpInst *LHS, ICmpInst *RHS,
 
   // Special case: get the ordering right when the values wrap around zero.
   // Ie, we assumed the constants were unsigned when swapping earlier.
-  if (*C1 == 0 && C2->isAllOnesValue())
+  if (C1->isNullValue() && C2->isAllOnesValue())
     std::swap(C1, C2);
 
   if (*C1 == *C2 - 1) {
@@ -840,7 +840,8 @@ Value *InstCombiner::foldAndOfICmps(ICmpInst *LHS, ICmpInst *RHS) {
 
       // Check that the low bits are zero.
       APInt Low = APInt::getLowBitsSet(BigBitSize, SmallBitSize);
-      if ((Low & AndC->getValue()) == 0 && (Low & BigC->getValue()) == 0) {
+      if ((Low & AndC->getValue()).isNullValue() &&
+          (Low & BigC->getValue()).isNullValue()) {
         Value *NewAnd = Builder->CreateAnd(V, Low | AndC->getValue());
         APInt N = SmallC->getValue().zext(BigBitSize) | BigC->getValue();
         Value *NewVal = ConstantInt::get(AndC->getType()->getContext(), N);
@@ -1286,7 +1287,7 @@ Instruction *InstCombiner::visitAnd(BinaryOperator &I) {
       }
       case Instruction::Sub:
         // -x & 1 -> x & 1
-        if (AndRHSMask == 1 && match(Op0LHS, m_Zero()))
+        if (AndRHSMask.isOneValue() && match(Op0LHS, m_Zero()))
           return BinaryOperator::CreateAnd(Op0RHS, AndRHS);
 
         break;
@@ -1295,7 +1296,7 @@ Instruction *InstCombiner::visitAnd(BinaryOperator &I) {
       case Instruction::LShr:
         // (1 << x) & 1 --> zext(x == 0)
         // (1 >> x) & 1 --> zext(x == 0)
-        if (AndRHSMask == 1 && Op0LHS == AndRHS) {
+        if (AndRHSMask.isOneValue() && Op0LHS == AndRHS) {
           Value *NewICmp =
             Builder->CreateICmpEQ(Op0RHS, Constant::getNullValue(I.getType()));
           return new ZExtInst(NewICmp, I.getType());
@@ -2033,7 +2034,7 @@ Instruction *InstCombiner::visitOr(BinaryOperator &I) {
     ConstantInt *C1 = dyn_cast<ConstantInt>(C);
     ConstantInt *C2 = dyn_cast<ConstantInt>(D);
     if (C1 && C2) {  // (A & C1)|(B & C2)
-      if ((C1->getValue() & C2->getValue()) == 0) {
+      if ((C1->getValue() & C2->getValue()).isNullValue()) {
         // ((V | N) & C1) | (V & C2) --> (V|N) & (C1|C2)
         // iff (C1&C2) == 0 and (N&~C1) == 0
         if (match(A, m_Or(m_Value(V1), m_Value(V2))) &&
@@ -2056,9 +2057,9 @@ Instruction *InstCombiner::visitOr(BinaryOperator &I) {
         // iff (C1&C2) == 0 and (C3&~C1) == 0 and (C4&~C2) == 0.
         ConstantInt *C3 = nullptr, *C4 = nullptr;
         if (match(A, m_Or(m_Value(V1), m_ConstantInt(C3))) &&
-            (C3->getValue() & ~C1->getValue()) == 0 &&
+            (C3->getValue() & ~C1->getValue()).isNullValue() &&
             match(B, m_Or(m_Specific(V1), m_ConstantInt(C4))) &&
-            (C4->getValue() & ~C2->getValue()) == 0) {
+            (C4->getValue() & ~C2->getValue()).isNullValue()) {
           V2 = Builder->CreateOr(V1, ConstantExpr::getOr(C3, C4), "bitfield");
           return BinaryOperator::CreateAnd(V2,
                                 Builder->getInt(C1->getValue()|C2->getValue()));

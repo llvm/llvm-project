@@ -11,9 +11,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/BPFMCTargetDesc.h"
 #include "BPF.h"
 #include "InstPrinter/BPFInstPrinter.h"
-#include "MCTargetDesc/BPFMCTargetDesc.h"
 #include "MCTargetDesc/BPFMCAsmInfo.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"

@@ -14,8 +14,8 @@
 #ifndef LLVM_LIB_TARGET_BPF_MCTARGETDESC_BPFMCTARGETDESC_H
 #define LLVM_LIB_TARGET_BPF_MCTARGETDESC_BPFMCTARGETDESC_H
 
-#include "llvm/Support/DataTypes.h"
 #include "llvm/Config/config.h"
+#include "llvm/Support/DataTypes.h"
 
 namespace llvm {
 class MCAsmBackend;

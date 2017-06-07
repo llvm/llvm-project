@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "gtest/gtest.h"
 #include "llvm/Support/MathExtras.h"
+#include "gtest/gtest.h"
 
 using namespace llvm;
 

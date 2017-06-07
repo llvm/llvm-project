@@ -8,5 +8,6 @@ add_lldb_library(lldbPluginObjectFilePECOFF PLUGIN
     lldbSymbol
     lldbTarget
   LINK_COMPONENTS
+    BinaryFormat
     Support
   )

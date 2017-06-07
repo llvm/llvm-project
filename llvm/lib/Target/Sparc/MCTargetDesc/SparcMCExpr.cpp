@@ -19,7 +19,6 @@
 #include "llvm/MC/MCSymbolELF.h"
 #include "llvm/Object/ELF.h"
 
-
 using namespace llvm;
 
 #define DEBUG_TYPE "sparcmcexpr"

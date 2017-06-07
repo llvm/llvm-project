@@ -11,9 +11,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/XCoreMCTargetDesc.h"
 #include "InstPrinter/XCoreInstPrinter.h"
 #include "MCTargetDesc/XCoreMCAsmInfo.h"
-#include "MCTargetDesc/XCoreMCTargetDesc.h"
 #include "XCoreTargetStreamer.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCDwarf.h"
@@ -23,8 +23,8 @@
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/TargetRegistry.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 

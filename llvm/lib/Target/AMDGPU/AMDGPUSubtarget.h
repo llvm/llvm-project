@@ -16,12 +16,12 @@
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUSUBTARGET_H
 
 #include "AMDGPU.h"
-#include "R600InstrInfo.h"
-#include "R600ISelLowering.h"
 #include "R600FrameLowering.h"
-#include "SIInstrInfo.h"
-#include "SIISelLowering.h"
+#include "R600ISelLowering.h"
+#include "R600InstrInfo.h"
 #include "SIFrameLowering.h"
+#include "SIISelLowering.h"
+#include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/Triple.h"

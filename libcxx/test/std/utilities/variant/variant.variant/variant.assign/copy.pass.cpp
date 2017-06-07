@@ -107,35 +107,6 @@ struct CopyDoesThrow {
   CopyDoesThrow &operator=(const CopyDoesThrow &) noexcept(false);
 };
 
-#ifndef TEST_HAS_NO_EXCEPTIONS
-struct CopyThrows {
-  CopyThrows() = default;
-  CopyThrows(const CopyThrows &) { throw 42; }
-  CopyThrows &operator=(const CopyThrows &) { throw 42; }
-};
-
-struct CopyCannotThrow {
-  static int alive;
-  CopyCannotThrow() { ++alive; }
-  CopyCannotThrow(const CopyCannotThrow &) noexcept { ++alive; }
-  CopyCannotThrow(CopyCannotThrow &&) noexcept { assert(false); }
-  CopyCannotThrow &operator=(const CopyCannotThrow &) noexcept = default;
-  CopyCannotThrow &operator=(CopyCannotThrow &&) noexcept { assert(false); return *this; }
-};
-
-int CopyCannotThrow::alive = 0;
-
-struct MoveThrows {
-  static int alive;
-  MoveThrows() { ++alive; }
-  MoveThrows(const MoveThrows &) { ++alive; }
-  MoveThrows(MoveThrows &&) { throw 42; }
-  MoveThrows &operator=(const MoveThrows &) { return *this; }
-  MoveThrows &operator=(MoveThrows &&) { throw 42; }
-  ~MoveThrows() { --alive; }
-};
-
-int MoveThrows::alive = 0;
 
 struct NTCopyAssign {
   constexpr NTCopyAssign(int v) : value(v) {}
@@ -177,6 +148,36 @@ struct TCopyAssignNTMoveAssign {
 };
 
 static_assert(std::is_trivially_copy_assignable_v<TCopyAssignNTMoveAssign>, "");
+
+#ifndef TEST_HAS_NO_EXCEPTIONS
+struct CopyThrows {
+  CopyThrows() = default;
+  CopyThrows(const CopyThrows &) { throw 42; }
+  CopyThrows &operator=(const CopyThrows &) { throw 42; }
+};
+
+struct CopyCannotThrow {
+  static int alive;
+  CopyCannotThrow() { ++alive; }
+  CopyCannotThrow(const CopyCannotThrow &) noexcept { ++alive; }
+  CopyCannotThrow(CopyCannotThrow &&) noexcept { assert(false); }
+  CopyCannotThrow &operator=(const CopyCannotThrow &) noexcept = default;
+  CopyCannotThrow &operator=(CopyCannotThrow &&) noexcept { assert(false); return *this; }
+};
+
+int CopyCannotThrow::alive = 0;
+
+struct MoveThrows {
+  static int alive;
+  MoveThrows() { ++alive; }
+  MoveThrows(const MoveThrows &) { ++alive; }
+  MoveThrows(MoveThrows &&) { throw 42; }
+  MoveThrows &operator=(const MoveThrows &) { return *this; }
+  MoveThrows &operator=(MoveThrows &&) { throw 42; }
+  ~MoveThrows() { --alive; }
+};
+
+int MoveThrows::alive = 0;
 
 struct MakeEmptyT {
   static int alive;

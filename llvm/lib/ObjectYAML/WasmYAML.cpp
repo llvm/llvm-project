@@ -366,7 +366,7 @@ void ScalarEnumerationTraits<WasmYAML::TableType>::enumeration(
 void ScalarEnumerationTraits<WasmYAML::RelocType>::enumeration(
     IO &IO, WasmYAML::RelocType &Type) {
 #define WASM_RELOC(name, value) IO.enumCase(Type, #name, wasm::name);
-#include "llvm/Support/WasmRelocs/WebAssembly.def"
+#include "llvm/BinaryFormat/WasmRelocs/WebAssembly.def"
 #undef WASM_RELOC
 }
 

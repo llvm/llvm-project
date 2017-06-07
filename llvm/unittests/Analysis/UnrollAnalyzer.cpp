@@ -7,11 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Analysis/LoopUnrollAnalyzer.h"
 #include "llvm/AsmParser/Parser.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Analysis/LoopUnrollAnalyzer.h"
-#include "llvm/IR/Dominators.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;

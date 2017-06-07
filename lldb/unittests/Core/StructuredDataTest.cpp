@@ -12,7 +12,7 @@
 #include "lldb/Core/StructuredData.h"
 #include "lldb/Utility/StreamString.h"
 
-#include "llvm/Support/MachO.h"
+#include "llvm/BinaryFormat/MachO.h"
 
 using namespace lldb;
 using namespace lldb_private;

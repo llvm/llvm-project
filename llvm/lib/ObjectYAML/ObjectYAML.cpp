@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ObjectYAML/YAML.h"
 #include "llvm/ObjectYAML/ObjectYAML.h"
+#include "llvm/ObjectYAML/YAML.h"
 
 using namespace llvm;
 using namespace yaml;

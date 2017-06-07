@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "gtest/gtest.h"
 #include "llvm/ADT/PointerSumType.h"
+#include "gtest/gtest.h"
 using namespace llvm;
 
 namespace {

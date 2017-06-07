@@ -7,14 +7,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "SystemZTargetMachine.h"
 #include "MCTargetDesc/SystemZMCTargetDesc.h"
 #include "SystemZ.h"
 #include "SystemZMachineScheduler.h"
-#include "SystemZTargetMachine.h"
 #include "SystemZTargetTransformInfo.h"
 #include "llvm/ADT/Optional.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/Passes.h"

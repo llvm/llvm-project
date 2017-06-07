@@ -12,6 +12,7 @@
 
 #include "DIASupport.h"
 #include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
+#include "llvm/DebugInfo/PDB/PDBSymbol.h"
 
 namespace llvm {
 namespace pdb {

@@ -13,15 +13,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
+#include "AMDGPUISelLowering.h" // For AMDGPUISD
 #include "AMDGPUInstrInfo.h"
 #include "AMDGPURegisterInfo.h"
-#include "AMDGPUISelLowering.h" // For AMDGPUISD
 #include "AMDGPUSubtarget.h"
 #include "SIDefines.h"
-#include "SIInstrInfo.h"
-#include "SIRegisterInfo.h"
 #include "SIISelLowering.h"
+#include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"
+#include "SIRegisterInfo.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"

@@ -11,10 +11,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MipsMachineFunction.h"
-#include "Mips.h"
-#include "MipsRegisterInfo.h"
 #include "MipsSubtarget.h"
+#include "Mips.h"
+#include "MipsMachineFunction.h"
+#include "MipsRegisterInfo.h"
 #include "MipsTargetMachine.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Function.h"
@@ -70,7 +70,7 @@ MipsSubtarget::MipsSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
       InMips16HardFloat(Mips16HardFloat), InMicroMipsMode(false), HasDSP(false),
       HasDSPR2(false), HasDSPR3(false), AllowMixed16_32(Mixed16_32 | Mips_Os16),
       Os16(Mips_Os16), HasMSA(false), UseTCCInDIV(false), HasSym32(false),
-      HasEVA(false), TM(TM), TargetTriple(TT), TSInfo(),
+      HasEVA(false), DisableMadd4(false), TM(TM), TargetTriple(TT), TSInfo(),
       InstrInfo(
           MipsInstrInfo::create(initializeSubtargetDependencies(CPU, FS, TM))),
       FrameLowering(MipsFrameLowering::create(*this)),

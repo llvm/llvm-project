@@ -13,12 +13,12 @@
 
 #include "X86MCAsmInfo.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/ELF.h"
 using namespace llvm;
 
 enum AsmWriterFlavorTy {

@@ -8,10 +8,10 @@
 //==-----------------------------------------------------------------------===//
 
 #include "SIFrameLowering.h"
+#include "AMDGPUSubtarget.h"
 #include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIRegisterInfo.h"
-#include "AMDGPUSubtarget.h"
 
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"

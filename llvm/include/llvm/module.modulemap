@@ -259,25 +259,6 @@ module LLVM_Utils {
     // These are intended for textual inclusion.
     textual header "Support/ARMTargetParser.def"
     textual header "Support/AArch64TargetParser.def"
-    textual header "Support/Dwarf.def"
-    textual header "Support/MachO.def"
-    textual header "Support/ELFRelocs/AArch64.def"
-    textual header "Support/ELFRelocs/AMDGPU.def"
-    textual header "Support/ELFRelocs/ARM.def"
-    textual header "Support/ELFRelocs/AVR.def"
-    textual header "Support/ELFRelocs/BPF.def"
-    textual header "Support/ELFRelocs/Hexagon.def"
-    textual header "Support/ELFRelocs/i386.def"
-    textual header "Support/ELFRelocs/Lanai.def"
-    textual header "Support/ELFRelocs/Mips.def"
-    textual header "Support/ELFRelocs/PowerPC64.def"
-    textual header "Support/ELFRelocs/PowerPC.def"
-    textual header "Support/ELFRelocs/RISCV.def"
-    textual header "Support/ELFRelocs/Sparc.def"
-    textual header "Support/ELFRelocs/SystemZ.def"
-    textual header "Support/ELFRelocs/x86_64.def"
-    textual header "Support/ELFRelocs/WebAssembly.def"
-    textual header "Support/WasmRelocs/WebAssembly.def"
   }
 
   // This part of the module is usable from both C and C++ code.

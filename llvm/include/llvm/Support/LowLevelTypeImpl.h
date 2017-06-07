@@ -27,9 +27,9 @@
 #ifndef LLVM_SUPPORT_LOWLEVELTYPEIMPL_H
 #define LLVM_SUPPORT_LOWLEVELTYPEIMPL_H
 
-#include <cassert>
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/CodeGen/MachineValueType.h"
+#include <cassert>
 
 namespace llvm {
 

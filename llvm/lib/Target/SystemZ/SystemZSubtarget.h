@@ -19,8 +19,8 @@
 #include "SystemZInstrInfo.h"
 #include "SystemZRegisterInfo.h"
 #include "SystemZSelectionDAGInfo.h"
-#include "llvm/IR/DataLayout.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
 #include <string>
 

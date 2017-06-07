@@ -7,9 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "gtest/gtest.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_sha1_ostream.h"
+#include "gtest/gtest.h"
 
 #include <string>
 

@@ -15,9 +15,9 @@
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUINSTRUCTIONSELECTOR_H
 
 #include "AMDGPU.h"
-#include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 
 namespace llvm {
 

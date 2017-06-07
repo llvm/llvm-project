@@ -35,8 +35,8 @@
 #include "Thunks.h"
 #include "Writer.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Object/ELF.h"
-#include "llvm/Support/ELF.h"
 #include "llvm/Support/Endian.h"
 
 using namespace llvm;

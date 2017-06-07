@@ -3,11 +3,11 @@
 
 // Simple test for a fuzzer. Must find a specific string
 // used in std::string operator ==.
+#include <cstddef>
 #include <cstdint>
 #include <cstdlib>
-#include <cstddef>
-#include <string>
 #include <iostream>
+#include <string>
 
 static volatile int Sink;
 

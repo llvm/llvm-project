@@ -16,10 +16,10 @@
 
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/MachO.h"
-#include "llvm/Support/MachO.h"
 
 namespace llvm {
 class StringRef;

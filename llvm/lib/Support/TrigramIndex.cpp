@@ -18,9 +18,9 @@
 #include "llvm/Support/TrigramIndex.h"
 #include "llvm/ADT/SmallVector.h"
 
-#include <unordered_map>
 #include <set>
 #include <string>
+#include <unordered_map>
 
 using namespace llvm;
 

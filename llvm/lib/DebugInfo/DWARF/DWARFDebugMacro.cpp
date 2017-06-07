@@ -7,9 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SyntaxHighlighting.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugMacro.h"
-#include "llvm/Support/Dwarf.h"
+#include "SyntaxHighlighting.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
 

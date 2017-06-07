@@ -930,7 +930,7 @@ Instruction *InstCombiner::commonIDivTransforms(BinaryOperator &I) {
         }
       }
 
-      if (*C2 != 0) // avoid X udiv 0
+      if (!C2->isNullValue()) // avoid X udiv 0
         if (Instruction *FoldedDiv = foldOpWithConstantIntoOperand(I))
           return FoldedDiv;
     }

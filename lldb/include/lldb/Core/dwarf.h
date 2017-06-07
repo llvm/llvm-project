@@ -13,7 +13,7 @@
 #include <stdint.h>
 
 // Get the DWARF constant definitions from llvm
-#include "llvm/Support/Dwarf.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 
 #include "lldb/Core/RangeMap.h"
 

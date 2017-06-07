@@ -25,9 +25,9 @@
 #include "Writer.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compression.h"
-#include "llvm/Support/ELF.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
@@ -54,7 +54,7 @@ uint64_t ExprValue::getValue() const {
   if (Sec) {
     if (OutputSection *OS = Sec->getOutputSection())
       return alignTo(Sec->getOffset(Val) + OS->Addr, Alignment);
-    error("unable to evaluate expression: input section " + Sec->Name +
+    error(Loc + ": unable to evaluate expression: input section " + Sec->Name +
           " has no output section assigned");
   }
   return alignTo(Val, Alignment);
@@ -1231,12 +1231,12 @@ bool LinkerScript::hasLMA(OutputSection *Sec) {
 
 ExprValue LinkerScript::getSymbolValue(const Twine &Loc, StringRef S) {
   if (S == ".")
-    return {CurOutSec, Dot - CurOutSec->Addr};
+    return {CurOutSec, Dot - CurOutSec->Addr, Loc};
   if (SymbolBody *B = findSymbol(S)) {
     if (auto *D = dyn_cast<DefinedRegular>(B))
-      return {D->Section, D->Value};
+      return {D->Section, D->Value, Loc};
     if (auto *C = dyn_cast<DefinedCommon>(B))
-      return {InX::Common, C->Offset};
+      return {InX::Common, C->Offset, Loc};
   }
   error(Loc + ": symbol not found: " + S);
   return 0;

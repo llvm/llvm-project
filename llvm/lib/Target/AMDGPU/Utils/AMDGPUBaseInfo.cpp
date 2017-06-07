@@ -7,11 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AMDGPU.h"
 #include "AMDGPUBaseInfo.h"
+#include "AMDGPU.h"
 #include "SIDefines.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constants.h"
@@ -27,7 +28,6 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/ELF.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include <algorithm>
@@ -37,7 +37,6 @@
 #include <utility>
 
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
-
 
 #define GET_INSTRINFO_NAMED_OPS
 #include "AMDGPUGenInstrInfo.inc"

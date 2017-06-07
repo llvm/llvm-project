@@ -40,8 +40,8 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/MathExtras.h"
 #include <algorithm>
-#include <limits>
 #include <iterator>
+#include <limits>
 #include <utility>
 
 using namespace llvm;

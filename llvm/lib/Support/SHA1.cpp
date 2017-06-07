@@ -15,9 +15,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/Host.h"
 #include "llvm/Support/SHA1.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/Host.h"
 using namespace llvm;
 
 #include <stdint.h>

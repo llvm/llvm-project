@@ -100,8 +100,11 @@ public:
   /// Inform the analysis cache that we have erased a block.
   void eraseBlock(BasicBlock *BB);
 
-  /// Print the \LazyValueInfoCache.
-  void printCache(Function &F, raw_ostream &OS);
+  /// Print the \LazyValueInfo Analysis.
+  /// We pass in the DTree that is required for identifying which basic blocks
+  /// we can solve/print for, in the LVIPrinter. The DT is optional
+  /// in LVI, so we need to pass it here as an argument.
+  void printLVI(Function &F, DominatorTree &DTree, raw_ostream &OS);
 
   // For old PM pass. Delete once LazyValueInfoWrapperPass is gone.
   void releaseMemory();

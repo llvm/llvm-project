@@ -21,7 +21,7 @@
 #include "llvm/CodeGen/PseudoSourceValue.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Metadata.h"
-#include "llvm/IR/Value.h"  // PointerLikeTypeTraits<Value*>
+#include "llvm/IR/Value.h" // PointerLikeTypeTraits<Value*>
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/DataTypes.h"
 

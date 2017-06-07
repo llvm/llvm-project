@@ -17,8 +17,8 @@
 #define LLVM_CODEGEN_GLOBALISEL_INSTRUCTIONSELECTOR_H
 
 #include "llvm/ADT/Optional.h"
-#include <cstdint>
 #include <bitset>
+#include <cstdint>
 #include <functional>
 
 namespace llvm {

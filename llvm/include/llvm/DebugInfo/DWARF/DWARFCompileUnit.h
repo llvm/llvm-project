@@ -29,7 +29,7 @@ public:
   // VTable anchor.
   ~DWARFCompileUnit() override;
 
-  void dump(raw_ostream &OS);
+  void dump(raw_ostream &OS, DIDumpOptions DumpOpts);
 
   static const DWARFSectionKind Section = DW_SECT_INFO;
 };

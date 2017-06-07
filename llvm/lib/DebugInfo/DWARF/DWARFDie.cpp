@@ -7,18 +7,18 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/DebugInfo/DWARF/DWARFDie.h"
 #include "SyntaxHighlighting.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DWARF/DWARFAbbreviationDeclaration.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugRangeList.h"
-#include "llvm/DebugInfo/DWARF/DWARFDie.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/Support/DataExtractor.h"
-#include "llvm/Support/Dwarf.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
@@ -67,7 +67,8 @@ static void dumpRanges(raw_ostream &OS, const DWARFAddressRangesVector& Ranges,
 
 static void dumpAttribute(raw_ostream &OS, const DWARFDie &Die,
                           uint32_t *OffsetPtr, dwarf::Attribute Attr,
-                          dwarf::Form Form, unsigned Indent) {
+                          dwarf::Form Form, unsigned Indent,
+                          DIDumpOptions DumpOpts) {
   if (!Die.isValid())
     return;
   const char BaseIndent[] = "            ";
@@ -78,13 +79,15 @@ static void dumpAttribute(raw_ostream &OS, const DWARFDie &Die,
     WithColor(OS, syntax::Attribute) << attrString;
   else
     WithColor(OS, syntax::Attribute).get() << format("DW_AT_Unknown_%x", Attr);
-  
-  auto formString = FormEncodingString(Form);
-  if (!formString.empty())
-    OS << " [" << formString << ']';
-  else
-    OS << format(" [DW_FORM_Unknown_%x]", Form);
-  
+
+  if (!DumpOpts.Brief) {
+    auto formString = FormEncodingString(Form);
+    if (!formString.empty())
+      OS << " [" << formString << ']';
+    else
+      OS << format(" [DW_FORM_Unknown_%x]", Form);
+  }
+
   DWARFUnit *U = Die.getDwarfUnit();
   DWARFFormValue formValue(Form);
   
@@ -301,8 +304,8 @@ void DWARFDie::getCallerFrame(uint32_t &CallFile, uint32_t &CallLine,
   CallDiscriminator = toUnsigned(find(DW_AT_GNU_discriminator), 0);
 }
 
-void DWARFDie::dump(raw_ostream &OS, unsigned RecurseDepth,
-                    unsigned Indent) const {
+void DWARFDie::dump(raw_ostream &OS, unsigned RecurseDepth, unsigned Indent,
+                    DIDumpOptions DumpOpts) const {
   if (!isValid())
     return;
   DataExtractor debug_info_data = U->getDebugInfoExtractor();
@@ -322,10 +325,12 @@ void DWARFDie::dump(raw_ostream &OS, unsigned RecurseDepth,
         else
           WithColor(OS, syntax::Tag).get().indent(Indent)
           << format("DW_TAG_Unknown_%x", getTag());
-        
-        OS << format(" [%u] %c\n", abbrCode,
-                     AbbrevDecl->hasChildren() ? '*' : ' ');
-        
+
+        if (!DumpOpts.Brief)
+          OS << format(" [%u] %c", abbrCode,
+                       AbbrevDecl->hasChildren() ? '*' : ' ');
+        OS << '\n';
+
         // Dump all data in the DIE for the attributes.
         for (const auto &AttrSpec : AbbrevDecl->attributes()) {
           if (AttrSpec.Form == DW_FORM_implicit_const) {
@@ -335,13 +340,13 @@ void DWARFDie::dump(raw_ostream &OS, unsigned RecurseDepth,
             continue;
           }
           dumpAttribute(OS, *this, &offset, AttrSpec.Attr, AttrSpec.Form,
-                        Indent);
+                        Indent, DumpOpts);
         }
         
         DWARFDie child = getFirstChild();
         if (RecurseDepth > 0 && child) {
           while (child) {
-            child.dump(OS, RecurseDepth-1, Indent+2);
+            child.dump(OS, RecurseDepth-1, Indent+2, DumpOpts);
             child = child.getSibling();
           }
         }

@@ -153,6 +153,7 @@ struct DIDumpOptions {
     DIDumpType DumpType = DIDT_All;
     bool DumpEH = false;
     bool SummarizeTypes = false;
+    bool Brief = false;
 };
 
 class DIContext {

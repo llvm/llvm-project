@@ -17,11 +17,11 @@
 #define LLVM_CODEGEN_BASICTTIIMPL_H
 
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfoImpl.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetLowering.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
-#include "llvm/Analysis/TargetLibraryInfo.h"
 
 namespace llvm {
 

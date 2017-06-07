@@ -722,6 +722,10 @@ public:
   /// if false is returned.
   bool getTgtMemIntrinsic(IntrinsicInst *Inst, MemIntrinsicInfo &Info) const;
 
+  /// \returns The maximum element size, in bytes, for an element
+  /// unordered-atomic memory intrinsic.
+  unsigned getAtomicMemIntrinsicMaxElementSize() const;
+
   /// \returns A value which is the result of the given memory intrinsic.  New
   /// instructions may be created to extract the result from the given intrinsic
   /// memory operation.  Returns nullptr if the target cannot create a result
@@ -923,6 +927,7 @@ public:
   virtual unsigned getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys) = 0;
   virtual bool getTgtMemIntrinsic(IntrinsicInst *Inst,
                                   MemIntrinsicInfo &Info) = 0;
+  virtual unsigned getAtomicMemIntrinsicMaxElementSize() const = 0;
   virtual Value *getOrCreateResultFromMemIntrinsic(IntrinsicInst *Inst,
                                                    Type *ExpectedType) = 0;
   virtual bool areInlineCompatible(const Function *Caller,
@@ -1223,6 +1228,9 @@ public:
   bool getTgtMemIntrinsic(IntrinsicInst *Inst,
                           MemIntrinsicInfo &Info) override {
     return Impl.getTgtMemIntrinsic(Inst, Info);
+  }
+  unsigned getAtomicMemIntrinsicMaxElementSize() const override {
+    return Impl.getAtomicMemIntrinsicMaxElementSize();
   }
   Value *getOrCreateResultFromMemIntrinsic(IntrinsicInst *Inst,
                                            Type *ExpectedType) override {

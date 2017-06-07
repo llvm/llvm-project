@@ -15,8 +15,8 @@
 #define LLVM_MC_MCSECTIONMACHO_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/BinaryFormat/MachO.h"
 #include "llvm/MC/MCSection.h"
-#include "llvm/Support/MachO.h"
 
 namespace llvm {
 

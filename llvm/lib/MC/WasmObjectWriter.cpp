@@ -13,6 +13,7 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCAsmLayout.h"
@@ -31,7 +32,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/StringSaver.h"
-#include "llvm/Support/Wasm.h"
 #include <vector>
 
 using namespace llvm;
@@ -127,6 +127,38 @@ struct WasmGlobal {
   uint32_t ImportIndex;
 };
 
+// Information about a single relocation.
+struct WasmRelocationEntry {
+  uint64_t Offset;            // Where is the relocation.
+  const MCSymbolWasm *Symbol; // The symbol to relocate with.
+  int64_t Addend;             // A value to add to the symbol.
+  unsigned Type;              // The type of the relocation.
+  MCSectionWasm *FixupSection;// The section the relocation is targeting.
+
+  WasmRelocationEntry(uint64_t Offset, const MCSymbolWasm *Symbol,
+                      int64_t Addend, unsigned Type,
+                      MCSectionWasm *FixupSection)
+      : Offset(Offset), Symbol(Symbol), Addend(Addend), Type(Type),
+        FixupSection(FixupSection) {}
+
+  bool hasAddend() const {
+    switch (Type) {
+    case wasm::R_WEBASSEMBLY_GLOBAL_ADDR_LEB:
+    case wasm::R_WEBASSEMBLY_GLOBAL_ADDR_SLEB:
+    case wasm::R_WEBASSEMBLY_GLOBAL_ADDR_I32:
+      return true;
+    default:
+      return false;
+    }
+  }
+
+  void print(raw_ostream &Out) const {
+    Out << "Off=" << Offset << ", Sym=" << Symbol << ", Addend=" << Addend
+        << ", Type=" << Type << ", FixupSection=" << FixupSection;
+  }
+  void dump() const { print(errs()); }
+};
+
 class WasmObjectWriter : public MCObjectWriter {
   /// Helper struct for containing some precomputed information on symbols.
   struct WasmSymbolData {
@@ -146,11 +178,14 @@ class WasmObjectWriter : public MCObjectWriter {
   // Relocations for fixing up references in the data section.
   std::vector<WasmRelocationEntry> DataRelocations;
 
-  // Fixups for call_indirect type indices.
-  std::vector<WasmRelocationEntry> TypeIndexFixups;
-
   // Index values to use for fixing up call_indirect type indices.
-  std::vector<uint32_t> TypeIndexFixupTypes;
+  // Maps function symbols to the index of the type of the function
+  DenseMap<const MCSymbolWasm *, uint32_t> TypeIndices;
+
+  DenseMap<const MCSymbolWasm *, uint32_t> SymbolIndices;
+
+  DenseMap<WasmFunctionType, int32_t, WasmFunctionTypeDenseMapInfo>
+      FunctionTypeIndices;
 
   // TargetObjectWriter wrappers.
   bool is64Bit() const { return TargetObjectWriter->is64Bit(); }
@@ -169,6 +204,15 @@ public:
 
 private:
   ~WasmObjectWriter() override;
+
+  void reset() override {
+    CodeRelocations.clear();
+    DataRelocations.clear();
+    TypeIndices.clear();
+    SymbolIndices.clear();
+    FunctionTypeIndices.clear();
+    MCObjectWriter::reset();
+  }
 
   void writeHeader(const MCAssembler &Asm);
 
@@ -195,21 +239,23 @@ private:
   void writeExportSection(const SmallVector<WasmExport, 4> &Exports);
   void writeElemSection(const SmallVector<uint32_t, 4> &TableElems);
   void writeCodeSection(const MCAssembler &Asm, const MCAsmLayout &Layout,
-                        DenseMap<const MCSymbolWasm *, uint32_t> &SymbolIndices,
                         const SmallVector<WasmFunction, 4> &Functions);
   uint64_t
-  writeDataSection(const SmallVector<char, 0> &DataBytes,
-                   DenseMap<const MCSymbolWasm *, uint32_t> &SymbolIndices);
+  writeDataSection(const SmallVector<char, 0> &DataBytes);
   void writeNameSection(const SmallVector<WasmFunction, 4> &Functions,
                         const SmallVector<WasmImport, 4> &Imports,
                         uint32_t NumFuncImports);
-  void writeCodeRelocSection(
-      DenseMap<const MCSymbolWasm *, uint32_t> &SymbolIndices);
-  void writeDataRelocSection(
-      DenseMap<const MCSymbolWasm *, uint32_t> &SymbolIndices,
-      uint64_t DataSectionHeaderSize);
+  void writeCodeRelocSection();
+  void writeDataRelocSection(uint64_t DataSectionHeaderSize);
   void writeLinkingMetaDataSection(bool HasStackPointer,
                                    uint32_t StackPointerGlobal);
+
+  void applyRelocations(ArrayRef<WasmRelocationEntry> Relocations,
+                        uint64_t ContentsOffset);
+
+  void writeRelocations(ArrayRef<WasmRelocationEntry> Relocations,
+                        uint64_t HeaderSize);
+  uint32_t getRelocationIndexValue(const WasmRelocationEntry &RelEntry);
 };
 
 } // end anonymous namespace
@@ -356,19 +402,7 @@ void WasmObjectWriter::recordRelocation(MCAssembler &Asm,
       SymA->setUsedInReloc();
   }
 
-  if (RefA) {
-    if (RefA->getKind() == MCSymbolRefExpr::VK_WebAssembly_TYPEINDEX) {
-      assert(C == 0);
-      WasmRelocationEntry Rec(FixupOffset, SymA, C,
-                              wasm::R_WEBASSEMBLY_TYPE_INDEX_LEB,
-                              &FixupSection);
-      TypeIndexFixups.push_back(Rec);
-      return;
-    }
-  }
-
   unsigned Type = getRelocType(Ctx, Target, Fixup, IsPCRel);
-
   WasmRelocationEntry Rec(FixupOffset, SymA, C, Type, &FixupSection);
 
   if (FixupSection.hasInstructions())
@@ -427,124 +461,85 @@ static uint32_t ProvisionalValue(const WasmRelocationEntry &RelEntry) {
   return Value;
 }
 
+uint32_t WasmObjectWriter::getRelocationIndexValue(
+    const WasmRelocationEntry &RelEntry) {
+  switch (RelEntry.Type) {
+  case wasm::R_WEBASSEMBLY_FUNCTION_INDEX_LEB:
+  case wasm::R_WEBASSEMBLY_TABLE_INDEX_SLEB:
+  case wasm::R_WEBASSEMBLY_TABLE_INDEX_I32:
+  case wasm::R_WEBASSEMBLY_GLOBAL_ADDR_LEB:
+  case wasm::R_WEBASSEMBLY_GLOBAL_ADDR_SLEB:
+  case wasm::R_WEBASSEMBLY_GLOBAL_ADDR_I32:
+    assert(SymbolIndices.count(RelEntry.Symbol));
+    return SymbolIndices[RelEntry.Symbol];
+  case wasm::R_WEBASSEMBLY_TYPE_INDEX_LEB:
+    assert(TypeIndices.count(RelEntry.Symbol));
+    return TypeIndices[RelEntry.Symbol];
+  default:
+    llvm_unreachable("invalid relocation type");
+  }
+}
+
 // Apply the portions of the relocation records that we can handle ourselves
 // directly.
-static void ApplyRelocations(
-    ArrayRef<WasmRelocationEntry> Relocations,
-    raw_pwrite_stream &Stream,
-    DenseMap<const MCSymbolWasm *, uint32_t> &SymbolIndices,
-    uint64_t ContentsOffset)
-{
+void WasmObjectWriter::applyRelocations(
+    ArrayRef<WasmRelocationEntry> Relocations, uint64_t ContentsOffset) {
+  raw_pwrite_stream &Stream = getStream();
   for (const WasmRelocationEntry &RelEntry : Relocations) {
     uint64_t Offset = ContentsOffset +
                       RelEntry.FixupSection->getSectionOffset() +
                       RelEntry.Offset;
-    switch (RelEntry.Type) {
-    case wasm::R_WEBASSEMBLY_FUNCTION_INDEX_LEB: {
-      assert(SymbolIndices.count(RelEntry.Symbol));
-      uint32_t Index = SymbolIndices[RelEntry.Symbol];
-      assert(RelEntry.Addend == 0);
 
-      WritePatchableLEB(Stream, Index, Offset);
+    switch (RelEntry.Type) {
+    case wasm::R_WEBASSEMBLY_TABLE_INDEX_SLEB:
+    case wasm::R_WEBASSEMBLY_FUNCTION_INDEX_LEB:
+    case wasm::R_WEBASSEMBLY_TYPE_INDEX_LEB: {
+      uint32_t Index = getRelocationIndexValue(RelEntry);
+      WritePatchableSLEB(Stream, Index, Offset);
       break;
     }
-    case wasm::R_WEBASSEMBLY_TABLE_INDEX_SLEB: {
-      assert(SymbolIndices.count(RelEntry.Symbol));
-      uint32_t Index = SymbolIndices[RelEntry.Symbol];
-      assert(RelEntry.Addend == 0);
-
-      WritePatchableSLEB(Stream, Index, Offset);
+    case wasm::R_WEBASSEMBLY_TABLE_INDEX_I32: {
+      uint32_t Index = getRelocationIndexValue(RelEntry);
+      WriteI32(Stream, Index, Offset);
       break;
     }
     case wasm::R_WEBASSEMBLY_GLOBAL_ADDR_SLEB: {
       uint32_t Value = ProvisionalValue(RelEntry);
-
       WritePatchableSLEB(Stream, Value, Offset);
       break;
     }
     case wasm::R_WEBASSEMBLY_GLOBAL_ADDR_LEB: {
       uint32_t Value = ProvisionalValue(RelEntry);
-
       WritePatchableLEB(Stream, Value, Offset);
-      break;
-    }
-    case wasm::R_WEBASSEMBLY_TABLE_INDEX_I32: {
-      assert(SymbolIndices.count(RelEntry.Symbol));
-      uint32_t Index = SymbolIndices[RelEntry.Symbol];
-      assert(RelEntry.Addend == 0);
-
-      WriteI32(Stream, Index, Offset);
       break;
     }
     case wasm::R_WEBASSEMBLY_GLOBAL_ADDR_I32: {
       uint32_t Value = ProvisionalValue(RelEntry);
-
       WriteI32(Stream, Value, Offset);
       break;
     }
-    default:
-      break;
-    }
-  }
-}
-
-// Write out the portions of the relocation records that the linker will
-// need to handle.
-static void
-WriteRelocations(ArrayRef<WasmRelocationEntry> Relocations,
-                 raw_pwrite_stream &Stream,
-                 DenseMap<const MCSymbolWasm *, uint32_t> &SymbolIndices,
-                 uint64_t HeaderSize) {
-  for (const WasmRelocationEntry RelEntry : Relocations) {
-    encodeULEB128(RelEntry.Type, Stream);
-
-    uint64_t Offset = RelEntry.Offset +
-                      RelEntry.FixupSection->getSectionOffset() + HeaderSize;
-    assert(SymbolIndices.count(RelEntry.Symbol));
-    uint32_t Index = SymbolIndices[RelEntry.Symbol];
-    int64_t Addend = RelEntry.Addend;
-
-    switch (RelEntry.Type) {
-    case wasm::R_WEBASSEMBLY_FUNCTION_INDEX_LEB:
-    case wasm::R_WEBASSEMBLY_TABLE_INDEX_SLEB:
-    case wasm::R_WEBASSEMBLY_TABLE_INDEX_I32:
-      encodeULEB128(Offset, Stream);
-      encodeULEB128(Index, Stream);
-      assert(Addend == 0 && "addends not supported for functions");
-      break;
-    case wasm::R_WEBASSEMBLY_GLOBAL_ADDR_LEB:
-    case wasm::R_WEBASSEMBLY_GLOBAL_ADDR_SLEB:
-    case wasm::R_WEBASSEMBLY_GLOBAL_ADDR_I32:
-      encodeULEB128(Offset, Stream);
-      encodeULEB128(Index, Stream);
-      encodeSLEB128(Addend, Stream);
-      break;
     default:
       llvm_unreachable("unsupported relocation type");
     }
   }
 }
 
-// Write out the the type relocation records that the linker will
+// Write out the portions of the relocation records that the linker will
 // need to handle.
-static void WriteTypeRelocations(
-    ArrayRef<WasmRelocationEntry> TypeIndexFixups,
-    ArrayRef<uint32_t> TypeIndexFixupTypes,
-    raw_pwrite_stream &Stream)
-{
-  for (size_t i = 0, e = TypeIndexFixups.size(); i < e; ++i) {
-    const WasmRelocationEntry &Fixup = TypeIndexFixups[i];
-    uint32_t Type = TypeIndexFixupTypes[i];
+void WasmObjectWriter::writeRelocations(
+    ArrayRef<WasmRelocationEntry> Relocations, uint64_t HeaderSize) {
+  raw_pwrite_stream &Stream = getStream();
+  for (const WasmRelocationEntry& RelEntry : Relocations) {
 
-    assert(Fixup.Type == wasm::R_WEBASSEMBLY_TYPE_INDEX_LEB);
-    assert(Fixup.Addend == 0);
+    uint64_t Offset = RelEntry.Offset +
+                      RelEntry.FixupSection->getSectionOffset() + HeaderSize;
+    uint32_t Index = getRelocationIndexValue(RelEntry);
 
-    uint64_t Offset = Fixup.Offset +
-                      Fixup.FixupSection->getSectionOffset();
-
-    encodeULEB128(Fixup.Type, Stream);
+    encodeULEB128(RelEntry.Type, Stream);
     encodeULEB128(Offset, Stream);
-    encodeULEB128(Type, Stream);
+    encodeULEB128(Index, Stream);
+    if (RelEntry.hasAddend())
+      encodeSLEB128(RelEntry.Addend, Stream);
   }
 }
 
@@ -733,7 +728,6 @@ void WasmObjectWriter::writeElemSection(
 
 void WasmObjectWriter::writeCodeSection(
     const MCAssembler &Asm, const MCAsmLayout &Layout,
-    DenseMap<const MCSymbolWasm *, uint32_t> &SymbolIndices,
     const SmallVector<WasmFunction, 4> &Functions) {
   if (Functions.empty())
     return;
@@ -768,34 +762,14 @@ void WasmObjectWriter::writeCodeSection(
     Asm.writeSectionData(&FuncSection, Layout);
   }
 
-  // Apply the type index fixups for call_indirect etc. instructions.
-  for (size_t i = 0, e = TypeIndexFixups.size(); i < e; ++i) {
-    uint32_t Type = TypeIndexFixupTypes[i];
-    unsigned Padding = PaddingFor5ByteULEB128(Type);
-
-    const WasmRelocationEntry &Fixup = TypeIndexFixups[i];
-    assert(Fixup.Addend == 0);
-    assert(Fixup.Type == wasm::R_WEBASSEMBLY_TYPE_INDEX_LEB);
-    uint64_t Offset = Fixup.Offset +
-                      Fixup.FixupSection->getSectionOffset();
-
-    uint8_t Buffer[16];
-    unsigned SizeLen = encodeULEB128(Type, Buffer, Padding);
-    assert(SizeLen == 5);
-    getStream().pwrite((char *)Buffer, SizeLen,
-                       Section.ContentsOffset + Offset);
-  }
-
   // Apply fixups.
-  ApplyRelocations(CodeRelocations, getStream(), SymbolIndices,
-                   Section.ContentsOffset);
+  applyRelocations(CodeRelocations, Section.ContentsOffset);
 
   endSection(Section);
 }
 
 uint64_t WasmObjectWriter::writeDataSection(
-    const SmallVector<char, 0> &DataBytes,
-    DenseMap<const MCSymbolWasm *, uint32_t> &SymbolIndices) {
+    const SmallVector<char, 0> &DataBytes) {
   if (DataBytes.empty())
     return 0;
 
@@ -812,8 +786,7 @@ uint64_t WasmObjectWriter::writeDataSection(
   writeBytes(DataBytes); // data
 
   // Apply fixups.
-  ApplyRelocations(DataRelocations, getStream(), SymbolIndices,
-                   Section.ContentsOffset + HeaderSize);
+  applyRelocations(DataRelocations, Section.ContentsOffset + HeaderSize);
 
   endSection(Section);
   return HeaderSize;
@@ -853,8 +826,7 @@ void WasmObjectWriter::writeNameSection(
   endSection(Section);
 }
 
-void WasmObjectWriter::writeCodeRelocSection(
-    DenseMap<const MCSymbolWasm *, uint32_t> &SymbolIndices) {
+void WasmObjectWriter::writeCodeRelocSection() {
   // See: https://github.com/WebAssembly/tool-conventions/blob/master/Linking.md
   // for descriptions of the reloc sections.
 
@@ -865,17 +837,14 @@ void WasmObjectWriter::writeCodeRelocSection(
   startSection(Section, wasm::WASM_SEC_CUSTOM, "reloc.CODE");
 
   encodeULEB128(wasm::WASM_SEC_CODE, getStream());
-  encodeULEB128(CodeRelocations.size() + TypeIndexFixups.size(), getStream());
+  encodeULEB128(CodeRelocations.size(), getStream());
 
-  WriteRelocations(CodeRelocations, getStream(), SymbolIndices, 0);
-  WriteTypeRelocations(TypeIndexFixups, TypeIndexFixupTypes, getStream());
+  writeRelocations(CodeRelocations, 0);
 
   endSection(Section);
 }
 
-void WasmObjectWriter::writeDataRelocSection(
-    DenseMap<const MCSymbolWasm *, uint32_t> &SymbolIndices,
-    uint64_t DataSectionHeaderSize) {
+void WasmObjectWriter::writeDataRelocSection(uint64_t DataSectionHeaderSize) {
   // See: https://github.com/WebAssembly/tool-conventions/blob/master/Linking.md
   // for descriptions of the reloc sections.
 
@@ -888,8 +857,7 @@ void WasmObjectWriter::writeDataRelocSection(
   encodeULEB128(wasm::WASM_SEC_DATA, getStream());
   encodeULEB128(DataRelocations.size(), getStream());
 
-  WriteRelocations(DataRelocations, getStream(), SymbolIndices,
-                   DataSectionHeaderSize);
+  writeRelocations(DataRelocations, DataSectionHeaderSize);
 
   endSection(Section);
 }
@@ -915,15 +883,12 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
   wasm::ValType PtrType = is64Bit() ? wasm::ValType::I64 : wasm::ValType::I32;
 
   // Collect information from the available symbols.
-  DenseMap<WasmFunctionType, int32_t, WasmFunctionTypeDenseMapInfo>
-      FunctionTypeIndices;
   SmallVector<WasmFunctionType, 4> FunctionTypes;
   SmallVector<WasmFunction, 4> Functions;
   SmallVector<uint32_t, 4> TableElems;
   SmallVector<WasmGlobal, 4> Globals;
   SmallVector<WasmImport, 4> Imports;
   SmallVector<WasmExport, 4> Exports;
-  DenseMap<const MCSymbolWasm *, uint32_t> SymbolIndices;
   SmallPtrSet<const MCSymbolWasm *, 4> IsAddressTaken;
   unsigned NumFuncImports = 0;
   unsigned NumGlobalImports = 0;
@@ -1194,9 +1159,9 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
   }
 
   // Add types for indirect function calls.
-  for (const WasmRelocationEntry &Fixup : TypeIndexFixups) {
-    assert(Fixup.Addend == 0);
-    assert(Fixup.Type == wasm::R_WEBASSEMBLY_TYPE_INDEX_LEB);
+  for (const WasmRelocationEntry &Fixup : CodeRelocations) {
+    if (Fixup.Type != wasm::R_WEBASSEMBLY_TYPE_INDEX_LEB)
+      continue;
 
     WasmFunctionType F;
     F.Returns = Fixup.Symbol->getReturns();
@@ -1206,7 +1171,7 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
     if (Pair.second)
       FunctionTypes.push_back(F);
 
-    TypeIndexFixupTypes.push_back(Pair.first->second);
+    TypeIndices[Fixup.Symbol] = Pair.first->second;
   }
 
   // Write out the Wasm header.
@@ -1221,11 +1186,11 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
   writeExportSection(Exports);
   // TODO: Start Section
   writeElemSection(TableElems);
-  writeCodeSection(Asm, Layout, SymbolIndices, Functions);
-  uint64_t DataSectionHeaderSize = writeDataSection(DataBytes, SymbolIndices);
+  writeCodeSection(Asm, Layout, Functions);
+  uint64_t DataSectionHeaderSize = writeDataSection(DataBytes);
   writeNameSection(Functions, Imports, NumFuncImports);
-  writeCodeRelocSection(SymbolIndices);
-  writeDataRelocSection(SymbolIndices, DataSectionHeaderSize);
+  writeCodeRelocSection();
+  writeDataRelocSection(DataSectionHeaderSize);
   writeLinkingMetaDataSection(HasStackPointer, StackPointerGlobal);
 
   // TODO: Translate the .comment section to the output.

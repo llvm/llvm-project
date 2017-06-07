@@ -14,8 +14,8 @@
 #ifndef LLVM_SUPPORT_SOLARIS_H
 #define LLVM_SUPPORT_SOLARIS_H
 
-#include <sys/types.h>
 #include <sys/regset.h>
+#include <sys/types.h>
 
 /* Solaris doesn't have endian.h. SPARC is the only supported big-endian ISA. */
 #define BIG_ENDIAN 4321

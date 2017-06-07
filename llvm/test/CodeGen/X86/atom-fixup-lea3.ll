@@ -1,6 +1,8 @@
 ; RUN: llc < %s -mcpu=atom -mtriple=i686-linux | FileCheck %s
-; CHECK: addl ([[reg:%[a-z]+]])
-; CHECK-NEXT: addl $4, [[reg]]
+; CHECK: addl ({{%[a-z]+}},[[reg:%[a-z]+]],4)
+; CHECK-NEXT: movl
+; CHECK-NEXT: addl 4({{%[a-z]+}},[[reg:%[a-z]+]],4)
+; CHECK-NEXT: incl
 
 ; Test for the FixupLEAs pre-emit pass.
 ; An LEA should NOT be substituted for the ADD instruction
@@ -20,7 +22,7 @@
 ;  return sum;
 ;}
 
-define i32 @test(i32 %n, i32* nocapture %array, i32* nocapture %m, i32* nocapture %array2) #0 {
+define i32 @test(i32 %n, i32* nocapture %array, i32* nocapture %k, i32* nocapture %l, i32* nocapture %m, i32* nocapture %array2) #0 {
 entry:
   %cmp7 = icmp sgt i32 %n, 0
   br i1 %cmp7, label %for.body.lr.ph, label %for.end
@@ -35,6 +37,9 @@ for.body:                                         ; preds = %for.body, %for.body
   %j.09 = phi i32 [ 0, %for.body.lr.ph ], [ %inc1, %for.body ]
   %inc1 = add nsw i32 %j.09, 1
   %arrayidx = getelementptr inbounds i32, i32* %array2, i32 %j.09
+  store i32 %0, i32* %m, align 4
+  store i32 %sum.010, i32* %m, align 4
+  store i32 %0, i32* %m, align 4
   %1 = load i32, i32* %arrayidx, align 4
   %add = add nsw i32 %0, %1
   store i32 %add, i32* %m, align 4

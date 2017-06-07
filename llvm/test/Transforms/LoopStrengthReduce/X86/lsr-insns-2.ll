@@ -1,5 +1,5 @@
-; RUN: opt < %s -loop-reduce -mtriple=x86_64 -lsr-insns-cost -S | FileCheck %s -check-prefix=BOTH -check-prefix=INSN
-; RUN: opt < %s -loop-reduce -mtriple=x86_64 -S | FileCheck %s -check-prefix=BOTH -check-prefix=REGS
+; RUN: opt < %s -loop-reduce -mtriple=x86_64 -S | FileCheck %s -check-prefix=BOTH -check-prefix=INSN
+; RUN: opt < %s -loop-reduce -mtriple=x86_64 -lsr-insns-cost=false -S | FileCheck %s -check-prefix=BOTH -check-prefix=REGS
 ; RUN: llc < %s -O2 -march=x86-64 -lsr-insns-cost -asm-verbose=0 | FileCheck %s
 
 ; OPT checks that LSR prefers less instructions to less registers.

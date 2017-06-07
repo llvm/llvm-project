@@ -144,6 +144,10 @@ class MipsSubtarget : public MipsGenSubtargetInfo {
 
   // HasEVA -- supports EVA ASE.
   bool HasEVA;
+  
+  // nomadd4 - disables generation of 4-operand madd.s, madd.d and
+  // related instructions.
+  bool DisableMadd4;
 
   InstrItineraryData InstrItins;
 
@@ -253,6 +257,7 @@ public:
   bool hasDSPR2() const { return HasDSPR2; }
   bool hasDSPR3() const { return HasDSPR3; }
   bool hasMSA() const { return HasMSA; }
+  bool disableMadd4() const { return DisableMadd4; }
   bool hasEVA() const { return HasEVA; }
   bool useSmallSection() const { return UseSmallSection; }
 

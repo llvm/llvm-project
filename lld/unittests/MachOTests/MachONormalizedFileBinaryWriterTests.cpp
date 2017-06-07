@@ -7,11 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "gtest/gtest.h"
 #include "../../lib/ReaderWriter/MachO/MachONormalizedFile.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/MachO.h"
+#include "gtest/gtest.h"
 #include <cassert>
 #include <memory>
 #include <system_error>

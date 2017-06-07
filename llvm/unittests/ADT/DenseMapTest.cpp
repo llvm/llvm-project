@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "gtest/gtest.h"
 #include "llvm/ADT/DenseMap.h"
+#include "gtest/gtest.h"
 #include <map>
 #include <set>
 

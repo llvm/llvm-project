@@ -13,6 +13,7 @@
 
 #include "llvm/MC/MCCodeView.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/BinaryFormat/COFF.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/Line.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
@@ -20,7 +21,6 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCValue.h"
-#include "llvm/Support/COFF.h"
 #include "llvm/Support/EndianStream.h"
 
 using namespace llvm;

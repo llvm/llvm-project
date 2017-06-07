@@ -17,9 +17,9 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
-#include <vector>
 #include <cassert>
 #include <cstdint>
+#include <vector>
 
 namespace llvm {
 

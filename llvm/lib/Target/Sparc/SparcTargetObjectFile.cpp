@@ -9,8 +9,8 @@
 
 #include "SparcTargetObjectFile.h"
 #include "MCTargetDesc/SparcMCExpr.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
-#include "llvm/Support/Dwarf.h"
 #include "llvm/Target/TargetLowering.h"
 
 using namespace llvm;

@@ -869,7 +869,7 @@ bool MIRParser::parseMachineFunctions(Module &M, MachineModuleInfo &MMI) {
 std::unique_ptr<MIRParser> llvm::createMIRParserFromFile(StringRef Filename,
                                                          SMDiagnostic &Error,
                                                          LLVMContext &Context) {
-  auto FileOrErr = MemoryBuffer::getFile(Filename);
+  auto FileOrErr = MemoryBuffer::getFileOrSTDIN(Filename);
   if (std::error_code EC = FileOrErr.getError()) {
     Error = SMDiagnostic(Filename, SourceMgr::DK_Error,
                          "Could not open input file: " + EC.message());

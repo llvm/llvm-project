@@ -2,11 +2,11 @@
 // License. See LICENSE.TXT for details.
 
 // Simple test for a fuzzer. The fuzzer must find the interesting switch value.
-#include <cstdint>
-#include <cstdlib>
-#include <cstdio>
-#include <cstring>
 #include <cstddef>
+#include <cstdint>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 
 static volatile int Sink;
 
