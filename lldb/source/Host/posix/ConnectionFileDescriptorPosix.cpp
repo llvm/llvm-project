@@ -36,6 +36,7 @@
 #include <sstream>
 
 // Other libraries and framework includes
+#include "llvm/Support/Errno.h"
 #include "llvm/Support/ErrorHandling.h"
 #if defined(__APPLE__)
 #include "llvm/ADT/SmallVector.h"
@@ -461,10 +462,8 @@ size_t ConnectionFileDescriptor::Read(void *dst, size_t dst_len,
       return 0;
 
     default:
-      if (log)
-        log->Printf(
-            "%p ConnectionFileDescriptor::Read (), unexpected error: %s",
-            static_cast<void *>(this), strerror(error_value));
+      LLDB_LOG(log, "this = {0}, unexpected error: {1}", this,
+               llvm::sys::StrError(error_value));
       status = eConnectionStatusError;
       break; // Break to close....
     }

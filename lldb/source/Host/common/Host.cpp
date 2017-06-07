@@ -68,6 +68,7 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-private-forward.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Support/Errno.h"
 #include "llvm/Support/FileSystem.h"
 
 #if defined(_WIN32)
@@ -217,10 +218,9 @@ static thread_result_t MonitorChildProcessThreadFunction(void *arg) {
       if (errno == EINTR)
         continue;
       else {
-        if (log)
-          log->Printf(
-              "%s (arg = %p) thread exiting because waitpid failed (%s)...",
-              __FUNCTION__, arg, strerror(errno));
+        LLDB_LOG(log,
+                 "arg = {0}, thread exiting because waitpid failed ({1})...",
+                 arg, llvm::sys::StrError());
         break;
       }
     } else if (wait_pid > 0) {

@@ -11,10 +11,11 @@
 #include "lldb/Utility/Status.h"
 
 #include "lldb/Utility/VASPrintf.h"
-#include "lldb/lldb-defines.h"            // for LLDB_GENERIC_ERROR
-#include "lldb/lldb-enumerations.h"       // for ErrorType, ErrorType::eErr...
-#include "llvm/ADT/SmallString.h"         // for SmallString
-#include "llvm/ADT/StringRef.h"           // for StringRef
+#include "lldb/lldb-defines.h"      // for LLDB_GENERIC_ERROR
+#include "lldb/lldb-enumerations.h" // for ErrorType, ErrorType::eErr...
+#include "llvm/ADT/SmallString.h"   // for SmallString
+#include "llvm/ADT/StringRef.h"     // for StringRef
+#include "llvm/Support/Errno.h"
 #include "llvm/Support/FormatProviders.h" // for format_provider
 
 #include <cerrno>
@@ -27,7 +28,6 @@
 #endif
 
 #include <stdint.h> // for uint32_t
-#include <string.h> // for strerror
 
 namespace llvm {
 class raw_ostream;
@@ -121,23 +121,21 @@ const char *Status::AsCString(const char *default_error_str) const {
     return nullptr;
 
   if (m_string.empty()) {
-    const char *s = nullptr;
     switch (m_type) {
     case eErrorTypeMachKernel:
 #if defined(__APPLE__)
-      s = ::mach_error_string(m_code);
+      if (const char *s = ::mach_error_string(m_code))
+        m_string.assign(s);
 #endif
       break;
 
     case eErrorTypePOSIX:
-      s = ::strerror(m_code);
+      m_string = llvm::sys::StrError(m_code);
       break;
 
     default:
       break;
     }
-    if (s != nullptr)
-      m_string.assign(s);
   }
   if (m_string.empty()) {
     if (default_error_str)

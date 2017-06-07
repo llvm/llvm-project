@@ -3395,7 +3395,10 @@ INTERCEPTOR(char *, strerror_r, int errnum, char *buf, SIZE_T buflen) {
   // its metadata. See
   // https://github.com/google/sanitizers/issues/321.
   char *res = REAL(strerror_r)(errnum, buf, buflen);
-  COMMON_INTERCEPTOR_WRITE_RANGE(ctx, res, REAL(strlen)(res) + 1);
+  if (res == buf)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, res, REAL(strlen)(res) + 1);
+  else
+    COMMON_INTERCEPTOR_INITIALIZE_RANGE(res, REAL(strlen)(res) + 1);
   return res;
 }
 #endif //(_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600) && !_GNU_SOURCE ||

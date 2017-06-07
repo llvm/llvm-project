@@ -21,8 +21,6 @@
 
 // C++ Includes
 
-// Other libraries and framework includes
-#include "llvm/ADT/StringRef.h"
 
 #include "Acceptor.h"
 #include "LLDBServerUtilities.h"
@@ -36,6 +34,8 @@
 #include "lldb/Host/Socket.h"
 #include "lldb/Host/StringConvert.h"
 #include "lldb/Utility/Status.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Errno.h"
 
 #ifndef LLGS_PROGRAM_NAME
 #define LLGS_PROGRAM_NAME "lldb-server"
@@ -398,10 +398,9 @@ int main_gdbserver(int argc, char *argv[]) {
       {
         const ::pid_t new_sid = setsid();
         if (new_sid == -1) {
-          const char *errno_str = strerror(errno);
-          fprintf(stderr, "failed to set new session id for %s (%s)\n",
-                  LLGS_PROGRAM_NAME,
-                  errno_str ? errno_str : "<no error string>");
+          llvm::errs() << llvm::formatv(
+              "failed to set new session id for {0} ({1})\n", LLGS_PROGRAM_NAME,
+              llvm::sys::StrError());
         }
       }
       break;

@@ -967,48 +967,52 @@ template <class ELFT> void elf::scanRelocations(InputSectionBase &S) {
 // in the Sections vector, and recalculate the InputSection output section
 // offsets.
 // This may invalidate any output section offsets stored outside of InputSection
-void ThunkCreator::mergeThunks(OutputSection *OS,
-                               std::vector<ThunkSection *> &Thunks) {
-  // Order Thunks in ascending OutSecOff
-  auto ThunkCmp = [](const ThunkSection *A, const ThunkSection *B) {
-    return A->OutSecOff < B->OutSecOff;
-  };
-  std::stable_sort(Thunks.begin(), Thunks.end(), ThunkCmp);
+void ThunkCreator::mergeThunks() {
+  for (auto &KV : ThunkSections) {
+    std::vector<InputSection *> *ISR = KV.first;
+    std::vector<ThunkSection *> &Thunks = KV.second;
 
-  // Merge sorted vectors of Thunks and InputSections by OutSecOff
-  std::vector<InputSection *> Tmp;
-  Tmp.reserve(OS->Sections.size() + Thunks.size());
-  auto MergeCmp = [](const InputSection *A, const InputSection *B) {
-    // std::merge requires a strict weak ordering.
-    if (A->OutSecOff < B->OutSecOff)
-      return true;
-    if (A->OutSecOff == B->OutSecOff)
-      // Check if Thunk is immediately before any specific Target InputSection
-      // for example Mips LA25 Thunks.
-      if (auto *TA = dyn_cast<ThunkSection>(A))
-        if (TA && TA->getTargetInputSection() == B)
-          return true;
-    return false;
-  };
-  std::merge(OS->Sections.begin(), OS->Sections.end(), Thunks.begin(),
-             Thunks.end(), std::back_inserter(Tmp), MergeCmp);
-  OS->Sections = std::move(Tmp);
-  OS->assignOffsets();
+    // Order Thunks in ascending OutSecOff
+    auto ThunkCmp = [](const ThunkSection *A, const ThunkSection *B) {
+      return A->OutSecOff < B->OutSecOff;
+    };
+    std::stable_sort(Thunks.begin(), Thunks.end(), ThunkCmp);
+
+    // Merge sorted vectors of Thunks and InputSections by OutSecOff
+    std::vector<InputSection *> Tmp;
+    Tmp.reserve(ISR->size() + Thunks.size());
+    auto MergeCmp = [](const InputSection *A, const InputSection *B) {
+      // std::merge requires a strict weak ordering.
+      if (A->OutSecOff < B->OutSecOff)
+        return true;
+      if (A->OutSecOff == B->OutSecOff)
+        // Check if Thunk is immediately before any specific Target InputSection
+        // for example Mips LA25 Thunks.
+        if (auto *TA = dyn_cast<ThunkSection>(A))
+          if (TA && TA->getTargetInputSection() == B)
+            return true;
+      return false;
+    };
+    std::merge(ISR->begin(), ISR->end(), Thunks.begin(), Thunks.end(),
+               std::back_inserter(Tmp), MergeCmp);
+    OutputSection *OS = Thunks.front()->getParent();
+    OS->Sections = std::move(Tmp);
+    OS->assignOffsets();
+  }
 }
 
-ThunkSection *ThunkCreator::getOSThunkSec(ThunkSection *&TS,
-                                          OutputSection *OS) {
-  if (TS == nullptr) {
+ThunkSection *ThunkCreator::getOSThunkSec(OutputSection *OS) {
+  if (CurTS == nullptr) {
     uint32_t Off = 0;
     for (auto *IS : OS->Sections) {
       Off = IS->OutSecOff + IS->getSize();
       if ((IS->Flags & SHF_EXECINSTR) == 0)
         break;
     }
-    TS = make<ThunkSection>(OS, Off);
-    ThunkSections[OS].push_back(TS);
+    CurTS = make<ThunkSection>(OS, Off);
+    ThunkSections[&OS->Sections].push_back(CurTS);
   }
-  return TS;
+  return CurTS;
 }
 
 ThunkSection *ThunkCreator::getISThunkSec(InputSection *IS, OutputSection *OS) {
@@ -1017,7 +1021,7 @@ ThunkSection *ThunkCreator::getISThunkSec(InputSection *IS, OutputSection *OS) {
     return TS;
   auto *TOS = IS->getParent();
   TS = make<ThunkSection>(TOS, IS->OutSecOff);
-  ThunkSections[TOS].push_back(TS);
+  ThunkSections[&TOS->Sections].push_back(TS);
   ThunkedSections[IS] = TS;
   return TS;
 }
@@ -1028,6 +1032,20 @@ std::pair<Thunk *, bool> ThunkCreator::getThunk(SymbolBody &Body,
   if (res.second)
     res.first->second = addThunk(Type, Body);
   return std::make_pair(res.first->second, res.second);
+}
+
+// Call Fn on every executable InputSection accessed via the linker script
+// InputSectionDescription::Sections.
+void ThunkCreator::forEachExecInputSection(
+    ArrayRef<OutputSection *> OutputSections,
+    std::function<void(OutputSection *, InputSection *)> Fn) {
+  for (OutputSection *OS : OutputSections) {
+    if (!(OS->Flags & SHF_ALLOC) || !(OS->Flags & SHF_EXECINSTR))
+      continue;
+    CurTS = nullptr;
+    for (InputSection *IS : OS->Sections)
+      Fn(OS, IS);
+  }
 }
 
 // Process all relocations from the InputSections that have been assigned
@@ -1047,35 +1065,32 @@ bool ThunkCreator::createThunks(ArrayRef<OutputSection *> OutputSections) {
   // We separate the creation of ThunkSections from the insertion of the
   // ThunkSections back into the OutputSection as ThunkSections are not always
   // inserted into the same OutputSection as the caller.
-  for (OutputSection *OS : OutputSections) {
-    ThunkSection *OSTS = nullptr;
-    for (InputSection *IS : OS->Sections) {
-      for (Relocation &Rel : IS->Relocations) {
-        SymbolBody &Body = *Rel.Sym;
-        if (!Target->needsThunk(Rel.Expr, Rel.Type, IS->File, Body))
-          continue;
-        Thunk *T;
-        bool IsNew;
-        std::tie(T, IsNew) = getThunk(Body, Rel.Type);
-        if (IsNew) {
-          // Find or create a ThunkSection for the new Thunk
-          ThunkSection *TS;
-          if (auto *TIS = T->getTargetInputSection())
-            TS = getISThunkSec(TIS, OS);
-          else
-            TS = getOSThunkSec(OSTS, OS);
-          TS->addThunk(T);
+  forEachExecInputSection(
+      OutputSections, [=](OutputSection *OS, InputSection *IS) {
+        for (Relocation &Rel : IS->Relocations) {
+          SymbolBody &Body = *Rel.Sym;
+          if (!Target->needsThunk(Rel.Expr, Rel.Type, IS->File, Body))
+            continue;
+          Thunk *T;
+          bool IsNew;
+          std::tie(T, IsNew) = getThunk(Body, Rel.Type);
+          if (IsNew) {
+            // Find or create a ThunkSection for the new Thunk
+            ThunkSection *TS;
+            if (auto *TIS = T->getTargetInputSection())
+              TS = getISThunkSec(TIS, OS);
+            else
+              TS = getOSThunkSec(OS);
+            TS->addThunk(T);
+          }
+          // Redirect relocation to Thunk, we never go via the PLT to a Thunk
+          Rel.Sym = T->ThunkSym;
+          Rel.Expr = fromPlt(Rel.Expr);
         }
-        // Redirect relocation to Thunk, we never go via the PLT to a Thunk
-        Rel.Sym = T->ThunkSym;
-        Rel.Expr = fromPlt(Rel.Expr);
-      }
-    }
-  }
+      });
 
   // Merge all created synthetic ThunkSections back into OutputSection
-  for (auto &KV : ThunkSections)
-    mergeThunks(KV.first, KV.second);
+  mergeThunks();
   return !ThunkSections.empty();
 }
 

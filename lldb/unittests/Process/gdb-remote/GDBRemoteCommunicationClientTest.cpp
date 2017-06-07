@@ -318,8 +318,6 @@ TEST_F(GDBRemoteCommunicationClientTest, SendSignalsToIgnore) {
   if (HasFailure())
     return;
 
-  const lldb::tid_t tid = 0x47;
-  const uint32_t reg_num = 4;
   std::future<Status> result = std::async(std::launch::async, [&] {
     return client.SendSignalsToIgnore({2, 3, 5, 7, 0xB, 0xD, 0x11});
   });
@@ -406,7 +404,7 @@ TEST_F(GDBRemoteCommunicationClientTest, SendStartTracePacket) {
       R"( {"psb" : 1,"tracetech" : "intel-pt"},"threadid" : 35,"type" : 1})";
   HandlePacket(server, (expected_packet1 + expected_packet2), "1");
   ASSERT_TRUE(error.Success());
-  ASSERT_EQ(result.get(), 1);
+  ASSERT_EQ(result.get(), 1u);
 
   error.Clear();
   result = std::async(std::launch::async, [&] {
@@ -468,7 +466,7 @@ TEST_F(GDBRemoteCommunicationClientTest, SendGetDataPacket) {
   std::string expected_packet2 = R"("traceid" : 3})";
   HandlePacket(server, expected_packet1+expected_packet2, "123456");
   ASSERT_TRUE(result.get().Success());
-  ASSERT_EQ(buffer.size(), 3);
+  ASSERT_EQ(buffer.size(), 3u);
   ASSERT_EQ(buf[0], 0x12);
   ASSERT_EQ(buf[1], 0x34);
   ASSERT_EQ(buf[2], 0x56);
@@ -480,7 +478,7 @@ TEST_F(GDBRemoteCommunicationClientTest, SendGetDataPacket) {
 
   HandlePacket(server, expected_packet1+expected_packet2, "E23");
   ASSERT_FALSE(result.get().Success());
-  ASSERT_EQ(buffer2.size(), 0);
+  ASSERT_EQ(buffer2.size(), 0u);
 }
 
 TEST_F(GDBRemoteCommunicationClientTest, SendGetMetaDataPacket) {
@@ -506,7 +504,7 @@ TEST_F(GDBRemoteCommunicationClientTest, SendGetMetaDataPacket) {
   std::string expected_packet2 = R"("traceid" : 3})";
   HandlePacket(server, expected_packet1+expected_packet2, "123456");
   ASSERT_TRUE(result.get().Success());
-  ASSERT_EQ(buffer.size(), 3);
+  ASSERT_EQ(buffer.size(), 3u);
   ASSERT_EQ(buf[0], 0x12);
   ASSERT_EQ(buf[1], 0x34);
   ASSERT_EQ(buf[2], 0x56);
@@ -518,7 +516,7 @@ TEST_F(GDBRemoteCommunicationClientTest, SendGetMetaDataPacket) {
 
   HandlePacket(server, expected_packet1+expected_packet2, "E23");
   ASSERT_FALSE(result.get().Success());
-  ASSERT_EQ(buffer2.size(), 0);
+  ASSERT_EQ(buffer2.size(), 0u);
 }
 
 TEST_F(GDBRemoteCommunicationClientTest, SendGetTraceConfigPacket) {
@@ -545,8 +543,8 @@ TEST_F(GDBRemoteCommunicationClientTest, SendGetTraceConfigPacket) {
       R"(],"metabuffersize" : 8192,"threadid" : 35,"type" : 1}])";
   HandlePacket(server, expected_packet, response1+response2);
   ASSERT_TRUE(result.get().Success());
-  ASSERT_EQ(options.getTraceBufferSize(), 8192);
-  ASSERT_EQ(options.getMetaDataBufferSize(), 8192);
+  ASSERT_EQ(options.getTraceBufferSize(), 8192u);
+  ASSERT_EQ(options.getMetaDataBufferSize(), 8192u);
   ASSERT_EQ(options.getType(), 1);
 
   auto custom_params = options.getTraceParams();
@@ -556,9 +554,8 @@ TEST_F(GDBRemoteCommunicationClientTest, SendGetTraceConfigPacket) {
 
   ASSERT_TRUE(custom_params);
   ASSERT_EQ(custom_params->GetType(), eStructuredDataTypeDictionary);
-  ASSERT_TRUE(
-      custom_params->GetValueForKeyAsInteger<uint64_t>("psb", psb_value));
-  ASSERT_EQ(psb_value, 1);
+  ASSERT_TRUE(custom_params->GetValueForKeyAsInteger("psb", psb_value));
+  ASSERT_EQ(psb_value, 1u);
   ASSERT_TRUE(
       custom_params->GetValueForKeyAsString("tracetech", trace_tech_value));
   ASSERT_STREQ(trace_tech_value.data(), "intel-pt");

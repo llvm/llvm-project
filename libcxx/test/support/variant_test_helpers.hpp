@@ -69,9 +69,9 @@ template <class Variant>
 void makeEmpty(Variant& v) {
     Variant v2(std::in_place_type<MakeEmptyT>);
     try {
-        v = v2;
+        v = std::move(v2);
         assert(false);
-    }  catch (...) {
+    } catch (...) {
         assert(v.valueless_by_exception());
     }
 }

@@ -43,13 +43,13 @@
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StringExtractor.h"
+#include "llvm/Support/Errno.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Threading.h"
 
 #include "NativeThreadLinux.h"
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
 #include "Procfs.h"
-
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Threading.h"
 
 #include <linux/unistd.h>
 #include <sys/socket.h>
@@ -97,7 +97,7 @@ static bool ProcessVmReadvSupported() {
       LLDB_LOG(log,
                "syscall process_vm_readv failed (error: {0}). Fast memory "
                "reads disabled.",
-               strerror(errno));
+               llvm::sys::StrError());
   });
 
   return is_supported;
@@ -1988,7 +1988,7 @@ Status NativeProcessLinux::ReadMemory(lldb::addr_t addr, void *buf, size_t size,
     LLDB_LOG(log,
              "using process_vm_readv to read {0} bytes from inferior "
              "address {1:x}: {2}",
-             size, addr, success ? "Success" : strerror(errno));
+             size, addr, success ? "Success" : llvm::sys::StrError(errno));
 
     if (success)
       return Status();
