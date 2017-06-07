@@ -1052,6 +1052,30 @@ TEST_F(FormatTestComments, KeepsTrailingPPCommentsAndSectionCommentsSeparate) {
                "}", getLLVMStyleWithColumns(80));
 }
 
+TEST_F(FormatTestComments, AlignsPPElseEndifComments) {
+  verifyFormat("#if A\n"
+               "#else  // A\n"
+               "int iiii;\n"
+               "#endif // B",
+               getLLVMStyleWithColumns(20));
+  verifyFormat("#if A\n"
+               "#else  // A\n"
+               "int iiii; // CC\n"
+               "#endif // B",
+               getLLVMStyleWithColumns(20));
+  EXPECT_EQ("#if A\n"
+            "#else  // A1\n"
+            "       // A2\n"
+            "int ii;\n"
+            "#endif // B",
+            format("#if A\n"
+                   "#else  // A1\n"
+                   "       // A2\n"
+                   "int ii;\n"
+                   "#endif // B",
+                   getLLVMStyleWithColumns(20)));
+}
+
 TEST_F(FormatTestComments, CommentsInStaticInitializers) {
   EXPECT_EQ(
       "static SomeType type = {aaaaaaaaaaaaaaaaaaaa, /* comment */\n"

@@ -1549,8 +1549,6 @@ define <2 x float> @uitofp_2i1_float(<2 x i32> %a) {
 ; NOVL:       # BB#0:
 ; NOVL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; NOVL-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3]
-; NOVL-NEXT:    vmovdqa {{.*#+}} xmm1 = [9223372036854775808,9223372036854775808]
-; NOVL-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; NOVL-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
 ; NOVL-NEXT:    vpextrb $8, %xmm0, %eax
 ; NOVL-NEXT:    andl $1, %eax
@@ -1579,8 +1577,6 @@ define <2 x double> @uitofp_2i1_double(<2 x i32> %a) {
 ; NOVL:       # BB#0:
 ; NOVL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; NOVL-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3]
-; NOVL-NEXT:    vmovdqa {{.*#+}} xmm1 = [9223372036854775808,9223372036854775808]
-; NOVL-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; NOVL-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm0
 ; NOVL-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
 ; NOVL-NEXT:    retq

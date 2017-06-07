@@ -723,16 +723,17 @@ void ARMAsmBackend::processFixupValue(const MCAssembler &Asm,
                                       bool &IsResolved) {
   const MCSymbolRefExpr *A = Target.getSymA();
   const MCSymbol *Sym = A ? &A->getSymbol() : nullptr;
+  const unsigned FixupKind = Fixup.getKind() ;
   // MachO (the only user of "Value") tries to make .o files that look vaguely
   // pre-linked, so for MOVW/MOVT and .word relocations they put the Thumb bit
   // into the addend if possible. Other relocation types don't want this bit
   // though (branches couldn't encode it if it *was* present, and no other
   // relocations exist) and it can interfere with checking valid expressions.
-  if ((unsigned)Fixup.getKind() == FK_Data_4 ||
-      (unsigned)Fixup.getKind() == ARM::fixup_arm_movw_lo16 ||
-      (unsigned)Fixup.getKind() == ARM::fixup_arm_movt_hi16 ||
-      (unsigned)Fixup.getKind() == ARM::fixup_t2_movw_lo16 ||
-      (unsigned)Fixup.getKind() == ARM::fixup_t2_movt_hi16) {
+  if (FixupKind == FK_Data_4 ||
+      FixupKind == ARM::fixup_arm_movw_lo16 ||
+      FixupKind == ARM::fixup_arm_movt_hi16 ||
+      FixupKind == ARM::fixup_t2_movw_lo16 ||
+      FixupKind == ARM::fixup_t2_movt_hi16) {
     if (Sym) {
       if (Asm.isThumbFunc(Sym))
         Value |= 1;
@@ -754,7 +755,6 @@ void ARMAsmBackend::processFixupValue(const MCAssembler &Asm,
   if (Sym && Sym->isELF()) {
     unsigned Type = dyn_cast<MCSymbolELF>(Sym)->getType();
     if ((Type == ELF::STT_FUNC || Type == ELF::STT_GNU_IFUNC)) {
-      unsigned FixupKind = Fixup.getKind() ;
       if (Asm.isThumbFunc(Sym) && (FixupKind == ARM::fixup_arm_uncondbranch))
         IsResolved = false;
       if (!Asm.isThumbFunc(Sym) && (FixupKind == ARM::fixup_arm_thumb_br ||
@@ -766,10 +766,10 @@ void ARMAsmBackend::processFixupValue(const MCAssembler &Asm,
   // We must always generate a relocation for BL/BLX instructions if we have
   // a symbol to reference, as the linker relies on knowing the destination
   // symbol's thumb-ness to get interworking right.
-  if (A && ((unsigned)Fixup.getKind() == ARM::fixup_arm_thumb_blx ||
-            (unsigned)Fixup.getKind() == ARM::fixup_arm_blx ||
-            (unsigned)Fixup.getKind() == ARM::fixup_arm_uncondbl ||
-            (unsigned)Fixup.getKind() == ARM::fixup_arm_condbl))
+  if (A && (FixupKind == ARM::fixup_arm_thumb_blx ||
+            FixupKind == ARM::fixup_arm_blx ||
+            FixupKind == ARM::fixup_arm_uncondbl ||
+            FixupKind == ARM::fixup_arm_condbl))
     IsResolved = false;
 }
 

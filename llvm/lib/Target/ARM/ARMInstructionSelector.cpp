@@ -127,34 +127,30 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
   return true;
 }
 
-static bool selectSequence(MachineInstrBuilder &MIB,
-                           const ARMBaseInstrInfo &TII,
-                           MachineRegisterInfo &MRI,
-                           const TargetRegisterInfo &TRI,
-                           const RegisterBankInfo &RBI) {
-  assert(TII.getSubtarget().hasVFP2() && "Can't select sequence without VFP");
+static bool selectMergeValues(MachineInstrBuilder &MIB,
+                              const ARMBaseInstrInfo &TII,
+                              MachineRegisterInfo &MRI,
+                              const TargetRegisterInfo &TRI,
+                              const RegisterBankInfo &RBI) {
+  assert(TII.getSubtarget().hasVFP2() && "Can't select merge without VFP");
 
-  // We only support G_SEQUENCE as a way to stick together two scalar GPRs
+  // We only support G_MERGE_VALUES as a way to stick together two scalar GPRs
   // into one DPR.
   unsigned VReg0 = MIB->getOperand(0).getReg();
   (void)VReg0;
   assert(MRI.getType(VReg0).getSizeInBits() == 64 &&
          RBI.getRegBank(VReg0, MRI, TRI)->getID() == ARM::FPRRegBankID &&
-         "Unsupported operand for G_SEQUENCE");
+         "Unsupported operand for G_MERGE_VALUES");
   unsigned VReg1 = MIB->getOperand(1).getReg();
   (void)VReg1;
   assert(MRI.getType(VReg1).getSizeInBits() == 32 &&
          RBI.getRegBank(VReg1, MRI, TRI)->getID() == ARM::GPRRegBankID &&
-         "Unsupported operand for G_SEQUENCE");
-  unsigned VReg2 = MIB->getOperand(3).getReg();
+         "Unsupported operand for G_MERGE_VALUES");
+  unsigned VReg2 = MIB->getOperand(2).getReg();
   (void)VReg2;
   assert(MRI.getType(VReg2).getSizeInBits() == 32 &&
          RBI.getRegBank(VReg2, MRI, TRI)->getID() == ARM::GPRRegBankID &&
-         "Unsupported operand for G_SEQUENCE");
-
-  // Remove the operands corresponding to the offsets.
-  MIB->RemoveOperand(4);
-  MIB->RemoveOperand(2);
+         "Unsupported operand for G_MERGE_VALUES");
 
   MIB->setDesc(TII.get(ARM::VMOVDRR));
   MIB.add(predOps(ARMCC::AL));
@@ -162,30 +158,32 @@ static bool selectSequence(MachineInstrBuilder &MIB,
   return true;
 }
 
-static bool selectExtract(MachineInstrBuilder &MIB, const ARMBaseInstrInfo &TII,
-                          MachineRegisterInfo &MRI,
-                          const TargetRegisterInfo &TRI,
-                          const RegisterBankInfo &RBI) {
-  assert(TII.getSubtarget().hasVFP2() && "Can't select extract without VFP");
+static bool selectUnmergeValues(MachineInstrBuilder &MIB,
+                                const ARMBaseInstrInfo &TII,
+                                MachineRegisterInfo &MRI,
+                                const TargetRegisterInfo &TRI,
+                                const RegisterBankInfo &RBI) {
+  assert(TII.getSubtarget().hasVFP2() && "Can't select unmerge without VFP");
 
-  // We only support G_EXTRACT as a way to break up one DPR into two GPRs.
+  // We only support G_UNMERGE_VALUES as a way to break up one DPR into two
+  // GPRs.
   unsigned VReg0 = MIB->getOperand(0).getReg();
   (void)VReg0;
   assert(MRI.getType(VReg0).getSizeInBits() == 32 &&
          RBI.getRegBank(VReg0, MRI, TRI)->getID() == ARM::GPRRegBankID &&
-         "Unsupported operand for G_EXTRACT");
+         "Unsupported operand for G_UNMERGE_VALUES");
   unsigned VReg1 = MIB->getOperand(1).getReg();
   (void)VReg1;
-  assert(MRI.getType(VReg1).getSizeInBits() == 64 &&
-         RBI.getRegBank(VReg1, MRI, TRI)->getID() == ARM::FPRRegBankID &&
-         "Unsupported operand for G_EXTRACT");
-  assert(MIB->getOperand(2).getImm() % 32 == 0 &&
-         "Unsupported operand for G_EXTRACT");
+  assert(MRI.getType(VReg1).getSizeInBits() == 32 &&
+         RBI.getRegBank(VReg1, MRI, TRI)->getID() == ARM::GPRRegBankID &&
+         "Unsupported operand for G_UNMERGE_VALUES");
+  unsigned VReg2 = MIB->getOperand(2).getReg();
+  (void)VReg2;
+  assert(MRI.getType(VReg2).getSizeInBits() == 64 &&
+         RBI.getRegBank(VReg2, MRI, TRI)->getID() == ARM::FPRRegBankID &&
+         "Unsupported operand for G_UNMERGE_VALUES");
 
-  // Remove the operands corresponding to the offsets.
-  MIB->getOperand(2).setImm(MIB->getOperand(2).getImm() / 32);
-
-  MIB->setDesc(TII.get(ARM::VGETLNi32));
+  MIB->setDesc(TII.get(ARM::VMOVRRD));
   MIB.add(predOps(ARMCC::AL));
 
   return true;
@@ -407,13 +405,13 @@ bool ARMInstructionSelector::select(MachineInstr &I) const {
     MIB.addImm(0).add(predOps(ARMCC::AL));
     break;
   }
-  case G_SEQUENCE: {
-    if (!selectSequence(MIB, TII, MRI, TRI, RBI))
+  case G_MERGE_VALUES: {
+    if (!selectMergeValues(MIB, TII, MRI, TRI, RBI))
       return false;
     break;
   }
-  case G_EXTRACT: {
-    if (!selectExtract(MIB, TII, MRI, TRI, RBI))
+  case G_UNMERGE_VALUES: {
+    if (!selectUnmergeValues(MIB, TII, MRI, TRI, RBI))
       return false;
     break;
   }

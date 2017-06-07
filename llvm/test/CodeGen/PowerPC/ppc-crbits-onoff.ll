@@ -37,17 +37,13 @@ entry:
 
 ; CHECK-LABEL: @crbitson
 ; CHECK-NO-ISEL-LABEL: @crbitson
-; CHECK-DAG: cmpwi {{[0-9]+}}, 3, 0
-; CHECK-DAG: cmpwi {{[0-9]+}}, 4, 0
-; CHECK-DAG: li [[REG2:[0-9]+]], 1
-; CHECK-DAG: crorc [[REG3:[0-9]+]],
-; CHECK: isel 3, 0, [[REG2]], [[REG3]]
-; CHECK-NO-ISEL: bc 12, 20, [[TRUE:.LBB[0-9]+]]
-; CHECK-NO-ISEL-NEXT: blr
-; CHECK-NO-ISEL: [[TRUE]]
-; CHECK-NO-ISEL-NEXT: addi 3, 0, 0
-; CHECK-NO-ISEL-NEXT: blr
-; CHECK: blr
+; CHECK-DAG: cntlzw [[REG1:[0-9]+]], 3
+; CHECK-DAG: cntlzw [[REG2:[0-9]+]], 4
+; CHECK: srwi [[REG3:[0-9]+]], [[REG1]], 5
+; CHECK: srwi [[REG4:[0-9]+]], [[REG2]], 5
+; CHECK: xori [[REG5:[0-9]+]], [[REG3]], 1
+; CHECK: and 3, [[REG5]], [[REG4]]
+; CHECK-NEXT: blr
 }
 
 

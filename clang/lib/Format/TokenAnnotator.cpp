@@ -135,8 +135,11 @@ private:
     if (Left->is(TT_OverloadedOperatorLParen)) {
       Contexts.back().IsExpression = false;
     } else if (Style.Language == FormatStyle::LK_JavaScript &&
-               Line.startsWith(Keywords.kw_type, tok::identifier)) {
+               (Line.startsWith(Keywords.kw_type, tok::identifier) ||
+                Line.startsWith(tok::kw_export, Keywords.kw_type,
+                                tok::identifier))) {
       // type X = (...);
+      // export type X = (...);
       Contexts.back().IsExpression = false;
     } else if (Left->Previous &&
         (Left->Previous->isOneOf(tok::kw_static_assert, tok::kw_decltype,
@@ -979,9 +982,12 @@ private:
   void modifyContext(const FormatToken &Current) {
     if (Current.getPrecedence() == prec::Assignment &&
         !Line.First->isOneOf(tok::kw_template, tok::kw_using, tok::kw_return) &&
-        // Type aliases use `type X = ...;` in TypeScript.
+        // Type aliases use `type X = ...;` in TypeScript and can be exported
+        // using `export type ...`.
         !(Style.Language == FormatStyle::LK_JavaScript &&
-          Line.startsWith(Keywords.kw_type, tok::identifier)) &&
+          (Line.startsWith(Keywords.kw_type, tok::identifier) ||
+           Line.startsWith(tok::kw_export, Keywords.kw_type,
+                           tok::identifier))) &&
         (!Current.Previous || Current.Previous->isNot(tok::kw_operator))) {
       Contexts.back().IsExpression = true;
       if (!Line.startsWith(TT_UnaryOperator)) {
