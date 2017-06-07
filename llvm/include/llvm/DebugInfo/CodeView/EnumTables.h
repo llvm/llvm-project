@@ -11,8 +11,8 @@
 #define LLVM_DEBUGINFO_CODEVIEW_ENUMTABLES_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/BinaryFormat/COFF.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
-#include "llvm/Support/COFF.h"
 #include "llvm/Support/ScopedPrinter.h"
 
 #include <stdint.h>

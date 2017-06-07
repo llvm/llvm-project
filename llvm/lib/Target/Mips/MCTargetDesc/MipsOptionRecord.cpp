@@ -11,11 +11,11 @@
 #include "MipsABIInfo.h"
 #include "MipsELFStreamer.h"
 #include "MipsTargetStreamer.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSectionELF.h"
-#include "llvm/Support/ELF.h"
 #include <cassert>
 
 using namespace llvm;

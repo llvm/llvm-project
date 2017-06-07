@@ -302,7 +302,7 @@ _mm_min_pd(__m128d __a, __m128d __b)
   return __builtin_ia32_minpd((__v2df)__a, (__v2df)__b);
 }
 
-/// \brief Compares lower 64-bits double-precision values of both operands, and
+/// \brief Compares lower 64-bit double-precision values of both operands, and
 ///    returns the greater of the pair of values in the lower 64-bits of the
 ///    result. The upper 64 bits of the result are copied from the upper double-
 ///    precision value of the first operand.
@@ -1652,7 +1652,7 @@ _mm_loadu_pd(double const *__dp)
 ///
 /// This intrinsic corresponds to the <c> VMOVQ / MOVQ </c> instruction.
 ///
-/// \param __dp
+/// \param __a
 ///    A pointer to a 64-bit memory location. The address of the memory
 ///    location does not have to be aligned.
 /// \returns A 128-bit vector of [2 x i64] containing the loaded value.
@@ -1674,7 +1674,7 @@ _mm_loadu_si64(void const *__a)
 /// This intrinsic corresponds to the <c> VMOVSD / MOVSD </c> instruction.
 ///
 /// \param __dp
-///    An pointer to a memory location containing a double-precision value.
+///    A pointer to a memory location containing a double-precision value.
 ///    The address of the memory location does not have to be aligned.
 /// \returns A 128-bit vector of [2 x double] containing the loaded value.
 static __inline__ __m128d __DEFAULT_FN_ATTRS
@@ -1911,12 +1911,38 @@ _mm_store_sd(double *__dp, __m128d __a)
   ((struct __mm_store_sd_struct*)__dp)->__u = __a[0];
 }
 
+/// \brief Moves packed double-precision values from a 128-bit vector of
+///    [2 x double] to a memory location.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the <c>VMOVAPD / MOVAPS</c> instruction.
+///
+/// \param __dp
+///    A pointer to an aligned memory location that can store two
+///    double-precision values.
+/// \param __a
+///    A packed 128-bit vector of [2 x double] containing the values to be
+///    moved.
 static __inline__ void __DEFAULT_FN_ATTRS
 _mm_store_pd(double *__dp, __m128d __a)
 {
   *(__m128d*)__dp = __a;
 }
 
+/// \brief Moves the lower 64 bits of a 128-bit vector of [2 x double] twice to
+///    the upper and lower 64 bits of a memory location.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the <c>VMOVDDUP + VMOVAPD / MOVLHPS + MOVAPS </c> instruction.
+///
+/// \param __dp
+///    A pointer to a memory location that can store two double-precision
+///    values.
+/// \param __a
+///    A 128-bit vector of [2 x double] whose lower 64 bits are copied to each
+///    of the values in \a dp.
 static __inline__ void __DEFAULT_FN_ATTRS
 _mm_store1_pd(double *__dp, __m128d __a)
 {

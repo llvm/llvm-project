@@ -1,4 +1,4 @@
-//===-- llvm/lib/CodeGen/AsmPrinter/CodeViewDebug.cpp --*- C++ -*--===//
+//===- llvm/lib/CodeGen/AsmPrinter/CodeViewDebug.cpp ----------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,37 +12,82 @@
 //===----------------------------------------------------------------------===//
 
 #include "CodeViewDebug.h"
+#include "llvm/ADT/APSInt.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/None.h"
+#include "llvm/ADT/Optional.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TinyPtrVector.h"
+#include "llvm/ADT/Triple.h"
+#include "llvm/ADT/Twine.h"
+#include "llvm/BinaryFormat/COFF.h"
+#include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/CodeGen/AsmPrinter.h"
+#include "llvm/CodeGen/LexicalScopes.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/DebugInlineeLinesSubsection.h"
 #include "llvm/DebugInfo/CodeView/Line.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
-#include "llvm/DebugInfo/CodeView/TypeDatabase.h"
 #include "llvm/DebugInfo/CodeView/TypeDumpVisitor.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeTableCollection.h"
-#include "llvm/DebugInfo/CodeView/TypeVisitorCallbacks.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/Metadata.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
-#include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSectionCOFF.h"
+#include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/BinaryByteStream.h"
 #include "llvm/Support/BinaryStreamReader.h"
-#include "llvm/Support/COFF.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/Endian.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ScopedPrinter.h"
+#include "llvm/Support/SMLoc.h"
 #include "llvm/Target/TargetFrameLowering.h"
+#include "llvm/Target/TargetLoweringObjectFile.h"
+#include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetRegisterInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
+#include <algorithm>
+#include <cassert>
+#include <cctype>
+#include <cstddef>
+#include <cstdint>
+#include <iterator>
+#include <limits>
+#include <string>
+#include <utility>
+#include <vector>
 
 using namespace llvm;
 using namespace llvm::codeview;
 
 CodeViewDebug::CodeViewDebug(AsmPrinter *AP)
-    : DebugHandlerBase(AP), OS(*Asm->OutStreamer), Allocator(),
-      TypeTable(Allocator), CurFn(nullptr) {
+    : DebugHandlerBase(AP), OS(*Asm->OutStreamer), TypeTable(Allocator) {
   // If module doesn't have named metadata anchors or COFF debug section
   // is not available, skip any debug info related stuff.
   if (!MMI->getModule()->getNamedMetadata("llvm.dbg.cu") ||
@@ -178,7 +223,8 @@ static const DISubprogram *getQualifiedNameComponents(
 static std::string getQualifiedName(ArrayRef<StringRef> QualifiedNameComponents,
                                     StringRef TypeName) {
   std::string FullyQualifiedName;
-  for (StringRef QualifiedNameComponent : reverse(QualifiedNameComponents)) {
+  for (StringRef QualifiedNameComponent :
+       llvm::reverse(QualifiedNameComponents)) {
     FullyQualifiedName.append(QualifiedNameComponent);
     FullyQualifiedName.append("::");
   }
@@ -571,7 +617,7 @@ static CPUType mapArchToCVCPUType(Triple::ArchType Type) {
   }
 }
 
-}  // anonymous namespace
+} // end anonymous namespace
 
 void CodeViewDebug::emitCompilerInformation() {
   MCContext &Context = MMI->getContext();
@@ -1581,11 +1627,11 @@ struct llvm::ClassInfo {
     uint64_t BaseOffset;
   };
   // [MemberInfo]
-  typedef std::vector<MemberInfo> MemberList;
+  using MemberList = std::vector<MemberInfo>;
 
-  typedef TinyPtrVector<const DISubprogram *> MethodsList;
+  using MethodsList = TinyPtrVector<const DISubprogram *>;
   // MethodName -> MethodsList
-  typedef MapVector<MDString *, MethodsList> MethodsMap;
+  using MethodsMap = MapVector<MDString *, MethodsList>;
 
   /// Base classes.
   std::vector<const DIDerivedType *> Inheritance;
@@ -1850,7 +1896,7 @@ CodeViewDebug::lowerRecordFieldList(const DICompositeType *Ty) {
           translateMethodOptionFlags(SP), VFTableOffset, Name));
       MemberCount++;
     }
-    assert(Methods.size() > 0 && "Empty methods map entry");
+    assert(!Methods.empty() && "Empty methods map entry");
     if (Methods.size() == 1)
       FLBR.writeMemberType(Methods[0]);
     else {

@@ -25,9 +25,9 @@
 #include "Writer.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compression.h"
-#include "llvm/Support/ELF.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
@@ -54,7 +54,7 @@ uint64_t ExprValue::getValue() const {
   if (Sec) {
     if (OutputSection *OS = Sec->getOutputSection())
       return alignTo(Sec->getOffset(Val) + OS->Addr, Alignment);
-    error("unable to evaluate expression: input section " + Sec->Name +
+    error(Loc + ": unable to evaluate expression: input section " + Sec->Name +
           " has no output section assigned");
   }
   return alignTo(Val, Alignment);
@@ -870,51 +870,6 @@ void LinkerScript::processNonSectionCommands() {
   }
 }
 
-// Do a last effort at synchronizing the linker script "AST" and the section
-// list. This is needed to account for last minute changes, like adding a
-// .ARM.exidx terminator and sorting SHF_LINK_ORDER sections.
-//
-// FIXME: We should instead create the "AST" earlier and the above changes would
-// be done directly in the "AST".
-//
-// This can only handle new sections being added and sections being reordered.
-void LinkerScript::synchronize() {
-  for (BaseCommand *Base : Opt.Commands) {
-    auto *Cmd = dyn_cast<OutputSectionCommand>(Base);
-    if (!Cmd)
-      continue;
-    ArrayRef<InputSection *> Sections = Cmd->Sec->Sections;
-    std::vector<InputSection **> ScriptSections;
-    DenseSet<InputSection *> ScriptSectionsSet;
-    for (BaseCommand *Base : Cmd->Commands) {
-      auto *ISD = dyn_cast<InputSectionDescription>(Base);
-      if (!ISD)
-        continue;
-      for (InputSection *&IS : ISD->Sections) {
-        if (IS->Live) {
-          ScriptSections.push_back(&IS);
-          ScriptSectionsSet.insert(IS);
-        }
-      }
-    }
-    std::vector<InputSection *> Missing;
-    for (InputSection *IS : Sections)
-      if (!ScriptSectionsSet.count(IS))
-        Missing.push_back(IS);
-    if (!Missing.empty()) {
-      auto ISD = make<InputSectionDescription>("");
-      ISD->Sections = Missing;
-      Cmd->Commands.push_back(ISD);
-      for (InputSection *&IS : ISD->Sections)
-        if (IS->Live)
-          ScriptSections.push_back(&IS);
-    }
-    assert(ScriptSections.size() == Sections.size());
-    for (int I = 0, N = Sections.size(); I < N; ++I)
-      *ScriptSections[I] = Sections[I];
-  }
-}
-
 static bool
 allocateHeaders(std::vector<PhdrEntry> &Phdrs,
                 ArrayRef<OutputSectionCommand *> OutputSectionCommands,
@@ -1085,31 +1040,34 @@ static bool compareByFilePosition(InputSection *A, InputSection *B) {
   return LA->OutSecOff < LB->OutSecOff;
 }
 
-template <class ELFT> static void finalizeShtGroup(OutputSection *Sec) {
+template <class ELFT>
+static void finalizeShtGroup(OutputSection *OS,
+                             ArrayRef<InputSection *> Sections) {
   // sh_link field for SHT_GROUP sections should contain the section index of
   // the symbol table.
-  Sec->Link = InX::SymTab->getParent()->SectionIndex;
+  OS->Link = InX::SymTab->getParent()->SectionIndex;
 
   // sh_info then contain index of an entry in symbol table section which
   // provides signature of the section group.
-  elf::ObjectFile<ELFT> *Obj = Sec->Sections[0]->getFile<ELFT>();
-  assert(Config->Relocatable && Sec->Sections.size() == 1);
+  elf::ObjectFile<ELFT> *Obj = Sections[0]->getFile<ELFT>();
+  assert(Config->Relocatable && Sections.size() == 1);
   ArrayRef<SymbolBody *> Symbols = Obj->getSymbols();
-  Sec->Info = InX::SymTab->getSymbolIndex(Symbols[Sec->Sections[0]->Info - 1]);
+  OS->Info = InX::SymTab->getSymbolIndex(Symbols[Sections[0]->Info - 1]);
 }
 
 template <class ELFT> void OutputSectionCommand::finalize() {
-  if ((Sec->Flags & SHF_LINK_ORDER) && !Sec->Sections.empty()) {
-    // Link order may be distributed across several InputSectionDescriptions
-    // but sort must consider them all at once.
-    std::vector<InputSection **> ScriptSections;
-    std::vector<InputSection *> Sections;
-    for (BaseCommand *Base : Commands)
-      if (auto *ISD = dyn_cast<InputSectionDescription>(Base))
-        for (InputSection *&IS : ISD->Sections) {
-          ScriptSections.push_back(&IS);
-          Sections.push_back(IS);
-        }
+  // Link order may be distributed across several InputSectionDescriptions
+  // but sort must consider them all at once.
+  std::vector<InputSection **> ScriptSections;
+  std::vector<InputSection *> Sections;
+  for (BaseCommand *Base : Commands)
+    if (auto *ISD = dyn_cast<InputSectionDescription>(Base))
+      for (InputSection *&IS : ISD->Sections) {
+        ScriptSections.push_back(&IS);
+        Sections.push_back(IS);
+      }
+
+  if ((Sec->Flags & SHF_LINK_ORDER)) {
     std::sort(Sections.begin(), Sections.end(), compareByFilePosition);
     for (int I = 0, N = Sections.size(); I < N; ++I)
       *ScriptSections[I] = Sections[I];
@@ -1118,20 +1076,20 @@ template <class ELFT> void OutputSectionCommand::finalize() {
     // SHF_LINK_ORDER flag. The dependency is indicated by the sh_link field. We
     // need to translate the InputSection sh_link to the OutputSection sh_link,
     // all InputSections in the OutputSection have the same dependency.
-    if (auto *D = Sec->Sections.front()->getLinkOrderDep())
+    if (auto *D = Sections.front()->getLinkOrderDep())
       Sec->Link = D->getParent()->SectionIndex;
   }
 
   uint32_t Type = Sec->Type;
   if (Type == SHT_GROUP) {
-    finalizeShtGroup<ELFT>(Sec);
+    finalizeShtGroup<ELFT>(Sec, Sections);
     return;
   }
 
   if (!Config->CopyRelocs || (Type != SHT_RELA && Type != SHT_REL))
     return;
 
-  InputSection *First = Sec->Sections[0];
+  InputSection *First = Sections[0];
   if (isa<SyntheticSection>(First))
     return;
 
@@ -1228,12 +1186,12 @@ bool LinkerScript::hasLMA(OutputSection *Sec) {
 
 ExprValue LinkerScript::getSymbolValue(const Twine &Loc, StringRef S) {
   if (S == ".")
-    return {CurOutSec, Dot - CurOutSec->Addr};
+    return {CurOutSec, Dot - CurOutSec->Addr, Loc};
   if (SymbolBody *B = findSymbol(S)) {
     if (auto *D = dyn_cast<DefinedRegular>(B))
-      return {D->Section, D->Value};
+      return {D->Section, D->Value, Loc};
     if (auto *C = dyn_cast<DefinedCommon>(B))
-      return {InX::Common, C->Offset};
+      return {InX::Common, C->Offset, Loc};
   }
   error(Loc + ": symbol not found: " + S);
   return 0;

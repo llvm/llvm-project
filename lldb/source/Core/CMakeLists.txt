@@ -67,6 +67,7 @@ add_lldb_library(lldbCore
     lldbPluginObjectFileJIT
 
   LINK_COMPONENTS
+    BinaryFormat
     Support
     Demangle
   )

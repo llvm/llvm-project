@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "gtest/gtest.h"
 #include "../../lib/ReaderWriter/MachO/MachONormalizedFile.h"
 #include "lld/Core/Atom.h"
 #include "lld/Core/DefinedAtom.h"
@@ -15,9 +14,10 @@
 #include "lld/Core/UndefinedAtom.h"
 #include "lld/ReaderWriter/MachOLinkingContext.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/MachO.h"
 #include "llvm/Support/YAMLTraits.h"
+#include "gtest/gtest.h"
 #include <cstdint>
 #include <memory>
 

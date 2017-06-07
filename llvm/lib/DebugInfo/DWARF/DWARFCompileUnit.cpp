@@ -15,7 +15,7 @@
 
 using namespace llvm;
 
-void DWARFCompileUnit::dump(raw_ostream &OS) {
+void DWARFCompileUnit::dump(raw_ostream &OS, DIDumpOptions DumpOpts) {
   OS << format("0x%08x", getOffset()) << ": Compile Unit:"
      << " length = " << format("0x%08x", getLength())
      << " version = " << format("0x%04x", getVersion());
@@ -27,7 +27,7 @@ void DWARFCompileUnit::dump(raw_ostream &OS) {
      << ")\n";
 
   if (DWARFDie CUDie = getUnitDIE(false))
-    CUDie.dump(OS, -1U);
+    CUDie.dump(OS, -1U, 0, DumpOpts);
   else
     OS << "<compile unit can't be parsed!>\n\n";
 }

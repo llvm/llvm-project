@@ -262,7 +262,7 @@ template <typename Predicate> struct api_pred_ty : public Predicate {
 };
 
 struct is_one {
-  bool isValue(const APInt &C) { return C == 1; }
+  bool isValue(const APInt &C) { return C.isOneValue(); }
 };
 
 /// \brief Match an integer 1 or a vector with all elements equal to 1.

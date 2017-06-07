@@ -27,9 +27,9 @@
 #include "Threads.h"
 #include "Writer.h"
 #include "lld/Config/Version.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugPubTable.h"
 #include "llvm/Object/ELFObjectFile.h"
-#include "llvm/Support/Dwarf.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/RandomNumberGenerator.h"
@@ -1719,10 +1719,15 @@ readAddressArea(DWARFContext &Dwarf, InputSection *Sec, size_t CurrentCU) {
     CU->collectAddressRanges(Ranges);
 
     ArrayRef<InputSectionBase *> Sections = Sec->File->getSections();
-    for (DWARFAddressRange &R : Ranges)
-      if (InputSection *S = findSection(Sections, R.LowPC))
-        Ret.push_back({S, R.LowPC - S->getOffsetInFile(),
-                       R.HighPC - S->getOffsetInFile(), CurrentCU});
+    for (DWARFAddressRange &R : Ranges) {
+      InputSectionBase *S = Sections[R.SectionIndex];
+      if (!S || S == &InputSection::Discarded || !S->Live)
+        continue;
+      // Range list with zero size has no effect.
+      if (R.LowPC == R.HighPC)
+        continue;
+      Ret.push_back({cast<InputSection>(S), R.LowPC, R.HighPC, CurrentCU});
+    }
     ++CurrentCU;
   }
   return Ret;
@@ -1743,17 +1748,6 @@ readPubNamesAndTypes(DWARFContext &Dwarf, bool IsLE) {
   return Ret;
 }
 
-class ObjInfoTy : public llvm::LoadedObjectInfo {
-  uint64_t getSectionLoadAddress(const object::SectionRef &Sec) const override {
-    auto &S = static_cast<const object::ELFSectionRef &>(Sec);
-    if (S.getFlags() & ELF::SHF_ALLOC)
-      return S.getOffset();
-    return 0;
-  }
-
-  std::unique_ptr<llvm::LoadedObjectInfo> clone() const override { return {}; }
-};
-
 void GdbIndexSection::readDwarf(InputSection *Sec) {
   Expected<std::unique_ptr<object::ObjectFile>> Obj =
       object::ObjectFile::createObjectFile(Sec->File->MB);
@@ -1762,8 +1756,7 @@ void GdbIndexSection::readDwarf(InputSection *Sec) {
     return;
   }
 
-  ObjInfoTy ObjInfo;
-  DWARFContextInMemory Dwarf(*Obj.get(), &ObjInfo);
+  DWARFContextInMemory Dwarf(*Obj.get());
 
   size_t CuId = CompilationUnits.size();
   for (std::pair<uint64_t, uint64_t> &P : readCuList(Dwarf, Sec))

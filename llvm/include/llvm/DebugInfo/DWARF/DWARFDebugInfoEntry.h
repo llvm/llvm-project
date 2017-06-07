@@ -10,8 +10,8 @@
 #ifndef LLVM_DEBUGINFO_DWARFDEBUGINFOENTRY_H
 #define LLVM_DEBUGINFO_DWARFDEBUGINFOENTRY_H
 
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DWARF/DWARFAbbreviationDeclaration.h"
-#include "llvm/Support/Dwarf.h"
 #include <cstdint>
 
 namespace llvm {

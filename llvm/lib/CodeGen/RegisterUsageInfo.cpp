@@ -12,11 +12,22 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/RegisterUsageInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Support/Debug.h"
+#include "llvm/Pass.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetMachine.h"
+#include "llvm/Target/TargetRegisterInfo.h"
+#include "llvm/Target/TargetSubtargetInfo.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <utility>
+#include <vector>
 
 using namespace llvm;
 
@@ -63,7 +74,7 @@ PhysicalRegisterUsageInfo::getRegUsageInfo(const Function *FP) {
 void PhysicalRegisterUsageInfo::print(raw_ostream &OS, const Module *M) const {
   const TargetRegisterInfo *TRI;
 
-  typedef std::pair<const Function *, std::vector<uint32_t>> FuncPtrRegMaskPair;
+  using FuncPtrRegMaskPair = std::pair<const Function *, std::vector<uint32_t>>;
 
   SmallVector<const FuncPtrRegMaskPair *, 64> FPRMPairVector;
 

@@ -17,6 +17,28 @@ struct X {
   }
 };
 
+struct MrsBadcrumble {
+  friend MrsBadcrumble operator<(void (*)(int), MrsBadcrumble);
+  friend void operator>(MrsBadcrumble, int);
+} mb;
+
+template<int N, typename T> void f(T t) {
+  t.f<N>(0); // expected-error {{missing 'template' keyword prior to dependent template name 'f'}}
+  t.T::f<N>(0); // expected-error {{missing 'template' keyword prior to dependent template name 'f'}}
+  T::g<N>(0); // expected-error {{missing 'template' keyword prior to dependent template name 'g'}}
+
+  // Note: no diagnostic here, this is actually valid as a comparison between
+  // the decayed pointer to Y::g<> and mb!
+  T::g<mb>(0);
+}
+
+struct Y {
+  template <int> void f(int);
+  template <int = 0> static void g(int); // expected-warning 0-1{{extension}}
+};
+void q() { void (*p)(int) = Y::g; }
+template void f<0>(Y); // expected-note {{in instantiation of}}
+
 namespace PR9401 {
   // From GCC PR c++/45558
   template <typename S, typename T>

@@ -38,5 +38,6 @@ add_lldb_library(lldbUtility
   # lldbUtility cannot have any dependencies
 
   LINK_COMPONENTS
+    BinaryFormat
     Support
   )

@@ -1,4 +1,4 @@
-//===-- llvm/Support/ELF.h - ELF constants and data structures --*- C++ -*-===//
+//===-- llvm/BinaryFormat/ELF.h - ELF constants and structures --*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -17,8 +17,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_SUPPORT_ELF_H
-#define LLVM_SUPPORT_ELF_H
+#ifndef LLVM_BINARYFORMAT_ELF_H
+#define LLVM_BINARYFORMAT_ELF_H
 
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"

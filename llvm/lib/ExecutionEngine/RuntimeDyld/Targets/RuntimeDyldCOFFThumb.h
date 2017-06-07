@@ -15,8 +15,8 @@
 #define LLVM_LIB_EXECUTIONENGINE_RUNTIMEDYLD_TARGETS_RUNTIMEDYLDCOFFTHUMB_H
 
 #include "../RuntimeDyldCOFF.h"
+#include "llvm/BinaryFormat/COFF.h"
 #include "llvm/Object/COFF.h"
-#include "llvm/Support/COFF.h"
 
 #define DEBUG_TYPE "dyld"
 

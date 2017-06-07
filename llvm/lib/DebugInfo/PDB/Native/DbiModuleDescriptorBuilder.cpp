@@ -10,6 +10,7 @@
 #include "llvm/DebugInfo/PDB/Native/DbiModuleDescriptorBuilder.h"
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/BinaryFormat/COFF.h"
 #include "llvm/DebugInfo/CodeView/DebugSubsectionRecord.h"
 #include "llvm/DebugInfo/MSF/MSFBuilder.h"
 #include "llvm/DebugInfo/MSF/MSFCommon.h"
@@ -19,7 +20,6 @@
 #include "llvm/DebugInfo/PDB/Native/RawError.h"
 #include "llvm/Support/BinaryItemStream.h"
 #include "llvm/Support/BinaryStreamWriter.h"
-#include "llvm/Support/COFF.h"
 
 using namespace llvm;
 using namespace llvm::codeview;
@@ -38,12 +38,12 @@ template <> struct BinaryItemTraits<CVSymbol> {
 
 static uint32_t calculateDiSymbolStreamSize(uint32_t SymbolByteSize,
                                             uint32_t C13Size) {
-  uint32_t Size = sizeof(uint32_t); // Signature
-  Size += SymbolByteSize;           // Symbol Data
-  Size += 0;                        // TODO: Layout.C11Bytes
-  Size += C13Size;                  // C13 Debug Info Size
-  Size += sizeof(uint32_t);         // GlobalRefs substream size (always 0)
-  Size += 0;                        // GlobalRefs substream bytes
+  uint32_t Size = sizeof(uint32_t);   // Signature
+  Size += alignTo(SymbolByteSize, 4); // Symbol Data
+  Size += 0;                          // TODO: Layout.C11Bytes
+  Size += C13Size;                    // C13 Debug Info Size
+  Size += sizeof(uint32_t);           // GlobalRefs substream size (always 0)
+  Size += 0;                          // GlobalRefs substream bytes
   return Size;
 }
 
@@ -155,6 +155,8 @@ Error DbiModuleDescriptorBuilder::commit(BinaryStreamWriter &ModiWriter,
     Records.setItems(Symbols);
     BinaryStreamRef RecordsRef(Records);
     if (auto EC = SymbolWriter.writeStreamRef(RecordsRef))
+      return EC;
+    if (auto EC = SymbolWriter.padToAlignment(4))
       return EC;
     // TODO: Write C11 Line data
     assert(SymbolWriter.getOffset() % alignOf(CodeViewContainer::Pdb) == 0 &&

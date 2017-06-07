@@ -991,8 +991,9 @@ static Instruction *foldAddWithConstant(BinaryOperator &Add,
   // Shifts and add used to flip and mask off the low bit:
   // add (ashr (shl i32 X, 31), 31), 1 --> and (not X), 1
   const APInt *C3;
-  if (*C == 1 && match(Op0, m_OneUse(m_AShr(m_Shl(m_Value(X), m_APInt(C2)),
-                                            m_APInt(C3)))) &&
+  if (C->isOneValue() &&
+      match(Op0,
+            m_OneUse(m_AShr(m_Shl(m_Value(X), m_APInt(C2)), m_APInt(C3)))) &&
       C2 == C3 && *C2 == Ty->getScalarSizeInBits() - 1) {
     Value *NotX = Builder.CreateNot(X);
     return BinaryOperator::CreateAnd(NotX, ConstantInt::get(Ty, 1));
@@ -1554,7 +1555,7 @@ Instruction *InstCombiner::visitSub(BinaryOperator &I) {
 
     // -(X >>u 31) -> (X >>s 31)
     // -(X >>s 31) -> (X >>u 31)
-    if (*Op0C == 0) {
+    if (Op0C->isNullValue()) {
       Value *X;
       const APInt *ShAmt;
       if (match(Op1, m_LShr(m_Value(X), m_APInt(ShAmt))) &&

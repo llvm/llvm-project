@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/BinaryFormat/Magic.h"
 #include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/Error.h"
@@ -306,10 +307,10 @@ public:
   createObjectFile(StringRef ObjectPath);
 
   static Expected<std::unique_ptr<ObjectFile>>
-  createObjectFile(MemoryBufferRef Object, sys::fs::file_magic Type);
+  createObjectFile(MemoryBufferRef Object, llvm::file_magic Type);
   static Expected<std::unique_ptr<ObjectFile>>
   createObjectFile(MemoryBufferRef Object) {
-    return createObjectFile(Object, sys::fs::file_magic::unknown);
+    return createObjectFile(Object, llvm::file_magic::unknown);
   }
 
   static inline bool classof(const Binary *v) {

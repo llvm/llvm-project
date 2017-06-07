@@ -1,4 +1,4 @@
-//===-- Thumb2InstrInfo.cpp - Thumb-2 Instruction Information -------------===//
+//===- Thumb2InstrInfo.cpp - Thumb-2 Instruction Information --------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,16 +11,26 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Thumb2InstrInfo.h"
-#include "ARMConstantPoolValue.h"
 #include "ARMMachineFunctionInfo.h"
 #include "MCTargetDesc/ARMAddressingModes.h"
+#include "Thumb2InstrInfo.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/IR/DebugLoc.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
+#include "llvm/Target/TargetMachine.h"
+#include "llvm/Target/TargetRegisterInfo.h"
+#include <cassert>
 
 using namespace llvm;
 
@@ -30,7 +40,7 @@ OldT2IfCvt("old-thumb2-ifcvt", cl::Hidden,
            cl::init(false));
 
 Thumb2InstrInfo::Thumb2InstrInfo(const ARMSubtarget &STI)
-    : ARMBaseInstrInfo(STI), RI() {}
+    : ARMBaseInstrInfo(STI) {}
 
 /// Return the noop instruction to use for a noop.
 void Thumb2InstrInfo::getNoop(MCInst &NopInst) const {
@@ -539,9 +549,7 @@ bool llvm::rewriteT2FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
     // Add cc_out operand if the original instruction did not have one.
     if (!HasCCOut)
       MI.addOperand(MachineOperand::CreateReg(0, false));
-
   } else {
-
     // AddrMode4 and AddrMode6 cannot handle any offset.
     if (AddrMode == ARMII::AddrMode4 || AddrMode == ARMII::AddrMode6)
       return false;

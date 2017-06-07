@@ -15,12 +15,12 @@
 
 #include "MCTargetDesc/WebAssemblyFixupKinds.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
+#include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCSymbolWasm.h"
 #include "llvm/MC/MCWasmObjectWriter.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/Wasm.h"
 using namespace llvm;
 
 namespace {

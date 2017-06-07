@@ -32,7 +32,9 @@
 namespace llvm {
 
 class LiveIntervals;
+class MachineFunction;
 class MachineInstr;
+class MachineRegisterInfo;
 class RegisterClassInfo;
 
 struct RegisterMaskPair {
@@ -147,12 +149,14 @@ class PressureDiff {
 
   PressureChange PressureChanges[MaxPSets];
 
-  typedef PressureChange* iterator;
+  using iterator = PressureChange *;
+
   iterator nonconst_begin() { return &PressureChanges[0]; }
   iterator nonconst_end() { return &PressureChanges[MaxPSets]; }
 
 public:
-  typedef const PressureChange* const_iterator;
+  using const_iterator = const PressureChange *;
+
   const_iterator begin() const { return &PressureChanges[0]; }
   const_iterator end() const { return &PressureChanges[MaxPSets]; }
 
@@ -269,7 +273,7 @@ private:
     }
   };
 
-  typedef SparseSet<IndexMaskPair> RegSet;
+  using RegSet = SparseSet<IndexMaskPair>;
   RegSet Regs;
   unsigned NumRegUnits;
 

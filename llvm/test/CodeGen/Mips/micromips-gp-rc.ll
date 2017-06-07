@@ -14,5 +14,5 @@ entry:
 ; Function Attrs: noreturn
 declare void @exit(i32 signext)
 
-; CHECK: addu $gp, ${{[0-9]+}}
+; CHECK: move $gp, ${{[0-9]+}}
 

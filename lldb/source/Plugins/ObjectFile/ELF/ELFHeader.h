@@ -21,7 +21,7 @@
 #ifndef liblldb_ELFHeader_h_
 #define liblldb_ELFHeader_h_
 
-#include "llvm/Support/ELF.h"
+#include "llvm/BinaryFormat/ELF.h"
 
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-types.h"

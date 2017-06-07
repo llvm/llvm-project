@@ -13,9 +13,9 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Support/CachePruning.h"
 #include "llvm/Support/CodeGen.h"
-#include "llvm/Support/ELF.h"
 #include "llvm/Support/Endian.h"
 
 #include <vector>

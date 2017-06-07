@@ -194,7 +194,7 @@ public:
   /// common code. It also correctly performs the comparison without the
   /// potential for an assertion from getZExtValue().
   bool isZero() const {
-    return Val == 0;
+    return Val.isNullValue();
   }
 
   /// This is just a convenience method to make client code smaller for a
@@ -202,7 +202,7 @@ public:
   /// potential for an assertion from getZExtValue().
   /// @brief Determine if the value is one.
   bool isOne() const {
-    return Val == 1;
+    return Val.isOneValue();
   }
 
   /// This function will return true iff every bit in this constant is set
@@ -243,7 +243,7 @@ public:
   /// @returns true iff this constant is greater or equal to the given number.
   /// @brief Determine if the value is greater or equal to the given number.
   bool uge(uint64_t Num) const {
-    return Val.getActiveBits() > 64 || Val.getZExtValue() >= Num;
+    return Val.uge(Num);
   }
 
   /// getLimitedValue - If the value is smaller than the specified limit,

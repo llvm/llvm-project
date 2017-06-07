@@ -221,6 +221,9 @@ ARMRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case G_ADD:
   case G_SUB:
   case G_MUL:
+  case G_AND:
+  case G_OR:
+  case G_XOR:
   case G_SDIV:
   case G_UDIV:
   case G_SEXT:
@@ -252,30 +255,32 @@ ARMRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     OperandsMapping =
         getOperandsMapping({&ARM::ValueMappings[ARM::GPR3OpsIdx], nullptr});
     break;
-  case G_SEQUENCE: {
-    // We only support G_SEQUENCE for creating a double precision floating point
-    // value out of two GPRs.
+  case G_MERGE_VALUES: {
+    // We only support G_MERGE_VALUES for creating a double precision floating
+    // point value out of two GPRs.
     LLT Ty1 = MRI.getType(MI.getOperand(1).getReg());
-    LLT Ty2 = MRI.getType(MI.getOperand(3).getReg());
+    LLT Ty2 = MRI.getType(MI.getOperand(2).getReg());
     if (Ty.getSizeInBits() != 64 || Ty1.getSizeInBits() != 32 ||
         Ty2.getSizeInBits() != 32)
       return getInvalidInstructionMapping();
     OperandsMapping =
         getOperandsMapping({&ARM::ValueMappings[ARM::DPR3OpsIdx],
-                            &ARM::ValueMappings[ARM::GPR3OpsIdx], nullptr,
-                            &ARM::ValueMappings[ARM::GPR3OpsIdx], nullptr});
+                            &ARM::ValueMappings[ARM::GPR3OpsIdx],
+                            &ARM::ValueMappings[ARM::GPR3OpsIdx]});
     break;
   }
-  case G_EXTRACT: {
-    // We only support G_EXTRACT for splitting a double precision floating point
-    // value into two GPRs.
+  case G_UNMERGE_VALUES: {
+    // We only support G_UNMERGE_VALUES for splitting a double precision
+    // floating point value into two GPRs.
     LLT Ty1 = MRI.getType(MI.getOperand(1).getReg());
-    if (Ty.getSizeInBits() != 32 || Ty1.getSizeInBits() != 64 ||
-        MI.getOperand(2).getImm() % 32 != 0)
+    LLT Ty2 = MRI.getType(MI.getOperand(2).getReg());
+    if (Ty.getSizeInBits() != 32 || Ty1.getSizeInBits() != 32 ||
+        Ty2.getSizeInBits() != 64)
       return getInvalidInstructionMapping();
-    OperandsMapping = getOperandsMapping({&ARM::ValueMappings[ARM::GPR3OpsIdx],
-                                          &ARM::ValueMappings[ARM::DPR3OpsIdx],
-                                          nullptr, nullptr});
+    OperandsMapping =
+        getOperandsMapping({&ARM::ValueMappings[ARM::GPR3OpsIdx],
+                            &ARM::ValueMappings[ARM::GPR3OpsIdx],
+                            &ARM::ValueMappings[ARM::DPR3OpsIdx]});
     break;
   }
   default:

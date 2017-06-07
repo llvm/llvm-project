@@ -1,4 +1,4 @@
-//===- MIParser.h - Machine Instructions Parser ---------------------------===//
+//===- MIParser.h - Machine Instructions Parser -----------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,21 +15,19 @@
 #define LLVM_LIB_CODEGEN_MIRPARSER_MIPARSER_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/Support/Allocator.h"
 
 namespace llvm {
 
-class StringRef;
-class BasicBlock;
 class MachineBasicBlock;
 class MachineFunction;
-class MachineInstr;
-class MachineRegisterInfo;
 class MDNode;
 class RegisterBank;
 struct SlotMapping;
 class SMDiagnostic;
 class SourceMgr;
+class StringRef;
 class TargetRegisterClass;
 
 struct VRegInfo {
@@ -45,8 +43,8 @@ struct VRegInfo {
   unsigned PreferredReg = 0;
 };
 
-typedef StringMap<const TargetRegisterClass*> Name2RegClassMap;
-typedef StringMap<const RegisterBank*> Name2RegBankMap;
+using Name2RegClassMap = StringMap<const TargetRegisterClass *>;
+using Name2RegBankMap = StringMap<const RegisterBank *>;
 
 struct PerFunctionMIParsingState {
   BumpPtrAllocator Allocator;
@@ -122,4 +120,4 @@ bool parseMDNode(PerFunctionMIParsingState &PFS, MDNode *&Node, StringRef Src,
 
 } // end namespace llvm
 
-#endif
+#endif // LLVM_LIB_CODEGEN_MIRPARSER_MIPARSER_H
