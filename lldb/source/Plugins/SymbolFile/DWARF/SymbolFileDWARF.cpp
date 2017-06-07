@@ -1958,7 +1958,7 @@ void SymbolFileDWARF::Index() {
                       &function_fullname_index, &function_method_index,
                       &function_selector_index, &objc_class_selectors_index,
                       &global_index, &type_index,
-                      &namespace_index](uint32_t cu_idx) {
+                      &namespace_index](size_t cu_idx) {
       DWARFCompileUnit *dwarf_cu = debug_info->GetCompileUnitAtIndex(cu_idx);
       if (dwarf_cu) {
         dwarf_cu->Index(
@@ -1967,10 +1967,9 @@ void SymbolFileDWARF::Index() {
             objc_class_selectors_index[cu_idx], global_index[cu_idx],
             type_index[cu_idx], namespace_index[cu_idx]);
       }
-      return cu_idx;
     };
 
-    auto extract_fn = [debug_info, &clear_cu_dies](uint32_t cu_idx) {
+    auto extract_fn = [debug_info, &clear_cu_dies](size_t cu_idx) {
       DWARFCompileUnit *dwarf_cu = debug_info->GetCompileUnitAtIndex(cu_idx);
       if (dwarf_cu) {
         // dwarf_cu->ExtractDIEsIfNeeded(false) will return zero if the

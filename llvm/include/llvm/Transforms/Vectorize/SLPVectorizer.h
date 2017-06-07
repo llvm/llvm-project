@@ -84,7 +84,7 @@ private:
                           ArrayRef<Value *> BuildVector = None,
                           bool AllowReorder = false);
 
-  /// \brief Try to vectorize a chain that may start at the operands of \V;
+  /// \brief Try to vectorize a chain that may start at the operands of \p V.
   bool tryToVectorize(BinaryOperator *V, slpvectorizer::BoUpSLP &R);
 
   /// \brief Vectorize the store instructions collected in Stores.

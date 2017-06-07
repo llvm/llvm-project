@@ -608,8 +608,25 @@ Value *LowerTypeTestsModule::lowerTypeTestCall(Metadata *TypeId, CallInst *CI,
   if (TIL.TheKind == TypeTestResolution::AllOnes)
     return OffsetInRange;
 
-  TerminatorInst *Term = SplitBlockAndInsertIfThen(OffsetInRange, CI, false);
-  IRBuilder<> ThenB(Term);
+  // See if the intrinsic is used in the following common pattern:
+  //   br(llvm.type.test(...), thenbb, elsebb)
+  // where nothing happens between the type test and the br.
+  // If so, create slightly simpler IR.
+  if (CI->hasOneUse())
+    if (auto *Br = dyn_cast<BranchInst>(*CI->user_begin()))
+      if (CI->getNextNode() == Br) {
+        BasicBlock *Then = InitialBB->splitBasicBlock(CI->getIterator());
+        BasicBlock *Else = Br->getSuccessor(1);
+        BranchInst *NewBr = BranchInst::Create(Then, Else, OffsetInRange);
+        NewBr->setMetadata(LLVMContext::MD_prof,
+                           Br->getMetadata(LLVMContext::MD_prof));
+        ReplaceInstWithInst(InitialBB->getTerminator(), NewBr);
+
+        IRBuilder<> ThenB(CI);
+        return createBitSetTest(ThenB, TIL, BitOffset);
+      }
+
+  IRBuilder<> ThenB(SplitBlockAndInsertIfThen(OffsetInRange, CI, false));
 
   // Now that we know that the offset is in range and aligned, load the
   // appropriate bit from the bitset.

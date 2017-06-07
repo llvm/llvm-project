@@ -244,6 +244,52 @@ TEST_F(MemorySSATest, CreateALoadUpdater) {
   MSSA.verifyMemorySSA();
 }
 
+TEST_F(MemorySSATest, SinkLoad) {
+  F = Function::Create(
+      FunctionType::get(B.getVoidTy(), {B.getInt8PtrTy()}, false),
+      GlobalValue::ExternalLinkage, "F", &M);
+  BasicBlock *Entry(BasicBlock::Create(C, "", F));
+  BasicBlock *Left(BasicBlock::Create(C, "", F));
+  BasicBlock *Right(BasicBlock::Create(C, "", F));
+  BasicBlock *Merge(BasicBlock::Create(C, "", F));
+  B.SetInsertPoint(Entry);
+  B.CreateCondBr(B.getTrue(), Left, Right);
+  B.SetInsertPoint(Left, Left->begin());
+  Argument *PointerArg = &*F->arg_begin();
+  B.SetInsertPoint(Left);
+  B.CreateBr(Merge);
+  B.SetInsertPoint(Right);
+  B.CreateBr(Merge);
+
+  // Load in left block
+  B.SetInsertPoint(Left, Left->begin());
+  LoadInst *LoadInst1 = B.CreateLoad(PointerArg);
+  // Store in merge block
+  B.SetInsertPoint(Merge, Merge->begin());
+  B.CreateStore(B.getInt8(16), PointerArg);
+
+  setupAnalyses();
+  MemorySSA &MSSA = *Analyses->MSSA;
+  MemorySSAUpdater Updater(&MSSA);
+
+  // Mimic sinking of a load:
+  // - clone load
+  // - insert in "exit" block
+  // - insert in mssa
+  // - remove from original block
+
+  LoadInst *LoadInstClone = cast<LoadInst>(LoadInst1->clone());
+  Merge->getInstList().insert(Merge->begin(), LoadInstClone);
+  MemoryAccess * NewLoadAccess =
+      Updater.createMemoryAccessInBB(LoadInstClone, nullptr,
+                                     LoadInstClone->getParent(),
+                                     MemorySSA::Beginning);
+  Updater.insertUse(cast<MemoryUse>(NewLoadAccess));
+  MSSA.verifyMemorySSA();
+  Updater.removeMemoryAccess(MSSA.getMemoryAccess(LoadInst1));
+  MSSA.verifyMemorySSA();
+}
+
 TEST_F(MemorySSATest, MoveAStore) {
   // We create a diamond where there is a in the entry, a store on one side, and
   // a load at the end.  After building MemorySSA, we test updating by moving

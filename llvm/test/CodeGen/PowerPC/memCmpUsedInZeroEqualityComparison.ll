@@ -21,7 +21,7 @@ define signext i32 @zeroEqualityTest02(i8* %x, i8* %y) {
 ; CHECK-NEXT:    lwz 3, 0(3)
 ; CHECK-NEXT:    lwz 4, 0(4)
 ; CHECK-NEXT:    li 5, 1
-; CHECK-NEXT:    cmpld 3, 4
+; CHECK-NEXT:    cmplw 3, 4
 ; CHECK-NEXT:    isel 3, 0, 5, 2
 ; CHECK-NEXT:    clrldi 3, 3, 32
 ; CHECK-NEXT:    blr
@@ -64,17 +64,17 @@ define signext i32 @zeroEqualityTest03(i8* %x, i8* %y) {
 ; CHECK:       # BB#0: # %loadbb
 ; CHECK-NEXT:    lwz 5, 0(3)
 ; CHECK-NEXT:    lwz 6, 0(4)
-; CHECK-NEXT:    cmpld 5, 6
+; CHECK-NEXT:    cmplw 5, 6
 ; CHECK-NEXT:    bne 0, .LBB2_3
 ; CHECK-NEXT:  # BB#1: # %loadbb1
 ; CHECK-NEXT:    lhz 5, 4(3)
 ; CHECK-NEXT:    lhz 6, 4(4)
-; CHECK-NEXT:    cmpld 5, 6
+; CHECK-NEXT:    cmplw 5, 6
 ; CHECK-NEXT:    bne 0, .LBB2_3
 ; CHECK-NEXT:  # BB#2: # %loadbb2
 ; CHECK-NEXT:    lbz 3, 6(3)
 ; CHECK-NEXT:    lbz 4, 6(4)
-; CHECK-NEXT:    cmpld 3, 4
+; CHECK-NEXT:    cmplw 3, 4
 ; CHECK-NEXT:    li 3, 0
 ; CHECK-NEXT:    beq 0, .LBB2_4
 ; CHECK-NEXT:  .LBB2_3: # %res_block
