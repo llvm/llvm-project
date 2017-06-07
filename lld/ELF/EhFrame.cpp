@@ -22,8 +22,8 @@
 #include "Relocations.h"
 #include "Strings.h"
 
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Object/ELF.h"
-#include "llvm/Support/Dwarf.h"
 #include "llvm/Support/Endian.h"
 
 using namespace llvm;

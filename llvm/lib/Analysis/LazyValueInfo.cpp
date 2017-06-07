@@ -1684,13 +1684,13 @@ static LazyValueInfo::Tristate getPredicateResult(unsigned Pred, Constant *C,
       if (!CR.contains(CI->getValue()))
         return LazyValueInfo::False;
 
-      if (CR.isSingleElement() && CR.contains(CI->getValue()))
+      if (CR.isSingleElement())
         return LazyValueInfo::True;
     } else if (Pred == ICmpInst::ICMP_NE) {
       if (!CR.contains(CI->getValue()))
         return LazyValueInfo::True;
 
-      if (CR.isSingleElement() && CR.contains(CI->getValue()))
+      if (CR.isSingleElement())
         return LazyValueInfo::False;
     }
 

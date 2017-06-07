@@ -13,11 +13,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "yaml2obj.h"
-#include "llvm/ObjectYAML/ObjectYAML.h"
+#include "llvm/BinaryFormat/MachO.h"
 #include "llvm/ObjectYAML/DWARFEmitter.h"
+#include "llvm/ObjectYAML/ObjectYAML.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/LEB128.h"
-#include "llvm/Support/MachO.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -239,7 +239,7 @@ Error MachOWriter::writeLoadCommands(raw_ostream &OS) {
       BytesWritten +=
           writeLoadCommandData<MachO::load_command>(LC, OS, Obj.IsLittleEndian);
       break;
-#include "llvm/Support/MachO.def"
+#include "llvm/BinaryFormat/MachO.def"
     }
 
     if (LC.PayloadBytes.size() > 0) {

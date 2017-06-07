@@ -13,7 +13,7 @@
 #define LLVM_OBJECTYAML_DWARFVISITOR_H
 
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Dwarf.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Support/MemoryBuffer.h"
 
 namespace llvm {

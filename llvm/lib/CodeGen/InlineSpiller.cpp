@@ -877,14 +877,16 @@ void InlineSpiller::insertSpill(unsigned NewVReg, bool isKill,
   MachineBasicBlock &MBB = *MI->getParent();
 
   MachineInstrSpan MIS(MI);
-  if (isFullUndefDef(*MI))
+  bool IsRealSpill = true;
+  if (isFullUndefDef(*MI)) {
     // Don't spill undef value.
     // Anything works for undef, in particular keeping the memory
     // uninitialized is a viable option and it saves code size and
     // run time.
     BuildMI(MBB, std::next(MI), MI->getDebugLoc(), TII.get(TargetOpcode::KILL))
         .addReg(NewVReg, getKillRegState(isKill));
-  else
+    IsRealSpill = false;
+  } else
     TII.storeRegToStackSlot(MBB, std::next(MI), NewVReg, isKill, StackSlot,
                             MRI.getRegClass(NewVReg), &TRI);
 
@@ -893,7 +895,8 @@ void InlineSpiller::insertSpill(unsigned NewVReg, bool isKill,
   DEBUG(dumpMachineInstrRangeWithSlotIndex(std::next(MI), MIS.end(), LIS,
                                            "spill"));
   ++NumSpills;
-  HSpiller.addToMergeableSpills(*std::next(MI), StackSlot, Original);
+  if (IsRealSpill)
+    HSpiller.addToMergeableSpills(*std::next(MI), StackSlot, Original);
 }
 
 /// spillAroundUses - insert spill code around each use of Reg.

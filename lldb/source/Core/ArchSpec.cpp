@@ -24,11 +24,11 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Twine.h" // for Twine
-#include "llvm/Support/COFF.h"
-#include "llvm/Support/Compiler.h" // for LLVM_FALLTHROUGH
-#include "llvm/Support/ELF.h"
+#include "llvm/BinaryFormat/COFF.h"
+#include "llvm/BinaryFormat/ELF.h"
+#include "llvm/BinaryFormat/MachO.h" // for CPUType::CPU_T...
+#include "llvm/Support/Compiler.h"   // for LLVM_FALLTHROUGH
 #include "llvm/Support/Host.h"
-#include "llvm/Support/MachO.h" // for CPUType::CPU_T...
 
 #include <memory> // for shared_ptr
 #include <string>

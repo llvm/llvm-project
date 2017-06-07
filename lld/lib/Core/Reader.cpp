@@ -11,11 +11,15 @@
 #include "lld/Core/File.h"
 #include "lld/Core/Reference.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <algorithm>
 #include <memory>
+
+using llvm::file_magic;
+using llvm::identify_magic;
 
 namespace lld {
 
@@ -33,7 +37,7 @@ ErrorOr<std::unique_ptr<File>>
 Registry::loadFile(std::unique_ptr<MemoryBuffer> mb) const {
   // Get file magic.
   StringRef content(mb->getBufferStart(), mb->getBufferSize());
-  llvm::sys::fs::file_magic fileType = llvm::sys::fs::identify_magic(content);
+  file_magic fileType = identify_magic(content);
 
   // Ask each registered reader if it can handle this file type or extension.
   for (const std::unique_ptr<Reader> &reader : _readers) {

@@ -16,9 +16,9 @@
 #ifndef LLVM_OBJECTYAML_MACHOYAML_H
 #define LLVM_OBJECTYAML_MACHOYAML_H
 
+#include "llvm/BinaryFormat/MachO.h"
 #include "llvm/ObjectYAML/DWARFYAML.h"
 #include "llvm/ObjectYAML/YAML.h"
-#include "llvm/Support/MachO.h"
 
 namespace llvm {
 namespace MachOYAML {
@@ -209,7 +209,7 @@ template <> struct MappingTraits<MachO::build_tool_version> {
 
 template <> struct ScalarEnumerationTraits<MachO::LoadCommandType> {
   static void enumeration(IO &io, MachO::LoadCommandType &value) {
-#include "llvm/Support/MachO.def"
+#include "llvm/BinaryFormat/MachO.def"
     io.enumFallback<Hex32>(value);
   }
 };
@@ -278,7 +278,7 @@ template <> struct ScalarTraits<uuid_t> {
     static void mapping(IO &IO, MachO::LCStruct &LoadCommand);                 \
   };
 
-#include "llvm/Support/MachO.def"
+#include "llvm/BinaryFormat/MachO.def"
 
 // Extra structures used by load commands
 template <> struct MappingTraits<MachO::dylib> {

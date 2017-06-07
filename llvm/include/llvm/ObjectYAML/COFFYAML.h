@@ -15,8 +15,8 @@
 #define LLVM_OBJECTYAML_COFFYAML_H
 
 #include "llvm/ADT/Optional.h"
+#include "llvm/BinaryFormat/COFF.h"
 #include "llvm/ObjectYAML/YAML.h"
-#include "llvm/Support/COFF.h"
 
 namespace llvm {
 

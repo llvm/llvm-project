@@ -12,7 +12,6 @@
 #if LIBFUZZER_WINDOWS
 #include "FuzzerIO.h"
 #include "FuzzerInternal.h"
-#include <Psapi.h>
 #include <cassert>
 #include <chrono>
 #include <cstring>
@@ -23,6 +22,9 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <windows.h>
+
+// This must be included after windows.h.
+#include <Psapi.h>
 
 namespace fuzzer {
 

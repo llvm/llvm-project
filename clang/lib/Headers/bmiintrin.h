@@ -148,7 +148,7 @@ __blsi_u32(unsigned int __X)
 }
 
 /// \brief Creates a mask whose bits are set to 1, using bit 0 up to and
-///    including the least siginificant bit that is set to 1 in the source
+///    including the least significant bit that is set to 1 in the source
 ///    operand and returns the result.
 ///
 /// \headerfile <x86intrin.h>
@@ -164,7 +164,7 @@ __blsmsk_u32(unsigned int __X)
   return __X ^ (__X - 1);
 }
 
-/// \brief Clears the least siginificant bit that is set to 1 in the source
+/// \brief Clears the least significant bit that is set to 1 in the source
 ///    operand and returns the result.
 ///
 /// \headerfile <x86intrin.h>
@@ -309,7 +309,7 @@ __blsi_u64(unsigned long long __X)
 }
 
 /// \brief Creates a mask whose bits are set to 1, using bit 0 up to and
-///    including the least siginificant bit that is set to 1 in the source
+///    including the least significant bit that is set to 1 in the source
 ///    operand and returns the result.
 ///
 /// \headerfile <x86intrin.h>
@@ -325,7 +325,7 @@ __blsmsk_u64(unsigned long long __X)
   return __X ^ (__X - 1);
 }
 
-/// \brief Clears the least siginificant bit that is set to 1 in the source
+/// \brief Clears the least significant bit that is set to 1 in the source
 ///    operand and returns the result.
 ///
 /// \headerfile <x86intrin.h>

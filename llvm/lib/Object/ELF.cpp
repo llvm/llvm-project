@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Object/ELF.h"
-#include "llvm/Support/ELF.h"
+#include "llvm/BinaryFormat/ELF.h"
 
 using namespace llvm;
 using namespace object;
@@ -24,7 +24,7 @@ StringRef llvm::object::getELFRelocationTypeName(uint32_t Machine,
   switch (Machine) {
   case ELF::EM_X86_64:
     switch (Type) {
-#include "llvm/Support/ELFRelocs/x86_64.def"
+#include "llvm/BinaryFormat/ELFRelocs/x86_64.def"
     default:
       break;
     }
@@ -32,77 +32,77 @@ StringRef llvm::object::getELFRelocationTypeName(uint32_t Machine,
   case ELF::EM_386:
   case ELF::EM_IAMCU:
     switch (Type) {
-#include "llvm/Support/ELFRelocs/i386.def"
+#include "llvm/BinaryFormat/ELFRelocs/i386.def"
     default:
       break;
     }
     break;
   case ELF::EM_MIPS:
     switch (Type) {
-#include "llvm/Support/ELFRelocs/Mips.def"
+#include "llvm/BinaryFormat/ELFRelocs/Mips.def"
     default:
       break;
     }
     break;
   case ELF::EM_AARCH64:
     switch (Type) {
-#include "llvm/Support/ELFRelocs/AArch64.def"
+#include "llvm/BinaryFormat/ELFRelocs/AArch64.def"
     default:
       break;
     }
     break;
   case ELF::EM_ARM:
     switch (Type) {
-#include "llvm/Support/ELFRelocs/ARM.def"
+#include "llvm/BinaryFormat/ELFRelocs/ARM.def"
     default:
       break;
     }
     break;
   case ELF::EM_AVR:
     switch (Type) {
-#include "llvm/Support/ELFRelocs/AVR.def"
+#include "llvm/BinaryFormat/ELFRelocs/AVR.def"
     default:
       break;
     }
     break;
   case ELF::EM_HEXAGON:
     switch (Type) {
-#include "llvm/Support/ELFRelocs/Hexagon.def"
+#include "llvm/BinaryFormat/ELFRelocs/Hexagon.def"
     default:
       break;
     }
     break;
   case ELF::EM_LANAI:
     switch (Type) {
-#include "llvm/Support/ELFRelocs/Lanai.def"
+#include "llvm/BinaryFormat/ELFRelocs/Lanai.def"
     default:
       break;
     }
     break;
   case ELF::EM_PPC:
     switch (Type) {
-#include "llvm/Support/ELFRelocs/PowerPC.def"
+#include "llvm/BinaryFormat/ELFRelocs/PowerPC.def"
     default:
       break;
     }
     break;
   case ELF::EM_PPC64:
     switch (Type) {
-#include "llvm/Support/ELFRelocs/PowerPC64.def"
+#include "llvm/BinaryFormat/ELFRelocs/PowerPC64.def"
     default:
       break;
     }
     break;
   case ELF::EM_RISCV:
     switch (Type) {
-#include "llvm/Support/ELFRelocs/RISCV.def"
+#include "llvm/BinaryFormat/ELFRelocs/RISCV.def"
     default:
       break;
     }
     break;
   case ELF::EM_S390:
     switch (Type) {
-#include "llvm/Support/ELFRelocs/SystemZ.def"
+#include "llvm/BinaryFormat/ELFRelocs/SystemZ.def"
     default:
       break;
     }
@@ -111,27 +111,27 @@ StringRef llvm::object::getELFRelocationTypeName(uint32_t Machine,
   case ELF::EM_SPARC32PLUS:
   case ELF::EM_SPARCV9:
     switch (Type) {
-#include "llvm/Support/ELFRelocs/Sparc.def"
+#include "llvm/BinaryFormat/ELFRelocs/Sparc.def"
     default:
       break;
     }
     break;
   case ELF::EM_WEBASSEMBLY:
     switch (Type) {
-#include "llvm/Support/ELFRelocs/WebAssembly.def"
+#include "llvm/BinaryFormat/ELFRelocs/WebAssembly.def"
     default:
       break;
     }
     break;
   case ELF::EM_AMDGPU:
     switch (Type) {
-#include "llvm/Support/ELFRelocs/AMDGPU.def"
+#include "llvm/BinaryFormat/ELFRelocs/AMDGPU.def"
     default:
       break;
     }
   case ELF::EM_BPF:
     switch (Type) {
-#include "llvm/Support/ELFRelocs/BPF.def"
+#include "llvm/BinaryFormat/ELFRelocs/BPF.def"
     default:
       break;
     }

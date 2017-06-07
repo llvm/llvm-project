@@ -68,6 +68,7 @@
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
+#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
 #include <map>
 #include <memory>
@@ -1116,6 +1117,10 @@ void Driver::PrintVersion(const Compilation &C, raw_ostream &OS) const {
 
   // Print out the install directory.
   OS << "InstalledDir: " << InstalledDir << '\n';
+
+  // Print registered targets.
+  OS << '\n';
+  llvm::TargetRegistry::printRegisteredTargetsForVersion(OS);
 }
 
 /// PrintDiagnosticCategories - Implement the --print-diagnostic-categories

@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Object/WindowsResource.h"
-#include "llvm/Support/COFF.h"
+#include "llvm/BinaryFormat/COFF.h"
 #include <sstream>
 #include <system_error>
 

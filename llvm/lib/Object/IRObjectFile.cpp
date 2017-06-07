@@ -14,6 +14,7 @@
 #include "llvm/Object/IRObjectFile.h"
 #include "RecordStreamer.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/IR/GVMaterializer.h"
 #include "llvm/IR/LLVMContext.h"
@@ -95,13 +96,13 @@ ErrorOr<MemoryBufferRef> IRObjectFile::findBitcodeInObject(const ObjectFile &Obj
 }
 
 ErrorOr<MemoryBufferRef> IRObjectFile::findBitcodeInMemBuffer(MemoryBufferRef Object) {
-  sys::fs::file_magic Type = sys::fs::identify_magic(Object.getBuffer());
+  file_magic Type = identify_magic(Object.getBuffer());
   switch (Type) {
-  case sys::fs::file_magic::bitcode:
+  case file_magic::bitcode:
     return Object;
-  case sys::fs::file_magic::elf_relocatable:
-  case sys::fs::file_magic::macho_object:
-  case sys::fs::file_magic::coff_object: {
+  case file_magic::elf_relocatable:
+  case file_magic::macho_object:
+  case file_magic::coff_object: {
     Expected<std::unique_ptr<ObjectFile>> ObjFile =
         ObjectFile::createObjectFile(Object, Type);
     if (!ObjFile)

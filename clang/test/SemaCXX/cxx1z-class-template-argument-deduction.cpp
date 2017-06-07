@@ -248,3 +248,27 @@ namespace variadic {
   };
   Z z(1, a, b);
 }
+
+namespace tuple_tests {
+  // The converting n-ary constructor appears viable, deducing T as an empty
+  // pack (until we check its SFINAE constraints).
+  namespace libcxx_1 {
+    template<class ...T> struct tuple {
+      template<class ...Args> struct X { static const bool value = false; };
+      template<class ...U, bool Y = X<U...>::value> tuple(U &&...u);
+    };
+    tuple a = {1, 2, 3};
+  }
+
+  // Don't get caught by surprise when X<...> doesn't even exist in the
+  // selected specialization!
+  namespace libcxx_2 {
+    template<class ...T> struct tuple { // expected-note {{candidate}}
+      template<class ...Args> struct X { static const bool value = false; };
+      template<class ...U, bool Y = X<U...>::value> tuple(U &&...u);
+      // expected-note@-1 {{substitution failure [with T = <>, U = <int, int, int>]: cannot reference member of primary template because deduced class template specialization 'tuple<>' is an explicit specialization}}
+    };
+    template <> class tuple<> {};
+    tuple a = {1, 2, 3}; // expected-error {{no viable constructor or deduction guide}}
+  }
+}

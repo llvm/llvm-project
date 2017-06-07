@@ -216,10 +216,12 @@ FixedStreamArray<SecMapEntry> DbiStream::getSectionMap() const {
 
 void DbiStream::visitSectionContributions(
     ISectionContribVisitor &Visitor) const {
-  if (SectionContribVersion == DbiSecContribVer60) {
+  if (!SectionContribs.empty()) {
+    assert(SectionContribVersion == DbiSecContribVer60);
     for (auto &SC : SectionContribs)
       Visitor.visit(SC);
-  } else if (SectionContribVersion == DbiSecContribV2) {
+  } else if (!SectionContribs2.empty()) {
+    assert(SectionContribVersion == DbiSecContribV2);
     for (auto &SC : SectionContribs2)
       Visitor.visit(SC);
   }

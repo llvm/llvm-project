@@ -16,6 +16,8 @@
 #include "MCTargetDesc/ARMFixupKinds.h"
 #include "MCTargetDesc/ARMMCTargetDesc.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/BinaryFormat/ELF.h"
+#include "llvm/BinaryFormat/MachO.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
@@ -31,10 +33,8 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/ELF.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/MachO.h"
 #include "llvm/Support/TargetParser.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
@@ -748,13 +748,18 @@ void ARMAsmBackend::processFixupValue(const MCAssembler &Asm,
     // linker can handle it. GNU AS produces an error in this case.
     if (Sym->isExternal() || Value >= 0x400004)
       IsResolved = false;
-    // When an ARM function is called from a Thumb function, produce a
-    // relocation so the linker will use the correct branch instruction for ELF
-    // binaries.
-    if (Sym->isELF()) {
-      unsigned Type = dyn_cast<MCSymbolELF>(Sym)->getType();
-      if ((Type == ELF::STT_FUNC || Type == ELF::STT_GNU_IFUNC) &&
-          !Asm.isThumbFunc(Sym))
+  }
+  // Create relocations for unconditional branches to function symbols with
+  // different execution mode in ELF binaries.
+  if (Sym && Sym->isELF()) {
+    unsigned Type = dyn_cast<MCSymbolELF>(Sym)->getType();
+    if ((Type == ELF::STT_FUNC || Type == ELF::STT_GNU_IFUNC)) {
+      unsigned FixupKind = Fixup.getKind() ;
+      if (Asm.isThumbFunc(Sym) && (FixupKind == ARM::fixup_arm_uncondbranch))
+        IsResolved = false;
+      if (!Asm.isThumbFunc(Sym) && (FixupKind == ARM::fixup_arm_thumb_br ||
+                                    FixupKind == ARM::fixup_arm_thumb_bl ||
+                                    FixupKind == ARM::fixup_t2_uncondbranch))
         IsResolved = false;
     }
   }

@@ -2099,7 +2099,7 @@ _mm_stream_pi(__m64 *__p, __m64 __a)
 ///
 /// \param __p
 ///    A pointer to a 128-bit aligned memory location that will receive the
-///    integer values.
+///    single-precision floating-point values.
 /// \param __a
 ///    A 128-bit vector of [4 x float] containing the values to be moved.
 static __inline__ void __DEFAULT_FN_ATTRS

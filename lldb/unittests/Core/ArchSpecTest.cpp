@@ -11,7 +11,7 @@
 
 #include "lldb/Core/ArchSpec.h"
 
-#include "llvm/Support/MachO.h"
+#include "llvm/BinaryFormat/MachO.h"
 
 using namespace lldb;
 using namespace lldb_private;

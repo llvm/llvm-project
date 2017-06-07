@@ -507,35 +507,35 @@ void ScalarEnumerationTraits<ELFYAML::ELF_REL>::enumeration(
 #define ELF_RELOC(X, Y) IO.enumCase(Value, #X, ELF::X);
   switch (Object->Header.Machine) {
   case ELF::EM_X86_64:
-#include "llvm/Support/ELFRelocs/x86_64.def"
+#include "llvm/BinaryFormat/ELFRelocs/x86_64.def"
     break;
   case ELF::EM_MIPS:
-#include "llvm/Support/ELFRelocs/Mips.def"
+#include "llvm/BinaryFormat/ELFRelocs/Mips.def"
     break;
   case ELF::EM_HEXAGON:
-#include "llvm/Support/ELFRelocs/Hexagon.def"
+#include "llvm/BinaryFormat/ELFRelocs/Hexagon.def"
     break;
   case ELF::EM_386:
   case ELF::EM_IAMCU:
-#include "llvm/Support/ELFRelocs/i386.def"
+#include "llvm/BinaryFormat/ELFRelocs/i386.def"
     break;
   case ELF::EM_AARCH64:
-#include "llvm/Support/ELFRelocs/AArch64.def"
+#include "llvm/BinaryFormat/ELFRelocs/AArch64.def"
     break;
   case ELF::EM_ARM:
-#include "llvm/Support/ELFRelocs/ARM.def"
+#include "llvm/BinaryFormat/ELFRelocs/ARM.def"
     break;
   case ELF::EM_RISCV:
-#include "llvm/Support/ELFRelocs/RISCV.def"
+#include "llvm/BinaryFormat/ELFRelocs/RISCV.def"
     break;
   case ELF::EM_LANAI:
-#include "llvm/Support/ELFRelocs/Lanai.def"
+#include "llvm/BinaryFormat/ELFRelocs/Lanai.def"
     break;
   case ELF::EM_AMDGPU:
-#include "llvm/Support/ELFRelocs/AMDGPU.def"
+#include "llvm/BinaryFormat/ELFRelocs/AMDGPU.def"
     break;
   case ELF::EM_BPF:
-#include "llvm/Support/ELFRelocs/BPF.def"
+#include "llvm/BinaryFormat/ELFRelocs/BPF.def"
     break;
   default:
     llvm_unreachable("Unsupported architecture");

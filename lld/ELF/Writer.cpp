@@ -101,18 +101,6 @@ StringRef elf::getOutputSectionName(StringRef Name) {
   if (Config->Relocatable)
     return Name;
 
-  // If -emit-relocs is given (which is rare), we need to copy
-  // relocation sections to the output. If input section .foo is
-  // output as .bar, we want to rename .rel.foo .rel.bar as well.
-  if (Config->EmitRelocs) {
-    for (StringRef V : {".rel.", ".rela."}) {
-      if (Name.startswith(V)) {
-        StringRef Inner = getOutputSectionName(Name.substr(V.size() - 1));
-        return Saver.save(V.drop_back() + Inner);
-      }
-    }
-  }
-
   for (StringRef V :
        {".text.", ".rodata.", ".data.rel.ro.", ".data.", ".bss.rel.ro.",
         ".bss.", ".init_array.", ".fini_array.", ".ctors.", ".dtors.", ".tbss.",
@@ -268,22 +256,24 @@ template <class ELFT> void Writer<ELFT>::run() {
       OutputSectionCommands.begin(), OutputSectionCommands.end(),
       [](OutputSectionCommand *Cmd) { Cmd->maybeCompress<ELFT>(); });
 
-  if (Config->Relocatable) {
+  Script->assignAddresses(Phdrs, OutputSectionCommands);
+
+  // Remove empty PT_LOAD to avoid causing the dynamic linker to try to mmap a
+  // 0 sized region. This has to be done late since only after assignAddresses
+  // we know the size of the sections.
+  removeEmptyPTLoad();
+
+  if (!Config->OFormatBinary)
     assignFileOffsets();
+  else
+    assignFileOffsetsBinary();
+
+  setPhdrs();
+
+  if (Config->Relocatable) {
+    for (OutputSectionCommand *Cmd : OutputSectionCommands)
+      Cmd->Sec->Addr = 0;
   } else {
-    Script->assignAddresses(Phdrs, OutputSectionCommands);
-
-    // Remove empty PT_LOAD to avoid causing the dynamic linker to try to mmap a
-    // 0 sized region. This has to be done late since only after assignAddresses
-    // we know the size of the sections.
-    removeEmptyPTLoad();
-
-    if (!Config->OFormatBinary)
-      assignFileOffsets();
-    else
-      assignFileOffsetsBinary();
-
-    setPhdrs();
     fixPredefinedSymbols();
   }
 
@@ -1113,10 +1103,8 @@ template <class ELFT> void Writer<ELFT>::sortSections() {
 static void applySynthetic(const std::vector<SyntheticSection *> &Sections,
                            std::function<void(SyntheticSection *)> Fn) {
   for (SyntheticSection *SS : Sections)
-    if (SS && SS->getParent() && !SS->empty()) {
+    if (SS && SS->getParent() && !SS->empty())
       Fn(SS);
-      SS->getParent()->assignOffsets();
-    }
 }
 
 // We need to add input synthetic sections early in createSyntheticSections()
@@ -1231,6 +1219,18 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     Out::ProgramHeaders->Size = sizeof(Elf_Phdr) * Phdrs.size();
   }
 
+  // Compute the size of .rela.dyn and .rela.plt early since we need
+  // them to populate .dynamic.
+  for (SyntheticSection *SS : {In<ELFT>::RelaDyn, In<ELFT>::RelaPlt})
+    if (SS->getParent() && !SS->empty())
+      SS->getParent()->assignOffsets();
+
+  if (!Script->Opt.HasSections)
+    Script->fabricateDefaultCommands();
+  for (BaseCommand *Base : Script->Opt.Commands)
+    if (auto *Cmd = dyn_cast<OutputSectionCommand>(Base))
+      OutputSectionCommands.push_back(Cmd);
+
   // Dynamic section must be the last one in this list and dynamic
   // symbol table section (DynSymTab) must be the first one.
   applySynthetic({InX::DynSymTab,    InX::Bss,           InX::BssRelRo,
@@ -1259,13 +1259,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
                      [](SyntheticSection *SS) { SS->updateAllocSize(); });
   }
 
-  if (!Script->Opt.HasSections)
-    Script->fabricateDefaultCommands();
-  else
-    Script->synchronize();
-  for (BaseCommand *Base : Script->Opt.Commands)
-    if (auto *Cmd = dyn_cast<OutputSectionCommand>(Base))
-      OutputSectionCommands.push_back(Cmd);
+  clearOutputSections();
 
   // Fill other section headers. The dynamic table is finalized
   // at the end because some tags like RELSZ depend on result
@@ -1276,8 +1270,6 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // createThunks may have added local symbols to the static symbol table
   applySynthetic({InX::SymTab, InX::ShStrTab, InX::StrTab},
                  [](SyntheticSection *SS) { SS->postThunkContents(); });
-
-  clearOutputSections();
 }
 
 template <class ELFT> void Writer<ELFT>::addPredefinedSections() {
