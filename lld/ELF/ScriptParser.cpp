@@ -127,16 +127,16 @@ static void moveAbsRight(ExprValue &A, ExprValue &B) {
   if (A.isAbsolute())
     std::swap(A, B);
   if (!B.isAbsolute())
-    error("At least one side of the expression must be absolute");
+    error(A.Loc + ": at least one side of the expression must be absolute");
 }
 
 static ExprValue add(ExprValue A, ExprValue B) {
   moveAbsRight(A, B);
-  return {A.Sec, A.ForceAbsolute, A.Val + B.getValue()};
+  return {A.Sec, A.ForceAbsolute, A.Val + B.getValue(), A.Loc};
 }
 
 static ExprValue sub(ExprValue A, ExprValue B) {
-  return {A.Sec, A.Val - B.getValue()};
+  return {A.Sec, A.Val - B.getValue(), A.Loc};
 }
 
 static ExprValue mul(ExprValue A, ExprValue B) {
@@ -153,13 +153,13 @@ static ExprValue div(ExprValue A, ExprValue B) {
 static ExprValue bitAnd(ExprValue A, ExprValue B) {
   moveAbsRight(A, B);
   return {A.Sec, A.ForceAbsolute,
-          (A.getValue() & B.getValue()) - A.getSecAddr()};
+          (A.getValue() & B.getValue()) - A.getSecAddr(), A.Loc};
 }
 
 static ExprValue bitOr(ExprValue A, ExprValue B) {
   moveAbsRight(A, B);
   return {A.Sec, A.ForceAbsolute,
-          (A.getValue() | B.getValue()) - A.getSecAddr()};
+          (A.getValue() | B.getValue()) - A.getSecAddr(), A.Loc};
 }
 
 void ScriptParser::readDynamicList() {
@@ -859,7 +859,9 @@ Expr ScriptParser::readPrimary() {
   if (Tok == "ADDR") {
     StringRef Name = readParenLiteral();
     OutputSectionCommand *Cmd = Script->getOrCreateOutputSectionCommand(Name);
-    return [=]() -> ExprValue { return {checkSection(Cmd, Location), 0}; };
+    return [=]() -> ExprValue {
+      return {checkSection(Cmd, Location), 0, Location};
+    };
   }
   if (Tok == "ALIGN") {
     expect("(");

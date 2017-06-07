@@ -1699,17 +1699,6 @@ readCuList(DWARFContext &Dwarf, InputSection *Sec) {
   return Ret;
 }
 
-static InputSection *findSection(ArrayRef<InputSectionBase *> Arr,
-                                 uint64_t Offset) {
-  for (InputSectionBase *S : Arr)
-    if (auto *IS = dyn_cast_or_null<InputSection>(S))
-      if (IS != &InputSection::Discarded && IS->Live &&
-          Offset >= IS->getOffsetInFile() &&
-          Offset < IS->getOffsetInFile() + IS->getSize())
-        return IS;
-  return nullptr;
-}
-
 static std::vector<AddressEntry>
 readAddressArea(DWARFContext &Dwarf, InputSection *Sec, size_t CurrentCU) {
   std::vector<AddressEntry> Ret;
@@ -1719,10 +1708,15 @@ readAddressArea(DWARFContext &Dwarf, InputSection *Sec, size_t CurrentCU) {
     CU->collectAddressRanges(Ranges);
 
     ArrayRef<InputSectionBase *> Sections = Sec->File->getSections();
-    for (DWARFAddressRange &R : Ranges)
-      if (InputSection *S = findSection(Sections, R.LowPC))
-        Ret.push_back({S, R.LowPC - S->getOffsetInFile(),
-                       R.HighPC - S->getOffsetInFile(), CurrentCU});
+    for (DWARFAddressRange &R : Ranges) {
+      InputSectionBase *S = Sections[R.SectionIndex];
+      if (!S || S == &InputSection::Discarded || !S->Live)
+        continue;
+      // Range list with zero size has no effect.
+      if (R.LowPC == R.HighPC)
+        continue;
+      Ret.push_back({cast<InputSection>(S), R.LowPC, R.HighPC, CurrentCU});
+    }
     ++CurrentCU;
   }
   return Ret;
@@ -1743,17 +1737,6 @@ readPubNamesAndTypes(DWARFContext &Dwarf, bool IsLE) {
   return Ret;
 }
 
-class ObjInfoTy : public llvm::LoadedObjectInfo {
-  uint64_t getSectionLoadAddress(const object::SectionRef &Sec) const override {
-    auto &S = static_cast<const object::ELFSectionRef &>(Sec);
-    if (S.getFlags() & ELF::SHF_ALLOC)
-      return S.getOffset();
-    return 0;
-  }
-
-  std::unique_ptr<llvm::LoadedObjectInfo> clone() const override { return {}; }
-};
-
 void GdbIndexSection::readDwarf(InputSection *Sec) {
   Expected<std::unique_ptr<object::ObjectFile>> Obj =
       object::ObjectFile::createObjectFile(Sec->File->MB);
@@ -1762,8 +1745,7 @@ void GdbIndexSection::readDwarf(InputSection *Sec) {
     return;
   }
 
-  ObjInfoTy ObjInfo;
-  DWARFContextInMemory Dwarf(*Obj.get(), &ObjInfo);
+  DWARFContextInMemory Dwarf(*Obj.get());
 
   size_t CuId = CompilationUnits.size();
   for (std::pair<uint64_t, uint64_t> &P : readCuList(Dwarf, Sec))

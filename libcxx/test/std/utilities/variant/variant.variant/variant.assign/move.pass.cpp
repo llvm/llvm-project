@@ -183,13 +183,7 @@ void test_move_assignment_sfinae() {
   }
   {
     using V = std::variant<int, CopyOnly>;
-#ifdef _LIBCPP_VERSION // LWG2904
-    // variant only provides move assignment when both the move constructor
-    // and move assignment operator are well formed.
-    static_assert(!std::is_move_assignable<V>::value, "");
-#else // _LIBCPP_VERSION // LWG2904
     static_assert(std::is_move_assignable<V>::value, "");
-#endif // _LIBCPP_VERSION // LWG2904
   }
   {
     using V = std::variant<int, NoCopy>;
@@ -232,12 +226,10 @@ void test_move_assignment_sfinae() {
     using V = std::variant<int, TrivialCopyNontrivialMove>;
     static_assert(!std::is_trivially_move_assignable<V>::value, "");
   }
-#ifndef _LIBCPP_VERSION // LWG2904
   {
     using V = std::variant<int, CopyOnly>;
     static_assert(std::is_trivially_move_assignable<V>::value, "");
   }
-#endif // _LIBCPP_VERSION // LWG2904
 }
 
 void test_move_assignment_empty_empty() {

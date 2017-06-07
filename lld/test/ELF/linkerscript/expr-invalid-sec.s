@@ -3,4 +3,4 @@
 # RUN: echo "SECTIONS { foo = ADDR(.text) + ADDR(.text); };" > %t.script
 # RUN: not ld.lld -o %t.so --script %t.script %t.o -shared 2>&1 | FileCheck %s
 
-# CHECK: At least one side of the expression must be absolute
+# CHECK: error: {{.*}}.script:1: at least one side of the expression must be absolute

@@ -199,12 +199,8 @@ void test_T_assignment_performs_construction() {
       assert(false);
     } catch (...) { /* ... */
     }
-#ifdef _LIBCPP_VERSION // LWG2904
-    assert(v.valueless_by_exception());
-#else // _LIBCPP_VERSION
     assert(v.index() == 0);
     assert(std::get<0>(v) == "hello");
-#endif // _LIBCPP_VERSION
   }
   {
     using V = std::variant<ThrowsAssignT, std::string>;
@@ -213,28 +209,6 @@ void test_T_assignment_performs_construction() {
     assert(v.index() == 0);
     assert(std::get<0>(v).value == 42);
   }
-#ifdef _LIBCPP_VERSION // LWG2904
-  {
-    // Test that nothrow direct construction is preferred to nothrow move.
-    using V = std::variant<MoveCrashes, std::string>;
-    V v(std::in_place_type<std::string>, "hello");
-    v = 42;
-    assert(v.index() == 0);
-    assert(std::get<0>(v).value == 42);
-  }
-  {
-    // Test that throwing direct construction is preferred to copy-and-move when
-    // move can throw.
-    using V = std::variant<ThrowsCtorTandMove, std::string>;
-    V v(std::in_place_type<std::string>, "hello");
-    try {
-      v = 42;
-      assert(false);
-    } catch(...) { /* ... */
-    }
-    assert(v.valueless_by_exception());
-  }
-#endif // _LIBCPP_VERSION // LWG2904
 #endif // TEST_HAS_NO_EXCEPTIONS
 }
 
