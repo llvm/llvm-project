@@ -611,6 +611,12 @@ func (t Type) StructElementTypes() []Type {
 }
 
 // Operations on array, pointer, and vector types (sequence types)
+func (t Type) Subtypes() (ret []Type) {
+	ret = make([]Type, C.LLVMGetNumContainedTypes(t.C))
+	C.LLVMGetSubtypes(t.C, llvmTypeRefPtr(&ret[0]))
+	return
+}
+
 func ArrayType(elementType Type, elementCount int) (t Type) {
 	t.C = C.LLVMArrayType(elementType.C, C.unsigned(elementCount))
 	return

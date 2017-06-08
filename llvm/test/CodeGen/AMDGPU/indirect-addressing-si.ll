@@ -379,7 +379,7 @@ entry:
   %idx0 = load volatile i32, i32 addrspace(1)* %gep
   %idx1 = add i32 %idx0, 1
   %val0 = extractelement <4 x i32> <i32 7, i32 9, i32 11, i32 13>, i32 %idx0
-  %live.out.reg = call i32 asm sideeffect "s_mov_b32 $0, 17", "={SGPR4}" ()
+  %live.out.reg = call i32 asm sideeffect "s_mov_b32 $0, 17", "={s4}" ()
   %val1 = extractelement <4 x i32> <i32 7, i32 9, i32 11, i32 13>, i32 %idx1
   store volatile i32 %val0, i32 addrspace(1)* %out0
   store volatile i32 %val1, i32 addrspace(1)* %out0

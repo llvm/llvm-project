@@ -173,13 +173,6 @@ while [ $# -gt 0 ]; do
     shift
 done
 
-if [ "$do_test_suite" = "yes" ]; then
-  # See llvm.org/PR26146.
-  echo Skipping test-suite build when using CMake.
-  echo It will still be exported.
-  do_test_suite="export-only"
-fi
-
 # Check required arguments.
 if [ -z "$Release" ]; then
     echo "error: no release number specified"
@@ -315,11 +308,7 @@ function export_sources() {
             projsrc=llvm.src/projects/$proj
             ;;
         test-suite)
-            if [ $do_test_suite = 'yes' ]; then
-              projsrc=llvm.src/projects/$proj
-            else
-              projsrc=$proj.src
-            fi
+            projsrc=$proj.src
             ;;
         *)
             echo "error: unknown project $proj"
@@ -417,6 +406,22 @@ function test_llvmCore() {
       deferred_error $Phase $Flavor "check-all failed"
     fi
 
+    if [ $do_test_suite = 'yes' ]; then
+      SandboxDir="$BuildDir/sandbox"
+      Lit=$SandboxDir/bin/lit
+      TestSuiteBuildDir="$BuildDir/test-suite-build"
+      TestSuiteSrcDir="$BuildDir/test-suite.src"
+
+      virtualenv $SandboxDir
+      $SandboxDir/bin/python $BuildDir/llvm.src/utils/lit/setup.py install
+      mkdir -p $TestSuiteBuildDir
+      cd $TestSuiteBuildDir
+      cmake $TestSuiteSrcDir -DTEST_SUITE_LIT=$Lit
+      if ! ( ${MAKE} -j $NumJobs -k check \
+          2>&1 | tee $LogDir/llvm.check-Phase$Phase-$Flavor.log ) ; then
+        deferred_error $Phase $Flavor "test suite failed"
+      fi
+    fi
     cd $BuildDir
 }
 

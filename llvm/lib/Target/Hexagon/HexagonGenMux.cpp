@@ -235,8 +235,11 @@ bool HexagonGenMux::genMuxInBlock(MachineBasicBlock &B) {
     unsigned DR = MI->getOperand(0).getReg();
     if (isRegPair(DR))
       continue;
+    MachineOperand &PredOp = MI->getOperand(1);
+    if (PredOp.isUndef())
+      continue;
 
-    unsigned PR = MI->getOperand(1).getReg();
+    unsigned PR = PredOp.getReg();
     unsigned Idx = I2X.lookup(MI);
     CondsetMap::iterator F = CM.find(DR);
     bool IfTrue = HII->isPredicatedTrue(Opc);

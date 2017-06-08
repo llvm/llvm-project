@@ -193,7 +193,7 @@ entry:
 ; CHECK: use v[0:1]
 define amdgpu_kernel void @i64_imm_input_phys_vgpr() {
 entry:
-  call void asm sideeffect "; use $0 ", "{VGPR0_VGPR1}"(i64 123456)
+  call void asm sideeffect "; use $0 ", "{v[0:1]}"(i64 123456)
   ret void
 }
 
@@ -202,7 +202,7 @@ entry:
 ; CHECK: ; use v0
 define amdgpu_kernel void @i1_imm_input_phys_vgpr() {
 entry:
-  call void asm sideeffect "; use $0 ", "{VGPR0}"(i1 true)
+  call void asm sideeffect "; use $0 ", "{v0}"(i1 true)
   ret void
 }
 
@@ -215,7 +215,7 @@ entry:
 define amdgpu_kernel void @i1_input_phys_vgpr() {
 entry:
   %val = load i1, i1 addrspace(1)* undef
-  call void asm sideeffect "; use $0 ", "{VGPR0}"(i1 %val)
+  call void asm sideeffect "; use $0 ", "{v0}"(i1 %val)
   ret void
 }
 
@@ -229,7 +229,7 @@ define amdgpu_kernel void @i1_input_phys_vgpr_x2() {
 entry:
   %val0 = load volatile i1, i1 addrspace(1)* undef
   %val1 = load volatile i1, i1 addrspace(1)* undef
-  call void asm sideeffect "; use $0 $1 ", "{VGPR0}, {VGPR1}"(i1 %val0, i1 %val1)
+  call void asm sideeffect "; use $0 $1 ", "{v0}, {v1}"(i1 %val0, i1 %val1)
   ret void
 }
 
@@ -240,8 +240,8 @@ entry:
 ; CHECK: v_lshlrev_b32_e32 v{{[0-9]+}}, v0, v1
 define amdgpu_kernel void @muliple_def_phys_vgpr() {
 entry:
-  %def0 = call i32 asm sideeffect "; def $0 ", "={VGPR0}"()
-  %def1 = call i32 asm sideeffect "; def $0 ", "={VGPR0}"()
+  %def0 = call i32 asm sideeffect "; def $0 ", "={v0}"()
+  %def1 = call i32 asm sideeffect "; def $0 ", "={v0}"()
   %add = shl i32 %def0, %def1
   store i32 %add, i32 addrspace(1)* undef
   ret void

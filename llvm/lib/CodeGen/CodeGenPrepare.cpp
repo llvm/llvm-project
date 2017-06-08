@@ -235,12 +235,12 @@ class TypePromotionTransaction;
     void eliminateMostlyEmptyBlock(BasicBlock *BB);
     bool isMergingEmptyBlockProfitable(BasicBlock *BB, BasicBlock *DestBB,
                                        bool isPreheader);
-    bool optimizeBlock(BasicBlock &BB, bool& ModifiedDT);
-    bool optimizeInst(Instruction *I, bool& ModifiedDT);
+    bool optimizeBlock(BasicBlock &BB, bool &ModifiedDT);
+    bool optimizeInst(Instruction *I, bool &ModifiedDT);
     bool optimizeMemoryInst(Instruction *I, Value *Addr,
                             Type *AccessTy, unsigned AS);
     bool optimizeInlineAsmInst(CallInst *CS);
-    bool optimizeCallInst(CallInst *CI, bool& ModifiedDT);
+    bool optimizeCallInst(CallInst *CI, bool &ModifiedDT);
     bool optimizeExt(Instruction *&I);
     bool optimizeExtUses(Instruction *I);
     bool optimizeLoadExt(LoadInst *I);
@@ -1675,6 +1675,7 @@ class MemCmpExpansion {
   void emitLoadCompareByteBlock(unsigned Index, int GEPIndex);
   void emitMemCmpResultBlock(bool IsLittleEndian);
   Value *getMemCmpExpansionZeroCase(unsigned Size, bool IsLittleEndian);
+  Value *getMemCmpEqZeroOneBlock(unsigned Size);
   unsigned getLoadSize(unsigned Size);
   unsigned getNumLoads(unsigned Size);
 
@@ -1699,31 +1700,35 @@ MemCmpExpansion::MemCmpExpansion(CallInst *CI, uint64_t Size,
                                  unsigned MaxLoadSize, unsigned LoadsPerBlock)
     : CI(CI), MaxLoadSize(MaxLoadSize), NumLoadsPerBlock(LoadsPerBlock) {
 
-  IRBuilder<> Builder(CI->getContext());
-  BasicBlock *StartBlock = CI->getParent();
-  EndBlock = StartBlock->splitBasicBlock(CI, "endblock");
-  setupEndBlockPHINodes();
+  // A memcmp with zero-comparison with only one block of load and compare does
+  // not need to set up any extra blocks. This case could be handled in the DAG,
+  // but since we have all of the machinery to flexibly expand any memcpy here,
+  // we choose to handle this case too to avoid fragmented lowering.
   IsUsedForZeroCmp = isOnlyUsedInZeroEqualityComparison(CI);
-
-  // Calculate how many load compare blocks are required for an expansion of
-  // given Size.
   NumBlocks = calculateNumBlocks(Size);
-  createResultBlock();
+  if (!IsUsedForZeroCmp || NumBlocks != 1) {
+    BasicBlock *StartBlock = CI->getParent();
+    EndBlock = StartBlock->splitBasicBlock(CI, "endblock");
+    setupEndBlockPHINodes();
+    createResultBlock();
 
-  // If return value of memcmp is not used in a zero equality, we need to
-  // calculate which source was larger. The calculation requires the
-  // two loaded source values of each load compare block.
-  // These will be saved in the phi nodes created by setupResultBlockPHINodes.
-  if (!IsUsedForZeroCmp)
-    setupResultBlockPHINodes();
+    // If return value of memcmp is not used in a zero equality, we need to
+    // calculate which source was larger. The calculation requires the
+    // two loaded source values of each load compare block.
+    // These will be saved in the phi nodes created by setupResultBlockPHINodes.
+    if (!IsUsedForZeroCmp)
+      setupResultBlockPHINodes();
 
-  // Create the number of required load compare basic blocks.
-  createLoadCmpBlocks();
+    // Create the number of required load compare basic blocks.
+    createLoadCmpBlocks();
 
-  // Update the terminator added by splitBasicBlock to branch to the first
-  // LoadCmpBlock.
+    // Update the terminator added by splitBasicBlock to branch to the first
+    // LoadCmpBlock.
+    StartBlock->getTerminator()->setSuccessor(0, LoadCmpBlocks[0]);
+  }
+
+  IRBuilder<> Builder(CI->getContext());
   Builder.SetCurrentDebugLocation(CI->getDebugLoc());
-  StartBlock->getTerminator()->setSuccessor(0, LoadCmpBlocks[0]);
 }
 
 void MemCmpExpansion::createLoadCmpBlocks() {
@@ -1810,7 +1815,12 @@ Value *MemCmpExpansion::getCompareLoadPairs(unsigned Index, unsigned Size,
   unsigned NumLoadsRemaining = getNumLoads(RemainingBytes);
   unsigned NumLoads = std::min(NumLoadsRemaining, NumLoadsPerBlock);
 
-  Builder.SetInsertPoint(LoadCmpBlocks[Index]);
+  // For a single-block expansion, start inserting before the memcmp call.
+  if (LoadCmpBlocks.empty())
+    Builder.SetInsertPoint(CI);
+  else
+    Builder.SetInsertPoint(LoadCmpBlocks[Index]);
+
   Value *Cmp = nullptr;
   for (unsigned i = 0; i < NumLoads; ++i) {
     unsigned LoadSize = getLoadSize(RemainingBytes);
@@ -2071,11 +2081,22 @@ Value *MemCmpExpansion::getMemCmpExpansionZeroCase(unsigned Size,
   return PhiRes;
 }
 
+/// A memcmp expansion that compares equality with 0 and only has one block of
+/// load and compare can bypass the compare, branch, and phi IR that is required
+/// in the general case.
+Value *MemCmpExpansion::getMemCmpEqZeroOneBlock(unsigned Size) {
+  unsigned NumBytesProcessed = 0;
+  IRBuilder<> Builder(CI->getContext());
+  Value *Cmp = getCompareLoadPairs(0, Size, NumBytesProcessed, Builder);
+  return Builder.CreateZExt(Cmp, Type::getInt32Ty(CI->getContext()));
+}
+
 // This function expands the memcmp call into an inline expansion and returns
 // the memcmp result.
 Value *MemCmpExpansion::getMemCmpExpansion(uint64_t Size, bool IsLittleEndian) {
   if (IsUsedForZeroCmp)
-    return getMemCmpExpansionZeroCase(Size, IsLittleEndian);
+    return NumBlocks == 1 ? getMemCmpEqZeroOneBlock(Size) :
+                            getMemCmpExpansionZeroCase(Size, IsLittleEndian);
 
   // This loop calls emitLoadCompareBlock for comparing Size bytes of the two
   // memcmp sources. It starts with loading using the maximum load size set by
@@ -2232,7 +2253,7 @@ static bool expandMemCmp(CallInst *CI, const TargetTransformInfo *TTI,
   return true;
 }
 
-bool CodeGenPrepare::optimizeCallInst(CallInst *CI, bool& ModifiedDT) {
+bool CodeGenPrepare::optimizeCallInst(CallInst *CI, bool &ModifiedDT) {
   BasicBlock *BB = CI->getParent();
 
   // Lower inline assembly if we can.
@@ -2385,12 +2406,10 @@ bool CodeGenPrepare::optimizeCallInst(CallInst *CI, bool& ModifiedDT) {
   }
 
   LibFunc Func;
-  if (TLInfo->getLibFunc(*CI->getCalledFunction(), Func) &&
-      Func == LibFunc_memcmp) {
-    if (expandMemCmp(CI, TTI, TLI, DL)) {
-      ModifiedDT = true;
-      return true;
-    }
+  if (TLInfo->getLibFunc(ImmutableCallSite(CI), Func) &&
+      Func == LibFunc_memcmp && expandMemCmp(CI, TTI, TLI, DL)) {
+    ModifiedDT = true;
+    return true;
   }
   return false;
 }
@@ -6018,7 +6037,7 @@ static bool splitMergedValStore(StoreInst &SI, const DataLayout &DL,
   return true;
 }
 
-bool CodeGenPrepare::optimizeInst(Instruction *I, bool& ModifiedDT) {
+bool CodeGenPrepare::optimizeInst(Instruction *I, bool &ModifiedDT) {
   // Bail out if we inserted the instruction to prevent optimizations from
   // stepping on each other's toes.
   if (InsertedInsts.count(I))
@@ -6173,7 +6192,7 @@ static bool makeBitReverse(Instruction &I, const DataLayout &DL,
 // In this pass we look for GEP and cast instructions that are used
 // across basic blocks and rewrite them to improve basic-block-at-a-time
 // selection.
-bool CodeGenPrepare::optimizeBlock(BasicBlock &BB, bool& ModifiedDT) {
+bool CodeGenPrepare::optimizeBlock(BasicBlock &BB, bool &ModifiedDT) {
   SunkAddrs.clear();
   bool MadeChange = false;
 

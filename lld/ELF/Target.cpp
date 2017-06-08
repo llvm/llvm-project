@@ -2085,7 +2085,7 @@ RelExpr MipsTargetInfo<ELFT>::getRelExpr(uint32_t Type, const SymbolBody &S,
       return R_MIPS_GOT_GP_PC;
     if (&S == ElfSym::MipsLocalGp)
       return R_MIPS_GOT_GP;
-    // fallthrough
+    LLVM_FALLTHROUGH;
   case R_MIPS_GOT_OFST:
     return R_ABS;
   case R_MIPS_PC32:
@@ -2099,7 +2099,7 @@ RelExpr MipsTargetInfo<ELFT>::getRelExpr(uint32_t Type, const SymbolBody &S,
   case R_MIPS_GOT16:
     if (S.isLocal())
       return R_MIPS_GOT_LOCAL_PAGE;
-  // fallthrough
+    LLVM_FALLTHROUGH;
   case R_MIPS_CALL16:
   case R_MIPS_GOT_DISP:
   case R_MIPS_TLS_GOTTPREL:
@@ -2353,7 +2353,7 @@ void MipsTargetInfo<ELFT>::relocateOne(uint8_t *Loc, uint32_t Type,
   case R_MIPS_TLS_GD:
   case R_MIPS_TLS_LDM:
     checkInt<16>(Loc, Val, Type);
-  // fallthrough
+    LLVM_FALLTHROUGH;
   case R_MIPS_CALL16:
   case R_MIPS_CALL_LO16:
   case R_MIPS_GOT_LO16:

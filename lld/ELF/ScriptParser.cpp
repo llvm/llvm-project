@@ -76,6 +76,7 @@ private:
   BytesDataCommand *readBytesDataCommand(StringRef Tok);
   uint32_t readFill();
   uint32_t parseFill(StringRef Tok);
+  void readSectionAddressType(OutputSectionCommand *Cmd);
   OutputSectionCommand *readOutputSectionDescription(StringRef OutSec);
   std::vector<StringRef> readOutputSectionPhdrs();
   InputSectionDescription *readInputSectionDescription(StringRef Tok);
@@ -563,26 +564,42 @@ uint32_t ScriptParser::readFill() {
   return V;
 }
 
+// Reads an expression and/or the special directive "(NOLOAD)" for an
+// output section definition.
+//
+// An output section name can be followed by an address expression
+// and/or by "(NOLOAD)". This grammar is not LL(1) because "(" can be
+// interpreted as either the beginning of some expression or "(NOLOAD)".
+//
+// https://sourceware.org/binutils/docs/ld/Output-Section-Address.html
+// https://sourceware.org/binutils/docs/ld/Output-Section-Type.html
+void ScriptParser::readSectionAddressType(OutputSectionCommand *Cmd) {
+  if (consume("(")) {
+    if (consume("NOLOAD")) {
+      expect(")");
+      Cmd->Noload = true;
+      return;
+    }
+    Cmd->AddrExpr = readExpr();
+    expect(")");
+  } else {
+    Cmd->AddrExpr = readExpr();
+  }
+
+  if (consume("(")) {
+    expect("NOLOAD");
+    expect(")");
+    Cmd->Noload = true;
+  }
+}
+
 OutputSectionCommand *
 ScriptParser::readOutputSectionDescription(StringRef OutSec) {
   OutputSectionCommand *Cmd =
       Script->createOutputSectionCommand(OutSec, getCurrentLocation());
 
-  if (peek() != ":") {
-    // Read an address expression.
-    // https://sourceware.org/binutils/docs/ld/Output-Section-Address.html
-    if (peek() != "(")
-      Cmd->AddrExpr = readExpr();
-
-    // Read a section type. Currently, only NOLOAD is supported.
-    // https://sourceware.org/binutils/docs/ld/Output-Section-Type.html
-    if (consume("(")) {
-      expect("NOLOAD");
-      expect(")");
-      Cmd->Noload = true;
-    }
-  }
-
+  if (peek() != ":")
+    readSectionAddressType(Cmd);
   expect(":");
 
   if (consume("AT"))

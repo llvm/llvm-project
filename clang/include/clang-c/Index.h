@@ -32,7 +32,7 @@
  * compatible, thus CINDEX_VERSION_MAJOR is expected to remain stable.
  */
 #define CINDEX_VERSION_MAJOR 0
-#define CINDEX_VERSION_MINOR 41
+#define CINDEX_VERSION_MINOR 42
 
 #define CINDEX_VERSION_ENCODE(major, minor) ( \
       ((major) * 10000)                       \
@@ -3415,6 +3415,16 @@ CINDEX_LINKAGE unsigned clang_isVolatileQualifiedType(CXType T);
  * different level.
  */
 CINDEX_LINKAGE unsigned clang_isRestrictQualifiedType(CXType T);
+
+/**
+ * \brief Returns the address space of the given type.
+ */
+CINDEX_LINKAGE unsigned clang_getAddressSpace(CXType T);
+
+/**
+ * \brief Returns the typedef name of the given type.
+ */
+CINDEX_LINKAGE CXString clang_getTypedefName(CXType CT);
 
 /**
  * \brief For pointer types, returns the type of the pointee.

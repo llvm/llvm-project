@@ -51,7 +51,7 @@ IslExprBuilder::IslExprBuilder(Scop &S, PollyIRBuilder &Builder,
 
 void IslExprBuilder::setTrackOverflow(bool Enable) {
   // If potential overflows are tracked always or never we ignore requests
-  // to change the behaviour.
+  // to change the behavior.
   if (OTMode != OT_REQUEST)
     return;
 
@@ -399,7 +399,7 @@ Value *IslExprBuilder::createOpBin(__isl_take isl_ast_expr *Expr) {
       }
     }
     // TODO: Review code and check that this calculation does not yield
-    //       incorrect overflow in some bordercases.
+    //       incorrect overflow in some edge cases.
     //
     // floord(n,d) ((n < 0) ? (n - d + 1) : n) / d
     Value *One = ConstantInt::get(MaxType, 1);
@@ -536,7 +536,7 @@ Value *IslExprBuilder::createOpBoolean(__isl_take isl_ast_expr *Expr) {
   // 'exp & exp' or 'exp | exp'. This forces the evaluation of both branches,
   // but it is, due to the use of i1 types, otherwise equivalent. The reason
   // to go for bitwise operations is, that we assume the reduced control flow
-  // will outweight the overhead introduced by evaluating unneeded expressions.
+  // will outweigh the overhead introduced by evaluating unneeded expressions.
   // The isl code generation currently does not take advantage of the fact that
   // the expression after an '||' or '&&' is in some cases not evaluated.
   // Evaluating it anyways does not cause any undefined behaviour.

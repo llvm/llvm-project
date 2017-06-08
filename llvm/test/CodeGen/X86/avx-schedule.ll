@@ -910,14 +910,14 @@ define <4 x double> @test_haddpd(<4 x double> %a0, <4 x double> %a1, <4 x double
 ;
 ; BTVER2-LABEL: test_haddpd:
 ; BTVER2:       # BB#0:
-; BTVER2-NEXT:    vhaddpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
-; BTVER2-NEXT:    vhaddpd (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
+; BTVER2-NEXT:    vhaddpd %ymm1, %ymm0, %ymm0 # sched: [3:2.00]
+; BTVER2-NEXT:    vhaddpd (%rdi), %ymm0, %ymm0 # sched: [8:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_haddpd:
 ; ZNVER1:       # BB#0:
-; ZNVER1-NEXT:    vhaddpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
-; ZNVER1-NEXT:    vhaddpd (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
+; ZNVER1-NEXT:    vhaddpd %ymm1, %ymm0, %ymm0 # sched: [3:2.00]
+; ZNVER1-NEXT:    vhaddpd (%rdi), %ymm0, %ymm0 # sched: [8:2.00]
 ; ZNVER1-NEXT:    retq # sched: [4:1.00]
   %1 = call <4 x double> @llvm.x86.avx.hadd.pd.256(<4 x double> %a0, <4 x double> %a1)
   %2 = load <4 x double>, <4 x double> *%a2, align 32
@@ -941,14 +941,14 @@ define <8 x float> @test_haddps(<8 x float> %a0, <8 x float> %a1, <8 x float> *%
 ;
 ; BTVER2-LABEL: test_haddps:
 ; BTVER2:       # BB#0:
-; BTVER2-NEXT:    vhaddps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
-; BTVER2-NEXT:    vhaddps (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
+; BTVER2-NEXT:    vhaddps %ymm1, %ymm0, %ymm0 # sched: [3:2.00]
+; BTVER2-NEXT:    vhaddps (%rdi), %ymm0, %ymm0 # sched: [8:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_haddps:
 ; ZNVER1:       # BB#0:
-; ZNVER1-NEXT:    vhaddps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
-; ZNVER1-NEXT:    vhaddps (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
+; ZNVER1-NEXT:    vhaddps %ymm1, %ymm0, %ymm0 # sched: [3:2.00]
+; ZNVER1-NEXT:    vhaddps (%rdi), %ymm0, %ymm0 # sched: [8:2.00]
 ; ZNVER1-NEXT:    retq # sched: [4:1.00]
   %1 = call <8 x float> @llvm.x86.avx.hadd.ps.256(<8 x float> %a0, <8 x float> %a1)
   %2 = load <8 x float>, <8 x float> *%a2, align 32
@@ -972,14 +972,14 @@ define <4 x double> @test_hsubpd(<4 x double> %a0, <4 x double> %a1, <4 x double
 ;
 ; BTVER2-LABEL: test_hsubpd:
 ; BTVER2:       # BB#0:
-; BTVER2-NEXT:    vhsubpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
-; BTVER2-NEXT:    vhsubpd (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
+; BTVER2-NEXT:    vhsubpd %ymm1, %ymm0, %ymm0 # sched: [3:2.00]
+; BTVER2-NEXT:    vhsubpd (%rdi), %ymm0, %ymm0 # sched: [8:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_hsubpd:
 ; ZNVER1:       # BB#0:
-; ZNVER1-NEXT:    vhsubpd %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
-; ZNVER1-NEXT:    vhsubpd (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
+; ZNVER1-NEXT:    vhsubpd %ymm1, %ymm0, %ymm0 # sched: [3:2.00]
+; ZNVER1-NEXT:    vhsubpd (%rdi), %ymm0, %ymm0 # sched: [8:2.00]
 ; ZNVER1-NEXT:    retq # sched: [4:1.00]
   %1 = call <4 x double> @llvm.x86.avx.hsub.pd.256(<4 x double> %a0, <4 x double> %a1)
   %2 = load <4 x double>, <4 x double> *%a2, align 32
@@ -1003,14 +1003,14 @@ define <8 x float> @test_hsubps(<8 x float> %a0, <8 x float> %a1, <8 x float> *%
 ;
 ; BTVER2-LABEL: test_hsubps:
 ; BTVER2:       # BB#0:
-; BTVER2-NEXT:    vhsubps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
-; BTVER2-NEXT:    vhsubps (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
+; BTVER2-NEXT:    vhsubps %ymm1, %ymm0, %ymm0 # sched: [3:2.00]
+; BTVER2-NEXT:    vhsubps (%rdi), %ymm0, %ymm0 # sched: [8:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; ZNVER1-LABEL: test_hsubps:
 ; ZNVER1:       # BB#0:
-; ZNVER1-NEXT:    vhsubps %ymm1, %ymm0, %ymm0 # sched: [3:1.00]
-; ZNVER1-NEXT:    vhsubps (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
+; ZNVER1-NEXT:    vhsubps %ymm1, %ymm0, %ymm0 # sched: [3:2.00]
+; ZNVER1-NEXT:    vhsubps (%rdi), %ymm0, %ymm0 # sched: [8:2.00]
 ; ZNVER1-NEXT:    retq # sched: [4:1.00]
   %1 = call <8 x float> @llvm.x86.avx.hsub.ps.256(<8 x float> %a0, <8 x float> %a1)
   %2 = load <8 x float>, <8 x float> *%a2, align 32

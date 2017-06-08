@@ -28,11 +28,6 @@
     #error This header may not be used when targeting libc++
 #endif
 
-// Indicates that we are using the MSVC standard library.
-#ifndef _MSVC_STL_VER
-    #define _MSVC_STL_VER 42
-#endif
-
 #ifndef _LIBCXX_IN_DEVCRT
 struct AssertionDialogAvoider {
     AssertionDialogAvoider() {

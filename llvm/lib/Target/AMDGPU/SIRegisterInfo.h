@@ -118,6 +118,8 @@ public:
   bool eliminateSGPRToVGPRSpillFrameIndex(MachineBasicBlock::iterator MI,
                                           int FI, RegScavenger *RS) const;
 
+  StringRef getRegAsmName(unsigned Reg) const override;
+
   unsigned getHWRegIndex(unsigned Reg) const {
     return getEncodingValue(Reg) & 0xff;
   }

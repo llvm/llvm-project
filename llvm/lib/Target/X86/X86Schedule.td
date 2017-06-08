@@ -77,6 +77,10 @@ defm WriteFVarBlend  : X86SchedWritePair; // Fp vector variable blends.
 // FMA Scheduling helper class.
 class FMASC { X86FoldableSchedWrite Sched = WriteFAdd; }
 
+// Horizontal Add/Sub (float and integer)
+defm WriteFHAdd  : X86SchedWritePair;
+defm WritePHAdd : X86SchedWritePair;
+
 // Vector integer operations.
 defm WriteVecALU   : X86SchedWritePair; // Vector integer ALU op, no logicals.
 defm WriteVecShift : X86SchedWritePair; // Vector integer shifts.

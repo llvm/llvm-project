@@ -24,6 +24,7 @@ namespace llvm {
 class AnalysisUsage;
 class Function;
 class LoopInfo;
+class TargetLibraryInfo;
 
 /// \brief This is an alternative analysis pass to
 /// BranchProbabilityInfoWrapperPass.  The difference is that with this pass the
@@ -55,14 +56,15 @@ class LazyBranchProbabilityInfoPass : public FunctionPass {
   /// analysis without paying for the overhead if BPI doesn't end up being used.
   class LazyBranchProbabilityInfo {
   public:
-    LazyBranchProbabilityInfo(const Function *F, const LoopInfo *LI)
-        : Calculated(false), F(F), LI(LI) {}
+    LazyBranchProbabilityInfo(const Function *F, const LoopInfo *LI,
+                              const TargetLibraryInfo *TLI)
+        : Calculated(false), F(F), LI(LI), TLI(TLI) {}
 
     /// Retrieve the BPI with the branch probabilities computed.
     BranchProbabilityInfo &getCalculated() {
       if (!Calculated) {
         assert(F && LI && "call setAnalysis");
-        BPI.calculate(*F, *LI);
+        BPI.calculate(*F, *LI, TLI);
         Calculated = true;
       }
       return BPI;
@@ -77,6 +79,7 @@ class LazyBranchProbabilityInfoPass : public FunctionPass {
     bool Calculated;
     const Function *F;
     const LoopInfo *LI;
+    const TargetLibraryInfo *TLI;
   };
 
   std::unique_ptr<LazyBranchProbabilityInfo> LBPI;

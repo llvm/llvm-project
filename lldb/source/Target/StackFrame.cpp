@@ -191,9 +191,10 @@ const Address &StackFrame::GetFrameCodeAddress() {
     if (thread_sp) {
       TargetSP target_sp(thread_sp->CalculateTarget());
       if (target_sp) {
+        const bool allow_section_end = true;
         if (m_frame_code_addr.SetOpcodeLoadAddress(
                 m_frame_code_addr.GetOffset(), target_sp.get(),
-                eAddressClassCode)) {
+                eAddressClassCode, allow_section_end)) {
           ModuleSP module_sp(m_frame_code_addr.GetModule());
           if (module_sp) {
             m_sc.module_sp = module_sp;

@@ -738,7 +738,15 @@ void RegAllocPBQP::finalizeAlloc(MachineFunction &MF,
 
     if (PReg == 0) {
       const TargetRegisterClass &RC = *MRI.getRegClass(LI.reg);
-      PReg = RC.getRawAllocationOrder(MF).front();
+      const ArrayRef<MCPhysReg> RawPRegOrder = RC.getRawAllocationOrder(MF);
+      for (unsigned CandidateReg : RawPRegOrder) {
+        if (!VRM.getRegInfo().isReserved(CandidateReg)) {
+          PReg = CandidateReg;
+          break;
+        }
+      }
+      assert(PReg &&
+             "No un-reserved physical registers in this register class");
     }
 
     VRM.assignVirt2Phys(LI.reg, PReg);

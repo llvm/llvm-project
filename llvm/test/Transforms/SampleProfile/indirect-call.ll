@@ -69,7 +69,18 @@ define void @test_noinline(void ()*) !dbg !12 {
   ret void
 }
 
+; CHECK-LABEL: @test_norecursive_inline
+; If the indirect call target is the caller, we should not promote it.
+define void @test_norecursive_inline() !dbg !24 {
+; CHECK-NOT: icmp
+; CHECK: call
+  %1 = load void ()*, void ()** @y, align 8
+  call void %1(), !dbg !25
+  ret void
+}
+
 @x = global i32 0, align 4
+@y = global void ()* null, align 8
 
 define i32* @foo_inline1(i32* %x) !dbg !14 {
   ret i32* %x
@@ -142,3 +153,5 @@ define void @test_direct() !dbg !22 {
 !21 = distinct !DISubprogram(name: "foo_direct", scope: !1, file: !1, line: 21, unit: !0)
 !22 = distinct !DISubprogram(name: "test_direct", scope: !1, file: !1, line: 22, unit: !0)
 !23 = !DILocation(line: 23, scope: !22)
+!24 = distinct !DISubprogram(name: "test_norecursive_inline", scope: !1, file: !1, line: 12, unit: !0)
+!25 = !DILocation(line: 13, scope: !24)

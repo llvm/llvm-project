@@ -422,6 +422,10 @@ public:
   ///     a section + offset. The Target's SectionLoadList object
   ///     is used to resolve the address.
   ///
+  /// @param[in] allow_section_end
+  ///     If true, treat an address pointing to the end of the module as
+  ///     belonging to that module.
+  ///
   /// @return
   ///     Returns \b true if the load address was resolved to be
   ///     section/offset, \b false otherwise. It is often ok for an
@@ -429,11 +433,13 @@ public:
   ///     happens for JIT'ed code, or any load addresses on the stack
   ///     or heap.
   //------------------------------------------------------------------
-  bool SetLoadAddress(lldb::addr_t load_addr, Target *target);
+  bool SetLoadAddress(lldb::addr_t load_addr, Target *target,
+                      bool allow_section_end = false);
 
   bool SetOpcodeLoadAddress(
       lldb::addr_t load_addr, Target *target,
-      lldb::AddressClass addr_class = lldb::eAddressClassInvalid);
+      lldb::AddressClass addr_class = lldb::eAddressClassInvalid,
+      bool allow_section_end = false);
 
   bool SetCallableLoadAddress(lldb::addr_t load_addr, Target *target);
 
