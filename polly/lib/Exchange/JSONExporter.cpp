@@ -109,7 +109,7 @@ struct JSONImporter : public ScopPass {
   ///
   /// @param S The scop to update.
   /// @param JScop The JScop file describing the new schedule.
-  /// @param DL The datalayout to assume.
+  /// @param DL The data layout to assume.
   ///
   /// @returns True if the import succeeded, otherwise False.
   bool importAccesses(Scop &S, Json::Value &JScop, const DataLayout &DL);

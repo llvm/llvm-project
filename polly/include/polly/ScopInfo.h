@@ -143,7 +143,7 @@ enum class MemoryKind {
   /// |  use float %V |               |  use float %V |
   /// -----------------               -----------------
   ///
-  /// is modeled as if the following memory accesses occured:
+  /// is modeled as if the following memory accesses occurred:
   ///
   ///                        __________________________
   ///                        |entry:                  |
@@ -175,7 +175,7 @@ enum class MemoryKind {
   ///
   /// %PHI = phi float [ %Val1, %IncomingBlock1 ], [ %Val2, %IncomingBlock2 ]
   ///
-  /// is modeled as if the accesses occured this way:
+  /// is modeled as if the accesses occurred this way:
   ///
   ///                    _______________________________
   ///                    |entry:                       |
@@ -651,7 +651,7 @@ private:
   /// Get the new access function imported or set by a pass
   __isl_give isl_map *getNewAccessRelation() const;
 
-  /// Fold the memory access to consider parameteric offsets
+  /// Fold the memory access to consider parametric offsets
   ///
   /// To recover memory accesses with array size parameters in the subscript
   /// expression we post-process the delinearization results.
@@ -659,7 +659,7 @@ private:
   /// We would normally recover from an access A[exp0(i) * N + exp1(i)] into an
   /// array A[][N] the 2D access A[exp0(i)][exp1(i)]. However, another valid
   /// delinearization is A[exp0(i) - 1][exp1(i) + N] which - depending on the
-  /// range of exp1(i) - may be preferrable. Specifically, for cases where we
+  /// range of exp1(i) - may be preferable. Specifically, for cases where we
   /// know exp1(i) is negative, we want to choose the latter expression.
   ///
   /// As we commonly do not have any information about the range of exp1(i),
@@ -717,7 +717,7 @@ public:
   /// @param AccType    Whether read or write access.
   /// @param IsAffine   Whether the subscripts are affine expressions.
   /// @param Kind       The kind of memory accessed.
-  /// @param Subscripts Subscipt expressions
+  /// @param Subscripts Subscript expressions
   /// @param Sizes      Dimension lengths of the accessed array.
   MemoryAccess(ScopStmt *Stmt, Instruction *AccessInst, AccessType AccType,
                Value *BaseAddress, Type *ElemType, bool Affine,
@@ -741,7 +741,7 @@ public:
   /// Add a new incoming block/value pairs for this PHI/ExitPHI access.
   ///
   /// @param IncomingBlock The PHI's incoming block.
-  /// @param IncomingValue The value when reacing the PHI from the @p
+  /// @param IncomingValue The value when reaching the PHI from the @p
   ///                      IncomingBlock.
   void addIncoming(BasicBlock *IncomingBlock, Value *IncomingValue) {
     assert(!isRead());
@@ -1014,7 +1014,7 @@ public:
     return isOriginalPHIKind() || isOriginalExitPHIKind();
   }
 
-  /// Does this access orginate from one of the two PHI types? Can be
+  /// Does this access originate from one of the two PHI types? Can be
   /// changed to an array access using setNewAccessRelation().
   bool isLatestAnyPHIKind() const {
     return isLatestPHIKind() || isLatestExitPHIKind();
@@ -1154,7 +1154,7 @@ public:
   /// @param Stmt       The parent statement.
   /// @param SourceRel  The source location.
   /// @param TargetRel  The target location.
-  /// @param Domain     The original domain under which copy statement whould
+  /// @param Domain     The original domain under which the copy statement would
   ///                   be executed.
   ScopStmt(Scop &parent, __isl_take isl_map *SourceRel,
            __isl_take isl_map *TargetRel, __isl_take isl_set *Domain);
@@ -1166,7 +1166,7 @@ private:
   /// Polyhedral description
   //@{
 
-  /// The Scop containing this ScopStmt
+  /// The Scop containing this ScopStmt.
   Scop &Parent;
 
   /// The domain under which this statement is not modeled precisely.
@@ -1930,7 +1930,7 @@ private:
   /// Invariant load hoisting is not guaranteed to hoist all loads that were
   /// assumed to be scop invariant during scop detection. This function checks
   /// for cases where the hoisting failed, but where it would have been
-  /// necessary for our scop modeling to be correct. In case of insufficent
+  /// necessary for our scop modeling to be correct. In case of insufficient
   /// hoisting the scop is marked as invalid.
   ///
   /// In the example below Bound[1] is required to be invariant:
@@ -2060,7 +2060,7 @@ private:
   /// functions and move it to the size of the memory access. We do this as this
   /// increases the size of the innermost dimension, consequently widens the
   /// valid range the array subscript in this dimension can evaluate to, and
-  /// as a result increases the likelyhood that our delinearization is
+  /// as a result increases the likelihood that our delinearization is
   /// correct.
   ///
   /// Example:
@@ -2076,13 +2076,13 @@ private:
   ///    S[i,j] -> A[i][2j]
   ///
   /// Constants in outer dimensions can arise when the elements of a parametric
-  /// multi-dimensional array are not elementar data types, but e.g.,
+  /// multi-dimensional array are not elementary data types, but e.g.,
   /// structures.
   void foldSizeConstantsToRight();
 
   /// Fold memory accesses to handle parametric offset.
   ///
-  /// As a post-processing step, we 'fold' memory accesses to parameteric
+  /// As a post-processing step, we 'fold' memory accesses to parametric
   /// offsets in the access functions. @see MemoryAccess::foldAccess for
   /// details.
   void foldAccessRelations();
@@ -2203,7 +2203,7 @@ public:
   /// @param Stmt       The parent statement.
   /// @param SourceRel  The source location.
   /// @param TargetRel  The target location.
-  /// @param Domain     The original domain under which copy statement whould
+  /// @param Domain     The original domain under which the copy statement would
   ///                   be executed.
   ScopStmt *addScopStmt(__isl_take isl_map *SourceRel,
                         __isl_take isl_map *TargetRel,
@@ -2813,7 +2813,7 @@ public:
 
 private:
   /// A map of Region to its Scop object containing
-  ///        Polly IR of static control part
+  ///        Polly IR of static control part.
   RegionToScopMapTy RegionToScopMap;
 
 public:
@@ -2821,7 +2821,7 @@ public:
            LoopInfo &LI, AliasAnalysis &AA, DominatorTree &DT,
            AssumptionCache &AC);
 
-  /// Get the Scop object for the given Region
+  /// Get the Scop object for the given Region.
   ///
   /// @return If the given region is the maximal region within a scop, return
   ///         the scop object. If the given region is a subregion, return a

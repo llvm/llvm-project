@@ -157,6 +157,31 @@ def : WriteRes<WriteMPSADLd, [SBPort0, SBPort1, SBPort5, SBPort23]> {
   let ResourceCycles = [1, 1, 1, 1];
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// Horizontal add/sub  instructions.
+////////////////////////////////////////////////////////////////////////////////
+// HADD, HSUB PS/PD
+// x,x / v,v,v.
+def : WriteRes<WriteFHAdd, [SBPort1]> {
+  let Latency = 3;
+}
+
+// x,m / v,v,m.
+def : WriteRes<WriteFHAddLd, [SBPort1, SBPort23]> {
+  let Latency = 7;
+  let ResourceCycles = [1, 1];
+}
+
+// PHADD|PHSUB (S) W/D.
+// v <- v,v.
+def : WriteRes<WritePHAdd, [SBPort15]>;
+
+// v <- v,m.
+def : WriteRes<WritePHAddLd, [SBPort15, SBPort23]> {
+  let Latency = 5;
+  let ResourceCycles = [1, 1];
+}
+
 // String instructions.
 // Packed Compare Implicit Length Strings, Return Mask
 def : WriteRes<WritePCmpIStrM, [SBPort015]> {

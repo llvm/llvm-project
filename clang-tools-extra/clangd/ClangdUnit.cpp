@@ -138,9 +138,21 @@ public:
           CodeCompleteOpts.IncludeBriefComments);
       if (CCS) {
         CompletionItem Item;
+        for (CodeCompletionString::Chunk C : *CCS) {
+          switch (C.Kind) {
+          case CodeCompletionString::CK_ResultType:
+            Item.detail = C.Text;
+            break;
+          case CodeCompletionString::CK_Optional:
+            break;
+          default:
+            Item.label += C.Text;
+            break;
+          }
+        }
         assert(CCS->getTypedText());
-        Item.label = CCS->getTypedText();
         Item.kind = getKind(Result.CursorKind);
+        Item.insertText = Item.sortText = Item.filterText = CCS->getTypedText();
         if (CCS->getBriefComment())
           Item.documentation = CCS->getBriefComment();
         Items->push_back(std::move(Item));

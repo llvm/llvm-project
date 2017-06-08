@@ -462,13 +462,13 @@ Value *BlockGenerator::getOrCreateAlloca(const ScopArrayInfo *Array) {
 
   if (Addr) {
     // Allow allocas to be (temporarily) redirected once by adding a new
-    // old-alloca-addr to new-addr mapping to GlobalMap. This funcitionality
+    // old-alloca-addr to new-addr mapping to GlobalMap. This functionality
     // is used for example by the OpenMP code generation where a first use
     // of a scalar while still in the host code allocates a normal alloca with
     // getOrCreateAlloca. When the values of this scalar are accessed during
     // the generation of the parallel subfunction, these values are copied over
     // to the parallel subfunction and each request for a scalar alloca slot
-    // must be forwared to the temporary in-subfunction slot. This mapping is
+    // must be forwarded to the temporary in-subfunction slot. This mapping is
     // removed when the subfunction has been generated and again normal host
     // code is generated. Due to the following reasons it is not possible to
     // perform the GlobalMap lookup right after creating the alloca below, but
@@ -1196,7 +1196,7 @@ void VectorBlockGenerator::copyInstruction(
       return;
     }
 
-    // Falltrough: We generate scalar instructions, if we don't know how to
+    // Fallthrough: We generate scalar instructions, if we don't know how to
     // generate vector code.
   }
 
@@ -1447,7 +1447,7 @@ void RegionGenerator::copyStmt(ScopStmt &Stmt, LoopToScevMapT &LTS,
   }
 
   // Add counting PHI nodes to all loops in the region that can be used as
-  // replacement for SCEVs refering to the old loop.
+  // replacement for SCEVs referring to the old loop.
   for (BasicBlock *BB : SeenBlocks) {
     Loop *L = LI.getLoopFor(BB);
     if (L == nullptr || L->getHeader() != BB || !R->contains(L))

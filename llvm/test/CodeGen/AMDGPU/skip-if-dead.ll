@@ -79,7 +79,7 @@ define amdgpu_ps void @test_kill_depth_var_x2(float %x, float %y) #0 {
 ; CHECK-NEXT: s_endpgm
 define amdgpu_ps void @test_kill_depth_var_x2_instructions(float %x) #0 {
   call void @llvm.AMDGPU.kill(float %x)
-  %y = call float asm sideeffect "v_mov_b32_e64 v7, -1", "={VGPR7}"()
+  %y = call float asm sideeffect "v_mov_b32_e64 v7, -1", "={v7}"()
   call void @llvm.AMDGPU.kill(float %y)
   ret void
 }
@@ -128,7 +128,7 @@ bb:
     v_nop_e64
     v_nop_e64
     v_nop_e64
-    v_nop_e64", "={VGPR7}"()
+    v_nop_e64", "={v7}"()
   call void @llvm.AMDGPU.kill(float %var)
   br label %exit
 
@@ -186,11 +186,11 @@ bb:
     v_nop_e64
     v_nop_e64
     v_nop_e64
-    v_nop_e64", "={VGPR7}"()
-  %live.across = call float asm sideeffect "v_mov_b32_e64 v8, -1", "={VGPR8}"()
+    v_nop_e64", "={v7}"()
+  %live.across = call float asm sideeffect "v_mov_b32_e64 v8, -1", "={v8}"()
   call void @llvm.AMDGPU.kill(float %var)
   store volatile float %live.across, float addrspace(1)* undef
-  %live.out = call float asm sideeffect "v_mov_b32_e64 v9, -2", "={VGPR9}"()
+  %live.out = call float asm sideeffect "v_mov_b32_e64 v9, -2", "={v9}"()
   br label %exit
 
 exit:
@@ -242,7 +242,7 @@ bb:
     v_nop_e64
     v_nop_e64
     v_nop_e64
-    v_nop_e64", "={VGPR7}"()
+    v_nop_e64", "={v7}"()
   call void @llvm.AMDGPU.kill(float %var)
   %vgpr = load volatile i32, i32 addrspace(1)* undef
   %loop.cond = icmp eq i32 %vgpr, 0

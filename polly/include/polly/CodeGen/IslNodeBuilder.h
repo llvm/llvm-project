@@ -112,7 +112,7 @@ public:
 
   /// Get the associated block generator.
   ///
-  /// @return A referecne to the associated block generator.
+  /// @return A reference to the associated block generator.
   BlockGenerator &getBlockGenerator() { return BlockGen; }
 
   /// Return the parallel subfunctions that have been created.
@@ -182,7 +182,7 @@ protected:
 
   /// Materialize code for @p Id if it was not done before.
   ///
-  /// @returns False, iff a problem occured and the value was not materialized.
+  /// @returns False, iff a problem occurred and the value was not materialized.
   bool materializeValue(__isl_take isl_id *Id);
 
   /// Materialize parameters of @p Set.

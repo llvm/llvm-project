@@ -22,6 +22,7 @@ add_clang_library(clangTidyModernizeModule
   UseEmplaceCheck.cpp
   UseEqualsDefaultCheck.cpp
   UseEqualsDeleteCheck.cpp
+  UseNoexceptCheck.cpp
   UseNullptrCheck.cpp
   UseOverrideCheck.cpp
   UseTransparentFunctorsCheck.cpp

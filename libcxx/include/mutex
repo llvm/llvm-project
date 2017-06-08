@@ -546,11 +546,6 @@ private:
     _MutexTuple __t_;
 };
 
-#ifdef __cpp_deduction_guides
-template <class _Mutex> explicit scoped_lock(_Mutex&) -> scoped_lock<_Mutex>;
-explicit scoped_lock() -> scoped_lock<>;
-#endif
-
 #endif // _LIBCPP_STD_VER > 14
 #endif // !_LIBCPP_HAS_NO_THREADS
 

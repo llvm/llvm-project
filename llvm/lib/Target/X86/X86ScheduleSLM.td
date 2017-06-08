@@ -137,6 +137,33 @@ defm : SMWriteResPair<WriteShuffle,  FPC_RSV0,  1>;
 defm : SMWriteResPair<WriteBlend,  FPC_RSV0,  1>;
 defm : SMWriteResPair<WriteMPSAD,  FPC_RSV0,  7>;
 
+////////////////////////////////////////////////////////////////////////////////
+// Horizontal add/sub  instructions.
+////////////////////////////////////////////////////////////////////////////////
+
+// HADD, HSUB PS/PD
+
+def : WriteRes<WriteFHAdd,  [FPC_RSV01]> {
+  let Latency = 3;
+  let ResourceCycles = [2];
+}
+
+def : WriteRes<WriteFHAddLd,  [FPC_RSV01, MEC_RSV]> {
+  let Latency = 6;
+  let ResourceCycles = [2, 1];
+}
+
+// PHADD|PHSUB (S) W/D.
+def : WriteRes<WritePHAdd,  [FPC_RSV01]> {
+  let Latency = 1;
+  let ResourceCycles = [1];
+}
+
+def : WriteRes<WritePHAddLd,  [FPC_RSV01, MEC_RSV]> {
+  let Latency = 4;
+  let ResourceCycles = [1, 1];
+}
+
 // String instructions.
 // Packed Compare Implicit Length Strings, Return Mask
 def : WriteRes<WritePCmpIStrM, [FPC_RSV0]> {

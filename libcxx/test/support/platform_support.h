@@ -19,16 +19,18 @@
 #ifdef _WIN32
 // WARNING: Windows does not support UTF-8 codepages.
 // Locales are "converted" using http://docs.moodle.org/dev/Table_of_locales
-#define LOCALE_en_US_UTF_8     "English_United States.1252"
-#define LOCALE_cs_CZ_ISO8859_2 "Czech_Czech Republic.1250"
-#define LOCALE_fr_FR_UTF_8     "French_France.1252"
-#define LOCALE_fr_CA_ISO8859_1 "French_Canada.1252"
-#define LOCALE_ru_RU_UTF_8     "Russian_Russia.1251"
-#define LOCALE_zh_CN_UTF_8     "Chinese_China.936"
+#define LOCALE_en_US           "en-US"
+#define LOCALE_en_US_UTF_8     "en-US"
+#define LOCALE_cs_CZ_ISO8859_2 "cs-CZ"
+#define LOCALE_fr_FR_UTF_8     "fr-FR"
+#define LOCALE_fr_CA_ISO8859_1 "fr-CA"
+#define LOCALE_ru_RU_UTF_8     "ru-RU"
+#define LOCALE_zh_CN_UTF_8     "zh-CN"
 #elif defined(__CloudABI__)
 // Timezones are integrated into locales through LC_TIMEZONE_MASK on
 // CloudABI. LC_ALL_MASK can only be used if a timezone has also been
 // provided. UTC should be all right.
+#define LOCALE_en_US           "en_US"
 #define LOCALE_en_US_UTF_8     "en_US.UTF-8@UTC"
 #define LOCALE_fr_FR_UTF_8     "fr_FR.UTF-8@UTC"
 #define LOCALE_fr_CA_ISO8859_1 "fr_CA.ISO-8859-1@UTC"
@@ -36,6 +38,7 @@
 #define LOCALE_ru_RU_UTF_8     "ru_RU.UTF-8@UTC"
 #define LOCALE_zh_CN_UTF_8     "zh_CN.UTF-8@UTC"
 #else
+#define LOCALE_en_US           "en_US"
 #define LOCALE_en_US_UTF_8     "en_US.UTF-8"
 #define LOCALE_fr_FR_UTF_8     "fr_FR.UTF-8"
 #ifdef __linux__

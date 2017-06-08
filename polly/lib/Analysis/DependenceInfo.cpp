@@ -492,7 +492,7 @@ void Dependences::calculateDependences(Scop &S) {
     // S0[98 <= i <= 100] is captured in S1[98 <= i <= 100].
     // Since we allow free reordering on our reduction dependences, we need to
     // remove all instances of a reduction statement that have data dependences
-    // orignating from them.
+    // originating from them.
     // In the case of the example, we need to remove S0[98 <= i <= 100] from
     // our reduction dependences.
     //
@@ -522,7 +522,7 @@ void Dependences::calculateDependences(Scop &S) {
     //     void f(int *sum, int A[N], int B[N]) {
     //       for (int i = 0; i < N; i++) {
     //         *sum += A[i]; < the store and the load is not tagged as a
-    //         B[i] = *sum;  < reductionLike acccess due to the overlap.
+    //         B[i] = *sum;  < reduction-like access due to the overlap.
     //       }
     //     }
 

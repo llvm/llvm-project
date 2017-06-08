@@ -372,8 +372,11 @@ DIARawSymbol::findChildren(PDB_SymType Type) const {
   enum SymTagEnum EnumVal = static_cast<enum SymTagEnum>(Type);
 
   CComPtr<IDiaEnumSymbols> DiaEnumerator;
-  if (S_OK != Symbol->findChildrenEx(EnumVal, nullptr, nsNone, &DiaEnumerator))
-    return nullptr;
+  if (S_OK !=
+      Symbol->findChildrenEx(EnumVal, nullptr, nsNone, &DiaEnumerator)) {
+    if (S_OK != Symbol->findChildren(EnumVal, nullptr, nsNone, &DiaEnumerator))
+      return nullptr;
+  }
 
   return llvm::make_unique<DIAEnumSymbols>(Session, DiaEnumerator);
 }

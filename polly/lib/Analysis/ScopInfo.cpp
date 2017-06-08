@@ -930,7 +930,7 @@ static bool isDivisible(const SCEV *Expr, unsigned Size, ScalarEvolution &SE) {
   }
 
   // For other n-ary expressions (Add, AddRec, Max,...) all operands need
-  // to be divisble.
+  // to be divisible.
   if (auto *NAryExpr = dyn_cast<SCEVNAryExpr>(Expr)) {
     for (auto *OpExpr : NAryExpr->operands())
       if (!isDivisible(OpExpr, Size, SE))
@@ -2518,7 +2518,7 @@ static inline Loop *getRegionNodeLoop(RegionNode *RN, LoopInfo &LI) {
     // able to model them and to later eliminate the run-time bounds checks.
     //
     // Specifically, for basic blocks that terminate in an unreachable and
-    // where the immeditate predecessor is part of a loop, we assume these
+    // where the immediate predecessor is part of a loop, we assume these
     // basic blocks belong to the loop the predecessor belongs to. This
     // allows us to model the following code.
     //
@@ -3739,8 +3739,8 @@ static bool canAlwaysBeHoisted(MemoryAccess *MA, bool StmtInvalidCtxIsEmpty,
   if (!NonHoistableCtxIsEmpty)
     return false;
 
-  // If a dereferencable load is in a statement that is modeled precisely we can
-  // hoist it.
+  // If a dereferenceable load is in a statement that is modeled precisely we
+  // can hoist it.
   if (StmtInvalidCtxIsEmpty && MAInvalidCtxIsEmpty)
     return true;
 
@@ -4949,7 +4949,7 @@ INITIALIZE_PASS_END(ScopInfoRegionPass, "polly-scops",
 ScopInfo::ScopInfo(const DataLayout &DL, ScopDetection &SD, ScalarEvolution &SE,
                    LoopInfo &LI, AliasAnalysis &AA, DominatorTree &DT,
                    AssumptionCache &AC) {
-  /// Create polyhedral descripton of scops for all the valid regions of a
+  /// Create polyhedral description of scops for all the valid regions of a
   /// function.
   for (auto &It : SD) {
     Region *R = const_cast<Region *>(It);

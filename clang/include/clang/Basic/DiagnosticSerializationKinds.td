@@ -175,11 +175,13 @@ def note_module_odr_violation_mismatch_decl_diff : Note<"but in '%0' found "
   "method %2 with %ordinal3 parameter named %4}1">;
 
 def err_module_odr_violation_mismatch_decl_unknown : Error<
-  "%q0 has different definitions in different modules; first difference is "
-  "%select{definition in module '%2'|defined here}1 found different "
-  "%select{||||static assert|field|method|other}3">;
+  "%q0 %select{with definition in module '%2'|defined here}1 has different "
+  "definitions in different modules; first difference is this "
+  "%select{||||static assert|field|method|unexpected decl}3">;
 def note_module_odr_violation_mismatch_decl_unknown : Note<
-  "but in '%0' found different %select{||||static assert|field|method|other}1">;
+  "but in '%0' found "
+  "%select{||||different static assert|different field|different method|"
+  "another unexpected decl}1">;
 
 def warn_duplicate_module_file_extension : Warning<
   "duplicate module file extension block name '%0'">,

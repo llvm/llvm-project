@@ -31,8 +31,8 @@ enum : SanitizerMask {
   NotAllowedWithTrap = Vptr,
   RequiresPIE = DataFlow,
   NeedsUnwindTables = Address | Thread | Memory | DataFlow,
-  SupportsCoverage =
-      Address | Memory | Leak | Undefined | Integer | Nullability | DataFlow,
+  SupportsCoverage = Address | KernelAddress | Memory | Leak | Undefined |
+                     Integer | Nullability | DataFlow,
   RecoverableByDefault = Undefined | Integer | Nullability,
   Unrecoverable = Unreachable | Return,
   LegacyFsanitizeRecoverMask = Undefined | Integer,

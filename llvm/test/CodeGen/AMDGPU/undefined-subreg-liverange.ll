@@ -73,14 +73,14 @@ bb11:                                             ; preds = %bb9
 
 ; CHECK: buffer_store_dwordx4 v{{\[}}[[OUTPUT_LO]]:[[OUTPUT_HI]]{{\]}}
 define amdgpu_kernel void @partially_undef_copy() #0 {
-  %tmp0 = call i32 asm sideeffect "v_mov_b32_e32 v5, 5", "={VGPR5}"()
-  %tmp1 = call i32 asm sideeffect "v_mov_b32_e32 v6, 6", "={VGPR6}"()
+  %tmp0 = call i32 asm sideeffect "v_mov_b32_e32 v5, 5", "={v5}"()
+  %tmp1 = call i32 asm sideeffect "v_mov_b32_e32 v6, 6", "={v6}"()
 
   %partially.undef.0 = insertelement <4 x i32> undef, i32 %tmp0, i32 0
   %partially.undef.1 = insertelement <4 x i32> %partially.undef.0, i32 %tmp1, i32 0
 
   store volatile <4 x i32> %partially.undef.1, <4 x i32> addrspace(1)* undef, align 16
-  tail call void asm sideeffect "v_nop", "v={VGPR5_VGPR6_VGPR7_VGPR8}"(<4 x i32> %partially.undef.0)
+  tail call void asm sideeffect "v_nop", "v={v[5:8]}"(<4 x i32> %partially.undef.0)
   ret void
 }
 

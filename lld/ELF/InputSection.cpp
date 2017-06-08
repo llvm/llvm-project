@@ -20,6 +20,7 @@
 #include "Target.h"
 #include "Thunks.h"
 #include "llvm/Object/Decompressor.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Path.h"
@@ -682,7 +683,7 @@ void InputSectionBase::relocateAlloc(uint8_t *Buf, uint8_t *BufEnd) {
       // Patch a nop (0x60000000) to a ld.
       if (BufLoc + 8 <= BufEnd && read32be(BufLoc + 4) == 0x60000000)
         write32be(BufLoc + 4, 0xe8410028); // ld %r2, 40(%r1)
-    // fallthrough
+      LLVM_FALLTHROUGH;
     default:
       Target->relocateOne(BufLoc, Type, TargetVA);
       break;

@@ -10,7 +10,7 @@
 
 define <2 x double> @buildvector_add_2f64(<2 x double> %a, <2 x double> %b) {
 ; CHECK-LABEL: @buildvector_add_2f64(
-; CHECK-NEXT:    [[TMP1:%.*]] = fadd <2 x double> %a, %b
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd <2 x double> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[TMP1]], i32 0
 ; CHECK-NEXT:    [[R0:%.*]] = insertelement <2 x double> undef, double [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x double> [[TMP1]], i32 1
@@ -30,7 +30,7 @@ define <2 x double> @buildvector_add_2f64(<2 x double> %a, <2 x double> %b) {
 
 define <2 x double> @buildvector_sub_2f64(<2 x double> %a, <2 x double> %b) {
 ; CHECK-LABEL: @buildvector_sub_2f64(
-; CHECK-NEXT:    [[TMP1:%.*]] = fsub <2 x double> %a, %b
+; CHECK-NEXT:    [[TMP1:%.*]] = fsub <2 x double> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[TMP1]], i32 0
 ; CHECK-NEXT:    [[R0:%.*]] = insertelement <2 x double> undef, double [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x double> [[TMP1]], i32 1
@@ -50,7 +50,7 @@ define <2 x double> @buildvector_sub_2f64(<2 x double> %a, <2 x double> %b) {
 
 define <2 x double> @buildvector_mul_2f64(<2 x double> %a, <2 x double> %b) {
 ; CHECK-LABEL: @buildvector_mul_2f64(
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul <2 x double> %a, %b
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul <2 x double> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[TMP1]], i32 0
 ; CHECK-NEXT:    [[R0:%.*]] = insertelement <2 x double> undef, double [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x double> [[TMP1]], i32 1
@@ -70,7 +70,7 @@ define <2 x double> @buildvector_mul_2f64(<2 x double> %a, <2 x double> %b) {
 
 define <2 x double> @buildvector_div_2f64(<2 x double> %a, <2 x double> %b) {
 ; CHECK-LABEL: @buildvector_div_2f64(
-; CHECK-NEXT:    [[TMP1:%.*]] = fdiv <2 x double> %a, %b
+; CHECK-NEXT:    [[TMP1:%.*]] = fdiv <2 x double> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[TMP1]], i32 0
 ; CHECK-NEXT:    [[R0:%.*]] = insertelement <2 x double> undef, double [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x double> [[TMP1]], i32 1
@@ -90,7 +90,7 @@ define <2 x double> @buildvector_div_2f64(<2 x double> %a, <2 x double> %b) {
 
 define <4 x float> @buildvector_add_4f32(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: @buildvector_add_4f32(
-; CHECK-NEXT:    [[TMP1:%.*]] = fadd <4 x float> %a, %b
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd <4 x float> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[TMP1]], i32 0
 ; CHECK-NEXT:    [[R0:%.*]] = insertelement <4 x float> undef, float [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[TMP1]], i32 1
@@ -122,7 +122,7 @@ define <4 x float> @buildvector_add_4f32(<4 x float> %a, <4 x float> %b) {
 
 define <4 x float> @buildvector_sub_4f32(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: @buildvector_sub_4f32(
-; CHECK-NEXT:    [[TMP1:%.*]] = fsub <4 x float> %a, %b
+; CHECK-NEXT:    [[TMP1:%.*]] = fsub <4 x float> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[TMP1]], i32 0
 ; CHECK-NEXT:    [[R0:%.*]] = insertelement <4 x float> undef, float [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[TMP1]], i32 1
@@ -154,7 +154,7 @@ define <4 x float> @buildvector_sub_4f32(<4 x float> %a, <4 x float> %b) {
 
 define <4 x float> @buildvector_mul_4f32(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: @buildvector_mul_4f32(
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul <4 x float> %a, %b
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul <4 x float> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[TMP1]], i32 0
 ; CHECK-NEXT:    [[R0:%.*]] = insertelement <4 x float> undef, float [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[TMP1]], i32 1
@@ -186,7 +186,7 @@ define <4 x float> @buildvector_mul_4f32(<4 x float> %a, <4 x float> %b) {
 
 define <4 x float> @buildvector_div_4f32(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: @buildvector_div_4f32(
-; CHECK-NEXT:    [[TMP1:%.*]] = fdiv <4 x float> %a, %b
+; CHECK-NEXT:    [[TMP1:%.*]] = fdiv <4 x float> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[TMP1]], i32 0
 ; CHECK-NEXT:    [[R0:%.*]] = insertelement <4 x float> undef, float [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[TMP1]], i32 1
@@ -222,7 +222,7 @@ define <4 x float> @buildvector_div_4f32(<4 x float> %a, <4 x float> %b) {
 
 define <4 x double> @buildvector_add_4f64(<4 x double> %a, <4 x double> %b) {
 ; CHECK-LABEL: @buildvector_add_4f64(
-; CHECK-NEXT:    [[TMP1:%.*]] = fadd <4 x double> %a, %b
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd <4 x double> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x double> [[TMP1]], i32 0
 ; CHECK-NEXT:    [[R0:%.*]] = insertelement <4 x double> undef, double [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x double> [[TMP1]], i32 1
@@ -254,7 +254,7 @@ define <4 x double> @buildvector_add_4f64(<4 x double> %a, <4 x double> %b) {
 
 define <4 x double> @buildvector_sub_4f64(<4 x double> %a, <4 x double> %b) {
 ; CHECK-LABEL: @buildvector_sub_4f64(
-; CHECK-NEXT:    [[TMP1:%.*]] = fsub <4 x double> %a, %b
+; CHECK-NEXT:    [[TMP1:%.*]] = fsub <4 x double> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x double> [[TMP1]], i32 0
 ; CHECK-NEXT:    [[R0:%.*]] = insertelement <4 x double> undef, double [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x double> [[TMP1]], i32 1
@@ -286,7 +286,7 @@ define <4 x double> @buildvector_sub_4f64(<4 x double> %a, <4 x double> %b) {
 
 define <4 x double> @buildvector_mul_4f64(<4 x double> %a, <4 x double> %b) {
 ; CHECK-LABEL: @buildvector_mul_4f64(
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul <4 x double> %a, %b
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul <4 x double> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x double> [[TMP1]], i32 0
 ; CHECK-NEXT:    [[R0:%.*]] = insertelement <4 x double> undef, double [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x double> [[TMP1]], i32 1
@@ -318,7 +318,7 @@ define <4 x double> @buildvector_mul_4f64(<4 x double> %a, <4 x double> %b) {
 
 define <4 x double> @buildvector_div_4f64(<4 x double> %a, <4 x double> %b) {
 ; CHECK-LABEL: @buildvector_div_4f64(
-; CHECK-NEXT:    [[TMP1:%.*]] = fdiv <4 x double> %a, %b
+; CHECK-NEXT:    [[TMP1:%.*]] = fdiv <4 x double> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x double> [[TMP1]], i32 0
 ; CHECK-NEXT:    [[R0:%.*]] = insertelement <4 x double> undef, double [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x double> [[TMP1]], i32 1
@@ -350,7 +350,7 @@ define <4 x double> @buildvector_div_4f64(<4 x double> %a, <4 x double> %b) {
 
 define <8 x float> @buildvector_add_8f32(<8 x float> %a, <8 x float> %b) {
 ; CHECK-LABEL: @buildvector_add_8f32(
-; CHECK-NEXT:    [[TMP1:%.*]] = fadd <8 x float> %a, %b
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd <8 x float> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <8 x float> [[TMP1]], i32 0
 ; CHECK-NEXT:    [[R0:%.*]] = insertelement <8 x float> undef, float [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <8 x float> [[TMP1]], i32 1
@@ -406,7 +406,7 @@ define <8 x float> @buildvector_add_8f32(<8 x float> %a, <8 x float> %b) {
 
 define <8 x float> @buildvector_sub_8f32(<8 x float> %a, <8 x float> %b) {
 ; CHECK-LABEL: @buildvector_sub_8f32(
-; CHECK-NEXT:    [[TMP1:%.*]] = fsub <8 x float> %a, %b
+; CHECK-NEXT:    [[TMP1:%.*]] = fsub <8 x float> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <8 x float> [[TMP1]], i32 0
 ; CHECK-NEXT:    [[R0:%.*]] = insertelement <8 x float> undef, float [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <8 x float> [[TMP1]], i32 1
@@ -462,7 +462,7 @@ define <8 x float> @buildvector_sub_8f32(<8 x float> %a, <8 x float> %b) {
 
 define <8 x float> @buildvector_mul_8f32(<8 x float> %a, <8 x float> %b) {
 ; CHECK-LABEL: @buildvector_mul_8f32(
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul <8 x float> %a, %b
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul <8 x float> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <8 x float> [[TMP1]], i32 0
 ; CHECK-NEXT:    [[R0:%.*]] = insertelement <8 x float> undef, float [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <8 x float> [[TMP1]], i32 1
@@ -518,7 +518,7 @@ define <8 x float> @buildvector_mul_8f32(<8 x float> %a, <8 x float> %b) {
 
 define <8 x float> @buildvector_div_8f32(<8 x float> %a, <8 x float> %b) {
 ; CHECK-LABEL: @buildvector_div_8f32(
-; CHECK-NEXT:    [[TMP1:%.*]] = fdiv <8 x float> %a, %b
+; CHECK-NEXT:    [[TMP1:%.*]] = fdiv <8 x float> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <8 x float> [[TMP1]], i32 0
 ; CHECK-NEXT:    [[R0:%.*]] = insertelement <8 x float> undef, float [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <8 x float> [[TMP1]], i32 1
@@ -578,7 +578,7 @@ define <8 x float> @buildvector_div_8f32(<8 x float> %a, <8 x float> %b) {
 
 define <8 x double> @buildvector_add_8f64(<8 x double> %a, <8 x double> %b) {
 ; CHECK-LABEL: @buildvector_add_8f64(
-; CHECK-NEXT:    [[TMP1:%.*]] = fadd <8 x double> %a, %b
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd <8 x double> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <8 x double> [[TMP1]], i32 0
 ; CHECK-NEXT:    [[R0:%.*]] = insertelement <8 x double> undef, double [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <8 x double> [[TMP1]], i32 1
@@ -634,7 +634,7 @@ define <8 x double> @buildvector_add_8f64(<8 x double> %a, <8 x double> %b) {
 
 define <8 x double> @buildvector_sub_8f64(<8 x double> %a, <8 x double> %b) {
 ; CHECK-LABEL: @buildvector_sub_8f64(
-; CHECK-NEXT:    [[TMP1:%.*]] = fsub <8 x double> %a, %b
+; CHECK-NEXT:    [[TMP1:%.*]] = fsub <8 x double> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <8 x double> [[TMP1]], i32 0
 ; CHECK-NEXT:    [[R0:%.*]] = insertelement <8 x double> undef, double [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <8 x double> [[TMP1]], i32 1
@@ -690,7 +690,7 @@ define <8 x double> @buildvector_sub_8f64(<8 x double> %a, <8 x double> %b) {
 
 define <8 x double> @buildvector_mul_8f64(<8 x double> %a, <8 x double> %b) {
 ; CHECK-LABEL: @buildvector_mul_8f64(
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul <8 x double> %a, %b
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul <8 x double> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <8 x double> [[TMP1]], i32 0
 ; CHECK-NEXT:    [[R0:%.*]] = insertelement <8 x double> undef, double [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <8 x double> [[TMP1]], i32 1
@@ -746,7 +746,7 @@ define <8 x double> @buildvector_mul_8f64(<8 x double> %a, <8 x double> %b) {
 
 define <8 x double> @buildvector_div_8f64(<8 x double> %a, <8 x double> %b) {
 ; CHECK-LABEL: @buildvector_div_8f64(
-; CHECK-NEXT:    [[TMP1:%.*]] = fdiv <8 x double> %a, %b
+; CHECK-NEXT:    [[TMP1:%.*]] = fdiv <8 x double> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <8 x double> [[TMP1]], i32 0
 ; CHECK-NEXT:    [[R0:%.*]] = insertelement <8 x double> undef, double [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <8 x double> [[TMP1]], i32 1
@@ -802,7 +802,7 @@ define <8 x double> @buildvector_div_8f64(<8 x double> %a, <8 x double> %b) {
 
 define <16 x float> @buildvector_add_16f32(<16 x float> %a, <16 x float> %b) {
 ; CHECK-LABEL: @buildvector_add_16f32(
-; CHECK-NEXT:    [[TMP1:%.*]] = fadd <16 x float> %a, %b
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd <16 x float> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <16 x float> [[TMP1]], i32 0
 ; CHECK-NEXT:    [[R0:%.*]] = insertelement <16 x float> undef, float [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <16 x float> [[TMP1]], i32 1
@@ -906,7 +906,7 @@ define <16 x float> @buildvector_add_16f32(<16 x float> %a, <16 x float> %b) {
 
 define <16 x float> @buildvector_sub_16f32(<16 x float> %a, <16 x float> %b) {
 ; CHECK-LABEL: @buildvector_sub_16f32(
-; CHECK-NEXT:    [[TMP1:%.*]] = fsub <16 x float> %a, %b
+; CHECK-NEXT:    [[TMP1:%.*]] = fsub <16 x float> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <16 x float> [[TMP1]], i32 0
 ; CHECK-NEXT:    [[R0:%.*]] = insertelement <16 x float> undef, float [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <16 x float> [[TMP1]], i32 1
@@ -1010,7 +1010,7 @@ define <16 x float> @buildvector_sub_16f32(<16 x float> %a, <16 x float> %b) {
 
 define <16 x float> @buildvector_mul_16f32(<16 x float> %a, <16 x float> %b) {
 ; CHECK-LABEL: @buildvector_mul_16f32(
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul <16 x float> %a, %b
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul <16 x float> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <16 x float> [[TMP1]], i32 0
 ; CHECK-NEXT:    [[R0:%.*]] = insertelement <16 x float> undef, float [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <16 x float> [[TMP1]], i32 1
@@ -1114,7 +1114,7 @@ define <16 x float> @buildvector_mul_16f32(<16 x float> %a, <16 x float> %b) {
 
 define <16 x float> @buildvector_div_16f32(<16 x float> %a, <16 x float> %b) {
 ; CHECK-LABEL: @buildvector_div_16f32(
-; CHECK-NEXT:    [[TMP1:%.*]] = fdiv <16 x float> %a, %b
+; CHECK-NEXT:    [[TMP1:%.*]] = fdiv <16 x float> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <16 x float> [[TMP1]], i32 0
 ; CHECK-NEXT:    [[R0:%.*]] = insertelement <16 x float> undef, float [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <16 x float> [[TMP1]], i32 1

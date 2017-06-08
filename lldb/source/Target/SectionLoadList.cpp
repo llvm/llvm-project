@@ -207,8 +207,8 @@ bool SectionLoadList::SetSectionUnloaded(const lldb::SectionSP &section_sp,
   return erased;
 }
 
-bool SectionLoadList::ResolveLoadAddress(addr_t load_addr,
-                                         Address &so_addr) const {
+bool SectionLoadList::ResolveLoadAddress(addr_t load_addr, Address &so_addr,
+                                         bool allow_section_end) const {
   // First find the top level section that this load address exists in
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   if (!m_addr_to_sect.empty()) {
@@ -220,10 +220,11 @@ bool SectionLoadList::ResolveLoadAddress(addr_t load_addr,
       const addr_t pos_load_addr = pos->first;
       if (load_addr >= pos_load_addr) {
         addr_t offset = load_addr - pos_load_addr;
-        if (offset < pos->second->GetByteSize()) {
+        if (offset < pos->second->GetByteSize() + (allow_section_end ? 1 : 0)) {
           // We have found the top level section, now we need to find the
           // deepest child section.
-          return pos->second->ResolveContainedAddress(offset, so_addr);
+          return pos->second->ResolveContainedAddress(offset, so_addr,
+                                                      allow_section_end);
         }
       }
     } else {
@@ -233,10 +234,12 @@ bool SectionLoadList::ResolveLoadAddress(addr_t load_addr,
           m_addr_to_sect.rbegin();
       if (load_addr >= rpos->first) {
         addr_t offset = load_addr - rpos->first;
-        if (offset < rpos->second->GetByteSize()) {
+        if (offset <
+            rpos->second->GetByteSize() + (allow_section_end ? 1 : 0)) {
           // We have found the top level section, now we need to find the
           // deepest child section.
-          return rpos->second->ResolveContainedAddress(offset, so_addr);
+          return rpos->second->ResolveContainedAddress(offset, so_addr,
+                                                       allow_section_end);
         }
       }
     }

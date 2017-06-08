@@ -125,7 +125,7 @@ class ScopBuilder {
   /// @returns True if the access could be built, False otherwise.
   bool buildAccessMultiDimFixed(MemAccInst Inst, ScopStmt *Stmt);
 
-  /// Try to build a multi-dimensional parameteric sized MemoryAccess.
+  /// Try to build a multi-dimensional parametric sized MemoryAccess.
   ///        from the Load/Store instruction.
   ///
   /// @param Inst       The Load/Store instruction that access the memory
@@ -196,7 +196,7 @@ class ScopBuilder {
   ///
   /// @param SR A subregion of @p R.
   ///
-  /// Some of the statments might be optimized away later when they do not
+  /// Some of the statements might be optimized away later when they do not
   /// access any memory and thus have no effect.
   void buildStmts(Region &SR);
 
