@@ -608,11 +608,11 @@ ret:
 ; GCN: ;;#ASMSTART
 ; GCN: ; use s[0:1]
 define amdgpu_kernel void @no_vgprs_last_sgpr_spill(i32 addrspace(1)* %out, i32 %in) #1 {
-  call void asm sideeffect "", "~{VGPR0_VGPR1_VGPR2_VGPR3_VGPR4_VGPR5_VGPR6_VGPR7}" () #0
-  call void asm sideeffect "", "~{VGPR8_VGPR9_VGPR10_VGPR11_VGPR12_VGPR13_VGPR14_VGPR15}" () #0
-  call void asm sideeffect "", "~{VGPR16_VGPR17_VGPR18_VGPR19}"() #0
-  call void asm sideeffect "", "~{VGPR20_VGPR21}"() #0
-  call void asm sideeffect "", "~{VGPR22}"() #0
+  call void asm sideeffect "", "~{v[0:7]}" () #0
+  call void asm sideeffect "", "~{v[8:15]}" () #0
+  call void asm sideeffect "", "~{v[16:19]}"() #0
+  call void asm sideeffect "", "~{v[20:21]}"() #0
+  call void asm sideeffect "", "~{v22}"() #0
 
   %wide.sgpr0 = call <16 x i32> asm sideeffect "; def $0", "=s" () #0
   %wide.sgpr1 = call <16 x i32> asm sideeffect "; def $0", "=s" () #0

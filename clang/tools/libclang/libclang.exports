@@ -147,6 +147,7 @@ clang_findReferencesInFile
 clang_findReferencesInFileWithBlock
 clang_formatDiagnostic
 clang_free
+clang_getAddressSpace
 clang_getAllSkippedRanges
 clang_getArgType
 clang_getArrayElementType
@@ -259,6 +260,7 @@ clang_getTypeDeclaration
 clang_getTypeKindSpelling
 clang_getTypeSpelling
 clang_getTypedefDeclUnderlyingType
+clang_getTypedefName
 clang_hashCursor
 clang_indexLoc_getCXSourceLocation
 clang_indexLoc_getFileLocation

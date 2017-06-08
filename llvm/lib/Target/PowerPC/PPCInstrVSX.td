@@ -2717,6 +2717,40 @@ def DblToFlt {
   dag B0 = (f32 (fpround (f64 (extractelt v2f64:$B, 0))));
   dag B1 = (f32 (fpround (f64 (extractelt v2f64:$B, 1))));
 }
+
+def ByteToWord {
+  dag A0 = (i32 (sext_inreg (i32 (vector_extract v16i8:$A, 0)), i8));
+  dag A1 = (i32 (sext_inreg (i32 (vector_extract v16i8:$A, 4)), i8));
+  dag A2 = (i32 (sext_inreg (i32 (vector_extract v16i8:$A, 8)), i8));
+  dag A3 = (i32 (sext_inreg (i32 (vector_extract v16i8:$A, 12)), i8));
+}
+
+def ByteToDWord {
+  dag A0 = (i64 (sext_inreg
+            (i64 (anyext (i32 (vector_extract v16i8:$A, 0)))), i8));
+  dag A1 = (i64 (sext_inreg
+            (i64 (anyext (i32 (vector_extract v16i8:$A, 8)))), i8));
+}
+
+def HWordToWord {
+  dag A0 = (i32 (sext_inreg (i32 (vector_extract v8i16:$A, 0)), i16));
+  dag A1 = (i32 (sext_inreg (i32 (vector_extract v8i16:$A, 2)), i16));
+  dag A2 = (i32 (sext_inreg (i32 (vector_extract v8i16:$A, 4)), i16));
+  dag A3 = (i32 (sext_inreg (i32 (vector_extract v8i16:$A, 6)), i16));
+}
+
+def HWordToDWord {
+  dag A0 = (i64 (sext_inreg
+            (i64 (anyext (i32 (vector_extract v8i16:$A, 0)))), i16));
+  dag A1 = (i64 (sext_inreg
+            (i64 (anyext (i32 (vector_extract v8i16:$A, 4)))), i16));
+}
+
+def WordToDWord {
+  dag A0 = (i64 (sext (i32 (vector_extract v4i32:$A, 0))));
+  dag A1 = (i64 (sext (i32 (vector_extract v4i32:$A, 2))));
+}
+
 def FltToIntLoad {
   dag A = (i32 (PPCmfvsr (PPCfctiwz (f64 (extloadf32 xoaddr:$A)))));
 }
@@ -2968,5 +3002,22 @@ let AddedComplexity = 400 in {
     def : Pat<(v4i32 (build_vector i32:$A, i32:$B, i32:$C, i32:$D)),
               (VMRGOW (COPY_TO_REGCLASS (MTVSRDD AnyExts.D, AnyExts.B), VSRC),
                       (COPY_TO_REGCLASS (MTVSRDD AnyExts.C, AnyExts.A), VSRC))>;
+  }
+  // P9 Altivec instructions that can be used to build vectors.
+  // Adding them to PPCInstrVSX.td rather than PPCAltivecVSX.td to compete
+  // with complexities of existing build vector patterns in this file.
+  let Predicates = [HasP9Altivec] in {
+    def : Pat<(v2i64 (build_vector WordToDWord.A0, WordToDWord.A1)),
+              (v2i64 (VEXTSW2D $A))>;
+    def : Pat<(v2i64 (build_vector HWordToDWord.A0, HWordToDWord.A1)),
+              (v2i64 (VEXTSH2D $A))>;
+    def : Pat<(v4i32 (build_vector HWordToWord.A0, HWordToWord.A1,
+                      HWordToWord.A2, HWordToWord.A3)),
+              (v4i32 (VEXTSH2W $A))>;
+    def : Pat<(v4i32 (build_vector ByteToWord.A0, ByteToWord.A1,
+                      ByteToWord.A2, ByteToWord.A3)),
+              (v4i32 (VEXTSB2W $A))>;
+    def : Pat<(v2i64 (build_vector ByteToDWord.A0, ByteToDWord.A1)),
+              (v2i64 (VEXTSB2D $A))>;
   }
 }

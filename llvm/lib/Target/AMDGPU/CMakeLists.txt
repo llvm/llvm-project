@@ -59,6 +59,7 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPUISelLowering.cpp
   AMDGPUInstrInfo.cpp
   AMDGPUPromoteAlloca.cpp
+  AMDGPURegAsmNames.inc.cpp
   AMDGPURegisterInfo.cpp
   AMDGPUUnifyDivergentExitNodes.cpp
   AMDGPUConvertAtomicLibCalls.cpp

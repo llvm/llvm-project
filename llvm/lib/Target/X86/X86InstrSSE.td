@@ -5183,14 +5183,14 @@ multiclass S3D_Int<bits<8> o, string OpcodeStr, ValueType vt, RegisterClass RC,
          !strconcat(OpcodeStr, "\t{$src2, $dst|$dst, $src2}"),
          !strconcat(OpcodeStr, "\t{$src2, $src1, $dst|$dst, $src1, $src2}")),
       [(set RC:$dst, (vt (OpNode RC:$src1, RC:$src2)))], IIC_SSE_HADDSUB_RR>,
-      Sched<[WriteFAdd]>;
+      Sched<[WriteFHAdd]>;
 
   def rm : S3DI<o, MRMSrcMem, (outs RC:$dst), (ins RC:$src1, x86memop:$src2),
        !if(Is2Addr,
          !strconcat(OpcodeStr, "\t{$src2, $dst|$dst, $src2}"),
          !strconcat(OpcodeStr, "\t{$src2, $src1, $dst|$dst, $src1, $src2}")),
       [(set RC:$dst, (vt (OpNode RC:$src1, (ld_frag addr:$src2))))],
-        IIC_SSE_HADDSUB_RM>, Sched<[WriteFAddLd, ReadAfterLd]>;
+        IIC_SSE_HADDSUB_RM>, Sched<[WriteFHAddLd, ReadAfterLd]>;
 }
 multiclass S3_Int<bits<8> o, string OpcodeStr, ValueType vt, RegisterClass RC,
                   X86MemOperand x86memop, SDNode OpNode, PatFrag ld_frag,
@@ -5200,14 +5200,14 @@ multiclass S3_Int<bits<8> o, string OpcodeStr, ValueType vt, RegisterClass RC,
          !strconcat(OpcodeStr, "\t{$src2, $dst|$dst, $src2}"),
          !strconcat(OpcodeStr, "\t{$src2, $src1, $dst|$dst, $src1, $src2}")),
       [(set RC:$dst, (vt (OpNode RC:$src1, RC:$src2)))], IIC_SSE_HADDSUB_RR>,
-      Sched<[WriteFAdd]>;
+      Sched<[WriteFHAdd]>;
 
   def rm : S3I<o, MRMSrcMem, (outs RC:$dst), (ins RC:$src1, x86memop:$src2),
        !if(Is2Addr,
          !strconcat(OpcodeStr, "\t{$src2, $dst|$dst, $src2}"),
          !strconcat(OpcodeStr, "\t{$src2, $src1, $dst|$dst, $src1, $src2}")),
       [(set RC:$dst, (vt (OpNode RC:$src1, (ld_frag addr:$src2))))],
-        IIC_SSE_HADDSUB_RM>, Sched<[WriteFAddLd, ReadAfterLd]>;
+        IIC_SSE_HADDSUB_RM>, Sched<[WriteFHAddLd, ReadAfterLd]>;
 }
 
 let Predicates = [HasAVX] in {
@@ -5310,7 +5310,7 @@ defm PABSD : SS3I_unop_rm<0x1E, "pabsd", v4i32, abs, memopv2i64>;
 // SSSE3 - Packed Binary Operator Instructions
 //===---------------------------------------------------------------------===//
 
-let Sched = WriteVecALU in {
+let Sched = WritePHAdd in {
 def SSE_PHADDSUBD : OpndItins<
   IIC_SSE_PHADDSUBD_RR, IIC_SSE_PHADDSUBD_RM
 >;

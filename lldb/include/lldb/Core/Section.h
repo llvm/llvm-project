@@ -143,7 +143,8 @@ public:
 
   lldb::addr_t GetLoadBaseAddress(Target *target) const;
 
-  bool ResolveContainedAddress(lldb::addr_t offset, Address &so_addr) const;
+  bool ResolveContainedAddress(lldb::addr_t offset, Address &so_addr,
+                               bool allow_section_end = false) const;
 
   lldb::offset_t GetFileOffset() const { return m_file_offset; }
 

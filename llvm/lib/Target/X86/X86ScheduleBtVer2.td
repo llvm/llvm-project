@@ -320,6 +320,38 @@ def : WriteRes<WriteAESKeyGenLd, [JLAGU, JVIMUL]> {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+// Horizontal add/sub  instructions.
+////////////////////////////////////////////////////////////////////////////////
+
+def : WriteRes<WriteFHAdd, [JFPU0]> {
+  let Latency = 3;
+}
+
+def : WriteRes<WriteFHAddLd, [JLAGU, JFPU0]> {
+  let Latency = 8;
+}
+
+def : WriteRes<WritePHAdd, [JFPU01]> {
+  let ResourceCycles = [1];
+}
+def : WriteRes<WritePHAddLd, [JLAGU, JFPU01 ]> {
+  let Latency = 6;
+  let ResourceCycles = [1, 1];
+}
+
+def WriteFHAddY: SchedWriteRes<[JFPU0]> {
+  let Latency = 3;
+  let ResourceCycles = [2];
+}
+def : InstRW<[WriteFHAddY], (instregex "VH(ADD|SUB)P(S|D)Yrr")>;
+
+def WriteFHAddYLd: SchedWriteRes<[JLAGU, JFPU0]> {
+  let Latency = 8;
+  let ResourceCycles = [1, 2];
+}
+def : InstRW<[WriteFHAddYLd], (instregex "VH(ADD|SUB)P(S|D)Yrm")>;
+
+////////////////////////////////////////////////////////////////////////////////
 // Carry-less multiplication instructions.
 ////////////////////////////////////////////////////////////////////////////////
 
