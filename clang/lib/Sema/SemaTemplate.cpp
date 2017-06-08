@@ -8957,7 +8957,8 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
   //   A member function [...] of a class template can be explicitly
   //  instantiated from the member definition associated with its class
   //  template.
-  UnresolvedSet<8> Matches;
+  UnresolvedSet<8> TemplateMatches;
+  FunctionDecl *NonTemplateMatch = nullptr;
   AttributeList *Attr = D.getDeclSpec().getAttributes().getList();
   TemplateSpecCandidateSet FailedCandidates(D.getIdentifierLoc());
   for (LookupResult::iterator P = Previous.begin(), PEnd = Previous.end();
@@ -8968,11 +8969,13 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
         QualType Adjusted = adjustCCAndNoReturn(R, Method->getType(),
                                                 /*AdjustExceptionSpec*/true);
         if (Context.hasSameUnqualifiedType(Method->getType(), Adjusted)) {
-          Matches.clear();
-
-          Matches.addDecl(Method, P.getAccess());
-          if (Method->getTemplateSpecializationKind() == TSK_Undeclared)
-            break;
+          if (Method->getPrimaryTemplate()) {
+            TemplateMatches.addDecl(Method, P.getAccess());
+          } else {
+            // FIXME: Can this assert ever happen?  Needs a test.
+            assert(!NonTemplateMatch && "Multiple NonTemplateMatches");
+            NonTemplateMatch = Method;
+          }
         }
       }
     }
@@ -9011,22 +9014,25 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
       continue;
     }
 
-    Matches.addDecl(Specialization, P.getAccess());
+    TemplateMatches.addDecl(Specialization, P.getAccess());
   }
 
-  // Find the most specialized function template specialization.
-  UnresolvedSetIterator Result = getMostSpecialized(
-      Matches.begin(), Matches.end(), FailedCandidates,
-      D.getIdentifierLoc(),
-      PDiag(diag::err_explicit_instantiation_not_known) << Name,
-      PDiag(diag::err_explicit_instantiation_ambiguous) << Name,
-      PDiag(diag::note_explicit_instantiation_candidate));
+  FunctionDecl *Specialization = NonTemplateMatch;
+  if (!Specialization) {
+    // Find the most specialized function template specialization.
+    UnresolvedSetIterator Result = getMostSpecialized(
+        TemplateMatches.begin(), TemplateMatches.end(), FailedCandidates,
+        D.getIdentifierLoc(),
+        PDiag(diag::err_explicit_instantiation_not_known) << Name,
+        PDiag(diag::err_explicit_instantiation_ambiguous) << Name,
+        PDiag(diag::note_explicit_instantiation_candidate));
 
-  if (Result == Matches.end())
-    return true;
+    if (Result == TemplateMatches.end())
+      return true;
 
-  // Ignore access control bits, we don't need them for redeclaration checking.
-  FunctionDecl *Specialization = cast<FunctionDecl>(*Result);
+    // Ignore access control bits, we don't need them for redeclaration checking.
+    Specialization = cast<FunctionDecl>(*Result);
+  }
 
   // C++11 [except.spec]p4
   // In an explicit instantiation an exception-specification may be specified,

@@ -298,6 +298,13 @@ void mips::getMIPSTargetFeatures(const Driver &D, const llvm::Triple &Triple,
 
   AddTargetFeature(Args, Features, options::OPT_mno_odd_spreg,
                    options::OPT_modd_spreg, "nooddspreg");
+
+  if (Arg *A = Args.getLastArg(options::OPT_mmadd4, options::OPT_mno_madd4)) {
+    if (A->getOption().matches(options::OPT_mmadd4))
+      Features.push_back("-nomadd4");
+    else
+      Features.push_back("+nomadd4");
+  }
 }
 
 mips::NanEncoding mips::getSupportedNanEncoding(StringRef &CPU) {

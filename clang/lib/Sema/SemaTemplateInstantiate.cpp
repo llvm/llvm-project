@@ -1692,20 +1692,26 @@ TypeSourceInfo *Sema::SubstFunctionDeclType(TypeSourceInfo *T,
   return TLB.getTypeSourceInfo(Context, Result);
 }
 
+bool Sema::SubstExceptionSpec(SourceLocation Loc,
+                              FunctionProtoType::ExceptionSpecInfo &ESI,
+                              SmallVectorImpl<QualType> &ExceptionStorage,
+                              const MultiLevelTemplateArgumentList &Args) {
+  assert(ESI.Type != EST_Uninstantiated);
+
+  bool Changed = false;
+  TemplateInstantiator Instantiator(*this, Args, Loc, DeclarationName());
+  return Instantiator.TransformExceptionSpec(Loc, ESI, ExceptionStorage,
+                                             Changed);
+}
+
 void Sema::SubstExceptionSpec(FunctionDecl *New, const FunctionProtoType *Proto,
                               const MultiLevelTemplateArgumentList &Args) {
   FunctionProtoType::ExceptionSpecInfo ESI =
       Proto->getExtProtoInfo().ExceptionSpec;
-  assert(ESI.Type != EST_Uninstantiated);
-
-  TemplateInstantiator Instantiator(*this, Args, New->getLocation(),
-                                    New->getDeclName());
 
   SmallVector<QualType, 4> ExceptionStorage;
-  bool Changed = false;
-  if (Instantiator.TransformExceptionSpec(
-          New->getTypeSourceInfo()->getTypeLoc().getLocEnd(), ESI,
-          ExceptionStorage, Changed))
+  if (SubstExceptionSpec(New->getTypeSourceInfo()->getTypeLoc().getLocEnd(),
+                         ESI, ExceptionStorage, Args))
     // On error, recover by dropping the exception specification.
     ESI.Type = EST_None;
 

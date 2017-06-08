@@ -1084,46 +1084,46 @@ public:
     return 0; 
   }
 
+  /// Try to calculate arithmetic and shuffle op costs for reduction operations.
+  /// We're assuming that reduction operation are performing the following way:
+  /// 1. Non-pairwise reduction
+  /// %val1 = shufflevector<n x t> %val, <n x t> %undef,
+  /// <n x i32> <i32 n/2, i32 n/2 + 1, ..., i32 n, i32 undef, ..., i32 undef>
+  ///            \----------------v-------------/  \----------v------------/
+  ///                            n/2 elements               n/2 elements
+  /// %red1 = op <n x t> %val, <n x t> val1
+  /// After this operation we have a vector %red1 with only maningfull the
+  /// first n/2 elements, the second n/2 elements are undefined and can be
+  /// dropped. All other operations are actually working with the vector of
+  /// length n/2, not n. though the real vector length is still n.
+  /// %val2 = shufflevector<n x t> %red1, <n x t> %undef,
+  /// <n x i32> <i32 n/4, i32 n/4 + 1, ..., i32 n/2, i32 undef, ..., i32 undef>
+  ///            \----------------v-------------/  \----------v------------/
+  ///                            n/4 elements               3*n/4 elements
+  /// %red2 = op <n x t> %red1, <n x t> val2  - working with the vector of
+  /// length n/2, the resulting vector has length n/4 etc.
+  /// 2. Pairwise reduction:
+  /// Everything is the same except for an additional shuffle operation which
+  /// is used to produce operands for pairwise kind of reductions.
+  /// %val1 = shufflevector<n x t> %val, <n x t> %undef,
+  /// <n x i32> <i32 0, i32 2, ..., i32 n-2, i32 undef, ..., i32 undef>
+  ///            \-------------v----------/  \----------v------------/
+  ///                   n/2 elements               n/2 elements
+  /// %val2 = shufflevector<n x t> %val, <n x t> %undef,
+  /// <n x i32> <i32 1, i32 3, ..., i32 n-1, i32 undef, ..., i32 undef>
+  ///            \-------------v----------/  \----------v------------/
+  ///                   n/2 elements               n/2 elements
+  /// %red1 = op <n x t> %val1, <n x t> val2
+  /// Again, the operation is performed on <n x t> vector, but the resulting
+  /// vector %red1 is <n/2 x t> vector.
+  ///
+  /// The cost model should take into account that the actual length of the
+  /// vector is reduced on each iteration.
   unsigned getReductionCost(unsigned Opcode, Type *Ty, bool IsPairwise) {
     assert(Ty->isVectorTy() && "Expect a vector type");
     Type *ScalarTy = Ty->getVectorElementType();
     unsigned NumVecElts = Ty->getVectorNumElements();
     unsigned NumReduxLevels = Log2_32(NumVecElts);
-    // Try to calculate arithmetic and shuffle op costs for reduction operations.
-    // We're assuming that reduction operation are performing the following way:
-    // 1. Non-pairwise reduction
-    // %val1 = shufflevector<n x t> %val, <n x t> %undef,
-    // <n x i32> <i32 n/2, i32 n/2 + 1, ..., i32 n, i32 undef, ..., i32 undef>
-    //            \----------------v-------------/  \----------v------------/
-    //                            n/2 elements               n/2 elements
-    // %red1 = op <n x t> %val, <n x t> val1
-    // After this operation we have a vector %red1 with only maningfull the
-    // first n/2 elements, the second n/2 elements are undefined and can be
-    // dropped. All other operations are actually working with the vector of
-    // length n/2, not n. though the real vector length is still n.
-    // %val2 = shufflevector<n x t> %red1, <n x t> %undef,
-    // <n x i32> <i32 n/4, i32 n/4 + 1, ..., i32 n/2, i32 undef, ..., i32 undef>
-    //            \----------------v-------------/  \----------v------------/
-    //                            n/4 elements               3*n/4 elements
-    // %red2 = op <n x t> %red1, <n x t> val2  - working with the vector of
-    // length n/2, the resulting vector has length n/4 etc.
-    // 2. Pairwise reduction:
-    // Everything is the same except for an additional shuffle operation which
-    // is used to produce operands for pairwise kind of reductions.
-    // %val1 = shufflevector<n x t> %val, <n x t> %undef,
-    // <n x i32> <i32 0, i32 2, ..., i32 n-2, i32 undef, ..., i32 undef>
-    //            \-------------v----------/  \----------v------------/
-    //                   n/2 elements               n/2 elements
-    // %val2 = shufflevector<n x t> %val, <n x t> %undef,
-    // <n x i32> <i32 1, i32 3, ..., i32 n-1, i32 undef, ..., i32 undef>
-    //            \-------------v----------/  \----------v------------/
-    //                   n/2 elements               n/2 elements
-    // %red1 = op <n x t> %val1, <n x t> val2
-    // Again, the operation is performed on <n x t> vector, but the resulting
-    // vector %red1 is <n/2 x t> vector.
-    //
-    // The cost model should take into account that the actual length of the
-    // vector is reduced on each iteration.
     unsigned ArithCost = 0;
     unsigned ShuffleCost = 0;
     auto *ConcreteTTI = static_cast<T *>(this);

@@ -1,4 +1,4 @@
-//===-- TailDuplicator.cpp - Duplicate blocks into predecessors' tails ---===//
+//===- TailDuplicator.cpp - Duplicate blocks into predecessors' tails -----===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,22 +12,36 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CodeGen/TailDuplicator.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
-#include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineLoopInfo.h"
-#include "llvm/CodeGen/MachineModuleInfo.h"
-#include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/MachineSSAUpdater.h"
+#include "llvm/CodeGen/TailDuplicator.h"
+#include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetInstrInfo.h"
+#include "llvm/Target/TargetRegisterInfo.h"
+#include "llvm/Target/TargetSubtargetInfo.h"
+#include <algorithm>
+#include <cassert>
+#include <iterator>
+#include <utility>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "tailduplication"
@@ -41,15 +55,13 @@ STATISTIC(NumTailDupRemoved,
 STATISTIC(NumDeadBlocks, "Number of dead blocks removed");
 STATISTIC(NumAddedPHIs, "Number of phis added");
 
-namespace llvm {
-
 // Heuristic for tail duplication.
 static cl::opt<unsigned> TailDuplicateSize(
     "tail-dup-size",
     cl::desc("Maximum instructions to consider tail duplicating"), cl::init(2),
     cl::Hidden);
 
-cl::opt<unsigned> TailDupIndirectBranchSize(
+static cl::opt<unsigned> TailDupIndirectBranchSize(
     "tail-dup-indirect-size",
     cl::desc("Maximum instructions to consider tail duplicating blocks that "
              "end with indirect branches."), cl::init(20),
@@ -138,7 +150,7 @@ bool TailDuplicator::tailDuplicateAndUpdate(
     bool IsSimple, MachineBasicBlock *MBB,
     MachineBasicBlock *ForcedLayoutPred,
     SmallVectorImpl<MachineBasicBlock*> *DuplicatedPreds,
-    llvm::function_ref<void(MachineBasicBlock *)> *RemovalCallback) {
+    function_ref<void(MachineBasicBlock *)> *RemovalCallback) {
   // Save the successors list.
   SmallSetVector<MachineBasicBlock *, 8> Succs(MBB->succ_begin(),
                                                MBB->succ_end());
@@ -971,7 +983,7 @@ void TailDuplicator::appendCopies(MachineBasicBlock *MBB,
 /// the CFG.
 void TailDuplicator::removeDeadBlock(
     MachineBasicBlock *MBB,
-    llvm::function_ref<void(MachineBasicBlock *)> *RemovalCallback) {
+    function_ref<void(MachineBasicBlock *)> *RemovalCallback) {
   assert(MBB->pred_empty() && "MBB must be dead!");
   DEBUG(dbgs() << "\nRemoving MBB: " << *MBB);
 
@@ -985,5 +997,3 @@ void TailDuplicator::removeDeadBlock(
   // Remove the block.
   MBB->eraseFromParent();
 }
-
-} // End llvm namespace

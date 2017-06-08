@@ -1,4 +1,4 @@
-//===-- SelectionDAGISel.cpp - Implement the SelectionDAGISel class -------===//
+//===- SelectionDAGISel.cpp - Implement the SelectionDAGISel class --------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CodeGen/SelectionDAGISel.h"
 #include "ScheduleDAGSDNodes.h"
 #include "SelectionDAGBuilder.h"
 #include "llvm/ADT/APInt.h"
@@ -32,6 +31,7 @@
 #include "llvm/CodeGen/FastISel.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/CodeGen/GCMetadata.h"
+#include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -39,21 +39,23 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
-#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachinePassRegistry.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/SchedulerRegistry.h"
 #include "llvm/CodeGen/SelectionDAG.h"
+#include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/StackProtector.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/InstrTypes.h"
@@ -64,6 +66,7 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
+#include "llvm/IR/Value.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Pass.h"
@@ -89,6 +92,7 @@
 #include <cassert>
 #include <cstdint>
 #include <iterator>
+#include <limits>
 #include <memory>
 #include <string>
 #include <utility>
@@ -766,7 +770,6 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
 
     DEBUG(dbgs() << "Optimized type-legalized selection DAG: BB#" << BlockNumber
           << " '" << BlockName << "'\n"; CurDAG->dump());
-
   }
 
   {
@@ -1137,7 +1140,7 @@ static void processDbgDeclares(FunctionLoweringInfo *FuncInfo) {
       // Check if the variable is a static alloca or a byval or inalloca
       // argument passed in memory. If it is not, then we will ignore this
       // intrinsic and handle this during isel like dbg.value.
-      int FI = INT_MAX;
+      int FI = std::numeric_limits<int>::max();
       if (const auto *AI = dyn_cast<AllocaInst>(Address)) {
         auto SI = FuncInfo->StaticAllocaMap.find(AI);
         if (SI != FuncInfo->StaticAllocaMap.end())
@@ -1145,7 +1148,7 @@ static void processDbgDeclares(FunctionLoweringInfo *FuncInfo) {
       } else if (const auto *Arg = dyn_cast<Argument>(Address))
         FI = FuncInfo->getArgumentFrameIndex(Arg);
 
-      if (FI == INT_MAX)
+      if (FI == std::numeric_limits<int>::max())
         continue;
 
       DIExpression *Expr = DI->getExpression();

@@ -19,17 +19,20 @@
 
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Triple.h"
-#include "llvm/IR/Dominators.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/ValueMap.h"
 #include "llvm/Pass.h"
-#include "llvm/Target/TargetLowering.h"
 
 namespace llvm {
 
+class BasicBlock;
+class DominatorTree;
 class Function;
+class Instruction;
 class Module;
-class PHINode;
+class TargetLoweringBase;
 class TargetMachine;
+class Type;
 
 class StackProtector : public FunctionPass {
 public:
@@ -47,7 +50,7 @@ public:
   };
 
   /// A mapping of AllocaInsts to their required SSP layout.
-  typedef ValueMap<const AllocaInst *, SSPLayoutKind> SSPLayoutMap;
+  using SSPLayoutMap = ValueMap<const AllocaInst *, SSPLayoutKind>;
 
 private:
   const TargetMachine *TM = nullptr;

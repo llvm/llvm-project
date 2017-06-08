@@ -16,7 +16,13 @@ using namespace llvm;
 
 TEST(GlobalsModRef, OptNone) {
   StringRef Assembly = R"(
-    define void @f() optnone {
+    define void @f1() optnone {
+      ret void
+    }
+    define void @f2() optnone readnone {
+      ret void
+    }
+    define void @f3() optnone readonly {
       ret void
     }
   )";
@@ -27,9 +33,14 @@ TEST(GlobalsModRef, OptNone) {
   ASSERT_TRUE(M) << "Bad assembly?";
 
   const auto &funcs = M->functions();
-  ASSERT_NE(funcs.begin(), funcs.end());
-  EXPECT_EQ(std::next(funcs.begin()), funcs.end());
-  const Function &F = *funcs.begin();
+  auto I = funcs.begin();
+  ASSERT_NE(I, funcs.end());
+  const Function &F1 = *I;
+  ASSERT_NE(++I, funcs.end());
+  const Function &F2 = *I;
+  ASSERT_NE(++I, funcs.end());
+  const Function &F3 = *I;
+  EXPECT_EQ(++I, funcs.end());
 
   Triple Trip(M->getTargetTriple());
   TargetLibraryInfoImpl TLII(Trip);
@@ -37,5 +48,8 @@ TEST(GlobalsModRef, OptNone) {
   llvm::CallGraph CG(*M);
 
   auto AAR = GlobalsAAResult::analyzeModule(*M, TLI, CG);
-  EXPECT_EQ(FMRB_UnknownModRefBehavior, AAR.getModRefBehavior(&F));
+
+  EXPECT_EQ(FMRB_UnknownModRefBehavior, AAR.getModRefBehavior(&F1));
+  EXPECT_EQ(FMRB_DoesNotAccessMemory, AAR.getModRefBehavior(&F2));
+  EXPECT_EQ(FMRB_OnlyReadsMemory, AAR.getModRefBehavior(&F3));
 }

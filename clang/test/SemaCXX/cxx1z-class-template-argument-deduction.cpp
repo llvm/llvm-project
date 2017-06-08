@@ -271,4 +271,12 @@ namespace tuple_tests {
     template <> class tuple<> {};
     tuple a = {1, 2, 3}; // expected-error {{no viable constructor or deduction guide}}
   }
+
+  namespace libcxx_3 {
+    template<typename ...T> struct scoped_lock {
+      scoped_lock(T...);
+    };
+    template<> struct scoped_lock<> {};
+    scoped_lock l = {};
+  }
 }

@@ -21,6 +21,7 @@ class SymbolBody;
 class InputSection;
 class InputSectionBase;
 class OutputSection;
+struct OutputSectionCommand;
 
 // List of target-independent relocation types. Relocations read
 // from files are converted to these types so that the main code
@@ -123,7 +124,7 @@ class Thunk;
 class ThunkCreator {
 public:
   // Return true if Thunks have been added to OutputSections
-  bool createThunks(ArrayRef<OutputSection *> OutputSections);
+  bool createThunks(ArrayRef<OutputSectionCommand *> OutputSections);
 
 private:
   void mergeThunks();
@@ -131,9 +132,10 @@ private:
                               std::vector<InputSection *> *ISR);
   ThunkSection *getISThunkSec(InputSection *IS, OutputSection *OS);
   void forEachExecInputSection(
-      ArrayRef<OutputSection *> OutputSections,
+      ArrayRef<OutputSectionCommand *> OutputSections,
       std::function<void(OutputSection *, std::vector<InputSection *> *,
-                         InputSection *)> Fn);
+                         InputSection *)>
+          Fn);
   std::pair<Thunk *, bool> getThunk(SymbolBody &Body, uint32_t Type);
 
   // Track Symbols that already have a Thunk

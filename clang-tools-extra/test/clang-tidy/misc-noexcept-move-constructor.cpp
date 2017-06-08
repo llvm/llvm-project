@@ -1,16 +1,25 @@
-// RUN: %check_clang_tidy %s misc-noexcept-move-constructor %t
+// RUN: clang-tidy %s -checks="-*,misc-noexcept-move-constructor" -- -std=c++11 \
+// RUN:   | FileCheck %s -check-prefix=CHECK-EXCEPTIONS \
+// RUN:   -implicit-check-not="{{warning|error}}:"
+// RUN: clang-tidy %s -checks="-*,misc-noexcept-move-constructor" -- -fno-exceptions -std=c++11 \
+// RUN:   | FileCheck %s -allow-empty -check-prefix=CHECK-NONEXCEPTIONS \
+// RUN:   -implicit-check-not="{{warning|error}}:"
+
 
 class A {
   A(A &&);
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: move constructors should be marked noexcept [misc-noexcept-move-constructor]
+  // CHECK-EXCEPTIONS: :[[@LINE-1]]:3: warning: move constructors should be marked noexcept [misc-noexcept-move-constructor]
+  // CHECK-NONEXCEPTIONS-NOT: warning:
   A &operator=(A &&);
-  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: move assignment operators should
+  // CHECK-EXCEPTIONS: :[[@LINE-1]]:6: warning: move assignment operators should
+  // CHECK-NONEXCEPTIONS-NOT: warning:
 };
 
 struct B {
   static constexpr bool kFalse = false;
   B(B &&) noexcept(kFalse);
-  // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: noexcept specifier on the move constructor evaluates to 'false' [misc-noexcept-move-constructor]
+  // CHECK-EXCEPTIONS: :[[@LINE-1]]:20: warning: noexcept specifier on the move constructor evaluates to 'false' [misc-noexcept-move-constructor]
+  // CHECK-NONEXCEPTIONS-NOT: warning:
 };
 
 class OK {};
