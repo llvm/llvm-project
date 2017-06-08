@@ -1,4 +1,4 @@
-//===-- llvm/CodeGen/RegAllocRegistry.h -------------------------*- C++ -*-===//
+//===- llvm/CodeGen/RegAllocRegistry.h --------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -19,16 +19,16 @@
 
 namespace llvm {
 
+class FunctionPass;
+
 //===----------------------------------------------------------------------===//
 ///
 /// RegisterRegAlloc class - Track the registration of register allocators.
 ///
 //===----------------------------------------------------------------------===//
 class RegisterRegAlloc : public MachinePassRegistryNode {
-
 public:
-
-  typedef FunctionPass *(*FunctionPassCtor)();
+  using FunctionPassCtor = FunctionPass *(*)();
 
   static MachinePassRegistry Registry;
 
@@ -36,22 +36,26 @@ public:
       : MachinePassRegistryNode(N, D, (MachinePassCtor)C) {
     Registry.Add(this);
   }
+
   ~RegisterRegAlloc() { Registry.Remove(this); }
 
   // Accessors.
-  //
   RegisterRegAlloc *getNext() const {
     return (RegisterRegAlloc *)MachinePassRegistryNode::getNext();
   }
+
   static RegisterRegAlloc *getList() {
     return (RegisterRegAlloc *)Registry.getList();
   }
+
   static FunctionPassCtor getDefault() {
     return (FunctionPassCtor)Registry.getDefault();
   }
+
   static void setDefault(FunctionPassCtor C) {
     Registry.setDefault((MachinePassCtor)C);
   }
+
   static void setListener(MachinePassRegistryListener *L) {
     Registry.setListener(L);
   }
@@ -59,5 +63,4 @@ public:
 
 } // end namespace llvm
 
-
-#endif
+#endif // LLVM_CODEGEN_REGALLOCREGISTRY_H

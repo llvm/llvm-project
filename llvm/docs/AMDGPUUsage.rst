@@ -136,11 +136,11 @@ names from both the *Processor* and *Alternative Processor* can be used.
                                                        - FirePro W9100
                                                        - FirePro S9150
                                                        - FirePro S9170
-     \                                   dGPU  ROCm    - Radeon R9 290
+     gfx702                              dGPU  ROCm    - Radeon R9 290
                                                        - Radeon R9 290x
                                                        - Radeon R390
-                                                       - Radeonb R390x
-     gfx702     - kabini    amdgcn       APU           - E1-2100
+                                                       - Radeon R390x
+     gfx703     - kabini    amdgcn       APU           - E1-2100
                 - mullins                              - E1-2200
                                                        - E1-2500
                                                        - E2-3000

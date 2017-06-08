@@ -139,3 +139,26 @@ IRObjectFile::create(MemoryBufferRef Object, LLVMContext &Context) {
   return std::unique_ptr<IRObjectFile>(
       new IRObjectFile(*BCOrErr, std::move(Mods)));
 }
+
+Expected<IRSymtabFile> object::readIRSymtab(MemoryBufferRef MBRef) {
+  IRSymtabFile F;
+  ErrorOr<MemoryBufferRef> BCOrErr =
+      IRObjectFile::findBitcodeInMemBuffer(MBRef);
+  if (!BCOrErr)
+    return errorCodeToError(BCOrErr.getError());
+
+  Expected<std::vector<BitcodeModule>> BMsOrErr =
+      getBitcodeModuleList(*BCOrErr);
+  if (!BMsOrErr)
+    return BMsOrErr.takeError();
+
+  Expected<irsymtab::FileContents> FCOrErr = irsymtab::readBitcode(*BMsOrErr);
+  if (!FCOrErr)
+    return FCOrErr.takeError();
+
+  F.Mods = std::move(*BMsOrErr);
+  F.Symtab = std::move(FCOrErr->Symtab);
+  F.Strtab = std::move(FCOrErr->Strtab);
+  F.TheReader = std::move(FCOrErr->TheReader);
+  return std::move(F);
+}

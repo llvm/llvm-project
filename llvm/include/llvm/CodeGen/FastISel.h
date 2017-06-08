@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/IR/Attributes.h"
@@ -30,19 +31,43 @@
 #include <algorithm>
 #include <cstdint>
 #include <utility>
-#include <vector>
 
 namespace llvm {
 
+class AllocaInst;
+class BasicBlock;
+class CallInst;
+class Constant;
+class ConstantFP;
+class DataLayout;
+class FunctionLoweringInfo;
+class LoadInst;
 class MachineConstantPool;
+class MachineFrameInfo;
+class MachineFunction;
+class MachineInstr;
+class MachineMemOperand;
+class MachineOperand;
+class MachineRegisterInfo;
+class MCContext;
+class MCInstrDesc;
+class MCSymbol;
+class TargetInstrInfo;
+class TargetLibraryInfo;
+class TargetMachine;
+class TargetRegisterClass;
+class TargetRegisterInfo;
+class Type;
+class User;
+class Value;
 
 /// \brief This is a fast-path instruction selection class that generates poor
 /// code and doesn't support illegal types or non-trivial lowering, but runs
 /// quickly.
 class FastISel {
 public:
-  typedef TargetLoweringBase::ArgListEntry ArgListEntry;
-  typedef TargetLoweringBase::ArgListTy ArgListTy;
+  using ArgListEntry = TargetLoweringBase::ArgListEntry;
+  using ArgListTy = TargetLoweringBase::ArgListTy;
   struct CallLoweringInfo {
     Type *RetTy = nullptr;
     bool RetSExt : 1;
@@ -202,6 +227,8 @@ protected:
   MachineInstr *EmitStartPt;
 
 public:
+  virtual ~FastISel();
+
   /// \brief Return the position of the last instruction emitted for
   /// materializing constants for use in the current block.
   MachineInstr *getLastLocalValue() { return LastLocalValue; }
@@ -293,8 +320,6 @@ public:
   /// \brief Reset InsertPt to the given old insert position.
   void leaveLocalValueArea(SavePoint Old);
 
-  virtual ~FastISel();
-
 protected:
   explicit FastISel(FunctionLoweringInfo &FuncInfo,
                     const TargetLibraryInfo *LibInfo,
@@ -334,7 +359,7 @@ protected:
 
   /// \brief This method is called by target-independent code to request that an
   /// instruction with the given type, opcode, and register and immediate
-  // operands be emitted.
+  /// operands be emitted.
   virtual unsigned fastEmit_ri(MVT VT, MVT RetVT, unsigned Opcode, unsigned Op0,
                                bool Op0IsKill, uint64_t Imm);
 

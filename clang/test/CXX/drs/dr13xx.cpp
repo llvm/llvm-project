@@ -192,7 +192,7 @@ namespace dr1330 { // dr1330: 4 c++11
   static_assert(!noexcept(B<Q>().g()), "");
 #endif
 
-  template<typename T> int f() throw(typename T::error) { return 0; } // expected-error 1-4{{prior to '::'}} expected-note 0-1{{instantiation of}}
+  template<typename T> int f() throw(typename T::error) { return 0; } // expected-error 1-4{{prior to '::'}} expected-note 0-1{{prior to '::'}} expected-note 0-1{{requested here}}
 #if __cplusplus > 201402L
     // expected-error@-2 0-1{{C++1z}} expected-note@-2 0-1{{noexcept}}
 #endif
@@ -203,7 +203,16 @@ namespace dr1330 { // dr1330: 4 c++11
   decltype(f<char>()) f2; // expected-note {{instantiation of}}
   bool f3 = noexcept(f<float>()); // expected-note {{instantiation of}}
 #endif
-  template int f<short>(); // expected-note {{instantiation of}}
+  // In C++1z onwards, substituting explicit template arguments into the
+  // function type substitutes into the exception specification (because it's
+  // part of the type). In earlier languages, we don't notice there's a problem
+  // until we've already started to instantiate.
+  template int f<short>();
+#if __cplusplus >= 201703L
+  // expected-error@-2 {{does not refer to a function template}}
+#else
+  // expected-note@-4 {{instantiation of}}
+#endif
 
   template<typename T> struct C {
     C() throw(typename T::type); // expected-error 1-2{{prior to '::'}}

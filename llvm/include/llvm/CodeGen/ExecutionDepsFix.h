@@ -1,4 +1,4 @@
-//===- llvm/CodeGen/ExecutionDepsFix.h - Execution Dependency Fix -*- C++ -*-=//
+//==- llvm/CodeGen/ExecutionDepsFix.h - Execution Dependency Fix -*- C++ -*-==//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -20,18 +20,29 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 #ifndef LLVM_CODEGEN_EXECUTIONDEPSFIX_H
 #define LLVM_CODEGEN_EXECUTIONDEPSFIX_H
 
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
+#include "llvm/Pass.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/MathExtras.h"
+#include <cassert>
+#include <limits>
+#include <utility>
 #include <vector>
 
 namespace llvm {
+
+class MachineBasicBlock;
+class MachineInstr;
+class TargetInstrInfo;
 
 /// A DomainValue is a bit like LiveIntervals' ValNo, but it also keeps track
 /// of execution domains.
@@ -50,7 +61,7 @@ namespace llvm {
 /// domains.
 struct DomainValue {
   // Basic reference counting.
-  unsigned Refs;
+  unsigned Refs = 0;
 
   // Bitmask of available domains. For an open DomainValue, it is the still
   // possible domains for collapsing. For a collapsed DomainValue it is the
@@ -64,6 +75,8 @@ struct DomainValue {
 
   // Twiddleable instructions using or defining these registers.
   SmallVector<MachineInstr*, 8> Instrs;
+
+  DomainValue() { clear(); }
 
   // A collapsed DomainValue has no instructions to twiddle - it simply keeps
   // track of the domains where the registers are already available.
@@ -96,8 +109,6 @@ struct DomainValue {
   unsigned getFirstDomain() const {
     return countTrailingZeros(AvailableDomains);
   }
-
-  DomainValue() : Refs(0) { clear(); }
 
   // Clear this DomainValue and point to next which has all its data.
   void clear() {
@@ -136,29 +147,27 @@ class ExecutionDepsFix : public MachineFunctionPass {
     // Keeps clearance and domain information for all registers. Note that this
     // is different from the usual definition notion of liveness. The CPU
     // doesn't care whether or not we consider a register killed.
-    LiveReg *OutRegs;
+    LiveReg *OutRegs = nullptr;
 
     // Whether we have gotten to this block in primary processing yet.
-    bool PrimaryCompleted;
+    bool PrimaryCompleted = false;
 
     // The number of predecessors for which primary processing has completed
-    unsigned IncomingProcessed;
+    unsigned IncomingProcessed = 0;
 
     // The value of `IncomingProcessed` at the start of primary processing
-    unsigned PrimaryIncoming;
+    unsigned PrimaryIncoming = 0;
 
     // The number of predecessors for which all processing steps are done.
-    unsigned IncomingCompleted;
+    unsigned IncomingCompleted = 0;
 
-    MBBInfo()
-        : OutRegs(nullptr), PrimaryCompleted(false), IncomingProcessed(0),
-          PrimaryIncoming(0), IncomingCompleted(0) {}
+    MBBInfo() = default;
   };
-  typedef DenseMap<MachineBasicBlock *, MBBInfo> MBBInfoMap;
+  using MBBInfoMap = DenseMap<MachineBasicBlock *, MBBInfo>;
   MBBInfoMap MBBInfos;
 
   /// List of undefined register reads in this block in forward order.
-  std::vector<std::pair<MachineInstr*, unsigned> > UndefReads;
+  std::vector<std::pair<MachineInstr *, unsigned>> UndefReads;
 
   /// Storage for register unit liveness.
   LivePhysRegs LiveRegSet;
@@ -166,6 +175,7 @@ class ExecutionDepsFix : public MachineFunctionPass {
   /// Current instruction number.
   /// The first instruction in each basic block is 0.
   int CurInstr;
+
 public:
   ExecutionDepsFix(char &PassID, const TargetRegisterClass &RC)
     : MachineFunctionPass(PassID), RC(&RC), NumRegs(RC.getNumRegs()) {}
@@ -217,4 +227,4 @@ private:
 
 } // end namepsace llvm
 
-#endif
+#endif // LLVM_CODEGEN_EXECUTIONDEPSFIX_H
