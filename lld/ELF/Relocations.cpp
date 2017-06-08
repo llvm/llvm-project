@@ -1051,10 +1051,12 @@ std::pair<Thunk *, bool> ThunkCreator::getThunk(SymbolBody &Body,
 // Call Fn on every executable InputSection accessed via the linker script
 // InputSectionDescription::Sections.
 void ThunkCreator::forEachExecInputSection(
-    ArrayRef<OutputSection *> OutputSections,
-    std::function<void(OutputSection *, std::vector<InputSection*> *,
-                       InputSection *)> Fn) {
-  for (OutputSection *OS : OutputSections) {
+    ArrayRef<OutputSectionCommand *> OutputSections,
+    std::function<void(OutputSection *, std::vector<InputSection *> *,
+                       InputSection *)>
+        Fn) {
+  for (OutputSectionCommand *Cmd : OutputSections) {
+    OutputSection *OS = Cmd->Sec;
     if (!(OS->Flags & SHF_ALLOC) || !(OS->Flags & SHF_EXECINSTR))
       continue;
     if (OutputSectionCommand *C = Script->getCmd(OS))
@@ -1077,7 +1079,8 @@ void ThunkCreator::forEachExecInputSection(
 //
 // FIXME: All Thunks are assumed to be in range of the relocation. Range
 // extension Thunks are not yet supported.
-bool ThunkCreator::createThunks(ArrayRef<OutputSection *> OutputSections) {
+bool ThunkCreator::createThunks(
+    ArrayRef<OutputSectionCommand *> OutputSections) {
   // Create all the Thunks and insert them into synthetic ThunkSections. The
   // ThunkSections are later inserted back into the OutputSection.
 

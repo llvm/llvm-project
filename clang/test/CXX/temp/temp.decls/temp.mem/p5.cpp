@@ -77,3 +77,16 @@ void test_X0(X0 x0, const X0 &x0c) {
   x0.operator float *();
   x0c.operator const char*();
 }
+
+namespace PR14211 {
+template <class U> struct X {
+  void foo(U){}
+  template <class T> void foo(T){}
+
+  template <class T> void bar(T){}
+  void bar(U){}
+};
+
+template void X<int>::foo(int);
+template void X<int>::bar(int);
+}

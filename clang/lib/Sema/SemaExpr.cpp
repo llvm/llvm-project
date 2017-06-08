@@ -11843,14 +11843,10 @@ ExprResult Sema::BuildBinOp(Scope *S, SourceLocation OpLoc,
           std::any_of(OE->decls_begin(), OE->decls_end(), [](NamedDecl *ND) {
             return isa<FunctionTemplateDecl>(ND);
           })) {
-        if (OE->getQualifier()) {
-          Diag(OE->getQualifierLoc().getBeginLoc(),
-               diag::err_template_kw_missing)
-            << OE->getName().getAsString() << "";
-        } else {
-          Diag(OE->getNameLoc(), diag::err_template_kw_missing)
-            << OE->getName().getAsString() << "";
-        }
+        Diag(OE->getQualifier() ? OE->getQualifierLoc().getBeginLoc()
+                                : OE->getNameLoc(),
+             diag::err_template_kw_missing)
+          << OE->getName().getAsString() << "";
         return ExprError();
       }
     }
@@ -11979,16 +11975,13 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
           << resultType << Input.get()->getSourceRange();
     else if (resultType->hasIntegerRepresentation())
       break;
-    else if (resultType->isExtVectorType()) {
-      if (Context.getLangOpts().OpenCL) {
-        // OpenCL v1.1 s6.3.f: The bitwise operator not (~) does not operate
-        // on vector float types.
-        QualType T = resultType->getAs<ExtVectorType>()->getElementType();
-        if (!T->isIntegerType())
-          return ExprError(Diag(OpLoc, diag::err_typecheck_unary_expr)
-                           << resultType << Input.get()->getSourceRange());
-      }
-      break;
+    else if (resultType->isExtVectorType() && Context.getLangOpts().OpenCL) {
+      // OpenCL v1.1 s6.3.f: The bitwise operator not (~) does not operate
+      // on vector float types.
+      QualType T = resultType->getAs<ExtVectorType>()->getElementType();
+      if (!T->isIntegerType())
+        return ExprError(Diag(OpLoc, diag::err_typecheck_unary_expr)
+                          << resultType << Input.get()->getSourceRange());
     } else {
       return ExprError(Diag(OpLoc, diag::err_typecheck_unary_expr)
                        << resultType << Input.get()->getSourceRange());

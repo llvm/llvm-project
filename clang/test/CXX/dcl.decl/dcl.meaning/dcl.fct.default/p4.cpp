@@ -73,3 +73,36 @@ void Test ()
 }
 
 } // namespace
+
+namespace pr12724 {
+
+void func_01(bool param = true);
+class C01 {
+public:
+  friend void func_01(bool param);
+};
+
+void func_02(bool param = true);
+template<typename T>
+class C02 {
+public:
+  friend void func_02(bool param);
+};
+C02<int> c02;
+
+void func_03(bool param);
+template<typename T>
+class C03 {
+public:
+  friend void func_03(bool param);
+};
+void func_03(bool param = true);
+C03<int> c03;
+
+void main() {
+  func_01();
+  func_02();
+  func_03();
+}
+
+} // namespace pr12724

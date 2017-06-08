@@ -101,9 +101,12 @@ void OutputSection::addSection(InputSection *S) {
 // This function is called after we sort input sections
 // and scan relocations to setup sections' offsets.
 void OutputSection::assignOffsets() {
+  OutputSectionCommand *Cmd = Script->getCmd(this);
   uint64_t Off = 0;
-  for (InputSection *S : Sections)
-    Off = updateOffset(Off, S);
+  for (BaseCommand *Base : Cmd->Commands)
+    if (auto *ISD = dyn_cast<InputSectionDescription>(Base))
+      for (InputSection *S : ISD->Sections)
+        Off = updateOffset(Off, S);
   this->Size = Off;
 }
 
