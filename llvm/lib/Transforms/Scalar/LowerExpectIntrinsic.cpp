@@ -93,7 +93,9 @@ static bool handleSwitchExpect(SwitchInst &SI) {
 /// the branch probability info for the originating branch can be inferred.
 static void handlePhiDef(CallInst *Expect) {
   Value &Arg = *Expect->getArgOperand(0);
-  ConstantInt *ExpectedValue = cast<ConstantInt>(Expect->getArgOperand(1));
+  ConstantInt *ExpectedValue = dyn_cast<ConstantInt>(Expect->getArgOperand(1));
+  if (!ExpectedValue)
+    return;
   const APInt &ExpectedPhiValue = ExpectedValue->getValue();
 
   // Walk up in backward a list of instructions that

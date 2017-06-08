@@ -15,6 +15,7 @@
 #define LLVM_OBJECT_IROBJECTFILE_H
 
 #include "llvm/ADT/PointerUnion.h"
+#include "llvm/Object/IRSymtab.h"
 #include "llvm/Object/ModuleSymbolTable.h"
 #include "llvm/Object/SymbolicFile.h"
 
@@ -61,7 +62,20 @@ public:
   static Expected<std::unique_ptr<IRObjectFile>> create(MemoryBufferRef Object,
                                                         LLVMContext &Context);
 };
+
+/// The contents of a bitcode file and its irsymtab. Any underlying data
+/// for the irsymtab are owned by Symtab and Strtab.
+struct IRSymtabFile {
+  std::vector<BitcodeModule> Mods;
+  SmallVector<char, 0> Symtab, Strtab;
+  irsymtab::Reader TheReader;
+};
+
+/// Reads a bitcode file, creating its irsymtab if necessary.
+Expected<IRSymtabFile> readIRSymtab(MemoryBufferRef MBRef);
+
 }
+
 }
 
 #endif

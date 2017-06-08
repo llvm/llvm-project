@@ -329,15 +329,13 @@ define arm_aapcscc double @test_double_aapcscc(double %p0, double %p1, double %p
 ; CHECK: liveins: %r0, %r1, %r2, %r3
 ; CHECK-DAG: [[VREGP1LO:%[0-9]+]](s32) = COPY %r2
 ; CHECK-DAG: [[VREGP1HI:%[0-9]+]](s32) = COPY %r3
-; LITTLE: [[VREGP1:%[0-9]+]](s64) = G_SEQUENCE [[VREGP1LO]](s32), 0, [[VREGP1HI]](s32), 32
-; BIG: [[VREGP1:%[0-9]+]](s64) = G_SEQUENCE [[VREGP1HI]](s32), 0, [[VREGP1LO]](s32), 32
+; LITTLE: [[VREGP1:%[0-9]+]](s64) = G_MERGE_VALUES [[VREGP1LO]](s32), [[VREGP1HI]](s32)
+; BIG: [[VREGP1:%[0-9]+]](s64) = G_MERGE_VALUES [[VREGP1HI]](s32), [[VREGP1LO]](s32)
 ; CHECK: [[FIP5:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[P5]]
 ; CHECK: [[VREGP5:%[0-9]+]](s64) = G_LOAD [[FIP5]](p0){{.*}}load 8
 ; CHECK: [[VREGV:%[0-9]+]](s64) = G_FADD [[VREGP1]], [[VREGP5]]
-; LITTLE: [[VREGVLO:%[0-9]+]](s32) = G_EXTRACT [[VREGV]](s64), 0
-; LITTLE: [[VREGVHI:%[0-9]+]](s32) = G_EXTRACT [[VREGV]](s64), 32
-; BIG: [[VREGVHI:%[0-9]+]](s32) = G_EXTRACT [[VREGV]](s64), 0
-; BIG: [[VREGVLO:%[0-9]+]](s32) = G_EXTRACT [[VREGV]](s64), 32
+; LITTLE: [[VREGVLO:%[0-9]+]](s32), [[VREGVHI:%[0-9]+]](s32) = G_UNMERGE_VALUES [[VREGV]](s64)
+; BIG: [[VREGVHI:%[0-9]+]](s32), [[VREGVLO:%[0-9]+]](s32) = G_UNMERGE_VALUES [[VREGV]](s64)
 ; CHECK-DAG: %r0 = COPY [[VREGVLO]]
 ; CHECK-DAG: %r1 = COPY [[VREGVHI]]
 ; CHECK: BX_RET 14, _, implicit %r0, implicit %r1
@@ -376,15 +374,13 @@ define arm_aapcscc double @test_double_gap_aapcscc(float %filler, double %p0,
 ; CHECK: liveins: %r0, %r2, %r3
 ; CHECK-DAG: [[VREGP0LO:%[0-9]+]](s32) = COPY %r2
 ; CHECK-DAG: [[VREGP0HI:%[0-9]+]](s32) = COPY %r3
-; LITTLE: [[VREGP0:%[0-9]+]](s64) = G_SEQUENCE [[VREGP0LO]](s32), 0, [[VREGP0HI]](s32), 32
-; BIG: [[VREGP0:%[0-9]+]](s64) = G_SEQUENCE [[VREGP0HI]](s32), 0, [[VREGP0LO]](s32), 32
+; LITTLE: [[VREGP0:%[0-9]+]](s64) = G_MERGE_VALUES [[VREGP0LO]](s32), [[VREGP0HI]](s32)
+; BIG: [[VREGP0:%[0-9]+]](s64) = G_MERGE_VALUES [[VREGP0HI]](s32), [[VREGP0LO]](s32)
 ; CHECK: [[FIP1:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[P1]]
 ; CHECK: [[VREGP1:%[0-9]+]](s64) = G_LOAD [[FIP1]](p0){{.*}}load 8
 ; CHECK: [[VREGV:%[0-9]+]](s64) = G_FADD [[VREGP0]], [[VREGP1]]
-; LITTLE: [[VREGVLO:%[0-9]+]](s32) = G_EXTRACT [[VREGV]](s64), 0
-; LITTLE: [[VREGVHI:%[0-9]+]](s32) = G_EXTRACT [[VREGV]](s64), 32
-; BIG: [[VREGVHI:%[0-9]+]](s32) = G_EXTRACT [[VREGV]](s64), 0
-; BIG: [[VREGVLO:%[0-9]+]](s32) = G_EXTRACT [[VREGV]](s64), 32
+; LITTLE: [[VREGVLO:%[0-9]+]](s32), [[VREGVHI:%[0-9]+]](s32) = G_UNMERGE_VALUES [[VREGV]](s64)
+; BIG: [[VREGVHI:%[0-9]+]](s32), [[VREGVLO:%[0-9]+]](s32) = G_UNMERGE_VALUES [[VREGV]](s64)
 ; CHECK-DAG: %r0 = COPY [[VREGVLO]]
 ; CHECK-DAG: %r1 = COPY [[VREGVHI]]
 ; CHECK: BX_RET 14, _, implicit %r0, implicit %r1
@@ -401,15 +397,13 @@ define arm_aapcscc double @test_double_gap2_aapcscc(double %p0, float %filler,
 ; CHECK: liveins: %r0, %r1, %r2
 ; CHECK-DAG: [[VREGP0LO:%[0-9]+]](s32) = COPY %r0
 ; CHECK-DAG: [[VREGP0HI:%[0-9]+]](s32) = COPY %r1
-; LITTLE: [[VREGP0:%[0-9]+]](s64) = G_SEQUENCE [[VREGP0LO]](s32), 0, [[VREGP0HI]](s32), 32
-; BIG: [[VREGP0:%[0-9]+]](s64) = G_SEQUENCE [[VREGP0HI]](s32), 0, [[VREGP0LO]](s32), 32
+; LITTLE: [[VREGP0:%[0-9]+]](s64) = G_MERGE_VALUES [[VREGP0LO]](s32), [[VREGP0HI]](s32)
+; BIG: [[VREGP0:%[0-9]+]](s64) = G_MERGE_VALUES [[VREGP0HI]](s32), [[VREGP0LO]](s32)
 ; CHECK: [[FIP1:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[P1]]
 ; CHECK: [[VREGP1:%[0-9]+]](s64) = G_LOAD [[FIP1]](p0){{.*}}load 8
 ; CHECK: [[VREGV:%[0-9]+]](s64) = G_FADD [[VREGP0]], [[VREGP1]]
-; LITTLE: [[VREGVLO:%[0-9]+]](s32) = G_EXTRACT [[VREGV]](s64), 0
-; LITTLE: [[VREGVHI:%[0-9]+]](s32) = G_EXTRACT [[VREGV]](s64), 32
-; BIG: [[VREGVHI:%[0-9]+]](s32) = G_EXTRACT [[VREGV]](s64), 0
-; BIG: [[VREGVLO:%[0-9]+]](s32) = G_EXTRACT [[VREGV]](s64), 32
+; LITTLE: [[VREGVLO:%[0-9]+]](s32), [[VREGVHI:%[0-9]+]](s32) = G_UNMERGE_VALUES [[VREGV]](s64)
+; BIG: [[VREGVHI:%[0-9]+]](s32), [[VREGVLO:%[0-9]+]](s32) = G_UNMERGE_VALUES [[VREGV]](s64)
 ; CHECK-DAG: %r0 = COPY [[VREGVLO]]
 ; CHECK-DAG: %r1 = COPY [[VREGVHI]]
 ; CHECK: BX_RET 14, _, implicit %r0, implicit %r1
@@ -568,13 +562,12 @@ define arm_aapcscc double @test_call_aapcs_fp_params(double %a, float %b) {
 ; CHECK-LABEL: name: test_call_aapcs_fp_params
 ; CHECK-DAG: [[A1:%[0-9]+]](s32) = COPY %r0
 ; CHECK-DAG: [[A2:%[0-9]+]](s32) = COPY %r1
-; LITTLE-DAG: [[AVREG:%[0-9]+]](s64) = G_SEQUENCE [[A1]](s32), 0, [[A2]](s32), 32
-; BIG-DAG: [[AVREG:%[0-9]+]](s64) = G_SEQUENCE [[A2]](s32), 0, [[A1]](s32), 32
+; LITTLE-DAG: [[AVREG:%[0-9]+]](s64) = G_MERGE_VALUES [[A1]](s32), [[A2]](s32)
+; BIG-DAG: [[AVREG:%[0-9]+]](s64) = G_MERGE_VALUES [[A2]](s32), [[A1]](s32)
 ; CHECK-DAG: [[BVREG:%[0-9]+]](s32) = COPY %r2
 ; CHECK: ADJCALLSTACKDOWN 16, 0, 14, _, implicit-def %sp, implicit %sp
 ; CHECK-DAG: %r0 = COPY [[BVREG]]
-; CHECK-DAG: [[A1:%[0-9]+]](s32) = G_EXTRACT [[AVREG]](s64), 0
-; CHECK-DAG: [[A2:%[0-9]+]](s32) = G_EXTRACT [[AVREG]](s64), 32
+; CHECK-DAG: [[A1:%[0-9]+]](s32), [[A2:%[0-9]+]](s32) = G_UNMERGE_VALUES [[AVREG]](s64)
 ; LITTLE-DAG: %r2 = COPY [[A1]]
 ; LITTLE-DAG: %r3 = COPY [[A2]]
 ; BIG-DAG: %r2 = COPY [[A2]]
@@ -590,11 +583,10 @@ define arm_aapcscc double @test_call_aapcs_fp_params(double %a, float %b) {
 ; CHECK: BLX @aapcscc_fp_target, csr_aapcs, implicit-def %lr, implicit %sp, implicit %r0, implicit %r2, implicit %r3, implicit-def %r0, implicit-def %r1
 ; CHECK-DAG: [[R1:%[0-9]+]](s32) = COPY %r0
 ; CHECK-DAG: [[R2:%[0-9]+]](s32) = COPY %r1
-; LITTLE: [[RVREG:%[0-9]+]](s64) = G_SEQUENCE [[R1]](s32), 0, [[R2]](s32), 32
-; BIG: [[RVREG:%[0-9]+]](s64) = G_SEQUENCE [[R2]](s32), 0, [[R1]](s32), 32
+; LITTLE: [[RVREG:%[0-9]+]](s64) = G_MERGE_VALUES [[R1]](s32), [[R2]](s32)
+; BIG: [[RVREG:%[0-9]+]](s64) = G_MERGE_VALUES [[R2]](s32), [[R1]](s32)
 ; CHECK: ADJCALLSTACKUP 16, 0, 14, _, implicit-def %sp, implicit %sp
-; CHECK: [[R1:%[0-9]+]](s32) = G_EXTRACT [[RVREG]](s64), 0
-; CHECK: [[R2:%[0-9]+]](s32) = G_EXTRACT [[RVREG]](s64), 32
+; CHECK: [[R1:%[0-9]+]](s32), [[R2:%[0-9]+]](s32) = G_UNMERGE_VALUES [[RVREG]](s64)
 ; LITTLE-DAG: %r0 = COPY [[R1]]
 ; LITTLE-DAG: %r1 = COPY [[R2]]
 ; BIG-DAG: %r0 = COPY [[R2]]
@@ -761,12 +753,12 @@ define arm_aapcscc [2 x float] @test_fp_arrays_aapcs([3 x double] %arr) {
 ; CHECK: liveins: %r0, %r1, %r2, %r3
 ; CHECK: [[ARR0_0:%[0-9]+]](s32) = COPY %r0
 ; CHECK: [[ARR0_1:%[0-9]+]](s32) = COPY %r1
-; LITTLE: [[ARR0:%[0-9]+]](s64) = G_SEQUENCE [[ARR0_0]](s32), 0, [[ARR0_1]](s32), 32
-; BIG: [[ARR0:%[0-9]+]](s64) = G_SEQUENCE [[ARR0_1]](s32), 0, [[ARR0_0]](s32), 32
+; LITTLE: [[ARR0:%[0-9]+]](s64) = G_MERGE_VALUES [[ARR0_0]](s32), [[ARR0_1]](s32)
+; BIG: [[ARR0:%[0-9]+]](s64) = G_MERGE_VALUES [[ARR0_1]](s32), [[ARR0_0]](s32)
 ; CHECK: [[ARR1_0:%[0-9]+]](s32) = COPY %r2
 ; CHECK: [[ARR1_1:%[0-9]+]](s32) = COPY %r3
-; LITTLE: [[ARR1:%[0-9]+]](s64) = G_SEQUENCE [[ARR1_0]](s32), 0, [[ARR1_1]](s32), 32
-; BIG: [[ARR1:%[0-9]+]](s64) = G_SEQUENCE [[ARR1_1]](s32), 0, [[ARR1_0]](s32), 32
+; LITTLE: [[ARR1:%[0-9]+]](s64) = G_MERGE_VALUES [[ARR1_0]](s32), [[ARR1_1]](s32)
+; BIG: [[ARR1:%[0-9]+]](s64) = G_MERGE_VALUES [[ARR1_1]](s32), [[ARR1_0]](s32)
 ; CHECK: [[ARR2_FI:%[0-9]+]](p0) = G_FRAME_INDEX %fixed-stack.[[ARR2_ID]]
 ; CHECK: [[ARR2:%[0-9]+]](s64) = G_LOAD [[ARR2_FI]]{{.*}}load 8 from %fixed-stack.[[ARR2_ID]]
 ; CHECK: [[ARR_MERGED_0:%[0-9]+]](s192) = IMPLICIT_DEF
@@ -778,14 +770,12 @@ define arm_aapcscc [2 x float] @test_fp_arrays_aapcs([3 x double] %arr) {
 ; CHECK: [[ARR0:%[0-9]+]](s64) = G_EXTRACT [[ARR_MERGED]](s192), 0
 ; CHECK: [[ARR1:%[0-9]+]](s64) = G_EXTRACT [[ARR_MERGED]](s192), 64
 ; CHECK: [[ARR2:%[0-9]+]](s64) = G_EXTRACT [[ARR_MERGED]](s192), 128
-; CHECK: [[ARR0_0:%[0-9]+]](s32) = G_EXTRACT [[ARR0]](s64), 0
-; CHECK: [[ARR0_1:%[0-9]+]](s32) = G_EXTRACT [[ARR0]](s64), 32
+; CHECK: [[ARR0_0:%[0-9]+]](s32), [[ARR0_1:%[0-9]+]](s32) = G_UNMERGE_VALUES [[ARR0]](s64)
 ; LITTLE: %r0 = COPY [[ARR0_0]](s32)
 ; LITTLE: %r1 = COPY [[ARR0_1]](s32)
 ; BIG: %r0 = COPY [[ARR0_1]](s32)
 ; BIG: %r1 = COPY [[ARR0_0]](s32)
-; CHECK: [[ARR1_0:%[0-9]+]](s32) = G_EXTRACT [[ARR1]](s64), 0
-; CHECK: [[ARR1_1:%[0-9]+]](s32) = G_EXTRACT [[ARR1]](s64), 32
+; CHECK: [[ARR1_0:%[0-9]+]](s32), [[ARR1_1:%[0-9]+]](s32) = G_UNMERGE_VALUES [[ARR1]](s64)
 ; LITTLE: %r2 = COPY [[ARR1_0]](s32)
 ; LITTLE: %r3 = COPY [[ARR1_1]](s32)
 ; BIG: %r2 = COPY [[ARR1_1]](s32)

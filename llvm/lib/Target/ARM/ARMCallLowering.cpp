@@ -123,8 +123,7 @@ struct OutgoingValueHandler : public CallLowering::ValueHandler {
 
     unsigned NewRegs[] = {MRI.createGenericVirtualRegister(LLT::scalar(32)),
                           MRI.createGenericVirtualRegister(LLT::scalar(32))};
-    MIRBuilder.buildExtract(NewRegs[0], Arg.Reg, 0);
-    MIRBuilder.buildExtract(NewRegs[1], Arg.Reg, 32);
+    MIRBuilder.buildUnmerge(NewRegs, Arg.Reg);
 
     bool IsLittle = MIRBuilder.getMF().getSubtarget<ARMSubtarget>().isLittle();
     if (!IsLittle)
@@ -340,7 +339,7 @@ struct IncomingValueHandler : public CallLowering::ValueHandler {
     if (!IsLittle)
       std::swap(NewRegs[0], NewRegs[1]);
 
-    MIRBuilder.buildSequence(Arg.Reg, NewRegs, {0, 32});
+    MIRBuilder.buildMerge(Arg.Reg, NewRegs);
 
     return 1;
   }

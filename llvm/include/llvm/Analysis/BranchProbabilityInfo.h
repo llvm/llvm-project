@@ -26,6 +26,7 @@
 
 namespace llvm {
 class LoopInfo;
+class TargetLibraryInfo;
 class raw_ostream;
 
 /// \brief Analysis providing branch probability information.
@@ -43,8 +44,9 @@ class raw_ostream;
 class BranchProbabilityInfo {
 public:
   BranchProbabilityInfo() {}
-  BranchProbabilityInfo(const Function &F, const LoopInfo &LI) {
-    calculate(F, LI);
+  BranchProbabilityInfo(const Function &F, const LoopInfo &LI,
+                        const TargetLibraryInfo *TLI = nullptr) {
+    calculate(F, LI, TLI);
   }
 
   BranchProbabilityInfo(BranchProbabilityInfo &&Arg)
@@ -116,7 +118,8 @@ public:
     return IsLikely ? LikelyProb : LikelyProb.getCompl();
   }
 
-  void calculate(const Function &F, const LoopInfo &LI);
+  void calculate(const Function &F, const LoopInfo &LI,
+                 const TargetLibraryInfo *TLI = nullptr);
 
   /// Forget analysis results for the given basic block.
   void eraseBlock(const BasicBlock *BB);
@@ -171,7 +174,7 @@ private:
   bool calcColdCallHeuristics(const BasicBlock *BB);
   bool calcPointerHeuristics(const BasicBlock *BB);
   bool calcLoopBranchHeuristics(const BasicBlock *BB, const LoopInfo &LI);
-  bool calcZeroHeuristics(const BasicBlock *BB);
+  bool calcZeroHeuristics(const BasicBlock *BB, const TargetLibraryInfo *TLI);
   bool calcFloatingPointHeuristics(const BasicBlock *BB);
   bool calcInvokeHeuristics(const BasicBlock *BB);
 };

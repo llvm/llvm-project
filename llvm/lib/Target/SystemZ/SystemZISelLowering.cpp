@@ -5367,12 +5367,24 @@ MachineBasicBlock *SystemZTargetLowering::emitCondStore(MachineInstr &MI,
   if (STOCOpcode && !IndexReg && Subtarget.hasLoadStoreOnCond()) {
     if (Invert)
       CCMask ^= CCValid;
+
+    // ISel pattern matching also adds a load memory operand of the same
+    // address, so take special care to find the storing memory operand.
+    MachineMemOperand *MMO = nullptr;
+    for (auto *I : MI.memoperands())
+      if (I->isStore()) {
+          MMO = I;
+          break;
+        }
+
     BuildMI(*MBB, MI, DL, TII->get(STOCOpcode))
-        .addReg(SrcReg)
-        .add(Base)
-        .addImm(Disp)
-        .addImm(CCValid)
-        .addImm(CCMask);
+      .addReg(SrcReg)
+      .add(Base)
+      .addImm(Disp)
+      .addImm(CCValid)
+      .addImm(CCMask)
+      .addMemOperand(MMO);
+
     MI.eraseFromParent();
     return MBB;
   }
@@ -5950,7 +5962,8 @@ MachineBasicBlock *SystemZTargetLowering::emitMemMemWrapper(
         .addImm(DestDisp)
         .addImm(ThisLength)
         .add(SrcBase)
-        .addImm(SrcDisp);
+        .addImm(SrcDisp)
+        ->setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
     DestDisp += ThisLength;
     SrcDisp += ThisLength;
     Length -= ThisLength;

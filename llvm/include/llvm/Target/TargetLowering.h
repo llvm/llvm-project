@@ -1876,6 +1876,38 @@ public:
     return false;
   }
 
+  /// Returns true if the opcode is a commutative binary operation.
+  virtual bool isCommutativeBinOp(unsigned Opcode) const {
+    // FIXME: This should get its info from the td file.
+    switch (Opcode) {
+    case ISD::ADD:
+    case ISD::SMIN:
+    case ISD::SMAX:
+    case ISD::UMIN:
+    case ISD::UMAX:
+    case ISD::MUL:
+    case ISD::MULHU:
+    case ISD::MULHS:
+    case ISD::SMUL_LOHI:
+    case ISD::UMUL_LOHI:
+    case ISD::FADD:
+    case ISD::FMUL:
+    case ISD::AND:
+    case ISD::OR:
+    case ISD::XOR:
+    case ISD::SADDO:
+    case ISD::UADDO:
+    case ISD::ADDC:
+    case ISD::ADDE:
+    case ISD::FMINNUM:
+    case ISD::FMAXNUM:
+    case ISD::FMINNAN:
+    case ISD::FMAXNAN:
+      return true;
+    default: return false;
+    }
+  }
+
   /// Return true if it's free to truncate a value of type FromTy to type
   /// ToTy. e.g. On x86 it's free to truncate a i32 value in register EAX to i16
   /// by referencing its sub-register AX.

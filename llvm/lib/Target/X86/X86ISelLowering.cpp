@@ -5868,8 +5868,7 @@ static bool getFauxShuffleMask(SDValue N, SmallVectorImpl<int> &Mask,
       assert(SrcExtract.getOperand(0).getValueType() == MVT::v16i8);
     }
 
-    if (!SrcExtract || !isa<ConstantSDNode>(SrcExtract.getOperand(1)) ||
-        NumElts <= SrcExtract.getConstantOperandVal(1))
+    if (!SrcExtract || !isa<ConstantSDNode>(SrcExtract.getOperand(1)))
       return false;
 
     SDValue SrcVec = SrcExtract.getOperand(0);
@@ -5877,8 +5876,12 @@ static bool getFauxShuffleMask(SDValue N, SmallVectorImpl<int> &Mask,
     unsigned NumSrcElts = SrcVT.getVectorNumElements();
     unsigned NumZeros = (NumBitsPerElt / SrcVT.getScalarSizeInBits()) - 1;
 
+    unsigned SrcIdx = SrcExtract.getConstantOperandVal(1);
+    if (NumSrcElts <= SrcIdx)
+      return false;
+
     Ops.push_back(SrcVec);
-    Mask.push_back(SrcExtract.getConstantOperandVal(1));
+    Mask.push_back(SrcIdx);
     Mask.append(NumZeros, SM_SentinelZero);
     Mask.append(NumSrcElts - Mask.size(), SM_SentinelUndef);
     return true;
@@ -17181,7 +17184,13 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
               Cond == ISD::SETGE || Cond == ISD::SETUGE;
   bool Invert = Cond == ISD::SETNE ||
                 (Cond != ISD::SETEQ && ISD::isTrueWhenEqual(Cond));
-  bool FlipSigns = ISD::isUnsignedIntSetCC(Cond);
+
+  // If both operands are known non-negative, then an unsigned compare is the
+  // same as a signed compare and there's no need to flip signbits.
+  // TODO: We could check for more general simplifications here since we're
+  // computing known bits.
+  bool FlipSigns = ISD::isUnsignedIntSetCC(Cond) &&
+                   !(DAG.SignBitIsZero(Op0) && DAG.SignBitIsZero(Op1));
 
   // Special case: Use min/max operations for SETULE/SETUGE
   MVT VET = VT.getVectorElementType();

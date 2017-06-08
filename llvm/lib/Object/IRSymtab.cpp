@@ -23,7 +23,9 @@
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/MC/StringTableBuilder.h"
+#include "llvm/Object/IRObjectFile.h"
 #include "llvm/Object/ModuleSymbolTable.h"
 #include "llvm/Object/SymbolicFile.h"
 #include "llvm/Support/Allocator.h"
@@ -258,4 +260,36 @@ Error Builder::build(ArrayRef<Module *> IRMods) {
 Error irsymtab::build(ArrayRef<Module *> Mods, SmallVector<char, 0> &Symtab,
                       SmallVector<char, 0> &Strtab) {
   return Builder(Symtab, Strtab).build(Mods);
+}
+
+Expected<FileContents> irsymtab::readBitcode(ArrayRef<BitcodeModule> BMs) {
+  FileContents FC;
+  if (BMs.empty())
+    return make_error<StringError>("Bitcode file does not contain any modules",
+                                   inconvertibleErrorCode());
+
+  LLVMContext Ctx;
+  std::vector<Module *> Mods;
+  std::vector<std::unique_ptr<Module>> OwnedMods;
+  for (auto BM : BMs) {
+    Expected<std::unique_ptr<Module>> MOrErr =
+        BM.getLazyModule(Ctx, /*ShouldLazyLoadMetadata*/ true,
+                         /*IsImporting*/ false);
+    if (!MOrErr)
+      return MOrErr.takeError();
+
+    if ((*MOrErr)->getDataLayoutStr().empty())
+      return make_error<StringError>("input module has no datalayout",
+                                     inconvertibleErrorCode());
+
+    Mods.push_back(MOrErr->get());
+    OwnedMods.push_back(std::move(*MOrErr));
+  }
+
+  if (Error E = build(Mods, FC.Symtab, FC.Strtab))
+    return std::move(E);
+
+  FC.TheReader = {{FC.Symtab.data(), FC.Symtab.size()},
+                  {FC.Strtab.data(), FC.Strtab.size()}};
+  return std::move(FC);
 }

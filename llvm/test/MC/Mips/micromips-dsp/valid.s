@@ -95,7 +95,7 @@
   mtlo $1, $ac1                # CHECK: mtlo $1, $ac1                # encoding: [0x00,0x01,0x70,0x7c]
   raddu.w.qb $1, $2            # CHECK: raddu.w.qb $1, $2       # encoding: [0x00,0x22,0xf1,0x3c]
   rddsp $1, 2                  # CHECK: rddsp $1, 2             # encoding: [0x00,0x20,0x86,0x7c]
-  repl.ph $1, 512              # CHECK: repl.ph $1, 512         # encoding: [0x02,0x00,0x08,0x3d]
+  repl.ph $1, 2                # CHECK: repl.ph $1, 2           # encoding: [0x00,0x02,0x08,0x3d]
   repl.qb $1, 128              # CHECK: repl.qb $1, 128         # encoding: [0x00,0x30,0x05,0xfc]
   replv.ph $1, $2              # CHECK: replv.ph $1, $2         # encoding: [0x00,0x22,0x03,0x3c]
   replv.qb $1, $2              # CHECK: replv.qb $1, $2         # encoding: [0x00,0x22,0x13,0x3c]

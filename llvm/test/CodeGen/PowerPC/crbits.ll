@@ -94,13 +94,15 @@ entry:
   ret i1 %or7
 
 ; CHECK-LABEL: @test5
+; CHECK-DAG: li [[NEG2:[0-9]+]], -2
 ; CHECK-DAG: and [[REG1:[0-9]+]], 3, 4
-; CHECK-DAG: cmpwi {{[0-9]+}}, 5, -2
-; CHECK-DAG: li [[REG3:[0-9]+]], 1
-; CHECK-DAG: andi. {{[0-9]+}}, [[REG1]], 1
-; CHECK-DAG: crandc [[REG5:[0-9]+]],
-; CHECK: isel 3, 0, [[REG3]], [[REG5]]
-; CHECK: blr
+; CHECK-DAG: xor [[NE1:[0-9]+]], 5, [[NEG2]]
+; CHECK-DAG: clrldi [[TRUNC:[0-9]+]], [[REG1]], 63
+; CHECK-DAG: cntlzw [[NE2:[0-9]+]], [[NE1]]
+; CHECK: srwi [[NE3:[0-9]+]], [[NE2]], 5
+; CHECK: xori [[NE4:[0-9]+]], [[NE3]], 1
+; CHECK: or 3, [[TRUNC]], [[NE4]]
+; CHECK-NEXT: blr
 }
 
 ; Function Attrs: nounwind readnone
@@ -112,15 +114,16 @@ entry:
   ret i1 %and7
 
 ; CHECK-LABEL: @test6
-; CHECK-DAG: andi. {{[0-9]+}}, 3, 1
-; CHECK-DAG: cmpwi {{[0-9]+}}, 5, -2
-; CHECK-DAG: crmove [[REG1:[0-9]+]], 1
-; CHECK-DAG: andi. {{[0-9]+}}, 4, 1
-; CHECK-DAG: li [[REG2:[0-9]+]], 1
-; CHECK-DAG: crorc [[REG4:[0-9]+]], 1,
-; CHECK-DAG: crnand [[REG5:[0-9]+]], [[REG4]], [[REG1]]
-; CHECK: isel 3, 0, [[REG2]], [[REG5]]
-; CHECK: blr
+; CHECK-DAG: li [[NEG2:[0-9]+]], -2
+; CHECK-DAG: clrldi [[CLR1:[0-9]+]], 4, 63
+; CHECK-DAG: clrldi [[CLR2:[0-9]+]], 3, 63
+; CHECK-DAG: xor [[NE1:[0-9]+]], 5, [[NEG2]]
+; CHECK-DAG: cntlzw [[NE2:[0-9]+]], [[NE1]]
+; CHECK: srwi [[NE3:[0-9]+]], [[NE2]], 5
+; CHECK: xori [[NE4:[0-9]+]], [[NE3]], 1
+; CHECK: or [[OR:[0-9]+]], [[NE4]], [[CLR1]]
+; CHECK: and 3, [[OR]], [[CLR2]]
+; CHECK-NEXT: blr
 }
 
 ; Function Attrs: nounwind readnone
@@ -187,12 +190,13 @@ entry:
   ret i32 %and
 
 ; CHECK-LABEL: @test10
-; CHECK-DAG: cmpwi {{[0-9]+}}, 3, 0
-; CHECK-DAG: cmpwi {{[0-9]+}}, 4, 0
-; CHECK-DAG: li [[REG2:[0-9]+]], 1
-; CHECK-DAG: crorc [[REG3:[0-9]+]],
-; CHECK: isel 3, 0, [[REG2]], [[REG3]]
-; CHECK: blr
+; CHECK-DAG: cntlzw 3, 3
+; CHECK-DAG: cntlzw 4, 4
+; CHECK-DAG: srwi 3, 3, 5
+; CHECK-DAG: srwi 4, 4, 5
+; CHECK: xori 3, 3, 1
+; CHECK: and 3, 3, 4
+; CHECK-NEXT: blr
 }
 
 attributes #0 = { nounwind readnone }

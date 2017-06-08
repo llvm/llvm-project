@@ -29,6 +29,8 @@
   define void @test_udiv_s32() #2 { ret void }
 
   define void @test_and_s32() { ret void }
+  define void @test_or_s32() { ret void }
+  define void @test_xor_s32() { ret void }
 
   define void @test_load_from_stack() { ret void }
   define void @test_load_f32() #0 { ret void }
@@ -818,6 +820,72 @@ body:             |
     ; CHECK: BX_RET 14, _, implicit %r0
 ...
 ---
+name:            test_or_s32
+# CHECK-LABEL: name: test_or_s32
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+# CHECK: id: 0, class: gpr
+# CHECK: id: 1, class: gpr
+# CHECK: id: 2, class: gpr
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(s32) = COPY %r0
+    ; CHECK: [[VREGX:%[0-9]+]] = COPY %r0
+
+    %1(s32) = COPY %r1
+    ; CHECK: [[VREGY:%[0-9]+]] = COPY %r1
+
+    %2(s32) = G_OR %0, %1
+    ; CHECK: [[VREGRES:%[0-9]+]] = ORRrr [[VREGX]], [[VREGY]], 14, _
+
+    %r0 = COPY %2(s32)
+    ; CHECK: %r0 = COPY [[VREGRES]]
+
+    BX_RET 14, _, implicit %r0
+    ; CHECK: BX_RET 14, _, implicit %r0
+...
+---
+name:            test_xor_s32
+# CHECK-LABEL: name: test_xor_s32
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+# CHECK: id: 0, class: gpr
+# CHECK: id: 1, class: gpr
+# CHECK: id: 2, class: gpr
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(s32) = COPY %r0
+    ; CHECK: [[VREGX:%[0-9]+]] = COPY %r0
+
+    %1(s32) = COPY %r1
+    ; CHECK: [[VREGY:%[0-9]+]] = COPY %r1
+
+    %2(s32) = G_XOR %0, %1
+    ; CHECK: [[VREGRES:%[0-9]+]] = EORrr [[VREGX]], [[VREGY]], 14, _
+
+    %r0 = COPY %2(s32)
+    ; CHECK: %r0 = COPY [[VREGRES]]
+
+    BX_RET 14, _, implicit %r0
+    ; CHECK: BX_RET 14, _, implicit %r0
+...
+---
 name:            test_load_from_stack
 # CHECK-LABEL: name: test_load_from_stack
 legalized:       true
@@ -1059,13 +1127,11 @@ body:             |
     %1(s32) = COPY %r3
     ; CHECK: [[IN2:%[0-9]+]] = COPY %r3
 
-    %2(s64) = G_SEQUENCE %0(s32), 0, %1(s32), 1
+    %2(s64) = G_MERGE_VALUES %0(s32), %1(s32)
     ; CHECK: %[[DREG]] = VMOVDRR [[IN1]], [[IN2]]
 
-    %3(s32) = G_EXTRACT %2(s64), 0
-    %4(s32) = G_EXTRACT %2(s64), 32
-    ; CHECK: [[OUT1:%[0-9]+]] = VGETLNi32 %[[DREG]], 0
-    ; CHECK: [[OUT2:%[0-9]+]] = VGETLNi32 %[[DREG]], 1
+    %3(s32), %4(s32) = G_UNMERGE_VALUES %2(s64)
+    ; CHECK: [[OUT1:%[0-9]+]], [[OUT2:%[0-9]+]] = VMOVRRD %[[DREG]]
 
     %r0 = COPY %3
     ; CHECK: %r0 = COPY [[OUT1]]

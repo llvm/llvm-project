@@ -1229,39 +1229,6 @@ public:
     AllNodes.insert(Position, AllNodes.remove(N));
   }
 
-  /// Returns true if the opcode is a commutative binary operation.
-  static bool isCommutativeBinOp(unsigned Opcode) {
-    // FIXME: This should get its info from the td file, so that we can include
-    // target info.
-    switch (Opcode) {
-    case ISD::ADD:
-    case ISD::SMIN:
-    case ISD::SMAX:
-    case ISD::UMIN:
-    case ISD::UMAX:
-    case ISD::MUL:
-    case ISD::MULHU:
-    case ISD::MULHS:
-    case ISD::SMUL_LOHI:
-    case ISD::UMUL_LOHI:
-    case ISD::FADD:
-    case ISD::FMUL:
-    case ISD::AND:
-    case ISD::OR:
-    case ISD::XOR:
-    case ISD::SADDO:
-    case ISD::UADDO:
-    case ISD::ADDC:
-    case ISD::ADDE:
-    case ISD::FMINNUM:
-    case ISD::FMAXNUM:
-    case ISD::FMINNAN:
-    case ISD::FMAXNAN:
-      return true;
-    default: return false;
-    }
-  }
-
   /// Returns an APFloat semantics tag appropriate for the given type. If VT is
   /// a vector type, the element semantics are returned.
   static const fltSemantics &EVTToAPFloatSemantics(EVT VT) {
