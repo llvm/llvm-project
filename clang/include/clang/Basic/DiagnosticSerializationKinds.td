@@ -174,6 +174,13 @@ def note_module_odr_violation_mismatch_decl_diff : Note<"but in '%0' found "
   "method %2 with %ordinal3 parameter of type %4%select{| decayed from %6}5|"
   "method %2 with %ordinal3 parameter named %4}1">;
 
+def err_module_odr_violation_mismatch_decl_unknown : Error<
+  "%q0 has different definitions in different modules; first difference is "
+  "%select{definition in module '%2'|defined here}1 found different "
+  "%select{||||static assert|field|method|other}3">;
+def note_module_odr_violation_mismatch_decl_unknown : Note<
+  "but in '%0' found different %select{||||static assert|field|method|other}1">;
+
 def warn_duplicate_module_file_extension : Warning<
   "duplicate module file extension block name '%0'">,
   InGroup<ModuleFileExtension>;

@@ -502,7 +502,6 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     explicit scoped_lock(mutex_type& __m, adopt_lock_t) _LIBCPP_THREAD_SAFETY_ANNOTATION(requires_capability(__m))
         : __m_(__m) {}
-    
 
     scoped_lock(scoped_lock const&) = delete;
     scoped_lock& operator=(scoped_lock const&) = delete;
@@ -546,6 +545,11 @@ private:
 
     _MutexTuple __t_;
 };
+
+#ifdef __cpp_deduction_guides
+template <class _Mutex> explicit scoped_lock(_Mutex&) -> scoped_lock<_Mutex>;
+explicit scoped_lock() -> scoped_lock<>;
+#endif
 
 #endif // _LIBCPP_STD_VER > 14
 #endif // !_LIBCPP_HAS_NO_THREADS

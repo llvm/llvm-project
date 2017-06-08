@@ -444,7 +444,7 @@ void LinkerScript::fabricateDefaultCommands() {
   std::vector<BaseCommand *> Commands;
 
   // Define start address
-  uint64_t StartAddr = Config->ImageBase + elf::getHeaderSize();
+  uint64_t StartAddr = -1;
 
   // The Sections with -T<section> have been sorted in order of ascending
   // address. We must lower StartAddr if the lowest -T<section address> as
@@ -452,8 +452,12 @@ void LinkerScript::fabricateDefaultCommands() {
   for (auto& KV : Config->SectionStartMap)
     StartAddr = std::min(StartAddr, KV.second);
 
-  Commands.push_back(
-      make<SymbolAssignment>(".", [=] { return StartAddr; }, ""));
+  Commands.push_back(make<SymbolAssignment>(
+      ".",
+      [=] {
+        return std::min(StartAddr, Config->ImageBase + elf::getHeaderSize());
+      },
+      ""));
 
   // For each OutputSection that needs a VA fabricate an OutputSectionCommand
   // with an InputSectionDescription describing the InputSections

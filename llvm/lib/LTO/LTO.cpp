@@ -315,54 +315,19 @@ InputFile::~InputFile() = default;
 Expected<std::unique_ptr<InputFile>> InputFile::create(MemoryBufferRef Object) {
   std::unique_ptr<InputFile> File(new InputFile);
 
-  ErrorOr<MemoryBufferRef> BCOrErr =
-      IRObjectFile::findBitcodeInMemBuffer(Object);
-  if (!BCOrErr)
-    return errorCodeToError(BCOrErr.getError());
+  Expected<IRSymtabFile> FOrErr = readIRSymtab(Object);
+  if (!FOrErr)
+    return FOrErr.takeError();
 
-  Expected<std::vector<BitcodeModule>> BMsOrErr =
-      getBitcodeModuleList(*BCOrErr);
-  if (!BMsOrErr)
-    return BMsOrErr.takeError();
+  File->TargetTriple = FOrErr->TheReader.getTargetTriple();
+  File->SourceFileName = FOrErr->TheReader.getSourceFileName();
+  File->COFFLinkerOpts = FOrErr->TheReader.getCOFFLinkerOpts();
+  File->ComdatTable = FOrErr->TheReader.getComdatTable();
 
-  if (BMsOrErr->empty())
-    return make_error<StringError>("Bitcode file does not contain any modules",
-                                   inconvertibleErrorCode());
-
-  File->Mods = *BMsOrErr;
-
-  LLVMContext Ctx;
-  std::vector<Module *> Mods;
-  std::vector<std::unique_ptr<Module>> OwnedMods;
-  for (auto BM : *BMsOrErr) {
-    Expected<std::unique_ptr<Module>> MOrErr =
-        BM.getLazyModule(Ctx, /*ShouldLazyLoadMetadata*/ true,
-                         /*IsImporting*/ false);
-    if (!MOrErr)
-      return MOrErr.takeError();
-
-    if ((*MOrErr)->getDataLayoutStr().empty())
-      return make_error<StringError>("input module has no datalayout",
-                                     inconvertibleErrorCode());
-
-    Mods.push_back(MOrErr->get());
-    OwnedMods.push_back(std::move(*MOrErr));
-  }
-
-  SmallVector<char, 0> Symtab;
-  if (Error E = irsymtab::build(Mods, Symtab, File->Strtab))
-    return std::move(E);
-
-  irsymtab::Reader R({Symtab.data(), Symtab.size()},
-                     {File->Strtab.data(), File->Strtab.size()});
-  File->TargetTriple = R.getTargetTriple();
-  File->SourceFileName = R.getSourceFileName();
-  File->COFFLinkerOpts = R.getCOFFLinkerOpts();
-  File->ComdatTable = R.getComdatTable();
-
-  for (unsigned I = 0; I != Mods.size(); ++I) {
+  for (unsigned I = 0; I != FOrErr->Mods.size(); ++I) {
     size_t Begin = File->Symbols.size();
-    for (const irsymtab::Reader::SymbolRef &Sym : R.module_symbols(I))
+    for (const irsymtab::Reader::SymbolRef &Sym :
+         FOrErr->TheReader.module_symbols(I))
       // Skip symbols that are irrelevant to LTO. Note that this condition needs
       // to match the one in Skip() in LTO::addRegularLTO().
       if (Sym.isGlobal() && !Sym.isFormatSpecific())
@@ -370,6 +335,8 @@ Expected<std::unique_ptr<InputFile>> InputFile::create(MemoryBufferRef Object) {
     File->ModuleSymIndices.push_back({Begin, File->Symbols.size()});
   }
 
+  File->Mods = FOrErr->Mods;
+  File->Strtab = std::move(FOrErr->Strtab);
   return std::move(File);
 }
 

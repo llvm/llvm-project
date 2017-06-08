@@ -174,7 +174,7 @@ public:
 /// Note that to use a custom GCMetadataPrinter w/gc.roots, you must also
 /// register your GCMetadataPrinter subclass with the
 /// GCMetadataPrinterRegistery as well.
-typedef Registry<GCStrategy> GCRegistry;
+using GCRegistry = Registry<GCStrategy>;
 
 } // end namespace llvm
 

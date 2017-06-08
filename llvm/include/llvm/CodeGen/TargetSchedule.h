@@ -16,6 +16,7 @@
 #ifndef LLVM_CODEGEN_TARGETSCHEDULE_H
 #define LLVM_CODEGEN_TARGETSCHEDULE_H
 
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/MC/MCSchedule.h"
@@ -123,7 +124,7 @@ public:
   }
 #endif
 
-  typedef const MCWriteProcResEntry *ProcResIter;
+  using ProcResIter = const MCWriteProcResEntry *;
 
   // \brief Get an iterator into the processor resources consumed by this
   // scheduling class.

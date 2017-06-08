@@ -12488,12 +12488,18 @@ void DAGCombiner::getStoreMergeCandidates(
   if (BasePtr.Base.isUndef())
     return;
 
-  bool IsLoadSrc = isa<LoadSDNode>(St->getValue());
   bool IsConstantSrc = isa<ConstantSDNode>(St->getValue()) ||
                        isa<ConstantFPSDNode>(St->getValue());
   bool IsExtractVecSrc =
       (St->getValue().getOpcode() == ISD::EXTRACT_VECTOR_ELT ||
        St->getValue().getOpcode() == ISD::EXTRACT_SUBVECTOR);
+  bool IsLoadSrc = isa<LoadSDNode>(St->getValue());
+  BaseIndexOffset LBasePtr;
+  // Match on loadbaseptr if relevant.
+  if (IsLoadSrc)
+    LBasePtr = BaseIndexOffset::match(
+        cast<LoadSDNode>(St->getValue())->getBasePtr(), DAG);
+
   auto CandidateMatch = [&](StoreSDNode *Other, BaseIndexOffset &Ptr) -> bool {
     if (Other->isVolatile() || Other->isIndexed())
       return false;
@@ -12502,9 +12508,15 @@ void DAGCombiner::getStoreMergeCandidates(
       if (!(MemVT.isInteger() && MemVT.bitsEq(Other->getMemoryVT()) &&
             isa<ConstantFPSDNode>(Other->getValue())))
         return false;
-    if (IsLoadSrc)
-      if (!isa<LoadSDNode>(Other->getValue()))
+    if (IsLoadSrc) {
+      // The Load's Base Ptr must also match
+      if (LoadSDNode *OtherLd = dyn_cast<LoadSDNode>(Other->getValue())) {
+        auto LPtr = BaseIndexOffset::match(OtherLd->getBasePtr(), DAG);
+        if (!(LBasePtr.equalBaseIndex(LPtr)))
+          return false;
+      } else
         return false;
+    }
     if (IsConstantSrc)
       if (!(isa<ConstantSDNode>(Other->getValue()) ||
             isa<ConstantFPSDNode>(Other->getValue())))

@@ -9753,13 +9753,13 @@ void ASTReader::diagnoseOdrViolations() {
       if (Diagnosed == true)
         continue;
 
-      Diag(FirstRecord->getLocation(),
-           diag::err_module_odr_violation_different_definitions)
-          << FirstRecord << FirstModule.empty() << FirstModule;
-
-      Diag(SecondRecord->getLocation(),
-           diag::note_module_odr_violation_different_definitions)
-          << SecondModule;
+      Diag(FirstDecl->getLocation(),
+           diag::err_module_odr_violation_mismatch_decl_unknown)
+          << FirstRecord << FirstModule.empty() << FirstModule << FirstDiffType
+          << FirstDecl->getSourceRange();
+      Diag(SecondDecl->getLocation(),
+           diag::note_module_odr_violation_mismatch_decl_unknown)
+          << SecondModule << FirstDiffType << SecondDecl->getSourceRange();
       Diagnosed = true;
     }
 

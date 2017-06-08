@@ -477,8 +477,7 @@ void GlobalsAAResult::AnalyzeCallGraph(CallGraph &CG, Module &M) {
 
     Function *F = SCC[0]->getFunction();
 
-    if (!F || !F->isDefinitionExact() ||
-        F->hasFnAttribute(Attribute::OptimizeNone)) {
+    if (!F || !F->isDefinitionExact()) {
       // Calls externally or not exact - can't say anything useful. Remove any
       // existing function records (may have been created when scanning
       // globals).
@@ -498,7 +497,7 @@ void GlobalsAAResult::AnalyzeCallGraph(CallGraph &CG, Module &M) {
         break;
       }
 
-      if (F->isDeclaration()) {
+      if (F->isDeclaration() || F->hasFnAttribute(Attribute::OptimizeNone)) {
         // Try to get mod/ref behaviour from function attributes.
         if (F->doesNotAccessMemory()) {
           // Can't do better than that!
@@ -549,12 +548,10 @@ void GlobalsAAResult::AnalyzeCallGraph(CallGraph &CG, Module &M) {
         break; // The mod/ref lattice saturates here.
 
       // Don't prove any properties based on the implementation of an optnone
-      // function.
-      if (Node->getFunction()->hasFnAttribute(Attribute::OptimizeNone)) {
-        FI.addModRefInfo(MRI_Ref);
-        FI.addModRefInfo(MRI_Mod);
+      // function. Function attributes were already used as a best approximation
+      // above.
+      if (Node->getFunction()->hasFnAttribute(Attribute::OptimizeNone))
         continue;
-      }
 
       for (Instruction &I : instructions(Node->getFunction())) {
         if (FI.getModRefInfo() == MRI_ModRef)
