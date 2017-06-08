@@ -500,6 +500,7 @@ static Value *cloneConstantExprWithNewAddressSpace(
   }
 
   // Computes the operands of the new constant expression.
+  bool IsNew = false;
   SmallVector<Constant *, 4> NewOperands;
   for (unsigned Index = 0; Index < CE->getNumOperands(); ++Index) {
     Constant *Operand = CE->getOperand(Index);
@@ -509,12 +510,18 @@ static Value *cloneConstantExprWithNewAddressSpace(
     // bitcast, and getelementptr) do not incur cycles in the data flow graph
     // and (2) this function is called on constant expressions in postorder.
     if (Value *NewOperand = ValueWithNewAddrSpace.lookup(Operand)) {
+      IsNew = true;
       NewOperands.push_back(cast<Constant>(NewOperand));
     } else {
       // Otherwise, reuses the old operand.
       NewOperands.push_back(Operand);
     }
   }
+
+  // If !IsNew, we will replace the Value with itself. However, replaced values
+  // are assumed to wrapped in a addrspace cast later so drop it now.
+  if (!IsNew)
+    return nullptr;
 
   if (CE->getOpcode() == Instruction::GetElementPtr) {
     // Needs to specify the source type while constructing a getelementptr

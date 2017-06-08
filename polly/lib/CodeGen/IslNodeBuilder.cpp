@@ -101,7 +101,7 @@ IslNodeBuilder::getUpperBound(__isl_keep isl_ast_node *For,
     Predicate = ICmpInst::ICMP_SLT;
     break;
   default:
-    llvm_unreachable("Unexpected comparision type in loop conditon");
+    llvm_unreachable("Unexpected comparison type in loop condition");
   }
 
   Arg0 = isl_ast_expr_get_op_arg(Cond, 0);
@@ -588,7 +588,7 @@ void IslNodeBuilder::createForParallel(__isl_take isl_ast_node *For) {
   ValueInc = ExprBuilder.create(Inc);
 
   // OpenMP always uses SLE. In case the isl generated AST uses a SLT
-  // expression, we need to adjust the loop blound by one.
+  // expression, we need to adjust the loop bound by one.
   if (Predicate == CmpInst::ICMP_SLT)
     ValueUB = Builder.CreateAdd(
         ValueUB, Builder.CreateSExt(Builder.getTrue(), ValueUB->getType()));
@@ -832,7 +832,7 @@ void IslNodeBuilder::createSubstitutions(__isl_take isl_ast_expr *Expr,
   assert(isl_ast_expr_get_type(Expr) == isl_ast_expr_op &&
          "Expression of type 'op' expected");
   assert(isl_ast_expr_get_op_type(Expr) == isl_ast_op_call &&
-         "Opertation of type 'call' expected");
+         "Operation of type 'call' expected");
   for (int i = 0; i < isl_ast_expr_get_op_n_arg(Expr) - 1; ++i) {
     isl_ast_expr *SubExpr;
     Value *V;
@@ -952,9 +952,9 @@ bool IslNodeBuilder::materializeValue(isl_id *Id) {
     auto *ParamSCEV = (const SCEV *)isl_id_get_user(Id);
     Value *V = nullptr;
 
-    // Parameters could refere to invariant loads that need to be
+    // Parameters could refer to invariant loads that need to be
     // preloaded before we can generate code for the parameter. Thus,
-    // check if any value refered to in ParamSCEV is an invariant load
+    // check if any value referred to in ParamSCEV is an invariant load
     // and if so make sure its equivalence class is preloaded.
     SetVector<Value *> Values;
     findValues(ParamSCEV, SE, Values);
@@ -1093,7 +1093,7 @@ bool IslNodeBuilder::materializeFortranArrayOutermostDimension() {
         continue;
 
       isl_pw_aff *ParametricPwAff = Array->getDimensionSizePw(0);
-      assert(ParametricPwAff && "parameteric pw_aff corresponding "
+      assert(ParametricPwAff && "parametric pw_aff corresponding "
                                 "to outermost dimension does not "
                                 "exist");
 
@@ -1488,7 +1488,7 @@ Value *IslNodeBuilder::generateSCEV(const SCEV *Expr) {
 /// The AST expression we generate to perform the run-time check assumes
 /// computations on integer types of infinite size. As we only use 64-bit
 /// arithmetic we check for overflows, in case of which we set the result
-/// of this run-time check to false to be cosnservatively correct,
+/// of this run-time check to false to be conservatively correct,
 Value *IslNodeBuilder::createRTC(isl_ast_expr *Condition) {
   auto ExprBuilder = getExprBuilder();
   ExprBuilder.setTrackOverflow(true);

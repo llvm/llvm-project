@@ -1207,6 +1207,12 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     Sec->ShName = InX::ShStrTab->addString(Sec->Name);
   }
 
+  if (!Script->Opt.HasSections)
+    Script->fabricateDefaultCommands();
+  for (BaseCommand *Base : Script->Opt.Commands)
+    if (auto *Cmd = dyn_cast<OutputSectionCommand>(Base))
+      OutputSectionCommands.push_back(Cmd);
+
   // Binary and relocatable output does not have PHDRS.
   // The headers have to be created before finalize as that can influence the
   // image base and the dynamic section on mips includes the image base.
@@ -1216,11 +1222,6 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     Out::ProgramHeaders->Size = sizeof(Elf_Phdr) * Phdrs.size();
   }
 
-  if (!Script->Opt.HasSections)
-    Script->fabricateDefaultCommands();
-  for (BaseCommand *Base : Script->Opt.Commands)
-    if (auto *Cmd = dyn_cast<OutputSectionCommand>(Base))
-      OutputSectionCommands.push_back(Cmd);
   clearOutputSections();
 
   // Compute the size of .rela.dyn and .rela.plt early since we need
