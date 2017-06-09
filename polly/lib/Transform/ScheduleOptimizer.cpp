@@ -775,7 +775,7 @@ static bool containsOnlyMatrMultAcc(__isl_keep isl_map *PartialSchedule,
 ///
 /// @param  Schedule The schedule of the SCoP statement.
 /// @param  D The SCoP dependencies.
-/// @param  Pos The parameter to desribe an acceptable true dependence.
+/// @param  Pos The parameter to describe an acceptable true dependence.
 ///             In case it has a negative value, try to determine its
 ///             acceptable value.
 /// @return True in case dependencies correspond to the matrix multiplication
@@ -1018,7 +1018,7 @@ getMacroKernelParams(const MicroKernelParamsTy &MicroKernelParams,
 
   // Car can be computed to be zero since it is floor to int.
   // On Mac OS, division by 0 does not raise a signal. This causes negative
-  // tile sizes to be computed. Prevent division by 0 Cac by early returning
+  // tile sizes to be computed. Prevent division by Cac==0 by early returning
   // if this happens.
   if (Car == 0)
     return {1, 1, 1};

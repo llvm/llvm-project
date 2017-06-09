@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Functions for converting between gmp objects and apint.
+// Functions for converting between gmp objects and llvm::APInt.
 //
 //===----------------------------------------------------------------------===//
 #include "polly/Support/GICHelper.h"

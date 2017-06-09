@@ -114,7 +114,7 @@ inline isl::val valFromAPInt(isl_ctx *Ctx, const llvm::APInt Int,
 /// As the input isl_val may be negative, the APInt that this function returns
 /// must always be interpreted as signed two's complement value. The bitwidth of
 /// the generated APInt is always the minimal bitwidth necessary to model the
-/// provided integer when interpreting the bitpattern as signed value.
+/// provided integer when interpreting the bit pattern as signed value.
 ///
 /// Some example conversions are:
 ///
@@ -143,7 +143,7 @@ llvm::APInt APIntFromVal(__isl_take isl_val *Val);
 /// As the input isl::val may be negative, the APInt that this function returns
 /// must always be interpreted as signed two's complement value. The bitwidth of
 /// the generated APInt is always the minimal bitwidth necessary to model the
-/// provided integer when interpreting the bitpattern as signed value.
+/// provided integer when interpreting the bit pattern as signed value.
 ///
 /// Some example conversions are:
 ///

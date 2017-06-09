@@ -329,7 +329,8 @@ void RegisterContextLLDB::InitializeNonZerothFrame() {
   if (abi)
     pc = abi->FixCodeAddress(pc);
 
-  m_current_pc.SetLoadAddress(pc, &process->GetTarget());
+  const bool allow_section_end = true;
+  m_current_pc.SetLoadAddress(pc, &process->GetTarget(), allow_section_end);
 
   // If we don't have a Module for some reason, we're not going to find
   // symbol/function information - just
@@ -477,11 +478,12 @@ void RegisterContextLLDB::InitializeNonZerothFrame() {
   // Or if we're in the middle of the stack (and not "above" an asynchronous
   // event like sigtramp),
   // and our "current" pc is the start of a function...
-  if (m_sym_ctx_valid && GetNextFrame()->m_frame_type != eTrapHandlerFrame &&
+  if (GetNextFrame()->m_frame_type != eTrapHandlerFrame &&
       GetNextFrame()->m_frame_type != eDebuggerFrame &&
-      addr_range.GetBaseAddress().IsValid() &&
-      addr_range.GetBaseAddress().GetSection() == m_current_pc.GetSection() &&
-      addr_range.GetBaseAddress().GetOffset() == m_current_pc.GetOffset()) {
+      (!m_sym_ctx_valid ||
+       (addr_range.GetBaseAddress().IsValid() &&
+        addr_range.GetBaseAddress().GetSection() == m_current_pc.GetSection() &&
+        addr_range.GetBaseAddress().GetOffset() == m_current_pc.GetOffset()))) {
     decr_pc_and_recompute_addr_range = true;
   }
 

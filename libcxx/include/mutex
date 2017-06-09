@@ -502,7 +502,6 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     explicit scoped_lock(mutex_type& __m, adopt_lock_t) _LIBCPP_THREAD_SAFETY_ANNOTATION(requires_capability(__m))
         : __m_(__m) {}
-    
 
     scoped_lock(scoped_lock const&) = delete;
     scoped_lock& operator=(scoped_lock const&) = delete;

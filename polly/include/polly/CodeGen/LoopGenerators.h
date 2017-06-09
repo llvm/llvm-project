@@ -172,7 +172,7 @@ public:
   /// Create a runtime library call to allow cleanup of the thread.
   ///
   /// @note This function is called right before the thread will exit the
-  ///       subfunction and only if the runtime system depends depends on it.
+  ///       subfunction and only if the runtime system depends on it.
   void createCallCleanupThread();
 
   /// Create a struct for all @p Values and store them in there.

@@ -72,7 +72,7 @@ using BoxedLoopsSetTy = llvm::SetVector<const llvm::Loop *>;
 /// those from llvm/Support/Casting.h. Partial template function specialization
 /// is currently not supported in C++ such that those cannot be used directly.
 /// (llvm::isa could, but then llvm:cast etc. would not have the expected
-/// behaviour)
+/// behavior)
 class MemAccInst {
 private:
   llvm::Instruction *I;
@@ -331,7 +331,7 @@ void splitEntryBlockForAlloca(llvm::BasicBlock *EntryBlock, llvm::Pass *P);
 /// @param E     The expression for which code is actually generated.
 /// @param Ty    The type of the resulting code.
 /// @param IP    The insertion point for the new code.
-/// @param VMap  A remaping of values used in @p E.
+/// @param VMap  A remapping of values used in @p E.
 /// @param RTCBB The last block of the RTC. Used to insert loop-invariant
 ///              instructions in rare cases.
 llvm::Value *expandCodeFor(Scop &S, llvm::ScalarEvolution &SE,
@@ -342,7 +342,7 @@ llvm::Value *expandCodeFor(Scop &S, llvm::ScalarEvolution &SE,
 
 /// Check if the block is a error block.
 ///
-/// A error block is currently any block that fullfills at least one of
+/// A error block is currently any block that fulfills at least one of
 /// the following conditions:
 ///
 ///  - It is terminated by an unreachable instruction
@@ -350,7 +350,7 @@ llvm::Value *expandCodeFor(Scop &S, llvm::ScalarEvolution &SE,
 ///    dominated by a loop header and that does not dominate the region exit.
 ///    This is a heuristic to pick only error blocks that are conditionally
 ///    executed and can be assumed to be not executed at all without the domains
-///    beeing available.
+///    being available.
 ///
 /// @param BB The block to check.
 /// @param R  The analyzed region.

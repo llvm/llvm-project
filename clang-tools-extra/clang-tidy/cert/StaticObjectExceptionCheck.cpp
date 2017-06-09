@@ -19,7 +19,7 @@ namespace tidy {
 namespace cert {
 
 void StaticObjectExceptionCheck::registerMatchers(MatchFinder *Finder) {
-  if (!getLangOpts().CPlusPlus)
+  if ((!getLangOpts().CPlusPlus) || (!getLangOpts().CXXExceptions))
     return;
 
   // Match any static or thread_local variable declaration that has an
