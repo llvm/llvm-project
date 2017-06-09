@@ -1070,20 +1070,20 @@ void ObjCMethodDecl::createImplicitParams(ASTContext &Context,
   bool selfIsPseudoStrong, selfIsConsumed;
   QualType selfTy =
     getSelfType(Context, OID, selfIsPseudoStrong, selfIsConsumed);
-  ImplicitParamDecl *self
-    = ImplicitParamDecl::Create(Context, this, SourceLocation(),
-                                &Context.Idents.get("self"), selfTy);
-  setSelfDecl(self);
+  auto *Self = ImplicitParamDecl::Create(Context, this, SourceLocation(),
+                                         &Context.Idents.get("self"), selfTy,
+                                         ImplicitParamDecl::ObjCSelf);
+  setSelfDecl(Self);
 
   if (selfIsConsumed)
-    self->addAttr(NSConsumedAttr::CreateImplicit(Context));
+    Self->addAttr(NSConsumedAttr::CreateImplicit(Context));
 
   if (selfIsPseudoStrong)
-    self->setARCPseudoStrong(true);
+    Self->setARCPseudoStrong(true);
 
-  setCmdDecl(ImplicitParamDecl::Create(Context, this, SourceLocation(),
-                                       &Context.Idents.get("_cmd"),
-                                       Context.getObjCSelType()));
+  setCmdDecl(ImplicitParamDecl::Create(
+      Context, this, SourceLocation(), &Context.Idents.get("_cmd"),
+      Context.getObjCSelType(), ImplicitParamDecl::ObjCCmd));
 }
 
 ObjCInterfaceDecl *ObjCMethodDecl::getClassInterface() {

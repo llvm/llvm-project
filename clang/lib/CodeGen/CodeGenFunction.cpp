@@ -1083,10 +1083,9 @@ QualType CodeGenFunction::BuildFunctionArgList(GlobalDecl GD,
       if (!Param->hasAttr<PassObjectSizeAttr>())
         continue;
 
-      IdentifierInfo *NoID = nullptr;
       auto *Implicit = ImplicitParamDecl::Create(
-          getContext(), Param->getDeclContext(), Param->getLocation(), NoID,
-          getContext().getSizeType());
+          getContext(), Param->getDeclContext(), Param->getLocation(),
+          /*Id=*/nullptr, getContext().getSizeType(), ImplicitParamDecl::Other);
       SizeArguments[Param] = Implicit;
       Args.push_back(Implicit);
     }

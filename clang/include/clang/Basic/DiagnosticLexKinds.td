@@ -527,6 +527,10 @@ def err_pp_module_end_without_module_begin : Error<
   "'#pragma clang module end'">;
 def note_pp_module_begin_here : Note<
   "entering module '%0' due to this pragma">;
+def err_pp_module_build_pth : Error<
+  "'#pragma clang module build' not supported in pretokenized header">;
+def err_pp_module_build_missing_end : Error<
+  "no matching '#pragma clang module endbuild' for this '#pragma clang module build'">;
 
 def err_defined_macro_name : Error<"'defined' cannot be used as a macro name">;
 def err_paste_at_start : Error<

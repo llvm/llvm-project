@@ -2658,6 +2658,8 @@ void Sema::DeclareGlobalAllocationFunction(DeclarationName Name,
         Context, GlobalCtx, SourceLocation(), SourceLocation(), Name,
         FnType, /*TInfo=*/nullptr, SC_None, false, true);
     Alloc->setImplicit();
+    // Global allocation functions should always be visible.
+    Alloc->setHidden(false);
 
     // Implicit sized deallocation functions always have default visibility.
     Alloc->addAttr(
@@ -5104,7 +5106,9 @@ QualType Sema::CheckPointerToMemberOperands(ExprResult &LHS, ExprResult &RHS,
       return QualType();
 
     // Cast LHS to type of use.
-    QualType UseType = isIndirect ? Context.getPointerType(Class) : Class;
+    QualType UseType = Context.getQualifiedType(Class, LHSType.getQualifiers());
+    if (isIndirect)
+      UseType = Context.getPointerType(UseType);
     ExprValueKind VK = isIndirect ? VK_RValue : LHS.get()->getValueKind();
     LHS = ImpCastExprToType(LHS.get(), UseType, CK_DerivedToBase, VK,
                             &BasePath);

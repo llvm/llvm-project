@@ -3956,8 +3956,9 @@ void Sema::ActOnCapturedRegionStart(SourceLocation Loc, Scope *CurScope,
   DeclContext *DC = CapturedDecl::castToDeclContext(CD);
   IdentifierInfo *ParamName = &Context.Idents.get("__context");
   QualType ParamType = Context.getPointerType(Context.getTagDeclType(RD));
-  ImplicitParamDecl *Param
-    = ImplicitParamDecl::Create(Context, DC, Loc, ParamName, ParamType);
+  auto *Param =
+      ImplicitParamDecl::Create(Context, DC, Loc, ParamName, ParamType,
+                                ImplicitParamDecl::CapturedContext);
   DC->addDecl(Param);
 
   CD->setContextParam(0, Param);
@@ -3992,15 +3993,17 @@ void Sema::ActOnCapturedRegionStart(SourceLocation Loc, Scope *CurScope,
              "null type has been found already for '__context' parameter");
       IdentifierInfo *ParamName = &Context.Idents.get("__context");
       QualType ParamType = Context.getPointerType(Context.getTagDeclType(RD));
-      ImplicitParamDecl *Param
-        = ImplicitParamDecl::Create(Context, DC, Loc, ParamName, ParamType);
+      auto *Param =
+          ImplicitParamDecl::Create(Context, DC, Loc, ParamName, ParamType,
+                                    ImplicitParamDecl::CapturedContext);
       DC->addDecl(Param);
       CD->setContextParam(ParamNum, Param);
       ContextIsFound = true;
     } else {
       IdentifierInfo *ParamName = &Context.Idents.get(I->first);
-      ImplicitParamDecl *Param
-        = ImplicitParamDecl::Create(Context, DC, Loc, ParamName, I->second);
+      auto *Param =
+          ImplicitParamDecl::Create(Context, DC, Loc, ParamName, I->second,
+                                    ImplicitParamDecl::CapturedContext);
       DC->addDecl(Param);
       CD->setParam(ParamNum, Param);
     }
@@ -4010,8 +4013,9 @@ void Sema::ActOnCapturedRegionStart(SourceLocation Loc, Scope *CurScope,
     // Add __context implicitly if it is not specified.
     IdentifierInfo *ParamName = &Context.Idents.get("__context");
     QualType ParamType = Context.getPointerType(Context.getTagDeclType(RD));
-    ImplicitParamDecl *Param =
-        ImplicitParamDecl::Create(Context, DC, Loc, ParamName, ParamType);
+    auto *Param =
+        ImplicitParamDecl::Create(Context, DC, Loc, ParamName, ParamType,
+                                  ImplicitParamDecl::CapturedContext);
     DC->addDecl(Param);
     CD->setContextParam(ParamNum, Param);
   }

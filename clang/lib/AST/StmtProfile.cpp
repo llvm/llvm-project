@@ -186,10 +186,7 @@ namespace {
       Hash.AddTemplateName(Name);
     }
     void VisitNestedNameSpecifier(NestedNameSpecifier *NNS) override {
-      ID.AddBoolean(NNS);
-      if (NNS) {
-        Hash.AddNestedNameSpecifier(NNS);
-      }
+      Hash.AddNestedNameSpecifier(NNS);
     }
   };
 }

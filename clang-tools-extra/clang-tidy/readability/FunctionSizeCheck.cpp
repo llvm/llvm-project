@@ -38,6 +38,13 @@ public:
       ++Info.Branches;
     // fallthrough
     case Stmt::CompoundStmtClass:
+      // If this new compound statement is located in a compound statement,
+      // which is already nested NestingThreshold levels deep, record the start
+      // location of this new compound statement
+      if (CurrentNestingLevel == Info.NestingThreshold)
+        Info.NestingThresholders.push_back(Node->getLocStart());
+
+      ++CurrentNestingLevel;
       TrackedParent.push_back(true);
       break;
     default:
@@ -47,7 +54,10 @@ public:
 
     Base::TraverseStmt(Node);
 
+    if (TrackedParent.back())
+      --CurrentNestingLevel;
     TrackedParent.pop_back();
+
     return true;
   }
 
@@ -59,13 +69,15 @@ public:
   }
 
   struct FunctionInfo {
-    FunctionInfo() : Lines(0), Statements(0), Branches(0) {}
-    unsigned Lines;
-    unsigned Statements;
-    unsigned Branches;
+    unsigned Lines = 0;
+    unsigned Statements = 0;
+    unsigned Branches = 0;
+    unsigned NestingThreshold = 0;
+    std::vector<SourceLocation> NestingThresholders;
   };
   FunctionInfo Info;
   std::vector<bool> TrackedParent;
+  unsigned CurrentNestingLevel = 0;
 };
 
 FunctionSizeCheck::FunctionSizeCheck(StringRef Name, ClangTidyContext *Context)
@@ -73,13 +85,15 @@ FunctionSizeCheck::FunctionSizeCheck(StringRef Name, ClangTidyContext *Context)
       LineThreshold(Options.get("LineThreshold", -1U)),
       StatementThreshold(Options.get("StatementThreshold", 800U)),
       BranchThreshold(Options.get("BranchThreshold", -1U)),
-      ParameterThreshold(Options.get("ParameterThreshold", -1U)) {}
+      ParameterThreshold(Options.get("ParameterThreshold", -1U)),
+      NestingThreshold(Options.get("NestingThreshold", -1U)) {}
 
 void FunctionSizeCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "LineThreshold", LineThreshold);
   Options.store(Opts, "StatementThreshold", StatementThreshold);
   Options.store(Opts, "BranchThreshold", BranchThreshold);
   Options.store(Opts, "ParameterThreshold", ParameterThreshold);
+  Options.store(Opts, "NestingThreshold", NestingThreshold);
 }
 
 void FunctionSizeCheck::registerMatchers(MatchFinder *Finder) {
@@ -90,6 +104,7 @@ void FunctionSizeCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Func = Result.Nodes.getNodeAs<FunctionDecl>("func");
 
   FunctionASTVisitor Visitor;
+  Visitor.Info.NestingThreshold = NestingThreshold;
   Visitor.TraverseDecl(const_cast<FunctionDecl *>(Func));
   auto &FI = Visitor.Info;
 
@@ -109,7 +124,8 @@ void FunctionSizeCheck::check(const MatchFinder::MatchResult &Result) {
 
   if (FI.Lines > LineThreshold || FI.Statements > StatementThreshold ||
       FI.Branches > BranchThreshold ||
-      ActualNumberParameters > ParameterThreshold) {
+      ActualNumberParameters > ParameterThreshold ||
+      !FI.NestingThresholders.empty()) {
     diag(Func->getLocation(),
          "function %0 exceeds recommended size/complexity thresholds")
         << Func;
@@ -137,6 +153,12 @@ void FunctionSizeCheck::check(const MatchFinder::MatchResult &Result) {
     diag(Func->getLocation(), "%0 parameters (threshold %1)",
          DiagnosticIDs::Note)
         << ActualNumberParameters << ParameterThreshold;
+  }
+
+  for (const auto &CSPos : FI.NestingThresholders) {
+    diag(CSPos, "nesting level %0 starts here (threshold %1)",
+         DiagnosticIDs::Note)
+        << NestingThreshold + 1 << NestingThreshold;
   }
 }
 

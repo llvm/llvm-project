@@ -264,15 +264,14 @@ Defined::Defined(Kind K, StringRefZ Name, bool IsLocal, uint8_t StOther,
     : SymbolBody(K, Name, IsLocal, StOther, Type) {}
 
 template <class ELFT> bool DefinedRegular::isMipsPIC() const {
+  typedef typename ELFT::Ehdr Elf_Ehdr;
   if (!Section || !isFunc())
     return false;
+
+  auto *Sec = cast<InputSectionBase>(Section);
+  const Elf_Ehdr *Hdr = Sec->template getFile<ELFT>()->getObj().getHeader();
   return (this->StOther & STO_MIPS_MIPS16) == STO_MIPS_PIC ||
-         (cast<InputSectionBase>(Section)
-              ->template getFile<ELFT>()
-              ->getObj()
-              .getHeader()
-              ->e_flags &
-          EF_MIPS_PIC);
+         (Hdr->e_flags & EF_MIPS_PIC);
 }
 
 Undefined::Undefined(StringRefZ Name, bool IsLocal, uint8_t StOther,

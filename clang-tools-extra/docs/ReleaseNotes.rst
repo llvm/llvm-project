@@ -100,16 +100,21 @@ Improvements to clang-tidy
   to remove user-defined make functions from ``push_back`` calls on containers
   of custom tuple-like types by providing `TupleTypes` and `TupleMakeFunctions`.
 
- - New `modernize-use-noexcept
-   <http://clang.llvm.org/extra/clang-tidy/checks/modernize-use-noexcept.html>`_ check
+- New `modernize-use-noexcept
+  <http://clang.llvm.org/extra/clang-tidy/checks/modernize-use-noexcept.html>`_ check
 
-   Replaces dynamic exception specifications with ``noexcept`` or a user defined macro.
+  Replaces dynamic exception specifications with ``noexcept`` or a user defined macro.
 
 - New `performance-inefficient-vector-operation
   <http://clang.llvm.org/extra/clang-tidy/checks/performance-inefficient-vector-operation.html>`_ check
 
   Finds possible inefficient vector operations in for loops that may cause
   unnecessary memory reallocations.
+
+- Added `NestingThreshold` to `readability-function-size
+  <http://clang.llvm.org/extra/clang-tidy/checks/readability-function-size.html>`_ check
+
+  Finds compound statements which create next nesting level after `NestingThreshold` and emits a warning.
 
 - Added `ParameterThreshold` to `readability-function-size
   <http://clang.llvm.org/extra/clang-tidy/checks/readability-function-size.html>`_ check

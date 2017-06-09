@@ -580,7 +580,11 @@ IdentifierInfo *Preprocessor::LookUpIdentifierInfo(Token &Identifier) const {
 
   // Update the token info (identifier info and appropriate token kind).
   Identifier.setIdentifierInfo(II);
-  Identifier.setKind(II->getTokenID());
+  if (getLangOpts().MSVCCompat && II->isCPlusPlusOperatorKeyword() &&
+      getSourceManager().isInSystemHeader(Identifier.getLocation()))
+    Identifier.setKind(clang::tok::identifier);
+  else
+    Identifier.setKind(II->getTokenID());
 
   return II;
 }
@@ -709,7 +713,9 @@ bool Preprocessor::HandleIdentifier(Token &Identifier) {
   // C++ 2.11p2: If this is an alternative representation of a C++ operator,
   // then we act as if it is the actual operator and not the textual
   // representation of it.
-  if (II.isCPlusPlusOperatorKeyword())
+  if (II.isCPlusPlusOperatorKeyword() &&
+      !(getLangOpts().MSVCCompat &&
+        getSourceManager().isInSystemHeader(Identifier.getLocation())))
     Identifier.setIdentifierInfo(nullptr);
 
   // If this is an extension token, diagnose its use.
