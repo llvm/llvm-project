@@ -29,10 +29,10 @@ _start:
 
 // CHECK: Disassembly of section .text:
 // 69636 = 0x11004
-// CHECK:         11000:       11 f0 02 80     beq.w   #69636
-// CHECK-NEXT:    11004:       11 f0 04 b8     b.w     #69640
-// CHECK-NEXT:    11008:       11 f0 06 f8     bl      #69644
+// CHECK:         11000: {{.*}} beq.w   #69636
+// CHECK-NEXT:    11004: {{.*}} b.w     #69640
+// CHECK-NEXT:    11008: {{.*}} bl      #69644
 // blx is transformed into bl so we don't change state
-// CHECK-NEXT:    1100c:       11 f0 08 f8     bl      #69648
-// CHECK-NEXT:    11010:       c0 f2 00 00     movt    r0, #0
-// CHECK-NEXT:    11014:       40 f2 00 00     movw    r0, #0
+// CHECK-NEXT:    1100c: {{.*}} bl      #69648
+// CHECK-NEXT:    11010: {{.*}} movt    r0, #0
+// CHECK-NEXT:    11014: {{.*}} movw    r0, #0

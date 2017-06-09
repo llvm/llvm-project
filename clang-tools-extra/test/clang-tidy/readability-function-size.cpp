@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s readability-function-size %t -- -config='{CheckOptions: [{key: readability-function-size.LineThreshold, value: 0}, {key: readability-function-size.StatementThreshold, value: 0}, {key: readability-function-size.BranchThreshold, value: 0}, {key: readability-function-size.ParameterThreshold, value: 5}]}' -- -std=c++11
+// RUN: %check_clang_tidy %s readability-function-size %t -- -config='{CheckOptions: [{key: readability-function-size.LineThreshold, value: 0}, {key: readability-function-size.StatementThreshold, value: 0}, {key: readability-function-size.BranchThreshold, value: 0}, {key: readability-function-size.ParameterThreshold, value: 5}, {key: readability-function-size.NestingThreshold, value: 2}]}' -- -std=c++11
 
 // Bad formatting is intentional, don't run clang-format over the whole file!
 
@@ -59,3 +59,33 @@ void bar2() { class A { void barx() {;;} }; }
 //
 // CHECK-MESSAGES: :[[@LINE-4]]:30: warning: function 'barx' exceeds recommended size/complexity
 // CHECK-MESSAGES: :[[@LINE-5]]:30: note: 2 statements (threshold 0)
+
+#define macro() {int x; {int y; {int z;}}}
+
+void baz0() { // 1
+// CHECK-MESSAGES: :[[@LINE-1]]:6: warning: function 'baz0' exceeds recommended size/complexity
+// CHECK-MESSAGES: :[[@LINE-2]]:6: note: 9 statements (threshold 0)
+  int a;
+  { // 2
+    int b;
+    { // 3
+// CHECK-MESSAGES: :[[@LINE-1]]:5: note: nesting level 3 starts here (threshold 2)
+      int c;
+      { // 4
+        int d;
+      }
+    }
+  }
+  { // 2
+    int e;
+  }
+  { // 2
+    { // 3
+// CHECK-MESSAGES: :[[@LINE-1]]:5: note: nesting level 3 starts here (threshold 2)
+      int j;
+    }
+  }
+  macro()
+// CHECK-MESSAGES: :[[@LINE-1]]:3: note: nesting level 3 starts here (threshold 2)
+// CHECK-MESSAGES: :[[@LINE-27]]:25: note: expanded from macro 'macro'
+}

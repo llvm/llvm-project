@@ -143,7 +143,7 @@ void ThumbV7ABSLongThunk::writeTo(uint8_t *Buf, ThunkSection &IS) const {
 void ThumbV7ABSLongThunk::addSymbols(ThunkSection &IS) {
   ThunkSym = addSyntheticLocal(
       Saver.save("__Thumbv7ABSLongThunk_" + Destination.getName()), STT_FUNC,
-      Offset, size(), &IS);
+      Offset | 0x1, size(), &IS);
   addSyntheticLocal("$t", STT_NOTYPE, Offset, 0, &IS);
 }
 
@@ -176,7 +176,7 @@ void ThumbV7PILongThunk::writeTo(uint8_t *Buf, ThunkSection &IS) const {
       0x60, 0x47,             //     bx   r12
   };
   uint64_t S = getARMThunkDestVA(Destination);
-  uint64_t P = ThunkSym->getVA();
+  uint64_t P = ThunkSym->getVA() & ~0x1;
   memcpy(Buf, Data, sizeof(Data));
   Target->relocateOne(Buf, R_ARM_THM_MOVW_PREL_NC, S - P - 12);
   Target->relocateOne(Buf + 4, R_ARM_THM_MOVT_PREL, S - P - 8);
@@ -185,7 +185,7 @@ void ThumbV7PILongThunk::writeTo(uint8_t *Buf, ThunkSection &IS) const {
 void ThumbV7PILongThunk::addSymbols(ThunkSection &IS) {
   ThunkSym = addSyntheticLocal(
       Saver.save("__ThumbV7PILongThunk_" + Destination.getName()), STT_FUNC,
-      Offset, size(), &IS);
+      Offset | 0x1, size(), &IS);
   addSyntheticLocal("$t", STT_NOTYPE, Offset, 0, &IS);
 }
 
