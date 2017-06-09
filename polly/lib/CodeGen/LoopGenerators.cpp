@@ -159,7 +159,7 @@ Value *ParallelLoopGenerator::createParallelLoop(
   Value *SubFnParam = Builder.CreateBitCast(Struct, Builder.getInt8PtrTy(),
                                             "polly.par.userContext");
 
-  // Add one as the upper bound provided by openmp is a < comparison
+  // Add one as the upper bound provided by OpenMP is a < comparison
   // whereas the codegenForSequential function creates a <= comparison.
   UB = Builder.CreateAdd(UB, ConstantInt::get(LongType, 1));
 
@@ -357,7 +357,7 @@ Value *ParallelLoopGenerator::createSubFn(Value *Stride, AllocaInst *StructData,
   LB = Builder.CreateLoad(LBPtr, "polly.par.LB");
   UB = Builder.CreateLoad(UBPtr, "polly.par.UB");
 
-  // Subtract one as the upper bound provided by openmp is a < comparison
+  // Subtract one as the upper bound provided by OpenMP is a < comparison
   // whereas the codegenForSequential function creates a <= comparison.
   UB = Builder.CreateSub(UB, ConstantInt::get(LongType, 1),
                          "polly.par.UBAdjusted");

@@ -235,7 +235,7 @@ Function *PerfMonitor::insertInitFunction(Function *FinalReporting) {
   // constructor lists are just appended, such that the initializer will appear
   // multiple times. To avoid initializations being run multiple times (and
   // especially to avoid that atExitFn is called more than once), we bail
-  // out if the intializer is run more than once.
+  // out if the initializer is run more than once.
   Value *HasRunBefore = Builder.CreateLoad(AlreadyInitializedPtr);
   Builder.CreateCondBr(HasRunBefore, EarlyReturn, InitBB);
   Builder.SetInsertPoint(EarlyReturn);

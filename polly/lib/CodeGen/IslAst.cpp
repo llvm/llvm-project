@@ -21,7 +21,7 @@
 //
 // Polyhedral AST generation is more than scanning polyhedra
 // Tobias Grosser, Sven Verdoolaege, Albert Cohen
-// ACM Transations on Programming Languages and Systems (TOPLAS),
+// ACM Transactions on Programming Languages and Systems (TOPLAS),
 // 37(4), July 2015
 // http://www.grosser.es/#pub-polyhedral-AST-generation
 //
@@ -171,7 +171,7 @@ static isl_printer *cbPrintFor(__isl_take isl_printer *Printer,
 /// dependences is broken when we exploit this parallelism. If so,
 /// @p IsReductionParallel will be set to true. The reduction dependences we use
 /// to check are actually the union of the transitive closure of the initial
-/// reduction dependences together with their reveresal. Even though these
+/// reduction dependences together with their reversal. Even though these
 /// dependences connect all iterations with each other (thus they are cyclic)
 /// we can perform the parallelism check as we are only interested in a zero
 /// (or non-zero) dependence distance on the dimension in question.

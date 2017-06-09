@@ -220,18 +220,18 @@ addr_t Section::GetLoadBaseAddress(Target *target) const {
   return load_base_addr;
 }
 
-bool Section::ResolveContainedAddress(addr_t offset, Address &so_addr) const {
+bool Section::ResolveContainedAddress(addr_t offset, Address &so_addr,
+                                      bool allow_section_end) const {
   const size_t num_children = m_children.GetSize();
-  if (num_children > 0) {
-    for (size_t i = 0; i < num_children; i++) {
-      Section *child_section = m_children.GetSectionAtIndex(i).get();
+  for (size_t i = 0; i < num_children; i++) {
+    Section *child_section = m_children.GetSectionAtIndex(i).get();
 
-      addr_t child_offset = child_section->GetOffset();
-      if (child_offset <= offset &&
-          offset - child_offset < child_section->GetByteSize())
-        return child_section->ResolveContainedAddress(offset - child_offset,
-                                                      so_addr);
-    }
+    addr_t child_offset = child_section->GetOffset();
+    if (child_offset <= offset &&
+        offset - child_offset <
+            child_section->GetByteSize() + (allow_section_end ? 1 : 0))
+      return child_section->ResolveContainedAddress(offset - child_offset,
+                                                    so_addr, allow_section_end);
   }
   so_addr.SetOffset(offset);
   so_addr.SetSection(const_cast<Section *>(this)->shared_from_this());

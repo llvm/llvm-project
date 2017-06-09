@@ -2,7 +2,7 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
 # RUN: echo "SECTIONS { \
 # RUN:        .data_noload_a (NOLOAD) : { *(.data_noload_a) } \
-# RUN:        .data_noload_b 0x10000 (NOLOAD) : { *(.data_noload_b) } };" > %t.script
+# RUN:        .data_noload_b (0x10000) (NOLOAD) : { *(.data_noload_b) } };" > %t.script
 # RUN: ld.lld -o %t --script %t.script %t.o
 # RUN: llvm-readobj --symbols -sections %t
 

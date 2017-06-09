@@ -153,7 +153,7 @@ static int computeSizeInBytes(const Type *T) {
 /// Generate code for a GPU specific isl AST.
 ///
 /// The GPUNodeBuilder augments the general existing IslNodeBuilder, which
-/// generates code for general-prupose AST nodes, with special functionality
+/// generates code for general-purpose AST nodes, with special functionality
 /// for generating GPU specific user nodes.
 ///
 /// @see GPUNodeBuilder::createUser
@@ -434,7 +434,7 @@ private:
   /// Finalize the generation of the kernel arguments.
   ///
   /// This function ensures that not-read-only scalars used in a kernel are
-  /// stored back to the global memory location they ared backed up with before
+  /// stored back to the global memory location they are backed with before
   /// the kernel terminates.
   ///
   /// @params Kernel The kernel to finalize kernel arguments for.
@@ -515,7 +515,7 @@ private:
   /// @param GridBlockX The size of the first block dimension.
   /// @param GridBlockY The size of the second block dimension.
   /// @param GridBlockZ The size of the third block dimension.
-  /// @param Paramters  A pointer to an array that contains itself pointers to
+  /// @param Parameters A pointer to an array that contains itself pointers to
   ///                   the parameter values passed for each kernel argument.
   void createCallLaunchKernel(Value *GPUKernel, Value *GridDimX,
                               Value *GridDimY, Value *BlockDimX,
@@ -2046,7 +2046,7 @@ public:
     return PPCGScop;
   }
 
-  /// Collect the array acesses in a statement.
+  /// Collect the array accesses in a statement.
   ///
   /// @param Stmt The statement for which to collect the accesses.
   ///
@@ -2290,7 +2290,7 @@ public:
 
   /// Create a default-initialized PPCG GPU program.
   ///
-  /// @returns A new gpu grogram description.
+  /// @returns A new gpu program description.
   gpu_prog *createPPCGProg(ppcg_scop *PPCGScop) {
 
     if (!PPCGScop)
