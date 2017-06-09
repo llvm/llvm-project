@@ -88,12 +88,13 @@ struct AssemblerInvocation {
   unsigned NoInitialTextSection : 1;
   unsigned SaveTemporaryLabels : 1;
   unsigned GenDwarfForAssembly : 1;
-  unsigned CompressDebugSections : 1;
   unsigned RelaxELFRelocations : 1;
   unsigned DwarfVersion;
   std::string DwarfDebugFlags;
   std::string DwarfDebugProducer;
   std::string DebugCompilationDir;
+  llvm::DebugCompressionType CompressDebugSections =
+      llvm::DebugCompressionType::None;
   std::string MainFileName;
 
   /// @}
@@ -201,7 +202,9 @@ bool AssemblerInvocation::CreateFromArgs(AssemblerInvocation &Opts,
   Opts.SaveTemporaryLabels = Args.hasArg(OPT_msave_temp_labels);
   // Any DebugInfoKind implies GenDwarfForAssembly.
   Opts.GenDwarfForAssembly = Args.hasArg(OPT_debug_info_kind_EQ);
-  Opts.CompressDebugSections = Args.hasArg(OPT_compress_debug_sections);
+  // TODO: base this on -gz instead
+  if (Args.hasArg(OPT_compress_debug_sections))
+    Opts.CompressDebugSections = llvm::DebugCompressionType::GNU;
   Opts.RelaxELFRelocations = Args.hasArg(OPT_mrelax_relocations);
   Opts.DwarfVersion = getLastArgIntValue(Args, OPT_dwarf_version_EQ, 2, Diags);
   Opts.DwarfDebugFlags = Args.getLastArgValue(OPT_dwarf_debug_flags);
@@ -314,8 +317,7 @@ static bool ExecuteAssembler(AssemblerInvocation &Opts,
 
   // Ensure MCAsmInfo initialization occurs before any use, otherwise sections
   // may be created with a combination of default and explicit settings.
-  if (Opts.CompressDebugSections)
-    MAI->setCompressDebugSections(DebugCompressionType::DCT_ZlibGnu);
+  MAI->setCompressDebugSections(Opts.CompressDebugSections);
 
   MAI->setRelaxELFRelocations(Opts.RelaxELFRelocations);
 

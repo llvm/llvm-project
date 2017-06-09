@@ -633,12 +633,9 @@ namespace clang {
     /// Might be a UsingShadowDecl or a FunctionTemplateDecl.
     DeclAccessPair FoundDecl;
 
-    // BuiltinTypes - Provides the return and parameter types of a
-    // built-in overload candidate. Only valid when Function is NULL.
-    struct {
-      QualType ResultTy;
-      QualType ParamTypes[3];
-    } BuiltinTypes;
+    /// BuiltinParamTypes - Provides the parameter types of a built-in overload
+    /// candidate. Only valid when Function is NULL.
+    QualType BuiltinParamTypes[3];
 
     /// Surrogate - The conversion function for which this candidate
     /// is a surrogate, but only if IsSurrogate is true.

@@ -37,12 +37,11 @@ public:
   bool ActOnEndOfTranslationUnit;
   std::vector<std::string> decl_names;
 
-  bool BeginSourceFileAction(CompilerInstance &ci,
-                             StringRef filename) override {
+  bool BeginSourceFileAction(CompilerInstance &ci) override {
     if (EnableIncrementalProcessing)
       ci.getPreprocessor().enableIncrementalProcessing();
 
-    return ASTFrontendAction::BeginSourceFileAction(ci, filename);
+    return ASTFrontendAction::BeginSourceFileAction(ci);
   }
 
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,

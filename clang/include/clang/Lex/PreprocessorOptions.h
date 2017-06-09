@@ -95,6 +95,9 @@ public:
   /// If given, a PTH cache file to use for speeding up header parsing.
   std::string TokenCache;
 
+  /// When enabled, preprocessor is in a mode for parsing a single file only.
+  bool SingleFileParseMode = false;
+
   /// \brief True if the SourceManager should report the original file name for
   /// contents of files that were remapped to other files. Defaults to true.
   bool RemappedFilesKeepOriginalName;
@@ -181,6 +184,7 @@ public:
     ImplicitPCHInclude.clear();
     ImplicitPTHInclude.clear();
     TokenCache.clear();
+    SingleFileParseMode = false;
     RetainRemappedFileBuffers = true;
     PrecompiledPreambleBytes.first = 0;
     PrecompiledPreambleBytes.second = 0;

@@ -91,7 +91,7 @@ public:
   ComputeASTConsumerArguments(CompilerInstance &CI, StringRef InFile,
                               std::string &Sysroot, std::string &OutputFile);
 
-  bool BeginSourceFileAction(CompilerInstance &CI, StringRef Filename) override;
+  bool BeginSourceFileAction(CompilerInstance &CI) override;
 };
 
 class GenerateModuleAction : public ASTFrontendAction {
@@ -111,15 +111,13 @@ protected:
 
 class GenerateModuleFromModuleMapAction : public GenerateModuleAction {
 private:
-  bool BeginSourceFileAction(CompilerInstance &CI, StringRef Filename) override;
-
   std::unique_ptr<raw_pwrite_stream>
   CreateOutputFile(CompilerInstance &CI, StringRef InFile) override;
 };
 
 class GenerateModuleInterfaceAction : public GenerateModuleAction {
 private:
-  bool BeginSourceFileAction(CompilerInstance &CI, StringRef Filename) override;
+  bool BeginSourceFileAction(CompilerInstance &CI) override;
 
   std::unique_ptr<raw_pwrite_stream>
   CreateOutputFile(CompilerInstance &CI, StringRef InFile) override;
@@ -181,8 +179,7 @@ protected:
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef InFile) override;
 
-  bool BeginSourceFileAction(CompilerInstance &CI,
-                             StringRef Filename) override;
+  bool BeginSourceFileAction(CompilerInstance &CI) override;
 
   void ExecuteAction() override;
   void EndSourceFileAction() override;

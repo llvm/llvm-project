@@ -34,8 +34,7 @@ protected:
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef InFile) override;
 
-  bool BeginSourceFileAction(CompilerInstance &CI,
-                             StringRef Filename) override;
+  bool BeginSourceFileAction(CompilerInstance &CI) override;
 
   void EndSourceFileAction() override;
 

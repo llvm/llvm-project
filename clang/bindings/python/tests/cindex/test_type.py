@@ -37,37 +37,44 @@ def test_a_struct():
     assert not fields[0].type.is_const_qualified()
     assert fields[0].type.kind == TypeKind.INT
     assert fields[0].type.get_canonical().kind == TypeKind.INT
+    assert fields[0].type.get_typedef_name() == ''
 
     assert fields[1].spelling == 'b'
     assert not fields[1].type.is_const_qualified()
     assert fields[1].type.kind == TypeKind.TYPEDEF
     assert fields[1].type.get_canonical().kind == TypeKind.INT
     assert fields[1].type.get_declaration().spelling == 'I'
+    assert fields[1].type.get_typedef_name() == 'I'
 
     assert fields[2].spelling == 'c'
     assert not fields[2].type.is_const_qualified()
     assert fields[2].type.kind == TypeKind.LONG
     assert fields[2].type.get_canonical().kind == TypeKind.LONG
+    assert fields[2].type.get_typedef_name() == ''
 
     assert fields[3].spelling == 'd'
     assert not fields[3].type.is_const_qualified()
     assert fields[3].type.kind == TypeKind.ULONG
     assert fields[3].type.get_canonical().kind == TypeKind.ULONG
+    assert fields[3].type.get_typedef_name() == ''
 
     assert fields[4].spelling == 'e'
     assert not fields[4].type.is_const_qualified()
     assert fields[4].type.kind == TypeKind.LONG
     assert fields[4].type.get_canonical().kind == TypeKind.LONG
+    assert fields[4].type.get_typedef_name() == ''
 
     assert fields[5].spelling == 'f'
     assert fields[5].type.is_const_qualified()
     assert fields[5].type.kind == TypeKind.INT
     assert fields[5].type.get_canonical().kind == TypeKind.INT
+    assert fields[5].type.get_typedef_name() == ''
 
     assert fields[6].spelling == 'g'
     assert not fields[6].type.is_const_qualified()
     assert fields[6].type.kind == TypeKind.POINTER
     assert fields[6].type.get_pointee().kind == TypeKind.INT
+    assert fields[6].type.get_typedef_name() == ''
 
     assert fields[7].spelling == 'h'
     assert not fields[7].type.is_const_qualified()
@@ -75,6 +82,7 @@ def test_a_struct():
     assert fields[7].type.get_pointee().kind == TypeKind.POINTER
     assert fields[7].type.get_pointee().get_pointee().kind == TypeKind.POINTER
     assert fields[7].type.get_pointee().get_pointee().get_pointee().kind == TypeKind.INT
+    assert fields[7].type.get_typedef_name() == ''
 
 def test_references():
     """Ensure that a Type maintains a reference to a TranslationUnit."""
@@ -404,3 +412,12 @@ def test_decay():
     assert a.kind == TypeKind.INCOMPLETEARRAY
     assert a.element_type.kind == TypeKind.INT
     assert a.get_canonical().kind == TypeKind.INCOMPLETEARRAY
+
+def test_addrspace():
+    """Ensure the address space can be queried"""
+    tu = get_tu('__attribute__((address_space(2))) int testInteger = 3;', 'c')
+
+    testInteger = get_cursor(tu, 'testInteger')
+
+    assert testInteger is not None, "Could not find testInteger."
+    assert testInteger.type.get_address_space() == 2

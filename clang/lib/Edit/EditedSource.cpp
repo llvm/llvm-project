@@ -25,17 +25,16 @@ void EditsReceiver::remove(CharSourceRange range) {
 
 void EditedSource::deconstructMacroArgLoc(SourceLocation Loc,
                                           SourceLocation &ExpansionLoc,
-                                          IdentifierInfo *&II) {
+                                          MacroArgUse &ArgUse) {
   assert(SourceMgr.isMacroArgExpansion(Loc));
   SourceLocation DefArgLoc = SourceMgr.getImmediateExpansionRange(Loc).first;
   ExpansionLoc = SourceMgr.getImmediateExpansionRange(DefArgLoc).first;
   SmallString<20> Buf;
   StringRef ArgName = Lexer::getSpelling(SourceMgr.getSpellingLoc(DefArgLoc),
                                          Buf, SourceMgr, LangOpts);
-  II = nullptr;
-  if (!ArgName.empty()) {
-    II = &IdentTable.get(ArgName);
-  }
+  ArgUse = {nullptr, SourceLocation()};
+  if (!ArgName.empty())
+    ArgUse = {&IdentTable.get(ArgName), SourceMgr.getSpellingLoc(DefArgLoc)};
 }
 
 void EditedSource::startingCommit() {}
@@ -43,12 +42,11 @@ void EditedSource::startingCommit() {}
 void EditedSource::finishedCommit() {
   for (auto &ExpArg : CurrCommitMacroArgExps) {
     SourceLocation ExpLoc;
-    IdentifierInfo *II;
-    std::tie(ExpLoc, II) = ExpArg;
-    auto &ArgNames = ExpansionToArgMap[ExpLoc.getRawEncoding()];
-    if (std::find(ArgNames.begin(), ArgNames.end(), II) == ArgNames.end()) {
-      ArgNames.push_back(II);
-    }
+    MacroArgUse ArgUse;
+    std::tie(ExpLoc, ArgUse) = ExpArg;
+    auto &ArgUses = ExpansionToArgMap[ExpLoc.getRawEncoding()];
+    if (std::find(ArgUses.begin(), ArgUses.end(), ArgUse) == ArgUses.end())
+      ArgUses.push_back(ArgUse);
   }
   CurrCommitMacroArgExps.clear();
 }
@@ -66,12 +64,15 @@ bool EditedSource::canInsertInOffset(SourceLocation OrigLoc, FileOffset Offs) {
   }
 
   if (SourceMgr.isMacroArgExpansion(OrigLoc)) {
-    IdentifierInfo *II;
     SourceLocation ExpLoc;
-    deconstructMacroArgLoc(OrigLoc, ExpLoc, II);
+    MacroArgUse ArgUse;
+    deconstructMacroArgLoc(OrigLoc, ExpLoc, ArgUse);
     auto I = ExpansionToArgMap.find(ExpLoc.getRawEncoding());
     if (I != ExpansionToArgMap.end() &&
-        std::find(I->second.begin(), I->second.end(), II) != I->second.end()) {
+        std::find_if(
+            I->second.begin(), I->second.end(), [&](const MacroArgUse &U) {
+              return ArgUse.first == U.first && ArgUse.second != U.second;
+            }) != I->second.end()) {
       // Trying to write in a macro argument input that has already been
       // written by a previous commit for another expansion of the same macro
       // argument name. For example:
@@ -101,11 +102,11 @@ bool EditedSource::commitInsert(SourceLocation OrigLoc,
     return true;
 
   if (SourceMgr.isMacroArgExpansion(OrigLoc)) {
-    IdentifierInfo *II;
     SourceLocation ExpLoc;
-    deconstructMacroArgLoc(OrigLoc, ExpLoc, II);
-    if (II)
-      CurrCommitMacroArgExps.emplace_back(ExpLoc, II);
+    MacroArgUse ArgUse;
+    deconstructMacroArgLoc(OrigLoc, ExpLoc, ArgUse);
+    if (ArgUse.first)
+      CurrCommitMacroArgExps.emplace_back(ExpLoc, ArgUse);
   }
   
   FileEdit &FA = FileEdits[Offs];

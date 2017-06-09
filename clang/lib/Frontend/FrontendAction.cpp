@@ -614,7 +614,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     setCurrentInput(Input, std::move(AST));
 
     // Initialize the action.
-    if (!BeginSourceFileAction(CI, InputFile))
+    if (!BeginSourceFileAction(CI))
       goto failure;
 
     // Create the AST consumer.
@@ -661,7 +661,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     HasBegunSourceFile = true;
 
     // Initialize the action.
-    if (!BeginSourceFileAction(CI, InputFile))
+    if (!BeginSourceFileAction(CI))
       goto failure;
 
     // Initialize the main file entry.
@@ -754,7 +754,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
   }
 
   // Initialize the action.
-  if (!BeginSourceFileAction(CI, InputFile))
+  if (!BeginSourceFileAction(CI))
     goto failure;
 
   // Create the AST context and consumer unless this is a preprocessor only
@@ -1012,11 +1012,10 @@ WrapperFrontendAction::CreateASTConsumer(CompilerInstance &CI,
 bool WrapperFrontendAction::BeginInvocation(CompilerInstance &CI) {
   return WrappedAction->BeginInvocation(CI);
 }
-bool WrapperFrontendAction::BeginSourceFileAction(CompilerInstance &CI,
-                                                  StringRef Filename) {
+bool WrapperFrontendAction::BeginSourceFileAction(CompilerInstance &CI) {
   WrappedAction->setCurrentInput(getCurrentInput());
   WrappedAction->setCompilerInstance(&CI);
-  auto Ret = WrappedAction->BeginSourceFileAction(CI, Filename);
+  auto Ret = WrappedAction->BeginSourceFileAction(CI);
   // BeginSourceFileAction may change CurrentInput, e.g. during module builds.
   setCurrentInput(WrappedAction->getCurrentInput());
   return Ret;
