@@ -147,16 +147,15 @@ Expected<IRSymtabFile> object::readIRSymtab(MemoryBufferRef MBRef) {
   if (!BCOrErr)
     return errorCodeToError(BCOrErr.getError());
 
-  Expected<std::vector<BitcodeModule>> BMsOrErr =
-      getBitcodeModuleList(*BCOrErr);
-  if (!BMsOrErr)
-    return BMsOrErr.takeError();
+  Expected<BitcodeFileContents> BFCOrErr = getBitcodeFileContents(*BCOrErr);
+  if (!BFCOrErr)
+    return BFCOrErr.takeError();
 
-  Expected<irsymtab::FileContents> FCOrErr = irsymtab::readBitcode(*BMsOrErr);
+  Expected<irsymtab::FileContents> FCOrErr = irsymtab::readBitcode(*BFCOrErr);
   if (!FCOrErr)
     return FCOrErr.takeError();
 
-  F.Mods = std::move(*BMsOrErr);
+  F.Mods = std::move(BFCOrErr->Mods);
   F.Symtab = std::move(FCOrErr->Symtab);
   F.Strtab = std::move(FCOrErr->Strtab);
   F.TheReader = std::move(FCOrErr->TheReader);

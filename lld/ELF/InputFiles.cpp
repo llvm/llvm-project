@@ -306,21 +306,23 @@ void elf::ObjectFile<ELFT>::initializeSections(
 
     switch (Sec.sh_type) {
     case SHT_GROUP: {
-      // We discard comdat sections usually. When -r we should not do that. We
-      // still do deduplication in this case to simplify implementation, because
-      // otherwise merging group sections together would requre additional
-      // regeneration of its contents.
-      bool New = ComdatGroups
-                     .insert(CachedHashStringRef(
-                         getShtGroupSignature(ObjSections, Sec)))
-                     .second;
-      if (New && Config->Relocatable)
-        this->Sections[I] = createInputSection(Sec, SectionStringTable);
-      else
-        this->Sections[I] = &InputSection::Discarded;
-      if (New)
-        continue;
+      // De-duplicate section groups by their signatures.
+      StringRef Signature = getShtGroupSignature(ObjSections, Sec);
+      bool IsNew = ComdatGroups.insert(CachedHashStringRef(Signature)).second;
+      this->Sections[I] = &InputSection::Discarded;
 
+      // If it is a new section group, we want to keep group members.
+      // Group leader sections, which contain indices of group members, are
+      // discarded because they are useless beyond this point. The only
+      // exception is the -r option because in order to produce re-linkable
+      // object files, we want to pass through basically everything.
+      if (IsNew) {
+        if (Config->Relocatable)
+          this->Sections[I] = createInputSection(Sec, SectionStringTable);
+        continue;
+      }
+
+      // Otherwise, discard group members.
       for (uint32_t SecIndex : getShtGroupEntries(Sec)) {
         if (SecIndex >= Size)
           fatal(toString(this) +

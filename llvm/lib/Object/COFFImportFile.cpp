@@ -285,11 +285,13 @@ ObjectFactory::createImportDescriptor(std::vector<uint8_t> &Buffer) {
        IMAGE_SYM_CLASS_EXTERNAL,
        0},
   };
-  reinterpret_cast<StringTableOffset &>(SymbolTable[0].Name).Offset =
+  // TODO: Name.Offset.Offset here and in the all similar places below
+  // suggests a names refactoring. Maybe StringTableOffset.Value?
+  SymbolTable[0].Name.Offset.Offset =
       sizeof(uint32_t);
-  reinterpret_cast<StringTableOffset &>(SymbolTable[5].Name).Offset =
+  SymbolTable[5].Name.Offset.Offset =
       sizeof(uint32_t) + ImportDescriptorSymbolName.length() + 1;
-  reinterpret_cast<StringTableOffset &>(SymbolTable[6].Name).Offset =
+  SymbolTable[6].Name.Offset.Offset =
       sizeof(uint32_t) + ImportDescriptorSymbolName.length() + 1 +
       NullImportDescriptorSymbolName.length() + 1;
   append(Buffer, SymbolTable);
@@ -354,8 +356,7 @@ ObjectFactory::createNullImportDescriptor(std::vector<uint8_t> &Buffer) {
        IMAGE_SYM_CLASS_EXTERNAL,
        0},
   };
-  reinterpret_cast<StringTableOffset &>(SymbolTable[0].Name).Offset =
-      sizeof(uint32_t);
+  SymbolTable[0].Name.Offset.Offset = sizeof(uint32_t);
   append(Buffer, SymbolTable);
 
   // String Table
@@ -437,8 +438,7 @@ NewArchiveMember ObjectFactory::createNullThunk(std::vector<uint8_t> &Buffer) {
        IMAGE_SYM_CLASS_EXTERNAL,
        0},
   };
-  reinterpret_cast<StringTableOffset &>(SymbolTable[0].Name).Offset =
-      sizeof(uint32_t);
+  SymbolTable[0].Name.Offset.Offset = sizeof(uint32_t);
   append(Buffer, SymbolTable);
 
   // String Table

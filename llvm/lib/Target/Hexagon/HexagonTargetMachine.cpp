@@ -276,27 +276,27 @@ bool HexagonPassConfig::addInstSelector() {
   if (!NoOpt) {
     // Create logical operations on predicate registers.
     if (EnableGenPred)
-      addPass(createHexagonGenPredicate(), false);
+      addPass(createHexagonGenPredicate());
     // Rotate loops to expose bit-simplification opportunities.
     if (EnableLoopResched)
-      addPass(createHexagonLoopRescheduling(), false);
+      addPass(createHexagonLoopRescheduling());
     // Split double registers.
     if (!DisableHSDR)
       addPass(createHexagonSplitDoubleRegs());
     // Bit simplification.
     if (EnableBitSimplify)
-      addPass(createHexagonBitSimplify(), false);
+      addPass(createHexagonBitSimplify());
     addPass(createHexagonPeephole());
     printAndVerify("After hexagon peephole pass");
     // Constant propagation.
     if (!DisableHCP) {
-      addPass(createHexagonConstPropagationPass(), false);
-      addPass(&UnreachableMachineBlockElimID, false);
+      addPass(createHexagonConstPropagationPass());
+      addPass(&UnreachableMachineBlockElimID);
     }
     if (EnableGenInsert)
-      addPass(createHexagonGenInsert(), false);
+      addPass(createHexagonGenInsert());
     if (EnableEarlyIf)
-      addPass(createHexagonEarlyIfConversion(), false);
+      addPass(createHexagonEarlyIfConversion());
   }
 
   return false;
@@ -307,9 +307,9 @@ void HexagonPassConfig::addPreRegAlloc() {
     if (EnableExpandCondsets)
       insertPass(&RegisterCoalescerID, &HexagonExpandCondsetsID);
     if (!DisableStoreWidening)
-      addPass(createHexagonStoreWidening(), false);
+      addPass(createHexagonStoreWidening());
     if (!DisableHardwareLoops)
-      addPass(createHexagonHardwareLoops(), false);
+      addPass(createHexagonHardwareLoops());
   }
   if (TM->getOptLevel() >= CodeGenOpt::Default)
     addPass(&MachinePipelinerID);
@@ -320,16 +320,16 @@ void HexagonPassConfig::addPostRegAlloc() {
     if (EnableRDFOpt)
       addPass(createHexagonRDFOpt());
     if (!DisableHexagonCFGOpt)
-      addPass(createHexagonCFGOptimizer(), false);
+      addPass(createHexagonCFGOptimizer());
     if (!DisableAModeOpt)
-      addPass(createHexagonOptAddrMode(), false);
+      addPass(createHexagonOptAddrMode());
   }
 }
 
 void HexagonPassConfig::addPreSched2() {
-  addPass(createHexagonCopyToCombine(), false);
+  addPass(createHexagonCopyToCombine());
   if (getOptLevel() != CodeGenOpt::None)
-    addPass(&IfConverterID, false);
+    addPass(&IfConverterID);
   addPass(createHexagonSplitConst32AndConst64());
 }
 
@@ -337,17 +337,17 @@ void HexagonPassConfig::addPreEmitPass() {
   bool NoOpt = (getOptLevel() == CodeGenOpt::None);
 
   if (!NoOpt)
-    addPass(createHexagonNewValueJump(), false);
+    addPass(createHexagonNewValueJump());
 
-  addPass(createHexagonBranchRelaxation(), false);
+  addPass(createHexagonBranchRelaxation());
 
   // Create Packets.
   if (!NoOpt) {
     if (!DisableHardwareLoops)
-      addPass(createHexagonFixupHwLoops(), false);
+      addPass(createHexagonFixupHwLoops());
     // Generate MUX from pairs of conditional transfers.
     if (EnableGenMux)
-      addPass(createHexagonGenMux(), false);
+      addPass(createHexagonGenMux());
 
     addPass(createHexagonPacketizer(), false);
   }

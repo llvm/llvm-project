@@ -9,7 +9,6 @@
 
 #include "LLVMOutputStyle.h"
 
-#include "C13DebugFragmentVisitor.h"
 #include "CompactTypeDumpVisitor.h"
 #include "StreamUtil.h"
 #include "llvm-pdbdump.h"
@@ -18,9 +17,12 @@
 #include "llvm/DebugInfo/CodeView/DebugChecksumsSubsection.h"
 #include "llvm/DebugInfo/CodeView/DebugCrossExSubsection.h"
 #include "llvm/DebugInfo/CodeView/DebugCrossImpSubsection.h"
+#include "llvm/DebugInfo/CodeView/DebugFrameDataSubsection.h"
 #include "llvm/DebugInfo/CodeView/DebugInlineeLinesSubsection.h"
 #include "llvm/DebugInfo/CodeView/DebugLinesSubsection.h"
+#include "llvm/DebugInfo/CodeView/DebugStringTableSubsection.h"
 #include "llvm/DebugInfo/CodeView/DebugSubsectionVisitor.h"
+#include "llvm/DebugInfo/CodeView/DebugSymbolsSubsection.h"
 #include "llvm/DebugInfo/CodeView/DebugUnknownSubsection.h"
 #include "llvm/DebugInfo/CodeView/EnumTables.h"
 #include "llvm/DebugInfo/CodeView/LazyRandomTypeCollection.h"
@@ -83,62 +85,74 @@ struct PageStats {
   BitVector UseAfterFreePages;
 };
 
-class C13RawVisitor : public C13DebugFragmentVisitor {
+class C13RawVisitor : public DebugSubsectionVisitor {
 public:
-  C13RawVisitor(ScopedPrinter &P, PDBFile &F, LazyRandomTypeCollection &IPI)
-      : C13DebugFragmentVisitor(F), P(P), IPI(IPI) {}
+  C13RawVisitor(ScopedPrinter &P, LazyRandomTypeCollection &TPI,
+                LazyRandomTypeCollection &IPI)
+      : P(P), TPI(TPI), IPI(IPI) {}
 
-  Error handleLines() override {
-    if (Lines.empty())
+  Error visitUnknown(DebugUnknownSubsectionRef &Unknown) override {
+    if (!opts::checkModuleSubsection(opts::ModuleSubsection::Unknown))
+      return Error::success();
+    DictScope DD(P, "Unknown");
+    P.printHex("Kind", static_cast<uint32_t>(Unknown.kind()));
+    ArrayRef<uint8_t> Data;
+    BinaryStreamReader Reader(Unknown.getData());
+    consumeError(Reader.readBytes(Data, Reader.bytesRemaining()));
+    P.printBinaryBlock("Data", Data);
+    return Error::success();
+  }
+
+  Error visitLines(DebugLinesSubsectionRef &Lines,
+                   const DebugSubsectionState &State) override {
+    if (!opts::checkModuleSubsection(opts::ModuleSubsection::Lines))
       return Error::success();
 
     DictScope DD(P, "Lines");
 
-    for (const auto &Fragment : Lines) {
-      DictScope DDD(P, "Block");
-      P.printNumber("RelocSegment", Fragment.header()->RelocSegment);
-      P.printNumber("RelocOffset", Fragment.header()->RelocOffset);
-      P.printNumber("CodeSize", Fragment.header()->CodeSize);
-      P.printBoolean("HasColumns", Fragment.hasColumnInfo());
+    P.printNumber("RelocSegment", Lines.header()->RelocSegment);
+    P.printNumber("RelocOffset", Lines.header()->RelocOffset);
+    P.printNumber("CodeSize", Lines.header()->CodeSize);
+    P.printBoolean("HasColumns", Lines.hasColumnInfo());
 
-      for (const auto &L : Fragment) {
-        DictScope DDDD(P, "Lines");
+    for (const auto &L : Lines) {
+      DictScope DDDD(P, "FileEntry");
 
-        if (auto EC = printFileName("FileName", L.NameIndex))
-          return EC;
+      if (auto EC = printFileName("FileName", L.NameIndex, State))
+        return EC;
 
-        for (const auto &N : L.LineNumbers) {
-          DictScope DDD(P, "Line");
-          LineInfo LI(N.Flags);
-          P.printNumber("Offset", N.Offset);
-          if (LI.isAlwaysStepInto())
-            P.printString("StepInto", StringRef("Always"));
-          else if (LI.isNeverStepInto())
-            P.printString("StepInto", StringRef("Never"));
-          else
-            P.printNumber("LineNumberStart", LI.getStartLine());
-          P.printNumber("EndDelta", LI.getLineDelta());
-          P.printBoolean("IsStatement", LI.isStatement());
-        }
-        for (const auto &C : L.Columns) {
-          DictScope DDD(P, "Column");
-          P.printNumber("Start", C.StartColumn);
-          P.printNumber("End", C.EndColumn);
-        }
+      for (const auto &N : L.LineNumbers) {
+        DictScope DDD(P, "Line");
+        LineInfo LI(N.Flags);
+        P.printNumber("Offset", N.Offset);
+        if (LI.isAlwaysStepInto())
+          P.printString("StepInto", StringRef("Always"));
+        else if (LI.isNeverStepInto())
+          P.printString("StepInto", StringRef("Never"));
+        else
+          P.printNumber("LineNumberStart", LI.getStartLine());
+        P.printNumber("EndDelta", LI.getLineDelta());
+        P.printBoolean("IsStatement", LI.isStatement());
+      }
+      for (const auto &C : L.Columns) {
+        DictScope DDD(P, "Column");
+        P.printNumber("Start", C.StartColumn);
+        P.printNumber("End", C.EndColumn);
       }
     }
 
     return Error::success();
   }
 
-  Error handleFileChecksums() override {
-    if (!Checksums.hasValue())
+  Error visitFileChecksums(DebugChecksumsSubsectionRef &Checksums,
+                           const DebugSubsectionState &State) override {
+    if (!opts::checkModuleSubsection(opts::ModuleSubsection::FileChecksums))
       return Error::success();
 
     DictScope DD(P, "FileChecksums");
-    for (const auto &CS : *Checksums) {
+    for (const auto &CS : Checksums) {
       DictScope DDD(P, "Checksum");
-      if (auto Result = getNameFromStringTable(CS.FileNameOffset))
+      if (auto Result = getNameFromStringTable(CS.FileNameOffset, State))
         P.printString("FileName", *Result);
       else
         return Result.takeError();
@@ -148,56 +162,126 @@ public:
     return Error::success();
   }
 
-  Error handleInlineeLines() override {
-    if (InlineeLines.empty())
+  Error visitInlineeLines(DebugInlineeLinesSubsectionRef &Inlinees,
+                          const DebugSubsectionState &State) override {
+    if (!opts::checkModuleSubsection(opts::ModuleSubsection::InlineeLines))
       return Error::success();
 
     DictScope D(P, "InlineeLines");
-    for (const auto &IL : InlineeLines) {
-      P.printBoolean("HasExtraFiles", IL.hasExtraFiles());
-      ListScope LS(P, "Lines");
-      for (const auto &L : IL) {
-        DictScope DDD(P, "Inlinee");
-        if (auto EC = printFileName("FileName", L.Header->FileID))
-          return EC;
+    P.printBoolean("HasExtraFiles", Inlinees.hasExtraFiles());
+    ListScope LS(P, "Lines");
+    for (const auto &L : Inlinees) {
+      DictScope DDD(P, "Inlinee");
+      if (auto EC = printFileName("FileName", L.Header->FileID, State))
+        return EC;
 
-        if (auto EC = dumpTypeRecord("Function", L.Header->Inlinee))
-          return EC;
-        P.printNumber("SourceLine", L.Header->SourceLineNum);
-        if (IL.hasExtraFiles()) {
-          ListScope DDDD(P, "ExtraFiles");
-          for (const auto &EF : L.ExtraFiles) {
-            if (auto EC = printFileName("File", EF))
-              return EC;
-          }
+      if (auto EC = dumpTypeRecord("Function", L.Header->Inlinee))
+        return EC;
+      P.printNumber("SourceLine", L.Header->SourceLineNum);
+      if (Inlinees.hasExtraFiles()) {
+        ListScope DDDD(P, "ExtraFiles");
+        for (const auto &EF : L.ExtraFiles) {
+          if (auto EC = printFileName("File", EF, State))
+            return EC;
         }
       }
     }
     return Error::success();
   }
 
-  Error handleCrossModuleExports() override {
-    for (const auto &M : CrossExports) {
-      DictScope D(P, "CrossModuleExports");
-      for (const auto &E : M) {
-        P.printHex("Local", E.Local);
-        P.printHex("Global", E.Global);
+  Error visitCrossModuleExports(DebugCrossModuleExportsSubsectionRef &CSE,
+                                const DebugSubsectionState &State) override {
+    if (!opts::checkModuleSubsection(opts::ModuleSubsection::CrossScopeExports))
+      return Error::success();
+
+    ListScope D(P, "CrossModuleExports");
+    for (const auto &M : CSE) {
+      DictScope D(P, "Export");
+      P.printHex("Local", M.Local);
+      P.printHex("Global", M.Global);
+    }
+    return Error::success();
+  }
+
+  Error visitCrossModuleImports(DebugCrossModuleImportsSubsectionRef &CSI,
+                                const DebugSubsectionState &State) override {
+    if (!opts::checkModuleSubsection(opts::ModuleSubsection::CrossScopeImports))
+      return Error::success();
+
+    ListScope L(P, "CrossModuleImports");
+    for (const auto &M : CSI) {
+      DictScope D(P, "ModuleImport");
+      auto Name = getNameFromStringTable(M.Header->ModuleNameOffset, State);
+      if (!Name)
+        return Name.takeError();
+      P.printString("Module", *Name);
+      P.printHexList("Imports", M.Imports);
+    }
+    return Error::success();
+  }
+
+  Error visitFrameData(DebugFrameDataSubsectionRef &FD,
+                       const DebugSubsectionState &State) override {
+    if (!opts::checkModuleSubsection(opts::ModuleSubsection::FrameData))
+      return Error::success();
+
+    ListScope L(P, "FrameData");
+    for (const auto &Frame : FD) {
+      DictScope D(P, "Frame");
+      auto Name = getNameFromStringTable(Frame.FrameFunc, State);
+      if (!Name)
+        return joinErrors(make_error<RawError>(raw_error_code::invalid_format,
+                                               "Invalid Frame.FrameFunc index"),
+                          Name.takeError());
+      P.printNumber("Rva", Frame.RvaStart);
+      P.printNumber("CodeSize", Frame.CodeSize);
+      P.printNumber("LocalSize", Frame.LocalSize);
+      P.printNumber("ParamsSize", Frame.ParamsSize);
+      P.printNumber("MaxStackSize", Frame.MaxStackSize);
+      P.printString("FrameFunc", *Name);
+      P.printNumber("PrologSize", Frame.PrologSize);
+      P.printNumber("SavedRegsSize", Frame.SavedRegsSize);
+      P.printNumber("Flags", Frame.Flags);
+    }
+    return Error::success();
+  }
+
+  Error visitSymbols(DebugSymbolsSubsectionRef &Symbols,
+                     const DebugSubsectionState &State) override {
+    if (!opts::checkModuleSubsection(opts::ModuleSubsection::Symbols))
+      return Error::success();
+    ListScope L(P, "Symbols");
+
+    // This section should not actually appear in a PDB file, it really only
+    // appears in object files.  But we support it here for testing.  So we
+    // specify the Object File container type.
+    codeview::CVSymbolDumper SD(P, TPI, CodeViewContainer::ObjectFile, nullptr,
+                                false);
+    for (auto S : Symbols) {
+      DictScope LL(P, "");
+      if (auto EC = SD.dump(S)) {
+        return make_error<RawError>(
+            raw_error_code::corrupt_file,
+            "DEBUG_S_SYMBOLS subsection contained corrupt symbol record");
       }
     }
     return Error::success();
   }
 
-  Error handleCrossModuleImports() override {
-    for (const auto &M : CrossImports) {
-      DictScope D(P, "CrossModuleImports");
-      for (const auto &ImportGroup : M) {
-        auto Name =
-            getNameFromStringTable(ImportGroup.Header->ModuleNameOffset);
-        if (!Name)
-          return Name.takeError();
-        P.printString("Module", *Name);
-        P.printHexList("Imports", ImportGroup.Imports);
-      }
+  Error visitStringTable(DebugStringTableSubsectionRef &Strings,
+                         const DebugSubsectionState &State) override {
+    if (!opts::checkModuleSubsection(opts::ModuleSubsection::StringTable))
+      return Error::success();
+
+    ListScope D(P, "String Table");
+    BinaryStreamReader Reader(Strings.getBuffer());
+    StringRef S;
+    consumeError(Reader.readCString(S));
+    while (Reader.bytesRemaining() > 0) {
+      consumeError(Reader.readCString(S));
+      if (S.empty() && Reader.bytesRemaining() < 4)
+        break;
+      P.printString(S);
     }
     return Error::success();
   }
@@ -217,15 +301,33 @@ private:
     }
     return Error::success();
   }
-  Error printFileName(StringRef Label, uint32_t Offset) {
-    if (auto Result = getNameFromChecksumsBuffer(Offset)) {
+  Error printFileName(StringRef Label, uint32_t Offset,
+                      const DebugSubsectionState &State) {
+    if (auto Result = getNameFromChecksumsBuffer(Offset, State)) {
       P.printString(Label, *Result);
       return Error::success();
     } else
       return Result.takeError();
   }
 
+  Expected<StringRef>
+  getNameFromStringTable(uint32_t Offset, const DebugSubsectionState &State) {
+    return State.strings().getString(Offset);
+  }
+
+  Expected<StringRef>
+  getNameFromChecksumsBuffer(uint32_t Offset,
+                             const DebugSubsectionState &State) {
+    auto Array = State.checksums().getArray();
+    auto ChecksumIter = Array.at(Offset);
+    if (ChecksumIter == Array.end())
+      return make_error<RawError>(raw_error_code::invalid_format);
+    const auto &Entry = *ChecksumIter;
+    return getNameFromStringTable(Entry.FileNameOffset, State);
+  }
+
   ScopedPrinter &P;
+  LazyRandomTypeCollection &TPI;
   LazyRandomTypeCollection &IPI;
 };
 }
@@ -755,8 +857,10 @@ LLVMOutputStyle::initializeTypeDatabase(uint32_t SN) {
 }
 
 Error LLVMOutputStyle::dumpDbiStream() {
-  bool DumpModules = opts::raw::DumpModules || opts::raw::DumpModuleSyms ||
-                     opts::raw::DumpModuleFiles || opts::raw::DumpLineInfo;
+  bool DumpModules = opts::shared::DumpModules ||
+                     opts::shared::DumpModuleSyms ||
+                     opts::shared::DumpModuleFiles ||
+                     !opts::shared::DumpModuleSubsections.empty();
   if (!opts::raw::DumpHeaders && !DumpModules)
     return Error::success();
   if (!File.hasPDBDbiStream()) {
@@ -806,7 +910,7 @@ Error LLVMOutputStyle::dumpDbiStream() {
       P.printNumber("Symbol Byte Size", Modi.getSymbolDebugInfoByteSize());
       P.printNumber("Type Server Index", Modi.getTypeServerIndex());
       P.printBoolean("Has EC Info", Modi.hasECInfo());
-      if (opts::raw::DumpModuleFiles) {
+      if (opts::shared::DumpModuleFiles) {
         std::string FileListName = to_string(Modules.getSourceFileCount(I)) +
                                    " Contributing Source Files";
         ListScope LL(P, FileListName);
@@ -815,8 +919,9 @@ Error LLVMOutputStyle::dumpDbiStream() {
       }
       bool HasModuleDI = (Modi.getModuleStreamIndex() < File.getNumStreams());
       bool ShouldDumpSymbols =
-          (opts::raw::DumpModuleSyms || opts::raw::DumpSymRecordBytes);
-      if (HasModuleDI && (ShouldDumpSymbols || opts::raw::DumpLineInfo)) {
+          (opts::shared::DumpModuleSyms || opts::raw::DumpSymRecordBytes);
+      if (HasModuleDI &&
+          (ShouldDumpSymbols || !opts::shared::DumpModuleSubsections.empty())) {
         auto ModStreamData = MappedBlockStream::createIndexedStream(
             File.getMsfLayout(), File.getMsfBuffer(),
             Modi.getModuleStreamIndex(), File.getAllocator());
@@ -825,19 +930,19 @@ Error LLVMOutputStyle::dumpDbiStream() {
         if (auto EC = ModS.reload())
           return EC;
 
+        auto ExpectedTpi = initializeTypeDatabase(StreamTPI);
+        if (!ExpectedTpi)
+          return ExpectedTpi.takeError();
+        auto &Tpi = *ExpectedTpi;
         if (ShouldDumpSymbols) {
-          auto ExpectedTypes = initializeTypeDatabase(StreamTPI);
-          if (!ExpectedTypes)
-            return ExpectedTypes.takeError();
-          auto &Types = *ExpectedTypes;
 
           ListScope SS(P, "Symbols");
-          codeview::CVSymbolDumper SD(P, Types, CodeViewContainer::Pdb, nullptr,
+          codeview::CVSymbolDumper SD(P, Tpi, CodeViewContainer::Pdb, nullptr,
                                       false);
           bool HadError = false;
           for (auto S : ModS.symbols(&HadError)) {
             DictScope LL(P, "");
-            if (opts::raw::DumpModuleSyms) {
+            if (opts::shared::DumpModuleSyms) {
               if (auto EC = SD.dump(S)) {
                 llvm::consumeError(std::move(EC));
                 HadError = true;
@@ -852,14 +957,22 @@ Error LLVMOutputStyle::dumpDbiStream() {
                 raw_error_code::corrupt_file,
                 "DBI stream contained corrupt symbol record");
         }
-        if (opts::raw::DumpLineInfo) {
-          ListScope SS(P, "LineInfo");
-          auto ExpectedTypes = initializeTypeDatabase(StreamIPI);
-          if (!ExpectedTypes)
-            return ExpectedTypes.takeError();
-          auto &IpiItems = *ExpectedTypes;
-          C13RawVisitor V(P, File, IpiItems);
-          if (auto EC = codeview::visitDebugSubsections(ModS.subsections(), V))
+        if (!opts::shared::DumpModuleSubsections.empty()) {
+          ListScope SS(P, "Subsections");
+          auto ExpectedIpi = initializeTypeDatabase(StreamIPI);
+          if (!ExpectedIpi)
+            return ExpectedIpi.takeError();
+          auto &Ipi = *ExpectedIpi;
+          auto ExpectedStrings = File.getStringTable();
+          if (!ExpectedStrings)
+            return joinErrors(
+                make_error<RawError>(raw_error_code::no_stream,
+                                     "Could not get string table!"),
+                ExpectedStrings.takeError());
+
+          C13RawVisitor V(P, Tpi, Ipi);
+          if (auto EC = codeview::visitDebugSubsections(
+                  ModS.subsections(), V, ExpectedStrings->getStringTable()))
             return EC;
         }
       }

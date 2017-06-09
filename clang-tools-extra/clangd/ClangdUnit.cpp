@@ -52,6 +52,7 @@ ClangdUnit::ClangdUnit(PathRef FileName, StringRef Contents,
       /*IncludeBriefCommentsInCodeCompletion=*/true,
       /*AllowPCHWithCompilerErrors=*/true,
       /*SkipFunctionBodies=*/false,
+      /*SingleFileParse=*/false,
       /*UserFilesAreVolatile=*/false, /*ForSerialization=*/false,
       /*ModuleFormat=*/llvm::None,
       /*ErrAST=*/nullptr, VFS));

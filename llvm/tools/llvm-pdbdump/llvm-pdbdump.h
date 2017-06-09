@@ -27,6 +27,28 @@ uint32_t getTypeLength(const PDBSymbolData &Symbol);
 
 namespace opts {
 
+enum class ModuleSubsection {
+  Unknown,
+  Lines,
+  FileChecksums,
+  InlineeLines,
+  CrossScopeImports,
+  CrossScopeExports,
+  StringTable,
+  Symbols,
+  FrameData,
+  All
+};
+
+bool checkModuleSubsection(ModuleSubsection Kind);
+
+template <typename... Ts>
+bool checkModuleSubsection(ModuleSubsection K1, ModuleSubsection K2,
+                           Ts &&... Rest) {
+  return checkModuleSubsection(K1) ||
+         checkModuleSubsection(K2, std::forward<Ts>(Rest)...);
+}
+
 namespace pretty {
 
 enum class ClassDefinitionFormat { None, Layout, All };
@@ -96,13 +118,8 @@ extern llvm::cl::opt<bool> DumpTpiRecordBytes;
 extern llvm::cl::opt<bool> DumpTpiRecords;
 extern llvm::cl::opt<bool> DumpIpiRecords;
 extern llvm::cl::opt<bool> DumpIpiRecordBytes;
-extern llvm::cl::opt<bool> DumpModules;
-extern llvm::cl::opt<bool> DumpModuleFiles;
-extern llvm::cl::opt<bool> DumpModuleLines;
-extern llvm::cl::opt<bool> DumpModuleSyms;
 extern llvm::cl::opt<bool> DumpPublics;
 extern llvm::cl::opt<bool> DumpSectionContribs;
-extern llvm::cl::opt<bool> DumpLineInfo;
 extern llvm::cl::opt<bool> DumpSectionMap;
 extern llvm::cl::opt<bool> DumpSymRecordBytes;
 extern llvm::cl::opt<bool> DumpSectionHeaders;
@@ -123,14 +140,17 @@ extern llvm::cl::opt<bool> StreamDirectory;
 extern llvm::cl::opt<bool> StringTable;
 extern llvm::cl::opt<bool> PdbStream;
 extern llvm::cl::opt<bool> DbiStream;
-extern llvm::cl::opt<bool> DbiModuleInfo;
-extern llvm::cl::opt<bool> DbiModuleSyms;
-extern llvm::cl::opt<bool> DbiModuleSourceFileInfo;
-extern llvm::cl::opt<bool> DbiModuleSourceLineInfo;
 extern llvm::cl::opt<bool> TpiStream;
 extern llvm::cl::opt<bool> IpiStream;
 extern llvm::cl::list<std::string> InputFilename;
 }
+
+namespace shared {
+extern llvm::cl::opt<bool> DumpModules;
+extern llvm::cl::opt<bool> DumpModuleFiles;
+extern llvm::cl::list<ModuleSubsection> DumpModuleSubsections;
+extern llvm::cl::opt<bool> DumpModuleSyms;
+} // namespace shared
 }
 
 #endif

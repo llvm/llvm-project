@@ -7150,8 +7150,7 @@ void Sema::AddBuiltinCandidate(QualType *ParamTys, ArrayRef<Expr *> Args,
   Candidate.Function = nullptr;
   Candidate.IsSurrogate = false;
   Candidate.IgnoreObjectArgument = false;
-  for (unsigned ArgIdx = 0, N = Args.size(); ArgIdx != N; ++ArgIdx)
-    Candidate.BuiltinTypes.ParamTypes[ArgIdx] = ParamTys[ArgIdx];
+  std::copy(ParamTys, ParamTys + Args.size(), Candidate.BuiltinParamTypes);
 
   // Determine the implicit conversion sequences for each of the
   // arguments.
@@ -10143,13 +10142,13 @@ static void NoteBuiltinOperatorCandidate(Sema &S, StringRef Opc,
   std::string TypeStr("operator");
   TypeStr += Opc;
   TypeStr += "(";
-  TypeStr += Cand->BuiltinTypes.ParamTypes[0].getAsString();
+  TypeStr += Cand->BuiltinParamTypes[0].getAsString();
   if (Cand->Conversions.size() == 1) {
     TypeStr += ")";
     S.Diag(OpLoc, diag::note_ovl_builtin_unary_candidate) << TypeStr;
   } else {
     TypeStr += ", ";
-    TypeStr += Cand->BuiltinTypes.ParamTypes[1].getAsString();
+    TypeStr += Cand->BuiltinParamTypes[1].getAsString();
     TypeStr += ")";
     S.Diag(OpLoc, diag::note_ovl_builtin_binary_candidate) << TypeStr;
   }
@@ -10386,7 +10385,7 @@ static void CompleteNonViableCandidate(Sema &S, OverloadCandidate *Cand,
   } else {
     // Builtin operator.
     assert(ConvCount <= 3);
-    ParamTypes = Cand->BuiltinTypes.ParamTypes;
+    ParamTypes = Cand->BuiltinParamTypes;
   }
 
   // Fill in the rest of the conversions.
@@ -11992,9 +11991,8 @@ Sema::CreateOverloadedUnaryOp(SourceLocation OpLoc, UnaryOperatorKind Opc,
       // We matched a built-in operator. Convert the arguments, then
       // break out so that we will build the appropriate built-in
       // operator node.
-      ExprResult InputRes =
-        PerformImplicitConversion(Input, Best->BuiltinTypes.ParamTypes[0],
-                                  Best->Conversions[0], AA_Passing);
+      ExprResult InputRes = PerformImplicitConversion(
+          Input, Best->BuiltinParamTypes[0], Best->Conversions[0], AA_Passing);
       if (InputRes.isInvalid())
         return ExprError();
       Input = InputRes.get();
@@ -12238,15 +12236,15 @@ Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
         // break out so that we will build the appropriate built-in
         // operator node.
         ExprResult ArgsRes0 =
-          PerformImplicitConversion(Args[0], Best->BuiltinTypes.ParamTypes[0],
-                                    Best->Conversions[0], AA_Passing);
+            PerformImplicitConversion(Args[0], Best->BuiltinParamTypes[0],
+                                      Best->Conversions[0], AA_Passing);
         if (ArgsRes0.isInvalid())
           return ExprError();
         Args[0] = ArgsRes0.get();
 
         ExprResult ArgsRes1 =
-          PerformImplicitConversion(Args[1], Best->BuiltinTypes.ParamTypes[1],
-                                    Best->Conversions[1], AA_Passing);
+            PerformImplicitConversion(Args[1], Best->BuiltinParamTypes[1],
+                                      Best->Conversions[1], AA_Passing);
         if (ArgsRes1.isInvalid())
           return ExprError();
         Args[1] = ArgsRes1.get();
@@ -12449,15 +12447,15 @@ Sema::CreateOverloadedArraySubscriptExpr(SourceLocation LLoc,
         // break out so that we will build the appropriate built-in
         // operator node.
         ExprResult ArgsRes0 =
-          PerformImplicitConversion(Args[0], Best->BuiltinTypes.ParamTypes[0],
-                                    Best->Conversions[0], AA_Passing);
+            PerformImplicitConversion(Args[0], Best->BuiltinParamTypes[0],
+                                      Best->Conversions[0], AA_Passing);
         if (ArgsRes0.isInvalid())
           return ExprError();
         Args[0] = ArgsRes0.get();
 
         ExprResult ArgsRes1 =
-          PerformImplicitConversion(Args[1], Best->BuiltinTypes.ParamTypes[1],
-                                    Best->Conversions[1], AA_Passing);
+            PerformImplicitConversion(Args[1], Best->BuiltinParamTypes[1],
+                                      Best->Conversions[1], AA_Passing);
         if (ArgsRes1.isInvalid())
           return ExprError();
         Args[1] = ArgsRes1.get();

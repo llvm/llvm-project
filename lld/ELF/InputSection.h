@@ -325,7 +325,7 @@ private:
   template <class ELFT, class RelTy>
   void copyRelocations(uint8_t *Buf, llvm::ArrayRef<RelTy> Rels);
 
-  void copyShtGroup(uint8_t *Buf);
+  template <class ELFT> void copyShtGroup(uint8_t *Buf);
 };
 
 // The list of all input sections.

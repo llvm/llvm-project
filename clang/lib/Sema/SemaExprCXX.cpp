@@ -5281,16 +5281,16 @@ static bool FindConditionalOverload(Sema &Self, ExprResult &LHS, ExprResult &RHS
   switch (CandidateSet.BestViableFunction(Self, QuestionLoc, Best)) {
     case OR_Success: {
       // We found a match. Perform the conversions on the arguments and move on.
-      ExprResult LHSRes =
-        Self.PerformImplicitConversion(LHS.get(), Best->BuiltinTypes.ParamTypes[0],
-                                       Best->Conversions[0], Sema::AA_Converting);
+      ExprResult LHSRes = Self.PerformImplicitConversion(
+          LHS.get(), Best->BuiltinParamTypes[0], Best->Conversions[0],
+          Sema::AA_Converting);
       if (LHSRes.isInvalid())
         break;
       LHS = LHSRes;
 
-      ExprResult RHSRes =
-        Self.PerformImplicitConversion(RHS.get(), Best->BuiltinTypes.ParamTypes[1],
-                                       Best->Conversions[1], Sema::AA_Converting);
+      ExprResult RHSRes = Self.PerformImplicitConversion(
+          RHS.get(), Best->BuiltinParamTypes[1], Best->Conversions[1],
+          Sema::AA_Converting);
       if (RHSRes.isInvalid())
         break;
       RHS = RHSRes;

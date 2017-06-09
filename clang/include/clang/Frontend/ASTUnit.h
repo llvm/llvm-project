@@ -188,6 +188,14 @@ private:
   /// some number of calls.
   unsigned PreambleRebuildCounter;
 
+  /// \brief Cache pairs "filename - source location"
+  ///
+  /// Cache contains only source locations from preamble so it is
+  /// guaranteed that they stay valid when the SourceManager is recreated.
+  /// This cache is used when loading preambule to increase performance
+  /// of that loading. It must be cleared when preamble is recreated.
+  llvm::StringMap<SourceLocation> PreambleSrcLocCache;
+
 public:
   class PreambleData {
     const FileEntry *File;
@@ -871,6 +879,7 @@ public:
       bool CacheCodeCompletionResults = false,
       bool IncludeBriefCommentsInCodeCompletion = false,
       bool AllowPCHWithCompilerErrors = false, bool SkipFunctionBodies = false,
+      bool SingleFileParse = false,
       bool UserFilesAreVolatile = false, bool ForSerialization = false,
       llvm::Optional<StringRef> ModuleFormat = llvm::None,
       std::unique_ptr<ASTUnit> *ErrAST = nullptr,

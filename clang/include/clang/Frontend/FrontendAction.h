@@ -76,8 +76,7 @@ protected:
   ///
   /// \return True on success; on failure ExecutionAction() and
   /// EndSourceFileAction() will not be called.
-  virtual bool BeginSourceFileAction(CompilerInstance &CI,
-                                     StringRef Filename) {
+  virtual bool BeginSourceFileAction(CompilerInstance &CI) {
     return true;
   }
 
@@ -291,7 +290,7 @@ protected:
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef InFile) override;
   bool BeginInvocation(CompilerInstance &CI) override;
-  bool BeginSourceFileAction(CompilerInstance &CI, StringRef Filename) override;
+  bool BeginSourceFileAction(CompilerInstance &CI) override;
   void ExecuteAction() override;
   void EndSourceFileAction() override;
 

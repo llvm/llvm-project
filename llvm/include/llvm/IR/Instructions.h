@@ -2970,9 +2970,13 @@ public:
 private:
   friend TerminatorInst;
 
-  BasicBlock *getSuccessorV(unsigned idx) const;
-  unsigned getNumSuccessorsV() const;
-  void setSuccessorV(unsigned idx, BasicBlock *B);
+  BasicBlock *getSuccessor(unsigned idx) const {
+    llvm_unreachable("ReturnInst has no successors!");
+  }
+
+  void setSuccessor(unsigned idx, BasicBlock *B) {
+    llvm_unreachable("ReturnInst has no successors!");
+  }
 };
 
 template <>
@@ -3078,13 +3082,6 @@ public:
   static inline bool classof(const Value *V) {
     return isa<Instruction>(V) && classof(cast<Instruction>(V));
   }
-
-private:
-  friend TerminatorInst;
-
-  BasicBlock *getSuccessorV(unsigned idx) const;
-  unsigned getNumSuccessorsV() const;
-  void setSuccessorV(unsigned idx, BasicBlock *B);
 };
 
 template <>
@@ -3444,13 +3441,6 @@ public:
   static inline bool classof(const Value *V) {
     return isa<Instruction>(V) && classof(cast<Instruction>(V));
   }
-
-private:
-  friend TerminatorInst;
-
-  BasicBlock *getSuccessorV(unsigned idx) const;
-  unsigned getNumSuccessorsV() const;
-  void setSuccessorV(unsigned idx, BasicBlock *B);
 };
 
 template <>
@@ -3551,13 +3541,6 @@ public:
   static inline bool classof(const Value *V) {
     return isa<Instruction>(V) && classof(cast<Instruction>(V));
   }
-
-private:
-  friend TerminatorInst;
-
-  BasicBlock *getSuccessorV(unsigned idx) const;
-  unsigned getNumSuccessorsV() const;
-  void setSuccessorV(unsigned idx, BasicBlock *B);
 };
 
 template <>
@@ -4036,12 +4019,6 @@ public:
   }
 
 private:
-  friend TerminatorInst;
-
-  BasicBlock *getSuccessorV(unsigned idx) const;
-  unsigned getNumSuccessorsV() const;
-  void setSuccessorV(unsigned idx, BasicBlock *B);
-
   template <typename AttrKind> bool hasFnAttrImpl(AttrKind Kind) const {
     if (Attrs.hasAttribute(AttributeList::FunctionIndex, Kind))
       return true;
@@ -4139,9 +4116,13 @@ public:
 private:
   friend TerminatorInst;
 
-  BasicBlock *getSuccessorV(unsigned idx) const;
-  unsigned getNumSuccessorsV() const;
-  void setSuccessorV(unsigned idx, BasicBlock *B);
+  BasicBlock *getSuccessor(unsigned idx) const {
+    llvm_unreachable("ResumeInst has no successors!");
+  }
+
+  void setSuccessor(unsigned idx, BasicBlock *NewSucc) {
+    llvm_unreachable("ResumeInst has no successors!");
+  }
 };
 
 template <>
@@ -4321,13 +4302,6 @@ public:
   static inline bool classof(const Value *V) {
     return isa<Instruction>(V) && classof(cast<Instruction>(V));
   }
-
-private:
-  friend TerminatorInst;
-
-  BasicBlock *getSuccessorV(unsigned Idx) const;
-  unsigned getNumSuccessorsV() const;
-  void setSuccessorV(unsigned Idx, BasicBlock *B);
 };
 
 template <>
@@ -4492,9 +4466,15 @@ public:
 private:
   friend TerminatorInst;
 
-  BasicBlock *getSuccessorV(unsigned Idx) const;
-  unsigned getNumSuccessorsV() const;
-  void setSuccessorV(unsigned Idx, BasicBlock *B);
+  BasicBlock *getSuccessor(unsigned Idx) const {
+    assert(Idx < getNumSuccessors() && "Successor # out of range for catchret!");
+    return getSuccessor();
+  }
+
+  void setSuccessor(unsigned Idx, BasicBlock *B) {
+    assert(Idx < getNumSuccessors() && "Successor # out of range for catchret!");
+    setSuccessor(B);
+  }
 };
 
 template <>
@@ -4582,9 +4562,15 @@ public:
 private:
   friend TerminatorInst;
 
-  BasicBlock *getSuccessorV(unsigned Idx) const;
-  unsigned getNumSuccessorsV() const;
-  void setSuccessorV(unsigned Idx, BasicBlock *B);
+  BasicBlock *getSuccessor(unsigned Idx) const {
+    assert(Idx == 0);
+    return getUnwindDest();
+  }
+
+  void setSuccessor(unsigned Idx, BasicBlock *B) {
+    assert(Idx == 0);
+    setUnwindDest(B);
+  }
 
   // Shadow Instruction::setInstructionSubclassData with a private forwarding
   // method so that subclasses cannot accidentally use it.
@@ -4639,9 +4625,13 @@ public:
 private:
   friend TerminatorInst;
 
-  BasicBlock *getSuccessorV(unsigned idx) const;
-  unsigned getNumSuccessorsV() const;
-  void setSuccessorV(unsigned idx, BasicBlock *B);
+  BasicBlock *getSuccessor(unsigned idx) const {
+    llvm_unreachable("UnreachableInst has no successors!");
+  }
+
+  void setSuccessor(unsigned idx, BasicBlock *B) {
+    llvm_unreachable("UnreachableInst has no successors!");
+  }
 };
 
 //===----------------------------------------------------------------------===//

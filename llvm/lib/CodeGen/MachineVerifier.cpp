@@ -945,7 +945,6 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
     VerifyStackMapConstant(VarStart + StatepointOpers::NumDeoptOperandsOffset);
 
     // TODO: verify we have properly encoded deopt arguments
-   
   };
 }
 
@@ -1947,9 +1946,11 @@ void MachineVerifier::verifyLiveRangeSegment(const LiveRange &LR,
       SlotIndex PEnd = LiveInts->getMBBEndIdx(*PI);
       const VNInfo *PVNI = LR.getVNInfoBefore(PEnd);
 
-      // All predecessors must have a live-out value if this is not a
-      // subregister liverange.
-      if (!PVNI && LaneMask.none()) {
+      // All predecessors must have a live-out value. However for a phi
+      // instruction with subregister intervals
+      // only one of the subregisters (not necessarily the current one) needs to
+      // be defined.
+      if (!PVNI && (LaneMask.none() || !IsPHI) ) {
         report("Register not marked live out of predecessor", *PI);
         report_context(LR, Reg, LaneMask);
         report_context(*VNI);

@@ -3305,7 +3305,15 @@ static const uint64_t INDEX_VERSION = 3;
 /// Emit the per-module summary section alongside the rest of
 /// the module's bitcode.
 void ModuleBitcodeWriter::writePerModuleGlobalValueSummary() {
-  Stream.EnterSubblock(bitc::GLOBALVAL_SUMMARY_BLOCK_ID, 4);
+  // By default we compile with ThinLTO if the module has a summary, but the
+  // client can request full LTO with a module flag.
+  bool IsThinLTO = true;
+  if (auto *MD =
+          mdconst::extract_or_null<ConstantInt>(M.getModuleFlag("ThinLTO")))
+    IsThinLTO = MD->getZExtValue();
+  Stream.EnterSubblock(IsThinLTO ? bitc::GLOBALVAL_SUMMARY_BLOCK_ID
+                                 : bitc::FULL_LTO_GLOBALVAL_SUMMARY_BLOCK_ID,
+                       4);
 
   Stream.EmitRecord(bitc::FS_VERSION, ArrayRef<uint64_t>{INDEX_VERSION});
 

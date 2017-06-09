@@ -86,6 +86,8 @@ public:
 
   void reset();
 
+  BumpPtrAllocator &getAllocator() { return RecordStorage; }
+
   ArrayRef<ArrayRef<uint8_t>> records() const;
   TypeIndex insertRecordBytes(ArrayRef<uint8_t> &Record);
   TypeIndex insertRecord(const RemappedType &Record);

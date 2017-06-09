@@ -21,14 +21,13 @@ ASTMergeAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
   return AdaptedAction->CreateASTConsumer(CI, InFile);
 }
 
-bool ASTMergeAction::BeginSourceFileAction(CompilerInstance &CI,
-                                           StringRef Filename) {
+bool ASTMergeAction::BeginSourceFileAction(CompilerInstance &CI) {
   // FIXME: This is a hack. We need a better way to communicate the
   // AST file, compiler instance, and file name than member variables
   // of FrontendAction.
   AdaptedAction->setCurrentInput(getCurrentInput(), takeCurrentASTUnit());
   AdaptedAction->setCompilerInstance(&CI);
-  return AdaptedAction->BeginSourceFileAction(CI, Filename);
+  return AdaptedAction->BeginSourceFileAction(CI);
 }
 
 void ASTMergeAction::ExecuteAction() {

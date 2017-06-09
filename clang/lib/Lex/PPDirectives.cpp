@@ -30,6 +30,7 @@
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Pragma.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Lex/PTHLexer.h"
 #include "clang/Lex/Token.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -1845,10 +1846,13 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
   // we've imported or already built.
   bool ShouldEnter = true;
 
+  if (PPOpts->SingleFileParseMode)
+    ShouldEnter = false;
+
   // Determine whether we should try to import the module for this #include, if
   // there is one. Don't do so if precompiled module support is disabled or we
   // are processing this module textually (because we're building the module).
-  if (File && SuggestedModule && getLangOpts().Modules &&
+  if (ShouldEnter && File && SuggestedModule && getLangOpts().Modules &&
       SuggestedModule.getModule()->getTopLevelModuleName() !=
           getLangOpts().CurrentModule) {
     // If this include corresponds to a module but that module is

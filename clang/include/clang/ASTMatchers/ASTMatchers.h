@@ -3806,14 +3806,22 @@ AST_MATCHER_P(CompoundStmt, statementCountIs, unsigned, N) {
   return Node.size() == N;
 }
 
-/// \brief Matches literals that are equal to the given value.
+/// \brief Matches literals that are equal to the given value of type ValueT.
 ///
-/// Example matches true (matcher = cxxBoolLiteral(equals(true)))
+/// Given
 /// \code
-///   true
+///   f('\0', false, 3.14, 42);
 /// \endcode
+/// characterLiteral(equals(0))
+///   matches '\0'
+/// cxxBoolLiteral(equals(false)) and cxxBoolLiteral(equals(0))
+///   match false
+/// floatLiteral(equals(3.14)) and floatLiteral(equals(314e-2))
+///   match 3.14
+/// integerLiteral(equals(42))
+///   matches 42
 ///
-/// Usable as: Matcher<CharacterLiteral>, Matcher<CXXBoolLiteral>,
+/// Usable as: Matcher<CharacterLiteral>, Matcher<CXXBoolLiteralExpr>,
 ///            Matcher<FloatingLiteral>, Matcher<IntegerLiteral>
 template <typename ValueT>
 internal::PolymorphicMatcherWithParam1<internal::ValueEqualsMatcher, ValueT>
@@ -3821,6 +3829,34 @@ equals(const ValueT &Value) {
   return internal::PolymorphicMatcherWithParam1<
     internal::ValueEqualsMatcher,
     ValueT>(Value);
+}
+
+AST_POLYMORPHIC_MATCHER_P_OVERLOAD(equals,
+                          AST_POLYMORPHIC_SUPPORTED_TYPES(CharacterLiteral,
+                                                          CXXBoolLiteralExpr,
+                                                          IntegerLiteral),
+                          bool, Value, 0) {
+  return internal::ValueEqualsMatcher<NodeType, ParamT>(Value)
+    .matchesNode(Node);
+}
+
+AST_POLYMORPHIC_MATCHER_P_OVERLOAD(equals,
+                          AST_POLYMORPHIC_SUPPORTED_TYPES(CharacterLiteral,
+                                                          CXXBoolLiteralExpr,
+                                                          IntegerLiteral),
+                          unsigned, Value, 1) {
+  return internal::ValueEqualsMatcher<NodeType, ParamT>(Value)
+    .matchesNode(Node);
+}
+
+AST_POLYMORPHIC_MATCHER_P_OVERLOAD(equals,
+                          AST_POLYMORPHIC_SUPPORTED_TYPES(CharacterLiteral,
+                                                          CXXBoolLiteralExpr,
+                                                          FloatingLiteral,
+                                                          IntegerLiteral),
+                          double, Value, 2) {
+  return internal::ValueEqualsMatcher<NodeType, ParamT>(Value)
+    .matchesNode(Node);
 }
 
 /// \brief Matches the operator Name of operator expressions (binary or

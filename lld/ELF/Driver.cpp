@@ -185,7 +185,7 @@ void LinkerDriver::addFile(StringRef Path, bool WithLOption) {
     // is attempting LTO and using a default ar command that doesn't
     // understand the LLVM bitcode file. It is a pretty common error, so
     // we'll handle it as if it had a symbol table.
-    if (!File->hasSymbolTable()) {
+    if (!File->isEmpty() && !File->hasSymbolTable()) {
       for (const auto &P : getArchiveMembers(MBRef))
         Files.push_back(make<LazyObjectFile>(P.first, Path, P.second));
       return;

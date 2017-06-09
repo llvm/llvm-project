@@ -19,8 +19,10 @@
 /// \code
 /// Grammar for the expressions supported:
 /// <Expression>        := <Literal> | <NamedValue> | <MatcherExpression>
-/// <Literal>           := <StringLiteral> | <Unsigned>
+/// <Literal>           := <StringLiteral> | <Boolean> | <Double> | <Unsigned>
 /// <StringLiteral>     := "quoted string"
+/// <Boolean>           := true | false
+/// <Double>            := [0-9]+.[0-9]* | [0-9]+.[0-9]*[eE][-+]?[0-9]+
 /// <Unsigned>          := [0-9]+
 /// <NamedValue>        := <Identifier>
 /// <MatcherExpression> := <Identifier>(<ArgumentList>) |

@@ -134,8 +134,7 @@ bool GeneratePCHAction::shouldEraseOutputFiles() {
   return ASTFrontendAction::shouldEraseOutputFiles();
 }
 
-bool GeneratePCHAction::BeginSourceFileAction(CompilerInstance &CI,
-                                              StringRef Filename) {
+bool GeneratePCHAction::BeginSourceFileAction(CompilerInstance &CI) {
   CI.getLangOpts().CompilingPCH = true;
   return true;
 }
@@ -164,11 +163,6 @@ GenerateModuleAction::CreateASTConsumer(CompilerInstance &CI,
   return llvm::make_unique<MultiplexConsumer>(std::move(Consumers));
 }
 
-bool GenerateModuleFromModuleMapAction::BeginSourceFileAction(
-    CompilerInstance &CI, StringRef Filename) {
-  return GenerateModuleAction::BeginSourceFileAction(CI, Filename);
-}
-
 std::unique_ptr<raw_pwrite_stream>
 GenerateModuleFromModuleMapAction::CreateOutputFile(CompilerInstance &CI,
                                                     StringRef InFile) {
@@ -194,8 +188,8 @@ GenerateModuleFromModuleMapAction::CreateOutputFile(CompilerInstance &CI,
                              /*CreateMissingDirectories=*/true);
 }
 
-bool GenerateModuleInterfaceAction::BeginSourceFileAction(CompilerInstance &CI,
-                                                          StringRef Filename) {
+bool GenerateModuleInterfaceAction::BeginSourceFileAction(
+    CompilerInstance &CI) {
   if (!CI.getLangOpts().ModulesTS) {
     CI.getDiagnostics().Report(diag::err_module_interface_requires_modules_ts);
     return false;
@@ -203,7 +197,7 @@ bool GenerateModuleInterfaceAction::BeginSourceFileAction(CompilerInstance &CI,
 
   CI.getLangOpts().setCompilingModule(LangOptions::CMK_ModuleInterface);
 
-  return GenerateModuleAction::BeginSourceFileAction(CI, Filename);
+  return GenerateModuleAction::BeginSourceFileAction(CI);
 }
 
 std::unique_ptr<raw_pwrite_stream>

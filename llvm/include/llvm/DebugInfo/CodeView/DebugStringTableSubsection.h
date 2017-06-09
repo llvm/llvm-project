@@ -39,10 +39,13 @@ public:
   }
 
   Error initialize(BinaryStreamRef Contents);
+  Error initialize(BinaryStreamReader &Reader);
 
   Expected<StringRef> getString(uint32_t Offset) const;
 
   bool valid() const { return Stream.valid(); }
+
+  BinaryStreamRef getBuffer() const { return Stream; }
 
 private:
   BinaryStreamRef Stream;

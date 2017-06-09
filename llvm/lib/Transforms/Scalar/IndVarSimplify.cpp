@@ -86,6 +86,10 @@ static cl::opt<bool> UsePostIncrementRanges(
   cl::desc("Use post increment control-dependent ranges in IndVarSimplify"),
   cl::init(true));
 
+static cl::opt<bool>
+DisableLFTR("disable-lftr", cl::Hidden, cl::init(false),
+            cl::desc("Disable Linear Function Test Replace optimization"));
+
 namespace {
 struct RewritePhi;
 
@@ -2413,7 +2417,8 @@ bool IndVarSimplify::run(Loop *L) {
 
   // If we have a trip count expression, rewrite the loop's exit condition
   // using it.  We can currently only handle loops with a single exit.
-  if (canExpandBackedgeTakenCount(L, SE, Rewriter) && needsLFTR(L, DT)) {
+  if (!DisableLFTR && canExpandBackedgeTakenCount(L, SE, Rewriter) &&
+      needsLFTR(L, DT)) {
     PHINode *IndVar = FindLoopCounter(L, BackedgeTakenCount, SE, DT);
     if (IndVar) {
       // Check preconditions for proper SCEVExpander operation. SCEV does not

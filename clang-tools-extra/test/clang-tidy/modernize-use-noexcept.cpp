@@ -1,5 +1,5 @@
 // RUN: %check_clang_tidy %s modernize-use-noexcept %t -- \
-// RUN:   -- -std=c++11
+// RUN:   -- -std=c++11 -fexceptions
 
 class A {};
 class B {};

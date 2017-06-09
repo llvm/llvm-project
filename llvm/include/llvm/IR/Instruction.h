@@ -360,9 +360,9 @@ public:
   /// Copy I's fast-math flags
   void copyFastMathFlags(const Instruction *I);
 
-  /// Convenience method to copy supported wrapping, exact, and fast-math flags
-  /// from V to this instruction.
-  void copyIRFlags(const Value *V);
+  /// Convenience method to copy supported exact, fast-math, and (optionally)
+  /// wrapping flags from V to this instruction.
+  void copyIRFlags(const Value *V, bool IncludeWrapFlags = true);
 
   /// Logical 'and' of any supported wrapping, exact, and fast-math flags of
   /// V and this instruction.
