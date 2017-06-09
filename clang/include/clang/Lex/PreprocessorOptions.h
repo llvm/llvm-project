@@ -91,6 +91,9 @@ public:
   /// When enabled, the preprocessor will construct editor placeholder tokens.
   bool LexEditorPlaceholders = true;
 
+  /// When enabled, preprocessor is in a mode for parsing a single file only.
+  bool SingleFileParseMode = false;
+
   /// \brief True if the SourceManager should report the original file name for
   /// contents of files that were remapped to other files. Defaults to true.
   bool RemappedFilesKeepOriginalName;
@@ -177,6 +180,7 @@ public:
     ImplicitPTHInclude.clear();
     TokenCache.clear();
     LexEditorPlaceholders = true;
+    SingleFileParseMode = false;
     RetainRemappedFileBuffers = true;
     PrecompiledPreambleBytes.first = 0;
     PrecompiledPreambleBytes.second = 0;
