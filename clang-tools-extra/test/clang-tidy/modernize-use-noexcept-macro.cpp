@@ -1,6 +1,6 @@
 // RUN: %check_clang_tidy %s modernize-use-noexcept %t -- \
 // RUN:   -config="{CheckOptions: [{key: modernize-use-noexcept.ReplacementString, value: 'NOEXCEPT'}]}" \
-// RUN:   -- -std=c++11
+// RUN:   -- -std=c++11 -fexceptions
 
 // Example definition of NOEXCEPT -- simplified test to see if noexcept is supported.
 #if (__has_feature(cxx_noexcept))

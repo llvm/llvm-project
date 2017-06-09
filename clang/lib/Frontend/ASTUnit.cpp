@@ -1159,6 +1159,8 @@ bool ASTUnit::Parse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
   if (SavedMainFileBuffer)
     TranslateStoredDiagnostics(getFileManager(), getSourceManager(),
                                PreambleDiagnostics, StoredDiagnostics);
+  else
+    PreambleSrcLocCache.clear();
 
   if (!Act->Execute())
     goto error;
@@ -1982,7 +1984,7 @@ ASTUnit *ASTUnit::LoadFromCommandLine(
     unsigned PrecompilePreambleAfterNParses, TranslationUnitKind TUKind,
     bool CacheCodeCompletionResults, bool IncludeBriefCommentsInCodeCompletion,
     bool AllowPCHWithCompilerErrors, bool SkipFunctionBodies,
-    bool UserFilesAreVolatile, bool ForSerialization,
+    bool SingleFileParse, bool UserFilesAreVolatile, bool ForSerialization,
     llvm::Optional<StringRef> ModuleFormat, std::unique_ptr<ASTUnit> *ErrAST,
     IntrusiveRefCntPtr<vfs::FileSystem> VFS) {
   assert(Diags.get() && "no DiagnosticsEngine was provided");
@@ -2011,6 +2013,7 @@ ASTUnit *ASTUnit::LoadFromCommandLine(
   PPOpts.RemappedFilesKeepOriginalName = RemappedFilesKeepOriginalName;
   PPOpts.AllowPCHWithCompilerErrors = AllowPCHWithCompilerErrors;
   PPOpts.GeneratePreamble = PrecompilePreambleAfterNParses != 0;
+  PPOpts.SingleFileParseMode = SingleFileParse;
   
   // Override the resources path.
   CI->getHeaderSearchOpts().ResourceDir = ResourceFilesPath;
@@ -2601,11 +2604,9 @@ void ASTUnit::TranslateStoredDiagnostics(
   // remap all the locations to the new view. This includes the diag location,
   // any associated source ranges, and the source ranges of associated fix-its.
   // FIXME: There should be a cleaner way to do this.
-
   SmallVector<StoredDiagnostic, 4> Result;
   Result.reserve(Diags.size());
-  const FileEntry *PreviousFE = nullptr;
-  FileID FID;
+
   for (const StandaloneDiagnostic &SD : Diags) {
     // Rebuild the StoredDiagnostic.
     if (SD.Filename.empty())
@@ -2613,11 +2614,16 @@ void ASTUnit::TranslateStoredDiagnostics(
     const FileEntry *FE = FileMgr.getFile(SD.Filename);
     if (!FE)
       continue;
-    if (FE != PreviousFE) {
-      FID = SrcMgr.translateFile(FE);
-      PreviousFE = FE;
+    SourceLocation FileLoc;
+    auto ItFileID = PreambleSrcLocCache.find(SD.Filename);
+    if (ItFileID == PreambleSrcLocCache.end()) {
+      FileID FID = SrcMgr.translateFile(FE);
+      FileLoc = SrcMgr.getLocForStartOfFile(FID);
+      PreambleSrcLocCache[SD.Filename] = FileLoc;
+    } else {
+      FileLoc = ItFileID->getValue();
     }
-    SourceLocation FileLoc = SrcMgr.getLocForStartOfFile(FID);
+
     if (FileLoc.isInvalid())
       continue;
     SourceLocation L = FileLoc.getLocWithOffset(SD.LocOffset);

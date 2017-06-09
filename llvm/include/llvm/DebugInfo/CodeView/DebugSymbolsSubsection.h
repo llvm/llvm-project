@@ -27,6 +27,9 @@ public:
 
   Error initialize(BinaryStreamReader Reader);
 
+  CVSymbolArray::Iterator begin() const { return Records.begin(); }
+  CVSymbolArray::Iterator end() const { return Records.end(); }
+
 private:
   CVSymbolArray Records;
 };

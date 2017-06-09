@@ -40,6 +40,8 @@ namespace llvm {
     return std::move(*Val);
   }
 
+  struct BitcodeFileContents;
+
   /// Represents a module in a bitcode file.
   class BitcodeModule {
     // This covers the identification (if present) and module blocks.
@@ -61,8 +63,8 @@ namespace llvm {
           IdentificationBit(IdentificationBit), ModuleBit(ModuleBit) {}
 
     // Calls the ctor.
-    friend Expected<std::vector<BitcodeModule>>
-    getBitcodeModuleList(MemoryBufferRef Buffer);
+    friend Expected<BitcodeFileContents>
+    getBitcodeFileContents(MemoryBufferRef Buffer);
 
     Expected<std::unique_ptr<Module>> getModuleImpl(LLVMContext &Context,
                                                     bool MaterializeAll,
@@ -98,6 +100,13 @@ namespace llvm {
     /// into CombinedIndex.
     Error readSummary(ModuleSummaryIndex &CombinedIndex, unsigned ModuleId);
   };
+
+  struct BitcodeFileContents {
+    std::vector<BitcodeModule> Mods;
+  };
+
+  /// Returns the contents of a bitcode file.
+  Expected<BitcodeFileContents> getBitcodeFileContents(MemoryBufferRef Buffer);
 
   /// Returns a list of modules in the specified bitcode buffer.
   Expected<std::vector<BitcodeModule>>

@@ -25,6 +25,9 @@
 ; ERROR: llvm-modextract: error: module index out of range; bitcode file contains 2 module(s)
 
 ; BCA0: <GLOBALVAL_SUMMARY_BLOCK
+; BCA1: <FULL_LTO_GLOBALVAL_SUMMARY_BLOCK
+; 16 = not eligible to import
+; BCA1: <PERMODULE_GLOBALVAR_INIT_REFS {{.*}} op1=16
 ; BCA1-NOT: <GLOBALVAL_SUMMARY_BLOCK
 
 $g = comdat any
@@ -47,5 +50,6 @@ define i8* @f() {
 ; NODEBUG-NOT: !llvm.dbg.cu
 !llvm.dbg.cu = !{}
 
+; M1: !{i32 1, !"ThinLTO", i32 0}
 !1 = !{i32 2, !"Debug Info Version", i32 3}
 !llvm.module.flags = !{!1}

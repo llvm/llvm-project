@@ -37,8 +37,9 @@ private:
   TypeSerializer Serializer;
 
 public:
-  explicit TypeTableBuilder(BumpPtrAllocator &Allocator)
-      : Allocator(Allocator), Serializer(Allocator) {}
+  explicit TypeTableBuilder(BumpPtrAllocator &Allocator,
+                            bool WriteUnique = true)
+      : Allocator(Allocator), Serializer(Allocator, WriteUnique) {}
   TypeTableBuilder(const TypeTableBuilder &) = delete;
   TypeTableBuilder &operator=(const TypeTableBuilder &) = delete;
 

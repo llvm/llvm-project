@@ -20,6 +20,7 @@
 #include "llvm/Object/SymbolicFile.h"
 
 namespace llvm {
+class BitcodeModule;
 class Mangler;
 class Module;
 class GlobalValue;

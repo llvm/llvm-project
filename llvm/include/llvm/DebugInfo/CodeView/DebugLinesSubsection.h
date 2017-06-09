@@ -122,7 +122,7 @@ public:
   uint32_t calculateSerializedSize() const override;
   Error commit(BinaryStreamWriter &Writer) const override;
 
-  void setRelocationAddress(uint16_t Segment, uint16_t Offset);
+  void setRelocationAddress(uint16_t Segment, uint32_t Offset);
   void setCodeSize(uint32_t Size);
   void setFlags(LineFlags Flags);
 
@@ -131,7 +131,7 @@ public:
 private:
   DebugChecksumsSubsection &Checksums;
 
-  uint16_t RelocOffset = 0;
+  uint32_t RelocOffset = 0;
   uint16_t RelocSegment = 0;
   uint32_t CodeSize = 0;
   LineFlags Flags = LF_None;

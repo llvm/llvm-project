@@ -739,7 +739,9 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.InstrumentForProfiling = Args.hasArg(OPT_pg);
   Opts.CallFEntry = Args.hasArg(OPT_mfentry);
   Opts.EmitOpenCLArgMetadata = Args.hasArg(OPT_cl_kernel_arg_info);
-  Opts.CompressDebugSections = Args.hasArg(OPT_compress_debug_sections);
+  // TODO: map this from -gz in the driver and give it a named value
+  if (Args.hasArg(OPT_compress_debug_sections))
+    Opts.setCompressDebugSections(llvm::DebugCompressionType::GNU);
   Opts.RelaxELFRelocations = Args.hasArg(OPT_mrelax_relocations);
   Opts.DebugCompilationDir = Args.getLastArgValue(OPT_fdebug_compilation_dir);
   for (auto A : Args.filtered(OPT_mlink_bitcode_file, OPT_mlink_cuda_bitcode)) {
@@ -768,6 +770,8 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.SanitizeCoverageTracePCGuard =
       Args.hasArg(OPT_fsanitize_coverage_trace_pc_guard);
   Opts.SanitizeCoverageNoPrune = Args.hasArg(OPT_fsanitize_coverage_no_prune);
+  Opts.SanitizeCoverageInline8bitCounters =
+      Args.hasArg(OPT_fsanitize_coverage_inline_8bit_counters);
   Opts.SanitizeMemoryTrackOrigins =
       getLastArgIntValue(Args, OPT_fsanitize_memory_track_origins_EQ, 0, Diags);
   Opts.SanitizeMemoryUseAfterDtor =

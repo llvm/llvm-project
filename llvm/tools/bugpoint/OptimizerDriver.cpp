@@ -202,10 +202,11 @@ bool BugDriver::runPasses(Module *Program,
   } else
     Args.push_back(tool.c_str());
 
-  Args.push_back("-o");
-  Args.push_back(OutputFilename.c_str());
   for (unsigned i = 0, e = OptArgs.size(); i != e; ++i)
     Args.push_back(OptArgs[i].c_str());
+  Args.push_back("-disable-symbolication");
+  Args.push_back("-o");
+  Args.push_back(OutputFilename.c_str());
   std::vector<std::string> pass_args;
   for (unsigned i = 0, e = PluginLoader::getNumPlugins(); i != e; ++i) {
     pass_args.push_back(std::string("-load"));

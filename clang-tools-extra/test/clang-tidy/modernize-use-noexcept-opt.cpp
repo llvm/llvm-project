@@ -1,6 +1,6 @@
 // RUN: %check_clang_tidy %s modernize-use-noexcept %t -- \
 // RUN:   -config="{CheckOptions: [{key: modernize-use-noexcept.UseNoexceptFalse, value: 0}]}" \
-// RUN:   -- -std=c++11
+// RUN:   -- -std=c++11 -fexceptions
 
 class A {};
 class B {};

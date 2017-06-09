@@ -1850,6 +1850,34 @@ int perform_test_reparse_source(int argc, const char **argv, int trials,
   return result;
 }
 
+static int perform_single_file_parse(const char *filename) {
+  CXIndex Idx;
+  CXTranslationUnit TU;
+  enum CXErrorCode Err;
+  int result;
+
+  Idx = clang_createIndex(/* excludeDeclsFromPCH */1,
+                          /* displayDiagnostics=*/1);
+
+  Err = clang_parseTranslationUnit2(Idx, filename,
+                                    /*command_line_args=*/NULL,
+                                    /*num_command_line_args=*/0,
+                                    /*unsaved_files=*/NULL,
+                                    /*num_unsaved_files=*/0,
+                                    CXTranslationUnit_SingleFileParse, &TU);
+  if (Err != CXError_Success) {
+    fprintf(stderr, "Unable to load translation unit!\n");
+    describeLibclangFailure(Err);
+    clang_disposeIndex(Idx);
+    return 1;
+  }
+
+  result = perform_test_load(Idx, TU, /*filter=*/"all", /*prefix=*/NULL, FilteredPrintingVisitor, /*PostVisit=*/NULL,
+                             /*CommentSchemaFile=*/NULL);
+  clang_disposeIndex(Idx);
+  return result;
+}
+
 /******************************************************************************/
 /* Logic for testing clang_getCursor().                                       */
 /******************************************************************************/
@@ -4439,6 +4467,8 @@ int cindextest_main(int argc, const char **argv) {
       return perform_test_load_source(argc - 3, argv + 3, argv[2], I,
                                       postVisit);
   }
+  else if (argc >= 3 && strcmp(argv[1], "-single-file-parse") == 0)
+    return perform_single_file_parse(argv[2]);
   else if (argc >= 4 && strcmp(argv[1], "-test-file-scan") == 0)
     return perform_file_scan(argv[2], argv[3],
                              argc >= 5 ? argv[4] : 0);

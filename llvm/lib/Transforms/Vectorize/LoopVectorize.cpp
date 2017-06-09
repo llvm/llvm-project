@@ -3814,7 +3814,11 @@ void InnerLoopVectorizer::truncateToMinimalBitwidths() {
       if (auto *BO = dyn_cast<BinaryOperator>(I)) {
         NewI = B.CreateBinOp(BO->getOpcode(), ShrinkOperand(BO->getOperand(0)),
                              ShrinkOperand(BO->getOperand(1)));
-        cast<BinaryOperator>(NewI)->copyIRFlags(I);
+
+        // Any wrapping introduced by shrinking this operation shouldn't be
+        // considered undefined behavior. So, we can't unconditionally copy
+        // arithmetic wrapping flags to NewI.
+        cast<BinaryOperator>(NewI)->copyIRFlags(I, /*IncludeWrapFlags=*/false);
       } else if (auto *CI = dyn_cast<ICmpInst>(I)) {
         NewI =
             B.CreateICmp(CI->getPredicate(), ShrinkOperand(CI->getOperand(0)),

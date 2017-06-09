@@ -309,23 +309,21 @@ OutputSection *InputSection::getParent() const {
   return cast_or_null<OutputSection>(Parent);
 }
 
-void InputSection::copyShtGroup(uint8_t *Buf) {
-  assert(this->Type == SHT_GROUP);
+// Copy SHT_GROUP section contents. Used only for the -r option.
+template <class ELFT> void InputSection::copyShtGroup(uint8_t *Buf) {
+  // ELFT::Word is the 32-bit integral type in the target endianness.
+  typedef typename ELFT::Word u32;
+  ArrayRef<u32> From = getDataAs<u32>();
+  auto *To = reinterpret_cast<u32 *>(Buf);
 
-  ArrayRef<uint32_t> From = getDataAs<uint32_t>();
-  uint32_t *To = reinterpret_cast<uint32_t *>(Buf);
-
-  // First entry is a flag word, we leave it unchanged.
+  // The first entry is not a section number but a flag.
   *To++ = From[0];
 
-  // Here we adjust indices of sections that belong to group as it
-  // might change during linking.
+  // Adjust section numbers because section numbers in an input object
+  // files are different in the output.
   ArrayRef<InputSectionBase *> Sections = this->File->getSections();
-  for (uint32_t Val : From.slice(1)) {
-    uint32_t Index = read32(&Val, Config->Endianness);
-    write32(To++, Sections[Index]->getOutputSection()->SectionIndex,
-            Config->Endianness);
-  }
+  for (uint32_t Idx : From.slice(1))
+    *To++ = Sections[Idx]->getOutputSection()->SectionIndex;
 }
 
 InputSectionBase *InputSection::getRelocatedSection() {
@@ -713,10 +711,9 @@ template <class ELFT> void InputSection::writeTo(uint8_t *Buf) {
     return;
   }
 
-  // If -r is given, linker should keep SHT_GROUP sections. We should fixup
-  // them, see copyShtGroup().
+  // If -r is given, we may have a SHT_GROUP section.
   if (this->Type == SHT_GROUP) {
-    copyShtGroup(Buf + OutSecOff);
+    copyShtGroup<ELFT>(Buf + OutSecOff);
     return;
   }
 

@@ -53,18 +53,18 @@ static void makeVisible(GlobalValue &GV, bool Delete) {
 }
 
 namespace {
-  /// @brief A pass to extract specific functions and their dependencies.
+  /// @brief A pass to extract specific global values and their dependencies.
   class GVExtractorPass : public ModulePass {
     SetVector<GlobalValue *> Named;
     bool deleteStuff;
   public:
     static char ID; // Pass identification, replacement for typeid
 
-    /// FunctionExtractorPass - If deleteFn is true, this pass deletes as the
-    /// specified function. Otherwise, it deletes as much of the module as
-    /// possible, except for the function specified.
-    ///
-    explicit GVExtractorPass(std::vector<GlobalValue*>& GVs, bool deleteS = true)
+    /// If deleteS is true, this pass deletes the specified global values.
+    /// Otherwise, it deletes as much of the module as possible, except for the
+    /// global values specified.
+    explicit GVExtractorPass(std::vector<GlobalValue*> &GVs,
+                             bool deleteS = true)
       : ModulePass(ID), Named(GVs.begin(), GVs.end()), deleteStuff(deleteS) {}
 
     bool runOnModule(Module &M) override {

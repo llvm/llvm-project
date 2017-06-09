@@ -210,6 +210,7 @@ static void addSanitizerCoveragePass(const PassManagerBuilder &Builder,
   Opts.TracePC = CGOpts.SanitizeCoverageTracePC;
   Opts.TracePCGuard = CGOpts.SanitizeCoverageTracePCGuard;
   Opts.NoPrune = CGOpts.SanitizeCoverageNoPrune;
+  Opts.Inline8bitCounters = CGOpts.SanitizeCoverageInline8bitCounters;
   PM.add(createSanitizerCoverageModulePass(Opts));
 }
 
@@ -432,7 +433,7 @@ static void initTargetOptions(llvm::TargetOptions &Options,
 
   Options.UseInitArray = CodeGenOpts.UseInitArray;
   Options.DisableIntegratedAS = CodeGenOpts.DisableIntegratedAS;
-  Options.CompressDebugSections = CodeGenOpts.CompressDebugSections;
+  Options.CompressDebugSections = CodeGenOpts.getCompressDebugSections();
   Options.RelaxELFRelocations = CodeGenOpts.RelaxELFRelocations;
 
   // Set EABI version.

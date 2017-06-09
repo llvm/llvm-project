@@ -1,3 +1,12 @@
+//==- HexagonPatterns.td - Target Description for Hexagon -*- tablegen -*-===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+
 // Pattern fragment that combines the value type and the register class
 // into a single parameter.
 

@@ -56,20 +56,24 @@ void RegistryMaps::registerMatcher(
   registerMatcher(#name, internal::makeMatcherAutoMarshall(                    \
                              ::clang::ast_matchers::name, #name));
 
+#define REGISTER_MATCHER_OVERLOAD(name)                                        \
+  registerMatcher(#name,                                                       \
+      llvm::make_unique<internal::OverloadedMatcherDescriptor>(name##Callbacks))
+
 #define SPECIFIC_MATCHER_OVERLOAD(name, Id)                                    \
   static_cast<::clang::ast_matchers::name##_Type##Id>(                         \
       ::clang::ast_matchers::name)
 
+#define MATCHER_OVERLOAD_ENTRY(name, Id)                                       \
+        internal::makeMatcherAutoMarshall(SPECIFIC_MATCHER_OVERLOAD(name, Id), \
+                                          #name)
+
 #define REGISTER_OVERLOADED_2(name)                                            \
   do {                                                                         \
-    std::unique_ptr<MatcherDescriptor> Callbacks[] = {                         \
-        internal::makeMatcherAutoMarshall(SPECIFIC_MATCHER_OVERLOAD(name, 0),  \
-                                          #name),                              \
-        internal::makeMatcherAutoMarshall(SPECIFIC_MATCHER_OVERLOAD(name, 1),  \
-                                          #name)};                             \
-    registerMatcher(                                                           \
-        #name,                                                                 \
-        llvm::make_unique<internal::OverloadedMatcherDescriptor>(Callbacks));  \
+    std::unique_ptr<MatcherDescriptor> name##Callbacks[] = {                   \
+        MATCHER_OVERLOAD_ENTRY(name, 0),                                       \
+        MATCHER_OVERLOAD_ENTRY(name, 1)};                                      \
+    REGISTER_MATCHER_OVERLOAD(name);                                           \
   } while (0)
 
 /// \brief Generate a registry map with all the known matchers.
@@ -83,7 +87,6 @@ RegistryMaps::RegistryMaps() {
   // findAll
   //
   // Other:
-  // equals
   // equalsNode
 
   REGISTER_OVERLOADED_2(callee);
@@ -95,6 +98,13 @@ RegistryMaps::RegistryMaps() {
   REGISTER_OVERLOADED_2(pointsTo);
   REGISTER_OVERLOADED_2(references);
   REGISTER_OVERLOADED_2(thisPointerType);
+
+  std::unique_ptr<MatcherDescriptor> equalsCallbacks[] = {
+      MATCHER_OVERLOAD_ENTRY(equals, 0),
+      MATCHER_OVERLOAD_ENTRY(equals, 1),
+      MATCHER_OVERLOAD_ENTRY(equals, 2),
+  };
+  REGISTER_MATCHER_OVERLOAD(equals);
 
   REGISTER_MATCHER(accessSpecDecl);
   REGISTER_MATCHER(addrLabelExpr);

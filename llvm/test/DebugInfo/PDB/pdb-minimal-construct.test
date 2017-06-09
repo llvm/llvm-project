@@ -7,5 +7,5 @@
 ; is identical.
 
 ; RUN: llvm-pdbdump yaml2pdb -pdb=%t.pdb %p/Inputs/one-symbol.yaml
-; RUN: llvm-pdbdump pdb2yaml -minimal -dbi-module-syms -no-file-headers %t.pdb > %t.pdb.yaml
+; RUN: llvm-pdbdump pdb2yaml -minimal -module-syms -no-file-headers %t.pdb > %t.pdb.yaml
 ; RUN: diff -b %p/Inputs/one-symbol.yaml %t.pdb.yaml

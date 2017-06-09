@@ -57,8 +57,11 @@ static const char *const SanCovTracePCGuardName =
     "__sanitizer_cov_trace_pc_guard";
 static const char *const SanCovTracePCGuardInitName =
     "__sanitizer_cov_trace_pc_guard_init";
+static const char *const SanCov8bitCountersInitName = 
+    "__sanitizer_cov_8bit_counters_init";
 
 static const char *const SanCovGuardsSectionName = "sancov_guards";
+static const char *const SanCovCountersSectionName = "sancov_counters";
 
 static cl::opt<int> ClCoverageLevel(
     "sanitizer-coverage-level",
@@ -66,12 +69,16 @@ static cl::opt<int> ClCoverageLevel(
              "3: all blocks and critical edges"),
     cl::Hidden, cl::init(0));
 
-static cl::opt<bool> ClExperimentalTracePC("sanitizer-coverage-trace-pc",
-                                           cl::desc("Experimental pc tracing"),
-                                           cl::Hidden, cl::init(false));
+static cl::opt<bool> ClTracePC("sanitizer-coverage-trace-pc",
+                               cl::desc("Experimental pc tracing"), cl::Hidden,
+                               cl::init(false));
 
 static cl::opt<bool> ClTracePCGuard("sanitizer-coverage-trace-pc-guard",
                                     cl::desc("pc tracing with a guard"),
+                                    cl::Hidden, cl::init(false));
+
+static cl::opt<bool> ClInline8bitCounters("sanitizer-coverage-inline-8bit-counters",
+                                    cl::desc("increments 8-bit counter for every edge"),
                                     cl::Hidden, cl::init(false));
 
 static cl::opt<bool>
@@ -125,9 +132,10 @@ SanitizerCoverageOptions OverrideFromCL(SanitizerCoverageOptions Options) {
   Options.TraceCmp |= ClCMPTracing;
   Options.TraceDiv |= ClDIVTracing;
   Options.TraceGep |= ClGEPTracing;
-  Options.TracePC |= ClExperimentalTracePC;
+  Options.TracePC |= ClTracePC;
   Options.TracePCGuard |= ClTracePCGuard;
-  if (!Options.TracePCGuard && !Options.TracePC)
+  Options.Inline8bitCounters |= ClInline8bitCounters;
+  if (!Options.TracePCGuard && !Options.TracePC && !Options.Inline8bitCounters)
     Options.TracePCGuard = true; // TracePCGuard is default.
   Options.NoPrune |= !ClPruneBlocks;
   return Options;
@@ -169,6 +177,11 @@ private:
   void CreateInitCallForSection(Module &M, const char *InitFunctionName,
                                 Type *Ty, const std::string &Section);
 
+  void SetNoSanitizeMetadata(Instruction *I) {
+    I->setMetadata(I->getModule()->getMDKindID("nosanitize"),
+                   MDNode::get(*C, None));
+  }
+
   std::string getSectionName(const std::string &Section) const;
   std::string getSectionStart(const std::string &Section) const;
   std::string getSectionEnd(const std::string &Section) const;
@@ -179,13 +192,15 @@ private:
   Function *SanCovTraceGepFunction;
   Function *SanCovTraceSwitchFunction;
   InlineAsm *EmptyAsm;
-  Type *IntptrTy, *IntptrPtrTy, *Int64Ty, *Int64PtrTy, *Int32Ty, *Int32PtrTy;
+  Type *IntptrTy, *IntptrPtrTy, *Int64Ty, *Int64PtrTy, *Int32Ty, *Int32PtrTy,
+      *Int8Ty, *Int8PtrTy;
   Module *CurModule;
   Triple TargetTriple;
   LLVMContext *C;
   const DataLayout *DL;
 
   GlobalVariable *FunctionGuardArray;  // for trace-pc-guard.
+  GlobalVariable *Function8bitCounterArray;  // for inline-8bit-counters.
 
   SanitizerCoverageOptions Options;
 };
@@ -227,14 +242,17 @@ bool SanitizerCoverageModule::runOnModule(Module &M) {
   CurModule = &M;
   TargetTriple = Triple(M.getTargetTriple());
   FunctionGuardArray = nullptr;
+  Function8bitCounterArray = nullptr;
   IntptrTy = Type::getIntNTy(*C, DL->getPointerSizeInBits());
   IntptrPtrTy = PointerType::getUnqual(IntptrTy);
   Type *VoidTy = Type::getVoidTy(*C);
   IRBuilder<> IRB(*C);
   Int64PtrTy = PointerType::getUnqual(IRB.getInt64Ty());
   Int32PtrTy = PointerType::getUnqual(IRB.getInt32Ty());
+  Int8PtrTy = PointerType::getUnqual(IRB.getInt8Ty());
   Int64Ty = IRB.getInt64Ty();
   Int32Ty = IRB.getInt32Ty();
+  Int8Ty = IRB.getInt8Ty();
 
   SanCovTracePCIndir = checkSanitizerInterfaceFunction(
       M.getOrInsertFunction(SanCovTracePCIndirName, VoidTy, IntptrTy));
@@ -280,6 +298,9 @@ bool SanitizerCoverageModule::runOnModule(Module &M) {
   if (FunctionGuardArray)
     CreateInitCallForSection(M, SanCovTracePCGuardInitName, Int32PtrTy,
                              SanCovGuardsSectionName);
+  if (Function8bitCounterArray)
+    CreateInitCallForSection(M, SanCov8bitCountersInitName, Int8PtrTy,
+                             SanCovCountersSectionName);
 
   return true;
 }
@@ -420,6 +441,9 @@ void SanitizerCoverageModule::CreateFunctionLocalArrays(size_t NumGuards,
   if (Options.TracePCGuard)
     FunctionGuardArray = CreateFunctionLocalArrayInSection(
         NumGuards, F, Int32Ty, SanCovGuardsSectionName);
+  if (Options.Inline8bitCounters)
+    Function8bitCounterArray = CreateFunctionLocalArrayInSection(
+        NumGuards, F, Int8Ty, SanCovCountersSectionName);
 }
 
 bool SanitizerCoverageModule::InjectCoverage(Function &F,
@@ -452,7 +476,7 @@ void SanitizerCoverageModule::InjectCoverageForIndirectCalls(
     Function &F, ArrayRef<Instruction *> IndirCalls) {
   if (IndirCalls.empty())
     return;
-  assert(Options.TracePC || Options.TracePCGuard);
+  assert(Options.TracePC || Options.TracePCGuard || Options.Inline8bitCounters);
   for (auto I : IndirCalls) {
     IRBuilder<> IRB(I);
     CallSite CS(I);
@@ -580,14 +604,24 @@ void SanitizerCoverageModule::InjectCoverageAtBlock(Function &F, BasicBlock &BB,
   if (Options.TracePC) {
     IRB.CreateCall(SanCovTracePC); // gets the PC using GET_CALLER_PC.
     IRB.CreateCall(EmptyAsm, {}); // Avoids callback merge.
-  } else {
-    assert(Options.TracePCGuard);
+  }
+  if (Options.TracePCGuard) {
     auto GuardPtr = IRB.CreateIntToPtr(
         IRB.CreateAdd(IRB.CreatePointerCast(FunctionGuardArray, IntptrTy),
                       ConstantInt::get(IntptrTy, Idx * 4)),
         Int32PtrTy);
     IRB.CreateCall(SanCovTracePCGuard, GuardPtr);
     IRB.CreateCall(EmptyAsm, {}); // Avoids callback merge.
+  }
+  if (Options.Inline8bitCounters) {
+    auto CounterPtr = IRB.CreateGEP(
+        Function8bitCounterArray,
+        {ConstantInt::get(IntptrTy, 0), ConstantInt::get(IntptrTy, Idx)});
+    auto Load = IRB.CreateLoad(CounterPtr);
+    auto Inc = IRB.CreateAdd(Load, ConstantInt::get(Int8Ty, 1));
+    auto Store = IRB.CreateStore(Inc, CounterPtr);
+    SetNoSanitizeMetadata(Load);
+    SetNoSanitizeMetadata(Store);
   }
 }
 

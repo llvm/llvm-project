@@ -26,14 +26,20 @@
 #include "llvm/Support/Program.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/Options.h"
 #include <vector>
-
-namespace llvm {
 
 //===----------------------------------------------------------------------===//
 //=== WARNING: Implementation here must contain only TRULY operating system
 //===          independent code.
 //===----------------------------------------------------------------------===//
+
+using namespace llvm;
+
+static cl::opt<bool>
+    DisableSymbolication("disable-symbolication",
+                         cl::desc("Disable symbolizing crash backtraces."),
+                         cl::init(false), cl::Hidden);
 
 static ManagedStatic<std::vector<std::pair<void (*)(void *), void *>>>
     CallBacksToRun;
@@ -44,9 +50,6 @@ void sys::RunSignalHandlers() {
     I.first(I.second);
   CallBacksToRun->clear();
 }
-}
-
-using namespace llvm;
 
 static bool findModulesAndOffsets(void **StackTrace, int Depth,
                                   const char **Modules, intptr_t *Offsets,
@@ -70,6 +73,9 @@ static bool printSymbolizedStackTrace(StringRef Argv0,
 static bool printSymbolizedStackTrace(StringRef Argv0,
                                       void **StackTrace, int Depth,
                                       llvm::raw_ostream &OS) {
+  if (DisableSymbolication)
+    return false;
+
   // Don't recursively invoke the llvm-symbolizer binary.
   if (Argv0.find("llvm-symbolizer") != std::string::npos)
     return false;

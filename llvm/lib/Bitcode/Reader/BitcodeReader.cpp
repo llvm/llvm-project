@@ -5370,12 +5370,20 @@ static Expected<StringRef> readStrtab(BitstreamCursor &Stream) {
 
 Expected<std::vector<BitcodeModule>>
 llvm::getBitcodeModuleList(MemoryBufferRef Buffer) {
+  auto FOrErr = getBitcodeFileContents(Buffer);
+  if (!FOrErr)
+    return FOrErr.takeError();
+  return std::move(FOrErr->Mods);
+}
+
+Expected<BitcodeFileContents>
+llvm::getBitcodeFileContents(MemoryBufferRef Buffer) {
   Expected<BitstreamCursor> StreamOrErr = initStream(Buffer);
   if (!StreamOrErr)
     return StreamOrErr.takeError();
   BitstreamCursor &Stream = *StreamOrErr;
 
-  std::vector<BitcodeModule> Modules;
+  BitcodeFileContents F;
   while (true) {
     uint64_t BCBegin = Stream.getCurrentByteNo();
 
@@ -5383,7 +5391,7 @@ llvm::getBitcodeModuleList(MemoryBufferRef Buffer) {
     // of the bitcode stream (e.g. Apple's ar tool). If we are close enough to
     // the end that there cannot possibly be another module, stop looking.
     if (BCBegin + 8 >= Stream.getBitcodeBytes().size())
-      return Modules;
+      return F;
 
     BitstreamEntry Entry = Stream.advance();
     switch (Entry.Kind) {
@@ -5409,10 +5417,10 @@ llvm::getBitcodeModuleList(MemoryBufferRef Buffer) {
         if (Stream.SkipBlock())
           return error("Malformed block");
 
-        Modules.push_back({Stream.getBitcodeBytes().slice(
-                               BCBegin, Stream.getCurrentByteNo() - BCBegin),
-                           Buffer.getBufferIdentifier(), IdentificationBit,
-                           ModuleBit});
+        F.Mods.push_back({Stream.getBitcodeBytes().slice(
+                              BCBegin, Stream.getCurrentByteNo() - BCBegin),
+                          Buffer.getBufferIdentifier(), IdentificationBit,
+                          ModuleBit});
         continue;
       }
 
@@ -5424,7 +5432,7 @@ llvm::getBitcodeModuleList(MemoryBufferRef Buffer) {
         // not have its own string table. A bitcode file may have multiple
         // string tables if it was created by binary concatenation, for example
         // with "llvm-cat -b".
-        for (auto I = Modules.rbegin(), E = Modules.rend(); I != E; ++I) {
+        for (auto I = F.Mods.rbegin(), E = F.Mods.rend(); I != E; ++I) {
           if (!I->Strtab.empty())
             break;
           I->Strtab = *Strtab;

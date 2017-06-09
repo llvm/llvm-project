@@ -86,8 +86,7 @@ public:
 };
 } // end anonymous namespace
 
-bool FixItAction::BeginSourceFileAction(CompilerInstance &CI,
-                                        StringRef Filename) {
+bool FixItAction::BeginSourceFileAction(CompilerInstance &CI) {
   const FrontendOptions &FEOpts = getCompilerInstance().getFrontendOpts();
   if (!FEOpts.FixItSuffix.empty()) {
     FixItOpts.reset(new FixItActionSuffixInserter(FEOpts.FixItSuffix,
