@@ -23,6 +23,12 @@ enum class ExceptionHandling {
   WinEH,    /// Windows Exception Handling
 };
 
+enum class DebugCompressionType {
+  None, /// No compression
+  GNU,  /// zlib-gnu style compression
+  Z,    /// zlib style complession
+};
+
 class StringRef;
 
 class MCTargetOptions {

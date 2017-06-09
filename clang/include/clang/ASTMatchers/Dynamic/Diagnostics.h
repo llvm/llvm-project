@@ -76,7 +76,7 @@ public:
     ET_ParserInvalidToken = 106,
     ET_ParserMalformedBindExpr = 107,
     ET_ParserTrailingCode = 108,
-    ET_ParserUnsignedError = 109,
+    ET_ParserNumberError = 109,
     ET_ParserOverloadedType = 110
   };
 

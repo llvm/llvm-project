@@ -447,6 +447,11 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
         });
   }
 
+  bool IsThinLTO = true;
+  if (auto *MD =
+          mdconst::extract_or_null<ConstantInt>(M.getModuleFlag("ThinLTO")))
+    IsThinLTO = MD->getZExtValue();
+
   for (auto &GlobalList : Index) {
     // Ignore entries for references that are undefined in the current module.
     if (GlobalList.second.SummaryList.empty())
@@ -455,6 +460,11 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
     assert(GlobalList.second.SummaryList.size() == 1 &&
            "Expected module's index to have one summary per GUID");
     auto &Summary = GlobalList.second.SummaryList[0];
+    if (!IsThinLTO) {
+      Summary->setNotEligibleToImport();
+      continue;
+    }
+
     bool AllRefsCanBeExternallyReferenced =
         llvm::all_of(Summary->refs(), [&](const ValueInfo &VI) {
           return !CantBePromoted.count(VI.getGUID());

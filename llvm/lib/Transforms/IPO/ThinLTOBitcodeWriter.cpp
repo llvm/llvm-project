@@ -318,6 +318,12 @@ void splitAndWriteThinLTOBitcode(
   ProfileSummaryInfo PSI(M);
   ModuleSummaryIndex Index = buildModuleSummaryIndex(M, nullptr, &PSI);
 
+  // Mark the merged module as requiring full LTO. We still want an index for
+  // it though, so that it can participate in summary-based dead stripping.
+  MergedM->addModuleFlag(Module::Error, "ThinLTO", uint32_t(0));
+  ModuleSummaryIndex MergedMIndex =
+      buildModuleSummaryIndex(*MergedM, nullptr, &PSI);
+
   SmallVector<char, 0> Buffer;
 
   BitcodeWriter W(Buffer);
@@ -327,7 +333,8 @@ void splitAndWriteThinLTOBitcode(
   ModuleHash ModHash = {{0}};
   W.writeModule(&M, /*ShouldPreserveUseListOrder=*/false, &Index,
                 /*GenerateHash=*/true, &ModHash);
-  W.writeModule(MergedM.get());
+  W.writeModule(MergedM.get(), /*ShouldPreserveUseListOrder=*/false,
+                &MergedMIndex);
   W.writeStrtab();
   OS << Buffer;
 
@@ -340,7 +347,8 @@ void splitAndWriteThinLTOBitcode(
     StripDebugInfo(M);
     W2.writeModule(&M, /*ShouldPreserveUseListOrder=*/false, &Index,
                    /*GenerateHash=*/false, &ModHash);
-    W2.writeModule(MergedM.get());
+    W2.writeModule(MergedM.get(), /*ShouldPreserveUseListOrder=*/false,
+                   &MergedMIndex);
     W2.writeStrtab();
     *ThinLinkOS << Buffer;
   }

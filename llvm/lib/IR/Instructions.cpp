@@ -63,7 +63,7 @@ unsigned TerminatorInst::getNumSuccessors() const {
   switch (getOpcode()) {
 #define HANDLE_TERM_INST(N, OPC, CLASS)                                        \
   case Instruction::OPC:                                                       \
-    return static_cast<const CLASS *>(this)->getNumSuccessorsV();
+    return static_cast<const CLASS *>(this)->getNumSuccessors();
 #include "llvm/IR/Instruction.def"
   default:
     break;
@@ -75,7 +75,7 @@ BasicBlock *TerminatorInst::getSuccessor(unsigned idx) const {
   switch (getOpcode()) {
 #define HANDLE_TERM_INST(N, OPC, CLASS)                                        \
   case Instruction::OPC:                                                       \
-    return static_cast<const CLASS *>(this)->getSuccessorV(idx);
+    return static_cast<const CLASS *>(this)->getSuccessor(idx);
 #include "llvm/IR/Instruction.def"
   default:
     break;
@@ -87,7 +87,7 @@ void TerminatorInst::setSuccessor(unsigned idx, BasicBlock *B) {
   switch (getOpcode()) {
 #define HANDLE_TERM_INST(N, OPC, CLASS)                                        \
   case Instruction::OPC:                                                       \
-    return static_cast<CLASS *>(this)->setSuccessorV(idx, B);
+    return static_cast<CLASS *>(this)->setSuccessor(idx, B);
 #include "llvm/IR/Instruction.def"
   default:
     break;
@@ -747,18 +747,6 @@ InvokeInst *InvokeInst::Create(InvokeInst *II, ArrayRef<OperandBundleDef> OpB,
   return NewII;
 }
 
-BasicBlock *InvokeInst::getSuccessorV(unsigned idx) const {
-  return getSuccessor(idx);
-}
-
-unsigned InvokeInst::getNumSuccessorsV() const {
-  return getNumSuccessors();
-}
-
-void InvokeInst::setSuccessorV(unsigned idx, BasicBlock *B) {
-  return setSuccessor(idx, B);
-}
-
 Value *InvokeInst::getReturnedArgOperand() const {
   unsigned Index;
 
@@ -902,20 +890,6 @@ ReturnInst::ReturnInst(LLVMContext &Context, BasicBlock *InsertAtEnd)
                    OperandTraits<ReturnInst>::op_end(this), 0, InsertAtEnd) {
 }
 
-unsigned ReturnInst::getNumSuccessorsV() const {
-  return getNumSuccessors();
-}
-
-/// Out-of-line ReturnInst method, put here so the C++ compiler can choose to
-/// emit the vtable for the class in this translation unit.
-void ReturnInst::setSuccessorV(unsigned idx, BasicBlock *NewSucc) {
-  llvm_unreachable("ReturnInst has no successors!");
-}
-
-BasicBlock *ReturnInst::getSuccessorV(unsigned idx) const {
-  llvm_unreachable("ReturnInst has no successors!");
-}
-
 //===----------------------------------------------------------------------===//
 //                        ResumeInst Implementation
 //===----------------------------------------------------------------------===//
@@ -936,18 +910,6 @@ ResumeInst::ResumeInst(Value *Exn, BasicBlock *InsertAtEnd)
   : TerminatorInst(Type::getVoidTy(Exn->getContext()), Instruction::Resume,
                    OperandTraits<ResumeInst>::op_begin(this), 1, InsertAtEnd) {
   Op<0>() = Exn;
-}
-
-unsigned ResumeInst::getNumSuccessorsV() const {
-  return getNumSuccessors();
-}
-
-void ResumeInst::setSuccessorV(unsigned idx, BasicBlock *NewSucc) {
-  llvm_unreachable("ResumeInst has no successors!");
-}
-
-BasicBlock *ResumeInst::getSuccessorV(unsigned idx) const {
-  llvm_unreachable("ResumeInst has no successors!");
 }
 
 //===----------------------------------------------------------------------===//
@@ -992,20 +954,6 @@ CleanupReturnInst::CleanupReturnInst(Value *CleanupPad, BasicBlock *UnwindBB,
   init(CleanupPad, UnwindBB);
 }
 
-BasicBlock *CleanupReturnInst::getSuccessorV(unsigned Idx) const {
-  assert(Idx == 0);
-  return getUnwindDest();
-}
-
-unsigned CleanupReturnInst::getNumSuccessorsV() const {
-  return getNumSuccessors();
-}
-
-void CleanupReturnInst::setSuccessorV(unsigned Idx, BasicBlock *B) {
-  assert(Idx == 0);
-  setUnwindDest(B);
-}
-
 //===----------------------------------------------------------------------===//
 //                        CatchReturnInst Implementation
 //===----------------------------------------------------------------------===//
@@ -1035,20 +983,6 @@ CatchReturnInst::CatchReturnInst(Value *CatchPad, BasicBlock *BB,
                      OperandTraits<CatchReturnInst>::op_begin(this), 2,
                      InsertAtEnd) {
   init(CatchPad, BB);
-}
-
-BasicBlock *CatchReturnInst::getSuccessorV(unsigned Idx) const {
-  assert(Idx < getNumSuccessors() && "Successor # out of range for catchret!");
-  return getSuccessor();
-}
-
-unsigned CatchReturnInst::getNumSuccessorsV() const {
-  return getNumSuccessors();
-}
-
-void CatchReturnInst::setSuccessorV(unsigned Idx, BasicBlock *B) {
-  assert(Idx < getNumSuccessors() && "Successor # out of range for catchret!");
-  setSuccessor(B);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1134,18 +1068,6 @@ void CatchSwitchInst::removeHandler(handler_iterator HI) {
   setNumHungOffUseOperands(getNumOperands() - 1);
 }
 
-BasicBlock *CatchSwitchInst::getSuccessorV(unsigned idx) const {
-  return getSuccessor(idx);
-}
-
-unsigned CatchSwitchInst::getNumSuccessorsV() const {
-  return getNumSuccessors();
-}
-
-void CatchSwitchInst::setSuccessorV(unsigned idx, BasicBlock *B) {
-  setSuccessor(idx, B);
-}
-
 //===----------------------------------------------------------------------===//
 //                        FuncletPadInst Implementation
 //===----------------------------------------------------------------------===//
@@ -1196,18 +1118,6 @@ UnreachableInst::UnreachableInst(LLVMContext &Context,
 UnreachableInst::UnreachableInst(LLVMContext &Context, BasicBlock *InsertAtEnd)
   : TerminatorInst(Type::getVoidTy(Context), Instruction::Unreachable,
                    nullptr, 0, InsertAtEnd) {
-}
-
-unsigned UnreachableInst::getNumSuccessorsV() const {
-  return getNumSuccessors();
-}
-
-void UnreachableInst::setSuccessorV(unsigned idx, BasicBlock *NewSucc) {
-  llvm_unreachable("UnreachableInst has no successors!");
-}
-
-BasicBlock *UnreachableInst::getSuccessorV(unsigned idx) const {
-  llvm_unreachable("UnreachableInst has no successors!");
 }
 
 //===----------------------------------------------------------------------===//
@@ -1283,18 +1193,6 @@ void BranchInst::swapSuccessors() {
   // Update profile metadata if present and it matches our structural
   // expectations.
   swapProfMetadata();
-}
-
-BasicBlock *BranchInst::getSuccessorV(unsigned idx) const {
-  return getSuccessor(idx);
-}
-
-unsigned BranchInst::getNumSuccessorsV() const {
-  return getNumSuccessors();
-}
-
-void BranchInst::setSuccessorV(unsigned idx, BasicBlock *B) {
-  setSuccessor(idx, B);
 }
 
 //===----------------------------------------------------------------------===//
@@ -3785,19 +3683,6 @@ void SwitchInst::growOperands() {
   growHungoffUses(ReservedSpace);
 }
 
-
-BasicBlock *SwitchInst::getSuccessorV(unsigned idx) const {
-  return getSuccessor(idx);
-}
-
-unsigned SwitchInst::getNumSuccessorsV() const {
-  return getNumSuccessors();
-}
-
-void SwitchInst::setSuccessorV(unsigned idx, BasicBlock *B) {
-  setSuccessor(idx, B);
-}
-
 //===----------------------------------------------------------------------===//
 //                        IndirectBrInst Implementation
 //===----------------------------------------------------------------------===//
@@ -3875,18 +3760,6 @@ void IndirectBrInst::removeDestination(unsigned idx) {
   // Nuke the last value.
   OL[NumOps-1].set(nullptr);
   setNumHungOffUseOperands(NumOps-1);
-}
-
-BasicBlock *IndirectBrInst::getSuccessorV(unsigned idx) const {
-  return getSuccessor(idx);
-}
-
-unsigned IndirectBrInst::getNumSuccessorsV() const {
-  return getNumSuccessors();
-}
-
-void IndirectBrInst::setSuccessorV(unsigned idx, BasicBlock *B) {
-  setSuccessor(idx, B);
 }
 
 //===----------------------------------------------------------------------===//

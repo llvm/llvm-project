@@ -141,11 +141,16 @@ bool XRayInstrumentation::runOnMachineFunction(MachineFunction &MF) {
     if (Attr.getValueAsString().getAsInteger(10, XRayThreshold))
       return false; // Invalid value for threshold.
 
+    // Count the number of MachineInstr`s in MachineFunction
+    int64_t MICount = 0;
+    for (const auto& MBB : MF)
+      MICount += MBB.size();
+
     // Check if we have a loop.
     // FIXME: Maybe make this smarter, and see whether the loops are dependent
     // on inputs or side-effects?
     MachineLoopInfo &MLI = getAnalysis<MachineLoopInfo>();
-    if (MLI.empty() && F.size() < XRayThreshold)
+    if (MLI.empty() && MICount < XRayThreshold)
       return false; // Function is too small and has no loops.
   }
 

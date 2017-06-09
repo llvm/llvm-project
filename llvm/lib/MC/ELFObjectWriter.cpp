@@ -1020,17 +1020,23 @@ void ELFObjectWriter::writeSectionData(const MCAssembler &Asm, MCSection &Sec,
   MCSectionELF &Section = static_cast<MCSectionELF &>(Sec);
   StringRef SectionName = Section.getSectionName();
 
+  auto &MC = Asm.getContext();
+  const auto &MAI = MC.getAsmInfo();
+
   // Compressing debug_frame requires handling alignment fragments which is
   // more work (possibly generalizing MCAssembler.cpp:writeFragment to allow
   // for writing to arbitrary buffers) for little benefit.
   bool CompressionEnabled =
-      Asm.getContext().getAsmInfo()->compressDebugSections() !=
-      DebugCompressionType::DCT_None;
+      MAI->compressDebugSections() != DebugCompressionType::None;
   if (!CompressionEnabled || !SectionName.startswith(".debug_") ||
       SectionName == ".debug_frame") {
     Asm.writeSectionData(&Section, Layout);
     return;
   }
+
+  assert((MAI->compressDebugSections() == DebugCompressionType::Z ||
+          MAI->compressDebugSections() == DebugCompressionType::GNU) &&
+         "expected zlib or zlib-gnu style compression");
 
   SmallVector<char, 128> UncompressedData;
   raw_svector_ostream VecOS(UncompressedData);
@@ -1048,8 +1054,7 @@ void ELFObjectWriter::writeSectionData(const MCAssembler &Asm, MCSection &Sec,
     return;
   }
 
-  bool ZlibStyle = Asm.getContext().getAsmInfo()->compressDebugSections() ==
-                   DebugCompressionType::DCT_Zlib;
+  bool ZlibStyle = MAI->compressDebugSections() == DebugCompressionType::Z;
   if (!maybeWriteCompression(UncompressedData.size(), CompressedContents,
                              ZlibStyle, Sec.getAlignment())) {
     getStream() << UncompressedData;
@@ -1061,8 +1066,7 @@ void ELFObjectWriter::writeSectionData(const MCAssembler &Asm, MCSection &Sec,
     Section.setFlags(Section.getFlags() | ELF::SHF_COMPRESSED);
   else
     // Add "z" prefix to section name. This is zlib-gnu style.
-    Asm.getContext().renameELFSection(&Section,
-                                      (".z" + SectionName.drop_front(1)).str());
+    MC.renameELFSection(&Section, (".z" + SectionName.drop_front(1)).str());
   getStream() << CompressedContents;
 }
 

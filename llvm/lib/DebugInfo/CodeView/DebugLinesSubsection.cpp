@@ -145,7 +145,7 @@ uint32_t DebugLinesSubsection::calculateSerializedSize() const {
 }
 
 void DebugLinesSubsection::setRelocationAddress(uint16_t Segment,
-                                                uint16_t Offset) {
+                                                uint32_t Offset) {
   RelocOffset = Offset;
   RelocSegment = Segment;
 }

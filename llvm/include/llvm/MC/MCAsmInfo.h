@@ -51,12 +51,6 @@ enum LCOMMType { NoAlignment, ByteAlignment, Log2Alignment };
 
 } // end namespace LCOMM
 
-enum class DebugCompressionType {
-  DCT_None,    // no compression
-  DCT_Zlib,    // zlib style complession
-  DCT_ZlibGnu  // zlib-gnu style compression
-};
-
 /// This class is intended to be used as a base class for asm
 /// properties and features specific to the target.
 class MCAsmInfo {
@@ -366,7 +360,7 @@ protected:
   bool PreserveAsmComments;
 
   /// Compress DWARF debug sections. Defaults to no compression.
-  DebugCompressionType CompressDebugSections = DebugCompressionType::DCT_None;
+  DebugCompressionType CompressDebugSections = DebugCompressionType::None;
 
   /// True if the integrated assembler should interpret 'a >> b' constant
   /// expressions as logical rather than arithmetic.

@@ -25,23 +25,15 @@ using namespace lldb_private;
 bool VMRange::ContainsValue(const VMRange::collection &coll,
                             lldb::addr_t value) {
   ValueInRangeUnaryPredicate in_range_predicate(value);
-  VMRange::const_iterator pos;
   VMRange::const_iterator end = coll.end();
-  pos = std::find_if(coll.begin(), end, in_range_predicate);
-  if (pos != end)
-    return true;
-  return false;
+  return std::find_if(coll.begin(), end, in_range_predicate) != end;
 }
 
 bool VMRange::ContainsRange(const VMRange::collection &coll,
                             const VMRange &range) {
   RangeInRangeUnaryPredicate in_range_predicate(range);
-  VMRange::const_iterator pos;
   VMRange::const_iterator end = coll.end();
-  pos = std::find_if(coll.begin(), end, in_range_predicate);
-  if (pos != end)
-    return true;
-  return false;
+  return std::find_if(coll.begin(), end, in_range_predicate) != end;
 }
 
 size_t VMRange::FindRangeIndexThatContainsValue(const VMRange::collection &coll,

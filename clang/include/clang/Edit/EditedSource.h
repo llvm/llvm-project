@@ -41,9 +41,11 @@ class EditedSource {
   typedef std::map<FileOffset, FileEdit> FileEditsTy;
   FileEditsTy FileEdits;
 
-  llvm::DenseMap<unsigned, llvm::TinyPtrVector<IdentifierInfo*>>
+  // Location of argument use inside the macro body 
+  typedef std::pair<IdentifierInfo*, SourceLocation> MacroArgUse;
+  llvm::DenseMap<unsigned, SmallVector<MacroArgUse, 2>>
     ExpansionToArgMap;
-  SmallVector<std::pair<SourceLocation, IdentifierInfo*>, 2>
+  SmallVector<std::pair<SourceLocation, MacroArgUse>, 2>
     CurrCommitMacroArgExps;
 
   IdentifierTable IdentTable;
@@ -84,7 +86,7 @@ private:
   FileEditsTy::iterator getActionForOffset(FileOffset Offs);
   void deconstructMacroArgLoc(SourceLocation Loc,
                               SourceLocation &ExpansionLoc,
-                              IdentifierInfo *&II);
+                              MacroArgUse &ArgUse);
 
   void startingCommit();
   void finishedCommit();

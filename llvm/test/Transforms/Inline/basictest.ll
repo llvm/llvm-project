@@ -91,3 +91,27 @@ define i32 @test() {
   ret i32 %e
 ; CHECK: }
 }
+
+; Inliner shouldn't delete calls it can't inline, even if they're trivially dead
+; CHECK-LABEL: @outer4(
+define void @outer4(void ()* %inner4) {
+entry:
+; CHECK: call void %inner4()
+  call void %inner4() nounwind readnone
+  ret void
+}
+
+declare void @inner5_inner()
+
+define void @inner5(void ()* %x) {
+  call void %x() nounwind readnone
+  ret void
+}
+
+; Inliner shouldn't delete calls it can't inline, even if they're trivially dead and temporarily indirect
+; CHECK-LABEL: @outer5(
+define void @outer5() {
+; CHECK: call void @inner5_inner(
+  call void @inner5(void ()* @inner5_inner)
+  ret void
+}
