@@ -37,7 +37,7 @@
 
 namespace llvm {
 
-class BitcodeModule;
+struct BitcodeFileContents;
 
 namespace irsymtab {
 
@@ -325,7 +325,7 @@ struct FileContents {
 };
 
 /// Reads the contents of a bitcode file, creating its irsymtab if necessary.
-Expected<FileContents> readBitcode(ArrayRef<BitcodeModule> Mods);
+Expected<FileContents> readBitcode(const BitcodeFileContents &BFC);
 
 } // end namespace irsymtab
 } // end namespace llvm

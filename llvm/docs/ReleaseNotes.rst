@@ -43,6 +43,13 @@ Non-comprehensive list of changes in this release
 * LLVM's ``WeakVH`` has been renamed to ``WeakTrackingVH`` and a new ``WeakVH``
   has been introduced.  The new ``WeakVH`` nulls itself out on deletion, but
   does not track values across RAUW.
+  
+* A new library named ``BinaryFormat`` has been created which holds a collection
+  of code which previously lived in ``Support``.  This includes the
+  ``file_magic`` structure and ``identify_magic`` functions, as well as all the
+  structure and type definitions for DWARF, ELF, COFF, WASM, and MachO file
+  formats.
+  
 
 * ... next change ...
 

@@ -1958,7 +1958,8 @@ def VFMSD : ADbI<0b11101, 0b10, 1, 0,
                  [(set DPR:$Dd, (fadd_mlx (fneg (fmul_su DPR:$Dn,DPR:$Dm)),
                                           (f64 DPR:$Ddin)))]>,
               RegConstraint<"$Ddin = $Dd">,
-              Requires<[HasVFP4,HasDPVFP,UseFusedMAC]>;
+              Requires<[HasVFP4,HasDPVFP,UseFusedMAC]>,
+              Sched<[WriteFPMAC64, ReadFPMAC, ReadFPMUL, ReadFPMUL]>;
 
 def VFMSS : ASbIn<0b11101, 0b10, 1, 0,
                   (outs SPR:$Sd), (ins SPR:$Sdin, SPR:$Sn, SPR:$Sm),
@@ -1966,7 +1967,8 @@ def VFMSS : ASbIn<0b11101, 0b10, 1, 0,
                   [(set SPR:$Sd, (fadd_mlx (fneg (fmul_su SPR:$Sn, SPR:$Sm)),
                                            SPR:$Sdin))]>,
               RegConstraint<"$Sdin = $Sd">,
-              Requires<[HasVFP4,DontUseNEONForFP,UseFusedMAC]> {
+              Requires<[HasVFP4,DontUseNEONForFP,UseFusedMAC]>,
+              Sched<[WriteFPMAC32, ReadFPMAC, ReadFPMUL, ReadFPMUL]> {
   // Some single precision VFP instructions may be executed on both NEON and
   // VFP pipelines.
 }
@@ -1976,7 +1978,8 @@ def VFMSH : AHbI<0b11101, 0b10, 1, 0,
                   IIC_fpFMAC16, "vfms", ".f16\t$Sd, $Sn, $Sm",
                   []>,
               RegConstraint<"$Sdin = $Sd">,
-              Requires<[HasFullFP16,UseFusedMAC]>;
+              Requires<[HasFullFP16,UseFusedMAC]>,
+              Sched<[WriteFPMAC32, ReadFPMAC, ReadFPMUL, ReadFPMUL]>;
 
 def : Pat<(fsub_mlx DPR:$dstin, (fmul_su DPR:$a, (f64 DPR:$b))),
           (VFMSD DPR:$dstin, DPR:$a, DPR:$b)>,

@@ -1104,6 +1104,66 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
   }
 }
 
+StringRef SIRegisterInfo::getRegAsmName(unsigned Reg) const {
+  #define AMDGPU_REG_ASM_NAMES
+  #include "AMDGPURegAsmNames.inc.cpp"
+
+  #define REG_RANGE(BeginReg, EndReg, RegTable)            \
+    if (Reg >= BeginReg && Reg <= EndReg) {                \
+      unsigned Index = Reg - BeginReg;                     \
+      assert(Index < array_lengthof(RegTable));            \
+      return RegTable[Index];                              \
+    }
+
+  REG_RANGE(AMDGPU::VGPR0, AMDGPU::VGPR255, VGPR32RegNames);
+  REG_RANGE(AMDGPU::SGPR0, AMDGPU::SGPR103, SGPR32RegNames);
+  REG_RANGE(AMDGPU::VGPR0_VGPR1, AMDGPU::VGPR254_VGPR255, VGPR64RegNames);
+  REG_RANGE(AMDGPU::SGPR0_SGPR1, AMDGPU::SGPR102_SGPR103, SGPR64RegNames);
+  REG_RANGE(AMDGPU::VGPR0_VGPR1_VGPR2, AMDGPU::VGPR253_VGPR254_VGPR255,
+            VGPR96RegNames);
+
+  REG_RANGE(AMDGPU::VGPR0_VGPR1_VGPR2_VGPR3,
+            AMDGPU::VGPR252_VGPR253_VGPR254_VGPR255,
+            VGPR128RegNames);
+  REG_RANGE(AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3,
+            AMDGPU::SGPR100_SGPR101_SGPR102_SGPR103,
+            SGPR128RegNames);
+
+  REG_RANGE(AMDGPU::VGPR0_VGPR1_VGPR2_VGPR3_VGPR4_VGPR5_VGPR6_VGPR7,
+            AMDGPU::VGPR248_VGPR249_VGPR250_VGPR251_VGPR252_VGPR253_VGPR254_VGPR255,
+            VGPR256RegNames);
+
+  REG_RANGE(
+    AMDGPU::VGPR0_VGPR1_VGPR2_VGPR3_VGPR4_VGPR5_VGPR6_VGPR7_VGPR8_VGPR9_VGPR10_VGPR11_VGPR12_VGPR13_VGPR14_VGPR15,
+    AMDGPU::VGPR240_VGPR241_VGPR242_VGPR243_VGPR244_VGPR245_VGPR246_VGPR247_VGPR248_VGPR249_VGPR250_VGPR251_VGPR252_VGPR253_VGPR254_VGPR255,
+    VGPR512RegNames);
+
+  REG_RANGE(AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3_SGPR4_SGPR5_SGPR6_SGPR7,
+            AMDGPU::SGPR96_SGPR97_SGPR98_SGPR99_SGPR100_SGPR101_SGPR102_SGPR103,
+            SGPR256RegNames);
+
+  REG_RANGE(
+    AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3_SGPR4_SGPR5_SGPR6_SGPR7_SGPR8_SGPR9_SGPR10_SGPR11_SGPR12_SGPR13_SGPR14_SGPR15,
+    AMDGPU::SGPR88_SGPR89_SGPR90_SGPR91_SGPR92_SGPR93_SGPR94_SGPR95_SGPR96_SGPR97_SGPR98_SGPR99_SGPR100_SGPR101_SGPR102_SGPR103,
+    SGPR512RegNames
+  );
+
+#undef REG_RANGE
+
+  // FIXME: Rename flat_scr so we don't need to special case this.
+  switch (Reg) {
+  case AMDGPU::FLAT_SCR:
+    return "flat_scratch";
+  case AMDGPU::FLAT_SCR_LO:
+    return "flat_scratch_lo";
+  case AMDGPU::FLAT_SCR_HI:
+    return "flat_scratch_hi";
+  default:
+    // For the special named registers the default is fine.
+    return TargetRegisterInfo::getRegAsmName(Reg);
+  }
+}
+
 // FIXME: This is very slow. It might be worth creating a map from physreg to
 // register class.
 const TargetRegisterClass *SIRegisterInfo::getPhysRegClass(unsigned Reg) const {

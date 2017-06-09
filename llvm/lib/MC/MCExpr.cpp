@@ -655,7 +655,11 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
         // the OS X assembler will completely drop the 4. We should probably
         // include it in the relocation or produce an error if that is not
         // possible.
+        // Allow constant expressions.
         if (!A && !B)
+          return true;
+        // Allows aliases with zero offset.
+        if (Res.getConstant() == 0 && (!A || !B))
           return true;
       }
     }

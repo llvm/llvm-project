@@ -1235,7 +1235,7 @@ Instruction *InstCombiner::visitAnd(BinaryOperator &I) {
   if (Value *V = SimplifyVectorOp(I))
     return replaceInstUsesWith(I, V);
 
-  if (Value *V = SimplifyAndInst(Op0, Op1, SQ))
+  if (Value *V = SimplifyAndInst(Op0, Op1, SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
 
   // See if we can simplify any instructions used by the instruction whose sole
@@ -1963,7 +1963,7 @@ Instruction *InstCombiner::visitOr(BinaryOperator &I) {
   if (Value *V = SimplifyVectorOp(I))
     return replaceInstUsesWith(I, V);
 
-  if (Value *V = SimplifyOrInst(Op0, Op1, SQ))
+  if (Value *V = SimplifyOrInst(Op0, Op1, SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
 
   // See if we can simplify any instructions used by the instruction whose sole
@@ -2345,7 +2345,7 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
   if (Value *V = SimplifyVectorOp(I))
     return replaceInstUsesWith(I, V);
 
-  if (Value *V = SimplifyXorInst(Op0, Op1, SQ))
+  if (Value *V = SimplifyXorInst(Op0, Op1, SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
 
   if (Instruction *NewXor = foldXorToXor(I))

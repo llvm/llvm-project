@@ -102,14 +102,7 @@ namespace llvm {
 
     /// @brief creates a mapping for the specified virtual register to
     /// the specified physical register
-    void assignVirt2Phys(unsigned virtReg, unsigned physReg) {
-      assert(TargetRegisterInfo::isVirtualRegister(virtReg) &&
-             TargetRegisterInfo::isPhysicalRegister(physReg));
-      assert(Virt2PhysMap[virtReg] == NO_PHYS_REG &&
-             "attempt to assign physical register to already mapped "
-             "virtual register");
-      Virt2PhysMap[virtReg] = physReg;
-    }
+    void assignVirt2Phys(unsigned virtReg, MCPhysReg physReg);
 
     /// @brief clears the specified virtual register's, physical
     /// register mapping

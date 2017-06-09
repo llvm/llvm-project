@@ -135,80 +135,84 @@ filterAndSortClassDefs(LinePrinter &Printer, Enumerator &E,
 TypeDumper::TypeDumper(LinePrinter &P) : PDBSymDumper(true), Printer(P) {}
 
 void TypeDumper::start(const PDBSymbolExe &Exe) {
+  auto Children = Exe.findAllChildren();
   if (opts::pretty::Enums) {
-    auto Enums = Exe.findAllChildren<PDBSymbolTypeEnum>();
-    Printer.NewLine();
-    WithColor(Printer, PDB_ColorItem::Identifier).get() << "Enums";
-    Printer << ": (" << Enums->getChildCount() << " items)";
-    Printer.Indent();
-    while (auto Enum = Enums->getNext())
-      Enum->dump(*this);
-    Printer.Unindent();
+    if (auto Enums = Exe.findAllChildren<PDBSymbolTypeEnum>()) {
+      Printer.NewLine();
+      WithColor(Printer, PDB_ColorItem::Identifier).get() << "Enums";
+      Printer << ": (" << Enums->getChildCount() << " items)";
+      Printer.Indent();
+      while (auto Enum = Enums->getNext())
+        Enum->dump(*this);
+      Printer.Unindent();
+    }
   }
 
   if (opts::pretty::Typedefs) {
-    auto Typedefs = Exe.findAllChildren<PDBSymbolTypeTypedef>();
-    Printer.NewLine();
-    WithColor(Printer, PDB_ColorItem::Identifier).get() << "Typedefs";
-    Printer << ": (" << Typedefs->getChildCount() << " items)";
-    Printer.Indent();
-    while (auto Typedef = Typedefs->getNext())
-      Typedef->dump(*this);
-    Printer.Unindent();
+    if (auto Typedefs = Exe.findAllChildren<PDBSymbolTypeTypedef>()) {
+      Printer.NewLine();
+      WithColor(Printer, PDB_ColorItem::Identifier).get() << "Typedefs";
+      Printer << ": (" << Typedefs->getChildCount() << " items)";
+      Printer.Indent();
+      while (auto Typedef = Typedefs->getNext())
+        Typedef->dump(*this);
+      Printer.Unindent();
+    }
   }
 
   if (opts::pretty::Classes) {
-    auto Classes = Exe.findAllChildren<PDBSymbolTypeUDT>();
-    uint32_t All = Classes->getChildCount();
+    if (auto Classes = Exe.findAllChildren<PDBSymbolTypeUDT>()) {
+      uint32_t All = Classes->getChildCount();
 
-    Printer.NewLine();
-    WithColor(Printer, PDB_ColorItem::Identifier).get() << "Classes";
+      Printer.NewLine();
+      WithColor(Printer, PDB_ColorItem::Identifier).get() << "Classes";
 
-    bool Precompute = false;
-    Precompute =
-        (opts::pretty::ClassOrder != opts::pretty::ClassSortMode::None);
+      bool Precompute = false;
+      Precompute =
+          (opts::pretty::ClassOrder != opts::pretty::ClassSortMode::None);
 
-    // If we're using no sort mode, then we can start getting immediate output
-    // from the tool by just filtering as we go, rather than processing
-    // everything up front so that we can sort it.  This makes the tool more
-    // responsive.  So only precompute the filtered/sorted set of classes if
-    // necessary due to the specified options.
-    std::vector<LayoutPtr> Filtered;
-    uint32_t Shown = All;
-    if (Precompute) {
-      Filtered = filterAndSortClassDefs(Printer, *Classes, All);
+      // If we're using no sort mode, then we can start getting immediate output
+      // from the tool by just filtering as we go, rather than processing
+      // everything up front so that we can sort it.  This makes the tool more
+      // responsive.  So only precompute the filtered/sorted set of classes if
+      // necessary due to the specified options.
+      std::vector<LayoutPtr> Filtered;
+      uint32_t Shown = All;
+      if (Precompute) {
+        Filtered = filterAndSortClassDefs(Printer, *Classes, All);
 
-      Shown = Filtered.size();
-    }
-
-    Printer << ": (Showing " << Shown << " items";
-    if (Shown < All)
-      Printer << ", " << (All - Shown) << " filtered";
-    Printer << ")";
-    Printer.Indent();
-
-    // If we pre-computed, iterate the filtered/sorted list, otherwise iterate
-    // the DIA enumerator and filter on the fly.
-    if (Precompute) {
-      for (auto &Class : Filtered)
-        dumpClassLayout(*Class);
-    } else {
-      while (auto Class = Classes->getNext()) {
-        if (Class->getUnmodifiedTypeId() != 0)
-          continue;
-
-        if (Printer.IsTypeExcluded(Class->getName(), Class->getLength()))
-          continue;
-
-        auto Layout = llvm::make_unique<ClassLayout>(std::move(Class));
-        if (Layout->deepPaddingSize() < opts::pretty::PaddingThreshold)
-          continue;
-
-        dumpClassLayout(*Layout);
+        Shown = Filtered.size();
       }
-    }
 
-    Printer.Unindent();
+      Printer << ": (Showing " << Shown << " items";
+      if (Shown < All)
+        Printer << ", " << (All - Shown) << " filtered";
+      Printer << ")";
+      Printer.Indent();
+
+      // If we pre-computed, iterate the filtered/sorted list, otherwise iterate
+      // the DIA enumerator and filter on the fly.
+      if (Precompute) {
+        for (auto &Class : Filtered)
+          dumpClassLayout(*Class);
+      } else {
+        while (auto Class = Classes->getNext()) {
+          if (Class->getUnmodifiedTypeId() != 0)
+            continue;
+
+          if (Printer.IsTypeExcluded(Class->getName(), Class->getLength()))
+            continue;
+
+          auto Layout = llvm::make_unique<ClassLayout>(std::move(Class));
+          if (Layout->deepPaddingSize() < opts::pretty::PaddingThreshold)
+            continue;
+
+          dumpClassLayout(*Layout);
+        }
+      }
+
+      Printer.Unindent();
+    }
   }
 }
 

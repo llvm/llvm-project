@@ -235,7 +235,6 @@ class LowerTypeTestsModule {
   ModuleSummaryIndex *ExportSummary;
   const ModuleSummaryIndex *ImportSummary;
 
-  bool LinkerSubsectionsViaSymbols;
   Triple::ArchType Arch;
   Triple::OSType OS;
   Triple::ObjectFormatType ObjectFormat;
@@ -475,13 +474,9 @@ void LowerTypeTestsModule::allocateByteArrays() {
     // Create an alias instead of RAUW'ing the gep directly. On x86 this ensures
     // that the pc-relative displacement is folded into the lea instead of the
     // test instruction getting another displacement.
-    if (LinkerSubsectionsViaSymbols) {
-      BAI->ByteArray->replaceAllUsesWith(GEP);
-    } else {
-      GlobalAlias *Alias = GlobalAlias::create(
-          Int8Ty, 0, GlobalValue::PrivateLinkage, "bits", GEP, &M);
-      BAI->ByteArray->replaceAllUsesWith(Alias);
-    }
+    GlobalAlias *Alias = GlobalAlias::create(
+        Int8Ty, 0, GlobalValue::PrivateLinkage, "bits", GEP, &M);
+    BAI->ByteArray->replaceAllUsesWith(Alias);
     BAI->ByteArray->eraseFromParent();
   }
 
@@ -502,7 +497,7 @@ Value *LowerTypeTestsModule::createBitSetTest(IRBuilder<> &B,
     return createMaskedBitTest(B, TIL.InlineBits, BitOffset);
   } else {
     Constant *ByteArray = TIL.TheByteArray;
-    if (!LinkerSubsectionsViaSymbols && AvoidReuse && !ImportSummary) {
+    if (AvoidReuse && !ImportSummary) {
       // Each use of the byte array uses a different alias. This makes the
       // backend less likely to reuse previously computed byte array addresses,
       // improving the security of the CFI mechanism based on this pass.
@@ -697,17 +692,13 @@ void LowerTypeTestsModule::buildBitSetsFromGlobalVariables(
                                       ConstantInt::get(Int32Ty, I * 2)};
     Constant *CombinedGlobalElemPtr = ConstantExpr::getGetElementPtr(
         NewInit->getType(), CombinedGlobal, CombinedGlobalIdxs);
-    if (LinkerSubsectionsViaSymbols) {
-      GV->replaceAllUsesWith(CombinedGlobalElemPtr);
-    } else {
-      assert(GV->getType()->getAddressSpace() == 0);
-      GlobalAlias *GAlias = GlobalAlias::create(NewTy->getElementType(I * 2), 0,
-                                                GV->getLinkage(), "",
-                                                CombinedGlobalElemPtr, &M);
-      GAlias->setVisibility(GV->getVisibility());
-      GAlias->takeName(GV);
-      GV->replaceAllUsesWith(GAlias);
-    }
+    assert(GV->getType()->getAddressSpace() == 0);
+    GlobalAlias *GAlias =
+        GlobalAlias::create(NewTy->getElementType(I * 2), 0, GV->getLinkage(),
+                            "", CombinedGlobalElemPtr, &M);
+    GAlias->setVisibility(GV->getVisibility());
+    GAlias->takeName(GV);
+    GV->replaceAllUsesWith(GAlias);
     GV->eraseFromParent();
   }
 }
@@ -1183,8 +1174,7 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsNative(
             ArrayRef<Constant *>{ConstantInt::get(IntPtrTy, 0),
                                  ConstantInt::get(IntPtrTy, I)}),
         F->getType());
-    if (LinkerSubsectionsViaSymbols || F->isDeclarationForLinker()) {
-
+    if (F->isDeclarationForLinker()) {
       if (F->isWeakForLinker())
         replaceWeakDeclarationWithJumpTablePtr(F, CombinedGlobalElemPtr);
       else
@@ -1319,7 +1309,6 @@ LowerTypeTestsModule::LowerTypeTestsModule(
     : M(M), ExportSummary(ExportSummary), ImportSummary(ImportSummary) {
   assert(!(ExportSummary && ImportSummary));
   Triple TargetTriple(M.getTargetTriple());
-  LinkerSubsectionsViaSymbols = TargetTriple.isMacOSX();
   Arch = TargetTriple.getArch();
   OS = TargetTriple.getOS();
   ObjectFormat = TargetTriple.getObjectFormat();

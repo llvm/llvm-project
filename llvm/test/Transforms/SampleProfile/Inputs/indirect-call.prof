@@ -17,3 +17,6 @@ test_inline_strip:3000:0
 test_inline_strip_conflict:3000:0
  1: foo_inline_strip_conflict:3000
   1: 3000
+test_norecursive_inline:3000:0
+ 1: test_norecursive_inline:3000
+  20: 3000

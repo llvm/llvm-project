@@ -5,7 +5,7 @@ target triple = "aarch64"
 
 ; CHECK-LABEL: @add_a(
 ; CHECK: load <16 x i8>, <16 x i8>*
-; CHECK: add nuw nsw <16 x i8>
+; CHECK: add <16 x i8>
 ; CHECK: store <16 x i8>
 ; Function Attrs: nounwind
 define void @add_a(i8* noalias nocapture readonly %p, i8* noalias nocapture %q, i32 %len) #0 {
@@ -31,9 +31,37 @@ for.body:                                         ; preds = %entry, %for.body
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 }
 
+; Ensure that we preserve nuw/nsw if we're not shrinking the values we're
+; working with.
+; CHECK-LABEL: @add_a1(
+; CHECK: load <16 x i8>, <16 x i8>*
+; CHECK: add nuw nsw <16 x i8>
+; CHECK: store <16 x i8>
+; Function Attrs: nounwind
+define void @add_a1(i8* noalias nocapture readonly %p, i8* noalias nocapture %q, i32 %len) #0 {
+entry:
+  %cmp8 = icmp sgt i32 %len, 0
+  br i1 %cmp8, label %for.body, label %for.cond.cleanup
+
+for.cond.cleanup:                                 ; preds = %for.body, %entry
+  ret void
+
+for.body:                                         ; preds = %entry, %for.body
+  %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds i8, i8* %p, i64 %indvars.iv
+  %0 = load i8, i8* %arrayidx
+  %add = add nuw nsw i8 %0, 2
+  %arrayidx3 = getelementptr inbounds i8, i8* %q, i64 %indvars.iv
+  store i8 %add, i8* %arrayidx3
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %lftr.wideiv = trunc i64 %indvars.iv.next to i32
+  %exitcond = icmp eq i32 %lftr.wideiv, %len
+  br i1 %exitcond, label %for.cond.cleanup, label %for.body
+}
+
 ; CHECK-LABEL: @add_b(
 ; CHECK: load <8 x i16>, <8 x i16>*
-; CHECK: add nuw nsw <8 x i16>
+; CHECK: add <8 x i16>
 ; CHECK: store <8 x i16>
 ; Function Attrs: nounwind
 define void @add_b(i16* noalias nocapture readonly %p, i16* noalias nocapture %q, i32 %len) #0 {
@@ -61,7 +89,7 @@ for.body:                                         ; preds = %entry, %for.body
 
 ; CHECK-LABEL: @add_c(
 ; CHECK: load <8 x i8>, <8 x i8>*
-; CHECK: add nuw nsw <8 x i16>
+; CHECK: add <8 x i16>
 ; CHECK: store <8 x i16>
 ; Function Attrs: nounwind
 define void @add_c(i8* noalias nocapture readonly %p, i16* noalias nocapture %q, i32 %len) #0 {
@@ -116,12 +144,12 @@ for.body:                                         ; preds = %entry, %for.body
 ; CHECK-LABEL: @add_e(
 ; CHECK: load <16 x i8>
 ; CHECK: shl <16 x i8>
-; CHECK: add nuw nsw <16 x i8>
+; CHECK: add <16 x i8>
 ; CHECK: or <16 x i8>
-; CHECK: mul nuw nsw <16 x i8>
+; CHECK: mul <16 x i8>
 ; CHECK: and <16 x i8>
 ; CHECK: xor <16 x i8>
-; CHECK: mul nuw nsw <16 x i8>
+; CHECK: mul <16 x i8>
 ; CHECK: store <16 x i8>
 define void @add_e(i8* noalias nocapture readonly %p, i8* noalias nocapture %q, i8 %arg1, i8 %arg2, i32 %len) #0 {
 entry:
@@ -162,12 +190,12 @@ for.body:                                         ; preds = %for.body, %for.body
 ; CHECK: load <8 x i16>
 ; CHECK: trunc <8 x i16>
 ; CHECK: shl <8 x i8>
-; CHECK: add nsw <8 x i8>
+; CHECK: add <8 x i8>
 ; CHECK: or <8 x i8>
-; CHECK: mul nuw nsw <8 x i8>
+; CHECK: mul <8 x i8>
 ; CHECK: and <8 x i8>
 ; CHECK: xor <8 x i8>
-; CHECK: mul nuw nsw <8 x i8>
+; CHECK: mul <8 x i8>
 ; CHECK: store <8 x i8>
 define void @add_f(i16* noalias nocapture readonly %p, i8* noalias nocapture %q, i8 %arg1, i8 %arg2, i32 %len) #0 {
 entry:

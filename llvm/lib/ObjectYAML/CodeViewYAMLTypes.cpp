@@ -20,6 +20,7 @@
 #include "llvm/DebugInfo/CodeView/EnumTables.h"
 #include "llvm/DebugInfo/CodeView/TypeDeserializer.h"
 #include "llvm/DebugInfo/CodeView/TypeTableBuilder.h"
+#include "llvm/Support/BinaryStreamWriter.h"
 
 using namespace llvm;
 using namespace llvm::codeview;
@@ -66,7 +67,7 @@ struct LeafRecordBase {
 
   virtual ~LeafRecordBase() {}
   virtual void map(yaml::IO &io) = 0;
-  virtual CVType toCodeViewRecord(BumpPtrAllocator &Allocator) const = 0;
+  virtual CVType toCodeViewRecord(TypeTableBuilder &TTB) const = 0;
   virtual Error fromCodeViewRecord(CVType Type) = 0;
 };
 
@@ -80,10 +81,9 @@ template <typename T> struct LeafRecordImpl : public LeafRecordBase {
     return TypeDeserializer::deserializeAs<T>(Type, Record);
   }
 
-  CVType toCodeViewRecord(BumpPtrAllocator &Allocator) const override {
-    TypeTableBuilder Table(Allocator);
-    Table.writeKnownType(Record);
-    return CVType(Kind, Table.records().front());
+  CVType toCodeViewRecord(TypeTableBuilder &TTB) const override {
+    TTB.writeKnownType(Record);
+    return CVType(Kind, TTB.records().back());
   }
 
   mutable T Record;
@@ -93,7 +93,7 @@ template <> struct LeafRecordImpl<FieldListRecord> : public LeafRecordBase {
   explicit LeafRecordImpl(TypeLeafKind K) : LeafRecordBase(K) {}
 
   void map(yaml::IO &io) override;
-  CVType toCodeViewRecord(BumpPtrAllocator &Allocator) const override;
+  CVType toCodeViewRecord(TypeTableBuilder &TTB) const override;
   Error fromCodeViewRecord(CVType Type) override;
 
   std::vector<MemberRecord> Members;
@@ -440,16 +440,15 @@ Error LeafRecordImpl<FieldListRecord>::fromCodeViewRecord(CVType Type) {
   return visitMemberRecordStream(Type.content(), V);
 }
 
-CVType LeafRecordImpl<FieldListRecord>::toCodeViewRecord(
-    BumpPtrAllocator &Allocator) const {
-  TypeTableBuilder TTB(Allocator);
+CVType
+LeafRecordImpl<FieldListRecord>::toCodeViewRecord(TypeTableBuilder &TTB) const {
   FieldListRecordBuilder FLRB(TTB);
   FLRB.begin();
   for (const auto &Member : Members) {
     Member.Member->writeTo(FLRB);
   }
   FLRB.end(true);
-  return CVType(Kind, TTB.records().front());
+  return CVType(Kind, TTB.records().back());
 }
 
 void MappingTraits<OneMethodRecord>::mapping(IO &io, OneMethodRecord &Record) {
@@ -634,8 +633,13 @@ Expected<LeafRecord> LeafRecord::fromCodeViewRecord(CVType Type) {
   return make_error<CodeViewError>(cv_error_code::corrupt_record);
 }
 
-CVType LeafRecord::toCodeViewRecord(BumpPtrAllocator &Allocator) const {
-  return Leaf->toCodeViewRecord(Allocator);
+CVType LeafRecord::toCodeViewRecord(BumpPtrAllocator &Alloc) const {
+  TypeTableBuilder TTB(Alloc);
+  return Leaf->toCodeViewRecord(TTB);
+}
+
+CVType LeafRecord::toCodeViewRecord(TypeTableBuilder &TTB) const {
+  return Leaf->toCodeViewRecord(TTB);
 }
 
 namespace llvm {

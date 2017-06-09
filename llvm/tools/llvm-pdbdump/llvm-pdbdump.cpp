@@ -269,7 +269,6 @@ namespace raw {
 
 cl::OptionCategory MsfOptions("MSF Container Options");
 cl::OptionCategory TypeOptions("Type Record Options");
-cl::OptionCategory FileOptions("Module & File Options");
 cl::OptionCategory SymbolOptions("Symbol Options");
 cl::OptionCategory MiscOptions("Miscellaneous Options");
 
@@ -323,20 +322,9 @@ cl::opt<bool> DumpIpiRecordBytes(
     cl::desc("dump CodeView type record raw bytes from IPI stream"),
     cl::cat(TypeOptions), cl::sub(RawSubcommand));
 
-// MODULE & FILE OPTIONS
-cl::opt<bool> DumpModules("modules", cl::desc("dump compiland information"),
-                          cl::cat(FileOptions), cl::sub(RawSubcommand));
-cl::opt<bool> DumpModuleFiles("module-files", cl::desc("dump file information"),
-                              cl::cat(FileOptions), cl::sub(RawSubcommand));
-cl::opt<bool> DumpLineInfo("line-info",
-                           cl::desc("dump file and line information"),
-                           cl::cat(FileOptions), cl::sub(RawSubcommand));
-
 // SYMBOL OPTIONS
 cl::opt<bool> DumpGlobals("globals", cl::desc("dump globals stream data"),
                           cl::cat(SymbolOptions), cl::sub(RawSubcommand));
-cl::opt<bool> DumpModuleSyms("module-syms", cl::desc("dump module symbols"),
-                             cl::cat(SymbolOptions), cl::sub(RawSubcommand));
 cl::opt<bool> DumpPublics("publics", cl::desc("dump Publics stream data"),
                           cl::cat(SymbolOptions), cl::sub(RawSubcommand));
 cl::opt<bool>
@@ -381,11 +369,9 @@ namespace pdb2yaml {
 cl::opt<bool> All("all",
                   cl::desc("Dump everything we know how to dump."),
                   cl::sub(PdbToYamlSubcommand), cl::init(false));
-cl::opt<bool>
-    NoFileHeaders("no-file-headers",
-                  cl::desc("Do not dump MSF file headers (you will not be able "
-                           "to generate a fresh PDB from the resulting YAML)"),
-                  cl::sub(PdbToYamlSubcommand), cl::init(false));
+cl::opt<bool> NoFileHeaders("no-file-headers",
+                            cl::desc("Do not dump MSF file headers"),
+                            cl::sub(PdbToYamlSubcommand), cl::init(false));
 cl::opt<bool> Minimal("minimal",
                       cl::desc("Don't write fields with default values"),
                       cl::sub(PdbToYamlSubcommand), cl::init(false));
@@ -406,29 +392,8 @@ cl::opt<bool> StringTable("string-table", cl::desc("Dump the PDB String Table"),
                           cl::sub(PdbToYamlSubcommand), cl::init(false));
 
 cl::opt<bool> DbiStream("dbi-stream",
-                        cl::desc("Dump the DBI Stream (Stream 2)"),
+                        cl::desc("Dump the DBI Stream Headers (Stream 2)"),
                         cl::sub(PdbToYamlSubcommand), cl::init(false));
-cl::opt<bool>
-    DbiModuleInfo("dbi-module-info",
-                  cl::desc("Dump DBI Module Information (implies -dbi-stream)"),
-                  cl::sub(PdbToYamlSubcommand), cl::init(false));
-
-cl::opt<bool> DbiModuleSyms(
-    "dbi-module-syms",
-    cl::desc("Dump DBI Module Information (implies -dbi-module-info)"),
-    cl::sub(PdbToYamlSubcommand), cl::init(false));
-
-cl::opt<bool> DbiModuleSourceFileInfo(
-    "dbi-module-source-info",
-    cl::desc(
-        "Dump DBI Module Source File Information (implies -dbi-module-info)"),
-    cl::sub(PdbToYamlSubcommand), cl::init(false));
-
-cl::opt<bool>
-    DbiModuleSourceLineInfo("dbi-module-lines",
-                            cl::desc("Dump DBI Module Source Line Information "
-                                     "(implies -dbi-module-source-info)"),
-                            cl::sub(PdbToYamlSubcommand), cl::init(false));
 
 cl::opt<bool> TpiStream("tpi-stream",
                         cl::desc("Dump the TPI Stream (Stream 3)"),
@@ -442,6 +407,49 @@ cl::list<std::string> InputFilename(cl::Positional,
                                     cl::desc("<input PDB file>"), cl::Required,
                                     cl::sub(PdbToYamlSubcommand));
 }
+
+namespace shared {
+cl::OptionCategory FileOptions("Module & File Options");
+
+// MODULE & FILE OPTIONS
+cl::opt<bool> DumpModules("modules", cl::desc("dump compiland information"),
+                          cl::cat(FileOptions), cl::sub(RawSubcommand),
+                          cl::sub(PdbToYamlSubcommand));
+cl::opt<bool> DumpModuleFiles("module-files", cl::desc("dump file information"),
+                              cl::cat(FileOptions), cl::sub(RawSubcommand),
+                              cl::sub(PdbToYamlSubcommand));
+cl::list<ModuleSubsection> DumpModuleSubsections(
+    "subsections", cl::ZeroOrMore, cl::CommaSeparated,
+    cl::desc("dump subsections from each module's debug stream"),
+    cl::values(
+        clEnumValN(
+            ModuleSubsection::CrossScopeExports, "cme",
+            "Cross module exports (DEBUG_S_CROSSSCOPEEXPORTS subsection)"),
+        clEnumValN(
+            ModuleSubsection::CrossScopeImports, "cmi",
+            "Cross module imports (DEBUG_S_CROSSSCOPEIMPORTS subsection)"),
+        clEnumValN(ModuleSubsection::FileChecksums, "fc",
+                   "File checksums (DEBUG_S_CHECKSUMS subsection)"),
+        clEnumValN(ModuleSubsection::InlineeLines, "ilines",
+                   "Inlinee lines (DEBUG_S_INLINEELINES subsection)"),
+        clEnumValN(ModuleSubsection::Lines, "lines",
+                   "Lines (DEBUG_S_LINES subsection)"),
+        clEnumValN(ModuleSubsection::StringTable, "strings",
+                   "String Table (DEBUG_S_STRINGTABLE subsection) (not "
+                   "typically present in PDB file)"),
+        clEnumValN(ModuleSubsection::FrameData, "frames",
+                   "Frame Data (DEBUG_S_FRAMEDATA subsection)"),
+        clEnumValN(ModuleSubsection::Symbols, "symbols",
+                   "Symbols (DEBUG_S_SYMBOLS subsection) (not typically "
+                   "present in PDB file)"),
+        clEnumValN(ModuleSubsection::Unknown, "unknown",
+                   "Any subsection not covered by another option"),
+        clEnumValN(ModuleSubsection::All, "all", "All known subsections")),
+    cl::cat(FileOptions), cl::sub(RawSubcommand), cl::sub(PdbToYamlSubcommand));
+cl::opt<bool> DumpModuleSyms("module-syms", cl::desc("dump module symbols"),
+                             cl::cat(FileOptions), cl::sub(RawSubcommand),
+                             cl::sub(PdbToYamlSubcommand));
+} // namespace shared
 
 namespace analyze {
 cl::opt<bool> StringTable("hash-collisions", cl::desc("Find hash collisions"),
@@ -462,6 +470,13 @@ cl::opt<std::string>
 }
 
 static ExitOnError ExitOnErr;
+
+bool opts::checkModuleSubsection(opts::ModuleSubsection MS) {
+  return any_of(opts::shared::DumpModuleSubsections,
+                [=](opts::ModuleSubsection M) {
+                  return M == MS || M == opts::ModuleSubsection::All;
+                });
+}
 
 static void yamlToPdb(StringRef Path) {
   BumpPtrAllocator Allocator;
@@ -540,8 +555,8 @@ static void yamlToPdb(StringRef Path) {
       }
     }
 
-    auto CodeViewSubsections =
-        ExitOnErr(CodeViewYAML::convertSubsectionList(MI.Subsections, Strings));
+    auto CodeViewSubsections = ExitOnErr(CodeViewYAML::toCodeViewSubsectionList(
+        Allocator, MI.Subsections, Strings));
     for (auto &SS : CodeViewSubsections) {
       ModiBuilder.addDebugSubsection(std::move(SS));
     }
@@ -879,12 +894,29 @@ int main(int argc_, const char *argv_[]) {
     }
   }
 
+  if ((opts::RawSubcommand && opts::raw::RawAll) ||
+      (opts::PdbToYamlSubcommand && opts::pdb2yaml::All)) {
+    opts::shared::DumpModules = true;
+    opts::shared::DumpModuleFiles = true;
+    opts::shared::DumpModuleSyms = true;
+    opts::shared::DumpModuleSubsections.push_back(opts::ModuleSubsection::All);
+    if (llvm::is_contained(opts::shared::DumpModuleSubsections,
+                           opts::ModuleSubsection::All)) {
+      opts::shared::DumpModuleSubsections.reset();
+      opts::shared::DumpModuleSubsections.push_back(
+          opts::ModuleSubsection::All);
+    }
+  }
+
+  if (opts::shared::DumpModuleSyms || opts::shared::DumpModuleFiles)
+    opts::shared::DumpModules = true;
+
+  if (opts::shared::DumpModules)
+    opts::pdb2yaml::DbiStream = true;
+
   if (opts::RawSubcommand) {
     if (opts::raw::RawAll) {
       opts::raw::DumpHeaders = true;
-      opts::raw::DumpModules = true;
-      opts::raw::DumpModuleFiles = true;
-      opts::raw::DumpModuleSyms = true;
       opts::raw::DumpGlobals = true;
       opts::raw::DumpPublics = true;
       opts::raw::DumpSectionHeaders = true;
@@ -896,7 +928,6 @@ int main(int argc_, const char *argv_[]) {
       opts::raw::DumpIpiRecords = true;
       opts::raw::DumpSectionMap = true;
       opts::raw::DumpSectionContribs = true;
-      opts::raw::DumpLineInfo = true;
       opts::raw::DumpFpo = true;
       opts::raw::DumpStringTable = true;
     }
@@ -906,6 +937,17 @@ int main(int argc_, const char *argv_[]) {
       errs() << "-compact-records is incompatible with -tpi-record-bytes and "
                 "-ipi-record-bytes.\n";
       exit(1);
+    }
+  }
+  if (opts::PdbToYamlSubcommand) {
+    if (opts::pdb2yaml::All) {
+      opts::pdb2yaml::StreamMetadata = true;
+      opts::pdb2yaml::StreamDirectory = true;
+      opts::pdb2yaml::PdbStream = true;
+      opts::pdb2yaml::StringTable = true;
+      opts::pdb2yaml::DbiStream = true;
+      opts::pdb2yaml::TpiStream = true;
+      opts::pdb2yaml::IpiStream = true;
     }
   }
 

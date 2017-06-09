@@ -1092,10 +1092,10 @@ public:
   ///            \----------------v-------------/  \----------v------------/
   ///                            n/2 elements               n/2 elements
   /// %red1 = op <n x t> %val, <n x t> val1
-  /// After this operation we have a vector %red1 with only maningfull the
-  /// first n/2 elements, the second n/2 elements are undefined and can be
+  /// After this operation we have a vector %red1 where only the first n/2
+  /// elements are meaningful, the second n/2 elements are undefined and can be
   /// dropped. All other operations are actually working with the vector of
-  /// length n/2, not n. though the real vector length is still n.
+  /// length n/2, not n, though the real vector length is still n.
   /// %val2 = shufflevector<n x t> %red1, <n x t> %undef,
   /// <n x i32> <i32 n/4, i32 n/4 + 1, ..., i32 n/2, i32 undef, ..., i32 undef>
   ///            \----------------v-------------/  \----------v------------/

@@ -209,7 +209,10 @@ def V_DIV_SCALE_F64 : VOP3_Pseudo <"v_div_scale_f64", VOP3b_F64_I1_F64_F64_F64, 
 }
 
 def V_MSAD_U8 : VOP3Inst <"v_msad_u8", VOP3_Profile<VOP_I32_I32_I32_I32>, int_amdgcn_msad_u8>;
+
+let Constraints = "@earlyclobber $vdst" in {
 def V_MQSAD_PK_U16_U8 : VOP3Inst <"v_mqsad_pk_u16_u8", VOP3_Profile<VOP_I64_I64_I32_I64>, int_amdgcn_mqsad_pk_u16_u8>;
+} // End Constraints = "@earlyclobber $vdst"
 
 def V_TRIG_PREOP_F64 : VOP3Inst <"v_trig_preop_f64", VOP3_Profile<VOP_F64_F64_I32>, AMDGPUtrig_preop> {
   let SchedRW = [WriteDouble];
@@ -232,8 +235,10 @@ def V_ASHRREV_I64 : VOP3Inst <"v_ashrrev_i64", VOP3_Profile<VOP_I64_I32_I64>>;
 
 let SubtargetPredicate = isCIVI in {
 
+let Constraints = "@earlyclobber $vdst" in {
 def V_QSAD_PK_U16_U8 : VOP3Inst <"v_qsad_pk_u16_u8", VOP3_Profile<VOP_I64_I64_I32_I64>, int_amdgcn_qsad_pk_u16_u8>;
 def V_MQSAD_U32_U8 : VOP3Inst <"v_mqsad_u32_u8", VOP3_Profile<VOP_V4I32_I64_I32_V4I32>, int_amdgcn_mqsad_u32_u8>;
+} // End Constraints = "@earlyclobber $vdst"
 
 let isCommutable = 1 in {
 def V_MAD_U64_U32 : VOP3Inst <"v_mad_u64_u32", VOP3b_I64_I1_I32_I32_I64>;
