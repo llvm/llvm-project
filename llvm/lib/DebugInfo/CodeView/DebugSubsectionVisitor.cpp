@@ -17,6 +17,7 @@
 #include "llvm/DebugInfo/CodeView/DebugLinesSubsection.h"
 #include "llvm/DebugInfo/CodeView/DebugStringTableSubsection.h"
 #include "llvm/DebugInfo/CodeView/DebugSubsectionRecord.h"
+#include "llvm/DebugInfo/CodeView/DebugSymbolRVASubsection.h"
 #include "llvm/DebugInfo/CodeView/DebugSymbolsSubsection.h"
 #include "llvm/DebugInfo/CodeView/DebugUnknownSubsection.h"
 #include "llvm/Support/BinaryStreamReader.h"
@@ -110,6 +111,12 @@ Error llvm::codeview::visitDebugSubsection(const DebugSubsectionRecord &R,
     if (auto EC = Section.initialize(Reader))
       return EC;
     return V.visitFrameData(Section, State);
+  }
+  case DebugSubsectionKind::CoffSymbolRVA: {
+    DebugSymbolRVASubsectionRef Section;
+    if (auto EC = Section.initialize(Reader))
+      return EC;
+    return V.visitCOFFSymbolRVAs(Section, State);
   }
   default: {
     DebugUnknownSubsectionRef Fragment(R.kind(), R.getRecordData());

@@ -1,8 +1,8 @@
-; RUN: llvm-pdbdump raw -stream-data=8 %p/Inputs/LoadAddressTest.pdb \
+; RUN: llvm-pdbutil raw -stream-data=8 %p/Inputs/LoadAddressTest.pdb \
 ; RUN:   | FileCheck %s -check-prefix=FULL_STREAM
-; RUN: llvm-pdbdump raw -stream-data=8:4 %p/Inputs/LoadAddressTest.pdb \
+; RUN: llvm-pdbutil raw -stream-data=8:4 %p/Inputs/LoadAddressTest.pdb \
 ; RUN:   | FileCheck %s -check-prefix=OFFSET_STREAM
-; RUN: llvm-pdbdump raw -stream-data=8:4@24 %p/Inputs/LoadAddressTest.pdb \
+; RUN: llvm-pdbutil raw -stream-data=8:4@24 %p/Inputs/LoadAddressTest.pdb \
 ; RUN:   | FileCheck %s -check-prefix=OFFSET_AND_LENGTH
 
 FULL_STREAM:      Stream Data {

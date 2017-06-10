@@ -537,7 +537,17 @@ void X86TargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
     write16le(Loc, Val);
     break;
   case R_386_PC16:
-    checkInt<16>(Loc, Val, Type);
+    // R_386_PC16 is normally used with 16 bit code. In that situation
+    // the PC is 16 bits, just like the addend. This means that it can
+    // point from any 16 bit address to any other if the possibility
+    // of wrapping is included.
+    // The only restriction we have to check then is that the destination
+    // address fits in 16 bits. That is impossible to do here. The problem is
+    // that we are passed the final value, which already had the
+    // current location subtracted from it.
+    // We just check that Val fits in 17 bits. This misses some cases, but
+    // should have no false positives.
+    checkInt<17>(Loc, Val, Type);
     write16le(Loc, Val);
     break;
   default:

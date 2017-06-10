@@ -62,10 +62,8 @@ private:
 } // namespace codeview
 
 template <> struct VarStreamArrayExtractor<codeview::DebugSubsectionRecord> {
-  typedef void ContextType;
-
-  static Error extract(BinaryStreamRef Stream, uint32_t &Length,
-                       codeview::DebugSubsectionRecord &Info) {
+  Error operator()(BinaryStreamRef Stream, uint32_t &Length,
+                   codeview::DebugSubsectionRecord &Info) {
     if (auto EC = codeview::DebugSubsectionRecord::initialize(
             Stream, Info, codeview::CodeViewContainer::Pdb))
       return EC;

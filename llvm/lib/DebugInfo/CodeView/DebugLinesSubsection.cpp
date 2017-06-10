@@ -17,9 +17,8 @@
 using namespace llvm;
 using namespace llvm::codeview;
 
-Error LineColumnExtractor::extract(BinaryStreamRef Stream, uint32_t &Len,
-                                   LineColumnEntry &Item,
-                                   const LineFragmentHeader *Header) {
+Error LineColumnExtractor::operator()(BinaryStreamRef Stream, uint32_t &Len,
+                                      LineColumnEntry &Item) {
   using namespace codeview;
   const LineBlockFragmentHeader *BlockHeader;
   BinaryStreamReader Reader(Stream);
@@ -56,8 +55,8 @@ Error DebugLinesSubsectionRef::initialize(BinaryStreamReader Reader) {
   if (auto EC = Reader.readObject(Header))
     return EC;
 
-  if (auto EC =
-          Reader.readArray(LinesAndColumns, Reader.bytesRemaining(), Header))
+  LinesAndColumns.getExtractor().Header = Header;
+  if (auto EC = Reader.readArray(LinesAndColumns, Reader.bytesRemaining()))
     return EC;
 
   return Error::success();

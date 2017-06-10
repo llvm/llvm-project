@@ -27,6 +27,7 @@ class DebugCrossModuleImportsSubsectionRef;
 class DebugFrameDataSubsectionRef;
 class DebugLinesSubsectionRef;
 class DebugStringTableSubsectionRef;
+class DebugSymbolRVASubsectionRef;
 class DebugSymbolsSubsectionRef;
 class DebugUnknownSubsectionRef;
 
@@ -108,6 +109,8 @@ public:
 
   virtual Error visitFrameData(DebugFrameDataSubsectionRef &FD,
                                const DebugSubsectionState &State) = 0;
+  virtual Error visitCOFFSymbolRVAs(DebugSymbolRVASubsectionRef &RVAs,
+                                    const DebugSubsectionState &State) = 0;
 };
 
 Error visitDebugSubsection(const DebugSubsectionRecord &R,

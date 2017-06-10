@@ -1,4 +1,4 @@
-; RUN: llvm-pdbdump pretty -classes -class-definitions=layout \
+; RUN: llvm-pdbutil pretty -classes -class-definitions=layout \
 ; RUN:     -include-types=SimplePad %p/Inputs/SimplePaddingTest.pdb > %t
 
 ; RUN: FileCheck -input-file=%t %s -check-prefix=NO_PADDING

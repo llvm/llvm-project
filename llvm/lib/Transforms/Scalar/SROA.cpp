@@ -3626,10 +3626,12 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
         auto *PartPtrTy =
             PLoad->getType()->getPointerTo(SI->getPointerAddressSpace());
 
+        auto AS = SI->getPointerAddressSpace();
         StoreInst *PStore = IRB.CreateAlignedStore(
-            PLoad, getAdjustedPtr(IRB, DL, StoreBasePtr,
-                                  APInt(DL.getPointerSizeInBits(), PartOffset),
-                                  PartPtrTy, StoreBasePtr->getName() + "."),
+            PLoad,
+            getAdjustedPtr(IRB, DL, StoreBasePtr,
+                           APInt(DL.getPointerSizeInBits(AS), PartOffset),
+                           PartPtrTy, StoreBasePtr->getName() + "."),
             getAdjustedAlignment(SI, PartOffset, DL), /*IsVolatile*/ false);
         PStore->copyMetadata(*LI, LLVMContext::MD_mem_parallel_loop_access);
         DEBUG(dbgs() << "      +" << PartOffset << ":" << *PStore << "\n");
@@ -3707,9 +3709,10 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
         PLoad = (*SplitLoads)[Idx];
       } else {
         IRB.SetInsertPoint(LI);
+        auto AS = LI->getPointerAddressSpace();
         PLoad = IRB.CreateAlignedLoad(
             getAdjustedPtr(IRB, DL, LoadBasePtr,
-                           APInt(DL.getPointerSizeInBits(), PartOffset),
+                           APInt(DL.getPointerSizeInBits(AS), PartOffset),
                            LoadPartPtrTy, LoadBasePtr->getName() + "."),
             getAdjustedAlignment(LI, PartOffset, DL), /*IsVolatile*/ false,
             LI->getName());
@@ -3717,10 +3720,12 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
 
       // And store this partition.
       IRB.SetInsertPoint(SI);
+      auto AS = SI->getPointerAddressSpace();
       StoreInst *PStore = IRB.CreateAlignedStore(
-          PLoad, getAdjustedPtr(IRB, DL, StoreBasePtr,
-                                APInt(DL.getPointerSizeInBits(), PartOffset),
-                                StorePartPtrTy, StoreBasePtr->getName() + "."),
+          PLoad,
+          getAdjustedPtr(IRB, DL, StoreBasePtr,
+                         APInt(DL.getPointerSizeInBits(AS), PartOffset),
+                         StorePartPtrTy, StoreBasePtr->getName() + "."),
           getAdjustedAlignment(SI, PartOffset, DL), /*IsVolatile*/ false);
 
       // Now build a new slice for the alloca.

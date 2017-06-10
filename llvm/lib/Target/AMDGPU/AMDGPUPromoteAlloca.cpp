@@ -319,15 +319,17 @@ static bool canVectorizeInst(Instruction *Inst, User *User) {
   switch (Inst->getOpcode()) {
   case Instruction::Load: {
     LoadInst *LI = cast<LoadInst>(Inst);
-    return !LI->isVolatile();
+    // Currently only handle the case where the Pointer Operand is a GEP so check for that case.
+    return isa<GetElementPtrInst>(LI->getPointerOperand()) && !LI->isVolatile();
   }
   case Instruction::BitCast:
   case Instruction::AddrSpaceCast:
     return true;
   case Instruction::Store: {
-    // Must be the stored pointer operand, not a stored value.
+    // Must be the stored pointer operand, not a stored value, plus
+    // since it should be canonical form, the User should be a GEP.
     StoreInst *SI = cast<StoreInst>(Inst);
-    return (SI->getPointerOperand() == User) && !SI->isVolatile();
+    return (SI->getPointerOperand() == User) && isa<GetElementPtrInst>(User) && !SI->isVolatile();
   }
   default:
     return false;
@@ -341,8 +343,11 @@ static bool tryPromoteAllocaToVector(AllocaInst *Alloca, AMDGPUAS AS) {
 
   // FIXME: There is no reason why we can't support larger arrays, we
   // are just being conservative for now.
+  // FIXME: We also reject alloca's of the form [ 2 x [ 2 x i32 ]] or equivalent. Potentially these
+  // could also be promoted but we don't currently handle this case
   if (!AllocaTy ||
       AllocaTy->getElementType()->isVectorTy() ||
+      AllocaTy->getElementType()->isArrayTy() ||
       AllocaTy->getNumElements() > 4 ||
       AllocaTy->getNumElements() < 2) {
     DEBUG(dbgs() << "  Cannot convert type to vector\n");
@@ -390,7 +395,7 @@ static bool tryPromoteAllocaToVector(AllocaInst *Alloca, AMDGPUAS AS) {
     switch (Inst->getOpcode()) {
     case Instruction::Load: {
       Type *VecPtrTy = VectorTy->getPointerTo(AS.PRIVATE_ADDRESS);
-      Value *Ptr = Inst->getOperand(0);
+      Value *Ptr = cast<LoadInst>(Inst)->getPointerOperand();
       Value *Index = calculateVectorIndex(Ptr, GEPVectorIdx);
 
       Value *BitCast = Builder.CreateBitCast(Alloca, VecPtrTy);
@@ -403,12 +408,13 @@ static bool tryPromoteAllocaToVector(AllocaInst *Alloca, AMDGPUAS AS) {
     case Instruction::Store: {
       Type *VecPtrTy = VectorTy->getPointerTo(AS.PRIVATE_ADDRESS);
 
-      Value *Ptr = Inst->getOperand(1);
+      StoreInst *SI = cast<StoreInst>(Inst);
+      Value *Ptr = SI->getPointerOperand();
       Value *Index = calculateVectorIndex(Ptr, GEPVectorIdx);
       Value *BitCast = Builder.CreateBitCast(Alloca, VecPtrTy);
       Value *VecValue = Builder.CreateLoad(BitCast);
       Value *NewVecValue = Builder.CreateInsertElement(VecValue,
-                                                       Inst->getOperand(0),
+                                                       SI->getValueOperand(),
                                                        Index);
       Builder.CreateStore(NewVecValue, BitCast);
       Inst->eraseFromParent();

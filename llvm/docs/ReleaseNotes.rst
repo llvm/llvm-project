@@ -50,6 +50,10 @@ Non-comprehensive list of changes in this release
   structure and type definitions for DWARF, ELF, COFF, WASM, and MachO file
   formats.
   
+* The tool ``llvm-pdbdump`` has been renamed ``llvm-pdbutil`` to better reflect
+  its nature as a general purpose PDB manipulation / diagnostics tool that does
+  more than just dumping contents.
+  
 
 * ... next change ...
 

@@ -439,7 +439,7 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst,
 
       if (Callee->isDeclaration()) {
         // If this is a function we can constant fold, do it.
-        if (Constant *C = ConstantFoldCall(Callee, Formals, TLI)) {
+        if (Constant *C = ConstantFoldCall(CS, Callee, Formals, TLI)) {
           InstResult = C;
           DEBUG(dbgs() << "Constant folded function call. Result: " <<
                 *InstResult << "\n");

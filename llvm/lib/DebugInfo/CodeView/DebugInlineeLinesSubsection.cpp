@@ -17,9 +17,8 @@
 using namespace llvm;
 using namespace llvm::codeview;
 
-Error VarStreamArrayExtractor<InlineeSourceLine>::extract(
-    BinaryStreamRef Stream, uint32_t &Len, InlineeSourceLine &Item,
-    bool HasExtraFiles) {
+Error VarStreamArrayExtractor<InlineeSourceLine>::
+operator()(BinaryStreamRef Stream, uint32_t &Len, InlineeSourceLine &Item) {
   BinaryStreamReader Reader(Stream);
 
   if (auto EC = Reader.readObject(Item.Header))
@@ -44,8 +43,8 @@ Error DebugInlineeLinesSubsectionRef::initialize(BinaryStreamReader Reader) {
   if (auto EC = Reader.readEnum(Signature))
     return EC;
 
-  if (auto EC =
-          Reader.readArray(Lines, Reader.bytesRemaining(), hasExtraFiles()))
+  Lines.getExtractor().HasExtraFiles = hasExtraFiles();
+  if (auto EC = Reader.readArray(Lines, Reader.bytesRemaining()))
     return EC;
 
   assert(Reader.bytesRemaining() == 0);

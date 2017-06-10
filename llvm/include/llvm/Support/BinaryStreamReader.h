@@ -198,25 +198,7 @@ public:
     BinaryStreamRef S;
     if (auto EC = readStreamRef(S, Size))
       return EC;
-    Array = VarStreamArray<T, U>(S);
-    return Error::success();
-  }
-
-  /// Read a VarStreamArray of size \p Size bytes and store the result into
-  /// \p Array.  Updates the stream's offset to point after the newly read
-  /// array.  Never causes a copy (although iterating the elements of the
-  /// VarStreamArray may, depending upon the implementation of the underlying
-  /// stream).
-  ///
-  /// \returns a success error code if the data was successfully read, otherwise
-  /// returns an appropriate error code.
-  template <typename T, typename U, typename ContextType>
-  Error readArray(VarStreamArray<T, U> &Array, uint32_t Size,
-                  ContextType &&Context) {
-    BinaryStreamRef S;
-    if (auto EC = readStreamRef(S, Size))
-      return EC;
-    Array = VarStreamArray<T, U>(S, std::move(Context));
+    Array.setUnderlyingStream(S);
     return Error::success();
   }
 

@@ -1,5 +1,5 @@
-; RUN: llvm-pdbdump raw -stream-data=1 %p/Inputs/empty.pdb | FileCheck --check-prefix=STREAM1 %s
-; RUN: not llvm-pdbdump raw -stream-data=100 %p/Inputs/empty.pdb 2>&1 | FileCheck --check-prefix=INVALIDSTREAM %s
+; RUN: llvm-pdbutil raw -stream-data=1 %p/Inputs/empty.pdb | FileCheck --check-prefix=STREAM1 %s
+; RUN: not llvm-pdbutil raw -stream-data=100 %p/Inputs/empty.pdb 2>&1 | FileCheck --check-prefix=INVALIDSTREAM %s
 
 STREAM1:      Stream Data {
 STREAM1-NEXT:   Stream {

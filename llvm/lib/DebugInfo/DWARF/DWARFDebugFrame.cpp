@@ -585,6 +585,7 @@ void DWARFDebugFrame::parse(DataExtractor Data) {
           switch (AugmentationString[i]) {
             default:
               ReportError("Unknown augmentation character in entry at %lx");
+              llvm_unreachable("ReportError should not return.");
             case 'L':
               LSDAPointerEncoding = Data.getU8(&Offset);
               break;
