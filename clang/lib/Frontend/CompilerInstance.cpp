@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Frontend/CompilerInstance.h"
+#include "clang/APINotes/APINotesReader.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
@@ -631,6 +632,27 @@ void CompilerInstance::createSema(TranslationUnitKind TUKind,
                                   CodeCompleteConsumer *CompletionConsumer) {
   TheSema.reset(new Sema(getPreprocessor(), getASTContext(), getASTConsumer(),
                          TUKind, CompletionConsumer));
+
+  // Set up API notes.
+  TheSema->APINotes.setSwiftVersion(getAPINotesOpts().SwiftVersion);
+
+  // If we're building a module and are supposed to load API notes,
+  // notify the API notes manager.
+  if (auto currentModule = getPreprocessor().getCurrentModule()) {
+    (void)TheSema->APINotes.loadCurrentModuleAPINotes(
+            currentModule,
+            getLangOpts().APINotesModules,
+            getAPINotesOpts().ModuleSearchPaths);
+    // Check for any attributes we should add to the module
+    for (auto reader : TheSema->APINotes.getCurrentModuleReaders()) {
+      // swift_infer_import_as_member
+      if (reader->getModuleOptions().SwiftInferImportAsMember) {
+        currentModule->IsSwiftInferImportAsMember = true;
+        break;
+      }
+    }
+  }
+
   // Attach the external sema source if there is any.
   if (ExternalSemaSrc) {
     TheSema->addExternalSource(ExternalSemaSrc.get());
