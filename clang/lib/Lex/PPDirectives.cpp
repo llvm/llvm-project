@@ -1662,7 +1662,7 @@ bool Preprocessor::checkModuleIsAvailable(const LangOptions &LangOpts,
   Module::UnresolvedHeaderDirective MissingHeader;
   Module *ShadowingModule = nullptr;
   if (M->isAvailable(LangOpts, TargetInfo, Requirement, MissingHeader,
-		     ShadowingModule))
+                     ShadowingModule))
     return false;
 
   if (MissingHeader.FileNameLoc.isValid()) {
