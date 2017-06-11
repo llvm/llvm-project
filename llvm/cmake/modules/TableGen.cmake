@@ -37,7 +37,7 @@ function(tablegen project ofn)
   # https://cmake.org/Bug/view.php?id=15858
   # We could always have just one dependency on both the target and
   # the file, but these 2 cases would produce cleaner cmake files.
-  if (${${project}_TABLEGEN_TARGET} STREQUAL ${${project}_TABLEGEN_EXE})
+  if ("${${project}_TABLEGEN_TARGET}" STREQUAL "${${project}_TABLEGEN_EXE}")
     add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${ofn}.tmp
       # Generate tablegen output in a temporary file.
       COMMAND ${${project}_TABLEGEN_EXE} ${ARGN} -I ${CMAKE_CURRENT_SOURCE_DIR}

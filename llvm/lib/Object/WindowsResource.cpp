@@ -574,8 +574,8 @@ void WindowsResourceCOFFWriter::writeSymbolTable() {
 
 void WindowsResourceCOFFWriter::writeStringTable() {
   // Just 4 null bytes for the string table.
-  auto COFFStringTable = reinterpret_cast<uint32_t *>(Current);
-  *COFFStringTable = 0;
+  auto COFFStringTable = reinterpret_cast<void *>(Current);
+  memset(COFFStringTable, 0, 4);
 }
 
 void WindowsResourceCOFFWriter::writeDirectoryTree() {

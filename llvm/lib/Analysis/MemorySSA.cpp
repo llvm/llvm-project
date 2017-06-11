@@ -1872,7 +1872,6 @@ MemorySSAPrinterLegacyPass::MemorySSAPrinterLegacyPass() : FunctionPass(ID) {
 void MemorySSAPrinterLegacyPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   AU.addRequired<MemorySSAWrapperPass>();
-  AU.addPreserved<MemorySSAWrapperPass>();
 }
 
 bool MemorySSAPrinterLegacyPass::runOnFunction(Function &F) {

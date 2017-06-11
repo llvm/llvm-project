@@ -382,7 +382,7 @@ struct ConstModifier: public Modifier {
       switch (Ran->Rand() % 2) {
       case 0: if (Ty->getScalarType()->isIntegerTy())
                 return PT->push_back(ConstantVector::getAllOnesValue(Ty));
-              llvm_unreachable("Unexpected state");
+              break;
       case 1: if (Ty->getScalarType()->isIntegerTy())
                 return PT->push_back(ConstantVector::getNullValue(Ty));
       }

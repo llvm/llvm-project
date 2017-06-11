@@ -515,6 +515,7 @@ void Util::organizeSections() {
       // Main executables, need a zero-page segment
       segmentForName("__PAGEZERO");
       // Fall into next case.
+      LLVM_FALLTHROUGH;
     case llvm::MachO::MH_DYLIB:
     case llvm::MachO::MH_BUNDLE:
       // All dynamic code needs TEXT segment to hold the load commands.

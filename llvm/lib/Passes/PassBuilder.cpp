@@ -160,6 +160,10 @@ static cl::opt<bool>
               cl::Hidden, cl::ZeroOrMore,
               cl::desc("Run NewGVN instead of GVN"));
 
+static cl::opt<bool> EnableEarlyCSEMemSSA(
+    "enable-npm-earlycse-memssa", cl::init(false), cl::Hidden,
+    cl::desc("Enable the EarlyCSE w/ MemorySSA pass for the new PM (default = off)"));
+
 static cl::opt<bool> EnableGVNHoist(
     "enable-npm-gvn-hoist", cl::init(false), cl::Hidden,
     cl::desc("Enable the GVN hoisting pass for the new PM (default = off)"));
@@ -312,7 +316,7 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   FPM.addPass(SROA());
 
   // Catch trivial redundancies
-  FPM.addPass(EarlyCSEPass());
+  FPM.addPass(EarlyCSEPass(EnableEarlyCSEMemSSA));
 
   // Hoisting of scalars and load expressions.
   if (EnableGVNHoist)
