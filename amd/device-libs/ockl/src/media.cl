@@ -35,15 +35,13 @@ OCKL_MANGLE_U32(bfe)(uint a, uint s, uint w)
 CATTR uint
 OCKL_MANGLE_U32(bitalign)(uint a, uint b, uint c)
 {
-    // TODO check that this results in v_alignbit_b32
-    return (uint)((((ulong)a << 32) | (ulong)b) >> (c & 0x1fU));
+    return __llvm_amdgcn_alignbit(a, b, c);
 }
 
 CATTR uint
 OCKL_MANGLE_U32(bytealign)(uint a, uint b, uint c)
 {
-    // TODO check that this results in v_alignbyte_b32
-    return (uint)((((ulong)a << 32) | (ulong)b) >> ((c & 0x3) * 8));
+    return __llvm_amdgcn_alignbyte(a, b, c);
 }
 
 CATTR uint

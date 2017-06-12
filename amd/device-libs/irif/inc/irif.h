@@ -287,6 +287,9 @@ extern uint __llvm_amdgcn_readlane(uint, uint) __asm("llvm.amdgcn.readlane");
 extern __attribute__((const)) uint __llvm_amdgcn_ubfe_i32(uint, uint, uint) __asm("llvm.amdgcn.ubfe.i32");
 extern __attribute__((const)) int __llvm_amdgcn_sbfe_i32(int, uint, uint) __asm("llvm.amdgcn.sbfe.i32");
 
+extern __attribute__((const)) uint __llvm_amdgcn_alignbit(uint, uint, uint) __asm("llvm.amdgcn.alignbit");
+extern __attribute__((const)) uint __llvm_amdgcn_alignbyte(uint, uint, uint) __asm("llvm.amdgcn.alignbyte");
+
 extern __attribute__((const)) uint __llvm_amdgcn_lerp(uint, uint, uint) __asm("llvm.amdgcn.lerp");
 extern __attribute__((const)) ulong __llvm_amdgcn_mqsad_pk_u16_u8(ulong, uint, ulong) __asm("llvm.amdgcn.mqsad.pk.u16.u8");
 extern __attribute__((const)) uint __llvm_amdgcn_cvt_pk_u8_f32(float, uint, uint) __asm("llvm.amdgcn.cvt.pk.u8.f32");

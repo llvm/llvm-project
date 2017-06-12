@@ -41,7 +41,7 @@
 #define BUILTIN_ABS_F16 __llvm_fabs_f16
 #define BUILTIN_ABS_2F16 __llvm_fabs_2f16
 
-#define BUILTIN_BITALIGN_B32(A,B,C) ((((ulong)(A) << 32) | (ulong)(B)) >> ((C) & 0x1f))
+#define BUILTIN_BITALIGN_B32 __llvm_amdgcn_alignbit
 
 #define BUILTIN_CEIL_F32 __llvm_ceil_f32
 #define BUILTIN_CEIL_F64 __llvm_ceil_f64
