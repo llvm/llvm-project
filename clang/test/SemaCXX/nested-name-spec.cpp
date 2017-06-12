@@ -169,6 +169,13 @@ void N::f() { } // okay
 struct Y;  // expected-note{{forward declaration of 'Y'}}
 Y::foo y; // expected-error{{incomplete type 'Y' named in nested name specifier}}
 
+namespace PR25156 {
+struct Y;  // expected-note{{forward declaration of 'PR25156::Y'}}
+void foo() {
+  Y::~Y(); // expected-error{{incomplete type 'PR25156::Y' named in nested name specifier}}
+}
+}
+
 X::X() : a(5) { } // expected-error{{use of undeclared identifier 'X'}}
 
 struct foo_S {

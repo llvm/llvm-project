@@ -189,12 +189,15 @@ ParsedType Sema::getDestructorName(SourceLocation TildeLoc,
     // have one) and, if that fails to find a match, in the scope (if
     // we're allowed to look there).
     Found.clear();
-    if (Step == 0 && LookupCtx)
+    if (Step == 0 && LookupCtx) {
+      if (RequireCompleteDeclContext(SS, LookupCtx))
+        return nullptr;
       LookupQualifiedName(Found, LookupCtx);
-    else if (Step == 1 && LookInScope && S)
+    } else if (Step == 1 && LookInScope && S) {
       LookupName(Found, S);
-    else
+    } else {
       continue;
+    }
 
     // FIXME: Should we be suppressing ambiguities here?
     if (Found.isAmbiguous())
