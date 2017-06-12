@@ -3,10 +3,10 @@
 # RUN: lld-link /debug /pdb:%t.pdb /dll /out:%t.dll /entry:main /nodefaultlib \
 # RUN:   %t1.obj %t2.obj
 
-# RUN: llvm-pdbdump pdb2yaml -stream-metadata -stream-directory -pdb-stream \
+# RUN: llvm-pdbutil pdb2yaml -stream-metadata -stream-directory -pdb-stream \
 # RUN:   -dbi-stream -ipi-stream -tpi-stream %t.pdb | FileCheck %s
 
-# RUN: llvm-pdbdump raw -modules -section-map -section-headers -section-contribs \
+# RUN: llvm-pdbutil raw -modules -section-map -section-headers -section-contribs \
 # RUN:   -tpi-records %t.pdb | FileCheck -check-prefix RAW %s
 
 # CHECK:      MSF:

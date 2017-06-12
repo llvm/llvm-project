@@ -1,4 +1,4 @@
-; RUN: llvm-pdbdump pdb2yaml -tpi-stream %p/Inputs/empty.pdb \
+; RUN: llvm-pdbutil pdb2yaml -tpi-stream %p/Inputs/empty.pdb \
 ; RUN:   | FileCheck -check-prefix=YAML %s
 
 YAML: ---

@@ -851,6 +851,7 @@ protected:
 
   class NonParmVarDeclBitfields {
     friend class VarDecl;
+    friend class ImplicitParamDecl;
     friend class ASTDeclReader;
 
     unsigned : NumVarDeclBits;
@@ -894,6 +895,10 @@ protected:
     /// declared in the same block scope. This controls whether we should merge
     /// the type of this declaration with its previous declaration.
     unsigned PreviousDeclInSameBlockScope : 1;
+
+    /// Defines kind of the ImplicitParamDecl: 'this', 'self', 'vtt', '_cmd' or
+    /// something else.
+    unsigned ImplicitParamKind : 3;
   };
 
   union {
@@ -1376,20 +1381,50 @@ public:
 
 class ImplicitParamDecl : public VarDecl {
   void anchor() override;
+
 public:
+  /// Defines the kind of the implicit parameter: is this an implicit parameter
+  /// with pointer to 'this', 'self', '_cmd', virtual table pointers, captured
+  /// context or something else.
+  enum ImplicitParamKind : unsigned {
+    ObjCSelf,        /// Parameter for Objective-C 'self' argument
+    ObjCCmd,         /// Parameter for Objective-C '_cmd' argument
+    CXXThis,         /// Parameter for C++ 'this' argument
+    CXXVTT,          /// Parameter for C++ virtual table pointers
+    CapturedContext, /// Parameter for captured context
+    Other,           /// Other implicit parameter
+  };
+
+  /// Create implicit parameter.
   static ImplicitParamDecl *Create(ASTContext &C, DeclContext *DC,
                                    SourceLocation IdLoc, IdentifierInfo *Id,
-                                   QualType T);
+                                   QualType T, ImplicitParamKind ParamKind);
+  static ImplicitParamDecl *Create(ASTContext &C, QualType T,
+                                   ImplicitParamKind ParamKind);
 
   static ImplicitParamDecl *CreateDeserialized(ASTContext &C, unsigned ID);
 
   ImplicitParamDecl(ASTContext &C, DeclContext *DC, SourceLocation IdLoc,
-                    IdentifierInfo *Id, QualType Type)
-    : VarDecl(ImplicitParam, C, DC, IdLoc, IdLoc, Id, Type,
-              /*tinfo*/ nullptr, SC_None) {
+                    IdentifierInfo *Id, QualType Type,
+                    ImplicitParamKind ParamKind)
+      : VarDecl(ImplicitParam, C, DC, IdLoc, IdLoc, Id, Type,
+                /*TInfo=*/nullptr, SC_None) {
+    NonParmVarDeclBits.ImplicitParamKind = ParamKind;
     setImplicit();
   }
 
+  ImplicitParamDecl(ASTContext &C, QualType Type, ImplicitParamKind ParamKind)
+      : VarDecl(ImplicitParam, C, /*DC=*/nullptr, SourceLocation(),
+                SourceLocation(), /*Id=*/nullptr, Type,
+                /*TInfo=*/nullptr, SC_None) {
+    NonParmVarDeclBits.ImplicitParamKind = ParamKind;
+    setImplicit();
+  }
+
+  /// Returns the implicit parameter kind.
+  ImplicitParamKind getParameterKind() const {
+    return static_cast<ImplicitParamKind>(NonParmVarDeclBits.ImplicitParamKind);
+  }
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K == ImplicitParam; }

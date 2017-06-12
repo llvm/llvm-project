@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple %itanium_abi_triple -emit-llvm %s -o %t
+// RUN: %clang_cc1 -triple %itanium_abi_triple -emit-llvm %s -o %t -debug-info-kind=limited
 // RUN: FileCheck %s -input-file=%t -check-prefix=CHECK-GLOBALS
 // RUN: FileCheck %s -input-file=%t -check-prefix=CHECK-1
 // RUN: FileCheck %s -input-file=%t -check-prefix=CHECK-2
@@ -98,3 +98,8 @@ void dont_capture_global() {
 // CHECK-GLOBALS:   load i32, i32* @global
 // CHECK-GLOBALS:   load i32, i32* @
 // CHECK-GLOBALS:   load i32, i32* @e
+
+// CHECK-GLOBALS-NOT: DIFlagObjectPointer
+// CHECK-1-NOT: DIFlagObjectPointer
+// CHECK-2-NOT: DIFlagObjectPointer
+// CHECK-3-NOT: DIFlagObjectPointer

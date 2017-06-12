@@ -646,6 +646,13 @@ struct coff_resource_dir_entry {
   } Offset;
 };
 
+struct coff_resource_data_entry {
+  support::ulittle32_t DataRVA;
+  support::ulittle32_t DataSize;
+  support::ulittle32_t Codepage;
+  support::ulittle32_t Reserved;
+};
+
 struct coff_resource_dir_table {
   support::ulittle32_t Characteristics;
   support::ulittle32_t TimeDateStamp;

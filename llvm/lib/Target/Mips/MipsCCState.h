@@ -45,15 +45,32 @@ private:
                          const char *Func);
 
   /// Identify lowered values that originated from f128 arguments and record
-  /// this.
+  /// this for use by RetCC_MipsN.
   void
   PreAnalyzeFormalArgumentsForF128(const SmallVectorImpl<ISD::InputArg> &Ins);
+
+  void
+  PreAnalyzeCallResultForVectorFloat(const SmallVectorImpl<ISD::InputArg> &Ins,
+                                     const Type *RetTy);
+
+  void PreAnalyzeFormalArgumentsForVectorFloat(
+      const SmallVectorImpl<ISD::InputArg> &Ins);
+
+  void
+  PreAnalyzeReturnForVectorFloat(const SmallVectorImpl<ISD::OutputArg> &Outs);
 
   /// Records whether the value has been lowered from an f128.
   SmallVector<bool, 4> OriginalArgWasF128;
 
   /// Records whether the value has been lowered from float.
   SmallVector<bool, 4> OriginalArgWasFloat;
+
+  /// Records whether the value has been lowered from a floating point vector.
+  SmallVector<bool, 4> OriginalArgWasFloatVector;
+
+  /// Records whether the return value has been lowered from a floating point
+  /// vector.
+  SmallVector<bool, 4> OriginalRetWasFloatVector;
 
   /// Records whether the value was a fixed argument.
   /// See ISD::OutputArg::IsFixed,
@@ -78,6 +95,7 @@ public:
     CCState::AnalyzeCallOperands(Outs, Fn);
     OriginalArgWasF128.clear();
     OriginalArgWasFloat.clear();
+    OriginalArgWasFloatVector.clear();
     CallOperandIsFixed.clear();
   }
 
@@ -96,37 +114,50 @@ public:
     CCState::AnalyzeFormalArguments(Ins, Fn);
     OriginalArgWasFloat.clear();
     OriginalArgWasF128.clear();
+    OriginalArgWasFloatVector.clear();
   }
 
   void AnalyzeCallResult(const SmallVectorImpl<ISD::InputArg> &Ins,
                          CCAssignFn Fn, const Type *RetTy,
                          const char *Func) {
     PreAnalyzeCallResultForF128(Ins, RetTy, Func);
+    PreAnalyzeCallResultForVectorFloat(Ins, RetTy);
     CCState::AnalyzeCallResult(Ins, Fn);
     OriginalArgWasFloat.clear();
     OriginalArgWasF128.clear();
+    OriginalArgWasFloatVector.clear();
   }
 
   void AnalyzeReturn(const SmallVectorImpl<ISD::OutputArg> &Outs,
                      CCAssignFn Fn) {
     PreAnalyzeReturnForF128(Outs);
+    PreAnalyzeReturnForVectorFloat(Outs);
     CCState::AnalyzeReturn(Outs, Fn);
     OriginalArgWasFloat.clear();
     OriginalArgWasF128.clear();
+    OriginalArgWasFloatVector.clear();
   }
 
   bool CheckReturn(const SmallVectorImpl<ISD::OutputArg> &ArgsFlags,
                    CCAssignFn Fn) {
     PreAnalyzeReturnForF128(ArgsFlags);
+    PreAnalyzeReturnForVectorFloat(ArgsFlags);
     bool Return = CCState::CheckReturn(ArgsFlags, Fn);
     OriginalArgWasFloat.clear();
     OriginalArgWasF128.clear();
+    OriginalArgWasFloatVector.clear();
     return Return;
   }
 
   bool WasOriginalArgF128(unsigned ValNo) { return OriginalArgWasF128[ValNo]; }
   bool WasOriginalArgFloat(unsigned ValNo) {
       return OriginalArgWasFloat[ValNo];
+  }
+  bool WasOriginalArgVectorFloat(unsigned ValNo) const {
+    return OriginalArgWasFloatVector[ValNo];
+  }
+  bool WasOriginalRetVectorFloat(unsigned ValNo) const {
+    return OriginalRetWasFloatVector[ValNo];
   }
   bool IsCallOperandFixed(unsigned ValNo) { return CallOperandIsFixed[ValNo]; }
   SpecialCallingConvType getSpecialCallingConv() { return SpecialCallingConv; }

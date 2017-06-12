@@ -958,7 +958,8 @@ void LinkerScript::assignAddresses(
 }
 
 // Creates program headers as instructed by PHDRS linker script command.
-std::vector<PhdrEntry> LinkerScript::createPhdrs() {
+std::vector<PhdrEntry> LinkerScript::createPhdrs(
+    ArrayRef<OutputSectionCommand *> OutputSectionCommands) {
   std::vector<PhdrEntry> Ret;
 
   // Process PHDRS and FILEHDR keywords because they are not
@@ -979,7 +980,8 @@ std::vector<PhdrEntry> LinkerScript::createPhdrs() {
   }
 
   // Add output sections to program headers.
-  for (OutputSection *Sec : *OutputSections) {
+  for (OutputSectionCommand *Cmd : OutputSectionCommands) {
+    OutputSection *Sec = Cmd->Sec;
     if (!(Sec->Flags & SHF_ALLOC))
       break;
 

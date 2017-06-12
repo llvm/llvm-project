@@ -932,6 +932,10 @@ def frewrite_includes : Flag<["-"], "frewrite-includes">, Group<f_Group>,
   Flags<[CC1Option]>;
 def fno_rewrite_includes : Flag<["-"], "fno-rewrite-includes">, Group<f_Group>;
 
+def frewrite_imports : Flag<["-"], "frewrite-imports">, Group<f_Group>,
+  Flags<[CC1Option]>;
+def fno_rewrite_imports : Flag<["-"], "fno-rewrite-imports">, Group<f_Group>;
+
 def frewrite_map_file : Separate<["-"], "frewrite-map-file">,
                         Group<f_Group>,
                         Flags<[ DriverOption, CC1Option ]>;
@@ -1559,6 +1563,10 @@ def gdwarf_aranges : Flag<["-"], "gdwarf-aranges">, Group<g_flags_Group>;
 def gmodules : Flag <["-"], "gmodules">, Group<gN_Group>,
   HelpText<"Generate debug info with external references to clang modules"
            " or precompiled headers">;
+def gz : Flag<["-"], "gz">, Group<g_flags_Group>,
+    HelpText<"DWARF debug sections compression type">;
+def gz_EQ : Joined<["-"], "gz=">, Group<g_flags_Group>,
+    HelpText<"DWARF debug sections compression type">;
 def headerpad__max__install__names : Joined<["-"], "headerpad_max_install_names">;
 def help : Flag<["-", "--"], "help">, Flags<[CC1Option,CC1AsOption]>,
   HelpText<"Display available options">;

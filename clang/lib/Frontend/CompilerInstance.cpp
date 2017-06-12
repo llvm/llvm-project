@@ -667,6 +667,11 @@ void CompilerInstance::clearOutputFiles(bool EraseFiles) {
       llvm::sys::fs::remove(OF.Filename);
   }
   OutputFiles.clear();
+  if (DeleteBuiltModules) {
+    for (auto &Module : BuiltModules)
+      llvm::sys::fs::remove(Module.second);
+    BuiltModules.clear();
+  }
   NonSeekStream.reset();
 }
 
@@ -1029,13 +1034,14 @@ static InputKind::Language getLanguageFromOptions(const LangOptions &LangOpts) {
 /// \brief Compile a module file for the given module, using the options 
 /// provided by the importing compiler instance. Returns true if the module
 /// was built without errors.
-static bool compileModuleImpl(CompilerInstance &ImportingInstance,
-                              SourceLocation ImportLoc,
-                              Module *Module,
-                              StringRef ModuleFileName) {
-  ModuleMap &ModMap 
-    = ImportingInstance.getPreprocessor().getHeaderSearchInfo().getModuleMap();
-    
+static bool
+compileModuleImpl(CompilerInstance &ImportingInstance, SourceLocation ImportLoc,
+                  StringRef ModuleName, FrontendInputFile Input,
+                  StringRef OriginalModuleMapFile, StringRef ModuleFileName,
+                  llvm::function_ref<void(CompilerInstance &)> PreBuildStep =
+                      [](CompilerInstance &) {},
+                  llvm::function_ref<void(CompilerInstance &)> PostBuildStep =
+                      [](CompilerInstance &) {}) {
   // Construct a compiler invocation for creating this module.
   auto Invocation =
       std::make_shared<CompilerInvocation>(ImportingInstance.getInvocation());
@@ -1060,7 +1066,7 @@ static bool compileModuleImpl(CompilerInstance &ImportingInstance,
       PPOpts.Macros.end());
 
   // Note the name of the module we're building.
-  Invocation->getLangOpts()->CurrentModule = Module->getTopLevelModuleName();
+  Invocation->getLangOpts()->CurrentModule = ModuleName;
 
   // Make sure that the failed-module structure has been allocated in
   // the importing instance, and propagate the pointer to the newly-created
@@ -1080,13 +1086,10 @@ static bool compileModuleImpl(CompilerInstance &ImportingInstance,
   FrontendOpts.DisableFree = false;
   FrontendOpts.GenerateGlobalModuleIndex = false;
   FrontendOpts.BuildingImplicitModule = true;
-  FrontendOpts.OriginalModuleMap =
-      ModMap.getModuleMapFileForUniquing(Module)->getName();
+  FrontendOpts.OriginalModuleMap = OriginalModuleMapFile;
   // Force implicitly-built modules to hash the content of the module file.
   HSOpts.ModulesHashContent = true;
-  FrontendOpts.Inputs.clear();
-  InputKind IK(getLanguageFromOptions(*Invocation->getLangOpts()),
-               InputKind::ModuleMap);
+  FrontendOpts.Inputs = {Input};
 
   // Don't free the remapped file buffers; they are owned by our caller.
   PPOpts.RetainRemappedFileBuffers = true;
@@ -1117,7 +1120,7 @@ static bool compileModuleImpl(CompilerInstance &ImportingInstance,
   SourceManager &SourceMgr = Instance.getSourceManager();
   SourceMgr.setModuleBuildStack(
     ImportingInstance.getSourceManager().getModuleBuildStack());
-  SourceMgr.pushModuleBuildStack(Module->getTopLevelModuleName(),
+  SourceMgr.pushModuleBuildStack(ModuleName,
     FullSourceLoc(ImportLoc, ImportingInstance.getSourceManager()));
 
   // If we're collecting module dependencies, we need to share a collector
@@ -1126,32 +1129,11 @@ static bool compileModuleImpl(CompilerInstance &ImportingInstance,
   Instance.setModuleDepCollector(ImportingInstance.getModuleDepCollector());
   Inv.getDependencyOutputOpts() = DependencyOutputOptions();
 
-  // Get or create the module map that we'll use to build this module.
-  std::string InferredModuleMapContent;
-  if (const FileEntry *ModuleMapFile =
-          ModMap.getContainingModuleMapFile(Module)) {
-    // Use the module map where this module resides.
-    FrontendOpts.Inputs.emplace_back(ModuleMapFile->getName(), IK,
-                                     +Module->IsSystem);
-  } else {
-    SmallString<128> FakeModuleMapFile(Module->Directory->getName());
-    llvm::sys::path::append(FakeModuleMapFile, "__inferred_module.map");
-    FrontendOpts.Inputs.emplace_back(FakeModuleMapFile, IK, +Module->IsSystem);
-
-    llvm::raw_string_ostream OS(InferredModuleMapContent);
-    Module->print(OS);
-    OS.flush();
-
-    std::unique_ptr<llvm::MemoryBuffer> ModuleMapBuffer =
-        llvm::MemoryBuffer::getMemBuffer(InferredModuleMapContent);
-    ModuleMapFile = Instance.getFileManager().getVirtualFile(
-        FakeModuleMapFile, InferredModuleMapContent.size(), 0);
-    SourceMgr.overrideFileContents(ModuleMapFile, std::move(ModuleMapBuffer));
-  }
-
   ImportingInstance.getDiagnostics().Report(ImportLoc,
                                             diag::remark_module_build)
-    << Module->Name << ModuleFileName;
+    << ModuleName << ModuleFileName;
+
+  PreBuildStep(Instance);
 
   // Execute the action to actually build the module in-place. Use a separate
   // thread so that we get a stack large enough.
@@ -1164,9 +1146,11 @@ static bool compileModuleImpl(CompilerInstance &ImportingInstance,
       },
       ThreadStackSize);
 
+  PostBuildStep(Instance);
+
   ImportingInstance.getDiagnostics().Report(ImportLoc,
                                             diag::remark_module_build_done)
-    << Module->Name;
+    << ModuleName;
 
   // Delete the temporary module map file.
   // FIXME: Even though we're executing under crash protection, it would still
@@ -1174,13 +1158,66 @@ static bool compileModuleImpl(CompilerInstance &ImportingInstance,
   // doesn't make sense for all clients, so clean this up manually.
   Instance.clearOutputFiles(/*EraseFiles=*/true);
 
+  return !Instance.getDiagnostics().hasErrorOccurred();
+}
+
+/// \brief Compile a module file for the given module, using the options 
+/// provided by the importing compiler instance. Returns true if the module
+/// was built without errors.
+static bool compileModuleImpl(CompilerInstance &ImportingInstance,
+                              SourceLocation ImportLoc,
+                              Module *Module,
+                              StringRef ModuleFileName) {
+  InputKind IK(getLanguageFromOptions(ImportingInstance.getLangOpts()),
+               InputKind::ModuleMap);
+
+  // Get or create the module map that we'll use to build this module.
+  ModuleMap &ModMap 
+    = ImportingInstance.getPreprocessor().getHeaderSearchInfo().getModuleMap();
+  bool Result;
+  if (const FileEntry *ModuleMapFile =
+          ModMap.getContainingModuleMapFile(Module)) {
+    // Use the module map where this module resides.
+    Result = compileModuleImpl(
+        ImportingInstance, ImportLoc, Module->getTopLevelModuleName(),
+        FrontendInputFile(ModuleMapFile->getName(), IK, +Module->IsSystem),
+        ModMap.getModuleMapFileForUniquing(Module)->getName(),
+        ModuleFileName);
+  } else {
+    // FIXME: We only need to fake up an input file here as a way of
+    // transporting the module's directory to the module map parser. We should
+    // be able to do that more directly, and parse from a memory buffer without
+    // inventing this file.
+    SmallString<128> FakeModuleMapFile(Module->Directory->getName());
+    llvm::sys::path::append(FakeModuleMapFile, "__inferred_module.map");
+
+    std::string InferredModuleMapContent;
+    llvm::raw_string_ostream OS(InferredModuleMapContent);
+    Module->print(OS);
+    OS.flush();
+
+    Result = compileModuleImpl(
+        ImportingInstance, ImportLoc, Module->getTopLevelModuleName(),
+        FrontendInputFile(FakeModuleMapFile, IK, +Module->IsSystem),
+        ModMap.getModuleMapFileForUniquing(Module)->getName(),
+        ModuleFileName,
+        [&](CompilerInstance &Instance) {
+      std::unique_ptr<llvm::MemoryBuffer> ModuleMapBuffer =
+          llvm::MemoryBuffer::getMemBuffer(InferredModuleMapContent);
+      ModuleMapFile = Instance.getFileManager().getVirtualFile(
+          FakeModuleMapFile, InferredModuleMapContent.size(), 0);
+      Instance.getSourceManager().overrideFileContents(
+          ModuleMapFile, std::move(ModuleMapBuffer));
+    });
+  }
+
   // We've rebuilt a module. If we're allowed to generate or update the global
   // module index, record that fact in the importing compiler instance.
   if (ImportingInstance.getFrontendOpts().GenerateGlobalModuleIndex) {
     ImportingInstance.setBuildGlobalModuleIndex(true);
   }
 
-  return !Instance.getDiagnostics().hasErrorOccurred();
+  return Result;
 }
 
 static bool compileAndLoadModule(CompilerInstance &ImportingInstance,
@@ -1586,24 +1623,36 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
         PP->getHeaderSearchInfo().getHeaderSearchOpts();
 
     std::string ModuleFileName;
-    bool LoadFromPrebuiltModulePath = false;
-    // We try to load the module from the prebuilt module paths. If not
-    // successful, we then try to find it in the module cache.
-    if (!HSOpts.PrebuiltModulePaths.empty()) {
-      // Load the module from the prebuilt module path.
+    enum ModuleSource {
+      ModuleNotFound, ModuleCache, PrebuiltModulePath, ModuleBuildPragma
+    } Source = ModuleNotFound;
+
+    // Check to see if the module has been built as part of this compilation
+    // via a module build pragma.
+    auto BuiltModuleIt = BuiltModules.find(ModuleName);
+    if (BuiltModuleIt != BuiltModules.end()) {
+      ModuleFileName = BuiltModuleIt->second;
+      Source = ModuleBuildPragma;
+    }
+
+    // Try to load the module from the prebuilt module path.
+    if (Source == ModuleNotFound && !HSOpts.PrebuiltModulePaths.empty()) {
       ModuleFileName = PP->getHeaderSearchInfo().getModuleFileName(
           ModuleName, "", /*UsePrebuiltPath*/ true);
       if (!ModuleFileName.empty())
-        LoadFromPrebuiltModulePath = true;
+        Source = PrebuiltModulePath;
     }
-    if (!LoadFromPrebuiltModulePath && Module) {
-      // Load the module from the module cache.
+
+    // Try to load the module from the module cache.
+    if (Source == ModuleNotFound && Module) {
       ModuleFileName = PP->getHeaderSearchInfo().getModuleFileName(Module);
-    } else if (!LoadFromPrebuiltModulePath) {
+      Source = ModuleCache;
+    }
+
+    if (Source == ModuleNotFound) {
       // We can't find a module, error out here.
       getDiagnostics().Report(ModuleNameLoc, diag::err_module_not_found)
-      << ModuleName
-      << SourceRange(ImportLoc, ModuleNameLoc);
+          << ModuleName << SourceRange(ImportLoc, ModuleNameLoc);
       ModuleBuildFailed = true;
       return ModuleLoadResult();
     }
@@ -1631,20 +1680,20 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
                  *FrontendTimerGroup);
     llvm::TimeRegion TimeLoading(FrontendTimerGroup ? &Timer : nullptr);
 
-    // Try to load the module file. If we are trying to load from the prebuilt
-    // module path, we don't have the module map files and don't know how to
-    // rebuild modules.
-    unsigned ARRFlags = LoadFromPrebuiltModulePath ?
-                        ASTReader::ARR_ConfigurationMismatch :
-                        ASTReader::ARR_OutOfDate | ASTReader::ARR_Missing;
+    // Try to load the module file. If we are not trying to load from the
+    // module cache, we don't know how to rebuild modules.
+    unsigned ARRFlags = Source == ModuleCache ?
+                        ASTReader::ARR_OutOfDate | ASTReader::ARR_Missing :
+                        ASTReader::ARR_ConfigurationMismatch;
     switch (ModuleManager->ReadAST(ModuleFileName,
-                                   LoadFromPrebuiltModulePath ?
-                                   serialization::MK_PrebuiltModule :
-                                   serialization::MK_ImplicitModule,
-                                   ImportLoc,
-                                   ARRFlags)) {
+                                   Source == PrebuiltModulePath
+                                       ? serialization::MK_PrebuiltModule
+                                       : Source == ModuleBuildPragma
+                                             ? serialization::MK_ExplicitModule
+                                             : serialization::MK_ImplicitModule,
+                                   ImportLoc, ARRFlags)) {
     case ASTReader::Success: {
-      if (LoadFromPrebuiltModulePath && !Module) {
+      if (Source != ModuleCache && !Module) {
         Module = PP->getHeaderSearchInfo().lookupModule(ModuleName);
         if (!Module || !Module->getASTFile() ||
             FileMgr->getFile(ModuleFileName) != Module->getASTFile()) {
@@ -1662,10 +1711,10 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
 
     case ASTReader::OutOfDate:
     case ASTReader::Missing: {
-      if (LoadFromPrebuiltModulePath) {
-        // We can't rebuild the module without a module map. Since ReadAST
-        // already produces diagnostics for these two cases, we simply
-        // error out here.
+      if (Source != ModuleCache) {
+        // We don't know the desired configuration for this module and don't
+        // necessarily even have a module map. Since ReadAST already produces
+        // diagnostics for these two cases, we simply error out here.
         ModuleBuildFailed = true;
         KnownModules[Path[0].first] = nullptr;
         return ModuleLoadResult();
@@ -1722,7 +1771,9 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
     }
 
     case ASTReader::ConfigurationMismatch:
-      if (LoadFromPrebuiltModulePath)
+      if (Source == PrebuiltModulePath)
+        // FIXME: We shouldn't be setting HadFatalFailure below if we only
+        // produce a warning here!
         getDiagnostics().Report(SourceLocation(),
                                 diag::warn_module_config_mismatch)
             << ModuleFileName;
@@ -1751,7 +1802,7 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
   // If we never found the module, fail.
   if (!Module)
     return ModuleLoadResult();
-  
+
   // Verify that the rest of the module path actually corresponds to
   // a submodule.
   if (Path.size() > 1) {
@@ -1846,6 +1897,53 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
   LastModuleImportLoc = ImportLoc;
   LastModuleImportResult = ModuleLoadResult(Module);
   return LastModuleImportResult;
+}
+
+void CompilerInstance::loadModuleFromSource(SourceLocation ImportLoc,
+                                            StringRef ModuleName,
+                                            StringRef Source) {
+  // FIXME: Using a randomized filename here means that our intermediate .pcm
+  // output is nondeterministic (as .pcm files refer to each other by name).
+  // Can this affect the output in any way?
+  SmallString<128> ModuleFileName;
+  if (std::error_code EC = llvm::sys::fs::createTemporaryFile(
+          ModuleName, "pcm", ModuleFileName)) {
+    getDiagnostics().Report(ImportLoc, diag::err_fe_unable_to_open_output)
+        << ModuleFileName << EC.message();
+    return;
+  }
+  std::string ModuleMapFileName = (ModuleName + ".map").str();
+
+  FrontendInputFile Input(
+      ModuleMapFileName,
+      InputKind(getLanguageFromOptions(*Invocation->getLangOpts()),
+                InputKind::ModuleMap, /*Preprocessed*/true));
+
+  std::string NullTerminatedSource(Source.str());
+
+  auto PreBuildStep = [&](CompilerInstance &Other) {
+    // Create a virtual file containing our desired source.
+    // FIXME: We shouldn't need to do this.
+    const FileEntry *ModuleMapFile = Other.getFileManager().getVirtualFile(
+        ModuleMapFileName, NullTerminatedSource.size(), 0);
+    Other.getSourceManager().overrideFileContents(
+        ModuleMapFile,
+        llvm::MemoryBuffer::getMemBuffer(NullTerminatedSource.c_str()));
+
+    Other.BuiltModules = std::move(BuiltModules);
+    Other.DeleteBuiltModules = false;
+  };
+
+  auto PostBuildStep = [this](CompilerInstance &Other) {
+    BuiltModules = std::move(Other.BuiltModules);
+  };
+
+  // Build the module, inheriting any modules that we've built locally.
+  if (compileModuleImpl(*this, ImportLoc, ModuleName, Input, StringRef(),
+                        ModuleFileName, PreBuildStep, PostBuildStep)) {
+    BuiltModules[ModuleName] = ModuleFileName.str();
+    llvm::sys::RemoveFileOnSignal(ModuleFileName);
+  }
 }
 
 void CompilerInstance::makeModuleVisible(Module *Mod,

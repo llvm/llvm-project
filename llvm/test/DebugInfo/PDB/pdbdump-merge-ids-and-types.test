@@ -1,12 +1,12 @@
-; RUN: llvm-pdbdump yaml2pdb -pdb=%t.1.pdb %p/Inputs/merge-ids-and-types-1.yaml
-; RUN: llvm-pdbdump yaml2pdb -pdb=%t.2.pdb %p/Inputs/merge-ids-and-types-2.yaml
-; RUN: llvm-pdbdump merge -pdb=%t.3.pdb %t.1.pdb %t.2.pdb
-; RUN: llvm-pdbdump raw -tpi-records %t.3.pdb | FileCheck -check-prefix=TPI-TYPES %s
-; RUN: llvm-pdbdump raw -tpi-records %t.3.pdb | FileCheck -check-prefix=INTMAIN %s
-; RUN: llvm-pdbdump raw -tpi-records %t.3.pdb | FileCheck -check-prefix=VOIDMAIN %s
-; RUN: llvm-pdbdump raw -ipi-records %t.3.pdb | FileCheck -check-prefix=IPI-TYPES %s
-; RUN: llvm-pdbdump raw -ipi-records %t.3.pdb | FileCheck -check-prefix=IPI-NAMES %s
-; RUN: llvm-pdbdump raw -ipi-records %t.3.pdb | FileCheck -check-prefix=IPI-UDT %s
+; RUN: llvm-pdbutil yaml2pdb -pdb=%t.1.pdb %p/Inputs/merge-ids-and-types-1.yaml
+; RUN: llvm-pdbutil yaml2pdb -pdb=%t.2.pdb %p/Inputs/merge-ids-and-types-2.yaml
+; RUN: llvm-pdbutil merge -pdb=%t.3.pdb %t.1.pdb %t.2.pdb
+; RUN: llvm-pdbutil raw -tpi-records %t.3.pdb | FileCheck -check-prefix=TPI-TYPES %s
+; RUN: llvm-pdbutil raw -tpi-records %t.3.pdb | FileCheck -check-prefix=INTMAIN %s
+; RUN: llvm-pdbutil raw -tpi-records %t.3.pdb | FileCheck -check-prefix=VOIDMAIN %s
+; RUN: llvm-pdbutil raw -ipi-records %t.3.pdb | FileCheck -check-prefix=IPI-TYPES %s
+; RUN: llvm-pdbutil raw -ipi-records %t.3.pdb | FileCheck -check-prefix=IPI-NAMES %s
+; RUN: llvm-pdbutil raw -ipi-records %t.3.pdb | FileCheck -check-prefix=IPI-UDT %s
 
 TPI-TYPES:     Type Info Stream (TPI)
 TPI-TYPES:     Record count: 9

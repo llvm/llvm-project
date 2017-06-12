@@ -651,7 +651,6 @@ private:
   void finalizeTailMerge();
   void finalizeNoTailMerge();
 
-  bool Finalized = false;
   llvm::StringTableBuilder Builder;
   std::vector<MergeInputSection *> Sections;
 };
@@ -748,6 +747,7 @@ private:
 template <class ELFT> InputSection *createCommonSection();
 InputSection *createInterpSection();
 template <class ELFT> MergeInputSection *createCommentSection();
+void decompressAndMergeSections();
 
 SymbolBody *addSyntheticLocal(StringRef Name, uint8_t Type, uint64_t Value,
                               uint64_t Size, InputSectionBase *Section);

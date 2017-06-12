@@ -103,6 +103,11 @@ namespace AMDGPU {
 namespace IsaInfo {
 
 IsaVersion getIsaVersion(const FeatureBitset &Features) {
+  // SI.
+  if (Features.test(FeatureISAVersion6_0_0))
+    return {6, 0, 0};
+  if (Features.test(FeatureISAVersion6_0_1))
+    return {6, 0, 1};
   // CI.
   if (Features.test(FeatureISAVersion7_0_0))
     return {7, 0, 0};
@@ -110,6 +115,8 @@ IsaVersion getIsaVersion(const FeatureBitset &Features) {
     return {7, 0, 1};
   if (Features.test(FeatureISAVersion7_0_2))
     return {7, 0, 2};
+  if (Features.test(FeatureISAVersion7_0_3))
+    return {7, 0, 3};
 
   // VI.
   if (Features.test(FeatureISAVersion8_0_0))
@@ -130,6 +137,10 @@ IsaVersion getIsaVersion(const FeatureBitset &Features) {
     return {9, 0, 0};
   if (Features.test(FeatureISAVersion9_0_1))
     return {9, 0, 1};
+  if (Features.test(FeatureISAVersion9_0_2))
+    return {9, 0, 2};
+  if (Features.test(FeatureISAVersion9_0_3))
+    return {9, 0, 3};
 
   if (!Features.test(FeatureGCN) || Features.test(FeatureSouthernIslands))
     return {0, 0, 0};

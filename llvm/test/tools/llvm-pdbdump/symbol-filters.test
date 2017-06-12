@@ -1,25 +1,25 @@
-; RUN: llvm-pdbdump pretty -globals -module-syms -sym-types=data %p/Inputs/FilterTest.pdb \
+; RUN: llvm-pdbutil pretty -globals -module-syms -sym-types=data %p/Inputs/FilterTest.pdb \
 ; RUN:    | FileCheck --check-prefix=ONLY_DATA %s
 
-; RUN: llvm-pdbdump pretty -globals -module-syms -sym-types=thunks %p/Inputs/FilterTest.pdb \
+; RUN: llvm-pdbutil pretty -globals -module-syms -sym-types=thunks %p/Inputs/FilterTest.pdb \
 ; RUN:    | FileCheck --check-prefix=ONLY_THUNKS %s
 
-; RUN: llvm-pdbdump pretty -globals -module-syms -sym-types=funcs %p/Inputs/FilterTest.pdb \
+; RUN: llvm-pdbutil pretty -globals -module-syms -sym-types=funcs %p/Inputs/FilterTest.pdb \
 ; RUN:    | FileCheck --check-prefix=ONLY_FUNCS %s
 
-; RUN: llvm-pdbdump pretty -globals -module-syms -sym-types=funcs -sym-types=data \
+; RUN: llvm-pdbutil pretty -globals -module-syms -sym-types=funcs -sym-types=data \
 ; RUN: %p/Inputs/FilterTest.pdb | FileCheck --check-prefix=TWO_TYPES %s
 
-; RUN: llvm-pdbdump pretty -globals -module-syms -sym-types=data \
+; RUN: llvm-pdbutil pretty -globals -module-syms -sym-types=data \
 ; RUN: -symbol-order=name %p/Inputs/FilterTest.pdb | FileCheck --check-prefix=NAME_SORT_DATA %s
 
-; RUN: llvm-pdbdump pretty -globals -module-syms -sym-types=data \
+; RUN: llvm-pdbutil pretty -globals -module-syms -sym-types=data \
 ; RUN: -symbol-order=size %p/Inputs/FilterTest.pdb | FileCheck --check-prefix=SIZE_SORT_DATA %s
 
-; RUN: llvm-pdbdump pretty -globals -module-syms -sym-types=funcs \
+; RUN: llvm-pdbutil pretty -globals -module-syms -sym-types=funcs \
 ; RUN: -symbol-order=name %p/Inputs/FilterTest.pdb | FileCheck --check-prefix=NAME_SORT_FUNCS %s
 
-; RUN: llvm-pdbdump pretty -globals -module-syms -sym-types=funcs \
+; RUN: llvm-pdbutil pretty -globals -module-syms -sym-types=funcs \
 ; RUN: -symbol-order=size %p/Inputs/FilterTest.pdb | FileCheck --check-prefix=SIZE_SORT_FUNCS %s
 
 ; ONLY_DATA-NOT: func

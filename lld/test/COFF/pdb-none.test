@@ -3,7 +3,7 @@
 # RUN: lld-link /debug /debugtype:pdata /pdb:%t.pdb /dll /out:%t.dll /entry:main /nodefaultlib \
 # RUN:   %t1.obj %t2.obj
 
-# RUN: llvm-pdbdump pdb2yaml -pdb-stream %t.pdb | FileCheck %s
+# RUN: llvm-pdbutil pdb2yaml -pdb-stream %t.pdb | FileCheck %s
 
 # CHECK:      PdbStream:
 # CHECK-NEXT:   Age:             0

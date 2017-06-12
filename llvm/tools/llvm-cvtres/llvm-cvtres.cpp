@@ -112,20 +112,23 @@ int main(int argc_, const char *argv_[]) {
     return 0;
   }
 
-  machine Machine;
+  bool Verbose = InputArgs.hasArg(OPT_VERBOSE);
+
+  Machine MachineType;
 
   if (InputArgs.hasArg(OPT_MACHINE)) {
     std::string MachineString = InputArgs.getLastArgValue(OPT_MACHINE).upper();
-    Machine = StringSwitch<machine>(MachineString)
-                  .Case("ARM", machine::ARM)
-                  .Case("X64", machine::X64)
-                  .Case("X86", machine::X86)
-                  .Default(machine::UNKNOWN);
-    if (Machine == machine::UNKNOWN)
+    MachineType = StringSwitch<Machine>(MachineString)
+                      .Case("ARM", Machine::ARM)
+                      .Case("X64", Machine::X64)
+                      .Case("X86", Machine::X86)
+                      .Default(Machine::UNKNOWN);
+    if (MachineType == Machine::UNKNOWN)
       reportError("Unsupported machine architecture");
   } else {
-    outs() << "Machine architecture not specified; assumed X64.\n";
-    Machine = machine::X64;
+    if (Verbose)
+      outs() << "Machine architecture not specified; assumed X64.\n";
+    MachineType = Machine::X64;
   }
 
   std::vector<std::string> InputFiles = InputArgs.getAllArgValues(OPT_INPUT);
@@ -139,20 +142,22 @@ int main(int argc_, const char *argv_[]) {
   if (InputArgs.hasArg(OPT_OUT)) {
     OutputFile = InputArgs.getLastArgValue(OPT_OUT);
   } else {
-    OutputFile = StringRef(InputFiles[0]);
+    OutputFile = llvm::sys::path::filename(StringRef(InputFiles[0]));
     llvm::sys::path::replace_extension(OutputFile, ".obj");
   }
 
-  outs() << "Machine: ";
-  switch (Machine) {
-  case machine::ARM:
-    outs() << "ARM\n";
-    break;
-  case machine::X86:
-    outs() << "X86\n";
-    break;
-  default:
-    outs() << "X64\n";
+  if (Verbose) {
+    outs() << "Machine: ";
+    switch (MachineType) {
+    case Machine::ARM:
+      outs() << "ARM\n";
+      break;
+    case Machine::X86:
+      outs() << "X86\n";
+      break;
+    default:
+      outs() << "X64\n";
+    }
   }
 
   WindowsResourceParser Parser;
@@ -169,22 +174,28 @@ int main(int argc_, const char *argv_[]) {
     if (!RF)
       reportError(File + ": unrecognized file format.\n");
 
-    int EntryNumber = 0;
-    Expected<ResourceEntryRef> EntryOrErr = RF->getHeadEntry();
-    if (!EntryOrErr)
-      error(EntryOrErr.takeError());
-    ResourceEntryRef Entry = EntryOrErr.get();
-    bool End = false;
-    while (!End) {
-      error(Entry.moveNext(End));
-      EntryNumber++;
+    if (Verbose) {
+      int EntryNumber = 0;
+      Expected<ResourceEntryRef> EntryOrErr = RF->getHeadEntry();
+      if (!EntryOrErr)
+        error(EntryOrErr.takeError());
+      ResourceEntryRef Entry = EntryOrErr.get();
+      bool End = false;
+      while (!End) {
+        error(Entry.moveNext(End));
+        EntryNumber++;
+      }
+      outs() << "Number of resources: " << EntryNumber << "\n";
     }
-    outs() << "Number of resources: " << EntryNumber << "\n";
 
     error(Parser.parse(RF));
   }
 
-  Parser.printTree();
+  if (Verbose)
+    Parser.printTree();
+
+  error(
+      llvm::object::writeWindowsResourceCOFF(OutputFile, MachineType, Parser));
 
   return 0;
 }

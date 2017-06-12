@@ -29,6 +29,7 @@
 #include "lld/Config/Version.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugPubTable.h"
+#include "llvm/Object/Decompressor.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/MD5.h"
@@ -2133,7 +2134,6 @@ MergeSyntheticSection::MergeSyntheticSection(StringRef Name, uint32_t Type,
       Builder(StringTableBuilder::RAW, Alignment) {}
 
 void MergeSyntheticSection::addSection(MergeInputSection *MS) {
-  assert(!Finalized);
   MS->Parent = this;
   Sections.push_back(MS);
 }
@@ -2178,9 +2178,6 @@ void MergeSyntheticSection::finalizeNoTailMerge() {
 }
 
 void MergeSyntheticSection::finalizeContents() {
-  if (Finalized)
-    return;
-  Finalized = true;
   if (shouldTailMerge())
     finalizeTailMerge();
   else
@@ -2188,9 +2185,63 @@ void MergeSyntheticSection::finalizeContents() {
 }
 
 size_t MergeSyntheticSection::getSize() const {
-  // We should finalize string builder to know the size.
-  const_cast<MergeSyntheticSection *>(this)->finalizeContents();
   return Builder.getSize();
+}
+
+// This function decompresses compressed sections and scans over the input
+// sections to create mergeable synthetic sections. It removes
+// MergeInputSections from the input section array and adds new synthetic
+// sections at the location of the first input section that it replaces. It then
+// finalizes each synthetic section in order to compute an output offset for
+// each piece of each input section.
+void elf::decompressAndMergeSections() {
+  // splitIntoPieces needs to be called on each MergeInputSection before calling
+  // finalizeContents(). Do that first.
+  parallelForEach(InputSections.begin(), InputSections.end(),
+                  [](InputSectionBase *S) {
+                    if (!S->Live)
+                      return;
+                    if (Decompressor::isCompressedELFSection(S->Flags, S->Name))
+                      S->uncompress();
+                    if (auto *MS = dyn_cast<MergeInputSection>(S))
+                      MS->splitIntoPieces();
+                  });
+
+  std::vector<MergeSyntheticSection *> MergeSections;
+  for (InputSectionBase *&S : InputSections) {
+    MergeInputSection *MS = dyn_cast<MergeInputSection>(S);
+    if (!MS)
+      continue;
+
+    // We do not want to handle sections that are not alive, so just remove
+    // them instead of trying to merge.
+    if (!MS->Live)
+      continue;
+
+    StringRef OutsecName = getOutputSectionName(MS->Name);
+    uint64_t Flags = MS->Flags & ~(uint64_t)SHF_GROUP;
+    uint32_t Alignment = std::max<uint32_t>(MS->Alignment, MS->Entsize);
+
+    auto I = llvm::find_if(MergeSections, [=](MergeSyntheticSection *Sec) {
+      return Sec->Name == OutsecName && Sec->Flags == Flags &&
+             Sec->Alignment == Alignment;
+    });
+    if (I == MergeSections.end()) {
+      MergeSyntheticSection *Syn =
+          make<MergeSyntheticSection>(OutsecName, MS->Type, Flags, Alignment);
+      MergeSections.push_back(Syn);
+      I = std::prev(MergeSections.end());
+      S = Syn;
+    } else {
+      S = nullptr;
+    }
+    (*I)->addSection(MS);
+  }
+  for (auto *MS : MergeSections)
+    MS->finalizeContents();
+
+  std::vector<InputSectionBase *> &V = InputSections;
+  V.erase(std::remove(V.begin(), V.end(), nullptr), V.end());
 }
 
 MipsRldMapSection::MipsRldMapSection()

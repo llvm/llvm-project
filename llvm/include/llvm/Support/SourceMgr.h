@@ -49,7 +49,7 @@ public:
   /// Clients that want to handle their own diagnostics in a custom way can
   /// register a function pointer+context as a diagnostic handler.
   /// It gets called each time PrintMessage is invoked.
-  typedef void (*DiagHandlerTy)(const SMDiagnostic &, void *Context);
+  using DiagHandlerTy = void (*)(const SMDiagnostic &, void *Context);
 
 private:
   struct SrcBuffer {

@@ -869,7 +869,7 @@ bool CallAnalyzer::simplifyCallSite(Function *F, CallSite CS) {
   // because we have to continually rebuild the argument list even when no
   // simplifications can be performed. Until that is fixed with remapping
   // inside of instsimplify, directly constant fold calls here.
-  if (!canConstantFoldCallTo(F))
+  if (!canConstantFoldCallTo(CS, F))
     return false;
 
   // Try to re-map the arguments to constants.
@@ -885,7 +885,7 @@ bool CallAnalyzer::simplifyCallSite(Function *F, CallSite CS) {
 
     ConstantArgs.push_back(C);
   }
-  if (Constant *C = ConstantFoldCall(F, ConstantArgs)) {
+  if (Constant *C = ConstantFoldCall(CS, F, ConstantArgs)) {
     SimplifiedValues[CS.getInstruction()] = C;
     return true;
   }

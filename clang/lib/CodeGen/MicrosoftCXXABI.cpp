@@ -1413,11 +1413,10 @@ void MicrosoftCXXABI::addImplicitStructorParams(CodeGenFunction &CGF,
   const CXXMethodDecl *MD = cast<CXXMethodDecl>(CGF.CurGD.getDecl());
   assert(isa<CXXConstructorDecl>(MD) || isa<CXXDestructorDecl>(MD));
   if (isa<CXXConstructorDecl>(MD) && MD->getParent()->getNumVBases()) {
-    ImplicitParamDecl *IsMostDerived
-      = ImplicitParamDecl::Create(Context, nullptr,
-                                  CGF.CurGD.getDecl()->getLocation(),
-                                  &Context.Idents.get("is_most_derived"),
-                                  Context.IntTy);
+    auto *IsMostDerived = ImplicitParamDecl::Create(
+        Context, /*DC=*/nullptr, CGF.CurGD.getDecl()->getLocation(),
+        &Context.Idents.get("is_most_derived"), Context.IntTy,
+        ImplicitParamDecl::Other);
     // The 'most_derived' parameter goes second if the ctor is variadic and last
     // if it's not.  Dtors can't be variadic.
     const FunctionProtoType *FPT = MD->getType()->castAs<FunctionProtoType>();
@@ -1427,11 +1426,10 @@ void MicrosoftCXXABI::addImplicitStructorParams(CodeGenFunction &CGF,
       Params.push_back(IsMostDerived);
     getStructorImplicitParamDecl(CGF) = IsMostDerived;
   } else if (isDeletingDtor(CGF.CurGD)) {
-    ImplicitParamDecl *ShouldDelete
-      = ImplicitParamDecl::Create(Context, nullptr,
-                                  CGF.CurGD.getDecl()->getLocation(),
-                                  &Context.Idents.get("should_call_delete"),
-                                  Context.IntTy);
+    auto *ShouldDelete = ImplicitParamDecl::Create(
+        Context, /*DC=*/nullptr, CGF.CurGD.getDecl()->getLocation(),
+        &Context.Idents.get("should_call_delete"), Context.IntTy,
+        ImplicitParamDecl::Other);
     Params.push_back(ShouldDelete);
     getStructorImplicitParamDecl(CGF) = ShouldDelete;
   }
@@ -3875,18 +3873,21 @@ MicrosoftCXXABI::getAddrOfCXXCtorClosure(const CXXConstructorDecl *CD,
   // Following the 'this' pointer is a reference to the source object that we
   // are copying from.
   ImplicitParamDecl SrcParam(
-      getContext(), nullptr, SourceLocation(), &getContext().Idents.get("src"),
+      getContext(), /*DC=*/nullptr, SourceLocation(),
+      &getContext().Idents.get("src"),
       getContext().getLValueReferenceType(RecordTy,
-                                          /*SpelledAsLValue=*/true));
+                                          /*SpelledAsLValue=*/true),
+      ImplicitParamDecl::Other);
   if (IsCopy)
     FunctionArgs.push_back(&SrcParam);
 
   // Constructors for classes which utilize virtual bases have an additional
   // parameter which indicates whether or not it is being delegated to by a more
   // derived constructor.
-  ImplicitParamDecl IsMostDerived(getContext(), nullptr, SourceLocation(),
+  ImplicitParamDecl IsMostDerived(getContext(), /*DC=*/nullptr,
+                                  SourceLocation(),
                                   &getContext().Idents.get("is_most_derived"),
-                                  getContext().IntTy);
+                                  getContext().IntTy, ImplicitParamDecl::Other);
   // Only add the parameter to the list if thie class has virtual bases.
   if (RD->getNumVBases() > 0)
     FunctionArgs.push_back(&IsMostDerived);

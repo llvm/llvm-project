@@ -2234,6 +2234,8 @@ public:
     return User::operator new(s, 3);
   }
 
+  void *operator new(size_t, unsigned) = delete;
+
   /// Return true if a shufflevector instruction can be
   /// formed with the specified operands.
   static bool isValidOperands(const Value *V1, const Value *V2,
@@ -2330,9 +2332,6 @@ class ExtractValueInst : public UnaryInstruction {
   inline ExtractValueInst(Value *Agg,
                           ArrayRef<unsigned> Idxs,
                           const Twine &NameStr, BasicBlock *InsertAtEnd);
-
-  // allocate space for exactly one operand
-  void *operator new(size_t s) { return User::operator new(s, 1); }
 
   void init(ArrayRef<unsigned> Idxs, const Twine &NameStr);
 
@@ -2579,7 +2578,6 @@ class PHINode : public Instruction {
   unsigned ReservedSpace;
 
   PHINode(const PHINode &PN);
-  // allocate space for exactly zero operands
 
   explicit PHINode(Type *Ty, unsigned NumReservedValues,
                    const Twine &NameStr = "",
@@ -2598,6 +2596,7 @@ class PHINode : public Instruction {
     allocHungoffUses(ReservedSpace);
   }
 
+  // allocate space for exactly zero operands
   void *operator new(size_t s) {
     return User::operator new(s);
   }

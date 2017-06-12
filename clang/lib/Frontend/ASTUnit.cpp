@@ -716,7 +716,7 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
 
   AST->PP = std::make_shared<Preprocessor>(
       AST->PPOpts, AST->getDiagnostics(), *AST->LangOpts,
-      AST->getSourceManager(), *AST->PCMCache, HeaderInfo, *AST,
+      AST->getSourceManager(), *AST->PCMCache, HeaderInfo, AST->ModuleLoader,
       /*IILookup=*/nullptr,
       /*OwnsHeaderSearch=*/false);
   Preprocessor &PP = *AST->PP;

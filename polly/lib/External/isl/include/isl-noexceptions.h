@@ -580,7 +580,6 @@ public:
   inline isl::basic_map eliminate(isl::dim type, unsigned int first, unsigned int n) const;
   static inline isl::basic_map empty(isl::space dim);
   static inline isl::basic_map equal(isl::space dim, unsigned int n_equal);
-  inline void * equalities_matrix(isl::dim c1, isl::dim c2, isl::dim c3, isl::dim c4, isl::dim c5) const;
   inline isl::basic_map equate(isl::dim type1, int pos1, isl::dim type2, int pos2) const;
   inline int find_dim_by_name(isl::dim type, const std::string &name) const;
   inline isl::basic_map fix_si(isl::dim type, unsigned int pos, int value) const;
@@ -607,7 +606,6 @@ public:
   inline isl::boolean has_dim_id(isl::dim type, unsigned int pos) const;
   static inline isl::basic_map identity(isl::space dim);
   inline isl::boolean image_is_bounded() const;
-  inline void * inequalities_matrix(isl::dim c1, isl::dim c2, isl::dim c3, isl::dim c4, isl::dim c5) const;
   inline isl::basic_map insert_dims(isl::dim type, unsigned int pos, unsigned int n) const;
   inline isl::basic_map intersect(isl::basic_map bmap2) const;
   inline isl::basic_map intersect_domain(isl::basic_set bset) const;
@@ -733,7 +731,6 @@ public:
   inline isl::basic_set drop_constraints_not_involving_dims(isl::dim type, unsigned int first, unsigned int n) const;
   inline isl::basic_set eliminate(isl::dim type, unsigned int first, unsigned int n) const;
   static inline isl::basic_set empty(isl::space dim);
-  inline void * equalities_matrix(isl::dim c1, isl::dim c2, isl::dim c3, isl::dim c4) const;
   inline isl::basic_set fix_si(isl::dim type, unsigned int pos, int value) const;
   inline isl::basic_set fix_val(isl::dim type, unsigned int pos, isl::val v) const;
   inline isl::basic_set flat_product(isl::basic_set bset2) const;
@@ -747,7 +744,6 @@ public:
   inline isl::space get_space() const;
   inline std::string get_tuple_name() const;
   inline isl::basic_set gist(isl::basic_set context) const;
-  inline void * inequalities_matrix(isl::dim c1, isl::dim c2, isl::dim c3, isl::dim c4) const;
   inline isl::basic_set insert_dims(isl::dim type, unsigned int pos, unsigned int n) const;
   inline isl::basic_set intersect(isl::basic_set bset2) const;
   inline isl::basic_set intersect_params(isl::basic_set bset2) const;
@@ -773,7 +769,6 @@ public:
   static inline isl::basic_set positive_orthant(isl::space space);
   inline isl::basic_set preimage_multi_aff(isl::multi_aff ma) const;
   inline isl::basic_set project_out(isl::dim type, unsigned int first, unsigned int n) const;
-  inline void * reduced_basis() const;
   inline isl::basic_set remove_dims(isl::dim type, unsigned int first, unsigned int n) const;
   inline isl::basic_set remove_divs() const;
   inline isl::basic_set remove_divs_involving_dims(isl::dim type, unsigned int first, unsigned int n) const;
@@ -1947,6 +1942,7 @@ public:
   inline isl::schedule gist_domain_params(isl::set context) const;
   inline isl::schedule insert_context(isl::set context) const;
   inline isl::schedule insert_guard(isl::set guard) const;
+  inline isl::schedule insert_partial_schedule(isl::multi_union_pw_aff partial) const;
   inline isl::schedule intersect_domain(isl::union_set domain) const;
   inline isl::boolean plain_is_equal(const isl::schedule &schedule2) const;
   inline isl::schedule pullback(isl::union_pw_multi_aff upma) const;
@@ -2077,6 +2073,7 @@ public:
   inline isl::schedule_node insert_filter(isl::union_set filter) const;
   inline isl::schedule_node insert_guard(isl::set context) const;
   inline isl::schedule_node insert_mark(isl::id mark) const;
+  inline isl::schedule_node insert_partial_schedule(isl::multi_union_pw_aff schedule) const;
   inline isl::schedule_node insert_sequence(isl::union_set_list filters) const;
   inline isl::schedule_node insert_set(isl::union_set_list filters) const;
   inline isl::boolean is_equal(const isl::schedule_node &node2) const;
@@ -2828,10 +2825,10 @@ public:
   inline /* implicit */ union_set();
   inline /* implicit */ union_set(const isl::union_set &obj);
   inline /* implicit */ union_set(std::nullptr_t);
-  inline /* implicit */ union_set(isl::basic_set bset);
-  inline /* implicit */ union_set(isl::set set);
   inline /* implicit */ union_set(isl::point pnt);
   inline explicit union_set(isl::ctx ctx, const std::string &str);
+  inline /* implicit */ union_set(isl::basic_set bset);
+  inline /* implicit */ union_set(isl::set set);
   inline isl::union_set &operator=(isl::union_set obj);
   inline ~union_set();
   inline __isl_give isl_union_set *copy() const &;
@@ -4440,11 +4437,6 @@ isl::basic_map basic_map::equal(isl::space dim, unsigned int n_equal) {
   return manage(res);
 }
 
-void * basic_map::equalities_matrix(isl::dim c1, isl::dim c2, isl::dim c3, isl::dim c4, isl::dim c5) const {
-  auto res = isl_basic_map_equalities_matrix(get(), static_cast<enum isl_dim_type>(c1), static_cast<enum isl_dim_type>(c2), static_cast<enum isl_dim_type>(c3), static_cast<enum isl_dim_type>(c4), static_cast<enum isl_dim_type>(c5));
-  return res;
-}
-
 isl::basic_map basic_map::equate(isl::dim type1, int pos1, isl::dim type2, int pos2) const {
   auto res = isl_basic_map_equate(copy(), static_cast<enum isl_dim_type>(type1), pos1, static_cast<enum isl_dim_type>(type2), pos2);
   return manage(res);
@@ -4580,11 +4572,6 @@ isl::basic_map basic_map::identity(isl::space dim) {
 isl::boolean basic_map::image_is_bounded() const {
   auto res = isl_basic_map_image_is_bounded(get());
   return manage(res);
-}
-
-void * basic_map::inequalities_matrix(isl::dim c1, isl::dim c2, isl::dim c3, isl::dim c4, isl::dim c5) const {
-  auto res = isl_basic_map_inequalities_matrix(get(), static_cast<enum isl_dim_type>(c1), static_cast<enum isl_dim_type>(c2), static_cast<enum isl_dim_type>(c3), static_cast<enum isl_dim_type>(c4), static_cast<enum isl_dim_type>(c5));
-  return res;
 }
 
 isl::basic_map basic_map::insert_dims(isl::dim type, unsigned int pos, unsigned int n) const {
@@ -5049,11 +5036,6 @@ isl::basic_set basic_set::empty(isl::space dim) {
   return manage(res);
 }
 
-void * basic_set::equalities_matrix(isl::dim c1, isl::dim c2, isl::dim c3, isl::dim c4) const {
-  auto res = isl_basic_set_equalities_matrix(get(), static_cast<enum isl_dim_type>(c1), static_cast<enum isl_dim_type>(c2), static_cast<enum isl_dim_type>(c3), static_cast<enum isl_dim_type>(c4));
-  return res;
-}
-
 isl::basic_set basic_set::fix_si(isl::dim type, unsigned int pos, int value) const {
   auto res = isl_basic_set_fix_si(copy(), static_cast<enum isl_dim_type>(type), pos, value);
   return manage(res);
@@ -5130,11 +5112,6 @@ std::string basic_set::get_tuple_name() const {
 isl::basic_set basic_set::gist(isl::basic_set context) const {
   auto res = isl_basic_set_gist(copy(), context.release());
   return manage(res);
-}
-
-void * basic_set::inequalities_matrix(isl::dim c1, isl::dim c2, isl::dim c3, isl::dim c4) const {
-  auto res = isl_basic_set_inequalities_matrix(get(), static_cast<enum isl_dim_type>(c1), static_cast<enum isl_dim_type>(c2), static_cast<enum isl_dim_type>(c3), static_cast<enum isl_dim_type>(c4));
-  return res;
 }
 
 isl::basic_set basic_set::insert_dims(isl::dim type, unsigned int pos, unsigned int n) const {
@@ -5260,11 +5237,6 @@ isl::basic_set basic_set::preimage_multi_aff(isl::multi_aff ma) const {
 isl::basic_set basic_set::project_out(isl::dim type, unsigned int first, unsigned int n) const {
   auto res = isl_basic_set_project_out(copy(), static_cast<enum isl_dim_type>(type), first, n);
   return manage(res);
-}
-
-void * basic_set::reduced_basis() const {
-  auto res = isl_basic_set_reduced_basis(get());
-  return res;
 }
 
 isl::basic_set basic_set::remove_dims(isl::dim type, unsigned int first, unsigned int n) const {
@@ -9691,6 +9663,11 @@ isl::schedule schedule::insert_guard(isl::set guard) const {
   return manage(res);
 }
 
+isl::schedule schedule::insert_partial_schedule(isl::multi_union_pw_aff partial) const {
+  auto res = isl_schedule_insert_partial_schedule(copy(), partial.release());
+  return manage(res);
+}
+
 isl::schedule schedule::intersect_domain(isl::union_set domain) const {
   auto res = isl_schedule_intersect_domain(copy(), domain.release());
   return manage(res);
@@ -10185,6 +10162,11 @@ isl::schedule_node schedule_node::insert_guard(isl::set context) const {
 
 isl::schedule_node schedule_node::insert_mark(isl::id mark) const {
   auto res = isl_schedule_node_insert_mark(copy(), mark.release());
+  return manage(res);
+}
+
+isl::schedule_node schedule_node::insert_partial_schedule(isl::multi_union_pw_aff schedule) const {
+  auto res = isl_schedule_node_insert_partial_schedule(copy(), schedule.release());
   return manage(res);
 }
 
@@ -13008,20 +12990,20 @@ union_set::union_set(std::nullptr_t)
 union_set::union_set(__isl_take isl_union_set *ptr)
     : ptr(ptr) {}
 
-union_set::union_set(isl::basic_set bset) {
-  auto res = isl_union_set_from_basic_set(bset.release());
-  ptr = res;
-}
-union_set::union_set(isl::set set) {
-  auto res = isl_union_set_from_set(set.release());
-  ptr = res;
-}
 union_set::union_set(isl::point pnt) {
   auto res = isl_union_set_from_point(pnt.release());
   ptr = res;
 }
 union_set::union_set(isl::ctx ctx, const std::string &str) {
   auto res = isl_union_set_read_from_str(ctx.release(), str.c_str());
+  ptr = res;
+}
+union_set::union_set(isl::basic_set bset) {
+  auto res = isl_union_set_from_basic_set(bset.release());
+  ptr = res;
+}
+union_set::union_set(isl::set set) {
+  auto res = isl_union_set_from_set(set.release());
   ptr = res;
 }
 

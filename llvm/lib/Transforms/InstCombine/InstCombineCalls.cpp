@@ -1814,8 +1814,8 @@ Instruction *InstCombiner::visitVACopyInst(VACopyInst &I) {
 /// lifting.
 Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   auto Args = CI.arg_operands();
-  if (Value *V = SimplifyCall(CI.getCalledValue(), Args.begin(), Args.end(),
-                              SQ.getWithInstruction(&CI)))
+  if (Value *V = SimplifyCall(&CI, CI.getCalledValue(), Args.begin(),
+                              Args.end(), SQ.getWithInstruction(&CI)))
     return replaceInstUsesWith(CI, V);
 
   if (isFreeCall(&CI, &TLI))

@@ -111,6 +111,11 @@ Improvements to clang-tidy
   Finds possible inefficient vector operations in for loops that may cause
   unnecessary memory reallocations.
 
+- Added `NestingThreshold` to `readability-function-size
+  <http://clang.llvm.org/extra/clang-tidy/checks/readability-function-size.html>`_ check
+
+  Finds compound statements which create next nesting level after `NestingThreshold` and emits a warning.
+
 - Added `ParameterThreshold` to `readability-function-size
   <http://clang.llvm.org/extra/clang-tidy/checks/readability-function-size.html>`_ check
 

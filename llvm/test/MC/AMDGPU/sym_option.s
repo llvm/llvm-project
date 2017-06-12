@@ -10,7 +10,7 @@
 // RUN: llvm-mc -arch=amdgcn -mcpu=stoney  %s | FileCheck %s --check-prefix=STONEY
 
 .byte .option.machine_version_major
-// SI: .byte 0
+// SI: .byte 6
 // BONAIRE: .byte 7
 // HAWAII: .byte 7
 // KABINI: .byte 7
@@ -37,7 +37,7 @@
 // SI: .byte 0
 // BONAIRE: .byte 0
 // HAWAII: .byte 1
-// KABINI: .byte 2
+// KABINI: .byte 3
 // ICELAND: .byte 0
 // CARRIZO: .byte 1
 // TONGA: .byte 2

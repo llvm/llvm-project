@@ -41,6 +41,7 @@ template <class T> class ArrayRef;
 class AssumptionCache;
 class DominatorTree;
 class Instruction;
+class ImmutableCallSite;
 class DataLayout;
 class FastMathFlags;
 struct LoopStandardAnalysisResults;
@@ -194,11 +195,12 @@ Value *SimplifyFPBinOp(unsigned Opcode, Value *LHS, Value *RHS,
 
 /// Given a function and iterators over arguments, fold the result or return
 /// null.
-Value *SimplifyCall(Value *V, User::op_iterator ArgBegin,
+Value *SimplifyCall(ImmutableCallSite CS, Value *V, User::op_iterator ArgBegin,
                     User::op_iterator ArgEnd, const SimplifyQuery &Q);
 
 /// Given a function and set of arguments, fold the result or return null.
-Value *SimplifyCall(Value *V, ArrayRef<Value *> Args, const SimplifyQuery &Q);
+Value *SimplifyCall(ImmutableCallSite CS, Value *V, ArrayRef<Value *> Args,
+                    const SimplifyQuery &Q);
 
 /// See if we can compute a simplified version of this instruction. If not,
 /// return null.

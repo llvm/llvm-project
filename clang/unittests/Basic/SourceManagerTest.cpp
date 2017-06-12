@@ -51,24 +51,6 @@ protected:
   IntrusiveRefCntPtr<TargetInfo> Target;
 };
 
-class VoidModuleLoader : public ModuleLoader {
-  ModuleLoadResult loadModule(SourceLocation ImportLoc, 
-                              ModuleIdPath Path,
-                              Module::NameVisibilityKind Visibility,
-                              bool IsInclusionDirective) override {
-    return ModuleLoadResult();
-  }
-
-  void makeModuleVisible(Module *Mod,
-                         Module::NameVisibilityKind Visibility,
-                         SourceLocation ImportLoc) override { }
-
-  GlobalModuleIndex *loadGlobalModuleIndex(SourceLocation TriggerLoc) override
-    { return nullptr; }
-  bool lookupMissingImports(StringRef Name, SourceLocation TriggerLoc) override
-    { return 0; }
-};
-
 TEST_F(SourceManagerTest, isBeforeInTranslationUnit) {
   const char *source =
     "#define M(x) [x]\n"
@@ -78,7 +60,7 @@ TEST_F(SourceManagerTest, isBeforeInTranslationUnit) {
   FileID mainFileID = SourceMgr.createFileID(std::move(Buf));
   SourceMgr.setMainFileID(mainFileID);
 
-  VoidModuleLoader ModLoader;
+  TrivialModuleLoader ModLoader;
   MemoryBufferCache PCMCache;
   HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
                           Diags, LangOpts, &*Target);
@@ -199,7 +181,7 @@ TEST_F(SourceManagerTest, getMacroArgExpandedLocation) {
                                                  HeaderBuf->getBufferSize(), 0);
   SourceMgr.overrideFileContents(headerFile, std::move(HeaderBuf));
 
-  VoidModuleLoader ModLoader;
+  TrivialModuleLoader ModLoader;
   MemoryBufferCache PCMCache;
   HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
                           Diags, LangOpts, &*Target);
@@ -318,7 +300,7 @@ TEST_F(SourceManagerTest, isBeforeInTranslationUnitWithMacroInInclude) {
                                                  HeaderBuf->getBufferSize(), 0);
   SourceMgr.overrideFileContents(headerFile, std::move(HeaderBuf));
 
-  VoidModuleLoader ModLoader;
+  TrivialModuleLoader ModLoader;
   MemoryBufferCache PCMCache;
   HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
                           Diags, LangOpts, &*Target);

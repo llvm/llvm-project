@@ -19,6 +19,6 @@ _start:
 // CHECK: Disassembly of section .text:
 // CHECK-NEXT: _start:
 // 69636 = 0x11004 = next instruction
-// CHECK:         11000:        11 f0 02 f8     bl      #69636
-// CHECK-NEXT:    11004:        11 f0 04 b8     b.w     #69640
-// CHECK-NEXT:    11008:        11 f0 06 b8     b.w     #69644
+// CHECK:         11000: {{.*}} bl      #69636
+// CHECK-NEXT:    11004: {{.*}} b.w     #69640
+// CHECK-NEXT:    11008: {{.*}} b.w     #69644
