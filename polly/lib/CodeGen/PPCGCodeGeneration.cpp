@@ -2611,6 +2611,36 @@ public:
     return isl_ast_expr_ge(Iterations, MinComputeExpr);
   }
 
+  /// Check whether the Block contains any Function value.
+  bool ContainsFnPtrValInBlock(const BasicBlock *BB) {
+    for (const Instruction &Inst : *BB)
+      for (Value *SrcVal : Inst.operands()) {
+        PointerType *p = dyn_cast<PointerType>(SrcVal->getType());
+        if (!p)
+          continue;
+        if (isa<FunctionType>(p->getElementType()))
+          return true;
+      }
+    return false;
+  }
+
+  /// Return whether the Scop S has functions.
+  bool ContainsFnPtr(const Scop &S) {
+    for (auto &Stmt : S) {
+      if (Stmt.isBlockStmt()) {
+        if (ContainsFnPtrValInBlock(Stmt.getBasicBlock()))
+          return true;
+      } else {
+        assert(Stmt.isRegionStmt() &&
+               "Stmt was neither block nor region statement");
+        for (const BasicBlock *BB : Stmt.getRegion()->blocks())
+          if (ContainsFnPtrValInBlock(BB))
+            return true;
+      }
+    }
+    return false;
+  }
+
   /// Generate code for a given GPU AST described by @p Root.
   ///
   /// @param Root An isl_ast_node pointing to the root of the GPU AST.
@@ -2679,6 +2709,14 @@ public:
 
     // We currently do not support scops with invariant loads.
     if (S->hasInvariantAccesses())
+      return false;
+
+    // We currently do not support functions inside kernels, as code
+    // generation will need to offload function calls to the kernel.
+    // This may lead to a kernel trying to call a function on the host.
+    // This also allows us to prevent codegen from trying to take the
+    // address of an intrinsic function to send to the kernel.
+    if (ContainsFnPtr(CurrentScop))
       return false;
 
     auto PPCGScop = createPPCGScop();

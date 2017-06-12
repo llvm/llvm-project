@@ -50,7 +50,6 @@ endif ()
 
 # Check compiler flags
 check_c_compiler_flag(-funwind-tables         LIBCXXABI_HAS_FUNWIND_TABLES)
-check_cxx_compiler_flag(-fPIC                 LIBCXXABI_HAS_FPIC_FLAG)
 check_cxx_compiler_flag(-fno-exceptions       LIBCXXABI_HAS_NO_EXCEPTIONS_FLAG)
 check_cxx_compiler_flag(-fno-rtti             LIBCXXABI_HAS_NO_RTTI_FLAG)
 check_cxx_compiler_flag(-fstrict-aliasing     LIBCXXABI_HAS_FSTRICT_ALIASING_FLAG)
@@ -82,11 +81,6 @@ check_cxx_compiler_flag(/EHsc                 LIBCXXABI_HAS_EHSC_FLAG)
 check_cxx_compiler_flag(/EHs-                 LIBCXXABI_HAS_NO_EHS_FLAG)
 check_cxx_compiler_flag(/EHa-                 LIBCXXABI_HAS_NO_EHA_FLAG)
 check_cxx_compiler_flag(/GR-                  LIBCXXABI_HAS_NO_GR_FLAG)
-check_cxx_compiler_flag(-std=c++11            LIBCXXABI_HAS_STD_CXX11)
-
-if(LIBCXXABI_HAS_STD_CXX11)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-endif()
 
 # Check libraries
 check_library_exists(dl dladdr "" LIBCXXABI_HAS_DL_LIB)

@@ -42,6 +42,23 @@ template <class InputIterator, class OutputIterator, class BinaryOperation>
     OutputIterator
     partial_sum(InputIterator first, InputIterator last, OutputIterator result, BinaryOperation binary_op);
 
+template<class InputIterator, class OutputIterator, class T>
+    OutputIterator
+    exclusive_scan(InputIterator first, InputIterator last,
+                   OutputIterator result, T init); // C++17
+                           
+template<class InputIterator, class OutputIterator, class T, class BinaryOperation>
+    OutputIterator
+    exclusive_scan(InputIterator first, InputIterator last, 
+                   OutputIterator result, T init, BinaryOperation binary_op); // C++17
+
+template<class InputIterator, class OutputIterator, class T,
+         class BinaryOperation, class UnaryOperation>
+    OutputIterator
+    transform_exclusive_scan(InputIterator first, InputIterator last,
+                             OutputIterator result, T init,
+                             BinaryOperation binary_op, UnaryOperation unary_op);  // C++17
+
 template <class InputIterator, class OutputIterator>
     OutputIterator
     adjacent_difference(InputIterator first, InputIterator last, OutputIterator result);
@@ -66,6 +83,7 @@ template <class M, class N>
 #include <__config>
 #include <iterator>
 #include <limits> // for numeric_limits
+#include <functional>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
@@ -153,6 +171,59 @@ partial_sum(_InputIterator __first, _InputIterator __last, _OutputIterator __res
     }
     return __result;
 }
+
+#if _LIBCPP_STD_VER > 14
+template <class _InputIterator, class _OutputIterator, class _Tp, class _BinaryOp>
+inline _LIBCPP_INLINE_VISIBILITY
+_OutputIterator
+exclusive_scan(_InputIterator __first, _InputIterator __last, 
+               _OutputIterator __result, _Tp __init, _BinaryOp __b)
+{
+    if (__first != __last)
+    {
+        _Tp __saved = __init;
+        do
+        {
+            __init = __b(__init, *__first);
+            *__result = __saved;
+            __saved = __init;
+            ++__result;
+        } while (++__first != __last);
+    }
+    return __result;
+}
+
+template <class _InputIterator, class _OutputIterator, class _Tp>
+inline _LIBCPP_INLINE_VISIBILITY
+_OutputIterator
+exclusive_scan(_InputIterator __first, _InputIterator __last, 
+               _OutputIterator __result, _Tp __init)
+{
+    return _VSTD::exclusive_scan(__first, __last, __result, __init, _VSTD::plus<>());
+}
+
+template <class _InputIterator, class _OutputIterator, class _Tp, 
+          class _BinaryOp, class _UnaryOp>
+inline _LIBCPP_INLINE_VISIBILITY
+_OutputIterator
+transform_exclusive_scan(_InputIterator __first, _InputIterator __last, 
+                           _OutputIterator __result, _Tp __init,
+                           _BinaryOp __b, _UnaryOp __u)
+{
+    if (__first != __last)
+    {
+        _Tp __saved = __init;
+        do
+        {
+            __init = __b(__init, __u(*__first));
+            *__result = __saved;
+            __saved = __init;
+            ++__result;
+        } while (++__first != __last);
+    }
+    return __result;
+}
+#endif
 
 template <class _InputIterator, class _OutputIterator>
 inline _LIBCPP_INLINE_VISIBILITY
