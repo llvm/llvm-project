@@ -14,27 +14,36 @@
 #ifndef LLVM_SUPPORT_ENDIAN_H
 #define LLVM_SUPPORT_ENDIAN_H
 
+#include "llvm/Support/AlignOf.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/SwapByteOrder.h"
-
-#include <stdint.h>
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <cstring>
+#include <type_traits>
 
 namespace llvm {
 namespace support {
+
 enum endianness {big, little, native};
 
 // These are named values for common alignments.
 enum {aligned = 0, unaligned = 1};
 
 namespace detail {
-  /// \brief ::value is either alignment, or alignof(T) if alignment is 0.
-  template<class T, int alignment>
-  struct PickAlignment {
-    enum { value = alignment == 0 ? alignof(T) : alignment };
-  };
+
+/// \brief ::value is either alignment, or alignof(T) if alignment is 0.
+template<class T, int alignment>
+struct PickAlignment {
+ enum { value = alignment == 0 ? alignof(T) : alignment };
+};
+
 } // end namespace detail
 
 namespace endian {
+
 constexpr endianness system_endianness() {
   return sys::IsBigEndianHost ? big : little;
 }
@@ -190,9 +199,11 @@ inline void writeAtBitAlignment(void *memory, value_type value,
            &val[0], sizeof(value_type) * 2);
   }
 }
+
 } // end namespace endian
 
 namespace detail {
+
 template<typename value_type,
          endianness endian,
          std::size_t alignment>
@@ -254,77 +265,78 @@ public:
 
 } // end namespace detail
 
-typedef detail::packed_endian_specific_integral
-                  <uint16_t, little, unaligned> ulittle16_t;
-typedef detail::packed_endian_specific_integral
-                  <uint32_t, little, unaligned> ulittle32_t;
-typedef detail::packed_endian_specific_integral
-                  <uint64_t, little, unaligned> ulittle64_t;
+using ulittle16_t =
+    detail::packed_endian_specific_integral<uint16_t, little, unaligned>;
+using ulittle32_t =
+    detail::packed_endian_specific_integral<uint32_t, little, unaligned>;
+using ulittle64_t =
+    detail::packed_endian_specific_integral<uint64_t, little, unaligned>;
 
-typedef detail::packed_endian_specific_integral
-                   <int16_t, little, unaligned> little16_t;
-typedef detail::packed_endian_specific_integral
-                   <int32_t, little, unaligned> little32_t;
-typedef detail::packed_endian_specific_integral
-                   <int64_t, little, unaligned> little64_t;
+using little16_t =
+    detail::packed_endian_specific_integral<int16_t, little, unaligned>;
+using little32_t =
+    detail::packed_endian_specific_integral<int32_t, little, unaligned>;
+using little64_t =
+    detail::packed_endian_specific_integral<int64_t, little, unaligned>;
 
-typedef detail::packed_endian_specific_integral
-                    <uint16_t, little, aligned> aligned_ulittle16_t;
-typedef detail::packed_endian_specific_integral
-                    <uint32_t, little, aligned> aligned_ulittle32_t;
-typedef detail::packed_endian_specific_integral
-                    <uint64_t, little, aligned> aligned_ulittle64_t;
+using aligned_ulittle16_t =
+    detail::packed_endian_specific_integral<uint16_t, little, aligned>;
+using aligned_ulittle32_t =
+    detail::packed_endian_specific_integral<uint32_t, little, aligned>;
+using aligned_ulittle64_t =
+    detail::packed_endian_specific_integral<uint64_t, little, aligned>;
 
-typedef detail::packed_endian_specific_integral
-                     <int16_t, little, aligned> aligned_little16_t;
-typedef detail::packed_endian_specific_integral
-                     <int32_t, little, aligned> aligned_little32_t;
-typedef detail::packed_endian_specific_integral
-                     <int64_t, little, aligned> aligned_little64_t;
+using aligned_little16_t =
+    detail::packed_endian_specific_integral<int16_t, little, aligned>;
+using aligned_little32_t =
+    detail::packed_endian_specific_integral<int32_t, little, aligned>;
+using aligned_little64_t =
+    detail::packed_endian_specific_integral<int64_t, little, aligned>;
 
-typedef detail::packed_endian_specific_integral
-                  <uint16_t, big, unaligned>    ubig16_t;
-typedef detail::packed_endian_specific_integral
-                  <uint32_t, big, unaligned>    ubig32_t;
-typedef detail::packed_endian_specific_integral
-                  <uint64_t, big, unaligned>    ubig64_t;
+using ubig16_t =
+    detail::packed_endian_specific_integral<uint16_t, big, unaligned>;
+using ubig32_t =
+    detail::packed_endian_specific_integral<uint32_t, big, unaligned>;
+using ubig64_t =
+    detail::packed_endian_specific_integral<uint64_t, big, unaligned>;
 
-typedef detail::packed_endian_specific_integral
-                   <int16_t, big, unaligned>    big16_t;
-typedef detail::packed_endian_specific_integral
-                   <int32_t, big, unaligned>    big32_t;
-typedef detail::packed_endian_specific_integral
-                   <int64_t, big, unaligned>    big64_t;
+using big16_t =
+    detail::packed_endian_specific_integral<int16_t, big, unaligned>;
+using big32_t =
+    detail::packed_endian_specific_integral<int32_t, big, unaligned>;
+using big64_t =
+    detail::packed_endian_specific_integral<int64_t, big, unaligned>;
 
-typedef detail::packed_endian_specific_integral
-                    <uint16_t, big, aligned>    aligned_ubig16_t;
-typedef detail::packed_endian_specific_integral
-                    <uint32_t, big, aligned>    aligned_ubig32_t;
-typedef detail::packed_endian_specific_integral
-                    <uint64_t, big, aligned>    aligned_ubig64_t;
+using aligned_ubig16_t =
+    detail::packed_endian_specific_integral<uint16_t, big, aligned>;
+using aligned_ubig32_t =
+    detail::packed_endian_specific_integral<uint32_t, big, aligned>;
+using aligned_ubig64_t =
+    detail::packed_endian_specific_integral<uint64_t, big, aligned>;
 
-typedef detail::packed_endian_specific_integral
-                     <int16_t, big, aligned>    aligned_big16_t;
-typedef detail::packed_endian_specific_integral
-                     <int32_t, big, aligned>    aligned_big32_t;
-typedef detail::packed_endian_specific_integral
-                     <int64_t, big, aligned>    aligned_big64_t;
+using aligned_big16_t =
+    detail::packed_endian_specific_integral<int16_t, big, aligned>;
+using aligned_big32_t =
+    detail::packed_endian_specific_integral<int32_t, big, aligned>;
+using aligned_big64_t =
+    detail::packed_endian_specific_integral<int64_t, big, aligned>;
 
-typedef detail::packed_endian_specific_integral
-                  <uint16_t, native, unaligned> unaligned_uint16_t;
-typedef detail::packed_endian_specific_integral
-                  <uint32_t, native, unaligned> unaligned_uint32_t;
-typedef detail::packed_endian_specific_integral
-                  <uint64_t, native, unaligned> unaligned_uint64_t;
+using unaligned_uint16_t =
+    detail::packed_endian_specific_integral<uint16_t, native, unaligned>;
+using unaligned_uint32_t =
+    detail::packed_endian_specific_integral<uint32_t, native, unaligned>;
+using unaligned_uint64_t =
+    detail::packed_endian_specific_integral<uint64_t, native, unaligned>;
 
-typedef detail::packed_endian_specific_integral
-                   <int16_t, native, unaligned> unaligned_int16_t;
-typedef detail::packed_endian_specific_integral
-                   <int32_t, native, unaligned> unaligned_int32_t;
-typedef detail::packed_endian_specific_integral
-                   <int64_t, native, unaligned> unaligned_int64_t;
+using unaligned_int16_t =
+    detail::packed_endian_specific_integral<int16_t, native, unaligned>;
+using unaligned_int32_t =
+    detail::packed_endian_specific_integral<int32_t, native, unaligned>;
+using unaligned_int64_t =
+    detail::packed_endian_specific_integral<int64_t, native, unaligned>;
 
 namespace endian {
+
 template <typename T> inline T read(const void *P, endianness E) {
   return read<T, unaligned>(P, E);
 }
@@ -394,8 +406,10 @@ inline void write64le(void *P, uint64_t V) { write64<little>(P, V); }
 inline void write16be(void *P, uint16_t V) { write16<big>(P, V); }
 inline void write32be(void *P, uint32_t V) { write32<big>(P, V); }
 inline void write64be(void *P, uint64_t V) { write64<big>(P, V); }
+
 } // end namespace endian
+
 } // end namespace support
 } // end namespace llvm
 
-#endif
+#endif // LLVM_SUPPORT_ENDIAN_H

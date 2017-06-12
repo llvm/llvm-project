@@ -738,8 +738,8 @@ Value *LibCallSimplifier::optimizeMemCmp(CallInst *CI, IRBuilder<> &B) {
   ConstantInt *LenC = dyn_cast<ConstantInt>(CI->getArgOperand(2));
   if (!LenC)
     return nullptr;
-  uint64_t Len = LenC->getZExtValue();
 
+  uint64_t Len = LenC->getZExtValue();
   if (Len == 0) // memcmp(s1,s2,0) -> 0
     return Constant::getNullValue(CI->getType());
 

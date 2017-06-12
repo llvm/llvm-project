@@ -2847,10 +2847,10 @@ void CodeGenFunction::EmitCfiCheckStub() {
 void CodeGenFunction::EmitCfiCheckFail() {
   SanitizerScope SanScope(this);
   FunctionArgList Args;
-  ImplicitParamDecl ArgData(getContext(), nullptr, SourceLocation(), nullptr,
-                            getContext().VoidPtrTy);
-  ImplicitParamDecl ArgAddr(getContext(), nullptr, SourceLocation(), nullptr,
-                            getContext().VoidPtrTy);
+  ImplicitParamDecl ArgData(getContext(), getContext().VoidPtrTy,
+                            ImplicitParamDecl::Other);
+  ImplicitParamDecl ArgAddr(getContext(), getContext().VoidPtrTy,
+                            ImplicitParamDecl::Other);
   Args.push_back(&ArgData);
   Args.push_back(&ArgAddr);
 

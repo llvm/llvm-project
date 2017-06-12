@@ -31,8 +31,8 @@ template <> struct VarStreamArrayExtractor<codeview::CrossModuleImportItem> {
 public:
   typedef void ContextType;
 
-  static Error extract(BinaryStreamRef Stream, uint32_t &Len,
-                       codeview::CrossModuleImportItem &Item);
+  Error operator()(BinaryStreamRef Stream, uint32_t &Len,
+                   codeview::CrossModuleImportItem &Item);
 };
 }
 

@@ -1,6 +1,6 @@
-; RUN: llvm-pdbdump yaml2pdb -pdb=%t.pdb %p/Inputs/debug-subsections.yaml
-; RUN: llvm-pdbdump pdb2yaml -all -no-file-headers %t.pdb | FileCheck --check-prefix=YAML %s
-; RUN: llvm-pdbdump raw -subsections=all %t.pdb | FileCheck --check-prefix=RAW %s
+; RUN: llvm-pdbutil yaml2pdb -pdb=%t.pdb %p/Inputs/debug-subsections.yaml
+; RUN: llvm-pdbutil pdb2yaml -all -no-file-headers %t.pdb | FileCheck --check-prefix=YAML %s
+; RUN: llvm-pdbutil raw -subsections=all %t.pdb | FileCheck --check-prefix=RAW %s
 
 YAML:      Modules:
 YAML-NEXT:   - Module:          Foo.obj

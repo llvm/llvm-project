@@ -1,10 +1,10 @@
-RUN: llvm-pdbdump pdb2yaml -modules -module-files -dbi-stream \
+RUN: llvm-pdbutil pdb2yaml -modules -module-files -dbi-stream \
 RUN:   -pdb-stream -string-table -tpi-stream -stream-directory \
 RUN:   -stream-metadata %p/Inputs/empty.pdb > %t.1
-RUN: llvm-pdbdump yaml2pdb -pdb=%t.2 %t.1
+RUN: llvm-pdbutil yaml2pdb -pdb=%t.2 %t.1
 
-RUN: llvm-pdbdump raw -headers -string-table -tpi-records %p/Inputs/empty.pdb | FileCheck %s
-RUN: llvm-pdbdump raw -headers -string-table -tpi-records %t.2 | FileCheck %s
+RUN: llvm-pdbutil raw -headers -string-table -tpi-records %p/Inputs/empty.pdb | FileCheck %s
+RUN: llvm-pdbutil raw -headers -string-table -tpi-records %t.2 | FileCheck %s
 
 CHECK:      FileHeaders {
 CHECK-NEXT:   BlockSize: 4096

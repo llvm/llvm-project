@@ -4204,13 +4204,18 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   }
 #endif
 
+  bool RewriteImports = Args.hasFlag(options::OPT_frewrite_imports,
+                                     options::OPT_fno_rewrite_imports, false);
+  if (RewriteImports)
+    CmdArgs.push_back("-frewrite-imports");
+
   // Enable rewrite includes if the user's asked for it or if we're generating
   // diagnostics.
   // TODO: Once -module-dependency-dir works with -frewrite-includes it'd be
   // nice to enable this when doing a crashdump for modules as well.
   if (Args.hasFlag(options::OPT_frewrite_includes,
                    options::OPT_fno_rewrite_includes, false) ||
-      (C.isForDiagnostics() && !HaveAnyModules))
+      (C.isForDiagnostics() && (RewriteImports || !HaveAnyModules)))
     CmdArgs.push_back("-frewrite-includes");
 
   // Only allow -traditional or -traditional-cpp outside in preprocessing modes.

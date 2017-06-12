@@ -206,7 +206,8 @@ private:
     if (isFloatingLiteral) {
       char *end;
       errno = 0;
-      double doubleValue = strtod(Result->Text.str().c_str(), &end);
+      std::string Text = Result->Text.str();
+      double doubleValue = strtod(Text.c_str(), &end);
       if (*end == 0 && errno == 0) {
         Result->Kind = TokenInfo::TK_Literal;
         Result->Value = doubleValue;

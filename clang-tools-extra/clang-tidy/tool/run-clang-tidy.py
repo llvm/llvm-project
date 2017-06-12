@@ -105,6 +105,8 @@ def apply_fixes(args, tmpdir):
   invocation = [args.clang_apply_replacements_binary]
   if args.format:
     invocation.append('-format')
+  if args.style:
+    invocation.append('-style=' + args.style)
   invocation.append(tmpdir)
   subprocess.call(invocation)
 
@@ -148,6 +150,8 @@ def main():
   parser.add_argument('-fix', action='store_true', help='apply fix-its')
   parser.add_argument('-format', action='store_true', help='Reformat code '
                       'after applying fixes')
+  parser.add_argument('-style', default='file', help='The style of reformat '
+                      'code after applying fixes')
   parser.add_argument('-p', dest='build_path',
                       help='Path used to read a compile command database.')
   parser.add_argument('-extra-arg', dest='extra_arg',

@@ -4598,6 +4598,14 @@ void SelectionDAG::Legalize() {
   AssignTopologicalOrder();
 
   SmallPtrSet<SDNode *, 16> LegalizedNodes;
+  // Use a delete listener to remove nodes which were deleted during
+  // legalization from LegalizeNodes. This is needed to handle the situation
+  // where a new node is allocated by the object pool to the same address of a
+  // previously deleted node.
+  DAGNodeDeletedListener DeleteListener(
+      *this,
+      [&LegalizedNodes](SDNode *N, SDNode *E) { LegalizedNodes.erase(N); });
+
   SelectionDAGLegalize Legalizer(*this, LegalizedNodes);
 
   // Visit all the nodes. We start in topological order, so that we see

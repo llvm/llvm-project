@@ -1,7 +1,7 @@
-RUN: llvm-pdbdump pdb2yaml -tpi-stream %p/Inputs/big-read.pdb > %t.yaml
+RUN: llvm-pdbutil pdb2yaml -tpi-stream %p/Inputs/big-read.pdb > %t.yaml
 RUN: FileCheck -check-prefix=YAML %s < %t.yaml
-RUN: llvm-pdbdump yaml2pdb %t.yaml -pdb %t.pdb
-RUN: llvm-pdbdump raw -tpi-records %t.pdb | FileCheck %s --check-prefix=PDB
+RUN: llvm-pdbutil yaml2pdb %t.yaml -pdb %t.pdb
+RUN: llvm-pdbutil raw -tpi-records %t.pdb | FileCheck %s --check-prefix=PDB
 
 Only verify the beginning of the type stream.
 

@@ -25,6 +25,7 @@
 #include "llvm/DebugInfo/CodeView/DebugLinesSubsection.h"
 #include "llvm/DebugInfo/CodeView/DebugStringTableSubsection.h"
 #include "llvm/DebugInfo/CodeView/DebugSubsectionVisitor.h"
+#include "llvm/DebugInfo/CodeView/DebugSymbolRVASubsection.h"
 #include "llvm/DebugInfo/CodeView/DebugSymbolsSubsection.h"
 #include "llvm/DebugInfo/CodeView/EnumTables.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
@@ -208,6 +209,21 @@ struct YAMLFrameDataSubsection : public YAMLSubsectionBase {
 
   std::vector<YAMLFrameData> Frames;
 };
+
+struct YAMLCoffSymbolRVASubsection : public YAMLSubsectionBase {
+  YAMLCoffSymbolRVASubsection()
+      : YAMLSubsectionBase(DebugSubsectionKind::CoffSymbolRVA) {}
+
+  void map(IO &IO) override;
+  std::unique_ptr<DebugSubsection>
+  toCodeViewSubsection(BumpPtrAllocator &Allocator,
+                       DebugStringTableSubsection *Strings,
+                       DebugChecksumsSubsection *Checksums) const override;
+  static Expected<std::shared_ptr<YAMLCoffSymbolRVASubsection>>
+  fromCodeViewSubsection(const DebugSymbolRVASubsectionRef &RVAs);
+
+  std::vector<uint32_t> RVAs;
+};
 }
 
 void ScalarBitSetTraits<LineFlags>::bitset(IO &io, LineFlags &Flags) {
@@ -337,6 +353,11 @@ void YAMLFrameDataSubsection::map(IO &IO) {
   IO.mapRequired("Frames", Frames);
 }
 
+void YAMLCoffSymbolRVASubsection::map(IO &IO) {
+  IO.mapTag("!COFFSymbolRVAs", true);
+  IO.mapRequired("RVAs", RVAs);
+}
+
 void MappingTraits<YAMLDebugSubsection>::mapping(
     IO &IO, YAMLDebugSubsection &Subsection) {
   if (!IO.outputting()) {
@@ -359,6 +380,8 @@ void MappingTraits<YAMLDebugSubsection>::mapping(
       Subsection.Subsection = std::make_shared<YAMLStringTableSubsection>();
     } else if (IO.mapTag("!FrameData")) {
       Subsection.Subsection = std::make_shared<YAMLFrameDataSubsection>();
+    } else if (IO.mapTag("!COFFSymbolRVAs")) {
+      Subsection.Subsection = std::make_shared<YAMLCoffSymbolRVASubsection>();
     } else {
       llvm_unreachable("Unexpected subsection tag!");
     }
@@ -499,6 +522,16 @@ std::unique_ptr<DebugSubsection> YAMLFrameDataSubsection::toCodeViewSubsection(
     F.FrameFunc = Strings->insert(YF.FrameFunc);
     Result->addFrameData(F);
   }
+  return std::move(Result);
+}
+
+std::unique_ptr<DebugSubsection>
+YAMLCoffSymbolRVASubsection::toCodeViewSubsection(
+    BumpPtrAllocator &Allocator, DebugStringTableSubsection *Strings,
+    DebugChecksumsSubsection *Checksums) const {
+  auto Result = llvm::make_unique<DebugSymbolRVASubsection>();
+  for (const auto &RVA : RVAs)
+    Result->addRVA(RVA);
   return std::move(Result);
 }
 
@@ -698,6 +731,16 @@ YAMLFrameDataSubsection::fromCodeViewSubsection(
   return Result;
 }
 
+Expected<std::shared_ptr<YAMLCoffSymbolRVASubsection>>
+YAMLCoffSymbolRVASubsection::fromCodeViewSubsection(
+    const DebugSymbolRVASubsectionRef &Section) {
+  auto Result = std::make_shared<YAMLCoffSymbolRVASubsection>();
+  for (const auto &RVA : Section) {
+    Result->RVAs.push_back(RVA);
+  }
+  return Result;
+}
+
 Expected<std::vector<std::unique_ptr<DebugSubsection>>>
 llvm::CodeViewYAML::toCodeViewSubsectionList(
     BumpPtrAllocator &Allocator, ArrayRef<YAMLDebugSubsection> Subsections,
@@ -782,6 +825,8 @@ struct SubsectionConversionVisitor : public DebugSubsectionVisitor {
                      const DebugSubsectionState &State) override;
   Error visitFrameData(DebugFrameDataSubsectionRef &Symbols,
                        const DebugSubsectionState &State) override;
+  Error visitCOFFSymbolRVAs(DebugSymbolRVASubsectionRef &Symbols,
+                            const DebugSubsectionState &State) override;
 
   YAMLDebugSubsection Subsection;
 };
@@ -866,6 +911,15 @@ Error SubsectionConversionVisitor::visitFrameData(
     DebugFrameDataSubsectionRef &Frames, const DebugSubsectionState &State) {
   auto Result =
       YAMLFrameDataSubsection::fromCodeViewSubsection(State.strings(), Frames);
+  if (!Result)
+    return Result.takeError();
+  Subsection.Subsection = *Result;
+  return Error::success();
+}
+
+Error SubsectionConversionVisitor::visitCOFFSymbolRVAs(
+    DebugSymbolRVASubsectionRef &RVAs, const DebugSubsectionState &State) {
+  auto Result = YAMLCoffSymbolRVASubsection::fromCodeViewSubsection(RVAs);
   if (!Result)
     return Result.takeError();
   Subsection.Subsection = *Result;

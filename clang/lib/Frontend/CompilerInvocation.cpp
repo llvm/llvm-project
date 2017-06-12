@@ -2501,6 +2501,7 @@ static void ParsePreprocessorOutputArgs(PreprocessorOutputOptions &Opts,
   Opts.ShowMacros = Args.hasArg(OPT_dM) || Args.hasArg(OPT_dD);
   Opts.ShowIncludeDirectives = Args.hasArg(OPT_dI);
   Opts.RewriteIncludes = Args.hasArg(OPT_frewrite_includes);
+  Opts.RewriteImports = Args.hasArg(OPT_frewrite_imports);
   Opts.UseLineDirectives = Args.hasArg(OPT_fuse_line_directives);
 }
 

@@ -64,10 +64,10 @@ struct LineColumnEntry {
 
 class LineColumnExtractor {
 public:
-  typedef const LineFragmentHeader *ContextType;
+  Error operator()(BinaryStreamRef Stream, uint32_t &Len,
+                   LineColumnEntry &Item);
 
-  static Error extract(BinaryStreamRef Stream, uint32_t &Len,
-                       LineColumnEntry &Item, const LineFragmentHeader *Ctx);
+  const LineFragmentHeader *Header = nullptr;
 };
 
 class DebugLinesSubsectionRef final : public DebugSubsectionRef {

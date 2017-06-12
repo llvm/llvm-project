@@ -1,4 +1,4 @@
-//===-- ELFDumper.cpp - ELF-specific dumper ---------------------*- C++ -*-===//
+//===- ELFDumper.cpp - ELF-specific dumper --------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -17,19 +17,44 @@
 #include "ObjDumper.h"
 #include "StackMapPrinter.h"
 #include "llvm-readobj.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
+#include "llvm/BinaryFormat/ELF.h"
+#include "llvm/Object/ELF.h"
 #include "llvm/Object/ELFObjectFile.h"
+#include "llvm/Object/ELFTypes.h"
+#include "llvm/Object/Error.h"
+#include "llvm/Object/ObjectFile.h"
+#include "llvm/Object/StackMapParser.h"
 #include "llvm/Support/ARMAttributeParser.h"
 #include "llvm/Support/ARMBuildAttributes.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/Endian.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MipsABIFlags.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cinttypes>
+#include <cstddef>
+#include <cstdint>
+#include <cstdlib>
+#include <iterator>
+#include <memory>
+#include <string>
+#include <system_error>
+#include <vector>
 
 using namespace llvm;
 using namespace llvm::object;
@@ -49,28 +74,28 @@ using namespace ELF;
     return std::string(#enum).substr(3);
 
 #define TYPEDEF_ELF_TYPES(ELFT)                                                \
-  typedef ELFFile<ELFT> ELFO;                                                  \
-  typedef typename ELFO::Elf_Shdr Elf_Shdr;                                    \
-  typedef typename ELFO::Elf_Sym Elf_Sym;                                      \
-  typedef typename ELFO::Elf_Dyn Elf_Dyn;                                      \
-  typedef typename ELFO::Elf_Dyn_Range Elf_Dyn_Range;                          \
-  typedef typename ELFO::Elf_Rel Elf_Rel;                                      \
-  typedef typename ELFO::Elf_Rela Elf_Rela;                                    \
-  typedef typename ELFO::Elf_Rel_Range Elf_Rel_Range;                          \
-  typedef typename ELFO::Elf_Rela_Range Elf_Rela_Range;                        \
-  typedef typename ELFO::Elf_Phdr Elf_Phdr;                                    \
-  typedef typename ELFO::Elf_Half Elf_Half;                                    \
-  typedef typename ELFO::Elf_Ehdr Elf_Ehdr;                                    \
-  typedef typename ELFO::Elf_Word Elf_Word;                                    \
-  typedef typename ELFO::Elf_Hash Elf_Hash;                                    \
-  typedef typename ELFO::Elf_GnuHash Elf_GnuHash;                              \
-  typedef typename ELFO::Elf_Sym_Range Elf_Sym_Range;                          \
-  typedef typename ELFO::Elf_Versym Elf_Versym;                                \
-  typedef typename ELFO::Elf_Verneed Elf_Verneed;                              \
-  typedef typename ELFO::Elf_Vernaux Elf_Vernaux;                              \
-  typedef typename ELFO::Elf_Verdef Elf_Verdef;                                \
-  typedef typename ELFO::Elf_Verdaux Elf_Verdaux;                              \
-  typedef typename ELFO::uintX_t uintX_t;
+  using ELFO = ELFFile<ELFT>;                                                  \
+  using Elf_Shdr = typename ELFO::Elf_Shdr;                                    \
+  using Elf_Sym = typename ELFO::Elf_Sym;                                      \
+  using Elf_Dyn = typename ELFO::Elf_Dyn;                                      \
+  using Elf_Dyn_Range = typename ELFO::Elf_Dyn_Range;                          \
+  using Elf_Rel = typename ELFO::Elf_Rel;                                      \
+  using Elf_Rela = typename ELFO::Elf_Rela;                                    \
+  using Elf_Rel_Range = typename ELFO::Elf_Rel_Range;                          \
+  using Elf_Rela_Range = typename ELFO::Elf_Rela_Range;                        \
+  using Elf_Phdr = typename ELFO::Elf_Phdr;                                    \
+  using Elf_Half = typename ELFO::Elf_Half;                                    \
+  using Elf_Ehdr = typename ELFO::Elf_Ehdr;                                    \
+  using Elf_Word = typename ELFO::Elf_Word;                                    \
+  using Elf_Hash = typename ELFO::Elf_Hash;                                    \
+  using Elf_GnuHash = typename ELFO::Elf_GnuHash;                              \
+  using Elf_Sym_Range = typename ELFO::Elf_Sym_Range;                          \
+  using Elf_Versym = typename ELFO::Elf_Versym;                                \
+  using Elf_Verneed = typename ELFO::Elf_Verneed;                              \
+  using Elf_Vernaux = typename ELFO::Elf_Vernaux;                              \
+  using Elf_Verdef = typename ELFO::Elf_Verdef;                                \
+  using Elf_Verdaux = typename ELFO::Elf_Verdaux;                              \
+  using uintX_t = typename ELFO::uintX_t;
 
 namespace {
 
@@ -81,15 +106,16 @@ template <class ELFT> class DumpStyle;
 /// the size, entity size and virtual address are different entries in arbitrary
 /// order (DT_REL, DT_RELSZ, DT_RELENT for example).
 struct DynRegionInfo {
-  DynRegionInfo() : Addr(nullptr), Size(0), EntSize(0) {}
+  DynRegionInfo() = default;
   DynRegionInfo(const void *A, uint64_t S, uint64_t ES)
       : Addr(A), Size(S), EntSize(ES) {}
+
   /// \brief Address in current address space.
-  const void *Addr;
+  const void *Addr = nullptr;
   /// \brief Size in bytes of the region.
-  uint64_t Size;
+  uint64_t Size = 0;
   /// \brief Size of each entity in the region.
-  uint64_t EntSize;
+  uint64_t EntSize = 0;
 
   template <typename Type> ArrayRef<Type> getAsArrayRef() const {
     const Type *Start = reinterpret_cast<const Type *>(Addr);
@@ -139,6 +165,7 @@ public:
 
 private:
   std::unique_ptr<DumpStyle<ELFT>> ELFDumperStyle;
+
   TYPEDEF_ELF_TYPES(ELFT)
 
   DynRegionInfo checkDRI(DynRegionInfo DRI) {
@@ -196,6 +223,7 @@ private:
         : PointerIntPair<const void *, 1>(verdef, 0) {}
     VersionMapEntry(const Elf_Vernaux *vernaux)
         : PointerIntPair<const void *, 1>(vernaux, 1) {}
+
     bool isNull() const { return getPointer() == nullptr; }
     bool isVerdef() const { return !isNull() && getInt() == 0; }
     bool isVernaux() const { return !isNull() && getInt() == 1; }
@@ -262,10 +290,11 @@ void ELFDumper<ELFT>::printSymbolsHelper(bool IsDynamic) const {
 template <typename ELFT> class DumpStyle {
 public:
   using Elf_Shdr = typename ELFFile<ELFT>::Elf_Shdr;
-  using Elf_Sym =  typename ELFFile<ELFT>::Elf_Sym;
+  using Elf_Sym = typename ELFFile<ELFT>::Elf_Sym;
 
   DumpStyle(ELFDumper<ELFT> *Dumper) : Dumper(Dumper) {}
-  virtual ~DumpStyle() {}
+  virtual ~DumpStyle() = default;
+
   virtual void printFileHeaders(const ELFFile<ELFT> *Obj) = 0;
   virtual void printGroupSections(const ELFFile<ELFT> *Obj) = 0;
   virtual void printRelocations(const ELFFile<ELFT> *Obj) = 0;
@@ -274,9 +303,7 @@ public:
   virtual void printDynamicSymbols(const ELFFile<ELFT> *Obj) = 0;
   virtual void printDynamicRelocations(const ELFFile<ELFT> *Obj) = 0;
   virtual void printSymtabMessage(const ELFFile<ELFT> *obj, StringRef Name,
-                                  size_t Offset) {
-    return;
-  }
+                                  size_t Offset) {}
   virtual void printSymbol(const ELFFile<ELFT> *Obj, const Elf_Sym *Symbol,
                            const Elf_Sym *FirstSym, StringRef StrTable,
                            bool IsDynamic) = 0;
@@ -284,16 +311,20 @@ public:
   virtual void printHashHistogram(const ELFFile<ELFT> *Obj) = 0;
   virtual void printNotes(const ELFFile<ELFT> *Obj) = 0;
   const ELFDumper<ELFT> *dumper() const { return Dumper; }
+
 private:
   const ELFDumper<ELFT> *Dumper;
 };
 
 template <typename ELFT> class GNUStyle : public DumpStyle<ELFT> {
   formatted_raw_ostream OS;
+
 public:
   TYPEDEF_ELF_TYPES(ELFT)
+
   GNUStyle(ScopedPrinter &W, ELFDumper<ELFT> *Dumper)
       : DumpStyle<ELFT>(Dumper), OS(W.getOStream()) {}
+
   void printFileHeaders(const ELFO *Obj) override;
   void printGroupSections(const ELFFile<ELFT> *Obj) override;
   void printRelocations(const ELFO *Obj) override;
@@ -301,8 +332,8 @@ public:
   void printSymbols(const ELFO *Obj) override;
   void printDynamicSymbols(const ELFO *Obj) override;
   void printDynamicRelocations(const ELFO *Obj) override;
-  virtual void printSymtabMessage(const ELFO *Obj, StringRef Name,
-                                  size_t Offset) override;
+  void printSymtabMessage(const ELFO *Obj, StringRef Name,
+                          size_t Offset) override;
   void printProgramHeaders(const ELFO *Obj) override;
   void printHashHistogram(const ELFFile<ELFT> *Obj) override;
   void printNotes(const ELFFile<ELFT> *Obj) override;
@@ -311,6 +342,7 @@ private:
   struct Field {
     StringRef Str;
     unsigned Column;
+
     Field(StringRef S, unsigned Col) : Str(S), Column(Col) {}
     Field(unsigned Col) : Str(""), Column(Col) {}
   };
@@ -348,6 +380,7 @@ private:
 template <typename ELFT> class LLVMStyle : public DumpStyle<ELFT> {
 public:
   TYPEDEF_ELF_TYPES(ELFT)
+
   LLVMStyle(ScopedPrinter &W, ELFDumper<ELFT> *Dumper)
       : DumpStyle<ELFT>(Dumper), W(W) {}
 
@@ -368,10 +401,11 @@ private:
   void printDynamicRelocation(const ELFO *Obj, Elf_Rela Rel);
   void printSymbol(const ELFO *Obj, const Elf_Sym *Symbol, const Elf_Sym *First,
                    StringRef StrTable, bool IsDynamic) override;
+
   ScopedPrinter &W;
 };
 
-} // namespace
+} // end anonymous namespace
 
 namespace llvm {
 
@@ -405,7 +439,7 @@ std::error_code createELFDumper(const object::ObjectFile *Obj,
   return readobj_error::unsupported_obj_file_format;
 }
 
-} // namespace llvm
+} // end namespace llvm
 
 // Iterate through the versions needed section, and place each Elf_Vernaux
 // in the VersionMap according to its index.
@@ -525,8 +559,8 @@ static void printVersionDefinitionSection(ELFDumper<ELFT> *Dumper,
                                           const ELFO *Obj,
                                           const typename ELFO::Elf_Shdr *Sec,
                                           ScopedPrinter &W) {
-  typedef typename ELFO::Elf_Verdef VerDef;
-  typedef typename ELFO::Elf_Verdaux VerdAux;
+  using VerDef = typename ELFO::Elf_Verdef;
+  using VerdAux = typename ELFO::Elf_Verdaux;
 
   DictScope SD(W, "SHT_GNU_verdef");
   if (!Sec)
@@ -581,8 +615,8 @@ static void printVersionDependencySection(ELFDumper<ELFT> *Dumper,
                                           const ELFO *Obj,
                                           const typename ELFO::Elf_Shdr *Sec,
                                           ScopedPrinter &W) {
-  typedef typename ELFO::Elf_Verneed VerNeed;
-  typedef typename ELFO::Elf_Vernaux VernAux;
+  using VerNeed = typename ELFO::Elf_Verneed;
+  using VernAux = typename ELFO::Elf_Vernaux;
 
   DictScope SD(W, "SHT_GNU_verneed");
   if (!Sec)
@@ -1238,7 +1272,6 @@ static const char *getElfMipsOptionsOdkType(unsigned Odk) {
 template <typename ELFT>
 ELFDumper<ELFT>::ELFDumper(const ELFFile<ELFT> *Obj, ScopedPrinter &Writer)
     : ObjDumper(Writer), Obj(Obj) {
-
   SmallVector<const Elf_Phdr *, 4> LoadSegments;
   for (const Elf_Phdr &Phdr : unwrapOrError(Obj->program_headers())) {
     if (Phdr.p_type == ELF::PT_DYNAMIC) {
@@ -1567,8 +1600,8 @@ static const EnumEntry<unsigned> ElfDynamicDTMipsFlags[] = {
 
 template <typename T, typename TFlag>
 void printFlags(T Value, ArrayRef<EnumEntry<TFlag>> Flags, raw_ostream &OS) {
-  typedef EnumEntry<TFlag> FlagEntry;
-  typedef SmallVector<FlagEntry, 10> FlagVector;
+  using FlagEntry = EnumEntry<TFlag>;
+  using FlagVector = SmallVector<FlagEntry, 10>;
   FlagVector SetFlags;
 
   for (const auto &Flag : Flags) {
@@ -1687,6 +1720,7 @@ void ELFDumper<ELFT>::printUnwindInfo() {
 }
 
 namespace {
+
 template <> void ELFDumper<ELFType<support::little, false>>::printUnwindInfo() {
   const unsigned Machine = Obj->getHeader()->e_machine;
   if (Machine == EM_ARM) {
@@ -1696,7 +1730,8 @@ template <> void ELFDumper<ELFType<support::little, false>>::printUnwindInfo() {
   }
   W.startLine() << "UnwindInfo not implemented.\n";
 }
-}
+
+} // end anonymous namespace
 
 template<class ELFT>
 void ELFDumper<ELFT>::printDynamicTable() {
@@ -1742,7 +1777,7 @@ template<class ELFT>
 void ELFDumper<ELFT>::printNeededLibraries() {
   ListScope D(W, "NeededLibraries");
 
-  typedef std::vector<StringRef> LibsTy;
+  using LibsTy = std::vector<StringRef>;
   LibsTy Libs;
 
   for (const auto &Entry : dynamic_table())
@@ -1796,6 +1831,7 @@ void ELFDumper<ELFT>::printAttributes() {
 }
 
 namespace {
+
 template <> void ELFDumper<ELFType<support::little, false>>::printAttributes() {
   if (Obj->getHeader()->e_machine != EM_ARM) {
     W.startLine() << "Attributes not implemented.\n";
@@ -1821,13 +1857,12 @@ template <> void ELFDumper<ELFType<support::little, false>>::printAttributes() {
     ARMAttributeParser(&W).Parse(Contents, true);
   }
 }
-}
 
-namespace {
 template <class ELFT> class MipsGOTParser {
 public:
   TYPEDEF_ELF_TYPES(ELFT)
-  typedef typename ELFO::Elf_Addr GOTEntry;
+  using GOTEntry = typename ELFO::Elf_Addr;
+
   MipsGOTParser(ELFDumper<ELFT> *Dumper, const ELFO *Obj,
                 Elf_Dyn_Range DynTable, ScopedPrinter &W);
 
@@ -1838,11 +1873,11 @@ private:
   ELFDumper<ELFT> *Dumper;
   const ELFO *Obj;
   ScopedPrinter &W;
-  llvm::Optional<uint64_t> DtPltGot;
-  llvm::Optional<uint64_t> DtLocalGotNum;
-  llvm::Optional<uint64_t> DtGotSym;
-  llvm::Optional<uint64_t> DtMipsPltGot;
-  llvm::Optional<uint64_t> DtJmpRel;
+  Optional<uint64_t> DtPltGot;
+  Optional<uint64_t> DtLocalGotNum;
+  Optional<uint64_t> DtGotSym;
+  Optional<uint64_t> DtMipsPltGot;
+  Optional<uint64_t> DtJmpRel;
 
   std::size_t getGOTTotal(ArrayRef<uint8_t> GOT) const;
   const GOTEntry *makeGOTIter(ArrayRef<uint8_t> GOT, std::size_t EntryNum);
@@ -1858,7 +1893,8 @@ private:
                      const GOTEntry *It, StringRef StrTable,
                      const Elf_Sym *Sym);
 };
-}
+
+} // end anonymous namespace
 
 template <class ELFT>
 MipsGOTParser<ELFT>::MipsGOTParser(ELFDumper<ELFT> *Dumper, const ELFO *Obj,
@@ -2329,8 +2365,8 @@ template <class ELFT> void ELFDumper<ELFT>::printStackMap() const {
   ArrayRef<uint8_t> StackMapContentsArray =
       unwrapOrError(Obj->getSectionContents(StackMapSection));
 
-  prettyPrintStackMap(llvm::outs(), StackMapV2Parser<ELFT::TargetEndianness>(
-                                        StackMapContentsArray));
+  prettyPrintStackMap(outs(), StackMapV2Parser<ELFT::TargetEndianness>(
+                                  StackMapContentsArray));
 }
 
 template <class ELFT> void ELFDumper<ELFT>::printGroupSections() {
@@ -2431,7 +2467,7 @@ template <class ELFT> void GNUStyle<ELFT>::printGroupSections(const ELFO *Obj) {
 template <class ELFT>
 void GNUStyle<ELFT>::printRelocation(const ELFO *Obj, const Elf_Shdr *SymTab,
                                      const Elf_Rela &R, bool IsRela) {
-  std::string Offset, Info, Addend = "", Value;
+  std::string Offset, Info, Addend, Value;
   SmallString<32> RelocName;
   StringRef StrTable = unwrapOrError(Obj->getStringTableForSymtab(*SymTab));
   StringRef TargetName;
@@ -2525,6 +2561,7 @@ template <class ELFT> void GNUStyle<ELFT>::printRelocations(const ELFO *Obj) {
 
 std::string getSectionTypeString(unsigned Arch, unsigned Type) {
   using namespace ELF;
+
   switch (Arch) {
   case EM_ARM:
     switch (Type) {
@@ -2691,7 +2728,7 @@ template <class ELFT> void GNUStyle<ELFT>::printSections(const ELFO *Obj) {
 template <class ELFT>
 void GNUStyle<ELFT>::printSymtabMessage(const ELFO *Obj, StringRef Name,
                                         size_t Entries) {
-  if (Name.size())
+  if (!Name.empty())
     OS << "\nSymbol table '" << Name << "' contains " << Entries
        << " entries:\n";
   else
@@ -2846,7 +2883,7 @@ template <class ELFT> void GNUStyle<ELFT>::printSymbols(const ELFO *Obj) {
 
 template <class ELFT>
 void GNUStyle<ELFT>::printDynamicSymbols(const ELFO *Obj) {
-  if (this->dumper()->getDynamicStringTable().size() == 0)
+  if (this->dumper()->getDynamicStringTable().empty())
     return;
   auto StringTable = this->dumper()->getDynamicStringTable();
   auto DynSyms = this->dumper()->dynamic_symbols();
@@ -3060,19 +3097,19 @@ void GNUStyle<ELFT>::printDynamicRelocation(const ELFO *Obj, Elf_Rela R,
   Obj->getRelocationTypeName(R.getType(Obj->isMips64EL()), RelocName);
   SymbolName =
       unwrapOrError(Sym->getName(this->dumper()->getDynamicStringTable()));
-  std::string Addend = "", Info, Offset, Value;
+  std::string Addend, Info, Offset, Value;
   Offset = to_string(format_hex_no_prefix(R.r_offset, Width));
   Info = to_string(format_hex_no_prefix(R.r_info, Width));
   Value = to_string(format_hex_no_prefix(Sym->getValue(), Width));
   int64_t RelAddend = R.r_addend;
-  if (SymbolName.size() && IsRela) {
+  if (!SymbolName.empty() && IsRela) {
     if (R.r_addend < 0)
       Addend = " - ";
     else
       Addend = " + ";
   }
 
-  if (!SymbolName.size() && Sym->getValue() == 0)
+  if (SymbolName.empty() && Sym->getValue() == 0)
     Value = "";
 
   if (IsRela)
@@ -3207,7 +3244,7 @@ void GNUStyle<ELFT>::printHashHistogram(const ELFFile<ELFT> *Obj) {
     size_t MaxChain = 1;
     size_t CumulativeNonZero = 0;
 
-    if (Chains.size() == 0 || NBucket == 0)
+    if (Chains.empty() || NBucket == 0)
       return;
 
     std::vector<size_t> ChainLen(NBucket, 0);
@@ -3538,13 +3575,13 @@ void LLVMStyle<ELFT>::printRelocation(const ELFO *Obj, Elf_Rela Rel,
     DictScope Group(W, "Relocation");
     W.printHex("Offset", Rel.r_offset);
     W.printNumber("Type", RelocName, (int)Rel.getType(Obj->isMips64EL()));
-    W.printNumber("Symbol", TargetName.size() > 0 ? TargetName : "-",
+    W.printNumber("Symbol", !TargetName.empty() ? TargetName : "-",
                   Rel.getSymbol(Obj->isMips64EL()));
     W.printHex("Addend", Rel.r_addend);
   } else {
     raw_ostream &OS = W.startLine();
     OS << W.hex(Rel.r_offset) << " " << RelocName << " "
-       << (TargetName.size() > 0 ? TargetName : "-") << " "
+       << (!TargetName.empty() ? TargetName : "-") << " "
        << W.hex(Rel.r_addend) << "\n";
   }
 }
@@ -3735,12 +3772,12 @@ void LLVMStyle<ELFT>::printDynamicRelocation(const ELFO *Obj, Elf_Rela Rel) {
     DictScope Group(W, "Relocation");
     W.printHex("Offset", Rel.r_offset);
     W.printNumber("Type", RelocName, (int)Rel.getType(Obj->isMips64EL()));
-    W.printString("Symbol", SymbolName.size() > 0 ? SymbolName : "-");
+    W.printString("Symbol", !SymbolName.empty() ? SymbolName : "-");
     W.printHex("Addend", Rel.r_addend);
   } else {
     raw_ostream &OS = W.startLine();
     OS << W.hex(Rel.r_offset) << " " << RelocName << " "
-       << (SymbolName.size() > 0 ? SymbolName : "-") << " "
+       << (!SymbolName.empty() ? SymbolName : "-") << " "
        << W.hex(Rel.r_addend) << "\n";
   }
 }
@@ -3773,4 +3810,3 @@ template <class ELFT>
 void LLVMStyle<ELFT>::printNotes(const ELFFile<ELFT> *Obj) {
   W.startLine() << "printNotes not implemented!\n";
 }
-

@@ -24,6 +24,7 @@ public:
   unsigned ShowMacros : 1;         ///< Print macro definitions.
   unsigned ShowIncludeDirectives : 1;  ///< Print includes, imports etc. within preprocessed output.
   unsigned RewriteIncludes : 1;    ///< Preprocess include directives only.
+  unsigned RewriteImports  : 1;    ///< Include contents of transitively-imported modules.
 
 public:
   PreprocessorOutputOptions() {
@@ -35,6 +36,7 @@ public:
     ShowMacros = 0;
     ShowIncludeDirectives = 0;
     RewriteIncludes = 0;
+    RewriteImports = 0;
   }
 };
 

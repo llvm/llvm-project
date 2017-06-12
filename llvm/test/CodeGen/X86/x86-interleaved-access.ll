@@ -9,8 +9,8 @@ define <4 x double> @load_factorf64_4(<16 x double>* %ptr) {
 ; AVX-NEXT:    vmovupd 32(%rdi), %ymm1
 ; AVX-NEXT:    vmovupd 64(%rdi), %ymm2
 ; AVX-NEXT:    vmovupd 96(%rdi), %ymm3
-; AVX-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm4
-; AVX-NEXT:    vinsertf128 $1, %xmm3, %ymm1, %ymm5
+; AVX-NEXT:    vperm2f128 {{.*#+}} ymm4 = ymm0[0,1],ymm2[0,1]
+; AVX-NEXT:    vperm2f128 {{.*#+}} ymm5 = ymm1[0,1],ymm3[0,1]
 ; AVX-NEXT:    vhaddpd %ymm5, %ymm4, %ymm4
 ; AVX-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],ymm2[2,3]
 ; AVX-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm1[2,3],ymm3[2,3]
@@ -37,8 +37,8 @@ define <4 x double> @load_factorf64_2(<16 x double>* %ptr) {
 ; AVX-NEXT:    vmovupd 32(%rdi), %ymm1
 ; AVX-NEXT:    vmovupd 64(%rdi), %ymm2
 ; AVX-NEXT:    vmovupd 96(%rdi), %ymm3
-; AVX-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm4
-; AVX-NEXT:    vinsertf128 $1, %xmm3, %ymm1, %ymm5
+; AVX-NEXT:    vperm2f128 {{.*#+}} ymm4 = ymm0[0,1],ymm2[0,1]
+; AVX-NEXT:    vperm2f128 {{.*#+}} ymm5 = ymm1[0,1],ymm3[0,1]
 ; AVX-NEXT:    vunpcklpd {{.*#+}} ymm4 = ymm4[0],ymm5[0],ymm4[2],ymm5[2]
 ; AVX-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],ymm2[2,3]
 ; AVX-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm1[2,3],ymm3[2,3]
@@ -53,25 +53,15 @@ define <4 x double> @load_factorf64_2(<16 x double>* %ptr) {
 }
 
 define <4 x double> @load_factorf64_1(<16 x double>* %ptr) {
-; AVX1-LABEL: load_factorf64_1:
-; AVX1:       # BB#0:
-; AVX1-NEXT:    vmovups (%rdi), %ymm0
-; AVX1-NEXT:    vmovups 32(%rdi), %ymm1
-; AVX1-NEXT:    vinsertf128 $1, 64(%rdi), %ymm0, %ymm0
-; AVX1-NEXT:    vinsertf128 $1, 96(%rdi), %ymm1, %ymm1
-; AVX1-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
-; AVX1-NEXT:    vmulpd %ymm0, %ymm0, %ymm0
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: load_factorf64_1:
-; AVX2:       # BB#0:
-; AVX2-NEXT:    vmovupd (%rdi), %ymm0
-; AVX2-NEXT:    vmovupd 32(%rdi), %ymm1
-; AVX2-NEXT:    vinsertf128 $1, 64(%rdi), %ymm0, %ymm0
-; AVX2-NEXT:    vinsertf128 $1, 96(%rdi), %ymm1, %ymm1
-; AVX2-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
-; AVX2-NEXT:    vmulpd %ymm0, %ymm0, %ymm0
-; AVX2-NEXT:    retq
+; AVX-LABEL: load_factorf64_1:
+; AVX:       # BB#0:
+; AVX-NEXT:    vmovupd (%rdi), %ymm0
+; AVX-NEXT:    vmovupd 32(%rdi), %ymm1
+; AVX-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[0,1],mem[0,1]
+; AVX-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm1[0,1],mem[0,1]
+; AVX-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
+; AVX-NEXT:    vmulpd %ymm0, %ymm0, %ymm0
+; AVX-NEXT:    retq
   %wide.vec = load <16 x double>, <16 x double>* %ptr, align 16
   %strided.v0 = shufflevector <16 x double> %wide.vec, <16 x double> undef, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
   %strided.v3 = shufflevector <16 x double> %wide.vec, <16 x double> undef, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
@@ -86,8 +76,8 @@ define <4 x i64> @load_factori64_4(<16 x i64>* %ptr) {
 ; AVX1-NEXT:    vmovupd 32(%rdi), %ymm1
 ; AVX1-NEXT:    vmovupd 64(%rdi), %ymm2
 ; AVX1-NEXT:    vmovupd 96(%rdi), %ymm3
-; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm4
-; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm1, %ymm5
+; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm4 = ymm0[0,1],ymm2[0,1]
+; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm5 = ymm1[0,1],ymm3[0,1]
 ; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],ymm2[2,3]
 ; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm1[2,3],ymm3[2,3]
 ; AVX1-NEXT:    vunpcklpd {{.*#+}} ymm2 = ymm4[0],ymm5[0],ymm4[2],ymm5[2]
@@ -113,8 +103,8 @@ define <4 x i64> @load_factori64_4(<16 x i64>* %ptr) {
 ; AVX2-NEXT:    vmovdqu 32(%rdi), %ymm1
 ; AVX2-NEXT:    vmovdqu 64(%rdi), %ymm2
 ; AVX2-NEXT:    vmovdqu 96(%rdi), %ymm3
-; AVX2-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm4
-; AVX2-NEXT:    vinserti128 $1, %xmm3, %ymm1, %ymm5
+; AVX2-NEXT:    vperm2i128 {{.*#+}} ymm4 = ymm0[0,1],ymm2[0,1]
+; AVX2-NEXT:    vperm2i128 {{.*#+}} ymm5 = ymm1[0,1],ymm3[0,1]
 ; AVX2-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],ymm2[2,3]
 ; AVX2-NEXT:    vperm2i128 {{.*#+}} ymm1 = ymm1[2,3],ymm3[2,3]
 ; AVX2-NEXT:    vpunpcklqdq {{.*#+}} ymm2 = ymm4[0],ymm5[0],ymm4[2],ymm5[2]

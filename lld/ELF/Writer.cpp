@@ -137,46 +137,6 @@ template <class ELFT> void Writer<ELFT>::removeEmptyPTLoad() {
   Phdrs.erase(I, Phdrs.end());
 }
 
-// This function scans over the input sections and creates mergeable
-// synthetic sections. It removes MergeInputSections from array and
-// adds new synthetic ones. Each synthetic section is added to the
-// location of the first input section it replaces.
-static void combineMergableSections() {
-  std::vector<MergeSyntheticSection *> MergeSections;
-  for (InputSectionBase *&S : InputSections) {
-    MergeInputSection *MS = dyn_cast<MergeInputSection>(S);
-    if (!MS)
-      continue;
-
-    // We do not want to handle sections that are not alive, so just remove
-    // them instead of trying to merge.
-    if (!MS->Live)
-      continue;
-
-    StringRef OutsecName = getOutputSectionName(MS->Name);
-    uint64_t Flags = MS->Flags & ~(uint64_t)SHF_GROUP;
-    uint32_t Alignment = std::max<uint32_t>(MS->Alignment, MS->Entsize);
-
-    auto I = llvm::find_if(MergeSections, [=](MergeSyntheticSection *Sec) {
-      return Sec->Name == OutsecName && Sec->Flags == Flags &&
-             Sec->Alignment == Alignment;
-    });
-    if (I == MergeSections.end()) {
-      MergeSyntheticSection *Syn =
-          make<MergeSyntheticSection>(OutsecName, MS->Type, Flags, Alignment);
-      MergeSections.push_back(Syn);
-      I = std::prev(MergeSections.end());
-      S = Syn;
-    } else {
-      S = nullptr;
-    }
-    (*I)->addSection(MS);
-  }
-
-  std::vector<InputSectionBase *> &V = InputSections;
-  V.erase(std::remove(V.begin(), V.end(), nullptr), V.end());
-}
-
 template <class ELFT> static void combineEhFrameSections() {
   for (InputSectionBase *&S : InputSections) {
     EhInputSection *ES = dyn_cast<EhInputSection>(S);
@@ -205,7 +165,6 @@ template <class ELFT> void Writer<ELFT>::run() {
   // Create linker-synthesized sections such as .got or .plt.
   // Such sections are of type input section.
   createSyntheticSections();
-  combineMergableSections();
 
   if (!Config->Relocatable)
     combineEhFrameSections<ELFT>();
@@ -339,9 +298,6 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
   } else {
     InX::Interp = nullptr;
   }
-
-  if (!Config->Relocatable)
-    Add(createCommentSection<ELFT>());
 
   if (Config->Strip != StripPolicy::All) {
     InX::StrTab = make<StringTableSection>(".strtab", false);
@@ -1212,17 +1168,18 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   for (BaseCommand *Base : Script->Opt.Commands)
     if (auto *Cmd = dyn_cast<OutputSectionCommand>(Base))
       OutputSectionCommands.push_back(Cmd);
+  clearOutputSections();
 
   // Binary and relocatable output does not have PHDRS.
   // The headers have to be created before finalize as that can influence the
   // image base and the dynamic section on mips includes the image base.
   if (!Config->Relocatable && !Config->OFormatBinary) {
-    Phdrs = Script->hasPhdrsCommands() ? Script->createPhdrs() : createPhdrs();
+    Phdrs = Script->hasPhdrsCommands()
+                ? Script->createPhdrs(OutputSectionCommands)
+                : createPhdrs();
     addPtArmExid(Phdrs);
     Out::ProgramHeaders->Size = sizeof(Elf_Phdr) * Phdrs.size();
   }
-
-  clearOutputSections();
 
   // Compute the size of .rela.dyn and .rela.plt early since we need
   // them to populate .dynamic.
@@ -1386,7 +1343,7 @@ template <class ELFT> std::vector<PhdrEntry> Writer<ELFT>::createPhdrs() {
   AddHdr(PT_PHDR, PF_R)->add(Out::ProgramHeaders);
 
   // PT_INTERP must be the second entry if exists.
-  if (OutputSection *Sec = findSection(".interp"))
+  if (OutputSection *Sec = findSectionInScript(".interp"))
     AddHdr(PT_INTERP, Sec->getPhdrFlags())->add(Sec);
 
   // Add the first PT_LOAD segment for regular output sections.
@@ -1397,7 +1354,8 @@ template <class ELFT> std::vector<PhdrEntry> Writer<ELFT>::createPhdrs() {
   Load->add(Out::ElfHeader);
   Load->add(Out::ProgramHeaders);
 
-  for (OutputSection *Sec : OutputSections) {
+  for (OutputSectionCommand *Cmd : OutputSectionCommands) {
+    OutputSection *Sec = Cmd->Sec;
     if (!(Sec->Flags & SHF_ALLOC))
       break;
     if (!needsPtLoad(Sec))
@@ -1419,9 +1377,11 @@ template <class ELFT> std::vector<PhdrEntry> Writer<ELFT>::createPhdrs() {
 
   // Add a TLS segment if any.
   PhdrEntry TlsHdr(PT_TLS, PF_R);
-  for (OutputSection *Sec : OutputSections)
+  for (OutputSectionCommand *Cmd : OutputSectionCommands) {
+    OutputSection *Sec = Cmd->Sec;
     if (Sec->Flags & SHF_TLS)
       TlsHdr.add(Sec);
+  }
   if (TlsHdr.First)
     Ret.push_back(std::move(TlsHdr));
 
@@ -1433,9 +1393,11 @@ template <class ELFT> std::vector<PhdrEntry> Writer<ELFT>::createPhdrs() {
   // PT_GNU_RELRO includes all sections that should be marked as
   // read-only by dynamic linker after proccessing relocations.
   PhdrEntry RelRo(PT_GNU_RELRO, PF_R);
-  for (OutputSection *Sec : OutputSections)
+  for (OutputSectionCommand *Cmd : OutputSectionCommands) {
+    OutputSection *Sec = Cmd->Sec;
     if (needsPtLoad(Sec) && isRelroSection(Sec))
       RelRo.add(Sec);
+  }
   if (RelRo.First)
     Ret.push_back(std::move(RelRo));
 
@@ -1447,7 +1409,7 @@ template <class ELFT> std::vector<PhdrEntry> Writer<ELFT>::createPhdrs() {
 
   // PT_OPENBSD_RANDOMIZE is an OpenBSD-specific feature. That makes
   // the dynamic linker fill the segment with random data.
-  if (OutputSection *Sec = findSection(".openbsd.randomdata"))
+  if (OutputSection *Sec = findSectionInScript(".openbsd.randomdata"))
     AddHdr(PT_OPENBSD_RANDOMIZE, Sec->getPhdrFlags())->add(Sec);
 
   // PT_GNU_STACK is a special section to tell the loader to make the
@@ -1470,7 +1432,8 @@ template <class ELFT> std::vector<PhdrEntry> Writer<ELFT>::createPhdrs() {
 
   // Create one PT_NOTE per a group of contiguous .note sections.
   PhdrEntry *Note = nullptr;
-  for (OutputSection *Sec : OutputSections) {
+  for (OutputSectionCommand *Cmd : OutputSectionCommands) {
+    OutputSection *Sec = Cmd->Sec;
     if (Sec->Type == SHT_NOTE) {
       if (!Note || Script->hasLMA(Sec))
         Note = AddHdr(PT_NOTE, PF_R);
@@ -1486,15 +1449,17 @@ template <class ELFT>
 void Writer<ELFT>::addPtArmExid(std::vector<PhdrEntry> &Phdrs) {
   if (Config->EMachine != EM_ARM)
     return;
-  auto I = std::find_if(
-      OutputSections.begin(), OutputSections.end(),
-      [](OutputSection *Sec) { return Sec->Type == SHT_ARM_EXIDX; });
-  if (I == OutputSections.end())
+  auto I =
+      std::find_if(OutputSectionCommands.begin(), OutputSectionCommands.end(),
+                   [](OutputSectionCommand *Cmd) {
+                     return Cmd->Sec->Type == SHT_ARM_EXIDX;
+                   });
+  if (I == OutputSectionCommands.end())
     return;
 
   // PT_ARM_EXIDX is the ARM EHABI equivalent of PT_GNU_EH_FRAME
   PhdrEntry ARMExidx(PT_ARM_EXIDX, PF_R);
-  ARMExidx.add(*I);
+  ARMExidx.add((*I)->Sec);
   Phdrs.push_back(ARMExidx);
 }
 

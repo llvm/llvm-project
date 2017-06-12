@@ -1,4 +1,4 @@
-; RUN: llvm-pdbdump pretty -classes -class-definitions=layout \
+; RUN: llvm-pdbutil pretty -classes -class-definitions=layout \
 ; RUN:     -include-types=Test %p/Inputs/ComplexPaddingTest.pdb > %t
 
 ; RUN: FileCheck -input-file=%t %s -check-prefix=DIRECT_VB_ONLY

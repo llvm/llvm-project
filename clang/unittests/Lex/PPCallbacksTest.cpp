@@ -32,25 +32,6 @@ using namespace clang;
 
 namespace {
 
-// Stub out module loading.
-class VoidModuleLoader : public ModuleLoader {
-  ModuleLoadResult loadModule(SourceLocation ImportLoc, 
-                              ModuleIdPath Path,
-                              Module::NameVisibilityKind Visibility,
-                              bool IsInclusionDirective) override {
-    return ModuleLoadResult();
-  }
-
-  void makeModuleVisible(Module *Mod,
-                         Module::NameVisibilityKind Visibility,
-                         SourceLocation ImportLoc) override { }
-
-  GlobalModuleIndex *loadGlobalModuleIndex(SourceLocation TriggerLoc) override
-    { return nullptr; }
-  bool lookupMissingImports(StringRef Name, SourceLocation TriggerLoc) override
-    { return 0; }
-};
-
 // Stub to collect data from InclusionDirective callbacks.
 class InclusionDirectiveCallbacks : public PPCallbacks {
 public:
@@ -161,7 +142,7 @@ protected:
         llvm::MemoryBuffer::getMemBuffer(SourceText);
     SourceMgr.setMainFileID(SourceMgr.createFileID(std::move(Buf)));
 
-    VoidModuleLoader ModLoader;
+    TrivialModuleLoader ModLoader;
     MemoryBufferCache PCMCache;
 
     HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
@@ -199,7 +180,7 @@ protected:
         llvm::MemoryBuffer::getMemBuffer(SourceText, "test.cl");
     SourceMgr.setMainFileID(SourceMgr.createFileID(std::move(SourceBuf)));
 
-    VoidModuleLoader ModLoader;
+    TrivialModuleLoader ModLoader;
     MemoryBufferCache PCMCache;
     HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
                             Diags, OpenCLLangOpts, Target.get());

@@ -134,7 +134,7 @@ static cl::opt<polly::VectorizerChoice, true> Vectorizer(
 
 static cl::opt<bool> ImportJScop(
     "polly-import",
-    cl::desc("Export the polyhedral description of the detected Scops"),
+    cl::desc("Import the polyhedral description of the detected Scops"),
     cl::Hidden, cl::init(false), cl::ZeroOrMore, cl::cat(PollyCategory));
 
 static cl::opt<bool> ExportJScop(

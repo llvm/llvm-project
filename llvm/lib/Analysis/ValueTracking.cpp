@@ -3078,7 +3078,7 @@ bool llvm::getConstantStringInfo(const Value *V, StringRef &Str,
       Str = StringRef("", 1);
       return true;
     }
-    // We cannot instantiate a StringRef as we do not have an apropriate string
+    // We cannot instantiate a StringRef as we do not have an appropriate string
     // of 0s at hand.
     return false;
   }

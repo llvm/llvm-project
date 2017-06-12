@@ -2462,10 +2462,9 @@ Decl *ASTNodeImporter::VisitImplicitParamDecl(ImplicitParamDecl *D) {
     return nullptr;
 
   // Create the imported parameter.
-  ImplicitParamDecl *ToParm
-    = ImplicitParamDecl::Create(Importer.getToContext(), DC,
-                                Loc, Name.getAsIdentifierInfo(),
-                                T);
+  auto *ToParm = ImplicitParamDecl::Create(Importer.getToContext(), DC, Loc,
+                                           Name.getAsIdentifierInfo(), T,
+                                           D->getParameterKind());
   return Importer.Imported(D, ToParm);
 }
 

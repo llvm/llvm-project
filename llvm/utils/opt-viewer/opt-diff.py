@@ -43,7 +43,7 @@ if __name__ == '__main__':
         '-j',
         default=cpu_count(),
         type=int,
-        help='Max job count (defaults to current CPU count)')
+        help='Max job count (defaults to %(default)s, the current CPU count)')
     parser.add_argument('--output', '-o', default='diff.opt.yaml')
     args = parser.parse_args()
 

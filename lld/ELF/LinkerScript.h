@@ -274,7 +274,8 @@ public:
   void adjustSectionsBeforeSorting();
   void adjustSectionsAfterSorting();
 
-  std::vector<PhdrEntry> createPhdrs();
+  std::vector<PhdrEntry>
+  createPhdrs(ArrayRef<OutputSectionCommand *> OutputSectionCommands);
   bool ignoreInterpSection();
 
   bool hasLMA(OutputSection *Sec);

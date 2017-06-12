@@ -1,4 +1,4 @@
-
+﻿
 //===-- X86ISelLowering.cpp - X86 DAG Lowering Implementation -------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -5816,7 +5816,8 @@ static bool setTargetShuffleZeroElements(SDValue N,
 // The decoded shuffle mask may contain a different number of elements to the
 // destination value type.
 static bool getFauxShuffleMask(SDValue N, SmallVectorImpl<int> &Mask,
-                               SmallVectorImpl<SDValue> &Ops) {
+                               SmallVectorImpl<SDValue> &Ops,
+                               SelectionDAG &DAG) {
   Mask.clear();
   Ops.clear();
 
@@ -5924,6 +5925,19 @@ static bool getFauxShuffleMask(SDValue N, SmallVectorImpl<int> &Mask,
       Mask.push_back(i == InIdx ? NumElts + ExIdx : i);
     return true;
   }
+  case X86ISD::PACKSS: {
+    // If we know input saturation won't happen we can treat this
+    // as a truncation shuffle.
+    if (DAG.ComputeNumSignBits(N.getOperand(0)) <= NumBitsPerElt ||
+        DAG.ComputeNumSignBits(N.getOperand(1)) <= NumBitsPerElt)
+      return false;
+
+    Ops.push_back(N.getOperand(0));
+    Ops.push_back(N.getOperand(1));
+    for (unsigned i = 0; i != NumElts; ++i)
+      Mask.push_back(i * 2);
+    return true;
+  }
   case X86ISD::VSHLI:
   case X86ISD::VSRLI: {
     uint64_t ShiftVal = N.getConstantOperandVal(1);
@@ -5998,9 +6012,10 @@ static void resolveTargetShuffleInputsAndMask(SmallVectorImpl<SDValue> &Inputs,
 /// Returns true if the target shuffle mask was decoded.
 static bool resolveTargetShuffleInputs(SDValue Op,
                                        SmallVectorImpl<SDValue> &Inputs,
-                                       SmallVectorImpl<int> &Mask) {
+                                       SmallVectorImpl<int> &Mask,
+                                       SelectionDAG &DAG) {
   if (!setTargetShuffleZeroElements(Op, Mask, Inputs))
-    if (!getFauxShuffleMask(Op, Mask, Inputs))
+    if (!getFauxShuffleMask(Op, Mask, Inputs, DAG))
       return false;
 
   resolveTargetShuffleInputsAndMask(Inputs, Mask);
@@ -11992,18 +12007,22 @@ static SDValue lowerV2X128VectorShuffle(const SDLoc &DL, MVT VT, SDValue V1,
     // subvector.
     bool OnlyUsesV1 = isShuffleEquivalent(V1, V2, Mask, {0, 1, 0, 1});
     if (OnlyUsesV1 || isShuffleEquivalent(V1, V2, Mask, {0, 1, 4, 5})) {
-      // With AVX2 we should use VPERMQ/VPERMPD to allow memory folding.
+      // With AVX2, use VPERMQ/VPERMPD to allow memory folding.
       if (Subtarget.hasAVX2() && V2.isUndef())
         return SDValue();
 
-      MVT SubVT = MVT::getVectorVT(VT.getVectorElementType(),
-                                   VT.getVectorNumElements() / 2);
-      SDValue LoV = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, SubVT, V1,
-                                DAG.getIntPtrConstant(0, DL));
-      SDValue HiV = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, SubVT,
-                                OnlyUsesV1 ? V1 : V2,
-                                DAG.getIntPtrConstant(0, DL));
-      return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, LoV, HiV);
+      // With AVX1, use vperm2f128 (below) to allow load folding. Otherwise,
+      // this will likely become vinsertf128 which can't fold a 256-bit memop.
+      if (!isa<LoadSDNode>(peekThroughBitcasts(V1))) {
+        MVT SubVT = MVT::getVectorVT(VT.getVectorElementType(),
+                                     VT.getVectorNumElements() / 2);
+        SDValue LoV = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, SubVT, V1,
+                                  DAG.getIntPtrConstant(0, DL));
+        SDValue HiV = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, SubVT,
+                                  OnlyUsesV1 ? V1 : V2,
+                                  DAG.getIntPtrConstant(0, DL));
+        return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, LoV, HiV);
+      }
     }
   }
 
@@ -26760,6 +26779,17 @@ unsigned X86TargetLowering::ComputeNumSignBitsForTargetNode(
     return Tmp;
   }
 
+  case X86ISD::VSHLI: {
+    SDValue Src = Op.getOperand(0);
+    unsigned Tmp = DAG.ComputeNumSignBits(Src, Depth + 1);
+    APInt ShiftVal = cast<ConstantSDNode>(Op.getOperand(1))->getAPIntValue();
+    if (ShiftVal.uge(VTBits))
+      return VTBits; // Shifted all bits out --> zero.
+    if (ShiftVal.uge(Tmp))
+      return 1; // Shifted all sign bits out --> unknown.
+    return Tmp - ShiftVal.getZExtValue();
+  }
+
   case X86ISD::VSRAI: {
     SDValue Src = Op.getOperand(0);
     unsigned Tmp = DAG.ComputeNumSignBits(Src, Depth + 1);
@@ -27908,7 +27938,7 @@ static bool combineX86ShufflesRecursively(ArrayRef<SDValue> SrcOps,
   // Extract target shuffle mask and resolve sentinels and inputs.
   SmallVector<int, 64> OpMask;
   SmallVector<SDValue, 2> OpInputs;
-  if (!resolveTargetShuffleInputs(Op, OpInputs, OpMask))
+  if (!resolveTargetShuffleInputs(Op, OpInputs, OpMask, DAG))
     return false;
 
   assert(OpInputs.size() <= 2 && "Too many shuffle inputs");
@@ -29450,7 +29480,7 @@ static SDValue combineExtractWithShuffle(SDNode *N, SelectionDAG &DAG,
   // Resolve the target shuffle inputs and mask.
   SmallVector<int, 16> Mask;
   SmallVector<SDValue, 2> Ops;
-  if (!resolveTargetShuffleInputs(peekThroughBitcasts(Src), Ops, Mask))
+  if (!resolveTargetShuffleInputs(peekThroughBitcasts(Src), Ops, Mask, DAG))
     return SDValue();
 
   // Attempt to narrow/widen the shuffle mask to the correct size.

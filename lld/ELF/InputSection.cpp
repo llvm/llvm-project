@@ -73,6 +73,16 @@ InputSectionBase::InputSectionBase(InputFile *File, uint64_t Flags,
   this->Alignment = V;
 }
 
+// Drop SHF_GROUP bit unless we are producing a re-linkable object file.
+// SHF_GROUP is a marker that a section belongs to some comdat group.
+// That flag doesn't make sense in an executable.
+static uint64_t getFlags(uint64_t Flags) {
+  Flags &= ~(uint64_t)SHF_INFO_LINK;
+  if (!Config->Relocatable)
+    Flags &= ~(uint64_t)SHF_GROUP;
+  return Flags;
+}
+
 // GNU assembler 2.24 and LLVM 4.0.0's MC (the newest release as of
 // March 2017) fail to infer section types for sections starting with
 // ".init_array." or ".fini_array.". They set SHT_PROGBITS instead of
@@ -95,7 +105,7 @@ template <class ELFT>
 InputSectionBase::InputSectionBase(elf::ObjectFile<ELFT> *File,
                                    const typename ELFT::Shdr *Hdr,
                                    StringRef Name, Kind SectionKind)
-    : InputSectionBase(File, Hdr->sh_flags & ~SHF_INFO_LINK,
+    : InputSectionBase(File, getFlags(Hdr->sh_flags),
                        getType(Hdr->sh_type, Name), Hdr->sh_entsize,
                        Hdr->sh_link, Hdr->sh_info, Hdr->sh_addralign,
                        getSectionContents(File, Hdr), Name, SectionKind) {
