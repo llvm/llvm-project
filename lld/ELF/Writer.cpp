@@ -137,46 +137,6 @@ template <class ELFT> void Writer<ELFT>::removeEmptyPTLoad() {
   Phdrs.erase(I, Phdrs.end());
 }
 
-// This function scans over the input sections and creates mergeable
-// synthetic sections. It removes MergeInputSections from array and
-// adds new synthetic ones. Each synthetic section is added to the
-// location of the first input section it replaces.
-static void combineMergableSections() {
-  std::vector<MergeSyntheticSection *> MergeSections;
-  for (InputSectionBase *&S : InputSections) {
-    MergeInputSection *MS = dyn_cast<MergeInputSection>(S);
-    if (!MS)
-      continue;
-
-    // We do not want to handle sections that are not alive, so just remove
-    // them instead of trying to merge.
-    if (!MS->Live)
-      continue;
-
-    StringRef OutsecName = getOutputSectionName(MS->Name);
-    uint64_t Flags = MS->Flags & ~(uint64_t)SHF_GROUP;
-    uint32_t Alignment = std::max<uint32_t>(MS->Alignment, MS->Entsize);
-
-    auto I = llvm::find_if(MergeSections, [=](MergeSyntheticSection *Sec) {
-      return Sec->Name == OutsecName && Sec->Flags == Flags &&
-             Sec->Alignment == Alignment;
-    });
-    if (I == MergeSections.end()) {
-      MergeSyntheticSection *Syn =
-          make<MergeSyntheticSection>(OutsecName, MS->Type, Flags, Alignment);
-      MergeSections.push_back(Syn);
-      I = std::prev(MergeSections.end());
-      S = Syn;
-    } else {
-      S = nullptr;
-    }
-    (*I)->addSection(MS);
-  }
-
-  std::vector<InputSectionBase *> &V = InputSections;
-  V.erase(std::remove(V.begin(), V.end(), nullptr), V.end());
-}
-
 template <class ELFT> static void combineEhFrameSections() {
   for (InputSectionBase *&S : InputSections) {
     EhInputSection *ES = dyn_cast<EhInputSection>(S);
@@ -205,7 +165,6 @@ template <class ELFT> void Writer<ELFT>::run() {
   // Create linker-synthesized sections such as .got or .plt.
   // Such sections are of type input section.
   createSyntheticSections();
-  combineMergableSections();
 
   if (!Config->Relocatable)
     combineEhFrameSections<ELFT>();
@@ -339,9 +298,6 @@ template <class ELFT> void Writer<ELFT>::createSyntheticSections() {
   } else {
     InX::Interp = nullptr;
   }
-
-  if (!Config->Relocatable)
-    Add(createCommentSection<ELFT>());
 
   if (Config->Strip != StripPolicy::All) {
     InX::StrTab = make<StringTableSection>(".strtab", false);

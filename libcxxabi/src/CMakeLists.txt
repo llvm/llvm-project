@@ -77,7 +77,6 @@ if (MINGW)
 endif()
 
 # Setup flags.
-add_compile_flags_if_supported(-fPIC)
 add_link_flags_if_supported(-nodefaultlibs)
 
 set(LIBCXXABI_SHARED_LINK_FLAGS)
@@ -110,11 +109,18 @@ endif()
 
 # Add a object library that contains the compiled source files.
 add_library(cxxabi_objects OBJECT ${LIBCXXABI_SOURCES} ${LIBCXXABI_HEADERS})
-
 set_target_properties(cxxabi_objects
-  PROPERTIES
-    COMPILE_FLAGS "${LIBCXXABI_COMPILE_FLAGS}"
-  )
+                      PROPERTIES
+                        CXX_EXTENSIONS
+                          OFF
+                        CXX_STANDARD
+                          11
+                        CXX_STANDARD_REQUIRED
+                          ON
+                        COMPILE_FLAGS
+                          "${LIBCXXABI_COMPILE_FLAGS}"
+                        POSITION_INDEPENDENT_CODE
+                          ON)
 
 set(LIBCXXABI_TARGETS)
 
@@ -123,12 +129,23 @@ if (LIBCXXABI_ENABLE_SHARED)
   add_library(cxxabi_shared SHARED $<TARGET_OBJECTS:cxxabi_objects>)
   target_link_libraries(cxxabi_shared ${LIBCXXABI_LIBRARIES})
   set_target_properties(cxxabi_shared
-    PROPERTIES
-      LINK_FLAGS    "${LIBCXXABI_LINK_FLAGS} ${LIBCXXABI_SHARED_LINK_FLAGS}"
-      OUTPUT_NAME   "c++abi"
-      VERSION       "1.0"
-      SOVERSION     "1"
-    )
+                        PROPERTIES
+                          CXX_EXTENSIONS
+                            OFF
+                          CXX_STANDARD
+                            11
+                          CXX_STANDARD_REQUIRED
+                            ON
+                          LINK_FLAGS
+                            "${LIBCXXABI_LINK_FLAGS} ${LIBCXXABI_SHARED_LINK_FLAGS}"
+                          OUTPUT_NAME
+                            "c++abi"
+                          POSITION_INDEPENDENT_CODE
+                            ON
+                          SOVERSION
+                            "1"
+                          VERSION
+                            "1.0")
   list(APPEND LIBCXXABI_TARGETS "cxxabi_shared")
 endif()
 
@@ -137,10 +154,19 @@ if (LIBCXXABI_ENABLE_STATIC)
   add_library(cxxabi_static STATIC $<TARGET_OBJECTS:cxxabi_objects>)
   target_link_libraries(cxxabi_static ${LIBCXXABI_LIBRARIES})
   set_target_properties(cxxabi_static
-    PROPERTIES
-      LINK_FLAGS    "${LIBCXXABI_LINK_FLAGS}"
-      OUTPUT_NAME   "c++abi"
-  )
+                        PROPERTIES
+                          CXX_EXTENSIONS
+                            OFF
+                          CXX_STANDARD
+                            11
+                          CXX_STANDARD_REQUIRED
+                            ON
+                          LINK_FLAGS
+                            "${LIBCXXABI_LINK_FLAGS}"
+                          OUTPUT_NAME
+                            "c++abi"
+                          POSITION_INDEPENDENT_CODE
+                            ON)
   list(APPEND LIBCXXABI_TARGETS "cxxabi_static")
 endif()
 

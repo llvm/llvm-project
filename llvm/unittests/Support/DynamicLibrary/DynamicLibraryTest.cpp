@@ -19,8 +19,6 @@
 using namespace llvm;
 using namespace llvm::sys;
 
-extern "C" PIPSQUEAK_EXPORT const char *TestA() { return "ProcessCall"; }
-
 std::string LibPath(const std::string Name = "PipSqueak") {
   const std::vector<testing::internal::string>& Argvs = testing::internal::GetArgvs();
   const char *Argv0 = Argvs.size() > 0 ? Argvs[0].c_str() : "DynamicLibraryTests";

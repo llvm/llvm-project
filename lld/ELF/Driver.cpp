@@ -36,6 +36,7 @@
 #include "ScriptParser.h"
 #include "Strings.h"
 #include "SymbolTable.h"
+#include "SyntheticSections.h"
 #include "Target.h"
 #include "Threads.h"
 #include "Writer.h"
@@ -43,7 +44,6 @@
 #include "lld/Driver/Driver.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/Object/Decompressor.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Path.h"
@@ -1001,23 +1001,19 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
     for (InputSectionBase *S : F->getSections())
       InputSections.push_back(cast<InputSection>(S));
 
-  // Do size optimizations: garbage collection and identical code folding.
+  // This adds a .comment section containing a version string. We have to add it
+  // before decompressAndMergeSections because the .comment section is a
+  // mergeable section.
+  if (!Config->Relocatable)
+    InputSections.push_back(createCommentSection<ELFT>());
+
+  // Do size optimizations: garbage collection, merging of SHF_MERGE sections
+  // and identical code folding.
   if (Config->GcSections)
     markLive<ELFT>();
+  decompressAndMergeSections();
   if (Config->ICF)
     doIcf<ELFT>();
-
-  // MergeInputSection::splitIntoPieces needs to be called before
-  // any call of MergeInputSection::getOffset. Do that.
-  parallelForEach(InputSections.begin(), InputSections.end(),
-                  [](InputSectionBase *S) {
-                    if (!S->Live)
-                      return;
-                    if (Decompressor::isCompressedELFSection(S->Flags, S->Name))
-                      S->uncompress();
-                    if (auto *MS = dyn_cast<MergeInputSection>(S))
-                      MS->splitIntoPieces();
-                  });
 
   // Write the result to the file.
   writeResult<ELFT>();

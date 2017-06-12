@@ -1,4 +1,4 @@
-//===-- MemorySSA.cpp - Memory SSA Builder---------------------------===//
+﻿//===-- MemorySSA.cpp - Memory SSA Builder---------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -1956,6 +1956,7 @@ MemoryAccess *MemorySSA::CachingWalker::getClobberingMemoryAccess(
 #ifdef EXPENSIVE_CHECKS
   MemoryAccess *NewNoCache = Walker.findClobber(StartingAccess, Q);
   assert(NewNoCache == New && "Cache made us hand back a different result?");
+  (void)NewNoCache;
 #endif
   if (AutoResetWalker)
     resetClobberWalker();

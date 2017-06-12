@@ -50,16 +50,10 @@ entry:
 }
 
 define <8 x float> @shuffle_v8f32_01230123_mem(<8 x float>* %pa, <8 x float>* %pb) nounwind uwtable readnone ssp {
-; AVX1-LABEL: shuffle_v8f32_01230123_mem:
-; AVX1:       ## BB#0: ## %entry
-; AVX1-NEXT:    vmovaps (%rdi), %ymm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: shuffle_v8f32_01230123_mem:
-; AVX2:       ## BB#0: ## %entry
-; AVX2-NEXT:    vperm2f128 {{.*#+}} ymm0 = mem[0,1,0,1]
-; AVX2-NEXT:    retq
+; ALL-LABEL: shuffle_v8f32_01230123_mem:
+; ALL:       ## BB#0: ## %entry
+; ALL-NEXT:    vperm2f128 {{.*#+}} ymm0 = mem[0,1,0,1]
+; ALL-NEXT:    retq
 entry:
   %a = load <8 x float>, <8 x float>* %pa
   %b = load <8 x float>, <8 x float>* %pb
@@ -195,17 +189,15 @@ define <16 x i16> @shuffle_v16i16_4501_mem(<16 x i16>* %a, <16 x i16>* %b) nounw
 ; AVX1-LABEL: shuffle_v16i16_4501_mem:
 ; AVX1:       ## BB#0: ## %entry
 ; AVX1-NEXT:    vmovdqa (%rdi), %ymm0
-; AVX1-NEXT:    vmovaps (%rsi), %ymm1
 ; AVX1-NEXT:    vpaddw {{.*}}(%rip), %xmm0, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm0 = mem[0,1],ymm0[0,1]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: shuffle_v16i16_4501_mem:
 ; AVX2:       ## BB#0: ## %entry
 ; AVX2-NEXT:    vmovdqa (%rdi), %ymm0
-; AVX2-NEXT:    vmovdqa (%rsi), %ymm1
 ; AVX2-NEXT:    vpaddw {{.*}}(%rip), %ymm0, %ymm0
-; AVX2-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
+; AVX2-NEXT:    vperm2i128 {{.*#+}} ymm0 = mem[0,1],ymm0[0,1]
 ; AVX2-NEXT:    retq
 entry:
   %c = load <16 x i16>, <16 x i16>* %a
