@@ -1,25 +1,25 @@
-; RUN: llvm-pdbdump pretty -module-syms -globals -types %p/Inputs/FilterTest.pdb \
+; RUN: llvm-pdbutil pretty -module-syms -globals -types %p/Inputs/FilterTest.pdb \
 ; RUN:    | FileCheck --check-prefix=NO_FILTER %s
 
-; RUN: llvm-pdbdump pretty -types -exclude-types="GlobalTypedef|NestedTypedef" \
+; RUN: llvm-pdbutil pretty -types -exclude-types="GlobalTypedef|NestedTypedef" \
 ; RUN:    %p/Inputs/FilterTest.pdb | FileCheck --check-prefix=EXCLUDE_TYPEDEFS %s
-; RUN: llvm-pdbdump pretty -classes -enums %p/Inputs/FilterTest.pdb \
+; RUN: llvm-pdbutil pretty -classes -enums %p/Inputs/FilterTest.pdb \
 ; RUN:    | FileCheck --check-prefix=EXCLUDE_TYPEDEFS %s
 
-; RUN: llvm-pdbdump pretty -types -exclude-types="GlobalEnum|NestedEnum" \
+; RUN: llvm-pdbutil pretty -types -exclude-types="GlobalEnum|NestedEnum" \
 ; RUN:    %p/Inputs/FilterTest.pdb | FileCheck --check-prefix=EXCLUDE_ENUMS %s
-; RUN: llvm-pdbdump pretty -classes -typedefs %p/Inputs/FilterTest.pdb \
+; RUN: llvm-pdbutil pretty -classes -typedefs %p/Inputs/FilterTest.pdb \
 ; RUN:    | FileCheck --check-prefix=EXCLUDE_ENUMS %s
 
-; RUN: llvm-pdbdump pretty -types -module-syms -globals -exclude-symbols="MemberVar|GlobalVar" \
+; RUN: llvm-pdbutil pretty -types -module-syms -globals -exclude-symbols="MemberVar|GlobalVar" \
 ; RUN:    %p/Inputs/FilterTest.pdb | FileCheck --check-prefix=EXCLUDE_VARS %s
-; RUN: llvm-pdbdump pretty -types -exclude-types="FilterTestClass" \
+; RUN: llvm-pdbutil pretty -types -exclude-types="FilterTestClass" \
 ; RUN:    %p/Inputs/FilterTest.pdb | FileCheck  --check-prefix=EXCLUDE_WHOLE_CLASS %s
-; RUN: llvm-pdbdump pretty -module-syms -globals -exclude-compilands="FilterTest.obj"  \
+; RUN: llvm-pdbutil pretty -module-syms -globals -exclude-compilands="FilterTest.obj"  \
 ; RUN:    %p/Inputs/FilterTest.pdb | FileCheck  --check-prefix=EXCLUDE_COMPILAND %s
-; RUN: llvm-pdbdump pretty -types -include-types="FilterTestClass" \
+; RUN: llvm-pdbutil pretty -types -include-types="FilterTestClass" \
 ; RUN:    %p/Inputs/FilterTest.pdb | FileCheck --check-prefix=INCLUDE_ONLY_TYPES %s
-; RUN: llvm-pdbdump pretty -types -module-syms -globals -include-symbols="[[:<:]](IntGlobalVar|DoubleGlobalVar)[[:>:]]" \
+; RUN: llvm-pdbutil pretty -types -module-syms -globals -include-symbols="[[:<:]](IntGlobalVar|DoubleGlobalVar)[[:>:]]" \
 ; RUN:    %p/Inputs/FilterTest.pdb | FileCheck --check-prefix=INCLUDE_ONLY_VARS %s
 
 ; NO_FILTER: ---TYPES---

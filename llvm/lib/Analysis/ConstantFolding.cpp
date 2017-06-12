@@ -1015,9 +1015,11 @@ Constant *ConstantFoldInstOperandsImpl(const Value *InstOrCE, unsigned Opcode,
   case Instruction::ICmp:
   case Instruction::FCmp: llvm_unreachable("Invalid for compares");
   case Instruction::Call:
-    if (auto *F = dyn_cast<Function>(Ops.back()))
-      if (canConstantFoldCallTo(F))
-        return ConstantFoldCall(F, Ops.slice(0, Ops.size() - 1), TLI);
+    if (auto *F = dyn_cast<Function>(Ops.back())) {
+      ImmutableCallSite CS(cast<CallInst>(InstOrCE));
+      if (canConstantFoldCallTo(CS, F))
+        return ConstantFoldCall(CS, F, Ops.slice(0, Ops.size() - 1), TLI);
+    }
     return nullptr;
   case Instruction::Select:
     return ConstantExpr::getSelect(Ops[0], Ops[1], Ops[2]);
@@ -1356,7 +1358,9 @@ llvm::ConstantFoldLoadThroughGEPIndices(Constant *C,
 //  Constant Folding for Calls
 //
 
-bool llvm::canConstantFoldCallTo(const Function *F) {
+bool llvm::canConstantFoldCallTo(ImmutableCallSite CS, const Function *F) {
+  if (CS.isNoBuiltin())
+    return false;
   switch (F->getIntrinsicID()) {
   case Intrinsic::fabs:
   case Intrinsic::minnum:
@@ -2059,8 +2063,11 @@ Constant *ConstantFoldVectorCall(StringRef Name, unsigned IntrinsicID,
 } // end anonymous namespace
 
 Constant *
-llvm::ConstantFoldCall(Function *F, ArrayRef<Constant *> Operands,
+llvm::ConstantFoldCall(ImmutableCallSite CS, Function *F,
+                       ArrayRef<Constant *> Operands,
                        const TargetLibraryInfo *TLI) {
+  if (CS.isNoBuiltin())
+    return nullptr;
   if (!F->hasName())
     return nullptr;
   StringRef Name = F->getName();
@@ -2077,6 +2084,8 @@ llvm::ConstantFoldCall(Function *F, ArrayRef<Constant *> Operands,
 bool llvm::isMathLibCallNoop(CallSite CS, const TargetLibraryInfo *TLI) {
   // FIXME: Refactor this code; this duplicates logic in LibCallsShrinkWrap
   // (and to some extent ConstantFoldScalarCall).
+  if (CS.isNoBuiltin())
+    return false;
   Function *F = CS.getCalledFunction();
   if (!F)
     return false;

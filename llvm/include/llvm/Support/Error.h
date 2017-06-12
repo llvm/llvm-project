@@ -1,4 +1,4 @@
-//===----- llvm/Support/Error.h - Recoverable error handling ----*- C++ -*-===//
+//===- llvm/Support/Error.h - Recoverable error handling --------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,14 +14,15 @@
 #ifndef LLVM_SUPPORT_ERROR_H
 #define LLVM_SUPPORT_ERROR_H
 
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Config/abi-breaking.h"
 #include "llvm/Support/AlignOf.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -167,7 +168,7 @@ class LLVM_NODISCARD Error {
 
 protected:
   /// Create a success value. Prefer using 'Error::success()' for readability
-  Error() : Payload(nullptr) {
+  Error() {
     setPtr(nullptr);
     setChecked(false);
   }
@@ -182,7 +183,7 @@ public:
   /// Move-construct an error value. The newly constructed error is considered
   /// unchecked, even if the source error had been checked. The original error
   /// becomes a checked Success value, regardless of its original state.
-  Error(Error &&Other) : Payload(nullptr) {
+  Error(Error &&Other) {
     setChecked(true);
     *this = std::move(Other);
   }
@@ -299,7 +300,7 @@ private:
     return Tmp;
   }
 
-  ErrorInfoBase *Payload;
+  ErrorInfoBase *Payload = nullptr;
 };
 
 /// Subclass of Error for the sole purpose of identifying the success path in
@@ -327,7 +328,6 @@ template <typename ErrT, typename... ArgTs> Error make_error(ArgTs &&... Args) {
 template <typename ThisErrT, typename ParentErrT = ErrorInfoBase>
 class ErrorInfo : public ParentErrT {
 public:
-
   static const void *classID() { return &ThisErrT::ID; }
 
   const void *dynamicClassID() const override { return &ThisErrT::ID; }
@@ -645,20 +645,22 @@ private:
 template <class T> class LLVM_NODISCARD Expected {
   template <class T1> friend class ExpectedAsOutParameter;
   template <class OtherT> friend class Expected;
-  static const bool isRef = std::is_reference<T>::value;
-  typedef ReferenceStorage<typename std::remove_reference<T>::type> wrap;
 
-  typedef std::unique_ptr<ErrorInfoBase> error_type;
+  static const bool isRef = std::is_reference<T>::value;
+
+  using wrap = ReferenceStorage<typename std::remove_reference<T>::type>;
+
+  using error_type = std::unique_ptr<ErrorInfoBase>;
 
 public:
-  typedef typename std::conditional<isRef, wrap, T>::type storage_type;
-  typedef T value_type;
+  using storage_type = typename std::conditional<isRef, wrap, T>::type;
+  using value_type = T;
 
 private:
-  typedef typename std::remove_reference<T>::type &reference;
-  typedef const typename std::remove_reference<T>::type &const_reference;
-  typedef typename std::remove_reference<T>::type *pointer;
-  typedef const typename std::remove_reference<T>::type *const_pointer;
+  using reference = typename std::remove_reference<T>::type &;
+  using const_reference = const typename std::remove_reference<T>::type &;
+  using pointer = typename std::remove_reference<T>::type *;
+  using const_pointer = const typename std::remove_reference<T>::type *;
 
 public:
   /// Create an Expected<T> error value from the given Error.
@@ -891,7 +893,6 @@ private:
 template <typename T>
 class ExpectedAsOutParameter {
 public:
-
   ExpectedAsOutParameter(Expected<T> *ValOrErr)
     : ValOrErr(ValOrErr) {
     if (ValOrErr)

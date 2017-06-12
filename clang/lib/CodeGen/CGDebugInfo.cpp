@@ -3466,8 +3466,8 @@ void CGDebugInfo::EmitDeclare(const VarDecl *VD, llvm::Value *Storage,
   unsigned AddressSpace = CGM.getContext().getTargetAddressSpace(VD->getType());
   AppendAddressSpaceXDeref(AddressSpace, Expr);
 
-  // If this is implicit parameter and has IPK_CXXThis or IPK_ObjCSelf attribute
-  // then give it an object pointer flag.
+  // If this is implicit parameter of CXXThis or ObjCSelf kind, then give it an
+  // object pointer flag.
   if (const auto *IPD = dyn_cast<ImplicitParamDecl>(VD)) {
     if (IPD->getParameterKind() == ImplicitParamDecl::CXXThis ||
         IPD->getParameterKind() == ImplicitParamDecl::ObjCSelf)

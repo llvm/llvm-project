@@ -44,9 +44,14 @@
 #include <map>
 
 namespace llvm {
+
+class FileOutputBuffer;
+
 namespace object {
 
 class WindowsResource;
+
+enum class Machine { UNKNOWN, ARM, X64, X86 };
 
 class ResourceEntryRef {
 public:
@@ -58,6 +63,10 @@ public:
   ArrayRef<UTF16> getNameString() const { return Name; }
   uint16_t getNameID() const { return NameID; }
   uint16_t getLanguage() const { return Suffix->Language; }
+  uint16_t getMajorVersion() const { return Suffix->Version >> 16; }
+  uint16_t getMinorVersion() const { return Suffix->Version; }
+  uint32_t getCharacteristics() const { return Suffix->Characteristics; }
+  ArrayRef<uint8_t> getData() const { return Data; }
 
 private:
   friend class WindowsResource;
@@ -106,33 +115,76 @@ private:
 
 class WindowsResourceParser {
 public:
+  class TreeNode;
   WindowsResourceParser();
-
   Error parse(WindowsResource *WR);
-
   void printTree() const;
+  const TreeNode &getTree() const { return Root; }
+  const ArrayRef<std::vector<uint8_t>> getData() const { return Data; }
+  const ArrayRef<std::vector<UTF16>> getStringTable() const {
+    return StringTable;
+  }
 
-private:
   class TreeNode {
   public:
-    TreeNode() = default;
-    explicit TreeNode(ArrayRef<UTF16> Ref);
-    void addEntry(const ResourceEntryRef &Entry);
+    template <typename T>
+    using Children = std::map<T, std::unique_ptr<TreeNode>>;
+
     void print(ScopedPrinter &Writer, StringRef Name) const;
+    uint32_t getTreeSize() const;
+    uint32_t getStringIndex() const { return StringIndex; }
+    uint32_t getDataIndex() const { return DataIndex; }
+    uint16_t getMajorVersion() const { return MajorVersion; }
+    uint16_t getMinorVersion() const { return MinorVersion; }
+    uint32_t getCharacteristics() const { return Characteristics; }
+    bool checkIsDataNode() const { return IsDataNode; }
+    const Children<uint32_t> &getIDChildren() const { return IDChildren; }
+    const Children<std::string> &getStringChildren() const {
+      return StringChildren;
+    }
 
   private:
+    friend class WindowsResourceParser;
+
+    static uint32_t StringCount;
+    static uint32_t DataCount;
+
+    static std::unique_ptr<TreeNode> createStringNode();
+    static std::unique_ptr<TreeNode> createIDNode();
+    static std::unique_ptr<TreeNode> createDataNode(uint16_t MajorVersion,
+                                                    uint16_t MinorVersion,
+                                                    uint32_t Characteristics);
+
+    explicit TreeNode(bool IsStringNode);
+    TreeNode(uint16_t MajorVersion, uint16_t MinorVersion,
+             uint32_t Characteristics);
+
+    void addEntry(const ResourceEntryRef &Entry);
     TreeNode &addTypeNode(const ResourceEntryRef &Entry);
     TreeNode &addNameNode(const ResourceEntryRef &Entry);
     TreeNode &addLanguageNode(const ResourceEntryRef &Entry);
-    TreeNode &addChild(uint32_t ID);
+    TreeNode &addChild(uint32_t ID, bool IsDataNode = false,
+                       uint16_t MajorVersion = 0, uint16_t MinorVersion = 0,
+                       uint32_t Characteristics = 0);
     TreeNode &addChild(ArrayRef<UTF16> NameRef);
-    std::vector<UTF16> Name;
-    std::map<uint32_t, std::unique_ptr<TreeNode>> IDChildren;
-    std::map<std::string, std::unique_ptr<TreeNode>> StringChildren;
+    bool IsDataNode = false;
+    uint32_t StringIndex;
+    uint32_t DataIndex;
+    Children<uint32_t> IDChildren;
+    Children<std::string> StringChildren;
+    uint16_t MajorVersion = 0;
+    uint16_t MinorVersion = 0;
+    uint32_t Characteristics = 0;
   };
 
+private:
   TreeNode Root;
+  std::vector<std::vector<uint8_t>> Data;
+  std::vector<std::vector<UTF16>> StringTable;
 };
+
+Error writeWindowsResourceCOFF(StringRef OutputFile, Machine MachineType,
+                               const WindowsResourceParser &Parser);
 
 } // namespace object
 } // namespace llvm

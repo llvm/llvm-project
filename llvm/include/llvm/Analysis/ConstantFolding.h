@@ -31,6 +31,7 @@ class DataLayout;
 class Function;
 class GlobalValue;
 class Instruction;
+class ImmutableCallSite;
 class TargetLibraryInfo;
 class Type;
 
@@ -125,11 +126,12 @@ Constant *ConstantFoldLoadThroughGEPIndices(Constant *C,
 
 /// canConstantFoldCallTo - Return true if its even possible to fold a call to
 /// the specified function.
-bool canConstantFoldCallTo(const Function *F);
+bool canConstantFoldCallTo(ImmutableCallSite CS, const Function *F);
 
 /// ConstantFoldCall - Attempt to constant fold a call to the specified function
 /// with the specified arguments, returning null if unsuccessful.
-Constant *ConstantFoldCall(Function *F, ArrayRef<Constant *> Operands,
+Constant *ConstantFoldCall(ImmutableCallSite CS, Function *F,
+                           ArrayRef<Constant *> Operands,
                            const TargetLibraryInfo *TLI = nullptr);
 
 /// \brief Check whether the given call has no side-effects.

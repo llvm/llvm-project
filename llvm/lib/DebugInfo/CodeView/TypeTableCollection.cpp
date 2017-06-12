@@ -51,7 +51,8 @@ void TypeTableCollection::ensureTypeExists(TypeIndex Index) {
 
   CVType Type;
   uint32_t Len;
-  error(VarStreamArrayExtractor<CVType>::extract(Bytes, Len, Type));
+  VarStreamArrayExtractor<CVType> Extract;
+  error(Extract(Bytes, Len, Type));
 
   TypeDatabaseVisitor DBV(Database);
   error(codeview::visitTypeRecord(Type, Index, DBV));

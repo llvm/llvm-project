@@ -106,15 +106,32 @@ template <typename T> class ArrayRef;
     /// significant impact on the cost however.
     void findInputsOutputs(ValueSet &Inputs, ValueSet &Outputs,
                            const ValueSet &Allocas) const;
+
+    /// Check if life time marker nodes can be hoisted/sunk into the outline
+    /// region.
+    ///
+    /// Returns true if it is safe to do the code motion.
+    bool isLegalToShrinkwrapLifetimeMarkers(Instruction *AllocaAddr) const;
     /// Find the set of allocas whose life ranges are contained within the
     /// outlined region.
     ///
     /// Allocas which have life_time markers contained in the outlined region
     /// should be pushed to the outlined function. The address bitcasts that
     /// are used by the lifetime markers are also candidates for shrink-
-    /// wrapping. The instructions that need to be sinked are collected in
+    /// wrapping. The instructions that need to be sunk are collected in
     /// 'Allocas'.
-    void findAllocas(ValueSet &Allocas) const;
+    void findAllocas(ValueSet &SinkCands, ValueSet &HoistCands,
+                     BasicBlock *&ExitBlock) const;
+
+    /// Find or create a block within the outline region for placing hoisted
+    /// code.
+    ///
+    /// CommonExitBlock is block outside the outline region. It is the common
+    /// successor of blocks inside the region. If there exists a single block
+    /// inside the region that is the predecessor of CommonExitBlock, that block
+    /// will be returned. Otherwise CommonExitBlock will be split and the
+    /// original block will be added to the outline region.
+    BasicBlock *findOrCreateBlockForHoisting(BasicBlock *CommonExitBlock);
 
   private:
     void severSplitPHINodes(BasicBlock *&Header);

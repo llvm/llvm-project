@@ -13,6 +13,7 @@ add_llvm_library(LLVMDebugInfoCodeView
   DebugSubsection.cpp
   DebugSubsectionRecord.cpp
   DebugSubsectionVisitor.cpp
+  DebugSymbolRVASubsection.cpp
   DebugSymbolsSubsection.cpp
   EnumTables.cpp
   Formatters.cpp

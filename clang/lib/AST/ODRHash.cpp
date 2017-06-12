@@ -82,13 +82,25 @@ void ODRHash::AddDeclarationName(DeclarationName Name) {
 }
 
 void ODRHash::AddNestedNameSpecifier(const NestedNameSpecifier *NNS) {
-  assert(NNS && "Expecting non-null pointer.");
-  const auto *Prefix = NNS->getPrefix();
-  AddBoolean(Prefix);
-  if (Prefix) {
-    AddNestedNameSpecifier(Prefix);
+  // Unlike the other pointer handling functions, allow null pointers here.
+  if (!NNS) {
+    AddBoolean(false);
+    return;
   }
+
+  // Skip inlined namespaces.
   auto Kind = NNS->getKind();
+  if (Kind == NestedNameSpecifier::Namespace) {
+    if (NNS->getAsNamespace()->isInline()) {
+      return AddNestedNameSpecifier(NNS->getPrefix());
+    }
+  }
+
+  AddBoolean(true);
+
+  // Process prefix
+  AddNestedNameSpecifier(NNS->getPrefix());
+
   ID.AddInteger(Kind);
   switch (Kind) {
   case NestedNameSpecifier::Identifier:
@@ -381,10 +393,7 @@ public:
   }
 
   void AddNestedNameSpecifier(const NestedNameSpecifier *NNS) {
-    Hash.AddBoolean(NNS);
-    if (NNS) {
-      Hash.AddNestedNameSpecifier(NNS);
-    }
+    Hash.AddNestedNameSpecifier(NNS);
   }
 
   void AddIdentifierInfo(const IdentifierInfo *II) {

@@ -24,14 +24,17 @@ entry:
 ; MIPS64-DAG: and     $[[R2:[0-9]+]], $[[R1]], $[[R0]]
 ; MIPS64-DAG: clz     $[[R3:[0-9]+]], $[[R2]]
 ; MIPS64-DAG: addiu   $[[R4:[0-9]+]], $zero, 32
-; MIPS64-DAG: subu    $2, $[[R4]], $[[R3]]
-; MIPS64-DAG: sll     $[[A1:[0-9]+]], $5, 0
-; MIPS64-DAG: addiu   $[[R5:[0-9]+]], $[[A1]], -1
-; MIPS64-DAG: not     $[[R6:[0-9]+]], $[[A1]]
-; MIPS64-DAG: and     $[[R7:[0-9]+]], $[[R6]], $[[R5]]
-; MIPS64-DAG: clz     $[[R8:[0-9]+]], $[[R7]]
-; MIPS64-DAG: jr      $ra
-; MIPS64-DAG: subu    $3, $[[R4]], $[[R8]]
+; MIPS64-DAG: subu    $[[R5:[0-9]+]], $[[R4]], $[[R3]]
+; MIPS64-DAG: dsrl    $[[R6:[0-9]+]], $4, 32
+; MIPS64-DAG: sll     $[[R7:[0-9]+]], $[[R6]], 0
+; MIPS64-DAG: dext    $[[R8:[0-9]+]], $[[R5]], 0, 32
+; MIPS64-DAG: addiu   $[[R9:[0-9]+]], $[[R7]], -1
+; MIPS64-DAG: not     $[[R10:[0-9]+]], $[[R7]]
+; MIPS64-DAG: and     $[[R11:[0-9]+]], $[[R10]], $[[R9]]
+; MIPS64-DAG: clz     $[[R12:[0-9]+]], $[[R11]]
+; MIPS64-DAG: subu    $[[R13:[0-9]+]], $[[R4]], $[[R12]]
+; MIPS64-DAG: dsll    $[[R14:[0-9]+]], $[[R13]], 32
+; MIPS64-DAG: or      $2, $[[R8]], $[[R14]]
 
   %ret = call <2 x i32> @llvm.cttz.v2i32(<2 x i32> %x, i1 true)
   ret <2 x i32> %ret

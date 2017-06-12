@@ -1,5 +1,5 @@
 ; Test that the native PDB reader gets the PDB summary correct.
-; RUN: llvm-pdbdump pretty -native -color-output=false %p/../Inputs/empty.pdb \
+; RUN: llvm-pdbutil pretty -native -color-output=false %p/../Inputs/empty.pdb \
 ; RUN:   | FileCheck -check-prefix=EMPTY %s
 
 ; Reference output was generated with the DIA reader to ensure that the

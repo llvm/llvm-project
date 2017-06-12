@@ -1661,28 +1661,29 @@ class MemCmpExpansion {
   BasicBlock *EndBlock;
   PHINode *PhiRes;
   bool IsUsedForZeroCmp;
+  const DataLayout &DL;
+
   int calculateNumBlocks(unsigned Size);
   void createLoadCmpBlocks();
   void createResultBlock();
   void setupResultBlockPHINodes();
   void setupEndBlockPHINodes();
-  void emitLoadCompareBlock(unsigned Index, int LoadSize, int GEPIndex,
-                            bool IsLittleEndian);
+  void emitLoadCompareBlock(unsigned Index, int LoadSize, int GEPIndex);
   Value *getCompareLoadPairs(unsigned Index, unsigned Size,
                              unsigned &NumBytesProcessed, IRBuilder<> &Builder);
   void emitLoadCompareBlockMultipleLoads(unsigned Index, unsigned Size,
                                          unsigned &NumBytesProcessed);
   void emitLoadCompareByteBlock(unsigned Index, int GEPIndex);
-  void emitMemCmpResultBlock(bool IsLittleEndian);
-  Value *getMemCmpExpansionZeroCase(unsigned Size, bool IsLittleEndian);
+  void emitMemCmpResultBlock();
+  Value *getMemCmpExpansionZeroCase(unsigned Size);
   Value *getMemCmpEqZeroOneBlock(unsigned Size);
   unsigned getLoadSize(unsigned Size);
   unsigned getNumLoads(unsigned Size);
 
 public:
   MemCmpExpansion(CallInst *CI, uint64_t Size, unsigned MaxLoadSize,
-                  unsigned NumLoadsPerBlock);
-  Value *getMemCmpExpansion(uint64_t Size, bool IsLittleEndian);
+                  unsigned NumLoadsPerBlock, const DataLayout &DL);
+  Value *getMemCmpExpansion(uint64_t Size);
 };
 
 MemCmpExpansion::ResultBlock::ResultBlock()
@@ -1697,8 +1698,10 @@ MemCmpExpansion::ResultBlock::ResultBlock()
 // 3. ResultBlock, block to branch to for early exit when a
 // LoadCmpBlock finds a difference.
 MemCmpExpansion::MemCmpExpansion(CallInst *CI, uint64_t Size,
-                                 unsigned MaxLoadSize, unsigned LoadsPerBlock)
-    : CI(CI), MaxLoadSize(MaxLoadSize), NumLoadsPerBlock(LoadsPerBlock) {
+                                 unsigned MaxLoadSize, unsigned LoadsPerBlock,
+                                 const DataLayout &TheDataLayout)
+    : CI(CI), MaxLoadSize(MaxLoadSize), NumLoadsPerBlock(LoadsPerBlock),
+      DL(TheDataLayout) {
 
   // A memcmp with zero-comparison with only one block of load and compare does
   // not need to set up any extra blocks. This case could be handled in the DAG,
@@ -1924,7 +1927,7 @@ void MemCmpExpansion::emitLoadCompareBlockMultipleLoads(
 // a special case through emitLoadCompareByteBlock. The special handling can
 // simply subtract the loaded values and add it to the result phi node.
 void MemCmpExpansion::emitLoadCompareBlock(unsigned Index, int LoadSize,
-                                           int GEPIndex, bool IsLittleEndian) {
+                                           int GEPIndex) {
   if (LoadSize == 1) {
     MemCmpExpansion::emitLoadCompareByteBlock(Index, GEPIndex);
     return;
@@ -1957,7 +1960,7 @@ void MemCmpExpansion::emitLoadCompareBlock(unsigned Index, int LoadSize,
   Value *LoadSrc1 = Builder.CreateLoad(LoadSizeType, Source1);
   Value *LoadSrc2 = Builder.CreateLoad(LoadSizeType, Source2);
 
-  if (IsLittleEndian) {
+  if (DL.isLittleEndian()) {
     Function *F = LoadCmpBlocks[Index]->getParent();
 
     Function *Bswap = Intrinsic::getDeclaration(F->getParent(),
@@ -2002,7 +2005,7 @@ void MemCmpExpansion::emitLoadCompareBlock(unsigned Index, int LoadSize,
 // This function populates the ResultBlock with a sequence to calculate the
 // memcmp result. It compares the two loaded source values and returns -1 if
 // src1 < src2 and 1 if src1 > src2.
-void MemCmpExpansion::emitMemCmpResultBlock(bool IsLittleEndian) {
+void MemCmpExpansion::emitMemCmpResultBlock() {
   IRBuilder<> Builder(CI->getContext());
 
   // Special case: if memcmp result is used in a zero equality, result does not
@@ -2069,15 +2072,14 @@ void MemCmpExpansion::setupEndBlockPHINodes() {
   PhiRes = Builder.CreatePHI(Type::getInt32Ty(CI->getContext()), 2, "phi.res");
 }
 
-Value *MemCmpExpansion::getMemCmpExpansionZeroCase(unsigned Size,
-                                                   bool IsLittleEndian) {
+Value *MemCmpExpansion::getMemCmpExpansionZeroCase(unsigned Size) {
   unsigned NumBytesProcessed = 0;
   // This loop populates each of the LoadCmpBlocks with the IR sequence to
   // handle multiple loads per block.
   for (unsigned i = 0; i < NumBlocks; ++i)
     emitLoadCompareBlockMultipleLoads(i, Size, NumBytesProcessed);
 
-  emitMemCmpResultBlock(IsLittleEndian);
+  emitMemCmpResultBlock();
   return PhiRes;
 }
 
@@ -2093,10 +2095,10 @@ Value *MemCmpExpansion::getMemCmpEqZeroOneBlock(unsigned Size) {
 
 // This function expands the memcmp call into an inline expansion and returns
 // the memcmp result.
-Value *MemCmpExpansion::getMemCmpExpansion(uint64_t Size, bool IsLittleEndian) {
+Value *MemCmpExpansion::getMemCmpExpansion(uint64_t Size) {
   if (IsUsedForZeroCmp)
     return NumBlocks == 1 ? getMemCmpEqZeroOneBlock(Size) :
-                            getMemCmpExpansionZeroCase(Size, IsLittleEndian);
+                            getMemCmpExpansionZeroCase(Size);
 
   // This loop calls emitLoadCompareBlock for comparing Size bytes of the two
   // memcmp sources. It starts with loading using the maximum load size set by
@@ -2114,7 +2116,7 @@ Value *MemCmpExpansion::getMemCmpExpansion(uint64_t Size, bool IsLittleEndian) {
     // For each NumBlocks, populate the instruction sequence for loading and
     // comparing LoadSize bytes.
     while (NumBlocks--) {
-      emitLoadCompareBlock(Index, LoadSize, GEPIndex, IsLittleEndian);
+      emitLoadCompareBlock(Index, LoadSize, GEPIndex);
       Index++;
       GEPIndex++;
     }
@@ -2122,7 +2124,7 @@ Value *MemCmpExpansion::getMemCmpExpansion(uint64_t Size, bool IsLittleEndian) {
     LoadSize = LoadSize / 2;
   }
 
-  emitMemCmpResultBlock(IsLittleEndian);
+  emitMemCmpResultBlock();
   return PhiRes;
 }
 
@@ -2242,9 +2244,9 @@ static bool expandMemCmp(CallInst *CI, const TargetTransformInfo *TTI,
   // MemCmpHelper object creates and sets up basic blocks required for
   // expanding memcmp with size SizeVal.
   unsigned NumLoadsPerBlock = MemCmpNumLoadsPerBlock;
-  MemCmpExpansion MemCmpHelper(CI, SizeVal, MaxLoadSize, NumLoadsPerBlock);
+  MemCmpExpansion MemCmpHelper(CI, SizeVal, MaxLoadSize, NumLoadsPerBlock, *DL);
 
-  Value *Res = MemCmpHelper.getMemCmpExpansion(SizeVal, DL->isLittleEndian());
+  Value *Res = MemCmpHelper.getMemCmpExpansion(SizeVal);
 
   // Replace call with result of expansion and erase call.
   CI->replaceAllUsesWith(Res);

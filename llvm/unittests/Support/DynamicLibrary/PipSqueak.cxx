@@ -45,4 +45,5 @@ extern "C" PIPSQUEAK_EXPORT void TestOrder(std::vector<std::string> &V) {
   Glb.Vec = &V;
 }
 
-extern "C" PIPSQUEAK_EXPORT const char *TestA() { return "LibCall"; }
+#define PIPSQUEAK_TESTA_RETURN "LibCall"
+#include "ExportedFuncs.cxx"

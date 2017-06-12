@@ -109,6 +109,16 @@ public:
                                       Module::NameVisibilityKind Visibility,
                                       bool IsInclusionDirective) = 0;
 
+  /// Attempt to load the given module from the specified source buffer. Does
+  /// not make any submodule visible; for that, use loadModule or
+  /// makeModuleVisible.
+  ///
+  /// \param Loc The location at which the module was loaded.
+  /// \param ModuleName The name of the module to build.
+  /// \param Source The source of the module: a (preprocessed) module map.
+  virtual void loadModuleFromSource(SourceLocation Loc, StringRef ModuleName,
+                                    StringRef Source) = 0;
+
   /// \brief Make the given module visible.
   virtual void makeModuleVisible(Module *Mod,
                                  Module::NameVisibilityKind Visibility,
@@ -135,6 +145,30 @@ public:
                                     SourceLocation TriggerLoc) = 0;
 
   bool HadFatalFailure;
+};
+
+/// A module loader that doesn't know how to load modules.
+class TrivialModuleLoader : public ModuleLoader {
+public:
+  ModuleLoadResult loadModule(SourceLocation ImportLoc, ModuleIdPath Path,
+                              Module::NameVisibilityKind Visibility,
+                              bool IsInclusionDirective) override {
+    return ModuleLoadResult();
+  }
+
+  void loadModuleFromSource(SourceLocation ImportLoc, StringRef ModuleName,
+                            StringRef Source) override {}
+
+  void makeModuleVisible(Module *Mod, Module::NameVisibilityKind Visibility,
+                         SourceLocation ImportLoc) override {}
+
+  GlobalModuleIndex *loadGlobalModuleIndex(SourceLocation TriggerLoc) override {
+    return nullptr;
+  }
+  bool lookupMissingImports(StringRef Name,
+                            SourceLocation TriggerLoc) override {
+    return 0;
+  }
 };
   
 }

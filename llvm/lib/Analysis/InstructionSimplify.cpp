@@ -4473,8 +4473,9 @@ static Value *SimplifyIntrinsic(Function *F, IterTy ArgBegin, IterTy ArgEnd,
 }
 
 template <typename IterTy>
-static Value *SimplifyCall(Value *V, IterTy ArgBegin, IterTy ArgEnd,
-                           const SimplifyQuery &Q, unsigned MaxRecurse) {
+static Value *SimplifyCall(ImmutableCallSite CS, Value *V, IterTy ArgBegin,
+                           IterTy ArgEnd, const SimplifyQuery &Q,
+                           unsigned MaxRecurse) {
   Type *Ty = V->getType();
   if (PointerType *PTy = dyn_cast<PointerType>(Ty))
     Ty = PTy->getElementType();
@@ -4493,7 +4494,7 @@ static Value *SimplifyCall(Value *V, IterTy ArgBegin, IterTy ArgEnd,
     if (Value *Ret = SimplifyIntrinsic(F, ArgBegin, ArgEnd, Q, MaxRecurse))
       return Ret;
 
-  if (!canConstantFoldCallTo(F))
+  if (!canConstantFoldCallTo(CS, F))
     return nullptr;
 
   SmallVector<Constant *, 4> ConstantArgs;
@@ -4505,17 +4506,18 @@ static Value *SimplifyCall(Value *V, IterTy ArgBegin, IterTy ArgEnd,
     ConstantArgs.push_back(C);
   }
 
-  return ConstantFoldCall(F, ConstantArgs, Q.TLI);
+  return ConstantFoldCall(CS, F, ConstantArgs, Q.TLI);
 }
 
-Value *llvm::SimplifyCall(Value *V, User::op_iterator ArgBegin,
-                          User::op_iterator ArgEnd, const SimplifyQuery &Q) {
-  return ::SimplifyCall(V, ArgBegin, ArgEnd, Q, RecursionLimit);
-}
-
-Value *llvm::SimplifyCall(Value *V, ArrayRef<Value *> Args,
+Value *llvm::SimplifyCall(ImmutableCallSite CS, Value *V,
+                          User::op_iterator ArgBegin, User::op_iterator ArgEnd,
                           const SimplifyQuery &Q) {
-  return ::SimplifyCall(V, Args.begin(), Args.end(), Q, RecursionLimit);
+  return ::SimplifyCall(CS, V, ArgBegin, ArgEnd, Q, RecursionLimit);
+}
+
+Value *llvm::SimplifyCall(ImmutableCallSite CS, Value *V,
+                          ArrayRef<Value *> Args, const SimplifyQuery &Q) {
+  return ::SimplifyCall(CS, V, Args.begin(), Args.end(), Q, RecursionLimit);
 }
 
 /// See if we can compute a simplified version of this instruction.
@@ -4646,7 +4648,8 @@ Value *llvm::SimplifyInstruction(Instruction *I, const SimplifyQuery &SQ,
     break;
   case Instruction::Call: {
     CallSite CS(cast<CallInst>(I));
-    Result = SimplifyCall(CS.getCalledValue(), CS.arg_begin(), CS.arg_end(), Q);
+    Result = SimplifyCall(CS, CS.getCalledValue(), CS.arg_begin(), CS.arg_end(),
+                          Q);
     break;
   }
 #define HANDLE_CAST_INST(num, opc, clas) case Instruction::opc:

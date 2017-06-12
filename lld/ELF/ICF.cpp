@@ -98,7 +98,8 @@ private:
   void segregate(size_t Begin, size_t End, bool Constant);
 
   template <class RelTy>
-  bool constantEq(ArrayRef<RelTy> RelsA, ArrayRef<RelTy> RelsB);
+  bool constantEq(const InputSection *A, ArrayRef<RelTy> RelsA,
+                  const InputSection *B, ArrayRef<RelTy> RelsB);
 
   template <class RelTy>
   bool variableEq(const InputSection *A, ArrayRef<RelTy> RelsA,
@@ -206,11 +207,53 @@ void ICF<ELFT>::segregate(size_t Begin, size_t End, bool Constant) {
 // Compare two lists of relocations.
 template <class ELFT>
 template <class RelTy>
-bool ICF<ELFT>::constantEq(ArrayRef<RelTy> RelsA, ArrayRef<RelTy> RelsB) {
-  auto Eq = [](const RelTy &A, const RelTy &B) {
-    return A.r_offset == B.r_offset &&
-           A.getType(Config->IsMips64EL) == B.getType(Config->IsMips64EL) &&
-           getAddend<ELFT>(A) == getAddend<ELFT>(B);
+bool ICF<ELFT>::constantEq(const InputSection *A, ArrayRef<RelTy> RelsA,
+                           const InputSection *B, ArrayRef<RelTy> RelsB) {
+  auto Eq = [&](const RelTy &RA, const RelTy &RB) {
+    if (RA.r_offset != RB.r_offset ||
+        RA.getType(Config->IsMips64EL) != RB.getType(Config->IsMips64EL))
+      return false;
+    uint64_t AddA = getAddend<ELFT>(RA);
+    uint64_t AddB = getAddend<ELFT>(RB);
+
+    SymbolBody &SA = A->template getFile<ELFT>()->getRelocTargetSym(RA);
+    SymbolBody &SB = B->template getFile<ELFT>()->getRelocTargetSym(RB);
+    if (&SA == &SB)
+      return AddA == AddB;
+
+    auto *DA = dyn_cast<DefinedRegular>(&SA);
+    auto *DB = dyn_cast<DefinedRegular>(&SB);
+    if (!DA || !DB)
+      return false;
+
+    // Relocations referring to absolute symbols are constant-equal if their
+    // values are equal.
+    if (!DA->Section || !DB->Section)
+      return !DA->Section && !DB->Section &&
+             DA->Value + AddA == DB->Value + AddB;
+
+    if (DA->Section->kind() != DB->Section->kind())
+      return false;
+
+    // Relocations referring to InputSections are constant-equal if their
+    // section offsets are equal.
+    if (isa<InputSection>(DA->Section))
+      return DA->Value + AddA == DB->Value + AddB;
+
+    // Relocations referring to MergeInputSections are constant-equal if their
+    // offsets in the output section are equal.
+    auto *X = dyn_cast<MergeInputSection>(DA->Section);
+    if (!X)
+      return false;
+    auto *Y = cast<MergeInputSection>(DB->Section);
+    if (X->getParent() != Y->getParent())
+      return false;
+
+    uint64_t OffsetA =
+        SA.isSection() ? X->getOffset(AddA) : X->getOffset(DA->Value) + AddA;
+    uint64_t OffsetB =
+        SB.isSection() ? Y->getOffset(AddB) : Y->getOffset(DB->Value) + AddB;
+    return OffsetA == OffsetB;
   };
 
   return RelsA.size() == RelsB.size() &&
@@ -226,8 +269,9 @@ bool ICF<ELFT>::equalsConstant(const InputSection *A, const InputSection *B) {
     return false;
 
   if (A->AreRelocsRela)
-    return constantEq(A->template relas<ELFT>(), B->template relas<ELFT>());
-  return constantEq(A->template rels<ELFT>(), B->template rels<ELFT>());
+    return constantEq(A, A->template relas<ELFT>(), B,
+                      B->template relas<ELFT>());
+  return constantEq(A, A->template rels<ELFT>(), B, B->template rels<ELFT>());
 }
 
 // Compare two lists of relocations. Returns true if all pairs of
@@ -243,22 +287,18 @@ bool ICF<ELFT>::variableEq(const InputSection *A, ArrayRef<RelTy> RelsA,
     if (&SA == &SB)
       return true;
 
-    auto *DA = dyn_cast<DefinedRegular>(&SA);
-    auto *DB = dyn_cast<DefinedRegular>(&SB);
-    if (!DA || !DB)
-      return false;
-    if (DA->Value != DB->Value)
-      return false;
+    auto *DA = cast<DefinedRegular>(&SA);
+    auto *DB = cast<DefinedRegular>(&SB);
 
-    // Either both symbols must be absolute...
-    if (!DA->Section || !DB->Section)
-      return !DA->Section && !DB->Section;
-
-    // Or the two sections must be in the same equivalence class.
+    // We already dealt with absolute and non-InputSection symbols in
+    // constantEq, and for InputSections we have already checked everything
+    // except the equivalence class.
+    if (!DA->Section)
+      return true;
     auto *X = dyn_cast<InputSection>(DA->Section);
-    auto *Y = dyn_cast<InputSection>(DB->Section);
-    if (!X || !Y)
-      return false;
+    if (!X)
+      return true;
+    auto *Y = cast<InputSection>(DB->Section);
 
     // Ineligible sections are in the special equivalence class 0.
     // They can never be the same in terms of the equivalence class.
