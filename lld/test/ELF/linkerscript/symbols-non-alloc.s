@@ -9,6 +9,9 @@
 # RUN: ld.lld -o %t2 --script %t.script %t
 # RUN: llvm-objdump -section-headers -t %t2 | FileCheck %s
 
+# CHECK: Sections:
+# CHECK:  .nonalloc     00000008 0000000000000000
+
 # CHECK: SYMBOL TABLE:
 # CHECK:  00000000000000f0 .nonalloc 00000000 Sym
 

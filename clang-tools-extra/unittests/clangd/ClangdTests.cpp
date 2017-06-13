@@ -386,13 +386,13 @@ TEST_F(ClangdVFSTest, CheckVersions) {
   auto FooCpp = getVirtualTestFilePath("foo.cpp");
   const auto SourceContents = "int a;";
   FS->Files[FooCpp] = SourceContents;
-  FS->Tag = 123;
+  FS->Tag = "123";
 
   Server.addDocument(FooCpp, SourceContents);
   EXPECT_EQ(DiagConsumer->lastVFSTag(), FS->Tag);
   EXPECT_EQ(Server.codeComplete(FooCpp, Position{0, 0}).Tag, FS->Tag);
 
-  FS->Tag = 321;
+  FS->Tag = "321";
   Server.addDocument(FooCpp, SourceContents);
   EXPECT_EQ(DiagConsumer->lastVFSTag(), FS->Tag);
   EXPECT_EQ(Server.codeComplete(FooCpp, Position{0, 0}).Tag, FS->Tag);

@@ -194,14 +194,17 @@ private:
   void initializeSymbols();
   void initializeDwarfLine();
   InputSectionBase *getRelocTarget(const Elf_Shdr &Sec);
-  InputSectionBase *createInputSection(const Elf_Shdr &Sec,
-                                       StringRef SectionStringTable);
+  InputSectionBase *createInputSection(const Elf_Shdr &Sec);
+  StringRef getSectionName(const Elf_Shdr &Sec);
 
   bool shouldMerge(const Elf_Shdr &Sec);
   SymbolBody *createSymbolBody(const Elf_Sym *Sym);
 
   // List of all symbols referenced or defined by this file.
   std::vector<SymbolBody *> SymbolBodies;
+
+  // .shstrtab contents.
+  StringRef SectionStringTable;
 
   // Debugging information to retrieve source file and line for error
   // reporting. Linker may find reasonable number of errors in a

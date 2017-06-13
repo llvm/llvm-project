@@ -33,12 +33,12 @@ _start:
 
 // CHECK: Disassembly of section .text:
 // 131076 = 0x20004
-// CHECK:         20000: {{.*}} b       #131076
-// CHECK-NEXT:    20004: {{.*}} bl      #131080
-// CHECK-NEXT:    20008: {{.*}} b.eq    #131084
-// CHECK-NEXT:    2000c: {{.*}} cbz     x1, #131088
+// CHECK:         20000: {{.*}} b       #4
+// CHECK-NEXT:    20004: {{.*}} bl      #4
+// CHECK-NEXT:    20008: {{.*}} b.eq    #4
+// CHECK-NEXT:    2000c: {{.*}} cbz     x1, #4
 // CHECK-NEXT:    20010: {{.*}} adr     x0, #0
-// CHECK-NEXT:    20014: {{.*}} adrp    x0, #0
+// CHECK-NEXT:    20014: {{.*}} adrp    x0, #-131072
 // CHECK:         20018: {{.*}} .word   0x00000000
 // CHECK-NEXT:    2001c: {{.*}} .word   0x00000000
 // CHECK-NEXT:    20020: {{.*}} .word   0x00000000
