@@ -80,6 +80,16 @@ Error PDBFileBuilder::addNamedStream(StringRef Name, uint32_t Size) {
 }
 
 Expected<msf::MSFLayout> PDBFileBuilder::finalizeMsfLayout() {
+
+  if (Ipi && Ipi->getRecordCount() > 0) {
+    // In theory newer PDBs always have an ID stream, but by saying that we're
+    // only going to *really* have an ID stream if there is at least one ID
+    // record, we leave open the opportunity to test older PDBs such as those
+    // that don't have an ID stream.
+    auto &Info = getInfoBuilder();
+    Info.addFeature(PdbRaw_FeatureSig::VC140);
+  }
+
   uint32_t StringsLen = Strings.calculateSerializedSize();
 
   if (auto EC = addNamedStream("/names", StringsLen))

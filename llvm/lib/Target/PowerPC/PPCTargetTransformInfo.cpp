@@ -230,7 +230,7 @@ unsigned PPCTTIImpl::getNumberOfRegisters(bool Vector) {
   return ST->hasVSX() ? 64 : 32;
 }
 
-unsigned PPCTTIImpl::getRegisterBitWidth(bool Vector) {
+unsigned PPCTTIImpl::getRegisterBitWidth(bool Vector) const {
   if (Vector) {
     if (ST->hasQPX()) return 256;
     if (ST->hasAltivec()) return 128;

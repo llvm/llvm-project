@@ -204,11 +204,23 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   setOperationAction(ISD::FNEARBYINT, MVT::ppcf128, Expand);
   setOperationAction(ISD::FREM, MVT::ppcf128, Expand);
 
-  // PowerPC has no SREM/UREM instructions
-  setOperationAction(ISD::SREM, MVT::i32, Expand);
-  setOperationAction(ISD::UREM, MVT::i32, Expand);
-  setOperationAction(ISD::SREM, MVT::i64, Expand);
-  setOperationAction(ISD::UREM, MVT::i64, Expand);
+  // PowerPC has no SREM/UREM instructions unless we are on P9
+  // On P9 we may use a hardware instruction to compute the remainder.
+  // The instructions are not legalized directly because in the cases where the
+  // result of both the remainder and the division is required it is more
+  // efficient to compute the remainder from the result of the division rather
+  // than use the remainder instruction.
+  if (Subtarget.isISA3_0()) {
+    setOperationAction(ISD::SREM, MVT::i32, Custom);
+    setOperationAction(ISD::UREM, MVT::i32, Custom);
+    setOperationAction(ISD::SREM, MVT::i64, Custom);
+    setOperationAction(ISD::UREM, MVT::i64, Custom);
+  } else {
+    setOperationAction(ISD::SREM, MVT::i32, Expand);
+    setOperationAction(ISD::UREM, MVT::i32, Expand);
+    setOperationAction(ISD::SREM, MVT::i64, Expand);
+    setOperationAction(ISD::UREM, MVT::i64, Expand);
+  }
 
   // Don't use SMUL_LOHI/UMUL_LOHI or SDIVREM/UDIVREM to lower SREM/UREM.
   setOperationAction(ISD::UMUL_LOHI, MVT::i32, Expand);
@@ -1116,6 +1128,7 @@ const char *PPCTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case PPCISD::VPERM:           return "PPCISD::VPERM";
   case PPCISD::XXSPLT:          return "PPCISD::XXSPLT";
   case PPCISD::XXINSERT:        return "PPCISD::XXINSERT";
+  case PPCISD::XXREVERSE:       return "PPCISD::XXREVERSE";
   case PPCISD::XXPERMDI:        return "PPCISD::XXPERMDI";
   case PPCISD::VECSHL:          return "PPCISD::VECSHL";
   case PPCISD::CMPB:            return "PPCISD::CMPB";
@@ -1598,22 +1611,34 @@ bool PPC::isSplatShuffleMask(ShuffleVectorSDNode *N, unsigned EltSize) {
   return true;
 }
 
-// Check that the mask is shuffling N byte elements.
-static bool isNByteElemShuffleMask(ShuffleVectorSDNode *N, unsigned Width) {
+/// Check that the mask is shuffling N byte elements. Within each N byte
+/// element of the mask, the indices could be either in increasing or
+/// decreasing order as long as they are consecutive.
+/// \param[in] N the shuffle vector SD Node to analyze
+/// \param[in] Width the element width in bytes, could be 2/4/8/16 (HalfWord/
+/// Word/DoubleWord/QuadWord).
+/// \param[in] StepLen the delta indices number among the N byte element, if
+/// the mask is in increasing/decreasing order then it is 1/-1.
+/// \return true iff the mask is shuffling N byte elements.
+static bool isNByteElemShuffleMask(ShuffleVectorSDNode *N, unsigned Width,
+                                   int StepLen) {
   assert((Width == 2 || Width == 4 || Width == 8 || Width == 16) &&
          "Unexpected element width.");
+  assert((StepLen == 1 || StepLen == -1) && "Unexpected element width.");
 
   unsigned NumOfElem = 16 / Width;
   unsigned MaskVal[16]; //  Width is never greater than 16
   for (unsigned i = 0; i < NumOfElem; ++i) {
     MaskVal[0] = N->getMaskElt(i * Width);
-    if (MaskVal[0] % Width) {
+    if ((StepLen == 1) && (MaskVal[0] % Width)) {
+      return false;
+    } else if ((StepLen == -1) && ((MaskVal[0] + 1) % Width)) {
       return false;
     }
 
     for (unsigned int j = 1; j < Width; ++j) {
       MaskVal[j] = N->getMaskElt(i * Width + j);
-      if (MaskVal[j] != MaskVal[j-1] + 1) {
+      if (MaskVal[j] != MaskVal[j-1] + StepLen) {
         return false;
       }
     }
@@ -1624,7 +1649,7 @@ static bool isNByteElemShuffleMask(ShuffleVectorSDNode *N, unsigned Width) {
 
 bool PPC::isXXINSERTWMask(ShuffleVectorSDNode *N, unsigned &ShiftElts,
                           unsigned &InsertAtByte, bool &Swap, bool IsLE) {
-  if (!isNByteElemShuffleMask(N, 4))
+  if (!isNByteElemShuffleMask(N, 4, 1))
     return false;
 
   // Now we look at mask elements 0,4,8,12
@@ -1701,7 +1726,7 @@ bool PPC::isXXSLDWIShuffleMask(ShuffleVectorSDNode *N, unsigned &ShiftElts,
                                bool &Swap, bool IsLE) {
   assert(N->getValueType(0) == MVT::v16i8 && "Shuffle vector expects v16i8");
   // Ensure each byte index of the word is consecutive.
-  if (!isNByteElemShuffleMask(N, 4))
+  if (!isNByteElemShuffleMask(N, 4, 1))
     return false;
 
   // Now we look at mask elements 0,4,8,12, which are the beginning of words.
@@ -1759,6 +1784,35 @@ bool PPC::isXXSLDWIShuffleMask(ShuffleVectorSDNode *N, unsigned &ShiftElts,
   }
 }
 
+bool static isXXBRShuffleMaskHelper(ShuffleVectorSDNode *N, int Width) {
+  assert(N->getValueType(0) == MVT::v16i8 && "Shuffle vector expects v16i8");
+
+  if (!isNByteElemShuffleMask(N, Width, -1))
+    return false;
+
+  for (int i = 0; i < 16; i += Width)
+    if (N->getMaskElt(i) != i + Width - 1)
+      return false;
+
+  return true;
+}
+
+bool PPC::isXXBRHShuffleMask(ShuffleVectorSDNode *N) {
+  return isXXBRShuffleMaskHelper(N, 2);
+}
+
+bool PPC::isXXBRWShuffleMask(ShuffleVectorSDNode *N) {
+  return isXXBRShuffleMaskHelper(N, 4);
+}
+
+bool PPC::isXXBRDShuffleMask(ShuffleVectorSDNode *N) {
+  return isXXBRShuffleMaskHelper(N, 8);
+}
+
+bool PPC::isXXBRQShuffleMask(ShuffleVectorSDNode *N) {
+  return isXXBRShuffleMaskHelper(N, 16);
+}
+
 /// Can node \p N be lowered to an XXPERMDI instruction? If so, set \p Swap
 /// if the inputs to the instruction should be swapped and set \p DM to the
 /// value for the immediate.
@@ -1772,7 +1826,7 @@ bool PPC::isXXPERMDIShuffleMask(ShuffleVectorSDNode *N, unsigned &DM,
   assert(N->getValueType(0) == MVT::v16i8 && "Shuffle vector expects v16i8");
 
   // Ensure each byte index of the double word is consecutive.
-  if (!isNByteElemShuffleMask(N, 8))
+  if (!isNByteElemShuffleMask(N, 8, 1))
     return false;
 
   unsigned M0 = N->getMaskElt(0) / 8;
@@ -6819,6 +6873,7 @@ bool PPCTargetLowering::canReuseLoadAddress(SDValue Op, EVT MemVT,
 // Given the head of the old chain, ResChain, insert a token factor containing
 // it and NewResChain, and make users of ResChain now be users of that token
 // factor.
+// TODO: Remove and use DAG::makeEquivalentMemoryOrdering() instead.
 void PPCTargetLowering::spliceIntoChain(SDValue ResChain,
                                         SDValue NewResChain,
                                         SelectionDAG &DAG) const {
@@ -7846,6 +7901,26 @@ SDValue PPCTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
     return DAG.getNode(ISD::BITCAST, dl, MVT::v16i8, PermDI);
   }
 
+  if (Subtarget.hasP9Vector()) {
+     if (PPC::isXXBRHShuffleMask(SVOp)) {
+      SDValue Conv = DAG.getNode(ISD::BITCAST, dl, MVT::v8i16, V1);
+      SDValue ReveHWord = DAG.getNode(PPCISD::XXREVERSE, dl, MVT::v8i16, Conv);
+      return DAG.getNode(ISD::BITCAST, dl, MVT::v16i8, ReveHWord);
+    } else if (PPC::isXXBRWShuffleMask(SVOp)) {
+      SDValue Conv = DAG.getNode(ISD::BITCAST, dl, MVT::v4i32, V1);
+      SDValue ReveWord = DAG.getNode(PPCISD::XXREVERSE, dl, MVT::v4i32, Conv);
+      return DAG.getNode(ISD::BITCAST, dl, MVT::v16i8, ReveWord);
+    } else if (PPC::isXXBRDShuffleMask(SVOp)) {
+      SDValue Conv = DAG.getNode(ISD::BITCAST, dl, MVT::v2i64, V1);
+      SDValue ReveDWord = DAG.getNode(PPCISD::XXREVERSE, dl, MVT::v2i64, Conv);
+      return DAG.getNode(ISD::BITCAST, dl, MVT::v16i8, ReveDWord);
+    } else if (PPC::isXXBRQShuffleMask(SVOp)) {
+      SDValue Conv = DAG.getNode(ISD::BITCAST, dl, MVT::v1i128, V1);
+      SDValue ReveQWord = DAG.getNode(PPCISD::XXREVERSE, dl, MVT::v1i128, Conv);
+      return DAG.getNode(ISD::BITCAST, dl, MVT::v16i8, ReveQWord);
+    }
+  }
+
   if (Subtarget.hasVSX()) {
     if (V2.isUndef() && PPC::isSplatShuffleMask(SVOp, 4)) {
       int SplatIdx = PPC::getVSPLTImmediate(SVOp, 4, DAG);
@@ -8393,6 +8468,18 @@ SDValue PPCTargetLowering::LowerINTRINSIC_VOID(SDValue Op,
   return SDValue();
 }
 
+SDValue PPCTargetLowering::LowerREM(SDValue Op, SelectionDAG &DAG) const {
+  // Check for a DIV with the same operands as this REM.
+  for (auto UI : Op.getOperand(1)->uses()) {
+    if ((Op.getOpcode() == ISD::SREM && UI->getOpcode() == ISD::SDIV) ||
+        (Op.getOpcode() == ISD::UREM && UI->getOpcode() == ISD::UDIV))
+      if (UI->getOperand(0) == Op.getOperand(0) &&
+          UI->getOperand(1) == Op.getOperand(1))
+        return SDValue();
+  }
+  return Op;
+}
+
 SDValue PPCTargetLowering::LowerSIGN_EXTEND_INREG(SDValue Op,
                                                   SelectionDAG &DAG) const {
   SDLoc dl(Op);
@@ -8861,6 +8948,9 @@ SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
 
   case ISD::INTRINSIC_VOID:
     return LowerINTRINSIC_VOID(Op, DAG);
+  case ISD::SREM:
+  case ISD::UREM:
+    return LowerREM(Op, DAG);
   }
 }
 

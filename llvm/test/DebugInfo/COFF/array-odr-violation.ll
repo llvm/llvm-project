@@ -65,7 +65,7 @@ attributes #1 = { nounwind readnone }
 
 !llvm.dbg.cu = !{!2, !11}
 !llvm.ident = !{!13, !13}
-!llvm.module.flags = !{!14, !18, !19, !20}
+!llvm.module.flags = !{!18, !19, !20}
 
 !0 = !DIGlobalVariableExpression(var: !1)
 !1 = distinct !DIGlobalVariable(name: "a", linkageName: "\01?a@@3TYYSTYPE@@A", scope: !2, file: !3, line: 2, type: !6, isLocal: false, isDefinition: true)
@@ -81,10 +81,6 @@ attributes #1 = { nounwind readnone }
 !11 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !12, producer: "clang version 5.0.0 ", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !4)
 !12 = !DIFile(filename: "b.cpp", directory: "C:\5Csrc\5Cllvm-project\5Cbuild", checksumkind: CSK_MD5, checksum: "9cfd390d8827beab36769147bb037abc")
 !13 = !{!"clang version 5.0.0 "}
-!14 = !{i32 6, !"Linker Options", !15}
-!15 = !{!16, !17}
-!16 = !{!"/DEFAULTLIB:libcmt.lib"}
-!17 = !{!"/DEFAULTLIB:oldnames.lib"}
 !18 = !{i32 2, !"CodeView", i32 1}
 !19 = !{i32 2, !"Debug Info Version", i32 3}
 !20 = !{i32 1, !"PIC Level", i32 2}

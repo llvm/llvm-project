@@ -89,10 +89,10 @@ struct RewriteStatepointsForGC : public ModulePass {
       Changed |= runOnFunction(F);
 
     if (Changed) {
-      // stripNonValidAttributes asserts that shouldRewriteStatepointsIn
+      // stripNonValidAttributesAndMetadata asserts that shouldRewriteStatepointsIn
       // returns true for at least one function in the module.  Since at least
       // one function changed, we know that the precondition is satisfied.
-      stripNonValidAttributes(M);
+      stripNonValidAttributesAndMetadata(M);
     }
 
     return Changed;
@@ -105,20 +105,24 @@ struct RewriteStatepointsForGC : public ModulePass {
     AU.addRequired<TargetTransformInfoWrapperPass>();
   }
 
-  /// The IR fed into RewriteStatepointsForGC may have had attributes implying
-  /// dereferenceability that are no longer valid/correct after
-  /// RewriteStatepointsForGC has run.  This is because semantically, after
+  /// The IR fed into RewriteStatepointsForGC may have had attributes and
+  /// metadata implying dereferenceability that are no longer valid/correct after
+  /// RewriteStatepointsForGC has run. This is because semantically, after
   /// RewriteStatepointsForGC runs, all calls to gc.statepoint "free" the entire
-  /// heap.  stripNonValidAttributes (conservatively) restores correctness
-  /// by erasing all attributes in the module that externally imply
-  /// dereferenceability.
-  /// Similar reasoning also applies to the noalias attributes. gc.statepoint
-  /// can touch the entire heap including noalias objects.
-  void stripNonValidAttributes(Module &M);
+  /// heap. stripNonValidAttributesAndMetadata (conservatively) restores
+  /// correctness by erasing all attributes in the module that externally imply
+  /// dereferenceability. Similar reasoning also applies to the noalias
+  /// attributes and metadata. gc.statepoint can touch the entire heap including
+  /// noalias objects.
+  void stripNonValidAttributesAndMetadata(Module &M);
 
-  // Helpers for stripNonValidAttributes
-  void stripNonValidAttributesFromBody(Function &F);
+  // Helpers for stripNonValidAttributesAndMetadata
+  void stripNonValidAttributesAndMetadataFromBody(Function &F);
   void stripNonValidAttributesFromPrototype(Function &F);
+  // Certain metadata on instructions are invalid after running RS4GC.
+  // Optimizations that run after RS4GC can incorrectly use this metadata to
+  // optimize functions. We drop such metadata on the instruction.
+  void stripInvalidMetadataFromInstruction(Instruction &I);
 };
 } // namespace
 
@@ -2306,12 +2310,43 @@ RewriteStatepointsForGC::stripNonValidAttributesFromPrototype(Function &F) {
     RemoveNonValidAttrAtIndex(Ctx, F, AttributeList::ReturnIndex);
 }
 
-void RewriteStatepointsForGC::stripNonValidAttributesFromBody(Function &F) {
+void RewriteStatepointsForGC::stripInvalidMetadataFromInstruction(Instruction &I) {
+
+  if (!isa<LoadInst>(I) && !isa<StoreInst>(I))
+    return;
+  // These are the attributes that are still valid on loads and stores after
+  // RS4GC.
+  // The metadata implying dereferenceability and noalias are (conservatively)
+  // dropped.  This is because semantically, after RewriteStatepointsForGC runs,
+  // all calls to gc.statepoint "free" the entire heap. Also, gc.statepoint can
+  // touch the entire heap including noalias objects. Note: The reasoning is
+  // same as stripping the dereferenceability and noalias attributes that are
+  // analogous to the metadata counterparts.
+  // We also drop the invariant.load metadata on the load because that metadata
+  // implies the address operand to the load points to memory that is never
+  // changed once it became dereferenceable. This is no longer true after RS4GC.
+  // Similar reasoning applies to invariant.group metadata, which applies to
+  // loads within a group.
+  unsigned ValidMetadataAfterRS4GC[] = {LLVMContext::MD_tbaa,
+                         LLVMContext::MD_range,
+                         LLVMContext::MD_alias_scope,
+                         LLVMContext::MD_nontemporal,
+                         LLVMContext::MD_nonnull,
+                         LLVMContext::MD_align,
+                         LLVMContext::MD_type};
+
+  // Drops all metadata on the instruction other than ValidMetadataAfterRS4GC.
+  I.dropUnknownNonDebugMetadata(ValidMetadataAfterRS4GC);
+
+}
+
+void RewriteStatepointsForGC::stripNonValidAttributesAndMetadataFromBody(Function &F) {
   if (F.empty())
     return;
 
   LLVMContext &Ctx = F.getContext();
   MDBuilder Builder(Ctx);
+
 
   for (Instruction &I : instructions(F)) {
     if (const MDNode *MD = I.getMetadata(LLVMContext::MD_tbaa)) {
@@ -2332,6 +2367,8 @@ void RewriteStatepointsForGC::stripNonValidAttributesFromBody(Function &F) {
           Builder.createTBAAStructTagNode(Base, Access, Offset);
       I.setMetadata(LLVMContext::MD_tbaa, MutableTBAA);
     }
+
+    stripInvalidMetadataFromInstruction(I);
 
     if (CallSite CS = CallSite(&I)) {
       for (int i = 0, e = CS.arg_size(); i != e; i++)
@@ -2357,7 +2394,7 @@ static bool shouldRewriteStatepointsIn(Function &F) {
     return false;
 }
 
-void RewriteStatepointsForGC::stripNonValidAttributes(Module &M) {
+void RewriteStatepointsForGC::stripNonValidAttributesAndMetadata(Module &M) {
 #ifndef NDEBUG
   assert(any_of(M, shouldRewriteStatepointsIn) && "precondition!");
 #endif
@@ -2366,7 +2403,7 @@ void RewriteStatepointsForGC::stripNonValidAttributes(Module &M) {
     stripNonValidAttributesFromPrototype(F);
 
   for (Function &F : M)
-    stripNonValidAttributesFromBody(F);
+    stripNonValidAttributesAndMetadataFromBody(F);
 }
 
 bool RewriteStatepointsForGC::runOnFunction(Function &F) {

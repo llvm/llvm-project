@@ -181,7 +181,10 @@ class WasmObjectWriter : public MCObjectWriter {
   // Index values to use for fixing up call_indirect type indices.
   // Maps function symbols to the index of the type of the function
   DenseMap<const MCSymbolWasm *, uint32_t> TypeIndices;
-
+  // Maps function symbols to the table element index space. Used
+  // for TABLE_INDEX relocation types (i.e. address taken functions).
+  DenseMap<const MCSymbolWasm *, uint32_t> IndirectSymbolIndices;
+  // Maps function/global symbols to the function/global index space.
   DenseMap<const MCSymbolWasm *, uint32_t> SymbolIndices;
 
   DenseMap<WasmFunctionType, int32_t, WasmFunctionTypeDenseMapInfo>
@@ -210,6 +213,7 @@ private:
     DataRelocations.clear();
     TypeIndices.clear();
     SymbolIndices.clear();
+    IndirectSymbolIndices.clear();
     FunctionTypeIndices.clear();
     MCObjectWriter::reset();
   }
@@ -233,7 +237,7 @@ private:
   void writeTypeSection(const SmallVector<WasmFunctionType, 4> &FunctionTypes);
   void writeImportSection(const SmallVector<WasmImport, 4> &Imports);
   void writeFunctionSection(const SmallVector<WasmFunction, 4> &Functions);
-  void writeTableSection(const SmallVector<uint32_t, 4> &TableElems);
+  void writeTableSection(uint32_t NumElements);
   void writeMemorySection(const SmallVector<char, 0> &DataBytes);
   void writeGlobalSection(const SmallVector<WasmGlobal, 4> &Globals);
   void writeExportSection(const SmallVector<WasmExport, 4> &Exports);
@@ -464,9 +468,11 @@ static uint32_t ProvisionalValue(const WasmRelocationEntry &RelEntry) {
 uint32_t WasmObjectWriter::getRelocationIndexValue(
     const WasmRelocationEntry &RelEntry) {
   switch (RelEntry.Type) {
-  case wasm::R_WEBASSEMBLY_FUNCTION_INDEX_LEB:
   case wasm::R_WEBASSEMBLY_TABLE_INDEX_SLEB:
   case wasm::R_WEBASSEMBLY_TABLE_INDEX_I32:
+    assert(IndirectSymbolIndices.count(RelEntry.Symbol));
+    return IndirectSymbolIndices[RelEntry.Symbol];
+  case wasm::R_WEBASSEMBLY_FUNCTION_INDEX_LEB:
   case wasm::R_WEBASSEMBLY_GLOBAL_ADDR_LEB:
   case wasm::R_WEBASSEMBLY_GLOBAL_ADDR_SLEB:
   case wasm::R_WEBASSEMBLY_GLOBAL_ADDR_I32:
@@ -617,21 +623,19 @@ void WasmObjectWriter::writeFunctionSection(
   endSection(Section);
 }
 
-void WasmObjectWriter::writeTableSection(
-    const SmallVector<uint32_t, 4> &TableElems) {
+void WasmObjectWriter::writeTableSection(uint32_t NumElements) {
   // For now, always emit the table section, since indirect calls are not
   // valid without it. In the future, we could perhaps be more clever and omit
   // it if there are no indirect calls.
+
   SectionBookkeeping Section;
   startSection(Section, wasm::WASM_SEC_TABLE);
 
-  // The number of tables, fixed to 1 for now.
-  encodeULEB128(1, getStream());
-
-  encodeSLEB128(wasm::WASM_TYPE_ANYFUNC, getStream());
-
-  encodeULEB128(0, getStream());                 // flags
-  encodeULEB128(TableElems.size(), getStream()); // initial
+  encodeULEB128(1, getStream());                       // The number of tables.
+                                                       // Fixed to 1 for now.
+  encodeSLEB128(wasm::WASM_TYPE_ANYFUNC, getStream()); // Type of table
+  encodeULEB128(0, getStream());                       // flags
+  encodeULEB128(NumElements, getStream());             // initial
 
   endSection(Section);
 }
@@ -1072,8 +1076,10 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
       }
 
       // If needed, prepare the function to be called indirectly.
-      if (IsAddressTaken.count(&WS))
+      if (IsAddressTaken.count(&WS)) {
+        IndirectSymbolIndices[&WS] = TableElems.size();
         TableElems.push_back(Index);
+      }
     } else {
       if (WS.isTemporary() && !WS.getSize())
         continue;
@@ -1180,7 +1186,7 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
   writeTypeSection(FunctionTypes);
   writeImportSection(Imports);
   writeFunctionSection(Functions);
-  writeTableSection(TableElems);
+  writeTableSection(TableElems.size());
   writeMemorySection(DataBytes);
   writeGlobalSection(Globals);
   writeExportSection(Exports);

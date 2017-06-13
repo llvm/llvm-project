@@ -35,7 +35,6 @@ public:
   Operator() = delete;
   ~Operator() = delete;
 
-  void *operator new(size_t, unsigned) = delete;
   void *operator new(size_t s) = delete;
 
   /// Return the opcode for this Instruction or ConstantExpr.

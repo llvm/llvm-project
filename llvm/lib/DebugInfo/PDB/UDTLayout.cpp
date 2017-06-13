@@ -181,13 +181,14 @@ void UDTLayoutBase::initializeChildren(const PDBSymbol &Sym) {
       if (Data->getDataKind() == PDB_DataKind::Member)
         Members.push_back(std::move(Data));
       else
-        Other.push_back(std::move(Child));
+        Other.push_back(std::move(Data));
     } else if (auto VT = unique_dyn_cast<PDBSymbolTypeVTable>(Child))
       VTables.push_back(std::move(VT));
     else if (auto Func = unique_dyn_cast<PDBSymbolFunc>(Child))
       Funcs.push_back(std::move(Func));
-    else
+    else {
       Other.push_back(std::move(Child));
+    }
   }
 
   // We don't want to have any re-allocations in the list of bases, so make

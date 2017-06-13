@@ -294,8 +294,6 @@ public:
     return User::operator new(s, 1);
   }
 
-  void *operator new(size_t, unsigned) = delete;
-
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 
@@ -342,8 +340,6 @@ public:
   void *operator new(size_t s) {
     return User::operator new(s, 2);
   }
-
-  void *operator new(size_t, unsigned) = delete;
 
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
@@ -913,8 +909,6 @@ public:
   void *operator new(size_t s) {
     return User::operator new(s, 2);
   }
-
-  void *operator new(size_t, unsigned) = delete;
 
   /// Construct a compare instruction, given the opcode, the predicate and
   /// the two operands.  Optionally (if InstBefore is specified) insert the

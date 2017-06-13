@@ -14693,21 +14693,7 @@ static SDValue narrowExtractedVectorLoad(SDNode *Extract, SelectionDAG &DAG) {
   MachineMemOperand *MMO = MF.getMachineMemOperand(Ld->getMemOperand(), Offset,
                                                    VT.getStoreSize());
   SDValue NewLd = DAG.getLoad(VT, DL, Ld->getChain(), NewAddr, MMO);
-
-  // The new load must have the same position as the old load in terms of memory
-  // dependency. Create a TokenFactor for Ld and NewLd and update uses of Ld's
-  // output chain to use that TokenFactor.
-  // TODO: This code is based on a similar sequence in x86 lowering. It should
-  // be moved to a helper function, so it can be shared and reused.
-  if (Ld->hasAnyUseOfValue(1)) {
-    SDValue OldChain = SDValue(Ld, 1);
-    SDValue NewChain = SDValue(NewLd.getNode(), 1);
-    SDValue TokenFactor = DAG.getNode(ISD::TokenFactor, DL, MVT::Other,
-                                      OldChain, NewChain);
-    DAG.ReplaceAllUsesOfValueWith(OldChain, TokenFactor);
-    DAG.UpdateNodeOperands(TokenFactor.getNode(), OldChain, NewChain);
-  }
-
+  DAG.makeEquivalentMemoryOrdering(Ld, NewLd);
   return NewLd;
 }
 

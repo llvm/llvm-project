@@ -76,7 +76,7 @@ public:
   }
 
   unsigned getNumberOfRegisters(bool Vector);
-  unsigned getRegisterBitWidth(bool Vector);
+  unsigned getRegisterBitWidth(bool Vector) const;
   unsigned getLoadStoreVecRegBitWidth(unsigned AddrSpace) const;
 
   bool isLegalToVectorizeMemChain(unsigned ChainSizeInBytes,

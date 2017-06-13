@@ -61,9 +61,11 @@
 using namespace llvm;
 using namespace dwarf;
 
-static void GetObjCImageInfo(ArrayRef<Module::ModuleFlagEntry> ModuleFlags,
-                             unsigned &Version, unsigned &Flags,
+static void GetObjCImageInfo(Module &M, unsigned &Version, unsigned &Flags,
                              StringRef &Section) {
+  SmallVector<Module::ModuleFlagEntry, 8> ModuleFlags;
+  M.getModuleFlagsMetadata(ModuleFlags);
+
   for (const auto &MFE: ModuleFlags) {
     // Ignore flags with 'Require' behaviour.
     if (MFE.Behavior == Module::Require)
@@ -88,14 +90,13 @@ static void GetObjCImageInfo(ArrayRef<Module::ModuleFlagEntry> ModuleFlags,
 //                                  ELF
 //===----------------------------------------------------------------------===//
 
-void TargetLoweringObjectFileELF::emitModuleFlags(
-    MCStreamer &Streamer, ArrayRef<Module::ModuleFlagEntry> ModuleFlags,
-    const TargetMachine &TM) const {
+void TargetLoweringObjectFileELF::emitModuleMetadata(
+    MCStreamer &Streamer, Module &M, const TargetMachine &TM) const {
   unsigned Version = 0;
   unsigned Flags = 0;
   StringRef Section;
 
-  GetObjCImageInfo(ModuleFlags, Version, Flags, Section);
+  GetObjCImageInfo(M, Version, Flags, Section);
   if (Section.empty())
     return;
 
@@ -618,20 +619,10 @@ void TargetLoweringObjectFileMachO::Initialize(MCContext &Ctx,
   }
 }
 
-/// emitModuleFlags - Perform code emission for module flags.
-void TargetLoweringObjectFileMachO::emitModuleFlags(
-    MCStreamer &Streamer, ArrayRef<Module::ModuleFlagEntry> ModuleFlags,
-    const TargetMachine &TM) const {
-  MDNode *LinkerOptions = nullptr;
-
-  for (const auto &MFE : ModuleFlags) {
-    StringRef Key = MFE.Key->getString();
-    if (Key == "Linker Options")
-      LinkerOptions = cast<MDNode>(MFE.Val);
-  }
-
+void TargetLoweringObjectFileMachO::emitModuleMetadata(
+    MCStreamer &Streamer, Module &M, const TargetMachine &TM) const {
   // Emit the linker options if present.
-  if (LinkerOptions) {
+  if (auto *LinkerOptions = M.getNamedMetadata("llvm.linker.options")) {
     for (const auto &Option : LinkerOptions->operands()) {
       SmallVector<std::string, 4> StrOptions;
       for (const auto &Piece : cast<MDNode>(Option)->operands())
@@ -643,7 +634,8 @@ void TargetLoweringObjectFileMachO::emitModuleFlags(
   unsigned VersionVal = 0;
   unsigned ImageInfoFlags = 0;
   StringRef SectionVal;
-  GetObjCImageInfo(ModuleFlags, VersionVal, ImageInfoFlags, SectionVal);
+
+  GetObjCImageInfo(M, VersionVal, ImageInfoFlags, SectionVal);
 
   // The section is mandatory. If we don't have it, then we don't have GC info.
   if (SectionVal.empty())
@@ -1159,18 +1151,9 @@ MCSection *TargetLoweringObjectFileCOFF::getSectionForJumpTable(
                                      COFF::IMAGE_COMDAT_SELECT_ASSOCIATIVE, UniqueID);
 }
 
-void TargetLoweringObjectFileCOFF::emitModuleFlags(
-    MCStreamer &Streamer, ArrayRef<Module::ModuleFlagEntry> ModuleFlags,
-    const TargetMachine &TM) const {
-  MDNode *LinkerOptions = nullptr;
-
-  for (const auto &MFE : ModuleFlags) {
-    StringRef Key = MFE.Key->getString();
-    if (Key == "Linker Options")
-      LinkerOptions = cast<MDNode>(MFE.Val);
-  }
-
-  if (LinkerOptions) {
+void TargetLoweringObjectFileCOFF::emitModuleMetadata(
+    MCStreamer &Streamer, Module &M, const TargetMachine &TM) const {
+  if (NamedMDNode *LinkerOptions = M.getNamedMetadata("llvm.linker.options")) {
     // Emit the linker options to the linker .drectve section.  According to the
     // spec, this section is a space-separated string containing flags for
     // linker.
@@ -1190,7 +1173,7 @@ void TargetLoweringObjectFileCOFF::emitModuleFlags(
   unsigned Flags = 0;
   StringRef Section;
 
-  GetObjCImageInfo(ModuleFlags, Version, Flags, Section);
+  GetObjCImageInfo(M, Version, Flags, Section);
   if (Section.empty())
     return;
 

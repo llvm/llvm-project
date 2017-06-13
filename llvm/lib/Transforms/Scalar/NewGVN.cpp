@@ -3561,7 +3561,7 @@ bool NewGVN::eliminateInstructions(Function &F) {
     // TODO: It would be faster to use getNumIncomingBlocks() on a phi node in
     // the block and subtract the pred count, but it's more complicated.
     if (ReachablePredCount.lookup(BB) !=
-        std::distance(pred_begin(BB), pred_end(BB))) {
+        unsigned(std::distance(pred_begin(BB), pred_end(BB)))) {
       for (auto II = BB->begin(); isa<PHINode>(II); ++II) {
         auto &PHI = cast<PHINode>(*II);
         ReplaceUnreachablePHIArgs(PHI, BB);

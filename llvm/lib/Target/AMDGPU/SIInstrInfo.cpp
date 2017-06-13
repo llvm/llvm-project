@@ -468,13 +468,11 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
     Builder.addReg(RI.getSubReg(SrcReg, SubIdx));
 
-    if (Idx == SubIndices.size() - 1)
-      Builder.addReg(SrcReg, getKillRegState(KillSrc) | RegState::Implicit);
-
     if (Idx == 0)
       Builder.addReg(DestReg, RegState::Define | RegState::Implicit);
 
-    Builder.addReg(SrcReg, RegState::Implicit);
+    bool UseKill = KillSrc && Idx == SubIndices.size() - 1;
+    Builder.addReg(SrcReg, getKillRegState(UseKill) | RegState::Implicit);
   }
 }
 
@@ -2331,11 +2329,12 @@ static bool isSubRegOf(const SIRegisterInfo &TRI,
 bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
                                     StringRef &ErrInfo) const {
   uint16_t Opcode = MI.getOpcode();
-
   if (SIInstrInfo::isGenericOpcode(MI.getOpcode()))
     return true;
 
-  const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
+  const MachineFunction *MF = MI.getParent()->getParent();
+  const MachineRegisterInfo &MRI = MF->getRegInfo();
+
   int Src0Idx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src0);
   int Src1Idx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src1);
   int Src2Idx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src2);
@@ -2562,6 +2561,14 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
         ErrInfo = "scalar stores must use m0 as offset register";
         return false;
       }
+    }
+  }
+
+  if (isFLAT(MI) && !MF->getSubtarget<SISubtarget>().hasFlatInstOffsets()) {
+    const MachineOperand *Offset = getNamedOperand(MI, AMDGPU::OpName::offset);
+    if (Offset->getImm() != 0) {
+      ErrInfo = "subtarget does not support offsets in flat instructions";
+      return false;
     }
   }
 

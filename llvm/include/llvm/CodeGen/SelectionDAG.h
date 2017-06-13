@@ -1217,6 +1217,12 @@ public:
   void ReplaceAllUsesOfValuesWith(const SDValue *From, const SDValue *To,
                                   unsigned Num);
 
+  /// If an existing load has uses of its chain, create a token factor node with
+  /// that chain and the new memory node's chain and update users of the old
+  /// chain to the token factor. This ensures that the new memory node will have
+  /// the same relative memory dependency position as the old load.
+  void makeEquivalentMemoryOrdering(LoadSDNode *Old, SDValue New);
+
   /// Topological-sort the AllNodes list and a
   /// assign a unique node id for each node in the DAG based on their
   /// topological order. Returns the number of nodes.
