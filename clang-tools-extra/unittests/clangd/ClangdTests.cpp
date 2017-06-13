@@ -214,11 +214,6 @@ std::string dumpASTWithoutMemoryLocs(ClangdServer &Server, PathRef File) {
   return replacePtrsInDump(DumpWithMemLocs);
 }
 
-template <class T>
-std::unique_ptr<T> getAndMove(std::unique_ptr<T> Ptr, T *&Output) {
-  Output = Ptr.get();
-  return Ptr;
-}
 } // namespace
 
 class ClangdVFSTest : public ::testing::Test {
@@ -243,22 +238,19 @@ protected:
       PathRef SourceFileRelPath, StringRef SourceContents,
       std::vector<std::pair<PathRef, StringRef>> ExtraFiles = {},
       bool ExpectErrors = false) {
-    MockFSProvider *FS;
-    ErrorCheckingDiagConsumer *DiagConsumer;
-    ClangdServer Server(
-        llvm::make_unique<MockCompilationDatabase>(),
-        getAndMove(llvm::make_unique<ErrorCheckingDiagConsumer>(),
-                   DiagConsumer),
-        getAndMove(llvm::make_unique<MockFSProvider>(), FS),
-        /*RunSynchronously=*/false);
+    MockFSProvider FS;
+    ErrorCheckingDiagConsumer DiagConsumer;
+    MockCompilationDatabase CDB;
+    ClangdServer Server(CDB, DiagConsumer, FS,
+                        /*RunSynchronously=*/false);
     for (const auto &FileWithContents : ExtraFiles)
-      FS->Files[getVirtualTestFilePath(FileWithContents.first)] =
+      FS.Files[getVirtualTestFilePath(FileWithContents.first)] =
           FileWithContents.second;
 
     auto SourceFilename = getVirtualTestFilePath(SourceFileRelPath);
     Server.addDocument(SourceFilename, SourceContents);
     auto Result = dumpASTWithoutMemoryLocs(Server, SourceFilename);
-    EXPECT_EQ(ExpectErrors, DiagConsumer->hadErrorInLastDiags());
+    EXPECT_EQ(ExpectErrors, DiagConsumer.hadErrorInLastDiags());
     return Result;
   }
 };
@@ -299,13 +291,11 @@ int b = a;
 }
 
 TEST_F(ClangdVFSTest, Reparse) {
-  MockFSProvider *FS;
-  ErrorCheckingDiagConsumer *DiagConsumer;
-  ClangdServer Server(
-      llvm::make_unique<MockCompilationDatabase>(),
-      getAndMove(llvm::make_unique<ErrorCheckingDiagConsumer>(), DiagConsumer),
-      getAndMove(llvm::make_unique<MockFSProvider>(), FS),
-      /*RunSynchronously=*/false);
+  MockFSProvider FS;
+  ErrorCheckingDiagConsumer DiagConsumer;
+  MockCompilationDatabase CDB;
+  ClangdServer Server(CDB, DiagConsumer, FS,
+                      /*RunSynchronously=*/false);
 
   const auto SourceContents = R"cpp(
 #include "foo.h"
@@ -315,34 +305,32 @@ int b = a;
   auto FooCpp = getVirtualTestFilePath("foo.cpp");
   auto FooH = getVirtualTestFilePath("foo.h");
 
-  FS->Files[FooH] = "int a;";
-  FS->Files[FooCpp] = SourceContents;
+  FS.Files[FooH] = "int a;";
+  FS.Files[FooCpp] = SourceContents;
 
   Server.addDocument(FooCpp, SourceContents);
   auto DumpParse1 = dumpASTWithoutMemoryLocs(Server, FooCpp);
-  EXPECT_FALSE(DiagConsumer->hadErrorInLastDiags());
+  EXPECT_FALSE(DiagConsumer.hadErrorInLastDiags());
 
   Server.addDocument(FooCpp, "");
   auto DumpParseEmpty = dumpASTWithoutMemoryLocs(Server, FooCpp);
-  EXPECT_FALSE(DiagConsumer->hadErrorInLastDiags());
+  EXPECT_FALSE(DiagConsumer.hadErrorInLastDiags());
 
   Server.addDocument(FooCpp, SourceContents);
   auto DumpParse2 = dumpASTWithoutMemoryLocs(Server, FooCpp);
-  EXPECT_FALSE(DiagConsumer->hadErrorInLastDiags());
+  EXPECT_FALSE(DiagConsumer.hadErrorInLastDiags());
 
   EXPECT_EQ(DumpParse1, DumpParse2);
   EXPECT_NE(DumpParse1, DumpParseEmpty);
 }
 
 TEST_F(ClangdVFSTest, ReparseOnHeaderChange) {
-  MockFSProvider *FS;
-  ErrorCheckingDiagConsumer *DiagConsumer;
+  MockFSProvider FS;
+  ErrorCheckingDiagConsumer DiagConsumer;
+  MockCompilationDatabase CDB;
 
-  ClangdServer Server(
-      llvm::make_unique<MockCompilationDatabase>(),
-      getAndMove(llvm::make_unique<ErrorCheckingDiagConsumer>(), DiagConsumer),
-      getAndMove(llvm::make_unique<MockFSProvider>(), FS),
-      /*RunSynchronously=*/false);
+  ClangdServer Server(CDB, DiagConsumer, FS,
+                      /*RunSynchronously=*/false);
 
   const auto SourceContents = R"cpp(
 #include "foo.h"
@@ -352,50 +340,47 @@ int b = a;
   auto FooCpp = getVirtualTestFilePath("foo.cpp");
   auto FooH = getVirtualTestFilePath("foo.h");
 
-  FS->Files[FooH] = "int a;";
-  FS->Files[FooCpp] = SourceContents;
+  FS.Files[FooH] = "int a;";
+  FS.Files[FooCpp] = SourceContents;
 
   Server.addDocument(FooCpp, SourceContents);
   auto DumpParse1 = dumpASTWithoutMemoryLocs(Server, FooCpp);
-  EXPECT_FALSE(DiagConsumer->hadErrorInLastDiags());
+  EXPECT_FALSE(DiagConsumer.hadErrorInLastDiags());
 
-  FS->Files[FooH] = "";
+  FS.Files[FooH] = "";
   Server.forceReparse(FooCpp);
   auto DumpParseDifferent = dumpASTWithoutMemoryLocs(Server, FooCpp);
-  EXPECT_TRUE(DiagConsumer->hadErrorInLastDiags());
+  EXPECT_TRUE(DiagConsumer.hadErrorInLastDiags());
 
-  FS->Files[FooH] = "int a;";
+  FS.Files[FooH] = "int a;";
   Server.forceReparse(FooCpp);
   auto DumpParse2 = dumpASTWithoutMemoryLocs(Server, FooCpp);
-  EXPECT_FALSE(DiagConsumer->hadErrorInLastDiags());
+  EXPECT_FALSE(DiagConsumer.hadErrorInLastDiags());
 
   EXPECT_EQ(DumpParse1, DumpParse2);
   EXPECT_NE(DumpParse1, DumpParseDifferent);
 }
 
 TEST_F(ClangdVFSTest, CheckVersions) {
-  MockFSProvider *FS;
-  ErrorCheckingDiagConsumer *DiagConsumer;
-
-  ClangdServer Server(
-      llvm::make_unique<MockCompilationDatabase>(),
-      getAndMove(llvm::make_unique<ErrorCheckingDiagConsumer>(), DiagConsumer),
-      getAndMove(llvm::make_unique<MockFSProvider>(), FS),
-      /*RunSynchronously=*/true);
+  MockFSProvider FS;
+  ErrorCheckingDiagConsumer DiagConsumer;
+  MockCompilationDatabase CDB;
+  ClangdServer Server(CDB, DiagConsumer, FS,
+                      /*RunSynchronously=*/true);
 
   auto FooCpp = getVirtualTestFilePath("foo.cpp");
   const auto SourceContents = "int a;";
-  FS->Files[FooCpp] = SourceContents;
-  FS->Tag = "123";
+  FS.Files[FooCpp] = SourceContents;
+  FS.Tag = "123";
 
   Server.addDocument(FooCpp, SourceContents);
-  EXPECT_EQ(DiagConsumer->lastVFSTag(), FS->Tag);
-  EXPECT_EQ(Server.codeComplete(FooCpp, Position{0, 0}).Tag, FS->Tag);
+  EXPECT_EQ(DiagConsumer.lastVFSTag(), FS.Tag);
+  EXPECT_EQ(Server.codeComplete(FooCpp, Position{0, 0}).Tag, FS.Tag);
 
-  FS->Tag = "321";
+  FS.Tag = "321";
   Server.addDocument(FooCpp, SourceContents);
-  EXPECT_EQ(DiagConsumer->lastVFSTag(), FS->Tag);
-  EXPECT_EQ(Server.codeComplete(FooCpp, Position{0, 0}).Tag, FS->Tag);
+  EXPECT_EQ(DiagConsumer.lastVFSTag(), FS.Tag);
+  EXPECT_EQ(Server.codeComplete(FooCpp, Position{0, 0}).Tag, FS.Tag);
 }
 
 class ClangdCompletionTest : public ClangdVFSTest {
@@ -410,11 +395,11 @@ protected:
 };
 
 TEST_F(ClangdCompletionTest, CheckContentsOverride) {
-  MockFSProvider *FS;
+  MockFSProvider FS;
+  ErrorCheckingDiagConsumer DiagConsumer;
+  MockCompilationDatabase CDB;
 
-  ClangdServer Server(llvm::make_unique<MockCompilationDatabase>(),
-                      llvm::make_unique<ErrorCheckingDiagConsumer>(),
-                      getAndMove(llvm::make_unique<MockFSProvider>(), FS),
+  ClangdServer Server(CDB, DiagConsumer, FS,
                       /*RunSynchronously=*/false);
 
   auto FooCpp = getVirtualTestFilePath("foo.cpp");
@@ -433,7 +418,7 @@ int b =   ;
   // string literal of the SourceContents starts with a newline(it's easy to
   // miss).
   Position CompletePos = {2, 8};
-  FS->Files[FooCpp] = SourceContents;
+  FS.Files[FooCpp] = SourceContents;
 
   Server.addDocument(FooCpp, SourceContents);
 

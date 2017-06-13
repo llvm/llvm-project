@@ -453,7 +453,7 @@ enum clock_function_type {
 };
 #endif /* KMP_OS_LINUX */
 
-#if KMP_ARCH_X86_64 && (KMP_OS_LINUX || KMP_OS_WINDOWS)
+#if KMP_MIC_SUPPORTED
 enum mic_type { non_mic, mic1, mic2, mic3, dummy };
 #endif
 
@@ -2940,7 +2940,7 @@ extern enum clock_function_type __kmp_clock_function;
 extern int __kmp_clock_function_param;
 #endif /* KMP_OS_LINUX */
 
-#if KMP_ARCH_X86_64 && (KMP_OS_LINUX || KMP_OS_WINDOWS)
+#if KMP_MIC_SUPPORTED
 extern enum mic_type __kmp_mic_type;
 #endif
 
@@ -3268,6 +3268,9 @@ extern int __kmp_aux_set_affinity_mask_proc(int proc, void **mask);
 extern int __kmp_aux_unset_affinity_mask_proc(int proc, void **mask);
 extern int __kmp_aux_get_affinity_mask_proc(int proc, void **mask);
 extern void __kmp_balanced_affinity(int tid, int team_size);
+#if KMP_OS_LINUX
+extern int kmp_set_thread_affinity_mask_initial(void);
+#endif
 #endif /* KMP_AFFINITY_SUPPORTED */
 
 extern void __kmp_cleanup_hierarchy();

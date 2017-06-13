@@ -136,10 +136,18 @@ private:
 /// diagnostics for tracked files).
 class ClangdServer {
 public:
-  ClangdServer(std::unique_ptr<GlobalCompilationDatabase> CDB,
-               std::unique_ptr<DiagnosticsConsumer> DiagConsumer,
-               std::unique_ptr<FileSystemProvider> FSProvider,
-               bool RunSynchronously);
+  /// Creates a new ClangdServer. If \p RunSynchronously is false, no worker
+  /// thread will be created and all requests will be completed synchronously on
+  /// the calling thread (this is mostly used for tests). If \p RunSynchronously
+  /// is true, a worker thread will be created to parse files in the background
+  /// and provide diagnostics results via DiagConsumer.onDiagnosticsReady
+  /// callback. File accesses for each instance of parsing will be conducted via
+  /// a vfs::FileSystem provided by \p FSProvider. Results of code
+  /// completion/diagnostics also include a tag, that \p FSProvider returns
+  /// along with the vfs::FileSystem.
+  ClangdServer(GlobalCompilationDatabase &CDB,
+               DiagnosticsConsumer &DiagConsumer,
+               FileSystemProvider &FSProvider, bool RunSynchronously);
 
   /// Add a \p File to the list of tracked C++ files or update the contents if
   /// \p File is already tracked. Also schedules parsing of the AST for it on a
@@ -181,9 +189,9 @@ public:
   std::string dumpAST(PathRef File);
 
 private:
-  std::unique_ptr<GlobalCompilationDatabase> CDB;
-  std::unique_ptr<DiagnosticsConsumer> DiagConsumer;
-  std::unique_ptr<FileSystemProvider> FSProvider;
+  GlobalCompilationDatabase &CDB;
+  DiagnosticsConsumer &DiagConsumer;
+  FileSystemProvider &FSProvider;
   DraftStore DraftMgr;
   ClangdUnitStore Units;
   std::shared_ptr<PCHContainerOperations> PCHs;

@@ -150,6 +150,8 @@ private:
 uint64_t getHeaderSize();
 void reportDiscarded(InputSectionBase *IS);
 
+extern std::vector<OutputSection *> OutputSections;
+extern std::vector<OutputSectionCommand *> OutputSectionCommands;
 } // namespace elf
 } // namespace lld
 

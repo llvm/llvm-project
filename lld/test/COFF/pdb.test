@@ -191,8 +191,34 @@
 # RAW-NEXT:   mspdb00.dll version: 0.0.0
 # RAW-NEXT:   Modules [
 # RAW-NEXT:     {
-# RAW-NEXT:       Name: * Linker *
+# RAW-NEXT:       Name: {{.*}}tmp1.obj
 # RAW-NEXT:       Debug Stream Index: 9
+# RAW-NEXT:       Object File Name: {{.*}}tmp1.obj
+# RAW-NEXT:       Num Files: 0
+# RAW-NEXT:       Source File Name Idx: 0
+# RAW-NEXT:       Pdb File Name Idx: 0
+# RAW-NEXT:       Line Info Byte Size: 0
+# RAW-NEXT:       C13 Line Info Byte Size: 0
+# RAW-NEXT:       Symbol Byte Size: 4
+# RAW-NEXT:       Type Server Index: 0
+# RAW-NEXT:       Has EC Info: No
+# RAW-NEXT:     }
+# RAW-NEXT:     {
+# RAW-NEXT:       Name: {{.*}}tmp2.obj
+# RAW-NEXT:       Debug Stream Index: 10
+# RAW-NEXT:       Object File Name: {{.*}}tmp2.obj
+# RAW-NEXT:       Num Files: 0
+# RAW-NEXT:       Source File Name Idx: 0
+# RAW-NEXT:       Pdb File Name Idx: 0
+# RAW-NEXT:       Line Info Byte Size: 0
+# RAW-NEXT:       C13 Line Info Byte Size: 0
+# RAW-NEXT:       Symbol Byte Size: 4
+# RAW-NEXT:       Type Server Index: 0
+# RAW-NEXT:       Has EC Info: No
+# RAW-NEXT:     }
+# RAW-NEXT:     {
+# RAW-NEXT:       Name: * Linker *
+# RAW-NEXT:       Debug Stream Index: 11
 # RAW-NEXT:       Object File Name:
 # RAW-NEXT:       Num Files: 0
 # RAW-NEXT:       Source File Name Idx: 0
@@ -207,7 +233,7 @@
 # RAW-NEXT: }
 # RAW-NEXT: Section Contributions [
 # RAW-NEXT:   Contribution {
-# RAW-NEXT:     ISect: 0
+# RAW-NEXT:     ISect: 65535
 # RAW-NEXT:     Off: 1288
 # RAW-NEXT:     Size: 14
 # RAW-NEXT:     Characteristics [ (0x60500020)
@@ -218,13 +244,13 @@
 # RAW-NEXT:     ]
 # RAW-NEXT:     Module {
 # RAW-NEXT:       Index: 0
-# RAW-NEXT:       Name: * Linker *
+# RAW-NEXT:       Name: {{.*}}tmp1.obj
 # RAW-NEXT:     }
 # RAW-NEXT:     Data CRC: 0
 # RAW-NEXT:     Reloc CRC: 0
 # RAW-NEXT:   }
 # RAW-NEXT:   Contribution {
-# RAW-NEXT:     ISect: 0
+# RAW-NEXT:     ISect: 65535
 # RAW-NEXT:     Off: 1312
 # RAW-NEXT:     Size: 8
 # RAW-NEXT:     Characteristics [ (0x40300040)
@@ -234,13 +260,13 @@
 # RAW-NEXT:     ]
 # RAW-NEXT:     Module {
 # RAW-NEXT:       Index: 0
-# RAW-NEXT:       Name: * Linker *
+# RAW-NEXT:       Name: {{.*}}tmp1.obj
 # RAW-NEXT:     }
 # RAW-NEXT:     Data CRC: 0
 # RAW-NEXT:     Reloc CRC: 0
 # RAW-NEXT:   }
 # RAW-NEXT:   Contribution {
-# RAW-NEXT:     ISect: 0
+# RAW-NEXT:     ISect: 65535
 # RAW-NEXT:     Off: 1320
 # RAW-NEXT:     Size: 12
 # RAW-NEXT:     Characteristics [ (0x40300040)
@@ -250,13 +276,13 @@
 # RAW-NEXT:     ]
 # RAW-NEXT:     Module {
 # RAW-NEXT:       Index: 0
-# RAW-NEXT:       Name: * Linker *
+# RAW-NEXT:       Name: {{.*}}tmp1.obj
 # RAW-NEXT:     }
 # RAW-NEXT:     Data CRC: 0
 # RAW-NEXT:     Reloc CRC: 0
 # RAW-NEXT:   }
 # RAW-NEXT:   Contribution {
-# RAW-NEXT:     ISect: 0
+# RAW-NEXT:     ISect: 65535
 # RAW-NEXT:     Off: 1144
 # RAW-NEXT:     Size: 6
 # RAW-NEXT:     Characteristics [ (0x60500020)
@@ -266,8 +292,8 @@
 # RAW-NEXT:       IMAGE_SCN_MEM_READ (0x40000000)
 # RAW-NEXT:     ]
 # RAW-NEXT:     Module {
-# RAW-NEXT:       Index: 0
-# RAW-NEXT:       Name: * Linker *
+# RAW-NEXT:       Index: 1
+# RAW-NEXT:       Name: {{.*}}tmp2.obj
 # RAW-NEXT:     }
 # RAW-NEXT:     Data CRC: 0
 # RAW-NEXT:     Reloc CRC: 0
