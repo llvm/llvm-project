@@ -27,6 +27,7 @@
 # CHECK-NEXT:   Age:             1
 # CHECK-NEXT:   Guid:
 # CHECK-NEXT:   Signature:       0
+# CHECK-NEXT:   Features:        [ VC140 ]
 # CHECK-NEXT:   Version:         VC70
 # CHECK-NEXT: DbiStream:
 # CHECK-NEXT:   VerHeader:       V110

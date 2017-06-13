@@ -653,6 +653,12 @@ template <class _T1, class _T2>
   class _LIBCPP_TEMPLATE_VIS tuple_size<pair<_T1, _T2> >
     : public integral_constant<size_t, 2> {};
 
+template <size_t _Ip, class _T1, class _T2>
+class _LIBCPP_TEMPLATE_VIS tuple_element<_Ip, pair<_T1, _T2> >
+{
+    static_assert(_Ip < 2, "Index out of bounds in std::tuple_element<std::pair<T1, T2>>");
+};
+
 template <class _T1, class _T2>
 class _LIBCPP_TEMPLATE_VIS tuple_element<0, pair<_T1, _T2> >
 {

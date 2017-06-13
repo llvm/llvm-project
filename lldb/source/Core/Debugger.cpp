@@ -112,6 +112,12 @@ OptionEnumValueElement g_language_enumerators[] = {
   "{ "                                                                         \
   "${module.file.basename}{`${function.name-with-args}"                        \
   "{${frame.no-debug}${function.pc-offset}}}}"
+
+#define MODULE_WITH_FUNC_NO_ARGS                                               \
+  "{ "                                                                         \
+  "${module.file.basename}{`${function.name-without-args}"                     \
+  "{${frame.no-debug}${function.pc-offset}}}}"
+
 #define FILE_AND_LINE "{ at ${line.file.basename}:${line.number}}"
 #define IS_OPTIMIZED "{${function.is-optimized} [opt]}"
 
@@ -139,6 +145,10 @@ OptionEnumValueElement g_language_enumerators[] = {
 
 #define DEFAULT_FRAME_FORMAT                                                   \
   "frame #${frame.index}: ${frame.pc}" MODULE_WITH_FUNC FILE_AND_LINE          \
+      IS_OPTIMIZED "\\n"
+
+#define DEFAULT_FRAME_FORMAT_NO_ARGS                                           \
+  "frame #${frame.index}: ${frame.pc}" MODULE_WITH_FUNC_NO_ARGS FILE_AND_LINE  \
       IS_OPTIMIZED "\\n"
 
 // Three parts to this disassembly format specification:
@@ -186,13 +196,15 @@ static PropertyDefinition g_properties[] = {
     {"auto-confirm", OptionValue::eTypeBoolean, true, false, nullptr, nullptr,
      "If true all confirmation prompts will receive their default reply."},
     {"disassembly-format", OptionValue::eTypeFormatEntity, true, 0,
-     DEFAULT_DISASSEMBLY_FORMAT, nullptr, "The default disassembly format "
-                                          "string to use when disassembling "
-                                          "instruction sequences."},
+     DEFAULT_DISASSEMBLY_FORMAT, nullptr,
+     "The default disassembly format "
+     "string to use when disassembling "
+     "instruction sequences."},
     {"frame-format", OptionValue::eTypeFormatEntity, true, 0,
-     DEFAULT_FRAME_FORMAT, nullptr, "The default frame format string to use "
-                                    "when displaying stack frame information "
-                                    "for threads."},
+     DEFAULT_FRAME_FORMAT, nullptr,
+     "The default frame format string to use "
+     "when displaying stack frame information "
+     "for threads."},
     {"notify-void", OptionValue::eTypeBoolean, true, false, nullptr, nullptr,
      "Notify the user explicitly if an expression returns void (default: "
      "false)."},
@@ -203,18 +215,21 @@ static PropertyDefinition g_properties[] = {
      nullptr, g_language_enumerators,
      "The script language to be used for evaluating user-written scripts."},
     {"stop-disassembly-count", OptionValue::eTypeSInt64, true, 4, nullptr,
-     nullptr, "The number of disassembly lines to show when displaying a "
-              "stopped context."},
+     nullptr,
+     "The number of disassembly lines to show when displaying a "
+     "stopped context."},
     {"stop-disassembly-display", OptionValue::eTypeEnum, true,
      Debugger::eStopDisassemblyTypeNoDebugInfo, nullptr,
      g_show_disassembly_enum_values,
      "Control when to display disassembly when displaying a stopped context."},
     {"stop-line-count-after", OptionValue::eTypeSInt64, true, 3, nullptr,
-     nullptr, "The number of sources lines to display that come after the "
-              "current source line when displaying a stopped context."},
+     nullptr,
+     "The number of sources lines to display that come after the "
+     "current source line when displaying a stopped context."},
     {"stop-line-count-before", OptionValue::eTypeSInt64, true, 3, nullptr,
-     nullptr, "The number of sources lines to display that come before the "
-              "current source line when displaying a stopped context."},
+     nullptr,
+     "The number of sources lines to display that come before the "
+     "current source line when displaying a stopped context."},
     {"stop-show-column", OptionValue::eTypeEnum, false,
      eStopShowColumnAnsiOrCaret, nullptr, s_stop_show_column_values,
      "If true, LLDB will use the column information from the debug info to "
@@ -232,19 +247,22 @@ static PropertyDefinition g_properties[] = {
     {"term-width", OptionValue::eTypeSInt64, true, 80, nullptr, nullptr,
      "The maximum number of columns to use for displaying text."},
     {"thread-format", OptionValue::eTypeFormatEntity, true, 0,
-     DEFAULT_THREAD_FORMAT, nullptr, "The default thread format string to use "
-                                     "when displaying thread information."},
+     DEFAULT_THREAD_FORMAT, nullptr,
+     "The default thread format string to use "
+     "when displaying thread information."},
     {"thread-stop-format", OptionValue::eTypeFormatEntity, true, 0,
-     DEFAULT_THREAD_STOP_FORMAT, nullptr, "The default thread format  "
-                                     "string to usewhen displaying thread "
-                                     "information as part of the stop display."},
+     DEFAULT_THREAD_STOP_FORMAT, nullptr,
+     "The default thread format  "
+     "string to use when displaying thread "
+     "information as part of the stop display."},
     {"use-external-editor", OptionValue::eTypeBoolean, true, false, nullptr,
      nullptr, "Whether to use an external editor or not."},
     {"use-color", OptionValue::eTypeBoolean, true, true, nullptr, nullptr,
      "Whether to use Ansi color codes or not."},
     {"auto-one-line-summaries", OptionValue::eTypeBoolean, true, true, nullptr,
-     nullptr, "If true, LLDB will automatically display small structs in "
-              "one-liner format (default: true)."},
+     nullptr,
+     "If true, LLDB will automatically display small structs in "
+     "one-liner format (default: true)."},
     {"auto-indent", OptionValue::eTypeBoolean, true, true, nullptr, nullptr,
      "If true, LLDB will auto indent/outdent code. Currently only supported in "
      "the REPL (default: true)."},
@@ -255,8 +273,13 @@ static PropertyDefinition g_properties[] = {
      "The tab size to use when indenting code in multi-line input mode "
      "(default: 4)."},
     {"escape-non-printables", OptionValue::eTypeBoolean, true, true, nullptr,
-     nullptr, "If true, LLDB will automatically escape non-printable and "
-              "escape characters when formatting strings."},
+     nullptr,
+     "If true, LLDB will automatically escape non-printable and "
+     "escape characters when formatting strings."},
+    {"frame-format-unique", OptionValue::eTypeFormatEntity, true, 0,
+     DEFAULT_FRAME_FORMAT_NO_ARGS, nullptr,
+     "The default frame format string to use when displaying stack frame"
+     "information for threads from thread backtrace unique."},
     {nullptr, OptionValue::eTypeInvalid, true, 0, nullptr, nullptr, nullptr}};
 
 enum {
@@ -282,7 +305,8 @@ enum {
   ePropertyAutoIndent,
   ePropertyPrintDecls,
   ePropertyTabSize,
-  ePropertyEscapeNonPrintables
+  ePropertyEscapeNonPrintables,
+  ePropertyFrameFormatUnique,
 };
 
 LoadPluginCallbackType Debugger::g_load_plugin_callback = nullptr;
@@ -355,6 +379,11 @@ const FormatEntity::Entry *Debugger::GetDisassemblyFormat() const {
 
 const FormatEntity::Entry *Debugger::GetFrameFormat() const {
   const uint32_t idx = ePropertyFrameFormat;
+  return m_collection_sp->GetPropertyAtIndexAsFormatEntity(nullptr, idx);
+}
+
+const FormatEntity::Entry *Debugger::GetFrameFormatUnique() const {
+  const uint32_t idx = ePropertyFrameFormatUnique;
   return m_collection_sp->GetPropertyAtIndexAsFormatEntity(nullptr, idx);
 }
 

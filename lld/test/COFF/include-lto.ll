@@ -17,8 +17,5 @@ define i32 @foo() {
   ret i32 0
 }
 
-!llvm.module.flags = !{!0}
-
-!0 = !{i32 6, !"Linker Options", !1}
-!1 = !{!2}
-!2 = !{!"/INCLUDE:foo"}
+!llvm.linker.options = !{!0}
+!0 = !{!"/INCLUDE:foo"}

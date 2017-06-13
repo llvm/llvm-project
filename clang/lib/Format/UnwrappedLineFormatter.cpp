@@ -186,6 +186,12 @@ private:
                 ? 0
                 : Limit - TheLine->Last->TotalLength;
 
+    if (TheLine->Last->is(TT_FunctionLBrace) &&
+        TheLine->First == TheLine->Last &&
+        !Style.BraceWrapping.SplitEmptyFunctionBody &&
+        I[1]->First->is(tok::r_brace))
+      return tryMergeSimpleBlock(I, E, Limit);
+
     // FIXME: TheLine->Level != 0 might or might not be the right check to do.
     // If necessary, change to something smarter.
     bool MergeShortFunctions =
@@ -215,7 +221,10 @@ private:
       Limit -= 2;
 
       unsigned MergedLines = 0;
-      if (MergeShortFunctions) {
+      if (MergeShortFunctions ||
+          (Style.AllowShortFunctionsOnASingleLine >= FormatStyle::SFS_Empty &&
+           I[1]->First == I[1]->Last && I + 2 != E &&
+           I[2]->First->is(tok::r_brace))) {
         MergedLines = tryMergeSimpleBlock(I + 1, E, Limit);
         // If we managed to merge the block, count the function header, which is
         // on a separate line.

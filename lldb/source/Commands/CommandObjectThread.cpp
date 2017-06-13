@@ -42,10 +42,44 @@ using namespace lldb;
 using namespace lldb_private;
 
 //-------------------------------------------------------------------------
-// CommandObjectThreadBacktrace
+// CommandObjectIterateOverThreads
 //-------------------------------------------------------------------------
 
 class CommandObjectIterateOverThreads : public CommandObjectParsed {
+
+  class UniqueStack {
+
+  public:
+    UniqueStack(std::stack<lldb::addr_t> stack_frames, uint32_t thread_index_id)
+        : m_stack_frames(stack_frames) {
+      m_thread_index_ids.push_back(thread_index_id);
+    }
+
+    void AddThread(uint32_t thread_index_id) const {
+      m_thread_index_ids.push_back(thread_index_id);
+    }
+
+    const std::vector<uint32_t> &GetUniqueThreadIndexIDs() const {
+      return m_thread_index_ids;
+    }
+
+    lldb::tid_t GetRepresentativeThread() const {
+      return m_thread_index_ids.front();
+    }
+
+    friend bool inline operator<(const UniqueStack &lhs,
+                                 const UniqueStack &rhs) {
+      return lhs.m_stack_frames < rhs.m_stack_frames;
+    }
+
+  protected:
+    // Mark the thread index as mutable, as we don't care about it from a const
+    // perspective, we only care about m_stack_frames so we keep our std::set
+    // sorted.
+    mutable std::vector<uint32_t> m_thread_index_ids;
+    std::stack<lldb::addr_t> m_stack_frames;
+  };
+
 public:
   CommandObjectIterateOverThreads(CommandInterpreter &interpreter,
                                   const char *name, const char *help,
@@ -57,11 +91,15 @@ public:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
     result.SetStatus(m_success_return);
 
+    bool all_threads = false;
     if (command.GetArgumentCount() == 0) {
       Thread *thread = m_exe_ctx.GetThreadPtr();
       if (!HandleOneThread(thread->GetID(), result))
         return false;
       return result.Succeeded();
+    } else if (command.GetArgumentCount() == 1) {
+      all_threads = ::strcmp(command.GetArgumentAtIndex(0), "all") == 0;
+      m_unique_stacks = ::strcmp(command.GetArgumentAtIndex(0), "unique") == 0;
     }
 
     // Use tids instead of ThreadSPs to prevent deadlocking problems which
@@ -69,8 +107,7 @@ public:
     // code while iterating over the (locked) ThreadSP list.
     std::vector<lldb::tid_t> tids;
 
-    if (command.GetArgumentCount() == 1 &&
-        ::strcmp(command.GetArgumentAtIndex(0), "all") == 0) {
+    if (all_threads || m_unique_stacks) {
       Process *process = m_exe_ctx.GetProcessPtr();
 
       for (ThreadSP thread_sp : process->Threads())
@@ -108,15 +145,47 @@ public:
       }
     }
 
-    uint32_t idx = 0;
-    for (const lldb::tid_t &tid : tids) {
-      if (idx != 0 && m_add_return)
-        result.AppendMessage("");
+    if (m_unique_stacks) {
+      // Iterate over threads, finding unique stack buckets.
+      std::set<UniqueStack> unique_stacks;
+      for (const lldb::tid_t &tid : tids) {
+        if (!BucketThread(tid, unique_stacks, result)) {
+          return false;
+        }
+      }
 
-      if (!HandleOneThread(tid, result))
-        return false;
+      // Write the thread id's and unique call stacks to the output stream
+      Stream &strm = result.GetOutputStream();
+      Process *process = m_exe_ctx.GetProcessPtr();
+      for (const UniqueStack &stack : unique_stacks) {
+        // List the common thread ID's
+        const std::vector<uint32_t> &thread_index_ids =
+            stack.GetUniqueThreadIndexIDs();
+        strm.Printf("%lu thread(s) ", thread_index_ids.size());
+        for (const uint32_t &thread_index_id : thread_index_ids) {
+          strm.Printf("#%u ", thread_index_id);
+        }
+        strm.EOL();
 
-      ++idx;
+        // List the shared call stack for this set of threads
+        uint32_t representative_thread_id = stack.GetRepresentativeThread();
+        ThreadSP thread = process->GetThreadList().FindThreadByIndexID(
+            representative_thread_id);
+        if (!HandleOneThread(thread->GetID(), result)) {
+          return false;
+        }
+      }
+    } else {
+      uint32_t idx = 0;
+      for (const lldb::tid_t &tid : tids) {
+        if (idx != 0 && m_add_return)
+          result.AppendMessage("");
+
+        if (!HandleOneThread(tid, result))
+          return false;
+
+        ++idx;
+      }
     }
     return result.Succeeded();
   }
@@ -134,7 +203,43 @@ protected:
 
   virtual bool HandleOneThread(lldb::tid_t, CommandReturnObject &result) = 0;
 
+  bool BucketThread(lldb::tid_t tid, std::set<UniqueStack> &unique_stacks,
+                    CommandReturnObject &result) {
+    // Grab the corresponding thread for the given thread id.
+    Process *process = m_exe_ctx.GetProcessPtr();
+    Thread *thread = process->GetThreadList().FindThreadByID(tid).get();
+    if (thread == nullptr) {
+      result.AppendErrorWithFormat("Failed to process thread# %lu.\n", tid);
+      result.SetStatus(eReturnStatusFailed);
+      return false;
+    }
+
+    // Collect the each frame's address for this call-stack
+    std::stack<lldb::addr_t> stack_frames;
+    const uint32_t frame_count = thread->GetStackFrameCount();
+    for (uint32_t frame_index = 0; frame_index < frame_count; frame_index++) {
+      const lldb::StackFrameSP frame_sp =
+          thread->GetStackFrameAtIndex(frame_index);
+      const lldb::addr_t pc = frame_sp->GetStackID().GetPC();
+      stack_frames.push(pc);
+    }
+
+    uint32_t thread_index_id = thread->GetIndexID();
+    UniqueStack new_unique_stack(stack_frames, thread_index_id);
+
+    // Try to match the threads stack to and existing entry.
+    std::set<UniqueStack>::iterator matching_stack =
+        unique_stacks.find(new_unique_stack);
+    if (matching_stack != unique_stacks.end()) {
+      matching_stack->AddThread(thread_index_id);
+    } else {
+      unique_stacks.insert(new_unique_stack);
+    }
+    return true;
+  }
+
   ReturnStatus m_success_return = eReturnStatusSuccessFinishResult;
+  bool m_unique_stacks = false;
   bool m_add_return = true;
 };
 
@@ -218,9 +323,10 @@ public:
       : CommandObjectIterateOverThreads(
             interpreter, "thread backtrace",
             "Show thread call stacks.  Defaults to the current thread, thread "
-            "indexes can be specified as arguments.  Use the thread-index "
-            "\"all\" "
-            "to see all threads.",
+            "indexes can be specified as arguments.\n"
+            "Use the thread-index \"all\" to see all threads.\n"
+            "Use the thread-index \"unique\" to see threads grouped by unique "
+            "call stacks.",
             nullptr,
             eCommandRequiresProcess | eCommandRequiresThread |
                 eCommandTryTargetAPILock | eCommandProcessMustBeLaunched |
@@ -270,11 +376,14 @@ protected:
 
     Stream &strm = result.GetOutputStream();
 
+    // Only dump stack info if we processing unique stacks.
+    const bool only_stacks = m_unique_stacks;
+
     // Don't show source context when doing backtraces.
     const uint32_t num_frames_with_source = 0;
     const bool stop_format = true;
     if (!thread->GetStatus(strm, m_options.m_start, m_options.m_count,
-                           num_frames_with_source, stop_format)) {
+                           num_frames_with_source, stop_format, only_stacks)) {
       result.AppendErrorWithFormat(
           "error displaying backtrace for thread: \"0x%4.4x\"\n",
           thread->GetIndexID());
