@@ -83,7 +83,7 @@ struct SyncVar {
   }
 
   bool IsFlagSet(u32 f) const {
-    return atomic_load_relaxed(&flags);
+    return atomic_load_relaxed(&flags) & f;
   }
 
   void SetFlags(u32 f) {

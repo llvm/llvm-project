@@ -3,7 +3,7 @@
 
 // Test that failed TryLock does not induce parasitic synchronization.
 
-Mutex mu;
+Mutex mu(true, 0);
 long data;
 
 void *thr(void *arg) {

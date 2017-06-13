@@ -386,16 +386,80 @@ TEST_F(ClangdVFSTest, CheckVersions) {
   auto FooCpp = getVirtualTestFilePath("foo.cpp");
   const auto SourceContents = "int a;";
   FS->Files[FooCpp] = SourceContents;
-  FS->Tag = 123;
+  FS->Tag = "123";
 
   Server.addDocument(FooCpp, SourceContents);
   EXPECT_EQ(DiagConsumer->lastVFSTag(), FS->Tag);
   EXPECT_EQ(Server.codeComplete(FooCpp, Position{0, 0}).Tag, FS->Tag);
 
-  FS->Tag = 321;
+  FS->Tag = "321";
   Server.addDocument(FooCpp, SourceContents);
   EXPECT_EQ(DiagConsumer->lastVFSTag(), FS->Tag);
   EXPECT_EQ(Server.codeComplete(FooCpp, Position{0, 0}).Tag, FS->Tag);
+}
+
+class ClangdCompletionTest : public ClangdVFSTest {
+protected:
+  bool ContainsItem(std::vector<CompletionItem> const &Items, StringRef Name) {
+    for (const auto &Item : Items) {
+      if (Item.insertText == Name)
+        return true;
+    }
+    return false;
+  }
+};
+
+TEST_F(ClangdCompletionTest, CheckContentsOverride) {
+  MockFSProvider *FS;
+
+  ClangdServer Server(llvm::make_unique<MockCompilationDatabase>(),
+                      llvm::make_unique<ErrorCheckingDiagConsumer>(),
+                      getAndMove(llvm::make_unique<MockFSProvider>(), FS),
+                      /*RunSynchronously=*/false);
+
+  auto FooCpp = getVirtualTestFilePath("foo.cpp");
+  const auto SourceContents = R"cpp(
+int aba;
+int b =   ;
+)cpp";
+
+  const auto OverridenSourceContents = R"cpp(
+int cbc;
+int b =   ;
+)cpp";
+  // Complete after '=' sign. We need to be careful to keep the SourceContents'
+  // size the same.
+  // We complete on the 3rd line (2nd in zero-based numbering), because raw
+  // string literal of the SourceContents starts with a newline(it's easy to
+  // miss).
+  Position CompletePos = {2, 8};
+  FS->Files[FooCpp] = SourceContents;
+
+  Server.addDocument(FooCpp, SourceContents);
+
+  {
+    auto CodeCompletionResults1 =
+        Server.codeComplete(FooCpp, CompletePos, None).Value;
+    EXPECT_TRUE(ContainsItem(CodeCompletionResults1, "aba"));
+    EXPECT_FALSE(ContainsItem(CodeCompletionResults1, "cbc"));
+  }
+
+  {
+    auto CodeCompletionResultsOverriden =
+        Server
+            .codeComplete(FooCpp, CompletePos,
+                          StringRef(OverridenSourceContents))
+            .Value;
+    EXPECT_TRUE(ContainsItem(CodeCompletionResultsOverriden, "cbc"));
+    EXPECT_FALSE(ContainsItem(CodeCompletionResultsOverriden, "aba"));
+  }
+
+  {
+    auto CodeCompletionResults2 =
+        Server.codeComplete(FooCpp, CompletePos, None).Value;
+    EXPECT_TRUE(ContainsItem(CodeCompletionResults2, "aba"));
+    EXPECT_FALSE(ContainsItem(CodeCompletionResults2, "cbc"));
+  }
 }
 
 } // namespace clangd

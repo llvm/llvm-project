@@ -184,17 +184,27 @@ void ClangdServer::forceReparse(PathRef File) {
   addDocument(File, getDocument(File));
 }
 
-Tagged<std::vector<CompletionItem>> ClangdServer::codeComplete(PathRef File,
-                                                               Position Pos) {
-  auto FileContents = DraftMgr.getDraft(File);
-  assert(FileContents.Draft && "codeComplete is called for non-added document");
+Tagged<std::vector<CompletionItem>>
+ClangdServer::codeComplete(PathRef File, Position Pos,
+                           llvm::Optional<StringRef> OverridenContents) {
+  if (!OverridenContents) {
+    auto FileContents = DraftMgr.getDraft(File);
+    assert(FileContents.Draft &&
+           "codeComplete is called for non-added document");
+
+    OverridenContents = *FileContents.Draft;
+  }
 
   std::vector<CompletionItem> Result;
   auto TaggedFS = FSProvider->getTaggedFileSystem();
-  Units.runOnUnitWithoutReparse(
-      File, *FileContents.Draft, *CDB, PCHs, TaggedFS.Value, [&](ClangdUnit &Unit) {
-        Result = Unit.codeComplete(*FileContents.Draft, Pos, TaggedFS.Value);
-      });
+  // It would be nice to use runOnUnitWithoutReparse here, but we can't
+  // guarantee the correctness of code completion cache here if we don't do the
+  // reparse.
+  Units.runOnUnit(File, *OverridenContents, *CDB, PCHs, TaggedFS.Value,
+                  [&](ClangdUnit &Unit) {
+                    Result = Unit.codeComplete(*OverridenContents, Pos,
+                                               TaggedFS.Value);
+                  });
   return make_tagged(std::move(Result), TaggedFS.Tag);
 }
 
