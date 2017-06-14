@@ -772,4 +772,16 @@ TEST(Fuzzer, ForEachNonZeroByte) {
   Expected = {{108, 1}, {109, 2}, {118, 3}, {120, 4},
               {135, 5}, {137, 6}, {146, 7}, {163, 8}};
   EXPECT_EQ(Res, Expected);
+
+  Res.clear();
+  ForEachNonZeroByte(Ar + 9, Ar + N, 109, CB);
+  Expected = {          {109, 2}, {118, 3}, {120, 4},
+              {135, 5}, {137, 6}, {146, 7}, {163, 8}};
+  EXPECT_EQ(Res, Expected);
+
+  Res.clear();
+  ForEachNonZeroByte(Ar + 9, Ar + N - 9, 109, CB);
+  Expected = {          {109, 2}, {118, 3}, {120, 4},
+              {135, 5}, {137, 6}, {146, 7}};
+  EXPECT_EQ(Res, Expected);
 }

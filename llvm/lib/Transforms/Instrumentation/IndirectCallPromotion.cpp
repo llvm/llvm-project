@@ -884,6 +884,7 @@ bool MemOPSizeOpt::perform(MemIntrinsic *MI) {
 
   // Keeping track of the count of the default case:
   uint64_t RemainCount = TotalCount;
+  uint64_t SavedRemainCount = SavedTotalCount;
   SmallVector<uint64_t, 16> SizeIds;
   SmallVector<uint64_t, 16> CaseCounts;
   uint64_t MaxCount = 0;
@@ -912,6 +913,8 @@ bool MemOPSizeOpt::perform(MemIntrinsic *MI) {
 
     assert(RemainCount >= C);
     RemainCount -= C;
+    assert(SavedRemainCount >= VD.Count);
+    SavedRemainCount -= VD.Count;
 
     if (++Version > MemOPMaxVersion && MemOPMaxVersion != 0)
       break;
@@ -968,6 +971,11 @@ bool MemOPSizeOpt::perform(MemIntrinsic *MI) {
 
   // Clear the value profile data.
   MI->setMetadata(LLVMContext::MD_prof, nullptr);
+  // If all promoted, we don't need the MD.prof metadata.
+  if (SavedRemainCount > 0 || Version != NumVals)
+    // Otherwise we need update with the un-promoted records back.
+    annotateValueSite(*Func.getParent(), *MI, VDs.slice(Version),
+                      SavedRemainCount, IPVK_MemOPSize, NumVals);
 
   DEBUG(dbgs() << "\n\n== Basic Block After==\n");
 

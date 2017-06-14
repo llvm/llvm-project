@@ -118,7 +118,7 @@ public:
   class TreeNode;
   WindowsResourceParser();
   Error parse(WindowsResource *WR);
-  void printTree() const;
+  void printTree(raw_ostream &OS) const;
   const TreeNode &getTree() const { return Root; }
   const ArrayRef<std::vector<uint8_t>> getData() const { return Data; }
   const ArrayRef<std::vector<UTF16>> getStringTable() const {

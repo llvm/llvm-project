@@ -13,6 +13,7 @@
 #include "llvm/MC/MCSymbol.h"
 
 namespace llvm {
+
 class MCSymbolWasm : public MCSymbol {
 private:
   bool IsFunction = false;
@@ -52,6 +53,7 @@ public:
     Params = std::move(Pars);
   }
 };
-}
 
-#endif
+}  // end namespace llvm
+
+#endif // LLVM_MC_MCSYMBOLWASM_H

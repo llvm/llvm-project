@@ -1,4 +1,3 @@
-﻿
 //===-- X86ISelLowering.cpp - X86 DAG Lowering Implementation -------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -5314,20 +5313,37 @@ static bool getTargetConstantBitsFromNode(SDValue Op, unsigned EltSizeInBits,
   assert((SizeInBits % EltSizeInBits) == 0 && "Can't split constant!");
   unsigned NumElts = SizeInBits / EltSizeInBits;
 
-  unsigned SrcEltSizeInBits = VT.getScalarSizeInBits();
-  unsigned NumSrcElts = SizeInBits / SrcEltSizeInBits;
+  // Bitcast a source array of element bits to the target size.
+  auto CastBitData = [&](APInt &UndefSrcElts, ArrayRef<APInt> SrcEltBits) {
+    unsigned NumSrcElts = UndefSrcElts.getBitWidth();
+    unsigned SrcEltSizeInBits = SrcEltBits[0].getBitWidth();
+    assert((NumSrcElts * SrcEltSizeInBits) == SizeInBits &&
+           "Constant bit sizes don't match");
 
-  // Extract all the undef/constant element data and pack into single bitsets.
-  APInt UndefBits(SizeInBits, 0);
-  APInt MaskBits(SizeInBits, 0);
-
-  // Split the undef/constant single bitset data into the target elements.
-  auto SplitBitData = [&]() {
     // Don't split if we don't allow undef bits.
     bool AllowUndefs = AllowWholeUndefs || AllowPartialUndefs;
-    if (UndefBits.getBoolValue() && !AllowUndefs)
+    if (UndefSrcElts.getBoolValue() && !AllowUndefs)
       return false;
 
+    // If we're already the right size, don't bother bitcasting.
+    if (NumSrcElts == NumElts) {
+      UndefElts = UndefSrcElts;
+      EltBits.assign(SrcEltBits.begin(), SrcEltBits.end());
+      return true;
+    }
+
+    // Extract all the undef/constant element data and pack into single bitsets.
+    APInt UndefBits(SizeInBits, 0);
+    APInt MaskBits(SizeInBits, 0);
+
+    for (unsigned i = 0; i != NumSrcElts; ++i) {
+      unsigned BitOffset = i * SrcEltSizeInBits;
+      if (UndefSrcElts[i])
+        UndefBits.setBits(BitOffset, BitOffset + SrcEltSizeInBits);
+      MaskBits.insertBits(SrcEltBits[i], BitOffset);
+    }
+
+    // Split the undef/constant single bitset data into the target elements.
     UndefElts = APInt(NumElts, 0);
     EltBits.resize(NumElts, APInt(EltSizeInBits, 0));
 
@@ -5356,20 +5372,19 @@ static bool getTargetConstantBitsFromNode(SDValue Op, unsigned EltSizeInBits,
 
   // Collect constant bits and insert into mask/undef bit masks.
   auto CollectConstantBits = [](const Constant *Cst, APInt &Mask, APInt &Undefs,
-                                unsigned BitOffset) {
+                                unsigned UndefBitIndex) {
     if (!Cst)
       return false;
     if (isa<UndefValue>(Cst)) {
-      unsigned CstSizeInBits = Cst->getType()->getPrimitiveSizeInBits();
-      Undefs.setBits(BitOffset, BitOffset + CstSizeInBits);
+      Undefs.setBit(UndefBitIndex);
       return true;
     }
     if (auto *CInt = dyn_cast<ConstantInt>(Cst)) {
-      Mask.insertBits(CInt->getValue(), BitOffset);
+      Mask = CInt->getValue();
       return true;
     }
     if (auto *CFP = dyn_cast<ConstantFP>(Cst)) {
-      Mask.insertBits(CFP->getValueAPF().bitcastToAPInt(), BitOffset);
+      Mask = CFP->getValueAPF().bitcastToAPInt();
       return true;
     }
     return false;
@@ -5377,18 +5392,21 @@ static bool getTargetConstantBitsFromNode(SDValue Op, unsigned EltSizeInBits,
 
   // Extract constant bits from build vector.
   if (ISD::isBuildVectorOfConstantSDNodes(Op.getNode())) {
+    unsigned SrcEltSizeInBits = VT.getScalarSizeInBits();
+    unsigned NumSrcElts = SizeInBits / SrcEltSizeInBits;
+
+    APInt UndefSrcElts(NumSrcElts, 0);
+    SmallVector<APInt, 64> SrcEltBits(NumSrcElts, APInt(SrcEltSizeInBits, 0));
     for (unsigned i = 0, e = Op.getNumOperands(); i != e; ++i) {
       const SDValue &Src = Op.getOperand(i);
-      unsigned BitOffset = i * SrcEltSizeInBits;
       if (Src.isUndef()) {
-        UndefBits.setBits(BitOffset, BitOffset + SrcEltSizeInBits);
+        UndefSrcElts.setBit(i);
         continue;
       }
       auto *Cst = cast<ConstantSDNode>(Src);
-      APInt Bits = Cst->getAPIntValue().zextOrTrunc(SrcEltSizeInBits);
-      MaskBits.insertBits(Bits, BitOffset);
+      SrcEltBits[i] = Cst->getAPIntValue().zextOrTrunc(SrcEltSizeInBits);
     }
-    return SplitBitData();
+    return CastBitData(UndefSrcElts, SrcEltBits);
   }
 
   // Extract constant bits from constant pool vector.
@@ -5397,27 +5415,33 @@ static bool getTargetConstantBitsFromNode(SDValue Op, unsigned EltSizeInBits,
     if (!CstTy->isVectorTy() || (SizeInBits != CstTy->getPrimitiveSizeInBits()))
       return false;
 
-    unsigned CstEltSizeInBits = CstTy->getScalarSizeInBits();
-    for (unsigned i = 0, e = CstTy->getVectorNumElements(); i != e; ++i)
-      if (!CollectConstantBits(Cst->getAggregateElement(i), MaskBits, UndefBits,
-                               i * CstEltSizeInBits))
+    unsigned SrcEltSizeInBits = CstTy->getScalarSizeInBits();
+    unsigned NumSrcElts = CstTy->getVectorNumElements();
+
+    APInt UndefSrcElts(NumSrcElts, 0);
+    SmallVector<APInt, 64> SrcEltBits(NumSrcElts, APInt(SrcEltSizeInBits, 0));
+    for (unsigned i = 0; i != NumSrcElts; ++i)
+      if (!CollectConstantBits(Cst->getAggregateElement(i), SrcEltBits[i],
+                               UndefSrcElts, i))
         return false;
 
-    return SplitBitData();
+    return CastBitData(UndefSrcElts, SrcEltBits);
   }
 
   // Extract constant bits from a broadcasted constant pool scalar.
   if (Op.getOpcode() == X86ISD::VBROADCAST &&
-      EltSizeInBits <= SrcEltSizeInBits) {
+      EltSizeInBits <= VT.getScalarSizeInBits()) {
     if (auto *Broadcast = getTargetConstantFromNode(Op.getOperand(0))) {
-      APInt Bits(SizeInBits, 0);
-      APInt Undefs(SizeInBits, 0);
-      if (CollectConstantBits(Broadcast, Bits, Undefs, 0)) {
-        for (unsigned i = 0; i != NumSrcElts; ++i) {
-          MaskBits |= Bits.shl(i * SrcEltSizeInBits);
-          UndefBits |= Undefs.shl(i * SrcEltSizeInBits);
-        }
-        return SplitBitData();
+      unsigned SrcEltSizeInBits = Broadcast->getType()->getScalarSizeInBits();
+      unsigned NumSrcElts = SizeInBits / SrcEltSizeInBits;
+
+      APInt UndefSrcElts(NumSrcElts, 0);
+      SmallVector<APInt, 64> SrcEltBits(1, APInt(SrcEltSizeInBits, 0));
+      if (CollectConstantBits(Broadcast, SrcEltBits[0], UndefSrcElts, 0)) {
+        if (UndefSrcElts[0])
+          UndefSrcElts.setBits(0, NumSrcElts);
+        SrcEltBits.append(NumSrcElts - 1, SrcEltBits[0]);
+        return CastBitData(UndefSrcElts, SrcEltBits);
       }
     }
   }
@@ -5426,10 +5450,15 @@ static bool getTargetConstantBitsFromNode(SDValue Op, unsigned EltSizeInBits,
   if (Op.getOpcode() == X86ISD::VZEXT_MOVL &&
       Op.getOperand(0).getOpcode() == ISD::SCALAR_TO_VECTOR &&
       isa<ConstantSDNode>(Op.getOperand(0).getOperand(0))) {
+    unsigned SrcEltSizeInBits = VT.getScalarSizeInBits();
+    unsigned NumSrcElts = SizeInBits / SrcEltSizeInBits;
+
+    APInt UndefSrcElts(NumSrcElts, 0);
+    SmallVector<APInt, 64> SrcEltBits;
     auto *CN = cast<ConstantSDNode>(Op.getOperand(0).getOperand(0));
-    MaskBits = CN->getAPIntValue().zextOrTrunc(SrcEltSizeInBits);
-    MaskBits = MaskBits.zext(SizeInBits);
-    return SplitBitData();
+    SrcEltBits.push_back(CN->getAPIntValue().zextOrTrunc(SrcEltSizeInBits));
+    SrcEltBits.append(NumSrcElts - 1, APInt(SrcEltSizeInBits, 0));
+    return CastBitData(UndefSrcElts, SrcEltBits);
   }
 
   return false;

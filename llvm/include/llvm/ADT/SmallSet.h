@@ -39,8 +39,9 @@ class SmallSet {
   /// we will never use.
   SmallVector<T, N> Vector;
   std::set<T, C> Set;
-  typedef typename SmallVector<T, N>::const_iterator VIterator;
-  typedef typename SmallVector<T, N>::iterator mutable_iterator;
+
+  using VIterator = typename SmallVector<T, N>::const_iterator;
+  using mutable_iterator = typename SmallVector<T, N>::iterator;
 
   // In small mode SmallPtrSet uses linear search for the elements, so it is
   // not a good idea to choose this value too high. You may consider using a
@@ -48,7 +49,7 @@ class SmallSet {
   static_assert(N <= 32, "N should be small");
 
 public:
-  typedef size_t size_type;
+  using size_type = size_t;
 
   SmallSet() = default;
 

@@ -903,8 +903,6 @@ protected:
           BasicBlock *InsertAtEnd);
 
 public:
-  CmpInst() = delete;
-
   // allocate space for exactly two operands
   void *operator new(size_t s) {
     return User::operator new(s, 2);

@@ -191,6 +191,24 @@ MachineInstrBuilder MachineIRBuilder::buildGEP(unsigned Res, unsigned Op0,
       .addUse(Op1);
 }
 
+Optional<MachineInstrBuilder>
+MachineIRBuilder::materializeGEP(unsigned &Res, unsigned Op0,
+                                 const LLT &ValueTy, uint64_t Value) {
+  assert(Res == 0 && "Res is a result argument");
+  assert(ValueTy.isScalar()  && "invalid offset type");
+
+  if (Value == 0) {
+    Res = Op0;
+    return None;
+  }
+
+  Res = MRI->createGenericVirtualRegister(MRI->getType(Op0));
+  unsigned TmpReg = MRI->createGenericVirtualRegister(ValueTy);
+
+  buildConstant(TmpReg, Value);
+  return buildGEP(Res, Op0, TmpReg);
+}
+
 MachineInstrBuilder MachineIRBuilder::buildPtrMask(unsigned Res, unsigned Op0,
                                                    uint32_t NumBits) {
   assert(MRI->getType(Res).isPointer() &&

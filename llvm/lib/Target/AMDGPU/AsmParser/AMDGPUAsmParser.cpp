@@ -1042,7 +1042,6 @@ public:
   AMDGPUOperand::Ptr defaultSMRDOffset20() const;
   AMDGPUOperand::Ptr defaultSMRDLiteralOffset() const;
   AMDGPUOperand::Ptr defaultOffsetU12() const;
-  AMDGPUOperand::Ptr defaultOffsetS13() const;
 
   OperandMatchResultTy parseOModOperand(OperandVector &Operands);
 
@@ -3868,10 +3867,6 @@ AMDGPUOperand::Ptr AMDGPUAsmParser::defaultSMRDLiteralOffset() const {
 }
 
 AMDGPUOperand::Ptr AMDGPUAsmParser::defaultOffsetU12() const {
-  return AMDGPUOperand::CreateImm(this, 0, SMLoc(), AMDGPUOperand::ImmTyOffset);
-}
-
-AMDGPUOperand::Ptr AMDGPUAsmParser::defaultOffsetS13() const {
   return AMDGPUOperand::CreateImm(this, 0, SMLoc(), AMDGPUOperand::ImmTyOffset);
 }
 

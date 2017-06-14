@@ -12,20 +12,12 @@
 
 #include "llvm/ADT/Triple.h"
 #include "llvm/BinaryFormat/Wasm.h"
-#include "llvm/MC/MCValue.h"
 #include "llvm/Support/DataTypes.h"
-#include "llvm/Support/raw_ostream.h"
-#include <vector>
 
 namespace llvm {
-class MCAssembler;
-class MCContext;
+
 class MCFixup;
-class MCFragment;
 class MCObjectWriter;
-class MCSectionWasm;
-class MCSymbol;
-class MCSymbolWasm;
 class MCValue;
 class raw_pwrite_stream;
 
@@ -38,8 +30,8 @@ protected:
 public:
   virtual ~MCWasmObjectTargetWriter();
 
-  virtual unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
-                                const MCFixup &Fixup, bool IsPCRel) const = 0;
+  virtual unsigned getRelocType(const MCValue &Target,
+                                const MCFixup &Fixup) const = 0;
 
   /// \name Accessors
   /// @{
@@ -54,6 +46,7 @@ public:
 /// \returns The constructed object writer.
 MCObjectWriter *createWasmObjectWriter(MCWasmObjectTargetWriter *MOTW,
                                        raw_pwrite_stream &OS);
+
 } // End llvm namespace
 
 #endif

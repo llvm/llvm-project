@@ -56,6 +56,8 @@ public:
   StringRef getModuleName() const { return ModuleName; }
   StringRef getObjFileName() const { return ObjFileName; }
 
+  unsigned getModuleIndex() const { return Layout.Mod; }
+
   ArrayRef<std::string> source_files() const {
     return makeArrayRef(SourceFiles);
   }

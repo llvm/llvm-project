@@ -124,6 +124,7 @@ private:
   bool keepsLowBits(const SDValue &Val, unsigned NumBits, SDValue &Src);
   bool isOrEquivalentToAdd(const SDNode *N) const;
   bool isAlignedMemNode(const MemSDNode *N) const;
+  bool isSmallStackStore(const StoreSDNode *N) const;
   bool isPositiveHalfWord(const SDNode *N) const;
 
   // DAG preprocessing functions.
@@ -1460,6 +1461,20 @@ bool HexagonDAGToDAGISel::isOrEquivalentToAdd(const SDNode *N) const {
 
 bool HexagonDAGToDAGISel::isAlignedMemNode(const MemSDNode *N) const {
   return N->getAlignment() >= N->getMemoryVT().getStoreSize();
+}
+
+bool HexagonDAGToDAGISel::isSmallStackStore(const StoreSDNode *N) const {
+  unsigned StackSize = MF->getFrameInfo().estimateStackSize(*MF);
+  switch (N->getMemoryVT().getStoreSize()) {
+    case 1:
+      return StackSize <= 56;   // 1*2^6 - 8
+    case 2:
+      return StackSize <= 120;  // 2*2^6 - 8
+    case 4:
+      return StackSize <= 248;  // 4*2^6 - 8
+    default:
+      return false;
+  }
 }
 
 // Return true when the given node fits in a positive half word.

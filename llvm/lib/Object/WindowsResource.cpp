@@ -70,7 +70,7 @@ ResourceEntryRef::ResourceEntryRef(BinaryStreamRef Ref,
                                    const WindowsResource *Owner, Error &Err)
     : Reader(Ref), OwningRes(Owner) {
   if (loadNext())
-    Err = make_error<GenericBinaryError>("Could not read first entry.",
+    Err = make_error<GenericBinaryError>("Could not read first entry.\n",
                                          object_error::unexpected_eof);
 }
 
@@ -156,8 +156,8 @@ Error WindowsResourceParser::parse(WindowsResource *WR) {
   return Error::success();
 }
 
-void WindowsResourceParser::printTree() const {
-  ScopedPrinter Writer(outs());
+void WindowsResourceParser::printTree(raw_ostream &OS) const {
+  ScopedPrinter Writer(OS);
   Root.print(Writer, "Resource Tree");
 }
 
@@ -598,9 +598,8 @@ void WindowsResourceCOFFWriter::writeSymbolTable() {
 
 void WindowsResourceCOFFWriter::writeStringTable() {
   // Just 4 null bytes for the string table.
-  auto COFFStringTable =
-      reinterpret_cast<uint32_t *>(BufferStart + CurrentOffset);
-  *COFFStringTable = 0;
+  auto COFFStringTable = reinterpret_cast<void *>(BufferStart + CurrentOffset);
+  memset(COFFStringTable, 0, 4);
 }
 
 void WindowsResourceCOFFWriter::writeDirectoryTree() {
@@ -691,11 +690,9 @@ void WindowsResourceCOFFWriter::writeDirectoryTree() {
 void WindowsResourceCOFFWriter::writeDirectoryStringTable() {
   // Now write the directory string table for .rsrc$01
   uint32_t TotalStringTableSize = 0;
-  for (auto String : StringTable) {
-    auto *LengthField =
-        reinterpret_cast<uint16_t *>(BufferStart + CurrentOffset);
+  for (auto &String : StringTable) {
     uint16_t Length = String.size();
-    *LengthField = Length;
+    support::endian::write16le(BufferStart + CurrentOffset, Length);
     CurrentOffset += sizeof(uint16_t);
     auto *Start = reinterpret_cast<UTF16 *>(BufferStart + CurrentOffset);
     std::copy(String.begin(), String.end(), Start);

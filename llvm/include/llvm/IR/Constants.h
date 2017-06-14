@@ -68,7 +68,6 @@ protected:
   void *operator new(size_t s) { return User::operator new(s, 0); }
 
 public:
-  ConstantData() = delete;
   ConstantData(const ConstantData &) = delete;
 
   /// Methods to support type inquiry through isa, cast, and dyn_cast.

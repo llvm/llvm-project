@@ -4405,6 +4405,7 @@ The current supported vocabulary is limited:
 
 - ``DW_OP_deref`` dereferences the top of the expression stack.
 - ``DW_OP_plus, 93`` adds ``93`` to the working expression.
+- ``DW_OP_plus_uconst, 93`` adds ``93`` to the working expression.
 - ``DW_OP_LLVM_fragment, 16, 8`` specifies the offset and size (``16`` and ``8``
   here, respectively) of the variable fragment from the working expression. Note
   that contrary to DW_OP_bit_piece, the offset is describing the the location
@@ -4427,6 +4428,7 @@ combined with a concrete location.
 
     !0 = !DIExpression(DW_OP_deref)
     !1 = !DIExpression(DW_OP_plus, 3)
+    !1 = !DIExpression(DW_OP_plus_uconst, 3)
     !2 = !DIExpression(DW_OP_bit_piece, 3, 7)
     !3 = !DIExpression(DW_OP_deref, DW_OP_plus, 3, DW_OP_LLVM_fragment, 3, 7)
     !4 = !DIExpression(DW_OP_constu, 2, DW_OP_swap, DW_OP_xderef)

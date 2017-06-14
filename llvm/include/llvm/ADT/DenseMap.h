@@ -25,8 +25,8 @@
 #include <cstddef>
 #include <cstring>
 #include <iterator>
-#include <limits>
 #include <new>
+#include <type_traits>
 #include <utility>
 
 namespace llvm {
@@ -57,14 +57,15 @@ class DenseMapBase : public DebugEpochBase {
   using const_arg_type_t = typename const_pointer_or_const_ref<T>::type;
 
 public:
-  typedef unsigned size_type;
-  typedef KeyT key_type;
-  typedef ValueT mapped_type;
-  typedef BucketT value_type;
+  using size_type = unsigned;
+  using key_type = KeyT;
+  using mapped_type = ValueT;
+  using value_type = BucketT;
 
-  typedef DenseMapIterator<KeyT, ValueT, KeyInfoT, BucketT> iterator;
-  typedef DenseMapIterator<KeyT, ValueT, KeyInfoT, BucketT, true>
-      const_iterator;
+  using iterator = DenseMapIterator<KeyT, ValueT, KeyInfoT, BucketT>;
+  using const_iterator =
+      DenseMapIterator<KeyT, ValueT, KeyInfoT, BucketT, true>;
+
   inline iterator begin() {
     // When the map is empty, avoid the overhead of AdvancePastEmptyBuckets().
     return empty() ? end() : iterator(getBuckets(), getBucketsEnd(), *this);
@@ -387,15 +388,18 @@ protected:
   static unsigned getHashValue(const KeyT &Val) {
     return KeyInfoT::getHashValue(Val);
   }
+
   template<typename LookupKeyT>
   static unsigned getHashValue(const LookupKeyT &Val) {
     return KeyInfoT::getHashValue(Val);
   }
+
   static const KeyT getEmptyKey() {
     static_assert(std::is_base_of<DenseMapBase, DerivedT>::value,
                   "Must pass the derived type to this template!");
     return KeyInfoT::getEmptyKey();
   }
+
   static const KeyT getTombstoneKey() {
     return KeyInfoT::getTombstoneKey();
   }
@@ -404,39 +408,51 @@ private:
   unsigned getNumEntries() const {
     return static_cast<const DerivedT *>(this)->getNumEntries();
   }
+
   void setNumEntries(unsigned Num) {
     static_cast<DerivedT *>(this)->setNumEntries(Num);
   }
+
   void incrementNumEntries() {
     setNumEntries(getNumEntries() + 1);
   }
+
   void decrementNumEntries() {
     setNumEntries(getNumEntries() - 1);
   }
+
   unsigned getNumTombstones() const {
     return static_cast<const DerivedT *>(this)->getNumTombstones();
   }
+
   void setNumTombstones(unsigned Num) {
     static_cast<DerivedT *>(this)->setNumTombstones(Num);
   }
+
   void incrementNumTombstones() {
     setNumTombstones(getNumTombstones() + 1);
   }
+
   void decrementNumTombstones() {
     setNumTombstones(getNumTombstones() - 1);
   }
+
   const BucketT *getBuckets() const {
     return static_cast<const DerivedT *>(this)->getBuckets();
   }
+
   BucketT *getBuckets() {
     return static_cast<DerivedT *>(this)->getBuckets();
   }
+
   unsigned getNumBuckets() const {
     return static_cast<const DerivedT *>(this)->getNumBuckets();
   }
+
   BucketT *getBucketsEnd() {
     return getBuckets() + getNumBuckets();
   }
+
   const BucketT *getBucketsEnd() const {
     return getBuckets() + getNumBuckets();
   }
@@ -587,10 +603,11 @@ template <typename KeyT, typename ValueT,
           typename BucketT = detail::DenseMapPair<KeyT, ValueT>>
 class DenseMap : public DenseMapBase<DenseMap<KeyT, ValueT, KeyInfoT, BucketT>,
                                      KeyT, ValueT, KeyInfoT, BucketT> {
+  friend class DenseMapBase<DenseMap, KeyT, ValueT, KeyInfoT, BucketT>;
+
   // Lift some types from the dependent base class into this class for
   // simplicity of referring to them.
-  typedef DenseMapBase<DenseMap, KeyT, ValueT, KeyInfoT, BucketT> BaseT;
-  friend class DenseMapBase<DenseMap, KeyT, ValueT, KeyInfoT, BucketT>;
+  using BaseT = DenseMapBase<DenseMap, KeyT, ValueT, KeyInfoT, BucketT>;
 
   BucketT *Buckets;
   unsigned NumEntries;
@@ -705,6 +722,7 @@ private:
   unsigned getNumEntries() const {
     return NumEntries;
   }
+
   void setNumEntries(unsigned Num) {
     NumEntries = Num;
   }
@@ -712,6 +730,7 @@ private:
   unsigned getNumTombstones() const {
     return NumTombstones;
   }
+
   void setNumTombstones(unsigned Num) {
     NumTombstones = Num;
   }
@@ -743,10 +762,12 @@ class SmallDenseMap
     : public DenseMapBase<
           SmallDenseMap<KeyT, ValueT, InlineBuckets, KeyInfoT, BucketT>, KeyT,
           ValueT, KeyInfoT, BucketT> {
+  friend class DenseMapBase<SmallDenseMap, KeyT, ValueT, KeyInfoT, BucketT>;
+
   // Lift some types from the dependent base class into this class for
   // simplicity of referring to them.
-  typedef DenseMapBase<SmallDenseMap, KeyT, ValueT, KeyInfoT, BucketT> BaseT;
-  friend class DenseMapBase<SmallDenseMap, KeyT, ValueT, KeyInfoT, BucketT>;
+  using BaseT = DenseMapBase<SmallDenseMap, KeyT, ValueT, KeyInfoT, BucketT>;
+
   static_assert(isPowerOf2_64(InlineBuckets),
                 "InlineBuckets must be a power of 2.");
 
@@ -972,6 +993,7 @@ private:
   unsigned getNumEntries() const {
     return NumEntries;
   }
+
   void setNumEntries(unsigned Num) {
     // NumEntries is hardcoded to be 31 bits wide.
     assert(Num < (1U << 31) && "Cannot support more than 1<<31 entries");
@@ -981,6 +1003,7 @@ private:
   unsigned getNumTombstones() const {
     return NumTombstones;
   }
+
   void setNumTombstones(unsigned Num) {
     NumTombstones = Num;
   }
@@ -992,15 +1015,18 @@ private:
     // 'storage.buffer' static type is 'char *'.
     return reinterpret_cast<const BucketT *>(storage.buffer);
   }
+
   BucketT *getInlineBuckets() {
     return const_cast<BucketT *>(
       const_cast<const SmallDenseMap *>(this)->getInlineBuckets());
   }
+
   const LargeRep *getLargeRep() const {
     assert(!Small);
     // Note, same rule about aliasing as with getInlineBuckets.
     return reinterpret_cast<const LargeRep *>(storage.buffer);
   }
+
   LargeRep *getLargeRep() {
     return const_cast<LargeRep *>(
       const_cast<const SmallDenseMap *>(this)->getLargeRep());
@@ -1009,10 +1035,12 @@ private:
   const BucketT *getBuckets() const {
     return Small ? getInlineBuckets() : getLargeRep()->Buckets;
   }
+
   BucketT *getBuckets() {
     return const_cast<BucketT *>(
       const_cast<const SmallDenseMap *>(this)->getBuckets());
   }
+
   unsigned getNumBuckets() const {
     return Small ? InlineBuckets : getLargeRep()->NumBuckets;
   }
@@ -1037,23 +1065,25 @@ private:
 template <typename KeyT, typename ValueT, typename KeyInfoT, typename Bucket,
           bool IsConst>
 class DenseMapIterator : DebugEpochBase::HandleBase {
-  typedef DenseMapIterator<KeyT, ValueT, KeyInfoT, Bucket, true> ConstIterator;
   friend class DenseMapIterator<KeyT, ValueT, KeyInfoT, Bucket, true>;
   friend class DenseMapIterator<KeyT, ValueT, KeyInfoT, Bucket, false>;
 
+  using ConstIterator = DenseMapIterator<KeyT, ValueT, KeyInfoT, Bucket, true>;
+
 public:
-  typedef ptrdiff_t difference_type;
-  typedef typename std::conditional<IsConst, const Bucket, Bucket>::type
-  value_type;
-  typedef value_type *pointer;
-  typedef value_type &reference;
-  typedef std::forward_iterator_tag iterator_category;
+  using difference_type = ptrdiff_t;
+  using value_type =
+      typename std::conditional<IsConst, const Bucket, Bucket>::type;
+  using pointer = value_type *;
+  using reference = value_type &;
+  using iterator_category = std::forward_iterator_tag;
 
 private:
-  pointer Ptr, End;
+  pointer Ptr = nullptr;
+  pointer End = nullptr;
 
 public:
-  DenseMapIterator() : Ptr(nullptr), End(nullptr) {}
+  DenseMapIterator() = default;
 
   DenseMapIterator(pointer Pos, pointer E, const DebugEpochBase &Epoch,
                    bool NoAdvance = false)
