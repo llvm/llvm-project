@@ -109,9 +109,9 @@ Error Builder::addModule(Module *M) {
   if (TT.isOSBinFormatCOFF()) {
     if (auto E = M->materializeMetadata())
       return E;
-    if (Metadata *Val = M->getModuleFlag("Linker Options")) {
-      MDNode *LinkerOptions = cast<MDNode>(Val);
-      for (const MDOperand &MDOptions : LinkerOptions->operands())
+    if (NamedMDNode *LinkerOptions =
+            M->getNamedMetadata("llvm.linker.options")) {
+      for (MDNode *MDOptions : LinkerOptions->operands())
         for (const MDOperand &MDOption : cast<MDNode>(MDOptions)->operands())
           COFFLinkerOptsOS << " " << cast<MDString>(MDOption)->getString();
     }

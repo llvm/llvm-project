@@ -46,9 +46,7 @@ public:
   /// .functype
   virtual void emitIndirectFunctionType(StringRef name,
                                         SmallVectorImpl<MVT> &Params,
-                                        SmallVectorImpl<MVT> &Results) {
-    llvm_unreachable("emitIndirectFunctionType not implemented");
-  }
+                                        SmallVectorImpl<MVT> &Results) = 0;
   /// .indidx
   virtual void emitIndIdx(const MCExpr *Value) = 0;
   /// .import_global

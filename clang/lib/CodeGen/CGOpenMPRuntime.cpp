@@ -6327,7 +6327,7 @@ bool CGOpenMPRuntime::emitTargetGlobalVariable(GlobalDecl GD) {
     }
   }
 
-  // If we are in target mode we do not emit any global (declare target is not
+  // If we are in target mode, we do not emit any global (declare target is not
   // implemented yet). Therefore we signal that GD was processed in this case.
   return true;
 }

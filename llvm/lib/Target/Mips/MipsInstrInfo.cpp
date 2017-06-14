@@ -103,12 +103,9 @@ void MipsInstrInfo::BuildCondBr(MachineBasicBlock &MBB, MachineBasicBlock *TBB,
   MachineInstrBuilder MIB = BuildMI(&MBB, DL, MCID);
 
   for (unsigned i = 1; i < Cond.size(); ++i) {
-    if (Cond[i].isReg())
-      MIB.addReg(Cond[i].getReg());
-    else if (Cond[i].isImm())
-      MIB.addImm(Cond[i].getImm());
-    else
-       assert(false && "Cannot copy operand");
+    assert((Cond[i].isImm() || Cond[i].isReg()) &&
+           "Cannot copy operand for conditional branch!");
+    MIB.add(Cond[i]);
   }
   MIB.addMBB(TBB);
 }

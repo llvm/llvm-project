@@ -470,11 +470,11 @@ static FunctionScopeInfo *checkCoroutineContext(Sema &S, SourceLocation Loc,
   return ScopeInfo;
 }
 
-static bool actOnCoroutineBodyStart(Sema &S, Scope *SC, SourceLocation KWLoc,
-                                    StringRef Keyword) {
-  if (!checkCoroutineContext(S, KWLoc, Keyword))
+bool Sema::ActOnCoroutineBodyStart(Scope *SC, SourceLocation KWLoc,
+                                   StringRef Keyword) {
+  if (!checkCoroutineContext(*this, KWLoc, Keyword))
     return false;
-  auto *ScopeInfo = S.getCurFunction();
+  auto *ScopeInfo = getCurFunction();
   assert(ScopeInfo->CoroutinePromise);
 
   // If we have existing coroutine statements then we have already built
@@ -484,24 +484,24 @@ static bool actOnCoroutineBodyStart(Sema &S, Scope *SC, SourceLocation KWLoc,
 
   ScopeInfo->setNeedsCoroutineSuspends(false);
 
-  auto *Fn = cast<FunctionDecl>(S.CurContext);
+  auto *Fn = cast<FunctionDecl>(CurContext);
   SourceLocation Loc = Fn->getLocation();
   // Build the initial suspend point
   auto buildSuspends = [&](StringRef Name) mutable -> StmtResult {
     ExprResult Suspend =
-        buildPromiseCall(S, ScopeInfo->CoroutinePromise, Loc, Name, None);
+        buildPromiseCall(*this, ScopeInfo->CoroutinePromise, Loc, Name, None);
     if (Suspend.isInvalid())
       return StmtError();
-    Suspend = buildOperatorCoawaitCall(S, SC, Loc, Suspend.get());
+    Suspend = buildOperatorCoawaitCall(*this, SC, Loc, Suspend.get());
     if (Suspend.isInvalid())
       return StmtError();
-    Suspend = S.BuildResolvedCoawaitExpr(Loc, Suspend.get(),
-                                         /*IsImplicit*/ true);
-    Suspend = S.ActOnFinishFullExpr(Suspend.get());
+    Suspend = BuildResolvedCoawaitExpr(Loc, Suspend.get(),
+                                       /*IsImplicit*/ true);
+    Suspend = ActOnFinishFullExpr(Suspend.get());
     if (Suspend.isInvalid()) {
-      S.Diag(Loc, diag::note_coroutine_promise_suspend_implicitly_required)
+      Diag(Loc, diag::note_coroutine_promise_suspend_implicitly_required)
           << ((Name == "initial_suspend") ? 0 : 1);
-      S.Diag(KWLoc, diag::note_declared_coroutine_here) << Keyword;
+      Diag(KWLoc, diag::note_declared_coroutine_here) << Keyword;
       return StmtError();
     }
     return cast<Stmt>(Suspend.get());
@@ -521,7 +521,7 @@ static bool actOnCoroutineBodyStart(Sema &S, Scope *SC, SourceLocation KWLoc,
 }
 
 ExprResult Sema::ActOnCoawaitExpr(Scope *S, SourceLocation Loc, Expr *E) {
-  if (!actOnCoroutineBodyStart(*this, S, Loc, "co_await")) {
+  if (!ActOnCoroutineBodyStart(S, Loc, "co_await")) {
     CorrectDelayedTyposInExpr(E);
     return ExprError();
   }
@@ -613,7 +613,7 @@ ExprResult Sema::BuildResolvedCoawaitExpr(SourceLocation Loc, Expr *E,
 }
 
 ExprResult Sema::ActOnCoyieldExpr(Scope *S, SourceLocation Loc, Expr *E) {
-  if (!actOnCoroutineBodyStart(*this, S, Loc, "co_yield")) {
+  if (!ActOnCoroutineBodyStart(S, Loc, "co_yield")) {
     CorrectDelayedTyposInExpr(E);
     return ExprError();
   }
@@ -658,14 +658,15 @@ ExprResult Sema::BuildCoyieldExpr(SourceLocation Loc, Expr *E) {
   if (RSS.IsInvalid)
     return ExprError();
 
-  Expr *Res = new (Context) CoyieldExpr(Loc, E, RSS.Results[0], RSS.Results[1],
-                                        RSS.Results[2], RSS.OpaqueValue);
+  Expr *Res =
+      new (Context) CoyieldExpr(Loc, E, RSS.Results[0], RSS.Results[1],
+                                RSS.Results[2], RSS.OpaqueValue);
 
   return Res;
 }
 
 StmtResult Sema::ActOnCoreturnStmt(Scope *S, SourceLocation Loc, Expr *E) {
-  if (!actOnCoroutineBodyStart(*this, S, Loc, "co_return")) {
+  if (!ActOnCoroutineBodyStart(S, Loc, "co_return")) {
     CorrectDelayedTyposInExpr(E);
     return StmtError();
   }

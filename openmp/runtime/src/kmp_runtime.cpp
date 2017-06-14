@@ -6268,7 +6268,7 @@ void __kmp_unregister_library(void) {
 // End of Library registration stuff.
 // -----------------------------------------------------------------------------
 
-#if KMP_ARCH_X86_64 && (KMP_OS_LINUX || KMP_OS_WINDOWS)
+#if KMP_MIC_SUPPORTED
 
 static void __kmp_check_mic_type() {
   kmp_cpuid_t cpuid_state = {0};
@@ -6284,7 +6284,7 @@ static void __kmp_check_mic_type() {
   }
 }
 
-#endif /* KMP_ARCH_X86_64 && (KMP_OS_LINUX || KMP_OS_WINDOWS) */
+#endif /* KMP_MIC_SUPPORTED */
 
 static void __kmp_do_serial_initialize(void) {
   int i, gtid;
@@ -6356,7 +6356,7 @@ static void __kmp_do_serial_initialize(void) {
 
   __kmp_runtime_initialize();
 
-#if KMP_ARCH_X86_64 && (KMP_OS_LINUX || KMP_OS_WINDOWS)
+#if KMP_MIC_SUPPORTED
   __kmp_check_mic_type();
 #endif
 
@@ -6423,7 +6423,7 @@ static void __kmp_do_serial_initialize(void) {
 #undef kmp_reduction_barrier_release_bb
 #undef kmp_reduction_barrier_gather_bb
 #endif // KMP_FAST_REDUCTION_BARRIER
-#if KMP_ARCH_X86_64 && (KMP_OS_LINUX || KMP_OS_WINDOWS)
+#if KMP_MIC_SUPPORTED
   if (__kmp_mic_type == mic2) { // KNC
     // AC: plane=3,2, forkjoin=2,1 are optimal for 240 threads on KNC
     __kmp_barrier_gather_branch_bits[bs_plain_barrier] = 3; // plain gather
@@ -6437,8 +6437,8 @@ static void __kmp_do_serial_initialize(void) {
     __kmp_barrier_gather_pattern[bs_reduction_barrier] = bp_hierarchical_bar;
     __kmp_barrier_release_pattern[bs_reduction_barrier] = bp_hierarchical_bar;
   }
-#endif
-#endif
+#endif // KMP_FAST_REDUCTION_BARRIER
+#endif // KMP_MIC_SUPPORTED
 
 // From KMP_CHECKS initialization
 #ifdef KMP_DEBUG
@@ -7513,7 +7513,7 @@ __kmp_determine_reduction_method(
 
     int teamsize_cutoff = 4;
 
-#if KMP_ARCH_X86_64 && (KMP_OS_LINUX || KMP_OS_WINDOWS)
+#if KMP_MIC_SUPPORTED
     if (__kmp_mic_type != non_mic) {
       teamsize_cutoff = 8;
     }

@@ -20,6 +20,7 @@ struct DWARFAttribute;
 class DWARFContext;
 class DWARFDie;
 class DWARFUnit;
+class DWARFAcceleratorTable;
 
 /// A class that verifies DWARF debug information given a DWARF Context.
 class DWARFVerifier {
@@ -31,6 +32,7 @@ class DWARFVerifier {
   std::map<uint64_t, std::set<uint32_t>> ReferenceToDIEOffsets;
   uint32_t NumDebugInfoErrors;
   uint32_t NumDebugLineErrors;
+  uint32_t NumAppleNamesErrors;
 
   /// Verifies the attribute's DWARF attribute and its value.
   ///
@@ -75,7 +77,8 @@ class DWARFVerifier {
 
 public:
   DWARFVerifier(raw_ostream &S, DWARFContext &D)
-      : OS(S), DCtx(D), NumDebugInfoErrors(0), NumDebugLineErrors(0) {}
+      : OS(S), DCtx(D), NumDebugInfoErrors(0), NumDebugLineErrors(0),
+        NumAppleNamesErrors(0) {}
   /// Verify the information in the .debug_info section.
   ///
   /// Any errors are reported to the stream that was this object was
@@ -91,6 +94,14 @@ public:
   ///
   /// @return True if the .debug_line verifies successfully, false otherwise.
   bool handleDebugLine();
+
+  /// Verify the information in the .apple_names accelerator table.
+  ///
+  /// Any errors are reported to the stream that was this object was
+  /// constructed with.
+  ///
+  /// @return True if the .apple_names verifies successfully, false otherwise.
+  bool handleAppleNames();
 };
 
 } // end namespace llvm

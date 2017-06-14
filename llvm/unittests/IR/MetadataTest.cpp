@@ -2043,6 +2043,7 @@ TEST_F(DIExpressionTest, isValid) {
 
   // Valid constructions.
   EXPECT_VALID(dwarf::DW_OP_plus, 6);
+  EXPECT_VALID(dwarf::DW_OP_plus_uconst, 6);
   EXPECT_VALID(dwarf::DW_OP_deref);
   EXPECT_VALID(dwarf::DW_OP_LLVM_fragment, 3, 7);
   EXPECT_VALID(dwarf::DW_OP_plus, 6, dwarf::DW_OP_deref);
@@ -2054,6 +2055,7 @@ TEST_F(DIExpressionTest, isValid) {
   // Invalid constructions.
   EXPECT_INVALID(~0u);
   EXPECT_INVALID(dwarf::DW_OP_plus);
+  EXPECT_INVALID(dwarf::DW_OP_plus_uconst);
   EXPECT_INVALID(dwarf::DW_OP_LLVM_fragment);
   EXPECT_INVALID(dwarf::DW_OP_LLVM_fragment, 3);
   EXPECT_INVALID(dwarf::DW_OP_LLVM_fragment, 3, 7, dwarf::DW_OP_plus, 3);

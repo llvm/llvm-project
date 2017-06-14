@@ -343,14 +343,24 @@ static std::string getVarName(InstrProfIncrementInst *Inc, StringRef Prefix) {
 
 static inline bool shouldRecordFunctionAddr(Function *F) {
   // Check the linkage
+  bool HasAvailableExternallyLinkage = F->hasAvailableExternallyLinkage();
   if (!F->hasLinkOnceLinkage() && !F->hasLocalLinkage() &&
-      !F->hasAvailableExternallyLinkage())
+      !HasAvailableExternallyLinkage)
     return true;
+
+  // A function marked 'alwaysinline' with available_externally linkage can't
+  // have its address taken. Doing so would create an undefined external ref to
+  // the function, which would fail to link.
+  if (HasAvailableExternallyLinkage &&
+      F->hasFnAttribute(Attribute::AlwaysInline))
+    return false;
+
   // Prohibit function address recording if the function is both internal and
   // COMDAT. This avoids the profile data variable referencing internal symbols
   // in COMDAT.
   if (F->hasLocalLinkage() && F->hasComdat())
     return false;
+
   // Check uses of this function for other than direct calls or invokes to it.
   // Inline virtual functions have linkeOnceODR linkage. When a key method
   // exists, the vtable will only be emitted in the TU where the key method

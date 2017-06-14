@@ -7216,15 +7216,11 @@ static CXVersion convertVersion(VersionTuple In) {
   return Out;
 }
 
-static int getCursorPlatformAvailabilityForDecl(const Decl *D,
-                                                int *always_deprecated,
-                                                CXString *deprecated_message,
-                                                int *always_unavailable,
-                                                CXString *unavailable_message,
-                                           CXPlatformAvailability *availability,
-                                                int availability_size) {
+static void getCursorPlatformAvailabilityForDecl(
+    const Decl *D, int *always_deprecated, CXString *deprecated_message,
+    int *always_unavailable, CXString *unavailable_message,
+    SmallVectorImpl<AvailabilityAttr *> &AvailabilityAttrs) {
   bool HadAvailAttr = false;
-  int N = 0;
   for (auto A : D->attrs()) {
     if (DeprecatedAttr *Deprecated = dyn_cast<DeprecatedAttr>(A)) {
       HadAvailAttr = true;
@@ -7236,7 +7232,7 @@ static int getCursorPlatformAvailabilityForDecl(const Decl *D,
       }
       continue;
     }
-    
+
     if (UnavailableAttr *Unavailable = dyn_cast<UnavailableAttr>(A)) {
       HadAvailAttr = true;
       if (always_unavailable)
@@ -7247,38 +7243,71 @@ static int getCursorPlatformAvailabilityForDecl(const Decl *D,
       }
       continue;
     }
-    
+
     if (AvailabilityAttr *Avail = dyn_cast<AvailabilityAttr>(A)) {
+      AvailabilityAttrs.push_back(Avail);
       HadAvailAttr = true;
-      if (N < availability_size) {
-        availability[N].Platform
-          = cxstring::createDup(Avail->getPlatform()->getName());
-        availability[N].Introduced = convertVersion(Avail->getIntroduced());
-        availability[N].Deprecated = convertVersion(Avail->getDeprecated());
-        availability[N].Obsoleted = convertVersion(Avail->getObsoleted());
-        availability[N].Unavailable = Avail->getUnavailable();
-        availability[N].Message = cxstring::createDup(Avail->getMessage());
-      }
-      ++N;
     }
   }
 
   if (!HadAvailAttr)
     if (const EnumConstantDecl *EnumConst = dyn_cast<EnumConstantDecl>(D))
       return getCursorPlatformAvailabilityForDecl(
-                                        cast<Decl>(EnumConst->getDeclContext()),
-                                                  always_deprecated,
-                                                  deprecated_message,
-                                                  always_unavailable,
-                                                  unavailable_message,
-                                                  availability,
-                                                  availability_size);
-  
-  return N;
+          cast<Decl>(EnumConst->getDeclContext()), always_deprecated,
+          deprecated_message, always_unavailable, unavailable_message,
+          AvailabilityAttrs);
+
+  if (AvailabilityAttrs.empty())
+    return;
+
+  std::sort(AvailabilityAttrs.begin(), AvailabilityAttrs.end(),
+            [](AvailabilityAttr *LHS, AvailabilityAttr *RHS) {
+              return LHS->getPlatform() > RHS->getPlatform();
+            });
+  ASTContext &Ctx = D->getASTContext();
+  auto It = std::unique(
+      AvailabilityAttrs.begin(), AvailabilityAttrs.end(),
+      [&Ctx](AvailabilityAttr *LHS, AvailabilityAttr *RHS) {
+        if (LHS->getPlatform() != RHS->getPlatform())
+          return false;
+
+        if (LHS->getIntroduced() == RHS->getIntroduced() &&
+            LHS->getDeprecated() == RHS->getDeprecated() &&
+            LHS->getObsoleted() == RHS->getObsoleted() &&
+            LHS->getMessage() == RHS->getMessage() &&
+            LHS->getReplacement() == RHS->getReplacement())
+          return true;
+
+        if ((!LHS->getIntroduced().empty() && !RHS->getIntroduced().empty()) ||
+            (!LHS->getDeprecated().empty() && !RHS->getDeprecated().empty()) ||
+            (!LHS->getObsoleted().empty() && !RHS->getObsoleted().empty()))
+          return false;
+
+        if (LHS->getIntroduced().empty() && !RHS->getIntroduced().empty())
+          LHS->setIntroduced(Ctx, RHS->getIntroduced());
+
+        if (LHS->getDeprecated().empty() && !RHS->getDeprecated().empty()) {
+          LHS->setDeprecated(Ctx, RHS->getDeprecated());
+          if (LHS->getMessage().empty())
+            LHS->setMessage(Ctx, RHS->getMessage());
+          if (LHS->getReplacement().empty())
+            LHS->setReplacement(Ctx, RHS->getReplacement());
+        }
+
+        if (LHS->getObsoleted().empty() && !RHS->getObsoleted().empty()) {
+          LHS->setObsoleted(Ctx, RHS->getObsoleted());
+          if (LHS->getMessage().empty())
+            LHS->setMessage(Ctx, RHS->getMessage());
+          if (LHS->getReplacement().empty())
+            LHS->setReplacement(Ctx, RHS->getReplacement());
+        }
+
+        return true;
+      });
+  AvailabilityAttrs.erase(It, AvailabilityAttrs.end());
 }
 
-int clang_getCursorPlatformAvailability(CXCursor cursor,
-                                        int *always_deprecated,
+int clang_getCursorPlatformAvailability(CXCursor cursor, int *always_deprecated,
                                         CXString *deprecated_message,
                                         int *always_unavailable,
                                         CXString *unavailable_message,
@@ -7300,14 +7329,29 @@ int clang_getCursorPlatformAvailability(CXCursor cursor,
   if (!D)
     return 0;
 
-  return getCursorPlatformAvailabilityForDecl(D, always_deprecated,
-                                              deprecated_message,
-                                              always_unavailable,
-                                              unavailable_message,
-                                              availability,
-                                              availability_size);
+  SmallVector<AvailabilityAttr *, 8> AvailabilityAttrs;
+  getCursorPlatformAvailabilityForDecl(D, always_deprecated, deprecated_message,
+                                       always_unavailable, unavailable_message,
+                                       AvailabilityAttrs);
+  for (const auto &Avail :
+       llvm::enumerate(llvm::makeArrayRef(AvailabilityAttrs)
+                           .take_front(availability_size))) {
+    availability[Avail.index()].Platform =
+        cxstring::createDup(Avail.value()->getPlatform()->getName());
+    availability[Avail.index()].Introduced =
+        convertVersion(Avail.value()->getIntroduced());
+    availability[Avail.index()].Deprecated =
+        convertVersion(Avail.value()->getDeprecated());
+    availability[Avail.index()].Obsoleted =
+        convertVersion(Avail.value()->getObsoleted());
+    availability[Avail.index()].Unavailable = Avail.value()->getUnavailable();
+    availability[Avail.index()].Message =
+        cxstring::createDup(Avail.value()->getMessage());
+  }
+
+  return AvailabilityAttrs.size();
 }
-  
+
 void clang_disposeCXPlatformAvailability(CXPlatformAvailability *availability) {
   clang_disposeString(availability->Platform);
   clang_disposeString(availability->Message);

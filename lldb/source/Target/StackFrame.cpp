@@ -1744,7 +1744,7 @@ void StackFrame::CalculateExecutionContext(ExecutionContext &exe_ctx) {
   exe_ctx.SetContext(shared_from_this());
 }
 
-void StackFrame::DumpUsingSettingsFormat(Stream *strm,
+void StackFrame::DumpUsingSettingsFormat(Stream *strm, bool show_unique,
                                          const char *frame_marker) {
   if (strm == nullptr)
     return;
@@ -1758,8 +1758,13 @@ void StackFrame::DumpUsingSettingsFormat(Stream *strm,
 
   const FormatEntity::Entry *frame_format = nullptr;
   Target *target = exe_ctx.GetTargetPtr();
-  if (target)
-    frame_format = target->GetDebugger().GetFrameFormat();
+  if (target) {
+    if (show_unique) {
+      frame_format = target->GetDebugger().GetFrameFormatUnique();
+    } else {
+      frame_format = target->GetDebugger().GetFrameFormat();
+    }
+  }
   if (frame_format && FormatEntity::Format(*frame_format, s, &m_sc, &exe_ctx,
                                            nullptr, nullptr, false, false)) {
     strm->PutCString(s.GetString());
@@ -1841,11 +1846,10 @@ bool StackFrame::HasCachedData() const {
 }
 
 bool StackFrame::GetStatus(Stream &strm, bool show_frame_info, bool show_source,
-                           const char *frame_marker) {
-
+                           bool show_unique, const char *frame_marker) {
   if (show_frame_info) {
     strm.Indent();
-    DumpUsingSettingsFormat(&strm, frame_marker);
+    DumpUsingSettingsFormat(&strm, show_unique, frame_marker);
   }
 
   if (show_source) {

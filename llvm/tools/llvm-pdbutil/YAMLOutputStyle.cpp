@@ -293,6 +293,12 @@ Error YAMLOutputStyle::dumpIpiStream() {
   if (!opts::pdb2yaml::IpiStream)
     return Error::success();
 
+  auto InfoS = File.getPDBInfoStream();
+  if (!InfoS)
+    return InfoS.takeError();
+  if (!InfoS->containsIdStream())
+    return Error::success();
+
   auto IpiS = File.getPDBIpiStream();
   if (!IpiS)
     return IpiS.takeError();

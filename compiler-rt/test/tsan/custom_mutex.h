@@ -6,11 +6,11 @@
 // A very primitive mutex annotated with tsan annotations.
 class Mutex {
  public:
-  Mutex(bool prof = true)
+  Mutex(bool prof, unsigned flags)
       : prof_(prof)
       , locked_(false)
       , seq_(0) {
-    __tsan_mutex_create(this, 0);
+    __tsan_mutex_create(this, flags);
   }
 
   ~Mutex() {
@@ -87,5 +87,5 @@ class Mutex {
   }
 };
 
-Mutex Mutex::prof_mu_(false);
+Mutex Mutex::prof_mu_(false, __tsan_mutex_linker_init);
 int Mutex::prof_data_;

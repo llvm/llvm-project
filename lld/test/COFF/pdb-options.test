@@ -2,6 +2,7 @@
 # RUN: yaml2obj < %p/Inputs/pdb2.yaml > %t2.obj
 
 ; If /DEBUG is not specified, /pdb is ignored.
+# RUN: rm -f %t.pdb
 # RUN: lld-link /pdb:%t.pdb /entry:main /nodefaultlib %t1.obj %t2.obj
 # RUN: not ls %t.pdb
 

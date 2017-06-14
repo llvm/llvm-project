@@ -35,38 +35,24 @@ function(tablegen project ofn)
   # a tablegen change, as cmake does not propagate file-level dependencies
   # of custom targets. See the following ticket for more information:
   # https://cmake.org/Bug/view.php?id=15858
-  # We could always have just one dependency on both the target and
-  # the file, but these 2 cases would produce cleaner cmake files.
-  if ("${${project}_TABLEGEN_TARGET}" STREQUAL "${${project}_TABLEGEN_EXE}")
-    add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${ofn}.tmp
-      # Generate tablegen output in a temporary file.
-      COMMAND ${${project}_TABLEGEN_EXE} ${ARGN} -I ${CMAKE_CURRENT_SOURCE_DIR}
-      ${LLVM_TABLEGEN_FLAGS}
-      ${LLVM_TARGET_DEFINITIONS_ABSOLUTE}
-      -o ${CMAKE_CURRENT_BINARY_DIR}/${ofn}.tmp
-      # The file in LLVM_TARGET_DEFINITIONS may be not in the current
-      # directory and local_tds may not contain it, so we must
-      # explicitly list it here:
-      DEPENDS ${${project}_TABLEGEN_TARGET} ${local_tds} ${global_tds}
-      ${LLVM_TARGET_DEFINITIONS_ABSOLUTE}
-      COMMENT "Building ${ofn}..."
-      )
-  else()
-    add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${ofn}.tmp
-      # Generate tablegen output in a temporary file.
-      COMMAND ${${project}_TABLEGEN_EXE} ${ARGN} -I ${CMAKE_CURRENT_SOURCE_DIR}
-      ${LLVM_TABLEGEN_FLAGS}
-      ${LLVM_TARGET_DEFINITIONS_ABSOLUTE}
-      -o ${CMAKE_CURRENT_BINARY_DIR}/${ofn}.tmp
-      # The file in LLVM_TARGET_DEFINITIONS may be not in the current
-      # directory and local_tds may not contain it, so we must
-      # explicitly list it here:
-      DEPENDS ${${project}_TABLEGEN_TARGET} ${${project}_TABLEGEN_EXE}
-        ${local_tds} ${global_tds}
-      ${LLVM_TARGET_DEFINITIONS_ABSOLUTE}
-      COMMENT "Building ${ofn}..."
-      )
-  endif()
+  # The dependency on both, the target and the file, produces the same
+  # dependency twice in the result file when
+  # ("${${project}_TABLEGEN_TARGET}" STREQUAL "${${project}_TABLEGEN_EXE}")
+  # but lets us having smaller and cleaner code here.
+  add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${ofn}.tmp
+    # Generate tablegen output in a temporary file.
+    COMMAND ${${project}_TABLEGEN_EXE} ${ARGN} -I ${CMAKE_CURRENT_SOURCE_DIR}
+    ${LLVM_TABLEGEN_FLAGS}
+    ${LLVM_TARGET_DEFINITIONS_ABSOLUTE}
+    -o ${CMAKE_CURRENT_BINARY_DIR}/${ofn}.tmp
+    # The file in LLVM_TARGET_DEFINITIONS may be not in the current
+    # directory and local_tds may not contain it, so we must
+    # explicitly list it here:
+    DEPENDS ${${project}_TABLEGEN_TARGET} ${${project}_TABLEGEN_EXE}
+      ${local_tds} ${global_tds}
+    ${LLVM_TARGET_DEFINITIONS_ABSOLUTE}
+    COMMENT "Building ${ofn}..."
+    )
   add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${ofn}
     # Only update the real output file if there are any differences.
     # This prevents recompilation of all the files depending on it if there

@@ -29,4 +29,6 @@
 #define PIPSQUEAK_EXPORT
 #endif
 
+extern "C" PIPSQUEAK_EXPORT const char *TestA();
+
 #endif

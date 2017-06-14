@@ -9,8 +9,8 @@ target datalayout = "e-m:x-p:32:32-i64:64-f80:32-n8:16:32-a:0:32-S32"
 source_filename = "src.c"
 
 ; CHECK: linker opts: /include:foo
-!0 = !{i32 6, !"Linker Options", !{!{!"/include:foo"}}}
-!llvm.module.flags = !{ !0 }
+!0 = !{!"/include:foo"}
+!llvm.linker.options = !{ !0 }
 
 ; CHECK: D------X _fun
 define i32 @fun() {

@@ -678,8 +678,13 @@ bool DWARFContext::verify(raw_ostream &OS, DIDumpType DumpType) {
     if (!verifier.handleDebugLine())
       Success = false;
   }
+  if (DumpType == DIDT_All || DumpType == DIDT_AppleNames) {
+    if (!verifier.handleAppleNames())
+      Success = false;
+  }
   return Success;
 }
+
 const DWARFUnitIndex &DWARFContext::getCUIndex() {
   if (CUIndex)
     return *CUIndex;

@@ -599,6 +599,7 @@ unsigned DIExpression::ExprOperand::getSize() const {
     return 3;
   case dwarf::DW_OP_constu:
   case dwarf::DW_OP_plus:
+  case dwarf::DW_OP_plus_uconst:
   case dwarf::DW_OP_minus:
     return 2;
   default:
@@ -641,6 +642,7 @@ bool DIExpression::isValid() const {
       break;
     }
     case dwarf::DW_OP_constu:
+    case dwarf::DW_OP_plus_uconst:
     case dwarf::DW_OP_plus:
     case dwarf::DW_OP_minus:
     case dwarf::DW_OP_deref:
@@ -679,7 +681,8 @@ bool DIExpression::extractIfOffset(int64_t &Offset) const {
   }
   if (getNumElements() != 2)
     return false;
-  if (Elements[0] == dwarf::DW_OP_plus) {
+  if (Elements[0] == dwarf::DW_OP_plus ||
+      Elements[0] == dwarf::DW_OP_plus_uconst) {
     Offset = Elements[1];
     return true;
   }

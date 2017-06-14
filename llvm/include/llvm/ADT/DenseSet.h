@@ -15,11 +15,18 @@
 #define LLVM_ADT_DENSESET_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/Support/type_traits.h"
+#include <algorithm> 
+#include <cstddef>
 #include <initializer_list>
+#include <iterator>
+#include <utility>
 
 namespace llvm {
 
 namespace detail {
+
 struct DenseSetEmpty {};
 
 // Use the empty base class trick so we can create a DenseMap where the buckets
@@ -48,13 +55,14 @@ class DenseSetImpl {
   static_assert(sizeof(typename MapTy::value_type) == sizeof(ValueT),
                 "DenseMap buckets unexpectedly large!");
   MapTy TheMap;
+
   template <typename T>
   using const_arg_type_t = typename const_pointer_or_const_ref<T>::type;
 
 public:
-  typedef ValueT key_type;
-  typedef ValueT value_type;
-  typedef unsigned size_type;
+  using key_type = ValueT;
+  using value_type = ValueT;
+  using size_type = unsigned;
 
   explicit DenseSetImpl(unsigned InitialReserve = 0) : TheMap(InitialReserve) {}
 
@@ -100,11 +108,11 @@ public:
     friend class ConstIterator;
 
   public:
-    typedef typename MapTy::iterator::difference_type difference_type;
-    typedef ValueT value_type;
-    typedef value_type *pointer;
-    typedef value_type &reference;
-    typedef std::forward_iterator_tag iterator_category;
+    using difference_type = typename MapTy::iterator::difference_type;
+    using value_type = ValueT;
+    using pointer = value_type *;
+    using reference = value_type &;
+    using iterator_category = std::forward_iterator_tag;
 
     Iterator() = default;
     Iterator(const typename MapTy::iterator &i) : I(i) {}
@@ -126,16 +134,14 @@ public:
     friend class Iterator;
 
   public:
-    typedef typename MapTy::const_iterator::difference_type difference_type;
-    typedef ValueT value_type;
-    typedef value_type *pointer;
-    typedef value_type &reference;
-    typedef std::forward_iterator_tag iterator_category;
-
-    ConstIterator(const Iterator &B) : I(B.I) {}
+    using difference_type = typename MapTy::const_iterator::difference_type;
+    using value_type = ValueT;
+    using pointer = value_type *;
+    using reference = value_type &;
+    using iterator_category = std::forward_iterator_tag;
 
     ConstIterator() = default;
-
+    ConstIterator(const Iterator &B) : I(B.I) {}
     ConstIterator(const typename MapTy::const_iterator &i) : I(i) {}
 
     const ValueT &operator*() const { return I->getFirst(); }
@@ -147,8 +153,8 @@ public:
     bool operator!=(const ConstIterator& X) const { return I != X.I; }
   };
 
-  typedef Iterator      iterator;
-  typedef ConstIterator const_iterator;
+  using iterator = Iterator;
+  using const_iterator = ConstIterator;
 
   iterator begin() { return Iterator(TheMap.begin()); }
   iterator end() { return Iterator(TheMap.end()); }
@@ -208,7 +214,7 @@ public:
   }
 };
 
-} // namespace detail
+} // end namespace detail
 
 /// Implements a dense probed hash-table based set.
 template <typename ValueT, typename ValueInfoT = DenseMapInfo<ValueT>>
@@ -246,4 +252,4 @@ public:
 
 } // end namespace llvm
 
-#endif
+#endif // LLVM_ADT_DENSESET_H

@@ -855,6 +855,7 @@ static void mergePdbs() {
   MergedIpi.ForEachRecord([&DestIpi](TypeIndex TI, ArrayRef<uint8_t> Data) {
     DestIpi.addTypeRecord(Data, None);
   });
+  Builder.getInfoBuilder().addFeature(PdbRaw_FeatureSig::VC140);
 
   SmallString<64> OutFile(opts::merge::PdbOutputFile);
   if (OutFile.empty()) {

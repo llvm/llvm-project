@@ -302,7 +302,7 @@ unsigned SystemZTTIImpl::getNumberOfRegisters(bool Vector) {
   return 0;
 }
 
-unsigned SystemZTTIImpl::getRegisterBitWidth(bool Vector) {
+unsigned SystemZTTIImpl::getRegisterBitWidth(bool Vector) const {
   if (!Vector)
     return 64;
   if (ST->hasVector())

@@ -102,6 +102,10 @@ InfoStream::named_streams() const {
   return NamedStreams.entries();
 }
 
+bool InfoStream::containsIdStream() const {
+  return !!(Features & PdbFeatureContainsIdStream);
+}
+
 PdbRaw_ImplVer InfoStream::getVersion() const {
   return static_cast<PdbRaw_ImplVer>(Version);
 }

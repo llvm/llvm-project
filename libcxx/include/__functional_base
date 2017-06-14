@@ -548,16 +548,13 @@ template <class _Tp> void cref(const _Tp&&) = delete;
 #endif
 
 #if _LIBCPP_STD_VER > 11
-template <class _Tp1, class _Tp2 = void>
-struct __is_transparent
-{
-private:
-    struct __two {char __lx; char __lxx;};
-    template <class _Up> static __two __test(...);
-    template <class _Up> static char __test(typename _Up::is_transparent* = 0);
-public:
-    static const bool value = sizeof(__test<_Tp1>(0)) == 1;
-};
+template <class _Tp, class, class = void>
+struct __is_transparent : false_type {};
+
+template <class _Tp, class _Up>
+struct __is_transparent<_Tp, _Up,  
+                        typename __void_t<typename _Tp::is_transparent>::type>
+   : true_type {};
 #endif
 
 // allocator_arg_t

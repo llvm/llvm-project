@@ -34,6 +34,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo() {
   const LLT P1 = LLT::pointer(1, 64);
   const LLT P2 = LLT::pointer(2, 64);
 
+  setAction({G_ADD, S32}, Legal);
+
   // FIXME: i1 operands to intrinsics should always be legal, but other i1
   // values may not be legal.  We need to figure out how to distinguish
   // between these two scenarios.

@@ -739,22 +739,9 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.InstrumentForProfiling = Args.hasArg(OPT_pg);
   Opts.CallFEntry = Args.hasArg(OPT_mfentry);
   Opts.EmitOpenCLArgMetadata = Args.hasArg(OPT_cl_kernel_arg_info);
-
-  if (const Arg *A = Args.getLastArg(OPT_compress_debug_sections,
-                                     OPT_compress_debug_sections_EQ)) {
-    if (A->getOption().getID() == OPT_compress_debug_sections) {
-      // TODO: be more clever about the compression type auto-detection
-      Opts.setCompressDebugSections(llvm::DebugCompressionType::GNU);
-    } else {
-      auto DCT = llvm::StringSwitch<llvm::DebugCompressionType>(A->getValue())
-                     .Case("none", llvm::DebugCompressionType::None)
-                     .Case("zlib", llvm::DebugCompressionType::Z)
-                     .Case("zlib-gnu", llvm::DebugCompressionType::GNU)
-                     .Default(llvm::DebugCompressionType::None);
-      Opts.setCompressDebugSections(DCT);
-    }
-  }
-
+  // TODO: map this from -gz in the driver and give it a named value
+  if (Args.hasArg(OPT_compress_debug_sections))
+    Opts.setCompressDebugSections(llvm::DebugCompressionType::GNU);
   Opts.RelaxELFRelocations = Args.hasArg(OPT_mrelax_relocations);
   Opts.DebugCompilationDir = Args.getLastArgValue(OPT_fdebug_compilation_dir);
   for (auto A : Args.filtered(OPT_mlink_bitcode_file, OPT_mlink_cuda_bitcode)) {

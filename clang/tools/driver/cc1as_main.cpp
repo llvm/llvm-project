@@ -202,22 +202,9 @@ bool AssemblerInvocation::CreateFromArgs(AssemblerInvocation &Opts,
   Opts.SaveTemporaryLabels = Args.hasArg(OPT_msave_temp_labels);
   // Any DebugInfoKind implies GenDwarfForAssembly.
   Opts.GenDwarfForAssembly = Args.hasArg(OPT_debug_info_kind_EQ);
-
-  if (const Arg *A = Args.getLastArg(OPT_compress_debug_sections,
-                                     OPT_compress_debug_sections_EQ)) {
-    if (A->getOption().getID() == OPT_compress_debug_sections) {
-      // TODO: be more clever about the compression type auto-detection
-      Opts.CompressDebugSections = llvm::DebugCompressionType::GNU;
-    } else {
-      Opts.CompressDebugSections =
-          llvm::StringSwitch<llvm::DebugCompressionType>(A->getValue())
-              .Case("none", llvm::DebugCompressionType::None)
-              .Case("zlib", llvm::DebugCompressionType::Z)
-              .Case("zlib-gnu", llvm::DebugCompressionType::GNU)
-              .Default(llvm::DebugCompressionType::None);
-    }
-  }
-
+  // TODO: base this on -gz instead
+  if (Args.hasArg(OPT_compress_debug_sections))
+    Opts.CompressDebugSections = llvm::DebugCompressionType::GNU;
   Opts.RelaxELFRelocations = Args.hasArg(OPT_mrelax_relocations);
   Opts.DwarfVersion = getLastArgIntValue(Args, OPT_dwarf_version_EQ, 2, Diags);
   Opts.DwarfDebugFlags = Args.getLastArgValue(OPT_dwarf_debug_flags);

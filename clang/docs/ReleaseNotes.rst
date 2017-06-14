@@ -187,6 +187,31 @@ Static Analyzer
 
 ...
 
+Undefined Behavior Sanitizer (UBSan)
+------------------------------------
+
+- The Undefined Behavior Sanitizer has a new check for pointer overflow. This
+  check is on by default. The flag to control this functionality is
+  -fsanitize=pointer-overflow.
+
+  Pointer overflow is an indicator of undefined behavior: when a pointer
+  indexing expression wraps around the address space, or produces other
+  unexpected results, its result may not point to a valid object.
+
+- UBSan has several new checks which detect violations of nullability
+  annotations. These checks are off by default. The flag to control this group
+  of checks is -fsanitize=nullability. The checks can be individially enabled
+  by -fsanitize=nullability-arg (which checks calls),
+  -fsanitize=nullability-assign (which checks assignments), and
+  -fsanitize=nullability-return (which checks return statements).
+
+- UBSan can now detect invalid loads from bitfields and from ObjC BOOLs.
+
+- UBSan can now avoid emitting unnecessary type checks in C++ class methods and
+  in several other cases where the result is known at compile-time. UBSan can
+  also avoid emitting unnecessary overflow checks in arithmetic expressions
+  with promoted integer operands.
+
 Core Analysis Improvements
 ==========================
 

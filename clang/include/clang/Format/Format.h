@@ -688,6 +688,18 @@ struct FormatStyle {
     bool BeforeElse;
     /// \brief Indent the wrapped braces themselves.
     bool IndentBraces;
+    /// \brief If ``false``, empty function body can be put on a single line.
+    /// This option is used only if the opening brace of the function has
+    /// already been wrapped, i.e. the `AfterFunction` brace wrapping mode is
+    /// set, and the function could/should not be put on a single line (as per
+    /// `AllowShortFunctionsOnASingleLine` and constructor formatting options).
+    /// \code
+    ///   int f()   vs.   inf f()
+    ///   {}              {
+    ///                   }
+    /// \endcode
+    ///
+    bool SplitEmptyFunctionBody;
   };
 
   /// \brief Control of individual brace wrapping cases.

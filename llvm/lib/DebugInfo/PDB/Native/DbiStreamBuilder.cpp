@@ -45,10 +45,6 @@ void DbiStreamBuilder::setFlags(uint16_t F) { Flags = F; }
 
 void DbiStreamBuilder::setMachineType(PDB_Machine M) { MachineType = M; }
 
-void DbiStreamBuilder::setSectionContribs(ArrayRef<SectionContrib> Arr) {
-  SectionContribs = Arr;
-}
-
 void DbiStreamBuilder::setSectionMap(ArrayRef<SecMapEntry> SecMap) {
   SectionMap = SecMap;
 }
@@ -293,23 +289,17 @@ static uint16_t toSecMapFlags(uint32_t Flags) {
   return Ret;
 }
 
-// A utility function to create Section Contributions
-// for a given input sections.
-std::vector<SectionContrib> DbiStreamBuilder::createSectionContribs(
-    ArrayRef<object::coff_section> SecHdrs) {
-  std::vector<SectionContrib> Ret;
-
-  // Create a SectionContrib for each input section.
-  for (auto &Sec : SecHdrs) {
-    Ret.emplace_back();
-    auto &Entry = Ret.back();
-    memset(&Entry, 0, sizeof(Entry));
-
-    Entry.Off = Sec.PointerToRawData;
-    Entry.Size = Sec.SizeOfRawData;
-    Entry.Characteristics = Sec.Characteristics;
-  }
-  return Ret;
+void DbiStreamBuilder::addSectionContrib(DbiModuleDescriptorBuilder *ModuleDbi,
+                                         const object::coff_section *SecHdr) {
+  SectionContrib SC;
+  memset(&SC, 0, sizeof(SC));
+  SC.ISect = (uint16_t)~0U; // This represents nil.
+  SC.Off = SecHdr->PointerToRawData;
+  SC.Size = SecHdr->SizeOfRawData;
+  SC.Characteristics = SecHdr->Characteristics;
+  // Use the module index in the module dbi stream or nil (-1).
+  SC.Imod = ModuleDbi ? ModuleDbi->getModuleIndex() : (uint16_t)~0U;
+  SectionContribs.emplace_back(SC);
 }
 
 // A utility function to create a Section Map for a given list of COFF sections.
@@ -372,7 +362,7 @@ Error DbiStreamBuilder::commit(const msf::MSFLayout &Layout,
   if (!SectionContribs.empty()) {
     if (auto EC = Writer.writeEnum(DbiSecContribVer60))
       return EC;
-    if (auto EC = Writer.writeArray(SectionContribs))
+    if (auto EC = Writer.writeArray(makeArrayRef(SectionContribs)))
       return EC;
   }
 

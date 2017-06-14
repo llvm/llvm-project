@@ -237,17 +237,18 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
     unsigned NarrowSize = NarrowTy.getSizeInBits();
     int NumParts =
         MRI.getType(MI.getOperand(0).getReg()).getSizeInBits() / NarrowSize;
-    LLT NarrowPtrTy = LLT::pointer(
-        MRI.getType(MI.getOperand(1).getReg()).getAddressSpace(), NarrowSize);
+    LLT OffsetTy = LLT::scalar(
+        MRI.getType(MI.getOperand(1).getReg()).getScalarSizeInBits());
 
     SmallVector<unsigned, 2> DstRegs;
     for (int i = 0; i < NumParts; ++i) {
       unsigned DstReg = MRI.createGenericVirtualRegister(NarrowTy);
-      unsigned SrcReg = MRI.createGenericVirtualRegister(NarrowPtrTy);
-      unsigned Offset = MRI.createGenericVirtualRegister(LLT::scalar(64));
+      unsigned SrcReg = 0;
+      unsigned Adjustment = i * NarrowSize / 8;
 
-      MIRBuilder.buildConstant(Offset, i * NarrowSize / 8);
-      MIRBuilder.buildGEP(SrcReg, MI.getOperand(1).getReg(), Offset);
+      MIRBuilder.materializeGEP(SrcReg, MI.getOperand(1).getReg(), OffsetTy,
+                                Adjustment);
+
       // TODO: This is conservatively correct, but we probably want to split the
       // memory operands in the future.
       MIRBuilder.buildLoad(DstReg, SrcReg, **MI.memoperands_begin());
@@ -263,17 +264,19 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
     unsigned NarrowSize = NarrowTy.getSizeInBits();
     int NumParts =
         MRI.getType(MI.getOperand(0).getReg()).getSizeInBits() / NarrowSize;
-    LLT NarrowPtrTy = LLT::pointer(
-        MRI.getType(MI.getOperand(1).getReg()).getAddressSpace(), NarrowSize);
+    LLT OffsetTy = LLT::scalar(
+        MRI.getType(MI.getOperand(1).getReg()).getScalarSizeInBits());
 
     SmallVector<unsigned, 2> SrcRegs;
     extractParts(MI.getOperand(0).getReg(), NarrowTy, NumParts, SrcRegs);
 
     for (int i = 0; i < NumParts; ++i) {
-      unsigned DstReg = MRI.createGenericVirtualRegister(NarrowPtrTy);
-      unsigned Offset = MRI.createGenericVirtualRegister(LLT::scalar(64));
-      MIRBuilder.buildConstant(Offset, i * NarrowSize / 8);
-      MIRBuilder.buildGEP(DstReg, MI.getOperand(1).getReg(), Offset);
+      unsigned DstReg = 0;
+      unsigned Adjustment = i * NarrowSize / 8;
+
+      MIRBuilder.materializeGEP(DstReg, MI.getOperand(1).getReg(), OffsetTy,
+                                Adjustment);
+
       // TODO: This is conservatively correct, but we probably want to split the
       // memory operands in the future.
       MIRBuilder.buildStore(SrcRegs[i], DstReg, **MI.memoperands_begin());

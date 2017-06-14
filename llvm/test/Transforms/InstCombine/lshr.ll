@@ -122,10 +122,19 @@ define <2 x i8> @bool_zext_splat(<2 x i1> %x) {
   ret <2 x i8> %hibit
 }
 
-; FIXME: The replicated sign bits are all that's left. This could be ashr+zext.
-
-define i16 @smear_sign_and_widen(i4 %x) {
+define i32 @smear_sign_and_widen(i8 %x) {
 ; CHECK-LABEL: @smear_sign_and_widen(
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr i8 %x, 7
+; CHECK-NEXT:    [[HIBIT:%.*]] = zext i8 [[TMP1]] to i32
+; CHECK-NEXT:    ret i32 [[HIBIT]]
+;
+  %sext = sext i8 %x to i32
+  %hibit = lshr i32 %sext, 24
+  ret i32 %hibit
+}
+
+define i16 @smear_sign_and_widen_should_not_change_type(i4 %x) {
+; CHECK-LABEL: @smear_sign_and_widen_should_not_change_type(
 ; CHECK-NEXT:    [[SEXT:%.*]] = sext i4 %x to i16
 ; CHECK-NEXT:    [[HIBIT:%.*]] = lshr i16 [[SEXT]], 12
 ; CHECK-NEXT:    ret i16 [[HIBIT]]
@@ -137,8 +146,8 @@ define i16 @smear_sign_and_widen(i4 %x) {
 
 define <2 x i8> @smear_sign_and_widen_splat(<2 x i6> %x) {
 ; CHECK-LABEL: @smear_sign_and_widen_splat(
-; CHECK-NEXT:    [[SEXT:%.*]] = sext <2 x i6> %x to <2 x i8>
-; CHECK-NEXT:    [[HIBIT:%.*]] = lshr <2 x i8> [[SEXT]], <i8 2, i8 2>
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr <2 x i6> %x, <i6 2, i6 2>
+; CHECK-NEXT:    [[HIBIT:%.*]] = zext <2 x i6> [[TMP1]] to <2 x i8>
 ; CHECK-NEXT:    ret <2 x i8> [[HIBIT]]
 ;
   %sext = sext <2 x i6> %x to <2 x i8>

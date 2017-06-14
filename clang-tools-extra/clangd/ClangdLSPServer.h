@@ -11,6 +11,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_CLANGDLSPSERVER_H
 
 #include "ClangdServer.h"
+#include "GlobalCompilationDatabase.h"
 #include "Path.h"
 #include "Protocol.h"
 #include "clang/Tooling/Core/Replacement.h"
@@ -34,7 +35,17 @@ public:
 
 private:
   class LSPProtocolCallbacks;
-  class LSPDiagnosticsConsumer;
+  class LSPDiagnosticsConsumer : public DiagnosticsConsumer {
+  public:
+    LSPDiagnosticsConsumer(ClangdLSPServer &Server);
+
+    virtual void
+    onDiagnosticsReady(PathRef File,
+                       Tagged<std::vector<DiagWithFixIts>> Diagnostics);
+
+  private:
+    ClangdLSPServer &Server;
+  };
 
   std::vector<clang::tooling::Replacement>
   getFixIts(StringRef File, const clangd::Diagnostic &D);
@@ -56,6 +67,13 @@ private:
       DiagnosticToReplacementMap;
   /// Caches FixIts per file and diagnostics
   llvm::StringMap<DiagnosticToReplacementMap> FixItsMap;
+
+  // Various ClangdServer parameters go here. It's important they're created
+  // before ClangdServer.
+  DirectoryBasedGlobalCompilationDatabase CDB;
+  LSPDiagnosticsConsumer DiagConsumer;
+  RealFileSystemProvider FSProvider;
+
   // Server must be the last member of the class to allow its destructor to exit
   // the worker thread that may otherwise run an async callback on partially
   // destructed instance of ClangdLSPServer.

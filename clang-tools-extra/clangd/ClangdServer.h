@@ -43,20 +43,22 @@ size_t positionToOffset(StringRef Code, Position P);
 Position offsetToPosition(StringRef Code, size_t Offset);
 
 /// A tag supplied by the FileSytemProvider.
-typedef int VFSTag;
+typedef std::string VFSTag;
 
 /// A value of an arbitrary type and VFSTag that was supplied by the
 /// FileSystemProvider when this value was computed.
 template <class T> class Tagged {
 public:
   template <class U>
-  Tagged(U &&Value, VFSTag Tag) : Value(std::forward<U>(Value)), Tag(Tag) {}
+  Tagged(U &&Value, VFSTag Tag)
+      : Value(std::forward<U>(Value)), Tag(std::move(Tag)) {}
 
   template <class U>
   Tagged(const Tagged<U> &Other) : Value(Other.Value), Tag(Other.Tag) {}
 
   template <class U>
-  Tagged(Tagged<U> &&Other) : Value(std::move(Other.Value)), Tag(Other.Tag) {}
+  Tagged(Tagged<U> &&Other)
+      : Value(std::move(Other.Value)), Tag(std::move(Other.Tag)) {}
 
   T Value;
   VFSTag Tag;
@@ -134,10 +136,18 @@ private:
 /// diagnostics for tracked files).
 class ClangdServer {
 public:
-  ClangdServer(std::unique_ptr<GlobalCompilationDatabase> CDB,
-               std::unique_ptr<DiagnosticsConsumer> DiagConsumer,
-               std::unique_ptr<FileSystemProvider> FSProvider,
-               bool RunSynchronously);
+  /// Creates a new ClangdServer. If \p RunSynchronously is false, no worker
+  /// thread will be created and all requests will be completed synchronously on
+  /// the calling thread (this is mostly used for tests). If \p RunSynchronously
+  /// is true, a worker thread will be created to parse files in the background
+  /// and provide diagnostics results via DiagConsumer.onDiagnosticsReady
+  /// callback. File accesses for each instance of parsing will be conducted via
+  /// a vfs::FileSystem provided by \p FSProvider. Results of code
+  /// completion/diagnostics also include a tag, that \p FSProvider returns
+  /// along with the vfs::FileSystem.
+  ClangdServer(GlobalCompilationDatabase &CDB,
+               DiagnosticsConsumer &DiagConsumer,
+               FileSystemProvider &FSProvider, bool RunSynchronously);
 
   /// Add a \p File to the list of tracked C++ files or update the contents if
   /// \p File is already tracked. Also schedules parsing of the AST for it on a
@@ -150,8 +160,15 @@ public:
   /// Force \p File to be reparsed using the latest contents.
   void forceReparse(PathRef File);
 
-  /// Run code completion for \p File at \p Pos.
-  Tagged<std::vector<CompletionItem>> codeComplete(PathRef File, Position Pos);
+  /// Run code completion for \p File at \p Pos. If \p OverridenContents is not
+  /// None, they will used only for code completion, i.e. no diagnostics update
+  /// will be scheduled and a draft for \p File will not be updated.
+  /// If \p OverridenContents is None, contents of the current draft for \p File
+  /// will be used.
+  /// This method should only be called for currently tracked files.
+  Tagged<std::vector<CompletionItem>>
+  codeComplete(PathRef File, Position Pos,
+               llvm::Optional<StringRef> OverridenContents = llvm::None);
 
   /// Run formatting for \p Rng inside \p File.
   std::vector<tooling::Replacement> formatRange(PathRef File, Range Rng);
@@ -172,9 +189,9 @@ public:
   std::string dumpAST(PathRef File);
 
 private:
-  std::unique_ptr<GlobalCompilationDatabase> CDB;
-  std::unique_ptr<DiagnosticsConsumer> DiagConsumer;
-  std::unique_ptr<FileSystemProvider> FSProvider;
+  GlobalCompilationDatabase &CDB;
+  DiagnosticsConsumer &DiagConsumer;
+  FileSystemProvider &FSProvider;
   DraftStore DraftMgr;
   ClangdUnitStore Units;
   std::shared_ptr<PCHContainerOperations> PCHs;

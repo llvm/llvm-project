@@ -653,6 +653,12 @@ template <class _T1, class _T2>
   class _LIBCPP_TEMPLATE_VIS tuple_size<pair<_T1, _T2> >
     : public integral_constant<size_t, 2> {};
 
+template <size_t _Ip, class _T1, class _T2>
+class _LIBCPP_TEMPLATE_VIS tuple_element<_Ip, pair<_T1, _T2> >
+{
+    static_assert(_Ip < 2, "Index out of bounds in std::tuple_element<std::pair<T1, T2>>");
+};
+
 template <class _T1, class _T2>
 class _LIBCPP_TEMPLATE_VIS tuple_element<0, pair<_T1, _T2> >
 {
@@ -923,6 +929,12 @@ template <class _Tp> struct __is_inplace_type_imp<in_place_type_t<_Tp>> : true_t
 
 template <class _Tp>
 using __is_inplace_type = __is_inplace_type_imp<__uncvref_t<_Tp>>;
+
+template <class _Tp> struct __is_inplace_index_imp : false_type {};
+template <size_t _Idx> struct __is_inplace_index_imp<in_place_index_t<_Idx>> : true_type {};
+
+template <class _Tp>
+using __is_inplace_index = __is_inplace_index_imp<__uncvref_t<_Tp>>;
 
 #endif // _LIBCPP_STD_VER > 14
 

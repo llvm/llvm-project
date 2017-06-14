@@ -285,6 +285,9 @@ public:
   bool isOffset() const { return isImmTy(ImmTyOffset) && isUInt<16>(getImm()); }
   bool isOffset0() const { return isImmTy(ImmTyOffset0) && isUInt<16>(getImm()); }
   bool isOffset1() const { return isImmTy(ImmTyOffset1) && isUInt<8>(getImm()); }
+
+  bool isOffsetU12() const { return isImmTy(ImmTyOffset) && isUInt<12>(getImm()); }
+  bool isOffsetS13() const { return isImmTy(ImmTyOffset) && isInt<13>(getImm()); }
   bool isGDS() const { return isImmTy(ImmTyGDS); }
   bool isGLC() const { return isImmTy(ImmTyGLC); }
   bool isSLC() const { return isImmTy(ImmTySLC); }
@@ -886,6 +889,10 @@ public:
     return getFeatureBits()[AMDGPU::FeatureInv2PiInlineImm];
   }
 
+  bool hasFlatOffsets() const {
+    return getFeatureBits()[AMDGPU::FeatureFlatInstOffsets];
+  }
+
   bool hasSGPR102_SGPR103() const {
     return !isVI();
   }
@@ -1034,6 +1041,7 @@ public:
   AMDGPUOperand::Ptr defaultSMRDOffset8() const;
   AMDGPUOperand::Ptr defaultSMRDOffset20() const;
   AMDGPUOperand::Ptr defaultSMRDLiteralOffset() const;
+  AMDGPUOperand::Ptr defaultOffsetU12() const;
 
   OperandMatchResultTy parseOModOperand(OperandVector &Operands);
 
@@ -1968,6 +1976,15 @@ unsigned AMDGPUAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
     if (!Op.isImm() || Op.getImm() != AMDGPU::SDWA::SdwaSel::DWORD) {
       return Match_InvalidOperand;
     }
+  }
+
+  if ((TSFlags & SIInstrFlags::FLAT) && !hasFlatOffsets()) {
+    // FIXME: Produces error without correct column reported.
+    auto OpNum =
+        AMDGPU::getNamedOperandIdx(Inst.getOpcode(), AMDGPU::OpName::offset);
+    const auto &Op = Inst.getOperand(OpNum);
+    if (Op.getImm() != 0)
+      return Match_InvalidOperand;
   }
 
   return Match_Success;
@@ -3846,6 +3863,10 @@ AMDGPUOperand::Ptr AMDGPUAsmParser::defaultSMRDOffset20() const {
 }
 
 AMDGPUOperand::Ptr AMDGPUAsmParser::defaultSMRDLiteralOffset() const {
+  return AMDGPUOperand::CreateImm(this, 0, SMLoc(), AMDGPUOperand::ImmTyOffset);
+}
+
+AMDGPUOperand::Ptr AMDGPUAsmParser::defaultOffsetU12() const {
   return AMDGPUOperand::CreateImm(this, 0, SMLoc(), AMDGPUOperand::ImmTyOffset);
 }
 

@@ -567,9 +567,17 @@ bool SITargetLowering::getAddrModeArguments(IntrinsicInst *II,
 }
 
 bool SITargetLowering::isLegalFlatAddressingMode(const AddrMode &AM) const {
-  // Flat instructions do not have offsets, and only have the register
-  // address.
-  return AM.BaseOffs == 0 && (AM.Scale == 0 || AM.Scale == 1);
+  if (!Subtarget->hasFlatInstOffsets()) {
+    // Flat instructions do not have offsets, and only have the register
+    // address.
+    return AM.BaseOffs == 0 && AM.Scale == 0;
+  }
+
+  // GFX9 added a 13-bit signed offset. When using regular flat instructions,
+  // the sign bit is ignored and is treated as a 12-bit unsigned offset.
+
+  // Just r + i
+  return isUInt<12>(AM.BaseOffs) && AM.Scale == 0;
 }
 
 bool SITargetLowering::isLegalMUBUFAddressingMode(const AddrMode &AM) const {

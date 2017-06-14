@@ -249,8 +249,8 @@ template <typename T> class ArrayRef;
   };
 
   /// Returns true if the value \p V is a pointer into a ContantDataArray.
-  /// If successfull \p Index will point to a ConstantDataArray info object
-  /// with an apropriate offset.
+  /// If successful \p Index will point to a ConstantDataArray info object
+  /// with an appropriate offset.
   bool getConstantDataArrayInfo(const Value *V, ConstantDataArraySlice &Slice,
                                 unsigned ElementSize, uint64_t Offset = 0);
 

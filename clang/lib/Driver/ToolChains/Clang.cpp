@@ -910,37 +910,6 @@ static void RenderDebugEnablingArgs(const ArgList &Args, ArgStringList &CmdArgs,
   }
 }
 
-static void RenderDebugInfoCompressionArgs(const ArgList &Args,
-                                           ArgStringList &CmdArgs,
-                                           const Driver &D) {
-  const Arg *A = Args.getLastArg(options::OPT_gz, options::OPT_gz_EQ);
-  if (!A)
-    return;
-
-  if (A->getOption().getID() == options::OPT_gz) {
-    if (llvm::zlib::isAvailable())
-      CmdArgs.push_back("-compress-debug-sections");
-    else
-      D.Diag(diag::warn_debug_compression_unavailable);
-    return;
-  }
-
-  StringRef Value = A->getValue();
-  if (Value == "none") {
-    CmdArgs.push_back("-compress-debug-sections=none");
-  } else if (Value == "zlib" || Value == "zlib-gnu") {
-    if (llvm::zlib::isAvailable()) {
-      CmdArgs.push_back(
-          Args.MakeArgString("-compress-debug-sections=" + Twine(Value)));
-    } else {
-      D.Diag(diag::warn_debug_compression_unavailable);
-    }
-  } else {
-    D.Diag(diag::err_drv_unsupported_option_argument)
-        << A->getOption().getName() << Value;
-  }
-}
-
 static const char *RelocationModelName(llvm::Reloc::Model Model) {
   switch (Model) {
   case llvm::Reloc::Static:
@@ -1775,6 +1744,10 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
   // arg after parsing the '-I' arg.
   bool TakeNextArg = false;
 
+  // When using an integrated assembler, translate -Wa, and -Xassembler
+  // options.
+  bool CompressDebugSections = false;
+
   bool UseRelaxRelocations = ENABLE_X86_RELAX_RELOCATIONS;
   const char *MipsTargetFeature = nullptr;
   for (const Arg *A :
@@ -1849,11 +1822,12 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
         CmdArgs.push_back("-massembler-fatal-warnings");
       } else if (Value == "--noexecstack") {
         CmdArgs.push_back("-mnoexecstack");
-      } else if (Value.startswith("-compress-debug-sections") ||
-                 Value.startswith("--compress-debug-sections") ||
-                 Value == "-nocompress-debug-sections" ||
+      } else if (Value == "-compress-debug-sections" ||
+                 Value == "--compress-debug-sections") {
+        CompressDebugSections = true;
+      } else if (Value == "-nocompress-debug-sections" ||
                  Value == "--nocompress-debug-sections") {
-        CmdArgs.push_back(Value.data());
+        CompressDebugSections = false;
       } else if (Value == "-mrelax-relocations=yes" ||
                  Value == "--mrelax-relocations=yes") {
         UseRelaxRelocations = true;
@@ -1905,6 +1879,12 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
             << A->getOption().getName() << Value;
       }
     }
+  }
+  if (CompressDebugSections) {
+    if (llvm::zlib::isAvailable())
+      CmdArgs.push_back("-compress-debug-sections");
+    else
+      D.Diag(diag::warn_debug_compression_unavailable);
   }
   if (UseRelaxRelocations)
     CmdArgs.push_back("--mrelax-relocations");
@@ -2840,8 +2820,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-backend-option");
     CmdArgs.push_back("-generate-type-units");
   }
-
-  RenderDebugInfoCompressionArgs(Args, CmdArgs, D);
 
   bool UseSeparateSections = isUseSeparateSections(Triple);
 
@@ -4946,7 +4924,6 @@ void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
 
   const llvm::Triple &Triple = getToolChain().getEffectiveTriple();
   const std::string &TripleStr = Triple.getTriple();
-  const auto &D = getToolChain().getDriver();
 
   // Don't warn about "clang -w -c foo.s"
   Args.ClaimAllArgs(options::OPT_w);
@@ -5034,8 +5011,6 @@ void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
   }
   RenderDebugEnablingArgs(Args, CmdArgs, DebugInfoKind, DwarfVersion,
                           llvm::DebuggerKind::Default);
-  RenderDebugInfoCompressionArgs(Args, CmdArgs, D);
-
 
   // Handle -fPIC et al -- the relocation-model affects the assembler
   // for some targets.

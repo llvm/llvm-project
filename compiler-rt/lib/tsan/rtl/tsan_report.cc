@@ -92,7 +92,8 @@ static const char *ReportTypeString(ReportType typ, uptr tag) {
   if (typ == ReportTypeVptrUseAfterFree)
     return "heap-use-after-free (virtual call vs free)";
   if (typ == ReportTypeExternalRace) {
-    return GetReportHeaderFromTag(tag) ?: "race on external object";
+    const char *str = GetReportHeaderFromTag(tag);
+    return str ? str : "race on external object";
   }
   if (typ == ReportTypeThreadLeak)
     return "thread leak";
@@ -170,8 +171,9 @@ static void PrintMop(const ReportMop *mop, bool first) {
            MopDesc(first, mop->write, mop->atomic), mop->size,
            (void *)mop->addr, thread_name(thrbuf, mop->tid));
   } else {
-    const char *object_type =
-        GetObjectTypeFromTag(mop->external_tag) ?: "external object";
+    const char *object_type = GetObjectTypeFromTag(mop->external_tag);
+    if (object_type == nullptr)
+        object_type = "external object";
     Printf("  %s access of %s at %p by %s",
            ExternalMopDesc(first, mop->write), object_type,
            (void *)mop->addr, thread_name(thrbuf, mop->tid));

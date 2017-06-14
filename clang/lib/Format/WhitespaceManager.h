@@ -43,6 +43,10 @@ public:
 
   /// \brief Replaces the whitespace in front of \p Tok. Only call once for
   /// each \c AnnotatedToken.
+  ///
+  /// \p StartOfTokenColumn is the column at which the token will start after
+  /// this replacement. It is needed for determining how \p Spaces is turned
+  /// into tabs and spaces for some format styles.
   void replaceWhitespace(FormatToken &Tok, unsigned Newlines, unsigned Spaces,
                          unsigned StartOfTokenColumn,
                          bool InPPDirective = false);

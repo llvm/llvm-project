@@ -586,6 +586,57 @@ S3 s3;
 // expected-error@first.h:* {{'TypeDef::S3::a' from module 'FirstModule' is not present in definition of 'TypeDef::S3' in module 'SecondModule'}}
 // expected-note@second.h:* {{declaration of 'a' does not match}}
 #endif
+
+#if defined(FIRST)
+struct S4 {
+  typedef int a;
+  typedef int b;
+};
+#elif defined(SECOND)
+struct S4 {
+  typedef int b;
+  typedef int a;
+};
+#else
+S4 s4;
+// expected-error@second.h:* {{'TypeDef::S4' has different definitions in different modules; first difference is definition in module 'SecondModule' found typedef name 'b'}}
+// expected-note@first.h:* {{but in 'FirstModule' found typedef name 'a'}}
+#endif
+
+#if defined(FIRST)
+struct S5 {
+  typedef int a;
+  typedef int b;
+  int x;
+};
+#elif defined(SECOND)
+struct S5 {
+  int x;
+  typedef int b;
+  typedef int a;
+};
+#else
+S5 s5;
+// expected-error@second.h:* {{'TypeDef::S5' has different definitions in different modules; first difference is definition in module 'SecondModule' found field}}
+// expected-note@first.h:* {{but in 'FirstModule' found typedef}}
+#endif
+
+#if defined(FIRST)
+typedef float F;
+struct S6 {
+  typedef int a;
+  typedef F b;
+};
+#elif defined(SECOND)
+struct S6 {
+  typedef int a;
+  typedef float b;
+};
+#else
+S6 s6;
+// expected-error@second.h:* {{'TypeDef::S6' has different definitions in different modules; first difference is definition in module 'SecondModule' found typedef 'b' with underlying type 'float'}}
+// expected-note@first.h:* {{but in 'FirstModule' found typedef 'b' with different underlying type 'TypeDef::F' (aka 'float')}}
+#endif
 }  // namespace TypeDef
 
 namespace Using {
@@ -631,6 +682,57 @@ struct S3 {
 S3 s3;
 // expected-error@first.h:* {{'Using::S3::a' from module 'FirstModule' is not present in definition of 'Using::S3' in module 'SecondModule'}}
 // expected-note@second.h:* {{declaration of 'a' does not match}}
+#endif
+
+#if defined(FIRST)
+struct S4 {
+  using a = int;
+  using b = int;
+};
+#elif defined(SECOND)
+struct S4 {
+  using b = int;
+  using a = int;
+};
+#else
+S4 s4;
+// expected-error@second.h:* {{'Using::S4' has different definitions in different modules; first difference is definition in module 'SecondModule' found type alias name 'b'}}
+// expected-note@first.h:* {{but in 'FirstModule' found type alias name 'a'}}
+#endif
+
+#if defined(FIRST)
+struct S5 {
+  using a = int;
+  using b = int;
+  int x;
+};
+#elif defined(SECOND)
+struct S5 {
+  int x;
+  using b = int;
+  using a = int;
+};
+#else
+S5 s5;
+// expected-error@second.h:* {{'Using::S5' has different definitions in different modules; first difference is definition in module 'SecondModule' found field}}
+// expected-note@first.h:* {{but in 'FirstModule' found type alias}}
+#endif
+
+#if defined(FIRST)
+typedef float F;
+struct S6 {
+  using a = int;
+  using b = F;
+};
+#elif defined(SECOND)
+struct S6 {
+  using a = int;
+  using b = float;
+};
+#else
+S6 s6;
+// expected-error@second.h:* {{'Using::S6' has different definitions in different modules; first difference is definition in module 'SecondModule' found type alias 'b' with underlying type 'float'}}
+// expected-note@first.h:* {{but in 'FirstModule' found type alias 'b' with different underlying type 'Using::F' (aka 'float')}}
 #endif
 }  // namespace Using
 
@@ -898,6 +1000,75 @@ S2 s2;
 // expected-error@first.h:* {{'TemplateSpecializationType::S2::u' from module 'FirstModule' is not present in definition of 'TemplateSpecializationType::S2' in module 'SecondModule'}}
 // expected-note@second.h:* {{declaration of 'u' does not match}}
 #endif
+}
+
+namespace TemplateArgument {
+#if defined(FIRST)
+template <class> struct U1{};
+struct S1 {
+  U1<int> x;
+};
+#elif defined(SECOND)
+template <int> struct U1{};
+struct S1 {
+  U1<1> x;
+};
+#else
+S1 s1;
+// expected-error@first.h:* {{'TemplateArgument::S1::x' from module 'FirstModule' is not present in definition of 'TemplateArgument::S1' in module 'SecondModule'}}
+// expected-note@second.h:* {{declaration of 'x' does not match}}
+#endif
+
+#if defined(FIRST)
+template <int> struct U2{};
+struct S2 {
+  using T = U2<2>;
+};
+#elif defined(SECOND)
+template <int> struct U2{};
+struct S2 {
+  using T = U2<(2)>;
+};
+#else
+S2 s2;
+// expected-error@second.h:* {{'TemplateArgument::S2' has different definitions in different modules; first difference is definition in module 'SecondModule' found type alias 'T' with underlying type 'U2<(2)>'}}
+// expected-note@first.h:* {{but in 'FirstModule' found type alias 'T' with different underlying type 'U2<2>'}}
+#endif
+
+#if defined(FIRST)
+template <int> struct U3{};
+struct S3 {
+  using T = U3<2>;
+};
+#elif defined(SECOND)
+template <int> struct U3{};
+struct S3 {
+  using T = U3<1 + 1>;
+};
+#else
+S3 s3;
+// expected-error@second.h:* {{'TemplateArgument::S3' has different definitions in different modules; first difference is definition in module 'SecondModule' found type alias 'T' with underlying type 'U3<1 + 1>'}}
+// expected-note@first.h:* {{but in 'FirstModule' found type alias 'T' with different underlying type 'U3<2>'}}
+#endif
+
+#if defined(FIRST)
+template<class> struct T4a {};
+template <template <class> class T> struct U4 {};
+struct S4 {
+  U4<T4a> x;
+};
+#elif defined(SECOND)
+template<class> struct T4b {};
+template <template <class> class T> struct U4 {};
+struct S4 {
+  U4<T4b> x;
+};
+#else
+S4 s4;
+// expected-error@first.h:* {{'TemplateArgument::S4::x' from module 'FirstModule' is not present in definition of 'TemplateArgument::S4' in module 'SecondModule'}}
+// expected-note@second.h:* {{declaration of 'x' does not match}}
+#endif
+
 }
 
 // Interesting cases that should not cause errors.  struct S should not error

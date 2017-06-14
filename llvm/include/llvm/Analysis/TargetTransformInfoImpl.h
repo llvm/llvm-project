@@ -320,7 +320,7 @@ public:
 
   unsigned getNumberOfRegisters(bool Vector) { return 8; }
 
-  unsigned getRegisterBitWidth(bool Vector) { return 32; }
+  unsigned getRegisterBitWidth(bool Vector) const { return 32; }
 
   unsigned getMinVectorRegisterBitWidth() { return 128; }
 

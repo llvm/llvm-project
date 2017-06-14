@@ -278,7 +278,7 @@ struct _LIBCPP_TEMPLATE_VIS variant_alternative<_Ip, const volatile _Tp>
 
 template <size_t _Ip, class... _Types>
 struct _LIBCPP_TEMPLATE_VIS variant_alternative<_Ip, variant<_Types...>> {
-  static_assert(_Ip < sizeof...(_Types));
+  static_assert(_Ip < sizeof...(_Types), "Index out of bounds in std::variant_alternative<>");
   using type = __type_pack_element<_Ip, _Types...>;
 };
 

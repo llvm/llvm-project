@@ -28,7 +28,12 @@
 
 int main()
 {
+    {
     typedef std::multimap<int, double, transparent_less> M;
-
     M().upper_bound(C2Int{5});
+    }
+    {
+    typedef std::multimap<int, double, transparent_less_not_referenceable> M;
+    M().upper_bound(C2Int{5});
+    }
 }

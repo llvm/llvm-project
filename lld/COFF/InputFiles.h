@@ -22,6 +22,12 @@
 #include <set>
 #include <vector>
 
+namespace llvm {
+namespace pdb {
+class DbiModuleDescriptorBuilder;
+}
+}
+
 namespace lld {
 namespace coff {
 
@@ -121,6 +127,12 @@ public:
   // The list of safe exception handlers listed in .sxdata section.
   // COFF-specific and x86-only.
   std::set<SymbolBody *> SEHandlers;
+
+  // Pointer to the PDB module descriptor builder. Various debug info records
+  // will reference object files by "module index", which is here. Things like
+  // source files and section contributions are also recorded here. Will be null
+  // if we are not producing a PDB.
+  llvm::pdb::DbiModuleDescriptorBuilder *ModuleDBI = nullptr;
 
 private:
   void initializeChunks();

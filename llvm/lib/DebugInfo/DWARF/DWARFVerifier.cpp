@@ -14,6 +14,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/DebugInfo/DWARF/DWARFSection.h"
+#include "llvm/DebugInfo/DWARF/DWARFAcceleratorTable.h"
 #include "llvm/Support/raw_ostream.h"
 #include <map>
 #include <set>
@@ -274,4 +275,37 @@ bool DWARFVerifier::handleDebugLine() {
   verifyDebugLineStmtOffsets();
   verifyDebugLineRows();
   return NumDebugLineErrors == 0;
+}
+
+bool DWARFVerifier::handleAppleNames() {
+  NumAppleNamesErrors = 0;
+  OS << "Verifying .apple_names...\n";
+
+  DataExtractor AppleNamesSection(DCtx.getAppleNamesSection().Data,
+                                  DCtx.isLittleEndian(), 0);
+  DataExtractor StrData(DCtx.getStringSection(), DCtx.isLittleEndian(), 0);
+  DWARFAcceleratorTable AppleNames(AppleNamesSection, StrData,
+                                   DCtx.getAppleNamesSection().Relocs);
+
+  if (!AppleNames.extract()) {
+    OS << "error: cannot extract .apple_names accelerator table\n";
+    return false;
+  }
+
+  // Verify that all buckets have a valid hash index or are empty
+  uint32_t NumBuckets = AppleNames.getNumBuckets();
+  uint32_t NumHashes = AppleNames.getNumHashes();
+
+  uint32_t BucketsOffset =
+      AppleNames.getSizeHdr() + AppleNames.getHeaderDataLength();
+
+  for (uint32_t BucketIdx = 0; BucketIdx < NumBuckets; ++BucketIdx) {
+    uint32_t HashIdx = AppleNamesSection.getU32(&BucketsOffset);
+    if (HashIdx >= NumHashes && HashIdx != UINT32_MAX) {
+      OS << format("error: Bucket[%d] has invalid hash index: [%d]\n",
+                   BucketIdx, HashIdx);
+      ++NumAppleNamesErrors;
+    }
+  }
+  return NumAppleNamesErrors == 0;
 }
