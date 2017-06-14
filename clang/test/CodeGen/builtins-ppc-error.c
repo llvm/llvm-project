@@ -11,6 +11,8 @@
 #include <altivec.h>
 
 extern vector signed int vsi;
+extern vector signed int vui;
+extern vector float vf;
 extern vector unsigned char vuc;
 
 void testInsertWord(void) {
@@ -33,4 +35,35 @@ void testXXSLDWI(int index) {
   vec_xxsldwi(vsi, vsi, index); //expected-error {{argument 3 to '__builtin_vsx_xxsldwi' must be a 2-bit unsigned literal (i.e. 0, 1, 2 or 3)}}
   vec_xxsldwi(1, 2, 3); //expected-error {{first two arguments to '__builtin_vsx_xxsldwi' must be vectors}}
   vec_xxsldwi(vsi, vuc, 2); //expected-error {{first two arguments to '__builtin_vsx_xxsldwi' must have the same type}}
+}
+
+void testCTF(int index) {
+  vec_ctf(vsi, index); //expected-error {{argument to '__builtin_altivec_vcfsx' must be a constant integer}}
+  vec_ctf(vui, index); //expected-error {{argument to '__builtin_altivec_vcfsx' must be a constant integer}}
+}
+
+void testVCFSX(int index) {
+  vec_vcfsx(vsi, index); //expected-error {{argument to '__builtin_altivec_vcfsx' must be a constant integer}}
+}
+
+void testVCFUX(int index) {
+  vec_vcfux(vui, index); //expected-error {{argument to '__builtin_altivec_vcfux' must be a constant integer}}
+}
+
+void testCTS(int index) {
+  vec_cts(vf, index); //expected-error {{argument to '__builtin_altivec_vctsxs' must be a constant integer}}
+
+}
+
+void testVCTSXS(int index) {
+  vec_vctsxs(vf, index); //expected-error {{argument to '__builtin_altivec_vctsxs' must be a constant integer}}
+}
+
+void testCTU(int index) {
+  vec_ctu(vf, index); //expected-error {{argument to '__builtin_altivec_vctuxs' must be a constant integer}}
+
+}
+
+void testVCTUXS(int index) {
+  vec_vctuxs(vf, index); //expected-error {{argument to '__builtin_altivec_vctuxs' must be a constant integer}}
 }

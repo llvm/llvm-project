@@ -20,8 +20,19 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/SourceMgr.h"
+
+// Workaround for the gcc 7.1 bug PR80916.
+#if defined(__GNUC__) && __GNUC__ > 6
+#  pragma GCC diagnostic push
+#  pragma GCC diagnostic ignored "-Wunused-function"
+#endif
+
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+
+#if defined(__GNUC__) && __GNUC__ > 6
+#  pragma GCC diagnostic pop
+#endif
 
 using namespace llvm;
 

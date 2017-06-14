@@ -649,8 +649,14 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.NoUseJumpTables = Args.hasArg(OPT_fno_jump_tables);
 
   Opts.PrepareForLTO = Args.hasArg(OPT_flto, OPT_flto_EQ);
-  const Arg *A = Args.getLastArg(OPT_flto, OPT_flto_EQ);
-  Opts.EmitSummaryIndex = A && A->containsValue("thin");
+  Opts.EmitSummaryIndex = false;
+  if (Arg *A = Args.getLastArg(OPT_flto_EQ)) {
+    StringRef S = A->getValue();
+    if (S == "thin")
+      Opts.EmitSummaryIndex = true;
+    else if (S != "full")
+      Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args) << S;
+  }
   Opts.LTOUnit = Args.hasFlag(OPT_flto_unit, OPT_fno_lto_unit, false);
   if (Arg *A = Args.getLastArg(OPT_fthinlto_index_EQ)) {
     if (IK.getLanguage() != InputKind::LLVM_IR)

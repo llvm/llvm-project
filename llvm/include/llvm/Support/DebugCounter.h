@@ -121,10 +121,10 @@ public:
     Us.Counters[ID] = Val;
   }
 
-  // Dump or print the current counter set.
-  LLVM_DUMP_METHOD void dump() { print(dbgs()); }
+  // Dump or print the current counter set into llvm::dbgs().
+  LLVM_DUMP_METHOD void dump() const;
 
-  void print(raw_ostream &OS);
+  void print(raw_ostream &OS) const;
 
   // Get the counter ID for a given named counter, or return 0 if none is found.
   unsigned getCounterId(const std::string &Name) const {

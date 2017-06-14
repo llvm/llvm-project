@@ -121,10 +121,7 @@ public:
     OS << "}";
   }
 
-  LLVM_DUMP_METHOD void dump() const {
-    print(dbgs());
-    dbgs() << "\n";
-  }
+  LLVM_DUMP_METHOD void dump() const;
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS, const Expression &E) {

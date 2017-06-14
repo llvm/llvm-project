@@ -28,6 +28,7 @@
 #include "llvm/DebugInfo/CodeView/DebugSymbolRVASubsection.h"
 #include "llvm/DebugInfo/CodeView/DebugSymbolsSubsection.h"
 #include "llvm/DebugInfo/CodeView/EnumTables.h"
+#include "llvm/DebugInfo/CodeView/StringsAndChecksums.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/DebugInfo/CodeView/SymbolSerializer.h"
 #include "llvm/ObjectYAML/CodeViewYAMLSymbols.h"
@@ -75,10 +76,9 @@ struct YAMLSubsectionBase {
   virtual ~YAMLSubsectionBase() {}
 
   virtual void map(IO &IO) = 0;
-  virtual std::unique_ptr<DebugSubsection>
+  virtual std::shared_ptr<DebugSubsection>
   toCodeViewSubsection(BumpPtrAllocator &Allocator,
-                       DebugStringTableSubsection *UseStrings,
-                       DebugChecksumsSubsection *UseChecksums) const = 0;
+                       const codeview::StringsAndChecksums &SC) const = 0;
 };
 }
 }
@@ -90,10 +90,9 @@ struct YAMLChecksumsSubsection : public YAMLSubsectionBase {
       : YAMLSubsectionBase(DebugSubsectionKind::FileChecksums) {}
 
   void map(IO &IO) override;
-  std::unique_ptr<DebugSubsection>
+  std::shared_ptr<DebugSubsection>
   toCodeViewSubsection(BumpPtrAllocator &Allocator,
-                       DebugStringTableSubsection *Strings,
-                       DebugChecksumsSubsection *Checksums) const override;
+                       const codeview::StringsAndChecksums &SC) const override;
   static Expected<std::shared_ptr<YAMLChecksumsSubsection>>
   fromCodeViewSubsection(const DebugStringTableSubsectionRef &Strings,
                          const DebugChecksumsSubsectionRef &FC);
@@ -105,10 +104,9 @@ struct YAMLLinesSubsection : public YAMLSubsectionBase {
   YAMLLinesSubsection() : YAMLSubsectionBase(DebugSubsectionKind::Lines) {}
 
   void map(IO &IO) override;
-  std::unique_ptr<DebugSubsection>
+  std::shared_ptr<DebugSubsection>
   toCodeViewSubsection(BumpPtrAllocator &Allocator,
-                       DebugStringTableSubsection *Strings,
-                       DebugChecksumsSubsection *Checksums) const override;
+                       const codeview::StringsAndChecksums &SC) const override;
   static Expected<std::shared_ptr<YAMLLinesSubsection>>
   fromCodeViewSubsection(const DebugStringTableSubsectionRef &Strings,
                          const DebugChecksumsSubsectionRef &Checksums,
@@ -122,10 +120,9 @@ struct YAMLInlineeLinesSubsection : public YAMLSubsectionBase {
       : YAMLSubsectionBase(DebugSubsectionKind::InlineeLines) {}
 
   void map(IO &IO) override;
-  std::unique_ptr<DebugSubsection>
+  std::shared_ptr<DebugSubsection>
   toCodeViewSubsection(BumpPtrAllocator &Allocator,
-                       DebugStringTableSubsection *Strings,
-                       DebugChecksumsSubsection *Checksums) const override;
+                       const codeview::StringsAndChecksums &SC) const override;
   static Expected<std::shared_ptr<YAMLInlineeLinesSubsection>>
   fromCodeViewSubsection(const DebugStringTableSubsectionRef &Strings,
                          const DebugChecksumsSubsectionRef &Checksums,
@@ -139,10 +136,9 @@ struct YAMLCrossModuleExportsSubsection : public YAMLSubsectionBase {
       : YAMLSubsectionBase(DebugSubsectionKind::CrossScopeExports) {}
 
   void map(IO &IO) override;
-  std::unique_ptr<DebugSubsection>
+  std::shared_ptr<DebugSubsection>
   toCodeViewSubsection(BumpPtrAllocator &Allocator,
-                       DebugStringTableSubsection *Strings,
-                       DebugChecksumsSubsection *Checksums) const override;
+                       const codeview::StringsAndChecksums &SC) const override;
   static Expected<std::shared_ptr<YAMLCrossModuleExportsSubsection>>
   fromCodeViewSubsection(const DebugCrossModuleExportsSubsectionRef &Exports);
 
@@ -154,10 +150,9 @@ struct YAMLCrossModuleImportsSubsection : public YAMLSubsectionBase {
       : YAMLSubsectionBase(DebugSubsectionKind::CrossScopeImports) {}
 
   void map(IO &IO) override;
-  std::unique_ptr<DebugSubsection>
+  std::shared_ptr<DebugSubsection>
   toCodeViewSubsection(BumpPtrAllocator &Allocator,
-                       DebugStringTableSubsection *Strings,
-                       DebugChecksumsSubsection *Checksums) const override;
+                       const codeview::StringsAndChecksums &SC) const override;
   static Expected<std::shared_ptr<YAMLCrossModuleImportsSubsection>>
   fromCodeViewSubsection(const DebugStringTableSubsectionRef &Strings,
                          const DebugCrossModuleImportsSubsectionRef &Imports);
@@ -169,10 +164,9 @@ struct YAMLSymbolsSubsection : public YAMLSubsectionBase {
   YAMLSymbolsSubsection() : YAMLSubsectionBase(DebugSubsectionKind::Symbols) {}
 
   void map(IO &IO) override;
-  std::unique_ptr<DebugSubsection>
+  std::shared_ptr<DebugSubsection>
   toCodeViewSubsection(BumpPtrAllocator &Allocator,
-                       DebugStringTableSubsection *Strings,
-                       DebugChecksumsSubsection *Checksums) const override;
+                       const codeview::StringsAndChecksums &SC) const override;
   static Expected<std::shared_ptr<YAMLSymbolsSubsection>>
   fromCodeViewSubsection(const DebugSymbolsSubsectionRef &Symbols);
 
@@ -184,10 +178,9 @@ struct YAMLStringTableSubsection : public YAMLSubsectionBase {
       : YAMLSubsectionBase(DebugSubsectionKind::StringTable) {}
 
   void map(IO &IO) override;
-  std::unique_ptr<DebugSubsection>
+  std::shared_ptr<DebugSubsection>
   toCodeViewSubsection(BumpPtrAllocator &Allocator,
-                       DebugStringTableSubsection *Strings,
-                       DebugChecksumsSubsection *Checksums) const override;
+                       const codeview::StringsAndChecksums &SC) const override;
   static Expected<std::shared_ptr<YAMLStringTableSubsection>>
   fromCodeViewSubsection(const DebugStringTableSubsectionRef &Strings);
 
@@ -199,10 +192,9 @@ struct YAMLFrameDataSubsection : public YAMLSubsectionBase {
       : YAMLSubsectionBase(DebugSubsectionKind::FrameData) {}
 
   void map(IO &IO) override;
-  std::unique_ptr<DebugSubsection>
+  std::shared_ptr<DebugSubsection>
   toCodeViewSubsection(BumpPtrAllocator &Allocator,
-                       DebugStringTableSubsection *Strings,
-                       DebugChecksumsSubsection *Checksums) const override;
+                       const codeview::StringsAndChecksums &SC) const override;
   static Expected<std::shared_ptr<YAMLFrameDataSubsection>>
   fromCodeViewSubsection(const DebugStringTableSubsectionRef &Strings,
                          const DebugFrameDataSubsectionRef &Frames);
@@ -215,10 +207,9 @@ struct YAMLCoffSymbolRVASubsection : public YAMLSubsectionBase {
       : YAMLSubsectionBase(DebugSubsectionKind::CoffSymbolRVA) {}
 
   void map(IO &IO) override;
-  std::unique_ptr<DebugSubsection>
+  std::shared_ptr<DebugSubsection>
   toCodeViewSubsection(BumpPtrAllocator &Allocator,
-                       DebugStringTableSubsection *Strings,
-                       DebugChecksumsSubsection *Checksums) const override;
+                       const codeview::StringsAndChecksums &SC) const override;
   static Expected<std::shared_ptr<YAMLCoffSymbolRVASubsection>>
   fromCodeViewSubsection(const DebugSymbolRVASubsectionRef &RVAs);
 
@@ -389,34 +380,23 @@ void MappingTraits<YAMLDebugSubsection>::mapping(
   Subsection.Subsection->map(IO);
 }
 
-static std::shared_ptr<YAMLChecksumsSubsection>
-findChecksums(ArrayRef<YAMLDebugSubsection> Subsections) {
-  for (const auto &SS : Subsections) {
-    if (SS.Subsection->Kind == DebugSubsectionKind::FileChecksums) {
-      return std::static_pointer_cast<YAMLChecksumsSubsection>(SS.Subsection);
-    }
-  }
-
-  return nullptr;
-}
-
-std::unique_ptr<DebugSubsection> YAMLChecksumsSubsection::toCodeViewSubsection(
-    BumpPtrAllocator &Allocator, DebugStringTableSubsection *UseStrings,
-    DebugChecksumsSubsection *UseChecksums) const {
-  assert(UseStrings && !UseChecksums);
-  auto Result = llvm::make_unique<DebugChecksumsSubsection>(*UseStrings);
+std::shared_ptr<DebugSubsection> YAMLChecksumsSubsection::toCodeViewSubsection(
+    BumpPtrAllocator &Allocator,
+    const codeview::StringsAndChecksums &SC) const {
+  assert(SC.hasStrings());
+  auto Result = std::make_shared<DebugChecksumsSubsection>(*SC.strings());
   for (const auto &CS : Checksums) {
     Result->addChecksum(CS.FileName, CS.Kind, CS.ChecksumBytes.Bytes);
   }
-  return std::move(Result);
+  return Result;
 }
 
-std::unique_ptr<DebugSubsection> YAMLLinesSubsection::toCodeViewSubsection(
-    BumpPtrAllocator &Allocator, DebugStringTableSubsection *UseStrings,
-    DebugChecksumsSubsection *UseChecksums) const {
-  assert(UseStrings && UseChecksums);
+std::shared_ptr<DebugSubsection> YAMLLinesSubsection::toCodeViewSubsection(
+    BumpPtrAllocator &Allocator,
+    const codeview::StringsAndChecksums &SC) const {
+  assert(SC.hasStrings() && SC.hasChecksums());
   auto Result =
-      llvm::make_unique<DebugLinesSubsection>(*UseChecksums, *UseStrings);
+      std::make_shared<DebugLinesSubsection>(*SC.checksums(), *SC.strings());
   Result->setCodeSize(Lines.CodeSize);
   Result->setRelocationAddress(Lines.RelocSegment, Lines.RelocOffset);
   Result->setFlags(Lines.Flags);
@@ -438,16 +418,16 @@ std::unique_ptr<DebugSubsection> YAMLLinesSubsection::toCodeViewSubsection(
       }
     }
   }
-  return llvm::cast<DebugSubsection>(std::move(Result));
+  return Result;
 }
 
-std::unique_ptr<DebugSubsection>
+std::shared_ptr<DebugSubsection>
 YAMLInlineeLinesSubsection::toCodeViewSubsection(
-    BumpPtrAllocator &Allocator, DebugStringTableSubsection *UseStrings,
-    DebugChecksumsSubsection *UseChecksums) const {
-  assert(UseChecksums);
-  auto Result = llvm::make_unique<DebugInlineeLinesSubsection>(
-      *UseChecksums, InlineeLines.HasExtraFiles);
+    BumpPtrAllocator &Allocator,
+    const codeview::StringsAndChecksums &SC) const {
+  assert(SC.hasChecksums());
+  auto Result = std::make_shared<DebugInlineeLinesSubsection>(
+      *SC.checksums(), InlineeLines.HasExtraFiles);
 
   for (const auto &Site : InlineeLines.Sites) {
     Result->addInlineSite(TypeIndex(Site.Inlinee), Site.FileName,
@@ -459,56 +439,60 @@ YAMLInlineeLinesSubsection::toCodeViewSubsection(
       Result->addExtraFile(EF);
     }
   }
-  return llvm::cast<DebugSubsection>(std::move(Result));
+  return Result;
 }
 
-std::unique_ptr<DebugSubsection>
+std::shared_ptr<DebugSubsection>
 YAMLCrossModuleExportsSubsection::toCodeViewSubsection(
-    BumpPtrAllocator &Allocator, DebugStringTableSubsection *Strings,
-    DebugChecksumsSubsection *Checksums) const {
-  auto Result = llvm::make_unique<DebugCrossModuleExportsSubsection>();
+    BumpPtrAllocator &Allocator,
+    const codeview::StringsAndChecksums &SC) const {
+  auto Result = std::make_shared<DebugCrossModuleExportsSubsection>();
   for (const auto &M : Exports)
     Result->addMapping(M.Local, M.Global);
-  return llvm::cast<DebugSubsection>(std::move(Result));
+  return Result;
 }
 
-std::unique_ptr<DebugSubsection>
+std::shared_ptr<DebugSubsection>
 YAMLCrossModuleImportsSubsection::toCodeViewSubsection(
-    BumpPtrAllocator &Allocator, DebugStringTableSubsection *Strings,
-    DebugChecksumsSubsection *Checksums) const {
-  auto Result = llvm::make_unique<DebugCrossModuleImportsSubsection>(*Strings);
+    BumpPtrAllocator &Allocator,
+    const codeview::StringsAndChecksums &SC) const {
+  assert(SC.hasStrings());
+
+  auto Result =
+      std::make_shared<DebugCrossModuleImportsSubsection>(*SC.strings());
   for (const auto &M : Imports) {
     for (const auto Id : M.ImportIds)
       Result->addImport(M.ModuleName, Id);
   }
-  return llvm::cast<DebugSubsection>(std::move(Result));
+  return Result;
 }
 
-std::unique_ptr<DebugSubsection> YAMLSymbolsSubsection::toCodeViewSubsection(
-    BumpPtrAllocator &Allocator, DebugStringTableSubsection *Strings,
-    DebugChecksumsSubsection *Checksums) const {
-  auto Result = llvm::make_unique<DebugSymbolsSubsection>();
+std::shared_ptr<DebugSubsection> YAMLSymbolsSubsection::toCodeViewSubsection(
+    BumpPtrAllocator &Allocator,
+    const codeview::StringsAndChecksums &SC) const {
+  auto Result = std::make_shared<DebugSymbolsSubsection>();
   for (const auto &Sym : Symbols)
     Result->addSymbol(
         Sym.toCodeViewSymbol(Allocator, CodeViewContainer::ObjectFile));
-  return std::move(Result);
+  return Result;
 }
 
-std::unique_ptr<DebugSubsection>
+std::shared_ptr<DebugSubsection>
 YAMLStringTableSubsection::toCodeViewSubsection(
-    BumpPtrAllocator &Allocator, DebugStringTableSubsection *Strings,
-    DebugChecksumsSubsection *Checksums) const {
-  auto Result = llvm::make_unique<DebugStringTableSubsection>();
+    BumpPtrAllocator &Allocator,
+    const codeview::StringsAndChecksums &SC) const {
+  auto Result = std::make_shared<DebugStringTableSubsection>();
   for (const auto &Str : this->Strings)
     Result->insert(Str);
-  return std::move(Result);
+  return Result;
 }
 
-std::unique_ptr<DebugSubsection> YAMLFrameDataSubsection::toCodeViewSubsection(
-    BumpPtrAllocator &Allocator, DebugStringTableSubsection *Strings,
-    DebugChecksumsSubsection *Checksums) const {
-  assert(Strings);
-  auto Result = llvm::make_unique<DebugFrameDataSubsection>();
+std::shared_ptr<DebugSubsection> YAMLFrameDataSubsection::toCodeViewSubsection(
+    BumpPtrAllocator &Allocator,
+    const codeview::StringsAndChecksums &SC) const {
+  assert(SC.hasStrings());
+
+  auto Result = std::make_shared<DebugFrameDataSubsection>();
   for (const auto &YF : Frames) {
     codeview::FrameData F;
     F.CodeSize = YF.CodeSize;
@@ -519,20 +503,20 @@ std::unique_ptr<DebugSubsection> YAMLFrameDataSubsection::toCodeViewSubsection(
     F.PrologSize = YF.PrologSize;
     F.RvaStart = YF.RvaStart;
     F.SavedRegsSize = YF.SavedRegsSize;
-    F.FrameFunc = Strings->insert(YF.FrameFunc);
+    F.FrameFunc = SC.strings()->insert(YF.FrameFunc);
     Result->addFrameData(F);
   }
-  return std::move(Result);
+  return Result;
 }
 
-std::unique_ptr<DebugSubsection>
+std::shared_ptr<DebugSubsection>
 YAMLCoffSymbolRVASubsection::toCodeViewSubsection(
-    BumpPtrAllocator &Allocator, DebugStringTableSubsection *Strings,
-    DebugChecksumsSubsection *Checksums) const {
-  auto Result = llvm::make_unique<DebugSymbolRVASubsection>();
+    BumpPtrAllocator &Allocator,
+    const codeview::StringsAndChecksums &SC) const {
+  auto Result = std::make_shared<DebugSymbolRVASubsection>();
   for (const auto &RVA : RVAs)
     Result->addRVA(RVA);
-  return std::move(Result);
+  return Result;
 }
 
 static Expected<SourceFileChecksumEntry>
@@ -741,63 +725,17 @@ YAMLCoffSymbolRVASubsection::fromCodeViewSubsection(
   return Result;
 }
 
-Expected<std::vector<std::unique_ptr<DebugSubsection>>>
+Expected<std::vector<std::shared_ptr<DebugSubsection>>>
 llvm::CodeViewYAML::toCodeViewSubsectionList(
     BumpPtrAllocator &Allocator, ArrayRef<YAMLDebugSubsection> Subsections,
-    DebugStringTableSubsection &Strings) {
-  std::vector<std::unique_ptr<DebugSubsection>> Result;
+    const codeview::StringsAndChecksums &SC) {
+  std::vector<std::shared_ptr<DebugSubsection>> Result;
   if (Subsections.empty())
     return std::move(Result);
 
-  auto Checksums = findChecksums(Subsections);
-  std::unique_ptr<DebugSubsection> ChecksumsBase;
-  if (Checksums)
-    ChecksumsBase =
-        Checksums->toCodeViewSubsection(Allocator, &Strings, nullptr);
-  DebugChecksumsSubsection *CS =
-      static_cast<DebugChecksumsSubsection *>(ChecksumsBase.get());
   for (const auto &SS : Subsections) {
-    // We've already converted the checksums subsection, don't do it
-    // twice.
-    std::unique_ptr<DebugSubsection> CVS;
-    if (SS.Subsection->Kind == DebugSubsectionKind::FileChecksums)
-      CVS = std::move(ChecksumsBase);
-    else
-      CVS = SS.Subsection->toCodeViewSubsection(Allocator, &Strings, CS);
-    assert(CVS != nullptr);
-    Result.push_back(std::move(CVS));
-  }
-  return std::move(Result);
-}
-
-Expected<std::vector<std::unique_ptr<codeview::DebugSubsection>>>
-llvm::CodeViewYAML::toCodeViewSubsectionList(
-    BumpPtrAllocator &Allocator, ArrayRef<YAMLDebugSubsection> Subsections,
-    std::unique_ptr<DebugStringTableSubsection> &TakeStrings,
-    DebugStringTableSubsection *StringsRef) {
-  std::vector<std::unique_ptr<DebugSubsection>> Result;
-  if (Subsections.empty())
-    return std::move(Result);
-
-  auto Checksums = findChecksums(Subsections);
-
-  std::unique_ptr<DebugSubsection> ChecksumsBase;
-  if (Checksums)
-    ChecksumsBase =
-        Checksums->toCodeViewSubsection(Allocator, StringsRef, nullptr);
-  DebugChecksumsSubsection *CS =
-      static_cast<DebugChecksumsSubsection *>(ChecksumsBase.get());
-  for (const auto &SS : Subsections) {
-    // We've already converted the checksums and string table subsection, don't
-    // do it twice.
-    std::unique_ptr<DebugSubsection> CVS;
-    if (SS.Subsection->Kind == DebugSubsectionKind::FileChecksums)
-      CVS = std::move(ChecksumsBase);
-    else if (SS.Subsection->Kind == DebugSubsectionKind::StringTable) {
-      assert(TakeStrings && "No string table!");
-      CVS = std::move(TakeStrings);
-    } else
-      CVS = SS.Subsection->toCodeViewSubsection(Allocator, StringsRef, CS);
+    std::shared_ptr<DebugSubsection> CVS;
+    CVS = SS.Subsection->toCodeViewSubsection(Allocator, SC);
     assert(CVS != nullptr);
     Result.push_back(std::move(CVS));
   }
@@ -810,23 +748,23 @@ struct SubsectionConversionVisitor : public DebugSubsectionVisitor {
 
   Error visitUnknown(DebugUnknownSubsectionRef &Unknown) override;
   Error visitLines(DebugLinesSubsectionRef &Lines,
-                   const DebugSubsectionState &State) override;
+                   const StringsAndChecksumsRef &State) override;
   Error visitFileChecksums(DebugChecksumsSubsectionRef &Checksums,
-                           const DebugSubsectionState &State) override;
+                           const StringsAndChecksumsRef &State) override;
   Error visitInlineeLines(DebugInlineeLinesSubsectionRef &Inlinees,
-                          const DebugSubsectionState &State) override;
+                          const StringsAndChecksumsRef &State) override;
   Error visitCrossModuleExports(DebugCrossModuleExportsSubsectionRef &Checksums,
-                                const DebugSubsectionState &State) override;
+                                const StringsAndChecksumsRef &State) override;
   Error visitCrossModuleImports(DebugCrossModuleImportsSubsectionRef &Inlinees,
-                                const DebugSubsectionState &State) override;
+                                const StringsAndChecksumsRef &State) override;
   Error visitStringTable(DebugStringTableSubsectionRef &ST,
-                         const DebugSubsectionState &State) override;
+                         const StringsAndChecksumsRef &State) override;
   Error visitSymbols(DebugSymbolsSubsectionRef &Symbols,
-                     const DebugSubsectionState &State) override;
+                     const StringsAndChecksumsRef &State) override;
   Error visitFrameData(DebugFrameDataSubsectionRef &Symbols,
-                       const DebugSubsectionState &State) override;
+                       const StringsAndChecksumsRef &State) override;
   Error visitCOFFSymbolRVAs(DebugSymbolRVASubsectionRef &Symbols,
-                            const DebugSubsectionState &State) override;
+                            const StringsAndChecksumsRef &State) override;
 
   YAMLDebugSubsection Subsection;
 };
@@ -837,7 +775,7 @@ Error SubsectionConversionVisitor::visitUnknown(
 }
 
 Error SubsectionConversionVisitor::visitLines(
-    DebugLinesSubsectionRef &Lines, const DebugSubsectionState &State) {
+    DebugLinesSubsectionRef &Lines, const StringsAndChecksumsRef &State) {
   auto Result = YAMLLinesSubsection::fromCodeViewSubsection(
       State.strings(), State.checksums(), Lines);
   if (!Result)
@@ -847,7 +785,8 @@ Error SubsectionConversionVisitor::visitLines(
 }
 
 Error SubsectionConversionVisitor::visitFileChecksums(
-    DebugChecksumsSubsectionRef &Checksums, const DebugSubsectionState &State) {
+    DebugChecksumsSubsectionRef &Checksums,
+    const StringsAndChecksumsRef &State) {
   auto Result = YAMLChecksumsSubsection::fromCodeViewSubsection(State.strings(),
                                                                 Checksums);
   if (!Result)
@@ -858,7 +797,7 @@ Error SubsectionConversionVisitor::visitFileChecksums(
 
 Error SubsectionConversionVisitor::visitInlineeLines(
     DebugInlineeLinesSubsectionRef &Inlinees,
-    const DebugSubsectionState &State) {
+    const StringsAndChecksumsRef &State) {
   auto Result = YAMLInlineeLinesSubsection::fromCodeViewSubsection(
       State.strings(), State.checksums(), Inlinees);
   if (!Result)
@@ -869,7 +808,7 @@ Error SubsectionConversionVisitor::visitInlineeLines(
 
 Error SubsectionConversionVisitor::visitCrossModuleExports(
     DebugCrossModuleExportsSubsectionRef &Exports,
-    const DebugSubsectionState &State) {
+    const StringsAndChecksumsRef &State) {
   auto Result =
       YAMLCrossModuleExportsSubsection::fromCodeViewSubsection(Exports);
   if (!Result)
@@ -880,7 +819,7 @@ Error SubsectionConversionVisitor::visitCrossModuleExports(
 
 Error SubsectionConversionVisitor::visitCrossModuleImports(
     DebugCrossModuleImportsSubsectionRef &Imports,
-    const DebugSubsectionState &State) {
+    const StringsAndChecksumsRef &State) {
   auto Result = YAMLCrossModuleImportsSubsection::fromCodeViewSubsection(
       State.strings(), Imports);
   if (!Result)
@@ -890,7 +829,8 @@ Error SubsectionConversionVisitor::visitCrossModuleImports(
 }
 
 Error SubsectionConversionVisitor::visitStringTable(
-    DebugStringTableSubsectionRef &Strings, const DebugSubsectionState &State) {
+    DebugStringTableSubsectionRef &Strings,
+    const StringsAndChecksumsRef &State) {
   auto Result = YAMLStringTableSubsection::fromCodeViewSubsection(Strings);
   if (!Result)
     return Result.takeError();
@@ -899,7 +839,7 @@ Error SubsectionConversionVisitor::visitStringTable(
 }
 
 Error SubsectionConversionVisitor::visitSymbols(
-    DebugSymbolsSubsectionRef &Symbols, const DebugSubsectionState &State) {
+    DebugSymbolsSubsectionRef &Symbols, const StringsAndChecksumsRef &State) {
   auto Result = YAMLSymbolsSubsection::fromCodeViewSubsection(Symbols);
   if (!Result)
     return Result.takeError();
@@ -908,7 +848,7 @@ Error SubsectionConversionVisitor::visitSymbols(
 }
 
 Error SubsectionConversionVisitor::visitFrameData(
-    DebugFrameDataSubsectionRef &Frames, const DebugSubsectionState &State) {
+    DebugFrameDataSubsectionRef &Frames, const StringsAndChecksumsRef &State) {
   auto Result =
       YAMLFrameDataSubsection::fromCodeViewSubsection(State.strings(), Frames);
   if (!Result)
@@ -918,7 +858,7 @@ Error SubsectionConversionVisitor::visitFrameData(
 }
 
 Error SubsectionConversionVisitor::visitCOFFSymbolRVAs(
-    DebugSymbolRVASubsectionRef &RVAs, const DebugSubsectionState &State) {
+    DebugSymbolRVASubsectionRef &RVAs, const StringsAndChecksumsRef &State) {
   auto Result = YAMLCoffSymbolRVASubsection::fromCodeViewSubsection(RVAs);
   if (!Result)
     return Result.takeError();
@@ -927,29 +867,71 @@ Error SubsectionConversionVisitor::visitCOFFSymbolRVAs(
 }
 }
 
-Expected<YAMLDebugSubsection> YAMLDebugSubsection::fromCodeViewSubection(
-    const DebugStringTableSubsectionRef &Strings,
-    const DebugChecksumsSubsectionRef &Checksums,
-    const DebugSubsectionRecord &SS) {
-  DebugSubsectionState State(Strings, Checksums);
+Expected<YAMLDebugSubsection>
+YAMLDebugSubsection::fromCodeViewSubection(const StringsAndChecksumsRef &SC,
+                                           const DebugSubsectionRecord &SS) {
   SubsectionConversionVisitor V;
-  if (auto EC = visitDebugSubsection(SS, V, State))
+  if (auto EC = visitDebugSubsection(SS, V, SC))
     return std::move(EC);
 
   return V.Subsection;
 }
 
-std::unique_ptr<DebugStringTableSubsection>
-llvm::CodeViewYAML::findStringTable(ArrayRef<YAMLDebugSubsection> Sections) {
-  for (const auto &SS : Sections) {
-    if (SS.Subsection->Kind != DebugSubsectionKind::StringTable)
-      continue;
+std::vector<YAMLDebugSubsection>
+llvm::CodeViewYAML::fromDebugS(ArrayRef<uint8_t> Data,
+                               const StringsAndChecksumsRef &SC) {
+  BinaryStreamReader Reader(Data, support::little);
+  uint32_t Magic;
 
-    // String Table doesn't use the allocator.
-    BumpPtrAllocator Allocator;
-    auto Result =
-        SS.Subsection->toCodeViewSubsection(Allocator, nullptr, nullptr);
-    return llvm::cast<DebugStringTableSubsection>(std::move(Result));
+  ExitOnError Err("Invalid .debug$S section!");
+  Err(Reader.readInteger(Magic));
+  assert(Magic == COFF::DEBUG_SECTION_MAGIC && "Invalid .debug$S section!");
+
+  DebugSubsectionArray Subsections;
+  Err(Reader.readArray(Subsections, Reader.bytesRemaining()));
+
+  std::vector<YAMLDebugSubsection> Result;
+
+  for (const auto &SS : Subsections) {
+    auto YamlSS = Err(YAMLDebugSubsection::fromCodeViewSubection(SC, SS));
+    Result.push_back(YamlSS);
   }
-  return nullptr;
+  return Result;
+}
+
+void llvm::CodeViewYAML::initializeStringsAndChecksums(
+    ArrayRef<YAMLDebugSubsection> Sections, codeview::StringsAndChecksums &SC) {
+  // String Table and Checksums subsections don't use the allocator.
+  BumpPtrAllocator Allocator;
+
+  // It's possible for checksums and strings to even appear in different debug$S
+  // sections, so we have to make this a stateful function that can build up
+  // the strings and checksums field over multiple iterations.
+
+  // File Checksums require the string table, but may become before it, so we
+  // have to scan for strings first, then scan for checksums again from the
+  // beginning.
+  if (!SC.hasStrings()) {
+    for (const auto &SS : Sections) {
+      if (SS.Subsection->Kind != DebugSubsectionKind::StringTable)
+        continue;
+
+      auto Result = SS.Subsection->toCodeViewSubsection(Allocator, SC);
+      SC.setStrings(
+          std::static_pointer_cast<DebugStringTableSubsection>(Result));
+      break;
+    }
+  }
+
+  if (SC.hasStrings() && !SC.hasChecksums()) {
+    for (const auto &SS : Sections) {
+      if (SS.Subsection->Kind != DebugSubsectionKind::FileChecksums)
+        continue;
+
+      auto Result = SS.Subsection->toCodeViewSubsection(Allocator, SC);
+      SC.setChecksums(
+          std::static_pointer_cast<DebugChecksumsSubsection>(Result));
+      break;
+    }
+  }
 }

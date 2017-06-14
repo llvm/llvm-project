@@ -601,8 +601,6 @@ class InstrItineraryData;
     SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG,
                                     const ARMSubtarget *Subtarget) const;
     SDValue LowerBlockAddress(SDValue Op, SelectionDAG &DAG) const;
-    SDValue LowerConstantPool(SDValue Op, SelectionDAG &DAG) const;
-    SDValue LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerGlobalAddressDarwin(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerGlobalAddressELF(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerGlobalAddressWindows(SDValue Op, SelectionDAG &DAG) const;

@@ -76,8 +76,8 @@ template <typename T, unsigned BitNum, typename BitVectorTy = BitVector>
 class PackedVector : public PackedVectorBase<T, BitNum, BitVectorTy,
                                             std::numeric_limits<T>::is_signed> {
   BitVectorTy Bits;
-  typedef PackedVectorBase<T, BitNum, BitVectorTy,
-                           std::numeric_limits<T>::is_signed> base;
+  using base = PackedVectorBase<T, BitNum, BitVectorTy,
+                                std::numeric_limits<T>::is_signed>;
 
 public:
   class reference {
@@ -99,7 +99,7 @@ public:
   };
 
   PackedVector() = default;
-  explicit PackedVector(unsigned size) : Bits(size << (BitNum-1)) { }
+  explicit PackedVector(unsigned size) : Bits(size << (BitNum-1)) {}
 
   bool empty() const { return Bits.empty(); }
 

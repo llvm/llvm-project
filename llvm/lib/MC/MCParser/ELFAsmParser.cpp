@@ -603,6 +603,8 @@ EndStmt:
       Type = ELF::SHT_NOTE;
     else if (TypeName == "unwind")
       Type = ELF::SHT_X86_64_UNWIND;
+    else if (TypeName == "llvm_odrtab")
+      Type = ELF::SHT_LLVM_ODRTAB;
     else if (TypeName.getAsInteger(0, Type))
       return TokError("unknown section type");
   }

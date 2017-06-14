@@ -7,13 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ErrorChecking.h"
-#include "gtest/gtest.h"
-
 #include "llvm/DebugInfo/PDB/Native/HashTable.h"
 #include "llvm/Support/BinaryByteStream.h"
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/BinaryStreamWriter.h"
+#include "llvm/Testing/Support/Error.h"
+
+#include "gtest/gtest.h"
 
 #include <vector>
 
@@ -150,13 +150,13 @@ TEST(HashTableTest, Serialization) {
   std::vector<uint8_t> Buffer(Table.calculateSerializedLength());
   MutableBinaryByteStream Stream(Buffer, little);
   BinaryStreamWriter Writer(Stream);
-  EXPECT_NO_ERROR(Table.commit(Writer));
+  EXPECT_THAT_ERROR(Table.commit(Writer), Succeeded());
   // We should have written precisely the number of bytes we calculated earlier.
   EXPECT_EQ(Buffer.size(), Writer.getOffset());
 
   HashTableInternals Table2;
   BinaryStreamReader Reader(Stream);
-  EXPECT_NO_ERROR(Table2.load(Reader));
+  EXPECT_THAT_ERROR(Table2.load(Reader), Succeeded());
   // We should have read precisely the number of bytes we calculated earlier.
   EXPECT_EQ(Buffer.size(), Reader.getOffset());
 

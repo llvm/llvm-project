@@ -39,6 +39,7 @@ subdirectories =
  Support
  TableGen
  Target
+ Testing
  ToolDrivers
  Transforms
 

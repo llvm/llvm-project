@@ -50,7 +50,7 @@ DebugSubsectionKind DebugSubsectionRecord::kind() const { return Kind; }
 BinaryStreamRef DebugSubsectionRecord::getRecordData() const { return Data; }
 
 DebugSubsectionRecordBuilder::DebugSubsectionRecordBuilder(
-    std::unique_ptr<DebugSubsection> Subsection, CodeViewContainer Container)
+    std::shared_ptr<DebugSubsection> Subsection, CodeViewContainer Container)
     : Subsection(std::move(Subsection)), Container(Container) {}
 
 uint32_t DebugSubsectionRecordBuilder::calculateSerializedLength() {

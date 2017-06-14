@@ -3960,7 +3960,8 @@ wbuffer_convert<_Codecvt, _Elem, _Tr>::underflow()
                                        this->egptr(), __inext);
                 if (__r == codecvt_base::noconv)
                 {
-                    this->setg((char_type*)__extbuf_, (char_type*)__extbuf_, (char_type*)__extbufend_);
+                    this->setg((char_type*)__extbuf_, (char_type*)__extbuf_, 
+                               (char_type*) const_cast<char *>(__extbufend_));
                     __c = *this->gptr();
                 }
                 else if (__inext != this->eback() + __unget_sz)
@@ -4048,7 +4049,7 @@ wbuffer_convert<_Codecvt, _Elem, _Tr>::overflow(int_type __c)
                         return traits_type::eof();
                     if (__r == codecvt_base::partial)
                     {
-                        this->setp((char_type*)__e, this->pptr());
+                        this->setp(const_cast<char_type *>(__e), this->pptr());
                         this->pbump(this->epptr() - this->pbase());
                     }
                 }

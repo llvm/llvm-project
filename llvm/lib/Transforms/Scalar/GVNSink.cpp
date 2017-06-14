@@ -64,6 +64,17 @@ using namespace llvm;
 
 STATISTIC(NumRemoved, "Number of instructions removed");
 
+namespace llvm {
+namespace GVNExpression {
+
+LLVM_DUMP_METHOD void Expression::dump() const {
+  print(dbgs());
+  dbgs() << "\n";
+}
+
+}
+}
+
 namespace {
 
 static bool isMemoryInst(const Instruction *I) {
