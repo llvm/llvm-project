@@ -17,7 +17,7 @@ define void @use1() {
 ; CHECK: [[AVAR]] = !DIGlobalVariable(name: "a", scope: null, isLocal: false, isDefinition: true)
 ; CHECK: [[B]] = !DIGlobalVariableExpression(var: [[BVAR:![0-9]+]], expr: [[EXPR:![0-9]+]])
 ; CHECK: [[BVAR]] = !DIGlobalVariable(name: "b", scope: null, isLocal: false, isDefinition: true)
-; CHECK: [[EXPR]] = !DIExpression(DW_OP_plus, 4)
+; CHECK: [[EXPR]] = !DIExpression(DW_OP_plus_uconst, 4)
 
 !llvm.module.flags = !{!4, !5}
 

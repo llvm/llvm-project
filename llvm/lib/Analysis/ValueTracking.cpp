@@ -852,7 +852,8 @@ static void computeKnownBitsFromShiftOperator(
   Optional<bool> ShifterOperandIsNonZero;
 
   // Early exit if we can't constrain any well-defined shift amount.
-  if (!(ShiftAmtKZ & (BitWidth - 1)) && !(ShiftAmtKO & (BitWidth - 1))) {
+  if (!(ShiftAmtKZ & (PowerOf2Ceil(BitWidth) - 1)) &&
+      !(ShiftAmtKO & (PowerOf2Ceil(BitWidth) - 1))) {
     ShifterOperandIsNonZero =
         isKnownNonZero(I->getOperand(1), Depth + 1, Q);
     if (!*ShifterOperandIsNonZero)

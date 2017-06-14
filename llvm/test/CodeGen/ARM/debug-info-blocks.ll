@@ -273,6 +273,6 @@ define hidden void @foobar_func_block_invoke_0(i8* %.block_descriptor, %0* %load
 !160 = !DIFile(filename: "header.h", directory: "/Volumes/Sandbox/llvm")
 !161 = !{!"header2.h", !"/Volumes/Sandbox/llvm"}
 !162 = !{i32 1, !"Debug Info Version", i32 3}
-!163 = !DIExpression(DW_OP_plus, 20, DW_OP_deref, DW_OP_plus, 4, DW_OP_deref, DW_OP_plus, 24)
-!164 = !DIExpression(DW_OP_deref, DW_OP_plus, 24)
-!165 = !DIExpression(DW_OP_deref, DW_OP_plus, 28)
+!163 = !DIExpression(DW_OP_plus_uconst, 20, DW_OP_deref, DW_OP_plus_uconst, 4, DW_OP_deref, DW_OP_plus_uconst, 24)
+!164 = !DIExpression(DW_OP_deref, DW_OP_plus_uconst, 24)
+!165 = !DIExpression(DW_OP_deref, DW_OP_plus_uconst, 28)

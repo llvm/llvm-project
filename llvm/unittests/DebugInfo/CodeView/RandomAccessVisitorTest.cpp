@@ -7,8 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ErrorChecking.h"
-
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
 #include "llvm/DebugInfo/CodeView/LazyRandomTypeCollection.h"
@@ -22,6 +20,7 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/BinaryItemStream.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Testing/Support/Error.h"
 
 #include "gtest/gtest.h"
 
@@ -219,7 +218,8 @@ TEST_F(RandomAccessVisitorTest, MultipleVisits) {
   for (uint32_t I : IndicesToVisit) {
     TypeIndex TI = TypeIndex::fromArrayIndex(I);
     CVType T = Types.getType(TI);
-    EXPECT_NO_ERROR(codeview::visitTypeRecord(T, TI, TestState->Callbacks));
+    EXPECT_THAT_ERROR(codeview::visitTypeRecord(T, TI, TestState->Callbacks),
+                      Succeeded());
   }
 
   // [0,8) should be present
@@ -247,7 +247,8 @@ TEST_F(RandomAccessVisitorTest, DescendingWithinChunk) {
   for (uint32_t I : IndicesToVisit) {
     TypeIndex TI = TypeIndex::fromArrayIndex(I);
     CVType T = Types.getType(TI);
-    EXPECT_NO_ERROR(codeview::visitTypeRecord(T, TI, TestState->Callbacks));
+    EXPECT_THAT_ERROR(codeview::visitTypeRecord(T, TI, TestState->Callbacks),
+                      Succeeded());
   }
 
   // [0, 7]
@@ -275,7 +276,8 @@ TEST_F(RandomAccessVisitorTest, AscendingWithinChunk) {
   for (uint32_t I : IndicesToVisit) {
     TypeIndex TI = TypeIndex::fromArrayIndex(I);
     CVType T = Types.getType(TI);
-    EXPECT_NO_ERROR(codeview::visitTypeRecord(T, TI, TestState->Callbacks));
+    EXPECT_THAT_ERROR(codeview::visitTypeRecord(T, TI, TestState->Callbacks),
+                      Succeeded());
   }
 
   // [0, 7]
@@ -305,7 +307,8 @@ TEST_F(RandomAccessVisitorTest, StopPrematurelyInChunk) {
   for (uint32_t I : IndicesToVisit) {
     TypeIndex TI = TypeIndex::fromArrayIndex(I);
     CVType T = Types.getType(TI);
-    EXPECT_NO_ERROR(codeview::visitTypeRecord(T, TI, TestState->Callbacks));
+    EXPECT_THAT_ERROR(codeview::visitTypeRecord(T, TI, TestState->Callbacks),
+                      Succeeded());
   }
 
   // [0, 8) should be visited.
@@ -334,7 +337,8 @@ TEST_F(RandomAccessVisitorTest, InnerChunk) {
   for (uint32_t I : IndicesToVisit) {
     TypeIndex TI = TypeIndex::fromArrayIndex(I);
     CVType T = Types.getType(TI);
-    EXPECT_NO_ERROR(codeview::visitTypeRecord(T, TI, TestState->Callbacks));
+    EXPECT_THAT_ERROR(codeview::visitTypeRecord(T, TI, TestState->Callbacks),
+                      Succeeded());
   }
 
   // [4, 9)

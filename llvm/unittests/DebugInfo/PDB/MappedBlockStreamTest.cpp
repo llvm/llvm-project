@@ -7,16 +7,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ErrorChecking.h"
-
+#include "llvm/DebugInfo/MSF/MappedBlockStream.h"
 #include "llvm/DebugInfo/MSF/IMSFFile.h"
 #include "llvm/DebugInfo/MSF/MSFError.h"
 #include "llvm/DebugInfo/MSF/MSFStreamLayout.h"
-#include "llvm/DebugInfo/MSF/MappedBlockStream.h"
 #include "llvm/Support/BinaryByteStream.h"
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/BinaryStreamRef.h"
 #include "llvm/Support/BinaryStreamWriter.h"
+#include "llvm/Testing/Support/Error.h"
+
 #include "gtest/gtest.h"
 
 #include <unordered_map>
@@ -95,11 +95,11 @@ TEST(MappedBlockStreamTest, ReadBeyondEndOfStreamRef) {
 
   BinaryStreamReader R(*S);
   BinaryStreamRef SR;
-  EXPECT_NO_ERROR(R.readStreamRef(SR, 0U));
+  EXPECT_THAT_ERROR(R.readStreamRef(SR, 0U), Succeeded());
   ArrayRef<uint8_t> Buffer;
-  EXPECT_ERROR(SR.readBytes(0U, 1U, Buffer));
-  EXPECT_NO_ERROR(R.readStreamRef(SR, 1U));
-  EXPECT_ERROR(SR.readBytes(1U, 1U, Buffer));
+  EXPECT_THAT_ERROR(SR.readBytes(0U, 1U, Buffer), Failed());
+  EXPECT_THAT_ERROR(R.readStreamRef(SR, 1U), Succeeded());
+  EXPECT_THAT_ERROR(SR.readBytes(1U, 1U, Buffer), Failed());
 }
 
 // Tests that a read which outputs into a full destination buffer works and
@@ -111,7 +111,7 @@ TEST(MappedBlockStreamTest, ReadOntoNonEmptyBuffer) {
 
   BinaryStreamReader R(*S);
   StringRef Str = "ZYXWVUTSRQPONMLKJIHGFEDCBA";
-  EXPECT_NO_ERROR(R.readFixedString(Str, 1));
+  EXPECT_THAT_ERROR(R.readFixedString(Str, 1), Succeeded());
   EXPECT_EQ(Str, StringRef("A"));
   EXPECT_EQ(0U, F.Allocator.getBytesAllocated());
 }
@@ -125,12 +125,12 @@ TEST(MappedBlockStreamTest, ZeroCopyReadContiguousBreak) {
                                            F.Allocator);
   BinaryStreamReader R(*S);
   StringRef Str;
-  EXPECT_NO_ERROR(R.readFixedString(Str, 2));
+  EXPECT_THAT_ERROR(R.readFixedString(Str, 2), Succeeded());
   EXPECT_EQ(Str, StringRef("AB"));
   EXPECT_EQ(0U, F.Allocator.getBytesAllocated());
 
   R.setOffset(6);
-  EXPECT_NO_ERROR(R.readFixedString(Str, 4));
+  EXPECT_THAT_ERROR(R.readFixedString(Str, 4), Succeeded());
   EXPECT_EQ(Str, StringRef("GHIJ"));
   EXPECT_EQ(0U, F.Allocator.getBytesAllocated());
 }
@@ -144,7 +144,7 @@ TEST(MappedBlockStreamTest, CopyReadNonContiguousBreak) {
                                            F.Allocator);
   BinaryStreamReader R(*S);
   StringRef Str;
-  EXPECT_NO_ERROR(R.readFixedString(Str, 10));
+  EXPECT_THAT_ERROR(R.readFixedString(Str, 10), Succeeded());
   EXPECT_EQ(Str, StringRef("ABCDEFGHIJ"));
   EXPECT_EQ(10U, F.Allocator.getBytesAllocated());
 }
@@ -159,7 +159,7 @@ TEST(MappedBlockStreamTest, InvalidReadSizeNoBreak) {
   StringRef Str;
 
   R.setOffset(10);
-  EXPECT_ERROR(R.readFixedString(Str, 1));
+  EXPECT_THAT_ERROR(R.readFixedString(Str, 1), Failed());
   EXPECT_EQ(0U, F.Allocator.getBytesAllocated());
 }
 
@@ -173,7 +173,7 @@ TEST(MappedBlockStreamTest, InvalidReadSizeContiguousBreak) {
   StringRef Str;
 
   R.setOffset(6);
-  EXPECT_ERROR(R.readFixedString(Str, 5));
+  EXPECT_THAT_ERROR(R.readFixedString(Str, 5), Failed());
   EXPECT_EQ(0U, F.Allocator.getBytesAllocated());
 }
 
@@ -186,7 +186,7 @@ TEST(MappedBlockStreamTest, InvalidReadSizeNonContiguousBreak) {
   BinaryStreamReader R(*S);
   StringRef Str;
 
-  EXPECT_ERROR(R.readFixedString(Str, 11));
+  EXPECT_THAT_ERROR(R.readFixedString(Str, 11), Failed());
   EXPECT_EQ(0U, F.Allocator.getBytesAllocated());
 }
 
@@ -198,7 +198,7 @@ TEST(MappedBlockStreamTest, ZeroCopyReadNoBreak) {
                                            F.Allocator);
   BinaryStreamReader R(*S);
   StringRef Str;
-  EXPECT_NO_ERROR(R.readFixedString(Str, 1));
+  EXPECT_THAT_ERROR(R.readFixedString(Str, 1), Succeeded());
   EXPECT_EQ(Str, StringRef("A"));
   EXPECT_EQ(0U, F.Allocator.getBytesAllocated());
 }
@@ -213,12 +213,12 @@ TEST(MappedBlockStreamTest, UnalignedOverlappingRead) {
   BinaryStreamReader R(*S);
   StringRef Str1;
   StringRef Str2;
-  EXPECT_NO_ERROR(R.readFixedString(Str1, 7));
+  EXPECT_THAT_ERROR(R.readFixedString(Str1, 7), Succeeded());
   EXPECT_EQ(Str1, StringRef("ABCDEFG"));
   EXPECT_EQ(7U, F.Allocator.getBytesAllocated());
 
   R.setOffset(2);
-  EXPECT_NO_ERROR(R.readFixedString(Str2, 3));
+  EXPECT_THAT_ERROR(R.readFixedString(Str2, 3), Succeeded());
   EXPECT_EQ(Str2, StringRef("CDE"));
   EXPECT_EQ(Str1.data() + 2, Str2.data());
   EXPECT_EQ(7U, F.Allocator.getBytesAllocated());
@@ -234,12 +234,12 @@ TEST(MappedBlockStreamTest, UnalignedOverlappingReadFail) {
   BinaryStreamReader R(*S);
   StringRef Str1;
   StringRef Str2;
-  EXPECT_NO_ERROR(R.readFixedString(Str1, 6));
+  EXPECT_THAT_ERROR(R.readFixedString(Str1, 6), Succeeded());
   EXPECT_EQ(Str1, StringRef("ABCDEF"));
   EXPECT_EQ(6U, F.Allocator.getBytesAllocated());
 
   R.setOffset(4);
-  EXPECT_NO_ERROR(R.readFixedString(Str2, 4));
+  EXPECT_THAT_ERROR(R.readFixedString(Str2, 4), Succeeded());
   EXPECT_EQ(Str2, StringRef("EFGH"));
   EXPECT_EQ(10U, F.Allocator.getBytesAllocated());
 }
@@ -257,10 +257,12 @@ TEST(MappedBlockStreamTest, WriteBeyondEndOfStream) {
                                                    F, F.Allocator);
   ArrayRef<uint8_t> Buffer;
 
-  EXPECT_ERROR(S->writeBytes(0, ArrayRef<uint8_t>(LargeBuffer)));
-  EXPECT_NO_ERROR(S->writeBytes(0, ArrayRef<uint8_t>(SmallBuffer)));
-  EXPECT_NO_ERROR(S->writeBytes(7, ArrayRef<uint8_t>(SmallBuffer)));
-  EXPECT_ERROR(S->writeBytes(8, ArrayRef<uint8_t>(SmallBuffer)));
+  EXPECT_THAT_ERROR(S->writeBytes(0, ArrayRef<uint8_t>(LargeBuffer)), Failed());
+  EXPECT_THAT_ERROR(S->writeBytes(0, ArrayRef<uint8_t>(SmallBuffer)),
+                    Succeeded());
+  EXPECT_THAT_ERROR(S->writeBytes(7, ArrayRef<uint8_t>(SmallBuffer)),
+                    Succeeded());
+  EXPECT_THAT_ERROR(S->writeBytes(8, ArrayRef<uint8_t>(SmallBuffer)), Failed());
 }
 
 TEST(MappedBlockStreamTest, TestWriteBytesNoBreakBoundary) {
@@ -270,25 +272,25 @@ TEST(MappedBlockStreamTest, TestWriteBytesNoBreakBoundary) {
                                                    F, F.Allocator);
   ArrayRef<uint8_t> Buffer;
 
-  EXPECT_NO_ERROR(S->readBytes(0, 1, Buffer));
+  EXPECT_THAT_ERROR(S->readBytes(0, 1, Buffer), Succeeded());
   EXPECT_EQ(Buffer, ArrayRef<uint8_t>('A'));
-  EXPECT_NO_ERROR(S->readBytes(9, 1, Buffer));
+  EXPECT_THAT_ERROR(S->readBytes(9, 1, Buffer), Succeeded());
   EXPECT_EQ(Buffer, ArrayRef<uint8_t>('J'));
 
-  EXPECT_NO_ERROR(S->writeBytes(0, ArrayRef<uint8_t>('J')));
-  EXPECT_NO_ERROR(S->writeBytes(9, ArrayRef<uint8_t>('A')));
+  EXPECT_THAT_ERROR(S->writeBytes(0, ArrayRef<uint8_t>('J')), Succeeded());
+  EXPECT_THAT_ERROR(S->writeBytes(9, ArrayRef<uint8_t>('A')), Succeeded());
 
-  EXPECT_NO_ERROR(S->readBytes(0, 1, Buffer));
+  EXPECT_THAT_ERROR(S->readBytes(0, 1, Buffer), Succeeded());
   EXPECT_EQ(Buffer, ArrayRef<uint8_t>('J'));
-  EXPECT_NO_ERROR(S->readBytes(9, 1, Buffer));
+  EXPECT_THAT_ERROR(S->readBytes(9, 1, Buffer), Succeeded());
   EXPECT_EQ(Buffer, ArrayRef<uint8_t>('A'));
 
-  EXPECT_NO_ERROR(S->writeBytes(0, ArrayRef<uint8_t>('A')));
-  EXPECT_NO_ERROR(S->writeBytes(9, ArrayRef<uint8_t>('J')));
+  EXPECT_THAT_ERROR(S->writeBytes(0, ArrayRef<uint8_t>('A')), Succeeded());
+  EXPECT_THAT_ERROR(S->writeBytes(9, ArrayRef<uint8_t>('J')), Succeeded());
 
-  EXPECT_NO_ERROR(S->readBytes(0, 1, Buffer));
+  EXPECT_THAT_ERROR(S->readBytes(0, 1, Buffer), Succeeded());
   EXPECT_EQ(Buffer, ArrayRef<uint8_t>('A'));
-  EXPECT_NO_ERROR(S->readBytes(9, 1, Buffer));
+  EXPECT_THAT_ERROR(S->readBytes(9, 1, Buffer), Succeeded());
   EXPECT_EQ(Buffer, ArrayRef<uint8_t>('J'));
 }
 
@@ -303,12 +305,12 @@ TEST(MappedBlockStreamTest, TestWriteBytesBreakBoundary) {
                                                    F, F.Allocator);
   ArrayRef<uint8_t> Buffer;
 
-  EXPECT_NO_ERROR(S->writeBytes(0, TestData));
+  EXPECT_THAT_ERROR(S->writeBytes(0, TestData), Succeeded());
   // First just compare the memory, then compare the result of reading the
   // string out.
   EXPECT_EQ(ArrayRef<uint8_t>(Data), ArrayRef<uint8_t>(Expected));
 
-  EXPECT_NO_ERROR(S->readBytes(0, 8, Buffer));
+  EXPECT_THAT_ERROR(S->readBytes(0, 8, Buffer), Succeeded());
   EXPECT_EQ(Buffer, ArrayRef<uint8_t>(TestData));
 }
 
@@ -340,8 +342,8 @@ TEST(MappedBlockStreamTest, TestWriteThenRead) {
 
   BinaryStreamReader Reader(*S);
   BinaryStreamWriter Writer(*S);
-  EXPECT_NO_ERROR(Writer.writeInteger(u16[0]));
-  EXPECT_NO_ERROR(Reader.readInteger(u16[1]));
+  EXPECT_THAT_ERROR(Writer.writeInteger(u16[0]), Succeeded());
+  EXPECT_THAT_ERROR(Reader.readInteger(u16[1]), Succeeded());
   EXPECT_EQ(u16[0], u16[1]);
   EXPECT_EQ(std::vector<uint8_t>({0, 0x7A, 0xEC, 0, 0, 0, 0, 0, 0, 0}),
             DataBytes);
@@ -349,8 +351,8 @@ TEST(MappedBlockStreamTest, TestWriteThenRead) {
   Reader.setOffset(0);
   Writer.setOffset(0);
   ::memset(DataBytes.data(), 0, 10);
-  EXPECT_NO_ERROR(Writer.writeInteger(u32[0]));
-  EXPECT_NO_ERROR(Reader.readInteger(u32[1]));
+  EXPECT_THAT_ERROR(Writer.writeInteger(u32[0]), Succeeded());
+  EXPECT_THAT_ERROR(Reader.readInteger(u32[1]), Succeeded());
   EXPECT_EQ(u32[0], u32[1]);
   EXPECT_EQ(std::vector<uint8_t>({0x17, 0x5C, 0x50, 0, 0, 0, 0x35, 0, 0, 0}),
             DataBytes);
@@ -358,8 +360,8 @@ TEST(MappedBlockStreamTest, TestWriteThenRead) {
   Reader.setOffset(0);
   Writer.setOffset(0);
   ::memset(DataBytes.data(), 0, 10);
-  EXPECT_NO_ERROR(Writer.writeEnum(Enum[0]));
-  EXPECT_NO_ERROR(Reader.readEnum(Enum[1]));
+  EXPECT_THAT_ERROR(Writer.writeEnum(Enum[0]), Succeeded());
+  EXPECT_THAT_ERROR(Reader.readEnum(Enum[1]), Succeeded());
   EXPECT_EQ(Enum[0], Enum[1]);
   EXPECT_EQ(std::vector<uint8_t>({0x2C, 0x60, 0x4A, 0, 0, 0, 0, 0, 0, 0}),
             DataBytes);
@@ -367,8 +369,8 @@ TEST(MappedBlockStreamTest, TestWriteThenRead) {
   Reader.setOffset(0);
   Writer.setOffset(0);
   ::memset(DataBytes.data(), 0, 10);
-  EXPECT_NO_ERROR(Writer.writeCString(ZStr[0]));
-  EXPECT_NO_ERROR(Reader.readCString(ZStr[1]));
+  EXPECT_THAT_ERROR(Writer.writeCString(ZStr[0]), Succeeded());
+  EXPECT_THAT_ERROR(Reader.readCString(ZStr[1]), Succeeded());
   EXPECT_EQ(ZStr[0], ZStr[1]);
   EXPECT_EQ(
       std::vector<uint8_t>({'r', 'e', 'Z', ' ', 'S', 't', 'o', 'r', 0, 0}),
@@ -377,8 +379,9 @@ TEST(MappedBlockStreamTest, TestWriteThenRead) {
   Reader.setOffset(0);
   Writer.setOffset(0);
   ::memset(DataBytes.data(), 0, 10);
-  EXPECT_NO_ERROR(Writer.writeFixedString(FStr[0]));
-  EXPECT_NO_ERROR(Reader.readFixedString(FStr[1], FStr[0].size()));
+  EXPECT_THAT_ERROR(Writer.writeFixedString(FStr[0]), Succeeded());
+  EXPECT_THAT_ERROR(Reader.readFixedString(FStr[1], FStr[0].size()),
+                    Succeeded());
   EXPECT_EQ(FStr[0], FStr[1]);
   EXPECT_EQ(
       std::vector<uint8_t>({'x', 'i', 'F', 'd', ' ', 'S', 'e', 't', 0, 'r'}),
@@ -387,8 +390,9 @@ TEST(MappedBlockStreamTest, TestWriteThenRead) {
   Reader.setOffset(0);
   Writer.setOffset(0);
   ::memset(DataBytes.data(), 0, 10);
-  EXPECT_NO_ERROR(Writer.writeArray(byteArray[0]));
-  EXPECT_NO_ERROR(Reader.readArray(byteArray[1], byteArray[0].size()));
+  EXPECT_THAT_ERROR(Writer.writeArray(byteArray[0]), Succeeded());
+  EXPECT_THAT_ERROR(Reader.readArray(byteArray[1], byteArray[0].size()),
+                    Succeeded());
   EXPECT_EQ(byteArray[0], byteArray[1]);
   EXPECT_EQ(std::vector<uint8_t>({0, 0x32, 0x31, 0, 0, 0, 0, 0, 0, 0}),
             DataBytes);
@@ -396,8 +400,9 @@ TEST(MappedBlockStreamTest, TestWriteThenRead) {
   Reader.setOffset(0);
   Writer.setOffset(0);
   ::memset(DataBytes.data(), 0, 10);
-  EXPECT_NO_ERROR(Writer.writeArray(intArray[0]));
-  EXPECT_NO_ERROR(Reader.readArray(intArray[1], intArray[0].size()));
+  EXPECT_THAT_ERROR(Writer.writeArray(intArray[0]), Succeeded());
+  EXPECT_THAT_ERROR(Reader.readArray(intArray[1], intArray[0].size()),
+                    Succeeded());
   EXPECT_EQ(intArray[0], intArray[1]);
 }
 
@@ -416,20 +421,20 @@ TEST(MappedBlockStreamTest, TestWriteContiguousStreamRef) {
   // First write "Test Str" into the source stream.
   MutableBinaryByteStream SourceStream(SrcData, little);
   BinaryStreamWriter SourceWriter(SourceStream);
-  EXPECT_NO_ERROR(SourceWriter.writeCString("Test Str"));
+  EXPECT_THAT_ERROR(SourceWriter.writeCString("Test Str"), Succeeded());
   EXPECT_EQ(SrcDataBytes, std::vector<uint8_t>(
                               {'T', 'e', 's', 't', ' ', 'S', 't', 'r', 0, 0}));
 
   // Then write the source stream into the dest stream.
   BinaryStreamWriter DestWriter(*DestStream);
-  EXPECT_NO_ERROR(DestWriter.writeStreamRef(SourceStream));
+  EXPECT_THAT_ERROR(DestWriter.writeStreamRef(SourceStream), Succeeded());
   EXPECT_EQ(DestDataBytes, std::vector<uint8_t>(
                                {'s', 'e', 'T', ' ', 'S', 't', 't', 'r', 0, 0}));
 
   // Then read the string back out of the dest stream.
   StringRef Result;
   BinaryStreamReader DestReader(*DestStream);
-  EXPECT_NO_ERROR(DestReader.readCString(Result));
+  EXPECT_THAT_ERROR(DestReader.readCString(Result), Succeeded());
   EXPECT_EQ(Result, "Test Str");
 }
 
@@ -452,20 +457,20 @@ TEST(MappedBlockStreamTest, TestWriteDiscontiguousStreamRef) {
 
   // First write "Test Str" into the source stream.
   BinaryStreamWriter SourceWriter(*Src);
-  EXPECT_NO_ERROR(SourceWriter.writeCString("Test Str"));
+  EXPECT_THAT_ERROR(SourceWriter.writeCString("Test Str"), Succeeded());
   EXPECT_EQ(SrcDataBytes, std::vector<uint8_t>(
                               {'e', 'T', 't', 't', ' ', 'S', 's', 'r', 0, 0}));
 
   // Then write the source stream into the dest stream.
   BinaryStreamWriter DestWriter(*Dest);
-  EXPECT_NO_ERROR(DestWriter.writeStreamRef(*Src));
+  EXPECT_THAT_ERROR(DestWriter.writeStreamRef(*Src), Succeeded());
   EXPECT_EQ(DestDataBytes, std::vector<uint8_t>(
                                {'s', 'e', 'T', ' ', 'S', 't', 't', 'r', 0, 0}));
 
   // Then read the string back out of the dest stream.
   StringRef Result;
   BinaryStreamReader DestReader(*Dest);
-  EXPECT_NO_ERROR(DestReader.readCString(Result));
+  EXPECT_THAT_ERROR(DestReader.readCString(Result), Succeeded());
   EXPECT_EQ(Result, "Test Str");
 }
 
@@ -484,8 +489,8 @@ TEST(MappedBlockStreamTest, DataLivesAfterStreamDestruction) {
     BinaryStreamReader Reader(*S);
     BinaryStreamWriter Writer(*S);
     ::memset(DataBytes.data(), 0, 10);
-    EXPECT_NO_ERROR(Writer.writeCString(Str[0]));
-    EXPECT_NO_ERROR(Reader.readCString(Str[1]));
+    EXPECT_THAT_ERROR(Writer.writeCString(Str[0]), Succeeded());
+    EXPECT_THAT_ERROR(Reader.readCString(Str[1]), Succeeded());
     EXPECT_EQ(Str[0], Str[1]);
   }
 

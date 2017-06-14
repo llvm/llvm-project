@@ -1470,7 +1470,7 @@ void GlobalObject::copyMetadata(const GlobalObject *Other, unsigned Offset) {
       if (E)
         OrigElements = E->getElements();
       std::vector<uint64_t> Elements(OrigElements.size() + 2);
-      Elements[0] = dwarf::DW_OP_plus;
+      Elements[0] = dwarf::DW_OP_plus_uconst;
       Elements[1] = Offset;
       std::copy(OrigElements.begin(), OrigElements.end(), Elements.begin() + 2);
       E = DIExpression::get(getContext(), Elements);

@@ -93,4 +93,4 @@ attributes #1 = { nounwind readnone }
 !15 = !DISubprogram(name: "<(lambda at test.ii:87:58)>", scope: !0, file: !1, line: 27, type: !6, isLocal: false, isDefinition: false, scopeLine: 27, flags: DIFlagPublic | DIFlagPrototyped, isOptimized: true, templateParams: !2)
 !16 = distinct !DILocation(line: 99, column: 21, scope: !17)
 !17 = !DILexicalBlockFile(scope: !5, file: !1, discriminator: 2)
-!18 = !DIExpression(DW_OP_plus, 4, DW_OP_stack_value, DW_OP_LLVM_fragment, 64, 32)
+!18 = !DIExpression(DW_OP_plus_uconst, 4, DW_OP_stack_value, DW_OP_LLVM_fragment, 64, 32)

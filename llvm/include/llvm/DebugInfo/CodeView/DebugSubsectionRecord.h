@@ -49,13 +49,13 @@ private:
 
 class DebugSubsectionRecordBuilder {
 public:
-  DebugSubsectionRecordBuilder(std::unique_ptr<DebugSubsection> Subsection,
+  DebugSubsectionRecordBuilder(std::shared_ptr<DebugSubsection> Subsection,
                                CodeViewContainer Container);
   uint32_t calculateSerializedLength();
   Error commit(BinaryStreamWriter &Writer) const;
 
 private:
-  std::unique_ptr<DebugSubsection> Subsection;
+  std::shared_ptr<DebugSubsection> Subsection;
   CodeViewContainer Container;
 };
 
@@ -64,6 +64,9 @@ private:
 template <> struct VarStreamArrayExtractor<codeview::DebugSubsectionRecord> {
   Error operator()(BinaryStreamRef Stream, uint32_t &Length,
                    codeview::DebugSubsectionRecord &Info) {
+    // FIXME: We need to pass the container type through to this function.  In
+    // practice this isn't super important since the subsection header describes
+    // its length and we can just skip it.  It's more important when writing.
     if (auto EC = codeview::DebugSubsectionRecord::initialize(
             Stream, Info, codeview::CodeViewContainer::Pdb))
       return EC;

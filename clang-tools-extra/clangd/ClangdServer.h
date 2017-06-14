@@ -82,16 +82,21 @@ public:
 class FileSystemProvider {
 public:
   virtual ~FileSystemProvider() = default;
+  /// Called by ClangdServer to obtain a vfs::FileSystem to be used for parsing.
+  /// Name of the file that will be parsed is passed in \p File.
+  ///
   /// \return A filesystem that will be used for all file accesses in clangd.
   /// A Tag returned by this method will be propagated to all results of clangd
   /// that will use this filesystem.
-  virtual Tagged<IntrusiveRefCntPtr<vfs::FileSystem>> getTaggedFileSystem() = 0;
+  virtual Tagged<IntrusiveRefCntPtr<vfs::FileSystem>>
+  getTaggedFileSystem(PathRef File) = 0;
 };
 
 class RealFileSystemProvider : public FileSystemProvider {
 public:
   /// \return getRealFileSystem() tagged with default tag, i.e. VFSTag()
-  Tagged<IntrusiveRefCntPtr<vfs::FileSystem>> getTaggedFileSystem() override;
+  Tagged<IntrusiveRefCntPtr<vfs::FileSystem>>
+  getTaggedFileSystem(PathRef File) override;
 };
 
 class ClangdServer;

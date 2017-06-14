@@ -2629,6 +2629,8 @@ std::string getSectionTypeString(unsigned Arch, unsigned Type) {
     return "GROUP";
   case SHT_SYMTAB_SHNDX:
     return "SYMTAB SECTION INDICES";
+  case SHT_LLVM_ODRTAB:
+    return "LLVM_ODRTAB";
   // FIXME: Parse processor specific GNU attributes
   case SHT_GNU_ATTRIBUTES:
     return "ATTRIBUTES";

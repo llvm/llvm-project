@@ -26,40 +26,9 @@
 using namespace llvm;
 using namespace llvm::codeview;
 
-DebugSubsectionState::DebugSubsectionState() {}
-
-DebugSubsectionState::DebugSubsectionState(
-    const DebugStringTableSubsectionRef &Strings)
-    : Strings(&Strings) {}
-
-DebugSubsectionState::DebugSubsectionState(
-    const DebugStringTableSubsectionRef &Strings,
-    const DebugChecksumsSubsectionRef &Checksums)
-    : Strings(&Strings), Checksums(&Checksums) {}
-
-void DebugSubsectionState::initializeStrings(const DebugSubsectionRecord &SR) {
-  assert(SR.kind() == DebugSubsectionKind::StringTable);
-  assert(!Strings && "Found a string table even though we already have one!");
-
-  OwnedStrings = llvm::make_unique<DebugStringTableSubsectionRef>();
-  consumeError(OwnedStrings->initialize(SR.getRecordData()));
-  Strings = OwnedStrings.get();
-}
-
-void DebugSubsectionState::initializeChecksums(
-    const DebugSubsectionRecord &FCR) {
-  assert(FCR.kind() == DebugSubsectionKind::FileChecksums);
-  if (Checksums)
-    return;
-
-  OwnedChecksums = llvm::make_unique<DebugChecksumsSubsectionRef>();
-  consumeError(OwnedChecksums->initialize(FCR.getRecordData()));
-  Checksums = OwnedChecksums.get();
-}
-
-Error llvm::codeview::visitDebugSubsection(const DebugSubsectionRecord &R,
-                                           DebugSubsectionVisitor &V,
-                                           const DebugSubsectionState &State) {
+Error llvm::codeview::visitDebugSubsection(
+    const DebugSubsectionRecord &R, DebugSubsectionVisitor &V,
+    const StringsAndChecksumsRef &State) {
   BinaryStreamReader Reader(R.getRecordData());
   switch (R.kind()) {
   case DebugSubsectionKind::Lines: {

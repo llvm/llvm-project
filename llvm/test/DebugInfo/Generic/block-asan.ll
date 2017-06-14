@@ -13,7 +13,7 @@
 
 ; Check that the location of the ASAN instrumented __block variable is
 ; correct.
-; CHECK: !DIExpression(DW_OP_plus, 8, DW_OP_deref, DW_OP_plus, 24)
+; CHECK: !DIExpression(DW_OP_plus_uconst, 8, DW_OP_deref, DW_OP_plus_uconst, 24)
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
@@ -79,7 +79,7 @@ attributes #3 = { nounwind }
 !19 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
 !20 = !DIDerivedType(tag: DW_TAG_member, name: "__size", size: 32, align: 32, offset: 160, file: !1, scope: !5, baseType: !19)
 !21 = !DIDerivedType(tag: DW_TAG_member, name: "x", size: 32, align: 32, offset: 192, file: !1, scope: !5, baseType: !19)
-!22 = !DIExpression(DW_OP_plus, 8, DW_OP_deref, DW_OP_plus, 24)
+!22 = !DIExpression(DW_OP_plus_uconst, 8, DW_OP_deref, DW_OP_plus_uconst, 24)
 !23 = !DILocation(line: 4, column: 15, scope: !4)
 !24 = !DILocation(line: 4, column: 3, scope: !4)
 !25 = !DILocation(line: 5, column: 3, scope: !4)

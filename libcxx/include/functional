@@ -1941,8 +1941,8 @@ _Tp*
 function<_Rp(_ArgTypes...)>::target() _NOEXCEPT
 {
     if (__f_ == 0)
-        return (_Tp*)0;
-    return (_Tp*)__f_->target(typeid(_Tp));
+        return nullptr;
+    return (_Tp*) const_cast<void *>(__f_->target(typeid(_Tp)));
 }
 
 template<class _Rp, class ..._ArgTypes>
@@ -1951,7 +1951,7 @@ const _Tp*
 function<_Rp(_ArgTypes...)>::target() const _NOEXCEPT
 {
     if (__f_ == 0)
-        return (const _Tp*)0;
+        return nullptr;
     return (const _Tp*)__f_->target(typeid(_Tp));
 }
 

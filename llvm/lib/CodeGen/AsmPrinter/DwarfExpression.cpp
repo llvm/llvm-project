@@ -254,15 +254,19 @@ bool DwarfExpression::addMachineRegExpression(const TargetRegisterInfo &TRI,
     ExprCursor.take();
   }
 
-  // [Reg, Offset, DW_OP_plus] --> [DW_OP_breg, Offset].
-  // [Reg, Offset, DW_OP_minus] --> [DW_OP_breg, -Offset].
+  // [Reg, DW_OP_constu, Offset, DW_OP_plus]  --> [DW_OP_breg, Offset]
+  // [Reg, DW_OP_constu, Offset, DW_OP_minus] --> [DW_OP_breg,-Offset]
   // If Reg is a subregister we need to mask it out before subtracting.
-  if (Op && ((Op->getOp() == dwarf::DW_OP_plus) ||
-             (Op->getOp() == dwarf::DW_OP_minus && !SubRegisterSizeInBits))) {
-    int Offset = Op->getArg(0);
-    SignedOffset = (Op->getOp() == dwarf::DW_OP_plus) ? Offset : -Offset;
-    ExprCursor.take();
+  if (Op && Op->getOp() == dwarf::DW_OP_constu) {
+    auto N = ExprCursor.peekNext();
+    if (N && (N->getOp() == dwarf::DW_OP_plus ||
+             (N->getOp() == dwarf::DW_OP_minus && !SubRegisterSizeInBits))) {
+      int Offset = Op->getArg(0);
+      SignedOffset = (N->getOp() == dwarf::DW_OP_minus) ? -Offset : Offset;
+      ExprCursor.consume(2);
+    }
   }
+
   if (FBReg)
     addFBReg(SignedOffset);
   else
@@ -326,18 +330,14 @@ void DwarfExpression::addExpression(DIExpressionCursor &&ExprCursor,
       LocationKind = Unknown;
       return;
     }
-    case dwarf::DW_OP_plus:
     case dwarf::DW_OP_plus_uconst:
       assert(LocationKind != Register);
       emitOp(dwarf::DW_OP_plus_uconst);
       emitUnsigned(Op->getArg(0));
       break;
+    case dwarf::DW_OP_plus:
     case dwarf::DW_OP_minus:
-      assert(LocationKind != Register);
-      // There is no DW_OP_minus_uconst.
-      emitOp(dwarf::DW_OP_constu);
-      emitUnsigned(Op->getArg(0));
-      emitOp(dwarf::DW_OP_minus);
+      emitOp(Op->getOp());
       break;
     case dwarf::DW_OP_deref: {
       assert(LocationKind != Register);

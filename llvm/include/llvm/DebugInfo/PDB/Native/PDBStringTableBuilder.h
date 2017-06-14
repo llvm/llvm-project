@@ -41,10 +41,7 @@ public:
   uint32_t calculateSerializedSize() const;
   Error commit(BinaryStreamWriter &Writer) const;
 
-  codeview::DebugStringTableSubsection &getStrings() { return Strings; }
-  const codeview::DebugStringTableSubsection &getStrings() const {
-    return Strings;
-  }
+  void setStrings(const codeview::DebugStringTableSubsection &Strings);
 
 private:
   uint32_t calculateHashTableSize() const;

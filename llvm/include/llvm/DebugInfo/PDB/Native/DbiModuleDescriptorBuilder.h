@@ -50,7 +50,7 @@ public:
   void addSymbol(codeview::CVSymbol Symbol);
 
   void
-  addDebugSubsection(std::unique_ptr<codeview::DebugSubsection> Subsection);
+  addDebugSubsection(std::shared_ptr<codeview::DebugSubsection> Subsection);
 
   uint16_t getStreamIndex() const;
   StringRef getModuleName() const { return ModuleName; }

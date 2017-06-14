@@ -59,7 +59,7 @@ Position clangd::offsetToPosition(StringRef Code, size_t Offset) {
 }
 
 Tagged<IntrusiveRefCntPtr<vfs::FileSystem>>
-RealFileSystemProvider::getTaggedFileSystem() {
+RealFileSystemProvider::getTaggedFileSystem(PathRef File) {
   return make_tagged(vfs::getRealFileSystem(), VFSTag());
 }
 
@@ -156,7 +156,7 @@ void ClangdServer::addDocument(PathRef File, StringRef Contents) {
 
     assert(FileContents.Draft &&
            "No contents inside a file that was scheduled for reparse");
-    auto TaggedFS = FSProvider.getTaggedFileSystem();
+    auto TaggedFS = FSProvider.getTaggedFileSystem(FileStr);
     Units.runOnUnit(
         FileStr, *FileContents.Draft, CDB, PCHs, TaggedFS.Value,
         [&](ClangdUnit const &Unit) {
@@ -197,7 +197,7 @@ ClangdServer::codeComplete(PathRef File, Position Pos,
   }
 
   std::vector<CompletionItem> Result;
-  auto TaggedFS = FSProvider.getTaggedFileSystem();
+  auto TaggedFS = FSProvider.getTaggedFileSystem(File);
   // It would be nice to use runOnUnitWithoutReparse here, but we can't
   // guarantee the correctness of code completion cache here if we don't do the
   // reparse.
