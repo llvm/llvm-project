@@ -172,9 +172,13 @@ public:
 
 class MockFSProvider : public FileSystemProvider {
 public:
-  Tagged<IntrusiveRefCntPtr<vfs::FileSystem>> getTaggedFileSystem() override {
+  Tagged<IntrusiveRefCntPtr<vfs::FileSystem>>
+  getTaggedFileSystem(PathRef File) override {
     IntrusiveRefCntPtr<vfs::InMemoryFileSystem> MemFS(
         new vfs::InMemoryFileSystem);
+    if (ExpectedFile)
+      EXPECT_EQ(*ExpectedFile, File);
+
     for (auto &FileAndContents : Files)
       MemFS->addFile(FileAndContents.first(), time_t(),
                      llvm::MemoryBuffer::getMemBuffer(FileAndContents.second,
@@ -186,6 +190,7 @@ public:
     return make_tagged(OverlayFS, Tag);
   }
 
+  llvm::Optional<SmallString<32>> ExpectedFile;
   llvm::StringMap<std::string> Files;
   VFSTag Tag = VFSTag();
 };
@@ -248,7 +253,10 @@ protected:
           FileWithContents.second;
 
     auto SourceFilename = getVirtualTestFilePath(SourceFileRelPath);
+
+    FS.ExpectedFile = SourceFilename;
     Server.addDocument(SourceFilename, SourceContents);
+
     auto Result = dumpASTWithoutMemoryLocs(Server, SourceFilename);
     EXPECT_EQ(ExpectErrors, DiagConsumer.hadErrorInLastDiags());
     return Result;
@@ -307,6 +315,7 @@ int b = a;
 
   FS.Files[FooH] = "int a;";
   FS.Files[FooCpp] = SourceContents;
+  FS.ExpectedFile = FooCpp;
 
   Server.addDocument(FooCpp, SourceContents);
   auto DumpParse1 = dumpASTWithoutMemoryLocs(Server, FooCpp);
@@ -342,6 +351,7 @@ int b = a;
 
   FS.Files[FooH] = "int a;";
   FS.Files[FooCpp] = SourceContents;
+  FS.ExpectedFile = FooCpp;
 
   Server.addDocument(FooCpp, SourceContents);
   auto DumpParse1 = dumpASTWithoutMemoryLocs(Server, FooCpp);
@@ -371,8 +381,9 @@ TEST_F(ClangdVFSTest, CheckVersions) {
   auto FooCpp = getVirtualTestFilePath("foo.cpp");
   const auto SourceContents = "int a;";
   FS.Files[FooCpp] = SourceContents;
-  FS.Tag = "123";
+  FS.ExpectedFile = FooCpp;
 
+  FS.Tag = "123";
   Server.addDocument(FooCpp, SourceContents);
   EXPECT_EQ(DiagConsumer.lastVFSTag(), FS.Tag);
   EXPECT_EQ(Server.codeComplete(FooCpp, Position{0, 0}).Tag, FS.Tag);
@@ -419,6 +430,7 @@ int b =   ;
   // miss).
   Position CompletePos = {2, 8};
   FS.Files[FooCpp] = SourceContents;
+  FS.ExpectedFile = FooCpp;
 
   Server.addDocument(FooCpp, SourceContents);
 

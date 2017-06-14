@@ -8411,6 +8411,8 @@ public:
   //===--------------------------------------------------------------------===//
   // C++ Coroutines TS
   //
+  bool ActOnCoroutineBodyStart(Scope *S, SourceLocation KwLoc,
+                               StringRef Keyword);
   ExprResult ActOnCoawaitExpr(Scope *S, SourceLocation KwLoc, Expr *E);
   ExprResult ActOnCoyieldExpr(Scope *S, SourceLocation KwLoc, Expr *E);
   StmtResult ActOnCoreturnStmt(Scope *S, SourceLocation KwLoc, Expr *E);
@@ -10320,7 +10322,6 @@ private:
   void CheckFloatComparison(SourceLocation Loc, Expr* LHS, Expr* RHS);
   void CheckImplicitConversions(Expr *E, SourceLocation CC = SourceLocation());
   void CheckBoolLikeConversion(Expr *E, SourceLocation CC);
-  void CheckForIntOverflow(Expr *E);
   void CheckUnsequencedOperations(Expr *E);
 
   /// \brief Perform semantic checks on a completed expression. This will either

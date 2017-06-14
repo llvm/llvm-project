@@ -3490,13 +3490,13 @@ void CGDebugInfo::EmitDeclare(const VarDecl *VD, llvm::Value *Storage,
     if (VD->hasAttr<BlocksAttr>()) {
       // Here, we need an offset *into* the alloca.
       CharUnits offset = CharUnits::fromQuantity(32);
-      Expr.push_back(llvm::dwarf::DW_OP_plus);
+      Expr.push_back(llvm::dwarf::DW_OP_plus_uconst);
       // offset of __forwarding field
       offset = CGM.getContext().toCharUnitsFromBits(
           CGM.getTarget().getPointerWidth(0));
       Expr.push_back(offset.getQuantity());
       Expr.push_back(llvm::dwarf::DW_OP_deref);
-      Expr.push_back(llvm::dwarf::DW_OP_plus);
+      Expr.push_back(llvm::dwarf::DW_OP_plus_uconst);
       // offset of x field
       offset = CGM.getContext().toCharUnitsFromBits(XOffset);
       Expr.push_back(offset.getQuantity());
@@ -3605,17 +3605,17 @@ void CGDebugInfo::EmitDeclareOfBlockDeclRefVariable(
 
   SmallVector<int64_t, 9> addr;
   addr.push_back(llvm::dwarf::DW_OP_deref);
-  addr.push_back(llvm::dwarf::DW_OP_plus);
+  addr.push_back(llvm::dwarf::DW_OP_plus_uconst);
   addr.push_back(offset.getQuantity());
   if (isByRef) {
     addr.push_back(llvm::dwarf::DW_OP_deref);
-    addr.push_back(llvm::dwarf::DW_OP_plus);
+    addr.push_back(llvm::dwarf::DW_OP_plus_uconst);
     // offset of __forwarding field
     offset =
         CGM.getContext().toCharUnitsFromBits(target.getPointerSizeInBits(0));
     addr.push_back(offset.getQuantity());
     addr.push_back(llvm::dwarf::DW_OP_deref);
-    addr.push_back(llvm::dwarf::DW_OP_plus);
+    addr.push_back(llvm::dwarf::DW_OP_plus_uconst);
     // offset of x field
     offset = CGM.getContext().toCharUnitsFromBits(XOffset);
     addr.push_back(offset.getQuantity());

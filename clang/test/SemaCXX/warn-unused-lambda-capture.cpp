@@ -142,11 +142,14 @@ void test_templated() {
   auto implicit_by_reference = [&] { i++; };
 
   auto explicit_by_value_used = [i] { return i + 1; };
+  auto explicit_by_value_used_generic = [i](auto c) { return i + 1; };
   auto explicit_by_value_used_void = [i] { (void)i; };
+
   auto explicit_by_value_unused = [i] {}; // expected-warning{{lambda capture 'i' is not used}}
   auto explicit_by_value_unused_sizeof = [i] { return sizeof(i); }; // expected-warning{{lambda capture 'i' is not required to be captured for this use}}
   auto explicit_by_value_unused_decltype = [i] { decltype(i) j = 0; }; // expected-warning{{lambda capture 'i' is not used}}
   auto explicit_by_value_unused_const = [k] { return k + 1; };         // expected-warning{{lambda capture 'k' is not required to be captured for this use}}
+  auto explicit_by_value_unused_const_generic = [k](auto c) { return k + 1; }; // expected-warning{{lambda capture 'k' is not required to be captured for this use}}
 
   auto explicit_by_reference_used = [&i] { i++; };
   auto explicit_by_reference_unused = [&i] {}; // expected-warning{{lambda capture 'i' is not used}}
@@ -161,6 +164,8 @@ void test_templated() {
   auto explicit_initialized_value_trivial_init = [j = Trivial()]{}; // expected-warning{{lambda capture 'j' is not used}}
   auto explicit_initialized_value_non_trivial_init = [j = Trivial(42)]{};
   auto explicit_initialized_value_with_side_effect = [j = side_effect()]{};
+  auto explicit_initialized_value_generic_used = [i = 1](auto c) mutable { i++; };
+  auto explicit_initialized_value_generic_unused = [i = 1](auto c) mutable {}; // expected-warning{{lambda capture 'i' is not used}}
 
   auto nested = [&i] {
     auto explicit_by_value_used = [i] { return i + 1; };

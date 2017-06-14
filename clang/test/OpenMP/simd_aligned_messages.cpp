@@ -107,9 +107,8 @@ S3 h; // expected-note 2 {{'h' defined here}}
 template<class I, class C> int foomain(I argc, C **argv) {
   I e(argc);
   I g(argc);
-  int i; // expected-note {{declared here}} expected-note {{'i' defined here}}
-  // expected-note@+2 {{declared here}}
-  // expected-note@+1 {{reference to 'i' is not a constant expression}}
+  int i; // expected-note {{'i' defined here}}
+  // expected-note@+1 {{declared here}}
   int &j = i;
   #pragma omp simd aligned // expected-error {{expected '(' after 'aligned'}}
   for (I k = 0; k < argc; ++k) ++k;

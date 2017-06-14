@@ -1795,6 +1795,8 @@ void CodeGenModule::ConstructAttributeList(
       FuncAttrs.addAttribute(llvm::Attribute::NoUnwind);
     if (TargetDecl->hasAttr<NoReturnAttr>())
       FuncAttrs.addAttribute(llvm::Attribute::NoReturn);
+    if (TargetDecl->hasAttr<ColdAttr>())
+      FuncAttrs.addAttribute(llvm::Attribute::Cold);
     if (TargetDecl->hasAttr<NoDuplicateAttr>())
       FuncAttrs.addAttribute(llvm::Attribute::NoDuplicate);
     if (TargetDecl->hasAttr<ConvergentAttr>())
