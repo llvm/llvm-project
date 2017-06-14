@@ -53,11 +53,7 @@ ThreadPool::ThreadPool(unsigned ThreadCount)
           Tasks.pop();
         }
         // Run the task we just grabbed
-#ifndef _MSC_VER
         Task();
-#else
-        Task(/* unused */ false);
-#endif
 
         {
           // Adjust `ActiveThreads`, in case someone waits on ThreadPool::wait()
@@ -82,7 +78,7 @@ void ThreadPool::wait() {
                            [&] { return !ActiveThreads && Tasks.empty(); });
 }
 
-std::shared_future<ThreadPool::VoidTy> ThreadPool::asyncImpl(TaskTy Task) {
+std::shared_future<void> ThreadPool::asyncImpl(TaskTy Task) {
   /// Wrap the Task in a packaged_task to return a future object.
   PackagedTaskTy PackagedTask(std::move(Task));
   auto Future = PackagedTask.get_future();
@@ -128,25 +124,16 @@ void ThreadPool::wait() {
   while (!Tasks.empty()) {
     auto Task = std::move(Tasks.front());
     Tasks.pop();
-#ifndef _MSC_VER
-        Task();
-#else
-        Task(/* unused */ false);
-#endif
+    Task();
   }
 }
 
-std::shared_future<ThreadPool::VoidTy> ThreadPool::asyncImpl(TaskTy Task) {
-#ifndef _MSC_VER
+std::shared_future<void> ThreadPool::asyncImpl(TaskTy Task) {
   // Get a Future with launch::deferred execution using std::async
   auto Future = std::async(std::launch::deferred, std::move(Task)).share();
   // Wrap the future so that both ThreadPool::wait() can operate and the
   // returned future can be sync'ed on.
   PackagedTaskTy PackagedTask([Future]() { Future.get(); });
-#else
-  auto Future = std::async(std::launch::deferred, std::move(Task), false).share();
-  PackagedTaskTy PackagedTask([Future](bool) -> bool { Future.get(); return false; });
-#endif
   Tasks.push(std::move(PackagedTask));
   return Future;
 }

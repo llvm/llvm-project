@@ -138,7 +138,10 @@ private:
   bool SelectMUBUFIntrinsicVOffset(SDValue Offset, SDValue &SOffset,
                                    SDValue &ImmOffset, SDValue &VOffset) const;
 
-  bool SelectFlat(SDValue Addr, SDValue &VAddr, SDValue &SLC) const;
+  bool SelectFlatAtomic(SDValue Addr, SDValue &VAddr,
+                        SDValue &Offset, SDValue &SLC) const;
+  bool SelectFlatOffset(SDValue Addr, SDValue &VAddr,
+                        SDValue &Offset, SDValue &SLC) const;
 
   bool SelectSMRDOffset(SDValue ByteOffsetNode, SDValue &Offset,
                         bool &Imm) const;
@@ -1313,12 +1316,35 @@ bool AMDGPUDAGToDAGISel::SelectMUBUFIntrinsicVOffset(SDValue Offset,
   return true;
 }
 
-bool AMDGPUDAGToDAGISel::SelectFlat(SDValue Addr,
-                                    SDValue &VAddr,
-                                    SDValue &SLC) const {
+bool AMDGPUDAGToDAGISel::SelectFlatOffset(SDValue Addr,
+                                          SDValue &VAddr,
+                                          SDValue &Offset,
+                                          SDValue &SLC) const {
+  int64_t OffsetVal = 0;
+
+  if (Subtarget->hasFlatInstOffsets() &&
+      CurDAG->isBaseWithConstantOffset(Addr)) {
+    SDValue N0 = Addr.getOperand(0);
+    SDValue N1 = Addr.getOperand(1);
+    uint64_t COffsetVal = cast<ConstantSDNode>(N1)->getZExtValue();
+    if (isUInt<12>(COffsetVal)) {
+      Addr = N0;
+      OffsetVal = COffsetVal;
+    }
+  }
+
   VAddr = Addr;
+  Offset = CurDAG->getTargetConstant(OffsetVal, SDLoc(), MVT::i16);
   SLC = CurDAG->getTargetConstant(0, SDLoc(), MVT::i1);
+
   return true;
+}
+
+bool AMDGPUDAGToDAGISel::SelectFlatAtomic(SDValue Addr,
+                                          SDValue &VAddr,
+                                          SDValue &Offset,
+                                          SDValue &SLC) const {
+  return SelectFlatOffset(Addr, VAddr, Offset, SLC);
 }
 
 bool AMDGPUDAGToDAGISel::SelectSMRDOffset(SDValue ByteOffsetNode,

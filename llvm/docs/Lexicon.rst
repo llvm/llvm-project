@@ -109,6 +109,13 @@ G
     Garbage Collection. The practice of using reachability analysis instead of
     explicit memory management to reclaim unused memory.
 
+**GVN**
+    Global Value Numbering. GVN is a pass that partitions values computed by a
+    function into congruence classes. Values ending up in the same congruence
+    class are guaranteed to be the same for every execution of the program.
+    In that respect, congruency is a compile-time approximation of equivalence
+    of values at runtime.
+
 H
 -
 

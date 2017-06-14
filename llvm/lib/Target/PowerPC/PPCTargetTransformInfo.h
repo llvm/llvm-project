@@ -63,7 +63,7 @@ public:
   bool expandMemCmp(Instruction *I, unsigned &MaxLoadSize);
   bool enableInterleavedAccessVectorization();
   unsigned getNumberOfRegisters(bool Vector);
-  unsigned getRegisterBitWidth(bool Vector);
+  unsigned getRegisterBitWidth(bool Vector) const;
   unsigned getCacheLineSize();
   unsigned getPrefetchDistance();
   unsigned getMaxInterleaveFactor(unsigned VF);

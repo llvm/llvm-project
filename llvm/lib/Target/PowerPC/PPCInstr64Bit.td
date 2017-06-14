@@ -683,6 +683,16 @@ def DIVDE : XOForm_1<31, 425, 0, (outs g8rc:$rT), (ins g8rc:$rA, g8rc:$rB),
                      "divde $rT, $rA, $rB", IIC_IntDivD,
                      [(set i64:$rT, (int_ppc_divde g8rc:$rA, g8rc:$rB))]>,
                      isPPC64, Requires<[HasExtDiv]>;
+
+let Predicates = [IsISA3_0] in {
+def MODSD : XForm_8<31, 777, (outs g8rc:$rT), (ins g8rc:$rA, g8rc:$rB),
+                        "modsd $rT, $rA, $rB", IIC_IntDivW,
+                        [(set i64:$rT, (srem i64:$rA, i64:$rB))]>;
+def MODUD : XForm_8<31, 265, (outs g8rc:$rT), (ins g8rc:$rA, g8rc:$rB),
+                        "modud $rT, $rA, $rB", IIC_IntDivW,
+                        [(set i64:$rT, (urem i64:$rA, i64:$rB))]>;
+}
+
 let Defs = [CR0] in
 def DIVDEo : XOForm_1<31, 425, 0, (outs g8rc:$rT), (ins g8rc:$rA, g8rc:$rB),
                       "divde. $rT, $rA, $rB", IIC_IntDivD,

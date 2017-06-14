@@ -142,10 +142,7 @@ void LinkerScript::assignSymbol(SymbolAssignment *Cmd, bool InSec) {
     Sym->Value = V.getValue();
   } else {
     Sym->Section = V.Sec;
-    if (Sym->Section->Flags & SHF_ALLOC)
-      Sym->Value = alignTo(V.Val, V.Alignment);
-    else
-      Sym->Value = V.getValue();
+    Sym->Value = alignTo(V.Val, V.Alignment);
   }
 }
 
@@ -461,7 +458,7 @@ void LinkerScript::fabricateDefaultCommands() {
 
   // For each OutputSection that needs a VA fabricate an OutputSectionCommand
   // with an InputSectionDescription describing the InputSections
-  for (OutputSection *Sec : *OutputSections) {
+  for (OutputSection *Sec : OutputSections) {
     auto *OSCmd = createOutputSectionCommand(Sec->Name, "<internal>");
     OSCmd->Sec = Sec;
     SecToCommand[Sec] = OSCmd;
@@ -649,7 +646,9 @@ void LinkerScript::assignOffsets(OutputSectionCommand *Cmd) {
   if (!Sec)
     return;
 
-  if (Cmd->AddrExpr && (Sec->Flags & SHF_ALLOC))
+  if (!(Sec->Flags & SHF_ALLOC))
+    Dot = 0;
+  else if (Cmd->AddrExpr)
     setDot(Cmd->AddrExpr, Cmd->Location, false);
 
   if (Cmd->LMAExpr) {
@@ -681,8 +680,7 @@ void LinkerScript::removeEmptyCommands() {
   auto Pos = std::remove_if(
       Opt.Commands.begin(), Opt.Commands.end(), [&](BaseCommand *Base) {
         if (auto *Cmd = dyn_cast<OutputSectionCommand>(Base))
-          return std::find(OutputSections->begin(), OutputSections->end(),
-                           Cmd->Sec) == OutputSections->end();
+          return Cmd->Sec == nullptr;
         return false;
       });
   Opt.Commands.erase(Pos, Opt.Commands.end());
@@ -716,7 +714,7 @@ void LinkerScript::adjustSectionsBeforeSorting() {
 
     auto *OutSec = make<OutputSection>(Cmd->Name, SHT_PROGBITS, Flags);
     OutSec->SectionIndex = I;
-    OutputSections->push_back(OutSec);
+    OutputSections.push_back(OutSec);
     Cmd->Sec = OutSec;
     SecToCommand[OutSec] = Cmd;
   }
@@ -827,7 +825,7 @@ void LinkerScript::placeOrphanSections() {
       ++CmdIndex;
   }
 
-  for (OutputSection *Sec : *OutputSections) {
+  for (OutputSection *Sec : OutputSections) {
     StringRef Name = Sec->Name;
 
     // Find the last spot where we can insert a command and still get the
@@ -922,9 +920,7 @@ allocateHeaders(std::vector<PhdrEntry> &Phdrs,
   return false;
 }
 
-void LinkerScript::assignAddresses(
-    std::vector<PhdrEntry> &Phdrs,
-    ArrayRef<OutputSectionCommand *> OutputSectionCommands) {
+void LinkerScript::assignAddresses(std::vector<PhdrEntry> &Phdrs) {
   // Assign addresses as instructed by linker script SECTIONS sub-commands.
   Dot = 0;
   ErrorOnMissingSection = true;
@@ -950,16 +946,13 @@ void LinkerScript::assignAddresses(
     OutputSection *Sec = Cmd->Sec;
     if (Sec->Flags & SHF_ALLOC)
       MinVA = std::min<uint64_t>(MinVA, Sec->Addr);
-    else
-      Sec->Addr = 0;
   }
 
   allocateHeaders(Phdrs, OutputSectionCommands, MinVA);
 }
 
 // Creates program headers as instructed by PHDRS linker script command.
-std::vector<PhdrEntry> LinkerScript::createPhdrs(
-    ArrayRef<OutputSectionCommand *> OutputSectionCommands) {
+std::vector<PhdrEntry> LinkerScript::createPhdrs() {
   std::vector<PhdrEntry> Ret;
 
   // Process PHDRS and FILEHDR keywords because they are not

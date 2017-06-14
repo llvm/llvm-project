@@ -2,7 +2,7 @@
 // rc.exe:
 // > rc /fo test_resource.res /nologo test_resource.rc
 
-RUN: llvm-cvtres /verbose /out:%t %p/Inputs/test_resource.res | FileCheck %s
+RUN: llvm-cvtres /out:%t /verbose %p/Inputs/test_resource.res | FileCheck %s
 
 CHECK:      Number of resources: 8
 CHECK-NEXT: Resource Tree [

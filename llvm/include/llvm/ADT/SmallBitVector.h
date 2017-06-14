@@ -15,8 +15,15 @@
 #define LLVM_ADT_SMALLBITVECTOR_H
 
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/MathExtras.h"
+#include <algorithm>
 #include <cassert>
+#include <climits>
+#include <cstddef>
+#include <cstdint>
+#include <limits>
+#include <utility>
 
 namespace llvm {
 
@@ -29,7 +36,7 @@ class SmallBitVector {
   // TODO: In "large" mode, a pointer to a BitVector is used, leading to an
   // unnecessary level of indirection. It would be more efficient to use a
   // pointer to memory containing size, allocation size, and the array of bits.
-  uintptr_t X;
+  uintptr_t X = 1;
 
   enum {
     // The number of bits in this class.
@@ -54,7 +61,8 @@ class SmallBitVector {
                 "Unsupported word size");
 
 public:
-  typedef unsigned size_type;
+  using size_type = unsigned;
+
   // Encapsulation of a single bit.
   class reference {
     SmallBitVector &TheVector;
@@ -134,21 +142,8 @@ private:
   }
 
 public:
-  typedef const_set_bits_iterator_impl<SmallBitVector> const_set_bits_iterator;
-  typedef const_set_bits_iterator set_iterator;
-
-  const_set_bits_iterator set_bits_begin() const {
-    return const_set_bits_iterator(*this);
-  }
-  const_set_bits_iterator set_bits_end() const {
-    return const_set_bits_iterator(*this, -1);
-  }
-  iterator_range<const_set_bits_iterator> set_bits() const {
-    return make_range(set_bits_begin(), set_bits_end());
-  }
-
   /// Creates an empty bitvector.
-  SmallBitVector() : X(1) {}
+  SmallBitVector() = default;
 
   /// Creates a bitvector of specified number of bits. All bits are initialized
   /// to the specified value.
@@ -174,6 +169,21 @@ public:
   ~SmallBitVector() {
     if (!isSmall())
       delete getPointer();
+  }
+
+  using const_set_bits_iterator = const_set_bits_iterator_impl<SmallBitVector>;
+  using set_iterator = const_set_bits_iterator;
+
+  const_set_bits_iterator set_bits_begin() const {
+    return const_set_bits_iterator(*this);
+  }
+
+  const_set_bits_iterator set_bits_end() const {
+    return const_set_bits_iterator(*this, -1);
+  }
+
+  iterator_range<const_set_bits_iterator> set_bits() const {
+    return make_range(set_bits_begin(), set_bits_end());
   }
 
   /// Tests whether there are no bits in this bitvector.
@@ -677,14 +687,16 @@ operator^(const SmallBitVector &LHS, const SmallBitVector &RHS) {
   return Result;
 }
 
-} // End llvm namespace
+} // end namespace llvm
 
 namespace std {
-  /// Implement std::swap in terms of BitVector swap.
-  inline void
-  swap(llvm::SmallBitVector &LHS, llvm::SmallBitVector &RHS) {
-    LHS.swap(RHS);
-  }
+
+/// Implement std::swap in terms of BitVector swap.
+inline void
+swap(llvm::SmallBitVector &LHS, llvm::SmallBitVector &RHS) {
+  LHS.swap(RHS);
 }
 
-#endif
+} // end namespace std
+
+#endif // LLVM_ADT_SMALLBITVECTOR_H

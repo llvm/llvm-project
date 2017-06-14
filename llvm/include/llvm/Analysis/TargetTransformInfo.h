@@ -873,7 +873,7 @@ public:
   virtual int getIntImmCost(Intrinsic::ID IID, unsigned Idx, const APInt &Imm,
                             Type *Ty) = 0;
   virtual unsigned getNumberOfRegisters(bool Vector) = 0;
-  virtual unsigned getRegisterBitWidth(bool Vector) = 0;
+  virtual unsigned getRegisterBitWidth(bool Vector) const = 0;
   virtual unsigned getMinVectorRegisterBitWidth() = 0;
   virtual bool shouldConsiderAddressTypePromotion(
       const Instruction &I, bool &AllowPromotionWithoutCommonHeader) = 0;
@@ -1119,7 +1119,7 @@ public:
   unsigned getNumberOfRegisters(bool Vector) override {
     return Impl.getNumberOfRegisters(Vector);
   }
-  unsigned getRegisterBitWidth(bool Vector) override {
+  unsigned getRegisterBitWidth(bool Vector) const override {
     return Impl.getRegisterBitWidth(Vector);
   }
   unsigned getMinVectorRegisterBitWidth() override {

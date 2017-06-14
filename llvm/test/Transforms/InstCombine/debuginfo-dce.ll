@@ -93,12 +93,12 @@ entry:
   ret void, !dbg !32
 }
 
-; CHECK: ![[LOAD_EXPR]] = !DIExpression(DW_OP_deref, DW_OP_plus, 0)
-; CHECK: ![[BITCAST_EXPR]] = !DIExpression(DW_OP_plus, 0)
-; CHECK: ![[GEP0_EXPR]] = !DIExpression(DW_OP_minus, 8, DW_OP_plus, 0, DW_OP_stack_value)
-; CHECK: ![[GEP1_EXPR]] = !DIExpression(DW_OP_minus, 8, DW_OP_stack_value,
+; CHECK: ![[LOAD_EXPR]] = !DIExpression(DW_OP_deref, DW_OP_plus_uconst, 0)
+; CHECK: ![[BITCAST_EXPR]] = !DIExpression(DW_OP_plus_uconst, 0)
+; CHECK: ![[GEP0_EXPR]] = !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_plus_uconst, 0, DW_OP_stack_value)
+; CHECK: ![[GEP1_EXPR]] = !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_stack_value,
 ; CHECK-SAME:                           DW_OP_LLVM_fragment, 0, 32)
-; CHECK: ![[GEP2_EXPR]] = !DIExpression(DW_OP_minus, 8, DW_OP_stack_value)
+; CHECK: ![[GEP2_EXPR]] = !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_stack_value)
 
 ; Function Attrs: nounwind readnone
 declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
@@ -130,7 +130,7 @@ attributes #1 = { nounwind readnone }
 !17 = !{!18}
 !18 = !DILocalVariable(name: "entry", scope: !14, file: !1, line: 6, type: !4)
 !19 = !DILocation(line: 6, column: 17, scope: !14)
-!20 = !DIExpression(DW_OP_plus, 0)
+!20 = !DIExpression(DW_OP_plus_uconst, 0)
 !21 = !DILocation(line: 11, column: 1, scope: !14)
 !22 = distinct !DISubprogram(name: "scan", scope: !1, file: !1, line: 4, type: !15, isLocal: false, isDefinition: true, scopeLine: 5, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !17)
 !23 = !DILocation(line: 6, column: 17, scope: !22)

@@ -407,6 +407,11 @@ void PlaceholderQueue::flush(BitcodeReaderMetadataList &MetadataList) {
 
 } // anonynous namespace
 
+static Error error(const Twine &Message) {
+  return make_error<StringError>(
+      Message, make_error_code(BitcodeError::CorruptedBitcode));
+}
+
 class MetadataLoader::MetadataLoaderImpl {
   BitcodeReaderMetadataList MetadataList;
   BitcodeReaderValueList &ValueList;
@@ -533,6 +538,88 @@ class MetadataLoader::MetadataLoaderImpl {
             }
   }
 
+  /// Upgrade the expression from previous versions.
+  Error upgradeDIExpression(uint64_t FromVersion,
+                            MutableArrayRef<uint64_t> &Expr,
+                            SmallVectorImpl<uint64_t> &Buffer) {
+    auto N = Expr.size();
+    switch (FromVersion) {
+    default:
+      return error("Invalid record");
+    case 0:
+      if (N >= 3 && Expr[N - 3] == dwarf::DW_OP_bit_piece)
+        Expr[N - 3] = dwarf::DW_OP_LLVM_fragment;
+      LLVM_FALLTHROUGH;
+    case 1:
+      // Move DW_OP_deref to the end.
+      if (N && Expr[0] == dwarf::DW_OP_deref) {
+        auto End = Expr.end();
+        if (Expr.size() >= 3 &&
+            *std::prev(End, 3) == dwarf::DW_OP_LLVM_fragment)
+          End = std::prev(End, 3);
+        std::move(std::next(Expr.begin()), End, Expr.begin());
+        *std::prev(End) = dwarf::DW_OP_deref;
+      }
+      NeedDeclareExpressionUpgrade = true;
+      LLVM_FALLTHROUGH;
+    case 2: {
+      // Change DW_OP_plus to DW_OP_plus_uconst.
+      // Change DW_OP_minus to DW_OP_uconst, DW_OP_minus
+      auto SubExpr = ArrayRef<uint64_t>(Expr);
+      while (!SubExpr.empty()) {
+        // Skip past other operators with their operands
+        // for this version of the IR, obtained from
+        // from historic DIExpression::ExprOperand::getSize().
+        size_t HistoricSize;
+        switch (SubExpr.front()) {
+        default:
+          HistoricSize = 1;
+          break;
+        case dwarf::DW_OP_constu:
+        case dwarf::DW_OP_minus:
+        case dwarf::DW_OP_plus:
+          HistoricSize = 2;
+          break;
+        case dwarf::DW_OP_LLVM_fragment:
+          HistoricSize = 3;
+          break;
+        }
+
+        // If the expression is malformed, make sure we don't
+        // copy more elements than we should.
+        HistoricSize = std::min(SubExpr.size(), HistoricSize);
+        ArrayRef<uint64_t> Args = SubExpr.slice(1, HistoricSize-1);
+
+        switch (SubExpr.front()) {
+        case dwarf::DW_OP_plus:
+          Buffer.push_back(dwarf::DW_OP_plus_uconst);
+          Buffer.append(Args.begin(), Args.end());
+          break;
+        case dwarf::DW_OP_minus:
+          Buffer.push_back(dwarf::DW_OP_constu);
+          Buffer.append(Args.begin(), Args.end());
+          Buffer.push_back(dwarf::DW_OP_minus);
+          break;
+        default:
+          Buffer.push_back(*SubExpr.begin());
+          Buffer.append(Args.begin(), Args.end());
+          break;
+        }
+
+        // Continue with remaining elements.
+        SubExpr = SubExpr.slice(HistoricSize);
+      }
+      Expr = MutableArrayRef<uint64_t>(Buffer);
+      LLVM_FALLTHROUGH;
+    }
+    case 3:
+      // Up-to-date!
+      break;
+    }
+
+    return Error::success();
+  }
+
   void upgradeDebugInfo() {
     upgradeCUSubprograms();
     upgradeCUVariables();
@@ -589,11 +676,6 @@ public:
   void shrinkTo(unsigned N) { MetadataList.shrinkTo(N); }
   void upgradeDebugIntrinsics(Function &F) { upgradeDeclareExpressions(F); }
 };
-
-static Error error(const Twine &Message) {
-  return make_error<StringError>(
-      Message, make_error_code(BitcodeError::CorruptedBitcode));
-}
 
 Expected<bool>
 MetadataLoader::MetadataLoaderImpl::lazyLoadModuleMetadataBlock() {
@@ -1551,34 +1633,13 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     IsDistinct = Record[0] & 1;
     uint64_t Version = Record[0] >> 1;
     auto Elts = MutableArrayRef<uint64_t>(Record).slice(1);
-    unsigned N = Elts.size();
-    // Perform various upgrades.
-    switch (Version) {
-    case 0:
-      if (N >= 3 && Elts[N - 3] == dwarf::DW_OP_bit_piece)
-        Elts[N - 3] = dwarf::DW_OP_LLVM_fragment;
-      LLVM_FALLTHROUGH;
-    case 1:
-      // Move DW_OP_deref to the end.
-      if (N && Elts[0] == dwarf::DW_OP_deref) {
-        auto End = Elts.end();
-        if (Elts.size() >= 3 && *std::prev(End, 3) == dwarf::DW_OP_LLVM_fragment)
-          End = std::prev(End, 3);
-        std::move(std::next(Elts.begin()), End, Elts.begin());
-        *std::prev(End) = dwarf::DW_OP_deref;
-      }
-      NeedDeclareExpressionUpgrade = true;
-      LLVM_FALLTHROUGH;
-    case 2:
-      // Up-to-date!
-      break;
-    default:
-      return error("Invalid record");
-    }
+
+    SmallVector<uint64_t, 6> Buffer;
+    if (Error Err = upgradeDIExpression(Version, Elts, Buffer))
+      return Err;
 
     MetadataList.assignValue(
-        GET_OR_DISTINCT(DIExpression, (Context, makeArrayRef(Record).slice(1))),
-        NextMetadataNo);
+        GET_OR_DISTINCT(DIExpression, (Context, Elts)), NextMetadataNo);
     NextMetadataNo++;
     break;
   }

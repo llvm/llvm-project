@@ -1913,39 +1913,42 @@ const char *Thread::RunModeAsCString(lldb::RunMode mode) {
 
 size_t Thread::GetStatus(Stream &strm, uint32_t start_frame,
                          uint32_t num_frames, uint32_t num_frames_with_source,
-                         bool stop_format) {
-  ExecutionContext exe_ctx(shared_from_this());
-  Target *target = exe_ctx.GetTargetPtr();
-  Process *process = exe_ctx.GetProcessPtr();
-  size_t num_frames_shown = 0;
-  strm.Indent();
-  bool is_selected = false;
-  if (process) {
-    if (process->GetThreadList().GetSelectedThread().get() == this)
-      is_selected = true;
-  }
-  strm.Printf("%c ", is_selected ? '*' : ' ');
-  if (target && target->GetDebugger().GetUseExternalEditor()) {
-    StackFrameSP frame_sp = GetStackFrameAtIndex(start_frame);
-    if (frame_sp) {
-      SymbolContext frame_sc(
-          frame_sp->GetSymbolContext(eSymbolContextLineEntry));
-      if (frame_sc.line_entry.line != 0 && frame_sc.line_entry.file) {
-        Host::OpenFileInExternalEditor(frame_sc.line_entry.file,
-                                       frame_sc.line_entry.line);
+                         bool stop_format, bool only_stacks) {
+
+  if (!only_stacks) {
+    ExecutionContext exe_ctx(shared_from_this());
+    Target *target = exe_ctx.GetTargetPtr();
+    Process *process = exe_ctx.GetProcessPtr();
+    strm.Indent();
+    bool is_selected = false;
+    if (process) {
+      if (process->GetThreadList().GetSelectedThread().get() == this)
+        is_selected = true;
+    }
+    strm.Printf("%c ", is_selected ? '*' : ' ');
+    if (target && target->GetDebugger().GetUseExternalEditor()) {
+      StackFrameSP frame_sp = GetStackFrameAtIndex(start_frame);
+      if (frame_sp) {
+        SymbolContext frame_sc(
+            frame_sp->GetSymbolContext(eSymbolContextLineEntry));
+        if (frame_sc.line_entry.line != 0 && frame_sc.line_entry.file) {
+          Host::OpenFileInExternalEditor(frame_sc.line_entry.file,
+                                         frame_sc.line_entry.line);
+        }
       }
     }
+
+    DumpUsingSettingsFormat(strm, start_frame, stop_format);
   }
 
-  DumpUsingSettingsFormat(strm, start_frame, stop_format);
-
+  size_t num_frames_shown = 0;
   if (num_frames > 0) {
     strm.IndentMore();
 
     const bool show_frame_info = true;
-
+    const bool show_frame_unique = only_stacks;
     const char *selected_frame_marker = nullptr;
-    if (num_frames == 1 ||
+    if (num_frames == 1 || only_stacks ||
         (GetID() != GetProcess()->GetThreadList().GetSelectedThread()->GetID()))
       strm.IndentMore();
     else
@@ -1953,7 +1956,7 @@ size_t Thread::GetStatus(Stream &strm, uint32_t start_frame,
 
     num_frames_shown = GetStackFrameList()->GetStatus(
         strm, start_frame, num_frames, show_frame_info, num_frames_with_source,
-        selected_frame_marker);
+        show_frame_unique, selected_frame_marker);
     if (num_frames == 1)
       strm.IndentLess();
     strm.IndentLess();

@@ -16,11 +16,15 @@
 #include "MCTargetDesc/WebAssemblyFixupKinds.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "llvm/BinaryFormat/Wasm.h"
+#include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCFixup.h"
+#include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCSymbolWasm.h"
 #include "llvm/MC/MCWasmObjectWriter.h"
+#include "llvm/MC/MCValue.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
+
 using namespace llvm;
 
 namespace {
@@ -29,8 +33,8 @@ public:
   explicit WebAssemblyWasmObjectWriter(bool Is64Bit);
 
 private:
-  unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
-                        const MCFixup &Fixup, bool IsPCRel) const override;
+  unsigned getRelocType(const MCValue &Target,
+                        const MCFixup &Fixup) const override;
 };
 } // end anonymous namespace
 
@@ -39,16 +43,13 @@ WebAssemblyWasmObjectWriter::WebAssemblyWasmObjectWriter(bool Is64Bit)
 
 // Test whether the given expression computes a function address.
 static bool IsFunctionExpr(const MCExpr *Expr) {
-  if (const MCSymbolRefExpr *SyExp =
-          dyn_cast<MCSymbolRefExpr>(Expr))
+  if (auto SyExp = dyn_cast<MCSymbolRefExpr>(Expr))
     return cast<MCSymbolWasm>(SyExp->getSymbol()).isFunction();
 
-  if (const MCBinaryExpr *BinOp =
-          dyn_cast<MCBinaryExpr>(Expr))
+  if (auto BinOp = dyn_cast<MCBinaryExpr>(Expr))
     return IsFunctionExpr(BinOp->getLHS()) != IsFunctionExpr(BinOp->getRHS());
 
-  if (const MCUnaryExpr *UnOp =
-          dyn_cast<MCUnaryExpr>(Expr))
+  if (auto UnOp = dyn_cast<MCUnaryExpr>(Expr))
     return IsFunctionExpr(UnOp->getSubExpr());
 
   return false;
@@ -59,15 +60,13 @@ static bool IsFunctionType(const MCValue &Target) {
   return RefA && RefA->getKind() == MCSymbolRefExpr::VK_WebAssembly_TYPEINDEX;
 }
 
-unsigned WebAssemblyWasmObjectWriter::getRelocType(MCContext &Ctx,
-                                                   const MCValue &Target,
-                                                   const MCFixup &Fixup,
-                                                   bool IsPCRel) const {
+unsigned
+WebAssemblyWasmObjectWriter::getRelocType(const MCValue &Target,
+                                          const MCFixup &Fixup) const {
   // WebAssembly functions are not allocated in the data address space. To
   // resolve a pointer to a function, we must use a special relocation type.
   bool IsFunction = IsFunctionExpr(Fixup.getValue());
 
-  assert(!IsPCRel);
   switch (unsigned(Fixup.getKind())) {
   case WebAssembly::fixup_code_sleb128_i32:
     if (IsFunction)

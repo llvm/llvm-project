@@ -2,10 +2,10 @@
 ; Verify relocations are correctly generated for addresses of externals
 ; in the data section.
 
-declare i32 @f1(...)
+@myimport = external global i32, align 4
 
 @foo = global i64 7, align 4
-@far = local_unnamed_addr global i32 (...)* @f1, align 4
+@bar = hidden global i32* @myimport, align 4
 
 ; CHECK:   - Type:            DATA
 ; CHECK:     Relocations:

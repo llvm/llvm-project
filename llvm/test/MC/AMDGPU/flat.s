@@ -49,9 +49,10 @@ flat_store_dword v[3:4], v1 slc
 
 // FIXME: For atomic instructions, glc must be placed immediately following
 // the data regiser.  These forms aren't currently supported:
+// FIXME: offset:0 required
 // flat_atomic_add v1, v[3:4], v5 slc glc
 
-flat_atomic_add v1 v[3:4], v5 glc slc
+flat_atomic_add v1, v[3:4], v5 offset:0 glc slc
 // NOSI: error:
 // CI: flat_atomic_add v1, v[3:4], v5 glc slc ; encoding: [0x00,0x00,0xcb,0xdc,0x03,0x05,0x00,0x01]
 // VI: flat_atomic_add v1, v[3:4], v5 glc slc ; encoding: [0x00,0x00,0x0b,0xdd,0x03,0x05,0x00,0x01]

@@ -492,6 +492,11 @@ void UnwrappedLineParser::parseBlock(bool MustBeDeclaration, bool AddLevel,
     nextToken();
   Line->Level = InitialLevel;
   Line->MatchingOpeningBlockLineIndex = OpeningLineIndex;
+  if (OpeningLineIndex != UnwrappedLine::kInvalidIndex) {
+    // Update the opening line to add the forward reference as well
+    (*CurrentLines)[OpeningLineIndex].MatchingOpeningBlockLineIndex =
+            CurrentLines->size() - 1;
+  }
 }
 
 static bool isGoogScope(const UnwrappedLine &Line) {

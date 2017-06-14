@@ -440,18 +440,18 @@ TYPED_TEST(SmallVectorTest, AppendNonIterTest) {
   this->assertValuesInOrder(this->theVector, 3u, 1, 7, 7);
 }
 
+struct output_iterator {
+  typedef std::output_iterator_tag iterator_category;
+  typedef int value_type;
+  typedef int difference_type;
+  typedef value_type *pointer;
+  typedef value_type &reference;
+  operator int() { return 2; }
+  operator Constructable() { return 7; }
+};
+
 TYPED_TEST(SmallVectorTest, AppendRepeatedNonForwardIterator) {
   SCOPED_TRACE("AppendRepeatedTest");
-
-  struct output_iterator {
-    typedef LLVM_ATTRIBUTE_USED std::output_iterator_tag iterator_category;
-    typedef LLVM_ATTRIBUTE_USED int value_type;
-    typedef LLVM_ATTRIBUTE_USED int difference_type;
-    typedef LLVM_ATTRIBUTE_USED value_type *pointer;
-    typedef LLVM_ATTRIBUTE_USED value_type &reference;
-    operator int() { return 2; }
-    operator Constructable() { return 7; }
-  };
 
   this->theVector.push_back(Constructable(1));
   this->theVector.append(output_iterator(), output_iterator());

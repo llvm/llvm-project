@@ -183,7 +183,46 @@ template <typename T> struct SymbolRecordImpl : public SymbolRecordBase {
   mutable T Symbol;
 };
 
+struct UnknownSymbolRecord : public SymbolRecordBase {
+  explicit UnknownSymbolRecord(codeview::SymbolKind K) : SymbolRecordBase(K) {}
+
+  void map(yaml::IO &io) override;
+
+  CVSymbol toCodeViewSymbol(BumpPtrAllocator &Allocator,
+                            CodeViewContainer Container) const override {
+    RecordPrefix Prefix;
+    uint32_t TotalLen = sizeof(RecordPrefix) + Data.size();
+    Prefix.RecordKind = Kind;
+    Prefix.RecordLen = TotalLen - 2;
+    uint8_t *Buffer = Allocator.Allocate<uint8_t>(TotalLen);
+    ::memcpy(Buffer, &Prefix, sizeof(RecordPrefix));
+    ::memcpy(Buffer + sizeof(RecordPrefix), Data.data(), Data.size());
+    return CVSymbol(Kind, ArrayRef<uint8_t>(Buffer, TotalLen));
+  }
+  Error fromCodeViewSymbol(CVSymbol CVS) override {
+    this->Kind = CVS.kind();
+    Data = CVS.RecordData.drop_front(sizeof(RecordPrefix));
+    return Error::success();
+  }
+
+  std::vector<uint8_t> Data;
+};
+
 template <> void SymbolRecordImpl<ScopeEndSym>::map(IO &IO) {}
+
+void UnknownSymbolRecord::map(yaml::IO &io) {
+  yaml::BinaryRef Binary;
+  if (io.outputting())
+    Binary = yaml::BinaryRef(Data);
+  io.mapRequired("Data", Binary);
+  if (!io.outputting()) {
+    std::string Str;
+    raw_string_ostream OS(Str);
+    Binary.writeAsBinary(OS);
+    OS.flush();
+    Data.assign(Str.begin(), Str.end());
+  }
+}
 
 template <> void SymbolRecordImpl<Thunk32Sym>::map(IO &IO) {
   IO.mapRequired("Parent", Symbol.Parent);
@@ -461,7 +500,7 @@ static inline Expected<CodeViewYAML::SymbolRecord>
 fromCodeViewSymbolImpl(CVSymbol Symbol) {
   CodeViewYAML::SymbolRecord Result;
 
-  auto Impl = std::make_shared<SymbolRecordImpl<SymbolType>>(Symbol.kind());
+  auto Impl = std::make_shared<SymbolType>(Symbol.kind());
   if (auto EC = Impl->fromCodeViewSymbol(Symbol))
     return std::move(EC);
   Result.Symbol = Impl;
@@ -472,12 +511,13 @@ Expected<CodeViewYAML::SymbolRecord>
 CodeViewYAML::SymbolRecord::fromCodeViewSymbol(CVSymbol Symbol) {
 #define SYMBOL_RECORD(EnumName, EnumVal, ClassName)                            \
   case EnumName:                                                               \
-    return fromCodeViewSymbolImpl<ClassName>(Symbol);
+    return fromCodeViewSymbolImpl<SymbolRecordImpl<ClassName>>(Symbol);
 #define SYMBOL_RECORD_ALIAS(EnumName, EnumVal, AliasName, ClassName)           \
   SYMBOL_RECORD(EnumName, EnumVal, ClassName)
   switch (Symbol.kind()) {
 #include "llvm/DebugInfo/CodeView/CodeViewSymbols.def"
-  default: { llvm_unreachable("Unknown symbol kind!"); }
+  default:
+    return fromCodeViewSymbolImpl<UnknownSymbolRecord>(Symbol);
   }
   return make_error<CodeViewError>(cv_error_code::corrupt_record);
 }
@@ -486,7 +526,7 @@ template <typename ConcreteType>
 static void mapSymbolRecordImpl(IO &IO, const char *Class, SymbolKind Kind,
                                 CodeViewYAML::SymbolRecord &Obj) {
   if (!IO.outputting())
-    Obj.Symbol = std::make_shared<SymbolRecordImpl<ConcreteType>>(Kind);
+    Obj.Symbol = std::make_shared<ConcreteType>(Kind);
 
   IO.mapRequired(Class, *Obj.Symbol);
 }
@@ -500,12 +540,14 @@ void MappingTraits<CodeViewYAML::SymbolRecord>::mapping(
 
 #define SYMBOL_RECORD(EnumName, EnumVal, ClassName)                            \
   case EnumName:                                                               \
-    mapSymbolRecordImpl<ClassName>(IO, #ClassName, Kind, Obj);                 \
+    mapSymbolRecordImpl<SymbolRecordImpl<ClassName>>(IO, #ClassName, Kind,     \
+                                                     Obj);                     \
     break;
 #define SYMBOL_RECORD_ALIAS(EnumName, EnumVal, AliasName, ClassName)           \
   SYMBOL_RECORD(EnumName, EnumVal, ClassName)
   switch (Kind) {
 #include "llvm/DebugInfo/CodeView/CodeViewSymbols.def"
-  default: { llvm_unreachable("Unknown symbol kind!"); }
+  default:
+    mapSymbolRecordImpl<UnknownSymbolRecord>(IO, "UnknownSym", Kind, Obj);
   }
 }

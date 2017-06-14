@@ -1,0 +1,22 @@
+# RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=fiji -O0 -run-pass=legalizer -global-isel %s -o - | FileCheck %s
+
+--- |
+  define void @test_add() { ret void }
+...
+
+---
+name:            test_add
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body: |
+  bb.0:
+    liveins: %vgpr0, %vgpr1
+    ; CHECK-LABEL: name: test_add
+    ; CHECK: %2(s32) = G_ADD %0, %1
+
+    %0(s32) = COPY %vgpr0
+    %1(s32) = COPY %vgpr1
+    %2(s32) = G_ADD %0, %1
+...

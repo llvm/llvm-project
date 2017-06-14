@@ -158,7 +158,7 @@ public:
 
 private:
   /// Parse metadata from the module
-  // FIXME: it only parses "Linker Options" metadata at the moment
+  // FIXME: it only parses "llvm.linker.options" metadata at the moment
   void parseMetadata();
 
   /// Parse the symbols from the module and model-level ASM and add them to

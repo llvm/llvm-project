@@ -35,6 +35,7 @@ public:
 
   uint32_t getStreamSize() const;
 
+  bool containsIdStream() const;
   PdbRaw_ImplVer getVersion() const;
   uint32_t getSignature() const;
   uint32_t getAge() const;

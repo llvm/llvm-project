@@ -493,6 +493,19 @@
 # FIXME:    divweuo 2, 3, 4
 # FIXME:    divweuo. 2, 3, 4
 
+# CHECK-BE: modsw 2, 3, 4                   # encoding: [0x7c,0x43,0x26,0x16]
+# CHECK-LE: modsw 2, 3, 4                   # encoding: [0x16,0x26,0x43,0x7c]
+            modsw 2, 3, 4
+# CHECK-BE: moduw 2, 3, 4                   # encoding: [0x7c,0x43,0x22,0x16]
+# CHECK-LE: moduw 2, 3, 4                   # encoding: [0x16,0x22,0x43,0x7c]
+            moduw 2, 3, 4
+# CHECK-BE: modsd 2, 3, 4                   # encoding: [0x7c,0x43,0x26,0x12]
+# CHECK-LE: modsd 2, 3, 4                   # encoding: [0x12,0x26,0x43,0x7c]
+            modsd 2, 3, 4
+# CHECK-BE: modud 2, 3, 4                   # encoding: [0x7c,0x43,0x22,0x12]
+# CHECK-LE: modud 2, 3, 4                   # encoding: [0x12,0x22,0x43,0x7c]
+            modud 2, 3, 4
+
 # CHECK-BE: mulld 2, 3, 4                   # encoding: [0x7c,0x43,0x21,0xd2]
 # CHECK-LE: mulld 2, 3, 4                   # encoding: [0xd2,0x21,0x43,0x7c]
             mulld 2, 3, 4

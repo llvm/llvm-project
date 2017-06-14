@@ -151,21 +151,21 @@ bool PrettyClassLayoutGraphicalDumper::shouldRecurse() const {
 }
 
 void PrettyClassLayoutGraphicalDumper::dump(const PDBSymbolData &Symbol) {
-  assert(CurrentItem != nullptr);
-
-  DataMemberLayoutItem &Layout =
-      static_cast<DataMemberLayoutItem &>(*CurrentItem);
-
   VariableDumper VarDumper(Printer);
   VarDumper.start(Symbol, ClassOffsetZero);
 
-  if (Layout.hasUDTLayout() && shouldRecurse()) {
-    uint32_t ChildOffsetZero = ClassOffsetZero + Layout.getOffsetInParent();
-    Printer.Indent();
-    PrettyClassLayoutGraphicalDumper TypeDumper(Printer, RecursionLevel + 1,
-                                                ChildOffsetZero);
-    TypeDumper.start(Layout.getUDTLayout());
-    Printer.Unindent();
+  if (CurrentItem != nullptr) {
+    DataMemberLayoutItem &Layout =
+        static_cast<DataMemberLayoutItem &>(*CurrentItem);
+
+    if (Layout.hasUDTLayout() && shouldRecurse()) {
+      uint32_t ChildOffsetZero = ClassOffsetZero + Layout.getOffsetInParent();
+      Printer.Indent();
+      PrettyClassLayoutGraphicalDumper TypeDumper(Printer, RecursionLevel + 1,
+                                                  ChildOffsetZero);
+      TypeDumper.start(Layout.getUDTLayout());
+      Printer.Unindent();
+    }
   }
 
   DumpedAnything = true;

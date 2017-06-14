@@ -3026,7 +3026,7 @@ bool llvm::getConstantDataArrayInfo(const Value *V,
   if (GV->getInitializer()->isNullValue()) {
     Type *GVTy = GV->getValueType();
     if ( (ArrayTy = dyn_cast<ArrayType>(GVTy)) ) {
-      // A zeroinitializer for the array; There is no ConstantDataArray.
+      // A zeroinitializer for the array; there is no ConstantDataArray.
       Array = nullptr;
     } else {
       const DataLayout &DL = GV->getParent()->getDataLayout();

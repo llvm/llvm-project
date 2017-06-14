@@ -569,8 +569,7 @@ SlotIndex SplitEditor::buildCopy(unsigned FromReg, unsigned ToReg,
 
   // Greedy heuristic: Keep iterating keeping the best covering subreg index
   // each time.
-  LaneBitmask LanesLeft =
-      LaneMask & ~(TRI.getSubRegIndexLaneMask(BestCover));
+  LaneBitmask LanesLeft = LaneMask & ~(TRI.getSubRegIndexLaneMask(BestIdx));
   while (LanesLeft.any()) {
     unsigned BestIdx = 0;
     int BestCover = INT_MIN;

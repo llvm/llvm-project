@@ -1,0 +1,59 @@
+// Check that cvtres properly generates COFF for different machine types. The
+// only things that changes with machine type are the machine constant listed
+// in the COFF header, and the relocation types in the relocation tables.
+// The input was generated with the following command, using the original Windows
+// rc.exe:
+// > rc /fo test_resource.res /nologo test_resource.rc
+// The object files we are comparing against were generated with these commands
+// using the original Windows cvtres.exe.
+// > cvtres /machine:X86 /readonly /nologo /out:test_resource.obj.coff \ 
+// 	 test_resource.res
+// > cvtres /machine:X64 /readonly /nologo /out:test_resource.obj.coff.x64 \ 
+// 	 test_resource.res
+// > cvtres /machine:ARM /readonly /nologo /out:test_resource.obj.coff.x64 \ 
+// 	 test_resource.res
+
+RUN: llvm-cvtres /machine:X86 /out:%t %p/Inputs/test_resource.res
+RUN: llvm-readobj -h -relocations %t | FileCheck %s -check-prefix=X86
+
+RUN: llvm-cvtres /machine:X64 /out:%t %p/Inputs/test_resource.res
+RUN: llvm-readobj -h -relocations %t | FileCheck %s -check-prefix=X64
+
+RUN: llvm-cvtres /machine:ARM /out:%t %p/Inputs/test_resource.res
+RUN: llvm-readobj -h -relocations %t | FileCheck %s -check-prefix=ARM
+
+X86:         Machine: IMAGE_FILE_MACHINE_I386 (0x14C)
+X86-DAG:   Relocations [
+X86-DAG:                 .rsrc$01 {
+X86-NEXT:      0x1E8 IMAGE_REL_I386_DIR32NB $R000000
+X86-NEXT:      0x198 IMAGE_REL_I386_DIR32NB $R000018
+X86-NEXT:      0x1A8 IMAGE_REL_I386_DIR32NB $R000340
+X86-NEXT:      0x1C8 IMAGE_REL_I386_DIR32NB $R000668
+X86-NEXT:      0x1D8 IMAGE_REL_I386_DIR32NB $R000698
+X86-NEXT:      0x1F8 IMAGE_REL_I386_DIR32NB $R000708
+X86-NEXT:      0x1B8 IMAGE_REL_I386_DIR32NB $R000720
+X86-NEXT:      0x188 IMAGE_REL_I386_DIR32NB $R000750
+
+X64:         Machine: IMAGE_FILE_MACHINE_AMD64 (0x8664)
+X64-DAG:   Relocations [
+X64-DAG:                 .rsrc$01 {
+X64-NEXT:      0x1E8 IMAGE_REL_AMD64_ADDR32NB $R000000
+X64-NEXT:      0x198 IMAGE_REL_AMD64_ADDR32NB $R000018
+X64-NEXT:      0x1A8 IMAGE_REL_AMD64_ADDR32NB $R000340
+X64-NEXT:      0x1C8 IMAGE_REL_AMD64_ADDR32NB $R000668
+X64-NEXT:      0x1D8 IMAGE_REL_AMD64_ADDR32NB $R000698
+X64-NEXT:      0x1F8 IMAGE_REL_AMD64_ADDR32NB $R000708
+X64-NEXT:      0x1B8 IMAGE_REL_AMD64_ADDR32NB $R000720
+X64-NEXT:      0x188 IMAGE_REL_AMD64_ADDR32NB $R000750
+
+ARM:         Machine: IMAGE_FILE_MACHINE_ARMNT (0x1C4)
+ARM-DAG:   Relocations [
+ARM-DAG:                 .rsrc$01 {
+ARM-NEXT:      0x1E8 IMAGE_REL_ARM_ADDR32NB $R000000
+ARM-NEXT:      0x198 IMAGE_REL_ARM_ADDR32NB $R000018
+ARM-NEXT:      0x1A8 IMAGE_REL_ARM_ADDR32NB $R000340
+ARM-NEXT:      0x1C8 IMAGE_REL_ARM_ADDR32NB $R000668
+ARM-NEXT:      0x1D8 IMAGE_REL_ARM_ADDR32NB $R000698
+ARM-NEXT:      0x1F8 IMAGE_REL_ARM_ADDR32NB $R000708
+ARM-NEXT:      0x1B8 IMAGE_REL_ARM_ADDR32NB $R000720
+ARM-NEXT:      0x188 IMAGE_REL_ARM_ADDR32NB $R000750

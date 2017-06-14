@@ -49,7 +49,6 @@ public:
   void setPdbDllRbld(uint16_t R);
   void setFlags(uint16_t F);
   void setMachineType(PDB_Machine M);
-  void setSectionContribs(ArrayRef<SectionContrib> SecMap);
   void setSectionMap(ArrayRef<SecMapEntry> SecMap);
 
   // Add given bytes as a new stream.
@@ -65,10 +64,8 @@ public:
 
   Error commit(const msf::MSFLayout &Layout, WritableBinaryStreamRef MsfBuffer);
 
-  // A helper function to create Section Contributions from COFF input
-  // section headers.
-  static std::vector<SectionContrib>
-  createSectionContribs(ArrayRef<llvm::object::coff_section> SecHdrs);
+  void addSectionContrib(DbiModuleDescriptorBuilder *ModuleDbi,
+                         const llvm::object::coff_section *SecHdr);
 
   // A helper function to create a Section Map from a COFF section header.
   static std::vector<SecMapEntry>
@@ -112,7 +109,7 @@ private:
 
   WritableBinaryStreamRef NamesBuffer;
   MutableBinaryByteStream FileInfoBuffer;
-  ArrayRef<SectionContrib> SectionContribs;
+  std::vector<SectionContrib> SectionContribs;
   ArrayRef<SecMapEntry> SectionMap;
   llvm::SmallVector<DebugStream, (int)DbgHeaderType::Max> DbgStreams;
 };

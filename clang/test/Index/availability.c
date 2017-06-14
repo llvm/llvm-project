@@ -8,13 +8,15 @@ enum {
 
 enum {
   old_enum_plat
-} __attribute__((availability(macosx,introduced=10.4,deprecated=10.5,obsoleted=10.7)
+} __attribute__((availability(macosx,introduced=10.4,deprecated=10.5,obsoleted=10.7)));
 
-// RUN: c-index-test -test-load-source all %s > %t
-// RUN: FileCheck -check-prefix=CHECK-1 %s < %t
-// RUN: FileCheck -check-prefix=CHECK-2 %s < %t
-// CHECK-1: (ios, introduced=3.2, deprecated=4.1) 
-// CHECK-2: (macos, introduced=10.4, deprecated=10.5, obsoleted=10.7)
+void bar(void) __attribute__((availability(macosx,introduced=10.4))) __attribute__((availability(macosx,obsoleted=10.6))) __attribute__((availability(ios,introduced=3.2))) __attribute__((availability(macosx,deprecated=10.5,message="use foobar")));
 
-// CHECK-2: EnumConstantDecl=old_enum:6:3 (Definition) (deprecated)
-// CHECK-2: EnumConstantDecl=old_enum_plat:10:3 {{.*}} (macos, introduced=10.4, deprecated=10.5, obsoleted=10.7)
+void bar2(void) __attribute__((availability(macosx,introduced=10.4,deprecated=10.5,obsoleted=10.7))) __attribute__((availability(ios,introduced=3.2,deprecated=10.0))) __attribute__((availability(macosx,introduced=10.4,deprecated=10.5,obsoleted=10.7))) __attribute__((availability(ios,introduced=3.2,deprecated=10.0)));
+
+// RUN: c-index-test -test-load-source all %s | FileCheck %s
+// CHECK: FunctionDecl=foo:3:6{{.*}}(ios, introduced=3.2, deprecated=4.1) (macos, introduced=10.4, deprecated=10.5, obsoleted=10.7)
+// CHECK: EnumConstantDecl=old_enum:6:3 (Definition) (deprecated)
+// CHECK: EnumConstantDecl=old_enum_plat:10:3 {{.*}} (macos, introduced=10.4, deprecated=10.5, obsoleted=10.7)
+// CHECK: FunctionDecl=bar:13:6{{.*}}(ios, introduced=3.2) (macos, introduced=10.4, deprecated=10.5, obsoleted=10.6, message="use foobar")
+// CHECK: FunctionDecl=bar2:15:6{{.*}}(ios, introduced=3.2, deprecated=10.0) (macos, introduced=10.4, deprecated=10.5, obsoleted=10.7)

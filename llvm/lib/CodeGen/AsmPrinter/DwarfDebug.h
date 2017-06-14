@@ -134,6 +134,13 @@ public:
     assert(!FrameIndexExprs.empty() && "Expected an MMI entry");
     assert(!V.FrameIndexExprs.empty() && "Expected an MMI entry");
 
+    if (FrameIndexExprs.size()) {
+      auto *Expr = FrameIndexExprs.back().Expr;
+      // Get rid of duplicate non-fragment entries. More than one non-fragment
+      // dbg.declare makes no sense so ignore all but the first.
+      if (!Expr || !Expr->isFragment())
+        return;
+    }
     FrameIndexExprs.append(V.FrameIndexExprs.begin(), V.FrameIndexExprs.end());
     assert(all_of(FrameIndexExprs,
                   [](FrameIndexExpr &FIE) {

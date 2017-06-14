@@ -1,4 +1,4 @@
-//===- llvm/ADT/ilist_iterator.h - Intrusive List Iterator -------*- C++ -*-==//
+//===- llvm/ADT/ilist_iterator.h - Intrusive List Iterator ------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -23,28 +23,30 @@ namespace ilist_detail {
 /// Find const-correct node types.
 template <class OptionsT, bool IsConst> struct IteratorTraits;
 template <class OptionsT> struct IteratorTraits<OptionsT, false> {
-  typedef typename OptionsT::value_type value_type;
-  typedef typename OptionsT::pointer pointer;
-  typedef typename OptionsT::reference reference;
-  typedef ilist_node_impl<OptionsT> *node_pointer;
-  typedef ilist_node_impl<OptionsT> &node_reference;
+  using value_type = typename OptionsT::value_type;
+  using pointer = typename OptionsT::pointer;
+  using reference = typename OptionsT::reference;
+  using node_pointer = ilist_node_impl<OptionsT> *;
+  using node_reference = ilist_node_impl<OptionsT> &;
 };
 template <class OptionsT> struct IteratorTraits<OptionsT, true> {
-  typedef const typename OptionsT::value_type value_type;
-  typedef typename OptionsT::const_pointer pointer;
-  typedef typename OptionsT::const_reference reference;
-  typedef const ilist_node_impl<OptionsT> *node_pointer;
-  typedef const ilist_node_impl<OptionsT> &node_reference;
+  using value_type = const typename OptionsT::value_type;
+  using pointer = typename OptionsT::const_pointer;
+  using reference = typename OptionsT::const_reference;
+  using node_pointer = const ilist_node_impl<OptionsT> *;
+  using node_reference = const ilist_node_impl<OptionsT> &;
 };
 
 template <bool IsReverse> struct IteratorHelper;
 template <> struct IteratorHelper<false> : ilist_detail::NodeAccess {
-  typedef ilist_detail::NodeAccess Access;
+  using Access = ilist_detail::NodeAccess;
+
   template <class T> static void increment(T *&I) { I = Access::getNext(*I); }
   template <class T> static void decrement(T *&I) { I = Access::getPrev(*I); }
 };
 template <> struct IteratorHelper<true> : ilist_detail::NodeAccess {
-  typedef ilist_detail::NodeAccess Access;
+  using Access = ilist_detail::NodeAccess;
+
   template <class T> static void increment(T *&I) { I = Access::getPrev(*I); }
   template <class T> static void decrement(T *&I) { I = Access::getNext(*I); }
 };
@@ -58,24 +60,23 @@ class ilist_iterator : ilist_detail::SpecificNodeAccess<OptionsT> {
   friend ilist_iterator<OptionsT, !IsReverse, IsConst>;
   friend ilist_iterator<OptionsT, !IsReverse, !IsConst>;
 
-  typedef ilist_detail::IteratorTraits<OptionsT, IsConst> Traits;
-  typedef ilist_detail::SpecificNodeAccess<OptionsT> Access;
+  using Traits = ilist_detail::IteratorTraits<OptionsT, IsConst>;
+  using Access = ilist_detail::SpecificNodeAccess<OptionsT>;
 
 public:
-  typedef typename Traits::value_type value_type;
-  typedef typename Traits::pointer pointer;
-  typedef typename Traits::reference reference;
-  typedef ptrdiff_t difference_type;
-  typedef std::bidirectional_iterator_tag iterator_category;
-
-  typedef typename OptionsT::const_pointer const_pointer;
-  typedef typename OptionsT::const_reference const_reference;
+  using value_type = typename Traits::value_type;
+  using pointer = typename Traits::pointer;
+  using reference = typename Traits::reference;
+  using difference_type = ptrdiff_t;
+  using iterator_category = std::bidirectional_iterator_tag;
+  using const_pointer = typename OptionsT::const_pointer;
+  using const_reference = typename OptionsT::const_reference;
 
 private:
-  typedef typename Traits::node_pointer node_pointer;
-  typedef typename Traits::node_reference node_reference;
+  using node_pointer = typename Traits::node_pointer;
+  using node_reference = typename Traits::node_reference;
 
-  node_pointer NodePtr;
+  node_pointer NodePtr = nullptr;
 
 public:
   /// Create from an ilist_node.
@@ -83,7 +84,7 @@ public:
 
   explicit ilist_iterator(pointer NP) : NodePtr(Access::getNodePtr(NP)) {}
   explicit ilist_iterator(reference NR) : NodePtr(Access::getNodePtr(&NR)) {}
-  ilist_iterator() : NodePtr(nullptr) {}
+  ilist_iterator() = default;
 
   // This is templated so that we can allow constructing a const iterator from
   // a nonconst iterator...
@@ -184,8 +185,8 @@ template <typename From> struct simplify_type;
 /// FIXME: remove this, since there is no implicit conversion to NodeTy.
 template <class OptionsT, bool IsConst>
 struct simplify_type<ilist_iterator<OptionsT, false, IsConst>> {
-  typedef ilist_iterator<OptionsT, false, IsConst> iterator;
-  typedef typename iterator::pointer SimpleType;
+  using iterator = ilist_iterator<OptionsT, false, IsConst>;
+  using SimpleType = typename iterator::pointer;
 
   static SimpleType getSimplifiedValue(const iterator &Node) { return &*Node; }
 };

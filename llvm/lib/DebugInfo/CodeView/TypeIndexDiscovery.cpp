@@ -34,7 +34,7 @@ static inline PointerMode getPointerMode(uint32_t Attrs) {
 static inline bool isMemberPointer(uint32_t Attrs) {
   PointerMode Mode = getPointerMode(Attrs);
   return Mode == PointerMode::PointerToDataMember ||
-         Mode == PointerMode::PointerToDataMember;
+         Mode == PointerMode::PointerToMemberFunction;
 }
 
 static inline uint32_t getEncodedIntegerLength(ArrayRef<uint8_t> Data) {

@@ -59,9 +59,7 @@ namespace {
   public:
     static char ID;
 
-    HexagonGenMux() : MachineFunctionPass(ID), HII(nullptr), HRI(nullptr) {
-      initializeHexagonGenMuxPass(*PassRegistry::getPassRegistry());
-    }
+    HexagonGenMux() : MachineFunctionPass(ID) {}
 
     StringRef getPassName() const override {
       return "Hexagon generate mux instructions";
@@ -79,8 +77,8 @@ namespace {
     }
 
   private:
-    const HexagonInstrInfo *HII;
-    const HexagonRegisterInfo *HRI;
+    const HexagonInstrInfo *HII = nullptr;
+    const HexagonRegisterInfo *HRI = nullptr;
 
     struct CondsetInfo {
       unsigned PredR = 0;
@@ -134,7 +132,7 @@ namespace {
 
 } // end anonymous namespace
 
-INITIALIZE_PASS(HexagonGenMux, "hexagon-mux",
+INITIALIZE_PASS(HexagonGenMux, "hexagon-gen-mux",
   "Hexagon generate mux instructions", false, false)
 
 void HexagonGenMux::getSubRegs(unsigned Reg, BitVector &SRs) const {
@@ -297,12 +295,15 @@ bool HexagonGenMux::genMuxInBlock(MachineBasicBlock &B) {
     unsigned SR1 = Src1->isReg() ? Src1->getReg() : 0;
     unsigned SR2 = Src2->isReg() ? Src2->getReg() : 0;
     bool Failure = false, CanUp = true, CanDown = true;
+    bool Used1 = false, Used2 = false;
     for (unsigned X = MinX+1; X < MaxX; X++) {
       const DefUseInfo &DU = DUM.lookup(X);
       if (DU.Defs[PR] || DU.Defs[DR] || DU.Uses[DR]) {
         Failure = true;
         break;
       }
+      Used1 |= DU.Uses[SR1];
+      Used2 |= DU.Uses[SR2];
       if (CanDown && DU.Defs[SR1])
         CanDown = false;
       if (CanUp && DU.Defs[SR2])
@@ -316,6 +317,15 @@ bool HexagonGenMux::genMuxInBlock(MachineBasicBlock &B) {
     // Prefer "down", since this will move the MUX farther away from the
     // predicate definition.
     MachineBasicBlock::iterator At = CanDown ? Def2 : Def1;
+    if (!CanDown) {
+      // If the MUX is placed "up", it shouldn't kill any source registers
+      // that are still used afterwards. We can reset the kill flags directly
+      // on the operands, because the source instructions will be erased.
+      if (Used1 && Src1->isReg())
+        Src1->setIsKill(false);
+      if (Used2 && Src2->isReg())
+        Src2->setIsKill(false);
+    }
     ML.push_back(MuxInfo(At, DR, PR, SrcT, SrcF, Def1, Def2));
   }
 

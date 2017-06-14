@@ -41,6 +41,9 @@ OutputSection *Out::PreinitArray;
 OutputSection *Out::InitArray;
 OutputSection *Out::FiniArray;
 
+std::vector<OutputSection *> elf::OutputSections;
+std::vector<OutputSectionCommand *> elf::OutputSectionCommands;
+
 uint32_t OutputSection::getPhdrFlags() const {
   uint32_t Ret = PF_R;
   if (Flags & SHF_WRITE)

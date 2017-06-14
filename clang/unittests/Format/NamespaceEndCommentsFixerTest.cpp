@@ -185,6 +185,41 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsEndComment) {
                                     "}\n"
                                     "}"));
 
+  // Add comment for namespaces which will be 'compacted'
+  FormatStyle CompactNamespacesStyle = getLLVMStyle();
+  CompactNamespacesStyle.CompactNamespaces = true;
+  EXPECT_EQ("namespace out { namespace in {\n"
+            "int i;\n"
+            "int j;\n"
+            "}}// namespace out::in",
+            fixNamespaceEndComments("namespace out { namespace in {\n"
+                                    "int i;\n"
+                                    "int j;\n"
+                                    "}}",
+                                    CompactNamespacesStyle));
+  EXPECT_EQ("namespace out {\n"
+            "namespace in {\n"
+            "int i;\n"
+            "int j;\n"
+            "}\n"
+            "}// namespace out::in",
+            fixNamespaceEndComments("namespace out {\n"
+                                    "namespace in {\n"
+                                    "int i;\n"
+                                    "int j;\n"
+                                    "}\n"
+                                    "}",
+                                    CompactNamespacesStyle));
+  EXPECT_EQ("namespace out { namespace in {\n"
+            "int i;\n"
+            "int j;\n"
+            "};}// namespace out::in",
+            fixNamespaceEndComments("namespace out { namespace in {\n"
+                                    "int i;\n"
+                                    "int j;\n"
+                                    "};}",
+                                    CompactNamespacesStyle));
+
   // Adds an end comment after a semicolon.
   EXPECT_EQ("namespace {\n"
             "  int i;\n"
@@ -388,6 +423,27 @@ TEST_F(NamespaceEndCommentsFixerTest, UpdatesInvalidEndLineComment) {
             fixNamespaceEndComments("namespace A {} // namespace"));
   EXPECT_EQ("namespace A {}; // namespace A",
             fixNamespaceEndComments("namespace A {}; // namespace"));
+
+  // Update invalid comments for compacted namespaces.
+  FormatStyle CompactNamespacesStyle = getLLVMStyle();
+  CompactNamespacesStyle.CompactNamespaces = true;
+  EXPECT_EQ("namespace out { namespace in {\n"
+            "}} // namespace out::in",
+            fixNamespaceEndComments("namespace out { namespace in {\n"
+                                    "}} // namespace out",
+                                    CompactNamespacesStyle));
+  EXPECT_EQ("namespace out { namespace in {\n"
+            "}} // namespace out::in",
+            fixNamespaceEndComments("namespace out { namespace in {\n"
+                                    "}} // namespace in",
+                                    CompactNamespacesStyle));
+  EXPECT_EQ("namespace out { namespace in {\n"
+            "}\n"
+            "} // namespace out::in",
+            fixNamespaceEndComments("namespace out { namespace in {\n"
+                                    "}// banamespace in\n"
+                                    "} // namespace out",
+                                    CompactNamespacesStyle));
 }
 
 TEST_F(NamespaceEndCommentsFixerTest, UpdatesInvalidEndBlockComment) {

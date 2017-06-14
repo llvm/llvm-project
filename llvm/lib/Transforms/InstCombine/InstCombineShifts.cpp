@@ -682,11 +682,11 @@ Instruction *InstCombiner::visitLShr(BinaryOperator &I) {
       return BinaryOperator::CreateAnd(X, ConstantInt::get(Ty, Mask));
     }
 
-    if (match(Op0, m_SExt(m_Value(X)))) {
+    if (match(Op0, m_SExt(m_Value(X))) &&
+        (!Ty->isIntegerTy() || shouldChangeType(Ty, X->getType()))) {
       // Are we moving the sign bit to the low bit and widening with high zeros?
       unsigned SrcTyBitWidth = X->getType()->getScalarSizeInBits();
-      if (ShAmt == BitWidth - 1 &&
-          (!Ty->isIntegerTy() || shouldChangeType(Ty, X->getType()))) {
+      if (ShAmt == BitWidth - 1) {
         // lshr (sext i1 X to iN), N-1 --> zext X to iN
         if (SrcTyBitWidth == 1)
           return new ZExtInst(X, Ty);
@@ -698,7 +698,13 @@ Instruction *InstCombiner::visitLShr(BinaryOperator &I) {
         }
       }
 
-      // TODO: Convert to ashr+zext if the shift equals the extension amount.
+      // lshr (sext iM X to iN), N-M --> zext (ashr X, min(N-M, M-1)) to iN
+      if (ShAmt == BitWidth - SrcTyBitWidth && Op0->hasOneUse()) {
+        // The new shift amount can't be more than the narrow source type.
+        unsigned NewShAmt = std::min(ShAmt, SrcTyBitWidth - 1);
+        Value *AShr = Builder->CreateAShr(X, NewShAmt);
+        return new ZExtInst(AShr, Ty);
+      }
     }
 
     if (match(Op0, m_LShr(m_Value(X), m_APInt(ShOp1)))) {

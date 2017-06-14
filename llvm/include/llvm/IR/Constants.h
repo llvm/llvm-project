@@ -68,10 +68,7 @@ protected:
   void *operator new(size_t s) { return User::operator new(s, 0); }
 
 public:
-  ConstantData() = delete;
   ConstantData(const ConstantData &) = delete;
-
-  void *operator new(size_t, unsigned) = delete;
 
   /// Methods to support type inquiry through isa, cast, and dyn_cast.
   static bool classof(const Value *V) {
@@ -691,8 +688,6 @@ class ConstantDataArray final : public ConstantDataSequential {
 public:
   ConstantDataArray(const ConstantDataArray &) = delete;
 
-  void *operator new(size_t, unsigned) = delete;
-
   /// get() constructors - Return a constant with array type with an element
   /// count and element type matching the ArrayRef passed in.  Note that this
   /// can return a ConstantAggregateZero object.
@@ -751,8 +746,6 @@ class ConstantDataVector final : public ConstantDataSequential {
 
 public:
   ConstantDataVector(const ConstantDataVector &) = delete;
-
-  void *operator new(size_t, unsigned) = delete;
 
   /// get() constructors - Return a constant with vector type with an element
   /// count and element type matching the ArrayRef passed in.  Note that this
@@ -830,8 +823,6 @@ class BlockAddress final : public Constant {
   Value *handleOperandChangeImpl(Value *From, Value *To);
 
 public:
-  void *operator new(size_t, unsigned) = delete;
-
   /// Return a BlockAddress for the specified function and basic block.
   static BlockAddress *get(Function *F, BasicBlock *BB);
 

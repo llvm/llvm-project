@@ -4,7 +4,7 @@
 // Test that custom annoations provide normal mutex synchronization
 // (no race reports for properly protected critical sections).
 
-Mutex mu;
+Mutex mu(true, 0);
 long data;
 
 void *thr(void *arg) {

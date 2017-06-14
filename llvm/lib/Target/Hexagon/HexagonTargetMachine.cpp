@@ -111,6 +111,7 @@ namespace llvm {
   extern char &HexagonExpandCondsetsID;
   void initializeHexagonExpandCondsetsPass(PassRegistry&);
   void initializeHexagonLoopIdiomRecognizePass(PassRegistry&);
+  void initializeHexagonGenMuxPass(PassRegistry&);
   void initializeHexagonOptAddrModePass(PassRegistry&);
   Pass *createHexagonLoopIdiomPass();
 
@@ -152,8 +153,11 @@ static Reloc::Model getEffectiveRelocModel(Optional<Reloc::Model> RM) {
 extern "C" void LLVMInitializeHexagonTarget() {
   // Register the target.
   RegisterTargetMachine<HexagonTargetMachine> X(getTheHexagonTarget());
-  initializeHexagonLoopIdiomRecognizePass(*PassRegistry::getPassRegistry());
-  initializeHexagonOptAddrModePass(*PassRegistry::getPassRegistry());
+
+  PassRegistry &PR = *PassRegistry::getPassRegistry();
+  initializeHexagonLoopIdiomRecognizePass(PR);
+  initializeHexagonGenMuxPass(PR);
+  initializeHexagonOptAddrModePass(PR);
 }
 
 HexagonTargetMachine::HexagonTargetMachine(const Target &T, const Triple &TT,

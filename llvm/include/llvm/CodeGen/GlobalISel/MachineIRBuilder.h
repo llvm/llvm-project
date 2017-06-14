@@ -40,8 +40,8 @@ class MachineIRBuilder {
   MachineFunction *MF;
   /// Information used to access the description of the opcodes.
   const TargetInstrInfo *TII;
-  /// Information used to verify types are consistent.
-  const MachineRegisterInfo *MRI;
+  /// Information used to verify types are consistent and to create virtual registers.
+  MachineRegisterInfo *MRI;
   /// Debug location to be set to any instruction we create.
   DebugLoc DL;
 
@@ -228,6 +228,26 @@ public:
   /// \return a MachineInstrBuilder for the newly created instruction.
   MachineInstrBuilder buildGEP(unsigned Res, unsigned Op0,
                                unsigned Op1);
+
+  /// Materialize and insert \p Res<def> = G_GEP \p Op0, (G_CONSTANT \p Value)
+  ///
+  /// G_GEP adds \p Value bytes to the pointer specified by \p Op0,
+  /// storing the resulting pointer in \p Res. If \p Value is zero then no
+  /// G_GEP or G_CONSTANT will be created and \pre Op0 will be assigned to
+  /// \p Res.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre \p Op0 must be a generic virtual register with pointer type.
+  /// \pre \p ValueTy must be a scalar type.
+  /// \pre \p Res must be 0. This is to detect confusion between
+  ///      materializeGEP() and buildGEP().
+  /// \post \p Res will either be a new generic virtual register of the same
+  ///       type as \p Op0 or \p Op0 itself.
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  Optional<MachineInstrBuilder> materializeGEP(unsigned &Res, unsigned Op0,
+                                               const LLT &ValueTy,
+                                               uint64_t Value);
 
   /// Build and insert \p Res<def> = G_PTR_MASK \p Op0, \p NumBits
   ///

@@ -9242,6 +9242,7 @@ void ASTReader::diagnoseOdrViolations() {
 
       // Used with err_module_odr_violation_mismatch_decl and
       // note_module_odr_violation_mismatch_decl
+      // This list should be the same Decl's as in ODRHash::isWhiteListedDecl
       enum {
         EndOfClass,
         PublicSpecifer,
@@ -9250,6 +9251,8 @@ void ASTReader::diagnoseOdrViolations() {
         StaticAssert,
         Field,
         CXXMethod,
+        TypeAlias,
+        TypeDef,
         Other
       } FirstDiffType = Other,
         SecondDiffType = Other;
@@ -9277,6 +9280,10 @@ void ASTReader::diagnoseOdrViolations() {
           return Field;
         case Decl::CXXMethod:
           return CXXMethod;
+        case Decl::TypeAlias:
+          return TypeAlias;
+        case Decl::Typedef:
+          return TypeDef;
         }
       };
 
@@ -9373,6 +9380,8 @@ void ASTReader::diagnoseOdrViolations() {
         MethodNumberParameters,
         MethodParameterType,
         MethodParameterName,
+        TypedefName,
+        TypedefType,
       };
 
       // These lambdas have the common portions of the ODR diagnostics.  This
@@ -9746,6 +9755,38 @@ void ASTReader::diagnoseOdrViolations() {
           break;
         }
 
+        break;
+      }
+      case TypeAlias:
+      case TypeDef: {
+        TypedefNameDecl *FirstTD = cast<TypedefNameDecl>(FirstDecl);
+        TypedefNameDecl *SecondTD = cast<TypedefNameDecl>(SecondDecl);
+        auto FirstName = FirstTD->getDeclName();
+        auto SecondName = SecondTD->getDeclName();
+        if (FirstName != SecondName) {
+          ODRDiagError(FirstTD->getLocation(), FirstTD->getSourceRange(),
+                       TypedefName)
+              << (FirstDiffType == TypeAlias) << FirstName;
+          ODRDiagNote(SecondTD->getLocation(), SecondTD->getSourceRange(),
+                      TypedefName)
+              << (FirstDiffType == TypeAlias) << SecondName;
+          Diagnosed = true;
+          break;
+        }
+
+        QualType FirstType = FirstTD->getUnderlyingType();
+        QualType SecondType = SecondTD->getUnderlyingType();
+        if (ComputeQualTypeODRHash(FirstType) !=
+            ComputeQualTypeODRHash(SecondType)) {
+          ODRDiagError(FirstTD->getLocation(), FirstTD->getSourceRange(),
+                       TypedefType)
+              << (FirstDiffType == TypeAlias) << FirstName << FirstType;
+          ODRDiagNote(SecondTD->getLocation(), SecondTD->getSourceRange(),
+                      TypedefType)
+              << (FirstDiffType == TypeAlias) << SecondName << SecondType;
+          Diagnosed = true;
+          break;
+        }
         break;
       }
       }

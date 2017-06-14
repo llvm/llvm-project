@@ -84,8 +84,8 @@ attributes #4 = { nounwind }
 !13 = !DILocation(line: 5, column: 3, scope: !6)
 !14 = !DILocation(line: 6, column: 3, scope: !6)
 
-; CHECK-DAG: ![[X1_EXPR]] = !DIExpression(DW_OP_deref, DW_OP_minus, 4)
-; CHECK-DAG: ![[X2_EXPR]] = !DIExpression(DW_OP_deref, DW_OP_minus, 8)
+; CHECK-DAG: ![[X1_EXPR]] = !DIExpression(DW_OP_deref, DW_OP_constu, 4, DW_OP_minus)
+; CHECK-DAG: ![[X2_EXPR]] = !DIExpression(DW_OP_deref, DW_OP_constu, 8, DW_OP_minus)
 !15 = !DIExpression(DW_OP_deref)
 !16 = !DILocation(line: 5, column: 7, scope: !6)
 !17 = !DILocation(line: 8, column: 3, scope: !6)
@@ -95,4 +95,4 @@ attributes #4 = { nounwind }
 !21 = !DILocation(line: 10, column: 1, scope: !22)
 !22 = !DILexicalBlockFile(scope: !6, file: !1, discriminator: 1)
 !23 = !DIExpression()
-!24 = !DIExpression(DW_OP_minus, 42)
+!24 = !DIExpression(DW_OP_constu, 42, DW_OP_minus)
