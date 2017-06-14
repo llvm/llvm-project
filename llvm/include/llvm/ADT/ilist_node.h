@@ -1,4 +1,4 @@
-//==-- llvm/ADT/ilist_node.h - Intrusive Linked List Helper ------*- C++ -*-==//
+//===- llvm/ADT/ilist_node.h - Intrusive Linked List Helper -----*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -21,11 +21,10 @@
 namespace llvm {
 
 namespace ilist_detail {
-struct NodeAccess;
-} // end namespace ilist_detail
 
-template<typename NodeTy>
-struct ilist_traits;
+struct NodeAccess;
+
+} // end namespace ilist_detail
 
 template <class OptionsT, bool IsReverse, bool IsConst> class ilist_iterator;
 template <class OptionsT> class ilist_sentinel;
@@ -39,9 +38,9 @@ template <class OptionsT> class ilist_sentinel;
 /// provide type safety: you can't insert nodes of \a ilist_node_impl into the
 /// wrong \a simple_ilist or \a iplist.
 template <class OptionsT> class ilist_node_impl : OptionsT::node_base_type {
-  typedef typename OptionsT::value_type value_type;
-  typedef typename OptionsT::node_base_type node_base_type;
-  typedef typename OptionsT::list_base_type list_base_type;
+  using value_type = typename OptionsT::value_type;
+  using node_base_type = typename OptionsT::node_base_type;
+  using list_base_type = typename OptionsT::list_base_type;
 
   friend typename OptionsT::list_base_type;
   friend struct ilist_detail::NodeAccess;
@@ -52,17 +51,18 @@ template <class OptionsT> class ilist_node_impl : OptionsT::node_base_type {
   friend class ilist_iterator<OptionsT, true, true>;
 
 protected:
-  ilist_node_impl() = default;
+  using self_iterator = ilist_iterator<OptionsT, false, false>;
+  using const_self_iterator = ilist_iterator<OptionsT, false, true>;
+  using reverse_self_iterator = ilist_iterator<OptionsT, true, false>;
+  using const_reverse_self_iterator = ilist_iterator<OptionsT, true, true>;
 
-  typedef ilist_iterator<OptionsT, false, false> self_iterator;
-  typedef ilist_iterator<OptionsT, false, true> const_self_iterator;
-  typedef ilist_iterator<OptionsT, true, false> reverse_self_iterator;
-  typedef ilist_iterator<OptionsT, true, true> const_reverse_self_iterator;
+  ilist_node_impl() = default;
 
 private:
   ilist_node_impl *getPrev() {
     return static_cast<ilist_node_impl *>(node_base_type::getPrev());
   }
+
   ilist_node_impl *getNext() {
     return static_cast<ilist_node_impl *>(node_base_type::getNext());
   }
@@ -70,6 +70,7 @@ private:
   const ilist_node_impl *getPrev() const {
     return static_cast<ilist_node_impl *>(node_base_type::getPrev());
   }
+
   const ilist_node_impl *getNext() const {
     return static_cast<ilist_node_impl *>(node_base_type::getNext());
   }
@@ -80,9 +81,11 @@ private:
 public:
   self_iterator getIterator() { return self_iterator(*this); }
   const_self_iterator getIterator() const { return const_self_iterator(*this); }
+
   reverse_self_iterator getReverseIterator() {
     return reverse_self_iterator(*this);
   }
+
   const_reverse_self_iterator getReverseIterator() const {
     return const_reverse_self_iterator(*this);
   }
@@ -151,6 +154,7 @@ class ilist_node
 };
 
 namespace ilist_detail {
+
 /// An access class for ilist_node private API.
 ///
 /// This gives access to the private parts of ilist nodes.  Nodes for an ilist
@@ -163,15 +167,18 @@ protected:
   static ilist_node_impl<OptionsT> *getNodePtr(typename OptionsT::pointer N) {
     return N;
   }
+
   template <class OptionsT>
   static const ilist_node_impl<OptionsT> *
   getNodePtr(typename OptionsT::const_pointer N) {
     return N;
   }
+
   template <class OptionsT>
   static typename OptionsT::pointer getValuePtr(ilist_node_impl<OptionsT> *N) {
     return static_cast<typename OptionsT::pointer>(N);
   }
+
   template <class OptionsT>
   static typename OptionsT::const_pointer
   getValuePtr(const ilist_node_impl<OptionsT> *N) {
@@ -182,15 +189,18 @@ protected:
   static ilist_node_impl<OptionsT> *getPrev(ilist_node_impl<OptionsT> &N) {
     return N.getPrev();
   }
+
   template <class OptionsT>
   static ilist_node_impl<OptionsT> *getNext(ilist_node_impl<OptionsT> &N) {
     return N.getNext();
   }
+
   template <class OptionsT>
   static const ilist_node_impl<OptionsT> *
   getPrev(const ilist_node_impl<OptionsT> &N) {
     return N.getPrev();
   }
+
   template <class OptionsT>
   static const ilist_node_impl<OptionsT> *
   getNext(const ilist_node_impl<OptionsT> &N) {
@@ -200,23 +210,27 @@ protected:
 
 template <class OptionsT> struct SpecificNodeAccess : NodeAccess {
 protected:
-  typedef typename OptionsT::pointer pointer;
-  typedef typename OptionsT::const_pointer const_pointer;
-  typedef ilist_node_impl<OptionsT> node_type;
+  using pointer = typename OptionsT::pointer;
+  using const_pointer = typename OptionsT::const_pointer;
+  using node_type = ilist_node_impl<OptionsT>;
 
   static node_type *getNodePtr(pointer N) {
     return NodeAccess::getNodePtr<OptionsT>(N);
   }
+
   static const node_type *getNodePtr(const_pointer N) {
     return NodeAccess::getNodePtr<OptionsT>(N);
   }
+
   static pointer getValuePtr(node_type *N) {
     return NodeAccess::getValuePtr<OptionsT>(N);
   }
+
   static const_pointer getValuePtr(const node_type *N) {
     return NodeAccess::getValuePtr<OptionsT>(N);
   }
 };
+
 } // end namespace ilist_detail
 
 template <class OptionsT>
@@ -265,6 +279,7 @@ public:
         getNodeParent()->*(ParentTy::getSublistAccess((NodeTy *)nullptr));
     return List.getPrevNode(*static_cast<NodeTy *>(this));
   }
+
   /// \brief Get the previous node, or \c nullptr for the list head.
   const NodeTy *getPrevNode() const {
     return const_cast<ilist_node_with_parent *>(this)->getPrevNode();
@@ -278,6 +293,7 @@ public:
         getNodeParent()->*(ParentTy::getSublistAccess((NodeTy *)nullptr));
     return List.getNextNode(*static_cast<NodeTy *>(this));
   }
+
   /// \brief Get the next node, or \c nullptr for the list tail.
   const NodeTy *getNextNode() const {
     return const_cast<ilist_node_with_parent *>(this)->getNextNode();
@@ -285,6 +301,6 @@ public:
   /// @}
 };
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_ADT_ILIST_NODE_H

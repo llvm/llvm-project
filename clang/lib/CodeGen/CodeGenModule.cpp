@@ -1243,7 +1243,7 @@ void CodeGenModule::AddDependentLib(StringRef Lib) {
 /// \brief Add link options implied by the given module, including modules
 /// it depends on, using a postorder walk.
 static void addLinkOptionsPostorder(CodeGenModule &CGM, Module *Mod,
-                                    SmallVectorImpl<llvm::Metadata *> &Metadata,
+                                    SmallVectorImpl<llvm::MDNode *> &Metadata,
                                     llvm::SmallPtrSet<Module *, 16> &Visited) {
   // Import this module's parent.
   if (Mod->Parent && Visited.insert(Mod->Parent).second) {
@@ -1331,7 +1331,7 @@ void CodeGenModule::EmitModuleLinkOptions() {
   // Add link options for all of the imported modules in reverse topological
   // order.  We don't do anything to try to order import link flags with respect
   // to linker options inserted by things like #pragma comment().
-  SmallVector<llvm::Metadata *, 16> MetadataArgs;
+  SmallVector<llvm::MDNode *, 16> MetadataArgs;
   Visited.clear();
   for (Module *M : LinkModules)
     if (Visited.insert(M).second)
@@ -1340,9 +1340,9 @@ void CodeGenModule::EmitModuleLinkOptions() {
   LinkerOptionsMetadata.append(MetadataArgs.begin(), MetadataArgs.end());
 
   // Add the linker options metadata flag.
-  getModule().addModuleFlag(llvm::Module::AppendUnique, "Linker Options",
-                            llvm::MDNode::get(getLLVMContext(),
-                                              LinkerOptionsMetadata));
+  auto *NMD = getModule().getOrInsertNamedMetadata("llvm.linker.options");
+  for (auto *MD : LinkerOptionsMetadata)
+    NMD->addOperand(MD);
 }
 
 void CodeGenModule::EmitDeferred() {

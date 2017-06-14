@@ -109,6 +109,7 @@ private:
   ScopedHashTableVal<K, V> *getLastValInScope() {
     return LastValInScope;
   }
+
   void setLastValInScope(ScopedHashTableVal<K, V> *Val) {
     LastValInScope = Val;
   }
@@ -151,13 +152,14 @@ class ScopedHashTable {
 public:
   /// ScopeTy - This is a helpful typedef that allows clients to get easy access
   /// to the name of the scope for this hash table.
-  typedef ScopedHashTableScope<K, V, KInfo, AllocatorTy> ScopeTy;
-  typedef unsigned size_type;
+  using ScopeTy = ScopedHashTableScope<K, V, KInfo, AllocatorTy>;
+  using size_type = unsigned;
 
 private:
   friend class ScopedHashTableScope<K, V, KInfo, AllocatorTy>;
 
-  typedef ScopedHashTableVal<K, V> ValTy;
+  using ValTy = ScopedHashTableVal<K, V>;
+
   DenseMap<K, ValTy*, KInfo> TopLevelMap;
   ScopeTy *CurScope = nullptr;
 
@@ -165,7 +167,7 @@ private:
 
 public:
   ScopedHashTable() = default;
-  ScopedHashTable(AllocatorTy A) : CurScope(0), Allocator(A) {}
+  ScopedHashTable(AllocatorTy A) : Allocator(A) {}
   ScopedHashTable(const ScopedHashTable &) = delete;
   ScopedHashTable &operator=(const ScopedHashTable &) = delete;
 
@@ -194,7 +196,7 @@ public:
     insertIntoScope(CurScope, Key, Val);
   }
 
-  typedef ScopedHashTableIterator<K, V, KInfo> iterator;
+  using iterator = ScopedHashTableIterator<K, V, KInfo>;
 
   iterator end() { return iterator(0); }
 

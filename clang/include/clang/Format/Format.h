@@ -688,6 +688,18 @@ struct FormatStyle {
     bool BeforeElse;
     /// \brief Indent the wrapped braces themselves.
     bool IndentBraces;
+    /// \brief If ``false``, empty function body can be put on a single line.
+    /// This option is used only if the opening brace of the function has
+    /// already been wrapped, i.e. the `AfterFunction` brace wrapping mode is
+    /// set, and the function could/should not be put on a single line (as per
+    /// `AllowShortFunctionsOnASingleLine` and constructor formatting options).
+    /// \code
+    ///   int f()   vs.   inf f()
+    ///   {}              {
+    ///                   }
+    /// \endcode
+    ///
+    bool SplitEmptyFunctionBody;
   };
 
   /// \brief Control of individual brace wrapping cases.
@@ -778,6 +790,29 @@ struct FormatStyle {
   ///    };
   /// \endcode
   bool BreakBeforeInheritanceComma;
+
+  /// \brief If ``true``, consecutive namespace declarations will be on the same
+  /// line. If ``false``, each namespace is declared on a new line.
+  /// \code
+  ///   true:
+  ///   namespace Foo { namespace Bar {
+  ///   }}
+  ///
+  ///   false:
+  ///   namespace Foo {
+  ///   namespace Bar {
+  ///   }
+  ///   }
+  /// \endcode
+  ///
+  /// If it does not fit on a single line, the overflowing namespaces get
+  /// wrapped:
+  /// \code
+  ///   namespace Foo { namespace Bar {
+  ///   namespace Extra {
+  ///   }}}
+  /// \endcode
+  bool CompactNamespaces;
 
   /// \brief If the constructor initializers don't fit on a line, put each
   /// initializer on its own line.
@@ -1410,6 +1445,7 @@ struct FormatStyle {
            BreakBeforeBraces == R.BreakBeforeBraces &&
            BreakBeforeTernaryOperators == R.BreakBeforeTernaryOperators &&
            BreakConstructorInitializers == R.BreakConstructorInitializers &&
+           CompactNamespaces == R.CompactNamespaces &&
            BreakAfterJavaFieldAnnotations == R.BreakAfterJavaFieldAnnotations &&
            BreakStringLiterals == R.BreakStringLiterals &&
            ColumnLimit == R.ColumnLimit && CommentPragmas == R.CommentPragmas &&

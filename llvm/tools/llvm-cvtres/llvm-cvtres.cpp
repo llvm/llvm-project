@@ -191,11 +191,23 @@ int main(int argc_, const char *argv_[]) {
     error(Parser.parse(RF));
   }
 
-  if (Verbose)
-    Parser.printTree();
+  if (Verbose) {
+    Parser.printTree(outs());
+    Parser.printTree(errs());
+  }
 
   error(
       llvm::object::writeWindowsResourceCOFF(OutputFile, MachineType, Parser));
+
+  if (Verbose) {
+    Expected<object::OwningBinary<object::Binary>> BinaryOrErr =
+        object::createBinary(OutputFile);
+    if (!BinaryOrErr)
+      reportError(OutputFile, errorToErrorCode(BinaryOrErr.takeError()));
+    Binary &Binary = *BinaryOrErr.get().getBinary();
+    ScopedPrinter W(errs());
+    W.printBinaryBlock("Output File Raw Data", Binary.getData());
+  }
 
   return 0;
 }

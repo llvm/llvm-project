@@ -342,10 +342,13 @@ public:
   /// @param [in] strm
   ///   The Stream to print the description to.
   ///
+  /// @param [in] show_unique
+  ///   Whether to print the function arguments or not for backtrace unique.
+  ///
   /// @param [in] frame_marker
   ///   Optional string that will be prepended to the frame output description.
   //------------------------------------------------------------------
-  void DumpUsingSettingsFormat(Stream *strm,
+  void DumpUsingSettingsFormat(Stream *strm, bool show_unique = false,
                                const char *frame_marker = nullptr);
 
   //------------------------------------------------------------------
@@ -375,6 +378,10 @@ public:
   /// @param[in] show_source
   ///   If true, print source or disassembly as per the user's settings.
   ///
+  /// @param[in] show_unique
+  ///   If true, print using backtrace unique style, without function
+  ///            arguments as per the user's settings.
+  ///
   /// @param[in] frame_marker
   ///   Passed to DumpUsingSettingsFormat() for the frame info printing.
   ///
@@ -382,7 +389,7 @@ public:
   ///   Returns true if successful.
   //------------------------------------------------------------------
   bool GetStatus(Stream &strm, bool show_frame_info, bool show_source,
-                 const char *frame_marker = nullptr);
+                 bool show_unique = false, const char *frame_marker = nullptr);
 
   //------------------------------------------------------------------
   /// Query whether this frame is a concrete frame on the call stack,

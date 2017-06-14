@@ -122,6 +122,12 @@ void basic_tests()
         assert(v[i] == 40 + triangle(i));
     }
 
+    {
+    std::vector<int> v, res;
+    std::transform_exclusive_scan(v.begin(), v.end(), std::back_inserter(res), 40, std::plus<>(), identity<>());
+    assert(res.empty());
+    }
+
 //  Make sure that the calculations are done using the init typedef
     {
     std::vector<unsigned char> v(10);

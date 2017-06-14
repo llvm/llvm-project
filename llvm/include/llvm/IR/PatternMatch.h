@@ -1027,7 +1027,7 @@ struct MaxMin_match {
         (TrueVal != RHS || FalseVal != LHS))
       return false;
     typename CmpInst_t::Predicate Pred =
-        LHS == TrueVal ? Cmp->getPredicate() : Cmp->getSwappedPredicate();
+        LHS == TrueVal ? Cmp->getPredicate() : Cmp->getInversePredicate();
     // Does "(x pred y) ? x : y" represent the desired max/min operation?
     if (!Pred_t::match(Pred))
       return false;
@@ -1138,7 +1138,7 @@ inline MaxMin_match<FCmpInst, LHS, RHS, ofmax_pred_ty> m_OrdFMax(const LHS &L,
 /// semantics. In the presence of 'NaN' we have to preserve the original
 /// select(fcmp(olt/le, L, R), L, R) semantics matched by this predicate.
 ///
-///                         max(L, R)  iff L and R are not NaN
+///                         min(L, R)  iff L and R are not NaN
 ///  m_OrdFMin(L, R) =      R          iff L or R are NaN
 template <typename LHS, typename RHS>
 inline MaxMin_match<FCmpInst, LHS, RHS, ofmin_pred_ty> m_OrdFMin(const LHS &L,
@@ -1154,11 +1154,26 @@ inline MaxMin_match<FCmpInst, LHS, RHS, ofmin_pred_ty> m_OrdFMin(const LHS &L,
 /// select(fcmp(ugt/ge, L, R), L, R) semantics matched by this predicate.
 ///
 ///                         max(L, R)  iff L and R are not NaN
-///  m_UnordFMin(L, R) =    L          iff L or R are NaN
+///  m_UnordFMax(L, R) =    L          iff L or R are NaN
 template <typename LHS, typename RHS>
 inline MaxMin_match<FCmpInst, LHS, RHS, ufmax_pred_ty>
 m_UnordFMax(const LHS &L, const RHS &R) {
   return MaxMin_match<FCmpInst, LHS, RHS, ufmax_pred_ty>(L, R);
+}
+
+/// \brief Match an 'unordered' floating point minimum function.
+/// Floating point has one special value 'NaN'. Therefore, there is no total
+/// order. However, if we can ignore the 'NaN' value (for example, because of a
+/// 'no-nans-float-math' flag) a combination of a fcmp and select has 'minimum'
+/// semantics. In the presence of 'NaN' we have to preserve the original
+/// select(fcmp(ult/le, L, R), L, R) semantics matched by this predicate.
+///
+///                          min(L, R)  iff L and R are not NaN
+///  m_UnordFMin(L, R) =     L          iff L or R are NaN
+template <typename LHS, typename RHS>
+inline MaxMin_match<FCmpInst, LHS, RHS, ufmin_pred_ty>
+m_UnordFMin(const LHS &L, const RHS &R) {
+  return MaxMin_match<FCmpInst, LHS, RHS, ufmin_pred_ty>(L, R);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1205,21 +1220,6 @@ template <typename LHS_t, typename RHS_t, typename Sum_t>
 UAddWithOverflow_match<LHS_t, RHS_t, Sum_t>
 m_UAddWithOverflow(const LHS_t &L, const RHS_t &R, const Sum_t &S) {
   return UAddWithOverflow_match<LHS_t, RHS_t, Sum_t>(L, R, S);
-}
-
-/// \brief Match an 'unordered' floating point minimum function.
-/// Floating point has one special value 'NaN'. Therefore, there is no total
-/// order. However, if we can ignore the 'NaN' value (for example, because of a
-/// 'no-nans-float-math' flag) a combination of a fcmp and select has 'minimum'
-/// semantics. In the presence of 'NaN' we have to preserve the original
-/// select(fcmp(ult/le, L, R), L, R) semantics matched by this predicate.
-///
-///                          max(L, R)  iff L and R are not NaN
-///  m_UnordFMin(L, R) =     L          iff L or R are NaN
-template <typename LHS, typename RHS>
-inline MaxMin_match<FCmpInst, LHS, RHS, ufmin_pred_ty>
-m_UnordFMin(const LHS &L, const RHS &R) {
-  return MaxMin_match<FCmpInst, LHS, RHS, ufmin_pred_ty>(L, R);
 }
 
 template <typename Opnd_t> struct Argument_match {

@@ -55,6 +55,13 @@ bool DWARFAcceleratorTable::extract() {
   return true;
 }
 
+uint32_t DWARFAcceleratorTable::getNumBuckets() { return Hdr.NumBuckets; }
+uint32_t DWARFAcceleratorTable::getNumHashes() { return Hdr.NumHashes; }
+uint32_t DWARFAcceleratorTable::getSizeHdr() { return sizeof(Hdr); }
+uint32_t DWARFAcceleratorTable::getHeaderDataLength() {
+  return Hdr.HeaderDataLength;
+}
+
 LLVM_DUMP_METHOD void DWARFAcceleratorTable::dump(raw_ostream &OS) const {
   // Dump the header.
   OS << "Magic = " << format("0x%08x", Hdr.Magic) << '\n'

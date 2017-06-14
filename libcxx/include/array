@@ -296,6 +296,7 @@ class _LIBCPP_TEMPLATE_VIS tuple_size<array<_Tp, _Size> >
 template <size_t _Ip, class _Tp, size_t _Size>
 class _LIBCPP_TEMPLATE_VIS tuple_element<_Ip, array<_Tp, _Size> >
 {
+    static_assert(_Ip < _Size, "Index out of bounds in std::tuple_element<> (std::array)");
 public:
     typedef _Tp type;
 };

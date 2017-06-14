@@ -113,7 +113,6 @@ void GetThreadStackTopAndBottom(bool at_initialization, uptr *stack_top,
   my_pthread_attr_getstack(&attr, &stackaddr, &stacksize);
   pthread_attr_destroy(&attr);
 
-  CHECK_LE(stacksize, kMaxThreadStackSize);  // Sanity check.
   *stack_top = (uptr)stackaddr + stacksize;
   *stack_bottom = (uptr)stackaddr;
 }

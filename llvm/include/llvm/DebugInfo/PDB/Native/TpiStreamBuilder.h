@@ -58,6 +58,8 @@ public:
 
   Error finalizeMsfLayout();
 
+  uint32_t getRecordCount() const { return TypeRecords.size(); }
+
   Error commit(const msf::MSFLayout &Layout, WritableBinaryStreamRef Buffer);
 
   uint32_t calculateSerializedLength();

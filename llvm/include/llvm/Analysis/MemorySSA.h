@@ -147,7 +147,6 @@ public:
   MemoryAccess(const MemoryAccess &) = delete;
   MemoryAccess &operator=(const MemoryAccess &) = delete;
 
-  void *operator new(size_t, unsigned) = delete;
   void *operator new(size_t) = delete;
 
   BasicBlock *getBlock() const { return Block; }
@@ -232,7 +231,6 @@ inline raw_ostream &operator<<(raw_ostream &OS, const MemoryAccess &MA) {
 /// MemoryDef instead.
 class MemoryUseOrDef : public MemoryAccess {
 public:
-  void *operator new(size_t, unsigned) = delete;
   void *operator new(size_t) = delete;
 
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(MemoryAccess);
@@ -298,7 +296,6 @@ public:
 
   // allocate space for exactly one operand
   void *operator new(size_t s) { return User::operator new(s, 1); }
-  void *operator new(size_t, unsigned) = delete;
 
   static inline bool classof(const Value *MA) {
     return MA->getValueID() == MemoryUseVal;
@@ -355,7 +352,6 @@ public:
 
   // allocate space for exactly one operand
   void *operator new(size_t s) { return User::operator new(s, 1); }
-  void *operator new(size_t, unsigned) = delete;
 
   static inline bool classof(const Value *MA) {
     return MA->getValueID() == MemoryDefVal;
@@ -437,8 +433,6 @@ public:
         ReservedSpace(NumPreds) {
     allocHungoffUses(ReservedSpace);
   }
-
-  void *operator new(size_t, unsigned) = delete;
 
   // Block iterator interface. This provides access to the list of incoming
   // basic blocks, which parallels the list of incoming values.

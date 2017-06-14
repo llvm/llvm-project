@@ -89,7 +89,7 @@ struct PageStats {
 class C13RawVisitor : public DebugSubsectionVisitor {
 public:
   C13RawVisitor(ScopedPrinter &P, LazyRandomTypeCollection &TPI,
-                LazyRandomTypeCollection &IPI)
+                LazyRandomTypeCollection *IPI)
       : P(P), TPI(TPI), IPI(IPI) {}
 
   Error visitUnknown(DebugUnknownSubsectionRef &Unknown) override {
@@ -299,13 +299,18 @@ public:
 
 private:
   Error dumpTypeRecord(StringRef Label, TypeIndex Index) {
-    CompactTypeDumpVisitor CTDV(IPI, Index, &P);
+    bool Success = false;
     DictScope D(P, Label);
-    if (IPI.contains(Index)) {
-      CVType Type = IPI.getType(Index);
-      if (auto EC = codeview::visitTypeRecord(Type, CTDV))
-        return EC;
-    } else {
+    if (IPI) {
+      CompactTypeDumpVisitor CTDV(*IPI, Index, &P);
+      if (IPI->contains(Index)) {
+        CVType Type = IPI->getType(Index);
+        if (auto EC = codeview::visitTypeRecord(Type, CTDV))
+          return EC;
+      }
+    }
+    
+    if (!Success) {
       P.printString(
           llvm::formatv("Index: {0:x} (unknown function)", Index.getIndex())
               .str());
@@ -339,7 +344,7 @@ private:
 
   ScopedPrinter &P;
   LazyRandomTypeCollection &TPI;
-  LazyRandomTypeCollection &IPI;
+  LazyRandomTypeCollection *IPI;
 };
 }
 
@@ -739,10 +744,12 @@ Error LLVMOutputStyle::dumpTpiStream(uint32_t StreamIdx) {
     Label = "Type Info Stream (TPI)";
     VerLabel = "TPI Version";
   } else if (StreamIdx == StreamIPI) {
-    if (!File.hasPDBIpiStream()) {
-      P.printString("Type Info Stream (IPI) not present");
+    auto InfoS = File.getPDBInfoStream();
+    if (!InfoS)
+      return InfoS.takeError();
+
+    if (!File.hasPDBIpiStream() || !InfoS->containsIdStream())
       return Error::success();
-    }
     DumpRecordBytes = opts::raw::DumpIpiRecordBytes;
     DumpRecords = opts::raw::DumpIpiRecords;
     Label = "Type Info Stream (IPI)";
@@ -879,6 +886,8 @@ Error LLVMOutputStyle::dumpDbiStream() {
     return Error::success();
   }
 
+  ExitOnError Err("Error while processing DBI Stream");
+
   auto DS = File.getPDBDbiStream();
   if (!DS)
     return DS.takeError();
@@ -970,10 +979,10 @@ Error LLVMOutputStyle::dumpDbiStream() {
         }
         if (!opts::shared::DumpModuleSubsections.empty()) {
           ListScope SS(P, "Subsections");
-          auto ExpectedIpi = initializeTypeDatabase(StreamIPI);
-          if (!ExpectedIpi)
-            return ExpectedIpi.takeError();
-          auto &Ipi = *ExpectedIpi;
+          auto &InfoS = Err(File.getPDBInfoStream());
+          LazyRandomTypeCollection *Ipi = nullptr;
+          if (InfoS.containsIdStream())
+            Ipi = &Err(initializeTypeDatabase(StreamIPI));
           auto ExpectedStrings = File.getStringTable();
           if (!ExpectedStrings)
             return joinErrors(

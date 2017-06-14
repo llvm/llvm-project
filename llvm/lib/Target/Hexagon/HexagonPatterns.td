@@ -401,6 +401,11 @@ def Aext64: PatFrag<(ops node:$Rs), (i64 (anyext node:$Rs))>;
 def Zext64: PatFrag<(ops node:$Rs), (i64 (zext node:$Rs))>;
 def Sext64: PatLeaf<(i64 Usxtw:$Rs)>;
 
+def: Pat<(i32 (trunc (sra (mul Sext64:$Rs, Sext64:$Rt), (i32 32)))),
+         (M2_mpy_up (LoReg Sext64:$Rs), (LoReg Sext64:$Rt))>;
+def: Pat<(i32 (trunc (srl (mul Sext64:$Rs, Sext64:$Rt), (i32 32)))),
+         (M2_mpy_up (LoReg Sext64:$Rs), (LoReg Sext64:$Rt))>;
+
 def: Pat<(mul (Aext64 I32:$Rs), (Aext64 I32:$Rt)),
          (M2_dpmpyuu_s0 I32:$Rs, I32:$Rt)>;
 
@@ -1470,16 +1475,22 @@ def i32in8ImmPred: PatLeaf<(i32 imm), [{
   return v == (int64_t)(int8_t)v;
 }]>;
 
+class SmallStackStore<PatFrag Store>
+  : PatFrag<(ops node:$Val, node:$Addr), (Store node:$Val, node:$Addr), [{
+  return isSmallStackStore(cast<StoreSDNode>(N));
+}]>;
 
 let AddedComplexity = 40 in {
   // Even though the offset is not extendable in the store-immediate, we
   // can still generate the fi# in the base address. If the final offset
   // is not valid for the instruction, we will replace it with a scratch
   // register.
-//  def: Storexm_fi_pat <truncstorei8, s32_0ImmPred, ToImmByte, S4_storeirb_io>;
-//  def: Storexm_fi_pat <truncstorei16, i16in8ImmPred, ToImmHalf,
-//                       S4_storeirh_io>;
-//  def: Storexm_fi_pat <store, i32in8ImmPred, ToImmWord, S4_storeiri_io>;
+  def: Storexm_fi_pat <SmallStackStore<truncstorei8>, s32_0ImmPred,
+                       ToImmByte, S4_storeirb_io>;
+  def: Storexm_fi_pat <SmallStackStore<truncstorei16>, i16in8ImmPred,
+                       ToImmHalf, S4_storeirh_io>;
+  def: Storexm_fi_pat <SmallStackStore<store>, i32in8ImmPred,
+                       ToImmWord, S4_storeiri_io>;
 
 //  defm: Storexm_fi_add_pat <truncstorei8, s32_0ImmPred, u6_0ImmPred, ToImmByte,
 //                            S4_storeirb_io>;

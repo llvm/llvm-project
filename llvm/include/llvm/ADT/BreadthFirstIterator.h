@@ -25,7 +25,6 @@
 #include "llvm/ADT/iterator_range.h"
 #include <iterator>
 #include <queue>
-#include <set>
 #include <utility>
 
 namespace llvm {
@@ -49,13 +48,13 @@ template <class GraphT,
 class bf_iterator
     : public std::iterator<std::forward_iterator_tag, typename GT::NodeRef>,
       public bf_iterator_storage<SetType> {
-  typedef std::iterator<std::forward_iterator_tag, typename GT::NodeRef> super;
+  using super = std::iterator<std::forward_iterator_tag, typename GT::NodeRef>;
 
-  typedef typename GT::NodeRef NodeRef;
-  typedef typename GT::ChildIteratorType ChildItTy;
+  using NodeRef = typename GT::NodeRef;
+  using ChildItTy = typename GT::ChildIteratorType;
 
   // First element is the node reference, second is the next child to visit.
-  typedef std::pair<NodeRef, Optional<ChildItTy>> QueueElement;
+  using QueueElement = std::pair<NodeRef, Optional<ChildItTy>>;
 
   // Visit queue - used to maintain BFS ordering.
   // Optional<> because we need markers for levels.
@@ -109,7 +108,7 @@ private:
   }
 
 public:
-  typedef typename super::pointer pointer;
+  using pointer = typename super::pointer;
 
   // Provide static begin and end methods as our public "constructors"
   static bf_iterator begin(const GraphT &G) {

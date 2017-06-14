@@ -1282,6 +1282,10 @@ unsigned AArch64FastISel::emitAddSub_rr(bool UseAdd, MVT RetVT, unsigned LHSReg,
                                         bool WantResult) {
   assert(LHSReg && RHSReg && "Invalid register number.");
 
+  if (LHSReg == AArch64::SP || LHSReg == AArch64::WSP ||
+      RHSReg == AArch64::SP || RHSReg == AArch64::WSP)
+    return 0;
+
   if (RetVT != MVT::i32 && RetVT != MVT::i64)
     return 0;
 
@@ -1362,6 +1366,8 @@ unsigned AArch64FastISel::emitAddSub_rs(bool UseAdd, MVT RetVT, unsigned LHSReg,
                                         uint64_t ShiftImm, bool SetFlags,
                                         bool WantResult) {
   assert(LHSReg && RHSReg && "Invalid register number.");
+  assert(LHSReg != AArch64::SP && LHSReg != AArch64::WSP &&
+         RHSReg != AArch64::SP && RHSReg != AArch64::WSP);
 
   if (RetVT != MVT::i32 && RetVT != MVT::i64)
     return 0;
@@ -1403,6 +1409,8 @@ unsigned AArch64FastISel::emitAddSub_rx(bool UseAdd, MVT RetVT, unsigned LHSReg,
                                         uint64_t ShiftImm, bool SetFlags,
                                         bool WantResult) {
   assert(LHSReg && RHSReg && "Invalid register number.");
+  assert(LHSReg != AArch64::XZR && LHSReg != AArch64::WZR &&
+         RHSReg != AArch64::XZR && RHSReg != AArch64::WZR);
 
   if (RetVT != MVT::i32 && RetVT != MVT::i64)
     return 0;

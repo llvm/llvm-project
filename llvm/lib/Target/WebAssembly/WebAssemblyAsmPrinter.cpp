@@ -33,6 +33,8 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/MCSymbolWasm.h"
+#include "llvm/MC/MCSymbolELF.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
@@ -218,9 +220,13 @@ void WebAssemblyAsmPrinter::EmitInstruction(const MachineInstr *MI) {
 
 const MCExpr *WebAssemblyAsmPrinter::lowerConstant(const Constant *CV) {
   if (const GlobalValue *GV = dyn_cast<GlobalValue>(CV))
-    if (GV->getValueType()->isFunctionTy())
+    if (GV->getValueType()->isFunctionTy()) {
+      MCSymbol* Sym = getSymbol(GV);
+      if (!isa<MCSymbolELF>(Sym))
+        cast<MCSymbolWasm>(Sym)->setIsFunction(true);
       return MCSymbolRefExpr::create(
-          getSymbol(GV), MCSymbolRefExpr::VK_WebAssembly_FUNCTION, OutContext);
+          Sym, MCSymbolRefExpr::VK_WebAssembly_FUNCTION, OutContext);
+    }
   return AsmPrinter::lowerConstant(CV);
 }
 

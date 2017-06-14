@@ -1330,6 +1330,14 @@ Verifier::visitModuleFlag(const MDNode *Op,
       = mdconst::dyn_extract_or_null<ConstantInt>(Op->getOperand(2));
     Assert(Value, "wchar_size metadata requires constant integer argument");
   }
+
+  if (ID->getString() == "Linker Options") {
+    // If the llvm.linker.options named metadata exists, we assume that the
+    // bitcode reader has upgraded the module flag. Otherwise the flag might
+    // have been created by a client directly.
+    Assert(M.getNamedMetadata("llvm.linker.options"),
+           "'Linker Options' named metadata no longer supported");
+  }
 }
 
 /// Return true if this attribute kind only applies to functions.

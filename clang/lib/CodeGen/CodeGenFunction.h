@@ -3554,8 +3554,10 @@ public:
 
   /// Same as IRBuilder::CreateInBoundsGEP, but additionally emits a check to
   /// detect undefined behavior when the pointer overflow sanitizer is enabled.
+  /// \p SignedIndices indicates whether any of the GEP indices are signed.
   llvm::Value *EmitCheckedInBoundsGEP(llvm::Value *Ptr,
                                       ArrayRef<llvm::Value *> IdxList,
+                                      bool SignedIndices,
                                       SourceLocation Loc,
                                       const Twine &Name = "");
 

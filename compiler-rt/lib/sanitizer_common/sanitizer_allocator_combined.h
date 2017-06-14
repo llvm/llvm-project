@@ -43,12 +43,12 @@ class CombinedAllocator {
   }
 
   void *Allocate(AllocatorCache *cache, uptr size, uptr alignment,
-                 bool cleared = false, bool check_rss_limit = false) {
+                 bool cleared = false) {
     // Returning 0 on malloc(0) may break a lot of code.
     if (size == 0)
       size = 1;
-    if (size + alignment < size) return ReturnNullOrDieOnBadRequest();
-    if (check_rss_limit && RssLimitIsExceeded()) return ReturnNullOrDieOnOOM();
+    if (size + alignment < size)
+      return ReturnNullOrDieOnBadRequest();
     uptr original_size = size;
     // If alignment requirements are to be fulfilled by the frontend allocator
     // rather than by the primary or secondary, passing an alignment lower than
@@ -89,7 +89,8 @@ class CombinedAllocator {
   }
 
   void *ReturnNullOrDieOnOOM() {
-    if (MayReturnNull()) return nullptr;
+    if (MayReturnNull())
+      return nullptr;
     ReportAllocatorCannotReturnNull(true);
   }
 
@@ -104,15 +105,6 @@ class CombinedAllocator {
 
   void SetReleaseToOSIntervalMs(s32 release_to_os_interval_ms) {
     primary_.SetReleaseToOSIntervalMs(release_to_os_interval_ms);
-  }
-
-  bool RssLimitIsExceeded() {
-    return atomic_load(&rss_limit_is_exceeded_, memory_order_acquire);
-  }
-
-  void SetRssLimitIsExceeded(bool rss_limit_is_exceeded) {
-    atomic_store(&rss_limit_is_exceeded_, rss_limit_is_exceeded,
-                 memory_order_release);
   }
 
   void Deallocate(AllocatorCache *cache, void *p) {
@@ -228,6 +220,5 @@ class CombinedAllocator {
   SecondaryAllocator secondary_;
   AllocatorGlobalStats stats_;
   atomic_uint8_t may_return_null_;
-  atomic_uint8_t rss_limit_is_exceeded_;
 };
 

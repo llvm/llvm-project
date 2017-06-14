@@ -35,14 +35,15 @@ using namespace llvm;
 namespace {
 class BPFAsmPrinter : public AsmPrinter {
 public:
-  explicit BPFAsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer)
+  explicit BPFAsmPrinter(TargetMachine &TM,
+                         std::unique_ptr<MCStreamer> Streamer)
       : AsmPrinter(TM, std::move(Streamer)) {}
 
   StringRef getPassName() const override { return "BPF Assembly Printer"; }
 
   void EmitInstruction(const MachineInstr *MI) override;
 };
-}
+} // namespace
 
 void BPFAsmPrinter::EmitInstruction(const MachineInstr *MI) {
 

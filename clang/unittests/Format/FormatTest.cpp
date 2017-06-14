@@ -1310,6 +1310,141 @@ TEST_F(FormatTest, FormatsNamespaces) {
                    Style));
 }
 
+TEST_F(FormatTest, FormatsCompactNamespaces) {
+  FormatStyle Style = getLLVMStyle();
+  Style.CompactNamespaces = true;
+
+  verifyFormat("namespace A { namespace B {\n"
+			   "}} // namespace A::B",
+			   Style);
+
+  EXPECT_EQ("namespace out { namespace in {\n"
+            "}} // namespace out::in",
+            format("namespace out {\n"
+                   "namespace in {\n"
+                   "} // namespace in\n"
+                   "} // namespace out",
+                   Style));
+
+  // Only namespaces which have both consecutive opening and end get compacted
+  EXPECT_EQ("namespace out {\n"
+            "namespace in1 {\n"
+            "} // namespace in1\n"
+            "namespace in2 {\n"
+            "} // namespace in2\n"
+            "} // namespace out",
+            format("namespace out {\n"
+                   "namespace in1 {\n"
+                   "} // namespace in1\n"
+                   "namespace in2 {\n"
+                   "} // namespace in2\n"
+                   "} // namespace out",
+                   Style));
+
+  EXPECT_EQ("namespace out {\n"
+            "int i;\n"
+            "namespace in {\n"
+            "int j;\n"
+            "} // namespace in\n"
+            "int k;\n"
+            "} // namespace out",
+            format("namespace out { int i;\n"
+                   "namespace in { int j; } // namespace in\n"
+                   "int k; } // namespace out",
+                   Style));
+
+  EXPECT_EQ("namespace A { namespace B { namespace C {\n"
+            "}}} // namespace A::B::C\n",
+            format("namespace A { namespace B {\n"
+                   "namespace C {\n"
+                   "}} // namespace B::C\n"
+                   "} // namespace A\n",
+                   Style));
+
+  Style.ColumnLimit = 40;
+  EXPECT_EQ("namespace aaaaaaaaaa {\n"
+            "namespace bbbbbbbbbb {\n"
+            "}} // namespace aaaaaaaaaa::bbbbbbbbbb",
+            format("namespace aaaaaaaaaa {\n"
+                   "namespace bbbbbbbbbb {\n"
+                   "} // namespace bbbbbbbbbb\n"
+                   "} // namespace aaaaaaaaaa",
+                   Style));
+
+  EXPECT_EQ("namespace aaaaaa { namespace bbbbbb {\n"
+            "namespace cccccc {\n"
+            "}}} // namespace aaaaaa::bbbbbb::cccccc",
+            format("namespace aaaaaa {\n"
+                   "namespace bbbbbb {\n"
+                   "namespace cccccc {\n"
+                   "} // namespace cccccc\n"
+                   "} // namespace bbbbbb\n"
+                   "} // namespace aaaaaa",
+                   Style));
+  Style.ColumnLimit = 80;
+
+  // Extra semicolon after 'inner' closing brace prevents merging
+  EXPECT_EQ("namespace out { namespace in {\n"
+            "}; } // namespace out::in",
+            format("namespace out {\n"
+                   "namespace in {\n"
+                   "}; // namespace in\n"
+                   "} // namespace out",
+                   Style));
+
+  // Extra semicolon after 'outer' closing brace is conserved
+  EXPECT_EQ("namespace out { namespace in {\n"
+            "}}; // namespace out::in",
+            format("namespace out {\n"
+                   "namespace in {\n"
+                   "} // namespace in\n"
+                   "}; // namespace out",
+                   Style));
+
+  Style.NamespaceIndentation = FormatStyle::NI_All;
+  EXPECT_EQ("namespace out { namespace in {\n"
+            "  int i;\n"
+            "}} // namespace out::in",
+            format("namespace out {\n"
+                   "namespace in {\n"
+                   "int i;\n"
+                   "} // namespace in\n"
+                   "} // namespace out",
+                   Style));
+  EXPECT_EQ("namespace out { namespace mid {\n"
+            "  namespace in {\n"
+            "    int j;\n"
+            "  } // namespace in\n"
+            "  int k;\n"
+            "}} // namespace out::mid",
+            format("namespace out { namespace mid {\n"
+                   "namespace in { int j; } // namespace in\n"
+                   "int k; }} // namespace out::mid",
+                   Style));
+
+  Style.NamespaceIndentation = FormatStyle::NI_Inner;
+  EXPECT_EQ("namespace out { namespace in {\n"
+            "  int i;\n"
+            "}} // namespace out::in",
+            format("namespace out {\n"
+                   "namespace in {\n"
+                   "int i;\n"
+                   "} // namespace in\n"
+                   "} // namespace out",
+                   Style));
+  EXPECT_EQ("namespace out { namespace mid { namespace in {\n"
+            "  int i;\n"
+            "}}} // namespace out::mid::in",
+            format("namespace out {\n"
+                   "namespace mid {\n"
+                   "namespace in {\n"
+                   "int i;\n"
+                   "} // namespace in\n"
+                   "} // namespace mid\n"
+                   "} // namespace out",
+                   Style));
+}
+
 TEST_F(FormatTest, FormatsExternC) { verifyFormat("extern \"C\" {\nint a;"); }
 
 TEST_F(FormatTest, FormatsInlineASM) {
@@ -6239,6 +6374,35 @@ TEST_F(FormatTest, PullTrivialFunctionDefinitionsIntoSingleLine) {
                getLLVMStyleWithColumns(23));
 }
 
+TEST_F(FormatTest, PullEmptyFunctionDefinitionsIntoSingleLine) {
+  FormatStyle MergeEmptyOnly = getLLVMStyle();
+  MergeEmptyOnly.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_Empty;
+  verifyFormat("class C {\n"
+               "  int f() {}\n"
+               "};",
+               MergeEmptyOnly);
+  verifyFormat("class C {\n"
+               "  int f() {\n"
+               "    return 42;\n"
+               "  }\n"
+               "};",
+               MergeEmptyOnly);
+  verifyFormat("int f() {}", MergeEmptyOnly);
+  verifyFormat("int f() {\n"
+               "  return 42;\n"
+               "}",
+               MergeEmptyOnly);
+
+  // Also verify behavior when BraceWrapping.AfterFunction = true
+  MergeEmptyOnly.BreakBeforeBraces = FormatStyle::BS_Custom;
+  MergeEmptyOnly.BraceWrapping.AfterFunction = true;
+  verifyFormat("int f() {}", MergeEmptyOnly);
+  verifyFormat("class C {\n"
+               "  int f() {}\n"
+               "};",
+               MergeEmptyOnly);
+}
+
 TEST_F(FormatTest, PullInlineFunctionDefinitionsIntoSingleLine) {
   FormatStyle MergeInlineOnly = getLLVMStyle();
   MergeInlineOnly.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_Inline;
@@ -6250,6 +6414,101 @@ TEST_F(FormatTest, PullInlineFunctionDefinitionsIntoSingleLine) {
                "  return 42;\n"
                "}",
                MergeInlineOnly);
+
+  // SFS_Inline implies SFS_Empty
+  verifyFormat("class C {\n"
+               "  int f() {}\n"
+               "};",
+               MergeInlineOnly);
+  verifyFormat("int f() {}", MergeInlineOnly);
+
+  // Also verify behavior when BraceWrapping.AfterFunction = true
+  MergeInlineOnly.BreakBeforeBraces = FormatStyle::BS_Custom;
+  MergeInlineOnly.BraceWrapping.AfterFunction = true;
+  verifyFormat("class C {\n"
+               "  int f() { return 42; }\n"
+               "};",
+               MergeInlineOnly);
+  verifyFormat("int f()\n"
+               "{\n"
+               "  return 42;\n"
+               "}",
+               MergeInlineOnly);
+
+  // SFS_Inline implies SFS_Empty
+  verifyFormat("int f() {}", MergeInlineOnly);
+  verifyFormat("class C {\n"
+               "  int f() {}\n"
+               "};",
+               MergeInlineOnly);
+}
+
+TEST_F(FormatTest, SplitEmptyFunctionBody) {
+  FormatStyle Style = getLLVMStyle();
+  Style.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_None;
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.AfterFunction = true;
+  Style.BraceWrapping.SplitEmptyFunctionBody = false;
+  Style.ColumnLimit = 40;
+
+  verifyFormat("int f()\n"
+               "{}",
+               Style);
+  verifyFormat("int f()\n"
+               "{\n"
+               "  return 42;\n"
+               "}",
+               Style);
+  verifyFormat("int f()\n"
+               "{\n"
+               "  // some comment\n"
+               "}",
+               Style);
+
+  Style.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_Empty;
+  verifyFormat("int f() {}", Style);
+  verifyFormat("int aaaaaaaaaaaaaa(int bbbbbbbbbbbbbb)\n"
+               "{}",
+               Style);
+  verifyFormat("int f()\n"
+               "{\n"
+               "  return 0;\n"
+               "}",
+               Style);
+
+  Style.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_Inline;
+  verifyFormat("class Foo {\n"
+               "  int f() {}\n"
+               "};\n",
+               Style);
+  verifyFormat("class Foo {\n"
+               "  int f() { return 0; }\n"
+               "};\n",
+               Style);
+  verifyFormat("class Foo {\n"
+               "  int aaaaaaaaaaaaaa(int bbbbbbbbbbbbbb)\n"
+               "  {}\n"
+               "};\n",
+               Style);
+  verifyFormat("class Foo {\n"
+               "  int aaaaaaaaaaaaaa(int bbbbbbbbbbbbbb)\n"
+               "  {\n"
+               "    return 0;\n"
+               "  }\n"
+               "};\n",
+               Style);
+
+  Style.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_All;
+  verifyFormat("int f() {}", Style);
+  verifyFormat("int f() { return 0; }", Style);
+  verifyFormat("int aaaaaaaaaaaaaa(int bbbbbbbbbbbbbb)\n"
+               "{}",
+               Style);
+  verifyFormat("int aaaaaaaaaaaaaa(int bbbbbbbbbbbbbb)\n"
+               "{\n"
+               "  return 0;\n"
+               "}",
+               Style);
 }
 
 TEST_F(FormatTest, UnderstandContextOfRecordTypeKeywords) {
@@ -8927,6 +9186,7 @@ TEST_F(FormatTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(BreakBeforeTernaryOperators);
   CHECK_PARSE_BOOL(BreakStringLiterals);
   CHECK_PARSE_BOOL(BreakBeforeInheritanceComma)
+  CHECK_PARSE_BOOL(CompactNamespaces);
   CHECK_PARSE_BOOL(ConstructorInitializerAllOnOneLineOrOnePerLine);
   CHECK_PARSE_BOOL(DerivePointerAlignment);
   CHECK_PARSE_BOOL_FIELD(DerivePointerAlignment, "DerivePointerBinding");
@@ -8960,6 +9220,7 @@ TEST_F(FormatTest, ParsesConfigurationBools) {
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, BeforeCatch);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, BeforeElse);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, IndentBraces);
+  CHECK_PARSE_NESTED_BOOL(BraceWrapping, SplitEmptyFunctionBody);
 }
 
 #undef CHECK_PARSE_BOOL

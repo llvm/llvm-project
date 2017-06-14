@@ -248,6 +248,12 @@ bool DwarfExpression::addMachineRegExpression(const TargetRegisterInfo &TRI,
   assert(Reg.Size == 0 && "subregister has same size as superregister");
 
   // Pattern-match combinations for which more efficient representations exist.
+  // [Reg, DW_OP_plus_uconst, Offset] --> [DW_OP_breg, Offset].
+  if (Op && (Op->getOp() == dwarf::DW_OP_plus_uconst)) {
+    SignedOffset = Op->getArg(0);
+    ExprCursor.take();
+  }
+
   // [Reg, Offset, DW_OP_plus] --> [DW_OP_breg, Offset].
   // [Reg, Offset, DW_OP_minus] --> [DW_OP_breg, -Offset].
   // If Reg is a subregister we need to mask it out before subtracting.
@@ -321,6 +327,7 @@ void DwarfExpression::addExpression(DIExpressionCursor &&ExprCursor,
       return;
     }
     case dwarf::DW_OP_plus:
+    case dwarf::DW_OP_plus_uconst:
       assert(LocationKind != Register);
       emitOp(dwarf::DW_OP_plus_uconst);
       emitUnsigned(Op->getArg(0));

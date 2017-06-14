@@ -14,6 +14,7 @@ from lldbsuite.test import lldbutil
 class ExprCommandThatRestartsTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
+    NO_DEBUG_INFO_TESTCASE = True
 
     def setUp(self):
         # Call super's setUp().
@@ -25,6 +26,7 @@ class ExprCommandThatRestartsTestCase(TestBase):
     @skipIfFreeBSD  # llvm.org/pr19246: intermittent failure
     @skipIfDarwin  # llvm.org/pr19246: intermittent failure
     @skipIfWindows  # Test relies on signals, unsupported on Windows
+    @expectedFlakeyAndroid(bugnumber="llvm.org/pr19246")
     def test(self):
         """Test calling function that hits a signal and restarts."""
         self.build()

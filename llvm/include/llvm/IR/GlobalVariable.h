@@ -78,8 +78,6 @@ public:
     return User::operator new(s, 1);
   }
 
-  void *operator new(size_t, unsigned) = delete;
-
   /// Provide fast operand accessors
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 

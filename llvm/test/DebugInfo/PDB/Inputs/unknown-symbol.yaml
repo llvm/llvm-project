@@ -1,0 +1,10 @@
+---
+DbiStream:
+  Modules:
+    - Module:          unknown-symbol.yaml
+      Modi:
+        Records:
+          - Kind:            S_ANNOTATION
+            UnknownSym:
+              Data:          123456789ABCDEF0
+...

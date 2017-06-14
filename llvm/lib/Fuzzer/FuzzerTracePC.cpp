@@ -53,6 +53,17 @@ size_t TracePC::GetTotalPCCoverage() {
   return Res;
 }
 
+
+void TracePC::HandleInline8bitCountersInit(uint8_t *Start, uint8_t *Stop) {
+  if (Start == Stop) return;
+  if (NumModulesWithInline8bitCounters &&
+      ModuleCounters[NumModulesWithInline8bitCounters-1].Start == Start) return;
+  assert(NumModulesWithInline8bitCounters <
+         sizeof(ModuleCounters) / sizeof(ModuleCounters[0]));
+  ModuleCounters[NumModulesWithInline8bitCounters++] = {Start, Stop};
+  NumInline8bitCounters += Stop - Start;
+}
+
 void TracePC::HandleInit(uint32_t *Start, uint32_t *Stop) {
   if (Start == Stop || *Start) return;
   assert(NumModules < sizeof(Modules) / sizeof(Modules[0]));
@@ -76,6 +87,13 @@ void TracePC::PrintModuleInfo() {
   for (size_t i = 0; i < NumModules; i++)
     Printf("[%p, %p), ", Modules[i].Start, Modules[i].Stop);
   Printf("\n");
+  if (NumModulesWithInline8bitCounters) {
+    Printf("INFO: Loaded %zd modules with %zd inline 8-bit counters\n",
+           NumModulesWithInline8bitCounters, NumInline8bitCounters);
+    for (size_t i = 0; i < NumModulesWithInline8bitCounters; i++)
+      Printf("[%p, %p), ", ModuleCounters[i].Start, ModuleCounters[i].Stop);
+    Printf("\n");
+  }
 }
 
 ATTRIBUTE_NO_SANITIZE_ALL
@@ -301,6 +319,11 @@ void __sanitizer_cov_trace_pc() {
 ATTRIBUTE_INTERFACE
 void __sanitizer_cov_trace_pc_guard_init(uint32_t *Start, uint32_t *Stop) {
   fuzzer::TPC.HandleInit(Start, Stop);
+}
+
+ATTRIBUTE_INTERFACE
+void __sanitizer_cov_8bit_counters_init(uint8_t *Start, uint8_t *Stop) {
+  fuzzer::TPC.HandleInline8bitCountersInit(Start, Stop);
 }
 
 ATTRIBUTE_INTERFACE

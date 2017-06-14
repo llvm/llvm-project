@@ -2907,19 +2907,6 @@ SDValue PPCDAGToDAGISel::get64BitZExtCompare(SDValue LHS, SDValue RHS,
                                           getI64Imm(58, dl), getI64Imm(63, dl)),
                    0);
   }
-  case ISD::SETNE: {
-    // {addc.reg, addc.CA} = (addcarry (xor %a, %b), -1)
-    // (zext (setcc %a, %b, setne)) -> (sube addc.reg, addc.reg, addc.CA)
-    // {addcz.reg, addcz.CA} = (addcarry %a, -1)
-    // (zext (setcc %a, 0, setne)) -> (sube addcz.reg, addcz.reg, addcz.CA)
-    SDValue Xor = IsRHSZero ? LHS :
-      SDValue(CurDAG->getMachineNode(PPC::XOR8, dl, MVT::i64, LHS, RHS), 0);
-    SDValue AC =
-      SDValue(CurDAG->getMachineNode(PPC::ADDIC8, dl, MVT::i64, MVT::Glue,
-                                     Xor, getI32Imm(~0U, dl)), 0);
-    return SDValue(CurDAG->getMachineNode(PPC::SUBFE8, dl, MVT::i64, AC,
-                                          Xor, AC.getValue(1)), 0);
-  }
   }
 }
 
@@ -2943,19 +2930,6 @@ SDValue PPCDAGToDAGISel::get64BitSExtCompare(SDValue LHS, SDValue RHS,
                                      AddInput, getI32Imm(~0U, dl)), 0);
     return SDValue(CurDAG->getMachineNode(PPC::SUBFE8, dl, MVT::i64, Addic,
                                           Addic, Addic.getValue(1)), 0);
-  }
-  case ISD::SETNE: {
-    // {subfc.reg, subfc.CA} = (subcarry 0, (xor %a, %b))
-    // (sext (setcc %a, %b, setne)) -> (sube subfc.reg, subfc.reg, subfc.CA)
-    // {subfcz.reg, subfcz.CA} = (subcarry 0, %a)
-    // (sext (setcc %a, 0, setne)) -> (sube subfcz.reg, subfcz.reg, subfcz.CA)
-    SDValue Xor = IsRHSZero ? LHS :
-      SDValue(CurDAG->getMachineNode(PPC::XOR8, dl, MVT::i64, LHS, RHS), 0);
-    SDValue SC =
-      SDValue(CurDAG->getMachineNode(PPC::SUBFIC8, dl, MVT::i64, MVT::Glue,
-                                     Xor, getI32Imm(0, dl)), 0);
-    return SDValue(CurDAG->getMachineNode(PPC::SUBFE8, dl, MVT::i64, SC,
-                                          SC, SC.getValue(1)), 0);
   }
   }
 }

@@ -1,4 +1,4 @@
-﻿//===-- MemorySSA.cpp - Memory SSA Builder---------------------------===//
+//===-- MemorySSA.cpp - Memory SSA Builder---------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //

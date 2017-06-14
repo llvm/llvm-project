@@ -310,6 +310,8 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("BreakBeforeBinaryOperators",
                    Style.BreakBeforeBinaryOperators);
     IO.mapOptional("BreakBeforeBraces", Style.BreakBeforeBraces);
+    IO.mapOptional("BreakBeforeInheritanceComma",
+                   Style.BreakBeforeInheritanceComma);
     IO.mapOptional("BreakBeforeTernaryOperators",
                    Style.BreakBeforeTernaryOperators);
 
@@ -330,8 +332,7 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("BreakStringLiterals", Style.BreakStringLiterals);
     IO.mapOptional("ColumnLimit", Style.ColumnLimit);
     IO.mapOptional("CommentPragmas", Style.CommentPragmas);
-    IO.mapOptional("BreakBeforeInheritanceComma",
-                   Style.BreakBeforeInheritanceComma);
+    IO.mapOptional("CompactNamespaces", Style.CompactNamespaces);
     IO.mapOptional("ConstructorInitializerAllOnOneLineOrOnePerLine",
                    Style.ConstructorInitializerAllOnOneLineOrOnePerLine);
     IO.mapOptional("ConstructorInitializerIndentWidth",
@@ -410,6 +411,7 @@ template <> struct MappingTraits<FormatStyle::BraceWrappingFlags> {
     IO.mapOptional("BeforeCatch", Wrapping.BeforeCatch);
     IO.mapOptional("BeforeElse", Wrapping.BeforeElse);
     IO.mapOptional("IndentBraces", Wrapping.IndentBraces);
+    IO.mapOptional("SplitEmptyFunctionBody", Wrapping.SplitEmptyFunctionBody);
   }
 };
 
@@ -485,7 +487,7 @@ static FormatStyle expandPresets(const FormatStyle &Style) {
     return Style;
   FormatStyle Expanded = Style;
   Expanded.BraceWrapping = {false, false, false, false, false, false,
-                            false, false, false, false, false};
+                            false, false, false, false, false, true};
   switch (Style.BreakBeforeBraces) {
   case FormatStyle::BS_Linux:
     Expanded.BraceWrapping.AfterClass = true;
@@ -498,6 +500,7 @@ static FormatStyle expandPresets(const FormatStyle &Style) {
     Expanded.BraceWrapping.AfterFunction = true;
     Expanded.BraceWrapping.AfterStruct = true;
     Expanded.BraceWrapping.AfterUnion = true;
+    Expanded.BraceWrapping.SplitEmptyFunctionBody = false;
     break;
   case FormatStyle::BS_Stroustrup:
     Expanded.BraceWrapping.AfterFunction = true;
@@ -517,7 +520,7 @@ static FormatStyle expandPresets(const FormatStyle &Style) {
     break;
   case FormatStyle::BS_GNU:
     Expanded.BraceWrapping = {true, true, true, true, true, true,
-                              true, true, true, true, true};
+                              true, true, true, true, true, true};
     break;
   case FormatStyle::BS_WebKit:
     Expanded.BraceWrapping.AfterFunction = true;
@@ -548,19 +551,20 @@ FormatStyle getLLVMStyle() {
   LLVMStyle.AlwaysBreakAfterDefinitionReturnType = FormatStyle::DRTBS_None;
   LLVMStyle.AlwaysBreakBeforeMultilineStrings = false;
   LLVMStyle.AlwaysBreakTemplateDeclarations = false;
-  LLVMStyle.BinPackParameters = true;
   LLVMStyle.BinPackArguments = true;
+  LLVMStyle.BinPackParameters = true;
   LLVMStyle.BreakBeforeBinaryOperators = FormatStyle::BOS_None;
   LLVMStyle.BreakBeforeTernaryOperators = true;
   LLVMStyle.BreakBeforeBraces = FormatStyle::BS_Attach;
   LLVMStyle.BraceWrapping = {false, false, false, false, false, false,
-                             false, false, false, false, false};
+                             false, false, false, false, false, true};
   LLVMStyle.BreakAfterJavaFieldAnnotations = false;
   LLVMStyle.BreakConstructorInitializers = FormatStyle::BCIS_BeforeColon;
   LLVMStyle.BreakBeforeInheritanceComma = false;
   LLVMStyle.BreakStringLiterals = true;
   LLVMStyle.ColumnLimit = 80;
   LLVMStyle.CommentPragmas = "^ IWYU pragma:";
+  LLVMStyle.CompactNamespaces = false;
   LLVMStyle.ConstructorInitializerAllOnOneLineOrOnePerLine = false;
   LLVMStyle.ConstructorInitializerIndentWidth = 4;
   LLVMStyle.ContinuationIndentWidth = 4;

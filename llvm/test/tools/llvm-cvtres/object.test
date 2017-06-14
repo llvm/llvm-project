@@ -3,107 +3,138 @@
 // rc.exe:
 // > rc /fo test_resource.res /nologo test_resource.rc
 // The object file we are comparing against was generated with this command using
-// the original cvtres.
-// > cvtres /machine:X86 /readonly /nologo /out:test_resource.o test_resource.res
+// the original Windows cvtres.exe.
+// > cvtres /machine:X86 /readonly /nologo /out:test_resource.obj.coff \
+//   test_resource.res
 
-RUN: llvm-cvtres /out:%t %p/Inputs/test_resource.res
+RUN: llvm-cvtres /verbose /out:%t %p/Inputs/test_resource.res
 RUN: llvm-readobj -coff-resources -section-data %t | FileCheck %s
 
-CHECK:      Resources [
-CHECK-NEXT:   String Name Entries: 1
-CHECK-NEXT:   ID Entries: 4
-CHECK-NEXT:   Type: STRINGARRAY [
-CHECK-NEXT:     String Name Entries: 1
-CHECK-NEXT:     ID Entries: 0
-CHECK-NEXT:     Name: MYRESOURCE [
-CHECK-NEXT:       String Name Entries: 0
-CHECK-NEXT:       ID Entries: 1
-CHECK-NEXT:       Language: (ID 1033) [
-CHECK-NEXT:         Time/Date Stamp: 1970-01-01 00:00:00 (0x0)
-CHECK-NEXT:         Major Version: 0
-CHECK-NEXT:         Minor Version: 0
-CHECK-NEXT:       ]
-CHECK-NEXT:     ]
-CHECK-NEXT:   ]
-CHECK-NEXT:   Type: kRT_BITMAP (ID 2) [
-CHECK-NEXT:     String Name Entries: 2
-CHECK-NEXT:     ID Entries: 0
-CHECK-NEXT:     Name: CURSOR [
-CHECK-NEXT:       String Name Entries: 0
-CHECK-NEXT:       ID Entries: 1
-CHECK-NEXT:       Language: (ID 1033) [
-CHECK-NEXT:         Time/Date Stamp: 1970-01-01 00:00:00 (0x0)
-CHECK-NEXT:         Major Version: 0
-CHECK-NEXT:         Minor Version: 0
-CHECK-NEXT:       ]
-CHECK-NEXT:     ]
-CHECK-NEXT:     Name: OKAY [
-CHECK-NEXT:       String Name Entries: 0
-CHECK-NEXT:       ID Entries: 1
-CHECK-NEXT:       Language: (ID 1033) [
-CHECK-NEXT:         Time/Date Stamp: 1970-01-01 00:00:00 (0x0)
-CHECK-NEXT:         Major Version: 0
-CHECK-NEXT:         Minor Version: 0
-CHECK-NEXT:       ]
-CHECK-NEXT:     ]
-CHECK-NEXT:   ]
-CHECK-NEXT:   Type: kRT_MENU (ID 4) [
-CHECK-NEXT:     String Name Entries: 1
-CHECK-NEXT:     ID Entries: 1
-CHECK-NEXT:     Name: "EAT" [
-CHECK-NEXT:       String Name Entries: 0
-CHECK-NEXT:       ID Entries: 1
-CHECK-NEXT:       Language: (ID 3081) [
-CHECK-NEXT:         Time/Date Stamp: 1970-01-01 00:00:00 (0x0)
-CHECK-NEXT:         Major Version: 0
-CHECK-NEXT:         Minor Version: 0
-CHECK-NEXT:       ]
-CHECK-NEXT:     ]
-CHECK-NEXT:     Name: (ID 14432) [
-CHECK-NEXT:       String Name Entries: 0
-CHECK-NEXT:       ID Entries: 1
-CHECK-NEXT:       Language: (ID 2052) [
-CHECK-NEXT:         Time/Date Stamp: 1970-01-01 00:00:00 (0x0)
-CHECK-NEXT:         Major Version: 0
-CHECK-NEXT:         Minor Version: 0
-CHECK-NEXT:       ]
-CHECK-NEXT:     ]
-CHECK-NEXT:   ]
-CHECK-NEXT:   Type: kRT_DIALOG (ID 5) [
-CHECK-NEXT:     String Name Entries: 1
-CHECK-NEXT:     ID Entries: 0
-CHECK-NEXT:     Name: TESTDIALOG [
-CHECK-NEXT:       String Name Entries: 0
-CHECK-NEXT:       ID Entries: 1
-CHECK-NEXT:       Language: (ID 1033) [
-CHECK-NEXT:         Time/Date Stamp: 1970-01-01 00:00:00 (0x0)
-CHECK-NEXT:         Major Version: 0
-CHECK-NEXT:         Minor Version: 0
-CHECK-NEXT:       ]
-CHECK-NEXT:     ]
-CHECK-NEXT:   ]
-CHECK-NEXT:   Type: kRT_ACCELERATOR (ID 9) [
-CHECK-NEXT:     String Name Entries: 1
-CHECK-NEXT:     ID Entries: 1
-CHECK-NEXT:     Name: MYACCELERATORS [
-CHECK-NEXT:       String Name Entries: 0
-CHECK-NEXT:       ID Entries: 1
-CHECK-NEXT:       Language: (ID 1033) [
-CHECK-NEXT:         Time/Date Stamp: 1970-01-01 00:00:00 (0x0)
-CHECK-NEXT:         Major Version: 0
-CHECK-NEXT:         Minor Version: 0
-CHECK-NEXT:       ]
-CHECK-NEXT:     ]
-CHECK-NEXT:     Name: (ID 12) [
-CHECK-NEXT:       String Name Entries: 0
-CHECK-NEXT:       ID Entries: 1
-CHECK-NEXT:       Language: (ID 1033) [
-CHECK-NEXT:         Time/Date Stamp: 1970-01-01 00:00:00 (0x0)
-CHECK-NEXT:         Major Version: 0
-CHECK-NEXT:         Minor Version: 0
-CHECK-NEXT:       ]
-CHECK-NEXT:     ]
-CHECK-NEXT:   ]
+CHECK:     Resources [
+CHECK-NEXT:  Total Number of Resources: 8
+CHECK-DAG:   Number of String Entries: 1
+CHECK-NEXT:  Number of ID Entries: 4
+CHECK-NEXT:  Type: STRINGARRAY [
+CHECK-NEXT:    Table Offset: 0x38
+CHECK-NEXT:    Number of String Entries: 1
+CHECK-NEXT:    Number of ID Entries: 0
+CHECK-NEXT:    Name: MYRESOURCE [
+CHECK-NEXT:      Table Offset: 0xC8
+CHECK-NEXT:      Number of String Entries: 0
+CHECK-NEXT:      Number of ID Entries: 1
+CHECK-NEXT:      Language: (ID 1033) [
+CHECK-NEXT:        Entry Offset: 0x188
+CHECK-NEXT:        Time/Date Stamp: 1970-01-01 00:00:00 (0x0)
+CHECK-NEXT:        Major Version: 0
+CHECK-NEXT:        Minor Version: 0
+CHECK-NEXT:        Characteristics: 0
+CHECK-NEXT:      ]
+CHECK-NEXT:    ]
+CHECK-NEXT:  ]
+CHECK-NEXT:  Type: kRT_BITMAP (ID 2) [
+CHECK-NEXT:    Table Offset: 0x50
+CHECK-NEXT:    Number of String Entries: 2
+CHECK-NEXT:    Number of ID Entries: 0
+CHECK-NEXT:    Name: CURSOR [
+CHECK-NEXT:      Table Offset: 0xE0
+CHECK-NEXT:      Number of String Entries: 0
+CHECK-NEXT:      Number of ID Entries: 1
+CHECK-NEXT:      Language: (ID 1033) [
+CHECK-NEXT:        Entry Offset: 0x198
+CHECK-NEXT:        Time/Date Stamp: 1970-01-01 00:00:00 (0x0)
+CHECK-NEXT:        Major Version: 0
+CHECK-NEXT:        Minor Version: 0
+CHECK-NEXT:        Characteristics: 0
+CHECK-NEXT:      ]
+CHECK-NEXT:    ]
+CHECK-NEXT:    Name: OKAY [
+CHECK-NEXT:      Table Offset: 0xF8
+CHECK-NEXT:      Number of String Entries: 0
+CHECK-NEXT:      Number of ID Entries: 1
+CHECK-NEXT:      Language: (ID 1033) [
+CHECK-NEXT:        Entry Offset: 0x1A8
+CHECK-NEXT:        Time/Date Stamp: 1970-01-01 00:00:00 (0x0)
+CHECK-NEXT:        Major Version: 0
+CHECK-NEXT:        Minor Version: 0
+CHECK-NEXT:        Characteristics: 0
+CHECK-NEXT:      ]
+CHECK-NEXT:    ]
+CHECK-NEXT:  ]
+CHECK-NEXT:  Type: kRT_MENU (ID 4) [
+CHECK-NEXT:    Table Offset: 0x70
+CHECK-NEXT:    Number of String Entries: 1
+CHECK-NEXT:    Number of ID Entries: 1
+CHECK-NEXT:    Name: "EAT" [
+CHECK-NEXT:      Table Offset: 0x110
+CHECK-NEXT:      Number of String Entries: 0
+CHECK-NEXT:      Number of ID Entries: 1
+CHECK-NEXT:      Language: (ID 3081) [
+CHECK-NEXT:        Entry Offset: 0x1B8
+CHECK-NEXT:        Time/Date Stamp: 1970-01-01 00:00:00 (0x0)
+CHECK-NEXT:        Major Version: 0
+CHECK-NEXT:        Minor Version: 0
+CHECK-NEXT:        Characteristics: 0
+CHECK-NEXT:      ]
+CHECK-NEXT:    ]
+CHECK-NEXT:    Name: (ID 14432) [
+CHECK-NEXT:      Table Offset: 0x128
+CHECK-NEXT:      Number of String Entries: 0
+CHECK-NEXT:      Number of ID Entries: 1
+CHECK-NEXT:      Language: (ID 2052) [
+CHECK-NEXT:        Entry Offset: 0x1C8
+CHECK-NEXT:        Time/Date Stamp: 1970-01-01 00:00:00 (0x0)
+CHECK-NEXT:        Major Version: 0
+CHECK-NEXT:        Minor Version: 0
+CHECK-NEXT:        Characteristics: 0
+CHECK-NEXT:      ]
+CHECK-NEXT:    ]
+CHECK-NEXT:  ]
+CHECK-NEXT:  Type: kRT_DIALOG (ID 5) [
+CHECK-NEXT:    Table Offset: 0x90
+CHECK-NEXT:    Number of String Entries: 1
+CHECK-NEXT:    Number of ID Entries: 0
+CHECK-NEXT:    Name: TESTDIALOG [
+CHECK-NEXT:      Table Offset: 0x140
+CHECK-NEXT:      Number of String Entries: 0
+CHECK-NEXT:      Number of ID Entries: 1
+CHECK-NEXT:      Language: (ID 1033) [
+CHECK-NEXT:        Entry Offset: 0x1D8
+CHECK-NEXT:        Time/Date Stamp: 1970-01-01 00:00:00 (0x0)
+CHECK-NEXT:        Major Version: 0
+CHECK-NEXT:        Minor Version: 0
+CHECK-NEXT:        Characteristics: 0
+CHECK-NEXT:      ]
+CHECK-NEXT:    ]
+CHECK-NEXT:  ]
+CHECK-NEXT:  Type: kRT_ACCELERATOR (ID 9) [
+CHECK-NEXT:    Table Offset: 0xA8
+CHECK-NEXT:    Number of String Entries: 1
+CHECK-NEXT:    Number of ID Entries: 1
+CHECK-NEXT:    Name: MYACCELERATORS [
+CHECK-NEXT:      Table Offset: 0x158
+CHECK-NEXT:      Number of String Entries: 0
+CHECK-NEXT:      Number of ID Entries: 1
+CHECK-NEXT:      Language: (ID 1033) [
+CHECK-NEXT:        Entry Offset: 0x1E8
+CHECK-NEXT:        Time/Date Stamp: 1970-01-01 00:00:00 (0x0)
+CHECK-NEXT:        Major Version: 0
+CHECK-NEXT:        Minor Version: 0
+CHECK-NEXT:        Characteristics: 0
+CHECK-NEXT:      ]
+CHECK-NEXT:    ]
+CHECK-NEXT:    Name: (ID 12) [
+CHECK-NEXT:      Table Offset: 0x170
+CHECK-NEXT:      Number of String Entries: 0
+CHECK-NEXT:      Number of ID Entries: 1
+CHECK-NEXT:      Language: (ID 1033) [
+CHECK-NEXT:        Entry Offset: 0x1F8
+CHECK-NEXT:        Time/Date Stamp: 1970-01-01 00:00:00 (0x0)
+CHECK-NEXT:        Major Version: 0
+CHECK-NEXT:        Minor Version: 0
+CHECK-NEXT:        Characteristics: 0
+CHECK-NEXT:      ]
+CHECK-NEXT:    ]
+CHECK-NEXT:  ]
 CHECK-DAG:   .rsrc$02 Data (
 CHECK-NEXT:    0000: 11000300 E7030000 0D004400 4C040000  |..........D.L...|
 CHECK-NEXT:    0010: 82001200 BC010000 28000000 10000000  |........(.......|

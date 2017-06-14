@@ -737,19 +737,15 @@ def alignedloadv8f64  : PatFrag<(ops node:$ptr),
 def alignedloadv8i64  : PatFrag<(ops node:$ptr),
                                 (v8i64  (alignedload512 node:$ptr))>;
 
-// Like 'load', but uses special alignment checks suitable for use in
+// Like 'vec128load', but uses special alignment checks suitable for use in
 // memory operands in most SSE instructions, which are required to
 // be naturally aligned on some targets but not on others.  If the subtarget
 // allows unaligned accesses, match any load, though this may require
 // setting a feature bit in the processor (on startup, for example).
 // Opteron 10h and later implement such a feature.
-// Avoid non-temporal aligned loads on supported targets.
-def memop : PatFrag<(ops node:$ptr), (load node:$ptr), [{
-  return (Subtarget->hasSSEUnalignedMem() ||
-          cast<LoadSDNode>(N)->getAlignment() >= 16) &&
-         (!Subtarget->hasSSE41() ||
-          !(cast<LoadSDNode>(N)->getAlignment() >= 16 &&
-            cast<LoadSDNode>(N)->isNonTemporal()));
+def memop : PatFrag<(ops node:$ptr), (vec128load node:$ptr), [{
+  return Subtarget->hasSSEUnalignedMem() ||
+         cast<LoadSDNode>(N)->getAlignment() >= 16;
 }]>;
 
 // 128-bit memop pattern fragments

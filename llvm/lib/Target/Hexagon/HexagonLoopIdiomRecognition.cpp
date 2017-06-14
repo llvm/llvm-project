@@ -1744,7 +1744,8 @@ bool PolynomialMultiplyRecognize::recognize() {
     // wide as the target's pmpy instruction.
     if (!promoteTypes(LoopB, ExitB))
       return false;
-    convertShiftsToLeft(LoopB, ExitB, IterCount);
+    if (!convertShiftsToLeft(LoopB, ExitB, IterCount))
+      return false;
     cleanupLoopBody(LoopB);
   }
 

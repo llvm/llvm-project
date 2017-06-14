@@ -92,6 +92,10 @@ void AArch64Subtarget::initializeProperties() {
     MaxInterleaveFactor = 4;
     // FIXME: remove this to enable 64-bit SLP if performance looks good.
     MinVectorRegisterBitWidth = 128;
+    CacheLineSize = 128;
+    PrefetchDistance = 820;
+    MinPrefetchStride = 2048;
+    MaxPrefetchIterationsAhead = 8;
     break;
   case Kryo:
     MaxInterleaveFactor = 4;

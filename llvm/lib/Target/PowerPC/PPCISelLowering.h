@@ -86,6 +86,10 @@ namespace llvm {
       ///
       XXINSERT,
 
+      /// XXREVERSE - The PPC VSX reverse instruction
+      ///
+      XXREVERSE,
+
       /// VECSHL - The PPC VSX shift left instruction
       ///
       VECSHL,
@@ -458,6 +462,23 @@ namespace llvm {
     /// for a XXSLDWI instruction.
     bool isXXSLDWIShuffleMask(ShuffleVectorSDNode *N, unsigned &ShiftElts,
                               bool &Swap, bool IsLE);
+
+    /// isXXBRHShuffleMask - Return true if this is a shuffle mask suitable
+    /// for a XXBRH instruction.
+    bool isXXBRHShuffleMask(ShuffleVectorSDNode *N);
+
+    /// isXXBRWShuffleMask - Return true if this is a shuffle mask suitable
+    /// for a XXBRW instruction.
+    bool isXXBRWShuffleMask(ShuffleVectorSDNode *N);
+
+    /// isXXBRDShuffleMask - Return true if this is a shuffle mask suitable
+    /// for a XXBRD instruction.
+    bool isXXBRDShuffleMask(ShuffleVectorSDNode *N);
+
+    /// isXXBRQShuffleMask - Return true if this is a shuffle mask suitable
+    /// for a XXBRQ instruction.
+    bool isXXBRQShuffleMask(ShuffleVectorSDNode *N);
+
     /// isXXPERMDIShuffleMask - Return true if this is a shuffle mask suitable
     /// for a XXPERMDI instruction.
     bool isXXPERMDIShuffleMask(ShuffleVectorSDNode *N, unsigned &ShiftElts,
@@ -918,6 +939,7 @@ namespace llvm {
     SDValue LowerEXTRACT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerINTRINSIC_VOID(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerREM(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSCALAR_TO_VECTOR(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSIGN_EXTEND_INREG(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerMUL(SDValue Op, SelectionDAG &DAG) const;

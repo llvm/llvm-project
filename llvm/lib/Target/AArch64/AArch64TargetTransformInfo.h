@@ -78,7 +78,7 @@ public:
     return 31;
   }
 
-  unsigned getRegisterBitWidth(bool Vector) {
+  unsigned getRegisterBitWidth(bool Vector) const {
     if (Vector) {
       if (ST->hasNEON())
         return 128;

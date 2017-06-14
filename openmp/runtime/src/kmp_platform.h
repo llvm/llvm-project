@@ -176,6 +176,10 @@
 /* Specify 32 bit architectures here */
 #define KMP_32_BIT_ARCH (KMP_ARCH_X86 || KMP_ARCH_ARM || KMP_ARCH_MIPS)
 
+// Platforms which support Intel(R) Many Integrated Core Architecture
+#define KMP_MIC_SUPPORTED                                                      \
+  ((KMP_ARCH_X86 || KMP_ARCH_X86_64) && (KMP_OS_LINUX || KMP_OS_WINDOWS))
+
 // TODO: Fixme - This is clever, but really fugly
 #if (1 !=                                                                      \
      KMP_ARCH_X86 + KMP_ARCH_X86_64 + KMP_ARCH_ARM + KMP_ARCH_PPC64 +          \

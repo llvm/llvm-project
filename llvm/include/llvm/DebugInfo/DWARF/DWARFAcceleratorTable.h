@@ -50,6 +50,10 @@ public:
     : AccelSection(AccelSection), StringSection(StringSection), Relocs(Relocs) {}
 
   bool extract();
+  uint32_t getNumBuckets();
+  uint32_t getNumHashes();
+  uint32_t getSizeHdr();
+  uint32_t getHeaderDataLength();
   void dump(raw_ostream &OS) const;
 };
 

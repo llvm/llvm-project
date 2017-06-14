@@ -3070,6 +3070,64 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::VPSRLDZ128rik,         X86::VPSRLDZ128mik,         0 },
     { X86::VPSRLQZ128rik,         X86::VPSRLQZ128mik,         0 },
     { X86::VPSRLWZ128rik,         X86::VPSRLWZ128mik,         0 },
+
+    // AVX-512 masked compare instructions
+    { X86::VCMPPDZ128rrik,        X86::VCMPPDZ128rmik,        0 },
+    { X86::VCMPPSZ128rrik,        X86::VCMPPSZ128rmik,        0 },
+    { X86::VCMPPDZ256rrik,        X86::VCMPPDZ256rmik,        0 },
+    { X86::VCMPPSZ256rrik,        X86::VCMPPSZ256rmik,        0 },
+    { X86::VCMPPDZrrik,           X86::VCMPPDZrmik,           0 },
+    { X86::VCMPPSZrrik,           X86::VCMPPSZrmik,           0 },
+    { X86::VCMPSDZrr_Intk,        X86::VCMPSDZrm_Intk,        TB_NO_REVERSE },
+    { X86::VCMPSSZrr_Intk,        X86::VCMPSSZrm_Intk,        TB_NO_REVERSE },
+    { X86::VPCMPBZ128rrik,        X86::VPCMPBZ128rmik,        0 },
+    { X86::VPCMPBZ256rrik,        X86::VPCMPBZ256rmik,        0 },
+    { X86::VPCMPBZrrik,           X86::VPCMPBZrmik,           0 },
+    { X86::VPCMPDZ128rrik,        X86::VPCMPDZ128rmik,        0 },
+    { X86::VPCMPDZ256rrik,        X86::VPCMPDZ256rmik,        0 },
+    { X86::VPCMPDZrrik,           X86::VPCMPDZrmik,           0 },
+    { X86::VPCMPEQBZ128rrk,       X86::VPCMPEQBZ128rmk,       0 },
+    { X86::VPCMPEQBZ256rrk,       X86::VPCMPEQBZ256rmk,       0 },
+    { X86::VPCMPEQBZrrk,          X86::VPCMPEQBZrmk,          0 },
+    { X86::VPCMPEQDZ128rrk,       X86::VPCMPEQDZ128rmk,       0 },
+    { X86::VPCMPEQDZ256rrk,       X86::VPCMPEQDZ256rmk,       0 },
+    { X86::VPCMPEQDZrrk,          X86::VPCMPEQDZrmk,          0 },
+    { X86::VPCMPEQQZ128rrk,       X86::VPCMPEQQZ128rmk,       0 },
+    { X86::VPCMPEQQZ256rrk,       X86::VPCMPEQQZ256rmk,       0 },
+    { X86::VPCMPEQQZrrk,          X86::VPCMPEQQZrmk,          0 },
+    { X86::VPCMPEQWZ128rrk,       X86::VPCMPEQWZ128rmk,       0 },
+    { X86::VPCMPEQWZ256rrk,       X86::VPCMPEQWZ256rmk,       0 },
+    { X86::VPCMPEQWZrrk,          X86::VPCMPEQWZrmk,          0 },
+    { X86::VPCMPGTBZ128rrk,       X86::VPCMPGTBZ128rmk,       0 },
+    { X86::VPCMPGTBZ256rrk,       X86::VPCMPGTBZ256rmk,       0 },
+    { X86::VPCMPGTBZrrk,          X86::VPCMPGTBZrmk,          0 },
+    { X86::VPCMPGTDZ128rrk,       X86::VPCMPGTDZ128rmk,       0 },
+    { X86::VPCMPGTDZ256rrk,       X86::VPCMPGTDZ256rmk,       0 },
+    { X86::VPCMPGTDZrrk,          X86::VPCMPGTDZrmk,          0 },
+    { X86::VPCMPGTQZ128rrk,       X86::VPCMPGTQZ128rmk,       0 },
+    { X86::VPCMPGTQZ256rrk,       X86::VPCMPGTQZ256rmk,       0 },
+    { X86::VPCMPGTQZrrk,          X86::VPCMPGTQZrmk,          0 },
+    { X86::VPCMPGTWZ128rrk,       X86::VPCMPGTWZ128rmk,       0 },
+    { X86::VPCMPGTWZ256rrk,       X86::VPCMPGTWZ256rmk,       0 },
+    { X86::VPCMPGTWZrrk,          X86::VPCMPGTWZrmk,          0 },
+    { X86::VPCMPQZ128rrik,        X86::VPCMPQZ128rmik,        0 },
+    { X86::VPCMPQZ256rrik,        X86::VPCMPQZ256rmik,        0 },
+    { X86::VPCMPQZrrik,           X86::VPCMPQZrmik,           0 },
+    { X86::VPCMPUBZ128rrik,       X86::VPCMPUBZ128rmik,       0 },
+    { X86::VPCMPUBZ256rrik,       X86::VPCMPUBZ256rmik,       0 },
+    { X86::VPCMPUBZrrik,          X86::VPCMPUBZrmik,          0 },
+    { X86::VPCMPUDZ128rrik,       X86::VPCMPUDZ128rmik,       0 },
+    { X86::VPCMPUDZ256rrik,       X86::VPCMPUDZ256rmik,       0 },
+    { X86::VPCMPUDZrrik,          X86::VPCMPUDZrmik,          0 },
+    { X86::VPCMPUQZ128rrik,       X86::VPCMPUQZ128rmik,       0 },
+    { X86::VPCMPUQZ256rrik,       X86::VPCMPUQZ256rmik,       0 },
+    { X86::VPCMPUQZrrik,          X86::VPCMPUQZrmik,          0 },
+    { X86::VPCMPUWZ128rrik,       X86::VPCMPUWZ128rmik,       0 },
+    { X86::VPCMPUWZ256rrik,       X86::VPCMPUWZ256rmik,       0 },
+    { X86::VPCMPUWZrrik,          X86::VPCMPUWZrmik,          0 },
+    { X86::VPCMPWZ128rrik,        X86::VPCMPWZ128rmik,        0 },
+    { X86::VPCMPWZ256rrik,        X86::VPCMPWZ256rmik,        0 },
+    { X86::VPCMPWZrrik,           X86::VPCMPWZrmik,           0 },
   };
 
   for (X86MemoryFoldTableEntry Entry : MemoryFoldTable3) {
@@ -5172,20 +5230,32 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
       return nullptr;
     }
   }
-  case X86::VPCMPBZ128rri: case X86::VPCMPUBZ128rri:
-  case X86::VPCMPBZ256rri: case X86::VPCMPUBZ256rri:
-  case X86::VPCMPBZrri:    case X86::VPCMPUBZrri:
-  case X86::VPCMPDZ128rri: case X86::VPCMPUDZ128rri:
-  case X86::VPCMPDZ256rri: case X86::VPCMPUDZ256rri:
-  case X86::VPCMPDZrri:    case X86::VPCMPUDZrri:
-  case X86::VPCMPQZ128rri: case X86::VPCMPUQZ128rri:
-  case X86::VPCMPQZ256rri: case X86::VPCMPUQZ256rri:
-  case X86::VPCMPQZrri:    case X86::VPCMPUQZrri:
-  case X86::VPCMPWZ128rri: case X86::VPCMPUWZ128rri:
-  case X86::VPCMPWZ256rri: case X86::VPCMPUWZ256rri:
-  case X86::VPCMPWZrri:    case X86::VPCMPUWZrri: {
+  case X86::VPCMPBZ128rri:  case X86::VPCMPUBZ128rri:
+  case X86::VPCMPBZ256rri:  case X86::VPCMPUBZ256rri:
+  case X86::VPCMPBZrri:     case X86::VPCMPUBZrri:
+  case X86::VPCMPDZ128rri:  case X86::VPCMPUDZ128rri:
+  case X86::VPCMPDZ256rri:  case X86::VPCMPUDZ256rri:
+  case X86::VPCMPDZrri:     case X86::VPCMPUDZrri:
+  case X86::VPCMPQZ128rri:  case X86::VPCMPUQZ128rri:
+  case X86::VPCMPQZ256rri:  case X86::VPCMPUQZ256rri:
+  case X86::VPCMPQZrri:     case X86::VPCMPUQZrri:
+  case X86::VPCMPWZ128rri:  case X86::VPCMPUWZ128rri:
+  case X86::VPCMPWZ256rri:  case X86::VPCMPUWZ256rri:
+  case X86::VPCMPWZrri:     case X86::VPCMPUWZrri:
+  case X86::VPCMPBZ128rrik: case X86::VPCMPUBZ128rrik:
+  case X86::VPCMPBZ256rrik: case X86::VPCMPUBZ256rrik:
+  case X86::VPCMPBZrrik:    case X86::VPCMPUBZrrik:
+  case X86::VPCMPDZ128rrik: case X86::VPCMPUDZ128rrik:
+  case X86::VPCMPDZ256rrik: case X86::VPCMPUDZ256rrik:
+  case X86::VPCMPDZrrik:    case X86::VPCMPUDZrrik:
+  case X86::VPCMPQZ128rrik: case X86::VPCMPUQZ128rrik:
+  case X86::VPCMPQZ256rrik: case X86::VPCMPUQZ256rrik:
+  case X86::VPCMPQZrrik:    case X86::VPCMPUQZrrik:
+  case X86::VPCMPWZ128rrik: case X86::VPCMPUWZ128rrik:
+  case X86::VPCMPWZ256rrik: case X86::VPCMPUWZ256rrik:
+  case X86::VPCMPWZrrik:    case X86::VPCMPUWZrrik: {
     // Flip comparison mode immediate (if necessary).
-    unsigned Imm = MI.getOperand(3).getImm() & 0x7;
+    unsigned Imm = MI.getOperand(MI.getNumOperands() - 1).getImm() & 0x7;
     switch (Imm) {
     default: llvm_unreachable("Unreachable!");
     case 0x01: Imm = 0x06; break; // LT  -> NLE
@@ -5199,7 +5269,7 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
       break;
     }
     auto &WorkingMI = cloneIfNew(MI);
-    WorkingMI.getOperand(3).setImm(Imm);
+    WorkingMI.getOperand(MI.getNumOperands() - 1).setImm(Imm);
     return TargetInstrInfo::commuteInstructionImpl(WorkingMI, /*NewMI=*/false,
                                                    OpIdx1, OpIdx2);
   }
