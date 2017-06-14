@@ -13,6 +13,8 @@
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/BinaryStreamRef.h"
 #include "llvm/Support/BinaryStreamWriter.h"
+#include "llvm/Testing/Support/Error.h"
+
 #include "gtest/gtest.h"
 
 #include <unordered_map>
@@ -20,30 +22,6 @@
 
 using namespace llvm;
 using namespace llvm::support;
-
-#define EXPECT_NO_ERROR(Err)                                                   \
-  {                                                                            \
-    auto E = Err;                                                              \
-    EXPECT_FALSE(static_cast<bool>(E));                                        \
-    if (E)                                                                     \
-      consumeError(std::move(E));                                              \
-  }
-
-#define ASSERT_NO_ERROR(Err)                                                   \
-  {                                                                            \
-    auto E = Err;                                                              \
-    ASSERT_FALSE(static_cast<bool>(E));                                        \
-    if (E)                                                                     \
-      consumeError(std::move(E));                                              \
-  }
-
-#define EXPECT_ERROR(Err)                                                      \
-  {                                                                            \
-    auto E = Err;                                                              \
-    EXPECT_TRUE(static_cast<bool>(E));                                         \
-    if (E)                                                                     \
-      consumeError(std::move(E));                                              \
-  }
 
 namespace {
 
@@ -227,13 +205,13 @@ TEST_F(BinaryStreamTest, BinaryByteStreamBounds) {
 
     // 1. If the read fits it should work.
     ASSERT_EQ(InputData.size(), Stream.Input->getLength());
-    ASSERT_NO_ERROR(Stream.Input->readBytes(2, 1, Buffer));
+    ASSERT_THAT_ERROR(Stream.Input->readBytes(2, 1, Buffer), Succeeded());
     EXPECT_EQ(makeArrayRef(InputData).slice(2, 1), Buffer);
-    ASSERT_NO_ERROR(Stream.Input->readBytes(0, 4, Buffer));
+    ASSERT_THAT_ERROR(Stream.Input->readBytes(0, 4, Buffer), Succeeded());
     EXPECT_EQ(makeArrayRef(InputData).slice(0, 4), Buffer);
 
     // 2. Reading past the bounds of the input should fail.
-    EXPECT_ERROR(Stream.Input->readBytes(4, 2, Buffer));
+    EXPECT_THAT_ERROR(Stream.Input->readBytes(4, 2, Buffer), Failed());
   }
 }
 
@@ -247,31 +225,31 @@ TEST_F(BinaryStreamTest, StreamRefBounds) {
 
     // Read 1 byte from offset 2 should work
     ASSERT_EQ(InputData.size(), Ref.getLength());
-    ASSERT_NO_ERROR(Ref.readBytes(2, 1, Buffer));
+    ASSERT_THAT_ERROR(Ref.readBytes(2, 1, Buffer), Succeeded());
     EXPECT_EQ(makeArrayRef(InputData).slice(2, 1), Buffer);
 
     // Reading everything from offset 2 on.
-    ASSERT_NO_ERROR(Ref.readLongestContiguousChunk(2, Buffer));
+    ASSERT_THAT_ERROR(Ref.readLongestContiguousChunk(2, Buffer), Succeeded());
     if (Stream.IsContiguous)
       EXPECT_EQ(makeArrayRef(InputData).slice(2), Buffer);
     else
       EXPECT_FALSE(Buffer.empty());
 
     // Reading 6 bytes from offset 0 is too big.
-    EXPECT_ERROR(Ref.readBytes(0, 6, Buffer));
-    EXPECT_ERROR(Ref.readLongestContiguousChunk(6, Buffer));
+    EXPECT_THAT_ERROR(Ref.readBytes(0, 6, Buffer), Failed());
+    EXPECT_THAT_ERROR(Ref.readLongestContiguousChunk(6, Buffer), Failed());
 
     // Reading 1 byte from offset 2 after dropping 1 byte is the same as reading
     // 1 byte from offset 3.
     Ref = Ref.drop_front(1);
-    ASSERT_NO_ERROR(Ref.readBytes(2, 1, Buffer));
+    ASSERT_THAT_ERROR(Ref.readBytes(2, 1, Buffer), Succeeded());
     if (Stream.IsContiguous)
       EXPECT_EQ(makeArrayRef(InputData).slice(3, 1), Buffer);
     else
       EXPECT_FALSE(Buffer.empty());
 
     // Reading everything from offset 2 on after dropping 1 byte.
-    ASSERT_NO_ERROR(Ref.readLongestContiguousChunk(2, Buffer));
+    ASSERT_THAT_ERROR(Ref.readLongestContiguousChunk(2, Buffer), Succeeded());
     if (Stream.IsContiguous)
       EXPECT_EQ(makeArrayRef(InputData).slice(3), Buffer);
     else
@@ -280,11 +258,11 @@ TEST_F(BinaryStreamTest, StreamRefBounds) {
     // Reading 2 bytes from offset 2 after dropping 2 bytes is the same as
     // reading 2 bytes from offset 4, and should fail.
     Ref = Ref.drop_front(1);
-    EXPECT_ERROR(Ref.readBytes(2, 2, Buffer));
+    EXPECT_THAT_ERROR(Ref.readBytes(2, 2, Buffer), Failed());
 
     // But if we read the longest contiguous chunk instead, we should still
     // get the 1 byte at the end.
-    ASSERT_NO_ERROR(Ref.readLongestContiguousChunk(2, Buffer));
+    ASSERT_THAT_ERROR(Ref.readLongestContiguousChunk(2, Buffer), Succeeded());
     EXPECT_EQ(makeArrayRef(InputData).take_back(), Buffer);
   }
 }
@@ -298,27 +276,33 @@ TEST_F(BinaryStreamTest, DropOperations) {
   BinaryStreamRef Original(InputData, support::little);
   ASSERT_EQ(InputData.size(), Original.getLength());
 
-  EXPECT_NO_ERROR(Original.readBytes(0, InputData.size(), Result));
+  EXPECT_THAT_ERROR(Original.readBytes(0, InputData.size(), Result),
+                    Succeeded());
   EXPECT_EQ(RefData, Result);
 
   auto Dropped = Original.drop_front(2);
-  EXPECT_NO_ERROR(Dropped.readBytes(0, Dropped.getLength(), Result));
+  EXPECT_THAT_ERROR(Dropped.readBytes(0, Dropped.getLength(), Result),
+                    Succeeded());
   EXPECT_EQ(RefData.drop_front(2), Result);
 
   Dropped = Original.drop_back(2);
-  EXPECT_NO_ERROR(Dropped.readBytes(0, Dropped.getLength(), Result));
+  EXPECT_THAT_ERROR(Dropped.readBytes(0, Dropped.getLength(), Result),
+                    Succeeded());
   EXPECT_EQ(RefData.drop_back(2), Result);
 
   Dropped = Original.keep_front(2);
-  EXPECT_NO_ERROR(Dropped.readBytes(0, Dropped.getLength(), Result));
+  EXPECT_THAT_ERROR(Dropped.readBytes(0, Dropped.getLength(), Result),
+                    Succeeded());
   EXPECT_EQ(RefData.take_front(2), Result);
 
   Dropped = Original.keep_back(2);
-  EXPECT_NO_ERROR(Dropped.readBytes(0, Dropped.getLength(), Result));
+  EXPECT_THAT_ERROR(Dropped.readBytes(0, Dropped.getLength(), Result),
+                    Succeeded());
   EXPECT_EQ(RefData.take_back(2), Result);
 
   Dropped = Original.drop_symmetric(2);
-  EXPECT_NO_ERROR(Dropped.readBytes(0, Dropped.getLength(), Result));
+  EXPECT_THAT_ERROR(Dropped.readBytes(0, Dropped.getLength(), Result),
+                    Succeeded());
   EXPECT_EQ(RefData.drop_front(2).drop_back(2), Result);
 }
 
@@ -341,22 +325,24 @@ TEST_F(BinaryStreamTest, MutableBinaryByteStreamBounds) {
 
       // Read everything from Offset until the end of the input data.
       ArrayRef<uint8_t> Data;
-      ASSERT_NO_ERROR(Stream.Input->readBytes(Offset, ExpectedSize, Data));
+      ASSERT_THAT_ERROR(Stream.Input->readBytes(Offset, ExpectedSize, Data),
+                        Succeeded());
       ASSERT_EQ(ExpectedSize, Data.size());
 
       // Then write it to the destination.
-      ASSERT_NO_ERROR(Stream.Output->writeBytes(0, Data));
+      ASSERT_THAT_ERROR(Stream.Output->writeBytes(0, Data), Succeeded());
 
       // Then we read back what we wrote, it should match the corresponding
       // slice of the original input data.
       ArrayRef<uint8_t> Data2;
-      ASSERT_NO_ERROR(Stream.Output->readBytes(Offset, ExpectedSize, Data2));
+      ASSERT_THAT_ERROR(Stream.Output->readBytes(Offset, ExpectedSize, Data2),
+                        Succeeded());
       EXPECT_EQ(makeArrayRef(InputData).drop_front(Offset), Data2);
     }
 
     std::vector<uint8_t> BigData = {0, 1, 2, 3, 4};
     // 2. If the write is too big, it should fail.
-    EXPECT_ERROR(Stream.Output->writeBytes(3, BigData));
+    EXPECT_THAT_ERROR(Stream.Output->writeBytes(3, BigData), Failed());
   }
 }
 
@@ -456,7 +442,7 @@ TEST_F(BinaryStreamTest, StreamReaderBounds) {
     StringRef S;
     BinaryStreamReader Reader(*Stream.Input);
     EXPECT_EQ(0U, Reader.bytesRemaining());
-    EXPECT_ERROR(Reader.readFixedString(S, 1));
+    EXPECT_THAT_ERROR(Reader.readFixedString(S, 1), Failed());
   }
 
   Bytes.resize(5);
@@ -465,8 +451,8 @@ TEST_F(BinaryStreamTest, StreamReaderBounds) {
     StringRef S;
     BinaryStreamReader Reader(*Stream.Input);
     EXPECT_EQ(Bytes.size(), Reader.bytesRemaining());
-    EXPECT_NO_ERROR(Reader.readFixedString(S, 5));
-    EXPECT_ERROR(Reader.readFixedString(S, 6));
+    EXPECT_THAT_ERROR(Reader.readFixedString(S, 5), Succeeded());
+    EXPECT_THAT_ERROR(Reader.readFixedString(S, 6), Failed());
   }
 }
 
@@ -484,11 +470,11 @@ TEST_F(BinaryStreamTest, StreamReaderIntegers) {
 
   for (auto &Stream : Streams) {
     BinaryStreamWriter Writer(*Stream.Output);
-    ASSERT_NO_ERROR(Writer.writeObject(Little));
-    ASSERT_NO_ERROR(Writer.writeObject(Big));
-    ASSERT_NO_ERROR(Writer.writeInteger(NS));
-    ASSERT_NO_ERROR(Writer.writeInteger(NI));
-    ASSERT_NO_ERROR(Writer.writeInteger(NUL));
+    ASSERT_THAT_ERROR(Writer.writeObject(Little), Succeeded());
+    ASSERT_THAT_ERROR(Writer.writeObject(Big), Succeeded());
+    ASSERT_THAT_ERROR(Writer.writeInteger(NS), Succeeded());
+    ASSERT_THAT_ERROR(Writer.writeInteger(NI), Succeeded());
+    ASSERT_THAT_ERROR(Writer.writeInteger(NUL), Succeeded());
 
     const support::ulittle64_t *Little2;
     const support::ubig32_t *Big2;
@@ -498,11 +484,11 @@ TEST_F(BinaryStreamTest, StreamReaderIntegers) {
 
     // 1. Reading fields individually.
     BinaryStreamReader Reader(*Stream.Input);
-    ASSERT_NO_ERROR(Reader.readObject(Little2));
-    ASSERT_NO_ERROR(Reader.readObject(Big2));
-    ASSERT_NO_ERROR(Reader.readInteger(NS2));
-    ASSERT_NO_ERROR(Reader.readInteger(NI2));
-    ASSERT_NO_ERROR(Reader.readInteger(NUL2));
+    ASSERT_THAT_ERROR(Reader.readObject(Little2), Succeeded());
+    ASSERT_THAT_ERROR(Reader.readObject(Big2), Succeeded());
+    ASSERT_THAT_ERROR(Reader.readInteger(NS2), Succeeded());
+    ASSERT_THAT_ERROR(Reader.readInteger(NI2), Succeeded());
+    ASSERT_THAT_ERROR(Reader.readInteger(NUL2), Succeeded());
     ASSERT_EQ(0U, Reader.bytesRemaining());
 
     EXPECT_EQ(Little, *Little2);
@@ -523,13 +509,13 @@ TEST_F(BinaryStreamTest, StreamReaderIntegerArray) {
   for (auto &Stream : Streams) {
     BinaryStreamReader Reader(*Stream.Input);
     ArrayRef<int> IntsRef;
-    ASSERT_NO_ERROR(Reader.readArray(IntsRef, Ints.size()));
+    ASSERT_THAT_ERROR(Reader.readArray(IntsRef, Ints.size()), Succeeded());
     ASSERT_EQ(0U, Reader.bytesRemaining());
     EXPECT_EQ(makeArrayRef(Ints), IntsRef);
 
     Reader.setOffset(0);
     FixedStreamArray<int> FixedIntsRef;
-    ASSERT_NO_ERROR(Reader.readArray(FixedIntsRef, Ints.size()));
+    ASSERT_THAT_ERROR(Reader.readArray(FixedIntsRef, Ints.size()), Succeeded());
     ASSERT_EQ(0U, Reader.bytesRemaining());
     ASSERT_EQ(Ints, std::vector<int>(FixedIntsRef.begin(), FixedIntsRef.end()));
   }
@@ -545,7 +531,7 @@ TEST_F(BinaryStreamTest, StreamReaderEnum) {
   for (auto &Stream : Streams) {
     BinaryStreamWriter Writer(*Stream.Output);
     for (auto Value : Enums)
-      ASSERT_NO_ERROR(Writer.writeEnum(Value));
+      ASSERT_THAT_ERROR(Writer.writeEnum(Value), Succeeded());
 
     BinaryStreamReader Reader(*Stream.Input);
 
@@ -554,7 +540,7 @@ TEST_F(BinaryStreamTest, StreamReaderEnum) {
 
     for (size_t I = 0; I < Enums.size(); ++I) {
       MyEnum Value;
-      ASSERT_NO_ERROR(Reader.readEnum(Value));
+      ASSERT_THAT_ERROR(Reader.readEnum(Value), Succeeded());
       EXPECT_EQ(Enums[I], Value);
     }
     ASSERT_EQ(0U, Reader.bytesRemaining());
@@ -587,9 +573,9 @@ TEST_F(BinaryStreamTest, StreamReaderObject) {
     const Foo *FPtrOut = nullptr;
     const Foo *GPtrOut = nullptr;
     const Foo *HPtrOut = nullptr;
-    ASSERT_NO_ERROR(Reader.readObject(FPtrOut));
-    ASSERT_NO_ERROR(Reader.readObject(GPtrOut));
-    ASSERT_NO_ERROR(Reader.readObject(HPtrOut));
+    ASSERT_THAT_ERROR(Reader.readObject(FPtrOut), Succeeded());
+    ASSERT_THAT_ERROR(Reader.readObject(GPtrOut), Succeeded());
+    ASSERT_THAT_ERROR(Reader.readObject(HPtrOut), Succeeded());
     EXPECT_EQ(0U, Reader.bytesRemaining());
     EXPECT_EQ(Foos[0], *FPtrOut);
     EXPECT_EQ(Foos[1], *GPtrOut);
@@ -610,10 +596,10 @@ TEST_F(BinaryStreamTest, StreamReaderStrings) {
     StringRef S2;
     StringRef S3;
     StringRef S4;
-    ASSERT_NO_ERROR(Reader.readCString(S1));
-    ASSERT_NO_ERROR(Reader.readCString(S2));
-    ASSERT_NO_ERROR(Reader.readCString(S3));
-    ASSERT_NO_ERROR(Reader.readCString(S4));
+    ASSERT_THAT_ERROR(Reader.readCString(S1), Succeeded());
+    ASSERT_THAT_ERROR(Reader.readCString(S2), Succeeded());
+    ASSERT_THAT_ERROR(Reader.readCString(S3), Succeeded());
+    ASSERT_THAT_ERROR(Reader.readCString(S4), Succeeded());
     ASSERT_EQ(0U, Reader.bytesRemaining());
 
     EXPECT_EQ("One", S1);
@@ -623,14 +609,14 @@ TEST_F(BinaryStreamTest, StreamReaderStrings) {
 
     S1 = S2 = S3 = S4 = "";
     Reader.setOffset(0);
-    ASSERT_NO_ERROR(Reader.readFixedString(S1, 3));
-    ASSERT_NO_ERROR(Reader.skip(1));
-    ASSERT_NO_ERROR(Reader.readFixedString(S2, 3));
-    ASSERT_NO_ERROR(Reader.skip(1));
-    ASSERT_NO_ERROR(Reader.readFixedString(S3, 5));
-    ASSERT_NO_ERROR(Reader.skip(1));
-    ASSERT_NO_ERROR(Reader.readFixedString(S4, 4));
-    ASSERT_NO_ERROR(Reader.skip(1));
+    ASSERT_THAT_ERROR(Reader.readFixedString(S1, 3), Succeeded());
+    ASSERT_THAT_ERROR(Reader.skip(1), Succeeded());
+    ASSERT_THAT_ERROR(Reader.readFixedString(S2, 3), Succeeded());
+    ASSERT_THAT_ERROR(Reader.skip(1), Succeeded());
+    ASSERT_THAT_ERROR(Reader.readFixedString(S3, 5), Succeeded());
+    ASSERT_THAT_ERROR(Reader.skip(1), Succeeded());
+    ASSERT_THAT_ERROR(Reader.readFixedString(S4, 4), Succeeded());
+    ASSERT_THAT_ERROR(Reader.skip(1), Succeeded());
     ASSERT_EQ(0U, Reader.bytesRemaining());
 
     EXPECT_EQ("One", S1);
@@ -648,16 +634,16 @@ TEST_F(BinaryStreamTest, StreamWriterBounds) {
 
     // 1. Can write a string that exactly fills the buffer.
     EXPECT_EQ(5U, Writer.bytesRemaining());
-    EXPECT_NO_ERROR(Writer.writeFixedString("abcde"));
+    EXPECT_THAT_ERROR(Writer.writeFixedString("abcde"), Succeeded());
     EXPECT_EQ(0U, Writer.bytesRemaining());
 
     // 2. Can write an empty string even when you're full
-    EXPECT_NO_ERROR(Writer.writeFixedString(""));
-    EXPECT_ERROR(Writer.writeFixedString("a"));
+    EXPECT_THAT_ERROR(Writer.writeFixedString(""), Succeeded());
+    EXPECT_THAT_ERROR(Writer.writeFixedString("a"), Failed());
 
     // 3. Can't write a string that is one character too long.
     Writer.setOffset(0);
-    EXPECT_ERROR(Writer.writeFixedString("abcdef"));
+    EXPECT_THAT_ERROR(Writer.writeFixedString("abcdef"), Failed());
   }
 }
 
@@ -676,11 +662,12 @@ TEST_F(BinaryStreamTest, StreamWriterIntegerArrays) {
     ArrayRef<int> Ints;
     ArrayRef<int> Ints2;
     // First read them, then write them, then read them back.
-    ASSERT_NO_ERROR(Reader.readArray(Ints, SourceInts.size()));
-    ASSERT_NO_ERROR(Writer.writeArray(Ints));
+    ASSERT_THAT_ERROR(Reader.readArray(Ints, SourceInts.size()), Succeeded());
+    ASSERT_THAT_ERROR(Writer.writeArray(Ints), Succeeded());
 
     BinaryStreamReader ReaderBacker(*Stream.Output);
-    ASSERT_NO_ERROR(ReaderBacker.readArray(Ints2, SourceInts.size()));
+    ASSERT_THAT_ERROR(ReaderBacker.readArray(Ints2, SourceInts.size()),
+                      Succeeded());
 
     EXPECT_EQ(makeArrayRef(SourceInts), Ints2);
   }
@@ -698,12 +685,12 @@ TEST_F(BinaryStreamTest, StringWriterStrings) {
   for (auto &Stream : Streams) {
     BinaryStreamWriter Writer(*Stream.Output);
     for (auto S : Strings)
-      ASSERT_NO_ERROR(Writer.writeCString(S));
+      ASSERT_THAT_ERROR(Writer.writeCString(S), Succeeded());
     std::vector<StringRef> InStrings;
     BinaryStreamReader Reader(*Stream.Input);
     while (!Reader.empty()) {
       StringRef S;
-      ASSERT_NO_ERROR(Reader.readCString(S));
+      ASSERT_THAT_ERROR(Reader.readCString(S), Succeeded());
       InStrings.push_back(S);
     }
     EXPECT_EQ(makeArrayRef(Strings), makeArrayRef(InStrings));
@@ -748,7 +735,7 @@ TEST_F(BinaryStreamTest, BinaryItemStream) {
     MutableArrayRef<uint8_t> Buffer(Ptr, sizeof(Foo));
     MutableBinaryByteStream Stream(Buffer, llvm::support::big);
     BinaryStreamWriter Writer(Stream);
-    ASSERT_NO_ERROR(Writer.writeObject(F));
+    ASSERT_THAT_ERROR(Writer.writeObject(F), Succeeded());
     Objects.push_back(BinaryItemStreamObject(Buffer));
   }
 
@@ -758,7 +745,7 @@ TEST_F(BinaryStreamTest, BinaryItemStream) {
 
   for (const auto &F : Foos) {
     const Foo *F2;
-    ASSERT_NO_ERROR(Reader.readObject(F2));
+    ASSERT_THAT_ERROR(Reader.readObject(F2), Succeeded());
 
     EXPECT_EQ(F.X, F2->X);
     EXPECT_DOUBLE_EQ(F.Y, F2->Y);

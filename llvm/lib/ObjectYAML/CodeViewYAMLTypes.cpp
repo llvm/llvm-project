@@ -714,3 +714,43 @@ void MappingTraits<MemberRecord>::mapping(IO &IO, MemberRecord &Obj) {
   default: { llvm_unreachable("Unknown member kind!"); }
   }
 }
+
+std::vector<LeafRecord>
+llvm::CodeViewYAML::fromDebugT(ArrayRef<uint8_t> DebugT) {
+  ExitOnError Err("Invalid .debug$T section!");
+  BinaryStreamReader Reader(DebugT, support::little);
+  CVTypeArray Types;
+  uint32_t Magic;
+
+  Err(Reader.readInteger(Magic));
+  assert(Magic == COFF::DEBUG_SECTION_MAGIC && "Invalid .debug$T section!");
+
+  std::vector<LeafRecord> Result;
+  Err(Reader.readArray(Types, Reader.bytesRemaining()));
+  for (const auto &T : Types) {
+    auto CVT = Err(LeafRecord::fromCodeViewRecord(T));
+    Result.push_back(CVT);
+  }
+  return Result;
+}
+
+ArrayRef<uint8_t> llvm::CodeViewYAML::toDebugT(ArrayRef<LeafRecord> Leafs,
+                                               BumpPtrAllocator &Alloc) {
+  TypeTableBuilder TTB(Alloc, false);
+  uint32_t Size = sizeof(uint32_t);
+  for (const auto &Leaf : Leafs) {
+    CVType T = Leaf.toCodeViewRecord(TTB);
+    Size += T.length();
+    assert(T.length() % 4 == 0 && "Improper type record alignment!");
+  }
+  uint8_t *ResultBuffer = Alloc.Allocate<uint8_t>(Size);
+  MutableArrayRef<uint8_t> Output(ResultBuffer, Size);
+  BinaryStreamWriter Writer(Output, support::little);
+  ExitOnError Err("Error writing type record to .debug$T section");
+  Err(Writer.writeInteger<uint32_t>(COFF::DEBUG_SECTION_MAGIC));
+  for (const auto &R : TTB.records()) {
+    Err(Writer.writeBytes(R));
+  }
+  assert(Writer.bytesRemaining() == 0 && "Didn't write all type record bytes!");
+  return Output;
+}

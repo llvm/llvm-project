@@ -20,6 +20,7 @@ add_llvm_library(LLVMDebugInfoCodeView
   LazyRandomTypeCollection.cpp
   Line.cpp
   RecordSerialization.cpp
+  StringsAndChecksums.cpp
   SymbolRecordMapping.cpp
   SymbolDumper.cpp
   SymbolSerializer.cpp
@@ -32,7 +33,7 @@ add_llvm_library(LLVMDebugInfoCodeView
   TypeSerializer.cpp
   TypeStreamMerger.cpp
   TypeTableCollection.cpp
-  
+
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/DebugInfo/CodeView
   )

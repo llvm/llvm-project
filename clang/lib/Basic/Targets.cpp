@@ -4734,6 +4734,9 @@ protected:
 
     Builder.defineMacro("__rtems__");
     Builder.defineMacro("__ELF__");
+    // Required by the libc++ locale support.
+    if (Opts.CPlusPlus)
+      Builder.defineMacro("_GNU_SOURCE");
   }
 
 public:

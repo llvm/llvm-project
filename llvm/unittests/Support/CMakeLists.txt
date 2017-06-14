@@ -1,5 +1,6 @@
 set(LLVM_LINK_COMPONENTS
   Support
+  TestingSupport
   )
 
 add_llvm_unittest(SupportTests

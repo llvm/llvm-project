@@ -102,9 +102,13 @@ void DebugCounter::push_back(const std::string &Val) {
   }
 }
 
-void DebugCounter::print(raw_ostream &OS) {
+void DebugCounter::print(raw_ostream &OS) const {
   OS << "Counters and values:\n";
   for (const auto &KV : Counters)
     OS << left_justify(RegisteredCounters[KV.first], 32) << ": {"
        << KV.second.first << "," << KV.second.second << "}\n";
+}
+
+LLVM_DUMP_METHOD void DebugCounter::dump() const {
+  print(dbgs());
 }

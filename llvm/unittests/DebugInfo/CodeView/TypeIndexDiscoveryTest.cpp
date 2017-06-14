@@ -9,7 +9,6 @@
 
 #include "llvm/DebugInfo/CodeView/TypeIndexDiscovery.h"
 
-#include "ErrorChecking.h"
 #include "llvm/DebugInfo/CodeView/TypeTableBuilder.h"
 #include "llvm/Support/Allocator.h"
 

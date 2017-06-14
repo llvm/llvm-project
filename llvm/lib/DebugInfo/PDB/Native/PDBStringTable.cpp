@@ -56,7 +56,8 @@ Error PDBStringTable::readStrings(BinaryStreamReader &Reader) {
   return Error::success();
 }
 
-codeview::DebugStringTableSubsectionRef PDBStringTable::getStringTable() const {
+const codeview::DebugStringTableSubsectionRef &
+PDBStringTable::getStringTable() const {
   return Strings;
 }
 

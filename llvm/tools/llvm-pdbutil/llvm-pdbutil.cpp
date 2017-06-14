@@ -35,6 +35,7 @@
 #include "llvm/DebugInfo/CodeView/DebugInlineeLinesSubsection.h"
 #include "llvm/DebugInfo/CodeView/DebugLinesSubsection.h"
 #include "llvm/DebugInfo/CodeView/LazyRandomTypeCollection.h"
+#include "llvm/DebugInfo/CodeView/StringsAndChecksums.h"
 #include "llvm/DebugInfo/CodeView/TypeStreamMerger.h"
 #include "llvm/DebugInfo/CodeView/TypeTableBuilder.h"
 #include "llvm/DebugInfo/MSF/MSFBuilder.h"
@@ -511,10 +512,12 @@ static void yamlToPdb(StringRef Path) {
   for (uint32_t I = 0; I < kSpecialStreamCount; ++I)
     ExitOnErr(Builder.getMsfBuilder().addStream(0));
 
+  StringsAndChecksums Strings;
+  Strings.setStrings(std::make_shared<DebugStringTableSubsection>());
+
   if (YamlObj.StringTable.hasValue()) {
-    auto &Strings = Builder.getStringTableBuilder();
     for (auto S : *YamlObj.StringTable)
-      Strings.insert(S);
+      Strings.strings()->insert(S);
   }
 
   pdb::yaml::PdbInfoStream DefaultInfoStream;
@@ -531,8 +534,6 @@ static void yamlToPdb(StringRef Path) {
   InfoBuilder.setVersion(Info.Version);
   for (auto F : Info.Features)
     InfoBuilder.addFeature(F);
-
-  auto &Strings = Builder.getStringTableBuilder().getStrings();
 
   const auto &Dbi = YamlObj.DbiStream.getValueOr(DefaultDbiStream);
   auto &DbiBuilder = Builder.getDbiBuilder();
@@ -557,10 +558,14 @@ static void yamlToPdb(StringRef Path) {
       }
     }
 
+    // Each module has its own checksum subsection, so scan for it every time.
+    Strings.setChecksums(nullptr);
+    CodeViewYAML::initializeStringsAndChecksums(MI.Subsections, Strings);
+
     auto CodeViewSubsections = ExitOnErr(CodeViewYAML::toCodeViewSubsectionList(
         Allocator, MI.Subsections, Strings));
     for (auto &SS : CodeViewSubsections) {
-      ModiBuilder.addDebugSubsection(std::move(SS));
+      ModiBuilder.addDebugSubsection(SS);
     }
   }
 
@@ -579,6 +584,8 @@ static void yamlToPdb(StringRef Path) {
     CVType Type = R.toCodeViewRecord(Allocator);
     IpiBuilder.addTypeRecord(Type.RecordData, None);
   }
+
+  Builder.getStringTableBuilder().setStrings(*Strings.strings());
 
   ExitOnErr(Builder.commit(opts::yaml2pdb::YamlPdbOutputFile));
 }

@@ -7,19 +7,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ErrorChecking.h"
-
+#include "llvm/DebugInfo/CodeView/TypeServerHandler.h"
 #include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeRecordMapping.h"
 #include "llvm/DebugInfo/CodeView/TypeSerializer.h"
-#include "llvm/DebugInfo/CodeView/TypeServerHandler.h"
 #include "llvm/DebugInfo/CodeView/TypeTableBuilder.h"
 #include "llvm/DebugInfo/CodeView/TypeVisitorCallbackPipeline.h"
 #include "llvm/DebugInfo/CodeView/TypeVisitorCallbacks.h"
 #include "llvm/DebugInfo/PDB/Native/RawTypes.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Testing/Support/Error.h"
 
 #include "gtest/gtest.h"
 
@@ -127,7 +126,8 @@ TEST_F(TypeServerHandlerTest, VisitRecordNoTypeServer) {
   Pipeline.addCallbackToPipeline(C1);
   Pipeline.addCallbackToPipeline(C2);
 
-  EXPECT_NO_ERROR(codeview::visitTypeRecord(TypeServerRecord, Pipeline));
+  EXPECT_THAT_ERROR(codeview::visitTypeRecord(TypeServerRecord, Pipeline),
+                    Succeeded());
 
   EXPECT_EQ(MockTypeVisitorCallbacks::State::VisitTypeEnd, C1.S);
   EXPECT_EQ(MockTypeVisitorCallbacks::State::VisitTypeEnd, C2.S);
@@ -141,14 +141,18 @@ TEST_F(TypeServerHandlerTest, VisitRecordWithTypeServerOnce) {
   MockTypeVisitorCallbacks C1;
 
   // Our mock server returns true the first time.
-  EXPECT_NO_ERROR(codeview::visitTypeRecord(
-      TypeServerRecord, C1, codeview::VDS_BytesExternal, &Handler));
+  EXPECT_THAT_ERROR(codeview::visitTypeRecord(TypeServerRecord, C1,
+                                              codeview::VDS_BytesExternal,
+                                              &Handler),
+                    Succeeded());
   EXPECT_TRUE(Handler.Handled);
   EXPECT_EQ(MockTypeVisitorCallbacks::State::Ready, C1.S);
 
   // And false the second time.
-  EXPECT_NO_ERROR(codeview::visitTypeRecord(
-      TypeServerRecord, C1, codeview::VDS_BytesExternal, &Handler));
+  EXPECT_THAT_ERROR(codeview::visitTypeRecord(TypeServerRecord, C1,
+                                              codeview::VDS_BytesExternal,
+                                              &Handler),
+                    Succeeded());
   EXPECT_TRUE(Handler.Handled);
   EXPECT_EQ(MockTypeVisitorCallbacks::State::VisitTypeEnd, C1.S);
 }
@@ -161,13 +165,17 @@ TEST_F(TypeServerHandlerTest, VisitRecordWithTypeServerAlways) {
 
   MockTypeVisitorCallbacks C1;
 
-  EXPECT_NO_ERROR(codeview::visitTypeRecord(
-      TypeServerRecord, C1, codeview::VDS_BytesExternal, &Handler));
+  EXPECT_THAT_ERROR(codeview::visitTypeRecord(TypeServerRecord, C1,
+                                              codeview::VDS_BytesExternal,
+                                              &Handler),
+                    Succeeded());
   EXPECT_TRUE(Handler.Handled);
   EXPECT_EQ(MockTypeVisitorCallbacks::State::Ready, C1.S);
 
-  EXPECT_NO_ERROR(codeview::visitTypeRecord(
-      TypeServerRecord, C1, codeview::VDS_BytesExternal, &Handler));
+  EXPECT_THAT_ERROR(codeview::visitTypeRecord(TypeServerRecord, C1,
+                                              codeview::VDS_BytesExternal,
+                                              &Handler),
+                    Succeeded());
   EXPECT_TRUE(Handler.Handled);
   EXPECT_EQ(MockTypeVisitorCallbacks::State::Ready, C1.S);
 }

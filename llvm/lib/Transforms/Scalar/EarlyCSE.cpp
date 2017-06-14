@@ -15,6 +15,7 @@
 #include "llvm/Transforms/Scalar/EarlyCSE.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/ScopedHashTable.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/GlobalsModRef.h"
@@ -506,7 +507,7 @@ private:
     if (MemoryAccess *MA = MSSA->getMemoryAccess(Inst)) {
       // Optimize MemoryPhi nodes that may become redundant by having all the
       // same input values once MA is removed.
-      SmallVector<MemoryPhi *, 4> PhisToCheck;
+      SmallSetVector<MemoryPhi *, 4> PhisToCheck;
       SmallVector<MemoryAccess *, 8> WorkQueue;
       WorkQueue.push_back(MA);
       // Process MemoryPhi nodes in FIFO order using a ever-growing vector since
@@ -517,7 +518,7 @@ private:
 
         for (auto *U : WI->users())
           if (MemoryPhi *MP = dyn_cast<MemoryPhi>(U))
-            PhisToCheck.push_back(MP);
+            PhisToCheck.insert(MP);
 
         MSSAUpdater->removeMemoryAccess(WI);
 

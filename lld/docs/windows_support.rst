@@ -48,11 +48,8 @@ Creating DLL
   file.
 
 Windows resource files support
-  :good:`Done`. If an ``.rc`` file is given, LLD converts the file to a COFF
-  file using some external commands and link it. Specifically, ``rc.exe`` is
-  used to compile a resource file (.rc) to a compiled resource (.res)
-  file. ``rescvt.exe`` is then used to convert a compiled resource file to a
-  COFF object file section. Both tools are shipped with MSVC.
+  :good:`Done`. If an ``.res`` file is given, LLD converts the file to a COFF
+  file using ``cvtres.exe`` command and link it.
 
 Safe Structured Exception Handler (SEH)
   :good:`Done` for both x86 and x64.

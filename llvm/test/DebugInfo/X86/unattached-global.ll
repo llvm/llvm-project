@@ -12,7 +12,7 @@ target triple = "x86_64-unknown-linux-gnu"
 !1 = !{!2}
 !2 = !DIGlobalVariableExpression(var: !3, expr: !4)
 !3 = distinct !DIGlobalVariable(name: "a", scope: null, isLocal: false, isDefinition: true, type: !6)
-!4 = !DIExpression(DW_OP_plus, 4)
+!4 = !DIExpression(DW_OP_plus_uconst, 4)
 !5 = !DIFile(filename: "<stdin>", directory: "/")
 !6 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
 

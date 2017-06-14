@@ -364,6 +364,18 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
   setOperationAction(ISD::UDIV, MVT::i64, Expand);
   setOperationAction(ISD::UREM, MVT::i64, Expand);
 
+  if (!(Subtarget.hasDSP() && Subtarget.hasMips32r2())) {
+    setOperationAction(ISD::ADDC, MVT::i32, Expand);
+    setOperationAction(ISD::ADDE, MVT::i32, Expand);
+  }
+
+  setOperationAction(ISD::ADDC, MVT::i64, Expand);
+  setOperationAction(ISD::ADDE, MVT::i64, Expand);
+  setOperationAction(ISD::SUBC, MVT::i32, Expand);
+  setOperationAction(ISD::SUBE, MVT::i32, Expand);
+  setOperationAction(ISD::SUBC, MVT::i64, Expand);
+  setOperationAction(ISD::SUBE, MVT::i64, Expand);
+
   // Operations not directly supported by Mips.
   setOperationAction(ISD::BR_CC,             MVT::f32,   Expand);
   setOperationAction(ISD::BR_CC,             MVT::f64,   Expand);
@@ -469,6 +481,7 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
   setTargetDAGCombine(ISD::AND);
   setTargetDAGCombine(ISD::OR);
   setTargetDAGCombine(ISD::ADD);
+  setTargetDAGCombine(ISD::SUB);
   setTargetDAGCombine(ISD::AssertZext);
   setTargetDAGCombine(ISD::SHL);
 
@@ -918,14 +931,130 @@ static SDValue performORCombine(SDNode *N, SelectionDAG &DAG,
   }
 }
 
+static SDValue performMADD_MSUBCombine(SDNode *ROOTNode, SelectionDAG &CurDAG,
+                                       const MipsSubtarget &Subtarget) {
+  // ROOTNode must have a multiplication as an operand for the match to be
+  // successful.
+  if (ROOTNode->getOperand(0).getOpcode() != ISD::MUL &&
+      ROOTNode->getOperand(1).getOpcode() != ISD::MUL)
+    return SDValue();
+
+  // We don't handle vector types here.
+  if (ROOTNode->getValueType(0).isVector())
+    return SDValue();
+
+  // For MIPS64, madd / msub instructions are inefficent to use with 64 bit
+  // arithmetic. E.g.
+  // (add (mul a b) c) =>
+  //   let res = (madd (mthi (drotr c 32))x(mtlo c) a b) in
+  //   MIPS64:   (or (dsll (mfhi res) 32) (dsrl (dsll (mflo res) 32) 32)
+  //   or
+  //   MIPS64R2: (dins (mflo res) (mfhi res) 32 32)
+  //
+  // The overhead of setting up the Hi/Lo registers and reassembling the
+  // result makes this a dubious optimzation for MIPS64. The core of the
+  // problem is that Hi/Lo contain the upper and lower 32 bits of the
+  // operand and result.
+  //
+  // It requires a chain of 4 add/mul for MIPS64R2 to get better code
+  // density than doing it naively, 5 for MIPS64. Additionally, using
+  // madd/msub on MIPS64 requires the operands actually be 32 bit sign
+  // extended operands, not true 64 bit values.
+  //
+  // FIXME: For the moment, disable this completely for MIPS64.
+  if (Subtarget.hasMips64())
+    return SDValue();
+
+  SDValue Mult = ROOTNode->getOperand(0).getOpcode() == ISD::MUL
+                     ? ROOTNode->getOperand(0)
+                     : ROOTNode->getOperand(1);
+
+  SDValue AddOperand = ROOTNode->getOperand(0).getOpcode() == ISD::MUL
+                     ? ROOTNode->getOperand(1)
+                     : ROOTNode->getOperand(0);
+
+  // Transform this to a MADD only if the user of this node is the add.
+  // If there are other users of the mul, this function returns here.
+  if (!Mult.hasOneUse())
+    return SDValue();
+
+  // maddu and madd are unusual instructions in that on MIPS64 bits 63..31
+  // must be in canonical form, i.e. sign extended. For MIPS32, the operands
+  // of the multiply must have 32 or more sign bits, otherwise we cannot
+  // perform this optimization. We have to check this here as we're performing
+  // this optimization pre-legalization.
+  SDValue MultLHS = Mult->getOperand(0);
+  SDValue MultRHS = Mult->getOperand(1);
+  unsigned LHSSB = CurDAG.ComputeNumSignBits(MultLHS);
+  unsigned RHSSB = CurDAG.ComputeNumSignBits(MultRHS);
+
+  if (LHSSB < 32 || RHSSB < 32)
+    return SDValue();
+
+  APInt HighMask =
+      APInt::getHighBitsSet(Mult->getValueType(0).getScalarSizeInBits(), 32);
+  bool IsUnsigned = CurDAG.MaskedValueIsZero(Mult->getOperand(0), HighMask) &&
+                    CurDAG.MaskedValueIsZero(Mult->getOperand(1), HighMask) &&
+                    CurDAG.MaskedValueIsZero(AddOperand, HighMask);
+
+  // Initialize accumulator.
+  SDLoc DL(ROOTNode);
+  SDValue TopHalf;
+  SDValue BottomHalf;
+  BottomHalf = CurDAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32, AddOperand,
+                              CurDAG.getIntPtrConstant(0, DL));
+
+  TopHalf = CurDAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32, AddOperand,
+                           CurDAG.getIntPtrConstant(1, DL));
+  SDValue ACCIn = CurDAG.getNode(MipsISD::MTLOHI, DL, MVT::Untyped,
+                                  BottomHalf,
+                                  TopHalf);
+
+  // Create MipsMAdd(u) / MipsMSub(u) node.
+  bool IsAdd = ROOTNode->getOpcode() == ISD::ADD;
+  unsigned Opcode = IsAdd ? (IsUnsigned ? MipsISD::MAddu : MipsISD::MAdd)
+                          : (IsUnsigned ? MipsISD::MSubu : MipsISD::MSub);
+  SDValue MAddOps[3] = {
+      CurDAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Mult->getOperand(0)),
+      CurDAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Mult->getOperand(1)), ACCIn};
+  EVT VTs[2] = {MVT::i32, MVT::i32};
+  SDValue MAdd = CurDAG.getNode(Opcode, DL, VTs, MAddOps);
+
+  SDValue ResLo = CurDAG.getNode(MipsISD::MFLO, DL, MVT::i32, MAdd);
+  SDValue ResHi = CurDAG.getNode(MipsISD::MFHI, DL, MVT::i32, MAdd);
+  SDValue Combined =
+      CurDAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64, ResLo, ResHi);
+  return Combined;
+}
+
+static SDValue performSUBCombine(SDNode *N, SelectionDAG &DAG,
+                                 TargetLowering::DAGCombinerInfo &DCI,
+                                 const MipsSubtarget &Subtarget) {
+  // (sub v0 (mul v1, v2)) => (msub v1, v2, v0)
+  if (DCI.isBeforeLegalizeOps()) {
+    if (Subtarget.hasMips32() && !Subtarget.hasMips32r6() &&
+        !Subtarget.inMips16Mode() && N->getValueType(0) == MVT::i64)
+      return performMADD_MSUBCombine(N, DAG, Subtarget);
+
+    return SDValue();
+  }
+
+  return SDValue();
+}
+
 static SDValue performADDCombine(SDNode *N, SelectionDAG &DAG,
                                  TargetLowering::DAGCombinerInfo &DCI,
                                  const MipsSubtarget &Subtarget) {
-  // (add v0, (add v1, abs_lo(tjt))) => (add (add v0, v1), abs_lo(tjt))
+  // (add v0 (mul v1, v2)) => (madd v1, v2, v0)
+  if (DCI.isBeforeLegalizeOps()) {
+    if (Subtarget.hasMips32() && !Subtarget.hasMips32r6() &&
+        !Subtarget.inMips16Mode() && N->getValueType(0) == MVT::i64)
+      return performMADD_MSUBCombine(N, DAG, Subtarget);
 
-  if (DCI.isBeforeLegalizeOps())
     return SDValue();
+  }
 
+  // (add v0, (add v1, abs_lo(tjt))) => (add (add v0, v1), abs_lo(tjt))
   SDValue Add = N->getOperand(1);
 
   if (Add.getOpcode() != ISD::ADD)
@@ -1053,6 +1182,8 @@ SDValue  MipsTargetLowering::PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI)
     return performAssertZextCombine(N, DAG, DCI, Subtarget);
   case ISD::SHL:
     return performSHLCombine(N, DAG, DCI, Subtarget);
+  case ISD::SUB:
+    return performSUBCombine(N, DAG, DCI, Subtarget);
   }
 
   return SDValue();

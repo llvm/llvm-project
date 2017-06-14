@@ -267,3 +267,15 @@ bar:
 // CHECK-NEXT:       SHF_TLS
 // CHECK-NEXT:       SHF_WRITE
 // CHECK-NEXT:     ]
+
+// Test SHT_LLVM_ODRTAB
+
+.section .odrtab,"e",@llvm_odrtab
+// ASM: .section .odrtab,"e",@llvm_odrtab
+
+// CHECK:        Section {
+// CHECK:          Name: .odrtab
+// CHECK-NEXT:     Type: SHT_LLVM_ODRTAB
+// CHECK-NEXT:     Flags [
+// CHECK-NEXT:       SHF_EXCLUDE
+// CHECK-NEXT:     ]

@@ -514,20 +514,26 @@ static uint64_t readPointer(const DataExtractor &Data, uint32_t &Offset,
   }
 }
 
+// This is a workaround for old compilers which do not allow
+// noreturn attribute usage in lambdas. Once the support for those
+// compilers are phased out, we can remove this and return back to
+// a ReportError lambda: [StartOffset](const char *ErrorMsg).
+#define ReportError(ErrorMsg) ReportErrorImpl(StartOffset,ErrorMsg)
+static void LLVM_ATTRIBUTE_NORETURN
+ReportErrorImpl(uint32_t StartOffset, const char *ErrorMsg) {
+      std::string Str;
+      raw_string_ostream OS(Str);
+      OS << format(ErrorMsg, StartOffset);
+      OS.flush();
+      report_fatal_error(Str);
+}
+
 void DWARFDebugFrame::parse(DataExtractor Data) {
   uint32_t Offset = 0;
   DenseMap<uint32_t, CIE *> CIEs;
 
   while (Data.isValidOffset(Offset)) {
     uint32_t StartOffset = Offset;
-
-    auto ReportError = [StartOffset](const char *ErrorMsg) {
-      std::string Str;
-      raw_string_ostream OS(Str);
-      OS << format(ErrorMsg, StartOffset);
-      OS.flush();
-      report_fatal_error(Str);
-    };
 
     bool IsDWARF64 = false;
     uint64_t Length = Data.getU32(&Offset);
@@ -585,7 +591,6 @@ void DWARFDebugFrame::parse(DataExtractor Data) {
           switch (AugmentationString[i]) {
             default:
               ReportError("Unknown augmentation character in entry at %lx");
-              llvm_unreachable("ReportError should not return.");
             case 'L':
               LSDAPointerEncoding = Data.getU8(&Offset);
               break;

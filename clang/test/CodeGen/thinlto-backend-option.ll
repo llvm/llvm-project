@@ -8,6 +8,8 @@
 
 ; RUN: %clang -flto=thin -c -o %t.o %s
 ; RUN: llvm-lto -thinlto -o %t %t.o
-; RUN: not %clang_cc1 -x ir %t.o -fthinlto-index=%t.thinlto.bc -backend-option -nonexistent -emit-obj -o /dev/null 2>&1 | FileCheck %s
+; RUN: not %clang_cc1 -x ir %t.o -fthinlto-index=%t.thinlto.bc -backend-option -nonexistent -emit-obj -o /dev/null 2>&1 | FileCheck %s -check-prefix=UNKNOWN
+; UNKNOWN: clang: Unknown command line argument '-nonexistent'
 
-; CHECK: clang: Unknown command line argument '-nonexistent'
+; RUN: not %clang_cc1 -flto=thinfoo 2>&1 | FileCheck %s -check-prefix=INVALID
+; INVALID: error: invalid value 'thinfoo' in '-flto=thinfoo'

@@ -2,6 +2,7 @@ set(LLVM_LINK_COMPONENTS
   DebugInfoCodeView
   DebugInfoMSF
   DebugInfoPDB
+  TestingSupport
   )
 
 set(DebugInfoPDBSources
