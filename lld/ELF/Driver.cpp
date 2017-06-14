@@ -306,13 +306,11 @@ static bool hasZOption(opt::InputArgList &Args, StringRef Key) {
 static uint64_t getZOptionValue(opt::InputArgList &Args, StringRef Key,
                                 uint64_t Default) {
   for (auto *Arg : Args.filtered(OPT_z)) {
-    StringRef Value = Arg->getValue();
-    size_t Pos = Value.find("=");
-    if (Pos != StringRef::npos && Key == Value.substr(0, Pos)) {
-      Value = Value.substr(Pos + 1);
+    std::pair<StringRef, StringRef> KV = StringRef(Arg->getValue()).split('=');
+    if (KV.first == Key) {
       uint64_t Result;
-      if (!to_integer(Value, Result))
-        error("invalid " + Key + ": " + Value);
+      if (!to_integer(KV.second, Result))
+        error("invalid " + Key + ": " + KV.second);
       return Result;
     }
   }
