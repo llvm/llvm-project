@@ -2670,6 +2670,13 @@ std::string CompilerInvocation::getModuleHash(DiagnosticsEngine &Diags) const {
     }
   }
 
+  // Extend the signature with the enabled sanitizers, if at least one is
+  // enabled. Sanitizers which cannot affect AST generation aren't hashed.
+  SanitizerSet SanHash = LangOpts->Sanitize;
+  SanHash.clear(getPPTransparentSanitizers());
+  if (!SanHash.empty())
+    code = hash_combine(code, SanHash.Mask);
+
   return llvm::APInt(64, code).toString(36, /*Signed=*/false);
 }
 
