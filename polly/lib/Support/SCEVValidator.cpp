@@ -320,11 +320,12 @@ public:
   ValidatorResult visitCallInstruction(Instruction *I, const SCEV *S) {
     assert(I->getOpcode() == Instruction::Call && "Call instruction expected");
 
-    auto Call = cast<CallInst>(I);
+    if (R->contains(I)) {
+      auto Call = cast<CallInst>(I);
 
-    if (!isConstCall(Call))
-      return ValidatorResult(SCEVType::INVALID, S);
-
+      if (!isConstCall(Call))
+        return ValidatorResult(SCEVType::INVALID, S);
+    }
     return ValidatorResult(SCEVType::PARAM, S);
   }
 

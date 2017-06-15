@@ -1,6 +1,5 @@
 set(LLVM_LINK_COMPONENTS
   Support
-  TestingSupport
   )
 
 add_llvm_unittest(SupportTests
@@ -73,6 +72,6 @@ add_llvm_unittest(SupportTests
 set_source_files_properties(AlignOfTest.cpp PROPERTIES COMPILE_FLAGS -w)
 
 # ManagedStatic.cpp uses <pthread>.
-target_link_libraries(SupportTests ${LLVM_PTHREAD_LIB})
+target_link_libraries(SupportTests LLVMTestingSupport ${LLVM_PTHREAD_LIB})
 
 add_subdirectory(DynamicLibrary)

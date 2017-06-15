@@ -108,6 +108,11 @@ class Configuration(object):
             return check_value(val, env_var)
         return check_value(conf_val, name)
 
+    def get_modules_enabled(self):
+        return self.get_lit_bool('enable_modules',
+                                default=False,
+                                env_var='LIBCXX_ENABLE_MODULES')
+
     def make_static_lib_name(self, name):
         """Return the full filename for the specified library name"""
         if self.is_windows:
@@ -631,9 +636,19 @@ class Configuration(object):
         # The __config_site header should be non-empty. Otherwise it should
         # have never been emitted by CMake.
         assert len(feature_macros) > 0
+        # FIXME: This is a hack that should be fixed using module maps (or something)
+        # If modules are enabled then we have to lift all of the definitions
+        # in __config_site onto the command line.
+        modules_enabled = self.get_modules_enabled()
+        self.cxx.compile_flags += ['-Wno-macro-redefined']
         # Transform each macro name into the feature name used in the tests.
         # Ex. _LIBCPP_HAS_NO_THREADS -> libcpp-has-no-threads
         for m in feature_macros:
+            if modules_enabled:
+                define = '-D%s' % m
+                if feature_macros[m]:
+                    define += '=%s' % (feature_macros[m])
+                self.cxx.compile_flags += [define]
             if m == '_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS':
                 continue
             if m == '_LIBCPP_ABI_VERSION':
@@ -976,9 +991,7 @@ class Configuration(object):
         if platform.system() != 'Darwin':
             modules_flags += ['-Xclang', '-fmodules-local-submodule-visibility']
         supports_modules = self.cxx.hasCompileFlag(modules_flags)
-        enable_modules = self.get_lit_bool('enable_modules',
-                                           default=False,
-                                           env_var='LIBCXX_ENABLE_MODULES')
+        enable_modules = self.get_modules_enabled()
         if enable_modules and not supports_modules:
             self.lit_config.fatal(
                 '-fmodules is enabled but not supported by the compiler')

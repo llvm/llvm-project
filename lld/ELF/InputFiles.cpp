@@ -821,6 +821,8 @@ static uint8_t getBitcodeMachineKind(StringRef Path, const Triple &T) {
   case Triple::arm:
   case Triple::thumb:
     return EM_ARM;
+  case Triple::avr:
+    return EM_AVR;
   case Triple::mips:
   case Triple::mipsel:
   case Triple::mips64:

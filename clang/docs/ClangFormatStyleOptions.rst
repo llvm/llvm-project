@@ -521,11 +521,11 @@ the configuration (without a prefix: ``Auto``).
   .. code-block:: c++
 
     true:
-    class foo {};
-
-    false:
     class foo
     {};
+
+    false:
+    class foo {};
 
   * ``bool AfterControlStatement`` Wrap control statements (``if``/``for``/``while``/``switch``/..).
 
@@ -603,12 +603,12 @@ the configuration (without a prefix: ``Auto``).
     struct foo
     {
       int x;
-    }
+    };
 
     false:
     struct foo {
       int x;
-    }
+    };
 
   * ``bool AfterUnion`` Wrap union definitions.
 

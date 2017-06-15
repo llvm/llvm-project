@@ -28005,10 +28005,10 @@ static bool combineX86ShufflesRecursively(ArrayRef<SDValue> SrcOps,
       continue;
     }
 
-    // TODO: Here and below, we could convert multiply to shift-left for
-    // performance because we know that our mask sizes are power-of-2.
     unsigned RootMaskedIdx =
-        RootMask[RootIdx] * RootRatio + (i & (RootRatio - 1));
+        RootRatio == 1
+            ? RootMask[RootIdx]
+            : (RootMask[RootIdx] << RootRatioLog2) + (i & (RootRatio - 1));
 
     // Just insert the scaled root mask value if it references an input other
     // than the SrcOp we're currently inserting.
@@ -28019,7 +28019,6 @@ static bool combineX86ShufflesRecursively(ArrayRef<SDValue> SrcOps,
     }
 
     RootMaskedIdx = RootMaskedIdx & (MaskWidth - 1);
-
     unsigned OpIdx = RootMaskedIdx >> OpRatioLog2;
     if (OpMask[OpIdx] < 0) {
       // The incoming lanes are zero or undef, it doesn't matter which ones we
@@ -28030,9 +28029,11 @@ static bool combineX86ShufflesRecursively(ArrayRef<SDValue> SrcOps,
 
     // Ok, we have non-zero lanes, map them through to one of the Op's inputs.
     unsigned OpMaskedIdx =
-        OpMask[OpIdx] * OpRatio + (RootMaskedIdx & (OpRatio - 1));
-    OpMaskedIdx = OpMaskedIdx & (MaskWidth - 1);
+        OpRatio == 1
+            ? OpMask[OpIdx]
+            : (OpMask[OpIdx] << OpRatioLog2) + (RootMaskedIdx & (OpRatio - 1));
 
+    OpMaskedIdx = OpMaskedIdx & (MaskWidth - 1);
     if (OpMask[OpIdx] < (int)OpMask.size()) {
       assert(0 <= InputIdx0 && "Unknown target shuffle input");
       OpMaskedIdx += InputIdx0 * MaskWidth;

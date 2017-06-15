@@ -720,16 +720,12 @@ public:
 
 // pointer_traits
 
+template <class _Tp, class = void>
+struct __has_element_type : false_type {};
+
 template <class _Tp>
-struct __has_element_type
-{
-private:
-    struct __two {char __lx; char __lxx;};
-    template <class _Up> static __two __test(...);
-    template <class _Up> static char __test(typename _Up::element_type* = 0);
-public:
-    static const bool value = sizeof(__test<_Tp>(0)) == 1;
-};
+struct __has_element_type<_Tp, 
+              typename __void_t<typename _Tp::element_type>::type> : true_type {};
 
 template <class _Ptr, bool = __has_element_type<_Ptr>::value>
 struct __pointer_traits_element_type;
@@ -808,16 +804,12 @@ struct __pointer_traits_element_type<_Sp<_Tp, _A0, _A1, _A2>, false>
 
 #endif  // _LIBCPP_HAS_NO_VARIADICS
 
+template <class _Tp, class = void>
+struct __has_difference_type : false_type {};
+
 template <class _Tp>
-struct __has_difference_type
-{
-private:
-    struct __two {char __lx; char __lxx;};
-    template <class _Up> static __two __test(...);
-    template <class _Up> static char __test(typename _Up::difference_type* = 0);
-public:
-    static const bool value = sizeof(__test<_Tp>(0)) == 1;
-};
+struct __has_difference_type<_Tp, 
+            typename __void_t<typename _Tp::difference_type>::type> : true_type {};
 
 template <class _Ptr, bool = __has_difference_type<_Ptr>::value>
 struct __pointer_traits_difference_type
@@ -998,17 +990,12 @@ struct __rebind_pointer {
 
 // allocator_traits
 
-struct __has_pointer_type_imp
-{
-    template <class _Up> static __two __test(...);
-    template <class _Up> static char __test(typename _Up::pointer* = 0);
-};
+template <class _Tp, class = void>
+struct __has_pointer_type : false_type {};
 
 template <class _Tp>
-struct __has_pointer_type
-    : public integral_constant<bool, sizeof(__has_pointer_type_imp::__test<_Tp>(0)) == 1>
-{
-};
+struct __has_pointer_type<_Tp, 
+          typename __void_t<typename _Tp::pointer>::type> : true_type {};
 
 namespace __pointer_type_imp
 {
@@ -1033,16 +1020,12 @@ struct __pointer_type
     typedef typename __pointer_type_imp::__pointer_type<_Tp, typename remove_reference<_Dp>::type>::type type;
 };
 
+template <class _Tp, class = void>
+struct __has_const_pointer : false_type {};
+
 template <class _Tp>
-struct __has_const_pointer
-{
-private:
-    struct __two {char __lx; char __lxx;};
-    template <class _Up> static __two __test(...);
-    template <class _Up> static char __test(typename _Up::const_pointer* = 0);
-public:
-    static const bool value = sizeof(__test<_Tp>(0)) == 1;
-};
+struct __has_const_pointer<_Tp, 
+            typename __void_t<typename _Tp::const_pointer>::type> : true_type {};
 
 template <class _Tp, class _Ptr, class _Alloc, bool = __has_const_pointer<_Alloc>::value>
 struct __const_pointer
@@ -1060,16 +1043,12 @@ struct __const_pointer<_Tp, _Ptr, _Alloc, false>
 #endif
 };
 
+template <class _Tp, class = void>
+struct __has_void_pointer : false_type {};
+
 template <class _Tp>
-struct __has_void_pointer
-{
-private:
-    struct __two {char __lx; char __lxx;};
-    template <class _Up> static __two __test(...);
-    template <class _Up> static char __test(typename _Up::void_pointer* = 0);
-public:
-    static const bool value = sizeof(__test<_Tp>(0)) == 1;
-};
+struct __has_void_pointer<_Tp, 
+               typename __void_t<typename _Tp::void_pointer>::type> : true_type {};
 
 template <class _Ptr, class _Alloc, bool = __has_void_pointer<_Alloc>::value>
 struct __void_pointer
@@ -1087,16 +1066,12 @@ struct __void_pointer<_Ptr, _Alloc, false>
 #endif
 };
 
+template <class _Tp, class = void>
+struct __has_const_void_pointer : false_type {};
+
 template <class _Tp>
-struct __has_const_void_pointer
-{
-private:
-    struct __two {char __lx; char __lxx;};
-    template <class _Up> static __two __test(...);
-    template <class _Up> static char __test(typename _Up::const_void_pointer* = 0);
-public:
-    static const bool value = sizeof(__test<_Tp>(0)) == 1;
-};
+struct __has_const_void_pointer<_Tp, 
+            typename __void_t<typename _Tp::const_void_pointer>::type> : true_type {};
 
 template <class _Ptr, class _Alloc, bool = __has_const_void_pointer<_Alloc>::value>
 struct __const_void_pointer
@@ -1130,16 +1105,12 @@ __to_raw_pointer(_Pointer __p) _NOEXCEPT
     return _VSTD::__to_raw_pointer(__p.operator->());
 }
 
+template <class _Tp, class = void>
+struct __has_size_type : false_type {};
+
 template <class _Tp>
-struct __has_size_type
-{
-private:
-    struct __two {char __lx; char __lxx;};
-    template <class _Up> static __two __test(...);
-    template <class _Up> static char __test(typename _Up::size_type* = 0);
-public:
-    static const bool value = sizeof(__test<_Tp>(0)) == 1;
-};
+struct __has_size_type<_Tp,
+               typename __void_t<typename _Tp::size_type>::type> : true_type {};
 
 template <class _Alloc, class _DiffType, bool = __has_size_type<_Alloc>::value>
 struct __size_type
@@ -1153,16 +1124,13 @@ struct __size_type<_Alloc, _DiffType, true>
     typedef typename _Alloc::size_type type;
 };
 
+template <class _Tp, class = void>
+struct __has_propagate_on_container_copy_assignment : false_type {};
+
 template <class _Tp>
-struct __has_propagate_on_container_copy_assignment
-{
-private:
-    struct __two {char __lx; char __lxx;};
-    template <class _Up> static __two __test(...);
-    template <class _Up> static char __test(typename _Up::propagate_on_container_copy_assignment* = 0);
-public:
-    static const bool value = sizeof(__test<_Tp>(0)) == 1;
-};
+struct __has_propagate_on_container_copy_assignment<_Tp,
+    typename __void_t<typename _Tp::propagate_on_container_copy_assignment>::type>
+        : true_type {};
 
 template <class _Alloc, bool = __has_propagate_on_container_copy_assignment<_Alloc>::value>
 struct __propagate_on_container_copy_assignment
@@ -1176,16 +1144,13 @@ struct __propagate_on_container_copy_assignment<_Alloc, true>
     typedef typename _Alloc::propagate_on_container_copy_assignment type;
 };
 
+template <class _Tp, class = void>
+struct __has_propagate_on_container_move_assignment : false_type {};
+
 template <class _Tp>
-struct __has_propagate_on_container_move_assignment
-{
-private:
-    struct __two {char __lx; char __lxx;};
-    template <class _Up> static __two __test(...);
-    template <class _Up> static char __test(typename _Up::propagate_on_container_move_assignment* = 0);
-public:
-    static const bool value = sizeof(__test<_Tp>(0)) == 1;
-};
+struct __has_propagate_on_container_move_assignment<_Tp, 
+           typename __void_t<typename _Tp::propagate_on_container_move_assignment>::type>
+               : true_type {};
 
 template <class _Alloc, bool = __has_propagate_on_container_move_assignment<_Alloc>::value>
 struct __propagate_on_container_move_assignment
@@ -1199,16 +1164,13 @@ struct __propagate_on_container_move_assignment<_Alloc, true>
     typedef typename _Alloc::propagate_on_container_move_assignment type;
 };
 
+template <class _Tp, class = void>
+struct __has_propagate_on_container_swap : false_type {};
+
 template <class _Tp>
-struct __has_propagate_on_container_swap
-{
-private:
-    struct __two {char __lx; char __lxx;};
-    template <class _Up> static __two __test(...);
-    template <class _Up> static char __test(typename _Up::propagate_on_container_swap* = 0);
-public:
-    static const bool value = sizeof(__test<_Tp>(0)) == 1;
-};
+struct __has_propagate_on_container_swap<_Tp, 
+           typename __void_t<typename _Tp::propagate_on_container_swap>::type>
+               : true_type {};
 
 template <class _Alloc, bool = __has_propagate_on_container_swap<_Alloc>::value>
 struct __propagate_on_container_swap
@@ -1222,16 +1184,13 @@ struct __propagate_on_container_swap<_Alloc, true>
     typedef typename _Alloc::propagate_on_container_swap type;
 };
 
+template <class _Tp, class = void>
+struct __has_is_always_equal : false_type {};
+
 template <class _Tp>
-struct __has_is_always_equal
-{
-private:
-    struct __two {char __lx; char __lxx;};
-    template <class _Up> static __two __test(...);
-    template <class _Up> static char __test(typename _Up::is_always_equal* = 0);
-public:
-    static const bool value = sizeof(__test<_Tp>(0)) == 1;
-};
+struct __has_is_always_equal<_Tp, 
+           typename __void_t<typename _Tp::is_always_equal>::type>
+               : true_type {};
 
 template <class _Alloc, bool = __has_is_always_equal<_Alloc>::value>
 struct __is_always_equal

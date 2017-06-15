@@ -121,6 +121,8 @@ class ObjCNewSyntaxTestCase(TestBase):
             '7.0.0'])
     @skipIf(macos_version=["<", "10.12"])
     @expectedFailureAll(archs=["i[3-6]86"])
+    @expectedFailureAll(
+        bugnumber="rdar://32777981")
     def test_update_dictionary(self):
         self.runToBreakpoint()
 
@@ -163,6 +165,8 @@ class ObjCNewSyntaxTestCase(TestBase):
             '7.0.0'])
     @skipIf(macos_version=["<", "10.12"])
     @expectedFailureAll(archs=["i[3-6]86"])
+    @expectedFailureAll(
+        bugnumber="rdar://32777981")
     def test_dictionary_literal(self):
         self.runToBreakpoint()
 
