@@ -56,10 +56,11 @@ Status::Status(const char *format, ...)
   va_end(args);
 }
 
-Status::Status(llvm::Error error)
-    : m_code(0), m_type(ErrorType::eErrorTypeGeneric) {
-  if (!error)
-    return;
+const Status &Status::operator=(llvm::Error error) {
+  if (!error) {
+    Clear();
+    return *this;
+  }
 
   // if the error happens to be a errno error, preserve the error code
   error = llvm::handleErrors(
@@ -74,8 +75,12 @@ Status::Status(llvm::Error error)
       });
 
   // Otherwise, just preserve the message
-  if (error)
+  if (error) {
+    SetErrorToGenericError();
     SetErrorString(llvm::toString(std::move(error)));
+  }
+
+  return *this;
 }
 
 llvm::Error Status::ToError() const {

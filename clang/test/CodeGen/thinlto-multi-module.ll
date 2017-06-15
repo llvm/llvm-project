@@ -3,8 +3,8 @@
 ; RUN: opt -module-summary -o %t1.o %s
 ; RUN: llvm-lto -thinlto -o %t %t1.o
 
-; RUN: opt -o %t2.o %S/Inputs/thinlto_backend.ll
-; RUN: llvm-cat -b -o %t1cat.o %t1.o %t2.o
+; RUN: opt -module-summary -o %t2.o %S/Inputs/thinlto-multi-module.ll
+; RUN: llvm-cat -b -o %t1cat.o %t2.o %t1.o
 ; RUN: cp %t1cat.o %t1.o
 ; RUN: %clang -target x86_64-unknown-linux-gnu -O2 -o %t3.o -x ir %t1.o -c -fthinlto-index=%t.thinlto.bc
 ; RUN: llvm-nm %t3.o | FileCheck --check-prefix=CHECK-OBJ %s

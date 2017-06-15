@@ -42,6 +42,12 @@ namespace llvm {
 
   struct BitcodeFileContents;
 
+  /// Basic information extracted from a bitcode module to be used for LTO.
+  struct BitcodeLTOInfo {
+    bool IsThinLTO;
+    bool HasSummary;
+  };
+
   /// Represents a module in a bitcode file.
   class BitcodeModule {
     // This covers the identification (if present) and module blocks.
@@ -90,15 +96,17 @@ namespace llvm {
     /// Read the entire bitcode module and return it.
     Expected<std::unique_ptr<Module>> parseModule(LLVMContext &Context);
 
-    /// Check if the given bitcode buffer contains a summary block.
-    Expected<bool> hasSummary();
+    /// Returns information about the module to be used for LTO: whether to
+    /// compile with ThinLTO, and whether it has a summary.
+    Expected<BitcodeLTOInfo> getLTOInfo();
 
     /// Parse the specified bitcode buffer, returning the module summary index.
     Expected<std::unique_ptr<ModuleSummaryIndex>> getSummary();
 
     /// Parse the specified bitcode buffer and merge its module summary index
     /// into CombinedIndex.
-    Error readSummary(ModuleSummaryIndex &CombinedIndex, unsigned ModuleId);
+    Error readSummary(ModuleSummaryIndex &CombinedIndex, StringRef ModulePath,
+                      uint64_t ModuleId);
   };
 
   struct BitcodeFileContents {
@@ -147,8 +155,8 @@ namespace llvm {
   Expected<std::unique_ptr<Module>> parseBitcodeFile(MemoryBufferRef Buffer,
                                                      LLVMContext &Context);
 
-  /// Check if the given bitcode buffer contains a summary block.
-  Expected<bool> hasGlobalValueSummary(MemoryBufferRef Buffer);
+  /// Returns LTO information for the specified bitcode file.
+  Expected<BitcodeLTOInfo> getBitcodeLTOInfo(MemoryBufferRef Buffer);
 
   /// Parse the specified bitcode buffer, returning the module summary index.
   Expected<std::unique_ptr<ModuleSummaryIndex>>
@@ -157,7 +165,7 @@ namespace llvm {
   /// Parse the specified bitcode buffer and merge the index into CombinedIndex.
   Error readModuleSummaryIndex(MemoryBufferRef Buffer,
                                ModuleSummaryIndex &CombinedIndex,
-                               unsigned ModuleId);
+                               uint64_t ModuleId);
 
   /// Parse the module summary index out of an IR file and return the module
   /// summary index object if found, or an empty summary if not. If Path refers

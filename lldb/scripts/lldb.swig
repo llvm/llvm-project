@@ -40,7 +40,13 @@ us to override the module import logic to suit our needs. This does that.
 Older swig versions will simply ignore this setting.
 */
 %define MODULEIMPORT
-"from . import $module"
+"try:
+    # Try a relative import first
+    from . import $module
+except ImportError:
+    # Maybe absolute import will work (if we're being loaded from lldb, it
+    # should).
+    import $module"
 %enddef
 // These versions will not generate working python modules, so error out early.
 #if SWIG_VERSION >= 0x030009 && SWIG_VERSION < 0x030011

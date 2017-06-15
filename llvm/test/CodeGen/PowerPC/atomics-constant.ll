@@ -11,7 +11,7 @@ define i64 @foo() {
 ; CHECK-NEXT:    addis 3, 2, .LC0@toc@ha
 ; CHECK-NEXT:    li 4, 0
 ; CHECK-NEXT:    ld 3, .LC0@toc@l(3)
-; CHECK-NEXT:    cmpw 7, 4, 4
+; CHECK-NEXT:    cmpd 7, 4, 4
 ; CHECK-NEXT:    ld 3, 0(3)
 ; CHECK-NEXT:    bne- 7, .+4
 ; CHECK-NEXT:    isync
