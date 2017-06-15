@@ -58,6 +58,10 @@ Error DebugStringTableSubsection::commit(BinaryStreamWriter &Writer) const {
   uint32_t Begin = Writer.getOffset();
   uint32_t End = Begin + StringSize;
 
+  // Write a null string at the beginning.
+  if (auto EC = Writer.writeCString(StringRef()))
+    return EC;
+
   for (auto &Pair : Strings) {
     StringRef S = Pair.getKey();
     uint32_t Offset = Begin + Pair.getValue();
@@ -68,6 +72,7 @@ Error DebugStringTableSubsection::commit(BinaryStreamWriter &Writer) const {
   }
 
   Writer.setOffset(End);
+  assert((End - Begin) == StringSize);
   return Error::success();
 }
 

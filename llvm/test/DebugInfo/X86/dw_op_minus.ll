@@ -10,7 +10,7 @@
 ;   Capture(buf);
 ; }
 ; }
-; The interesting part is !DIExpression(DW_OP_minus, 400)
+; The interesting part is !DIExpression(DW_OP_constu, 400, DW_OP_minus)
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -56,7 +56,7 @@ declare void @Capture(i32*)
 !14 = !{i32 2, !"Debug Info Version", i32 3}
 !15 = !{!"clang version 3.8.0 (trunk 248518) (llvm/trunk 248512)"}
 !16 = !DILocation(line: 5, column: 3, scope: !4)
-!17 = !DIExpression(DW_OP_minus, 400)
+!17 = !DIExpression(DW_OP_constu, 400, DW_OP_minus)
 !18 = !DILocation(line: 5, column: 7, scope: !4)
 !19 = !DILocation(line: 6, column: 11, scope: !4)
 !20 = !DILocation(line: 6, column: 3, scope: !4)

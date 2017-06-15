@@ -683,6 +683,7 @@ enum : unsigned {
   SHT_GROUP = 17,                  // Section group.
   SHT_SYMTAB_SHNDX = 18,           // Indices for SHN_XINDEX entries.
   SHT_LOOS = 0x60000000,           // Lowest operating system-specific type.
+  SHT_LLVM_ODRTAB = 0x6fff4c00,    // LLVM ODR table.
   SHT_GNU_ATTRIBUTES = 0x6ffffff5, // Object attributes.
   SHT_GNU_HASH = 0x6ffffff6,       // GNU-style hash table.
   SHT_GNU_verdef = 0x6ffffffd,     // GNU version definitions.

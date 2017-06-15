@@ -42,6 +42,9 @@ public:
   DIExpressionCursor(ArrayRef<uint64_t> Expr)
       : Start(Expr.begin()), End(Expr.end()) {}
 
+  DIExpressionCursor(const DIExpressionCursor &C)
+      : Start(C.Start), End(C.End) {}
+
   /// Consume one operation.
   Optional<DIExpression::ExprOperand> take() {
     if (Start == End)

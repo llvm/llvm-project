@@ -21,9 +21,11 @@ struct FmtAlign {
   detail::format_adapter &Adapter;
   AlignStyle Where;
   size_t Amount;
+  char Fill;
 
-  FmtAlign(detail::format_adapter &Adapter, AlignStyle Where, size_t Amount)
-      : Adapter(Adapter), Where(Where), Amount(Amount) {}
+  FmtAlign(detail::format_adapter &Adapter, AlignStyle Where, size_t Amount,
+           char Fill = ' ')
+      : Adapter(Adapter), Where(Where), Amount(Amount), Fill(Fill) {}
 
   void format(raw_ostream &S, StringRef Options) {
     // If we don't need to align, we can format straight into the underlying
@@ -48,20 +50,26 @@ struct FmtAlign {
     switch (Where) {
     case AlignStyle::Left:
       S << Item;
-      S.indent(PadAmount);
+      fill(S, PadAmount);
       break;
     case AlignStyle::Center: {
       size_t X = PadAmount / 2;
-      S.indent(X);
+      fill(S, X);
       S << Item;
-      S.indent(PadAmount - X);
+      fill(S, PadAmount - X);
       break;
     }
     default:
-      S.indent(PadAmount);
+      fill(S, PadAmount);
       S << Item;
       break;
     }
+  }
+
+private:
+  void fill(llvm::raw_ostream &S, uint32_t Count) {
+    for (uint32_t I = 0; I < Count; ++I)
+      S << Fill;
   }
 };
 }

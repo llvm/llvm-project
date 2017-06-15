@@ -40,8 +40,8 @@ class DWARFVerifier {
   /// - DW_AT_ranges values is a valid .debug_ranges offset
   /// - DW_AT_stmt_list is a valid .debug_line offset
   ///
-  /// @param Die          The DWARF DIE that owns the attribute value
-  /// @param AttrValue    The DWARF attribute value to check
+  /// \param Die          The DWARF DIE that owns the attribute value
+  /// \param AttrValue    The DWARF attribute value to check
   void verifyDebugInfoAttribute(const DWARFDie &Die, DWARFAttribute &AttrValue);
 
   /// Verifies the attribute's DWARF form.
@@ -51,8 +51,8 @@ class DWARFVerifier {
   /// - All DW_FORM_ref_addr values have valid .debug_info offsets
   /// - All DW_FORM_strp values have valid .debug_str offsets
   ///
-  /// @param Die          The DWARF DIE that owns the attribute value
-  /// @param AttrValue    The DWARF attribute value to check
+  /// \param Die          The DWARF DIE that owns the attribute value
+  /// \param AttrValue    The DWARF attribute value to check
   void verifyDebugInfoForm(const DWARFDie &Die, DWARFAttribute &AttrValue);
 
   /// Verifies the all valid references that were found when iterating through
@@ -84,7 +84,7 @@ public:
   /// Any errors are reported to the stream that was this object was
   /// constructed with.
   ///
-  /// @return True if the .debug_info verifies successfully, false otherwise.
+  /// \returns true if the .debug_info verifies successfully, false otherwise.
   bool handleDebugInfo();
 
   /// Verify the information in the .debug_line section.
@@ -92,7 +92,7 @@ public:
   /// Any errors are reported to the stream that was this object was
   /// constructed with.
   ///
-  /// @return True if the .debug_line verifies successfully, false otherwise.
+  /// \returns true if the .debug_line verifies successfully, false otherwise.
   bool handleDebugLine();
 
   /// Verify the information in the .apple_names accelerator table.
@@ -100,7 +100,7 @@ public:
   /// Any errors are reported to the stream that was this object was
   /// constructed with.
   ///
-  /// @return True if the .apple_names verifies successfully, false otherwise.
+  /// \returns true if the .apple_names verifies successfully, false otherwise.
   bool handleAppleNames();
 };
 

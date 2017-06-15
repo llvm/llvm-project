@@ -14,7 +14,7 @@
 ; CHECK: ![[HVAR:[0-9]+]] = distinct !DIGlobalVariable(name: "h",
 ; CHECK: ![[IMPORTS]] = !{![[CIMPORT:[0-9]+]]}
 ; CHECK: ![[CIMPORT]] = !DIImportedEntity({{.*}}entity: ![[HVAR]]
-; CHECK: ![[GEXPR]] = !DIExpression(DW_OP_plus, 1)
+; CHECK: ![[GEXPR]] = !DIExpression(DW_OP_plus_uconst, 1)
 ; CHECK: ![[H]] = {{.*}}!DIGlobalVariableExpression(var: ![[HVAR]])
 
 @g = common global i32 0, align 4, !dbg !0

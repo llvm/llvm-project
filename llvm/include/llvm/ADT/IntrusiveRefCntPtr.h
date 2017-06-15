@@ -1,4 +1,4 @@
-//== llvm/ADT/IntrusiveRefCntPtr.h - Smart Refcounting Pointer ---*- C++ -*-==//
+//==- llvm/ADT/IntrusiveRefCntPtr.h - Smart Refcounting Pointer --*- C++ -*-==//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -73,9 +73,10 @@ template <class Derived> class RefCountedBase {
 
 public:
   RefCountedBase() = default;
-  RefCountedBase(const RefCountedBase &) : RefCount(0) {}
+  RefCountedBase(const RefCountedBase &) {}
 
   void Retain() const { ++RefCount; }
+
   void Release() const {
     assert(RefCount > 0 && "Reference count is already zero.");
     if (--RefCount == 0)
@@ -136,7 +137,7 @@ template <typename T> class IntrusiveRefCntPtr {
   T *Obj = nullptr;
 
 public:
-  typedef T element_type;
+  using element_type = T;
 
   explicit IntrusiveRefCntPtr() = default;
   IntrusiveRefCntPtr(T *obj) : Obj(obj) { retain(); }
@@ -153,12 +154,12 @@ public:
     retain();
   }
 
+  ~IntrusiveRefCntPtr() { release(); }
+
   IntrusiveRefCntPtr &operator=(IntrusiveRefCntPtr S) {
     swap(S);
     return *this;
   }
-
-  ~IntrusiveRefCntPtr() { release(); }
 
   T &operator*() const { return *Obj; }
   T *operator->() const { return Obj; }
@@ -183,6 +184,7 @@ private:
     if (Obj)
       IntrusiveRefCntPtrInfo<T>::retain(Obj);
   }
+
   void release() {
     if (Obj)
       IntrusiveRefCntPtrInfo<T>::release(Obj);
@@ -248,14 +250,16 @@ bool operator!=(const IntrusiveRefCntPtr<T> &A, std::nullptr_t B) {
 template <typename From> struct simplify_type;
 
 template <class T> struct simplify_type<IntrusiveRefCntPtr<T>> {
-  typedef T *SimpleType;
+  using SimpleType = T *;
+
   static SimpleType getSimplifiedValue(IntrusiveRefCntPtr<T> &Val) {
     return Val.get();
   }
 };
 
 template <class T> struct simplify_type<const IntrusiveRefCntPtr<T>> {
-  typedef /*const*/ T *SimpleType;
+  using SimpleType = /*const*/ T *;
+
   static SimpleType getSimplifiedValue(const IntrusiveRefCntPtr<T> &Val) {
     return Val.get();
   }

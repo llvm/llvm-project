@@ -16,3 +16,5 @@ set(DebugInfoPDBSources
 add_llvm_unittest(DebugInfoPDBTests
   ${DebugInfoPDBSources}
   )
+
+target_link_libraries(DebugInfoPDBTests LLVMTestingSupport)

@@ -460,6 +460,9 @@ void PredicateInfo::buildPredicateInfo() {
     if (auto *BI = dyn_cast<BranchInst>(BranchBB->getTerminator())) {
       if (!BI->isConditional())
         continue;
+      // Can't insert conditional information if they all go to the same place.
+      if (BI->getSuccessor(0) == BI->getSuccessor(1))
+        continue;
       processBranch(BI, BranchBB, OpsToRename);
     } else if (auto *SI = dyn_cast<SwitchInst>(BranchBB->getTerminator())) {
       processSwitch(SI, BranchBB, OpsToRename);

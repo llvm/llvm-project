@@ -7,13 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ErrorChecking.h"
-
 #include "llvm/DebugInfo/PDB/Native/PDBStringTable.h"
 #include "llvm/DebugInfo/PDB/Native/PDBStringTableBuilder.h"
 #include "llvm/Support/BinaryByteStream.h"
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/BinaryStreamWriter.h"
+#include "llvm/Testing/Support/Error.h"
 
 #include "gtest/gtest.h"
 
@@ -36,21 +35,21 @@ TEST_F(StringTableBuilderTest, Simple) {
   std::vector<uint8_t> Buffer(Builder.calculateSerializedSize());
   MutableBinaryByteStream OutStream(Buffer, little);
   BinaryStreamWriter Writer(OutStream);
-  EXPECT_NO_ERROR(Builder.commit(Writer));
+  EXPECT_THAT_ERROR(Builder.commit(Writer), Succeeded());
 
   // Reads the contents back.
   BinaryByteStream InStream(Buffer, little);
   BinaryStreamReader Reader(InStream);
   PDBStringTable Table;
-  EXPECT_NO_ERROR(Table.reload(Reader));
+  EXPECT_THAT_ERROR(Table.reload(Reader), Succeeded());
 
   EXPECT_EQ(3U, Table.getNameCount());
   EXPECT_EQ(1U, Table.getHashVersion());
 
-  EXPECT_EXPECTED_EQ("foo", Table.getStringForID(1));
-  EXPECT_EXPECTED_EQ("bar", Table.getStringForID(5));
-  EXPECT_EXPECTED_EQ("baz", Table.getStringForID(9));
-  EXPECT_EXPECTED_EQ(1U, Table.getIDForString("foo"));
-  EXPECT_EXPECTED_EQ(5U, Table.getIDForString("bar"));
-  EXPECT_EXPECTED_EQ(9U, Table.getIDForString("baz"));
+  EXPECT_THAT_EXPECTED(Table.getStringForID(1), HasValue("foo"));
+  EXPECT_THAT_EXPECTED(Table.getStringForID(5), HasValue("bar"));
+  EXPECT_THAT_EXPECTED(Table.getStringForID(9), HasValue("baz"));
+  EXPECT_THAT_EXPECTED(Table.getIDForString("foo"), HasValue(1U));
+  EXPECT_THAT_EXPECTED(Table.getIDForString("bar"), HasValue(5U));
+  EXPECT_THAT_EXPECTED(Table.getIDForString("baz"), HasValue(9U));
 }

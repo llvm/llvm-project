@@ -2195,7 +2195,7 @@ void NewGVN::moveValueToNewCongruenceClass(Instruction *I, const Expression *E,
 // For a given expression, mark the phi of ops instructions that could have
 // changed as a result.
 void NewGVN::markPhiOfOpsChanged(const Expression *E) {
-  touchAndErase(ExpressionToPhiOfOps, E);
+  touchAndErase(ExpressionToPhiOfOps, ExactEqualsExpression(*E));
 }
 
 // Perform congruence finding on a given value numbering expression.

@@ -52,6 +52,11 @@ uint32_t PDBStringTableBuilder::calculateSerializedSize() const {
   return Size;
 }
 
+void PDBStringTableBuilder::setStrings(
+    const codeview::DebugStringTableSubsection &Strings) {
+  this->Strings = Strings;
+}
+
 Error PDBStringTableBuilder::writeHeader(BinaryStreamWriter &Writer) const {
   // Write a header
   PDBStringTableHeader H;

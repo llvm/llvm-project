@@ -206,7 +206,7 @@ include_directories(..)
 add_subdirectory(no-coverage)
 add_subdirectory(trace-pc)
 add_subdirectory(ubsan)
-if (NOT APPLE AND NOT MSVC)
+if (NOT MSVC)
   add_subdirectory(inline-8bit-counters)
 endif()
 
