@@ -703,8 +703,12 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     }
   }
 
-  if (!Args.hasArgNoClaim(OPT_INPUT))
-    fatal("no input files");
+  if (!Args.hasArgNoClaim(OPT_INPUT)) {
+    if (Args.hasArgNoClaim(OPT_deffile))
+      Config->NoEntry = true;
+    else
+      fatal("no input files");
+  }
 
   // Construct search path list.
   SearchPaths.push_back("");
@@ -984,6 +988,13 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   if (auto *Arg = Args.getLastArg(OPT_deffile)) {
     // parseModuleDefs mutates Config object.
     parseModuleDefs(Arg->getValue());
+  }
+
+  // Handle generation of import library from a def file.
+  if (!Args.hasArgNoClaim(OPT_INPUT)) {
+    fixupExports();
+    createImportLibrary();
+    exit(0);
   }
 
   // Handle /delayload

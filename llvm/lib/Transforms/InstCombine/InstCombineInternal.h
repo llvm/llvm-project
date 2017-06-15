@@ -449,7 +449,7 @@ private:
 
   Value *foldAndOfICmps(ICmpInst *LHS, ICmpInst *RHS);
   Value *foldAndOfFCmps(FCmpInst *LHS, FCmpInst *RHS);
-  Value *foldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS, Instruction *CxtI);
+  Value *foldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS, Instruction &CxtI);
   Value *foldOrOfFCmps(FCmpInst *LHS, FCmpInst *RHS);
   Value *foldXorOfICmps(ICmpInst *LHS, ICmpInst *RHS);
 

@@ -523,3 +523,29 @@ void FunctionLoweringInfo::setCurrentSwiftErrorVReg(
     const MachineBasicBlock *MBB, const Value *Val, unsigned VReg) {
   SwiftErrorVRegDefMap[std::make_pair(MBB, Val)] = VReg;
 }
+
+std::pair<unsigned, bool>
+FunctionLoweringInfo::getOrCreateSwiftErrorVRegDefAt(const Instruction *I) {
+  auto Key = PointerIntPair<const Instruction *, 1, bool>(I, true);
+  auto It = SwiftErrorVRegDefUses.find(Key);
+  if (It == SwiftErrorVRegDefUses.end()) {
+    auto &DL = MF->getDataLayout();
+    const TargetRegisterClass *RC = TLI->getRegClassFor(TLI->getPointerTy(DL));
+    unsigned VReg =  MF->getRegInfo().createVirtualRegister(RC);
+    SwiftErrorVRegDefUses[Key] = VReg;
+    return std::make_pair(VReg, true);
+  }
+  return std::make_pair(It->second, false);
+}
+
+std::pair<unsigned, bool>
+FunctionLoweringInfo::getOrCreateSwiftErrorVRegUseAt(const Instruction *I, const MachineBasicBlock *MBB, const Value *Val) {
+  auto Key = PointerIntPair<const Instruction *, 1, bool>(I, false);
+  auto It = SwiftErrorVRegDefUses.find(Key);
+  if (It == SwiftErrorVRegDefUses.end()) {
+    unsigned VReg = getOrCreateSwiftErrorVReg(MBB, Val);
+    SwiftErrorVRegDefUses[Key] = VReg;
+    return std::make_pair(VReg, true);
+  }
+  return std::make_pair(It->second, false);
+}

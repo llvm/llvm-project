@@ -66,3 +66,24 @@ define arm_aapcscc i8 @test_udiv_i8(i8 %a, i8 %b) {
   ret i8 %r
 }
 
+define arm_aapcscc i32 @test_srem_i32(i32 %x, i32 %y) {
+; CHECK-LABEL: test_srem_i32:
+; HWDIV: sdiv [[Q:r[0-9]+]], r0, r1
+; HWDIV: mul [[P:r[0-9]+]], [[Q]], r1
+; HWDIV: sub r0, r0, [[P]]
+; SOFT-AEABI: blx __aeabi_idivmod
+; SOFT-DEFAULT: blx __modsi3
+  %r = srem i32 %x, %y
+  ret i32 %r
+}
+
+define arm_aapcscc i32 @test_urem_i32(i32 %x, i32 %y) {
+; CHECK-LABEL: test_urem_i32:
+; HWDIV: udiv [[Q:r[0-9]+]], r0, r1
+; HWDIV: mul [[P:r[0-9]+]], [[Q]], r1
+; HWDIV: sub r0, r0, [[P]]
+; SOFT-AEABI: blx __aeabi_uidivmod
+; SOFT-DEFAULT: blx __umodsi3
+  %r = urem i32 %x, %y
+  ret i32 %r
+}

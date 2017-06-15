@@ -1214,26 +1214,31 @@ public:
                          SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,
                          unsigned Depth = 0);
   const SCEV *getAddExpr(const SCEV *LHS, const SCEV *RHS,
-                         SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap) {
+                         SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,
+                         unsigned Depth = 0) {
     SmallVector<const SCEV *, 2> Ops = {LHS, RHS};
-    return getAddExpr(Ops, Flags);
+    return getAddExpr(Ops, Flags, Depth);
   }
   const SCEV *getAddExpr(const SCEV *Op0, const SCEV *Op1, const SCEV *Op2,
-                         SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap) {
+                         SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,
+                         unsigned Depth = 0) {
     SmallVector<const SCEV *, 3> Ops = {Op0, Op1, Op2};
-    return getAddExpr(Ops, Flags);
+    return getAddExpr(Ops, Flags, Depth);
   }
   const SCEV *getMulExpr(SmallVectorImpl<const SCEV *> &Ops,
-                         SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap);
+                         SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,
+                         unsigned Depth = 0);
   const SCEV *getMulExpr(const SCEV *LHS, const SCEV *RHS,
-                         SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap) {
+                         SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,
+                         unsigned Depth = 0) {
     SmallVector<const SCEV *, 2> Ops = {LHS, RHS};
-    return getMulExpr(Ops, Flags);
+    return getMulExpr(Ops, Flags, Depth);
   }
   const SCEV *getMulExpr(const SCEV *Op0, const SCEV *Op1, const SCEV *Op2,
-                         SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap) {
+                         SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,
+                         unsigned Depth = 0) {
     SmallVector<const SCEV *, 3> Ops = {Op0, Op1, Op2};
-    return getMulExpr(Ops, Flags);
+    return getMulExpr(Ops, Flags, Depth);
   }
   const SCEV *getUDivExpr(const SCEV *LHS, const SCEV *RHS);
   const SCEV *getUDivExactExpr(const SCEV *LHS, const SCEV *RHS);
@@ -1287,7 +1292,8 @@ public:
 
   /// Return LHS-RHS.  Minus is represented in SCEV as A+B*-1.
   const SCEV *getMinusSCEV(const SCEV *LHS, const SCEV *RHS,
-                           SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap);
+                           SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,
+                           unsigned Depth = 0);
 
   /// Return a SCEV corresponding to a conversion of the input value to the
   /// specified type.  If the type must be extended, it is zero extended.
@@ -1693,8 +1699,12 @@ private:
   bool doesIVOverflowOnGT(const SCEV *RHS, const SCEV *Stride, bool IsSigned,
                           bool NoWrap);
 
-  /// Get add expr already created or create a new one
+  /// Get add expr already created or create a new one.
   const SCEV *getOrCreateAddExpr(SmallVectorImpl<const SCEV *> &Ops,
+                                 SCEV::NoWrapFlags Flags);
+
+  /// Get mul expr already created or create a new one.
+  const SCEV *getOrCreateMulExpr(SmallVectorImpl<const SCEV *> &Ops,
                                  SCEV::NoWrapFlags Flags);
 
 private:

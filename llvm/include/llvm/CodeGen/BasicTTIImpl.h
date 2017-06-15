@@ -93,6 +93,8 @@ public:
 
   bool isSourceOfDivergence(const Value *V) { return false; }
 
+  bool isAlwaysUniform(const Value *V) { return false; }
+
   unsigned getFlatAddressSpace() {
     // Return an invalid address space.
     return -1;

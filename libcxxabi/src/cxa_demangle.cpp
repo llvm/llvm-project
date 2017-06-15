@@ -2258,7 +2258,7 @@ parse_type(const char* first, const char* last, C& db)
                                 break;
                             }
                         }
-                        [[gnu::fallthrough]];
+                        _LIBCPP_FALLTHROUGH();
                     default:
                         // must check for builtin-types before class-enum-types to avoid
                         // ambiguities with operator-names

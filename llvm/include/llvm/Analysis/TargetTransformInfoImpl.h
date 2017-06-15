@@ -177,6 +177,8 @@ public:
 
   bool isSourceOfDivergence(const Value *V) { return false; }
 
+  bool isAlwaysUniform(const Value *V) { return false; }
+
   unsigned getFlatAddressSpace () {
     return -1;
   }

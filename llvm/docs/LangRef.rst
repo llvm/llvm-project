@@ -5192,6 +5192,72 @@ Example:
     !0 = !{i32* @a}
 
 
+'``prof``' Metadata
+^^^^^^^^^^^^^^^^^^^
+
+The ``prof`` metadata is used to record profile data in the IR.
+The first operand of the metadata node indicates the profile metadata
+type. There are currently 3 types:
+:ref:`branch_weights<prof_node_branch_weights>`,
+:ref:`function_entry_count<prof_node_function_entry_count>`, and
+:ref:`VP<prof_node_VP>`.
+
+.. _prof_node_branch_weights:
+
+branch_weights
+""""""""""""""
+
+Branch weight metadata attached to a branch, select, switch or call instruction
+represents the likeliness of the associated branch being taken.
+For more information, see :doc:`BranchWeightMetadata`.
+
+.. _prof_node_function_entry_count:
+
+function_entry_count
+""""""""""""""""""""
+
+Function entry count metadata can be attached to function definitions
+to record the number of times the function is called. Used with BFI
+information, it is also used to derive the basic block profile count.
+For more information, see :doc:`BranchWeightMetadata`.
+
+.. _prof_node_VP:
+
+VP
+""
+
+VP (value profile) metadata can be attached to instructions that have
+value profile information. Currently this is indirect calls (where it
+records the hottest callees) and calls to memory intrinsics such as memcpy,
+memmove, and memset (where it records the hottest byte lengths).
+
+Each VP metadata node contains "VP" string, then a uint32_t value for the value
+profiling kind, a uint64_t value for the total number of times the instruction
+is executed, followed by uint64_t value and execution count pairs.
+The value profiling kind is 0 for indirect call targets and 1 for memory
+operations. For indirect call targets, each profile value is a hash
+of the callee function name, and for memory operations each value is the
+byte length.
+
+Note that the value counts do not need to add up to the total count
+listed in the third operand (in practice only the top hottest values
+are tracked and reported).
+
+Indirect call example:
+
+.. code-block:: llvm
+
+    call void %f(), !prof !1
+    !1 = !{!"VP", i32 0, i64 1600, i64 7651369219802541373, i64 1030, i64 -4377547752858689819, i64 410}
+
+Note that the VP type is 0 (the second operand), which indicates this is
+an indirect call value profile data. The third operand indicates that the
+indirect call executed 1600 times. The 4th and 6th operands give the
+hashes of the 2 hottest target functions' names (this is the same hash used
+to represent function names in the profile database), and the 5th and 7th
+operands give the execution count that each of the respective prior target
+functions was called.
+
 Module Flags Metadata
 =====================
 
