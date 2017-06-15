@@ -1,0 +1,136 @@
+//===--- IndexerQueries.cpp - Indexer queries -----------------------------===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+
+#include "clang/Tooling/Refactor/IndexerQuery.h"
+#include "llvm/Support/Errc.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/YAMLTraits.h"
+
+using namespace clang;
+using namespace clang::tooling;
+using namespace clang::tooling::indexer;
+using namespace clang::tooling::indexer::detail;
+using namespace llvm::yaml;
+
+const char *ASTProducerQuery::BaseUIDString = "ast.producer.query";
+const char *DeclarationsQuery::BaseUIDString = "decl.query";
+const char *ASTUnitForImplementationOfDeclarationQuery::NameUIDString =
+    "file.for.impl.of.decl";
+
+const char *DeclPredicateNodePredicate::NameUIDString = "decl.predicate";
+const char *DeclPredicateNotPredicate::NameUIDString = "not.decl.predicate";
+
+std::unique_ptr<DeclPredicateNode>
+DeclPredicateNode::create(const DeclPredicate &Predicate) {
+  return llvm::make_unique<DeclPredicateNodePredicate>(Predicate);
+}
+
+std::unique_ptr<DeclPredicateNode>
+DeclPredicateNode::create(const BoolDeclPredicate &Predicate) {
+  if (Predicate.IsInverted)
+    return llvm::make_unique<DeclPredicateNotPredicate>(
+        create(Predicate.Predicate));
+  return create(Predicate.Predicate);
+}
+
+std::unique_ptr<ASTUnitForImplementationOfDeclarationQuery>
+clang::tooling::indexer::fileThatShouldContainImplementationOf(const Decl *D) {
+  return llvm::make_unique<ASTUnitForImplementationOfDeclarationQuery>(D);
+}
+
+namespace {
+
+struct QueryPredicateNode {
+  std::string Name;
+  std::vector<int> IntegerValues;
+};
+
+struct QueryYAMLNode {
+  std::string Name;
+  std::vector<QueryPredicateNode> PredicateResults;
+  std::string FilenameResult;
+};
+
+} // end anonymous namespace
+
+LLVM_YAML_IS_SEQUENCE_VECTOR(int)
+LLVM_YAML_IS_SEQUENCE_VECTOR(QueryPredicateNode)
+LLVM_YAML_IS_SEQUENCE_VECTOR(QueryYAMLNode)
+
+namespace llvm {
+namespace yaml {
+
+template <> struct MappingTraits<QueryPredicateNode> {
+  static void mapping(IO &Yaml, QueryPredicateNode &Predicate) {
+    Yaml.mapRequired("name", Predicate.Name);
+    Yaml.mapRequired("intValues", Predicate.IntegerValues);
+  }
+};
+
+template <> struct MappingTraits<QueryYAMLNode> {
+  static void mapping(IO &Yaml, QueryYAMLNode &Query) {
+    Yaml.mapRequired("name", Query.Name);
+    Yaml.mapOptional("predicateResults", Query.PredicateResults);
+    Yaml.mapOptional("filenameResult", Query.FilenameResult);
+    // FIXME: Report an error if no results are provided at all.
+  }
+};
+
+} // end namespace yaml
+} // end namespace llvm
+
+llvm::Error
+IndexerQuery::loadResultsFromYAML(StringRef Source,
+                                  ArrayRef<IndexerQuery *> Queries) {
+  std::vector<QueryYAMLNode> QueryResults;
+  Input YamlIn(Source);
+  YamlIn >> QueryResults;
+  if (YamlIn.error())
+    return llvm::make_error<llvm::StringError>("Failed to parse query results",
+                                               YamlIn.error());
+  if (QueryResults.size() != Queries.size())
+    return llvm::make_error<llvm::StringError>("Mismatch in query results size",
+                                               llvm::errc::invalid_argument);
+  for (const auto &QueryTuple : llvm::zip(Queries, QueryResults)) {
+    IndexerQuery *Query = std::get<0>(QueryTuple);
+    const QueryYAMLNode &Result = std::get<1>(QueryTuple);
+    if ((Query->NameUID && Query->NameUID != Result.Name) &&
+        (Query->BaseUID && Query->BaseUID != Result.Name))
+      continue;
+    if (auto *DQ = dyn_cast<DeclarationsQuery>(Query)) {
+      const DeclPredicateNode &Predicate = DQ->getPredicateNode();
+      DeclPredicate ActualPredicate("");
+      bool IsNot = false;
+      if (const auto *Not = dyn_cast<DeclPredicateNotPredicate>(&Predicate)) {
+        ActualPredicate =
+            cast<DeclPredicateNodePredicate>(Not->getChild()).getPredicate();
+        IsNot = true;
+      } else
+        ActualPredicate =
+            cast<DeclPredicateNodePredicate>(Predicate).getPredicate();
+      for (const auto &PredicateResult : Result.PredicateResults) {
+        if (PredicateResult.Name != ActualPredicate.Name)
+          continue;
+        std::vector<PersistentDeclRef<Decl>> Output;
+        for (const auto &ResultTuple :
+             zip(DQ->getInputs(), PredicateResult.IntegerValues)) {
+          const Decl *D = std::get<0>(ResultTuple);
+          int Result = std::get<1>(ResultTuple);
+          Output.push_back(PersistentDeclRef<Decl>::create(
+              (IsNot ? !Result : !!Result) ? D : nullptr));
+        }
+        DQ->setOutput(std::move(Output));
+        break;
+      }
+    } else if (auto *AQ =
+                   dyn_cast<ASTUnitForImplementationOfDeclarationQuery>(Query))
+      AQ->setResult(Result.FilenameResult);
+  }
+  return llvm::Error::success();
+}

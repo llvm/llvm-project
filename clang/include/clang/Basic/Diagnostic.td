@@ -139,4 +139,4 @@ include "DiagnosticLexKinds.td"
 include "DiagnosticParseKinds.td"
 include "DiagnosticSemaKinds.td"
 include "DiagnosticSerializationKinds.td"
-
+include "DiagnosticRefactoringKinds.td"

@@ -2155,18 +2155,19 @@ raw_ostream &clang::operator<<(raw_ostream &OS,
 
 void ObjCCompatibleAliasDecl::anchor() { }
 
-ObjCCompatibleAliasDecl *
-ObjCCompatibleAliasDecl::Create(ASTContext &C, DeclContext *DC,
-                                SourceLocation L,
-                                IdentifierInfo *Id,
-                                ObjCInterfaceDecl* AliasedClass) {
-  return new (C, DC) ObjCCompatibleAliasDecl(DC, L, Id, AliasedClass);
+ObjCCompatibleAliasDecl *ObjCCompatibleAliasDecl::Create(
+    ASTContext &C, DeclContext *DC, SourceLocation NameLoc, IdentifierInfo *Id,
+    ObjCInterfaceDecl *AliasedClass, SourceLocation AliasedClassLoc,
+    SourceLocation AtLoc) {
+  return new (C, DC) ObjCCompatibleAliasDecl(DC, NameLoc, Id, AliasedClass,
+                                             AliasedClassLoc, AtLoc);
 }
 
 ObjCCompatibleAliasDecl *
 ObjCCompatibleAliasDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
-  return new (C, ID) ObjCCompatibleAliasDecl(nullptr, SourceLocation(),
-                                             nullptr, nullptr);
+  return new (C, ID)
+      ObjCCompatibleAliasDecl(nullptr, SourceLocation(), nullptr, nullptr,
+                              SourceLocation(), SourceLocation());
 }
 
 //===----------------------------------------------------------------------===//

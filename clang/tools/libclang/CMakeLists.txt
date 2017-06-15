@@ -9,6 +9,7 @@ set(SOURCES
   CIndexInclusionStack.cpp
   CIndexUSRs.cpp
   CIndexer.cpp
+  CRefactor.cpp
   CXComment.cpp
   CXCursor.cpp
   CXIndexDataConsumer.cpp

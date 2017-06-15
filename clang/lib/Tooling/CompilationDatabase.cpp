@@ -257,8 +257,10 @@ static bool stripPositionalArgs(std::vector<const char *> Args,
   for (const auto &Cmd : Jobs) {
     // Collect only for Assemble jobs. If we do all jobs we get duplicates
     // since Link jobs point to Assemble jobs as inputs.
-    if (Cmd.getSource().getKind() == driver::Action::AssembleJobClass)
+    if (Cmd.getSource().getKind() == driver::Action::AssembleJobClass ||
+        Cmd.getSource().getKind() == driver::Action::CompileJobClass) {
       CompileAnalyzer.run(&Cmd.getSource());
+    }
   }
 
   if (CompileAnalyzer.Inputs.empty()) {

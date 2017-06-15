@@ -1175,6 +1175,12 @@ def warn_unimplemented_selector:  Warning<
   InGroup<Selector>, DefaultIgnore;
 def warn_unimplemented_protocol_method : Warning<
   "method %0 in protocol %1 not implemented">, InGroup<Protocol>;
+def warn_class_does_not_conform_protocol : Warning<
+  "%select{class|category}0 %1 does not conform to protocol"
+  "%plural{1: %3|2:s %3 and %4|3:s %3, %4 and %5|:s %3, %4, %5, ...}2">,
+  InGroup<Protocol>;
+def note_add_missing_protocol_stubs : Note<
+  "add stubs for missing protocol requirements">;
 def warn_multiple_selectors: Warning<
   "several methods with selector %0 of mismatched types are found "
   "for the @selector expression">,
@@ -7954,6 +7960,7 @@ def warn_missing_case : Warning<"%plural{"
   "3:enumeration values %1, %2, and %3 not handled in switch|"
   ":%0 enumeration values not handled in switch: %1, %2, %3...}0">,
   InGroup<Switch>;
+def note_fill_in_missing_cases : Note<"add missing switch cases">;
 
 def warn_unannotated_fallthrough : Warning<
   "unannotated fall-through between switch labels">,
