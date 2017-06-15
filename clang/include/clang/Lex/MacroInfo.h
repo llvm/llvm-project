@@ -266,11 +266,6 @@ public:
 
   void setUsedForHeaderGuard(bool Val) { UsedForHeaderGuard = Val; }
 
-  // FIXME: hack to get past build failures
-  unsigned getOwningModuleID() const {
-    return 0;
-  }
-
   void dump() const;
 
 private:
