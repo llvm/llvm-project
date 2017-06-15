@@ -12057,11 +12057,17 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
     }
     break;
   case UO_Extension:
-  case UO_Coawait:
     resultType = Input.get()->getType();
     VK = Input.get()->getValueKind();
     OK = Input.get()->getObjectKind();
     break;
+  case UO_Coawait:
+    // It's unnessesary to represent the pass-through operator co_await in the
+    // AST; just return the input expression instead.
+    assert(!Input.get()->getType()->isDependentType() &&
+                   "the co_await expression must be non-dependant before "
+                   "building operator co_await");
+    return Input;
   }
   if (resultType.isNull() || Input.isInvalid())
     return ExprError();

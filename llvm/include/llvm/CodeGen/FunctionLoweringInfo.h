@@ -82,6 +82,11 @@ public:
   DenseMap<std::pair<const MachineBasicBlock *, const Value *>, unsigned>
       SwiftErrorVRegUpwardsUse;
 
+  /// A map from instructions that define/use a swifterror value to the virtual
+  /// register that represents that def/use.
+  llvm::DenseMap<PointerIntPair<const Instruction *, 1, bool>, unsigned>
+      SwiftErrorVRegDefUses;
+
   /// The swifterror argument of the current function.
   const Value *SwiftErrorArg;
 
@@ -100,6 +105,13 @@ public:
   /// basic block.
   void setCurrentSwiftErrorVReg(const MachineBasicBlock *MBB, const Value *,
                                 unsigned);
+
+  /// Get or create the swifterror value virtual register for a def of a
+  /// swifterror by an instruction.
+  std::pair<unsigned, bool> getOrCreateSwiftErrorVRegDefAt(const Instruction *);
+  std::pair<unsigned, bool>
+  getOrCreateSwiftErrorVRegUseAt(const Instruction *, const MachineBasicBlock *,
+                                 const Value *);
 
   /// ValueMap - Since we emit code for the function a basic block at a time,
   /// we must remember which virtual registers hold the values for

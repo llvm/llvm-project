@@ -301,6 +301,10 @@ SymbolInfo index::getSymbolInfo(const Decl *D) {
       Info.Kind = SymbolKind::TypeAlias;
       Info.Lang = SymbolLanguage::CXX;
       break;
+    case Decl::Binding:
+      Info.Kind = SymbolKind::Variable;
+      Info.Lang = SymbolLanguage::CXX;
+      break;
     default:
       break;
     }

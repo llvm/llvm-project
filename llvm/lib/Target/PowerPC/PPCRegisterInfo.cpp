@@ -273,6 +273,20 @@ BitVector PPCRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   return Reserved;
 }
 
+bool PPCRegisterInfo::isCallerPreservedPhysReg(unsigned PhysReg,
+                                               const MachineFunction &MF) const {
+  assert(TargetRegisterInfo::isPhysicalRegister(PhysReg));
+  if (TM.isELFv2ABI() && PhysReg == PPC::X2) {
+    // X2 is guaranteed to be preserved within a function if it is reserved.
+    // The reason it's reserved is that it's the TOC pointer (and the function
+    // uses the TOC). In functions where it isn't reserved (i.e. leaf functions
+    // with no TOC access), we can't claim that it is preserved.
+    return (getReservedRegs(MF).test(PPC::X2));
+  } else {
+    return false;
+  }
+}
+
 unsigned PPCRegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
                                               MachineFunction &MF) const {
   const PPCFrameLowering *TFI = getFrameLowering(MF);

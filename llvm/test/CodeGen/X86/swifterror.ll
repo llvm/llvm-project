@@ -712,3 +712,111 @@ trueBB:
 falseBB:
   ret void
 }
+
+
+declare swiftcc void @foo2(%swift_error** swifterror)
+
+; Make sure we properly assign registers during fast-isel.
+; CHECK-O0-LABEL: testAssign
+; CHECK-O0:        pushq   %r12
+; CHECK-O0:        xorl    [[ZERO:%[a-z0-9]+]], [[ZERO]]
+; CHECK-O0:        movl    [[ZERO]], %r12d
+; CHECK-O0:        callq   _foo2
+; CHECK-O0:        movq    %r12, [[SLOT:[-a-z0-9\(\)\%]*]]
+;
+; CHECK-O0:        movq    [[SLOT]], %rax
+; CHECK-O0:        popq    %r12
+; CHECK-O0:        retq
+
+; CHECK-APPLE-LABEL: testAssign
+; CHECK-APPLE:        pushq   %r12
+; CHECK-APPLE:        xorl    %r12d, %r12d
+; CHECK-APPLE:        callq   _foo2
+; CHECK-APPLE:        movq    %r12, %rax
+; CHECK-APPLE:        popq    %r12
+; CHECK-APPLE:        retq
+
+define swiftcc %swift_error* @testAssign(i8* %error_ref) {
+entry:
+  %error_ptr = alloca swifterror %swift_error*
+  store %swift_error* null, %swift_error** %error_ptr
+  call swiftcc void @foo2(%swift_error** swifterror %error_ptr)
+  br label %a
+
+a:
+  %error = load %swift_error*, %swift_error** %error_ptr
+  ret %swift_error* %error
+}
+
+; CHECK-O0-LABEL: testAssign2
+; CHECK-O0:        movq    %r12, {{.*}}
+; CHECK-O0:        movq    %r12, [[SLOT:[-a-z0-9\(\)\%]*]]
+; CHECK-O0:        jmp
+; CHECK-O0:        movq    [[SLOT]], %rax
+; CHECK-O0:        movq    %rax, [[SLOT2:[-a-z0-9\(\)\%]*]]
+; CHECK-O0:        movq    [[SLOT2]], %r12
+; CHECK-O0:        retq
+
+; CHECK-APPLE-LABEL: testAssign2
+; CHECK-APPLE:        movq    %r12, %rax
+; CHECK-APPLE:        retq
+define swiftcc %swift_error* @testAssign2(i8* %error_ref, %swift_error** swifterror %err) {
+entry:
+  br label %a
+
+a:
+  %error = load %swift_error*, %swift_error** %err
+  ret %swift_error* %error
+}
+
+; CHECK-O0-LABEL: testAssign3
+; CHECK-O0:        callq   _foo2
+; CHECK-O0:        movq    %r12, [[SLOT:[-a-z0-9\(\)\%]*]]
+; CHECK-O0:        movq    [[SLOT]], %rax
+; CHECK-O0:        movq    %rax, [[SLOT2:[-a-z0-9\(\)\%]*]]
+; CHECK-O0:        movq    [[SLOT2]], %r12
+; CHECK-O0:        addq    $24, %rsp
+; CHECK-O0:        retq
+
+; CHECK-APPLE-LABEL: testAssign3
+; CHECK-APPLE:         callq   _foo2
+; CHECK-APPLE:         movq    %r12, %rax
+; CHECK-APPLE:         retq
+
+define swiftcc %swift_error* @testAssign3(i8* %error_ref, %swift_error** swifterror %err) {
+entry:
+  call swiftcc void @foo2(%swift_error** swifterror %err)
+  br label %a
+
+a:
+  %error = load %swift_error*, %swift_error** %err
+  ret %swift_error* %error
+}
+
+
+; CHECK-O0-LABEL: testAssign4
+; CHECK-O0:        callq   _foo2
+; CHECK-O0:        xorl    %ecx, %ecx
+; CHECK-O0:        movl    %ecx, %eax
+; CHECK-O0:        movq    %rax, [[SLOT:[-a-z0-9\(\)\%]*]]
+; CHECK-O0:        movq    [[SLOT]], %rax
+; CHECK-O0:        movq    %rax, [[SLOT2:[-a-z0-9\(\)\%]*]]
+; CHECK-O0:        movq    [[SLOT2]], %r12
+; CHECK-O0:        retq
+
+; CHECK-APPLE-LABEL: testAssign4
+; CHECK-APPLE:        callq   _foo2
+; CHECK-APPLE:        xorl    %eax, %eax
+; CHECK-APPLE:        xorl    %r12d, %r12d
+; CHECK-APPLE:        retq
+
+define swiftcc %swift_error* @testAssign4(i8* %error_ref, %swift_error** swifterror %err) {
+entry:
+  call swiftcc void @foo2(%swift_error** swifterror %err)
+  store %swift_error* null, %swift_error** %err
+  br label %a
+
+a:
+  %error = load %swift_error*, %swift_error** %err
+  ret %swift_error* %error
+}
