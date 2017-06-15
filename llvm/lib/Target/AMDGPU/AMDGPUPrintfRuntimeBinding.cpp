@@ -234,8 +234,21 @@ bool AMDGPUPrintfRuntimeBinding::lowerPrintfForGpu(Module &M) {
 
     SmallString<16> OpConvSpecifiers;
     Value *Op = CI->getArgOperand(0);
-    if (auto I = dyn_cast<Instruction>(Op))
-      Op = simplify(I);
+
+    if (auto LI = dyn_cast<LoadInst>(Op)) {
+      Op = LI->getPointerOperand();
+      for (auto Use : Op->users()) {
+        if (auto SI = dyn_cast<StoreInst>(Use)) {
+          Op = SI->getValueOperand();
+          break;
+        }
+      }
+    }
+
+    if (auto I = dyn_cast<Instruction>(Op)) {
+      Value *Op_simplified = simplify(I);
+      if (Op_simplified) Op = Op_simplified;
+    }
 
     ConstantExpr *ConstExpr = dyn_cast<ConstantExpr>(Op);
 
@@ -245,10 +258,12 @@ bool AMDGPUPrintfRuntimeBinding::lowerPrintfForGpu(Module &M) {
 
       StringRef Str("unknown");
       if (GVar && GVar->hasInitializer()) {
-        ConstantDataArray *CA = dyn_cast<ConstantDataArray>(
-              GVar->getInitializer());
-        if (CA->isString()) {
-          Str = CA->getAsCString();
+        auto Init = GVar->getInitializer();
+        if (auto CA = dyn_cast<ConstantDataArray>(Init)) {
+          if (CA->isString())
+            Str = CA->getAsCString();
+        } else if (isa<ConstantAggregateZero>(Init)) {
+          Str = "";
         }
         //
         // we need this call to ascertain
