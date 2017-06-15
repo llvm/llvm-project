@@ -235,6 +235,11 @@ public:
   /// starting with the sources of divergence.
   bool isSourceOfDivergence(const Value *V) const;
 
+  // \brief Returns true for the target specific
+  // set of operations which produce uniform result
+  // even taking non-unform arguments
+  bool isAlwaysUniform(const Value *V) const;
+
   /// Returns the address space ID for a target's 'flat' address space. Note
   /// this is not necessarily the same as addrspace(0), which LLVM sometimes
   /// refers to as the generic address space. The flat address space is a
@@ -821,6 +826,7 @@ public:
   virtual int getUserCost(const User *U) = 0;
   virtual bool hasBranchDivergence() = 0;
   virtual bool isSourceOfDivergence(const Value *V) = 0;
+  virtual bool isAlwaysUniform(const Value *V) = 0;
   virtual unsigned getFlatAddressSpace() = 0;
   virtual bool isLoweredToCall(const Function *F) = 0;
   virtual void getUnrollingPreferences(Loop *L, UnrollingPreferences &UP) = 0;
@@ -996,6 +1002,10 @@ public:
   bool hasBranchDivergence() override { return Impl.hasBranchDivergence(); }
   bool isSourceOfDivergence(const Value *V) override {
     return Impl.isSourceOfDivergence(V);
+  }
+
+  bool isAlwaysUniform(const Value *V) override {
+    return Impl.isAlwaysUniform(V);
   }
 
   unsigned getFlatAddressSpace() override {

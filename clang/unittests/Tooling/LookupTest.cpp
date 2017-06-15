@@ -143,8 +143,9 @@ TEST(LookupTest, replaceNestedClassName) {
   Visitor.OnRecordTypeLoc = [&](RecordTypeLoc Type) {
     // Filter Types by name since there are other `RecordTypeLoc` in the test
     // file.
-    if (Type.getDecl()->getQualifiedNameAsString() == "a::b::Foo")
+    if (Type.getDecl()->getQualifiedNameAsString() == "a::b::Foo") {
       EXPECT_EQ("x::Bar", replaceRecordTypeLoc(Type, "::a::x::Bar"));
+    }
   };
   Visitor.runOver("namespace a { namespace b {\n"
                   "class Foo;\n"
@@ -155,8 +156,9 @@ TEST(LookupTest, replaceNestedClassName) {
     // Filter Types by name since there are other `RecordTypeLoc` in the test
     // file.
     // `a::b::Foo` in using shadow decl is not `TypeLoc`.
-    if (Type.getDecl()->getQualifiedNameAsString() == "a::b::Foo")
+    if (Type.getDecl()->getQualifiedNameAsString() == "a::b::Foo") {
       EXPECT_EQ("Bar", replaceRecordTypeLoc(Type, "::a::x::Bar"));
+    }
   };
   Visitor.runOver("namespace a { namespace b { class Foo {}; } }\n"
                   "namespace c { using a::b::Foo; Foo f();; }\n");

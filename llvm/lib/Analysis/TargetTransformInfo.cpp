@@ -103,6 +103,10 @@ bool TargetTransformInfo::isSourceOfDivergence(const Value *V) const {
   return TTIImpl->isSourceOfDivergence(V);
 }
 
+bool llvm::TargetTransformInfo::isAlwaysUniform(const Value *V) const {
+  return TTIImpl->isAlwaysUniform(V);
+}
+
 unsigned TargetTransformInfo::getFlatAddressSpace() const {
   return TTIImpl->getFlatAddressSpace();
 }

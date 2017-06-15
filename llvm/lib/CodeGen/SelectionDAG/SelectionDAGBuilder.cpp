@@ -3582,8 +3582,7 @@ void SelectionDAGBuilder::visitLoad(const LoadInst &I) {
 }
 
 void SelectionDAGBuilder::visitStoreToSwiftError(const StoreInst &I) {
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  assert(TLI.supportSwiftError() &&
+  assert(DAG.getTargetLoweringInfo().supportSwiftError() &&
          "call visitStoreToSwiftError when backend supports swifterror");
 
   SmallVector<EVT, 4> ValueVTs;

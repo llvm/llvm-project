@@ -8,6 +8,7 @@ add_llvm_library(LLVMInstrumentation
   Instrumentation.cpp
   InstrProfiling.cpp
   PGOInstrumentation.cpp
+  PGOMemOPSizeOpt.cpp
   SanitizerCoverage.cpp
   ThreadSanitizer.cpp
   EfficiencySanitizer.cpp

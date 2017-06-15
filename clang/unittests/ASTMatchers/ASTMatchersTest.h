@@ -320,10 +320,12 @@ public:
       ExpectedName(ExpectedName) {}
 
   void onEndOfTranslationUnit() override {
-    if (ExpectedCount != -1)
+    if (ExpectedCount != -1) {
       EXPECT_EQ(ExpectedCount, Count);
-    if (!ExpectedName.empty())
+    }
+    if (!ExpectedName.empty()) {
       EXPECT_EQ(ExpectedName, Name);
+    }
     Count = 0;
     Name.clear();
   }
@@ -346,8 +348,9 @@ public:
       }
       BoundNodes::IDToNodeMap::const_iterator I = M.find(Id);
       EXPECT_NE(M.end(), I);
-      if (I != M.end())
+      if (I != M.end()) {
         EXPECT_EQ(Nodes->getNodeAs<T>(Id), I->second.get<T>());
+      }
       return true;
     }
     EXPECT_TRUE(M.count(Id) == 0 ||

@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fcoroutines-ts -std=c++14 -emit-llvm %s -o - -disable-llvm-passes | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fcoroutines-ts -std=c++14 \
+// RUN:   -emit-llvm %s -o - -disable-llvm-passes -Wno-coroutine -Wno-unused | FileCheck %s
 
 namespace std {
 namespace experimental {
@@ -277,4 +278,51 @@ extern "C" void EndlessLoop() {
 void AwaitLValue() {
   suspend_always lval;
   co_await lval;
+}
+
+struct RefTag { };
+
+struct AwaitResumeReturnsLValue {
+  bool await_ready();
+  void await_suspend(std::experimental::coroutine_handle<>);
+  RefTag& await_resume();
+};
+
+
+template<>
+struct std::experimental::coroutine_traits<void,double> {
+  struct promise_type {
+    void get_return_object();
+    init_susp initial_suspend();
+    final_susp final_suspend();
+    void return_void();
+    AwaitResumeReturnsLValue yield_value(int);
+  };
+};
+
+// Verifies that we don't crash when returning an lvalue from an await_resume()
+// expression.
+// CHECK-LABEL:  define void @_Z18AwaitReturnsLValued(double)
+void AwaitReturnsLValue(double) {
+  AwaitResumeReturnsLValue a;
+  // CHECK: %[[AVAR:.+]] = alloca %struct.AwaitResumeReturnsLValue,
+  // CHECK: %[[XVAR:.+]] = alloca %struct.RefTag*,
+
+  // CHECK: %[[YVAR:.+]] = alloca %struct.RefTag*,
+  // CHECK-NEXT: %[[TMP1:.+]] = alloca %struct.AwaitResumeReturnsLValue,
+
+  // CHECK: %[[ZVAR:.+]] = alloca %struct.RefTag*,
+  // CHECK-NEXT: %[[TMP2:.+]] = alloca %struct.AwaitResumeReturnsLValue,
+
+  // CHECK: %[[RES1:.+]] = call dereferenceable({{.*}}) %struct.RefTag* @_ZN24AwaitResumeReturnsLValue12await_resumeEv(%struct.AwaitResumeReturnsLValue* %[[AVAR]])
+  // CHECK-NEXT: store %struct.RefTag* %[[RES1]], %struct.RefTag** %[[XVAR]],
+  RefTag& x = co_await a;
+
+  // CHECK: %[[RES2:.+]] = call dereferenceable({{.*}}) %struct.RefTag* @_ZN24AwaitResumeReturnsLValue12await_resumeEv(%struct.AwaitResumeReturnsLValue* %[[TMP1]])
+  // CHECK-NEXT: store %struct.RefTag* %[[RES2]], %struct.RefTag** %[[YVAR]],
+
+  RefTag& y = co_await AwaitResumeReturnsLValue{};
+  // CHECK: %[[RES3:.+]] = call dereferenceable({{.*}}) %struct.RefTag* @_ZN24AwaitResumeReturnsLValue12await_resumeEv(%struct.AwaitResumeReturnsLValue* %[[TMP2]])
+  // CHECK-NEXT: store %struct.RefTag* %[[RES3]], %struct.RefTag** %[[ZVAR]],
+  RefTag& z = co_yield 42;
 }

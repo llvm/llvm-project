@@ -497,6 +497,16 @@ public:
   /// function.  Used by MachineRegisterInfo::isConstantPhysReg().
   virtual bool isConstantPhysReg(unsigned PhysReg) const { return false; }
 
+  /// Physical registers that may be modified within a function but are
+  /// guaranteed to be restored before any uses. This is useful for targets that
+  /// have call sequences where a GOT register may be updated by the caller
+  /// prior to a call and is guaranteed to be restored (also by the caller)
+  /// after the call. 
+  virtual bool isCallerPreservedPhysReg(unsigned PhysReg,
+                                        const MachineFunction &MF) const {
+    return false;
+  }
+
   /// Prior to adding the live-out mask to a stackmap or patchpoint
   /// instruction, provide the target the opportunity to adjust it (mainly to
   /// remove pseudo-registers that should be ignored).
