@@ -53,9 +53,12 @@ class MacroArgs {
   /// Preprocessor owns which we use to avoid thrashing malloc/free.
   MacroArgs *ArgCache;
 
-  MacroArgs(unsigned NumToks, bool varargsElided)
-    : NumUnexpArgTokens(NumToks), VarargsElided(varargsElided),
-      ArgCache(nullptr) {}
+  /// MacroArgs - The number of arguments the invoked macro expects.
+  unsigned NumMacroArgs;
+
+  MacroArgs(unsigned NumToks, bool varargsElided, unsigned MacroArgs)
+      : NumUnexpArgTokens(NumToks), VarargsElided(varargsElided),
+        ArgCache(nullptr), NumMacroArgs(MacroArgs) {}
   ~MacroArgs() = default;
 
 public:
@@ -94,10 +97,9 @@ public:
                                       SourceLocation ExpansionLocStart,
                                       SourceLocation ExpansionLocEnd);
 
-  /// getNumArguments - Return the number of arguments passed into this macro
-  /// invocation.
-  unsigned getNumArguments() const { return NumUnexpArgTokens; }
-
+  /// getNumMacroArguments - Return the number of arguments the invoked macro
+  /// expects.
+  unsigned getNumMacroArguments() const { return NumMacroArgs; }
 
   /// isVarargsElidedUse - Return true if this is a C99 style varargs macro
   /// invocation and there was no argument specified for the "..." argument.  If

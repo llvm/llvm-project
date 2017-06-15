@@ -372,19 +372,57 @@ template <class _CharT>
 struct __num_get
     : protected __num_get_base
 {
-    static string __stage2_int_prep(ios_base& __iob, _CharT* __atoms, _CharT& __thousands_sep);
     static string __stage2_float_prep(ios_base& __iob, _CharT* __atoms, _CharT& __decimal_point,
                                       _CharT& __thousands_sep);
-    static int __stage2_int_loop(_CharT __ct, int __base, char* __a, char*& __a_end,
-                  unsigned& __dc, _CharT __thousands_sep, const string& __grouping,
-                  unsigned* __g, unsigned*& __g_end, _CharT* __atoms);
+
     static int __stage2_float_loop(_CharT __ct, bool& __in_units, char& __exp,
                                    char* __a, char*& __a_end,
                                    _CharT __decimal_point, _CharT __thousands_sep,
                                    const string& __grouping, unsigned* __g,
                                    unsigned*& __g_end, unsigned& __dc, _CharT* __atoms);
+#ifndef _LIBCPP_ABI_OPTIMIZED_LOCALE_NUM_GET
+    static string __stage2_int_prep(ios_base& __iob, _CharT* __atoms, _CharT& __thousands_sep);
+    static int __stage2_int_loop(_CharT __ct, int __base, char* __a, char*& __a_end,
+                  unsigned& __dc, _CharT __thousands_sep, const string& __grouping,
+                  unsigned* __g, unsigned*& __g_end, _CharT* __atoms);
+
+#else
+    static string __stage2_int_prep(ios_base& __iob, _CharT& __thousands_sep)
+    {
+        locale __loc = __iob.getloc();
+        const numpunct<_CharT>& __np = use_facet<numpunct<_CharT> >(__loc);
+        __thousands_sep = __np.thousands_sep();
+        return __np.grouping();
+    }
+
+    const _CharT* __do_widen(ios_base& __iob, _CharT* __atoms) const
+    {
+      return __do_widen_p(__iob, __atoms);
+    }
+
+
+    static int __stage2_int_loop(_CharT __ct, int __base, char* __a, char*& __a_end,
+                  unsigned& __dc, _CharT __thousands_sep, const string& __grouping,
+                  unsigned* __g, unsigned*& __g_end, const _CharT* __atoms);
+private:
+    template<typename T>
+    const T* __do_widen_p(ios_base& __iob, T* __atoms) const
+    {
+      locale __loc = __iob.getloc();
+      use_facet<ctype<T> >(__loc).widen(__src, __src + 26, __atoms);
+      return __atoms;
+    }
+
+    const char* __do_widen_p(ios_base& __iob, char* __atoms) const
+    {
+      (void)__iob;
+      (void)__atoms;
+      return __src;
+    }
+#endif
 };
 
+#ifndef _LIBCPP_ABI_OPTIMIZED_LOCALE_NUM_GET
 template <class _CharT>
 string
 __num_get<_CharT>::__stage2_int_prep(ios_base& __iob, _CharT* __atoms, _CharT& __thousands_sep)
@@ -395,6 +433,7 @@ __num_get<_CharT>::__stage2_int_prep(ios_base& __iob, _CharT* __atoms, _CharT& _
     __thousands_sep = __np.thousands_sep();
     return __np.grouping();
 }
+#endif
 
 template <class _CharT>
 string
@@ -411,9 +450,16 @@ __num_get<_CharT>::__stage2_float_prep(ios_base& __iob, _CharT* __atoms, _CharT&
 
 template <class _CharT>
 int
+#ifndef _LIBCPP_ABI_OPTIMIZED_LOCALE_NUM_GET
 __num_get<_CharT>::__stage2_int_loop(_CharT __ct, int __base, char* __a, char*& __a_end,
                   unsigned& __dc, _CharT __thousands_sep, const string& __grouping,
                   unsigned* __g, unsigned*& __g_end, _CharT* __atoms)
+#else
+__num_get<_CharT>::__stage2_int_loop(_CharT __ct, int __base, char* __a, char*& __a_end,
+                  unsigned& __dc, _CharT __thousands_sep, const string& __grouping,
+                  unsigned* __g, unsigned*& __g_end, const _CharT* __atoms)
+
+#endif
 {
     if (__a_end == __a && (__ct == __atoms[24] || __ct == __atoms[25]))
     {
@@ -849,9 +895,16 @@ num_get<_CharT, _InputIterator>::__do_get_signed(iter_type __b, iter_type __e,
     // Stage 1
     int __base = this->__get_base(__iob);
     // Stage 2
-    char_type __atoms[26];
     char_type __thousands_sep;
+    const int __atoms_size = 26;
+#ifdef _LIBCPP_ABI_OPTIMIZED_LOCALE_NUM_GET
+    char_type __atoms1[__atoms_size];
+    const char_type *__atoms = this->__do_widen(__iob, __atoms1);
+    string __grouping = this->__stage2_int_prep(__iob, __thousands_sep);
+#else
+    char_type __atoms[__atoms_size];
     string __grouping = this->__stage2_int_prep(__iob, __atoms, __thousands_sep);
+#endif
     string __buf;
     __buf.resize(__buf.capacity());
     char* __a = &__buf[0];
@@ -899,9 +952,16 @@ num_get<_CharT, _InputIterator>::__do_get_unsigned(iter_type __b, iter_type __e,
     // Stage 1
     int __base = this->__get_base(__iob);
     // Stage 2
-    char_type __atoms[26];
     char_type __thousands_sep;
+    const int __atoms_size = 26;
+#ifdef _LIBCPP_ABI_OPTIMIZED_LOCALE_NUM_GET
+    char_type __atoms1[__atoms_size];
+    const char_type *__atoms = this->__do_widen(__iob, __atoms1);
+    string __grouping = this->__stage2_int_prep(__iob, __thousands_sep);
+#else
+    char_type __atoms[__atoms_size];
     string __grouping = this->__stage2_int_prep(__iob, __atoms, __thousands_sep);
+#endif
     string __buf;
     __buf.resize(__buf.capacity());
     char* __a = &__buf[0];

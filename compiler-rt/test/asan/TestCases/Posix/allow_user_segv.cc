@@ -10,6 +10,14 @@
 // RUN: %clangxx_asan -O0 %s -o %t && %env_asan_opts=handle_segv=2 not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK2
 // RUN: %clangxx_asan -O2 %s -o %t && %env_asan_opts=handle_segv=2 not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK2
 
+// RUN: %clangxx_asan -O0 %s -o %t && %env_asan_opts=handle_segv=0:allow_user_segv_handler=0 not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK0
+// RUN: %clangxx_asan -O0 %s -o %t && %env_asan_opts=handle_segv=1:allow_user_segv_handler=0 not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK2
+// RUN: %clangxx_asan -O0 %s -o %t && %env_asan_opts=handle_segv=2:allow_user_segv_handler=0 not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK2
+
+// RUN: %clangxx_asan -O0 %s -o %t && %env_asan_opts=handle_segv=0:allow_user_segv_handler=1 not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK0
+// RUN: %clangxx_asan -O0 %s -o %t && %env_asan_opts=handle_segv=1:allow_user_segv_handler=1 not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK1
+// RUN: %clangxx_asan -O0 %s -o %t && %env_asan_opts=handle_segv=2:allow_user_segv_handler=1 not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK2
+
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>

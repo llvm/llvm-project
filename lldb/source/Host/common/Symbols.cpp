@@ -86,7 +86,6 @@ static bool LocateDSYMInVincinityOfExecutable(const ModuleSpec &module_spec,
                         path);
           }
         }
-        size_t obj_file_path_length = strlen(path);
         ::strncat(path, ".dSYM/Contents/Resources/DWARF/",
                   sizeof(path) - strlen(path) - 1);
         ::strncat(path, exec_fspec->GetFilename().AsCString(),
@@ -105,38 +104,41 @@ static bool LocateDSYMInVincinityOfExecutable(const ModuleSpec &module_spec,
           }
           return true;
         } else {
-          path[obj_file_path_length] = '\0';
+          // Get a clean copy of the executable path, without the final filename
+          FileSpec path_dir_fspec (exec_fspec->GetDirectory().AsCString(), true);
+          std::string path_dir_str = path_dir_fspec.GetPath();
 
-          char *last_dot = strrchr(path, '.');
-          while (last_dot != NULL && last_dot[0]) {
-            char *next_slash = strchr(last_dot, '/');
-            if (next_slash != NULL) {
-              *next_slash = '\0';
-              ::strncat(path, ".dSYM/Contents/Resources/DWARF/",
-                        sizeof(path) - strlen(path) - 1);
-              ::strncat(path, exec_fspec->GetFilename().AsCString(),
-                        sizeof(path) - strlen(path) - 1);
-              dsym_fspec.SetFile(path, false);
-              if (dsym_fspec.Exists() &&
-                  FileAtPathContainsArchAndUUID(
-                      dsym_fspec, module_spec.GetArchitecturePtr(),
-                      module_spec.GetUUIDPtr())) {
-                if (log) {
-                  log->Printf("dSYM with matching UUID & arch found at %s",
-                              path);
-                }
-                return true;
-              } else {
-                *last_dot = '\0';
-                char *prev_slash = strrchr(path, '/');
-                if (prev_slash != NULL)
-                  *prev_slash = '\0';
-                else
-                  break;
-              }
-            } else {
-              break;
+          // Add a ".dSYM" name to each directory component of the path, stripping
+          // off components.  e.g. we may have a binary like
+          // /S/L/F/Foundation.framework/Versions/A/Foundation
+          // and
+          // /S/L/F/Foundation.framework.dSYM
+          //
+          // so we'll need to start with /S/L/F/Foundation.framework/Versions/A,
+          // add the .dSYM part to the "A", and if that doesn't exist, strip off
+          // the "A" and try it again with "Versions", etc., until we find a dSYM
+          // bundle or we've stripped off enough path components that there's no
+          // need to continue.
+
+          for (int i = 0; i < 4; i++) {
+            std::string path_dir_plus_dsym (path_dir_str);
+            path_dir_plus_dsym += ".dSYM/Contents/Resources/DWARF/";
+            path_dir_plus_dsym += exec_fspec->GetFilename().AsCString();
+            dsym_fspec.SetFile (path_dir_plus_dsym, true);
+            if (dsym_fspec.Exists() &&
+                    FileAtPathContainsArchAndUUID(
+                        dsym_fspec, module_spec.GetArchitecturePtr(),
+                        module_spec.GetUUIDPtr())) {
+                  if (log) {
+                    log->Printf("dSYM with matching UUID & arch found at %s",
+                                path_dir_plus_dsym.c_str());
+                  }
+                  return true;
             }
+            auto const last_slash = path_dir_str.rfind('/');
+            if (last_slash == std::string::npos)
+                break;
+            path_dir_str.resize(last_slash);
           }
         }
       }

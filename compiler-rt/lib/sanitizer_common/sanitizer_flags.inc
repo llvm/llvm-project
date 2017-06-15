@@ -93,6 +93,9 @@ COMMON_FLAG(HandleSignalMode, handle_sigill, kHandleSignalNo,
 COMMON_FLAG(HandleSignalMode, handle_sigfpe, kHandleSignalYes,
             COMMON_FLAG_HANDLE_SIGNAL_HELP(SIGFPE))
 #undef COMMON_FLAG_HANDLE_SIGNAL_HELP
+COMMON_FLAG(bool, allow_user_segv_handler, true,
+            "Deprecated. True has no effect, use handle_sigbus=1. If false, "
+            "handle_*=1 will be upgraded to handle_*=2.")
 COMMON_FLAG(bool, use_sigaltstack, true,
             "If set, uses alternate stack for signal handling.")
 COMMON_FLAG(bool, detect_deadlocks, false,
