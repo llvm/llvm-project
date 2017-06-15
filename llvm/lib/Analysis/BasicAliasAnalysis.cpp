@@ -1011,10 +1011,24 @@ static AliasResult aliasSameBasePointerGEPs(const GEPOperator *GEP1,
     // equal each other so we can exit early.
     if (C1 && C2)
       return NoAlias;
-    if (isKnownNonEqual(GEP1->getOperand(GEP1->getNumOperands() - 1),
-                        GEP2->getOperand(GEP2->getNumOperands() - 1),
-                        DL))
-      return NoAlias;
+    {
+      Value *GEP1LastIdx = GEP1->getOperand(GEP1->getNumOperands() - 1);
+      Value *GEP2LastIdx = GEP2->getOperand(GEP2->getNumOperands() - 1);
+      if (isa<PHINode>(GEP1LastIdx) || isa<PHINode>(GEP2LastIdx)) {
+        // If one of the indices is a PHI node, be safe and only use
+        // computeKnownBits so we don't make any assumptions about the
+        // relationships between the two indices. This is important if we're
+        // asking about values from different loop iterations. See PR32314.
+        // TODO: We may be able to change the check so we only do this when
+        // we definitely looked through a PHINode.
+        KnownBits Known1 = computeKnownBits(GEP1LastIdx, DL);
+        KnownBits Known2 = computeKnownBits(GEP2LastIdx, DL);
+        if (Known1.Zero.intersects(Known2.One) ||
+            Known1.One.intersects(Known2.Zero))
+          return NoAlias;
+      } else if (isKnownNonEqual(GEP1LastIdx, GEP2LastIdx, DL))
+        return NoAlias;
+    }
     return MayAlias;
   } else if (!LastIndexedStruct || !C1 || !C2) {
     return MayAlias;

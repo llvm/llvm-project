@@ -292,7 +292,7 @@
 # endif
 #endif  // !defined(_LIBCPP_LITTLE_ENDIAN) || !defined(_LIBCPP_BIG_ENDIAN)
 
-#if __has_attribute(__no_sanitize__)
+#if __has_attribute(__no_sanitize__) && !defined(_LIBCPP_COMPILER_GCC)
 #define _LIBCPP_NO_CFI __attribute__((__no_sanitize__("cfi")))
 #else
 #define _LIBCPP_NO_CFI

@@ -11,6 +11,9 @@
 
   define void @test_sdiv_i8() { ret void }
   define void @test_udiv_i8() { ret void }
+
+  define void @test_srem_i32() { ret void }
+  define void @test_urem_i32() { ret void }
 ...
 ---
 name:            test_sdiv_i32
@@ -226,5 +229,77 @@ body:             |
     %2(s8) = G_UDIV %0, %1
     ; CHECK: %r0 = COPY [[R]]
     %r0 = COPY %2(s8)
+    BX_RET 14, _, implicit %r0
+...
+---
+name:            test_srem_i32
+# CHECK-LABEL: name: test_srem_i32
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    ; CHECK-DAG: [[X:%[0-9]+]](s32) = COPY %r0
+    ; CHECK-DAG: [[Y:%[0-9]+]](s32) = COPY %r1
+    %0(s32) = COPY %r0
+    %1(s32) = COPY %r1
+    ; HWDIV: [[Q:%[0-9]+]](s32) = G_SDIV [[X]], [[Y]]
+    ; HWDIV: [[P:%[0-9]+]](s32) = G_MUL [[Q]], [[Y]]
+    ; HWDIV: [[R:%[0-9]+]](s32) = G_SUB [[X]], [[P]]
+    ; SOFT: ADJCALLSTACKDOWN
+    ; SOFT-DAG: %r0 = COPY [[X]]
+    ; SOFT-DAG: %r1 = COPY [[Y]]
+    ; SOFT-AEABI: BLX $__aeabi_idivmod, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0, implicit-def %r1
+    ; SOFT-AEABI: [[R:%[0-9]+]](s32) = COPY %r1
+    ; SOFT-DEFAULT: BLX $__modsi3, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT-DEFAULT: [[R:%[0-9]+]](s32) = COPY %r0
+    ; SOFT: ADJCALLSTACKUP
+    %2(s32) = G_SREM %0, %1
+    ; CHECK: %r0 = COPY [[R]]
+    %r0 = COPY %2(s32)
+    BX_RET 14, _, implicit %r0
+...
+---
+name:            test_urem_i32
+# CHECK-LABEL: name: test_urem_i32
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    ; CHECK-DAG: [[X:%[0-9]+]](s32) = COPY %r0
+    ; CHECK-DAG: [[Y:%[0-9]+]](s32) = COPY %r1
+    %0(s32) = COPY %r0
+    %1(s32) = COPY %r1
+    ; HWDIV: [[Q:%[0-9]+]](s32) = G_UDIV [[X]], [[Y]]
+    ; HWDIV: [[P:%[0-9]+]](s32) = G_MUL [[Q]], [[Y]]
+    ; HWDIV: [[R:%[0-9]+]](s32) = G_SUB [[X]], [[P]]
+    ; SOFT: ADJCALLSTACKDOWN
+    ; SOFT-DAG: %r0 = COPY [[X]]
+    ; SOFT-DAG: %r1 = COPY [[Y]]
+    ; SOFT-AEABI: BLX $__aeabi_uidivmod, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0, implicit-def %r1
+    ; SOFT-AEABI: [[R:%[0-9]+]](s32) = COPY %r1
+    ; SOFT-DEFAULT: BLX $__umodsi3, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT-DEFAULT: [[R:%[0-9]+]](s32) = COPY %r0
+    ; SOFT: ADJCALLSTACKUP
+    %2(s32) = G_UREM %0, %1
+    ; CHECK: %r0 = COPY [[R]]
+    %r0 = COPY %2(s32)
     BX_RET 14, _, implicit %r0
 ...

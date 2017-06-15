@@ -78,7 +78,7 @@ class MipsSubtarget : public MipsGenSubtargetInfo {
   // IsNan2008 - IEEE 754-2008 NaN encoding.
   bool IsNaN2008bit;
 
-  // IsFP64bit - General-purpose registers are 64 bits wide
+  // IsGP64bit - General-purpose registers are 64 bits wide
   bool IsGP64bit;
 
   // IsPTR64bit - Pointers are 64 bit wide

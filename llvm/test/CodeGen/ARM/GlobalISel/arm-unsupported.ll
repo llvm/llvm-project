@@ -65,6 +65,14 @@ define %large.struct @test_large_struct_return() {
   ret %large.struct %r
 }
 
+%mixed.struct = type {i32*, float, i32}
+
+define %mixed.struct @test_mixed_struct(%mixed.struct %x) {
+; CHECK: remark: {{.*}} unable to lower arguments: %mixed.struct (%mixed.struct)*
+; CHECK-LABEL: warning: Instruction selection used fallback path for test_mixed_struct
+  ret %mixed.struct %x
+}
+
 define void @test_vararg_definition(i32 %a, ...) {
 ; CHECK: remark: {{.*}} unable to lower arguments: void (i32, ...)*
 ; CHECK-LABEL: warning: Instruction selection used fallback path for test_vararg_definition

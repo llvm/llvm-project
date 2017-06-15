@@ -21,9 +21,11 @@
 #ifndef LLVM_CODEGEN_GLOBALISEL_MACHINELEGALIZEHELPER_H
 #define LLVM_CODEGEN_GLOBALISEL_MACHINELEGALIZEHELPER_H
 
+#include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/RuntimeLibcalls.h"
 
 namespace llvm {
 // Forward declarations.
@@ -98,6 +100,12 @@ private:
   MachineRegisterInfo &MRI;
   const LegalizerInfo &LI;
 };
+
+/// Helper function that replaces \p MI with a libcall.
+LegalizerHelper::LegalizeResult
+replaceWithLibcall(MachineInstr &MI, MachineIRBuilder &MIRBuilder,
+                   RTLIB::Libcall Libcall, const CallLowering::ArgInfo &Result,
+                   ArrayRef<CallLowering::ArgInfo> Args);
 
 } // End namespace llvm.
 
