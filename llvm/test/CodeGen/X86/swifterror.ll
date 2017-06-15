@@ -685,3 +685,30 @@ entry:
   tail call void @acallee(i8* null)
   ret void
 }
+
+; Make sure we don't crash on this function during -O0.
+; We used to crash because we would insert an IMPLICIT_DEF for the swifterror at
+; beginning of the machine basic block but did not inform FastISel of the
+; inserted instruction. When computing the InsertPoint in the entry block
+; FastISel would choose an insertion point before the IMPLICIT_DEF causing a
+; crash later on.
+declare hidden swiftcc i8* @testFunA()
+
+%TSb = type <{ i1 }>
+
+define swiftcc void @dontCrash()  {
+entry:
+  %swifterror = alloca swifterror %swift_error*, align 8
+  store %swift_error* null, %swift_error** %swifterror, align 8
+  %a = call i8* @testFunA()
+  %b = bitcast i8* %a to %TSb*
+  %._value = getelementptr inbounds %TSb, %TSb* %b, i32 0, i32 0
+  %c = load i1, i1* %._value, align 1
+  br i1 %c, label %trueBB, label %falseBB
+
+trueBB:
+  ret void
+
+falseBB:
+  ret void
+}
