@@ -107,6 +107,24 @@ void updateEndComment(const FormatToken *RBraceTok, StringRef EndCommentText,
                  << llvm::toString(std::move(Err)) << "\n";
   }
 }
+
+const FormatToken *
+getNamespaceToken(const AnnotatedLine *line,
+                  const SmallVectorImpl<AnnotatedLine *> &AnnotatedLines) {
+  if (!line->Affected || line->InPPDirective || !line->startsWith(tok::r_brace))
+    return nullptr;
+  size_t StartLineIndex = line->MatchingOpeningBlockLineIndex;
+  if (StartLineIndex == UnwrappedLine::kInvalidIndex)
+    return nullptr;
+  assert(StartLineIndex < AnnotatedLines.size());
+  const FormatToken *NamespaceTok = AnnotatedLines[StartLineIndex]->First;
+  // Detect "(inline)? namespace" in the beginning of a line.
+  if (NamespaceTok->is(tok::kw_inline))
+    NamespaceTok = NamespaceTok->getNextNonComment();
+  if (!NamespaceTok || NamespaceTok->isNot(tok::kw_namespace))
+    return nullptr;
+  return NamespaceTok;
+}
 } // namespace
 
 NamespaceEndCommentsFixer::NamespaceEndCommentsFixer(const Environment &Env,
@@ -120,20 +138,14 @@ tooling::Replacements NamespaceEndCommentsFixer::analyze(
   AffectedRangeMgr.computeAffectedLines(AnnotatedLines.begin(),
                                         AnnotatedLines.end());
   tooling::Replacements Fixes;
+  std::string AllNamespaceNames = "";
+  size_t StartLineIndex = SIZE_MAX;
+  unsigned int CompactedNamespacesCount = 0;
   for (size_t I = 0, E = AnnotatedLines.size(); I != E; ++I) {
-    if (!AnnotatedLines[I]->Affected || AnnotatedLines[I]->InPPDirective ||
-        !AnnotatedLines[I]->startsWith(tok::r_brace))
-      continue;
     const AnnotatedLine *EndLine = AnnotatedLines[I];
-    size_t StartLineIndex = EndLine->MatchingOpeningBlockLineIndex;
-    if (StartLineIndex == UnwrappedLine::kInvalidIndex)
-      continue;
-    assert(StartLineIndex < E);
-    const FormatToken *NamespaceTok = AnnotatedLines[StartLineIndex]->First;
-    // Detect "(inline)? namespace" in the beginning of a line.
-    if (NamespaceTok->is(tok::kw_inline))
-      NamespaceTok = NamespaceTok->getNextNonComment();
-    if (!NamespaceTok || NamespaceTok->isNot(tok::kw_namespace))
+    const FormatToken *NamespaceTok =
+        getNamespaceToken(EndLine, AnnotatedLines);
+    if (!NamespaceTok)
       continue;
     FormatToken *RBraceTok = EndLine->First;
     if (RBraceTok->Finalized)
@@ -144,6 +156,27 @@ tooling::Replacements NamespaceEndCommentsFixer::analyze(
     // comments to the semicolon tokens.
     if (RBraceTok->Next && RBraceTok->Next->is(tok::semi)) {
       EndCommentPrevTok = RBraceTok->Next;
+    }
+    if (StartLineIndex == SIZE_MAX)
+      StartLineIndex = EndLine->MatchingOpeningBlockLineIndex;
+    std::string NamespaceName = computeName(NamespaceTok);
+    if (Style.CompactNamespaces) {
+      if ((I + 1 < E) &&
+          getNamespaceToken(AnnotatedLines[I + 1], AnnotatedLines) &&
+          StartLineIndex - CompactedNamespacesCount - 1 ==
+              AnnotatedLines[I + 1]->MatchingOpeningBlockLineIndex &&
+          !AnnotatedLines[I + 1]->First->Finalized) {
+        if (hasEndComment(EndCommentPrevTok)) {
+          // remove end comment, it will be merged in next one
+          updateEndComment(EndCommentPrevTok, std::string(), SourceMgr, &Fixes);
+        }
+        CompactedNamespacesCount++;
+        AllNamespaceNames = "::" + NamespaceName + AllNamespaceNames;
+        continue;
+      }
+      NamespaceName += std::move(AllNamespaceNames);
+      CompactedNamespacesCount = 0;
+      AllNamespaceNames = std::string();
     }
     // The next token in the token stream after the place where the end comment
     // token must be. This is either the next token on the current line or the
@@ -156,17 +189,16 @@ tooling::Replacements NamespaceEndCommentsFixer::analyze(
     bool AddNewline = EndCommentNextTok &&
                       EndCommentNextTok->NewlinesBefore == 0 &&
                       EndCommentNextTok->isNot(tok::eof);
-    const std::string NamespaceName = computeName(NamespaceTok);
     const std::string EndCommentText =
         computeEndCommentText(NamespaceName, AddNewline);
     if (!hasEndComment(EndCommentPrevTok)) {
       bool isShort = I - StartLineIndex <= kShortNamespaceMaxLines + 1;
       if (!isShort)
         addEndComment(EndCommentPrevTok, EndCommentText, SourceMgr, &Fixes);
-      continue;
-    }
-    if (!validEndComment(EndCommentPrevTok, NamespaceName))
+    } else if (!validEndComment(EndCommentPrevTok, NamespaceName)) {
       updateEndComment(EndCommentPrevTok, EndCommentText, SourceMgr, &Fixes);
+    }
+    StartLineIndex = SIZE_MAX;
   }
   return Fixes;
 }

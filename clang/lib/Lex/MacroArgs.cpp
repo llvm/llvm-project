@@ -44,20 +44,22 @@ MacroArgs *MacroArgs::create(const MacroInfo *MI,
       // Otherwise, use the best fit.
       ClosestMatch = (*Entry)->NumUnexpArgTokens;
     }
-  
+
   MacroArgs *Result;
   if (!ResultEnt) {
     // Allocate memory for a MacroArgs object with the lexer tokens at the end.
-    Result = (MacroArgs*)malloc(sizeof(MacroArgs) + 
-                                UnexpArgTokens.size() * sizeof(Token));
+    Result = (MacroArgs *)malloc(sizeof(MacroArgs) +
+                                 UnexpArgTokens.size() * sizeof(Token));
     // Construct the MacroArgs object.
-    new (Result) MacroArgs(UnexpArgTokens.size(), VarargsElided);
+    new (Result)
+        MacroArgs(UnexpArgTokens.size(), VarargsElided, MI->getNumArgs());
   } else {
     Result = *ResultEnt;
     // Unlink this node from the preprocessors singly linked list.
     *ResultEnt = Result->ArgCache;
     Result->NumUnexpArgTokens = UnexpArgTokens.size();
     Result->VarargsElided = VarargsElided;
+    Result->NumMacroArgs = MI->getNumArgs();
   }
 
   // Copy the actual unexpanded tokens to immediately after the result ptr.
@@ -298,12 +300,10 @@ const Token &MacroArgs::getStringifiedArgument(unsigned ArgNo,
                                                Preprocessor &PP,
                                                SourceLocation ExpansionLocStart,
                                                SourceLocation ExpansionLocEnd) {
-  assert(ArgNo < NumUnexpArgTokens && "Invalid argument number!");
-  if (StringifiedArgs.empty()) {
-    StringifiedArgs.resize(getNumArguments());
-    memset((void*)&StringifiedArgs[0], 0,
-           sizeof(StringifiedArgs[0])*getNumArguments());
-  }
+  assert(ArgNo < getNumMacroArguments() && "Invalid argument number!");
+  if (StringifiedArgs.empty())
+    StringifiedArgs.resize(getNumMacroArguments(), {});
+
   if (StringifiedArgs[ArgNo].isNot(tok::string_literal))
     StringifiedArgs[ArgNo] = StringifyArgument(getUnexpArgument(ArgNo), PP,
                                                /*Charify=*/false,

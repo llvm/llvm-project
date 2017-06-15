@@ -14,6 +14,7 @@
 //  However, for backwards compatibility, if _LIBCPP_ENABLE_CXX17_REMOVED_BINDERS
 //  is defined before including <functional>, then they will be restored.
 
+// MODULES_DEFINES: _LIBCPP_ENABLE_CXX17_REMOVED_BINDERS
 #define _LIBCPP_ENABLE_CXX17_REMOVED_BINDERS
 
 #include <functional>

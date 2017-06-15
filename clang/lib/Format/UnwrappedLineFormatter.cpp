@@ -66,6 +66,13 @@ public:
       Indent += Offset;
   }
 
+  /// \brief Update the indent state given that \p Line indent should be
+  /// skipped.
+  void skipLine(const AnnotatedLine &Line) {
+    while (IndentForLevel.size() <= Line.Level)
+      IndentForLevel.push_back(Indent);
+  }
+
   /// \brief Update the level indent to adapt to the given \p Line.
   ///
   /// When a line is not formatted, we move the subsequent lines on the same
@@ -127,12 +134,31 @@ private:
   unsigned Indent = 0;
 };
 
+bool isNamespaceDeclaration(const AnnotatedLine *Line) {
+  const FormatToken *NamespaceTok = Line->First;
+  // Detect "(inline)? namespace" in the beginning of a line.
+  if (NamespaceTok->is(tok::kw_inline))
+    NamespaceTok = NamespaceTok->getNextNonComment();
+  return NamespaceTok && NamespaceTok->is(tok::kw_namespace);
+}
+
+bool isEndOfNamespace(const AnnotatedLine *Line,
+                      const SmallVectorImpl<AnnotatedLine *> &AnnotatedLines) {
+  if (!Line->startsWith(tok::r_brace))
+    return false;
+  size_t StartLineIndex = Line->MatchingOpeningBlockLineIndex;
+  if (StartLineIndex == UnwrappedLine::kInvalidIndex)
+    return false;
+  assert(StartLineIndex < AnnotatedLines.size());
+  return isNamespaceDeclaration(AnnotatedLines[StartLineIndex]);
+}
+
 class LineJoiner {
 public:
   LineJoiner(const FormatStyle &Style, const AdditionalKeywords &Keywords,
              const SmallVectorImpl<AnnotatedLine *> &Lines)
-      : Style(Style), Keywords(Keywords), End(Lines.end()),
-        Next(Lines.begin()) {}
+      : Style(Style), Keywords(Keywords), End(Lines.end()), Next(Lines.begin()),
+        AnnotatedLines(Lines) {}
 
   /// \brief Returns the next line, merging multiple lines into one if possible.
   const AnnotatedLine *getNextMergedLine(bool DryRun,
@@ -142,7 +168,7 @@ public:
     const AnnotatedLine *Current = *Next;
     IndentTracker.nextLine(*Current);
     unsigned MergedLines =
-        tryFitMultipleLinesInOne(IndentTracker.getIndent(), Next, End);
+        tryFitMultipleLinesInOne(IndentTracker, Next, End);
     if (MergedLines > 0 && Style.ColumnLimit == 0)
       // Disallow line merging if there is a break at the start of one of the
       // input lines.
@@ -159,9 +185,11 @@ public:
 private:
   /// \brief Calculates how many lines can be merged into 1 starting at \p I.
   unsigned
-  tryFitMultipleLinesInOne(unsigned Indent,
+  tryFitMultipleLinesInOne(LevelIndentTracker &IndentTracker,
                            SmallVectorImpl<AnnotatedLine *>::const_iterator I,
                            SmallVectorImpl<AnnotatedLine *>::const_iterator E) {
+    const unsigned Indent = IndentTracker.getIndent();
+
     // Can't join the last line with anything.
     if (I + 1 == E)
       return 0;
@@ -200,6 +228,38 @@ private:
          I[1]->First->is(tok::r_brace)) ||
         (Style.AllowShortFunctionsOnASingleLine == FormatStyle::SFS_Inline &&
          TheLine->Level != 0);
+
+    if (Style.CompactNamespaces) {
+      if (isNamespaceDeclaration(TheLine)) {
+        int i = 0;
+        unsigned closingLine = TheLine->MatchingOpeningBlockLineIndex - 1;
+        for (; I + 1 + i != E && isNamespaceDeclaration(I[i + 1]) &&
+               closingLine == I[i + 1]->MatchingOpeningBlockLineIndex &&
+               I[i + 1]->Last->TotalLength < Limit;
+             i++, closingLine--) {
+          // No extra indent for compacted namespaces
+          IndentTracker.skipLine(*I[i + 1]);
+
+          Limit -= I[i + 1]->Last->TotalLength;
+        }
+        return i;
+      }
+
+      if (isEndOfNamespace(TheLine, AnnotatedLines)) {
+        int i = 0;
+        unsigned openingLine = TheLine->MatchingOpeningBlockLineIndex - 1;
+        for (; I + 1 + i != E && isEndOfNamespace(I[i + 1], AnnotatedLines) &&
+               openingLine == I[i + 1]->MatchingOpeningBlockLineIndex;
+             i++, openingLine--) {
+          // No space between consecutive braces
+          I[i + 1]->First->SpacesRequiredBefore = !I[i]->Last->is(tok::r_brace);
+
+          // Indent like the outer-most namespace
+          IndentTracker.nextLine(*I[i + 1]);
+        }
+        return i;
+      }
+    }
 
     if (TheLine->Last->is(TT_FunctionLBrace) &&
         TheLine->First != TheLine->Last) {
@@ -458,6 +518,7 @@ private:
   const SmallVectorImpl<AnnotatedLine *>::const_iterator End;
 
   SmallVectorImpl<AnnotatedLine *>::const_iterator Next;
+  const SmallVectorImpl<AnnotatedLine *> &AnnotatedLines;
 };
 
 static void markFinalized(FormatToken *Tok) {

@@ -230,6 +230,8 @@ template <class ELFT> void elf::markLive() {
   MarkSymbol(Symtab<ELFT>::X->find(Config->Fini));
   for (StringRef S : Config->Undefined)
     MarkSymbol(Symtab<ELFT>::X->find(S));
+  for (StringRef S : Script->Opt.ReferencedSymbols)
+    MarkSymbol(Symtab<ELFT>::X->find(S));
 
   // Preserve externally-visible symbols if the symbols defined by this
   // file can interrupt other ELF file's symbols at runtime.

@@ -791,6 +791,29 @@ struct FormatStyle {
   /// \endcode
   bool BreakBeforeInheritanceComma;
 
+  /// \brief If ``true``, consecutive namespace declarations will be on the same
+  /// line. If ``false``, each namespace is declared on a new line.
+  /// \code
+  ///   true:
+  ///   namespace Foo { namespace Bar {
+  ///   }}
+  ///
+  ///   false:
+  ///   namespace Foo {
+  ///   namespace Bar {
+  ///   }
+  ///   }
+  /// \endcode
+  ///
+  /// If it does not fit on a single line, the overflowing namespaces get
+  /// wrapped:
+  /// \code
+  ///   namespace Foo { namespace Bar {
+  ///   namespace Extra {
+  ///   }}}
+  /// \endcode
+  bool CompactNamespaces;
+
   /// \brief If the constructor initializers don't fit on a line, put each
   /// initializer on its own line.
   /// \code
@@ -1422,6 +1445,7 @@ struct FormatStyle {
            BreakBeforeBraces == R.BreakBeforeBraces &&
            BreakBeforeTernaryOperators == R.BreakBeforeTernaryOperators &&
            BreakConstructorInitializers == R.BreakConstructorInitializers &&
+           CompactNamespaces == R.CompactNamespaces &&
            BreakAfterJavaFieldAnnotations == R.BreakAfterJavaFieldAnnotations &&
            BreakStringLiterals == R.BreakStringLiterals &&
            ColumnLimit == R.ColumnLimit && CommentPragmas == R.CommentPragmas &&

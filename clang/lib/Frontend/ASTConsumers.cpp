@@ -142,7 +142,7 @@ std::unique_ptr<ASTConsumer> clang::CreateASTDumper(StringRef FilterString,
                                                     bool DumpDecls,
                                                     bool Deserialize,
                                                     bool DumpLookups) {
-  assert((DumpDecls || DumpLookups) && "nothing to dump");
+  assert((DumpDecls || Deserialize || DumpLookups) && "nothing to dump");
   return llvm::make_unique<ASTPrinter>(nullptr,
                                        Deserialize ? ASTPrinter::DumpFull :
                                        DumpDecls ? ASTPrinter::Dump :
