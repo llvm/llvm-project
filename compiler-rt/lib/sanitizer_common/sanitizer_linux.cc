@@ -1396,7 +1396,7 @@ AndroidApiLevel AndroidGetApiLevel() {
 
 #endif
 
-HandleSignalMode GetHandleSignalMode(int signum) {
+static HandleSignalMode GetHandleSignalModeImpl(int signum) {
   switch (signum) {
     case SIGABRT:
       return common_flags()->handle_abort;
@@ -1410,6 +1410,13 @@ HandleSignalMode GetHandleSignalMode(int signum) {
       return common_flags()->handle_sigbus;
   }
   return kHandleSignalNo;
+}
+
+HandleSignalMode GetHandleSignalMode(int signum) {
+  HandleSignalMode result = GetHandleSignalModeImpl(signum);
+  if (result == kHandleSignalYes && !common_flags()->allow_user_segv_handler)
+    return kHandleSignalExclusive;
+  return result;
 }
 
 #if !SANITIZER_GO
