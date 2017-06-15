@@ -1819,7 +1819,7 @@ PlatformDarwin::LaunchProcess(lldb_private::ProcessLaunchInfo &launch_info) {
   return PlatformPOSIX::LaunchProcess(launch_info);
 }
 
-lldb_private::Error
+lldb_private::Status
 PlatformDarwin::FindBundleBinaryInExecSearchPaths (const ModuleSpec &module_spec, Process *process, 
                                                    ModuleSP &module_sp, 
                                                    const FileSpecList *module_search_paths_ptr, 
@@ -1880,7 +1880,7 @@ PlatformDarwin::FindBundleBinaryInExecSearchPaths (const ModuleSpec &module_spec
         if (path_to_try.Exists()) {
           ModuleSpec new_module_spec(module_spec);
           new_module_spec.GetFileSpec() = path_to_try;
-          Error new_error(Platform::GetSharedModule(
+          Status new_error(Platform::GetSharedModule(
               new_module_spec, process, module_sp, NULL, old_module_sp_ptr,
               did_create_ptr));
 
@@ -1892,5 +1892,5 @@ PlatformDarwin::FindBundleBinaryInExecSearchPaths (const ModuleSpec &module_spec
       }
     }
   }
-  return Error();
+  return Status();
 }
