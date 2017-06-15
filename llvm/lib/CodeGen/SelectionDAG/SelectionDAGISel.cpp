@@ -1160,6 +1160,7 @@ static void setupSwiftErrorVals(const Function &Fn, const TargetLowering *TLI,
   FuncInfo->SwiftErrorVals.clear();
   FuncInfo->SwiftErrorVRegDefMap.clear();
   FuncInfo->SwiftErrorVRegUpwardsUse.clear();
+  FuncInfo->SwiftErrorVRegDefUses.clear();
   FuncInfo->SwiftErrorArg = nullptr;
 
   // Check if function has a swifterror argument.
@@ -1184,9 +1185,9 @@ static void setupSwiftErrorVals(const Function &Fn, const TargetLowering *TLI,
 }
 
 static void createSwiftErrorEntriesInEntryBlock(FunctionLoweringInfo *FuncInfo,
+                                                FastISel *FastIS,
                                                 const TargetLowering *TLI,
                                                 const TargetInstrInfo *TII,
-                                                const BasicBlock *LLVMBB,
                                                 SelectionDAGBuilder *SDB) {
   if (!TLI->supportSwiftError())
     return;
@@ -1196,22 +1197,27 @@ static void createSwiftErrorEntriesInEntryBlock(FunctionLoweringInfo *FuncInfo,
   if (FuncInfo->SwiftErrorVals.empty())
     return;
 
-  if (pred_begin(LLVMBB) == pred_end(LLVMBB)) {
-    auto &DL = FuncInfo->MF->getDataLayout();
-    auto const *RC = TLI->getRegClassFor(TLI->getPointerTy(DL));
-    for (const auto *SwiftErrorVal : FuncInfo->SwiftErrorVals) {
-      // We will always generate a copy from the argument. It is always used at
-      // least by the 'return' of the swifterror.
-      if (FuncInfo->SwiftErrorArg && FuncInfo->SwiftErrorArg == SwiftErrorVal)
-        continue;
-      unsigned VReg = FuncInfo->MF->getRegInfo().createVirtualRegister(RC);
-      // Assign Undef to Vreg. We construct MI directly to make sure it works
-      // with FastISel.
-      BuildMI(*FuncInfo->MBB, FuncInfo->MBB->getFirstNonPHI(),
-              SDB->getCurDebugLoc(), TII->get(TargetOpcode::IMPLICIT_DEF),
-              VReg);
-      FuncInfo->setCurrentSwiftErrorVReg(FuncInfo->MBB, SwiftErrorVal, VReg);
-    }
+  assert(FuncInfo->MBB == &*FuncInfo->MF->begin() &&
+         "expected to insert into entry block");
+  auto &DL = FuncInfo->MF->getDataLayout();
+  auto const *RC = TLI->getRegClassFor(TLI->getPointerTy(DL));
+  for (const auto *SwiftErrorVal : FuncInfo->SwiftErrorVals) {
+    // We will always generate a copy from the argument. It is always used at
+    // least by the 'return' of the swifterror.
+    if (FuncInfo->SwiftErrorArg && FuncInfo->SwiftErrorArg == SwiftErrorVal)
+      continue;
+    unsigned VReg = FuncInfo->MF->getRegInfo().createVirtualRegister(RC);
+    // Assign Undef to Vreg. We construct MI directly to make sure it works
+    // with FastISel.
+    BuildMI(*FuncInfo->MBB, FuncInfo->MBB->getFirstNonPHI(),
+            SDB->getCurDebugLoc(), TII->get(TargetOpcode::IMPLICIT_DEF),
+            VReg);
+
+    // Keep FastIS informed about the value we just inserted.
+    if (FastIS)
+      FastIS->setLastLocalValue(&*std::prev(FuncInfo->InsertPt));
+
+    FuncInfo->setCurrentSwiftErrorVReg(FuncInfo->MBB, SwiftErrorVal, VReg);
   }
 }
 
@@ -1333,6 +1339,80 @@ static void propagateSwiftErrorVRegs(FunctionLoweringInfo *FuncInfo) {
   }
 }
 
+void preassignSwiftErrorRegs(const TargetLowering *TLI,
+                             FunctionLoweringInfo *FuncInfo,
+                             BasicBlock::const_iterator Begin,
+                             BasicBlock::const_iterator End) {
+  if (!TLI->supportSwiftError() || FuncInfo->SwiftErrorVals.empty())
+    return;
+
+  // Iterator over instructions and assign vregs to swifterror defs and uses.
+  for (auto It = Begin; It != End; ++It) {
+    ImmutableCallSite CS(&*It);
+    if (CS) {
+      // A call-site with a swifterror argument is both use and def.
+      const Value *SwiftErrorAddr = nullptr;
+      for (auto &Arg : CS.args()) {
+        if (!Arg->isSwiftError())
+          continue;
+        // Use of swifterror.
+        assert(!SwiftErrorAddr && "Cannot have multiple swifterror arguments");
+        SwiftErrorAddr = &*Arg;
+        assert(SwiftErrorAddr->isSwiftError() &&
+               "Must have a swifterror value argument");
+        unsigned VReg; bool CreatedReg;
+        std::tie(VReg, CreatedReg) = FuncInfo->getOrCreateSwiftErrorVRegUseAt(
+          &*It, FuncInfo->MBB, SwiftErrorAddr);
+        assert(CreatedReg);
+      }
+      if (!SwiftErrorAddr)
+        continue;
+
+      // Def of swifterror.
+      unsigned VReg; bool CreatedReg;
+      std::tie(VReg, CreatedReg) =
+          FuncInfo->getOrCreateSwiftErrorVRegDefAt(&*It);
+      assert(CreatedReg);
+      FuncInfo->setCurrentSwiftErrorVReg(FuncInfo->MBB, SwiftErrorAddr, VReg);
+
+    // A load is a use.
+    } else if (const LoadInst *LI = dyn_cast<const LoadInst>(&*It)) {
+      const Value *V = LI->getOperand(0);
+      if (!V->isSwiftError())
+        continue;
+
+      unsigned VReg; bool CreatedReg;
+      std::tie(VReg, CreatedReg) =
+          FuncInfo->getOrCreateSwiftErrorVRegUseAt(LI, FuncInfo->MBB, V);
+      assert(CreatedReg);
+
+    // A store is a def.
+    } else if (const StoreInst *SI = dyn_cast<const StoreInst>(&*It)) {
+      const Value *SwiftErrorAddr = SI->getOperand(1);
+      if (!SwiftErrorAddr->isSwiftError())
+        continue;
+
+      // Def of swifterror.
+      unsigned VReg; bool CreatedReg;
+      std::tie(VReg, CreatedReg) =
+          FuncInfo->getOrCreateSwiftErrorVRegDefAt(&*It);
+      assert(CreatedReg);
+      FuncInfo->setCurrentSwiftErrorVReg(FuncInfo->MBB, SwiftErrorAddr, VReg);
+
+    // A return in a swiferror returning function is a use.
+    } else if (const ReturnInst *R = dyn_cast<const ReturnInst>(&*It)) {
+      const Function *F = R->getParent()->getParent();
+      if(!F->getAttributes().hasAttrSomewhere(Attribute::SwiftError))
+        continue;
+
+      unsigned VReg; bool CreatedReg;
+      std::tie(VReg, CreatedReg) = FuncInfo->getOrCreateSwiftErrorVRegUseAt(
+          R, FuncInfo->MBB, FuncInfo->SwiftErrorArg);
+      assert(CreatedReg);
+    }
+  }
+}
+
 void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
   // Initialize the Fast-ISel state, if needed.
   FastISel *FastIS = nullptr;
@@ -1341,12 +1421,47 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
 
   setupSwiftErrorVals(Fn, TLI, FuncInfo);
 
-  // Iterate over all basic blocks in the function.
   ReversePostOrderTraversal<const Function*> RPOT(&Fn);
-  for (ReversePostOrderTraversal<const Function*>::rpo_iterator
-       I = RPOT.begin(), E = RPOT.end(); I != E; ++I) {
-    const BasicBlock *LLVMBB = *I;
 
+  // Lower arguments up front. An RPO iteration always visits the entry block
+  // first.
+  assert(*RPOT.begin() == &Fn.getEntryBlock());
+  ++NumEntryBlocks;
+
+  // Set up FuncInfo for ISel. Entry blocks never have PHIs.
+  FuncInfo->MBB = FuncInfo->MBBMap[&Fn.getEntryBlock()];
+  FuncInfo->InsertPt = FuncInfo->MBB->begin();
+
+  if (!FastIS) {
+    LowerArguments(Fn);
+  } else {
+    // See if fast isel can lower the arguments.
+    FastIS->startNewBlock();
+    if (!FastIS->lowerArguments()) {
+      // Fast isel failed to lower these arguments
+      ++NumFastIselFailLowerArguments;
+      if (EnableFastISelAbort > 1)
+        report_fatal_error("FastISel didn't lower all arguments");
+
+      // Use SelectionDAG argument lowering
+      LowerArguments(Fn);
+      CurDAG->setRoot(SDB->getControlRoot());
+      SDB->clear();
+      CodeGenAndEmitDAG();
+    }
+
+    // If we inserted any instructions at the beginning, make a note of
+    // where they are, so we can be sure to emit subsequent instructions
+    // after them.
+    if (FuncInfo->InsertPt != FuncInfo->MBB->begin())
+      FastIS->setLastLocalValue(&*std::prev(FuncInfo->InsertPt));
+    else
+      FastIS->setLastLocalValue(nullptr);
+  }
+  createSwiftErrorEntriesInEntryBlock(FuncInfo, FastIS, TLI, TII, SDB);
+
+  // Iterate over all basic blocks in the function.
+  for (const BasicBlock *LLVMBB : RPOT) {
     if (OptLevel != CodeGenOpt::None) {
       bool AllPredsVisited = true;
       for (const_pred_iterator PI = pred_begin(LLVMBB), PE = pred_end(LLVMBB);
@@ -1378,8 +1493,9 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
     FuncInfo->MBB = FuncInfo->MBBMap[LLVMBB];
     if (!FuncInfo->MBB)
       continue; // Some blocks like catchpads have no code or MBB.
-    FuncInfo->InsertPt = FuncInfo->MBB->getFirstNonPHI();
-    createSwiftErrorEntriesInEntryBlock(FuncInfo, TLI, TII, LLVMBB, SDB);
+
+    // Insert new instructions after any phi or argument setup code.
+    FuncInfo->InsertPt = FuncInfo->MBB->end();
 
     // Setup an EH landing-pad block.
     FuncInfo->ExceptionPointerVirtReg = 0;
@@ -1390,37 +1506,14 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
 
     // Before doing SelectionDAG ISel, see if FastISel has been requested.
     if (FastIS) {
-      FastIS->startNewBlock();
-
-      // Emit code for any incoming arguments. This must happen before
-      // beginning FastISel on the entry block.
-      if (LLVMBB == &Fn.getEntryBlock()) {
-        ++NumEntryBlocks;
-
-        // Lower any arguments needed in this block if this is the entry block.
-        if (!FastIS->lowerArguments()) {
-          // Fast isel failed to lower these arguments
-          ++NumFastIselFailLowerArguments;
-          if (EnableFastISelAbort > 1)
-            report_fatal_error("FastISel didn't lower all arguments");
-
-          // Use SelectionDAG argument lowering
-          LowerArguments(Fn);
-          CurDAG->setRoot(SDB->getControlRoot());
-          SDB->clear();
-          CodeGenAndEmitDAG();
-        }
-
-        // If we inserted any instructions at the beginning, make a note of
-        // where they are, so we can be sure to emit subsequent instructions
-        // after them.
-        if (FuncInfo->InsertPt != FuncInfo->MBB->begin())
-          FastIS->setLastLocalValue(&*std::prev(FuncInfo->InsertPt));
-        else
-          FastIS->setLastLocalValue(nullptr);
-      }
+      if (LLVMBB != &Fn.getEntryBlock())
+        FastIS->startNewBlock();
 
       unsigned NumFastIselRemaining = std::distance(Begin, End);
+
+      // Pre-assign swifterror vregs.
+      preassignSwiftErrorRegs(TLI, FuncInfo, Begin, End);
+
       // Do FastISel on as many instructions as possible.
       for (; BI != Begin; --BI) {
         const Instruction *Inst = &*std::prev(BI);
@@ -1525,13 +1618,8 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
       }
 
       FastIS->recomputeInsertPt();
-    } else {
-      // Lower any arguments needed in this block if this is the entry block.
-      if (LLVMBB == &Fn.getEntryBlock()) {
-        ++NumEntryBlocks;
-        LowerArguments(Fn);
-      }
     }
+
     if (getAnalysis<StackProtector>().shouldEmitSDCheck(*LLVMBB)) {
       bool FunctionBasedInstrumentation =
           TLI->getSSPStackGuardCheck(*Fn.getParent());

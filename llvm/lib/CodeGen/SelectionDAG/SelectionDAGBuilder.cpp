@@ -1461,9 +1461,10 @@ void SelectionDAGBuilder::visitRet(const ReturnInst &I) {
                                   true /*isfixed*/, 1 /*origidx*/,
                                   0 /*partOffs*/));
     // Create SDNode for the swifterror virtual register.
-    OutVals.push_back(DAG.getRegister(FuncInfo.getOrCreateSwiftErrorVReg(
-                                          FuncInfo.MBB, FuncInfo.SwiftErrorArg),
-                                      EVT(TLI.getPointerTy(DL))));
+    OutVals.push_back(
+        DAG.getRegister(FuncInfo.getOrCreateSwiftErrorVRegUseAt(
+                            &I, FuncInfo.MBB, FuncInfo.SwiftErrorArg).first,
+                        EVT(TLI.getPointerTy(DL))));
   }
 
   bool isVarArg = DAG.getMachineFunction().getFunction()->isVarArg();
@@ -3548,15 +3549,15 @@ void SelectionDAGBuilder::visitStoreToSwiftError(const StoreInst &I) {
 
   SDValue Src = getValue(SrcV);
   // Create a virtual register, then update the virtual register.
-  auto &DL = DAG.getDataLayout();
-  const TargetRegisterClass *RC = TLI.getRegClassFor(TLI.getPointerTy(DL));
-  unsigned VReg = FuncInfo.MF->getRegInfo().createVirtualRegister(RC);
+  unsigned VReg; bool CreatedVReg;
+  std::tie(VReg, CreatedVReg) = FuncInfo.getOrCreateSwiftErrorVRegDefAt(&I);
   // Chain, DL, Reg, N or Chain, DL, Reg, N, Glue
   // Chain can be getRoot or getControlRoot.
   SDValue CopyNode = DAG.getCopyToReg(getRoot(), getCurSDLoc(), VReg,
                                       SDValue(Src.getNode(), Src.getResNo()));
   DAG.setRoot(CopyNode);
-  FuncInfo.setCurrentSwiftErrorVReg(FuncInfo.MBB, I.getOperand(1), VReg);
+  if (CreatedVReg)
+    FuncInfo.setCurrentSwiftErrorVReg(FuncInfo.MBB, I.getOperand(1), VReg);
 }
 
 void SelectionDAGBuilder::visitLoadFromSwiftError(const LoadInst &I) {
@@ -3586,7 +3587,8 @@ void SelectionDAGBuilder::visitLoadFromSwiftError(const LoadInst &I) {
   // Chain, DL, Reg, VT, Glue or Chain, DL, Reg, VT
   SDValue L = DAG.getCopyFromReg(
       getRoot(), getCurSDLoc(),
-      FuncInfo.getOrCreateSwiftErrorVReg(FuncInfo.MBB, SV), ValueVTs[0]);
+      FuncInfo.getOrCreateSwiftErrorVRegUseAt(&I, FuncInfo.MBB, SV).first,
+      ValueVTs[0]);
 
   setValue(&I, L);
 }
@@ -5856,9 +5858,11 @@ void SelectionDAGBuilder::LowerCallTo(ImmutableCallSite CS, SDValue Callee,
       SwiftErrorVal = V;
       // We find the virtual register for the actual swifterror argument.
       // Instead of using the Value, we use the virtual register instead.
-      Entry.Node =
-          DAG.getRegister(FuncInfo.getOrCreateSwiftErrorVReg(FuncInfo.MBB, V),
-                          EVT(TLI.getPointerTy(DL)));
+      Entry.Node = DAG.getRegister(FuncInfo
+                                       .getOrCreateSwiftErrorVRegUseAt(
+                                           CS.getInstruction(), FuncInfo.MBB, V)
+                                       .first,
+                                   EVT(TLI.getPointerTy(DL)));
     }
 
     Args.push_back(Entry);
@@ -5899,11 +5903,13 @@ void SelectionDAGBuilder::LowerCallTo(ImmutableCallSite CS, SDValue Callee,
   if (SwiftErrorVal && TLI.supportSwiftError()) {
     // Get the last element of InVals.
     SDValue Src = CLI.InVals.back();
-    const TargetRegisterClass *RC = TLI.getRegClassFor(TLI.getPointerTy(DL));
-    unsigned VReg = FuncInfo.MF->getRegInfo().createVirtualRegister(RC);
+    unsigned VReg; bool CreatedVReg;
+    std::tie(VReg, CreatedVReg) =
+        FuncInfo.getOrCreateSwiftErrorVRegDefAt(CS.getInstruction());
     SDValue CopyNode = CLI.DAG.getCopyToReg(Result.second, CLI.DL, VReg, Src);
     // We update the virtual register for the actual swifterror argument.
-    FuncInfo.setCurrentSwiftErrorVReg(FuncInfo.MBB, SwiftErrorVal, VReg);
+    if (CreatedVReg)
+      FuncInfo.setCurrentSwiftErrorVReg(FuncInfo.MBB, SwiftErrorVal, VReg);
     DAG.setRoot(CopyNode);
   }
 }
@@ -8029,14 +8035,14 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
   }
 
   // Set up the incoming argument description vector.
-  unsigned Idx = 1;
-  for (Function::const_arg_iterator I = F.arg_begin(), E = F.arg_end();
-       I != E; ++I, ++Idx) {
+  unsigned Idx = 0;
+  for (const Argument &Arg : F.args()) {
+    ++Idx;
     SmallVector<EVT, 4> ValueVTs;
-    ComputeValueVTs(*TLI, DAG.getDataLayout(), I->getType(), ValueVTs);
-    bool isArgValueUsed = !I->use_empty();
+    ComputeValueVTs(*TLI, DAG.getDataLayout(), Arg.getType(), ValueVTs);
+    bool isArgValueUsed = !Arg.use_empty();
     unsigned PartBase = 0;
-    Type *FinalType = I->getType();
+    Type *FinalType = Arg.getType();
     if (F.getAttributes().hasAttribute(Idx, Attribute::ByVal))
       FinalType = cast<PointerType>(FinalType)->getElementType();
     bool NeedsRegBlock = TLI->functionArgumentNeedsConsecutiveRegisters(
@@ -8056,7 +8062,7 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
         // If we are using vectorcall calling convention, a structure that is
         // passed InReg - is surely an HVA
         if (F.getCallingConv() == CallingConv::X86_VectorCall &&
-            isa<StructType>(I->getType())) {
+            isa<StructType>(Arg.getType())) {
           // The first value of a structure is marked
           if (0 == Value)
             Flags.setHvaStart();
@@ -8088,7 +8094,7 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
           Flags.setByVal();
       }
       if (Flags.isByVal() || Flags.isInAlloca()) {
-        PointerType *Ty = cast<PointerType>(I->getType());
+        PointerType *Ty = cast<PointerType>(Arg.getType());
         Type *ElementTy = Ty->getElementType();
         Flags.setByValSize(DL.getTypeAllocSize(ElementTy));
         // For ByVal, alignment should be passed from FE.  BE will guess if
@@ -8151,7 +8157,7 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
 
   // Set up the argument values.
   unsigned i = 0;
-  Idx = 1;
+  Idx = 0;
   if (!FuncInfo->CanLowerReturn) {
     // Create a virtual register for the sret pointer, and put in a copy
     // from the sret argument into it.
@@ -8177,11 +8183,11 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
     ++i;
   }
 
-  for (Function::const_arg_iterator I = F.arg_begin(), E = F.arg_end(); I != E;
-      ++I, ++Idx) {
+  for (const Argument &Arg : F.args()) {
+    ++Idx;
     SmallVector<SDValue, 4> ArgValues;
     SmallVector<EVT, 4> ValueVTs;
-    ComputeValueVTs(*TLI, DAG.getDataLayout(), I->getType(), ValueVTs);
+    ComputeValueVTs(*TLI, DAG.getDataLayout(), Arg.getType(), ValueVTs);
     unsigned NumValues = ValueVTs.size();
 
     // If this argument is unused then remember its value. It is used to generate
@@ -8189,13 +8195,13 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
     bool isSwiftErrorArg =
         TLI->supportSwiftError() &&
         F.getAttributes().hasAttribute(Idx, Attribute::SwiftError);
-    if (I->use_empty() && NumValues && !isSwiftErrorArg) {
-      SDB->setUnusedArgValue(&*I, InVals[i]);
+    if (Arg.use_empty() && NumValues && !isSwiftErrorArg) {
+      SDB->setUnusedArgValue(&Arg, InVals[i]);
 
       // Also remember any frame index for use in FastISel.
       if (FrameIndexSDNode *FI =
           dyn_cast<FrameIndexSDNode>(InVals[i].getNode()))
-        FuncInfo->setArgumentFrameIndex(&*I, FI->getIndex());
+        FuncInfo->setArgumentFrameIndex(&Arg, FI->getIndex());
     }
 
     for (unsigned Val = 0; Val != NumValues; ++Val) {
@@ -8206,7 +8212,7 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
       // Even an apparant 'unused' swifterror argument needs to be returned. So
       // we do generate a copy for it that can be used on return from the
       // function.
-      if (!I->use_empty() || isSwiftErrorArg) {
+      if (!Arg.use_empty() || isSwiftErrorArg) {
         Optional<ISD::NodeType> AssertOp;
         if (F.getAttributes().hasAttribute(Idx, Attribute::SExt))
           AssertOp = ISD::AssertSext;
@@ -8228,18 +8234,18 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
     // Note down frame index.
     if (FrameIndexSDNode *FI =
         dyn_cast<FrameIndexSDNode>(ArgValues[0].getNode()))
-      FuncInfo->setArgumentFrameIndex(&*I, FI->getIndex());
+      FuncInfo->setArgumentFrameIndex(&Arg, FI->getIndex());
 
     SDValue Res = DAG.getMergeValues(makeArrayRef(ArgValues.data(), NumValues),
                                      SDB->getCurSDLoc());
 
-    SDB->setValue(&*I, Res);
+    SDB->setValue(&Arg, Res);
     if (!TM.Options.EnableFastISel && Res.getOpcode() == ISD::BUILD_PAIR) {
       if (LoadSDNode *LNode =
           dyn_cast<LoadSDNode>(Res.getOperand(0).getNode()))
         if (FrameIndexSDNode *FI =
             dyn_cast<FrameIndexSDNode>(LNode->getBasePtr().getNode()))
-        FuncInfo->setArgumentFrameIndex(&*I, FI->getIndex());
+        FuncInfo->setArgumentFrameIndex(&Arg, FI->getIndex());
     }
 
     // Update the SwiftErrorVRegDefMap.
@@ -8259,13 +8265,13 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
       // uses with vregs.
       unsigned Reg = cast<RegisterSDNode>(Res.getOperand(1))->getReg();
       if (TargetRegisterInfo::isVirtualRegister(Reg)) {
-        FuncInfo->ValueMap[&*I] = Reg;
+        FuncInfo->ValueMap[&Arg] = Reg;
         continue;
       }
     }
-    if (!isOnlyUsedInEntryBlock(&*I, TM.Options.EnableFastISel)) {
-      FuncInfo->InitializeRegForValue(&*I);
-      SDB->CopyToExportRegsIfNeeded(&*I);
+    if (!isOnlyUsedInEntryBlock(&Arg, TM.Options.EnableFastISel)) {
+      FuncInfo->InitializeRegForValue(&Arg);
+      SDB->CopyToExportRegsIfNeeded(&Arg);
     }
   }
 
