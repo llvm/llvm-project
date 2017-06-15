@@ -429,7 +429,7 @@ static std::string getImplibPath() {
   return Out.str();
 }
 
-std::vector<COFFShortExport> createCOFFShortExportFromConfig() {
+static void createImportLibrary() {
   std::vector<COFFShortExport> Exports;
   for (Export &E1 : Config->Exports) {
     COFFShortExport E2;
@@ -443,11 +443,7 @@ std::vector<COFFShortExport> createCOFFShortExportFromConfig() {
     E2.Constant = E1.Constant;
     Exports.push_back(E2);
   }
-  return Exports;
-}
 
-static void createImportLibrary() {
-  std::vector<COFFShortExport> Exports = createCOFFShortExportFromConfig();
   std::string DLLName = sys::path::filename(Config->OutputFile);
   std::string Path = getImplibPath();
   writeImportLibrary(DLLName, Path, Exports, Config->Machine);

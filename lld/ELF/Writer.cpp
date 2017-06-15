@@ -73,8 +73,6 @@ private:
 
   std::unique_ptr<FileOutputBuffer> Buffer;
 
-  std::vector<OutputSection *> OutputSections;
-  std::vector<OutputSectionCommand *> OutputSectionCommands;
   OutputSectionFactory Factory{OutputSections};
 
   void addRelIpltSymbols();
@@ -174,7 +172,6 @@ template <class ELFT> void Writer<ELFT>::run() {
     addReservedSymbols();
 
   // Create output sections.
-  Script->OutputSections = &OutputSections;
   if (Script->Opt.HasSections) {
     // If linker script contains SECTIONS commands, let it create sections.
     Script->processCommands(Factory);
@@ -215,7 +212,7 @@ template <class ELFT> void Writer<ELFT>::run() {
       OutputSectionCommands.begin(), OutputSectionCommands.end(),
       [](OutputSectionCommand *Cmd) { Cmd->maybeCompress<ELFT>(); });
 
-  Script->assignAddresses(Phdrs, OutputSectionCommands);
+  Script->assignAddresses(Phdrs);
 
   // Remove empty PT_LOAD to avoid causing the dynamic linker to try to mmap a
   // 0 sized region. This has to be done late since only after assignAddresses
@@ -1151,18 +1148,6 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   removeUnusedSyntheticSections(OutputSections);
 
   sortSections();
-
-  // This is a bit of a hack. A value of 0 means undef, so we set it
-  // to 1 t make __ehdr_start defined. The section number is not
-  // particularly relevant.
-  Out::ElfHeader->SectionIndex = 1;
-
-  unsigned I = 1;
-  for (OutputSection *Sec : OutputSections) {
-    Sec->SectionIndex = I++;
-    Sec->ShName = InX::ShStrTab->addString(Sec->Name);
-  }
-
   if (!Script->Opt.HasSections)
     Script->fabricateDefaultCommands();
   for (BaseCommand *Base : Script->Opt.Commands)
@@ -1170,13 +1155,23 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
       OutputSectionCommands.push_back(Cmd);
   clearOutputSections();
 
+  // This is a bit of a hack. A value of 0 means undef, so we set it
+  // to 1 t make __ehdr_start defined. The section number is not
+  // particularly relevant.
+  Out::ElfHeader->SectionIndex = 1;
+
+  unsigned I = 1;
+  for (OutputSectionCommand *Cmd : OutputSectionCommands) {
+    OutputSection *Sec = Cmd->Sec;
+    Sec->SectionIndex = I++;
+    Sec->ShName = InX::ShStrTab->addString(Sec->Name);
+  }
+
   // Binary and relocatable output does not have PHDRS.
   // The headers have to be created before finalize as that can influence the
   // image base and the dynamic section on mips includes the image base.
   if (!Config->Relocatable && !Config->OFormatBinary) {
-    Phdrs = Script->hasPhdrsCommands()
-                ? Script->createPhdrs(OutputSectionCommands)
-                : createPhdrs();
+    Phdrs = Script->hasPhdrsCommands() ? Script->createPhdrs() : createPhdrs();
     addPtArmExid(Phdrs);
     Out::ProgramHeaders->Size = sizeof(Elf_Phdr) * Phdrs.size();
   }

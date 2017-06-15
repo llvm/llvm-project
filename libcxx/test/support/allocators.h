@@ -104,7 +104,7 @@ public:
     T* allocate(std::size_t, const void* hint)
     {
         allocate_called = true;
-        return (T*)hint;
+        return (T*) const_cast<void *>(hint);
     }
 };
 

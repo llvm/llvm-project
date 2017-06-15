@@ -13,7 +13,7 @@
 # CHECK:  .nonalloc     00000008 0000000000000000
 
 # CHECK: SYMBOL TABLE:
-# CHECK:  00000000000000f0 .nonalloc 00000000 Sym
+# CHECK:  0000000000000008 .nonalloc 00000000 Sym
 
 .section .nonalloc,""
  .quad 0

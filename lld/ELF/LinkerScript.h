@@ -267,15 +267,13 @@ public:
   ExprValue getSymbolValue(const Twine &Loc, StringRef S);
   bool isDefined(StringRef S);
 
-  std::vector<OutputSection *> *OutputSections;
   void fabricateDefaultCommands();
   void addOrphanSections(OutputSectionFactory &Factory);
   void removeEmptyCommands();
   void adjustSectionsBeforeSorting();
   void adjustSectionsAfterSorting();
 
-  std::vector<PhdrEntry>
-  createPhdrs(ArrayRef<OutputSectionCommand *> OutputSectionCommands);
+  std::vector<PhdrEntry> createPhdrs();
   bool ignoreInterpSection();
 
   bool hasLMA(OutputSection *Sec);
@@ -283,8 +281,7 @@ public:
   void assignOffsets(OutputSectionCommand *Cmd);
   void placeOrphanSections();
   void processNonSectionCommands();
-  void assignAddresses(std::vector<PhdrEntry> &Phdrs,
-                       ArrayRef<OutputSectionCommand *> OutputSectionCommands);
+  void assignAddresses(std::vector<PhdrEntry> &Phdrs);
 
   void addSymbol(SymbolAssignment *Cmd);
   void processCommands(OutputSectionFactory &Factory);
