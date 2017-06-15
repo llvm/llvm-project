@@ -61,7 +61,7 @@ static const char *const SanCov8bitCountersInitName =
     "__sanitizer_cov_8bit_counters_init";
 
 static const char *const SanCovGuardsSectionName = "sancov_guards";
-static const char *const SanCovCountersSectionName = "sancov_counters";
+static const char *const SanCovCountersSectionName = "sancov_cntrs";
 
 static cl::opt<int> ClCoverageLevel(
     "sanitizer-coverage-level",

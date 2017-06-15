@@ -1,6 +1,5 @@
 set(LLVM_LINK_COMPONENTS
   DebugInfoCodeView
-  TestingSupport
   )
 
 set(DebugInfoCodeViewSources
@@ -11,3 +10,5 @@ set(DebugInfoCodeViewSources
 add_llvm_unittest(DebugInfoCodeViewTests
   ${DebugInfoCodeViewSources}
   )
+
+target_link_libraries(DebugInfoCodeViewTests LLVMTestingSupport)

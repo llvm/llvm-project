@@ -1068,7 +1068,48 @@ S4 s4;
 // expected-error@first.h:* {{'TemplateArgument::S4::x' from module 'FirstModule' is not present in definition of 'TemplateArgument::S4' in module 'SecondModule'}}
 // expected-note@second.h:* {{declaration of 'x' does not match}}
 #endif
+}
 
+namespace TemplateTypeParmType {
+#if defined(FIRST)
+template <class T1, class T2>
+struct S1 {
+  T1 x;
+};
+#elif defined(SECOND)
+template <class T1, class T2>
+struct S1 {
+  T2 x;
+};
+#else
+using TemplateTypeParmType::S1;
+// expected-error@first.h:* {{'TemplateTypeParmType::S1::x' from module 'FirstModule' is not present in definition of 'S1<T1, T2>' in module 'SecondModule'}}
+// expected-note@second.h:* {{declaration of 'x' does not match}}
+#endif
+
+#if defined(FIRST)
+template <int ...Ts>
+struct U2 {};
+template <int T, int U>
+class S2 {
+  typedef U2<U, T> type;
+  type x;
+};
+#elif defined(SECOND)
+template <int ...Ts>
+struct U2 {};
+template <int T, int U>
+class S2 {
+  typedef U2<T, U> type;
+  type x;
+};
+#else
+using TemplateTypeParmType::S2;
+// expected-error@first.h:* {{'TemplateTypeParmType::S2::x' from module 'FirstModule' is not present in definition of 'S2<T, U>' in module 'SecondModule'}}
+// expected-note@second.h:* {{declaration of 'x' does not match}}
+// expected-error@first.h:* {{'TemplateTypeParmType::S2::type' from module 'FirstModule' is not present in definition of 'S2<T, U>' in module 'SecondModule'}}
+// expected-note@second.h:* {{declaration of 'type' does not match}}
+#endif
 }
 
 // Interesting cases that should not cause errors.  struct S should not error

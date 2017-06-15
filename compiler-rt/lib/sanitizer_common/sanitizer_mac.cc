@@ -414,10 +414,7 @@ void ListOfModules::init() {
   memory_mapping.DumpListOfModules(&modules_);
 }
 
-HandleSignalMode GetHandleSignalMode(int signum) {
-  // Handling fatal signals on watchOS and tvOS devices is disallowed.
-  if ((SANITIZER_WATCHOS || SANITIZER_TVOS) && !(SANITIZER_IOSSIM))
-    return kHandleSignalNo;
+static HandleSignalMode GetHandleSignalModeImpl(int signum) {
   switch (signum) {
     case SIGABRT:
       return common_flags()->handle_abort;
@@ -431,6 +428,16 @@ HandleSignalMode GetHandleSignalMode(int signum) {
       return common_flags()->handle_sigbus;
   }
   return kHandleSignalNo;
+}
+
+HandleSignalMode GetHandleSignalMode(int signum) {
+  // Handling fatal signals on watchOS and tvOS devices is disallowed.
+  if ((SANITIZER_WATCHOS || SANITIZER_TVOS) && !(SANITIZER_IOSSIM))
+    return kHandleSignalNo;
+  HandleSignalMode result = GetHandleSignalModeImpl(signum);
+  if (result == kHandleSignalYes && !common_flags()->allow_user_segv_handler)
+    return kHandleSignalExclusive;
+  return result;
 }
 
 MacosVersion cached_macos_version = MACOS_VERSION_UNINITIALIZED;

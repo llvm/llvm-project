@@ -159,6 +159,10 @@ void ODRHash::AddTemplateArgument(TemplateArgument TA) {
       AddStmt(TA.getAsExpr());
       break;
     case TemplateArgument::Pack:
+      ID.AddInteger(TA.pack_size());
+      for (auto SubTA : TA.pack_elements()) {
+        AddTemplateArgument(SubTA);
+      }
       break;
   }
 }
@@ -548,6 +552,13 @@ public:
     }
     Hash.AddTemplateName(T->getTemplateName());
     VisitType(T);
+  }
+
+  void VisitTemplateTypeParmType(const TemplateTypeParmType *T) {
+    ID.AddInteger(T->getDepth());
+    ID.AddInteger(T->getIndex());
+    Hash.AddBoolean(T->isParameterPack());
+    AddDecl(T->getDecl());
   }
 };
 
