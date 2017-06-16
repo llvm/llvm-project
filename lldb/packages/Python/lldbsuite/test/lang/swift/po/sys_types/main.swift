@@ -18,7 +18,7 @@ func main() {
   var nsarr = NSMutableArray(array: arr) //% self.expect("po str", substrs = ['Hello world'])
   var clr = NSColor.red //% self.expect("po arr", substrs = ['1','2','3','4'])
   //% self.expect("po nsarr", substrs = ['1','2','3','4'])
-  var nsobject = NSObject() //% self.expect("po clr", substrs = ['NSCalibratedRGBColorSpace 1 0 0 1']) # may change depending on OS/platform
+  var nsobject = NSObject() //% self.expect("po clr", substrs = ['1 0 0 1']) # may change depending on OS/platform
   var any: Any = 1234 //% self.expect("po nsobject", substrs = ['<NSObject: 0x']) # may change depending on OS/platform
   //% self.expect("script lldb.frame.FindVariable('nsobject').GetObjectDescription()", substrs = ['<NSObject: 0x']) # may change depending on OS/platform
   var anyobject: AnyObject = 1234 as NSNumber //% self.expect("po any", substrs = ['1234'])
