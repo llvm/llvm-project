@@ -307,7 +307,7 @@ Error SymbolRecordMapping::visitKnownRecord(CVSymbol &CVR,
 
   error(IO.mapInteger(FrameCookie.CodeOffset));
   error(IO.mapInteger(FrameCookie.Register));
-  error(IO.mapInteger(FrameCookie.CookieKind));
+  error(IO.mapEnum(FrameCookie.CookieKind));
   error(IO.mapInteger(FrameCookie.Flags));
 
   return Error::success();
@@ -439,7 +439,7 @@ Error SymbolRecordMapping::visitKnownRecord(CVSymbol &CVR,
 
   error(IO.mapInteger(RegRel.Offset));
   error(IO.mapInteger(RegRel.Type));
-  error(IO.mapInteger(RegRel.Register));
+  error(IO.mapEnum(RegRel.Register));
   error(IO.mapStringZ(RegRel.Name));
 
   return Error::success();

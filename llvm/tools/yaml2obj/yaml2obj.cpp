@@ -95,5 +95,6 @@ int main(int argc, char **argv) {
   if (Res == 0)
     Out->keep();
 
+  Out->os().flush();
   return Res;
 }

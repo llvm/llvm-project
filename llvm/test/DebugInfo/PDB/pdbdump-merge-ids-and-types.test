@@ -1,65 +1,51 @@
 ; RUN: llvm-pdbutil yaml2pdb -pdb=%t.1.pdb %p/Inputs/merge-ids-and-types-1.yaml
 ; RUN: llvm-pdbutil yaml2pdb -pdb=%t.2.pdb %p/Inputs/merge-ids-and-types-2.yaml
 ; RUN: llvm-pdbutil merge -pdb=%t.3.pdb %t.1.pdb %t.2.pdb
-; RUN: llvm-pdbutil raw -tpi-records %t.3.pdb | FileCheck -check-prefix=TPI-TYPES %s
-; RUN: llvm-pdbutil raw -tpi-records %t.3.pdb | FileCheck -check-prefix=INTMAIN %s
-; RUN: llvm-pdbutil raw -tpi-records %t.3.pdb | FileCheck -check-prefix=VOIDMAIN %s
-; RUN: llvm-pdbutil raw -ipi-records %t.3.pdb | FileCheck -check-prefix=IPI-TYPES %s
-; RUN: llvm-pdbutil raw -ipi-records %t.3.pdb | FileCheck -check-prefix=IPI-NAMES %s
-; RUN: llvm-pdbutil raw -ipi-records %t.3.pdb | FileCheck -check-prefix=IPI-UDT %s
+; RUN: llvm-pdbutil raw -types %t.3.pdb | FileCheck -check-prefix=TPI-TYPES %s
+; RUN: llvm-pdbutil raw -ids %t.3.pdb | FileCheck -check-prefix=IPI-TYPES %s
 
-TPI-TYPES:     Type Info Stream (TPI)
-TPI-TYPES:     Record count: 9
-TPI-TYPES-DAG: TypeLeafKind: LF_POINTER
-TPI-TYPES-DAG: TypeLeafKind: LF_FIELDLIST
-TPI-TYPES-DAG: TypeLeafKind: LF_ARGLIST
-TPI-TYPES-DAG: TypeLeafKind: LF_STRUCTURE
-TPI-TYPES-DAG: TypeLeafKind: LF_MEMBER
-TPI-TYPES-DAG: TypeLeafKind: LF_POINTER
-TPI-TYPES-DAG: TypeLeafKind: LF_ARGLIST
-TPI-TYPES-DAG: TypeLeafKind: LF_MFUNCTION
-TPI-TYPES-DAG: TypeLeafKind: LF_PROCEDURE
-TPI-TYPES-DAG: TypeLeafKind: LF_PROCEDURE
-TPI-TYPES-DAG: TypeLeafKind: LF_ARGLIST
+TPI-TYPES:                          Types (TPI Stream)
+TPI-TYPES-NEXT: ============================================================
+TPI-TYPES-NEXT:   Showing 9 records
+TPI-TYPES-NEXT:   0x1000 | LF_POINTER [size = 12]
+TPI-TYPES-NEXT:            referent = 0x0470 (char*), mode = pointer, opts = None, kind = ptr32
+TPI-TYPES-NEXT:   0x1001 | LF_FIELDLIST [size = 24]
+TPI-TYPES-NEXT:            - LF_MEMBER [name = `FooMember`, Type = 0x0403 (void*), offset = 0, attrs = public]
+TPI-TYPES-NEXT:   0x1002 | LF_ARGLIST [size = 16]
+TPI-TYPES-NEXT:            0x0074 (int): `int`
+TPI-TYPES-NEXT:            0x1000: `char**`
+TPI-TYPES-NEXT:   0x1003 | LF_STRUCTURE [size = 36]
+TPI-TYPES-NEXT:            class name: `FooBar`
+TPI-TYPES-NEXT:            unique name: `FooBar`
+TPI-TYPES-NEXT:            vtable: <no type>, base list: <no type>, field list: 0x1001
+TPI-TYPES-NEXT:            options: has unique name
+TPI-TYPES-NEXT:   0x1004 | LF_POINTER [size = 12]
+TPI-TYPES-NEXT:            referent = 0x1003, mode = pointer, opts = None, kind = ptr32
+TPI-TYPES-NEXT:   0x1005 | LF_ARGLIST [size = 12]
+TPI-TYPES-NEXT:            0x0074 (int): `int`
+TPI-TYPES-NEXT:   0x1006 | LF_MFUNCTION [size = 28]
+TPI-TYPES-NEXT:            return type = 1, # args = 0x1005, param list = 0x0003 (void)
+TPI-TYPES-NEXT:            class type = 0x1003, this type = 0x1004, this adjust = 0
+TPI-TYPES-NEXT:            calling conv = thiscall, options = constructor
+TPI-TYPES-NEXT:   0x1007 | LF_PROCEDURE [size = 16]
+TPI-TYPES-NEXT:            return type = 0x0074 (int), # args = 2, param list = 0x1002
+TPI-TYPES-NEXT:            calling conv = cdecl, options = None
+TPI-TYPES-NEXT:   0x1008 | LF_PROCEDURE [size = 16]
+TPI-TYPES-NEXT:            return type = 0x0003 (void), # args = 2, param list = 0x1002
+TPI-TYPES-NEXT:            calling conv = cdecl, options = None
 
-; Both procedures should use the same arglist even though they have a different
-; return type.
-INTMAIN:      ArgList ([[ID:.*]])
-INTMAIN-NEXT:   TypeLeafKind: LF_ARGLIST
-INTMAIN-NEXT:   NumArgs: 2
-INTMAIN-NEXT:   Arguments [
-INTMAIN-NEXT:     ArgType: int
-INTMAIN-NEXT:     ArgType: char**
-INTMAIN:        TypeLeafKind: LF_PROCEDURE
-INTMAIN:          ReturnType: int
-INTMAIN:          NumParameters: 2
-INTMAIN-NEXT:     ArgListType: (int, char**) ([[ID]])
-
-VOIDMAIN:      ArgList ([[ID:.*]])
-VOIDMAIN-NEXT:   TypeLeafKind: LF_ARGLIST
-VOIDMAIN-NEXT:   NumArgs: 2
-VOIDMAIN-NEXT:   Arguments [
-VOIDMAIN-NEXT:     ArgType: int
-VOIDMAIN-NEXT:     ArgType: char**
-VOIDMAIN:        TypeLeafKind: LF_PROCEDURE
-VOIDMAIN:          ReturnType: void
-VOIDMAIN:          NumParameters: 2
-VOIDMAIN-NEXT:     ArgListType: (int, char**) ([[ID]])
-
-IPI-TYPES:     Type Info Stream (IPI)
-IPI-TYPES:     Record count: 6
-IPI-TYPES-DAG: TypeLeafKind: LF_FUNC_ID
-IPI-TYPES-DAG: TypeLeafKind: LF_MFUNC_ID
-IPI-TYPES-DAG: TypeLeafKind: LF_UDT_MOD_SRC_LINE
-IPI-TYPES-DAG: TypeLeafKind: LF_FUNC_ID
-IPI-TYPES-DAG: TypeLeafKind: LF_FUNC_ID
-IPI-TYPES-DAG: TypeLeafKind: LF_MFUNC_ID
-
-IPI-NAMES-DAG: Name: main
-IPI-NAMES-DAG: Name: FooMethod
-IPI-NAMES-DAG: Name: main2
-IPI-NAMES-DAG: Name: foo
-IPI-NAMES-DAG: Name: FooMethod2
-
-IPI-UDT:      TypeLeafKind: LF_UDT_MOD_SRC_LINE
-IPI-UDT-NEXT: UDT: FooBar
+IPI-TYPES:                          Types (IPI Stream)
+IPI-TYPES-NEXT: ============================================================
+IPI-TYPES-NEXT:   Showing 6 records
+IPI-TYPES-NEXT:   0x1000 | LF_FUNC_ID [size = 20]
+IPI-TYPES-NEXT:            name = main, type = 0x1007, parent scope = <no type>
+IPI-TYPES-NEXT:   0x1001 | LF_MFUNC_ID [size = 24]
+IPI-TYPES-NEXT:            name = FooMethod, type = 0x1006, class type = 0x1003
+IPI-TYPES-NEXT:   0x1002 | LF_UDT_MOD_SRC_LINE [size = 20]
+IPI-TYPES-NEXT:            udt = 0x1003, mod = 0, file = 0, line = 0
+IPI-TYPES-NEXT:   0x1003 | LF_FUNC_ID [size = 20]
+IPI-TYPES-NEXT:            name = main2, type = 0x1007, parent scope = <no type>
+IPI-TYPES-NEXT:   0x1004 | LF_FUNC_ID [size = 16]
+IPI-TYPES-NEXT:            name = foo, type = 0x1008, parent scope = <no type>
+IPI-TYPES-NEXT:   0x1005 | LF_MFUNC_ID [size = 24]
+IPI-TYPES-NEXT:            name = FooMethod2, type = 0x1006, class type = 0x1003

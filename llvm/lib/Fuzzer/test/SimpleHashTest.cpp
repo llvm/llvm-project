@@ -26,7 +26,7 @@ static uint32_t simple_hash(const uint8_t *Data, size_t Size) {
 }
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
-  if (Size < 14)
+  if (Size < 14 || Size > 64)
     return 0;
 
   uint32_t Hash = simple_hash(&Data[0], Size - 4);

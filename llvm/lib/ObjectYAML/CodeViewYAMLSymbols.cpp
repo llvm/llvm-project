@@ -35,6 +35,7 @@ LLVM_YAML_DECLARE_SCALAR_TRAITS(APSInt, false)
 LLVM_YAML_DECLARE_SCALAR_TRAITS(TypeIndex, false)
 
 LLVM_YAML_DECLARE_ENUM_TRAITS(SymbolKind)
+LLVM_YAML_DECLARE_ENUM_TRAITS(FrameCookieKind)
 
 LLVM_YAML_DECLARE_BITSET_TRAITS(CompileSym2Flags)
 LLVM_YAML_DECLARE_BITSET_TRAITS(CompileSym3Flags)
@@ -146,6 +147,15 @@ void ScalarEnumerationTraits<ThunkOrdinal>::enumeration(IO &io,
   auto ThunkNames = getThunkOrdinalNames();
   for (const auto &E : ThunkNames) {
     io.enumCase(Ord, E.Name.str().c_str(), static_cast<ThunkOrdinal>(E.Value));
+  }
+}
+
+void ScalarEnumerationTraits<FrameCookieKind>::enumeration(
+    IO &io, FrameCookieKind &FC) {
+  auto ThunkNames = getFrameCookieKindNames();
+  for (const auto &E : ThunkNames) {
+    io.enumCase(FC, E.Name.str().c_str(),
+                static_cast<FrameCookieKind>(E.Value));
   }
 }
 

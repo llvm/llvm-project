@@ -8,48 +8,17 @@
 # Make sure that the PDB has module descriptors. foo.obj and bar.lib should be
 # absolute paths, and bar.obj should be the relative path passed to llvm-lib.
 
-# CHECK-LABEL: Modules [
-# CHECK-NEXT:   {
-# CHECK-NEXT:     Name: {{.*pdb-lib.s.tmp[/\\]foo.obj}}
-# CHECK-NEXT:     Debug Stream Index:
-# CHECK-NEXT:     Object File Name: {{.*pdb-lib.s.tmp[/\\]foo.obj}}
-# CHECK-NEXT:     Num Files: 0
-# CHECK-NEXT:     Source File Name Idx: 0
-# CHECK-NEXT:     Pdb File Name Idx: 0
-# CHECK-NEXT:     Line Info Byte Size: 0
-# CHECK-NEXT:     C13 Line Info Byte Size: 0
-# CHECK-NEXT:     Symbol Byte Size: 4
-# CHECK-NEXT:     Type Server Index: 0
-# CHECK-NEXT:     Has EC Info: No
-# CHECK-NEXT:   }
-# CHECK-NEXT:   {
-# CHECK-NEXT:     Name: bar.obj
-# CHECK-NEXT:     Debug Stream Index:
-# CHECK-NEXT:     Object File Name: {{.*pdb-lib.s.tmp[/\\]bar.lib}}
-# CHECK-NEXT:     Num Files: 0
-# CHECK-NEXT:     Source File Name Idx: 0
-# CHECK-NEXT:     Pdb File Name Idx: 0
-# CHECK-NEXT:     Line Info Byte Size: 0
-# CHECK-NEXT:     C13 Line Info Byte Size: 0
-# CHECK-NEXT:     Symbol Byte Size: 4
-# CHECK-NEXT:     Type Server Index: 0
-# CHECK-NEXT:     Has EC Info: No
-# CHECK-NEXT:   }
-# CHECK-NEXT:   {
-# CHECK-NEXT:     Name: * Linker *
-# CHECK-NEXT:     Debug Stream Index:
-# CHECK-NEXT:     Object File Name:
-# CHECK-NEXT:     Num Files: 0
-# CHECK-NEXT:     Source File Name Idx: 0
-# CHECK-NEXT:     Pdb File Name Idx: 0
-# CHECK-NEXT:     Line Info Byte Size: 0
-# CHECK-NEXT:     C13 Line Info Byte Size: 0
-# CHECK-NEXT:     Symbol Byte Size: 4
-# CHECK-NEXT:     Type Server Index: 0
-# CHECK-NEXT:     Has EC Info: No
-# CHECK-NEXT:   }
-# CHECK-NEXT: ]
-
+# CHECK:                               Modules
+# CHECK-NEXT: ============================================================
+# CHECK-NEXT:   Mod 0000 | Name: `{{.*pdb-lib.s.tmp[/\\]foo.obj}}`:
+# CHECK-NEXT:              Obj: `{{.*pdb-lib.s.tmp[/\\]foo.obj}}`:
+# CHECK-NEXT:              debug stream: 9, # files: 0, has ec info: false
+# CHECK-NEXT:   Mod 0001 | Name: `bar.obj`:
+# CHECK-NEXT:              Obj: `{{.*pdb-lib.s.tmp[/\\]bar.lib}}`:
+# CHECK-NEXT:              debug stream: 10, # files: 0, has ec info: false
+# CHECK-NEXT:   Mod 0002 | Name: `* Linker *`:
+# CHECK-NEXT:              Obj: ``:
+# CHECK-NEXT:              debug stream: 11, # files: 0, has ec info: false
 
         .def     _main;
         .scl    2;

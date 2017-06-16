@@ -5,7 +5,6 @@
 
 // CFI-icall is not implemented in thinlto mode => ".cfi" suffixes are missing
 // in sanstats output.
-// XFAIL: thinlto
 
 struct ABase {};
 

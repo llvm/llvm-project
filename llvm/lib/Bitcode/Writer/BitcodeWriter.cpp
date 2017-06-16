@@ -77,10 +77,13 @@ protected:
   /// The stream created and owned by the client.
   BitstreamWriter &Stream;
 
+  StringTableBuilder &StrtabBuilder;
+
 public:
   /// Constructs a BitcodeWriterBase object that writes to the provided
   /// \p Stream.
-  BitcodeWriterBase(BitstreamWriter &Stream) : Stream(Stream) {}
+  BitcodeWriterBase(BitstreamWriter &Stream, StringTableBuilder &StrtabBuilder)
+      : Stream(Stream), StrtabBuilder(StrtabBuilder) {}
 
 protected:
   void writeBitcodeHeader();
@@ -96,8 +99,6 @@ void BitcodeWriterBase::writeModuleVersion() {
 class ModuleBitcodeWriter : public BitcodeWriterBase {
   /// Pointer to the buffer allocated by caller for bitcode writing.
   const SmallVectorImpl<char> &Buffer;
-
-  StringTableBuilder &StrtabBuilder;
 
   /// The Module to write to bitcode.
   const Module &M;
@@ -142,8 +143,8 @@ public:
                       BitstreamWriter &Stream, bool ShouldPreserveUseListOrder,
                       const ModuleSummaryIndex *Index, bool GenerateHash,
                       ModuleHash *ModHash = nullptr)
-      : BitcodeWriterBase(Stream), Buffer(Buffer), StrtabBuilder(StrtabBuilder),
-        M(*M), VE(*M, ShouldPreserveUseListOrder), Index(Index),
+      : BitcodeWriterBase(Stream, StrtabBuilder), Buffer(Buffer), M(*M),
+        VE(*M, ShouldPreserveUseListOrder), Index(Index),
         GenerateHash(GenerateHash), ModHash(ModHash),
         BitcodeStartBit(Stream.GetCurrentBitNo()) {
     // Assign ValueIds to any callee values in the index that came from
@@ -331,10 +332,11 @@ public:
   /// Constructs a IndexBitcodeWriter object for the given combined index,
   /// writing to the provided \p Buffer. When writing a subset of the index
   /// for a distributed backend, provide a \p ModuleToSummariesForIndex map.
-  IndexBitcodeWriter(BitstreamWriter &Stream, const ModuleSummaryIndex &Index,
+  IndexBitcodeWriter(BitstreamWriter &Stream, StringTableBuilder &StrtabBuilder,
+                     const ModuleSummaryIndex &Index,
                      const std::map<std::string, GVSummaryMapTy>
                          *ModuleToSummariesForIndex = nullptr)
-      : BitcodeWriterBase(Stream), Index(Index),
+      : BitcodeWriterBase(Stream, StrtabBuilder), Index(Index),
         ModuleToSummariesForIndex(ModuleToSummariesForIndex) {
     // Assign unique value ids to all summaries to be written, for use
     // in writing out the call graph edges. Save the mapping from GUID
@@ -3595,6 +3597,24 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
     MaybeEmitOriginalName(*AS);
   }
 
+  if (!Index.cfiFunctionDefs().empty()) {
+    for (auto &S : Index.cfiFunctionDefs()) {
+      NameVals.push_back(StrtabBuilder.add(S));
+      NameVals.push_back(S.size());
+    }
+    Stream.EmitRecord(bitc::FS_CFI_FUNCTION_DEFS, NameVals);
+    NameVals.clear();
+  }
+
+  if (!Index.cfiFunctionDecls().empty()) {
+    for (auto &S : Index.cfiFunctionDecls()) {
+      NameVals.push_back(StrtabBuilder.add(S));
+      NameVals.push_back(S.size());
+    }
+    Stream.EmitRecord(bitc::FS_CFI_FUNCTION_DECLS, NameVals);
+    NameVals.clear();
+  }
+
   Stream.ExitBlock();
 }
 
@@ -3829,6 +3849,14 @@ void BitcodeWriter::writeModule(const Module *M,
   ModuleWriter.write();
 }
 
+void BitcodeWriter::writeIndex(
+    const ModuleSummaryIndex *Index,
+    const std::map<std::string, GVSummaryMapTy> *ModuleToSummariesForIndex) {
+  IndexBitcodeWriter IndexWriter(*Stream, StrtabBuilder, *Index,
+                                 ModuleToSummariesForIndex);
+  IndexWriter.write();
+}
+
 /// WriteBitcodeToFile - Write the specified module to the specified output
 /// stream.
 void llvm::WriteBitcodeToFile(const Module *M, raw_ostream &Out,
@@ -3880,11 +3908,9 @@ void llvm::WriteIndexToFile(
   SmallVector<char, 0> Buffer;
   Buffer.reserve(256 * 1024);
 
-  BitstreamWriter Stream(Buffer);
-  writeBitcodeHeader(Stream);
-
-  IndexBitcodeWriter IndexWriter(Stream, Index, ModuleToSummariesForIndex);
-  IndexWriter.write();
+  BitcodeWriter Writer(Buffer);
+  Writer.writeIndex(&Index, ModuleToSummariesForIndex);
+  Writer.writeStrtab();
 
   Out.write((char *)&Buffer.front(), Buffer.size());
 }

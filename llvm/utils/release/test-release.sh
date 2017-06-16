@@ -416,7 +416,8 @@ function test_llvmCore() {
       $SandboxDir/bin/python $BuildDir/llvm.src/utils/lit/setup.py install
       mkdir -p $TestSuiteBuildDir
       cd $TestSuiteBuildDir
-      cmake $TestSuiteSrcDir -DTEST_SUITE_LIT=$Lit
+      env CC="$c_compiler" CXX="$cxx_compiler" \
+          cmake $TestSuiteSrcDir -DTEST_SUITE_LIT=$Lit
       if ! ( ${MAKE} -j $NumJobs -k check \
           2>&1 | tee $LogDir/llvm.check-Phase$Phase-$Flavor.log ) ; then
         deferred_error $Phase $Flavor "test suite failed"
@@ -548,6 +549,8 @@ for Flavor in $Flavors ; do
 
     ########################################################################
     # Testing: Test phase 3
+    c_compiler=$llvmCore_phase3_destdir/usr/local/bin/clang
+    cxx_compiler=$llvmCore_phase3_destdir/usr/local/bin/clang++
     echo "# Testing - built with clang"
     test_llvmCore 3 $Flavor $llvmCore_phase3_objdir
 

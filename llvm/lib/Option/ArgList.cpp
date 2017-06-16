@@ -1,4 +1,4 @@
-//===--- ArgList.cpp - Argument List Management ---------------------------===//
+//===- ArgList.cpp - Argument List Management -----------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,14 +7,25 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Option/ArgList.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/None.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Option/Arg.h"
+#include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
+#include "llvm/Option/OptSpecifier.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cassert>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
 
 using namespace llvm;
 using namespace llvm::opt;
@@ -197,8 +208,6 @@ void ArgList::print(raw_ostream &O) const {
 LLVM_DUMP_METHOD void ArgList::dump() const { print(dbgs()); }
 #endif
 
-//
-
 void InputArgList::releaseMemory() {
   // An InputArgList always owns its arguments.
   for (Arg *A : *this)
@@ -233,8 +242,6 @@ unsigned InputArgList::MakeIndex(StringRef String0,
 const char *InputArgList::MakeArgStringRef(StringRef Str) const {
   return getArgString(MakeIndex(Str));
 }
-
-//
 
 DerivedArgList::DerivedArgList(const InputArgList &BaseArgs)
     : BaseArgs(BaseArgs) {}

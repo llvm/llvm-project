@@ -12873,6 +12873,9 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
       if (Ld->isVolatile() || Ld->isIndexed())
         break;
 
+      // We do not accept ext loads.
+      if (Ld->getExtensionType() != ISD::NON_EXTLOAD)
+        break;
 
       // The stored memory type must be the same.
       if (Ld->getMemoryVT() != MemVT)
@@ -13009,31 +13012,17 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
 
     // The merged loads are required to have the same incoming chain, so
     // using the first's chain is acceptable.
+    SDValue NewLoad = DAG.getLoad(JointMemOpVT, LoadDL, FirstLoad->getChain(),
+                                  FirstLoad->getBasePtr(),
+                                  FirstLoad->getPointerInfo(), FirstLoadAlign);
 
     SDValue NewStoreChain = getMergeStoreChains(StoreNodes, NumElem);
+
     AddToWorklist(NewStoreChain.getNode());
 
-    SDValue NewLoad, NewStore;
-    if (TLI.isTypeLegal(JointMemOpVT)) {
-      NewLoad = DAG.getLoad(JointMemOpVT, LoadDL, FirstLoad->getChain(),
-                            FirstLoad->getBasePtr(),
-                            FirstLoad->getPointerInfo(), FirstLoadAlign);
-      NewStore = DAG.getStore(NewStoreChain, StoreDL, NewLoad,
-                              FirstInChain->getBasePtr(),
-                              FirstInChain->getPointerInfo(), FirstStoreAlign);
-    } else { // This must be the truncstore/extload case
-      EVT ExtendedTy =
-          TLI.getTypeToTransformTo(*DAG.getContext(), JointMemOpVT);
-      NewLoad = DAG.getExtLoad(ISD::EXTLOAD, LoadDL, ExtendedTy,
-                               FirstLoad->getChain(), FirstLoad->getBasePtr(),
-                               FirstLoad->getPointerInfo(), JointMemOpVT,
-                               FirstLoadAlign);
-      NewStore = DAG.getTruncStore(NewStoreChain, StoreDL, NewLoad,
-                                   FirstInChain->getBasePtr(),
-                                   FirstInChain->getPointerInfo(), JointMemOpVT,
-                                   FirstInChain->getAlignment(),
-                                   FirstInChain->getMemOperand()->getFlags());
-    }
+    SDValue NewStore = DAG.getStore(
+        NewStoreChain, StoreDL, NewLoad, FirstInChain->getBasePtr(),
+        FirstInChain->getPointerInfo(), FirstStoreAlign);
 
     // Transfer chain users from old loads to the new load.
     for (unsigned i = 0; i < NumElem; ++i) {
