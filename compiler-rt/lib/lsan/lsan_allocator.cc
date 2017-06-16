@@ -76,7 +76,7 @@ void *Allocate(const StackTrace &stack, uptr size, uptr alignment,
     Report("WARNING: LeakSanitizer failed to allocate %zu bytes\n", size);
     return nullptr;
   }
-  void *p = allocator.Allocate(GetAllocatorCache(), size, alignment, false);
+  void *p = allocator.Allocate(GetAllocatorCache(), size, alignment);
   // Do not rely on the allocator to clear the memory (it's slow).
   if (cleared && allocator.FromPrimary(p))
     memset(p, 0, size);

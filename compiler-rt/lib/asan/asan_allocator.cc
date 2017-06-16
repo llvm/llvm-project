@@ -160,7 +160,7 @@ struct QuarantineCallback {
   }
 
   void *Allocate(uptr size) {
-    return get_allocator().Allocate(cache_, size, 1, false);
+    return get_allocator().Allocate(cache_, size, 1);
   }
 
   void Deallocate(void *p) {
@@ -414,13 +414,11 @@ struct Allocator {
     void *allocated;
     if (t) {
       AllocatorCache *cache = GetAllocatorCache(&t->malloc_storage());
-      allocated =
-          allocator.Allocate(cache, needed_size, 8, false);
+      allocated = allocator.Allocate(cache, needed_size, 8);
     } else {
       SpinMutexLock l(&fallback_mutex);
       AllocatorCache *cache = &fallback_allocator_cache;
-      allocated =
-          allocator.Allocate(cache, needed_size, 8, false);
+      allocated = allocator.Allocate(cache, needed_size, 8);
     }
 
     if (!allocated) return allocator.ReturnNullOrDieOnOOM();

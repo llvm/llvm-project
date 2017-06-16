@@ -1281,9 +1281,12 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     // are out of range. This will need to turn into a loop that converges
     // when no more Thunks are added
     ThunkCreator TC;
-    if (TC.createThunks(OutputSectionCommands))
+    if (TC.createThunks(OutputSectionCommands)) {
       applySynthetic({InX::MipsGot},
                      [](SyntheticSection *SS) { SS->updateAllocSize(); });
+      if (TC.createThunks(OutputSectionCommands))
+        fatal("All non-range thunks should be created in first call");
+    }
   }
 
   // Fill other section headers. The dynamic table is finalized

@@ -145,11 +145,11 @@ static void *MsanAllocate(StackTrace *stack, uptr size, uptr alignment,
   void *allocated;
   if (t) {
     AllocatorCache *cache = GetAllocatorCache(&t->malloc_storage());
-    allocated = allocator.Allocate(cache, size, alignment, false);
+    allocated = allocator.Allocate(cache, size, alignment);
   } else {
     SpinMutexLock l(&fallback_mutex);
     AllocatorCache *cache = &fallback_allocator_cache;
-    allocated = allocator.Allocate(cache, size, alignment, false);
+    allocated = allocator.Allocate(cache, size, alignment);
   }
   Metadata *meta =
       reinterpret_cast<Metadata *>(allocator.GetMetaData(allocated));
