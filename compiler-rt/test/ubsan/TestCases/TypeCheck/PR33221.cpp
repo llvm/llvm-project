@@ -18,7 +18,7 @@ public:
 
 int main() {
   char *c = new char[sizeof(Derived)];
-  memset((void *)c, 0, sizeof(Derived));
+  memset((void *)c, 0xFF, sizeof(Derived));
   Derived *list = (Derived *)c;
 
 // CHECK: PR33221.cpp:[[@LINE+2]]:19: runtime error: member access within address {{.*}} which does not point to an object of type 'Base'

@@ -24,6 +24,7 @@ Using Polly
    Architecture
    UsingPollyWithClang
    HowToManuallyUseTheIndividualPiecesOfPolly
+   TipsAndTricks
 
 * `A list of Polly passes <http://polly.llvm.org/documentation/passes.html>`_
 

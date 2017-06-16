@@ -104,7 +104,8 @@ public:
   ~Status();
 
   // llvm::Error support
-  explicit Status(llvm::Error error);
+  explicit Status(llvm::Error error) { *this = std::move(error); }
+  const Status &operator=(llvm::Error error);
   llvm::Error ToError() const;
 
   //------------------------------------------------------------------
