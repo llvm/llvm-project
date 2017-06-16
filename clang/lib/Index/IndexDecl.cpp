@@ -293,6 +293,12 @@ public:
     return true;
   }
 
+  bool VisitDecompositionDecl(const DecompositionDecl *D) {
+    for (const auto *Binding : D->bindings())
+      TRY_DECL(Binding, IndexCtx.handleDecl(Binding));
+    return Base::VisitDecompositionDecl(D);
+  }
+
   bool VisitFieldDecl(const FieldDecl *D) {
     SmallVector<SymbolRelation, 4> Relations;
     gatherTemplatePseudoOverrides(D, Relations);
@@ -681,6 +687,13 @@ public:
 
   bool VisitImportDecl(const ImportDecl *D) {
     return IndexCtx.importedModule(D);
+  }
+
+  bool VisitStaticAssertDecl(const StaticAssertDecl *D) {
+    IndexCtx.indexBody(D->getAssertExpr(),
+                       dyn_cast<NamedDecl>(D->getDeclContext()),
+                       D->getLexicalDeclContext());
+    return true;
   }
 };
 
