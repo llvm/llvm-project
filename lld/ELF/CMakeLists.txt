@@ -7,6 +7,15 @@ if(NOT LLD_BUILT_STANDALONE)
 endif()
 
 add_lld_library(lldELF
+  Arch/AArch64.cpp
+  Arch/AMDGPU.cpp
+  Arch/ARM.cpp
+  Arch/AVR.cpp
+  Arch/Mips.cpp
+  Arch/PPC.cpp
+  Arch/PPC64.cpp
+  Arch/X86.cpp
+  Arch/X86_64.cpp
   Driver.cpp
   DriverUtils.cpp
   EhFrame.cpp

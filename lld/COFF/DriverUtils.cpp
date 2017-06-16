@@ -21,6 +21,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Object/COFF.h"
+#include "llvm/Object/WindowsResource.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
@@ -592,40 +593,23 @@ void checkFailIfMismatch(StringRef Arg) {
 // using cvtres.exe.
 std::unique_ptr<MemoryBuffer>
 convertResToCOFF(const std::vector<MemoryBufferRef> &MBs) {
-  // Create an output file path.
-  TemporaryFile File("resource-file", "obj");
+  object::WindowsResourceParser Parser;
 
-  // Execute cvtres.exe.
-  Executor E("cvtres.exe");
-  E.add("/machine:" + machineToStr(Config->Machine));
-  E.add("/readonly");
-  E.add("/nologo");
-  E.add("/out:" + Twine(File.Path));
-
-  // We must create new files because the memory buffers we have may have no
-  // underlying file still existing on the disk.
-  // It happens if it was created from a TemporaryFile, which usually delete
-  // the file just after creating the MemoryBuffer.
-  std::vector<TemporaryFile> ResFiles;
-  ResFiles.reserve(MBs.size());
   for (MemoryBufferRef MB : MBs) {
-    // We store the temporary file in a vector to avoid deletion
-    // before running cvtres
-    ResFiles.emplace_back("resource-file", "res");
-    TemporaryFile& ResFile = ResFiles.back();
-    // Write the content of the resource in a temporary file
-    std::error_code EC;
-    raw_fd_ostream OS(ResFile.Path, EC, sys::fs::F_None);
-    if (EC)
-      fatal(EC, "failed to open " + ResFile.Path);
-    OS << MB.getBuffer();
-    OS.close();
-
-    E.add(ResFile.Path);
+    std::unique_ptr<object::Binary> Bin = check(object::createBinary(MB));
+    object::WindowsResource *RF = dyn_cast<object::WindowsResource>(Bin.get());
+    if (!RF)
+      fatal("cannot compile non-resource file as resource");
+    if (auto EC = Parser.parse(RF))
+      fatal(EC, "failed to parse .res file");
   }
 
-  E.run();
-  return File.getMemoryBuffer();
+  std::unique_ptr<MemoryBuffer> MB;
+  if (auto EC =
+          llvm::object::writeWindowsResourceCOFF(MB, Config->Machine, Parser))
+    fatal(EC, "failed to write resources to buffer");
+
+  return MB;
 }
 
 // Run MSVC link.exe for given in-memory object files.

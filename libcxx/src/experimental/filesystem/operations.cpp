@@ -842,7 +842,7 @@ void __rename(const path& from, const path& to, std::error_code *ec) {
 }
 
 void __resize_file(const path& p, std::uintmax_t size, std::error_code *ec) {
-    if (::truncate(p.c_str(), static_cast<long>(size)) == -1)
+    if (::truncate(p.c_str(), static_cast<::off_t>(size)) == -1)
         set_or_throw(ec, "resize_file", p);
     else if (ec)
         ec->clear();

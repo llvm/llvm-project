@@ -10,13 +10,13 @@
 #ifndef LLD_ELF_TARGET_H
 #define LLD_ELF_TARGET_H
 
+#include "Error.h"
 #include "InputSection.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/Object/ELF.h"
 
-#include <memory>
-
 namespace lld {
+std::string toString(uint32_t RelType);
+
 namespace elf {
 class InputFile;
 class SymbolBody;
@@ -102,14 +102,53 @@ public:
   virtual void relaxTlsLdToLe(uint8_t *Loc, uint32_t Type, uint64_t Val) const;
 };
 
+TargetInfo *getAArch64TargetInfo();
+TargetInfo *getAMDGPUTargetInfo();
+TargetInfo *getARMTargetInfo();
+TargetInfo *getAVRTargetInfo();
+TargetInfo *getPPC64TargetInfo();
+TargetInfo *getPPCTargetInfo();
+TargetInfo *getX32TargetInfo();
+TargetInfo *getX86TargetInfo();
+TargetInfo *getX86_64TargetInfo();
+template <class ELFT> TargetInfo *getMipsTargetInfo();
+
+std::string getErrorLocation(const uint8_t *Loc);
+
 uint64_t getPPC64TocBase();
 uint64_t getAArch64Page(uint64_t Expr);
 
 extern TargetInfo *Target;
-TargetInfo *createTarget();
+TargetInfo *getTarget();
+
+template <unsigned N>
+static void checkInt(uint8_t *Loc, int64_t V, uint32_t Type) {
+  if (!llvm::isInt<N>(V))
+    error(getErrorLocation(Loc) + "relocation " + lld::toString(Type) +
+          " out of range");
 }
 
-std::string toString(uint32_t RelType);
+template <unsigned N>
+static void checkUInt(uint8_t *Loc, uint64_t V, uint32_t Type) {
+  if (!llvm::isUInt<N>(V))
+    error(getErrorLocation(Loc) + "relocation " + lld::toString(Type) +
+          " out of range");
+}
+
+template <unsigned N>
+static void checkIntUInt(uint8_t *Loc, uint64_t V, uint32_t Type) {
+  if (!llvm::isInt<N>(V) && !llvm::isUInt<N>(V))
+    error(getErrorLocation(Loc) + "relocation " + lld::toString(Type) +
+          " out of range");
+}
+
+template <unsigned N>
+static void checkAlignment(uint8_t *Loc, uint64_t V, uint32_t Type) {
+  if ((V & (N - 1)) != 0)
+    error(getErrorLocation(Loc) + "improper alignment for relocation " +
+          lld::toString(Type));
+}
+} // namespace elf
 }
 
 #endif

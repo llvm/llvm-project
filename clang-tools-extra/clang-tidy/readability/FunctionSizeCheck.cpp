@@ -36,15 +36,8 @@ public:
     case Stmt::ForStmtClass:
     case Stmt::SwitchStmtClass:
       ++Info.Branches;
-    // fallthrough
+      LLVM_FALLTHROUGH;
     case Stmt::CompoundStmtClass:
-      // If this new compound statement is located in a compound statement,
-      // which is already nested NestingThreshold levels deep, record the start
-      // location of this new compound statement
-      if (CurrentNestingLevel == Info.NestingThreshold)
-        Info.NestingThresholders.push_back(Node->getLocStart());
-
-      ++CurrentNestingLevel;
       TrackedParent.push_back(true);
       break;
     default:
@@ -54,9 +47,21 @@ public:
 
     Base::TraverseStmt(Node);
 
-    if (TrackedParent.back())
-      --CurrentNestingLevel;
     TrackedParent.pop_back();
+
+    return true;
+  }
+
+  bool TraverseCompoundStmt(CompoundStmt *Node) {
+    // If this new compound statement is located in a compound statement, which
+    // is already nested NestingThreshold levels deep, record the start location
+    // of this new compound statement.
+    if (CurrentNestingLevel == Info.NestingThreshold)
+      Info.NestingThresholders.push_back(Node->getLocStart());
+
+    ++CurrentNestingLevel;
+    Base::TraverseCompoundStmt(Node);
+    --CurrentNestingLevel;
 
     return true;
   }

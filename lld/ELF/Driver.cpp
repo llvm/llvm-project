@@ -912,7 +912,7 @@ getDefsym(opt::InputArgList &Args) {
 template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   SymbolTable<ELFT> Symtab;
   elf::Symtab<ELFT>::X = &Symtab;
-  Target = createTarget();
+  Target = getTarget();
 
   Config->MaxPageSize = getMaxPageSize(Args);
   Config->ImageBase = getImageBase(Args);
