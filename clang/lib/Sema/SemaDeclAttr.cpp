@@ -313,8 +313,8 @@ static bool checkAttrMutualExclusion(Sema &S, Decl *D, SourceRange Range,
 /// \returns true if IdxExpr is a valid index.
 template <typename AttrInfo>
 static bool checkFunctionOrMethodParameterIndex(
-    Sema &S, const Decl *D, const AttrInfo& Attr,
-    unsigned AttrArgNum, const Expr *IdxExpr, uint64_t &Idx) {
+    Sema &S, const Decl *D, const AttrInfo &Attr, unsigned AttrArgNum,
+    const Expr *IdxExpr, uint64_t &Idx, bool AllowImplicitThis = false) {
   assert(isFunctionOrMethodOrBlock(D));
 
   // In C++ the implicit 'this' function parameter also counts.
@@ -341,7 +341,7 @@ static bool checkFunctionOrMethodParameterIndex(
     return false;
   }
   Idx--; // Convert to zero-based.
-  if (HasImplicitThisParam) {
+  if (HasImplicitThisParam && !AllowImplicitThis) {
     if (Idx == 0) {
       S.Diag(getAttrLoc(Attr),
              diag::err_attribute_invalid_implicit_this_argument)
@@ -4604,14 +4604,16 @@ static void handleTypeTagForDatatypeAttr(Sema &S, Decl *D,
 static void handleXRayLogArgsAttr(Sema &S, Decl *D,
                                   const AttributeList &Attr) {
   uint64_t ArgCount;
+
   if (!checkFunctionOrMethodParameterIndex(S, D, Attr, 1, Attr.getArgAsExpr(0),
-                                           ArgCount))
+                                           ArgCount,
+                                           true /* AllowImplicitThis*/))
     return;
 
   // ArgCount isn't a parameter index [0;n), it's a count [1;n] - hence + 1.
   D->addAttr(::new (S.Context)
-             XRayLogArgsAttr(Attr.getRange(), S.Context, ++ArgCount,
-             Attr.getAttributeSpellingListIndex()));
+                 XRayLogArgsAttr(Attr.getRange(), S.Context, ++ArgCount,
+                                 Attr.getAttributeSpellingListIndex()));
 }
 
 //===----------------------------------------------------------------------===//

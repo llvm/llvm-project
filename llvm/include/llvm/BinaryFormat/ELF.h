@@ -1,4 +1,4 @@
-//===-- llvm/BinaryFormat/ELF.h - ELF constants and structures --*- C++ -*-===//
+//===- llvm/BinaryFormat/ELF.h - ELF constants and structures ---*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -20,27 +20,25 @@
 #ifndef LLVM_BINARYFORMAT_ELF_H
 #define LLVM_BINARYFORMAT_ELF_H
 
-#include "llvm/Support/Compiler.h"
-#include "llvm/Support/DataTypes.h"
+#include <cstdint>
 #include <cstring>
 
 namespace llvm {
-
 namespace ELF {
 
-typedef uint32_t Elf32_Addr; // Program address
-typedef uint32_t Elf32_Off;  // File offset
-typedef uint16_t Elf32_Half;
-typedef uint32_t Elf32_Word;
-typedef int32_t Elf32_Sword;
+using Elf32_Addr = uint32_t; // Program address
+using Elf32_Off = uint32_t;  // File offset
+using Elf32_Half = uint16_t;
+using Elf32_Word = uint32_t;
+using Elf32_Sword = int32_t;
 
-typedef uint64_t Elf64_Addr;
-typedef uint64_t Elf64_Off;
-typedef uint16_t Elf64_Half;
-typedef uint32_t Elf64_Word;
-typedef int32_t Elf64_Sword;
-typedef uint64_t Elf64_Xword;
-typedef int64_t Elf64_Sxword;
+using Elf64_Addr = uint64_t;
+using Elf64_Off = uint64_t;
+using Elf64_Half = uint16_t;
+using Elf64_Word = uint32_t;
+using Elf64_Sword = int32_t;
+using Elf64_Xword = uint64_t;
+using Elf64_Sxword = int64_t;
 
 // Object file magic string.
 static const char ElfMagic[] = {0x7f, 'E', 'L', 'F', '\0'};
@@ -75,9 +73,11 @@ struct Elf32_Ehdr {
   Elf32_Half e_shentsize; // Size of an entry in the section header table
   Elf32_Half e_shnum;     // Number of entries in the section header table
   Elf32_Half e_shstrndx;  // Sect hdr table index of sect name string table
+
   bool checkMagic() const {
     return (memcmp(e_ident, ElfMagic, strlen(ElfMagic))) == 0;
   }
+
   unsigned char getFileClass() const { return e_ident[EI_CLASS]; }
   unsigned char getDataEncoding() const { return e_ident[EI_DATA]; }
 };
@@ -99,9 +99,11 @@ struct Elf64_Ehdr {
   Elf64_Half e_shentsize;
   Elf64_Half e_shnum;
   Elf64_Half e_shstrndx;
+
   bool checkMagic() const {
     return (memcmp(e_ident, ElfMagic, strlen(ElfMagic))) == 0;
   }
+
   unsigned char getFileClass() const { return e_ident[EI_CLASS]; }
   unsigned char getDataEncoding() const { return e_ident[EI_DATA]; }
 };
@@ -1357,7 +1359,6 @@ enum {
 };
 
 } // end namespace ELF
-
 } // end namespace llvm
 
-#endif
+#endif // LLVM_BINARYFORMAT_ELF_H

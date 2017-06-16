@@ -25,8 +25,8 @@ entry:
 
 ; CHECK-DAG: li [[REG1:[0-9]+]], -128
 ; CHECK-DAG: neg [[REG2:[0-9]+]],
-; CHECK: and [[REG1]], [[REG2]], [[REG1]]
-; CHECK: stdux {{[0-9]+}}, 1, [[REG1]]
+; CHECK: and [[REG3:[0-9]+]], [[REG2]], [[REG1]]
+; CHECK: stdux {{[0-9]+}}, 1, [[REG3]]
 
 ; CHECK: blr
 

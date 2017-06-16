@@ -22,9 +22,9 @@ define void @func_mov_fi_i32() #0 {
 
 ; GCN-LABEL: {{^}}func_add_constant_to_fi_i32:
 ; GCN: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN: s_sub_u32 s6, s5, s4
-; GCN-NEXT: s_lshr_b32 s6, s6, 6
-; GCN-NEXT: v_add_i32_e64 v0, s{{\[[0-9]+:[0-9]+\]}}, s6, 4
+; GCN: s_sub_u32 vcc_hi, s5, s4
+; GCN-NEXT: s_lshr_b32 vcc_hi, vcc_hi, 6
+; GCN-NEXT: v_add_i32_e64 v0, {{s\[[0-9]+:[0-9]+\]|vcc}}, vcc_hi, 4
 ; GCN-NEXT: v_add_i32_e32 v0, vcc, 4, v0
 ; GCN-NOT: v_mov
 ; GCN: ds_write_b32 v0, v0
@@ -71,8 +71,8 @@ define void @func_load_private_arg_i32_ptr(i32* %ptr) #0 {
 
 ; GCN-LABEL: {{^}}void_func_byval_struct_i8_i32_ptr:
 ; GCN: s_waitcnt
-; GCN-NEXT: s_sub_u32 s6, s5, s4
-; GCN-NEXT: v_lshr_b32_e64 v0, s6, 6
+; GCN-NEXT: s_sub_u32 vcc_hi, s5, s4
+; GCN-NEXT: v_lshr_b32_e64 v0, vcc_hi, 6
 ; GCN-NEXT: v_add_i32_e32 v0, vcc, 4, v0
 ; GCN-NOT: v_mov
 ; GCN: ds_write_b32 v0, v0
@@ -99,8 +99,8 @@ define void @void_func_byval_struct_i8_i32_ptr_value({ i8, i32 }* byval %arg0) #
 }
 
 ; GCN-LABEL: {{^}}void_func_byval_struct_i8_i32_ptr_nonentry_block:
-; GCN: s_sub_u32 s8, s5, s4
-; GCN: v_lshr_b32_e64 v1, s8, 6
+; GCN: s_sub_u32 vcc_hi, s5, s4
+; GCN: v_lshr_b32_e64 v1, vcc_hi, 6
 ; GCN: s_and_saveexec_b64
 
 ; GCN: v_add_i32_e32 v0, vcc, 4, v1

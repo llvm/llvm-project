@@ -5258,6 +5258,20 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
           {{Record[0], Record[1]}, {Record.begin() + 2, Record.end()}});
       break;
     }
+    case bitc::FS_CFI_FUNCTION_DEFS: {
+      std::set<std::string> &CfiFunctionDefs = TheIndex.cfiFunctionDefs();
+      for (unsigned I = 0; I != Record.size(); I += 2)
+        CfiFunctionDefs.insert(
+            {Strtab.data() + Record[I], static_cast<size_t>(Record[I + 1])});
+      break;
+    }
+    case bitc::FS_CFI_FUNCTION_DECLS: {
+      std::set<std::string> &CfiFunctionDecls = TheIndex.cfiFunctionDecls();
+      for (unsigned I = 0; I != Record.size(); I += 2)
+        CfiFunctionDecls.insert(
+            {Strtab.data() + Record[I], static_cast<size_t>(Record[I + 1])});
+      break;
+    }
     }
   }
   llvm_unreachable("Exit infinite loop");

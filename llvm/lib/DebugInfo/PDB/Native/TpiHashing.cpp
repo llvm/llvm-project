@@ -9,6 +9,7 @@
 
 #include "llvm/DebugInfo/PDB/Native/TpiHashing.h"
 
+#include "llvm/DebugInfo/CodeView/TypeDeserializer.h"
 #include "llvm/DebugInfo/PDB/Native/Hash.h"
 #include "llvm/DebugInfo/PDB/Native/RawError.h"
 

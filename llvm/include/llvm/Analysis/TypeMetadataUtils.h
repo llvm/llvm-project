@@ -20,6 +20,13 @@
 
 namespace llvm {
 
+/// The type of CFI jumptable needed for a function.
+enum CfiFunctionLinkage {
+  CFL_Definition = 0,
+  CFL_Declaration = 1,
+  CFL_WeakDeclaration = 2
+};
+
 /// A call site that could be devirtualized.
 struct DevirtCallSite {
   /// The offset from the address point to the virtual function.

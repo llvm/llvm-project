@@ -32,7 +32,8 @@ namespace {
 
 // Promote each local-linkage entity defined by ExportM and used by ImportM by
 // changing visibility and appending the given ModuleId.
-void promoteInternals(Module &ExportM, Module &ImportM, StringRef ModuleId) {
+void promoteInternals(Module &ExportM, Module &ImportM, StringRef ModuleId,
+                      SetVector<GlobalValue *> &PromoteExtra) {
   DenseMap<const Comdat *, Comdat *> RenamedComdats;
   for (auto &ExportGV : ExportM.global_values()) {
     if (!ExportGV.hasLocalLinkage())
@@ -40,7 +41,7 @@ void promoteInternals(Module &ExportM, Module &ImportM, StringRef ModuleId) {
 
     auto Name = ExportGV.getName();
     GlobalValue *ImportGV = ImportM.getNamedValue(Name);
-    if (!ImportGV || ImportGV->use_empty())
+    if ((!ImportGV || ImportGV->use_empty()) && !PromoteExtra.count(&ExportGV))
       continue;
 
     std::string NewName = (Name + ModuleId).str();
@@ -53,8 +54,10 @@ void promoteInternals(Module &ExportM, Module &ImportM, StringRef ModuleId) {
     ExportGV.setLinkage(GlobalValue::ExternalLinkage);
     ExportGV.setVisibility(GlobalValue::HiddenVisibility);
 
-    ImportGV->setName(NewName);
-    ImportGV->setVisibility(GlobalValue::HiddenVisibility);
+    if (ImportGV) {
+      ImportGV->setName(NewName);
+      ImportGV->setVisibility(GlobalValue::HiddenVisibility);
+    }
   }
 
   if (!RenamedComdats.empty())
@@ -296,6 +299,11 @@ void splitAndWriteThinLTOBitcode(
       F.setComdat(nullptr);
     }
 
+  SetVector<GlobalValue *> CfiFunctions;
+  for (auto &F : M)
+    if ((!F.hasLocalLinkage() || F.hasAddressTaken()) && HasTypeMetadata(&F))
+      CfiFunctions.insert(&F);
+
   // Remove all globals with type metadata, globals with comdats that live in
   // MergedM, and aliases pointing to such globals from the thin LTO module.
   filterModule(&M, [&](const GlobalValue *GV) {
@@ -308,11 +316,39 @@ void splitAndWriteThinLTOBitcode(
     return true;
   });
 
-  promoteInternals(*MergedM, M, ModuleId);
-  promoteInternals(M, *MergedM, ModuleId);
+  promoteInternals(*MergedM, M, ModuleId, CfiFunctions);
+  promoteInternals(M, *MergedM, ModuleId, CfiFunctions);
+
+  SmallVector<MDNode *, 8> CfiFunctionMDs;
+  for (auto V : CfiFunctions) {
+    Function &F = *cast<Function>(V);
+    SmallVector<MDNode *, 2> Types;
+    F.getMetadata(LLVMContext::MD_type, Types);
+
+    auto &Ctx = MergedM->getContext();
+    SmallVector<Metadata *, 4> Elts;
+    Elts.push_back(MDString::get(Ctx, F.getName()));
+    CfiFunctionLinkage Linkage;
+    if (!F.isDeclarationForLinker())
+      Linkage = CFL_Definition;
+    else if (F.isWeakForLinker())
+      Linkage = CFL_WeakDeclaration;
+    else
+      Linkage = CFL_Declaration;
+    Elts.push_back(ConstantAsMetadata::get(
+        llvm::ConstantInt::get(Type::getInt8Ty(Ctx), Linkage)));
+    for (auto Type : Types)
+      Elts.push_back(Type);
+    CfiFunctionMDs.push_back(MDTuple::get(Ctx, Elts));
+  }
+
+  if(!CfiFunctionMDs.empty()) {
+    NamedMDNode *NMD = MergedM->getOrInsertNamedMetadata("cfi.functions");
+    for (auto MD : CfiFunctionMDs)
+      NMD->addOperand(MD);
+  }
 
   simplifyExternals(*MergedM);
-
 
   // FIXME: Try to re-use BSI and PFI from the original module here.
   ProfileSummaryInfo PSI(M);

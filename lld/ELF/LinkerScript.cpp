@@ -714,15 +714,12 @@ void LinkerScript::adjustSectionsBeforeSorting() {
 
     auto *OutSec = make<OutputSection>(Cmd->Name, SHT_PROGBITS, Flags);
     OutSec->SectionIndex = I;
-    OutputSections.push_back(OutSec);
     Cmd->Sec = OutSec;
     SecToCommand[OutSec] = Cmd;
   }
 }
 
 void LinkerScript::adjustSectionsAfterSorting() {
-  placeOrphanSections();
-
   // Try and find an appropriate memory region to assign offsets in.
   for (BaseCommand *Base : Opt.Commands) {
     if (auto *Cmd = dyn_cast<OutputSectionCommand>(Base)) {
@@ -762,106 +759,18 @@ void LinkerScript::adjustSectionsAfterSorting() {
   removeEmptyCommands();
 }
 
-// When placing orphan sections, we want to place them after symbol assignments
-// so that an orphan after
-//   begin_foo = .;
-//   foo : { *(foo) }
-//   end_foo = .;
-// doesn't break the intended meaning of the begin/end symbols.
-// We don't want to go over sections since Writer<ELFT>::sortSections is the
-// one in charge of deciding the order of the sections.
-// We don't want to go over alignments, since doing so in
-//  rx_sec : { *(rx_sec) }
-//  . = ALIGN(0x1000);
-//  /* The RW PT_LOAD starts here*/
-//  rw_sec : { *(rw_sec) }
-// would mean that the RW PT_LOAD would become unaligned.
-static bool shouldSkip(BaseCommand *Cmd) {
-  if (isa<OutputSectionCommand>(Cmd))
-    return false;
-  if (auto *Assign = dyn_cast<SymbolAssignment>(Cmd))
-    return Assign->Name != ".";
-  return true;
-}
-
-// Orphan sections are sections present in the input files which are
-// not explicitly placed into the output file by the linker script.
-//
-// When the control reaches this function, Opt.Commands contains
-// output section commands for non-orphan sections only. This function
-// adds new elements for orphan sections so that all sections are
-// explicitly handled by Opt.Commands.
-//
-// Writer<ELFT>::sortSections has already sorted output sections.
-// What we need to do is to scan OutputSections vector and
-// Opt.Commands in parallel to find orphan sections. If there is an
-// output section that doesn't have a corresponding entry in
-// Opt.Commands, we will insert a new entry to Opt.Commands.
-//
-// There is some ambiguity as to where exactly a new entry should be
-// inserted, because Opt.Commands contains not only output section
-// commands but also other types of commands such as symbol assignment
-// expressions. There's no correct answer here due to the lack of the
-// formal specification of the linker script. We use heuristics to
-// determine whether a new output command should be added before or
-// after another commands. For the details, look at shouldSkip
-// function.
-void LinkerScript::placeOrphanSections() {
-  // The OutputSections are already in the correct order.
-  // This loops creates or moves commands as needed so that they are in the
-  // correct order.
-  int CmdIndex = 0;
-
-  // As a horrible special case, skip the first . assignment if it is before any
-  // section. We do this because it is common to set a load address by starting
-  // the script with ". = 0xabcd" and the expectation is that every section is
-  // after that.
-  auto FirstSectionOrDotAssignment =
-      std::find_if(Opt.Commands.begin(), Opt.Commands.end(),
-                   [](BaseCommand *Cmd) { return !shouldSkip(Cmd); });
-  if (FirstSectionOrDotAssignment != Opt.Commands.end()) {
-    CmdIndex = FirstSectionOrDotAssignment - Opt.Commands.begin();
-    if (isa<SymbolAssignment>(**FirstSectionOrDotAssignment))
-      ++CmdIndex;
-  }
-
+void LinkerScript::createOrphanCommands() {
   for (OutputSection *Sec : OutputSections) {
-    StringRef Name = Sec->Name;
-
-    // Find the last spot where we can insert a command and still get the
-    // correct result.
-    auto CmdIter = Opt.Commands.begin() + CmdIndex;
-    auto E = Opt.Commands.end();
-    while (CmdIter != E && shouldSkip(*CmdIter)) {
-      ++CmdIter;
-      ++CmdIndex;
-    }
-
-    // If there is no command corresponding to this output section,
-    // create one and put a InputSectionDescription in it so that both
-    // representations agree on which input sections to use.
-    OutputSectionCommand *Cmd = getCmd(Sec);
-    if (!Cmd) {
-      Cmd = createOutputSectionCommand(Name, "<internal>");
-      Opt.Commands.insert(CmdIter, Cmd);
-      ++CmdIndex;
-
-      Cmd->Sec = Sec;
-      SecToCommand[Sec] = Cmd;
-      auto *ISD = make<InputSectionDescription>("");
-      for (InputSection *IS : Sec->Sections)
-        ISD->Sections.push_back(IS);
-      Cmd->Commands.push_back(ISD);
-
+    if (Sec->SectionIndex != INT_MAX)
       continue;
-    }
-
-    // Continue from where we found it.
-    while (*CmdIter != Cmd) {
-      ++CmdIter;
-      ++CmdIndex;
-    }
-    ++CmdIndex;
+    OutputSectionCommand *Cmd =
+        createOutputSectionCommand(Sec->Name, "<internal>");
+    Cmd->Sec = Sec;
+    SecToCommand[Sec] = Cmd;
+    auto *ISD = make<InputSectionDescription>("");
+    ISD->Sections = Sec->Sections;
+    Cmd->Commands.push_back(ISD);
+    Opt.Commands.push_back(Cmd);
   }
 }
 

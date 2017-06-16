@@ -108,6 +108,8 @@ public:
   bool hasPDBTpiStream() const;
   bool hasPDBStringTable();
 
+  uint32_t getPointerSize();
+
 private:
   Expected<std::unique_ptr<msf::MappedBlockStream>>
   safelyCreateIndexedStream(const msf::MSFLayout &Layout,

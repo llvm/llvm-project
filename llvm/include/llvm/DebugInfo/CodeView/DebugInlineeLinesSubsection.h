@@ -19,7 +19,7 @@
 namespace llvm {
 namespace codeview {
 
-class DebugInlineeLinesSubsectionsRef;
+class DebugInlineeLinesSubsectionRef;
 class DebugChecksumsSubsection;
 
 enum class InlineeLinesSignature : uint32_t {

@@ -98,14 +98,18 @@ enum class DbgHeaderType : uint16_t {
 };
 
 enum class OMFSegDescFlags : uint16_t {
+  None = 0,
   Read = 1 << 0,              // Segment is readable.
   Write = 1 << 1,             // Segment is writable.
   Execute = 1 << 2,           // Segment is executable.
   AddressIs32Bit = 1 << 3,    // Descriptor describes a 32-bit linear address.
   IsSelector = 1 << 8,        // Frame represents a selector.
   IsAbsoluteAddress = 1 << 9, // Frame represents an absolute address.
-  IsGroup = 1 << 10           // If set, descriptor represents a group.
+  IsGroup = 1 << 10,          // If set, descriptor represents a group.
+  LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue = */ IsGroup)
 };
+
+LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 
 } // end namespace pdb
 } // end namespace llvm

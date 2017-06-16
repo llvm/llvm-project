@@ -9,7 +9,7 @@
 //
 /// \file
 /// This pass marks all internal functions as always_inline and creates
-/// duplicates of all other functions a marks the duplicates as always_inline.
+/// duplicates of all other functions and marks the duplicates as always_inline.
 //
 //===----------------------------------------------------------------------===//
 

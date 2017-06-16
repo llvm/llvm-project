@@ -12,8 +12,8 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 ; CHECK:      DebugProps:
 ; CHECK:        DebuggerABIVersion:                [ 1, 0 ]
 ; CHECK:        ReservedNumVGPRs:                  4
-; GFX700:       ReservedFirstVGPR:                 11
-; GFX800:       ReservedFirstVGPR:                 11
+; GFX700:       ReservedFirstVGPR:                 8
+; GFX800:       ReservedFirstVGPR:                 8
 ; GFX9:         ReservedFirstVGPR:                 14
 ; CHECK:        PrivateSegmentBufferSGPR:          0
 ; CHECK:        WavefrontPrivateSegmentOffsetSGPR: 11
