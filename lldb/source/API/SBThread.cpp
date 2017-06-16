@@ -293,10 +293,6 @@ SBThread::GetStopReasonExtendedBacktraces(InstrumentationRuntimeType type) {
   ThreadCollectionSP threads;
   threads.reset(new ThreadCollection());
 
-  // We currently only support ThreadSanitizer.
-  if (type != eInstrumentationRuntimeTypeThreadSanitizer)
-    return threads;
-
   std::unique_lock<std::recursive_mutex> lock;
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
 
