@@ -682,6 +682,13 @@ public:
   bool VisitImportDecl(const ImportDecl *D) {
     return IndexCtx.importedModule(D);
   }
+
+  bool VisitStaticAssertDecl(const StaticAssertDecl *D) {
+    IndexCtx.indexBody(D->getAssertExpr(),
+                       dyn_cast<NamedDecl>(D->getDeclContext()),
+                       D->getLexicalDeclContext());
+    return true;
+  }
 };
 
 } // anonymous namespace
