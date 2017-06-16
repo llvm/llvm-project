@@ -121,10 +121,12 @@ def err_module_odr_violation_mismatch_decl : Error<
   "%q0 has different definitions in different modules; first difference is "
   "%select{definition in module '%2'|defined here}1 found "
   "%select{end of class|public access specifier|private access specifier|"
-  "protected access specifier|static assert|field|method|type alias|typedef}3">;
+  "protected access specifier|static assert|field|method|type alias|typedef|"
+  "data member}3">;
 def note_module_odr_violation_mismatch_decl : Note<"but in '%0' found "
   "%select{end of class|public access specifier|private access specifier|"
-  "protected access specifier|static assert|field|method|type alias|typedef}1">;
+  "protected access specifier|static assert|field|method|type alias|typedef|"
+  "data member}1">;
 
 def err_module_odr_violation_mismatch_decl_diff : Error<
   "%q0 has different definitions in different modules; first difference is "
@@ -150,8 +152,16 @@ def err_module_odr_violation_mismatch_decl_diff : Error<
   "method %4 that has %5 parameter%s5|"
   "method %4 with %ordinal5 parameter of type %6%select{| decayed from %8}7|"
   "method %4 with %ordinal5 parameter named %6|"
+  "method %4 with %ordinal5 parameter with%select{out|}6 a default argument|"
+  "method %4 with %ordinal5 parameter with a default argument|"
   "%select{typedef|type alias}4 name %5|"
-  "%select{typedef|type alias}4 %5 with underlying type %6}3">;
+  "%select{typedef|type alias}4 %5 with underlying type %6|"
+  "data member with name %4|"
+  "data member %4 with type %5|"
+  "data member %4 with%select{out|}5 an initializer|"
+  "data member %4 with an initializer|"
+  "data member %4 %select{is constexpr|is not constexpr}5|"
+  "}3">;
 
 def note_module_odr_violation_mismatch_decl_diff : Note<"but in '%0' found "
   "%select{"
@@ -175,18 +185,26 @@ def note_module_odr_violation_mismatch_decl_diff : Note<"but in '%0' found "
   "method %2 that has %3 parameter%s3|"
   "method %2 with %ordinal3 parameter of type %4%select{| decayed from %6}5|"
   "method %2 with %ordinal3 parameter named %4|"
+  "method %2 with %ordinal3 parameter with%select{out|}4 a default argument|"
+  "method %2 with %ordinal3 parameter with a different default argument|"
   "%select{typedef|type alias}2 name %3|"
-  "%select{typedef|type alias}2 %3 with different underlying type %4}1">;
+  "%select{typedef|type alias}2 %3 with different underlying type %4|"
+  "data member with name %2|"
+  "data member %2 with different type %3|"
+  "data member %2 with%select{out|}3 an initializer|"
+  "data member %2 with a different initializer|"
+  "data member %2 %select{is constexpr|is not constexpr}3|"
+  "}1">;
 
 def err_module_odr_violation_mismatch_decl_unknown : Error<
   "%q0 %select{with definition in module '%2'|defined here}1 has different "
   "definitions in different modules; first difference is this "
-  "%select{||||static assert|field|method|type alias|typedef|"
+  "%select{||||static assert|field|method|type alias|typedef|data member|"
   "unexpected decl}3">;
 def note_module_odr_violation_mismatch_decl_unknown : Note<
   "but in '%0' found "
   "%select{||||different static assert|different field|different method|"
-  "different type alias|different typedef|"
+  "different type alias|different typedef|different data member|"
   "another unexpected decl}1">;
 
 def warn_duplicate_module_file_extension : Warning<

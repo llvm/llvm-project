@@ -252,6 +252,17 @@ public:
     Inherited::VisitValueDecl(D);
   }
 
+  void VisitVarDecl(const VarDecl *D) {
+    Hash.AddBoolean(D->isStaticLocal());
+    Hash.AddBoolean(D->isConstexpr());
+    const bool HasInit = D->hasInit();
+    Hash.AddBoolean(HasInit);
+    if (HasInit) {
+      AddStmt(D->getInit());
+    }
+    Inherited::VisitVarDecl(D);
+  }
+
   void VisitParmVarDecl(const ParmVarDecl *D) {
     // TODO: Handle default arguments.
     Inherited::VisitParmVarDecl(D);
@@ -336,6 +347,7 @@ bool ODRHash::isWhitelistedDecl(const Decl *D, const CXXRecordDecl *Parent) {
     case Decl::StaticAssert:
     case Decl::TypeAlias:
     case Decl::Typedef:
+    case Decl::Var:
       return true;
   }
 }
