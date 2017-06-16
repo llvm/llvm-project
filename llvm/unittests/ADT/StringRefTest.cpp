@@ -882,8 +882,9 @@ TEST(StringRefTest, getAsDouble) {
     double Result;
     StringRef S(Entry.Str);
     EXPECT_EQ(Entry.ShouldFail, S.getAsDouble(Result, Entry.AllowInexact));
-    if (!Entry.ShouldFail)
+    if (!Entry.ShouldFail) {
       EXPECT_EQ(Result, Entry.D);
+    }
   }
 }
 

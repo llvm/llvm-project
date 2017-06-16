@@ -1280,11 +1280,22 @@ static void __kmp_atfork_child(void) {
 
   ++__kmp_fork_count;
 
-#if KMP_AFFINITY_SUPPORTED && KMP_OS_LINUX
+#if KMP_AFFINITY_SUPPORTED
+#if KMP_OS_LINUX
   // reset the affinity in the child to the initial thread
   // affinity in the parent
   kmp_set_thread_affinity_mask_initial();
 #endif
+  // Set default not to bind threads tightly in the child (we’re expecting
+  // over-subscription after the fork and this can improve things for
+  // scripting languages that use OpenMP inside process-parallel code).
+  __kmp_affinity_type = affinity_none;
+#if OMP_40_ENABLED
+  if (__kmp_nested_proc_bind.bind_types != NULL) {
+    __kmp_nested_proc_bind.bind_types[0] = proc_bind_false;
+  }
+#endif // OMP_40_ENABLED
+#endif // KMP_AFFINITY_SUPPORTED
 
   __kmp_init_runtime = FALSE;
 #if KMP_USE_MONITOR

@@ -1,4 +1,4 @@
-// RUN: c-index-test core -print-source-symbols -- %s -std=c++14 -target x86_64-apple-macosx10.7 | FileCheck %s
+// RUN: c-index-test core -print-source-symbols -- %s -std=c++1z -target x86_64-apple-macosx10.7 | FileCheck %s
 
 // CHECK: [[@LINE+1]]:7 | class/C++ | Cls | [[Cls_USR:.*]] | <no-cgname> | Def | rel: 0
 class Cls { public:
@@ -448,4 +448,30 @@ void staticAssertInFn() {
 // CHECK-NEXT: RelCont | staticAssertInFn | c:@F@staticAssertInFn#
 // CHECK: [[@LINE-3]]:17 | struct/C++ | StaticAssertRef | c:@S@StaticAssertRef | <no-cgname> | Ref,RelCont | rel: 1
 // CHECK-NEXT: RelCont | staticAssertInFn | c:@F@staticAssertInFn#
+}
+
+namespace cpp17structuredBinding {
+
+struct Cpp17StructuredBinding {
+  int x, y;
+
+  Cpp17StructuredBinding(int x, int y): x(x), y(y) { }
+};
+
+auto [structuredBinding1, structuredBinding2] = Cpp17StructuredBinding(Record::C, 0);
+// CHECK: [[@LINE-1]]:7 | variable/C++ | structuredBinding1 | c:@N@cpp17structuredBinding@structuredBinding1 | <no-cgname> | Decl,RelChild | rel: 1
+// CHECK-NEXT: RelChild | cpp17structuredBinding | c:@N@cpp17structuredBinding
+// CHECK: [[@LINE-3]]:27 | variable/C++ | structuredBinding2 | c:@N@cpp17structuredBinding@structuredBinding2 | <no-cgname> | Decl,RelChild | rel: 1
+// CHECK-NEXT: RelChild | cpp17structuredBinding | c:@N@cpp17structuredBinding
+
+void localStructuredBindingAndRef() {
+  int ref = structuredBinding1;
+// CHECK: [[@LINE-1]]:13 | variable/C++ | structuredBinding1 | c:@N@cpp17structuredBinding@structuredBinding1 | <no-cgname> | Ref,Read,RelCont | rel: 1
+// CHECK-NEXT: RelCont | localStructuredBindingAndRef | c:@N@cpp17structuredBinding@F@localStructuredBindingAndRef#
+  auto [localBinding1, localBinding2] = Cpp17StructuredBinding(ref, structuredBinding2);
+// CHECK: [[@LINE-1]]:69 | variable/C++ | structuredBinding2 | c:@N@cpp17structuredBinding@structuredBinding2 | <no-cgname> | Ref,Read,RelCont | rel: 1
+// CHECK-NEXT: RelCont | localStructuredBindingAndRef | c:@N@cpp17structuredBinding@F@localStructuredBindingAndRef#
+// CHECK-NOT: localBinding
+}
+
 }

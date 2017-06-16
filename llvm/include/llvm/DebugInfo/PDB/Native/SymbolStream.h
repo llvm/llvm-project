@@ -27,6 +27,10 @@ public:
   ~SymbolStream();
   Error reload();
 
+  const codeview::CVSymbolArray &getSymbolArray() const {
+    return SymbolRecords;
+  }
+
   iterator_range<codeview::CVSymbolArray::Iterator>
   getSymbols(bool *HadError) const;
 

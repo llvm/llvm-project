@@ -300,8 +300,9 @@ struct ScopedDir {
     EXPECT_FALSE(EC);
   }
   ~ScopedDir() {
-    if (Path != "")
+    if (Path != "") {
       EXPECT_FALSE(llvm::sys::fs::remove(Path.str()));
+    }
   }
   operator StringRef() { return Path.str(); }
 };
@@ -316,8 +317,9 @@ struct ScopedLink {
     EXPECT_FALSE(EC);
   }
   ~ScopedLink() {
-    if (Path != "")
+    if (Path != "") {
       EXPECT_FALSE(llvm::sys::fs::remove(Path.str()));
+    }
   }
   operator StringRef() { return Path.str(); }
 };

@@ -1,2901 +1,1093 @@
-; RUN: llvm-pdbutil raw -headers -string-table -tpi-records -tpi-record-bytes -module-syms \
-; RUN:              -sym-record-bytes -globals -publics -module-files \
-; RUN:              -stream-summary -stream-blocks -ipi-records -ipi-record-bytes \
-; RUN:              -section-contribs -section-map -section-headers -subsections=all \
-; RUN:              -tpi-hash -fpo -page-stats %p/Inputs/empty.pdb | FileCheck -check-prefix=EMPTY %s
 ; RUN: llvm-pdbutil raw -all %p/Inputs/empty.pdb | FileCheck -check-prefix=ALL %s
-; RUN: llvm-pdbutil raw -headers -modules -module-files \
+; RUN: llvm-pdbutil raw -summary -modules -files \
 ; RUN:              %p/Inputs/big-read.pdb | FileCheck -check-prefix=BIG %s
-; RUN: not llvm-pdbutil raw -headers %p/Inputs/bad-block-size.pdb 2>&1 | FileCheck -check-prefix=BAD-BLOCK-SIZE %s
+; RUN: not llvm-pdbutil raw -summary %p/Inputs/bad-block-size.pdb 2>&1 | FileCheck -check-prefix=BAD-BLOCK-SIZE %s
 
-; EMPTY:      FileHeaders {
-; EMPTY-NEXT:   BlockSize: 4096
-; EMPTY-NEXT:   FreeBlockMap: 2
-; EMPTY-NEXT:   NumBlocks: 25
-; EMPTY-NEXT:   NumDirectoryBytes: 136
-; EMPTY-NEXT:   Unknown1: 0
-; EMPTY-NEXT:   BlockMapAddr: 24
-; EMPTY-NEXT:   NumDirectoryBlocks: 1
-; EMPTY-NEXT:   DirectoryBlocks: [23]
-; EMPTY-NEXT:   NumStreams: 17
-; EMPTY-NEXT: }
-; EMPTY-NEXT: Streams [
-; EMPTY-NEXT:   Stream 0: [Old MSF Directory] (40 bytes)
-; EMPTY-NEXT:   Stream 1: [PDB Stream] (118 bytes)
-; EMPTY-NEXT:   Stream 2: [TPI Stream] (5392 bytes)
-; EMPTY-NEXT:   Stream 3: [DBI Stream] (739 bytes)
-; EMPTY-NEXT:   Stream 4: [IPI Stream] (784 bytes)
-; EMPTY-NEXT:   Stream 5: [Named Stream "/LinkInfo"] (0 bytes)
-; EMPTY-NEXT:   Stream 6: [Global Symbol Hash] (556 bytes)
-; EMPTY-NEXT:   Stream 7: [Public Symbol Hash] (604 bytes)
-; EMPTY-NEXT:   Stream 8: [Public Symbol Records] (104 bytes)
-; EMPTY-NEXT:   Stream 9: [Named Stream "/src/headerblock"] (0 bytes)
-; EMPTY-NEXT:   Stream 10: [Section Header Data] (160 bytes)
-; EMPTY-NEXT:   Stream 11: [New FPO Data] (32 bytes)
-; EMPTY-NEXT:   Stream 12: [Module "d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj"] (308 bytes)
-; EMPTY-NEXT:   Stream 13: [Named Stream "/names"] (239 bytes)
-; EMPTY-NEXT:   Stream 14: [Module "* Linker *"] (520 bytes)
-; EMPTY-NEXT:   Stream 15: [TPI Hash] (308 bytes)
-; EMPTY-NEXT:   Stream 16: [IPI Hash] (68 bytes)
-; EMPTY-NEXT: ]
-; EMPTY-NEXT: Msf Free Pages: [3, 4, 5, 8, 9]
-; EMPTY-NEXT: Orphaned Pages: []
-; EMPTY-NEXT: Multiply Used Pages: []
-; EMPTY-NEXT: Use After Free Pages: []
-; EMPTY-NEXT: StreamBlocks [
-; EMPTY-NEXT:   Stream 0: [8]
-; EMPTY-NEXT:   Stream 1: [19]
-; EMPTY-NEXT:   Stream 2: [18, 17]
-; EMPTY-NEXT:   Stream 3: [14]
-; EMPTY-NEXT:   Stream 4: [20]
-; EMPTY-NEXT:   Stream 5: []
-; EMPTY-NEXT:   Stream 6: [11]
-; EMPTY-NEXT:   Stream 7: [13]
-; EMPTY-NEXT:   Stream 8: [12]
-; EMPTY-NEXT:   Stream 9: []
-; EMPTY-NEXT:   Stream 10: [10]
-; EMPTY-NEXT:   Stream 11: [15]
-; EMPTY-NEXT:   Stream 12: [6]
-; EMPTY-NEXT:   Stream 13: [16]
-; EMPTY-NEXT:   Stream 14: [7]
-; EMPTY-NEXT:   Stream 15: [21]
-; EMPTY-NEXT:   Stream 16: [22]
-; EMPTY-NEXT: ]
-; EMPTY-NEXT: String Table {
-; EMPTY-NEXT:   'd:\src\llvm\test\debuginfo\pdb\inputs\predefined c++ attributes (compiler internal)'
-; EMPTY-NEXT:   'd:\src\llvm\test\debuginfo\pdb\inputs\empty.cpp'
-; EMPTY-NEXT:   '$T0 $ebp = $eip $T0 4 + ^ = $ebp $T0 ^ = $esp $T0 8 + = '
-; EMPTY-NEXT: }
-; EMPTY-NEXT: PDB Stream {
-; EMPTY-NEXT:   Version: 20000404
-; EMPTY-NEXT:   Signature: 0x54E507E2
-; EMPTY-NEXT:   Age: 1
-; EMPTY-NEXT:   Guid: {0B355641-86A0-A249-896F-9988FAE52FF0}
-; EMPTY-NEXT:   Features: 0x1
-; EMPTY-NEXT:   Named Streams {
-; EMPTY-NEXT:     /names: 13
-; EMPTY-NEXT:     /LinkInfo: 5
-; EMPTY-NEXT:     /src/headerblock: 9
-; EMPTY-NEXT:   }
-; EMPTY-NEXT: }
-; EMPTY-NEXT: Type Info Stream (TPI) {
-; EMPTY-NEXT:   TPI Version: 20040203
-; EMPTY-NEXT:   Record count: 75
-; EMPTY-NEXT:   Records [
-; EMPTY-NEXT:     {
-; EMPTY-NEXT:       ArgList (0x1000) {
-; EMPTY-NEXT:         TypeLeafKind: LF_ARGLIST (0x1201)
-; EMPTY-NEXT:         NumArgs: 0
-; EMPTY-NEXT:         Arguments [
-; EMPTY-NEXT:         ]
-; EMPTY-NEXT:       }
-; EMPTY-NEXT:       Bytes (
-; EMPTY-NEXT:         0000: 00000000                             |....|
-; EMPTY-NEXT:       )
-; EMPTY-NEXT:     }
-; EMPTY-NEXT:     {
-; EMPTY-NEXT:       Procedure (0x1001) {
-; EMPTY-NEXT:         TypeLeafKind: LF_PROCEDURE (0x1008)
-; EMPTY-NEXT:         ReturnType: int (0x74)
-; EMPTY-NEXT:         CallingConvention: NearC (0x0)
-; EMPTY-NEXT:         FunctionOptions [ (0x0)
-; EMPTY-NEXT:         ]
-; EMPTY-NEXT:         NumParameters: 0
-; EMPTY-NEXT:         ArgListType: () (0x1000)
-; EMPTY-NEXT:       }
-; EMPTY-NEXT:       Bytes (
-; EMPTY-NEXT:         0000: 74000000 00000000 00100000           |t...........|
-; EMPTY-NEXT:       )
-; EMPTY-NEXT:     }
-; EMPTY-NEXT:     {
-; EMPTY-NEXT:       FieldList (0x1002) {
-; EMPTY-NEXT:         TypeLeafKind: LF_FIELDLIST (0x1203)
-; EMPTY-NEXT:         Enumerator {
-; EMPTY-NEXT:           TypeLeafKind: LF_ENUMERATE (0x1502)
-; EMPTY-NEXT:           AccessSpecifier: Public (0x3)
-; EMPTY-NEXT:           EnumValue: 1
-; EMPTY-NEXT:           Name: apartment
-; EMPTY-NEXT:         }
-; EMPTY-NEXT:         Enumerator {
-; EMPTY-NEXT:           TypeLeafKind: LF_ENUMERATE (0x1502)
-; EMPTY-NEXT:           AccessSpecifier: Public (0x3)
-; EMPTY-NEXT:           EnumValue: 2
-; EMPTY-NEXT:           Name: single
-; EMPTY-NEXT:         }
-; EMPTY-NEXT:         Enumerator {
-; EMPTY-NEXT:           TypeLeafKind: LF_ENUMERATE (0x1502)
-; EMPTY-NEXT:           AccessSpecifier: Public (0x3)
-; EMPTY-NEXT:           EnumValue: 3
-; EMPTY-NEXT:           Name: free
-; EMPTY-NEXT:         }
-; EMPTY-NEXT:         Enumerator {
-; EMPTY-NEXT:           TypeLeafKind: LF_ENUMERATE (0x1502)
-; EMPTY-NEXT:           AccessSpecifier: Public (0x3)
-; EMPTY-NEXT:           EnumValue: 4
-; EMPTY-NEXT:           Name: neutral
-; EMPTY-NEXT:         }
-; EMPTY-NEXT:         Enumerator {
-; EMPTY-NEXT:           TypeLeafKind: LF_ENUMERATE (0x1502)
-; EMPTY-NEXT:           AccessSpecifier: Public (0x3)
-; EMPTY-NEXT:           EnumValue: 5
-; EMPTY-NEXT:           Name: both
-; EMPTY-NEXT:         }
-; EMPTY-NEXT:       }
-; EMPTY-NEXT:       Bytes (
-; EMPTY-NEXT:         0000: 02150300 01006170 6172746D 656E7400  |......apartment.|
-; EMPTY-NEXT:         0010: 02150300 02007369 6E676C65 00F3F2F1  |......single....|
-; EMPTY-NEXT:         0020: 02150300 03006672 656500F1 02150300  |......free......|
-; EMPTY-NEXT:         0030: 04006E65 75747261 6C00F2F1 02150300  |..neutral.......|
-; EMPTY-NEXT:         0040: 0500626F 746800F1                    |..both..|
-; EMPTY-NEXT:       )
-; EMPTY-NEXT:     }
-; EMPTY:          Hash {
-; EMPTY-NEXT:       Number of Hash Buckets: 262143
-; EMPTY-NEXT:       Hash Key Size: 4
-; EMPTY-NEXT:       Values: [205956, 163561, 59811, 208239, 16377, 247078, 194342, 254156, 194536, 167492, 185421, 119540, 261871, 198119, 48056, 251486, 134580, 148190, 113636, 53336, 55779, 220695, 198114, 148734, 81128, 60158, 217249, 174209, 159978, 249504, 141941, 238785, 6214, 94935, 151449, 135589, 73373, 96512, 254299, 17744, 239514, 173189, 130544, 204437, 238560, 144673, 115151, 197306, 256035, 101096, 231280, 52156, 48854, 170035, 177041, 102745, 16947, 183703, 98548, 35693, 171328, 203640, 139292, 49018, 43821, 202555, 165040, 215835, 142625, 52534, 44186, 103930, 110942, 17991, 213215]
-; EMPTY-NEXT:       Adjusters [
-; EMPTY-NEXT:       ]
-; EMPTY-NEXT:     }
-; EMPTY-NEXT:     TypeIndexOffsets [
-; EMPTY-NEXT:       Index: 0x1000, Offset: 0
-; EMPTY-NEXT:     ]
-; EMPTY:        Type Info Stream (IPI) {
-; EMPTY-NEXT:     IPI Version: 20040203
-; EMPTY-NEXT:     Record count: 15
-; EMPTY-NEXT:     Records [
-; EMPTY-NEXT:       {
-; EMPTY-NEXT:         UdtModSourceLine (0x1000) {
-; EMPTY-NEXT:           TypeLeafKind: LF_UDT_MOD_SRC_LINE (0x1607)
-; EMPTY-NEXT:           UDT: __vc_attributes::threadingAttribute (0x100B)
-; EMPTY-NEXT:           SourceFile: <unknown simple type> (0x1)
-; EMPTY-NEXT:           LineNumber: 481
-; EMPTY-NEXT:           Module: 1
-; EMPTY-NEXT:         }
-; EMPTY-NEXT:         Bytes (
-; EMPTY-NEXT:           0000: 0B100000 01000000 E1010000 0100F2F1  |................|
-; EMPTY-NEXT:         )
-; EMPTY-NEXT:       }
-; EMPTY-NEXT:       {
-; EMPTY-NEXT:         UdtModSourceLine (0x1001) {
-; EMPTY-NEXT:           TypeLeafKind: LF_UDT_MOD_SRC_LINE (0x1607)
-; EMPTY-NEXT:           UDT: __vc_attributes::event_receiverAttribute (0x1017)
-; EMPTY-NEXT:           SourceFile: <unknown simple type> (0x1)
-; EMPTY-NEXT:           LineNumber: 194
-; EMPTY-NEXT:           Module: 1
-; EMPTY-NEXT:         }
-; EMPTY-NEXT:         Bytes (
-; EMPTY-NEXT:           0000: 17100000 01000000 C2000000 0100F2F1  |................|
-; EMPTY-NEXT:         )
-; EMPTY-NEXT:       }
-; EMPTY-NEXT:       {
-; EMPTY-NEXT:         UdtModSourceLine (0x1002) {
-; EMPTY-NEXT:           TypeLeafKind: LF_UDT_MOD_SRC_LINE (0x1607)
-; EMPTY-NEXT:           UDT: __vc_attributes::aggregatableAttribute (0x1021)
-; EMPTY-NEXT:           SourceFile: <unknown simple type> (0x1)
-; EMPTY-NEXT:           LineNumber: 603
-; EMPTY-NEXT:           Module: 1
-; EMPTY-NEXT:         }
-; EMPTY-NEXT:         Bytes (
-; EMPTY-NEXT:           0000: 21100000 01000000 5B020000 0100F2F1  |!.......[.......|
-; EMPTY-NEXT:         )
-; EMPTY-NEXT:       }
-; EMPTY-NEXT:       {
-; EMPTY-NEXT:         UdtModSourceLine (0x1003) {
-; EMPTY-NEXT:           TypeLeafKind: LF_UDT_MOD_SRC_LINE (0x1607)
-; EMPTY-NEXT:           UDT: __vc_attributes::event_sourceAttribute (0x102C)
-; EMPTY-NEXT:           SourceFile: <unknown simple type> (0x1)
-; EMPTY-NEXT:           LineNumber: 1200
-; EMPTY-NEXT:           Module: 1
-; EMPTY-NEXT:         }
-; EMPTY-NEXT:         Bytes (
-; EMPTY-NEXT:           0000: 2C100000 01000000 B0040000 0100F2F1  |,...............|
-; EMPTY-NEXT:         )
-; EMPTY-NEXT:       }
-; EMPTY-NEXT:       {
-; EMPTY-NEXT:         UdtModSourceLine (0x1004) {
-; EMPTY-NEXT:           TypeLeafKind: LF_UDT_MOD_SRC_LINE (0x1607)
-; EMPTY-NEXT:           UDT: __vc_attributes::moduleAttribute (0x103A)
-; EMPTY-NEXT:           SourceFile: <unknown simple type> (0x1)
-; EMPTY-NEXT:           LineNumber: 540
-; EMPTY-NEXT:           Module: 1
-; EMPTY-NEXT:         }
-; EMPTY-NEXT:         Bytes (
-; EMPTY-NEXT:           0000: 3A100000 01000000 1C020000 0100F2F1  |:...............|
-; EMPTY-NEXT:         )
-; EMPTY-NEXT:       }
-; EMPTY-NEXT:       {
-; EMPTY-NEXT:         UdtModSourceLine (0x1005) {
-; EMPTY-NEXT:           TypeLeafKind: LF_UDT_MOD_SRC_LINE (0x1607)
-; EMPTY-NEXT:           UDT: __vc_attributes::helper_attributes::usageAttribute (0x1042)
-; EMPTY-NEXT:           SourceFile: <unknown simple type> (0x1)
-; EMPTY-NEXT:           LineNumber: 108
-; EMPTY-NEXT:           Module: 1
-; EMPTY-NEXT:         }
-; EMPTY-NEXT:         Bytes (
-; EMPTY-NEXT:           0000: 42100000 01000000 6C000000 0100F2F1  |B.......l.......|
-; EMPTY-NEXT:         )
-; EMPTY-NEXT:       }
-; EMPTY-NEXT:       {
-; EMPTY-NEXT:         UdtModSourceLine (0x1006) {
-; EMPTY-NEXT:           TypeLeafKind: LF_UDT_MOD_SRC_LINE (0x1607)
-; EMPTY-NEXT:           UDT: __vc_attributes::helper_attributes::v1_alttypeAttribute (0x104A)
-; EMPTY-NEXT:           SourceFile: <unknown simple type> (0x1)
-; EMPTY-NEXT:           LineNumber: 96
-; EMPTY-NEXT:           Module: 1
-; EMPTY-NEXT:         }
-; EMPTY-NEXT:         Bytes (
-; EMPTY-NEXT:           0000: 4A100000 01000000 60000000 0100F2F1  |J.......`.......|
-; EMPTY-NEXT:         )
-; EMPTY-NEXT:       }
-; EMPTY-NEXT:       {
-; EMPTY-NEXT:         StringId (0x1007) {
-; EMPTY-NEXT:           TypeLeafKind: LF_STRING_ID (0x1605)
-; EMPTY-NEXT:           Id: 0x0
-; EMPTY-NEXT:           StringData: d:\src\llvm\test\DebugInfo\PDB\Inputs
-; EMPTY-NEXT:         }
-; EMPTY-NEXT:         Bytes (
-; EMPTY-NEXT:           0000: 00000000 643A5C73 72635C6C 6C766D5C  |....d:\src\llvm\|
-; EMPTY-NEXT:           0010: 74657374 5C446562 7567496E 666F5C50  |test\DebugInfo\P|
-; EMPTY-NEXT:           0020: 44425C49 6E707574 7300F2F1           |DB\Inputs...|
-; EMPTY-NEXT:         )
-; EMPTY-NEXT:       }
-; EMPTY-NEXT:       {
-; EMPTY-NEXT:         StringId (0x1008) {
-; EMPTY-NEXT:           TypeLeafKind: LF_STRING_ID (0x1605)
-; EMPTY-NEXT:           Id: 0x0
-; EMPTY-NEXT:           StringData: C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\BIN\cl.exe
-; EMPTY-NEXT:         }
-; EMPTY-NEXT:         Bytes (
-; EMPTY-NEXT:           0000: 00000000 433A5C50 726F6772 616D2046  |....C:\Program F|
-; EMPTY-NEXT:           0010: 696C6573 20287838 36295C4D 6963726F  |iles (x86)\Micro|
-; EMPTY-NEXT:           0020: 736F6674 20566973 75616C20 53747564  |soft Visual Stud|
-; EMPTY-NEXT:           0030: 696F2031 322E305C 56435C42 494E5C63  |io 12.0\VC\BIN\c|
-; EMPTY-NEXT:           0040: 6C2E6578 6500F2F1                    |l.exe...|
-; EMPTY-NEXT:         )
-; EMPTY-NEXT:       }
-; EMPTY-NEXT:       {
-; EMPTY-NEXT:         StringId (0x1009) {
-; EMPTY-NEXT:           TypeLeafKind: LF_STRING_ID (0x1605)
-; EMPTY-NEXT:           Id: 0x0
-; EMPTY-NEXT:           StringData: empty.cpp
-; EMPTY-NEXT:         }
-; EMPTY-NEXT:         Bytes (
-; EMPTY-NEXT:           0000: 00000000 656D7074 792E6370 7000F2F1  |....empty.cpp...|
-; EMPTY-NEXT:         )
-; EMPTY-NEXT:       }
-; EMPTY-NEXT:       {
-; EMPTY-NEXT:         StringId (0x100A) {
-; EMPTY-NEXT:           TypeLeafKind: LF_STRING_ID (0x1605)
-; EMPTY-NEXT:           Id: 0x0
-; EMPTY-NEXT:           StringData: d:\src\llvm\test\DebugInfo\PDB\Inputs\vc120.pdb
-; EMPTY-NEXT:         }
-; EMPTY-NEXT:         Bytes (
-; EMPTY-NEXT:           0000: 00000000 643A5C73 72635C6C 6C766D5C  |....d:\src\llvm\|
-; EMPTY-NEXT:           0010: 74657374 5C446562 7567496E 666F5C50  |test\DebugInfo\P|
-; EMPTY-NEXT:           0020: 44425C49 6E707574 735C7663 3132302E  |DB\Inputs\vc120.|
-; EMPTY-NEXT:           0030: 70646200                             |pdb.|
-; EMPTY-NEXT:         )
-; EMPTY-NEXT:       }
-; EMPTY-NEXT:       {
-; EMPTY-NEXT:         StringId (0x100B) {
-; EMPTY-NEXT:           TypeLeafKind: LF_STRING_ID (0x1605)
-; EMPTY-NEXT:           Id: 0x0
-; EMPTY-NEXT:           StringData: -Zi -MT -I"C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\INCLUDE" -I"C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\ATLMFC\INCLUDE" -I"C:\Program Files (x86)\Windows Kits\8.1\include\shared" -I"C:\Program Files (x86)\Windows
-; EMPTY-NEXT:         }
-; EMPTY-NEXT:         Bytes (
-; EMPTY-NEXT:           0000: 00000000 2D5A6920 2D4D5420 2D492243  |....-Zi -MT -I"C|
-; EMPTY-NEXT:           0010: 3A5C5072 6F677261 6D204669 6C657320  |:\Program Files |
-; EMPTY-NEXT:           0020: 28783836 295C4D69 63726F73 6F667420  |(x86)\Microsoft |
-; EMPTY-NEXT:           0030: 56697375 616C2053 74756469 6F203132  |Visual Studio 12|
-; EMPTY-NEXT:           0040: 2E305C56 435C494E 434C5544 4522202D  |.0\VC\INCLUDE" -|
-; EMPTY-NEXT:           0050: 4922433A 5C50726F 6772616D 2046696C  |I"C:\Program Fil|
-; EMPTY-NEXT:           0060: 65732028 78383629 5C4D6963 726F736F  |es (x86)\Microso|
-; EMPTY-NEXT:           0070: 66742056 69737561 6C205374 7564696F  |ft Visual Studio|
-; EMPTY-NEXT:           0080: 2031322E 305C5643 5C41544C 4D46435C  | 12.0\VC\ATLMFC\|
-; EMPTY-NEXT:           0090: 494E434C 55444522 202D4922 433A5C50  |INCLUDE" -I"C:\P|
-; EMPTY-NEXT:           00A0: 726F6772 616D2046 696C6573 20287838  |rogram Files (x8|
-; EMPTY-NEXT:           00B0: 36295C57 696E646F 7773204B 6974735C  |6)\Windows Kits\|
-; EMPTY-NEXT:           00C0: 382E315C 696E636C 7564655C 73686172  |8.1\include\shar|
-; EMPTY-NEXT:           00D0: 65642220 2D492243 3A5C5072 6F677261  |ed" -I"C:\Progra|
-; EMPTY-NEXT:           00E0: 6D204669 6C657320 28783836 295C5769  |m Files (x86)\Wi|
-; EMPTY-NEXT:           00F0: 6E646F77 7300F2F1                    |ndows...|
-; EMPTY-NEXT:         )
-; EMPTY-NEXT:       }
-; EMPTY-NEXT:       {
-; EMPTY-NEXT:         StringList (0x100C) {
-; EMPTY-NEXT:           TypeLeafKind: LF_SUBSTR_LIST (0x1604)
-; EMPTY-NEXT:           NumStrings: 1
-; EMPTY-NEXT:           Strings [
-; EMPTY-NEXT:             String: -Zi -MT -I"C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\INCLUDE" -I"C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\ATLMFC\INCLUDE" -I"C:\Program Files (x86)\Windows Kits\8.1\include\shared" -I"C:\Program Files (x86)\Windows
-; EMPTY-NEXT:           ]
-; EMPTY-NEXT:         }
-; EMPTY-NEXT:         Bytes (
-; EMPTY-NEXT:           0000: 01000000 0B100000                    |........|
-; EMPTY-NEXT:         )
-; EMPTY-NEXT:       }
-; EMPTY-NEXT:       {
-; EMPTY-NEXT:         StringId (0x100D) {
-; EMPTY-NEXT:           TypeLeafKind: LF_STRING_ID (0x1605)
-; EMPTY-NEXT:           Id: "-Zi -MT -I"C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\INCLUDE" -I"C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\ATLMFC\INCLUDE" -I"C:\Program Files (x86)\Windows Kits\8.1\include\shared" -I"C:\Program Files (x86)\Windows" (0x100C)
-; EMPTY-NEXT:           StringData:  Kits\8.1\include\um" -I"C:\Program Files (x86)\Windows Kits\8.1\include\winrt" -TP -X
-; EMPTY-NEXT:         }
-; EMPTY-NEXT:         Bytes (
-; EMPTY-NEXT:           0000: 0C100000 204B6974 735C382E 315C696E  |.... Kits\8.1\in|
-; EMPTY-NEXT:           0010: 636C7564 655C756D 22202D49 22433A5C  |clude\um" -I"C:\|
-; EMPTY-NEXT:           0020: 50726F67 72616D20 46696C65 73202878  |Program Files (x|
-; EMPTY-NEXT:           0030: 3836295C 57696E64 6F777320 4B697473  |86)\Windows Kits|
-; EMPTY-NEXT:           0040: 5C382E31 5C696E63 6C756465 5C77696E  |\8.1\include\win|
-; EMPTY-NEXT:           0050: 72742220 2D545020 2D5800F1           |rt" -TP -X..|
-; EMPTY-NEXT:         )
-; EMPTY-NEXT:       }
-; EMPTY-NEXT:       {
-; EMPTY-NEXT:         BuildInfo (0x100E) {
-; EMPTY-NEXT:           TypeLeafKind: LF_BUILDINFO (0x1603)
-; EMPTY-NEXT:           NumArgs: 5
-; EMPTY-NEXT:           Arguments [
-; EMPTY-NEXT:             ArgType: d:\src\llvm\test\DebugInfo\PDB\Inputs (0x1007)
-; EMPTY-NEXT:             ArgType: C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\BIN\cl.exe (0x1008)
-; EMPTY-NEXT:             ArgType: empty.cpp (0x1009)
-; EMPTY-NEXT:             ArgType: d:\src\llvm\test\DebugInfo\PDB\Inputs\vc120.pdb (0x100A)
-; EMPTY-NEXT:             ArgType:  Kits\8.1\include\um" -I"C:\Program Files (x86)\Windows Kits\8.1\include\winrt" -TP -X (0x100D)
-; EMPTY-NEXT:           ]
-; EMPTY-NEXT:         }
-; EMPTY-NEXT:         Bytes (
-; EMPTY-NEXT:           0000: 05000710 00000810 00000910 00000A10  |................|
-; EMPTY-NEXT:           0010: 00000D10 0000F2F1                    |........|
-; EMPTY-NEXT:         )
-; EMPTY-NEXT:       }
-; EMPTY-NEXT:       TypeIndexOffsets [
-; EMPTY-NEXT:         Index: 0x1000, Offset: 0
-; EMPTY-NEXT:       ]
-; EMPTY-NEXT:     ]
-; EMPTY-NEXT:   }
-; EMPTY:      DBI Stream {
-; EMPTY-NEXT:   Dbi Version: 19990903
-; EMPTY-NEXT:   Age: 1
-; EMPTY-NEXT:   Incremental Linking: Yes
-; EMPTY-NEXT:   Has CTypes: No
-; EMPTY-NEXT:   Is Stripped: No
-; EMPTY-NEXT:   Machine Type: x86
-; EMPTY-NEXT:   Symbol Record Stream Index: 8
-; EMPTY-NEXT:   Public Symbol Stream Index: 7
-; EMPTY-NEXT:   Global Symbol Stream Index: 6
-; EMPTY-NEXT:   Toolchain Version: 12.0
-; EMPTY-NEXT:   mspdb120.dll version: 12.0.31101
-; EMPTY-NEXT:   Modules [
-; EMPTY-NEXT:     {
-; EMPTY-NEXT:       Name: d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj
-; EMPTY-NEXT:       Debug Stream Index: 12
-; EMPTY-NEXT:       Object File Name: d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj
-; EMPTY-NEXT:       Num Files: 1
-; EMPTY-NEXT:       Source File Name Idx: 0
-; EMPTY-NEXT:       Pdb File Name Idx: 0
-; EMPTY-NEXT:       Line Info Byte Size: 0
-; EMPTY-NEXT:       C13 Line Info Byte Size: 88
-; EMPTY-NEXT:       Symbol Byte Size: 208
-; EMPTY-NEXT:       Type Server Index: 0
-; EMPTY-NEXT:       Has EC Info: No
-; EMPTY-NEXT:       1 Contributing Source Files [
-; EMPTY-NEXT:         d:\src\llvm\test\debuginfo\pdb\inputs\empty.cpp
-; EMPTY-NEXT:       ]
-; EMPTY-NEXT:       Symbols [
-; EMPTY-NEXT:         {
-; EMPTY-NEXT:           ObjectName {
-; EMPTY-NEXT:             Signature: 0x0
-; EMPTY-NEXT:             ObjectName: d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj
-; EMPTY-NEXT:           }
-; EMPTY-NEXT:           Bytes (
-; EMPTY-NEXT:             0000: 00000000 643A5C73 72635C6C 6C766D5C  |....d:\src\llvm\|
-; EMPTY-NEXT:             0010: 74657374 5C446562 7567496E 666F5C50  |test\DebugInfo\P|
-; EMPTY-NEXT:             0020: 44425C49 6E707574 735C656D 7074792E  |DB\Inputs\empty.|
-; EMPTY-NEXT:             0030: 6F626A00                             |obj.|
-; EMPTY-NEXT:           )
-; EMPTY-NEXT:         }
-; EMPTY-NEXT:         {
-; EMPTY-NEXT:           CompilerFlags3 {
-; EMPTY-NEXT:             Language: Cpp (0x1)
-; EMPTY-NEXT:             Flags [ (0x2000)
-; EMPTY-NEXT:               SecurityChecks (0x2000)
-; EMPTY-NEXT:             ]
-; EMPTY-NEXT:             Machine: Pentium3 (0x7)
-; EMPTY-NEXT:             FrontendVersion: 18.0.31101.0
-; EMPTY-NEXT:             BackendVersion: 18.0.31101.0
-; EMPTY-NEXT:             VersionName: Microsoft (R) Optimizing Compiler
-; EMPTY-NEXT:           }
-; EMPTY-NEXT:           Bytes (
-; EMPTY-NEXT:             0000: 01200000 07001200 00007D79 00001200  |. ........}y....|
-; EMPTY-NEXT:             0010: 00007D79 00004D69 63726F73 6F667420  |..}y..Microsoft |
-; EMPTY-NEXT:             0020: 28522920 4F707469 6D697A69 6E672043  |(R) Optimizing C|
-; EMPTY-NEXT:             0030: 6F6D7069 6C657200                    |ompiler.|
-; EMPTY-NEXT:           )
-; EMPTY-NEXT:         }
-; EMPTY-NEXT:         {
-; EMPTY-NEXT:           ProcStart {
-; EMPTY-NEXT:             Kind: S_GPROC32 (0x1110)
-; EMPTY-NEXT:             PtrParent: 0x0
-; EMPTY-NEXT:             PtrEnd: 0xC4
-; EMPTY-NEXT:             PtrNext: 0x0
-; EMPTY-NEXT:             CodeSize: 0xA
-; EMPTY-NEXT:             DbgStart: 0x3
-; EMPTY-NEXT:             DbgEnd: 0x8
-; EMPTY-NEXT:             FunctionType: int () (0x1001)
-; EMPTY-NEXT:             Segment: 0x1
-; EMPTY-NEXT:             Flags [ (0x1)
-; EMPTY-NEXT:               HasFP (0x1)
-; EMPTY-NEXT:             ]
-; EMPTY-NEXT:             DisplayName: main
-; EMPTY-NEXT:           }
-; EMPTY-NEXT:           Bytes (
-; EMPTY-NEXT:             0000: 00000000 C4000000 00000000 0A000000  |................|
-; EMPTY-NEXT:             0010: 03000000 08000000 01100000 10000000  |................|
-; EMPTY-NEXT:             0020: 0100016D 61696E00                    |...main.|
-; EMPTY-NEXT:           )
-; EMPTY-NEXT:         }
-; EMPTY-NEXT:         {
-; EMPTY-NEXT:           FrameProc {
-; EMPTY-NEXT:             TotalFrameBytes: 0x0
-; EMPTY-NEXT:             PaddingFrameBytes: 0x0
-; EMPTY-NEXT:             OffsetToPadding: 0x0
-; EMPTY-NEXT:             BytesOfCalleeSavedRegisters: 0x0
-; EMPTY-NEXT:             OffsetOfExceptionHandler: 0x0
-; EMPTY-NEXT:             SectionIdOfExceptionHandler: 0x0
-; EMPTY-NEXT:             Flags [ (0x128200)
-; EMPTY-NEXT:               AsynchronousExceptionHandling (0x200)
-; EMPTY-NEXT:               OptimizedForSpeed (0x100000)
-; EMPTY-NEXT:             ]
-; EMPTY-NEXT:           }
-; EMPTY-NEXT:           Bytes (
-; EMPTY-NEXT:             0000: 00000000 00000000 00000000 00000000  |................|
-; EMPTY-NEXT:             0010: 00000000 00000082 12000000           |............|
-; EMPTY-NEXT:           )
-; EMPTY-NEXT:         }
-; EMPTY-NEXT:         {
-; EMPTY-NEXT:           BlockEnd {
-; EMPTY-NEXT:           }
-; EMPTY-NEXT:           Bytes (
-; EMPTY-NEXT:           )
-; EMPTY-NEXT:         }
-; EMPTY-NEXT:         {
-; EMPTY-NEXT:           BuildInfo {
-; EMPTY-NEXT:             BuildId: 4110
-; EMPTY-NEXT:           }
-; EMPTY-NEXT:           Bytes (
-; EMPTY-NEXT:             0000: 0E100000                             |....|
-; EMPTY-NEXT:           )
-; EMPTY-NEXT:         }
-; EMPTY-NEXT:       ]
-; EMPTY-NEXT:       Subsections [
-; EMPTY-NEXT:         Lines {
-; EMPTY-NEXT:           RelocSegment: 1
-; EMPTY-NEXT:           RelocOffset: 16
-; EMPTY-NEXT:           CodeSize: 10
-; EMPTY-NEXT:           HasColumns: No
-; EMPTY-NEXT:           FileEntry {
-; EMPTY-NEXT:             FileName: d:\src\llvm\test\debuginfo\pdb\inputs\empty.cpp
-; EMPTY-NEXT:             Line {
-; EMPTY-NEXT:               Offset: 0
-; EMPTY-NEXT:               LineNumberStart: 5
-; EMPTY-NEXT:               EndDelta: 0
-; EMPTY-NEXT:               IsStatement: Yes
-; EMPTY-NEXT:             }
-; EMPTY-NEXT:             Line {
-; EMPTY-NEXT:               Offset: 3
-; EMPTY-NEXT:               LineNumberStart: 6
-; EMPTY-NEXT:               EndDelta: 0
-; EMPTY-NEXT:               IsStatement: Yes
-; EMPTY-NEXT:             }
-; EMPTY-NEXT:             Line {
-; EMPTY-NEXT:               Offset: 8
-; EMPTY-NEXT:               LineNumberStart: 7
-; EMPTY-NEXT:               EndDelta: 0
-; EMPTY-NEXT:               IsStatement: Yes
-; EMPTY-NEXT:             }
-; EMPTY-NEXT:           }
-; EMPTY-NEXT:         }
-; EMPTY-NEXT:         FileChecksums {
-; EMPTY-NEXT:           Checksum {
-; EMPTY-NEXT:             FileName: d:\src\llvm\test\debuginfo\pdb\inputs\empty.cpp
-; EMPTY-NEXT:             Kind: MD5 (0x1)
-; EMPTY-NEXT:             Checksum (
-; EMPTY-NEXT:               0000: A0A5BD0D 3ECD93FC 29D19DE8 26FBF4BC  |....>...)...&...|
-; EMPTY-NEXT:             )
-; EMPTY-NEXT:           }
-; EMPTY-NEXT:         }
-; EMPTY-NEXT:       ]
-; EMPTY-NEXT:     }
-; EMPTY-NEXT:     {
-; EMPTY-NEXT:       Name: * Linker *
-; EMPTY-NEXT:       Debug Stream Index: 14
-; EMPTY-NEXT:       Object File Name:
-; EMPTY-NEXT:       Num Files: 0
-; EMPTY-NEXT:       Source File Name Idx: 0
-; EMPTY-NEXT:       Pdb File Name Idx: 1
-; EMPTY-NEXT:       Line Info Byte Size: 0
-; EMPTY-NEXT:       C13 Line Info Byte Size: 0
-; EMPTY-NEXT:       Symbol Byte Size: 516
-; EMPTY-NEXT:       Type Server Index: 0
-; EMPTY-NEXT:       Has EC Info: No
-; EMPTY-NEXT:       0 Contributing Source Files [
-; EMPTY-NEXT:       ]
-; EMPTY-NEXT:       Symbols [
-; EMPTY-NEXT:         {
-; EMPTY-NEXT:           ObjectName {
-; EMPTY-NEXT:             Signature: 0x0
-; EMPTY-NEXT:             ObjectName: * Linker *
-; EMPTY-NEXT:           }
-; EMPTY-NEXT:           Bytes (
-; EMPTY-NEXT:             0000: 00000000 2A204C69 6E6B6572 202A0000  |....* Linker *..|
-; EMPTY-NEXT:           )
-; EMPTY-NEXT:         }
-; EMPTY-NEXT:         {
-; EMPTY-NEXT:           CompilerFlags3 {
-; EMPTY-NEXT:             Language: Link (0x7)
-; EMPTY-NEXT:             Flags [ (0x0)
-; EMPTY-NEXT:             ]
-; EMPTY-NEXT:             Machine: Intel80386 (0x3)
-; EMPTY-NEXT:             FrontendVersion: 0.0.0.0
-; EMPTY-NEXT:             BackendVersion: 12.0.31101.0
-; EMPTY-NEXT:             VersionName: Microsoft (R) LINK
-; EMPTY-NEXT:           }
-; EMPTY-NEXT:           Bytes (
-; EMPTY-NEXT:             0000: 07000000 03000000 00000000 00000C00  |................|
-; EMPTY-NEXT:             0010: 00007D79 00004D69 63726F73 6F667420  |..}y..Microsoft |
-; EMPTY-NEXT:             0020: 28522920 4C494E4B 00000000           |(R) LINK....|
-; EMPTY-NEXT:           )
-; EMPTY-NEXT:         }
-; EMPTY-NEXT:         {
-; EMPTY-NEXT:           EnvBlock {
-; EMPTY-NEXT:             Entries [
-; EMPTY-NEXT:               cwd
-; EMPTY-NEXT:               d:\src\llvm\test\DebugInfo\PDB\Inputs
-; EMPTY-NEXT:               exe
-; EMPTY-NEXT:               C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\BIN\link.exe
-; EMPTY-NEXT:               pdb
-; EMPTY-NEXT:               d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.pdb
-; EMPTY-NEXT:             ]
-; EMPTY-NEXT:           }
-; EMPTY-NEXT:           Bytes (
-; EMPTY-NEXT:             0000: 00637764 00643A5C 7372635C 6C6C766D  |.cwd.d:\src\llvm|
-; EMPTY-NEXT:             0010: 5C746573 745C4465 62756749 6E666F5C  |\test\DebugInfo\|
-; EMPTY-NEXT:             0020: 5044425C 496E7075 74730065 78650043  |PDB\Inputs.exe.C|
-; EMPTY-NEXT:             0030: 3A5C5072 6F677261 6D204669 6C657320  |:\Program Files |
-; EMPTY-NEXT:             0040: 28783836 295C4D69 63726F73 6F667420  |(x86)\Microsoft |
-; EMPTY-NEXT:             0050: 56697375 616C2053 74756469 6F203132  |Visual Studio 12|
-; EMPTY-NEXT:             0060: 2E305C56 435C4249 4E5C6C69 6E6B2E65  |.0\VC\BIN\link.e|
-; EMPTY-NEXT:             0070: 78650070 64620064 3A5C7372 635C6C6C  |xe.pdb.d:\src\ll|
-; EMPTY-NEXT:             0080: 766D5C74 6573745C 44656275 67496E66  |vm\test\DebugInf|
-; EMPTY-NEXT:             0090: 6F5C5044 425C496E 70757473 5C656D70  |o\PDB\Inputs\emp|
-; EMPTY-NEXT:             00A0: 74792E70 64620000                    |ty.pdb..|
-; EMPTY-NEXT:           )
-; EMPTY-NEXT:         }
-; EMPTY-NEXT:         {
-; EMPTY-NEXT:           Trampoline {
-; EMPTY-NEXT:             Type: TrampIncremental (0x0)
-; EMPTY-NEXT:             Size: 5
-; EMPTY-NEXT:             ThunkOff: 5
-; EMPTY-NEXT:             TargetOff: 16
-; EMPTY-NEXT:             ThunkSection: 1
-; EMPTY-NEXT:             TargetSection: 1
-; EMPTY-NEXT:           }
-; EMPTY-NEXT:           Bytes (
-; EMPTY-NEXT:             0000: 00000500 05000000 10000000 01000100  |................|
-; EMPTY-NEXT:           )
-; EMPTY-NEXT:         }
-; EMPTY-NEXT:         {
-; EMPTY-NEXT:           Section {
-; EMPTY-NEXT:             SectionNumber: 1
-; EMPTY-NEXT:             Alignment: 12
-; EMPTY-NEXT:             Rva: 4096
-; EMPTY-NEXT:             Length: 4122
-; EMPTY-NEXT:             Characteristics [ (0x60000020)
-; EMPTY-NEXT:               IMAGE_SCN_CNT_CODE (0x20)
-; EMPTY-NEXT:               IMAGE_SCN_MEM_EXECUTE (0x20000000)
-; EMPTY-NEXT:               IMAGE_SCN_MEM_READ (0x40000000)
-; EMPTY-NEXT:             ]
-; EMPTY-NEXT:             Name: .text
-; EMPTY-NEXT:           }
-; EMPTY-NEXT:           Bytes (
-; EMPTY-NEXT:             0000: 01000C00 00100000 1A100000 20000060  |............ ..`|
-; EMPTY-NEXT:             0010: 2E746578 74000000                    |.text...|
-; EMPTY-NEXT:           )
-; EMPTY-NEXT:         }
-; EMPTY-NEXT:         {
-; EMPTY-NEXT:           COFF Group {
-; EMPTY-NEXT:             Size: 4122
-; EMPTY-NEXT:             Characteristics [ (0x60000020)
-; EMPTY-NEXT:               IMAGE_SCN_CNT_CODE (0x20)
-; EMPTY-NEXT:               IMAGE_SCN_MEM_EXECUTE (0x20000000)
-; EMPTY-NEXT:               IMAGE_SCN_MEM_READ (0x40000000)
-; EMPTY-NEXT:             ]
-; EMPTY-NEXT:             Offset: 0
-; EMPTY-NEXT:             Segment: 1
-; EMPTY-NEXT:             Name: .text$mn
-; EMPTY-NEXT:           }
-; EMPTY-NEXT:           Bytes (
-; EMPTY-NEXT:             0000: 1A100000 20000060 00000000 01002E74  |.... ..`.......t|
-; EMPTY-NEXT:             0010: 65787424 6D6E0000                    |ext$mn..|
-; EMPTY-NEXT:           )
-; EMPTY-NEXT:         }
-; EMPTY-NEXT:         {
-; EMPTY-NEXT:           Section {
-; EMPTY-NEXT:             SectionNumber: 2
-; EMPTY-NEXT:             Alignment: 12
-; EMPTY-NEXT:             Rva: 12288
-; EMPTY-NEXT:             Length: 690
-; EMPTY-NEXT:             Characteristics [ (0x40000040)
-; EMPTY-NEXT:               IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
-; EMPTY-NEXT:               IMAGE_SCN_MEM_READ (0x40000000)
-; EMPTY-NEXT:             ]
-; EMPTY-NEXT:             Name: .rdata
-; EMPTY-NEXT:           }
-; EMPTY-NEXT:           Bytes (
-; EMPTY-NEXT:             0000: 02000C00 00300000 B2020000 40000040  |.....0......@..@|
-; EMPTY-NEXT:             0010: 2E726461 74610000                    |.rdata..|
-; EMPTY-NEXT:           )
-; EMPTY-NEXT:         }
-; EMPTY-NEXT:         {
-; EMPTY-NEXT:           COFF Group {
-; EMPTY-NEXT:             Size: 323
-; EMPTY-NEXT:             Characteristics [ (0x40000040)
-; EMPTY-NEXT:               IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
-; EMPTY-NEXT:               IMAGE_SCN_MEM_READ (0x40000000)
-; EMPTY-NEXT:             ]
-; EMPTY-NEXT:             Offset: 0
-; EMPTY-NEXT:             Segment: 2
-; EMPTY-NEXT:             Name: .rdata
-; EMPTY-NEXT:           }
-; EMPTY-NEXT:           Bytes (
-; EMPTY-NEXT:             0000: 43010000 40000040 00000000 02002E72  |C...@..@.......r|
-; EMPTY-NEXT:             0010: 64617461 00000000                    |data....|
-; EMPTY-NEXT:           )
-; EMPTY-NEXT:         }
-; EMPTY-NEXT:         {
-; EMPTY-NEXT:           COFF Group {
-; EMPTY-NEXT:             Size: 0
-; EMPTY-NEXT:             Characteristics [ (0x40000040)
-; EMPTY-NEXT:               IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
-; EMPTY-NEXT:               IMAGE_SCN_MEM_READ (0x40000000)
-; EMPTY-NEXT:             ]
-; EMPTY-NEXT:             Offset: 323
-; EMPTY-NEXT:             Segment: 2
-; EMPTY-NEXT:             Name: .edata
-; EMPTY-NEXT:           }
-; EMPTY-NEXT:           Bytes (
-; EMPTY-NEXT:             0000: 00000000 40000040 43010000 02002E65  |....@..@C......e|
-; EMPTY-NEXT:             0010: 64617461 00000000                    |data....|
-; EMPTY-NEXT:           )
-; EMPTY-NEXT:         }
-; EMPTY-NEXT:         {
-; EMPTY-NEXT:           COFF Group {
-; EMPTY-NEXT:             Size: 366
-; EMPTY-NEXT:             Characteristics [ (0x40000040)
-; EMPTY-NEXT:               IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
-; EMPTY-NEXT:               IMAGE_SCN_MEM_READ (0x40000000)
-; EMPTY-NEXT:             ]
-; EMPTY-NEXT:             Offset: 324
-; EMPTY-NEXT:             Segment: 2
-; EMPTY-NEXT:             Name: .rdata$debug
-; EMPTY-NEXT:           }
-; EMPTY-NEXT:           Bytes (
-; EMPTY-NEXT:             0000: 6E010000 40000040 44010000 02002E72  |n...@..@D......r|
-; EMPTY-NEXT:             0010: 64617461 24646562 75670000           |data$debug..|
-; EMPTY-NEXT:           )
-; EMPTY-NEXT:         }
-; EMPTY-NEXT:         {
-; EMPTY-NEXT:           Section {
-; EMPTY-NEXT:             SectionNumber: 3
-; EMPTY-NEXT:             Alignment: 12
-; EMPTY-NEXT:             Rva: 16384
-; EMPTY-NEXT:             Length: 4
-; EMPTY-NEXT:             Characteristics [ (0xC0000040)
-; EMPTY-NEXT:               IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
-; EMPTY-NEXT:               IMAGE_SCN_MEM_READ (0x40000000)
-; EMPTY-NEXT:               IMAGE_SCN_MEM_WRITE (0x80000000)
-; EMPTY-NEXT:             ]
-; EMPTY-NEXT:             Name: .data
-; EMPTY-NEXT:           }
-; EMPTY-NEXT:           Bytes (
-; EMPTY-NEXT:             0000: 03000C00 00400000 04000000 400000C0  |.....@......@...|
-; EMPTY-NEXT:             0010: 2E646174 61000000                    |.data...|
-; EMPTY-NEXT:           )
-; EMPTY-NEXT:         }
-; EMPTY-NEXT:         {
-; EMPTY-NEXT:           COFF Group {
-; EMPTY-NEXT:             Size: 4
-; EMPTY-NEXT:             Characteristics [ (0xC0000080)
-; EMPTY-NEXT:               IMAGE_SCN_CNT_UNINITIALIZED_DATA (0x80)
-; EMPTY-NEXT:               IMAGE_SCN_MEM_READ (0x40000000)
-; EMPTY-NEXT:               IMAGE_SCN_MEM_WRITE (0x80000000)
-; EMPTY-NEXT:             ]
-; EMPTY-NEXT:             Offset: 0
-; EMPTY-NEXT:             Segment: 3
-; EMPTY-NEXT:             Name: .bss
-; EMPTY-NEXT:           }
-; EMPTY-NEXT:           Bytes (
-; EMPTY-NEXT:             0000: 04000000 800000C0 00000000 03002E62  |...............b|
-; EMPTY-NEXT:             0010: 73730000                             |ss..|
-; EMPTY-NEXT:           )
-; EMPTY-NEXT:         }
-; EMPTY-NEXT:         {
-; EMPTY-NEXT:           Section {
-; EMPTY-NEXT:             SectionNumber: 4
-; EMPTY-NEXT:             Alignment: 12
-; EMPTY-NEXT:             Rva: 20480
-; EMPTY-NEXT:             Length: 8
-; EMPTY-NEXT:             Characteristics [ (0x42000040)
-; EMPTY-NEXT:               IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
-; EMPTY-NEXT:               IMAGE_SCN_MEM_DISCARDABLE (0x2000000)
-; EMPTY-NEXT:               IMAGE_SCN_MEM_READ (0x40000000)
-; EMPTY-NEXT:             ]
-; EMPTY-NEXT:             Name: .reloc
-; EMPTY-NEXT:           }
-; EMPTY-NEXT:           Bytes (
-; EMPTY-NEXT:             0000: 04000C00 00500000 08000000 40000042  |.....P......@..B|
-; EMPTY-NEXT:             0010: 2E72656C 6F630000                    |.reloc..|
-; EMPTY-NEXT:           )
-; EMPTY-NEXT:         }
-; EMPTY-NEXT:       ]
-; EMPTY-NEXT:       Subsections [
-; EMPTY-NEXT:       ]
-; EMPTY-NEXT:     }
-; EMPTY-NEXT:   ]
-; EMPTY-NEXT: }
-; EMPTY-NEXT: Section Contributions [
-; EMPTY-NEXT:   Contribution {
-; EMPTY-NEXT:     ISect: 1
-; EMPTY-NEXT:     Off: 0
-; EMPTY-NEXT:     Size: 10
-; EMPTY-NEXT:     Characteristics [ (0x60000020)
-; EMPTY-NEXT:       IMAGE_SCN_CNT_CODE (0x20)
-; EMPTY-NEXT:       IMAGE_SCN_MEM_EXECUTE (0x20000000)
-; EMPTY-NEXT:       IMAGE_SCN_MEM_READ (0x40000000)
-; EMPTY-NEXT:     ]
-; EMPTY-NEXT:     Module {
-; EMPTY-NEXT:       Index: 1
-; EMPTY-NEXT:       Name: * Linker *
-; EMPTY-NEXT:     }
-; EMPTY-NEXT:     Data CRC: 0
-; EMPTY-NEXT:     Reloc CRC: 0
-; EMPTY-NEXT:   }
-; EMPTY-NEXT:   Contribution {
-; EMPTY-NEXT:     ISect: 1
-; EMPTY-NEXT:     Off: 16
-; EMPTY-NEXT:     Size: 10
-; EMPTY-NEXT:     Characteristics [ (0x60500020)
-; EMPTY-NEXT:       IMAGE_SCN_ALIGN_16BYTES (0x500000)
-; EMPTY-NEXT:       IMAGE_SCN_CNT_CODE (0x20)
-; EMPTY-NEXT:       IMAGE_SCN_MEM_EXECUTE (0x20000000)
-; EMPTY-NEXT:       IMAGE_SCN_MEM_READ (0x40000000)
-; EMPTY-NEXT:     ]
-; EMPTY-NEXT:     Module {
-; EMPTY-NEXT:       Index: 0
-; EMPTY-NEXT:       Name: d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj
-; EMPTY-NEXT:     }
-; EMPTY-NEXT:     Data CRC: 3617027124
-; EMPTY-NEXT:     Reloc CRC: 0
-; EMPTY-NEXT:   }
-; EMPTY-NEXT:   Contribution {
-; EMPTY-NEXT:     ISect: 2
-; EMPTY-NEXT:     Off: 0
-; EMPTY-NEXT:     Size: 56
-; EMPTY-NEXT:     Characteristics [ (0x40000040)
-; EMPTY-NEXT:       IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
-; EMPTY-NEXT:       IMAGE_SCN_MEM_READ (0x40000000)
-; EMPTY-NEXT:     ]
-; EMPTY-NEXT:     Module {
-; EMPTY-NEXT:       Index: 1
-; EMPTY-NEXT:       Name: * Linker *
-; EMPTY-NEXT:     }
-; EMPTY-NEXT:     Data CRC: 0
-; EMPTY-NEXT:     Reloc CRC: 0
-; EMPTY-NEXT:   }
-; EMPTY-NEXT:   Contribution {
-; EMPTY-NEXT:     ISect: 2
-; EMPTY-NEXT:     Off: 324
-; EMPTY-NEXT:     Size: 72
-; EMPTY-NEXT:     Characteristics [ (0x40300040)
-; EMPTY-NEXT:       IMAGE_SCN_ALIGN_4BYTES (0x300000)
-; EMPTY-NEXT:       IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
-; EMPTY-NEXT:       IMAGE_SCN_MEM_READ (0x40000000)
-; EMPTY-NEXT:     ]
-; EMPTY-NEXT:     Module {
-; EMPTY-NEXT:       Index: 1
-; EMPTY-NEXT:       Name: * Linker *
-; EMPTY-NEXT:     }
-; EMPTY-NEXT:     Data CRC: 0
-; EMPTY-NEXT:     Reloc CRC: 0
-; EMPTY-NEXT:   }
-; EMPTY-NEXT:   Contribution {
-; EMPTY-NEXT:     ISect: 2
-; EMPTY-NEXT:     Off: 396
-; EMPTY-NEXT:     Size: 20
-; EMPTY-NEXT:     Characteristics [ (0x40300040)
-; EMPTY-NEXT:       IMAGE_SCN_ALIGN_4BYTES (0x300000)
-; EMPTY-NEXT:       IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
-; EMPTY-NEXT:       IMAGE_SCN_MEM_READ (0x40000000)
-; EMPTY-NEXT:     ]
-; EMPTY-NEXT:     Module {
-; EMPTY-NEXT:       Index: 1
-; EMPTY-NEXT:       Name: * Linker *
-; EMPTY-NEXT:     }
-; EMPTY-NEXT:     Data CRC: 0
-; EMPTY-NEXT:     Reloc CRC: 0
-; EMPTY-NEXT:   }
-; EMPTY-NEXT:   Contribution {
-; EMPTY-NEXT:     ISect: 3
-; EMPTY-NEXT:     Off: 0
-; EMPTY-NEXT:     Size: 4
-; EMPTY-NEXT:     Characteristics [ (0xC0300080)
-; EMPTY-NEXT:       IMAGE_SCN_ALIGN_4BYTES (0x300000)
-; EMPTY-NEXT:       IMAGE_SCN_CNT_UNINITIALIZED_DATA (0x80)
-; EMPTY-NEXT:       IMAGE_SCN_MEM_READ (0x40000000)
-; EMPTY-NEXT:       IMAGE_SCN_MEM_WRITE (0x80000000)
-; EMPTY-NEXT:     ]
-; EMPTY-NEXT:     Module {
-; EMPTY-NEXT:       Index: 0
-; EMPTY-NEXT:       Name: d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj
-; EMPTY-NEXT:     }
-; EMPTY-NEXT:     Data CRC: 0
-; EMPTY-NEXT:     Reloc CRC: 0
-; EMPTY-NEXT:   }
-; EMPTY-NEXT: ]
-; EMPTY-NEXT: Section Map [
-; EMPTY-NEXT:   Entry {
-; EMPTY-NEXT:     Flags [ (0x10D)
-; EMPTY-NEXT:       AddressIs32Bit (0x8)
-; EMPTY-NEXT:       Execute (0x4)
-; EMPTY-NEXT:       IsSelector (0x100)
-; EMPTY-NEXT:       Read (0x1)
-; EMPTY-NEXT:     ]
-; EMPTY-NEXT:     Ovl: 0
-; EMPTY-NEXT:     Group: 0
-; EMPTY-NEXT:     Frame: 1
-; EMPTY-NEXT:     SecName: 65535
-; EMPTY-NEXT:     ClassName: 65535
-; EMPTY-NEXT:     Offset: 0
-; EMPTY-NEXT:     SecByteLength: 4122
-; EMPTY-NEXT:   }
-; EMPTY-NEXT:   Entry {
-; EMPTY-NEXT:     Flags [ (0x109)
-; EMPTY-NEXT:       AddressIs32Bit (0x8)
-; EMPTY-NEXT:       IsSelector (0x100)
-; EMPTY-NEXT:       Read (0x1)
-; EMPTY-NEXT:     ]
-; EMPTY-NEXT:     Ovl: 0
-; EMPTY-NEXT:     Group: 0
-; EMPTY-NEXT:     Frame: 2
-; EMPTY-NEXT:     SecName: 65535
-; EMPTY-NEXT:     ClassName: 65535
-; EMPTY-NEXT:     Offset: 0
-; EMPTY-NEXT:     SecByteLength: 690
-; EMPTY-NEXT:   }
-; EMPTY-NEXT:   Entry {
-; EMPTY-NEXT:     Flags [ (0x10B)
-; EMPTY-NEXT:       AddressIs32Bit (0x8)
-; EMPTY-NEXT:       IsSelector (0x100)
-; EMPTY-NEXT:       Read (0x1)
-; EMPTY-NEXT:       Write (0x2)
-; EMPTY-NEXT:     ]
-; EMPTY-NEXT:     Ovl: 0
-; EMPTY-NEXT:     Group: 0
-; EMPTY-NEXT:     Frame: 3
-; EMPTY-NEXT:     SecName: 65535
-; EMPTY-NEXT:     ClassName: 65535
-; EMPTY-NEXT:     Offset: 0
-; EMPTY-NEXT:     SecByteLength: 4
-; EMPTY-NEXT:   }
-; EMPTY-NEXT:   Entry {
-; EMPTY-NEXT:     Flags [ (0x109)
-; EMPTY-NEXT:       AddressIs32Bit (0x8)
-; EMPTY-NEXT:       IsSelector (0x100)
-; EMPTY-NEXT:       Read (0x1)
-; EMPTY-NEXT:     ]
-; EMPTY-NEXT:     Ovl: 0
-; EMPTY-NEXT:     Group: 0
-; EMPTY-NEXT:     Frame: 4
-; EMPTY-NEXT:     SecName: 65535
-; EMPTY-NEXT:     ClassName: 65535
-; EMPTY-NEXT:     Offset: 0
-; EMPTY-NEXT:     SecByteLength: 8
-; EMPTY-NEXT:   }
-; EMPTY-NEXT:   Entry {
-; EMPTY-NEXT:     Flags [ (0x208)
-; EMPTY-NEXT:       AddressIs32Bit (0x8)
-; EMPTY-NEXT:       IsAbsoluteAddress (0x200)
-; EMPTY-NEXT:     ]
-; EMPTY-NEXT:     Ovl: 0
-; EMPTY-NEXT:     Group: 0
-; EMPTY-NEXT:     Frame: 0
-; EMPTY-NEXT:     SecName: 65535
-; EMPTY-NEXT:     ClassName: 65535
-; EMPTY-NEXT:     Offset: 0
-; EMPTY-NEXT:     SecByteLength: 4294967295
-; EMPTY-NEXT:   }
-; EMPTY-NEXT: ]
-; EMPTY-NEXT: Globals Stream {
-; EMPTY-NEXT:   Stream number: 6
-; EMPTY-NEXT:   Number of buckets: 2
-; EMPTY-NEXT:   Hash Buckets: [0, 12]
-; EMPTY-NEXT: }
-; EMPTY-NEXT: Publics Stream {
-; EMPTY-NEXT:   Stream number: 7
-; EMPTY-NEXT:   SymHash: 556
-; EMPTY-NEXT:   AddrMap: 8
-; EMPTY-NEXT:   Number of buckets: 2
-; EMPTY-NEXT:   Hash Buckets: [0, 12]
-; EMPTY-NEXT:   Address Map: [36, 0]
-; EMPTY-NEXT:   Thunk Map: [4112]
-; EMPTY-NEXT:   Section Offsets: [4096, 1]
-; EMPTY-NEXT:   Symbols [
-; EMPTY-NEXT:     {
-; EMPTY-NEXT:       PublicSym {
-; EMPTY-NEXT:         Type: 0
-; EMPTY-NEXT:         Seg: 3
-; EMPTY-NEXT:         Off: 0
-; EMPTY-NEXT:         Name: ?__purecall@@3PAXA
-; EMPTY-NEXT:       }
-; EMPTY-NEXT:       Bytes (
-; EMPTY-NEXT:         0000: 00000000 00000000 03003F5F 5F707572  |..........?__pur|
-; EMPTY-NEXT:         0010: 6563616C 6C404033 50415841 00000000  |ecall@@3PAXA....|
-; EMPTY-NEXT:       )
-; EMPTY-NEXT:     }
-; EMPTY-NEXT:     {
-; EMPTY-NEXT:       PublicSym {
-; EMPTY-NEXT:         Type: 2
-; EMPTY-NEXT:         Seg: 1
-; EMPTY-NEXT:         Off: 16
-; EMPTY-NEXT:         Name: _main
-; EMPTY-NEXT:       }
-; EMPTY-NEXT:       Bytes (
-; EMPTY-NEXT:         0000: 02000000 10000000 01005F6D 61696E00  |.........._main.|
-; EMPTY-NEXT:       )
-; EMPTY-NEXT:     }
-; EMPTY-NEXT:     {
-; EMPTY-NEXT:       ProcRef {
-; EMPTY-NEXT:         SumName: 0
-; EMPTY-NEXT:         SymOffset: 120
-; EMPTY-NEXT:         Mod: 1
-; EMPTY-NEXT:         Name: main
-; EMPTY-NEXT:       }
-; EMPTY-NEXT:       Bytes (
-; EMPTY-NEXT:         0000: 00000000 78000000 01006D61 696E0000  |....x.....main..|
-; EMPTY-NEXT:       )
-; EMPTY-NEXT:     }
-; EMPTY-NEXT:     {
-; EMPTY-NEXT:       DataSym {
-; EMPTY-NEXT:         Kind: S_GDATA32 (0x110D)
-; EMPTY-NEXT:         Type: void* (0x403)
-; EMPTY-NEXT:         DisplayName: __purecall
-; EMPTY-NEXT:       }
-; EMPTY-NEXT:       Bytes (
-; EMPTY-NEXT:         0000: 03040000 00000000 03005F5F 70757265  |..........__pure|
-; EMPTY-NEXT:         0010: 63616C6C 00000000                    |call....|
-; EMPTY-NEXT:       )
-; EMPTY-NEXT:     }
-; EMPTY-NEXT:   ]
-; EMPTY-NEXT: }
-; EMPTY-NEXT: Section Headers [
-; EMPTY-NEXT:   {
-; EMPTY-NEXT:     Name: .text
-; EMPTY-NEXT:     Virtual Size: 4122
-; EMPTY-NEXT:     Virtual Address: 4096
-; EMPTY-NEXT:     Size of Raw Data: 4608
-; EMPTY-NEXT:     File Pointer to Raw Data: 1024
-; EMPTY-NEXT:     File Pointer to Relocations: 0
-; EMPTY-NEXT:     File Pointer to Linenumbers: 0
-; EMPTY-NEXT:     Number of Relocations: 0
-; EMPTY-NEXT:     Number of Linenumbers: 0
-; EMPTY-NEXT:     Characteristics [ (0x60000020)
-; EMPTY-NEXT:       IMAGE_SCN_CNT_CODE (0x20)
-; EMPTY-NEXT:       IMAGE_SCN_MEM_EXECUTE (0x20000000)
-; EMPTY-NEXT:       IMAGE_SCN_MEM_READ (0x40000000)
-; EMPTY-NEXT:     ]
-; EMPTY-NEXT:   }
-; EMPTY-NEXT:   {
-; EMPTY-NEXT:     Name: .rdata
-; EMPTY-NEXT:     Virtual Size: 690
-; EMPTY-NEXT:     Virtual Address: 12288
-; EMPTY-NEXT:     Size of Raw Data: 1024
-; EMPTY-NEXT:     File Pointer to Raw Data: 5632
-; EMPTY-NEXT:     File Pointer to Relocations: 0
-; EMPTY-NEXT:     File Pointer to Linenumbers: 0
-; EMPTY-NEXT:     Number of Relocations: 0
-; EMPTY-NEXT:     Number of Linenumbers: 0
-; EMPTY-NEXT:     Characteristics [ (0x40000040)
-; EMPTY-NEXT:       IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
-; EMPTY-NEXT:       IMAGE_SCN_MEM_READ (0x40000000)
-; EMPTY-NEXT:     ]
-; EMPTY-NEXT:   }
-; EMPTY-NEXT:   {
-; EMPTY-NEXT:     Name: .data
-; EMPTY-NEXT:     Virtual Size: 4
-; EMPTY-NEXT:     Virtual Address: 16384
-; EMPTY-NEXT:     Size of Raw Data: 0
-; EMPTY-NEXT:     File Pointer to Raw Data: 0
-; EMPTY-NEXT:     File Pointer to Relocations: 0
-; EMPTY-NEXT:     File Pointer to Linenumbers: 0
-; EMPTY-NEXT:     Number of Relocations: 0
-; EMPTY-NEXT:     Number of Linenumbers: 0
-; EMPTY-NEXT:     Characteristics [ (0xC0000040)
-; EMPTY-NEXT:       IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
-; EMPTY-NEXT:       IMAGE_SCN_MEM_READ (0x40000000)
-; EMPTY-NEXT:       IMAGE_SCN_MEM_WRITE (0x80000000)
-; EMPTY-NEXT:     ]
-; EMPTY-NEXT:   }
-; EMPTY-NEXT:   {
-; EMPTY-NEXT:     Name: .reloc
-; EMPTY-NEXT:     Virtual Size: 8
-; EMPTY-NEXT:     Virtual Address: 20480
-; EMPTY-NEXT:     Size of Raw Data: 512
-; EMPTY-NEXT:     File Pointer to Raw Data: 6656
-; EMPTY-NEXT:     File Pointer to Relocations: 0
-; EMPTY-NEXT:     File Pointer to Linenumbers: 0
-; EMPTY-NEXT:     Number of Relocations: 0
-; EMPTY-NEXT:     Number of Linenumbers: 0
-; EMPTY-NEXT:     Characteristics [ (0x42000040)
-; EMPTY-NEXT:       IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
-; EMPTY-NEXT:       IMAGE_SCN_MEM_DISCARDABLE (0x2000000)
-; EMPTY-NEXT:       IMAGE_SCN_MEM_READ (0x40000000)
-; EMPTY-NEXT:     ]
-; EMPTY-NEXT:   }
-; EMPTY-NEXT: ]
-; EMPTY:      New FPO [
-; EMPTY-NEXT:   {
-; EMPTY-NEXT:     Offset: 4112
-; EMPTY-NEXT:     Size: 10
-; EMPTY-NEXT:     Number of locals: 0
-; EMPTY-NEXT:     Number of params: 0
-; EMPTY-NEXT:     Size of Prolog: 0
-; EMPTY-NEXT:     Number of Saved Registers: 0
-; EMPTY-NEXT:     Has SEH: No
-; EMPTY-NEXT:     Use BP: No
-; EMPTY-NEXT:     Frame Pointer: 0
-; EMPTY-NEXT:   }
-; EMPTY-NEXT:   {
-; EMPTY-NEXT:     Offset: 0
-; EMPTY-NEXT:     Size: 134
-; EMPTY-NEXT:     Number of locals: 3
-; EMPTY-NEXT:     Number of params: 4
-; EMPTY-NEXT:     Size of Prolog: 0
-; EMPTY-NEXT:     Number of Saved Registers: 0
-; EMPTY-NEXT:     Has SEH: No
-; EMPTY-NEXT:     Use BP: No
-; EMPTY-NEXT:     Frame Pointer: 0
-; EMPTY-NEXT:   }
-; EMPTY-NEXT: ]
+ALL:                                Summary
+ALL-NEXT: ============================================================
+ALL-NEXT:   Block Size: 4096
+ALL-NEXT:   Number of blocks: 25
+ALL-NEXT:   Number of streams: 17
+ALL-NEXT:   Signature: 1424295906
+ALL-NEXT:   Age: 1
+ALL-NEXT:   GUID: {0B355641-86A0-A249-896F-9988FAE52FF0}
+ALL-NEXT:   Features: 0x1
+ALL-NEXT:   Has Debug Info: true
+ALL-NEXT:   Has Types: true
+ALL-NEXT:   Has IDs: true
+ALL-NEXT:   Has Globals: true
+ALL-NEXT:   Has Publics: true
+ALL-NEXT:   Is incrementally linked: true
+ALL-NEXT:   Has conflicting types: false
+ALL-NEXT:   Is stripped: false
+ALL:                                  Streams
+ALL-NEXT: ============================================================
+ALL-NEXT: Stream  0: [Old MSF Directory] (40 bytes)
+ALL-NEXT:   Stream  1: [PDB Stream] (118 bytes)
+ALL-NEXT:   Stream  2: [TPI Stream] (5392 bytes)
+ALL-NEXT:   Stream  3: [DBI Stream] (739 bytes)
+ALL-NEXT:   Stream  4: [IPI Stream] (784 bytes)
+ALL-NEXT:   Stream  5: [Named Stream "/LinkInfo"] (0 bytes)
+ALL-NEXT:   Stream  6: [Global Symbol Hash] (556 bytes)
+ALL-NEXT:   Stream  7: [Public Symbol Hash] (604 bytes)
+ALL-NEXT:   Stream  8: [Public Symbol Records] (104 bytes)
+ALL-NEXT:   Stream  9: [Named Stream "/src/headerblock"] (0 bytes)
+ALL-NEXT:   Stream 10: [Section Header Data] (160 bytes)
+ALL-NEXT:   Stream 11: [New FPO Data] (32 bytes)
+ALL-NEXT:   Stream 12: [Module "d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj"] (308 bytes)
+ALL-NEXT:   Stream 13: [Named Stream "/names"] (239 bytes)
+ALL-NEXT:   Stream 14: [Module "* Linker *"] (520 bytes)
+ALL-NEXT:   Stream 15: [TPI Hash] (308 bytes)
+ALL-NEXT:   Stream 16: [IPI Hash] (68 bytes)
+ALL:                                String Table
+ALL-NEXT: ============================================================
+ALL-NEXT:    ID | String
+ALL-NEXT:     1 | 'd:\src\llvm\test\debuginfo\pdb\inputs\predefined c++ attributes (compiler internal)'
+ALL-NEXT:    86 | 'd:\src\llvm\test\debuginfo\pdb\inputs\empty.cpp'
+ALL-NEXT:   134 | '$T0 $ebp = $eip $T0 4 + ^ = $ebp $T0 ^ = $esp $T0 8 + = '
+ALL:      		                    Modules
+ALL-NEXT: ============================================================
+ALL-NEXT:   Mod 0000 | Name: `d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj`:
+ALL-NEXT:              Obj: `d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj`:
+ALL-NEXT:              debug stream: 12, # files: 1, has ec info: false
+ALL-NEXT:              contributing source files:
+ALL-NEXT:              - d:\src\llvm\test\debuginfo\pdb\inputs\empty.cpp
+ALL-NEXT:   Mod 0001 | Name: `* Linker *`:
+ALL-NEXT:              Obj: ``:
+ALL-NEXT:              debug stream: 14, # files: 0, has ec info: false
+ALL-NEXT:              contributing source files:
+ALL:                           Types (TPI Stream)
+ALL-NEXT: ============================================================
+ALL-NEXT:   Showing 75 records
+ALL-NEXT:   0x1000 | LF_ARGLIST [size = 8]
+ALL-NEXT:   0x1001 | LF_PROCEDURE [size = 16]
+ALL-NEXT:            return type = 0x0074 (int), # args = 0, param list = 0x1000
+ALL-NEXT:            calling conv = cdecl, options = None
+ALL-NEXT:   0x1002 | LF_FIELDLIST [size = 76]
+ALL-NEXT:            - LF_ENUMERATE [apartment = 1]
+ALL-NEXT:            - LF_ENUMERATE [single = 2]
+ALL-NEXT:            - LF_ENUMERATE [free = 3]
+ALL-NEXT:            - LF_ENUMERATE [neutral = 4]
+ALL-NEXT:            - LF_ENUMERATE [both = 5]
+ALL-NEXT:   0x1003 | LF_ENUM [size = 120]
+ALL-NEXT:            name: `__vc_attributes::threadingAttribute::threading_e`
+ALL-NEXT:            unique name: `.?AW4threading_e@threadingAttribute@__vc_attributes@@`
+ALL-NEXT:            field list: 0x1002, underlying type: 0x0074 (int)
+ALL-NEXT:            options: has unique name | is nested
+ALL-NEXT:   0x1004 | LF_STRUCTURE [size = 100]
+ALL-NEXT:            class name: `__vc_attributes::threadingAttribute`
+ALL-NEXT:            unique name: `.?AUthreadingAttribute@__vc_attributes@@`
+ALL-NEXT:            vtable: <no type>, base list: <no type>, field list: <no type>
+ALL-NEXT:            options: forward ref | has unique name
+ALL-NEXT:   0x1005 | LF_POINTER [size = 12]
+ALL-NEXT:            referent = 0x1004, mode = pointer, opts = const, kind = ptr32
+ALL-NEXT:   0x1006 | LF_ARGLIST [size = 12]
+ALL-NEXT:            0x1003: `__vc_attributes::threadingAttribute::threading_e`
+ALL-NEXT:   0x1007 | LF_MFUNCTION [size = 28]
+ALL-NEXT:            return type = 1, # args = 0x1006, param list = 0x0003 (void)
+ALL-NEXT:            class type = 0x1004, this type = 0x1005, this adjust = 0
+ALL-NEXT:            calling conv = thiscall, options = constructor
+ALL-NEXT:   0x1008 | LF_MFUNCTION [size = 28]
+ALL-NEXT:            return type = 0, # args = 0x1000, param list = 0x0003 (void)
+ALL-NEXT:            class type = 0x1004, this type = 0x1005, this adjust = 0
+ALL-NEXT:            calling conv = thiscall, options = constructor
+ALL-NEXT:   0x1009 | LF_METHODLIST [size = 20]
+ALL-NEXT:            - Method [type = 0x1007, vftable offset = -1, attrs = public]
+ALL-NEXT:            - Method [type = 0x1008, vftable offset = -1, attrs = public]
+ALL-NEXT:   0x100A | LF_FIELDLIST [size = 68]
+ALL-NEXT:            - LF_NESTTYPE [name = `threading_e`, parent = 0x1003]
+ALL-NEXT:            - LF_METHOD [name = `threadingAttribute`, # overloads = 2, overload list = 0x1009]
+ALL-NEXT:            - LF_MEMBER [name = `value`, Type = 0x1003, offset = 0, attrs = public]
+ALL-NEXT:   0x100B | LF_STRUCTURE [size = 100]
+ALL-NEXT:            class name: `__vc_attributes::threadingAttribute`
+ALL-NEXT:            unique name: `.?AUthreadingAttribute@__vc_attributes@@`
+ALL-NEXT:            vtable: <no type>, base list: <no type>, field list: 0x100A
+ALL-NEXT:            options: has ctor / dtor | contains nested class | has unique name
+ALL-NEXT:   0x100C | LF_FIELDLIST [size = 48]
+ALL-NEXT:            - LF_ENUMERATE [native = 0]
+ALL-NEXT:            - LF_ENUMERATE [com = 1]
+ALL-NEXT:            - LF_ENUMERATE [managed = 2]
+ALL-NEXT:   0x100D | LF_ENUM [size = 120]
+ALL-NEXT:            name: `__vc_attributes::event_receiverAttribute::type_e`
+ALL-NEXT:            unique name: `.?AW4type_e@event_receiverAttribute@__vc_attributes@@`
+ALL-NEXT:            field list: 0x100C, underlying type: 0x0074 (int)
+ALL-NEXT:            options: has unique name | is nested
+ALL-NEXT:   0x100E | LF_STRUCTURE [size = 112]
+ALL-NEXT:            class name: `__vc_attributes::event_receiverAttribute`
+ALL-NEXT:            unique name: `.?AUevent_receiverAttribute@__vc_attributes@@`
+ALL-NEXT:            vtable: <no type>, base list: <no type>, field list: <no type>
+ALL-NEXT:            options: forward ref | has unique name
+ALL-NEXT:   0x100F | LF_POINTER [size = 12]
+ALL-NEXT:            referent = 0x100E, mode = pointer, opts = const, kind = ptr32
+ALL-NEXT:   0x1010 | LF_ARGLIST [size = 16]
+ALL-NEXT:            0x100D: `__vc_attributes::event_receiverAttribute::type_e`
+ALL-NEXT:            0x0030 (bool): `bool`
+ALL-NEXT:   0x1011 | LF_MFUNCTION [size = 28]
+ALL-NEXT:            return type = 2, # args = 0x1010, param list = 0x0003 (void)
+ALL-NEXT:            class type = 0x100E, this type = 0x100F, this adjust = 0
+ALL-NEXT:            calling conv = thiscall, options = constructor
+ALL-NEXT:   0x1012 | LF_ARGLIST [size = 12]
+ALL-NEXT:            0x100D: `__vc_attributes::event_receiverAttribute::type_e`
+ALL-NEXT:   0x1013 | LF_MFUNCTION [size = 28]
+ALL-NEXT:            return type = 1, # args = 0x1012, param list = 0x0003 (void)
+ALL-NEXT:            class type = 0x100E, this type = 0x100F, this adjust = 0
+ALL-NEXT:            calling conv = thiscall, options = constructor
+ALL-NEXT:   0x1014 | LF_MFUNCTION [size = 28]
+ALL-NEXT:            return type = 0, # args = 0x1000, param list = 0x0003 (void)
+ALL-NEXT:            class type = 0x100E, this type = 0x100F, this adjust = 0
+ALL-NEXT:            calling conv = thiscall, options = constructor
+ALL-NEXT:   0x1015 | LF_METHODLIST [size = 28]
+ALL-NEXT:            - Method [type = 0x1011, vftable offset = -1, attrs = public]
+ALL-NEXT:            - Method [type = 0x1013, vftable offset = -1, attrs = public]
+ALL-NEXT:            - Method [type = 0x1014, vftable offset = -1, attrs = public]
+ALL-NEXT:   0x1016 | LF_FIELDLIST [size = 96]
+ALL-NEXT:            - LF_NESTTYPE [name = `type_e`, parent = 0x100D]
+ALL-NEXT:            - LF_METHOD [name = `event_receiverAttribute`, # overloads = 3, overload list = 0x1015]
+ALL-NEXT:            - LF_MEMBER [name = `type`, Type = 0x100D, offset = 0, attrs = public]
+ALL-NEXT:            - LF_MEMBER [name = `layout_dependent`, Type = 0x0030 (bool), offset = 4, attrs = public]
+ALL-NEXT:   0x1017 | LF_STRUCTURE [size = 112]
+ALL-NEXT:            class name: `__vc_attributes::event_receiverAttribute`
+ALL-NEXT:            unique name: `.?AUevent_receiverAttribute@__vc_attributes@@`
+ALL-NEXT:            vtable: <no type>, base list: <no type>, field list: 0x1016
+ALL-NEXT:            options: has ctor / dtor | contains nested class | has unique name
+ALL-NEXT:   0x1018 | LF_FIELDLIST [size = 48]
+ALL-NEXT:            - LF_ENUMERATE [never = 0]
+ALL-NEXT:            - LF_ENUMERATE [allowed = 1]
+ALL-NEXT:            - LF_ENUMERATE [always = 2]
+ALL-NEXT:   0x1019 | LF_ENUM [size = 116]
+ALL-NEXT:            name: `__vc_attributes::aggregatableAttribute::type_e`
+ALL-NEXT:            unique name: `.?AW4type_e@aggregatableAttribute@__vc_attributes@@`
+ALL-NEXT:            field list: 0x1018, underlying type: 0x0074 (int)
+ALL-NEXT:            options: has unique name | is nested
+ALL-NEXT:   0x101A | LF_STRUCTURE [size = 108]
+ALL-NEXT:            class name: `__vc_attributes::aggregatableAttribute`
+ALL-NEXT:            unique name: `.?AUaggregatableAttribute@__vc_attributes@@`
+ALL-NEXT:            vtable: <no type>, base list: <no type>, field list: <no type>
+ALL-NEXT:            options: forward ref | has unique name
+ALL-NEXT:   0x101B | LF_POINTER [size = 12]
+ALL-NEXT:            referent = 0x101A, mode = pointer, opts = const, kind = ptr32
+ALL-NEXT:   0x101C | LF_ARGLIST [size = 12]
+ALL-NEXT:            0x1019: `__vc_attributes::aggregatableAttribute::type_e`
+ALL-NEXT:   0x101D | LF_MFUNCTION [size = 28]
+ALL-NEXT:            return type = 1, # args = 0x101C, param list = 0x0003 (void)
+ALL-NEXT:            class type = 0x101A, this type = 0x101B, this adjust = 0
+ALL-NEXT:            calling conv = thiscall, options = constructor
+ALL-NEXT:   0x101E | LF_MFUNCTION [size = 28]
+ALL-NEXT:            return type = 0, # args = 0x1000, param list = 0x0003 (void)
+ALL-NEXT:            class type = 0x101A, this type = 0x101B, this adjust = 0
+ALL-NEXT:            calling conv = thiscall, options = constructor
+ALL-NEXT:   0x101F | LF_METHODLIST [size = 20]
+ALL-NEXT:            - Method [type = 0x101D, vftable offset = -1, attrs = public]
+ALL-NEXT:            - Method [type = 0x101E, vftable offset = -1, attrs = public]
+ALL-NEXT:   0x1020 | LF_FIELDLIST [size = 68]
+ALL-NEXT:            - LF_NESTTYPE [name = `type_e`, parent = 0x1019]
+ALL-NEXT:            - LF_METHOD [name = `aggregatableAttribute`, # overloads = 2, overload list = 0x101F]
+ALL-NEXT:            - LF_MEMBER [name = `type`, Type = 0x1019, offset = 0, attrs = public]
+ALL-NEXT:   0x1021 | LF_STRUCTURE [size = 108]
+ALL-NEXT:            class name: `__vc_attributes::aggregatableAttribute`
+ALL-NEXT:            unique name: `.?AUaggregatableAttribute@__vc_attributes@@`
+ALL-NEXT:            vtable: <no type>, base list: <no type>, field list: 0x1020
+ALL-NEXT:            options: has ctor / dtor | contains nested class | has unique name
+ALL-NEXT:   0x1022 | LF_ENUM [size = 116]
+ALL-NEXT:            name: `__vc_attributes::event_sourceAttribute::type_e`
+ALL-NEXT:            unique name: `.?AW4type_e@event_sourceAttribute@__vc_attributes@@`
+ALL-NEXT:            field list: 0x100C, underlying type: 0x0074 (int)
+ALL-NEXT:            options: has unique name | is nested
+ALL-NEXT:   0x1023 | LF_FIELDLIST [size = 28]
+ALL-NEXT:            - LF_ENUMERATE [speed = 0]
+ALL-NEXT:            - LF_ENUMERATE [size = 1]
+ALL-NEXT:   0x1024 | LF_ENUM [size = 124]
+ALL-NEXT:            name: `__vc_attributes::event_sourceAttribute::optimize_e`
+ALL-NEXT:            unique name: `.?AW4optimize_e@event_sourceAttribute@__vc_attributes@@`
+ALL-NEXT:            field list: 0x1023, underlying type: 0x0074 (int)
+ALL-NEXT:            options: has unique name | is nested
+ALL-NEXT:   0x1025 | LF_STRUCTURE [size = 108]
+ALL-NEXT:            class name: `__vc_attributes::event_sourceAttribute`
+ALL-NEXT:            unique name: `.?AUevent_sourceAttribute@__vc_attributes@@`
+ALL-NEXT:            vtable: <no type>, base list: <no type>, field list: <no type>
+ALL-NEXT:            options: forward ref | has unique name
+ALL-NEXT:   0x1026 | LF_POINTER [size = 12]
+ALL-NEXT:            referent = 0x1025, mode = pointer, opts = const, kind = ptr32
+ALL-NEXT:   0x1027 | LF_ARGLIST [size = 12]
+ALL-NEXT:            0x1022: `__vc_attributes::event_sourceAttribute::type_e`
+ALL-NEXT:   0x1028 | LF_MFUNCTION [size = 28]
+ALL-NEXT:            return type = 1, # args = 0x1027, param list = 0x0003 (void)
+ALL-NEXT:            class type = 0x1025, this type = 0x1026, this adjust = 0
+ALL-NEXT:            calling conv = thiscall, options = constructor
+ALL-NEXT:   0x1029 | LF_MFUNCTION [size = 28]
+ALL-NEXT:            return type = 0, # args = 0x1000, param list = 0x0003 (void)
+ALL-NEXT:            class type = 0x1025, this type = 0x1026, this adjust = 0
+ALL-NEXT:            calling conv = thiscall, options = constructor
+ALL-NEXT:   0x102A | LF_METHODLIST [size = 20]
+ALL-NEXT:            - Method [type = 0x1028, vftable offset = -1, attrs = public]
+ALL-NEXT:            - Method [type = 0x1029, vftable offset = -1, attrs = public]
+ALL-NEXT:   0x102B | LF_FIELDLIST [size = 128]
+ALL-NEXT:            - LF_NESTTYPE [name = `type_e`, parent = 0x1022]
+ALL-NEXT:            - LF_NESTTYPE [name = `optimize_e`, parent = 0x1024]
+ALL-NEXT:            - LF_METHOD [name = `event_sourceAttribute`, # overloads = 2, overload list = 0x102A]
+ALL-NEXT:            - LF_MEMBER [name = `type`, Type = 0x1022, offset = 0, attrs = public]
+ALL-NEXT:            - LF_MEMBER [name = `optimize`, Type = 0x1024, offset = 4, attrs = public]
+ALL-NEXT:            - LF_MEMBER [name = `decorate`, Type = 0x0030 (bool), offset = 8, attrs = public]
+ALL-NEXT:   0x102C | LF_STRUCTURE [size = 108]
+ALL-NEXT:            class name: `__vc_attributes::event_sourceAttribute`
+ALL-NEXT:            unique name: `.?AUevent_sourceAttribute@__vc_attributes@@`
+ALL-NEXT:            vtable: <no type>, base list: <no type>, field list: 0x102B
+ALL-NEXT:            options: has ctor / dtor | contains nested class | has unique name
+ALL-NEXT:   0x102D | LF_FIELDLIST [size = 92]
+ALL-NEXT:            - LF_ENUMERATE [dll = 1]
+ALL-NEXT:            - LF_ENUMERATE [exe = 2]
+ALL-NEXT:            - LF_ENUMERATE [service = 3]
+ALL-NEXT:            - LF_ENUMERATE [unspecified = 4]
+ALL-NEXT:            - LF_ENUMERATE [EXE = 2]
+ALL-NEXT:            - LF_ENUMERATE [SERVICE = 3]
+ALL-NEXT:   0x102E | LF_ENUM [size = 104]
+ALL-NEXT:            name: `__vc_attributes::moduleAttribute::type_e`
+ALL-NEXT:            unique name: `.?AW4type_e@moduleAttribute@__vc_attributes@@`
+ALL-NEXT:            field list: 0x102D, underlying type: 0x0074 (int)
+ALL-NEXT:            options: has unique name | is nested
+ALL-NEXT:   0x102F | LF_STRUCTURE [size = 96]
+ALL-NEXT:            class name: `__vc_attributes::moduleAttribute`
+ALL-NEXT:            unique name: `.?AUmoduleAttribute@__vc_attributes@@`
+ALL-NEXT:            vtable: <no type>, base list: <no type>, field list: <no type>
+ALL-NEXT:            options: forward ref | has unique name
+ALL-NEXT:   0x1030 | LF_POINTER [size = 12]
+ALL-NEXT:            referent = 0x102F, mode = pointer, opts = const, kind = ptr32
+ALL-NEXT:   0x1031 | LF_MODIFIER [size = 12]
+ALL-NEXT:            referent = 0x0070 (char), modifiers = const
+ALL-NEXT:   0x1032 | LF_POINTER [size = 12]
+ALL-NEXT:            referent = 0x1031, mode = pointer, opts = None, kind = ptr32
+ALL-NEXT:   0x1033 | LF_ARGLIST [size = 68]
+ALL-NEXT:            0x102E: `__vc_attributes::moduleAttribute::type_e`
+ALL-NEXT:            0x1032: `const char*`
+ALL-NEXT:            0x1032: `const char*`
+ALL-NEXT:            0x1032: `const char*`
+ALL-NEXT:            0x0074 (int): `int`
+ALL-NEXT:            0x0030 (bool): `bool`
+ALL-NEXT:            0x1032: `const char*`
+ALL-NEXT:            0x0074 (int): `int`
+ALL-NEXT:            0x1032: `const char*`
+ALL-NEXT:            0x1032: `const char*`
+ALL-NEXT:            0x0074 (int): `int`
+ALL-NEXT:            0x0030 (bool): `bool`
+ALL-NEXT:            0x0030 (bool): `bool`
+ALL-NEXT:            0x1032: `const char*`
+ALL-NEXT:            0x1032: `const char*`
+ALL-NEXT:   0x1034 | LF_MFUNCTION [size = 28]
+ALL-NEXT:            return type = 15, # args = 0x1033, param list = 0x0003 (void)
+ALL-NEXT:            class type = 0x102F, this type = 0x1030, this adjust = 0
+ALL-NEXT:            calling conv = thiscall, options = constructor
+ALL-NEXT:   0x1035 | LF_ARGLIST [size = 12]
+ALL-NEXT:            0x102E: `__vc_attributes::moduleAttribute::type_e`
+ALL-NEXT:   0x1036 | LF_MFUNCTION [size = 28]
+ALL-NEXT:            return type = 1, # args = 0x1035, param list = 0x0003 (void)
+ALL-NEXT:            class type = 0x102F, this type = 0x1030, this adjust = 0
+ALL-NEXT:            calling conv = thiscall, options = constructor
+ALL-NEXT:   0x1037 | LF_MFUNCTION [size = 28]
+ALL-NEXT:            return type = 0, # args = 0x1000, param list = 0x0003 (void)
+ALL-NEXT:            class type = 0x102F, this type = 0x1030, this adjust = 0
+ALL-NEXT:            calling conv = thiscall, options = constructor
+ALL-NEXT:   0x1038 | LF_METHODLIST [size = 28]
+ALL-NEXT:            - Method [type = 0x1034, vftable offset = -1, attrs = public]
+ALL-NEXT:            - Method [type = 0x1036, vftable offset = -1, attrs = public]
+ALL-NEXT:            - Method [type = 0x1037, vftable offset = -1, attrs = public]
+ALL-NEXT:   0x1039 | LF_FIELDLIST [size = 356]
+ALL-NEXT:            - LF_NESTTYPE [name = `type_e`, parent = 0x102E]
+ALL-NEXT:            - LF_METHOD [name = `moduleAttribute`, # overloads = 3, overload list = 0x1038]
+ALL-NEXT:            - LF_MEMBER [name = `type`, Type = 0x102E, offset = 0, attrs = public]
+ALL-NEXT:            - LF_MEMBER [name = `name`, Type = 0x1032, offset = 4, attrs = public]
+ALL-NEXT:            - LF_MEMBER [name = `version`, Type = 0x1032, offset = 8, attrs = public]
+ALL-NEXT:            - LF_MEMBER [name = `uuid`, Type = 0x1032, offset = 12, attrs = public]
+ALL-NEXT:            - LF_MEMBER [name = `lcid`, Type = 0x0074 (int), offset = 16, attrs = public]
+ALL-NEXT:            - LF_MEMBER [name = `control`, Type = 0x0030 (bool), offset = 20, attrs = public]
+ALL-NEXT:            - LF_MEMBER [name = `helpstring`, Type = 0x1032, offset = 24, attrs = public]
+ALL-NEXT:            - LF_MEMBER [name = `helpstringcontext`, Type = 0x0074 (int), offset = 28, attrs = public]
+ALL-NEXT:            - LF_MEMBER [name = `helpstringdll`, Type = 0x1032, offset = 32, attrs = public]
+ALL-NEXT:            - LF_MEMBER [name = `helpfile`, Type = 0x1032, offset = 36, attrs = public]
+ALL-NEXT:            - LF_MEMBER [name = `helpcontext`, Type = 0x0074 (int), offset = 40, attrs = public]
+ALL-NEXT:            - LF_MEMBER [name = `hidden`, Type = 0x0030 (bool), offset = 44, attrs = public]
+ALL-NEXT:            - LF_MEMBER [name = `restricted`, Type = 0x0030 (bool), offset = 45, attrs = public]
+ALL-NEXT:            - LF_MEMBER [name = `custom`, Type = 0x1032, offset = 48, attrs = public]
+ALL-NEXT:            - LF_MEMBER [name = `resource_name`, Type = 0x1032, offset = 52, attrs = public]
+ALL-NEXT:   0x103A | LF_STRUCTURE [size = 96]
+ALL-NEXT:            class name: `__vc_attributes::moduleAttribute`
+ALL-NEXT:            unique name: `.?AUmoduleAttribute@__vc_attributes@@`
+ALL-NEXT:            vtable: <no type>, base list: <no type>, field list: 0x1039
+ALL-NEXT:            options: has ctor / dtor | contains nested class | has unique name
+ALL-NEXT:   0x103B | LF_FIELDLIST [size = 756]
+ALL-NEXT:            - LF_ENUMERATE [eAnyUsage = 0]
+ALL-NEXT:            - LF_ENUMERATE [eCoClassUsage = 1]
+ALL-NEXT:            - LF_ENUMERATE [eCOMInterfaceUsage = 2]
+ALL-NEXT:            - LF_ENUMERATE [eInterfaceUsage = 6]
+ALL-NEXT:            - LF_ENUMERATE [eMemberUsage = 8]
+ALL-NEXT:            - LF_ENUMERATE [eMethodUsage = 16]
+ALL-NEXT:            - LF_ENUMERATE [eInterfaceMethodUsage = 32]
+ALL-NEXT:            - LF_ENUMERATE [eInterfaceMemberUsage = 64]
+ALL-NEXT:            - LF_ENUMERATE [eCoClassMemberUsage = 128]
+ALL-NEXT:            - LF_ENUMERATE [eCoClassMethodUsage = 256]
+ALL-NEXT:            - LF_ENUMERATE [eGlobalMethodUsage = 768]
+ALL-NEXT:            - LF_ENUMERATE [eGlobalDataUsage = 1024]
+ALL-NEXT:            - LF_ENUMERATE [eClassUsage = 2048]
+ALL-NEXT:            - LF_ENUMERATE [eInterfaceParameterUsage = 4096]
+ALL-NEXT:            - LF_ENUMERATE [eMethodParameterUsage = 12288]
+ALL-NEXT:            - LF_ENUMERATE [eIDLModuleUsage = 16384]
+ALL-NEXT:            - LF_ENUMERATE [eAnonymousUsage = 32768]
+ALL-NEXT:            - LF_ENUMERATE [eTypedefUsage = 65536]
+ALL-NEXT:            - LF_ENUMERATE [eUnionUsage = 131072]
+ALL-NEXT:            - LF_ENUMERATE [eEnumUsage = 262144]
+ALL-NEXT:            - LF_ENUMERATE [eDefineTagUsage = 524288]
+ALL-NEXT:            - LF_ENUMERATE [eStructUsage = 1048576]
+ALL-NEXT:            - LF_ENUMERATE [eLocalUsage = 2097152]
+ALL-NEXT:            - LF_ENUMERATE [ePropertyUsage = 4194304]
+ALL-NEXT:            - LF_ENUMERATE [eEventUsage = 8388608]
+ALL-NEXT:            - LF_ENUMERATE [eTemplateUsage = 16777216]
+ALL-NEXT:            - LF_ENUMERATE [eModuleUsage = 16777216]
+ALL-NEXT:            - LF_ENUMERATE [eIllegalUsage = 33554432]
+ALL-NEXT:            - LF_ENUMERATE [eAsynchronousUsage = 67108864]
+ALL-NEXT:            - LF_ENUMERATE [eAnyIDLUsage = 4161535]
+ALL-NEXT:   0x103C | LF_ENUM [size = 140]
+ALL-NEXT:            name: `__vc_attributes::helper_attributes::usageAttribute::usage_e`
+ALL-NEXT:            unique name: `.?AW4usage_e@usageAttribute@helper_attributes@__vc_attributes@@`
+ALL-NEXT:            field list: 0x103B, underlying type: 0x0074 (int)
+ALL-NEXT:            options: has unique name | is nested
+ALL-NEXT:   0x103D | LF_STRUCTURE [size = 128]
+ALL-NEXT:            class name: `__vc_attributes::helper_attributes::usageAttribute`
+ALL-NEXT:            unique name: `.?AUusageAttribute@helper_attributes@__vc_attributes@@`
+ALL-NEXT:            vtable: <no type>, base list: <no type>, field list: <no type>
+ALL-NEXT:            options: forward ref | has unique name
+ALL-NEXT:   0x103E | LF_POINTER [size = 12]
+ALL-NEXT:            referent = 0x103D, mode = pointer, opts = const, kind = ptr32
+ALL-NEXT:   0x103F | LF_ARGLIST [size = 12]
+ALL-NEXT:            0x0075 (unsigned): `unsigned`
+ALL-NEXT:   0x1040 | LF_MFUNCTION [size = 28]
+ALL-NEXT:            return type = 1, # args = 0x103F, param list = 0x0003 (void)
+ALL-NEXT:            class type = 0x103D, this type = 0x103E, this adjust = 0
+ALL-NEXT:            calling conv = thiscall, options = constructor
+ALL-NEXT:   0x1041 | LF_FIELDLIST [size = 60]
+ALL-NEXT:            - LF_NESTTYPE [name = `usage_e`, parent = 0x103C]
+ALL-NEXT:            - LF_ONEMETHOD [name = `usageAttribute`]
+ALL-NEXT:              type = 0x1040, vftable offset = -1, attrs = public
+ALL-NEXT:            - LF_MEMBER [name = `value`, Type = 0x0075 (unsigned), offset = 0, attrs = public]
+ALL-NEXT:   0x1042 | LF_STRUCTURE [size = 128]
+ALL-NEXT:            class name: `__vc_attributes::helper_attributes::usageAttribute`
+ALL-NEXT:            unique name: `.?AUusageAttribute@helper_attributes@__vc_attributes@@`
+ALL-NEXT:            vtable: <no type>, base list: <no type>, field list: 0x1041
+ALL-NEXT:            options: has ctor / dtor | contains nested class | has unique name
+ALL-NEXT:   0x1043 | LF_FIELDLIST [size = 68]
+ALL-NEXT:            - LF_ENUMERATE [eBoolean = 0]
+ALL-NEXT:            - LF_ENUMERATE [eInteger = 1]
+ALL-NEXT:            - LF_ENUMERATE [eFloat = 2]
+ALL-NEXT:            - LF_ENUMERATE [eDouble = 3]
+ALL-NEXT:   0x1044 | LF_ENUM [size = 148]
+ALL-NEXT:            name: `__vc_attributes::helper_attributes::v1_alttypeAttribute::type_e`
+ALL-NEXT:            unique name: `.?AW4type_e@v1_alttypeAttribute@helper_attributes@__vc_attributes@@`
+ALL-NEXT:            field list: 0x1043, underlying type: 0x0074 (int)
+ALL-NEXT:            options: has unique name | is nested
+ALL-NEXT:   0x1045 | LF_STRUCTURE [size = 140]
+ALL-NEXT:            class name: `__vc_attributes::helper_attributes::v1_alttypeAttribute`
+ALL-NEXT:            unique name: `.?AUv1_alttypeAttribute@helper_attributes@__vc_attributes@@`
+ALL-NEXT:            vtable: <no type>, base list: <no type>, field list: <no type>
+ALL-NEXT:            options: forward ref | has unique name
+ALL-NEXT:   0x1046 | LF_POINTER [size = 12]
+ALL-NEXT:            referent = 0x1045, mode = pointer, opts = const, kind = ptr32
+ALL-NEXT:   0x1047 | LF_ARGLIST [size = 12]
+ALL-NEXT:            0x1044: `__vc_attributes::helper_attributes::v1_alttypeAttribute::type_e`
+ALL-NEXT:   0x1048 | LF_MFUNCTION [size = 28]
+ALL-NEXT:            return type = 1, # args = 0x1047, param list = 0x0003 (void)
+ALL-NEXT:            class type = 0x1045, this type = 0x1046, this adjust = 0
+ALL-NEXT:            calling conv = thiscall, options = constructor
+ALL-NEXT:   0x1049 | LF_FIELDLIST [size = 64]
+ALL-NEXT:            - LF_NESTTYPE [name = `type_e`, parent = 0x1044]
+ALL-NEXT:            - LF_ONEMETHOD [name = `v1_alttypeAttribute`]
+ALL-NEXT:              type = 0x1048, vftable offset = -1, attrs = public
+ALL-NEXT:            - LF_MEMBER [name = `type`, Type = 0x1044, offset = 0, attrs = public]
+ALL-NEXT:   0x104A | LF_STRUCTURE [size = 140]
+ALL-NEXT:            class name: `__vc_attributes::helper_attributes::v1_alttypeAttribute`
+ALL-NEXT:            unique name: `.?AUv1_alttypeAttribute@helper_attributes@__vc_attributes@@`
+ALL-NEXT:            vtable: <no type>, base list: <no type>, field list: 0x1049
+ALL-NEXT:            options: has ctor / dtor | contains nested class | has unique name
+ALL:                           Types (IPI Stream)
+ALL-NEXT: ============================================================
+ALL-NEXT:   Showing 15 records
+ALL-NEXT:   0x1000 | LF_UDT_MOD_SRC_LINE [size = 20]
+ALL-NEXT:            udt = 0x100B, mod = 1, file = 1, line = 481
+ALL-NEXT:   0x1001 | LF_UDT_MOD_SRC_LINE [size = 20]
+ALL-NEXT:            udt = 0x1017, mod = 1, file = 1, line = 194
+ALL-NEXT:   0x1002 | LF_UDT_MOD_SRC_LINE [size = 20]
+ALL-NEXT:            udt = 0x1021, mod = 1, file = 1, line = 603
+ALL-NEXT:   0x1003 | LF_UDT_MOD_SRC_LINE [size = 20]
+ALL-NEXT:            udt = 0x102C, mod = 1, file = 1, line = 1200
+ALL-NEXT:   0x1004 | LF_UDT_MOD_SRC_LINE [size = 20]
+ALL-NEXT:            udt = 0x103A, mod = 1, file = 1, line = 540
+ALL-NEXT:   0x1005 | LF_UDT_MOD_SRC_LINE [size = 20]
+ALL-NEXT:            udt = 0x1042, mod = 1, file = 1, line = 108
+ALL-NEXT:   0x1006 | LF_UDT_MOD_SRC_LINE [size = 20]
+ALL-NEXT:            udt = 0x104A, mod = 1, file = 1, line = 96
+ALL-NEXT:   0x1007 | LF_STRING_ID [size = 48] ID: <no type>, String: d:\src\llvm\test\DebugInfo\PDB\Inputs
+ALL-NEXT:   0x1008 | LF_STRING_ID [size = 76] ID: <no type>, String: C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\BIN\cl.exe
+ALL-NEXT:   0x1009 | LF_STRING_ID [size = 20] ID: <no type>, String: empty.cpp
+ALL-NEXT:   0x100A | LF_STRING_ID [size = 56] ID: <no type>, String: d:\src\llvm\test\DebugInfo\PDB\Inputs\vc120.pdb
+ALL-NEXT:   0x100B | LF_STRING_ID [size = 252] ID: <no type>, String: -Zi -MT -I"C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\INCLUDE" -I"C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\ATLMFC\INCLUDE" -I"C:\Program Files (x86)\Windows Kits\8.1\include\shared" -I"C:\Program Files (x86)\Windows
+ALL-NEXT:   0x100C | LF_SUBSTR_LIST [size = 12]
+ALL-NEXT:            0x100B: `-Zi -MT -I"C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\INCLUDE" -I"C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\ATLMFC\INCLUDE" -I"C:\Program Files (x86)\Windows Kits\8.1\include\shared" -I"C:\Program Files (x86)\Windows`
+ALL-NEXT:   0x100D | LF_STRING_ID [size = 96] ID: 0x100C, String:  Kits\8.1\include\um" -I"C:\Program Files (x86)\Windows Kits\8.1\include\winrt" -TP -X
+ALL-NEXT:   0x100E | LF_BUILDINFO [size = 28]
+ALL-NEXT:            0x1007: `d:\src\llvm\test\DebugInfo\PDB\Inputs`
+ALL-NEXT:            0x1008: `C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\BIN\cl.exe`
+ALL-NEXT:            0x1009: `empty.cpp`
+ALL-NEXT:            0x100A: `d:\src\llvm\test\DebugInfo\PDB\Inputs\vc120.pdb`
+ALL-NEXT:            0x100D: ` Kits\8.1\include\um" -I"C:\Program Files (x86)\Windows Kits\8.1\include\winrt" -TP -X`
+ALL:                             Public Symbols
+ALL-NEXT: ============================================================
+ALL-NEXT:   - S_PUB32 [size = 36] `?__purecall@@3PAXA`
+ALL-NEXT:       type = <no type>, addr = 0003:0000
+ALL-NEXT:   - S_PUB32 [size = 20] `_main`
+ALL-NEXT:       type = 0x0002 (<unknown simple type>), addr = 0001:0016
+ALL-NEXT:   - S_PROCREF [size = 20] `main`
+ALL-NEXT:       module = 1, sum name = 0, offset = 120
+ALL-NEXT:   - S_GDATA32 [size = 28] `__purecall`
+ALL-NEXT:       type = 0x0403 (void*), addr = 0003:0000
+ALL:                                Symbols
+ALL-NEXT: ============================================================
+ALL-NEXT:   Mod 0000 | `d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj`:
+ALL-NEXT:   - S_OBJNAME [size = 56] sig=0, `d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj`
+ALL-NEXT:   - S_COMPILE3 [size = 60]
+ALL-NEXT:       machine = intel pentium 3, Ver = Microsoft (R) Optimizing Compiler, language = c++
+ALL-NEXT:       frontend = 18.0.31101.0, backend = 18.0.31101.0
+ALL-NEXT:       flags = security checks
+ALL-NEXT:   - S_GPROC32 [size = 44] `main`
+ALL-NEXT:       parent = 0, addr = 0001:0016, code size = 10, end = 196
+ALL-NEXT:       debug start = 3, debug end = 8, flags = has fp
+ALL-NEXT:   - S_FRAMEPROC [size = 32]
+ALL-NEXT:       size = 0, padding size = 0, offset to padding = 0
+ALL-NEXT:       bytes of callee saved registers = 0, exception handler addr = 0000:0000
+ALL-NEXT:       flags = has async eh | opt speed
+ALL-NEXT:   - S_END [size = 4]
+ALL-NEXT:   - S_BUILDINFO [size = 8] BuildId = `4110`
+ALL-NEXT:   Mod 0001 | `* Linker *`:
+ALL-NEXT:   - S_OBJNAME [size = 20] sig=0, `* Linker *`
+ALL-NEXT:   - S_COMPILE3 [size = 48]
+ALL-NEXT:       machine = intel 80386, Ver = Microsoft (R) LINK, language = link
+ALL-NEXT:       frontend = 0.0.0.0, backend = 12.0.31101.0
+ALL-NEXT:       flags = none
+ALL-NEXT:   - S_ENVBLOCK [size = 172]
+ALL-NEXT:     - cwd
+ALL-NEXT:     - d:\src\llvm\test\DebugInfo\PDB\Inputs
+ALL-NEXT:     - exe
+ALL-NEXT:     - C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\BIN\link.exe
+ALL-NEXT:     - pdb
+ALL-NEXT:     - d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.pdb
+ALL-NEXT:   - S_TRAMPOLINE [size = 20]
+ALL-NEXT:       type = tramp incremental, size = 5, source = 0001:0005, target = 0001:0005
+ALL-NEXT:   - S_SECTION [size = 28] `.text`
+ALL-NEXT:       length = 4122, alignment = 12, rva = 4096, section # = 1, characteristics = 1610612768
+ALL-NEXT:   - S_COFFGROUP [size = 28] `.text$mn`
+ALL-NEXT:       length = 4122, addr = 0001:0000, characteristics = 1610612768
+ALL-NEXT:   - S_SECTION [size = 28] `.rdata`
+ALL-NEXT:       length = 690, alignment = 12, rva = 12288, section # = 2, characteristics = 1073741888
+ALL-NEXT:   - S_COFFGROUP [size = 28] `.rdata`
+ALL-NEXT:       length = 323, addr = 0002:0000, characteristics = 1073741888
+ALL-NEXT:   - S_COFFGROUP [size = 28] `.edata`
+ALL-NEXT:       length = 0, addr = 0002:0323, characteristics = 1073741888
+ALL-NEXT:   - S_COFFGROUP [size = 32] `.rdata$debug`
+ALL-NEXT:       length = 366, addr = 0002:0324, characteristics = 1073741888
+ALL-NEXT:   - S_SECTION [size = 28] `.data`
+ALL-NEXT:       length = 4, alignment = 12, rva = 16384, section # = 3, characteristics = 3221225536
+ALL-NEXT:   - S_COFFGROUP [size = 24] `.bss`
+ALL-NEXT:       length = 4, addr = 0003:0000, characteristics = 3221225600
+ALL-NEXT:   - S_SECTION [size = 28] `.reloc`
+ALL-NEXT:       length = 8, alignment = 12, rva = 20480, section # = 4, characteristics = 1107296320
+ALL:                         Section Contributions
+ALL-NEXT: ============================================================
+ALL-NEXT:   SC  | mod = 1, 0001:0000, size = 10, data crc = 0, reloc crc = 0
+ALL-NEXT:         IMAGE_SCN_CNT_CODE | IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_MEM_READ
+ALL-NEXT:   SC  | mod = 0, 0001:0016, size = 10, data crc = 3617027124, reloc crc = 0
+ALL-NEXT:         IMAGE_SCN_CNT_CODE | IMAGE_SCN_ALIGN_16BYTES | IMAGE_SCN_MEM_EXECUTE |
+ALL-NEXT:         IMAGE_SCN_MEM_READ
+ALL-NEXT:   SC  | mod = 1, 0002:0000, size = 56, data crc = 0, reloc crc = 0
+ALL-NEXT:         IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ
+ALL-NEXT:   SC  | mod = 1, 0002:0324, size = 72, data crc = 0, reloc crc = 0
+ALL-NEXT:         IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_ALIGN_4BYTES | IMAGE_SCN_MEM_READ
+ALL-NEXT:   SC  | mod = 1, 0002:0396, size = 20, data crc = 0, reloc crc = 0
+ALL-NEXT:         IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_ALIGN_4BYTES | IMAGE_SCN_MEM_READ
+ALL-NEXT:   SC  | mod = 0, 0003:0000, size = 4, data crc = 0, reloc crc = 0
+ALL-NEXT:         IMAGE_SCN_CNT_UNINITIALIZED_DATA | IMAGE_SCN_ALIGN_4BYTES | IMAGE_SCN_MEM_READ |
+ALL-NEXT:         IMAGE_SCN_MEM_WRITE
+ALL:                              Section Map
+ALL-NEXT: ============================================================
+ALL-NEXT:   Section 0000 | ovl = 0, group = 0, frame = 0, name = 1
+ALL-NEXT:                  class = 65535, offset = 0, size = 4122
+ALL-NEXT:                  flags = read | execute | 32 bit addr | selector
+ALL-NEXT:   Section 0001 | ovl = 1, group = 0, frame = 0, name = 2
+ALL-NEXT:                  class = 65535, offset = 0, size = 690
+ALL-NEXT:                  flags = read | 32 bit addr | selector
+ALL-NEXT:   Section 0002 | ovl = 2, group = 0, frame = 0, name = 3
+ALL-NEXT:                  class = 65535, offset = 0, size = 4
+ALL-NEXT:                  flags = read | write | 32 bit addr | selector
+ALL-NEXT:   Section 0003 | ovl = 3, group = 0, frame = 0, name = 4
+ALL-NEXT:                  class = 65535, offset = 0, size = 8
+ALL-NEXT:                  flags = read | 32 bit addr | selector
+ALL-NEXT:   Section 0004 | ovl = 4, group = 0, frame = 0, name = 0
+ALL-NEXT:                  class = 65535, offset = 0, size = 4294967295
+ALL-NEXT:                  flags = 32 bit addr | absolute addr
 
-; ALL: FileHeaders {
-; ALL:   BlockSize: 4096
-; ALL:   FreeBlockMap: 2
-; ALL:   NumBlocks: 25
-; ALL:   NumDirectoryBytes: 136
-; ALL:   Unknown1: 0
-; ALL:   BlockMapAddr: 24
-; ALL:   NumDirectoryBlocks: 1
-; ALL:   DirectoryBlocks: [23]
-; ALL:   NumStreams: 17
-; ALL: }
-; ALL: Streams [
-; ALL:   Stream 0: [Old MSF Directory] (40 bytes)
-; ALL:   Stream 1: [PDB Stream] (118 bytes)
-; ALL:   Stream 2: [TPI Stream] (5392 bytes)
-; ALL:   Stream 3: [DBI Stream] (739 bytes)
-; ALL:   Stream 4: [IPI Stream] (784 bytes)
-; ALL:   Stream 5: [Named Stream "/LinkInfo"] (0 bytes)
-; ALL:   Stream 6: [Global Symbol Hash] (556 bytes)
-; ALL:   Stream 7: [Public Symbol Hash] (604 bytes)
-; ALL:   Stream 8: [Public Symbol Records] (104 bytes)
-; ALL:   Stream 9: [Named Stream "/src/headerblock"] (0 bytes)
-; ALL:   Stream 10: [Section Header Data] (160 bytes)
-; ALL:   Stream 11: [New FPO Data] (32 bytes)
-; ALL:   Stream 12: [Module "d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj"] (308 bytes)
-; ALL:   Stream 13: [Named Stream "/names"] (239 bytes)
-; ALL:   Stream 14: [Module "* Linker *"] (520 bytes)
-; ALL:   Stream 15: [TPI Hash] (308 bytes)
-; ALL:   Stream 16: [IPI Hash] (68 bytes)
-; ALL: ]
-; ALL: Msf Free Pages: [3, 4, 5, 8, 9]
-; ALL: Orphaned Pages: []
-; ALL: Multiply Used Pages: []
-; ALL: Use After Free Pages: []
-; ALL: StreamBlocks [
-; ALL:   Stream 0: [8]
-; ALL:   Stream 1: [19]
-; ALL:   Stream 2: [18, 17]
-; ALL:   Stream 3: [14]
-; ALL:   Stream 4: [20]
-; ALL:   Stream 5: []
-; ALL:   Stream 6: [11]
-; ALL:   Stream 7: [13]
-; ALL:   Stream 8: [12]
-; ALL:   Stream 9: []
-; ALL:   Stream 10: [10]
-; ALL:   Stream 11: [15]
-; ALL:   Stream 12: [6]
-; ALL:   Stream 13: [16]
-; ALL:   Stream 14: [7]
-; ALL:   Stream 15: [21]
-; ALL:   Stream 16: [22]
-; ALL: ]
-; ALL: PDB Stream {
-; ALL:   Version: 20000404
-; ALL:   Signature: 0x54E507E2
-; ALL:   Age: 1
-; ALL:   Guid: {0B355641-86A0-A249-896F-9988FAE52FF0}
-; ALL:   Features: 0x1
-; ALL: }
-; ALL: Type Info Stream (IPI) {
-; ALL:   IPI Version: 20040203
-; ALL:   Record count: 15
-; ALL:   Records [
-; ALL:     {
-; ALL:       UdtModSourceLine (0x1000) {
-; ALL:         TypeLeafKind: LF_UDT_MOD_SRC_LINE (0x1607)
-; ALL:         UDT: __vc_attributes::threadingAttribute (0x100B)
-; ALL:         SourceFile: <unknown simple type> (0x1)
-; ALL:         LineNumber: 481
-; ALL:         Module: 1
-; ALL:       }
-; ALL:     }
-; ALL:     {
-; ALL:       UdtModSourceLine (0x1001) {
-; ALL:         TypeLeafKind: LF_UDT_MOD_SRC_LINE (0x1607)
-; ALL:         UDT: __vc_attributes::event_receiverAttribute (0x1017)
-; ALL:         SourceFile: <unknown simple type> (0x1)
-; ALL:         LineNumber: 194
-; ALL:         Module: 1
-; ALL:       }
-; ALL:     }
-; ALL:     {
-; ALL:       UdtModSourceLine (0x1002) {
-; ALL:         TypeLeafKind: LF_UDT_MOD_SRC_LINE (0x1607)
-; ALL:         UDT: __vc_attributes::aggregatableAttribute (0x1021)
-; ALL:         SourceFile: <unknown simple type> (0x1)
-; ALL:         LineNumber: 603
-; ALL:         Module: 1
-; ALL:       }
-; ALL:     }
-; ALL:     {
-; ALL:       UdtModSourceLine (0x1003) {
-; ALL:         TypeLeafKind: LF_UDT_MOD_SRC_LINE (0x1607)
-; ALL:         UDT: __vc_attributes::event_sourceAttribute (0x102C)
-; ALL:         SourceFile: <unknown simple type> (0x1)
-; ALL:         LineNumber: 1200
-; ALL:         Module: 1
-; ALL:       }
-; ALL:     }
-; ALL:     {
-; ALL:       UdtModSourceLine (0x1004) {
-; ALL:         TypeLeafKind: LF_UDT_MOD_SRC_LINE (0x1607)
-; ALL:         UDT: __vc_attributes::moduleAttribute (0x103A)
-; ALL:         SourceFile: <unknown simple type> (0x1)
-; ALL:         LineNumber: 540
-; ALL:         Module: 1
-; ALL:       }
-; ALL:     }
-; ALL:     {
-; ALL:       UdtModSourceLine (0x1005) {
-; ALL:         TypeLeafKind: LF_UDT_MOD_SRC_LINE (0x1607)
-; ALL:         UDT: __vc_attributes::helper_attributes::usageAttribute (0x1042)
-; ALL:         SourceFile: <unknown simple type> (0x1)
-; ALL:         LineNumber: 108
-; ALL:         Module: 1
-; ALL:       }
-; ALL:     }
-; ALL:     {
-; ALL:       UdtModSourceLine (0x1006) {
-; ALL:         TypeLeafKind: LF_UDT_MOD_SRC_LINE (0x1607)
-; ALL:         UDT: __vc_attributes::helper_attributes::v1_alttypeAttribute (0x104A)
-; ALL:         SourceFile: <unknown simple type> (0x1)
-; ALL:         LineNumber: 96
-; ALL:         Module: 1
-; ALL:       }
-; ALL:     }
-; ALL:     {
-; ALL:       StringId (0x1007) {
-; ALL:         TypeLeafKind: LF_STRING_ID (0x1605)
-; ALL:         Id: 0x0
-; ALL:         StringData: d:\src\llvm\test\DebugInfo\PDB\Inputs
-; ALL:       }
-; ALL:     }
-; ALL:     {
-; ALL:       StringId (0x1008) {
-; ALL:         TypeLeafKind: LF_STRING_ID (0x1605)
-; ALL:         Id: 0x0
-; ALL:         StringData: C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\BIN\cl.exe
-; ALL:       }
-; ALL:     }
-; ALL:     {
-; ALL:       StringId (0x1009) {
-; ALL:         TypeLeafKind: LF_STRING_ID (0x1605)
-; ALL:         Id: 0x0
-; ALL:         StringData: empty.cpp
-; ALL:       }
-; ALL:     }
-; ALL:     {
-; ALL:       StringId (0x100A) {
-; ALL:         TypeLeafKind: LF_STRING_ID (0x1605)
-; ALL:         Id: 0x0
-; ALL:         StringData: d:\src\llvm\test\DebugInfo\PDB\Inputs\vc120.pdb
-; ALL:       }
-; ALL:     }
-; ALL:     {
-; ALL:       StringId (0x100B) {
-; ALL:         TypeLeafKind: LF_STRING_ID (0x1605)
-; ALL:         Id: 0x0
-; ALL:         StringData: -Zi -MT -I"C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\INCLUDE" -I"C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\ATLMFC\INCLUDE" -I"C:\Program Files (x86)\Windows Kits\8.1\include\shared" -I"C:\Program Files (x86)\Windows
-; ALL:       }
-; ALL:     }
-; ALL:     {
-; ALL:       StringList (0x100C) {
-; ALL:         TypeLeafKind: LF_SUBSTR_LIST (0x1604)
-; ALL:         NumStrings: 1
-; ALL:         Strings [
-; ALL:           String: -Zi -MT -I"C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\INCLUDE" -I"C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\ATLMFC\INCLUDE" -I"C:\Program Files (x86)\Windows Kits\8.1\include\shared" -I"C:\Program Files (x86)\Windows (0x100B)
-; ALL:         ]
-; ALL:       }
-; ALL:     }
-; ALL:     {
-; ALL:       StringId (0x100D) {
-; ALL:         TypeLeafKind: LF_STRING_ID (0x1605)
-; ALL:         Id: "-Zi -MT -I"C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\INCLUDE" -I"C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\ATLMFC\INCLUDE" -I"C:\Program Files (x86)\Windows Kits\8.1\include\shared" -I"C:\Program Files (x86)\Windows" (0x100C)
-; ALL:         StringData:  Kits\8.1\include\um" -I"C:\Program Files (x86)\Windows Kits\8.1\include\winrt" -TP -X
-; ALL:       }
-; ALL:     }
-; ALL:     {
-; ALL:       BuildInfo (0x100E) {
-; ALL:         TypeLeafKind: LF_BUILDINFO (0x1603)
-; ALL:         NumArgs: 5
-; ALL:         Arguments [
-; ALL:           ArgType: d:\src\llvm\test\DebugInfo\PDB\Inputs (0x1007)
-; ALL:           ArgType: C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\BIN\cl.exe (0x1008)
-; ALL:           ArgType: empty.cpp (0x1009)
-; ALL:           ArgType: d:\src\llvm\test\DebugInfo\PDB\Inputs\vc120.pdb (0x100A)
-; ALL:           ArgType:  Kits\8.1\include\um" -I"C:\Program Files (x86)\Windows Kits\8.1\include\winrt" -TP -X (0x100D)
-; ALL:         ]
-; ALL:       }
-; ALL:     }
-; ALL:   ]
-; ALL: }
-; ALL: DBI Stream {
-; ALL:   Dbi Version: 19990903
-; ALL:   Age: 1
-; ALL:   Incremental Linking: Yes
-; ALL:   Has CTypes: No
-; ALL:   Is Stripped: No
-; ALL:   Machine Type: x86
-; ALL:   Symbol Record Stream Index: 8
-; ALL:   Public Symbol Stream Index: 7
-; ALL:   Global Symbol Stream Index: 6
-; ALL:   Toolchain Version: 12.0
-; ALL:   mspdb120.dll version: 12.0.31101
-; ALL:   Modules [
-; ALL:     {
-; ALL:       Name: d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj
-; ALL:       Debug Stream Index: 12
-; ALL:       Object File Name: d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj
-; ALL:       Num Files: 1
-; ALL:       Source File Name Idx: 0
-; ALL:       Pdb File Name Idx: 0
-; ALL:       Line Info Byte Size: 0
-; ALL:       C13 Line Info Byte Size: 88
-; ALL:       Symbol Byte Size: 208
-; ALL:       Type Server Index: 0
-; ALL:       Has EC Info: No
-; ALL:       1 Contributing Source Files [
-; ALL:         d:\src\llvm\test\debuginfo\pdb\inputs\empty.cpp
-; ALL:       ]
-; ALL:       Symbols [
-; ALL:         {
-; ALL:           ObjectName {
-; ALL:             Signature: 0x0
-; ALL:             ObjectName: d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj
-; ALL:           }
-; ALL:         }
-; ALL:         {
-; ALL:           CompilerFlags3 {
-; ALL:             Language: Cpp (0x1)
-; ALL:             Flags [ (0x2000)
-; ALL:               SecurityChecks (0x2000)
-; ALL:             ]
-; ALL:             Machine: Pentium3 (0x7)
-; ALL:             FrontendVersion: 18.0.31101.0
-; ALL:             BackendVersion: 18.0.31101.0
-; ALL:             VersionName: Microsoft (R) Optimizing Compiler
-; ALL:           }
-; ALL:         }
-; ALL:         {
-; ALL:           ProcStart {
-; ALL:             PtrParent: 0x0
-; ALL:             PtrEnd: 0xC4
-; ALL:             PtrNext: 0x0
-; ALL:             CodeSize: 0xA
-; ALL:             DbgStart: 0x3
-; ALL:             DbgEnd: 0x8
-; ALL:             FunctionType: int () (0x1001)
-; ALL:             Segment: 0x1
-; ALL:             Flags [ (0x1)
-; ALL:               HasFP (0x1)
-; ALL:             ]
-; ALL:             DisplayName: main
-; ALL:           }
-; ALL:         }
-; ALL:         {
-; ALL:           FrameProc {
-; ALL:             TotalFrameBytes: 0x0
-; ALL:             PaddingFrameBytes: 0x0
-; ALL:             OffsetToPadding: 0x0
-; ALL:             BytesOfCalleeSavedRegisters: 0x0
-; ALL:             OffsetOfExceptionHandler: 0x0
-; ALL:             SectionIdOfExceptionHandler: 0x0
-; ALL:             Flags [ (0x128200)
-; ALL:               AsynchronousExceptionHandling (0x200)
-; ALL:               OptimizedForSpeed (0x100000)
-; ALL:             ]
-; ALL:           }
-; ALL:         }
-; ALL:         {
-; ALL:           BlockEnd {
-; ALL:           }
-; ALL:         }
-; ALL:         {
-; ALL:           BuildInfo {
-; ALL:             BuildId: 4110
-; ALL:           }
-; ALL:         }
-; ALL:       ]
-; ALL:     }
-; ALL:     {
-; ALL:       Name: * Linker *
-; ALL:       Debug Stream Index: 14
-; ALL:       Object File Name:
-; ALL:       Num Files: 0
-; ALL:       Source File Name Idx: 0
-; ALL:       Pdb File Name Idx: 1
-; ALL:       Line Info Byte Size: 0
-; ALL:       C13 Line Info Byte Size: 0
-; ALL:       Symbol Byte Size: 516
-; ALL:       Type Server Index: 0
-; ALL:       Has EC Info: No
-; ALL:       0 Contributing Source Files [
-; ALL:       ]
-; ALL:       Symbols [
-; ALL:         {
-; ALL:           ObjectName {
-; ALL:             Signature: 0x0
-; ALL:             ObjectName: * Linker *
-; ALL:           }
-; ALL:         }
-; ALL:         {
-; ALL:           CompilerFlags3 {
-; ALL:             Language: Link (0x7)
-; ALL:             Flags [ (0x0)
-; ALL:             ]
-; ALL:             Machine: Intel80386 (0x3)
-; ALL:             FrontendVersion: 0.0.0.0
-; ALL:             BackendVersion: 12.0.31101.0
-; ALL:             VersionName: Microsoft (R) LINK
-; ALL:           }
-; ALL:         }
-; ALL:         {
-; ALL:           EnvBlock {
-; ALL:             Entries [
-; ALL:               cwd
-; ALL:               d:\src\llvm\test\DebugInfo\PDB\Inputs
-; ALL:               exe
-; ALL:               C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\BIN\link.exe
-; ALL:               pdb
-; ALL:               d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.pdb
-; ALL:             ]
-; ALL:           }
-; ALL:         }
-; ALL:         {
-; ALL:           Trampoline {
-; ALL:             Type: TrampIncremental (0x0)
-; ALL:             Size: 5
-; ALL:             ThunkOff: 5
-; ALL:             TargetOff: 16
-; ALL:             ThunkSection: 1
-; ALL:             TargetSection: 1
-; ALL:           }
-; ALL:         }
-; ALL:         {
-; ALL:           Section {
-; ALL:             SectionNumber: 1
-; ALL:             Alignment: 12
-; ALL:             Rva: 4096
-; ALL:             Length: 4122
-; ALL:             Characteristics [ (0x60000020)
-; ALL:               IMAGE_SCN_CNT_CODE (0x20)
-; ALL:               IMAGE_SCN_MEM_EXECUTE (0x20000000)
-; ALL:               IMAGE_SCN_MEM_READ (0x40000000)
-; ALL:             ]
-; ALL:             Name: .text
-; ALL:           }
-; ALL:         }
-; ALL:         {
-; ALL:           COFF Group {
-; ALL:             Size: 4122
-; ALL:             Characteristics [ (0x60000020)
-; ALL:               IMAGE_SCN_CNT_CODE (0x20)
-; ALL:               IMAGE_SCN_MEM_EXECUTE (0x20000000)
-; ALL:               IMAGE_SCN_MEM_READ (0x40000000)
-; ALL:             ]
-; ALL:             Offset: 0
-; ALL:             Segment: 1
-; ALL:             Name: .text$mn
-; ALL:           }
-; ALL:         }
-; ALL:         {
-; ALL:           Section {
-; ALL:             SectionNumber: 2
-; ALL:             Alignment: 12
-; ALL:             Rva: 12288
-; ALL:             Length: 690
-; ALL:             Characteristics [ (0x40000040)
-; ALL:               IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
-; ALL:               IMAGE_SCN_MEM_READ (0x40000000)
-; ALL:             ]
-; ALL:             Name: .rdata
-; ALL:           }
-; ALL:         }
-; ALL:         {
-; ALL:           COFF Group {
-; ALL:             Size: 323
-; ALL:             Characteristics [ (0x40000040)
-; ALL:               IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
-; ALL:               IMAGE_SCN_MEM_READ (0x40000000)
-; ALL:             ]
-; ALL:             Offset: 0
-; ALL:             Segment: 2
-; ALL:             Name: .rdata
-; ALL:           }
-; ALL:         }
-; ALL:         {
-; ALL:           COFF Group {
-; ALL:             Size: 0
-; ALL:             Characteristics [ (0x40000040)
-; ALL:               IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
-; ALL:               IMAGE_SCN_MEM_READ (0x40000000)
-; ALL:             ]
-; ALL:             Offset: 323
-; ALL:             Segment: 2
-; ALL:             Name: .edata
-; ALL:           }
-; ALL:         }
-; ALL:         {
-; ALL:           COFF Group {
-; ALL:             Size: 366
-; ALL:             Characteristics [ (0x40000040)
-; ALL:               IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
-; ALL:               IMAGE_SCN_MEM_READ (0x40000000)
-; ALL:             ]
-; ALL:             Offset: 324
-; ALL:             Segment: 2
-; ALL:             Name: .rdata$debug
-; ALL:           }
-; ALL:         }
-; ALL:         {
-; ALL:           Section {
-; ALL:             SectionNumber: 3
-; ALL:             Alignment: 12
-; ALL:             Rva: 16384
-; ALL:             Length: 4
-; ALL:             Characteristics [ (0xC0000040)
-; ALL:               IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
-; ALL:               IMAGE_SCN_MEM_READ (0x40000000)
-; ALL:               IMAGE_SCN_MEM_WRITE (0x80000000)
-; ALL:             ]
-; ALL:             Name: .data
-; ALL:           }
-; ALL:         }
-; ALL:         {
-; ALL:           COFF Group {
-; ALL:             Size: 4
-; ALL:             Characteristics [ (0xC0000080)
-; ALL:               IMAGE_SCN_CNT_UNINITIALIZED_DATA (0x80)
-; ALL:               IMAGE_SCN_MEM_READ (0x40000000)
-; ALL:               IMAGE_SCN_MEM_WRITE (0x80000000)
-; ALL:             ]
-; ALL:             Offset: 0
-; ALL:             Segment: 3
-; ALL:             Name: .bss
-; ALL:           }
-; ALL:         }
-; ALL:         {
-; ALL:           Section {
-; ALL:             SectionNumber: 4
-; ALL:             Alignment: 12
-; ALL:             Rva: 20480
-; ALL:             Length: 8
-; ALL:             Characteristics [ (0x42000040)
-; ALL:               IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
-; ALL:               IMAGE_SCN_MEM_DISCARDABLE (0x2000000)
-; ALL:               IMAGE_SCN_MEM_READ (0x40000000)
-; ALL:             ]
-; ALL:             Name: .reloc
-; ALL:           }
-; ALL:         }
-; ALL:       ]
-; ALL:     }
-; ALL:   ]
-; ALL: }
-; ALL: Section Contributions [
-; ALL:   Contribution {
-; ALL:     ISect: 1
-; ALL:     Off: 0
-; ALL:     Size: 10
-; ALL:     Characteristics [ (0x60000020)
-; ALL:       IMAGE_SCN_CNT_CODE (0x20)
-; ALL:       IMAGE_SCN_MEM_EXECUTE (0x20000000)
-; ALL:       IMAGE_SCN_MEM_READ (0x40000000)
-; ALL:     ]
-; ALL:     Module {
-; ALL:       Index: 1
-; ALL:       Name: * Linker *
-; ALL:     }
-; ALL:     Data CRC: 0
-; ALL:     Reloc CRC: 0
-; ALL:   }
-; ALL:   Contribution {
-; ALL:     ISect: 1
-; ALL:     Off: 16
-; ALL:     Size: 10
-; ALL:     Characteristics [ (0x60500020)
-; ALL:       IMAGE_SCN_ALIGN_16BYTES (0x500000)
-; ALL:       IMAGE_SCN_CNT_CODE (0x20)
-; ALL:       IMAGE_SCN_MEM_EXECUTE (0x20000000)
-; ALL:       IMAGE_SCN_MEM_READ (0x40000000)
-; ALL:     ]
-; ALL:     Module {
-; ALL:       Index: 0
-; ALL:       Name: d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj
-; ALL:     }
-; ALL:     Data CRC: 3617027124
-; ALL:     Reloc CRC: 0
-; ALL:   }
-; ALL:   Contribution {
-; ALL:     ISect: 2
-; ALL:     Off: 0
-; ALL:     Size: 56
-; ALL:     Characteristics [ (0x40000040)
-; ALL:       IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
-; ALL:       IMAGE_SCN_MEM_READ (0x40000000)
-; ALL:     ]
-; ALL:     Module {
-; ALL:       Index: 1
-; ALL:       Name: * Linker *
-; ALL:     }
-; ALL:     Data CRC: 0
-; ALL:     Reloc CRC: 0
-; ALL:   }
-; ALL:   Contribution {
-; ALL:     ISect: 2
-; ALL:     Off: 324
-; ALL:     Size: 72
-; ALL:     Characteristics [ (0x40300040)
-; ALL:       IMAGE_SCN_ALIGN_4BYTES (0x300000)
-; ALL:       IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
-; ALL:       IMAGE_SCN_MEM_READ (0x40000000)
-; ALL:     ]
-; ALL:     Module {
-; ALL:       Index: 1
-; ALL:       Name: * Linker *
-; ALL:     }
-; ALL:     Data CRC: 0
-; ALL:     Reloc CRC: 0
-; ALL:   }
-; ALL:   Contribution {
-; ALL:     ISect: 2
-; ALL:     Off: 396
-; ALL:     Size: 20
-; ALL:     Characteristics [ (0x40300040)
-; ALL:       IMAGE_SCN_ALIGN_4BYTES (0x300000)
-; ALL:       IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
-; ALL:       IMAGE_SCN_MEM_READ (0x40000000)
-; ALL:     ]
-; ALL:     Module {
-; ALL:       Index: 1
-; ALL:       Name: * Linker *
-; ALL:     }
-; ALL:     Data CRC: 0
-; ALL:     Reloc CRC: 0
-; ALL:   }
-; ALL:   Contribution {
-; ALL:     ISect: 3
-; ALL:     Off: 0
-; ALL:     Size: 4
-; ALL:     Characteristics [ (0xC0300080)
-; ALL:       IMAGE_SCN_ALIGN_4BYTES (0x300000)
-; ALL:       IMAGE_SCN_CNT_UNINITIALIZED_DATA (0x80)
-; ALL:       IMAGE_SCN_MEM_READ (0x40000000)
-; ALL:       IMAGE_SCN_MEM_WRITE (0x80000000)
-; ALL:     ]
-; ALL:     Module {
-; ALL:       Index: 0
-; ALL:       Name: d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj
-; ALL:     }
-; ALL:     Data CRC: 0
-; ALL:     Reloc CRC: 0
-; ALL:   }
-; ALL: ]
-; ALL: Section Map [
-; ALL:   Entry {
-; ALL:     Flags [ (0x10D)
-; ALL:       AddressIs32Bit (0x8)
-; ALL:       Execute (0x4)
-; ALL:       IsSelector (0x100)
-; ALL:       Read (0x1)
-; ALL:     ]
-; ALL:     Ovl: 0
-; ALL:     Group: 0
-; ALL:     Frame: 1
-; ALL:     SecName: 65535
-; ALL:     ClassName: 65535
-; ALL:     Offset: 0
-; ALL:     SecByteLength: 4122
-; ALL:   }
-; ALL:   Entry {
-; ALL:     Flags [ (0x109)
-; ALL:       AddressIs32Bit (0x8)
-; ALL:       IsSelector (0x100)
-; ALL:       Read (0x1)
-; ALL:     ]
-; ALL:     Ovl: 0
-; ALL:     Group: 0
-; ALL:     Frame: 2
-; ALL:     SecName: 65535
-; ALL:     ClassName: 65535
-; ALL:     Offset: 0
-; ALL:     SecByteLength: 690
-; ALL:   }
-; ALL:   Entry {
-; ALL:     Flags [ (0x10B)
-; ALL:       AddressIs32Bit (0x8)
-; ALL:       IsSelector (0x100)
-; ALL:       Read (0x1)
-; ALL:       Write (0x2)
-; ALL:     ]
-; ALL:     Ovl: 0
-; ALL:     Group: 0
-; ALL:     Frame: 3
-; ALL:     SecName: 65535
-; ALL:     ClassName: 65535
-; ALL:     Offset: 0
-; ALL:     SecByteLength: 4
-; ALL:   }
-; ALL:   Entry {
-; ALL:     Flags [ (0x109)
-; ALL:       AddressIs32Bit (0x8)
-; ALL:       IsSelector (0x100)
-; ALL:       Read (0x1)
-; ALL:     ]
-; ALL:     Ovl: 0
-; ALL:     Group: 0
-; ALL:     Frame: 4
-; ALL:     SecName: 65535
-; ALL:     ClassName: 65535
-; ALL:     Offset: 0
-; ALL:     SecByteLength: 8
-; ALL:   }
-; ALL:   Entry {
-; ALL:     Flags [ (0x208)
-; ALL:       AddressIs32Bit (0x8)
-; ALL:       IsAbsoluteAddress (0x200)
-; ALL:     ]
-; ALL:     Ovl: 0
-; ALL:     Group: 0
-; ALL:     Frame: 0
-; ALL:     SecName: 65535
-; ALL:     ClassName: 65535
-; ALL:     Offset: 0
-; ALL:     SecByteLength: 4294967295
-; ALL:   }
-; ALL: ]
-; ALL: Globals Stream {
-; ALL:   Stream number: 6
-; ALL:   Number of buckets: 2
-; ALL:   Hash Buckets: [0, 12]
-; ALL: }
-; ALL: Publics Stream {
-; ALL:   Stream number: 7
-; ALL:   SymHash: 556
-; ALL:   AddrMap: 8
-; ALL:   Number of buckets: 2
-; ALL:   Hash Buckets: [0, 12]
-; ALL:   Address Map: [36, 0]
-; ALL:   Thunk Map: [4112]
-; ALL:   Section Offsets: [4096, 1]
-; ALL:   Symbols [
-; ALL:     {
-; ALL:       PublicSym {
-; ALL:         Type: 0
-; ALL:         Seg: 3
-; ALL:         Off: 0
-; ALL:         Name: ?__purecall@@3PAXA
-; ALL:       }
-; ALL:     }
-; ALL:     {
-; ALL:       PublicSym {
-; ALL:         Type: 2
-; ALL:         Seg: 1
-; ALL:         Off: 16
-; ALL:         Name: _main
-; ALL:       }
-; ALL:     }
-; ALL:     {
-; ALL:       ProcRef {
-; ALL:         SumName: 0
-; ALL:         SymOffset: 120
-; ALL:         Mod: 1
-; ALL:         Name: main
-; ALL:       }
-; ALL:     }
-; ALL:     {
-; ALL:       DataSym {
-; ALL:         Type: void* (0x403)
-; ALL:         DisplayName: __purecall
-; ALL:       }
-; ALL:     }
-; ALL:   ]
-; ALL: }
-; ALL: Section Headers [
-; ALL:   {
-; ALL:     Name: .text
-; ALL:     Virtual Size: 4122
-; ALL:     Virtual Address: 4096
-; ALL:     Size of Raw Data: 4608
-; ALL:     File Pointer to Raw Data: 1024
-; ALL:     File Pointer to Relocations: 0
-; ALL:     File Pointer to Linenumbers: 0
-; ALL:     Number of Relocations: 0
-; ALL:     Number of Linenumbers: 0
-; ALL:     Characteristics [ (0x60000020)
-; ALL:       IMAGE_SCN_CNT_CODE (0x20)
-; ALL:       IMAGE_SCN_MEM_EXECUTE (0x20000000)
-; ALL:       IMAGE_SCN_MEM_READ (0x40000000)
-; ALL:     ]
-; ALL:   }
-; ALL:   {
-; ALL:     Name: .rdata
-; ALL:     Virtual Size: 690
-; ALL:     Virtual Address: 12288
-; ALL:     Size of Raw Data: 1024
-; ALL:     File Pointer to Raw Data: 5632
-; ALL:     File Pointer to Relocations: 0
-; ALL:     File Pointer to Linenumbers: 0
-; ALL:     Number of Relocations: 0
-; ALL:     Number of Linenumbers: 0
-; ALL:     Characteristics [ (0x40000040)
-; ALL:       IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
-; ALL:       IMAGE_SCN_MEM_READ (0x40000000)
-; ALL:     ]
-; ALL:   }
-; ALL:   {
-; ALL:     Name: .data
-; ALL:     Virtual Size: 4
-; ALL:     Virtual Address: 16384
-; ALL:     Size of Raw Data: 0
-; ALL:     File Pointer to Raw Data: 0
-; ALL:     File Pointer to Relocations: 0
-; ALL:     File Pointer to Linenumbers: 0
-; ALL:     Number of Relocations: 0
-; ALL:     Number of Linenumbers: 0
-; ALL:     Characteristics [ (0xC0000040)
-; ALL:       IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
-; ALL:       IMAGE_SCN_MEM_READ (0x40000000)
-; ALL:       IMAGE_SCN_MEM_WRITE (0x80000000)
-; ALL:     ]
-; ALL:   }
-; ALL:   {
-; ALL:     Name: .reloc
-; ALL:     Virtual Size: 8
-; ALL:     Virtual Address: 20480
-; ALL:     Size of Raw Data: 512
-; ALL:     File Pointer to Raw Data: 6656
-; ALL:     File Pointer to Relocations: 0
-; ALL:     File Pointer to Linenumbers: 0
-; ALL:     Number of Relocations: 0
-; ALL:     Number of Linenumbers: 0
-; ALL:     Characteristics [ (0x42000040)
-; ALL:       IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
-; ALL:       IMAGE_SCN_MEM_DISCARDABLE (0x2000000)
-; ALL:       IMAGE_SCN_MEM_READ (0x40000000)
-; ALL:     ]
-; ALL:   }
-; ALL: ]
 
-; BIG:      FileHeaders {
-; BIG-NEXT:   BlockSize: 4096
-; BIG-NEXT:   FreeBlockMap: 2
-; BIG-NEXT:   NumBlocks: 99
-; BIG-NEXT:   NumDirectoryBytes: 616
-; BIG-NEXT:   Unknown1: 0
-; BIG-NEXT:   BlockMapAddr: 97
-; BIG-NEXT:   NumDirectoryBlocks: 1
-; BIG-NEXT:   DirectoryBlocks: [96]
-; BIG-NEXT:   NumStreams: 64
-; BIG-NEXT: }
-; BIG-NEXT: PDB Stream {
-; BIG-NEXT:   Version: 20000404
-; BIG-NEXT:   Signature: 0x571FFE67
-; BIG-NEXT:   Age: 1
-; BIG-NEXT:   Guid: {880ECC89-DF81-0B4F-839C-58CBD052E937}
-; BIG-NEXT:   Features: 0x1
-; BIG-NEXT:   Named Streams {
-; BIG-NEXT:     /names: 13
-; BIG-NEXT:     /LinkInfo: 5
-; BIG-NEXT:     /src/headerblock: 61
-; BIG-NEXT:   }
-; BIG-NEXT: }
-; BIG-NEXT: DBI Stream {
-; BIG-NEXT:   Dbi Version: 19990903
-; BIG-NEXT:   Age: 1
-; BIG-NEXT:   Incremental Linking: Yes
-; BIG-NEXT:   Has CTypes: No
-; BIG-NEXT:   Is Stripped: No
-; BIG-NEXT:   Machine Type: x86
-; BIG-NEXT:   Symbol Record Stream Index: 9
-; BIG-NEXT:   Public Symbol Stream Index: 8
-; BIG-NEXT:   Global Symbol Stream Index: 7
-; BIG-NEXT:   Toolchain Version: 14.0
-; BIG-NEXT:   mspdb140.dll version: 14.0.23918
-; BIG-NEXT:   Modules [
-; BIG-NEXT:     {
-; BIG-NEXT:       Name: D:\src\llvm\test\tools\llvm-symbolizer\pdb\Inputs\test.obj
-; BIG-NEXT:       Debug Stream Index: 12
-; BIG-NEXT:       Object File Name: D:\src\llvm\test\tools\llvm-symbolizer\pdb\Inputs\test.obj
-; BIG-NEXT:       Num Files: 1
-; BIG-NEXT:       Source File Name Idx: 0
-; BIG-NEXT:       Pdb File Name Idx: 0
-; BIG-NEXT:       Line Info Byte Size: 0
-; BIG-NEXT:       C13 Line Info Byte Size: 400
-; BIG-NEXT:       Symbol Byte Size: 872
-; BIG-NEXT:       Type Server Index: 0
-; BIG-NEXT:       Has EC Info: No
-; BIG-NEXT:       1 Contributing Source Files [
-; BIG-NEXT:         d:\src\llvm\test\tools\llvm-symbolizer\pdb\inputs\test.cpp
-; BIG-NEXT:       ]
-; BIG-NEXT:     }
-; BIG-NEXT:     {
-; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\_cpu_disp_.obj
-; BIG-NEXT:       Debug Stream Index: 14
-; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
-; BIG-NEXT:       Num Files: 14
-; BIG-NEXT:       Source File Name Idx: 0
-; BIG-NEXT:       Pdb File Name Idx: 0
-; BIG-NEXT:       Line Info Byte Size: 0
-; BIG-NEXT:       C13 Line Info Byte Size: 344
-; BIG-NEXT:       Symbol Byte Size: 720
-; BIG-NEXT:       Type Server Index: 0
-; BIG-NEXT:       Has EC Info: No
-; BIG-NEXT:       14 Contributing Source Files [
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\malloc.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\evntprov.h
-; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
-; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
-; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\misc\i386\cpu_disp.c
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
-; BIG-NEXT:       ]
-; BIG-NEXT:     }
-; BIG-NEXT:     {
-; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\_initsect_.obj
-; BIG-NEXT:       Debug Stream Index: 15
-; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
-; BIG-NEXT:       Num Files: 19
-; BIG-NEXT:       Source File Name Idx: 0
-; BIG-NEXT:       Pdb File Name Idx: 0
-; BIG-NEXT:       Line Info Byte Size: 0
-; BIG-NEXT:       C13 Line Info Byte Size: 464
-; BIG-NEXT:       Symbol Byte Size: 464
-; BIG-NEXT:       Type Server Index: 0
-; BIG-NEXT:       Has EC Info: No
-; BIG-NEXT:       19 Contributing Source Files [
-; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
-; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\rtc\initsect.cpp
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\malloc.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
-; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\stdlib.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\evntprov.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\guiddef.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winuser.h
-; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\vcruntime_new.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memory.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
-; BIG-NEXT:       ]
-; BIG-NEXT:     }
-; BIG-NEXT:     {
-; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\_sehprolg4_.obj
-; BIG-NEXT:       Debug Stream Index: 16
-; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
-; BIG-NEXT:       Num Files: 1
-; BIG-NEXT:       Source File Name Idx: 1
-; BIG-NEXT:       Pdb File Name Idx: 0
-; BIG-NEXT:       Line Info Byte Size: 0
-; BIG-NEXT:       C13 Line Info Byte Size: 32
-; BIG-NEXT:       Symbol Byte Size: 444
-; BIG-NEXT:       Type Server Index: 0
-; BIG-NEXT:       Has EC Info: No
-; BIG-NEXT:       1 Contributing Source Files [
-; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\eh\i386\sehprolg4.asm
-; BIG-NEXT:       ]
-; BIG-NEXT:     }
-; BIG-NEXT:     {
-; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\_chandler4gs_.obj
-; BIG-NEXT:       Debug Stream Index: 17
-; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
-; BIG-NEXT:       Num Files: 14
-; BIG-NEXT:       Source File Name Idx: 0
-; BIG-NEXT:       Pdb File Name Idx: 0
-; BIG-NEXT:       Line Info Byte Size: 0
-; BIG-NEXT:       C13 Line Info Byte Size: 344
-; BIG-NEXT:       Symbol Byte Size: 604
-; BIG-NEXT:       Type Server Index: 0
-; BIG-NEXT:       Has EC Info: No
-; BIG-NEXT:       14 Contributing Source Files [
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\malloc.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\evntprov.h
-; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
-; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
-; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\eh\i386\chandler4gs.c
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
-; BIG-NEXT:       ]
-; BIG-NEXT:     }
-; BIG-NEXT:     {
-; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\_secchk_.obj
-; BIG-NEXT:       Debug Stream Index: 18
-; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
-; BIG-NEXT:       Num Files: 14
-; BIG-NEXT:       Source File Name Idx: 0
-; BIG-NEXT:       Pdb File Name Idx: 0
-; BIG-NEXT:       Line Info Byte Size: 0
-; BIG-NEXT:       C13 Line Info Byte Size: 344
-; BIG-NEXT:       Symbol Byte Size: 344
-; BIG-NEXT:       Type Server Index: 0
-; BIG-NEXT:       Has EC Info: No
-; BIG-NEXT:       14 Contributing Source Files [
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\malloc.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\evntprov.h
-; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
-; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
-; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\eh\i386\secchk.c
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
-; BIG-NEXT:       ]
-; BIG-NEXT:     }
-; BIG-NEXT:     {
-; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\gs_cookie.obj
-; BIG-NEXT:       Debug Stream Index: 19
-; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
-; BIG-NEXT:       Num Files: 9
-; BIG-NEXT:       Source File Name Idx: 0
-; BIG-NEXT:       Pdb File Name Idx: 0
-; BIG-NEXT:       Line Info Byte Size: 0
-; BIG-NEXT:       C13 Line Info Byte Size: 224
-; BIG-NEXT:       Symbol Byte Size: 160
-; BIG-NEXT:       Type Server Index: 0
-; BIG-NEXT:       Has EC Info: No
-; BIG-NEXT:       9 Contributing Source Files [
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
-; BIG-NEXT:       ]
-; BIG-NEXT:     }
-; BIG-NEXT:     {
-; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\gs_report.obj
-; BIG-NEXT:       Debug Stream Index: 20
-; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
-; BIG-NEXT:       Num Files: 14
-; BIG-NEXT:       Source File Name Idx: 0
-; BIG-NEXT:       Pdb File Name Idx: 0
-; BIG-NEXT:       Line Info Byte Size: 0
-; BIG-NEXT:       C13 Line Info Byte Size: 1392
-; BIG-NEXT:       Symbol Byte Size: 1144
-; BIG-NEXT:       Type Server Index: 0
-; BIG-NEXT:       Has EC Info: No
-; BIG-NEXT:       14 Contributing Source Files [
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\malloc.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\evntprov.h
-; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
-; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
-; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\gs\gs_report.c
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
-; BIG-NEXT:       ]
-; BIG-NEXT:     }
-; BIG-NEXT:     {
-; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\gs_support.obj
-; BIG-NEXT:       Debug Stream Index: 21
-; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
-; BIG-NEXT:       Num Files: 10
-; BIG-NEXT:       Source File Name Idx: 0
-; BIG-NEXT:       Pdb File Name Idx: 0
-; BIG-NEXT:       Line Info Byte Size: 0
-; BIG-NEXT:       C13 Line Info Byte Size: 432
-; BIG-NEXT:       Symbol Byte Size: 552
-; BIG-NEXT:       Type Server Index: 0
-; BIG-NEXT:       Has EC Info: No
-; BIG-NEXT:       10 Contributing Source Files [
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
-; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\gs\gs_support.c
-; BIG-NEXT:       ]
-; BIG-NEXT:     }
-; BIG-NEXT:     {
-; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\checkcfg.obj
-; BIG-NEXT:       Debug Stream Index: 22
-; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
-; BIG-NEXT:       Num Files: 14
-; BIG-NEXT:       Source File Name Idx: 0
-; BIG-NEXT:       Pdb File Name Idx: 0
-; BIG-NEXT:       Line Info Byte Size: 0
-; BIG-NEXT:       C13 Line Info Byte Size: 392
-; BIG-NEXT:       Symbol Byte Size: 328
-; BIG-NEXT:       Type Server Index: 0
-; BIG-NEXT:       Has EC Info: No
-; BIG-NEXT:       14 Contributing Source Files [
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\malloc.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\evntprov.h
-; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
-; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
-; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\misc\checkcfg.c
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
-; BIG-NEXT:       ]
-; BIG-NEXT:     }
-; BIG-NEXT:     {
-; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\guard_support.obj
-; BIG-NEXT:       Debug Stream Index: 23
-; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
-; BIG-NEXT:       Num Files: 10
-; BIG-NEXT:       Source File Name Idx: 0
-; BIG-NEXT:       Pdb File Name Idx: 0
-; BIG-NEXT:       Line Info Byte Size: 0
-; BIG-NEXT:       C13 Line Info Byte Size: 352
-; BIG-NEXT:       Symbol Byte Size: 424
-; BIG-NEXT:       Type Server Index: 0
-; BIG-NEXT:       Has EC Info: No
-; BIG-NEXT:       10 Contributing Source Files [
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
-; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\misc\guard_support.c
-; BIG-NEXT:       ]
-; BIG-NEXT:     }
-; BIG-NEXT:     {
-; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\loadcfg.obj
-; BIG-NEXT:       Debug Stream Index: 24
-; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
-; BIG-NEXT:       Num Files: 9
-; BIG-NEXT:       Source File Name Idx: 0
-; BIG-NEXT:       Pdb File Name Idx: 0
-; BIG-NEXT:       Line Info Byte Size: 0
-; BIG-NEXT:       C13 Line Info Byte Size: 224
-; BIG-NEXT:       Symbol Byte Size: 156
-; BIG-NEXT:       Type Server Index: 0
-; BIG-NEXT:       Has EC Info: No
-; BIG-NEXT:       9 Contributing Source Files [
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
-; BIG-NEXT:       ]
-; BIG-NEXT:     }
-; BIG-NEXT:     {
-; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\dyn_tls_dtor.obj
-; BIG-NEXT:       Debug Stream Index: 25
-; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
-; BIG-NEXT:       Num Files: 11
-; BIG-NEXT:       Source File Name Idx: 0
-; BIG-NEXT:       Pdb File Name Idx: 0
-; BIG-NEXT:       Line Info Byte Size: 0
-; BIG-NEXT:       C13 Line Info Byte Size: 328
-; BIG-NEXT:       Symbol Byte Size: 272
-; BIG-NEXT:       Type Server Index: 0
-; BIG-NEXT:       Has EC Info: No
-; BIG-NEXT:       11 Contributing Source Files [
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\math.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
-; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\utility\dyn_tls_dtor.c
-; BIG-NEXT:       ]
-; BIG-NEXT:     }
-; BIG-NEXT:     {
-; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\dyn_tls_init.obj
-; BIG-NEXT:       Debug Stream Index: 26
-; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
-; BIG-NEXT:       Num Files: 10
-; BIG-NEXT:       Source File Name Idx: 0
-; BIG-NEXT:       Pdb File Name Idx: 0
-; BIG-NEXT:       Line Info Byte Size: 0
-; BIG-NEXT:       C13 Line Info Byte Size: 304
-; BIG-NEXT:       Symbol Byte Size: 272
-; BIG-NEXT:       Type Server Index: 0
-; BIG-NEXT:       Has EC Info: No
-; BIG-NEXT:       10 Contributing Source Files [
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
-; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\utility\dyn_tls_init.c
-; BIG-NEXT:       ]
-; BIG-NEXT:     }
-; BIG-NEXT:     {
-; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\matherr_detection.obj
-; BIG-NEXT:       Debug Stream Index: 27
-; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
-; BIG-NEXT:       Num Files: 1
-; BIG-NEXT:       Source File Name Idx: 0
-; BIG-NEXT:       Pdb File Name Idx: 0
-; BIG-NEXT:       Line Info Byte Size: 0
-; BIG-NEXT:       C13 Line Info Byte Size: 88
-; BIG-NEXT:       Symbol Byte Size: 276
-; BIG-NEXT:       Type Server Index: 0
-; BIG-NEXT:       Has EC Info: No
-; BIG-NEXT:       1 Contributing Source Files [
-; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\utility\matherr_detection.c
-; BIG-NEXT:       ]
-; BIG-NEXT:     }
-; BIG-NEXT:     {
-; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\ucrt_detection.obj
-; BIG-NEXT:       Debug Stream Index: 28
-; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
-; BIG-NEXT:       Num Files: 1
-; BIG-NEXT:       Source File Name Idx: 0
-; BIG-NEXT:       Pdb File Name Idx: 0
-; BIG-NEXT:       Line Info Byte Size: 0
-; BIG-NEXT:       C13 Line Info Byte Size: 88
-; BIG-NEXT:       Symbol Byte Size: 268
-; BIG-NEXT:       Type Server Index: 0
-; BIG-NEXT:       Has EC Info: No
-; BIG-NEXT:       1 Contributing Source Files [
-; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\utility\ucrt_detection.c
-; BIG-NEXT:       ]
-; BIG-NEXT:     }
-; BIG-NEXT:     {
-; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\argv_mode.obj
-; BIG-NEXT:       Debug Stream Index: 29
-; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
-; BIG-NEXT:       Num Files: 1
-; BIG-NEXT:       Source File Name Idx: 0
-; BIG-NEXT:       Pdb File Name Idx: 0
-; BIG-NEXT:       Line Info Byte Size: 0
-; BIG-NEXT:       C13 Line Info Byte Size: 88
-; BIG-NEXT:       Symbol Byte Size: 260
-; BIG-NEXT:       Type Server Index: 0
-; BIG-NEXT:       Has EC Info: No
-; BIG-NEXT:       1 Contributing Source Files [
-; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\defaults\argv_mode.cpp
-; BIG-NEXT:       ]
-; BIG-NEXT:     }
-; BIG-NEXT:     {
-; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\commit_mode.obj
-; BIG-NEXT:       Debug Stream Index: 30
-; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
-; BIG-NEXT:       Num Files: 1
-; BIG-NEXT:       Source File Name Idx: 0
-; BIG-NEXT:       Pdb File Name Idx: 0
-; BIG-NEXT:       Line Info Byte Size: 0
-; BIG-NEXT:       C13 Line Info Byte Size: 88
-; BIG-NEXT:       Symbol Byte Size: 260
-; BIG-NEXT:       Type Server Index: 0
-; BIG-NEXT:       Has EC Info: No
-; BIG-NEXT:       1 Contributing Source Files [
-; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\defaults\commit_mode.cpp
-; BIG-NEXT:       ]
-; BIG-NEXT:     }
-; BIG-NEXT:     {
-; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\default_local_stdio_options.obj
-; BIG-NEXT:       Debug Stream Index: 31
-; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
-; BIG-NEXT:       Num Files: 24
-; BIG-NEXT:       Source File Name Idx: 0
-; BIG-NEXT:       Pdb File Name Idx: 0
-; BIG-NEXT:       Line Info Byte Size: 0
-; BIG-NEXT:       C13 Line Info Byte Size: 760
-; BIG-NEXT:       Symbol Byte Size: 620
-; BIG-NEXT:       Type Server Index: 0
-; BIG-NEXT:       Has EC Info: No
-; BIG-NEXT:       24 Contributing Source Files [
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\malloc.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
-; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
-; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\defaults\default_local_stdio_options.cpp
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\math.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\stdlib.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\guiddef.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\stdio.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstdio.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_stdio_config.h
-; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\inc\vcstartup_internal.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memory.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
-; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
-; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\vcruntime_new.h
-; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\vadefs.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winuser.h
-; BIG-NEXT:       ]
-; BIG-NEXT:     }
-; BIG-NEXT:     {
-; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\denormal_control.obj
-; BIG-NEXT:       Debug Stream Index: 32
-; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
-; BIG-NEXT:       Num Files: 1
-; BIG-NEXT:       Source File Name Idx: 0
-; BIG-NEXT:       Pdb File Name Idx: 0
-; BIG-NEXT:       Line Info Byte Size: 0
-; BIG-NEXT:       C13 Line Info Byte Size: 80
-; BIG-NEXT:       Symbol Byte Size: 272
-; BIG-NEXT:       Type Server Index: 0
-; BIG-NEXT:       Has EC Info: No
-; BIG-NEXT:       1 Contributing Source Files [
-; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\defaults\denormal_control.cpp
-; BIG-NEXT:       ]
-; BIG-NEXT:     }
-; BIG-NEXT:     {
-; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\env_mode.obj
-; BIG-NEXT:       Debug Stream Index: 33
-; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
-; BIG-NEXT:       Num Files: 1
-; BIG-NEXT:       Source File Name Idx: 0
-; BIG-NEXT:       Pdb File Name Idx: 0
-; BIG-NEXT:       Line Info Byte Size: 0
-; BIG-NEXT:       C13 Line Info Byte Size: 88
-; BIG-NEXT:       Symbol Byte Size: 268
-; BIG-NEXT:       Type Server Index: 0
-; BIG-NEXT:       Has EC Info: No
-; BIG-NEXT:       1 Contributing Source Files [
-; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\defaults\env_mode.cpp
-; BIG-NEXT:       ]
-; BIG-NEXT:     }
-; BIG-NEXT:     {
-; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\file_mode.obj
-; BIG-NEXT:       Debug Stream Index: 34
-; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
-; BIG-NEXT:       Num Files: 1
-; BIG-NEXT:       Source File Name Idx: 0
-; BIG-NEXT:       Pdb File Name Idx: 0
-; BIG-NEXT:       Line Info Byte Size: 0
-; BIG-NEXT:       C13 Line Info Byte Size: 88
-; BIG-NEXT:       Symbol Byte Size: 260
-; BIG-NEXT:       Type Server Index: 0
-; BIG-NEXT:       Has EC Info: No
-; BIG-NEXT:       1 Contributing Source Files [
-; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\defaults\file_mode.cpp
-; BIG-NEXT:       ]
-; BIG-NEXT:     }
-; BIG-NEXT:     {
-; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\invalid_parameter_handler.obj
-; BIG-NEXT:       Debug Stream Index: 35
-; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
-; BIG-NEXT:       Num Files: 1
-; BIG-NEXT:       Source File Name Idx: 0
-; BIG-NEXT:       Pdb File Name Idx: 0
-; BIG-NEXT:       Line Info Byte Size: 0
-; BIG-NEXT:       C13 Line Info Byte Size: 80
-; BIG-NEXT:       Symbol Byte Size: 292
-; BIG-NEXT:       Type Server Index: 0
-; BIG-NEXT:       Has EC Info: No
-; BIG-NEXT:       1 Contributing Source Files [
-; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\defaults\invalid_parameter_handler.cpp
-; BIG-NEXT:       ]
-; BIG-NEXT:     }
-; BIG-NEXT:     {
-; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\matherr.obj
-; BIG-NEXT:       Debug Stream Index: 36
-; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
-; BIG-NEXT:       Num Files: 2
-; BIG-NEXT:       Source File Name Idx: 0
-; BIG-NEXT:       Pdb File Name Idx: 0
-; BIG-NEXT:       Line Info Byte Size: 0
-; BIG-NEXT:       C13 Line Info Byte Size: 112
-; BIG-NEXT:       Symbol Byte Size: 312
-; BIG-NEXT:       Type Server Index: 0
-; BIG-NEXT:       Has EC Info: No
-; BIG-NEXT:       2 Contributing Source Files [
-; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\defaults\matherr.cpp
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\math.h
-; BIG-NEXT:       ]
-; BIG-NEXT:     }
-; BIG-NEXT:     {
-; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\new_mode.obj
-; BIG-NEXT:       Debug Stream Index: 37
-; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
-; BIG-NEXT:       Num Files: 1
-; BIG-NEXT:       Source File Name Idx: 0
-; BIG-NEXT:       Pdb File Name Idx: 0
-; BIG-NEXT:       Line Info Byte Size: 0
-; BIG-NEXT:       C13 Line Info Byte Size: 88
-; BIG-NEXT:       Symbol Byte Size: 260
-; BIG-NEXT:       Type Server Index: 0
-; BIG-NEXT:       Has EC Info: No
-; BIG-NEXT:       1 Contributing Source Files [
-; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\defaults\new_mode.cpp
-; BIG-NEXT:       ]
-; BIG-NEXT:     }
-; BIG-NEXT:     {
-; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\thread_locale.obj
-; BIG-NEXT:       Debug Stream Index: 38
-; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
-; BIG-NEXT:       Num Files: 1
-; BIG-NEXT:       Source File Name Idx: 0
-; BIG-NEXT:       Pdb File Name Idx: 0
-; BIG-NEXT:       Line Info Byte Size: 0
-; BIG-NEXT:       C13 Line Info Byte Size: 88
-; BIG-NEXT:       Symbol Byte Size: 272
-; BIG-NEXT:       Type Server Index: 0
-; BIG-NEXT:       Has EC Info: No
-; BIG-NEXT:       1 Contributing Source Files [
-; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\defaults\thread_locale.cpp
-; BIG-NEXT:       ]
-; BIG-NEXT:     }
-; BIG-NEXT:     {
-; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\tncleanup.obj
-; BIG-NEXT:       Debug Stream Index: 39
-; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
-; BIG-NEXT:       Num Files: 21
-; BIG-NEXT:       Source File Name Idx: 0
-; BIG-NEXT:       Pdb File Name Idx: 0
-; BIG-NEXT:       Line Info Byte Size: 0
-; BIG-NEXT:       C13 Line Info Byte Size: 624
-; BIG-NEXT:       Symbol Byte Size: 432
-; BIG-NEXT:       Type Server Index: 0
-; BIG-NEXT:       Has EC Info: No
-; BIG-NEXT:       21 Contributing Source Files [
-; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
-; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\eh\tncleanup.cpp
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\malloc.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
-; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
-; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\vcruntime_typeinfo.h
-; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\vcruntime_exception.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\stdlib.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\evntprov.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\guiddef.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winuser.h
-; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\vcruntime_new.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memory.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
-; BIG-NEXT:       ]
-; BIG-NEXT:     }
-; BIG-NEXT:     {
-; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\exe_main.obj
-; BIG-NEXT:       Debug Stream Index: 40
-; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
-; BIG-NEXT:       Num Files: 26
-; BIG-NEXT:       Source File Name Idx: 0
-; BIG-NEXT:       Pdb File Name Idx: 0
-; BIG-NEXT:       Line Info Byte Size: 0
-; BIG-NEXT:       C13 Line Info Byte Size: 1668
-; BIG-NEXT:       Symbol Byte Size: 2364
-; BIG-NEXT:       Type Server Index: 0
-; BIG-NEXT:       Has EC Info: No
-; BIG-NEXT:       26 Contributing Source Files [
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\malloc.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
-; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
-; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\startup\exe_main.cpp
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\math.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\stdio.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstdio.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_stdio_config.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\stdlib.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\guiddef.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
-; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\startup\exe_common.inl
-; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\inc\vcstartup_internal.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memory.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
-; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
-; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\vcruntime_new.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\evntprov.h
-; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\vadefs.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winuser.h
-; BIG-NEXT:       ]
-; BIG-NEXT:     }
-; BIG-NEXT:     {
-; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\initializers.obj
-; BIG-NEXT:       Debug Stream Index: 41
-; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
-; BIG-NEXT:       Num Files: 20
-; BIG-NEXT:       Source File Name Idx: 0
-; BIG-NEXT:       Pdb File Name Idx: 0
-; BIG-NEXT:       Line Info Byte Size: 0
-; BIG-NEXT:       C13 Line Info Byte Size: 488
-; BIG-NEXT:       Symbol Byte Size: 196
-; BIG-NEXT:       Type Server Index: 0
-; BIG-NEXT:       Has EC Info: No
-; BIG-NEXT:       20 Contributing Source Files [
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\malloc.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
-; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\math.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\stdlib.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\guiddef.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
-; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\inc\vcstartup_internal.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memory.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
-; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
-; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\vcruntime_new.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\evntprov.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winuser.h
-; BIG-NEXT:       ]
-; BIG-NEXT:     }
-; BIG-NEXT:     {
-; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\utility.obj
-; BIG-NEXT:       Debug Stream Index: 42
-; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
-; BIG-NEXT:       Num Files: 20
-; BIG-NEXT:       Source File Name Idx: 0
-; BIG-NEXT:       Pdb File Name Idx: 0
-; BIG-NEXT:       Line Info Byte Size: 0
-; BIG-NEXT:       C13 Line Info Byte Size: 2500
-; BIG-NEXT:       Symbol Byte Size: 6020
-; BIG-NEXT:       Type Server Index: 0
-; BIG-NEXT:       Has EC Info: No
-; BIG-NEXT:       20 Contributing Source Files [
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\malloc.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
-; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
-; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\utility\utility.cpp
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\math.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\stdlib.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\guiddef.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
-; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\inc\vcstartup_internal.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memory.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
-; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
-; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\vcruntime_new.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winuser.h
-; BIG-NEXT:       ]
-; BIG-NEXT:     }
-; BIG-NEXT:     {
-; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\ucrt_stubs.obj
-; BIG-NEXT:       Debug Stream Index: 43
-; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
-; BIG-NEXT:       Num Files: 1
-; BIG-NEXT:       Source File Name Idx: 0
-; BIG-NEXT:       Pdb File Name Idx: 0
-; BIG-NEXT:       Line Info Byte Size: 0
-; BIG-NEXT:       C13 Line Info Byte Size: 368
-; BIG-NEXT:       Symbol Byte Size: 988
-; BIG-NEXT:       Type Server Index: 0
-; BIG-NEXT:       Has EC Info: No
-; BIG-NEXT:       1 Contributing Source Files [
-; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\utility\ucrt_stubs.cpp
-; BIG-NEXT:       ]
-; BIG-NEXT:     }
-; BIG-NEXT:     {
-; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\utility_desktop.obj
-; BIG-NEXT:       Debug Stream Index: 44
-; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
-; BIG-NEXT:       Num Files: 20
-; BIG-NEXT:       Source File Name Idx: 0
-; BIG-NEXT:       Pdb File Name Idx: 0
-; BIG-NEXT:       Line Info Byte Size: 0
-; BIG-NEXT:       C13 Line Info Byte Size: 1240
-; BIG-NEXT:       Symbol Byte Size: 1844
-; BIG-NEXT:       Type Server Index: 0
-; BIG-NEXT:       Has EC Info: No
-; BIG-NEXT:       20 Contributing Source Files [
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\malloc.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
-; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
-; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\utility\utility_desktop.cpp
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\math.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\stdlib.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\guiddef.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
-; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\inc\vcstartup_internal.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memory.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
-; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
-; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\vcruntime_new.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winuser.h
-; BIG-NEXT:       ]
-; BIG-NEXT:     }
-; BIG-NEXT:     {
-; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\default_precision.obj
-; BIG-NEXT:       Debug Stream Index: 45
-; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
-; BIG-NEXT:       Num Files: 20
-; BIG-NEXT:       Source File Name Idx: 0
-; BIG-NEXT:       Pdb File Name Idx: 0
-; BIG-NEXT:       Line Info Byte Size: 0
-; BIG-NEXT:       C13 Line Info Byte Size: 552
-; BIG-NEXT:       Symbol Byte Size: 356
-; BIG-NEXT:       Type Server Index: 0
-; BIG-NEXT:       Has EC Info: No
-; BIG-NEXT:       20 Contributing Source Files [
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memory.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
-; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\defaults\default_precision.cpp
-; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
-; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\vcruntime_new.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winuser.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\malloc.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
-; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
-; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\inc\vcstartup_internal.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\math.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\stdlib.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\guiddef.h
-; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
-; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
-; BIG-NEXT:       ]
-; BIG-NEXT:     }
-; BIG-NEXT:     {
-; BIG-NEXT:       Name: Import:KERNEL32.dll
-; BIG-NEXT:       Debug Stream Index: 47
-; BIG-NEXT:       Object File Name: C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\um\x86\kernel32.lib
-; BIG-NEXT:       Num Files: 0
-; BIG-NEXT:       Source File Name Idx: 0
-; BIG-NEXT:       Pdb File Name Idx: 0
-; BIG-NEXT:       Line Info Byte Size: 0
-; BIG-NEXT:       C13 Line Info Byte Size: 0
-; BIG-NEXT:       Symbol Byte Size: 1616
-; BIG-NEXT:       Type Server Index: 0
-; BIG-NEXT:       Has EC Info: No
-; BIG-NEXT:       0 Contributing Source Files [
-; BIG-NEXT:       ]
-; BIG-NEXT:     }
-; BIG-NEXT:     {
-; BIG-NEXT:       Name: KERNEL32.dll
-; BIG-NEXT:       Debug Stream Index: 46
-; BIG-NEXT:       Object File Name: C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\um\x86\kernel32.lib
-; BIG-NEXT:       Num Files: 0
-; BIG-NEXT:       Source File Name Idx: 0
-; BIG-NEXT:       Pdb File Name Idx: 0
-; BIG-NEXT:       Line Info Byte Size: 0
-; BIG-NEXT:       C13 Line Info Byte Size: 0
-; BIG-NEXT:       Symbol Byte Size: 208
-; BIG-NEXT:       Type Server Index: 0
-; BIG-NEXT:       Has EC Info: No
-; BIG-NEXT:       0 Contributing Source Files [
-; BIG-NEXT:       ]
-; BIG-NEXT:     }
-; BIG-NEXT:     {
-; BIG-NEXT:       Name: Import:VCRUNTIME140.dll
-; BIG-NEXT:       Debug Stream Index: 49
-; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\vcruntime.lib
-; BIG-NEXT:       Num Files: 0
-; BIG-NEXT:       Source File Name Idx: 0
-; BIG-NEXT:       Pdb File Name Idx: 0
-; BIG-NEXT:       Line Info Byte Size: 0
-; BIG-NEXT:       C13 Line Info Byte Size: 0
-; BIG-NEXT:       Symbol Byte Size: 664
-; BIG-NEXT:       Type Server Index: 0
-; BIG-NEXT:       Has EC Info: No
-; BIG-NEXT:       0 Contributing Source Files [
-; BIG-NEXT:       ]
-; BIG-NEXT:     }
-; BIG-NEXT:     {
-; BIG-NEXT:       Name: VCRUNTIME140.dll
-; BIG-NEXT:       Debug Stream Index: 48
-; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\vcruntime.lib
-; BIG-NEXT:       Num Files: 0
-; BIG-NEXT:       Source File Name Idx: 0
-; BIG-NEXT:       Pdb File Name Idx: 0
-; BIG-NEXT:       Line Info Byte Size: 0
-; BIG-NEXT:       C13 Line Info Byte Size: 0
-; BIG-NEXT:       Symbol Byte Size: 148
-; BIG-NEXT:       Type Server Index: 0
-; BIG-NEXT:       Has EC Info: No
-; BIG-NEXT:       0 Contributing Source Files [
-; BIG-NEXT:       ]
-; BIG-NEXT:     }
-; BIG-NEXT:     {
-; BIG-NEXT:       Name: Import:api-ms-win-crt-stdio-l1-1-0.dll
-; BIG-NEXT:       Debug Stream Index: 59
-; BIG-NEXT:       Object File Name: C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib
-; BIG-NEXT:       Num Files: 0
-; BIG-NEXT:       Source File Name Idx: 0
-; BIG-NEXT:       Pdb File Name Idx: 0
-; BIG-NEXT:       Line Info Byte Size: 0
-; BIG-NEXT:       C13 Line Info Byte Size: 0
-; BIG-NEXT:       Symbol Byte Size: 264
-; BIG-NEXT:       Type Server Index: 0
-; BIG-NEXT:       Has EC Info: No
-; BIG-NEXT:       0 Contributing Source Files [
-; BIG-NEXT:       ]
-; BIG-NEXT:     }
-; BIG-NEXT:     {
-; BIG-NEXT:       Name: api-ms-win-crt-stdio-l1-1-0.dll
-; BIG-NEXT:       Debug Stream Index: 58
-; BIG-NEXT:       Object File Name: C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib
-; BIG-NEXT:       Num Files: 0
-; BIG-NEXT:       Source File Name Idx: 0
-; BIG-NEXT:       Pdb File Name Idx: 0
-; BIG-NEXT:       Line Info Byte Size: 0
-; BIG-NEXT:       C13 Line Info Byte Size: 0
-; BIG-NEXT:       Symbol Byte Size: 180
-; BIG-NEXT:       Type Server Index: 0
-; BIG-NEXT:       Has EC Info: No
-; BIG-NEXT:       0 Contributing Source Files [
-; BIG-NEXT:       ]
-; BIG-NEXT:     }
-; BIG-NEXT:     {
-; BIG-NEXT:       Name: Import:api-ms-win-crt-runtime-l1-1-0.dll
-; BIG-NEXT:       Debug Stream Index: 57
-; BIG-NEXT:       Object File Name: C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib
-; BIG-NEXT:       Num Files: 0
-; BIG-NEXT:       Source File Name Idx: 0
-; BIG-NEXT:       Pdb File Name Idx: 0
-; BIG-NEXT:       Line Info Byte Size: 0
-; BIG-NEXT:       C13 Line Info Byte Size: 0
-; BIG-NEXT:       Symbol Byte Size: 3068
-; BIG-NEXT:       Type Server Index: 0
-; BIG-NEXT:       Has EC Info: No
-; BIG-NEXT:       0 Contributing Source Files [
-; BIG-NEXT:       ]
-; BIG-NEXT:     }
-; BIG-NEXT:     {
-; BIG-NEXT:       Name: api-ms-win-crt-runtime-l1-1-0.dll
-; BIG-NEXT:       Debug Stream Index: 56
-; BIG-NEXT:       Object File Name: C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib
-; BIG-NEXT:       Num Files: 0
-; BIG-NEXT:       Source File Name Idx: 0
-; BIG-NEXT:       Pdb File Name Idx: 0
-; BIG-NEXT:       Line Info Byte Size: 0
-; BIG-NEXT:       C13 Line Info Byte Size: 0
-; BIG-NEXT:       Symbol Byte Size: 188
-; BIG-NEXT:       Type Server Index: 0
-; BIG-NEXT:       Has EC Info: No
-; BIG-NEXT:       0 Contributing Source Files [
-; BIG-NEXT:       ]
-; BIG-NEXT:     }
-; BIG-NEXT:     {
-; BIG-NEXT:       Name: Import:api-ms-win-crt-math-l1-1-0.dll
-; BIG-NEXT:       Debug Stream Index: 55
-; BIG-NEXT:       Object File Name: C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib
-; BIG-NEXT:       Num Files: 0
-; BIG-NEXT:       Source File Name Idx: 0
-; BIG-NEXT:       Pdb File Name Idx: 0
-; BIG-NEXT:       Line Info Byte Size: 0
-; BIG-NEXT:       C13 Line Info Byte Size: 0
-; BIG-NEXT:       Symbol Byte Size: 140
-; BIG-NEXT:       Type Server Index: 0
-; BIG-NEXT:       Has EC Info: No
-; BIG-NEXT:       0 Contributing Source Files [
-; BIG-NEXT:       ]
-; BIG-NEXT:     }
-; BIG-NEXT:     {
-; BIG-NEXT:       Name: api-ms-win-crt-math-l1-1-0.dll
-; BIG-NEXT:       Debug Stream Index: 54
-; BIG-NEXT:       Object File Name: C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib
-; BIG-NEXT:       Num Files: 0
-; BIG-NEXT:       Source File Name Idx: 0
-; BIG-NEXT:       Pdb File Name Idx: 0
-; BIG-NEXT:       Line Info Byte Size: 0
-; BIG-NEXT:       C13 Line Info Byte Size: 0
-; BIG-NEXT:       Symbol Byte Size: 180
-; BIG-NEXT:       Type Server Index: 0
-; BIG-NEXT:       Has EC Info: No
-; BIG-NEXT:       0 Contributing Source Files [
-; BIG-NEXT:       ]
-; BIG-NEXT:     }
-; BIG-NEXT:     {
-; BIG-NEXT:       Name: Import:api-ms-win-crt-locale-l1-1-0.dll
-; BIG-NEXT:       Debug Stream Index: 53
-; BIG-NEXT:       Object File Name: C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib
-; BIG-NEXT:       Num Files: 0
-; BIG-NEXT:       Source File Name Idx: 0
-; BIG-NEXT:       Pdb File Name Idx: 0
-; BIG-NEXT:       Line Info Byte Size: 0
-; BIG-NEXT:       C13 Line Info Byte Size: 0
-; BIG-NEXT:       Symbol Byte Size: 148
-; BIG-NEXT:       Type Server Index: 0
-; BIG-NEXT:       Has EC Info: No
-; BIG-NEXT:       0 Contributing Source Files [
-; BIG-NEXT:       ]
-; BIG-NEXT:     }
-; BIG-NEXT:     {
-; BIG-NEXT:       Name: api-ms-win-crt-locale-l1-1-0.dll
-; BIG-NEXT:       Debug Stream Index: 52
-; BIG-NEXT:       Object File Name: C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib
-; BIG-NEXT:       Num Files: 0
-; BIG-NEXT:       Source File Name Idx: 0
-; BIG-NEXT:       Pdb File Name Idx: 0
-; BIG-NEXT:       Line Info Byte Size: 0
-; BIG-NEXT:       C13 Line Info Byte Size: 0
-; BIG-NEXT:       Symbol Byte Size: 188
-; BIG-NEXT:       Type Server Index: 0
-; BIG-NEXT:       Has EC Info: No
-; BIG-NEXT:       0 Contributing Source Files [
-; BIG-NEXT:       ]
-; BIG-NEXT:     }
-; BIG-NEXT:     {
-; BIG-NEXT:       Name: Import:api-ms-win-crt-heap-l1-1-0.dll
-; BIG-NEXT:       Debug Stream Index: 51
-; BIG-NEXT:       Object File Name: C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib
-; BIG-NEXT:       Num Files: 0
-; BIG-NEXT:       Source File Name Idx: 0
-; BIG-NEXT:       Pdb File Name Idx: 0
-; BIG-NEXT:       Line Info Byte Size: 0
-; BIG-NEXT:       C13 Line Info Byte Size: 0
-; BIG-NEXT:       Symbol Byte Size: 136
-; BIG-NEXT:       Type Server Index: 0
-; BIG-NEXT:       Has EC Info: No
-; BIG-NEXT:       0 Contributing Source Files [
-; BIG-NEXT:       ]
-; BIG-NEXT:     }
-; BIG-NEXT:     {
-; BIG-NEXT:       Name: api-ms-win-crt-heap-l1-1-0.dll
-; BIG-NEXT:       Debug Stream Index: 50
-; BIG-NEXT:       Object File Name: C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib
-; BIG-NEXT:       Num Files: 0
-; BIG-NEXT:       Source File Name Idx: 0
-; BIG-NEXT:       Pdb File Name Idx: 0
-; BIG-NEXT:       Line Info Byte Size: 0
-; BIG-NEXT:       C13 Line Info Byte Size: 0
-; BIG-NEXT:       Symbol Byte Size: 180
-; BIG-NEXT:       Type Server Index: 0
-; BIG-NEXT:       Has EC Info: No
-; BIG-NEXT:       0 Contributing Source Files [
-; BIG-NEXT:       ]
-; BIG-NEXT:     }
-; BIG-NEXT:     {
-; BIG-NEXT:       Name: * Linker *
-; BIG-NEXT:       Debug Stream Index: 60
-; BIG-NEXT:       Object File Name:
-; BIG-NEXT:       Num Files: 0
-; BIG-NEXT:       Source File Name Idx: 0
-; BIG-NEXT:       Pdb File Name Idx: 55
-; BIG-NEXT:       Line Info Byte Size: 0
-; BIG-NEXT:       C13 Line Info Byte Size: 0
-; BIG-NEXT:       Symbol Byte Size: 3080
-; BIG-NEXT:       Type Server Index: 0
-; BIG-NEXT:       Has EC Info: No
-; BIG-NEXT:       0 Contributing Source Files [
-; BIG-NEXT:       ]
-; BIG-NEXT:     }
-; BIG-NEXT:   ]
-; BIG-NEXT: }
 
-; BAD-BLOCK-SIZE: Native PDB Error: The PDB file is corrupt. Does not contain superblock
+BIG:                           Summary
+BIG-NEXT: ============================================================
+BIG-NEXT:   Block Size: 4096
+BIG-NEXT:   Number of blocks: 99
+BIG-NEXT:   Number of streams: 64
+BIG-NEXT:   Signature: 1461714535
+BIG-NEXT:   Age: 1
+BIG-NEXT:   GUID: {880ECC89-DF81-0B4F-839C-58CBD052E937}
+BIG-NEXT:   Features: 0x1
+BIG-NEXT:   Has Debug Info: true
+BIG-NEXT:   Has Types: true
+BIG-NEXT:   Has IDs: true
+BIG-NEXT:   Has Globals: true
+BIG-NEXT:   Has Publics: true
+BIG-NEXT:   Is incrementally linked: true
+BIG-NEXT:   Has conflicting types: false
+BIG-NEXT:   Is stripped: false
+BIG:                                Modules
+BIG-NEXT: ============================================================
+BIG-NEXT:   Mod 0000 | Name: `D:\src\llvm\test\tools\llvm-symbolizer\pdb\Inputs\test.obj`:
+BIG-NEXT:              Obj: `D:\src\llvm\test\tools\llvm-symbolizer\pdb\Inputs\test.obj`:
+BIG-NEXT:              debug stream: 12, # files: 1, has ec info: false
+BIG-NEXT:              contributing source files:
+BIG-NEXT:              - d:\src\llvm\test\tools\llvm-symbolizer\pdb\inputs\test.cpp
+BIG-NEXT:   Mod 0001 | Name: `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\_cpu_disp_.obj`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
+BIG-NEXT:              debug stream: 14, # files: 14, has ec info: false
+BIG-NEXT:              contributing source files:
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\malloc.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\string.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\evntprov.h
+BIG-NEXT:              - f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+BIG-NEXT:              - f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+BIG-NEXT:              - f:\dd\vctools\crt\vcstartup\src\misc\i386\cpu_disp.c
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\ctype.h
+BIG-NEXT:   Mod 0002 | Name: `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\_initsect_.obj`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
+BIG-NEXT:              debug stream: 15, # files: 19, has ec info: false
+BIG-NEXT:              contributing source files:
+BIG-NEXT:              - f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+BIG-NEXT:              - f:\dd\vctools\crt\vcstartup\src\rtc\initsect.cpp
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\malloc.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+BIG-NEXT:              - f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\stdlib.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\ctype.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\evntprov.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\guiddef.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\winuser.h
+BIG-NEXT:              - f:\dd\vctools\crt\vcruntime\inc\vcruntime_new.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\string.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\corecrt_memory.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+BIG-NEXT:   Mod 0003 | Name: `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\_sehprolg4_.obj`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
+BIG-NEXT:              debug stream: 16, # files: 1, has ec info: false
+BIG-NEXT:              contributing source files:
+BIG-NEXT:              - f:\dd\vctools\crt\vcstartup\src\eh\i386\sehprolg4.asm
+BIG-NEXT:   Mod 0004 | Name: `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\_chandler4gs_.obj`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
+BIG-NEXT:              debug stream: 17, # files: 14, has ec info: false
+BIG-NEXT:              contributing source files:
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\malloc.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\string.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\evntprov.h
+BIG-NEXT:              - f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+BIG-NEXT:              - f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+BIG-NEXT:              - f:\dd\vctools\crt\vcstartup\src\eh\i386\chandler4gs.c
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\ctype.h
+BIG-NEXT:   Mod 0005 | Name: `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\_secchk_.obj`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
+BIG-NEXT:              debug stream: 18, # files: 14, has ec info: false
+BIG-NEXT:              contributing source files:
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\malloc.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\string.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\evntprov.h
+BIG-NEXT:              - f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+BIG-NEXT:              - f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+BIG-NEXT:              - f:\dd\vctools\crt\vcstartup\src\eh\i386\secchk.c
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\ctype.h
+BIG-NEXT:   Mod 0006 | Name: `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\gs_cookie.obj`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
+BIG-NEXT:              debug stream: 19, # files: 9, has ec info: false
+BIG-NEXT:              contributing source files:
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\string.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\ctype.h
+BIG-NEXT:   Mod 0007 | Name: `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\gs_report.obj`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
+BIG-NEXT:              debug stream: 20, # files: 14, has ec info: false
+BIG-NEXT:              contributing source files:
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\malloc.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\string.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\evntprov.h
+BIG-NEXT:              - f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+BIG-NEXT:              - f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+BIG-NEXT:              - f:\dd\vctools\crt\vcstartup\src\gs\gs_report.c
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\ctype.h
+BIG-NEXT:   Mod 0008 | Name: `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\gs_support.obj`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
+BIG-NEXT:              debug stream: 21, # files: 10, has ec info: false
+BIG-NEXT:              contributing source files:
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\string.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\ctype.h
+BIG-NEXT:              - f:\dd\vctools\crt\vcstartup\src\gs\gs_support.c
+BIG-NEXT:   Mod 0009 | Name: `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\checkcfg.obj`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
+BIG-NEXT:              debug stream: 22, # files: 14, has ec info: false
+BIG-NEXT:              contributing source files:
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\malloc.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\string.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\evntprov.h
+BIG-NEXT:              - f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+BIG-NEXT:              - f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+BIG-NEXT:              - f:\dd\vctools\crt\vcstartup\src\misc\checkcfg.c
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\ctype.h
+BIG-NEXT:   Mod 0010 | Name: `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\guard_support.obj`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
+BIG-NEXT:              debug stream: 23, # files: 10, has ec info: false
+BIG-NEXT:              contributing source files:
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\string.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\ctype.h
+BIG-NEXT:              - f:\dd\vctools\crt\vcstartup\src\misc\guard_support.c
+BIG-NEXT:   Mod 0011 | Name: `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\loadcfg.obj`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
+BIG-NEXT:              debug stream: 24, # files: 9, has ec info: false
+BIG-NEXT:              contributing source files:
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\string.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\ctype.h
+BIG-NEXT:   Mod 0012 | Name: `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\dyn_tls_dtor.obj`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
+BIG-NEXT:              debug stream: 25, # files: 11, has ec info: false
+BIG-NEXT:              contributing source files:
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\string.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\math.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\ctype.h
+BIG-NEXT:              - f:\dd\vctools\crt\vcstartup\src\utility\dyn_tls_dtor.c
+BIG-NEXT:   Mod 0013 | Name: `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\dyn_tls_init.obj`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
+BIG-NEXT:              debug stream: 26, # files: 10, has ec info: false
+BIG-NEXT:              contributing source files:
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\string.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\ctype.h
+BIG-NEXT:              - f:\dd\vctools\crt\vcstartup\src\utility\dyn_tls_init.c
+BIG-NEXT:   Mod 0014 | Name: `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\matherr_detection.obj`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
+BIG-NEXT:              debug stream: 27, # files: 1, has ec info: false
+BIG-NEXT:              contributing source files:
+BIG-NEXT:              - f:\dd\vctools\crt\vcstartup\src\utility\matherr_detection.c
+BIG-NEXT:   Mod 0015 | Name: `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\ucrt_detection.obj`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
+BIG-NEXT:              debug stream: 28, # files: 1, has ec info: false
+BIG-NEXT:              contributing source files:
+BIG-NEXT:              - f:\dd\vctools\crt\vcstartup\src\utility\ucrt_detection.c
+BIG-NEXT:   Mod 0016 | Name: `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\argv_mode.obj`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
+BIG-NEXT:              debug stream: 29, # files: 1, has ec info: false
+BIG-NEXT:              contributing source files:
+BIG-NEXT:              - f:\dd\vctools\crt\vcstartup\src\defaults\argv_mode.cpp
+BIG-NEXT:   Mod 0017 | Name: `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\commit_mode.obj`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
+BIG-NEXT:              debug stream: 30, # files: 1, has ec info: false
+BIG-NEXT:              contributing source files:
+BIG-NEXT:              - f:\dd\vctools\crt\vcstartup\src\defaults\commit_mode.cpp
+BIG-NEXT:   Mod 0018 | Name: `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\default_local_stdio_options.obj`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
+BIG-NEXT:              debug stream: 31, # files: 24, has ec info: false
+BIG-NEXT:              contributing source files:
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\malloc.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+BIG-NEXT:              - f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
+BIG-NEXT:              - f:\dd\vctools\crt\vcstartup\src\defaults\default_local_stdio_options.cpp
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\math.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\stdlib.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\ctype.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\guiddef.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\stdio.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\corecrt_wstdio.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\corecrt_stdio_config.h
+BIG-NEXT:              - f:\dd\vctools\crt\vcstartup\inc\vcstartup_internal.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\string.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\corecrt_memory.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+BIG-NEXT:              - f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
+BIG-NEXT:              - f:\dd\vctools\crt\vcruntime\inc\vcruntime_new.h
+BIG-NEXT:              - f:\dd\vctools\crt\vcruntime\inc\vadefs.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\winuser.h
+BIG-NEXT:   Mod 0019 | Name: `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\denormal_control.obj`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
+BIG-NEXT:              debug stream: 32, # files: 1, has ec info: false
+BIG-NEXT:              contributing source files:
+BIG-NEXT:              - f:\dd\vctools\crt\vcstartup\src\defaults\denormal_control.cpp
+BIG-NEXT:   Mod 0020 | Name: `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\env_mode.obj`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
+BIG-NEXT:              debug stream: 33, # files: 1, has ec info: false
+BIG-NEXT:              contributing source files:
+BIG-NEXT:              - f:\dd\vctools\crt\vcstartup\src\defaults\env_mode.cpp
+BIG-NEXT:   Mod 0021 | Name: `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\file_mode.obj`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
+BIG-NEXT:              debug stream: 34, # files: 1, has ec info: false
+BIG-NEXT:              contributing source files:
+BIG-NEXT:              - f:\dd\vctools\crt\vcstartup\src\defaults\file_mode.cpp
+BIG-NEXT:   Mod 0022 | Name: `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\invalid_parameter_handler.obj`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
+BIG-NEXT:              debug stream: 35, # files: 1, has ec info: false
+BIG-NEXT:              contributing source files:
+BIG-NEXT:              - f:\dd\vctools\crt\vcstartup\src\defaults\invalid_parameter_handler.cpp
+BIG-NEXT:   Mod 0023 | Name: `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\matherr.obj`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
+BIG-NEXT:              debug stream: 36, # files: 2, has ec info: false
+BIG-NEXT:              contributing source files:
+BIG-NEXT:              - f:\dd\vctools\crt\vcstartup\src\defaults\matherr.cpp
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\math.h
+BIG-NEXT:   Mod 0024 | Name: `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\new_mode.obj`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
+BIG-NEXT:              debug stream: 37, # files: 1, has ec info: false
+BIG-NEXT:              contributing source files:
+BIG-NEXT:              - f:\dd\vctools\crt\vcstartup\src\defaults\new_mode.cpp
+BIG-NEXT:   Mod 0025 | Name: `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\thread_locale.obj`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
+BIG-NEXT:              debug stream: 38, # files: 1, has ec info: false
+BIG-NEXT:              contributing source files:
+BIG-NEXT:              - f:\dd\vctools\crt\vcstartup\src\defaults\thread_locale.cpp
+BIG-NEXT:   Mod 0026 | Name: `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\tncleanup.obj`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
+BIG-NEXT:              debug stream: 39, # files: 21, has ec info: false
+BIG-NEXT:              contributing source files:
+BIG-NEXT:              - f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+BIG-NEXT:              - f:\dd\vctools\crt\vcstartup\src\eh\tncleanup.cpp
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\malloc.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+BIG-NEXT:              - f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+BIG-NEXT:              - f:\dd\vctools\crt\vcruntime\inc\vcruntime_typeinfo.h
+BIG-NEXT:              - f:\dd\vctools\crt\vcruntime\inc\vcruntime_exception.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\stdlib.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\ctype.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\evntprov.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\guiddef.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\winuser.h
+BIG-NEXT:              - f:\dd\vctools\crt\vcruntime\inc\vcruntime_new.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\string.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\corecrt_memory.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+BIG-NEXT:   Mod 0027 | Name: `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\exe_main.obj`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
+BIG-NEXT:              debug stream: 40, # files: 26, has ec info: false
+BIG-NEXT:              contributing source files:
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\malloc.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+BIG-NEXT:              - f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
+BIG-NEXT:              - f:\dd\vctools\crt\vcstartup\src\startup\exe_main.cpp
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\math.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\stdio.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\corecrt_wstdio.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\corecrt_stdio_config.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\stdlib.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\ctype.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\guiddef.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+BIG-NEXT:              - f:\dd\vctools\crt\vcstartup\src\startup\exe_common.inl
+BIG-NEXT:              - f:\dd\vctools\crt\vcstartup\inc\vcstartup_internal.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\string.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\corecrt_memory.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+BIG-NEXT:              - f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
+BIG-NEXT:              - f:\dd\vctools\crt\vcruntime\inc\vcruntime_new.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\evntprov.h
+BIG-NEXT:              - f:\dd\vctools\crt\vcruntime\inc\vadefs.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\winuser.h
+BIG-NEXT:   Mod 0028 | Name: `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\initializers.obj`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
+BIG-NEXT:              debug stream: 41, # files: 20, has ec info: false
+BIG-NEXT:              contributing source files:
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\malloc.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+BIG-NEXT:              - f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\math.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\stdlib.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\ctype.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\guiddef.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+BIG-NEXT:              - f:\dd\vctools\crt\vcstartup\inc\vcstartup_internal.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\string.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\corecrt_memory.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+BIG-NEXT:              - f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
+BIG-NEXT:              - f:\dd\vctools\crt\vcruntime\inc\vcruntime_new.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\evntprov.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\winuser.h
+BIG-NEXT:   Mod 0029 | Name: `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\utility.obj`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
+BIG-NEXT:              debug stream: 42, # files: 20, has ec info: false
+BIG-NEXT:              contributing source files:
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\malloc.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+BIG-NEXT:              - f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
+BIG-NEXT:              - f:\dd\vctools\crt\vcstartup\src\utility\utility.cpp
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\math.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\stdlib.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\ctype.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\guiddef.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+BIG-NEXT:              - f:\dd\vctools\crt\vcstartup\inc\vcstartup_internal.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\string.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\corecrt_memory.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+BIG-NEXT:              - f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
+BIG-NEXT:              - f:\dd\vctools\crt\vcruntime\inc\vcruntime_new.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\winuser.h
+BIG-NEXT:   Mod 0030 | Name: `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\ucrt_stubs.obj`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
+BIG-NEXT:              debug stream: 43, # files: 1, has ec info: false
+BIG-NEXT:              contributing source files:
+BIG-NEXT:              - f:\dd\vctools\crt\vcstartup\src\utility\ucrt_stubs.cpp
+BIG-NEXT:   Mod 0031 | Name: `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\utility_desktop.obj`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
+BIG-NEXT:              debug stream: 44, # files: 20, has ec info: false
+BIG-NEXT:              contributing source files:
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\malloc.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+BIG-NEXT:              - f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
+BIG-NEXT:              - f:\dd\vctools\crt\vcstartup\src\utility\utility_desktop.cpp
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\math.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\stdlib.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\ctype.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\guiddef.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+BIG-NEXT:              - f:\dd\vctools\crt\vcstartup\inc\vcstartup_internal.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\string.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\corecrt_memory.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+BIG-NEXT:              - f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
+BIG-NEXT:              - f:\dd\vctools\crt\vcruntime\inc\vcruntime_new.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\winuser.h
+BIG-NEXT:   Mod 0032 | Name: `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\default_precision.obj`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
+BIG-NEXT:              debug stream: 45, # files: 20, has ec info: false
+BIG-NEXT:              contributing source files:
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\string.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\corecrt_memory.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+BIG-NEXT:              - f:\dd\vctools\crt\vcstartup\src\defaults\default_precision.cpp
+BIG-NEXT:              - f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
+BIG-NEXT:              - f:\dd\vctools\crt\vcruntime\inc\vcruntime_new.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\winuser.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\malloc.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+BIG-NEXT:              - f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+BIG-NEXT:              - f:\dd\vctools\crt\vcstartup\inc\vcstartup_internal.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\math.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\stdlib.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\ctype.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\guiddef.h
+BIG-NEXT:              - f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+BIG-NEXT:              - f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+BIG-NEXT:   Mod 0033 | Name: `Import:KERNEL32.dll`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\um\x86\kernel32.lib`:
+BIG-NEXT:              debug stream: 47, # files: 0, has ec info: false
+BIG-NEXT:              contributing source files:
+BIG-NEXT:   Mod 0034 | Name: `KERNEL32.dll`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\um\x86\kernel32.lib`:
+BIG-NEXT:              debug stream: 46, # files: 0, has ec info: false
+BIG-NEXT:              contributing source files:
+BIG-NEXT:   Mod 0035 | Name: `Import:VCRUNTIME140.dll`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\vcruntime.lib`:
+BIG-NEXT:              debug stream: 49, # files: 0, has ec info: false
+BIG-NEXT:              contributing source files:
+BIG-NEXT:   Mod 0036 | Name: `VCRUNTIME140.dll`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\vcruntime.lib`:
+BIG-NEXT:              debug stream: 48, # files: 0, has ec info: false
+BIG-NEXT:              contributing source files:
+BIG-NEXT:   Mod 0037 | Name: `Import:api-ms-win-crt-stdio-l1-1-0.dll`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib`:
+BIG-NEXT:              debug stream: 59, # files: 0, has ec info: false
+BIG-NEXT:              contributing source files:
+BIG-NEXT:   Mod 0038 | Name: `api-ms-win-crt-stdio-l1-1-0.dll`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib`:
+BIG-NEXT:              debug stream: 58, # files: 0, has ec info: false
+BIG-NEXT:              contributing source files:
+BIG-NEXT:   Mod 0039 | Name: `Import:api-ms-win-crt-runtime-l1-1-0.dll`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib`:
+BIG-NEXT:              debug stream: 57, # files: 0, has ec info: false
+BIG-NEXT:              contributing source files:
+BIG-NEXT:   Mod 0040 | Name: `api-ms-win-crt-runtime-l1-1-0.dll`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib`:
+BIG-NEXT:              debug stream: 56, # files: 0, has ec info: false
+BIG-NEXT:              contributing source files:
+BIG-NEXT:   Mod 0041 | Name: `Import:api-ms-win-crt-math-l1-1-0.dll`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib`:
+BIG-NEXT:              debug stream: 55, # files: 0, has ec info: false
+BIG-NEXT:              contributing source files:
+BIG-NEXT:   Mod 0042 | Name: `api-ms-win-crt-math-l1-1-0.dll`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib`:
+BIG-NEXT:              debug stream: 54, # files: 0, has ec info: false
+BIG-NEXT:              contributing source files:
+BIG-NEXT:   Mod 0043 | Name: `Import:api-ms-win-crt-locale-l1-1-0.dll`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib`:
+BIG-NEXT:              debug stream: 53, # files: 0, has ec info: false
+BIG-NEXT:              contributing source files:
+BIG-NEXT:   Mod 0044 | Name: `api-ms-win-crt-locale-l1-1-0.dll`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib`:
+BIG-NEXT:              debug stream: 52, # files: 0, has ec info: false
+BIG-NEXT:              contributing source files:
+BIG-NEXT:   Mod 0045 | Name: `Import:api-ms-win-crt-heap-l1-1-0.dll`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib`:
+BIG-NEXT:              debug stream: 51, # files: 0, has ec info: false
+BIG-NEXT:              contributing source files:
+BIG-NEXT:   Mod 0046 | Name: `api-ms-win-crt-heap-l1-1-0.dll`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib`:
+BIG-NEXT:              debug stream: 50, # files: 0, has ec info: false
+BIG-NEXT:              contributing source files:
+BIG-NEXT:   Mod 0047 | Name: `* Linker *`:
+BIG-NEXT:              Obj: ``:
+BIG-NEXT:              debug stream: 60, # files: 0, has ec info: false
+BIG-NEXT:              contributing source files:
+
+
+BAD-BLOCK-SIZE: Native PDB Error: The PDB file is corrupt. Does not contain superblock
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,23 +1,28 @@
-; RUN: llvm-pdbutil raw -stream-data=1 %p/Inputs/empty.pdb | FileCheck --check-prefix=STREAM1 %s
-; RUN: not llvm-pdbutil raw -stream-data=100 %p/Inputs/empty.pdb 2>&1 | FileCheck --check-prefix=INVALIDSTREAM %s
+; RUN: llvm-pdbutil raw -stream-data=1 %p/Inputs/empty.pdb | FileCheck --check-prefix=STREAM %s
+; RUN: llvm-pdbutil raw -stream-data=100 %p/Inputs/empty.pdb 2>&1 | FileCheck --check-prefix=INVALIDSTREAM %s
+; RUN: llvm-pdbutil raw -stream-data=1,100 %p/Inputs/empty.pdb 2>&1 | FileCheck --check-prefix=BOTH %s
 
-STREAM1:      Stream Data {
-STREAM1-NEXT:   Stream {
-STREAM1-NEXT:     Index: 1
-STREAM1-NEXT:     Type: PDB Stream
-STREAM1-NEXT:     Size: 118
-STREAM1-NEXT:     Blocks: [19]
-STREAM1-NEXT:     Data (
-STREAM1-NEXT:       0000: 942E3101 E207E554 01000000 0B355641  |..1....T.....5VA|
-STREAM1-NEXT:       0010: 86A0A249 896F9988 FAE52FF0 22000000  |...I.o..../."...|
-STREAM1-NEXT:       0020: 2F4C696E 6B496E66 6F002F6E 616D6573  |/LinkInfo./names|
-STREAM1-NEXT:       0030: 002F7372 632F6865 61646572 626C6F63  |./src/headerbloc|
-STREAM1-NEXT:       0040: 6B000300 00000600 00000100 00001A00  |k...............|
-STREAM1-NEXT:       0050: 00000000 00001100 00000900 00000A00  |................|
-STREAM1-NEXT:       0060: 00000D00 00000000 00000500 00000000  |................|
-STREAM1-NEXT:       0070: 00004191 3201                        |..A.2.|
-STREAM1-NEXT:     )
-STREAM1-NEXT:   }
-STREAM1-NEXT: }
+STREAM:                             Stream Data
+STREAM-NEXT: ============================================================
+STREAM-NEXT:   Stream 1 (118 bytes): PDB Stream
+STREAM-NEXT:     Data (
+STREAM-NEXT:       0000: 942E3101 E207E554 01000000 0B355641 86A0A249 896F9988 FAE52FF0 22000000  |..1....T.....5VA...I.o..../."...|
+STREAM-NEXT:       0020: 2F4C696E 6B496E66 6F002F6E 616D6573 002F7372 632F6865 61646572 626C6F63  |/LinkInfo./names./src/headerbloc|
+STREAM-NEXT:       0040: 6B000300 00000600 00000100 00001A00 00000000 00001100 00000900 00000A00  |k...............................|
+STREAM-NEXT:       0060: 00000D00 00000000 00000500 00000000 00004191 3201                        |..................A.2.|
+STREAM-NEXT:     )
 
-INVALIDSTREAM: Native PDB Error: The specified stream could not be loaded.
+INVALIDSTREAM:                             Stream Data
+INVALIDSTREAM-NEXT: ============================================================
+INVALIDSTREAM-NEXT:   Stream 100: Not present
+
+BOTH:                             Stream Data
+BOTH-NEXT: ============================================================
+BOTH-NEXT:   Stream 1 (118 bytes): PDB Stream
+BOTH-NEXT:     Data (
+BOTH-NEXT:       0000: 942E3101 E207E554 01000000 0B355641 86A0A249 896F9988 FAE52FF0 22000000  |..1....T.....5VA...I.o..../."...|
+BOTH-NEXT:       0020: 2F4C696E 6B496E66 6F002F6E 616D6573 002F7372 632F6865 61646572 626C6F63  |/LinkInfo./names./src/headerbloc|
+BOTH-NEXT:       0040: 6B000300 00000600 00000100 00001A00 00000000 00001100 00000900 00000A00  |k...............................|
+BOTH-NEXT:       0060: 00000D00 00000000 00000500 00000000 00004191 3201                        |..................A.2.|
+BOTH-NEXT:     )
+BOTH-NEXT:   Stream 100: Not present

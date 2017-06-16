@@ -150,6 +150,10 @@ template <class ELFT> static void combineEhFrameSections() {
 }
 
 template <class ELFT> void Writer<ELFT>::clearOutputSections() {
+  if (Script->Opt.HasSections)
+    Script->createOrphanCommands();
+  else
+    Script->fabricateDefaultCommands();
   // Clear the OutputSections to make sure it is not used anymore. Any
   // code from this point on should be using the linker script
   // commands.
@@ -725,27 +729,15 @@ static unsigned getSectionRank(const OutputSection *Sec) {
   return Rank;
 }
 
-static bool compareSectionsNonScript(const OutputSection *A,
-                                     const OutputSection *B) {
+static bool compareSections(const BaseCommand *ACmd, const BaseCommand *BCmd) {
+  const OutputSection *A = cast<OutputSectionCommand>(ACmd)->Sec;
+  const OutputSection *B = cast<OutputSectionCommand>(BCmd)->Sec;
   if (A->SortRank != B->SortRank)
     return A->SortRank < B->SortRank;
   if (!(A->SortRank & RF_NOT_ADDR_SET))
     return Config->SectionStartMap.lookup(A->Name) <
            Config->SectionStartMap.lookup(B->Name);
   return false;
-}
-
-// Output section ordering is determined by this function.
-static bool compareSections(const OutputSection *A, const OutputSection *B) {
-  // For now, put sections mentioned in a linker script
-  // first. Sections not on linker script will have a SectionIndex of
-  // INT_MAX.
-  int AIndex = A->SectionIndex;
-  int BIndex = B->SectionIndex;
-  if (AIndex != BIndex)
-    return AIndex < BIndex;
-
-  return compareSectionsNonScript(A, B);
 }
 
 void PhdrEntry::add(OutputSection *Sec) {
@@ -957,30 +949,70 @@ template <class ELFT> void Writer<ELFT>::createSections() {
 // The more branches in getSectionRank that match, the more similar they are.
 // Since each branch corresponds to a bit flag, we can just use
 // countLeadingZeros.
-static unsigned getRankProximity(OutputSection *A, OutputSection *B) {
+static int getRankProximity(OutputSection *A, OutputSection *B) {
   return countLeadingZeros(A->SortRank ^ B->SortRank);
+}
+
+static int getRankProximity(OutputSection *A, BaseCommand *B) {
+  if (auto *Cmd = dyn_cast<OutputSectionCommand>(B))
+    if (Cmd->Sec)
+      return getRankProximity(A, Cmd->Sec);
+  return -1;
+}
+
+// When placing orphan sections, we want to place them after symbol assignments
+// so that an orphan after
+//   begin_foo = .;
+//   foo : { *(foo) }
+//   end_foo = .;
+// doesn't break the intended meaning of the begin/end symbols.
+// We don't want to go over sections since findOrphanPos is the
+// one in charge of deciding the order of the sections.
+// We don't want to go over changes to '.', since doing so in
+//  rx_sec : { *(rx_sec) }
+//  . = ALIGN(0x1000);
+//  /* The RW PT_LOAD starts here*/
+//  rw_sec : { *(rw_sec) }
+// would mean that the RW PT_LOAD would become unaligned.
+static bool shouldSkip(BaseCommand *Cmd) {
+  if (isa<OutputSectionCommand>(Cmd))
+    return false;
+  if (auto *Assign = dyn_cast<SymbolAssignment>(Cmd))
+    return Assign->Name != ".";
+  return true;
 }
 
 // We want to place orphan sections so that they share as much
 // characteristics with their neighbors as possible. For example, if
 // both are rw, or both are tls.
 template <typename ELFT>
-static std::vector<OutputSection *>::iterator
-findOrphanPos(std::vector<OutputSection *>::iterator B,
-              std::vector<OutputSection *>::iterator E) {
-  OutputSection *Sec = *E;
+static std::vector<BaseCommand *>::iterator
+findOrphanPos(std::vector<BaseCommand *>::iterator B,
+              std::vector<BaseCommand *>::iterator E) {
+  OutputSection *Sec = cast<OutputSectionCommand>(*E)->Sec;
 
   // Find the first element that has as close a rank as possible.
-  auto I = std::max_element(B, E, [=](OutputSection *A, OutputSection *B) {
+  auto I = std::max_element(B, E, [=](BaseCommand *A, BaseCommand *B) {
     return getRankProximity(Sec, A) < getRankProximity(Sec, B);
   });
   if (I == E)
     return E;
 
   // Consider all existing sections with the same proximity.
-  unsigned Proximity = getRankProximity(Sec, *I);
-  while (I != E && getRankProximity(Sec, *I) == Proximity &&
-         Sec->SortRank >= (*I)->SortRank)
+  int Proximity = getRankProximity(Sec, *I);
+  for (; I != E; ++I) {
+    auto *Cmd = dyn_cast<OutputSectionCommand>(*I);
+    if (!Cmd || !Cmd->Sec)
+      continue;
+    if (getRankProximity(Sec, Cmd->Sec) != Proximity ||
+        Sec->SortRank < Cmd->Sec->SortRank)
+      break;
+  }
+  auto J = std::find_if(
+      llvm::make_reverse_iterator(I), llvm::make_reverse_iterator(B),
+      [](BaseCommand *Cmd) { return isa<OutputSectionCommand>(Cmd); });
+  I = J.base();
+  while (I != E && shouldSkip(*I))
     ++I;
   return I;
 }
@@ -994,19 +1026,38 @@ template <class ELFT> void Writer<ELFT>::sortSections() {
   if (Script->Opt.HasSections)
     Script->adjustSectionsBeforeSorting();
 
-  for (OutputSection *Sec : OutputSections)
-    Sec->SortRank = getSectionRank(Sec);
+  for (BaseCommand *Base : Script->Opt.Commands)
+    if (auto *Cmd = dyn_cast<OutputSectionCommand>(Base))
+      if (OutputSection *Sec = Cmd->Sec)
+        Sec->SortRank = getSectionRank(Sec);
 
   if (!Script->Opt.HasSections) {
-    std::stable_sort(OutputSections.begin(), OutputSections.end(),
-                     compareSectionsNonScript);
+    // We know that all the OutputSectionCommands are contiguous in
+    // this case.
+    auto E = Script->Opt.Commands.end();
+    auto I = Script->Opt.Commands.begin();
+    auto IsSection = [](BaseCommand *Base) {
+      return isa<OutputSectionCommand>(Base);
+    };
+    I = std::find_if(I, E, IsSection);
+    E = std::find_if(llvm::make_reverse_iterator(E),
+                     llvm::make_reverse_iterator(I), IsSection)
+            .base();
+    std::stable_sort(I, E, compareSections);
     return;
   }
 
+  // Orphan sections are sections present in the input files which are
+  // not explicitly placed into the output file by the linker script.
+  //
+  // The sections in the linker script are already in the correct
+  // order. We have to figuere out where to insert the orphan
+  // sections.
+  //
   // The order of the sections in the script is arbitrary and may not agree with
-  // compareSectionsNonScript. This means that we cannot easily define a
-  // strict weak ordering. To see why, consider a comparison of a section in the
-  // script and one not in the script. We have a two simple options:
+  // compareSections. This means that we cannot easily define a strict weak
+  // ordering. To see why, consider a comparison of a section in the script and
+  // one not in the script. We have a two simple options:
   // * Make them equivalent (a is not less than b, and b is not less than a).
   //   The problem is then that equivalence has to be transitive and we can
   //   have sections a, b and c with only b in a script and a less than c
@@ -1021,27 +1072,51 @@ template <class ELFT> void Writer<ELFT>::sortSections() {
   //   .d (ro) # not in script
   //
   // The way we define an order then is:
-  // *  First put script sections at the start and sort the script sections.
-  // *  Move each non-script section to its preferred position. We try
+  // *  Sort only the orphan sections. They are in the end right now.
+  // *  Move each orphan section to its preferred position. We try
   //    to put each section in the last position where it it can share
   //    a PT_LOAD.
+  //
+  // There is some ambiguity as to where exactly a new entry should be
+  // inserted, because Opt.Commands contains not only output section
+  // commands but also other types of commands such as symbol assignment
+  // expressions. There's no correct answer here due to the lack of the
+  // formal specification of the linker script. We use heuristics to
+  // determine whether a new output command should be added before or
+  // after another commands. For the details, look at shouldSkip
+  // function.
 
-  std::stable_sort(OutputSections.begin(), OutputSections.end(),
-                   compareSections);
+  auto I = Script->Opt.Commands.begin();
+  auto E = Script->Opt.Commands.end();
+  auto NonScriptI = std::find_if(I, E, [](BaseCommand *Base) {
+    if (auto *Cmd = dyn_cast<OutputSectionCommand>(Base))
+      return Cmd->Sec && Cmd->Sec->SectionIndex == INT_MAX;
+    return false;
+  });
 
-  auto I = OutputSections.begin();
-  auto E = OutputSections.end();
-  auto NonScriptI =
-      std::find_if(OutputSections.begin(), E,
-                   [](OutputSection *S) { return S->SectionIndex == INT_MAX; });
+  // Sort the orphan sections.
+  std::stable_sort(NonScriptI, E, compareSections);
+
+  // As a horrible special case, skip the first . assignment if it is before any
+  // section. We do this because it is common to set a load address by starting
+  // the script with ". = 0xabcd" and the expectation is that every section is
+  // after that.
+  auto FirstSectionOrDotAssignment =
+      std::find_if(I, E, [](BaseCommand *Cmd) { return !shouldSkip(Cmd); });
+  if (FirstSectionOrDotAssignment != E &&
+      isa<SymbolAssignment>(**FirstSectionOrDotAssignment))
+    ++FirstSectionOrDotAssignment;
+  I = FirstSectionOrDotAssignment;
+
   while (NonScriptI != E) {
     auto Pos = findOrphanPos<ELFT>(I, NonScriptI);
+    OutputSection *Orphan = cast<OutputSectionCommand>(*NonScriptI)->Sec;
 
     // As an optimization, find all sections with the same sort rank
     // and insert them with one rotate.
-    unsigned Rank = (*NonScriptI)->SortRank;
-    auto End = std::find_if(NonScriptI + 1, E, [=](OutputSection *Sec) {
-      return Sec->SortRank != Rank;
+    unsigned Rank = Orphan->SortRank;
+    auto End = std::find_if(NonScriptI + 1, E, [=](BaseCommand *Cmd) {
+      return cast<OutputSectionCommand>(Cmd)->Sec->SortRank != Rank;
     });
     std::rotate(Pos, NonScriptI, End);
     NonScriptI = End;
@@ -1147,13 +1222,14 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   addPredefinedSections();
   removeUnusedSyntheticSections(OutputSections);
 
+  clearOutputSections();
   sortSections();
-  if (!Script->Opt.HasSections)
-    Script->fabricateDefaultCommands();
+
+  // Now that we have the final list, create a list of all the
+  // OutputSectionCommands for convenience.
   for (BaseCommand *Base : Script->Opt.Commands)
     if (auto *Cmd = dyn_cast<OutputSectionCommand>(Base))
       OutputSectionCommands.push_back(Cmd);
-  clearOutputSections();
 
   // This is a bit of a hack. A value of 0 means undef, so we set it
   // to 1 t make __ehdr_start defined. The section number is not

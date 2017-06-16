@@ -54,7 +54,8 @@ reviewer understand your code.
 To get a full diff, use one of the following commands (or just use Arcanist
 to upload your patch):
 
-* ``git diff -U999999 other-branch``
+* ``git show HEAD -U999999 > mypatch.patch``
+* ``git format-patch -U999999 @{u}``
 * ``svn diff --diff-cmd=diff -x -U999999``
 
 To upload a new patch:
