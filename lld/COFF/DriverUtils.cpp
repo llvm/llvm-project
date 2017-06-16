@@ -522,7 +522,7 @@ void fixupExports() {
 
   for (Export &E : Config->Exports) {
     SymbolBody *Sym = E.Sym;
-    if (!E.ForwardTo.empty()) {
+    if (!E.ForwardTo.empty() || !Sym) {
       E.SymbolName = E.Name;
     } else {
       if (auto *U = dyn_cast<Undefined>(Sym))

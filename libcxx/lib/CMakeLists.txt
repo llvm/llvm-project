@@ -1,6 +1,7 @@
 set(LIBCXX_LIB_CMAKEFILES_DIR "${CMAKE_CURRENT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}"  PARENT_SCOPE)
 
 # Get sources
+# FIXME: Don't use glob here
 file(GLOB LIBCXX_SOURCES ../src/*.cpp)
 if(WIN32)
   file(GLOB LIBCXX_WIN32_SOURCES ../src/support/win32/*.cpp)

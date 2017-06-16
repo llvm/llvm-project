@@ -230,6 +230,13 @@ public:
   void relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
 };
 
+class AVRTargetInfo final : public TargetInfo {
+public:
+  RelExpr getRelExpr(uint32_t Type, const SymbolBody &S,
+                     const uint8_t *Loc) const override;
+  void relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
+};
+
 template <class ELFT> class MipsTargetInfo final : public TargetInfo {
 public:
   MipsTargetInfo();
@@ -260,6 +267,8 @@ TargetInfo *createTarget() {
     return make<AMDGPUTargetInfo>();
   case EM_ARM:
     return make<ARMTargetInfo>();
+  case EM_AVR:
+    return make<AVRTargetInfo>();
   case EM_MIPS:
     switch (Config->EKind) {
     case ELF32LEKind:
@@ -2043,6 +2052,32 @@ int64_t ARMTargetInfo::getImplicitAddend(const uint8_t *Buf,
                             ((Lo & 0x7000) >> 4) |  // imm3
                             (Lo & 0x00ff));         // imm8
   }
+  }
+}
+
+RelExpr AVRTargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S,
+                                  const uint8_t *Loc) const {
+  switch (Type) {
+  case R_AVR_CALL:
+    return R_ABS;
+  default:
+    error(toString(S.File) + ": unknown relocation type: " + toString(Type));
+    return R_HINT;
+  }
+}
+
+void AVRTargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
+                                uint64_t Val) const {
+  switch (Type) {
+  case R_AVR_CALL: {
+    uint16_t Hi = Val >> 17;
+    uint16_t Lo = Val >> 1;
+    write16le(Loc, read16le(Loc) | ((Hi >> 1) << 4) | (Hi & 1));
+    write16le(Loc + 2, Lo);
+    break;
+  }
+  default:
+    error(getErrorLocation(Loc) + "unrecognized reloc " + toString(Type));
   }
 }
 
