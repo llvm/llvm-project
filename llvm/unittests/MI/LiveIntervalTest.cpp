@@ -151,8 +151,7 @@ body: |
   std::unique_ptr<MIRParser> MIR;
   std::unique_ptr<Module> M = parseMIR(Context, PM, MIR, *TM, MIRString,
                                        "func");
-  if (!M)
-    report_fatal_error("Could not parse MIR code\n");
+  ASSERT_TRUE(M);
 
   PM.add(new TestPass(T));
 

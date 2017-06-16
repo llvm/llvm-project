@@ -82,6 +82,12 @@ static RTLIB::Libcall getRTLibDesc(unsigned Opcode, unsigned Size) {
   case TargetOpcode::G_UDIV:
     assert(Size == 32 && "Unsupported size");
     return RTLIB::UDIV_I32;
+  case TargetOpcode::G_SREM:
+    assert(Size == 32 && "Unsupported size");
+    return RTLIB::SREM_I32;
+  case TargetOpcode::G_UREM:
+    assert(Size == 32 && "Unsupported size");
+    return RTLIB::UREM_I32;
   case TargetOpcode::G_FADD:
     assert((Size == 32 || Size == 64) && "Unsupported size");
     return Size == 64 ? RTLIB::ADD_F64 : RTLIB::ADD_F32;
@@ -93,43 +99,57 @@ static RTLIB::Libcall getRTLibDesc(unsigned Opcode, unsigned Size) {
   llvm_unreachable("Unknown libcall function");
 }
 
-static LegalizerHelper::LegalizeResult
-simpleLibcall(MachineInstr &MI, MachineIRBuilder &MIRBuilder, unsigned Size,
-              Type *OpType) {
+LegalizerHelper::LegalizeResult llvm::replaceWithLibcall(
+    MachineInstr &MI, MachineIRBuilder &MIRBuilder, RTLIB::Libcall Libcall,
+    const CallLowering::ArgInfo &Result, ArrayRef<CallLowering::ArgInfo> Args) {
   auto &CLI = *MIRBuilder.getMF().getSubtarget().getCallLowering();
   auto &TLI = *MIRBuilder.getMF().getSubtarget().getTargetLowering();
-  auto Libcall = getRTLibDesc(MI.getOpcode(), Size);
   const char *Name = TLI.getLibcallName(Libcall);
   MIRBuilder.getMF().getFrameInfo().setHasCalls(true);
-  CLI.lowerCall(MIRBuilder, TLI.getLibcallCallingConv(Libcall),
-                MachineOperand::CreateES(Name),
-                {MI.getOperand(0).getReg(), OpType},
-                {{MI.getOperand(1).getReg(), OpType},
-                 {MI.getOperand(2).getReg(), OpType}});
+  MIRBuilder.setInstr(MI);
+  if (!CLI.lowerCall(MIRBuilder, TLI.getLibcallCallingConv(Libcall),
+                     MachineOperand::CreateES(Name), Result, Args))
+    return LegalizerHelper::UnableToLegalize;
+
+  // We're about to remove MI, so move the insert point after it.
+  MIRBuilder.setInsertPt(MIRBuilder.getMBB(),
+                         std::next(MIRBuilder.getInsertPt()));
+
   MI.eraseFromParent();
   return LegalizerHelper::Legalized;
 }
 
+static LegalizerHelper::LegalizeResult
+simpleLibcall(MachineInstr &MI, MachineIRBuilder &MIRBuilder, unsigned Size,
+              Type *OpType) {
+  auto Libcall = getRTLibDesc(MI.getOpcode(), Size);
+  return replaceWithLibcall(MI, MIRBuilder, Libcall,
+                            {MI.getOperand(0).getReg(), OpType},
+                            {{MI.getOperand(1).getReg(), OpType},
+                             {MI.getOperand(2).getReg(), OpType}});
+}
+
 LegalizerHelper::LegalizeResult
 LegalizerHelper::libcall(MachineInstr &MI) {
-  LLT Ty = MRI.getType(MI.getOperand(0).getReg());
-  unsigned Size = Ty.getSizeInBits();
+  LLT LLTy = MRI.getType(MI.getOperand(0).getReg());
+  unsigned Size = LLTy.getSizeInBits();
   auto &Ctx = MIRBuilder.getMF().getFunction()->getContext();
-  MIRBuilder.setInstr(MI);
 
   switch (MI.getOpcode()) {
   default:
     return UnableToLegalize;
   case TargetOpcode::G_SDIV:
-  case TargetOpcode::G_UDIV: {
-    Type *Ty = Type::getInt32Ty(Ctx);
-    return simpleLibcall(MI, MIRBuilder, Size, Ty);
+  case TargetOpcode::G_UDIV:
+  case TargetOpcode::G_SREM:
+  case TargetOpcode::G_UREM: {
+    Type *HLTy = Type::getInt32Ty(Ctx);
+    return simpleLibcall(MI, MIRBuilder, Size, HLTy);
   }
   case TargetOpcode::G_FADD:
   case TargetOpcode::G_FPOW:
   case TargetOpcode::G_FREM: {
-    Type *Ty = Size == 64 ? Type::getDoubleTy(Ctx) : Type::getFloatTy(Ctx);
-    return simpleLibcall(MI, MIRBuilder, Size, Ty);
+    Type *HLTy = Size == 64 ? Type::getDoubleTy(Ctx) : Type::getFloatTy(Ctx);
+    return simpleLibcall(MI, MIRBuilder, Size, HLTy);
   }
   }
 }

@@ -77,14 +77,12 @@ bool LTOModule::isBitcodeFile(StringRef Path) {
 }
 
 bool LTOModule::isThinLTO() {
-  // Right now the detection is only based on the summary presence. We may want
-  // to add a dedicated flag at some point.
-  Expected<bool> Result = hasGlobalValueSummary(MBRef);
+  Expected<BitcodeLTOInfo> Result = getBitcodeLTOInfo(MBRef);
   if (!Result) {
     logAllUnhandledErrors(Result.takeError(), errs(), "");
     return false;
   }
-  return *Result;
+  return Result->IsThinLTO;
 }
 
 bool LTOModule::isBitcodeForTarget(MemoryBuffer *Buffer,

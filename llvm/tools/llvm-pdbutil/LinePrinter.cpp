@@ -13,6 +13,7 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/DebugInfo/PDB/UDTLayout.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/Regex.h"
 
 #include <algorithm>
@@ -60,15 +61,28 @@ LinePrinter::LinePrinter(int Indent, bool UseColor, llvm::raw_ostream &Stream)
              opts::pretty::IncludeCompilands.end());
 }
 
-void LinePrinter::Indent() { CurrentIndent += IndentSpaces; }
+void LinePrinter::Indent(uint32_t Amount) {
+  if (Amount == 0)
+    Amount = IndentSpaces;
+  CurrentIndent += Amount;
+}
 
-void LinePrinter::Unindent() {
-  CurrentIndent = std::max(0, CurrentIndent - IndentSpaces);
+void LinePrinter::Unindent(uint32_t Amount) {
+  if (Amount == 0)
+    Amount = IndentSpaces;
+  CurrentIndent = std::max<int>(0, CurrentIndent - Amount);
 }
 
 void LinePrinter::NewLine() {
   OS << "\n";
   OS.indent(CurrentIndent);
+}
+
+void LinePrinter::print(const Twine &T) { OS << T; }
+
+void LinePrinter::printLine(const Twine &T) {
+  NewLine();
+  OS << T;
 }
 
 bool LinePrinter::IsClassExcluded(const ClassLayout &Class) {
@@ -77,6 +91,19 @@ bool LinePrinter::IsClassExcluded(const ClassLayout &Class) {
   if (Class.deepPaddingSize() < opts::pretty::PaddingThreshold)
     return true;
   return false;
+}
+
+void LinePrinter::formatBinary(StringRef Label, ArrayRef<uint8_t> Data,
+                               uint32_t StartOffset) {
+  NewLine();
+  OS << Label << " (";
+  if (!Data.empty()) {
+    OS << "\n";
+    OS << format_bytes_with_ascii(Data, StartOffset, 32, 4,
+                                  CurrentIndent + IndentSpaces, true);
+    NewLine();
+  }
+  OS << ")";
 }
 
 bool LinePrinter::IsTypeExcluded(llvm::StringRef TypeName, uint32_t Size) {

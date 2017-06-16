@@ -1,4 +1,4 @@
-//===--- ArgList.h - Argument List Management -------------------*- C++ -*-===//
+//===- ArgList.h - Argument List Management ---------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -10,7 +10,9 @@
 #ifndef LLVM_OPTION_ARGLIST_H
 #define LLVM_OPTION_ARGLIST_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -18,15 +20,21 @@
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/OptSpecifier.h"
 #include "llvm/Option/Option.h"
+#include <algorithm>
+#include <cstddef>
+#include <initializer_list>
+#include <iterator>
 #include <list>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace llvm {
+
+class raw_ostream;
+
 namespace opt {
-class ArgList;
-class Option;
 
 /// arg_iterator - Iterates through arguments stored inside an ArgList.
 template<typename BaseIter, unsigned NumOptSpecifiers = 0>
@@ -59,14 +67,14 @@ class arg_iterator {
     }
   }
 
-  typedef std::iterator_traits<BaseIter> Traits;
+  using Traits = std::iterator_traits<BaseIter>;
 
 public:
-  typedef typename Traits::value_type  value_type;
-  typedef typename Traits::reference   reference;
-  typedef typename Traits::pointer     pointer;
-  typedef std::forward_iterator_tag    iterator_category;
-  typedef std::ptrdiff_t               difference_type;
+  using value_type = typename Traits::value_type;
+  using reference = typename Traits::reference;
+  using pointer = typename Traits::pointer;
+  using iterator_category = std::forward_iterator_tag;
+  using difference_type = std::ptrdiff_t;
 
   arg_iterator(
       BaseIter Current, BaseIter End,
@@ -111,12 +119,12 @@ public:
 /// and to iterate over groups of arguments.
 class ArgList {
 public:
-  typedef SmallVector<Arg*, 16> arglist_type;
-  typedef arg_iterator<arglist_type::iterator> iterator;
-  typedef arg_iterator<arglist_type::const_iterator> const_iterator;
-  typedef arg_iterator<arglist_type::reverse_iterator> reverse_iterator;
-  typedef arg_iterator<arglist_type::const_reverse_iterator>
-      const_reverse_iterator;
+  using arglist_type = SmallVector<Arg *, 16>;
+  using iterator = arg_iterator<arglist_type::iterator>;
+  using const_iterator = arg_iterator<arglist_type::const_iterator>;
+  using reverse_iterator = arg_iterator<arglist_type::reverse_iterator>;
+  using const_reverse_iterator =
+      arg_iterator<arglist_type::const_reverse_iterator>;
 
   template<unsigned N> using filtered_iterator =
       arg_iterator<arglist_type::const_iterator, N>;
@@ -127,7 +135,7 @@ private:
   /// The internal list of arguments.
   arglist_type Args;
 
-  typedef std::pair<unsigned, unsigned> OptRange;
+  using OptRange = std::pair<unsigned, unsigned>;
   static OptRange emptyRange() { return {-1u, 0u}; }
 
   /// The first and last index of each different OptSpecifier ID.
@@ -142,6 +150,7 @@ protected:
   // derived objects, but can still be used by derived objects to implement
   // their own special members.
   ArgList() = default;
+
   // Explicit move operations to ensure the container is cleared post-move
   // otherwise it could lead to a double-delete in the case of moving of an
   // InputArgList which deletes the contents of the container. If we could fix
@@ -152,6 +161,7 @@ protected:
     RHS.Args.clear();
     RHS.OptRanges.clear();
   }
+
   ArgList &operator=(ArgList &&RHS) {
     Args = std::move(RHS.Args);
     RHS.Args.clear();
@@ -159,6 +169,7 @@ protected:
     RHS.OptRanges.clear();
     return *this;
   }
+
   // Protect the dtor to ensure this type is never destroyed polymorphically.
   ~ArgList() = default;
 
@@ -380,10 +391,12 @@ private:
 
 public:
   InputArgList(const char* const *ArgBegin, const char* const *ArgEnd);
+
   InputArgList(InputArgList &&RHS)
       : ArgList(std::move(RHS)), ArgStrings(std::move(RHS.ArgStrings)),
         SynthesizedStrings(std::move(RHS.SynthesizedStrings)),
         NumInputArgStrings(RHS.NumInputArgStrings) {}
+
   InputArgList &operator=(InputArgList &&RHS) {
     releaseMemory();
     ArgList::operator=(std::move(RHS));
@@ -392,6 +405,7 @@ public:
     NumInputArgStrings = RHS.NumInputArgStrings;
     return *this;
   }
+
   ~InputArgList() { releaseMemory(); }
 
   const char *getArgString(unsigned Index) const override {
@@ -464,7 +478,6 @@ public:
     append(MakePositionalArg(BaseArg, Opt, Value));
   }
 
-
   /// AddSeparateArg - Construct a new Positional arg for the given option
   /// \p Id, with the provided \p Value and append it to the argument
   /// list.
@@ -473,14 +486,12 @@ public:
     append(MakeSeparateArg(BaseArg, Opt, Value));
   }
 
-
   /// AddJoinedArg - Construct a new Positional arg for the given option
   /// \p Id, with the provided \p Value and append it to the argument list.
   void AddJoinedArg(const Arg *BaseArg, const Option Opt,
                     StringRef Value) {
     append(MakeJoinedArg(BaseArg, Opt, Value));
   }
-
 
   /// MakeFlagArg - Construct a new FlagArg for the given option \p Id.
   Arg *MakeFlagArg(const Arg *BaseArg, const Option Opt) const;
@@ -504,6 +515,7 @@ public:
 };
 
 } // end namespace opt
+
 } // end namespace llvm
 
-#endif
+#endif // LLVM_OPTION_ARGLIST_H

@@ -36,6 +36,13 @@ void StringsAndChecksumsRef::initializeStrings(
   Strings = OwnedStrings.get();
 }
 
+void StringsAndChecksumsRef::setChecksums(
+    const DebugChecksumsSubsectionRef &CS) {
+  OwnedChecksums = llvm::make_unique<DebugChecksumsSubsectionRef>();
+  *OwnedChecksums = CS;
+  Checksums = OwnedChecksums.get();
+}
+
 void StringsAndChecksumsRef::initializeChecksums(
     const DebugSubsectionRecord &FCR) {
   assert(FCR.kind() == DebugSubsectionKind::FileChecksums);

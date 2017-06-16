@@ -1,4 +1,4 @@
-//===--- OptTable.h - Option Table ------------------------------*- C++ -*-===//
+//===- OptTable.h - Option Table --------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,12 +11,19 @@
 #define LLVM_OPTION_OPTTABLE_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Option/OptSpecifier.h"
+#include <cassert>
+#include <string>
+#include <vector>
 
 namespace llvm {
+
 class raw_ostream;
+
 namespace opt {
+
 class Arg;
 class ArgList;
 class InputArgList;
@@ -53,12 +60,12 @@ private:
   ArrayRef<Info> OptionInfos;
   bool IgnoreCase;
 
-  unsigned TheInputOptionID;
-  unsigned TheUnknownOptionID;
+  unsigned TheInputOptionID = 0;
+  unsigned TheUnknownOptionID = 0;
 
   /// The index of the first option which can be parsed (i.e., is not a
   /// special option like 'input' or 'unknown', and is not an option group).
-  unsigned FirstSearchableIndex;
+  unsigned FirstSearchableIndex = 0;
 
   /// The union of all option prefixes. If an argument does not begin with
   /// one of these, it is an input.
@@ -176,7 +183,9 @@ public:
   void PrintHelp(raw_ostream &OS, const char *Name,
                   const char *Title, bool ShowHidden = false) const;
 };
+
 } // end namespace opt
+
 } // end namespace llvm
 
-#endif
+#endif // LLVM_OPTION_OPTTABLE_H

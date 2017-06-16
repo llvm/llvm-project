@@ -363,7 +363,7 @@ public:
       : SymbolRecord(SymbolRecordKind::PublicSym32),
         RecordOffset(RecordOffset) {}
 
-  uint32_t Index;
+  TypeIndex Index;
   uint32_t Offset;
   uint16_t Segment;
   StringRef Name;
@@ -379,7 +379,7 @@ public:
       : SymbolRecord(SymbolRecordKind::RegisterSym),
         RecordOffset(RecordOffset) {}
 
-  uint32_t Index;
+  TypeIndex Index;
   RegisterId Register;
   StringRef Name;
 
@@ -679,7 +679,7 @@ public:
       : SymbolRecord(SymbolRecordKind::FileStaticSym),
         RecordOffset(RecordOffset) {}
 
-  uint32_t Index;
+  TypeIndex Index;
   uint32_t ModFilenameOffset;
   LocalSymFlags Flags;
   StringRef Name;
@@ -814,7 +814,7 @@ public:
 
   uint32_t CodeOffset;
   uint16_t Register;
-  uint8_t CookieKind;
+  FrameCookieKind CookieKind;
   uint8_t Flags;
 
   uint32_t RecordOffset;
@@ -871,7 +871,7 @@ public:
 
   uint32_t Offset;
   TypeIndex Type;
-  uint16_t Register;
+  RegisterId Register;
   StringRef Name;
 
   uint32_t RecordOffset;

@@ -326,3 +326,240 @@ define i32 @test69(i32 %x, i32 %y) {
   %select = select i1 %cmp, i32 %y, i32 %or
   ret i32 %select
 }
+
+define i32 @shift_no_xor_multiuse_or(i32 %x, i32 %y) {
+; CHECK-LABEL: @shift_no_xor_multiuse_or(
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[Y:%.*]], 2
+; CHECK-NEXT:    [[AND:%.*]] = shl i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[AND]], 2
+; CHECK-NEXT:    [[TMP2:%.*]] = or i32 [[TMP1]], [[Y]]
+; CHECK-NEXT:    [[RES:%.*]] = mul i32 [[TMP2]], [[OR]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %and = and i32 %x, 1
+  %cmp = icmp eq i32 %and, 0
+  %or = or i32 %y, 2
+  %select = select i1 %cmp, i32 %y, i32 %or
+  %res = mul i32 %select, %or ; to bump up use count of the Or
+  ret i32 %res
+}
+
+define i32 @no_shift_no_xor_multiuse_or(i32 %x, i32 %y) {
+; CHECK-LABEL: @no_shift_no_xor_multiuse_or(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 4096
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[Y:%.*]], 4096
+; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[AND]], [[Y]]
+; CHECK-NEXT:    [[RES:%.*]] = mul i32 [[TMP1]], [[OR]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %and = and i32 %x, 4096
+  %cmp = icmp eq i32 %and, 0
+  %or = or i32 %y, 4096
+  %select = select i1 %cmp, i32 %y, i32 %or
+  %res = mul i32 %select, %or ; to bump up use count of the Or
+  ret i32 %res
+}
+
+define i32 @no_shift_xor_multiuse_or(i32 %x, i32 %y) {
+; CHECK-LABEL: @no_shift_xor_multiuse_or(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 4096
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[Y:%.*]], 4096
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[AND]], 4096
+; CHECK-NEXT:    [[TMP2:%.*]] = or i32 [[TMP1]], [[Y]]
+; CHECK-NEXT:    [[RES:%.*]] = mul i32 [[TMP2]], [[OR]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %and = and i32 %x, 4096
+  %cmp = icmp ne i32 0, %and
+  %or = or i32 %y, 4096
+  %select = select i1 %cmp, i32 %y, i32 %or
+  %res = mul i32 %select, %or ; to bump up use count of the Or
+  ret i32 %res
+}
+
+; TODO this increased the number of instructions
+define i32 @shift_xor_multiuse_or(i32 %x, i32 %y) {
+; CHECK-LABEL: @shift_xor_multiuse_or(
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[Y:%.*]], 2048
+; CHECK-NEXT:    [[AND:%.*]] = lshr i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[AND]], 2048
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i32 [[TMP1]], 2048
+; CHECK-NEXT:    [[TMP3:%.*]] = or i32 [[TMP2]], [[Y]]
+; CHECK-NEXT:    [[RES:%.*]] = mul i32 [[TMP3]], [[OR]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %and = and i32 %x, 4096
+  %cmp = icmp ne i32 0, %and
+  %or = or i32 %y, 2048
+  %select = select i1 %cmp, i32 %y, i32 %or
+  %res = mul i32 %select, %or ; to bump up use count of the Or
+  ret i32 %res
+}
+
+define i32 @shift_no_xor_multiuse_cmp(i32 %x, i32 %y, i32 %z, i32 %w) {
+; CHECK-LABEL: @shift_no_xor_multiuse_cmp(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i32 [[AND]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = or i32 [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    [[SELECT2:%.*]] = select i1 [[CMP]], i32 [[Z:%.*]], i32 [[W:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = mul i32 [[TMP2]], [[SELECT2]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %and = and i32 %x, 1
+  %cmp = icmp eq i32 %and, 0
+  %or = or i32 %y, 2
+  %select = select i1 %cmp, i32 %y, i32 %or
+  %select2 = select i1 %cmp, i32 %z, i32 %w ; to bump up use count of the cmp
+  %res = mul i32 %select, %select2
+  ret i32 %res
+}
+
+define i32 @no_shift_no_xor_multiuse_cmp(i32 %x, i32 %y, i32 %z, i32 %w) {
+; CHECK-LABEL: @no_shift_no_xor_multiuse_cmp(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 4096
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[AND]], [[Y:%.*]]
+; CHECK-NEXT:    [[SELECT2:%.*]] = select i1 [[CMP]], i32 [[Z:%.*]], i32 [[W:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = mul i32 [[TMP1]], [[SELECT2]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %and = and i32 %x, 4096
+  %cmp = icmp eq i32 %and, 0
+  %or = or i32 %y, 4096
+  %select = select i1 %cmp, i32 %y, i32 %or
+  %select2 = select i1 %cmp, i32 %z, i32 %w ; to bump up use count of the cmp
+  %res = mul i32 %select, %select2
+  ret i32 %res
+}
+
+define i32 @no_shift_xor_multiuse_cmp(i32 %x, i32 %y, i32 %z, i32 %w) {
+; CHECK-LABEL: @no_shift_xor_multiuse_cmp(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 4096
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[AND]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[AND]], 4096
+; CHECK-NEXT:    [[TMP2:%.*]] = or i32 [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    [[SELECT2:%.*]] = select i1 [[CMP]], i32 [[Z:%.*]], i32 [[W:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = mul i32 [[TMP2]], [[SELECT2]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %and = and i32 %x, 4096
+  %cmp = icmp ne i32 0, %and
+  %or = or i32 %y, 4096
+  %select = select i1 %cmp, i32 %y, i32 %or
+  %select2 = select i1 %cmp, i32 %z, i32 %w ; to bump up use count of the cmp
+  %res = mul i32 %select, %select2
+  ret i32 %res
+}
+
+; TODO this increased the number of instructions
+define i32 @shift_xor_multiuse_cmp(i32 %x, i32 %y, i32 %z, i32 %w) {
+; CHECK-LABEL: @shift_xor_multiuse_cmp(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 4096
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[AND]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr exact i32 [[AND]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i32 [[TMP1]], 2048
+; CHECK-NEXT:    [[TMP3:%.*]] = or i32 [[TMP2]], [[Y:%.*]]
+; CHECK-NEXT:    [[SELECT2:%.*]] = select i1 [[CMP]], i32 [[Z:%.*]], i32 [[W:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = mul i32 [[TMP3]], [[SELECT2]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %and = and i32 %x, 4096
+  %cmp = icmp ne i32 0, %and
+  %or = or i32 %y, 2048
+  %select = select i1 %cmp, i32 %y, i32 %or
+  %select2 = select i1 %cmp, i32 %z, i32 %w ; to bump up use count of the cmp
+  %res = mul i32 %select, %select2
+  ret i32 %res
+}
+
+; TODO this increased the number of instructions
+define i32 @shift_no_xor_multiuse_cmp_or(i32 %x, i32 %y, i32 %z, i32 %w) {
+; CHECK-LABEL: @shift_no_xor_multiuse_cmp_or(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[Y:%.*]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i32 [[AND]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = or i32 [[TMP1]], [[Y]]
+; CHECK-NEXT:    [[SELECT2:%.*]] = select i1 [[CMP]], i32 [[Z:%.*]], i32 [[W:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = mul i32 [[TMP2]], [[SELECT2]]
+; CHECK-NEXT:    [[RES2:%.*]] = mul i32 [[RES]], [[OR]]
+; CHECK-NEXT:    ret i32 [[RES2]]
+;
+  %and = and i32 %x, 1
+  %cmp = icmp eq i32 %and, 0
+  %or = or i32 %y, 2
+  %select = select i1 %cmp, i32 %y, i32 %or
+  %select2 = select i1 %cmp, i32 %z, i32 %w ; to bump up use count of the cmp
+  %res = mul i32 %select, %select2
+  %res2 = mul i32 %res, %or ; to bump up the use count of the or
+  ret i32 %res2
+}
+
+define i32 @no_shift_no_xor_multiuse_cmp_or(i32 %x, i32 %y, i32 %z, i32 %w) {
+; CHECK-LABEL: @no_shift_no_xor_multiuse_cmp_or(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 4096
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[Y:%.*]], 4096
+; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[AND]], [[Y]]
+; CHECK-NEXT:    [[SELECT2:%.*]] = select i1 [[CMP]], i32 [[Z:%.*]], i32 [[W:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = mul i32 [[TMP1]], [[SELECT2]]
+; CHECK-NEXT:    [[RES2:%.*]] = mul i32 [[RES]], [[OR]]
+; CHECK-NEXT:    ret i32 [[RES2]]
+;
+  %and = and i32 %x, 4096
+  %cmp = icmp eq i32 %and, 0
+  %or = or i32 %y, 4096
+  %select = select i1 %cmp, i32 %y, i32 %or
+  %select2 = select i1 %cmp, i32 %z, i32 %w ; to bump up use count of the cmp
+  %res = mul i32 %select, %select2
+  %res2 = mul i32 %res, %or ; to bump up the use count of the or
+  ret i32 %res2
+}
+
+; TODO this increased the number of instructions
+define i32 @no_shift_xor_multiuse_cmp_or(i32 %x, i32 %y, i32 %z, i32 %w) {
+; CHECK-LABEL: @no_shift_xor_multiuse_cmp_or(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 4096
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[AND]], 0
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[Y:%.*]], 4096
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[AND]], 4096
+; CHECK-NEXT:    [[TMP2:%.*]] = or i32 [[TMP1]], [[Y]]
+; CHECK-NEXT:    [[SELECT2:%.*]] = select i1 [[CMP]], i32 [[Z:%.*]], i32 [[W:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = mul i32 [[TMP2]], [[SELECT2]]
+; CHECK-NEXT:    [[RES2:%.*]] = mul i32 [[RES]], [[OR]]
+; CHECK-NEXT:    ret i32 [[RES2]]
+;
+  %and = and i32 %x, 4096
+  %cmp = icmp ne i32 0, %and
+  %or = or i32 %y, 4096
+  %select = select i1 %cmp, i32 %y, i32 %or
+  %select2 = select i1 %cmp, i32 %z, i32 %w ; to bump up use count of the cmp
+  %res = mul i32 %select, %select2
+  %res2 = mul i32 %res, %or ; to bump up the use count of the or
+  ret i32 %res2
+}
+
+; TODO this increased the number of instructions
+define i32 @shift_xor_multiuse_cmp_or(i32 %x, i32 %y, i32 %z, i32 %w) {
+; CHECK-LABEL: @shift_xor_multiuse_cmp_or(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 4096
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[AND]], 0
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[Y:%.*]], 2048
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr exact i32 [[AND]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i32 [[TMP1]], 2048
+; CHECK-NEXT:    [[TMP3:%.*]] = or i32 [[TMP2]], [[Y]]
+; CHECK-NEXT:    [[SELECT2:%.*]] = select i1 [[CMP]], i32 [[Z:%.*]], i32 [[W:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = mul i32 [[TMP3]], [[SELECT2]]
+; CHECK-NEXT:    [[RES2:%.*]] = mul i32 [[RES]], [[OR]]
+; CHECK-NEXT:    ret i32 [[RES2]]
+;
+  %and = and i32 %x, 4096
+  %cmp = icmp ne i32 0, %and
+  %or = or i32 %y, 2048
+  %select = select i1 %cmp, i32 %y, i32 %or
+  %select2 = select i1 %cmp, i32 %z, i32 %w ; to bump up use count of the cmp
+  %res = mul i32 %select, %select2
+  %res2 = mul i32 %res, %or ; to bump up the use count of the or
+  ret i32 %res2
+}

@@ -107,7 +107,7 @@ bool AMDGPUAnnotateUniformValues::isClobberedInFunction(LoadInst * Load) {
 
   DFS(Start, Checklist);
   for (auto &BB : Checklist) {
-    BasicBlock::iterator StartIt = (BB == Load->getParent()) ?
+    BasicBlock::iterator StartIt = (!L && (BB == Load->getParent())) ?
      BasicBlock::iterator(Load) : BB->end();
      if (MDR->getPointerDependencyFrom(MemoryLocation(Ptr),
        true, StartIt, BB, Load).isClobber())

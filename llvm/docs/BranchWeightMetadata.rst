@@ -64,6 +64,20 @@ Branch weights are assigned to every destination.
     [ , i32 <LABEL_BRANCH_WEIGHT> ... ]
   }
 
+``CallInst``
+^^^^^^^^^^^^^^^^^^
+
+Calls may have branch weight metadata, containing the execution count of
+the call. It is currently used in SamplePGO mode only, to augment the
+block and entry counts which may not be accurate with sampling.
+
+.. code-block:: none
+
+  !0 = metadata !{
+    metadata !"branch_weights",
+    i32 <CALL_BRANCH_WEIGHT>
+  }
+
 Other
 ^^^^^
 

@@ -56,3 +56,16 @@ ModuleSummaryIndex::getGlobalValueSummary(uint64_t ValueGUID,
   auto &Summary = VI.getSummaryList()[0];
   return Summary.get();
 }
+
+bool ModuleSummaryIndex::isGUIDLive(GlobalValue::GUID GUID) const {
+  auto VI = getValueInfo(GUID);
+  if (!VI)
+    return true;
+  const auto &SummaryList = VI.getSummaryList();
+  if (SummaryList.empty())
+    return true;
+  for (auto &I : SummaryList)
+    if (isGlobalValueLive(I.get()))
+      return true;
+  return false;
+}

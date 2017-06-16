@@ -11,20 +11,28 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/TableGen/Record.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FoldingSet.h"
-#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Allocator.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/SMLoc.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
+#include "llvm/TableGen/Record.h"
 #include <cassert>
 #include <cstdint>
-#include <new>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
 
 using namespace llvm;
 
@@ -162,7 +170,8 @@ RecTy *llvm::resolveTypes(RecTy *T1, RecTy *T2) {
 //    Initializer implementations
 //===----------------------------------------------------------------------===//
 
-void Init::anchor() { }
+void Init::anchor() {}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void Init::dump() const { return print(errs()); }
 #endif
@@ -301,7 +310,6 @@ static Init *fixBitInit(const RecordVal *RV, Init *Before, Init *After) {
 
 // resolveReferences - If there are any field references that refer to fields
 // that have been filled in, we can propagate the values now.
-//
 Init *BitsInit::resolveReferences(Record &R, const RecordVal *RV) const {
   bool Changed = false;
   SmallVector<Init *, 16> NewBits(getNumBits());
@@ -615,7 +623,7 @@ void UnOpInit::Profile(FoldingSetNodeID &ID) const {
 
 Init *UnOpInit::Fold(Record *CurRec, MultiClass *CurMultiClass) const {
   switch (getOpcode()) {
-  case CAST: {
+  case CAST:
     if (isa<StringRecTy>(getType())) {
       if (StringInit *LHSs = dyn_cast<StringInit>(LHS))
         return LHSs;
@@ -680,15 +688,15 @@ Init *UnOpInit::Fold(Record *CurRec, MultiClass *CurMultiClass) const {
       }
     }
     break;
-  }
-  case HEAD: {
+
+  case HEAD:
     if (ListInit *LHSl = dyn_cast<ListInit>(LHS)) {
       assert(!LHSl->empty() && "Empty list in head");
       return LHSl->getElement(0);
     }
     break;
-  }
-  case TAIL: {
+
+  case TAIL:
     if (ListInit *LHSl = dyn_cast<ListInit>(LHS)) {
       assert(!LHSl->empty() && "Empty list in tail");
       // Note the +1.  We can't just pass the result of getValues()
@@ -696,15 +704,13 @@ Init *UnOpInit::Fold(Record *CurRec, MultiClass *CurMultiClass) const {
       return ListInit::get(LHSl->getValues().slice(1), LHSl->getType());
     }
     break;
-  }
-  case EMPTY: {
+
+  case EMPTY:
     if (ListInit *LHSl = dyn_cast<ListInit>(LHS))
       return IntInit::get(LHSl->empty());
     if (StringInit *LHSs = dyn_cast<StringInit>(LHS))
       return IntInit::get(LHSs->getValue().empty());
-
     break;
-  }
   }
   return const_cast<UnOpInit *>(this);
 }
@@ -948,7 +954,6 @@ static Init *EvaluateOperation(OpInit *RHSo, Init *LHS, Init *Arg,
 
 static Init *ForeachHelper(Init *LHS, Init *MHS, Init *RHS, RecTy *Type,
                            Record *CurRec, MultiClass *CurMultiClass) {
-
   OpInit *RHSo = dyn_cast<OpInit>(RHS);
 
   if (!RHSo)
@@ -1245,7 +1250,7 @@ VarInit *VarInit::get(StringRef VN, RecTy *T) {
 }
 
 VarInit *VarInit::get(Init *VN, RecTy *T) {
-  typedef std::pair<RecTy *, Init *> Key;
+  using Key = std::pair<RecTy *, Init *>;
   static DenseMap<Key, VarInit*> ThePool;
 
   Key TheKey(std::make_pair(T, VN));
@@ -1320,7 +1325,7 @@ Init *VarInit::resolveReferences(Record &R, const RecordVal *RV) const {
 }
 
 VarBitInit *VarBitInit::get(TypedInit *T, unsigned B) {
-  typedef std::pair<TypedInit *, unsigned> Key;
+  using Key = std::pair<TypedInit *, unsigned>;
   static DenseMap<Key, VarBitInit*> ThePool;
 
   Key TheKey(std::make_pair(T, B));
@@ -1352,7 +1357,7 @@ Init *VarBitInit::resolveReferences(Record &R, const RecordVal *RV) const {
 
 VarListElementInit *VarListElementInit::get(TypedInit *T,
                                             unsigned E) {
-  typedef std::pair<TypedInit *, unsigned> Key;
+  using Key = std::pair<TypedInit *, unsigned>;
   static DenseMap<Key, VarListElementInit*> ThePool;
 
   Key TheKey(std::make_pair(T, E));
@@ -1422,7 +1427,7 @@ std::string DefInit::getAsString() const {
 }
 
 FieldInit *FieldInit::get(Init *R, StringInit *FN) {
-  typedef std::pair<Init *, StringInit *> Key;
+  using Key = std::pair<Init *, StringInit *>;
   static DenseMap<Key, FieldInit*> ThePool;
 
   Key TheKey(std::make_pair(R, FN));

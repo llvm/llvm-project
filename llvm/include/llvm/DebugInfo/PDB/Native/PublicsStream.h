@@ -35,6 +35,7 @@ public:
   uint32_t getSymHash() const;
   uint32_t getAddrMap() const;
   uint32_t getNumBuckets() const { return NumBuckets; }
+  Expected<const codeview::CVSymbolArray &> getSymbolArray() const;
   iterator_range<codeview::CVSymbolArray::Iterator>
   getSymbols(bool *HadError) const;
   FixedStreamArray<support::ulittle32_t> getHashBuckets() const {

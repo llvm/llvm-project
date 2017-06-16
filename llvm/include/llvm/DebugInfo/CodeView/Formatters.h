@@ -12,7 +12,10 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/Support/FormatAdapters.h"
+#include "llvm/Support/FormatProviders.h"
+#include "llvm/Support/FormatVariadic.h"
 
 namespace llvm {
 namespace codeview {
@@ -35,6 +38,20 @@ inline detail::GuidAdapter fmt_guid(ArrayRef<uint8_t> Item) {
   return detail::GuidAdapter(Item);
 }
 }
+
+template <> struct format_provider<codeview::TypeIndex> {
+public:
+  static void format(const codeview::TypeIndex &V, llvm::raw_ostream &Stream,
+                     StringRef Style) {
+    if (V.isNoneType())
+      Stream << "<no type>";
+    else {
+      Stream << formatv("{0:X+4}", V.getIndex());
+      if (V.isSimple())
+        Stream << " (" << codeview::TypeIndex::simpleTypeName(V) << ")";
+    }
+  }
+};
 }
 
 #endif

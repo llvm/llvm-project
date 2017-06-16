@@ -281,6 +281,16 @@ private:
     bool HasModule = false;
     std::unique_ptr<Module> CombinedModule;
     std::unique_ptr<IRMover> Mover;
+
+    // This stores the information about a regular LTO module that we have added
+    // to the link. It will either be linked immediately (for modules without
+    // summaries) or after summary-based dead stripping (for modules with
+    // summaries).
+    struct AddedModule {
+      std::unique_ptr<Module> M;
+      std::vector<GlobalValue *> Keep;
+    };
+    std::vector<AddedModule> ModsWithSummaries;
   } RegularLTO;
 
   struct ThinLTOState {
@@ -303,9 +313,10 @@ private:
     /// The unmangled name of the global.
     std::string IRName;
 
-    /// Keep track if the symbol is visible outside of ThinLTO (i.e. in
-    /// either a regular object or the regular LTO partition).
-    bool VisibleOutsideThinLTO = false;
+    /// Keep track if the symbol is visible outside of a module with a summary
+    /// (i.e. in either a regular object or a regular LTO module without a
+    /// summary).
+    bool VisibleOutsideSummary = false;
 
     bool UnnamedAddr = true;
 
@@ -339,8 +350,9 @@ private:
   // Global mapping from mangled symbol names to resolutions.
   StringMap<GlobalResolution> GlobalResolutions;
 
-  void addSymbolToGlobalRes(const InputFile::Symbol &Sym, SymbolResolution Res,
-                            unsigned Partition);
+  void addModuleToGlobalRes(ArrayRef<InputFile::Symbol> Syms,
+                            ArrayRef<SymbolResolution> Res, unsigned Partition,
+                            bool InSummary);
 
   // These functions take a range of symbol resolutions [ResI, ResE) and consume
   // the resolutions used by a single input module by incrementing ResI. After
@@ -348,10 +360,13 @@ private:
   // the remaining modules in the InputFile.
   Error addModule(InputFile &Input, unsigned ModI,
                   const SymbolResolution *&ResI, const SymbolResolution *ResE);
-  Error addRegularLTO(BitcodeModule BM,
-                      ArrayRef<InputFile::Symbol> Syms,
-                      const SymbolResolution *&ResI,
-                      const SymbolResolution *ResE);
+
+  Expected<RegularLTOState::AddedModule>
+  addRegularLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
+                const SymbolResolution *&ResI, const SymbolResolution *ResE);
+  Error linkRegularLTO(RegularLTOState::AddedModule Mod,
+                       bool LivenessFromIndex);
+
   Error addThinLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
                    const SymbolResolution *&ResI, const SymbolResolution *ResE);
 

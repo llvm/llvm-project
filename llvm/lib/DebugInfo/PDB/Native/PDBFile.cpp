@@ -363,6 +363,16 @@ Expected<PDBStringTable &> PDBFile::getStringTable() {
   return *Strings;
 }
 
+uint32_t PDBFile::getPointerSize() {
+  auto DbiS = getPDBDbiStream();
+  if (!DbiS)
+    return 0;
+  PDB_Machine Machine = DbiS->getMachineType();
+  if (Machine == PDB_Machine::Amd64)
+    return 8;
+  return 4;
+}
+
 bool PDBFile::hasPDBDbiStream() const { return StreamDBI < getNumStreams(); }
 
 bool PDBFile::hasPDBGlobalsStream() {

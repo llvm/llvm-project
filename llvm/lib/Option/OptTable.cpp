@@ -1,4 +1,4 @@
-//===--- OptTable.cpp - Option Table Implementation -----------------------===//
+//===- OptTable.cpp - Option Table Implementation -------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,16 +7,25 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Option/OptTable.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
+#include "llvm/Option/OptSpecifier.h"
+#include "llvm/Option/OptTable.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
+#include <cassert>
 #include <cctype>
+#include <cstring>
 #include <map>
+#include <string>
+#include <utility>
+#include <vector>
 
 using namespace llvm;
 using namespace llvm::opt;
@@ -80,14 +89,14 @@ static inline bool operator<(const OptTable::Info &A, const OptTable::Info &B) {
 static inline bool operator<(const OptTable::Info &I, const char *Name) {
   return StrCmpOptionNameIgnoreCase(I.Name, Name) < 0;
 }
-}
-}
+
+} // end namespace opt
+} // end namespace llvm
 
 OptSpecifier::OptSpecifier(const Option *Opt) : ID(Opt->getID()) {}
 
 OptTable::OptTable(ArrayRef<Info> OptionInfos, bool IgnoreCase)
-    : OptionInfos(OptionInfos), IgnoreCase(IgnoreCase), TheInputOptionID(0),
-      TheUnknownOptionID(0), FirstSearchableIndex(0) {
+    : OptionInfos(OptionInfos), IgnoreCase(IgnoreCase) {
   // Explicitly zero initialize the error to work around a bug in array
   // value-initialization on MinGW with gcc 4.3.5.
 
@@ -138,8 +147,8 @@ OptTable::OptTable(ArrayRef<Info> OptionInfos, bool IgnoreCase)
   }
 
   // Build prefix chars.
-  for (llvm::StringSet<>::const_iterator I = PrefixesUnion.begin(),
-                                         E = PrefixesUnion.end(); I != E; ++I) {
+  for (StringSet<>::const_iterator I = PrefixesUnion.begin(),
+                                   E = PrefixesUnion.end(); I != E; ++I) {
     StringRef Prefix = I->getKey();
     for (StringRef::const_iterator C = Prefix.begin(), CE = Prefix.end();
                                    C != CE; ++C)
@@ -148,8 +157,7 @@ OptTable::OptTable(ArrayRef<Info> OptionInfos, bool IgnoreCase)
   }
 }
 
-OptTable::~OptTable() {
-}
+OptTable::~OptTable() = default;
 
 const Option OptTable::getOption(OptSpecifier Opt) const {
   unsigned id = Opt.getID();
@@ -159,11 +167,11 @@ const Option OptTable::getOption(OptSpecifier Opt) const {
   return Option(&getInfo(id), this);
 }
 
-static bool isInput(const llvm::StringSet<> &Prefixes, StringRef Arg) {
+static bool isInput(const StringSet<> &Prefixes, StringRef Arg) {
   if (Arg == "-")
     return true;
-  for (llvm::StringSet<>::const_iterator I = Prefixes.begin(),
-                                         E = Prefixes.end(); I != E; ++I)
+  for (StringSet<>::const_iterator I = Prefixes.begin(),
+                                   E = Prefixes.end(); I != E; ++I)
     if (Arg.startswith(I->getKey()))
       return false;
   return true;
@@ -346,7 +354,7 @@ static std::string getOptionHelpName(const OptTable &Opts, OptSpecifier Id) {
 
 static void PrintHelpOptionList(raw_ostream &OS, StringRef Title,
                                 std::vector<std::pair<std::string,
-                                const char*> > &OptionHelp) {
+                                const char*>> &OptionHelp) {
   OS << Title << ":\n";
 
   // Find the maximum option length.
@@ -412,8 +420,8 @@ void OptTable::PrintHelp(raw_ostream &OS, const char *Name, const char *Title,
 
   // Render help text into a map of group-name to a list of (option, help)
   // pairs.
-  typedef std::map<std::string,
-                 std::vector<std::pair<std::string, const char*> > > helpmap_ty;
+  using helpmap_ty =
+      std::map<std::string, std::vector<std::pair<std::string, const char*>>>;
   helpmap_ty GroupedOptionHelp;
 
   for (unsigned i = 0, e = getNumOptions(); i != e; ++i) {

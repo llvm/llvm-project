@@ -733,7 +733,7 @@ private:
   std::vector<FunctionSummary::EdgeTy> makeCallList(ArrayRef<uint64_t> Record,
                                                     bool IsOldProfileFormat,
                                                     bool HasProfile);
-  Error parseEntireSummary();
+  Error parseEntireSummary(unsigned ID);
   Error parseModuleStringTable();
 
   std::pair<ValueInfo, GlobalValue::GUID>
@@ -4854,6 +4854,7 @@ Error ModuleSummaryIndexBitcodeReader::parseModule() {
           return error("Invalid record");
         break;
       case bitc::GLOBALVAL_SUMMARY_BLOCK_ID:
+      case bitc::FULL_LTO_GLOBALVAL_SUMMARY_BLOCK_ID:
         assert(!SeenValueSymbolTable &&
                "Already read VST when parsing summary block?");
         // We might not have a VST if there were no values in the
@@ -4866,7 +4867,7 @@ Error ModuleSummaryIndexBitcodeReader::parseModule() {
           SeenValueSymbolTable = true;
         }
         SeenGlobalValSummary = true;
-        if (Error Err = parseEntireSummary())
+        if (Error Err = parseEntireSummary(Entry.ID))
           return Err;
         break;
       case bitc::MODULE_STRTAB_BLOCK_ID:
@@ -4974,8 +4975,8 @@ std::vector<FunctionSummary::EdgeTy> ModuleSummaryIndexBitcodeReader::makeCallLi
 
 // Eagerly parse the entire summary block. This populates the GlobalValueSummary
 // objects in the index.
-Error ModuleSummaryIndexBitcodeReader::parseEntireSummary() {
-  if (Stream.EnterSubBlock(bitc::GLOBALVAL_SUMMARY_BLOCK_ID))
+Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
+  if (Stream.EnterSubBlock(ID))
     return error("Invalid record");
   SmallVector<uint64_t, 64> Record;
 
@@ -5251,6 +5252,20 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary() {
           {{Record[0], Record[1]}, {Record.begin() + 2, Record.end()}});
       break;
     }
+    case bitc::FS_CFI_FUNCTION_DEFS: {
+      std::set<std::string> &CfiFunctionDefs = TheIndex.cfiFunctionDefs();
+      for (unsigned I = 0; I != Record.size(); I += 2)
+        CfiFunctionDefs.insert(
+            {Strtab.data() + Record[I], static_cast<size_t>(Record[I + 1])});
+      break;
+    }
+    case bitc::FS_CFI_FUNCTION_DECLS: {
+      std::set<std::string> &CfiFunctionDecls = TheIndex.cfiFunctionDecls();
+      for (unsigned I = 0; I != Record.size(); I += 2)
+        CfiFunctionDecls.insert(
+            {Strtab.data() + Record[I], static_cast<size_t>(Record[I + 1])});
+      break;
+    }
     }
   }
   llvm_unreachable("Exit infinite loop");
@@ -5517,13 +5532,16 @@ BitcodeModule::getLazyModule(LLVMContext &Context, bool ShouldLazyLoadMetadata,
 }
 
 // Parse the specified bitcode buffer and merge the index into CombinedIndex.
+// We don't use ModuleIdentifier here because the client may need to control the
+// module path used in the combined summary (e.g. when reading summaries for
+// regular LTO modules).
 Error BitcodeModule::readSummary(ModuleSummaryIndex &CombinedIndex,
-                                 unsigned ModuleId) {
+                                 StringRef ModulePath, uint64_t ModuleId) {
   BitstreamCursor Stream(Buffer);
   Stream.JumpToBit(ModuleBit);
 
   ModuleSummaryIndexBitcodeReader R(std::move(Stream), Strtab, CombinedIndex,
-                                    ModuleIdentifier, ModuleId);
+                                    ModulePath, ModuleId);
   return R.parseModule();
 }
 
@@ -5543,7 +5561,7 @@ Expected<std::unique_ptr<ModuleSummaryIndex>> BitcodeModule::getSummary() {
 }
 
 // Check if the given bitcode buffer contains a global value summary block.
-Expected<bool> BitcodeModule::hasSummary() {
+Expected<BitcodeLTOInfo> BitcodeModule::getLTOInfo() {
   BitstreamCursor Stream(Buffer);
   Stream.JumpToBit(ModuleBit);
 
@@ -5557,11 +5575,14 @@ Expected<bool> BitcodeModule::hasSummary() {
     case BitstreamEntry::Error:
       return error("Malformed block");
     case BitstreamEntry::EndBlock:
-      return false;
+      return BitcodeLTOInfo{/*IsThinLTO=*/false, /*HasSummary=*/false};
 
     case BitstreamEntry::SubBlock:
       if (Entry.ID == bitc::GLOBALVAL_SUMMARY_BLOCK_ID)
-        return true;
+        return BitcodeLTOInfo{/*IsThinLTO=*/true, /*HasSummary=*/true};
+
+      if (Entry.ID == bitc::FULL_LTO_GLOBALVAL_SUMMARY_BLOCK_ID)
+        return BitcodeLTOInfo{/*IsThinLTO=*/false, /*HasSummary=*/true};
 
       // Ignore other sub-blocks.
       if (Stream.SkipBlock())
@@ -5648,12 +5669,12 @@ Expected<std::string> llvm::getBitcodeProducerString(MemoryBufferRef Buffer) {
 
 Error llvm::readModuleSummaryIndex(MemoryBufferRef Buffer,
                                    ModuleSummaryIndex &CombinedIndex,
-                                   unsigned ModuleId) {
+                                   uint64_t ModuleId) {
   Expected<BitcodeModule> BM = getSingleModule(Buffer);
   if (!BM)
     return BM.takeError();
 
-  return BM->readSummary(CombinedIndex, ModuleId);
+  return BM->readSummary(CombinedIndex, BM->getModuleIdentifier(), ModuleId);
 }
 
 Expected<std::unique_ptr<ModuleSummaryIndex>>
@@ -5665,12 +5686,12 @@ llvm::getModuleSummaryIndex(MemoryBufferRef Buffer) {
   return BM->getSummary();
 }
 
-Expected<bool> llvm::hasGlobalValueSummary(MemoryBufferRef Buffer) {
+Expected<BitcodeLTOInfo> llvm::getBitcodeLTOInfo(MemoryBufferRef Buffer) {
   Expected<BitcodeModule> BM = getSingleModule(Buffer);
   if (!BM)
     return BM.takeError();
 
-  return BM->hasSummary();
+  return BM->getLTOInfo();
 }
 
 Expected<std::unique_ptr<ModuleSummaryIndex>>

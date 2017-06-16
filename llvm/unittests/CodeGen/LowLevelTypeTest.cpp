@@ -137,8 +137,9 @@ TEST(LowLevelTypeTest, Vector) {
       if ((Elts % 2) == 0) {
         EXPECT_EQ(S * (Elts / 2), HalfEltIfEvenTy.getSizeInBits());
         EXPECT_EQ(S, HalfEltIfEvenTy.getScalarSizeInBits());
-        if (Elts > 2)
+        if (Elts > 2) {
           EXPECT_EQ(Elts / 2, HalfEltIfEvenTy.getNumElements());
+        }
       }
 
       EXPECT_EQ(S * (Elts * 2), DoubleEltTy.getSizeInBits());

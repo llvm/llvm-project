@@ -12,8 +12,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "ARMLegalizerInfo.h"
+#include "ARMCallLowering.h"
 #include "ARMSubtarget.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
+#include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -62,6 +64,16 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
     else
       setAction({Op, s32}, Libcall);
   }
+
+  // FIXME: Support s8 and s16 as well
+  for (unsigned Op : {G_SREM, G_UREM})
+    if (ST.hasDivideInARMMode())
+      setAction({Op, s32}, Lower);
+    else if (ST.isTargetAEABI() || ST.isTargetGNUAEABI() ||
+             ST.isTargetMuslAEABI())
+      setAction({Op, s32}, Custom);
+    else
+      setAction({Op, s32}, Libcall);
 
   for (unsigned Op : {G_SEXT, G_ZEXT}) {
     setAction({Op, s32}, Legal);
@@ -133,6 +145,39 @@ bool ARMLegalizerInfo::legalizeCustom(MachineInstr &MI,
       return false;
     }
     return true;
+  }
+  case G_SREM:
+  case G_UREM: {
+    unsigned OriginalResult = MI.getOperand(0).getReg();
+    auto Size = MRI.getType(OriginalResult).getSizeInBits();
+    if (Size != 32)
+      return false;
+
+    auto Libcall =
+        MI.getOpcode() == G_SREM ? RTLIB::SDIVREM_I32 : RTLIB::UDIVREM_I32;
+
+    // Our divmod libcalls return a struct containing the quotient and the
+    // remainder. We need to create a virtual register for it.
+    auto &Ctx = MIRBuilder.getMF().getFunction()->getContext();
+    Type *ArgTy = Type::getInt32Ty(Ctx);
+    StructType *RetTy = StructType::get(Ctx, {ArgTy, ArgTy}, /* Packed */ true);
+    auto RetVal = MRI.createGenericVirtualRegister(
+        getLLTForType(*RetTy, MIRBuilder.getMF().getDataLayout()));
+
+    auto Status = replaceWithLibcall(MI, MIRBuilder, Libcall, {RetVal, RetTy},
+                                     {{MI.getOperand(1).getReg(), ArgTy},
+                                      {MI.getOperand(2).getReg(), ArgTy}});
+    if (Status != LegalizerHelper::Legalized)
+      return false;
+
+    // The remainder is the second result of divmod. Split the return value into
+    // a new, unused register for the quotient and the destination of the
+    // original instruction for the remainder.
+    MIRBuilder.buildUnmerge(
+        {MRI.createGenericVirtualRegister(LLT::scalar(32)), OriginalResult},
+        RetVal);
+
+    return LegalizerHelper::Legalized;
   }
   }
 }

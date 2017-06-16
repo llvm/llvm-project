@@ -1559,6 +1559,24 @@ define <16 x i16> @shuffle_v16i16_17_18_19_20_21_22_23_zz_25_26_27_28_29_30_31_z
   ret <16 x i16> %shuffle
 }
 
+define <16 x i16> @shuffle_v16i16_06_07_01_02_07_00_04_05_14_15_09_10_15_08_12_13(<16 x i16> %a) {
+; AVX1-LABEL: shuffle_v16i16_06_07_01_02_07_00_04_05_14_15_09_10_15_08_12_13:
+; AVX1:       # BB#0:
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [12,13,14,15,2,3,4,5,14,15,0,1,8,9,10,11]
+; AVX1-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2OR512VL-LABEL: shuffle_v16i16_06_07_01_02_07_00_04_05_14_15_09_10_15_08_12_13:
+; AVX2OR512VL:       # BB#0:
+; AVX2OR512VL-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[12,13,14,15,2,3,4,5,14,15,0,1,8,9,10,11,28,29,30,31,18,19,20,21,30,31,16,17,24,25,26,27]
+; AVX2OR512VL-NEXT:    retq
+  %1 = shufflevector <16 x i16> %a, <16 x i16> undef, <16 x i32> <i32 6, i32 7, i32 1, i32 2, i32 7, i32 0, i32 4, i32 5, i32 14, i32 15, i32 9, i32 10, i32 15, i32 8, i32 12, i32 13>
+  ret <16 x i16> %1
+}
+
 ;
 ; Shuffle to logical bit shifts
 ;

@@ -290,6 +290,12 @@ public:
     return FixedStreamArrayIterator<T>(*this, size());
   }
 
+  const T &front() const { return *begin(); }
+  const T &back() const {
+    FixedStreamArrayIterator<T> I = end();
+    return *(--I);
+  }
+
   BinaryStreamRef getUnderlyingStream() const { return Stream; }
 
 private:
