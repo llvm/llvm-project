@@ -88,6 +88,9 @@ public:
   /// If given, a PTH cache file to use for speeding up header parsing.
   std::string TokenCache;
 
+  /// When enabled, the preprocessor will construct editor placeholder tokens.
+  bool LexEditorPlaceholders = true;
+
   /// \brief True if the SourceManager should report the original file name for
   /// contents of files that were remapped to other files. Defaults to true.
   bool RemappedFilesKeepOriginalName;
@@ -173,6 +176,7 @@ public:
     ImplicitPCHInclude.clear();
     ImplicitPTHInclude.clear();
     TokenCache.clear();
+    LexEditorPlaceholders = true;
     RetainRemappedFileBuffers = true;
     PrecompiledPreambleBytes.first = 0;
     PrecompiledPreambleBytes.second = 0;
