@@ -22,7 +22,7 @@
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
-#include "lldb/Utility/RegularExpression.h"
+#include "lldb/Core/RegularExpression.h"
 #include "Plugins/Process/Utility/HistoryThread.h"
 #include "swift/AST/ASTContext.h"
 #include "swift/AST/NameLookup.h"
@@ -157,7 +157,7 @@ MainThreadCheckerRuntime::RetrieveReportData(ExecutionContextRef exe_ctx_ref) {
     return StructuredData::ObjectSP();
 
   std::string apiName = "";
-  Status read_error;
+  Error read_error;
   target.ReadCStringFromMemory(apiname_ptr, apiName, read_error);
   if (read_error.Fail())
     return StructuredData::ObjectSP();
