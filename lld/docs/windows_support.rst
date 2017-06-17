@@ -49,7 +49,7 @@ Creating DLL
 
 Windows resource files support
   :good:`Done`. If an ``.res`` file is given, LLD converts the file to a COFF
-  file using ``cvtres.exe`` command and link it.
+  file using LLVM's Object library.
 
 Safe Structured Exception Handler (SEH)
   :good:`Done` for both x86 and x64.

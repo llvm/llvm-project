@@ -24,7 +24,6 @@ namespace llvm {
   class PPCTargetMachine;
   class PassRegistry;
   class FunctionPass;
-  class ImmutablePass;
   class MachineInstr;
   class AsmPrinter;
   class MCInst;
