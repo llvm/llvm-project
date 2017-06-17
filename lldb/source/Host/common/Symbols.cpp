@@ -85,7 +85,6 @@ static bool LocateDSYMInVincinityOfExecutable(const ModuleSpec &module_spec,
                         path);
           }
         }
-        size_t obj_file_path_length = strlen(path);
         ::strncat(path, ".dSYM/Contents/Resources/DWARF/",
                   sizeof(path) - strlen(path) - 1);
         ::strncat(path, exec_fspec->GetFilename().AsCString(),
@@ -104,38 +103,55 @@ static bool LocateDSYMInVincinityOfExecutable(const ModuleSpec &module_spec,
           }
           return true;
         } else {
-          path[obj_file_path_length] = '\0';
+          FileSpec parent_dirs = exec_fspec;
 
-          char *last_dot = strrchr(path, '.');
-          while (last_dot != NULL && last_dot[0]) {
-            char *next_slash = strchr(last_dot, '/');
-            if (next_slash != NULL) {
-              *next_slash = '\0';
-              ::strncat(path, ".dSYM/Contents/Resources/DWARF/",
-                        sizeof(path) - strlen(path) - 1);
-              ::strncat(path, exec_fspec->GetFilename().AsCString(),
-                        sizeof(path) - strlen(path) - 1);
-              dsym_fspec.SetFile(path, false);
+          // Remove the binary name from the FileSpec
+          parent_dirs.RemoveLastPathComponent();
+
+          // Add a ".dSYM" name to each directory component of the path, stripping
+          // off components.  e.g. we may have a binary like
+          // /S/L/F/Foundation.framework/Versions/A/Foundation
+          // and
+          // /S/L/F/Foundation.framework.dSYM
+          //
+          // so we'll need to start with /S/L/F/Foundation.framework/Versions/A,
+          // add the .dSYM part to the "A", and if that doesn't exist, strip off
+          // the "A" and try it again with "Versions", etc., until we find a dSYM
+          // bundle or we've stripped off enough path components that there's no
+          // need to continue.
+
+          for (int i = 0; i < 4; i++) {
+            // Does this part of the path have a "." character - could it be a bundle's
+            // top level directory?
+            const char *fn = parent_dirs.GetFilename().AsCString();
+            if (fn == nullptr)
+                break;
+            if (::strchr (fn, '.') != nullptr) {
+              dsym_fspec = parent_dirs;
+              dsym_fspec.RemoveLastPathComponent();
+
+              // If the current directory name is "Foundation.framework", see if
+              // "Foundation.framework.dSYM/Contents/Resources/DWARF/Foundation"
+              // exists & has the right uuid.
+              std::string dsym_fn = fn;
+              dsym_fn += ".dSYM";
+              dsym_fspec.AppendPathComponent(dsym_fn.c_str());
+              dsym_fspec.AppendPathComponent("Contents");
+              dsym_fspec.AppendPathComponent("Resources");
+              dsym_fspec.AppendPathComponent("DWARF");
+              dsym_fspec.AppendPathComponent(exec_fspec->GetFilename().AsCString());
               if (dsym_fspec.Exists() &&
-                  FileAtPathContainsArchAndUUID(
-                      dsym_fspec, module_spec.GetArchitecturePtr(),
-                      module_spec.GetUUIDPtr())) {
-                if (log) {
-                  log->Printf("dSYM with matching UUID & arch found at %s",
-                              path);
-                }
-                return true;
-              } else {
-                *last_dot = '\0';
-                char *prev_slash = strrchr(path, '/');
-                if (prev_slash != NULL)
-                  *prev_slash = '\0';
-                else
-                  break;
+                      FileAtPathContainsArchAndUUID(
+                          dsym_fspec, module_spec.GetArchitecturePtr(),
+                          module_spec.GetUUIDPtr())) {
+                    if (log) {
+                      log->Printf("dSYM with matching UUID & arch found at %s",
+                                  dsym_fspec.GetPath().c_str());
+                    }
+                    return true;
               }
-            } else {
-              break;
             }
+            parent_dirs.RemoveLastPathComponent();
           }
         }
       }
