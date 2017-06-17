@@ -7,13 +7,13 @@
 # An important constraint of the build is that it only produces libraries
 # based on the ability of the host toolchain to target various platforms.
 
+cmake_minimum_required(VERSION 3.4.3)
+
 # Check if compiler-rt is built as a standalone project.
 if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR OR COMPILER_RT_STANDALONE_BUILD)
   project(CompilerRT C CXX ASM)
   set(COMPILER_RT_STANDALONE_BUILD TRUE)
 endif()
-
-cmake_minimum_required(VERSION 3.4.3)
 
 # Add path for custom compiler-rt modules.
 list(INSERT CMAKE_MODULE_PATH 0

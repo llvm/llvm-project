@@ -67,6 +67,10 @@ namespace llvm {
     void writeModule(const Module *M, bool ShouldPreserveUseListOrder = false,
                      const ModuleSummaryIndex *Index = nullptr,
                      bool GenerateHash = false, ModuleHash *ModHash = nullptr);
+
+    void writeIndex(
+        const ModuleSummaryIndex *Index,
+        const std::map<std::string, GVSummaryMapTy> *ModuleToSummariesForIndex);
   };
 
   /// \brief Write the specified module to the specified raw output stream.

@@ -515,10 +515,6 @@ private:
   void visitCmpInst(CmpInst &I);
   void visitExtractValueInst(ExtractValueInst &EVI);
   void visitInsertValueInst(InsertValueInst &IVI);
-  void visitLandingPadInst(LandingPadInst &I) { markOverdefined(&I); }
-  void visitFuncletPadInst(FuncletPadInst &FPI) {
-    markOverdefined(&FPI);
-  }
   void visitCatchSwitchInst(CatchSwitchInst &CPI) {
     markOverdefined(&CPI);
     visitTerminatorInst(CPI);
@@ -539,17 +535,11 @@ private:
   void visitResumeInst    (TerminatorInst &I) { /*returns void*/ }
   void visitUnreachableInst(TerminatorInst &I) { /*returns void*/ }
   void visitFenceInst     (FenceInst &I) { /*returns void*/ }
-  void visitAtomicCmpXchgInst(AtomicCmpXchgInst &I) {
-    markOverdefined(&I);
-  }
-  void visitAtomicRMWInst (AtomicRMWInst &I) { markOverdefined(&I); }
-  void visitAllocaInst    (Instruction &I) { markOverdefined(&I); }
-  void visitVAArgInst     (Instruction &I) { markOverdefined(&I); }
-
   void visitInstruction(Instruction &I) {
-    // If a new instruction is added to LLVM that we don't handle.
+    // All the instructions we don't do any special handling for just
+    // go to overdefined.
     DEBUG(dbgs() << "SCCP: Don't know how to handle: " << I << '\n');
-    markOverdefined(&I);   // Just in case
+    markOverdefined(&I);
   }
 };
 
@@ -1825,15 +1815,11 @@ static bool runIPSCCP(Module &M, const DataLayout &DL,
     if (F.isDeclaration())
       continue;
 
-    if (Solver.isBlockExecutable(&F.front())) {
+    if (Solver.isBlockExecutable(&F.front()))
       for (Function::arg_iterator AI = F.arg_begin(), E = F.arg_end(); AI != E;
-           ++AI) {
-        if (AI->use_empty())
-          continue;
-        if (tryToReplaceWithConstant(Solver, &*AI))
+           ++AI)
+        if (!AI->use_empty() && tryToReplaceWithConstant(Solver, &*AI))
           ++IPNumArgsElimed;
-      }
-    }
 
     for (Function::iterator BB = F.begin(), E = F.end(); BB != E; ++BB) {
       if (!Solver.isBlockExecutable(&*BB)) {

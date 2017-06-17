@@ -9253,6 +9253,7 @@ void ASTReader::diagnoseOdrViolations() {
         CXXMethod,
         TypeAlias,
         TypeDef,
+        Var,
         Other
       } FirstDiffType = Other,
         SecondDiffType = Other;
@@ -9284,6 +9285,8 @@ void ASTReader::diagnoseOdrViolations() {
           return TypeAlias;
         case Decl::Typedef:
           return TypeDef;
+        case Decl::Var:
+          return Var;
         }
       };
 
@@ -9380,8 +9383,15 @@ void ASTReader::diagnoseOdrViolations() {
         MethodNumberParameters,
         MethodParameterType,
         MethodParameterName,
+        MethodParameterSingleDefaultArgument,
+        MethodParameterDifferentDefaultArgument,
         TypedefName,
         TypedefType,
+        VarName,
+        VarType,
+        VarSingleInitializer,
+        VarDifferentInitializer,
+        VarConstexpr,
       };
 
       // These lambdas have the common portions of the ODR diagnostics.  This
@@ -9748,6 +9758,38 @@ void ASTReader::diagnoseOdrViolations() {
             ParameterMismatch = true;
             break;
           }
+
+          const Expr *FirstInit = FirstParam->getInit();
+          const Expr *SecondInit = SecondParam->getInit();
+          if ((FirstInit == nullptr) != (SecondInit == nullptr)) {
+            ODRDiagError(FirstMethod->getLocation(),
+                         FirstMethod->getSourceRange(),
+                         MethodParameterSingleDefaultArgument)
+                << FirstName << (I + 1) << (FirstInit == nullptr)
+                << (FirstInit ? FirstInit->getSourceRange() : SourceRange());
+            ODRDiagNote(SecondMethod->getLocation(),
+                        SecondMethod->getSourceRange(),
+                        MethodParameterSingleDefaultArgument)
+                << SecondName << (I + 1) << (SecondInit == nullptr)
+                << (SecondInit ? SecondInit->getSourceRange() : SourceRange());
+            ParameterMismatch = true;
+            break;
+          }
+
+          if (FirstInit && SecondInit &&
+              ComputeODRHash(FirstInit) != ComputeODRHash(SecondInit)) {
+            ODRDiagError(FirstMethod->getLocation(),
+                         FirstMethod->getSourceRange(),
+                         MethodParameterDifferentDefaultArgument)
+                << FirstName << (I + 1) << FirstInit->getSourceRange();
+            ODRDiagNote(SecondMethod->getLocation(),
+                        SecondMethod->getSourceRange(),
+                        MethodParameterDifferentDefaultArgument)
+                << SecondName << (I + 1) << SecondInit->getSourceRange();
+            ParameterMismatch = true;
+            break;
+
+          }
         }
 
         if (ParameterMismatch) {
@@ -9784,6 +9826,77 @@ void ASTReader::diagnoseOdrViolations() {
           ODRDiagNote(SecondTD->getLocation(), SecondTD->getSourceRange(),
                       TypedefType)
               << (FirstDiffType == TypeAlias) << SecondName << SecondType;
+          Diagnosed = true;
+          break;
+        }
+        break;
+      }
+      case Var: {
+        VarDecl *FirstVD = cast<VarDecl>(FirstDecl);
+        VarDecl *SecondVD = cast<VarDecl>(SecondDecl);
+        auto FirstName = FirstVD->getDeclName();
+        auto SecondName = SecondVD->getDeclName();
+        if (FirstName != SecondName) {
+          ODRDiagError(FirstVD->getLocation(), FirstVD->getSourceRange(),
+                       VarName)
+              << FirstName;
+          ODRDiagNote(SecondVD->getLocation(), SecondVD->getSourceRange(),
+                      VarName)
+              << SecondName;
+          Diagnosed = true;
+          break;
+        }
+
+        QualType FirstType = FirstVD->getType();
+        QualType SecondType = SecondVD->getType();
+        if (ComputeQualTypeODRHash(FirstType) !=
+                        ComputeQualTypeODRHash(SecondType)) {
+          ODRDiagError(FirstVD->getLocation(), FirstVD->getSourceRange(),
+                       VarType)
+              << FirstName << FirstType;
+          ODRDiagNote(SecondVD->getLocation(), SecondVD->getSourceRange(),
+                      VarType)
+              << SecondName << SecondType;
+          Diagnosed = true;
+          break;
+        }
+
+        const Expr *FirstInit = FirstVD->getInit();
+        const Expr *SecondInit = SecondVD->getInit();
+        if ((FirstInit == nullptr) != (SecondInit == nullptr)) {
+          ODRDiagError(FirstVD->getLocation(), FirstVD->getSourceRange(),
+                       VarSingleInitializer)
+              << FirstName << (FirstInit == nullptr)
+              << (FirstInit ? FirstInit->getSourceRange(): SourceRange());
+          ODRDiagNote(SecondVD->getLocation(), SecondVD->getSourceRange(),
+                      VarSingleInitializer)
+              << SecondName << (SecondInit == nullptr)
+              << (SecondInit ? SecondInit->getSourceRange() : SourceRange());
+          Diagnosed = true;
+          break;
+        }
+
+        if (FirstInit && SecondInit &&
+            ComputeODRHash(FirstInit) != ComputeODRHash(SecondInit)) {
+          ODRDiagError(FirstVD->getLocation(), FirstVD->getSourceRange(),
+                       VarDifferentInitializer)
+              << FirstName << FirstInit->getSourceRange();
+          ODRDiagNote(SecondVD->getLocation(), SecondVD->getSourceRange(),
+                      VarDifferentInitializer)
+              << SecondName << SecondInit->getSourceRange();
+          Diagnosed = true;
+          break;
+        }
+
+        const bool FirstIsConstexpr = FirstVD->isConstexpr();
+        const bool SecondIsConstexpr = SecondVD->isConstexpr();
+        if (FirstIsConstexpr != SecondIsConstexpr) {
+          ODRDiagError(FirstVD->getLocation(), FirstVD->getSourceRange(),
+                       VarConstexpr)
+              << FirstName << FirstIsConstexpr;
+          ODRDiagNote(SecondVD->getLocation(), SecondVD->getSourceRange(),
+                      VarConstexpr)
+              << SecondName << SecondIsConstexpr;
           Diagnosed = true;
           break;
         }

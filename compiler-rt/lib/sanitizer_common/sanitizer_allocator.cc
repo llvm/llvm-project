@@ -108,9 +108,9 @@ static void *RawInternalAlloc(uptr size, InternalAllocatorCache *cache,
   if (cache == 0) {
     SpinMutexLock l(&internal_allocator_cache_mu);
     return internal_allocator()->Allocate(&internal_allocator_cache, size,
-                                          alignment, false);
+                                          alignment);
   }
-  return internal_allocator()->Allocate(cache, size, alignment, false);
+  return internal_allocator()->Allocate(cache, size, alignment);
 }
 
 static void *RawInternalRealloc(void *ptr, uptr size,

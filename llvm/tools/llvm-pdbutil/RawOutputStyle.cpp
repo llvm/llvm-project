@@ -9,13 +9,13 @@
 
 #include "RawOutputStyle.h"
 
-#include "CompactTypeDumpVisitor.h"
 #include "FormatUtil.h"
 #include "MinimalSymbolDumper.h"
 #include "MinimalTypeDumper.h"
 #include "StreamUtil.h"
 #include "llvm-pdbutil.h"
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/DebugInfo/CodeView/CVSymbolVisitor.h"
 #include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
 #include "llvm/DebugInfo/CodeView/DebugChecksumsSubsection.h"
@@ -103,12 +103,37 @@ Error RawOutputStyle::dump() {
       return EC;
   }
 
-  if (opts::raw::DumpTypes) {
+  if (opts::raw::DumpModuleFiles) {
+    if (auto EC = dumpModuleFiles())
+      return EC;
+  }
+
+  if (opts::raw::DumpLines) {
+    if (auto EC = dumpLines())
+      return EC;
+  }
+
+  if (opts::raw::DumpInlineeLines) {
+    if (auto EC = dumpInlineeLines())
+      return EC;
+  }
+
+  if (opts::raw::DumpXmi) {
+    if (auto EC = dumpXmi())
+      return EC;
+  }
+
+  if (opts::raw::DumpXme) {
+    if (auto EC = dumpXme())
+      return EC;
+  }
+
+  if (opts::raw::DumpTypes || opts::raw::DumpTypeExtras) {
     if (auto EC = dumpTpiStream(StreamTPI))
       return EC;
   }
 
-  if (opts::raw::DumpIds) {
+  if (opts::raw::DumpIds || opts::raw::DumpIdExtras) {
     if (auto EC = dumpTpiStream(StreamIPI))
       return EC;
   }
@@ -288,6 +313,186 @@ Error RawOutputStyle::dumpStreamBytes() {
   return Error::success();
 }
 
+static Expected<ModuleDebugStreamRef> getModuleDebugStream(PDBFile &File,
+                                                           uint32_t Index) {
+  ExitOnError Err("Unexpected error");
+
+  auto &Dbi = Err(File.getPDBDbiStream());
+  const auto &Modules = Dbi.modules();
+  auto Modi = Modules.getModuleDescriptor(Index);
+
+  uint16_t ModiStream = Modi.getModuleStreamIndex();
+  if (ModiStream == kInvalidStreamIndex)
+    return make_error<RawError>(raw_error_code::no_stream,
+                                "Module stream not present");
+
+  auto ModStreamData = MappedBlockStream::createIndexedStream(
+      File.getMsfLayout(), File.getMsfBuffer(), ModiStream,
+      File.getAllocator());
+
+  ModuleDebugStreamRef ModS(Modi, std::move(ModStreamData));
+  if (auto EC = ModS.reload())
+    return make_error<RawError>(raw_error_code::corrupt_file,
+                                "Invalid module stream");
+
+  return std::move(ModS);
+}
+
+static std::string formatChecksumKind(FileChecksumKind Kind) {
+  switch (Kind) {
+    RETURN_CASE(FileChecksumKind, None, "None");
+    RETURN_CASE(FileChecksumKind, MD5, "MD5");
+    RETURN_CASE(FileChecksumKind, SHA1, "SHA-1");
+    RETURN_CASE(FileChecksumKind, SHA256, "SHA-256");
+  }
+  return formatUnknownEnum(Kind);
+}
+
+namespace {
+class StringsAndChecksumsPrinter {
+  const DebugStringTableSubsectionRef &extractStringTable(PDBFile &File) {
+    ExitOnError Err("Unexpected error processing modules");
+    return Err(File.getStringTable()).getStringTable();
+  }
+
+  template <typename... Args>
+  void formatInternal(LinePrinter &Printer, bool Append,
+                      Args &&... args) const {
+    if (Append)
+      Printer.format(std::forward<Args>(args)...);
+    else
+      Printer.formatLine(std::forward<Args>(args)...);
+  }
+
+public:
+  StringsAndChecksumsPrinter(PDBFile &File, uint32_t Modi)
+      : Records(extractStringTable(File)) {
+    auto MDS = getModuleDebugStream(File, Modi);
+    if (!MDS) {
+      consumeError(MDS.takeError());
+      return;
+    }
+
+    DebugStream = llvm::make_unique<ModuleDebugStreamRef>(std::move(*MDS));
+    Records.initialize(MDS->subsections());
+    if (Records.hasChecksums()) {
+      for (const auto &Entry : Records.checksums()) {
+        auto S = Records.strings().getString(Entry.FileNameOffset);
+        if (!S)
+          continue;
+        ChecksumsByFile[*S] = Entry;
+      }
+    }
+  }
+
+  Expected<StringRef> getNameFromStringTable(uint32_t Offset) const {
+    return Records.strings().getString(Offset);
+  }
+
+  void formatFromFileName(LinePrinter &Printer, StringRef File,
+                          bool Append = false) const {
+    auto FC = ChecksumsByFile.find(File);
+    if (FC == ChecksumsByFile.end()) {
+      formatInternal(Printer, Append, "- (no checksum) {0}", File);
+      return;
+    }
+
+    formatInternal(Printer, Append, "- ({0}: {1}) {2}",
+                   formatChecksumKind(FC->getValue().Kind),
+                   toHex(FC->getValue().Checksum), File);
+  }
+
+  void formatFromChecksumsOffset(LinePrinter &Printer, uint32_t Offset,
+                                 bool Append = false) const {
+    if (!Records.hasChecksums()) {
+      formatInternal(Printer, Append, "(unknown file name offset {0})", Offset);
+      return;
+    }
+
+    auto Iter = Records.checksums().getArray().at(Offset);
+    if (Iter == Records.checksums().getArray().end()) {
+      formatInternal(Printer, Append, "(unknown file name offset {0})", Offset);
+      return;
+    }
+
+    uint32_t FO = Iter->FileNameOffset;
+    auto ExpectedFile = getNameFromStringTable(FO);
+    if (!ExpectedFile) {
+      formatInternal(Printer, Append, "(unknown file name offset {0})", Offset);
+      consumeError(ExpectedFile.takeError());
+      return;
+    }
+    if (Iter->Kind == FileChecksumKind::None) {
+      formatInternal(Printer, Append, "{0} (no checksum)", *ExpectedFile);
+    } else {
+      formatInternal(Printer, Append, "{0} ({1}: {2})", *ExpectedFile,
+                     formatChecksumKind(Iter->Kind), toHex(Iter->Checksum));
+    }
+  }
+
+  std::unique_ptr<ModuleDebugStreamRef> DebugStream;
+  StringsAndChecksumsRef Records;
+  StringMap<FileChecksumEntry> ChecksumsByFile;
+};
+} // namespace
+
+template <typename CallbackT>
+static void iterateModules(PDBFile &File, LinePrinter &P, uint32_t IndentLevel,
+                           CallbackT Callback) {
+  AutoIndent Indent(P);
+  if (!File.hasPDBDbiStream()) {
+    P.formatLine("DBI Stream not present");
+    return;
+  }
+
+  ExitOnError Err("Unexpected error processing modules");
+
+  auto &Stream = Err(File.getPDBDbiStream());
+
+  const DbiModuleList &Modules = Stream.modules();
+  uint32_t Count = Modules.getModuleCount();
+  uint32_t Digits = NumDigits(Count);
+  for (uint32_t I = 0; I < Count; ++I) {
+    auto Modi = Modules.getModuleDescriptor(I);
+    P.formatLine("Mod {0:4} | `{1}`: ", fmt_align(I, AlignStyle::Right, Digits),
+                 Modi.getModuleName());
+
+    StringsAndChecksumsPrinter Strings(File, I);
+    AutoIndent Indent2(P, IndentLevel);
+    Callback(I, Strings);
+  }
+}
+
+template <typename SubsectionT>
+static void iterateModuleSubsections(
+    PDBFile &File, LinePrinter &P, uint32_t IndentLevel,
+    llvm::function_ref<void(uint32_t, StringsAndChecksumsPrinter &,
+                            SubsectionT &)>
+        Callback) {
+
+  iterateModules(
+      File, P, IndentLevel,
+      [&File, &Callback](uint32_t Modi, StringsAndChecksumsPrinter &Strings) {
+        auto MDS = getModuleDebugStream(File, Modi);
+        if (!MDS) {
+          consumeError(MDS.takeError());
+          return;
+        }
+
+        for (const auto &SS : MDS->subsections()) {
+          SubsectionT Subsection;
+
+          if (SS.kind() != Subsection.kind())
+            continue;
+
+          BinaryStreamReader Reader(SS.getRecordData());
+          if (auto EC = Subsection.initialize(Reader))
+            continue;
+          Callback(Modi, Strings, Subsection);
+        }
+      });
+}
+
 Error RawOutputStyle::dumpModules() {
   printHeader(P, "Modules");
 
@@ -297,7 +502,7 @@ Error RawOutputStyle::dumpModules() {
     return Error::success();
   }
 
-  ExitOnError Err("Unexpected error processing symbols");
+  ExitOnError Err("Unexpected error processing modules");
 
   auto &Stream = Err(File.getPDBDbiStream());
 
@@ -312,15 +517,169 @@ Error RawOutputStyle::dumpModules() {
     P.formatLine("           debug stream: {0}, # files: {1}, has ec info: {2}",
                  Modi.getModuleStreamIndex(), Modi.getNumberOfFiles(),
                  Modi.hasECInfo());
-    if (opts::raw::DumpModuleFiles) {
-      P.formatLine("           contributing source files:");
-      for (const auto &F : Modules.source_files(I)) {
-        P.formatLine("           - {0}", F);
-      }
-    }
   }
   return Error::success();
 }
+
+Error RawOutputStyle::dumpModuleFiles() {
+  printHeader(P, "Files");
+
+  ExitOnError Err("Unexpected error processing modules");
+
+  iterateModules(
+      File, P, 11,
+      [this, &Err](uint32_t Modi, StringsAndChecksumsPrinter &Strings) {
+        auto &Stream = Err(File.getPDBDbiStream());
+
+        const DbiModuleList &Modules = Stream.modules();
+        for (const auto &F : Modules.source_files(Modi)) {
+          Strings.formatFromFileName(P, F);
+        }
+      });
+  return Error::success();
+}
+
+static void typesetLinesAndColumns(PDBFile &File, LinePrinter &P,
+                                   uint32_t Start, const LineColumnEntry &E) {
+  const uint32_t kMaxCharsPerLineNumber = 4; // 4 digit line number
+  uint32_t MinColumnWidth = kMaxCharsPerLineNumber + 5;
+
+  // Let's try to keep it under 100 characters
+  constexpr uint32_t kMaxRowLength = 100;
+  // At least 3 spaces between columns.
+  uint32_t ColumnsPerRow = kMaxRowLength / (MinColumnWidth + 3);
+  uint32_t ItemsLeft = E.LineNumbers.size();
+  auto LineIter = E.LineNumbers.begin();
+  while (ItemsLeft != 0) {
+    uint32_t RowColumns = std::min(ItemsLeft, ColumnsPerRow);
+    for (uint32_t I = 0; I < RowColumns; ++I) {
+      LineInfo Line(LineIter->Flags);
+      std::string LineStr;
+      if (Line.isAlwaysStepInto())
+        LineStr = "ASI";
+      else if (Line.isNeverStepInto())
+        LineStr = "NSI";
+      else
+        LineStr = utostr(Line.getStartLine());
+      char Statement = Line.isStatement() ? ' ' : '!';
+      P.format("{0} {1:X-} {2} ",
+               fmt_align(LineStr, AlignStyle::Right, kMaxCharsPerLineNumber),
+               fmt_align(Start + LineIter->Offset, AlignStyle::Right, 8, '0'),
+               Statement);
+      ++LineIter;
+      --ItemsLeft;
+    }
+    P.NewLine();
+  }
+}
+
+Error RawOutputStyle::dumpLines() {
+  printHeader(P, "Lines");
+
+  uint32_t LastModi = UINT32_MAX;
+  uint32_t LastNameIndex = UINT32_MAX;
+  iterateModuleSubsections<DebugLinesSubsectionRef>(
+      File, P, 4,
+      [this, &LastModi, &LastNameIndex](uint32_t Modi,
+                                        StringsAndChecksumsPrinter &Strings,
+                                        DebugLinesSubsectionRef &Lines) {
+        uint16_t Segment = Lines.header()->RelocSegment;
+        uint32_t Begin = Lines.header()->RelocOffset;
+        uint32_t End = Begin + Lines.header()->CodeSize;
+        for (const auto &Block : Lines) {
+          if (LastModi != Modi || LastNameIndex != Block.NameIndex) {
+            LastModi = Modi;
+            LastNameIndex = Block.NameIndex;
+            Strings.formatFromChecksumsOffset(P, Block.NameIndex);
+          }
+
+          AutoIndent Indent(P, 2);
+          P.formatLine("{0:X-4}:{1:X-8}-{2:X-8}, ", Segment, Begin, End);
+          uint32_t Count = Block.LineNumbers.size();
+          if (Lines.hasColumnInfo())
+            P.format("line/column/addr entries = {0}", Count);
+          else
+            P.format("line/addr entries = {0}", Count);
+
+          P.NewLine();
+          typesetLinesAndColumns(File, P, Begin, Block);
+        }
+      });
+
+  return Error::success();
+}
+
+Error RawOutputStyle::dumpInlineeLines() {
+  printHeader(P, "Inlinee Lines");
+
+  iterateModuleSubsections<DebugInlineeLinesSubsectionRef>(
+      File, P, 2,
+      [this](uint32_t Modi, StringsAndChecksumsPrinter &Strings,
+             DebugInlineeLinesSubsectionRef &Lines) {
+        P.formatLine("{0,+8} | {1,+5} | {2}", "Inlinee", "Line", "Source File");
+        for (const auto &Entry : Lines) {
+          P.formatLine("{0,+8} | {1,+5} | ", Entry.Header->Inlinee,
+                       fmtle(Entry.Header->SourceLineNum));
+          Strings.formatFromChecksumsOffset(P, Entry.Header->FileID, true);
+        }
+        P.NewLine();
+      });
+
+  return Error::success();
+}
+
+Error RawOutputStyle::dumpXmi() {
+  printHeader(P, "Cross Module Imports");
+  iterateModuleSubsections<DebugCrossModuleImportsSubsectionRef>(
+      File, P, 2,
+      [this](uint32_t Modi, StringsAndChecksumsPrinter &Strings,
+             DebugCrossModuleImportsSubsectionRef &Imports) {
+        P.formatLine("{0,=32} | {1}", "Imported Module", "Type IDs");
+
+        for (const auto &Xmi : Imports) {
+          auto ExpectedModule =
+              Strings.getNameFromStringTable(Xmi.Header->ModuleNameOffset);
+          StringRef Module;
+          SmallString<32> ModuleStorage;
+          if (!ExpectedModule) {
+            Module = "(unknown module)";
+            consumeError(ExpectedModule.takeError());
+          } else
+            Module = *ExpectedModule;
+          if (Module.size() > 32) {
+            ModuleStorage = "...";
+            ModuleStorage += Module.take_back(32 - 3);
+            Module = ModuleStorage;
+          }
+          std::vector<std::string> TIs;
+          for (const auto I : Xmi.Imports)
+            TIs.push_back(formatv("{0,+10:X+}", fmtle(I)));
+          std::string Result =
+              typesetItemList(TIs, P.getIndentLevel() + 35, 12, " ");
+          P.formatLine("{0,+32} | {1}", Module, Result);
+        }
+      });
+
+  return Error::success();
+}
+
+Error RawOutputStyle::dumpXme() {
+  printHeader(P, "Cross Module Exports");
+
+  iterateModuleSubsections<DebugCrossModuleExportsSubsectionRef>(
+      File, P, 2,
+      [this](uint32_t Modi, StringsAndChecksumsPrinter &Strings,
+             DebugCrossModuleExportsSubsectionRef &Exports) {
+        P.formatLine("{0,-10} | {1}", "Local ID", "Global ID");
+        for (const auto &Export : Exports) {
+          P.formatLine("{0,+10:X+} | {1}", TypeIndex(Export.Local),
+                       TypeIndex(Export.Global));
+        }
+      });
+
+  return Error::success();
+}
+
 Error RawOutputStyle::dumpStringTable() {
   printHeader(P, "String Table");
 
@@ -367,15 +726,26 @@ Error RawOutputStyle::dumpTpiStream(uint32_t StreamIdx) {
   assert(StreamIdx == StreamTPI || StreamIdx == StreamIPI);
 
   bool Present = false;
+  bool DumpTypes = false;
   bool DumpBytes = false;
+  bool DumpExtras = false;
+  std::vector<uint32_t> Indices;
   if (StreamIdx == StreamTPI) {
     printHeader(P, "Types (TPI Stream)");
     Present = File.hasPDBTpiStream();
+    DumpTypes = opts::raw::DumpTypes;
     DumpBytes = opts::raw::DumpTypeData;
+    DumpExtras = opts::raw::DumpTypeExtras;
+    Indices.assign(opts::raw::DumpTypeIndex.begin(),
+                   opts::raw::DumpTypeIndex.end());
   } else if (StreamIdx == StreamIPI) {
     printHeader(P, "Types (IPI Stream)");
     Present = File.hasPDBIpiStream();
+    DumpTypes = opts::raw::DumpIds;
     DumpBytes = opts::raw::DumpIdData;
+    DumpExtras = opts::raw::DumpIdExtras;
+    Indices.assign(opts::raw::DumpIdIndex.begin(),
+                   opts::raw::DumpIdIndex.end());
   }
 
   AutoIndent Indent(P);
@@ -389,24 +759,62 @@ Error RawOutputStyle::dumpTpiStream(uint32_t StreamIdx) {
   auto &Stream = Err((StreamIdx == StreamTPI) ? File.getPDBTpiStream()
                                               : File.getPDBIpiStream());
 
-  auto &Types = Err(initializeTypeDatabase(StreamIdx));
+  auto &Types = Err(initializeTypes(StreamIdx));
 
-  P.formatLine("Showing {0:N} records", Stream.getNumTypeRecords());
-  uint32_t Width =
-      NumDigits(TypeIndex::FirstNonSimpleIndex + Stream.getNumTypeRecords());
+  if (DumpTypes) {
+    P.formatLine("Showing {0:N} records", Stream.getNumTypeRecords());
+    uint32_t Width =
+        NumDigits(TypeIndex::FirstNonSimpleIndex + Stream.getNumTypeRecords());
 
-  MinimalTypeDumpVisitor V(P, Width + 2, DumpBytes, Types);
+    MinimalTypeDumpVisitor V(P, Width + 2, DumpBytes, DumpExtras, Types,
+                             Stream.getHashValues());
 
-  Optional<TypeIndex> I = Types.getFirst();
-  if (auto EC = codeview::visitTypeStream(Types, V)) {
-    P.formatLine("An error occurred dumping type records: {0}",
-                 toString(std::move(EC)));
+    if (Indices.empty()) {
+      if (auto EC = codeview::visitTypeStream(Types, V)) {
+        P.formatLine("An error occurred dumping type records: {0}",
+                     toString(std::move(EC)));
+      }
+    } else {
+      for (const auto &I : Indices) {
+        TypeIndex TI(I);
+        CVType Type = Types.getType(TI);
+        if (auto EC = codeview::visitTypeRecord(Type, TI, V))
+          P.formatLine("An error occurred dumping type record {0}: {1}", TI,
+                       toString(std::move(EC)));
+      }
+    }
+  }
+
+  if (DumpExtras) {
+    P.NewLine();
+    auto IndexOffsets = Stream.getTypeIndexOffsets();
+    P.formatLine("Type Index Offsets:");
+    for (const auto &IO : IndexOffsets) {
+      AutoIndent Indent2(P);
+      P.formatLine("TI: {0}, Offset: {1}", IO.Type, fmtle(IO.Offset));
+    }
+
+    P.NewLine();
+    P.formatLine("Hash Adjusters:");
+    auto &Adjusters = Stream.getHashAdjusters();
+    auto &Strings = Err(File.getStringTable());
+    for (const auto &A : Adjusters) {
+      AutoIndent Indent2(P);
+      auto ExpectedStr = Strings.getStringForID(A.first);
+      TypeIndex TI(A.second);
+      if (ExpectedStr)
+        P.formatLine("`{0}` -> {1}", *ExpectedStr, TI);
+      else {
+        P.formatLine("unknown str id ({0}) -> {1}", A.first, TI);
+        consumeError(ExpectedStr.takeError());
+      }
+    }
   }
   return Error::success();
 }
 
 Expected<codeview::LazyRandomTypeCollection &>
-RawOutputStyle::initializeTypeDatabase(uint32_t SN) {
+RawOutputStyle::initializeTypes(uint32_t SN) {
   auto &TypeCollection = (SN == StreamTPI) ? TpiTypes : IpiTypes;
   auto Tpi =
       (SN == StreamTPI) ? File.getPDBTpiStream() : File.getPDBIpiStream();
@@ -437,7 +845,7 @@ Error RawOutputStyle::dumpModuleSyms() {
 
   auto &Stream = Err(File.getPDBDbiStream());
 
-  auto &Types = Err(initializeTypeDatabase(StreamTPI));
+  auto &Types = Err(initializeTypes(StreamTPI));
 
   const DbiModuleList &Modules = Stream.modules();
   uint32_t Count = Modules.getModuleCount();
@@ -489,7 +897,7 @@ Error RawOutputStyle::dumpPublics() {
 
   ExitOnError Err("Error dumping publics stream");
 
-  auto &Types = Err(initializeTypeDatabase(StreamTPI));
+  auto &Types = Err(initializeTypes(StreamTPI));
   auto &Publics = Err(File.getPDBPublicsStream());
   SymbolVisitorCallbackPipeline Pipeline;
   SymbolDeserializer Deserializer(nullptr, CodeViewContainer::Pdb);
@@ -574,7 +982,7 @@ static std::string formatSectionCharacteristics(uint32_t IndentLevel,
   PUSH_FLAG(SC, IMAGE_SCN_MEM_EXECUTE, C, "IMAGE_SCN_MEM_EXECUTE");
   PUSH_FLAG(SC, IMAGE_SCN_MEM_READ, C, "IMAGE_SCN_MEM_READ");
   PUSH_FLAG(SC, IMAGE_SCN_MEM_WRITE, C, "IMAGE_SCN_MEM_WRITE");
-  return typesetItemList(Opts, 3, IndentLevel, " | ");
+  return typesetItemList(Opts, IndentLevel, 3, " | ");
 }
 
 static std::string formatSegMapDescriptorFlag(uint32_t IndentLevel,
@@ -590,7 +998,7 @@ static std::string formatSegMapDescriptorFlag(uint32_t IndentLevel,
   PUSH_FLAG(OMFSegDescFlags, IsSelector, Flags, "selector");
   PUSH_FLAG(OMFSegDescFlags, IsAbsoluteAddress, Flags, "absolute addr");
   PUSH_FLAG(OMFSegDescFlags, IsGroup, Flags, "group");
-  return typesetItemList(Opts, 4, IndentLevel, " | ");
+  return typesetItemList(Opts, IndentLevel, 4, " | ");
 }
 
 Error RawOutputStyle::dumpSectionContribs() {

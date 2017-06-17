@@ -7923,6 +7923,7 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     }
 
     // We can't handle 8-31 immediates with native IR, use the intrinsic.
+    // Except for predicates that create constants.
     Intrinsic::ID ID;
     switch (BuiltinID) {
     default: llvm_unreachable("Unsupported intrinsic!");
@@ -7930,12 +7931,32 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
       ID = Intrinsic::x86_sse_cmp_ps;
       break;
     case X86::BI__builtin_ia32_cmpps256:
+      // _CMP_TRUE_UQ, _CMP_TRUE_US produce -1,-1... vector
+      // on any input and _CMP_FALSE_OQ, _CMP_FALSE_OS produce 0, 0...
+      if (CC == 0xf || CC == 0xb || CC == 0x1b || CC == 0x1f) {
+         Value *Constant = (CC == 0xf || CC == 0x1f) ?
+                llvm::Constant::getAllOnesValue(Builder.getInt32Ty()) :
+                llvm::Constant::getNullValue(Builder.getInt32Ty());
+         Value *Vec = Builder.CreateVectorSplat(
+                        Ops[0]->getType()->getVectorNumElements(), Constant);
+         return Builder.CreateBitCast(Vec, Ops[0]->getType());
+      }
       ID = Intrinsic::x86_avx_cmp_ps_256;
       break;
     case X86::BI__builtin_ia32_cmppd:
       ID = Intrinsic::x86_sse2_cmp_pd;
       break;
     case X86::BI__builtin_ia32_cmppd256:
+      // _CMP_TRUE_UQ, _CMP_TRUE_US produce -1,-1... vector
+      // on any input and _CMP_FALSE_OQ, _CMP_FALSE_OS produce 0, 0...
+      if (CC == 0xf || CC == 0xb || CC == 0x1b || CC == 0x1f) {
+         Value *Constant = (CC == 0xf || CC == 0x1f) ?
+                llvm::Constant::getAllOnesValue(Builder.getInt64Ty()) :
+                llvm::Constant::getNullValue(Builder.getInt64Ty());
+         Value *Vec = Builder.CreateVectorSplat(
+                        Ops[0]->getType()->getVectorNumElements(), Constant);
+         return Builder.CreateBitCast(Vec, Ops[0]->getType());
+      }
       ID = Intrinsic::x86_avx_cmp_pd_256;
       break;
     }

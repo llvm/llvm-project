@@ -151,7 +151,7 @@ body: |
   std::unique_ptr<MIRParser> MIR;
   std::unique_ptr<Module> M = parseMIR(Context, PM, MIR, *TM, MIRString,
                                        "func");
-  EXPECT_TRUE(M);
+  ASSERT_TRUE(M);
 
   PM.add(new TestPass(T));
 

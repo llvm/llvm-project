@@ -11,6 +11,7 @@
 #define LLVM_TOOLS_LLVMPDBUTIL_MINIMAL_TYPE_DUMPER_H
 
 #include "llvm/DebugInfo/CodeView/TypeVisitorCallbacks.h"
+#include "llvm/Support/BinaryStreamArray.h"
 
 namespace llvm {
 namespace codeview {
@@ -23,8 +24,10 @@ class LinePrinter;
 class MinimalTypeDumpVisitor : public codeview::TypeVisitorCallbacks {
 public:
   MinimalTypeDumpVisitor(LinePrinter &P, uint32_t Width, bool RecordBytes,
-                         codeview::LazyRandomTypeCollection &Types)
-      : P(P), Width(Width), RecordBytes(RecordBytes), Types(Types) {}
+                         bool Hashes, codeview::LazyRandomTypeCollection &Types,
+                         FixedStreamArray<support::ulittle32_t> HashValues)
+      : P(P), Width(Width), RecordBytes(RecordBytes), Hashes(Hashes),
+        Types(Types), HashValues(HashValues) {}
 
   Error visitTypeBegin(codeview::CVType &Record,
                        codeview::TypeIndex Index) override;
@@ -48,7 +51,9 @@ private:
   LinePrinter &P;
   uint32_t Width;
   bool RecordBytes = false;
+  bool Hashes = false;
   codeview::LazyRandomTypeCollection &Types;
+  FixedStreamArray<support::ulittle32_t> HashValues;
 };
 } // namespace pdb
 } // namespace llvm

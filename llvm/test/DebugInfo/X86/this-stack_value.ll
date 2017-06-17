@@ -1,5 +1,5 @@
 ; RUN: llc -filetype=asm -o - %s | FileCheck %s --check-prefix=ASM
-; RUN: llc -filetype=obj -o - %s | llvm-dwarfdump - | FileCheck %s
+; RUN: llc -filetype=obj -o - %s | llvm-dwarfdump --debug-dump=info - | FileCheck %s
 ;
 ; Generated at -O2 from:
 ;   struct B;
@@ -18,7 +18,7 @@
 ; modified by the debugger.
 ;
 ; ASM: [DW_OP_stack_value]
-; CHECK:  Location description: 70 00 9f
+; CHECK:  DW_AT_location {{.*}} 70 00 9f
 ;                               rax+0, stack-value
 source_filename = "ab.cpp"
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"

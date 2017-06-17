@@ -36,6 +36,8 @@ public:
   StringsAndChecksumsRef(const DebugStringTableSubsectionRef &Strings,
                          const DebugChecksumsSubsectionRef &Checksums);
 
+  void setChecksums(const DebugChecksumsSubsectionRef &CS);
+
   template <typename T> void initialize(T &&FragmentRange) {
     for (const DebugSubsectionRecord &R : FragmentRange) {
       if (Strings && Checksums)

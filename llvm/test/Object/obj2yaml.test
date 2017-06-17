@@ -478,4 +478,4 @@ ELF-X86-64-UNWIND-NEXT:   AddressAlign:    0x0000000000000001
 ELF-X86-64-UNWIND-NEXT:   Content:         ''
 
 RUN: not obj2yaml %t.blah 2>&1 | FileCheck --check-prefix=ENOENT %s
-ENOENT: Error: '{{[Nn]}}o such file or directory'
+ENOENT: Error reading file: {{.*}}.blah: {{[Nn]}}o such file or directory

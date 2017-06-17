@@ -250,9 +250,11 @@ public:
 
     _LIBCPP_ALWAYS_INLINE
     static coroutine_handle from_promise(_Promise& __promise) _NOEXCEPT {
+        typedef typename remove_cv<_Promise>::type _RawPromise;
         coroutine_handle __tmp;
-        __tmp.__handle_ = __builtin_coro_promise(_VSTD::addressof(__promise),
-                                                 __alignof(_Promise), true);
+        __tmp.__handle_ = __builtin_coro_promise(
+            _VSTD::addressof(const_cast<_RawPromise&>(__promise)),
+             __alignof(_Promise), true);
         return __tmp;
     }
 };

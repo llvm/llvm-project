@@ -17,7 +17,7 @@ using namespace llvm;
 using namespace llvm::pdb;
 
 std::string llvm::pdb::typesetItemList(ArrayRef<std::string> Opts,
-                                       uint32_t GroupSize, uint32_t IndentLevel,
+                                       uint32_t IndentLevel, uint32_t GroupSize,
                                        StringRef Sep) {
   std::string Result;
   while (!Opts.empty()) {

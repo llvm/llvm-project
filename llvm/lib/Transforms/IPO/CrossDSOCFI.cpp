@@ -95,6 +95,17 @@ void CrossDSOCFI::buildCFICheck(Module &M) {
     }
   }
 
+  NamedMDNode *CfiFunctionsMD = M.getNamedMetadata("cfi.functions");
+  if (CfiFunctionsMD) {
+    for (auto Func : CfiFunctionsMD->operands()) {
+      assert(Func->getNumOperands() >= 2);
+      for (unsigned I = 2; I < Func->getNumOperands(); ++I)
+        if (ConstantInt *TypeId =
+                extractNumericTypeId(cast<MDNode>(Func->getOperand(I).get())))
+          TypeIds.insert(TypeId->getZExtValue());
+    }
+  }
+
   LLVMContext &Ctx = M.getContext();
   Constant *C = M.getOrInsertFunction(
       "__cfi_check", Type::getVoidTy(Ctx), Type::getInt64Ty(Ctx),

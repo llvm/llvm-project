@@ -86,9 +86,9 @@ EnableMachineCombinerPass("ppc-machine-combiner",
 
 extern "C" void LLVMInitializePowerPCTarget() {
   // Register the targets
-  RegisterTargetMachine<PPC32TargetMachine> A(getThePPC32Target());
-  RegisterTargetMachine<PPC64TargetMachine> B(getThePPC64Target());
-  RegisterTargetMachine<PPC64TargetMachine> C(getThePPC64LETarget());
+  RegisterTargetMachine<PPCTargetMachine> A(getThePPC32Target());
+  RegisterTargetMachine<PPCTargetMachine> B(getThePPC64Target());
+  RegisterTargetMachine<PPCTargetMachine> C(getThePPC64LETarget());
 
   PassRegistry &PR = *PassRegistry::getPassRegistry();
   initializePPCBoolRetToIntPass(PR);
@@ -177,32 +177,34 @@ static PPCTargetMachine::PPCABI computeTargetABI(const Triple &TT,
   assert(Options.MCOptions.getABIName().empty() &&
          "Unknown target-abi option!");
 
-  if (!TT.isMacOSX()) {
-    switch (TT.getArch()) {
-    case Triple::ppc64le:
-      return PPCTargetMachine::PPC_ABI_ELFv2;
-    case Triple::ppc64:
-      return PPCTargetMachine::PPC_ABI_ELFv1;
-    default:
-      // Fallthrough.
-      ;
-    }
+  if (TT.isMacOSX())
+    return PPCTargetMachine::PPC_ABI_UNKNOWN;
+
+  switch (TT.getArch()) {
+  case Triple::ppc64le:
+    return PPCTargetMachine::PPC_ABI_ELFv2;
+  case Triple::ppc64:
+    return PPCTargetMachine::PPC_ABI_ELFv1;
+  default:
+    return PPCTargetMachine::PPC_ABI_UNKNOWN;
   }
-  return PPCTargetMachine::PPC_ABI_UNKNOWN;
 }
 
 static Reloc::Model getEffectiveRelocModel(const Triple &TT,
                                            Optional<Reloc::Model> RM) {
-  if (!RM.hasValue()) {
-    if (TT.getArch() == Triple::ppc64 || TT.getArch() == Triple::ppc64le) {
-      if (!TT.isOSBinFormatMachO() && !TT.isMacOSX())
-        return Reloc::PIC_;
-    }
-    if (TT.isOSDarwin())
-      return Reloc::DynamicNoPIC;
-    return Reloc::Static;
-  }
-  return *RM;
+  if (RM.hasValue())
+    return *RM;
+
+  // Darwin defaults to dynamic-no-pic.
+  if (TT.isOSDarwin())
+    return Reloc::DynamicNoPIC;
+
+  // Non-darwin 64-bit platforms are PIC by default.
+  if (TT.getArch() == Triple::ppc64 || TT.getArch() == Triple::ppc64le)
+    return Reloc::PIC_;
+
+  // 32-bit is static by default.
+  return Reloc::Static;
 }
 
 // The FeatureString here is a little subtle. We are modifying the feature
@@ -223,26 +225,6 @@ PPCTargetMachine::PPCTargetMachine(const Target &T, const Triple &TT,
 }
 
 PPCTargetMachine::~PPCTargetMachine() = default;
-
-void PPC32TargetMachine::anchor() {}
-
-PPC32TargetMachine::PPC32TargetMachine(const Target &T, const Triple &TT,
-                                       StringRef CPU, StringRef FS,
-                                       const TargetOptions &Options,
-                                       Optional<Reloc::Model> RM,
-                                       CodeModel::Model CM,
-                                       CodeGenOpt::Level OL)
-    : PPCTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL) {}
-
-void PPC64TargetMachine::anchor() {}
-
-PPC64TargetMachine::PPC64TargetMachine(const Target &T, const Triple &TT,
-                                       StringRef CPU, StringRef FS,
-                                       const TargetOptions &Options,
-                                       Optional<Reloc::Model> RM,
-                                       CodeModel::Model CM,
-                                       CodeGenOpt::Level OL)
-    : PPCTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL) {}
 
 const PPCSubtarget *
 PPCTargetMachine::getSubtargetImpl(const Function &F) const {

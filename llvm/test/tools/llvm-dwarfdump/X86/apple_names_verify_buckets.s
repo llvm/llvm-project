@@ -3,7 +3,7 @@
 # RUN: | FileCheck %s
 
 # CHECK: Verifying .apple_names...
-# CHECK-NEXT: error:
+# CHECK-NEXT: error: Bucket[0] has invalid hash index: [-2]
 
 # This test is meant to verify that the -verify option 
 # in llvm-dwarfdump, correctly identifies

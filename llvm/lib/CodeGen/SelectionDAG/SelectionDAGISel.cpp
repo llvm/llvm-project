@@ -337,12 +337,13 @@ void SelectionDAGISel::getAnalysisUsage(AnalysisUsage &AU) const {
 /// SplitCriticalSideEffectEdges - Look for critical edges with a PHI value that
 /// may trap on it.  In this case we have to split the edge so that the path
 /// through the predecessor block that doesn't go to the phi block doesn't
-/// execute the possibly trapping instruction. If available, we pass a
-/// dominator tree to be updated when we split critical edges. This is because
-/// SelectionDAGISel preserves the DominatorTree.
+/// execute the possibly trapping instruction. If available, we pass domtree
+/// and loop info to be updated when we split critical edges. This is because
+/// SelectionDAGISel preserves these analyses.
 /// This is required for correctness, so it must be done at -O0.
 ///
-static void SplitCriticalSideEffectEdges(Function &Fn, DominatorTree *DT) {
+static void SplitCriticalSideEffectEdges(Function &Fn, DominatorTree *DT,
+                                         LoopInfo *LI) {
   // Loop for blocks with phi nodes.
   for (BasicBlock &BB : Fn) {
     PHINode *PN = dyn_cast<PHINode>(BB.begin());
@@ -368,7 +369,7 @@ static void SplitCriticalSideEffectEdges(Function &Fn, DominatorTree *DT) {
         // Okay, we have to split this edge.
         SplitCriticalEdge(
             Pred->getTerminator(), GetSuccessorNumber(Pred, &BB),
-            CriticalEdgeSplittingOptions(DT).setMergeIdenticalEdges());
+            CriticalEdgeSplittingOptions(DT, LI).setMergeIdenticalEdges());
         goto ReprocessBlock;
       }
   }
@@ -406,10 +407,12 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
   ORE = make_unique<OptimizationRemarkEmitter>(&Fn);
   auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>();
   DominatorTree *DT = DTWP ? &DTWP->getDomTree() : nullptr;
+  auto *LIWP = getAnalysisIfAvailable<LoopInfoWrapperPass>();
+  LoopInfo *LI = LIWP ? &LIWP->getLoopInfo() : nullptr;
 
   DEBUG(dbgs() << "\n\n\n=== " << Fn.getName() << "\n");
 
-  SplitCriticalSideEffectEdges(const_cast<Function &>(Fn), DT);
+  SplitCriticalSideEffectEdges(const_cast<Function &>(Fn), DT, LI);
 
   CurDAG->init(*MF, *ORE);
   FuncInfo->set(Fn, *MF, CurDAG);

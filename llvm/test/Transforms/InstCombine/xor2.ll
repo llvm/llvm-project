@@ -325,3 +325,36 @@ define i32 @test14(i32 %a, i32 %b, i32 %c) {
   ret i32 %xor
 }
 
+define i8 @test15(i8 %A, i8 %B) {
+; CHECK-LABEL: @test15(
+; CHECK-NEXT:    [[XOR1:%.*]] = xor i8 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[NOT:%.*]] = xor i8 [[A]], 33
+; CHECK-NEXT:    [[XOR2:%.*]] = xor i8 [[NOT]], [[B]]
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[XOR1]], [[XOR2]]
+; CHECK-NEXT:    [[RES:%.*]] = mul i8 [[AND]], [[XOR2]]
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %xor1 = xor i8 %B, %A
+  %not = xor i8 %A, 33
+  %xor2 = xor i8 %not, %B
+  %and = and i8 %xor1, %xor2
+  %res = mul i8 %and, %xor2 ; to increase the use count for the xor
+  ret i8 %res
+}
+
+define i8 @test16(i8 %A, i8 %B) {
+; CHECK-LABEL: @test16(
+; CHECK-NEXT:    [[XOR1:%.*]] = xor i8 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[NOT:%.*]] = xor i8 [[A]], 33
+; CHECK-NEXT:    [[XOR2:%.*]] = xor i8 [[NOT]], [[B]]
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[XOR2]], [[XOR1]]
+; CHECK-NEXT:    [[RES:%.*]] = mul i8 [[AND]], [[XOR2]]
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %xor1 = xor i8 %B, %A
+  %not = xor i8 %A, 33
+  %xor2 = xor i8 %not, %B
+  %and = and i8 %xor2, %xor1
+  %res = mul i8 %and, %xor2 ; to increase the use count for the xor
+  ret i8 %res
+}

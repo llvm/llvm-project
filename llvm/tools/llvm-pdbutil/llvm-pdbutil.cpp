@@ -302,9 +302,14 @@ cl::opt<bool> DumpTypeData(
     cl::desc("dump CodeView type record raw bytes from TPI stream"),
     cl::cat(TypeOptions), cl::sub(RawSubcommand));
 
-cl::opt<bool> DumpTypeHashes("type-hash",
-                             cl::desc("dump CodeView TPI hash stream"),
+cl::opt<bool> DumpTypeExtras("type-extras",
+                             cl::desc("dump type hashes and index offsets"),
                              cl::cat(TypeOptions), cl::sub(RawSubcommand));
+
+cl::list<uint32_t> DumpTypeIndex(
+    "type-index", cl::ZeroOrMore,
+    cl::desc("only dump types with the specified hexadecimal type index"),
+    cl::cat(TypeOptions), cl::sub(RawSubcommand));
 
 cl::opt<bool> DumpIds("ids",
                       cl::desc("dump CodeView type records from IPI stream"),
@@ -313,6 +318,14 @@ cl::opt<bool>
     DumpIdData("id-data",
                cl::desc("dump CodeView type record raw bytes from IPI stream"),
                cl::cat(TypeOptions), cl::sub(RawSubcommand));
+
+cl::opt<bool> DumpIdExtras("id-extras",
+                           cl::desc("dump id hashes and index offsets"),
+                           cl::cat(TypeOptions), cl::sub(RawSubcommand));
+cl::list<uint32_t> DumpIdIndex(
+    "id-index", cl::ZeroOrMore,
+    cl::desc("only dump ids with the specified hexadecimal type index"),
+    cl::cat(TypeOptions), cl::sub(RawSubcommand));
 
 // SYMBOL OPTIONS
 cl::opt<bool> DumpPublics("publics", cl::desc("dump Publics stream data"),
@@ -330,7 +343,25 @@ cl::opt<bool> DumpModules("modules", cl::desc("dump compiland information"),
                           cl::cat(FileOptions), cl::sub(RawSubcommand));
 cl::opt<bool> DumpModuleFiles(
     "files",
-    cl::desc("for each module dumped, dump the contributing source files"),
+    cl::desc("Dump the source files that contribute to each module's."),
+    cl::cat(FileOptions), cl::sub(RawSubcommand));
+cl::opt<bool> DumpLines(
+    "l",
+    cl::desc("dump source file/line information (DEBUG_S_LINES subsection)"),
+    cl::cat(FileOptions), cl::sub(RawSubcommand));
+cl::opt<bool> DumpInlineeLines(
+    "il",
+    cl::desc("dump inlinee line information (DEBUG_S_INLINEELINES subsection)"),
+    cl::cat(FileOptions), cl::sub(RawSubcommand));
+cl::opt<bool> DumpXmi(
+    "xmi",
+    cl::desc(
+        "dump cross module imports (DEBUG_S_CROSSSCOPEIMPORTS subsection)"),
+    cl::cat(FileOptions), cl::sub(RawSubcommand));
+cl::opt<bool> DumpXme(
+    "xme",
+    cl::desc(
+        "dump cross module exports (DEBUG_S_CROSSSCOPEEXPORTS subsection)"),
     cl::cat(FileOptions), cl::sub(RawSubcommand));
 
 // MISCELLANEOUS OPTIONS
@@ -889,6 +920,10 @@ int main(int argc_, const char *argv_[]) {
 
   if (opts::RawSubcommand) {
     if (opts::raw::RawAll) {
+      opts::raw::DumpLines = true;
+      opts::raw::DumpInlineeLines = true;
+      opts::raw::DumpXme = true;
+      opts::raw::DumpXmi = true;
       opts::raw::DumpIds = true;
       opts::raw::DumpPublics = true;
       opts::raw::DumpSectionContribs = true;
@@ -898,8 +933,9 @@ int main(int argc_, const char *argv_[]) {
       opts::raw::DumpSummary = true;
       opts::raw::DumpSymbols = true;
       opts::raw::DumpIds = true;
+      opts::raw::DumpIdExtras = true;
       opts::raw::DumpTypes = true;
-      opts::raw::DumpTypeHashes = true;
+      opts::raw::DumpTypeExtras = true;
       opts::raw::DumpModules = true;
       opts::raw::DumpModuleFiles = true;
     }

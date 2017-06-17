@@ -208,9 +208,20 @@ Error MinimalTypeDumpVisitor::visitTypeBegin(CVType &Record, TypeIndex Index) {
   // formatLine puts the newline at the beginning, so we use formatLine here
   // to start a new line, and then individual visit methods use format to
   // append to the existing line.
-  P.formatLine("{0} | {1} [size = {2}]",
-               fmt_align(Index, AlignStyle::Right, Width),
-               getLeafTypeName(Record.Type), Record.length());
+  if (!Hashes) {
+    P.formatLine("{0} | {1} [size = {2}]",
+                 fmt_align(Index, AlignStyle::Right, Width),
+                 getLeafTypeName(Record.Type), Record.length());
+  } else {
+    std::string H;
+    if (Index.toArrayIndex() >= HashValues.size())
+      H = "(not present)";
+    else
+      H = utostr(HashValues[Index.toArrayIndex()]);
+    P.formatLine("{0} | {1} [size = {2}, hash = {3}]",
+                 fmt_align(Index, AlignStyle::Right, Width),
+                 getLeafTypeName(Record.Type), Record.length(), H);
+  }
   P.Indent(Width + 3);
   return Error::success();
 }

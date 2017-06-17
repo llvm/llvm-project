@@ -31,6 +31,7 @@ class ModuleDebugStreamRef {
 public:
   ModuleDebugStreamRef(const DbiModuleDescriptor &Module,
                        std::unique_ptr<msf::MappedBlockStream> Stream);
+  ModuleDebugStreamRef(ModuleDebugStreamRef &&Other) = default;
   ~ModuleDebugStreamRef();
 
   Error reload();
@@ -43,6 +44,8 @@ public:
   const codeview::CVSymbolArray &getSymbolArray() const {
     return SymbolsSubstream;
   }
+
+  ModuleDebugStreamRef &operator=(ModuleDebugStreamRef &&Other) = default;
 
   llvm::iterator_range<DebugSubsectionIterator> subsections() const;
 
@@ -58,7 +61,7 @@ private:
 
   uint32_t Signature;
 
-  std::unique_ptr<msf::MappedBlockStream> Stream;
+  std::shared_ptr<msf::MappedBlockStream> Stream;
 
   codeview::CVSymbolArray SymbolsSubstream;
   BinaryStreamRef C11LinesSubstream;

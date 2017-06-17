@@ -972,16 +972,60 @@ DbgVariable *DwarfDebug::createConcreteVariable(DwarfCompileUnit &TheCU,
   return ConcreteVariables.back().get();
 }
 
-// Determine whether this DBG_VALUE is valid at the beginning of the function.
-static bool validAtEntry(const MachineInstr *MInsn) {
-  auto MBB = MInsn->getParent();
-  // Is it in the entry basic block?
-  if (!MBB->pred_empty())
+/// Determine whether a *singular* DBG_VALUE is valid for the entirety of its
+/// enclosing lexical scope. The check ensures there are no other instructions
+/// in the same lexical scope preceding the DBG_VALUE and that its range is
+/// either open or otherwise rolls off the end of the scope.
+static bool validThroughout(LexicalScopes &LScopes,
+                            const MachineInstr *DbgValue,
+                            const MachineInstr *RangeEnd) {
+  assert(DbgValue->getDebugLoc() && "DBG_VALUE without a debug location");
+  auto MBB = DbgValue->getParent();
+  auto DL = DbgValue->getDebugLoc();
+  auto *LScope = LScopes.findLexicalScope(DL);
+  // Scope doesn't exist; this is a dead DBG_VALUE.
+  if (!LScope)
     return false;
-  for (MachineBasicBlock::const_reverse_iterator I(MInsn); I != MBB->rend(); ++I)
-    if (!(I->isDebugValue() || I->getFlag(MachineInstr::FrameSetup)))
+  auto &LSRange = LScope->getRanges();
+  if (LSRange.size() == 0)
+    return false;
+
+  // Determine if the DBG_VALUE is valid at the beginning of its lexical block.
+  const MachineInstr *LScopeBegin = LSRange.front().first;
+  // Early exit if the lexical scope begins outside of the current block.
+  if (LScopeBegin->getParent() != MBB)
+    return false;
+  MachineBasicBlock::const_reverse_iterator Pred(DbgValue);
+  for (++Pred; Pred != MBB->rend(); ++Pred) {
+    if (Pred->getFlag(MachineInstr::FrameSetup))
+      break;
+    auto PredDL = Pred->getDebugLoc();
+    if (!PredDL || Pred->isDebugValue())
+      continue;
+    // Check whether the instruction preceding the DBG_VALUE is in the same
+    // (sub)scope as the DBG_VALUE.
+    if (DL->getScope() == PredDL->getScope() ||
+        LScope->dominates(LScopes.findLexicalScope(PredDL)))
       return false;
-  return true;
+  }
+
+  // If the range of the DBG_VALUE is open-ended, report success.
+  if (!RangeEnd)
+    return true;
+
+  // Fail if there are instructions belonging to our scope in another block.
+  const MachineInstr *LScopeEnd = LSRange.back().second;
+  if (LScopeEnd->getParent() != MBB)
+    return false;
+
+  // Single, constant DBG_VALUEs in the prologue are promoted to be live
+  // throughout the function. This is a hack, presumably for DWARF v2 and not
+  // necessarily correct. It would be much better to use a dbg.declare instead
+  // if we know the constant is live throughout the scope.
+  if (DbgValue->getOperand(0).isImm() && MBB->pred_empty())
+    return true;
+
+  return false;
 }
 
 // Find variables for each lexical scope.
@@ -1016,11 +1060,9 @@ void DwarfDebug::collectVariableInfo(DwarfCompileUnit &TheCU,
     const MachineInstr *MInsn = Ranges.front().first;
     assert(MInsn->isDebugValue() && "History must begin with debug value");
 
-    // Check if there is a single DBG_VALUE, valid throughout the function.
-    // A single constant is also considered valid for the entire function.
+    // Check if there is a single DBG_VALUE, valid throughout the var's scope.
     if (Ranges.size() == 1 &&
-        (MInsn->getOperand(0).isImm() ||
-         (validAtEntry(MInsn) && Ranges.front().second == nullptr))) {
+        validThroughout(LScopes, MInsn, Ranges.front().second)) {
       RegVar->initializeDbgValue(MInsn);
       continue;
     }

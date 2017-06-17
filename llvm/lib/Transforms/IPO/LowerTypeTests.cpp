@@ -17,6 +17,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/Analysis/TypeMetadataUtils.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
@@ -206,23 +207,38 @@ struct ByteArrayInfo {
 class GlobalTypeMember final : TrailingObjects<GlobalTypeMember, MDNode *> {
   GlobalObject *GO;
   size_t NTypes;
+  // For functions: true if this is a definition (either in the merged module or
+  // in one of the thinlto modules).
+  bool IsDefinition;
+  // For functions: true if this function is either defined or used in a thinlto
+  // module and its jumptable entry needs to be exported to thinlto backends.
+  bool IsExported;
 
   friend TrailingObjects;
   size_t numTrailingObjects(OverloadToken<MDNode *>) const { return NTypes; }
 
 public:
   static GlobalTypeMember *create(BumpPtrAllocator &Alloc, GlobalObject *GO,
+                                  bool IsDefinition, bool IsExported,
                                   ArrayRef<MDNode *> Types) {
     auto *GTM = static_cast<GlobalTypeMember *>(Alloc.Allocate(
         totalSizeToAlloc<MDNode *>(Types.size()), alignof(GlobalTypeMember)));
     GTM->GO = GO;
     GTM->NTypes = Types.size();
+    GTM->IsDefinition = IsDefinition;
+    GTM->IsExported = IsExported;
     std::uninitialized_copy(Types.begin(), Types.end(),
                             GTM->getTrailingObjects<MDNode *>());
     return GTM;
   }
   GlobalObject *getGlobal() const {
     return GO;
+  }
+  bool isDefinition() const {
+    return IsDefinition;
+  }
+  bool isExported() const {
+    return IsExported;
   }
   ArrayRef<MDNode *> types() const {
     return makeArrayRef(getTrailingObjects<MDNode *>(), NTypes);
@@ -294,6 +310,7 @@ class LowerTypeTestsModule {
   void exportTypeId(StringRef TypeId, const TypeIdLowering &TIL);
   TypeIdLowering importTypeId(StringRef TypeId);
   void importTypeTest(CallInst *CI);
+  void importFunction(Function *F, bool isDefinition);
 
   BitSetInfo
   buildBitSet(Metadata *TypeId,
@@ -820,6 +837,41 @@ void LowerTypeTestsModule::importTypeTest(CallInst *CI) {
   CI->eraseFromParent();
 }
 
+// ThinLTO backend: the function F has a jump table entry; update this module
+// accordingly. isDefinition describes the type of the jump table entry.
+void LowerTypeTestsModule::importFunction(Function *F, bool isDefinition) {
+  assert(F->getType()->getAddressSpace() == 0);
+
+  // Declaration of a local function - nothing to do.
+  if (F->isDeclarationForLinker() && isDefinition)
+    return;
+
+  GlobalValue::VisibilityTypes Visibility = F->getVisibility();
+  std::string Name = F->getName();
+  Function *FDecl;
+
+  if (F->isDeclarationForLinker() && !isDefinition) {
+    // Declaration of an external function.
+    FDecl = Function::Create(F->getFunctionType(), GlobalValue::ExternalLinkage,
+                             Name + ".cfi_jt", &M);
+    FDecl->setVisibility(GlobalValue::HiddenVisibility);
+  } else {
+    // Definition.
+    assert(isDefinition);
+    F->setName(Name + ".cfi");
+    F->setLinkage(GlobalValue::ExternalLinkage);
+    F->setVisibility(GlobalValue::HiddenVisibility);
+    FDecl = Function::Create(F->getFunctionType(), GlobalValue::ExternalLinkage,
+                             Name, &M);
+    FDecl->setVisibility(Visibility);
+  }
+
+  if (F->isWeakForLinker())
+    replaceWeakDeclarationWithJumpTablePtr(F, FDecl);
+  else
+    F->replaceAllUsesWith(FDecl);
+}
+
 void LowerTypeTestsModule::lowerTypeTestCalls(
     ArrayRef<Metadata *> TypeIds, Constant *CombinedGlobalAddr,
     const DenseMap<GlobalTypeMember *, uint64_t> &GlobalLayout) {
@@ -1143,7 +1195,6 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsNative(
   // arithmetic that we normally use for globals.
 
   // FIXME: find a better way to represent the jumptable in the IR.
-
   assert(!Functions.empty());
 
   // Build a simple layout based on the regular layout of jump tables.
@@ -1167,6 +1218,7 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsNative(
   // references to the original functions with references to the aliases.
   for (unsigned I = 0; I != Functions.size(); ++I) {
     Function *F = cast<Function>(Functions[I]->getGlobal());
+    bool IsDefinition = Functions[I]->isDefinition();
 
     Constant *CombinedGlobalElemPtr = ConstantExpr::getBitCast(
         ConstantExpr::getInBoundsGetElementPtr(
@@ -1174,7 +1226,18 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsNative(
             ArrayRef<Constant *>{ConstantInt::get(IntPtrTy, 0),
                                  ConstantInt::get(IntPtrTy, I)}),
         F->getType());
-    if (F->isDeclarationForLinker()) {
+    if (Functions[I]->isExported()) {
+      if (IsDefinition) {
+        ExportSummary->cfiFunctionDefs().insert(F->getName());
+      } else {
+        GlobalAlias *JtAlias = GlobalAlias::create(
+            F->getValueType(), 0, GlobalValue::ExternalLinkage,
+            F->getName() + ".cfi_jt", CombinedGlobalElemPtr, &M);
+        JtAlias->setVisibility(GlobalValue::HiddenVisibility);
+        ExportSummary->cfiFunctionDecls().insert(F->getName());
+      }
+    }
+    if (!IsDefinition) {
       if (F->isWeakForLinker())
         replaceWeakDeclarationWithJumpTablePtr(F, CombinedGlobalElemPtr);
       else
@@ -1182,9 +1245,8 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsNative(
     } else {
       assert(F->getType()->getAddressSpace() == 0);
 
-      GlobalAlias *FAlias = GlobalAlias::create(F->getValueType(), 0,
-                                                F->getLinkage(), "",
-                                                CombinedGlobalElemPtr, &M);
+      GlobalAlias *FAlias = GlobalAlias::create(
+          F->getValueType(), 0, F->getLinkage(), "", CombinedGlobalElemPtr, &M);
       FAlias->setVisibility(F->getVisibility());
       FAlias->takeName(F);
       if (FAlias->hasName())
@@ -1353,15 +1415,37 @@ bool LowerTypeTestsModule::runForTesting(Module &M) {
 bool LowerTypeTestsModule::lower() {
   Function *TypeTestFunc =
       M.getFunction(Intrinsic::getName(Intrinsic::type_test));
-  if ((!TypeTestFunc || TypeTestFunc->use_empty()) && !ExportSummary)
+  if ((!TypeTestFunc || TypeTestFunc->use_empty()) && !ExportSummary &&
+      !ImportSummary)
     return false;
 
   if (ImportSummary) {
-    for (auto UI = TypeTestFunc->use_begin(), UE = TypeTestFunc->use_end();
-         UI != UE;) {
-      auto *CI = cast<CallInst>((*UI++).getUser());
-      importTypeTest(CI);
+    if (TypeTestFunc) {
+      for (auto UI = TypeTestFunc->use_begin(), UE = TypeTestFunc->use_end();
+           UI != UE;) {
+        auto *CI = cast<CallInst>((*UI++).getUser());
+        importTypeTest(CI);
+      }
     }
+
+    SmallVector<Function *, 8> Defs;
+    SmallVector<Function *, 8> Decls;
+    for (auto &F : M) {
+      // CFI functions are either external, or promoted. A local function may
+      // have the same name, but it's not the one we are looking for.
+      if (F.hasLocalLinkage())
+        continue;
+      if (ImportSummary->cfiFunctionDefs().count(F.getName()))
+        Defs.push_back(&F);
+      else if (ImportSummary->cfiFunctionDecls().count(F.getName()))
+        Decls.push_back(&F);
+    }
+
+    for (auto F : Defs)
+      importFunction(F, /*isDefinition*/ true);
+    for (auto F : Decls)
+      importFunction(F, /*isDefinition*/ false);
+
     return true;
   }
 
@@ -1387,6 +1471,58 @@ bool LowerTypeTestsModule::lower() {
   llvm::DenseMap<Metadata *, TIInfo> TypeIdInfo;
   unsigned I = 0;
   SmallVector<MDNode *, 2> Types;
+
+  struct ExportedFunctionInfo {
+    CfiFunctionLinkage Linkage;
+    MDNode *FuncMD; // {name, linkage, type[, type...]}
+  };
+  DenseMap<StringRef, ExportedFunctionInfo> ExportedFunctions;
+  if (ExportSummary) {
+    NamedMDNode *CfiFunctionsMD = M.getNamedMetadata("cfi.functions");
+    if (CfiFunctionsMD) {
+      for (auto FuncMD : CfiFunctionsMD->operands()) {
+        assert(FuncMD->getNumOperands() >= 2);
+        StringRef FunctionName =
+            cast<MDString>(FuncMD->getOperand(0))->getString();
+        if (!ExportSummary->isGUIDLive(GlobalValue::getGUID(
+                GlobalValue::dropLLVMManglingEscape(FunctionName))))
+          continue;
+        CfiFunctionLinkage Linkage = static_cast<CfiFunctionLinkage>(
+            cast<ConstantAsMetadata>(FuncMD->getOperand(1))
+                ->getValue()
+                ->getUniqueInteger()
+                .getZExtValue());
+        auto P = ExportedFunctions.insert({FunctionName, {Linkage, FuncMD}});
+        if (!P.second && P.first->second.Linkage != CFL_Definition)
+          P.first->second = {Linkage, FuncMD};
+      }
+
+      for (const auto &P : ExportedFunctions) {
+        StringRef FunctionName = P.first;
+        CfiFunctionLinkage Linkage = P.second.Linkage;
+        MDNode *FuncMD = P.second.FuncMD;
+        Function *F = M.getFunction(FunctionName);
+        if (!F)
+          F = Function::Create(
+              FunctionType::get(Type::getVoidTy(M.getContext()), false),
+              GlobalVariable::ExternalLinkage, FunctionName, &M);
+
+        if (Linkage == CFL_Definition)
+          F->eraseMetadata(LLVMContext::MD_type);
+
+        if (F->isDeclaration()) {
+          if (Linkage == CFL_WeakDeclaration)
+            F->setLinkage(GlobalValue::ExternalWeakLinkage);
+
+          SmallVector<MDNode *, 2> Types;
+          for (unsigned I = 2; I < FuncMD->getNumOperands(); ++I)
+            F->addMetadata(LLVMContext::MD_type,
+                           *cast<MDNode>(FuncMD->getOperand(I).get()));
+        }
+      }
+    }
+  }
+
   for (GlobalObject &GO : M.global_objects()) {
     if (isa<GlobalVariable>(GO) && GO.isDeclarationForLinker())
       continue;
@@ -1396,7 +1532,15 @@ bool LowerTypeTestsModule::lower() {
     if (Types.empty())
       continue;
 
-    auto *GTM = GlobalTypeMember::create(Alloc, &GO, Types);
+    bool IsDefinition = !GO.isDeclarationForLinker();
+    bool IsExported = false;
+    if (isa<Function>(GO) && ExportedFunctions.count(GO.getName())) {
+      IsDefinition |= ExportedFunctions[GO.getName()].Linkage == CFL_Definition;
+      IsExported = true;
+    }
+
+    auto *GTM =
+        GlobalTypeMember::create(Alloc, &GO, IsDefinition, IsExported, Types);
     for (MDNode *Type : Types) {
       verifyTypeMDNode(&GO, Type);
       auto &Info = TypeIdInfo[cast<MDNode>(Type)->getOperand(1)];

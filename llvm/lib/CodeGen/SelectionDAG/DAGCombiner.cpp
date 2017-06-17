@@ -2549,14 +2549,14 @@ SDValue DAGCombiner::visitMUL(SDNode *N) {
      !DAG.isConstantIntBuildVectorOrConstantInt(N1))
     return DAG.getNode(ISD::MUL, SDLoc(N), VT, N1, N0);
   // fold (mul x, 0) -> 0
-  if (N1IsConst && ConstValue1 == 0)
+  if (N1IsConst && ConstValue1.isNullValue())
     return N1;
   // We require a splat of the entire scalar bit width for non-contiguous
   // bit patterns.
   bool IsFullSplat =
     ConstValue1.getBitWidth() == VT.getScalarSizeInBits();
   // fold (mul x, 1) -> x
-  if (N1IsConst && ConstValue1 == 1 && IsFullSplat)
+  if (N1IsConst && ConstValue1.isOneValue() && IsFullSplat)
     return N0;
 
   if (SDValue NewSel = foldBinOpIntoSelect(N))
@@ -3685,7 +3685,7 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
   // fold (and (or x, C), D) -> D if (C & D) == D
   if (N1C && N0.getOpcode() == ISD::OR)
     if (ConstantSDNode *ORI = isConstOrConstSplat(N0.getOperand(1)))
-      if ((ORI->getAPIntValue() & N1C->getAPIntValue()) == N1C->getAPIntValue())
+      if (N1C->getAPIntValue().isSubsetOf(ORI->getAPIntValue()))
         return N1;
   // fold (and (any_ext V), c) -> (zero_ext V) if 'and' only clears top bits.
   if (N1C && N0.getOpcode() == ISD::ANY_EXTEND) {
@@ -12873,6 +12873,9 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
       if (Ld->isVolatile() || Ld->isIndexed())
         break;
 
+      // We do not accept ext loads.
+      if (Ld->getExtensionType() != ISD::NON_EXTLOAD)
+        break;
 
       // The stored memory type must be the same.
       if (Ld->getMemoryVT() != MemVT)
@@ -13009,31 +13012,17 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
 
     // The merged loads are required to have the same incoming chain, so
     // using the first's chain is acceptable.
+    SDValue NewLoad = DAG.getLoad(JointMemOpVT, LoadDL, FirstLoad->getChain(),
+                                  FirstLoad->getBasePtr(),
+                                  FirstLoad->getPointerInfo(), FirstLoadAlign);
 
     SDValue NewStoreChain = getMergeStoreChains(StoreNodes, NumElem);
+
     AddToWorklist(NewStoreChain.getNode());
 
-    SDValue NewLoad, NewStore;
-    if (TLI.isTypeLegal(JointMemOpVT)) {
-      NewLoad = DAG.getLoad(JointMemOpVT, LoadDL, FirstLoad->getChain(),
-                            FirstLoad->getBasePtr(),
-                            FirstLoad->getPointerInfo(), FirstLoadAlign);
-      NewStore = DAG.getStore(NewStoreChain, StoreDL, NewLoad,
-                              FirstInChain->getBasePtr(),
-                              FirstInChain->getPointerInfo(), FirstStoreAlign);
-    } else { // This must be the truncstore/extload case
-      EVT ExtendedTy =
-          TLI.getTypeToTransformTo(*DAG.getContext(), JointMemOpVT);
-      NewLoad = DAG.getExtLoad(ISD::EXTLOAD, LoadDL, ExtendedTy,
-                               FirstLoad->getChain(), FirstLoad->getBasePtr(),
-                               FirstLoad->getPointerInfo(), JointMemOpVT,
-                               FirstLoadAlign);
-      NewStore = DAG.getTruncStore(NewStoreChain, StoreDL, NewLoad,
-                                   FirstInChain->getBasePtr(),
-                                   FirstInChain->getPointerInfo(), JointMemOpVT,
-                                   FirstInChain->getAlignment(),
-                                   FirstInChain->getMemOperand()->getFlags());
-    }
+    SDValue NewStore = DAG.getStore(
+        NewStoreChain, StoreDL, NewLoad, FirstInChain->getBasePtr(),
+        FirstInChain->getPointerInfo(), FirstStoreAlign);
 
     // Transfer chain users from old loads to the new load.
     for (unsigned i = 0; i < NumElem; ++i) {

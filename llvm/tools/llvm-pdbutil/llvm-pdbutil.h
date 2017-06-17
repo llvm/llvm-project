@@ -102,12 +102,21 @@ extern llvm::cl::opt<bool> DumpSummary;
 extern llvm::cl::opt<bool> DumpStreams;
 extern llvm::Optional<BlockRange> DumpBlockRange;
 extern llvm::cl::list<std::string> DumpStreamData;
+
+extern llvm::cl::opt<bool> DumpLines;
+extern llvm::cl::opt<bool> DumpInlineeLines;
+extern llvm::cl::opt<bool> DumpXmi;
+extern llvm::cl::opt<bool> DumpXme;
 extern llvm::cl::opt<bool> DumpStringTable;
 extern llvm::cl::opt<bool> DumpTypes;
 extern llvm::cl::opt<bool> DumpTypeData;
-extern llvm::cl::opt<bool> DumpTypeHashes;
+extern llvm::cl::opt<bool> DumpTypeExtras;
+extern llvm::cl::list<uint32_t> DumpTypeIndex;
+
 extern llvm::cl::opt<bool> DumpIds;
 extern llvm::cl::opt<bool> DumpIdData;
+extern llvm::cl::opt<bool> DumpIdExtras;
+extern llvm::cl::list<uint32_t> DumpIdIndex;
 extern llvm::cl::opt<bool> DumpSymbols;
 extern llvm::cl::opt<bool> DumpSymRecordBytes;
 extern llvm::cl::opt<bool> DumpPublics;

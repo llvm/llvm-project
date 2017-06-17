@@ -1,4 +1,4 @@
-# REQUIRES: winres
+# REQUIRES: win_mt
 
 # RUN: yaml2obj %p/Inputs/ret42.yaml > %t.obj
 # RUN: lld-link /out:%t.exe /entry:main \

@@ -905,7 +905,6 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     Config->TerminalServerAware = false;
   if (Args.hasArg(OPT_nosymtab))
     Config->WriteSymtab = false;
-  Config->DumpPdb = Args.hasArg(OPT_dumppdb);
 
   Config->MapFile = getMapFile(Args);
 
@@ -936,9 +935,9 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     Config->Machine = AMD64;
   }
 
-  // Windows specific -- Input files can be Windows resource files (.res files).
-  // We invoke cvtres.exe to convert resource files to a regular COFF file
-  // then link the result file normally.
+  // Input files can be Windows resource files (.res files). We use
+  // WindowsResource to convert resource files to a regular COFF file,
+  // then link the resulting file normally.
   if (!Resources.empty())
     addBuffer(convertResToCOFF(Resources));
 

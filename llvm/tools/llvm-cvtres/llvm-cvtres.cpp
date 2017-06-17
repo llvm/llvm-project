@@ -12,8 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm-cvtres.h"
-
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/WindowsResource.h"
@@ -28,6 +26,8 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
+
+#include <system_error>
 
 using namespace llvm;
 using namespace object;
@@ -114,21 +114,21 @@ int main(int argc_, const char *argv_[]) {
 
   bool Verbose = InputArgs.hasArg(OPT_VERBOSE);
 
-  Machine MachineType;
+  COFF::MachineTypes MachineType;
 
   if (InputArgs.hasArg(OPT_MACHINE)) {
     std::string MachineString = InputArgs.getLastArgValue(OPT_MACHINE).upper();
-    MachineType = StringSwitch<Machine>(MachineString)
-                      .Case("ARM", Machine::ARM)
-                      .Case("X64", Machine::X64)
-                      .Case("X86", Machine::X86)
-                      .Default(Machine::UNKNOWN);
-    if (MachineType == Machine::UNKNOWN)
+    MachineType = StringSwitch<COFF::MachineTypes>(MachineString)
+                      .Case("ARM", COFF::IMAGE_FILE_MACHINE_ARMNT)
+                      .Case("X64", COFF::IMAGE_FILE_MACHINE_AMD64)
+                      .Case("X86", COFF::IMAGE_FILE_MACHINE_I386)
+                      .Default(COFF::IMAGE_FILE_MACHINE_UNKNOWN);
+    if (MachineType == COFF::IMAGE_FILE_MACHINE_UNKNOWN)
       reportError("Unsupported machine architecture");
   } else {
     if (Verbose)
       outs() << "Machine architecture not specified; assumed X64.\n";
-    MachineType = Machine::X64;
+    MachineType = COFF::IMAGE_FILE_MACHINE_AMD64;
   }
 
   std::vector<std::string> InputFiles = InputArgs.getAllArgValues(OPT_INPUT);
@@ -142,17 +142,17 @@ int main(int argc_, const char *argv_[]) {
   if (InputArgs.hasArg(OPT_OUT)) {
     OutputFile = InputArgs.getLastArgValue(OPT_OUT);
   } else {
-    OutputFile = llvm::sys::path::filename(StringRef(InputFiles[0]));
-    llvm::sys::path::replace_extension(OutputFile, ".obj");
+    OutputFile = sys::path::filename(StringRef(InputFiles[0]));
+    sys::path::replace_extension(OutputFile, ".obj");
   }
 
   if (Verbose) {
     outs() << "Machine: ";
     switch (MachineType) {
-    case Machine::ARM:
+    case COFF::IMAGE_FILE_MACHINE_ARMNT:
       outs() << "ARM\n";
       break;
-    case Machine::X86:
+    case COFF::IMAGE_FILE_MACHINE_I386:
       outs() << "X86\n";
       break;
     default:
@@ -163,8 +163,7 @@ int main(int argc_, const char *argv_[]) {
   WindowsResourceParser Parser;
 
   for (const auto &File : InputFiles) {
-    Expected<object::OwningBinary<object::Binary>> BinaryOrErr =
-        object::createBinary(File);
+    Expected<OwningBinary<Binary>> BinaryOrErr = createBinary(File);
     if (!BinaryOrErr)
       reportError(File, errorToErrorCode(BinaryOrErr.takeError()));
 
@@ -193,15 +192,22 @@ int main(int argc_, const char *argv_[]) {
 
   if (Verbose) {
     Parser.printTree(outs());
-    Parser.printTree(errs());
   }
 
-  error(
-      llvm::object::writeWindowsResourceCOFF(OutputFile, MachineType, Parser));
+  std::unique_ptr<MemoryBuffer> OutputBuffer;
+  error(llvm::object::writeWindowsResourceCOFF(OutputBuffer, MachineType,
+                                               Parser));
+  auto FileOrErr =
+      FileOutputBuffer::create(OutputFile, OutputBuffer->getBufferSize());
+  if (!FileOrErr)
+    reportError(OutputFile, FileOrErr.getError());
+  std::unique_ptr<FileOutputBuffer> FileBuffer = std::move(*FileOrErr);
+  std::copy(OutputBuffer->getBufferStart(), OutputBuffer->getBufferEnd(),
+            FileBuffer->getBufferStart());
+  error(FileBuffer->commit());
 
   if (Verbose) {
-    Expected<object::OwningBinary<object::Binary>> BinaryOrErr =
-        object::createBinary(OutputFile);
+    Expected<OwningBinary<Binary>> BinaryOrErr = createBinary(OutputFile);
     if (!BinaryOrErr)
       reportError(OutputFile, errorToErrorCode(BinaryOrErr.takeError()));
     Binary &Binary = *BinaryOrErr.get().getBinary();

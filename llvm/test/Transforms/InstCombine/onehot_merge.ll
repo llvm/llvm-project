@@ -73,12 +73,10 @@ define i1 @foo1_or(i32 %k, i32 %c1, i32 %c2) {
 ; CHECK-LABEL: @foo1_or(
 ; CHECK-NEXT:    [[TMP:%.*]] = shl i32 1, [[C1:%.*]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = lshr i32 -2147483648, [[C2:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[TMP]], [[K:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i32 [[TMP1]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = and i32 [[TMP4]], [[K]]
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne i32 [[TMP5]], 0
-; CHECK-NEXT:    [[OR:%.*]] = and i1 [[TMP2]], [[TMP6]]
-; CHECK-NEXT:    ret i1 [[OR]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[TMP]], [[TMP4]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[K:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[TMP3]]
 ;
   %tmp = shl i32 1, %c1
   %tmp4 = lshr i32 -2147483648, %c2
@@ -96,12 +94,10 @@ define i1 @foo1_or_commuted(i32 %k, i32 %c1, i32 %c2) {
 ; CHECK-NEXT:    [[K2:%.*]] = mul i32 [[K:%.*]], [[K]]
 ; CHECK-NEXT:    [[TMP:%.*]] = shl i32 1, [[C1:%.*]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = lshr i32 -2147483648, [[C2:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[K2]], [[TMP]]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i32 [[TMP1]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = and i32 [[TMP4]], [[K2]]
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne i32 [[TMP5]], 0
-; CHECK-NEXT:    [[OR:%.*]] = and i1 [[TMP2]], [[TMP6]]
-; CHECK-NEXT:    ret i1 [[OR]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[TMP]], [[TMP4]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[K2]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[TMP3]]
 ;
   %k2 = mul i32 %k, %k ; to trick the complexity sorting
   %tmp = shl i32 1, %c1

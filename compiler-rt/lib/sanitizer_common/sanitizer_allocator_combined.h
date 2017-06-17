@@ -42,8 +42,7 @@ class CombinedAllocator {
     InitCommon(may_return_null, release_to_os_interval_ms);
   }
 
-  void *Allocate(AllocatorCache *cache, uptr size, uptr alignment,
-                 bool cleared = false) {
+  void *Allocate(AllocatorCache *cache, uptr size, uptr alignment) {
     // Returning 0 on malloc(0) may break a lot of code.
     if (size == 0)
       size = 1;
@@ -70,11 +69,6 @@ class CombinedAllocator {
       res = secondary_.Allocate(&stats_, original_size, alignment);
     if (alignment > 8)
       CHECK_EQ(reinterpret_cast<uptr>(res) & (alignment - 1), 0);
-    // When serviced by the secondary, the chunk comes from a mmap allocation
-    // and will be zero'd out anyway. We only need to clear our the chunk if
-    // it was serviced by the primary, hence using the rounded up 'size'.
-    if (cleared && res && from_primary)
-      internal_bzero_aligned16(res, RoundUpTo(size, 16));
     return res;
   }
 

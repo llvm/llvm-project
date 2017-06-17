@@ -486,7 +486,8 @@ struct S12 {
 };
 #else
 S12 s12;
-// TODO: This should produce an error.
+// expected-error@second.h:* {{'Method::S12' has different definitions in different modules; first difference is definition in module 'SecondModule' found method 'A' with 1st parameter without a default argument}}
+// expected-note@first.h:* {{but in 'FirstModule' found method 'A' with 1st parameter with a default argument}}
 #endif
 
 #if defined(FIRST)
@@ -499,7 +500,8 @@ struct S13 {
 };
 #else
 S13 s13;
-// TODO: This should produce an error.
+// expected-error@second.h:* {{'Method::S13' has different definitions in different modules; first difference is definition in module 'SecondModule' found method 'A' with 1st parameter with a default argument}}
+// expected-note@first.h:* {{but in 'FirstModule' found method 'A' with 1st parameter with a different default argument}}
 #endif
 
 #if defined(FIRST)
@@ -1109,6 +1111,179 @@ using TemplateTypeParmType::S2;
 // expected-note@second.h:* {{declaration of 'x' does not match}}
 // expected-error@first.h:* {{'TemplateTypeParmType::S2::type' from module 'FirstModule' is not present in definition of 'S2<T, U>' in module 'SecondModule'}}
 // expected-note@second.h:* {{declaration of 'type' does not match}}
+#endif
+}
+
+namespace VarDecl {
+#if defined(FIRST)
+struct S1 {
+  static int x;
+  static int y;
+};
+#elif defined(SECOND)
+struct S1 {
+  static int y;
+  static int x;
+};
+#else
+S1 s1;
+// expected-error@second.h:* {{'VarDecl::S1' has different definitions in different modules; first difference is definition in module 'SecondModule' found data member with name 'y'}}
+// expected-note@first.h:* {{but in 'FirstModule' found data member with name 'x'}}
+#endif
+
+#if defined(FIRST)
+struct S2 {
+  static int x;
+};
+#elif defined(SECOND)
+using I = int;
+struct S2 {
+  static I x;
+};
+#else
+S2 s2;
+// expected-error@second.h:* {{'VarDecl::S2' has different definitions in different modules; first difference is definition in module 'SecondModule' found data member 'x' with type 'VarDecl::I' (aka 'int')}}
+// expected-note@first.h:* {{but in 'FirstModule' found data member 'x' with different type 'int'}}
+#endif
+
+#if defined(FIRST)
+struct S3 {
+  static const int x = 1;
+};
+#elif defined(SECOND)
+struct S3 {
+  static const int x;
+};
+#else
+S3 s3;
+// expected-error@second.h:* {{'VarDecl::S3' has different definitions in different modules; first difference is definition in module 'SecondModule' found data member 'x' with an initializer}}
+// expected-note@first.h:* {{but in 'FirstModule' found data member 'x' without an initializer}}
+#endif
+
+#if defined(FIRST)
+struct S4 {
+  static const int x = 1;
+};
+#elif defined(SECOND)
+struct S4 {
+  static const int x = 2;
+};
+#else
+S4 s4;
+// expected-error@second.h:* {{'VarDecl::S4' has different definitions in different modules; first difference is definition in module 'SecondModule' found data member 'x' with an initializer}}
+// expected-note@first.h:* {{but in 'FirstModule' found data member 'x' with a different initializer}}
+#endif
+
+#if defined(FIRST)
+struct S5 {
+  static const int x = 1;
+};
+#elif defined(SECOND)
+struct S5 {
+  static constexpr int x = 1;
+};
+#else
+S5 s5;
+// expected-error@second.h:* {{'VarDecl::S5' has different definitions in different modules; first difference is definition in module 'SecondModule' found data member 'x' is not constexpr}}
+// expected-note@first.h:* {{but in 'FirstModule' found data member 'x' is constexpr}}
+#endif
+
+#if defined(FIRST)
+struct S6 {
+  static const int x = 1;
+};
+#elif defined(SECOND)
+struct S6 {
+  static const int y = 1;
+};
+#else
+S6 s6;
+// expected-error@first.h:* {{'VarDecl::S6::x' from module 'FirstModule' is not present in definition of 'VarDecl::S6' in module 'SecondModule'}}
+// expected-note@second.h:* {{definition has no member 'x'}}
+#endif
+
+#if defined(FIRST)
+struct S7 {
+  static const int x = 1;
+};
+#elif defined(SECOND)
+struct S7 {
+  static const unsigned x = 1;
+};
+#else
+S7 s7;
+// expected-error@first.h:* {{'VarDecl::S7::x' from module 'FirstModule' is not present in definition of 'VarDecl::S7' in module 'SecondModule'}}
+// expected-note@second.h:* {{declaration of 'x' does not match}}
+#endif
+
+#if defined(FIRST)
+struct S8 {
+public:
+  static const int x = 1;
+};
+#elif defined(SECOND)
+struct S8 {
+  static const int x = 1;
+public:
+};
+#else
+S8 s8;
+// expected-error@second.h:* {{'VarDecl::S8' has different definitions in different modules; first difference is definition in module 'SecondModule' found data member}}
+// expected-note@first.h:* {{but in 'FirstModule' found public access specifier}}
+#endif
+
+#if defined(FIRST)
+struct S9 {
+  static const int x = 1;
+};
+#elif defined(SECOND)
+struct S9 {
+  static int x;
+};
+#else
+S9 s9;
+// expected-error@first.h:* {{'VarDecl::S9::x' from module 'FirstModule' is not present in definition of 'VarDecl::S9' in module 'SecondModule'}}
+// expected-note@second.h:* {{declaration of 'x' does not match}}
+#endif
+
+#if defined(FIRST)
+template <typename T>
+struct S {
+  struct R {
+    void foo(T x = 0) {}
+  };
+};
+#elif defined(SECOND)
+template <typename T>
+struct S {
+  struct R {
+    void foo(T x = 1) {}
+  };
+};
+#else
+void run() {
+  S<int>::R().foo();
+}
+// expected-error@second.h:* {{'VarDecl::S::R' has different definitions in different modules; first difference is definition in module 'SecondModule' found method 'foo' with 1st parameter with a default argument}}
+// expected-note@first.h:* {{but in 'FirstModule' found method 'foo' with 1st parameter with a different default argument}}
+#endif
+
+#if defined(FIRST)
+template <typename alpha> struct Bravo {
+  void charlie(bool delta = false) {}
+};
+typedef Bravo<char> echo;
+echo foxtrot;
+#elif defined(SECOND)
+template <typename alpha> struct Bravo {
+  void charlie(bool delta = (false)) {}
+};
+typedef Bravo<char> echo;
+echo foxtrot;
+#else
+Bravo<char> golf;
+// expected-error@second.h:* {{'VarDecl::Bravo' has different definitions in different modules; first difference is definition in module 'SecondModule' found method 'charlie' with 1st parameter with a default argument}}
+// expected-note@first.h:* {{but in 'FirstModule' found method 'charlie' with 1st parameter with a different default argument}}
 #endif
 }
 

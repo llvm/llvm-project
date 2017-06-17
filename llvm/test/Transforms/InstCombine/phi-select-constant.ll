@@ -55,3 +55,32 @@ final:
  %sel = select <4 x i1> %phinode, <4 x i64> zeroinitializer, <4 x i64> <i64 124, i64 125, i64 126, i64 127>
  ret <4 x i64> %sel
 }
+
+; Test PR33364
+; Insert the generated select into the same block as the incoming phi value.
+; phi has constant vectors along with a single non-constant vector as operands.
+define <2 x i8> @vec3(i1 %cond1, i1 %cond2, <2 x i1> %x, <2 x i8> %y, <2 x i8> %z) {
+; CHECK-LABEL: @vec3
+; CHECK-LABEL: entry:
+; CHECK-NEXT: [[PHITMP1:%.*]] = shufflevector <2 x i8> %y, <2 x i8> %z, <2 x i32> <i32 2, i32 1>
+entry:
+  br i1 %cond1, label %if1, label %else
+
+; CHECK-LABEL: if1:
+; CHECK-NEXT: [[PHITMP2:%.*]] = shufflevector <2 x i8> %y, <2 x i8> %z, <2 x i32> <i32 0, i32 3>
+if1:
+  br i1 %cond2, label %if2, label %else
+
+; CHECK-LABEL: if2:
+; CHECK-NEXT: [[PHITMP3:%.*]] = select <2 x i1> %x, <2 x i8> %y, <2 x i8> %z
+if2:
+  br label %else
+
+; CHECK-LABEL: else:
+; CHECK-NEXT: [[PHITMP4:%.*]] = phi <2 x i8> [ [[PHITMP3]], %if2 ], [ [[PHITMP1]], %entry ], [ [[PHITMP2]], %if1 ]
+; CHECK-NEXT: ret <2 x i8> [[PHITMP4]]
+else:
+  %phi = phi <2 x i1> [ %x, %if2 ], [ <i1 0, i1 1>, %entry ], [ <i1 1, i1 0>, %if1 ]
+  %sel = select <2 x i1> %phi, <2 x i8> %y, <2 x i8> %z
+  ret <2 x i8> %sel
+}

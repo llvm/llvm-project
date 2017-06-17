@@ -32,6 +32,7 @@
 #include <cstdint>
 #include <map>
 #include <memory>
+#include <set>
 #include <string>
 #include <utility>
 #include <vector>
@@ -542,6 +543,9 @@ private:
   /// considered live.
   bool WithGlobalValueDeadStripping = false;
 
+  std::set<std::string> CfiFunctionDefs;
+  std::set<std::string> CfiFunctionDecls;
+
   // YAML I/O support.
   friend yaml::MappingTraits<ModuleSummaryIndex>;
 
@@ -592,6 +596,12 @@ public:
     const auto I = OidGuidMap.find(OriginalID);
     return I == OidGuidMap.end() ? 0 : I->second;
   }
+
+  std::set<std::string> &cfiFunctionDefs() { return CfiFunctionDefs; }
+  const std::set<std::string> &cfiFunctionDefs() const { return CfiFunctionDefs; }
+
+  std::set<std::string> &cfiFunctionDecls() { return CfiFunctionDecls; }
+  const std::set<std::string> &cfiFunctionDecls() const { return CfiFunctionDecls; }
 
   /// Add a global value summary for a value of the given name.
   void addGlobalValueSummary(StringRef ValueName,

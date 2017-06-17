@@ -681,6 +681,53 @@ def skipUnlessThreadSanitizer(func):
         return None
     return skipTestIfFn(is_compiler_clang_with_thread_sanitizer)(func)
 
+def skipUnlessUndefinedBehaviorSanitizer(func):
+    """Decorate the item to skip test unless -fsanitize=undefined is supported."""
+
+    def is_compiler_clang_with_ubsan(self):
+        # Write out a temp file which exhibits UB.
+        inputf = tempfile.NamedTemporaryFile(suffix='.c')
+        inputf.write('int main() { int x = 0; return x / x; }\n')
+        inputf.flush()
+
+        # We need to write out the object into a named temp file for inspection.
+        outputf = tempfile.NamedTemporaryFile()
+
+        # Try to compile with ubsan turned on.
+        cmd = '%s -fsanitize=undefined %s -o %s' % (self.getCompiler(), inputf.name, outputf.name)
+        if os.popen(cmd).close() is not None:
+            return "Compiler cannot compile with -fsanitize=undefined"
+
+        # Check that we actually see ubsan instrumentation in the binary.
+        cmd = 'nm %s' % outputf.name
+        with os.popen(cmd) as nm_output:
+            if '___ubsan_handle_divrem_overflow' not in nm_output.read():
+                return "Division by zero instrumentation is missing"
+
+        # Find the ubsan dylib.
+        # FIXME: This check should go away once compiler-rt gains support for __ubsan_on_report.
+        cmd = '%s -fsanitize=undefined -x c - -o - -### 2>&1' % self.getCompiler()
+        with os.popen(cmd) as cc_output:
+            driver_jobs = cc_output.read()
+            m = re.search(r'"([^"]+libclang_rt.ubsan_osx_dynamic.dylib)"', driver_jobs)
+            if not m:
+                return "Could not find the ubsan dylib used by the driver"
+            ubsan_dylib = m.group(1)
+
+        # Check that the ubsan dylib has special monitor hooks.
+        cmd = 'nm -gU %s' % ubsan_dylib
+        with os.popen(cmd) as nm_output:
+            syms = nm_output.read()
+            if '___ubsan_on_report' not in syms:
+                return "Missing ___ubsan_on_report"
+            if '___ubsan_get_current_report_data' not in syms:
+                return "Missing ___ubsan_get_current_report_data"
+
+        # OK, this dylib + compiler works for us.
+        return None
+
+    return skipTestIfFn(is_compiler_clang_with_ubsan)(func)
+
 def skipUnlessAddressSanitizer(func):
     """Decorate the item to skip test unless Clang -fsanitize=thread is supported."""
 
