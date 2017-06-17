@@ -134,18 +134,17 @@ CreateMemCpy(Value *Dst, Value *Src, Value *Size, unsigned Align,
   return CI;  
 }
 
-CallInst *IRBuilderBase::CreateElementAtomicMemCpy(
-    Value *Dst, Value *Src, Value *NumElements, uint32_t ElementSize,
-    MDNode *TBAATag, MDNode *TBAAStructTag, MDNode *ScopeTag,
-    MDNode *NoAliasTag) {
+CallInst *IRBuilderBase::CreateElementUnorderedAtomicMemCpy(
+    Value *Dst, Value *Src, Value *Size, uint32_t ElementSize, MDNode *TBAATag,
+    MDNode *TBAAStructTag, MDNode *ScopeTag, MDNode *NoAliasTag) {
   Dst = getCastedInt8PtrValue(Dst);
   Src = getCastedInt8PtrValue(Src);
 
-  Value *Ops[] = {Dst, Src, NumElements, getInt32(ElementSize)};
-  Type *Tys[] = {Dst->getType(), Src->getType()};
+  Value *Ops[] = {Dst, Src, Size, getInt32(ElementSize)};
+  Type *Tys[] = {Dst->getType(), Src->getType(), Size->getType()};
   Module *M = BB->getParent()->getParent();
-  Value *TheFn =
-      Intrinsic::getDeclaration(M, Intrinsic::memcpy_element_atomic, Tys);
+  Value *TheFn = Intrinsic::getDeclaration(
+      M, Intrinsic::memcpy_element_unordered_atomic, Tys);
 
   CallInst *CI = createCallHelper(TheFn, Ops, this);
 

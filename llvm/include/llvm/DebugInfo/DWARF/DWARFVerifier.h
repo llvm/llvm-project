@@ -30,9 +30,9 @@ class DWARFVerifier {
   /// can verify each reference points to a valid DIE and not an offset that
   /// lies between to valid DIEs.
   std::map<uint64_t, std::set<uint32_t>> ReferenceToDIEOffsets;
-  uint32_t NumDebugInfoErrors;
-  uint32_t NumDebugLineErrors;
-  uint32_t NumAppleNamesErrors;
+  uint32_t NumDebugInfoErrors = 0;
+  uint32_t NumDebugLineErrors = 0;
+  uint32_t NumAppleNamesErrors = 0;
 
   /// Verifies the attribute's DWARF attribute and its value.
   ///
@@ -77,8 +77,7 @@ class DWARFVerifier {
 
 public:
   DWARFVerifier(raw_ostream &S, DWARFContext &D)
-      : OS(S), DCtx(D), NumDebugInfoErrors(0), NumDebugLineErrors(0),
-        NumAppleNamesErrors(0) {}
+      : OS(S), DCtx(D) {}
   /// Verify the information in the .debug_info section.
   ///
   /// Any errors are reported to the stream that was this object was

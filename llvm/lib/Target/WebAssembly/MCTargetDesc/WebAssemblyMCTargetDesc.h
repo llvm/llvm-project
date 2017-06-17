@@ -35,8 +35,7 @@ class raw_pwrite_stream;
 Target &getTheWebAssemblyTarget32();
 Target &getTheWebAssemblyTarget64();
 
-MCCodeEmitter *createWebAssemblyMCCodeEmitter(const MCInstrInfo &MCII,
-                                              MCContext &Ctx);
+MCCodeEmitter *createWebAssemblyMCCodeEmitter(const MCInstrInfo &MCII);
 
 MCAsmBackend *createWebAssemblyAsmBackend(const Triple &TT);
 

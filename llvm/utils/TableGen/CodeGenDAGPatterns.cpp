@@ -3808,9 +3808,7 @@ void CodeGenDAGPatterns::GenerateVariants() {
                        DepVars);
 
     assert(!Variants.empty() && "Must create at least original variant!");
-    Variants.erase(Variants.begin());  // Remove the original pattern.
-
-    if (Variants.empty())  // No variants for this pattern.
+    if (Variants.size() == 1)  // No additional variants for this pattern.
       continue;
 
     DEBUG(errs() << "FOUND VARIANTS OF: ";

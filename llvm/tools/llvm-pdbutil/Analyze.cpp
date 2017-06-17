@@ -12,10 +12,8 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
-#include "llvm/DebugInfo/CodeView/TypeDatabase.h"
-#include "llvm/DebugInfo/CodeView/TypeDatabaseVisitor.h"
+#include "llvm/DebugInfo/CodeView/LazyRandomTypeCollection.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
-#include "llvm/DebugInfo/CodeView/TypeVisitorCallbackPipeline.h"
 #include "llvm/DebugInfo/CodeView/TypeVisitorCallbacks.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Native/RawError.h"
@@ -73,16 +71,14 @@ Error AnalysisStyle::dump() {
   if (!Tpi)
     return Tpi.takeError();
 
-  TypeDatabase TypeDB(Tpi->getNumTypeRecords());
-  TypeDatabaseVisitor DBV(TypeDB);
-  TypeVisitorCallbackPipeline Pipeline;
   HashLookupVisitor Hasher(*Tpi);
-  // Add them to the database
-  Pipeline.addCallbackToPipeline(DBV);
-  // Store their hash values
-  Pipeline.addCallbackToPipeline(Hasher);
 
-  if (auto EC = codeview::visitTypeStream(Tpi->typeArray(), Pipeline))
+  uint32_t RecordCount = Tpi->getNumTypeRecords();
+  auto Offsets = Tpi->getTypeIndexOffsets();
+  auto Types = llvm::make_unique<LazyRandomTypeCollection>(
+      Tpi->typeArray(), RecordCount, Offsets);
+
+  if (auto EC = codeview::visitTypeStream(*Types, Hasher))
     return EC;
 
   auto &Adjusters = Tpi->getHashAdjusters();
@@ -109,7 +105,7 @@ Error AnalysisStyle::dump() {
       }
       StringRef LeafName = getLeafTypeName(R.Record.Type);
       uint32_t TI = R.TI.getIndex();
-      StringRef TypeName = TypeDB.getTypeName(R.TI);
+      StringRef TypeName = Types->getTypeName(R.TI);
       outs() << formatv("{0,-6} {1} ({2:x}) {3}\n", Prefix, LeafName, TI,
                         TypeName);
     }
@@ -119,8 +115,8 @@ Error AnalysisStyle::dump() {
   outs() << "Dumping hash adjustment chains\n";
   for (const auto &A : Tpi->getHashAdjusters()) {
     TypeIndex TI(A.second);
-    StringRef TypeName = TypeDB.getTypeName(TI);
-    const CVType &HeadRecord = TypeDB.getTypeRecord(TI);
+    StringRef TypeName = Types->getTypeName(TI);
+    const CVType &HeadRecord = Types->getType(TI);
     assert(HeadRecord.Hash.hasValue());
 
     auto CollisionsIter = Hasher.Lookup.find(*HeadRecord.Hash);
@@ -134,10 +130,10 @@ Error AnalysisStyle::dump() {
     for (const auto &Chain : Collisions) {
       if (Chain.TI == TI)
         continue;
-      const CVType &TailRecord = TypeDB.getTypeRecord(Chain.TI);
+      const CVType &TailRecord = Types->getType(Chain.TI);
       outs() << formatv("           {0:x} {1} {2}\n", Chain.TI.getIndex(),
                         getLeafTypeName(TailRecord.Type),
-                        TypeDB.getTypeName(Chain.TI));
+                        Types->getTypeName(Chain.TI));
     }
   }
   outs() << formatv("There are {0} orphaned hash adjusters\n",

@@ -279,7 +279,6 @@ bool DWARFVerifier::handleDebugLine() {
 
 bool DWARFVerifier::handleAppleNames() {
   NumAppleNamesErrors = 0;
-  OS << "Verifying .apple_names...\n";
 
   DataExtractor AppleNamesSection(DCtx.getAppleNamesSection().Data,
                                   DCtx.isLittleEndian(), 0);
@@ -288,9 +287,10 @@ bool DWARFVerifier::handleAppleNames() {
                                    DCtx.getAppleNamesSection().Relocs);
 
   if (!AppleNames.extract()) {
-    OS << "error: cannot extract .apple_names accelerator table\n";
-    return false;
+    return true;
   }
+
+  OS << "Verifying .apple_names...\n";
 
   // Verify that all buckets have a valid hash index or are empty
   uint32_t NumBuckets = AppleNames.getNumBuckets();

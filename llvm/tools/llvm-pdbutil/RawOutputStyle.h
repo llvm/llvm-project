@@ -15,7 +15,6 @@
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/DebugInfo/CodeView/TypeDatabase.h"
 
 #include <string>
 
@@ -34,8 +33,7 @@ public:
   Error dump() override;
 
 private:
-  Expected<codeview::LazyRandomTypeCollection &>
-  initializeTypeDatabase(uint32_t SN);
+  Expected<codeview::LazyRandomTypeCollection &> initializeTypes(uint32_t SN);
 
   Error dumpFileSummary();
   Error dumpStreamSummary();
