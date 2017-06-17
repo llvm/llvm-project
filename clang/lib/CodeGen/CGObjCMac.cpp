@@ -308,7 +308,7 @@ public:
     SmallVector<CanQualType,5> Params;
     Params.push_back(Ctx.VoidPtrTy);
     Params.push_back(Ctx.VoidPtrTy);
-    Params.push_back(Ctx.LongTy);
+    Params.push_back(Ctx.getSizeType());
     Params.push_back(Ctx.BoolTy);
     Params.push_back(Ctx.BoolTy);
     llvm::FunctionType *FTy =
