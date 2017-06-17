@@ -249,8 +249,12 @@ SymbolBody *ObjectFile::createDefined(COFFSymbolRef Sym, const void *AuxP,
     auto *Aux = reinterpret_cast<const coff_aux_section_definition *>(AuxP);
     if (Aux->Selection == IMAGE_COMDAT_SELECT_ASSOCIATIVE)
       if (auto *ParentSC = cast_or_null<SectionChunk>(
-              SparseChunks[Aux->getNumber(Sym.isBigObj())]))
+              SparseChunks[Aux->getNumber(Sym.isBigObj())])) {
         ParentSC->addAssociative(SC);
+        // If we already discarded the parent, discard the child.
+        if (ParentSC->isDiscarded())
+          SC->markDiscarded();
+      }
     SC->Checksum = Aux->CheckSum;
   }
 

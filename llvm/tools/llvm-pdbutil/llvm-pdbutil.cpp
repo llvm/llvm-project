@@ -306,6 +306,11 @@ cl::opt<bool> DumpTypeExtras("type-extras",
                              cl::desc("dump type hashes and index offsets"),
                              cl::cat(TypeOptions), cl::sub(RawSubcommand));
 
+cl::list<uint32_t> DumpTypeIndex(
+    "type-index", cl::ZeroOrMore,
+    cl::desc("only dump types with the specified hexadecimal type index"),
+    cl::cat(TypeOptions), cl::sub(RawSubcommand));
+
 cl::opt<bool> DumpIds("ids",
                       cl::desc("dump CodeView type records from IPI stream"),
                       cl::cat(TypeOptions), cl::sub(RawSubcommand));
@@ -317,6 +322,10 @@ cl::opt<bool>
 cl::opt<bool> DumpIdExtras("id-extras",
                            cl::desc("dump id hashes and index offsets"),
                            cl::cat(TypeOptions), cl::sub(RawSubcommand));
+cl::list<uint32_t> DumpIdIndex(
+    "id-index", cl::ZeroOrMore,
+    cl::desc("only dump ids with the specified hexadecimal type index"),
+    cl::cat(TypeOptions), cl::sub(RawSubcommand));
 
 // SYMBOL OPTIONS
 cl::opt<bool> DumpPublics("publics", cl::desc("dump Publics stream data"),

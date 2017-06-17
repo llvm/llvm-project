@@ -117,7 +117,7 @@ struct PartialInlinerImpl {
     void NormalizeReturnBlock();
 
     // Do function outlining:
-    Function *DoFunctionOutlining();
+    Function *doFunctionOutlining();
 
     Function *OrigFunc = nullptr;
     Function *ClonedFunc = nullptr;
@@ -735,7 +735,7 @@ void PartialInlinerImpl::FunctionCloner::NormalizeReturnBlock() {
     }
 }
 
-Function *PartialInlinerImpl::FunctionCloner::DoFunctionOutlining() {
+Function *PartialInlinerImpl::FunctionCloner::doFunctionOutlining() {
   // Returns true if the block is to be partial inlined into the caller
   // (i.e. not to be extracted to the out of line function)
   auto ToBeInlined = [&, this](BasicBlock *BB) {
@@ -821,7 +821,7 @@ Function *PartialInlinerImpl::unswitchFunction(Function *F) {
 
   FunctionCloner Cloner(F, OI.get());
   Cloner.NormalizeReturnBlock();
-  Function *OutlinedFunction = Cloner.DoFunctionOutlining();
+  Function *OutlinedFunction = Cloner.doFunctionOutlining();
 
   bool AnyInline = tryPartialInline(Cloner);
 

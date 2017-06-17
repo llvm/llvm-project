@@ -9,7 +9,6 @@
 
 #include "RawOutputStyle.h"
 
-#include "CompactTypeDumpVisitor.h"
 #include "FormatUtil.h"
 #include "MinimalSymbolDumper.h"
 #include "MinimalTypeDumper.h"
@@ -730,18 +729,23 @@ Error RawOutputStyle::dumpTpiStream(uint32_t StreamIdx) {
   bool DumpTypes = false;
   bool DumpBytes = false;
   bool DumpExtras = false;
+  std::vector<uint32_t> Indices;
   if (StreamIdx == StreamTPI) {
     printHeader(P, "Types (TPI Stream)");
     Present = File.hasPDBTpiStream();
     DumpTypes = opts::raw::DumpTypes;
     DumpBytes = opts::raw::DumpTypeData;
     DumpExtras = opts::raw::DumpTypeExtras;
+    Indices.assign(opts::raw::DumpTypeIndex.begin(),
+                   opts::raw::DumpTypeIndex.end());
   } else if (StreamIdx == StreamIPI) {
     printHeader(P, "Types (IPI Stream)");
     Present = File.hasPDBIpiStream();
     DumpTypes = opts::raw::DumpIds;
     DumpBytes = opts::raw::DumpIdData;
     DumpExtras = opts::raw::DumpIdExtras;
+    Indices.assign(opts::raw::DumpIdIndex.begin(),
+                   opts::raw::DumpIdIndex.end());
   }
 
   AutoIndent Indent(P);
@@ -755,7 +759,7 @@ Error RawOutputStyle::dumpTpiStream(uint32_t StreamIdx) {
   auto &Stream = Err((StreamIdx == StreamTPI) ? File.getPDBTpiStream()
                                               : File.getPDBIpiStream());
 
-  auto &Types = Err(initializeTypeDatabase(StreamIdx));
+  auto &Types = Err(initializeTypes(StreamIdx));
 
   if (DumpTypes) {
     P.formatLine("Showing {0:N} records", Stream.getNumTypeRecords());
@@ -765,10 +769,19 @@ Error RawOutputStyle::dumpTpiStream(uint32_t StreamIdx) {
     MinimalTypeDumpVisitor V(P, Width + 2, DumpBytes, DumpExtras, Types,
                              Stream.getHashValues());
 
-    Optional<TypeIndex> I = Types.getFirst();
-    if (auto EC = codeview::visitTypeStream(Types, V)) {
-      P.formatLine("An error occurred dumping type records: {0}",
-                   toString(std::move(EC)));
+    if (Indices.empty()) {
+      if (auto EC = codeview::visitTypeStream(Types, V)) {
+        P.formatLine("An error occurred dumping type records: {0}",
+                     toString(std::move(EC)));
+      }
+    } else {
+      for (const auto &I : Indices) {
+        TypeIndex TI(I);
+        CVType Type = Types.getType(TI);
+        if (auto EC = codeview::visitTypeRecord(Type, TI, V))
+          P.formatLine("An error occurred dumping type record {0}: {1}", TI,
+                       toString(std::move(EC)));
+      }
     }
   }
 
@@ -801,7 +814,7 @@ Error RawOutputStyle::dumpTpiStream(uint32_t StreamIdx) {
 }
 
 Expected<codeview::LazyRandomTypeCollection &>
-RawOutputStyle::initializeTypeDatabase(uint32_t SN) {
+RawOutputStyle::initializeTypes(uint32_t SN) {
   auto &TypeCollection = (SN == StreamTPI) ? TpiTypes : IpiTypes;
   auto Tpi =
       (SN == StreamTPI) ? File.getPDBTpiStream() : File.getPDBIpiStream();
@@ -832,7 +845,7 @@ Error RawOutputStyle::dumpModuleSyms() {
 
   auto &Stream = Err(File.getPDBDbiStream());
 
-  auto &Types = Err(initializeTypeDatabase(StreamTPI));
+  auto &Types = Err(initializeTypes(StreamTPI));
 
   const DbiModuleList &Modules = Stream.modules();
   uint32_t Count = Modules.getModuleCount();
@@ -884,7 +897,7 @@ Error RawOutputStyle::dumpPublics() {
 
   ExitOnError Err("Error dumping publics stream");
 
-  auto &Types = Err(initializeTypeDatabase(StreamTPI));
+  auto &Types = Err(initializeTypes(StreamTPI));
   auto &Publics = Err(File.getPDBPublicsStream());
   SymbolVisitorCallbackPipeline Pipeline;
   SymbolDeserializer Deserializer(nullptr, CodeViewContainer::Pdb);

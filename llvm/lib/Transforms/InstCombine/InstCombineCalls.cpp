@@ -94,75 +94,80 @@ static Constant *getNegativeIsTrueBoolVec(ConstantDataVector *V) {
   return ConstantVector::get(BoolVec);
 }
 
-Instruction *
-InstCombiner::SimplifyElementAtomicMemCpy(ElementAtomicMemCpyInst *AMI) {
+Instruction *InstCombiner::SimplifyElementUnorderedAtomicMemCpy(
+    ElementUnorderedAtomicMemCpyInst *AMI) {
   // Try to unfold this intrinsic into sequence of explicit atomic loads and
   // stores.
   // First check that number of elements is compile time constant.
-  auto *NumElementsCI = dyn_cast<ConstantInt>(AMI->getNumElements());
-  if (!NumElementsCI)
+  auto *LengthCI = dyn_cast<ConstantInt>(AMI->getLength());
+  if (!LengthCI)
     return nullptr;
 
   // Check that there are not too many elements.
-  uint64_t NumElements = NumElementsCI->getZExtValue();
+  uint64_t LengthInBytes = LengthCI->getZExtValue();
+  uint32_t ElementSizeInBytes = AMI->getElementSizeInBytes();
+  uint64_t NumElements = LengthInBytes / ElementSizeInBytes;
   if (NumElements >= UnfoldElementAtomicMemcpyMaxElements)
     return nullptr;
 
-  // Don't unfold into illegal integers
-  uint64_t ElementSizeInBytes = AMI->getElementSizeInBytes() * 8;
-  if (!getDataLayout().isLegalInteger(ElementSizeInBytes))
-    return nullptr;
+  // Only expand if there are elements to copy.
+  if (NumElements > 0) {
+    // Don't unfold into illegal integers
+    uint64_t ElementSizeInBits = ElementSizeInBytes * 8;
+    if (!getDataLayout().isLegalInteger(ElementSizeInBits))
+      return nullptr;
 
-  // Cast source and destination to the correct type. Intrinsic input arguments
-  // are usually represented as i8*.
-  // Often operands will be explicitly casted to i8* and we can just strip
-  // those casts instead of inserting new ones. However it's easier to rely on
-  // other InstCombine rules which will cover trivial cases anyway.
-  Value *Src = AMI->getRawSource();
-  Value *Dst = AMI->getRawDest();
-  Type *ElementPointerType = Type::getIntNPtrTy(
-      AMI->getContext(), ElementSizeInBytes, Src->getType()->getPointerAddressSpace());
+    // Cast source and destination to the correct type. Intrinsic input
+    // arguments are usually represented as i8*. Often operands will be
+    // explicitly casted to i8* and we can just strip those casts instead of
+    // inserting new ones. However it's easier to rely on other InstCombine
+    // rules which will cover trivial cases anyway.
+    Value *Src = AMI->getRawSource();
+    Value *Dst = AMI->getRawDest();
+    Type *ElementPointerType =
+        Type::getIntNPtrTy(AMI->getContext(), ElementSizeInBits,
+                           Src->getType()->getPointerAddressSpace());
 
-  Value *SrcCasted = Builder->CreatePointerCast(Src, ElementPointerType,
-                                                "memcpy_unfold.src_casted");
-  Value *DstCasted = Builder->CreatePointerCast(Dst, ElementPointerType,
-                                                "memcpy_unfold.dst_casted");
+    Value *SrcCasted = Builder->CreatePointerCast(Src, ElementPointerType,
+                                                  "memcpy_unfold.src_casted");
+    Value *DstCasted = Builder->CreatePointerCast(Dst, ElementPointerType,
+                                                  "memcpy_unfold.dst_casted");
 
-  for (uint64_t i = 0; i < NumElements; ++i) {
-    // Get current element addresses
-    ConstantInt *ElementIdxCI =
-        ConstantInt::get(AMI->getContext(), APInt(64, i));
-    Value *SrcElementAddr =
-        Builder->CreateGEP(SrcCasted, ElementIdxCI, "memcpy_unfold.src_addr");
-    Value *DstElementAddr =
-        Builder->CreateGEP(DstCasted, ElementIdxCI, "memcpy_unfold.dst_addr");
+    for (uint64_t i = 0; i < NumElements; ++i) {
+      // Get current element addresses
+      ConstantInt *ElementIdxCI =
+          ConstantInt::get(AMI->getContext(), APInt(64, i));
+      Value *SrcElementAddr =
+          Builder->CreateGEP(SrcCasted, ElementIdxCI, "memcpy_unfold.src_addr");
+      Value *DstElementAddr =
+          Builder->CreateGEP(DstCasted, ElementIdxCI, "memcpy_unfold.dst_addr");
 
-    // Load from the source. Transfer alignment information and mark load as
-    // unordered atomic.
-    LoadInst *Load = Builder->CreateLoad(SrcElementAddr, "memcpy_unfold.val");
-    Load->setOrdering(AtomicOrdering::Unordered);
-    // We know alignment of the first element. It is also guaranteed by the
-    // verifier that element size is less or equal than first element alignment
-    // and both of this values are powers of two.
-    // This means that all subsequent accesses are at least element size
-    // aligned.
-    // TODO: We can infer better alignment but there is no evidence that this
-    // will matter.
-    Load->setAlignment(i == 0 ? AMI->getSrcAlignment()
-                              : AMI->getElementSizeInBytes());
-    Load->setDebugLoc(AMI->getDebugLoc());
+      // Load from the source. Transfer alignment information and mark load as
+      // unordered atomic.
+      LoadInst *Load = Builder->CreateLoad(SrcElementAddr, "memcpy_unfold.val");
+      Load->setOrdering(AtomicOrdering::Unordered);
+      // We know alignment of the first element. It is also guaranteed by the
+      // verifier that element size is less or equal than first element
+      // alignment and both of this values are powers of two. This means that
+      // all subsequent accesses are at least element size aligned.
+      // TODO: We can infer better alignment but there is no evidence that this
+      // will matter.
+      Load->setAlignment(i == 0 ? AMI->getParamAlignment(1)
+                                : ElementSizeInBytes);
+      Load->setDebugLoc(AMI->getDebugLoc());
 
-    // Store loaded value via unordered atomic store.
-    StoreInst *Store = Builder->CreateStore(Load, DstElementAddr);
-    Store->setOrdering(AtomicOrdering::Unordered);
-    Store->setAlignment(i == 0 ? AMI->getDstAlignment()
-                               : AMI->getElementSizeInBytes());
-    Store->setDebugLoc(AMI->getDebugLoc());
+      // Store loaded value via unordered atomic store.
+      StoreInst *Store = Builder->CreateStore(Load, DstElementAddr);
+      Store->setOrdering(AtomicOrdering::Unordered);
+      Store->setAlignment(i == 0 ? AMI->getParamAlignment(0)
+                                 : ElementSizeInBytes);
+      Store->setDebugLoc(AMI->getDebugLoc());
+    }
   }
 
   // Set the number of elements of the copy to 0, it will be deleted on the
   // next iteration.
-  AMI->setNumElements(Constant::getNullValue(NumElementsCI->getType()));
+  AMI->setLength(Constant::getNullValue(LengthCI->getType()));
   return AMI;
 }
 
@@ -1888,12 +1893,12 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     if (Changed) return II;
   }
 
-  if (auto *AMI = dyn_cast<ElementAtomicMemCpyInst>(II)) {
-    if (Constant *C = dyn_cast<Constant>(AMI->getNumElements()))
+  if (auto *AMI = dyn_cast<ElementUnorderedAtomicMemCpyInst>(II)) {
+    if (Constant *C = dyn_cast<Constant>(AMI->getLength()))
       if (C->isNullValue())
         return eraseInstFromFunction(*AMI);
 
-    if (Instruction *I = SimplifyElementAtomicMemCpy(AMI))
+    if (Instruction *I = SimplifyElementUnorderedAtomicMemCpy(AMI))
       return I;
   }
 

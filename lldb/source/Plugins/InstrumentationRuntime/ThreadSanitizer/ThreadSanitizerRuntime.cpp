@@ -921,11 +921,6 @@ void ThreadSanitizerRuntime::Activate() {
   breakpoint->SetBreakpointKind("thread-sanitizer-report");
   SetBreakpointID(breakpoint->GetID());
 
-  StreamFileSP stream_sp(process_sp->GetTarget().GetDebugger().GetOutputFile());
-  if (stream_sp) {
-    stream_sp->Printf("ThreadSanitizer debugger support is active.\n");
-  }
-
   SetActive(true);
 }
 

@@ -32,8 +32,6 @@ namespace {
 enum OperandTransfer {
   OT_NA,          ///< Not applicable
   OT_OperandsAll, ///< Transfer all operands
-  OT_Operands02,  ///< Transfer operands 0 and 2
-  OT_Operand2,    ///< Transfer just operand 2
 };
 
 /// Reduction type
@@ -145,24 +143,14 @@ private:
   // returns true on success.
   static bool ReduceSXtoSX16(MachineInstr *MI, const ReduceEntry &Entry);
 
-  // Attempts to reduce arithmetic instructions, returns true on success.
+  // Attempts to reduce arithmetic instructions, returns true on success
   static bool ReduceArithmeticInstructions(MachineInstr *MI,
                                            const ReduceEntry &Entry);
 
-  // Attempts to reduce ADDIU into ADDIUSP instruction,
-  // returns true on success.
-  static bool ReduceADDIUToADDIUSP(MachineInstr *MI,
-                                   const ReduceEntry &Entry);
-
-  // Attempts to reduce ADDIU into ADDIUR1SP instruction,
-  // returns true on success.
-  static bool ReduceADDIUToADDIUR1SP(MachineInstr *MI,
-                                     const ReduceEntry &Entry);
-
-  // Changes opcode of an instruction.
+  // Changes opcode of an instruction
   static bool ReplaceInstruction(MachineInstr *MI, const ReduceEntry &Entry);
 
-  // Table with transformation rules for each instruction.
+  // Table with transformation rules for each instruction
   static llvm::SmallVector<ReduceEntry, 16> ReduceTable;
 };
 
@@ -170,20 +158,12 @@ char MicroMipsSizeReduce::ID = 0;
 const MipsInstrInfo *MicroMipsSizeReduce::MipsII;
 
 // This table must be sorted by WideOpc as a main criterion and
-// ReduceType as a sub-criterion (when wide opcodes are the same).
+// ReduceType as a sub-criterion (when wide opcodes are the same)
 llvm::SmallVector<ReduceEntry, 16> MicroMipsSizeReduce::ReduceTable = {
 
     // ReduceType, OpCodes, ReduceFunction,
     // OpInfo(TransferOperands),
     // ImmField(Shift, LBound, HBound, ImmFieldPosition)
-    {RT_OneInstr, OpCodes(Mips::ADDiu, Mips::ADDIUR1SP_MM),
-     ReduceADDIUToADDIUR1SP, OpInfo(OT_Operands02), ImmField(2, 0, 64, 2)},
-    {RT_OneInstr, OpCodes(Mips::ADDiu, Mips::ADDIUSP_MM),
-     ReduceADDIUToADDIUSP, OpInfo(OT_Operand2), ImmField(0, 0, 0, 2)},
-    {RT_OneInstr, OpCodes(Mips::ADDiu_MM, Mips::ADDIUR1SP_MM),
-     ReduceADDIUToADDIUR1SP, OpInfo(OT_Operands02), ImmField(2, 0, 64, 2)},
-    {RT_OneInstr, OpCodes(Mips::ADDiu_MM, Mips::ADDIUSP_MM),
-     ReduceADDIUToADDIUSP, OpInfo(OT_Operand2), ImmField(0, 0, 0, 2)},
     {RT_OneInstr, OpCodes(Mips::ADDu, Mips::ADDU16_MM),
      ReduceArithmeticInstructions, OpInfo(OT_OperandsAll),
      ImmField(0, 0, 0, -1)},
@@ -194,8 +174,6 @@ llvm::SmallVector<ReduceEntry, 16> MicroMipsSizeReduce::ReduceTable = {
      OpInfo(OT_OperandsAll), ImmField(0, -1, 15, 2)},
     {RT_OneInstr, OpCodes(Mips::LBu_MM, Mips::LBU16_MM), ReduceLXUtoLXU16,
      OpInfo(OT_OperandsAll), ImmField(0, -1, 15, 2)},
-    {RT_OneInstr, OpCodes(Mips::LEA_ADDiu, Mips::ADDIUR1SP_MM),
-     ReduceADDIUToADDIUR1SP, OpInfo(OT_Operands02), ImmField(2, 0, 64, 2)},
     {RT_OneInstr, OpCodes(Mips::LHu, Mips::LHU16_MM), ReduceLXUtoLXU16,
      OpInfo(OT_OperandsAll), ImmField(1, 0, 16, 2)},
     {RT_OneInstr, OpCodes(Mips::LHu_MM, Mips::LHU16_MM), ReduceLXUtoLXU16,
@@ -225,7 +203,7 @@ llvm::SmallVector<ReduceEntry, 16> MicroMipsSizeReduce::ReduceTable = {
 };
 }
 
-// Returns true if the machine operand MO is register SP.
+// Returns true if the machine operand MO is register SP
 static bool IsSP(const MachineOperand &MO) {
   if (MO.isReg() && ((MO.getReg() == Mips::SP)))
     return true;
@@ -247,7 +225,7 @@ static bool isMMSourceRegister(const MachineOperand &MO) {
 }
 
 // Returns true if the operand Op is an immediate value
-// and writes the immediate value into variable Imm.
+// and writes the immediate value into variable Imm
 static bool GetImm(MachineInstr *MI, unsigned Op, int64_t &Imm) {
 
   if (!MI->getOperand(Op).isImm())
@@ -256,17 +234,8 @@ static bool GetImm(MachineInstr *MI, unsigned Op, int64_t &Imm) {
   return true;
 }
 
-// Returns true if the value is a valid immediate for ADDIUSP.
-static bool AddiuspImmValue(int64_t Value) {
-  int64_t Value2 = Value >> 2;
-  if (Value == (Value2 << 2) &&
-      ((Value2 >= 2 && Value2 <= 257) || (Value2 >= -258 && Value2 <= -3)))
-    return true;
-  return false;
-}
-
 // Returns true if the variable Value has the number of least-significant zero
-// bits equal to Shift and if the shifted value is between the bounds.
+// bits equal to Shift and if the shifted value is between the bounds
 static bool InRange(int64_t Value, unsigned short Shift, int LBound,
                     int HBound) {
   int64_t Value2 = Value >> Shift;
@@ -275,7 +244,7 @@ static bool InRange(int64_t Value, unsigned short Shift, int LBound,
   return false;
 }
 
-// Returns true if immediate operand is in range.
+// Returns true if immediate operand is in range
 static bool ImmInRange(MachineInstr *MI, const ReduceEntry &Entry) {
 
   int64_t offset;
@@ -341,34 +310,6 @@ bool MicroMipsSizeReduce::ReduceArithmeticInstructions(
   return ReplaceInstruction(MI, Entry);
 }
 
-bool MicroMipsSizeReduce::ReduceADDIUToADDIUR1SP(MachineInstr *MI,
-                                                 const ReduceEntry &Entry) {
-
-  if (!ImmInRange(MI, Entry))
-    return false;
-
-  if (!isMMThreeBitGPRegister(MI->getOperand(0)) || !IsSP(MI->getOperand(1)))
-    return false;
-
-  return ReplaceInstruction(MI, Entry);
-}
-
-bool MicroMipsSizeReduce::ReduceADDIUToADDIUSP(MachineInstr *MI,
-                                               const ReduceEntry &Entry) {
-
-  int64_t ImmValue;
-  if (!GetImm(MI, Entry.ImmField(), ImmValue))
-    return false;
-
-  if (!AddiuspImmValue(ImmValue))
-    return false;
-
-  if (!IsSP(MI->getOperand(0)) || !IsSP(MI->getOperand(1)))
-    return false;
-
-  return ReplaceInstruction(MI, Entry);
-}
-
 bool MicroMipsSizeReduce::ReduceLXUtoLXU16(MachineInstr *MI,
                                            const ReduceEntry &Entry) {
 
@@ -420,36 +361,10 @@ bool MicroMipsSizeReduce::ReduceMBB(MachineBasicBlock &MBB) {
 bool MicroMipsSizeReduce::ReplaceInstruction(MachineInstr *MI,
                                              const ReduceEntry &Entry) {
 
-  enum OperandTransfer OpTransfer = Entry.TransferOperands();
-  if (OpTransfer == OT_OperandsAll) {
-    DEBUG(dbgs() << "Converted 32-bit: " << *MI);
-    MI->setDesc(MipsII->get(Entry.NarrowOpc()));
-    DEBUG(dbgs() << "       to 16-bit: " << *MI);
-    ++NumReduced;
-    return true;
-  } else {
-    MachineBasicBlock &MBB = *MI->getParent();
-    const MCInstrDesc &NewMCID = MipsII->get(Entry.NarrowOpc());
-    DebugLoc dl = MI->getDebugLoc();
-    MachineInstrBuilder MIB = BuildMI(MBB, MI, dl, NewMCID);
-
-    if (OpTransfer == OT_Operand2)
-      MIB.add(MI->getOperand(2));
-    else if (OpTransfer == OT_Operands02) {
-      MIB.add(MI->getOperand(0));
-      MIB.add(MI->getOperand(2));
-    }
-
-    // Transfer MI flags.
-    MIB.setMIFlags(MI->getFlags());
-
-    DEBUG(dbgs() << "Converted 32-bit: " << *MI
-                 << "       to 16-bit: " << *MIB);
-    MBB.erase_instr(MI);
-    ++NumReduced;
-    return true;
-  }
-  return false;
+  MI->setDesc(MipsII->get(Entry.NarrowOpc()));
+  DEBUG(dbgs() << "Converted into 16-bit: " << *MI);
+  ++NumReduced;
+  return true;
 }
 
 bool MicroMipsSizeReduce::runOnMachineFunction(MachineFunction &MF) {

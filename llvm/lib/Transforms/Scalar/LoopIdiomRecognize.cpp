@@ -983,21 +983,21 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(StoreInst *SI,
   const SCEV *NumBytesS =
       SE->getAddExpr(BECount, SE->getOne(IntPtrTy), SCEV::FlagNUW);
 
+  if (StoreSize != 1)
+    NumBytesS = SE->getMulExpr(NumBytesS, SE->getConstant(IntPtrTy, StoreSize),
+                               SCEV::FlagNUW);
+
+  Value *NumBytes =
+      Expander.expandCodeFor(NumBytesS, IntPtrTy, Preheader->getTerminator());
+
   unsigned Align = std::min(SI->getAlignment(), LI->getAlignment());
   CallInst *NewCall = nullptr;
   // Check whether to generate an unordered atomic memcpy:
   //  If the load or store are atomic, then they must neccessarily be unordered
   //  by previous checks.
-  if (!SI->isAtomic() && !LI->isAtomic()) {
-    if (StoreSize != 1)
-      NumBytesS = SE->getMulExpr(
-          NumBytesS, SE->getConstant(IntPtrTy, StoreSize), SCEV::FlagNUW);
-
-    Value *NumBytes =
-        Expander.expandCodeFor(NumBytesS, IntPtrTy, Preheader->getTerminator());
-
+  if (!SI->isAtomic() && !LI->isAtomic())
     NewCall = Builder.CreateMemCpy(StoreBasePtr, LoadBasePtr, NumBytes, Align);
-  } else {
+  else {
     // We cannot allow unaligned ops for unordered load/store, so reject
     // anything where the alignment isn't at least the element size.
     if (Align < StoreSize)
@@ -1010,11 +1010,9 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(StoreInst *SI,
     if (StoreSize > TTI->getAtomicMemIntrinsicMaxElementSize())
       return false;
 
-    Value *NumElements =
-        Expander.expandCodeFor(NumBytesS, IntPtrTy, Preheader->getTerminator());
+    NewCall = Builder.CreateElementUnorderedAtomicMemCpy(
+        StoreBasePtr, LoadBasePtr, NumBytes, StoreSize);
 
-    NewCall = Builder.CreateElementAtomicMemCpy(StoreBasePtr, LoadBasePtr,
-                                                NumElements, StoreSize);
     // Propagate alignment info onto the pointer args. Note that unordered
     // atomic loads/stores are *required* by the spec to have an alignment
     // but non-atomic loads/stores may not.

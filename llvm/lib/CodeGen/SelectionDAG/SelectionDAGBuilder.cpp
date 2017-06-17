@@ -4943,11 +4943,12 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
     updateDAGForMaybeTailCall(MM);
     return nullptr;
   }
-  case Intrinsic::memcpy_element_atomic: {
-    SDValue Dst = getValue(I.getArgOperand(0));
-    SDValue Src = getValue(I.getArgOperand(1));
-    SDValue NumElements = getValue(I.getArgOperand(2));
-    SDValue ElementSize = getValue(I.getArgOperand(3));
+  case Intrinsic::memcpy_element_unordered_atomic: {
+    const ElementUnorderedAtomicMemCpyInst &MI =
+        cast<ElementUnorderedAtomicMemCpyInst>(I);
+    SDValue Dst = getValue(MI.getRawDest());
+    SDValue Src = getValue(MI.getRawSource());
+    SDValue Length = getValue(MI.getLength());
 
     // Emit a library call.
     TargetLowering::ArgListTy Args;
@@ -4959,18 +4960,13 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
     Entry.Node = Src;
     Args.push_back(Entry);
 
-    Entry.Ty = I.getArgOperand(2)->getType();
-    Entry.Node = NumElements;
+    Entry.Ty = MI.getLength()->getType();
+    Entry.Node = Length;
     Args.push_back(Entry);
 
-    Entry.Ty = Type::getInt32Ty(*DAG.getContext());
-    Entry.Node = ElementSize;
-    Args.push_back(Entry);
-
-    uint64_t ElementSizeConstant =
-        cast<ConstantInt>(I.getArgOperand(3))->getZExtValue();
+    uint64_t ElementSizeConstant = MI.getElementSizeInBytes();
     RTLIB::Libcall LibraryCall =
-        RTLIB::getMEMCPY_ELEMENT_ATOMIC(ElementSizeConstant);
+        RTLIB::getMEMCPY_ELEMENT_UNORDERED_ATOMIC(ElementSizeConstant);
     if (LibraryCall == RTLIB::UNKNOWN_LIBCALL)
       report_fatal_error("Unsupported element size");
 

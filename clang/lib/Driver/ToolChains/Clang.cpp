@@ -980,6 +980,9 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
         DepTarget = Args.MakeArgString(llvm::sys::path::filename(P));
       }
 
+      if (!A->getOption().matches(options::OPT_MD) && !A->getOption().matches(options::OPT_MMD)) {
+        CmdArgs.push_back("-w");
+      }
       CmdArgs.push_back("-MT");
       SmallString<128> Quoted;
       QuoteTarget(DepTarget, Quoted);

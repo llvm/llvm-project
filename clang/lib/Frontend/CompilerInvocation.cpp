@@ -2379,9 +2379,51 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   Opts.AllowEditorPlaceholders = Args.hasArg(OPT_fallow_editor_placeholders);
 }
 
+static bool isStrictlyPreprocessorAction(frontend::ActionKind Action) {
+  switch (Action) {
+  case frontend::ASTDeclList:
+  case frontend::ASTDump:
+  case frontend::ASTPrint:
+  case frontend::ASTView:
+  case frontend::EmitAssembly:
+  case frontend::EmitBC:
+  case frontend::EmitHTML:
+  case frontend::EmitLLVM:
+  case frontend::EmitLLVMOnly:
+  case frontend::EmitCodeGenOnly:
+  case frontend::EmitObj:
+  case frontend::FixIt:
+  case frontend::GenerateModule:
+  case frontend::GenerateModuleInterface:
+  case frontend::GeneratePCH:
+  case frontend::GeneratePTH:
+  case frontend::ParseSyntaxOnly:
+  case frontend::ModuleFileInfo:
+  case frontend::VerifyPCH:
+  case frontend::PluginAction:
+  case frontend::PrintDeclContext:
+  case frontend::RewriteObjC:
+  case frontend::RewriteTest:
+  case frontend::RunAnalysis:
+  case frontend::MigrateSource:
+    return false;
+
+  case frontend::DumpRawTokens:
+  case frontend::DumpTokens:
+  case frontend::InitOnly:
+  case frontend::PrintPreamble:
+  case frontend::PrintPreprocessedInput:
+  case frontend::RewriteMacros:
+  case frontend::RunPreprocessorOnly:
+    return true;
+  }
+  llvm_unreachable("invalid frontend action");
+}
+
 static void ParsePreprocessorArgs(PreprocessorOptions &Opts, ArgList &Args,
                                   FileManager &FileMgr,
-                                  DiagnosticsEngine &Diags) {
+                                  DiagnosticsEngine &Diags,
+                                  frontend::ActionKind Action) {
   using namespace options;
   Opts.ImplicitPCHInclude = Args.getLastArgValue(OPT_include_pch);
   Opts.ImplicitPTHInclude = Args.getLastArgValue(OPT_include_pth);
@@ -2454,6 +2496,12 @@ static void ParsePreprocessorArgs(PreprocessorOptions &Opts, ArgList &Args,
     else
       Opts.ObjCXXARCStandardLibrary = (ObjCXXARCStandardLibraryKind)Library;
   }
+
+  // Always avoid lexing editor placeholders when we're just running the
+  // preprocessor as we never want to emit the
+  // "editor placeholder in source file" error in PP only mode.
+  if (isStrictlyPreprocessorAction(Action))
+    Opts.LexEditorPlaceholders = false;
 }
 
 static void ParsePreprocessorOutputArgs(PreprocessorOutputOptions &Opts,
@@ -2461,45 +2509,10 @@ static void ParsePreprocessorOutputArgs(PreprocessorOutputOptions &Opts,
                                         frontend::ActionKind Action) {
   using namespace options;
 
-  switch (Action) {
-  case frontend::ASTDeclList:
-  case frontend::ASTDump:
-  case frontend::ASTPrint:
-  case frontend::ASTView:
-  case frontend::EmitAssembly:
-  case frontend::EmitBC:
-  case frontend::EmitHTML:
-  case frontend::EmitLLVM:
-  case frontend::EmitLLVMOnly:
-  case frontend::EmitCodeGenOnly:
-  case frontend::EmitObj:
-  case frontend::FixIt:
-  case frontend::GenerateModule:
-  case frontend::GenerateModuleInterface:
-  case frontend::GeneratePCH:
-  case frontend::GeneratePTH:
-  case frontend::ParseSyntaxOnly:
-  case frontend::ModuleFileInfo:
-  case frontend::VerifyPCH:
-  case frontend::PluginAction:
-  case frontend::PrintDeclContext:
-  case frontend::RewriteObjC:
-  case frontend::RewriteTest:
-  case frontend::RunAnalysis:
-  case frontend::MigrateSource:
-    Opts.ShowCPP = 0;
-    break;
-
-  case frontend::DumpRawTokens:
-  case frontend::DumpTokens:
-  case frontend::InitOnly:
-  case frontend::PrintPreamble:
-  case frontend::PrintPreprocessedInput:
-  case frontend::RewriteMacros:
-  case frontend::RunPreprocessorOnly:
+  if (isStrictlyPreprocessorAction(Action))
     Opts.ShowCPP = !Args.hasArg(OPT_dM);
-    break;
-  }
+  else
+    Opts.ShowCPP = 0;
 
   Opts.ShowComments = Args.hasArg(OPT_C);
   Opts.ShowLineMarkers = !Args.hasArg(OPT_P);
@@ -2626,7 +2639,8 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
   // ParsePreprocessorArgs and remove the FileManager
   // parameters from the function and the "FileManager.h" #include.
   FileManager FileMgr(Res.getFileSystemOpts());
-  ParsePreprocessorArgs(Res.getPreprocessorOpts(), Args, FileMgr, Diags);
+  ParsePreprocessorArgs(Res.getPreprocessorOpts(), Args, FileMgr, Diags,
+                        Res.getFrontendOpts().ProgramAction);
   ParsePreprocessorOutputArgs(Res.getPreprocessorOutputOpts(), Args,
                               Res.getFrontendOpts().ProgramAction);
 

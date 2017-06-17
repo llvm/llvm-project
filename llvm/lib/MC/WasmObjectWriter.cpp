@@ -406,6 +406,8 @@ void WasmObjectWriter::recordRelocation(MCAssembler &Asm,
   }
 
   assert(!IsPCRel);
+  assert(SymA);
+
   unsigned Type = getRelocType(Target, Fixup);
 
   WasmRelocationEntry Rec(FixupOffset, SymA, C, Type, &FixupSection);
@@ -474,6 +476,7 @@ uint32_t WasmObjectWriter::getRelocationIndexValue(
     assert(IndirectSymbolIndices.count(RelEntry.Symbol));
     return IndirectSymbolIndices[RelEntry.Symbol];
   case wasm::R_WEBASSEMBLY_FUNCTION_INDEX_LEB:
+  case wasm::R_WEBASSEMBLY_GLOBAL_INDEX_LEB:
   case wasm::R_WEBASSEMBLY_GLOBAL_ADDR_LEB:
   case wasm::R_WEBASSEMBLY_GLOBAL_ADDR_SLEB:
   case wasm::R_WEBASSEMBLY_GLOBAL_ADDR_I32:
@@ -500,7 +503,8 @@ void WasmObjectWriter::applyRelocations(
     switch (RelEntry.Type) {
     case wasm::R_WEBASSEMBLY_TABLE_INDEX_SLEB:
     case wasm::R_WEBASSEMBLY_FUNCTION_INDEX_LEB:
-    case wasm::R_WEBASSEMBLY_TYPE_INDEX_LEB: {
+    case wasm::R_WEBASSEMBLY_TYPE_INDEX_LEB:
+    case wasm::R_WEBASSEMBLY_GLOBAL_INDEX_LEB: {
       uint32_t Index = getRelocationIndexValue(RelEntry);
       WritePatchableSLEB(Stream, Index, Offset);
       break;
@@ -526,7 +530,7 @@ void WasmObjectWriter::applyRelocations(
       break;
     }
     default:
-      llvm_unreachable("unsupported relocation type");
+      llvm_unreachable("invalid relocation type");
     }
   }
 }

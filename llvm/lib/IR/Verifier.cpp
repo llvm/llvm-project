@@ -4012,10 +4012,16 @@ void Verifier::visitIntrinsicCallSite(Intrinsic::ID ID, CallSite CS) {
            CS);
     break;
   }
-  case Intrinsic::memcpy_element_atomic: {
-    ConstantInt *ElementSizeCI = dyn_cast<ConstantInt>(CS.getArgOperand(3));
-    Assert(ElementSizeCI, "element size of the element-wise atomic memory "
-                          "intrinsic must be a constant int",
+  case Intrinsic::memcpy_element_unordered_atomic: {
+    const ElementUnorderedAtomicMemCpyInst *MI =
+        cast<ElementUnorderedAtomicMemCpyInst>(CS.getInstruction());
+    ;
+
+    ConstantInt *ElementSizeCI =
+        dyn_cast<ConstantInt>(MI->getRawElementSizeInBytes());
+    Assert(ElementSizeCI,
+           "element size of the element-wise unordered atomic memory "
+           "intrinsic must be a constant int",
            CS);
     const APInt &ElementSizeVal = ElementSizeCI->getValue();
     Assert(ElementSizeVal.isPowerOf2(),
@@ -4023,19 +4029,24 @@ void Verifier::visitIntrinsicCallSite(Intrinsic::ID ID, CallSite CS) {
            "must be a power of 2",
            CS);
 
+    if (auto *LengthCI = dyn_cast<ConstantInt>(MI->getLength())) {
+      uint64_t Length = LengthCI->getZExtValue();
+      uint64_t ElementSize = MI->getElementSizeInBytes();
+      Assert((Length % ElementSize) == 0,
+             "constant length must be a multiple of the element size in the "
+             "element-wise atomic memory intrinsic",
+             CS);
+    }
+
     auto IsValidAlignment = [&](uint64_t Alignment) {
       return isPowerOf2_64(Alignment) && ElementSizeVal.ule(Alignment);
     };
-
     uint64_t DstAlignment = CS.getParamAlignment(0),
              SrcAlignment = CS.getParamAlignment(1);
-
     Assert(IsValidAlignment(DstAlignment),
-           "incorrect alignment of the destination argument",
-           CS);
+           "incorrect alignment of the destination argument", CS);
     Assert(IsValidAlignment(SrcAlignment),
-           "incorrect alignment of the source argument",
-           CS);
+           "incorrect alignment of the source argument", CS);
     break;
   }
   case Intrinsic::gcroot:

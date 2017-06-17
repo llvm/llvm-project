@@ -1,10 +1,11 @@
 ; RUN: opt -instcombine -unfold-element-atomic-memcpy-max-elements=8 -S < %s | FileCheck %s
+; Temporarily an expected failure until inst combine is updated in the next patch
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-; Test basic unfolding
-define void @test1(i8* %Src, i8* %Dst) {
-; CHECK-LABEL: test1
-; CHECK-NOT: llvm.memcpy.element.atomic
+; Test basic unfolding -- unordered load & store
+define void @test1a(i8* %Src, i8* %Dst) {
+; CHECK-LABEL: test1a
+; CHECK-NOT: llvm.memcpy.element.unordered.atomic
 
 ; CHECK-DAG: %memcpy_unfold.src_casted = bitcast i8* %Src to i32*
 ; CHECK-DAG: %memcpy_unfold.dst_casted = bitcast i8* %Dst to i32*
@@ -21,7 +22,7 @@ define void @test1(i8* %Src, i8* %Dst) {
 ; CHECK-DAG: [[VAL4:%[^\s]+]] =  load atomic i32, i32* %{{[^\s]+}} unordered, align 4
 ; CHECK-DAG: store atomic i32 [[VAL4]], i32* %{{[^\s]+}} unordered, align 4
 entry:
-  call void @llvm.memcpy.element.atomic.p0i8.p0i8(i8* align 4 %Dst, i8* align 8 %Src, i64 4, i32 4)
+  call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i32(i8* align 8 %Dst, i8* align 4 %Src, i32 16, i32 4)
   ret void
 }
 
@@ -31,9 +32,9 @@ define void @test2(i8* %Src, i8* %Dst) {
 
 ; CHECK-NOT: load
 ; CHECK-NOT: store
-; CHECK: llvm.memcpy.element.atomic
+; CHECK: llvm.memcpy.element.unordered.atomic
 entry:
-  call void @llvm.memcpy.element.atomic.p0i8.p0i8(i8* align 4 %Dst, i8* align 4 %Src, i64 1000, i32 4)
+  call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i32(i8* align 8 %Dst, i8* align 4 %Src, i32 256, i32 4)
   ret void
 }
 
@@ -43,16 +44,16 @@ define void @test3(i8* %Src, i8* %Dst) {
 
 ; CHECK-NOT: load
 ; CHECK-NOT: store
-; CHECK: llvm.memcpy.element.atomic
+; CHECK: llvm.memcpy.element.unordered.atomic
 entry:
-  call void @llvm.memcpy.element.atomic.p0i8.p0i8(i8* align 64 %Dst, i8* align 64 %Src, i64 4, i32 64)
+  call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i32(i8* align 64 %Dst, i8* align 64 %Src, i32 64, i32 64)
   ret void
 }
 
 ; Test that we will eliminate redundant bitcasts
 define void @test4(i64* %Src, i64* %Dst) {
 ; CHECK-LABEL: test4
-; CHECK-NOT: llvm.memcpy.element.atomic
+; CHECK-NOT: llvm.memcpy.element.unordered.atomic
 
 ; CHECK-NOT: bitcast
 
@@ -76,17 +77,18 @@ define void @test4(i64* %Src, i64* %Dst) {
 entry:
   %Src.casted = bitcast i64* %Src to i8*
   %Dst.casted = bitcast i64* %Dst to i8*
-  call void @llvm.memcpy.element.atomic.p0i8.p0i8(i8* align 16 %Dst.casted, i8* align 16 %Src.casted, i64 4, i32 8)
+  call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i32(i8* align 16 %Dst.casted, i8* align 16 %Src.casted, i32 32, i32 8)
   ret void
 }
 
+; Test that 0-length unordered atomic memcpy gets removed.
 define void @test5(i8* %Src, i8* %Dst) {
 ; CHECK-LABEL: test5
 
-; CHECK-NOT: llvm.memcpy.element.atomic.p0i8.p0i8(i8* align 64 %Dst, i8* align 64 %Src, i64 0, i32 64)
+; CHECK-NOT: llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i32(i8* align 64 %Dst, i8* align 64 %Src, i32 0, i32 8)
 entry:
-  call void @llvm.memcpy.element.atomic.p0i8.p0i8(i8* align 64 %Dst, i8* align 64 %Src, i64 0, i32 64)
+  call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i32(i8* align 64 %Dst, i8* align 64 %Src, i32 0, i32 8)
   ret void
 }
 
-declare void @llvm.memcpy.element.atomic.p0i8.p0i8(i8* nocapture, i8* nocapture, i64, i32)
+declare void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i32) nounwind

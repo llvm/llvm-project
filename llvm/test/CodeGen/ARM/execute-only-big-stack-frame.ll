@@ -10,10 +10,10 @@ define i8 @test_big_stack_frame() {
 ; CHECK-SUBW-ADDW-NOT:   ldr {{r[0-9]+}}, .{{.*}}
 ; CHECK-SUBW-ADDW:       sub.w sp, sp, #65536
 ; CHECK-SUBW-ADDW-NOT:   ldr {{r[0-9]+}}, .{{.*}}
-; CHECK-SUBW-ADDW:       add.w [[REG1:r[0-9]+|lr]], sp, #255
+; CHECK-SUBW-ADDW:       add.w [[REG1:r[0-9]+]], sp, #255
 ; CHECK-SUBW-ADDW:       add.w {{r[0-9]+}}, [[REG1]], #65280
 ; CHECK-SUBW-ADDW-NOT:   ldr {{r[0-9]+}}, .{{.*}}
-; CHECK-SUBW-ADDW:       add.w [[REGX:r[0-9]+|lr]], sp, #61440
+; CHECK-SUBW-ADDW:       add.w lr, sp, #61440
 ; CHECK-SUBW-ADDW-NOT:   ldr {{r[0-9]+}}, .{{.*}}
 ; CHECK-SUBW-ADDW:       add.w sp, sp, #65536
 

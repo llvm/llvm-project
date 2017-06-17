@@ -104,9 +104,10 @@ static bool LocateDSYMInVincinityOfExecutable(const ModuleSpec &module_spec,
           }
           return true;
         } else {
-          // Get a clean copy of the executable path, without the final filename
-          FileSpec path_dir_fspec (exec_fspec->GetDirectory().AsCString(), true);
-          std::string path_dir_str = path_dir_fspec.GetPath();
+          FileSpec parent_dirs = exec_fspec;
+
+          // Remove the binary name from the FileSpec
+          parent_dirs.RemoveLastPathComponent();
 
           // Add a ".dSYM" name to each directory component of the path, stripping
           // off components.  e.g. we may have a binary like
@@ -121,24 +122,37 @@ static bool LocateDSYMInVincinityOfExecutable(const ModuleSpec &module_spec,
           // need to continue.
 
           for (int i = 0; i < 4; i++) {
-            std::string path_dir_plus_dsym (path_dir_str);
-            path_dir_plus_dsym += ".dSYM/Contents/Resources/DWARF/";
-            path_dir_plus_dsym += exec_fspec->GetFilename().AsCString();
-            dsym_fspec.SetFile (path_dir_plus_dsym, true);
-            if (dsym_fspec.Exists() &&
-                    FileAtPathContainsArchAndUUID(
-                        dsym_fspec, module_spec.GetArchitecturePtr(),
-                        module_spec.GetUUIDPtr())) {
-                  if (log) {
-                    log->Printf("dSYM with matching UUID & arch found at %s",
-                                path_dir_plus_dsym.c_str());
-                  }
-                  return true;
-            }
-            auto const last_slash = path_dir_str.rfind('/');
-            if (last_slash == std::string::npos)
+            // Does this part of the path have a "." character - could it be a bundle's
+            // top level directory?
+            const char *fn = parent_dirs.GetFilename().AsCString();
+            if (fn == nullptr)
                 break;
-            path_dir_str.resize(last_slash);
+            if (::strchr (fn, '.') != nullptr) {
+              dsym_fspec = parent_dirs;
+              dsym_fspec.RemoveLastPathComponent();
+
+              // If the current directory name is "Foundation.framework", see if
+              // "Foundation.framework.dSYM/Contents/Resources/DWARF/Foundation"
+              // exists & has the right uuid.
+              std::string dsym_fn = fn;
+              dsym_fn += ".dSYM";
+              dsym_fspec.AppendPathComponent(dsym_fn.c_str());
+              dsym_fspec.AppendPathComponent("Contents");
+              dsym_fspec.AppendPathComponent("Resources");
+              dsym_fspec.AppendPathComponent("DWARF");
+              dsym_fspec.AppendPathComponent(exec_fspec->GetFilename().AsCString());
+              if (dsym_fspec.Exists() &&
+                      FileAtPathContainsArchAndUUID(
+                          dsym_fspec, module_spec.GetArchitecturePtr(),
+                          module_spec.GetUUIDPtr())) {
+                    if (log) {
+                      log->Printf("dSYM with matching UUID & arch found at %s",
+                                  dsym_fspec.GetPath().c_str());
+                    }
+                    return true;
+              }
+            }
+            parent_dirs.RemoveLastPathComponent();
           }
         }
       }

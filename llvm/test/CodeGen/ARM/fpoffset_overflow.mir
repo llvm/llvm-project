@@ -3,10 +3,10 @@
 # This should trigger an emergency spill in the register scavenger because the
 # frame offset into the large argument is too large.
 # CHECK-LABEL: name: func0
-# CHECK: t2STRi12 killed [[SPILLED:%r[0-9]+]], %sp, 0, 14, _ :: (store 4 into %stack.0)
-# CHECK: [[SPILLED]] = t2ADDri killed %sp, 4096, 14, _, _
-# CHECK: %sp = t2LDRi12 killed [[SPILLED]], 40, 14, _ :: (load 4)
-# CHECK: [[SPILLED]] = t2LDRi12 %sp, 0, 14, _ :: (load 4 from %stack.0)
+# CHECK: t2STRi12 killed %r7, %sp, 0, 14, _ :: (store 4 into %stack.0)
+# CHECK: %r7 = t2ADDri killed %sp, 4096, 14, _, _
+# CHECK: %r11 = t2LDRi12 killed %r7, 36, 14, _ :: (load 4)
+# CHECK: %r7 = t2LDRi12 %sp, 0, 14, _ :: (load 4 from %stack.0)
 name: func0
 tracksRegLiveness: true
 fixedStack:
@@ -23,7 +23,6 @@ body: |
     %r4 = IMPLICIT_DEF
     %r5 = IMPLICIT_DEF
     %r6 = IMPLICIT_DEF
-    %r7 = IMPLICIT_DEF
     %r8 = IMPLICIT_DEF
     %r9 = IMPLICIT_DEF
     %r10 = IMPLICIT_DEF
@@ -31,7 +30,7 @@ body: |
     %r12 = IMPLICIT_DEF
     %lr = IMPLICIT_DEF
 
-    %sp = t2LDRi12 %fixed-stack.0, 0, 14, _ :: (load 4)
+    %r11 = t2LDRi12 %fixed-stack.0, 0, 14, _ :: (load 4)
 
     KILL %r0
     KILL %r1
@@ -40,7 +39,6 @@ body: |
     KILL %r4
     KILL %r5
     KILL %r6
-    KILL %r7
     KILL %r8
     KILL %r9
     KILL %r10

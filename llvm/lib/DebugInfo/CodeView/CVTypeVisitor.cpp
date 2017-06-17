@@ -12,8 +12,6 @@
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/DebugInfo/CodeView/CodeViewError.h"
 #include "llvm/DebugInfo/CodeView/TypeCollection.h"
-#include "llvm/DebugInfo/CodeView/TypeDatabase.h"
-#include "llvm/DebugInfo/CodeView/TypeDatabaseVisitor.h"
 #include "llvm/DebugInfo/CodeView/TypeDeserializer.h"
 #include "llvm/DebugInfo/CodeView/TypeRecordMapping.h"
 #include "llvm/DebugInfo/CodeView/TypeServerHandler.h"

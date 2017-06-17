@@ -939,9 +939,19 @@ Instruction *InstCombiner::foldOpIntoPhi(Instruction &I, PHINode *PN) {
       // `TrueVInPred`.
       if (InC && !isa<ConstantExpr>(InC) && isa<ConstantInt>(InC))
         InV = InC->isNullValue() ? FalseVInPred : TrueVInPred;
-      else
+      else {
+        // Generate the select in the same block as PN's current incoming block.
+        // Note: ThisBB need not be the NonConstBB because vector constants
+        // which are constants by definition are handled here.
+        // FIXME: This can lead to an increase in IR generation because we might
+        // generate selects for vector constant phi operand, that could not be
+        // folded to TrueVInPred or FalseVInPred as done for ConstantInt. For
+        // non-vector phis, this transformation was always profitable because
+        // the select would be generated exactly once in the NonConstBB.
+        Builder->SetInsertPoint(ThisBB->getTerminator());
         InV = Builder->CreateSelect(PN->getIncomingValue(i),
                                     TrueVInPred, FalseVInPred, "phitmp");
+      }
       NewPN->addIncoming(InV, ThisBB);
     }
   } else if (CmpInst *CI = dyn_cast<CmpInst>(&I)) {

@@ -5,7 +5,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ;;  Will not create call due to a max element size of 0
 define void @test1(i64 %Size) nounwind ssp {
 ; CHECK-LABEL: @test1(
-; CHECK-NOT: call void @llvm.memcpy.element.atomic
+; CHECK-NOT: call void @llvm.memcpy.element.unordered.atomic
 ; CHECK: store
 ; CHECK: ret void
 bb.nph:

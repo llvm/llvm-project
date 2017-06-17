@@ -36,9 +36,12 @@ class LargeMmapAllocator {
     if (alignment > page_size_)
       map_size += alignment;
     // Overflow.
-    if (map_size < size) return ReturnNullOrDieOnBadRequest();
+    if (map_size < size)
+      return ReturnNullOrDieOnBadRequest();
     uptr map_beg = reinterpret_cast<uptr>(
-        MmapOrDie(map_size, "LargeMmapAllocator"));
+        MmapOrDieOnFatalError(map_size, "LargeMmapAllocator"));
+    if (!map_beg)
+      return ReturnNullOrDieOnOOM();
     CHECK(IsAligned(map_beg, page_size_));
     MapUnmapCallback().OnMap(map_beg, map_size);
     uptr map_end = map_beg + map_size;

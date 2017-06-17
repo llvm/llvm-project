@@ -53,8 +53,15 @@ using namespace clang::driver;
 using namespace llvm::opt;
 
 std::string GetExecutablePath(const char *Argv0, bool CanonicalPrefixes) {
-  if (!CanonicalPrefixes)
-    return Argv0;
+  if (!CanonicalPrefixes) {
+    SmallString<128> ExecutablePath(Argv0);
+    // Do a PATH lookup if Argv0 isn't a valid path.
+    if (!llvm::sys::fs::exists(ExecutablePath))
+      if (llvm::ErrorOr<std::string> P =
+              llvm::sys::findProgramByName(ExecutablePath))
+        ExecutablePath = *P;
+    return ExecutablePath.str();
+  }
 
   // This just needs to be some symbol in the binary; C++ doesn't
   // allow taking the address of ::main however.
