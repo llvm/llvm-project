@@ -7,7 +7,7 @@
 |*                                                                            *|
 |*===----------------------------------------------------------------------===*|
 |*                                                                            *|
-|* This header provides a public inferface to use CompilationDatabase without *|
+|* This header provides a public interface to use CompilationDatabase without *|
 |* the full Clang C++ API.                                                    *|
 |*                                                                            *|
 \*===----------------------------------------------------------------------===*/

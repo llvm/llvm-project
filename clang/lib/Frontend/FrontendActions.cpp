@@ -517,7 +517,7 @@ void PrintPreprocessedAction::ExecuteAction() {
     // file.  This is mostly a sanity check in case the file has no 
     // newlines whatsoever.
     if (end - cur > 256) end = cur + 256;
-	  
+
     while (next < end) {
       if (*cur == 0x0D) {  // CR
         if (*next == 0x0A)  // CRLF

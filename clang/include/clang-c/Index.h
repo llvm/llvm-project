@@ -7,7 +7,7 @@
 |*                                                                            *|
 |*===----------------------------------------------------------------------===*|
 |*                                                                            *|
-|* This header provides a public inferface to a Clang library for extracting  *|
+|* This header provides a public interface to a Clang library for extracting  *|
 |* high-level symbol information from source files without exposing the full  *|
 |* Clang C++ API.                                                             *|
 |*                                                                            *|

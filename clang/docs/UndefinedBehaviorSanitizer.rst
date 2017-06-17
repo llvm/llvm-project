@@ -148,6 +148,12 @@ You can also use the following check groups:
      nullability does not have undefined behavior, it is often unintentional,
      so UBSan offers to catch it.
 
+Volatile
+--------
+
+The ``null``, ``alignment``, ``object-size``, and ``vptr`` checks do not apply
+to pointers to types with the ``volatile`` qualifier.
+
 Stack traces and report symbolization
 =====================================
 If you want UBSan to print symbolized stack trace for each error report, you
