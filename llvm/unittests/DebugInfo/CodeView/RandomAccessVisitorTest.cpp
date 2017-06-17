@@ -351,3 +351,54 @@ TEST_F(RandomAccessVisitorTest, InnerChunk) {
   for (auto &I : enumerate(IndicesToVisit))
     EXPECT_TRUE(ValidateVisitedRecord(I.index(), I.value()));
 }
+
+TEST_F(RandomAccessVisitorTest, CrossChunkName) {
+  TypeTableBuilder Builder(GlobalState->Allocator);
+
+  // TypeIndex 0
+  ClassRecord Class(TypeRecordKind::Class);
+  Class.Name = "FooClass";
+  Class.Options = ClassOptions::None;
+  Class.MemberCount = 0;
+  Class.DerivationList = TypeIndex::fromArrayIndex(0);
+  Class.FieldList = TypeIndex::fromArrayIndex(0);
+  Class.VTableShape = TypeIndex::fromArrayIndex(0);
+  TypeIndex IndexZero = Builder.writeKnownType(Class);
+
+  // TypeIndex 1 refers to type index 0.
+  ModifierRecord Modifier(TypeRecordKind::Modifier);
+  Modifier.ModifiedType = TypeIndex::fromArrayIndex(0);
+  Modifier.Modifiers = ModifierOptions::Const;
+  TypeIndex IndexOne = Builder.writeKnownType(Modifier);
+
+  // set up a type stream that refers to the above two serialized records.
+  std::vector<CVType> TypeArray;
+  TypeArray.push_back(
+      CVType(static_cast<TypeLeafKind>(Class.Kind), Builder.records()[0]));
+  TypeArray.push_back(
+      CVType(static_cast<TypeLeafKind>(Modifier.Kind), Builder.records()[1]));
+  BinaryItemStream<CVType> ItemStream(llvm::support::little);
+  ItemStream.setItems(TypeArray);
+  VarStreamArray<CVType> TypeStream(ItemStream);
+
+  // Figure out the byte offset of the second item.
+  auto ItemOneIter = TypeStream.begin();
+  ++ItemOneIter;
+
+  // Set up a partial offsets buffer that contains the first and second items
+  // in separate chunks.
+  std::vector<TypeIndexOffset> TIO;
+  TIO.push_back({IndexZero, ulittle32_t(0u)});
+  TIO.push_back({IndexOne, ulittle32_t(ItemOneIter.offset())});
+  ArrayRef<uint8_t> Buffer(reinterpret_cast<const uint8_t *>(TIO.data()),
+                           TIO.size() * sizeof(TypeIndexOffset));
+
+  BinaryStreamReader Reader(Buffer, llvm::support::little);
+  FixedStreamArray<TypeIndexOffset> PartialOffsets;
+  ASSERT_THAT_ERROR(Reader.readArray(PartialOffsets, 2), Succeeded());
+
+  LazyRandomTypeCollection Types(TypeStream, 2, PartialOffsets);
+
+  StringRef Name = Types.getTypeName(IndexOne);
+  EXPECT_EQ("const FooClass", Name);
+}

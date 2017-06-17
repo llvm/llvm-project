@@ -317,7 +317,37 @@ bool HexagonGenMux::genMuxInBlock(MachineBasicBlock &B) {
     // Prefer "down", since this will move the MUX farther away from the
     // predicate definition.
     MachineBasicBlock::iterator At = CanDown ? Def2 : Def1;
-    if (!CanDown) {
+    if (CanDown) {
+      // If the MUX is placed "down", we need to make sure that there aren't
+      // any kills of the source registers between the two defs.
+      if (Used1 || Used2) {
+        auto ResetKill = [this] (unsigned Reg, MachineInstr &MI) -> bool {
+          if (MachineOperand *Op = MI.findRegisterUseOperand(Reg, true, HRI)) {
+            Op->setIsKill(false);
+            return true;
+          }
+          return false;
+        };
+        bool KilledSR1 = false, KilledSR2 = false;
+        for (MachineInstr &MJ : make_range(std::next(It1), It2)) {
+          if (SR1)
+            KilledSR1 |= ResetKill(SR1, MJ);
+          if (SR2)
+            KilledSR2 |= ResetKill(SR1, MJ);
+        }
+        // If any of the source registers were killed in this range, transfer
+        // the kills to the source operands: they will me "moved" to the
+        // resulting MUX and their parent instructions will be deleted.
+        if (KilledSR1) {
+          assert(Src1->isReg());
+          Src1->setIsKill(true);
+        }
+        if (KilledSR2) {
+          assert(Src2->isReg());
+          Src2->setIsKill(true);
+        }
+      }
+    } else {
       // If the MUX is placed "up", it shouldn't kill any source registers
       // that are still used afterwards. We can reset the kill flags directly
       // on the operands, because the source instructions will be erased.

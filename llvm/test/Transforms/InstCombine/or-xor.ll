@@ -114,6 +114,17 @@ define i32 @test10(i32 %A, i32 %B) {
   ret i32 %or
 }
 
+define i32 @test10_commuted(i32 %A, i32 %B) {
+; CHECK-LABEL: @test10_commuted(
+; CHECK-NEXT:    ret i32 -1
+;
+  %xor1 = xor i32 %B, %A
+  %not = xor i32 %A, -1
+  %xor2 = xor i32 %not, %B
+  %or = or i32 %xor2, %xor1
+  ret i32 %or
+}
+
 ; (x | y) & ((~x) ^ y) -> (x & y)
 define i32 @test11(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test11(
@@ -300,3 +311,36 @@ define i8 @or_xor_or(i8 %x) {
   ret i8 %or2
 }
 
+define i8 @test17(i8 %A, i8 %B) {
+; CHECK-LABEL: @test17(
+; CHECK-NEXT:    [[XOR1:%.*]] = xor i8 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[NOT:%.*]] = xor i8 [[A]], 33
+; CHECK-NEXT:    [[XOR2:%.*]] = xor i8 [[NOT]], [[B]]
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[XOR1]], [[XOR2]]
+; CHECK-NEXT:    [[RES:%.*]] = mul i8 [[OR]], [[XOR2]]
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %xor1 = xor i8 %B, %A
+  %not = xor i8 %A, 33
+  %xor2 = xor i8 %not, %B
+  %or = or i8 %xor1, %xor2
+  %res = mul i8 %or, %xor2 ; to increase the use count for the xor
+  ret i8 %res
+}
+
+define i8 @test18(i8 %A, i8 %B) {
+; CHECK-LABEL: @test18(
+; CHECK-NEXT:    [[XOR1:%.*]] = xor i8 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[NOT:%.*]] = xor i8 [[A]], 33
+; CHECK-NEXT:    [[XOR2:%.*]] = xor i8 [[NOT]], [[B]]
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[XOR2]], [[XOR1]]
+; CHECK-NEXT:    [[RES:%.*]] = mul i8 [[OR]], [[XOR2]]
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %xor1 = xor i8 %B, %A
+  %not = xor i8 %A, 33
+  %xor2 = xor i8 %not, %B
+  %or = or i8 %xor2, %xor1
+  %res = mul i8 %or, %xor2 ; to increase the use count for the xor
+  ret i8 %res
+}

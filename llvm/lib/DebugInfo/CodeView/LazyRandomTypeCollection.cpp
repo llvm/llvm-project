@@ -12,6 +12,7 @@
 #include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
 #include "llvm/DebugInfo/CodeView/CodeViewError.h"
 #include "llvm/DebugInfo/CodeView/TypeDatabase.h"
+#include "llvm/DebugInfo/CodeView/TypeName.h"
 #include "llvm/DebugInfo/CodeView/TypeServerHandler.h"
 #include "llvm/DebugInfo/CodeView/TypeVisitorCallbacks.h"
 
@@ -31,8 +32,8 @@ LazyRandomTypeCollection::LazyRandomTypeCollection(uint32_t RecordCountHint)
 LazyRandomTypeCollection::LazyRandomTypeCollection(
     const CVTypeArray &Types, uint32_t RecordCountHint,
     PartialOffsetArray PartialOffsets)
-    : Database(RecordCountHint), Types(Types), DatabaseVisitor(Database),
-      PartialOffsets(PartialOffsets) {
+    : NameStorage(Allocator), Database(RecordCountHint), Types(Types),
+      DatabaseVisitor(Database), PartialOffsets(PartialOffsets) {
   KnownOffsets.resize(Database.capacity());
 }
 
@@ -71,15 +72,27 @@ CVType LazyRandomTypeCollection::getType(TypeIndex Index) {
 }
 
 StringRef LazyRandomTypeCollection::getTypeName(TypeIndex Index) {
-  if (!Index.isSimple()) {
-    // Try to make sure the type exists.  Even if it doesn't though, it may be
-    // because we're dumping a symbol stream with no corresponding type stream
-    // present, in which case we still want to be able to print <unknown UDT>
-    // for the type names.
-    consumeError(ensureTypeExists(Index));
+  if (Index.isNoneType() || Index.isSimple())
+    return TypeIndex::simpleTypeName(Index);
+
+  // Try to make sure the type exists.  Even if it doesn't though, it may be
+  // because we're dumping a symbol stream with no corresponding type stream
+  // present, in which case we still want to be able to print <unknown UDT>
+  // for the type names.
+  if (auto EC = ensureTypeExists(Index)) {
+    consumeError(std::move(EC));
+    return "<unknown UDT>";
   }
 
-  return Database.getTypeName(Index);
+  uint32_t I = Index.toArrayIndex();
+  if (I >= TypeNames.size())
+    TypeNames.resize(I + 1);
+
+  if (TypeNames[I].data() == nullptr) {
+    StringRef Result = NameStorage.save(computeTypeName(*this, Index));
+    TypeNames[I] = Result;
+  }
+  return TypeNames[I];
 }
 
 bool LazyRandomTypeCollection::contains(TypeIndex Index) {

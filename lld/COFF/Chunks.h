@@ -159,12 +159,22 @@ public:
   StringRef getDebugName() override;
   void setSymbol(DefinedRegular *S) { if (!Sym) Sym = S; }
 
+  // Returns true if the chunk was not dropped by GC or COMDAT deduplication.
+  bool isLive() { return Live && !Discarded; }
+
   // Used by the garbage collector.
-  bool isLive() { return !Config->DoGC || Live; }
   void markLive() {
+    assert(Config->DoGC && "should only mark things live from GC");
     assert(!isLive() && "Cannot mark an already live section!");
     Live = true;
   }
+
+  // Returns true if this chunk was dropped by COMDAT deduplication.
+  bool isDiscarded() const { return Discarded; }
+
+  // Used by the SymbolTable when discarding unused comdat sections. This is
+  // redundant when GC is enabled, as all comdat sections will start out dead.
+  void markDiscarded() { Discarded = true; }
 
   // Allow iteration over the bodies of this chunk's relocated symbols.
   llvm::iterator_range<symbol_iterator> symbols() const {
@@ -195,6 +205,9 @@ private:
   std::vector<SectionChunk *> AssocChildren;
   llvm::iterator_range<const coff_relocation *> Relocs;
   size_t NumRelocs;
+
+  // True if this chunk was discarded because it was a duplicate comdat section.
+  bool Discarded;
 
   // Used by the garbage collector.
   bool Live;

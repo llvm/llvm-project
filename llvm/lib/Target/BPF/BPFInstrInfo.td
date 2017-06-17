@@ -51,7 +51,7 @@ def u64imm   : Operand<i64> {
   let PrintMethod = "printImm64Operand";
 }
 
-def i64immSExt32 : PatLeaf<(imm),
+def i64immSExt32 : PatLeaf<(i64 imm),
                 [{return isInt<32>(N->getSExtValue()); }]>;
 
 // Addressing modes.
@@ -67,17 +67,17 @@ def MEMri : Operand<i64> {
 }
 
 // Conditional code predicates - used for pattern matching for jump instructions
-def BPF_CC_EQ  : PatLeaf<(imm),
+def BPF_CC_EQ  : PatLeaf<(i64 imm),
                          [{return (N->getZExtValue() == ISD::SETEQ);}]>;
-def BPF_CC_NE  : PatLeaf<(imm),
+def BPF_CC_NE  : PatLeaf<(i64 imm),
                          [{return (N->getZExtValue() == ISD::SETNE);}]>;
-def BPF_CC_GE  : PatLeaf<(imm),
+def BPF_CC_GE  : PatLeaf<(i64 imm),
                          [{return (N->getZExtValue() == ISD::SETGE);}]>;
-def BPF_CC_GT  : PatLeaf<(imm),
+def BPF_CC_GT  : PatLeaf<(i64 imm),
                          [{return (N->getZExtValue() == ISD::SETGT);}]>;
-def BPF_CC_GTU : PatLeaf<(imm),
+def BPF_CC_GTU : PatLeaf<(i64 imm),
                          [{return (N->getZExtValue() == ISD::SETUGT);}]>;
-def BPF_CC_GEU : PatLeaf<(imm),
+def BPF_CC_GEU : PatLeaf<(i64 imm),
                          [{return (N->getZExtValue() == ISD::SETUGE);}]>;
 
 // jump instructions

@@ -23,7 +23,7 @@ namespace llvm {
 
 /// Common code between 32-bit and 64-bit PowerPC targets.
 ///
-class PPCTargetMachine : public LLVMTargetMachine {
+class PPCTargetMachine final : public LLVMTargetMachine {
 public:
   enum PPCABI { PPC_ABI_UNKNOWN, PPC_ABI_ELFv1, PPC_ABI_ELFv2 };
 private:
@@ -60,29 +60,6 @@ public:
     return false;
   }
 };
-
-/// PowerPC 32-bit target machine.
-///
-class PPC32TargetMachine : public PPCTargetMachine {
-  virtual void anchor();
-public:
-  PPC32TargetMachine(const Target &T, const Triple &TT, StringRef CPU,
-                     StringRef FS, const TargetOptions &Options,
-                     Optional<Reloc::Model> RM, CodeModel::Model CM,
-                     CodeGenOpt::Level OL);
-};
-
-/// PowerPC 64-bit target machine.
-///
-class PPC64TargetMachine : public PPCTargetMachine {
-  virtual void anchor();
-public:
-  PPC64TargetMachine(const Target &T, const Triple &TT, StringRef CPU,
-                     StringRef FS, const TargetOptions &Options,
-                     Optional<Reloc::Model> RM, CodeModel::Model CM,
-                     CodeGenOpt::Level OL);
-};
-
 } // end namespace llvm
 
 #endif

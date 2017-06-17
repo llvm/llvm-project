@@ -76,6 +76,11 @@ private:
   Error visitRange(TypeIndex Begin, uint32_t BeginOffset, TypeIndex End);
   Error visitOneRecord(TypeIndex TI, uint32_t Offset, CVType &Record);
 
+  BumpPtrAllocator Allocator;
+  StringSaver NameStorage;
+
+  SmallVector<StringRef, 10> TypeNames;
+
   /// Visited records get automatically added to the type database.
   TypeDatabase Database;
 

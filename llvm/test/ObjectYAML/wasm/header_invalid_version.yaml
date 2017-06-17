@@ -3,4 +3,4 @@
 FileHeader:
   Version:         0x00000002
 ...
-# CHECK: Error: 'Invalid data was encountered while parsing the file'
+# CHECK: Error reading file: <stdin>: Bad version number

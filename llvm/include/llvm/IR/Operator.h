@@ -328,8 +328,15 @@ public:
     return I->getType()->isFPOrFPVectorTy() ||
       I->getOpcode() == Instruction::FCmp;
   }
+
+  static inline bool classof(const ConstantExpr *CE) {
+    return CE->getType()->isFPOrFPVectorTy() ||
+           CE->getOpcode() == Instruction::FCmp;
+  }
+
   static inline bool classof(const Value *V) {
-    return isa<Instruction>(V) && classof(cast<Instruction>(V));
+    return (isa<Instruction>(V) && classof(cast<Instruction>(V))) ||
+           (isa<ConstantExpr>(V) && classof(cast<ConstantExpr>(V)));
   }
 };
 

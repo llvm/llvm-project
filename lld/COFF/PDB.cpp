@@ -17,7 +17,6 @@
 #include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
 #include "llvm/DebugInfo/CodeView/LazyRandomTypeCollection.h"
 #include "llvm/DebugInfo/CodeView/SymbolDumper.h"
-#include "llvm/DebugInfo/CodeView/TypeDatabase.h"
 #include "llvm/DebugInfo/CodeView/TypeDumpVisitor.h"
 #include "llvm/DebugInfo/CodeView/TypeStreamMerger.h"
 #include "llvm/DebugInfo/CodeView/TypeTableBuilder.h"
@@ -144,56 +143,10 @@ static void addObjectsToPDB(SymbolTable *Symtab, pdb::PDBFileBuilder &Builder,
   addTypeInfo(Builder.getIpiBuilder(), IDTable);
 }
 
-static void dumpDebugT(ScopedPrinter &W, ObjectFile *File) {
-  ListScope LS(W, "DebugT");
-  ArrayRef<uint8_t> Data = getDebugSection(File, ".debug$T");
-  if (Data.empty())
-    return;
-
-  LazyRandomTypeCollection Types(Data, 100);
-  TypeDumpVisitor TDV(Types, &W, false);
-  // Use a default implementation that does not follow type servers and instead
-  // just dumps the contents of the TypeServer2 record.
-  if (auto EC = codeview::visitTypeStream(Types, TDV))
-    fatal(EC, "CVTypeDumper::dump failed");
-}
-
-static void dumpDebugS(ScopedPrinter &W, ObjectFile *File) {
-  ListScope LS(W, "DebugS");
-  ArrayRef<uint8_t> Data = getDebugSection(File, ".debug$S");
-  if (Data.empty())
-    return;
-
-  BinaryByteStream Stream(Data, llvm::support::little);
-  CVSymbolArray Symbols;
-  BinaryStreamReader Reader(Stream);
-  if (auto EC = Reader.readArray(Symbols, Reader.getLength()))
-    fatal(EC, "StreamReader.readArray<CVSymbolArray> failed");
-
-  TypeDatabase TDB(0);
-  CVSymbolDumper SymbolDumper(W, TDB, CodeViewContainer::ObjectFile, nullptr,
-                              false);
-  if (auto EC = SymbolDumper.dump(Symbols))
-    fatal(EC, "CVSymbolDumper::dump failed");
-}
-
-// Dump CodeView debug info. This is for debugging.
-static void dumpCodeView(SymbolTable *Symtab) {
-  ScopedPrinter W(outs());
-
-  for (ObjectFile *File : Symtab->ObjectFiles) {
-    dumpDebugT(W, File);
-    dumpDebugS(W, File);
-  }
-}
-
 // Creates a PDB file.
 void coff::createPDB(StringRef Path, SymbolTable *Symtab,
                      ArrayRef<uint8_t> SectionTable,
                      const llvm::codeview::DebugInfo *DI) {
-  if (Config->DumpPdb)
-    dumpCodeView(Symtab);
-
   BumpPtrAllocator Alloc;
   pdb::PDBFileBuilder Builder(Alloc);
   ExitOnErr(Builder.initialize(4096)); // 4096 is blocksize

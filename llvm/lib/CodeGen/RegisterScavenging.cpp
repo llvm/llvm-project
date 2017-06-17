@@ -421,7 +421,7 @@ findSurvivorBackwards(const TargetRegisterInfo &TRI,
           break;
         Survivor = Reg;
       }
-      if (--InstrCountDown == 0 || I == MBB.begin())
+      if (--InstrCountDown == 0)
         break;
       if (FoundVReg) {
         // Keep searching when we find a vreg since the spilled register will
@@ -429,6 +429,8 @@ findSurvivorBackwards(const TargetRegisterInfo &TRI,
         InstrCountDown = InstrLimit;
         Pos = I;
       }
+      if (I == MBB.begin())
+        break;
     }
   }
 

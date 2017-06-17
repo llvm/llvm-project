@@ -338,8 +338,9 @@ LinkerScript::computeInputSections(const InputSectionDescription *Cmd) {
 void LinkerScript::discard(ArrayRef<InputSectionBase *> V) {
   for (InputSectionBase *S : V) {
     S->Live = false;
-    if (S == InX::ShStrTab)
-      error("discarding .shstrtab section is not allowed");
+    if (S == InX::ShStrTab || S == InX::Dynamic || S == InX::DynSymTab ||
+        S == InX::DynStrTab)
+      error("discarding " + S->Name + " section is not allowed");
     discard(S->DependentSections);
   }
 }
@@ -1044,8 +1045,9 @@ template <class ELFT> void OutputSectionCommand::writeTo(uint8_t *Buf) {
 
   Sec->Loc = Buf;
 
-  // We may have already rendered compressed content when using
-  // -compress-debug-sections option. Write it together with header.
+  // If -compress-debug-section is specified and if this is a debug seciton,
+  // we've already compressed section contents. If that's the case,
+  // just write it down.
   if (!Sec->CompressedData.empty()) {
     memcpy(Buf, Sec->ZDebugHeader.data(), Sec->ZDebugHeader.size());
     memcpy(Buf + Sec->ZDebugHeader.size(), Sec->CompressedData.data(),

@@ -994,7 +994,7 @@ def LDgotTprelL: Pseudo<(outs g8rc:$rD), (ins s16imm64:$disp, g8rc_nox0:$reg),
                           (PPCldGotTprelL tglobaltlsaddr:$disp, i64:$reg))]>,
                  isPPC64;
 
-let isBarrier = 1, isPseudo = 1, Defs = [CR7], Itinerary = IIC_LdStSync in
+let isPseudo = 1, Defs = [CR7], Itinerary = IIC_LdStSync in
 def CFENCE8 : Pseudo<(outs), (ins g8rc:$cr), "#CFENCE8", []>;
 
 def : Pat<(PPCaddTls i64:$in, tglobaltlsaddr:$g),

@@ -131,6 +131,16 @@ void UnmapOrDie(void *addr, uptr size) {
   }
 }
 
+void *MmapOrDieOnFatalError(uptr size, const char *mem_type) {
+  void *rv = VirtualAlloc(0, size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+  if (rv == 0) {
+    error_t last_error = GetLastError();
+    if (last_error != ERROR_NOT_ENOUGH_MEMORY)
+      ReportMmapFailureAndDie(size, mem_type, "allocate", last_error);
+  }
+  return rv;
+}
+
 // We want to map a chunk of address space aligned to 'alignment'.
 void *MmapAlignedOrDie(uptr size, uptr alignment, const char *mem_type) {
   CHECK(IsPowerOfTwo(size));

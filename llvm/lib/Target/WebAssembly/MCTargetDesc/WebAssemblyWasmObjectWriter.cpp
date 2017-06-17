@@ -68,6 +68,8 @@ WebAssemblyWasmObjectWriter::getRelocType(const MCValue &Target,
   bool IsFunction = IsFunctionExpr(Fixup.getValue());
 
   switch (unsigned(Fixup.getKind())) {
+  case WebAssembly::fixup_code_global_index:
+    return wasm::R_WEBASSEMBLY_GLOBAL_INDEX_LEB;
   case WebAssembly::fixup_code_sleb128_i32:
     if (IsFunction)
       return wasm::R_WEBASSEMBLY_TABLE_INDEX_SLEB;

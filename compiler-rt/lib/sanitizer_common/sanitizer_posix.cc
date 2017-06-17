@@ -22,6 +22,7 @@
 #include "sanitizer_procmaps.h"
 #include "sanitizer_stacktrace.h"
 
+#include <errno.h>
 #include <fcntl.h>
 #include <signal.h>
 #include <sys/mman.h>
@@ -143,6 +144,21 @@ void UnmapOrDie(void *addr, uptr size) {
     CHECK("unable to unmap" && 0);
   }
   DecreaseTotalMmap(size);
+}
+
+void *MmapOrDieOnFatalError(uptr size, const char *mem_type) {
+  size = RoundUpTo(size, GetPageSizeCached());
+  uptr res = internal_mmap(nullptr, size,
+                           PROT_READ | PROT_WRITE,
+                           MAP_PRIVATE | MAP_ANON, -1, 0);
+  int reserrno;
+  if (internal_iserror(res, &reserrno)) {
+    if (reserrno == ENOMEM)
+      return nullptr;
+    ReportMmapFailureAndDie(size, mem_type, "allocate", reserrno);
+  }
+  IncreaseTotalMmap(size);
+  return (void *)res;
 }
 
 // We want to map a chunk of address space aligned to 'alignment'.

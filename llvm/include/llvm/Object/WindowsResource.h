@@ -30,7 +30,6 @@
 #define LLVM_INCLUDE_LLVM_OBJECT_RESFILE_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/Error.h"
@@ -44,14 +43,9 @@
 #include <map>
 
 namespace llvm {
-
-class FileOutputBuffer;
-
 namespace object {
 
 class WindowsResource;
-
-enum class Machine { UNKNOWN, ARM, X64, X86 };
 
 class ResourceEntryRef {
 public:
@@ -185,7 +179,8 @@ private:
   std::vector<std::vector<UTF16>> StringTable;
 };
 
-Error writeWindowsResourceCOFF(StringRef OutputFile, Machine MachineType,
+Error writeWindowsResourceCOFF(std::unique_ptr<MemoryBuffer> &OutputBuffer,
+                               llvm::COFF::MachineTypes MachineType,
                                const WindowsResourceParser &Parser);
 
 } // namespace object
