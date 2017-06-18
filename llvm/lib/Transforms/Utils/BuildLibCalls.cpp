@@ -116,6 +116,7 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
   case LibFunc_wcslen:
     Changed |= setOnlyReadsMemory(F);
     Changed |= setDoesNotThrow(F);
+    Changed |= setOnlyAccessesArgMemory(F);
     Changed |= setDoesNotCapture(F, 0);
     return Changed;
   case LibFunc_strchr:

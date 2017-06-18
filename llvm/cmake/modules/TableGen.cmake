@@ -104,7 +104,8 @@ macro(add_tablegen target project)
   set(${target}_OLD_LLVM_LINK_COMPONENTS ${LLVM_LINK_COMPONENTS})
   set(LLVM_LINK_COMPONENTS ${LLVM_LINK_COMPONENTS} TableGen)
 
-  if(NOT XCODE)
+  # CMake-3.9 doesn't let compilation units depend on their dependent libraries.
+  if(NOT (CMAKE_GENERATOR STREQUAL "Ninja" AND NOT CMAKE_VERSION VERSION_LESS 3.9) AND NOT XCODE)
     # FIXME: It leaks to user, callee of add_tablegen.
     set(LLVM_ENABLE_OBJLIB ON)
   endif()
