@@ -11,7 +11,9 @@
 #define LLVM_DEBUGINFO_CODEVIEW_TYPETABLECOLLECTION_H
 
 #include "llvm/DebugInfo/CodeView/TypeCollection.h"
-#include "llvm/DebugInfo/CodeView/TypeDatabase.h"
+#include "llvm/Support/StringSaver.h"
+
+#include <vector>
 
 namespace llvm {
 namespace codeview {
@@ -30,11 +32,10 @@ public:
   uint32_t capacity() override;
 
 private:
-  bool hasCapacityFor(TypeIndex Index) const;
-  void ensureTypeExists(TypeIndex Index);
-
+  BumpPtrAllocator Allocator;
+  StringSaver NameStorage;
+  std::vector<StringRef> Names;
   ArrayRef<ArrayRef<uint8_t>> Records;
-  TypeDatabase Database;
 };
 }
 }

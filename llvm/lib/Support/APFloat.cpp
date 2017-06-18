@@ -37,10 +37,6 @@
 
 using namespace llvm;
 
-// TODO: Remove these and use APInt qualified types directly.
-typedef APInt::WordType integerPart;
-const unsigned int integerPartWidth = APInt::APINT_BITS_PER_WORD;
-
 /// A macro used to combine two fcCategory enums into one key which can be used
 /// in a switch statement to classify how the interaction of two APFloat's
 /// categories affects an operation.
@@ -51,7 +47,7 @@ const unsigned int integerPartWidth = APInt::APINT_BITS_PER_WORD;
 
 /* Assumed in hexadecimal significand parsing, and conversion to
    hexadecimal strings.  */
-static_assert(integerPartWidth % 4 == 0, "Part width must be divisible by 4!");
+static_assert(APFloatBase::integerPartWidth % 4 == 0, "Part width must be divisible by 4!");
 
 namespace llvm {
   /* Represents floating point arithmetic semantics.  */
@@ -153,8 +149,7 @@ namespace llvm {
   const unsigned int maxExponent = 16383;
   const unsigned int maxPrecision = 113;
   const unsigned int maxPowerOfFiveExponent = maxExponent + maxPrecision - 1;
-  const unsigned int maxPowerOfFiveParts = 2 + ((maxPowerOfFiveExponent * 815)
-                                                / (351 * integerPartWidth));
+  const unsigned int maxPowerOfFiveParts = 2 + ((maxPowerOfFiveExponent * 815) / (351 * APFloatBase::integerPartWidth));
 
   unsigned int APFloatBase::semanticsPrecision(const fltSemantics &semantics) {
     return semantics.precision;
@@ -180,7 +175,7 @@ namespace llvm {
 static inline unsigned int
 partCountForBits(unsigned int bits)
 {
-  return ((bits) + integerPartWidth - 1) / integerPartWidth;
+  return ((bits) + APFloatBase::integerPartWidth - 1) / APFloatBase::integerPartWidth;
 }
 
 /* Returns 0U-9U.  Return values >= 10U are not digits.  */
@@ -420,7 +415,7 @@ trailingHexadecimalFraction(StringRef::iterator p, StringRef::iterator end,
 /* Return the fraction lost were a bignum truncated losing the least
    significant BITS bits.  */
 static lostFraction
-lostFractionThroughTruncation(const integerPart *parts,
+lostFractionThroughTruncation(const APFloatBase::integerPart *parts,
                               unsigned int partCount,
                               unsigned int bits)
 {
@@ -433,7 +428,7 @@ lostFractionThroughTruncation(const integerPart *parts,
     return lfExactlyZero;
   if (bits == lsb + 1)
     return lfExactlyHalf;
-  if (bits <= partCount * integerPartWidth &&
+  if (bits <= partCount * APFloatBase::integerPartWidth &&
       APInt::tcExtractBit(parts, bits - 1))
     return lfMoreThanHalf;
 
@@ -442,7 +437,7 @@ lostFractionThroughTruncation(const integerPart *parts,
 
 /* Shift DST right BITS bits noting lost fraction.  */
 static lostFraction
-shiftRight(integerPart *dst, unsigned int parts, unsigned int bits)
+shiftRight(APFloatBase::integerPart *dst, unsigned int parts, unsigned int bits)
 {
   lostFraction lost_fraction;
 
@@ -489,22 +484,22 @@ HUerrBound(bool inexactMultiply, unsigned int HUerr1, unsigned int HUerr2)
 /* The number of ulps from the boundary (zero, or half if ISNEAREST)
    when the least significant BITS are truncated.  BITS cannot be
    zero.  */
-static integerPart
-ulpsFromBoundary(const integerPart *parts, unsigned int bits, bool isNearest)
-{
+static APFloatBase::integerPart
+ulpsFromBoundary(const APFloatBase::integerPart *parts, unsigned int bits,
+                 bool isNearest) {
   unsigned int count, partBits;
-  integerPart part, boundary;
+  APFloatBase::integerPart part, boundary;
 
   assert(bits != 0);
 
   bits--;
-  count = bits / integerPartWidth;
-  partBits = bits % integerPartWidth + 1;
+  count = bits / APFloatBase::integerPartWidth;
+  partBits = bits % APFloatBase::integerPartWidth + 1;
 
-  part = parts[count] & (~(integerPart) 0 >> (integerPartWidth - partBits));
+  part = parts[count] & (~(APFloatBase::integerPart) 0 >> (APFloatBase::integerPartWidth - partBits));
 
   if (isNearest)
-    boundary = (integerPart) 1 << (partBits - 1);
+    boundary = (APFloatBase::integerPart) 1 << (partBits - 1);
   else
     boundary = 0;
 
@@ -518,32 +513,30 @@ ulpsFromBoundary(const integerPart *parts, unsigned int bits, bool isNearest)
   if (part == boundary) {
     while (--count)
       if (parts[count])
-        return ~(integerPart) 0; /* A lot.  */
+        return ~(APFloatBase::integerPart) 0; /* A lot.  */
 
     return parts[0];
   } else if (part == boundary - 1) {
     while (--count)
       if (~parts[count])
-        return ~(integerPart) 0; /* A lot.  */
+        return ~(APFloatBase::integerPart) 0; /* A lot.  */
 
     return -parts[0];
   }
 
-  return ~(integerPart) 0; /* A lot.  */
+  return ~(APFloatBase::integerPart) 0; /* A lot.  */
 }
 
 /* Place pow(5, power) in DST, and return the number of parts used.
    DST must be at least one part larger than size of the answer.  */
 static unsigned int
-powerOf5(integerPart *dst, unsigned int power)
-{
-  static const integerPart firstEightPowers[] = { 1, 5, 25, 125, 625, 3125,
-                                                  15625, 78125 };
-  integerPart pow5s[maxPowerOfFiveParts * 2 + 5];
+powerOf5(APFloatBase::integerPart *dst, unsigned int power) {
+  static const APFloatBase::integerPart firstEightPowers[] = { 1, 5, 25, 125, 625, 3125, 15625, 78125 };
+  APFloatBase::integerPart pow5s[maxPowerOfFiveParts * 2 + 5];
   pow5s[0] = 78125 * 5;
 
   unsigned int partsCount[16] = { 1 };
-  integerPart scratch[maxPowerOfFiveParts], *p1, *p2, *pow5;
+  APFloatBase::integerPart scratch[maxPowerOfFiveParts], *p1, *p2, *pow5;
   unsigned int result;
   assert(power <= maxExponent);
 
@@ -572,7 +565,7 @@ powerOf5(integerPart *dst, unsigned int power)
     }
 
     if (power & 1) {
-      integerPart *tmp;
+      APFloatBase::integerPart *tmp;
 
       APInt::tcFullMultiply(p2, p1, pow5, result, pc);
       result += pc;
@@ -608,14 +601,14 @@ static const char NaNU[] = "NAN";
    significant nibble.  Write out exactly COUNT hexdigits, return
    COUNT.  */
 static unsigned int
-partAsHex (char *dst, integerPart part, unsigned int count,
+partAsHex (char *dst, APFloatBase::integerPart part, unsigned int count,
            const char *hexDigitChars)
 {
   unsigned int result = count;
 
-  assert(count != 0 && count <= integerPartWidth / 4);
+  assert(count != 0 && count <= APFloatBase::integerPartWidth / 4);
 
-  part >>= (integerPartWidth - 4 * count);
+  part >>= (APFloatBase::integerPartWidth - 4 * count);
   while (count--) {
     dst[count] = hexDigitChars[part & 0xf];
     part >>= 4;
@@ -889,11 +882,11 @@ unsigned int IEEEFloat::partCount() const {
   return partCountForBits(semantics->precision + 1);
 }
 
-const integerPart *IEEEFloat::significandParts() const {
+const IEEEFloat::integerPart *IEEEFloat::significandParts() const {
   return const_cast<IEEEFloat *>(this)->significandParts();
 }
 
-integerPart *IEEEFloat::significandParts() {
+IEEEFloat::integerPart *IEEEFloat::significandParts() {
   if (partCount() > 1)
     return significand.parts;
   else
@@ -916,7 +909,7 @@ void IEEEFloat::incrementSignificand() {
 }
 
 /* Add the significand of the RHS.  Returns the carry flag.  */
-integerPart IEEEFloat::addSignificand(const IEEEFloat &rhs) {
+IEEEFloat::integerPart IEEEFloat::addSignificand(const IEEEFloat &rhs) {
   integerPart *parts;
 
   parts = significandParts();
@@ -929,8 +922,8 @@ integerPart IEEEFloat::addSignificand(const IEEEFloat &rhs) {
 
 /* Subtract the significand of the RHS with a borrow flag.  Returns
    the borrow flag.  */
-integerPart IEEEFloat::subtractSignificand(const IEEEFloat &rhs,
-                                           integerPart borrow) {
+IEEEFloat::integerPart IEEEFloat::subtractSignificand(const IEEEFloat &rhs,
+                                                      integerPart borrow) {
   integerPart *parts;
 
   parts = significandParts();
