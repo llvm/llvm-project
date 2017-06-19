@@ -677,9 +677,13 @@ static bool foldReturnAndProcessPred(BasicBlock *BB, ReturnInst *Ret,
                                      const TargetTransformInfo *TTI) {
   bool Change = false;
 
+  // Make sure this block is a trivial return block.
+  assert(BB->getFirstNonPHIOrDbg() == Ret &&
+         "Trying to fold non-trivial return block");
+
   // If the return block contains nothing but the return and PHI's,
   // there might be an opportunity to duplicate the return in its
-  // predecessors and perform TRC there. Look for predecessors that end
+  // predecessors and perform TRE there. Look for predecessors that end
   // in unconditional branch and recursive call(s).
   SmallVector<BranchInst*, 8> UncondBranchPreds;
   for (pred_iterator PI = pred_begin(BB), E = pred_end(BB); PI != E; ++PI) {

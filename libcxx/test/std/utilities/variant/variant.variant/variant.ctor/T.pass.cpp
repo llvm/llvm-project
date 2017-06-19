@@ -37,6 +37,9 @@ struct NoThrowT {
   NoThrowT(int) noexcept(true) {}
 };
 
+struct AnyConstructible { template <typename T> AnyConstructible(T&&) {} };
+struct NoConstructible { NoConstructible() = delete; };
+
 void test_T_ctor_noexcept() {
   {
     using V = std::variant<Dummy, NoThrowT>;
@@ -62,6 +65,17 @@ void test_T_ctor_sfinae() {
     static_assert(!std::is_constructible<V, int>::value,
                   "no matching constructor");
   }
+  {
+    using V = std::variant<AnyConstructible, NoConstructible>;
+    static_assert(
+        !std::is_constructible<V, std::in_place_type_t<NoConstructible>>::value,
+        "no matching constructor");
+    static_assert(!std::is_constructible<V, std::in_place_index_t<1>>::value,
+                  "no matching constructor");
+  }
+
+
+
 #if !defined(TEST_VARIANT_HAS_NO_REFERENCES)
   {
     using V = std::variant<int, int &&>;

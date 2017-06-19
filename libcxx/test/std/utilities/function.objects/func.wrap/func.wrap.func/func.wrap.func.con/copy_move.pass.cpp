@@ -12,7 +12,7 @@
 // class function<R(ArgTypes...)>
 
 // function(const function&  f);
-// function(const function&& f);
+// function(function&& f);
 
 #include <functional>
 #include <memory>

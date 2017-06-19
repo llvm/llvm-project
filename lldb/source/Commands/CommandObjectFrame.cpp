@@ -655,32 +655,30 @@ protected:
         if (num_variables > 0) {
           for (size_t i = 0; i < num_variables; i++) {
             var_sp = variable_list->GetVariableAtIndex(i);
-            switch (var_sp->GetScope())
-            {
-              case eValueTypeVariableGlobal:
-                if  (!m_option_variable.show_globals)
-                  continue;
-                break;
-              case eValueTypeVariableStatic:
-                if (!m_option_variable.show_globals)
-                  continue;
-                break;
-              case eValueTypeVariableArgument:
-                if (!m_option_variable.show_args)
-                  continue;
-                break;
-              case eValueTypeVariableLocal:
-                if (!m_option_variable.show_locals)
-                  continue;
-                break;
-              default:
+            switch (var_sp->GetScope()) {
+            case eValueTypeVariableGlobal:
+              if (!m_option_variable.show_globals)
                 continue;
-                break;
-                
+              break;
+            case eValueTypeVariableStatic:
+              if (!m_option_variable.show_globals)
+                continue;
+              break;
+            case eValueTypeVariableArgument:
+              if (!m_option_variable.show_args)
+                continue;
+              break;
+            case eValueTypeVariableLocal:
+              if (!m_option_variable.show_locals)
+                continue;
+              break;
+            default:
+              continue;
+              break;
             }
-          std::string scope_string;
-          if (m_option_variable.show_scope)
-            scope_string = GetScopeString(var_sp).str();
+            std::string scope_string;
+            if (m_option_variable.show_scope)
+              scope_string = GetScopeString(var_sp).str();
 
             // Use the variable object code to make sure we are
             // using the same APIs as the public API will be

@@ -42,6 +42,10 @@ public:
 private:
   bool selectImpl(MachineInstr &I) const;
 
+  bool selectICmp(MachineInstrBuilder &MIB, const ARMBaseInstrInfo &TII,
+                  MachineRegisterInfo &MRI, const TargetRegisterInfo &TRI,
+                  const RegisterBankInfo &RBI) const;
+
   const ARMBaseInstrInfo &TII;
   const ARMBaseRegisterInfo &TRI;
   const ARMBaseTargetMachine &TM;
@@ -243,6 +247,105 @@ static unsigned selectLoadStoreOpCode(unsigned Opc, unsigned RegBank,
   return Opc;
 }
 
+static ARMCC::CondCodes getComparePred(CmpInst::Predicate Pred) {
+  switch (Pred) {
+  // Needs two compares...
+  case CmpInst::FCMP_ONE:
+  case CmpInst::FCMP_UEQ:
+  default:
+    // AL is our "false" for now. The other two need more compares.
+    return ARMCC::AL;
+  case CmpInst::ICMP_EQ:
+  case CmpInst::FCMP_OEQ:
+    return ARMCC::EQ;
+  case CmpInst::ICMP_SGT:
+  case CmpInst::FCMP_OGT:
+    return ARMCC::GT;
+  case CmpInst::ICMP_SGE:
+  case CmpInst::FCMP_OGE:
+    return ARMCC::GE;
+  case CmpInst::ICMP_UGT:
+  case CmpInst::FCMP_UGT:
+    return ARMCC::HI;
+  case CmpInst::FCMP_OLT:
+    return ARMCC::MI;
+  case CmpInst::ICMP_ULE:
+  case CmpInst::FCMP_OLE:
+    return ARMCC::LS;
+  case CmpInst::FCMP_ORD:
+    return ARMCC::VC;
+  case CmpInst::FCMP_UNO:
+    return ARMCC::VS;
+  case CmpInst::FCMP_UGE:
+    return ARMCC::PL;
+  case CmpInst::ICMP_SLT:
+  case CmpInst::FCMP_ULT:
+    return ARMCC::LT;
+  case CmpInst::ICMP_SLE:
+  case CmpInst::FCMP_ULE:
+    return ARMCC::LE;
+  case CmpInst::FCMP_UNE:
+  case CmpInst::ICMP_NE:
+    return ARMCC::NE;
+  case CmpInst::ICMP_UGE:
+    return ARMCC::HS;
+  case CmpInst::ICMP_ULT:
+    return ARMCC::LO;
+  }
+}
+
+bool ARMInstructionSelector::selectICmp(MachineInstrBuilder &MIB,
+                                        const ARMBaseInstrInfo &TII,
+                                        MachineRegisterInfo &MRI,
+                                        const TargetRegisterInfo &TRI,
+                                        const RegisterBankInfo &RBI) const {
+  auto &MBB = *MIB->getParent();
+  auto InsertBefore = std::next(MIB->getIterator());
+  auto &DebugLoc = MIB->getDebugLoc();
+
+  // Move 0 into the result register.
+  auto Mov0I = BuildMI(MBB, InsertBefore, DebugLoc, TII.get(ARM::MOVi))
+                   .addDef(MRI.createVirtualRegister(&ARM::GPRRegClass))
+                   .addImm(0)
+                   .add(predOps(ARMCC::AL))
+                   .add(condCodeOp());
+  if (!constrainSelectedInstRegOperands(*Mov0I, TII, TRI, RBI))
+    return false;
+
+  // Perform the comparison.
+  auto LHSReg = MIB->getOperand(2).getReg();
+  auto RHSReg = MIB->getOperand(3).getReg();
+  assert(MRI.getType(LHSReg) == MRI.getType(RHSReg) &&
+         MRI.getType(LHSReg).getSizeInBits() == 32 &&
+         MRI.getType(RHSReg).getSizeInBits() == 32 &&
+         "Unsupported types for comparison operation");
+  auto CmpI = BuildMI(MBB, InsertBefore, DebugLoc, TII.get(ARM::CMPrr))
+                  .addUse(LHSReg)
+                  .addUse(RHSReg)
+                  .add(predOps(ARMCC::AL));
+  if (!constrainSelectedInstRegOperands(*CmpI, TII, TRI, RBI))
+    return false;
+
+  // Move 1 into the result register if the flags say so.
+  auto ResReg = MIB->getOperand(0).getReg();
+  auto Cond =
+      static_cast<CmpInst::Predicate>(MIB->getOperand(1).getPredicate());
+  auto ARMCond = getComparePred(Cond);
+  if (ARMCond == ARMCC::AL)
+    return false;
+
+  auto Mov1I = BuildMI(MBB, InsertBefore, DebugLoc, TII.get(ARM::MOVCCi))
+                   .addDef(ResReg)
+                   .addUse(Mov0I->getOperand(0).getReg())
+                   .addImm(1)
+                   .add(predOps(ARMCond, ARM::CPSR));
+  if (!constrainSelectedInstRegOperands(*Mov1I, TII, TRI, RBI))
+    return false;
+
+  MIB->eraseFromParent();
+  return true;
+}
+
 bool ARMInstructionSelector::select(MachineInstr &I) const {
   assert(I.getParent() && "Instruction should be in a basic block!");
   assert(I.getParent()->getParent() && "Instruction should be in a function!");
@@ -343,6 +446,8 @@ bool ARMInstructionSelector::select(MachineInstr &I) const {
     I.setDesc(TII.get(COPY));
     return selectCopy(I, TII, MRI, TRI, RBI);
   }
+  case G_ICMP:
+    return selectICmp(MIB, TII, MRI, TRI, RBI);
   case G_GEP:
     I.setDesc(TII.get(ARM::ADDrr));
     MIB.add(predOps(ARMCC::AL)).add(condCodeOp());

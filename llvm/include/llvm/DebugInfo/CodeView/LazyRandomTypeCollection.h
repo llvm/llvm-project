@@ -11,17 +11,14 @@
 #define LLVM_DEBUGINFO_CODEVIEW_LAZYRANDOMTYPECOLLECTION_H
 
 #include "llvm/DebugInfo/CodeView/TypeCollection.h"
-#include "llvm/DebugInfo/CodeView/TypeDatabase.h"
-#include "llvm/DebugInfo/CodeView/TypeDatabaseVisitor.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
+#include "llvm/Support/Allocator.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/StringSaver.h"
 
 namespace llvm {
 namespace codeview {
-
-class TypeDatabase;
-class TypeVisitorCallbacks;
 
 /// \brief Provides amortized O(1) random access to a CodeView type stream.
 /// Normally to access a type from a type stream, you must know its byte
@@ -47,6 +44,11 @@ class TypeVisitorCallbacks;
 /// of O(N/M) and an amortized time of O(1).
 class LazyRandomTypeCollection : public TypeCollection {
   typedef FixedStreamArray<TypeIndexOffset> PartialOffsetArray;
+  struct CacheEntry {
+    CVType Type;
+    uint32_t Offset;
+    StringRef Name;
+  };
 
 public:
   explicit LazyRandomTypeCollection(uint32_t RecordCountHint);
@@ -56,8 +58,8 @@ public:
                            PartialOffsetArray PartialOffsets);
   LazyRandomTypeCollection(const CVTypeArray &Types, uint32_t RecordCountHint);
 
-  void reset(ArrayRef<uint8_t> Data);
-  void reset(StringRef Data);
+  void reset(ArrayRef<uint8_t> Data, uint32_t RecordCountHint);
+  void reset(StringRef Data, uint32_t RecordCountHint);
 
   CVType getType(TypeIndex Index) override;
   StringRef getTypeName(TypeIndex Index) override;
@@ -68,32 +70,26 @@ public:
   Optional<TypeIndex> getNext(TypeIndex Prev) override;
 
 private:
-  const TypeDatabase &database() const { return Database; }
   Error ensureTypeExists(TypeIndex Index);
+  void ensureCapacityFor(TypeIndex Index);
 
   Error visitRangeForType(TypeIndex TI);
   Error fullScanForType(TypeIndex TI);
-  Error visitRange(TypeIndex Begin, uint32_t BeginOffset, TypeIndex End);
-  Error visitOneRecord(TypeIndex TI, uint32_t Offset, CVType &Record);
+  void visitRange(TypeIndex Begin, uint32_t BeginOffset, TypeIndex End);
+
+  /// Number of actual records.
+  uint32_t Count = 0;
+
+  /// The largest type index which we've visited.
+  TypeIndex LargestTypeIndex = TypeIndex::None();
 
   BumpPtrAllocator Allocator;
   StringSaver NameStorage;
 
-  SmallVector<StringRef, 10> TypeNames;
-
-  /// Visited records get automatically added to the type database.
-  TypeDatabase Database;
-
   /// The type array to allow random access visitation of.
   CVTypeArray Types;
 
-  /// The database visitor which adds new records to the database.
-  TypeDatabaseVisitor DatabaseVisitor;
-
-  /// A vector mapping type indices to type offset.  For every record that has
-  /// been visited, contains the absolute offset of that record in the record
-  /// array.
-  std::vector<uint32_t> KnownOffsets;
+  std::vector<CacheEntry> Records;
 
   /// An array of index offsets for the given type stream, allowing log(N)
   /// lookups of a type record by index.  Similar to KnownOffsets but only

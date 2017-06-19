@@ -86,6 +86,10 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
 
   setAction({G_CONSTANT, s32}, Legal);
 
+  setAction({G_ICMP, s1}, Legal);
+  for (auto Ty : {s32, p0})
+    setAction({G_ICMP, 1, Ty}, Legal);
+
   if (!ST.useSoftFloat() && ST.hasVFP2()) {
     setAction({G_FADD, s32}, Legal);
     setAction({G_FADD, s64}, Legal);

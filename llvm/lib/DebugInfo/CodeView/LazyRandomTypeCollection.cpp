@@ -11,7 +11,6 @@
 
 #include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
 #include "llvm/DebugInfo/CodeView/CodeViewError.h"
-#include "llvm/DebugInfo/CodeView/TypeDatabase.h"
 #include "llvm/DebugInfo/CodeView/TypeName.h"
 #include "llvm/DebugInfo/CodeView/TypeServerHandler.h"
 #include "llvm/DebugInfo/CodeView/TypeVisitorCallbacks.h"
@@ -32,15 +31,13 @@ LazyRandomTypeCollection::LazyRandomTypeCollection(uint32_t RecordCountHint)
 LazyRandomTypeCollection::LazyRandomTypeCollection(
     const CVTypeArray &Types, uint32_t RecordCountHint,
     PartialOffsetArray PartialOffsets)
-    : NameStorage(Allocator), Database(RecordCountHint), Types(Types),
-      DatabaseVisitor(Database), PartialOffsets(PartialOffsets) {
-  KnownOffsets.resize(Database.capacity());
+    : NameStorage(Allocator), Types(Types), PartialOffsets(PartialOffsets) {
+  Records.resize(RecordCountHint);
 }
 
 LazyRandomTypeCollection::LazyRandomTypeCollection(ArrayRef<uint8_t> Data,
                                                    uint32_t RecordCountHint)
     : LazyRandomTypeCollection(RecordCountHint) {
-  reset(Data);
 }
 
 LazyRandomTypeCollection::LazyRandomTypeCollection(StringRef Data,
@@ -53,22 +50,28 @@ LazyRandomTypeCollection::LazyRandomTypeCollection(const CVTypeArray &Types,
                                                    uint32_t NumRecords)
     : LazyRandomTypeCollection(Types, NumRecords, PartialOffsetArray()) {}
 
-void LazyRandomTypeCollection::reset(StringRef Data) {
-  reset(makeArrayRef(Data.bytes_begin(), Data.bytes_end()));
-}
-
-void LazyRandomTypeCollection::reset(ArrayRef<uint8_t> Data) {
+void LazyRandomTypeCollection::reset(StringRef Data, uint32_t RecordCountHint) {
+  Count = 0;
   PartialOffsets = PartialOffsetArray();
 
   BinaryStreamReader Reader(Data, support::little);
   error(Reader.readArray(Types, Reader.getLength()));
 
-  KnownOffsets.resize(Database.capacity());
+  // Clear and then resize, to make sure existing data gets destroyed.
+  Records.clear();
+  Records.resize(RecordCountHint);
+}
+
+void LazyRandomTypeCollection::reset(ArrayRef<uint8_t> Data,
+                                     uint32_t RecordCountHint) {
+  reset(toStringRef(Data), RecordCountHint);
 }
 
 CVType LazyRandomTypeCollection::getType(TypeIndex Index) {
   error(ensureTypeExists(Index));
-  return Database.getTypeRecord(Index);
+  assert(contains(Index));
+
+  return Records[Index.toArrayIndex()].Type;
 }
 
 StringRef LazyRandomTypeCollection::getTypeName(TypeIndex Index) {
@@ -85,30 +88,43 @@ StringRef LazyRandomTypeCollection::getTypeName(TypeIndex Index) {
   }
 
   uint32_t I = Index.toArrayIndex();
-  if (I >= TypeNames.size())
-    TypeNames.resize(I + 1);
-
-  if (TypeNames[I].data() == nullptr) {
+  ensureCapacityFor(Index);
+  if (Records[I].Name.data() == nullptr) {
     StringRef Result = NameStorage.save(computeTypeName(*this, Index));
-    TypeNames[I] = Result;
+    Records[I].Name = Result;
   }
-  return TypeNames[I];
+  return Records[I].Name;
 }
 
 bool LazyRandomTypeCollection::contains(TypeIndex Index) {
-  return Database.contains(Index);
+  if (Records.size() <= Index.toArrayIndex())
+    return false;
+  if (!Records[Index.toArrayIndex()].Type.valid())
+    return false;
+  return true;
 }
 
-uint32_t LazyRandomTypeCollection::size() { return Database.size(); }
+uint32_t LazyRandomTypeCollection::size() { return Count; }
 
-uint32_t LazyRandomTypeCollection::capacity() { return Database.capacity(); }
+uint32_t LazyRandomTypeCollection::capacity() { return Records.size(); }
 
 Error LazyRandomTypeCollection::ensureTypeExists(TypeIndex TI) {
-  if (!Database.contains(TI)) {
-    if (auto EC = visitRangeForType(TI))
-      return EC;
-  }
-  return Error::success();
+  if (contains(TI))
+    return Error::success();
+
+  return visitRangeForType(TI);
+}
+
+void LazyRandomTypeCollection::ensureCapacityFor(TypeIndex Index) {
+  uint32_t MinSize = Index.toArrayIndex() + 1;
+
+  if (MinSize <= capacity())
+    return;
+
+  uint32_t NewCapacity = MinSize * 3 / 2;
+
+  assert(NewCapacity > capacity());
+  Records.resize(NewCapacity);
 }
 
 Error LazyRandomTypeCollection::visitRangeForType(TypeIndex TI) {
@@ -124,7 +140,7 @@ Error LazyRandomTypeCollection::visitRangeForType(TypeIndex TI) {
   auto Prev = std::prev(Next);
 
   TypeIndex TIB = Prev->Type;
-  if (Database.contains(TIB)) {
+  if (contains(TIB)) {
     // They've asked us to fetch a type index, but the entry we found in the
     // partial offsets array has already been visited.  Since we visit an entire
     // block every time, that means this record should have been previously
@@ -135,13 +151,12 @@ Error LazyRandomTypeCollection::visitRangeForType(TypeIndex TI) {
 
   TypeIndex TIE;
   if (Next == PartialOffsets.end()) {
-    TIE = TypeIndex::fromArrayIndex(Database.capacity());
+    TIE = TypeIndex::fromArrayIndex(capacity());
   } else {
     TIE = Next->Type;
   }
 
-  if (auto EC = visitRange(TIB, Prev->Offset, TIE))
-    return EC;
+  visitRange(TIB, Prev->Offset, TIE);
   return Error::success();
 }
 
@@ -170,34 +185,31 @@ Error LazyRandomTypeCollection::fullScanForType(TypeIndex TI) {
   assert(PartialOffsets.empty());
 
   TypeIndex CurrentTI = TypeIndex::fromArrayIndex(0);
-  uint32_t Offset = 0;
   auto Begin = Types.begin();
 
-  if (!Database.empty()) {
+  if (Count > 0) {
     // In the case of type streams which we don't know the number of records of,
     // it's possible to search for a type index triggering a full scan, but then
     // later additional records are added since we didn't know how many there
     // would be until we did a full visitation, then you try to access the new
     // type triggering another full scan.  To avoid this, we assume that if the
-    // database has some records, this must be what's going on.  So we ask the
-    // database for the largest type index less than the one we're searching for
-    // and only do the forward scan from there.
-    auto Prev = Database.largestTypeIndexLessThan(TI);
-    assert(Prev.hasValue() && "Empty database with valid types?");
-    Offset = KnownOffsets[Prev->toArrayIndex()];
-    CurrentTI = *Prev;
-    ++CurrentTI;
+    // database has some records, this must be what's going on.  We can also
+    // assume that this index must be larger than the largest type index we've
+    // visited, so we start from there and scan forward.
+    uint32_t Offset = Records[LargestTypeIndex.toArrayIndex()].Offset;
+    CurrentTI = LargestTypeIndex + 1;
     Begin = Types.at(Offset);
     ++Begin;
-    Offset = Begin.offset();
   }
 
   auto End = Types.end();
   while (Begin != End) {
-    if (auto EC = visitOneRecord(CurrentTI, Offset, *Begin))
-      return EC;
-
-    Offset += Begin.getRecordLength();
+    ensureCapacityFor(CurrentTI);
+    LargestTypeIndex = std::max(LargestTypeIndex, CurrentTI);
+    auto Idx = CurrentTI.toArrayIndex();
+    Records[Idx].Type = *Begin;
+    Records[Idx].Offset = Begin.offset();
+    ++Count;
     ++Begin;
     ++CurrentTI;
   }
@@ -207,36 +219,19 @@ Error LazyRandomTypeCollection::fullScanForType(TypeIndex TI) {
   return Error::success();
 }
 
-Error LazyRandomTypeCollection::visitRange(TypeIndex Begin,
-                                           uint32_t BeginOffset,
-                                           TypeIndex End) {
-
+void LazyRandomTypeCollection::visitRange(TypeIndex Begin, uint32_t BeginOffset,
+                                          TypeIndex End) {
   auto RI = Types.at(BeginOffset);
   assert(RI != Types.end());
 
+  ensureCapacityFor(End);
   while (Begin != End) {
-    if (auto EC = visitOneRecord(Begin, BeginOffset, *RI))
-      return EC;
-
-    BeginOffset += RI.getRecordLength();
+    LargestTypeIndex = std::max(LargestTypeIndex, Begin);
+    auto Idx = Begin.toArrayIndex();
+    Records[Idx].Type = *RI;
+    Records[Idx].Offset = RI.offset();
+    ++Count;
     ++Begin;
     ++RI;
   }
-
-  return Error::success();
-}
-
-Error LazyRandomTypeCollection::visitOneRecord(TypeIndex TI, uint32_t Offset,
-                                               CVType &Record) {
-  assert(!Database.contains(TI));
-  if (auto EC = codeview::visitTypeRecord(Record, TI, DatabaseVisitor))
-    return EC;
-  // Keep the KnownOffsets array the same size as the Database's capacity. Since
-  // we don't always know how many records are in the type stream, we need to be
-  // prepared for the database growing and receicing a type index that can't fit
-  // in our current buffer.
-  if (KnownOffsets.size() < Database.capacity())
-    KnownOffsets.resize(Database.capacity());
-  KnownOffsets[TI.toArrayIndex()] = Offset;
-  return Error::success();
 }

@@ -15,6 +15,7 @@
 #ifndef POLLY_CODEGEN_IRBUILDER_H
 #define POLLY_CODEGEN_IRBUILDER_H
 
+#include "llvm/ADT/MapVector.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/ValueMap.h"
@@ -107,7 +108,7 @@ private:
   llvm::MDNode *AliasScopeDomain;
 
   /// A map from base pointers to its alias scope.
-  llvm::DenseMap<llvm::AssertingVH<llvm::Value>, llvm::MDNode *> AliasScopeMap;
+  llvm::MapVector<llvm::AssertingVH<llvm::Value>, llvm::MDNode *> AliasScopeMap;
 
   /// A map from base pointers to an alias scope list of other pointers.
   llvm::DenseMap<llvm::AssertingVH<llvm::Value>, llvm::MDNode *>

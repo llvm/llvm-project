@@ -67,10 +67,12 @@ void ScopAnnotator::buildAliasScopes(Scop &S) {
     return;
 
   std::string AliasScopeStr = "polly.alias.scope.";
-  for (const ScopArrayInfo *Array : S.arrays())
+  for (const ScopArrayInfo *Array : S.arrays()) {
+    assert(Array->getBasePtr() && "Base pointer must be present");
     AliasScopeMap[Array->getBasePtr()] =
         getID(Ctx, AliasScopeDomain,
               MDString::get(Ctx, (AliasScopeStr + Array->getName()).c_str()));
+  }
 
   for (const ScopArrayInfo *Array : S.arrays()) {
     MDNode *AliasScopeList = MDNode::get(Ctx, {});

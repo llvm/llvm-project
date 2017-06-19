@@ -312,7 +312,7 @@ __xray_unpatch_function(int32_t FuncId) XRAY_NEVER_INSTRUMENT {
   return patchFunction(FuncId, false);
 }
 
-int __xray_set_handler_arg1(void (*Handler)(int32_t, XRayEntryType, uint64_t)) {
+int __xray_set_handler_arg1(void (*entry)(int32_t, XRayEntryType, uint64_t)) {
   if (!__sanitizer::atomic_load(&XRayInitialized,
                                 __sanitizer::memory_order_acquire))
     return 0;
@@ -320,7 +320,7 @@ int __xray_set_handler_arg1(void (*Handler)(int32_t, XRayEntryType, uint64_t)) {
   // A relaxed write might not be visible even if the current thread gets
   // scheduled on a different CPU/NUMA node.  We need to wait for everyone to
   // have this handler installed for consistency of collected data across CPUs.
-  __sanitizer::atomic_store(&XRayArgLogger, reinterpret_cast<uint64_t>(Handler),
+  __sanitizer::atomic_store(&XRayArgLogger, reinterpret_cast<uint64_t>(entry),
                             __sanitizer::memory_order_release);
   return 1;
 }

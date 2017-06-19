@@ -1989,7 +1989,7 @@ A pointer value is *based* on another pointer value according to the
 following rules:
 
 -  A pointer value formed from a ``getelementptr`` operation is *based*
-   on the first value operand of the ``getelementptr``.
+   on the second value operand of the ``getelementptr``.
 -  The result value of a ``bitcast`` is *based* on the operand of the
    ``bitcast``.
 -  A pointer value formed by an ``inttoptr`` is *based* on all pointer
@@ -3166,7 +3166,7 @@ The following is the syntax for constant expressions:
 ``getelementptr (TY, CSTPTR, IDX0, IDX1, ...)``, ``getelementptr inbounds (TY, CSTPTR, IDX0, IDX1, ...)``
     Perform the :ref:`getelementptr operation <i_getelementptr>` on
     constants. As with the :ref:`getelementptr <i_getelementptr>`
-    instruction, the index list may have zero or more indexes, which are
+    instruction, the index list may have one or more indexes, which are
     required to make sense for the type of "pointer to TY".
 ``select (COND, VAL1, VAL2)``
     Perform the :ref:`select operation <i_select>` on constants.
@@ -7805,7 +7805,7 @@ base address to start from. The remaining arguments are indices
 that indicate which of the elements of the aggregate object are indexed.
 The interpretation of each index is dependent on the type being indexed
 into. The first index always indexes the pointer value given as the
-first argument, the second index indexes a value of the type pointed to
+second argument, the second index indexes a value of the type pointed to
 (not necessarily the value directly pointed to, since the first index
 can be non-zero), etc. The first type indexed into must be a pointer
 value, subsequent types can be arrays, vectors, and structs. Note that
