@@ -153,7 +153,7 @@ private:
 
   static void *MonitorThread(void *baton);
 
-  void MonitorCallback(lldb::pid_t pid, bool exited, int signal, int status);
+  void MonitorCallback(lldb::pid_t pid, bool exited, WaitStatus status);
 
   void WaitForNewThread(::pid_t tid);
 

@@ -15,6 +15,8 @@
 #include "Symbols.h"
 #include "llvm/DebugInfo/CodeView/CVDebugRecord.h"
 #include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
+#include "llvm/DebugInfo/CodeView/DebugSubsectionRecord.h"
+#include "llvm/DebugInfo/CodeView/DebugSubsectionVisitor.h"
 #include "llvm/DebugInfo/CodeView/LazyRandomTypeCollection.h"
 #include "llvm/DebugInfo/CodeView/SymbolDumper.h"
 #include "llvm/DebugInfo/CodeView/TypeDumpVisitor.h"
@@ -45,8 +47,6 @@ using namespace lld;
 using namespace lld::coff;
 using namespace llvm;
 using namespace llvm::codeview;
-using namespace llvm::support;
-using namespace llvm::support::endian;
 
 using llvm::object::coff_section;
 
@@ -67,22 +67,24 @@ static SectionChunk *findByName(std::vector<SectionChunk *> &Sections,
   return nullptr;
 }
 
-static ArrayRef<uint8_t> getDebugSection(ObjectFile *File, StringRef SecName) {
-  SectionChunk *Sec = findByName(File->getDebugChunks(), SecName);
-  if (!Sec)
-    return {};
-
+static ArrayRef<uint8_t> consumeDebugMagic(ArrayRef<uint8_t> Data,
+                                           StringRef SecName) {
   // First 4 bytes are section magic.
-  ArrayRef<uint8_t> Data = Sec->getContents();
   if (Data.size() < 4)
     fatal(SecName + " too short");
-  if (read32le(Data.data()) != COFF::DEBUG_SECTION_MAGIC)
+  if (support::endian::read32le(Data.data()) != COFF::DEBUG_SECTION_MAGIC)
     fatal(SecName + " has an invalid magic");
   return Data.slice(4);
 }
 
+static ArrayRef<uint8_t> getDebugSection(ObjectFile *File, StringRef SecName) {
+  if (SectionChunk *Sec = findByName(File->getDebugChunks(), SecName))
+    return consumeDebugMagic(Sec->getContents(), SecName);
+  return {};
+}
+
 static void addTypeInfo(pdb::TpiStreamBuilder &TpiBuilder,
-                        codeview::TypeTableBuilder &TypeTable) {
+                        TypeTableBuilder &TypeTable) {
   // Start the TPI or IPI stream header.
   TpiBuilder.setVersionHeader(pdb::PdbTpiV80);
 
@@ -93,16 +95,52 @@ static void addTypeInfo(pdb::TpiStreamBuilder &TpiBuilder,
   });
 }
 
+static void mergeDebugT(ObjectFile *File,
+                        TypeTableBuilder &IDTable,
+                        TypeTableBuilder &TypeTable,
+                        SmallVectorImpl<TypeIndex> &TypeIndexMap,
+                        pdb::PDBTypeServerHandler &Handler) {
+  ArrayRef<uint8_t> Data = getDebugSection(File, ".debug$T");
+  if (Data.empty())
+    return;
+
+  BinaryByteStream Stream(Data, support::little);
+  CVTypeArray Types;
+  BinaryStreamReader Reader(Stream);
+  Handler.addSearchPath(sys::path::parent_path(File->getName()));
+  if (auto EC = Reader.readArray(Types, Reader.getLength()))
+    fatal(EC, "Reader::readArray failed");
+  if (auto Err = mergeTypeAndIdRecords(IDTable, TypeTable,
+                                                 TypeIndexMap, &Handler, Types))
+    fatal(Err, "codeview::mergeTypeStreams failed");
+}
+
+// Allocate memory for a .debug$S section and relocate it.
+static ArrayRef<uint8_t> relocateDebugChunk(BumpPtrAllocator &Alloc,
+                                            SectionChunk *DebugChunk) {
+  uint8_t *Buffer = Alloc.Allocate<uint8_t>(DebugChunk->getSize());
+  assert(DebugChunk->OutputSectionOff == 0 &&
+         "debug sections should not be in output sections");
+  DebugChunk->writeTo(Buffer);
+  return consumeDebugMagic(makeArrayRef(Buffer, DebugChunk->getSize()),
+                           ".debug$S");
+}
+
 // Add all object files to the PDB. Merge .debug$T sections into IpiData and
 // TpiData.
-static void addObjectsToPDB(SymbolTable *Symtab, pdb::PDBFileBuilder &Builder,
-                            codeview::TypeTableBuilder &TypeTable,
-                            codeview::TypeTableBuilder &IDTable) {
+static void addObjectsToPDB(BumpPtrAllocator &Alloc, SymbolTable *Symtab,
+                            pdb::PDBFileBuilder &Builder,
+                            TypeTableBuilder &TypeTable,
+                            TypeTableBuilder &IDTable) {
   // Follow type servers.  If the same type server is encountered more than
   // once for this instance of `PDBTypeServerHandler` (for example if many
   // object files reference the same TypeServer), the types from the
   // TypeServer will only be visited once.
   pdb::PDBTypeServerHandler Handler;
+
+  // PDBs use a single global string table for filenames in the file checksum
+  // table.
+  auto PDBStrTab = std::make_shared<DebugStringTableSubsection>();
 
   // Visit all .debug$T sections to add them to Builder.
   for (ObjectFile *File : Symtab->ObjectFiles) {
@@ -117,24 +155,73 @@ static void addObjectsToPDB(SymbolTable *Symtab, pdb::PDBFileBuilder &Builder,
     File->ModuleDBI = &ExitOnErr(Builder.getDbiBuilder().addModuleInfo(Name));
     File->ModuleDBI->setObjFileName(Path);
 
-    // FIXME: Walk the .debug$S sections and add them. Do things like recording
-    // source files.
+    // Before we can process symbol substreams from .debug$S, we need to process
+    // type information, file checksums, and the string table.  Add type info to
+    // the PDB first, so that we can get the map from object file type and item
+    // indices to PDB type and item indices.
+    SmallVector<TypeIndex, 128> TypeIndexMap;
+    mergeDebugT(File, IDTable, TypeTable, TypeIndexMap, Handler);
 
-    ArrayRef<uint8_t> Data = getDebugSection(File, ".debug$T");
-    if (Data.empty())
-      continue;
+    // Now do all line info.
+    for (SectionChunk *DebugChunk : File->getDebugChunks()) {
+      // FIXME: Debug chunks do not have a correct isLive() bit.
+      // FIXME: When linker GC is off we need to ignore debug info whose
+      // associated symbol was discarded.
+      if (DebugChunk->getSectionName() != ".debug$S")
+        continue;
 
-    BinaryByteStream Stream(Data, support::little);
-    codeview::CVTypeArray Types;
-    BinaryStreamReader Reader(Stream);
-    SmallVector<TypeIndex, 128> SourceToDest;
-    Handler.addSearchPath(llvm::sys::path::parent_path(File->getName()));
-    if (auto EC = Reader.readArray(Types, Reader.getLength()))
-      fatal(EC, "Reader::readArray failed");
-    if (auto Err = codeview::mergeTypeAndIdRecords(
-            IDTable, TypeTable, SourceToDest, &Handler, Types))
-      fatal(Err, "codeview::mergeTypeStreams failed");
+      ArrayRef<uint8_t> RelocatedDebugContents =
+          relocateDebugChunk(Alloc, DebugChunk);
+      if (RelocatedDebugContents.empty())
+        continue;
+
+      DebugSubsectionArray Subsections;
+      BinaryStreamReader Reader(RelocatedDebugContents, support::little);
+      ExitOnErr(Reader.readArray(Subsections, RelocatedDebugContents.size()));
+
+      DebugStringTableSubsectionRef CVStrTab;
+      DebugChecksumsSubsectionRef Checksums;
+      for (const DebugSubsectionRecord &SS : Subsections) {
+        switch (SS.kind()) {
+        case DebugSubsectionKind::StringTable:
+          ExitOnErr(CVStrTab.initialize(SS.getRecordData()));
+          break;
+        case DebugSubsectionKind::FileChecksums:
+          ExitOnErr(Checksums.initialize(SS.getRecordData()));
+          break;
+        case DebugSubsectionKind::Lines:
+          // We can add the relocated line table directly to the PDB without
+          // modification because the file checksum offsets will stay the same.
+          File->ModuleDBI->addDebugSubsection(SS);
+          break;
+        default:
+          // FIXME: Process the rest of the subsections.
+          break;
+        }
+      }
+
+      if (Checksums.valid()) {
+        // Make a new file checksum table that refers to offsets in the PDB-wide
+        // string table. Generally the string table subsection appears after the
+        // checksum table, so we have to do this after looping over all the
+        // subsections.
+        if (!CVStrTab.valid())
+          fatal(".debug$S sections must have both a string table subsection "
+                "and a checksum subsection table or neither");
+        auto NewChecksums =
+            make_unique<DebugChecksumsSubsection>(*PDBStrTab);
+        for (FileChecksumEntry &FC : Checksums) {
+          StringRef FileName = ExitOnErr(CVStrTab.getString(FC.FileNameOffset));
+          ExitOnErr(Builder.getDbiBuilder().addModuleSourceFile(
+              *File->ModuleDBI, FileName));
+          NewChecksums->addChecksum(FileName, FC.Kind, FC.Checksum);
+        }
+        File->ModuleDBI->addDebugSubsection(std::move(NewChecksums));
+      }
+    }
   }
+
+  Builder.getStringTableBuilder().setStrings(*PDBStrTab);
 
   // Construct TPI stream contents.
   addTypeInfo(Builder.getTpiBuilder(), TypeTable);
@@ -172,9 +259,9 @@ void coff::createPDB(StringRef Path, SymbolTable *Symtab,
   pdb::DbiStreamBuilder &DbiBuilder = Builder.getDbiBuilder();
   DbiBuilder.setVersionHeader(pdb::PdbDbiV110);
 
-  codeview::TypeTableBuilder TypeTable(BAlloc);
-  codeview::TypeTableBuilder IDTable(BAlloc);
-  addObjectsToPDB(Symtab, Builder, TypeTable, IDTable);
+  TypeTableBuilder TypeTable(BAlloc);
+  TypeTableBuilder IDTable(BAlloc);
+  addObjectsToPDB(Alloc, Symtab, Builder, TypeTable, IDTable);
 
   // Add Section Contributions.
   addSectionContribs(Symtab, DbiBuilder);

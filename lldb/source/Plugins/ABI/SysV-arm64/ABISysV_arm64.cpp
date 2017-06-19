@@ -1951,22 +1951,20 @@ bool ABISysV_arm64::CreateFunctionEntryUnwindPlan(UnwindPlan &unwind_plan) {
 
   uint32_t lr_reg_num = arm64_dwarf::lr;
   uint32_t sp_reg_num = arm64_dwarf::sp;
-  uint32_t pc_reg_num = arm64_dwarf::pc;
 
   UnwindPlan::RowSP row(new UnwindPlan::Row);
 
   // Our previous Call Frame Address is the stack pointer
   row->GetCFAValue().SetIsRegisterPlusOffset(sp_reg_num, 0);
 
-  // Our previous PC is in the LR
-  row->SetRegisterLocationToRegister(pc_reg_num, lr_reg_num, true);
-
   unwind_plan.AppendRow(row);
+  unwind_plan.SetReturnAddressRegister(lr_reg_num);
 
   // All other registers are the same.
 
   unwind_plan.SetSourceName("arm64 at-func-entry default");
   unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
+  unwind_plan.SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
 
   return true;
 }
