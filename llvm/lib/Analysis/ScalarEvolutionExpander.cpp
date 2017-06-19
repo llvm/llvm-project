@@ -748,18 +748,56 @@ Value *SCEVExpander::visitMulExpr(const SCEVMulExpr *S) {
   // Emit instructions to mul all the operands. Hoist as much as possible
   // out of loops.
   Value *Prod = nullptr;
-  for (const auto &I : OpsAndLoops) {
-    const SCEV *Op = I.second;
+  auto I = OpsAndLoops.begin();
+
+  // Expand the calculation of X pow N in the following manner:
+  // Let N = P1 + P2 + ... + PK, where all P are powers of 2. Then:
+  // X pow N = (X pow P1) * (X pow P2) * ... * (X pow PK).
+  const auto ExpandOpBinPowN = [this, &I, &OpsAndLoops, &Ty]() {
+    auto E = I;
+    // Calculate how many times the same operand from the same loop is included
+    // into this power.
+    uint64_t Exponent = 0;
+    const uint64_t MaxExponent = UINT64_MAX >> 1;
+    // No one sane will ever try to calculate such huge exponents, but if we
+    // need this, we stop on UINT64_MAX / 2 because we need to exit the loop
+    // below when the power of 2 exceeds our Exponent, and we want it to be
+    // 1u << 31 at most to not deal with unsigned overflow.
+    while (E != OpsAndLoops.end() && *I == *E && Exponent != MaxExponent) {
+      ++Exponent;
+      ++E;
+    }
+    assert(Exponent > 0 && "Trying to calculate a zeroth exponent of operand?");
+
+    // Calculate powers with exponents 1, 2, 4, 8 etc. and include those of them
+    // that are needed into the result.
+    Value *P = expandCodeFor(I->second, Ty);
+    Value *Result = nullptr;
+    if (Exponent & 1)
+      Result = P;
+    for (uint64_t BinExp = 2; BinExp <= Exponent; BinExp <<= 1) {
+      P = InsertBinop(Instruction::Mul, P, P);
+      if (Exponent & BinExp)
+        Result = Result ? InsertBinop(Instruction::Mul, Result, P) : P;
+    }
+
+    I = E;
+    assert(Result && "Nothing was expanded?");
+    return Result;
+  };
+
+  while (I != OpsAndLoops.end()) {
     if (!Prod) {
       // This is the first operand. Just expand it.
-      Prod = expand(Op);
-    } else if (Op->isAllOnesValue()) {
+      Prod = ExpandOpBinPowN();
+    } else if (I->second->isAllOnesValue()) {
       // Instead of doing a multiply by negative one, just do a negate.
       Prod = InsertNoopCastOfTo(Prod, Ty);
       Prod = InsertBinop(Instruction::Sub, Constant::getNullValue(Ty), Prod);
+      ++I;
     } else {
       // A simple mul.
-      Value *W = expandCodeFor(Op, Ty);
+      Value *W = ExpandOpBinPowN();
       Prod = InsertNoopCastOfTo(Prod, Ty);
       // Canonicalize a constant to the RHS.
       if (isa<Constant>(Prod)) std::swap(Prod, W);

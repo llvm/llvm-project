@@ -359,3 +359,44 @@ entry:
   %v = fadd double %f0, %f1
   ret double %v
 }
+
+define arm_aapcscc i32 @test_cmp_i32_eq(i32 %a, i32 %b) {
+; CHECK-LABEL: test_cmp_i32_eq:
+; CHECK: mov [[V:r[0-9]+]], #0
+; CHECK: cmp r0, r1
+; CHECK: moveq [[V]], #1
+; CHECK: and r0, [[V]], #1
+; CHECK: bx lr
+entry:
+  %v = icmp eq i32 %a, %b
+  %r = zext i1 %v to i32
+  ret i32 %r
+}
+
+define arm_aapcscc i32 @test_cmp_ptr_neq(double *%a, double *%b) {
+; CHECK-LABEL: test_cmp_ptr_neq:
+; CHECK: mov [[V:r[0-9]+]], #0
+; CHECK: cmp r0, r1
+; CHECK: movne [[V]], #1
+; CHECK: and r0, [[V]], #1
+; CHECK: bx lr
+entry:
+  %v = icmp ne double * %a, %b
+  %r = zext i1 %v to i32
+  ret i32 %r
+}
+
+define arm_aapcscc i32 @test_cmp_i16_slt(i16 %a, i16 %b) {
+; CHECK-LABEL: test_cmp_i16_slt:
+; CHECK-DAG: sxth r0, r0
+; CHECK-DAG: sxth r1, r1
+; CHECK-DAG: mov [[V:r[0-9]+]], #0
+; CHECK: cmp r0, r1
+; CHECK: movlt [[V]], #1
+; CHECK: and r0, [[V]], #1
+; CHECK: bx lr
+entry:
+  %v = icmp slt i16 %a, %b
+  %r = zext i1 %v to i32
+  ret i32 %r
+}

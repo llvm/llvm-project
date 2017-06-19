@@ -124,8 +124,8 @@ public:
   /// @param Node A schedule node band, which is a parent of a band node,
   ///             that contains a vector loop.
   /// @return Modified isl_schedule_node.
-  static __isl_give isl_schedule_node *
-  isolateFullPartialTiles(__isl_take isl_schedule_node *Node, int VectorWidth);
+  static isl::schedule_node isolateFullPartialTiles(isl::schedule_node Node,
+                                                    int VectorWidth);
 
 private:
   /// Tile a schedule node.

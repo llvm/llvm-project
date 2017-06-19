@@ -315,6 +315,13 @@ public:
     return nonloc::ConcreteInt(BasicVals.getTruthValue(b));
   }
 
+  /// Create NULL pointer, with proper pointer bit-width for given address
+  /// space.
+  /// \param type pointer type.
+  Loc makeNullWithType(QualType type) {
+    return loc::ConcreteInt(BasicVals.getZeroWithTypeSize(type));
+  }
+
   Loc makeNull() {
     return loc::ConcreteInt(BasicVals.getZeroWithPtrWidth());
   }

@@ -29,6 +29,18 @@
 ; CODEGEN:  %polly.access.cast.E = bitcast [270336 x [200000 x double]]* %E to double*
 ; CODEGEN:  %polly.access.mul.E = mul nsw i64 %polly.indvar33, 200000
 ; CODEGEN:  %polly.access.add.E = add nsw i64 %polly.access.mul.E, %polly.indvar
+; CODEGEN:  {{%.*}} = load double, double* %polly.access.E, align 8, !alias.scope [[TAG0:![0-9]+]], !noalias [[TAG2:![0-9]+]]
+; CODEGEN:  store double {{%.*}}, double* %scevgep36, align 8, !alias.scope [[TAG5:![0-9]+]], !noalias [[TAG8:![0-9]+]]
+;
+; CODEGEN-DAG: [[TAG0]] = distinct !{[[TAG0]], [[TAG1:![0-9]+]], !"polly.alias.scope.E"}
+; CODEGEN-DAG: [[TAG1]] = distinct !{[[TAG1]], !"polly.alias.scope.domain"}
+; CODEGEN-DAG: [[TAG2]] = !{[[TAG3:![0-9]+]], [[TAG4:![0-9]+]], [[TAG5:![0-9]+]], [[TAG6:![0-9]+]], [[TAG7:![0-9]+]]}
+; CODEGEN-DAG: [[TAG3]] = distinct !{[[TAG3]], [[TAG1]], !"polly.alias.scope.MemRef_B"}
+; CODEGEN-DAG: [[TAG4]] = distinct !{[[TAG4]], [[TAG1]], !"polly.alias.scope.MemRef_beta"}
+; CODEGEN-DAG: [[TAG5]] = distinct !{[[TAG5]], [[TAG1]], !"polly.alias.scope.MemRef_A"}
+; CODEGEN-DAG: [[TAG6]] = distinct !{[[TAG6]], [[TAG1]], !"polly.alias.scope.D"}
+; CODEGEN-DAG: [[TAG7]] = distinct !{[[TAG7]], [[TAG1]], !"polly.alias.scope.F"}
+; CODEGEN-DAG: [[TAG8]] = !{[[TAG3]], [[TAG4]], [[TAG6]], [[TAG0]], [[TAG7]]}
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-unknown"
