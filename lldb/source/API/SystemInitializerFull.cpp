@@ -54,6 +54,7 @@
 #include "Plugins/InstrumentationRuntime/ThreadSanitizer/ThreadSanitizerRuntime.h"
 #include "Plugins/InstrumentationRuntime/UndefinedBehaviorSanitizer/UndefinedBehaviorSanitizerRuntime.h"
 #include "Plugins/InstrumentationRuntime/MainThreadChecker/MainThreadCheckerRuntime.h"
+#include "Plugins/InstrumentationRuntime/SwiftRuntimeReporting/SwiftRuntimeReporting.h"
 #include "Plugins/JITLoader/GDB/JITLoaderGDB.h"
 #include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
 #include "Plugins/Language/Go/GoLanguage.h"
@@ -333,6 +334,7 @@ void SystemInitializerFull::Initialize() {
   ThreadSanitizerRuntime::Initialize();
   UndefinedBehaviorSanitizerRuntime::Initialize();
   MainThreadCheckerRuntime::Initialize();
+  SwiftRuntimeReporting::Initialize();
 
   SymbolVendorELF::Initialize();
   SymbolFileDWARF::Initialize();
@@ -460,6 +462,7 @@ void SystemInitializerFull::Terminate() {
   ThreadSanitizerRuntime::Terminate();
   UndefinedBehaviorSanitizerRuntime::Terminate();
   MainThreadCheckerRuntime::Terminate();
+  SwiftRuntimeReporting::Terminate();
   SymbolVendorELF::Terminate();
   SymbolFileDWARF::Terminate();
   SymbolFilePDB::Terminate();
