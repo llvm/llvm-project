@@ -161,9 +161,6 @@ struct Configuration {
   bool LargeAddressAware = false;
   bool HighEntropyVA = false;
   bool AppContainer = false;
-
-  // This is for debugging.
-  bool DumpPdb = false;
 };
 
 extern Configuration *Config;
