@@ -510,6 +510,9 @@ public:
     ID.AddPointer(II);
   }
 
+  /// Get the name of the macro.
+  IdentifierInfo *getName() const { return II; }
+
   /// Get the ID of the module that exports this macro.
   Module *getOwningModule() const { return OwningModule; }
 
