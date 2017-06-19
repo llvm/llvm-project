@@ -341,6 +341,18 @@ TEST_F(FormatTest, FormatIfWithoutCompoundStatement) {
   verifyFormat("if (true)\n  f();\ng();");
   verifyFormat("if (a)\n  if (b)\n    if (c)\n      g();\nh();");
   verifyFormat("if (a)\n  if (b) {\n    f();\n  }\ng();");
+  verifyFormat("if constexpr (true)\n"
+               "  f();\ng();");
+  verifyFormat("if constexpr (a)\n"
+               "  if constexpr (b)\n"
+               "    if constexpr (c)\n"
+               "      g();\n"
+               "h();");
+  verifyFormat("if constexpr (a)\n"
+               "  if constexpr (b) {\n"
+               "    f();\n"
+               "  }\n"
+               "g();");
 
   FormatStyle AllowsMergedIf = getLLVMStyle();
   AllowsMergedIf.AlignEscapedNewlines = FormatStyle::ENAS_Left;
@@ -423,9 +435,11 @@ TEST_F(FormatTest, FormatShortBracedStatements) {
   AllowSimpleBracedStatements.AllowShortLoopsOnASingleLine = true;
 
   verifyFormat("if (true) {}", AllowSimpleBracedStatements);
+  verifyFormat("if constexpr (true) {}", AllowSimpleBracedStatements);
   verifyFormat("while (true) {}", AllowSimpleBracedStatements);
   verifyFormat("for (;;) {}", AllowSimpleBracedStatements);
   verifyFormat("if (true) { f(); }", AllowSimpleBracedStatements);
+  verifyFormat("if constexpr (true) { f(); }", AllowSimpleBracedStatements);
   verifyFormat("while (true) { f(); }", AllowSimpleBracedStatements);
   verifyFormat("for (;;) { f(); }", AllowSimpleBracedStatements);
   verifyFormat("if (true) { //\n"
@@ -444,6 +458,14 @@ TEST_F(FormatTest, FormatShortBracedStatements) {
                "}",
                AllowSimpleBracedStatements);
 
+  verifyFormat("struct A2 {\n"
+               "  int X;\n"
+               "};",
+               AllowSimpleBracedStatements);
+  verifyFormat("typedef struct A2 {\n"
+               "  int X;\n"
+               "} A2_t;",
+               AllowSimpleBracedStatements);
   verifyFormat("template <int> struct A2 {\n"
                "  struct B {};\n"
                "};",
@@ -496,6 +518,19 @@ TEST_F(FormatTest, ParseIfElse) {
                "else {\n"
                "  i();\n"
                "}");
+  verifyFormat("if (true)\n"
+               "  if constexpr (true)\n"
+               "    if (true) {\n"
+               "      if constexpr (true)\n"
+               "        f();\n"
+               "    } else {\n"
+               "      g();\n"
+               "    }\n"
+               "  else\n"
+               "    h();\n"
+               "else {\n"
+               "  i();\n"
+               "}");
   verifyFormat("void f() {\n"
                "  if (a) {\n"
                "  } else {\n"
@@ -508,6 +543,12 @@ TEST_F(FormatTest, ElseIf) {
   verifyFormat("if (a)\n"
                "  f();\n"
                "else if (b)\n"
+               "  g();\n"
+               "else\n"
+               "  h();");
+  verifyFormat("if constexpr (a)\n"
+               "  f();\n"
+               "else if constexpr (b)\n"
                "  g();\n"
                "else\n"
                "  h();");
@@ -525,6 +566,11 @@ TEST_F(FormatTest, ElseIf) {
                "}");
   verifyFormat("if (a) {\n"
                "} else if (\n"
+               "    aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa) {\n"
+               "}",
+               getLLVMStyleWithColumns(62));
+  verifyFormat("if (a) {\n"
+               "} else if constexpr (\n"
                "    aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa) {\n"
                "}",
                getLLVMStyleWithColumns(62));
@@ -2506,6 +2552,9 @@ TEST_F(FormatTest, LineBreakingInBinaryExpressions) {
   verifyFormat("if ((aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa ||\n"
                "     bbbbbbbbbbbbbbbbbb) && // aaaaaaaaaaaaaaaa\n"
                "    cccccc) {\n}");
+  verifyFormat("if constexpr ((aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa ||\n"
+               "               bbbbbbbbbbbbbbbbbb) && // aaaaaaaaaaa\n"
+               "              cccccc) {\n}");
   verifyFormat("b = a &&\n"
                "    // Comment\n"
                "    b.c && d;");
@@ -6627,6 +6676,10 @@ TEST_F(FormatTest, MergeHandlingInTheFaceOfPreprocessorDirectives) {
                "  if (true) continue;\n"
                "}",
                ShortMergedIf);
+  ShortMergedIf.ColumnLimit = 33;
+  verifyFormat("#define A \\\n"
+               "  if constexpr (true) return 42;",
+               ShortMergedIf);
   ShortMergedIf.ColumnLimit = 29;
   verifyFormat("#define A                   \\\n"
                "  if (aaaaaaaaaa) return 1; \\\n"
@@ -6636,6 +6689,11 @@ TEST_F(FormatTest, MergeHandlingInTheFaceOfPreprocessorDirectives) {
   verifyFormat("#define A         \\\n"
                "  if (aaaaaaaaaa) \\\n"
                "    return 1;     \\\n"
+               "  return 2;",
+               ShortMergedIf);
+  verifyFormat("#define A                \\\n"
+               "  if constexpr (aaaaaaa) \\\n"
+               "    return 1;            \\\n"
                "  return 2;",
                ShortMergedIf);
 }
@@ -8847,7 +8905,20 @@ TEST_F(FormatTest, AllmanBraceBreaking) {
                BreakBeforeBraceShortIfs);
   verifyFormat("void f(bool b)\n"
                "{\n"
+               "  if constexpr (b)\n"
+               "  {\n"
+               "    return;\n"
+               "  }\n"
+               "}\n",
+               BreakBeforeBraceShortIfs);
+  verifyFormat("void f(bool b)\n"
+               "{\n"
                "  if (b) return;\n"
+               "}\n",
+               BreakBeforeBraceShortIfs);
+  verifyFormat("void f(bool b)\n"
+               "{\n"
+               "  if constexpr (b) return;\n"
                "}\n",
                BreakBeforeBraceShortIfs);
   verifyFormat("void f(bool b)\n"
@@ -10097,6 +10168,11 @@ TEST_F(FormatTest, FormatsLambdas) {
                "      doo_dah();\n"
                "      doo_dah();\n"
                "    })) {\n"
+               "}");
+  verifyFormat("if constexpr (blah_blah(whatever, whatever, [] {\n"
+               "                doo_dah();\n"
+               "                doo_dah();\n"
+               "              })) {\n"
                "}");
   verifyFormat("auto lambda = []() {\n"
                "  int a = 2\n"

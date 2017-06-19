@@ -980,10 +980,9 @@ void ExprEngine::VisitUnaryOperator(const UnaryOperator* U, ExplodedNode *Pred,
           //    transfer functions as "0 == E".
           SVal Result;
           if (Optional<Loc> LV = V.getAs<Loc>()) {
-            Loc X = svalBuilder.makeNull();
+            Loc X = svalBuilder.makeNullWithType(Ex->getType());
             Result = evalBinOp(state, BO_EQ, *LV, X, U->getType());
-          }
-          else if (Ex->getType()->isFloatingType()) {
+          } else if (Ex->getType()->isFloatingType()) {
             // FIXME: handle floating point types.
             Result = UnknownVal();
           } else {

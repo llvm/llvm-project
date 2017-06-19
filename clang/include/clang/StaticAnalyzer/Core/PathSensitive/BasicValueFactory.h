@@ -180,6 +180,11 @@ public:
     return getValue(X);
   }
 
+  inline const llvm::APSInt& getZeroWithTypeSize(QualType T) {
+    assert(T->isScalarType());
+    return getValue(0, Ctx.getTypeSize(T), true);
+  }
+
   inline const llvm::APSInt& getZeroWithPtrWidth(bool isUnsigned = true) {
     return getValue(0, Ctx.getTypeSize(Ctx.VoidPtrTy), isUnsigned);
   }
