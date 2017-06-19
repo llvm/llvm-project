@@ -89,6 +89,12 @@ void error(Error EC) {
                   [&](const ErrorInfoBase &EI) { reportError(EI.message()); });
 }
 
+template <typename T> T error(Expected<T> EC) {
+  if (!EC)
+    error(EC.takeError());
+  return std::move(EC.get());
+}
+
 int main(int argc_, const char *argv_[]) {
   sys::PrintStackTraceOnErrorSignal(argv_[0]);
   PrettyStackTraceProgram X(argc_, argv_);
@@ -175,10 +181,7 @@ int main(int argc_, const char *argv_[]) {
 
     if (Verbose) {
       int EntryNumber = 0;
-      Expected<ResourceEntryRef> EntryOrErr = RF->getHeadEntry();
-      if (!EntryOrErr)
-        error(EntryOrErr.takeError());
-      ResourceEntryRef Entry = EntryOrErr.get();
+      ResourceEntryRef Entry = error(RF->getHeadEntry());
       bool End = false;
       while (!End) {
         error(Entry.moveNext(End));
@@ -194,9 +197,8 @@ int main(int argc_, const char *argv_[]) {
     Parser.printTree(outs());
   }
 
-  std::unique_ptr<MemoryBuffer> OutputBuffer;
-  error(llvm::object::writeWindowsResourceCOFF(OutputBuffer, MachineType,
-                                               Parser));
+  std::unique_ptr<MemoryBuffer> OutputBuffer =
+      error(llvm::object::writeWindowsResourceCOFF(MachineType, Parser));
   auto FileOrErr =
       FileOutputBuffer::create(OutputFile, OutputBuffer->getBufferSize());
   if (!FileOrErr)

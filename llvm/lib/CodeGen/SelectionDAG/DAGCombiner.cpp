@@ -469,7 +469,8 @@ namespace {
     /// \return True if a merged store was created.
     bool MergeStoresOfConstantsOrVecElts(SmallVectorImpl<MemOpLink> &StoreNodes,
                                          EVT MemVT, unsigned NumStores,
-                                         bool IsConstantSrc, bool UseVector);
+                                         bool IsConstantSrc, bool UseVector,
+                                         bool UseTrunc);
 
     /// This is a helper function for MergeConsecutiveStores.
     /// Stores that may be merged are placed in StoreNodes.
@@ -12378,8 +12379,8 @@ SDValue DAGCombiner::getMergeStoreChains(SmallVectorImpl<MemOpLink> &StoreNodes,
 }
 
 bool DAGCombiner::MergeStoresOfConstantsOrVecElts(
-                  SmallVectorImpl<MemOpLink> &StoreNodes, EVT MemVT,
-                  unsigned NumStores, bool IsConstantSrc, bool UseVector) {
+    SmallVectorImpl<MemOpLink> &StoreNodes, EVT MemVT, unsigned NumStores,
+    bool IsConstantSrc, bool UseVector, bool UseTrunc) {
   // Make sure we have something to merge.
   if (NumStores < 2)
     return false;
@@ -12464,7 +12465,7 @@ bool DAGCombiner::MergeStoresOfConstantsOrVecElts(
 
   // make sure we use trunc store if it's necessary to be legal.
   SDValue NewStore;
-  if (TLI.isTypeLegal(StoredVal.getValueType())) {
+  if (UseVector || !UseTrunc) {
     NewStore = DAG.getStore(NewChain, DL, StoredVal, FirstInChain->getBasePtr(),
                             FirstInChain->getPointerInfo(),
                             FirstInChain->getAlignment());
@@ -12721,8 +12722,9 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
       LSBaseSDNode *FirstInChain = StoreNodes[0].MemNode;
       unsigned FirstStoreAS = FirstInChain->getAddressSpace();
       unsigned FirstStoreAlign = FirstInChain->getAlignment();
-      unsigned LastLegalType = 0;
-      unsigned LastLegalVectorType = 0;
+      unsigned LastLegalType = 1;
+      unsigned LastLegalVectorType = 1;
+      bool LastIntegerTrunc = false;
       bool NonZero = false;
       for (unsigned i = 0; i < NumConsecutiveStores; ++i) {
         StoreSDNode *ST = cast<StoreSDNode>(StoreNodes[i].MemNode);
@@ -12747,6 +12749,7 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
             TLI.allowsMemoryAccess(Context, DL, StoreTy, FirstStoreAS,
                                    FirstStoreAlign, &IsFast) &&
             IsFast) {
+          LastIntegerTrunc = false;
           LastLegalType = i + 1;
           // Or check whether a truncstore is legal.
         } else if (TLI.getTypeAction(Context, StoreTy) ==
@@ -12758,6 +12761,7 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
               TLI.allowsMemoryAccess(Context, DL, LegalizedStoredValueTy,
                                      FirstStoreAS, FirstStoreAlign, &IsFast) &&
               IsFast) {
+            LastIntegerTrunc = true;
             LastLegalType = i + 1;
           }
         }
@@ -12787,8 +12791,8 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
       bool UseVector = (LastLegalVectorType > LastLegalType) && !NoVectors;
       unsigned NumElem = (UseVector) ? LastLegalVectorType : LastLegalType;
 
-      bool Merged = MergeStoresOfConstantsOrVecElts(StoreNodes, MemVT, NumElem,
-                                                    true, UseVector);
+      bool Merged = MergeStoresOfConstantsOrVecElts(
+          StoreNodes, MemVT, NumElem, true, UseVector, LastIntegerTrunc);
       if (!Merged) {
         StoreNodes.erase(StoreNodes.begin(), StoreNodes.begin() + NumElem);
         continue;
@@ -12836,7 +12840,7 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
       }
 
       bool Merged = MergeStoresOfConstantsOrVecElts(
-          StoreNodes, MemVT, NumStoresToMerge, false, true);
+          StoreNodes, MemVT, NumStoresToMerge, false, true, false);
       if (!Merged) {
         StoreNodes.erase(StoreNodes.begin(),
                          StoreNodes.begin() + NumStoresToMerge);
@@ -12919,10 +12923,11 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
     // Scan the memory operations on the chain and find the first
     // non-consecutive load memory address. These variables hold the index in
     // the store node array.
-    unsigned LastConsecutiveLoad = 0;
+    unsigned LastConsecutiveLoad = 1;
     // This variable refers to the size and not index in the array.
-    unsigned LastLegalVectorType = 0;
-    unsigned LastLegalIntegerType = 0;
+    unsigned LastLegalVectorType = 1;
+    unsigned LastLegalIntegerType = 1;
+    bool DoIntegerTruncate = false;
     StartAddress = LoadNodes[0].OffsetFromBase;
     SDValue FirstChain = FirstLoad->getChain();
     for (unsigned i = 1; i < LoadNodes.size(); ++i) {
@@ -12958,11 +12963,12 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
           IsFastSt &&
           TLI.allowsMemoryAccess(Context, DL, StoreTy, FirstLoadAS,
                                  FirstLoadAlign, &IsFastLd) &&
-          IsFastLd)
+          IsFastLd) {
         LastLegalIntegerType = i + 1;
-      // Or check whether a truncstore and extload is legal.
-      else if (TLI.getTypeAction(Context, StoreTy) ==
-               TargetLowering::TypePromoteInteger) {
+        DoIntegerTruncate = false;
+        // Or check whether a truncstore and extload is legal.
+      } else if (TLI.getTypeAction(Context, StoreTy) ==
+                 TargetLowering::TypePromoteInteger) {
         EVT LegalizedStoredValueTy = TLI.getTypeToTransformTo(Context, StoreTy);
         if (TLI.isTruncStoreLegal(LegalizedStoredValueTy, StoreTy) &&
             TLI.canMergeStoresTo(FirstStoreAS, LegalizedStoredValueTy) &&
@@ -12976,8 +12982,10 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
             IsFastSt &&
             TLI.allowsMemoryAccess(Context, DL, StoreTy, FirstLoadAS,
                                    FirstLoadAlign, &IsFastLd) &&
-            IsFastLd)
+            IsFastLd) {
           LastLegalIntegerType = i + 1;
+          DoIntegerTruncate = true;
+        }
       }
     }
 
@@ -13012,17 +13020,31 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
 
     // The merged loads are required to have the same incoming chain, so
     // using the first's chain is acceptable.
-    SDValue NewLoad = DAG.getLoad(JointMemOpVT, LoadDL, FirstLoad->getChain(),
-                                  FirstLoad->getBasePtr(),
-                                  FirstLoad->getPointerInfo(), FirstLoadAlign);
 
     SDValue NewStoreChain = getMergeStoreChains(StoreNodes, NumElem);
-
     AddToWorklist(NewStoreChain.getNode());
 
-    SDValue NewStore = DAG.getStore(
-        NewStoreChain, StoreDL, NewLoad, FirstInChain->getBasePtr(),
-        FirstInChain->getPointerInfo(), FirstStoreAlign);
+    SDValue NewLoad, NewStore;
+    if (UseVectorTy || !DoIntegerTruncate) {
+      NewLoad = DAG.getLoad(JointMemOpVT, LoadDL, FirstLoad->getChain(),
+                            FirstLoad->getBasePtr(),
+                            FirstLoad->getPointerInfo(), FirstLoadAlign);
+      NewStore = DAG.getStore(NewStoreChain, StoreDL, NewLoad,
+                              FirstInChain->getBasePtr(),
+                              FirstInChain->getPointerInfo(), FirstStoreAlign);
+    } else { // This must be the truncstore/extload case
+      EVT ExtendedTy =
+          TLI.getTypeToTransformTo(*DAG.getContext(), JointMemOpVT);
+      NewLoad =
+          DAG.getExtLoad(ISD::EXTLOAD, LoadDL, ExtendedTy, FirstLoad->getChain(),
+                         FirstLoad->getBasePtr(), FirstLoad->getPointerInfo(),
+                         JointMemOpVT, FirstLoadAlign);
+      NewStore = DAG.getTruncStore(NewStoreChain, StoreDL, NewLoad,
+                                   FirstInChain->getBasePtr(),
+                                   FirstInChain->getPointerInfo(), JointMemOpVT,
+                                   FirstInChain->getAlignment(),
+                                   FirstInChain->getMemOperand()->getFlags());
+    }
 
     // Transfer chain users from old loads to the new load.
     for (unsigned i = 0; i < NumElem; ++i) {

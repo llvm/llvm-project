@@ -22,7 +22,7 @@
 # CHECK-NEXT:   NumStreams:
 # CHECK-NEXT:   FileSize:
 # CHECK-NEXT: StreamSizes:
-# CHECK-NEXT: StreamMap:
+# CHECK:      StreamMap:
 # CHECK:      PdbStream:
 # CHECK-NEXT:   Age:             1
 # CHECK-NEXT:   Guid:
@@ -119,10 +119,10 @@ RAW:                               Modules
 RAW-NEXT: ============================================================
 RAW-NEXT:   Mod 0000 | Name: `{{.*}}pdb.test.tmp1.obj`:
 RAW-NEXT:              Obj: `{{.*}}pdb.test.tmp1.obj`:
-RAW-NEXT:              debug stream: 9, # files: 0, has ec info: false
+RAW-NEXT:              debug stream: 9, # files: 1, has ec info: false
 RAW-NEXT:   Mod 0001 | Name: `{{.*}}pdb.test.tmp2.obj`:
 RAW-NEXT:              Obj: `{{.*}}pdb.test.tmp2.obj`:
-RAW-NEXT:              debug stream: 10, # files: 0, has ec info: false
+RAW-NEXT:              debug stream: 10, # files: 1, has ec info: false
 RAW-NEXT:   Mod 0002 | Name: `* Linker *`:
 RAW-NEXT:              Obj: ``:
 RAW-NEXT:              debug stream: 11, # files: 0, has ec info: false

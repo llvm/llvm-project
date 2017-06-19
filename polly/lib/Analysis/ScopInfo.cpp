@@ -2551,8 +2551,8 @@ static inline Loop *getRegionNodeLoop(RegionNode *RN, LoopInfo &LI) {
 /// subsequently speculate away.
 ///
 /// @see getRegionNodeLoop for additional details.
-long getNumBlocksInLoop(Loop *L) {
-  long NumBlocks = L->getNumBlocks();
+unsigned getNumBlocksInLoop(Loop *L) {
+  unsigned NumBlocks = L->getNumBlocks();
   SmallVector<llvm::BasicBlock *, 4> ExitBlocks;
   L->getExitBlocks(ExitBlocks);
 

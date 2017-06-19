@@ -68,6 +68,7 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-private-forward.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Errno.h"
 #include "llvm/Support/FileSystem.h"
 
@@ -640,4 +641,52 @@ const UnixSignalsSP &Host::GetUnixSignals() {
   static const auto s_unix_signals_sp =
       UnixSignals::Create(HostInfo::GetArchitecture());
   return s_unix_signals_sp;
+}
+
+#if defined(LLVM_ON_UNIX)
+WaitStatus WaitStatus::Decode(int wstatus) {
+  if (WIFEXITED(wstatus))
+    return {Exit, uint8_t(WEXITSTATUS(wstatus))};
+  else if (WIFSIGNALED(wstatus))
+    return {Signal, uint8_t(WTERMSIG(wstatus))};
+  else if (WIFSTOPPED(wstatus))
+    return {Stop, uint8_t(WSTOPSIG(wstatus))};
+  llvm_unreachable("Unknown wait status");
+}
+#endif
+
+void llvm::format_provider<WaitStatus>::format(const WaitStatus &WS,
+                                               raw_ostream &OS,
+                                               StringRef Options) {
+  if (Options == "g") {
+    char type;
+    switch (WS.type) {
+    case WaitStatus::Exit:
+      type = 'W';
+      break;
+    case WaitStatus::Signal:
+      type = 'X';
+      break;
+    case WaitStatus::Stop:
+      type = 'S';
+      break;
+    }
+    OS << formatv("{0}{1:x-2}", type, WS.status);
+    return;
+  }
+
+  assert(Options.empty());
+  const char *desc;
+  switch(WS.type) {
+  case WaitStatus::Exit:
+    desc = "Exited with status";
+    break;
+  case WaitStatus::Signal:
+    desc = "Killed by signal";
+    break;
+  case WaitStatus::Stop:
+    desc = "Stopped by signal";
+    break;
+  }
+  OS << desc << " " << int(WS.status);
 }

@@ -50,7 +50,7 @@ legalized:       true
 regBankSelected: true
 # ALL:      registers:
 # ALL-NEXT:   - { id: 0, class: gr32, preferred-register: '' }
-# ALL-NEXT:   - { id: 1, class: gr32, preferred-register: '' }
+# ALL-NEXT:   - { id: 1, class: gpr, preferred-register: '' }
 # ALL-NEXT:   - { id: 2, class: gr8, preferred-register: '' }
 registers:
   - { id: 0, class: gpr }
@@ -58,8 +58,7 @@ registers:
   - { id: 2, class: gpr }
 fixedStack:
   - { id: 0, offset: 0, size: 4, alignment: 16, isImmutable: true, isAliased: false }
-# ALL:          %1 = LEA32r %fixed-stack.0, 1, _, 0, _
-# ALL-NEXT:     %0 = MOV32rm %1, 1, _, 0, _ :: (invariant load 4 from %fixed-stack.0, align 0)
+# ALL:          %0 = MOV32rm %fixed-stack.0, 1, _, 0, _ :: (invariant load 4 from %fixed-stack.0, align 0)
 # ALL-NEXT:     %2 = MOV8rm %0, 1, _, 0, _ :: (load 1 from %ir.p1)
 # ALL-NEXT:     %al = COPY %2
 # ALL-NEXT:     RET 0, implicit %al
@@ -80,7 +79,7 @@ legalized:       true
 regBankSelected: true
 # ALL:      registers:
 # ALL-NEXT:   - { id: 0, class: gr32, preferred-register: '' }
-# ALL-NEXT:   - { id: 1, class: gr32, preferred-register: '' }
+# ALL-NEXT:   - { id: 1, class: gpr, preferred-register: '' }
 # ALL-NEXT:   - { id: 2, class: gr16, preferred-register: '' }
 registers:
   - { id: 0, class: gpr }
@@ -88,8 +87,7 @@ registers:
   - { id: 2, class: gpr }
 fixedStack:
   - { id: 0, offset: 0, size: 4, alignment: 16, isImmutable: true, isAliased: false }
-# ALL:          %1 = LEA32r %fixed-stack.0, 1, _, 0, _
-# ALL-NEXT:     %0 = MOV32rm %1, 1, _, 0, _ :: (invariant load 4 from %fixed-stack.0, align 0)
+# ALL:          %0 = MOV32rm %fixed-stack.0, 1, _, 0, _ :: (invariant load 4 from %fixed-stack.0, align 0)
 # ALL-NEXT:     %2 = MOV16rm %0, 1, _, 0, _ :: (load 2 from %ir.p1)
 # ALL-NEXT:     %ax = COPY %2
 # ALL-NEXT:     RET 0, implicit %ax
@@ -110,7 +108,7 @@ legalized:       true
 regBankSelected: true
 # ALL:      registers:
 # ALL-NEXT:   - { id: 0, class: gr32, preferred-register: '' }
-# ALL-NEXT:   - { id: 1, class: gr32, preferred-register: '' }
+# ALL-NEXT:   - { id: 1, class: gpr, preferred-register: '' }
 # ALL-NEXT:   - { id: 2, class: gr32, preferred-register: '' }
 registers:
   - { id: 0, class: gpr }
@@ -118,8 +116,7 @@ registers:
   - { id: 2, class: gpr }
 fixedStack:
   - { id: 0, offset: 0, size: 4, alignment: 16, isImmutable: true, isAliased: false }
-# ALL:          %1 = LEA32r %fixed-stack.0, 1, _, 0, _
-# ALL-NEXT:     %0 = MOV32rm %1, 1, _, 0, _ :: (invariant load 4 from %fixed-stack.0, align 0)
+# ALL:          %0 = MOV32rm %fixed-stack.0, 1, _, 0, _ :: (invariant load 4 from %fixed-stack.0, align 0)
 # ALL-NEXT:     %2 = MOV32rm %0, 1, _, 0, _ :: (load 4 from %ir.p1)
 # ALL-NEXT:     %eax = COPY %2
 # ALL-NEXT:     RET 0, implicit %eax
@@ -141,8 +138,8 @@ regBankSelected: true
 # ALL:      registers:
 # ALL-NEXT:   - { id: 0, class: gr8, preferred-register: '' }
 # ALL-NEXT:   - { id: 1, class: gr32, preferred-register: '' }
-# ALL-NEXT:   - { id: 2, class: gr32, preferred-register: '' }
-# ALL-NEXT:   - { id: 3, class: gr32, preferred-register: '' }
+# ALL-NEXT:   - { id: 2, class: gpr, preferred-register: '' }
+# ALL-NEXT:   - { id: 3, class: gpr, preferred-register: '' }
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
@@ -151,10 +148,8 @@ registers:
 fixedStack:
   - { id: 0, offset: 4, size: 4, alignment: 4, isImmutable: true, isAliased: false }
   - { id: 1, offset: 0, size: 1, alignment: 16, isImmutable: true, isAliased: false }
-# ALL:          %2 = LEA32r %fixed-stack.0, 1, _, 0, _
-# ALL-NEXT:     %0 = MOV8rm %2, 1, _, 0, _ :: (invariant load 1 from %fixed-stack.0, align 0)
-# ALL-NEXT:     %3 = LEA32r %fixed-stack.1, 1, _, 0, _
-# ALL-NEXT:     %1 = MOV32rm %3, 1, _, 0, _ :: (invariant load 4 from %fixed-stack.1, align 0)
+# ALL:          %0 = MOV8rm %fixed-stack.0, 1, _, 0, _ :: (invariant load 1 from %fixed-stack.0, align 0)
+# ALL-NEXT:     %1 = MOV32rm %fixed-stack.1, 1, _, 0, _ :: (invariant load 4 from %fixed-stack.1, align 0)
 # ALL-NEXT:     MOV8mr %1, 1, _, 0, _, %0 :: (store 1 into %ir.p1)
 # ALL-NEXT:     %eax = COPY %1
 # ALL-NEXT:     RET 0, implicit %eax
@@ -178,8 +173,8 @@ regBankSelected: true
 # ALL:      registers:
 # ALL-NEXT:   - { id: 0, class: gr16, preferred-register: '' }
 # ALL-NEXT:   - { id: 1, class: gr32, preferred-register: '' }
-# ALL-NEXT:   - { id: 2, class: gr32, preferred-register: '' }
-# ALL-NEXT:   - { id: 3, class: gr32, preferred-register: '' }
+# ALL-NEXT:   - { id: 2, class: gpr, preferred-register: '' }
+# ALL-NEXT:   - { id: 3, class: gpr, preferred-register: '' }
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
@@ -188,10 +183,8 @@ registers:
 fixedStack:
   - { id: 0, offset: 4, size: 4, alignment: 4, isImmutable: true, isAliased: false }
   - { id: 1, offset: 0, size: 2, alignment: 16, isImmutable: true, isAliased: false }
-# ALL:          %2 = LEA32r %fixed-stack.0, 1, _, 0, _
-# ALL-NEXT:     %0 = MOV16rm %2, 1, _, 0, _ :: (invariant load 2 from %fixed-stack.0, align 0)
-# ALL-NEXT:     %3 = LEA32r %fixed-stack.1, 1, _, 0, _
-# ALL-NEXT:     %1 = MOV32rm %3, 1, _, 0, _ :: (invariant load 4 from %fixed-stack.1, align 0)
+# ALL:          %0 = MOV16rm %fixed-stack.0, 1, _, 0, _ :: (invariant load 2 from %fixed-stack.0, align 0)
+# ALL-NEXT:     %1 = MOV32rm %fixed-stack.1, 1, _, 0, _ :: (invariant load 4 from %fixed-stack.1, align 0)
 # ALL-NEXT:     MOV16mr %1, 1, _, 0, _, %0 :: (store 2 into %ir.p1)
 # ALL-NEXT:     %eax = COPY %1
 # ALL-NEXT:     RET 0, implicit %eax
@@ -215,8 +208,8 @@ regBankSelected: true
 # ALL:      registers:
 # ALL-NEXT:   - { id: 0, class: gr32, preferred-register: '' }
 # ALL-NEXT:   - { id: 1, class: gr32, preferred-register: '' }
-# ALL-NEXT:   - { id: 2, class: gr32, preferred-register: '' }
-# ALL-NEXT:   - { id: 3, class: gr32, preferred-register: '' }
+# ALL-NEXT:   - { id: 2, class: gpr, preferred-register: '' }
+# ALL-NEXT:   - { id: 3, class: gpr, preferred-register: '' }
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
@@ -225,10 +218,8 @@ registers:
 fixedStack:
   - { id: 0, offset: 4, size: 4, alignment: 4, isImmutable: true, isAliased: false }
   - { id: 1, offset: 0, size: 4, alignment: 16, isImmutable: true, isAliased: false }
-# ALL:          %2 = LEA32r %fixed-stack.0, 1, _, 0, _
-# ALL-NEXT:     %0 = MOV32rm %2, 1, _, 0, _ :: (invariant load 4 from %fixed-stack.0, align 0)
-# ALL-NEXT:     %3 = LEA32r %fixed-stack.1, 1, _, 0, _
-# ALL-NEXT:     %1 = MOV32rm %3, 1, _, 0, _ :: (invariant load 4 from %fixed-stack.1, align 0)
+# ALL:          %0 = MOV32rm %fixed-stack.0, 1, _, 0, _ :: (invariant load 4 from %fixed-stack.0, align 0)
+# ALL-NEXT:     %1 = MOV32rm %fixed-stack.1, 1, _, 0, _ :: (invariant load 4 from %fixed-stack.1, align 0)
 # ALL-NEXT:     MOV32mr %1, 1, _, 0, _, %0 :: (store 4 into %ir.p1)
 # ALL-NEXT:     %eax = COPY %1
 # ALL-NEXT:     RET 0, implicit %eax
@@ -251,7 +242,7 @@ legalized:       true
 regBankSelected: true
 # ALL:      registers:
 # ALL-NEXT:   - { id: 0, class: gr32, preferred-register: '' }
-# ALL-NEXT:   - { id: 1, class: gr32, preferred-register: '' }
+# ALL-NEXT:   - { id: 1, class: gpr, preferred-register: '' }
 # ALL-NEXT:   - { id: 2, class: gr32, preferred-register: '' }
 registers:
   - { id: 0, class: gpr }
@@ -259,8 +250,7 @@ registers:
   - { id: 2, class: gpr }
 fixedStack:
   - { id: 0, offset: 0, size: 4, alignment: 16, isImmutable: true, isAliased: false }
-# ALL:          %1 = LEA32r %fixed-stack.0, 1, _, 0, _
-# ALL-NEXT:     %0 = MOV32rm %1, 1, _, 0, _ :: (invariant load 4 from %fixed-stack.0, align 0)
+# ALL:          %0 = MOV32rm %fixed-stack.0, 1, _, 0, _ :: (invariant load 4 from %fixed-stack.0, align 0)
 # ALL-NEXT:     %2 = MOV32rm %0, 1, _, 0, _ :: (load 4 from %ir.ptr1)
 # ALL-NEXT:     %eax = COPY %2
 # ALL-NEXT:     RET 0, implicit %eax
@@ -282,8 +272,8 @@ regBankSelected: true
 # ALL:      registers:
 # ALL-NEXT:   - { id: 0, class: gr32, preferred-register: '' }
 # ALL-NEXT:   - { id: 1, class: gr32, preferred-register: '' }
-# ALL-NEXT:   - { id: 2, class: gr32, preferred-register: '' }
-# ALL-NEXT:   - { id: 3, class: gr32, preferred-register: '' }
+# ALL-NEXT:   - { id: 2, class: gpr, preferred-register: '' }
+# ALL-NEXT:   - { id: 3, class: gpr, preferred-register: '' }
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: gpr }
@@ -292,10 +282,8 @@ registers:
 fixedStack:
   - { id: 0, offset: 4, size: 4, alignment: 4, isImmutable: true, isAliased: false }
   - { id: 1, offset: 0, size: 4, alignment: 16, isImmutable: true, isAliased: false }
-# ALL:          %2 = LEA32r %fixed-stack.0, 1, _, 0, _
-# ALL-NEXT:     %0 = MOV32rm %2, 1, _, 0, _ :: (invariant load 4 from %fixed-stack.0, align 0)
-# ALL-NEXT:     %3 = LEA32r %fixed-stack.1, 1, _, 0, _
-# ALL-NEXT:     %1 = MOV32rm %3, 1, _, 0, _ :: (invariant load 4 from %fixed-stack.1, align 0)
+# ALL:          %0 = MOV32rm %fixed-stack.0, 1, _, 0, _ :: (invariant load 4 from %fixed-stack.0, align 0)
+# ALL-NEXT:     %1 = MOV32rm %fixed-stack.1, 1, _, 0, _ :: (invariant load 4 from %fixed-stack.1, align 0)
 # ALL-NEXT:     MOV32mr %0, 1, _, 0, _, %1 :: (store 4 into %ir.ptr1)
 # ALL-NEXT:     RET 0
 body:             |

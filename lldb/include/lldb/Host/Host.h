@@ -29,6 +29,27 @@ class FileAction;
 class ProcessLaunchInfo;
 
 //----------------------------------------------------------------------
+// Exit Type for inferior processes
+//----------------------------------------------------------------------
+struct WaitStatus {
+  enum Type : uint8_t {
+    Exit,   // The status represents the return code from normal
+            // program exit (i.e. WIFEXITED() was true)
+    Signal, // The status represents the signal number that caused
+            // the program to exit (i.e. WIFSIGNALED() was true)
+    Stop,   // The status represents the signal number that caused the
+            // program to stop (i.e. WIFSTOPPED() was true)
+  };
+
+  Type type;
+  uint8_t status;
+
+  WaitStatus(Type type, uint8_t status) : type(type), status(status) {}
+
+  static WaitStatus Decode(int wstatus);
+};
+
+//----------------------------------------------------------------------
 /// @class Host Host.h "lldb/Host/Host.h"
 /// @brief A class that provides host computer information.
 ///
@@ -229,6 +250,15 @@ public:
 };
 
 } // namespace lldb_private
+
+namespace llvm {
+template <> struct format_provider<lldb_private::WaitStatus> {
+  /// Options = "" gives a human readable description of the status
+  /// Options = "g" gives a gdb-remote protocol status (e.g., X09)
+  static void format(const lldb_private::WaitStatus &WS, raw_ostream &OS,
+                     llvm::StringRef Options);
+};
+} // namespace llvm
 
 #endif // #if defined(__cplusplus)
 #endif // liblldb_Host_h_

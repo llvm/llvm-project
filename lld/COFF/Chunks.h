@@ -64,7 +64,6 @@ public:
   uint64_t getRVA() const { return RVA; }
   uint32_t getAlign() const { return Align; }
   void setRVA(uint64_t V) { RVA = V; }
-  void setOutputSectionOff(uint64_t V) { OutputSectionOff = V; }
 
   // Returns true if this has non-zero data. BSS chunks return
   // false. If false is returned, the space occupied by this chunk
@@ -97,17 +96,19 @@ protected:
   Chunk(Kind K = OtherKind) : ChunkKind(K) {}
   const Kind ChunkKind;
 
+  // The alignment of this chunk. The writer uses the value.
+  uint32_t Align = 1;
+
   // The RVA of this chunk in the output. The writer sets a value.
   uint64_t RVA = 0;
 
+public:
   // The offset from beginning of the output section. The writer sets a value.
   uint64_t OutputSectionOff = 0;
 
+protected:
   // The output section for this chunk.
   OutputSection *Out = nullptr;
-
-  // The alignment of this chunk. The writer uses the value.
-  uint32_t Align = 1;
 };
 
 // A chunk corresponding a section of an input file.

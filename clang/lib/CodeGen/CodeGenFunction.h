@@ -1916,13 +1916,36 @@ public:
                             LValueBaseInfo *BaseInfo = nullptr);
   LValue EmitLoadOfPointerLValue(Address Ptr, const PointerType *PtrTy);
 
-  /// CreateTempAlloca - This creates a alloca and inserts it into the entry
-  /// block. The caller is responsible for setting an appropriate alignment on
+  /// CreateTempAlloca - This creates an alloca and inserts it into the entry
+  /// block if \p ArraySize is nullptr, otherwise inserts it at the current
+  /// insertion point of the builder. The caller is responsible for setting an
+  /// appropriate alignment on
   /// the alloca.
-  llvm::AllocaInst *CreateTempAlloca(llvm::Type *Ty,
-                                     const Twine &Name = "tmp");
+  ///
+  /// \p ArraySize is the number of array elements to be allocated if it
+  ///    is not nullptr.
+  ///
+  /// LangAS::Default is the address space of pointers to local variables and
+  /// temporaries, as exposed in the source language. In certain
+  /// configurations, this is not the same as the alloca address space, and a
+  /// cast is needed to lift the pointer from the alloca AS into
+  /// LangAS::Default. This can happen when the target uses a restricted
+  /// address space for the stack but the source language requires
+  /// LangAS::Default to be a generic address space. The latter condition is
+  /// common for most programming languages; OpenCL is an exception in that
+  /// LangAS::Default is the private address space, which naturally maps
+  /// to the stack.
+  ///
+  /// Because the address of a temporary is often exposed to the program in
+  /// various ways, this function will perform the cast by default. The cast
+  /// may be avoided by passing false as \p CastToDefaultAddrSpace; this is
+  /// more efficient if the caller knows that the address will not be exposed.
+  llvm::AllocaInst *CreateTempAlloca(llvm::Type *Ty, const Twine &Name = "tmp",
+                                     llvm::Value *ArraySize = nullptr);
   Address CreateTempAlloca(llvm::Type *Ty, CharUnits align,
-                           const Twine &Name = "tmp");
+                           const Twine &Name = "tmp",
+                           llvm::Value *ArraySize = nullptr,
+                           bool CastToDefaultAddrSpace = true);
 
   /// CreateDefaultAlignedTempAlloca - This creates an alloca with the
   /// default ABI alignment of the given LLVM type.
@@ -1957,9 +1980,12 @@ public:
   Address CreateIRTemp(QualType T, const Twine &Name = "tmp");
 
   /// CreateMemTemp - Create a temporary memory object of the given type, with
-  /// appropriate alignment.
-  Address CreateMemTemp(QualType T, const Twine &Name = "tmp");
-  Address CreateMemTemp(QualType T, CharUnits Align, const Twine &Name = "tmp");
+  /// appropriate alignment. Cast it to the default address space if
+  /// \p CastToDefaultAddrSpace is true.
+  Address CreateMemTemp(QualType T, const Twine &Name = "tmp",
+                        bool CastToDefaultAddrSpace = true);
+  Address CreateMemTemp(QualType T, CharUnits Align, const Twine &Name = "tmp",
+                        bool CastToDefaultAddrSpace = true);
 
   /// CreateAggTemp - Create a temporary memory object for the given
   /// aggregate type.

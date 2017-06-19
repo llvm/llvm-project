@@ -45,11 +45,11 @@ define float @test_load_float(float * %p1) {
 ; SSE-NEXT:    movd %eax, %xmm0
 ; SSE-NEXT:    retq
 ;
-; ALL_AVX-LABEL: test_load_float:
-; ALL_AVX:       # BB#0:
-; ALL_AVX-NEXT:    movl (%rdi), %eax
-; ALL_AVX-NEXT:    vmovd %eax, %xmm0
-; ALL_AVX-NEXT:    retq
+; ALL-LABEL: test_load_float:
+; ALL:       # BB#0:
+; ALL-NEXT:    movl (%rdi), %eax
+; ALL-NEXT:    movd %eax, %xmm0
+; ALL-NEXT:    retq
   %r = load float, float* %p1
   ret float %r
 }
@@ -61,11 +61,11 @@ define double @test_load_double(double * %p1) {
 ; SSE-NEXT:    movq %rax, %xmm0
 ; SSE-NEXT:    retq
 ;
-; ALL_AVX-LABEL: test_load_double:
-; ALL_AVX:       # BB#0:
-; ALL_AVX-NEXT:    movq (%rdi), %rax
-; ALL_AVX-NEXT:    vmovq %rax, %xmm0
-; ALL_AVX-NEXT:    retq
+; ALL-LABEL: test_load_double:
+; ALL:       # BB#0:
+; ALL-NEXT:    movq (%rdi), %rax
+; ALL-NEXT:    movq %rax, %xmm0
+; ALL-NEXT:    retq
   %r = load double, double* %p1
   ret double %r
 }
@@ -122,7 +122,6 @@ define double * @test_store_double(double %val, double * %p1) {
 ; SSE_GREEDY-NEXT:    movsd %xmm0, (%rdi)
 ; SSE_GREEDY-NEXT:    movq %rdi, %rax
 ; SSE_GREEDY-NEXT:    retq
-;
   store double %val, double* %p1
   ret double * %p1;
 }
@@ -143,4 +142,31 @@ define void @test_store_ptr(i32** %ptr1, i32* %a) {
 ; ALL-NEXT:    retq
   store i32* %a, i32** %ptr1
   ret void
+}
+
+define i32 @test_gep_folding(i32* %arr, i32 %val) {
+; ALL-LABEL: test_gep_folding:
+; ALL:       # BB#0:
+; ALL-NEXT:    movl %esi, 20(%rdi)
+; ALL-NEXT:    movl 20(%rdi), %eax
+; ALL-NEXT:    retq
+  %arrayidx = getelementptr i32, i32* %arr, i32 5
+  store i32 %val, i32* %arrayidx
+  %r = load i32, i32* %arrayidx
+  ret i32 %r
+}
+
+; check that gep index doesn't folded into memory operand
+define i32 @test_gep_folding_largeGepIndex(i32* %arr, i32 %val) {
+; ALL-LABEL: test_gep_folding_largeGepIndex:
+; ALL:       # BB#0:
+; ALL-NEXT:    movabsq $228719476720, %rax # imm = 0x3540BE3FF0
+; ALL-NEXT:    leaq (%rdi,%rax), %rax
+; ALL-NEXT:    movl %esi, (%rax)
+; ALL-NEXT:    movl (%rax), %eax
+; ALL-NEXT:    retq
+  %arrayidx = getelementptr i32, i32* %arr, i64 57179869180
+  store i32 %val, i32* %arrayidx
+  %r = load i32, i32* %arrayidx
+  ret i32 %r
 }

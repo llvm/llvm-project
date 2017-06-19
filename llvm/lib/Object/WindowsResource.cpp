@@ -307,10 +307,9 @@ uint32_t WindowsResourceParser::TreeNode::getTreeSize() const {
 
 class WindowsResourceCOFFWriter {
 public:
-  WindowsResourceCOFFWriter(std::unique_ptr<MemoryBuffer> &OutputBuffer,
-                            COFF::MachineTypes MachineType,
+  WindowsResourceCOFFWriter(COFF::MachineTypes MachineType,
                             const WindowsResourceParser &Parser, Error &E);
-  Error write();
+  std::unique_ptr<MemoryBuffer> write();
 
 private:
   void performFileLayout();
@@ -326,7 +325,7 @@ private:
   void writeDirectoryTree();
   void writeDirectoryStringTable();
   void writeFirstSectionRelocations();
-  std::unique_ptr<MemoryBuffer> &OutputBuffer;
+  std::unique_ptr<MemoryBuffer> OutputBuffer;
   char *BufferStart;
   uint64_t CurrentOffset = 0;
   COFF::MachineTypes MachineType;
@@ -346,11 +345,10 @@ private:
 };
 
 WindowsResourceCOFFWriter::WindowsResourceCOFFWriter(
-    std::unique_ptr<MemoryBuffer> &OutputBuffer, COFF::MachineTypes MachineType,
-    const WindowsResourceParser &Parser, Error &E)
-    : OutputBuffer(OutputBuffer), MachineType(MachineType),
-      Resources(Parser.getTree()), Data(Parser.getData()),
-      StringTable(Parser.getStringTable()) {
+    COFF::MachineTypes MachineType, const WindowsResourceParser &Parser,
+    Error &E)
+    : MachineType(MachineType), Resources(Parser.getTree()),
+      Data(Parser.getData()), StringTable(Parser.getStringTable()) {
   performFileLayout();
 
   OutputBuffer = MemoryBuffer::getNewMemBuffer(FileSize);
@@ -417,7 +415,7 @@ static std::time_t getTime() {
   return Now;
 }
 
-Error WindowsResourceCOFFWriter::write() {
+std::unique_ptr<MemoryBuffer> WindowsResourceCOFFWriter::write() {
   BufferStart = const_cast<char *>(OutputBuffer->getBufferStart());
 
   writeCOFFHeader();
@@ -428,7 +426,7 @@ Error WindowsResourceCOFFWriter::write() {
   writeSymbolTable();
   writeStringTable();
 
-  return Error::success();
+  return std::move(OutputBuffer);
 }
 
 void WindowsResourceCOFFWriter::writeCOFFHeader() {
@@ -716,13 +714,13 @@ void WindowsResourceCOFFWriter::writeFirstSectionRelocations() {
   }
 }
 
-Error writeWindowsResourceCOFF(std::unique_ptr<MemoryBuffer> &OutputBuffer,
-                               COFF::MachineTypes MachineType,
-                               const WindowsResourceParser &Parser) {
+Expected<std::unique_ptr<MemoryBuffer>>
+writeWindowsResourceCOFF(COFF::MachineTypes MachineType,
+                         const WindowsResourceParser &Parser) {
   Error E = Error::success();
-  WindowsResourceCOFFWriter Writer(OutputBuffer, MachineType, Parser, E);
+  WindowsResourceCOFFWriter Writer(MachineType, Parser, E);
   if (E)
-    return E;
+    return std::move(E);
   return Writer.write();
 }
 

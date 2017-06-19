@@ -370,53 +370,23 @@ GDBRemoteCommunicationServerLLGS::SendWResponse(
   Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PROCESS));
 
   // send W notification
-  ExitType exit_type = ExitType::eExitTypeInvalid;
-  int return_code = 0;
-  std::string exit_description;
-
-  const bool got_exit_info =
-      process->GetExitStatus(&exit_type, &return_code, exit_description);
-  if (!got_exit_info) {
-    if (log)
-      log->Printf("GDBRemoteCommunicationServerLLGS::%s pid %" PRIu64
-                  ", failed to retrieve process exit status",
-                  __FUNCTION__, process->GetID());
+  auto wait_status = process->GetExitStatus();
+  if (!wait_status) {
+    LLDB_LOG(log, "pid = {0}, failed to retrieve process exit status",
+             process->GetID());
 
     StreamGDBRemote response;
     response.PutChar('E');
     response.PutHex8(GDBRemoteServerError::eErrorExitStatus);
     return SendPacketNoLock(response.GetString());
-  } else {
-    if (log)
-      log->Printf("GDBRemoteCommunicationServerLLGS::%s pid %" PRIu64
-                  ", returning exit type %d, return code %d [%s]",
-                  __FUNCTION__, process->GetID(), exit_type, return_code,
-                  exit_description.c_str());
-
-    StreamGDBRemote response;
-
-    char return_type_code;
-    switch (exit_type) {
-    case ExitType::eExitTypeExit:
-      return_type_code = 'W';
-      break;
-    case ExitType::eExitTypeSignal:
-      return_type_code = 'X';
-      break;
-    case ExitType::eExitTypeStop:
-      return_type_code = 'S';
-      break;
-    case ExitType::eExitTypeInvalid:
-      return_type_code = 'E';
-      break;
-    }
-    response.PutChar(return_type_code);
-
-    // POSIX exit status limited to unsigned 8 bits.
-    response.PutHex8(return_code);
-
-    return SendPacketNoLock(response.GetString());
   }
+
+  LLDB_LOG(log, "pid = {0}, returning exit type {1}", process->GetID(),
+           *wait_status);
+
+  StreamGDBRemote response;
+  response.Format("{0:g}", *wait_status);
+  return SendPacketNoLock(response.GetString());
 }
 
 static void AppendHexValue(StreamString &response, const uint8_t *buf,

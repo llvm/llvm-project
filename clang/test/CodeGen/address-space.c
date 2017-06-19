@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm < %s | FileCheck -check-prefixes=CHECK,GIZ %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm < %s | FileCheck -check-prefixes=CHECK,X86,GIZ %s
 // RUN: %clang_cc1 -triple amdgcn -emit-llvm < %s | FileCheck -check-prefixes=CHECK,PIZ %s
-// RUN: %clang_cc1 -triple amdgcn---amdgiz -emit-llvm < %s | FileCheck -check-prefixes=CHECK,GIZ %s
+// RUN: %clang_cc1 -triple amdgcn---amdgiz -emit-llvm < %s | FileCheck -check-prefixes=CHECK,AMDGIZ,GIZ %s
 
 // CHECK: @foo = common addrspace(1) global
 int foo __attribute__((address_space(1)));

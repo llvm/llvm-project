@@ -38,6 +38,8 @@
   GET_STACK_TRACE(__sanitizer::common_flags()->malloc_context_size, \
                   common_flags()->fast_unwind_on_malloc)
 
+#define GET_STACK_TRACE_THREAD GET_STACK_TRACE(kStackTraceMax, true)
+
 namespace __lsan {
 
 void InitializeInterceptors();

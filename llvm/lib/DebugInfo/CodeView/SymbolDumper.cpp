@@ -524,7 +524,7 @@ Error CVSymbolDumperImpl::visitKnownRecord(CVSymbol &CVR,
 
 Error CVSymbolDumperImpl::visitKnownRecord(CVSymbol &CVR, PublicSym32 &Public) {
   DictScope S(W, "PublicSym");
-  printTypeIndex("Type", Public.Index);
+  W.printFlags("Flags", uint32_t(Public.Flags), getPublicSymFlagNames());
   W.printNumber("Seg", Public.Segment);
   W.printNumber("Off", Public.Offset);
   W.printString("Name", Public.Name);
