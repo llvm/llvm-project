@@ -11,6 +11,7 @@
 #define liblldb_NativeProcessProtocol_h_
 
 #include "lldb/Core/TraceOptions.h"
+#include "lldb/Host/Host.h"
 #include "lldb/Host/MainLoop.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-private-forward.h"
@@ -158,12 +159,9 @@ public:
   //----------------------------------------------------------------------
   // Exit Status
   //----------------------------------------------------------------------
-  virtual bool GetExitStatus(lldb_private::ExitType *exit_type, int *status,
-                             std::string &exit_description);
+  virtual llvm::Optional<WaitStatus> GetExitStatus();
 
-  virtual bool SetExitStatus(lldb_private::ExitType exit_type, int status,
-                             const char *exit_description,
-                             bool bNotifyStateChange);
+  virtual bool SetExitStatus(WaitStatus status, bool bNotifyStateChange);
 
   //----------------------------------------------------------------------
   // Access to threads
@@ -421,9 +419,8 @@ protected:
   lldb::StateType m_state;
   mutable std::recursive_mutex m_state_mutex;
 
-  lldb_private::ExitType m_exit_type;
-  int m_exit_status;
-  std::string m_exit_description;
+  llvm::Optional<WaitStatus> m_exit_status;
+
   std::recursive_mutex m_delegates_mutex;
   std::vector<NativeDelegate *> m_delegates;
   NativeBreakpointList m_breakpoint_list;

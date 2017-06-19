@@ -1116,6 +1116,8 @@ public:
   template <
       class _Arg,
       enable_if_t<!is_same_v<decay_t<_Arg>, variant>, int> = 0,
+      enable_if_t<!__is_inplace_type<decay_t<_Arg>>::value, int> = 0,
+      enable_if_t<!__is_inplace_index<decay_t<_Arg>>::value, int> = 0,
       class _Tp = __variant_detail::__best_match_t<_Arg, _Types...>,
       size_t _Ip =
           __find_detail::__find_unambiguous_index_sfinae<_Tp, _Types...>::value,

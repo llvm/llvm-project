@@ -326,6 +326,34 @@ unsigned X86InstructionSelector::getLoadStoreOp(LLT &Ty, const RegisterBank &RB,
   return Opc;
 }
 
+// Fill in an address from the given instruction.
+void X86SelectAddress(const MachineInstr &I, const MachineRegisterInfo &MRI,
+                      X86AddressMode &AM) {
+
+  assert(I.getOperand(0).isReg() && "unsupported opperand.");
+  assert(MRI.getType(I.getOperand(0).getReg()).isPointer() &&
+         "unsupported type.");
+
+  if (I.getOpcode() == TargetOpcode::G_GEP) {
+    if (auto COff = getConstantVRegVal(I.getOperand(2).getReg(), MRI)) {
+      int64_t Imm = *COff;
+      if (isInt<32>(Imm)) { // Check for displacement overflow.
+        AM.Disp = static_cast<int32_t>(Imm);
+        AM.Base.Reg = I.getOperand(1).getReg();
+        return;
+      }
+    }
+  } else if (I.getOpcode() == TargetOpcode::G_FRAME_INDEX) {
+    AM.Base.FrameIndex = I.getOperand(1).getIndex();
+    AM.BaseType = X86AddressMode::FrameIndexBase;
+    return;
+  }
+
+  // Default behavior.
+  AM.Base.Reg = I.getOperand(0).getReg();
+  return;
+}
+
 bool X86InstructionSelector::selectLoadStoreOp(MachineInstr &I,
                                                MachineRegisterInfo &MRI,
                                                MachineFunction &MF) const {
@@ -340,18 +368,28 @@ bool X86InstructionSelector::selectLoadStoreOp(MachineInstr &I,
   const RegisterBank &RB = *RBI.getRegBank(DefReg, MRI, TRI);
 
   auto &MemOp = **I.memoperands_begin();
+  if (MemOp.getOrdering() != AtomicOrdering::NotAtomic) {
+    DEBUG(dbgs() << "Atomic load/store not supported yet\n");
+    return false;
+  }
+
   unsigned NewOpc = getLoadStoreOp(Ty, RB, Opc, MemOp.getAlignment());
   if (NewOpc == Opc)
     return false;
 
+  X86AddressMode AM;
+  X86SelectAddress(*MRI.getVRegDef(I.getOperand(1).getReg()), MRI, AM);
+
   I.setDesc(TII.get(NewOpc));
   MachineInstrBuilder MIB(MF, I);
-  if (Opc == TargetOpcode::G_LOAD)
-    addOffset(MIB, 0);
-  else {
+  if (Opc == TargetOpcode::G_LOAD) {
+    I.RemoveOperand(1);
+    addFullAddress(MIB, AM);
+  } else {
     // G_STORE (VAL, Addr), X86Store instruction (Addr, VAL)
+    I.RemoveOperand(1);
     I.RemoveOperand(0);
-    addOffset(MIB, 0).addUse(DefReg);
+    addFullAddress(MIB, AM).addUse(DefReg);
   }
   return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
 }

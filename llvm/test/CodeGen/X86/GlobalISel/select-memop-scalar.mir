@@ -83,6 +83,20 @@
     store i32* %a, i32** %ptr1
     ret void
   }
+
+  define i32 @test_gep_folding(i32* %arr, i32 %val) {
+    %arrayidx = getelementptr i32, i32* %arr, i32 5
+    store i32 %val, i32* %arrayidx
+    %r = load i32, i32* %arrayidx
+    ret i32 %r
+  }
+
+  define i32 @test_gep_folding_largeGepIndex(i32* %arr, i32 %val) #0 {
+    %arrayidx = getelementptr i32, i32* %arr, i64 57179869180
+    store i32 %val, i32* %arrayidx
+    %r = load i32, i32* %arrayidx
+    ret i32 %r
+  }
 ...
 ---
 # ALL-LABEL: name:            test_load_i8
@@ -496,5 +510,83 @@ body:             |
     %1(p0) = COPY %rsi
     G_STORE %1(p0), %0(p0) :: (store 8 into %ir.ptr1)
     RET 0
+
+...
+---
+name:            test_gep_folding
+# ALL-LABEL: name:  test_gep_folding
+alignment:       4
+legalized:       true
+regBankSelected: true
+# ALL:              registers:
+# ALL-NEXT:           - { id: 0, class: gr64, preferred-register: '' }
+# ALL-NEXT:           - { id: 1, class: gr32, preferred-register: '' }
+# ALL-NEXT:           - { id: 2, class: gpr, preferred-register: '' }
+# ALL-NEXT:           - { id: 3, class: gpr, preferred-register: '' }
+# ALL-NEXT:           - { id: 4, class: gr32, preferred-register: '' }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+  - { id: 3, class: gpr }
+  - { id: 4, class: gpr }
+# ALL:                  %0 = COPY %rdi
+# ALL-NEXT:             %1 = COPY %esi
+# ALL-NEXT:             MOV32mr %0, 1, _, 20, _, %1 :: (store 4 into %ir.arrayidx)
+# ALL-NEXT:             %4 = MOV32rm %0, 1, _, 20, _ :: (load 4 from %ir.arrayidx)
+# ALL-NEXT:             %eax = COPY %4
+# ALL-NEXT:             RET 0, implicit %eax
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %esi, %rdi
+
+    %0(p0) = COPY %rdi
+    %1(s32) = COPY %esi
+    %2(s64) = G_CONSTANT i64 20
+    %3(p0) = G_GEP %0, %2(s64)
+    G_STORE %1(s32), %3(p0) :: (store 4 into %ir.arrayidx)
+    %4(s32) = G_LOAD %3(p0) :: (load 4 from %ir.arrayidx)
+    %eax = COPY %4(s32)
+    RET 0, implicit %eax
+
+...
+---
+name:            test_gep_folding_largeGepIndex
+# ALL-LABEL: name:  test_gep_folding_largeGepIndex
+alignment:       4
+legalized:       true
+regBankSelected: true
+# ALL:              registers:
+# ALL-NEXT:           - { id: 0, class: gr64, preferred-register: '' }
+# ALL-NEXT:           - { id: 1, class: gr32, preferred-register: '' }
+# ALL-NEXT:           - { id: 2, class: gr64_nosp, preferred-register: '' }
+# ALL-NEXT:           - { id: 3, class: gr64, preferred-register: '' }
+# ALL-NEXT:           - { id: 4, class: gr32, preferred-register: '' }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+  - { id: 3, class: gpr }
+  - { id: 4, class: gpr }
+# ALL:                  %0 = COPY %rdi
+# ALL-NEXT:             %1 = COPY %esi
+# ALL-NEXT:             %2 = MOV64ri 228719476720
+# ALL-NEXT:             %3 = LEA64r %0, 1, %2, 0, _
+# ALL-NEXT:             MOV32mr %3, 1, _, 0, _, %1 :: (store 4 into %ir.arrayidx)
+# ALL-NEXT:             %4 = MOV32rm %3, 1, _, 0, _ :: (load 4 from %ir.arrayidx)
+# ALL-NEXT:             %eax = COPY %4
+# ALL-NEXT:             RET 0, implicit %eax
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %esi, %rdi
+
+    %0(p0) = COPY %rdi
+    %1(s32) = COPY %esi
+    %2(s64) = G_CONSTANT i64 228719476720
+    %3(p0) = G_GEP %0, %2(s64)
+    G_STORE %1(s32), %3(p0) :: (store 4 into %ir.arrayidx)
+    %4(s32) = G_LOAD %3(p0) :: (load 4 from %ir.arrayidx)
+    %eax = COPY %4(s32)
+    RET 0, implicit %eax
 
 ...

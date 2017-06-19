@@ -38,16 +38,10 @@ define i64 @test_ret_i64() {
 }
 
 define i8 @test_arg_i8(i8 %a) {
-; X32_GISEL-LABEL: test_arg_i8:
-; X32_GISEL:       # BB#0:
-; X32_GISEL-NEXT:    leal 4(%esp), %eax
-; X32_GISEL-NEXT:    movb (%eax), %al
-; X32_GISEL-NEXT:    retl
-;
-; X32_ISEL-LABEL: test_arg_i8:
-; X32_ISEL:       # BB#0:
-; X32_ISEL-NEXT:    movb 4(%esp), %al
-; X32_ISEL-NEXT:    retl
+; X32-LABEL: test_arg_i8:
+; X32:       # BB#0:
+; X32-NEXT:    movb 4(%esp), %al
+; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_arg_i8:
 ; X64:       # BB#0:
@@ -57,16 +51,10 @@ define i8 @test_arg_i8(i8 %a) {
 }
 
 define i16 @test_arg_i16(i16 %a) {
-; X32_GISEL-LABEL: test_arg_i16:
-; X32_GISEL:       # BB#0:
-; X32_GISEL-NEXT:    leal 4(%esp), %eax
-; X32_GISEL-NEXT:    movzwl (%eax), %eax
-; X32_GISEL-NEXT:    retl
-;
-; X32_ISEL-LABEL: test_arg_i16:
-; X32_ISEL:       # BB#0:
-; X32_ISEL-NEXT:    movzwl 4(%esp), %eax
-; X32_ISEL-NEXT:    retl
+; X32-LABEL: test_arg_i16:
+; X32:       # BB#0:
+; X32-NEXT:    movzwl 4(%esp), %eax
+; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_arg_i16:
 ; X64:       # BB#0:
@@ -76,16 +64,10 @@ define i16 @test_arg_i16(i16 %a) {
 }
 
 define i32 @test_arg_i32(i32 %a) {
-; X32_GISEL-LABEL: test_arg_i32:
-; X32_GISEL:       # BB#0:
-; X32_GISEL-NEXT:    leal 4(%esp), %eax
-; X32_GISEL-NEXT:    movl (%eax), %eax
-; X32_GISEL-NEXT:    retl
-;
-; X32_ISEL-LABEL: test_arg_i32:
-; X32_ISEL:       # BB#0:
-; X32_ISEL-NEXT:    movl 4(%esp), %eax
-; X32_ISEL-NEXT:    retl
+; X32-LABEL: test_arg_i32:
+; X32:       # BB#0:
+; X32-NEXT:    movl 4(%esp), %eax
+; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_arg_i32:
 ; X64:       # BB#0:
@@ -95,19 +77,11 @@ define i32 @test_arg_i32(i32 %a) {
 }
 
 define i64 @test_arg_i64(i64 %a) {
-; X32_GISEL-LABEL: test_arg_i64:
-; X32_GISEL:       # BB#0:
-; X32_GISEL-NEXT:    leal 4(%esp), %eax
-; X32_GISEL-NEXT:    movl (%eax), %eax
-; X32_GISEL-NEXT:    leal 8(%esp), %ecx
-; X32_GISEL-NEXT:    movl (%ecx), %edx
-; X32_GISEL-NEXT:    retl
-;
-; X32_ISEL-LABEL: test_arg_i64:
-; X32_ISEL:       # BB#0:
-; X32_ISEL-NEXT:    movl 4(%esp), %eax
-; X32_ISEL-NEXT:    movl 8(%esp), %edx
-; X32_ISEL-NEXT:    retl
+; X32-LABEL: test_arg_i64:
+; X32:       # BB#0:
+; X32-NEXT:    movl 4(%esp), %eax
+; X32-NEXT:    movl 8(%esp), %edx
+; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_arg_i64:
 ; X64:       # BB#0:
@@ -117,30 +91,16 @@ define i64 @test_arg_i64(i64 %a) {
 }
 
 define i64 @test_i64_args_8(i64 %arg1, i64 %arg2, i64 %arg3, i64 %arg4, i64 %arg5, i64 %arg6, i64 %arg7, i64 %arg8) {
-; X32_GISEL-LABEL: test_i64_args_8:
-; X32_GISEL:       # BB#0:
-; X32_GISEL-NEXT:    leal 60(%esp), %eax
-; X32_GISEL-NEXT:    movl (%eax), %eax
-; X32_GISEL-NEXT:    leal 64(%esp), %ecx
-; X32_GISEL-NEXT:    movl (%ecx), %edx
-; X32_GISEL-NEXT:    retl
+; X32-LABEL: test_i64_args_8:
+; X32:       # BB#0:
+; X32-NEXT:    movl 60(%esp), %eax
+; X32-NEXT:    movl 64(%esp), %edx
+; X32-NEXT:    retl
 ;
-; X32_ISEL-LABEL: test_i64_args_8:
-; X32_ISEL:       # BB#0:
-; X32_ISEL-NEXT:    movl 60(%esp), %eax
-; X32_ISEL-NEXT:    movl 64(%esp), %edx
-; X32_ISEL-NEXT:    retl
-;
-; X64_GISEL-LABEL: test_i64_args_8:
-; X64_GISEL:       # BB#0:
-; X64_GISEL-NEXT:    leaq 16(%rsp), %rax
-; X64_GISEL-NEXT:    movq (%rax), %rax
-; X64_GISEL-NEXT:    retq
-;
-; X64_ISEL-LABEL: test_i64_args_8:
-; X64_ISEL:       # BB#0:
-; X64_ISEL-NEXT:    movq 16(%rsp), %rax
-; X64_ISEL-NEXT:    retq
+; X64-LABEL: test_i64_args_8:
+; X64:       # BB#0:
+; X64-NEXT:    movq 16(%rsp), %rax
+; X64-NEXT:    retq
 
   ret i64 %arg8
 }

@@ -1516,6 +1516,8 @@ void UnwrappedLineParser::parseSquare() {
 void UnwrappedLineParser::parseIfThenElse() {
   assert(FormatTok->Tok.is(tok::kw_if) && "'if' expected");
   nextToken();
+  if (FormatTok->Tok.is(tok::kw_constexpr))
+    nextToken();
   if (FormatTok->Tok.is(tok::l_paren))
     parseParens();
   bool NeedsUnwrappedLine = false;

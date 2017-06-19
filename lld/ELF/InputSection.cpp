@@ -399,9 +399,16 @@ void InputSection::copyRelocations(uint8_t *Buf, ArrayRef<RelTy> Rels) {
   }
 }
 
+// The ARM and AArch64 ABI handle pc-relative relocations to undefined weak
+// references specially. The general rule is that the value of the symbol in
+// this context is the address of the place P. A further special case is that
+// branch relocations to an undefined weak reference resolve to the next
+// instruction.
 static uint32_t getARMUndefinedRelativeWeakVA(uint32_t Type, uint32_t A,
                                               uint32_t P) {
   switch (Type) {
+  // Unresolved branch relocations to weak references resolve to next
+  // instruction, this will be either 2 or 4 bytes on from P.
   case R_ARM_THM_JUMP11:
     return P + 2 + A;
   case R_ARM_CALL:
@@ -415,22 +422,38 @@ static uint32_t getARMUndefinedRelativeWeakVA(uint32_t Type, uint32_t A,
   case R_ARM_THM_CALL:
     // We don't want an interworking BLX to ARM
     return P + 5 + A;
-  default:
+  // Unresolved non branch pc-relative relocations
+  // R_ARM_TARGET2 which can be resolved relatively is not present as it never
+  // targets a weak-reference.
+  case R_ARM_MOVW_PREL_NC:
+  case R_ARM_MOVT_PREL:
+  case R_ARM_REL32:
+  case R_ARM_THM_MOVW_PREL_NC:
+  case R_ARM_THM_MOVT_PREL:
     return P + A;
   }
+  llvm_unreachable("ARM pc-relative relocation expected\n");
 }
 
+// The comment above getARMUndefinedRelativeWeakVA applies to this function.
 static uint64_t getAArch64UndefinedRelativeWeakVA(uint64_t Type, uint64_t A,
                                                   uint64_t P) {
   switch (Type) {
+  // Unresolved branch relocations to weak references resolve to next
+  // instruction, this is 4 bytes on from P.
   case R_AARCH64_CALL26:
   case R_AARCH64_CONDBR19:
   case R_AARCH64_JUMP26:
   case R_AARCH64_TSTBR14:
     return P + 4 + A;
-  default:
+  // Unresolved non branch pc-relative relocations
+  case R_AARCH64_PREL16:
+  case R_AARCH64_PREL32:
+  case R_AARCH64_PREL64:
+  case R_AARCH64_ADR_PREL_LO21:
     return P + A;
   }
+  llvm_unreachable("AArch64 pc-relative relocation expected\n");
 }
 
 // ARM SBREL relocations are of the form S + A - B where B is the static base

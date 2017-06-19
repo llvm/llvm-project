@@ -848,8 +848,7 @@ EmitResultInstructionAsOperand(const TreePatternNode *N,
     if (II.HasOneImplicitDefWithKnownVT(CGT) != MVT::Other)
       HandledReg = II.ImplicitDefs[0];
 
-    for (unsigned i = 0; i != Pattern.getDstRegs().size(); ++i) {
-      Record *Reg = Pattern.getDstRegs()[i];
+    for (Record *Reg : Pattern.getDstRegs()) {
       if (!Reg->isSubClassOf("Register") || Reg == HandledReg) continue;
       ResultVTs.push_back(getRegisterValueType(Reg, CGT));
     }
@@ -972,8 +971,7 @@ void MatcherGen::EmitResultCode() {
         HandledReg = II.ImplicitDefs[0];
     }
 
-    for (unsigned i = 0; i != Pattern.getDstRegs().size(); ++i) {
-      Record *Reg = Pattern.getDstRegs()[i];
+    for (Record *Reg : Pattern.getDstRegs()) {
       if (!Reg->isSubClassOf("Register") || Reg == HandledReg) continue;
       ++NumSrcResults;
     }
