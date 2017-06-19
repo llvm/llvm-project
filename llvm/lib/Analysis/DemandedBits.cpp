@@ -107,6 +107,8 @@ void DemandedBits::determineLiveOperandBits(
         AB = AOut.byteSwap();
         break;
       case Intrinsic::bitreverse:
+        // The alive bits of the input are the reversed alive bits of
+        // the output.
         AB = AOut.reverseBits();
         break;
       case Intrinsic::ctlz:

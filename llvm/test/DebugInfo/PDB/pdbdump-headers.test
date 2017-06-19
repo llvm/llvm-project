@@ -458,9 +458,9 @@ ALL:        Hash Adjusters:
 ALL:                             Public Symbols
 ALL-NEXT: ============================================================
 ALL-NEXT:   - S_PUB32 [size = 36] `?__purecall@@3PAXA`
-ALL-NEXT:       type = <no type>, addr = 0003:0000
+ALL-NEXT:       flags = none, addr = 0003:0000
 ALL-NEXT:   - S_PUB32 [size = 20] `_main`
-ALL-NEXT:       type = 0x0002 (<unknown simple type>), addr = 0001:0016
+ALL-NEXT:       flags = function, addr = 0001:0016
 ALL-NEXT:   - S_PROCREF [size = 20] `main`
 ALL-NEXT:       module = 1, sum name = 0, offset = 120
 ALL-NEXT:   - S_GDATA32 [size = 28] `__purecall`

@@ -1111,18 +1111,27 @@ ExprValue LinkerScript::getSymbolValue(const Twine &Loc, StringRef S) {
 
 bool LinkerScript::isDefined(StringRef S) { return findSymbol(S) != nullptr; }
 
+static const size_t NoPhdr = -1;
+
 // Returns indices of ELF headers containing specific section. Each index is a
 // zero based number of ELF header listed within PHDRS {} script block.
 std::vector<size_t> LinkerScript::getPhdrIndices(OutputSection *Sec) {
   if (OutputSectionCommand *Cmd = getCmd(Sec)) {
     std::vector<size_t> Ret;
-    for (StringRef PhdrName : Cmd->Phdrs)
-      Ret.push_back(getPhdrIndex(Cmd->Location, PhdrName));
+    for (StringRef PhdrName : Cmd->Phdrs) {
+      size_t Index = getPhdrIndex(Cmd->Location, PhdrName);
+      if (Index != NoPhdr)
+        Ret.push_back(Index);
+    }
     return Ret;
   }
   return {};
 }
 
+// Returns the index of the segment named PhdrName if found otherwise
+// NoPhdr. When not found, if PhdrName is not the special case value 'NONE'
+// (which can be used to explicitly specify that a section isn't assigned to a
+// segment) then error.
 size_t LinkerScript::getPhdrIndex(const Twine &Loc, StringRef PhdrName) {
   size_t I = 0;
   for (PhdrsCommand &Cmd : Opt.PhdrsCommands) {
@@ -1130,8 +1139,9 @@ size_t LinkerScript::getPhdrIndex(const Twine &Loc, StringRef PhdrName) {
       return I;
     ++I;
   }
-  error(Loc + ": section header '" + PhdrName + "' is not listed in PHDRS");
-  return 0;
+  if (PhdrName != "NONE")
+    error(Loc + ": section header '" + PhdrName + "' is not listed in PHDRS");
+  return NoPhdr;
 }
 
 template void OutputSectionCommand::writeTo<ELF32LE>(uint8_t *Buf);

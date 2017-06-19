@@ -518,14 +518,13 @@ static uint64_t readPointer(const DataExtractor &Data, uint32_t &Offset,
 // noreturn attribute usage in lambdas. Once the support for those
 // compilers are phased out, we can remove this and return back to
 // a ReportError lambda: [StartOffset](const char *ErrorMsg).
-#define ReportError(ErrorMsg) ReportErrorImpl(StartOffset,ErrorMsg)
-static void LLVM_ATTRIBUTE_NORETURN
-ReportErrorImpl(uint32_t StartOffset, const char *ErrorMsg) {
-      std::string Str;
-      raw_string_ostream OS(Str);
-      OS << format(ErrorMsg, StartOffset);
-      OS.flush();
-      report_fatal_error(Str);
+static void LLVM_ATTRIBUTE_NORETURN ReportError(uint32_t StartOffset,
+                                                const char *ErrorMsg) {
+  std::string Str;
+  raw_string_ostream OS(Str);
+  OS << format(ErrorMsg, StartOffset);
+  OS.flush();
+  report_fatal_error(Str);
 }
 
 void DWARFDebugFrame::parse(DataExtractor Data) {
@@ -590,13 +589,15 @@ void DWARFDebugFrame::parse(DataExtractor Data) {
         for (unsigned i = 0, e = AugmentationString.size(); i != e; ++i) {
           switch (AugmentationString[i]) {
             default:
-              ReportError("Unknown augmentation character in entry at %lx");
+              ReportError(StartOffset,
+                          "Unknown augmentation character in entry at %lx");
             case 'L':
               LSDAPointerEncoding = Data.getU8(&Offset);
               break;
             case 'P': {
               if (Personality)
-                ReportError("Duplicate personality in entry at %lx");
+                ReportError(StartOffset,
+                            "Duplicate personality in entry at %lx");
               PersonalityEncoding = Data.getU8(&Offset);
               Personality = readPointer(Data, Offset, *PersonalityEncoding);
               break;
@@ -606,7 +607,8 @@ void DWARFDebugFrame::parse(DataExtractor Data) {
               break;
             case 'z':
               if (i)
-                ReportError("'z' must be the first character at %lx");
+                ReportError(StartOffset,
+                            "'z' must be the first character at %lx");
               // Parse the augmentation length first.  We only parse it if
               // the string contains a 'z'.
               AugmentationLength = Data.getULEB128(&Offset);
@@ -618,7 +620,7 @@ void DWARFDebugFrame::parse(DataExtractor Data) {
 
         if (AugmentationLength.hasValue()) {
           if (Offset != EndAugmentationOffset)
-            ReportError("Parsing augmentation data at %lx failed");
+            ReportError(StartOffset, "Parsing augmentation data at %lx failed");
 
           AugmentationData = Data.getData().slice(StartAugmentationOffset,
                                                   EndAugmentationOffset);
@@ -645,7 +647,8 @@ void DWARFDebugFrame::parse(DataExtractor Data) {
       if (IsEH) {
         // The address size is encoded in the CIE we reference.
         if (!Cie)
-          ReportError("Parsing FDE data at %lx failed due to missing CIE");
+          ReportError(StartOffset,
+                      "Parsing FDE data at %lx failed due to missing CIE");
 
         InitialLocation = readPointer(Data, Offset,
                                       Cie->getFDEPointerEncoding());
@@ -665,7 +668,7 @@ void DWARFDebugFrame::parse(DataExtractor Data) {
             readPointer(Data, Offset, Cie->getLSDAPointerEncoding());
 
           if (Offset != EndAugmentationOffset)
-            ReportError("Parsing augmentation data at %lx failed");
+            ReportError(StartOffset, "Parsing augmentation data at %lx failed");
         }
       } else {
         InitialLocation = Data.getAddress(&Offset);
@@ -680,7 +683,7 @@ void DWARFDebugFrame::parse(DataExtractor Data) {
     Entries.back()->parseInstructions(Data, &Offset, EndStructureOffset);
 
     if (Offset != EndStructureOffset)
-      ReportError("Parsing entry instructions at %lx failed");
+      ReportError(StartOffset, "Parsing entry instructions at %lx failed");
   }
 }
 

@@ -363,7 +363,7 @@ public:
       : SymbolRecord(SymbolRecordKind::PublicSym32),
         RecordOffset(RecordOffset) {}
 
-  TypeIndex Index;
+  PublicSymFlags Flags;
   uint32_t Offset;
   uint16_t Segment;
   StringRef Name;

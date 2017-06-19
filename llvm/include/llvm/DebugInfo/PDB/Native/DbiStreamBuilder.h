@@ -58,6 +58,7 @@ public:
 
   Expected<DbiModuleDescriptorBuilder &> addModuleInfo(StringRef ModuleName);
   Error addModuleSourceFile(StringRef Module, StringRef File);
+  Error addModuleSourceFile(DbiModuleDescriptorBuilder &Module, StringRef File);
   Expected<uint32_t> getSourceFileNameIndex(StringRef FileName);
 
   Error finalizeMsfLayout();

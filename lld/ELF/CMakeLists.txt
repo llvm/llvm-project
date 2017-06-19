@@ -12,6 +12,7 @@ add_lld_library(lldELF
   Arch/ARM.cpp
   Arch/AVR.cpp
   Arch/Mips.cpp
+  Arch/MipsArchTree.cpp
   Arch/PPC.cpp
   Arch/PPC64.cpp
   Arch/X86.cpp
@@ -29,7 +30,6 @@ add_lld_library(lldELF
   LinkerScript.cpp
   MapFile.cpp
   MarkLive.cpp
-  Mips.cpp
   OutputSections.cpp
   Relocations.cpp
   ScriptLexer.cpp

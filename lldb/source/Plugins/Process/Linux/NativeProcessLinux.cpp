@@ -503,35 +503,9 @@ Status NativeProcessLinux::SetDefaultPtraceOpts(lldb::pid_t pid) {
   return PtraceWrapper(PTRACE_SETOPTIONS, pid, nullptr, (void *)ptrace_opts);
 }
 
-static ExitType convert_pid_status_to_exit_type(int status) {
-  if (WIFEXITED(status))
-    return ExitType::eExitTypeExit;
-  else if (WIFSIGNALED(status))
-    return ExitType::eExitTypeSignal;
-  else if (WIFSTOPPED(status))
-    return ExitType::eExitTypeStop;
-  else {
-    // We don't know what this is.
-    return ExitType::eExitTypeInvalid;
-  }
-}
-
-static int convert_pid_status_to_return_code(int status) {
-  if (WIFEXITED(status))
-    return WEXITSTATUS(status);
-  else if (WIFSIGNALED(status))
-    return WTERMSIG(status);
-  else if (WIFSTOPPED(status))
-    return WSTOPSIG(status);
-  else {
-    // We don't know what this is.
-    return ExitType::eExitTypeInvalid;
-  }
-}
-
 // Handles all waitpid events from the inferior process.
 void NativeProcessLinux::MonitorCallback(lldb::pid_t pid, bool exited,
-                                         int signal, int status) {
+                                         WaitStatus status) {
   Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PROCESS));
 
   // Certain activities differ based on whether the pid is the tid of the main
@@ -564,8 +538,7 @@ void NativeProcessLinux::MonitorCallback(lldb::pid_t pid, bool exited,
                          : "thread metadata not found",
             GetState());
         // The main thread exited.  We're done monitoring.  Report to delegate.
-        SetExitStatus(convert_pid_status_to_exit_type(status),
-                      convert_pid_status_to_return_code(status), nullptr, true);
+        SetExitStatus(status, true);
 
         // Notify delegate that our process has exited.
         SetState(StateType::eStateExited, true);
@@ -658,8 +631,7 @@ void NativeProcessLinux::MonitorCallback(lldb::pid_t pid, bool exited,
         // Notify the delegate - our process is not available but appears to
         // have been killed outside
         // our control.  Is eStateExited the right exit state in this case?
-        SetExitStatus(convert_pid_status_to_exit_type(status),
-                      convert_pid_status_to_return_code(status), nullptr, true);
+        SetExitStatus(status, true);
         SetState(StateType::eStateExited, true);
       } else {
         // This thread was pulled out from underneath us.  Anything to do here?
@@ -830,10 +802,8 @@ void NativeProcessLinux::MonitorSIGTRAP(const siginfo_t &info,
              data, WIFEXITED(data), WIFSIGNALED(data), thread.GetID(),
              is_main_thread);
 
-    if (is_main_thread) {
-      SetExitStatus(convert_pid_status_to_exit_type(data),
-                    convert_pid_status_to_return_code(data), nullptr, true);
-    }
+    if (is_main_thread)
+      SetExitStatus(WaitStatus::Decode(data), true);
 
     StateType state = thread.GetState();
     if (!StateIsRunningState(state)) {
@@ -2384,33 +2354,17 @@ void NativeProcessLinux::SigchldHandler() {
       break;
     }
 
-    bool exited = false;
-    int signal = 0;
-    int exit_status = 0;
-    const char *status_cstr = nullptr;
-    if (WIFSTOPPED(status)) {
-      signal = WSTOPSIG(status);
-      status_cstr = "STOPPED";
-    } else if (WIFEXITED(status)) {
-      exit_status = WEXITSTATUS(status);
-      status_cstr = "EXITED";
-      exited = true;
-    } else if (WIFSIGNALED(status)) {
-      signal = WTERMSIG(status);
-      status_cstr = "SIGNALED";
-      if (wait_pid == static_cast<::pid_t>(GetID())) {
-        exited = true;
-        exit_status = -1;
-      }
-    } else
-      status_cstr = "(\?\?\?)";
+    WaitStatus wait_status = WaitStatus::Decode(status);
+    bool exited = wait_status.type == WaitStatus::Exit ||
+                  (wait_status.type == WaitStatus::Signal &&
+                   wait_pid == static_cast<::pid_t>(GetID()));
 
-    LLDB_LOG(log,
-             "waitpid (-1, &status, _) => pid = {0}, status = {1:x} "
-             "({2}), signal = {3}, exit_state = {4}",
-             wait_pid, status, status_cstr, signal, exit_status);
+    LLDB_LOG(
+        log,
+        "waitpid (-1, &status, _) => pid = {0}, status = {1}, exited = {2}",
+        wait_pid, wait_status, exited);
 
-    MonitorCallback(wait_pid, exited, signal, exit_status);
+    MonitorCallback(wait_pid, exited, wait_status);
   }
 }
 

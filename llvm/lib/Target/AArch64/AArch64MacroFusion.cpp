@@ -144,8 +144,8 @@ static bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
       return FirstOpcode == AArch64::INSTRUCTION_LIST_END ||
              (FirstOpcode == AArch64::MOVZXi &&
               SecondMI.getOperand(3).getImm() == 16) ||
-             (FirstMI->getOperand(3).getImm() == 32 &&
-              FirstOpcode == AArch64::MOVKXi &&
+             (FirstOpcode == AArch64::MOVKXi &&
+              FirstMI->getOperand(3).getImm() == 32 &&
               SecondMI.getOperand(3).getImm() == 48);
     }
 

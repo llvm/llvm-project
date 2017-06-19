@@ -39,6 +39,7 @@ namespace format {
   TYPE(ConflictStart) \
   TYPE(CtorInitializerColon) \
   TYPE(CtorInitializerComma) \
+  TYPE(DesignatedInitializerLSquare) \
   TYPE(DesignatedInitializerPeriod) \
   TYPE(DictLiteral) \
   TYPE(ForEachMacro) \

@@ -402,6 +402,16 @@ enum class LocalSymFlags : uint16_t {
 };
 CV_DEFINE_ENUM_CLASS_FLAGS_OPERATORS(LocalSymFlags)
 
+/// Corresponds to the CV_PUBSYMFLAGS bitfield.
+enum class PublicSymFlags : uint32_t {
+  None = 0,
+  Code = 1 << 0,
+  Function = 1 << 1,
+  Managed = 1 << 2,
+  MSIL = 1 << 3,
+};
+CV_DEFINE_ENUM_CLASS_FLAGS_OPERATORS(PublicSymFlags)
+
 /// Corresponds to the CV_PROCFLAGS bitfield.
 enum class ProcSymFlags : uint8_t {
   None = 0,

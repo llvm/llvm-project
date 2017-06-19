@@ -1177,7 +1177,7 @@ void MemIntrinsicVisitor::instrumentOneMemIntrinsic(MemIntrinsic &MI) {
   Builder.CreateCall(
       Intrinsic::getDeclaration(M, Intrinsic::instrprof_value_profile),
       {llvm::ConstantExpr::getBitCast(FuncNameVar, I8PtrTy),
-       Builder.getInt64(FuncHash), Builder.CreatePtrToInt(Length, Int64Ty),
+       Builder.getInt64(FuncHash), Builder.CreateZExtOrTrunc(Length, Int64Ty),
        Builder.getInt32(IPVK_MemOPSize), Builder.getInt32(CurCtrId)});
   ++CurCtrId;
 }

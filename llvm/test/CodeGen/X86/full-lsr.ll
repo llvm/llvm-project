@@ -1,10 +1,16 @@
 ; RUN: llc < %s -march=x86 -mcpu=generic | FileCheck %s
-; RUN: llc < %s -march=x86 -mcpu=atom | FileCheck %s
+; RUN: llc < %s -march=x86 -mcpu=atom | FileCheck -check-prefix=ATOM %s
 
 define void @foo(float* nocapture %A, float* nocapture %B, float* nocapture %C, i32 %N) nounwind {
+; ATOM: foo
+; ATOM: addl
+; ATOM: addl
+; ATOM: leal
 
 ; CHECK: foo
-; CHECK: incl
+; CHECK: addl
+; CHECK: addl
+; CHECK: addl
 
 entry:
 	%0 = icmp sgt i32 %N, 0		; <i1> [#uses=1]

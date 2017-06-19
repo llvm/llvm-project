@@ -40,32 +40,6 @@ using namespace lldb_private;
 using namespace lldb_private::process_netbsd;
 using namespace llvm;
 
-static ExitType convert_pid_status_to_exit_type(int status) {
-  if (WIFEXITED(status))
-    return ExitType::eExitTypeExit;
-  else if (WIFSIGNALED(status))
-    return ExitType::eExitTypeSignal;
-  else if (WIFSTOPPED(status))
-    return ExitType::eExitTypeStop;
-  else {
-    // We don't know what this is.
-    return ExitType::eExitTypeInvalid;
-  }
-}
-
-static int convert_pid_status_to_return_code(int status) {
-  if (WIFEXITED(status))
-    return WEXITSTATUS(status);
-  else if (WIFSIGNALED(status))
-    return WTERMSIG(status);
-  else if (WIFSTOPPED(status))
-    return WSTOPSIG(status);
-  else {
-    // We don't know what this is.
-    return ExitType::eExitTypeInvalid;
-  }
-}
-
 // Simple helper function to ensure flags are enabled on the given file
 // descriptor.
 static Status EnsureFDFlags(int fd, int flags) {
@@ -177,17 +151,15 @@ void NativeProcessNetBSD::MonitorCallback(lldb::pid_t pid, int signal) {
   }
 }
 
-void NativeProcessNetBSD::MonitorExited(lldb::pid_t pid, int signal,
-                                        int status) {
+void NativeProcessNetBSD::MonitorExited(lldb::pid_t pid, WaitStatus status) {
   Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PROCESS));
 
-  LLDB_LOG(log, "got exit signal({0}) , pid = {1}", signal, pid);
+  LLDB_LOG(log, "got exit signal({0}) , pid = {1}", status, pid);
 
   /* Stop Tracking All Threads attached to Process */
   m_threads.clear();
 
-  SetExitStatus(convert_pid_status_to_exit_type(status),
-                convert_pid_status_to_return_code(status), nullptr, true);
+  SetExitStatus(status, true);
 
   // Notify delegate that our process has exited.
   SetState(StateType::eStateExited, true);
@@ -861,36 +833,21 @@ void NativeProcessNetBSD::SigchldHandler() {
     LLDB_LOG(log, "waitpid ({0}, &status, _) failed: {1}", GetID(), error);
   }
 
-  bool exited = false;
-  int signal = 0;
-  int exit_status = 0;
-  const char *status_cstr = nullptr;
-  if (WIFSTOPPED(status)) {
-    signal = WSTOPSIG(status);
-    status_cstr = "STOPPED";
-  } else if (WIFEXITED(status)) {
-    exit_status = WEXITSTATUS(status);
-    status_cstr = "EXITED";
-    exited = true;
-  } else if (WIFSIGNALED(status)) {
-    signal = WTERMSIG(status);
-    status_cstr = "SIGNALED";
-    if (wait_pid == static_cast<::pid_t>(GetID())) {
-      exited = true;
-      exit_status = -1;
-    }
-  } else
-    status_cstr = "(\?\?\?)";
+  WaitStatus wait_status = WaitStatus::Decode(status);
+  bool exited = wait_status.type == WaitStatus::Exit ||
+                (wait_status.type == WaitStatus::Signal &&
+                 wait_pid == static_cast<::pid_t>(GetID()));
 
   LLDB_LOG(log,
-           "waitpid ({0}, &status, _) => pid = {1}, status = {2:x} "
-           "({3}), signal = {4}, exit_state = {5}",
-           GetID(), wait_pid, status, status_cstr, signal, exit_status);
+           "waitpid ({0}, &status, _) => pid = {1}, status = {2}, exited = {3}",
+           GetID(), wait_pid, status, exited);
 
   if (exited)
-    MonitorExited(wait_pid, signal, exit_status);
-  else
-    MonitorCallback(wait_pid, signal);
+    MonitorExited(wait_pid, wait_status);
+  else {
+    assert(wait_status == WaitStatus::Stop);
+    MonitorCallback(wait_pid, wait_status.status);
+  }
 }
 
 bool NativeProcessNetBSD::HasThreadNoLock(lldb::tid_t thread_id) {

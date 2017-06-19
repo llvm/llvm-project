@@ -7634,6 +7634,10 @@ static void PrintMachHeader(uint32_t magic, uint32_t cputype,
       outs() << " APP_EXTENSION_SAFE";
       f &= ~MachO::MH_APP_EXTENSION_SAFE;
     }
+    if (f & MachO::MH_NLIST_OUTOFSYNC_WITH_DYLDINFO) {
+      outs() << " NLIST_OUTOFSYNC_WITH_DYLDINFO";
+      f &= ~MachO::MH_NLIST_OUTOFSYNC_WITH_DYLDINFO;
+    }
     if (f != 0 || flags == 0)
       outs() << format(" 0x%08" PRIx32, f);
   } else {

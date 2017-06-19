@@ -136,14 +136,14 @@ namespace llvm {
 std::unique_ptr<ScheduleDAGMutation>
 createMacroFusionDAGMutation(ShouldSchedulePredTy shouldScheduleAdjacent) {
   if(EnableMacroFusion)
-    return make_unique<MacroFusion>(shouldScheduleAdjacent, true);
+    return llvm::make_unique<MacroFusion>(shouldScheduleAdjacent, true);
   return nullptr;
 }
 
 std::unique_ptr<ScheduleDAGMutation>
 createBranchMacroFusionDAGMutation(ShouldSchedulePredTy shouldScheduleAdjacent) {
   if(EnableMacroFusion)
-    return make_unique<MacroFusion>(shouldScheduleAdjacent, false);
+    return llvm::make_unique<MacroFusion>(shouldScheduleAdjacent, false);
   return nullptr;
 }
 

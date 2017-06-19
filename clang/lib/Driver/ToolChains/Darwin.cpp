@@ -1124,8 +1124,10 @@ void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
 /// then the SDK version is returned. Otherwise the system version is returned.
 static std::string getSystemOrSDKMacOSVersion(StringRef MacOSSDKVersion) {
   unsigned Major, Minor, Micro;
-  llvm::Triple(llvm::sys::getProcessTriple())
-      .getMacOSXVersion(Major, Minor, Micro);
+  llvm::Triple SystemTriple(llvm::sys::getProcessTriple());
+  if (!SystemTriple.isMacOSX())
+    return MacOSSDKVersion;
+  SystemTriple.getMacOSXVersion(Major, Minor, Micro);
   VersionTuple SystemVersion(Major, Minor, Micro);
   bool HadExtra;
   if (!Driver::GetReleaseVersion(MacOSSDKVersion, Major, Minor, Micro,

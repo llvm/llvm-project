@@ -12,7 +12,6 @@
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/common/TCPSocket.h"
 #include "lldb/Host/posix/ConnectionFileDescriptorPosix.h"
-#include "lldb/Host/posix/ProcessLauncherPosix.h"
 #include "lldb/Interpreter/Args.h"
 #include "lldb/Target/ProcessLaunchInfo.h"
 #include "llvm/ADT/StringExtras.h"

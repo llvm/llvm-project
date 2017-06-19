@@ -168,26 +168,8 @@ define signext i32 @zeroEqualityTest05() {
 ; Validate with memcmp()?:
 define signext i32 @equalityFoldTwoConstants() {
 ; CHECK-LABEL: equalityFoldTwoConstants:
-; CHECK:       # BB#0: # %loadbb
-; CHECK-NEXT:    addis 3, 2, .LzeroEqualityTest04.buffer1@toc@ha
-; CHECK-NEXT:    addis 4, 2, .LzeroEqualityTest04.buffer2@toc@ha
-; CHECK-NEXT:    ld 3, .LzeroEqualityTest04.buffer1@toc@l(3)
-; CHECK-NEXT:    ld 4, .LzeroEqualityTest04.buffer2@toc@l(4)
-; CHECK-NEXT:    cmpld 3, 4
-; CHECK-NEXT:    bne 0, .LBB5_2
-; CHECK-NEXT:  # BB#1: # %loadbb1
-; CHECK-NEXT:    addis 3, 2, .LzeroEqualityTest04.buffer1@toc@ha+8
-; CHECK-NEXT:    addis 4, 2, .LzeroEqualityTest04.buffer2@toc@ha+8
-; CHECK-NEXT:    ld 3, .LzeroEqualityTest04.buffer1@toc@l+8(3)
-; CHECK-NEXT:    ld 4, .LzeroEqualityTest04.buffer2@toc@l+8(4)
-; CHECK-NEXT:    cmpld 3, 4
-; CHECK-NEXT:    li 3, 0
-; CHECK-NEXT:    beq 0, .LBB5_3
-; CHECK-NEXT:  .LBB5_2: # %res_block
+; CHECK:       # BB#0: # %endblock
 ; CHECK-NEXT:    li 3, 1
-; CHECK-NEXT:  .LBB5_3: # %endblock
-; CHECK-NEXT:    cntlzw 3, 3
-; CHECK-NEXT:    srwi 3, 3, 5
 ; CHECK-NEXT:    blr
   %call = tail call signext i32 @memcmp(i8* bitcast ([15 x i32]* @zeroEqualityTest04.buffer1 to i8*), i8* bitcast ([15 x i32]* @zeroEqualityTest04.buffer2 to i8*), i64 16)
   %not.tobool = icmp eq i32 %call, 0
@@ -198,16 +180,17 @@ define signext i32 @equalityFoldTwoConstants() {
 define signext i32 @equalityFoldOneConstant(i8* %X) {
 ; CHECK-LABEL: equalityFoldOneConstant:
 ; CHECK:       # BB#0: # %loadbb
-; CHECK-NEXT:    addis 4, 2, .LzeroEqualityTest04.buffer1@toc@ha
+; CHECK-NEXT:    li 4, 1
 ; CHECK-NEXT:    ld 5, 0(3)
-; CHECK-NEXT:    ld 4, .LzeroEqualityTest04.buffer1@toc@l(4)
-; CHECK-NEXT:    cmpld 4, 5
+; CHECK-NEXT:    sldi 4, 4, 32
+; CHECK-NEXT:    cmpld 5, 4
 ; CHECK-NEXT:    bne 0, .LBB6_2
 ; CHECK-NEXT:  # BB#1: # %loadbb1
-; CHECK-NEXT:    addis 4, 2, .LzeroEqualityTest04.buffer1@toc@ha+8
+; CHECK-NEXT:    li 4, 3
 ; CHECK-NEXT:    ld 3, 8(3)
-; CHECK-NEXT:    ld 4, .LzeroEqualityTest04.buffer1@toc@l+8(4)
-; CHECK-NEXT:    cmpld 4, 3
+; CHECK-NEXT:    sldi 4, 4, 32
+; CHECK-NEXT:    ori 4, 4, 2
+; CHECK-NEXT:    cmpld 3, 4
 ; CHECK-NEXT:    li 3, 0
 ; CHECK-NEXT:    beq 0, .LBB6_3
 ; CHECK-NEXT:  .LBB6_2: # %res_block
