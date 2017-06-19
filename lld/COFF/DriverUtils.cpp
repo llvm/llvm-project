@@ -604,12 +604,11 @@ convertResToCOFF(const std::vector<MemoryBufferRef> &MBs) {
       fatal(EC, "failed to parse .res file");
   }
 
-  std::unique_ptr<MemoryBuffer> MB;
-  if (auto EC =
-          llvm::object::writeWindowsResourceCOFF(MB, Config->Machine, Parser))
-    fatal(EC, "failed to write resources to buffer");
-
-  return MB;
+  Expected<std::unique_ptr<MemoryBuffer>> E =
+      llvm::object::writeWindowsResourceCOFF(Config->Machine, Parser);
+  if (!E)
+    fatal(errorToErrorCode(E.takeError()), "failed to write .res to COFF");
+  return std::move(E.get());
 }
 
 // Run MSVC link.exe for given in-memory object files.

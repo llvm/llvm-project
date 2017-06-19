@@ -181,7 +181,7 @@ void OutputSection::addChunk(Chunk *C) {
   uint64_t Off = Header.VirtualSize;
   Off = alignTo(Off, C->getAlign());
   C->setRVA(Off);
-  C->setOutputSectionOff(Off);
+  C->OutputSectionOff = Off;
   Off += C->getSize();
   Header.VirtualSize = Off;
   if (C->hasData())

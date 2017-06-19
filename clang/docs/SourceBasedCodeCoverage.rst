@@ -274,6 +274,11 @@ To specify an alternate directory for raw profiles, use
 Drawbacks and limitations
 =========================
 
+* Prior to version 2.26, the GNU binutils BFD linker is not able link programs
+  with coverage enabled when the ``--gc-sections`` is enabled. The suggested
+  workaround is to either upgrade to a newer version of BFD, or to use the Gold
+  linker.
+
 * Code coverage does not handle unpredictable changes in control flow or stack
   unwinding in the presence of exceptions precisely. Consider the following
   function:

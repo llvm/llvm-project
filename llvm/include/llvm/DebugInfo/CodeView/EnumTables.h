@@ -22,6 +22,7 @@ namespace codeview {
 ArrayRef<EnumEntry<SymbolKind>> getSymbolTypeNames();
 ArrayRef<EnumEntry<TypeLeafKind>> getTypeLeafNames();
 ArrayRef<EnumEntry<uint16_t>> getRegisterNames();
+ArrayRef<EnumEntry<uint32_t>> getPublicSymFlagNames();
 ArrayRef<EnumEntry<uint8_t>> getProcSymFlagNames();
 ArrayRef<EnumEntry<uint16_t>> getLocalFlagNames();
 ArrayRef<EnumEntry<uint8_t>> getFrameCookieKindNames();

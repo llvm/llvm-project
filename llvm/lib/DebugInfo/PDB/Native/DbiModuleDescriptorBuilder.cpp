@@ -182,3 +182,9 @@ void DbiModuleDescriptorBuilder::addDebugSubsection(
   C13Builders.push_back(llvm::make_unique<DebugSubsectionRecordBuilder>(
       std::move(Subsection), CodeViewContainer::Pdb));
 }
+
+void DbiModuleDescriptorBuilder::addDebugSubsection(
+    const DebugSubsectionRecord &SubsectionContents) {
+  C13Builders.push_back(llvm::make_unique<DebugSubsectionRecordBuilder>(
+      SubsectionContents, CodeViewContainer::Pdb));
+}

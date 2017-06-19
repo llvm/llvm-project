@@ -1276,9 +1276,15 @@ Value *ReassociatePass::OptimizeXor(Instruction *I,
   if (Ops.size() == 1)
     return nullptr;
 
+  Type *Ty = Ops[0].Op->getType();
+
+  // TODO: We should optimize vector Xor instructions, but they are
+  // currently unsupported.
+  if (Ty->isVectorTy())
+    return nullptr;
+
   SmallVector<XorOpnd, 8> Opnds;
   SmallVector<XorOpnd*, 8> OpndPtrs;
-  Type *Ty = Ops[0].Op->getType();
   APInt ConstOpnd(Ty->getIntegerBitWidth(), 0);
 
   // Step 1: Convert ValueEntry to XorOpnd
@@ -1628,8 +1634,8 @@ Value *ReassociatePass::OptimizeAdd(Instruction *I,
 ///   ((((x*y)*x)*y)*x) -> [(x, 3), (y, 2)]
 ///
 /// \returns Whether any factors have a power greater than one.
-bool ReassociatePass::collectMultiplyFactors(SmallVectorImpl<ValueEntry> &Ops,
-                                             SmallVectorImpl<Factor> &Factors) {
+static bool collectMultiplyFactors(SmallVectorImpl<ValueEntry> &Ops,
+                                   SmallVectorImpl<Factor> &Factors) {
   // FIXME: Have Ops be (ValueEntry, Multiplicity) pairs, simplifying this.
   // Compute the sum of powers of simplifiable factors.
   unsigned FactorPowerSum = 0;
@@ -1999,11 +2005,6 @@ void ReassociatePass::OptimizeInst(Instruction *I) {
   // transformations simpler.
   if (I->isCommutative())
     canonicalizeOperands(I);
-
-  // TODO: We should optimize vector Xor instructions, but they are
-  // currently unsupported.
-  if (I->getType()->isVectorTy() && I->getOpcode() == Instruction::Xor)
-    return;
 
   // Don't optimize floating point instructions that don't have unsafe algebra.
   if (I->getType()->isFPOrFPVectorTy() && !I->hasUnsafeAlgebra())

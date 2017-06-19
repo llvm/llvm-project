@@ -1442,13 +1442,13 @@ Instruction *InstCombiner::visitAnd(BinaryOperator &I) {
     // (A ^ B) & ((B ^ C) ^ A) -> (A ^ B) & ~C
     if (match(Op0, m_Xor(m_Value(A), m_Value(B))))
       if (match(Op1, m_Xor(m_Xor(m_Specific(B), m_Value(C)), m_Specific(A))))
-        if (Op1->hasOneUse() || cast<BinaryOperator>(Op1)->hasOneUse())
+        if (Op1->hasOneUse() || IsFreeToInvert(C, C->hasOneUse()))
           return BinaryOperator::CreateAnd(Op0, Builder->CreateNot(C));
 
     // ((A ^ C) ^ B) & (B ^ A) -> (B ^ A) & ~C
     if (match(Op0, m_Xor(m_Xor(m_Value(A), m_Value(C)), m_Value(B))))
       if (match(Op1, m_Xor(m_Specific(B), m_Specific(A))))
-        if (Op0->hasOneUse() || cast<BinaryOperator>(Op0)->hasOneUse())
+        if (Op0->hasOneUse() || IsFreeToInvert(C, C->hasOneUse()))
           return BinaryOperator::CreateAnd(Op1, Builder->CreateNot(C));
 
     // (A | B) & ((~A) ^ B) -> (A & B)
@@ -2138,20 +2138,14 @@ Instruction *InstCombiner::visitOr(BinaryOperator &I) {
   }
 
   // (A ^ B) | ((B ^ C) ^ A) -> (A ^ B) | C
-  // FIXME: The two hasOneUse calls here are the same call, maybe we were
-  // supposed to check Op1->operand(0)?
   if (match(Op0, m_Xor(m_Value(A), m_Value(B))))
     if (match(Op1, m_Xor(m_Xor(m_Specific(B), m_Value(C)), m_Specific(A))))
-      if (Op1->hasOneUse() || cast<BinaryOperator>(Op1)->hasOneUse())
-        return BinaryOperator::CreateOr(Op0, C);
+      return BinaryOperator::CreateOr(Op0, C);
 
   // ((A ^ C) ^ B) | (B ^ A) -> (B ^ A) | C
-  // FIXME: The two hasOneUse calls here are the same call, maybe we were
-  // supposed to check Op0->operand(0)?
   if (match(Op0, m_Xor(m_Xor(m_Value(A), m_Value(C)), m_Value(B))))
     if (match(Op1, m_Xor(m_Specific(B), m_Specific(A))))
-      if (Op0->hasOneUse() || cast<BinaryOperator>(Op0)->hasOneUse())
-        return BinaryOperator::CreateOr(Op1, C);
+      return BinaryOperator::CreateOr(Op1, C);
 
   // ((B | C) & A) | B -> B | (A & C)
   if (match(Op0, m_And(m_Or(m_Specific(Op1), m_Value(C)), m_Value(A))))

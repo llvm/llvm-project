@@ -69,14 +69,13 @@ protected:
       : Roots(), IsPostDominators(isPostDom) {}
 
   DominatorBase(DominatorBase &&Arg)
-      : Roots(std::move(Arg.Roots)),
-        IsPostDominators(std::move(Arg.IsPostDominators)) {
+      : Roots(std::move(Arg.Roots)), IsPostDominators(Arg.IsPostDominators) {
     Arg.Roots.clear();
   }
 
   DominatorBase &operator=(DominatorBase &&RHS) {
     Roots = std::move(RHS.Roots);
-    IsPostDominators = std::move(RHS.IsPostDominators);
+    IsPostDominators = RHS.IsPostDominators;
     RHS.Roots.clear();
     return *this;
   }
@@ -99,18 +98,17 @@ template <class NodeT> class DomTreeNodeBase {
   template <class N> friend class DominatorTreeBase;
 
   NodeT *TheBB;
-  DomTreeNodeBase<NodeT> *IDom;
-  std::vector<DomTreeNodeBase<NodeT> *> Children;
-  mutable int DFSNumIn = -1;
-  mutable int DFSNumOut = -1;
+  DomTreeNodeBase *IDom;
+  std::vector<DomTreeNodeBase *> Children;
+  mutable unsigned DFSNumIn = ~0;
+  mutable unsigned DFSNumOut = ~0;
 
-public:
-  DomTreeNodeBase(NodeT *BB, DomTreeNodeBase<NodeT> *iDom)
-      : TheBB(BB), IDom(iDom) {}
+ public:
+  DomTreeNodeBase(NodeT *BB, DomTreeNodeBase *iDom) : TheBB(BB), IDom(iDom) {}
 
-  typedef typename std::vector<DomTreeNodeBase<NodeT> *>::iterator iterator;
-  typedef typename std::vector<DomTreeNodeBase<NodeT> *>::const_iterator
-      const_iterator;
+  using iterator = typename std::vector<DomTreeNodeBase *>::iterator;
+  using const_iterator =
+      typename std::vector<DomTreeNodeBase *>::const_iterator;
 
   iterator begin() { return Children.begin(); }
   iterator end() { return Children.end(); }
@@ -118,14 +116,12 @@ public:
   const_iterator end() const { return Children.end(); }
 
   NodeT *getBlock() const { return TheBB; }
-  DomTreeNodeBase<NodeT> *getIDom() const { return IDom; }
+  DomTreeNodeBase *getIDom() const { return IDom; }
 
-  const std::vector<DomTreeNodeBase<NodeT> *> &getChildren() const {
-    return Children;
-  }
+  const std::vector<DomTreeNodeBase *> &getChildren() const { return Children; }
 
-  std::unique_ptr<DomTreeNodeBase<NodeT>>
-  addChild(std::unique_ptr<DomTreeNodeBase<NodeT>> C) {
+  std::unique_ptr<DomTreeNodeBase> addChild(
+      std::unique_ptr<DomTreeNodeBase> C) {
     Children.push_back(C.get());
     return C;
   }
@@ -134,7 +130,7 @@ public:
 
   void clearAllChildren() { Children.clear(); }
 
-  bool compare(const DomTreeNodeBase<NodeT> *Other) const {
+  bool compare(const DomTreeNodeBase *Other) const {
     if (getNumChildren() != Other->getNumChildren())
       return true;
 
@@ -152,10 +148,10 @@ public:
     return false;
   }
 
-  void setIDom(DomTreeNodeBase<NodeT> *NewIDom) {
+  void setIDom(DomTreeNodeBase *NewIDom) {
     assert(IDom && "No immediate dominator?");
     if (IDom != NewIDom) {
-      typename std::vector<DomTreeNodeBase<NodeT> *>::iterator I =
+      typename std::vector<DomTreeNodeBase *>::iterator I =
           find(IDom->Children, this);
       assert(I != IDom->Children.end() &&
              "Not in immediate dominator children set!");
@@ -177,32 +173,32 @@ public:
 private:
   // Return true if this node is dominated by other. Use this only if DFS info
   // is valid.
-  bool DominatedBy(const DomTreeNodeBase<NodeT> *other) const {
+  bool DominatedBy(const DomTreeNodeBase *other) const {
     return this->DFSNumIn >= other->DFSNumIn &&
            this->DFSNumOut <= other->DFSNumOut;
   }
 };
 
 template <class NodeT>
-raw_ostream &operator<<(raw_ostream &o, const DomTreeNodeBase<NodeT> *Node) {
+raw_ostream &operator<<(raw_ostream &O, const DomTreeNodeBase<NodeT> *Node) {
   if (Node->getBlock())
-    Node->getBlock()->printAsOperand(o, false);
+    Node->getBlock()->printAsOperand(O, false);
   else
-    o << " <<exit node>>";
+    O << " <<exit node>>";
 
-  o << " {" << Node->getDFSNumIn() << "," << Node->getDFSNumOut() << "}";
+  O << " {" << Node->getDFSNumIn() << "," << Node->getDFSNumOut() << "}";
 
-  return o << "\n";
+  return O << "\n";
 }
 
 template <class NodeT>
-void PrintDomTree(const DomTreeNodeBase<NodeT> *N, raw_ostream &o,
+void PrintDomTree(const DomTreeNodeBase<NodeT> *N, raw_ostream &O,
                   unsigned Lev) {
-  o.indent(2 * Lev) << "[" << Lev << "] " << N;
+  O.indent(2 * Lev) << "[" << Lev << "] " << N;
   for (typename DomTreeNodeBase<NodeT>::const_iterator I = N->begin(),
                                                        E = N->end();
        I != E; ++I)
-    PrintDomTree<NodeT>(*I, o, Lev + 1);
+    PrintDomTree<NodeT>(*I, O, Lev + 1);
 }
 
 // The calculate routine is provided in a separate header but referenced here.
@@ -239,8 +235,8 @@ template <class NodeT> class DominatorTreeBase : public DominatorBase<NodeT> {
   }
 
 protected:
-  typedef DenseMap<NodeT *, std::unique_ptr<DomTreeNodeBase<NodeT>>>
-      DomTreeNodeMapType;
+  using DomTreeNodeMapType =
+     DenseMap<NodeT *, std::unique_ptr<DomTreeNodeBase<NodeT>>>;
   DomTreeNodeMapType DomTreeNodes;
   DomTreeNodeBase<NodeT> *RootNode;
 
@@ -663,19 +659,18 @@ public:
 
   /// print - Convert to human readable form
   ///
-  void print(raw_ostream &o) const {
-    o << "=============================--------------------------------\n";
+  void print(raw_ostream &O) const {
+    O << "=============================--------------------------------\n";
     if (this->isPostDominator())
-      o << "Inorder PostDominator Tree: ";
+      O << "Inorder PostDominator Tree: ";
     else
-      o << "Inorder Dominator Tree: ";
+      O << "Inorder Dominator Tree: ";
     if (!DFSInfoValid)
-      o << "DFSNumbers invalid: " << SlowQueries << " slow queries.";
-    o << "\n";
+      O << "DFSNumbers invalid: " << SlowQueries << " slow queries.";
+    O << "\n";
 
     // The postdom tree can have a null root if there are no returns.
-    if (getRootNode())
-      PrintDomTree<NodeT>(getRootNode(), o, 1);
+    if (getRootNode()) PrintDomTree<NodeT>(getRootNode(), O, 1);
   }
 
 protected:
@@ -770,7 +765,7 @@ public:
 
   /// recalculate - compute a dominator tree for the given function
   template <class FT> void recalculate(FT &F) {
-    typedef GraphTraits<FT *> TraitsTy;
+    using TraitsTy = GraphTraits<FT *>;
     reset();
     Vertex.push_back(nullptr);
 

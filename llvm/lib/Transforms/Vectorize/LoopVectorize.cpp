@@ -5702,14 +5702,14 @@ bool LoopVectorizationLegality::memoryInstructionCanBeWidened(Instruction *I,
 void LoopVectorizationCostModel::collectLoopUniforms(unsigned VF) {
 
   // We should not collect Uniforms more than once per VF. Right now,
-  // this function is called from collectUniformsAndScalars(), which 
+  // this function is called from collectUniformsAndScalars(), which
   // already does this check. Collecting Uniforms for VF=1 does not make any
   // sense.
 
   assert(VF >= 2 && !Uniforms.count(VF) &&
          "This function should not be visited twice for the same VF");
 
-  // Visit the list of Uniforms. If we'll not find any uniform value, we'll 
+  // Visit the list of Uniforms. If we'll not find any uniform value, we'll
   // not analyze again.  Uniforms.count(VF) will return 1.
   Uniforms[VF].clear();
 
@@ -5988,10 +5988,10 @@ void InterleavedAccessInfo::collectConstStrideAccesses(
         continue;
 
       Value *Ptr = getPointerOperand(&I);
-      // We don't check wrapping here because we don't know yet if Ptr will be 
-      // part of a full group or a group with gaps. Checking wrapping for all 
+      // We don't check wrapping here because we don't know yet if Ptr will be
+      // part of a full group or a group with gaps. Checking wrapping for all
       // pointers (even those that end up in groups with no gaps) will be overly
-      // conservative. For full groups, wrapping should be ok since if we would 
+      // conservative. For full groups, wrapping should be ok since if we would
       // wrap around the address space we would do a memory access at nullptr
       // even without the transformation. The wrapping checks are therefore
       // deferred until after we've formed the interleaved groups.
@@ -6244,7 +6244,7 @@ void InterleavedAccessInfo::analyzeInterleaving(
     Instruction *LastMember = Group->getMember(Group->getFactor() - 1);
     if (LastMember) {
       Value *LastMemberPtr = getPointerOperand(LastMember);
-      if (!getPtrStride(PSE, LastMemberPtr, TheLoop, Strides, /*Assume=*/false, 
+      if (!getPtrStride(PSE, LastMemberPtr, TheLoop, Strides, /*Assume=*/false,
                         /*ShouldCheckWrap=*/true)) {
         DEBUG(dbgs() << "LV: Invalidate candidate interleaved group due to "
                         "last group member potentially pointer-wrapping.\n");
@@ -6252,9 +6252,9 @@ void InterleavedAccessInfo::analyzeInterleaving(
       }
     } else {
       // Case 3: A non-reversed interleaved load group with gaps: We need
-      // to execute at least one scalar epilogue iteration. This will ensure 
+      // to execute at least one scalar epilogue iteration. This will ensure
       // we don't speculatively access memory out-of-bounds. We only need
-      // to look for a member at index factor - 1, since every group must have 
+      // to look for a member at index factor - 1, since every group must have
       // a member at index zero.
       if (Group->isReverse()) {
         releaseGroup(Group);
@@ -7789,8 +7789,18 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
   // Check the loop for a trip count threshold:
   // do not vectorize loops with a tiny trip count.
-  const unsigned MaxTC = SE->getSmallConstantMaxTripCount(L);
-  if (MaxTC > 0u && MaxTC < TinyTripCountVectorThreshold) {
+  unsigned ExpectedTC = SE->getSmallConstantMaxTripCount(L);
+  bool HasExpectedTC = (ExpectedTC > 0);
+
+  if (!HasExpectedTC && LoopVectorizeWithBlockFrequency) {
+    auto EstimatedTC = getLoopEstimatedTripCount(L);
+    if (EstimatedTC) {
+      ExpectedTC = *EstimatedTC;
+      HasExpectedTC = true;
+    }
+  }
+
+  if (HasExpectedTC && ExpectedTC < TinyTripCountVectorThreshold) {
     DEBUG(dbgs() << "LV: Found a loop with a very small trip count. "
                  << "This loop is not worth vectorizing.");
     if (Hints.getForce() == LoopVectorizeHints::FK_Enabled)
@@ -7821,18 +7831,6 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   // optimized for size.
   bool OptForSize =
       Hints.getForce() != LoopVectorizeHints::FK_Enabled && F->optForSize();
-
-  // Compute the weighted frequency of this loop being executed and see if it
-  // is less than 20% of the function entry baseline frequency. Note that we
-  // always have a canonical loop here because we think we *can* vectorize.
-  // FIXME: This is hidden behind a flag due to pervasive problems with
-  // exactly what block frequency models.
-  if (LoopVectorizeWithBlockFrequency) {
-    BlockFrequency LoopEntryFreq = BFI->getBlockFreq(L->getLoopPreheader());
-    if (Hints.getForce() != LoopVectorizeHints::FK_Enabled &&
-        LoopEntryFreq < ColdEntryFreq)
-      OptForSize = true;
-  }
 
   // Check the function attributes to see if implicit floats are allowed.
   // FIXME: This check doesn't seem possibly correct -- what if the loop is
@@ -8014,11 +8012,6 @@ bool LoopVectorizePass::runImpl(
   GetLAA = &GetLAA_;
   DB = &DB_;
   ORE = &ORE_;
-
-  // Compute some weights outside of the loop over the loops. Compute this
-  // using a BranchProbability to re-use its scaling math.
-  const BranchProbability ColdProb(1, 5); // 20%
-  ColdEntryFreq = BlockFrequency(BFI->getEntryFreq()) * ColdProb;
 
   // Don't attempt if
   // 1. the target claims to have no vector registers, and

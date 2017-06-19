@@ -179,9 +179,9 @@ private:
   std::vector<std::vector<UTF16>> StringTable;
 };
 
-Error writeWindowsResourceCOFF(std::unique_ptr<MemoryBuffer> &OutputBuffer,
-                               llvm::COFF::MachineTypes MachineType,
-                               const WindowsResourceParser &Parser);
+Expected<std::unique_ptr<MemoryBuffer>>
+writeWindowsResourceCOFF(llvm::COFF::MachineTypes MachineType,
+                         const WindowsResourceParser &Parser);
 
 } // namespace object
 } // namespace llvm

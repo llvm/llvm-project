@@ -361,7 +361,7 @@ Error SymbolRecordMapping::visitKnownRecord(CVSymbol &CVR,
 Error SymbolRecordMapping::visitKnownRecord(CVSymbol &CVR,
                                             PublicSym32 &Public) {
 
-  error(IO.mapInteger(Public.Index));
+  error(IO.mapEnum(Public.Flags));
   error(IO.mapInteger(Public.Offset));
   error(IO.mapInteger(Public.Segment));
   error(IO.mapStringZ(Public.Name));

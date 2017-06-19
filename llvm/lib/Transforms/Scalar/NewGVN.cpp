@@ -2329,9 +2329,7 @@ void NewGVN::updateReachableEdge(BasicBlock *From, BasicBlock *To) {
 // see if we know some constant value for it already.
 Value *NewGVN::findConditionEquivalence(Value *Cond) const {
   auto Result = lookupOperandLeader(Cond);
-  if (isa<Constant>(Result))
-    return Result;
-  return nullptr;
+  return isa<Constant>(Result) ? Result : nullptr;
 }
 
 // Process the outgoing edges of a block for reachability.

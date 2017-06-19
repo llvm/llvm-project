@@ -82,6 +82,13 @@ static const EnumEntry<uint16_t> RegisterNames[] = {
     CV_ENUM_CLASS_ENT(RegisterId, R15),
 };
 
+static const EnumEntry<uint32_t> PublicSymFlagNames[] = {
+    CV_ENUM_CLASS_ENT(PublicSymFlags, Code),
+    CV_ENUM_CLASS_ENT(PublicSymFlags, Function),
+    CV_ENUM_CLASS_ENT(PublicSymFlags, Managed),
+    CV_ENUM_CLASS_ENT(PublicSymFlags, MSIL),
+};
+
 static const EnumEntry<uint8_t> ProcSymFlagNames[] = {
     CV_ENUM_CLASS_ENT(ProcSymFlags, HasFP),
     CV_ENUM_CLASS_ENT(ProcSymFlags, HasIRET),
@@ -338,6 +345,9 @@ ArrayRef<EnumEntry<uint16_t>> getRegisterNames() {
   return makeArrayRef(RegisterNames);
 }
 
+ArrayRef<EnumEntry<uint32_t>> getPublicSymFlagNames() {
+  return makeArrayRef(PublicSymFlagNames);
+}
 ArrayRef<EnumEntry<uint8_t>> getProcSymFlagNames() {
   return makeArrayRef(ProcSymFlagNames);
 }

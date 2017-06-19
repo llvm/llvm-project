@@ -1,17 +1,17 @@
-; RUN: llc -march=mipsel -relocation-model=pic < %s -verify-machineinstrs | FileCheck %s
-; RUN: llc -march=mipsel -force-mips-long-branch -O3 -relocation-model=pic < %s -verify-machineinstrs \
+; RUN: llc -march=mipsel -relocation-model=pic < %s | FileCheck %s
+; RUN: llc -march=mipsel -force-mips-long-branch -O3 -relocation-model=pic < %s \
 ; RUN:   | FileCheck %s -check-prefix=O32
 ; RUN: llc -march=mipsel -mcpu=mips32r6 -force-mips-long-branch -O3 \
-; RUN:   -relocation-model=pic -asm-show-inst < %s -verify-machineinstrs | FileCheck %s -check-prefix=O32-R6
+; RUN:   -relocation-model=pic -asm-show-inst < %s | FileCheck %s -check-prefix=O32-R6
 ; RUN: llc -march=mips64el -mcpu=mips4 -target-abi=n64 -force-mips-long-branch -O3 -relocation-model=pic \
-; RUN:   < %s -verify-machineinstrs | FileCheck %s -check-prefix=N64
+; RUN:   < %s | FileCheck %s -check-prefix=N64
 ; RUN: llc -march=mips64el -mcpu=mips64 -target-abi=n64 -force-mips-long-branch -O3 -relocation-model=pic \
-; RUN:   < %s -verify-machineinstrs | FileCheck %s -check-prefix=N64
+; RUN:   < %s | FileCheck %s -check-prefix=N64
 ; RUN: llc -march=mips64el -mcpu=mips64r6 -target-abi=n64 -force-mips-long-branch -O3 \
-; RUN:   -relocation-model=pic -asm-show-inst < %s -verify-machineinstrs | FileCheck %s -check-prefix=N64-R6
+; RUN:   -relocation-model=pic -asm-show-inst < %s | FileCheck %s -check-prefix=N64-R6
 ; RUN: llc -march=mipsel -mcpu=mips32r2 -mattr=micromips \
-; RUN:   -force-mips-long-branch -O3 -relocation-model=pic < %s -verify-machineinstrs | FileCheck %s -check-prefix=MICROMIPS
-; RUN: llc -mtriple=mipsel-none-nacl -force-mips-long-branch -O3 -relocation-model=pic < %s -verify-machineinstrs \
+; RUN:   -force-mips-long-branch -O3 -relocation-model=pic < %s | FileCheck %s -check-prefix=MICROMIPS
+; RUN: llc -mtriple=mipsel-none-nacl -force-mips-long-branch -O3 -relocation-model=pic < %s \
 ; RUN:   | FileCheck %s -check-prefix=NACL
 
 
@@ -59,9 +59,9 @@ end:
 ; Check for long branch expansion:
 ; O32:             addiu   $sp, $sp, -8
 ; O32-NEXT:        sw      $ra, 0($sp)
-; O32-NEXT:        lui     $1, %hi(($BB0_[[BB2:[0-9]+]])-($[[BB1:BB[0-9_]+]]))
+; O32-NEXT:        lui     $1, %hi(($[[BB2:BB[0-9_]+]])-($[[BB1:BB[0-9_]+]]))
 ; O32-NEXT:        bal     $[[BB1]]
-; O32-NEXT:        addiu   $1, $1, %lo(($BB0_[[BB2]])-($[[BB1]]))
+; O32-NEXT:        addiu   $1, $1, %lo(($[[BB2]])-($[[BB1]]))
 ; O32-NEXT:   $[[BB1]]:
 ; O32-NEXT:        addu    $1, $ra, $1
 ; O32-NEXT:        lw      $ra, 0($sp)
@@ -72,7 +72,7 @@ end:
 ; O32:        lw      $[[R1:[0-9]+]], %got(x)($[[GP]])
 ; O32:        addiu   $[[R2:[0-9]+]], $zero, 1
 ; O32:        sw      $[[R2]], 0($[[R1]])
-; O32:   # BB#[[BB2]]:
+; O32:   $[[BB2]]:
 ; O32:        jr      $ra
 ; O32:        nop
 
@@ -90,10 +90,10 @@ end:
 ; Check for long branch expansion:
 ; N64:           daddiu  $sp, $sp, -16
 ; N64-NEXT:      sd      $ra, 0($sp)
-; N64-NEXT:      daddiu  $1, $zero, %hi(.LBB0_[[BB2:[0-9_]+]]-[[BB1:\.LBB[0-9_]+]])
+; N64-NEXT:      daddiu  $1, $zero, %hi([[BB2:\.LBB[0-9_]+]]-[[BB1:\.LBB[0-9_]+]])
 ; N64-NEXT:      dsll    $1, $1, 16
 ; N64-NEXT:      bal     [[BB1]]
-; N64-NEXT:      daddiu  $1, $1, %lo(.LBB0_[[BB2]]-[[BB1]])
+; N64-NEXT:      daddiu  $1, $1, %lo([[BB2]]-[[BB1]])
 ; N64-NEXT:  [[BB1]]:
 ; N64-NEXT:      daddu   $1, $ra, $1
 ; N64-NEXT:      ld      $ra, 0($sp)
@@ -105,7 +105,7 @@ end:
 ; N64:        addiu   $[[R3:[0-9]+]], $zero, 1
 ; N64:        ld      $[[R2:[0-9]+]], %got_disp(x)($[[GP]])
 ; N64:        sw      $[[R3]], 0($[[R2]])
-; N64:   # BB#[[BB2]]:
+; N64:   [[BB2]]:
 ; N64:        jr      $ra
 ; N64:        nop
 
@@ -125,9 +125,9 @@ end:
 ; Check for long branch expansion:
 ; MICROMIPS:          addiu   $sp, $sp, -8
 ; MICROMIPS-NEXT:     sw      $ra, 0($sp)
-; MICROMIPS-NEXT:     lui     $1, %hi(($BB0_[[BB2:[0-9]+]])-($[[BB1:BB[0-9_]+]]))
+; MICROMIPS-NEXT:     lui     $1, %hi(($[[BB2:BB[0-9_]+]])-($[[BB1:BB[0-9_]+]]))
 ; MICROMIPS-NEXT:     bal     $[[BB1]]
-; MICROMIPS-NEXT:     addiu   $1, $1, %lo(($BB0_[[BB2]])-($[[BB1]]))
+; MICROMIPS-NEXT:     addiu   $1, $1, %lo(($[[BB2]])-($[[BB1]]))
 ; MICROMIPS-NEXT:  $[[BB1]]:
 ; MICROMIPS-NEXT:     addu    $1, $ra, $1
 ; MICROMIPS-NEXT:     lw      $ra, 0($sp)
@@ -138,7 +138,7 @@ end:
 ; MICROMIPS:        lw      $[[R1:[0-9]+]], %got(x)($[[GP]])
 ; MICROMIPS:        li16    $[[R2:[0-9]+]], 1
 ; MICROMIPS:        sw16    $[[R2]], 0($[[R1]])
-; MICROMIPS:   # BB#[[BB2]]:
+; MICROMIPS:   $[[BB2]]:
 ; MICROMIPS:        jrc      $ra
 
 
@@ -154,9 +154,9 @@ end:
 ; Check for long branch expansion:
 ; NACL:             addiu   $sp, $sp, -8
 ; NACL-NEXT:        sw      $ra, 0($sp)
-; NACL-NEXT:        lui     $1, %hi(($BB0_[[BB2:[0-9]+]])-($[[BB1:BB[0-9_]+]]))
+; NACL-NEXT:        lui     $1, %hi(($[[BB2:BB[0-9_]+]])-($[[BB1:BB[0-9_]+]]))
 ; NACL-NEXT:        bal     $[[BB1]]
-; NACL-NEXT:        addiu   $1, $1, %lo(($BB0_[[BB2]])-($[[BB1]]))
+; NACL-NEXT:        addiu   $1, $1, %lo(($[[BB2]])-($[[BB1]]))
 ; NACL-NEXT:   $[[BB1]]:
 ; NACL-NEXT:        addu    $1, $ra, $1
 ; NACL-NEXT:        lw      $ra, 0($sp)
@@ -169,7 +169,7 @@ end:
 ; NACL:             addiu   $[[R2:[0-9]+]], $zero, 1
 ; NACL:             sw      $[[R2]], 0($[[R1]])
 ; NACL:             .p2align  4
-; NACL-NEXT:   # BB#[[BB2]]:
+; NACL-NEXT:   $[[BB2]]:
 ; NACL:             jr      $ra
 ; NACL:             nop
 }

@@ -247,7 +247,7 @@ static isl::union_set getIsolateOptions(isl::set IsolateDomain,
                                         unsigned OutDimsNum) {
   unsigned Dims = IsolateDomain.dim(isl::dim::set);
   assert(OutDimsNum <= Dims &&
-         "The isl_set IsolateDomain is used to describe the range of schedule "
+         "The isl::set IsolateDomain is used to describe the range of schedule "
          "dimensions values, which should be isolated. Consequently, the "
          "number of its dimensions should be greater than or equal to the "
          "number of the schedule dimensions.");

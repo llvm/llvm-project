@@ -3327,12 +3327,10 @@ void BoUpSLP::BlockScheduling::calculateDependencies(ScheduleData *SD,
             if (UseSD && isInSchedulingRegion(UseSD->FirstInBundle)) {
               BundleMember->Dependencies++;
               ScheduleData *DestBundle = UseSD->FirstInBundle;
-              if (!DestBundle->IsScheduled) {
+              if (!DestBundle->IsScheduled)
                 BundleMember->incrementUnscheduledDeps(1);
-              }
-              if (!DestBundle->hasValidDependencies()) {
+              if (!DestBundle->hasValidDependencies())
                 WorkList.push_back(DestBundle);
-              }
             }
           } else {
             // I'm not sure if this can ever happen. But we need to be safe.
