@@ -11,8 +11,8 @@ define <16 x i32> @vpandd(<16 x i32> %a, <16 x i32> %b) nounwind uwtable readnon
 ; ALL-NEXT:    retq
 entry:
   ; Force the execution domain with an add.
-  %a2 = add <16 x i32> %a, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1,
-                            i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %a2 = add <16 x i32> %a, <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2,
+                            i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
   %x = and <16 x i32> %a2, %b
   ret <16 x i32> %x
 }
@@ -25,8 +25,8 @@ define <16 x i32> @vpandnd(<16 x i32> %a, <16 x i32> %b) nounwind uwtable readno
 ; ALL-NEXT:    retq
 entry:
   ; Force the execution domain with an add.
-  %a2 = add <16 x i32> %a, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1,
-                            i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %a2 = add <16 x i32> %a, <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3,
+                            i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
   %b2 = xor <16 x i32> %b, <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1,
                             i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>
   %x = and <16 x i32> %a2, %b2
@@ -41,8 +41,8 @@ define <16 x i32> @vpord(<16 x i32> %a, <16 x i32> %b) nounwind uwtable readnone
 ; ALL-NEXT:    retq
 entry:
   ; Force the execution domain with an add.
-  %a2 = add <16 x i32> %a, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1,
-                            i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %a2 = add <16 x i32> %a, <i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4,
+                            i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4>
   %x = or <16 x i32> %a2, %b
   ret <16 x i32> %x
 }
@@ -55,8 +55,8 @@ define <16 x i32> @vpxord(<16 x i32> %a, <16 x i32> %b) nounwind uwtable readnon
 ; ALL-NEXT:    retq
 entry:
   ; Force the execution domain with an add.
-  %a2 = add <16 x i32> %a, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1,
-                            i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %a2 = add <16 x i32> %a, <i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5,
+                            i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5>
   %x = xor <16 x i32> %a2, %b
   ret <16 x i32> %x
 }
@@ -69,7 +69,7 @@ define <8 x i64> @vpandq(<8 x i64> %a, <8 x i64> %b) nounwind uwtable readnone s
 ; ALL-NEXT:    retq
 entry:
   ; Force the execution domain with an add.
-  %a2 = add <8 x i64> %a, <i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1>
+  %a2 = add <8 x i64> %a, <i64 6, i64 6, i64 6, i64 6, i64 6, i64 6, i64 6, i64 6>
   %x = and <8 x i64> %a2, %b
   ret <8 x i64> %x
 }
@@ -82,7 +82,7 @@ define <8 x i64> @vpandnq(<8 x i64> %a, <8 x i64> %b) nounwind uwtable readnone 
 ; ALL-NEXT:    retq
 entry:
   ; Force the execution domain with an add.
-  %a2 = add <8 x i64> %a, <i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1>
+  %a2 = add <8 x i64> %a, <i64 7, i64 7, i64 7, i64 7, i64 7, i64 7, i64 7, i64 7>
   %b2 = xor <8 x i64> %b, <i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1>
   %x = and <8 x i64> %a2, %b2
   ret <8 x i64> %x
@@ -96,7 +96,7 @@ define <8 x i64> @vporq(<8 x i64> %a, <8 x i64> %b) nounwind uwtable readnone ss
 ; ALL-NEXT:    retq
 entry:
   ; Force the execution domain with an add.
-  %a2 = add <8 x i64> %a, <i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1>
+  %a2 = add <8 x i64> %a, <i64 8, i64 8, i64 8, i64 8, i64 8, i64 8, i64 8, i64 8>
   %x = or <8 x i64> %a2, %b
   ret <8 x i64> %x
 }
@@ -109,7 +109,7 @@ define <8 x i64> @vpxorq(<8 x i64> %a, <8 x i64> %b) nounwind uwtable readnone s
 ; ALL-NEXT:    retq
 entry:
   ; Force the execution domain with an add.
-  %a2 = add <8 x i64> %a, <i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1>
+  %a2 = add <8 x i64> %a, <i64 9, i64 9, i64 9, i64 9, i64 9, i64 9, i64 9, i64 9>
   %x = xor <8 x i64> %a2, %b
   ret <8 x i64> %x
 }

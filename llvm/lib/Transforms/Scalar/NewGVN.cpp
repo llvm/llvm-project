@@ -1244,27 +1244,24 @@ const Expression *NewGVN::performSymbolicStoreEvaluation(Instruction *I) const {
     // only do this for simple stores, we should expand to cover memcpys, etc.
     const auto *LastStore = createStoreExpression(SI, StoreRHS);
     const auto *LastCC = ExpressionToClass.lookup(LastStore);
-    // Basically, check if the congruence class the store is in is defined by a
-    // store that isn't us, and has the same value.  MemorySSA takes care of
-    // ensuring the store has the same memory state as us already.
-    // The RepStoredValue gets nulled if all the stores disappear in a class, so
-    // we don't need to check if the class contains a store besides us.
-    if (LastCC &&
-        LastCC->getStoredValue() == lookupOperandLeader(SI->getValueOperand()))
+    // We really want to check whether the expression we matched was a store. No
+    // easy way to do that. However, we can check that the class we found has a
+    // store, which, assuming the value numbering state is not corrupt, is
+    // sufficient, because we must also be equivalent to that store's expression
+    // for it to be in the same class as the load.
+    if (LastCC && LastCC->getStoredValue() == LastStore->getStoredValue())
       return LastStore;
-    deleteExpression(LastStore);
     // Also check if our value operand is defined by a load of the same memory
     // location, and the memory state is the same as it was then (otherwise, it
     // could have been overwritten later. See test32 in
     // transforms/DeadStoreElimination/simple.ll).
-    if (auto *LI =
-            dyn_cast<LoadInst>(lookupOperandLeader(SI->getValueOperand()))) {
+    if (auto *LI = dyn_cast<LoadInst>(LastStore->getStoredValue()))
       if ((lookupOperandLeader(LI->getPointerOperand()) ==
-           lookupOperandLeader(SI->getPointerOperand())) &&
+           LastStore->getOperand(0)) &&
           (lookupMemoryLeader(getMemoryAccess(LI)->getDefiningAccess()) ==
            StoreRHS))
-        return createStoreExpression(SI, StoreRHS);
-    }
+        return LastStore;
+    deleteExpression(LastStore);
   }
 
   // If the store is not equivalent to anything, value number it as a store that
@@ -3014,14 +3011,29 @@ void NewGVN::verifyIterationSettled(Function &F) {
 // a no-longer valid StoreExpression.
 void NewGVN::verifyStoreExpressions() const {
 #ifndef NDEBUG
-  DenseSet<std::pair<const Value *, const Value *>> StoreExpressionSet;
+  // This is the only use of this, and it's not worth defining a complicated
+  // densemapinfo hash/equality function for it.
+  std::set<
+      std::pair<const Value *,
+                std::tuple<const Value *, const CongruenceClass *, Value *>>>
+      StoreExpressionSet;
   for (const auto &KV : ExpressionToClass) {
     if (auto *SE = dyn_cast<StoreExpression>(KV.first)) {
       // Make sure a version that will conflict with loads is not already there
-      auto Res =
-          StoreExpressionSet.insert({SE->getOperand(0), SE->getMemoryLeader()});
-      assert(Res.second &&
-             "Stored expression conflict exists in expression table");
+      auto Res = StoreExpressionSet.insert(
+          {SE->getOperand(0), std::make_tuple(SE->getMemoryLeader(), KV.second,
+                                              SE->getStoredValue())});
+      bool Okay = Res.second;
+      // It's okay to have the same expression already in there if it is
+      // identical in nature.
+      // This can happen when the leader of the stored value changes over time.
+      if (!Okay) {
+        Okay = Okay && std::get<1>(Res.first->second) == KV.second;
+        Okay = Okay &&
+               lookupOperandLeader(std::get<2>(Res.first->second)) ==
+                   lookupOperandLeader(SE->getStoredValue());
+      }
+      assert(Okay && "Stored expression conflict exists in expression table");
       auto *ValueExpr = ValueToExpression.lookup(SE->getStoreInst());
       assert(ValueExpr && ValueExpr->equals(*SE) &&
              "StoreExpression in ExpressionToClass is not latest "

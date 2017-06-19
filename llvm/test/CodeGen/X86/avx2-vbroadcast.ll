@@ -653,7 +653,7 @@ define <8 x i32> @V111(<8 x i32> %in) nounwind uwtable readnone ssp {
 ; X64-AVX512VL-NEXT:    vpaddd {{.*}}(%rip){1to8}, %ymm0, %ymm0
 ; X64-AVX512VL-NEXT:    retq
 entry:
-  %g = add <8 x i32> %in, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %g = add <8 x i32> %in, <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
   ret <8 x i32> %g
 }
 

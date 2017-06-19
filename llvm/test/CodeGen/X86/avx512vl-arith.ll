@@ -28,7 +28,7 @@ define <4 x i64> @vpaddq256_broadcast_test(<4 x i64> %i) nounwind {
 ; CHECK-NEXT:    vpaddq {{.*}}(%rip){1to4}, %ymm0, %ymm0 ## encoding: [0x62,0xf1,0xfd,0x38,0xd4,0x05,A,A,A,A]
 ; CHECK-NEXT:    ## fixup A - offset: 6, value: LCPI2_0-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %x = add <4 x i64> %i, <i64 1, i64 1, i64 1, i64 1>
+  %x = add <4 x i64> %i, <i64 2, i64 2, i64 2, i64 2>
   ret <4 x i64> %x
 }
 
@@ -69,7 +69,7 @@ define <8 x i32> @vpaddd256_broadcast_test(<8 x i32> %i) nounwind {
 ; CHECK-NEXT:    vpaddd {{.*}}(%rip){1to8}, %ymm0, %ymm0 ## encoding: [0x62,0xf1,0x7d,0x38,0xfe,0x05,A,A,A,A]
 ; CHECK-NEXT:    ## fixup A - offset: 6, value: LCPI6_0-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %x = add <8 x i32> %i, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %x = add <8 x i32> %i, <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
   ret <8 x i32> %x
 }
 
@@ -122,7 +122,7 @@ define <8 x i32> @vpaddd256_mask_broadcast_test(<8 x i32> %i, <8 x i32> %mask1) 
 ; CHECK-NEXT:    ## fixup A - offset: 6, value: LCPI10_0-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %mask = icmp ne <8 x i32> %mask1, zeroinitializer
-  %x = add <8 x i32> %i, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %x = add <8 x i32> %i, <i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4>
   %r = select <8 x i1> %mask, <8 x i32> %x, <8 x i32> %i
   ret <8 x i32> %r
 }
@@ -150,7 +150,7 @@ define <8 x i32> @vpaddd256_maskz_broadcast_test(<8 x i32> %i, <8 x i32> %mask1)
 ; CHECK-NEXT:    ## fixup A - offset: 6, value: LCPI12_0-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %mask = icmp ne <8 x i32> %mask1, zeroinitializer
-  %x = add <8 x i32> %i, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %x = add <8 x i32> %i, <i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5>
   %r = select <8 x i1> %mask, <8 x i32> %x, <8 x i32> zeroinitializer
   ret <8 x i32> %r
 }
@@ -517,7 +517,7 @@ define <4 x i32> @vpaddd128_broadcast_test(<4 x i32> %i) nounwind {
 ; CHECK-NEXT:    vpaddd {{.*}}(%rip){1to4}, %xmm0, %xmm0 ## encoding: [0x62,0xf1,0x7d,0x18,0xfe,0x05,A,A,A,A]
 ; CHECK-NEXT:    ## fixup A - offset: 6, value: LCPI42_0-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %x = add <4 x i32> %i, <i32 1, i32 1, i32 1, i32 1>
+  %x = add <4 x i32> %i, <i32 6, i32 6, i32 6, i32 6>
   ret <4 x i32> %x
 }
 
@@ -570,7 +570,7 @@ define <4 x i32> @vpaddd128_mask_broadcast_test(<4 x i32> %i, <4 x i32> %mask1) 
 ; CHECK-NEXT:    ## fixup A - offset: 6, value: LCPI46_0-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %mask = icmp ne <4 x i32> %mask1, zeroinitializer
-  %x = add <4 x i32> %i, <i32 1, i32 1, i32 1, i32 1>
+  %x = add <4 x i32> %i, <i32 7, i32 7, i32 7, i32 7>
   %r = select <4 x i1> %mask, <4 x i32> %x, <4 x i32> %i
   ret <4 x i32> %r
 }
@@ -598,7 +598,7 @@ define <4 x i32> @vpaddd128_maskz_broadcast_test(<4 x i32> %i, <4 x i32> %mask1)
 ; CHECK-NEXT:    ## fixup A - offset: 6, value: LCPI48_0-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %mask = icmp ne <4 x i32> %mask1, zeroinitializer
-  %x = add <4 x i32> %i, <i32 1, i32 1, i32 1, i32 1>
+  %x = add <4 x i32> %i, <i32 8, i32 8, i32 8, i32 8>
   %r = select <4 x i1> %mask, <4 x i32> %x, <4 x i32> zeroinitializer
   ret <4 x i32> %r
 }

@@ -10,7 +10,7 @@
 #include "llvm/DebugInfo/CodeView/TypeTableCollection.h"
 
 #include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
-#include "llvm/DebugInfo/CodeView/TypeDatabaseVisitor.h"
+#include "llvm/DebugInfo/CodeView/TypeName.h"
 #include "llvm/DebugInfo/CodeView/TypeTableBuilder.h"
 #include "llvm/Support/BinaryByteStream.h"
 #include "llvm/Support/BinaryStreamReader.h"
@@ -18,14 +18,10 @@
 using namespace llvm;
 using namespace llvm::codeview;
 
-static void error(Error &&EC) {
-  assert(!static_cast<bool>(EC));
-  if (EC)
-    consumeError(std::move(EC));
-}
-
 TypeTableCollection::TypeTableCollection(ArrayRef<ArrayRef<uint8_t>> Records)
-    : Records(Records), Database(Records.size()) {}
+    : NameStorage(Allocator), Records(Records) {
+  Names.resize(Records.size());
+}
 
 Optional<TypeIndex> TypeTableCollection::getFirst() {
   if (empty())
@@ -34,50 +30,38 @@ Optional<TypeIndex> TypeTableCollection::getFirst() {
 }
 
 Optional<TypeIndex> TypeTableCollection::getNext(TypeIndex Prev) {
+  assert(contains(Prev));
   ++Prev;
-  assert(Prev.toArrayIndex() <= size());
   if (Prev.toArrayIndex() == size())
     return None;
   return Prev;
 }
 
-void TypeTableCollection::ensureTypeExists(TypeIndex Index) {
-  assert(hasCapacityFor(Index));
-
-  if (Database.contains(Index))
-    return;
-
-  BinaryByteStream Bytes(Records[Index.toArrayIndex()], support::little);
-
-  CVType Type;
-  uint32_t Len;
-  VarStreamArrayExtractor<CVType> Extract;
-  error(Extract(Bytes, Len, Type));
-
-  TypeDatabaseVisitor DBV(Database);
-  error(codeview::visitTypeRecord(Type, Index, DBV));
-  assert(Database.contains(Index));
-}
-
 CVType TypeTableCollection::getType(TypeIndex Index) {
-  ensureTypeExists(Index);
-  return Database.getTypeRecord(Index);
+  assert(Index.toArrayIndex() < Records.size());
+  ArrayRef<uint8_t> Bytes = Records[Index.toArrayIndex()];
+  const RecordPrefix *Prefix =
+      reinterpret_cast<const RecordPrefix *>(Bytes.data());
+  TypeLeafKind Kind = static_cast<TypeLeafKind>(uint16_t(Prefix->RecordKind));
+  return CVType(Kind, Bytes);
 }
 
 StringRef TypeTableCollection::getTypeName(TypeIndex Index) {
-  if (!Index.isSimple())
-    ensureTypeExists(Index);
-  return Database.getTypeName(Index);
+  if (Index.isNoneType() || Index.isSimple())
+    return TypeIndex::simpleTypeName(Index);
+
+  uint32_t I = Index.toArrayIndex();
+  if (Names[I].data() == nullptr) {
+    StringRef Result = NameStorage.save(computeTypeName(*this, Index));
+    Names[I] = Result;
+  }
+  return Names[I];
 }
 
 bool TypeTableCollection::contains(TypeIndex Index) {
-  return Database.contains(Index);
+  return Index.toArrayIndex() <= size();
 }
 
 uint32_t TypeTableCollection::size() { return Records.size(); }
 
 uint32_t TypeTableCollection::capacity() { return Records.size(); }
-
-bool TypeTableCollection::hasCapacityFor(TypeIndex Index) const {
-  return Index.toArrayIndex() < Records.size();
-}
