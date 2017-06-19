@@ -12,7 +12,7 @@ define <8 x i32> @vpandd256(<8 x i32> %a, <8 x i32> %b) nounwind uwtable readnon
 ; CHECK-NEXT:    retq
 entry:
   ; Force the execution domain with an add.
-  %a2 = add <8 x i32> %a, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %a2 = add <8 x i32> %a, <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
   %x = and <8 x i32> %a2, %b
   ret <8 x i32> %x
 }
@@ -25,7 +25,7 @@ define <8 x i32> @vpandnd256(<8 x i32> %a, <8 x i32> %b) nounwind uwtable readno
 ; CHECK-NEXT:    retq
 entry:
   ; Force the execution domain with an add.
-  %a2 = add <8 x i32> %a, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %a2 = add <8 x i32> %a, <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
   %b2 = xor <8 x i32> %a, <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>
   %x = and <8 x i32> %a2, %b2
   ret <8 x i32> %x
@@ -39,7 +39,7 @@ define <8 x i32> @vpord256(<8 x i32> %a, <8 x i32> %b) nounwind uwtable readnone
 ; CHECK-NEXT:    retq
 entry:
   ; Force the execution domain with an add.
-  %a2 = add <8 x i32> %a, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %a2 = add <8 x i32> %a, <i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4>
   %x = or <8 x i32> %a2, %b
   ret <8 x i32> %x
 }
@@ -52,7 +52,7 @@ define <8 x i32> @vpxord256(<8 x i32> %a, <8 x i32> %b) nounwind uwtable readnon
 ; CHECK-NEXT:    retq
 entry:
   ; Force the execution domain with an add.
-  %a2 = add <8 x i32> %a, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %a2 = add <8 x i32> %a, <i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5>
   %x = xor <8 x i32> %a2, %b
   ret <8 x i32> %x
 }
@@ -65,7 +65,7 @@ define <4 x i64> @vpandq256(<4 x i64> %a, <4 x i64> %b) nounwind uwtable readnon
 ; CHECK-NEXT:    retq
 entry:
   ; Force the execution domain with an add.
-  %a2 = add <4 x i64> %a, <i64 1, i64 1, i64 1, i64 1>
+  %a2 = add <4 x i64> %a, <i64 6, i64 6, i64 6, i64 6>
   %x = and <4 x i64> %a2, %b
   ret <4 x i64> %x
 }
@@ -78,7 +78,7 @@ define <4 x i64> @vpandnq256(<4 x i64> %a, <4 x i64> %b) nounwind uwtable readno
 ; CHECK-NEXT:    retq
 entry:
   ; Force the execution domain with an add.
-  %a2 = add <4 x i64> %a, <i64 1, i64 1, i64 1, i64 1>
+  %a2 = add <4 x i64> %a, <i64 7, i64 7, i64 7, i64 7>
   %b2 = xor <4 x i64> %b, <i64 -1, i64 -1, i64 -1, i64 -1>
   %x = and <4 x i64> %a2, %b2
   ret <4 x i64> %x
@@ -92,7 +92,7 @@ define <4 x i64> @vporq256(<4 x i64> %a, <4 x i64> %b) nounwind uwtable readnone
 ; CHECK-NEXT:    retq
 entry:
   ; Force the execution domain with an add.
-  %a2 = add <4 x i64> %a, <i64 1, i64 1, i64 1, i64 1>
+  %a2 = add <4 x i64> %a, <i64 21, i64 21, i64 21, i64 21>
   %x = or <4 x i64> %a2, %b
   ret <4 x i64> %x
 }
@@ -105,7 +105,7 @@ define <4 x i64> @vpxorq256(<4 x i64> %a, <4 x i64> %b) nounwind uwtable readnon
 ; CHECK-NEXT:    retq
 entry:
   ; Force the execution domain with an add.
-  %a2 = add <4 x i64> %a, <i64 1, i64 1, i64 1, i64 1>
+  %a2 = add <4 x i64> %a, <i64 22, i64 22, i64 22, i64 22>
   %x = xor <4 x i64> %a2, %b
   ret <4 x i64> %x
 }
@@ -120,7 +120,7 @@ define <4 x i32> @vpandd128(<4 x i32> %a, <4 x i32> %b) nounwind uwtable readnon
 ; CHECK-NEXT:    retq
 entry:
   ; Force the execution domain with an add.
-  %a2 = add <4 x i32> %a, <i32 1, i32 1, i32 1, i32 1>
+  %a2 = add <4 x i32> %a, <i32 8, i32 8, i32 8, i32 8>
   %x = and <4 x i32> %a2, %b
   ret <4 x i32> %x
 }
@@ -133,7 +133,7 @@ define <4 x i32> @vpandnd128(<4 x i32> %a, <4 x i32> %b) nounwind uwtable readno
 ; CHECK-NEXT:    retq
 entry:
   ; Force the execution domain with an add.
-  %a2 = add <4 x i32> %a, <i32 1, i32 1, i32 1, i32 1>
+  %a2 = add <4 x i32> %a, <i32 9, i32 9, i32 9, i32 9>
   %b2 = xor <4 x i32> %b, <i32 -1, i32 -1, i32 -1, i32 -1>
   %x = and <4 x i32> %a2, %b2
   ret <4 x i32> %x
@@ -147,7 +147,7 @@ define <4 x i32> @vpord128(<4 x i32> %a, <4 x i32> %b) nounwind uwtable readnone
 ; CHECK-NEXT:    retq
 entry:
   ; Force the execution domain with an add.
-  %a2 = add <4 x i32> %a, <i32 1, i32 1, i32 1, i32 1>
+  %a2 = add <4 x i32> %a, <i32 10, i32 10, i32 10, i32 10>
   %x = or <4 x i32> %a2, %b
   ret <4 x i32> %x
 }
@@ -160,7 +160,7 @@ define <4 x i32> @vpxord128(<4 x i32> %a, <4 x i32> %b) nounwind uwtable readnon
 ; CHECK-NEXT:    retq
 entry:
   ; Force the execution domain with an add.
-  %a2 = add <4 x i32> %a, <i32 1, i32 1, i32 1, i32 1>
+  %a2 = add <4 x i32> %a, <i32 11, i32 11, i32 11, i32 11>
   %x = xor <4 x i32> %a2, %b
   ret <4 x i32> %x
 }
@@ -173,7 +173,7 @@ define <2 x i64> @vpandq128(<2 x i64> %a, <2 x i64> %b) nounwind uwtable readnon
 ; CHECK-NEXT:    retq
 entry:
   ; Force the execution domain with an add.
-  %a2 = add <2 x i64> %a, <i64 1, i64 1>
+  %a2 = add <2 x i64> %a, <i64 12, i64 12>
   %x = and <2 x i64> %a2, %b
   ret <2 x i64> %x
 }
@@ -186,7 +186,7 @@ define <2 x i64> @vpandnq128(<2 x i64> %a, <2 x i64> %b) nounwind uwtable readno
 ; CHECK-NEXT:    retq
 entry:
   ; Force the execution domain with an add.
-  %a2 = add <2 x i64> %a, <i64 1, i64 1>
+  %a2 = add <2 x i64> %a, <i64 13, i64 13>
   %b2 = xor <2 x i64> %b, <i64 -1, i64 -1>
   %x = and <2 x i64> %a2, %b2
   ret <2 x i64> %x
@@ -200,7 +200,7 @@ define <2 x i64> @vporq128(<2 x i64> %a, <2 x i64> %b) nounwind uwtable readnone
 ; CHECK-NEXT:    retq
 entry:
   ; Force the execution domain with an add.
-  %a2 = add <2 x i64> %a, <i64 1, i64 1>
+  %a2 = add <2 x i64> %a, <i64 14, i64 14>
   %x = or <2 x i64> %a2, %b
   ret <2 x i64> %x
 }
@@ -213,7 +213,7 @@ define <2 x i64> @vpxorq128(<2 x i64> %a, <2 x i64> %b) nounwind uwtable readnon
 ; CHECK-NEXT:    retq
 entry:
   ; Force the execution domain with an add.
-  %a2 = add <2 x i64> %a, <i64 1, i64 1>
+  %a2 = add <2 x i64> %a, <i64 15, i64 15>
   %x = xor <2 x i64> %a2, %b
   ret <2 x i64> %x
 }

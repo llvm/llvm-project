@@ -844,7 +844,7 @@ declare i64 @strcspn(i8*, i8*)
 ; CHECK: declare noalias i8* @strdup(i8* nocapture readonly) [[G0]]
 declare i8* @strdup(i8*)
 
-; CHECK: declare i64 @strlen(i8* nocapture) [[G1]]
+; CHECK: declare i64 @strlen(i8* nocapture) [[G2:#[0-9]+]]
 declare i64 @strlen(i8*)
 
 ; CHECK: declare i32 @strncasecmp(i8* nocapture, i8* nocapture, i64) [[G1]]
@@ -996,10 +996,11 @@ declare i64 @write(i32, i8*, i64)
 
 
 ; memset_pattern16 isn't available everywhere.
-; CHECK-DARWIN: declare void @memset_pattern16(i8* nocapture, i8* nocapture readonly, i64) [[G2:#[0-9]+]]
+; CHECK-DARWIN: declare void @memset_pattern16(i8* nocapture, i8* nocapture readonly, i64) [[G3:#[0-9]+]]
 declare void @memset_pattern16(i8*, i8*, i64)
 
 
 ; CHECK: attributes [[G0]] = { nounwind }
 ; CHECK: attributes [[G1]] = { nounwind readonly }
-; CHECK-DARWIN: attributes [[G2]] = { argmemonly }
+; CHECK: attributes [[G2]] = { argmemonly nounwind readonly }
+; CHECK-DARWIN: attributes [[G3]] = { argmemonly }

@@ -348,7 +348,7 @@ define <8 x i64> @vpaddq_broadcast_test(<8 x i64> %i) nounwind {
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vpaddq {{.*}}(%rip){1to8}, %zmm0, %zmm0
 ; CHECK-NEXT:    retq
-  %x = add <8 x i64> %i, <i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1>
+  %x = add <8 x i64> %i, <i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2, i64 2>
   ret <8 x i64> %x
 }
 
@@ -394,7 +394,7 @@ define <16 x i32> @vpaddd_broadcast_test(<16 x i32> %i) nounwind {
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vpaddd {{.*}}(%rip){1to16}, %zmm0, %zmm0
 ; CHECK-NEXT:    retq
-  %x = add <16 x i32> %i, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %x = add <16 x i32> %i, <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
   ret <16 x i32> %x
 }
 
@@ -446,7 +446,7 @@ define <16 x i32> @vpaddd_mask_broadcast_test(<16 x i32> %i, <16 x i32> %mask1) 
 ; CHECK-NEXT:    vpaddd {{.*}}(%rip){1to16}, %zmm0, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %mask = icmp ne <16 x i32> %mask1, zeroinitializer
-  %x = add <16 x i32> %i, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %x = add <16 x i32> %i, <i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4>
   %r = select <16 x i1> %mask, <16 x i32> %x, <16 x i32> %i
   ret <16 x i32> %r
 }
@@ -473,7 +473,7 @@ define <16 x i32> @vpaddd_maskz_broadcast_test(<16 x i32> %i, <16 x i32> %mask1)
 ; CHECK-NEXT:    vpaddd {{.*}}(%rip){1to16}, %zmm0, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %mask = icmp ne <16 x i32> %mask1, zeroinitializer
-  %x = add <16 x i32> %i, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %x = add <16 x i32> %i, <i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5>
   %r = select <16 x i1> %mask, <16 x i32> %x, <16 x i32> zeroinitializer
   ret <16 x i32> %r
 }

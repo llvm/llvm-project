@@ -27,8 +27,11 @@ namespace codeview {
 
 template <typename Kind> class CVRecord {
 public:
-  CVRecord() = default;
+  CVRecord() : Type(static_cast<Kind>(0)) {}
+
   CVRecord(Kind K, ArrayRef<uint8_t> Data) : Type(K), RecordData(Data) {}
+
+  bool valid() const { return Type != static_cast<Kind>(0); }
 
   uint32_t length() const { return RecordData.size(); }
   Kind kind() const { return Type; }

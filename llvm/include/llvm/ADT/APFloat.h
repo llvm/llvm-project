@@ -140,8 +140,8 @@ enum lostFraction { // Example of truncated bits:
 // implementation classes. This struct should not define any non-static data
 // members.
 struct APFloatBase {
-  // TODO remove this and use APInt typedef directly.
   typedef APInt::WordType integerPart;
+  static const unsigned integerPartWidth = APInt::APINT_BITS_PER_WORD;
 
   /// A signed type to represent a floating point numbers unbiased exponent.
   typedef signed short ExponentType;

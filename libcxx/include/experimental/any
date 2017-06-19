@@ -89,7 +89,7 @@ inline namespace fundamentals_v1 {
 
 _LIBCPP_BEGIN_NAMESPACE_LFTS
 
-class _LIBCPP_EXCEPTION_ABI bad_any_cast : public bad_cast
+class _LIBCPP_EXCEPTION_ABI _LIBCPP_AVAILABILITY_BAD_ANY_CAST bad_any_cast : public bad_cast
 {
 public:
     virtual const char* what() const _NOEXCEPT;
@@ -98,6 +98,7 @@ public:
 #if _LIBCPP_STD_VER > 11                                            // C++ > 11
 
 _LIBCPP_NORETURN inline _LIBCPP_ALWAYS_INLINE
+_LIBCPP_AVAILABILITY_THROW_BAD_ANY_CAST
 void __throw_bad_any_cast()
 {
 #ifndef _LIBCPP_NO_EXCEPTIONS
@@ -506,7 +507,7 @@ void swap(any & __lhs, any & __rhs) _NOEXCEPT
 }
 
 template <class _ValueType>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_INLINE_VISIBILITY _LIBCPP_AVAILABILITY_THROW_BAD_ANY_CAST
 _ValueType any_cast(any const & __v)
 {
     static_assert(
@@ -522,7 +523,7 @@ _ValueType any_cast(any const & __v)
 }
 
 template <class _ValueType>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_INLINE_VISIBILITY _LIBCPP_AVAILABILITY_THROW_BAD_ANY_CAST
 _ValueType any_cast(any & __v)
 {
     static_assert(
@@ -537,7 +538,7 @@ _ValueType any_cast(any & __v)
 }
 
 template <class _ValueType>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_INLINE_VISIBILITY _LIBCPP_AVAILABILITY_THROW_BAD_ANY_CAST
 _ValueType any_cast(any && __v)
 {
     static_assert(

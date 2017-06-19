@@ -620,7 +620,7 @@ static unsigned scavengeVReg(MachineRegisterInfo &MRI, RegScavenger &RS,
     if (MO.isDef()) {
       const MachineInstr &MI = *MO.getParent();
       if (!MI.readsRegister(VReg, &TRI)) {
-        assert(!RealDef || RealDef == &MI &&
+        assert((!RealDef || RealDef == &MI) &&
                "Can have at most one definition which is not a redefinition");
         RealDef = &MI;
       }
