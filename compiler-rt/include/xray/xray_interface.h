@@ -60,7 +60,8 @@ extern int __xray_remove_handler();
 /// start logging their subsequent affected function calls (if patched).
 ///
 /// Returns 1 on success, 0 on error.
-extern int __xray_set_handler_arg1(void (*)(int32_t, XRayEntryType, uint64_t));
+extern int __xray_set_handler_arg1(void (*entry)(int32_t, XRayEntryType,
+                                                 uint64_t));
 
 /// Disables the XRay handler used to log first arguments of function calls.
 /// Returns 1 on success, 0 on error.
