@@ -1951,7 +1951,7 @@ ASTUnit *ASTUnit::LoadFromCommandLine(
     unsigned PrecompilePreambleAfterNParses, TranslationUnitKind TUKind,
     bool CacheCodeCompletionResults, bool IncludeBriefCommentsInCodeCompletion,
     bool AllowPCHWithCompilerErrors, bool SkipFunctionBodies,
-    bool UserFilesAreVolatile, bool ForSerialization,
+    bool SingleFileParse, bool UserFilesAreVolatile, bool ForSerialization,
     llvm::Optional<StringRef> ModuleFormat, std::unique_ptr<ASTUnit> *ErrAST) {
   assert(Diags.get() && "no DiagnosticsEngine was provided");
 
@@ -1978,6 +1978,7 @@ ASTUnit *ASTUnit::LoadFromCommandLine(
   PreprocessorOptions &PPOpts = CI->getPreprocessorOpts();
   PPOpts.RemappedFilesKeepOriginalName = RemappedFilesKeepOriginalName;
   PPOpts.AllowPCHWithCompilerErrors = AllowPCHWithCompilerErrors;
+  PPOpts.SingleFileParseMode = SingleFileParse;
   
   // Override the resources path.
   CI->getHeaderSearchOpts().ResourceDir = ResourceFilesPath;
