@@ -55,6 +55,25 @@ auto b(bool k) {
   return "goodbye";
 }
 
+// Allow 'operator auto' to call only the explicit operator auto.
+struct BothOps {
+  template <typename T> operator T();
+  template <typename T> operator T *();
+  operator auto() { return 0; }
+  operator auto *() { return this; }
+};
+struct JustTemplateOp {
+  template <typename T> operator T();
+  template <typename T> operator T *();
+};
+
+auto c() {
+  BothOps().operator auto(); // ok
+  BothOps().operator auto *(); // ok
+  JustTemplateOp().operator auto(); // expected-error {{no member named 'operator auto' in 'JustTemplateOp'}}
+  JustTemplateOp().operator auto *(); // expected-error {{no member named 'operator auto *' in 'JustTemplateOp'}}
+}
+
 auto *ptr_1() {
   return 100; // expected-error {{cannot deduce return type 'auto *' from returned value of type 'int'}}
 }

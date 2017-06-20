@@ -57,3 +57,20 @@ void test() {
   Log3("test 7: %s", getNSInteger(), getNSUInteger());
   // CHECK: Log3("test 7: %ld", (long)getNSInteger(), (unsigned long)getNSUInteger());
 }
+
+#define Outer1(...) \
+do { \
+  printf(__VA_ARGS__); \
+} while (0)
+
+#define Outer2(...) \
+do { \
+  Outer1(__VA_ARGS__); Outer1(__VA_ARGS__); \
+} while (0)
+
+void bug33447() {
+  Outer2("test 8: %s", getNSInteger());  
+  // CHECK: Outer2("test 8: %ld", (long)getNSInteger());
+  Outer2("test 9: %s %s", getNSInteger(), getNSInteger());
+  // CHECK: Outer2("test 9: %ld %ld", (long)getNSInteger(), (long)getNSInteger());
+}

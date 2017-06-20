@@ -1227,7 +1227,25 @@ bool Driver::HandleImmediateArgs(const Compilation &C) {
   if (Arg *A = C.getArgs().getLastArg(options::OPT_autocomplete)) {
     // Print out all options that start with a given argument. This is used for
     // shell autocompletion.
-    llvm::outs() << llvm::join(Opts->findByPrefix(A->getValue()), " ") << '\n';
+    StringRef PassedFlags = A->getValue();
+    std::vector<std::string> SuggestedCompletions;
+
+    if (PassedFlags.find(',') == StringRef::npos) {
+      // If the flag is in the form of "--autocomplete=-foo",
+      // we were requested to print out all option names that start with "-foo".
+      // For example, "--autocomplete=-fsyn" is expanded to "-fsyntax-only".
+      SuggestedCompletions = Opts->findByPrefix(PassedFlags);
+    } else {
+      // If the flag is in the form of "--autocomplete=foo,bar", we were
+      // requested to print out all option values for "-foo" that start with
+      // "bar". For example,
+      // "--autocomplete=-stdlib=,l" is expanded to "libc++" and "libstdc++".
+      StringRef Option, Arg;
+      std::tie(Option, Arg) = PassedFlags.split(',');
+      SuggestedCompletions = Opts->suggestValueCompletions(Option, Arg);
+    }
+
+    llvm::outs() << llvm::join(SuggestedCompletions, " ") << '\n';
     return false;
   }
 

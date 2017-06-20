@@ -6172,6 +6172,8 @@ class AArch64TargetInfo : public TargetInfo {
   unsigned Crypto;
   unsigned Unaligned;
   unsigned V8_1A;
+  unsigned V8_2A;
+  unsigned HasFullFP16;
 
   static const Builtin::Info BuiltinInfo[];
 
@@ -6303,6 +6305,8 @@ public:
 
     if (V8_1A)
       Builder.defineMacro("__ARM_FEATURE_QRDMX", "1");
+    if (V8_2A && FPU == NeonMode && HasFullFP16)
+      Builder.defineMacro("__ARM_FEATURE_FP16_VECTOR_ARITHMETIC", "1");
 
     // All of the __sync_(bool|val)_compare_and_swap_(1|2|4|8) builtins work.
     Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1");
@@ -6330,6 +6334,8 @@ public:
     Crypto = 0;
     Unaligned = 1;
     V8_1A = 0;
+    V8_2A = 0;
+    HasFullFP16 = 0;
 
     for (const auto &Feature : Features) {
       if (Feature == "+neon")
@@ -6342,6 +6348,10 @@ public:
         Unaligned = 0;
       if (Feature == "+v8.1a")
         V8_1A = 1;
+      if (Feature == "+v8.2a")
+        V8_2A = 1;
+      if (Feature == "+fullfp16")
+        HasFullFP16 = 1;
     }
 
     setDataLayout();

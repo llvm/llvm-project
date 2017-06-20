@@ -1835,11 +1835,20 @@ private:
   /// \brief A fast PTH version of SkipExcludedConditionalBlock.
   void PTHSkipExcludedConditionalBlock();
 
+  /// Information about the result for evaluating an expression for a
+  /// preprocessor directive.
+  struct DirectiveEvalResult {
+    /// Whether the expression was evaluated as true or not.
+    bool Conditional;
+    /// True if the expression contained identifiers that were undefined.
+    bool IncludedUndefinedIds;
+  };
+
   /// \brief Evaluate an integer constant expression that may occur after a
-  /// \#if or \#elif directive and return it as a bool.
+  /// \#if or \#elif directive and return a \p DirectiveEvalResult object.
   ///
   /// If the expression is equivalent to "!defined(X)" return X in IfNDefMacro.
-  bool EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro);
+  DirectiveEvalResult EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro);
 
   /// \brief Install the standard preprocessor pragmas:
   /// \#pragma GCC poison/system_header/dependency and \#pragma once.

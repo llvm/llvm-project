@@ -98,6 +98,7 @@ CodeGenModule::CodeGenModule(ASTContext &C, const HeaderSearchOptions &HSO,
   Int16Ty = llvm::Type::getInt16Ty(LLVMContext);
   Int32Ty = llvm::Type::getInt32Ty(LLVMContext);
   Int64Ty = llvm::Type::getInt64Ty(LLVMContext);
+  HalfTy = llvm::Type::getHalfTy(LLVMContext);
   FloatTy = llvm::Type::getFloatTy(LLVMContext);
   DoubleTy = llvm::Type::getDoubleTy(LLVMContext);
   PointerWidthInBits = C.getTargetInfo().getPointerWidth(0);
@@ -506,6 +507,26 @@ void CodeGenModule::Release() {
                               LangOpts.CUDADeviceFlushDenormalsToZero ? 1 : 0);
   }
 
+  // Emit OpenCL specific module metadata: OpenCL/SPIR version.
+  if (LangOpts.OpenCL) {
+    EmitOpenCLMetadata();
+    // Emit SPIR version.
+    if (getTriple().getArch() == llvm::Triple::spir ||
+        getTriple().getArch() == llvm::Triple::spir64) {
+      // SPIR v2.0 s2.12 - The SPIR version used by the module is stored in the
+      // opencl.spir.version named metadata.
+      llvm::Metadata *SPIRVerElts[] = {
+          llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
+              Int32Ty, LangOpts.OpenCLVersion / 100)),
+          llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
+              Int32Ty, (LangOpts.OpenCLVersion / 100 > 1) ? 0 : 2))};
+      llvm::NamedMDNode *SPIRVerMD =
+          TheModule.getOrInsertNamedMetadata("opencl.spir.version");
+      llvm::LLVMContext &Ctx = TheModule.getContext();
+      SPIRVerMD->addOperand(llvm::MDNode::get(Ctx, SPIRVerElts));
+    }
+  }
+
   if (uint32_t PLevel = Context.getLangOpts().PICLevel) {
     assert(PLevel < 3 && "Invalid PIC Level");
     getModule().setPICLevel(static_cast<llvm::PICLevel::Level>(PLevel));
@@ -527,6 +548,20 @@ void CodeGenModule::Release() {
   EmitVersionIdentMetadata();
 
   EmitTargetMetadata();
+}
+
+void CodeGenModule::EmitOpenCLMetadata() {
+  // SPIR v2.0 s2.13 - The OpenCL version used by the module is stored in the
+  // opencl.ocl.version named metadata node.
+  llvm::Metadata *OCLVerElts[] = {
+      llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
+          Int32Ty, LangOpts.OpenCLVersion / 100)),
+      llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
+          Int32Ty, (LangOpts.OpenCLVersion % 100) / 10))};
+  llvm::NamedMDNode *OCLVerMD =
+      TheModule.getOrInsertNamedMetadata("opencl.ocl.version");
+  llvm::LLVMContext &Ctx = TheModule.getContext();
+  OCLVerMD->addOperand(llvm::MDNode::get(Ctx, OCLVerElts));
 }
 
 void CodeGenModule::UpdateCompletedType(const TagDecl *TD) {

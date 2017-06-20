@@ -7344,8 +7344,6 @@ public:
 };
 }
 
-static void appendOpenCLVersionMD (CodeGen::CodeGenModule &CGM);
-
 void AMDGPUTargetCodeGenInfo::setTargetAttributes(
     const Decl *D,
     llvm::GlobalValue *GV,
@@ -7402,8 +7400,6 @@ void AMDGPUTargetCodeGenInfo::setTargetAttributes(
     if (NumVGPR != 0)
       F->addFnAttr("amdgpu-num-vgpr", llvm::utostr(NumVGPR));
   }
-
-  appendOpenCLVersionMD(M);
 }
 
 unsigned AMDGPUTargetCodeGenInfo::getOpenCLKernelCallingConv() const {
@@ -8074,8 +8070,6 @@ class SPIRTargetCodeGenInfo : public TargetCodeGenInfo {
 public:
   SPIRTargetCodeGenInfo(CodeGen::CodeGenTypes &CGT)
     : TargetCodeGenInfo(new DefaultABIInfo(CGT)) {}
-  void emitTargetMD(const Decl *D, llvm::GlobalValue *GV,
-                    CodeGen::CodeGenModule &M) const override;
   unsigned getOpenCLKernelCallingConv() const override;
 };
 
@@ -8088,41 +8082,6 @@ void computeSPIRKernelABIInfo(CodeGenModule &CGM, CGFunctionInfo &FI) {
   SPIRABI.computeInfo(FI);
 }
 }
-}
-
-/// Emit SPIR specific metadata: OpenCL and SPIR version.
-void SPIRTargetCodeGenInfo::emitTargetMD(const Decl *D, llvm::GlobalValue *GV,
-                                         CodeGen::CodeGenModule &CGM) const {
-  llvm::LLVMContext &Ctx = CGM.getModule().getContext();
-  llvm::Type *Int32Ty = llvm::Type::getInt32Ty(Ctx);
-  llvm::Module &M = CGM.getModule();
-  // SPIR v2.0 s2.12 - The SPIR version used by the module is stored in the
-  // opencl.spir.version named metadata.
-  llvm::Metadata *SPIRVerElts[] = {
-      llvm::ConstantAsMetadata::get(
-          llvm::ConstantInt::get(Int32Ty, CGM.getLangOpts().OpenCLVersion / 100)),
-      llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
-          Int32Ty, (CGM.getLangOpts().OpenCLVersion / 100 > 1) ? 0 : 2))};
-  llvm::NamedMDNode *SPIRVerMD =
-      M.getOrInsertNamedMetadata("opencl.spir.version");
-  SPIRVerMD->addOperand(llvm::MDNode::get(Ctx, SPIRVerElts));
-  appendOpenCLVersionMD(CGM);
-}
-
-static void appendOpenCLVersionMD(CodeGen::CodeGenModule &CGM) {
-  llvm::LLVMContext &Ctx = CGM.getModule().getContext();
-  llvm::Type *Int32Ty = llvm::Type::getInt32Ty(Ctx);
-  llvm::Module &M = CGM.getModule();
-  // SPIR v2.0 s2.13 - The OpenCL version used by the module is stored in the
-  // opencl.ocl.version named metadata node.
-  llvm::Metadata *OCLVerElts[] = {
-      llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
-          Int32Ty, CGM.getLangOpts().OpenCLVersion / 100)),
-      llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
-          Int32Ty, (CGM.getLangOpts().OpenCLVersion % 100) / 10))};
-  llvm::NamedMDNode *OCLVerMD =
-      M.getOrInsertNamedMetadata("opencl.ocl.version");
-  OCLVerMD->addOperand(llvm::MDNode::get(Ctx, OCLVerElts));
 }
 
 unsigned SPIRTargetCodeGenInfo::getOpenCLKernelCallingConv() const {
