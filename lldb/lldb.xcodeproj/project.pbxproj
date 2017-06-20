@@ -848,6 +848,7 @@
 		8CF02AE919DCC01900B14BE0 /* InstrumentationRuntime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8CF02ADF19DCBF3B00B14BE0 /* InstrumentationRuntime.cpp */; };
 		8CF02AEA19DCC02100B14BE0 /* AddressSanitizerRuntime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8CF02AE519DCBF8400B14BE0 /* AddressSanitizerRuntime.cpp */; };
 		8CF02AEF19DD16B100B14BE0 /* InstrumentationRuntimeStopInfo.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8CF02AED19DD15CF00B14BE0 /* InstrumentationRuntimeStopInfo.cpp */; };
+		8CF5C8931EF195AE00C6D04F /* SwiftRuntimeReporting.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8CF5C8921EF195A200C6D04F /* SwiftRuntimeReporting.cpp */; };
 		94094C6B163B6F840083A547 /* ValueObjectCast.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 94094C69163B6CD90083A547 /* ValueObjectCast.cpp */; };
 		940B02F619DC96E700AD0F52 /* SBExecutionContext.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 940B02F519DC96E700AD0F52 /* SBExecutionContext.cpp */; };
 		940B04E41A8987680045D5F7 /* lldb-argdumper in CopyFiles */ = {isa = PBXBuildFile; fileRef = 942829C01A89835300521B30 /* lldb-argdumper */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
@@ -2832,6 +2833,8 @@
 		8CF02AE619DCBF8400B14BE0 /* AddressSanitizerRuntime.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AddressSanitizerRuntime.h; sourceTree = "<group>"; };
 		8CF02AED19DD15CF00B14BE0 /* InstrumentationRuntimeStopInfo.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = InstrumentationRuntimeStopInfo.cpp; path = source/Target/InstrumentationRuntimeStopInfo.cpp; sourceTree = "<group>"; };
 		8CF02AEE19DD15CF00B14BE0 /* InstrumentationRuntimeStopInfo.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = InstrumentationRuntimeStopInfo.h; path = include/lldb/Target/InstrumentationRuntimeStopInfo.h; sourceTree = "<group>"; };
+		8CF5C8911EF195A200C6D04F /* SwiftRuntimeReporting.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SwiftRuntimeReporting.h; sourceTree = "<group>"; };
+		8CF5C8921EF195A200C6D04F /* SwiftRuntimeReporting.cpp */ = {isa = PBXFileReference; indentWidth = 2; lastKnownFileType = sourcecode.cpp.cpp; path = SwiftRuntimeReporting.cpp; sourceTree = "<group>"; };
 		94005E0313F438DF001EF42D /* python-wrapper.swig */ = {isa = PBXFileReference; lastKnownFileType = text; path = "python-wrapper.swig"; sourceTree = "<group>"; };
 		94005E0513F45A1B001EF42D /* embedded_interpreter.py */ = {isa = PBXFileReference; lastKnownFileType = text.script.python; name = embedded_interpreter.py; path = source/Interpreter/embedded_interpreter.py; sourceTree = "<group>"; };
 		94094C68163B6CCC0083A547 /* ValueObjectCast.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = ValueObjectCast.h; path = include/lldb/Core/ValueObjectCast.h; sourceTree = "<group>"; };
@@ -6335,6 +6338,7 @@
 				8C26C4221C3EA4050031DF7C /* ThreadSanitizer */,
 				8CF02ADE19DCBEE600B14BE0 /* AddressSanitizer */,
 				8C3BD9911EF45D9B0016C343 /* MainThreadChecker */,
+				8CF5C88F1EF195A200C6D04F /* SwiftRuntimeReporting */,
 			);
 			path = InstrumentationRuntime;
 			sourceTree = "<group>";
@@ -6346,6 +6350,15 @@
 				8CF02AE619DCBF8400B14BE0 /* AddressSanitizerRuntime.h */,
 			);
 			path = AddressSanitizer;
+			sourceTree = "<group>";
+		};
+		8CF5C88F1EF195A200C6D04F /* SwiftRuntimeReporting */ = {
+			isa = PBXGroup;
+			children = (
+				8CF5C8911EF195A200C6D04F /* SwiftRuntimeReporting.h */,
+				8CF5C8921EF195A200C6D04F /* SwiftRuntimeReporting.cpp */,
+			);
+			path = SwiftRuntimeReporting;
 			sourceTree = "<group>";
 		};
 		942612ED1B94D30100EF842E /* Swift */ = {
@@ -7796,6 +7809,7 @@
 				2689005E13353E0E00698AC0 /* ClangASTSource.cpp in Sources */,
 				AF62AAE61BEC2DE100A829B2 /* PlatformAppleTVSimulator.cpp in Sources */,
 				2689005F13353E0E00698AC0 /* ClangFunctionCaller.cpp in Sources */,
+				8CF5C8931EF195AE00C6D04F /* SwiftRuntimeReporting.cpp in Sources */,
 				2689006013353E0E00698AC0 /* ClangExpressionDeclMap.cpp in Sources */,
 				2689006113353E0E00698AC0 /* ClangExpressionParser.cpp in Sources */,
 				4939EA8D1BD56B6D00084382 /* REPL.cpp in Sources */,
