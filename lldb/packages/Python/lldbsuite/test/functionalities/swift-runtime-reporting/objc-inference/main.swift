@@ -13,8 +13,10 @@
 import Foundation
 
 class MyClass : NSObject {
-  func memberfunc() { }
+  func memberfunc() { }  // method line
+  func memberfunc2() { }  // method2 line
 }
 
 let mc = MyClass()
 mc.perform(Selector(String("memberfunc")))
+mc.perform(Selector(String("memberfunc2")))
