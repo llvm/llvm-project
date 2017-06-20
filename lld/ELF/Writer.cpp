@@ -1231,6 +1231,13 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     if (auto *Cmd = dyn_cast<OutputSectionCommand>(Base))
       OutputSectionCommands.push_back(Cmd);
 
+  // Prefer command line supplied address over other constraints.
+  for (OutputSectionCommand *Cmd : OutputSectionCommands) {
+    auto I = Config->SectionStartMap.find(Cmd->Name);
+    if (I != Config->SectionStartMap.end())
+      Cmd->AddrExpr = [=] { return I->second; };
+  }
+
   // This is a bit of a hack. A value of 0 means undef, so we set it
   // to 1 t make __ehdr_start defined. The section number is not
   // particularly relevant.

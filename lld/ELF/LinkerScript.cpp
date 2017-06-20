@@ -464,11 +464,6 @@ void LinkerScript::fabricateDefaultCommands() {
     OSCmd->Sec = Sec;
     SecToCommand[Sec] = OSCmd;
 
-    // Prefer user supplied address over additional alignment constraint
-    auto I = Config->SectionStartMap.find(Sec->Name);
-    if (I != Config->SectionStartMap.end())
-      OSCmd->AddrExpr = [=] { return I->second; };
-
     Commands.push_back(OSCmd);
     if (Sec->Sections.size()) {
       auto *ISD = make<InputSectionDescription>("");

@@ -3,9 +3,10 @@
 // CHECK-LABEL: define void @_Z5func1Pi(i32* %x)
 void func1(int *x) {
   // CHECK: %[[x_addr:.*]] = alloca i32*{{.*}}addrspace(5)
-  // CHECK: store i32* %x, i32* addrspace(5)* %[[x_addr]]
-  // CHECK: %[[r0:.*]] = load i32*, i32* addrspace(5)* %[[x_addr]]
-  // CHECK: store i32 1, i32* %[[r0]]
+  // CHECK: %[[r0:.*]] = addrspacecast i32* addrspace(5)* %[[x_addr]] to i32**
+  // CHECK: store i32* %x, i32** %[[r0]]
+  // CHECK: %[[r1:.*]] = load i32*, i32** %[[r0]]
+  // CHECK: store i32 1, i32* %[[r1]]
   *x = 1;
 }
 
@@ -69,4 +70,13 @@ void func3() {
   // CHECK: call void @_ZN1AC1Ev(%class.A* %[[r0]])
   // CHECK: call void @_ZN1AD1Ev(%class.A* %[[r0]])
   A a;
+}
+
+// CHECK-LABEL: define void @_Z5func4i
+void func4(int x) {
+  // CHECK: %[[x_addr:.*]] = alloca i32, align 4, addrspace(5)
+  // CHECK: %[[r0:.*]] = addrspacecast i32 addrspace(5)* %[[x_addr]] to i32*
+  // CHECK: store i32 %x, i32* %[[r0]], align 4
+  // CHECK: call void @_Z5func1Pi(i32* %[[r0]])
+  func1(&x);
 }

@@ -1050,7 +1050,9 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
         (Current.is(TT_ArrayInitializerLSquare) && EndsInComma) ||
         Current.is(TT_DictLiteral) ||
         Style.Language == FormatStyle::LK_Proto || !Style.BinPackArguments ||
-        (NextNoComment && NextNoComment->is(TT_DesignatedInitializerPeriod));
+        (NextNoComment &&
+         NextNoComment->isOneOf(TT_DesignatedInitializerPeriod,
+                                TT_DesignatedInitializerLSquare));
     if (Current.ParameterCount > 1)
       NestedBlockIndent = std::max(NestedBlockIndent, State.Column + 1);
   } else {

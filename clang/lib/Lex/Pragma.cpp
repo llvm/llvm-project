@@ -20,6 +20,7 @@
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/LexDiagnostic.h"
+#include "clang/Lex/LiteralSupport.h"
 #include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
@@ -754,15 +755,52 @@ void Preprocessor::HandlePragmaIncludeAlias(Token &Tok) {
   getHeaderSearchInfo().AddIncludeAlias(OriginalSource, ReplaceFileName);
 }
 
+// Lex a component of a module name: either an identifier or a string literal;
+// for components that can be expressed both ways, the two forms are equivalent.
+static bool LexModuleNameComponent(
+    Preprocessor &PP, Token &Tok,
+    std::pair<IdentifierInfo *, SourceLocation> &ModuleNameComponent,
+    bool First) {
+  PP.LexUnexpandedToken(Tok);
+  if (Tok.is(tok::string_literal) && !Tok.hasUDSuffix()) {
+    StringLiteralParser Literal(Tok, PP);
+    if (Literal.hadError)
+      return true;
+    ModuleNameComponent = std::make_pair(
+        PP.getIdentifierInfo(Literal.GetString()), Tok.getLocation());
+  } else if (!Tok.isAnnotation() && Tok.getIdentifierInfo()) {
+    ModuleNameComponent =
+        std::make_pair(Tok.getIdentifierInfo(), Tok.getLocation());
+  } else {
+    PP.Diag(Tok.getLocation(), diag::err_pp_expected_module_name) << First;
+    return true;
+  }
+  return false;
+}
+
+static bool LexModuleName(
+    Preprocessor &PP, Token &Tok,
+    llvm::SmallVectorImpl<std::pair<IdentifierInfo *, SourceLocation>>
+        &ModuleName) {
+  while (true) {
+    std::pair<IdentifierInfo*, SourceLocation> NameComponent;
+    if (LexModuleNameComponent(PP, Tok, NameComponent, ModuleName.empty()))
+      return true;
+    ModuleName.push_back(NameComponent);
+
+    PP.LexUnexpandedToken(Tok);
+    if (Tok.isNot(tok::period))
+      return false;
+  }
+}
+
 void Preprocessor::HandlePragmaModuleBuild(Token &Tok) {
   SourceLocation Loc = Tok.getLocation();
 
-  LexUnexpandedToken(Tok);
-  if (Tok.isAnnotation() || !Tok.getIdentifierInfo()) {
-    Diag(Tok.getLocation(), diag::err_pp_expected_module_name) << true;
+  std::pair<IdentifierInfo *, SourceLocation> ModuleNameLoc;
+  if (LexModuleNameComponent(*this, Tok, ModuleNameLoc, true))
     return;
-  }
-  IdentifierInfo *ModuleName = Tok.getIdentifierInfo();
+  IdentifierInfo *ModuleName = ModuleNameLoc.first;
 
   LexUnexpandedToken(Tok);
   if (Tok.isNot(tok::eod)) {
@@ -1383,26 +1421,6 @@ public:
   }
 };
 
-static bool LexModuleName(
-    Preprocessor &PP, Token &Tok,
-    llvm::SmallVectorImpl<std::pair<IdentifierInfo *, SourceLocation>>
-        &ModuleName) {
-  while (true) {
-    PP.LexUnexpandedToken(Tok);
-    if (Tok.isAnnotation() || !Tok.getIdentifierInfo()) {
-      PP.Diag(Tok.getLocation(), diag::err_pp_expected_module_name)
-        << ModuleName.empty();
-      return true;
-    }
-
-    ModuleName.emplace_back(Tok.getIdentifierInfo(), Tok.getLocation());
-
-    PP.LexUnexpandedToken(Tok);
-    if (Tok.isNot(tok::period))
-      return false;
-  }
-}
-
 /// Handle the clang \#pragma module import extension. The syntax is:
 /// \code
 ///   #pragma clang module import some.module.name
@@ -1473,7 +1491,7 @@ struct PragmaModuleBeginHandler : public PragmaHandler {
     // be loaded or implicitly loadable.
     // FIXME: We could create the submodule here. We'd need to know whether
     // it's supposed to be explicit, but not much else.
-    Module *M = PP.getHeaderSearchInfo().getModuleMap().findModule(Current);
+    Module *M = PP.getHeaderSearchInfo().lookupModule(Current);
     if (!M) {
       PP.Diag(ModuleName.front().second,
               diag::err_pp_module_begin_no_module_map) << Current;
