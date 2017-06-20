@@ -2033,6 +2033,7 @@ public:
   inline isl::schedule_node ancestor(int generation) const;
   inline isl::boolean band_member_get_coincident(int pos) const;
   inline isl::schedule_node band_member_set_coincident(int pos, int coincident) const;
+  inline isl::schedule_node band_set_ast_build_options(isl::union_set options) const;
   inline isl::schedule_node child(int pos) const;
   inline isl::set context_get_context() const;
   inline isl::schedule_node cut() const;
@@ -9956,6 +9957,11 @@ isl::boolean schedule_node::band_member_get_coincident(int pos) const {
 
 isl::schedule_node schedule_node::band_member_set_coincident(int pos, int coincident) const {
   auto res = isl_schedule_node_band_member_set_coincident(copy(), pos, coincident);
+  return manage(res);
+}
+
+isl::schedule_node schedule_node::band_set_ast_build_options(isl::union_set options) const {
+  auto res = isl_schedule_node_band_set_ast_build_options(copy(), options.release());
   return manage(res);
 }
 

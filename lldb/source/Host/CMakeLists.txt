@@ -90,12 +90,6 @@ else()
     posix/ProcessLauncherPosixFork.cpp
     )
 
-  if (NOT (CMAKE_SYSTEM_NAME MATCHES "Android"))
-    add_host_subdirectory(posix
-      posix/ProcessLauncherPosix.cpp
-      )
-  endif()
-
   if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
     include_directories(SYSTEM ${LIBXML2_INCLUDE_DIR})
     add_host_subdirectory(macosx

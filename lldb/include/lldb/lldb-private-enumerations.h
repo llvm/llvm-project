@@ -212,19 +212,6 @@ enum class LineStatus {
 };
 
 //----------------------------------------------------------------------
-// Exit Type for inferior processes
-//----------------------------------------------------------------------
-typedef enum ExitType {
-  eExitTypeInvalid,
-  eExitTypeExit,   // The exit status represents the return code from normal
-                   // program exit (i.e. WIFEXITED() was true)
-  eExitTypeSignal, // The exit status represents the signal number that caused
-                   // the program to exit (i.e. WIFSIGNALED() was true)
-  eExitTypeStop,   // The exit status represents the stop signal that caused the
-                   // program to exit (i.e. WIFSTOPPED() was true)
-} ExitType;
-
-//----------------------------------------------------------------------
 // Boolean result of running a Type Validator
 //----------------------------------------------------------------------
 enum class TypeValidatorResult : bool { Success = true, Failure = false };

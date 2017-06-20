@@ -29,6 +29,27 @@ class FileAction;
 class ProcessLaunchInfo;
 
 //----------------------------------------------------------------------
+// Exit Type for inferior processes
+//----------------------------------------------------------------------
+struct WaitStatus {
+  enum Type : uint8_t {
+    Exit,   // The status represents the return code from normal
+            // program exit (i.e. WIFEXITED() was true)
+    Signal, // The status represents the signal number that caused
+            // the program to exit (i.e. WIFSIGNALED() was true)
+    Stop,   // The status represents the signal number that caused the
+            // program to stop (i.e. WIFSTOPPED() was true)
+  };
+
+  Type type;
+  uint8_t status;
+
+  WaitStatus(Type type, uint8_t status) : type(type), status(status) {}
+
+  static WaitStatus Decode(int wstatus);
+};
+
+//----------------------------------------------------------------------
 /// @class Host Host.h "lldb/Host/Host.h"
 /// @brief A class that provides host computer information.
 ///
@@ -111,15 +132,6 @@ public:
 
   static const char *GetSignalAsCString(int signo);
 
-  typedef void (*ThreadLocalStorageCleanupCallback)(void *p);
-
-  static lldb::thread_key_t
-  ThreadLocalStorageCreate(ThreadLocalStorageCleanupCallback callback);
-
-  static void *ThreadLocalStorageGet(lldb::thread_key_t key);
-
-  static void ThreadLocalStorageSet(lldb::thread_key_t key, void *value);
-
   //------------------------------------------------------------------
   /// Given an address in the current process (the process that
   /// is running the LLDB code), return the name of the module that
@@ -184,22 +196,6 @@ public:
 
   static bool GetProcessInfo(lldb::pid_t pid, ProcessInstanceInfo &proc_info);
 
-#if (defined(__APPLE__) || defined(__linux__) || defined(__FreeBSD__) ||       \
-     defined(__GLIBC__) || defined(__NetBSD__) || defined(__OpenBSD__)) &&                             \
-    !defined(__ANDROID__)
-
-  static short GetPosixspawnFlags(const ProcessLaunchInfo &launch_info);
-
-  static Status LaunchProcessPosixSpawn(const char *exe_path,
-                                        const ProcessLaunchInfo &launch_info,
-                                        lldb::pid_t &pid);
-
-  static bool AddPosixSpawnFileAction(void *file_actions,
-                                      const FileAction *info, Log *log,
-                                      Status &error);
-
-#endif
-
   static const lldb::UnixSignalsSP &GetUnixSignals();
 
   static Status LaunchProcess(ProcessLaunchInfo &launch_info);
@@ -245,6 +241,15 @@ public:
 };
 
 } // namespace lldb_private
+
+namespace llvm {
+template <> struct format_provider<lldb_private::WaitStatus> {
+  /// Options = "" gives a human readable description of the status
+  /// Options = "g" gives a gdb-remote protocol status (e.g., X09)
+  static void format(const lldb_private::WaitStatus &WS, raw_ostream &OS,
+                     llvm::StringRef Options);
+};
+} // namespace llvm
 
 #endif // #if defined(__cplusplus)
 #endif // liblldb_Host_h_

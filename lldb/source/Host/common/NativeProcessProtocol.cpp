@@ -32,7 +32,6 @@ using namespace lldb_private;
 NativeProcessProtocol::NativeProcessProtocol(lldb::pid_t pid)
     : m_pid(pid), m_threads(), m_current_thread_id(LLDB_INVALID_THREAD_ID),
       m_threads_mutex(), m_state(lldb::eStateInvalid), m_state_mutex(),
-      m_exit_type(eExitTypeInvalid), m_exit_status(0), m_exit_description(),
       m_delegates_mutex(), m_delegates(), m_breakpoint_list(),
       m_watchpoint_list(), m_terminal_fd(-1), m_stop_id(0) {}
 
@@ -59,46 +58,29 @@ NativeProcessProtocol::GetMemoryRegionInfo(lldb::addr_t load_addr,
   return Status("not implemented");
 }
 
-bool NativeProcessProtocol::GetExitStatus(ExitType *exit_type, int *status,
-                                          std::string &exit_description) {
-  if (m_state == lldb::eStateExited) {
-    *exit_type = m_exit_type;
-    *status = m_exit_status;
-    exit_description = m_exit_description;
-    return true;
-  }
+llvm::Optional<WaitStatus> NativeProcessProtocol::GetExitStatus() {
+  if (m_state == lldb::eStateExited)
+    return m_exit_status;
 
-  *status = 0;
-  return false;
+  return llvm::None;
 }
 
-bool NativeProcessProtocol::SetExitStatus(ExitType exit_type, int status,
-                                          const char *exit_description,
+bool NativeProcessProtocol::SetExitStatus(WaitStatus status,
                                           bool bNotifyStateChange) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
-  if (log)
-    log->Printf("NativeProcessProtocol::%s(%d, %d, %s, %s) called",
-                __FUNCTION__, exit_type, status,
-                exit_description ? exit_description : "nullptr",
-                bNotifyStateChange ? "true" : "false");
+  LLDB_LOG(log, "status = {0}, notify = {1}", status, bNotifyStateChange);
 
   // Exit status already set
   if (m_state == lldb::eStateExited) {
-    if (log)
-      log->Printf("NativeProcessProtocol::%s exit status already set to %d, "
-                  "ignoring new set to %d",
-                  __FUNCTION__, m_exit_status, status);
+    if (m_exit_status)
+      LLDB_LOG(log, "exit status already set to {0}", *m_exit_status);
+    else
+      LLDB_LOG(log, "state is exited, but status not set");
     return false;
   }
 
   m_state = lldb::eStateExited;
-
-  m_exit_type = exit_type;
   m_exit_status = status;
-  if (exit_description && exit_description[0])
-    m_exit_description = exit_description;
-  else
-    m_exit_description.clear();
 
   if (bNotifyStateChange)
     SynchronouslyNotifyProcessStateChanged(lldb::eStateExited);

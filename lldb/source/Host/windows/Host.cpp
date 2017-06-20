@@ -101,19 +101,6 @@ lldb::thread_t Host::GetCurrentThread() {
   return lldb::thread_t(::GetCurrentThread());
 }
 
-lldb::thread_key_t
-Host::ThreadLocalStorageCreate(ThreadLocalStorageCleanupCallback callback) {
-  return TlsAlloc();
-}
-
-void *Host::ThreadLocalStorageGet(lldb::thread_key_t key) {
-  return ::TlsGetValue(key);
-}
-
-void Host::ThreadLocalStorageSet(lldb::thread_key_t key, void *value) {
-  ::TlsSetValue(key, value);
-}
-
 void Host::Kill(lldb::pid_t pid, int signo) {
   TerminateProcess((HANDLE)pid, 1);
 }

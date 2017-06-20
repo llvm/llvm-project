@@ -52,10 +52,10 @@ static void FixupEnvironment(Args &env) {
 
 static void LLVM_ATTRIBUTE_NORETURN ExitWithError(int error_fd,
                                                   const char *operation) {
-  std::ostringstream os;
-  os << operation << " failed: " << strerror(errno);
-  write(error_fd, os.str().data(), os.str().size());
-  close(error_fd);
+  int err = errno;
+  llvm::raw_fd_ostream os(error_fd, true);
+  os << operation << " failed: " << llvm::sys::StrError(err);
+  os.flush();
   _exit(1);
 }
 
