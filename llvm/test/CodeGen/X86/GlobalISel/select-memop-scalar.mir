@@ -354,10 +354,16 @@ name:            test_store_float
 alignment:       4
 legalized:       true
 regBankSelected: true
+# NO_AVX512F:       registers:
+# NO_AVX512F-NEXT:    - { id: 0, class: fr32, preferred-register: '' }
+# NO_AVX512F-NEXT:    - { id: 1, class: gr64, preferred-register: '' }
+# NO_AVX512F-NEXT:    - { id: 2, class: gr32, preferred-register: '' }
+#
+# AVX512ALL:        registers:
+# AVX512ALL-NEXT:     - { id: 0, class: fr32x, preferred-register: '' }
+# AVX512ALL-NEXT:     - { id: 1, class: gr64, preferred-register: '' }
+# AVX512ALL-NEXT:     - { id: 2, class: gr32, preferred-register: '' }
 registers:
-# ALL:   - { id: 0, class: fr32x, preferred-register: '' }
-# ALL:   - { id: 1, class: gr64, preferred-register: '' }
-# ALL:   - { id: 2, class: gr32, preferred-register: '' }
   - { id: 0, class: vecr }
   - { id: 1, class: gpr }
   - { id: 2, class: gpr }
@@ -413,10 +419,16 @@ name:            test_store_double
 alignment:       4
 legalized:       true
 regBankSelected: true
+# NO_AVX512F:       registers:
+# NO_AVX512F-NEXT:    - { id: 0, class: fr64, preferred-register: '' }
+# NO_AVX512F-NEXT:    - { id: 1, class: gr64, preferred-register: '' }
+# NO_AVX512F-NEXT:    - { id: 2, class: gr64, preferred-register: '' }
+#
+# AVX512ALL:        registers:
+# AVX512ALL-NEXT:     - { id: 0, class: fr64x, preferred-register: '' }
+# AVX512ALL-NEXT:     - { id: 1, class: gr64, preferred-register: '' }
+# AVX512ALL-NEXT:     - { id: 2, class: gr64, preferred-register: '' }
 registers:
-# ALL:   - { id: 0, class: fr64x, preferred-register: '' }
-# ALL:   - { id: 1, class: gr64, preferred-register: '' }
-# ALL:   - { id: 2, class: gr64, preferred-register: '' }
   - { id: 0, class: vecr }
   - { id: 1, class: gpr }
   - { id: 2, class: gpr }

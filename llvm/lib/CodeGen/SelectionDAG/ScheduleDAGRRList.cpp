@@ -1861,28 +1861,68 @@ static int checkSpecialNodes(const SUnit *left, const SUnit *right) {
 /// Smaller number is the higher priority.
 static unsigned
 CalcNodeSethiUllmanNumber(const SUnit *SU, std::vector<unsigned> &SUNumbers) {
-  unsigned &SethiUllmanNumber = SUNumbers[SU->NodeNum];
-  if (SethiUllmanNumber != 0)
-    return SethiUllmanNumber;
+  if (SUNumbers[SU->NodeNum] != 0)
+    return SUNumbers[SU->NodeNum];
 
-  unsigned Extra = 0;
-  for (const SDep &Pred : SU->Preds) {
-    if (Pred.isCtrl()) continue;  // ignore chain preds
-    SUnit *PredSU = Pred.getSUnit();
-    unsigned PredSethiUllman = CalcNodeSethiUllmanNumber(PredSU, SUNumbers);
-    if (PredSethiUllman > SethiUllmanNumber) {
-      SethiUllmanNumber = PredSethiUllman;
-      Extra = 0;
-    } else if (PredSethiUllman == SethiUllmanNumber)
-      ++Extra;
+  // Use WorkList to avoid stack overflow on excessively large IRs.
+  struct WorkState {
+    WorkState(const SUnit *SU) : SU(SU) {}
+    const SUnit *SU;
+    unsigned PredsProcessed = 0;
+  };
+
+  SmallVector<WorkState, 16> WorkList;
+  WorkList.push_back(SU);
+  while (!WorkList.empty()) {
+    auto &Temp = WorkList.back();
+    auto *TempSU = Temp.SU;
+    bool AllPredsKnown = true;
+    // Try to find a non-evaluated pred and push it into the processing stack.
+    for (unsigned P = Temp.PredsProcessed; P < TempSU->Preds.size(); ++P) {
+      auto &Pred = TempSU->Preds[P];
+      if (Pred.isCtrl()) continue;  // ignore chain preds
+      SUnit *PredSU = Pred.getSUnit();
+      if (SUNumbers[PredSU->NodeNum] == 0) {
+#ifndef NDEBUG
+        // In debug mode, check that we don't have such element in the stack.
+        for (auto It : WorkList)
+          assert(It.SU != PredSU && "Trying to push an element twice?");
+#endif
+        // Next time start processing this one starting from the next pred.
+        Temp.PredsProcessed = P + 1;
+        WorkList.push_back(PredSU);
+        AllPredsKnown = false;
+        break;
+      }
+    }
+
+    if (!AllPredsKnown)
+      continue;
+
+    // Once all preds are known, we can calculate the answer for this one.
+    unsigned SethiUllmanNumber = 0;
+    unsigned Extra = 0;
+    for (const SDep &Pred : TempSU->Preds) {
+      if (Pred.isCtrl()) continue;  // ignore chain preds
+      SUnit *PredSU = Pred.getSUnit();
+      unsigned PredSethiUllman = SUNumbers[PredSU->NodeNum];
+      assert(PredSethiUllman > 0 && "We should have evaluated this pred!");
+      if (PredSethiUllman > SethiUllmanNumber) {
+        SethiUllmanNumber = PredSethiUllman;
+        Extra = 0;
+      } else if (PredSethiUllman == SethiUllmanNumber)
+        ++Extra;
+    }
+
+    SethiUllmanNumber += Extra;
+    if (SethiUllmanNumber == 0)
+      SethiUllmanNumber = 1;
+    SUNumbers[TempSU->NodeNum] = SethiUllmanNumber;
+    WorkList.pop_back();
   }
 
-  SethiUllmanNumber += Extra;
-
-  if (SethiUllmanNumber == 0)
-    SethiUllmanNumber = 1;
-
-  return SethiUllmanNumber;
+  assert(SUNumbers[SU->NodeNum] > 0 && "SethiUllman should never be zero!");
+  return SUNumbers[SU->NodeNum];
 }
 
 /// CalculateSethiUllmanNumbers - Calculate Sethi-Ullman numbers of all

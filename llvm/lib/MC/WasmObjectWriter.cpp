@@ -1093,7 +1093,7 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
 
     unsigned Index;
 
-                 //<< " function=" << S.isFunction()
+                 // << " function=" << S.isFunction()
 
     if (WS.isFunction()) {
       // Prepare the function's type, if we haven't seen it yet.

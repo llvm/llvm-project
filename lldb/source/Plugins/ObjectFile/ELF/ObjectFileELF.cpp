@@ -707,10 +707,7 @@ size_t ObjectFileELF::GetModuleSpecifications(
           SectionHeaderColl section_headers;
           lldb_private::UUID &uuid = spec.GetUUID();
 
-          using namespace std::placeholders;
-          const SetDataFunction set_data =
-              std::bind(&ObjectFileELF::SetData, std::cref(data), _1, _2, _3);
-          GetSectionHeaderInfo(section_headers, set_data, header, uuid,
+          GetSectionHeaderInfo(section_headers, data, header, uuid,
                                gnu_debuglink_file, gnu_debuglink_crc,
                                spec.GetArchitecture());
 
@@ -748,7 +745,7 @@ size_t ObjectFileELF::GetModuleSpecifications(
                     data.SetData(data_sp);
                 }
                 ProgramHeaderColl program_headers;
-                GetProgramHeaderInfo(program_headers, set_data, header);
+                GetProgramHeaderInfo(program_headers, data, header);
 
                 size_t segment_data_end = 0;
                 for (ProgramHeaderCollConstIter I = program_headers.begin();
@@ -950,29 +947,7 @@ size_t ObjectFileELF::SectionIndex(const SectionHeaderCollConstIter &I) const {
 
 bool ObjectFileELF::ParseHeader() {
   lldb::offset_t offset = 0;
-  if (!m_header.Parse(m_data, &offset))
-    return false;
-
-  if (!IsInMemory())
-    return true;
-
-  // For in memory object files m_data might not contain the full object file.
-  // Try to load it
-  // until the end of the "Section header table" what is at the end of the ELF
-  // file.
-  addr_t file_size = m_header.e_shoff + m_header.e_shnum * m_header.e_shentsize;
-  if (m_data.GetByteSize() < file_size) {
-    ProcessSP process_sp(m_process_wp.lock());
-    if (!process_sp)
-      return false;
-
-    DataBufferSP data_sp = ReadMemory(process_sp, m_memory_addr, file_size);
-    if (!data_sp)
-      return false;
-    m_data.SetData(data_sp, 0, file_size);
-  }
-
-  return true;
+  return m_header.Parse(m_data, &offset);
 }
 
 bool ObjectFileELF::GetUUID(lldb_private::UUID *uuid) {
@@ -1188,7 +1163,7 @@ size_t ObjectFileELF::ParseDependentModules() {
 // GetProgramHeaderInfo
 //----------------------------------------------------------------------
 size_t ObjectFileELF::GetProgramHeaderInfo(ProgramHeaderColl &program_headers,
-                                           const SetDataFunction &set_data,
+                                           DataExtractor &object_data,
                                            const ELFHeader &header) {
   // We have already parsed the program headers
   if (!program_headers.empty())
@@ -1205,7 +1180,7 @@ size_t ObjectFileELF::GetProgramHeaderInfo(ProgramHeaderColl &program_headers,
   const size_t ph_size = header.e_phnum * header.e_phentsize;
   const elf_off ph_offset = header.e_phoff;
   DataExtractor data;
-  if (set_data(data, ph_offset, ph_size) != ph_size)
+  if (data.SetData(object_data, ph_offset, ph_size) != ph_size)
     return 0;
 
   uint32_t idx;
@@ -1225,12 +1200,7 @@ size_t ObjectFileELF::GetProgramHeaderInfo(ProgramHeaderColl &program_headers,
 // ParseProgramHeaders
 //----------------------------------------------------------------------
 size_t ObjectFileELF::ParseProgramHeaders() {
-  using namespace std::placeholders;
-  return GetProgramHeaderInfo(
-      m_program_headers,
-      std::bind(&ObjectFileELF::SetDataWithReadMemoryFallback, this, _1, _2,
-                _3),
-      m_header);
+  return GetProgramHeaderInfo(m_program_headers, m_data, m_header);
 }
 
 lldb_private::Status
@@ -1562,7 +1532,7 @@ void ObjectFileELF::ParseARMAttributes(DataExtractor &data, uint64_t length,
 // GetSectionHeaderInfo
 //----------------------------------------------------------------------
 size_t ObjectFileELF::GetSectionHeaderInfo(SectionHeaderColl &section_headers,
-                                           const SetDataFunction &set_data,
+                                           DataExtractor &object_data,
                                            const elf::ELFHeader &header,
                                            lldb_private::UUID &uuid,
                                            std::string &gnu_debuglink_file,
@@ -1634,7 +1604,7 @@ size_t ObjectFileELF::GetSectionHeaderInfo(SectionHeaderColl &section_headers,
   const size_t sh_size = header.e_shnum * header.e_shentsize;
   const elf_off sh_offset = header.e_shoff;
   DataExtractor sh_data;
-  if (set_data(sh_data, sh_offset, sh_size) != sh_size)
+  if (sh_data.SetData(object_data, sh_offset, sh_size) != sh_size)
     return 0;
 
   uint32_t idx;
@@ -1653,7 +1623,7 @@ size_t ObjectFileELF::GetSectionHeaderInfo(SectionHeaderColl &section_headers,
     const Elf64_Off offset = sheader.sh_offset;
     lldb_private::DataExtractor shstr_data;
 
-    if (set_data(shstr_data, offset, byte_size) == byte_size) {
+    if (shstr_data.SetData(object_data, offset, byte_size) == byte_size) {
       for (SectionHeaderCollIter I = section_headers.begin();
            I != section_headers.end(); ++I) {
         static ConstString g_sect_name_gnu_debuglink(".gnu_debuglink");
@@ -1669,8 +1639,8 @@ size_t ObjectFileELF::GetSectionHeaderInfo(SectionHeaderColl &section_headers,
           DataExtractor data;
           if (sheader.sh_type == SHT_MIPS_ABIFLAGS) {
 
-            if (section_size && (set_data(data, sheader.sh_offset,
-                                          section_size) == section_size)) {
+            if (section_size && (data.SetData(object_data, sheader.sh_offset,
+                                              section_size) == section_size)) {
               // MIPS ASE Mask is at offset 12 in MIPS.abiflags section
               lldb::offset_t offset = 12; // MIPS ABI Flags Version: 0
               arch_flags |= data.GetU32(&offset);
@@ -1735,14 +1705,14 @@ size_t ObjectFileELF::GetSectionHeaderInfo(SectionHeaderColl &section_headers,
           DataExtractor data;
 
           if (sheader.sh_type == SHT_ARM_ATTRIBUTES && section_size != 0 &&
-              set_data(data, sheader.sh_offset, section_size) == section_size)
+              data.SetData(object_data, sheader.sh_offset, section_size) == section_size)
             ParseARMAttributes(data, section_size, arch_spec);
         }
 
         if (name == g_sect_name_gnu_debuglink) {
           DataExtractor data;
-          if (section_size && (set_data(data, sheader.sh_offset,
-                                        section_size) == section_size)) {
+          if (section_size && (data.SetData(object_data, sheader.sh_offset,
+                                            section_size) == section_size)) {
             lldb::offset_t gnu_debuglink_offset = 0;
             gnu_debuglink_file = data.GetCStr(&gnu_debuglink_offset);
             gnu_debuglink_offset = llvm::alignTo(gnu_debuglink_offset, 4);
@@ -1762,8 +1732,8 @@ size_t ObjectFileELF::GetSectionHeaderInfo(SectionHeaderColl &section_headers,
         if (is_note_header) {
           // Allow notes to refine module info.
           DataExtractor data;
-          if (section_size && (set_data(data, sheader.sh_offset,
-                                        section_size) == section_size)) {
+          if (section_size && (data.SetData(object_data, sheader.sh_offset,
+                                            section_size) == section_size)) {
             Status error = RefineModuleDetailsFromNote(data, arch_spec, uuid);
             if (error.Fail()) {
               if (log)
@@ -1819,40 +1789,9 @@ ObjectFileELF::StripLinkerSymbolAnnotations(llvm::StringRef symbol_name) const {
 // ParseSectionHeaders
 //----------------------------------------------------------------------
 size_t ObjectFileELF::ParseSectionHeaders() {
-  using namespace std::placeholders;
-
-  return GetSectionHeaderInfo(
-      m_section_headers,
-      std::bind(&ObjectFileELF::SetDataWithReadMemoryFallback, this, _1, _2,
-                _3),
-      m_header, m_uuid, m_gnu_debuglink_file, m_gnu_debuglink_crc, m_arch_spec);
-}
-
-lldb::offset_t ObjectFileELF::SetData(const lldb_private::DataExtractor &src,
-                                      lldb_private::DataExtractor &dst,
-                                      lldb::offset_t offset,
-                                      lldb::offset_t length) {
-  return dst.SetData(src, offset, length);
-}
-
-lldb::offset_t
-ObjectFileELF::SetDataWithReadMemoryFallback(lldb_private::DataExtractor &dst,
-                                             lldb::offset_t offset,
-                                             lldb::offset_t length) {
-  if (offset + length <= m_data.GetByteSize())
-    return dst.SetData(m_data, offset, length);
-
-  const auto process_sp = m_process_wp.lock();
-  if (process_sp != nullptr) {
-    addr_t file_size = offset + length;
-
-    DataBufferSP data_sp = ReadMemory(process_sp, m_memory_addr, file_size);
-    if (!data_sp)
-      return false;
-    m_data.SetData(data_sp, 0, file_size);
-  }
-
-  return dst.SetData(m_data, offset, length);
+  return GetSectionHeaderInfo(m_section_headers, m_data, m_header, m_uuid,
+                              m_gnu_debuglink_file, m_gnu_debuglink_crc,
+                              m_arch_spec);
 }
 
 const ObjectFileELF::ELFSectionHeaderInfo *

@@ -21,6 +21,7 @@
 #include "lldb/Core/Section.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
@@ -484,6 +485,27 @@ DynamicLoaderPOSIXDYLD::GetStepThroughTrampolinePlan(Thread &thread,
   return thread_plan_sp;
 }
 
+void DynamicLoaderPOSIXDYLD::LoadVDSO(ModuleList &modules) {
+  if (m_vdso_base == LLDB_INVALID_ADDRESS)
+    return;
+
+  FileSpec file("[vdso]", false);
+
+  MemoryRegionInfo info;
+  Status status = m_process->GetMemoryRegionInfo(m_vdso_base, info);
+  if (status.Fail()) {
+    Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_DYNAMIC_LOADER));
+    LLDB_LOG(log, "Failed to get vdso region info: {0}", status);
+    return;
+  }
+
+  if (ModuleSP module_sp = m_process->ReadModuleFromMemory(
+          file, m_vdso_base, info.GetRange().GetByteSize())) {
+    UpdateLoadedSections(module_sp, LLDB_INVALID_ADDRESS, m_vdso_base, false);
+    m_process->GetTarget().GetImages().AppendIfNeeded(module_sp);
+  }
+}
+
 void DynamicLoaderPOSIXDYLD::LoadAllCurrentModules() {
   DYLDRendezvous::iterator I;
   DYLDRendezvous::iterator E;
@@ -502,14 +524,7 @@ void DynamicLoaderPOSIXDYLD::LoadAllCurrentModules() {
   // that ourselves here.
   ModuleSP executable = GetTargetExecutable();
   m_loaded_modules[executable] = m_rendezvous.GetLinkMapAddress();
-  if (m_vdso_base != LLDB_INVALID_ADDRESS) {
-    FileSpec file_spec("[vdso]", false);
-    ModuleSP module_sp = LoadModuleAtAddress(file_spec, LLDB_INVALID_ADDRESS,
-                                             m_vdso_base, false);
-    if (module_sp.get()) {
-      module_list.Append(module_sp);
-    }
-  }
+  LoadVDSO(module_list);
 
   std::vector<FileSpec> module_names;
   for (I = m_rendezvous.begin(), E = m_rendezvous.end(); I != E; ++I)

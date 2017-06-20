@@ -38,20 +38,9 @@ static std::mutex &GetFileMutex() {
   return *g_file_mutex_ptr;
 }
 
-static void ThreadSpecificCleanup(void *p) {
-  delete static_cast<TimerStack *>(p);
-}
-
-static TimerStack *GetTimerStackForCurrentThread() {
-  static lldb::thread_key_t g_key =
-      Host::ThreadLocalStorageCreate(ThreadSpecificCleanup);
-
-  void *timer_stack = Host::ThreadLocalStorageGet(g_key);
-  if (timer_stack == NULL) {
-    Host::ThreadLocalStorageSet(g_key, new TimerStack);
-    timer_stack = Host::ThreadLocalStorageGet(g_key);
-  }
-  return (TimerStack *)timer_stack;
+static TimerStack &GetTimerStackForCurrentThread() {
+  static thread_local TimerStack g_stack;
+  return g_stack;
 }
 
 Timer::Category::Category(const char *cat) : m_name(cat) {
@@ -66,16 +55,14 @@ void Timer::SetQuiet(bool value) { g_quiet = value; }
 
 Timer::Timer(Timer::Category &category, const char *format, ...)
     : m_category(category), m_total_start(std::chrono::steady_clock::now()) {
-  TimerStack *stack = GetTimerStackForCurrentThread();
-  if (!stack)
-    return;
+  TimerStack &stack = GetTimerStackForCurrentThread();
 
-  stack->push_back(this);
-  if (g_quiet && stack->size() <= g_display_depth) {
+  stack.push_back(this);
+  if (g_quiet && stack.size() <= g_display_depth) {
     std::lock_guard<std::mutex> lock(GetFileMutex());
 
     // Indent
-    ::fprintf(stdout, "%*s", int(stack->size() - 1) * TIMER_INDENT_AMOUNT, "");
+    ::fprintf(stdout, "%*s", int(stack.size() - 1) * TIMER_INDENT_AMOUNT, "");
     // Print formatted string
     va_list args;
     va_start(args, format);
@@ -90,26 +77,23 @@ Timer::Timer(Timer::Category &category, const char *format, ...)
 Timer::~Timer() {
   using namespace std::chrono;
 
-  TimerStack *stack = GetTimerStackForCurrentThread();
-  if (!stack)
-    return;
-
   auto stop_time = steady_clock::now();
   auto total_dur = stop_time - m_total_start;
   auto timer_dur = total_dur - m_child_duration;
 
-  if (g_quiet && stack->size() <= g_display_depth) {
+  TimerStack &stack = GetTimerStackForCurrentThread();
+  if (g_quiet && stack.size() <= g_display_depth) {
     std::lock_guard<std::mutex> lock(GetFileMutex());
     ::fprintf(stdout, "%*s%.9f sec (%.9f sec)\n",
-              int(stack->size() - 1) * TIMER_INDENT_AMOUNT, "",
+              int(stack.size() - 1) * TIMER_INDENT_AMOUNT, "",
               duration<double>(total_dur).count(),
               duration<double>(timer_dur).count());
   }
 
-  assert(stack->back() == this);
-  stack->pop_back();
-  if (!stack->empty())
-    stack->back()->ChildDuration(total_dur);
+  assert(stack.back() == this);
+  stack.pop_back();
+  if (!stack.empty())
+    stack.back()->ChildDuration(total_dur);
 
   // Keep total results for each category so we can dump results.
   m_category.m_nanos += std::chrono::nanoseconds(timer_dur).count();

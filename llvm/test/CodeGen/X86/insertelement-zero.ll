@@ -373,8 +373,8 @@ define <8 x i16> @insert_v8i16_z12345z7(<8 x i16> %a) {
   ret <8 x i16> %2
 }
 
-define <16 x i16> @insert_v16i16_z12345z789ABZDEz(<16 x i16> %a) {
-; SSE2-LABEL: insert_v16i16_z12345z789ABZDEz:
+define <16 x i16> @insert_v16i16_z12345z789ABCDEz(<16 x i16> %a) {
+; SSE2-LABEL: insert_v16i16_z12345z789ABCDEz:
 ; SSE2:       # BB#0:
 ; SSE2-NEXT:    xorl %eax, %eax
 ; SSE2-NEXT:    pinsrw $0, %eax, %xmm0
@@ -382,7 +382,7 @@ define <16 x i16> @insert_v16i16_z12345z789ABZDEz(<16 x i16> %a) {
 ; SSE2-NEXT:    pinsrw $7, %eax, %xmm1
 ; SSE2-NEXT:    retq
 ;
-; SSE3-LABEL: insert_v16i16_z12345z789ABZDEz:
+; SSE3-LABEL: insert_v16i16_z12345z789ABCDEz:
 ; SSE3:       # BB#0:
 ; SSE3-NEXT:    xorl %eax, %eax
 ; SSE3-NEXT:    pinsrw $0, %eax, %xmm0
@@ -390,7 +390,7 @@ define <16 x i16> @insert_v16i16_z12345z789ABZDEz(<16 x i16> %a) {
 ; SSE3-NEXT:    pinsrw $7, %eax, %xmm1
 ; SSE3-NEXT:    retq
 ;
-; SSSE3-LABEL: insert_v16i16_z12345z789ABZDEz:
+; SSSE3-LABEL: insert_v16i16_z12345z789ABCDEz:
 ; SSSE3:       # BB#0:
 ; SSSE3-NEXT:    xorl %eax, %eax
 ; SSSE3-NEXT:    pinsrw $0, %eax, %xmm0
@@ -398,14 +398,14 @@ define <16 x i16> @insert_v16i16_z12345z789ABZDEz(<16 x i16> %a) {
 ; SSSE3-NEXT:    pinsrw $7, %eax, %xmm1
 ; SSSE3-NEXT:    retq
 ;
-; SSE41-LABEL: insert_v16i16_z12345z789ABZDEz:
+; SSE41-LABEL: insert_v16i16_z12345z789ABCDEz:
 ; SSE41:       # BB#0:
 ; SSE41-NEXT:    pxor %xmm2, %xmm2
 ; SSE41-NEXT:    pblendw {{.*#+}} xmm0 = xmm2[0],xmm0[1,2,3,4,5],xmm2[6],xmm0[7]
 ; SSE41-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1,2,3,4,5,6],xmm2[7]
 ; SSE41-NEXT:    retq
 ;
-; AVX1-LABEL: insert_v16i16_z12345z789ABZDEz:
+; AVX1-LABEL: insert_v16i16_z12345z789ABCDEz:
 ; AVX1:       # BB#0:
 ; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm2 = xmm1[0],xmm0[1,2,3,4,5],xmm1[6],xmm0[7]
@@ -415,7 +415,7 @@ define <16 x i16> @insert_v16i16_z12345z789ABZDEz(<16 x i16> %a) {
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm2, %ymm0
 ; AVX1-NEXT:    retq
 ;
-; AVX2-LABEL: insert_v16i16_z12345z789ABZDEz:
+; AVX2-LABEL: insert_v16i16_z12345z789ABCDEz:
 ; AVX2:       # BB#0:
 ; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    vpblendw {{.*#+}} xmm2 = xmm1[0],xmm0[1,2,3,4,5],xmm1[6],xmm0[7]

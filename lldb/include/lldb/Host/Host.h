@@ -132,15 +132,6 @@ public:
 
   static const char *GetSignalAsCString(int signo);
 
-  typedef void (*ThreadLocalStorageCleanupCallback)(void *p);
-
-  static lldb::thread_key_t
-  ThreadLocalStorageCreate(ThreadLocalStorageCleanupCallback callback);
-
-  static void *ThreadLocalStorageGet(lldb::thread_key_t key);
-
-  static void ThreadLocalStorageSet(lldb::thread_key_t key, void *value);
-
   //------------------------------------------------------------------
   /// Given an address in the current process (the process that
   /// is running the LLDB code), return the name of the module that

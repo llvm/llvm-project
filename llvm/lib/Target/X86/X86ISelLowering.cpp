@@ -14272,8 +14272,6 @@ SDValue X86TargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
   // If we are inserting a element, see if we can do this more efficiently with
   // a blend shuffle with a rematerializable vector than a costly integer
   // insertion.
-  // TODO: pre-SSE41 targets will tend to use bit masking - this could still
-  // be beneficial if we are inserting several zeros and can combine the masks.
   if ((IsZeroElt || IsAllOnesElt) && Subtarget.hasSSE41() && NumElts <= 8) {
     SmallVector<int, 8> BlendMask;
     for (unsigned i = 0; i != NumElts; ++i)

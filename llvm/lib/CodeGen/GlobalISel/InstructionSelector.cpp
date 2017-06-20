@@ -25,6 +25,18 @@ using namespace llvm;
 
 InstructionSelector::InstructionSelector() {}
 
+bool InstructionSelector::constrainOperandRegToRegClass(
+    MachineInstr &I, unsigned OpIdx, const TargetRegisterClass &RC,
+    const TargetInstrInfo &TII, const TargetRegisterInfo &TRI,
+    const RegisterBankInfo &RBI) const {
+  MachineBasicBlock &MBB = *I.getParent();
+  MachineFunction &MF = *MBB.getParent();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+
+  return llvm::constrainRegToClass(MRI, TII, RBI, I,
+                                   I.getOperand(OpIdx).getReg(), RC);
+}
+
 bool InstructionSelector::constrainSelectedInstRegOperands(
     MachineInstr &I, const TargetInstrInfo &TII, const TargetRegisterInfo &TRI,
     const RegisterBankInfo &RBI) const {
