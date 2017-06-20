@@ -136,7 +136,8 @@ void edit::fillInMissingSwitchEnumCases(
           else
             InsertionLoc = Switch->getBody()->getLocEnd();
         }
-        Consumer(FixItHint::CreateInsertion(InsertionLoc, OS.str()));
+        Consumer(FixItHint::CreateInsertion(
+            Context.getSourceManager().getSpellingLoc(InsertionLoc), OS.str()));
       };
 
   // Determine which enum cases are uncovered.

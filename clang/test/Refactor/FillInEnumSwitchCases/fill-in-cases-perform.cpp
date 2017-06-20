@@ -78,3 +78,16 @@ void perform1(PREFIX Color c) {
 // RUN: clang-refactor-test perform -action fill-in-enum-switch-cases -at=%s:43:3 %s -std=c++11 -D NESTED1 -D NESTED1NS -D ENUMCLASS | FileCheck --check-prefix=CHECK6 %s
 // RUN: clang-refactor-test perform -action fill-in-enum-switch-cases -at=%s:43:3 -at=%s:54:3 -at=%s:63:3 %s -std=c++11 -D NESTEDANON | FileCheck --check-prefix=CHECK1 %s
 // RUN: clang-refactor-test perform -action fill-in-enum-switch-cases -at=%s:43:3 -at=%s:54:3 -at=%s:63:3 %s -std=c++11 -D NESTEDANON -D ENUMCLASS | FileCheck --check-prefix=CHECK2 %s
+
+#define MACROARG(X) X
+
+void macroArg(PREFIX Color c) {
+  // macro-arg: +2:12
+  // macro-arg-range-begin: +1:12
+  MACROARG(switch (c) {
+  }); // MACRO-ARG: "case Black:\n<#code#>\nbreak;\ncase Blue:\n<#code#>\nbreak;\ncase White:\n<#code#>\nbreak;\ncase Gold:\n<#code#>\nbreak;\n" [[@LINE]]
+  // macro-arg-range-end: -1:4
+}
+
+// RUN: clang-refactor-test perform -action fill-in-enum-switch-cases -at=macro-arg %s | FileCheck --check-prefix=MACRO-ARG %s
+// RUN: clang-refactor-test perform -action fill-in-enum-switch-cases -selected=macro-arg-range %s | FileCheck --check-prefix=MACRO-ARG %s
