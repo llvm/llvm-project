@@ -131,7 +131,7 @@ static cl::opt<bool> EnablePhiElim(
 
 // The flag adds instruction count to solutions cost comparision.
 static cl::opt<bool> InsnsCost(
-  "lsr-insns-cost", cl::Hidden, cl::init(true),
+  "lsr-insns-cost", cl::Hidden, cl::init(false),
   cl::desc("Add instruction count to a LSR cost model"));
 
 // Flag to choose how to narrow complex lsr solution

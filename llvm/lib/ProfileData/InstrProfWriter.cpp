@@ -363,17 +363,19 @@ void InstrProfWriter::writeRecordInText(const InstrProfRecord &Func,
   OS << "\n";
 }
 
-void InstrProfWriter::writeText(raw_fd_ostream &OS) {
+Error InstrProfWriter::writeText(raw_fd_ostream &OS) {
   if (ProfileKind == PF_IRLevel)
     OS << "# IR level Instrumentation Flag\n:ir\n";
   InstrProfSymtab Symtab;
   for (const auto &I : FunctionData)
     if (shouldEncodeData(I.getValue()))
-      Symtab.addFuncName(I.getKey());
+      if (Error E = Symtab.addFuncName(I.getKey()))
+        return E;
   Symtab.finalizeSymtab();
 
   for (const auto &I : FunctionData)
     if (shouldEncodeData(I.getValue()))
       for (const auto &Func : I.getValue())
         writeRecordInText(Func.second, Symtab, OS);
+  return Error::success();
 }

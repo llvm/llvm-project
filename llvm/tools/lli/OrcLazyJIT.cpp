@@ -1,4 +1,4 @@
-//===------ OrcLazyJIT.cpp - Basic Orc-based JIT for lazy execution -------===//
+//===- OrcLazyJIT.cpp - Basic Orc-based JIT for lazy execution ------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -8,45 +8,50 @@
 //===----------------------------------------------------------------------===//
 
 #include "OrcLazyJIT.h"
-#include "llvm/ExecutionEngine/Orc/OrcABISupport.h"
-#include "llvm/Support/Debug.h"
+#include "llvm/ADT/Triple.h"
+#include "llvm/ExecutionEngine/ExecutionEngine.h"
+#include "llvm/Support/CodeGen.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/DynamicLibrary.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FileSystem.h"
+#include <cstdint>
 #include <cstdio>
+#include <cstdlib>
 #include <system_error>
 
 using namespace llvm;
 
 namespace {
 
-  enum class DumpKind { NoDump, DumpFuncsToStdOut, DumpModsToStdOut,
-                        DumpModsToDisk };
+enum class DumpKind {
+  NoDump,
+  DumpFuncsToStdOut,
+  DumpModsToStdOut,
+  DumpModsToDisk
+};
 
-  cl::opt<DumpKind> OrcDumpKind("orc-lazy-debug",
-                                cl::desc("Debug dumping for the orc-lazy JIT."),
-                                cl::init(DumpKind::NoDump),
-                                cl::values(
-                                  clEnumValN(DumpKind::NoDump, "no-dump",
-                                             "Don't dump anything."),
-                                  clEnumValN(DumpKind::DumpFuncsToStdOut,
-                                             "funcs-to-stdout",
-                                             "Dump function names to stdout."),
-                                  clEnumValN(DumpKind::DumpModsToStdOut,
-                                             "mods-to-stdout",
-                                             "Dump modules to stdout."),
-                                  clEnumValN(DumpKind::DumpModsToDisk,
-                                             "mods-to-disk",
-                                             "Dump modules to the current "
-                                             "working directory. (WARNING: "
-                                             "will overwrite existing files).")),
-                                cl::Hidden);
+} // end anonymous namespace
 
-  cl::opt<bool> OrcInlineStubs("orc-lazy-inline-stubs",
-                               cl::desc("Try to inline stubs"),
-                               cl::init(true), cl::Hidden);
-}
+static cl::opt<DumpKind> OrcDumpKind(
+    "orc-lazy-debug", cl::desc("Debug dumping for the orc-lazy JIT."),
+    cl::init(DumpKind::NoDump),
+    cl::values(clEnumValN(DumpKind::NoDump, "no-dump", "Don't dump anything."),
+               clEnumValN(DumpKind::DumpFuncsToStdOut, "funcs-to-stdout",
+                          "Dump function names to stdout."),
+               clEnumValN(DumpKind::DumpModsToStdOut, "mods-to-stdout",
+                          "Dump modules to stdout."),
+               clEnumValN(DumpKind::DumpModsToDisk, "mods-to-disk",
+                          "Dump modules to the current "
+                          "working directory. (WARNING: "
+                          "will overwrite existing files).")),
+    cl::Hidden);
+
+static cl::opt<bool> OrcInlineStubs("orc-lazy-inline-stubs",
+                                    cl::desc("Try to inline stubs"),
+                                    cl::init(true), cl::Hidden);
 
 OrcLazyJIT::TransformFtor OrcLazyJIT::createDebugDumper() {
-
   switch (OrcDumpKind) {
   case DumpKind::NoDump:
     return [](std::unique_ptr<Module> M) { return M; };
@@ -97,7 +102,6 @@ OrcLazyJIT::TransformFtor OrcLazyJIT::createDebugDumper() {
 
 // Defined in lli.cpp.
 CodeGenOpt::Level getOptLevel();
-
 
 template <typename PtrTy>
 static PtrTy fromTargetAddress(JITTargetAddress Addr) {
@@ -151,11 +155,10 @@ int llvm::runOrcLazyJIT(std::vector<std::unique_ptr<Module>> Ms,
     return 1;
   }
 
-  typedef int (*MainFnPtr)(int, const char*[]);
+  using MainFnPtr = int (*)(int, const char*[]);
   std::vector<const char *> ArgV;
   for (auto &Arg : Args)
     ArgV.push_back(Arg.c_str());
   auto Main = fromTargetAddress<MainFnPtr>(MainSym.getAddress());
   return Main(ArgV.size(), (const char**)ArgV.data());
 }
-

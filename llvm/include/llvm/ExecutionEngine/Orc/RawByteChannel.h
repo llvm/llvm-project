@@ -10,20 +10,14 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_RAWBYTECHANNEL_H
 #define LLVM_EXECUTIONENGINE_ORC_RAWBYTECHANNEL_H
 
-#include "OrcError.h"
-#include "RPCSerialization.h"
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ExecutionEngine/Orc/RPCSerialization.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
-#include <cstddef>
 #include <cstdint>
 #include <mutex>
 #include <string>
-#include <tuple>
 #include <type_traits>
-#include <vector>
 
 namespace llvm {
 namespace orc {
@@ -32,7 +26,7 @@ namespace rpc {
 /// Interface for byte-streams to be used with RPC.
 class RawByteChannel {
 public:
-  virtual ~RawByteChannel() {}
+  virtual ~RawByteChannel() = default;
 
   /// Read Size bytes from the stream into *Dst.
   virtual Error readBytes(char *Dst, unsigned Size) = 0;

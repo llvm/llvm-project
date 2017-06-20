@@ -343,7 +343,7 @@ struct InstrProfReaderIndexBase {
   virtual void setValueProfDataEndianness(support::endianness Endianness) = 0;
   virtual uint64_t getVersion() const = 0;
   virtual bool isIRLevelProfile() const = 0;
-  virtual void populateSymtab(InstrProfSymtab &) = 0;
+  virtual Error populateSymtab(InstrProfSymtab &) = 0;
 };
 
 typedef OnDiskIterableChainedHashTable<InstrProfLookupTrait>
@@ -383,8 +383,8 @@ public:
     return (FormatVersion & VARIANT_MASK_IR_PROF) != 0;
   }
 
-  void populateSymtab(InstrProfSymtab &Symtab) override {
-    Symtab.create(HashTable->keys());
+  Error populateSymtab(InstrProfSymtab &Symtab) override {
+    return Symtab.create(HashTable->keys());
   }
 };
 

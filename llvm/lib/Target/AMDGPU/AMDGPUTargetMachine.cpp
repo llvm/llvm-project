@@ -342,6 +342,14 @@ void AMDGPUTargetMachine::adjustPassManager(PassManagerBuilder &Builder) {
         PM.add(createAMDGPUExternalAAWrapperPass());
       }
   });
+
+  Builder.addExtension(
+    PassManagerBuilder::EP_CGSCCOptimizerLate,
+    [](const PassManagerBuilder &, legacy::PassManagerBase &PM) {
+      // Add infer address spaces pass to the opt pipeline after inlining
+      // but before SROA to increase SROA opportunities.
+      PM.add(createInferAddressSpacesPass());
+  });
 }
 
 //===----------------------------------------------------------------------===//

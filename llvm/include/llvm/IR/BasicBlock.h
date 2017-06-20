@@ -1,4 +1,4 @@
-//===-- llvm/BasicBlock.h - Represent a basic block in the VM ---*- C++ -*-===//
+//===- llvm/BasicBlock.h - Represent a basic block in the VM ----*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -18,13 +18,17 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/ilist.h"
 #include "llvm/ADT/ilist_node.h"
+#include "llvm/ADT/iterator.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/SymbolTableListTraits.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/CBindingWrapping.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstddef>
+#include <iterator>
 
 namespace llvm {
 
@@ -294,9 +298,9 @@ public:
       return *this;
     }
   };
-  typedef phi_iterator_impl<> phi_iterator;
-  typedef phi_iterator_impl<const PHINode, BasicBlock::const_iterator>
-      const_phi_iterator;
+  using phi_iterator = phi_iterator_impl<>;
+  using const_phi_iterator =
+      phi_iterator_impl<const PHINode, BasicBlock::const_iterator>;
 
   /// Returns a range that iterates over the phis in the basic block.
   ///

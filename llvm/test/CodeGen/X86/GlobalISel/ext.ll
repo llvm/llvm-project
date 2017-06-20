@@ -11,8 +11,7 @@ define i32 @test_zext_i1(i32 %a) {
 ;
 ; X32-LABEL: test_zext_i1:
 ; X32:       # BB#0:
-; X32-NEXT:    leal 4(%esp), %eax
-; X32-NEXT:    movl (%eax), %eax
+; X32-NEXT:    movl 4(%esp), %eax
 ; X32-NEXT:    andl $1, %eax
 ; X32-NEXT:    retl
   %val = trunc i32 %a to i1
@@ -28,8 +27,7 @@ define i32 @test_zext_i8(i8 %val) {
 ;
 ; X32-LABEL: test_zext_i8:
 ; X32:       # BB#0:
-; X32-NEXT:    leal 4(%esp), %eax
-; X32-NEXT:    movzbl (%eax), %eax
+; X32-NEXT:    movzbl 4(%esp), %eax
 ; X32-NEXT:    retl
   %r = zext i8 %val to i32
   ret i32 %r
@@ -43,8 +41,7 @@ define i32 @test_zext_i16(i16 %val) {
 ;
 ; X32-LABEL: test_zext_i16:
 ; X32:       # BB#0:
-; X32-NEXT:    leal 4(%esp), %eax
-; X32-NEXT:    movzwl (%eax), %eax
+; X32-NEXT:    movzwl 4(%esp), %eax
 ; X32-NEXT:    retl
   %r = zext i16 %val to i32
   ret i32 %r
@@ -58,8 +55,7 @@ define i32 @test_sext_i8(i8 %val) {
 ;
 ; X32-LABEL: test_sext_i8:
 ; X32:       # BB#0:
-; X32-NEXT:    leal 4(%esp), %eax
-; X32-NEXT:    movsbl (%eax), %eax
+; X32-NEXT:    movsbl 4(%esp), %eax
 ; X32-NEXT:    retl
   %r = sext i8 %val to i32
   ret i32 %r
@@ -73,8 +69,7 @@ define i32 @test_sext_i16(i16 %val) {
 ;
 ; X32-LABEL: test_sext_i16:
 ; X32:       # BB#0:
-; X32-NEXT:    leal 4(%esp), %eax
-; X32-NEXT:    movswl (%eax), %eax
+; X32-NEXT:    movswl 4(%esp), %eax
 ; X32-NEXT:    retl
   %r = sext i16 %val to i32
   ret i32 %r

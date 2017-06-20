@@ -87,6 +87,8 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
   setAction({G_CONSTANT, s32}, Legal);
 
   setAction({G_ICMP, s1}, Legal);
+  for (auto Ty : {s8, s16})
+    setAction({G_ICMP, 1, Ty}, WidenScalar);
   for (auto Ty : {s32, p0})
     setAction({G_ICMP, 1, Ty}, Legal);
 

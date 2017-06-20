@@ -53,12 +53,16 @@ DebugSubsectionRecordBuilder::DebugSubsectionRecordBuilder(
     std::shared_ptr<DebugSubsection> Subsection, CodeViewContainer Container)
     : Subsection(std::move(Subsection)), Container(Container) {}
 
+DebugSubsectionRecordBuilder::DebugSubsectionRecordBuilder(
+    const DebugSubsectionRecord &Contents, CodeViewContainer Container)
+    : Contents(Contents), Container(Container) {}
+
 uint32_t DebugSubsectionRecordBuilder::calculateSerializedLength() {
-  // The length of the entire subsection is always padded to 4 bytes, regardless
-  // of the container kind.
-  uint32_t Size = sizeof(DebugSubsectionHeader) +
-                  alignTo(Subsection->calculateSerializedSize(), 4);
-  return Size;
+  uint32_t DataSize = Subsection ? Subsection->calculateSerializedSize()
+                                 : Contents.getRecordData().getLength();
+  // The length of the entire subsection is always padded to 4 bytes,
+  // regardless of the container kind.
+  return sizeof(DebugSubsectionHeader) + alignTo(DataSize, 4);
 }
 
 Error DebugSubsectionRecordBuilder::commit(BinaryStreamWriter &Writer) const {
@@ -66,16 +70,22 @@ Error DebugSubsectionRecordBuilder::commit(BinaryStreamWriter &Writer) const {
          "Debug Subsection not properly aligned");
 
   DebugSubsectionHeader Header;
-  Header.Kind = uint32_t(Subsection->kind());
+  Header.Kind = uint32_t(Subsection ? Subsection->kind() : Contents.kind());
   // The value written into the Header's Length field is only padded to the
   // container's alignment
-  Header.Length =
-      alignTo(Subsection->calculateSerializedSize(), alignOf(Container));
+  uint32_t DataSize = Subsection ? Subsection->calculateSerializedSize()
+                                 : Contents.getRecordData().getLength();
+  Header.Length = alignTo(DataSize, alignOf(Container));
 
   if (auto EC = Writer.writeObject(Header))
     return EC;
-  if (auto EC = Subsection->commit(Writer))
-    return EC;
+  if (Subsection) {
+    if (auto EC = Subsection->commit(Writer))
+      return EC;
+  } else {
+    if (auto EC = Writer.writeStreamRef(Contents.getRecordData()))
+      return EC;
+  }
   if (auto EC = Writer.padToAlignment(4))
     return EC;
 

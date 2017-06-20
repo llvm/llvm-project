@@ -216,8 +216,6 @@ public:
   void AdjustInstrPostInstrSelection(MachineInstr &MI,
                                      SDNode *Node) const override;
 
-  SDValue CreateLiveInRegister(SelectionDAG &DAG, const TargetRegisterClass *RC,
-                               unsigned Reg, EVT VT) const override;
   SDNode *legalizeTargetIndependentNode(SDNode *Node, SelectionDAG &DAG) const;
 
   MachineSDNode *wrapAddr64Rsrc(SelectionDAG &DAG, const SDLoc &DL,

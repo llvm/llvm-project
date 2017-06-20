@@ -2,39 +2,31 @@
 //
 //                     The LLVM Compiler Infrastructure
 //
-// \file This file is distributed under the University of Illinois Open Source
+// This file is distributed under the University of Illinois Open Source
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains the X86 implementation of the DAG scheduling mutation to
-// pair instructions back to back.
+/// \file This file contains the X86 implementation of the DAG scheduling
+/// mutation to pair instructions back to back.
 //
 //===----------------------------------------------------------------------===//
 
 #include "X86MacroFusion.h"
 #include "X86Subtarget.h"
-#include "llvm/ADT/Statistic.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetInstrInfo.h"
-
-#define DEBUG_TYPE "misched"
-
-STATISTIC(NumFused, "Number of instr pairs fused");
+#include "llvm/CodeGen/MacroFusion.h"
 
 using namespace llvm;
 
-static cl::opt<bool> EnableMacroFusion("x86-misched-fusion", cl::Hidden,
-  cl::desc("Enable scheduling for macro fusion."), cl::init(true));
-
-namespace {
-
-/// \brief Verify that the instruction pair, First and Second,
-/// should be scheduled back to back.  If either instruction is unspecified,
-/// then verify that the other instruction may be part of a pair at all.
-static bool shouldScheduleAdjacent(const X86Subtarget &ST,
-                                   const MachineInstr *First,
-                                   const MachineInstr *Second) {
+/// \brief Check if the instr pair, FirstMI and SecondMI, should be fused
+/// together. Given SecondMI, when FirstMI is unspecified, then check if
+/// SecondMI may be part of a fused pair at all.
+static bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
+                                   const TargetSubtargetInfo &TSI,
+                                   const MachineInstr *FirstMI,
+                                   const MachineInstr &SecondMI) {
+  const X86Subtarget &ST = static_cast<const X86Subtarget&>(TSI);
   // Check if this processor supports macro-fusion. Since this is a minor
   // heuristic, we haven't specifically reserved a feature. hasAVX is a decent
   // proxy for SandyBridge+.
@@ -47,13 +39,10 @@ static bool shouldScheduleAdjacent(const X86Subtarget &ST,
     FuseInc
   } FuseKind;
 
-  assert((First || Second) && "At least one instr must be specified");
-  unsigned FirstOpcode = First
-                         ? First->getOpcode()
+  unsigned FirstOpcode = FirstMI
+                         ? FirstMI->getOpcode()
                          : static_cast<unsigned>(X86::INSTRUCTION_LIST_END);
-  unsigned SecondOpcode = Second
-                          ? Second->getOpcode()
-                          : static_cast<unsigned>(X86::INSTRUCTION_LIST_END);
+  unsigned SecondOpcode = SecondMI.getOpcode();
 
   switch (SecondOpcode) {
   default:
@@ -203,69 +192,11 @@ static bool shouldScheduleAdjacent(const X86Subtarget &ST,
   }
 }
 
-/// \brief Post-process the DAG to create cluster edges between instructions
-/// that may be fused by the processor into a single operation.
-class X86MacroFusion : public ScheduleDAGMutation {
-public:
-  X86MacroFusion() {}
-
-  void apply(ScheduleDAGInstrs *DAGInstrs) override;
-};
-
-void X86MacroFusion::apply(ScheduleDAGInstrs *DAGInstrs) {
-  ScheduleDAGMI *DAG = static_cast<ScheduleDAGMI*>(DAGInstrs);
-  const X86Subtarget &ST = DAG->MF.getSubtarget<X86Subtarget>();
-
-  // For now, assume targets can only fuse with the branch.
-  SUnit &ExitSU = DAG->ExitSU;
-  MachineInstr *Branch = ExitSU.getInstr();
-  if (!Branch || !shouldScheduleAdjacent(ST, nullptr, Branch))
-    return;
-
-  for (SDep &PredDep : ExitSU.Preds) {
-    if (PredDep.isWeak())
-      continue;
-    SUnit &SU = *PredDep.getSUnit();
-    MachineInstr &Pred = *SU.getInstr();
-    if (!shouldScheduleAdjacent(ST, &Pred, Branch))
-      continue;
-
-    // Create a single weak edge from SU to ExitSU. The only effect is to cause
-    // bottom-up scheduling to heavily prioritize the clustered SU.  There is no
-    // need to copy predecessor edges from ExitSU to SU, since top-down
-    // scheduling cannot prioritize ExitSU anyway. To defer top-down scheduling
-    // of SU, we could create an artificial edge from the deepest root, but it
-    // hasn't been needed yet.
-    bool Success = DAG->addEdge(&ExitSU, SDep(&SU, SDep::Cluster));
-    (void)Success;
-    assert(Success && "No DAG nodes should be reachable from ExitSU");
-
-    // Adjust latency of data deps between the nodes.
-    for (SDep &PredDep : ExitSU.Preds)
-      if (PredDep.getSUnit() == &SU)
-        PredDep.setLatency(0);
-    for (SDep &SuccDep : SU.Succs)
-      if (SuccDep.getSUnit() == &ExitSU)
-        SuccDep.setLatency(0);
-
-    ++NumFused;
-    DEBUG(dbgs() << DAG->MF.getName() << "(): Macro fuse ";
-          SU.print(dbgs(), DAG);
-          dbgs() << " - ExitSU"
-                 << " / " << DAG->TII->getName(Pred.getOpcode()) << " - "
-                 << DAG->TII->getName(Branch->getOpcode()) << '\n';);
-
-    break;
-  }
-}
-
-} // end namespace
-
 namespace llvm {
 
 std::unique_ptr<ScheduleDAGMutation>
 createX86MacroFusionDAGMutation () {
-  return EnableMacroFusion ? make_unique<X86MacroFusion>() : nullptr;
+  return createBranchMacroFusionDAGMutation(shouldScheduleAdjacent);
 }
 
 } // end namespace llvm

@@ -1,4 +1,4 @@
-//===--- OrcCBindingsStack.h - Orc JIT stack for C bindings ---*- C++ -*---===//
+//===- OrcCBindingsStack.h - Orc JIT stack for C bindings -----*- C++ -*---===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,14 +11,32 @@
 #define LLVM_LIB_EXECUTIONENGINE_ORC_ORCCBINDINGSSTACK_H
 
 #include "llvm-c/OrcBindings.h"
-#include "llvm/ADT/Triple.h"
+#include "llvm-c/TargetMachine.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/CompileOnDemandLayer.h"
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
+#include "llvm/ExecutionEngine/Orc/LambdaResolver.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
-#include "llvm/IR/LLVMContext.h"
+#include "llvm/ExecutionEngine/RuntimeDyld.h"
+#include "llvm/ExecutionEngine/SectionMemoryManager.h"
+#include "llvm/IR/DataLayout.h"
+#include "llvm/IR/Mangler.h"
+#include "llvm/IR/Module.h"
+#include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetMachine.h"
+#include <algorithm>
+#include <cstdint>
+#include <functional>
+#include <memory>
+#include <set>
+#include <string>
+#include <vector>
 
 namespace llvm {
 
@@ -29,21 +47,22 @@ DEFINE_SIMPLE_CONVERSION_FUNCTIONS(TargetMachine, LLVMTargetMachineRef)
 
 class OrcCBindingsStack {
 public:
-  typedef orc::JITCompileCallbackManager CompileCallbackMgr;
-  typedef orc::RTDyldObjectLinkingLayer<> ObjLayerT;
-  typedef orc::IRCompileLayer<ObjLayerT> CompileLayerT;
-  typedef orc::CompileOnDemandLayer<CompileLayerT, CompileCallbackMgr>
-      CODLayerT;
+  using CompileCallbackMgr = orc::JITCompileCallbackManager;
+  using ObjLayerT = orc::RTDyldObjectLinkingLayer<>;
+  using CompileLayerT = orc::IRCompileLayer<ObjLayerT>;
+  using CODLayerT =
+      orc::CompileOnDemandLayer<CompileLayerT, CompileCallbackMgr>;
 
-  typedef std::function<std::unique_ptr<CompileCallbackMgr>()>
-      CallbackManagerBuilder;
+  using CallbackManagerBuilder =
+      std::function<std::unique_ptr<CompileCallbackMgr>()>;
 
-  typedef CODLayerT::IndirectStubsManagerBuilderT IndirectStubsManagerBuilder;
+  using IndirectStubsManagerBuilder = CODLayerT::IndirectStubsManagerBuilderT;
 
 private:
   class GenericHandle {
   public:
-    virtual ~GenericHandle() {}
+    virtual ~GenericHandle() = default;
+
     virtual JITSymbol findSymbolIn(const std::string &Name,
                                    bool ExportedSymbolsOnly) = 0;
     virtual void removeModule() = 0;
@@ -75,15 +94,15 @@ private:
 
 public:
   // We need a 'ModuleSetHandleT' to conform to the layer concept.
-  typedef unsigned ModuleSetHandleT;
+  using ModuleSetHandleT = unsigned;
 
-  typedef unsigned ModuleHandleT;
+  using ModuleHandleT = unsigned;
 
   OrcCBindingsStack(TargetMachine &TM,
                     std::unique_ptr<CompileCallbackMgr> CCMgr,
                     IndirectStubsManagerBuilder IndirectStubsMgrBuilder)
       : DL(TM.createDataLayout()), IndirectStubsMgr(IndirectStubsMgrBuilder()),
-        CCMgr(std::move(CCMgr)), ObjectLayer(),
+        CCMgr(std::move(CCMgr)),
         CompileLayer(ObjectLayer, orc::SimpleCompiler(TM)),
         CODLayer(CompileLayer,
                  [](Function &F) { return std::set<Function *>({&F}); },
@@ -153,7 +172,7 @@ public:
           if (ExternalResolver)
             return JITSymbol(
                 ExternalResolver(Name.c_str(), ExternalResolverCtx),
-                llvm::JITSymbolFlags::Exported);
+                JITSymbolFlags::Exported);
 
           return JITSymbol(nullptr);
         },
@@ -167,7 +186,6 @@ public:
                             std::unique_ptr<RuntimeDyld::MemoryManager> MemMgr,
                             LLVMOrcSymbolResolverFn ExternalResolver,
                             void *ExternalResolverCtx) {
-
     // Attach a data-layout if one isn't already present.
     if (M->getDataLayout().isDefault())
       M->setDataLayout(DL);

@@ -406,25 +406,6 @@ const char *Host::GetSignalAsCString(int signo) {
 
 #endif
 
-#ifndef _WIN32
-
-lldb::thread_key_t
-Host::ThreadLocalStorageCreate(ThreadLocalStorageCleanupCallback callback) {
-  pthread_key_t key;
-  ::pthread_key_create(&key, callback);
-  return key;
-}
-
-void *Host::ThreadLocalStorageGet(lldb::thread_key_t key) {
-  return ::pthread_getspecific(key);
-}
-
-void Host::ThreadLocalStorageSet(lldb::thread_key_t key, void *value) {
-  ::pthread_setspecific(key, value);
-}
-
-#endif
-
 #if !defined(__APPLE__) // see Host.mm
 
 bool Host::GetBundleDirectory(const FileSpec &file, FileSpec &bundle) {

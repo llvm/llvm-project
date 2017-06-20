@@ -1,4 +1,4 @@
-//===---- GlobalMappingLayer.h - Run all IR through a functor ---*- C++ -*-===//
+//===- GlobalMappingLayer.h - Run all IR through a functor ------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -17,6 +17,7 @@
 
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include <map>
+#include <string>
 
 namespace llvm {
 namespace orc {
@@ -32,7 +33,7 @@ template <typename BaseLayerT>
 class GlobalMappingLayer {
 public:
   /// @brief Handle to a set of added modules.
-  typedef typename BaseLayerT::ModuleSetHandleT ModuleSetHandleT;
+  using ModuleSetHandleT = typename BaseLayerT::ModuleSetHandleT;
 
   /// @brief Construct an GlobalMappingLayer with the given BaseLayer
   GlobalMappingLayer(BaseLayerT &BaseLayer) : BaseLayer(BaseLayer) {}
@@ -102,7 +103,7 @@ private:
   std::map<std::string, JITTargetAddress> SymbolTable;
 };
 
-} // End namespace orc.
-} // End namespace llvm.
+} // end namespace orc
+} // end namespace llvm
 
 #endif // LLVM_EXECUTIONENGINE_ORC_GLOBALMAPPINGLAYER_H

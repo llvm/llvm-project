@@ -316,7 +316,7 @@ define i8 @test17(i8 %A, i8 %B) {
 ; CHECK-NEXT:    [[XOR1:%.*]] = xor i8 [[B:%.*]], [[A:%.*]]
 ; CHECK-NEXT:    [[NOT:%.*]] = xor i8 [[A]], 33
 ; CHECK-NEXT:    [[XOR2:%.*]] = xor i8 [[NOT]], [[B]]
-; CHECK-NEXT:    [[OR:%.*]] = or i8 [[XOR1]], [[XOR2]]
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[XOR1]], 33
 ; CHECK-NEXT:    [[RES:%.*]] = mul i8 [[OR]], [[XOR2]]
 ; CHECK-NEXT:    ret i8 [[RES]]
 ;
@@ -333,7 +333,7 @@ define i8 @test18(i8 %A, i8 %B) {
 ; CHECK-NEXT:    [[XOR1:%.*]] = xor i8 [[B:%.*]], [[A:%.*]]
 ; CHECK-NEXT:    [[NOT:%.*]] = xor i8 [[A]], 33
 ; CHECK-NEXT:    [[XOR2:%.*]] = xor i8 [[NOT]], [[B]]
-; CHECK-NEXT:    [[OR:%.*]] = or i8 [[XOR2]], [[XOR1]]
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[XOR1]], 33
 ; CHECK-NEXT:    [[RES:%.*]] = mul i8 [[OR]], [[XOR2]]
 ; CHECK-NEXT:    ret i8 [[RES]]
 ;

@@ -146,6 +146,19 @@ static std::string formatFrameProcedureOptions(uint32_t IndentLevel,
   return typesetItemList(Opts, 4, IndentLevel, " | ");
 }
 
+static std::string formatPublicSymFlags(uint32_t IndentLevel,
+                                        PublicSymFlags Flags) {
+  std::vector<std::string> Opts;
+  if (Flags == PublicSymFlags::None)
+    return "none";
+
+  PUSH_FLAG(PublicSymFlags, Code, Flags, "code");
+  PUSH_FLAG(PublicSymFlags, Function, Flags, "function");
+  PUSH_FLAG(PublicSymFlags, Managed, Flags, "managed");
+  PUSH_FLAG(PublicSymFlags, MSIL, Flags, "msil");
+  return typesetItemList(Opts, 4, IndentLevel, " | ");
+}
+
 static std::string formatProcSymFlags(uint32_t IndentLevel,
                                       ProcSymFlags Flags) {
   std::vector<std::string> Opts;
@@ -659,7 +672,8 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
                                             PublicSym32 &Public) {
   P.format(" `{0}`", Public.Name);
   AutoIndent Indent(P);
-  P.formatLine("type = {0}, addr = {1}", typeIndex(Public.Index),
+  P.formatLine("flags = {0}, addr = {1}",
+               formatPublicSymFlags(P.getIndentLevel() + 9, Public.Flags),
                formatSegmentOffset(Public.Segment, Public.Offset));
   return Error::success();
 }

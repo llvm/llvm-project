@@ -100,3 +100,90 @@ backedge:
 exit:
   ret i8 0
 }
+
+; Merging cont block into do block. Make sure that we do not incorrectly have the cont
+; LVI info as LVI info for the beginning of do block. LVI info for %i is Range[0,1)
+; at beginning of cont Block, which is incorrect at the beginning of do block.
+define i32 @test3(i32 %i, i1 %f, i32 %n) {
+; CHECK-LABEL: LVI for function 'test3':
+; CHECK-LABEL: entry
+; CHECK:  ; LatticeVal for: 'i32 %i' is: overdefined
+; CHECK: %c = icmp ne i32 %i, -2134 
+; CHECK: br i1 %c, label %cont, label %exit
+entry:
+  %c = icmp ne i32 %i, -2134
+  br i1 %c, label %do, label %exit
+
+exit:
+  %c1 = icmp ne i32 %i, -42
+  br i1 %c1, label %exit2, label %exit
+
+; CHECK-LABEL: cont:
+; Here cont is merged to do and i is any value except -2134.
+; i is not the single value: zero.
+; CHECK-NOT:  ; LatticeVal for: 'i32 %i' is: constantrange<0, 1>
+; CHECK:      ; LatticeVal for: 'i32 %i' is: constantrange<-2133, -2134>
+; CHECK:      ; LatticeVal for: '  %cond.0 = icmp sgt i32 %i, 0' in BB: '%cont' is: overdefined
+; CHECK:   %cond.0 = icmp sgt i32 %i, 0
+; CHECK:   %consume = call i32 @consume
+; CHECK:   %cond = icmp eq i32 %i, 0
+; CHECK:   call void (i1, ...) @llvm.experimental.guard(i1 %cond)
+; CHECK:   %cond.3 = icmp sgt i32 %i, %n
+; CHECK:   br i1 %cond.3, label %exit2, label %exit
+cont:
+  %cond.3 = icmp sgt i32 %i, %n
+  br i1 %cond.3, label %exit2, label %exit
+
+do:
+  %cond.0 = icmp sgt i32 %i, 0
+  %consume = call i32 @consume(i1 %cond.0)
+  %cond = icmp eq i32 %i, 0
+  call void (i1, ...) @llvm.experimental.guard(i1 %cond) [ "deopt"() ]
+  %cond.2 = icmp sgt i32 %i, 0
+  br i1 %cond.2, label %exit, label %cont
+  
+exit2:
+; CHECK-LABEL: exit2:
+; LatticeVal for: 'i32 %i' is: constantrange<-2134, 1>
+  ret i32 30
+}
+
+; FIXME: We should be able to merge cont into do.
+; When we do so, LVI for cont cannot be the one for the merged do block.
+define i32 @test4(i32 %i, i1 %f, i32 %n) {
+; CHECK-LABEL: LVI for function 'test4':
+entry:
+  %c = icmp ne i32 %i, -2134
+  br i1 %c, label %do, label %exit
+
+exit:                                             ; preds = %do, %cont, %exit, %entry
+  %c1 = icmp ne i32 %i, -42
+  br i1 %c1, label %exit2, label %exit
+
+cont:                                             ; preds = %do
+; CHECK-LABEL: cont:
+; CHECK:  ; LatticeVal for: 'i1 %f' is: constantrange<-1, 0>
+; CHECK: call void @dummy(i1 %f)
+  call void @dummy(i1 %f)
+  br label %exit2
+
+do:                                               ; preds = %entry
+; CHECK-LABEL: do:
+; CHECK:  ; LatticeVal for: 'i1 %f' is: overdefined
+; CHECK: call void @dummy(i1 %f)
+; CHECK: br i1 %cond, label %exit, label %cont
+  call void @dummy(i1 %f)
+  %consume = call i32 @exit()
+  call void @llvm.assume(i1 %f)
+  %cond = icmp eq i1 %f, false
+  br i1 %cond, label %exit, label %cont
+
+exit2:                                            ; preds = %cont, %exit
+  ret i32 30
+}
+
+declare i32 @exit()
+declare i32 @consume(i1)
+declare void @llvm.assume(i1) nounwind
+declare void @dummy(i1) nounwind
+declare void @llvm.experimental.guard(i1, ...)

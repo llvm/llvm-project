@@ -17,10 +17,10 @@
 
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Breakpoint/StoppointCallbackContext.h"
-#include "lldb/Target/DynamicLoader.h"
-
 #include "DYLDRendezvous.h"
+#include "lldb/Breakpoint/StoppointCallbackContext.h"
+#include "lldb/Core/ModuleList.h"
+#include "lldb/Target/DynamicLoader.h"
 
 class AuxVector;
 
@@ -137,6 +137,8 @@ protected:
   /// Helper for the entry breakpoint callback.  Resolves the load addresses
   /// of all dependent modules.
   virtual void LoadAllCurrentModules();
+
+  void LoadVDSO(lldb_private::ModuleList &modules);
 
   /// Computes a value for m_load_offset returning the computed address on
   /// success and LLDB_INVALID_ADDRESS on failure.

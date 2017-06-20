@@ -130,7 +130,7 @@ static cl::opt<unsigned> MulOpsInlineThreshold(
 
 static cl::opt<unsigned> AddOpsInlineThreshold(
     "scev-addops-inline-threshold", cl::Hidden,
-    cl::desc("Threshold for inlining multiplication operands into a SCEV"),
+    cl::desc("Threshold for inlining addition operands into a SCEV"),
     cl::init(500));
 
 static cl::opt<unsigned> MaxSCEVCompareDepth(

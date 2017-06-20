@@ -859,7 +859,7 @@ TEST_P(MaybeSparseInstrProfTest, instr_prof_symtab_test) {
   FuncNames.push_back("bar2");
   FuncNames.push_back("bar3");
   InstrProfSymtab Symtab;
-  Symtab.create(FuncNames);
+  NoError(Symtab.create(FuncNames));
   StringRef R = Symtab.getFuncName(IndexedInstrProf::ComputeHash("func1"));
   ASSERT_EQ(StringRef("func1"), R);
   R = Symtab.getFuncName(IndexedInstrProf::ComputeHash("func2"));
@@ -880,9 +880,9 @@ TEST_P(MaybeSparseInstrProfTest, instr_prof_symtab_test) {
   ASSERT_EQ(StringRef(), R);
 
   // Now incrementally update the symtab
-  Symtab.addFuncName("blah_1");
-  Symtab.addFuncName("blah_2");
-  Symtab.addFuncName("blah_3");
+  NoError(Symtab.addFuncName("blah_1"));
+  NoError(Symtab.addFuncName("blah_2"));
+  NoError(Symtab.addFuncName("blah_3"));
   // Finalize it
   Symtab.finalizeSymtab();
 
@@ -907,6 +907,12 @@ TEST_P(MaybeSparseInstrProfTest, instr_prof_symtab_test) {
   ASSERT_EQ(StringRef("bar3"), R);
 }
 
+// Test that we get an error when creating a bogus symtab.
+TEST_P(MaybeSparseInstrProfTest, instr_prof_bogus_symtab_empty_func_name) {
+  InstrProfSymtab Symtab;
+  ErrorEquals(instrprof_error::malformed, Symtab.addFuncName(""));
+}
+
 // Testing symtab creator interface used by value profile transformer.
 TEST_P(MaybeSparseInstrProfTest, instr_prof_symtab_module_test) {
   LLVMContext Ctx;
@@ -927,7 +933,7 @@ TEST_P(MaybeSparseInstrProfTest, instr_prof_symtab_module_test) {
   Function::Create(FTy, Function::WeakODRLinkage, "Wbar", M.get());
 
   InstrProfSymtab ProfSymtab;
-  ProfSymtab.create(*M);
+  NoError(ProfSymtab.create(*M));
 
   StringRef Funcs[] = {"Gfoo", "Gblah", "Gbar", "Ifoo", "Iblah", "Ibar",
                        "Pfoo", "Pblah", "Pbar", "Wfoo", "Wblah", "Wbar"};

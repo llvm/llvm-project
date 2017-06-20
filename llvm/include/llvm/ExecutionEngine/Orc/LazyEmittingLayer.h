@@ -40,7 +40,7 @@ namespace orc {
 /// (via JITSymbol::getAddress) for a symbol contained in this layer.
 template <typename BaseLayerT> class LazyEmittingLayer {
 public:
-  typedef typename BaseLayerT::ModuleSetHandleT BaseLayerHandleT;
+  using BaseLayerHandleT = typename BaseLayerT::ModuleSetHandleT;
 
 private:
   class EmissionDeferredSet {
@@ -216,14 +216,14 @@ private:
     mutable std::unique_ptr<StringMap<const GlobalValue*>> MangledSymbols;
   };
 
-  typedef std::list<std::unique_ptr<EmissionDeferredSet>> ModuleSetListT;
+  using ModuleSetListT = std::list<std::unique_ptr<EmissionDeferredSet>>;
 
   BaseLayerT &BaseLayer;
   ModuleSetListT ModuleSetList;
 
 public:
   /// @brief Handle to a set of loaded modules.
-  typedef typename ModuleSetListT::iterator ModuleSetHandleT;
+  using ModuleSetHandleT = typename ModuleSetListT::iterator;
 
   /// @brief Construct a lazy emitting layer.
   LazyEmittingLayer(BaseLayerT &BaseLayer) : BaseLayer(BaseLayer) {}
@@ -291,8 +291,8 @@ std::unique_ptr<typename LazyEmittingLayer<BaseLayerT>::EmissionDeferredSet>
 LazyEmittingLayer<BaseLayerT>::EmissionDeferredSet::create(
     BaseLayerT &B, ModuleSetT Ms, MemoryManagerPtrT MemMgr,
     SymbolResolverPtrT Resolver) {
-  typedef EmissionDeferredSetImpl<ModuleSetT, MemoryManagerPtrT, SymbolResolverPtrT>
-    EDS;
+  using EDS = EmissionDeferredSetImpl<ModuleSetT, MemoryManagerPtrT,
+                                      SymbolResolverPtrT>;
   return llvm::make_unique<EDS>(std::move(Ms), std::move(MemMgr),
                                 std::move(Resolver));
 }
