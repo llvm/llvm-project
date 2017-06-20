@@ -12,7 +12,7 @@
 
 // template<class InputIterator, class T, class BinaryOperation>
 //   T reduce(InputIterator first, InputIterator last, T init, BinaryOperation op);
-  
+
 #include <numeric>
 #include <cassert>
 

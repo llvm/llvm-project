@@ -10,7 +10,7 @@
 // <numeric>
 // UNSUPPORTED: c++98, c++03, c++11, c++14
 
-// template<class InputIterator, class OutputIterator, class T, 
+// template<class InputIterator, class OutputIterator, class T,
 //          class BinaryOperation, class UnaryOperation>
 //   OutputIterator transform_exclusive_scan(InputIterator first, InputIterator last,
 //                                           OutputIterator result, T init,
@@ -64,11 +64,11 @@ test()
 {
           int ia[]     = { 1,  3,  5,   7,   9};
     const int pResI0[] = { 0,  1,  4,   9,  16};        // with identity
-    const int mResI0[] = { 0,  0,  0,   0,   0};        
+    const int mResI0[] = { 0,  0,  0,   0,   0};
     const int pResN0[] = { 0, -1, -4,  -9, -16};        // with negate
     const int mResN0[] = { 0,  0,  0,   0,   0};
     const int pResI2[] = { 2,  3,  6,  11,  18};        // with identity
-    const int mResI2[] = { 2,  2,  6,  30, 210};        
+    const int mResI2[] = { 2,  2,  6,  30, 210};
     const int pResN2[] = { 2,  1, -2,  -7, -14};        // with negate
     const int mResN2[] = { 2, -2,  6, -30, 210};
     const unsigned sa = sizeof(ia) / sizeof(ia[0]);
@@ -149,7 +149,7 @@ void basic_tests()
 int main()
 {
     basic_tests();
-    
+
 //  All the iterator categories
     test<input_iterator        <const int*> >();
     test<forward_iterator      <const int*> >();

@@ -177,6 +177,12 @@ public:
   // redundant when GC is enabled, as all comdat sections will start out dead.
   void markDiscarded() { Discarded = true; }
 
+  // True if this is a codeview debug info chunk. These will not be laid out in
+  // the image. Instead they will end up in the PDB, if one is requested.
+  bool isCodeView() const {
+    return SectionName == ".debug" || SectionName.startswith(".debug$");
+  }
+
   // Allow iteration over the bodies of this chunk's relocated symbols.
   llvm::iterator_range<symbol_iterator> symbols() const {
     return llvm::make_range(symbol_iterator(File, Relocs.begin()),

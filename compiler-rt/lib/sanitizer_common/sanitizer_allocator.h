@@ -24,12 +24,28 @@
 
 namespace __sanitizer {
 
-// Returns true if ReportAllocatorCannotReturnNull(true) was called.
-// Can be use to avoid memory hungry operations.
-bool IsReportingOOM();
+// Since flags are immutable and allocator behavior can be changed at runtime
+// (unit tests or ASan on Android are some examples), allocator_may_return_null
+// flag value is cached here and can be altered later.
+bool AllocatorMayReturnNull();
+void SetAllocatorMayReturnNull(bool may_return_null);
 
-// Prints error message and kills the program.
-void NORETURN ReportAllocatorCannotReturnNull(bool out_of_memory);
+// Allocator failure handling policies:
+// Implements AllocatorMayReturnNull policy, returns null when the flag is set,
+// dies otherwise.
+struct ReturnNullOrDieOnFailure {
+  static void *OnBadRequest();
+  static void *OnOOM();
+};
+// Always dies on the failure.
+struct DieOnFailure {
+  static void *OnBadRequest();
+  static void *OnOOM();
+};
+
+// Returns true if allocator detected OOM condition. Can be used to avoid memory
+// hungry operations. Set when AllocatorReturnNullOrDieOnOOM() is called.
+bool IsAllocatorOutOfMemory();
 
 // Allocators call these callbacks on mmap/munmap.
 struct NoOpMapUnmapCallback {

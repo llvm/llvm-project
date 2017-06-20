@@ -426,8 +426,8 @@ TEST(SanitizerCommon, SizeClassAllocator32MapUnmapCallback) {
 TEST(SanitizerCommon, LargeMmapAllocatorMapUnmapCallback) {
   TestMapUnmapCallback::map_count = 0;
   TestMapUnmapCallback::unmap_count = 0;
-  LargeMmapAllocator<TestMapUnmapCallback> a;
-  a.Init(/* may_return_null */ false);
+  LargeMmapAllocator<TestMapUnmapCallback, DieOnFailure> a;
+  a.Init();
   AllocatorStats stats;
   stats.Init();
   void *x = a.Allocate(&stats, 1 << 20, 1);
@@ -463,8 +463,8 @@ TEST(SanitizerCommon, SizeClassAllocator64Overflow) {
 #endif
 
 TEST(SanitizerCommon, LargeMmapAllocator) {
-  LargeMmapAllocator<> a;
-  a.Init(/* may_return_null */ false);
+  LargeMmapAllocator<NoOpMapUnmapCallback, DieOnFailure> a;
+  a.Init();
   AllocatorStats stats;
   stats.Init();
 
@@ -546,8 +546,9 @@ void TestCombinedAllocator() {
   typedef
       CombinedAllocator<PrimaryAllocator, AllocatorCache, SecondaryAllocator>
       Allocator;
+  SetAllocatorMayReturnNull(true);
   Allocator *a = new Allocator;
-  a->Init(/* may_return_null */ true, kReleaseToOSIntervalNever);
+  a->Init(kReleaseToOSIntervalNever);
   std::mt19937 r;
 
   AllocatorCache cache;
@@ -561,7 +562,7 @@ void TestCombinedAllocator() {
   EXPECT_EQ(a->Allocate(&cache, (uptr)-1 - 1023, 1024), (void*)0);
 
   // Set to false
-  a->SetMayReturnNull(false);
+  SetAllocatorMayReturnNull(false);
   EXPECT_DEATH(a->Allocate(&cache, -1, 1),
                "allocator is terminating the process");
 
@@ -873,8 +874,8 @@ TEST(SanitizerCommon, SizeClassAllocator32Iteration) {
 }
 
 TEST(SanitizerCommon, LargeMmapAllocatorIteration) {
-  LargeMmapAllocator<> a;
-  a.Init(/* may_return_null */ false);
+  LargeMmapAllocator<NoOpMapUnmapCallback, DieOnFailure> a;
+  a.Init();
   AllocatorStats stats;
   stats.Init();
 
@@ -900,8 +901,8 @@ TEST(SanitizerCommon, LargeMmapAllocatorIteration) {
 }
 
 TEST(SanitizerCommon, LargeMmapAllocatorBlockBegin) {
-  LargeMmapAllocator<> a;
-  a.Init(/* may_return_null */ false);
+  LargeMmapAllocator<NoOpMapUnmapCallback, DieOnFailure> a;
+  a.Init();
   AllocatorStats stats;
   stats.Init();
 

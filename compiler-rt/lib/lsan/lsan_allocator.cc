@@ -38,8 +38,8 @@ typedef CombinedAllocator<PrimaryAllocator, AllocatorCache,
 static Allocator allocator;
 
 void InitializeAllocator() {
+  SetAllocatorMayReturnNull(common_flags()->allocator_may_return_null);
   allocator.InitLinkerInitialized(
-      common_flags()->allocator_may_return_null,
       common_flags()->allocator_release_to_os_interval_ms);
 }
 

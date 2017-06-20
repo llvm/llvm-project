@@ -23,11 +23,10 @@ template <class PrimaryAllocator, class AllocatorCache,
     class SecondaryAllocator>
 class ScudoCombinedAllocator {
  public:
-  void Init(bool AllocatorMayReturnNull, s32 ReleaseToOSIntervalMs) {
+  void Init(s32 ReleaseToOSIntervalMs) {
     Primary.Init(ReleaseToOSIntervalMs);
-    Secondary.Init(AllocatorMayReturnNull);
+    Secondary.Init();
     Stats.Init();
-    atomic_store_relaxed(&MayReturnNull, AllocatorMayReturnNull);
   }
 
   void *Allocate(AllocatorCache *Cache, uptr Size, uptr Alignment,
@@ -35,18 +34,6 @@ class ScudoCombinedAllocator {
     if (FromPrimary)
       return Cache->Allocate(&Primary, Primary.ClassID(Size));
     return Secondary.Allocate(&Stats, Size, Alignment);
-  }
-
-  void *ReturnNullOrDieOnBadRequest() {
-    if (atomic_load_relaxed(&MayReturnNull))
-      return nullptr;
-    ReportAllocatorCannotReturnNull(false);
-  }
-
-  void *ReturnNullOrDieOnOOM() {
-    if (atomic_load_relaxed(&MayReturnNull))
-      return nullptr;
-    ReportAllocatorCannotReturnNull(true);
   }
 
   void Deallocate(AllocatorCache *Cache, void *Ptr, bool FromPrimary) {
@@ -78,7 +65,6 @@ class ScudoCombinedAllocator {
   PrimaryAllocator Primary;
   SecondaryAllocator Secondary;
   AllocatorGlobalStats Stats;
-  atomic_uint8_t MayReturnNull;
 };
 
 #endif  // SCUDO_ALLOCATOR_COMBINED_H_
