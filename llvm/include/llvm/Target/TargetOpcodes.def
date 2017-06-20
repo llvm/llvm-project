@@ -359,6 +359,9 @@ HANDLE_TARGET_OPCODE(G_FSUB)
 /// Generic FP multiplication.
 HANDLE_TARGET_OPCODE(G_FMUL)
 
+/// Generic FMA multiplication. Behaves like llvm fma intrinsic
+HANDLE_TARGET_OPCODE(G_FMA)
+
 /// Generic FP division.
 HANDLE_TARGET_OPCODE(G_FDIV)
 

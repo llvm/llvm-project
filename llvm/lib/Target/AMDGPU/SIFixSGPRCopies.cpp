@@ -174,6 +174,31 @@ static bool isSGPRToVGPRCopy(const TargetRegisterClass *SrcRC,
   return TRI.isSGPRClass(SrcRC) && TRI.hasVGPRs(DstRC);
 }
 
+static bool tryChangeVGPRtoSGPRinCopy(MachineInstr &MI,
+                                      const SIRegisterInfo *TRI,
+                                      const SIInstrInfo *TII) {
+  MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
+  auto &Src = MI.getOperand(1);
+  unsigned DstReg = MI.getOperand(0).getReg();
+  unsigned SrcReg = Src.getReg();
+  if (!TargetRegisterInfo::isVirtualRegister(SrcReg) ||
+      !TargetRegisterInfo::isVirtualRegister(DstReg))
+    return false;
+
+  for (const auto &MO : MRI.reg_nodbg_operands(DstReg)) {
+    const auto *UseMI = MO.getParent();
+    if (UseMI == &MI)
+      continue;
+    if (MO.isDef() || UseMI->getParent() != MI.getParent() ||
+        UseMI->getOpcode() <= TargetOpcode::GENERIC_OP_END ||
+        !TII->isOperandLegal(*UseMI, UseMI->getOperandNo(&MO), &Src))
+      return false;
+  }
+  // Change VGPR to SGPR destination.
+  MRI.setRegClass(DstReg, TRI->getEquivalentSGPRClass(MRI.getRegClass(DstReg)));
+  return true;
+}
+
 // Distribute an SGPR->VGPR copy of a REG_SEQUENCE into a VGPR REG_SEQUENCE.
 //
 // SGPRx = ...
@@ -213,6 +238,9 @@ static bool foldVGPRCopyIntoRegSequence(MachineInstr &MI,
 
   if (!isSGPRToVGPRCopy(SrcRC, DstRC, *TRI))
     return false;
+
+  if (tryChangeVGPRtoSGPRinCopy(CopyUse, TRI, TII))
+    return true;
 
   // TODO: Could have multiple extracts?
   unsigned SubReg = CopyUse.getOperand(1).getSubReg();
@@ -563,6 +591,8 @@ bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
             break;
           }
           TII->moveToVALU(MI);
+        } else if (isSGPRToVGPRCopy(SrcRC, DstRC, *TRI)) {
+          tryChangeVGPRtoSGPRinCopy(MI, TRI, TII);
         }
 
         break;

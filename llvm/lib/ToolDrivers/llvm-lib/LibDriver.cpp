@@ -31,7 +31,7 @@ namespace {
 
 enum {
   OPT_INVALID = 0,
-#define OPTION(_1, _2, ID, _4, _5, _6, _7, _8, _9, _10, _11) OPT_##ID,
+#define OPTION(_1, _2, ID, _4, _5, _6, _7, _8, _9, _10, _11, _12) OPT_##ID,
 #include "Options.inc"
 #undef OPTION
 };
@@ -41,11 +41,9 @@ enum {
 #undef PREFIX
 
 static const llvm::opt::OptTable::Info infoTable[] = {
-#define OPTION(X1, X2, ID, KIND, GROUP, ALIAS, X6, X7, X8, X9, X10)    \
-  {                                                                    \
-    X1, X2, X9, X10, OPT_##ID, llvm::opt::Option::KIND##Class, X8, X7, \
-    OPT_##GROUP, OPT_##ALIAS, X6                                       \
-  },
+#define OPTION(X1, X2, ID, KIND, GROUP, ALIAS, X6, X7, X8, X9, X10, X11)       \
+  {X1, X2, X9,          X10,         OPT_##ID, llvm::opt::Option::KIND##Class, \
+   X8, X7, OPT_##GROUP, OPT_##ALIAS, X6,       X11},
 #include "Options.inc"
 #undef OPTION
 };

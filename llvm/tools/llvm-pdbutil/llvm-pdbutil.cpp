@@ -256,11 +256,6 @@ cl::opt<bool> NoEnumDefs("no-enum-definitions",
 }
 
 namespace diff {
-cl::opt<bool> Pedantic("pedantic",
-                       cl::desc("Finds all differences (even structural ones "
-                                "that produce otherwise identical PDBs)"),
-                       cl::sub(DiffSubcommand));
-
 cl::list<std::string> InputFilenames(cl::Positional,
                                      cl::desc("<first> <second>"),
                                      cl::OneOrMore, cl::sub(DiffSubcommand));

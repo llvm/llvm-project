@@ -386,6 +386,15 @@ def G_FMUL : Instruction {
   let isCommutable = 1;
 }
 
+// Generic fused multiply-add instruction.
+// Behaves like llvm fma intrinsic ie src1 * src2 + src3
+def G_FMA : Instruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2, type0:$src3);
+  let hasSideEffects = 0;
+  let isCommutable = 0;
+}
+
 // Generic FP division.
 def G_FDIV : Instruction {
   let OutOperandList = (outs type0:$dst);

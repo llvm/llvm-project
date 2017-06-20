@@ -1042,6 +1042,7 @@ public:
   AMDGPUOperand::Ptr defaultSMRDOffset20() const;
   AMDGPUOperand::Ptr defaultSMRDLiteralOffset() const;
   AMDGPUOperand::Ptr defaultOffsetU12() const;
+  AMDGPUOperand::Ptr defaultOffsetS13() const;
 
   OperandMatchResultTy parseOModOperand(OperandVector &Operands);
 
@@ -2554,11 +2555,21 @@ AMDGPUAsmParser::parseIntWithPrefix(const char *Prefix, int64_t &Int) {
         return MatchOperand_ParseFail;
 
       Parser.Lex();
+
+      bool IsMinus = false;
+      if (getLexer().getKind() == AsmToken::Minus) {
+        Parser.Lex();
+        IsMinus = true;
+      }
+
       if (getLexer().isNot(AsmToken::Integer))
         return MatchOperand_ParseFail;
 
       if (getParser().parseAbsoluteExpression(Int))
         return MatchOperand_ParseFail;
+
+      if (IsMinus)
+        Int = -Int;
       break;
     }
   }
@@ -3867,6 +3878,10 @@ AMDGPUOperand::Ptr AMDGPUAsmParser::defaultSMRDLiteralOffset() const {
 }
 
 AMDGPUOperand::Ptr AMDGPUAsmParser::defaultOffsetU12() const {
+  return AMDGPUOperand::CreateImm(this, 0, SMLoc(), AMDGPUOperand::ImmTyOffset);
+}
+
+AMDGPUOperand::Ptr AMDGPUAsmParser::defaultOffsetS13() const {
   return AMDGPUOperand::CreateImm(this, 0, SMLoc(), AMDGPUOperand::ImmTyOffset);
 }
 

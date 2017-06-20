@@ -29,6 +29,7 @@ class MachineOperand;
 class MachineRegisterInfo;
 class RegisterBankInfo;
 class TargetInstrInfo;
+class TargetRegisterClass;
 class TargetRegisterInfo;
 
 /// Container class for CodeGen predicate results.
@@ -78,6 +79,16 @@ protected:
   typedef std::function<void(MachineInstrBuilder &)> ComplexRendererFn;
 
   InstructionSelector();
+
+  /// Constrain a register operand of an instruction \p I to a specified
+  /// register class. This could involve inserting COPYs before (for uses) or
+  /// after (for defs) and may replace the operand of \p I.
+  /// \returns whether operand regclass constraining succeeded.
+  bool constrainOperandRegToRegClass(MachineInstr &I, unsigned OpIdx,
+                                     const TargetRegisterClass &RC,
+                                     const TargetInstrInfo &TII,
+                                     const TargetRegisterInfo &TRI,
+                                     const RegisterBankInfo &RBI) const;
 
   /// Mutate the newly-selected instruction \p I to constrain its (possibly
   /// generic) virtual register operands to the instruction's register class.

@@ -2232,6 +2232,12 @@ bool X86TTIImpl::areInlineCompatible(const Function *Caller,
   return (CallerBits & CalleeBits) == CalleeBits;
 }
 
+bool X86TTIImpl::expandMemCmp(Instruction *I, unsigned &MaxLoadSize) {
+  // TODO: We can increase these based on available vector ops.
+  MaxLoadSize = ST->is64Bit() ? 8 : 4;
+  return true;
+}
+
 bool X86TTIImpl::enableInterleavedAccessVectorization() {
   // TODO: We expect this to be beneficial regardless of arch,
   // but there are currently some unexplained performance artifacts on Atom.
