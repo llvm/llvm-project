@@ -49,6 +49,8 @@ bool useBraces(const SwitchStmt *S) {
   unsigned CaseCount = 0, CompoundCasesCount = 0;
   for (const SwitchCase *Case = S->getSwitchCaseList(); Case;
        Case = Case->getNextSwitchCase(), ++CaseCount) {
+    if (!Case->getSubStmt())
+      continue;
     if (isa<CompoundStmt>(Case->getSubStmt()))
       ++CompoundCasesCount;
   }
