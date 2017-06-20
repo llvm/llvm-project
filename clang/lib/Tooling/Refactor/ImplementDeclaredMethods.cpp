@@ -149,6 +149,12 @@ clang::tooling::initiateImplementDeclaredMethodsOperation(
             CharSourceRange::getTokenRange(M->getSourceRange())))
       SelectedMethods.push_back(M);
   }
+  // Method declarations from class extensions should be defined in class
+  // @implementations.
+  if (const auto *Category = dyn_cast<ObjCCategoryDecl>(Container)) {
+    if (Category->IsClassExtension())
+      Container = Category->getClassInterface();
+  }
   return ImplementDeclaredObjCMethodsOperation::initiate(
       Container, SelectedMethods, CreateOperation);
 }

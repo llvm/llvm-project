@@ -13,6 +13,18 @@
 
 @end
 
+// RUN: clang-refactor-test perform -action implement-declared-methods -selected=all-methods -continuation-file=%s -query-results=query-all-impl %s | FileCheck --check-prefix=CHECK1 %s
+
+@interface MyClass ()
+
+// extension-methods-begin: +1:1
+- (void)anExtensionMethod;
+// extension-methods-end: +0:1
+
+@end
+
+// RUN: clang-refactor-test perform -action implement-declared-methods -selected=extension-methods -continuation-file=%s -query-results=query-all-impl %s | FileCheck --check-prefix=CHECK-EXT %s
+
 #ifndef NO_IMPL
 @implementation MyClass
 
@@ -21,6 +33,7 @@
 @end
 // CHECK1: "{{.*}}implement-declared-methods.m" "- (void)method { \n  <#code#>;\n}\n\n+ (void)classMethod { \n  <#code#>;\n}\n\n- (void)implementedMethod { \n  <#code#>;\n}\n\n- (void)method:(int)x with:(int)y { \n  <#code#>;\n}\n\n" [[@LINE-1]]:1 -> [[@LINE-1]]:1
 // CHECK2: "{{.*}}implement-declared-methods.m" "- (void)method { \n  <#code#>;\n}\n\n- (void)implementedMethod { \n  <#code#>;\n}\n\n" [[@LINE-2]]:1
+// CHECK-EXT: "{{.*}}implement-declared-methods.m" "- (void)anExtensionMethod { \n  <#code#>;\n}\n\n" [[@LINE-3]]:1
 #endif
 // RUN: clang-refactor-test perform -action implement-declared-methods -selected=all-methods -continuation-file=%s -query-results=query-all-impl %s | FileCheck --check-prefix=CHECK1 %s
 // RUN: clang-refactor-test perform -action implement-declared-methods -selected=all-methods -continuation-file=%s -query-results=query-mix-impl %s | FileCheck --check-prefix=CHECK2 %s
