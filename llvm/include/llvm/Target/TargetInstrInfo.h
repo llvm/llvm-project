@@ -1,4 +1,4 @@
-//===-- llvm/Target/TargetInstrInfo.h - Instruction Info --------*- C++ -*-===//
+//===- llvm/Target/TargetInstrInfo.h - Instruction Info ---------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,36 +14,46 @@
 #ifndef LLVM_TARGET_TARGETINSTRINFO_H
 #define LLVM_TARGET_TARGETINSTRINFO_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/None.h"
 #include "llvm/CodeGen/LiveIntervalAnalysis.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineCombinerPattern.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/Support/BranchProbability.h"
-#include "llvm/Target/TargetRegisterInfo.h"
+#include "llvm/Support/ErrorHandling.h"
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <utility>
+#include <vector>
 
 namespace llvm {
 
+class DFAPacketizer;
 class InstrItineraryData;
 class LiveVariables;
-class MCAsmInfo;
 class MachineMemOperand;
 class MachineRegisterInfo;
-class MDNode;
+class MCAsmInfo;
 class MCInst;
 struct MCSchedModel;
-class MCSymbolRefExpr;
-class SDNode;
-class ScheduleHazardRecognizer;
-class SelectionDAG;
+class Module;
 class ScheduleDAG;
+class ScheduleHazardRecognizer;
+class SDNode;
+class SelectionDAG;
+class RegScavenger;
 class TargetRegisterClass;
 class TargetRegisterInfo;
-class TargetSubtargetInfo;
 class TargetSchedModel;
-class DFAPacketizer;
+class TargetSubtargetInfo;
 
 template<class T> class SmallVectorImpl;
 
@@ -52,8 +62,6 @@ template<class T> class SmallVectorImpl;
 /// TargetInstrInfo - Interface to description of machine instruction set
 ///
 class TargetInstrInfo : public MCInstrInfo {
-  TargetInstrInfo(const TargetInstrInfo &) = delete;
-  void operator=(const TargetInstrInfo &) = delete;
 public:
   TargetInstrInfo(unsigned CFSetupOpcode = ~0u, unsigned CFDestroyOpcode = ~0u,
                   unsigned CatchRetOpcode = ~0u, unsigned ReturnOpcode = ~0u)
@@ -61,7 +69,8 @@ public:
         CallFrameDestroyOpcode(CFDestroyOpcode),
         CatchRetOpcode(CatchRetOpcode),
         ReturnOpcode(ReturnOpcode) {}
-
+  TargetInstrInfo(const TargetInstrInfo &) = delete;
+  TargetInstrInfo &operator=(const TargetInstrInfo &) = delete;
   virtual ~TargetInstrInfo();
 
   static bool isGenericOpcode(unsigned Opc) {
@@ -396,14 +405,17 @@ public:
   struct RegSubRegPair {
     unsigned Reg;
     unsigned SubReg;
+
     RegSubRegPair(unsigned Reg = 0, unsigned SubReg = 0)
         : Reg(Reg), SubReg(SubReg) {}
   };
+
   /// A pair composed of a pair of a register and a sub-register index,
   /// and another sub-register index.
   /// Used to give some type checking when modeling Reg:SubReg1, SubReg2.
   struct RegSubRegPairAndIdx : RegSubRegPair {
     unsigned SubIdx;
+
     RegSubRegPairAndIdx(unsigned Reg = 0, unsigned SubReg = 0,
                         unsigned SubIdx = 0)
         : RegSubRegPair(Reg, SubReg), SubIdx(SubIdx) {}
@@ -468,7 +480,6 @@ public:
   getInsertSubregInputs(const MachineInstr &MI, unsigned DefIdx,
                         RegSubRegPair &BaseReg,
                         RegSubRegPairAndIdx &InsertedReg) const;
-
 
   /// Return true if two machine instructions would produce identical values.
   /// By default, this is only true when the two instructions
@@ -551,23 +562,19 @@ public:
       PRED_INVALID // Sentinel value
     };
 
-    ComparePredicate Predicate;
-    MachineOperand LHS;
-    MachineOperand RHS;
-    MachineBasicBlock *TrueDest;
-    MachineBasicBlock *FalseDest;
-    MachineInstr *ConditionDef;
+    ComparePredicate Predicate = PRED_INVALID;
+    MachineOperand LHS = MachineOperand::CreateImm(0);
+    MachineOperand RHS = MachineOperand::CreateImm(0);
+    MachineBasicBlock *TrueDest = nullptr;
+    MachineBasicBlock *FalseDest = nullptr;
+    MachineInstr *ConditionDef = nullptr;
 
     /// SingleUseCondition is true if ConditionDef is dead except for the
     /// branch(es) at the end of the basic block.
     ///
-    bool SingleUseCondition;
+    bool SingleUseCondition = false;
 
-    explicit MachineBranchPredicate()
-        : Predicate(PRED_INVALID), LHS(MachineOperand::CreateImm(0)),
-          RHS(MachineOperand::CreateImm(0)), TrueDest(nullptr),
-          FalseDest(nullptr), ConditionDef(nullptr), SingleUseCondition(false) {
-    }
+    explicit MachineBranchPredicate() = default;
   };
 
   /// Analyze the branching code at the end of MBB and parse it into the
@@ -1117,7 +1124,6 @@ public:
   virtual void insertNoop(MachineBasicBlock &MBB,
                           MachineBasicBlock::iterator MI) const;
 
-
   /// Return the noop instruction to use for a noop.
   virtual void getNoop(MCInst &NopInst) const;
 
@@ -1621,16 +1627,18 @@ private:
 /// \brief Provide DenseMapInfo for TargetInstrInfo::RegSubRegPair.
 template<>
 struct DenseMapInfo<TargetInstrInfo::RegSubRegPair> {
-  typedef DenseMapInfo<unsigned> RegInfo;
+  using RegInfo = DenseMapInfo<unsigned>;
 
   static inline TargetInstrInfo::RegSubRegPair getEmptyKey() {
     return TargetInstrInfo::RegSubRegPair(RegInfo::getEmptyKey(),
                          RegInfo::getEmptyKey());
   }
+
   static inline TargetInstrInfo::RegSubRegPair getTombstoneKey() {
     return TargetInstrInfo::RegSubRegPair(RegInfo::getTombstoneKey(),
                          RegInfo::getTombstoneKey());
   }
+
   /// \brief Reuse getHashValue implementation from
   /// std::pair<unsigned, unsigned>.
   static unsigned getHashValue(const TargetInstrInfo::RegSubRegPair &Val) {
@@ -1638,6 +1646,7 @@ struct DenseMapInfo<TargetInstrInfo::RegSubRegPair> {
         std::make_pair(Val.Reg, Val.SubReg);
     return DenseMapInfo<std::pair<unsigned, unsigned>>::getHashValue(PairVal);
   }
+
   static bool isEqual(const TargetInstrInfo::RegSubRegPair &LHS,
                       const TargetInstrInfo::RegSubRegPair &RHS) {
     return RegInfo::isEqual(LHS.Reg, RHS.Reg) &&

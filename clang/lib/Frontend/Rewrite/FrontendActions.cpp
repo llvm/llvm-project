@@ -9,6 +9,7 @@
 
 #include "clang/Rewrite/Frontend/FrontendActions.h"
 #include "clang/AST/ASTConsumer.h"
+#include "clang/Basic/CharInfo.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
@@ -224,7 +225,15 @@ public:
     auto OS = Out.lock();
     assert(OS && "loaded module file after finishing rewrite action?");
 
-    (*OS) << "#pragma clang module build " << MF->ModuleName << "\n";
+    (*OS) << "#pragma clang module build ";
+    if (isValidIdentifier(MF->ModuleName))
+      (*OS) << MF->ModuleName;
+    else {
+      (*OS) << '"';
+      OS->write_escaped(MF->ModuleName);
+      (*OS) << '"';
+    }
+    (*OS) << '\n';
 
     // Rewrite the contents of the module in a separate compiler instance.
     CompilerInstance Instance(CI.getPCHContainerOperations(),
@@ -234,6 +243,7 @@ public:
     Instance.createDiagnostics(
         new ForwardingDiagnosticConsumer(CI.getDiagnosticClient()),
         /*ShouldOwnClient=*/true);
+    Instance.getFrontendOpts().DisableFree = false;
     Instance.getFrontendOpts().Inputs.clear();
     Instance.getFrontendOpts().Inputs.emplace_back(
         Filename, InputKind(InputKind::Unknown, InputKind::Precompiled));

@@ -200,6 +200,9 @@ Error CoverageMapping::loadFunctionRecord(
     const CoverageMappingRecord &Record,
     IndexedInstrProfReader &ProfileReader) {
   StringRef OrigFuncName = Record.FunctionName;
+  if (OrigFuncName.empty())
+    return make_error<CoverageMapError>(coveragemap_error::malformed);
+
   if (Record.Filenames.empty())
     OrigFuncName = getFuncNameWithoutPrefix(OrigFuncName);
   else

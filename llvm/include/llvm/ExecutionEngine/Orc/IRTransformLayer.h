@@ -1,4 +1,4 @@
-//===----- IRTransformLayer.h - Run all IR through a functor ----*- C++ -*-===//
+//===- IRTransformLayer.h - Run all IR through a functor --------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,6 +15,7 @@
 #define LLVM_EXECUTIONENGINE_ORC_IRTRANSFORMLAYER_H
 
 #include "llvm/ExecutionEngine/JITSymbol.h"
+#include <string>
 
 namespace llvm {
 namespace orc {
@@ -28,7 +29,7 @@ template <typename BaseLayerT, typename TransformFtor>
 class IRTransformLayer {
 public:
   /// @brief Handle to a set of added modules.
-  typedef typename BaseLayerT::ModuleSetHandleT ModuleSetHandleT;
+  using ModuleSetHandleT = typename BaseLayerT::ModuleSetHandleT;
 
   /// @brief Construct an IRTransformLayer with the given BaseLayer
   IRTransformLayer(BaseLayerT &BaseLayer,
@@ -45,7 +46,6 @@ public:
   ModuleSetHandleT addModuleSet(ModuleSetT Ms,
                                 MemoryManagerPtrT MemMgr,
                                 SymbolResolverPtrT Resolver) {
-
     for (auto I = Ms.begin(), E = Ms.end(); I != E; ++I)
       *I = Transform(std::move(*I));
 
@@ -95,7 +95,7 @@ private:
   TransformFtor Transform;
 };
 
-} // End namespace orc.
-} // End namespace llvm.
+} // end namespace orc
+} // end namespace llvm
 
 #endif // LLVM_EXECUTIONENGINE_ORC_IRTRANSFORMLAYER_H

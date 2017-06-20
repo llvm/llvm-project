@@ -1,4 +1,4 @@
-//===-- ConstantRange.cpp - ConstantRange implementation ------------------===//
+//===- ConstantRange.cpp - ConstantRange implementation -------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -21,12 +21,21 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/APInt.h"
 #include "llvm/IR/ConstantRange.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+
 using namespace llvm;
 
 ConstantRange::ConstantRange(uint32_t BitWidth, bool Full)
@@ -170,7 +179,7 @@ ConstantRange
 ConstantRange::makeGuaranteedNoWrapRegion(Instruction::BinaryOps BinOp,
                                           const ConstantRange &Other,
                                           unsigned NoWrapKind) {
-  typedef OverflowingBinaryOperator OBO;
+  using OBO = OverflowingBinaryOperator;
 
   // Computes the intersection of CR0 and CR1.  It is different from
   // intersectWith in that the ConstantRange returned will only contain elements

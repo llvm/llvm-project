@@ -11,6 +11,7 @@
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
+#include "clang/Basic/CharInfo.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/MemoryBufferCache.h"
@@ -1902,17 +1903,23 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
 void CompilerInstance::loadModuleFromSource(SourceLocation ImportLoc,
                                             StringRef ModuleName,
                                             StringRef Source) {
+  // Avoid creating filenames with special characters.
+  SmallString<128> CleanModuleName(ModuleName);
+  for (auto &C : CleanModuleName)
+    if (!isAlphanumeric(C))
+      C = '_';
+
   // FIXME: Using a randomized filename here means that our intermediate .pcm
   // output is nondeterministic (as .pcm files refer to each other by name).
   // Can this affect the output in any way?
   SmallString<128> ModuleFileName;
   if (std::error_code EC = llvm::sys::fs::createTemporaryFile(
-          ModuleName, "pcm", ModuleFileName)) {
+          CleanModuleName, "pcm", ModuleFileName)) {
     getDiagnostics().Report(ImportLoc, diag::err_fe_unable_to_open_output)
         << ModuleFileName << EC.message();
     return;
   }
-  std::string ModuleMapFileName = (ModuleName + ".map").str();
+  std::string ModuleMapFileName = (CleanModuleName + ".map").str();
 
   FrontendInputFile Input(
       ModuleMapFileName,

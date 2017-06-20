@@ -38,7 +38,7 @@ do_test_suite="yes"
 do_openmp="yes"
 do_lld="yes"
 do_lldb="no"
-do_polly="no"
+do_polly="yes"
 BuildDir="`pwd`"
 ExtraConfigureFlags=""
 ExportBranch=""
@@ -68,8 +68,7 @@ function usage() {
     echo " -no-lld              Disable check-out & build lld"
     echo " -lldb                Enable check-out & build lldb"
     echo " -no-lldb             Disable check-out & build lldb (default)"
-    echo " -polly               Enable check-out & build Polly"
-    echo " -no-polly            Disable check-out & build Polly (default)"
+    echo " -no-polly            Disable check-out & build Polly"
 }
 
 while [ $# -gt 0 ]; do
@@ -153,9 +152,6 @@ while [ $# -gt 0 ]; do
             ;;
         -no-lldb )
             do_lldb="no"
-            ;;
-        -polly )
-            do_polly="yes"
             ;;
         -no-polly )
             do_polly="no"

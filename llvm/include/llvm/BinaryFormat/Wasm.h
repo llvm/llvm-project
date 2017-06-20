@@ -176,6 +176,11 @@ enum class ValType {
 // Linking metadata kinds.
 enum : unsigned {
   WASM_STACK_POINTER = 0x1,
+  WASM_SYMBOL_INFO  = 0x2,
+};
+
+enum : unsigned {
+  WASM_SYMBOL_FLAG_WEAK = 0x1,
 };
 
 #define WASM_RELOC(name, value) name = value,

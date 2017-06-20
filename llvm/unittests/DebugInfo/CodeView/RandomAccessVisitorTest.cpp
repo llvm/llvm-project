@@ -360,6 +360,7 @@ TEST_F(RandomAccessVisitorTest, CrossChunkName) {
   Class.Name = "FooClass";
   Class.Options = ClassOptions::None;
   Class.MemberCount = 0;
+  Class.Size = 4U;
   Class.DerivationList = TypeIndex::fromArrayIndex(0);
   Class.FieldList = TypeIndex::fromArrayIndex(0);
   Class.VTableShape = TypeIndex::fromArrayIndex(0);

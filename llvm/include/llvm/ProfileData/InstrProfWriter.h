@@ -58,7 +58,7 @@ public:
   void write(raw_fd_ostream &OS);
 
   /// Write the profile in text format to \c OS
-  void writeText(raw_fd_ostream &OS);
+  Error writeText(raw_fd_ostream &OS);
 
   /// Write \c Record in text format to \c OS
   static void writeRecordInText(const InstrProfRecord &Record,

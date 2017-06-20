@@ -32,8 +32,8 @@
 
 //===----------------------------------------------------------------------===//
 // Define 0 micro-op types
-def FalkorWr_none_1cyc : SchedWriteRes<[]> {
-  let Latency = 1;
+def FalkorWr_LdStInc_none_3cyc : SchedWriteRes<[]> {
+  let Latency = 3;
   let NumMicroOps = 0;
 }
 def FalkorWr_none_3cyc : SchedWriteRes<[]> {
@@ -505,7 +505,8 @@ def FalkorWr_4VXVY_4ST_4VSD_0cyc: SchedWriteRes<[FalkorUnitVXVY, FalkorUnitST,
   let NumMicroOps = 12;
 }
 
-// Forwarding logic is modeled for multiply add/accumulate.
+// Forwarding logic is modeled for multiply add/accumulate and
+// load/store base register increment.
 // -----------------------------------------------------------------------------
 def FalkorReadIMA32  : SchedReadAdvance<3, [FalkorWr_IMUL32_1X_2cyc]>;
 def FalkorReadIMA64  : SchedReadAdvance<4, [FalkorWr_IMUL64_1X_4cyc, FalkorWr_IMUL64_1X_5cyc]>;
@@ -513,9 +514,13 @@ def FalkorReadVMA    : SchedReadAdvance<3, [FalkorWr_VMUL32_1VXVY_4cyc, FalkorWr
 def FalkorReadFMA32  : SchedReadAdvance<1, [FalkorWr_FMUL32_1VXVY_5cyc, FalkorWr_FMUL32_2VXVY_5cyc]>;
 def FalkorReadFMA64  : SchedReadAdvance<2, [FalkorWr_FMUL64_1VXVY_6cyc, FalkorWr_FMUL64_2VXVY_6cyc]>;
 
+def FalkorReadIncLd  : SchedReadAdvance<2, [FalkorWr_LdStInc_none_3cyc]>;
+def FalkorReadIncSt  : SchedReadAdvance<1, [FalkorWr_LdStInc_none_3cyc]>;
+
 // SchedPredicates and WriteVariants for Immediate Zero and LSLFast/ASRFast
 // -----------------------------------------------------------------------------
-def FalkorImmZPred    : SchedPredicate<[{MI->getOperand(1).getImm() == 0}]>;
+def FalkorImmZPred    : SchedPredicate<[{MI->getOperand(1).isImm() &&
+                                         MI->getOperand(1).getImm() == 0}]>;
 def FalkorOp1ZrReg    : SchedPredicate<[{MI->getOperand(1).getReg() == AArch64::WZR ||
 
                                          MI->getOperand(1).getReg() == AArch64::XZR}]>;
@@ -770,84 +775,113 @@ def : InstRW<[FalkorWr_VMUL32_2VXVY_4cyc, FalkorReadVMA],
 
 // SIMD Load Instructions
 // -----------------------------------------------------------------------------
-def : InstRW<[FalkorWr_1LD_3cyc],                           (instregex "^LD1(i64|Onev(8b|4h|2s|1d|16b|8h|4s|2d))$")>;
-def : InstRW<[FalkorWr_none_1cyc, FalkorWr_1LD_3cyc],       (instregex "^LD1(i64|Onev(8b|4h|2s|1d|16b|8h|4s|2d))_POST$")>;
-def : InstRW<[FalkorWr_1LD_3cyc],                           (instregex "^LD1Rv(8b|4h|2s|1d|16b|8h|4s|2d)$")>;
-def : InstRW<[FalkorWr_none_1cyc, FalkorWr_1LD_3cyc],       (instregex "^LD1Rv(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
-def : InstRW<[FalkorWr_1LD_3cyc],                           (instrs LD2i64)>;
-def : InstRW<[FalkorWr_none_1cyc, FalkorWr_1LD_3cyc],       (instrs LD2i64_POST)>;
+def : InstRW<[FalkorWr_1LD_3cyc, FalkorReadIncLd],       (instregex "^LD1(i64|Onev(8b|4h|2s|1d|16b|8h|4s|2d))$")>;
+def : InstRW<[FalkorWr_LdStInc_none_3cyc, FalkorWr_1LD_3cyc, FalkorReadIncLd],
+                                                         (instregex "^LD1(i64|Onev(8b|4h|2s|1d|16b|8h|4s|2d))_POST$")>;
+def : InstRW<[FalkorWr_1LD_3cyc, FalkorReadIncLd],       (instregex "^LD1Rv(8b|4h|2s|1d|16b|8h|4s|2d)$")>;
+def : InstRW<[FalkorWr_LdStInc_none_3cyc, FalkorWr_1LD_3cyc, FalkorReadIncLd],
+                                                         (instregex "^LD1Rv(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
+def : InstRW<[FalkorWr_1LD_3cyc, FalkorReadIncLd],       (instrs LD2i64)>;
+def : InstRW<[FalkorWr_LdStInc_none_3cyc, FalkorWr_1LD_3cyc, FalkorReadIncLd],
+                                                         (instrs LD2i64_POST)>;
 
-def : InstRW<[FalkorWr_1LD_1VXVY_4cyc],                     (instregex "^LD1i(8|16|32)$")>;
-def : InstRW<[FalkorWr_none_1cyc, FalkorWr_1LD_1VXVY_4cyc], (instregex "^LD1i(8|16|32)_POST$")>;
+def : InstRW<[FalkorWr_1LD_1VXVY_4cyc, FalkorReadIncLd], (instregex "^LD1i(8|16|32)$")>;
+def : InstRW<[FalkorWr_LdStInc_none_3cyc, FalkorWr_1LD_1VXVY_4cyc, FalkorReadIncLd],
+                                                         (instregex "^LD1i(8|16|32)_POST$")>;
 
-def : InstRW<[FalkorWr_1LD_1none_3cyc],                     (instregex "^LD1Twov(8b|4h|2s|1d)$")>;
-def : InstRW<[FalkorWr_none_1cyc, FalkorWr_1LD_1none_3cyc], (instregex "^LD1Twov(8b|4h|2s|1d)_POST$")>;
-def : InstRW<[FalkorWr_1LD_1none_3cyc],                     (instregex "^LD2Twov(8b|4h|2s|1d)$")>;
-def : InstRW<[FalkorWr_none_1cyc, FalkorWr_1LD_1none_3cyc], (instregex "^LD2Twov(8b|4h|2s|1d)_POST$")>;
-def : InstRW<[FalkorWr_1LD_1none_3cyc],                     (instregex "^LD2Rv(8b|4h|2s|1d)$")>;
-def : InstRW<[FalkorWr_none_1cyc, FalkorWr_1LD_1none_3cyc], (instregex "^LD2Rv(8b|4h|2s|1d)_POST$")>;
+def : InstRW<[FalkorWr_1LD_1none_3cyc, FalkorReadIncLd], (instregex "^LD1Twov(8b|4h|2s|1d)$")>;
+def : InstRW<[FalkorWr_LdStInc_none_3cyc, FalkorWr_1LD_1none_3cyc, FalkorReadIncLd],
+                                                         (instregex "^LD1Twov(8b|4h|2s|1d)_POST$")>;
+def : InstRW<[FalkorWr_1LD_1none_3cyc, FalkorReadIncLd], (instregex "^LD2Twov(8b|4h|2s|1d)$")>;
+def : InstRW<[FalkorWr_LdStInc_none_3cyc, FalkorWr_1LD_1none_3cyc, FalkorReadIncLd],
+                                                         (instregex "^LD2Twov(8b|4h|2s|1d)_POST$")>;
+def : InstRW<[FalkorWr_1LD_1none_3cyc, FalkorReadIncLd], (instregex "^LD2Rv(8b|4h|2s|1d)$")>;
+def : InstRW<[FalkorWr_LdStInc_none_3cyc, FalkorWr_1LD_1none_3cyc, FalkorReadIncLd],
+                                                         (instregex "^LD2Rv(8b|4h|2s|1d)_POST$")>;
 
-def : InstRW<[FalkorWr_2LD_3cyc],                           (instregex "^LD1Twov(16b|8h|4s|2d)$")>;
-def : InstRW<[FalkorWr_none_1cyc, FalkorWr_2LD_3cyc],       (instregex "^LD1Twov(16b|8h|4s|2d)_POST$")>;
-def : InstRW<[FalkorWr_2LD_3cyc],                           (instregex "^LD2Twov(16b|8h|4s|2d)$")>;
-def : InstRW<[FalkorWr_none_1cyc, FalkorWr_2LD_3cyc],       (instregex "^LD2Twov(16b|8h|4s|2d)_POST$")>;
-def : InstRW<[FalkorWr_2LD_3cyc],                           (instregex "^LD2Rv(16b|8h|4s|2d)$")>;
-def : InstRW<[FalkorWr_none_1cyc, FalkorWr_2LD_3cyc],       (instregex "^LD2Rv(16b|8h|4s|2d)_POST$")>;
-def : InstRW<[FalkorWr_2LD_3cyc],                           (instrs LD3i64)>;
-def : InstRW<[FalkorWr_none_1cyc, FalkorWr_2LD_3cyc],       (instrs LD3i64_POST)>;
-def : InstRW<[FalkorWr_2LD_3cyc],                           (instrs LD4i64)>;
-def : InstRW<[FalkorWr_none_1cyc, FalkorWr_2LD_3cyc],       (instrs LD4i64_POST)>;
+def : InstRW<[FalkorWr_2LD_3cyc, FalkorReadIncLd],       (instregex "^LD1Twov(16b|8h|4s|2d)$")>;
+def : InstRW<[FalkorWr_LdStInc_none_3cyc, FalkorWr_2LD_3cyc, FalkorReadIncLd],
+                                                         (instregex "^LD1Twov(16b|8h|4s|2d)_POST$")>;
+def : InstRW<[FalkorWr_2LD_3cyc, FalkorReadIncLd],       (instregex "^LD2Twov(16b|8h|4s|2d)$")>;
+def : InstRW<[FalkorWr_LdStInc_none_3cyc, FalkorWr_2LD_3cyc, FalkorReadIncLd],
+                                                         (instregex "^LD2Twov(16b|8h|4s|2d)_POST$")>;
+def : InstRW<[FalkorWr_2LD_3cyc, FalkorReadIncLd],       (instregex "^LD2Rv(16b|8h|4s|2d)$")>;
+def : InstRW<[FalkorWr_LdStInc_none_3cyc, FalkorWr_2LD_3cyc, FalkorReadIncLd],
+                                                         (instregex "^LD2Rv(16b|8h|4s|2d)_POST$")>;
+def : InstRW<[FalkorWr_2LD_3cyc, FalkorReadIncLd],       (instrs LD3i64)>;
+def : InstRW<[FalkorWr_LdStInc_none_3cyc, FalkorWr_2LD_3cyc, FalkorReadIncLd],
+                                                         (instrs LD3i64_POST)>;
+def : InstRW<[FalkorWr_2LD_3cyc, FalkorReadIncLd],       (instrs LD4i64)>;
+def : InstRW<[FalkorWr_LdStInc_none_3cyc, FalkorWr_2LD_3cyc, FalkorReadIncLd],
+                                                         (instrs LD4i64_POST)>;
 
-def : InstRW<[FalkorWr_1LD_2VXVY_4cyc],                     (instregex "^LD2i(8|16|32)$")>;
-def : InstRW<[FalkorWr_none_1cyc, FalkorWr_1LD_2VXVY_4cyc], (instregex "^LD2i(8|16|32)_POST$")>;
+def : InstRW<[FalkorWr_1LD_2VXVY_4cyc, FalkorReadIncLd], (instregex "^LD2i(8|16|32)$")>;
+def : InstRW<[FalkorWr_LdStInc_none_3cyc, FalkorWr_1LD_2VXVY_4cyc, FalkorReadIncLd],
+                                                         (instregex "^LD2i(8|16|32)_POST$")>;
 
-def : InstRW<[FalkorWr_2LD_1none_3cyc],                     (instregex "^LD1Threev(8b|4h|2s|1d)$")>;
-def : InstRW<[FalkorWr_none_1cyc, FalkorWr_2LD_1none_3cyc], (instregex "^LD1Threev(8b|4h|2s|1d)_POST$")>;
-def : InstRW<[FalkorWr_2LD_1none_3cyc],                     (instregex "^LD3Rv(8b|4h|2s|1d)$")>;
-def : InstRW<[FalkorWr_none_1cyc, FalkorWr_2LD_1none_3cyc], (instregex "^LD3Rv(8b|4h|2s|1d)_POST$")>;
+def : InstRW<[FalkorWr_2LD_1none_3cyc, FalkorReadIncLd], (instregex "^LD1Threev(8b|4h|2s|1d)$")>;
+def : InstRW<[FalkorWr_LdStInc_none_3cyc, FalkorWr_2LD_1none_3cyc, FalkorReadIncLd],
+                                                         (instregex "^LD1Threev(8b|4h|2s|1d)_POST$")>;
+def : InstRW<[FalkorWr_2LD_1none_3cyc, FalkorReadIncLd], (instregex "^LD3Rv(8b|4h|2s|1d)$")>;
+def : InstRW<[FalkorWr_LdStInc_none_3cyc, FalkorWr_2LD_1none_3cyc, FalkorReadIncLd],
+                                                         (instregex "^LD3Rv(8b|4h|2s|1d)_POST$")>;
 
-def : InstRW<[FalkorWr_3LD_3cyc],                           (instregex "^LD1Threev(16b|8h|4s|2d)$")>;
-def : InstRW<[FalkorWr_none_1cyc, FalkorWr_3LD_3cyc],       (instregex "^LD1Threev(16b|8h|4s|2d)_POST$")>;
-def : InstRW<[FalkorWr_3LD_3cyc],                           (instrs LD3Threev2d)>;
-def : InstRW<[FalkorWr_none_1cyc, FalkorWr_3LD_3cyc],       (instrs LD3Threev2d_POST)>;
-def : InstRW<[FalkorWr_3LD_3cyc],                           (instregex "^LD3Rv(16b|8h|4s|2d)$")>;
-def : InstRW<[FalkorWr_none_1cyc, FalkorWr_3LD_3cyc],       (instregex "^LD3Rv(16b|8h|4s|2d)_POST$")>;
+def : InstRW<[FalkorWr_3LD_3cyc, FalkorReadIncLd],       (instregex "^LD1Threev(16b|8h|4s|2d)$")>;
+def : InstRW<[FalkorWr_LdStInc_none_3cyc, FalkorWr_3LD_3cyc, FalkorReadIncLd],
+                                                         (instregex "^LD1Threev(16b|8h|4s|2d)_POST$")>;
+def : InstRW<[FalkorWr_3LD_3cyc, FalkorReadIncLd],       (instrs LD3Threev2d)>;
+def : InstRW<[FalkorWr_LdStInc_none_3cyc, FalkorWr_3LD_3cyc, FalkorReadIncLd],
+                                                         (instrs LD3Threev2d_POST)>;
+def : InstRW<[FalkorWr_3LD_3cyc, FalkorReadIncLd],       (instregex "^LD3Rv(16b|8h|4s|2d)$")>;
+def : InstRW<[FalkorWr_LdStInc_none_3cyc, FalkorWr_3LD_3cyc, FalkorReadIncLd],
+                                                         (instregex "^LD3Rv(16b|8h|4s|2d)_POST$")>;
 
-def : InstRW<[FalkorWr_1LD_3VXVY_4cyc],                     (instregex "^LD3i(8|16|32)$")>;
-def : InstRW<[FalkorWr_none_1cyc, FalkorWr_1LD_3VXVY_4cyc], (instregex "^LD3i(8|16|32)_POST$")>;
+def : InstRW<[FalkorWr_1LD_3VXVY_4cyc, FalkorReadIncLd], (instregex "^LD3i(8|16|32)$")>;
+def : InstRW<[FalkorWr_LdStInc_none_3cyc, FalkorWr_1LD_3VXVY_4cyc, FalkorReadIncLd],
+                                                         (instregex "^LD3i(8|16|32)_POST$")>;
 
-def : InstRW<[FalkorWr_2LD_2none_3cyc],                     (instregex "^LD1Fourv(8b|4h|2s|1d)$")>;
-def : InstRW<[FalkorWr_none_1cyc, FalkorWr_2LD_2none_3cyc], (instregex "^LD1Fourv(8b|4h|2s|1d)_POST$")>;
-def : InstRW<[FalkorWr_2LD_2none_3cyc],                     (instregex "^LD4Rv(8b|4h|2s|1d)$")>;
-def : InstRW<[FalkorWr_none_1cyc, FalkorWr_2LD_2none_3cyc], (instregex "^LD4Rv(8b|4h|2s|1d)_POST$")>;
+def : InstRW<[FalkorWr_2LD_2none_3cyc, FalkorReadIncLd], (instregex "^LD1Fourv(8b|4h|2s|1d)$")>;
+def : InstRW<[FalkorWr_LdStInc_none_3cyc, FalkorWr_2LD_2none_3cyc, FalkorReadIncLd],
+                                                         (instregex "^LD1Fourv(8b|4h|2s|1d)_POST$")>;
+def : InstRW<[FalkorWr_2LD_2none_3cyc, FalkorReadIncLd], (instregex "^LD4Rv(8b|4h|2s|1d)$")>;
+def : InstRW<[FalkorWr_LdStInc_none_3cyc, FalkorWr_2LD_2none_3cyc, FalkorReadIncLd],
+                                                         (instregex "^LD4Rv(8b|4h|2s|1d)_POST$")>;
 
-def : InstRW<[FalkorWr_4LD_3cyc],                           (instregex "^LD1Fourv(16b|8h|4s|2d)$")>;
-def : InstRW<[FalkorWr_none_1cyc, FalkorWr_4LD_3cyc],       (instregex "^LD1Fourv(16b|8h|4s|2d)_POST$")>;
-def : InstRW<[FalkorWr_4LD_3cyc],                           (instrs LD4Fourv2d)>;
-def : InstRW<[FalkorWr_none_1cyc, FalkorWr_4LD_3cyc],       (instrs LD4Fourv2d_POST)>;
-def : InstRW<[FalkorWr_4LD_3cyc],                           (instregex "^LD4Rv(16b|8h|4s|2d)$")>;
-def : InstRW<[FalkorWr_none_1cyc, FalkorWr_4LD_3cyc],       (instregex "^LD4Rv(16b|8h|4s|2d)_POST$")>;
+def : InstRW<[FalkorWr_4LD_3cyc, FalkorReadIncLd],       (instregex "^LD1Fourv(16b|8h|4s|2d)$")>;
+def : InstRW<[FalkorWr_LdStInc_none_3cyc, FalkorWr_4LD_3cyc, FalkorReadIncLd],
+                                                         (instregex "^LD1Fourv(16b|8h|4s|2d)_POST$")>;
+def : InstRW<[FalkorWr_4LD_3cyc, FalkorReadIncLd],       (instrs LD4Fourv2d)>;
+def : InstRW<[FalkorWr_LdStInc_none_3cyc, FalkorWr_4LD_3cyc, FalkorReadIncLd],
+                                                         (instrs LD4Fourv2d_POST)>;
+def : InstRW<[FalkorWr_4LD_3cyc, FalkorReadIncLd],       (instregex "^LD4Rv(16b|8h|4s|2d)$")>;
+def : InstRW<[FalkorWr_LdStInc_none_3cyc, FalkorWr_4LD_3cyc, FalkorReadIncLd],
+                                                         (instregex "^LD4Rv(16b|8h|4s|2d)_POST$")>;
 
-def : InstRW<[FalkorWr_1LD_4VXVY_4cyc],                     (instregex "^LD4i(8|16|32)$")>;
-def : InstRW<[FalkorWr_none_1cyc, FalkorWr_1LD_4VXVY_4cyc], (instregex "^LD4i(8|16|32)_POST$")>;
+def : InstRW<[FalkorWr_1LD_4VXVY_4cyc, FalkorReadIncLd], (instregex "^LD4i(8|16|32)$")>;
+def : InstRW<[FalkorWr_LdStInc_none_3cyc, FalkorWr_1LD_4VXVY_4cyc, FalkorReadIncLd],
+                                                         (instregex "^LD4i(8|16|32)_POST$")>;
 
-def : InstRW<[FalkorWr_2LD_2VXVY_1none_4cyc],               (instregex "^LD3Threev(8b|4h|2s|1d)$")>;
-def : InstRW<[FalkorWr_none_1cyc, FalkorWr_2LD_2VXVY_1none_4cyc],
-                                                            (instregex "^LD3Threev(8b|4h|2s|1d)_POST$")>;
+def : InstRW<[FalkorWr_2LD_2VXVY_1none_4cyc, FalkorReadIncLd],
+                                                         (instregex "^LD3Threev(8b|4h|2s|1d)$")>;
+def : InstRW<[FalkorWr_LdStInc_none_3cyc, FalkorWr_2LD_2VXVY_1none_4cyc, FalkorReadIncLd],
+                                                         (instregex "^LD3Threev(8b|4h|2s|1d)_POST$")>;
 
-def : InstRW<[FalkorWr_2LD_2VXVY_2none_4cyc],               (instregex "^LD4Fourv(8b|4h|2s|1d)$")>;
-def : InstRW<[FalkorWr_none_1cyc, FalkorWr_2LD_2VXVY_2none_4cyc],
-                                                            (instregex "^LD4Fourv(8b|4h|2s|1d)_POST$")>;
+def : InstRW<[FalkorWr_2LD_2VXVY_2none_4cyc, FalkorReadIncLd],
+                                                         (instregex "^LD4Fourv(8b|4h|2s|1d)$")>;
+def : InstRW<[FalkorWr_LdStInc_none_3cyc, FalkorWr_2LD_2VXVY_2none_4cyc, FalkorReadIncLd],
+                                                         (instregex "^LD4Fourv(8b|4h|2s|1d)_POST$")>;
 
-def : InstRW<[FalkorWr_2LD_2VXVY_2LD_2VXVY_4cyc],           (instregex "^LD3Threev(16b|8h|4s)$")>;
+def : InstRW<[FalkorWr_2LD_2VXVY_2LD_2VXVY_4cyc, FalkorReadIncLd],
+                                                         (instregex "^LD3Threev(16b|8h|4s)$")>;
 
-def : InstRW<[FalkorWr_2LD_2VXVY_2LD_2VXVY_4cyc],           (instregex "^LD4Fourv(16b|8h|4s)$")>;
+def : InstRW<[FalkorWr_2LD_2VXVY_2LD_2VXVY_4cyc, FalkorReadIncLd],
+                                                         (instregex "^LD4Fourv(16b|8h|4s)$")>;
 
-def : InstRW<[FalkorWr_none_1cyc, FalkorWr_2LD_2VXVY_1XYZ_2LD_2VXVY_4cyc],
-                                                            (instregex "^LD3Threev(16b|8h|4s)_POST$")>;
+def : InstRW<[FalkorWr_LdStInc_none_3cyc, FalkorWr_2LD_2VXVY_1XYZ_2LD_2VXVY_4cyc, FalkorReadIncLd],
+                                                         (instregex "^LD3Threev(16b|8h|4s)_POST$")>;
 
-def : InstRW<[FalkorWr_none_1cyc, FalkorWr_2LD_2VXVY_2LD_1XYZ_2VXVY_4cyc],
-                                                            (instregex "^LD4Fourv(16b|8h|4s)_POST$")>;
+def : InstRW<[FalkorWr_LdStInc_none_3cyc, FalkorWr_2LD_2VXVY_2LD_1XYZ_2VXVY_4cyc, FalkorReadIncLd],
+                                                         (instregex "^LD4Fourv(16b|8h|4s)_POST$")>;
 
 // Arithmetic and Logical Instructions
 // -----------------------------------------------------------------------------
@@ -929,87 +963,105 @@ def : InstRW<[FalkorWr_5VXVY_7cyc],   (instregex "^TBX(v8i8Four|v16i8Four)$")>;
 // SIMD Store Instructions
 // -----------------------------------------------------------------------------
 
-def : InstRW<[FalkorWr_1VSD_1ST_0cyc], (instregex "^STR(Q|D|S|H|B)ui$")>;
-def : InstRW<[FalkorWr_none_1cyc, FalkorWr_1VSD_1ST_0cyc],
+def : InstRW<[FalkorWr_1VSD_1ST_0cyc, ReadDefault, FalkorReadIncSt],
+                                       (instregex "^STR(Q|D|S|H|B)ui$")>;
+def : InstRW<[FalkorWr_LdStInc_none_3cyc, FalkorWr_1VSD_1ST_0cyc, ReadDefault, FalkorReadIncSt],
                                        (instregex "^STR(Q|D|S|H|B)(post|pre)$")>;
-def : InstRW<[FalkorWr_STRVro],        (instregex "^STR(D|S|H|B)ro(W|X)$")>;
-def : InstRW<[FalkorWr_2VSD_2ST_0cyc], (instregex "^STPQi$")>;
-def : InstRW<[FalkorWr_none_1cyc, FalkorWr_2VSD_2ST_0cyc],
+def : InstRW<[FalkorWr_STRVro, ReadDefault, FalkorReadIncSt],
+                                       (instregex "^STR(D|S|H|B)ro(W|X)$")>;
+def : InstRW<[FalkorWr_2VSD_2ST_0cyc, ReadDefault, ReadDefault, FalkorReadIncSt],
+                                       (instregex "^STPQi$")>;
+def : InstRW<[FalkorWr_LdStInc_none_3cyc, FalkorWr_2VSD_2ST_0cyc, ReadDefault, ReadDefault, FalkorReadIncSt],
                                        (instregex "^STPQ(post|pre)$")>;
-def : InstRW<[FalkorWr_1VSD_1ST_0cyc], (instregex "^STP(D|S)(i)$")>;
-def : InstRW<[FalkorWr_none_1cyc, FalkorWr_1VSD_1ST_0cyc],
+def : InstRW<[FalkorWr_1VSD_1ST_0cyc, ReadDefault, ReadDefault, FalkorReadIncSt],
+                                       (instregex "^STP(D|S)(i)$")>;
+def : InstRW<[FalkorWr_LdStInc_none_3cyc, FalkorWr_1VSD_1ST_0cyc, ReadDefault, ReadDefault, FalkorReadIncSt],
                                        (instregex "^STP(D|S)(post|pre)$")>;
-def : InstRW<[FalkorWr_STRQro],        (instregex "^STRQro(W|X)$")>;
-def : InstRW<[FalkorWr_1VSD_1ST_0cyc], (instregex "^STUR(Q|D|S|B|H)i$")>;
-def : InstRW<[FalkorWr_1VSD_1ST_0cyc], (instrs STNPDi, STNPSi)>;
-def : InstRW<[FalkorWr_2VSD_2ST_0cyc], (instrs STNPQi)>;
+def : InstRW<[FalkorWr_STRQro, ReadDefault, FalkorReadIncSt],
+                                       (instregex "^STRQro(W|X)$")>;
+def : InstRW<[FalkorWr_1VSD_1ST_0cyc, ReadDefault, FalkorReadIncSt],
+                                       (instregex "^STUR(Q|D|S|B|H)i$")>;
+def : InstRW<[FalkorWr_1VSD_1ST_0cyc, ReadDefault, ReadDefault, FalkorReadIncSt],
+                                       (instrs STNPDi, STNPSi)>;
+def : InstRW<[FalkorWr_2VSD_2ST_0cyc, ReadDefault, ReadDefault, FalkorReadIncSt],
+                                       (instrs STNPQi)>;
 
-def : InstRW<[FalkorWr_1VSD_1ST_0cyc], (instregex "^ST1(One(v8b|v4h|v2s|v1d)|(i8|i16|i32|i64)|One(v16b|v8h|v4s|v2d)|Two(v8b|v4h|v2s|v1d))$")>;
-def : InstRW<[FalkorWr_none_1cyc, FalkorWr_1VSD_1ST_0cyc],
+def : InstRW<[FalkorWr_1VSD_1ST_0cyc, ReadDefault, FalkorReadIncSt],
+                                       (instregex "^ST1(One(v8b|v4h|v2s|v1d)|(i8|i16|i32|i64)|One(v16b|v8h|v4s|v2d)|Two(v8b|v4h|v2s|v1d))$")>;
+def : InstRW<[FalkorWr_LdStInc_none_3cyc, FalkorWr_1VSD_1ST_0cyc, ReadDefault, FalkorReadIncSt],
                                        (instregex "^ST1(One(v8b|v4h|v2s|v1d)_POST|(i8|i16|i32|i64)_POST)$")>;
-def : InstRW<[FalkorWr_1VSD_1ST_0cyc], (instregex "^ST2(Two(v8b|v4h|v2s|v1d)|(i8|i16|i32|i64))$")>;
-def : InstRW<[FalkorWr_1XYZ_1cyc, FalkorWr_1VSD_1ST_0cyc],
+def : InstRW<[FalkorWr_1VSD_1ST_0cyc, ReadDefault, FalkorReadIncSt],
+                                       (instregex "^ST2(Two(v8b|v4h|v2s|v1d)|(i8|i16|i32|i64))$")>;
+def : InstRW<[FalkorWr_1XYZ_1cyc, FalkorWr_1VSD_1ST_0cyc, ReadDefault, FalkorReadIncSt],
                                        (instregex "^ST1(One(v16b|v8h|v4s|v2d)|Two(v8b|v4h|v2s|v1d))_POST$")>;
-def : InstRW<[FalkorWr_1XYZ_1cyc, FalkorWr_1VSD_1ST_0cyc],
+def : InstRW<[FalkorWr_1XYZ_1cyc, FalkorWr_1VSD_1ST_0cyc, ReadDefault, FalkorReadIncSt],
                                        (instregex "^ST2(Two(v8b|v4h|v2s|v1d)|(i8|i16|i32|i64))_POST$")>;
 
-def : InstRW<[FalkorWr_2VSD_2ST_0cyc], (instregex "^ST1(Two(v16b|v8h|v4s|v2d)|(Three|Four)(v8b|v4h|v2s|v1d))$")>;
-def : InstRW<[FalkorWr_2VSD_2ST_0cyc], (instregex "^ST2Two(v16b|v8h|v4s|v2d)$")>;
-def : InstRW<[FalkorWr_2VSD_2ST_0cyc], (instregex "^ST3(i8|i16|i32|i64)$")>;
-def : InstRW<[FalkorWr_2VSD_2ST_0cyc], (instregex "^ST4(i8|i16|i32|i64)$")>;
+def : InstRW<[FalkorWr_2VSD_2ST_0cyc, ReadDefault, FalkorReadIncSt],
+                                       (instregex "^ST1(Two(v16b|v8h|v4s|v2d)|(Three|Four)(v8b|v4h|v2s|v1d))$")>;
+def : InstRW<[FalkorWr_2VSD_2ST_0cyc, ReadDefault, FalkorReadIncSt],
+                                       (instregex "^ST2Two(v16b|v8h|v4s|v2d)$")>;
+def : InstRW<[FalkorWr_2VSD_2ST_0cyc, ReadDefault, FalkorReadIncSt],
+                                       (instregex "^ST3(i8|i16|i32|i64)$")>;
+def : InstRW<[FalkorWr_2VSD_2ST_0cyc, ReadDefault, FalkorReadIncSt],
+                                       (instregex "^ST4(i8|i16|i32|i64)$")>;
 // FIXME: This is overly conservative in the imm POST case (no XYZ used in that case).
-def : InstRW<[FalkorWr_1XYZ_1cyc, FalkorWr_2VSD_2ST_0cyc],
+def : InstRW<[FalkorWr_1XYZ_1cyc, FalkorWr_2VSD_2ST_0cyc, ReadDefault, FalkorReadIncSt],
                                        (instregex "^ST1(Two(v16b|v8h|v4s|v2d)|(Three|Four)(v8b|v4h|v2s|v1d))_POST$")>;
 // FIXME: This is overly conservative in the imm POST case (no XYZ used in that case).
-def : InstRW<[FalkorWr_1XYZ_1cyc, FalkorWr_2VSD_2ST_0cyc],
+def : InstRW<[FalkorWr_1XYZ_1cyc, FalkorWr_2VSD_2ST_0cyc, ReadDefault, FalkorReadIncSt],
                                        (instregex "^ST2Two(v16b|v8h|v4s|v2d)_POST$")>;
 // FIXME: This is overly conservative in the imm POST case (no XYZ used in that case).
-def : InstRW<[FalkorWr_1XYZ_1cyc, FalkorWr_2VSD_2ST_0cyc],
+def : InstRW<[FalkorWr_1XYZ_1cyc, FalkorWr_2VSD_2ST_0cyc, ReadDefault, FalkorReadIncSt],
                                        (instregex "^ST3(i8|i16|i32|i64)_POST$")>;
 // FIXME: This is overly conservative in the imm POST case (no XYZ used in that case).
-def : InstRW<[FalkorWr_1XYZ_1cyc, FalkorWr_2VSD_2ST_0cyc],
+def : InstRW<[FalkorWr_1XYZ_1cyc, FalkorWr_2VSD_2ST_0cyc, ReadDefault, FalkorReadIncSt],
                                        (instregex "^ST4(i8|i16|i32|i64)_POST$")>;
 
-def : InstRW<[FalkorWr_1VXVY_2ST_2VSD_0cyc],
+def : InstRW<[FalkorWr_1VXVY_2ST_2VSD_0cyc, ReadDefault, FalkorReadIncSt],
                                        (instregex "^ST3Three(v8b|v4h|v2s|v1d)$")>;
 // FIXME: This is overly conservative in the imm POST case (no XYZ used in that case).
-def : InstRW<[FalkorWr_1XYZ_1cyc, FalkorWr_1VXVY_2ST_2VSD_0cyc],
+def : InstRW<[FalkorWr_1XYZ_1cyc, FalkorWr_1VXVY_2ST_2VSD_0cyc, ReadDefault, FalkorReadIncSt],
                                        (instregex "^ST3Three(v8b|v4h|v2s|v1d)_POST$")>;
 
-def : InstRW<[FalkorWr_3VSD_3ST_0cyc], (instregex "^ST1Three(v16b|v8h|v4s|v2d)$")>;
-def : InstRW<[FalkorWr_3VSD_3ST_0cyc], (instrs ST3Threev2d)>;
+def : InstRW<[FalkorWr_3VSD_3ST_0cyc, ReadDefault, FalkorReadIncSt],
+                                       (instregex "^ST1Three(v16b|v8h|v4s|v2d)$")>;
+def : InstRW<[FalkorWr_3VSD_3ST_0cyc, ReadDefault, FalkorReadIncSt],
+                                       (instrs ST3Threev2d)>;
 // FIXME: This is overly conservative in the imm POST case (no XYZ used in that case).
-def : InstRW<[FalkorWr_1XYZ_1cyc, FalkorWr_3VSD_3ST_0cyc],
+def : InstRW<[FalkorWr_1XYZ_1cyc, FalkorWr_3VSD_3ST_0cyc, ReadDefault, FalkorReadIncSt],
                                        (instregex "^ST1Three(v16b|v8h|v4s|v2d)_POST$")>;
 // FIXME: This is overly conservative in the imm POST case (no XYZ used in that case).
-def : InstRW<[FalkorWr_1XYZ_1cyc, FalkorWr_3VSD_3ST_0cyc],
+def : InstRW<[FalkorWr_1XYZ_1cyc, FalkorWr_3VSD_3ST_0cyc, ReadDefault, FalkorReadIncSt],
                                        (instrs ST3Threev2d_POST)>;
 
-def : InstRW<[FalkorWr_2VXVY_2ST_2VSD_0cyc],
+def : InstRW<[FalkorWr_2VXVY_2ST_2VSD_0cyc, ReadDefault, FalkorReadIncSt],
                                        (instregex "^ST4Four(v8b|v4h|v2s|v1d)$")>;
 // FIXME: This is overly conservative in the imm POST case (no XYZ used in that case).
-def : InstRW<[FalkorWr_1XYZ_1cyc, FalkorWr_2VXVY_2ST_2VSD_0cyc],
+def : InstRW<[FalkorWr_1XYZ_1cyc, FalkorWr_2VXVY_2ST_2VSD_0cyc, ReadDefault, FalkorReadIncSt],
                                        (instregex "^ST4Four(v8b|v4h|v2s|v1d)_POST$")>;
 
-def : InstRW<[FalkorWr_4VSD_4ST_0cyc], (instregex "^ST1Four(v16b|v8h|v4s|v2d)$")>;
-def : InstRW<[FalkorWr_4VSD_4ST_0cyc], (instrs ST4Fourv2d)>;
+def : InstRW<[FalkorWr_4VSD_4ST_0cyc, ReadDefault, FalkorReadIncSt],
+                                       (instregex "^ST1Four(v16b|v8h|v4s|v2d)$")>;
+def : InstRW<[FalkorWr_4VSD_4ST_0cyc, ReadDefault, FalkorReadIncSt],
+                                       (instrs ST4Fourv2d)>;
 // FIXME: This is overly conservative in the imm POST case (no XYZ used in that case).
-def : InstRW<[FalkorWr_1XYZ_1cyc, FalkorWr_4VSD_4ST_0cyc],
+def : InstRW<[FalkorWr_1XYZ_1cyc, FalkorWr_4VSD_4ST_0cyc, ReadDefault, FalkorReadIncSt],
                                        (instregex "^ST1Four(v16b|v8h|v4s|v2d)_POST$")>;
 // FIXME: This is overly conservative in the imm POST case (no XYZ used in that case).
-def : InstRW<[FalkorWr_1XYZ_1cyc, FalkorWr_4VSD_4ST_0cyc],
+def : InstRW<[FalkorWr_1XYZ_1cyc, FalkorWr_4VSD_4ST_0cyc, ReadDefault, FalkorReadIncSt],
                                        (instrs ST4Fourv2d_POST)>;
 
-def : InstRW<[FalkorWr_2VXVY_4ST_4VSD_0cyc],
+def : InstRW<[FalkorWr_2VXVY_4ST_4VSD_0cyc, ReadDefault, FalkorReadIncSt],
                                        (instregex "^ST3Three(v16b|v8h|v4s)$")>;
 // FIXME: This is overly conservative in the imm POST case (no XYZ used in that case).
-def : InstRW<[FalkorWr_1XYZ_1cyc, FalkorWr_2VXVY_4ST_4VSD_0cyc],
+def : InstRW<[FalkorWr_1XYZ_1cyc, FalkorWr_2VXVY_4ST_4VSD_0cyc, ReadDefault, FalkorReadIncSt],
                                        (instregex "^ST3Three(v16b|v8h|v4s)_POST$")>;
 
-def : InstRW<[FalkorWr_4VXVY_4ST_4VSD_0cyc],
+def : InstRW<[FalkorWr_4VXVY_4ST_4VSD_0cyc, ReadDefault, FalkorReadIncSt],
                                        (instregex "^ST4Four(v16b|v8h|v4s)$")>;
 // FIXME: This is overly conservative in the imm POST case (no XYZ used in that case).
-def : InstRW<[FalkorWr_1XYZ_1cyc, FalkorWr_4VXVY_4ST_4VSD_0cyc],
+def : InstRW<[FalkorWr_1XYZ_1cyc, FalkorWr_4VXVY_4ST_4VSD_0cyc, ReadDefault, FalkorReadIncSt],
                                        (instregex "^ST4Four(v16b|v8h|v4s)_POST$")>;
 
 // Branch Instructions
@@ -1033,22 +1085,25 @@ def : InstRW<[FalkorWr_4VXVY_3cyc],   (instrs SHA256SU1rrr)>;
 
 // FP Load Instructions
 // -----------------------------------------------------------------------------
-def : InstRW<[FalkorWr_1LD_3cyc],     (instregex "^LDR((Q|D|S|H|B)ui|(Q|D|S)l)$")>;
-def : InstRW<[FalkorWr_none_1cyc, FalkorWr_1LD_3cyc],
+def : InstRW<[FalkorWr_1LD_3cyc, FalkorReadIncLd],
+                                      (instregex "^LDR((Q|D|S|H|B)ui|(Q|D|S)l)$")>;
+def : InstRW<[FalkorWr_LdStInc_none_3cyc, FalkorWr_1LD_3cyc, FalkorReadIncLd],
                                       (instregex "^LDR(Q|D|S|H|B)(post|pre)$")>;
-def : InstRW<[FalkorWr_1LD_3cyc],     (instregex "^LDUR(Q|D|S|H|B)i$")>;
-def : InstRW<[FalkorWr_LDRro],        (instregex "^LDR(Q|D|H|S|B)ro(W|X)$")>;
-def : InstRW<[FalkorWr_2LD_3cyc, FalkorWr_none_3cyc],
+def : InstRW<[FalkorWr_1LD_3cyc, FalkorReadIncLd],
+                                      (instregex "^LDUR(Q|D|S|H|B)i$")>;
+def : InstRW<[FalkorWr_LDRro, FalkorReadIncLd],
+                                      (instregex "^LDR(Q|D|H|S|B)ro(W|X)$")>;
+def : InstRW<[FalkorWr_2LD_3cyc, FalkorWr_none_3cyc, FalkorReadIncLd],
                                       (instrs LDNPQi)>;
-def : InstRW<[FalkorWr_2LD_3cyc, FalkorWr_none_3cyc],
+def : InstRW<[FalkorWr_2LD_3cyc, FalkorWr_none_3cyc, FalkorReadIncLd],
                                       (instrs LDPQi)>;
-def : InstRW<[FalkorWr_1LD_1none_3cyc, FalkorWr_none_3cyc],
+def : InstRW<[FalkorWr_1LD_1none_3cyc, FalkorWr_none_3cyc, FalkorReadIncLd],
                                       (instregex "LDNP(D|S)i$")>;
-def : InstRW<[FalkorWr_1LD_1none_3cyc, FalkorWr_none_3cyc],
+def : InstRW<[FalkorWr_1LD_1none_3cyc, FalkorWr_none_3cyc, FalkorReadIncLd],
                                       (instregex "LDP(D|S)i$")>;
-def : InstRW<[FalkorWr_none_1cyc, FalkorWr_1LD_1none_3cyc, FalkorWr_none_3cyc],
+def : InstRW<[FalkorWr_LdStInc_none_3cyc, FalkorWr_1LD_1none_3cyc, FalkorWr_none_3cyc, FalkorReadIncLd],
                                       (instregex "LDP(D|S)(pre|post)$")>;
-def : InstRW<[FalkorWr_none_1cyc, FalkorWr_2LD_3cyc, FalkorWr_none_3cyc],
+def : InstRW<[FalkorWr_LdStInc_none_3cyc, FalkorWr_2LD_3cyc, FalkorWr_none_3cyc, FalkorReadIncLd],
                                       (instregex "^LDPQ(pre|post)$")>;
 
 // FP Data Processing Instructions
@@ -1106,31 +1161,41 @@ def : InstRW<[FalkorWr_2VXVY_4cyc],   (instregex "^(S|U)CVTF(v2i64|v4i32|v2f64|v
 // -----------------------------------------------------------------------------
 def : InstRW<[FalkorWr_1ST_0cyc],     (instrs PRFMui, PRFMl)>;
 def : InstRW<[FalkorWr_1ST_0cyc],     (instrs PRFUMi)>;
-def : InstRW<[FalkorWr_1LD_3cyc, FalkorWr_none_3cyc],
+def : InstRW<[FalkorWr_1LD_3cyc, FalkorWr_none_3cyc, FalkorReadIncLd],
                                       (instregex "^LDNP(W|X)i$")>;
-def : InstRW<[FalkorWr_1LD_3cyc, FalkorWr_none_3cyc],
+def : InstRW<[FalkorWr_1LD_3cyc, FalkorWr_none_3cyc, FalkorReadIncLd],
                                       (instregex "^LDP(W|X)i$")>;
-def : InstRW<[FalkorWr_none_1cyc, FalkorWr_1LD_3cyc, FalkorWr_none_3cyc],
+def : InstRW<[FalkorWr_LdStInc_none_3cyc, FalkorWr_1LD_3cyc, FalkorWr_none_3cyc, FalkorReadIncLd],
                                       (instregex "^LDP(W|X)(post|pre)$")>;
-def : InstRW<[FalkorWr_1LD_3cyc],     (instregex "^LDR(BB|HH|W|X)ui$")>;
-def : InstRW<[FalkorWr_none_1cyc, FalkorWr_1LD_3cyc],
+def : InstRW<[FalkorWr_1LD_3cyc, FalkorReadIncLd],
+                                      (instregex "^LDR(BB|HH|W|X)ui$")>;
+def : InstRW<[FalkorWr_LdStInc_none_3cyc, FalkorWr_1LD_3cyc, FalkorReadIncLd],
                                       (instregex "^LDR(BB|HH|W|X)(post|pre)$")>;
-def : InstRW<[FalkorWr_LDRro],        (instregex "^LDR(BB|HH|W|X)ro(W|X)$")>;
-def : InstRW<[FalkorWr_1LD_3cyc],     (instregex "^LDR(W|X)l$")>;
-def : InstRW<[FalkorWr_1LD_3cyc],     (instregex "^LDTR(B|H|W|X)i$")>;
-def : InstRW<[FalkorWr_1LD_3cyc],     (instregex "^LDUR(BB|HH|W|X)i$")>;
+def : InstRW<[FalkorWr_LDRro, FalkorReadIncLd],
+                                      (instregex "^LDR(BB|HH|W|X)ro(W|X)$")>;
+def : InstRW<[FalkorWr_1LD_3cyc, FalkorReadIncLd],
+                                      (instregex "^LDR(W|X)l$")>;
+def : InstRW<[FalkorWr_1LD_3cyc, FalkorReadIncLd],
+                                      (instregex "^LDTR(B|H|W|X)i$")>;
+def : InstRW<[FalkorWr_1LD_3cyc, FalkorReadIncLd],
+                                      (instregex "^LDUR(BB|HH|W|X)i$")>;
 def : InstRW<[FalkorWr_PRFMro],       (instregex "^PRFMro(W|X)$")>;
-def : InstRW<[FalkorWr_1LD_4cyc, FalkorWr_none_4cyc],
+def : InstRW<[FalkorWr_1LD_4cyc, FalkorWr_none_4cyc, FalkorReadIncLd],
                                       (instrs LDPSWi)>;
-def : InstRW<[FalkorWr_none_1cyc, FalkorWr_1LD_4cyc, FalkorWr_none_4cyc],
+def : InstRW<[FalkorWr_LdStInc_none_3cyc, FalkorWr_1LD_4cyc, FalkorWr_none_4cyc, FalkorReadIncLd],
                                       (instregex "^LDPSW(post|pre)$")>;
-def : InstRW<[FalkorWr_1LD_4cyc],     (instregex "^LDRS(BW|BX|HW|HX|W)ui$")>;
-def : InstRW<[FalkorWr_none_1cyc, FalkorWr_1LD_4cyc],
+def : InstRW<[FalkorWr_1LD_4cyc, FalkorReadIncLd],
+                                      (instregex "^LDRS(BW|BX|HW|HX|W)ui$")>;
+def : InstRW<[FalkorWr_LdStInc_none_3cyc, FalkorWr_1LD_4cyc, FalkorReadIncLd],
                                       (instregex "^LDRS(BW|BX|HW|HX|W)(post|pre)$")>;
-def : InstRW<[FalkorWr_LDRSro],       (instregex "^LDRS(BW|BX|HW|HX|W)ro(W|X)$")>;
-def : InstRW<[FalkorWr_1LD_4cyc],     (instrs LDRSWl)>;
-def : InstRW<[FalkorWr_1LD_4cyc],     (instregex "^LDTRS(BW|BX|HW|HX|W)i$")>;
-def : InstRW<[FalkorWr_1LD_4cyc],     (instregex "^LDURS(BW|BX|HW|HX|W)i$")>;
+def : InstRW<[FalkorWr_LDRSro, FalkorReadIncLd],
+                                      (instregex "^LDRS(BW|BX|HW|HX|W)ro(W|X)$")>;
+def : InstRW<[FalkorWr_1LD_4cyc, FalkorReadIncLd],
+                                      (instrs LDRSWl)>;
+def : InstRW<[FalkorWr_1LD_4cyc, FalkorReadIncLd],
+                                      (instregex "^LDTRS(BW|BX|HW|HX|W)i$")>;
+def : InstRW<[FalkorWr_1LD_4cyc, FalkorReadIncLd],
+                                      (instregex "^LDURS(BW|BX|HW|HX|W)i$")>;
 
 // Miscellaneous Data-Processing Instructions
 // -----------------------------------------------------------------------------
@@ -1178,32 +1243,46 @@ def : InstRW<[FalkorWr_1none_0cyc],   (instrs BRK, DCPS1, DCPS2, DCPS3, HINT, HL
 def : InstRW<[FalkorWr_1ST_0cyc],     (instrs SYSxt, SYSLxt)>;
 def : InstRW<[FalkorWr_1Z_0cyc],      (instrs MSRpstateImm1, MSRpstateImm4)>;
 
-def : InstRW<[FalkorWr_1LD_3cyc],     (instregex "^(LDAR(B|H|W|X)|LDAXP(W|X)|LDAXR(B|H|W|X)|LDXP(W|X)|LDXR(B|H|W|X))$")>;
+def : InstRW<[FalkorWr_1LD_3cyc, FalkorReadIncLd],
+                                      (instregex "^(LDAR(B|H|W|X)|LDAXR(B|H|W|X)|LDXR(B|H|W|X))$")>;
+def : InstRW<[FalkorWr_1LD_3cyc, FalkorWr_none_3cyc, FalkorReadIncLd],
+                                      (instregex "^(LDAXP(W|X)|LDXP(W|X))$")>;
 def : InstRW<[FalkorWr_1LD_3cyc],     (instrs MRS, MOVbaseTLS)>;
 
 def : InstRW<[FalkorWr_1LD_1Z_3cyc],  (instrs DRPS)>;
 
 def : InstRW<[FalkorWr_1SD_1ST_0cyc], (instrs MSR)>;
-def : InstRW<[FalkorWr_1SD_1ST_0cyc], (instrs STNPWi, STNPXi)>;
+def : InstRW<[FalkorWr_1SD_1ST_0cyc, ReadDefault, ReadDefault, FalkorReadIncSt],
+                                      (instrs STNPWi, STNPXi)>;
 def : InstRW<[FalkorWr_2LD_1Z_3cyc],  (instrs ERET)>;
 
 def : InstRW<[FalkorWr_1ST_1SD_1LD_3cyc], (instregex "^LDC.*$")>;
-def : InstRW<[FalkorWr_1ST_1SD_1LD_0cyc], (instregex "^STLR(B|H|W|X)$")>;
-def : InstRW<[FalkorWr_1ST_1SD_1LD_0cyc], (instregex "^STXP(W|X)$")>;
-def : InstRW<[FalkorWr_1ST_1SD_1LD_0cyc], (instregex "^STXR(B|H|W|X)$")>;
+def : InstRW<[FalkorWr_1ST_1SD_1LD_0cyc, ReadDefault, FalkorReadIncSt],
+                                      (instregex "^STLR(B|H|W|X)$")>;
+def : InstRW<[FalkorWr_1ST_1SD_1LD_0cyc, ReadDefault, ReadDefault, FalkorReadIncSt],
+                                      (instregex "^STXP(W|X)$")>;
+def : InstRW<[FalkorWr_1ST_1SD_1LD_0cyc, ReadDefault, ReadDefault, FalkorReadIncSt],
+                                      (instregex "^STXR(B|H|W|X)$")>;
 
-def : InstRW<[FalkorWr_2LD_1ST_1SD_3cyc], (instregex "^STLXP(W|X)$")>;
-def : InstRW<[FalkorWr_2LD_1ST_1SD_3cyc], (instregex "^STLXR(B|H|W|X)$")>;
+def : InstRW<[FalkorWr_2LD_1ST_1SD_3cyc, ReadDefault, ReadDefault, ReadDefault, FalkorReadIncSt],
+                                      (instregex "^STLXP(W|X)$")>;
+def : InstRW<[FalkorWr_2LD_1ST_1SD_3cyc, ReadDefault, ReadDefault, FalkorReadIncSt],
+                                      (instregex "^STLXR(B|H|W|X)$")>;
 
 // Store Instructions
 // -----------------------------------------------------------------------------
-def : InstRW<[FalkorWr_1SD_1ST_0cyc],     (instregex "^STP(W|X)i$")>;
-def : InstRW<[FalkorWr_none_1cyc, FalkorWr_1SD_1ST_0cyc],
+def : InstRW<[FalkorWr_1SD_1ST_0cyc, ReadDefault, ReadDefault, FalkorReadIncSt],
+                                          (instregex "^STP(W|X)i$")>;
+def : InstRW<[FalkorWr_LdStInc_none_3cyc, FalkorWr_1SD_1ST_0cyc, ReadDefault, ReadDefault, FalkorReadIncSt],
                                           (instregex "^STP(W|X)(post|pre)$")>;
-def : InstRW<[FalkorWr_1SD_1ST_0cyc],     (instregex "^STR(BB|HH|W|X)ui$")>;
-def : InstRW<[FalkorWr_none_1cyc, FalkorWr_1SD_1ST_0cyc],
+def : InstRW<[FalkorWr_1SD_1ST_0cyc, ReadDefault, FalkorReadIncSt],
+                                          (instregex "^STR(BB|HH|W|X)ui$")>;
+def : InstRW<[FalkorWr_LdStInc_none_3cyc, FalkorWr_1SD_1ST_0cyc, ReadDefault, FalkorReadIncSt],
                                           (instregex "^STR(BB|HH|W|X)(post|pre)$")>;
-def : InstRW<[FalkorWr_STRro],            (instregex "^STR(BB|HH|W|X)ro(W|X)$")>;
-def : InstRW<[FalkorWr_1SD_1ST_0cyc],     (instregex "^STTR(B|H|W|X)i$")>;
-def : InstRW<[FalkorWr_1SD_1ST_0cyc],     (instregex "^STUR(BB|HH|W|X)i$")>;
+def : InstRW<[FalkorWr_STRro, ReadDefault, FalkorReadIncSt],
+                                          (instregex "^STR(BB|HH|W|X)ro(W|X)$")>;
+def : InstRW<[FalkorWr_1SD_1ST_0cyc, ReadDefault, FalkorReadIncSt],
+                                          (instregex "^STTR(B|H|W|X)i$")>;
+def : InstRW<[FalkorWr_1SD_1ST_0cyc, ReadDefault, FalkorReadIncSt],
+                                          (instregex "^STUR(BB|HH|W|X)i$")>;
 

@@ -34,11 +34,14 @@
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/IR/InstrTypes.h"
-#include "llvm/Support/DataTypes.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/Support/Compiler.h"
+#include <cstdint>
 
 namespace llvm {
 
 class MDNode;
+class raw_ostream;
 
 /// This class represents a range of values.
 class LLVM_NODISCARD ConstantRange {
@@ -330,6 +333,6 @@ inline raw_ostream &operator<<(raw_ostream &OS, const ConstantRange &CR) {
 /// E.g. if RangeMD is !{i32 0, i32 10, i32 15, i32 20} then return [0, 20).
 ConstantRange getConstantRangeFromMetadata(const MDNode &RangeMD);
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_IR_CONSTANTRANGE_H

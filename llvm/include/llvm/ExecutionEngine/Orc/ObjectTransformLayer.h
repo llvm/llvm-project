@@ -15,6 +15,8 @@
 #define LLVM_EXECUTIONENGINE_ORC_OBJECTTRANSFORMLAYER_H
 
 #include "llvm/ExecutionEngine/JITSymbol.h"
+#include <algorithm>
+#include <string>
 
 namespace llvm {
 namespace orc {
@@ -28,7 +30,7 @@ template <typename BaseLayerT, typename TransformFtor>
 class ObjectTransformLayer {
 public:
   /// @brief Handle to a set of added objects.
-  typedef typename BaseLayerT::ObjSetHandleT ObjSetHandleT;
+  using ObjSetHandleT = typename BaseLayerT::ObjSetHandleT;
 
   /// @brief Construct an ObjectTransformLayer with the given BaseLayer
   ObjectTransformLayer(BaseLayerT &BaseLayer,
@@ -44,7 +46,6 @@ public:
             typename SymbolResolverPtrT>
   ObjSetHandleT addObjectSet(ObjSetT Objects, MemoryManagerPtrT MemMgr,
                              SymbolResolverPtrT Resolver) {
-
     for (auto I = Objects.begin(), E = Objects.end(); I != E; ++I)
       *I = Transform(std::move(*I));
 
@@ -98,7 +99,7 @@ private:
   TransformFtor Transform;
 };
 
-} // End namespace orc.
-} // End namespace llvm.
+} // end namespace orc
+} // end namespace llvm
 
 #endif // LLVM_EXECUTIONENGINE_ORC_OBJECTTRANSFORMLAYER_H

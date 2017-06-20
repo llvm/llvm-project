@@ -26,8 +26,9 @@ class WasmWriter {
 public:
   WasmWriter(WasmYAML::Object &Obj) : Obj(Obj) {}
   int writeWasm(raw_ostream &OS);
+
+private:
   int writeRelocSection(raw_ostream &OS, WasmYAML::Section &Sec);
-  int writeNameSection(raw_ostream &OS, WasmYAML::CustomSection &Section);
 
   int writeSectionContent(raw_ostream &OS, WasmYAML::CustomSection &Section);
   int writeSectionContent(raw_ostream &OS, WasmYAML::TypeSection &Section);
@@ -42,7 +43,9 @@ public:
   int writeSectionContent(raw_ostream &OS, WasmYAML::CodeSection &Section);
   int writeSectionContent(raw_ostream &OS, WasmYAML::DataSection &Section);
 
-private:
+  // Custom section types
+  int writeSectionContent(raw_ostream &OS, WasmYAML::NameSection &Section);
+  int writeSectionContent(raw_ostream &OS, WasmYAML::LinkingSection &Section);
   WasmYAML::Object &Obj;
 };
 
@@ -107,12 +110,30 @@ static int writeInitExpr(const wasm::WasmInitExpr &InitExpr, raw_ostream &OS) {
   return 0;
 }
 
-int WasmWriter::writeNameSection(raw_ostream &OS,
-                                 WasmYAML::CustomSection &Section) {
+int WasmWriter::writeSectionContent(raw_ostream &OS, WasmYAML::LinkingSection &Section) {
+  writeStringRef(Section.Name, OS);
+  if (Section.SymbolInfos.size()) {
+    encodeULEB128(wasm::WASM_SYMBOL_INFO, OS);
+    std::string OutString;
+    raw_string_ostream StringStream(OutString);
+
+    encodeULEB128(Section.SymbolInfos.size(), StringStream);
+    for (const WasmYAML::SymbolInfo &Info : Section.SymbolInfos) {
+      writeStringRef(Info.Name, StringStream);
+      encodeULEB128(Info.Flags, StringStream);
+    }
+
+    StringStream.flush();
+    encodeULEB128(OutString.size(), OS);
+    OS << OutString;
+  }
+  return 0;
+}
+
+int WasmWriter::writeSectionContent(raw_ostream &OS, WasmYAML::NameSection &Section) {
   writeStringRef(Section.Name, OS);
   if (Section.FunctionNames.size()) {
     encodeULEB128(wasm::WASM_NAMES_FUNCTION, OS);
-
     std::string OutString;
     raw_string_ostream StringStream(OutString);
 
@@ -131,8 +152,12 @@ int WasmWriter::writeNameSection(raw_ostream &OS,
 
 int WasmWriter::writeSectionContent(raw_ostream &OS,
                                     WasmYAML::CustomSection &Section) {
-  if (Section.Name == "name") {
-    writeNameSection(OS, Section);
+  if (auto S = dyn_cast<WasmYAML::NameSection>(&Section)) {
+    if (auto Err = writeSectionContent(OS, *S))
+      return Err;
+  } else if (auto S = dyn_cast<WasmYAML::LinkingSection>(&Section)) {
+    if (auto Err = writeSectionContent(OS, *S))
+      return Err;
   } else {
     Section.Payload.writeAsBinary(OS);
   }

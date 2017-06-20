@@ -1374,7 +1374,9 @@ def KryoWrite_3cyc_LS_LS_400ln :
 	let Latency = 3; let NumMicroOps = 2;
 }
 def : InstRW<[KryoWrite_3cyc_LS_LS_400ln],
-	(instregex "(LDAX?R(B|H|W|X)|LDAXP(W|X))")>;
+	(instregex "LDAX?R(B|H|W|X)")>;
+def : InstRW<[KryoWrite_3cyc_LS_LS_400ln, WriteLDHi],
+	(instregex "LDAXP(W|X)")>;
 def KryoWrite_3cyc_LS_LS_401ln :
 	SchedWriteRes<[KryoUnitLS, KryoUnitLS]> {
 	let Latency = 3; let NumMicroOps = 2;
@@ -1565,7 +1567,7 @@ def KryoWrite_3cyc_LS_258ln :
 	SchedWriteRes<[KryoUnitLS]> {
 	let Latency = 3; let NumMicroOps = 1;
 }
-def : InstRW<[KryoWrite_3cyc_LS_258ln],
+def : InstRW<[KryoWrite_3cyc_LS_258ln, WriteLDHi],
 	(instregex "LDXP(W|X)")>;
 def KryoWrite_3cyc_LS_258_1ln :
 	SchedWriteRes<[KryoUnitLS]> {

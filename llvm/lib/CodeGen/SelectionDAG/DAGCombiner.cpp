@@ -4726,74 +4726,72 @@ struct BaseIndexOffset {
   }
 
   /// Parses tree in Ptr for base, index, offset addresses.
-  static BaseIndexOffset match(SDValue Ptr, SelectionDAG &DAG,
-                               int64_t PartialOffset = 0) {
+  static BaseIndexOffset match(SDValue Ptr, SelectionDAG &DAG) {
+
+    SDValue Base = Ptr;
+    SDValue Index = SDValue();
+    int64_t Offset = 0;
     bool IsIndexSignExt = false;
 
+    // (((B + I*M) + O)) + O ...
+
+    //Consume constant adds
+    while (Base->getOpcode() == ISD::ADD &&
+           isa<ConstantSDNode>(Base->getOperand(1))) {
+      int64_t POffset = cast<ConstantSDNode>(Base->getOperand(1))->getSExtValue();
+      Offset += POffset;
+      Base = Base->getOperand(0);
+    }
+
     // Split up a folded GlobalAddress+Offset into its component parts.
-    if (GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(Ptr))
+    if (GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(Base))
       if (GA->getOpcode() == ISD::GlobalAddress && GA->getOffset() != 0) {
-        return BaseIndexOffset(DAG.getGlobalAddress(GA->getGlobal(),
-                                                    SDLoc(GA),
-                                                    GA->getValueType(0),
-                                                    /*Offset=*/PartialOffset,
-                                                    /*isTargetGA=*/false,
-                                                    GA->getTargetFlags()),
-                               SDValue(),
-                               GA->getOffset(),
-                               IsIndexSignExt);
+        Base = DAG.getGlobalAddress(GA->getGlobal(),
+                                    SDLoc(GA),
+                                    GA->getValueType(0),
+                                    /*Offset*/ 0,
+                                    /*isTargetGA=*/false,
+                                    GA->getTargetFlags());
+        Offset += GA->getOffset();
+        return BaseIndexOffset(Base, Index, Offset, IsIndexSignExt);
       }
 
-    // We only can pattern match BASE + INDEX + OFFSET. If Ptr is not an ADD
-    // instruction, then it could be just the BASE or everything else we don't
-    // know how to handle. Just use Ptr as BASE and give up.
-    if (Ptr->getOpcode() != ISD::ADD)
-      return BaseIndexOffset(Ptr, SDValue(), PartialOffset, IsIndexSignExt);
+    if (Base->getOpcode() == ISD::ADD) {
+      // TODO: The following code appears to be needless as it just
+      //       bails on some Ptrs early, reducing the cases where we
+      //       find equivalence. We should be able to remove this.
+      // Inside a loop the current BASE pointer is calculated using an ADD and a
+      // MUL instruction. In this case Base is the actual BASE pointer.
+      // (i64 add (i64 %array_ptr)
+      //          (i64 mul (i64 %induction_var)
+      //                   (i64 %element_size)))
+      if (Base->getOperand(1)->getOpcode() == ISD::MUL)
+        return BaseIndexOffset(Base, Index, Offset, IsIndexSignExt);
 
-    // We know that we have at least an ADD instruction. Try to pattern match
-    // the simple case of BASE + OFFSET.
-    if (isa<ConstantSDNode>(Ptr->getOperand(1))) {
-      int64_t Offset = cast<ConstantSDNode>(Ptr->getOperand(1))->getSExtValue();
-      return match(Ptr->getOperand(0), DAG, Offset + PartialOffset);
-    }
+      // Look at Base + Index + Offset cases.
+      Index   = Base->getOperand(1);
+      SDValue PotentialBase = Base->getOperand(0);
 
-    // Inside a loop the current BASE pointer is calculated using an ADD and a
-    // MUL instruction. In this case Ptr is the actual BASE pointer.
-    // (i64 add (i64 %array_ptr)
-    //          (i64 mul (i64 %induction_var)
-    //                   (i64 %element_size)))
-    if (Ptr->getOperand(1)->getOpcode() == ISD::MUL)
-      return BaseIndexOffset(Ptr, SDValue(), PartialOffset, IsIndexSignExt);
+      // Skip signextends.
+      if (Index->getOpcode() == ISD::SIGN_EXTEND) {
+        Index = Index->getOperand(0);
+        IsIndexSignExt = true;
+      }
 
-    // Look at Base + Index + Offset cases.
-    SDValue Base = Ptr->getOperand(0);
-    SDValue IndexOffset = Ptr->getOperand(1);
+      // Check if Index Offset pattern
+      if (Index->getOpcode() != ISD::ADD ||
+          !isa<ConstantSDNode>(Index->getOperand(1)))
+        return BaseIndexOffset(PotentialBase, Index, Offset, IsIndexSignExt);
 
-    // Skip signextends.
-    if (IndexOffset->getOpcode() == ISD::SIGN_EXTEND) {
-      IndexOffset = IndexOffset->getOperand(0);
-      IsIndexSignExt = true;
-    }
-
-    // Either the case of Base + Index (no offset) or something else.
-    if (IndexOffset->getOpcode() != ISD::ADD)
-      return BaseIndexOffset(Base, IndexOffset, PartialOffset, IsIndexSignExt);
-
-    // Now we have the case of Base + Index + offset.
-    SDValue Index = IndexOffset->getOperand(0);
-    SDValue Offset = IndexOffset->getOperand(1);
-
-    if (!isa<ConstantSDNode>(Offset))
-      return BaseIndexOffset(Ptr, SDValue(), PartialOffset, IsIndexSignExt);
-
-    // Ignore signextends.
-    if (Index->getOpcode() == ISD::SIGN_EXTEND) {
+      Offset += cast<ConstantSDNode>(Index->getOperand(1))->getSExtValue();
       Index = Index->getOperand(0);
-      IsIndexSignExt = true;
-    } else IsIndexSignExt = false;
-
-    int64_t Off = cast<ConstantSDNode>(Offset)->getSExtValue();
-    return BaseIndexOffset(Base, Index, Off + PartialOffset, IsIndexSignExt);
+      if (Index->getOpcode() == ISD::SIGN_EXTEND) {
+        Index = Index->getOperand(0);
+        IsIndexSignExt = true;
+      } else IsIndexSignExt = false;
+      Base = PotentialBase;
+    }
+    return BaseIndexOffset(Base, Index, Offset, IsIndexSignExt);
   }
 };
 } // namespace

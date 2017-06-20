@@ -20,3 +20,4 @@ type = Library
 name = TestingSupport
 parent = Libraries
 required_libraries = Support
+installed = 0

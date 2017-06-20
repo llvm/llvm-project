@@ -1,4 +1,4 @@
-//===------ IRCompileLayer.h -- Eagerly compile IR for JIT ------*- C++ -*-===//
+//===- IRCompileLayer.h -- Eagerly compile IR for JIT -----------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,12 +14,23 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_IRCOMPILELAYER_H
 #define LLVM_EXECUTIONENGINE_ORC_IRCOMPILELAYER_H
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/ObjectCache.h"
+#include "llvm/Object/Binary.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/MemoryBuffer.h"
+#include <algorithm>
+#include <functional>
 #include <memory>
+#include <string>
+#include <vector>
 
 namespace llvm {
+
+class Module;
+
 namespace orc {
 
 /// @brief Eager IR compiling layer.
@@ -30,20 +41,20 @@ namespace orc {
 /// the layer below, which must implement the object layer concept.
 template <typename BaseLayerT> class IRCompileLayer {
 public:
-  typedef std::function<object::OwningBinary<object::ObjectFile>(Module &)>
-      CompileFtor;
+  using CompileFtor =
+      std::function<object::OwningBinary<object::ObjectFile>(Module &)>;
 
 private:
-  typedef typename BaseLayerT::ObjSetHandleT ObjSetHandleT;
+  using ObjSetHandleT = typename BaseLayerT::ObjSetHandleT;
 
 public:
   /// @brief Handle to a set of compiled modules.
-  typedef ObjSetHandleT ModuleSetHandleT;
+  using ModuleSetHandleT = ObjSetHandleT;
 
   /// @brief Construct an IRCompileLayer with the given BaseLayer, which must
   ///        implement the ObjectLayer concept.
   IRCompileLayer(BaseLayerT &BaseLayer, CompileFtor Compile)
-      : BaseLayer(BaseLayer), Compile(std::move(Compile)), ObjCache(nullptr) {}
+      : BaseLayer(BaseLayer), Compile(std::move(Compile)) {}
 
   /// @brief Set an ObjectCache to query before compiling.
   void setObjectCache(ObjectCache *NewCache) { ObjCache = NewCache; }
@@ -137,10 +148,11 @@ private:
 
   BaseLayerT &BaseLayer;
   CompileFtor Compile;
-  ObjectCache *ObjCache;
+  ObjectCache *ObjCache = nullptr;
 };
 
-} // End namespace orc.
-} // End namespace llvm.
+} // end namespace orc
+
+} // end namespace llvm
 
 #endif // LLVM_EXECUTIONENGINE_ORC_IRCOMPILINGLAYER_H

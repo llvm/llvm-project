@@ -642,7 +642,12 @@ static bool promoteIndirectCalls(Module &M, bool InLTO, bool SamplePGO) {
   if (DisableICP)
     return false;
   InstrProfSymtab Symtab;
-  Symtab.create(M, InLTO);
+  if (Error E = Symtab.create(M, InLTO)) {
+    std::string SymtabFailure = toString(std::move(E));
+    DEBUG(dbgs() << "Failed to create symtab: " << SymtabFailure << "\n");
+    (void)SymtabFailure;
+    return false;
+  }
   bool Changed = false;
   for (auto &F : M) {
     if (F.isDeclaration())

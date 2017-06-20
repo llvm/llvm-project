@@ -622,7 +622,8 @@ public:
   // AttributeList Introspection
   //===--------------------------------------------------------------------===//
 
-  typedef const AttributeSet *iterator;
+  using iterator = const AttributeSet *;
+
   iterator begin() const;
   iterator end() const;
 
@@ -830,8 +831,8 @@ bool areInlineCompatible(const Function &Caller, const Function &Callee);
 /// \brief Merge caller's and callee's attributes.
 void mergeAttributesForInlining(Function &Caller, const Function &Callee);
 
-} // end AttributeFuncs namespace
+} // end namespace AttributeFuncs
 
-} // end llvm namespace
+} // end namespace llvm
 
 #endif // LLVM_IR_ATTRIBUTES_H

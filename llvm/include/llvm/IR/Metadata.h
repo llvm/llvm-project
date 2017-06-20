@@ -45,6 +45,8 @@ namespace llvm {
 
 class Module;
 class ModuleSlotTracker;
+class raw_ostream;
+class Type;
 
 enum LLVMConstants : uint32_t {
   DEBUG_METADATA_VERSION = 3 // Current debug info version number.
@@ -67,8 +69,8 @@ protected:
   unsigned char Storage;
   // TODO: expose remaining bits to subclasses.
 
-  unsigned short SubclassData16;
-  unsigned SubclassData32;
+  unsigned short SubclassData16 = 0;
+  unsigned SubclassData32 = 0;
 
 public:
   enum MetadataKind {
@@ -78,7 +80,7 @@ public:
 
 protected:
   Metadata(unsigned ID, StorageType Storage)
-      : SubclassID(ID), Storage(Storage), SubclassData16(0), SubclassData32(0) {
+      : SubclassID(ID), Storage(Storage) {
     static_assert(sizeof(*this) == 8, "Metadata fields poorly packed");
   }
 
@@ -183,6 +185,7 @@ public:
 
   static MetadataAsValue *get(LLVMContext &Context, Metadata *MD);
   static MetadataAsValue *getIfExists(LLVMContext &Context, Metadata *MD);
+
   Metadata *getMetadata() const { return MD; }
 
   static bool classof(const Value *V) {
@@ -257,7 +260,7 @@ public:
   /// \brief Check whether metadata is replaceable.
   static bool isReplaceable(const Metadata &MD);
 
-  typedef PointerUnion<MetadataAsValue *, Metadata *> OwnerTy;
+  using OwnerTy = PointerUnion<MetadataAsValue *, Metadata *>;
 
 private:
   /// \brief Track a reference to metadata for an owner.
@@ -275,7 +278,7 @@ class ReplaceableMetadataImpl {
   friend class MetadataTracking;
 
 public:
-  typedef MetadataTracking::OwnerTy OwnerTy;
+  using OwnerTy = MetadataTracking::OwnerTy;
 
 private:
   LLVMContext &Context;
@@ -352,17 +355,21 @@ protected:
 
 public:
   static ValueAsMetadata *get(Value *V);
+
   static ConstantAsMetadata *getConstant(Value *C) {
     return cast<ConstantAsMetadata>(get(C));
   }
+
   static LocalAsMetadata *getLocal(Value *Local) {
     return cast<LocalAsMetadata>(get(Local));
   }
 
   static ValueAsMetadata *getIfExists(Value *V);
+
   static ConstantAsMetadata *getConstantIfExists(Value *C) {
     return cast_or_null<ConstantAsMetadata>(getIfExists(C));
   }
+
   static LocalAsMetadata *getLocalIfExists(Value *Local) {
     return cast_or_null<LocalAsMetadata>(getIfExists(Local));
   }
@@ -491,8 +498,8 @@ namespace detail {
 
 template <class T> T &make();
 template <class T, class Result> struct HasDereference {
-  typedef char Yes[1];
-  typedef char No[2];
+  using Yes = char[1];
+  using No = char[2];
   template <size_t N> struct SFINAE {};
 
   template <class U, class V>
@@ -613,7 +620,7 @@ public:
 
   unsigned getLength() const { return (unsigned)getString().size(); }
 
-  typedef StringRef::iterator iterator;
+  using iterator = StringRef::iterator;
 
   /// \brief Pointer to the first byte of the string.
   iterator begin() const { return getString().begin(); }
@@ -730,12 +737,14 @@ private:
 };
 
 template <> struct simplify_type<MDOperand> {
-  typedef Metadata *SimpleType;
+  using SimpleType = Metadata *;
+
   static SimpleType getSimplifiedValue(MDOperand &MD) { return MD.get(); }
 };
 
 template <> struct simplify_type<const MDOperand> {
-  typedef Metadata *SimpleType;
+  using SimpleType = Metadata *;
+
   static SimpleType getSimplifiedValue(const MDOperand &MD) { return MD.get(); }
 };
 
@@ -817,7 +826,7 @@ struct TempMDNodeDeleter {
 };
 
 #define HANDLE_MDNODE_LEAF(CLASS)                                              \
-  typedef std::unique_ptr<CLASS, TempMDNodeDeleter> Temp##CLASS;
+  using Temp##CLASS = std::unique_ptr<CLASS, TempMDNodeDeleter>;
 #define HANDLE_MDNODE_BRANCH(CLASS) HANDLE_MDNODE_LEAF(CLASS)
 #include "llvm/IR/Metadata.def"
 
@@ -847,6 +856,10 @@ class MDNode : public Metadata {
   ContextAndReplaceableUses Context;
 
 protected:
+  MDNode(LLVMContext &Context, unsigned ID, StorageType Storage,
+         ArrayRef<Metadata *> Ops1, ArrayRef<Metadata *> Ops2 = None);
+  ~MDNode() = default;
+
   void *operator new(size_t Size, unsigned NumOps);
   void operator delete(void *Mem);
 
@@ -860,16 +873,13 @@ protected:
     llvm_unreachable("Constructor throws?");
   }
 
-  MDNode(LLVMContext &Context, unsigned ID, StorageType Storage,
-         ArrayRef<Metadata *> Ops1, ArrayRef<Metadata *> Ops2 = None);
-  ~MDNode() = default;
-
   void dropAllReferences();
 
   MDOperand *mutable_begin() { return mutable_end() - NumOperands; }
   MDOperand *mutable_end() { return reinterpret_cast<MDOperand *>(this); }
 
-  typedef iterator_range<MDOperand *> mutable_op_range;
+  using mutable_op_range = iterator_range<MDOperand *>;
+
   mutable_op_range mutable_operands() {
     return mutable_op_range(mutable_begin(), mutable_end());
   }
@@ -1028,8 +1038,8 @@ private:
   static void dispatchResetHash(NodeTy *, std::false_type) {}
 
 public:
-  typedef const MDOperand *op_iterator;
-  typedef iterator_range<op_iterator> op_range;
+  using op_iterator = const MDOperand *;
+  using op_range = iterator_range<op_iterator>;
 
   op_iterator op_begin() const {
     return const_cast<MDNode *>(this)->mutable_begin();
@@ -1227,13 +1237,14 @@ public:
   T *operator[](unsigned I) const { return cast_or_null<T>(N->getOperand(I)); }
 
   // FIXME: Fix callers and remove condition on N.
-  typedef TypedMDOperandIterator<T> iterator;
+  using iterator = TypedMDOperandIterator<T>;
+
   iterator begin() const { return N ? iterator(N->op_begin()) : iterator(); }
   iterator end() const { return N ? iterator(N->op_end()) : iterator(); }
 };
 
 #define HANDLE_METADATA(CLASS)                                                 \
-  typedef MDTupleTypedArrayWrapper<CLASS> CLASS##Array;
+  using CLASS##Array = MDTupleTypedArrayWrapper<CLASS>;
 #include "llvm/IR/Metadata.def"
 
 /// Placeholder metadata for operands of distinct MDNodes.
@@ -1304,12 +1315,12 @@ class NamedMDNode : public ilist_node<NamedMDNode> {
   template<class T1, class T2>
   class op_iterator_impl :
       public std::iterator<std::bidirectional_iterator_tag, T2> {
+    friend class NamedMDNode;
+
     const NamedMDNode *Node = nullptr;
     unsigned Idx = 0;
 
-    op_iterator_impl(const NamedMDNode *N, unsigned i) : Node(N), Idx(i) { }
-
-    friend class NamedMDNode;
+    op_iterator_impl(const NamedMDNode *N, unsigned i) : Node(N), Idx(i) {}
 
   public:
     op_iterator_impl() = default;
@@ -1371,11 +1382,13 @@ public:
   // ---------------------------------------------------------------------------
   // Operand Iterator interface...
   //
-  typedef op_iterator_impl<MDNode *, MDNode> op_iterator;
+  using op_iterator = op_iterator_impl<MDNode *, MDNode>;
+
   op_iterator op_begin() { return op_iterator(this, 0); }
   op_iterator op_end()   { return op_iterator(this, getNumOperands()); }
 
-  typedef op_iterator_impl<const MDNode *, MDNode> const_op_iterator;
+  using const_op_iterator = op_iterator_impl<const MDNode *, MDNode>;
+
   const_op_iterator op_begin() const { return const_op_iterator(this, 0); }
   const_op_iterator op_end()   const { return const_op_iterator(this, getNumOperands()); }
 

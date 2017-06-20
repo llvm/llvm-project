@@ -450,11 +450,11 @@ public:
   /// decls from module \c M. This interface is used by transformation
   /// passes such as indirect function call promotion. Variable \c InLTO
   /// indicates if this is called from LTO optimization passes.
-  void create(Module &M, bool InLTO = false);
+  Error create(Module &M, bool InLTO = false);
 
   /// Create InstrProfSymtab from a set of names iteratable from
   /// \p IterRange. This interface is used by IndexedProfReader.
-  template <typename NameIterRange> void create(const NameIterRange &IterRange);
+  template <typename NameIterRange> Error create(const NameIterRange &IterRange);
 
   // If the symtab is created by a series of calls to \c addFuncName, \c
   // finalizeSymtab needs to be called before looking up function names.
@@ -464,11 +464,14 @@ public:
 
   /// Update the symtab by adding \p FuncName to the table. This interface
   /// is used by the raw and text profile readers.
-  void addFuncName(StringRef FuncName) {
+  Error addFuncName(StringRef FuncName) {
+    if (FuncName.empty())
+      return make_error<InstrProfError>(instrprof_error::malformed);
     auto Ins = NameTab.insert(FuncName);
     if (Ins.second)
       MD5NameMap.push_back(std::make_pair(
           IndexedInstrProf::ComputeHash(FuncName), Ins.first->getKey()));
+    return Error::success();
   }
 
   /// Map a function address to its name's MD5 hash. This interface
@@ -511,11 +514,13 @@ Error InstrProfSymtab::create(StringRef NameStrings) {
 }
 
 template <typename NameIterRange>
-void InstrProfSymtab::create(const NameIterRange &IterRange) {
+Error InstrProfSymtab::create(const NameIterRange &IterRange) {
   for (auto Name : IterRange)
-    addFuncName(Name);
+    if (Error E = addFuncName(Name))
+      return E;
 
   finalizeSymtab();
+  return Error::success();
 }
 
 void InstrProfSymtab::finalizeSymtab() {

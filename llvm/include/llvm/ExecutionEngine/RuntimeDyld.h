@@ -1,4 +1,4 @@
-//===-- RuntimeDyld.h - Run-time dynamic linker for MC-JIT ------*- C++ -*-===//
+//===- RuntimeDyld.h - Run-time dynamic linker for MC-JIT -------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -32,7 +32,9 @@
 namespace llvm {
 
 namespace object {
-  template <typename T> class OwningBinary;
+
+template <typename T> class OwningBinary;
+
 } // end namespace object
 
 /// Base class for errors originating in RuntimeDyld, e.g. missing relocation
@@ -51,8 +53,8 @@ private:
   std::string ErrMsg;
 };
 
-class RuntimeDyldImpl;
 class RuntimeDyldCheckerImpl;
+class RuntimeDyldImpl;
 
 class RuntimeDyld {
   friend class RuntimeDyldCheckerImpl;
@@ -68,7 +70,7 @@ public:
     friend class RuntimeDyldImpl;
 
   public:
-    typedef std::map<object::SectionRef, unsigned> ObjSectionToIDMap;
+    using ObjSectionToIDMap = std::map<object::SectionRef, unsigned>;
 
     LoadedObjectInfo(RuntimeDyldImpl &RTDyld, ObjSectionToIDMap ObjSecToIDMap)
         : RTDyld(RTDyld), ObjSecToIDMap(std::move(ObjSecToIDMap)) {}
@@ -186,7 +188,7 @@ public:
   /// \brief Construct a RuntimeDyld instance.
   RuntimeDyld(MemoryManager &MemMgr, JITSymbolResolver &Resolver);
   RuntimeDyld(const RuntimeDyld &) = delete;
-  void operator=(const RuntimeDyld &) = delete;
+  RuntimeDyld &operator=(const RuntimeDyld &) = delete;
   ~RuntimeDyld();
 
   /// Add the referenced object file to the list of objects to be loaded and

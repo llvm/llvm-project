@@ -200,7 +200,8 @@ TextInstrProfReader::readValueProfileData(InstrProfRecord &Record) {
         std::pair<StringRef, StringRef> VD = Line->rsplit(':');
         uint64_t TakenCount, Value;
         if (ValueKind == IPVK_IndirectCallTarget) {
-          Symtab->addFuncName(VD.first);
+          if (Error E = Symtab->addFuncName(VD.first))
+            return E;
           Value = IndexedInstrProf::ComputeHash(VD.first);
         } else {
           READ_NUM(VD.first, Value);
@@ -232,7 +233,8 @@ Error TextInstrProfReader::readNextRecord(InstrProfRecord &Record) {
 
   // Read the function name.
   Record.Name = *Line++;
-  Symtab->addFuncName(Record.Name);
+  if (Error E = Symtab->addFuncName(Record.Name))
+    return E;
 
   // Read the function hash.
   if (Line.is_at_end())
@@ -694,7 +696,9 @@ InstrProfSymtab &IndexedInstrProfReader::getSymtab() {
     return *Symtab.get();
 
   std::unique_ptr<InstrProfSymtab> NewSymtab = make_unique<InstrProfSymtab>();
-  Index->populateSymtab(*NewSymtab.get());
+  if (Error E = Index->populateSymtab(*NewSymtab.get())) {
+    consumeError(error(InstrProfError::take(std::move(E))));
+  }
 
   Symtab = std::move(NewSymtab);
   return *Symtab.get();
