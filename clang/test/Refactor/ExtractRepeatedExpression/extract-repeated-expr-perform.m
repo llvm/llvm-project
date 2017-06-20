@@ -78,3 +78,21 @@ void worksOnClassProperty() {
 // CHECK5-NEXT: "classObject" [[@LINE-4]]:3 -> [[@LINE-4]]:22
 
 // RUN: clang-refactor-test perform -action extract-repeated-expr-into-var -at=%s:73:3 %s | FileCheck --check-prefix=CHECK5 %s
+
+#define MACROARG1(X, Y) (X)
+#define MACROARG2(X) X; ref.object.prop = 0
+
+void macroArgument(Wrapper *ref) {
+  // macro-arg1: +1:13
+  MACROARG1(Wrapper.classObject->ivar, 1); // MACRO-ARG1: "Object *classObject = Wrapper.classObject;\n" [[@LINE]]:3 -> [[@LINE]]:3
+                                             // MACRO-ARG1-NEXT: "classObject" [[@LINE-1]]:13 -> [[@LINE-1]]:32
+  MACROARG1(Wrapper.classObject.prop, 0) = 0;// MACRO-ARG1-NEXT: "classObject" [[@LINE]]:13 -> [[@LINE]]:32
+
+  // macro-arg2: +3:13
+  MACROARG2(int x = 0; ref.object->ivar); // MACRO-ARG2: "Object *object = ref.object;\n" [[@LINE]]:3 -> [[@LINE]]:3
+                                          // MACRO-ARG2-NEXT: "object" [[@LINE-1]]:24 -> [[@LINE-1]]:34
+  MACROARG2(ref.object.prop);// MARO-ARG2-NEXT: "object" [[@LINE]]:13 -> [[@LINE]]:23
+}
+
+// RUN: clang-refactor-test perform -action extract-repeated-expr-into-var -at=macro-arg1 %s | FileCheck --check-prefix=MACRO-ARG1 %s
+// RUN: clang-refactor-test perform -action extract-repeated-expr-into-var -at=macro-arg2 %s | FileCheck --check-prefix=MACRO-ARG2 %s

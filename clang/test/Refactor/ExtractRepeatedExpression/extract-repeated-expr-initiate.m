@@ -92,3 +92,15 @@ void implicitPropertyWithoutGetter(ImplicitPropertyWithoutGetter *x) {
 }
 
 // RUN: not clang-refactor-test initiate -action extract-repeated-expr-into-var -at=%s:90:3 %s 2>&1 | FileCheck --check-prefix=CHECK-NO %s
+
+// Prohibit ininiation in macros:
+
+#define MACROREF(X) X.object
+
+void prohibitMacroExpr(Wrapper *wrapper) {
+  // macro-prohibited: +1:3
+  wrapper.object.prop = 0;
+  MACROREF(wrapper).prop = 1;
+}
+
+// RUN: not clang-refactor-test initiate -action extract-repeated-expr-into-var -at=macro-prohibited %s 2>&1 | FileCheck --check-prefix=CHECK-NO %s

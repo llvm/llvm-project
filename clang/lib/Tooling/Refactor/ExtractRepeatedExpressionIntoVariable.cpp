@@ -88,6 +88,7 @@ public:
 class DuplicateExprFinder : public RecursiveASTVisitor<DuplicateExprFinder>,
                             PrinterHelper {
   const Expr *Target;
+  const ASTContext &Context;
   const PrintingPolicy &PP;
   Stmt::StmtClass ExprKind;
   QualType T;
@@ -102,8 +103,10 @@ class DuplicateExprFinder : public RecursiveASTVisitor<DuplicateExprFinder>,
 public:
   SmallVector<const Expr *, 4> DuplicateExpressions;
 
-  DuplicateExprFinder(const Expr *E, const PrintingPolicy &PP)
-      : Target(E), PP(PP), ExprKind(E->getStmtClass()), T(E->getType()) {
+  DuplicateExprFinder(const Expr *E, const ASTContext &Context,
+                      const PrintingPolicy &PP)
+      : Target(E), Context(Context), PP(PP), ExprKind(E->getStmtClass()),
+        T(E->getType()) {
     printExpr(ExprString, E);
     DuplicateExprSemanticProfiler(ExprDecls).TraverseStmt(
         const_cast<Expr *>(E));
@@ -126,6 +129,16 @@ public:
     if (E == Target) {
       DuplicateExpressions.push_back(E);
       return true;
+    }
+    // The expression should not be in a macro.
+    SourceRange R = E->getSourceRange();
+    if (R.getBegin().isMacroID()) {
+      if (!Context.getSourceManager().isMacroArgExpansion(R.getBegin()))
+        return true;
+    }
+    if (R.getEnd().isMacroID()) {
+      if (!Context.getSourceManager().isMacroArgExpansion(R.getEnd()))
+        return true;
     }
     // The expression types should match.
     if (E->getType() != T)
@@ -204,7 +217,7 @@ clang::tooling::initiateExtractRepeatedExpressionIntoVariableOperation(
       (!T->isAnyPointerType() && !T->isReferenceType()))
     return None;
 
-  DuplicateExprFinder DupFinder(E, Context.getPrintingPolicy());
+  DuplicateExprFinder DupFinder(E, Context, Context.getPrintingPolicy());
   DupFinder.TraverseDecl(const_cast<Decl *>(ParentDecl));
   if (DupFinder.DuplicateExpressions.size() < 2)
     return None;
@@ -354,15 +367,17 @@ ExtractRepeatedExpressionIntoVariableOperation::perform(
   OS << " = ";
   E->printPretty(OS, /*Helper=*/nullptr, Context.getPrintingPolicy());
   OS << ";\n";
-  Replacements.emplace_back(SourceRange(LocFinder.Loc, LocFinder.Loc),
-                            OS.str());
+  SourceLocation InsertionLoc = LocFinder.Loc;
+  if (InsertionLoc.isMacroID())
+    InsertionLoc = SM.getExpansionLoc(InsertionLoc);
+  Replacements.emplace_back(SourceRange(InsertionLoc, InsertionLoc), OS.str());
 
   // Replace the duplicates with a reference to the variable.
   for (const Expr *E : DuplicateExpressions)
     Replacements.emplace_back(
-        SourceRange(
-            E->getLocStart(),
-            getPreciseTokenLocEnd(E->getLocEnd(), SM, Context.getLangOpts())),
+        SourceRange(SM.getSpellingLoc(E->getLocStart()),
+                    getPreciseTokenLocEnd(SM.getSpellingLoc(E->getLocEnd()), SM,
+                                          Context.getLangOpts())),
         Name);
 
   return std::move(Replacements);
