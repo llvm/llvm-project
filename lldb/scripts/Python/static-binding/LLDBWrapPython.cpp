@@ -75673,6 +75673,9 @@ SWIG_init(void) {
   SWIG_Python_SetConstant(d, "eNumLanguageTypes",SWIG_From_int(static_cast< int >(lldb::eNumLanguageTypes)));
   SWIG_Python_SetConstant(d, "eInstrumentationRuntimeTypeAddressSanitizer",SWIG_From_int(static_cast< int >(lldb::eInstrumentationRuntimeTypeAddressSanitizer)));
   SWIG_Python_SetConstant(d, "eInstrumentationRuntimeTypeThreadSanitizer",SWIG_From_int(static_cast< int >(lldb::eInstrumentationRuntimeTypeThreadSanitizer)));
+  SWIG_Python_SetConstant(d, "eInstrumentationRuntimeTypeUndefinedBehaviorSanitizer",SWIG_From_int(static_cast< int >(lldb::eInstrumentationRuntimeTypeUndefinedBehaviorSanitizer)));
+  SWIG_Python_SetConstant(d, "eInstrumentationRuntimeTypeMainThreadChecker",SWIG_From_int(static_cast< int >(lldb::eInstrumentationRuntimeTypeMainThreadChecker)));
+  SWIG_Python_SetConstant(d, "eInstrumentationRuntimeTypeSwiftRuntimeReporting",SWIG_From_int(static_cast< int >(lldb::eInstrumentationRuntimeTypeSwiftRuntimeReporting)));
   SWIG_Python_SetConstant(d, "eNumInstrumentationRuntimeTypes",SWIG_From_int(static_cast< int >(lldb::eNumInstrumentationRuntimeTypes)));
   SWIG_Python_SetConstant(d, "eNoDynamicValues",SWIG_From_int(static_cast< int >(lldb::eNoDynamicValues)));
   SWIG_Python_SetConstant(d, "eDynamicCanRunTarget",SWIG_From_int(static_cast< int >(lldb::eDynamicCanRunTarget)));
