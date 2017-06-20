@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -std=c++14 -verify -fexceptions -fcxx-exceptions %s
 // RUN: %clang_cc1 -std=c++1z -verify -fexceptions -fcxx-exceptions %s -Wno-dynamic-exception-spec
+// RUN: %clang_cc1 -std=c++14 -verify -fexceptions -fcxx-exceptions -Wno-c++1z-compat-mangling -DNO_COMPAT_MANGLING %s
 
 #if __cplusplus > 201402L
 
@@ -81,7 +82,7 @@ namespace CompatWarning {
   auto f5() -> void (*)() throw();
   auto f6() -> void (&)() throw();
   auto f7() -> void (X::*)() throw();
-#if __cplusplus <= 201402L
+#if __cplusplus <= 201402L && !defined(NO_COMPAT_MANGLING)
   // expected-warning@-8 {{mangled name of 'f1' will change in C++17 due to non-throwing exception specification in function signature}}
   // expected-warning@-8 {{mangled name of 'f2' will change in C++17 due to non-throwing exception specification in function signature}}
   // expected-warning@-8 {{mangled name of 'f3' will change in C++17 due to non-throwing exception specification in function signature}}

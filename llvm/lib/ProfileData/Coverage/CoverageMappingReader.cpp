@@ -419,6 +419,8 @@ class VersionedCovMapFuncRecordReader : public CovMapFuncRecordReader {
       StringRef FuncName;
       if (Error Err = CFR->template getFuncName<Endian>(ProfileNames, FuncName))
         return Err;
+      if (FuncName.empty())
+        return make_error<InstrProfError>(instrprof_error::malformed);
       Records.emplace_back(Version, FuncName, FuncHash, Mapping, FilenamesBegin,
                            Filenames.size() - FilenamesBegin);
       return Error::success();

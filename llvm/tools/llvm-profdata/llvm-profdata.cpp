@@ -246,10 +246,12 @@ static void mergeInstrProfile(const WeightedFileVector &Inputs,
       exitWithError(std::move(WC->Err), WC->ErrWhence);
 
   InstrProfWriter &Writer = Contexts[0]->Writer;
-  if (OutputFormat == PF_Text)
-    Writer.writeText(Output);
-  else
+  if (OutputFormat == PF_Text) {
+    if (Error E = Writer.writeText(Output))
+      exitWithError(std::move(E));
+  } else {
     Writer.write(Output);
+  }
 }
 
 static sampleprof::SampleProfileFormat FormatMap[] = {
