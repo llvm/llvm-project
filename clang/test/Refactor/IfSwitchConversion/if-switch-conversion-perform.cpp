@@ -305,3 +305,17 @@ void noBracesNeeded(int x) {
 }
 
 // RUN: clang-refactor-test perform -action if-switch-conversion -at=%s:253:3 -at=%s:269:3 -at=%s:275:3 -at=%s:288:3 -at=%s:295:3 %s | FileCheck --check-prefix=CHECK8 %s
+
+#define MACRO(X) X
+
+void macroArg(int x) {
+  // macro-arg: +1:9
+  MACRO(if (x == 2) { // MACRO-ARG: "switch (" [[@LINE]]:9 -> [[@LINE]]:13
+    ;                 // MACRO-ARG: ") {\ncase " [[@LINE-1]]:14 -> [[@LINE-1]]:18
+                      // MACRO-ARG: ":" [[@LINE-2]]:19 -> [[@LINE-2]]:22
+  } else if (x == 3) { // MACRO-ARG: "break;\ncase " [[@LINE]]:3 -> [[@LINE]]:19
+    ;                 // MACRO-ARG: ":" [[@LINE-1]]:20 -> [[@LINE-1]]:23
+  }); // MACRO-ARG: "break;\n" [[@LINE]]:3 -> [[@LINE]]:3
+}
+
+// RUN: clang-refactor-test perform -action if-switch-conversion -at=macro-arg %s | FileCheck --check-prefix=MACRO-ARG %s

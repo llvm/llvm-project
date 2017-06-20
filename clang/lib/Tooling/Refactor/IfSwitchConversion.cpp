@@ -302,8 +302,9 @@ struct CasePlacement {
 
   CasePlacement(const IfStmt *If, const SourceManager &SM,
                 bool AreBracesNeeded) {
-    CaseStartLoc = isa<CompoundStmt>(If->getThen()) ? If->getThen()->getLocEnd()
-                                                    : If->getElseLoc();
+    CaseStartLoc = SM.getSpellingLoc(isa<CompoundStmt>(If->getThen())
+                                         ? If->getThen()->getLocEnd()
+                                         : If->getElseLoc());
     SourceLocation BodyEndLoc = findLastNonCompoundLocation(If->getThen());
     NeedsNewLine = BodyEndLoc.isValid()
                        ? areOnSameLine(CaseStartLoc, BodyEndLoc, SM)
@@ -343,16 +344,18 @@ addCaseReplacements(const IfStmt *If, const CasePlacement &CaseInfo,
   gatherCaseValues(If->getCond(), CaseValues);
   assert(!CaseValues.empty());
   Replacements.emplace_back(
-      SourceRange(CaseInfo.CaseStartLoc, CaseValues[0]->getLocStart()),
+      SourceRange(CaseInfo.CaseStartLoc,
+                  SM.getSpellingLoc(CaseValues[0]->getLocStart())),
       CaseInfo.getCaseReplacementString());
 
-  SourceLocation PrevCaseEnd =
-      getPreciseTokenLocEnd(CaseValues[0]->getLocEnd(), SM, LangOpts);
+  SourceLocation PrevCaseEnd = getPreciseTokenLocEnd(
+      SM.getSpellingLoc(CaseValues[0]->getLocEnd()), SM, LangOpts);
   for (const Expr *CaseValue : llvm::makeArrayRef(CaseValues).drop_front()) {
     Replacements.emplace_back(
-        SourceRange(PrevCaseEnd, CaseValue->getLocStart()),
+        SourceRange(PrevCaseEnd, SM.getSpellingLoc(CaseValue->getLocStart())),
         StringRef(":\ncase "));
-    PrevCaseEnd = getPreciseTokenLocEnd(CaseValue->getLocEnd(), SM, LangOpts);
+    PrevCaseEnd = getPreciseTokenLocEnd(
+        SM.getSpellingLoc(CaseValue->getLocEnd()), SM, LangOpts);
   }
 
   AreBracesNeeded = areBracesNeeded(If->getThen());
@@ -361,12 +364,13 @@ addCaseReplacements(const IfStmt *If, const CasePlacement &CaseInfo,
     Replacements.emplace_back(
         SourceRange(
             PrevCaseEnd,
-            getPreciseTokenLocEnd(If->getThen()->getLocStart(), SM, LangOpts)),
+            getPreciseTokenLocEnd(
+                SM.getSpellingLoc(If->getThen()->getLocStart()), SM, LangOpts)),
         ColonReplacement);
   } else {
     // Find the location of the if's ')'
-    SourceLocation End =
-        findClosingParenLocEnd(If->getCond()->getLocEnd(), SM, LangOpts);
+    SourceLocation End = findClosingParenLocEnd(
+        SM.getSpellingLoc(If->getCond()->getLocEnd()), SM, LangOpts);
     if (!End.isValid())
       return llvm::make_error<RefactoringOperationError>(
           "couldn't find the location of ')'");
@@ -388,13 +392,14 @@ IfSwitchConversionOperation::perform(ASTContext &Context,
   // should be preserved.
   const Expr *LHS = getConditionFirstLHS(If->getCond());
   assert(LHS && "Missing == expression");
-  Replacements.emplace_back(SourceRange(If->getLocStart(), LHS->getLocStart()),
+  Replacements.emplace_back(SourceRange(SM.getSpellingLoc(If->getLocStart()),
+                                        SM.getSpellingLoc(LHS->getLocStart())),
                             StringRef("switch ("));
 
   bool AreBracesNeeded = false;
   if (auto Error = addCaseReplacements(
-          If,
-          CasePlacement(getPreciseTokenLocEnd(LHS->getLocEnd(), SM, LangOpts)),
+          If, CasePlacement(getPreciseTokenLocEnd(
+                  SM.getSpellingLoc(LHS->getLocEnd()), SM, LangOpts)),
           AreBracesNeeded, Replacements, SM, LangOpts))
     return std::move(Error);
 
@@ -415,8 +420,10 @@ IfSwitchConversionOperation::perform(ASTContext &Context,
   if (const Stmt *Else = CurrentIf->getElse()) {
     CasePlacement DefaultInfo(CurrentIf, SM, AreBracesNeeded);
     AreBracesNeeded = areBracesNeeded(Else);
+
     SourceLocation EndLoc = getPreciseTokenLocEnd(
-        isa<CompoundStmt>(Else) ? Else->getLocStart() : CurrentIf->getElseLoc(),
+        SM.getSpellingLoc(isa<CompoundStmt>(Else) ? Else->getLocStart()
+                                                  : CurrentIf->getElseLoc()),
         SM, LangOpts);
     Replacements.emplace_back(SourceRange(DefaultInfo.CaseStartLoc, EndLoc),
                               DefaultInfo.getCaseReplacementString(
@@ -450,11 +457,12 @@ IfSwitchConversionOperation::perform(ASTContext &Context,
       OS << "}\n";
   }
 
-  if (!OS.str().empty())
+  if (!OS.str().empty()) {
+    TerminatingReplacementLoc = SM.getSpellingLoc(TerminatingReplacementLoc);
     Replacements.emplace_back(
         SourceRange(TerminatingReplacementLoc, TerminatingReplacementLoc),
         std::move(OS.str()));
+  }
 
-  // TODO: verify replacements (no macro locs + ordered).
   return std::move(Replacements);
 }
