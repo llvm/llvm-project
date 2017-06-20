@@ -1,4 +1,4 @@
-//===---- OrcMCJITReplacement.h - Orc based MCJIT replacement ---*- C++ -*-===//
+//===- OrcMCJITReplacement.h - Orc based MCJIT replacement ------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -24,9 +24,12 @@
 #include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
 #include "llvm/ExecutionEngine/Orc/LazyEmittingLayer.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
+#include "llvm/ExecutionEngine/RTDyldMemoryManager.h"
 #include "llvm/ExecutionEngine/RuntimeDyld.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Mangler.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/ObjectFile.h"
@@ -45,6 +48,9 @@
 #include <vector>
 
 namespace llvm {
+
+class ObjectCache;
+
 namespace orc {
 
 class OrcMCJITReplacement : public ExecutionEngine {
@@ -151,7 +157,6 @@ class OrcMCJITReplacement : public ExecutionEngine {
   };
 
 private:
-
   static ExecutionEngine *
   createOrcMCJITReplacement(std::string *ErrorMsg,
                             std::shared_ptr<MCJITMemoryManager> MemMgr,
@@ -162,10 +167,6 @@ private:
   }
 
 public:
-  static void Register() {
-    OrcMCJITReplacementCtor = createOrcMCJITReplacement;
-  }
-
   OrcMCJITReplacement(
       std::shared_ptr<MCJITMemoryManager> MemMgr,
       std::shared_ptr<JITSymbolResolver> ClientResolver,
@@ -178,8 +179,11 @@ public:
         CompileLayer(ObjectLayer, SimpleCompiler(*this->TM)),
         LazyEmitLayer(CompileLayer) {}
 
-  void addModule(std::unique_ptr<Module> M) override {
+  static void Register() {
+    OrcMCJITReplacementCtor = createOrcMCJITReplacement;
+  }
 
+  void addModule(std::unique_ptr<Module> M) override {
     // If this module doesn't have a DataLayout attached then attach the
     // default.
     if (M->getDataLayout().isDefault()) {
@@ -308,8 +312,8 @@ private:
 
   class NotifyObjectLoadedT {
   public:
-    typedef std::vector<std::unique_ptr<RuntimeDyld::LoadedObjectInfo>>
-        LoadedObjInfoListT;
+    using LoadedObjInfoListT =
+        std::vector<std::unique_ptr<RuntimeDyld::LoadedObjectInfo>>;
 
     NotifyObjectLoadedT(OrcMCJITReplacement &M) : M(M) {}
 
@@ -360,9 +364,9 @@ private:
     return MangledName;
   }
 
-  typedef RTDyldObjectLinkingLayer<NotifyObjectLoadedT> ObjectLayerT;
-  typedef IRCompileLayer<ObjectLayerT> CompileLayerT;
-  typedef LazyEmittingLayer<CompileLayerT> LazyEmitLayerT;
+  using ObjectLayerT = RTDyldObjectLinkingLayer<NotifyObjectLoadedT>;
+  using CompileLayerT = IRCompileLayer<ObjectLayerT>;
+  using LazyEmitLayerT = LazyEmittingLayer<CompileLayerT>;
 
   std::unique_ptr<TargetMachine> TM;
   MCJITReplacementMemMgr MemMgr;
@@ -380,7 +384,7 @@ private:
   // We need to store ObjLayerT::ObjSetHandles for each of the object sets
   // that have been emitted but not yet finalized so that we can forward the
   // mapSectionAddress calls appropriately.
-  typedef std::set<const void *> SectionAddrSet;
+  using SectionAddrSet = std::set<const void *>;
   struct ObjSetHandleCompare {
     bool operator()(ObjectLayerT::ObjSetHandleT H1,
                     ObjectLayerT::ObjSetHandleT H2) const {
@@ -395,6 +399,7 @@ private:
 };
 
 } // end namespace orc
+
 } // end namespace llvm
 
 #endif // LLVM_LIB_EXECUTIONENGINE_ORC_MCJITREPLACEMENT_H

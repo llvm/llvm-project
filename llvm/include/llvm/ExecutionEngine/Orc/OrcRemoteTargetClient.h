@@ -1,4 +1,4 @@
-//===---- OrcRemoteTargetClient.h - Orc Remote-target Client ----*- C++ -*-===//
+//===- OrcRemoteTargetClient.h - Orc Remote-target Client -------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -16,10 +16,29 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_ORCREMOTETARGETCLIENT_H
 #define LLVM_EXECUTIONENGINE_ORC_ORCREMOTETARGETCLIENT_H
 
-#include "IndirectionUtils.h"
-#include "OrcRemoteTargetRPCAPI.h"
+#include "llvm/ADT/Optional.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ExecutionEngine/JITSymbol.h"
+#include "llvm/ExecutionEngine/Orc/IndirectionUtils.h"
+#include "llvm/ExecutionEngine/Orc/OrcRemoteTargetRPCAPI.h"
 #include "llvm/ExecutionEngine/RuntimeDyld.h"
-#include <system_error>
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Format.h"
+#include "llvm/Support/MathExtras.h"
+#include "llvm/Support/Memory.h"
+#include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <memory>
+#include <string>
+#include <tuple>
+#include <utility>
+#include <vector>
 
 #define DEBUG_TYPE "orc-remote"
 
@@ -207,7 +226,6 @@ public:
       DEBUG(dbgs() << "Allocator " << Id << " finalizing:\n");
 
       for (auto &ObjAllocs : Unfinalized) {
-
         for (auto &Alloc : ObjAllocs.CodeAllocs) {
           DEBUG(dbgs() << "  copying code: "
                        << static_cast<void *>(Alloc.getLocalAddress()) << " -> "
@@ -469,7 +487,7 @@ public:
     OrcRemoteTargetClient &Remote;
     ResourceIdMgr::ResourceId Id;
     std::vector<RemoteIndirectStubsInfo> RemoteIndirectStubsInfos;
-    typedef std::pair<uint16_t, uint16_t> StubKey;
+    using StubKey = std::pair<uint16_t, uint16_t>;
     std::vector<StubKey> FreeStubs;
     StringMap<std::pair<StubKey, JITSymbolFlags>> StubIndexes;
 
@@ -710,7 +728,6 @@ private:
 
   Expected<JITTargetAddress> reserveMem(ResourceIdMgr::ResourceId Id,
                                         uint64_t Size, uint32_t Align) {
-
     // Check for an 'out-of-band' error, e.g. from an MM destructor.
     if (ExistingError)
       return std::move(ExistingError);

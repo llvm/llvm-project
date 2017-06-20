@@ -1,4 +1,4 @@
-//===-- CompileUtils.h - Utilities for compiling IR in the JIT --*- C++ -*-===//
+//===- CompileUtils.h - Utilities for compiling IR in the JIT ---*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,13 +14,24 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_COMPILEUTILS_H
 #define LLVM_EXECUTIONENGINE_ORC_COMPILEUTILS_H
 
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ExecutionEngine/ObjectMemoryBuffer.h"
 #include "llvm/IR/LegacyPassManager.h"
-#include "llvm/MC/MCContext.h"
+#include "llvm/Object/Binary.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
+#include <algorithm>
+#include <memory>
 
 namespace llvm {
+
+class MCContext;
+class Module;
+
 namespace orc {
 
 /// @brief Simple compile functor: Takes a single IR module and returns an
@@ -44,7 +55,7 @@ public:
         new ObjectMemoryBuffer(std::move(ObjBufferSV)));
     Expected<std::unique_ptr<object::ObjectFile>> Obj =
         object::ObjectFile::createObjectFile(ObjBuffer->getMemBufferRef());
-    typedef object::OwningBinary<object::ObjectFile> OwningObj;
+    using OwningObj = object::OwningBinary<object::ObjectFile>;
     if (Obj)
       return OwningObj(std::move(*Obj), std::move(ObjBuffer));
     // TODO: Actually report errors helpfully.
@@ -56,7 +67,8 @@ private:
   TargetMachine &TM;
 };
 
-} // End namespace orc.
-} // End namespace llvm.
+} // end namespace orc
+
+} // end namespace llvm
 
 #endif // LLVM_EXECUTIONENGINE_ORC_COMPILEUTILS_H

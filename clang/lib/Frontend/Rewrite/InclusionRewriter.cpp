@@ -140,7 +140,7 @@ void InclusionRewriter::WriteLineInfo(StringRef Filename, int Line,
 }
 
 void InclusionRewriter::WriteImplicitModuleImport(const Module *Mod) {
-  OS << "#pragma clang module import " << Mod->getFullModuleName()
+  OS << "#pragma clang module import " << Mod->getFullModuleName(true)
      << " /* clang -frewrite-includes: implicit import */" << MainEOL;
 }
 
@@ -471,15 +471,15 @@ void InclusionRewriter::Process(FileID FileId,
             else if (const IncludedFile *Inc = FindIncludeAtLocation(Loc)) {
               const Module *Mod = FindEnteredModule(Loc);
               if (Mod)
-                OS << "#pragma clang module begin " << Mod->getFullModuleName()
-                   << "\n";
+                OS << "#pragma clang module begin "
+                   << Mod->getFullModuleName(true) << "\n";
 
               // Include and recursively process the file.
               Process(Inc->Id, Inc->FileType);
 
               if (Mod)
-                OS << "#pragma clang module end /*" << Mod->getFullModuleName()
-                   << "*/\n";
+                OS << "#pragma clang module end /*"
+                   << Mod->getFullModuleName(true) << "*/\n";
 
               // Add line marker to indicate we're returning from an included
               // file.

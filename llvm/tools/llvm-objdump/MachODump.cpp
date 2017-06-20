@@ -9340,6 +9340,22 @@ void llvm::printMachOLoadCommands(const object::ObjectFile *Obj) {
 //===----------------------------------------------------------------------===//
 
 void llvm::printMachOExportsTrie(const object::MachOObjectFile *Obj) {
+  uint64_t BaseSegmentAddress = 0;
+  for (const auto &Command : Obj->load_commands()) {
+    if (Command.C.cmd == MachO::LC_SEGMENT) {
+      MachO::segment_command Seg = Obj->getSegmentLoadCommand(Command);
+      if (Seg.fileoff == 0 && Seg.filesize != 0) {
+        BaseSegmentAddress = Seg.vmaddr;
+        break;
+      }
+    } else if (Command.C.cmd == MachO::LC_SEGMENT_64) {
+      MachO::segment_command_64 Seg = Obj->getSegment64LoadCommand(Command);
+      if (Seg.fileoff == 0 && Seg.filesize != 0) {
+        BaseSegmentAddress = Seg.vmaddr;
+        break;
+      }
+    }
+  }
   for (const llvm::object::ExportEntry &Entry : Obj->exports()) {
     uint64_t Flags = Entry.flags();
     bool ReExport = (Flags & MachO::EXPORT_SYMBOL_FLAGS_REEXPORT);
@@ -9353,7 +9369,7 @@ void llvm::printMachOExportsTrie(const object::MachOObjectFile *Obj) {
       outs() << "[re-export] ";
     else
       outs() << format("0x%08llX  ",
-                       Entry.address()); // FIXME:add in base address
+                       Entry.address() + BaseSegmentAddress);
     outs() << Entry.name();
     if (WeakDef || ThreadLocal || Resolver || Abs) {
       bool NeedsComma = false;

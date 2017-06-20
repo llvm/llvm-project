@@ -1,4 +1,4 @@
-//===-- IndirectionUtils.h - Utilities for adding indirections --*- C++ -*-===//
+//===- IndirectionUtils.h - Utilities for adding indirections ---*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -18,9 +18,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
-#include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/Mangler.h"
-#include "llvm/IR/Module.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Memory.h"
 #include "llvm/Support/Process.h"
@@ -36,12 +33,23 @@
 #include <vector>
 
 namespace llvm {
+
+class Constant;
+class Function;
+class FunctionType;
+class GlobalAlias;
+class GlobalVariable;
+class Module;
+class PointerType;
+class Triple;
+class Value;
+
 namespace orc {
 
 /// @brief Target-independent base class for compile callback management.
 class JITCompileCallbackManager {
 public:
-  typedef std::function<JITTargetAddress()> CompileFtor;
+  using CompileFtor = std::function<JITTargetAddress()>;
 
   /// @brief Handle to a newly created compile callback. Can be used to get an
   ///        IR constant representing the address of the trampoline, and to set
@@ -125,7 +133,7 @@ public:
 protected:
   JITTargetAddress ErrorHandlerAddress;
 
-  typedef std::map<JITTargetAddress, CompileFtor> TrampolineMapT;
+  using TrampolineMapT = std::map<JITTargetAddress, CompileFtor>;
   TrampolineMapT ActiveTrampolines;
   std::vector<JITTargetAddress> AvailableTrampolines;
 
@@ -155,7 +163,6 @@ public:
   ///                            process to be used if a compile callback fails.
   LocalJITCompileCallbackManager(JITTargetAddress ErrorHandlerAddress)
       : JITCompileCallbackManager(ErrorHandlerAddress) {
-
     /// Set up the resolver block.
     std::error_code EC;
     ResolverBlock = sys::OwningMemoryBlock(sys::Memory::allocateMappedMemory(
@@ -220,7 +227,7 @@ private:
 class IndirectStubsManager {
 public:
   /// @brief Map type for initializing the manager. See init.
-  typedef StringMap<std::pair<JITTargetAddress, JITSymbolFlags>> StubInitsMap;
+  using StubInitsMap = StringMap<std::pair<JITTargetAddress, JITSymbolFlags>>;
 
   virtual ~IndirectStubsManager() = default;
 
@@ -336,7 +343,7 @@ private:
   }
 
   std::vector<typename TargetT::IndirectStubsInfo> IndirectStubsInfos;
-  typedef std::pair<uint16_t, uint16_t> StubKey;
+  using StubKey = std::pair<uint16_t, uint16_t>;
   std::vector<StubKey> FreeStubs;
   StringMap<std::pair<StubKey, JITSymbolFlags>> StubIndexes;
 };
@@ -432,6 +439,7 @@ void cloneModuleFlagsMetadata(Module &Dst, const Module &Src,
                               ValueToValueMapTy &VMap);
 
 } // end namespace orc
+
 } // end namespace llvm
 
 #endif // LLVM_EXECUTIONENGINE_ORC_INDIRECTIONUTILS_H

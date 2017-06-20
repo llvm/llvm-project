@@ -349,7 +349,7 @@ void PrintPPOutputPPCallbacks::InclusionDirective(SourceLocation HashLoc,
     case tok::pp_include_next:
       startNewLineIfNeeded();
       MoveToLine(HashLoc);
-      OS << "#pragma clang module import " << Imported->getFullModuleName()
+      OS << "#pragma clang module import " << Imported->getFullModuleName(true)
          << " /* clang -E: implicit import for "
          << "#" << PP.getSpelling(IncludeTok) << " "
          << (IsAngled ? '<' : '"') << FileName << (IsAngled ? '>' : '"')
@@ -378,14 +378,14 @@ void PrintPPOutputPPCallbacks::InclusionDirective(SourceLocation HashLoc,
 /// Handle entering the scope of a module during a module compilation.
 void PrintPPOutputPPCallbacks::BeginModule(const Module *M) {
   startNewLineIfNeeded();
-  OS << "#pragma clang module begin " << M->getFullModuleName();
+  OS << "#pragma clang module begin " << M->getFullModuleName(true);
   setEmittedDirectiveOnThisLine();
 }
 
 /// Handle leaving the scope of a module during a module compilation.
 void PrintPPOutputPPCallbacks::EndModule(const Module *M) {
   startNewLineIfNeeded();
-  OS << "#pragma clang module end /*" << M->getFullModuleName() << "*/";
+  OS << "#pragma clang module end /*" << M->getFullModuleName(true) << "*/";
   setEmittedDirectiveOnThisLine();
 }
 

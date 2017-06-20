@@ -1,4 +1,4 @@
-//===- RegisterUsageInfo.cpp - Register Usage Informartion Storage --------===//
+//===- RegisterUsageInfo.cpp - Register Usage Information Storage ---------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -38,7 +38,7 @@ static cl::opt<bool> DumpRegUsage(
     cl::desc("print register usage details collected for analysis."));
 
 INITIALIZE_PASS(PhysicalRegisterUsageInfo, "reg-usage-info",
-                "Register Usage Informartion Stroage", false, true)
+                "Register Usage Information Storage", false, true)
 
 char PhysicalRegisterUsageInfo::ID = 0;
 

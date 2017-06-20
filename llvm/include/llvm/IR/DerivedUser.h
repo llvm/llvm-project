@@ -1,4 +1,4 @@
-//===-- DerivedUser.h - Base for non-IR Users -------------------*- C++ -*-===//
+//===- DerivedUser.h - Base for non-IR Users --------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,6 +14,9 @@
 
 namespace llvm {
 
+class Type;
+class Use;
+
 /// Extension point for the Value hierarchy. All classes outside of lib/IR
 /// that wish to inherit from User should instead inherit from DerivedUser
 /// instead. Inheriting from this class is discouraged.
@@ -24,10 +27,11 @@ namespace llvm {
 /// its use/def list machinery.
 class DerivedUser : public User {
 protected:
-  typedef void (*DeleteValueTy)(DerivedUser *);
+  using  DeleteValueTy = void (*)(DerivedUser *);
 
 private:
-  friend Value;
+  friend class Value;
+
   DeleteValueTy DeleteValue;
 
 public:
@@ -36,6 +40,6 @@ public:
       : User(Ty, VK, U, NumOps), DeleteValue(DeleteValue) {}
 };
 
-} // namespace llvm
+} // end namespace llvm
 
 #endif // LLVM_IR_DERIVEDUSER_H

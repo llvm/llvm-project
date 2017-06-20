@@ -1,4 +1,4 @@
-//===-- RTDyldObjectLinkingLayer.h - RTDyld-based jit linking  --*- C++ -*-===//
+//===- RTDyldObjectLinkingLayer.h - RTDyld-based jit linking  ---*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -17,10 +17,8 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/RuntimeDyld.h"
-#include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Error.h"
 #include <algorithm>
@@ -76,11 +74,11 @@ protected:
     bool Finalized = false;
   };
 
-  typedef std::list<std::unique_ptr<LinkedObjectSet>> LinkedObjectSetListT;
+  using LinkedObjectSetListT = std::list<std::unique_ptr<LinkedObjectSet>>;
 
 public:
   /// @brief Handle to a set of loaded objects.
-  typedef LinkedObjectSetListT::iterator ObjSetHandleT;
+  using ObjSetHandleT = LinkedObjectSetListT::iterator;
 };
 
 /// @brief Default (no-op) action to perform when loading objects.
@@ -101,7 +99,7 @@ template <typename NotifyLoadedFtor = DoNothingOnNotifyLoaded>
 class RTDyldObjectLinkingLayer : public RTDyldObjectLinkingLayerBase {
 public:
   /// @brief Functor for receiving finalization notifications.
-  typedef std::function<void(ObjSetHandleT)> NotifyFinalizedFtor;
+  using NotifyFinalizedFtor = std::function<void(ObjSetHandleT)>;
 
 private:
   template <typename ObjSetT, typename MemoryManagerPtrT,
@@ -216,8 +214,8 @@ private:
                         SymbolResolverPtrT Resolver,
                         FinalizerFtor Finalizer,
                         bool ProcessAllSections) {
-    typedef ConcreteLinkedObjectSet<ObjSetT, MemoryManagerPtrT,
-                                    SymbolResolverPtrT, FinalizerFtor> LOS;
+    using LOS = ConcreteLinkedObjectSet<ObjSetT, MemoryManagerPtrT,
+                                        SymbolResolverPtrT, FinalizerFtor>;
     return llvm::make_unique<LOS>(std::move(Objects), std::move(MemMgr),
                                   std::move(Resolver), std::move(Finalizer),
                                   ProcessAllSections);
@@ -226,8 +224,8 @@ private:
 public:
   /// @brief LoadedObjectInfo list. Contains a list of owning pointers to
   ///        RuntimeDyld::LoadedObjectInfo instances.
-  typedef std::vector<std::unique_ptr<RuntimeDyld::LoadedObjectInfo>>
-      LoadedObjInfoList;
+  using LoadedObjInfoList =
+      std::vector<std::unique_ptr<RuntimeDyld::LoadedObjectInfo>>;
 
   /// @brief Construct an ObjectLinkingLayer with the given NotifyLoaded,
   ///        and NotifyFinalized functors.
@@ -235,8 +233,7 @@ public:
       NotifyLoadedFtor NotifyLoaded = NotifyLoadedFtor(),
       NotifyFinalizedFtor NotifyFinalized = NotifyFinalizedFtor())
       : NotifyLoaded(std::move(NotifyLoaded)),
-        NotifyFinalized(std::move(NotifyFinalized)),
-        ProcessAllSections(false) {}
+        NotifyFinalized(std::move(NotifyFinalized)) {}
 
   /// @brief Set the 'ProcessAllSections' flag.
   ///
@@ -357,7 +354,7 @@ private:
   LinkedObjectSetListT LinkedObjSetList;
   NotifyLoadedFtor NotifyLoaded;
   NotifyFinalizedFtor NotifyFinalized;
-  bool ProcessAllSections;
+  bool ProcessAllSections = false;
 };
 
 } // end namespace orc

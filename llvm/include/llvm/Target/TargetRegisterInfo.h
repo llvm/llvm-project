@@ -1,4 +1,4 @@
-//=== Target/TargetRegisterInfo.h - Target Register Information -*- C++ -*-===//
+//==- Target/TargetRegisterInfo.h - Target Register Information --*- C++ -*-==//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -17,30 +17,35 @@
 #define LLVM_TARGET_TARGETREGISTERINFO_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/IR/CallingConv.h"
+#include "llvm/MC/LaneBitmask.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Printable.h"
 #include <cassert>
+#include <cstdint>
 #include <functional>
 
 namespace llvm {
 
 class BitVector;
-class MachineFunction;
-class RegScavenger;
-template<class T> class SmallVectorImpl;
-class VirtRegMap;
-class raw_ostream;
 class LiveRegMatrix;
+class MachineFunction;
+class MachineInstr;
+class RegScavenger;
+class VirtRegMap;
 
 class TargetRegisterClass {
 public:
-  typedef const MCPhysReg* iterator;
-  typedef const MCPhysReg* const_iterator;
-  typedef const TargetRegisterClass* const * sc_iterator;
+  using iterator = const MCPhysReg *;
+  using const_iterator = const MCPhysReg *;
+  using sc_iterator = const TargetRegisterClass* const *;
 
   // Instance variables filled by tablegen, do not use!
   const MCRegisterClass *MC;
@@ -151,7 +156,6 @@ public:
   ///   There exists SuperRC where:
   ///     For all Reg in SuperRC:
   ///       this->contains(Reg:Idx)
-  ///
   const uint16_t *getSuperRegIndices() const {
     return SuperRegIndices;
   }
@@ -182,7 +186,6 @@ public:
   /// other criteria.
   ///
   /// By default, this method returns all registers in the class.
-  ///
   ArrayRef<MCPhysReg> getRawAllocationOrder(const MachineFunction &MF) const {
     return OrderFunc ? OrderFunc(MF) : makeArrayRef(begin(), getNumRegs());
   }
@@ -217,8 +220,9 @@ struct RegClassWeight {
 ///
 class TargetRegisterInfo : public MCRegisterInfo {
 public:
-  typedef const TargetRegisterClass * const * regclass_iterator;
-  typedef const MVT::SimpleValueType* vt_iterator;
+  using regclass_iterator = const TargetRegisterClass * const *;
+  using vt_iterator = const MVT::SimpleValueType *;
+
 private:
   const TargetRegisterInfoDesc *InfoDesc;     // Extra desc array for codegen
   const char *const *SubRegIndexNames;        // Names of subreg indexes.
@@ -236,8 +240,8 @@ protected:
                      const LaneBitmask *SRILaneMasks,
                      LaneBitmask CoveringLanes);
   virtual ~TargetRegisterInfo();
-public:
 
+public:
   // Register numbers can represent physical registers, virtual registers, and
   // sometimes stack slots. The unsigned values are divided into these ranges:
   //
@@ -510,7 +514,7 @@ public:
   /// Prior to adding the live-out mask to a stackmap or patchpoint
   /// instruction, provide the target the opportunity to adjust it (mainly to
   /// remove pseudo-registers that should be ignored).
-  virtual void adjustStackMapLiveOutMask(uint32_t *Mask) const { }
+  virtual void adjustStackMapLiveOutMask(uint32_t *Mask) const {}
 
   /// Return a super-register of the specified register
   /// Reg so its sub-register of index SubIdx is Reg.
@@ -568,7 +572,6 @@ public:
   /// The ARM register Q0 has two D subregs dsub_0:D0 and dsub_1:D1. It also has
   /// ssub_0:S0 - ssub_3:S3 subregs.
   /// If you compose subreg indices dsub_1, ssub_0 you get ssub_2.
-  ///
   unsigned composeSubRegIndices(unsigned a, unsigned b) const {
     if (!a) return b;
     if (!b) return a;
@@ -643,7 +646,6 @@ public:
   /// corresponding argument register class.
   ///
   /// The function returns NULL if no register class can be found.
-  ///
   const TargetRegisterClass*
   getCommonSuperRegClass(const TargetRegisterClass *RCA, unsigned SubA,
                          const TargetRegisterClass *RCB, unsigned SubB,
@@ -654,7 +656,6 @@ public:
   //
 
   /// Register class iterators
-  ///
   regclass_iterator regclass_begin() const { return RegClassBegin; }
   regclass_iterator regclass_end() const { return RegClassEnd; }
   iterator_range<regclass_iterator> regclasses() const {
@@ -909,7 +910,6 @@ public:
   /// Return true if the register was spilled, false otherwise.
   /// If this function does not spill the register, the scavenger
   /// will instead spill it to the emergency spill slot.
-  ///
   virtual bool saveScavengerRegister(MachineBasicBlock &MBB,
                                      MachineBasicBlock::iterator I,
                                      MachineBasicBlock::iterator &UseMI,
@@ -968,7 +968,6 @@ public:
       ArrayRef<MCPhysReg> Exceptions = ArrayRef<MCPhysReg>()) const;
 };
 
-
 //===----------------------------------------------------------------------===//
 //                           SuperRegClassIterator
 //===----------------------------------------------------------------------===//
@@ -987,7 +986,7 @@ public:
 //
 class SuperRegClassIterator {
   const unsigned RCMaskWords;
-  unsigned SubReg;
+  unsigned SubReg = 0;
   const uint16_t *Idx;
   const uint32_t *Mask;
 
@@ -998,9 +997,7 @@ public:
                         const TargetRegisterInfo *TRI,
                         bool IncludeSelf = false)
     : RCMaskWords((TRI->getNumRegClasses() + 31) / 32),
-      SubReg(0),
-      Idx(RC->getSuperRegIndices()),
-      Mask(RC->getSubClassMask()) {
+      Idx(RC->getSuperRegIndices()), Mask(RC->getSubClassMask()) {
     if (!IncludeSelf)
       ++*this;
   }
@@ -1039,12 +1036,12 @@ class BitMaskClassIterator {
   /// Base index of CurrentChunk.
   /// In other words, the number of bit we read to get at the
   /// beginning of that chunck.
-  unsigned Base;
+  unsigned Base = 0;
   /// Adjust base index of CurrentChunk.
   /// Base index + how many bit we read within CurrentChunk.
-  unsigned Idx;
+  unsigned Idx = 0;
   /// Current register class ID.
-  unsigned ID;
+  unsigned ID = 0;
   /// Mask we are iterating over.
   const uint32_t *Mask;
   /// Current chunk of the Mask we are traversing.
@@ -1098,8 +1095,7 @@ public:
   ///
   /// \pre \p Mask != nullptr
   BitMaskClassIterator(const uint32_t *Mask, const TargetRegisterInfo &TRI)
-      : NumRegClasses(TRI.getNumRegClasses()), Base(0), Idx(0), ID(0),
-        Mask(Mask), CurrentChunk(*Mask) {
+      : NumRegClasses(TRI.getNumRegClasses()), Mask(Mask), CurrentChunk(*Mask) {
     // Move to the first ID.
     moveToNextID();
   }
@@ -1151,6 +1147,6 @@ Printable PrintRegUnit(unsigned Unit, const TargetRegisterInfo *TRI);
 /// registers on a \ref raw_ostream.
 Printable PrintVRegOrUnit(unsigned VRegOrUnit, const TargetRegisterInfo *TRI);
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_TARGET_TARGETREGISTERINFO_H
