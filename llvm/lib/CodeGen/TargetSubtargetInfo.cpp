@@ -1,4 +1,4 @@
-//===-- TargetSubtargetInfo.cpp - General Target Information ---------------==//
+//===- TargetSubtargetInfo.cpp - General Target Information ----------------==//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,15 +11,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Target/TargetSubtargetInfo.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/TargetSchedule.h"
+#include "llvm/MC/MCInst.h"
+#include "llvm/Target/TargetSubtargetInfo.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
+#include <string>
+
 using namespace llvm;
 
-//---------------------------------------------------------------------------
-// TargetSubtargetInfo Class
-//
 TargetSubtargetInfo::TargetSubtargetInfo(
     const Triple &TT, StringRef CPU, StringRef FS,
     ArrayRef<SubtargetFeatureKV> PF, ArrayRef<SubtargetFeatureKV> PD,
@@ -29,7 +31,7 @@ TargetSubtargetInfo::TargetSubtargetInfo(
     : MCSubtargetInfo(TT, CPU, FS, PF, PD, ProcSched, WPR, WL, RA, IS, OC, FP) {
 }
 
-TargetSubtargetInfo::~TargetSubtargetInfo() {}
+TargetSubtargetInfo::~TargetSubtargetInfo() = default;
 
 bool TargetSubtargetInfo::enableAtomicExpand() const {
   return true;

@@ -48,6 +48,7 @@
 #include <cstring>
 #include <system_error>
 #include <vector>
+#include <string.h>
 
 using namespace llvm;
 using namespace object;
@@ -1116,6 +1117,7 @@ dumpSymbolNamesFromObject(SymbolicFile &Obj, bool printName,
       if (Nsect && Nsect != getNsectInMachO(*MachO, Sym))
         continue;
       NMSymbol S;
+      memset(&S, '\0', sizeof(S));
       S.Size = 0;
       S.Address = 0;
       if (PrintSize) {
@@ -1207,6 +1209,7 @@ dumpSymbolNamesFromObject(SymbolicFile &Obj, bool printName,
         }
         if (!found) {
           NMSymbol S;
+          memset(&S, '\0', sizeof(NMSymbol));
           S.Address = Entry.address() + BaseSegmentAddress;
           S.Size = 0;
           S.TypeChar = '\0';
@@ -1297,6 +1300,7 @@ dumpSymbolNamesFromObject(SymbolicFile &Obj, bool printName,
             // Now create the undefined symbol using the referened dynamic
             // library.
             NMSymbol U;
+            memset(&U, '\0', sizeof(NMSymbol));
             U.Address = 0;
             U.Size = 0;
             U.TypeChar = 'U';
@@ -1361,6 +1365,7 @@ dumpSymbolNamesFromObject(SymbolicFile &Obj, bool printName,
         if (!found) {
           LastSymbolName = Entry.symbolName();
           NMSymbol B;
+          memset(&B, '\0', sizeof(NMSymbol));
           B.Address = 0;
           B.Size = 0;
           B.TypeChar = 'U';
@@ -1420,6 +1425,7 @@ dumpSymbolNamesFromObject(SymbolicFile &Obj, bool printName,
         if (!found) {
           LastSymbolName = Entry.symbolName();
           NMSymbol L;
+          memset(&L, '\0', sizeof(NMSymbol));
           L.Name = Entry.symbolName();
           L.Address = 0;
           L.Size = 0;
@@ -1482,6 +1488,7 @@ dumpSymbolNamesFromObject(SymbolicFile &Obj, bool printName,
         if (!found) {
           LastSymbolName = Entry.symbolName();
           NMSymbol W;
+          memset(&W, '\0', sizeof(NMSymbol));
           W.Name = Entry.symbolName();
           W.Address = 0;
           W.Size = 0;

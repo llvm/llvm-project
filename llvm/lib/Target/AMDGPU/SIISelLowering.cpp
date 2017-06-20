@@ -5425,15 +5425,6 @@ MachineSDNode *SITargetLowering::buildRSRC(SelectionDAG &DAG, const SDLoc &DL,
   return DAG.getMachineNode(AMDGPU::REG_SEQUENCE, DL, MVT::v4i32, Ops);
 }
 
-SDValue SITargetLowering::CreateLiveInRegister(SelectionDAG &DAG,
-                                               const TargetRegisterClass *RC,
-                                               unsigned Reg, EVT VT) const {
-  SDValue VReg = AMDGPUTargetLowering::CreateLiveInRegister(DAG, RC, Reg, VT);
-
-  return DAG.getCopyFromReg(DAG.getEntryNode(), SDLoc(DAG.getEntryNode()),
-                            cast<RegisterSDNode>(VReg)->getReg(), VT);
-}
-
 //===----------------------------------------------------------------------===//
 //                         SI Inline Assembly Support
 //===----------------------------------------------------------------------===//

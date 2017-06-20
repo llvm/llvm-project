@@ -1,4 +1,4 @@
-//===----------- JITSymbol.h - JIT symbol abstraction -----------*- C++ -*-===//
+//===- JITSymbol.h - JIT symbol abstraction ---------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -26,16 +26,18 @@ namespace llvm {
 class GlobalValue;
 
 namespace object {
-  class BasicSymbolRef;
+
+class BasicSymbolRef;
+
 } // end namespace object
 
 /// @brief Represents an address in the target process's address space.
-typedef uint64_t JITTargetAddress;
+using JITTargetAddress = uint64_t;
 
 /// @brief Flags for symbols in the JIT.
 class JITSymbolFlags {
 public:
-  typedef uint8_t UnderlyingType;
+  using UnderlyingType = uint8_t;
 
   enum FlagNames : UnderlyingType {
     None = 0,
@@ -46,7 +48,7 @@ public:
   };
 
   /// @brief Default-construct a JITSymbolFlags instance.
-  JITSymbolFlags() : Flags(None) {}
+  JITSymbolFlags() = default;
 
   /// @brief Construct a JITSymbolFlags instance from the given flags.
   JITSymbolFlags(FlagNames Flags) : Flags(Flags) {}
@@ -81,15 +83,14 @@ public:
   static JITSymbolFlags fromObjectSymbol(const object::BasicSymbolRef &Symbol);
 
 private:
-  UnderlyingType Flags;
+  UnderlyingType Flags = None;
 };
 
 /// @brief Represents a symbol that has been evaluated to an address already.
 class JITEvaluatedSymbol {
 public:
   /// @brief Create a 'null' symbol.
-  JITEvaluatedSymbol(std::nullptr_t)
-      : Address(0) {}
+  JITEvaluatedSymbol(std::nullptr_t) {}
 
   /// @brief Create a symbol for the given address and flags.
   JITEvaluatedSymbol(JITTargetAddress Address, JITSymbolFlags Flags)
@@ -105,19 +106,18 @@ public:
   JITSymbolFlags getFlags() const { return Flags; }
 
 private:
-  JITTargetAddress Address;
+  JITTargetAddress Address = 0;
   JITSymbolFlags Flags;
 };
 
 /// @brief Represents a symbol in the JIT.
 class JITSymbol {
 public:
-  typedef std::function<JITTargetAddress()> GetAddressFtor;
+  using GetAddressFtor = std::function<JITTargetAddress()>;
 
   /// @brief Create a 'null' symbol that represents failure to find a symbol
   ///        definition.
-  JITSymbol(std::nullptr_t)
-      : CachedAddr(0) {}
+  JITSymbol(std::nullptr_t) {}
 
   /// @brief Create a symbol for a definition with a known address.
   JITSymbol(JITTargetAddress Addr, JITSymbolFlags Flags)
@@ -137,7 +137,7 @@ public:
   /// user can materialize the definition at any time by calling the getAddress
   /// method.
   JITSymbol(GetAddressFtor GetAddress, JITSymbolFlags Flags)
-      : GetAddress(std::move(GetAddress)), CachedAddr(0), Flags(Flags) {}
+      : GetAddress(std::move(GetAddress)), Flags(Flags) {}
 
   /// @brief Returns true if the symbol exists, false otherwise.
   explicit operator bool() const { return CachedAddr || GetAddress; }
@@ -157,7 +157,7 @@ public:
 
 private:
   GetAddressFtor GetAddress;
-  JITTargetAddress CachedAddr;
+  JITTargetAddress CachedAddr = 0;
   JITSymbolFlags Flags;
 };
 

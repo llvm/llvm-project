@@ -393,7 +393,9 @@ public:
 
   /// \brief Retrieve the full name of this module, including the path from
   /// its top-level module.
-  std::string getFullModuleName() const;
+  /// \param AllowStringLiterals If \c true, components that might not be
+  ///        lexically valid as identifiers will be emitted as string literals.
+  std::string getFullModuleName(bool AllowStringLiterals = false) const;
 
   /// \brief Whether the full name of this module is equal to joining
   /// \p nameParts with "."s.

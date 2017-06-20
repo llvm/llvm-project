@@ -544,7 +544,7 @@ liveins:
   - { reg: '%rsi' }
 # CHECK:  bb.0.entry:
 # CHECK:  %rbx = MOV64rr %rdx
-# CHECK-NEXT:  %rdi = FAULTING_OP 1, %bb.3.is_null, {{[0-9]+}}, %rbx, %rdi, 1, _, 0, _, implicit-def %eflags :: (load 4 from %ir.x)
+# CHECK-NEXT:  %rbx = FAULTING_OP 1, %bb.3.is_null, {{[0-9]+}}, %rbx, %rdi, 1, _, 0, _, implicit-def %eflags :: (load 4 from %ir.x)
 
 body:             |
   bb.0.entry:
@@ -557,9 +557,9 @@ body:             |
     liveins: %rsi, %rdi, %rdx
 
     %rbx  = MOV64rr %rdx
-    %rdi = AND64rm killed %rbx, killed %rdi, 1, _, 0, _, implicit-def dead %eflags :: (load 4 from %ir.x)
+    %rbx = AND64rm killed %rbx, killed %rdi, 1, _, 0, _, implicit-def dead %eflags :: (load 4 from %ir.x)
     %rdx = MOV64ri 0
-    CMP64rr killed %rdi, killed %rsi, implicit-def %eflags
+    CMP64rr killed %rbx, killed %rsi, implicit-def %eflags
     JE_1 %bb.4.ret_100, implicit %eflags
 
   bb.2.ret_200:

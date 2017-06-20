@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mattr=-promote-alloca -amdgpu-sroa=0 -verify-machineinstrs < %s | FileCheck  -enable-var-scope -check-prefix=GCN %s
 
 ; Test that non-entry function frame indices are expanded properly to
 ; give an index relative to the scratch wave offset register
@@ -7,8 +7,8 @@
 ; GCN-LABEL: {{^}}func_mov_fi_i32:
 ; GCN: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN: s_sub_u32 vcc_hi, s5, s4
-; GCN-NEXT: s_lshr_b32 vcc_hi, vcc_hi, 6
-; GCN-NEXT: v_add_i32_e64 v0, vcc, vcc_hi, 4
+; GCN-NEXT: v_lshr_b32_e64 [[SCALED:v[0-9]+]], vcc_hi, 6
+; GCN-NEXT: v_add_i32_e32 v0, vcc, 4, [[SCALED]]
 ; GCN-NOT: v_mov
 ; GCN: ds_write_b32 v0, v0
 define void @func_mov_fi_i32() #0 {
@@ -23,8 +23,8 @@ define void @func_mov_fi_i32() #0 {
 ; GCN-LABEL: {{^}}func_add_constant_to_fi_i32:
 ; GCN: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN: s_sub_u32 vcc_hi, s5, s4
-; GCN-NEXT: s_lshr_b32 vcc_hi, vcc_hi, 6
-; GCN-NEXT: v_add_i32_e64 v0, {{s\[[0-9]+:[0-9]+\]|vcc}}, vcc_hi, 4
+; GCN-NEXT: v_lshr_b32_e64 [[SCALED:v[0-9]+]], vcc_hi, 6
+; GCN-NEXT: v_add_i32_e32 v0, vcc, 4, [[SCALED]]
 ; GCN-NEXT: v_add_i32_e32 v0, vcc, 4, v0
 ; GCN-NOT: v_mov
 ; GCN: ds_write_b32 v0, v0
@@ -40,8 +40,8 @@ define void @func_add_constant_to_fi_i32() #0 {
 
 ; GCN-LABEL: {{^}}func_other_fi_user_i32:
 ; GCN: s_sub_u32 vcc_hi, s5, s4
-; GCN-NEXT: s_lshr_b32 vcc_hi, vcc_hi, 6
-; GCN-NEXT: v_add_i32_e64 v0, vcc, vcc_hi, 4
+; GCN-NEXT: v_lshr_b32_e64 [[SCALED:v[0-9]+]], vcc_hi, 6
+; GCN-NEXT: v_add_i32_e32 v0, vcc, 4, [[SCALED]]
 ; GCN-NEXT: v_mul_lo_i32 v0, v0, 9
 ; GCN-NOT: v_mov
 ; GCN: ds_write_b32 v0, v0
@@ -118,6 +118,46 @@ bb:
   br label %ret
 
 ret:
+  ret void
+}
+
+; Added offset can't be used with VOP3 add
+; GCN-LABEL: {{^}}func_other_fi_user_non_inline_imm_offset_i32:
+; GCN: s_sub_u32 vcc_hi, s5, s4
+; GCN-DAG: v_lshr_b32_e64 [[SCALED:v[0-9]+]], vcc_hi, 6
+; GCN-DAG: s_movk_i32 vcc_hi, 0x204
+; GCN: v_add_i32_e32 v0, vcc, vcc_hi, [[SCALED]]
+; GCN: v_mul_lo_i32 v0, v0, 9
+; GCN: ds_write_b32 v0, v0
+define void @func_other_fi_user_non_inline_imm_offset_i32() #0 {
+  %alloca0 = alloca [128 x i32], align 4
+  %alloca1 = alloca [8 x i32], align 4
+  %gep0 = getelementptr inbounds [128 x i32], [128 x i32]* %alloca0, i32 0, i32 65
+  %gep1 = getelementptr inbounds [8 x i32], [8 x i32]* %alloca1, i32 0, i32 0
+  store volatile i32 7, i32* %gep0
+  %ptrtoint = ptrtoint i32* %gep1 to i32
+  %mul = mul i32 %ptrtoint, 9
+  store volatile i32 %mul, i32 addrspace(3)* undef
+  ret void
+}
+; GCN-LABEL: {{^}}func_other_fi_user_non_inline_imm_offset_i32_vcc_live:
+; GCN: s_sub_u32 [[DIFF:s[0-9]+]], s5, s4
+; GCN-DAG: v_lshr_b32_e64 [[SCALED:v[0-9]+]], [[DIFF]], 6
+; GCN-DAG: s_movk_i32 [[OFFSET:s[0-9]+]], 0x204
+; GCN: v_add_i32_e64 v0, s{{\[[0-9]+:[0-9]+\]}}, [[OFFSET]], [[SCALED]]
+; GCN: v_mul_lo_i32 v0, v0, 9
+; GCN: ds_write_b32 v0, v0
+define void @func_other_fi_user_non_inline_imm_offset_i32_vcc_live() #0 {
+  %alloca0 = alloca [128 x i32], align 4
+  %alloca1 = alloca [8 x i32], align 4
+  %vcc = call i64 asm sideeffect "; def $0", "={VCC}"()
+  %gep0 = getelementptr inbounds [128 x i32], [128 x i32]* %alloca0, i32 0, i32 65
+  %gep1 = getelementptr inbounds [8 x i32], [8 x i32]* %alloca1, i32 0, i32 0
+  store volatile i32 7, i32* %gep0
+  call void asm sideeffect "; use $0", "{VCC}"(i64 %vcc)
+  %ptrtoint = ptrtoint i32* %gep1 to i32
+  %mul = mul i32 %ptrtoint, 9
+  store volatile i32 %mul, i32 addrspace(3)* undef
   ret void
 }
 

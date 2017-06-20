@@ -100,6 +100,7 @@ public:
 
 class EnumAttributeImpl : public AttributeImpl {
   virtual void anchor();
+
   Attribute::AttrKind Kind;
 
 protected:
@@ -133,6 +134,7 @@ public:
 
 class StringAttributeImpl : public AttributeImpl {
   virtual void anchor();
+
   std::string Kind;
   std::string Val;
 
@@ -243,7 +245,8 @@ public:
     return AvailableFunctionAttrs & ((uint64_t)1) << Kind;
   }
 
-  typedef const AttributeSet *iterator;
+  using iterator = const AttributeSet *;
+
   iterator begin() const { return getTrailingObjects<AttributeSet>(); }
   iterator end() const { return begin() + NumAttrSets; }
 

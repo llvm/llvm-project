@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/IR/Metadata.h"
 #include "LLVMContextImpl.h"
 #include "MetadataImpl.h"
 #include "SymbolTableListTraitsImpl.h"
@@ -27,6 +26,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
@@ -39,6 +39,7 @@
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/TrackingMDRef.h"
 #include "llvm/IR/Type.h"
@@ -53,6 +54,7 @@
 #include <cstdint>
 #include <iterator>
 #include <tuple>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -233,7 +235,7 @@ void ReplaceableMetadataImpl::replaceAllUsesWith(Metadata *MD) {
     return;
 
   // Copy out uses since UseMap will get touched below.
-  typedef std::pair<void *, std::pair<OwnerTy, uint64_t>> UseTy;
+  using UseTy = std::pair<void *, std::pair<OwnerTy, uint64_t>>;
   SmallVector<UseTy, 8> Uses(UseMap.begin(), UseMap.end());
   std::sort(Uses.begin(), Uses.end(), [](const UseTy &L, const UseTy &R) {
     return L.second.second < R.second.second;
@@ -286,7 +288,7 @@ void ReplaceableMetadataImpl::resolveAllUses(bool ResolveUsers) {
   }
 
   // Copy out uses since UseMap could get touched below.
-  typedef std::pair<void *, std::pair<OwnerTy, uint64_t>> UseTy;
+  using UseTy = std::pair<void *, std::pair<OwnerTy, uint64_t>>;
   SmallVector<UseTy, 8> Uses(UseMap.begin(), UseMap.end());
   std::sort(Uses.begin(), Uses.end(), [](const UseTy &L, const UseTy &R) {
     return L.second.second < R.second.second;
@@ -758,8 +760,8 @@ static T *uniquifyImpl(T *N, DenseSet<T *, InfoT> &Store) {
 }
 
 template <class NodeTy> struct MDNode::HasCachedHash {
-  typedef char Yes[1];
-  typedef char No[2];
+  using Yes = char[1];
+  using No = char[2];
   template <class U, U Val> struct SFINAE {};
 
   template <class U>
@@ -1484,7 +1486,7 @@ void GlobalObject::addTypeMetadata(unsigned Offset, Metadata *TypeID) {
   addMetadata(
       LLVMContext::MD_type,
       *MDTuple::get(getContext(),
-                    {ConstantAsMetadata::get(llvm::ConstantInt::get(
+                    {ConstantAsMetadata::get(ConstantInt::get(
                          Type::getInt64Ty(getContext()), Offset)),
                      TypeID}));
 }

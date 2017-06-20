@@ -1,4 +1,4 @@
-//===-- HexagonSubtarget.h - Define Subtarget for the Hexagon ---*- C++ -*-===//
+//===- HexagonSubtarget.h - Define Subtarget for the Hexagon ----*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,12 +15,17 @@
 #define LLVM_LIB_TARGET_HEXAGON_HEXAGONSUBTARGET_H
 
 #include "HexagonFrameLowering.h"
-#include "HexagonISelLowering.h"
 #include "HexagonInstrInfo.h"
+#include "HexagonISelLowering.h"
 #include "HexagonSelectionDAGInfo.h"
-#include "llvm/Target/TargetMachine.h"
+#include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/CodeGen/ScheduleDAGMutation.h"
+#include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
+#include <memory>
 #include <string>
+#include <vector>
 
 #define GET_SUBTARGETINFO_HEADER
 #include "HexagonGenSubtargetInfo.inc"
@@ -29,6 +34,12 @@
 #define Hexagon_SLOTS 4
 
 namespace llvm {
+
+class MachineInstr;
+class SDep;
+class SUnit;
+class TargetMachine;
+class Triple;
 
 class HexagonSubtarget : public HexagonGenSubtargetInfo {
   virtual void anchor();
@@ -57,6 +68,7 @@ private:
   HexagonSelectionDAGInfo TSInfo;
   HexagonFrameLowering FrameLowering;
   InstrItineraryData InstrItins;
+
   void initializeEnvironment();
 
 public:
@@ -108,6 +120,7 @@ public:
 
   bool useBSBScheduling() const { return UseBSBScheduling; }
   bool enableMachineScheduler() const override;
+
   // Always use the TargetLowering default scheduler.
   // FIXME: This will use the vliw scheduler which is probably just hurting
   // compiler time and will be removed eventually anyway.
@@ -124,6 +137,7 @@ public:
   unsigned getSmallDataThreshold() const {
     return Hexagon_SMALL_DATA_THRESHOLD;
   }
+
   const HexagonArchEnum &getHexagonArchVersion() const {
     return HexagonArchVersion;
   }
@@ -155,4 +169,4 @@ private:
 
 } // end namespace llvm
 
-#endif
+#endif // LLVM_LIB_TARGET_HEXAGON_HEXAGONSUBTARGET_H
