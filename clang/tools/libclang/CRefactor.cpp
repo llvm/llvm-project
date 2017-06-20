@@ -859,6 +859,7 @@ public:
       SourceLocation Loc = Replacement.value().Range.getBegin();
       const std::pair<FileID, unsigned> DecomposedLocation =
           SM.getDecomposedLoc(Loc);
+      assert(DecomposedLocation.first.isValid() && "Invalid file!");
       const FileEntry *Entry = SM.getFileEntryForID(DecomposedLocation.first);
       FilesToReplacements.try_emplace(Entry, std::vector<unsigned>())
           .first->second.push_back(Replacement.index());

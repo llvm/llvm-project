@@ -69,11 +69,15 @@ LocalizeObjCStringLiteralOperation::perform(ASTContext &Context,
                                             const RefactoringOptionSet &Options,
                                             unsigned SelectedCandidateIndex) {
   std::vector<RefactoringReplacement> Replacements;
-  SourceLocation LocStart = E->getLocStart();
+  // TODO: New API: Replace by something like Node.wrap("NSLocalizedString(", ",
+  // @""")
+  SourceLocation LocStart =
+      Context.getSourceManager().getSpellingLoc(E->getLocStart());
   Replacements.emplace_back(SourceRange(LocStart, LocStart),
                             StringRef("NSLocalizedString("));
   SourceLocation LocEnd = getPreciseTokenLocEnd(
-      E->getLocEnd(), Context.getSourceManager(), Context.getLangOpts());
+      Context.getSourceManager().getSpellingLoc(E->getLocEnd()),
+      Context.getSourceManager(), Context.getLangOpts());
   Replacements.emplace_back(SourceRange(LocEnd, LocEnd), StringRef(", @\"\")"));
   return std::move(Replacements);
 }
