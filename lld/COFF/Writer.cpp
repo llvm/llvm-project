@@ -603,6 +603,15 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
   auto *PE = reinterpret_cast<PEHeaderTy *>(Buf);
   Buf += sizeof(*PE);
   PE->Magic = Config->is64() ? PE32Header::PE32_PLUS : PE32Header::PE32;
+
+  // If {Major,Minor}LinkerVersion is left at 0.0, then for some
+  // reason signing the resulting PE file with Authenticode produces a
+  // signature that fails to validate on Windows 7 (but is OK on 10).
+  // Set it to 14.0, which is what VS2015 outputs, and which avoids
+  // that problem.
+  PE->MajorLinkerVersion = 14;
+  PE->MinorLinkerVersion = 0;
+
   PE->ImageBase = Config->ImageBase;
   PE->SectionAlignment = PageSize;
   PE->FileAlignment = SectorSize;

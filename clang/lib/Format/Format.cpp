@@ -23,6 +23,7 @@
 #include "TokenAnnotator.h"
 #include "UnwrappedLineFormatter.h"
 #include "UnwrappedLineParser.h"
+#include "UsingDeclarationsSorter.h"
 #include "WhitespaceManager.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticOptions.h"
@@ -96,6 +97,7 @@ template <> struct ScalarEnumerationTraits<FormatStyle::ShortFunctionStyle> {
     IO.enumCase(Value, "All", FormatStyle::SFS_All);
     IO.enumCase(Value, "true", FormatStyle::SFS_All);
     IO.enumCase(Value, "Inline", FormatStyle::SFS_Inline);
+    IO.enumCase(Value, "InlineOnly", FormatStyle::SFS_InlineOnly);
     IO.enumCase(Value, "Empty", FormatStyle::SFS_Empty);
   }
 };
@@ -1941,6 +1943,16 @@ tooling::Replacements fixNamespaceEndComments(const FormatStyle &Style,
       Environment::CreateVirtualEnvironment(Code, FileName, Ranges);
   NamespaceEndCommentsFixer Fix(*Env, Style);
   return Fix.process();
+}
+
+tooling::Replacements sortUsingDeclarations(const FormatStyle &Style,
+                                            StringRef Code,
+                                            ArrayRef<tooling::Range> Ranges,
+                                            StringRef FileName) {
+  std::unique_ptr<Environment> Env =
+      Environment::CreateVirtualEnvironment(Code, FileName, Ranges);
+  UsingDeclarationsSorter Sorter(*Env, Style);
+  return Sorter.process();
 }
 
 LangOptions getFormattingLangOpts(const FormatStyle &Style) {

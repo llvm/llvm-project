@@ -351,9 +351,11 @@ public:
         IndexCtx.indexTagDecl(D, Relations);
       } else {
         auto *Parent = dyn_cast<NamedDecl>(D->getDeclContext());
+        SmallVector<SymbolRelation, 1> Relations;
+        gatherTemplatePseudoOverrides(D, Relations);
         return IndexCtx.handleReference(D, D->getLocation(), Parent,
                                         D->getLexicalDeclContext(),
-                                        SymbolRoleSet());
+                                        SymbolRoleSet(), Relations);
       }
     }
     return true;

@@ -518,18 +518,18 @@ SymbolBody *SymbolTable<ELFT>::findInCurrentDSO(StringRef Name) {
 }
 
 template <class ELFT>
-void SymbolTable<ELFT>::addLazyArchive(ArchiveFile *F,
-                                       const object::Archive::Symbol Sym) {
+Symbol *SymbolTable<ELFT>::addLazyArchive(ArchiveFile *F,
+                                          const object::Archive::Symbol Sym) {
   Symbol *S;
   bool WasInserted;
   StringRef Name = Sym.getName();
   std::tie(S, WasInserted) = insert(Name);
   if (WasInserted) {
     replaceBody<LazyArchive>(S, *F, Sym, SymbolBody::UnknownType);
-    return;
+    return S;
   }
   if (!S->body()->isUndefined())
-    return;
+    return S;
 
   // Weak undefined symbols should not fetch members from archives. If we were
   // to keep old symbol we would not know that an archive member was available
@@ -540,11 +540,12 @@ void SymbolTable<ELFT>::addLazyArchive(ArchiveFile *F,
   // to preserve its type. FIXME: Move the Type field to Symbol.
   if (S->isWeak()) {
     replaceBody<LazyArchive>(S, *F, Sym, S->body()->Type);
-    return;
+    return S;
   }
   std::pair<MemoryBufferRef, uint64_t> MBInfo = F->getMember(&Sym);
   if (!MBInfo.first.getBuffer().empty())
     addFile(createObjectFile(MBInfo.first, F->getName(), MBInfo.second));
+  return S;
 }
 
 template <class ELFT>

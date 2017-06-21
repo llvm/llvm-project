@@ -134,6 +134,9 @@ class PseudoOverridesInSpecializations {
 
   template<typename U> struct InnerTemplate { };
   template<typename U> struct InnerTemplate <U*> { };
+
+  template<typename U>
+  class InnerClass { };
 };
 
 template<>
@@ -195,7 +198,21 @@ class PseudoOverridesInSpecializations<double, int> {
 // CHECK-NEXT: RelChild
 // CHECK-NEXT: RelSpecialization | InnerTemplate | c:@ST>2#T#T@PseudoOverridesInSpecializations@ST>1#T@InnerTemplate
   template<typename U> struct InnerTemplate <U*> { };
+
+  template<typename U>
+  class InnerClass;
+// CHECK: [[@LINE-1]]:9 | class(Gen)/C++ | InnerClass | c:@S@PseudoOverridesInSpecializations>#d#I@ST>1#T@InnerClass | <no-cgname> | Ref,RelCont,RelSpecialization | rel: 2
+// CHECK-NEXT: RelCont
+// CHECK-NEXT: RelSpecialization | InnerClass | c:@ST>2#T#T@PseudoOverridesInSpecializations@ST>1#T@InnerClass
 };
+
+template<typename U>
+class PseudoOverridesInSpecializations<double, int>::InnerClass {
+};
+// CHECK: [[@LINE-2]]:54 | class(Gen)/C++ | InnerClass | c:@S@PseudoOverridesInSpecializations>#d#I@ST>1#T@InnerClass | <no-cgname> | Def,RelChild | rel: 1
+// CHECK-NEXT: RelChild
+// CHECK: [[@LINE-4]]:7 | class(Gen)/C++ | PseudoOverridesInSpecializations | c:@ST>2#T#T@PseudoOverridesInSpecializations | <no-cgname> | Ref,RelCont | rel: 1
+// CHECK-NEXT: RelCont
 
 template<typename S>
 class PseudoOverridesInSpecializations<float, S> {

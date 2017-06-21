@@ -184,9 +184,23 @@ struct FormatStyle {
   enum ShortFunctionStyle {
     /// \brief Never merge functions into a single line.
     SFS_None,
+    /// \brief Only merge functions defined inside a class. Same as "inline",
+    /// except it does not implies "empty": i.e. top level empty functions
+    /// are not merged either.
+    /// \code
+    ///   class Foo {
+    ///     void f() { foo(); }
+    ///   };
+    ///   void f() {
+    ///     foo();
+    ///   }
+    ///   void f() {
+    ///   }
+    /// \endcode
+    SFS_InlineOnly,
     /// \brief Only merge empty functions.
     /// \code
-    ///   void f() { bar(); }
+    ///   void f() {}
     ///   void f2() {
     ///     bar2();
     ///   }
@@ -197,6 +211,10 @@ struct FormatStyle {
     ///   class Foo {
     ///     void f() { foo(); }
     ///   };
+    ///   void f() {
+    ///     foo();
+    ///   }
+    ///   void f() {}
     /// \endcode
     SFS_Inline,
     /// \brief Merge all functions fitting on a single line.
@@ -1640,6 +1658,16 @@ tooling::Replacements fixNamespaceEndComments(const FormatStyle &Style,
                                               StringRef Code,
                                               ArrayRef<tooling::Range> Ranges,
                                               StringRef FileName = "<stdin>");
+
+/// \brief Sort consecutive using declarations in the given \p Ranges in
+/// \p Code.
+///
+/// Returns the ``Replacements`` that sort the using declarations in all
+/// \p Ranges in \p Code.
+tooling::Replacements sortUsingDeclarations(const FormatStyle &Style,
+                                            StringRef Code,
+                                            ArrayRef<tooling::Range> Ranges,
+                                            StringRef FileName = "<stdin>");
 
 /// \brief Returns the ``LangOpts`` that the formatter expects you to set.
 ///

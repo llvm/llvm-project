@@ -18,8 +18,8 @@
 #include "llvm/DebugInfo/CodeView/DebugSubsectionRecord.h"
 #include "llvm/DebugInfo/CodeView/DebugSubsectionVisitor.h"
 #include "llvm/DebugInfo/CodeView/LazyRandomTypeCollection.h"
-#include "llvm/DebugInfo/CodeView/SymbolDumper.h"
 #include "llvm/DebugInfo/CodeView/TypeDumpVisitor.h"
+#include "llvm/DebugInfo/CodeView/TypeIndexDiscovery.h"
 #include "llvm/DebugInfo/CodeView/TypeStreamMerger.h"
 #include "llvm/DebugInfo/CodeView/TypeTableBuilder.h"
 #include "llvm/DebugInfo/MSF/MSFBuilder.h"
@@ -115,6 +115,101 @@ static void mergeDebugT(ObjectFile *File,
     fatal(Err, "codeview::mergeTypeStreams failed");
 }
 
+static bool remapTypeIndex(TypeIndex &TI, ArrayRef<TypeIndex> TypeIndexMap) {
+  if (TI.isSimple())
+    return true;
+  if (TI.toArrayIndex() >= TypeIndexMap.size())
+    return false;
+  TI = TypeIndexMap[TI.toArrayIndex()];
+  return true;
+}
+
+static bool remapTypesInSymbolRecord(ObjectFile *File,
+                                     MutableArrayRef<uint8_t> Contents,
+                                     ArrayRef<TypeIndex> TypeIndexMap,
+                                     ArrayRef<TiReference> TypeRefs) {
+  for (const TiReference &Ref : TypeRefs) {
+    unsigned ByteSize = Ref.Count * sizeof(TypeIndex);
+    if (Contents.size() < Ref.Offset + ByteSize) {
+      log("ignoring short symbol record");
+      return false;
+    }
+    MutableArrayRef<TypeIndex> TIs(
+        reinterpret_cast<TypeIndex *>(Contents.data() + Ref.Offset), Ref.Count);
+    for (TypeIndex &TI : TIs)
+      if (!remapTypeIndex(TI, TypeIndexMap)) {
+        log("ignoring symbol record in " + File->getName() +
+            " with bad type index 0x" + utohexstr(TI.getIndex()));
+        return false;
+      }
+  }
+  return true;
+}
+
+/// MSVC translates S_PROC_ID_END to S_END.
+uint16_t canonicalizeSymbolKind(SymbolKind Kind) {
+  if (Kind == SymbolKind::S_PROC_ID_END)
+    return SymbolKind::S_END;
+  return Kind;
+}
+
+/// Copy the symbol record. In a PDB, symbol records must be 4 byte aligned.
+/// The object file may not be aligned.
+static MutableArrayRef<uint8_t> copySymbolForPdb(const CVSymbol &Sym,
+                                                 BumpPtrAllocator &Alloc) {
+  size_t Size = alignTo(Sym.length(), alignOf(CodeViewContainer::Pdb));
+  assert(Size >= 4 && "record too short");
+  assert(Size <= MaxRecordLength && "record too long");
+  void *Mem = Alloc.Allocate(Size, 4);
+
+  // Copy the symbol record and zero out any padding bytes.
+  MutableArrayRef<uint8_t> NewData(reinterpret_cast<uint8_t *>(Mem), Size);
+  memcpy(NewData.data(), Sym.data().data(), Sym.length());
+  memset(NewData.data() + Sym.length(), 0, Size - Sym.length());
+
+  // Update the record prefix length. It should point to the beginning of the
+  // next record. MSVC does some canonicalization of the record kind, so we do
+  // that as well.
+  auto *Prefix = reinterpret_cast<RecordPrefix *>(Mem);
+  Prefix->RecordKind = canonicalizeSymbolKind(Sym.kind());
+  Prefix->RecordLen = Size - 2;
+  return NewData;
+}
+
+static void mergeSymbolRecords(BumpPtrAllocator &Alloc, ObjectFile *File,
+                               ArrayRef<TypeIndex> TypeIndexMap,
+                               BinaryStreamRef SymData) {
+  // FIXME: Improve error recovery by warning and skipping records when
+  // possible.
+  CVSymbolArray Syms;
+  BinaryStreamReader Reader(SymData);
+  ExitOnErr(Reader.readArray(Syms, Reader.getLength()));
+  for (const CVSymbol &Sym : Syms) {
+    // Discover type index references in the record. Skip it if we don't know
+    // where they are.
+    SmallVector<TiReference, 32> TypeRefs;
+    if (!discoverTypeIndices(Sym, TypeRefs)) {
+      log("ignoring unknown symbol record with kind 0x" + utohexstr(Sym.kind()));
+      continue;
+    }
+
+    // Copy the symbol record so we can mutate it.
+    MutableArrayRef<uint8_t> NewData = copySymbolForPdb(Sym, Alloc);
+
+    // Re-map all the type index references.
+    MutableArrayRef<uint8_t> Contents =
+        NewData.drop_front(sizeof(RecordPrefix));
+    if (!remapTypesInSymbolRecord(File, Contents, TypeIndexMap, TypeRefs))
+      continue;
+
+    // FIXME: Fill in "Parent" and "End" fields by maintaining a stack of
+    // scopes.
+
+    // Add the symbol to the module.
+    File->ModuleDBI->addSymbol(CVSymbol(Sym.kind(), NewData));
+  }
+}
+
 // Allocate memory for a .debug$S section and relocate it.
 static ArrayRef<uint8_t> relocateDebugChunk(BumpPtrAllocator &Alloc,
                                             SectionChunk *DebugChunk) {
@@ -190,6 +285,9 @@ static void addObjectsToPDB(BumpPtrAllocator &Alloc, SymbolTable *Symtab,
           // We can add the relocated line table directly to the PDB without
           // modification because the file checksum offsets will stay the same.
           File->ModuleDBI->addDebugSubsection(SS);
+          break;
+        case DebugSubsectionKind::Symbols:
+          mergeSymbolRecords(Alloc, File, TypeIndexMap, SS.getRecordData());
           break;
         default:
           // FIXME: Process the rest of the subsections.

@@ -92,6 +92,9 @@ def error_limit: S<"error-limit">,
 def error_unresolved_symbols: F<"error-unresolved-symbols">,
   HelpText<"Report unresolved symbols as errors">;
 
+def exclude_libs: S<"exclude-libs">,
+  HelpText<"Exclude static libraries from automatic export">;
+
 def export_dynamic: F<"export-dynamic">,
   HelpText<"Put symbols in the dynamic symbol table">;
 
@@ -298,6 +301,7 @@ def alias_emit_relocs: Flag<["-"], "q">, Alias<emit_relocs>;
 def alias_entry_e: JoinedOrSeparate<["-"], "e">, Alias<entry>;
 def alias_entry_entry: J<"entry=">, Alias<entry>;
 def alias_error_limit: J<"error-limit=">, Alias<error_limit>;
+def alias_exclude_libs: J<"exclude-libs=">, Alias<exclude_libs>;
 def alias_export_dynamic_E: Flag<["-"], "E">, Alias<export_dynamic>;
 def alias_export_dynamic_symbol: J<"export-dynamic-symbol=">,
   Alias<export_dynamic_symbol>;
