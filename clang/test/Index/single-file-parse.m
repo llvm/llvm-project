@@ -109,3 +109,13 @@
 // CHECK: [[@LINE+1]]:12: ObjCInterfaceDecl=Test28
 @interface Test28 @end
 #endif
+
+#if SOMETHING_NOT_DEFINED
+// CHECK: [[@LINE+1]]:12: ObjCInterfaceDecl=Test29
+@interface Test29 @end
+#endif
+
+#ifdef SOMETHING_NOT_DEFINED
+// CHECK: [[@LINE+1]]:12: ObjCInterfaceDecl=Test30
+@interface Test30 @end
+#endif
