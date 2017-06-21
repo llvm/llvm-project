@@ -118,9 +118,9 @@ namespace AMDGPU {
     // Operand for source modifiers for VOP instructions
     OPERAND_INPUT_MODS,
 
-    // Operand for GFX9 SDWA instructions
-    OPERAND_SDWA9_SRC,
-    OPERAND_SDWA9_VOPC_DST,
+    // Operand for SDWA instructions
+    OPERAND_SDWA_SRC,
+    OPERAND_SDWA_VOPC_DST,
 
     /// Operand with 32-bit immediate that uses the constant bus.
     OPERAND_KIMM32,

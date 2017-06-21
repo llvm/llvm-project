@@ -2108,7 +2108,9 @@ bool SIInstrInfo::isInlineConstant(const APInt &Imm) const {
 
 bool SIInstrInfo::isInlineConstant(const MachineOperand &MO,
                                    uint8_t OperandType) const {
-  if (!MO.isImm() || OperandType < MCOI::OPERAND_FIRST_TARGET)
+  if (!MO.isImm() ||
+      OperandType < AMDGPU::OPERAND_SRC_FIRST ||
+      OperandType > AMDGPU::OPERAND_SRC_LAST)
     return false;
 
   // MachineOperand provides no way to tell the true operand size, since it only
@@ -2433,8 +2435,73 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     }
   }
 
+  // Verify SDWA
+  if (isSDWA(MI)) {
+
+    if (!ST.hasSDWA()) {
+      ErrInfo = "SDWA is not supported on this target";
+      return false;
+    }
+
+    int DstIdx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::vdst);
+    if ( DstIdx == -1)
+      DstIdx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::sdst);
+
+    const int OpIndicies[] = { DstIdx, Src0Idx, Src1Idx, Src2Idx };
+
+    for (int OpIdx: OpIndicies) {
+      if (OpIdx == -1)
+        continue;
+      const MachineOperand &MO = MI.getOperand(OpIdx);
+
+      if (AMDGPU::isVI(ST)) {
+        // Only VGPRS on VI
+        if (!MO.isReg() || !RI.hasVGPRs(RI.getRegClassForReg(MRI, MO.getReg()))) {
+          ErrInfo = "Only VGPRs allowed as operands in SDWA instructions on VI";
+          return false;
+        }
+      } else {
+        // No immediates on GFX9
+        if (!MO.isReg()) {
+          ErrInfo = "Only reg allowed as operands in SDWA instructions on GFX9";
+          return false;
+        }
+      }
+    }
+
+    if (AMDGPU::isVI(ST)) {
+      // No omod allowed on VI
+      const MachineOperand *OMod = getNamedOperand(MI, AMDGPU::OpName::omod);
+      if (OMod != nullptr &&
+        (!OMod->isImm() || OMod->getImm() != 0)) {
+        ErrInfo = "OMod not allowed in SDWA instructions on VI";
+        return false;
+      }
+    }
+
+    uint16_t BasicOpcode = AMDGPU::getBasicFromSDWAOp(Opcode);
+    if (isVOPC(BasicOpcode)) {
+      if (AMDGPU::isVI(ST) && DstIdx != -1) {
+        // Only vcc allowed as dst on VI for VOPC
+        const MachineOperand &Dst = MI.getOperand(DstIdx);
+        if (!Dst.isReg() || Dst.getReg() != AMDGPU::VCC) {
+          ErrInfo = "Only VCC allowed as dst in SDWA instructions on VI";
+          return false;
+        }
+      } else if (AMDGPU::isGFX9(ST)) {
+        // No clamp allowed on GFX9 for VOPC
+        const MachineOperand *Clamp = getNamedOperand(MI, AMDGPU::OpName::clamp);
+        if (Clamp != nullptr &&
+          (!Clamp->isImm() || Clamp->getImm() != 0)) {
+          ErrInfo = "Clamp not allowed in VOPC SDWA instructions on VI";
+          return false;
+        }
+      }
+    }
+  }
+
   // Verify VOP*
-  if (isVOP1(MI) || isVOP2(MI) || isVOP3(MI) || isVOPC(MI)) {
+  if (isVOP1(MI) || isVOP2(MI) || isVOP3(MI) || isVOPC(MI) || isSDWA(MI)) {
     // Only look at the true operands. Only a real operand can use the constant
     // bus, and we don't want to check pseudo-operands like the source modifier
     // flags.

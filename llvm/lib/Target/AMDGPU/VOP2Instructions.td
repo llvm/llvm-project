@@ -114,11 +114,6 @@ class VOP2_SDWA_Pseudo <string OpName, VOPProfile P, list<dag> pattern=[]> :
   let AsmMatchConverter = "cvtSdwaVOP2";
 }
 
-class VOP2_SDWA9_Pseudo <string OpName, VOPProfile P, list<dag> pattern=[]> :
-  VOP_SDWA9_Pseudo <OpName, P, pattern> {
-  let AsmMatchConverter = "cvtSdwaVOP2";
-}
-
 class getVOP2Pat64 <SDPatternOperator node, VOPProfile P> : LetDummies {
   list<dag> ret = !if(P.HasModifiers,
     [(set P.DstVT:$vdst,
@@ -139,7 +134,6 @@ multiclass VOP2Inst <string opName,
              Commutable_REV<revOp#"_e64", !eq(revOp, opName)>;
 
   def _sdwa  : VOP2_SDWA_Pseudo <opName, P>;
-  def _sdwa9 : VOP2_SDWA9_Pseudo <opName, P>;
 }
 
 multiclass VOP2bInst <string opName,
@@ -154,10 +148,6 @@ multiclass VOP2bInst <string opName,
                  Commutable_REV<revOp#"_e32", !eq(revOp, opName)>;
 
       def _sdwa  : VOP2_SDWA_Pseudo <opName, P> {
-        let AsmMatchConverter = "cvtSdwaVOP2b";
-      }
-
-      def _sdwa9 : VOP2_SDWA9_Pseudo <opName, P> {
         let AsmMatchConverter = "cvtSdwaVOP2b";
       }
     }
@@ -221,17 +211,13 @@ class VOP_MAC <ValueType vt> : VOPProfile <[vt, vt, vt, vt]> {
                     VGPR_32:$src2, // stub argument
                     dpp_ctrl:$dpp_ctrl, row_mask:$row_mask,
                     bank_mask:$bank_mask, bound_ctrl:$bound_ctrl);
+
   let InsSDWA = (ins Src0ModSDWA:$src0_modifiers, Src0SDWA:$src0,
                      Src1ModSDWA:$src1_modifiers, Src1SDWA:$src1,
                      VGPR_32:$src2, // stub argument
-                     clampmod:$clamp, dst_sel:$dst_sel, dst_unused:$dst_unused,
+                     clampmod:$clamp, omod:$omod,
+                     dst_sel:$dst_sel, dst_unused:$dst_unused,
                      src0_sel:$src0_sel, src1_sel:$src1_sel);
-  let InsSDWA9 = (ins Src0ModSDWA9:$src0_modifiers, Src0SDWA9:$src0,
-                      Src1ModSDWA9:$src1_modifiers, Src1SDWA9:$src1,
-                      VGPR_32:$src2, // stub argument
-                      clampmod:$clamp, omod:$omod,
-                      dst_sel:$dst_sel, dst_unused:$dst_unused,
-                      src0_sel:$src0_sel, src1_sel:$src1_sel);
   let Asm32 = getAsm32<1, 2, vt>.ret;
   let Asm64 = getAsm64<1, 2, HasModifiers, HasOMod, vt>.ret;
   let AsmDPP = getAsmDPP<1, 2, HasModifiers, vt>.ret;
@@ -289,14 +275,9 @@ def VOP2b_I32_I1_I32_I32_I1 : VOPProfile<[i32, i32, i32, i1]> {
 
   let InsSDWA = (ins Src0ModSDWA:$src0_modifiers, Src0SDWA:$src0,
                      Src1ModSDWA:$src1_modifiers, Src1SDWA:$src1,
-                     clampmod:$clamp, dst_sel:$dst_sel, dst_unused:$dst_unused,
+                     clampmod:$clamp, omod:$omod,
+                     dst_sel:$dst_sel, dst_unused:$dst_unused,
                      src0_sel:$src0_sel, src1_sel:$src1_sel);
-
-  let InsSDWA9 = (ins Src0ModSDWA9:$src0_modifiers, Src0SDWA9:$src0,
-                      Src1ModSDWA9:$src1_modifiers, Src1SDWA9:$src1,
-                      clampmod:$clamp, omod:$omod,
-                      dst_sel:$dst_sel, dst_unused:$dst_unused,
-                      src0_sel:$src0_sel, src1_sel:$src1_sel);
 
   let InsDPP = (ins Src0Mod:$src0_modifiers, Src0DPP:$src0,
                     Src1Mod:$src1_modifiers, Src1DPP:$src1,
@@ -728,8 +709,8 @@ multiclass VOP2_SDWA_Real <bits<6> op> {
 
 multiclass VOP2_SDWA9_Real <bits<6> op> {
   def _sdwa_gfx9 :
-    VOP_SDWA9_Real <!cast<VOP2_SDWA9_Pseudo>(NAME#"_sdwa9")>,
-    VOP2_SDWA9Ae <op{5-0}, !cast<VOP2_SDWA9_Pseudo>(NAME#"_sdwa9").Pfl>;
+    VOP_SDWA9_Real <!cast<VOP2_SDWA_Pseudo>(NAME#"_sdwa")>,
+    VOP2_SDWA9Ae <op{5-0}, !cast<VOP2_SDWA_Pseudo>(NAME#"_sdwa").Pfl>;
 }
 
 multiclass VOP2be_Real_e32e64_vi <bits<6> op> :

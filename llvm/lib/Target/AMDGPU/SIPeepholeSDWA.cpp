@@ -224,7 +224,7 @@ static bool isSameReg(const MachineOperand &LHS, const MachineOperand &RHS) {
 static bool isSubregOf(const MachineOperand &SubReg,
                        const MachineOperand &SuperReg,
                        const TargetRegisterInfo *TRI) {
-  
+
   if (!SuperReg.isReg() || !SubReg.isReg())
     return false;
 
@@ -557,7 +557,7 @@ void SIPeepholeSDWA::matchSDWAOperands(MachineFunction &MF) {
 
         MachineOperand *Src0 = TII->getNamedOperand(MI, AMDGPU::OpName::src0);
         MachineOperand *Dst = TII->getNamedOperand(MI, AMDGPU::OpName::vdst);
-      
+
         if (TRI->isPhysicalRegister(Src0->getReg()) ||
             TRI->isPhysicalRegister(Dst->getReg()))
           break;
@@ -590,7 +590,7 @@ void SIPeepholeSDWA::matchSDWAOperands(MachineFunction &MF) {
           break;
 
         MachineOperand *Dst = TII->getNamedOperand(MI, AMDGPU::OpName::vdst);
-      
+
         if (TRI->isPhysicalRegister(Src1->getReg()) ||
             TRI->isPhysicalRegister(Dst->getReg()))
           break;
@@ -613,9 +613,17 @@ bool SIPeepholeSDWA::isConvertibleToSDWA(const MachineInstr &MI) const {
   if (AMDGPU::getSDWAOp(Opc) != -1)
     return true;
   int Opc32 = AMDGPU::getVOPe32(Opc);
-  if (Opc32 != -1 && AMDGPU::getSDWAOp(Opc32) != -1)
-    return !TII->hasModifiersSet(MI, AMDGPU::OpName::omod) &&
-           !TII->getNamedOperand(MI, AMDGPU::OpName::sdst);
+  if (Opc32 != -1 && AMDGPU::getSDWAOp(Opc32) != -1) {
+    if (TII->hasModifiersSet(MI, AMDGPU::OpName::omod))
+      return false;
+
+    if (TII->isVOPC(Opc)) {
+      const MachineOperand *SDst = TII->getNamedOperand(MI, AMDGPU::OpName::sdst);
+      return SDst && SDst->getReg() == AMDGPU::VCC;
+    } else {
+      return !TII->getNamedOperand(MI, AMDGPU::OpName::sdst);
+    }
+  }
   return false;
 }
 
@@ -640,6 +648,11 @@ bool SIPeepholeSDWA::convertToSDWA(MachineInstr &MI,
 
   if (Dst) {
     assert(AMDGPU::getNamedOperandIdx(SDWAOpcode, AMDGPU::OpName::vdst) != -1);
+    SDWAInst.add(*Dst);
+  } else {
+    Dst = TII->getNamedOperand(MI, AMDGPU::OpName::sdst);
+    assert(Dst &&
+           AMDGPU::getNamedOperandIdx(SDWAOpcode, AMDGPU::OpName::sdst) != -1);
     SDWAInst.add(*Dst);
   }
 
@@ -678,8 +691,12 @@ bool SIPeepholeSDWA::convertToSDWA(MachineInstr &MI,
   }
 
   // Initialize clamp.
-  assert(AMDGPU::getNamedOperandIdx(SDWAOpcode, AMDGPU::OpName::clamp) != -1);
-  SDWAInst.addImm(0);
+  if (AMDGPU::getNamedOperandIdx(SDWAOpcode, AMDGPU::OpName::clamp) != -1)
+    SDWAInst.addImm(0);
+
+  // Initialize omod.
+  if (AMDGPU::getNamedOperandIdx(SDWAOpcode, AMDGPU::OpName::omod) != -1)
+    SDWAInst.addImm(0);
 
   // Initialize dst_sel and dst_unused if present
   if (Dst) {
@@ -766,7 +783,7 @@ bool SIPeepholeSDWA::runOnMachineFunction(MachineFunction &MF) {
   MRI = &MF.getRegInfo();
   TRI = ST.getRegisterInfo();
   TII = ST.getInstrInfo();
-  
+
   // Find all SDWA operands in MF.
   matchSDWAOperands(MF);
 

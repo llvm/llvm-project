@@ -4573,6 +4573,12 @@ static void print_class64_t(uint64_t p, struct DisassembleInfo *info) {
                        n_value, c.superclass);
   if (name != nullptr)
     outs() << " " << name;
+  else {
+    name = get_dyld_bind_info_symbolname(S.getAddress() +
+             offset + offsetof(struct class64_t, superclass), info);
+    if (name != nullptr)
+      outs() << " " << name;
+  }
   outs() << "\n";
 
   outs() << "         cache " << format("0x%" PRIx64, c.cache);

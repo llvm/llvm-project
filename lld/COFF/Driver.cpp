@@ -1034,9 +1034,13 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
 
   // We do not support /guard:cf (control flow protection) yet.
   // Define CFG symbols anyway so that we can link MSVC 2015 CRT.
-  Symtab.addAbsolute(mangle("__guard_fids_table"), 0);
   Symtab.addAbsolute(mangle("__guard_fids_count"), 0);
+  Symtab.addAbsolute(mangle("__guard_fids_table"), 0);
   Symtab.addAbsolute(mangle("__guard_flags"), 0x100);
+  Symtab.addAbsolute(mangle("__guard_iat_count"), 0);
+  Symtab.addAbsolute(mangle("__guard_iat_table"), 0);
+  Symtab.addAbsolute(mangle("__guard_longjmp_count"), 0);
+  Symtab.addAbsolute(mangle("__guard_longjmp_table"), 0);
 
   // This code may add new undefined symbols to the link, which may enqueue more
   // symbol resolution tasks, so we need to continue executing tasks until we

@@ -1,6 +1,7 @@
 ; RUN: llc -O2 -march=mips64 -mcpu=mips64r2 -target-abi=n64 < %s -o - | FileCheck %s -check-prefix=MIPS64R2
 ; RUN: llc -O2 -march=mips -mcpu=mips32r2 < %s -o - | FileCheck %s -check-prefix=MIPS32R2
 ; RUN: llc -O2 -march=mips -mattr=mips16 < %s -o - | FileCheck %s -check-prefix=MIPS16
+; RUN: llc -O2 -march=mips64 -mcpu=mips64r2 -target-abi=n32 < %s -o - | FileCheck %s -check-prefix=MIPS64R2N32
 
 ; #include <stdint.h>
 ; #include <stdio.h>
@@ -55,16 +56,42 @@ entry:
   ret i64 %bf.lshr18
 }
 
-
 ; CHECK-LABEL: f123:
-; MIPS64R2: daddiu	$[[R0:[0-9]+]], $zero, 123
+; MIPS64R2: daddiu  $[[R0:[0-9]+]], $zero, 123
 ; MIPS64R2: dins    $[[R0:[0-9]+]], $[[R1:[0-9]+]], 27, 37
-; MIPS64R2: daddiu	$[[R0:[0-9]+]], $zero, 5
-; MIPS64R2: daddiu	$[[R0:[0-9]+]], $zero, 4
+; MIPS64R2: daddiu  $[[R0:[0-9]+]], $zero, 5
+; MIPS64R2: daddiu  $[[R0:[0-9]+]], $zero, 4
 ; MIPS64R2: dins    $[[R0:[0-9]+]], $[[R1:[0-9]+]], 28, 6
 ; MIPS64R2: dins    $[[R0:[0-9]+]], $[[R1:[0-9]+]], 50, 14
-; MIPS64R2: dsrl	  $[[R0:[0-9]+]], $[[R1:[0-9]+]], 50
+; MIPS64R2: dsrl    $[[R0:[0-9]+]], $[[R1:[0-9]+]], 50
 ; MIPS64R2: dins    $[[R0:[0-9]+]], $[[R1:[0-9]+]], 34, 16
 ; MIPS32R2: ins     $[[R0:[0-9]+]], $[[R1:[0-9]+]], 2, 16
 ; MIPS32R2-NOT: ins $[[R0:[0-9]+]], $[[R1:[0-9]+]], 18, 46
 ; MIPS16-NOT: ins{{[[:space:]].*}}
+
+
+; int foo(volatile int x) {
+;   int y = x;
+;   y = y & -4;
+;   x = y | 8;
+;   return y;
+; }
+
+define i32 @foo(i32 signext %x) {
+entry:
+  %x.addr = alloca i32, align 4
+  store volatile i32 %x, i32* %x.addr, align 4
+  %x.addr.0.x.addr.0. = load volatile i32, i32* %x.addr, align 4
+  %and = and i32 %x.addr.0.x.addr.0., -4
+  %or = or i32 %and, 8
+  store volatile i32 %or, i32* %x.addr, align 4
+  ret i32 %and
+}
+
+; CHECK-LABEL: foo:
+; MIPS64R2:        ori  $[[R0:[0-9]+]], $[[R0:[0-9]+]], 8
+; MIPS64R2-NOT:    ins {{[[:space:]].*}}
+; MIPS32R2:        ori  $[[R0:[0-9]+]], $[[R0:[0-9]+]], 8
+; MIPS32R2-NOT:    ins {{[[:space:]].*}}
+; MIPS64R2N32:     ori  $[[R0:[0-9]+]], $[[R0:[0-9]+]], 8
+; MIPS64R2N32-NOT: ins {{[[:space:]].*}}

@@ -126,7 +126,7 @@ static cl::opt<bool>
 static cl::opt<unsigned> MulOpsInlineThreshold(
     "scev-mulops-inline-threshold", cl::Hidden,
     cl::desc("Threshold for inlining multiplication operands into a SCEV"),
-    cl::init(1000));
+    cl::init(32));
 
 static cl::opt<unsigned> AddOpsInlineThreshold(
     "scev-addops-inline-threshold", cl::Hidden,

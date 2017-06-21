@@ -200,6 +200,7 @@ void LinkerDriver::addFile(StringRef Path, bool WithLOption) {
       error("attempted static link of dynamic object " + Path);
       return;
     }
+
     // DSOs usually have DT_SONAME tags in their ELF headers, and the
     // sonames are used to identify DSOs. But if they are missing,
     // they are identified by filenames. We don't know whether the new
@@ -210,8 +211,8 @@ void LinkerDriver::addFile(StringRef Path, bool WithLOption) {
     // If a file was specified by -lfoo, the directory part is not
     // significant, as a user did not specify it. This behavior is
     // compatible with GNU.
-    Files.push_back(createSharedFile(
-        MBRef, WithLOption ? sys::path::filename(Path) : Path));
+    Files.push_back(
+        createSharedFile(MBRef, WithLOption ? path::filename(Path) : Path));
     return;
   default:
     if (InLib)
