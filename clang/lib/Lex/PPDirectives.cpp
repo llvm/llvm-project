@@ -2673,7 +2673,7 @@ void Preprocessor::HandleIfdefDirective(Token &Result, bool isIfndef,
     // In 'single-file-parse mode' undefined identifiers trigger parsing of all
     // the directive blocks.
     CurPPLexer->pushConditionalLevel(DirectiveTok.getLocation(),
-                                     /*wasskip*/true, /*foundnonskip*/false,
+                                     /*wasskip*/false, /*foundnonskip*/false,
                                      /*foundelse*/false);
   } else if (!MI == isIfndef) {
     // Yes, remember that we are inside a conditional, then lex the next token.
@@ -2720,7 +2720,7 @@ void Preprocessor::HandleIfDirective(Token &IfToken,
   if (PPOpts->SingleFileParseMode && DER.IncludedUndefinedIds) {
     // In 'single-file-parse mode' undefined identifiers trigger parsing of all
     // the directive blocks.
-    CurPPLexer->pushConditionalLevel(IfToken.getLocation(), /*wasskip*/true,
+    CurPPLexer->pushConditionalLevel(IfToken.getLocation(), /*wasskip*/false,
                                      /*foundnonskip*/false, /*foundelse*/false);
   } else if (ConditionalTrue) {
     // Yes, remember that we are inside a conditional, then lex the next token.
@@ -2783,11 +2783,11 @@ void Preprocessor::HandleElseDirective(Token &Result) {
   if (Callbacks)
     Callbacks->Else(Result.getLocation(), CI.IfLoc);
 
-  if (PPOpts->SingleFileParseMode && CI.WasSkipping) {
+  if (PPOpts->SingleFileParseMode && !CI.FoundNonSkip) {
     // In 'single-file-parse mode' undefined identifiers trigger parsing of all
     // the directive blocks.
     CurPPLexer->pushConditionalLevel(CI.IfLoc, /*wasskip*/false,
-                                     /*foundnonskip*/true, /*foundelse*/true);
+                                     /*foundnonskip*/false, /*foundelse*/true);
     return;
   }
 
@@ -2826,10 +2826,10 @@ void Preprocessor::HandleElifDirective(Token &ElifToken) {
                     SourceRange(ConditionalBegin, ConditionalEnd),
                     PPCallbacks::CVK_NotEvaluated, CI.IfLoc);
 
-  if (PPOpts->SingleFileParseMode && CI.WasSkipping) {
+  if (PPOpts->SingleFileParseMode && !CI.FoundNonSkip) {
     // In 'single-file-parse mode' undefined identifiers trigger parsing of all
     // the directive blocks.
-    CurPPLexer->pushConditionalLevel(ElifToken.getLocation(), /*wasskip*/true,
+    CurPPLexer->pushConditionalLevel(ElifToken.getLocation(), /*wasskip*/false,
                                      /*foundnonskip*/false, /*foundelse*/false);
     return;
   }
