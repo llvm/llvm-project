@@ -1964,6 +1964,7 @@ void Scop::setContext(__isl_take isl_set *NewContext) {
   Context = NewContext;
 }
 
+namespace {
 /// Remap parameter values but keep AddRecs valid wrt. invariant loads.
 struct SCEVSensitiveParameterRewriter
     : public SCEVRewriteVisitor<SCEVSensitiveParameterRewriter> {
@@ -1994,8 +1995,45 @@ public:
   }
 };
 
-const SCEV *Scop::getRepresentingInvariantLoadSCEV(const SCEV *S) {
-  return SCEVSensitiveParameterRewriter::rewrite(S, *SE, InvEquivClassVMap);
+/// Check whether we should remap a SCEV expression.
+struct SCEVFindInsideScop : public SCEVTraversal<SCEVFindInsideScop> {
+  ValueToValueMap &VMap;
+  bool FoundInside = false;
+  Scop *S;
+
+public:
+  SCEVFindInsideScop(ValueToValueMap &VMap, ScalarEvolution &SE, Scop *S)
+      : SCEVTraversal(*this), VMap(VMap), S(S) {}
+
+  static bool hasVariant(const SCEV *E, ScalarEvolution &SE,
+                         ValueToValueMap &VMap, Scop *S) {
+    SCEVFindInsideScop SFIS(VMap, SE, S);
+    SFIS.visitAll(E);
+    return SFIS.FoundInside;
+  }
+
+  bool follow(const SCEV *E) {
+    if (auto *AddRec = dyn_cast<SCEVAddRecExpr>(E)) {
+      FoundInside |= S->getRegion().contains(AddRec->getLoop());
+    } else if (auto *Unknown = dyn_cast<SCEVUnknown>(E)) {
+      if (Instruction *I = dyn_cast<Instruction>(Unknown->getValue()))
+        FoundInside |= S->getRegion().contains(I) && !VMap.count(I);
+    }
+    return !FoundInside;
+  }
+  bool isDone() { return FoundInside; }
+};
+} // namespace
+
+const SCEV *Scop::getRepresentingInvariantLoadSCEV(const SCEV *E) {
+  // Check whether it makes sense to rewrite the SCEV.  (ScalarEvolution
+  // doesn't like addition between an AddRec and an expression that
+  // doesn't have a dominance relationship with it.)
+  if (SCEVFindInsideScop::hasVariant(E, *SE, InvEquivClassVMap, this))
+    return E;
+
+  // Rewrite SCEV.
+  return SCEVSensitiveParameterRewriter::rewrite(E, *SE, InvEquivClassVMap);
 }
 
 // This table of function names is used to translate parameter names in more

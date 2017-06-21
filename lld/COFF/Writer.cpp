@@ -213,13 +213,14 @@ void OutputSection::writeHeaderTo(uint8_t *Buf) {
 uint64_t Defined::getSecrel() {
   if (auto *D = dyn_cast<DefinedRegular>(this))
     return getRVA() - D->getChunk()->getOutputSection()->getRVA();
-  fatal("SECREL relocation points to a non-regular symbol");
+  fatal("SECREL relocation points to a non-regular symbol: " + toString(*this));
 }
 
 uint64_t Defined::getSectionIndex() {
   if (auto *D = dyn_cast<DefinedRegular>(this))
     return D->getChunk()->getOutputSection()->SectionIndex;
-  fatal("SECTION relocation points to a non-regular symbol");
+  fatal("SECTION relocation points to a non-regular symbol: " +
+        toString(*this));
 }
 
 bool Defined::isExecutable() {
@@ -445,9 +446,12 @@ Optional<coff_symbol16> Writer::createSymbol(Defined *Def) {
   if (isa<DefinedRelative>(Def))
     return None;
 
-  if (auto *D = dyn_cast<DefinedRegular>(Def))
-    if (!D->getChunk()->isLive())
+  if (auto *D = dyn_cast<DefinedRegular>(Def)) {
+    // Don't write dead symbols or symbols in codeview sections to the symbol
+    // table.
+    if (!D->getChunk()->isLive() || D->getChunk()->isCodeView())
       return None;
+  }
 
   if (auto *Sym = dyn_cast<DefinedImportData>(Def))
     if (!Sym->File->Live)

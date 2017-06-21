@@ -1,0 +1,52 @@
+Consider this example program with an inline function "foo":
+
+==> foo.h <==
+extern int global;
+__inline void foo() {
+  ++global;
+}
+void bar();
+==> pdb_comdat_main.c <==
+#include "foo.h"
+int main(void) {
+  foo();
+  bar();
+  return 42;
+}
+==> pdb_comdat_bar.c <==
+#include "foo.h"
+void bar(void) {
+  foo();
+}
+
+Both object files will contain debug info for foo, but only the debug info from
+pdb_comdat_main.obj should be included in the PDB.
+
+RUN: rm -rf %t && mkdir -p %t && cd %t
+RUN: yaml2obj %S/Inputs/pdb_comdat_main.yaml -o pdb_comdat_main.obj
+RUN: yaml2obj %S/Inputs/pdb_comdat_bar.yaml -o pdb_comdat_bar.obj
+RUN: lld-link pdb_comdat_main.obj pdb_comdat_bar.obj -out:t.exe -debug -pdb:t.pdb -nodefaultlib -entry:main
+RUN: llvm-pdbutil raw -l t.pdb | FileCheck %s
+
+CHECK:                            Lines
+CHECK: ============================================================
+CHECK-LABEL:   Mod 0000 | `{{.*}}pdb_comdat_main.obj`:
+CHECK:       c:\src\llvm-project\build\pdb_comdat_main.c (MD5: F969E51BBE373436D81492EB61387F36)
+CHECK:       c:\src\llvm-project\build\foo.h (MD5: D74D834EFAC3AE2B45E606A8320B1D5C)
+CHECK-LABEL:   Mod 0001 | `{{.*}}pdb_comdat_bar.obj`:
+CHECK:       c:\src\llvm-project\build\pdb_comdat_bar.c (MD5: 365279DB4FCBEDD721BBFC3B14A953C2)
+CHECK-NOT:       c:\src\llvm-project\build\foo.h
+CHECK-LABEL:   Mod 0002 | `* Linker *`:
+
+Reorder the object files and verify that the other table is selected.
+
+RUN: lld-link pdb_comdat_bar.obj pdb_comdat_main.obj -out:t.exe -debug -pdb:t.pdb -nodefaultlib -entry:main
+RUN: llvm-pdbutil raw -l t.pdb | FileCheck %s --check-prefix=REORDER
+
+REORDER-LABEL:   Mod 0000 | `{{.*}}pdb_comdat_bar.obj`:
+REORDER:       c:\src\llvm-project\build\pdb_comdat_bar.c (MD5: 365279DB4FCBEDD721BBFC3B14A953C2)
+REORDER:       c:\src\llvm-project\build\foo.h (MD5: D74D834EFAC3AE2B45E606A8320B1D5C)
+REORDER-LABEL:   Mod 0001 | `{{.*}}pdb_comdat_main.obj`:
+REORDER:       c:\src\llvm-project\build\pdb_comdat_main.c
+REORDER-NOT:       c:\src\llvm-project\build\foo.h
+REORDER-LABEL:   Mod 0002 | `* Linker *`:

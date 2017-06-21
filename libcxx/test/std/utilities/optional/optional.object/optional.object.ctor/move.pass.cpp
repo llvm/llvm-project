@@ -157,7 +157,7 @@ int main()
     test<int>(3);
     static_assert(constexpr_test<int>(), "" );
     static_assert(constexpr_test<int>(3), "" );
-	
+
     {
         optional<const int> o(42);
         optional<const int> o2(std::move(o));

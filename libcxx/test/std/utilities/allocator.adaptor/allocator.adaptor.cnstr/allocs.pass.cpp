@@ -111,7 +111,7 @@ int main()
     {
         static_assert(!std::is_convertible<A1<int>, A2<int>>::value, "");
         static_assert(!std::is_convertible<
-             std::scoped_allocator_adaptor<A1<int>>, 
+             std::scoped_allocator_adaptor<A1<int>>,
              std::scoped_allocator_adaptor<A2<int>>>::value, "");
     }
 }

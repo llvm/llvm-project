@@ -164,10 +164,7 @@ static void addObjectsToPDB(BumpPtrAllocator &Alloc, SymbolTable *Symtab,
 
     // Now do all line info.
     for (SectionChunk *DebugChunk : File->getDebugChunks()) {
-      // FIXME: Debug chunks do not have a correct isLive() bit.
-      // FIXME: When linker GC is off we need to ignore debug info whose
-      // associated symbol was discarded.
-      if (DebugChunk->getSectionName() != ".debug$S")
+      if (!DebugChunk->isLive() || DebugChunk->getSectionName() != ".debug$S")
         continue;
 
       ArrayRef<uint8_t> RelocatedDebugContents =

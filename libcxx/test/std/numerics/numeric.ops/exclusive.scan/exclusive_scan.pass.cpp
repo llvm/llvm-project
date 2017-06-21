@@ -13,7 +13,7 @@
 // template<class InputIterator, class OutputIterator, class T>
 //     OutputIterator exclusive_scan(InputIterator first, InputIterator last,
 //                                   OutputIterator result, T init);
-// 
+//
 
 #include <numeric>
 #include <vector>
@@ -26,7 +26,7 @@ void
 test(Iter1 first, Iter1 last, T init, Iter2 rFirst, Iter2 rLast)
 {
     std::vector<typename std::iterator_traits<Iter1>::value_type> v;
-    
+
 //  Not in place
     std::exclusive_scan(first, last, std::back_inserter(v), init);
     assert(std::equal(v.begin(), v.end(), rFirst, rLast));
@@ -35,7 +35,7 @@ test(Iter1 first, Iter1 last, T init, Iter2 rFirst, Iter2 rLast)
     v.clear();
     v.assign(first, last);
     std::exclusive_scan(v.begin(), v.end(), v.begin(), init);
-    assert(std::equal(v.begin(), v.end(), rFirst, rLast));  
+    assert(std::equal(v.begin(), v.end(), rFirst, rLast));
 }
 
 
