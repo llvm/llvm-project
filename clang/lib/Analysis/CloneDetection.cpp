@@ -635,8 +635,7 @@ void CloneConstraint::splitCloneGroups(
         if (Indexes[j])
           continue;
 
-        // If a following StmtSequence belongs to our CloneGroup, we add it to
-        // it.
+        // If a following StmtSequence belongs to our CloneGroup, we add it.
         const StmtSequence &Candidate = HashGroup[j];
 
         if (!Compare(Prototype, Candidate))

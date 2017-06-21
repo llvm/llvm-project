@@ -112,8 +112,13 @@ def note_module_odr_violation_possible_decl : Note<
 def err_module_odr_violation_different_definitions : Error<
   "%q0 has different definitions in different modules; "
   "%select{definition in module '%2' is here|defined here}1">;
+def note_first_module_difference : Note<
+  "in first definition, possible difference is here">;
 def note_module_odr_violation_different_definitions : Note<
   "definition in module '%0' is here">;
+def note_second_module_difference : Note<
+  "in second definition, possible difference is here">;
+
 def err_module_odr_violation_different_instantiations : Error<
   "instantiation of %q0 is different in different modules">;
 

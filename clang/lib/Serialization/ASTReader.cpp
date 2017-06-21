@@ -9326,9 +9326,20 @@ void ASTReader::diagnoseOdrViolations() {
              diag::err_module_odr_violation_different_definitions)
             << FirstRecord << FirstModule.empty() << FirstModule;
 
+        if (FirstDecl) {
+          Diag(FirstDecl->getLocation(), diag::note_first_module_difference)
+              << FirstRecord << FirstDecl->getSourceRange();
+        }
+
         Diag(SecondRecord->getLocation(),
              diag::note_module_odr_violation_different_definitions)
             << SecondModule;
+
+        if (SecondDecl) {
+          Diag(SecondDecl->getLocation(), diag::note_second_module_difference)
+              << SecondDecl->getSourceRange();
+        }
+
         Diagnosed = true;
         break;
       }
