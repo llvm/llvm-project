@@ -156,7 +156,7 @@ static SourceLocation findInsertionLocationForMethodsFromAbstractClass(
     const SourceManager &SM, const LangOptions &LangOpts) {
   SourceLocation Loc;
   for (const CXXMethodDecl *M : Class->methods()) {
-    if (!M->isVirtual() || M->isPure())
+    if (!M->isVirtual() || M->isPure() || M->isImplicit())
       continue;
     for (const CXXMethodDecl *OM : M->overridden_methods()) {
       OM = OM->getCanonicalDecl();

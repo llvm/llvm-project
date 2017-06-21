@@ -99,3 +99,28 @@ struct GenericSubType : GenericType<int> {
 // CHECK8: "void firstMethod(int x, int y) override;\n\nvoid thirdMethod(int a) override;\n\nvoid fourthMethod() override;\n\n" [[@LINE-1]]:1
 
 // RUN: clang-refactor-test perform -action fill-in-missing-abstract-methods -at=%s:91:1 -at=%s:96:1 %s | FileCheck --check-prefix=CHECK8 %s
+
+
+struct BaseClass2
+{
+    virtual ~BaseClass2();
+    virtual int load() = 0;
+};
+
+// correct-implicit-destructor-placement: +1:1
+struct DerivedImplicitDestructorClass2
+: public BaseClass2
+{
+
+}; // CHECK-DESTRUCTOR: "int load() override;\n\n" [[@LINE]]:1
+
+// Don't insert methods after the destructor:
+// correct-destructor-placement: +1:1
+struct DerivedExplicitDestructorClass2
+: public BaseClass2 {
+  ~DerivedImplicitDestructorClass2();
+
+
+}; // CHECK-DESTRUCTOR: "int load() override;\n\n" [[@LINE]]:1
+
+// RUN: clang-refactor-test perform -action fill-in-missing-abstract-methods -at=correct-implicit-destructor-placement -at=correct-destructor-placement %s | FileCheck --check-prefix=CHECK-DESTRUCTOR %s
