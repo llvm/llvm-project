@@ -189,25 +189,7 @@ void UnsetAlternateSignalStack() {
 
 static void MaybeInstallSigaction(int signum,
                                   SignalHandlerType handler) {
-  switch (GetHandleSignalMode(signum)) {
-    case kHandleSignalNo:
-      return;
-    case kHandleSignalYes: {
-      struct sigaction sigact;
-      internal_memset(&sigact, 0, sizeof(sigact));
-      CHECK_EQ(0, internal_sigaction(signum, nullptr, &sigact));
-      if (sigact.sa_flags & SA_SIGINFO) {
-        if (sigact.sa_sigaction) return;
-      } else {
-        if (sigact.sa_handler != SIG_DFL && sigact.sa_handler != SIG_IGN &&
-            sigact.sa_handler != SIG_ERR)
-          return;
-      }
-      break;
-    }
-    case kHandleSignalExclusive:
-      break;
-  }
+  if (GetHandleSignalMode(signum) == kHandleSignalNo) return;
 
   struct sigaction sigact;
   internal_memset(&sigact, 0, sizeof(sigact));
