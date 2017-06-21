@@ -31,10 +31,9 @@ if (GENERIC_IS_ZERO)
   # set the target triple to amdgizcl to show to the compiler
   # that we are using a newer address space mapping
   set(AMDGPU_TARGET_TRIPLE "amdgcn--amdhsa-amdgizcl")
-  # execute utils/change-addr-space.sh
-  # the script would apply utils/add_amdgiz.sed
-  execute_process(COMMAND "utils/change-addr-space.sh"
-                  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+  # HCC will execute utils/change-addr-space.sh
+  # and apply utils/add_amdgiz.sed on all .ll files in subdirectory hc/, irif/, opencl/
+
 endif (GENERIC_IS_ZERO)
 
 option(BUILD_HC_LIB "Build Heterogeneous Compute built-in library (hc)" ON)
