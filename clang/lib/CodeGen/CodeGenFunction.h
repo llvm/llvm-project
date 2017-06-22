@@ -120,6 +120,7 @@ enum TypeEvaluationKind {
   SANITIZER_CHECK(NonnullArg, nonnull_arg, 0)                                  \
   SANITIZER_CHECK(NonnullReturn, nonnull_return, 0)                            \
   SANITIZER_CHECK(OutOfBounds, out_of_bounds, 0)                               \
+  SANITIZER_CHECK(PointerOverflow, pointer_overflow, 0)                        \
   SANITIZER_CHECK(ShiftOutOfBounds, shift_out_of_bounds, 0)                    \
   SANITIZER_CHECK(SubOverflow, sub_overflow, 0)                                \
   SANITIZER_CHECK(TypeMismatch, type_mismatch, 1)                              \
@@ -3467,6 +3468,22 @@ public:
   /// Given an assignment `*LHS = RHS`, emit a test that checks if \p RHS is
   /// nonnull, if \p LHS is marked _Nonnull.
   void EmitNullabilityCheck(LValue LHS, llvm::Value *RHS, SourceLocation Loc);
+
+  /// An enumeration which makes it easier to specify whether or not an
+  /// operation is a subtraction.
+  enum { NotSubtraction = false, IsSubtraction = true };
+
+  /// Same as IRBuilder::CreateInBoundsGEP, but additionally emits a check to
+  /// detect undefined behavior when the pointer overflow sanitizer is enabled.
+  /// \p SignedIndices indicates whether any of the GEP indices are signed.
+  /// \p IsSubtraction indicates whether the expression used to form the GEP
+  /// is a subtraction.
+  llvm::Value *EmitCheckedInBoundsGEP(llvm::Value *Ptr,
+                                      ArrayRef<llvm::Value *> IdxList,
+                                      bool SignedIndices,
+                                      bool IsSubtraction,
+                                      SourceLocation Loc,
+                                      const Twine &Name = "");
 
   /// \brief Emit a description of a type in a format suitable for passing to
   /// a runtime sanitizer handler.

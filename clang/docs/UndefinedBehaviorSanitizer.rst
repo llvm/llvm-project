@@ -106,6 +106,8 @@ Available checks are:
      invalid pointers. These checks are made in terms of
      ``__builtin_object_size``, and consequently may be able to detect more
      problems at higher optimization levels.
+  -  ``-fsanitize=pointer-overflow``: Performing pointer arithmetic which
+     overflows.
   -  ``-fsanitize=return``: In C++, reaching the end of a
      value-returning function without returning a value.
   -  ``-fsanitize=returns-nonnull-attribute``: Returning null pointer
