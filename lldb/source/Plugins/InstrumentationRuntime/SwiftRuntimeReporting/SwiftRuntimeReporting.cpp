@@ -89,21 +89,20 @@ SwiftRuntimeReporting::RetrieveReportData(ExecutionContextRef exe_ctx_ref) {
   if (!abi)
     return StructuredData::ObjectSP();
 
-  // Prepare the argument types: 1st argument is bool, 2nd and 3rd are pointers
+  // Prepare the argument types: treat all of them as pointers
   ClangASTContext *clang_ast_context = target.GetScratchClangASTContext();
   ValueList args;
   Value input_value;
-  input_value.SetCompilerType(clang_ast_context->GetBasicType(eBasicTypeBool));
-  args.PushValue(input_value);
   input_value.SetCompilerType(
       clang_ast_context->GetBasicType(eBasicTypeVoid).GetPointerType());
+  args.PushValue(input_value);
   args.PushValue(input_value);
   args.PushValue(input_value);
 
   if (!abi->GetArgumentValues(*thread_sp, args))
     return StructuredData::ObjectSP();
 
-  bool is_fatal = args.GetValueAtIndex(0)->GetScalar().UInt() == 1;
+  bool is_fatal = (args.GetValueAtIndex(0)->GetScalar().UInt() & 0xff) == 1;
   addr_t message_ptr = args.GetValueAtIndex(1)->GetScalar().ULongLong();
   addr_t details_ptr = args.GetValueAtIndex(2)->GetScalar().ULongLong();
 
