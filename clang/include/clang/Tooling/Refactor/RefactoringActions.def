@@ -32,6 +32,8 @@ REFACTORING_SUB_ACTION(Local, Rename, "Rename")
 REFACTORING_OPERATION_ACTION(Extract, "Extract Function", "extract")
 REFACTORING_OPERATION_SUB_ACTION(Method, Extract, "Extract Method",
                                  "extract-method")
+REFACTORING_OPERATION_SUB_ACTION(Expression, Extract, "Extract Expression",
+                                 "extract-expression")
 
 REFACTORING_OPERATION_ACTION(IfSwitchConversion, "Convert to Switch",
                              "if-switch-conversion")

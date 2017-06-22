@@ -156,6 +156,12 @@ enum CXRefactoringActionType {
   * declarations without respective definitions.
   */
   CXRefactor_ImplementDeclaredMethods = 10,
+
+  /**
+   * \brief The sub-action of 'extract' that extracts source expression into a
+   * new variable.
+   */
+  CXRefactor_Extract_Expression = 11,
 };
 
 /**

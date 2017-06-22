@@ -95,7 +95,9 @@ public:
     if (auto *CS = dyn_cast<CompoundStmt>(S)) {
       IsPrevCompoundStmt = true;
       InsertionCandidateStack.emplace_back(CS, nullptr);
-      return RecursiveASTVisitor::TraverseStmt(S);
+      RecursiveASTVisitor::TraverseStmt(S);
+      InsertionCandidateStack.pop_back();
+      return true;
     }
     return RecursiveASTVisitor::TraverseStmt(S);
   }

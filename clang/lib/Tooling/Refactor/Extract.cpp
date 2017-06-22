@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "ExtractionUtils.h"
 #include "RefactoringOperations.h"
 #include "SourceLocationUtilities.h"
 #include "StmtUtils.h"
@@ -56,6 +57,8 @@ struct CompoundStatementRange {
   CompoundStmt::const_body_iterator end() const { return Last + 1; }
 };
 
+enum class ExtractionKind { Function, Method, Expression };
+
 class ExtractOperation : public RefactoringOperation {
 public:
   struct CandidateInfo {
@@ -80,12 +83,11 @@ public:
                    std::vector<std::string> Candidates,
                    Optional<CompoundStatementRange> ExtractedStmtRange,
                    Optional<CandidateInfo> FirstCandidateInfo,
-                   bool IsMethodExtraction)
+                   ExtractionKind Kind)
       : S(S), ParentStmt(ParentStmt),
         FunctionLikeParentDecl(FunctionLikeParentDecl),
         Candidates(std::move(Candidates)),
-        ExtractedStmtRange(ExtractedStmtRange),
-        IsMethodExtraction(IsMethodExtraction) {
+        ExtractedStmtRange(ExtractedStmtRange), Kind(Kind) {
     if (FirstCandidateInfo)
       CandidateExtractionInfo.push_back(*FirstCandidateInfo);
   }
@@ -107,15 +109,27 @@ public:
   }
 
   std::vector<RefactoringActionType> getAvailableSubActions() override {
+    std::vector<RefactoringActionType> SubActions;
     if (isa<CXXMethodDecl>(FunctionLikeParentDecl) ||
         isa<ObjCMethodDecl>(FunctionLikeParentDecl))
-      return {RefactoringActionType::Extract_Method};
-    return {};
+      SubActions.push_back(RefactoringActionType::Extract_Method);
+    if (isLexicalExpression(S, ParentStmt))
+      SubActions.push_back(RefactoringActionType::Extract_Expression);
+    return SubActions;
+  }
+
+  bool isMethodExtraction() const { return Kind == ExtractionKind::Method; }
+
+  bool isExpressionExtraction() const {
+    return Kind == ExtractionKind::Expression;
   }
 
   llvm::Expected<RefactoringResult> perform(ASTContext &Context, const Preprocessor &ThePreprocessor,
           const RefactoringOptionSet &Options,
           unsigned SelectedCandidateIndex) override;
+
+  llvm::Expected<RefactoringResult>
+  performExpressionExtraction(ASTContext &Context, PrintingPolicy &PP);
 
   const Stmt *S, *ParentStmt;
   const Decl *FunctionLikeParentDecl;
@@ -123,7 +137,7 @@ public:
   /// A set of extraction candidates that correspond to the extracted code.
   SmallVector<CandidateInfo, 2> CandidateExtractionInfo;
   Optional<CompoundStatementRange> ExtractedStmtRange;
-  bool IsMethodExtraction;
+  ExtractionKind Kind;
 };
 
 } // end anonymous namespace
@@ -167,7 +181,7 @@ static RefactoringOperationResult
 initiateAnyExtractOperation(ASTSlice &Slice, ASTContext &Context,
                             SourceLocation Location, SourceRange SelectionRange,
                             bool CreateOperation,
-                            bool IsMethodExtraction = false) {
+                            ExtractionKind Kind = ExtractionKind::Function) {
   auto SelectedStmtsOpt = Slice.getSelectedStmtSet();
   if (!SelectedStmtsOpt)
     return None;
@@ -195,6 +209,12 @@ initiateAnyExtractOperation(ASTSlice &Slice, ASTContext &Context,
     if (!PRE->isMessagingGetter())
       return RefactoringOperationResult("property setter can't be extracted");
   }
+
+  const Stmt *ParentStmt =
+      Slice.parentStmtForIndex(*Stmts.containsSelectionRangeIndex);
+  if (Kind == ExtractionKind::Expression &&
+      !isLexicalExpression(Selected, ParentStmt))
+    return None;
 
   RefactoringOperationResult Result;
   Result.Initiated = true;
@@ -244,9 +264,8 @@ initiateAnyExtractOperation(ASTSlice &Slice, ASTContext &Context,
   }
 
   auto Operation = llvm::make_unique<ExtractOperation>(
-      Selected, Slice.parentStmtForIndex(*Stmts.containsSelectionRangeIndex),
-      ParentDecl, std::move(Candidates), ExtractedStmtRange, FirstCandidateInfo,
-      IsMethodExtraction);
+      Selected, ParentStmt, ParentDecl, std::move(Candidates),
+      ExtractedStmtRange, FirstCandidateInfo, Kind);
   auto &CandidateExtractionInfo = Operation->CandidateExtractionInfo;
   SourceRange Range;
   if (ExtractedStmtRange)
@@ -290,8 +309,16 @@ RefactoringOperationResult clang::tooling::initiateExtractMethodOperation(
     SourceRange SelectionRange, bool CreateOperation) {
   // TODO: Verify that method extraction is actually possible.
   return initiateAnyExtractOperation(Slice, Context, Location, SelectionRange,
-                                     CreateOperation,
-                                     /*IsMethodExtraction=*/true);
+                                     CreateOperation, ExtractionKind::Method);
+}
+
+RefactoringOperationResult clang::tooling::initiateExtractExpressionOperation(
+    ASTSlice &Slice, ASTContext &Context, SourceLocation Location,
+    SourceRange SelectionRange, bool CreateOperation) {
+  RefactoringOperationResult R =
+      initiateAnyExtractOperation(Slice, Context, Location, SelectionRange,
+                                  CreateOperation, ExtractionKind::Expression);
+  return R;
 }
 
 using ReferencedEntity =
@@ -1429,6 +1456,54 @@ static bool isInHeader(SourceLocation Loc, const SourceManager &SM) {
       .Default(false);
 }
 
+llvm::Expected<RefactoringResult>
+ExtractOperation::performExpressionExtraction(ASTContext &Context,
+                                              PrintingPolicy &PP) {
+  assert(isExpressionExtraction() && "Not an expression extraction");
+  std::vector<RefactoringReplacement> Replacements;
+  const Expr *E = cast<Expr>(S);
+  QualType VarType = findExpressionLexicalType(FunctionLikeParentDecl, E,
+                                               E->getType(), PP, Context);
+  StringRef VarName = "extractedExpr";
+  auto CreatedSymbol =
+      llvm::make_unique<RefactoringResultAssociatedSymbol>(SymbolName(VarName));
+
+  SourceRange ExtractedTokenRange = CandidateExtractionInfo[0].Range;
+  SourceRange ExtractedCharRange = SourceRange(
+      ExtractedTokenRange.getBegin(),
+      getPreciseTokenLocEnd(ExtractedTokenRange.getEnd(),
+                            Context.getSourceManager(), Context.getLangOpts()));
+
+  // Create the variable that will hold the value of the duplicate expression.
+  std::string VariableDeclarationString;
+  llvm::raw_string_ostream OS(VariableDeclarationString);
+  VarType.print(OS, PP, /*PlaceHolder*/ VarName);
+  // FIXME: We should hook into the TypePrinter when moving over to llvm.org
+  // instead and get the offset from it.
+  unsigned NameOffset = StringRef(OS.str()).find(VarName);
+  OS << " = ";
+  OS << Lexer::getSourceText(CharSourceRange::getCharRange(ExtractedCharRange),
+                             Context.getSourceManager(), Context.getLangOpts());
+  OS << ";\n";
+
+  // Variable declaration.
+  SourceLocation InsertionLoc =
+      extract::locationForExtractedVariableDeclaration(
+          E, FunctionLikeParentDecl, Context.getSourceManager());
+  Replacements.push_back(RefactoringReplacement(
+      SourceRange(InsertionLoc, InsertionLoc), OS.str(), CreatedSymbol.get(),
+      RefactoringReplacement::AssociatedSymbolLocation(
+          llvm::makeArrayRef(NameOffset), /*IsDeclaration=*/true)));
+  // Replace the expression with the variable.
+  Replacements.push_back(
+      RefactoringReplacement(ExtractedCharRange, VarName, CreatedSymbol.get(),
+                             /*NameOffset=*/llvm::makeArrayRef(unsigned(0))));
+
+  RefactoringResult Result(std::move(Replacements));
+  Result.AssociatedSymbols.push_back(std::move(CreatedSymbol));
+  return std::move(Result);
+}
+
 llvm::Expected<RefactoringResult> ExtractOperation::perform(
     ASTContext &Context, const Preprocessor &ThePreprocessor,
     const RefactoringOptionSet &Options, unsigned SelectedCandidateIndex) {
@@ -1441,6 +1516,9 @@ llvm::Expected<RefactoringResult> ExtractOperation::perform(
   PP.SuppressStrongLifetime = true;
   PP.SuppressLifetimeQualifiers = true;
   PP.SuppressUnwrittenScope = true;
+
+  if (isExpressionExtraction())
+    return performExpressionExtraction(Context, PP);
 
   const Stmt *S =
       CandidateExtractionInfo[SelectedCandidateIndex].AnalyzedStatement
@@ -1573,7 +1651,7 @@ llvm::Expected<RefactoringResult> ExtractOperation::perform(
   }
   // Capture any fields if necessary.
   bool IsThisConstInCapturedFieldUses = true;
-  if (!IsMethodExtraction) {
+  if (!isMethodExtraction()) {
     for (const auto &I : Visitor.CapturedFields) {
       if (I.getSecond().isPassedByRefOrPtr() &&
           !I.getSecond().isRefOrPtrConst())
@@ -1592,7 +1670,7 @@ llvm::Expected<RefactoringResult> ExtractOperation::perform(
               return X.getName() < Y.getName();
             });
   // 'This'/'self' should be passed-in first.
-  if (!IsMethodExtraction && Visitor.CaptureThis) {
+  if (!isMethodExtraction() && Visitor.CaptureThis) {
     CapturedVariables.insert(
         CapturedVariables.begin(),
         CapturedVariable::getThis(
@@ -1612,7 +1690,7 @@ llvm::Expected<RefactoringResult> ExtractOperation::perform(
         PtrThisRewriter.TraverseStmt(const_cast<Stmt *>(S));
     } else
       PtrThisRewriter.TraverseStmt(const_cast<Stmt *>(S));
-  } else if (!IsMethodExtraction && Visitor.CaptureSelf &&
+  } else if (!isMethodExtraction() && Visitor.CaptureSelf &&
              EnclosingObjCMethod) {
     if (EnclosingObjCMethod->isInstanceMethod()) {
       // Instance methods rewrite 'self' into an 'object' parameter.
@@ -1638,7 +1716,7 @@ llvm::Expected<RefactoringResult> ExtractOperation::perform(
         SelfRewriter.TraverseStmt(const_cast<Stmt *>(S));
     }
   }
-  if (!IsMethodExtraction && Visitor.CaptureSuper && EnclosingObjCMethod) {
+  if (!isMethodExtraction() && Visitor.CaptureSuper && EnclosingObjCMethod) {
     if (EnclosingObjCMethod->isInstanceMethod())
       // Instance methods rewrite 'super' into an 'superObject' parameter.
       CapturedVariables.insert(Visitor.CaptureSelf
@@ -1701,7 +1779,8 @@ llvm::Expected<RefactoringResult> ExtractOperation::perform(
   StringRef ExtractedName = "extracted";
   llvm::SmallVector<StringRef, 4> ExtractedNamePieces;
   ExtractedNamePieces.push_back(ExtractedName);
-  if (IsMethodExtraction && EnclosingObjCMethod && !CapturedVariables.empty()) {
+  if (isMethodExtraction() && EnclosingObjCMethod &&
+      !CapturedVariables.empty()) {
     for (const auto &Var : llvm::makeArrayRef(CapturedVariables).drop_front())
       ExtractedNamePieces.push_back(Var.getName());
   }
@@ -1710,7 +1789,7 @@ llvm::Expected<RefactoringResult> ExtractOperation::perform(
           SymbolName(ExtractedNamePieces));
 
   SourceLocation FunctionExtractionLoc = computeFunctionExtractionLocation(
-      FunctionLikeParentDecl, IsMethodExtraction);
+      FunctionLikeParentDecl, isMethodExtraction());
   FunctionExtractionLoc =
       getLocationOfPrecedingComment(FunctionExtractionLoc, SM, LangOpts);
 
@@ -1719,7 +1798,7 @@ llvm::Expected<RefactoringResult> ExtractOperation::perform(
       [&](llvm::raw_string_ostream &OS,
           bool IsDefinition =
               true) -> RefactoringReplacement::AssociatedSymbolLocation {
-    if (IsMethodExtraction && EnclosingObjCMethod) {
+    if (isMethodExtraction() && EnclosingObjCMethod) {
       OS << (EnclosingObjCMethod->isClassMethod() ? '+' : '-') << " (";
       ReturnType.print(OS, PP);
       OS << ')';
@@ -1742,7 +1821,7 @@ llvm::Expected<RefactoringResult> ExtractOperation::perform(
           NameOffsets, /*IsDeclaration=*/true);
     }
     auto *FD = dyn_cast<FunctionDecl>(FunctionLikeParentDecl);
-    if (IsMethodExtraction && IsDefinition &&
+    if (isMethodExtraction() && IsDefinition &&
         !FD->getDescribedFunctionTemplate()) {
       // Print the class template parameter lists for an out-of-line method.
       for (unsigned I = 0,
@@ -1752,13 +1831,13 @@ llvm::Expected<RefactoringResult> ExtractOperation::perform(
         OS << "\n";
       }
     }
-    if (IsMethodExtraction && isEnclosingMethodStatic(FunctionLikeParentDecl))
+    if (isMethodExtraction() && isEnclosingMethodStatic(FunctionLikeParentDecl))
       OS << "static ";
-    else if (!IsMethodExtraction)
+    else if (!isMethodExtraction())
       OS << (isInHeader(FunctionExtractionLoc, SM) ? "inline " : "static ");
     ReturnType.print(OS, PP);
     OS << ' ';
-    if (IsMethodExtraction && IsDefinition)
+    if (isMethodExtraction() && IsDefinition)
       printEnclosingMethodScope(FunctionLikeParentDecl, OS, PP);
     unsigned NameOffset = OS.str().size();
     OS << ExtractedName << '(';
@@ -1770,14 +1849,14 @@ llvm::Expected<RefactoringResult> ExtractOperation::perform(
       Var.ParameterType.print(OS, PP, /*PlaceHolder=*/Var.getName());
     }
     OS << ')';
-    if (IsMethodExtraction && isEnclosingMethodConst(FunctionLikeParentDecl))
+    if (isMethodExtraction() && isEnclosingMethodConst(FunctionLikeParentDecl))
       OS << " const";
     return RefactoringReplacement::AssociatedSymbolLocation(
         NameOffset, /*IsDeclaration=*/true);
     ;
   };
 
-  if (IsMethodExtraction &&
+  if (isMethodExtraction() &&
       isEnclosingMethodOutOfLine(FunctionLikeParentDecl)) {
     // The location of the declaration should be either before the original
     // declararation, or, if this method has not declaration, somewhere
@@ -1786,7 +1865,7 @@ llvm::Expected<RefactoringResult> ExtractOperation::perform(
     SourceLocation DeclarationLoc;
     if (FunctionLikeParentDecl->getCanonicalDecl() != FunctionLikeParentDecl) {
       DeclarationLoc = computeFunctionExtractionLocation(
-          FunctionLikeParentDecl->getCanonicalDecl(), IsMethodExtraction);
+          FunctionLikeParentDecl->getCanonicalDecl(), isMethodExtraction());
       Placement = MethodDeclarationPlacement::Before;
     } else {
       auto LocAndPlacement =
@@ -1856,7 +1935,7 @@ llvm::Expected<RefactoringResult> ExtractOperation::perform(
   }
   InsertedOS << CandidateExtractionInfo[SelectedCandidateIndex].PreInsertedText;
   llvm::SmallVector<unsigned, 4> NameOffsets;
-  if (IsMethodExtraction && EnclosingObjCMethod) {
+  if (isMethodExtraction() && EnclosingObjCMethod) {
     InsertedOS << "[self ";
     NameOffsets.push_back(InsertedOS.str().size());
     InsertedOS << ExtractedName;
