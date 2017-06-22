@@ -2958,7 +2958,7 @@ static llvm::Value *emitArraySubscriptGEP(CodeGenFunction &CGF,
                                     const llvm::Twine &name = "arrayidx") {
   if (inbounds) {
     return CGF.EmitCheckedInBoundsGEP(
-        ptr, indices, signedIndices, CodeGenFunction::IsSubtraction, loc, name);
+        ptr, indices, signedIndices, CodeGenFunction::NotSubtraction, loc, name);
   } else {
     return CGF.Builder.CreateGEP(ptr, indices, name);
   }

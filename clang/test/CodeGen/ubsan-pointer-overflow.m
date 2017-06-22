@@ -126,8 +126,10 @@ void pointer_array(int **arr, int k) {
 
 // CHECK-LABEL: define void @pointer_array_unsigned_indices
 void pointer_array_unsigned_indices(int **arr, unsigned k) {
+  // CHECK: icmp uge
   // CHECK-NOT: select
   // CHECK: call void @__ubsan_handle_pointer_overflow{{.*}}
+  // CHECK: icmp uge
   // CHECK-NOT: select
   // CHECK: call void @__ubsan_handle_pointer_overflow{{.*}}
   arr[k][k];
