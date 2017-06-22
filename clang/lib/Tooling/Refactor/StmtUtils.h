@@ -27,6 +27,11 @@ SourceLocation getLexicalEndLocForDecl(const Decl *D, const SourceManager &SM,
 /// statement.
 bool isSemicolonRequiredAfter(const Stmt *S);
 
+/// Returns true if the given statement \p S is an actual expression in the
+/// source. Assignment expressions are considered to be statements unless they
+/// are a part of an expression.
+bool isLexicalExpression(const Stmt *S, const Stmt *Parent);
+
 } // end namespace tooling
 } // end namespace clang
 

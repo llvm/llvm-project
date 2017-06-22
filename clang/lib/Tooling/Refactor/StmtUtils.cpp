@@ -52,3 +52,21 @@ bool clang::tooling::isSemicolonRequiredAfter(const Stmt *S) {
     return true;
   }
 }
+
+static bool isAssignmentOperator(const Stmt *S) {
+  if (const auto *PseudoExpr = dyn_cast<PseudoObjectExpr>(S))
+    return isAssignmentOperator(PseudoExpr->getSyntacticForm());
+  if (const auto *BO = dyn_cast<BinaryOperator>(S))
+    return BO->isAssignmentOp();
+  return false;
+}
+
+bool clang::tooling::isLexicalExpression(const Stmt *S, const Stmt *Parent) {
+  if (!isa<Expr>(S))
+    return false;
+  // Assignment operators should be treated as statements unless they are a part
+  // of an expression.
+  if (isAssignmentOperator(S) && (!Parent || !isa<Expr>(Parent)))
+    return false;
+  return true;
+}

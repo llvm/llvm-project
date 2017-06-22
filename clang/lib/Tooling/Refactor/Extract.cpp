@@ -1282,14 +1282,6 @@ PrintingPolicy getPrintingPolicy(const ASTContext &Context,
   return Policy;
 }
 
-static bool isAssignmentOperator(const Stmt *S) {
-  if (const auto *PseudoExpr = dyn_cast<PseudoObjectExpr>(S))
-    return isAssignmentOperator(PseudoExpr->getSyntacticForm());
-  if (const auto *BO = dyn_cast<BinaryOperator>(S))
-    return BO->isAssignmentOp();
-  return false;
-}
-
 static QualType getFunctionLikeParentDeclReturnType(const Decl *D) {
   // FIXME: might need to handle ObjC blocks in the future.
   if (const auto *M = dyn_cast<ObjCMethodDecl>(D))
@@ -1468,12 +1460,7 @@ llvm::Expected<RefactoringResult> ExtractOperation::perform(
   } else
     Visitor.InspectExtractedStmt(const_cast<Stmt *>(S), Context);
   // Compute the return type.
-  bool IsExpr = isa<Expr>(S);
-  // Assignment operators should be treated as statements unless they are a part
-  // of an expression.
-  if (IsExpr && isAssignmentOperator(S) &&
-      (!ParentStmt || !isa<Expr>(ParentStmt)))
-    IsExpr = false;
+  bool IsExpr = isLexicalExpression(S, ParentStmt);
   QualType ReturnType;
   if (IsExpr || Visitor.HasReturnInExtracted) {
     if (const auto *E = dyn_cast<Expr>(S)) {
