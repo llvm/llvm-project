@@ -2,7 +2,7 @@
 // RUN: %clang_cc1 -x objective-c -emit-llvm -triple x86_64-apple-macosx10.10.0 -fsanitize=nullability-arg,nullability-assign,nullability-return -w %s -o - | FileCheck %s
 // RUN: %clang_cc1 -x objective-c++ -emit-llvm -triple x86_64-apple-macosx10.10.0 -fsanitize=nullability-arg,nullability-assign,nullability-return -w %s -o - | FileCheck %s
 
-// CHECK: [[NONNULL_RV_LOC1:@.*]] = private unnamed_addr global {{.*}} i32 109, i32 1 {{.*}} i32 100, i32 6
+// CHECK: [[NONNULL_RV_LOC1:@.*]] = private unnamed_addr global {{.*}} i32 100, i32 6
 // CHECK: [[NONNULL_ARG_LOC:@.*]] = private unnamed_addr global {{.*}} i32 204, i32 15 {{.*}} i32 190, i32 23
 // CHECK: [[NONNULL_ASSIGN1_LOC:@.*]] = private unnamed_addr global {{.*}} i32 305, i32 9
 // CHECK: [[NONNULL_ASSIGN2_LOC:@.*]] = private unnamed_addr global {{.*}} i32 405, i32 10
@@ -10,7 +10,7 @@
 // CHECK: [[NONNULL_INIT1_LOC:@.*]] = private unnamed_addr global {{.*}} i32 604, i32 25
 // CHECK: [[NONNULL_INIT2_LOC1:@.*]] = private unnamed_addr global {{.*}} i32 707, i32 26
 // CHECK: [[NONNULL_INIT2_LOC2:@.*]] = private unnamed_addr global {{.*}} i32 707, i32 29
-// CHECK: [[NONNULL_RV_LOC2:@.*]] = private unnamed_addr global {{.*}} i32 817, i32 1 {{.*}} i32 800, i32 6
+// CHECK: [[NONNULL_RV_LOC2:@.*]] = private unnamed_addr global {{.*}} i32 800, i32 6
 
 #define NULL ((void *)0)
 #define INULL ((int *)NULL)
@@ -19,14 +19,11 @@
 // CHECK-LABEL: define i32* @{{.*}}nonnull_retval1
 #line 100
 int *_Nonnull nonnull_retval1(int *p) {
-  // CHECK: br i1 true, label %[[NULL:.*]], label %[[NONULL:.*]], !nosanitize
-  // CHECK: [[NULL]]:
   // CHECK: [[ICMP:%.*]] = icmp ne i32* {{.*}}, null, !nosanitize
-  // CHECK-NEXT: br i1 [[ICMP]], {{.*}}, !nosanitize
+  // CHECK: br i1 [[ICMP]], {{.*}}, !nosanitize
   // CHECK: call void @__ubsan_handle_nullability_return{{.*}}[[NONNULL_RV_LOC1]]
   return p;
-  // CHECK: [[NONULL]]:
-  // CHECK-NEXT: ret i32*
+  // CHECK: ret i32*
 }
 
 #line 190
@@ -108,10 +105,13 @@ int *_Nonnull nonnull_retval2(int *_Nonnull arg1,  //< Test this.
   // CHECK-NEXT: [[DO_RV_CHECK_1:%.*]] = and i1 true, [[ARG1CMP]], !nosanitize
   // CHECK: [[ARG2CMP:%.*]] = icmp ne i32* %arg2, null, !nosanitize
   // CHECK-NEXT: [[DO_RV_CHECK_2:%.*]] = and i1 [[DO_RV_CHECK_1]], [[ARG2CMP]]
-  // CHECK: br i1 [[DO_RV_CHECK_2]], label %[[NULL:.*]], label %[[NONULL:.*]], !nosanitize
+  // CHECK: [[SLOC_PTR:%.*]] = load i8*, i8** %return.sloc.ptr
+  // CHECK-NEXT: [[SLOC_NONNULL:%.*]] = icmp ne i8* [[SLOC_PTR]], null
+  // CHECK-NEXT: [[DO_RV_CHECK_3:%.*]] = and i1 [[SLOC_NONNULL]], [[DO_RV_CHECK_2]]
+  // CHECK: br i1 [[DO_RV_CHECK_3]], label %[[NULL:.*]], label %[[NONULL:.*]], !nosanitize
   // CHECK: [[NULL]]:
   // CHECK-NEXT: [[ICMP:%.*]] = icmp ne i32* {{.*}}, null, !nosanitize
-  // CHECK-NEXT: br i1 [[ICMP]], {{.*}}, !nosanitize
+  // CHECK: br i1 [[ICMP]], {{.*}}, !nosanitize
   // CHECK: call void @__ubsan_handle_nullability_return{{.*}}[[NONNULL_RV_LOC2]]
   return arg1;
   // CHECK: [[NONULL]]:
@@ -129,10 +129,13 @@ int *_Nonnull nonnull_retval2(int *_Nonnull arg1,  //< Test this.
 +(int *_Nonnull) objc_clsmethod: (int *_Nonnull) arg1 {
   // CHECK: [[ARG1CMP:%.*]] = icmp ne i32* %arg1, null, !nosanitize
   // CHECK-NEXT: [[DO_RV_CHECK:%.*]] = and i1 true, [[ARG1CMP]]
-  // CHECK: br i1 [[DO_RV_CHECK]], label %[[NULL:.*]], label %[[NONULL:.*]], !nosanitize
+  // CHECK: [[SLOC_PTR:%.*]] = load i8*, i8** %return.sloc.ptr
+  // CHECK-NEXT: [[SLOC_NONNULL:%.*]] = icmp ne i8* [[SLOC_PTR]], null
+  // CHECK-NEXT: [[DO_RV_CHECK_2:%.*]] = and i1 [[SLOC_NONNULL]], [[DO_RV_CHECK]]
+  // CHECK: br i1 [[DO_RV_CHECK_2]], label %[[NULL:.*]], label %[[NONULL:.*]], !nosanitize
   // CHECK: [[NULL]]:
   // CHECK-NEXT: [[ICMP:%.*]] = icmp ne i32* {{.*}}, null, !nosanitize
-  // CHECK-NEXT: br i1 [[ICMP]], {{.*}}, !nosanitize
+  // CHECK: br i1 [[ICMP]], {{.*}}, !nosanitize
   // CHECK: call void @__ubsan_handle_nullability_return{{.*}}
   return arg1;
   // CHECK: [[NONULL]]:
@@ -143,10 +146,13 @@ int *_Nonnull nonnull_retval2(int *_Nonnull arg1,  //< Test this.
 -(int *_Nonnull) objc_method: (int *_Nonnull) arg1 {
   // CHECK: [[ARG1CMP:%.*]] = icmp ne i32* %arg1, null, !nosanitize
   // CHECK-NEXT: [[DO_RV_CHECK:%.*]] = and i1 true, [[ARG1CMP]]
-  // CHECK: br i1 [[DO_RV_CHECK]], label %[[NULL:.*]], label %[[NONULL:.*]], !nosanitize
+  // CHECK: [[SLOC_PTR:%.*]] = load i8*, i8** %return.sloc.ptr
+  // CHECK-NEXT: [[SLOC_NONNULL:%.*]] = icmp ne i8* [[SLOC_PTR]], null
+  // CHECK-NEXT: [[DO_RV_CHECK_2:%.*]] = and i1 [[SLOC_NONNULL]], [[DO_RV_CHECK]]
+  // CHECK: br i1 [[DO_RV_CHECK_2]], label %[[NULL:.*]], label %[[NONULL:.*]], !nosanitize
   // CHECK: [[NULL]]:
   // CHECK-NEXT: [[ICMP:%.*]] = icmp ne i32* {{.*}}, null, !nosanitize
-  // CHECK-NEXT: br i1 [[ICMP]], {{.*}}, !nosanitize
+  // CHECK: br i1 [[ICMP]], {{.*}}, !nosanitize
   // CHECK: call void @__ubsan_handle_nullability_return{{.*}}
   return arg1;
   // CHECK: [[NONULL]]:
