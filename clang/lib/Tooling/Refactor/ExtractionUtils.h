@@ -16,6 +16,8 @@
 namespace clang {
 
 class Expr;
+class Decl;
+class SourceManager;
 
 namespace tooling {
 namespace extract {
@@ -23,6 +25,13 @@ namespace extract {
 /// Returns a good name for an extracted variable based on the declaration
 /// that's used in the given expression \p E.
 Optional<StringRef> nameForExtractedVariable(const Expr *E);
+
+/// Returns an appropriate location for a variable declaration that will be
+/// visible to all the given expressions.
+SourceLocation
+locationForExtractedVariableDeclaration(ArrayRef<const Expr *> Expressions,
+                                        const Decl *ParentDecl,
+                                        const SourceManager &SM);
 
 } // end namespace extract
 } // end namespace tooling
