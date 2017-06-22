@@ -8,20 +8,20 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ; CHECK-DAG: MustAlias: %struct* %st, %struct* %sta
 
-; CHECK-DAG: PartialAlias: %struct* %st, i32* %x
-; CHECK-DAG: PartialAlias: %struct* %st, i32* %y
-; CHECK-DAG: PartialAlias: %struct* %st, i32* %z
+; CHECK-DAG: MayAlias: %struct* %st, i32* %x
+; CHECK-DAG: MayAlias: %struct* %st, i32* %y
+; CHECK-DAG: MayAlias: %struct* %st, i32* %z
 
 ; CHECK-DAG: NoAlias: i32* %x, i32* %y
 ; CHECK-DAG: NoAlias: i32* %x, i32* %z
 ; CHECK-DAG: NoAlias: i32* %y, i32* %z
 
-; CHECK-DAG: PartialAlias: %struct* %st, %struct* %y_12
-; CHECK-DAG: PartialAlias: %struct* %y_12, i32* %x
-; CHECK-DAG: PartialAlias: i32* %x, i80* %y_10
+; CHECK-DAG: MayAlias: %struct* %st, %struct* %y_12
+; CHECK-DAG: MayAlias: %struct* %y_12, i32* %x
+; CHECK-DAG: MayAlias: i32* %x, i80* %y_10
 
-; CHECK-DAG: PartialAlias: %struct* %st, i64* %y_8
-; CHECK-DAG: PartialAlias: i32* %z, i64* %y_8
+; CHECK-DAG: MayAlias: %struct* %st, i64* %y_8
+; CHECK-DAG: MayAlias: i32* %z, i64* %y_8
 ; CHECK-DAG: NoAlias: i32* %x, i64* %y_8
 
 ; CHECK-DAG: MustAlias: %struct* %y_12, i32* %y

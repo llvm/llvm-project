@@ -54,6 +54,7 @@ class MCSymbolizer;
 class MCTargetAsmParser;
 class MCTargetOptions;
 class MCTargetStreamer;
+class raw_ostream;
 class raw_pwrite_stream;
 class TargetMachine;
 class TargetOptions;
@@ -96,75 +97,75 @@ class Target {
 public:
   friend struct TargetRegistry;
 
-  typedef bool (*ArchMatchFnTy)(Triple::ArchType Arch);
+  using ArchMatchFnTy = bool (*)(Triple::ArchType Arch);
 
-  typedef MCAsmInfo *(*MCAsmInfoCtorFnTy)(const MCRegisterInfo &MRI,
-                                          const Triple &TT);
-  typedef void (*MCAdjustCodeGenOptsFnTy)(const Triple &TT, Reloc::Model RM,
-                                          CodeModel::Model &CM);
+  using MCAsmInfoCtorFnTy = MCAsmInfo *(*)(const MCRegisterInfo &MRI,
+                                           const Triple &TT);
+  using MCAdjustCodeGenOptsFnTy = void (*)(const Triple &TT, Reloc::Model RM,
+                                           CodeModel::Model &CM);
 
-  typedef MCInstrInfo *(*MCInstrInfoCtorFnTy)(void);
-  typedef MCInstrAnalysis *(*MCInstrAnalysisCtorFnTy)(const MCInstrInfo *Info);
-  typedef MCRegisterInfo *(*MCRegInfoCtorFnTy)(const Triple &TT);
-  typedef MCSubtargetInfo *(*MCSubtargetInfoCtorFnTy)(const Triple &TT,
-                                                      StringRef CPU,
-                                                      StringRef Features);
-  typedef TargetMachine *(*TargetMachineCtorTy)(
+  using MCInstrInfoCtorFnTy = MCInstrInfo *(*)();
+  using MCInstrAnalysisCtorFnTy = MCInstrAnalysis *(*)(const MCInstrInfo *Info);
+  using MCRegInfoCtorFnTy = MCRegisterInfo *(*)(const Triple &TT);
+  using MCSubtargetInfoCtorFnTy = MCSubtargetInfo *(*)(const Triple &TT,
+                                                       StringRef CPU,
+                                                       StringRef Features);
+  using TargetMachineCtorTy = TargetMachine *(*)(
       const Target &T, const Triple &TT, StringRef CPU, StringRef Features,
       const TargetOptions &Options, Optional<Reloc::Model> RM,
       CodeModel::Model CM, CodeGenOpt::Level OL);
   // If it weren't for layering issues (this header is in llvm/Support, but
   // depends on MC?) this should take the Streamer by value rather than rvalue
   // reference.
-  typedef AsmPrinter *(*AsmPrinterCtorTy)(
+  using AsmPrinterCtorTy = AsmPrinter *(*)(
       TargetMachine &TM, std::unique_ptr<MCStreamer> &&Streamer);
-  typedef MCAsmBackend *(*MCAsmBackendCtorTy)(const Target &T,
-                                              const MCRegisterInfo &MRI,
-                                              const Triple &TT, StringRef CPU,
-                                              const MCTargetOptions &Options);
-  typedef MCTargetAsmParser *(*MCAsmParserCtorTy)(
+  using MCAsmBackendCtorTy = MCAsmBackend *(*)(const Target &T,
+                                               const MCRegisterInfo &MRI,
+                                               const Triple &TT, StringRef CPU,
+                                               const MCTargetOptions &Options);
+  using MCAsmParserCtorTy = MCTargetAsmParser *(*)(
       const MCSubtargetInfo &STI, MCAsmParser &P, const MCInstrInfo &MII,
       const MCTargetOptions &Options);
-  typedef MCDisassembler *(*MCDisassemblerCtorTy)(const Target &T,
-                                                  const MCSubtargetInfo &STI,
-                                                  MCContext &Ctx);
-  typedef MCInstPrinter *(*MCInstPrinterCtorTy)(const Triple &T,
-                                                unsigned SyntaxVariant,
-                                                const MCAsmInfo &MAI,
-                                                const MCInstrInfo &MII,
-                                                const MCRegisterInfo &MRI);
-  typedef MCCodeEmitter *(*MCCodeEmitterCtorTy)(const MCInstrInfo &II,
-                                                const MCRegisterInfo &MRI,
-                                                MCContext &Ctx);
-  typedef MCStreamer *(*ELFStreamerCtorTy)(const Triple &T, MCContext &Ctx,
-                                           MCAsmBackend &TAB,
-                                           raw_pwrite_stream &OS,
-                                           MCCodeEmitter *Emitter,
-                                           bool RelaxAll);
-  typedef MCStreamer *(*MachOStreamerCtorTy)(MCContext &Ctx, MCAsmBackend &TAB,
-                                             raw_pwrite_stream &OS,
-                                             MCCodeEmitter *Emitter,
-                                             bool RelaxAll,
-                                             bool DWARFMustBeAtTheEnd);
-  typedef MCStreamer *(*COFFStreamerCtorTy)(MCContext &Ctx, MCAsmBackend &TAB,
-                                            raw_pwrite_stream &OS,
-                                            MCCodeEmitter *Emitter,
-                                            bool RelaxAll,
-                                            bool IncrementalLinkerCompatible);
-  typedef MCStreamer *(*WasmStreamerCtorTy)(const Triple &T, MCContext &Ctx,
+  using MCDisassemblerCtorTy = MCDisassembler *(*)(const Target &T,
+                                                   const MCSubtargetInfo &STI,
+                                                   MCContext &Ctx);
+  using MCInstPrinterCtorTy = MCInstPrinter *(*)(const Triple &T,
+                                                 unsigned SyntaxVariant,
+                                                 const MCAsmInfo &MAI,
+                                                 const MCInstrInfo &MII,
+                                                 const MCRegisterInfo &MRI);
+  using MCCodeEmitterCtorTy = MCCodeEmitter *(*)(const MCInstrInfo &II,
+                                                 const MCRegisterInfo &MRI,
+                                                 MCContext &Ctx);
+  using ELFStreamerCtorTy = MCStreamer *(*)(const Triple &T, MCContext &Ctx,
                                             MCAsmBackend &TAB,
                                             raw_pwrite_stream &OS,
                                             MCCodeEmitter *Emitter,
                                             bool RelaxAll);
-  typedef MCTargetStreamer *(*NullTargetStreamerCtorTy)(MCStreamer &S);
-  typedef MCTargetStreamer *(*AsmTargetStreamerCtorTy)(
+  using MachOStreamerCtorTy = MCStreamer *(*)(MCContext &Ctx, MCAsmBackend &TAB,
+                                              raw_pwrite_stream &OS,
+                                              MCCodeEmitter *Emitter,
+                                              bool RelaxAll,
+                                              bool DWARFMustBeAtTheEnd);
+  using COFFStreamerCtorTy = MCStreamer *(*)(MCContext &Ctx, MCAsmBackend &TAB,
+                                             raw_pwrite_stream &OS,
+                                             MCCodeEmitter *Emitter,
+                                             bool RelaxAll,
+                                             bool IncrementalLinkerCompatible);
+  using WasmStreamerCtorTy = MCStreamer *(*)(const Triple &T, MCContext &Ctx,
+                                             MCAsmBackend &TAB,
+                                             raw_pwrite_stream &OS,
+                                             MCCodeEmitter *Emitter,
+                                             bool RelaxAll);
+  using NullTargetStreamerCtorTy = MCTargetStreamer *(*)(MCStreamer &S);
+  using AsmTargetStreamerCtorTy = MCTargetStreamer *(*)(
       MCStreamer &S, formatted_raw_ostream &OS, MCInstPrinter *InstPrint,
       bool IsVerboseAsm);
-  typedef MCTargetStreamer *(*ObjectTargetStreamerCtorTy)(
+  using ObjectTargetStreamerCtorTy = MCTargetStreamer *(*)(
       MCStreamer &S, const MCSubtargetInfo &STI);
-  typedef MCRelocationInfo *(*MCRelocationInfoCtorTy)(const Triple &TT,
-                                                      MCContext &Ctx);
-  typedef MCSymbolizer *(*MCSymbolizerCtorTy)(
+  using MCRelocationInfoCtorTy = MCRelocationInfo *(*)(const Triple &TT,
+                                                       MCContext &Ctx);
+  using MCSymbolizerCtorTy = MCSymbolizer *(*)(
       const Triple &TT, LLVMOpInfoCallback GetOpInfo,
       LLVMSymbolLookupCallback SymbolLookUp, void *DisInfo, MCContext *Ctx,
       std::unique_ptr<MCRelocationInfo> &&RelInfo);

@@ -149,6 +149,11 @@ protected:
   bool HasScalarStores;
   bool HasInv2PiInlineImm;
   bool HasSDWA;
+  bool HasSDWAOmod;
+  bool HasSDWAScalar;
+  bool HasSDWASdst;
+  bool HasSDWAMac;
+  bool HasSDWAClampVOPC;
   bool HasDPP;
   bool FlatAddressSpace;
   bool FlatInstOffsets;
@@ -429,6 +434,26 @@ public:
 
   bool hasSDWA() const {
     return HasSDWA;
+  }
+
+  bool hasSDWAOmod() const {
+    return HasSDWAOmod;
+  }
+
+  bool hasSDWAScalar() const {
+    return HasSDWAScalar;
+  }
+
+  bool hasSDWASdst() const {
+    return HasSDWASdst;
+  }
+
+  bool hasSDWAMac() const {
+    return HasSDWAMac;
+  }
+
+  bool hasSDWAClampVOPC() const {
+    return HasSDWAClampVOPC;
   }
 
   /// \brief Returns the offset in bytes from the start of the input buffer

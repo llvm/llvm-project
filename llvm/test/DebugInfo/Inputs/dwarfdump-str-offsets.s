@@ -20,6 +20,14 @@ str_TU:
         .asciz "Type_Unit"
 str_TU_type:
         .asciz "MyStruct"
+str_Subprogram:
+        .asciz "MyFunc"
+str_Variable1:
+        .asciz "MyVar1"
+str_Variable2:
+        .asciz "MyVar2"
+str_Variable3:
+        .asciz "MyVar3"
 
 # Every unit contributes to the string_offsets table.
         .section .debug_str_offsets,"",@progbits
@@ -31,6 +39,10 @@ str_TU_type:
         .long str_producer
         .long str_CU1
         .long str_CU1_dir
+        .long str_Subprogram
+        .long str_Variable1
+        .long str_Variable2
+        .long str_Variable3
 .debug_str_offsets_segment0_end:
 # CU2's contribution
         .long .debug_str_offsets_segment1_end-.debug_str_offsets_base1
@@ -85,7 +97,7 @@ dwo_str_TU_5_type:
         .section .debug_abbrev,"",@progbits
         .byte 0x01  # Abbrev code
         .byte 0x11  # DW_TAG_compile_unit
-        .byte 0x00  # DW_CHILDREN_no
+        .byte 0x01  # DW_CHILDREN_yes
         .byte 0x25  # DW_AT_producer
         .byte 0x1a  # DW_FORM_strx
         .byte 0x03  # DW_AT_name
@@ -112,9 +124,37 @@ dwo_str_TU_5_type:
         .byte 0x1a  # DW_FORM_strx
         .byte 0x00  # EOM(1)
         .byte 0x00  # EOM(2)
+        .byte 0x04  # Abbrev code
+        .byte 0x2e  # DW_TAG_subprogram
+        .byte 0x01  # DW_CHILDREN_yes
+        .byte 0x03  # DW_AT_name
+        .byte 0x25  # DW_FORM_strx1
+        .byte 0x00  # EOM(1)
+        .byte 0x00  # EOM(2)
+        .byte 0x05  # Abbrev code
+        .byte 0x34  # DW_TAG_variable
+        .byte 0x00  # DW_CHILDREN_no
+        .byte 0x03  # DW_AT_name
+        .byte 0x26  # DW_FORM_strx2
+        .byte 0x00  # EOM(1)
+        .byte 0x00  # EOM(2)
+        .byte 0x06  # Abbrev code
+        .byte 0x34  # DW_TAG_variable
+        .byte 0x00  # DW_CHILDREN_no
+        .byte 0x03  # DW_AT_name
+        .byte 0x27  # DW_FORM_strx3
+        .byte 0x00  # EOM(1)
+        .byte 0x00  # EOM(2)
+        .byte 0x07  # Abbrev code
+        .byte 0x34  # DW_TAG_variable
+        .byte 0x00  # DW_CHILDREN_no
+        .byte 0x03  # DW_AT_name
+        .byte 0x28  # DW_FORM_strx4
+        .byte 0x00  # EOM(1)
+        .byte 0x00  # EOM(2)
         .byte 0x00  # EOM(3)
 
-# And a .dwo copy for the .dwo sections.
+# And a .dwo copy of a subset for the .dwo sections.
         .section .debug_abbrev.dwo,"",@progbits
         .byte 0x01  # Abbrev code
         .byte 0x11  # DW_TAG_compile_unit
@@ -163,6 +203,21 @@ CU1_5_version:
         .byte 1                # The index of the CU name string
         .long .debug_str_offsets_base0
         .byte 2                # The index of the comp dir string
+# A subprogram DIE with DW_AT_name, using DW_FORM_strx1.
+        .byte 4                # Abbreviation code
+        .byte 3                # Subprogram name string (DW_FORM_strx1)
+# A variable DIE with DW_AT_name, using DW_FORM_strx2.
+        .byte 5                # Abbreviation code
+        .short 0x0004          # Subprogram name string (DW_FORM_strx2)
+# A variable DIE with DW_AT_name, using DW_FORM_strx3.
+        .byte 6                # Abbreviation code
+        .byte 5                # Subprogram name string (DW_FORM_strx3)
+        .short 0               # Subprogram name string (DW_FORM_strx3)
+# A variable DIE with DW_AT_name, using DW_FORM_strx4.
+        .byte 7                # Abbreviation code
+        .quad 0x00000006       # Subprogram name string (DW_FORM_strx4)
+        .byte 0 # NULL
+        .byte 0 # NULL
         .byte 0 # NULL
 CU1_5_end:
 

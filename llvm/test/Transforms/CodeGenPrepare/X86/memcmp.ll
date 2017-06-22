@@ -1,7 +1,5 @@
-; RUN: opt -S -codegenprepare -mtriple=i686-unknown-unknown < %s   | FileCheck %s --check-prefix=ALL --check-prefix=X32
-; RUN: opt -S -codegenprepare -mtriple=x86_64-unknown-unknown < %s | FileCheck %s --check-prefix=ALL --check-prefix=X64
-
-target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
+; RUN: opt -S -codegenprepare -mtriple=i686-unknown-unknown   -data-layout=e-m:o-p:32:32-f64:32:64-f80:128-n8:16:32-S128 < %s | FileCheck %s --check-prefix=ALL --check-prefix=X32
+; RUN: opt -S -codegenprepare -mtriple=x86_64-unknown-unknown -data-layout=e-m:o-i64:64-f80:128-n8:16:32:64-S128         < %s | FileCheck %s --check-prefix=ALL --check-prefix=X64
 
 declare i32 @memcmp(i8* nocapture, i8* nocapture, i64)
 

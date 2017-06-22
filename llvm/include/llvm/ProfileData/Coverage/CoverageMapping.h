@@ -411,9 +411,11 @@ public:
   std::vector<CoverageSegment>::const_iterator begin() const {
     return Segments.begin();
   }
+
   std::vector<CoverageSegment>::const_iterator end() const {
     return Segments.end();
   }
+
   bool empty() const { return Segments.empty(); }
 
   /// \brief Expansions that can be further processed.
@@ -430,6 +432,7 @@ class CoverageMapping {
   unsigned MismatchedFunctionCount = 0;
 
   CoverageMapping() = default;
+
   /// \brief Add a function record corresponding to \p Record.
   Error loadFunctionRecord(const CoverageMappingRecord &Record,
                            IndexedInstrProfReader &ProfileReader);
@@ -607,13 +610,13 @@ enum CovMapVersion {
 };
 
 template <int CovMapVersion, class IntPtrT> struct CovMapTraits {
-  typedef CovMapFunctionRecord CovMapFuncRecordType;
-  typedef uint64_t NameRefType;
+  using CovMapFuncRecordType = CovMapFunctionRecord;
+  using NameRefType = uint64_t;
 };
 
 template <class IntPtrT> struct CovMapTraits<CovMapVersion::Version1, IntPtrT> {
-  typedef CovMapFunctionRecordV1<IntPtrT> CovMapFuncRecordType;
-  typedef IntPtrT NameRefType;
+  using CovMapFuncRecordType = CovMapFunctionRecordV1<IntPtrT>;
+  using NameRefType = IntPtrT;
 };
 
 } // end namespace coverage
@@ -622,6 +625,7 @@ template <class IntPtrT> struct CovMapTraits<CovMapVersion::Version1, IntPtrT> {
 template<> struct DenseMapInfo<coverage::CounterExpression> {
   static inline coverage::CounterExpression getEmptyKey() {
     using namespace coverage;
+
     return CounterExpression(CounterExpression::ExprKind::Subtract,
                              Counter::getCounter(~0U),
                              Counter::getCounter(~0U));
@@ -629,6 +633,7 @@ template<> struct DenseMapInfo<coverage::CounterExpression> {
 
   static inline coverage::CounterExpression getTombstoneKey() {
     using namespace coverage;
+
     return CounterExpression(CounterExpression::ExprKind::Add,
                              Counter::getCounter(~0U),
                              Counter::getCounter(~0U));

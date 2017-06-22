@@ -49,7 +49,7 @@ public:
                             MCContext &Ctx, bool IsLittleEndian,
                             bool IsResolved) const;
 
-  void applyFixup(const MCFixup &Fixup, char *Data, unsigned DataSize,
+  void applyFixup(const MCFixup &Fixup, MutableArrayRef<char> Data,
                   uint64_t Value, bool IsPCRel, MCContext &Ctx) const override;
 
   unsigned getRelaxedOpcode(unsigned Op) const;

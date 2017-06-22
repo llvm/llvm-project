@@ -1663,17 +1663,18 @@ class MemCmpExpansion {
   bool IsUsedForZeroCmp;
   const DataLayout &DL;
 
-  int calculateNumBlocks(unsigned Size);
+  unsigned calculateNumBlocks(unsigned Size);
   void createLoadCmpBlocks();
   void createResultBlock();
   void setupResultBlockPHINodes();
   void setupEndBlockPHINodes();
-  void emitLoadCompareBlock(unsigned Index, int LoadSize, int GEPIndex);
+  void emitLoadCompareBlock(unsigned Index, unsigned LoadSize,
+                            unsigned GEPIndex);
   Value *getCompareLoadPairs(unsigned Index, unsigned Size,
                              unsigned &NumBytesProcessed, IRBuilder<> &Builder);
   void emitLoadCompareBlockMultipleLoads(unsigned Index, unsigned Size,
                                          unsigned &NumBytesProcessed);
-  void emitLoadCompareByteBlock(unsigned Index, int GEPIndex);
+  void emitLoadCompareByteBlock(unsigned Index, unsigned GEPIndex);
   void emitMemCmpResultBlock();
   Value *getMemCmpExpansionZeroCase(unsigned Size);
   Value *getMemCmpEqZeroOneBlock(unsigned Size);
@@ -1751,7 +1752,8 @@ void MemCmpExpansion::createResultBlock() {
 // It loads 1 byte from each source of the memcmp parameters with the given
 // GEPIndex. It then subtracts the two loaded values and adds this result to the
 // final phi node for selecting the memcmp result.
-void MemCmpExpansion::emitLoadCompareByteBlock(unsigned Index, int GEPIndex) {
+void MemCmpExpansion::emitLoadCompareByteBlock(unsigned Index,
+                                               unsigned GEPIndex) {
   IRBuilder<> Builder(CI->getContext());
 
   Value *Source1 = CI->getArgOperand(0);
@@ -1833,6 +1835,7 @@ Value *MemCmpExpansion::getCompareLoadPairs(unsigned Index, unsigned Size,
 
     Type *LoadSizeType = IntegerType::get(CI->getContext(), LoadSize * 8);
     Type *MaxLoadType = IntegerType::get(CI->getContext(), MaxLoadSize * 8);
+    assert(LoadSize <= MaxLoadSize && "Unexpected load type");
 
     Value *Source1 = CI->getArgOperand(0);
     Value *Source2 = CI->getArgOperand(1);
@@ -1866,13 +1869,13 @@ Value *MemCmpExpansion::getCompareLoadPairs(unsigned Index, unsigned Size,
 
     if (NumLoads != 1) {
       if (LoadSizeType != MaxLoadType) {
-        LoadSrc1 = Builder.CreateZExtOrTrunc(LoadSrc1, MaxLoadType);
-        LoadSrc2 = Builder.CreateZExtOrTrunc(LoadSrc2, MaxLoadType);
+        LoadSrc1 = Builder.CreateZExt(LoadSrc1, MaxLoadType);
+        LoadSrc2 = Builder.CreateZExt(LoadSrc2, MaxLoadType);
       }
       // If we have multiple loads per block, we need to generate a composite
       // comparison using xor+or.
       Diff = Builder.CreateXor(LoadSrc1, LoadSrc2);
-      Diff = Builder.CreateZExtOrTrunc(Diff, MaxLoadType);
+      Diff = Builder.CreateZExt(Diff, MaxLoadType);
       XorList.push_back(Diff);
     } else {
       // If there's only one load per block, we just compare the loaded values.
@@ -1936,8 +1939,8 @@ void MemCmpExpansion::emitLoadCompareBlockMultipleLoads(
 // the EndBlock if this is the last LoadCmpBlock. Loading 1 byte is handled with
 // a special case through emitLoadCompareByteBlock. The special handling can
 // simply subtract the loaded values and add it to the result phi node.
-void MemCmpExpansion::emitLoadCompareBlock(unsigned Index, int LoadSize,
-                                           int GEPIndex) {
+void MemCmpExpansion::emitLoadCompareBlock(unsigned Index, unsigned LoadSize,
+                                           unsigned GEPIndex) {
   if (LoadSize == 1) {
     MemCmpExpansion::emitLoadCompareByteBlock(Index, GEPIndex);
     return;
@@ -1947,6 +1950,7 @@ void MemCmpExpansion::emitLoadCompareBlock(unsigned Index, int LoadSize,
 
   Type *LoadSizeType = IntegerType::get(CI->getContext(), LoadSize * 8);
   Type *MaxLoadType = IntegerType::get(CI->getContext(), MaxLoadSize * 8);
+  assert(LoadSize <= MaxLoadSize && "Unexpected load type");
 
   Value *Source1 = CI->getArgOperand(0);
   Value *Source2 = CI->getArgOperand(1);
@@ -1980,8 +1984,8 @@ void MemCmpExpansion::emitLoadCompareBlock(unsigned Index, int LoadSize,
   }
 
   if (LoadSizeType != MaxLoadType) {
-    LoadSrc1 = Builder.CreateZExtOrTrunc(LoadSrc1, MaxLoadType);
-    LoadSrc2 = Builder.CreateZExtOrTrunc(LoadSrc2, MaxLoadType);
+    LoadSrc1 = Builder.CreateZExt(LoadSrc1, MaxLoadType);
+    LoadSrc2 = Builder.CreateZExt(LoadSrc2, MaxLoadType);
   }
 
   // Add the loaded values to the phi nodes for calculating memcmp result only
@@ -2044,8 +2048,8 @@ void MemCmpExpansion::emitMemCmpResultBlock() {
   PhiRes->addIncoming(Res, ResBlock.BB);
 }
 
-int MemCmpExpansion::calculateNumBlocks(unsigned Size) {
-  int NumBlocks = 0;
+unsigned MemCmpExpansion::calculateNumBlocks(unsigned Size) {
+  unsigned NumBlocks = 0;
   bool HaveOneByteLoad = false;
   unsigned RemainingSize = Size;
   unsigned LoadSize = MaxLoadSize;
@@ -2114,13 +2118,13 @@ Value *MemCmpExpansion::getMemCmpExpansion(uint64_t Size) {
   // memcmp sources. It starts with loading using the maximum load size set by
   // the target. It processes any remaining bytes using a load size which is the
   // next smallest power of 2.
-  int LoadSize = MaxLoadSize;
-  int NumBytesToBeProcessed = Size;
+  unsigned LoadSize = MaxLoadSize;
+  unsigned NumBytesToBeProcessed = Size;
   unsigned Index = 0;
   while (NumBytesToBeProcessed) {
     // Calculate how many blocks we can create with the current load size.
-    int NumBlocks = NumBytesToBeProcessed / LoadSize;
-    int GEPIndex = (Size - NumBytesToBeProcessed) / LoadSize;
+    unsigned NumBlocks = NumBytesToBeProcessed / LoadSize;
+    unsigned GEPIndex = (Size - NumBytesToBeProcessed) / LoadSize;
     NumBytesToBeProcessed = NumBytesToBeProcessed % LoadSize;
 
     // For each NumBlocks, populate the instruction sequence for loading and

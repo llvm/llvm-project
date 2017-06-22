@@ -415,7 +415,7 @@ public:
   /// ApplyFixup - Apply the \arg Value for given \arg Fixup into the provided
   /// data fragment, at the offset specified by the fixup and following the
   /// fixup kind as appropriate.
-  void applyFixup(const MCFixup &Fixup, char *Data, unsigned DataSize,
+  void applyFixup(const MCFixup &Fixup, MutableArrayRef<char> Data,
                   uint64_t FixupValue, bool IsPCRel,
                   MCContext &Ctx) const override {
 
@@ -432,8 +432,8 @@ public:
     // to a real offset before we can use it.
     uint32_t Offset = Fixup.getOffset();
     unsigned NumBytes = getFixupKindNumBytes(Kind);
-    assert(Offset + NumBytes <= DataSize && "Invalid fixup offset!");
-    char *InstAddr = Data + Offset;
+    assert(Offset + NumBytes <= Data.size() && "Invalid fixup offset!");
+    char *InstAddr = Data.data() + Offset;
 
     Value = adjustFixupValue(Kind, FixupValue);
     if(!Value)
@@ -517,7 +517,7 @@ public:
           dbgs() << "\tBValue=0x"; dbgs().write_hex(Value) <<
             ": AValue=0x"; dbgs().write_hex(FixupValue) <<
             ": Offset=" << Offset <<
-            ": Size=" << DataSize <<
+            ": Size=" << Data.size() <<
             ": OInst=0x"; dbgs().write_hex(OldData) <<
             ": Reloc=0x"; dbgs().write_hex(Reloc););
 

@@ -252,9 +252,7 @@ uint32_t SIMCCodeEmitter::getLitEncoding(const MCOperand &MO,
   case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2FP16: {
     uint16_t Lo16 = static_cast<uint16_t>(Imm);
-    assert(Lo16 == static_cast<uint16_t>(Imm >> 16));
     uint32_t Encoding = getLit16Encoding(Lo16, STI);
-    assert(Encoding != 255 && "packed constants can only be inline immediates");
     return Encoding;
   }
   default:

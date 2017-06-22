@@ -2454,7 +2454,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
         continue;
       const MachineOperand &MO = MI.getOperand(OpIdx);
 
-      if (AMDGPU::isVI(ST)) {
+      if (!ST.hasSDWAScalar()) {
         // Only VGPRS on VI
         if (!MO.isReg() || !RI.hasVGPRs(RI.getRegClassForReg(MRI, MO.getReg()))) {
           ErrInfo = "Only VGPRs allowed as operands in SDWA instructions on VI";
@@ -2469,7 +2469,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
       }
     }
 
-    if (AMDGPU::isVI(ST)) {
+    if (!ST.hasSDWAOmod()) {
       // No omod allowed on VI
       const MachineOperand *OMod = getNamedOperand(MI, AMDGPU::OpName::omod);
       if (OMod != nullptr &&
@@ -2481,14 +2481,14 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
 
     uint16_t BasicOpcode = AMDGPU::getBasicFromSDWAOp(Opcode);
     if (isVOPC(BasicOpcode)) {
-      if (AMDGPU::isVI(ST) && DstIdx != -1) {
+      if (!ST.hasSDWASdst() && DstIdx != -1) {
         // Only vcc allowed as dst on VI for VOPC
         const MachineOperand &Dst = MI.getOperand(DstIdx);
         if (!Dst.isReg() || Dst.getReg() != AMDGPU::VCC) {
           ErrInfo = "Only VCC allowed as dst in SDWA instructions on VI";
           return false;
         }
-      } else if (AMDGPU::isGFX9(ST)) {
+      } else if (!ST.hasSDWAClampVOPC()) {
         // No clamp allowed on GFX9 for VOPC
         const MachineOperand *Clamp = getNamedOperand(MI, AMDGPU::OpName::clamp);
         if (Clamp != nullptr &&

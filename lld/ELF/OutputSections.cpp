@@ -273,7 +273,7 @@ void elf::reportDiscarded(InputSectionBase *IS) {
   if (!Config->PrintGcSections)
     return;
   message("removing unused section from '" + IS->Name + "' in file '" +
-          IS->File->getName());
+          IS->File->getName() + "'");
 }
 
 void OutputSectionFactory::addInputSec(InputSectionBase *IS,

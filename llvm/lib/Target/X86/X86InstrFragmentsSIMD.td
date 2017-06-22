@@ -773,6 +773,9 @@ def memop64 : PatFrag<(ops node:$ptr), (load node:$ptr), [{
 
 def memopmmx  : PatFrag<(ops node:$ptr), (x86mmx  (memop64 node:$ptr))>;
 
+def X86masked_gather  : SDNode<"X86ISD::MGATHER",  SDTMaskedGather,
+                       [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+
 def mgatherv4i32 : PatFrag<(ops node:$src1, node:$src2, node:$src3),
   (masked_gather node:$src1, node:$src2, node:$src3) , [{
   if (MaskedGatherSDNode *Mgt = dyn_cast<MaskedGatherSDNode>(N))
@@ -794,6 +797,15 @@ def mgatherv2i64 : PatFrag<(ops node:$src1, node:$src2, node:$src3),
   if (MaskedGatherSDNode *Mgt = dyn_cast<MaskedGatherSDNode>(N))
     return (Mgt->getIndex().getValueType() == MVT::v2i64 ||
             Mgt->getBasePtr().getValueType() == MVT::v2i64);
+  return false;
+}]>;
+def X86mgatherv2i64 : PatFrag<(ops node:$src1, node:$src2, node:$src3),
+  (X86masked_gather node:$src1, node:$src2, node:$src3) , [{
+  if (X86MaskedGatherSDNode *Mgt = dyn_cast<X86MaskedGatherSDNode>(N))
+    return (Mgt->getIndex().getValueType() == MVT::v2i64 ||
+            Mgt->getBasePtr().getValueType() == MVT::v2i64) &&
+           (Mgt->getMemoryVT() == MVT::v2i32 ||
+            Mgt->getMemoryVT() == MVT::v2f32);
   return false;
 }]>;
 def mgatherv4i64 : PatFrag<(ops node:$src1, node:$src2, node:$src3),

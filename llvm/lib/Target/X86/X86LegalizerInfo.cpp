@@ -214,12 +214,24 @@ void X86LegalizerInfo::setLegalizerInfoAVX() {
   if (!Subtarget.hasAVX())
     return;
 
+  const LLT v16s8 = LLT::vector(16, 8);
+  const LLT v8s16 = LLT::vector(8, 16);
+  const LLT v4s32 = LLT::vector(4, 32);
+  const LLT v2s64 = LLT::vector(2, 64);
+
+  const LLT v32s8 = LLT::vector(32, 8);
+  const LLT v16s16 = LLT::vector(16, 16);
   const LLT v8s32 = LLT::vector(8, 32);
   const LLT v4s64 = LLT::vector(4, 64);
 
   for (unsigned MemOp : {G_LOAD, G_STORE})
     for (auto Ty : {v8s32, v4s64})
       setAction({MemOp, Ty}, Legal);
+
+  for (auto Ty : {v32s8, v16s16, v8s32, v4s64})
+    setAction({G_INSERT, Ty}, Legal);
+  for (auto Ty : {v16s8, v8s16, v4s32, v2s64})
+    setAction({G_INSERT, 1, Ty}, Legal);
 }
 
 void X86LegalizerInfo::setLegalizerInfoAVX2() {
@@ -243,6 +255,18 @@ void X86LegalizerInfo::setLegalizerInfoAVX512() {
   if (!Subtarget.hasAVX512())
     return;
 
+  const LLT v16s8 = LLT::vector(16, 8);
+  const LLT v8s16 = LLT::vector(8, 16);
+  const LLT v4s32 = LLT::vector(4, 32);
+  const LLT v2s64 = LLT::vector(2, 64);
+
+  const LLT v32s8 = LLT::vector(32, 8);
+  const LLT v16s16 = LLT::vector(16, 16);
+  const LLT v8s32 = LLT::vector(8, 32);
+  const LLT v4s64 = LLT::vector(4, 64);
+
+  const LLT v64s8 = LLT::vector(64, 8);
+  const LLT v32s16 = LLT::vector(32, 16);
   const LLT v16s32 = LLT::vector(16, 32);
   const LLT v8s64 = LLT::vector(8, 64);
 
@@ -256,12 +280,14 @@ void X86LegalizerInfo::setLegalizerInfoAVX512() {
     for (auto Ty : {v16s32, v8s64})
       setAction({MemOp, Ty}, Legal);
 
+  for (auto Ty : {v64s8, v32s16, v16s32, v8s64})
+    setAction({G_INSERT, Ty}, Legal);
+  for (auto Ty : {v32s8, v16s16, v8s32, v4s64, v16s8, v8s16, v4s32, v2s64})
+    setAction({G_INSERT, 1, Ty}, Legal);
+
   /************ VLX *******************/
   if (!Subtarget.hasVLX())
     return;
-
-  const LLT v4s32 = LLT::vector(4, 32);
-  const LLT v8s32 = LLT::vector(8, 32);
 
   for (auto Ty : {v4s32, v8s32})
     setAction({G_MUL, Ty}, Legal);

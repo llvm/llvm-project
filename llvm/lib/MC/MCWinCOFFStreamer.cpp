@@ -1,4 +1,4 @@
-//===- llvm/MC/WinCOFFStreamer.cpp ----------------------------------------===//
+//===- llvm/MC/MCWinCOFFStreamer.cpp --------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //

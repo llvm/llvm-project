@@ -995,7 +995,9 @@ private:
   void errorExpTgt();
   OperandMatchResultTy parseExpTgtImpl(StringRef Str, uint8_t &Val);
 
-  bool validateOperandLimitations(const MCInst &Inst);
+  bool validateInstruction(const MCInst &Inst, const SMLoc &IDLoc);
+  bool validateConstantBusLimitations(const MCInst &Inst);
+  bool validateEarlyClobberLimitations(const MCInst &Inst);
   bool usesConstantBus(const MCInst &Inst, unsigned OpIdx);
   bool isInlineConstant(const MCInst &Inst, unsigned OpIdx) const;
   unsigned findImplicitSGPRReadInVOP(const MCInst &Inst) const;
@@ -2095,7 +2097,7 @@ bool AMDGPUAsmParser::usesConstantBus(const MCInst &Inst, unsigned OpIdx) {
          isSGPR(mc2PseudoReg(MO.getReg()), getContext().getRegisterInfo());
 }
 
-bool AMDGPUAsmParser::validateOperandLimitations(const MCInst &Inst) {
+bool AMDGPUAsmParser::validateConstantBusLimitations(const MCInst &Inst) {
   const unsigned Opcode = Inst.getOpcode();
   const MCInstrDesc &Desc = MII.get(Opcode);
   unsigned ConstantBusUseCount = 0;
@@ -2149,6 +2151,60 @@ bool AMDGPUAsmParser::validateOperandLimitations(const MCInst &Inst) {
   return ConstantBusUseCount <= 1;
 }
 
+bool AMDGPUAsmParser::validateEarlyClobberLimitations(const MCInst &Inst) {
+
+  const unsigned Opcode = Inst.getOpcode();
+  const MCInstrDesc &Desc = MII.get(Opcode);
+
+  const int DstIdx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::vdst);
+  if (DstIdx == -1 ||
+      Desc.getOperandConstraint(DstIdx, MCOI::EARLY_CLOBBER) == -1) {
+    return true;
+  }
+
+  const MCRegisterInfo *TRI = getContext().getRegisterInfo();
+
+  const int Src0Idx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src0);
+  const int Src1Idx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src1);
+  const int Src2Idx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src2);
+
+  assert(DstIdx != -1);
+  const MCOperand &Dst = Inst.getOperand(DstIdx);
+  assert(Dst.isReg());
+  const unsigned DstReg = mc2PseudoReg(Dst.getReg());
+
+  const int SrcIndices[] = { Src0Idx, Src1Idx, Src2Idx };
+
+  for (int SrcIdx : SrcIndices) {
+    if (SrcIdx == -1) break;
+    const MCOperand &Src = Inst.getOperand(SrcIdx);
+    if (Src.isReg()) {
+      const unsigned SrcReg = mc2PseudoReg(Src.getReg());
+      if (isRegIntersect(DstReg, SrcReg, TRI)) {
+        return false;
+      }
+    }
+  }
+
+  return true;
+}
+
+bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
+                                          const SMLoc &IDLoc) {
+  if (!validateConstantBusLimitations(Inst)) {
+    Error(IDLoc,
+      "invalid operand (violates constant bus restrictions)");
+    return false;
+  }
+  if (!validateEarlyClobberLimitations(Inst)) {
+    Error(IDLoc,
+      "destination must be different than all sources");
+    return false;
+  }
+
+  return true;
+}
+
 bool AMDGPUAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                               OperandVector &Operands,
                                               MCStreamer &Out,
@@ -2181,9 +2237,8 @@ bool AMDGPUAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   switch (Result) {
   default: break;
   case Match_Success:
-    if (!validateOperandLimitations(Inst)) {
-      return Error(IDLoc,
-                   "invalid operand (violates constant bus restrictions)");
+    if (!validateInstruction(Inst, IDLoc)) {
+      return true;
     }
     Inst.setLoc(IDLoc);
     Out.EmitInstruction(Inst, getSTI());

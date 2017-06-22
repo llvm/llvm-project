@@ -484,8 +484,8 @@ InstrProfLookupTrait::ComputeHash(StringRef K) {
   return IndexedInstrProf::ComputeHash(HashType, K);
 }
 
-typedef InstrProfLookupTrait::data_type data_type;
-typedef InstrProfLookupTrait::offset_type offset_type;
+using data_type = InstrProfLookupTrait::data_type;
+using offset_type = InstrProfLookupTrait::offset_type;
 
 bool InstrProfLookupTrait::readValueProfilingData(
     const unsigned char *&D, const unsigned char *const End) {
@@ -622,7 +622,7 @@ IndexedInstrProfReader::readSummary(IndexedInstrProf::ProfVersion Version,
     for (unsigned I = 0; I < SummarySize / sizeof(uint64_t); I++)
       Dst[I] = endian::byte_swap<uint64_t, little>(Src[I]);
 
-    llvm::SummaryEntryVector DetailedSummary;
+    SummaryEntryVector DetailedSummary;
     for (unsigned I = 0; I < SummaryData->NumCutoffEntries; I++) {
       const IndexedInstrProf::Summary::Entry &Ent = SummaryData->getEntry(I);
       DetailedSummary.emplace_back((uint32_t)Ent.Cutoff, Ent.MinBlockCount,

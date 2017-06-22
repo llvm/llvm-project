@@ -129,15 +129,15 @@ struct WasmGlobal {
 
 // Information about a single relocation.
 struct WasmRelocationEntry {
-  uint64_t Offset;            // Where is the relocation.
-  const MCSymbolWasm *Symbol; // The symbol to relocate with.
-  int64_t Addend;             // A value to add to the symbol.
-  unsigned Type;              // The type of the relocation.
-  MCSectionWasm *FixupSection;// The section the relocation is targeting.
+  uint64_t Offset;                  // Where is the relocation.
+  const MCSymbolWasm *Symbol;       // The symbol to relocate with.
+  int64_t Addend;                   // A value to add to the symbol.
+  unsigned Type;                    // The type of the relocation.
+  const MCSectionWasm *FixupSection;// The section the relocation is targeting.
 
   WasmRelocationEntry(uint64_t Offset, const MCSymbolWasm *Symbol,
                       int64_t Addend, unsigned Type,
-                      MCSectionWasm *FixupSection)
+                      const MCSectionWasm *FixupSection)
       : Offset(Offset), Symbol(Symbol), Addend(Addend), Type(Type),
         FixupSection(FixupSection) {}
 
@@ -350,7 +350,7 @@ void WasmObjectWriter::recordRelocation(MCAssembler &Asm,
                                         const MCFragment *Fragment,
                                         const MCFixup &Fixup, MCValue Target,
                                         bool &IsPCRel, uint64_t &FixedValue) {
-  MCSectionWasm &FixupSection = cast<MCSectionWasm>(*Fragment->getParent());
+  const auto &FixupSection = cast<MCSectionWasm>(*Fragment->getParent());
   uint64_t C = Target.getConstant();
   uint64_t FixupOffset = Layout.getFragmentOffset(Fragment) + Fixup.getOffset();
   MCContext &Ctx = Asm.getContext();
@@ -477,8 +477,7 @@ static uint32_t ProvisionalValue(const WasmRelocationEntry &RelEntry) {
   if (!Sym->isDefined(/*SetUsed=*/false))
     return UINT32_MAX;
 
-  MCSectionWasm &Section =
-    cast<MCSectionWasm>(RelEntry.Symbol->getSection(false));
+  const auto &Section = cast<MCSectionWasm>(RelEntry.Symbol->getSection(false));
   uint64_t Address = Section.getSectionOffset() + RelEntry.Addend;
 
   // Ignore overflow. LLVM allows address arithmetic to silently wrap.
@@ -766,8 +765,7 @@ void WasmObjectWriter::writeCodeSection(
   encodeULEB128(Functions.size(), getStream());
 
   for (const WasmFunction &Func : Functions) {
-    MCSectionWasm &FuncSection =
-        static_cast<MCSectionWasm &>(Func.Sym->getSection());
+    auto &FuncSection = static_cast<MCSectionWasm &>(Func.Sym->getSection());
 
     int64_t Size = 0;
     if (!Func.Sym->getSize()->evaluateAsAbsolute(Size, Layout))
@@ -775,8 +773,7 @@ void WasmObjectWriter::writeCodeSection(
 
     encodeULEB128(Size, getStream());
 
-    FuncSection.setSectionOffset(getStream().tell() -
-                                 Section.ContentsOffset);
+    FuncSection.setSectionOffset(getStream().tell() - Section.ContentsOffset);
 
     Asm.writeSectionData(&FuncSection, Layout);
   }
@@ -1003,7 +1000,7 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
     const MCFragment &Frag = *GlobalVars->begin();
     if (Frag.hasInstructions() || Frag.getKind() != MCFragment::FT_Data)
       report_fatal_error("only data supported in .global_variables");
-    const MCDataFragment &DataFrag = cast<MCDataFragment>(Frag);
+    const auto &DataFrag = cast<MCDataFragment>(Frag);
     if (!DataFrag.getFixups().empty())
       report_fatal_error("fixups not supported in .global_variables");
     const SmallVectorImpl<char> &Contents = DataFrag.getContents();
@@ -1059,7 +1056,7 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
     const MCFragment &Frag = *StackPtr->begin();
     if (Frag.hasInstructions() || Frag.getKind() != MCFragment::FT_Data)
       report_fatal_error("only data supported in .stack_pointer");
-    const MCDataFragment &DataFrag = cast<MCDataFragment>(Frag);
+    const auto &DataFrag = cast<MCDataFragment>(Frag);
     if (!DataFrag.getFixups().empty())
       report_fatal_error("fixups not supported in .stack_pointer");
     const SmallVectorImpl<char> &Contents = DataFrag.getContents();
@@ -1092,8 +1089,6 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
       WeakSymbols.push_back(WS.getName());
 
     unsigned Index;
-
-                 // << " function=" << S.isFunction()
 
     if (WS.isFunction()) {
       // Prepare the function's type, if we haven't seen it yet.
@@ -1142,68 +1137,65 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
       if (WS.isTemporary() && !WS.getSize())
         continue;
 
-      if (WS.isDefined(/*SetUsed=*/false)) {
-        if (WS.getOffset() != 0)
-          report_fatal_error("data sections must contain one variable each: " +
-                             WS.getName());
-        if (!WS.getSize())
-          report_fatal_error("data symbols must have a size set with .size: " +
-                             WS.getName());
+      if (!WS.isDefined(/*SetUsed=*/false))
+        continue;
 
-        int64_t Size = 0;
-        if (!WS.getSize()->evaluateAsAbsolute(Size, Layout))
-          report_fatal_error(".size expression must be evaluatable");
+      if (WS.getOffset() != 0)
+        report_fatal_error("data sections must contain one variable each: " +
+                           WS.getName());
+      if (!WS.getSize())
+        report_fatal_error("data symbols must have a size set with .size: " +
+                           WS.getName());
 
-        MCSectionWasm &DataSection =
-            static_cast<MCSectionWasm &>(WS.getSection());
+      int64_t Size = 0;
+      if (!WS.getSize()->evaluateAsAbsolute(Size, Layout))
+        report_fatal_error(".size expression must be evaluatable");
 
-        if (uint64_t(Size) != Layout.getSectionFileSize(&DataSection))
-          report_fatal_error("data sections must contain at most one variable");
+      auto &DataSection = static_cast<MCSectionWasm &>(WS.getSection());
 
-        DataBytes.resize(alignTo(DataBytes.size(), DataSection.getAlignment()));
+      if (uint64_t(Size) != Layout.getSectionFileSize(&DataSection))
+        report_fatal_error("data sections must contain at most one variable");
 
-        DataSection.setSectionOffset(DataBytes.size());
+      DataBytes.resize(alignTo(DataBytes.size(), DataSection.getAlignment()));
 
-        for (MCSection::iterator I = DataSection.begin(), E = DataSection.end();
-             I != E; ++I) {
-          const MCFragment &Frag = *I;
-          if (Frag.hasInstructions())
-            report_fatal_error("only data supported in data sections");
+      DataSection.setSectionOffset(DataBytes.size());
 
-          if (const MCAlignFragment *Align = dyn_cast<MCAlignFragment>(&Frag)) {
-            if (Align->getValueSize() != 1)
-              report_fatal_error("only byte values supported for alignment");
-            // If nops are requested, use zeros, as this is the data section.
-            uint8_t Value = Align->hasEmitNops() ? 0 : Align->getValue();
-            uint64_t Size = std::min<uint64_t>(alignTo(DataBytes.size(),
-                                                       Align->getAlignment()),
-                                               DataBytes.size() +
-                                                   Align->getMaxBytesToEmit());
-            DataBytes.resize(Size, Value);
-          } else if (const MCFillFragment *Fill =
-                                              dyn_cast<MCFillFragment>(&Frag)) {
-            DataBytes.insert(DataBytes.end(), Size, Fill->getValue());
-          } else {
-            const MCDataFragment &DataFrag = cast<MCDataFragment>(Frag);
-            const SmallVectorImpl<char> &Contents = DataFrag.getContents();
+      for (const MCFragment &Frag : DataSection) {
+        if (Frag.hasInstructions())
+          report_fatal_error("only data supported in data sections");
 
-            DataBytes.insert(DataBytes.end(), Contents.begin(), Contents.end());
-          }
+        if (auto *Align = dyn_cast<MCAlignFragment>(&Frag)) {
+          if (Align->getValueSize() != 1)
+            report_fatal_error("only byte values supported for alignment");
+          // If nops are requested, use zeros, as this is the data section.
+          uint8_t Value = Align->hasEmitNops() ? 0 : Align->getValue();
+          uint64_t Size = std::min<uint64_t>(alignTo(DataBytes.size(),
+                                                     Align->getAlignment()),
+                                             DataBytes.size() +
+                                                 Align->getMaxBytesToEmit());
+          DataBytes.resize(Size, Value);
+        } else if (auto *Fill = dyn_cast<MCFillFragment>(&Frag)) {
+          DataBytes.insert(DataBytes.end(), Size, Fill->getValue());
+        } else {
+          const auto &DataFrag = cast<MCDataFragment>(Frag);
+          const SmallVectorImpl<char> &Contents = DataFrag.getContents();
+
+          DataBytes.insert(DataBytes.end(), Contents.begin(), Contents.end());
         }
-
-        // For each global, prepare a corresponding wasm global holding its
-        // address.  For externals these will also be named exports.
-        Index = NumGlobalImports + Globals.size();
-
-        WasmGlobal Global;
-        Global.Type = PtrType;
-        Global.IsMutable = false;
-        Global.HasImport = false;
-        Global.InitialValue = DataSection.getSectionOffset();
-        Global.ImportIndex = 0;
-        SymbolIndices[&WS] = Index;
-        Globals.push_back(Global);
       }
+
+      // For each global, prepare a corresponding wasm global holding its
+      // address.  For externals these will also be named exports.
+      Index = NumGlobalImports + Globals.size();
+
+      WasmGlobal Global;
+      Global.Type = PtrType;
+      Global.IsMutable = false;
+      Global.HasImport = false;
+      Global.InitialValue = DataSection.getSectionOffset();
+      Global.ImportIndex = 0;
+      SymbolIndices[&WS] = Index;
+      Globals.push_back(Global);
     }
 
     // If the symbol is visible outside this translation unit, export it.
@@ -1231,7 +1223,7 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
     // Find the target symbol of this weak alias
     const MCExpr *Expr = WS.getVariableValue();
     auto *Inner = dyn_cast<MCSymbolRefExpr>(Expr);
-    const MCSymbolWasm *ResolvedSym = cast<MCSymbolWasm>(&Inner->getSymbol());
+    const auto *ResolvedSym = cast<MCSymbolWasm>(&Inner->getSymbol());
     uint32_t Index = SymbolIndices.find(ResolvedSym)->second;
     DEBUG(dbgs() << "Weak alias: '" << WS << "' -> '" << ResolvedSym << "' = " << Index << "\n");
     SymbolIndices[&WS] = Index;

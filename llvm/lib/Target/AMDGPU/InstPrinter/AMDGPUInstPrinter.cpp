@@ -394,7 +394,6 @@ void AMDGPUInstPrinter::printImmediateV216(uint32_t Imm,
                                            const MCSubtargetInfo &STI,
                                            raw_ostream &O) {
   uint16_t Lo16 = static_cast<uint16_t>(Imm);
-  assert(Lo16 == static_cast<uint16_t>(Imm >> 16));
   printImmediate16(Lo16, STI, O);
 }
 

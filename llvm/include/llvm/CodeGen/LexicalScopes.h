@@ -196,7 +196,7 @@ public:
   }
 
   /// dump - Print data structures to dbgs().
-  void dump();
+  void dump() const;
 
   /// getOrCreateAbstractScope - Find or create an abstract lexical scope.
   LexicalScope *getOrCreateAbstractScope(const DILocalScope *Scope);

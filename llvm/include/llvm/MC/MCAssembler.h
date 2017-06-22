@@ -413,7 +413,7 @@ public:
 
   /// @}
 
-  void dump();
+  void dump() const;
 };
 
 /// \brief Compute the amount of padding required before the fragment \p F to

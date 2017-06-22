@@ -357,6 +357,82 @@ static void discoverTypeIndices(ArrayRef<uint8_t> Content, TypeLeafKind Kind,
   }
 }
 
+static bool discoverTypeIndices(ArrayRef<uint8_t> Content, SymbolKind Kind,
+                                SmallVectorImpl<TiReference> &Refs) {
+  uint32_t Count;
+  // FIXME: In the future it would be nice if we could avoid hardcoding these
+  // values.  One idea is to define some structures representing these types
+  // that would allow the use of offsetof().
+  switch (Kind) {
+  case SymbolKind::S_GPROC32:
+  case SymbolKind::S_LPROC32:
+  case SymbolKind::S_GPROC32_ID:
+  case SymbolKind::S_LPROC32_ID:
+  case SymbolKind::S_LPROC32_DPC:
+  case SymbolKind::S_LPROC32_DPC_ID:
+    Refs.push_back({TiRefKind::IndexRef, 24, 1}); // LF_FUNC_ID
+    break;
+  case SymbolKind::S_UDT:
+    Refs.push_back({TiRefKind::TypeRef, 0, 1}); // UDT
+    break;
+  case SymbolKind::S_GDATA32:
+  case SymbolKind::S_LDATA32:
+    Refs.push_back({TiRefKind::TypeRef, 0, 1}); // Type
+    break;
+  case SymbolKind::S_BUILDINFO:
+    Refs.push_back({TiRefKind::IndexRef, 0, 1}); // Compile flags
+    break;
+  case SymbolKind::S_LOCAL:
+    Refs.push_back({TiRefKind::TypeRef, 0, 1}); // Type
+    break;
+  case SymbolKind::S_CONSTANT:
+    Refs.push_back({TiRefKind::TypeRef, 0, 1}); // Type
+    break;
+  case SymbolKind::S_REGREL32:
+    Refs.push_back({TiRefKind::TypeRef, 4, 1}); // Type
+    break;
+  case SymbolKind::S_CALLSITEINFO:
+    Refs.push_back({TiRefKind::TypeRef, 8, 1}); // Call signature
+    break;
+  case SymbolKind::S_CALLERS:
+  case SymbolKind::S_CALLEES:
+    // The record is a count followed by an array of type indices.
+    Count = *reinterpret_cast<const ulittle32_t *>(Content.data());
+    Refs.push_back({TiRefKind::IndexRef, 4, Count}); // Callees
+    break;
+  case SymbolKind::S_INLINESITE:
+    Refs.push_back({TiRefKind::IndexRef, 8, 1}); // ID of inlinee
+    break;
+
+  // Defranges don't have types, just registers and code offsets.
+  case SymbolKind::S_DEFRANGE_REGISTER:
+  case SymbolKind::S_DEFRANGE_REGISTER_REL:
+  case SymbolKind::S_DEFRANGE_FRAMEPOINTER_REL:
+  case SymbolKind::S_DEFRANGE_FRAMEPOINTER_REL_FULL_SCOPE:
+  case SymbolKind::S_DEFRANGE_SUBFIELD_REGISTER:
+  case SymbolKind::S_DEFRANGE_SUBFIELD:
+    break;
+
+  // No type refernces.
+  case SymbolKind::S_LABEL32:
+  case SymbolKind::S_OBJNAME:
+  case SymbolKind::S_COMPILE:
+  case SymbolKind::S_COMPILE2:
+  case SymbolKind::S_COMPILE3:
+  case SymbolKind::S_BLOCK32:
+  case SymbolKind::S_FRAMEPROC:
+    break;
+  // Scope ending symbols.
+  case SymbolKind::S_END:
+  case SymbolKind::S_INLINESITE_END:
+  case SymbolKind::S_PROC_ID_END:
+    break;
+  default:
+    return false; // Unknown symbol.
+  }
+  return true;
+}
+
 void llvm::codeview::discoverTypeIndices(const CVType &Type,
                                          SmallVectorImpl<TiReference> &Refs) {
   ::discoverTypeIndices(Type.content(), Type.kind(), Refs);
@@ -368,4 +444,10 @@ void llvm::codeview::discoverTypeIndices(ArrayRef<uint8_t> RecordData,
       reinterpret_cast<const RecordPrefix *>(RecordData.data());
   TypeLeafKind K = static_cast<TypeLeafKind>(uint16_t(P->RecordKind));
   ::discoverTypeIndices(RecordData.drop_front(sizeof(RecordPrefix)), K, Refs);
+}
+
+bool llvm::codeview::discoverTypeIndices(const CVSymbol &Sym,
+                                         SmallVectorImpl<TiReference> &Refs) {
+  SymbolKind K = Sym.kind();
+  return ::discoverTypeIndices(Sym.content(), K, Refs);
 }

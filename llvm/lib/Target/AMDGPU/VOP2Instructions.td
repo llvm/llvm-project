@@ -392,6 +392,15 @@ defm V_CVT_PK_I16_I32 : VOP2Inst <"v_cvt_pk_i16_i32", VOP_I32_I32_I32>;
 
 } // End SubtargetPredicate = isGCN
 
+def : Pat<
+    (AMDGPUadde i32:$src0, i32:$src1, i1:$src2),
+    (V_ADDC_U32_e64 $src0, $src1, $src2)
+>;
+
+def : Pat<
+    (AMDGPUsube i32:$src0, i32:$src1, i1:$src2),
+    (V_SUBB_U32_e64 $src0, $src1, $src2)
+>;
 
 // These instructions only exist on SI and CI
 let SubtargetPredicate = isSICI in {

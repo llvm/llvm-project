@@ -73,7 +73,7 @@ public:
   /// the offset specified by the fixup and following the fixup kind as
   /// appropriate. Errors (such as an out of range fixup value) should be
   /// reported via \p Ctx.
-  virtual void applyFixup(const MCFixup &Fixup, char *Data, unsigned DataSize,
+  virtual void applyFixup(const MCFixup &Fixup, MutableArrayRef<char> Data,
                           uint64_t Value, bool IsPCRel,
                           MCContext &Ctx) const = 0;
 

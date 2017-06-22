@@ -36,7 +36,7 @@ public:
                          const MCValue &Target, uint64_t &Value,
                          bool &IsResolved) override;
 
-  void applyFixup(const MCFixup &Fixup, char *Data, unsigned DataSize,
+  void applyFixup(const MCFixup &Fixup, MutableArrayRef<char> Data,
                   uint64_t Value, bool IsPCRel, MCContext &Ctx) const override;
   bool fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
                             const MCRelaxableFragment *DF,
@@ -129,8 +129,8 @@ void AMDGPUAsmBackend::processFixupValue(const MCAssembler &Asm,
     Value = adjustFixupValue(Fixup, Value, &Asm.getContext());
 }
 
-void AMDGPUAsmBackend::applyFixup(const MCFixup &Fixup, char *Data,
-                                  unsigned DataSize, uint64_t Value,
+void AMDGPUAsmBackend::applyFixup(const MCFixup &Fixup,
+                                  MutableArrayRef<char> Data, uint64_t Value,
                                   bool IsPCRel, MCContext &Ctx) const {
   if (!Value)
     return; // Doesn't change encoding.
@@ -142,7 +142,7 @@ void AMDGPUAsmBackend::applyFixup(const MCFixup &Fixup, char *Data,
 
   unsigned NumBytes = getFixupKindNumBytes(Fixup.getKind());
   uint32_t Offset = Fixup.getOffset();
-  assert(Offset + NumBytes <= DataSize && "Invalid fixup offset!");
+  assert(Offset + NumBytes <= Data.size() && "Invalid fixup offset!");
 
   // For each byte of the fragment that the fixup touches, mask in the bits from
   // the fixup value.

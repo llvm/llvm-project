@@ -521,7 +521,7 @@ void PPCFrameLowering::replaceFPWithRealFP(MachineFunction &MF) const {
   const PPCRegisterInfo *RegInfo = Subtarget.getRegisterInfo();
   bool HasBP = RegInfo->hasBasePointer(MF);
   unsigned BPReg  = HasBP ? (unsigned) RegInfo->getBaseRegister(MF) : FPReg;
-  unsigned BP8Reg = HasBP ? (unsigned) PPC::X30 : FPReg;
+  unsigned BP8Reg = HasBP ? (unsigned) PPC::X30 : FP8Reg;
 
   for (MachineFunction::iterator BI = MF.begin(), BE = MF.end();
        BI != BE; ++BI)

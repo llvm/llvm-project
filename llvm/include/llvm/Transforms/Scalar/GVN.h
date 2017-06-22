@@ -209,7 +209,7 @@ private:
   // Other helper routines
   bool processInstruction(Instruction *I);
   bool processBlock(BasicBlock *BB);
-  void dump(DenseMap<uint32_t, Value *> &d);
+  void dump(DenseMap<uint32_t, Value *> &d) const;
   bool iterateOnFunction(Function &F);
   bool performPRE(Function &F);
   bool performScalarPRE(Instruction *I);

@@ -71,7 +71,7 @@ public:
     return Infos[Kind - FirstTargetFixupKind];
   }
 
-  void applyFixup(const MCFixup &Fixup, char *Data, unsigned DataSize,
+  void applyFixup(const MCFixup &Fixup, MutableArrayRef<char> Data,
                   uint64_t Value, bool IsPCRel, MCContext &Ctx) const override;
 
   bool mayNeedRelaxation(const MCInst &Inst) const override;
@@ -260,8 +260,8 @@ unsigned AArch64AsmBackend::getFixupKindContainereSizeInBytes(unsigned Kind) con
   }
 }
 
-void AArch64AsmBackend::applyFixup(const MCFixup &Fixup, char *Data,
-                                   unsigned DataSize, uint64_t Value,
+void AArch64AsmBackend::applyFixup(const MCFixup &Fixup,
+                                   MutableArrayRef<char> Data, uint64_t Value,
                                    bool IsPCRel, MCContext &Ctx) const {
   unsigned NumBytes = getFixupKindNumBytes(Fixup.getKind());
   if (!Value)
@@ -274,7 +274,7 @@ void AArch64AsmBackend::applyFixup(const MCFixup &Fixup, char *Data,
   Value <<= Info.TargetOffset;
 
   unsigned Offset = Fixup.getOffset();
-  assert(Offset + NumBytes <= DataSize && "Invalid fixup offset!");
+  assert(Offset + NumBytes <= Data.size() && "Invalid fixup offset!");
 
   // Used to point to big endian bytes.
   unsigned FulleSizeInBytes = getFixupKindContainereSizeInBytes(Fixup.getKind());
@@ -288,7 +288,7 @@ void AArch64AsmBackend::applyFixup(const MCFixup &Fixup, char *Data,
     }
   } else {
     // Handle as big-endian
-    assert((Offset + FulleSizeInBytes) <= DataSize && "Invalid fixup size!");
+    assert((Offset + FulleSizeInBytes) <= Data.size() && "Invalid fixup size!");
     assert(NumBytes <= FulleSizeInBytes && "Invalid fixup size!");
     for (unsigned i = 0; i != NumBytes; ++i) {
       unsigned Idx = FulleSizeInBytes - 1 - i;

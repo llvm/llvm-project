@@ -1638,6 +1638,13 @@ static void adjustCallerSSPLevel(Function &Caller, const Function &Callee) {
     Caller.addFnAttr(Attribute::StackProtect);
 }
 
+/// \brief If the inlined function required stack probes, then ensure that
+/// the calling function has those too.
+static void adjustCallerStackProbes(Function &Caller, const Function &Callee) {
+  if (!Caller.hasFnAttribute("probe-stack") && Callee.hasFnAttribute("probe-stack"))
+    Caller.addFnAttr("probe-stack", Callee.getFnAttribute("probe-stack").getValueAsString());
+}
+
 #define GET_ATTR_COMPAT_FUNC
 #include "AttributesCompatFunc.inc"
 

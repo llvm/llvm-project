@@ -1,0 +1,271 @@
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx512f -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ALL
+
+--- |
+  define void @test_insert_128_idx0() {
+    ret void
+  }
+
+  define void @test_insert_128_idx0_undef() {
+    ret void
+  }
+
+  define void @test_insert_128_idx1() {
+    ret void
+  }
+
+  define void @test_insert_128_idx1_undef() {
+    ret void
+  }
+
+  define void @test_insert_256_idx0() {
+    ret void
+  }
+
+  define void @test_insert_256_idx0_undef() {
+    ret void
+  }
+
+  define void @test_insert_256_idx1() {
+    ret void
+  }
+
+  define void @test_insert_256_idx1_undef() {
+    ret void
+  }
+
+...
+---
+name:            test_insert_128_idx0
+# ALL-LABEL: name:  test_insert_128_idx0
+alignment:       4
+legalized:       true
+regBankSelected: true
+# ALL:      registers:
+# ALL-NEXT:   - { id: 0, class: vr512, preferred-register: '' }
+# ALL-NEXT:   - { id: 1, class: vr128x, preferred-register: '' }
+# ALL-NEXT:   - { id: 2, class: vr512, preferred-register: '' }
+registers:
+  - { id: 0, class: vecr }
+  - { id: 1, class: vecr }
+  - { id: 2, class: vecr }
+# ALL:          %0 = COPY %zmm0
+# ALL-NEXT:     %1 = COPY %xmm1
+# ALL-NEXT:     %2 = VINSERTF32x4Zrr %0, %1, 0
+# ALL-NEXT:     %ymm0 = COPY %2
+# ALL-NEXT:     RET 0, implicit %ymm0
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %zmm0, %ymm1
+
+    %0(<16 x s32>) = COPY %zmm0
+    %1(<4 x s32>) = COPY %xmm1
+    %2(<16 x s32>) = G_INSERT %0(<16 x s32>), %1(<4 x s32>), 0
+    %ymm0 = COPY %2(<16 x s32>)
+    RET 0, implicit %ymm0
+
+...
+---
+name:            test_insert_128_idx0_undef
+# ALL-LABEL: name:  test_insert_128_idx0_undef
+alignment:       4
+legalized:       true
+regBankSelected: true
+# ALL:      registers:
+# ALL-NEXT:   - { id: 0, class: vecr, preferred-register: '' }
+# ALL-NEXT:   - { id: 1, class: vr128x, preferred-register: '' }
+# ALL-NEXT:   - { id: 2, class: vr512, preferred-register: '' }
+registers:
+  - { id: 0, class: vecr }
+  - { id: 1, class: vecr }
+  - { id: 2, class: vecr }
+# ALL:          %1 = COPY %xmm1
+# ALL-NEXT:     undef %2.sub_xmm = COPY %1
+# ALL-NEXT:     %ymm0 = COPY %2
+# ALL-NEXT:     RET 0, implicit %ymm0
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %ymm0, %ymm1
+
+    %0(<16 x s32>) = IMPLICIT_DEF
+    %1(<4 x s32>) = COPY %xmm1
+    %2(<16 x s32>) = G_INSERT %0(<16 x s32>), %1(<4 x s32>), 0
+    %ymm0 = COPY %2(<16 x s32>)
+    RET 0, implicit %ymm0
+
+...
+---
+name:            test_insert_128_idx1
+# ALL-LABEL: name:  test_insert_128_idx1
+alignment:       4
+legalized:       true
+regBankSelected: true
+# ALL:      registers:
+# ALL-NEXT:   - { id: 0, class: vr512, preferred-register: '' }
+# ALL-NEXT:   - { id: 1, class: vr128x, preferred-register: '' }
+# ALL-NEXT:   - { id: 2, class: vr512, preferred-register: '' }
+registers:
+  - { id: 0, class: vecr }
+  - { id: 1, class: vecr }
+  - { id: 2, class: vecr }
+# ALL:          %0 = COPY %zmm0
+# ALL-NEXT:     %1 = COPY %xmm1
+# ALL-NEXT:     %2 = VINSERTF32x4Zrr %0, %1, 1
+# ALL-NEXT:     %ymm0 = COPY %2
+# ALL-NEXT:     RET 0, implicit %ymm0
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %ymm0, %ymm1
+
+    %0(<16 x s32>) = COPY %zmm0
+    %1(<4 x s32>) = COPY %xmm1
+    %2(<16 x s32>) = G_INSERT %0(<16 x s32>), %1(<4 x s32>), 128
+    %ymm0 = COPY %2(<16 x s32>)
+    RET 0, implicit %ymm0
+...
+---
+name:            test_insert_128_idx1_undef
+# ALL-LABEL: name:  test_insert_128_idx1_undef
+alignment:       4
+legalized:       true
+regBankSelected: true
+# ALL:      registers:
+# ALL-NEXT:   - { id: 0, class: vr512, preferred-register: '' }
+# ALL-NEXT:   - { id: 1, class: vr128x, preferred-register: '' }
+# ALL-NEXT:   - { id: 2, class: vr512, preferred-register: '' }
+registers:
+  - { id: 0, class: vecr }
+  - { id: 1, class: vecr }
+  - { id: 2, class: vecr }
+# ALL:          %0 = IMPLICIT_DEF
+# ALL-NEXT:     %1 = COPY %xmm1
+# ALL-NEXT:     %2 = VINSERTF32x4Zrr %0, %1, 1
+# ALL-NEXT:     %ymm0 = COPY %2
+# ALL-NEXT:     RET 0, implicit %ymm0
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %ymm0, %ymm1
+
+    %0(<16 x s32>) = IMPLICIT_DEF
+    %1(<4 x s32>) = COPY %xmm1
+    %2(<16 x s32>) = G_INSERT %0(<16 x s32>), %1(<4 x s32>), 128
+    %ymm0 = COPY %2(<16 x s32>)
+    RET 0, implicit %ymm0
+...
+---
+name:            test_insert_256_idx0
+# ALL-LABEL: name:  test_insert_256_idx0
+alignment:       4
+legalized:       true
+regBankSelected: true
+# ALL:      registers:
+# ALL-NEXT:   - { id: 0, class: vr512, preferred-register: '' }
+# ALL-NEXT:   - { id: 1, class: vr256x, preferred-register: '' }
+# ALL-NEXT:   - { id: 2, class: vr512, preferred-register: '' }
+registers:
+  - { id: 0, class: vecr }
+  - { id: 1, class: vecr }
+  - { id: 2, class: vecr }
+# ALL:          %0 = COPY %zmm0
+# ALL-NEXT:     %1 = COPY %ymm1
+# ALL-NEXT:     %2 = VINSERTF64x4Zrr %0, %1, 0
+# ALL-NEXT:     %ymm0 = COPY %2
+# ALL-NEXT:     RET 0, implicit %ymm0
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %zmm0, %ymm1
+
+    %0(<16 x s32>) = COPY %zmm0
+    %1(<8 x s32>) = COPY %ymm1
+    %2(<16 x s32>) = G_INSERT %0(<16 x s32>), %1(<8 x s32>), 0
+    %ymm0 = COPY %2(<16 x s32>)
+    RET 0, implicit %ymm0
+
+...
+---
+name:            test_insert_256_idx0_undef
+# ALL-LABEL: name:  test_insert_256_idx0_undef
+alignment:       4
+legalized:       true
+regBankSelected: true
+# ALL:      registers:
+# ALL-NEXT:   - { id: 0, class: vecr, preferred-register: '' }
+# ALL-NEXT:   - { id: 1, class: vr256x, preferred-register: '' }
+# ALL-NEXT:   - { id: 2, class: vr512, preferred-register: '' }
+registers:
+  - { id: 0, class: vecr }
+  - { id: 1, class: vecr }
+  - { id: 2, class: vecr }
+# ALL:          %1 = COPY %ymm1
+# ALL-NEXT:     undef %2.sub_ymm = COPY %1
+# ALL-NEXT:     %ymm0 = COPY %2
+# ALL-NEXT:     RET 0, implicit %ymm0
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %ymm0, %ymm1
+
+    %0(<16 x s32>) = IMPLICIT_DEF
+    %1(<8 x s32>) = COPY %ymm1
+    %2(<16 x s32>) = G_INSERT %0(<16 x s32>), %1(<8 x s32>), 0
+    %ymm0 = COPY %2(<16 x s32>)
+    RET 0, implicit %ymm0
+
+...
+---
+name:            test_insert_256_idx1
+# ALL-LABEL: name:  test_insert_256_idx1
+alignment:       4
+legalized:       true
+regBankSelected: true
+# ALL:      registers:
+# ALL-NEXT:   - { id: 0, class: vr512, preferred-register: '' }
+# ALL-NEXT:   - { id: 1, class: vr256x, preferred-register: '' }
+# ALL-NEXT:   - { id: 2, class: vr512, preferred-register: '' }
+registers:
+  - { id: 0, class: vecr }
+  - { id: 1, class: vecr }
+  - { id: 2, class: vecr }
+# ALL:          %0 = COPY %zmm0
+# ALL-NEXT:     %1 = COPY %ymm1
+# ALL-NEXT:     %2 = VINSERTF64x4Zrr %0, %1, 1
+# ALL-NEXT:     %ymm0 = COPY %2
+# ALL-NEXT:     RET 0, implicit %ymm0
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %ymm0, %ymm1
+
+    %0(<16 x s32>) = COPY %zmm0
+    %1(<8 x s32>) = COPY %ymm1
+    %2(<16 x s32>) = G_INSERT %0(<16 x s32>), %1(<8 x s32>), 256
+    %ymm0 = COPY %2(<16 x s32>)
+    RET 0, implicit %ymm0
+...
+---
+name:            test_insert_256_idx1_undef
+# ALL-LABEL: name:  test_insert_256_idx1_undef
+alignment:       4
+legalized:       true
+regBankSelected: true
+# ALL:      registers:
+# ALL-NEXT:   - { id: 0, class: vr512, preferred-register: '' }
+# ALL-NEXT:   - { id: 1, class: vr256x, preferred-register: '' }
+# ALL-NEXT:   - { id: 2, class: vr512, preferred-register: '' }
+registers:
+  - { id: 0, class: vecr }
+  - { id: 1, class: vecr }
+  - { id: 2, class: vecr }
+# ALL:          %0 = IMPLICIT_DEF
+# ALL-NEXT:     %1 = COPY %ymm1
+# ALL-NEXT:     %2 = VINSERTF64x4Zrr %0, %1, 1
+# ALL-NEXT:     %ymm0 = COPY %2
+# ALL-NEXT:     RET 0, implicit %ymm0
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %ymm0, %ymm1
+
+    %0(<16 x s32>) = IMPLICIT_DEF
+    %1(<8 x s32>) = COPY %ymm1
+    %2(<16 x s32>) = G_INSERT %0(<16 x s32>), %1(<8 x s32>), 256
+    %ymm0 = COPY %2(<16 x s32>)
+    RET 0, implicit %ymm0
+...
+

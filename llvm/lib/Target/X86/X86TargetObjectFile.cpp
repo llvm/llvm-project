@@ -86,6 +86,12 @@ X86LinuxNaClTargetObjectFile::Initialize(MCContext &Ctx,
   InitializeELF(TM.Options.UseInitArray);
 }
 
+void X86SolarisTargetObjectFile::Initialize(MCContext &Ctx,
+                                            const TargetMachine &TM) {
+  TargetLoweringObjectFileELF::Initialize(Ctx, TM);
+  InitializeELF(TM.Options.UseInitArray);
+}
+
 const MCExpr *X86WindowsTargetObjectFile::lowerRelativeReference(
     const GlobalValue *LHS, const GlobalValue *RHS,
     const TargetMachine &TM) const {

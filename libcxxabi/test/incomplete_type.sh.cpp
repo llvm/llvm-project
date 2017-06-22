@@ -91,6 +91,8 @@ int main() {
   } catch (int NeverDefined::*p) {
     assert(!p);
   }
+  catch(...) { assert(!"FAIL: Didn't catch NeverDefined::*" ); }
+
   AssertIncompleteTypeInfoEquals(ReturnTypeInfoIncompleteMP(), typeid(int IncompleteAtThrow::*));
   try {
     ThrowIncompleteMP();
@@ -104,6 +106,7 @@ int main() {
   } catch (int IncompleteAtThrow::*p) {
     assert(!p);
   }
+  catch(...) { assert(!"FAIL: Didn't catch IncompleteAtThrow::*" ); }
 
   AssertIncompleteTypeInfoEquals(ReturnTypeInfoIncompletePP(), typeid(IncompleteAtThrow**));
   try {
@@ -114,6 +117,7 @@ int main() {
   } catch (IncompleteAtThrow** p) {
     assert(!p);
   }
+  catch(...) { assert(!"FAIL: Didn't catch IncompleteAtThrow**" ); }
 
   try {
     ThrowIncompletePMP();
@@ -125,6 +129,7 @@ int main() {
   } catch (int IncompleteAtThrow::**p) {
     assert(!p);
   }
+  catch(...) { assert(!"FAIL: Didn't catch IncompleteAtThrow::**" ); }
 
   AssertIncompleteTypeInfoEquals(ReturnTypeInfoCompleteMP(), typeid(int CompleteAtThrow::*));
   try {
@@ -139,6 +144,7 @@ int main() {
   } catch (int CompleteAtThrow::*p) {
     assert(!p);
   }
+  catch(...) { assert(!"FAIL: Didn't catch CompleteAtThrow::" ); }
 
   AssertIncompleteTypeInfoEquals(ReturnTypeInfoCompletePP(), typeid(CompleteAtThrow**));
   try {
@@ -153,6 +159,7 @@ int main() {
   } catch (CompleteAtThrow**p) {
     assert(!p);
   }
+  catch(...) { assert(!"FAIL: Didn't catch CompleteAtThrow**" ); }
 
   try {
     ThrowCompletePMP();
@@ -168,6 +175,7 @@ int main() {
   } catch (int CompleteAtThrow::**p) {
     assert(!p);
   }
+  catch(...) { assert(!"FAIL: Didn't catch CompleteAtThrow::**" ); }
 
 #if __cplusplus >= 201103L
   // Catch nullptr as complete type
@@ -176,6 +184,7 @@ int main() {
   } catch (int IncompleteAtThrow::*p) {
     assert(!p);
   }
+  catch(...) { assert(!"FAIL: Didn't catch nullptr as IncompleteAtThrow::*" ); }
 
   // Catch nullptr as an incomplete type
   try {
@@ -183,12 +192,16 @@ int main() {
   } catch (int CompleteAtThrow::*p) {
     assert(!p);
   }
+  catch(...) { assert(!"FAIL: Didn't catch nullptr as CompleteAtThrow::*" ); }
+
   // Catch nullptr as a type that is never complete.
   try {
     ThrowNullptr();
   } catch (int NeverDefined::*p) {
     assert(!p);
   }
+  catch(...) { assert(!"FAIL: Didn't catch nullptr as NeverDefined::*" ); }
+
 #endif
 }
 #endif

@@ -287,6 +287,7 @@ define i8 @shuf_test1(i16 %v) nounwind {
 ; KNL-NEXT:    kmovw %k0, %eax
 ; KNL-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; KNL-NEXT:    retq
+; KNL-NEXT:    ## -- End function
 ;
 ; SKX-LABEL: shuf_test1:
 ; SKX:       ## BB#0:
@@ -295,6 +296,7 @@ define i8 @shuf_test1(i16 %v) nounwind {
 ; SKX-NEXT:    kmovd %k0, %eax
 ; SKX-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; SKX-NEXT:    retq
+; SKX-NEXT:    ## -- End function
 ;
 ; AVX512BW-LABEL: shuf_test1:
 ; AVX512BW:       ## BB#0:
@@ -303,6 +305,7 @@ define i8 @shuf_test1(i16 %v) nounwind {
 ; AVX512BW-NEXT:    kmovd %k0, %eax
 ; AVX512BW-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    retq
+; AVX512BW-NEXT:    ## -- End function
 ;
 ; AVX512DQ-LABEL: shuf_test1:
 ; AVX512DQ:       ## BB#0:
@@ -311,6 +314,7 @@ define i8 @shuf_test1(i16 %v) nounwind {
 ; AVX512DQ-NEXT:    kmovw %k0, %eax
 ; AVX512DQ-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512DQ-NEXT:    retq
+; AVX512DQ-NEXT:    ## -- End function
    %v1 = bitcast i16 %v to <16 x i1>
    %mask = shufflevector <16 x i1> %v1, <16 x i1> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
    %mask1 = bitcast <8 x i1> %mask to i8
@@ -1285,6 +1289,7 @@ define <32 x i16> @test21(<32 x i16> %x , <32 x i1> %mask) nounwind readnone {
 ; KNL-NEXT:    vpsraw $15, %ymm2, %ymm2
 ; KNL-NEXT:    vpand %ymm1, %ymm2, %ymm1
 ; KNL-NEXT:    retq
+; KNL-NEXT:    ## -- End function
 ;
 ; SKX-LABEL: test21:
 ; SKX:       ## BB#0:
@@ -1292,6 +1297,7 @@ define <32 x i16> @test21(<32 x i16> %x , <32 x i1> %mask) nounwind readnone {
 ; SKX-NEXT:    vpmovb2m %ymm1, %k1
 ; SKX-NEXT:    vmovdqu16 %zmm0, %zmm0 {%k1} {z}
 ; SKX-NEXT:    retq
+; SKX-NEXT:    ## -- End function
 ;
 ; AVX512BW-LABEL: test21:
 ; AVX512BW:       ## BB#0:
@@ -1299,6 +1305,7 @@ define <32 x i16> @test21(<32 x i16> %x , <32 x i1> %mask) nounwind readnone {
 ; AVX512BW-NEXT:    vpmovb2m %zmm1, %k1
 ; AVX512BW-NEXT:    vmovdqu16 %zmm0, %zmm0 {%k1} {z}
 ; AVX512BW-NEXT:    retq
+; AVX512BW-NEXT:    ## -- End function
 ;
 ; AVX512DQ-LABEL: test21:
 ; AVX512DQ:       ## BB#0:
@@ -1312,6 +1319,7 @@ define <32 x i16> @test21(<32 x i16> %x , <32 x i1> %mask) nounwind readnone {
 ; AVX512DQ-NEXT:    vpsraw $15, %ymm2, %ymm2
 ; AVX512DQ-NEXT:    vpand %ymm1, %ymm2, %ymm1
 ; AVX512DQ-NEXT:    retq
+; AVX512DQ-NEXT:    ## -- End function
   %ret = select <32 x i1> %mask, <32 x i16> %x, <32 x i16> zeroinitializer
   ret <32 x i16> %ret
 }

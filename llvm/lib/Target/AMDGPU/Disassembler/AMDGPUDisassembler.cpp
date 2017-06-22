@@ -555,8 +555,6 @@ MCOperand AMDGPUDisassembler::decodeSrcOp(const OpWidthTy Width, unsigned Val) c
     return createSRegOperand(getTtmpClassId(Width), Val - TTMP_MIN);
   }
 
-  assert(Width == OPW16 || Width == OPW32 || Width == OPW64);
-
   if (INLINE_INTEGER_C_MIN <= Val && Val <= INLINE_INTEGER_C_MAX)
     return decodeIntImmed(Val);
 

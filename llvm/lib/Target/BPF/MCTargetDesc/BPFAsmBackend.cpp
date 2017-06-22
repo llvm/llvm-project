@@ -27,7 +27,7 @@ public:
     : MCAsmBackend(), IsLittleEndian(IsLittleEndian) {}
   ~BPFAsmBackend() override = default;
 
-  void applyFixup(const MCFixup &Fixup, char *Data, unsigned DataSize,
+  void applyFixup(const MCFixup &Fixup, MutableArrayRef<char> Data,
                   uint64_t Value, bool IsPCRel, MCContext &Ctx) const override;
 
   MCObjectWriter *createObjectWriter(raw_pwrite_stream &OS) const override;
@@ -61,8 +61,8 @@ bool BPFAsmBackend::writeNopData(uint64_t Count, MCObjectWriter *OW) const {
   return true;
 }
 
-void BPFAsmBackend::applyFixup(const MCFixup &Fixup, char *Data,
-                               unsigned DataSize, uint64_t Value, bool IsPCRel,
+void BPFAsmBackend::applyFixup(const MCFixup &Fixup, MutableArrayRef<char> Data,
+                               uint64_t Value, bool IsPCRel,
                                MCContext &Ctx) const {
   if (Fixup.getKind() == FK_SecRel_4 || Fixup.getKind() == FK_SecRel_8) {
     assert(Value == 0);

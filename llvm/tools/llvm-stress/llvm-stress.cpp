@@ -411,12 +411,14 @@ struct ConstModifier: public Modifier {
       case 1:
         return PT->push_back(ConstantInt::get(
             Ty, APInt::getNullValue(Ty->getPrimitiveSizeInBits())));
-      case 2: case 3: case 4: case 5:
+      case 2:
+      case 3:
+      case 4:
+      case 5:
       case 6:
         PT->push_back(ConstantInt::get(Ty, Ran->Rand()));
       }
     }
-
   }
 };
 

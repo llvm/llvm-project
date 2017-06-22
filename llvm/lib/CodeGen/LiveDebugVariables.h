@@ -59,7 +59,7 @@ public:
   void emitDebugValues(VirtRegMap *VRM);
 
   /// dump - Print data structures to dbgs().
-  void dump();
+  void dump() const;
 
 private:
 

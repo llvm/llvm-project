@@ -138,6 +138,9 @@ static Optional<uint8_t> getFixedByteSize(dwarf::Form Form, const T *U) {
   case DW_FORM_addrx2:
     return 2;
 
+  case DW_FORM_strx3:
+    return 3;
+
   case DW_FORM_data4:
   case DW_FORM_ref4:
   case DW_FORM_ref_sup4:
@@ -302,6 +305,10 @@ bool DWARFFormValue::isFormClass(DWARFFormValue::FormClass FC) const {
   case DW_FORM_GNU_str_index:
   case DW_FORM_GNU_strp_alt:
   case DW_FORM_strx:
+  case DW_FORM_strx1:
+  case DW_FORM_strx2:
+  case DW_FORM_strx3:
+  case DW_FORM_strx4:
     return (FC == FC_String);
   case DW_FORM_implicit_const:
     return (FC == FC_Constant);
@@ -367,6 +374,9 @@ bool DWARFFormValue::extractValue(const DataExtractor &Data,
     case DW_FORM_strx2:
     case DW_FORM_addrx2:
       Value.uval = Data.getU16(OffsetPtr);
+      break;
+    case DW_FORM_strx3:
+      Value.uval = Data.getU24(OffsetPtr);
       break;
     case DW_FORM_data4:
     case DW_FORM_ref4:
@@ -545,6 +555,10 @@ void DWARFFormValue::dump(raw_ostream &OS) const {
     dumpString(OS);
     break;
   case DW_FORM_strx:
+  case DW_FORM_strx1:
+  case DW_FORM_strx2:
+  case DW_FORM_strx3:
+  case DW_FORM_strx4:
   case DW_FORM_GNU_str_index:
     OS << format(" indexed (%8.8x) string = ", (uint32_t)UValue);
     dumpString(OS);
@@ -623,7 +637,9 @@ Optional<const char *> DWARFFormValue::getAsCString() const {
   if (Form == DW_FORM_GNU_strp_alt || U == nullptr)
     return None;
   uint32_t Offset = Value.uval;
-  if (Form == DW_FORM_GNU_str_index || Form == DW_FORM_strx) {
+  if (Form == DW_FORM_GNU_str_index || Form == DW_FORM_strx ||
+      Form == DW_FORM_strx1 || Form == DW_FORM_strx2 || Form == DW_FORM_strx3 ||
+      Form == DW_FORM_strx4) {
     uint64_t StrOffset;
     if (!U->getStringOffsetSectionItem(Offset, StrOffset))
       return None;
