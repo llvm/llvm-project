@@ -131,18 +131,24 @@ void UnmapOrDie(void *addr, uptr size) {
   }
 }
 
+static void *ReturnNullptrOnOOMOrDie(uptr size, const char *mem_type,
+                                     const char *mmap_type) {
+  error_t last_error = GetLastError();
+  if (last_error == ERROR_NOT_ENOUGH_MEMORY)
+    return nullptr;
+  ReportMmapFailureAndDie(size, mem_type, mmap_type, last_error);
+}
+
 void *MmapOrDieOnFatalError(uptr size, const char *mem_type) {
   void *rv = VirtualAlloc(0, size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
-  if (rv == 0) {
-    error_t last_error = GetLastError();
-    if (last_error != ERROR_NOT_ENOUGH_MEMORY)
-      ReportMmapFailureAndDie(size, mem_type, "allocate", last_error);
-  }
+  if (rv == 0)
+    return ReturnNullptrOnOOMOrDie(size, mem_type, "allocate");
   return rv;
 }
 
 // We want to map a chunk of address space aligned to 'alignment'.
-void *MmapAlignedOrDie(uptr size, uptr alignment, const char *mem_type) {
+void *MmapAlignedOrDieOnFatalError(uptr size, uptr alignment,
+                                   const char *mem_type) {
   CHECK(IsPowerOfTwo(size));
   CHECK(IsPowerOfTwo(alignment));
 
@@ -152,7 +158,7 @@ void *MmapAlignedOrDie(uptr size, uptr alignment, const char *mem_type) {
   uptr mapped_addr =
       (uptr)VirtualAlloc(0, size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
   if (!mapped_addr)
-    ReportMmapFailureAndDie(size, mem_type, "allocate aligned", GetLastError());
+    return ReturnNullptrOnOOMOrDie(size, mem_type, "allocate aligned");
 
   // If we got it right on the first try, return. Otherwise, unmap it and go to
   // the slow path.
@@ -172,8 +178,7 @@ void *MmapAlignedOrDie(uptr size, uptr alignment, const char *mem_type) {
     mapped_addr =
         (uptr)VirtualAlloc(0, size + alignment, MEM_RESERVE, PAGE_NOACCESS);
     if (!mapped_addr)
-      ReportMmapFailureAndDie(size, mem_type, "allocate aligned",
-                              GetLastError());
+      return ReturnNullptrOnOOMOrDie(size, mem_type, "allocate aligned");
 
     // Find the aligned address.
     uptr aligned_addr = RoundUpTo(mapped_addr, alignment);
@@ -191,7 +196,7 @@ void *MmapAlignedOrDie(uptr size, uptr alignment, const char *mem_type) {
 
   // Fail if we can't make this work quickly.
   if (retries == kMaxRetries && mapped_addr == 0)
-    ReportMmapFailureAndDie(size, mem_type, "allocate aligned", GetLastError());
+    return ReturnNullptrOnOOMOrDie(size, mem_type, "allocate aligned");
 
   return (void *)mapped_addr;
 }
@@ -1000,6 +1005,11 @@ void GetMemoryProfile(fill_profile_f cb, uptr *stats, uptr stats_size) { }
 
 void CheckNoDeepBind(const char *filename, int flag) {
   // Do nothing.
+}
+
+// FIXME: implement on this platform.
+bool GetRandom(void *buffer, uptr length) {
+  UNIMPLEMENTED();
 }
 
 }  // namespace __sanitizer

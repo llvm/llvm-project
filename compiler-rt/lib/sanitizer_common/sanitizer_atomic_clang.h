@@ -82,8 +82,7 @@ INLINE bool atomic_compare_exchange_strong(volatile T *a, typename T::Type *cmp,
   if (sizeof(*a) == 8) {
     Type volatile *val_ptr = const_cast<Type volatile *>(&a->val_dont_use);
     prev = __mips_sync_val_compare_and_swap<u64>(
-        reinterpret_cast<u64 volatile *>(val_ptr), reinterpret_cast<u64> cmpv,
-        reinterpret_cast<u64> xchg);
+        reinterpret_cast<u64 volatile *>(val_ptr), (u64)cmpv, (u64)xchg);
   } else {
     prev = __sync_val_compare_and_swap(&a->val_dont_use, cmpv, xchg);
   }

@@ -144,8 +144,10 @@ struct SizeClassAllocator32LocalCache {
     CHECK_NE(class_id, 0UL);
     CHECK_LT(class_id, kNumClasses);
     PerClass *c = &per_class_[class_id];
-    if (UNLIKELY(c->count == 0))
-      Refill(allocator, class_id);
+    if (UNLIKELY(c->count == 0)) {
+      if (UNLIKELY(!Refill(allocator, class_id)))
+        return nullptr;
+    }
     stats_.Add(AllocatorStatAllocated, c->class_size);
     void *res = c->batch[--c->count];
     PREFETCH(c->batch[c->count - 1]);
@@ -227,14 +229,17 @@ struct SizeClassAllocator32LocalCache {
       Deallocate(allocator, batch_class_id, b);
   }
 
-  NOINLINE void Refill(SizeClassAllocator *allocator, uptr class_id) {
+  NOINLINE bool Refill(SizeClassAllocator *allocator, uptr class_id) {
     InitCache();
     PerClass *c = &per_class_[class_id];
     TransferBatch *b = allocator->AllocateBatch(&stats_, this, class_id);
+    if (UNLIKELY(!b))
+      return false;
     CHECK_GT(b->Count(), 0);
     b->CopyToArray(c->batch);
     c->count = b->Count();
     DestroyBatch(class_id, allocator, b);
+    return true;
   }
 
   NOINLINE void Drain(SizeClassAllocator *allocator, uptr class_id) {
@@ -244,6 +249,10 @@ struct SizeClassAllocator32LocalCache {
     uptr first_idx_to_drain = c->count - cnt;
     TransferBatch *b = CreateBatch(
         class_id, allocator, (TransferBatch *)c->batch[first_idx_to_drain]);
+    // Failure to allocate a batch while releasing memory is non recoverable.
+    // TODO(alekseys): Figure out how to do it without allocating a new batch.
+    if (UNLIKELY(!b))
+      DieOnFailure::OnOOM();
     b->SetFromArray(allocator->GetRegionBeginBySizeClass(class_id),
                     &c->batch[first_idx_to_drain], cnt);
     c->count -= cnt;

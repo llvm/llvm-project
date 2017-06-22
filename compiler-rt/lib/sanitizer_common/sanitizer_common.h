@@ -95,7 +95,9 @@ void *MmapFixedOrDie(uptr fixed_addr, uptr size);
 void *MmapFixedNoAccess(uptr fixed_addr, uptr size, const char *name = nullptr);
 void *MmapNoAccess(uptr size);
 // Map aligned chunk of address space; size and alignment are powers of two.
-void *MmapAlignedOrDie(uptr size, uptr alignment, const char *mem_type);
+// Dies on all but out of memory errors, in the latter case returns nullptr.
+void *MmapAlignedOrDieOnFatalError(uptr size, uptr alignment,
+                                   const char *mem_type);
 // Disallow access to a memory range.  Use MmapFixedNoAccess to allocate an
 // unaccessible memory.
 bool MprotectNoAccess(uptr addr, uptr size);
@@ -918,6 +920,10 @@ struct StackDepotStats {
 const s32 kReleaseToOSIntervalNever = -1;
 
 void CheckNoDeepBind(const char *filename, int flag);
+
+// Returns the requested amount of random data (up to 256 bytes) that can then
+// be used to seed a PRNG.
+bool GetRandom(void *buffer, uptr length);
 
 }  // namespace __sanitizer
 
