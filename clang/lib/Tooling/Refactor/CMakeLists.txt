@@ -5,6 +5,7 @@ add_clang_library(clangToolingRefactor
   ASTStateSerialization.cpp
   Extract.cpp
   ExtractRepeatedExpressionIntoVariable.cpp
+  ExtractionUtils.cpp
   FillInEnumSwitchCases.cpp
   FillInMissingMethodStubsFromAbstractClasses.cpp
   FillInMissingProtocolStubs.cpp

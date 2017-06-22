@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "ExtractionUtils.h"
 #include "RefactoringOperations.h"
 #include "SourceLocationUtilities.h"
 #include "clang/AST/AST.h"
@@ -322,22 +323,10 @@ public:
 } // end anonymous namespace
 
 static StringRef nameForExtractedVariable(const Expr *E) {
-  if (const auto *Call = dyn_cast<CallExpr>(E)) {
-    if (const auto *Fn = Call->getDirectCallee())
-      return Fn->getName();
-  } else if (const auto *Msg = dyn_cast<ObjCMessageExpr>(E)) {
-    if (const auto *M = Msg->getMethodDecl()) {
-      if (M->getSelector().isUnarySelector())
-        return M->getSelector().getNameForSlot(0);
-    }
-  } else if (const auto *PRE = dyn_cast<ObjCPropertyRefExpr>(E)) {
-    if (PRE->isImplicitProperty()) {
-      if (const auto *M = PRE->getImplicitPropertyGetter())
-        return M->getSelector().getNameForSlot(0);
-    } else if (const auto *Prop = PRE->getExplicitProperty())
-      return Prop->getName();
-  }
-  return "duplicate";
+  auto SuggestedName = extract::nameForExtractedVariable(E);
+  if (!SuggestedName)
+    return "duplicate";
+  return *SuggestedName;
 }
 
 llvm::Expected<RefactoringResult>
