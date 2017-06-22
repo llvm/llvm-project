@@ -554,6 +554,48 @@ void __ubsan::__ubsan_handle_nullability_arg_abort(NonNullArgData *Data) {
   Die();
 }
 
+static void handlePointerOverflowImpl(PointerOverflowData *Data,
+                                      ValueHandle Base,
+                                      ValueHandle Result,
+                                      ReportOptions Opts) {
+  SourceLocation Loc = Data->Loc.acquire();
+  ErrorType ET = ErrorType::PointerOverflow;
+
+  if (ignoreReport(Loc, Opts, ET))
+    return;
+
+  ScopedReport R(Opts, Loc, ET);
+
+  if ((sptr(Base) >= 0) == (sptr(Result) >= 0)) {
+    if (Base > Result)
+      Diag(Loc, DL_Error, "addition of unsigned offset to %0 overflowed to %1")
+          << (void *)Base << (void *)Result;
+    else
+      Diag(Loc, DL_Error,
+           "subtraction of unsigned offset from %0 overflowed to %1")
+          << (void *)Base << (void *)Result;
+  } else {
+    Diag(Loc, DL_Error,
+         "pointer index expression with base %0 overflowed to %1")
+        << (void *)Base << (void *)Result;
+  }
+}
+
+void __ubsan::__ubsan_handle_pointer_overflow(PointerOverflowData *Data,
+                                              ValueHandle Base,
+                                              ValueHandle Result) {
+  GET_REPORT_OPTIONS(false);
+  handlePointerOverflowImpl(Data, Base, Result, Opts);
+}
+
+void __ubsan::__ubsan_handle_pointer_overflow_abort(PointerOverflowData *Data,
+                                                    ValueHandle Base,
+                                                    ValueHandle Result) {
+  GET_REPORT_OPTIONS(true);
+  handlePointerOverflowImpl(Data, Base, Result, Opts);
+  Die();
+}
+
 static void handleCFIBadIcall(CFICheckFailData *Data, ValueHandle Function,
                               ReportOptions Opts) {
   if (Data->CheckKind != CFITCK_ICall)

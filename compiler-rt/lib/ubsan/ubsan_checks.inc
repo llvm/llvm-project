@@ -19,6 +19,7 @@
 
 UBSAN_CHECK(GenericUB, "undefined-behavior", "undefined")
 UBSAN_CHECK(NullPointerUse, "null-pointer-use", "null")
+UBSAN_CHECK(PointerOverflow, "pointer-overflow", "pointer-overflow")
 UBSAN_CHECK(MisalignedPointerUse, "misaligned-pointer-use", "alignment")
 UBSAN_CHECK(InsufficientObjectSize, "insufficient-object-size", "object-size")
 UBSAN_CHECK(SignedIntegerOverflow, "signed-integer-overflow",
