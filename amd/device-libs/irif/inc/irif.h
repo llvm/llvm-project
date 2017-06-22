@@ -304,6 +304,11 @@ extern __attribute__((const)) ulong __llvm_amdgcn_icmp_i64(ulong, ulong, uint) _
 extern __attribute__((const)) ulong __llvm_amdgcn_fcmp_f32(float, float, uint) __asm("llvm.amdgcn.fcmp.f32");
 extern __attribute__((const)) ulong __llvm_amdgcn_fcmp_f64(double, double, uint) __asm("llvm.amdgcn.fcmp.f64");
 
+extern __attribute__((const)) float __llvm_amdgcn_cubeid(float, float, float) __asm("llvm.amdgcn.cubeid");
+extern __attribute__((const)) float __llvm_amdgcn_cubema(float, float, float) __asm("llvm.amdgcn.cubema");
+extern __attribute__((const)) float __llvm_amdgcn_cubesc(float, float, float) __asm("llvm.amdgcn.cubesc");
+extern __attribute__((const)) float __llvm_amdgcn_cubetc(float, float, float) __asm("llvm.amdgcn.cubetc");
+
 // Buffer Load/Store
 
 extern __attribute__((pure)) float4 __llvm_amdgcn_buffer_load_format_v4f32(uint4 v, uint i, uint o, bool glc, bool slc) __asm("llvm.amdgcn.buffer.load.format.v4f32");
