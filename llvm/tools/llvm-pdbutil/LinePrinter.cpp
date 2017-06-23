@@ -106,6 +106,20 @@ void LinePrinter::formatBinary(StringRef Label, ArrayRef<uint8_t> Data,
   OS << ")";
 }
 
+void LinePrinter::formatBinary(StringRef Label, ArrayRef<uint8_t> Data,
+                               uint64_t Base, uint32_t StartOffset) {
+  NewLine();
+  OS << Label << " (";
+  if (!Data.empty()) {
+    OS << "\n";
+    Base += StartOffset;
+    OS << format_bytes_with_ascii(Data, Base, 32, 4,
+                                  CurrentIndent + IndentSpaces, true);
+    NewLine();
+  }
+  OS << ")";
+}
+
 bool LinePrinter::IsTypeExcluded(llvm::StringRef TypeName, uint32_t Size) {
   if (IsItemExcluded(TypeName, IncludeTypeFilters, ExcludeTypeFilters))
     return true;

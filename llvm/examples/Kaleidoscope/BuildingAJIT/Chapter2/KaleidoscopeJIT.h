@@ -44,8 +44,8 @@ class KaleidoscopeJIT {
 private:
   std::unique_ptr<TargetMachine> TM;
   const DataLayout DL;
-  RTDyldObjectLinkingLayer<> ObjectLayer;
-  IRCompileLayer<decltype(ObjectLayer)> CompileLayer;
+  RTDyldObjectLinkingLayer ObjectLayer;
+  IRCompileLayer<decltype(ObjectLayer), SimpleCompiler> CompileLayer;
 
   using OptimizeFunction =
       std::function<std::unique_ptr<Module>(std::unique_ptr<Module>)>;

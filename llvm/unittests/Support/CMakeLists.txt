@@ -21,7 +21,6 @@ add_llvm_unittest(SupportTests
   DebugTest.cpp
   EndianStreamTest.cpp
   EndianTest.cpp
-  ErrnoTest.cpp
   ErrorOrTest.cpp
   ErrorTest.cpp
   FileOutputBufferTest.cpp

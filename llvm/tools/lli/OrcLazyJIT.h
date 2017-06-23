@@ -45,11 +45,12 @@ namespace llvm {
 
 class OrcLazyJIT {
 public:
+
   using CompileCallbackMgr = orc::JITCompileCallbackManager;
-  using ObjLayerT = orc::RTDyldObjectLinkingLayer<>;
-  using CompileLayerT = orc::IRCompileLayer<ObjLayerT>;
+  using ObjLayerT = orc::RTDyldObjectLinkingLayer;
+  using CompileLayerT = orc::IRCompileLayer<ObjLayerT, orc::SimpleCompiler>;
   using TransformFtor =
-      std::function<std::unique_ptr<Module>(std::unique_ptr<Module>)>;
+    std::function<std::unique_ptr<Module>(std::unique_ptr<Module>)>;
   using IRDumpLayerT = orc::IRTransformLayer<CompileLayerT, TransformFtor>;
   using CODLayerT = orc::CompileOnDemandLayer<IRDumpLayerT, CompileCallbackMgr>;
   using IndirectStubsManagerBuilder = CODLayerT::IndirectStubsManagerBuilderT;

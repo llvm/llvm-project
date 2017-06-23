@@ -16,16 +16,9 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
-#include "llvm/ExecutionEngine/ObjectCache.h"
-#include "llvm/Object/Binary.h"
-#include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/MemoryBuffer.h"
-#include <algorithm>
-#include <functional>
 #include <memory>
 #include <string>
-#include <vector>
 
 namespace llvm {
 
@@ -39,25 +32,19 @@ namespace orc {
 /// immediately compiles each IR module to an object file (each IR Module is
 /// compiled separately). The resulting set of object files is then added to
 /// the layer below, which must implement the object layer concept.
-template <typename BaseLayerT> class IRCompileLayer {
-public:
-  using CompileFtor =
-      std::function<object::OwningBinary<object::ObjectFile>(Module &)>;
-
-private:
-  using ObjSetHandleT = typename BaseLayerT::ObjSetHandleT;
-
+template <typename BaseLayerT, typename CompileFtor>
+class IRCompileLayer {
 public:
   /// @brief Handle to a set of compiled modules.
-  using ModuleSetHandleT = ObjSetHandleT;
+  using ModuleSetHandleT = typename BaseLayerT::ObjHandleT;
 
   /// @brief Construct an IRCompileLayer with the given BaseLayer, which must
   ///        implement the ObjectLayer concept.
   IRCompileLayer(BaseLayerT &BaseLayer, CompileFtor Compile)
       : BaseLayer(BaseLayer), Compile(std::move(Compile)) {}
 
-  /// @brief Set an ObjectCache to query before compiling.
-  void setObjectCache(ObjectCache *NewCache) { ObjCache = NewCache; }
+  /// @brief Get a reference to the compiler functor.
+  CompileFtor& getCompiler() { return Compile; }
 
   /// @brief Compile each module in the given module set, then add the resulting
   ///        set of objects to the base layer along with the memory manager and
@@ -69,35 +56,15 @@ public:
   ModuleSetHandleT addModuleSet(ModuleSetT Ms,
                                 MemoryManagerPtrT MemMgr,
                                 SymbolResolverPtrT Resolver) {
-    std::vector<std::unique_ptr<object::OwningBinary<object::ObjectFile>>>
-      Objects;
-
-    for (const auto &M : Ms) {
-      auto Object =
-        llvm::make_unique<object::OwningBinary<object::ObjectFile>>();
-
-      if (ObjCache)
-        *Object = tryToLoadFromObjectCache(*M);
-
-      if (!Object->getBinary()) {
-        *Object = Compile(*M);
-        if (ObjCache)
-          ObjCache->notifyObjectCompiled(&*M,
-                                     Object->getBinary()->getMemoryBufferRef());
-      }
-
-      Objects.push_back(std::move(Object));
-    }
-
-    ModuleSetHandleT H =
-      BaseLayer.addObjectSet(std::move(Objects), std::move(MemMgr),
-                             std::move(Resolver));
-
-    return H;
+    assert(Ms.size() == 1);
+    using CompileResult = decltype(Compile(*Ms.front()));
+    auto Obj = std::make_shared<CompileResult>(Compile(*Ms.front()));
+    return BaseLayer.addObject(std::move(Obj), std::move(MemMgr),
+                               std::move(Resolver));
   }
 
   /// @brief Remove the module set associated with the handle H.
-  void removeModuleSet(ModuleSetHandleT H) { BaseLayer.removeObjectSet(H); }
+  void removeModuleSet(ModuleSetHandleT H) { BaseLayer.removeObject(H); }
 
   /// @brief Search for the given named symbol.
   /// @param Name The name of the symbol to search for.
@@ -128,27 +95,8 @@ public:
   }
 
 private:
-  object::OwningBinary<object::ObjectFile>
-  tryToLoadFromObjectCache(const Module &M) {
-    std::unique_ptr<MemoryBuffer> ObjBuffer = ObjCache->getObject(&M);
-    if (!ObjBuffer)
-      return object::OwningBinary<object::ObjectFile>();
-
-    Expected<std::unique_ptr<object::ObjectFile>> Obj =
-        object::ObjectFile::createObjectFile(ObjBuffer->getMemBufferRef());
-    if (!Obj) {
-      // TODO: Actually report errors helpfully.
-      consumeError(Obj.takeError());
-      return object::OwningBinary<object::ObjectFile>();
-    }
-
-    return object::OwningBinary<object::ObjectFile>(std::move(*Obj),
-                                                    std::move(ObjBuffer));
-  }
-
   BaseLayerT &BaseLayer;
   CompileFtor Compile;
-  ObjectCache *ObjCache = nullptr;
 };
 
 } // end namespace orc

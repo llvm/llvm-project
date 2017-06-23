@@ -1,4 +1,4 @@
-/*===- llvm/Support/Solaris.h ------------------------------------*- C++ -*-===*
+/*===- llvm/Support/Solaris/sys/regset.h ------------------------*- C++ -*-===*
  *
  *                     The LLVM Compiler Infrastructure
  *
@@ -7,24 +7,14 @@
  *
  *===----------------------------------------------------------------------===*
  *
- * This file contains portability fixes for Solaris hosts.
+ * This file works around excessive name space pollution from the system header
+ * on Solaris hosts.
  *
  *===----------------------------------------------------------------------===*/
 
-#ifndef LLVM_SUPPORT_SOLARIS_H
-#define LLVM_SUPPORT_SOLARIS_H
+#ifndef LLVM_SUPPORT_SOLARIS_SYS_REGSET_H
 
-#include <sys/regset.h>
-#include <sys/types.h>
-
-/* Solaris doesn't have endian.h. SPARC is the only supported big-endian ISA. */
-#define BIG_ENDIAN 4321
-#define LITTLE_ENDIAN 1234
-#if defined(__sparc) || defined(__sparc__)
-#define BYTE_ORDER BIG_ENDIAN
-#else
-#define BYTE_ORDER LITTLE_ENDIAN
-#endif
+#include_next <sys/regset.h>
 
 #undef CS
 #undef DS

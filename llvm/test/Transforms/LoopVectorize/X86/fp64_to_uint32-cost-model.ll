@@ -9,9 +9,7 @@ target triple = "x86_64-apple-macosx"
 
 ; If we need to scalarize the fptoui and then use inserts to build up the
 ; vector again, then there is certainly no value in going 256-bit wide.
-; But as we default to maximize bandwidth, we should convert it to 256-bit
-; anyway.
-; CHECK: vpinsrd
+; CHECK-NOT: vpinsrd
 
 define void @convert() {
 entry:

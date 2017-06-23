@@ -395,6 +395,9 @@ public:
                     static_cast<const BasicBlock *>(this)->getLandingPadInst());
   }
 
+  /// \brief Return true if it is legal to hoist instructions into this block.
+  bool isLegalToHoistInto() const;
+
 private:
   /// \brief Increment the internal refcount of the number of BlockAddresses
   /// referencing this BasicBlock by \p Amt.

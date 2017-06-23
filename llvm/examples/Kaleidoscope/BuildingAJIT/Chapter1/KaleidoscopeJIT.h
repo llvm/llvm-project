@@ -40,8 +40,8 @@ class KaleidoscopeJIT {
 private:
   std::unique_ptr<TargetMachine> TM;
   const DataLayout DL;
-  RTDyldObjectLinkingLayer<> ObjectLayer;
-  IRCompileLayer<decltype(ObjectLayer)> CompileLayer;
+  RTDyldObjectLinkingLayer ObjectLayer;
+  IRCompileLayer<decltype(ObjectLayer), SimpleCompiler> CompileLayer;
 
 public:
   using ModuleHandle = decltype(CompileLayer)::ModuleSetHandleT;

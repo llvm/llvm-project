@@ -188,16 +188,13 @@ define <2 x i1> @uge_to_slt_splat(<2 x i8> %x) {
 }
 
 ; PR33138, part 2: https://bugs.llvm.org/show_bug.cgi?id=33138
-; TODO: We could look through vector bitcasts for icmp folds,
-; or we could canonicalize bitcast ahead of logic ops with constants.
+; Bitcast canonicalization ensures that we recognize the signbit constant.
 
 define <8 x i1> @sgt_to_ugt_bitcasted_splat(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @sgt_to_ugt_bitcasted_splat(
-; CHECK-NEXT:    [[A:%.*]] = xor <2 x i32> %x, <i32 -2139062144, i32 -2139062144>
-; CHECK-NEXT:    [[B:%.*]] = xor <2 x i32> %y, <i32 -2139062144, i32 -2139062144>
-; CHECK-NEXT:    [[C:%.*]] = bitcast <2 x i32> [[A]] to <8 x i8>
-; CHECK-NEXT:    [[D:%.*]] = bitcast <2 x i32> [[B]] to <8 x i8>
-; CHECK-NEXT:    [[E:%.*]] = icmp sgt <8 x i8> [[C]], [[D]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i32> %x to <8 x i8>
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i32> %y to <8 x i8>
+; CHECK-NEXT:    [[E:%.*]] = icmp ugt <8 x i8> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret <8 x i1> [[E]]
 ;
   %a = xor <2 x i32> %x, <i32 2155905152, i32 2155905152> ; 0x80808080
@@ -208,17 +205,11 @@ define <8 x i1> @sgt_to_ugt_bitcasted_splat(<2 x i32> %x, <2 x i32> %y) {
   ret <8 x i1> %e
 }
 
-; TODO: This is false (little-endian). How should that be recognized?
-; Ie, should InstSimplify know this directly, should InstCombine canonicalize
-; this so InstSimplify can know this, or is that not something that we want
-; either pass to recognize?
+; Bitcast canonicalization ensures that we recognize the signbit constant.
 
 define <2 x i1> @negative_simplify_splat(<4 x i8> %x) {
 ; CHECK-LABEL: @negative_simplify_splat(
-; CHECK-NEXT:    [[A:%.*]] = or <4 x i8> %x, <i8 0, i8 -128, i8 0, i8 -128>
-; CHECK-NEXT:    [[B:%.*]] = bitcast <4 x i8> [[A]] to <2 x i16>
-; CHECK-NEXT:    [[C:%.*]] = icmp sgt <2 x i16> [[B]], zeroinitializer
-; CHECK-NEXT:    ret <2 x i1> [[C]]
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
 ;
   %a = or <4 x i8> %x, <i8 0, i8 128, i8 0, i8 128>
   %b = bitcast <4 x i8> %a to <2 x i16>

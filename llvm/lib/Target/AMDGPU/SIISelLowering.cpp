@@ -3295,6 +3295,8 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
                                                  SelectionDAG &DAG) const {
   unsigned IntrID = cast<ConstantSDNode>(Op.getOperand(1))->getZExtValue();
   SDLoc DL(Op);
+  MachineFunction &MF = DAG.getMachineFunction();
+
   switch (IntrID) {
   case Intrinsic::amdgcn_atomic_inc:
   case Intrinsic::amdgcn_atomic_dec: {
@@ -3320,7 +3322,6 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
       Op.getOperand(5), // glc
       Op.getOperand(6)  // slc
     };
-    MachineFunction &MF = DAG.getMachineFunction();
     SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
 
     unsigned Opc = (IntrID == Intrinsic::amdgcn_buffer_load) ?
@@ -3334,6 +3335,29 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
       VT.getStoreSize(), VT.getStoreSize());
 
     return DAG.getMemIntrinsicNode(Opc, DL, Op->getVTList(), Ops, IntVT, MMO);
+  }
+  case Intrinsic::amdgcn_tbuffer_load: {
+    SDValue Ops[] = {
+      Op.getOperand(0),  // Chain
+      Op.getOperand(2),  // rsrc
+      Op.getOperand(3),  // vindex
+      Op.getOperand(4),  // voffset
+      Op.getOperand(5),  // soffset
+      Op.getOperand(6),  // offset
+      Op.getOperand(7),  // dfmt
+      Op.getOperand(8),  // nfmt
+      Op.getOperand(9),  // glc
+      Op.getOperand(10)   // slc
+    };
+
+    EVT VT = Op.getOperand(2).getValueType();
+
+    MachineMemOperand *MMO = MF.getMachineMemOperand(
+      MachinePointerInfo(),
+      MachineMemOperand::MOLoad,
+      VT.getStoreSize(), VT.getStoreSize());
+    return DAG.getMemIntrinsicNode(AMDGPUISD::TBUFFER_LOAD_FORMAT, DL,
+                                   Op->getVTList(), Ops, VT, MMO);
   }
   // Basic sample.
   case Intrinsic::amdgcn_image_sample:
@@ -3400,10 +3424,10 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
 
 SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
                                               SelectionDAG &DAG) const {
-  MachineFunction &MF = DAG.getMachineFunction();
   SDLoc DL(Op);
   SDValue Chain = Op.getOperand(0);
   unsigned IntrinsicID = cast<ConstantSDNode>(Op.getOperand(1))->getZExtValue();
+  MachineFunction &MF = DAG.getMachineFunction();
 
   switch (IntrinsicID) {
   case Intrinsic::amdgcn_exp: {
@@ -3470,33 +3494,6 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     return DAG.getNode(AMDGPUISD::INIT_EXEC_FROM_INPUT, DL, MVT::Other, Chain,
                        Op.getOperand(2), Op.getOperand(3));
   }
-  case AMDGPUIntrinsic::SI_tbuffer_store: {
-    SDValue Ops[] = {
-      Chain,
-      Op.getOperand(2),
-      Op.getOperand(3),
-      Op.getOperand(4),
-      Op.getOperand(5),
-      Op.getOperand(6),
-      Op.getOperand(7),
-      Op.getOperand(8),
-      Op.getOperand(9),
-      Op.getOperand(10),
-      Op.getOperand(11),
-      Op.getOperand(12),
-      Op.getOperand(13),
-      Op.getOperand(14)
-    };
-
-    EVT VT = Op.getOperand(3).getValueType();
-
-    MachineMemOperand *MMO = MF.getMachineMemOperand(
-      MachinePointerInfo(),
-      MachineMemOperand::MOStore,
-      VT.getStoreSize(), 4);
-    return DAG.getMemIntrinsicNode(AMDGPUISD::TBUFFER_STORE_FORMAT, DL,
-                                   Op->getVTList(), Ops, VT, MMO);
-  }
   case AMDGPUIntrinsic::AMDGPU_kill: {
     SDValue Src = Op.getOperand(2);
     if (const ConstantFPSDNode *K = dyn_cast<ConstantFPSDNode>(Src)) {
@@ -3512,7 +3509,6 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
   }
   case Intrinsic::amdgcn_s_barrier: {
     if (getTargetMachine().getOptLevel() > CodeGenOpt::None) {
-      const MachineFunction &MF = DAG.getMachineFunction();
       const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
       unsigned WGSize = ST.getFlatWorkGroupSizes(*MF.getFunction()).second;
       if (WGSize <= ST.getWavefrontSize())
@@ -3521,6 +3517,75 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     }
     return SDValue();
   };
+  case AMDGPUIntrinsic::SI_tbuffer_store: {
+
+    // Extract vindex and voffset from vaddr as appropriate
+    const ConstantSDNode *OffEn = cast<ConstantSDNode>(Op.getOperand(10));
+    const ConstantSDNode *IdxEn = cast<ConstantSDNode>(Op.getOperand(11));
+    SDValue VAddr = Op.getOperand(5);
+
+    SDValue Zero = DAG.getTargetConstant(0, DL, MVT::i32);
+
+    assert(!(OffEn->isOne() && IdxEn->isOne()) &&
+           "Legacy intrinsic doesn't support both offset and index - use new version");
+
+    SDValue VIndex = IdxEn->isOne() ? VAddr : Zero;
+    SDValue VOffset = OffEn->isOne() ? VAddr : Zero;
+
+    // Deal with the vec-3 case
+    const ConstantSDNode *NumChannels = cast<ConstantSDNode>(Op.getOperand(4));
+    auto Opcode = NumChannels->getZExtValue() == 3 ?
+      AMDGPUISD::TBUFFER_STORE_FORMAT_X3 : AMDGPUISD::TBUFFER_STORE_FORMAT;
+
+    SDValue Ops[] = {
+     Chain,
+     Op.getOperand(3),  // vdata
+     Op.getOperand(2),  // rsrc
+     VIndex,
+     VOffset,
+     Op.getOperand(6),  // soffset
+     Op.getOperand(7),  // inst_offset
+     Op.getOperand(8),  // dfmt
+     Op.getOperand(9),  // nfmt
+     Op.getOperand(12), // glc
+     Op.getOperand(13), // slc
+    };
+
+    assert((cast<ConstantSDNode>(Op.getOperand(14)))->getZExtValue() == 0 &&
+           "Value of tfe other than zero is unsupported");
+
+    EVT VT = Op.getOperand(3).getValueType();
+    MachineMemOperand *MMO = MF.getMachineMemOperand(
+      MachinePointerInfo(),
+      MachineMemOperand::MOStore,
+      VT.getStoreSize(), 4);
+    return DAG.getMemIntrinsicNode(Opcode, DL,
+                                   Op->getVTList(), Ops, VT, MMO);
+  }
+
+  case Intrinsic::amdgcn_tbuffer_store: {
+    SDValue Ops[] = {
+      Chain,
+      Op.getOperand(2),  // vdata
+      Op.getOperand(3),  // rsrc
+      Op.getOperand(4),  // vindex
+      Op.getOperand(5),  // voffset
+      Op.getOperand(6),  // soffset
+      Op.getOperand(7),  // offset
+      Op.getOperand(8),  // dfmt
+      Op.getOperand(9),  // nfmt
+      Op.getOperand(10), // glc
+      Op.getOperand(11)  // slc
+    };
+    EVT VT = Op.getOperand(3).getValueType();
+    MachineMemOperand *MMO = MF.getMachineMemOperand(
+      MachinePointerInfo(),
+      MachineMemOperand::MOStore,
+      VT.getStoreSize(), 4);
+    return DAG.getMemIntrinsicNode(AMDGPUISD::TBUFFER_STORE_FORMAT, DL,
+                                   Op->getVTList(), Ops, VT, MMO);
+  }
+
   default:
     return Op;
   }

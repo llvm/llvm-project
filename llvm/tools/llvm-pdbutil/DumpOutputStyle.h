@@ -1,4 +1,4 @@
-//===- RawOutputStyle.h -------------------------------------- *- C++ --*-===//
+//===- DumpOutputStyle.h -------------------------------------- *- C++ --*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TOOLS_LLVMPDBDUMP_RAWOUTPUTSTYLE_H
-#define LLVM_TOOLS_LLVMPDBDUMP_RAWOUTPUTSTYLE_H
+#ifndef LLVM_TOOLS_LLVMPDBDUMP_DUMPOUTPUTSTYLE_H
+#define LLVM_TOOLS_LLVMPDBDUMP_DUMPOUTPUTSTYLE_H
 
 #include "LinePrinter.h"
 #include "OutputStyle.h"
@@ -26,9 +26,9 @@ class LazyRandomTypeCollection;
 }
 
 namespace pdb {
-class RawOutputStyle : public OutputStyle {
+class DumpOutputStyle : public OutputStyle {
 public:
-  RawOutputStyle(PDBFile &File);
+  DumpOutputStyle(PDBFile &File);
 
   Error dump() override;
 

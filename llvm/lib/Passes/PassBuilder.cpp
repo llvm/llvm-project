@@ -923,9 +923,6 @@ ModulePassManager PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   MainFPM.add(AlignmentFromAssumptionsPass());
 #endif
 
-  // FIXME: Conditionally run LoadCombine here, after it's ported
-  // (in case we still have this pass, given its questionable usefulness).
-
   // FIXME: add peephole extensions to the PM here.
   MainFPM.addPass(InstCombinePass());
   MainFPM.addPass(JumpThreadingPass());

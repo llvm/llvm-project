@@ -47,11 +47,12 @@ DEFINE_SIMPLE_CONVERSION_FUNCTIONS(TargetMachine, LLVMTargetMachineRef)
 
 class OrcCBindingsStack {
 public:
+
   using CompileCallbackMgr = orc::JITCompileCallbackManager;
-  using ObjLayerT = orc::RTDyldObjectLinkingLayer<>;
-  using CompileLayerT = orc::IRCompileLayer<ObjLayerT>;
+  using ObjLayerT = orc::RTDyldObjectLinkingLayer;
+  using CompileLayerT = orc::IRCompileLayer<ObjLayerT, orc::SimpleCompiler>;
   using CODLayerT =
-      orc::CompileOnDemandLayer<CompileLayerT, CompileCallbackMgr>;
+        orc::CompileOnDemandLayer<CompileLayerT, CompileCallbackMgr>;
 
   using CallbackManagerBuilder =
       std::function<std::unique_ptr<CompileCallbackMgr>()>;

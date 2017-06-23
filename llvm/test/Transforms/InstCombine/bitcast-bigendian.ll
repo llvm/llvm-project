@@ -92,12 +92,12 @@ define <2 x float> @test6(float %A){
   ret <2 x float> %tmp35
 }
 
-; Verify that 'xor' of vector and constant is done as a vector bitwise op before the bitcast.
+; No change. Bitcasts are canonicalized above bitwise logic.
 
 define <2 x i32> @xor_bitcast_vec_to_vec(<1 x i64> %a) {
 ; CHECK-LABEL: @xor_bitcast_vec_to_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <1 x i64> [[A:%.*]], <i64 4294967298>
-; CHECK-NEXT:    [[T2:%.*]] = bitcast <1 x i64> [[TMP1]] to <2 x i32>
+; CHECK-NEXT:    [[T1:%.*]] = bitcast <1 x i64> [[A:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[T2:%.*]] = xor <2 x i32> [[T1]], <i32 1, i32 2>
 ; CHECK-NEXT:    ret <2 x i32> [[T2]]
 ;
   %t1 = bitcast <1 x i64> %a to <2 x i32>
@@ -105,12 +105,12 @@ define <2 x i32> @xor_bitcast_vec_to_vec(<1 x i64> %a) {
   ret <2 x i32> %t2
 }
 
-; Verify that 'and' of integer and constant is done as a vector bitwise op before the bitcast.
+; No change. Bitcasts are canonicalized above bitwise logic.
 
 define i64 @and_bitcast_vec_to_int(<2 x i32> %a) {
 ; CHECK-LABEL: @and_bitcast_vec_to_int(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[A:%.*]], <i32 0, i32 3>
-; CHECK-NEXT:    [[T2:%.*]] = bitcast <2 x i32> [[TMP1]] to i64
+; CHECK-NEXT:    [[T1:%.*]] = bitcast <2 x i32> [[A:%.*]] to i64
+; CHECK-NEXT:    [[T2:%.*]] = and i64 [[T1]], 3
 ; CHECK-NEXT:    ret i64 [[T2]]
 ;
   %t1 = bitcast <2 x i32> %a to i64
@@ -118,12 +118,12 @@ define i64 @and_bitcast_vec_to_int(<2 x i32> %a) {
   ret i64 %t2
 }
 
-; Verify that 'or' of vector and constant is done as an integer bitwise op before the bitcast.
+; No change. Bitcasts are canonicalized above bitwise logic.
 
 define <2 x i32> @or_bitcast_int_to_vec(i64 %a) {
 ; CHECK-LABEL: @or_bitcast_int_to_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = or i64 [[A:%.*]], 4294967298
-; CHECK-NEXT:    [[T2:%.*]] = bitcast i64 [[TMP1]] to <2 x i32>
+; CHECK-NEXT:    [[T1:%.*]] = bitcast i64 [[A:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[T2:%.*]] = or <2 x i32> [[T1]], <i32 1, i32 2>
 ; CHECK-NEXT:    ret <2 x i32> [[T2]]
 ;
   %t1 = bitcast i64 %a to <2 x i32>

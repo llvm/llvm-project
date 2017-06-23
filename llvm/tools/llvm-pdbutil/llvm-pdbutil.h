@@ -92,16 +92,19 @@ extern llvm::cl::opt<ClassDefinitionFormat> ClassFormat;
 extern llvm::cl::opt<uint32_t> ClassRecursionDepth;
 }
 
-namespace raw {
+namespace bytes {
 struct BlockRange {
   uint32_t Min;
   llvm::Optional<uint32_t> Max;
 };
+extern llvm::Optional<BlockRange> DumpBlockRange;
+extern llvm::cl::list<std::string> DumpStreamData;
+} // namespace bytes
+
+namespace dump {
 
 extern llvm::cl::opt<bool> DumpSummary;
 extern llvm::cl::opt<bool> DumpStreams;
-extern llvm::Optional<BlockRange> DumpBlockRange;
-extern llvm::cl::list<std::string> DumpStreamData;
 
 extern llvm::cl::opt<bool> DumpLines;
 extern llvm::cl::opt<bool> DumpInlineeLines;

@@ -94,7 +94,7 @@ if(CMAKE_HOST_APPLE AND APPLE)
         set(LIBTOOL_NO_WARNING_FLAG "-no_warning_for_no_symbols")
       endif()
     endif()
-    
+
     foreach(lang ${languages})
       set(CMAKE_${lang}_CREATE_STATIC_LIBRARY
         "${CMAKE_LIBTOOL} -static ${LIBTOOL_NO_WARNING_FLAG} -o <TARGET> \
@@ -804,7 +804,8 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "(FreeBSD|DragonFly)")
 endif(${CMAKE_SYSTEM_NAME} MATCHES "(FreeBSD|DragonFly)")
 
 if( ${CMAKE_SYSTEM_NAME} MATCHES SunOS )
-   SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -include llvm/Support/Solaris.h")
+   # special hack for Solaris to handle crazy system sys/regset.h
+   include_directories("${LLVM_MAIN_INCLUDE_DIR}/llvm/Support/Solaris")
 endif( ${CMAKE_SYSTEM_NAME} MATCHES SunOS )
 
 # Make sure we don't get -rdynamic in every binary. For those that need it,

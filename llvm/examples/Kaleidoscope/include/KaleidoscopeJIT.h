@@ -39,8 +39,8 @@ namespace orc {
 
 class KaleidoscopeJIT {
 public:
-  using ObjLayerT = RTDyldObjectLinkingLayer<>;
-  using CompileLayerT = IRCompileLayer<ObjLayerT>;
+  using ObjLayerT = RTDyldObjectLinkingLayer;
+  using CompileLayerT = IRCompileLayer<ObjLayerT, SimpleCompiler>;
   using ModuleHandleT = CompileLayerT::ModuleSetHandleT;
 
   KaleidoscopeJIT()

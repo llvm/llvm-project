@@ -3,8 +3,8 @@ RUN:   -pdb-stream -string-table -tpi-stream -stream-directory \
 RUN:   -stream-metadata %p/Inputs/empty.pdb > %t.1
 RUN: llvm-pdbutil yaml2pdb -pdb=%t.2 %t.1
 
-RUN: llvm-pdbutil raw -summary -string-table -types %p/Inputs/empty.pdb | FileCheck %s
-RUN: llvm-pdbutil raw -summary -string-table -types %t.2 | FileCheck %s
+RUN: llvm-pdbutil dump -summary -string-table -types %p/Inputs/empty.pdb | FileCheck %s
+RUN: llvm-pdbutil dump -summary -string-table -types %t.2 | FileCheck %s
 
 
 CHECK:                                Summary

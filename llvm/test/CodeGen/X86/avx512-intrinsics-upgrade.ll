@@ -3072,3 +3072,375 @@ define <8 x i64> @test_x86_avx512_movntdqa(i8* %a0) {
 }
 
 declare <8 x i64> @llvm.x86.avx512.movntdqa(i8*) nounwind readonly
+
+define <8 x i16> @test_cmp_d_512(<16 x i32> %a0, <16 x i32> %a1) {
+; CHECK-LABEL: test_cmp_d_512:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0
+; CHECK-NEXT:    vpcmpgtd %zmm0, %zmm1, %k1
+; CHECK-NEXT:    vpcmpled %zmm1, %zmm0, %k2
+; CHECK-NEXT:    vpcmpneqd %zmm1, %zmm0, %k3
+; CHECK-NEXT:    vpcmpled %zmm0, %zmm1, %k4
+; CHECK-NEXT:    vpcmpgtd %zmm1, %zmm0, %k5
+; CHECK-NEXT:    kmovw %k0, %eax
+; CHECK-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
+; CHECK-NEXT:    kmovw %k1, %eax
+; CHECK-NEXT:    vpinsrw $1, %eax, %xmm0, %xmm0
+; CHECK-NEXT:    kmovw %k2, %eax
+; CHECK-NEXT:    vpinsrw $2, %eax, %xmm0, %xmm0
+; CHECK-NEXT:    kmovw %k3, %eax
+; CHECK-NEXT:    vpinsrw $4, %eax, %xmm0, %xmm0
+; CHECK-NEXT:    kmovw %k4, %eax
+; CHECK-NEXT:    vpinsrw $5, %eax, %xmm0, %xmm0
+; CHECK-NEXT:    kmovw %k5, %eax
+; CHECK-NEXT:    vpinsrw $6, %eax, %xmm0, %xmm0
+; CHECK-NEXT:    kxnorw %k0, %k0, %k0
+; CHECK-NEXT:    kmovw %k0, %eax
+; CHECK-NEXT:    vpinsrw $7, %eax, %xmm0, %xmm0
+; CHECK-NEXT:    retq
+  %res0 = call i16 @llvm.x86.avx512.mask.cmp.d.512(<16 x i32> %a0, <16 x i32> %a1, i32 0, i16 -1)
+  %vec0 = insertelement <8 x i16> undef, i16 %res0, i32 0
+  %res1 = call i16 @llvm.x86.avx512.mask.cmp.d.512(<16 x i32> %a0, <16 x i32> %a1, i32 1, i16 -1)
+  %vec1 = insertelement <8 x i16> %vec0, i16 %res1, i32 1
+  %res2 = call i16 @llvm.x86.avx512.mask.cmp.d.512(<16 x i32> %a0, <16 x i32> %a1, i32 2, i16 -1)
+  %vec2 = insertelement <8 x i16> %vec1, i16 %res2, i32 2
+  %res3 = call i16 @llvm.x86.avx512.mask.cmp.d.512(<16 x i32> %a0, <16 x i32> %a1, i32 3, i16 -1)
+  %vec3 = insertelement <8 x i16> %vec2, i16 %res3, i32 3
+  %res4 = call i16 @llvm.x86.avx512.mask.cmp.d.512(<16 x i32> %a0, <16 x i32> %a1, i32 4, i16 -1)
+  %vec4 = insertelement <8 x i16> %vec3, i16 %res4, i32 4
+  %res5 = call i16 @llvm.x86.avx512.mask.cmp.d.512(<16 x i32> %a0, <16 x i32> %a1, i32 5, i16 -1)
+  %vec5 = insertelement <8 x i16> %vec4, i16 %res5, i32 5
+  %res6 = call i16 @llvm.x86.avx512.mask.cmp.d.512(<16 x i32> %a0, <16 x i32> %a1, i32 6, i16 -1)
+  %vec6 = insertelement <8 x i16> %vec5, i16 %res6, i32 6
+  %res7 = call i16 @llvm.x86.avx512.mask.cmp.d.512(<16 x i32> %a0, <16 x i32> %a1, i32 7, i16 -1)
+  %vec7 = insertelement <8 x i16> %vec6, i16 %res7, i32 7
+  ret <8 x i16> %vec7
+}
+
+define <8 x i16> @test_mask_cmp_d_512(<16 x i32> %a0, <16 x i32> %a1, i16 %mask) {
+; CHECK-LABEL: test_mask_cmp_d_512:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0 {%k1}
+; CHECK-NEXT:    vpcmpgtd %zmm0, %zmm1, %k2 {%k1}
+; CHECK-NEXT:    vpcmpled %zmm1, %zmm0, %k3 {%k1}
+; CHECK-NEXT:    kxorw %k0, %k0, %k4
+; CHECK-NEXT:    vpcmpneqd %zmm1, %zmm0, %k5 {%k1}
+; CHECK-NEXT:    vpcmpled %zmm0, %zmm1, %k6 {%k1}
+; CHECK-NEXT:    vpcmpgtd %zmm1, %zmm0, %k1 {%k1}
+; CHECK-NEXT:    kmovw %k2, %eax
+; CHECK-NEXT:    kmovw %k0, %ecx
+; CHECK-NEXT:    vmovd %ecx, %xmm0
+; CHECK-NEXT:    vpinsrw $1, %eax, %xmm0, %xmm0
+; CHECK-NEXT:    kmovw %k3, %eax
+; CHECK-NEXT:    vpinsrw $2, %eax, %xmm0, %xmm0
+; CHECK-NEXT:    kmovw %k4, %eax
+; CHECK-NEXT:    vpinsrw $3, %eax, %xmm0, %xmm0
+; CHECK-NEXT:    kmovw %k5, %eax
+; CHECK-NEXT:    vpinsrw $4, %eax, %xmm0, %xmm0
+; CHECK-NEXT:    kmovw %k6, %eax
+; CHECK-NEXT:    vpinsrw $5, %eax, %xmm0, %xmm0
+; CHECK-NEXT:    kmovw %k1, %eax
+; CHECK-NEXT:    vpinsrw $6, %eax, %xmm0, %xmm0
+; CHECK-NEXT:    vpinsrw $7, %edi, %xmm0, %xmm0
+; CHECK-NEXT:    retq
+  %res0 = call i16 @llvm.x86.avx512.mask.cmp.d.512(<16 x i32> %a0, <16 x i32> %a1, i32 0, i16 %mask)
+  %vec0 = insertelement <8 x i16> undef, i16 %res0, i32 0
+  %res1 = call i16 @llvm.x86.avx512.mask.cmp.d.512(<16 x i32> %a0, <16 x i32> %a1, i32 1, i16 %mask)
+  %vec1 = insertelement <8 x i16> %vec0, i16 %res1, i32 1
+  %res2 = call i16 @llvm.x86.avx512.mask.cmp.d.512(<16 x i32> %a0, <16 x i32> %a1, i32 2, i16 %mask)
+  %vec2 = insertelement <8 x i16> %vec1, i16 %res2, i32 2
+  %res3 = call i16 @llvm.x86.avx512.mask.cmp.d.512(<16 x i32> %a0, <16 x i32> %a1, i32 3, i16 %mask)
+  %vec3 = insertelement <8 x i16> %vec2, i16 %res3, i32 3
+  %res4 = call i16 @llvm.x86.avx512.mask.cmp.d.512(<16 x i32> %a0, <16 x i32> %a1, i32 4, i16 %mask)
+  %vec4 = insertelement <8 x i16> %vec3, i16 %res4, i32 4
+  %res5 = call i16 @llvm.x86.avx512.mask.cmp.d.512(<16 x i32> %a0, <16 x i32> %a1, i32 5, i16 %mask)
+  %vec5 = insertelement <8 x i16> %vec4, i16 %res5, i32 5
+  %res6 = call i16 @llvm.x86.avx512.mask.cmp.d.512(<16 x i32> %a0, <16 x i32> %a1, i32 6, i16 %mask)
+  %vec6 = insertelement <8 x i16> %vec5, i16 %res6, i32 6
+  %res7 = call i16 @llvm.x86.avx512.mask.cmp.d.512(<16 x i32> %a0, <16 x i32> %a1, i32 7, i16 %mask)
+  %vec7 = insertelement <8 x i16> %vec6, i16 %res7, i32 7
+  ret <8 x i16> %vec7
+}
+
+declare i16 @llvm.x86.avx512.mask.cmp.d.512(<16 x i32>, <16 x i32>, i32, i16) nounwind readnone
+
+define <8 x i16> @test_ucmp_d_512(<16 x i32> %a0, <16 x i32> %a1) {
+; CHECK-LABEL: test_ucmp_d_512:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0
+; CHECK-NEXT:    vpcmpltud %zmm1, %zmm0, %k1
+; CHECK-NEXT:    vpcmpleud %zmm1, %zmm0, %k2
+; CHECK-NEXT:    vpcmpneqd %zmm1, %zmm0, %k3
+; CHECK-NEXT:    vpcmpnltud %zmm1, %zmm0, %k4
+; CHECK-NEXT:    vpcmpnleud %zmm1, %zmm0, %k5
+; CHECK-NEXT:    kmovw %k0, %eax
+; CHECK-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
+; CHECK-NEXT:    kmovw %k1, %eax
+; CHECK-NEXT:    vpinsrw $1, %eax, %xmm0, %xmm0
+; CHECK-NEXT:    kmovw %k2, %eax
+; CHECK-NEXT:    vpinsrw $2, %eax, %xmm0, %xmm0
+; CHECK-NEXT:    kmovw %k3, %eax
+; CHECK-NEXT:    vpinsrw $4, %eax, %xmm0, %xmm0
+; CHECK-NEXT:    kmovw %k4, %eax
+; CHECK-NEXT:    vpinsrw $5, %eax, %xmm0, %xmm0
+; CHECK-NEXT:    kmovw %k5, %eax
+; CHECK-NEXT:    vpinsrw $6, %eax, %xmm0, %xmm0
+; CHECK-NEXT:    kxnorw %k0, %k0, %k0
+; CHECK-NEXT:    kmovw %k0, %eax
+; CHECK-NEXT:    vpinsrw $7, %eax, %xmm0, %xmm0
+; CHECK-NEXT:    retq
+  %res0 = call i16 @llvm.x86.avx512.mask.ucmp.d.512(<16 x i32> %a0, <16 x i32> %a1, i32 0, i16 -1)
+  %vec0 = insertelement <8 x i16> undef, i16 %res0, i32 0
+  %res1 = call i16 @llvm.x86.avx512.mask.ucmp.d.512(<16 x i32> %a0, <16 x i32> %a1, i32 1, i16 -1)
+  %vec1 = insertelement <8 x i16> %vec0, i16 %res1, i32 1
+  %res2 = call i16 @llvm.x86.avx512.mask.ucmp.d.512(<16 x i32> %a0, <16 x i32> %a1, i32 2, i16 -1)
+  %vec2 = insertelement <8 x i16> %vec1, i16 %res2, i32 2
+  %res3 = call i16 @llvm.x86.avx512.mask.ucmp.d.512(<16 x i32> %a0, <16 x i32> %a1, i32 3, i16 -1)
+  %vec3 = insertelement <8 x i16> %vec2, i16 %res3, i32 3
+  %res4 = call i16 @llvm.x86.avx512.mask.ucmp.d.512(<16 x i32> %a0, <16 x i32> %a1, i32 4, i16 -1)
+  %vec4 = insertelement <8 x i16> %vec3, i16 %res4, i32 4
+  %res5 = call i16 @llvm.x86.avx512.mask.ucmp.d.512(<16 x i32> %a0, <16 x i32> %a1, i32 5, i16 -1)
+  %vec5 = insertelement <8 x i16> %vec4, i16 %res5, i32 5
+  %res6 = call i16 @llvm.x86.avx512.mask.ucmp.d.512(<16 x i32> %a0, <16 x i32> %a1, i32 6, i16 -1)
+  %vec6 = insertelement <8 x i16> %vec5, i16 %res6, i32 6
+  %res7 = call i16 @llvm.x86.avx512.mask.ucmp.d.512(<16 x i32> %a0, <16 x i32> %a1, i32 7, i16 -1)
+  %vec7 = insertelement <8 x i16> %vec6, i16 %res7, i32 7
+  ret <8 x i16> %vec7
+}
+
+define <8 x i16> @test_mask_ucmp_d_512(<16 x i32> %a0, <16 x i32> %a1, i16 %mask) {
+; CHECK-LABEL: test_mask_ucmp_d_512:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0 {%k1}
+; CHECK-NEXT:    vpcmpltud %zmm1, %zmm0, %k2 {%k1}
+; CHECK-NEXT:    vpcmpleud %zmm1, %zmm0, %k3 {%k1}
+; CHECK-NEXT:    kxorw %k0, %k0, %k4
+; CHECK-NEXT:    vpcmpneqd %zmm1, %zmm0, %k5 {%k1}
+; CHECK-NEXT:    vpcmpnltud %zmm1, %zmm0, %k6 {%k1}
+; CHECK-NEXT:    vpcmpnleud %zmm1, %zmm0, %k1 {%k1}
+; CHECK-NEXT:    kmovw %k2, %eax
+; CHECK-NEXT:    kmovw %k0, %ecx
+; CHECK-NEXT:    vmovd %ecx, %xmm0
+; CHECK-NEXT:    vpinsrw $1, %eax, %xmm0, %xmm0
+; CHECK-NEXT:    kmovw %k3, %eax
+; CHECK-NEXT:    vpinsrw $2, %eax, %xmm0, %xmm0
+; CHECK-NEXT:    kmovw %k4, %eax
+; CHECK-NEXT:    vpinsrw $3, %eax, %xmm0, %xmm0
+; CHECK-NEXT:    kmovw %k5, %eax
+; CHECK-NEXT:    vpinsrw $4, %eax, %xmm0, %xmm0
+; CHECK-NEXT:    kmovw %k6, %eax
+; CHECK-NEXT:    vpinsrw $5, %eax, %xmm0, %xmm0
+; CHECK-NEXT:    kmovw %k1, %eax
+; CHECK-NEXT:    vpinsrw $6, %eax, %xmm0, %xmm0
+; CHECK-NEXT:    vpinsrw $7, %edi, %xmm0, %xmm0
+; CHECK-NEXT:    retq
+  %res0 = call i16 @llvm.x86.avx512.mask.ucmp.d.512(<16 x i32> %a0, <16 x i32> %a1, i32 0, i16 %mask)
+  %vec0 = insertelement <8 x i16> undef, i16 %res0, i32 0
+  %res1 = call i16 @llvm.x86.avx512.mask.ucmp.d.512(<16 x i32> %a0, <16 x i32> %a1, i32 1, i16 %mask)
+  %vec1 = insertelement <8 x i16> %vec0, i16 %res1, i32 1
+  %res2 = call i16 @llvm.x86.avx512.mask.ucmp.d.512(<16 x i32> %a0, <16 x i32> %a1, i32 2, i16 %mask)
+  %vec2 = insertelement <8 x i16> %vec1, i16 %res2, i32 2
+  %res3 = call i16 @llvm.x86.avx512.mask.ucmp.d.512(<16 x i32> %a0, <16 x i32> %a1, i32 3, i16 %mask)
+  %vec3 = insertelement <8 x i16> %vec2, i16 %res3, i32 3
+  %res4 = call i16 @llvm.x86.avx512.mask.ucmp.d.512(<16 x i32> %a0, <16 x i32> %a1, i32 4, i16 %mask)
+  %vec4 = insertelement <8 x i16> %vec3, i16 %res4, i32 4
+  %res5 = call i16 @llvm.x86.avx512.mask.ucmp.d.512(<16 x i32> %a0, <16 x i32> %a1, i32 5, i16 %mask)
+  %vec5 = insertelement <8 x i16> %vec4, i16 %res5, i32 5
+  %res6 = call i16 @llvm.x86.avx512.mask.ucmp.d.512(<16 x i32> %a0, <16 x i32> %a1, i32 6, i16 %mask)
+  %vec6 = insertelement <8 x i16> %vec5, i16 %res6, i32 6
+  %res7 = call i16 @llvm.x86.avx512.mask.ucmp.d.512(<16 x i32> %a0, <16 x i32> %a1, i32 7, i16 %mask)
+  %vec7 = insertelement <8 x i16> %vec6, i16 %res7, i32 7
+  ret <8 x i16> %vec7
+}
+
+declare i16 @llvm.x86.avx512.mask.ucmp.d.512(<16 x i32>, <16 x i32>, i32, i16) nounwind readnone
+
+define <8 x i8> @test_cmp_q_512(<8 x i64> %a0, <8 x i64> %a1) {
+; CHECK-LABEL: test_cmp_q_512:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vpcmpeqq %zmm1, %zmm0, %k0
+; CHECK-NEXT:    vpcmpgtq %zmm0, %zmm1, %k1
+; CHECK-NEXT:    vpcmpleq %zmm1, %zmm0, %k2
+; CHECK-NEXT:    vpcmpneqq %zmm1, %zmm0, %k3
+; CHECK-NEXT:    vpcmpleq %zmm0, %zmm1, %k4
+; CHECK-NEXT:    vpcmpgtq %zmm1, %zmm0, %k5
+; CHECK-NEXT:    kmovw %k0, %eax
+; CHECK-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
+; CHECK-NEXT:    kmovw %k1, %eax
+; CHECK-NEXT:    vpinsrw $1, %eax, %xmm0, %xmm0
+; CHECK-NEXT:    kmovw %k2, %eax
+; CHECK-NEXT:    vpinsrw $2, %eax, %xmm0, %xmm0
+; CHECK-NEXT:    kmovw %k3, %eax
+; CHECK-NEXT:    vpinsrw $4, %eax, %xmm0, %xmm0
+; CHECK-NEXT:    kmovw %k4, %eax
+; CHECK-NEXT:    vpinsrw $5, %eax, %xmm0, %xmm0
+; CHECK-NEXT:    kmovw %k5, %eax
+; CHECK-NEXT:    vpinsrw $6, %eax, %xmm0, %xmm0
+; CHECK-NEXT:    kxnorw %k0, %k0, %k0
+; CHECK-NEXT:    kmovw %k0, %eax
+; CHECK-NEXT:    vpinsrw $7, %eax, %xmm0, %xmm0
+; CHECK-NEXT:    retq
+  %res0 = call i8 @llvm.x86.avx512.mask.cmp.q.512(<8 x i64> %a0, <8 x i64> %a1, i32 0, i8 -1)
+  %vec0 = insertelement <8 x i8> undef, i8 %res0, i32 0
+  %res1 = call i8 @llvm.x86.avx512.mask.cmp.q.512(<8 x i64> %a0, <8 x i64> %a1, i32 1, i8 -1)
+  %vec1 = insertelement <8 x i8> %vec0, i8 %res1, i32 1
+  %res2 = call i8 @llvm.x86.avx512.mask.cmp.q.512(<8 x i64> %a0, <8 x i64> %a1, i32 2, i8 -1)
+  %vec2 = insertelement <8 x i8> %vec1, i8 %res2, i32 2
+  %res3 = call i8 @llvm.x86.avx512.mask.cmp.q.512(<8 x i64> %a0, <8 x i64> %a1, i32 3, i8 -1)
+  %vec3 = insertelement <8 x i8> %vec2, i8 %res3, i32 3
+  %res4 = call i8 @llvm.x86.avx512.mask.cmp.q.512(<8 x i64> %a0, <8 x i64> %a1, i32 4, i8 -1)
+  %vec4 = insertelement <8 x i8> %vec3, i8 %res4, i32 4
+  %res5 = call i8 @llvm.x86.avx512.mask.cmp.q.512(<8 x i64> %a0, <8 x i64> %a1, i32 5, i8 -1)
+  %vec5 = insertelement <8 x i8> %vec4, i8 %res5, i32 5
+  %res6 = call i8 @llvm.x86.avx512.mask.cmp.q.512(<8 x i64> %a0, <8 x i64> %a1, i32 6, i8 -1)
+  %vec6 = insertelement <8 x i8> %vec5, i8 %res6, i32 6
+  %res7 = call i8 @llvm.x86.avx512.mask.cmp.q.512(<8 x i64> %a0, <8 x i64> %a1, i32 7, i8 -1)
+  %vec7 = insertelement <8 x i8> %vec6, i8 %res7, i32 7
+  ret <8 x i8> %vec7
+}
+
+define <8 x i8> @test_mask_cmp_q_512(<8 x i64> %a0, <8 x i64> %a1, i8 %mask) {
+; CHECK-LABEL: test_mask_cmp_q_512:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vpcmpeqq %zmm1, %zmm0, %k0 {%k1}
+; CHECK-NEXT:    vpcmpgtq %zmm0, %zmm1, %k2 {%k1}
+; CHECK-NEXT:    vpcmpleq %zmm1, %zmm0, %k3 {%k1}
+; CHECK-NEXT:    kxorw %k0, %k0, %k4
+; CHECK-NEXT:    vpcmpneqq %zmm1, %zmm0, %k5 {%k1}
+; CHECK-NEXT:    vpcmpleq %zmm0, %zmm1, %k6 {%k1}
+; CHECK-NEXT:    vpcmpgtq %zmm1, %zmm0, %k1 {%k1}
+; CHECK-NEXT:    kmovw %k2, %eax
+; CHECK-NEXT:    kmovw %k0, %ecx
+; CHECK-NEXT:    vmovd %ecx, %xmm0
+; CHECK-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; CHECK-NEXT:    kmovw %k3, %eax
+; CHECK-NEXT:    vpinsrb $4, %eax, %xmm0, %xmm0
+; CHECK-NEXT:    kmovw %k4, %eax
+; CHECK-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
+; CHECK-NEXT:    kmovw %k5, %eax
+; CHECK-NEXT:    vpinsrb $8, %eax, %xmm0, %xmm0
+; CHECK-NEXT:    kmovw %k6, %eax
+; CHECK-NEXT:    vpinsrb $10, %eax, %xmm0, %xmm0
+; CHECK-NEXT:    kmovw %k1, %eax
+; CHECK-NEXT:    vpinsrb $12, %eax, %xmm0, %xmm0
+; CHECK-NEXT:    vpinsrb $14, %edi, %xmm0, %xmm0
+; CHECK-NEXT:    retq
+  %res0 = call i8 @llvm.x86.avx512.mask.cmp.q.512(<8 x i64> %a0, <8 x i64> %a1, i32 0, i8 %mask)
+  %vec0 = insertelement <8 x i8> undef, i8 %res0, i32 0
+  %res1 = call i8 @llvm.x86.avx512.mask.cmp.q.512(<8 x i64> %a0, <8 x i64> %a1, i32 1, i8 %mask)
+  %vec1 = insertelement <8 x i8> %vec0, i8 %res1, i32 1
+  %res2 = call i8 @llvm.x86.avx512.mask.cmp.q.512(<8 x i64> %a0, <8 x i64> %a1, i32 2, i8 %mask)
+  %vec2 = insertelement <8 x i8> %vec1, i8 %res2, i32 2
+  %res3 = call i8 @llvm.x86.avx512.mask.cmp.q.512(<8 x i64> %a0, <8 x i64> %a1, i32 3, i8 %mask)
+  %vec3 = insertelement <8 x i8> %vec2, i8 %res3, i32 3
+  %res4 = call i8 @llvm.x86.avx512.mask.cmp.q.512(<8 x i64> %a0, <8 x i64> %a1, i32 4, i8 %mask)
+  %vec4 = insertelement <8 x i8> %vec3, i8 %res4, i32 4
+  %res5 = call i8 @llvm.x86.avx512.mask.cmp.q.512(<8 x i64> %a0, <8 x i64> %a1, i32 5, i8 %mask)
+  %vec5 = insertelement <8 x i8> %vec4, i8 %res5, i32 5
+  %res6 = call i8 @llvm.x86.avx512.mask.cmp.q.512(<8 x i64> %a0, <8 x i64> %a1, i32 6, i8 %mask)
+  %vec6 = insertelement <8 x i8> %vec5, i8 %res6, i32 6
+  %res7 = call i8 @llvm.x86.avx512.mask.cmp.q.512(<8 x i64> %a0, <8 x i64> %a1, i32 7, i8 %mask)
+  %vec7 = insertelement <8 x i8> %vec6, i8 %res7, i32 7
+  ret <8 x i8> %vec7
+}
+
+declare i8 @llvm.x86.avx512.mask.cmp.q.512(<8 x i64>, <8 x i64>, i32, i8) nounwind readnone
+
+define <8 x i8> @test_ucmp_q_512(<8 x i64> %a0, <8 x i64> %a1) {
+; CHECK-LABEL: test_ucmp_q_512:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vpcmpeqq %zmm1, %zmm0, %k0
+; CHECK-NEXT:    vpcmpltuq %zmm1, %zmm0, %k1
+; CHECK-NEXT:    vpcmpleuq %zmm1, %zmm0, %k2
+; CHECK-NEXT:    vpcmpneqq %zmm1, %zmm0, %k3
+; CHECK-NEXT:    vpcmpnltuq %zmm1, %zmm0, %k4
+; CHECK-NEXT:    vpcmpnleuq %zmm1, %zmm0, %k5
+; CHECK-NEXT:    kmovw %k0, %eax
+; CHECK-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
+; CHECK-NEXT:    kmovw %k1, %eax
+; CHECK-NEXT:    vpinsrw $1, %eax, %xmm0, %xmm0
+; CHECK-NEXT:    kmovw %k2, %eax
+; CHECK-NEXT:    vpinsrw $2, %eax, %xmm0, %xmm0
+; CHECK-NEXT:    kmovw %k3, %eax
+; CHECK-NEXT:    vpinsrw $4, %eax, %xmm0, %xmm0
+; CHECK-NEXT:    kmovw %k4, %eax
+; CHECK-NEXT:    vpinsrw $5, %eax, %xmm0, %xmm0
+; CHECK-NEXT:    kmovw %k5, %eax
+; CHECK-NEXT:    vpinsrw $6, %eax, %xmm0, %xmm0
+; CHECK-NEXT:    kxnorw %k0, %k0, %k0
+; CHECK-NEXT:    kmovw %k0, %eax
+; CHECK-NEXT:    vpinsrw $7, %eax, %xmm0, %xmm0
+; CHECK-NEXT:    retq
+  %res0 = call i8 @llvm.x86.avx512.mask.ucmp.q.512(<8 x i64> %a0, <8 x i64> %a1, i32 0, i8 -1)
+  %vec0 = insertelement <8 x i8> undef, i8 %res0, i32 0
+  %res1 = call i8 @llvm.x86.avx512.mask.ucmp.q.512(<8 x i64> %a0, <8 x i64> %a1, i32 1, i8 -1)
+  %vec1 = insertelement <8 x i8> %vec0, i8 %res1, i32 1
+  %res2 = call i8 @llvm.x86.avx512.mask.ucmp.q.512(<8 x i64> %a0, <8 x i64> %a1, i32 2, i8 -1)
+  %vec2 = insertelement <8 x i8> %vec1, i8 %res2, i32 2
+  %res3 = call i8 @llvm.x86.avx512.mask.ucmp.q.512(<8 x i64> %a0, <8 x i64> %a1, i32 3, i8 -1)
+  %vec3 = insertelement <8 x i8> %vec2, i8 %res3, i32 3
+  %res4 = call i8 @llvm.x86.avx512.mask.ucmp.q.512(<8 x i64> %a0, <8 x i64> %a1, i32 4, i8 -1)
+  %vec4 = insertelement <8 x i8> %vec3, i8 %res4, i32 4
+  %res5 = call i8 @llvm.x86.avx512.mask.ucmp.q.512(<8 x i64> %a0, <8 x i64> %a1, i32 5, i8 -1)
+  %vec5 = insertelement <8 x i8> %vec4, i8 %res5, i32 5
+  %res6 = call i8 @llvm.x86.avx512.mask.ucmp.q.512(<8 x i64> %a0, <8 x i64> %a1, i32 6, i8 -1)
+  %vec6 = insertelement <8 x i8> %vec5, i8 %res6, i32 6
+  %res7 = call i8 @llvm.x86.avx512.mask.ucmp.q.512(<8 x i64> %a0, <8 x i64> %a1, i32 7, i8 -1)
+  %vec7 = insertelement <8 x i8> %vec6, i8 %res7, i32 7
+  ret <8 x i8> %vec7
+}
+
+define <8 x i8> @test_mask_ucmp_q_512(<8 x i64> %a0, <8 x i64> %a1, i8 %mask) {
+; CHECK-LABEL: test_mask_ucmp_q_512:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vpcmpeqq %zmm1, %zmm0, %k0 {%k1}
+; CHECK-NEXT:    vpcmpltuq %zmm1, %zmm0, %k2 {%k1}
+; CHECK-NEXT:    vpcmpleuq %zmm1, %zmm0, %k3 {%k1}
+; CHECK-NEXT:    kxorw %k0, %k0, %k4
+; CHECK-NEXT:    vpcmpneqq %zmm1, %zmm0, %k5 {%k1}
+; CHECK-NEXT:    vpcmpnltuq %zmm1, %zmm0, %k6 {%k1}
+; CHECK-NEXT:    vpcmpnleuq %zmm1, %zmm0, %k1 {%k1}
+; CHECK-NEXT:    kmovw %k2, %eax
+; CHECK-NEXT:    kmovw %k0, %ecx
+; CHECK-NEXT:    vmovd %ecx, %xmm0
+; CHECK-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
+; CHECK-NEXT:    kmovw %k3, %eax
+; CHECK-NEXT:    vpinsrb $4, %eax, %xmm0, %xmm0
+; CHECK-NEXT:    kmovw %k4, %eax
+; CHECK-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
+; CHECK-NEXT:    kmovw %k5, %eax
+; CHECK-NEXT:    vpinsrb $8, %eax, %xmm0, %xmm0
+; CHECK-NEXT:    kmovw %k6, %eax
+; CHECK-NEXT:    vpinsrb $10, %eax, %xmm0, %xmm0
+; CHECK-NEXT:    kmovw %k1, %eax
+; CHECK-NEXT:    vpinsrb $12, %eax, %xmm0, %xmm0
+; CHECK-NEXT:    vpinsrb $14, %edi, %xmm0, %xmm0
+; CHECK-NEXT:    retq
+  %res0 = call i8 @llvm.x86.avx512.mask.ucmp.q.512(<8 x i64> %a0, <8 x i64> %a1, i32 0, i8 %mask)
+  %vec0 = insertelement <8 x i8> undef, i8 %res0, i32 0
+  %res1 = call i8 @llvm.x86.avx512.mask.ucmp.q.512(<8 x i64> %a0, <8 x i64> %a1, i32 1, i8 %mask)
+  %vec1 = insertelement <8 x i8> %vec0, i8 %res1, i32 1
+  %res2 = call i8 @llvm.x86.avx512.mask.ucmp.q.512(<8 x i64> %a0, <8 x i64> %a1, i32 2, i8 %mask)
+  %vec2 = insertelement <8 x i8> %vec1, i8 %res2, i32 2
+  %res3 = call i8 @llvm.x86.avx512.mask.ucmp.q.512(<8 x i64> %a0, <8 x i64> %a1, i32 3, i8 %mask)
+  %vec3 = insertelement <8 x i8> %vec2, i8 %res3, i32 3
+  %res4 = call i8 @llvm.x86.avx512.mask.ucmp.q.512(<8 x i64> %a0, <8 x i64> %a1, i32 4, i8 %mask)
+  %vec4 = insertelement <8 x i8> %vec3, i8 %res4, i32 4
+  %res5 = call i8 @llvm.x86.avx512.mask.ucmp.q.512(<8 x i64> %a0, <8 x i64> %a1, i32 5, i8 %mask)
+  %vec5 = insertelement <8 x i8> %vec4, i8 %res5, i32 5
+  %res6 = call i8 @llvm.x86.avx512.mask.ucmp.q.512(<8 x i64> %a0, <8 x i64> %a1, i32 6, i8 %mask)
+  %vec6 = insertelement <8 x i8> %vec5, i8 %res6, i32 6
+  %res7 = call i8 @llvm.x86.avx512.mask.ucmp.q.512(<8 x i64> %a0, <8 x i64> %a1, i32 7, i8 %mask)
+  %vec7 = insertelement <8 x i8> %vec6, i8 %res7, i32 7
+  ret <8 x i8> %vec7
+}
+
+declare i8 @llvm.x86.avx512.mask.ucmp.q.512(<8 x i64>, <8 x i64>, i32, i8) nounwind readnone

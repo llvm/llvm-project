@@ -1059,6 +1059,8 @@ namespace llvm {
 
     bool supportSwiftError() const override;
 
+    StringRef getStackProbeSymbolName(MachineFunction &MF) const override;
+
     unsigned getMaxSupportedInterleaveFactor() const override { return 4; }
 
     /// \brief Lower interleaved load(s) into target specific
@@ -1067,6 +1069,12 @@ namespace llvm {
                               ArrayRef<ShuffleVectorInst *> Shuffles,
                               ArrayRef<unsigned> Indices,
                               unsigned Factor) const override;
+
+    /// \brief Lower interleaved store(s) into target specific
+    /// instructions/intrinsics.
+    bool lowerInterleavedStore(StoreInst *SI, ShuffleVectorInst *SVI,
+                               unsigned Factor) const override;
+
 
     void finalizeLowering(MachineFunction &MF) const override;
 

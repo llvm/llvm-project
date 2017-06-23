@@ -153,8 +153,7 @@ void X86MachObjectWriter::RecordX86_64Relocation(
     const MCSymbol *B_Base = Asm.getAtom(*B);
 
     // Neither symbol can be modified.
-    if (Target.getSymA()->getKind() != MCSymbolRefExpr::VK_None ||
-        Target.getSymB()->getKind() != MCSymbolRefExpr::VK_None) {
+    if (Target.getSymA()->getKind() != MCSymbolRefExpr::VK_None) {
       Asm.getContext().reportError(Fixup.getLoc(),
                                    "unsupported relocation of modified symbol");
       return;

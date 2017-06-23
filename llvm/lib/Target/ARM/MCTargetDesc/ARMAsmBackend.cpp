@@ -759,6 +759,7 @@ void ARMAsmBackend::processFixupValue(const MCAssembler &Asm,
         IsResolved = false;
       if (!Asm.isThumbFunc(Sym) && (FixupKind == ARM::fixup_arm_thumb_br ||
                                     FixupKind == ARM::fixup_arm_thumb_bl ||
+                                    FixupKind == ARM::fixup_t2_condbranch ||
                                     FixupKind == ARM::fixup_t2_uncondbranch))
         IsResolved = false;
     }

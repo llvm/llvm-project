@@ -737,8 +737,10 @@ std::error_code openFileForRead(const Twine &Name, int &ResultFD,
 #ifdef O_CLOEXEC
   OpenFlags |= O_CLOEXEC;
 #endif
-  if ((ResultFD = sys::RetryAfterSignal(-1, open, P.begin(), OpenFlags)) < 0)
-    return std::error_code(errno, std::generic_category());
+  while ((ResultFD = open(P.begin(), OpenFlags)) < 0) {
+    if (errno != EINTR)
+      return std::error_code(errno, std::generic_category());
+  }
 #ifndef O_CLOEXEC
   int r = fcntl(ResultFD, F_SETFD, FD_CLOEXEC);
   (void)r;
@@ -798,8 +800,10 @@ std::error_code openFileForWrite(const Twine &Name, int &ResultFD,
 
   SmallString<128> Storage;
   StringRef P = Name.toNullTerminatedStringRef(Storage);
-  if ((ResultFD = sys::RetryAfterSignal(-1, open, P.begin(), OpenFlags, Mode)) < 0)
-    return std::error_code(errno, std::generic_category());
+  while ((ResultFD = open(P.begin(), OpenFlags, Mode)) < 0) {
+    if (errno != EINTR)
+      return std::error_code(errno, std::generic_category());
+  }
 #ifndef O_CLOEXEC
   int r = fcntl(ResultFD, F_SETFD, FD_CLOEXEC);
   (void)r;

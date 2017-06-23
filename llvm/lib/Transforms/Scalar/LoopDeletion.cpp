@@ -227,6 +227,8 @@ static void deleteDeadLoop(Loop *L, DominatorTree &DT, ScalarEvolution &SE,
   auto *ExitBlock = L->getUniqueExitBlock();
   assert(ExitBlock && "Should have a unique exit block!");
 
+  assert(L->hasDedicatedExits() && "Loop should have dedicated exits!");
+
   // Connect the preheader directly to the exit block.
   // Even when the loop is never executed, we cannot remove the edge from the
   // source block to the exit block. Consider the case where the unexecuted loop
@@ -236,20 +238,30 @@ static void deleteDeadLoop(Loop *L, DominatorTree &DT, ScalarEvolution &SE,
   // non-loop, it will be deleted in a future iteration of loop deletion pass.
   Preheader->getTerminator()->replaceUsesOfWith(L->getHeader(), ExitBlock);
 
-  SmallVector<BasicBlock *, 4> ExitingBlocks;
-  L->getExitingBlocks(ExitingBlocks);
   // Rewrite phis in the exit block to get their inputs from the Preheader
   // instead of the exiting block.
-  BasicBlock *ExitingBlock = ExitingBlocks[0];
   BasicBlock::iterator BI = ExitBlock->begin();
   while (PHINode *P = dyn_cast<PHINode>(BI)) {
-    int j = P->getBasicBlockIndex(ExitingBlock);
-    assert(j >= 0 && "Can't find exiting block in exit block's phi node!");
+    // Set the zero'th element of Phi to be from the preheader and remove all
+    // other incoming values. Given the loop has dedicated exits, all other
+    // incoming values must be from the exiting blocks.
+    int PredIndex = 0;
     if (LoopIsNeverExecuted)
-      P->setIncomingValue(j, UndefValue::get(P->getType()));
-    P->setIncomingBlock(j, Preheader);
-    for (unsigned i = 1; i < ExitingBlocks.size(); ++i)
-      P->removeIncomingValue(ExitingBlocks[i]);
+      P->setIncomingValue(PredIndex, UndefValue::get(P->getType()));
+    P->setIncomingBlock(PredIndex, Preheader);
+    // Removes all incoming values from all other exiting blocks (including
+    // duplicate values from an exiting block).
+    // Nuke all entries except the zero'th entry which is the preheader entry.
+    // NOTE! We need to remove Incoming Values in the reverse order as done
+    // below, to keep the indices valid for deletion (removeIncomingValues
+    // updates getNumIncomingValues and shifts all values down into the operand
+    // being deleted).
+    for (unsigned i = 0, e = P->getNumIncomingValues() - 1; i != e; ++i)
+      P->removeIncomingValue(e-i, false);
+
+    assert((P->getNumIncomingValues() == 1 &&
+            P->getIncomingBlock(PredIndex) == Preheader) &&
+           "Should have exactly one value and that's from the preheader!");
     ++BI;
   }
 

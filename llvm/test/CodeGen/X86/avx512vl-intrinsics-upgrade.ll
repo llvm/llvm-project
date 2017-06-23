@@ -4974,3 +4974,954 @@ define <4 x float> @test_mm512_min_ps_128(<4 x float> %a0, <4 x float> %a1, i8 %
 }
 declare <4 x float> @llvm.x86.avx512.mask.min.ps.128(<4 x float>, <4 x float>, <4 x float>, i8)
 
+define <8 x i8> @test_cmp_d_256(<8 x i32> %a0, <8 x i32> %a1) {
+; CHECK-LABEL: test_cmp_d_256:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vpcmpeqd %ymm1, %ymm0, %k0 ## encoding: [0x62,0xf1,0x7d,0x28,0x76,0xc1]
+; CHECK-NEXT:    vpcmpgtd %ymm0, %ymm1, %k1 ## encoding: [0x62,0xf1,0x75,0x28,0x66,0xc8]
+; CHECK-NEXT:    vpcmpled %ymm1, %ymm0, %k2 ## encoding: [0x62,0xf3,0x7d,0x28,0x1f,0xd1,0x02]
+; CHECK-NEXT:    vpcmpneqd %ymm1, %ymm0, %k3 ## encoding: [0x62,0xf3,0x7d,0x28,0x1f,0xd9,0x04]
+; CHECK-NEXT:    vpcmpled %ymm0, %ymm1, %k4 ## encoding: [0x62,0xf3,0x75,0x28,0x1f,0xe0,0x02]
+; CHECK-NEXT:    vpcmpgtd %ymm1, %ymm0, %k5 ## encoding: [0x62,0xf1,0x7d,0x28,0x66,0xe9]
+; CHECK-NEXT:    kmovw %k0, %eax ## encoding: [0xc5,0xf8,0x93,0xc0]
+; CHECK-NEXT:    vpxor %xmm0, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0xef,0xc0]
+; CHECK-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xc4,0xc0,0x00]
+; CHECK-NEXT:    kmovw %k1, %eax ## encoding: [0xc5,0xf8,0x93,0xc1]
+; CHECK-NEXT:    vpinsrw $1, %eax, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xc4,0xc0,0x01]
+; CHECK-NEXT:    kmovw %k2, %eax ## encoding: [0xc5,0xf8,0x93,0xc2]
+; CHECK-NEXT:    vpinsrw $2, %eax, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xc4,0xc0,0x02]
+; CHECK-NEXT:    kmovw %k3, %eax ## encoding: [0xc5,0xf8,0x93,0xc3]
+; CHECK-NEXT:    vpinsrw $4, %eax, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xc4,0xc0,0x04]
+; CHECK-NEXT:    kmovw %k4, %eax ## encoding: [0xc5,0xf8,0x93,0xc4]
+; CHECK-NEXT:    vpinsrw $5, %eax, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xc4,0xc0,0x05]
+; CHECK-NEXT:    kmovw %k5, %eax ## encoding: [0xc5,0xf8,0x93,0xc5]
+; CHECK-NEXT:    vpinsrw $6, %eax, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xc4,0xc0,0x06]
+; CHECK-NEXT:    kxnorw %k0, %k0, %k0 ## encoding: [0xc5,0xfc,0x46,0xc0]
+; CHECK-NEXT:    kmovw %k0, %eax ## encoding: [0xc5,0xf8,0x93,0xc0]
+; CHECK-NEXT:    vpinsrw $7, %eax, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xc4,0xc0,0x07]
+; CHECK-NEXT:    retq ## encoding: [0xc3]
+  %res0 = call i8 @llvm.x86.avx512.mask.cmp.d.256(<8 x i32> %a0, <8 x i32> %a1, i32 0, i8 -1)
+  %vec0 = insertelement <8 x i8> undef, i8 %res0, i32 0
+  %res1 = call i8 @llvm.x86.avx512.mask.cmp.d.256(<8 x i32> %a0, <8 x i32> %a1, i32 1, i8 -1)
+  %vec1 = insertelement <8 x i8> %vec0, i8 %res1, i32 1
+  %res2 = call i8 @llvm.x86.avx512.mask.cmp.d.256(<8 x i32> %a0, <8 x i32> %a1, i32 2, i8 -1)
+  %vec2 = insertelement <8 x i8> %vec1, i8 %res2, i32 2
+  %res3 = call i8 @llvm.x86.avx512.mask.cmp.d.256(<8 x i32> %a0, <8 x i32> %a1, i32 3, i8 -1)
+  %vec3 = insertelement <8 x i8> %vec2, i8 %res3, i32 3
+  %res4 = call i8 @llvm.x86.avx512.mask.cmp.d.256(<8 x i32> %a0, <8 x i32> %a1, i32 4, i8 -1)
+  %vec4 = insertelement <8 x i8> %vec3, i8 %res4, i32 4
+  %res5 = call i8 @llvm.x86.avx512.mask.cmp.d.256(<8 x i32> %a0, <8 x i32> %a1, i32 5, i8 -1)
+  %vec5 = insertelement <8 x i8> %vec4, i8 %res5, i32 5
+  %res6 = call i8 @llvm.x86.avx512.mask.cmp.d.256(<8 x i32> %a0, <8 x i32> %a1, i32 6, i8 -1)
+  %vec6 = insertelement <8 x i8> %vec5, i8 %res6, i32 6
+  %res7 = call i8 @llvm.x86.avx512.mask.cmp.d.256(<8 x i32> %a0, <8 x i32> %a1, i32 7, i8 -1)
+  %vec7 = insertelement <8 x i8> %vec6, i8 %res7, i32 7
+  ret <8 x i8> %vec7
+}
+
+define <8 x i8> @test_mask_cmp_d_256(<8 x i32> %a0, <8 x i32> %a1, i8 %mask) {
+; CHECK-LABEL: test_mask_cmp_d_256:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
+; CHECK-NEXT:    vpcmpeqd %ymm1, %ymm0, %k0 {%k1} ## encoding: [0x62,0xf1,0x7d,0x29,0x76,0xc1]
+; CHECK-NEXT:    vpcmpgtd %ymm0, %ymm1, %k2 {%k1} ## encoding: [0x62,0xf1,0x75,0x29,0x66,0xd0]
+; CHECK-NEXT:    vpcmpled %ymm1, %ymm0, %k3 {%k1} ## encoding: [0x62,0xf3,0x7d,0x29,0x1f,0xd9,0x02]
+; CHECK-NEXT:    kxorw %k0, %k0, %k4 ## encoding: [0xc5,0xfc,0x47,0xe0]
+; CHECK-NEXT:    vpcmpneqd %ymm1, %ymm0, %k5 {%k1} ## encoding: [0x62,0xf3,0x7d,0x29,0x1f,0xe9,0x04]
+; CHECK-NEXT:    vpcmpled %ymm0, %ymm1, %k6 {%k1} ## encoding: [0x62,0xf3,0x75,0x29,0x1f,0xf0,0x02]
+; CHECK-NEXT:    vpcmpgtd %ymm1, %ymm0, %k1 {%k1} ## encoding: [0x62,0xf1,0x7d,0x29,0x66,0xc9]
+; CHECK-NEXT:    kmovw %k2, %eax ## encoding: [0xc5,0xf8,0x93,0xc2]
+; CHECK-NEXT:    kmovw %k0, %ecx ## encoding: [0xc5,0xf8,0x93,0xc8]
+; CHECK-NEXT:    vmovd %ecx, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6e,0xc1]
+; CHECK-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x20,0xc0,0x02]
+; CHECK-NEXT:    kmovw %k3, %eax ## encoding: [0xc5,0xf8,0x93,0xc3]
+; CHECK-NEXT:    vpinsrb $4, %eax, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x20,0xc0,0x04]
+; CHECK-NEXT:    kmovw %k4, %eax ## encoding: [0xc5,0xf8,0x93,0xc4]
+; CHECK-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x20,0xc0,0x06]
+; CHECK-NEXT:    kmovw %k5, %eax ## encoding: [0xc5,0xf8,0x93,0xc5]
+; CHECK-NEXT:    vpinsrb $8, %eax, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x20,0xc0,0x08]
+; CHECK-NEXT:    kmovw %k6, %eax ## encoding: [0xc5,0xf8,0x93,0xc6]
+; CHECK-NEXT:    vpinsrb $10, %eax, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x20,0xc0,0x0a]
+; CHECK-NEXT:    kmovw %k1, %eax ## encoding: [0xc5,0xf8,0x93,0xc1]
+; CHECK-NEXT:    vpinsrb $12, %eax, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x20,0xc0,0x0c]
+; CHECK-NEXT:    vpinsrb $14, %edi, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x20,0xc7,0x0e]
+; CHECK-NEXT:    retq ## encoding: [0xc3]
+  %res0 = call i8 @llvm.x86.avx512.mask.cmp.d.256(<8 x i32> %a0, <8 x i32> %a1, i32 0, i8 %mask)
+  %vec0 = insertelement <8 x i8> undef, i8 %res0, i32 0
+  %res1 = call i8 @llvm.x86.avx512.mask.cmp.d.256(<8 x i32> %a0, <8 x i32> %a1, i32 1, i8 %mask)
+  %vec1 = insertelement <8 x i8> %vec0, i8 %res1, i32 1
+  %res2 = call i8 @llvm.x86.avx512.mask.cmp.d.256(<8 x i32> %a0, <8 x i32> %a1, i32 2, i8 %mask)
+  %vec2 = insertelement <8 x i8> %vec1, i8 %res2, i32 2
+  %res3 = call i8 @llvm.x86.avx512.mask.cmp.d.256(<8 x i32> %a0, <8 x i32> %a1, i32 3, i8 %mask)
+  %vec3 = insertelement <8 x i8> %vec2, i8 %res3, i32 3
+  %res4 = call i8 @llvm.x86.avx512.mask.cmp.d.256(<8 x i32> %a0, <8 x i32> %a1, i32 4, i8 %mask)
+  %vec4 = insertelement <8 x i8> %vec3, i8 %res4, i32 4
+  %res5 = call i8 @llvm.x86.avx512.mask.cmp.d.256(<8 x i32> %a0, <8 x i32> %a1, i32 5, i8 %mask)
+  %vec5 = insertelement <8 x i8> %vec4, i8 %res5, i32 5
+  %res6 = call i8 @llvm.x86.avx512.mask.cmp.d.256(<8 x i32> %a0, <8 x i32> %a1, i32 6, i8 %mask)
+  %vec6 = insertelement <8 x i8> %vec5, i8 %res6, i32 6
+  %res7 = call i8 @llvm.x86.avx512.mask.cmp.d.256(<8 x i32> %a0, <8 x i32> %a1, i32 7, i8 %mask)
+  %vec7 = insertelement <8 x i8> %vec6, i8 %res7, i32 7
+  ret <8 x i8> %vec7
+}
+
+declare i8 @llvm.x86.avx512.mask.cmp.d.256(<8 x i32>, <8 x i32>, i32, i8) nounwind readnone
+
+define <8 x i8> @test_ucmp_d_256(<8 x i32> %a0, <8 x i32> %a1) {
+; CHECK-LABEL: test_ucmp_d_256:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vpcmpeqd %ymm1, %ymm0, %k0 ## encoding: [0x62,0xf1,0x7d,0x28,0x76,0xc1]
+; CHECK-NEXT:    vpcmpltud %ymm1, %ymm0, %k1 ## encoding: [0x62,0xf3,0x7d,0x28,0x1e,0xc9,0x01]
+; CHECK-NEXT:    vpcmpleud %ymm1, %ymm0, %k2 ## encoding: [0x62,0xf3,0x7d,0x28,0x1e,0xd1,0x02]
+; CHECK-NEXT:    vpcmpneqd %ymm1, %ymm0, %k3 ## encoding: [0x62,0xf3,0x7d,0x28,0x1f,0xd9,0x04]
+; CHECK-NEXT:    vpcmpnltud %ymm1, %ymm0, %k4 ## encoding: [0x62,0xf3,0x7d,0x28,0x1e,0xe1,0x05]
+; CHECK-NEXT:    vpcmpnleud %ymm1, %ymm0, %k5 ## encoding: [0x62,0xf3,0x7d,0x28,0x1e,0xe9,0x06]
+; CHECK-NEXT:    kmovw %k0, %eax ## encoding: [0xc5,0xf8,0x93,0xc0]
+; CHECK-NEXT:    vpxor %xmm0, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0xef,0xc0]
+; CHECK-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xc4,0xc0,0x00]
+; CHECK-NEXT:    kmovw %k1, %eax ## encoding: [0xc5,0xf8,0x93,0xc1]
+; CHECK-NEXT:    vpinsrw $1, %eax, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xc4,0xc0,0x01]
+; CHECK-NEXT:    kmovw %k2, %eax ## encoding: [0xc5,0xf8,0x93,0xc2]
+; CHECK-NEXT:    vpinsrw $2, %eax, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xc4,0xc0,0x02]
+; CHECK-NEXT:    kmovw %k3, %eax ## encoding: [0xc5,0xf8,0x93,0xc3]
+; CHECK-NEXT:    vpinsrw $4, %eax, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xc4,0xc0,0x04]
+; CHECK-NEXT:    kmovw %k4, %eax ## encoding: [0xc5,0xf8,0x93,0xc4]
+; CHECK-NEXT:    vpinsrw $5, %eax, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xc4,0xc0,0x05]
+; CHECK-NEXT:    kmovw %k5, %eax ## encoding: [0xc5,0xf8,0x93,0xc5]
+; CHECK-NEXT:    vpinsrw $6, %eax, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xc4,0xc0,0x06]
+; CHECK-NEXT:    kxnorw %k0, %k0, %k0 ## encoding: [0xc5,0xfc,0x46,0xc0]
+; CHECK-NEXT:    kmovw %k0, %eax ## encoding: [0xc5,0xf8,0x93,0xc0]
+; CHECK-NEXT:    vpinsrw $7, %eax, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xc4,0xc0,0x07]
+; CHECK-NEXT:    retq ## encoding: [0xc3]
+  %res0 = call i8 @llvm.x86.avx512.mask.ucmp.d.256(<8 x i32> %a0, <8 x i32> %a1, i32 0, i8 -1)
+  %vec0 = insertelement <8 x i8> undef, i8 %res0, i32 0
+  %res1 = call i8 @llvm.x86.avx512.mask.ucmp.d.256(<8 x i32> %a0, <8 x i32> %a1, i32 1, i8 -1)
+  %vec1 = insertelement <8 x i8> %vec0, i8 %res1, i32 1
+  %res2 = call i8 @llvm.x86.avx512.mask.ucmp.d.256(<8 x i32> %a0, <8 x i32> %a1, i32 2, i8 -1)
+  %vec2 = insertelement <8 x i8> %vec1, i8 %res2, i32 2
+  %res3 = call i8 @llvm.x86.avx512.mask.ucmp.d.256(<8 x i32> %a0, <8 x i32> %a1, i32 3, i8 -1)
+  %vec3 = insertelement <8 x i8> %vec2, i8 %res3, i32 3
+  %res4 = call i8 @llvm.x86.avx512.mask.ucmp.d.256(<8 x i32> %a0, <8 x i32> %a1, i32 4, i8 -1)
+  %vec4 = insertelement <8 x i8> %vec3, i8 %res4, i32 4
+  %res5 = call i8 @llvm.x86.avx512.mask.ucmp.d.256(<8 x i32> %a0, <8 x i32> %a1, i32 5, i8 -1)
+  %vec5 = insertelement <8 x i8> %vec4, i8 %res5, i32 5
+  %res6 = call i8 @llvm.x86.avx512.mask.ucmp.d.256(<8 x i32> %a0, <8 x i32> %a1, i32 6, i8 -1)
+  %vec6 = insertelement <8 x i8> %vec5, i8 %res6, i32 6
+  %res7 = call i8 @llvm.x86.avx512.mask.ucmp.d.256(<8 x i32> %a0, <8 x i32> %a1, i32 7, i8 -1)
+  %vec7 = insertelement <8 x i8> %vec6, i8 %res7, i32 7
+  ret <8 x i8> %vec7
+}
+
+define <8 x i8> @test_mask_ucmp_d_256(<8 x i32> %a0, <8 x i32> %a1, i8 %mask) {
+; CHECK-LABEL: test_mask_ucmp_d_256:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
+; CHECK-NEXT:    vpcmpeqd %ymm1, %ymm0, %k0 {%k1} ## encoding: [0x62,0xf1,0x7d,0x29,0x76,0xc1]
+; CHECK-NEXT:    vpcmpltud %ymm1, %ymm0, %k2 {%k1} ## encoding: [0x62,0xf3,0x7d,0x29,0x1e,0xd1,0x01]
+; CHECK-NEXT:    vpcmpleud %ymm1, %ymm0, %k3 {%k1} ## encoding: [0x62,0xf3,0x7d,0x29,0x1e,0xd9,0x02]
+; CHECK-NEXT:    kxorw %k0, %k0, %k4 ## encoding: [0xc5,0xfc,0x47,0xe0]
+; CHECK-NEXT:    vpcmpneqd %ymm1, %ymm0, %k5 {%k1} ## encoding: [0x62,0xf3,0x7d,0x29,0x1f,0xe9,0x04]
+; CHECK-NEXT:    vpcmpnltud %ymm1, %ymm0, %k6 {%k1} ## encoding: [0x62,0xf3,0x7d,0x29,0x1e,0xf1,0x05]
+; CHECK-NEXT:    vpcmpnleud %ymm1, %ymm0, %k1 {%k1} ## encoding: [0x62,0xf3,0x7d,0x29,0x1e,0xc9,0x06]
+; CHECK-NEXT:    kmovw %k2, %eax ## encoding: [0xc5,0xf8,0x93,0xc2]
+; CHECK-NEXT:    kmovw %k0, %ecx ## encoding: [0xc5,0xf8,0x93,0xc8]
+; CHECK-NEXT:    vmovd %ecx, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6e,0xc1]
+; CHECK-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x20,0xc0,0x02]
+; CHECK-NEXT:    kmovw %k3, %eax ## encoding: [0xc5,0xf8,0x93,0xc3]
+; CHECK-NEXT:    vpinsrb $4, %eax, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x20,0xc0,0x04]
+; CHECK-NEXT:    kmovw %k4, %eax ## encoding: [0xc5,0xf8,0x93,0xc4]
+; CHECK-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x20,0xc0,0x06]
+; CHECK-NEXT:    kmovw %k5, %eax ## encoding: [0xc5,0xf8,0x93,0xc5]
+; CHECK-NEXT:    vpinsrb $8, %eax, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x20,0xc0,0x08]
+; CHECK-NEXT:    kmovw %k6, %eax ## encoding: [0xc5,0xf8,0x93,0xc6]
+; CHECK-NEXT:    vpinsrb $10, %eax, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x20,0xc0,0x0a]
+; CHECK-NEXT:    kmovw %k1, %eax ## encoding: [0xc5,0xf8,0x93,0xc1]
+; CHECK-NEXT:    vpinsrb $12, %eax, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x20,0xc0,0x0c]
+; CHECK-NEXT:    vpinsrb $14, %edi, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x20,0xc7,0x0e]
+; CHECK-NEXT:    retq ## encoding: [0xc3]
+  %res0 = call i8 @llvm.x86.avx512.mask.ucmp.d.256(<8 x i32> %a0, <8 x i32> %a1, i32 0, i8 %mask)
+  %vec0 = insertelement <8 x i8> undef, i8 %res0, i32 0
+  %res1 = call i8 @llvm.x86.avx512.mask.ucmp.d.256(<8 x i32> %a0, <8 x i32> %a1, i32 1, i8 %mask)
+  %vec1 = insertelement <8 x i8> %vec0, i8 %res1, i32 1
+  %res2 = call i8 @llvm.x86.avx512.mask.ucmp.d.256(<8 x i32> %a0, <8 x i32> %a1, i32 2, i8 %mask)
+  %vec2 = insertelement <8 x i8> %vec1, i8 %res2, i32 2
+  %res3 = call i8 @llvm.x86.avx512.mask.ucmp.d.256(<8 x i32> %a0, <8 x i32> %a1, i32 3, i8 %mask)
+  %vec3 = insertelement <8 x i8> %vec2, i8 %res3, i32 3
+  %res4 = call i8 @llvm.x86.avx512.mask.ucmp.d.256(<8 x i32> %a0, <8 x i32> %a1, i32 4, i8 %mask)
+  %vec4 = insertelement <8 x i8> %vec3, i8 %res4, i32 4
+  %res5 = call i8 @llvm.x86.avx512.mask.ucmp.d.256(<8 x i32> %a0, <8 x i32> %a1, i32 5, i8 %mask)
+  %vec5 = insertelement <8 x i8> %vec4, i8 %res5, i32 5
+  %res6 = call i8 @llvm.x86.avx512.mask.ucmp.d.256(<8 x i32> %a0, <8 x i32> %a1, i32 6, i8 %mask)
+  %vec6 = insertelement <8 x i8> %vec5, i8 %res6, i32 6
+  %res7 = call i8 @llvm.x86.avx512.mask.ucmp.d.256(<8 x i32> %a0, <8 x i32> %a1, i32 7, i8 %mask)
+  %vec7 = insertelement <8 x i8> %vec6, i8 %res7, i32 7
+  ret <8 x i8> %vec7
+}
+
+declare i8 @llvm.x86.avx512.mask.ucmp.d.256(<8 x i32>, <8 x i32>, i32, i8) nounwind readnone
+
+define <8 x i8> @test_cmp_q_256(<4 x i64> %a0, <4 x i64> %a1) {
+; CHECK-LABEL: test_cmp_q_256:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vpcmpeqq %ymm1, %ymm0, %k0 ## encoding: [0x62,0xf2,0xfd,0x28,0x29,0xc1]
+; CHECK-NEXT:    kshiftlw $12, %k0, %k0 ## encoding: [0xc4,0xe3,0xf9,0x32,0xc0,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k0, %k0 ## encoding: [0xc4,0xe3,0xf9,0x30,0xc0,0x0c]
+; CHECK-NEXT:    vpcmpgtq %ymm0, %ymm1, %k1 ## encoding: [0x62,0xf2,0xf5,0x28,0x37,0xc8]
+; CHECK-NEXT:    kshiftlw $12, %k1, %k1 ## encoding: [0xc4,0xe3,0xf9,0x32,0xc9,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k1, %k1 ## encoding: [0xc4,0xe3,0xf9,0x30,0xc9,0x0c]
+; CHECK-NEXT:    vpcmpleq %ymm1, %ymm0, %k2 ## encoding: [0x62,0xf3,0xfd,0x28,0x1f,0xd1,0x02]
+; CHECK-NEXT:    kshiftlw $12, %k2, %k2 ## encoding: [0xc4,0xe3,0xf9,0x32,0xd2,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k2, %k2 ## encoding: [0xc4,0xe3,0xf9,0x30,0xd2,0x0c]
+; CHECK-NEXT:    vpcmpneqq %ymm1, %ymm0, %k3 ## encoding: [0x62,0xf3,0xfd,0x28,0x1f,0xd9,0x04]
+; CHECK-NEXT:    kshiftlw $12, %k3, %k3 ## encoding: [0xc4,0xe3,0xf9,0x32,0xdb,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k3, %k3 ## encoding: [0xc4,0xe3,0xf9,0x30,0xdb,0x0c]
+; CHECK-NEXT:    vpcmpleq %ymm0, %ymm1, %k4 ## encoding: [0x62,0xf3,0xf5,0x28,0x1f,0xe0,0x02]
+; CHECK-NEXT:    kshiftlw $12, %k4, %k4 ## encoding: [0xc4,0xe3,0xf9,0x32,0xe4,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k4, %k4 ## encoding: [0xc4,0xe3,0xf9,0x30,0xe4,0x0c]
+; CHECK-NEXT:    vpcmpgtq %ymm1, %ymm0, %k5 ## encoding: [0x62,0xf2,0xfd,0x28,0x37,0xe9]
+; CHECK-NEXT:    kshiftlw $12, %k5, %k5 ## encoding: [0xc4,0xe3,0xf9,0x32,0xed,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k5, %k5 ## encoding: [0xc4,0xe3,0xf9,0x30,0xed,0x0c]
+; CHECK-NEXT:    kmovw %k0, %eax ## encoding: [0xc5,0xf8,0x93,0xc0]
+; CHECK-NEXT:    vpxor %xmm0, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0xef,0xc0]
+; CHECK-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xc4,0xc0,0x00]
+; CHECK-NEXT:    kmovw %k1, %eax ## encoding: [0xc5,0xf8,0x93,0xc1]
+; CHECK-NEXT:    vpinsrw $1, %eax, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xc4,0xc0,0x01]
+; CHECK-NEXT:    kmovw %k2, %eax ## encoding: [0xc5,0xf8,0x93,0xc2]
+; CHECK-NEXT:    vpinsrw $2, %eax, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xc4,0xc0,0x02]
+; CHECK-NEXT:    kmovw %k3, %eax ## encoding: [0xc5,0xf8,0x93,0xc3]
+; CHECK-NEXT:    vpinsrw $4, %eax, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xc4,0xc0,0x04]
+; CHECK-NEXT:    kmovw %k4, %eax ## encoding: [0xc5,0xf8,0x93,0xc4]
+; CHECK-NEXT:    vpinsrw $5, %eax, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xc4,0xc0,0x05]
+; CHECK-NEXT:    kmovw %k5, %eax ## encoding: [0xc5,0xf8,0x93,0xc5]
+; CHECK-NEXT:    vpinsrw $6, %eax, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xc4,0xc0,0x06]
+; CHECK-NEXT:    movl $15, %eax ## encoding: [0xb8,0x0f,0x00,0x00,0x00]
+; CHECK-NEXT:    vpinsrw $7, %eax, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xc4,0xc0,0x07]
+; CHECK-NEXT:    retq ## encoding: [0xc3]
+  %res0 = call i8 @llvm.x86.avx512.mask.cmp.q.256(<4 x i64> %a0, <4 x i64> %a1, i32 0, i8 -1)
+  %vec0 = insertelement <8 x i8> undef, i8 %res0, i32 0
+  %res1 = call i8 @llvm.x86.avx512.mask.cmp.q.256(<4 x i64> %a0, <4 x i64> %a1, i32 1, i8 -1)
+  %vec1 = insertelement <8 x i8> %vec0, i8 %res1, i32 1
+  %res2 = call i8 @llvm.x86.avx512.mask.cmp.q.256(<4 x i64> %a0, <4 x i64> %a1, i32 2, i8 -1)
+  %vec2 = insertelement <8 x i8> %vec1, i8 %res2, i32 2
+  %res3 = call i8 @llvm.x86.avx512.mask.cmp.q.256(<4 x i64> %a0, <4 x i64> %a1, i32 3, i8 -1)
+  %vec3 = insertelement <8 x i8> %vec2, i8 %res3, i32 3
+  %res4 = call i8 @llvm.x86.avx512.mask.cmp.q.256(<4 x i64> %a0, <4 x i64> %a1, i32 4, i8 -1)
+  %vec4 = insertelement <8 x i8> %vec3, i8 %res4, i32 4
+  %res5 = call i8 @llvm.x86.avx512.mask.cmp.q.256(<4 x i64> %a0, <4 x i64> %a1, i32 5, i8 -1)
+  %vec5 = insertelement <8 x i8> %vec4, i8 %res5, i32 5
+  %res6 = call i8 @llvm.x86.avx512.mask.cmp.q.256(<4 x i64> %a0, <4 x i64> %a1, i32 6, i8 -1)
+  %vec6 = insertelement <8 x i8> %vec5, i8 %res6, i32 6
+  %res7 = call i8 @llvm.x86.avx512.mask.cmp.q.256(<4 x i64> %a0, <4 x i64> %a1, i32 7, i8 -1)
+  %vec7 = insertelement <8 x i8> %vec6, i8 %res7, i32 7
+  ret <8 x i8> %vec7
+}
+
+define <8 x i8> @test_mask_cmp_q_256(<4 x i64> %a0, <4 x i64> %a1, i8 %mask) {
+; CHECK-LABEL: test_mask_cmp_q_256:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
+; CHECK-NEXT:    vpcmpeqq %ymm1, %ymm0, %k0 {%k1} ## encoding: [0x62,0xf2,0xfd,0x29,0x29,0xc1]
+; CHECK-NEXT:    kshiftlw $12, %k0, %k0 ## encoding: [0xc4,0xe3,0xf9,0x32,0xc0,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k0, %k0 ## encoding: [0xc4,0xe3,0xf9,0x30,0xc0,0x0c]
+; CHECK-NEXT:    vpcmpgtq %ymm0, %ymm1, %k2 {%k1} ## encoding: [0x62,0xf2,0xf5,0x29,0x37,0xd0]
+; CHECK-NEXT:    kshiftlw $12, %k2, %k2 ## encoding: [0xc4,0xe3,0xf9,0x32,0xd2,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k2, %k2 ## encoding: [0xc4,0xe3,0xf9,0x30,0xd2,0x0c]
+; CHECK-NEXT:    vpcmpleq %ymm1, %ymm0, %k3 {%k1} ## encoding: [0x62,0xf3,0xfd,0x29,0x1f,0xd9,0x02]
+; CHECK-NEXT:    kshiftlw $12, %k3, %k3 ## encoding: [0xc4,0xe3,0xf9,0x32,0xdb,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k3, %k3 ## encoding: [0xc4,0xe3,0xf9,0x30,0xdb,0x0c]
+; CHECK-NEXT:    kxorw %k0, %k0, %k4 ## encoding: [0xc5,0xfc,0x47,0xe0]
+; CHECK-NEXT:    vpcmpneqq %ymm1, %ymm0, %k5 {%k1} ## encoding: [0x62,0xf3,0xfd,0x29,0x1f,0xe9,0x04]
+; CHECK-NEXT:    kshiftlw $12, %k5, %k5 ## encoding: [0xc4,0xe3,0xf9,0x32,0xed,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k5, %k5 ## encoding: [0xc4,0xe3,0xf9,0x30,0xed,0x0c]
+; CHECK-NEXT:    vpcmpleq %ymm0, %ymm1, %k6 {%k1} ## encoding: [0x62,0xf3,0xf5,0x29,0x1f,0xf0,0x02]
+; CHECK-NEXT:    kshiftlw $12, %k6, %k6 ## encoding: [0xc4,0xe3,0xf9,0x32,0xf6,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k6, %k6 ## encoding: [0xc4,0xe3,0xf9,0x30,0xf6,0x0c]
+; CHECK-NEXT:    vpcmpgtq %ymm1, %ymm0, %k7 {%k1} ## encoding: [0x62,0xf2,0xfd,0x29,0x37,0xf9]
+; CHECK-NEXT:    kshiftlw $12, %k7, %k7 ## encoding: [0xc4,0xe3,0xf9,0x32,0xff,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k7, %k7 ## encoding: [0xc4,0xe3,0xf9,0x30,0xff,0x0c]
+; CHECK-NEXT:    kshiftlw $12, %k1, %k1 ## encoding: [0xc4,0xe3,0xf9,0x32,0xc9,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k1, %k1 ## encoding: [0xc4,0xe3,0xf9,0x30,0xc9,0x0c]
+; CHECK-NEXT:    kmovw %k2, %eax ## encoding: [0xc5,0xf8,0x93,0xc2]
+; CHECK-NEXT:    kmovw %k0, %ecx ## encoding: [0xc5,0xf8,0x93,0xc8]
+; CHECK-NEXT:    vmovd %ecx, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6e,0xc1]
+; CHECK-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x20,0xc0,0x02]
+; CHECK-NEXT:    kmovw %k3, %eax ## encoding: [0xc5,0xf8,0x93,0xc3]
+; CHECK-NEXT:    vpinsrb $4, %eax, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x20,0xc0,0x04]
+; CHECK-NEXT:    kmovw %k4, %eax ## encoding: [0xc5,0xf8,0x93,0xc4]
+; CHECK-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x20,0xc0,0x06]
+; CHECK-NEXT:    kmovw %k5, %eax ## encoding: [0xc5,0xf8,0x93,0xc5]
+; CHECK-NEXT:    vpinsrb $8, %eax, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x20,0xc0,0x08]
+; CHECK-NEXT:    kmovw %k6, %eax ## encoding: [0xc5,0xf8,0x93,0xc6]
+; CHECK-NEXT:    vpinsrb $10, %eax, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x20,0xc0,0x0a]
+; CHECK-NEXT:    kmovw %k7, %eax ## encoding: [0xc5,0xf8,0x93,0xc7]
+; CHECK-NEXT:    vpinsrb $12, %eax, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x20,0xc0,0x0c]
+; CHECK-NEXT:    kmovw %k1, %eax ## encoding: [0xc5,0xf8,0x93,0xc1]
+; CHECK-NEXT:    vpinsrb $14, %eax, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x20,0xc0,0x0e]
+; CHECK-NEXT:    retq ## encoding: [0xc3]
+  %res0 = call i8 @llvm.x86.avx512.mask.cmp.q.256(<4 x i64> %a0, <4 x i64> %a1, i32 0, i8 %mask)
+  %vec0 = insertelement <8 x i8> undef, i8 %res0, i32 0
+  %res1 = call i8 @llvm.x86.avx512.mask.cmp.q.256(<4 x i64> %a0, <4 x i64> %a1, i32 1, i8 %mask)
+  %vec1 = insertelement <8 x i8> %vec0, i8 %res1, i32 1
+  %res2 = call i8 @llvm.x86.avx512.mask.cmp.q.256(<4 x i64> %a0, <4 x i64> %a1, i32 2, i8 %mask)
+  %vec2 = insertelement <8 x i8> %vec1, i8 %res2, i32 2
+  %res3 = call i8 @llvm.x86.avx512.mask.cmp.q.256(<4 x i64> %a0, <4 x i64> %a1, i32 3, i8 %mask)
+  %vec3 = insertelement <8 x i8> %vec2, i8 %res3, i32 3
+  %res4 = call i8 @llvm.x86.avx512.mask.cmp.q.256(<4 x i64> %a0, <4 x i64> %a1, i32 4, i8 %mask)
+  %vec4 = insertelement <8 x i8> %vec3, i8 %res4, i32 4
+  %res5 = call i8 @llvm.x86.avx512.mask.cmp.q.256(<4 x i64> %a0, <4 x i64> %a1, i32 5, i8 %mask)
+  %vec5 = insertelement <8 x i8> %vec4, i8 %res5, i32 5
+  %res6 = call i8 @llvm.x86.avx512.mask.cmp.q.256(<4 x i64> %a0, <4 x i64> %a1, i32 6, i8 %mask)
+  %vec6 = insertelement <8 x i8> %vec5, i8 %res6, i32 6
+  %res7 = call i8 @llvm.x86.avx512.mask.cmp.q.256(<4 x i64> %a0, <4 x i64> %a1, i32 7, i8 %mask)
+  %vec7 = insertelement <8 x i8> %vec6, i8 %res7, i32 7
+  ret <8 x i8> %vec7
+}
+
+declare i8 @llvm.x86.avx512.mask.cmp.q.256(<4 x i64>, <4 x i64>, i32, i8) nounwind readnone
+
+define <8 x i8> @test_ucmp_q_256(<4 x i64> %a0, <4 x i64> %a1) {
+; CHECK-LABEL: test_ucmp_q_256:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vpcmpeqq %ymm1, %ymm0, %k0 ## encoding: [0x62,0xf2,0xfd,0x28,0x29,0xc1]
+; CHECK-NEXT:    kshiftlw $12, %k0, %k0 ## encoding: [0xc4,0xe3,0xf9,0x32,0xc0,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k0, %k0 ## encoding: [0xc4,0xe3,0xf9,0x30,0xc0,0x0c]
+; CHECK-NEXT:    vpcmpltuq %ymm1, %ymm0, %k1 ## encoding: [0x62,0xf3,0xfd,0x28,0x1e,0xc9,0x01]
+; CHECK-NEXT:    kshiftlw $12, %k1, %k1 ## encoding: [0xc4,0xe3,0xf9,0x32,0xc9,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k1, %k1 ## encoding: [0xc4,0xe3,0xf9,0x30,0xc9,0x0c]
+; CHECK-NEXT:    vpcmpleuq %ymm1, %ymm0, %k2 ## encoding: [0x62,0xf3,0xfd,0x28,0x1e,0xd1,0x02]
+; CHECK-NEXT:    kshiftlw $12, %k2, %k2 ## encoding: [0xc4,0xe3,0xf9,0x32,0xd2,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k2, %k2 ## encoding: [0xc4,0xe3,0xf9,0x30,0xd2,0x0c]
+; CHECK-NEXT:    vpcmpneqq %ymm1, %ymm0, %k3 ## encoding: [0x62,0xf3,0xfd,0x28,0x1f,0xd9,0x04]
+; CHECK-NEXT:    kshiftlw $12, %k3, %k3 ## encoding: [0xc4,0xe3,0xf9,0x32,0xdb,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k3, %k3 ## encoding: [0xc4,0xe3,0xf9,0x30,0xdb,0x0c]
+; CHECK-NEXT:    vpcmpnltuq %ymm1, %ymm0, %k4 ## encoding: [0x62,0xf3,0xfd,0x28,0x1e,0xe1,0x05]
+; CHECK-NEXT:    kshiftlw $12, %k4, %k4 ## encoding: [0xc4,0xe3,0xf9,0x32,0xe4,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k4, %k4 ## encoding: [0xc4,0xe3,0xf9,0x30,0xe4,0x0c]
+; CHECK-NEXT:    vpcmpnleuq %ymm1, %ymm0, %k5 ## encoding: [0x62,0xf3,0xfd,0x28,0x1e,0xe9,0x06]
+; CHECK-NEXT:    kshiftlw $12, %k5, %k5 ## encoding: [0xc4,0xe3,0xf9,0x32,0xed,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k5, %k5 ## encoding: [0xc4,0xe3,0xf9,0x30,0xed,0x0c]
+; CHECK-NEXT:    kmovw %k0, %eax ## encoding: [0xc5,0xf8,0x93,0xc0]
+; CHECK-NEXT:    vpxor %xmm0, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0xef,0xc0]
+; CHECK-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xc4,0xc0,0x00]
+; CHECK-NEXT:    kmovw %k1, %eax ## encoding: [0xc5,0xf8,0x93,0xc1]
+; CHECK-NEXT:    vpinsrw $1, %eax, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xc4,0xc0,0x01]
+; CHECK-NEXT:    kmovw %k2, %eax ## encoding: [0xc5,0xf8,0x93,0xc2]
+; CHECK-NEXT:    vpinsrw $2, %eax, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xc4,0xc0,0x02]
+; CHECK-NEXT:    kmovw %k3, %eax ## encoding: [0xc5,0xf8,0x93,0xc3]
+; CHECK-NEXT:    vpinsrw $4, %eax, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xc4,0xc0,0x04]
+; CHECK-NEXT:    kmovw %k4, %eax ## encoding: [0xc5,0xf8,0x93,0xc4]
+; CHECK-NEXT:    vpinsrw $5, %eax, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xc4,0xc0,0x05]
+; CHECK-NEXT:    kmovw %k5, %eax ## encoding: [0xc5,0xf8,0x93,0xc5]
+; CHECK-NEXT:    vpinsrw $6, %eax, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xc4,0xc0,0x06]
+; CHECK-NEXT:    movl $15, %eax ## encoding: [0xb8,0x0f,0x00,0x00,0x00]
+; CHECK-NEXT:    vpinsrw $7, %eax, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xc4,0xc0,0x07]
+; CHECK-NEXT:    retq ## encoding: [0xc3]
+  %res0 = call i8 @llvm.x86.avx512.mask.ucmp.q.256(<4 x i64> %a0, <4 x i64> %a1, i32 0, i8 -1)
+  %vec0 = insertelement <8 x i8> undef, i8 %res0, i32 0
+  %res1 = call i8 @llvm.x86.avx512.mask.ucmp.q.256(<4 x i64> %a0, <4 x i64> %a1, i32 1, i8 -1)
+  %vec1 = insertelement <8 x i8> %vec0, i8 %res1, i32 1
+  %res2 = call i8 @llvm.x86.avx512.mask.ucmp.q.256(<4 x i64> %a0, <4 x i64> %a1, i32 2, i8 -1)
+  %vec2 = insertelement <8 x i8> %vec1, i8 %res2, i32 2
+  %res3 = call i8 @llvm.x86.avx512.mask.ucmp.q.256(<4 x i64> %a0, <4 x i64> %a1, i32 3, i8 -1)
+  %vec3 = insertelement <8 x i8> %vec2, i8 %res3, i32 3
+  %res4 = call i8 @llvm.x86.avx512.mask.ucmp.q.256(<4 x i64> %a0, <4 x i64> %a1, i32 4, i8 -1)
+  %vec4 = insertelement <8 x i8> %vec3, i8 %res4, i32 4
+  %res5 = call i8 @llvm.x86.avx512.mask.ucmp.q.256(<4 x i64> %a0, <4 x i64> %a1, i32 5, i8 -1)
+  %vec5 = insertelement <8 x i8> %vec4, i8 %res5, i32 5
+  %res6 = call i8 @llvm.x86.avx512.mask.ucmp.q.256(<4 x i64> %a0, <4 x i64> %a1, i32 6, i8 -1)
+  %vec6 = insertelement <8 x i8> %vec5, i8 %res6, i32 6
+  %res7 = call i8 @llvm.x86.avx512.mask.ucmp.q.256(<4 x i64> %a0, <4 x i64> %a1, i32 7, i8 -1)
+  %vec7 = insertelement <8 x i8> %vec6, i8 %res7, i32 7
+  ret <8 x i8> %vec7
+}
+
+define <8 x i8> @test_mask_ucmp_q_256(<4 x i64> %a0, <4 x i64> %a1, i8 %mask) {
+; CHECK-LABEL: test_mask_ucmp_q_256:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
+; CHECK-NEXT:    vpcmpeqq %ymm1, %ymm0, %k0 {%k1} ## encoding: [0x62,0xf2,0xfd,0x29,0x29,0xc1]
+; CHECK-NEXT:    kshiftlw $12, %k0, %k0 ## encoding: [0xc4,0xe3,0xf9,0x32,0xc0,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k0, %k0 ## encoding: [0xc4,0xe3,0xf9,0x30,0xc0,0x0c]
+; CHECK-NEXT:    vpcmpltuq %ymm1, %ymm0, %k2 {%k1} ## encoding: [0x62,0xf3,0xfd,0x29,0x1e,0xd1,0x01]
+; CHECK-NEXT:    kshiftlw $12, %k2, %k2 ## encoding: [0xc4,0xe3,0xf9,0x32,0xd2,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k2, %k2 ## encoding: [0xc4,0xe3,0xf9,0x30,0xd2,0x0c]
+; CHECK-NEXT:    vpcmpleuq %ymm1, %ymm0, %k3 {%k1} ## encoding: [0x62,0xf3,0xfd,0x29,0x1e,0xd9,0x02]
+; CHECK-NEXT:    kshiftlw $12, %k3, %k3 ## encoding: [0xc4,0xe3,0xf9,0x32,0xdb,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k3, %k3 ## encoding: [0xc4,0xe3,0xf9,0x30,0xdb,0x0c]
+; CHECK-NEXT:    kxorw %k0, %k0, %k4 ## encoding: [0xc5,0xfc,0x47,0xe0]
+; CHECK-NEXT:    vpcmpneqq %ymm1, %ymm0, %k5 {%k1} ## encoding: [0x62,0xf3,0xfd,0x29,0x1f,0xe9,0x04]
+; CHECK-NEXT:    kshiftlw $12, %k5, %k5 ## encoding: [0xc4,0xe3,0xf9,0x32,0xed,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k5, %k5 ## encoding: [0xc4,0xe3,0xf9,0x30,0xed,0x0c]
+; CHECK-NEXT:    vpcmpnltuq %ymm1, %ymm0, %k6 {%k1} ## encoding: [0x62,0xf3,0xfd,0x29,0x1e,0xf1,0x05]
+; CHECK-NEXT:    kshiftlw $12, %k6, %k6 ## encoding: [0xc4,0xe3,0xf9,0x32,0xf6,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k6, %k6 ## encoding: [0xc4,0xe3,0xf9,0x30,0xf6,0x0c]
+; CHECK-NEXT:    vpcmpnleuq %ymm1, %ymm0, %k7 {%k1} ## encoding: [0x62,0xf3,0xfd,0x29,0x1e,0xf9,0x06]
+; CHECK-NEXT:    kshiftlw $12, %k7, %k7 ## encoding: [0xc4,0xe3,0xf9,0x32,0xff,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k7, %k7 ## encoding: [0xc4,0xe3,0xf9,0x30,0xff,0x0c]
+; CHECK-NEXT:    kshiftlw $12, %k1, %k1 ## encoding: [0xc4,0xe3,0xf9,0x32,0xc9,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k1, %k1 ## encoding: [0xc4,0xe3,0xf9,0x30,0xc9,0x0c]
+; CHECK-NEXT:    kmovw %k2, %eax ## encoding: [0xc5,0xf8,0x93,0xc2]
+; CHECK-NEXT:    kmovw %k0, %ecx ## encoding: [0xc5,0xf8,0x93,0xc8]
+; CHECK-NEXT:    vmovd %ecx, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6e,0xc1]
+; CHECK-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x20,0xc0,0x02]
+; CHECK-NEXT:    kmovw %k3, %eax ## encoding: [0xc5,0xf8,0x93,0xc3]
+; CHECK-NEXT:    vpinsrb $4, %eax, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x20,0xc0,0x04]
+; CHECK-NEXT:    kmovw %k4, %eax ## encoding: [0xc5,0xf8,0x93,0xc4]
+; CHECK-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x20,0xc0,0x06]
+; CHECK-NEXT:    kmovw %k5, %eax ## encoding: [0xc5,0xf8,0x93,0xc5]
+; CHECK-NEXT:    vpinsrb $8, %eax, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x20,0xc0,0x08]
+; CHECK-NEXT:    kmovw %k6, %eax ## encoding: [0xc5,0xf8,0x93,0xc6]
+; CHECK-NEXT:    vpinsrb $10, %eax, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x20,0xc0,0x0a]
+; CHECK-NEXT:    kmovw %k7, %eax ## encoding: [0xc5,0xf8,0x93,0xc7]
+; CHECK-NEXT:    vpinsrb $12, %eax, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x20,0xc0,0x0c]
+; CHECK-NEXT:    kmovw %k1, %eax ## encoding: [0xc5,0xf8,0x93,0xc1]
+; CHECK-NEXT:    vpinsrb $14, %eax, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x20,0xc0,0x0e]
+; CHECK-NEXT:    retq ## encoding: [0xc3]
+  %res0 = call i8 @llvm.x86.avx512.mask.ucmp.q.256(<4 x i64> %a0, <4 x i64> %a1, i32 0, i8 %mask)
+  %vec0 = insertelement <8 x i8> undef, i8 %res0, i32 0
+  %res1 = call i8 @llvm.x86.avx512.mask.ucmp.q.256(<4 x i64> %a0, <4 x i64> %a1, i32 1, i8 %mask)
+  %vec1 = insertelement <8 x i8> %vec0, i8 %res1, i32 1
+  %res2 = call i8 @llvm.x86.avx512.mask.ucmp.q.256(<4 x i64> %a0, <4 x i64> %a1, i32 2, i8 %mask)
+  %vec2 = insertelement <8 x i8> %vec1, i8 %res2, i32 2
+  %res3 = call i8 @llvm.x86.avx512.mask.ucmp.q.256(<4 x i64> %a0, <4 x i64> %a1, i32 3, i8 %mask)
+  %vec3 = insertelement <8 x i8> %vec2, i8 %res3, i32 3
+  %res4 = call i8 @llvm.x86.avx512.mask.ucmp.q.256(<4 x i64> %a0, <4 x i64> %a1, i32 4, i8 %mask)
+  %vec4 = insertelement <8 x i8> %vec3, i8 %res4, i32 4
+  %res5 = call i8 @llvm.x86.avx512.mask.ucmp.q.256(<4 x i64> %a0, <4 x i64> %a1, i32 5, i8 %mask)
+  %vec5 = insertelement <8 x i8> %vec4, i8 %res5, i32 5
+  %res6 = call i8 @llvm.x86.avx512.mask.ucmp.q.256(<4 x i64> %a0, <4 x i64> %a1, i32 6, i8 %mask)
+  %vec6 = insertelement <8 x i8> %vec5, i8 %res6, i32 6
+  %res7 = call i8 @llvm.x86.avx512.mask.ucmp.q.256(<4 x i64> %a0, <4 x i64> %a1, i32 7, i8 %mask)
+  %vec7 = insertelement <8 x i8> %vec6, i8 %res7, i32 7
+  ret <8 x i8> %vec7
+}
+
+declare i8 @llvm.x86.avx512.mask.ucmp.q.256(<4 x i64>, <4 x i64>, i32, i8) nounwind readnone
+
+define <8 x i8> @test_cmp_d_128(<4 x i32> %a0, <4 x i32> %a1) {
+; CHECK-LABEL: test_cmp_d_128:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm0, %k0 ## encoding: [0x62,0xf1,0x7d,0x08,0x76,0xc1]
+; CHECK-NEXT:    kshiftlw $12, %k0, %k0 ## encoding: [0xc4,0xe3,0xf9,0x32,0xc0,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k0, %k0 ## encoding: [0xc4,0xe3,0xf9,0x30,0xc0,0x0c]
+; CHECK-NEXT:    vpcmpgtd %xmm0, %xmm1, %k1 ## encoding: [0x62,0xf1,0x75,0x08,0x66,0xc8]
+; CHECK-NEXT:    kshiftlw $12, %k1, %k1 ## encoding: [0xc4,0xe3,0xf9,0x32,0xc9,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k1, %k1 ## encoding: [0xc4,0xe3,0xf9,0x30,0xc9,0x0c]
+; CHECK-NEXT:    vpcmpled %xmm1, %xmm0, %k2 ## encoding: [0x62,0xf3,0x7d,0x08,0x1f,0xd1,0x02]
+; CHECK-NEXT:    kshiftlw $12, %k2, %k2 ## encoding: [0xc4,0xe3,0xf9,0x32,0xd2,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k2, %k2 ## encoding: [0xc4,0xe3,0xf9,0x30,0xd2,0x0c]
+; CHECK-NEXT:    vpcmpneqd %xmm1, %xmm0, %k3 ## encoding: [0x62,0xf3,0x7d,0x08,0x1f,0xd9,0x04]
+; CHECK-NEXT:    kshiftlw $12, %k3, %k3 ## encoding: [0xc4,0xe3,0xf9,0x32,0xdb,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k3, %k3 ## encoding: [0xc4,0xe3,0xf9,0x30,0xdb,0x0c]
+; CHECK-NEXT:    vpcmpled %xmm0, %xmm1, %k4 ## encoding: [0x62,0xf3,0x75,0x08,0x1f,0xe0,0x02]
+; CHECK-NEXT:    kshiftlw $12, %k4, %k4 ## encoding: [0xc4,0xe3,0xf9,0x32,0xe4,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k4, %k4 ## encoding: [0xc4,0xe3,0xf9,0x30,0xe4,0x0c]
+; CHECK-NEXT:    vpcmpgtd %xmm1, %xmm0, %k5 ## encoding: [0x62,0xf1,0x7d,0x08,0x66,0xe9]
+; CHECK-NEXT:    kshiftlw $12, %k5, %k5 ## encoding: [0xc4,0xe3,0xf9,0x32,0xed,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k5, %k5 ## encoding: [0xc4,0xe3,0xf9,0x30,0xed,0x0c]
+; CHECK-NEXT:    kmovw %k0, %eax ## encoding: [0xc5,0xf8,0x93,0xc0]
+; CHECK-NEXT:    vpxor %xmm0, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0xef,0xc0]
+; CHECK-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xc4,0xc0,0x00]
+; CHECK-NEXT:    kmovw %k1, %eax ## encoding: [0xc5,0xf8,0x93,0xc1]
+; CHECK-NEXT:    vpinsrw $1, %eax, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xc4,0xc0,0x01]
+; CHECK-NEXT:    kmovw %k2, %eax ## encoding: [0xc5,0xf8,0x93,0xc2]
+; CHECK-NEXT:    vpinsrw $2, %eax, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xc4,0xc0,0x02]
+; CHECK-NEXT:    kmovw %k3, %eax ## encoding: [0xc5,0xf8,0x93,0xc3]
+; CHECK-NEXT:    vpinsrw $4, %eax, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xc4,0xc0,0x04]
+; CHECK-NEXT:    kmovw %k4, %eax ## encoding: [0xc5,0xf8,0x93,0xc4]
+; CHECK-NEXT:    vpinsrw $5, %eax, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xc4,0xc0,0x05]
+; CHECK-NEXT:    kmovw %k5, %eax ## encoding: [0xc5,0xf8,0x93,0xc5]
+; CHECK-NEXT:    vpinsrw $6, %eax, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xc4,0xc0,0x06]
+; CHECK-NEXT:    movl $15, %eax ## encoding: [0xb8,0x0f,0x00,0x00,0x00]
+; CHECK-NEXT:    vpinsrw $7, %eax, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xc4,0xc0,0x07]
+; CHECK-NEXT:    retq ## encoding: [0xc3]
+  %res0 = call i8 @llvm.x86.avx512.mask.cmp.d.128(<4 x i32> %a0, <4 x i32> %a1, i32 0, i8 -1)
+  %vec0 = insertelement <8 x i8> undef, i8 %res0, i32 0
+  %res1 = call i8 @llvm.x86.avx512.mask.cmp.d.128(<4 x i32> %a0, <4 x i32> %a1, i32 1, i8 -1)
+  %vec1 = insertelement <8 x i8> %vec0, i8 %res1, i32 1
+  %res2 = call i8 @llvm.x86.avx512.mask.cmp.d.128(<4 x i32> %a0, <4 x i32> %a1, i32 2, i8 -1)
+  %vec2 = insertelement <8 x i8> %vec1, i8 %res2, i32 2
+  %res3 = call i8 @llvm.x86.avx512.mask.cmp.d.128(<4 x i32> %a0, <4 x i32> %a1, i32 3, i8 -1)
+  %vec3 = insertelement <8 x i8> %vec2, i8 %res3, i32 3
+  %res4 = call i8 @llvm.x86.avx512.mask.cmp.d.128(<4 x i32> %a0, <4 x i32> %a1, i32 4, i8 -1)
+  %vec4 = insertelement <8 x i8> %vec3, i8 %res4, i32 4
+  %res5 = call i8 @llvm.x86.avx512.mask.cmp.d.128(<4 x i32> %a0, <4 x i32> %a1, i32 5, i8 -1)
+  %vec5 = insertelement <8 x i8> %vec4, i8 %res5, i32 5
+  %res6 = call i8 @llvm.x86.avx512.mask.cmp.d.128(<4 x i32> %a0, <4 x i32> %a1, i32 6, i8 -1)
+  %vec6 = insertelement <8 x i8> %vec5, i8 %res6, i32 6
+  %res7 = call i8 @llvm.x86.avx512.mask.cmp.d.128(<4 x i32> %a0, <4 x i32> %a1, i32 7, i8 -1)
+  %vec7 = insertelement <8 x i8> %vec6, i8 %res7, i32 7
+  ret <8 x i8> %vec7
+}
+
+define <8 x i8> @test_mask_cmp_d_128(<4 x i32> %a0, <4 x i32> %a1, i8 %mask) {
+; CHECK-LABEL: test_mask_cmp_d_128:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
+; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm0, %k0 {%k1} ## encoding: [0x62,0xf1,0x7d,0x09,0x76,0xc1]
+; CHECK-NEXT:    kshiftlw $12, %k0, %k0 ## encoding: [0xc4,0xe3,0xf9,0x32,0xc0,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k0, %k0 ## encoding: [0xc4,0xe3,0xf9,0x30,0xc0,0x0c]
+; CHECK-NEXT:    vpcmpgtd %xmm0, %xmm1, %k2 {%k1} ## encoding: [0x62,0xf1,0x75,0x09,0x66,0xd0]
+; CHECK-NEXT:    kshiftlw $12, %k2, %k2 ## encoding: [0xc4,0xe3,0xf9,0x32,0xd2,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k2, %k2 ## encoding: [0xc4,0xe3,0xf9,0x30,0xd2,0x0c]
+; CHECK-NEXT:    vpcmpled %xmm1, %xmm0, %k3 {%k1} ## encoding: [0x62,0xf3,0x7d,0x09,0x1f,0xd9,0x02]
+; CHECK-NEXT:    kshiftlw $12, %k3, %k3 ## encoding: [0xc4,0xe3,0xf9,0x32,0xdb,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k3, %k3 ## encoding: [0xc4,0xe3,0xf9,0x30,0xdb,0x0c]
+; CHECK-NEXT:    kxorw %k0, %k0, %k4 ## encoding: [0xc5,0xfc,0x47,0xe0]
+; CHECK-NEXT:    vpcmpneqd %xmm1, %xmm0, %k5 {%k1} ## encoding: [0x62,0xf3,0x7d,0x09,0x1f,0xe9,0x04]
+; CHECK-NEXT:    kshiftlw $12, %k5, %k5 ## encoding: [0xc4,0xe3,0xf9,0x32,0xed,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k5, %k5 ## encoding: [0xc4,0xe3,0xf9,0x30,0xed,0x0c]
+; CHECK-NEXT:    vpcmpled %xmm0, %xmm1, %k6 {%k1} ## encoding: [0x62,0xf3,0x75,0x09,0x1f,0xf0,0x02]
+; CHECK-NEXT:    kshiftlw $12, %k6, %k6 ## encoding: [0xc4,0xe3,0xf9,0x32,0xf6,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k6, %k6 ## encoding: [0xc4,0xe3,0xf9,0x30,0xf6,0x0c]
+; CHECK-NEXT:    vpcmpgtd %xmm1, %xmm0, %k7 {%k1} ## encoding: [0x62,0xf1,0x7d,0x09,0x66,0xf9]
+; CHECK-NEXT:    kshiftlw $12, %k7, %k7 ## encoding: [0xc4,0xe3,0xf9,0x32,0xff,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k7, %k7 ## encoding: [0xc4,0xe3,0xf9,0x30,0xff,0x0c]
+; CHECK-NEXT:    kshiftlw $12, %k1, %k1 ## encoding: [0xc4,0xe3,0xf9,0x32,0xc9,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k1, %k1 ## encoding: [0xc4,0xe3,0xf9,0x30,0xc9,0x0c]
+; CHECK-NEXT:    kmovw %k2, %eax ## encoding: [0xc5,0xf8,0x93,0xc2]
+; CHECK-NEXT:    kmovw %k0, %ecx ## encoding: [0xc5,0xf8,0x93,0xc8]
+; CHECK-NEXT:    vmovd %ecx, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6e,0xc1]
+; CHECK-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x20,0xc0,0x02]
+; CHECK-NEXT:    kmovw %k3, %eax ## encoding: [0xc5,0xf8,0x93,0xc3]
+; CHECK-NEXT:    vpinsrb $4, %eax, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x20,0xc0,0x04]
+; CHECK-NEXT:    kmovw %k4, %eax ## encoding: [0xc5,0xf8,0x93,0xc4]
+; CHECK-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x20,0xc0,0x06]
+; CHECK-NEXT:    kmovw %k5, %eax ## encoding: [0xc5,0xf8,0x93,0xc5]
+; CHECK-NEXT:    vpinsrb $8, %eax, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x20,0xc0,0x08]
+; CHECK-NEXT:    kmovw %k6, %eax ## encoding: [0xc5,0xf8,0x93,0xc6]
+; CHECK-NEXT:    vpinsrb $10, %eax, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x20,0xc0,0x0a]
+; CHECK-NEXT:    kmovw %k7, %eax ## encoding: [0xc5,0xf8,0x93,0xc7]
+; CHECK-NEXT:    vpinsrb $12, %eax, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x20,0xc0,0x0c]
+; CHECK-NEXT:    kmovw %k1, %eax ## encoding: [0xc5,0xf8,0x93,0xc1]
+; CHECK-NEXT:    vpinsrb $14, %eax, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x20,0xc0,0x0e]
+; CHECK-NEXT:    retq ## encoding: [0xc3]
+  %res0 = call i8 @llvm.x86.avx512.mask.cmp.d.128(<4 x i32> %a0, <4 x i32> %a1, i32 0, i8 %mask)
+  %vec0 = insertelement <8 x i8> undef, i8 %res0, i32 0
+  %res1 = call i8 @llvm.x86.avx512.mask.cmp.d.128(<4 x i32> %a0, <4 x i32> %a1, i32 1, i8 %mask)
+  %vec1 = insertelement <8 x i8> %vec0, i8 %res1, i32 1
+  %res2 = call i8 @llvm.x86.avx512.mask.cmp.d.128(<4 x i32> %a0, <4 x i32> %a1, i32 2, i8 %mask)
+  %vec2 = insertelement <8 x i8> %vec1, i8 %res2, i32 2
+  %res3 = call i8 @llvm.x86.avx512.mask.cmp.d.128(<4 x i32> %a0, <4 x i32> %a1, i32 3, i8 %mask)
+  %vec3 = insertelement <8 x i8> %vec2, i8 %res3, i32 3
+  %res4 = call i8 @llvm.x86.avx512.mask.cmp.d.128(<4 x i32> %a0, <4 x i32> %a1, i32 4, i8 %mask)
+  %vec4 = insertelement <8 x i8> %vec3, i8 %res4, i32 4
+  %res5 = call i8 @llvm.x86.avx512.mask.cmp.d.128(<4 x i32> %a0, <4 x i32> %a1, i32 5, i8 %mask)
+  %vec5 = insertelement <8 x i8> %vec4, i8 %res5, i32 5
+  %res6 = call i8 @llvm.x86.avx512.mask.cmp.d.128(<4 x i32> %a0, <4 x i32> %a1, i32 6, i8 %mask)
+  %vec6 = insertelement <8 x i8> %vec5, i8 %res6, i32 6
+  %res7 = call i8 @llvm.x86.avx512.mask.cmp.d.128(<4 x i32> %a0, <4 x i32> %a1, i32 7, i8 %mask)
+  %vec7 = insertelement <8 x i8> %vec6, i8 %res7, i32 7
+  ret <8 x i8> %vec7
+}
+
+declare i8 @llvm.x86.avx512.mask.cmp.d.128(<4 x i32>, <4 x i32>, i32, i8) nounwind readnone
+
+define <8 x i8> @test_ucmp_d_128(<4 x i32> %a0, <4 x i32> %a1) {
+; CHECK-LABEL: test_ucmp_d_128:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm0, %k0 ## encoding: [0x62,0xf1,0x7d,0x08,0x76,0xc1]
+; CHECK-NEXT:    kshiftlw $12, %k0, %k0 ## encoding: [0xc4,0xe3,0xf9,0x32,0xc0,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k0, %k0 ## encoding: [0xc4,0xe3,0xf9,0x30,0xc0,0x0c]
+; CHECK-NEXT:    vpcmpltud %xmm1, %xmm0, %k1 ## encoding: [0x62,0xf3,0x7d,0x08,0x1e,0xc9,0x01]
+; CHECK-NEXT:    kshiftlw $12, %k1, %k1 ## encoding: [0xc4,0xe3,0xf9,0x32,0xc9,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k1, %k1 ## encoding: [0xc4,0xe3,0xf9,0x30,0xc9,0x0c]
+; CHECK-NEXT:    vpcmpleud %xmm1, %xmm0, %k2 ## encoding: [0x62,0xf3,0x7d,0x08,0x1e,0xd1,0x02]
+; CHECK-NEXT:    kshiftlw $12, %k2, %k2 ## encoding: [0xc4,0xe3,0xf9,0x32,0xd2,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k2, %k2 ## encoding: [0xc4,0xe3,0xf9,0x30,0xd2,0x0c]
+; CHECK-NEXT:    vpcmpneqd %xmm1, %xmm0, %k3 ## encoding: [0x62,0xf3,0x7d,0x08,0x1f,0xd9,0x04]
+; CHECK-NEXT:    kshiftlw $12, %k3, %k3 ## encoding: [0xc4,0xe3,0xf9,0x32,0xdb,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k3, %k3 ## encoding: [0xc4,0xe3,0xf9,0x30,0xdb,0x0c]
+; CHECK-NEXT:    vpcmpnltud %xmm1, %xmm0, %k4 ## encoding: [0x62,0xf3,0x7d,0x08,0x1e,0xe1,0x05]
+; CHECK-NEXT:    kshiftlw $12, %k4, %k4 ## encoding: [0xc4,0xe3,0xf9,0x32,0xe4,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k4, %k4 ## encoding: [0xc4,0xe3,0xf9,0x30,0xe4,0x0c]
+; CHECK-NEXT:    vpcmpnleud %xmm1, %xmm0, %k5 ## encoding: [0x62,0xf3,0x7d,0x08,0x1e,0xe9,0x06]
+; CHECK-NEXT:    kshiftlw $12, %k5, %k5 ## encoding: [0xc4,0xe3,0xf9,0x32,0xed,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k5, %k5 ## encoding: [0xc4,0xe3,0xf9,0x30,0xed,0x0c]
+; CHECK-NEXT:    kmovw %k0, %eax ## encoding: [0xc5,0xf8,0x93,0xc0]
+; CHECK-NEXT:    vpxor %xmm0, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0xef,0xc0]
+; CHECK-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xc4,0xc0,0x00]
+; CHECK-NEXT:    kmovw %k1, %eax ## encoding: [0xc5,0xf8,0x93,0xc1]
+; CHECK-NEXT:    vpinsrw $1, %eax, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xc4,0xc0,0x01]
+; CHECK-NEXT:    kmovw %k2, %eax ## encoding: [0xc5,0xf8,0x93,0xc2]
+; CHECK-NEXT:    vpinsrw $2, %eax, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xc4,0xc0,0x02]
+; CHECK-NEXT:    kmovw %k3, %eax ## encoding: [0xc5,0xf8,0x93,0xc3]
+; CHECK-NEXT:    vpinsrw $4, %eax, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xc4,0xc0,0x04]
+; CHECK-NEXT:    kmovw %k4, %eax ## encoding: [0xc5,0xf8,0x93,0xc4]
+; CHECK-NEXT:    vpinsrw $5, %eax, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xc4,0xc0,0x05]
+; CHECK-NEXT:    kmovw %k5, %eax ## encoding: [0xc5,0xf8,0x93,0xc5]
+; CHECK-NEXT:    vpinsrw $6, %eax, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xc4,0xc0,0x06]
+; CHECK-NEXT:    movl $15, %eax ## encoding: [0xb8,0x0f,0x00,0x00,0x00]
+; CHECK-NEXT:    vpinsrw $7, %eax, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xc4,0xc0,0x07]
+; CHECK-NEXT:    retq ## encoding: [0xc3]
+  %res0 = call i8 @llvm.x86.avx512.mask.ucmp.d.128(<4 x i32> %a0, <4 x i32> %a1, i32 0, i8 -1)
+  %vec0 = insertelement <8 x i8> undef, i8 %res0, i32 0
+  %res1 = call i8 @llvm.x86.avx512.mask.ucmp.d.128(<4 x i32> %a0, <4 x i32> %a1, i32 1, i8 -1)
+  %vec1 = insertelement <8 x i8> %vec0, i8 %res1, i32 1
+  %res2 = call i8 @llvm.x86.avx512.mask.ucmp.d.128(<4 x i32> %a0, <4 x i32> %a1, i32 2, i8 -1)
+  %vec2 = insertelement <8 x i8> %vec1, i8 %res2, i32 2
+  %res3 = call i8 @llvm.x86.avx512.mask.ucmp.d.128(<4 x i32> %a0, <4 x i32> %a1, i32 3, i8 -1)
+  %vec3 = insertelement <8 x i8> %vec2, i8 %res3, i32 3
+  %res4 = call i8 @llvm.x86.avx512.mask.ucmp.d.128(<4 x i32> %a0, <4 x i32> %a1, i32 4, i8 -1)
+  %vec4 = insertelement <8 x i8> %vec3, i8 %res4, i32 4
+  %res5 = call i8 @llvm.x86.avx512.mask.ucmp.d.128(<4 x i32> %a0, <4 x i32> %a1, i32 5, i8 -1)
+  %vec5 = insertelement <8 x i8> %vec4, i8 %res5, i32 5
+  %res6 = call i8 @llvm.x86.avx512.mask.ucmp.d.128(<4 x i32> %a0, <4 x i32> %a1, i32 6, i8 -1)
+  %vec6 = insertelement <8 x i8> %vec5, i8 %res6, i32 6
+  %res7 = call i8 @llvm.x86.avx512.mask.ucmp.d.128(<4 x i32> %a0, <4 x i32> %a1, i32 7, i8 -1)
+  %vec7 = insertelement <8 x i8> %vec6, i8 %res7, i32 7
+  ret <8 x i8> %vec7
+}
+
+define <8 x i8> @test_mask_ucmp_d_128(<4 x i32> %a0, <4 x i32> %a1, i8 %mask) {
+; CHECK-LABEL: test_mask_ucmp_d_128:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
+; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm0, %k0 {%k1} ## encoding: [0x62,0xf1,0x7d,0x09,0x76,0xc1]
+; CHECK-NEXT:    kshiftlw $12, %k0, %k0 ## encoding: [0xc4,0xe3,0xf9,0x32,0xc0,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k0, %k0 ## encoding: [0xc4,0xe3,0xf9,0x30,0xc0,0x0c]
+; CHECK-NEXT:    vpcmpltud %xmm1, %xmm0, %k2 {%k1} ## encoding: [0x62,0xf3,0x7d,0x09,0x1e,0xd1,0x01]
+; CHECK-NEXT:    kshiftlw $12, %k2, %k2 ## encoding: [0xc4,0xe3,0xf9,0x32,0xd2,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k2, %k2 ## encoding: [0xc4,0xe3,0xf9,0x30,0xd2,0x0c]
+; CHECK-NEXT:    vpcmpleud %xmm1, %xmm0, %k3 {%k1} ## encoding: [0x62,0xf3,0x7d,0x09,0x1e,0xd9,0x02]
+; CHECK-NEXT:    kshiftlw $12, %k3, %k3 ## encoding: [0xc4,0xe3,0xf9,0x32,0xdb,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k3, %k3 ## encoding: [0xc4,0xe3,0xf9,0x30,0xdb,0x0c]
+; CHECK-NEXT:    kxorw %k0, %k0, %k4 ## encoding: [0xc5,0xfc,0x47,0xe0]
+; CHECK-NEXT:    vpcmpneqd %xmm1, %xmm0, %k5 {%k1} ## encoding: [0x62,0xf3,0x7d,0x09,0x1f,0xe9,0x04]
+; CHECK-NEXT:    kshiftlw $12, %k5, %k5 ## encoding: [0xc4,0xe3,0xf9,0x32,0xed,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k5, %k5 ## encoding: [0xc4,0xe3,0xf9,0x30,0xed,0x0c]
+; CHECK-NEXT:    vpcmpnltud %xmm1, %xmm0, %k6 {%k1} ## encoding: [0x62,0xf3,0x7d,0x09,0x1e,0xf1,0x05]
+; CHECK-NEXT:    kshiftlw $12, %k6, %k6 ## encoding: [0xc4,0xe3,0xf9,0x32,0xf6,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k6, %k6 ## encoding: [0xc4,0xe3,0xf9,0x30,0xf6,0x0c]
+; CHECK-NEXT:    vpcmpnleud %xmm1, %xmm0, %k7 {%k1} ## encoding: [0x62,0xf3,0x7d,0x09,0x1e,0xf9,0x06]
+; CHECK-NEXT:    kshiftlw $12, %k7, %k7 ## encoding: [0xc4,0xe3,0xf9,0x32,0xff,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k7, %k7 ## encoding: [0xc4,0xe3,0xf9,0x30,0xff,0x0c]
+; CHECK-NEXT:    kshiftlw $12, %k1, %k1 ## encoding: [0xc4,0xe3,0xf9,0x32,0xc9,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k1, %k1 ## encoding: [0xc4,0xe3,0xf9,0x30,0xc9,0x0c]
+; CHECK-NEXT:    kmovw %k2, %eax ## encoding: [0xc5,0xf8,0x93,0xc2]
+; CHECK-NEXT:    kmovw %k0, %ecx ## encoding: [0xc5,0xf8,0x93,0xc8]
+; CHECK-NEXT:    vmovd %ecx, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6e,0xc1]
+; CHECK-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x20,0xc0,0x02]
+; CHECK-NEXT:    kmovw %k3, %eax ## encoding: [0xc5,0xf8,0x93,0xc3]
+; CHECK-NEXT:    vpinsrb $4, %eax, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x20,0xc0,0x04]
+; CHECK-NEXT:    kmovw %k4, %eax ## encoding: [0xc5,0xf8,0x93,0xc4]
+; CHECK-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x20,0xc0,0x06]
+; CHECK-NEXT:    kmovw %k5, %eax ## encoding: [0xc5,0xf8,0x93,0xc5]
+; CHECK-NEXT:    vpinsrb $8, %eax, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x20,0xc0,0x08]
+; CHECK-NEXT:    kmovw %k6, %eax ## encoding: [0xc5,0xf8,0x93,0xc6]
+; CHECK-NEXT:    vpinsrb $10, %eax, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x20,0xc0,0x0a]
+; CHECK-NEXT:    kmovw %k7, %eax ## encoding: [0xc5,0xf8,0x93,0xc7]
+; CHECK-NEXT:    vpinsrb $12, %eax, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x20,0xc0,0x0c]
+; CHECK-NEXT:    kmovw %k1, %eax ## encoding: [0xc5,0xf8,0x93,0xc1]
+; CHECK-NEXT:    vpinsrb $14, %eax, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x20,0xc0,0x0e]
+; CHECK-NEXT:    retq ## encoding: [0xc3]
+  %res0 = call i8 @llvm.x86.avx512.mask.ucmp.d.128(<4 x i32> %a0, <4 x i32> %a1, i32 0, i8 %mask)
+  %vec0 = insertelement <8 x i8> undef, i8 %res0, i32 0
+  %res1 = call i8 @llvm.x86.avx512.mask.ucmp.d.128(<4 x i32> %a0, <4 x i32> %a1, i32 1, i8 %mask)
+  %vec1 = insertelement <8 x i8> %vec0, i8 %res1, i32 1
+  %res2 = call i8 @llvm.x86.avx512.mask.ucmp.d.128(<4 x i32> %a0, <4 x i32> %a1, i32 2, i8 %mask)
+  %vec2 = insertelement <8 x i8> %vec1, i8 %res2, i32 2
+  %res3 = call i8 @llvm.x86.avx512.mask.ucmp.d.128(<4 x i32> %a0, <4 x i32> %a1, i32 3, i8 %mask)
+  %vec3 = insertelement <8 x i8> %vec2, i8 %res3, i32 3
+  %res4 = call i8 @llvm.x86.avx512.mask.ucmp.d.128(<4 x i32> %a0, <4 x i32> %a1, i32 4, i8 %mask)
+  %vec4 = insertelement <8 x i8> %vec3, i8 %res4, i32 4
+  %res5 = call i8 @llvm.x86.avx512.mask.ucmp.d.128(<4 x i32> %a0, <4 x i32> %a1, i32 5, i8 %mask)
+  %vec5 = insertelement <8 x i8> %vec4, i8 %res5, i32 5
+  %res6 = call i8 @llvm.x86.avx512.mask.ucmp.d.128(<4 x i32> %a0, <4 x i32> %a1, i32 6, i8 %mask)
+  %vec6 = insertelement <8 x i8> %vec5, i8 %res6, i32 6
+  %res7 = call i8 @llvm.x86.avx512.mask.ucmp.d.128(<4 x i32> %a0, <4 x i32> %a1, i32 7, i8 %mask)
+  %vec7 = insertelement <8 x i8> %vec6, i8 %res7, i32 7
+  ret <8 x i8> %vec7
+}
+
+declare i8 @llvm.x86.avx512.mask.ucmp.d.128(<4 x i32>, <4 x i32>, i32, i8) nounwind readnone
+
+define <8 x i8> @test_cmp_q_128(<2 x i64> %a0, <2 x i64> %a1) {
+; CHECK-LABEL: test_cmp_q_128:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vpcmpeqq %xmm1, %xmm0, %k0 ## encoding: [0x62,0xf2,0xfd,0x08,0x29,0xc1]
+; CHECK-NEXT:    kshiftlw $14, %k0, %k0 ## encoding: [0xc4,0xe3,0xf9,0x32,0xc0,0x0e]
+; CHECK-NEXT:    kshiftrw $14, %k0, %k0 ## encoding: [0xc4,0xe3,0xf9,0x30,0xc0,0x0e]
+; CHECK-NEXT:    kshiftlw $12, %k0, %k0 ## encoding: [0xc4,0xe3,0xf9,0x32,0xc0,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k0, %k0 ## encoding: [0xc4,0xe3,0xf9,0x30,0xc0,0x0c]
+; CHECK-NEXT:    vpcmpgtq %xmm0, %xmm1, %k1 ## encoding: [0x62,0xf2,0xf5,0x08,0x37,0xc8]
+; CHECK-NEXT:    kshiftlw $14, %k1, %k1 ## encoding: [0xc4,0xe3,0xf9,0x32,0xc9,0x0e]
+; CHECK-NEXT:    kshiftrw $14, %k1, %k1 ## encoding: [0xc4,0xe3,0xf9,0x30,0xc9,0x0e]
+; CHECK-NEXT:    kshiftlw $12, %k1, %k1 ## encoding: [0xc4,0xe3,0xf9,0x32,0xc9,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k1, %k1 ## encoding: [0xc4,0xe3,0xf9,0x30,0xc9,0x0c]
+; CHECK-NEXT:    vpcmpleq %xmm1, %xmm0, %k2 ## encoding: [0x62,0xf3,0xfd,0x08,0x1f,0xd1,0x02]
+; CHECK-NEXT:    kshiftlw $14, %k2, %k2 ## encoding: [0xc4,0xe3,0xf9,0x32,0xd2,0x0e]
+; CHECK-NEXT:    kshiftrw $14, %k2, %k2 ## encoding: [0xc4,0xe3,0xf9,0x30,0xd2,0x0e]
+; CHECK-NEXT:    kshiftlw $12, %k2, %k2 ## encoding: [0xc4,0xe3,0xf9,0x32,0xd2,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k2, %k2 ## encoding: [0xc4,0xe3,0xf9,0x30,0xd2,0x0c]
+; CHECK-NEXT:    vpcmpneqq %xmm1, %xmm0, %k3 ## encoding: [0x62,0xf3,0xfd,0x08,0x1f,0xd9,0x04]
+; CHECK-NEXT:    kshiftlw $14, %k3, %k3 ## encoding: [0xc4,0xe3,0xf9,0x32,0xdb,0x0e]
+; CHECK-NEXT:    kshiftrw $14, %k3, %k3 ## encoding: [0xc4,0xe3,0xf9,0x30,0xdb,0x0e]
+; CHECK-NEXT:    kshiftlw $12, %k3, %k3 ## encoding: [0xc4,0xe3,0xf9,0x32,0xdb,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k3, %k3 ## encoding: [0xc4,0xe3,0xf9,0x30,0xdb,0x0c]
+; CHECK-NEXT:    vpcmpleq %xmm0, %xmm1, %k4 ## encoding: [0x62,0xf3,0xf5,0x08,0x1f,0xe0,0x02]
+; CHECK-NEXT:    kshiftlw $14, %k4, %k4 ## encoding: [0xc4,0xe3,0xf9,0x32,0xe4,0x0e]
+; CHECK-NEXT:    kshiftrw $14, %k4, %k4 ## encoding: [0xc4,0xe3,0xf9,0x30,0xe4,0x0e]
+; CHECK-NEXT:    kshiftlw $12, %k4, %k4 ## encoding: [0xc4,0xe3,0xf9,0x32,0xe4,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k4, %k4 ## encoding: [0xc4,0xe3,0xf9,0x30,0xe4,0x0c]
+; CHECK-NEXT:    vpcmpgtq %xmm1, %xmm0, %k5 ## encoding: [0x62,0xf2,0xfd,0x08,0x37,0xe9]
+; CHECK-NEXT:    kshiftlw $14, %k5, %k5 ## encoding: [0xc4,0xe3,0xf9,0x32,0xed,0x0e]
+; CHECK-NEXT:    kshiftrw $14, %k5, %k5 ## encoding: [0xc4,0xe3,0xf9,0x30,0xed,0x0e]
+; CHECK-NEXT:    kshiftlw $12, %k5, %k5 ## encoding: [0xc4,0xe3,0xf9,0x32,0xed,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k5, %k5 ## encoding: [0xc4,0xe3,0xf9,0x30,0xed,0x0c]
+; CHECK-NEXT:    kmovw %k0, %eax ## encoding: [0xc5,0xf8,0x93,0xc0]
+; CHECK-NEXT:    vpxor %xmm0, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0xef,0xc0]
+; CHECK-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xc4,0xc0,0x00]
+; CHECK-NEXT:    kmovw %k1, %eax ## encoding: [0xc5,0xf8,0x93,0xc1]
+; CHECK-NEXT:    vpinsrw $1, %eax, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xc4,0xc0,0x01]
+; CHECK-NEXT:    kmovw %k2, %eax ## encoding: [0xc5,0xf8,0x93,0xc2]
+; CHECK-NEXT:    vpinsrw $2, %eax, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xc4,0xc0,0x02]
+; CHECK-NEXT:    kmovw %k3, %eax ## encoding: [0xc5,0xf8,0x93,0xc3]
+; CHECK-NEXT:    vpinsrw $4, %eax, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xc4,0xc0,0x04]
+; CHECK-NEXT:    kmovw %k4, %eax ## encoding: [0xc5,0xf8,0x93,0xc4]
+; CHECK-NEXT:    vpinsrw $5, %eax, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xc4,0xc0,0x05]
+; CHECK-NEXT:    kmovw %k5, %eax ## encoding: [0xc5,0xf8,0x93,0xc5]
+; CHECK-NEXT:    vpinsrw $6, %eax, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xc4,0xc0,0x06]
+; CHECK-NEXT:    movl $3, %eax ## encoding: [0xb8,0x03,0x00,0x00,0x00]
+; CHECK-NEXT:    vpinsrw $7, %eax, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xc4,0xc0,0x07]
+; CHECK-NEXT:    retq ## encoding: [0xc3]
+  %res0 = call i8 @llvm.x86.avx512.mask.cmp.q.128(<2 x i64> %a0, <2 x i64> %a1, i32 0, i8 -1)
+  %vec0 = insertelement <8 x i8> undef, i8 %res0, i32 0
+  %res1 = call i8 @llvm.x86.avx512.mask.cmp.q.128(<2 x i64> %a0, <2 x i64> %a1, i32 1, i8 -1)
+  %vec1 = insertelement <8 x i8> %vec0, i8 %res1, i32 1
+  %res2 = call i8 @llvm.x86.avx512.mask.cmp.q.128(<2 x i64> %a0, <2 x i64> %a1, i32 2, i8 -1)
+  %vec2 = insertelement <8 x i8> %vec1, i8 %res2, i32 2
+  %res3 = call i8 @llvm.x86.avx512.mask.cmp.q.128(<2 x i64> %a0, <2 x i64> %a1, i32 3, i8 -1)
+  %vec3 = insertelement <8 x i8> %vec2, i8 %res3, i32 3
+  %res4 = call i8 @llvm.x86.avx512.mask.cmp.q.128(<2 x i64> %a0, <2 x i64> %a1, i32 4, i8 -1)
+  %vec4 = insertelement <8 x i8> %vec3, i8 %res4, i32 4
+  %res5 = call i8 @llvm.x86.avx512.mask.cmp.q.128(<2 x i64> %a0, <2 x i64> %a1, i32 5, i8 -1)
+  %vec5 = insertelement <8 x i8> %vec4, i8 %res5, i32 5
+  %res6 = call i8 @llvm.x86.avx512.mask.cmp.q.128(<2 x i64> %a0, <2 x i64> %a1, i32 6, i8 -1)
+  %vec6 = insertelement <8 x i8> %vec5, i8 %res6, i32 6
+  %res7 = call i8 @llvm.x86.avx512.mask.cmp.q.128(<2 x i64> %a0, <2 x i64> %a1, i32 7, i8 -1)
+  %vec7 = insertelement <8 x i8> %vec6, i8 %res7, i32 7
+  ret <8 x i8> %vec7
+}
+
+define <8 x i8> @test_mask_cmp_q_128(<2 x i64> %a0, <2 x i64> %a1, i8 %mask) {
+; CHECK-LABEL: test_mask_cmp_q_128:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
+; CHECK-NEXT:    vpcmpeqq %xmm1, %xmm0, %k0 {%k1} ## encoding: [0x62,0xf2,0xfd,0x09,0x29,0xc1]
+; CHECK-NEXT:    kshiftlw $14, %k0, %k0 ## encoding: [0xc4,0xe3,0xf9,0x32,0xc0,0x0e]
+; CHECK-NEXT:    kshiftrw $14, %k0, %k0 ## encoding: [0xc4,0xe3,0xf9,0x30,0xc0,0x0e]
+; CHECK-NEXT:    kshiftlw $12, %k0, %k0 ## encoding: [0xc4,0xe3,0xf9,0x32,0xc0,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k0, %k0 ## encoding: [0xc4,0xe3,0xf9,0x30,0xc0,0x0c]
+; CHECK-NEXT:    vpcmpgtq %xmm0, %xmm1, %k2 {%k1} ## encoding: [0x62,0xf2,0xf5,0x09,0x37,0xd0]
+; CHECK-NEXT:    kshiftlw $14, %k2, %k2 ## encoding: [0xc4,0xe3,0xf9,0x32,0xd2,0x0e]
+; CHECK-NEXT:    kshiftrw $14, %k2, %k2 ## encoding: [0xc4,0xe3,0xf9,0x30,0xd2,0x0e]
+; CHECK-NEXT:    kshiftlw $12, %k2, %k2 ## encoding: [0xc4,0xe3,0xf9,0x32,0xd2,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k2, %k2 ## encoding: [0xc4,0xe3,0xf9,0x30,0xd2,0x0c]
+; CHECK-NEXT:    vpcmpleq %xmm1, %xmm0, %k3 {%k1} ## encoding: [0x62,0xf3,0xfd,0x09,0x1f,0xd9,0x02]
+; CHECK-NEXT:    kshiftlw $14, %k3, %k3 ## encoding: [0xc4,0xe3,0xf9,0x32,0xdb,0x0e]
+; CHECK-NEXT:    kshiftrw $14, %k3, %k3 ## encoding: [0xc4,0xe3,0xf9,0x30,0xdb,0x0e]
+; CHECK-NEXT:    kshiftlw $12, %k3, %k3 ## encoding: [0xc4,0xe3,0xf9,0x32,0xdb,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k3, %k3 ## encoding: [0xc4,0xe3,0xf9,0x30,0xdb,0x0c]
+; CHECK-NEXT:    kxorw %k0, %k0, %k4 ## encoding: [0xc5,0xfc,0x47,0xe0]
+; CHECK-NEXT:    vpcmpneqq %xmm1, %xmm0, %k5 {%k1} ## encoding: [0x62,0xf3,0xfd,0x09,0x1f,0xe9,0x04]
+; CHECK-NEXT:    kshiftlw $14, %k5, %k5 ## encoding: [0xc4,0xe3,0xf9,0x32,0xed,0x0e]
+; CHECK-NEXT:    kshiftrw $14, %k5, %k5 ## encoding: [0xc4,0xe3,0xf9,0x30,0xed,0x0e]
+; CHECK-NEXT:    kshiftlw $12, %k5, %k5 ## encoding: [0xc4,0xe3,0xf9,0x32,0xed,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k5, %k5 ## encoding: [0xc4,0xe3,0xf9,0x30,0xed,0x0c]
+; CHECK-NEXT:    vpcmpleq %xmm0, %xmm1, %k6 {%k1} ## encoding: [0x62,0xf3,0xf5,0x09,0x1f,0xf0,0x02]
+; CHECK-NEXT:    kshiftlw $14, %k6, %k6 ## encoding: [0xc4,0xe3,0xf9,0x32,0xf6,0x0e]
+; CHECK-NEXT:    kshiftrw $14, %k6, %k6 ## encoding: [0xc4,0xe3,0xf9,0x30,0xf6,0x0e]
+; CHECK-NEXT:    kshiftlw $12, %k6, %k6 ## encoding: [0xc4,0xe3,0xf9,0x32,0xf6,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k6, %k6 ## encoding: [0xc4,0xe3,0xf9,0x30,0xf6,0x0c]
+; CHECK-NEXT:    vpcmpgtq %xmm1, %xmm0, %k7 {%k1} ## encoding: [0x62,0xf2,0xfd,0x09,0x37,0xf9]
+; CHECK-NEXT:    kshiftlw $14, %k7, %k7 ## encoding: [0xc4,0xe3,0xf9,0x32,0xff,0x0e]
+; CHECK-NEXT:    kshiftrw $14, %k7, %k7 ## encoding: [0xc4,0xe3,0xf9,0x30,0xff,0x0e]
+; CHECK-NEXT:    kshiftlw $12, %k7, %k7 ## encoding: [0xc4,0xe3,0xf9,0x32,0xff,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k7, %k7 ## encoding: [0xc4,0xe3,0xf9,0x30,0xff,0x0c]
+; CHECK-NEXT:    kshiftlw $14, %k1, %k1 ## encoding: [0xc4,0xe3,0xf9,0x32,0xc9,0x0e]
+; CHECK-NEXT:    kshiftrw $14, %k1, %k1 ## encoding: [0xc4,0xe3,0xf9,0x30,0xc9,0x0e]
+; CHECK-NEXT:    kshiftlw $12, %k1, %k1 ## encoding: [0xc4,0xe3,0xf9,0x32,0xc9,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k1, %k1 ## encoding: [0xc4,0xe3,0xf9,0x30,0xc9,0x0c]
+; CHECK-NEXT:    kmovw %k2, %eax ## encoding: [0xc5,0xf8,0x93,0xc2]
+; CHECK-NEXT:    kmovw %k0, %ecx ## encoding: [0xc5,0xf8,0x93,0xc8]
+; CHECK-NEXT:    vmovd %ecx, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6e,0xc1]
+; CHECK-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x20,0xc0,0x02]
+; CHECK-NEXT:    kmovw %k3, %eax ## encoding: [0xc5,0xf8,0x93,0xc3]
+; CHECK-NEXT:    vpinsrb $4, %eax, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x20,0xc0,0x04]
+; CHECK-NEXT:    kmovw %k4, %eax ## encoding: [0xc5,0xf8,0x93,0xc4]
+; CHECK-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x20,0xc0,0x06]
+; CHECK-NEXT:    kmovw %k5, %eax ## encoding: [0xc5,0xf8,0x93,0xc5]
+; CHECK-NEXT:    vpinsrb $8, %eax, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x20,0xc0,0x08]
+; CHECK-NEXT:    kmovw %k6, %eax ## encoding: [0xc5,0xf8,0x93,0xc6]
+; CHECK-NEXT:    vpinsrb $10, %eax, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x20,0xc0,0x0a]
+; CHECK-NEXT:    kmovw %k7, %eax ## encoding: [0xc5,0xf8,0x93,0xc7]
+; CHECK-NEXT:    vpinsrb $12, %eax, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x20,0xc0,0x0c]
+; CHECK-NEXT:    kmovw %k1, %eax ## encoding: [0xc5,0xf8,0x93,0xc1]
+; CHECK-NEXT:    vpinsrb $14, %eax, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x20,0xc0,0x0e]
+; CHECK-NEXT:    retq ## encoding: [0xc3]
+  %res0 = call i8 @llvm.x86.avx512.mask.cmp.q.128(<2 x i64> %a0, <2 x i64> %a1, i32 0, i8 %mask)
+  %vec0 = insertelement <8 x i8> undef, i8 %res0, i32 0
+  %res1 = call i8 @llvm.x86.avx512.mask.cmp.q.128(<2 x i64> %a0, <2 x i64> %a1, i32 1, i8 %mask)
+  %vec1 = insertelement <8 x i8> %vec0, i8 %res1, i32 1
+  %res2 = call i8 @llvm.x86.avx512.mask.cmp.q.128(<2 x i64> %a0, <2 x i64> %a1, i32 2, i8 %mask)
+  %vec2 = insertelement <8 x i8> %vec1, i8 %res2, i32 2
+  %res3 = call i8 @llvm.x86.avx512.mask.cmp.q.128(<2 x i64> %a0, <2 x i64> %a1, i32 3, i8 %mask)
+  %vec3 = insertelement <8 x i8> %vec2, i8 %res3, i32 3
+  %res4 = call i8 @llvm.x86.avx512.mask.cmp.q.128(<2 x i64> %a0, <2 x i64> %a1, i32 4, i8 %mask)
+  %vec4 = insertelement <8 x i8> %vec3, i8 %res4, i32 4
+  %res5 = call i8 @llvm.x86.avx512.mask.cmp.q.128(<2 x i64> %a0, <2 x i64> %a1, i32 5, i8 %mask)
+  %vec5 = insertelement <8 x i8> %vec4, i8 %res5, i32 5
+  %res6 = call i8 @llvm.x86.avx512.mask.cmp.q.128(<2 x i64> %a0, <2 x i64> %a1, i32 6, i8 %mask)
+  %vec6 = insertelement <8 x i8> %vec5, i8 %res6, i32 6
+  %res7 = call i8 @llvm.x86.avx512.mask.cmp.q.128(<2 x i64> %a0, <2 x i64> %a1, i32 7, i8 %mask)
+  %vec7 = insertelement <8 x i8> %vec6, i8 %res7, i32 7
+  ret <8 x i8> %vec7
+}
+
+declare i8 @llvm.x86.avx512.mask.cmp.q.128(<2 x i64>, <2 x i64>, i32, i8) nounwind readnone
+
+define <8 x i8> @test_ucmp_q_128(<2 x i64> %a0, <2 x i64> %a1) {
+; CHECK-LABEL: test_ucmp_q_128:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vpcmpeqq %xmm1, %xmm0, %k0 ## encoding: [0x62,0xf2,0xfd,0x08,0x29,0xc1]
+; CHECK-NEXT:    kshiftlw $14, %k0, %k0 ## encoding: [0xc4,0xe3,0xf9,0x32,0xc0,0x0e]
+; CHECK-NEXT:    kshiftrw $14, %k0, %k0 ## encoding: [0xc4,0xe3,0xf9,0x30,0xc0,0x0e]
+; CHECK-NEXT:    kshiftlw $12, %k0, %k0 ## encoding: [0xc4,0xe3,0xf9,0x32,0xc0,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k0, %k0 ## encoding: [0xc4,0xe3,0xf9,0x30,0xc0,0x0c]
+; CHECK-NEXT:    vpcmpltuq %xmm1, %xmm0, %k1 ## encoding: [0x62,0xf3,0xfd,0x08,0x1e,0xc9,0x01]
+; CHECK-NEXT:    kshiftlw $14, %k1, %k1 ## encoding: [0xc4,0xe3,0xf9,0x32,0xc9,0x0e]
+; CHECK-NEXT:    kshiftrw $14, %k1, %k1 ## encoding: [0xc4,0xe3,0xf9,0x30,0xc9,0x0e]
+; CHECK-NEXT:    kshiftlw $12, %k1, %k1 ## encoding: [0xc4,0xe3,0xf9,0x32,0xc9,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k1, %k1 ## encoding: [0xc4,0xe3,0xf9,0x30,0xc9,0x0c]
+; CHECK-NEXT:    vpcmpleuq %xmm1, %xmm0, %k2 ## encoding: [0x62,0xf3,0xfd,0x08,0x1e,0xd1,0x02]
+; CHECK-NEXT:    kshiftlw $14, %k2, %k2 ## encoding: [0xc4,0xe3,0xf9,0x32,0xd2,0x0e]
+; CHECK-NEXT:    kshiftrw $14, %k2, %k2 ## encoding: [0xc4,0xe3,0xf9,0x30,0xd2,0x0e]
+; CHECK-NEXT:    kshiftlw $12, %k2, %k2 ## encoding: [0xc4,0xe3,0xf9,0x32,0xd2,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k2, %k2 ## encoding: [0xc4,0xe3,0xf9,0x30,0xd2,0x0c]
+; CHECK-NEXT:    vpcmpneqq %xmm1, %xmm0, %k3 ## encoding: [0x62,0xf3,0xfd,0x08,0x1f,0xd9,0x04]
+; CHECK-NEXT:    kshiftlw $14, %k3, %k3 ## encoding: [0xc4,0xe3,0xf9,0x32,0xdb,0x0e]
+; CHECK-NEXT:    kshiftrw $14, %k3, %k3 ## encoding: [0xc4,0xe3,0xf9,0x30,0xdb,0x0e]
+; CHECK-NEXT:    kshiftlw $12, %k3, %k3 ## encoding: [0xc4,0xe3,0xf9,0x32,0xdb,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k3, %k3 ## encoding: [0xc4,0xe3,0xf9,0x30,0xdb,0x0c]
+; CHECK-NEXT:    vpcmpnltuq %xmm1, %xmm0, %k4 ## encoding: [0x62,0xf3,0xfd,0x08,0x1e,0xe1,0x05]
+; CHECK-NEXT:    kshiftlw $14, %k4, %k4 ## encoding: [0xc4,0xe3,0xf9,0x32,0xe4,0x0e]
+; CHECK-NEXT:    kshiftrw $14, %k4, %k4 ## encoding: [0xc4,0xe3,0xf9,0x30,0xe4,0x0e]
+; CHECK-NEXT:    kshiftlw $12, %k4, %k4 ## encoding: [0xc4,0xe3,0xf9,0x32,0xe4,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k4, %k4 ## encoding: [0xc4,0xe3,0xf9,0x30,0xe4,0x0c]
+; CHECK-NEXT:    vpcmpnleuq %xmm1, %xmm0, %k5 ## encoding: [0x62,0xf3,0xfd,0x08,0x1e,0xe9,0x06]
+; CHECK-NEXT:    kshiftlw $14, %k5, %k5 ## encoding: [0xc4,0xe3,0xf9,0x32,0xed,0x0e]
+; CHECK-NEXT:    kshiftrw $14, %k5, %k5 ## encoding: [0xc4,0xe3,0xf9,0x30,0xed,0x0e]
+; CHECK-NEXT:    kshiftlw $12, %k5, %k5 ## encoding: [0xc4,0xe3,0xf9,0x32,0xed,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k5, %k5 ## encoding: [0xc4,0xe3,0xf9,0x30,0xed,0x0c]
+; CHECK-NEXT:    kmovw %k0, %eax ## encoding: [0xc5,0xf8,0x93,0xc0]
+; CHECK-NEXT:    vpxor %xmm0, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0xef,0xc0]
+; CHECK-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xc4,0xc0,0x00]
+; CHECK-NEXT:    kmovw %k1, %eax ## encoding: [0xc5,0xf8,0x93,0xc1]
+; CHECK-NEXT:    vpinsrw $1, %eax, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xc4,0xc0,0x01]
+; CHECK-NEXT:    kmovw %k2, %eax ## encoding: [0xc5,0xf8,0x93,0xc2]
+; CHECK-NEXT:    vpinsrw $2, %eax, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xc4,0xc0,0x02]
+; CHECK-NEXT:    kmovw %k3, %eax ## encoding: [0xc5,0xf8,0x93,0xc3]
+; CHECK-NEXT:    vpinsrw $4, %eax, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xc4,0xc0,0x04]
+; CHECK-NEXT:    kmovw %k4, %eax ## encoding: [0xc5,0xf8,0x93,0xc4]
+; CHECK-NEXT:    vpinsrw $5, %eax, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xc4,0xc0,0x05]
+; CHECK-NEXT:    kmovw %k5, %eax ## encoding: [0xc5,0xf8,0x93,0xc5]
+; CHECK-NEXT:    vpinsrw $6, %eax, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xc4,0xc0,0x06]
+; CHECK-NEXT:    movl $3, %eax ## encoding: [0xb8,0x03,0x00,0x00,0x00]
+; CHECK-NEXT:    vpinsrw $7, %eax, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xc4,0xc0,0x07]
+; CHECK-NEXT:    retq ## encoding: [0xc3]
+  %res0 = call i8 @llvm.x86.avx512.mask.ucmp.q.128(<2 x i64> %a0, <2 x i64> %a1, i32 0, i8 -1)
+  %vec0 = insertelement <8 x i8> undef, i8 %res0, i32 0
+  %res1 = call i8 @llvm.x86.avx512.mask.ucmp.q.128(<2 x i64> %a0, <2 x i64> %a1, i32 1, i8 -1)
+  %vec1 = insertelement <8 x i8> %vec0, i8 %res1, i32 1
+  %res2 = call i8 @llvm.x86.avx512.mask.ucmp.q.128(<2 x i64> %a0, <2 x i64> %a1, i32 2, i8 -1)
+  %vec2 = insertelement <8 x i8> %vec1, i8 %res2, i32 2
+  %res3 = call i8 @llvm.x86.avx512.mask.ucmp.q.128(<2 x i64> %a0, <2 x i64> %a1, i32 3, i8 -1)
+  %vec3 = insertelement <8 x i8> %vec2, i8 %res3, i32 3
+  %res4 = call i8 @llvm.x86.avx512.mask.ucmp.q.128(<2 x i64> %a0, <2 x i64> %a1, i32 4, i8 -1)
+  %vec4 = insertelement <8 x i8> %vec3, i8 %res4, i32 4
+  %res5 = call i8 @llvm.x86.avx512.mask.ucmp.q.128(<2 x i64> %a0, <2 x i64> %a1, i32 5, i8 -1)
+  %vec5 = insertelement <8 x i8> %vec4, i8 %res5, i32 5
+  %res6 = call i8 @llvm.x86.avx512.mask.ucmp.q.128(<2 x i64> %a0, <2 x i64> %a1, i32 6, i8 -1)
+  %vec6 = insertelement <8 x i8> %vec5, i8 %res6, i32 6
+  %res7 = call i8 @llvm.x86.avx512.mask.ucmp.q.128(<2 x i64> %a0, <2 x i64> %a1, i32 7, i8 -1)
+  %vec7 = insertelement <8 x i8> %vec6, i8 %res7, i32 7
+  ret <8 x i8> %vec7
+}
+
+define <8 x i8> @test_mask_ucmp_q_128(<2 x i64> %a0, <2 x i64> %a1, i8 %mask) {
+; CHECK-LABEL: test_mask_ucmp_q_128:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
+; CHECK-NEXT:    vpcmpeqq %xmm1, %xmm0, %k0 {%k1} ## encoding: [0x62,0xf2,0xfd,0x09,0x29,0xc1]
+; CHECK-NEXT:    kshiftlw $14, %k0, %k0 ## encoding: [0xc4,0xe3,0xf9,0x32,0xc0,0x0e]
+; CHECK-NEXT:    kshiftrw $14, %k0, %k0 ## encoding: [0xc4,0xe3,0xf9,0x30,0xc0,0x0e]
+; CHECK-NEXT:    kshiftlw $12, %k0, %k0 ## encoding: [0xc4,0xe3,0xf9,0x32,0xc0,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k0, %k0 ## encoding: [0xc4,0xe3,0xf9,0x30,0xc0,0x0c]
+; CHECK-NEXT:    vpcmpltuq %xmm1, %xmm0, %k2 {%k1} ## encoding: [0x62,0xf3,0xfd,0x09,0x1e,0xd1,0x01]
+; CHECK-NEXT:    kshiftlw $14, %k2, %k2 ## encoding: [0xc4,0xe3,0xf9,0x32,0xd2,0x0e]
+; CHECK-NEXT:    kshiftrw $14, %k2, %k2 ## encoding: [0xc4,0xe3,0xf9,0x30,0xd2,0x0e]
+; CHECK-NEXT:    kshiftlw $12, %k2, %k2 ## encoding: [0xc4,0xe3,0xf9,0x32,0xd2,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k2, %k2 ## encoding: [0xc4,0xe3,0xf9,0x30,0xd2,0x0c]
+; CHECK-NEXT:    vpcmpleuq %xmm1, %xmm0, %k3 {%k1} ## encoding: [0x62,0xf3,0xfd,0x09,0x1e,0xd9,0x02]
+; CHECK-NEXT:    kshiftlw $14, %k3, %k3 ## encoding: [0xc4,0xe3,0xf9,0x32,0xdb,0x0e]
+; CHECK-NEXT:    kshiftrw $14, %k3, %k3 ## encoding: [0xc4,0xe3,0xf9,0x30,0xdb,0x0e]
+; CHECK-NEXT:    kshiftlw $12, %k3, %k3 ## encoding: [0xc4,0xe3,0xf9,0x32,0xdb,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k3, %k3 ## encoding: [0xc4,0xe3,0xf9,0x30,0xdb,0x0c]
+; CHECK-NEXT:    kxorw %k0, %k0, %k4 ## encoding: [0xc5,0xfc,0x47,0xe0]
+; CHECK-NEXT:    vpcmpneqq %xmm1, %xmm0, %k5 {%k1} ## encoding: [0x62,0xf3,0xfd,0x09,0x1f,0xe9,0x04]
+; CHECK-NEXT:    kshiftlw $14, %k5, %k5 ## encoding: [0xc4,0xe3,0xf9,0x32,0xed,0x0e]
+; CHECK-NEXT:    kshiftrw $14, %k5, %k5 ## encoding: [0xc4,0xe3,0xf9,0x30,0xed,0x0e]
+; CHECK-NEXT:    kshiftlw $12, %k5, %k5 ## encoding: [0xc4,0xe3,0xf9,0x32,0xed,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k5, %k5 ## encoding: [0xc4,0xe3,0xf9,0x30,0xed,0x0c]
+; CHECK-NEXT:    vpcmpnltuq %xmm1, %xmm0, %k6 {%k1} ## encoding: [0x62,0xf3,0xfd,0x09,0x1e,0xf1,0x05]
+; CHECK-NEXT:    kshiftlw $14, %k6, %k6 ## encoding: [0xc4,0xe3,0xf9,0x32,0xf6,0x0e]
+; CHECK-NEXT:    kshiftrw $14, %k6, %k6 ## encoding: [0xc4,0xe3,0xf9,0x30,0xf6,0x0e]
+; CHECK-NEXT:    kshiftlw $12, %k6, %k6 ## encoding: [0xc4,0xe3,0xf9,0x32,0xf6,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k6, %k6 ## encoding: [0xc4,0xe3,0xf9,0x30,0xf6,0x0c]
+; CHECK-NEXT:    vpcmpnleuq %xmm1, %xmm0, %k7 {%k1} ## encoding: [0x62,0xf3,0xfd,0x09,0x1e,0xf9,0x06]
+; CHECK-NEXT:    kshiftlw $14, %k7, %k7 ## encoding: [0xc4,0xe3,0xf9,0x32,0xff,0x0e]
+; CHECK-NEXT:    kshiftrw $14, %k7, %k7 ## encoding: [0xc4,0xe3,0xf9,0x30,0xff,0x0e]
+; CHECK-NEXT:    kshiftlw $12, %k7, %k7 ## encoding: [0xc4,0xe3,0xf9,0x32,0xff,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k7, %k7 ## encoding: [0xc4,0xe3,0xf9,0x30,0xff,0x0c]
+; CHECK-NEXT:    kshiftlw $14, %k1, %k1 ## encoding: [0xc4,0xe3,0xf9,0x32,0xc9,0x0e]
+; CHECK-NEXT:    kshiftrw $14, %k1, %k1 ## encoding: [0xc4,0xe3,0xf9,0x30,0xc9,0x0e]
+; CHECK-NEXT:    kshiftlw $12, %k1, %k1 ## encoding: [0xc4,0xe3,0xf9,0x32,0xc9,0x0c]
+; CHECK-NEXT:    kshiftrw $12, %k1, %k1 ## encoding: [0xc4,0xe3,0xf9,0x30,0xc9,0x0c]
+; CHECK-NEXT:    kmovw %k2, %eax ## encoding: [0xc5,0xf8,0x93,0xc2]
+; CHECK-NEXT:    kmovw %k0, %ecx ## encoding: [0xc5,0xf8,0x93,0xc8]
+; CHECK-NEXT:    vmovd %ecx, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6e,0xc1]
+; CHECK-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x20,0xc0,0x02]
+; CHECK-NEXT:    kmovw %k3, %eax ## encoding: [0xc5,0xf8,0x93,0xc3]
+; CHECK-NEXT:    vpinsrb $4, %eax, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x20,0xc0,0x04]
+; CHECK-NEXT:    kmovw %k4, %eax ## encoding: [0xc5,0xf8,0x93,0xc4]
+; CHECK-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x20,0xc0,0x06]
+; CHECK-NEXT:    kmovw %k5, %eax ## encoding: [0xc5,0xf8,0x93,0xc5]
+; CHECK-NEXT:    vpinsrb $8, %eax, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x20,0xc0,0x08]
+; CHECK-NEXT:    kmovw %k6, %eax ## encoding: [0xc5,0xf8,0x93,0xc6]
+; CHECK-NEXT:    vpinsrb $10, %eax, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x20,0xc0,0x0a]
+; CHECK-NEXT:    kmovw %k7, %eax ## encoding: [0xc5,0xf8,0x93,0xc7]
+; CHECK-NEXT:    vpinsrb $12, %eax, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x20,0xc0,0x0c]
+; CHECK-NEXT:    kmovw %k1, %eax ## encoding: [0xc5,0xf8,0x93,0xc1]
+; CHECK-NEXT:    vpinsrb $14, %eax, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x20,0xc0,0x0e]
+; CHECK-NEXT:    retq ## encoding: [0xc3]
+  %res0 = call i8 @llvm.x86.avx512.mask.ucmp.q.128(<2 x i64> %a0, <2 x i64> %a1, i32 0, i8 %mask)
+  %vec0 = insertelement <8 x i8> undef, i8 %res0, i32 0
+  %res1 = call i8 @llvm.x86.avx512.mask.ucmp.q.128(<2 x i64> %a0, <2 x i64> %a1, i32 1, i8 %mask)
+  %vec1 = insertelement <8 x i8> %vec0, i8 %res1, i32 1
+  %res2 = call i8 @llvm.x86.avx512.mask.ucmp.q.128(<2 x i64> %a0, <2 x i64> %a1, i32 2, i8 %mask)
+  %vec2 = insertelement <8 x i8> %vec1, i8 %res2, i32 2
+  %res3 = call i8 @llvm.x86.avx512.mask.ucmp.q.128(<2 x i64> %a0, <2 x i64> %a1, i32 3, i8 %mask)
+  %vec3 = insertelement <8 x i8> %vec2, i8 %res3, i32 3
+  %res4 = call i8 @llvm.x86.avx512.mask.ucmp.q.128(<2 x i64> %a0, <2 x i64> %a1, i32 4, i8 %mask)
+  %vec4 = insertelement <8 x i8> %vec3, i8 %res4, i32 4
+  %res5 = call i8 @llvm.x86.avx512.mask.ucmp.q.128(<2 x i64> %a0, <2 x i64> %a1, i32 5, i8 %mask)
+  %vec5 = insertelement <8 x i8> %vec4, i8 %res5, i32 5
+  %res6 = call i8 @llvm.x86.avx512.mask.ucmp.q.128(<2 x i64> %a0, <2 x i64> %a1, i32 6, i8 %mask)
+  %vec6 = insertelement <8 x i8> %vec5, i8 %res6, i32 6
+  %res7 = call i8 @llvm.x86.avx512.mask.ucmp.q.128(<2 x i64> %a0, <2 x i64> %a1, i32 7, i8 %mask)
+  %vec7 = insertelement <8 x i8> %vec6, i8 %res7, i32 7
+  ret <8 x i8> %vec7
+}
+
+declare i8 @llvm.x86.avx512.mask.ucmp.q.128(<2 x i64>, <2 x i64>, i32, i8) nounwind readnone

@@ -2454,9 +2454,44 @@ bool HexagonFrameLowering::mayOverflowFrameOffset(MachineFunction &MF) const {
   unsigned StackSize = MF.getFrameInfo().estimateStackSize(MF);
   auto &HST = MF.getSubtarget<HexagonSubtarget>();
   // A fairly simplistic guess as to whether a potential load/store to a
-  // stack location could require an extra register. It does not account
-  // for store-immediate instructions.
-  if (HST.useHVXOps())
-    return StackSize > 256;
+  // stack location could require an extra register.
+  if (HST.useHVXOps() && StackSize > 256)
+    return true;
+
+  // Check if the function has store-immediate instructions that access
+  // the stack. Since the offset field is not extendable, if the stack
+  // size exceeds the offset limit (6 bits, shifted), the stores will
+  // require a new base register.
+  bool HasImmStack = false;
+  unsigned MinLS = ~0u;   // Log_2 of the memory access size.
+
+  for (const MachineBasicBlock &B : MF) {
+    for (const MachineInstr &MI : B) {
+      unsigned LS = 0;
+      switch (MI.getOpcode()) {
+        case Hexagon::S4_storeirit_io:
+        case Hexagon::S4_storeirif_io:
+        case Hexagon::S4_storeiri_io:
+          ++LS;
+          LLVM_FALLTHROUGH;
+        case Hexagon::S4_storeirht_io:
+        case Hexagon::S4_storeirhf_io:
+        case Hexagon::S4_storeirh_io:
+          ++LS;
+          LLVM_FALLTHROUGH;
+        case Hexagon::S4_storeirbt_io:
+        case Hexagon::S4_storeirbf_io:
+        case Hexagon::S4_storeirb_io:
+          if (MI.getOperand(0).isFI())
+            HasImmStack = true;
+          MinLS = std::min(MinLS, LS);
+          break;
+      }
+    }
+  }
+
+  if (HasImmStack)
+    return !isUInt<6>(StackSize >> MinLS);
+
   return false;
 }

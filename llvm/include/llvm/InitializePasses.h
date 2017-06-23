@@ -192,7 +192,6 @@ void initializeLiveRangeShrinkPass(PassRegistry&);
 void initializeLiveRegMatrixPass(PassRegistry&);
 void initializeLiveStacksPass(PassRegistry&);
 void initializeLiveVariablesPass(PassRegistry&);
-void initializeLoadCombinePass(PassRegistry&);
 void initializeLoadStoreVectorizerPass(PassRegistry&);
 void initializeLoaderPassPass(PassRegistry&);
 void initializeLocalStackSlotPassPass(PassRegistry&);

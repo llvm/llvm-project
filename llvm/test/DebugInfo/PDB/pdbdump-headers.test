@@ -1,7 +1,7 @@
-; RUN: llvm-pdbutil raw -all %p/Inputs/empty.pdb | FileCheck -check-prefix=ALL %s
-; RUN: llvm-pdbutil raw -summary -modules -files \
+; RUN: llvm-pdbutil dump -all %p/Inputs/empty.pdb | FileCheck -check-prefix=ALL %s
+; RUN: llvm-pdbutil dump -summary -modules -files \
 ; RUN:              %p/Inputs/big-read.pdb | FileCheck -check-prefix=BIG %s
-; RUN: not llvm-pdbutil raw -summary %p/Inputs/bad-block-size.pdb 2>&1 | FileCheck -check-prefix=BAD-BLOCK-SIZE %s
+; RUN: not llvm-pdbutil dump -summary %p/Inputs/bad-block-size.pdb 2>&1 | FileCheck -check-prefix=BAD-BLOCK-SIZE %s
 
 ALL:                                Summary
 ALL-NEXT: ============================================================

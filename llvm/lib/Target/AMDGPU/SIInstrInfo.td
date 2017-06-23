@@ -41,24 +41,40 @@ def SIatomic_dec : SDNode<"AMDGPUISD::ATOMIC_DEC", SDTAtomic2,
   [SDNPMayLoad, SDNPMayStore, SDNPMemOperand, SDNPHasChain]
 >;
 
-def SItbuffer_store : SDNode<"AMDGPUISD::TBUFFER_STORE_FORMAT",
-  SDTypeProfile<0, 13,
-    [SDTCisVT<0, v4i32>,   // rsrc(SGPR)
-     SDTCisVT<1, iAny>,   // vdata(VGPR)
-     SDTCisVT<2, i32>,    // num_channels(imm)
-     SDTCisVT<3, i32>,    // vaddr(VGPR)
+def SItbuffer_load : SDNode<"AMDGPUISD::TBUFFER_LOAD_FORMAT",
+  SDTypeProfile<1, 9,
+    [                     // vdata
+     SDTCisVT<1, v4i32>,  // rsrc
+     SDTCisVT<2, i32>,    // vindex(VGPR)
+     SDTCisVT<3, i32>,    // voffset(VGPR)
      SDTCisVT<4, i32>,    // soffset(SGPR)
-     SDTCisVT<5, i32>,    // inst_offset(imm)
+     SDTCisVT<5, i32>,    // offset(imm)
      SDTCisVT<6, i32>,    // dfmt(imm)
      SDTCisVT<7, i32>,    // nfmt(imm)
-     SDTCisVT<8, i32>,    // offen(imm)
-     SDTCisVT<9, i32>,    // idxen(imm)
-     SDTCisVT<10, i32>,   // glc(imm)
-     SDTCisVT<11, i32>,   // slc(imm)
-     SDTCisVT<12, i32>    // tfe(imm)
+     SDTCisVT<8, i32>,    // glc(imm)
+     SDTCisVT<9, i32>     // slc(imm)
     ]>,
-  [SDNPMayStore, SDNPMemOperand, SDNPHasChain]
+  [SDNPMayLoad, SDNPMemOperand, SDNPHasChain]
 >;
+
+def SDTtbuffer_store : SDTypeProfile<0, 10,
+    [                     // vdata
+     SDTCisVT<1, v4i32>,  // rsrc
+     SDTCisVT<2, i32>,    // vindex(VGPR)
+     SDTCisVT<3, i32>,    // voffset(VGPR)
+     SDTCisVT<4, i32>,    // soffset(SGPR)
+     SDTCisVT<5, i32>,    // offset(imm)
+     SDTCisVT<6, i32>,    // dfmt(imm)
+     SDTCisVT<7, i32>,    // nfmt(imm)
+     SDTCisVT<8, i32>,    // glc(imm)
+     SDTCisVT<9, i32>     // slc(imm)
+    ]>;
+
+def SItbuffer_store : SDNode<"AMDGPUISD::TBUFFER_STORE_FORMAT", SDTtbuffer_store,
+                             [SDNPMayStore, SDNPMemOperand, SDNPHasChain]>;
+def SItbuffer_store_x3 : SDNode<"AMDGPUISD::TBUFFER_STORE_FORMAT_X3",
+                                SDTtbuffer_store,
+                                [SDNPMayStore, SDNPMemOperand, SDNPHasChain]>;
 
 def SDTBufferLoad : SDTypeProfile<1, 5,
     [                    // vdata
@@ -546,6 +562,9 @@ def r128 : NamedOperandBit<"R128", NamedMatchClass<"R128">>;
 def lwe : NamedOperandBit<"LWE", NamedMatchClass<"LWE">>;
 def exp_compr : NamedOperandBit<"ExpCompr", NamedMatchClass<"ExpCompr">>;
 def exp_vm : NamedOperandBit<"ExpVM", NamedMatchClass<"ExpVM">>;
+
+def DFMT : NamedOperandU8<"DFMT", NamedMatchClass<"DFMT">>;
+def NFMT : NamedOperandU8<"NFMT", NamedMatchClass<"NFMT">>;
 
 def dmask : NamedOperandU16<"DMask", NamedMatchClass<"DMask">>;
 

@@ -1951,13 +1951,29 @@ MachOObjectFile::section_rel_end(DataRefImpl Sec) const {
   return relocation_iterator(RelocationRef(Ret, this));
 }
 
+relocation_iterator MachOObjectFile::extrel_begin() const {
+  DataRefImpl Ret;
+  Ret.d.a = 0; // Would normally be a section index.
+  Ret.d.b = 0; // Index into the external relocations
+  return relocation_iterator(RelocationRef(Ret, this));
+}
+
+relocation_iterator MachOObjectFile::extrel_end() const {
+  MachO::dysymtab_command DysymtabLoadCmd = getDysymtabLoadCommand();
+  DataRefImpl Ret;
+  Ret.d.a = 0; // Would normally be a section index.
+  Ret.d.b = DysymtabLoadCmd.nextrel; // Index into the external relocations
+  return relocation_iterator(RelocationRef(Ret, this));
+}
+
 void MachOObjectFile::moveRelocationNext(DataRefImpl &Rel) const {
   ++Rel.d.b;
 }
 
 uint64_t MachOObjectFile::getRelocationOffset(DataRefImpl Rel) const {
-  assert(getHeader().filetype == MachO::MH_OBJECT &&
-         "Only implemented for MH_OBJECT");
+  assert((getHeader().filetype == MachO::MH_OBJECT ||
+          getHeader().filetype == MachO::MH_KEXT_BUNDLE) &&
+         "Only implemented for MH_OBJECT && MH_KEXT_BUNDLE");
   MachO::any_relocation_info RE = getRelocation(Rel);
   return getAnyRelocationAddress(RE);
 }
@@ -4086,15 +4102,20 @@ MachOObjectFile::getThreadCommand(const LoadCommandInfo &L) const {
 
 MachO::any_relocation_info
 MachOObjectFile::getRelocation(DataRefImpl Rel) const {
-  DataRefImpl Sec;
-  Sec.d.a = Rel.d.a;
   uint32_t Offset;
-  if (is64Bit()) {
-    MachO::section_64 Sect = getSection64(Sec);
-    Offset = Sect.reloff;
+  if (getHeader().filetype == MachO::MH_OBJECT) {
+    DataRefImpl Sec;
+    Sec.d.a = Rel.d.a;
+    if (is64Bit()) {
+      MachO::section_64 Sect = getSection64(Sec);
+      Offset = Sect.reloff;
+    } else {
+      MachO::section Sect = getSection(Sec);
+      Offset = Sect.reloff;
+    }
   } else {
-    MachO::section Sect = getSection(Sec);
-    Offset = Sect.reloff;
+    MachO::dysymtab_command DysymtabLoadCmd = getDysymtabLoadCommand();
+    Offset = DysymtabLoadCmd.extreloff; // Offset to the external relocations
   }
 
   auto P = reinterpret_cast<const MachO::any_relocation_info *>(

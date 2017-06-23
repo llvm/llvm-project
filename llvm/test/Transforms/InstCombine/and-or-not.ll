@@ -527,8 +527,7 @@ define i32 @and_to_nxor_multiuse(float %fa, float %fb) {
 ; CHECK-NEXT:    [[NOTB:%.*]] = xor i32 [[B]], -1
 ; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[NOTA]], [[B]]
 ; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[NOTB]], [[A]]
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[B]], [[A]]
-; CHECK-NEXT:    [[AND:%.*]] = xor i32 [[TMP1]], -1
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[OR1]], [[OR2]]
 ; CHECK-NEXT:    [[MUL1:%.*]] = mul i32 [[OR1]], [[OR2]]
 ; CHECK-NEXT:    [[MUL2:%.*]] = mul i32 [[MUL1]], [[AND]]
 ; CHECK-NEXT:    ret i32 [[MUL2]]
@@ -552,8 +551,7 @@ define i32 @or_to_nxor_multiuse(i32 %a, i32 %b) {
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 [[A]], [[B]]
 ; CHECK-NEXT:    [[NOTOR:%.*]] = xor i32 [[OR]], -1
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[A]], [[B]]
-; CHECK-NEXT:    [[OR2:%.*]] = xor i32 [[TMP1]], -1
+; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[AND]], [[NOTOR]]
 ; CHECK-NEXT:    [[MUL1:%.*]] = mul i32 [[AND]], [[NOTOR]]
 ; CHECK-NEXT:    [[MUL2:%.*]] = mul i32 [[MUL1]], [[OR2]]
 ; CHECK-NEXT:    ret i32 [[MUL2]]

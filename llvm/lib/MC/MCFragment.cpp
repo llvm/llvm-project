@@ -328,9 +328,9 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
   case MCFragment::FT_Dummy: OS << "MCDummyFragment"; break;
   }
 
-  OS << "<MCFragment " << (void*) this << " LayoutOrder:" << LayoutOrder
+  OS << "<MCFragment " << (const void*) this << " LayoutOrder:" << LayoutOrder
      << " Offset:" << Offset
-     << " HasInstructions:" << hasInstructions() 
+     << " HasInstructions:" << hasInstructions()
      << " BundlePadding:" << static_cast<unsigned>(getBundlePadding()) << ">";
 
   switch (getKind()) {
@@ -382,7 +382,8 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
   }
   case MCFragment::FT_Fill:  {
     const MCFillFragment *FF = cast<MCFillFragment>(this);
-    OS << " Value:" << FF->getValue() << " Size:" << FF->getSize();
+    OS << " Value:" << static_cast<unsigned>(FF->getValue())
+       << " Size:" << FF->getSize();
     break;
   }
   case MCFragment::FT_Relaxable:  {
@@ -395,7 +396,8 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
   case MCFragment::FT_Org:  {
     const MCOrgFragment *OF = cast<MCOrgFragment>(this);
     OS << "\n       ";
-    OS << " Offset:" << OF->getOffset() << " Value:" << OF->getValue();
+    OS << " Offset:" << OF->getOffset()
+       << " Value:" << static_cast<unsigned>(OF->getValue());
     break;
   }
   case MCFragment::FT_Dwarf:  {

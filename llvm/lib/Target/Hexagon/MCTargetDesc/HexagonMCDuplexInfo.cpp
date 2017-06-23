@@ -701,33 +701,32 @@ MCInst HexagonMCInstrInfo::deriveSubInst(MCInst const &Inst) {
     break;
   case Hexagon::A2_addi:
     Absolute = Inst.getOperand(2).getExpr()->evaluateAsAbsolute(Value);
-    assert(Absolute);(void)Absolute;
-    if (Value == 1) {
-      Result.setOpcode(Hexagon::SA1_inc);
-      addOps(Result, Inst, 0);
-      addOps(Result, Inst, 1);
-      break;
-    } //  1,2 SUBInst $Rd = add($Rs, #1)
-    else if (Value == -1) {
-      Result.setOpcode(Hexagon::SA1_dec);
-      addOps(Result, Inst, 0);
-      addOps(Result, Inst, 1);
-      addOps(Result, Inst, 2);
-      break;
-    } //  1,2 SUBInst $Rd = add($Rs,#-1)
-    else if (Inst.getOperand(1).getReg() == Hexagon::R29) {
-      Result.setOpcode(Hexagon::SA1_addsp);
-      addOps(Result, Inst, 0);
-      addOps(Result, Inst, 2);
-      break;
-    } //  1,3 SUBInst $Rd = add(r29, #$u6_2)
-    else {
-      Result.setOpcode(Hexagon::SA1_addi);
-      addOps(Result, Inst, 0);
-      addOps(Result, Inst, 1);
-      addOps(Result, Inst, 2);
-      break;
-    } //    1,2,3 SUBInst $Rx = add($Rx, #$s7)
+    if (Absolute) {
+      if (Value == 1) {
+        Result.setOpcode(Hexagon::SA1_inc);
+        addOps(Result, Inst, 0);
+        addOps(Result, Inst, 1);
+        break;
+      } //  1,2 SUBInst $Rd = add($Rs, #1)
+      if (Value == -1) {
+        Result.setOpcode(Hexagon::SA1_dec);
+        addOps(Result, Inst, 0);
+        addOps(Result, Inst, 1);
+        addOps(Result, Inst, 2);
+        break;
+      } //  1,2 SUBInst $Rd = add($Rs,#-1)
+      if (Inst.getOperand(1).getReg() == Hexagon::R29) {
+        Result.setOpcode(Hexagon::SA1_addsp);
+        addOps(Result, Inst, 0);
+        addOps(Result, Inst, 2);
+        break;
+      } //  1,3 SUBInst $Rd = add(r29, #$u6_2)
+    }
+    Result.setOpcode(Hexagon::SA1_addi);
+    addOps(Result, Inst, 0);
+    addOps(Result, Inst, 1);
+    addOps(Result, Inst, 2);
+    break; //    1,2,3 SUBInst $Rx = add($Rx, #$s7)
   case Hexagon::A2_add:
     Result.setOpcode(Hexagon::SA1_addrx);
     addOps(Result, Inst, 0);

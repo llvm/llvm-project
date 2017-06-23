@@ -152,6 +152,8 @@ public:
     ImmTyExpTgt,
     ImmTyExpCompr,
     ImmTyExpVM,
+    ImmTyDFMT,
+    ImmTyNFMT,
     ImmTyHwreg,
     ImmTyOff,
     ImmTySendMsg,
@@ -294,6 +296,8 @@ public:
   bool isGLC() const { return isImmTy(ImmTyGLC); }
   bool isSLC() const { return isImmTy(ImmTySLC); }
   bool isTFE() const { return isImmTy(ImmTyTFE); }
+  bool isDFMT() const { return isImmTy(ImmTyDFMT) && isUInt<8>(getImm()); }
+  bool isNFMT() const { return isImmTy(ImmTyNFMT) && isUInt<8>(getImm()); }
   bool isBankMask() const { return isImmTy(ImmTyDppBankMask); }
   bool isRowMask() const { return isImmTy(ImmTyDppRowMask); }
   bool isBoundCtrl() const { return isImmTy(ImmTyDppBoundCtrl); }
@@ -638,6 +642,8 @@ public:
     case ImmTyGLC: OS << "GLC"; break;
     case ImmTySLC: OS << "SLC"; break;
     case ImmTyTFE: OS << "TFE"; break;
+    case ImmTyDFMT: OS << "DFMT"; break;
+    case ImmTyNFMT: OS << "NFMT"; break;
     case ImmTyClampSI: OS << "ClampSI"; break;
     case ImmTyOModSI: OS << "OModSI"; break;
     case ImmTyDppCtrl: OS << "DppCtrl"; break;
@@ -1033,6 +1039,8 @@ public:
   void cvtMubuf(MCInst &Inst, const OperandVector &Operands) { cvtMubufImpl(Inst, Operands, false, false); }
   void cvtMubufAtomic(MCInst &Inst, const OperandVector &Operands) { cvtMubufImpl(Inst, Operands, true, false); }
   void cvtMubufAtomicReturn(MCInst &Inst, const OperandVector &Operands) { cvtMubufImpl(Inst, Operands, true, true); }
+  void cvtMtbuf(MCInst &Inst, const OperandVector &Operands);
+
   AMDGPUOperand::Ptr defaultGLC() const;
   AMDGPUOperand::Ptr defaultSLC() const;
   AMDGPUOperand::Ptr defaultTFE() const;
@@ -3820,6 +3828,44 @@ void AMDGPUAsmParser::cvtMubufImpl(MCInst &Inst,
   addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyTFE);
 }
 
+void AMDGPUAsmParser::cvtMtbuf(MCInst &Inst, const OperandVector &Operands) {
+  OptionalImmIndexMap OptionalIdx;
+
+  for (unsigned i = 1, e = Operands.size(); i != e; ++i) {
+    AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[i]);
+
+    // Add the register arguments
+    if (Op.isReg()) {
+      Op.addRegOperands(Inst, 1);
+      continue;
+    }
+
+    // Handle the case where soffset is an immediate
+    if (Op.isImm() && Op.getImmTy() == AMDGPUOperand::ImmTyNone) {
+      Op.addImmOperands(Inst, 1);
+      continue;
+    }
+
+    // Handle tokens like 'offen' which are sometimes hard-coded into the
+    // asm string.  There are no MCInst operands for these.
+    if (Op.isToken()) {
+      continue;
+    }
+    assert(Op.isImm());
+
+    // Handle optional arguments
+    OptionalIdx[Op.getImmTy()] = i;
+  }
+
+  addOptionalImmOperand(Inst, Operands, OptionalIdx,
+                        AMDGPUOperand::ImmTyOffset);
+  addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyDFMT);
+  addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyNFMT);
+  addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyGLC);
+  addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTySLC);
+  addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyTFE);
+}
+
 //===----------------------------------------------------------------------===//
 // mimg
 //===----------------------------------------------------------------------===//
@@ -4000,6 +4046,8 @@ static const OptionalOperand AMDGPUOptionalOperandTable[] = {
   {"offset1", AMDGPUOperand::ImmTyOffset1, false, nullptr},
   {"gds",     AMDGPUOperand::ImmTyGDS, true, nullptr},
   {"offset",  AMDGPUOperand::ImmTyOffset, false, nullptr},
+  {"dfmt",    AMDGPUOperand::ImmTyDFMT, false, nullptr},
+  {"nfmt",    AMDGPUOperand::ImmTyNFMT, false, nullptr},
   {"glc",     AMDGPUOperand::ImmTyGLC, true, nullptr},
   {"slc",     AMDGPUOperand::ImmTySLC, true, nullptr},
   {"tfe",     AMDGPUOperand::ImmTyTFE, true, nullptr},

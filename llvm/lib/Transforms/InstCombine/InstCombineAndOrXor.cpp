@@ -1097,20 +1097,11 @@ static Instruction *foldLogicCastConstant(BinaryOperator &Logic, CastInst *Cast,
   Type *DestTy = Logic.getType();
   Type *SrcTy = Cast->getSrcTy();
 
-  // If the first operand is bitcast, move the logic operation ahead of the
-  // bitcast (do the logic operation in the original type). This can eliminate
-  // bitcasts and allow combines that would otherwise be impeded by the bitcast.
+  // Move the logic operation ahead of a zext if the constant is unchanged in
+  // the smaller source type. Performing the logic in a smaller type may provide
+  // more information to later folds, and the smaller logic instruction may be
+  // cheaper (particularly in the case of vectors).
   Value *X;
-  if (match(Cast, m_BitCast(m_Value(X)))) {
-    Value *NewConstant = ConstantExpr::getBitCast(C, SrcTy);
-    Value *NewOp = Builder->CreateBinOp(LogicOpc, X, NewConstant);
-    return CastInst::CreateBitOrPointerCast(NewOp, DestTy);
-  }
-
-  // Similarly, move the logic operation ahead of a zext if the constant is
-  // unchanged in the smaller source type. Performing the logic in a smaller
-  // type may provide more information to later folds, and the smaller logic
-  // instruction may be cheaper (particularly in the case of vectors).
   if (match(Cast, m_OneUse(m_ZExt(m_Value(X))))) {
     Constant *TruncC = ConstantExpr::getTrunc(C, SrcTy);
     Constant *ZextTruncC = ConstantExpr::getZExt(TruncC, DestTy);
@@ -1239,9 +1230,10 @@ static Instruction *foldAndToXor(BinaryOperator &I,
   // (A | ~B) & (B | ~A) --> ~(A ^ B)
   // (~B | A) & (~A | B) --> ~(A ^ B)
   // (~B | A) & (B | ~A) --> ~(A ^ B)
-  if (match(Op0, m_c_Or(m_Value(A), m_Not(m_Value(B)))) &&
-      match(Op1, m_c_Or(m_Not(m_Specific(A)), m_Specific(B))))
-    return BinaryOperator::CreateNot(Builder.CreateXor(A, B));
+  if (Op0->hasOneUse() || Op1->hasOneUse())
+    if (match(Op0, m_c_Or(m_Value(A), m_Not(m_Value(B)))) &&
+        match(Op1, m_c_Or(m_Not(m_Specific(A)), m_Specific(B))))
+      return BinaryOperator::CreateNot(Builder.CreateXor(A, B));
 
   return nullptr;
 }
@@ -1256,9 +1248,10 @@ static Instruction *foldOrToXor(BinaryOperator &I,
   // Operand complexity canonicalization guarantees that the 'and' is Op0.
   // (A & B) | ~(A | B) --> ~(A ^ B)
   // (A & B) | ~(B | A) --> ~(A ^ B)
-  if (match(Op0, m_And(m_Value(A), m_Value(B))) &&
-      match(Op1, m_Not(m_c_Or(m_Specific(A), m_Specific(B)))))
-    return BinaryOperator::CreateNot(Builder.CreateXor(A, B));
+  if (Op0->hasOneUse() || Op1->hasOneUse())
+    if (match(Op0, m_And(m_Value(A), m_Value(B))) &&
+        match(Op1, m_Not(m_c_Or(m_Specific(A), m_Specific(B)))))
+      return BinaryOperator::CreateNot(Builder.CreateXor(A, B));
 
   // (A & ~B) | (~A & B) --> A ^ B
   // (A & ~B) | (B & ~A) --> A ^ B
@@ -1579,11 +1572,14 @@ static Value *getSelectCondition(Value *A, Value *B,
 
   // If A and B are sign-extended, look through the sexts to find the booleans.
   Value *Cond;
+  Value *NotB;
   if (match(A, m_SExt(m_Value(Cond))) &&
       Cond->getType()->getScalarType()->isIntegerTy(1) &&
-      match(B, m_CombineOr(m_Not(m_SExt(m_Specific(Cond))),
-                           m_SExt(m_Not(m_Specific(Cond))))))
-    return Cond;
+      match(B, m_OneUse(m_Not(m_Value(NotB))))) {
+    NotB = peekThroughBitcast(NotB, true);
+    if (match(NotB, m_SExt(m_Specific(Cond))))
+      return Cond;
+  }
 
   // All scalar (and most vector) possibilities should be handled now.
   // Try more matches that only apply to non-splat constant vectors.
@@ -1615,12 +1611,8 @@ static Value *matchSelectFromAndOr(Value *A, Value *C, Value *B, Value *D,
   // The potential condition of the select may be bitcasted. In that case, look
   // through its bitcast and the corresponding bitcast of the 'not' condition.
   Type *OrigType = A->getType();
-  Value *SrcA, *SrcB;
-  if (match(A, m_OneUse(m_BitCast(m_Value(SrcA)))) &&
-      match(B, m_OneUse(m_BitCast(m_Value(SrcB))))) {
-    A = SrcA;
-    B = SrcB;
-  }
+  A = peekThroughBitcast(A, true);
+  B = peekThroughBitcast(B, true);
 
   if (Value *Cond = getSelectCondition(A, B, Builder)) {
     // ((bc Cond) & C) | ((bc ~Cond) & D) --> bc (select Cond, (bc C), (bc D))

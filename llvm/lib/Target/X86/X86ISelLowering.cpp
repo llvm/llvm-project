@@ -18651,8 +18651,9 @@ X86TargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
                                            SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
   bool SplitStack = MF.shouldSplitStack();
+  bool EmitStackProbe = !getStackProbeSymbolName(MF).empty();
   bool Lower = (Subtarget.isOSWindows() && !Subtarget.isTargetMachO()) ||
-               SplitStack;
+               SplitStack || EmitStackProbe;
   SDLoc dl(Op);
 
   // Get the inputs.
@@ -34896,12 +34897,40 @@ static SDValue combineAddOrSubToADCOrSBB(SDNode *N, SelectionDAG &DAG) {
       !Cmp.getOperand(0).getValueType().isInteger())
     return SDValue();
 
-  // (cmp Z, 1) sets the carry flag if Z is 0.
   SDValue Z = Cmp.getOperand(0);
+  SDVTList VTs = DAG.getVTList(N->getValueType(0), MVT::i32);
+
+  // If X is -1 or 0, then we have an opportunity to avoid constants required in
+  // the general case below.
+  if (auto *ConstantX = dyn_cast<ConstantSDNode>(X)) {
+    // 'neg' sets the carry flag when Z != 0, so create 0 or -1 using 'sbb' with
+    // fake operands:
+    //  0 - (Z != 0) --> sbb %eax, %eax, (neg Z)
+    // -1 + (Z == 0) --> sbb %eax, %eax, (neg Z)
+    if ((IsSub && CC == X86::COND_NE && ConstantX->isNullValue()) ||
+        (!IsSub && CC == X86::COND_E && ConstantX->isAllOnesValue())) {
+      SDValue Zero = DAG.getConstant(0, DL, VT);
+      SDValue Neg = DAG.getNode(X86ISD::SUB, DL, VTs, Zero, Z);
+      return DAG.getNode(X86ISD::SETCC_CARRY, DL, VT,
+                         DAG.getConstant(X86::COND_B, DL, MVT::i8),
+                         SDValue(Neg.getNode(), 1));
+    }
+    // cmp with 1 sets the carry flag when Z == 0, so create 0 or -1 using 'sbb'
+    // with fake operands:
+    //  0 - (Z == 0) --> sbb %eax, %eax, (cmp Z, 1)
+    // -1 + (Z != 0) --> sbb %eax, %eax, (cmp Z, 1)
+    if ((IsSub && CC == X86::COND_E && ConstantX->isNullValue()) ||
+        (!IsSub && CC == X86::COND_NE && ConstantX->isAllOnesValue())) {
+      SDValue One = DAG.getConstant(1, DL, Z.getValueType());
+      SDValue Cmp1 = DAG.getNode(X86ISD::CMP, DL, MVT::i32, Z, One);
+      return DAG.getNode(X86ISD::SETCC_CARRY, DL, VT,
+                         DAG.getConstant(X86::COND_B, DL, MVT::i8), Cmp1);
+    }
+  }
+
+  // (cmp Z, 1) sets the carry flag if Z is 0.
   SDValue NewCmp = DAG.getNode(X86ISD::CMP, DL, MVT::i32, Z,
                                DAG.getConstant(1, DL, Z.getValueType()));
-
-  SDVTList VTs = DAG.getVTList(N->getValueType(0), MVT::i32);
 
   // X - (Z != 0) --> sub X, (zext(setne Z, 0)) --> adc X, -1, (cmp Z, 1)
   // X + (Z != 0) --> add X, (zext(setne Z, 0)) --> sbb X, -1, (cmp Z, 1)
@@ -36389,4 +36418,23 @@ void X86TargetLowering::insertCopiesSplitCSR(
 
 bool X86TargetLowering::supportSwiftError() const {
   return Subtarget.is64Bit();
+}
+
+/// Returns the name of the symbol used to emit stack probes or the empty
+/// string if not applicable.
+StringRef X86TargetLowering::getStackProbeSymbolName(MachineFunction &MF) const {
+  // If the function specifically requests stack probes, emit them.
+  if (MF.getFunction()->hasFnAttribute("probe-stack"))
+    return MF.getFunction()->getFnAttribute("probe-stack").getValueAsString();
+
+  // Generally, if we aren't on Windows, the platform ABI does not include
+  // support for stack probes, so don't emit them.
+  if (!Subtarget.isOSWindows() || Subtarget.isTargetMachO())
+    return "";
+
+  // We need a stack probe to conform to the Windows ABI. Choose the right
+  // symbol.
+  if (Subtarget.is64Bit())
+    return Subtarget.isTargetCygMing() ? "___chkstk_ms" : "__chkstk";
+  return Subtarget.isTargetCygMing() ? "_alloca" : "_chkstk";
 }

@@ -28,6 +28,7 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -295,15 +296,12 @@ bool HexagonGenMux::genMuxInBlock(MachineBasicBlock &B) {
     unsigned SR1 = Src1->isReg() ? Src1->getReg() : 0;
     unsigned SR2 = Src2->isReg() ? Src2->getReg() : 0;
     bool Failure = false, CanUp = true, CanDown = true;
-    bool Used1 = false, Used2 = false;
     for (unsigned X = MinX+1; X < MaxX; X++) {
       const DefUseInfo &DU = DUM.lookup(X);
       if (DU.Defs[PR] || DU.Defs[DR] || DU.Uses[DR]) {
         Failure = true;
         break;
       }
-      Used1 |= DU.Uses[SR1];
-      Used2 |= DU.Uses[SR2];
       if (CanDown && DU.Defs[SR1])
         CanDown = false;
       if (CanUp && DU.Defs[SR2])
@@ -317,62 +315,50 @@ bool HexagonGenMux::genMuxInBlock(MachineBasicBlock &B) {
     // Prefer "down", since this will move the MUX farther away from the
     // predicate definition.
     MachineBasicBlock::iterator At = CanDown ? Def2 : Def1;
-    if (CanDown) {
-      // If the MUX is placed "down", we need to make sure that there aren't
-      // any kills of the source registers between the two defs.
-      if (Used1 || Used2) {
-        auto ResetKill = [this] (unsigned Reg, MachineInstr &MI) -> bool {
-          if (MachineOperand *Op = MI.findRegisterUseOperand(Reg, true, HRI)) {
-            Op->setIsKill(false);
-            return true;
-          }
-          return false;
-        };
-        bool KilledSR1 = false, KilledSR2 = false;
-        for (MachineInstr &MJ : make_range(std::next(It1), It2)) {
-          if (SR1)
-            KilledSR1 |= ResetKill(SR1, MJ);
-          if (SR2)
-            KilledSR2 |= ResetKill(SR1, MJ);
-        }
-        // If any of the source registers were killed in this range, transfer
-        // the kills to the source operands: they will me "moved" to the
-        // resulting MUX and their parent instructions will be deleted.
-        if (KilledSR1) {
-          assert(Src1->isReg());
-          Src1->setIsKill(true);
-        }
-        if (KilledSR2) {
-          assert(Src2->isReg());
-          Src2->setIsKill(true);
-        }
-      }
-    } else {
-      // If the MUX is placed "up", it shouldn't kill any source registers
-      // that are still used afterwards. We can reset the kill flags directly
-      // on the operands, because the source instructions will be erased.
-      if (Used1 && Src1->isReg())
-        Src1->setIsKill(false);
-      if (Used2 && Src2->isReg())
-        Src2->setIsKill(false);
-    }
     ML.push_back(MuxInfo(At, DR, PR, SrcT, SrcF, Def1, Def2));
   }
 
-  for (unsigned I = 0, N = ML.size(); I < N; ++I) {
-    MuxInfo &MX = ML[I];
-    MachineBasicBlock &B = *MX.At->getParent();
-    DebugLoc DL = MX.At->getDebugLoc();
+  for (MuxInfo &MX : ML) {
     unsigned MxOpc = getMuxOpcode(*MX.SrcT, *MX.SrcF);
     if (!MxOpc)
       continue;
-    BuildMI(B, MX.At, DL, HII->get(MxOpc), MX.DefR)
-        .addReg(MX.PredR)
-        .add(*MX.SrcT)
-        .add(*MX.SrcF);
+    MachineBasicBlock &B = *MX.At->getParent();
+    const DebugLoc &DL = B.findDebugLoc(MX.At);
+    auto NewMux = BuildMI(B, MX.At, DL, HII->get(MxOpc), MX.DefR)
+                      .addReg(MX.PredR)
+                      .add(*MX.SrcT)
+                      .add(*MX.SrcF);
+    NewMux->clearKillInfo();
     B.erase(MX.Def1);
     B.erase(MX.Def2);
     Changed = true;
+  }
+
+  // Fix up kill flags.
+
+  LivePhysRegs LPR(*HRI);
+  LPR.addLiveOuts(B);
+  auto IsLive = [&LPR,this] (unsigned Reg) -> bool {
+    for (MCSubRegIterator S(Reg, HRI, true); S.isValid(); ++S)
+      if (LPR.contains(*S))
+        return true;
+    return false;
+  };
+  for (auto I = B.rbegin(), E = B.rend(); I != E; ++I) {
+    if (I->isDebugValue())
+      continue;
+    // This isn't 100% accurate, but it's safe.
+    // It won't detect (as a kill) a case like this
+    //   r0 = add r0, 1    <-- r0 should be "killed"
+    //   ... = r0
+    for (MachineOperand &Op : I->operands()) {
+      if (!Op.isReg() || !Op.isUse())
+        continue;
+      assert(Op.getSubReg() == 0 && "Should have physical registers only");
+      bool Live = IsLive(Op.getReg());
+      Op.setIsKill(!Live);
+    }
+    LPR.stepBackward(*I);
   }
 
   return Changed;

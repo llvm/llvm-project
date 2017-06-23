@@ -45,6 +45,8 @@ public:
 
   void formatBinary(StringRef Label, ArrayRef<uint8_t> Data,
                     uint32_t StartOffset);
+  void formatBinary(StringRef Label, ArrayRef<uint8_t> Data, uint64_t BaseAddr,
+                    uint32_t StartOffset);
 
   bool hasColor() const { return UseColor; }
   raw_ostream &getStream() { return OS; }

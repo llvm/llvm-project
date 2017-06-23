@@ -174,6 +174,12 @@ private:
     ArgV[0] = "<jit process>";
     for (auto &Arg : Args)
       ArgV[Idx++] = Arg.c_str();
+    ArgV[ArgC] = 0;
+    DEBUG(
+      for (int Idx = 0; Idx < ArgC; ++Idx) {
+        llvm::dbgs() << "Arg " << Idx << ": " << ArgV[Idx] << "\n";
+      }
+    );
 
     DEBUG(dbgs() << "  Calling " << format("0x%016x", Addr) << "\n");
     int Result = Fn(ArgC, ArgV.get());

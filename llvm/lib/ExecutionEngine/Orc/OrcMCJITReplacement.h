@@ -198,17 +198,16 @@ public:
   }
 
   void addObjectFile(std::unique_ptr<object::ObjectFile> O) override {
-    std::vector<std::unique_ptr<object::ObjectFile>> Objs;
-    Objs.push_back(std::move(O));
-    ObjectLayer.addObjectSet(std::move(Objs), &MemMgr, &Resolver);
+    auto Obj =
+      std::make_shared<object::OwningBinary<object::ObjectFile>>(std::move(O),
+                                                                 nullptr);
+    ObjectLayer.addObject(std::move(Obj), &MemMgr, &Resolver);
   }
 
   void addObjectFile(object::OwningBinary<object::ObjectFile> O) override {
-    std::vector<std::unique_ptr<object::OwningBinary<object::ObjectFile>>> Objs;
-    Objs.push_back(
-      llvm::make_unique<object::OwningBinary<object::ObjectFile>>(
-        std::move(O)));
-    ObjectLayer.addObjectSet(std::move(Objs), &MemMgr, &Resolver);
+    auto Obj =
+      std::make_shared<object::OwningBinary<object::ObjectFile>>(std::move(O));
+    ObjectLayer.addObject(std::move(Obj), &MemMgr, &Resolver);
   }
 
   void addArchive(object::OwningBinary<object::Archive> A) override {
@@ -260,7 +259,7 @@ public:
                            ArrayRef<GenericValue> ArgValues) override;
 
   void setObjectCache(ObjectCache *NewCache) override {
-    CompileLayer.setObjectCache(NewCache);
+    CompileLayer.getCompiler().setObjectCache(NewCache);
   }
 
   void setProcessAllSections(bool ProcessAllSections) override {
@@ -298,10 +297,12 @@ private:
         }
         std::unique_ptr<object::Binary> &ChildBin = ChildBinOrErr.get();
         if (ChildBin->isObject()) {
-          std::vector<std::unique_ptr<object::ObjectFile>> ObjSet;
-          ObjSet.push_back(std::unique_ptr<object::ObjectFile>(
-              static_cast<object::ObjectFile *>(ChildBin.release())));
-          ObjectLayer.addObjectSet(std::move(ObjSet), &MemMgr, &Resolver);
+          std::unique_ptr<object::ObjectFile> ChildObj(
+            static_cast<object::ObjectFile*>(ChildBinOrErr->release()));
+          auto Obj =
+            std::make_shared<object::OwningBinary<object::ObjectFile>>(
+              std::move(ChildObj), nullptr);
+          ObjectLayer.addObject(std::move(Obj), &MemMgr, &Resolver);
           if (auto Sym = ObjectLayer.findSymbol(Name, true))
             return Sym;
         }
@@ -317,29 +318,14 @@ private:
 
     NotifyObjectLoadedT(OrcMCJITReplacement &M) : M(M) {}
 
-    template <typename ObjListT>
-    void operator()(RTDyldObjectLinkingLayerBase::ObjSetHandleT H,
-                    const ObjListT &Objects,
-                    const LoadedObjInfoListT &Infos) const {
+    void operator()(RTDyldObjectLinkingLayerBase::ObjHandleT H,
+                    const RTDyldObjectLinkingLayer::ObjectPtr &Obj,
+                    const LoadedObjectInfo &Info) const {
       M.UnfinalizedSections[H] = std::move(M.SectionsAllocatedSinceLastLoad);
       M.SectionsAllocatedSinceLastLoad = SectionAddrSet();
-      assert(Objects.size() == Infos.size() &&
-             "Incorrect number of Infos for Objects.");
-      for (unsigned I = 0; I < Objects.size(); ++I)
-        M.MemMgr.notifyObjectLoaded(&M, getObject(*Objects[I]));
+      M.MemMgr.notifyObjectLoaded(&M, *Obj->getBinary());
     }
-
   private:
-    static const object::ObjectFile& getObject(const object::ObjectFile &Obj) {
-      return Obj;
-    }
-
-    template <typename ObjT>
-    static const object::ObjectFile&
-    getObject(const object::OwningBinary<ObjT> &Obj) {
-      return *Obj.getBinary();
-    }
-
     OrcMCJITReplacement &M;
   };
 
@@ -347,7 +333,7 @@ private:
   public:
     NotifyFinalizedT(OrcMCJITReplacement &M) : M(M) {}
 
-    void operator()(RTDyldObjectLinkingLayerBase::ObjSetHandleT H) {
+    void operator()(RTDyldObjectLinkingLayerBase::ObjHandleT H) {
       M.UnfinalizedSections.erase(H);
     }
 
@@ -364,8 +350,8 @@ private:
     return MangledName;
   }
 
-  using ObjectLayerT = RTDyldObjectLinkingLayer<NotifyObjectLoadedT>;
-  using CompileLayerT = IRCompileLayer<ObjectLayerT>;
+  using ObjectLayerT = RTDyldObjectLinkingLayer;
+  using CompileLayerT = IRCompileLayer<ObjectLayerT, orc::SimpleCompiler>;
   using LazyEmitLayerT = LazyEmittingLayer<CompileLayerT>;
 
   std::unique_ptr<TargetMachine> TM;
@@ -385,14 +371,14 @@ private:
   // that have been emitted but not yet finalized so that we can forward the
   // mapSectionAddress calls appropriately.
   using SectionAddrSet = std::set<const void *>;
-  struct ObjSetHandleCompare {
-    bool operator()(ObjectLayerT::ObjSetHandleT H1,
-                    ObjectLayerT::ObjSetHandleT H2) const {
+  struct ObjHandleCompare {
+    bool operator()(ObjectLayerT::ObjHandleT H1,
+                    ObjectLayerT::ObjHandleT H2) const {
       return &*H1 < &*H2;
     }
   };
   SectionAddrSet SectionsAllocatedSinceLastLoad;
-  std::map<ObjectLayerT::ObjSetHandleT, SectionAddrSet, ObjSetHandleCompare>
+  std::map<ObjectLayerT::ObjHandleT, SectionAddrSet, ObjHandleCompare>
       UnfinalizedSections;
 
   std::vector<object::OwningBinary<object::Archive>> Archives;

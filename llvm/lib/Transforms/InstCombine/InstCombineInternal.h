@@ -95,6 +95,18 @@ static inline bool isCanonicalPredicate(CmpInst::Predicate Pred) {
   }
 }
 
+/// Return the source operand of a potentially bitcasted value while optionally
+/// checking if it has one use. If there is no bitcast or the one use check is
+/// not met, return the input value itself.
+static inline Value *peekThroughBitcast(Value *V, bool OneUseOnly = false) {
+  if (auto *BitCast = dyn_cast<BitCastInst>(V))
+    if (!OneUseOnly || BitCast->hasOneUse())
+      return BitCast->getOperand(0);
+
+  // V is not a bitcast or V has more than one use and OneUseOnly is true.
+  return V;
+}
+
 /// \brief Add one to a Constant
 static inline Constant *AddOne(Constant *C) {
   return ConstantExpr::getAdd(C, ConstantInt::get(C->getType(), 1));
