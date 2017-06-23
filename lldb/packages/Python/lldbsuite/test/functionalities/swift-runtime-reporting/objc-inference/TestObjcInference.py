@@ -68,7 +68,7 @@ class SwiftRuntimeReportingObjcInferenceTestCase(lldbtest.TestBase):
         self.assertEqual(data["description"],
             "implicit Objective-C entrypoint -[a.MyClass memberfunc] is deprecated and will be removed in Swift 4")
         self.assertEqual(len(data["notes"]), 1)
-        self.assertEqual(data["notes"][0]["description"], "Method declaration; add '@objc' here")
+        self.assertEqual(data["notes"][0]["description"], "add '@objc' to expose this Swift declaration to Objective-C")
         self.assertEqual(len(data["notes"][0]["fixits"]), 1)
         self.assertTrue(data["notes"][0]["fixits"][0]["filename"].endswith(self.main_source))
         self.assertEqual(data["notes"][0]["fixits"][0]["start_line"], self.line_method)
@@ -100,7 +100,7 @@ class SwiftRuntimeReportingObjcInferenceTestCase(lldbtest.TestBase):
         self.assertEqual(data["description"],
             "implicit Objective-C entrypoint -[a.MyClass memberfunc2] is deprecated and will be removed in Swift 4")
         self.assertEqual(len(data["notes"]), 1)
-        self.assertEqual(data["notes"][0]["description"], "Method declaration; add '@objc' here")
+        self.assertEqual(data["notes"][0]["description"], "add '@objc' to expose this Swift declaration to Objective-C")
         self.assertEqual(len(data["notes"][0]["fixits"]), 1)
         self.assertTrue(data["notes"][0]["fixits"][0]["filename"].endswith(self.main_source))
         self.assertEqual(data["notes"][0]["fixits"][0]["start_line"], self.line_method2)
