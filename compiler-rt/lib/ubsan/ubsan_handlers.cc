@@ -473,9 +473,12 @@ void __ubsan::__ubsan_handle_function_type_mismatch_abort(
   Die();
 }
 
-static void handleNonNullReturn(NonNullReturnData *Data, ReportOptions Opts,
-                                bool IsAttr) {
-  SourceLocation Loc = Data->Loc.acquire();
+static void handleNonNullReturn(NonNullReturnData *Data, SourceLocation *LocPtr,
+                                ReportOptions Opts, bool IsAttr) {
+  if (!LocPtr)
+    UNREACHABLE("source location pointer is null!");
+
+  SourceLocation Loc = LocPtr->acquire();
   ErrorType ET = ErrorType::InvalidNullReturn;
 
   if (ignoreReport(Loc, Opts, ET))
@@ -491,25 +494,29 @@ static void handleNonNullReturn(NonNullReturnData *Data, ReportOptions Opts,
                    : "_Nonnull return type annotation");
 }
 
-void __ubsan::__ubsan_handle_nonnull_return(NonNullReturnData *Data) {
+void __ubsan::__ubsan_handle_nonnull_return_v1(NonNullReturnData *Data,
+                                               SourceLocation *LocPtr) {
   GET_REPORT_OPTIONS(false);
-  handleNonNullReturn(Data, Opts, true);
+  handleNonNullReturn(Data, LocPtr, Opts, true);
 }
 
-void __ubsan::__ubsan_handle_nonnull_return_abort(NonNullReturnData *Data) {
+void __ubsan::__ubsan_handle_nonnull_return_v1_abort(NonNullReturnData *Data,
+                                                     SourceLocation *LocPtr) {
   GET_REPORT_OPTIONS(true);
-  handleNonNullReturn(Data, Opts, true);
+  handleNonNullReturn(Data, LocPtr, Opts, true);
   Die();
 }
 
-void __ubsan::__ubsan_handle_nullability_return(NonNullReturnData *Data) {
+void __ubsan::__ubsan_handle_nullability_return_v1(NonNullReturnData *Data,
+                                                   SourceLocation *LocPtr) {
   GET_REPORT_OPTIONS(false);
-  handleNonNullReturn(Data, Opts, false);
+  handleNonNullReturn(Data, LocPtr, Opts, false);
 }
 
-void __ubsan::__ubsan_handle_nullability_return_abort(NonNullReturnData *Data) {
+void __ubsan::__ubsan_handle_nullability_return_v1_abort(
+    NonNullReturnData *Data, SourceLocation *LocPtr) {
   GET_REPORT_OPTIONS(true);
-  handleNonNullReturn(Data, Opts, false);
+  handleNonNullReturn(Data, LocPtr, Opts, false);
   Die();
 }
 
