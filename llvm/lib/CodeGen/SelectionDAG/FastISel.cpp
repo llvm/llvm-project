@@ -888,6 +888,8 @@ bool FastISel::lowerCallTo(const CallInst *CI, MCSymbol *Symbol,
     Entry.setAttributes(&CS, ArgI + 1);
     Args.push_back(Entry);
   }
+  markFastLibCallAttributes(*MF->getSubtarget().getTargetLowering(), MF,
+                            CS.getCallingConv(), Args);
 
   CallLoweringInfo CLI;
   CLI.setCallee(RetTy, FTy, Symbol, std::move(Args), CS, NumArgs);

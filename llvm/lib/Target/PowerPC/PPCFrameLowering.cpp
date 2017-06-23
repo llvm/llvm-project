@@ -1467,8 +1467,7 @@ void PPCFrameLowering::emitEpilogue(MachineFunction &MF,
   }
 
   if (FI->usesPICBase())
-    BuildMI(MBB, MBBI, dl, LoadInst)
-      .addReg(PPC::R30)
+    BuildMI(MBB, MBBI, dl, LoadInst, PPC::R30)
       .addImm(PBPOffset)
       .addReg(RBReg);
 
@@ -1776,32 +1775,37 @@ void PPCFrameLowering::processFunctionBeforeFrameFinalized(MachineFunction &MF,
   // Check whether the frame pointer register is allocated. If so, make sure it
   // is spilled to the correct offset.
   if (needsFP(MF)) {
-    HasGPSaveArea = true;
-
     int FI = PFI->getFramePointerSaveIndex();
     assert(FI && "No Frame Pointer Save Slot!");
-
     MFI.setObjectOffset(FI, LowerBound + MFI.getObjectOffset(FI));
+    // FP is R31/X31, so no need to update MinGPR/MinG8R.
+    HasGPSaveArea = true;
   }
 
   if (PFI->usesPICBase()) {
-    HasGPSaveArea = true;
-
     int FI = PFI->getPICBasePointerSaveIndex();
     assert(FI && "No PIC Base Pointer Save Slot!");
-
     MFI.setObjectOffset(FI, LowerBound + MFI.getObjectOffset(FI));
+
+    MinGPR = std::min<unsigned>(MinGPR, PPC::R30);
+    HasGPSaveArea = true;
   }
 
   const PPCRegisterInfo *RegInfo =
       static_cast<const PPCRegisterInfo *>(Subtarget.getRegisterInfo());
   if (RegInfo->hasBasePointer(MF)) {
-    HasGPSaveArea = true;
-
     int FI = PFI->getBasePointerSaveIndex();
     assert(FI && "No Base Pointer Save Slot!");
-
     MFI.setObjectOffset(FI, LowerBound + MFI.getObjectOffset(FI));
+
+    unsigned BP = RegInfo->getBaseRegister(MF);
+    if (PPC::G8RCRegClass.contains(BP)) {
+      MinG8R = std::min<unsigned>(MinG8R, BP);
+      HasG8SaveArea = true;
+    } else if (PPC::GPRCRegClass.contains(BP)) {
+      MinGPR = std::min<unsigned>(MinGPR, BP);
+      HasGPSaveArea = true;
+    }
   }
 
   // General register save area starts right below the Floating-point

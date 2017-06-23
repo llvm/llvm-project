@@ -2601,9 +2601,10 @@ void DAGTypeLegalizer::ExpandIntRes_XMULO(SDNode *N,
   SDValue Func = DAG.getExternalSymbol(TLI.getLibcallName(LC), PtrVT);
 
   TargetLowering::CallLoweringInfo CLI(DAG);
-  CLI.setDebugLoc(dl).setChain(Chain)
-    .setCallee(TLI.getLibcallCallingConv(LC), RetTy, Func, std::move(Args))
-    .setSExtResult();
+  CLI.setDebugLoc(dl)
+      .setChain(Chain)
+      .setLibCallee(TLI.getLibcallCallingConv(LC), RetTy, Func, std::move(Args))
+      .setSExtResult();
 
   std::pair<SDValue, SDValue> CallInfo = TLI.LowerCallTo(CLI);
 
