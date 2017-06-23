@@ -6425,6 +6425,15 @@ def err_exceptions_disabled : Error<
   "cannot use '%0' with exceptions disabled">;
 def err_objc_exceptions_disabled : Error<
   "cannot use '%0' with Objective-C exceptions disabled">;
+def warn_throw_in_noexcept_func 
+    : Warning<"%0 has a non-throwing exception specification but can still "
+      "throw, resulting in unexpected program termination">,
+      InGroup<Exceptions>;
+def note_throw_in_dtor 
+    : Note<"destructor or deallocator has a (possibly implicit) non-throwing "
+      "excepton specification">;
+def note_throw_in_function 
+    : Note<"non-throwing function declare here">;
 def err_seh_try_outside_functions : Error<
   "cannot use SEH '__try' in blocks, captured regions, or Obj-C method decls">;
 def err_mixing_cxx_try_seh_try : Error<

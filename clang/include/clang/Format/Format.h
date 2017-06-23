@@ -1270,6 +1270,14 @@ struct FormatStyle {
   /// \endcode
   bool SortIncludes;
 
+  /// \brief If ``true``, clang-format will sort using declarations.
+  /// \code
+  ///    false:                                 true:
+  ///    using std::cout;               vs.     using std::cin;
+  ///    using std::cin;                        using std::cout;
+  /// \endcode
+  bool SortUsingDeclarations;
+
   /// \brief If ``true``, a space is inserted after C style casts.
   /// \code
   ///    true:                                  false:

@@ -538,158 +538,158 @@ the configuration (without a prefix: ``Auto``).
 
   * ``bool AfterClass`` Wrap class definitions.
 
-  .. code-block:: c++
+    .. code-block:: c++
 
-    true:
-    class foo {};
+      true:
+      class foo {};
 
-    false:
-    class foo
-    {};
+      false:
+      class foo
+      {};
 
   * ``bool AfterControlStatement`` Wrap control statements (``if``/``for``/``while``/``switch``/..).
 
-  .. code-block:: c++
+    .. code-block:: c++
 
-    true:
-    if (foo())
-    {
-    } else
-    {}
-    for (int i = 0; i < 10; ++i)
-    {}
+      true:
+      if (foo())
+      {
+      } else
+      {}
+      for (int i = 0; i < 10; ++i)
+      {}
 
-    false:
-    if (foo()) {
-    } else {
-    }
-    for (int i = 0; i < 10; ++i) {
-    }
+      false:
+      if (foo()) {
+      } else {
+      }
+      for (int i = 0; i < 10; ++i) {
+      }
 
   * ``bool AfterEnum`` Wrap enum definitions.
 
-  .. code-block:: c++
+    .. code-block:: c++
 
-    true:
-    enum X : int
-    {
-      B
-    };
+      true:
+      enum X : int
+      {
+        B
+      };
 
-    false:
-    enum X : int { B };
+      false:
+      enum X : int { B };
 
   * ``bool AfterFunction`` Wrap function definitions.
 
-  .. code-block:: c++
+    .. code-block:: c++
 
-    true:
-    void foo()
-    {
-      bar();
-      bar2();
-    }
+      true:
+      void foo()
+      {
+        bar();
+        bar2();
+      }
 
-    false:
-    void foo() {
-      bar();
-      bar2();
-    }
+      false:
+      void foo() {
+        bar();
+        bar2();
+      }
 
   * ``bool AfterNamespace`` Wrap namespace definitions.
 
-  .. code-block:: c++
+    .. code-block:: c++
 
-    true:
-    namespace
-    {
-    int foo();
-    int bar();
-    }
+      true:
+      namespace
+      {
+      int foo();
+      int bar();
+      }
 
-    false:
-    namespace {
-    int foo();
-    int bar();
-    }
+      false:
+      namespace {
+      int foo();
+      int bar();
+      }
 
   * ``bool AfterObjCDeclaration`` Wrap ObjC definitions (``@autoreleasepool``, interfaces, ..).
 
   * ``bool AfterStruct`` Wrap struct definitions.
 
-  .. code-block:: c++
+    .. code-block:: c++
 
-    true:
-    struct foo
-    {
-      int x;
-    };
+      true:
+      struct foo
+      {
+        int x;
+      };
 
-    false:
-    struct foo {
-      int x;
-    };
+      false:
+      struct foo {
+        int x;
+      };
 
   * ``bool AfterUnion`` Wrap union definitions.
 
-  .. code-block:: c++
+    .. code-block:: c++
 
-    true:
-    union foo
-    {
-      int x;
-    }
+      true:
+      union foo
+      {
+        int x;
+      }
 
-    false:
-    union foo {
-      int x;
-    }
+      false:
+      union foo {
+        int x;
+      }
 
   * ``bool BeforeCatch`` Wrap before ``catch``.
 
-  .. code-block:: c++
+    .. code-block:: c++
 
-    true:
-    try {
-      foo();
-    }
-    catch () {
-    }
+      true:
+      try {
+        foo();
+      }
+      catch () {
+      }
 
-    false:
-    try {
-      foo();
-    } catch () {
-    }
+      false:
+      try {
+        foo();
+      } catch () {
+      }
 
   * ``bool BeforeElse`` Wrap before ``else``.
 
-  .. code-block:: c++
+    .. code-block:: c++
 
-    true:
-    if (foo()) {
-    }
-    else {
-    }
+      true:
+      if (foo()) {
+      }
+      else {
+      }
 
-    false:
-    if (foo()) {
-    } else {
-    }
+      false:
+      if (foo()) {
+      } else {
+      }
 
   * ``bool IndentBraces`` Indent the wrapped braces themselves.
 
   * ``bool SplitEmptyFunctionBody`` If ``false``, empty function body can be put on a single line.
-  This option is used only if the opening brace of the function has
-  already been wrapped, i.e. the `AfterFunction` brace wrapping mode is
-  set, and the function could/should not be put on a single line (as per
-  `AllowShortFunctionsOnASingleLine` and constructor formatting options).
+    This option is used only if the opening brace of the function has
+    already been wrapped, i.e. the `AfterFunction` brace wrapping mode is
+    set, and the function could/should not be put on a single line (as per
+    `AllowShortFunctionsOnASingleLine` and constructor formatting options).
 
-  .. code-block:: c++
+    .. code-block:: c++
 
-    int f()   vs.   inf f()
-    {}              {
-                    }
+      int f()   vs.   inf f()
+      {}              {
+                      }
 
 
 **BreakAfterJavaFieldAnnotations** (``bool``)
@@ -1474,6 +1474,15 @@ the configuration (without a prefix: ``Auto``).
      false:                                 true:
      #include "b.h"                 vs.     #include "a.h"
      #include "a.h"                         #include "b.h"
+
+**SortUsingDeclarations** (``bool``)
+  If ``true``, clang-format will sort using declarations.
+
+  .. code-block:: c++
+
+     false:                                 true:
+     using std::cout;               vs.     using std::cin;
+     using std::cin;                        using std::cout;
 
 **SpaceAfterCStyleCast** (``bool``)
   If ``true``, a space is inserted after C style casts.

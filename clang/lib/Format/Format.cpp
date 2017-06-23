@@ -379,6 +379,7 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("PointerAlignment", Style.PointerAlignment);
     IO.mapOptional("ReflowComments", Style.ReflowComments);
     IO.mapOptional("SortIncludes", Style.SortIncludes);
+    IO.mapOptional("SortUsingDeclarations", Style.SortUsingDeclarations);
     IO.mapOptional("SpaceAfterCStyleCast", Style.SpaceAfterCStyleCast);
     IO.mapOptional("SpaceAfterTemplateKeyword", Style.SpaceAfterTemplateKeyword);
     IO.mapOptional("SpaceBeforeAssignmentOperators",
@@ -619,6 +620,7 @@ FormatStyle getLLVMStyle() {
 
   LLVMStyle.DisableFormat = false;
   LLVMStyle.SortIncludes = true;
+  LLVMStyle.SortUsingDeclarations = true;
 
   return LLVMStyle;
 }
@@ -773,6 +775,7 @@ FormatStyle getNoStyle() {
   FormatStyle NoStyle = getLLVMStyle();
   NoStyle.DisableFormat = true;
   NoStyle.SortIncludes = false;
+  NoStyle.SortUsingDeclarations = false;
   return NoStyle;
 }
 
@@ -1879,38 +1882,53 @@ tooling::Replacements reformat(const FormatStyle &Style, StringRef Code,
     return tooling::Replacements();
   if (Expanded.Language == FormatStyle::LK_JavaScript && isMpegTS(Code))
     return tooling::Replacements();
-  auto Env = Environment::CreateVirtualEnvironment(Code, FileName, Ranges);
 
-  auto reformatAfterApplying = [&] (TokenAnalyzer& Fixer) {
-    tooling::Replacements Fixes = Fixer.process();
-    if (!Fixes.empty()) {
-      auto NewCode = applyAllReplacements(Code, Fixes);
-      if (NewCode) {
-        auto NewEnv = Environment::CreateVirtualEnvironment(
-            *NewCode, FileName,
-            tooling::calculateRangesAfterReplacements(Fixes, Ranges));
-        Formatter Format(*NewEnv, Expanded, Status);
-        return Fixes.merge(Format.process());
-      }
-    }
-    Formatter Format(*Env, Expanded, Status);
-    return Format.process();
-  };
+  typedef std::function<tooling::Replacements(const Environment &)>
+      AnalyzerPass;
+  SmallVector<AnalyzerPass, 4> Passes;
 
-  if (Style.Language == FormatStyle::LK_Cpp &&
-      Style.FixNamespaceComments) {
-    NamespaceEndCommentsFixer CommentsFixer(*Env, Expanded);
-    return reformatAfterApplying(CommentsFixer);
+  if (Style.Language == FormatStyle::LK_Cpp) {
+    if (Style.FixNamespaceComments)
+      Passes.emplace_back([&](const Environment &Env) {
+        return NamespaceEndCommentsFixer(Env, Expanded).process();
+      });
+
+    if (Style.SortUsingDeclarations)
+      Passes.emplace_back([&](const Environment &Env) {
+        return UsingDeclarationsSorter(Env, Expanded).process();
+      });
   }
 
   if (Style.Language == FormatStyle::LK_JavaScript &&
-      Style.JavaScriptQuotes != FormatStyle::JSQS_Leave) {
-    JavaScriptRequoter Requoter(*Env, Expanded);
-    return reformatAfterApplying(Requoter);
+      Style.JavaScriptQuotes != FormatStyle::JSQS_Leave)
+    Passes.emplace_back([&](const Environment &Env) {
+      return JavaScriptRequoter(Env, Expanded).process();
+    });
+
+  Passes.emplace_back([&](const Environment &Env) {
+    return Formatter(Env, Expanded, Status).process();
+  });
+
+  std::unique_ptr<Environment> Env =
+      Environment::CreateVirtualEnvironment(Code, FileName, Ranges);
+  llvm::Optional<std::string> CurrentCode = None;
+  tooling::Replacements Fixes;
+  for (size_t I = 0, E = Passes.size(); I < E; ++I) {
+    tooling::Replacements PassFixes = Passes[I](*Env);
+    auto NewCode = applyAllReplacements(
+        CurrentCode ? StringRef(*CurrentCode) : Code, PassFixes);
+    if (NewCode) {
+      Fixes = Fixes.merge(PassFixes);
+      if (I + 1 < E) {
+        CurrentCode = std::move(*NewCode);
+        Env = Environment::CreateVirtualEnvironment(
+            *CurrentCode, FileName,
+            tooling::calculateRangesAfterReplacements(Fixes, Ranges));
+      }
+    }
   }
 
-  Formatter Format(*Env, Expanded, Status);
-  return Format.process();
+  return Fixes;
 }
 
 tooling::Replacements cleanup(const FormatStyle &Style, StringRef Code,

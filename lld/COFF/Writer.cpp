@@ -219,7 +219,7 @@ uint64_t Defined::getSecrel() {
 uint64_t Defined::getSectionIndex() {
   if (auto *D = dyn_cast<DefinedRegular>(this))
     return D->getChunk()->getOutputSection()->SectionIndex;
-  if (auto *D = dyn_cast<DefinedAbsolute>(this))
+  if (isa<DefinedAbsolute>(this))
     return DefinedAbsolute::OutputSectionIndex;
   fatal("SECTION relocation points to a non-regular symbol: " +
         toString(*this));

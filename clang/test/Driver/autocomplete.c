@@ -11,7 +11,7 @@
 // RUN: %clang --autocomplete=-meabi,d | FileCheck %s -check-prefix=MEABI
 // MEABI: default
 // RUN: %clang --autocomplete=-meabi, | FileCheck %s -check-prefix=MEABIALL
-// MEABIALL: default 4 5 gnu
+// MEABIALL: 4 5 default gnu
 // RUN: %clang --autocomplete=-cl-std=,CL2 | FileCheck %s -check-prefix=CLSTD
 // CLSTD: CL2.0
 // RUN: %clang --autocomplete=-cl-std=, | FileCheck %s -check-prefix=CLSTDALL
@@ -19,18 +19,20 @@
 // RUN: %clang --autocomplete=-fno-sanitize-coverage=,f | FileCheck %s -check-prefix=FNOSANICOVER
 // FNOSANICOVER: func
 // RUN: %clang --autocomplete=-fno-sanitize-coverage=, | FileCheck %s -check-prefix=FNOSANICOVERALL
-// FNOSANICOVERALL: func bb edge indirect-calls trace-bb trace-cmp trace-div trace-gep 8bit-counters trace-pc trace-pc-guard no-prune inline-8bit-counters
+// FNOSANICOVERALL: 8bit-counters bb edge func indirect-calls inline-8bit-counters no-prune trace-bb trace-cmp trace-div trace-gep trace-pc trace-pc-guard
 // RUN: %clang --autocomplete=-ffp-contract=, | FileCheck %s -check-prefix=FFPALL
-// FFPALL: fast on off
+// FFPALL: fast off on
 // RUN: %clang --autocomplete=-flto=, | FileCheck %s -check-prefix=FLTOALL
-// FLTOALL: thin full
+// FLTOALL: full thin
 // RUN: %clang --autocomplete=-fveclib=, | FileCheck %s -check-prefix=FVECLIBALL
-// FVECLIBALL: Accelerate SVML none
+// FVECLIBALL: Accelerate none SVML
 // RUN: %clang --autocomplete=-fshow-overloads=, | FileCheck %s -check-prefix=FSOVERALL
-// FSOVERALL: best all
+// FSOVERALL: all best
 // RUN: %clang --autocomplete=-fvisibility=, | FileCheck %s -check-prefix=FVISIBILITYALL
-// FVISIBILITYALL: hidden default
+// FVISIBILITYALL: default hidden
 // RUN: %clang --autocomplete=-mfloat-abi=, | FileCheck %s -check-prefix=MFLOATABIALL
-// MFLOATABIALL: soft softfp hard
+// MFLOATABIALL: hard soft softfp
 // RUN: %clang --autocomplete=-mthread-model, | FileCheck %s -check-prefix=MTHREADMODELALL
 // MTHREADMODELALL: posix single
+// RUN: %clang --autocomplete=-mrelocation-model, | FileCheck %s -check-prefix=MRELOCMODELALL
+// MRELOCMODELALL: dynamic-no-pic pic ropi ropi-rwpi rwpi static

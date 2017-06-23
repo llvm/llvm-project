@@ -1245,6 +1245,13 @@ bool Driver::HandleImmediateArgs(const Compilation &C) {
       SuggestedCompletions = Opts->suggestValueCompletions(Option, Arg);
     }
 
+    // Sort the autocomplete candidates so that shells print them out in a
+    // deterministic order. We could sort in any way, but we chose
+    // case-insensitive sorting for consistency with the -help option
+    // which prints out options in the case-insensitive alphabetical order.
+    std::sort(SuggestedCompletions.begin(), SuggestedCompletions.end(),
+              [](StringRef A, StringRef B) { return A.compare_lower(B) < 0; });
+
     llvm::outs() << llvm::join(SuggestedCompletions, " ") << '\n';
     return false;
   }

@@ -2906,7 +2906,7 @@ void CodeGenFunction::EmitFunctionEpilog(const CGFunctionInfo &FI,
 
   llvm::Instruction *Ret;
   if (RV) {
-    EmitReturnValueCheck(RV, EndLoc);
+    EmitReturnValueCheck(RV);
     Ret = Builder.CreateRet(RV);
   } else {
     Ret = Builder.CreateRetVoid();
@@ -2916,8 +2916,7 @@ void CodeGenFunction::EmitFunctionEpilog(const CGFunctionInfo &FI,
     Ret->setDebugLoc(std::move(RetDbgLoc));
 }
 
-void CodeGenFunction::EmitReturnValueCheck(llvm::Value *RV,
-                                           SourceLocation EndLoc) {
+void CodeGenFunction::EmitReturnValueCheck(llvm::Value *RV) {
   // A current decl may not be available when emitting vtable thunks.
   if (!CurCodeDecl)
     return;
@@ -2950,27 +2949,30 @@ void CodeGenFunction::EmitReturnValueCheck(llvm::Value *RV,
 
   SanitizerScope SanScope(this);
 
-  llvm::BasicBlock *Check = nullptr;
-  llvm::BasicBlock *NoCheck = nullptr;
-  if (requiresReturnValueNullabilityCheck()) {
-    // Before doing the nullability check, make sure that the preconditions for
-    // the check are met.
-    Check = createBasicBlock("nullcheck");
-    NoCheck = createBasicBlock("no.nullcheck");
-    Builder.CreateCondBr(RetValNullabilityPrecondition, Check, NoCheck);
-    EmitBlock(Check);
-  }
-
-  // Now do the null check. If the returns_nonnull attribute is present, this
-  // is done unconditionally.
-  llvm::Value *Cond = Builder.CreateIsNotNull(RV);
-  llvm::Constant *StaticData[] = {
-      EmitCheckSourceLocation(EndLoc), EmitCheckSourceLocation(AttrLoc),
-  };
-  EmitCheck(std::make_pair(Cond, CheckKind), Handler, StaticData, None);
-
+  // Make sure the "return" source location is valid. If we're checking a
+  // nullability annotation, make sure the preconditions for the check are met.
+  llvm::BasicBlock *Check = createBasicBlock("nullcheck");
+  llvm::BasicBlock *NoCheck = createBasicBlock("no.nullcheck");
+  llvm::Value *SLocPtr = Builder.CreateLoad(ReturnLocation, "return.sloc.load");
+  llvm::Value *CanNullCheck = Builder.CreateIsNotNull(SLocPtr);
   if (requiresReturnValueNullabilityCheck())
-    EmitBlock(NoCheck);
+    CanNullCheck =
+        Builder.CreateAnd(CanNullCheck, RetValNullabilityPrecondition);
+  Builder.CreateCondBr(CanNullCheck, Check, NoCheck);
+  EmitBlock(Check);
+
+  // Now do the null check.
+  llvm::Value *Cond = Builder.CreateIsNotNull(RV);
+  llvm::Constant *StaticData[] = {EmitCheckSourceLocation(AttrLoc)};
+  llvm::Value *DynamicData[] = {SLocPtr};
+  EmitCheck(std::make_pair(Cond, CheckKind), Handler, StaticData, DynamicData);
+
+  EmitBlock(NoCheck);
+
+#ifndef NDEBUG
+  // The return location should not be used after the check has been emitted.
+  ReturnLocation = Address::invalid();
+#endif
 }
 
 static bool isInAllocaArgument(CGCXXABI &ABI, QualType type) {

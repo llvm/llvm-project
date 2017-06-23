@@ -1693,7 +1693,7 @@ size_t ObjectFileELF::GetSectionHeaderInfo(SectionHeaderColl &section_headers,
             // ABI Mask doesn't cover N32 and N64 ABI.
             if (header.e_ident[EI_CLASS] == llvm::ELF::ELFCLASS64)
               arch_flags |= lldb_private::ArchSpec::eMIPSABI_N64;
-            else if (header.e_flags && llvm::ELF::EF_MIPS_ABI2)
+            else if (header.e_flags & llvm::ELF::EF_MIPS_ABI2)
               arch_flags |= lldb_private::ArchSpec::eMIPSABI_N32;
             break;
           }

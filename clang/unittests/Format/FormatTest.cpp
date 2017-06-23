@@ -9333,6 +9333,7 @@ TEST_F(FormatTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(Cpp11BracedListStyle);
   CHECK_PARSE_BOOL(ReflowComments);
   CHECK_PARSE_BOOL(SortIncludes);
+  CHECK_PARSE_BOOL(SortUsingDeclarations);
   CHECK_PARSE_BOOL(SpacesInParentheses);
   CHECK_PARSE_BOOL(SpacesInSquareBrackets);
   CHECK_PARSE_BOOL(SpacesInAngles);
@@ -10872,6 +10873,13 @@ TEST_F(ReplacementTest, SortIncludesAfterReplacement) {
   auto Result = applyAllReplacements(Code, *FormattedReplaces);
   EXPECT_TRUE(static_cast<bool>(Result));
   EXPECT_EQ(Expected, *Result);
+}
+
+TEST_F(FormatTest, FormatSortsUsingDeclarations) {
+  EXPECT_EQ("using std::cin;\n"
+            "using std::cout;",
+            format("using std::cout;\n"
+                   "using std::cin;", getGoogleStyle()));
 }
 
 TEST_F(FormatTest, UTF8CharacterLiteralCpp03) {
