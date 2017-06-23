@@ -272,7 +272,7 @@ void Symtab::InitNameIndexes() {
         // Now try and figure out the basename and figure out if the
         // basename is a method, function, etc and put that in the
         // appropriate table.
-        llvm::StringRef name = entry.cstring;
+        llvm::StringRef name = entry.cstring.GetStringRef();
         if (symbol->ContainsLinkerAnnotations()) {
           // If the symbol has linker annotations, also add the version without
           // the annotations.
@@ -351,7 +351,7 @@ void Symtab::InitNameIndexes() {
                     ExtractFunctionBasenameFromMangled(mangled_name, basename,
                                                        is_method)) {
               if (basename && basename != mangled_name) {
-                entry.cstring = basename.GetCString();
+                entry.cstring = basename;
                 if (is_method)
                   m_method_to_index.Append(entry);
                 else

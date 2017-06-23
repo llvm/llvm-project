@@ -314,30 +314,27 @@ class CPPRuntimeEquivalents {
 public:
   CPPRuntimeEquivalents() {
     m_impl.Append(ConstString("std::basic_string<char, std::char_traits<char>, "
-                              "std::allocator<char> >")
-                      .GetStringRef(),
+                              "std::allocator<char> >"),
                   ConstString("basic_string<char>"));
 
     // these two (with a prefixed std::) occur when c++stdlib string class
     // occurs as a template argument in some STL container
     m_impl.Append(ConstString("std::basic_string<char, std::char_traits<char>, "
-                              "std::allocator<char> >")
-                      .GetStringRef(),
+                              "std::allocator<char> >"),
                   ConstString("std::basic_string<char>"));
 
     m_impl.Sort();
   }
 
   void Add(ConstString &type_name, ConstString &type_equivalent) {
-    m_impl.Insert(type_name.GetStringRef(), type_equivalent);
+    m_impl.Insert(type_name, type_equivalent);
   }
 
   uint32_t FindExactMatches(ConstString &type_name,
                             std::vector<ConstString> &equivalents) {
     uint32_t count = 0;
 
-    for (ImplData match =
-             m_impl.FindFirstValueForName(type_name.GetStringRef());
+    for (ImplData match = m_impl.FindFirstValueForName(type_name);
          match != nullptr; match = m_impl.FindNextValueForName(match)) {
       equivalents.push_back(match->value);
       count++;
@@ -365,7 +362,7 @@ public:
     size_t items_count = m_impl.GetSize();
 
     for (size_t item = 0; item < items_count; item++) {
-      llvm::StringRef key_cstr = m_impl.GetCStringAtIndex(item);
+      llvm::StringRef key_cstr = m_impl.GetCStringAtIndex(item).GetStringRef();
       if (type_name_cstr.contains(key_cstr)) {
         count += AppendReplacements(type_name_cstr, key_cstr, equivalents);
       }
@@ -394,7 +391,8 @@ private:
 
     uint32_t count = 0;
 
-    for (ImplData match = m_impl.FindFirstValueForName(matching_key);
+    for (ImplData match =
+             m_impl.FindFirstValueForName(ConstString(matching_key));
          match != nullptr; match = m_impl.FindNextValueForName(match)) {
       std::string target(original);
       std::string equiv_class(match->value.AsCString());
