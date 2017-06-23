@@ -95,17 +95,12 @@ class TestCXXRecordDeclPack : public T... {
 thread_local int TestThreadLocalInt;
 // CHECK: TestThreadLocalInt {{.*}} tls_dynamic
 
-__module_private__ class TestCXXRecordDeclPrivate;
-// CHECK: CXXRecordDecl{{.*}} class TestCXXRecordDeclPrivate __module_private__
-
 class testCXXMethodDecl {
-  __module_private__ void TestCXXMethodDeclPrivate();
   virtual void TestCXXMethodDeclPure() = 0;
   void TestCXXMethodDeclDelete() = delete;
   void TestCXXMethodDeclThrow() throw();
   void TestCXXMethodDeclThrowType() throw(int);
 };
-// CHECK: CXXMethodDecl{{.*}} TestCXXMethodDeclPrivate 'void (void)' __module_private__
 // CHECK: CXXMethodDecl{{.*}} TestCXXMethodDeclPure 'void (void)' virtual pure
 // CHECK: CXXMethodDecl{{.*}} TestCXXMethodDeclDelete 'void (void)' delete
 // CHECK: CXXMethodDecl{{.*}} TestCXXMethodDeclThrow 'void (void) throw()'

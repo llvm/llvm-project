@@ -1341,7 +1341,7 @@ void Sema::makeMergedDefinitionVisible(NamedDecl *ND) {
     Context.mergeDefinitionIntoModule(ND, M);
   else
     // We're not building a module; just make the definition visible.
-    ND->setHidden(false);
+    ND->setVisibleDespiteOwningModule();
 
   // If ND is a template declaration, make the template parameters
   // visible too. They're not (necessarily) within a mergeable DeclContext.
@@ -1528,7 +1528,7 @@ bool LookupResult::isVisibleSlow(Sema &SemaRef, NamedDecl *D) {
           !SemaRef.getLangOpts().ModulesLocalVisibility) {
         // Cache the fact that this declaration is implicitly visible because
         // its parent has a visible definition.
-        D->setHidden(false);
+        D->setVisibleDespiteOwningModule();
       }
       return true;
     }

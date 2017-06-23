@@ -3580,8 +3580,8 @@ static void moveMethodToBackOfGlobalList(Sema &S, ObjCMethodDecl *Method) {
 void ASTReader::makeNamesVisible(const HiddenNames &Names, Module *Owner) {
   assert(Owner->NameVisibility != Module::Hidden && "nothing to make visible?");
   for (Decl *D : Names) {
-    bool wasHidden = D->Hidden;
-    D->Hidden = false;
+    bool wasHidden = D->isHidden();
+    D->setVisibleDespiteOwningModule();
 
     if (wasHidden && SemaObj) {
       if (ObjCMethodDecl *Method = dyn_cast<ObjCMethodDecl>(D)) {
@@ -3648,7 +3648,7 @@ void ASTReader::mergeDefinitionVisibility(NamedDecl *Def,
   if (Def->isHidden()) {
     // If MergedDef is visible or becomes visible, make the definition visible.
     if (!MergedDef->isHidden())
-      Def->Hidden = false;
+      Def->setVisibleDespiteOwningModule();
     else if (getContext().getLangOpts().ModulesLocalVisibility) {
       getContext().mergeDefinitionIntoModule(
           Def, MergedDef->getImportedOwningModule(),

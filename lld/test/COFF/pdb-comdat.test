@@ -26,7 +26,7 @@ RUN: rm -rf %t && mkdir -p %t && cd %t
 RUN: yaml2obj %S/Inputs/pdb_comdat_main.yaml -o pdb_comdat_main.obj
 RUN: yaml2obj %S/Inputs/pdb_comdat_bar.yaml -o pdb_comdat_bar.obj
 RUN: lld-link pdb_comdat_main.obj pdb_comdat_bar.obj -out:t.exe -debug -pdb:t.pdb -nodefaultlib -entry:main
-RUN: llvm-pdbutil raw -l -symbols t.pdb | FileCheck %s
+RUN: llvm-pdbutil dump -l -symbols t.pdb | FileCheck %s
 
 CHECK:                            Lines
 CHECK: ============================================================
@@ -89,7 +89,7 @@ CHECK-LABEL:   Mod 0002 | `* Linker *`:
 Reorder the object files and verify that the other table is selected.
 
 RUN: lld-link pdb_comdat_bar.obj pdb_comdat_main.obj -out:t.exe -debug -pdb:t.pdb -nodefaultlib -entry:main
-RUN: llvm-pdbutil raw -l t.pdb | FileCheck %s --check-prefix=REORDER
+RUN: llvm-pdbutil dump -l t.pdb | FileCheck %s --check-prefix=REORDER
 
 REORDER-LABEL:   Mod 0000 | `{{.*}}pdb_comdat_bar.obj`:
 REORDER:       c:\src\llvm-project\build\pdb_comdat_bar.c (MD5: 365279DB4FCBEDD721BBFC3B14A953C2)

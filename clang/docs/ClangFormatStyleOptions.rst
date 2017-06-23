@@ -309,12 +309,28 @@ the configuration (without a prefix: ``Auto``).
   * ``SFS_None`` (in configuration: ``None``)
     Never merge functions into a single line.
 
+  * ``SFS_InlineOnly`` (in configuration: ``InlineOnly``)
+    Only merge functions defined inside a class. Same as "inline",
+    except it does not implies "empty": i.e. top level empty functions
+    are not merged either.
+
+    .. code-block:: c++
+
+      class Foo {
+        void f() { foo(); }
+      };
+      void f() {
+        foo();
+      }
+      void f() {
+      }
+
   * ``SFS_Empty`` (in configuration: ``Empty``)
     Only merge empty functions.
 
     .. code-block:: c++
 
-      void f() { bar(); }
+      void f() {}
       void f2() {
         bar2();
       }
@@ -327,6 +343,10 @@ the configuration (without a prefix: ``Auto``).
       class Foo {
         void f() { foo(); }
       };
+      void f() {
+        foo();
+      }
+      void f() {}
 
   * ``SFS_All`` (in configuration: ``All``)
     Merge all functions fitting on a single line.
@@ -521,11 +541,11 @@ the configuration (without a prefix: ``Auto``).
   .. code-block:: c++
 
     true:
-    class foo
-    {};
+    class foo {};
 
     false:
-    class foo {};
+    class foo
+    {};
 
   * ``bool AfterControlStatement`` Wrap control statements (``if``/``for``/``while``/``switch``/..).
 
@@ -658,6 +678,18 @@ the configuration (without a prefix: ``Auto``).
     }
 
   * ``bool IndentBraces`` Indent the wrapped braces themselves.
+
+  * ``bool SplitEmptyFunctionBody`` If ``false``, empty function body can be put on a single line.
+  This option is used only if the opening brace of the function has
+  already been wrapped, i.e. the `AfterFunction` brace wrapping mode is
+  set, and the function could/should not be put on a single line (as per
+  `AllowShortFunctionsOnASingleLine` and constructor formatting options).
+
+  .. code-block:: c++
+
+    int f()   vs.   inf f()
+    {}              {
+                    }
 
 
 **BreakAfterJavaFieldAnnotations** (``bool``)
@@ -899,17 +931,40 @@ the configuration (without a prefix: ``Auto``).
          firstValue :
          SecondValueVeryVeryVeryVeryLong;
 
-**BreakConstructorInitializersBeforeComma** (``bool``)
-  Always break constructor initializers before commas and align
-  the commas with the colon.
+**BreakConstructorInitializers** (``BreakConstructorInitializersStyle``)
+  The constructor initializers style to use.
 
-  .. code-block:: c++
+  Possible values:
 
-     true:                                  false:
-     SomeClass::Constructor()       vs.     SomeClass::Constructor() : a(a),
-         : a(a)                                                   b(b),
-         , b(b)                                                   c(c) {}
-         , c(c) {}
+  * ``BCIS_BeforeColon`` (in configuration: ``BeforeColon``)
+    Break constructor initializers before the colon and after the commas.
+
+    .. code-block:: c++
+
+    Constructor()
+        : initializer1(),
+          initializer2()
+
+  * ``BCIS_BeforeComma`` (in configuration: ``BeforeComma``)
+    Break constructor initializers before the colon and commas, and align
+    the commas with the colon.
+
+    .. code-block:: c++
+
+    Constructor()
+        : initializer1()
+        , initializer2()
+
+  * ``BCIS_AfterColon`` (in configuration: ``AfterColon``)
+    Break constructor initializers after the colon and commas.
+
+    .. code-block:: c++
+
+    Constructor() :
+        initializer1(),
+        initializer2()
+
+
 
 **BreakStringLiterals** (``bool``)
   Allow breaking string literals when formatting.
@@ -930,6 +985,31 @@ the configuration (without a prefix: ``Auto``).
      // CommentPragmas: '^ FOOBAR pragma:'
      // Will leave the following line unaffected
      #include <vector> // FOOBAR pragma: keep
+
+**CompactNamespaces** (``bool``)
+  If ``true``, consecutive namespace declarations will be on the same
+  line. If ``false``, each namespace is declared on a new line.
+
+  .. code-block:: c++
+
+    true:
+    namespace Foo { namespace Bar {
+    }}
+
+    false:
+    namespace Foo {
+    namespace Bar {
+    }
+    }
+
+  If it does not fit on a single line, the overflowing namespaces get
+  wrapped:
+
+  .. code-block:: c++
+
+    namespace Foo { namespace Bar {
+    namespace Extra {
+    }}}
 
 **ConstructorInitializerAllOnOneLineOrOnePerLine** (``bool``)
   If the constructor initializers don't fit on a line, put each
@@ -1320,6 +1400,9 @@ the configuration (without a prefix: ``Auto``).
 **ObjCSpaceBeforeProtocolList** (``bool``)
   Add a space in front of an Objective-C protocol list, i.e. use
   ``Foo <Protocol>`` instead of ``Foo<Protocol>``.
+
+**PenaltyBreakAssignment** (``unsigned``)
+  The penalty for breaking around an assignment operator.
 
 **PenaltyBreakBeforeFirstCallParameter** (``unsigned``)
   The penalty for breaking a function call after ``call(``.

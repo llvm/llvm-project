@@ -98,7 +98,9 @@ def CXX11CompatDeprecatedWritableStr :
 def DeprecatedAttributes : DiagGroup<"deprecated-attributes">;
 def DeprecatedDeclarations : DiagGroup<"deprecated-declarations">;
 def UnavailableDeclarations : DiagGroup<"unavailable-declarations">;
-def UnguardedAvailability : DiagGroup<"unguarded-availability">;
+def UnguardedAvailabilityNew : DiagGroup<"unguarded-availability-new">;
+def UnguardedAvailability : DiagGroup<"unguarded-availability",
+                                      [UnguardedAvailabilityNew]>;
 // partial-availability is an alias of unguarded-availability.
 def : DiagGroup<"partial-availability", [UnguardedAvailability]>;
 def DeprecatedDynamicExceptionSpec

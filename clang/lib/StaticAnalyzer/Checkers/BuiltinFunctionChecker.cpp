@@ -50,8 +50,10 @@ bool BuiltinFunctionChecker::evalCall(const CallExpr *CE,
     state = state->assume(ArgSVal.castAs<DefinedOrUnknownSVal>(), true);
     // FIXME: do we want to warn here? Not right now. The most reports might
     // come from infeasible paths, thus being false positives.
-    if (!state)
+    if (!state) {
+      C.generateSink(C.getState(), C.getPredecessor());
       return true;
+    }
 
     C.addTransition(state);
     return true;

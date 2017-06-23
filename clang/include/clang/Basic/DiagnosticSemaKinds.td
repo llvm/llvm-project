@@ -2879,8 +2879,13 @@ def note_protocol_method : Note<
 def warn_unguarded_availability :
   Warning<"%0 is only available on %1 %2 or newer">,
   InGroup<UnguardedAvailability>, DefaultIgnore;
+def warn_unguarded_availability_new :
+  Warning<warn_unguarded_availability.Text>,
+  InGroup<UnguardedAvailabilityNew>;
 def warn_partial_availability : Warning<"%0 is only available conditionally">,
     InGroup<UnguardedAvailability>, DefaultIgnore;
+def warn_partial_availability_new : Warning<warn_partial_availability.Text>,
+  InGroup<UnguardedAvailabilityNew>;
 def note_partial_availability_silence : Note<
   "explicitly redeclare %0 to silence this warning">;
 def note_unguarded_available_silence : Note<
@@ -2888,9 +2893,14 @@ def note_unguarded_available_silence : Note<
   " this warning">;
 def warn_partial_message : Warning<"%0 is partial: %1">,
     InGroup<UnguardedAvailability>, DefaultIgnore;
+def warn_partial_message_new : Warning<warn_partial_message.Text>,
+  InGroup<UnguardedAvailabilityNew>;
 def warn_partial_fwdclass_message : Warning<
     "%0 may be partial because the receiver type is unknown">,
     InGroup<UnguardedAvailability>, DefaultIgnore;
+def warn_partial_fwdclass_message_new :
+  Warning<warn_partial_fwdclass_message.Text>,
+  InGroup<UnguardedAvailabilityNew>;
 def warn_at_available_unchecked_use : Warning<
   "%select{@available|__builtin_available}0 does not guard availability here; "
   "use if (%select{@available|__builtin_available}0) instead">,

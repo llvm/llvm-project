@@ -52,6 +52,15 @@ static void add32(uint8_t *P, int32_t V) { write32le(P, read32le(P) + V); }
 static void add64(uint8_t *P, int64_t V) { write64le(P, read64le(P) + V); }
 static void or16(uint8_t *P, uint16_t V) { write16le(P, read16le(P) | V); }
 
+static void applySecRel(const SectionChunk *Sec, uint8_t *Off, Defined *Sym) {
+  // Don't apply section relative relocations to absolute symbols in codeview
+  // debug info sections. MSVC does not treat such relocations as fatal errors,
+  // and they can be found in the standard library for linker-provided symbols
+  // like __guard_fids_table and __safe_se_handler_table.
+  if (!(isa<DefinedAbsolute>(Sym) && Sec->isCodeView()))
+    add32(Off, Sym->getSecrel());
+}
+
 void SectionChunk::applyRelX64(uint8_t *Off, uint16_t Type, Defined *Sym,
                                uint64_t P) const {
   uint64_t S = Sym->getRVA();
@@ -66,7 +75,7 @@ void SectionChunk::applyRelX64(uint8_t *Off, uint16_t Type, Defined *Sym,
   case IMAGE_REL_AMD64_REL32_4:  add32(Off, S - P - 8); break;
   case IMAGE_REL_AMD64_REL32_5:  add32(Off, S - P - 9); break;
   case IMAGE_REL_AMD64_SECTION:  add16(Off, Sym->getSectionIndex()); break;
-  case IMAGE_REL_AMD64_SECREL:   add32(Off, Sym->getSecrel()); break;
+  case IMAGE_REL_AMD64_SECREL:   applySecRel(this, Off, Sym); break;
   default:
     fatal("unsupported relocation type 0x" + Twine::utohexstr(Type));
   }
@@ -81,7 +90,7 @@ void SectionChunk::applyRelX86(uint8_t *Off, uint16_t Type, Defined *Sym,
   case IMAGE_REL_I386_DIR32NB:  add32(Off, S); break;
   case IMAGE_REL_I386_REL32:    add32(Off, S - P - 4); break;
   case IMAGE_REL_I386_SECTION:  add16(Off, Sym->getSectionIndex()); break;
-  case IMAGE_REL_I386_SECREL:   add32(Off, Sym->getSecrel()); break;
+  case IMAGE_REL_I386_SECREL:   applySecRel(this, Off, Sym); break;
   default:
     fatal("unsupported relocation type 0x" + Twine::utohexstr(Type));
   }
@@ -141,7 +150,7 @@ void SectionChunk::applyRelARM(uint8_t *Off, uint16_t Type, Defined *Sym,
   case IMAGE_REL_ARM_BRANCH20T: applyBranch20T(Off, S - P - 4); break;
   case IMAGE_REL_ARM_BRANCH24T: applyBranch24T(Off, S - P - 4); break;
   case IMAGE_REL_ARM_BLX23T:    applyBranch24T(Off, S - P - 4); break;
-  case IMAGE_REL_ARM_SECREL:    add32(Off, Sym->getSecrel()); break;
+  case IMAGE_REL_ARM_SECREL:    applySecRel(this, Off, Sym); break;
   default:
     fatal("unsupported relocation type 0x" + Twine::utohexstr(Type));
   }

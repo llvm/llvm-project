@@ -219,6 +219,8 @@ uint64_t Defined::getSecrel() {
 uint64_t Defined::getSectionIndex() {
   if (auto *D = dyn_cast<DefinedRegular>(this))
     return D->getChunk()->getOutputSection()->SectionIndex;
+  if (auto *D = dyn_cast<DefinedAbsolute>(this))
+    return DefinedAbsolute::OutputSectionIndex;
   fatal("SECTION relocation points to a non-regular symbol: " +
         toString(*this));
 }
@@ -775,6 +777,10 @@ void Writer::setSectionPermissions() {
 
 // Write section contents to a mmap'ed file.
 void Writer::writeSections() {
+  // Record the section index that should be used when resolving a section
+  // relocation against an absolute symbol.
+  DefinedAbsolute::OutputSectionIndex = OutputSections.size() + 1;
+
   uint8_t *Buf = Buffer->getBufferStart();
   for (OutputSection *Sec : OutputSections) {
     uint8_t *SecBuf = Buf + Sec->getFileOff();

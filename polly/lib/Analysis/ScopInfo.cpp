@@ -98,7 +98,7 @@ static cl::opt<int>
     OptComputeOut("polly-analysis-computeout",
                   cl::desc("Bound the scop analysis by a maximal amount of "
                            "computational steps (0 means no bound)"),
-                  cl::Hidden, cl::init(600000), cl::ZeroOrMore,
+                  cl::Hidden, cl::init(800000), cl::ZeroOrMore,
                   cl::cat(PollyCategory));
 
 static cl::opt<bool> PollyRemarksMinimal(
@@ -2409,27 +2409,19 @@ void Scop::simplifyContexts() {
   InvalidContext = isl_set_align_params(InvalidContext, getParamSpace());
 }
 
-struct MinMaxData {
-  Scop::MinMaxVectorTy &MinMaxAccesses;
-  Scop &S;
-};
-
 /// Add the minimal/maximal access in @p Set to @p User.
-static isl_stat buildMinMaxAccess(__isl_take isl_set *Set, void *User) {
-  auto Data = (struct MinMaxData *)User;
-  Scop::MinMaxVectorTy *MinMaxAccesses = &Data->MinMaxAccesses;
-  isl_pw_multi_aff *MinPMA, *MaxPMA;
-  isl_pw_aff *LastDimAff;
-  isl_aff *OneAff;
+static isl::stat
+buildMinMaxAccess(isl::set Set, Scop::MinMaxVectorTy &MinMaxAccesses, Scop &S) {
+  isl::pw_multi_aff MinPMA, MaxPMA;
+  isl::pw_aff LastDimAff;
+  isl::aff OneAff;
   unsigned Pos;
-  isl_ctx *Ctx = isl_set_get_ctx(Set);
+  isl::ctx Ctx = Set.get_ctx();
 
-  Set = isl_set_remove_divs(Set);
+  Set = Set.remove_divs();
 
-  if (isl_set_n_basic_set(Set) >= MaxDisjunctsInDomain) {
-    isl_set_free(Set);
-    return isl_stat_error;
-  }
+  if (isl_set_n_basic_set(Set.get()) >= MaxDisjunctsInDomain)
+    return isl::stat::error;
 
   // Restrict the number of parameters involved in the access as the lexmin/
   // lexmax computation will take too long if this number is high.
@@ -2445,53 +2437,40 @@ static isl_stat buildMinMaxAccess(__isl_take isl_set *Set, void *User) {
   //           11          |     6.78
   //           12          |    30.38
   //
-  if (isl_set_n_param(Set) > RunTimeChecksMaxParameters) {
+  if (isl_set_n_param(Set.get()) > RunTimeChecksMaxParameters) {
     unsigned InvolvedParams = 0;
-    for (unsigned u = 0, e = isl_set_n_param(Set); u < e; u++)
-      if (isl_set_involves_dims(Set, isl_dim_param, u, 1))
+    for (unsigned u = 0, e = isl_set_n_param(Set.get()); u < e; u++)
+      if (Set.involves_dims(isl::dim::param, u, 1))
         InvolvedParams++;
 
-    if (InvolvedParams > RunTimeChecksMaxParameters) {
-      isl_set_free(Set);
-      return isl_stat_error;
-    }
+    if (InvolvedParams > RunTimeChecksMaxParameters)
+      return isl::stat::error;
   }
 
-  {
-    IslMaxOperationsGuard MaxOpGuard(isl_set_get_ctx(Set), OptComputeOut);
-    MinPMA = isl_set_lexmin_pw_multi_aff(isl_set_copy(Set));
-    MaxPMA = isl_set_lexmax_pw_multi_aff(isl_set_copy(Set));
-  }
+  MinPMA = Set.lexmin_pw_multi_aff();
+  MaxPMA = Set.lexmax_pw_multi_aff();
 
-  if (isl_ctx_last_error(Ctx) == isl_error_quota) {
-    MinPMA = isl_pw_multi_aff_free(MinPMA);
-    MaxPMA = isl_pw_multi_aff_free(MaxPMA);
-    Set = isl_set_free(Set);
-    Data->S.invalidate(COMPLEXITY, DebugLoc());
-    return isl_stat_error;
-  }
+  if (isl_ctx_last_error(Ctx.get()) == isl_error_quota)
+    return isl::stat::error;
 
-  MinPMA = isl_pw_multi_aff_coalesce(MinPMA);
-  MaxPMA = isl_pw_multi_aff_coalesce(MaxPMA);
+  MinPMA = MinPMA.coalesce();
+  MaxPMA = MaxPMA.coalesce();
 
   // Adjust the last dimension of the maximal access by one as we want to
   // enclose the accessed memory region by MinPMA and MaxPMA. The pointer
   // we test during code generation might now point after the end of the
   // allocated array but we will never dereference it anyway.
-  assert(isl_pw_multi_aff_dim(MaxPMA, isl_dim_out) &&
-         "Assumed at least one output dimension");
-  Pos = isl_pw_multi_aff_dim(MaxPMA, isl_dim_out) - 1;
-  LastDimAff = isl_pw_multi_aff_get_pw_aff(MaxPMA, Pos);
-  OneAff = isl_aff_zero_on_domain(
-      isl_local_space_from_space(isl_pw_aff_get_domain_space(LastDimAff)));
-  OneAff = isl_aff_add_constant_si(OneAff, 1);
-  LastDimAff = isl_pw_aff_add(LastDimAff, isl_pw_aff_from_aff(OneAff));
-  MaxPMA = isl_pw_multi_aff_set_pw_aff(MaxPMA, Pos, LastDimAff);
+  assert(MaxPMA.dim(isl::dim::out) && "Assumed at least one output dimension");
+  Pos = MaxPMA.dim(isl::dim::out) - 1;
+  LastDimAff = MaxPMA.get_pw_aff(Pos);
+  OneAff = isl::aff(isl::local_space(LastDimAff.get_domain_space()));
+  OneAff = OneAff.add_constant_si(1);
+  LastDimAff = LastDimAff.add(OneAff);
+  MaxPMA = MaxPMA.set_pw_aff(Pos, LastDimAff);
 
-  MinMaxAccesses->push_back(std::make_pair(MinPMA, MaxPMA));
+  MinMaxAccesses.push_back(std::make_pair(MinPMA.copy(), MaxPMA.copy()));
 
-  isl_set_free(Set);
-  return isl_stat_ok;
+  return isl::stat::ok;
 }
 
 static __isl_give isl_set *getAccessDomain(MemoryAccess *MA) {
@@ -2504,23 +2483,23 @@ static __isl_give isl_set *getAccessDomain(MemoryAccess *MA) {
 static bool calculateMinMaxAccess(Scop::AliasGroupTy AliasGroup, Scop &S,
                                   Scop::MinMaxVectorTy &MinMaxAccesses) {
 
-  struct MinMaxData Data = {MinMaxAccesses, S};
-  Data.MinMaxAccesses.reserve(AliasGroup.size());
+  MinMaxAccesses.reserve(AliasGroup.size());
 
-  isl_union_set *Domains = S.getDomains();
-  isl_union_map *Accesses = isl_union_map_empty(S.getParamSpace());
+  isl::union_set Domains = give(S.getDomains());
+  isl::union_map Accesses = isl::union_map::empty(give(S.getParamSpace()));
 
   for (MemoryAccess *MA : AliasGroup)
-    Accesses = isl_union_map_add_map(Accesses, MA->getAccessRelation());
+    Accesses = Accesses.add_map(give(MA->getAccessRelation()));
 
-  Accesses = isl_union_map_intersect_domain(Accesses, Domains);
-  isl_union_set *Locations = isl_union_map_range(Accesses);
-  Locations = isl_union_set_coalesce(Locations);
-  Locations = isl_union_set_detect_equalities(Locations);
-  bool Valid =
-      (0 == isl_union_set_foreach_set(Locations, buildMinMaxAccess, &Data));
-  isl_union_set_free(Locations);
-  return Valid;
+  Accesses = Accesses.intersect_domain(Domains);
+  isl::union_set Locations = Accesses.range();
+  Locations = Locations.coalesce();
+  Locations = Locations.detect_equalities();
+
+  auto Lambda = [&MinMaxAccesses, &S](isl::set Set) -> isl::stat {
+    return buildMinMaxAccess(Set, MinMaxAccesses, S);
+  };
+  return Locations.foreach_set(Lambda) == isl::stat::ok;
 }
 
 /// Helper to treat non-affine regions and basic blocks the same.
@@ -3347,9 +3326,19 @@ bool Scop::buildAliasGroups(AliasAnalysis &AA) {
   splitAliasGroupsByDomain(AliasGroups);
 
   for (AliasGroupTy &AG : AliasGroups) {
-    bool Valid = buildAliasGroup(AG, HasWriteAccess);
-    if (!Valid)
+    if (!hasFeasibleRuntimeContext())
       return false;
+
+    {
+      IslMaxOperationsGuard MaxOpGuard(getIslCtx(), OptComputeOut);
+      bool Valid = buildAliasGroup(AG, HasWriteAccess);
+      if (!Valid)
+        return false;
+    }
+    if (isl_ctx_last_error(getIslCtx()) == isl_error_quota) {
+      invalidate(COMPLEXITY, DebugLoc());
+      return false;
+    }
   }
 
   return true;

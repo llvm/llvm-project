@@ -3868,7 +3868,7 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
 
   // The instantiation is visible here, even if it was first declared in an
   // unimported module.
-  Function->setHidden(false);
+  Function->setVisibleDespiteOwningModule();
 
   // Copy the inner loc start from the pattern.
   Function->setInnerLocStart(PatternDecl->getInnerLocStart());
@@ -4274,7 +4274,7 @@ void Sema::InstantiateVariableDefinition(SourceLocation PointOfInstantiation,
 
       // The instantiation is visible here, even if it was first declared in an
       // unimported module.
-      Var->setHidden(false);
+      Var->setVisibleDespiteOwningModule();
 
       // If we're performing recursive template instantiation, create our own
       // queue of pending implicit instantiations that we will instantiate
@@ -4289,9 +4289,6 @@ void Sema::InstantiateVariableDefinition(SourceLocation PointOfInstantiation,
       ContextRAII PreviousContext(*this, Var->getDeclContext());
       InstantiateVariableInitializer(Var, PatternDecl, TemplateArgs);
       PreviousContext.pop();
-
-      // FIXME: Need to inform the ASTConsumer that we instantiated the
-      // initializer?
 
       // This variable may have local implicit instantiations that need to be
       // instantiated within this scope.
@@ -4402,7 +4399,6 @@ void Sema::InstantiateVariableDefinition(SourceLocation PointOfInstantiation,
   if (Def->isStaticDataMember() && !Def->isOutOfLine()) {
     // We're instantiating an inline static data member whose definition was
     // provided inside the class.
-    // FIXME: Update record?
     InstantiateVariableInitializer(Var, Def, TemplateArgs);
   } else if (!VarSpec) {
     Var = cast_or_null<VarDecl>(SubstDecl(Def, Var->getDeclContext(),

@@ -652,12 +652,12 @@ struct FormatStyle {
     ///   struct foo
     ///   {
     ///     int x;
-    ///   }
+    ///   };
     ///
     ///   false:
     ///   struct foo {
     ///     int x;
-    ///   }
+    ///   };
     /// \endcode
     bool AfterStruct;
     /// \brief Wrap union definitions.
@@ -733,7 +733,7 @@ struct FormatStyle {
   ///        ? firstValue
   ///        : SecondValueVeryVeryVeryVeryLong;
   ///
-  ///    true:
+  ///    false:
   ///    veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongDescription ?
   ///        firstValue :
   ///        SecondValueVeryVeryVeryVeryLong;
@@ -741,8 +741,7 @@ struct FormatStyle {
   bool BreakBeforeTernaryOperators;
 
   /// \brief Different ways to break initializers.
-  enum BreakConstructorInitializersStyle
-  {
+  enum BreakConstructorInitializersStyle {
     /// Break constructor initializers before the colon and after the commas.
     /// \code
     /// Constructor()
@@ -767,7 +766,7 @@ struct FormatStyle {
     BCIS_AfterColon
   };
 
-  /// \brief The constructor initializers style to use..
+  /// \brief The constructor initializers style to use.
   BreakConstructorInitializersStyle BreakConstructorInitializers;
 
   /// \brief Break after each annotation on a field in Java files.
