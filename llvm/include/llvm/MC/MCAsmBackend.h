@@ -63,11 +63,8 @@ public:
   /// Target hook to adjust the literal value of a fixup if necessary.
   /// IsResolved signals whether the caller believes a relocation is needed; the
   /// target can modify the value. The default does nothing.
-  virtual void processFixupValue(const MCAssembler &Asm,
-                                 const MCAsmLayout &Layout,
-                                 const MCFixup &Fixup, const MCFragment *DF,
-                                 const MCValue &Target, uint64_t &Value,
-                                 bool &IsResolved) {}
+  virtual void processFixupValue(const MCAssembler &Asm, const MCFixup &Fixup,
+                                 const MCValue &Target, bool &IsResolved) {}
 
   /// Apply the \p Value for given \p Fixup into the provided data fragment, at
   /// the offset specified by the fixup and following the fixup kind as

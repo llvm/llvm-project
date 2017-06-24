@@ -263,8 +263,7 @@ bool MCAssembler::evaluateFixup(const MCAsmLayout &Layout,
 
   // Let the backend adjust the fixup value if necessary, including whether
   // we need a relocation.
-  Backend.processFixupValue(*this, Layout, Fixup, DF, Target, Value,
-                            IsResolved);
+  Backend.processFixupValue(*this, Fixup, Target, IsResolved);
 
   return IsResolved;
 }

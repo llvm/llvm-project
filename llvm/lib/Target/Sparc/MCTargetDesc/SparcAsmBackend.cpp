@@ -203,10 +203,8 @@ namespace {
       return InfosBE[Kind - FirstTargetFixupKind];
     }
 
-    void processFixupValue(const MCAssembler &Asm, const MCAsmLayout &Layout,
-                           const MCFixup &Fixup, const MCFragment *DF,
-                           const MCValue &Target, uint64_t &Value,
-                           bool &IsResolved) override {
+    void processFixupValue(const MCAssembler &Asm, const MCFixup &Fixup,
+                           const MCValue &Target, bool &IsResolved) override {
       switch ((Sparc::Fixups)Fixup.getKind()) {
       default: break;
       case Sparc::fixup_sparc_wplt30:

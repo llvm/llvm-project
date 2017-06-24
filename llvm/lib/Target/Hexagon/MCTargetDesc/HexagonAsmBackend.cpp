@@ -202,10 +202,8 @@ public:
   /// processFixupValue - Target hook to adjust the literal value of a fixup
   /// if necessary. IsResolved signals whether the caller believes a relocation
   /// is needed; the target can modify the value. The default does nothing.
-  void processFixupValue(const MCAssembler &Asm, const MCAsmLayout &Layout,
-                         const MCFixup &Fixup, const MCFragment *DF,
-                         const MCValue &Target, uint64_t &Value,
-                         bool &IsResolved) override {
+  void processFixupValue(const MCAssembler &Asm, const MCFixup &Fixup,
+                         const MCValue &Target, bool &IsResolved) override {
     MCFixupKind Kind = Fixup.getKind();
 
     switch((unsigned)Kind) {
