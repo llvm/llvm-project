@@ -704,6 +704,47 @@ m_IDiv(const LHS &L, const RHS &R) {
 }
 
 //===----------------------------------------------------------------------===//
+// Class that matches a group of binary opcodes.
+//
+template <typename LHS_t, typename RHS_t, typename Predicate>
+struct BinOpPred_match : Predicate {
+  LHS_t L;
+  RHS_t R;
+
+  BinOpPred_match(const LHS_t &LHS, const RHS_t &RHS) : L(LHS), R(RHS) {}
+
+  template <typename OpTy> bool match(OpTy *V) {
+    if (auto *I = dyn_cast<Instruction>(V))
+      return this->isOpType(I->getOpcode()) && L.match(I->getOperand(0)) && R.match(I->getOperand(1));
+    if (auto *CE = dyn_cast<ConstantExpr>(V))
+      return this->isOpType(CE->getOpcode()) && L.match(CE->getOperand(0)) && R.match(CE->getOperand(1));
+    return false;
+  }
+};
+
+struct is_shift_op {
+  bool isOpType(unsigned Opcode) { return Instruction::isShift(Opcode); }
+};
+
+struct is_bitwiselogic_op {
+  bool isOpType(unsigned Opcode) { return Instruction::isBitwiseLogicOp(Opcode); }
+};
+
+/// \brief Matches shift operations.
+template <typename LHS, typename RHS>
+inline BinOpPred_match<LHS, RHS, is_shift_op>
+m_Shift(const LHS &L, const RHS &R) {
+  return BinOpPred_match<LHS, RHS, is_shift_op>(L, R);
+}
+
+/// \brief Matches bitwise logic operations.
+template <typename LHS, typename RHS>
+inline BinOpPred_match<LHS, RHS, is_bitwiselogic_op>
+m_BitwiseLogic(const LHS &L, const RHS &R) {
+  return BinOpPred_match<LHS, RHS, is_bitwiselogic_op>(L, R);
+}
+
+//===----------------------------------------------------------------------===//
 // Class that matches exact binary ops.
 //
 template <typename SubPattern_t> struct Exact_match {
