@@ -3,7 +3,7 @@
 
 ; FIXME: We should use llvm-mc for this, but we can't even parse our own output.
 ;        See PR33579.
-; RUN: llc -march=amdgcn -verify-machineinstrs -amdgpu-s-branch-bits=4 -o %t.o -filetype=obj
+; RUN: llc -march=amdgcn -verify-machineinstrs -amdgpu-s-branch-bits=4 -o %t.o -filetype=obj %s
 ; RUN: llvm-readobj -r %t.o | FileCheck --check-prefix=OBJ %s
 
 ; OBJ:       Relocations [
