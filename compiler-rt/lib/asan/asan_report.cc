@@ -204,6 +204,14 @@ class ScopedInErrorReport {
       error_report_callback(buffer_copy.data());
     }
 
+    if (halt_on_error_ && common_flags()->abort_on_error) {
+      // On Android the message is truncated to 512 characters.
+      // FIXME: implement "compact" error format, possibly without, or with
+      // highly compressed stack traces?
+      // FIXME: or just use the summary line as abort message?
+      SetAbortMessage(buffer_copy.data());
+    }
+
     // In halt_on_error = false mode, reset the current error object (before
     // unlocking).
     if (!halt_on_error_)

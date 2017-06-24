@@ -132,14 +132,13 @@ RECOVERABLE(function_type_mismatch,
             ValueHandle Val)
 
 struct NonNullReturnData {
-  SourceLocation Loc;
   SourceLocation AttrLoc;
 };
 
 /// \brief Handle returning null from function with the returns_nonnull
 /// attribute, or a return type annotated with _Nonnull.
-RECOVERABLE(nonnull_return, NonNullReturnData *Data)
-RECOVERABLE(nullability_return, NonNullReturnData *Data)
+RECOVERABLE(nonnull_return_v1, NonNullReturnData *Data, SourceLocation *Loc)
+RECOVERABLE(nullability_return_v1, NonNullReturnData *Data, SourceLocation *Loc)
 
 struct NonNullArgData {
   SourceLocation Loc;
