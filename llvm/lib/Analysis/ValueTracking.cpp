@@ -686,8 +686,7 @@ static void computeKnownBitsFromAssume(const Value *V, KnownBits &Known,
       Known.One  |= RHSKnown.Zero;
     // assume(v >> c = a)
     } else if (match(Arg,
-                     m_c_ICmp(Pred, m_CombineOr(m_LShr(m_V, m_ConstantInt(C)),
-                                                m_AShr(m_V, m_ConstantInt(C))),
+                     m_c_ICmp(Pred, m_Shr(m_V, m_ConstantInt(C)),
                               m_Value(A))) &&
                Pred == ICmpInst::ICMP_EQ &&
                isValidAssumeForContext(I, Q.CxtI, Q.DT)) {
@@ -698,9 +697,7 @@ static void computeKnownBitsFromAssume(const Value *V, KnownBits &Known,
       Known.Zero |= RHSKnown.Zero << C->getZExtValue();
       Known.One  |= RHSKnown.One  << C->getZExtValue();
     // assume(~(v >> c) = a)
-    } else if (match(Arg, m_c_ICmp(Pred, m_Not(m_CombineOr(
-                                             m_LShr(m_V, m_ConstantInt(C)),
-                                             m_AShr(m_V, m_ConstantInt(C)))),
+    } else if (match(Arg, m_c_ICmp(Pred, m_Not(m_Shr(m_V, m_ConstantInt(C))),
                                    m_Value(A))) &&
                Pred == ICmpInst::ICMP_EQ &&
                isValidAssumeForContext(I, Q.CxtI, Q.DT)) {
