@@ -109,6 +109,12 @@ Error BinaryStreamReader::readStreamRef(BinaryStreamRef &Ref, uint32_t Length) {
   return Error::success();
 }
 
+Error BinaryStreamReader::readSubstream(BinarySubstreamRef &Stream,
+                                        uint32_t Size) {
+  Stream.Offset = getOffset();
+  return readStreamRef(Stream.StreamData, Size);
+}
+
 Error BinaryStreamReader::skip(uint32_t Amount) {
   if (Amount > bytesRemaining())
     return make_error<BinaryStreamError>(stream_error_code::stream_too_short);

@@ -39,7 +39,7 @@ class DWARFDebugLoc {
     SmallVector<Entry, 2> Entries;
   };
 
-  typedef SmallVector<LocationList, 4> LocationLists;
+  using LocationLists = SmallVector<LocationList, 4>;
 
   /// A list of all the variables in the debug_loc section, each one describing
   /// the locations in which the variable is stored.
@@ -71,7 +71,7 @@ class DWARFDebugLocDWO {
     SmallVector<Entry, 2> Entries;
   };
 
-  typedef SmallVector<LocationList, 4> LocationLists;
+  using LocationLists = SmallVector<LocationList, 4>;
 
   LocationLists Locations;
 

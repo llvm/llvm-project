@@ -166,6 +166,18 @@ public:
                                    ArrayRef<uint8_t> &Buffer) const;
 };
 
+struct BinarySubstreamRef {
+  uint32_t Offset;            // Offset in the parent stream
+  BinaryStreamRef StreamData; // Stream Data
+
+  BinarySubstreamRef slice(uint32_t Off, uint32_t Size) const {
+    BinaryStreamRef SubSub = StreamData.slice(Off, Size);
+    return {Off + Offset, SubSub};
+  }
+  uint32_t size() const { return StreamData.getLength(); }
+  bool empty() const { return size() == 0; }
+};
+
 class WritableBinaryStreamRef
     : public BinaryStreamRefBase<WritableBinaryStreamRef,
                                  WritableBinaryStream> {

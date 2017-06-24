@@ -30,3 +30,4 @@ required_libraries =
  Linker
  ObjCARC
  Scalar
+ all-targets

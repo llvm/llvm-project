@@ -603,6 +603,15 @@ private:
                           Instruction::BinaryOps, Value *, Value *, Value *,
                           Value *);
 
+  /// Match a select chain which produces one of three values based on whether
+  /// the LHS is less than, equal to, or greater than RHS respectively.
+  /// Return true if we matched a three way compare idiom. The LHS, RHS, Less,
+  /// Equal and Greater values are saved in the matching process and returned to
+  /// the caller.
+  bool matchThreeWayIntCompare(SelectInst *SI, Value *&LHS, Value *&RHS,
+                               ConstantInt *&Less, ConstantInt *&Equal,
+                               ConstantInt *&Greater);
+
   /// \brief Attempts to replace V with a simpler value based on the demanded
   /// bits.
   Value *SimplifyDemandedUseBits(Value *V, APInt DemandedMask, KnownBits &Known,
@@ -680,6 +689,8 @@ private:
   Instruction *foldICmpBinOp(ICmpInst &Cmp);
   Instruction *foldICmpEquality(ICmpInst &Cmp);
 
+  Instruction *foldICmpSelectConstant(ICmpInst &Cmp, Instruction *Select,
+                                      ConstantInt *C);
   Instruction *foldICmpTruncConstant(ICmpInst &Cmp, Instruction *Trunc,
                                      const APInt *C);
   Instruction *foldICmpAndConstant(ICmpInst &Cmp, BinaryOperator *And,

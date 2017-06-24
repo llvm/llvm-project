@@ -51,7 +51,7 @@ private:
   IRCompileLayer<decltype(ObjectLayer), SimpleCompiler> CompileLayer;
 
   using OptimizeFunction =
-      std::function<std::unique_ptr<Module>(std::unique_ptr<Module>)>;
+      std::function<std::shared_ptr<Module>(std::shared_ptr<Module>)>;
 
   IRTransformLayer<decltype(CompileLayer), OptimizeFunction> OptimizeLayer;
 
@@ -59,13 +59,13 @@ private:
   CompileOnDemandLayer<decltype(OptimizeLayer)> CODLayer;
 
 public:
-  using ModuleHandle = decltype(CODLayer)::ModuleSetHandleT;
+  using ModuleHandle = decltype(CODLayer)::ModuleHandleT;
 
   KaleidoscopeJIT()
       : TM(EngineBuilder().selectTarget()), DL(TM->createDataLayout()),
         CompileLayer(ObjectLayer, SimpleCompiler(*TM)),
         OptimizeLayer(CompileLayer,
-                      [this](std::unique_ptr<Module> M) {
+                      [this](std::shared_ptr<Module> M) {
                         return optimizeModule(std::move(M));
                       }),
         CompileCallbackManager(
@@ -98,15 +98,11 @@ public:
           return JITSymbol(nullptr);
         });
 
-    // Build a singleton module set to hold our module.
-    std::vector<std::unique_ptr<Module>> Ms;
-    Ms.push_back(std::move(M));
-
     // Add the set to the JIT with the resolver we created above and a newly
     // created SectionMemoryManager.
-    return CODLayer.addModuleSet(std::move(Ms),
-                                 make_unique<SectionMemoryManager>(),
-                                 std::move(Resolver));
+    return CODLayer.addModule(std::move(M),
+                              make_unique<SectionMemoryManager>(),
+                              std::move(Resolver));
   }
 
   JITSymbol findSymbol(const std::string Name) {
@@ -117,11 +113,11 @@ public:
   }
 
   void removeModule(ModuleHandle H) {
-    CODLayer.removeModuleSet(H);
+    CODLayer.removeModule(H);
   }
 
 private:
-  std::unique_ptr<Module> optimizeModule(std::unique_ptr<Module> M) {
+  std::shared_ptr<Module> optimizeModule(std::shared_ptr<Module> M) {
     // Create a function pass manager.
     auto FPM = llvm::make_unique<legacy::FunctionPassManager>(M.get());
 

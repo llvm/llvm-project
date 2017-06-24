@@ -774,10 +774,13 @@ void X86FrameLowering::emitStackProbeCall(MachineFunction &MF,
       .addReg(SP, RegState::Define | RegState::Implicit)
       .addReg(X86::EFLAGS, RegState::Define | RegState::Implicit);
 
-  if (!STI.isTargetWin32()) {
+  if (STI.isTargetWin64() || !STI.isOSWindows()) {
+    // MSVC x32's _chkstk and cygwin/mingw's _alloca adjust %esp themselves.
     // MSVC x64's __chkstk and cygwin/mingw's ___chkstk_ms do not adjust %rsp
-    // themselves. It also does not clobber %rax so we can reuse it when
+    // themselves. They also does not clobber %rax so we can reuse it when
     // adjusting %rsp.
+    // All other platforms do not specify a particular ABI for the stack probe
+    // function, so we arbitrarily define it to not adjust %esp/%rsp itself.
     BuildMI(MBB, MBBI, DL, TII.get(getSUBrrOpcode(Is64Bit)), SP)
         .addReg(SP)
         .addReg(AX);

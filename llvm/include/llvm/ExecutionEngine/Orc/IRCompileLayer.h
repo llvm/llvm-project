@@ -28,15 +28,15 @@ namespace orc {
 
 /// @brief Eager IR compiling layer.
 ///
-///   This layer accepts sets of LLVM IR Modules (via addModuleSet). It
-/// immediately compiles each IR module to an object file (each IR Module is
-/// compiled separately). The resulting set of object files is then added to
-/// the layer below, which must implement the object layer concept.
+///   This layer immediately compiles each IR module added via addModule to an
+/// object file and adds this module file to the layer below, which must
+/// implement the object layer concept.
 template <typename BaseLayerT, typename CompileFtor>
 class IRCompileLayer {
 public:
-  /// @brief Handle to a set of compiled modules.
-  using ModuleSetHandleT = typename BaseLayerT::ObjHandleT;
+
+  /// @brief Handle to a compiled module.
+  using ModuleHandleT = typename BaseLayerT::ObjHandleT;
 
   /// @brief Construct an IRCompileLayer with the given BaseLayer, which must
   ///        implement the ObjectLayer concept.
@@ -46,25 +46,22 @@ public:
   /// @brief Get a reference to the compiler functor.
   CompileFtor& getCompiler() { return Compile; }
 
-  /// @brief Compile each module in the given module set, then add the resulting
-  ///        set of objects to the base layer along with the memory manager and
-  ///        symbol resolver.
+  /// @brief Compile the module, and add the resulting object to the base layer
+  ///        along with the given memory manager and symbol resolver.
   ///
-  /// @return A handle for the added modules.
-  template <typename ModuleSetT, typename MemoryManagerPtrT,
-            typename SymbolResolverPtrT>
-  ModuleSetHandleT addModuleSet(ModuleSetT Ms,
-                                MemoryManagerPtrT MemMgr,
-                                SymbolResolverPtrT Resolver) {
-    assert(Ms.size() == 1);
-    using CompileResult = decltype(Compile(*Ms.front()));
-    auto Obj = std::make_shared<CompileResult>(Compile(*Ms.front()));
+  /// @return A handle for the added module.
+  template <typename MemoryManagerPtrT, typename SymbolResolverPtrT>
+  ModuleHandleT addModule(std::shared_ptr<Module> M,
+                          MemoryManagerPtrT MemMgr,
+                          SymbolResolverPtrT Resolver) {
+    using CompileResult = decltype(Compile(*M));
+    auto Obj = std::make_shared<CompileResult>(Compile(*M));
     return BaseLayer.addObject(std::move(Obj), std::move(MemMgr),
                                std::move(Resolver));
   }
 
-  /// @brief Remove the module set associated with the handle H.
-  void removeModuleSet(ModuleSetHandleT H) { BaseLayer.removeObject(H); }
+  /// @brief Remove the module associated with the handle H.
+  void removeModule(ModuleHandleT H) { BaseLayer.removeObject(H); }
 
   /// @brief Search for the given named symbol.
   /// @param Name The name of the symbol to search for.
@@ -74,23 +71,23 @@ public:
     return BaseLayer.findSymbol(Name, ExportedSymbolsOnly);
   }
 
-  /// @brief Get the address of the given symbol in the context of the set of
-  ///        compiled modules represented by the handle H. This call is
-  ///        forwarded to the base layer's implementation.
-  /// @param H The handle for the module set to search in.
+  /// @brief Get the address of the given symbol in compiled module represented
+  ///        by the handle H. This call is forwarded to the base layer's
+  ///        implementation.
+  /// @param H The handle for the module to search in.
   /// @param Name The name of the symbol to search for.
   /// @param ExportedSymbolsOnly If true, search only for exported symbols.
   /// @return A handle for the given named symbol, if it is found in the
-  ///         given module set.
-  JITSymbol findSymbolIn(ModuleSetHandleT H, const std::string &Name,
+  ///         given module.
+  JITSymbol findSymbolIn(ModuleHandleT H, const std::string &Name,
                          bool ExportedSymbolsOnly) {
     return BaseLayer.findSymbolIn(H, Name, ExportedSymbolsOnly);
   }
 
-  /// @brief Immediately emit and finalize the moduleOB set represented by the
-  ///        given handle.
-  /// @param H Handle for module set to emit/finalize.
-  void emitAndFinalize(ModuleSetHandleT H) {
+  /// @brief Immediately emit and finalize the module represented by the given
+  ///        handle.
+  /// @param H Handle for module to emit/finalize.
+  void emitAndFinalize(ModuleHandleT H) {
     BaseLayer.emitAndFinalize(H);
   }
 

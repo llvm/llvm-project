@@ -191,10 +191,15 @@ public:
     } else {
       assert(M->getDataLayout() == getDataLayout() && "DataLayout Mismatch");
     }
-    Modules.push_back(std::move(M));
-    std::vector<Module *> Ms;
-    Ms.push_back(&*Modules.back());
-    LazyEmitLayer.addModuleSet(std::move(Ms), &MemMgr, &Resolver);
+    auto *MPtr = M.release();
+    ShouldDelete[MPtr] = true;
+    auto Deleter =
+      [this](Module *Mod) {
+        if (ShouldDelete[Mod])
+	  delete Mod;
+      };
+    LocalModules.push_back(std::shared_ptr<Module>(MPtr, std::move(Deleter)));
+    LazyEmitLayer.addModule(LocalModules.back(), &MemMgr, &Resolver);
   }
 
   void addObjectFile(std::unique_ptr<object::ObjectFile> O) override {
@@ -212,6 +217,17 @@ public:
 
   void addArchive(object::OwningBinary<object::Archive> A) override {
     Archives.push_back(std::move(A));
+  }
+  
+  bool removeModule(Module *M) override {
+    for (auto I = LocalModules.begin(), E = LocalModules.end(); I != E; ++I) {
+      if (I->get() == M) {
+	ShouldDelete[M] = false;
+	LocalModules.erase(I);
+	return true;
+      }
+    }
+    return false;
   }
 
   uint64_t getSymbolAddress(StringRef Name) {
@@ -265,6 +281,8 @@ public:
   void setProcessAllSections(bool ProcessAllSections) override {
     ObjectLayer.setProcessAllSections(ProcessAllSections);
   }
+
+  void runStaticConstructorsDestructors(bool isDtors) override;
 
 private:
   JITSymbol findMangledSymbol(StringRef Name) {
@@ -381,6 +399,8 @@ private:
   std::map<ObjectLayerT::ObjHandleT, SectionAddrSet, ObjHandleCompare>
       UnfinalizedSections;
 
+  std::map<Module*, bool> ShouldDelete;
+  std::vector<std::shared_ptr<Module>> LocalModules;
   std::vector<object::OwningBinary<object::Archive>> Archives;
 };
 

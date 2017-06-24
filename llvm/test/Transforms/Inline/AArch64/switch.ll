@@ -121,3 +121,40 @@ define i32 @caller_jumptable(i32 %a, i32 %b, i32* %P) {
   ret i32 %r
 }
 
+
+define internal i32 @callee_negativeCost(i32 %t)  {
+entry:
+  switch i32 %t, label %sw.default [
+    i32 1, label %sw.bb
+    i32 0, label %sw.bb1
+    i32 42, label %sw.bb2
+    i32 43, label %sw.bb3
+  ]
+
+sw.bb:                                            ; preds = %entry
+  br label %cleanup
+
+sw.bb1:                                           ; preds = %entry
+  br label %cleanup
+
+sw.bb2:                                           ; preds = %entry
+  br label %cleanup
+
+sw.bb3:                                           ; preds = %entry
+  br label %cleanup
+
+sw.default:                                       ; preds = %entry
+  br label %cleanup
+
+cleanup:                                          ; preds = %sw.default, %sw.bb3, %sw.bb2, %sw.bb1, %sw.bb
+  %retval.0 = phi i32 [ 1, %sw.default ], [ 3, %sw.bb3 ], [ 2, %sw.bb2 ], [ 0, %sw.bb1 ], [ 0, %sw.bb ]
+  ret i32 %retval.0
+}
+
+define i32 @caller_negativeCost(i32 %t) {
+; CHECK-LABEL: @caller_negativeCost(
+; CHECK-NOT: call i32 @callee_negativeCost
+entry:
+  %call = call i32 @callee_negativeCost(i32 %t)
+  ret i32 %call
+}

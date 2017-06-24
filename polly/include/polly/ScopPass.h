@@ -40,12 +40,12 @@ using FunctionAnalysisManagerScopProxy =
 } // namespace polly
 
 namespace llvm {
-using polly::Scop;
-using polly::ScopInfo;
-using polly::ScopAnalysisManager;
-using polly::ScopStandardAnalysisResults;
-using polly::ScopAnalysisManagerFunctionProxy;
 using polly::SPMUpdater;
+using polly::Scop;
+using polly::ScopAnalysisManager;
+using polly::ScopAnalysisManagerFunctionProxy;
+using polly::ScopInfo;
+using polly::ScopStandardAnalysisResults;
 
 template <>
 class InnerAnalysisManagerProxy<ScopAnalysisManager, Function>::Result {

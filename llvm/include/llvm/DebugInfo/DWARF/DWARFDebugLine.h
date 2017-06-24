@@ -10,6 +10,7 @@
 #ifndef LLVM_DEBUGINFO_DWARFDEBUGLINE_H
 #define LLVM_DEBUGINFO_DWARFDEBUGLINE_H
 
+#include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFRelocMap.h"
 #include "llvm/Support/DataExtractor.h"
@@ -104,7 +105,9 @@ public:
     void postAppend();
     void reset(bool DefaultIsStmt);
     void dump(raw_ostream &OS) const;
+
     static void dumpTableHeader(raw_ostream &OS);
+
     static bool orderByAddress(const Row &LHS, const Row &RHS) {
       return LHS.Address < RHS.Address;
     }
@@ -216,11 +219,12 @@ public:
     bool parse(DataExtractor DebugLineData, const RelocAddrMap *RMap,
                uint32_t *OffsetPtr);
 
+    using RowVector = std::vector<Row>;
+    using RowIter = RowVector::const_iterator;
+    using SequenceVector = std::vector<Sequence>;
+    using SequenceIter = SequenceVector::const_iterator;
+
     struct Prologue Prologue;
-    typedef std::vector<Row> RowVector;
-    typedef RowVector::const_iterator RowIter;
-    typedef std::vector<Sequence> SequenceVector;
-    typedef SequenceVector::const_iterator SequenceIter;
     RowVector Rows;
     SequenceVector Sequences;
 
@@ -244,14 +248,14 @@ private:
     struct LineTable *LineTable;
     /// The row number that starts at zero for the prologue, and increases for
     /// each row added to the matrix.
-    unsigned RowNumber;
+    unsigned RowNumber = 0;
     struct Row Row;
     struct Sequence Sequence;
   };
 
-  typedef std::map<uint32_t, LineTable> LineTableMapTy;
-  typedef LineTableMapTy::iterator LineTableIter;
-  typedef LineTableMapTy::const_iterator LineTableConstIter;
+  using LineTableMapTy = std::map<uint32_t, LineTable>;
+  using LineTableIter = LineTableMapTy::iterator;
+  using LineTableConstIter = LineTableMapTy::const_iterator;
 
   const RelocAddrMap *RelocMap;
   LineTableMapTy LineTableMap;

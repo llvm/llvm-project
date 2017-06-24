@@ -465,15 +465,6 @@ def G_INSERT : Instruction {
   let hasSideEffects = 0;
 }
 
-// Combine a sequence of generic vregs into a single larger value (starting at
-// bit 0). Essentially a G_INSERT where $src is an IMPLICIT_DEF, but it's so
-// important to legalization it probably deserves its own instruction.
-def G_SEQUENCE : Instruction {
-  let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins variable_ops);
-  let hasSideEffects = 0;
-}
-
 def G_MERGE_VALUES : Instruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins variable_ops);

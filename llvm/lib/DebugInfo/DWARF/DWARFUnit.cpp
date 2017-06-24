@@ -1,4 +1,4 @@
-//===-- DWARFUnit.cpp -----------------------------------------------------===//
+//===- DWARFUnit.cpp ------------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -8,7 +8,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/DWARF/DWARFAbbreviationDeclaration.h"
@@ -17,8 +16,6 @@
 #include "llvm/DebugInfo/DWARF/DWARFDebugInfoEntry.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
-#include "llvm/Object/ObjectFile.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Path.h"
 #include <algorithm>
@@ -26,6 +23,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
+#include <utility>
 #include <vector>
 
 using namespace llvm;
@@ -55,8 +53,8 @@ DWARFUnit::DWARFUnit(DWARFContext &DC, const DWARFSection &Section,
                      const DWARFUnitIndex::Entry *IndexEntry)
     : Context(DC), InfoSection(Section), Abbrev(DA), RangeSection(RS),
       LineSection(LS), StringSection(SS), StringOffsetSection(SOS),
-      StringOffsetSectionBase(0), AddrOffsetSection(AOS), isLittleEndian(LE),
-      isDWO(IsDWO), UnitSection(UnitSection), IndexEntry(IndexEntry) {
+      AddrOffsetSection(AOS), isLittleEndian(LE), isDWO(IsDWO),
+      UnitSection(UnitSection), IndexEntry(IndexEntry) {
   clear();
 }
 

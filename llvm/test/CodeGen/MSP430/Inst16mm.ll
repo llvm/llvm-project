@@ -64,6 +64,6 @@ entry:
  %0 = load i16, i16* %retval                          ; <i16> [#uses=1]
  ret i16 %0
 ; CHECK-LABEL: mov2:
-; CHECK:	mov.w	2(r1), 6(r1)
 ; CHECK:	mov.w	0(r1), 4(r1)
+; CHECK:	mov.w	2(r1), 6(r1)
 }

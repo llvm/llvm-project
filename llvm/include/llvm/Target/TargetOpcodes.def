@@ -241,8 +241,6 @@ HANDLE_TARGET_OPCODE(G_INSERT)
 
 /// Generic instruction to paste a variable number of components together into a
 /// larger register.
-HANDLE_TARGET_OPCODE(G_SEQUENCE)
-
 HANDLE_TARGET_OPCODE(G_MERGE_VALUES)
 
 /// Generic pointer to int conversion.

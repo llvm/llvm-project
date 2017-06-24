@@ -169,6 +169,18 @@ isOnlyCopiedFromConstantGlobal(AllocaInst *AI,
   return nullptr;
 }
 
+/// Returns true if V is dereferenceable for size of alloca.
+static bool isDereferenceableForAllocaSize(const Value *V, const AllocaInst *AI,
+                                           const DataLayout &DL) {
+  if (AI->isArrayAllocation())
+    return false;
+  uint64_t AllocaSize = DL.getTypeStoreSize(AI->getAllocatedType());
+  if (!AllocaSize)
+    return false;
+  return isDereferenceableAndAlignedPointer(V, AI->getAlignment(),
+                                            APInt(64, AllocaSize), DL);
+}
+
 static Instruction *simplifyAllocaArraySize(InstCombiner &IC, AllocaInst &AI) {
   // Check for array size of 1 (scalar allocation).
   if (!AI.isArrayAllocation()) {
@@ -390,7 +402,8 @@ Instruction *InstCombiner::visitAllocaInst(AllocaInst &AI) {
     if (MemTransferInst *Copy = isOnlyCopiedFromConstantGlobal(&AI, ToDelete)) {
       unsigned SourceAlign = getOrEnforceKnownAlignment(
           Copy->getSource(), AI.getAlignment(), DL, &AI, &AC, &DT);
-      if (AI.getAlignment() <= SourceAlign) {
+      if (AI.getAlignment() <= SourceAlign &&
+          isDereferenceableForAllocaSize(Copy->getSource(), &AI, DL)) {
         DEBUG(dbgs() << "Found alloca equal to global: " << AI << '\n');
         DEBUG(dbgs() << "  memcpy = " << *Copy << '\n');
         for (unsigned i = 0, e = ToDelete.size(); i != e; ++i)

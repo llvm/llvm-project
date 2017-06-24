@@ -22,23 +22,40 @@ ALL-NEXT:   Has conflicting types: false
 ALL-NEXT:   Is stripped: false
 ALL:                                  Streams
 ALL-NEXT: ============================================================
-ALL-NEXT: Stream  0: [Old MSF Directory] (40 bytes)
-ALL-NEXT:   Stream  1: [PDB Stream] (118 bytes)
-ALL-NEXT:   Stream  2: [TPI Stream] (5392 bytes)
-ALL-NEXT:   Stream  3: [DBI Stream] (739 bytes)
-ALL-NEXT:   Stream  4: [IPI Stream] (784 bytes)
-ALL-NEXT:   Stream  5: [Named Stream "/LinkInfo"] (0 bytes)
-ALL-NEXT:   Stream  6: [Global Symbol Hash] (556 bytes)
-ALL-NEXT:   Stream  7: [Public Symbol Hash] (604 bytes)
-ALL-NEXT:   Stream  8: [Public Symbol Records] (104 bytes)
-ALL-NEXT:   Stream  9: [Named Stream "/src/headerblock"] (0 bytes)
-ALL-NEXT:   Stream 10: [Section Header Data] (160 bytes)
-ALL-NEXT:   Stream 11: [New FPO Data] (32 bytes)
-ALL-NEXT:   Stream 12: [Module "d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj"] (308 bytes)
-ALL-NEXT:   Stream 13: [Named Stream "/names"] (239 bytes)
-ALL-NEXT:   Stream 14: [Module "* Linker *"] (520 bytes)
-ALL-NEXT:   Stream 15: [TPI Hash] (308 bytes)
-ALL-NEXT:   Stream 16: [IPI Hash] (68 bytes)
+ALL-NEXT:     Stream  0: [Old MSF Directory] (40 bytes)
+ALL-NEXT:                Blocks: [8]
+ALL-NEXT:     Stream  1: [PDB Stream] (118 bytes)
+ALL-NEXT:                Blocks: [19]
+ALL-NEXT:     Stream  2: [TPI Stream] (5392 bytes)
+ALL-NEXT:                Blocks: [18, 17]
+ALL-NEXT:     Stream  3: [DBI Stream] (739 bytes)
+ALL-NEXT:                Blocks: [14]
+ALL-NEXT:     Stream  4: [IPI Stream] (784 bytes)
+ALL-NEXT:                Blocks: [20]
+ALL-NEXT:     Stream  5: [Named Stream "/LinkInfo"] (0 bytes)
+ALL-NEXT:                Blocks: []
+ALL-NEXT:     Stream  6: [Global Symbol Hash] (556 bytes)
+ALL-NEXT:                Blocks: [11]
+ALL-NEXT:     Stream  7: [Public Symbol Hash] (604 bytes)
+ALL-NEXT:                Blocks: [13]
+ALL-NEXT:     Stream  8: [Public Symbol Records] (104 bytes)
+ALL-NEXT:                Blocks: [12]
+ALL-NEXT:     Stream  9: [Named Stream "/src/headerblock"] (0 bytes)
+ALL-NEXT:                Blocks: []
+ALL-NEXT:     Stream 10: [Section Header Data] (160 bytes)
+ALL-NEXT:                Blocks: [10]
+ALL-NEXT:     Stream 11: [New FPO Data] (32 bytes)
+ALL-NEXT:                Blocks: [15]
+ALL-NEXT:     Stream 12: [Module "d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj"] (308 bytes)
+ALL-NEXT:                Blocks: [6]
+ALL-NEXT:     Stream 13: [Named Stream "/names"] (239 bytes)
+ALL-NEXT:                Blocks: [16]
+ALL-NEXT:     Stream 14: [Module "* Linker *"] (520 bytes)
+ALL-NEXT:                Blocks: [7]
+ALL-NEXT:     Stream 15: [TPI Hash] (308 bytes)
+ALL-NEXT:                Blocks: [21]
+ALL-NEXT:     Stream 16: [IPI Hash] (68 bytes)
+ALL-NEXT:                Blocks: [22]
 ALL:                                String Table
 ALL-NEXT: ============================================================
 ALL-NEXT:    ID | String

@@ -213,6 +213,12 @@ private:
   /// out-of-line slow case for countLeadingZeros
   unsigned countLeadingZerosSlowCase() const LLVM_READONLY;
 
+  /// out-of-line slow case for countLeadingOnes.
+  unsigned countLeadingOnesSlowCase() const LLVM_READONLY;
+
+  /// out-of-line slow case for countTrailingZeros.
+  unsigned countTrailingZerosSlowCase() const LLVM_READONLY;
+
   /// out-of-line slow case for countTrailingOnes
   unsigned countTrailingOnesSlowCase() const LLVM_READONLY;
 
@@ -383,7 +389,7 @@ public:
   bool isAllOnesValue() const {
     if (isSingleWord())
       return U.VAL == WORD_MAX >> (APINT_BITS_PER_WORD - BitWidth);
-    return countPopulationSlowCase() == BitWidth;
+    return countTrailingOnesSlowCase() == BitWidth;
   }
 
   /// \brief Determine if all bits are clear
@@ -408,7 +414,9 @@ public:
   /// This checks to see if the value of this APInt is the maximum signed
   /// value for the APInt's bit width.
   bool isMaxSignedValue() const {
-    return !isNegative() && countPopulation() == BitWidth - 1;
+    if (isSingleWord())
+      return U.VAL == ((WordType(1) << (BitWidth - 1)) - 1);
+    return !isNegative() && countTrailingOnesSlowCase() == BitWidth - 1;
   }
 
   /// \brief Determine if this is the smallest unsigned value.
@@ -422,7 +430,9 @@ public:
   /// This checks to see if the value of this APInt is the minimum signed
   /// value for the APInt's bit width.
   bool isMinSignedValue() const {
-    return isNegative() && isPowerOf2();
+    if (isSingleWord())
+      return U.VAL == (WordType(1) << (BitWidth - 1));
+    return isNegative() && countTrailingZerosSlowCase() == BitWidth - 1;
   }
 
   /// \brief Check if this APInt has an N-bits unsigned integer value.
@@ -1574,7 +1584,11 @@ public:
   ///
   /// \returns 0 if the high order bit is not set, otherwise returns the number
   /// of 1 bits from the most significant to the least
-  unsigned countLeadingOnes() const LLVM_READONLY;
+  unsigned countLeadingOnes() const {
+    if (isSingleWord())
+      return llvm::countLeadingOnes(U.VAL << (APINT_BITS_PER_WORD - BitWidth));
+    return countLeadingOnesSlowCase();
+  }
 
   /// Computes the number of leading bits of this APInt that are equal to its
   /// sign bit.
@@ -1590,7 +1604,11 @@ public:
   ///
   /// \returns BitWidth if the value is zero, otherwise returns the number of
   /// zeros from the least significant bit to the first one bit.
-  unsigned countTrailingZeros() const LLVM_READONLY;
+  unsigned countTrailingZeros() const {
+    if (isSingleWord())
+      return std::min(unsigned(llvm::countTrailingZeros(U.VAL)), BitWidth);
+    return countTrailingZerosSlowCase();
+  }
 
   /// \brief Count the number of trailing one bits.
   ///

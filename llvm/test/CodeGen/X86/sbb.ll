@@ -111,3 +111,28 @@ define i8 @i8_select_neg1_or_0_commuted_as_math(i8 %x) {
   ret i8 %add
 }
 
+; Make sure we're creating nodes with the right value types. This would crash.
+; https://bugs.llvm.org/show_bug.cgi?id=33560
+
+define void @PR33560(i8 %x, i64 %y) {
+; CHECK-LABEL: PR33560:
+; CHECK:       # BB#0: # %entry
+; CHECK-NEXT:    negb %dil
+; CHECK-NEXT:    sbbq %rax, %rax
+; CHECK-NEXT:    cmpq %rsi, %rax
+; CHECK-NEXT:    retq
+entry:
+  %cmp1 = icmp eq i8 %x, 0
+  %ext = zext i1 %cmp1 to i64
+  %add = add i64 %ext, -1
+  %cmp2 = icmp eq i64 %add, %y
+  br i1 %cmp2, label %end, label %else
+
+else:
+  %tmp7 = zext i1 %cmp1 to i8
+  br label %end
+
+end:
+  ret void
+}
+

@@ -582,7 +582,7 @@ bool IRTranslator::translateOverflowIntrinsic(const CallInst &CI, unsigned Op,
     MIB.addUse(Zero);
   }
 
-  MIRBuilder.buildSequence(getOrCreateVReg(CI), Res, 0, Overflow, Width);
+  MIRBuilder.buildSequence(getOrCreateVReg(CI), {Res, Overflow}, {0, Width});
   return true;
 }
 

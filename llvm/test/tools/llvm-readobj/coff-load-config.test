@@ -1,6 +1,8 @@
 RUN: llvm-readobj -coff-load-config %S/Inputs/coff-load-config-x86.dll | FileCheck %s --check-prefix=X86
 RUN: llvm-readobj -coff-load-config %S/Inputs/coff-load-config-x64.dll | FileCheck %s --check-prefix=X64
 
+RUN: llvm-readobj -coff-load-config %S/Inputs/coff-load-config-data-end.exe | FileCheck %s --check-prefix=DATAEND
+
 X86: LoadConfig [
 X86:   Size: 0x5C
 X86:   TimeDateStamp: 1970-01-01 00:00:00 (0x0)
@@ -85,3 +87,7 @@ X64:   0x180001970
 X64:   0x180001B50
 X64:   0x180001D90
 X64: ]
+
+DATAEND: SEHTable [
+DATAEND-NEXT:   0x402006
+DATAEND-NEXT: ]

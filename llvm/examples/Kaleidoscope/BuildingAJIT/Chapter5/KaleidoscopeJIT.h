@@ -82,7 +82,7 @@ private:
   IRCompileLayer<decltype(ObjectLayer), SimpleCompiler> CompileLayer;
 
   using OptimizeFunction =
-      std::function<std::unique_ptr<Module>(std::unique_ptr<Module>)>;
+      std::function<std::shared_ptr<Module>(std::shared_ptr<Module>)>;
 
   IRTransformLayer<decltype(CompileLayer), OptimizeFunction> OptimizeLayer;
 
@@ -91,7 +91,7 @@ private:
   MyRemote &Remote;
 
 public:
-  using ModuleHandle = decltype(OptimizeLayer)::ModuleSetHandleT;
+  using ModuleHandle = decltype(OptimizeLayer)::ModuleHandleT;
 
   KaleidoscopeJIT(MyRemote &Remote)
       : TM(EngineBuilder().selectTarget(Triple(Remote.getTargetTriple()), "",
@@ -99,7 +99,7 @@ public:
         DL(TM->createDataLayout()),
         CompileLayer(ObjectLayer, SimpleCompiler(*TM)),
         OptimizeLayer(CompileLayer,
-                      [this](std::unique_ptr<Module> M) {
+                      [this](std::shared_ptr<Module> M) {
                         return optimizeModule(std::move(M));
                       }),
         Remote(Remote) {
@@ -153,15 +153,11 @@ public:
       exit(1);
     }
 
-    // Build a singleton module set to hold our module.
-    std::vector<std::unique_ptr<Module>> Ms;
-    Ms.push_back(std::move(M));
-
     // Add the set to the JIT with the resolver we created above and a newly
     // created SectionMemoryManager.
-    return OptimizeLayer.addModuleSet(std::move(Ms),
-                                      std::move(MemMgr),
-                                      std::move(Resolver));
+    return OptimizeLayer.addModule(std::move(M),
+                                   std::move(MemMgr),
+                                   std::move(Resolver));
   }
 
   Error addFunctionAST(std::unique_ptr<FunctionAST> FnAST) {
@@ -231,7 +227,7 @@ public:
   }
 
   void removeModule(ModuleHandle H) {
-    OptimizeLayer.removeModuleSet(H);
+    OptimizeLayer.removeModule(H);
   }
 
 private:
@@ -242,7 +238,7 @@ private:
     return MangledNameStream.str();
   }
 
-  std::unique_ptr<Module> optimizeModule(std::unique_ptr<Module> M) {
+  std::shared_ptr<Module> optimizeModule(std::shared_ptr<Module> M) {
     // Create a function pass manager.
     auto FPM = llvm::make_unique<legacy::FunctionPassManager>(M.get());
 

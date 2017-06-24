@@ -191,8 +191,6 @@ def z_sdivrem64         : SDNode<"SystemZISD::SDIVREM64", SDT_ZGR128Binary64>;
 def z_udivrem32         : SDNode<"SystemZISD::UDIVREM32", SDT_ZGR128Binary32>;
 def z_udivrem64         : SDNode<"SystemZISD::UDIVREM64", SDT_ZGR128Binary64>;
 
-def z_serialize         : SDNode<"SystemZISD::SERIALIZE", SDTNone,
-                                 [SDNPHasChain, SDNPMayStore]>;
 def z_membarrier        : SDNode<"SystemZISD::MEMBARRIER", SDTNone,
                                  [SDNPHasChain, SDNPSideEffect]>;
 

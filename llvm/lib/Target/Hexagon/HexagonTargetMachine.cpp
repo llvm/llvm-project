@@ -291,7 +291,6 @@ bool HexagonPassConfig::addInstSelector() {
     if (EnableBitSimplify)
       addPass(createHexagonBitSimplify());
     addPass(createHexagonPeephole());
-    printAndVerify("After hexagon peephole pass");
     // Constant propagation.
     if (!DisableHCP) {
       addPass(createHexagonConstPropagationPass());

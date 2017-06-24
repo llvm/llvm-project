@@ -195,8 +195,8 @@ private:
   /// finishLayout - Finalize a layout, including fragment lowering.
   void finishLayout(MCAsmLayout &Layout);
 
-  std::pair<uint64_t, bool> handleFixup(const MCAsmLayout &Layout,
-                                        MCFragment &F, const MCFixup &Fixup);
+  std::tuple<MCValue, uint64_t, bool>
+  handleFixup(const MCAsmLayout &Layout, MCFragment &F, const MCFixup &Fixup);
 
 public:
   /// Construct a new assembler instance.

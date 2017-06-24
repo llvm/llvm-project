@@ -22,8 +22,6 @@
 #include "llvm/DebugInfo/DWARF/DWARFRelocMap.h"
 #include "llvm/DebugInfo/DWARF/DWARFSection.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnitIndex.h"
-#include "llvm/Object/Binary.h"
-#include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/DataExtractor.h"
 #include <algorithm>
 #include <cassert>
@@ -31,6 +29,7 @@
 #include <cstdint>
 #include <map>
 #include <memory>
+#include <utility>
 #include <vector>
 
 namespace llvm {
@@ -72,9 +71,9 @@ class DWARFUnitSection final : public SmallVector<std::unique_ptr<UnitType>, 1>,
   bool Parsed = false;
 
 public:
-  typedef SmallVectorImpl<std::unique_ptr<UnitType>> UnitVector;
-  typedef typename UnitVector::iterator iterator;
-  typedef llvm::iterator_range<typename UnitVector::iterator> iterator_range;
+  using UnitVector = SmallVectorImpl<std::unique_ptr<UnitType>>;
+  using iterator = typename UnitVector::iterator;
+  using iterator_range = llvm::iterator_range<typename UnitVector::iterator>;
 
   UnitType *getUnitForOffset(uint32_t Offset) const override {
     auto *CU = std::upper_bound(
@@ -142,8 +141,9 @@ class DWARFUnit {
   /// IntervalMap does not support range removal, as a result, we use the
   /// std::map::upper_bound for address range lookup.
   std::map<uint64_t, std::pair<uint64_t, DWARFDie>> AddrDieMap;
-  typedef iterator_range<std::vector<DWARFDebugInfoEntry>::iterator>
-      die_iterator_range;
+
+  using die_iterator_range =
+      iterator_range<std::vector<DWARFDebugInfoEntry>::iterator>;
 
   std::shared_ptr<DWARFUnit> DWO;
 

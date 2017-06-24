@@ -314,7 +314,7 @@ TEST(ObjectTransformLayerTest, Main) {
   // compile.
   NullResolver Resolver;
   NullManager Manager;
-  CompileLayer.addModuleSet(std::vector<llvm::Module *>(), &Manager, &Resolver);
+  CompileLayer.addModule(std::shared_ptr<llvm::Module>(), &Manager, &Resolver);
 
   // Make sure that the calls from ObjectTransformLayer to ObjectLinkingLayer
   // compile.

@@ -425,10 +425,8 @@ MachineInstrBuilder MachineIRBuilder::buildExtract(unsigned Res, unsigned Src,
       .addImm(Index);
 }
 
-MachineInstrBuilder
-MachineIRBuilder::buildSequence(unsigned Res,
-                                ArrayRef<unsigned> Ops,
-                                ArrayRef<uint64_t> Indices) {
+void MachineIRBuilder::buildSequence(unsigned Res, ArrayRef<unsigned> Ops,
+                                     ArrayRef<uint64_t> Indices) {
 #ifndef NDEBUG
   assert(Ops.size() == Indices.size() && "incompatible args");
   assert(!Ops.empty() && "invalid trivial sequence");
@@ -440,13 +438,31 @@ MachineIRBuilder::buildSequence(unsigned Res,
     assert(MRI->getType(Op).isValid() && "invalid operand type");
 #endif
 
-  MachineInstrBuilder MIB = buildInstr(TargetOpcode::G_SEQUENCE);
-  MIB.addDef(Res);
+  LLT ResTy = MRI->getType(Res);
+  LLT OpTy = MRI->getType(Ops[0]);
+  unsigned OpSize = OpTy.getSizeInBits();
+  bool MaybeMerge = true;
   for (unsigned i = 0; i < Ops.size(); ++i) {
-    MIB.addUse(Ops[i]);
-    MIB.addImm(Indices[i]);
+    if (MRI->getType(Ops[i]) != OpTy || Indices[i] != i * OpSize) {
+      MaybeMerge = false;
+      break;
+    }
   }
-  return MIB;
+
+  if (MaybeMerge && Ops.size() * OpSize == ResTy.getSizeInBits()) {
+    buildMerge(Res, Ops);
+    return;
+  }
+
+  unsigned ResIn = MRI->createGenericVirtualRegister(ResTy);
+  buildUndef(ResIn);
+
+  for (unsigned i = 0; i < Ops.size(); ++i) {
+    unsigned ResOut =
+        i + 1 == Ops.size() ? Res : MRI->createGenericVirtualRegister(ResTy);
+    buildInsert(ResOut, ResIn, Ops[i], Indices[i]);
+    ResIn = ResOut;
+  }
 }
 
 MachineInstrBuilder MachineIRBuilder::buildUndef(unsigned Res) {

@@ -267,18 +267,69 @@ cl::list<std::string> InputFilenames(cl::Positional,
 cl::OptionCategory FileOptions("Module & File Options");
 
 namespace bytes {
-llvm::Optional<BlockRange> DumpBlockRange;
+cl::OptionCategory MsfBytes("MSF File Options");
+cl::OptionCategory DbiBytes("Dbi Stream Options");
+cl::OptionCategory PdbBytes("PDB Stream Options");
+cl::OptionCategory Types("Type Options");
+cl::OptionCategory ModuleCategory("Module Options");
+
+llvm::Optional<NumberRange> DumpBlockRange;
+llvm::Optional<NumberRange> DumpByteRange;
+
+cl::opt<std::string> DumpBlockRangeOpt(
+    "block-range", cl::value_desc("start[-end]"),
+    cl::desc("Dump binary data from specified range of blocks."),
+    cl::sub(BytesSubcommand), cl::cat(MsfBytes));
 
 cl::opt<std::string>
-    DumpBlockRangeOpt("block-data", cl::value_desc("start[-end]"),
-                      cl::desc("Dump binary data from specified range."),
-                      cl::sub(BytesSubcommand));
+    DumpByteRangeOpt("byte-range", cl::value_desc("start[-end]"),
+                     cl::desc("Dump binary data from specified range of bytes"),
+                     cl::sub(BytesSubcommand), cl::cat(MsfBytes));
 
 cl::list<std::string>
     DumpStreamData("stream-data", cl::CommaSeparated, cl::ZeroOrMore,
                    cl::desc("Dump binary data from specified streams.  Format "
                             "is SN[:Start][@Size]"),
-                   cl::sub(BytesSubcommand));
+                   cl::sub(BytesSubcommand), cl::cat(MsfBytes));
+
+cl::opt<bool> NameMap("name-map", cl::desc("Dump bytes of PDB Name Map"),
+                      cl::sub(BytesSubcommand), cl::cat(PdbBytes));
+
+cl::opt<bool> SectionContributions("sc", cl::desc("Dump section contributions"),
+                                   cl::sub(BytesSubcommand), cl::cat(DbiBytes));
+cl::opt<bool> SectionMap("sm", cl::desc("Dump section map"),
+                         cl::sub(BytesSubcommand), cl::cat(DbiBytes));
+cl::opt<bool> ModuleInfos("modi", cl::desc("Dump module info"),
+                          cl::sub(BytesSubcommand), cl::cat(DbiBytes));
+cl::opt<bool> FileInfo("files", cl::desc("Dump source file info"),
+                       cl::sub(BytesSubcommand), cl::cat(DbiBytes));
+cl::opt<bool> TypeServerMap("type-server", cl::desc("Dump type server map"),
+                            cl::sub(BytesSubcommand), cl::cat(DbiBytes));
+cl::opt<bool> ECData("ec", cl::desc("Dump edit and continue map"),
+                     cl::sub(BytesSubcommand), cl::cat(DbiBytes));
+
+cl::list<uint32_t>
+    TypeIndex("type",
+              cl::desc("Dump the type record with the given type index"),
+              cl::ZeroOrMore, cl::CommaSeparated, cl::sub(BytesSubcommand),
+              cl::cat(TypeCategory));
+cl::list<uint32_t>
+    IdIndex("id", cl::desc("Dump the id record with the given type index"),
+            cl::ZeroOrMore, cl::CommaSeparated, cl::sub(BytesSubcommand),
+            cl::cat(TypeCategory));
+
+cl::opt<uint32_t> ModuleIndex(
+    "mod",
+    cl::desc(
+        "Limit options in the Modules category to the specified module index"),
+    cl::Optional, cl::sub(BytesSubcommand), cl::cat(ModuleCategory));
+cl::opt<bool> ModuleSyms("syms", cl::desc("Dump symbol record substream"),
+                         cl::sub(BytesSubcommand), cl::cat(ModuleCategory));
+cl::opt<bool> ModuleC11("c11-chunks", cl::Hidden,
+                        cl::desc("Dump C11 CodeView debug chunks"),
+                        cl::sub(BytesSubcommand), cl::cat(ModuleCategory));
+cl::opt<bool> ModuleC13("chunks", cl::desc("Dump C13 CodeView debug chunks"),
+                        cl::sub(BytesSubcommand), cl::cat(ModuleCategory));
 
 cl::list<std::string> InputFilenames(cl::Positional,
                                      cl::desc("<input PDB files>"),
@@ -299,6 +350,10 @@ cl::opt<bool> DumpSummary("summary", cl::desc("dump file summary"),
 cl::opt<bool> DumpStreams("streams",
                           cl::desc("dump summary of the PDB streams"),
                           cl::cat(MsfOptions), cl::sub(DumpSubcommand));
+cl::opt<bool> DumpStreamBlocks(
+    "stream-blocks",
+    cl::desc("Add block information to the output of -streams"),
+    cl::cat(MsfOptions), cl::sub(DumpSubcommand));
 
 // TYPE OPTIONS
 cl::opt<bool> DumpTypes("types",
@@ -903,22 +958,23 @@ static void mergePdbs() {
   ExitOnErr(Builder.commit(OutFile));
 }
 
-static bool validateBlockRangeArgument() {
-  if (opts::bytes::DumpBlockRangeOpt.empty())
+static bool parseRange(StringRef Str,
+                       Optional<opts::bytes::NumberRange> &Parsed) {
+  if (Str.empty())
     return true;
 
   llvm::Regex R("^([^-]+)(-([^-]+))?$");
   llvm::SmallVector<llvm::StringRef, 2> Matches;
-  if (!R.match(opts::bytes::DumpBlockRangeOpt, &Matches))
+  if (!R.match(Str, &Matches))
     return false;
 
-  opts::bytes::DumpBlockRange.emplace();
-  if (!to_integer(Matches[1], opts::bytes::DumpBlockRange->Min))
+  Parsed.emplace();
+  if (!to_integer(Matches[1], Parsed->Min))
     return false;
 
   if (!Matches[3].empty()) {
-    opts::bytes::DumpBlockRange->Max.emplace();
-    if (!to_integer(Matches[3], *opts::bytes::DumpBlockRange->Max))
+    Parsed->Max.emplace();
+    if (!to_integer(Matches[3], *Parsed->Max))
       return false;
   }
   return true;
@@ -939,11 +995,22 @@ int main(int argc_, const char *argv_[]) {
   llvm_shutdown_obj Y; // Call llvm_shutdown() on exit.
 
   cl::ParseCommandLineOptions(argv.size(), argv.data(), "LLVM PDB Dumper\n");
-  if (!validateBlockRangeArgument()) {
-    errs() << "Argument '" << opts::bytes::DumpBlockRangeOpt
-           << "' invalid format.\n";
-    errs().flush();
-    exit(1);
+
+  if (opts::BytesSubcommand) {
+    if (!parseRange(opts::bytes::DumpBlockRangeOpt,
+                    opts::bytes::DumpBlockRange)) {
+      errs() << "Argument '" << opts::bytes::DumpBlockRangeOpt
+             << "' invalid format.\n";
+      errs().flush();
+      exit(1);
+    }
+    if (!parseRange(opts::bytes::DumpByteRangeOpt,
+                    opts::bytes::DumpByteRange)) {
+      errs() << "Argument '" << opts::bytes::DumpByteRangeOpt
+             << "' invalid format.\n";
+      errs().flush();
+      exit(1);
+    }
   }
 
   if (opts::DumpSubcommand) {
@@ -957,6 +1024,7 @@ int main(int argc_, const char *argv_[]) {
       opts::dump::DumpSectionContribs = true;
       opts::dump::DumpSectionMap = true;
       opts::dump::DumpStreams = true;
+      opts::dump::DumpStreamBlocks = true;
       opts::dump::DumpStringTable = true;
       opts::dump::DumpSummary = true;
       opts::dump::DumpSymbols = true;

@@ -199,6 +199,13 @@ Error DumpOutputStyle::dumpStreamSummary() {
         "Stream {0}: [{1}] ({2} bytes)",
         fmt_align(StreamIdx, AlignStyle::Right, NumDigits(StreamCount)),
         StreamPurposes[StreamIdx], File.getStreamByteSize(StreamIdx));
+    if (opts::dump::DumpStreamBlocks) {
+      auto Blocks = File.getStreamBlockList(StreamIdx);
+      std::vector<uint32_t> BV(Blocks.begin(), Blocks.end());
+      P.formatLine("       {0}  Blocks: [{1}]",
+                   fmt_repeat(' ', NumDigits(StreamCount)),
+                   make_range(BV.begin(), BV.end()));
+    }
   }
 
   return Error::success();

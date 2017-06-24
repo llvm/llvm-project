@@ -71,8 +71,9 @@ public:
     return Infos[Kind - FirstTargetFixupKind];
   }
 
-  void applyFixup(const MCFixup &Fixup, MutableArrayRef<char> Data,
-                  uint64_t Value, bool IsPCRel, MCContext &Ctx) const override;
+  void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
+                  const MCValue &Target, MutableArrayRef<char> Data,
+                  uint64_t Value, bool IsPCRel) const override;
 
   bool mayNeedRelaxation(const MCInst &Inst) const override;
   bool fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
@@ -260,13 +261,15 @@ unsigned AArch64AsmBackend::getFixupKindContainereSizeInBytes(unsigned Kind) con
   }
 }
 
-void AArch64AsmBackend::applyFixup(const MCFixup &Fixup,
+void AArch64AsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
+                                   const MCValue &Target,
                                    MutableArrayRef<char> Data, uint64_t Value,
-                                   bool IsPCRel, MCContext &Ctx) const {
+                                   bool IsPCRel) const {
   unsigned NumBytes = getFixupKindNumBytes(Fixup.getKind());
   if (!Value)
     return; // Doesn't change encoding.
   MCFixupKindInfo Info = getFixupKindInfo(Fixup.getKind());
+  MCContext &Ctx = Asm.getContext();
   // Apply any target-specific value adjustments.
   Value = adjustFixupValue(Fixup, Value, Ctx);
 
@@ -538,16 +541,14 @@ public:
     return createAArch64ELFObjectWriter(OS, OSABI, IsLittleEndian, IsILP32);
   }
 
-  void processFixupValue(const MCAssembler &Asm, const MCAsmLayout &Layout,
-                         const MCFixup &Fixup, const MCFragment *DF,
-                         const MCValue &Target, uint64_t &Value,
-                         bool &IsResolved) override;
+  void processFixupValue(const MCAssembler &Asm, const MCFixup &Fixup,
+                         const MCValue &Target, bool &IsResolved) override;
 };
 
-void ELFAArch64AsmBackend::processFixupValue(
-    const MCAssembler &Asm, const MCAsmLayout &Layout, const MCFixup &Fixup,
-    const MCFragment *DF, const MCValue &Target, uint64_t &Value,
-    bool &IsResolved) {
+void ELFAArch64AsmBackend::processFixupValue(const MCAssembler &Asm,
+                                             const MCFixup &Fixup,
+                                             const MCValue &Target,
+                                             bool &IsResolved) {
   // The ADRP instruction adds some multiple of 0x1000 to the current PC &
   // ~0xfff. This means that the required offset to reach a symbol can vary by
   // up to one step depending on where the ADRP is in memory. For example:

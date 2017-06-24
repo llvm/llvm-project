@@ -41,7 +41,7 @@ class KaleidoscopeJIT {
 public:
   using ObjLayerT = RTDyldObjectLinkingLayer;
   using CompileLayerT = IRCompileLayer<ObjLayerT, SimpleCompiler>;
-  using ModuleHandleT = CompileLayerT::ModuleSetHandleT;
+  using ModuleHandleT = CompileLayerT::ModuleHandleT;
 
   KaleidoscopeJIT()
       : TM(EngineBuilder().selectTarget()), DL(TM->createDataLayout()),
@@ -62,9 +62,9 @@ public:
           return JITSymbol(nullptr);
         },
         [](const std::string &S) { return nullptr; });
-    auto H = CompileLayer.addModuleSet(singletonSet(std::move(M)),
-                                       make_unique<SectionMemoryManager>(),
-                                       std::move(Resolver));
+    auto H = CompileLayer.addModule(std::move(M),
+                                    make_unique<SectionMemoryManager>(),
+                                    std::move(Resolver));
 
     ModuleHandles.push_back(H);
     return H;
@@ -72,7 +72,7 @@ public:
 
   void removeModule(ModuleHandleT H) {
     ModuleHandles.erase(find(ModuleHandles, H));
-    CompileLayer.removeModuleSet(H);
+    CompileLayer.removeModule(H);
   }
 
   JITSymbol findSymbol(const std::string Name) {
@@ -87,12 +87,6 @@ private:
       Mangler::getNameWithPrefix(MangledNameStream, Name, DL);
     }
     return MangledName;
-  }
-
-  template <typename T> static std::vector<T> singletonSet(T t) {
-    std::vector<T> Vec;
-    Vec.push_back(std::move(t));
-    return Vec;
   }
 
   JITSymbol findMangledSymbol(const std::string &Name) {

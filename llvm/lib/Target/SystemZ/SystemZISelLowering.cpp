@@ -1322,11 +1322,6 @@ SystemZTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   return DAG.getNode(SystemZISD::RET_FLAG, DL, MVT::Other, RetOps);
 }
 
-SDValue SystemZTargetLowering::prepareVolatileOrAtomicLoad(
-    SDValue Chain, const SDLoc &DL, SelectionDAG &DAG) const {
-  return DAG.getNode(SystemZISD::SERIALIZE, DL, MVT::Other, Chain);
-}
-
 // Return true if Op is an intrinsic node with chain that returns the CC value
 // as its only (other) argument.  Provide the associated SystemZISD opcode and
 // the mask of valid CC values if so.
@@ -3212,12 +3207,15 @@ SDValue SystemZTargetLowering::lowerATOMIC_FENCE(SDValue Op,
   return DAG.getNode(SystemZISD::MEMBARRIER, DL, MVT::Other, Op.getOperand(0));
 }
 
-// Op is an atomic load.  Lower it into a normal volatile load.
+// Op is an atomic load.  Lower it into a serialization followed
+// by a normal volatile load.
 SDValue SystemZTargetLowering::lowerATOMIC_LOAD(SDValue Op,
                                                 SelectionDAG &DAG) const {
   auto *Node = cast<AtomicSDNode>(Op.getNode());
+  SDValue Chain = SDValue(DAG.getMachineNode(SystemZ::Serialize, SDLoc(Op),
+                                             MVT::Other, Node->getChain()), 0);
   return DAG.getExtLoad(ISD::EXTLOAD, SDLoc(Op), Op.getValueType(),
-                        Node->getChain(), Node->getBasePtr(),
+                        Chain, Node->getBasePtr(),
                         Node->getMemoryVT(), Node->getMemOperand());
 }
 
@@ -4688,7 +4686,6 @@ const char *SystemZTargetLowering::getTargetNodeName(unsigned Opcode) const {
     OPCODE(STRCMP);
     OPCODE(SEARCH_STRING);
     OPCODE(IPM);
-    OPCODE(SERIALIZE);
     OPCODE(MEMBARRIER);
     OPCODE(TBEGIN);
     OPCODE(TBEGIN_NOFLOAT);

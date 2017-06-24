@@ -23710,7 +23710,7 @@ static SDValue LowerMGATHER(SDValue Op, const X86Subtarget &Subtarget,
     return DAG.getMergeValues(RetOps, dl);
   }
   if (N->getMemoryVT() == MVT::v2i32 && Subtarget.hasVLX()) {
-    // There is a special case when the return type is v2i32 is illegal and 
+    // There is a special case when the return type is v2i32 is illegal and
     // the type legaizer extended it to v2i64. Without this conversion we end up
     // with VPGATHERQQ (reading q-words from the memory) instead of VPGATHERQD.
     // In order to avoid this situation, we'll build an X86 specific Gather node
@@ -34898,7 +34898,7 @@ static SDValue combineAddOrSubToADCOrSBB(SDNode *N, SelectionDAG &DAG) {
     return SDValue();
 
   SDValue Z = Cmp.getOperand(0);
-  SDVTList VTs = DAG.getVTList(N->getValueType(0), MVT::i32);
+  EVT ZVT = Z.getValueType();
 
   // If X is -1 or 0, then we have an opportunity to avoid constants required in
   // the general case below.
@@ -34909,19 +34909,21 @@ static SDValue combineAddOrSubToADCOrSBB(SDNode *N, SelectionDAG &DAG) {
     // -1 + (Z == 0) --> sbb %eax, %eax, (neg Z)
     if ((IsSub && CC == X86::COND_NE && ConstantX->isNullValue()) ||
         (!IsSub && CC == X86::COND_E && ConstantX->isAllOnesValue())) {
-      SDValue Zero = DAG.getConstant(0, DL, VT);
-      SDValue Neg = DAG.getNode(X86ISD::SUB, DL, VTs, Zero, Z);
+      SDValue Zero = DAG.getConstant(0, DL, ZVT);
+      SDVTList X86SubVTs = DAG.getVTList(ZVT, MVT::i32);
+      SDValue Neg = DAG.getNode(X86ISD::SUB, DL, X86SubVTs, Zero, Z);
       return DAG.getNode(X86ISD::SETCC_CARRY, DL, VT,
                          DAG.getConstant(X86::COND_B, DL, MVT::i8),
                          SDValue(Neg.getNode(), 1));
     }
+
     // cmp with 1 sets the carry flag when Z == 0, so create 0 or -1 using 'sbb'
     // with fake operands:
     //  0 - (Z == 0) --> sbb %eax, %eax, (cmp Z, 1)
     // -1 + (Z != 0) --> sbb %eax, %eax, (cmp Z, 1)
     if ((IsSub && CC == X86::COND_E && ConstantX->isNullValue()) ||
         (!IsSub && CC == X86::COND_NE && ConstantX->isAllOnesValue())) {
-      SDValue One = DAG.getConstant(1, DL, Z.getValueType());
+      SDValue One = DAG.getConstant(1, DL, ZVT);
       SDValue Cmp1 = DAG.getNode(X86ISD::CMP, DL, MVT::i32, Z, One);
       return DAG.getNode(X86ISD::SETCC_CARRY, DL, VT,
                          DAG.getConstant(X86::COND_B, DL, MVT::i8), Cmp1);
@@ -34929,19 +34931,22 @@ static SDValue combineAddOrSubToADCOrSBB(SDNode *N, SelectionDAG &DAG) {
   }
 
   // (cmp Z, 1) sets the carry flag if Z is 0.
-  SDValue NewCmp = DAG.getNode(X86ISD::CMP, DL, MVT::i32, Z,
-                               DAG.getConstant(1, DL, Z.getValueType()));
+  SDValue One = DAG.getConstant(1, DL, ZVT);
+  SDValue Cmp1 = DAG.getNode(X86ISD::CMP, DL, MVT::i32, Z, One);
+
+  // Add the flags type for ADC/SBB nodes.
+  SDVTList VTs = DAG.getVTList(VT, MVT::i32);
 
   // X - (Z != 0) --> sub X, (zext(setne Z, 0)) --> adc X, -1, (cmp Z, 1)
   // X + (Z != 0) --> add X, (zext(setne Z, 0)) --> sbb X, -1, (cmp Z, 1)
   if (CC == X86::COND_NE)
     return DAG.getNode(IsSub ? X86ISD::ADC : X86ISD::SBB, DL, VTs, X,
-                       DAG.getConstant(-1ULL, DL, VT), NewCmp);
+                       DAG.getConstant(-1ULL, DL, VT), Cmp1);
 
   // X - (Z == 0) --> sub X, (zext(sete  Z, 0)) --> sbb X, 0, (cmp Z, 1)
   // X + (Z == 0) --> add X, (zext(sete  Z, 0)) --> adc X, 0, (cmp Z, 1)
   return DAG.getNode(IsSub ? X86ISD::SBB : X86ISD::ADC, DL, VTs, X,
-                     DAG.getConstant(0, DL, VT), NewCmp);
+                     DAG.getConstant(0, DL, VT), Cmp1);
 }
 
 static SDValue combineLoopMAddPattern(SDNode *N, SelectionDAG &DAG,

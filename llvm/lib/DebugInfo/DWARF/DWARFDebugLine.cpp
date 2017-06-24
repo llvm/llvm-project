@@ -9,6 +9,8 @@
 
 #include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
@@ -26,13 +28,17 @@
 using namespace llvm;
 using namespace dwarf;
 
-typedef DILineInfoSpecifier::FileLineInfoKind FileLineInfoKind;
+using FileLineInfoKind = DILineInfoSpecifier::FileLineInfoKind;
+
 namespace {
+
 struct ContentDescriptor {
   dwarf::LineNumberEntryFormat Type;
   dwarf::Form Form;
 };
-typedef SmallVector<ContentDescriptor, 4> ContentDescriptors;
+
+using ContentDescriptors = SmallVector<ContentDescriptor, 4>;
+
 } // end anonmyous namespace
 
 DWARFDebugLine::Prologue::Prologue() { clear(); }
@@ -333,7 +339,7 @@ void DWARFDebugLine::LineTable::clear() {
 }
 
 DWARFDebugLine::ParsingState::ParsingState(struct LineTable *LT)
-    : LineTable(LT), RowNumber(0) {
+    : LineTable(LT) {
   resetRowAndSequence();
 }
 

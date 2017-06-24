@@ -36,6 +36,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo() {
   const LLT P2 = LLT::pointer(2, 64);
 
   setAction({G_ADD, S32}, Legal);
+  setAction({G_AND, S32}, Legal);
 
   setAction({G_BITCAST, V2S16}, Legal);
   setAction({G_BITCAST, 1, S32}, Legal);

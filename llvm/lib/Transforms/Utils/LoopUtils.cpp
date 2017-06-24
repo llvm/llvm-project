@@ -88,8 +88,7 @@ RecurrenceDescriptor::lookThroughAnd(PHINode *Phi, Type *&RT,
 
   // Matches either I & 2^x-1 or 2^x-1 & I. If we find a match, we update RT
   // with a new integer type of the corresponding bit width.
-  if (match(J, m_CombineOr(m_And(m_Instruction(I), m_APInt(M)),
-                           m_And(m_APInt(M), m_Instruction(I))))) {
+  if (match(J, m_c_And(m_Instruction(I), m_APInt(M)))) {
     int32_t Bits = (*M + 1).exactLogBase2();
     if (Bits > 0) {
       RT = IntegerType::get(Phi->getContext(), Bits);

@@ -763,7 +763,8 @@ void COFFDumper::printRVATable(uint64_t TableVA, uint64_t Count,
                                uint64_t EntrySize, PrintExtraCB PrintExtra) {
   uintptr_t TableStart, TableEnd;
   error(Obj->getVaPtr(TableVA, TableStart));
-  error(Obj->getVaPtr(TableVA + Count * EntrySize, TableEnd));
+  error(Obj->getVaPtr(TableVA + Count * EntrySize - 1, TableEnd));
+  TableEnd++;
   for (uintptr_t I = TableStart; I < TableEnd; I += EntrySize) {
     uint32_t RVA = *reinterpret_cast<const ulittle32_t *>(I);
     raw_ostream &OS = W.startLine();
@@ -804,6 +805,9 @@ void COFFDumper::printCOFFLoadConfig() {
 
 template <typename T>
 void COFFDumper::printCOFFLoadConfig(const T *Conf, LoadConfigTables &Tables) {
+  if (!Conf)
+    return;
+
   ListScope LS(W, "LoadConfig");
   char FormattedTime[20] = {};
   time_t TDS = Conf->TimeDateStamp;

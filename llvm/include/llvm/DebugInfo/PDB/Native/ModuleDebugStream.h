@@ -41,9 +41,12 @@ public:
   iterator_range<codeview::CVSymbolArray::Iterator>
   symbols(bool *HadError) const;
 
-  const codeview::CVSymbolArray &getSymbolArray() const {
-    return SymbolsSubstream;
-  }
+  const codeview::CVSymbolArray &getSymbolArray() const { return SymbolArray; }
+
+  BinarySubstreamRef getSymbolsSubstream() const;
+  BinarySubstreamRef getC11LinesSubstream() const;
+  BinarySubstreamRef getC13LinesSubstream() const;
+  BinarySubstreamRef getGlobalRefsSubstream() const;
 
   ModuleDebugStreamRef &operator=(ModuleDebugStreamRef &&Other) = default;
 
@@ -63,10 +66,12 @@ private:
 
   std::shared_ptr<msf::MappedBlockStream> Stream;
 
-  codeview::CVSymbolArray SymbolsSubstream;
-  BinaryStreamRef C11LinesSubstream;
-  BinaryStreamRef C13LinesSubstream;
-  BinaryStreamRef GlobalRefsSubstream;
+  codeview::CVSymbolArray SymbolArray;
+
+  BinarySubstreamRef SymbolsSubstream;
+  BinarySubstreamRef C11LinesSubstream;
+  BinarySubstreamRef C13LinesSubstream;
+  BinarySubstreamRef GlobalRefsSubstream;
 
   codeview::DebugSubsectionArray Subsections;
 };

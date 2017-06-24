@@ -13,6 +13,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/DebugInfo/MSF/IMSFFile.h"
 #include "llvm/DebugInfo/MSF/MSFCommon.h"
+#include "llvm/DebugInfo/MSF/MSFStreamLayout.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/BinaryStreamRef.h"
 #include "llvm/Support/Endian.h"
@@ -84,6 +85,8 @@ public:
   BinaryStreamRef getMsfBuffer() const { return *Buffer; }
 
   ArrayRef<support::ulittle32_t> getDirectoryBlockArray() const;
+
+  msf::MSFStreamLayout getStreamLayout(uint32_t StreamIdx) const;
 
   Error parseFileHeaders();
   Error parseStreamData();

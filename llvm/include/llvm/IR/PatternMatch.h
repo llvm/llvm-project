@@ -660,47 +660,87 @@ m_NUWShl(const LHS &L, const RHS &R) {
 }
 
 //===----------------------------------------------------------------------===//
-// Class that matches two different binary ops.
+// Class that matches a group of binary opcodes.
 //
-template <typename LHS_t, typename RHS_t, unsigned Opc1, unsigned Opc2>
-struct BinOp2_match {
+template <typename LHS_t, typename RHS_t, typename Predicate>
+struct BinOpPred_match : Predicate {
   LHS_t L;
   RHS_t R;
 
-  BinOp2_match(const LHS_t &LHS, const RHS_t &RHS) : L(LHS), R(RHS) {}
+  BinOpPred_match(const LHS_t &LHS, const RHS_t &RHS) : L(LHS), R(RHS) {}
 
   template <typename OpTy> bool match(OpTy *V) {
-    if (V->getValueID() == Value::InstructionVal + Opc1 ||
-        V->getValueID() == Value::InstructionVal + Opc2) {
-      auto *I = cast<BinaryOperator>(V);
-      return L.match(I->getOperand(0)) && R.match(I->getOperand(1));
-    }
+    if (auto *I = dyn_cast<Instruction>(V))
+      return this->isOpType(I->getOpcode()) && L.match(I->getOperand(0)) &&
+             R.match(I->getOperand(1));
     if (auto *CE = dyn_cast<ConstantExpr>(V))
-      return (CE->getOpcode() == Opc1 || CE->getOpcode() == Opc2) &&
-             L.match(CE->getOperand(0)) && R.match(CE->getOperand(1));
+      return this->isOpType(CE->getOpcode()) && L.match(CE->getOperand(0)) &&
+             R.match(CE->getOperand(1));
     return false;
   }
 };
 
-/// \brief Matches LShr or AShr.
+struct is_shift_op {
+  bool isOpType(unsigned Opcode) { return Instruction::isShift(Opcode); }
+};
+
+struct is_right_shift_op {
+  bool isOpType(unsigned Opcode) {
+    return Opcode == Instruction::LShr || Opcode == Instruction::AShr;
+  }
+};
+
+struct is_logical_shift_op {
+  bool isOpType(unsigned Opcode) {
+    return Opcode == Instruction::LShr || Opcode == Instruction::Shl;
+  }
+};
+
+struct is_bitwiselogic_op {
+  bool isOpType(unsigned Opcode) {
+    return Instruction::isBitwiseLogicOp(Opcode);
+  }
+};
+
+struct is_idiv_op {
+  bool isOpType(unsigned Opcode) {
+    return Opcode == Instruction::SDiv || Opcode == Instruction::UDiv;
+  }
+};
+
+/// \brief Matches shift operations.
 template <typename LHS, typename RHS>
-inline BinOp2_match<LHS, RHS, Instruction::LShr, Instruction::AShr>
-m_Shr(const LHS &L, const RHS &R) {
-  return BinOp2_match<LHS, RHS, Instruction::LShr, Instruction::AShr>(L, R);
+inline BinOpPred_match<LHS, RHS, is_shift_op> m_Shift(const LHS &L,
+                                                      const RHS &R) {
+  return BinOpPred_match<LHS, RHS, is_shift_op>(L, R);
 }
 
-/// \brief Matches LShr or Shl.
+/// \brief Matches logical shift operations.
 template <typename LHS, typename RHS>
-inline BinOp2_match<LHS, RHS, Instruction::LShr, Instruction::Shl>
+inline BinOpPred_match<LHS, RHS, is_right_shift_op> m_Shr(const LHS &L,
+                                                          const RHS &R) {
+  return BinOpPred_match<LHS, RHS, is_right_shift_op>(L, R);
+}
+
+/// \brief Matches logical shift operations.
+template <typename LHS, typename RHS>
+inline BinOpPred_match<LHS, RHS, is_logical_shift_op>
 m_LogicalShift(const LHS &L, const RHS &R) {
-  return BinOp2_match<LHS, RHS, Instruction::LShr, Instruction::Shl>(L, R);
+  return BinOpPred_match<LHS, RHS, is_logical_shift_op>(L, R);
 }
 
-/// \brief Matches UDiv and SDiv.
+/// \brief Matches bitwise logic operations.
 template <typename LHS, typename RHS>
-inline BinOp2_match<LHS, RHS, Instruction::SDiv, Instruction::UDiv>
-m_IDiv(const LHS &L, const RHS &R) {
-  return BinOp2_match<LHS, RHS, Instruction::SDiv, Instruction::UDiv>(L, R);
+inline BinOpPred_match<LHS, RHS, is_bitwiselogic_op>
+m_BitwiseLogic(const LHS &L, const RHS &R) {
+  return BinOpPred_match<LHS, RHS, is_bitwiselogic_op>(L, R);
+}
+
+/// \brief Matches integer division operations.
+template <typename LHS, typename RHS>
+inline BinOpPred_match<LHS, RHS, is_idiv_op> m_IDiv(const LHS &L,
+                                                    const RHS &R) {
+  return BinOpPred_match<LHS, RHS, is_idiv_op>(L, R);
 }
 
 //===----------------------------------------------------------------------===//

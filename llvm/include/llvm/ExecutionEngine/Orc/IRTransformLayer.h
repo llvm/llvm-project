@@ -22,39 +22,34 @@ namespace orc {
 
 /// @brief IR mutating layer.
 ///
-///   This layer accepts sets of LLVM IR Modules (via addModuleSet). It
-/// immediately applies the user supplied functor to each module, then adds
-/// the set of transformed modules to the layer below.
+///   This layer applies a user supplied transform to each module that is added,
+/// then adds the transformed module to the layer below.
 template <typename BaseLayerT, typename TransformFtor>
 class IRTransformLayer {
 public:
+
   /// @brief Handle to a set of added modules.
-  using ModuleSetHandleT = typename BaseLayerT::ModuleSetHandleT;
+  using ModuleHandleT = typename BaseLayerT::ModuleHandleT;
 
   /// @brief Construct an IRTransformLayer with the given BaseLayer
   IRTransformLayer(BaseLayerT &BaseLayer,
                    TransformFtor Transform = TransformFtor())
     : BaseLayer(BaseLayer), Transform(std::move(Transform)) {}
 
-  /// @brief Apply the transform functor to each module in the module set, then
-  ///        add the resulting set of modules to the base layer, along with the
-  ///        memory manager and symbol resolver.
+  /// @brief Apply the transform functor to the module, then add the module to
+  ///        the layer below, along with the memory manager and symbol resolver.
   ///
   /// @return A handle for the added modules.
-  template <typename ModuleSetT, typename MemoryManagerPtrT,
-            typename SymbolResolverPtrT>
-  ModuleSetHandleT addModuleSet(ModuleSetT Ms,
-                                MemoryManagerPtrT MemMgr,
-                                SymbolResolverPtrT Resolver) {
-    for (auto I = Ms.begin(), E = Ms.end(); I != E; ++I)
-      *I = Transform(std::move(*I));
-
-    return BaseLayer.addModuleSet(std::move(Ms), std::move(MemMgr),
-                                  std::move(Resolver));
+  template <typename MemoryManagerPtrT, typename SymbolResolverPtrT>
+  ModuleHandleT addModule(std::shared_ptr<Module> M,
+                          MemoryManagerPtrT MemMgr,
+                          SymbolResolverPtrT Resolver) {
+    return BaseLayer.addModule(Transform(std::move(M)), std::move(MemMgr),
+                               std::move(Resolver));
   }
 
-  /// @brief Remove the module set associated with the handle H.
-  void removeModuleSet(ModuleSetHandleT H) { BaseLayer.removeModuleSet(H); }
+  /// @brief Remove the module associated with the handle H.
+  void removeModule(ModuleHandleT H) { BaseLayer.removeModule(H); }
 
   /// @brief Search for the given named symbol.
   /// @param Name The name of the symbol to search for.
@@ -64,23 +59,23 @@ public:
     return BaseLayer.findSymbol(Name, ExportedSymbolsOnly);
   }
 
-  /// @brief Get the address of the given symbol in the context of the set of
-  ///        modules represented by the handle H. This call is forwarded to the
-  ///        base layer's implementation.
-  /// @param H The handle for the module set to search in.
+  /// @brief Get the address of the given symbol in the context of the module
+  ///        represented by the handle H. This call is forwarded to the base
+  ///        layer's implementation.
+  /// @param H The handle for the module to search in.
   /// @param Name The name of the symbol to search for.
   /// @param ExportedSymbolsOnly If true, search only for exported symbols.
   /// @return A handle for the given named symbol, if it is found in the
-  ///         given module set.
-  JITSymbol findSymbolIn(ModuleSetHandleT H, const std::string &Name,
+  ///         given module.
+  JITSymbol findSymbolIn(ModuleHandleT H, const std::string &Name,
                          bool ExportedSymbolsOnly) {
     return BaseLayer.findSymbolIn(H, Name, ExportedSymbolsOnly);
   }
 
-  /// @brief Immediately emit and finalize the module set represented by the
-  ///        given handle.
-  /// @param H Handle for module set to emit/finalize.
-  void emitAndFinalize(ModuleSetHandleT H) {
+  /// @brief Immediately emit and finalize the module represented by the given
+  ///        handle.
+  /// @param H Handle for module to emit/finalize.
+  void emitAndFinalize(ModuleHandleT H) {
     BaseLayer.emitAndFinalize(H);
   }
 

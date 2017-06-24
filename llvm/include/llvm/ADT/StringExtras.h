@@ -15,10 +15,12 @@
 #define LLVM_ADT_STRINGEXTRAS_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
 #include <cstring>
 #include <iterator>
 #include <string>
@@ -127,6 +129,32 @@ static inline std::string fromHex(StringRef Input) {
 /// Returns true if the number was successfully converted, false otherwise.
 template <typename N> bool to_integer(StringRef S, N &Num, unsigned Base = 0) {
   return !S.getAsInteger(Base, Num);
+}
+
+namespace detail {
+template <typename N>
+inline bool to_float(const Twine &T, N &Num, N (*StrTo)(const char *, char **)) {
+  SmallString<32> Storage;
+  StringRef S = T.toNullTerminatedStringRef(Storage);
+  char *End;
+  N Temp = StrTo(S.data(), &End);
+  if (*End != '\0')
+    return false;
+  Num = Temp;
+  return true;
+}
+}
+
+inline bool to_float(const Twine &T, float &Num) {
+  return detail::to_float(T, Num, strtof);
+}
+
+inline bool to_float(const Twine &T, double &Num) {
+  return detail::to_float(T, Num, strtod);
+}
+
+inline bool to_float(const Twine &T, long double &Num) {
+  return detail::to_float(T, Num, strtold);
 }
 
 static inline std::string utostr(uint64_t X, bool isNeg = false) {
