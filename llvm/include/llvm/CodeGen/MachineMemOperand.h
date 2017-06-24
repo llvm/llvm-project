@@ -59,6 +59,11 @@ struct MachinePointerInfo {
     return MachinePointerInfo(V.get<const PseudoSourceValue*>(), Offset+O);
   }
 
+  /// Return true if memory region [V, V+Offset+Size) is known to be
+  /// dereferenceable.
+  bool isDereferenceable(unsigned Size, LLVMContext &C,
+                         const DataLayout &DL) const;
+
   /// Return the LLVM IR address space number that this pointer points into.
   unsigned getAddrSpace() const;
 
