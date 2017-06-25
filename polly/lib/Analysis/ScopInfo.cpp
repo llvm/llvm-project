@@ -114,6 +114,12 @@ static cl::opt<bool> DisableMultiplicativeReductions(
     cl::desc("Disable multiplicative reductions"), cl::Hidden, cl::ZeroOrMore,
     cl::init(false), cl::cat(PollyCategory));
 
+static cl::opt<int> RunTimeChecksMaxAccessDisjuncts(
+    "polly-rtc-max-array-disjuncts",
+    cl::desc("The maximal number of disjunts allowed in memory accesses to "
+             "to build RTCs."),
+    cl::Hidden, cl::ZeroOrMore, cl::init(8), cl::cat(PollyCategory));
+
 static cl::opt<unsigned> RunTimeChecksMaxParameters(
     "polly-rtc-max-parameters",
     cl::desc("The maximal number of parameters allowed in RTCs."), cl::Hidden,
@@ -2446,6 +2452,9 @@ buildMinMaxAccess(isl::set Set, Scop::MinMaxVectorTy &MinMaxAccesses, Scop &S) {
     if (InvolvedParams > RunTimeChecksMaxParameters)
       return isl::stat::error;
   }
+
+  if (isl_set_n_basic_set(Set.get()) > RunTimeChecksMaxAccessDisjuncts)
+    return isl::stat::error;
 
   MinPMA = Set.lexmin_pw_multi_aff();
   MaxPMA = Set.lexmax_pw_multi_aff();

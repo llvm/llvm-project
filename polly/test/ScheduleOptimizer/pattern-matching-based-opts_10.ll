@@ -12,14 +12,13 @@
 ; This test case checks whether Polly generates second level alias metadata
 ; to distinguish the specific accesses in case of the ublas gemm kernel.
 ;
-; CHECK: %tmp22_p_scalar_{{[0-9]*}} = load double, double* %scevgep[[N0:[a-z_0-9]*]], align 8
-; CHECK: store double %p_tmp23{{[0-9]*}}, double* %scevgep[[N0]], align 8
-; CHECK: %tmp22_p_scalar_{{[0-9]*}} = load double, double* %scevgep[[N1:[a-z_0-9]*]], align 8
-; CHECK: store double %p_tmp23{{[0-9]*}}, double* %scevgep[[N1]], align 8
-; CHECK: %tmp22_p_scalar_{{[0-9]*}} = load double, double* %scevgep[[N2:[a-z_0-9]*]], align 8
-; CHECK: store double %p_tmp23{{[0-9]*}}, double* %scevgep[[N2]], align 8
-; CHECK: %tmp22_p_scalar_{{[0-9]*}} = load double, double* %scevgep[[N3:[a-z_0-9]*]], align 8
-; CHECK: store double %p_tmp23{{[0-9]*}}, double* %scevgep[[N3]], align 8
+; CHECK: !13 = distinct !{!13, !0, !"second level alias metadata"}
+; CHECK: !14 = distinct !{!14, !0, !"second level alias metadata"}
+; CHECK: !15 = !{!3, !4, !5, !6, !7, !8, !13}
+; CHECK: !16 = distinct !{!16, !0, !"second level alias metadata"}
+; CHECK: !17 = !{!3, !4, !5, !6, !7, !8, !13, !14}
+; CHECK: !18 = distinct !{!18, !0, !"second level alias metadata"}
+; CHECK: !19 = !{!3, !4, !5, !6, !7, !8, !13, !14, !16}
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-unknown"

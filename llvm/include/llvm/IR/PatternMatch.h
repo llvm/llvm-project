@@ -946,10 +946,7 @@ template <typename LHS_t> struct not_match {
 
 private:
   bool isAllOnes(Value *V) {
-    return (isa<ConstantInt>(V) || isa<ConstantDataVector>(V) ||
-            // FIXME: Remove CV.
-            isa<ConstantVector>(V)) &&
-           cast<Constant>(V)->isAllOnesValue();
+    return isa<Constant>(V) && cast<Constant>(V)->isAllOnesValue();
   }
 };
 

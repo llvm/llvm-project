@@ -111,6 +111,21 @@ public:
       : OSTargetInfo<Target>(Triple, Opts) {}
 };
 
+// Ananas target
+template<typename Target>
+class AnanasTargetInfo : public OSTargetInfo<Target> {
+protected:
+  void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
+                    MacroBuilder &Builder) const override {
+    // Ananas defines
+    Builder.defineMacro("__Ananas__");
+    Builder.defineMacro("__ELF__");
+  }
+public:
+  AnanasTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
+      : OSTargetInfo<Target>(Triple, Opts) {}
+};
+
 static void getDarwinDefines(MacroBuilder &Builder, const LangOptions &Opts,
                              const llvm::Triple &Triple,
                              StringRef &PlatformName,
@@ -9530,6 +9545,8 @@ static TargetInfo *AllocateTarget(const llvm::Triple &Triple,
       return new DarwinI386TargetInfo(Triple, Opts);
 
     switch (os) {
+    case llvm::Triple::Ananas:
+      return new AnanasTargetInfo<X86_32TargetInfo>(Triple, Opts);
     case llvm::Triple::CloudABI:
       return new CloudABITargetInfo<X86_32TargetInfo>(Triple, Opts);
     case llvm::Triple::Linux: {
@@ -9585,6 +9602,8 @@ static TargetInfo *AllocateTarget(const llvm::Triple &Triple,
       return new DarwinX86_64TargetInfo(Triple, Opts);
 
     switch (os) {
+    case llvm::Triple::Ananas:
+      return new AnanasTargetInfo<X86_64TargetInfo>(Triple, Opts);
     case llvm::Triple::CloudABI:
       return new CloudABITargetInfo<X86_64TargetInfo>(Triple, Opts);
     case llvm::Triple::Linux: {

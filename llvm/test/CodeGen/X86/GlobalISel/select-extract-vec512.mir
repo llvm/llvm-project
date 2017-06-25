@@ -1,0 +1,127 @@
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx512f -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ALL
+
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx512f -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ALL
+
+--- |
+  define void @test_extract_128_idx0() {
+    ret void
+  }
+
+  define void @test_extract_128_idx1() {
+    ret void
+  }
+
+  define void @test_extract_256_idx0() {
+    ret void
+  }
+
+  define void @test_extract_256_idx1() {
+    ret void
+  }
+
+...
+---
+name:            test_extract_128_idx0
+# ALL-LABEL: name:  test_extract_128_idx0
+alignment:       4
+legalized:       true
+regBankSelected: true
+# ALL:      registers:
+# ALL-NEXT:   - { id: 0, class: vr512, preferred-register: '' }
+# ALL-NEXT:   - { id: 1, class: vr128x, preferred-register: '' }
+registers:
+  - { id: 0, class: vecr }
+  - { id: 1, class: vecr }
+# ALL:          %0 = COPY %zmm1
+# ALL-NEXT:     %1 = COPY %0.sub_xmm
+# ALL-NEXT:     %xmm0 = COPY %1
+# ALL-NEXT:     RET 0, implicit %xmm0
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %zmm1
+
+    %0(<16 x s32>) = COPY %zmm1
+    %1(<4 x s32>) = G_EXTRACT %0(<16 x s32>), 0
+    %xmm0 = COPY %1(<4 x s32>)
+    RET 0, implicit %xmm0
+
+...
+---
+name:            test_extract_128_idx1
+# ALL-LABEL: name:  test_extract_128_idx1
+alignment:       4
+legalized:       true
+regBankSelected: true
+# ALL:      registers:
+# ALL-NEXT:   - { id: 0, class: vr512, preferred-register: '' }
+# ALL-NEXT:   - { id: 1, class: vr128x, preferred-register: '' }
+registers:
+  - { id: 0, class: vecr }
+  - { id: 1, class: vecr }
+# ALL:          %0 = COPY %zmm1
+# ALL-NEXT:     %1 = VEXTRACTF32x4Zrr %0, 1
+# ALL-NEXT:     %xmm0 = COPY %1
+# ALL-NEXT:     RET 0, implicit %xmm0
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %zmm1
+
+    %0(<16 x s32>) = COPY %zmm1
+    %1(<4 x s32>) = G_EXTRACT %0(<16 x s32>), 128
+    %xmm0 = COPY %1(<4 x s32>)
+    RET 0, implicit %xmm0
+
+...
+---
+name:            test_extract_256_idx0
+# ALL-LABEL: name:  test_extract_256_idx0
+alignment:       4
+legalized:       true
+regBankSelected: true
+# ALL:      registers:
+# ALL-NEXT:   - { id: 0, class: vr512, preferred-register: '' }
+# ALL-NEXT:   - { id: 1, class: vr256x, preferred-register: '' }
+registers:
+  - { id: 0, class: vecr }
+  - { id: 1, class: vecr }
+# ALL:          %0 = COPY %zmm1
+# ALL-NEXT:     %1 = COPY %0.sub_ymm
+# ALL-NEXT:     %ymm0 = COPY %1
+# ALL-NEXT:     RET 0, implicit %ymm0
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %zmm1
+
+    %0(<16 x s32>) = COPY %zmm1
+    %1(<8 x s32>) = G_EXTRACT %0(<16 x s32>), 0
+    %ymm0 = COPY %1(<8 x s32>)
+    RET 0, implicit %ymm0
+
+...
+---
+name:            test_extract_256_idx1
+# ALL-LABEL: name:  test_extract_256_idx1
+alignment:       4
+legalized:       true
+regBankSelected: true
+# ALL:      registers:
+# ALL-NEXT:   - { id: 0, class: vr512, preferred-register: '' }
+# ALL-NEXT:   - { id: 1, class: vr256x, preferred-register: '' }
+registers:
+  - { id: 0, class: vecr }
+  - { id: 1, class: vecr }
+# ALL:          %0 = COPY %zmm1
+# ALL-NEXT:     %1 = VEXTRACTF64x4Zrr %0, 1
+# ALL-NEXT:     %ymm0 = COPY %1
+# ALL-NEXT:     RET 0, implicit %ymm0
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %zmm1
+
+    %0(<16 x s32>) = COPY %zmm1
+    %1(<8 x s32>) = G_EXTRACT %0(<16 x s32>), 256
+    %ymm0 = COPY %1(<8 x s32>)
+    RET 0, implicit %ymm0
+
+...
+
