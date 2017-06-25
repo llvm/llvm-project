@@ -2245,6 +2245,114 @@ bool X86TTIImpl::enableInterleavedAccessVectorization() {
   return !(ST->isAtom());
 }
 
+// Get estimation for interleaved load/store operations for AVX2.
+// \p Factor is the interleaved-access factor (stride) - number of
+// (interleaved) elements in the group.
+// \p Indices contains the indices for a strided load: when the
+// interleaved load has gaps they indicate which elements are used.
+// If Indices is empty (or if the number of indices is equal to the size
+// of the interleaved-access as given in \p Factor) the access has no gaps.
+//
+// As opposed to AVX-512, AVX2 does not have generic shuffles that allow
+// computing the cost using a generic formula as a function of generic
+// shuffles. We therefore use a lookup table instead, filled according to
+// the instruction sequences that codegen currently generates.
+int X86TTIImpl::getInterleavedMemoryOpCostAVX2(unsigned Opcode, Type *VecTy,
+                                               unsigned Factor,
+                                               ArrayRef<unsigned> Indices,
+                                               unsigned Alignment,
+                                               unsigned AddressSpace) {
+
+  // We currently Support only fully-interleaved groups, with no gaps.
+  // TODO: Support also strided loads (interleaved-groups with gaps).
+  if (Indices.size() && Indices.size() != Factor)
+    return BaseT::getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,
+                                             Alignment, AddressSpace);
+
+  // VecTy for interleave memop is <VF*Factor x Elt>.
+  // So, for VF=4, Interleave Factor = 3, Element type = i32 we have
+  // VecTy = <12 x i32>.
+  MVT LegalVT = getTLI()->getTypeLegalizationCost(DL, VecTy).second;
+
+  // This function can be called with VecTy=<6xi128>, Factor=3, in which case
+  // the VF=2, while v2i128 is an unsupported MVT vector type
+  // (see MachineValueType.h::getVectorVT()).
+  if (!LegalVT.isVector())
+    return BaseT::getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,
+                                             Alignment, AddressSpace);
+
+  unsigned VF = VecTy->getVectorNumElements() / Factor;
+  Type *ScalarTy = VecTy->getVectorElementType();
+  
+  // Calculate the number of memory operations (NumOfMemOps), required
+  // for load/store the VecTy.
+  unsigned VecTySize = DL.getTypeStoreSize(VecTy);
+  unsigned LegalVTSize = LegalVT.getStoreSize();
+  unsigned NumOfMemOps = (VecTySize + LegalVTSize - 1) / LegalVTSize;
+
+  // Get the cost of one memory operation.
+  Type *SingleMemOpTy = VectorType::get(VecTy->getVectorElementType(),
+                                        LegalVT.getVectorNumElements());
+  unsigned MemOpCost =
+      getMemoryOpCost(Opcode, SingleMemOpTy, Alignment, AddressSpace);
+  
+  VectorType *VT = VectorType::get(ScalarTy, VF);
+  EVT ETy = TLI->getValueType(DL, VT);
+  if (!ETy.isSimple())
+    return BaseT::getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,
+                                             Alignment, AddressSpace);
+
+  // TODO: Complete for other data-types and strides.
+  // Each combination of Stride, ElementTy and VF results in a different
+  // sequence; The cost tables are therefore accessed with:
+  // Factor (stride) and VectorType=VFxElemType.
+  // The Cost accounts only for the shuffle sequence;
+  // The cost of the loads/stores is accounted for separately.
+  //
+  static const CostTblEntry AVX2InterleavedLoadTbl[] = {
+    { 3, MVT::v2i8,  10 }, //(load 6i8 and)  deinterleave into 3 x 2i8
+    { 3, MVT::v4i8,  4 },  //(load 12i8 and) deinterleave into 3 x 4i8
+    { 3, MVT::v8i8,  9 },  //(load 24i8 and) deinterleave into 3 x 8i8
+    { 3, MVT::v16i8, 18},  //(load 48i8 and) deinterleave into 3 x 16i8
+    { 3, MVT::v32i8, 42 }, //(load 96i8 and) deinterleave into 3 x 32i8
+    
+    { 4, MVT::v2i8,  12 }, //(load 8i8 and)   deinterleave into 4 x 2i8
+    { 4, MVT::v4i8,  4 },  //(load 16i8 and)  deinterleave into 4 x 4i8
+    { 4, MVT::v8i8,  20 }, //(load 32i8 and)  deinterleave into 4 x 8i8
+    { 4, MVT::v16i8, 39 }, //(load 64i8 and)  deinterleave into 4 x 16i8
+    { 4, MVT::v32i8, 80 }  //(load 128i8 and) deinterleave into 4 x 32i8
+  };
+
+  static const CostTblEntry AVX2InterleavedStoreTbl[] = {
+    { 3, MVT::v2i8,  7 },  //interleave 3 x 2i8  into 6i8 (and store)
+    { 3, MVT::v4i8,  8 },  //interleave 3 x 4i8  into 12i8 (and store)
+    { 3, MVT::v8i8,  11 }, //interleave 3 x 8i8  into 24i8 (and store)
+    { 3, MVT::v16i8, 17 }, //interleave 3 x 16i8 into 48i8 (and store)
+    { 3, MVT::v32i8, 32 }, //interleave 3 x 32i8 into 96i8 (and store)
+
+    { 4, MVT::v2i8,  12 }, //interleave 4 x 2i8  into 8i8 (and store)
+    { 4, MVT::v4i8,  9 },  //interleave 4 x 4i8  into 16i8 (and store)
+    { 4, MVT::v8i8,  16 }, //interleave 4 x 8i8  into 32i8 (and store)
+    { 4, MVT::v16i8, 20 }, //interleave 4 x 16i8 into 64i8 (and store)
+    { 4, MVT::v32i8, 40 }  //interleave 4 x 32i8 into 128i8 (and store)
+  };
+
+  if (Opcode == Instruction::Load) {
+    if (const auto *Entry =
+            CostTableLookup(AVX2InterleavedLoadTbl, Factor, ETy.getSimpleVT()))
+      return NumOfMemOps * MemOpCost + Entry->Cost;
+  } else {
+    assert(Opcode == Instruction::Store &&
+           "Expected Store Instruction at this  point");
+    if (const auto *Entry = 
+            CostTableLookup(AVX2InterleavedStoreTbl, Factor, ETy.getSimpleVT()))
+      return NumOfMemOps * MemOpCost + Entry->Cost;
+  }
+
+  return BaseT::getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,
+                                           Alignment, AddressSpace);
+}
+
 // Get estimation for interleaved load/store operations and strided load.
 // \p Indices contains indices for strided load.
 // \p Factor - the factor of interleaving.
@@ -2353,6 +2461,10 @@ int X86TTIImpl::getInterleavedMemoryOpCost(unsigned Opcode, Type *VecTy,
   if (ST->hasAVX512() && HasAVX512Solution && (!RequiresBW || ST->hasBWI()))
     return getInterleavedMemoryOpCostAVX512(Opcode, VecTy, Factor, Indices,
                                             Alignment, AddressSpace);
+  if (ST->hasAVX2())
+    return getInterleavedMemoryOpCostAVX2(Opcode, VecTy, Factor, Indices,
+                                          Alignment, AddressSpace);
+  
   return BaseT::getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,
                                            Alignment, AddressSpace);
 }
