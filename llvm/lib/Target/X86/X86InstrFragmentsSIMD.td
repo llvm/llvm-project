@@ -641,7 +641,7 @@ def sdmem : Operand<v2f64> {
 // SSE pattern fragments
 //===----------------------------------------------------------------------===//
 
-// Vector load wrappers to prevent folding of non-temporal aligned loads on 
+// Vector load wrappers to prevent folding of non-temporal aligned loads on
 // supporting targets.
 def vec128load : PatFrag<(ops node:$ptr), (load node:$ptr), [{
   return !Subtarget->hasSSE41() || !cast<LoadSDNode>(N)->isNonTemporal() ||
@@ -753,16 +753,6 @@ def memop : PatFrag<(ops node:$ptr), (vec128load node:$ptr), [{
 def memopv4f32 : PatFrag<(ops node:$ptr), (v4f32 (memop node:$ptr))>;
 def memopv2f64 : PatFrag<(ops node:$ptr), (v2f64 (memop node:$ptr))>;
 def memopv2i64 : PatFrag<(ops node:$ptr), (v2i64 (memop node:$ptr))>;
-
-// These are needed to match a scalar memop that is used in a vector-only
-// math instruction such as the FP logical ops: andps, andnps, orps, xorps.
-// The memory operand is required to be a 128-bit load, so it must be converted
-// from a vector to a scalar.
-def memopfsf32_128 : PatFrag<(ops node:$ptr),
-  (f32 (extractelt (memopv4f32 node:$ptr), (iPTR 0)))>;
-def memopfsf64_128 : PatFrag<(ops node:$ptr),
-  (f64 (extractelt (memopv2f64 node:$ptr), (iPTR 0)))>;
-
 
 // SSSE3 uses MMX registers for some instructions. They aren't aligned on a
 // 16-byte boundary.

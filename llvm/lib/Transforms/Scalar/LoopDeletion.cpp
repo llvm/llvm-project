@@ -31,20 +31,19 @@ using namespace llvm;
 STATISTIC(NumDeleted, "Number of loops deleted");
 
 /// This function deletes dead loops. The caller of this function needs to
-/// guarantee that the loop is infact dead.  Here we handle two kinds of dead
+/// guarantee that the loop is infact dead. Here we handle two kinds of dead
 /// loop. The first kind (\p isLoopDead) is where only invariant values from
 /// within the loop are used outside of it. The second kind (\p
 /// isLoopNeverExecuted) is where the loop is provably never executed. We can
-/// always remove never executed loops since they will not cause any
-/// difference to program behaviour.
+/// always remove never executed loops since they will not cause any difference
+/// to program behaviour.
 /// 
 /// This also updates the relevant analysis information in \p DT, \p SE, and \p
 /// LI. It also updates the loop PM if an updater struct is provided.
 // TODO: This function will be used by loop-simplifyCFG as well. So, move this
 // to LoopUtils.cpp
 static void deleteDeadLoop(Loop *L, DominatorTree &DT, ScalarEvolution &SE,
-                           LoopInfo &LI, bool LoopIsNeverExecuted,
-                           LPMUpdater *Updater = nullptr);
+                           LoopInfo &LI, LPMUpdater *Updater = nullptr);
 /// Determines if a loop is dead.
 ///
 /// This assumes that we've already checked for unique exit and exiting blocks,
@@ -168,7 +167,14 @@ static bool deleteLoopIfDead(Loop *L, DominatorTree &DT, ScalarEvolution &SE,
   BasicBlock *ExitBlock = L->getUniqueExitBlock();
 
   if (ExitBlock && isLoopNeverExecuted(L)) {
-    deleteDeadLoop(L, DT, SE, LI, true /* LoopIsNeverExecuted */, Updater);
+    // Set incoming value to undef for phi nodes in the exit block.
+    BasicBlock::iterator BI = ExitBlock->begin();
+    while (PHINode *P = dyn_cast<PHINode>(BI)) {
+      for (unsigned i = 0; i < P->getNumIncomingValues(); i++)
+        P->setIncomingValue(i, UndefValue::get(P->getType()));
+      BI++;
+    }
+    deleteDeadLoop(L, DT, SE, LI, Updater);
     ++NumDeleted;
     return true;
   }
@@ -196,15 +202,14 @@ static bool deleteLoopIfDead(Loop *L, DominatorTree &DT, ScalarEvolution &SE,
   if (isa<SCEVCouldNotCompute>(S))
     return Changed;
 
-  deleteDeadLoop(L, DT, SE, LI, false /* LoopIsNeverExecuted */, Updater);
+  deleteDeadLoop(L, DT, SE, LI, Updater);
   ++NumDeleted;
 
   return true;
 }
 
 static void deleteDeadLoop(Loop *L, DominatorTree &DT, ScalarEvolution &SE,
-                           LoopInfo &LI, bool LoopIsNeverExecuted,
-                           LPMUpdater *Updater) {
+                           LoopInfo &LI, LPMUpdater *Updater) {
   assert(L->isLCSSAForm(DT) && "Expected LCSSA!");
   auto *Preheader = L->getLoopPreheader();
   assert(Preheader && "Preheader should exist!");
@@ -246,8 +251,6 @@ static void deleteDeadLoop(Loop *L, DominatorTree &DT, ScalarEvolution &SE,
     // other incoming values. Given the loop has dedicated exits, all other
     // incoming values must be from the exiting blocks.
     int PredIndex = 0;
-    if (LoopIsNeverExecuted)
-      P->setIncomingValue(PredIndex, UndefValue::get(P->getType()));
     P->setIncomingBlock(PredIndex, Preheader);
     // Removes all incoming values from all other exiting blocks (including
     // duplicate values from an exiting block).

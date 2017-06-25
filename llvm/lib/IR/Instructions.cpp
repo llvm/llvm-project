@@ -2038,8 +2038,7 @@ void BinaryOperator::init(BinaryOps iType) {
   case SDiv: 
     assert(getType() == LHS->getType() &&
            "Arithmetic operation should return same type as operands!");
-    assert((getType()->isIntegerTy() || (getType()->isVectorTy() && 
-            cast<VectorType>(getType())->getElementType()->isIntegerTy())) &&
+    assert(getType()->isIntOrIntVectorTy() &&
            "Incorrect operand type (not integer) for S/UDIV");
     break;
   case FDiv:
@@ -2052,8 +2051,7 @@ void BinaryOperator::init(BinaryOps iType) {
   case SRem: 
     assert(getType() == LHS->getType() &&
            "Arithmetic operation should return same type as operands!");
-    assert((getType()->isIntegerTy() || (getType()->isVectorTy() && 
-            cast<VectorType>(getType())->getElementType()->isIntegerTy())) &&
+    assert(getType()->isIntOrIntVectorTy() &&
            "Incorrect operand type (not integer) for S/UREM");
     break;
   case FRem:
@@ -2067,18 +2065,14 @@ void BinaryOperator::init(BinaryOps iType) {
   case AShr:
     assert(getType() == LHS->getType() &&
            "Shift operation should return same type as operands!");
-    assert((getType()->isIntegerTy() ||
-            (getType()->isVectorTy() && 
-             cast<VectorType>(getType())->getElementType()->isIntegerTy())) &&
+    assert(getType()->isIntOrIntVectorTy() &&
            "Tried to create a shift operation on a non-integral type!");
     break;
   case And: case Or:
   case Xor:
     assert(getType() == LHS->getType() &&
            "Logical operation should return same type as operands!");
-    assert((getType()->isIntegerTy() ||
-            (getType()->isVectorTy() && 
-             cast<VectorType>(getType())->getElementType()->isIntegerTy())) &&
+    assert(getType()->isIntOrIntVectorTy() &&
            "Tried to create a logical operation on a non-integral type!");
     break;
   default:
