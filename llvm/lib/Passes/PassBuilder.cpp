@@ -464,10 +464,15 @@ static void addPGOInstrPasses(ModulePassManager &MPM, bool DebugLogging,
   if (RunProfileGen) {
     MPM.addPass(PGOInstrumentationGen());
 
+    FunctionPassManager FPM;
+    FPM.addPass(createFunctionToLoopPassAdaptor(LoopRotatePass()));
+    MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
+
     // Add the profile lowering pass.
     InstrProfOptions Options;
     if (!ProfileGenFile.empty())
       Options.InstrProfileOutput = ProfileGenFile;
+    Options.DoCounterPromotion = true;
     MPM.addPass(InstrProfiling(Options));
   }
 

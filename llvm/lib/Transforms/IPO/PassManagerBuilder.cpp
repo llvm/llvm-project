@@ -291,6 +291,8 @@ void PassManagerBuilder::addPGOInstrPasses(legacy::PassManagerBase &MPM) {
     InstrProfOptions Options;
     if (!PGOInstrGen.empty())
       Options.InstrProfileOutput = PGOInstrGen;
+    Options.DoCounterPromotion = true;
+    MPM.add(createLoopRotatePass());
     MPM.add(createInstrProfilingLegacyPass(Options));
   }
   if (!PGOInstrUse.empty())
