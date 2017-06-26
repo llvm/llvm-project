@@ -1,4 +1,4 @@
-//===-- AddressSanitizerRuntime.cpp -----------------------------*- C++ -*-===//
+//===-- ASanRuntime.cpp -----------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AddressSanitizerRuntime.h"
+#include "ASanRuntime.h"
 
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
 #include "lldb/Core/Debugger.h"

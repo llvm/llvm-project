@@ -7,6 +7,8 @@
 ; RUN: opt %loadPolly -polly-scops -analyze  -polly-invariant-load-hoisting \
 ; RUN: -polly-codegen-ppcg -polly-acc-dump-kernel-ir < %s | FileCheck %s -check-prefix=KERNEL-IR
 ;
+; REQUIRES: pollyacc
+;
 ; SCOP:       Function: f
 ; SCOP-NEXT:  Region: %entry.split---%for.end26
 ; SCOP-NEXT:  Max Loop Depth:  3

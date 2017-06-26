@@ -1995,8 +1995,8 @@ BinaryOperator::BinaryOperator(BinaryOps iType, Value *S1, Value *S2,
                 InsertBefore) {
   Op<0>() = S1;
   Op<1>() = S2;
-  init(iType);
   setName(Name);
+  AssertOK();
 }
 
 BinaryOperator::BinaryOperator(BinaryOps iType, Value *S1, Value *S2, 
@@ -2008,17 +2008,17 @@ BinaryOperator::BinaryOperator(BinaryOps iType, Value *S1, Value *S2,
                 InsertAtEnd) {
   Op<0>() = S1;
   Op<1>() = S2;
-  init(iType);
   setName(Name);
+  AssertOK();
 }
 
-void BinaryOperator::init(BinaryOps iType) {
+void BinaryOperator::AssertOK() {
   Value *LHS = getOperand(0), *RHS = getOperand(1);
   (void)LHS; (void)RHS; // Silence warnings.
   assert(LHS->getType() == RHS->getType() &&
          "Binary operator operand types must match!");
 #ifndef NDEBUG
-  switch (iType) {
+  switch (getOpcode()) {
   case Add: case Sub:
   case Mul:
     assert(getType() == LHS->getType() &&
@@ -2075,8 +2075,7 @@ void BinaryOperator::init(BinaryOps iType) {
     assert(getType()->isIntOrIntVectorTy() &&
            "Tried to create a logical operation on a non-integral type!");
     break;
-  default:
-    break;
+  default: llvm_unreachable("Invalid opcode provided");
   }
 #endif
 }

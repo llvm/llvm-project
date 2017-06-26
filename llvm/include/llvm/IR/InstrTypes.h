@@ -322,13 +322,13 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(UnaryInstruction, Value)
 //===----------------------------------------------------------------------===//
 
 class BinaryOperator : public Instruction {
+  void AssertOK();
+
 protected:
   BinaryOperator(BinaryOps iType, Value *S1, Value *S2, Type *Ty,
                  const Twine &Name, Instruction *InsertBefore);
   BinaryOperator(BinaryOps iType, Value *S1, Value *S2, Type *Ty,
                  const Twine &Name, BasicBlock *InsertAtEnd);
-
-  void init(BinaryOps iType);
 
   // Note: Instruction needs to be a friend here to call cloneImpl.
   friend class Instruction;

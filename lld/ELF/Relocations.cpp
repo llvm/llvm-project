@@ -361,7 +361,7 @@ static bool isStaticLinkTimeConstant(RelExpr E, uint32_t Type,
   // These expressions always compute a constant
   if (isRelExprOneOf<R_SIZE, R_GOT_FROM_END, R_GOT_OFF, R_MIPS_GOT_LOCAL_PAGE,
                      R_MIPS_GOT_OFF, R_MIPS_GOT_OFF32, R_MIPS_GOT_GP_PC,
-                     R_MIPS_TLSGD, R_GOT_PAGE_PC, R_GOT_PC,
+                     R_MIPS_TLSGD, R_GOT_PAGE_PC, R_GOT_PC, R_GOTONLY_PC,
                      R_GOTONLY_PC_FROM_END, R_PLT_PC, R_TLSGD_PC, R_TLSGD,
                      R_PPC_PLT_OPD, R_TLSDESC_CALL, R_TLSDESC_PAGE, R_HINT>(E))
     return true;

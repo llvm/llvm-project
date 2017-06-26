@@ -144,7 +144,6 @@ int main(int argc, char **argv) {
     InitializeAllTargetMCs();
     InitializeAllAsmPrinters();
     InitializeAllAsmParsers();
-    InitializeAllDisassemblers();
   }
 
   cl::ParseCommandLineOptions(argc, argv,
