@@ -34,6 +34,7 @@
 // CHECK1: "{{.*}}implement-declared-methods.m" "- (void)method { \n  <#code#>;\n}\n\n+ (void)classMethod { \n  <#code#>;\n}\n\n- (void)implementedMethod { \n  <#code#>;\n}\n\n- (void)method:(int)x with:(int)y { \n  <#code#>;\n}\n\n" [[@LINE-1]]:1 -> [[@LINE-1]]:1
 // CHECK2: "{{.*}}implement-declared-methods.m" "- (void)method { \n  <#code#>;\n}\n\n- (void)implementedMethod { \n  <#code#>;\n}\n\n" [[@LINE-2]]:1
 // CHECK-EXT: "{{.*}}implement-declared-methods.m" "- (void)anExtensionMethod { \n  <#code#>;\n}\n\n" [[@LINE-3]]:1
+// CHECK-CAT-NO-IMPL: "{{.*}}implement-declared-methods.m" "- (void)thisCategoryMethodShouldBeInTheClassImplementation { \n  <#code#>;\n}\n\n" [[@LINE-4]]:1 -> [[@LINE-4]]:1
 #endif
 // RUN: clang-refactor-test perform -action implement-declared-methods -selected=all-methods -continuation-file=%s -query-results=query-all-impl %s | FileCheck --check-prefix=CHECK1 %s
 // RUN: clang-refactor-test perform -action implement-declared-methods -selected=all-methods -continuation-file=%s -query-results=query-mix-impl %s | FileCheck --check-prefix=CHECK2 %s
@@ -66,3 +67,13 @@
 @end
 // CHECK3: "{{.*}}implement-declared-methods.m" "- (void)categoryMethod { \n  <#code#>;\n}\n\n+ (MyClass *)classCategoryMethod { \n  <#code#>;\n}\n\n" [[@LINE-1]]:1
 // RUN: clang-refactor-test perform -action implement-declared-methods -selected=all-category-methods -continuation-file=%s -query-results=query-all-impl %s | FileCheck --check-prefix=CHECK3 %s
+
+@interface MyClass (NoCategoryImplementation)
+
+// category-no-impl-begin: +1:1
+- (void)thisCategoryMethodShouldBeInTheClassImplementation;
+// category-no-impl-end: +0:1
+
+@end
+
+// RUN: clang-refactor-test perform -action implement-declared-methods -selected=category-no-impl -continuation-file=%s -query-results=query-all-impl %s | FileCheck --check-prefix=CHECK-CAT-NO-IMPL %s

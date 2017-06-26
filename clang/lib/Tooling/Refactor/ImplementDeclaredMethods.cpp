@@ -86,11 +86,18 @@ class ImplementDeclaredObjCMethodsOperation
     : public ImplementDeclaredMethodsOperation<
           ObjCContainerDecl, ObjCMethodDecl,
           ImplementDeclaredObjCMethodsOperation> {
+  const ObjCInterfaceDecl *Interface;
+
 public:
   ImplementDeclaredObjCMethodsOperation(
       const ObjCContainerDecl *Container,
       ArrayRef<const ObjCMethodDecl *> SelectedMethods)
-      : ImplementDeclaredMethodsOperation(Container, SelectedMethods) {}
+      : ImplementDeclaredMethodsOperation(Container, SelectedMethods) {
+    if (const auto *CD = dyn_cast<ObjCCategoryDecl>(Container))
+      Interface = CD->getClassInterface();
+    else
+      Interface = nullptr;
+  }
 
   llvm::Expected<RefactoringResult>
   perform(ASTContext &Context, const Preprocessor &ThePreprocessor,
@@ -100,6 +107,7 @@ public:
   static llvm::Expected<RefactoringResult>
   runInImplementationAST(ASTContext &Context, const FileID &File,
                          const ObjCContainerDecl *Container,
+                         const ObjCInterfaceDecl *Interface,
                          ArrayRef<const ObjCMethodDecl *> SelectedMethods);
 };
 
@@ -363,27 +371,33 @@ ImplementDeclaredObjCMethodsOperation::perform(
   using namespace indexer;
   return continueInExternalASTUnit(
       fileThatShouldContainImplementationOf(Container), runInImplementationAST,
-      Container, filter(llvm::makeArrayRef(SelectedMethods),
-                        [](const DeclEntity &D) { return !D.isDefined(); }));
+      Container, Interface,
+      filter(llvm::makeArrayRef(SelectedMethods),
+             [](const DeclEntity &D) { return !D.isDefined(); }));
 }
 
 static const ObjCImplDecl *
-getImplementationContainer(const ObjCContainerDecl *Container) {
+getImplementationContainer(const ObjCContainerDecl *Container,
+                           const ObjCInterfaceDecl *Interface) {
   if (!Container)
     return nullptr;
   if (const auto *ID = dyn_cast<ObjCInterfaceDecl>(Container))
     return ID->getImplementation();
-  if (const auto *CD = dyn_cast<ObjCCategoryDecl>(Container))
-    return CD->getImplementation();
+  if (const auto *CD = dyn_cast<ObjCCategoryDecl>(Container)) {
+    if (const auto *Impl = CD->getImplementation())
+      return Impl;
+    return getImplementationContainer(Interface, /*Interface=*/nullptr);
+  }
   return nullptr;
 }
 
 llvm::Expected<RefactoringResult>
 ImplementDeclaredObjCMethodsOperation::runInImplementationAST(
     ASTContext &Context, const FileID &File, const ObjCContainerDecl *Container,
+    const ObjCInterfaceDecl *Interface,
     ArrayRef<const ObjCMethodDecl *> SelectedMethods) {
   const ObjCImplDecl *ImplementationContainer =
-      getImplementationContainer(Container);
+      getImplementationContainer(Container, Interface);
   if (!ImplementationContainer)
     return llvm::make_error<RefactoringOperationError>(
         "the target @interface is not implemented in the continuation AST "

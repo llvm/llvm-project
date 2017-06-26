@@ -40,6 +40,8 @@ public:
 } // end anonymous namespace
 
 const Decl *PersistentToASTSpecificStateConverter::lookupDecl(StringRef USR) {
+  if (USR.empty())
+    return nullptr;
   auto It = ConvertedDeclRefs.find(USR);
   if (It != ConvertedDeclRefs.end())
     return It->second;

@@ -115,7 +115,8 @@ public:
       const PersistentDeclRef<T> &Ref,
       typename std::enable_if<std::is_base_of<Decl, T>::value>::type * =
           nullptr) {
-    ConvertedDeclRefs[Ref.USR] = nullptr;
+    if (!Ref.USR.empty())
+      ConvertedDeclRefs[Ref.USR] = nullptr;
     return true;
   }
 
@@ -132,8 +133,10 @@ public:
       const std::vector<PersistentDeclRef<T>> &Refs,
       typename std::enable_if<std::is_base_of<Decl, T>::value>::type * =
           nullptr) {
-    for (const auto &Ref : Refs)
-      ConvertedDeclRefs[Ref.USR] = nullptr;
+    for (const auto &Ref : Refs) {
+      if (!Ref.USR.empty())
+        ConvertedDeclRefs[Ref.USR] = nullptr;
+    }
     return true;
   }
 
