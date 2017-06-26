@@ -182,8 +182,8 @@ static Expected<CompileUnitIdentifiers> getCUIdentifiers(StringRef Abbrev,
       ID.Signature = InfoData.getU64(&Offset);
       break;
     default:
-      DWARFFormValue::skipValue(Form, InfoData, &Offset, Version, AddrSize,
-                                Format);
+      DWARFFormValue::skipValue(Form, InfoData, &Offset,
+                                DWARFFormParams({Version, AddrSize, Format}));
     }
   }
   return ID;

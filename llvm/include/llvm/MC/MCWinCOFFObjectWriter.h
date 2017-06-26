@@ -13,6 +13,7 @@
 namespace llvm {
 
 class MCAsmBackend;
+class MCContext;
 class MCFixup;
 class MCObjectWriter;
 class MCValue;

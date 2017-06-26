@@ -42,6 +42,7 @@ LegalizerInfo::LegalizerInfo() : TablesInitialized(false) {
 
   DefaultActions[TargetOpcode::G_BRCOND] = WidenScalar;
   DefaultActions[TargetOpcode::G_INSERT] = NarrowScalar;
+  DefaultActions[TargetOpcode::G_EXTRACT] = NarrowScalar;
   DefaultActions[TargetOpcode::G_FNEG] = Lower;
 }
 
@@ -75,8 +76,7 @@ LegalizerInfo::getAction(const InstrAspect &Aspect) const {
 
   // FIXME: the long-term plan calls for expansion in terms of load/store (if
   // they're not legal).
-  if (Aspect.Opcode == TargetOpcode::G_EXTRACT ||
-      Aspect.Opcode == TargetOpcode::G_MERGE_VALUES ||
+  if (Aspect.Opcode == TargetOpcode::G_MERGE_VALUES ||
       Aspect.Opcode == TargetOpcode::G_UNMERGE_VALUES)
     return std::make_pair(Legal, Aspect.Type);
 

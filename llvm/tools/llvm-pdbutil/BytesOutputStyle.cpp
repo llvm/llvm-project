@@ -319,14 +319,22 @@ static void iterateOneModule(PDBFile &File, LinePrinter &P,
                              const DbiModuleList &Modules, uint32_t I,
                              uint32_t Digits, uint32_t IndentLevel,
                              CallbackT Callback) {
+  if (I >= Modules.getModuleCount()) {
+    P.formatLine("Mod {0:4} | Invalid module index ",
+                 fmt_align(I, AlignStyle::Right, std::max(Digits, 4U)));
+    return;
+  }
+
   auto Modi = Modules.getModuleDescriptor(I);
   P.formatLine("Mod {0:4} | `{1}`: ",
                fmt_align(I, AlignStyle::Right, std::max(Digits, 4U)),
                Modi.getModuleName());
 
   uint16_t ModiStream = Modi.getModuleStreamIndex();
-
   AutoIndent Indent2(P, IndentLevel);
+  if (ModiStream == kInvalidStreamIndex)
+    return;
+
   auto ModStreamData = MappedBlockStream::createIndexedStream(
       File.getMsfLayout(), File.getMsfBuffer(), ModiStream,
       File.getAllocator());
@@ -393,17 +401,48 @@ void BytesOutputStyle::dumpModuleC11() {
                  });
 }
 
+static std::string formatChunkKind(DebugSubsectionKind Kind) {
+  switch (Kind) {
+    RETURN_CASE(DebugSubsectionKind, None, "none");
+    RETURN_CASE(DebugSubsectionKind, Symbols, "symbols");
+    RETURN_CASE(DebugSubsectionKind, Lines, "lines");
+    RETURN_CASE(DebugSubsectionKind, StringTable, "strings");
+    RETURN_CASE(DebugSubsectionKind, FileChecksums, "checksums");
+    RETURN_CASE(DebugSubsectionKind, FrameData, "frames");
+    RETURN_CASE(DebugSubsectionKind, InlineeLines, "inlinee lines");
+    RETURN_CASE(DebugSubsectionKind, CrossScopeImports, "xmi");
+    RETURN_CASE(DebugSubsectionKind, CrossScopeExports, "xme");
+    RETURN_CASE(DebugSubsectionKind, ILLines, "il lines");
+    RETURN_CASE(DebugSubsectionKind, FuncMDTokenMap, "func md token map");
+    RETURN_CASE(DebugSubsectionKind, TypeMDTokenMap, "type md token map");
+    RETURN_CASE(DebugSubsectionKind, MergedAssemblyInput,
+                "merged assembly input");
+    RETURN_CASE(DebugSubsectionKind, CoffSymbolRVA, "coff symbol rva");
+  }
+  return formatUnknownEnum(Kind);
+}
+
 void BytesOutputStyle::dumpModuleC13() {
   printHeader(P, "Debug Chunks");
 
   AutoIndent Indent(P);
 
-  iterateModules(File, P, 2,
-                 [this](uint32_t Modi, const ModuleDebugStreamRef &Stream,
-                        const MSFStreamLayout &Layout) {
-                   auto Chunks = Stream.getC13LinesSubstream();
-                   P.formatMsfStreamData("Debug Chunks", File, Layout, Chunks);
-                 });
+  iterateModules(
+      File, P, 2,
+      [this](uint32_t Modi, const ModuleDebugStreamRef &Stream,
+             const MSFStreamLayout &Layout) {
+        auto Chunks = Stream.getC13LinesSubstream();
+        if (opts::bytes::SplitChunks) {
+          for (const auto &SS : Stream.subsections()) {
+            BinarySubstreamRef ThisChunk;
+            std::tie(ThisChunk, Chunks) = Chunks.split(SS.getRecordLength());
+            P.formatMsfStreamData(formatChunkKind(SS.kind()), File, Layout,
+                                  ThisChunk);
+          }
+        } else {
+          P.formatMsfStreamData("Debug Chunks", File, Layout, Chunks);
+        }
+      });
 }
 
 void BytesOutputStyle::dumpByteRanges(uint32_t Min, uint32_t Max) {

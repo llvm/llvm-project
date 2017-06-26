@@ -62,11 +62,13 @@ DWARFUnit::~DWARFUnit() = default;
 
 bool DWARFUnit::getAddrOffsetSectionItem(uint32_t Index,
                                                 uint64_t &Result) const {
-  uint32_t Offset = AddrOffsetSectionBase + Index * AddrSize;
-  if (AddrOffsetSection->Data.size() < Offset + AddrSize)
+  uint32_t Offset = AddrOffsetSectionBase + Index * getAddressByteSize();
+  if (AddrOffsetSection->Data.size() < Offset + getAddressByteSize())
     return false;
-  DataExtractor DA(AddrOffsetSection->Data, isLittleEndian, AddrSize);
-  Result = getRelocatedValue(DA, AddrSize, &Offset, &AddrOffsetSection->Relocs);
+  DataExtractor DA(AddrOffsetSection->Data, isLittleEndian,
+                   getAddressByteSize());
+  Result = getRelocatedValue(DA, getAddressByteSize(), &Offset,
+                             &AddrOffsetSection->Relocs);
   return true;
 }
 
@@ -92,15 +94,17 @@ uint64_t DWARFUnit::getStringOffsetSectionRelocation(uint32_t Index) const {
 
 bool DWARFUnit::extractImpl(DataExtractor debug_info, uint32_t *offset_ptr) {
   Length = debug_info.getU32(offset_ptr);
-  Version = debug_info.getU16(offset_ptr);
+  // FIXME: Support DWARF64.
+  FormParams.Format = DWARF32;
+  FormParams.Version = debug_info.getU16(offset_ptr);
   uint64_t AbbrOffset;
-  if (Version >= 5) {
+  if (FormParams.Version >= 5) {
     UnitType = debug_info.getU8(offset_ptr);
-    AddrSize = debug_info.getU8(offset_ptr);
+    FormParams.AddrSize = debug_info.getU8(offset_ptr);
     AbbrOffset = debug_info.getU32(offset_ptr);
   } else {
     AbbrOffset = debug_info.getU32(offset_ptr);
-    AddrSize = debug_info.getU8(offset_ptr);
+    FormParams.AddrSize = debug_info.getU8(offset_ptr);
   }
   if (IndexEntry) {
     if (AbbrOffset)
@@ -115,14 +119,14 @@ bool DWARFUnit::extractImpl(DataExtractor debug_info, uint32_t *offset_ptr) {
   }
 
   bool LengthOK = debug_info.isValidOffset(getNextUnitOffset() - 1);
-  bool VersionOK = DWARFContext::isSupportedVersion(Version);
-  bool AddrSizeOK = AddrSize == 4 || AddrSize == 8;
+  bool VersionOK = DWARFContext::isSupportedVersion(getVersion());
+  bool AddrSizeOK = getAddressByteSize() == 4 || getAddressByteSize() == 8;
 
   if (!LengthOK || !VersionOK || !AddrSizeOK)
     return false;
 
   // Keep track of the highest DWARF version we encounter across all units.
-  Context.setMaxVersionIfGreater(Version);
+  Context.setMaxVersionIfGreater(getVersion());
 
   Abbrevs = Abbrev->getAbbreviationDeclarationSet(AbbrOffset);
   return Abbrevs != nullptr;
@@ -148,7 +152,8 @@ bool DWARFUnit::extractRangeList(uint32_t RangeListOffset,
                                         DWARFDebugRangeList &RangeList) const {
   // Require that compile unit is extracted.
   assert(!DieArray.empty());
-  DataExtractor RangesData(RangeSection->Data, isLittleEndian, AddrSize);
+  DataExtractor RangesData(RangeSection->Data, isLittleEndian,
+                           getAddressByteSize());
   uint32_t ActualRangeListOffset = RangeSectionBase + RangeListOffset;
   return RangeList.extract(RangesData, &ActualRangeListOffset,
                            RangeSection->Relocs);
@@ -157,9 +162,8 @@ bool DWARFUnit::extractRangeList(uint32_t RangeListOffset,
 void DWARFUnit::clear() {
   Offset = 0;
   Length = 0;
-  Version = 0;
   Abbrevs = nullptr;
-  AddrSize = 0;
+  FormParams = DWARFFormParams({0, 0, DWARF32});
   BaseAddr = 0;
   RangeSectionBase = 0;
   AddrOffsetSectionBase = 0;

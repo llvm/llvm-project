@@ -94,6 +94,14 @@ static cl::opt<bool> ManagedMemory("polly-acc-codegen-managed-memory",
                                    cl::Hidden, cl::init(false), cl::ZeroOrMore,
                                    cl::cat(PollyCategory));
 
+static cl::opt<bool>
+    FailOnVerifyModuleFailure("polly-acc-fail-on-verify-module-failure",
+                              cl::desc("Fail and generate a backtrace if"
+                                       " verifyModule fails on the GPU "
+                                       " kernel module."),
+                              cl::Hidden, cl::init(false), cl::ZeroOrMore,
+                              cl::cat(PollyCategory));
+
 static cl::opt<std::string>
     CudaVersion("polly-acc-cuda-version",
                 cl::desc("The CUDA version to compile for"), cl::Hidden,
@@ -1900,7 +1908,14 @@ std::string GPUNodeBuilder::createKernelASM() {
 }
 
 std::string GPUNodeBuilder::finalizeKernelFunction() {
+
   if (verifyModule(*GPUModule)) {
+    DEBUG(dbgs() << "verifyModule failed on module:\n";
+          GPUModule->print(dbgs(), nullptr); dbgs() << "\n";);
+
+    if (FailOnVerifyModuleFailure)
+      llvm_unreachable("VerifyModule failed.");
+
     BuildSuccessful = false;
     return "";
   }

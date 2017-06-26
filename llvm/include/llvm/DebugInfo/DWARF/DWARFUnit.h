@@ -19,6 +19,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFDebugInfoEntry.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugRangeList.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
+#include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/DebugInfo/DWARF/DWARFRelocMap.h"
 #include "llvm/DebugInfo/DWARF/DWARFSection.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnitIndex.h"
@@ -127,12 +128,13 @@ class DWARFUnit {
   bool isDWO;
   const DWARFUnitSectionBase &UnitSection;
 
+  // Version, address size, and DWARF format.
+  DWARFFormParams FormParams;
+
   uint32_t Offset;
   uint32_t Length;
   const DWARFAbbreviationDeclarationSet *Abbrevs;
-  uint16_t Version;
   uint8_t UnitType;
-  uint8_t AddrSize;
   uint64_t BaseAddr;
   /// The compile unit debug information entry items.
   std::vector<DWARFDebugInfoEntry> DieArray;
@@ -159,7 +161,7 @@ protected:
   virtual bool extractImpl(DataExtractor debug_info, uint32_t *offset_ptr);
 
   /// Size in bytes of the unit header.
-  virtual uint32_t getHeaderSize() const { return Version <= 4 ? 11 : 12; }
+  virtual uint32_t getHeaderSize() const { return getVersion() <= 4 ? 11 : 12; }
 
 public:
   DWARFUnit(DWARFContext &Context, const DWARFSection &Section,
@@ -197,7 +199,8 @@ public:
   uint64_t getStringOffsetSectionRelocation(uint32_t Index) const;
 
   DataExtractor getDebugInfoExtractor() const {
-    return DataExtractor(InfoSection.Data, isLittleEndian, AddrSize);
+    return DataExtractor(InfoSection.Data, isLittleEndian,
+                         getAddressByteSize());
   }
 
   DataExtractor getStringExtractor() const {
@@ -220,10 +223,14 @@ public:
   uint32_t getOffset() const { return Offset; }
   uint32_t getNextUnitOffset() const { return Offset + Length + 4; }
   uint32_t getLength() const { return Length; }
-  uint16_t getVersion() const { return Version; }
 
-  dwarf::DwarfFormat getFormat() const {
-    return dwarf::DwarfFormat::DWARF32; // FIXME: Support DWARF64.
+  const DWARFFormParams &getFormParams() const { return FormParams; }
+  uint16_t getVersion() const { return FormParams.Version; }
+  dwarf::DwarfFormat getFormat() const { return FormParams.Format; }
+  uint8_t getAddressByteSize() const { return FormParams.AddrSize; }
+  uint8_t getRefAddrByteSize() const { return FormParams.getRefAddrByteSize(); }
+  uint8_t getDwarfOffsetByteSize() const {
+    return FormParams.getDwarfOffsetByteSize();
   }
 
   const DWARFAbbreviationDeclarationSet *getAbbreviations() const {
@@ -231,19 +238,6 @@ public:
   }
 
   uint8_t getUnitType() const { return UnitType; }
-  uint8_t getAddressByteSize() const { return AddrSize; }
-
-  uint8_t getRefAddrByteSize() const {
-    if (Version == 2)
-      return AddrSize;
-    return getDwarfOffsetByteSize();
-  }
-
-  uint8_t getDwarfOffsetByteSize() const {
-    if (getFormat() == dwarf::DwarfFormat::DWARF64)
-      return 8;
-    return 4;
-  }
 
   uint64_t getBaseAddress() const { return BaseAddr; }
 

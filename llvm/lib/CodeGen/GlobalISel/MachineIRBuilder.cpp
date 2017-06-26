@@ -482,6 +482,9 @@ MachineInstrBuilder MachineIRBuilder::buildMerge(unsigned Res,
          "input operands do not cover output register");
 #endif
 
+  if (Ops.size() == 1)
+    return buildCopy(Res, Ops[0]);
+
   MachineInstrBuilder MIB = buildInstr(TargetOpcode::G_MERGE_VALUES);
   MIB.addDef(Res);
   for (unsigned i = 0; i < Ops.size(); ++i)

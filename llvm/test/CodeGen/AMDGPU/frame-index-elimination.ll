@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mattr=-promote-alloca -amdgpu-sroa=0 -verify-machineinstrs < %s | FileCheck  -enable-var-scope -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mattr=-promote-alloca -amdgpu-sroa=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
 
 ; Test that non-entry function frame indices are expanded properly to
 ; give an index relative to the scratch wave offset register
@@ -71,8 +71,9 @@ define void @func_load_private_arg_i32_ptr(i32* %ptr) #0 {
 
 ; GCN-LABEL: {{^}}void_func_byval_struct_i8_i32_ptr:
 ; GCN: s_waitcnt
-; GCN-NEXT: s_sub_u32 s6, s5, s4
-; GCN-NEXT: v_lshr_b32_e64 v0, s6, 6
+; GCN-NEXT: s_mov_b32 s5, s32
+; GCN-NEXT: s_sub_u32 [[SUB:s[0-9]+]], s5, s4
+; GCN-NEXT: v_lshr_b32_e64 v0, [[SUB]], 6
 ; GCN-NEXT: v_add_i32_e32 v0, vcc, 4, v0
 ; GCN-NOT: v_mov
 ; GCN: ds_write_b32 v0, v0
@@ -86,6 +87,7 @@ define void @void_func_byval_struct_i8_i32_ptr({ i8, i32 }* byval %arg0) #0 {
 
 ; GCN-LABEL: {{^}}void_func_byval_struct_i8_i32_ptr_value:
 ; GCN: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT: s_mov_b32 s5, s32
 ; GCN-NEXT: buffer_load_ubyte v0, off, s[0:3], s5
 ; GCN_NEXT: buffer_load_dword v1, off, s[0:3], s5 offset:4
 define void @void_func_byval_struct_i8_i32_ptr_value({ i8, i32 }* byval %arg0) #0 {

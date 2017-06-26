@@ -1887,7 +1887,8 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
                                        SourceLocation(), false,
                                        clang::TypeResult(),
                                        DSC == DSC_type_specifier,
-                                       &SkipBody);
+                                       DSC == DSC_template_param ||
+                                       DSC == DSC_template_type_arg, &SkipBody);
 
     // If ActOnTag said the type was dependent, try again with the
     // less common call.

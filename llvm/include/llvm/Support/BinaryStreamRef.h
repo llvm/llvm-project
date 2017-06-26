@@ -174,6 +174,16 @@ struct BinarySubstreamRef {
     BinaryStreamRef SubSub = StreamData.slice(Off, Size);
     return {Off + Offset, SubSub};
   }
+  BinarySubstreamRef drop_front(uint32_t N) const {
+    return slice(N, size() - N);
+  }
+  BinarySubstreamRef keep_front(uint32_t N) const { return slice(0, N); }
+
+  std::pair<BinarySubstreamRef, BinarySubstreamRef>
+  split(uint32_t Offset) const {
+    return std::make_pair(keep_front(Offset), drop_front(Offset));
+  }
+
   uint32_t size() const { return StreamData.getLength(); }
   bool empty() const { return size() == 0; }
 };

@@ -820,10 +820,10 @@ template <class ELFT> void Writer<ELFT>::addReservedSymbols() {
   // The _GLOBAL_OFFSET_TABLE_ symbol is defined by target convention to
   // be at some offset from the base of the .got section, usually 0 or the end
   // of the .got
-  InputSection *GotSection = (InX::MipsGot) ? cast<InputSection>(InX::MipsGot)
-                                            : cast<InputSection>(InX::Got);
-  HasGotBaseSym = addOptionalRegular<ELFT>("_GLOBAL_OFFSET_TABLE_", GotSection,
-                                           Target->GotBaseSymOff) != nullptr;
+  InputSection *GotSection = InX::MipsGot ? cast<InputSection>(InX::MipsGot)
+                                          : cast<InputSection>(InX::Got);
+  ElfSym::GlobalOffsetTable = addOptionalRegular<ELFT>(
+      "_GLOBAL_OFFSET_TABLE_", GotSection, Target->GotBaseSymOff);
 
   // __tls_get_addr is defined by the dynamic linker for dynamic ELFs. For
   // static linking the linker is required to optimize away any references to
@@ -1132,8 +1132,7 @@ static void applySynthetic(const std::vector<SyntheticSection *> &Sections,
 // to make them visible from linkescript side. But not all sections are always
 // required to be in output. For example we don't need dynamic section content
 // sometimes. This function filters out such unused sections from the output.
-static void removeUnusedSyntheticSections(std::vector<OutputSection *> &V,
-                                          bool HasGotBaseSym) {
+static void removeUnusedSyntheticSections(std::vector<OutputSection *> &V) {
   // All input synthetic sections that can be empty are placed after
   // all regular ones. We iterate over them all and exit at first
   // non-synthetic.
@@ -1144,7 +1143,7 @@ static void removeUnusedSyntheticSections(std::vector<OutputSection *> &V,
     OutputSection *OS = SS->getParent();
     if (!SS->empty() || !OS)
       continue;
-    if ((SS == InX::Got || SS == InX::MipsGot) && HasGotBaseSym)
+    if ((SS == InX::Got || SS == InX::MipsGot) && ElfSym::GlobalOffsetTable)
       continue;
     OS->Sections.erase(std::find(OS->Sections.begin(), OS->Sections.end(), SS));
     SS->Live = false;
@@ -1219,7 +1218,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     return;
 
   addPredefinedSections();
-  removeUnusedSyntheticSections(OutputSections, HasGotBaseSym);
+  removeUnusedSyntheticSections(OutputSections);
 
   clearOutputSections();
   sortSections();

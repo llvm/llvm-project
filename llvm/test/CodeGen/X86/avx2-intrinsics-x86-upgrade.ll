@@ -382,7 +382,8 @@ define void @test_x86_avx_storeu_dq_256(i8* %a0, <32 x i8> %a1) {
 ; CHECK-LABEL: test_x86_avx_storeu_dq_256:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    vpaddb LCPI34_0, %ymm0, %ymm0
+; CHECK-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; CHECK-NEXT:    vpsubb %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    vmovdqu %ymm0, (%eax)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retl

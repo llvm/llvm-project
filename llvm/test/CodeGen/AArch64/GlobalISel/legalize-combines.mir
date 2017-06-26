@@ -57,11 +57,11 @@ body: |
     %0:_(s64) = COPY %x0
 
     ; CHECK-LABEL: name: test_combines_4
-    ; CHECK: %2(<2 x s32>) = G_EXTRACT %1(s128), 0
-    ; CHECK: %3(<2 x s32>) = G_ADD %2, %2
+    ; CHECK: %2(s64) = COPY %0(s64)
+    ; CHECK: %3(s64) = G_ADD %2, %2
     %1:_(s128) = G_MERGE_VALUES %0, %0
-    %2:_(<2 x s32>) = G_EXTRACT %1, 0
-    %3:_(<2 x s32>) = G_ADD %2, %2
+    %2:_(s64) = G_EXTRACT %1, 0
+    %3:_(s64) = G_ADD %2, %2
 ...
 
 ---

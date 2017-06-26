@@ -60,9 +60,7 @@ X86::X86() {
   PltEntrySize = 16;
   PltHeaderSize = 16;
   TlsGdRelaxSkip = 2;
-
-  // 0xCC is the "int3" (call debug exception handler) instruction.
-  TrapInstr = 0xcccccccc;
+  TrapInstr = 0xcccccccc; // 0xcc = INT3
 }
 
 RelExpr X86::getRelExpr(uint32_t Type, const SymbolBody &S,

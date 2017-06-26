@@ -1,5 +1,6 @@
 ; RUN: llvm-pdbutil bytes -chunks %p/Inputs/empty.pdb | FileCheck --check-prefix=CHUNKS %s
 ; RUN: llvm-pdbutil bytes -chunks -mod=0 %p/Inputs/empty.pdb | FileCheck --check-prefix=FILTERED-CHUNKS %s
+; RUN: llvm-pdbutil bytes -chunks -split-chunks -mod=0 %p/Inputs/empty.pdb | FileCheck --check-prefix=SPLIT-CHUNKS %s
 
 ; RUN: llvm-pdbutil bytes -syms %p/Inputs/empty.pdb | FileCheck --check-prefix=SYMS %s
 ; RUN: llvm-pdbutil bytes -syms -mod=0 %p/Inputs/empty.pdb | FileCheck --check-prefix=FILTERED-SYMS %s
@@ -25,6 +26,17 @@ FILTERED-CHUNKS-NEXT:         60F0: 00000000 05000080 03000000 06000080 08000000
 FILTERED-CHUNKS-NEXT:         6110: 56000000 1001A0A5 BD0D3ECD 93FC29D1 9DE826FB F4BC0000                    |V.........>...)...&.....|
 FILTERED-CHUNKS-NEXT:       )
 FILTERED-CHUNKS-NOT:      Mod 0001
+
+SPLIT-CHUNKS:                              Debug Chunks
+SPLIT-CHUNKS-NEXT: ============================================================
+SPLIT-CHUNKS-NEXT:     Mod 0000 | `d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj`:
+SPLIT-CHUNKS-NEXT:       lines (
+SPLIT-CHUNKS-NEXT:         60D0: F2000000 30000000 10000000 01000000 0A000000 00000000 03000000 24000000  |....0.......................$...|
+SPLIT-CHUNKS-NEXT:         60F0: 00000000 05000080 03000000 06000080 08000000 07000080                    |........................|
+SPLIT-CHUNKS-NEXT:       )
+SPLIT-CHUNKS-NEXT:       checksums (
+SPLIT-CHUNKS-NEXT:         6108: F4000000 18000000 56000000 1001A0A5 BD0D3ECD 93FC29D1 9DE826FB F4BC0000  |........V.........>...)...&.....|
+SPLIT-CHUNKS-NEXT:       )
 
 SYMS:                             Module Symbols
 SYMS-NEXT: ============================================================

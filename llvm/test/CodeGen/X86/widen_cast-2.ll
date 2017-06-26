@@ -7,8 +7,7 @@ define void @convert(<7 x i32>* %dst, <14 x i16>* %src) nounwind {
 ; CHECK:       # BB#0: # %entry
 ; CHECK-NEXT:    pushl %eax
 ; CHECK-NEXT:    movl $0, (%esp)
-; CHECK-NEXT:    movdqa {{.*#+}} xmm0 = [1,1,1,1,1,1,1,1]
-; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = <1,1,1,1,1,1,u,u>
+; CHECK-NEXT:    pcmpeqd %xmm0, %xmm0
 ; CHECK-NEXT:    cmpl $3, (%esp)
 ; CHECK-NEXT:    jg .LBB0_3
 ; CHECK-NEXT:    .p2align 4, 0x90
@@ -18,14 +17,14 @@ define void @convert(<7 x i32>* %dst, <14 x i16>* %src) nounwind {
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    shll $5, %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; CHECK-NEXT:    movdqa (%edx,%eax), %xmm2
-; CHECK-NEXT:    paddw %xmm0, %xmm2
-; CHECK-NEXT:    movdqa 16(%edx,%eax), %xmm3
-; CHECK-NEXT:    paddw %xmm1, %xmm3
-; CHECK-NEXT:    pextrd $2, %xmm3, 24(%ecx,%eax)
-; CHECK-NEXT:    pextrd $1, %xmm3, 20(%ecx,%eax)
-; CHECK-NEXT:    movd %xmm3, 16(%ecx,%eax)
-; CHECK-NEXT:    movdqa %xmm2, (%ecx,%eax)
+; CHECK-NEXT:    movdqa (%edx,%eax), %xmm1
+; CHECK-NEXT:    movdqa 16(%edx,%eax), %xmm2
+; CHECK-NEXT:    psubw %xmm0, %xmm1
+; CHECK-NEXT:    psubw %xmm0, %xmm2
+; CHECK-NEXT:    pextrd $2, %xmm2, 24(%ecx,%eax)
+; CHECK-NEXT:    pextrd $1, %xmm2, 20(%ecx,%eax)
+; CHECK-NEXT:    movd %xmm2, 16(%ecx,%eax)
+; CHECK-NEXT:    movdqa %xmm1, (%ecx,%eax)
 ; CHECK-NEXT:    incl (%esp)
 ; CHECK-NEXT:    cmpl $3, (%esp)
 ; CHECK-NEXT:    jle .LBB0_2

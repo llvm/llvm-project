@@ -117,7 +117,7 @@ extern llvm::cl::opt<uint32_t> ModuleIndex;
 extern llvm::cl::opt<bool> ModuleSyms;
 extern llvm::cl::opt<bool> ModuleC11;
 extern llvm::cl::opt<bool> ModuleC13;
-
+extern llvm::cl::opt<bool> SplitChunks;
 } // namespace bytes
 
 namespace dump {

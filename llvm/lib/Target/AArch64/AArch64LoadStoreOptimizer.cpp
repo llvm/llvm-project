@@ -808,7 +808,13 @@ AArch64LoadStoreOpt::promoteLoadFromStore(MachineBasicBlock::iterator LoadI,
     // Remove the load, if the destination register of the loads is the same
     // register for stored value.
     if (StRt == LdRt && LoadSize == 8) {
-      StoreI->clearRegisterKills(StRt, TRI);
+      for (MachineInstr &MI : make_range(StoreI->getIterator(),
+                                         LoadI->getIterator())) {
+        if (MI.killsRegister(StRt, TRI)) {
+          MI.clearRegisterKills(StRt, TRI);
+          break;
+        }
+      }
       DEBUG(dbgs() << "Remove load instruction:\n    ");
       DEBUG(LoadI->print(dbgs()));
       DEBUG(dbgs() << "\n");

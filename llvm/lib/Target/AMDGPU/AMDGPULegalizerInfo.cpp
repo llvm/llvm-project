@@ -69,6 +69,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo() {
   setAction({G_SELECT, S32}, Legal);
   setAction({G_SELECT, 1, S1}, Legal);
 
+  setAction({G_SHL, S32}, Legal);
+
   setAction({G_STORE, S32}, Legal);
   setAction({G_STORE, 1, P1}, Legal);
 
