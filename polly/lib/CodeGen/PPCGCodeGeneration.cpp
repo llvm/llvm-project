@@ -2707,10 +2707,6 @@ public:
     DL = &S->getRegion().getEntry()->getModule()->getDataLayout();
     RI = &getAnalysis<RegionInfoPass>().getRegionInfo();
 
-    // We currently do not support scops with invariant loads.
-    if (S->hasInvariantAccesses())
-      return false;
-
     // We currently do not support functions inside kernels, as code
     // generation will need to offload function calls to the kernel.
     // This may lead to a kernel trying to call a function on the host.

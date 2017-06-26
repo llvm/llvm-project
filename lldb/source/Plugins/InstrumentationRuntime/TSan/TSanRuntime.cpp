@@ -1,4 +1,4 @@
-//===-- ThreadSanitizerRuntime.cpp ------------------------------*- C++ -*-===//
+//===-- TSanRuntime.cpp -----------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ThreadSanitizerRuntime.h"
+#include "TSanRuntime.h"
 
 #include "Plugins/Process/Utility/HistoryThread.h"
 #include "lldb/Breakpoint/StoppointCallbackContext.h"

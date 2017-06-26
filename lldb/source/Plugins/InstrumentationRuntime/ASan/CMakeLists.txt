@@ -1,5 +1,5 @@
-add_lldb_library(lldbPluginInstrumentationRuntimeUndefinedBehaviorSanitizer PLUGIN
-  UndefinedBehaviorSanitizerRuntime.cpp
+add_lldb_library(lldbPluginInstrumentationRuntimeASan PLUGIN
+  ASanRuntime.cpp
 
   LINK_LIBS
     lldbBreakpoint
