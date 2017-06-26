@@ -101,15 +101,15 @@ class RenamingResult {
   void addOccurrence(const rename::SymbolOccurrence &RenamedOccurrence,
                      const SourceManager &SM, const LangOptions &LangOpts) {
     CXRefactoringReplacement_Old *OccurrenceReplacements =
-        Replacements.Allocate(RenamedOccurrence.Locations.size());
+        Replacements.Allocate(RenamedOccurrence.locations().size());
 
     unsigned I = 0;
     const auto &SymbolNameInfo = NameInfo[RenamedOccurrence.SymbolIndex];
     if (!RenamedOccurrence.IsMacroExpansion &&
         RenamedOccurrence.Kind != rename::SymbolOccurrence::MatchingComment &&
         RenamedOccurrence.Kind != rename::SymbolOccurrence::MatchingDocComment)
-      assert(RenamedOccurrence.Locations.size() == SymbolNameInfo.size());
-    for (const auto &Location : RenamedOccurrence.Locations) {
+      assert(RenamedOccurrence.locations().size() == SymbolNameInfo.size());
+    for (const auto &Location : RenamedOccurrence.locations()) {
       CXSourceRange Range = cxloc::translateSourceRange(
           SM, LangOpts,
           CharSourceRange::getCharRange(RenamedOccurrence.getLocationRange(
@@ -188,7 +188,7 @@ public:
     llvm::StringMap<OccurrenceSet> FilenamesToSymbolOccurrences;
     for (auto &Occurrence : Results) {
       const std::pair<FileID, unsigned> DecomposedLocation =
-          SM.getDecomposedLoc(Occurrence.Locations[0]);
+          SM.getDecomposedLoc(Occurrence.locations()[0]);
       const FileEntry *Entry = SM.getFileEntryForID(DecomposedLocation.first);
       assert(Entry && "Invalid file entry");
       auto &FileOccurrences =
@@ -259,16 +259,16 @@ class SymbolOccurrencesResult {
 
   void addOccurrence(const rename::SymbolOccurrence &RenamedOccurrence,
                      const SourceManager &SM, const LangOptions &LangOpts) {
-    CXFileRange *OccurrenceRanges =
-        Ranges.Allocate(RenamedOccurrence.Locations.size());
+    ArrayRef<SourceLocation> Locations = RenamedOccurrence.locations();
+    CXFileRange *OccurrenceRanges = Ranges.Allocate(Locations.size());
 
     unsigned I = 0;
     const auto &SymbolNameInfo = NameInfo[RenamedOccurrence.SymbolIndex];
     if (!RenamedOccurrence.IsMacroExpansion &&
         RenamedOccurrence.Kind != rename::SymbolOccurrence::MatchingComment &&
         RenamedOccurrence.Kind != rename::SymbolOccurrence::MatchingDocComment)
-      assert(RenamedOccurrence.Locations.size() == SymbolNameInfo.size());
-    for (const auto &Location : RenamedOccurrence.Locations) {
+      assert(Locations.size() == SymbolNameInfo.size());
+    for (const auto &Location : Locations) {
       CXSourceRange Range = cxloc::translateSourceRange(
           SM, LangOpts,
           CharSourceRange::getCharRange(RenamedOccurrence.getLocationRange(
@@ -327,7 +327,7 @@ public:
     llvm::StringMap<OccurrenceSet> FilenamesToSymbolOccurrences;
     for (auto &Occurrence : Results) {
       const std::pair<FileID, unsigned> DecomposedLocation =
-          SM.getDecomposedLoc(Occurrence.Locations[0]);
+          SM.getDecomposedLoc(Occurrence.locations()[0]);
       const FileEntry *Entry = SM.getFileEntryForID(DecomposedLocation.first);
       assert(Entry && "Invalid file entry");
       auto &FileOccurrences =

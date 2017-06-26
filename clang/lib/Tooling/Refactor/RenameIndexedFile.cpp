@@ -48,22 +48,36 @@ IndexedFileOccurrenceProducer::IndexedFileOccurrenceProducer(
 
 namespace {
 
-enum class MatchKind { SourceMatch, MacroExpansion, None };
+enum class MatchKind {
+  SourceMatch,
+  SourcePropSetterMatch,
+  MacroExpansion,
+  None
+};
 
 } // end anonymous namespace
+
+static bool isSetterNameEqualToPropName(StringRef SetterName,
+                                        StringRef PropertyName) {
+  assert(SetterName.startswith("set") && "invalid setter name");
+  SetterName = SetterName.drop_front(3);
+  return SetterName[0] == toUppercase(PropertyName[0]) &&
+         SetterName.drop_front() == PropertyName.drop_front();
+}
 
 static MatchKind checkOccurrence(const IndexedOccurrence &Occurrence,
                                  const IndexedSymbol &Symbol,
                                  const SourceManager &SM,
                                  const LangOptions &LangOpts,
-                                 SourceLocation &BeginLoc) {
+                                 SourceRange &SymbolRange,
+                                 bool AllowObjCSetterProp = false) {
   if (!Occurrence.Line || !Occurrence.Column)
     return MatchKind::None; // Ignore any invalid indexed locations.
 
   // Ensure that the first string in the name is present at the given
   // location.
-  BeginLoc = SM.translateLineCol(SM.getMainFileID(), Occurrence.Line,
-                                 Occurrence.Column);
+  SourceLocation BeginLoc = SM.translateLineCol(
+      SM.getMainFileID(), Occurrence.Line, Occurrence.Column);
   if (BeginLoc.isInvalid())
     return MatchKind::None;
   StringRef SymbolNameStart = Symbol.Name[0];
@@ -83,8 +97,17 @@ static MatchKind checkOccurrence(const IndexedOccurrence &Occurrence,
   RawLex.LexFromRawLexer(Tok);
   if (Tok.isNot(tok::raw_identifier) || Tok.getLocation() != BeginLoc)
     return MatchKind::None;
-  return Tok.getRawIdentifier() == SymbolNameStart ? MatchKind::SourceMatch
-                                                   : MatchKind::MacroExpansion;
+  SymbolRange = SourceRange(BeginLoc, Tok.getEndLoc());
+  if (Tok.getRawIdentifier() == SymbolNameStart)
+    return MatchKind::SourceMatch;
+  // Match 'prop' when looking for 'setProp'.
+  // FIXME: Verify that the previous token is a '.' to be sure.
+  if (AllowObjCSetterProp &&
+      Occurrence.Kind == IndexedOccurrence::IndexedObjCMessageSend &&
+      SymbolNameStart.startswith("set") &&
+      isSetterNameEqualToPropName(SymbolNameStart, Tok.getRawIdentifier()))
+    return MatchKind::SourcePropSetterMatch;
+  return MatchKind::MacroExpansion;
 }
 
 static void
@@ -366,16 +389,22 @@ void IndexedFileOccurrenceProducer::ExecuteAction() {
                                            Consumer);
           continue;
         }
-        SourceLocation BeginLoc;
-        MatchKind Match =
-            checkOccurrence(Occurrence, Symbol.value(), SM, LangOpts, BeginLoc);
+        SourceRange SymbolRange;
+        MatchKind Match = checkOccurrence(Occurrence, Symbol.value(), SM,
+                                          LangOpts, SymbolRange,
+                                          /*AllowObjCSetterProp=*/true);
         if (Match == MatchKind::None)
           continue;
-
-        SymbolOccurrence Result(SymbolOccurrence::MatchingSymbol,
-                                /*IsMacroExpansion=*/Match ==
-                                    MatchKind::MacroExpansion,
-                                Symbol.index(), BeginLoc);
+        llvm::SmallVector<SourceLocation, 2> Locs;
+        Locs.push_back(SymbolRange.getBegin());
+        bool IsImpProp = Match == MatchKind::SourcePropSetterMatch;
+        if (IsImpProp)
+          Locs.push_back(SymbolRange.getEnd());
+        SymbolOccurrence Result(
+            IsImpProp ? SymbolOccurrence::MatchingImplicitProperty
+                      : SymbolOccurrence::MatchingSymbol,
+            /*IsMacroExpansion=*/Match == MatchKind::MacroExpansion,
+            Symbol.index(), Locs);
         Consumer.handleOccurrence(Result, SM, LangOpts);
       }
     }
@@ -492,11 +521,12 @@ findObjCMultiPieceSelectorOccurrences(CompilerInstance &CI,
       // Selectors and names in #includes shouldn't really mix.
       if (Occurrence.Kind == IndexedOccurrence::InclusionDirective)
         continue;
-      SourceLocation Loc;
-      MatchKind Match =
-          checkOccurrence(Occurrence, Symbol.value(), SM, LangOpts, Loc);
+      SourceRange SymbolRange;
+      MatchKind Match = checkOccurrence(Occurrence, Symbol.value(), SM,
+                                        LangOpts, SymbolRange);
       if (Match == MatchKind::None)
         continue;
+      SourceLocation Loc = SymbolRange.getBegin();
       if (Match == MatchKind::MacroExpansion) {
         SymbolOccurrence Result(SymbolOccurrence::MatchingSymbol,
                                 /*IsMacroExpansion=*/true, Symbol.index(), Loc);

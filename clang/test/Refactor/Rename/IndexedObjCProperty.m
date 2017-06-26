@@ -28,3 +28,18 @@
 // CHECK: selector [[@LINE-3]]:11
 // CHECK: selector "setFoo" [[@LINE-3]]:11
 // CHECK-NOT: selector
+
+@interface ImplicitProperty
+
+- (int)implicit; // IMPL_GET: rename [[@LINE]]:8 -> [[@LINE]]:16
+- (void)setImplicit:(int)x; // IMPL_SET: rename [[@LINE]]:9 -> [[@LINE]]:20
+
+@end
+
+void useImplicitProperty(ImplicitProperty *x) {
+  x.implicit; // IMPL_GET: rename [[@LINE]]:5 -> [[@LINE]]:13
+  x.implicit = 0; // IMPL_SET: implicit-property [[@LINE]]:5 -> [[@LINE]]:13
+}
+
+// RUN: clang-refactor-test rename-indexed-file -name=implicit -new-name=foo -indexed-file=%s -indexed-at=objc-im:34:8 -indexed-at=objc-message:40:5 %s | FileCheck --check-prefix=IMPL_GET %s
+// RUN: clang-refactor-test rename-indexed-file -name=setImplicit -new-name=setFoo -indexed-file=%s -indexed-at=objc-im:35:9 -indexed-at=objc-message:41:5 %s | FileCheck --check-prefix=IMPL_SET %s

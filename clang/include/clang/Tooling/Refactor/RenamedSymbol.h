@@ -54,6 +54,9 @@ public:
 /// account for things like Objective-C selectors.
 // TODO: Rename
 class SymbolOccurrence {
+  /// The source locations that correspond to the occurence of the symbol.
+  SmallVector<SourceLocation, 4> Locations;
+
 public:
   enum OccurrenceKind {
     /// \brief This occurrence is an exact match and can be renamed
@@ -87,29 +90,44 @@ public:
   /// The index of the symbol stored in a \c SymbolOperation which matches this
   /// occurrence.
   unsigned SymbolIndex;
-  /// The source locations that correspond to the occurence of the symbol.
-  SmallVector<SourceLocation, 4> Locations;
 
   SymbolOccurrence()
       : Kind(MatchingSymbol), IsMacroExpansion(false), SymbolIndex(0) {}
 
   SymbolOccurrence(OccurrenceKind Kind, bool IsMacroExpansion,
                    unsigned SymbolIndex, ArrayRef<SourceLocation> Locations)
-      : Kind(Kind), IsMacroExpansion(IsMacroExpansion),
-        SymbolIndex(SymbolIndex),
-        Locations(Locations.begin(), Locations.end()) {
+      : Locations(Locations.begin(), Locations.end()), Kind(Kind),
+        IsMacroExpansion(IsMacroExpansion), SymbolIndex(SymbolIndex) {
     assert(!Locations.empty() && "Renamed occurence without locations!");
   }
 
   SymbolOccurrence(SymbolOccurrence &&) = default;
   SymbolOccurrence &operator=(SymbolOccurrence &&) = default;
 
+  ArrayRef<SourceLocation> locations() const {
+    if (Kind == MatchingImplicitProperty && Locations.size() == 2)
+      return llvm::makeArrayRef(Locations).drop_back();
+    return Locations;
+  }
+
   /// Return the source range that corresponds to an individual source location
   /// in this occurrence.
   SourceRange getLocationRange(SourceLocation Loc, size_t OldNameSize) const {
-    return SourceRange(
-        Loc, IsMacroExpansion ? Loc : Loc.getLocWithOffset(OldNameSize));
+    SourceLocation EndLoc;
+    // Implicit property references might store the end as the second location
+    // to take into account the match for 'prop' when the old name is 'setProp'.
+    if (Kind == MatchingImplicitProperty && Locations.size() == 2) {
+      assert(Loc == Locations[0] && "invalid loc");
+      EndLoc = Locations[1];
+    } else
+      EndLoc = IsMacroExpansion ? Loc : Loc.getLocWithOffset(OldNameSize);
+    return SourceRange(Loc, EndLoc);
   }
+
+  friend bool operator<(const SymbolOccurrence &LHS,
+                        const SymbolOccurrence &RHS);
+  friend bool operator==(const SymbolOccurrence &LHS,
+                         const SymbolOccurrence &RHS);
 };
 
 /// \brief Less-than operator between the two renamed symbol occurrences.
