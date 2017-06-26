@@ -175,8 +175,10 @@ static bool CodeGen(Scop &S, IslAstInfo &AI, LoopInfo &LI, DominatorTree &DT,
   // the SCEVExpander may introduce while code generating the parameters and
   // which may introduce scalar dependences that prevent us from correctly
   // code generating this scop.
-  BasicBlock *StartBlock =
+  BBPair StartExitBlocks =
       executeScopConditionally(S, Builder.getTrue(), DT, RI, LI);
+  BasicBlock *StartBlock = std::get<0>(StartExitBlocks);
+
   removeLifetimeMarkers(R);
   auto *SplitBlock = StartBlock->getSinglePredecessor();
 

@@ -305,7 +305,7 @@ void OutputSectionFactory::addInputSec(InputSectionBase *IS,
 
   SectionKey Key = createKey(IS, OutsecName);
   OutputSection *&Sec = Map[Key];
-  return addInputSec(IS, OutsecName, Sec);
+  addInputSec(IS, OutsecName, Sec);
 }
 
 void OutputSectionFactory::addInputSec(InputSectionBase *IS,

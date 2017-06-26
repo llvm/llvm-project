@@ -1,6 +1,6 @@
 # RUN: yaml2obj %s -o %t.obj
 # RUN: lld-link %t.obj -nodefaultlib -entry:main -debug -out:%t.exe -pdb:%t.pdb
-# RUN: llvm-pdbutil raw -symbols %t.pdb | FileCheck %s
+# RUN: llvm-pdbutil dump -symbols %t.pdb | FileCheck %s
 
 # To regenerate the object file:
 # $ cat symbol-types.c
@@ -15,7 +15,7 @@
 
 # CHECK:                           Symbols
 # CHECK: ============================================================
-# CHECK-LABEL:   Mod 0000 | `C:\src\llvm-project\build\tools\lld\test\COFF\Output\pdb-symbol-types.yaml.tmp.obj`:
+# CHECK-LABEL:   Mod 0000 | `{{.*}}pdb-symbol-types.yaml.tmp.obj`:
 # CHECK:   - S_OBJNAME [size = 52] sig=0, `C:\src\llvm-project\build\symbol-types.obj`
 # CHECK:   - S_COMPILE3 [size = 60]
 # CHECK:       machine = intel x86-x64, Ver = Microsoft (R) Optimizing Compiler, language = c
