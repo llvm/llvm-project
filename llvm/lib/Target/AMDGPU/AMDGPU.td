@@ -480,14 +480,14 @@ class SubtargetFeatureISAVersion <int Major, int Minor, int Stepping,
 
 def FeatureISAVersion6_0_0 : SubtargetFeatureISAVersion <6,0,0,
   [FeatureSouthernIslands,
-   FeatureFastFMAF32, 
+   FeatureFastFMAF32,
    HalfRate64Ops,
    FeatureLDSBankCount32]>;
 
 def FeatureISAVersion6_0_1 : SubtargetFeatureISAVersion <6,0,1,
   [FeatureSouthernIslands,
    FeatureLDSBankCount32]>;
-   
+
 def FeatureISAVersion7_0_0 : SubtargetFeatureISAVersion <7,0,0,
   [FeatureSeaIslands,
    FeatureLDSBankCount32]>;

@@ -489,21 +489,7 @@ static LoadInst *combineLoadToNewType(InstCombiner &IC, LoadInst &LI, Type *NewT
       break;
 
     case LLVMContext::MD_nonnull:
-      // This only directly applies if the new type is also a pointer.
-      if (NewTy->isPointerTy()) {
-        NewLoad->setMetadata(ID, N);
-        break;
-      }
-      // If it's integral now, translate it to !range metadata.
-      if (NewTy->isIntegerTy()) {
-        auto *ITy = cast<IntegerType>(NewTy);
-        auto *NullInt = ConstantExpr::getPtrToInt(
-            ConstantPointerNull::get(cast<PointerType>(Ptr->getType())), ITy);
-        auto *NonNullInt =
-            ConstantExpr::getAdd(NullInt, ConstantInt::get(ITy, 1));
-        NewLoad->setMetadata(LLVMContext::MD_range,
-                             MDB.createRange(NonNullInt, NullInt));
-      }
+      copyNonnullMetadata(LI, N, *NewLoad);
       break;
     case LLVMContext::MD_align:
     case LLVMContext::MD_dereferenceable:
@@ -513,17 +499,7 @@ static LoadInst *combineLoadToNewType(InstCombiner &IC, LoadInst &LI, Type *NewT
         NewLoad->setMetadata(ID, N);
       break;
     case LLVMContext::MD_range:
-      // FIXME: It would be nice to propagate this in some way, but the type
-      // conversions make it hard.
-
-      // If it's a pointer now and the range does not contain 0, make it !nonnull.
-      if (NewTy->isPointerTy()) {
-        unsigned BitWidth = IC.getDataLayout().getTypeSizeInBits(NewTy);
-        if (!getConstantRangeFromMetadata(*N).contains(APInt(BitWidth, 0))) {
-          MDNode *NN = MDNode::get(LI.getContext(), None);
-          NewLoad->setMetadata(LLVMContext::MD_nonnull, NN);
-        }
-      }
+      copyRangeMetadata(IC.getDataLayout(), LI, N, *NewLoad);
       break;
     }
   }

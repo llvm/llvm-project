@@ -587,7 +587,7 @@ Code Object Metadata
 The code object metadata is specified by the ``NT_AMD_AMDHSA_METADATA`` note
 record (see :ref:`amdgpu-note-records`).
 
-The metadata is specified as a YAML formated string (see [YAML]_ and
+The metadata is specified as a YAML formatted string (see [YAML]_ and
 :doc:`YamlIO`).
 
 The metadata is represented as a single YAML document comprised of the mapping
@@ -1031,11 +1031,11 @@ Global variable
   appropriate section according to if it has initialized data or is readonly.
 
   If the symbol is external then its section is ``STN_UNDEF`` and the loader
-  will resolve relocations using the defintion provided by another code object
+  will resolve relocations using the definition provided by another code object
   or explicitly defined by the runtime.
 
   All global symbols, whether defined in the compilation unit or external, are
-  accessed by the machine code indirectly throught a GOT table entry. This
+  accessed by the machine code indirectly through a GOT table entry. This
   allows them to be preemptable. The GOT table is only supported when the target
   triple OS is ``amdhsa`` (see :ref:`amdgpu-target-triples`).
 
@@ -1160,7 +1160,7 @@ Register Mapping
    Define DWARF register enumeration.
 
    If want to present a wavefront state then should expose vector registers as
-   64 wide (rather than per work-item view that LLVM uses). Either as seperate
+   64 wide (rather than per work-item view that LLVM uses). Either as separate
    registers, or a 64x4 byte single register. In either case use a new LANE op
    (akin to XDREF) to select the current lane usage in a location
    expression. This would also allow scalar register spilling to vector register
@@ -1653,7 +1653,7 @@ CP microcode requires the Kernel descritor to be allocated on 64 byte alignment.
                                                      ``COMPUTE_PGM_RSRC2.USER_SGPR``.
      6       1 bit   enable_trap_handler             Set to 1 if code contains a
                                                      TRAP instruction which
-                                                     requires a trap hander to
+                                                     requires a trap handler to
                                                      be enabled.
 
                                                      CP sets
@@ -2146,7 +2146,7 @@ This section describes the mapping of LLVM memory model onto AMDGPU machine code
 .. TODO
    Update when implementation complete.
 
-   Support more relaxed OpenCL memory model to be controled by environment
+   Support more relaxed OpenCL memory model to be controlled by environment
    component of target triple.
 
 The AMDGPU backend supports the memory synchronization scopes specified in
@@ -2201,7 +2201,7 @@ For GFX6-GFX9:
   can be reordered relative to each other, which can result in reordering the
   visibility of vector memory operations with respect to LDS operations of other
   wavefronts in the same work-group. A ``s_waitcnt lgkmcnt(0)`` is required to
-  ensure synchonization between LDS operations and vector memory operations
+  ensure synchronization between LDS operations and vector memory operations
   between waves of a work-group, but not between operations performed by the
   same wavefront.
 * The vector memory operations are performed as wavefront wide operations and
@@ -2226,7 +2226,7 @@ For GFX6-GFX9:
   scalar memory operations performed by waves executing in different work-groups
   (which may be executing on different CUs) of an agent can be reordered
   relative to each other. A ``s_waitcnt vmcnt(0)`` is required to ensure
-  synchonization between vector memory operations of different CUs. It ensures a
+  synchronization between vector memory operations of different CUs. It ensures a
   previous vector memory operation has completed before executing a subsequent
   vector memory or LDS operation and so can be used to meet the requirements of
   acquire and release.
@@ -2268,7 +2268,7 @@ and vector L1 caches are invalidated between kernel dispatches by CP since
 constant address space data may change between kernel dispatch executions. See
 :ref:`amdgpu-amdhsa-memory-spaces`.
 
-The one exeception is if scalar writes are used to spill SGPR registers. In this
+The one execption is if scalar writes are used to spill SGPR registers. In this
 case the AMDGPU backend ensures the memory location used to spill is never
 accessed by vector memory operations at the same time. If scalar writes are used
 then a ``s_dcache_wb`` is inserted before the ``s_endpgm`` and before a function
@@ -3310,7 +3310,7 @@ table
                     be moved before the acquire.
                   - If a fence then same as load atomic, plus no preceding
                     associated fence-paired-atomic can be moved after the fence.
-     release      - If a store atomic/atomicrmw then no preceeding load/load
+     release      - If a store atomic/atomicrmw then no preceding load/load
                     atomic/store/ store atomic/atomicrmw/fence instruction can
                     be moved after the release.
                   - If a fence then same as store atomic, plus no following

@@ -284,7 +284,7 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
     MF, SIRegisterInfo::PRIVATE_SEGMENT_WAVE_BYTE_OFFSET);
 
   unsigned PreloadedPrivateBufferReg = AMDGPU::NoRegister;
-  if (ST.isAmdCodeObjectV2(MF) || ST.isMesaGfxShader(MF)) {
+  if (ST.isAmdCodeObjectV2(MF)) {
     PreloadedPrivateBufferReg = TRI->getPreloadedValue(
       MF, SIRegisterInfo::PRIVATE_SEGMENT_BUFFER);
   }
@@ -363,14 +363,14 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
     // Use relocations to get the pointer, and setup the other bits manually.
     uint64_t Rsrc23 = TII->getScratchRsrcWords23();
 
-    if (MFI->hasPrivateMemoryInputPtr()) {
+    if (MFI->hasImplicitBufferPtr()) {
       unsigned Rsrc01 = TRI->getSubReg(ScratchRsrcReg, AMDGPU::sub0_sub1);
 
       if (AMDGPU::isCompute(MF.getFunction()->getCallingConv())) {
         const MCInstrDesc &Mov64 = TII->get(AMDGPU::S_MOV_B64);
 
         BuildMI(MBB, I, DL, Mov64, Rsrc01)
-          .addReg(PreloadedPrivateBufferReg)
+          .addReg(MFI->getImplicitBufferPtrUserSGPR())
           .addReg(ScratchRsrcReg, RegState::ImplicitDefine);
       } else {
         const MCInstrDesc &LoadDwordX2 = TII->get(AMDGPU::S_LOAD_DWORDX2_IMM);
@@ -385,7 +385,7 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
                                            MachineMemOperand::MODereferenceable,
                                            0, 0);
         BuildMI(MBB, I, DL, LoadDwordX2, Rsrc01)
-          .addReg(PreloadedPrivateBufferReg)
+          .addReg(MFI->getImplicitBufferPtrUserSGPR())
           .addImm(0) // offset
           .addImm(0) // glc
           .addMemOperand(MMO)
