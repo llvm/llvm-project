@@ -22,16 +22,17 @@ _clang()
   elif [[ "$w2" == -* && "$w1" == '=' ]]; then
     # -foo=bar<tab>
     arg="$w2=,$cur"
-  else
-    _filedir
   fi
 
   local flags=$( clang --autocomplete="$arg" )
-  if [[ "$cur" == "=" ]]; then
+  if [[ "$cur" == '=' ]]; then
     COMPREPLY=( $( compgen -W "$flags" -- "") )
-  elif [[ "$flags" == "" ]]; then
+  elif [[ "$flags" == "" || "$arg" == "" ]]; then
     _filedir
   else
+    # Bash automatically appends a space after '=' by default.
+    # Disable it so that it works nicely for options in the form of -foo=bar.
+    [[ "${flags: -1}" == '=' ]] && compopt -o nospace
     COMPREPLY=( $( compgen -W "$flags" -- "$cur" ) )
   fi
 }
