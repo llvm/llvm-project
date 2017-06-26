@@ -1744,7 +1744,7 @@ def VCVTSD2SSrm  : I<0x5A, MRMSrcMem, (outs FR32:$dst),
                       Sched<[WriteCvtF2FLd, ReadAfterLd]>, VEX_WIG;
 }
 
-def : Pat<(f32 (fpround FR64:$src)), 
+def : Pat<(f32 (fpround FR64:$src)),
             (VCVTSD2SSrr (COPY_TO_REGCLASS FR64:$src, FR32), FR64:$src)>,
           Requires<[UseAVX]>;
 

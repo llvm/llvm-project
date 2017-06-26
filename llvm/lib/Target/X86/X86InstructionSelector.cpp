@@ -77,10 +77,15 @@ private:
   bool selectCopy(MachineInstr &I, MachineRegisterInfo &MRI) const;
   bool selectInsert(MachineInstr &I, MachineRegisterInfo &MRI,
                     MachineFunction &MF) const;
+  bool selectExtract(MachineInstr &I, MachineRegisterInfo &MRI,
+                     MachineFunction &MF) const;
 
   // emit insert subreg instruction and insert it before MachineInstr &I
   bool emitInsertSubreg(unsigned DstReg, unsigned SrcReg, MachineInstr &I,
                         MachineRegisterInfo &MRI, MachineFunction &MF) const;
+  // emit extract subreg instruction and insert it before MachineInstr &I
+  bool emitExtractSubreg(unsigned DstReg, unsigned SrcReg, MachineInstr &I,
+                         MachineRegisterInfo &MRI, MachineFunction &MF) const;
 
   const TargetRegisterClass *getRegClass(LLT Ty, const RegisterBank &RB) const;
   const TargetRegisterClass *getRegClass(LLT Ty, unsigned Reg,
@@ -264,6 +269,8 @@ bool X86InstructionSelector::select(MachineInstr &I) const {
   if (selectCmp(I, MRI, MF))
     return true;
   if (selectUadde(I, MRI, MF))
+    return true;
+  if (selectExtract(I, MRI, MF))
     return true;
   if (selectInsert(I, MRI, MF))
     return true;
@@ -708,6 +715,103 @@ bool X86InstructionSelector::selectUadde(MachineInstr &I,
     return false;
 
   I.eraseFromParent();
+  return true;
+}
+
+bool X86InstructionSelector::selectExtract(MachineInstr &I,
+                                           MachineRegisterInfo &MRI,
+                                           MachineFunction &MF) const {
+
+  if (I.getOpcode() != TargetOpcode::G_EXTRACT)
+    return false;
+
+  const unsigned DstReg = I.getOperand(0).getReg();
+  const unsigned SrcReg = I.getOperand(1).getReg();
+  int64_t Index = I.getOperand(2).getImm();
+
+  const LLT DstTy = MRI.getType(DstReg);
+  const LLT SrcTy = MRI.getType(SrcReg);
+
+  // Meanwile handle vector type only.
+  if (!DstTy.isVector())
+    return false;
+
+  if (Index % DstTy.getSizeInBits() != 0)
+    return false; // Not extract subvector.
+
+  if (Index == 0) {
+    // Replace by extract subreg copy.
+    if (!emitExtractSubreg(DstReg, SrcReg, I, MRI, MF))
+      return false;
+
+    I.eraseFromParent();
+    return true;
+  }
+
+  bool HasAVX = STI.hasAVX();
+  bool HasAVX512 = STI.hasAVX512();
+  bool HasVLX = STI.hasVLX();
+
+  if (SrcTy.getSizeInBits() == 256 && DstTy.getSizeInBits() == 128) {
+    if (HasVLX)
+      I.setDesc(TII.get(X86::VEXTRACTF32x4Z256rr));
+    else if (HasAVX)
+      I.setDesc(TII.get(X86::VEXTRACTF128rr));
+    else
+      return false;
+  } else if (SrcTy.getSizeInBits() == 512 && HasAVX512) {
+    if (DstTy.getSizeInBits() == 128)
+      I.setDesc(TII.get(X86::VEXTRACTF32x4Zrr));
+    else if (DstTy.getSizeInBits() == 256)
+      I.setDesc(TII.get(X86::VEXTRACTF64x4Zrr));
+    else
+      return false;
+  } else
+    return false;
+
+  // Convert to X86 VEXTRACT immediate.
+  Index = Index / DstTy.getSizeInBits();
+  I.getOperand(2).setImm(Index);
+
+  return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+}
+
+bool X86InstructionSelector::emitExtractSubreg(unsigned DstReg, unsigned SrcReg,
+                                               MachineInstr &I,
+                                               MachineRegisterInfo &MRI,
+                                               MachineFunction &MF) const {
+
+  const LLT DstTy = MRI.getType(DstReg);
+  const LLT SrcTy = MRI.getType(SrcReg);
+  unsigned SubIdx = X86::NoSubRegister;
+
+  if (!DstTy.isVector() || !SrcTy.isVector())
+    return false;
+
+  assert(SrcTy.getSizeInBits() > DstTy.getSizeInBits() &&
+         "Incorrect Src/Dst register size");
+
+  if (DstTy.getSizeInBits() == 128)
+    SubIdx = X86::sub_xmm;
+  else if (DstTy.getSizeInBits() == 256)
+    SubIdx = X86::sub_ymm;
+  else
+    return false;
+
+  const TargetRegisterClass *DstRC = getRegClass(DstTy, DstReg, MRI);
+  const TargetRegisterClass *SrcRC = getRegClass(SrcTy, SrcReg, MRI);
+
+  SrcRC = TRI.getSubClassWithSubReg(SrcRC, SubIdx);
+
+  if (!RBI.constrainGenericRegister(SrcReg, *SrcRC, MRI) ||
+      !RBI.constrainGenericRegister(DstReg, *DstRC, MRI)) {
+    DEBUG(dbgs() << "Failed to constrain G_TRUNC\n");
+    return false;
+  }
+
+  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(X86::COPY), DstReg)
+      .addReg(SrcReg, 0, SubIdx);
+
   return true;
 }
 

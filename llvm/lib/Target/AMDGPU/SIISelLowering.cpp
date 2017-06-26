@@ -1068,10 +1068,10 @@ static void allocateHSAUserSGPRs(CCState &CCInfo,
                                  MachineFunction &MF,
                                  const SIRegisterInfo &TRI,
                                  SIMachineFunctionInfo &Info) {
-  if (Info.hasPrivateMemoryInputPtr()) {
-    unsigned PrivateMemoryPtrReg = Info.addPrivateMemoryPtr(TRI);
-    MF.addLiveIn(PrivateMemoryPtrReg, &AMDGPU::SGPR_64RegClass);
-    CCInfo.AllocateReg(PrivateMemoryPtrReg);
+  if (Info.hasImplicitBufferPtr()) {
+    unsigned ImplicitBufferPtrReg = Info.addImplicitBufferPtr(TRI);
+    MF.addLiveIn(ImplicitBufferPtrReg, &AMDGPU::SGPR_64RegClass);
+    CCInfo.AllocateReg(ImplicitBufferPtrReg);
   }
 
   // FIXME: How should these inputs interact with inreg / custom SGPR inputs?
@@ -1234,7 +1234,7 @@ static void reservePrivateMemoryRegs(const TargetMachine &TM,
     }
   }
 
-  if (NeedSP){
+  if (NeedSP) {
     unsigned ReservedStackPtrOffsetReg = TRI.reservedStackPtrOffsetReg(MF);
     Info.setStackPtrOffsetReg(ReservedStackPtrOffsetReg);
 
@@ -3005,7 +3005,11 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
 
   switch (IntrinsicID) {
   case Intrinsic::amdgcn_implicit_buffer_ptr: {
-    unsigned Reg = TRI->getPreloadedValue(MF, SIRegisterInfo::PRIVATE_SEGMENT_BUFFER);
+    if (getSubtarget()->isAmdCodeObjectV2(MF))
+      return emitNonHSAIntrinsicError(DAG, DL, VT);
+
+    unsigned Reg = TRI->getPreloadedValue(MF,
+                                          SIRegisterInfo::IMPLICIT_BUFFER_PTR);
     return CreateLiveInRegister(DAG, &AMDGPU::SReg_64RegClass, Reg, VT);
   }
   case Intrinsic::amdgcn_dispatch_ptr:

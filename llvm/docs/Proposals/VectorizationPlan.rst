@@ -27,7 +27,7 @@ Vectorization Workflow
 VPlan-based vectorization involves three major steps, taking a "scenario-based
 approach" to vectorization planning:
 
-1. Legal Step: check if a loop can be legally vectorized; encode contraints and
+1. Legal Step: check if a loop can be legally vectorized; encode constraints and
    artifacts if so.
 2. Plan Step:
 

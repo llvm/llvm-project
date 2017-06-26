@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/LoopUtils.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/GlobalsModRef.h"
@@ -931,6 +932,10 @@ bool llvm::formDedicatedExitBlocks(Loop *L, DominatorTree *DT, LoopInfo *LI,
   SmallVector<BasicBlock *, 4> InLoopPredecessors;
 
   auto RewriteExit = [&](BasicBlock *BB) {
+    assert(InLoopPredecessors.empty() &&
+           "Must start with an empty predecessors list!");
+    auto Cleanup = make_scope_exit([&] { InLoopPredecessors.clear(); });
+
     // See if there are any non-loop predecessors of this exit block and
     // keep track of the in-loop predecessors.
     bool IsDedicatedExit = true;
@@ -945,13 +950,12 @@ bool llvm::formDedicatedExitBlocks(Loop *L, DominatorTree *DT, LoopInfo *LI,
         IsDedicatedExit = false;
       }
 
-    // Nothing to do if this is already a dedicated exit.
-    if (IsDedicatedExit) {
-      InLoopPredecessors.clear();
-      return false;
-    }
-
     assert(!InLoopPredecessors.empty() && "Must have *some* loop predecessor!");
+
+    // Nothing to do if this is already a dedicated exit.
+    if (IsDedicatedExit)
+      return false;
+
     auto *NewExitBB = SplitBlockPredecessors(
         BB, InLoopPredecessors, ".loopexit", DT, LI, PreserveLCSSA);
 
@@ -961,7 +965,6 @@ bool llvm::formDedicatedExitBlocks(Loop *L, DominatorTree *DT, LoopInfo *LI,
     else
       DEBUG(dbgs() << "LoopSimplify: Creating dedicated exit block "
                    << NewExitBB->getName() << "\n");
-    InLoopPredecessors.clear();
     return true;
   };
 

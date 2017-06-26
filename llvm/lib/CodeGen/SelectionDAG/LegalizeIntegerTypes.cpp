@@ -615,9 +615,8 @@ SDValue DAGTypeLegalizer::PromoteIntRes_SETCC(SDNode *N) {
   SDValue SetCC = DAG.getNode(N->getOpcode(), dl, SVT, LHS, RHS,
                               N->getOperand(2));
 
-  assert(NVT.bitsLE(SVT) && "Integer type overpromoted?");
   // Convert to the expected type.
-  return DAG.getNode(ISD::TRUNCATE, dl, NVT, SetCC);
+  return DAG.getSExtOrTrunc(SetCC, dl, NVT);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_SHL(SDNode *N) {

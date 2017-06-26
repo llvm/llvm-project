@@ -1,4 +1,4 @@
-//===-- UndefinedBehaviorSanitizerRuntime.cpp -------------------*- C++ -*-===//
+//===-- UBSanRuntime.cpp ----------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "UndefinedBehaviorSanitizerRuntime.h"
+#include "UBSanRuntime.h"
 
 #include "Plugins/Process/Utility/HistoryThread.h"
 #include "lldb/Breakpoint/StoppointCallbackContext.h"

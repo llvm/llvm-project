@@ -684,12 +684,12 @@ public:
 /// processed to produce isel.
 class PatternToMatch {
 public:
-  PatternToMatch(Record *srcrecord, ListInit *preds,
-                 TreePatternNode *src, TreePatternNode *dst,
-                 const std::vector<Record*> &dstregs,
+  PatternToMatch(Record *srcrecord, ListInit *preds, TreePatternNode *src,
+                 TreePatternNode *dst, std::vector<Record *> dstregs,
                  int complexity, unsigned uid)
-    : SrcRecord(srcrecord), Predicates(preds), SrcPattern(src), DstPattern(dst),
-      Dstregs(dstregs), AddedComplexity(complexity), ID(uid) {}
+      : SrcRecord(srcrecord), Predicates(preds), SrcPattern(src),
+        DstPattern(dst), Dstregs(std::move(dstregs)),
+        AddedComplexity(complexity), ID(uid) {}
 
   Record          *SrcRecord;   // Originating Record for the pattern.
   ListInit        *Predicates;  // Top level predicate conditions to match.
@@ -853,7 +853,7 @@ private:
   void GenerateVariants();
   void VerifyInstructionFlags();
 
-  void AddPatternToMatch(TreePattern *Pattern, const PatternToMatch &PTM);
+  void AddPatternToMatch(TreePattern *Pattern, PatternToMatch &&PTM);
   void FindPatternInputsAndOutputs(TreePattern *I, TreePatternNode *Pat,
                                    std::map<std::string,
                                    TreePatternNode*> &InstInputs,

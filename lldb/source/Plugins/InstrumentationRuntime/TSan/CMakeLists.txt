@@ -1,5 +1,5 @@
-add_lldb_library(lldbPluginInstrumentationRuntimeThreadSanitizer PLUGIN
-  ThreadSanitizerRuntime.cpp
+add_lldb_library(lldbPluginInstrumentationRuntimeTSan PLUGIN
+  TSanRuntime.cpp
 
   LINK_LIBS
     lldbBreakpoint

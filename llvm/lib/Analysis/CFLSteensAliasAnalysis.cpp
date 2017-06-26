@@ -80,9 +80,6 @@ public:
   const AliasSummary &getAliasSummary() const { return Summary; }
 };
 
-/// Try to go from a Value* to a Function*. Never returns nullptr.
-static Optional<Function *> parentFunctionOfValue(Value *);
-
 const StratifiedIndex StratifiedLink::SetSentinel =
     std::numeric_limits<StratifiedIndex>::max();
 
