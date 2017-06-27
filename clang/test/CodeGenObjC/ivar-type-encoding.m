@@ -48,4 +48,4 @@ int main() {
 // CHECK: @{{.*}} = private unnamed_addr constant [5 x i8] c"b0i3\00"
 // CHECK: @{{.*}} = private unnamed_addr constant [5 x i8] c"b3s2\00"
 // CHECK: @{{.*}} = private unnamed_addr constant [2 x i8] c"q\00"
-// CHECK: @{{.*}} = private unnamed_addr constant [7 x i8] c"b128c1\00"
+// CHECK: @{{.*}} = private unnamed_addr constant [{{7|6}} x i8] c"b{{128|96}}c1\00"

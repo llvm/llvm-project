@@ -770,7 +770,7 @@ void SIInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
 
     if (ST.hasScalarStores()) {
       // m0 is used for offset to scalar stores if used to spill.
-      Spill.addReg(AMDGPU::M0, RegState::ImplicitDefine);
+      Spill.addReg(AMDGPU::M0, RegState::ImplicitDefine | RegState::Dead);
     }
 
     return;
@@ -871,7 +871,7 @@ void SIInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
 
     if (ST.hasScalarStores()) {
       // m0 is used for offset to scalar stores if used to spill.
-      Spill.addReg(AMDGPU::M0, RegState::ImplicitDefine);
+      Spill.addReg(AMDGPU::M0, RegState::ImplicitDefine | RegState::Dead);
     }
 
     return;

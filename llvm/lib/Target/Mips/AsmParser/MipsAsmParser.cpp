@@ -2808,8 +2808,12 @@ bool MipsAsmParser::loadAndAddSymbolAddress(const MCExpr *SymExpr,
     // symbol in the final relocation is external and not modified with a
     // constant then we must use R_MIPS_CALL16 instead of R_MIPS_GOT16.
     if ((DstReg == Mips::T9 || DstReg == Mips::T9_64) && !UseSrcReg &&
-        Res.getConstant() == 0 && !Res.getSymA()->getSymbol().isInSection() &&
-        !Res.getSymA()->getSymbol().isTemporary()) {
+        Res.getConstant() == 0 &&
+        !(Res.getSymA()->getSymbol().isInSection() ||
+          Res.getSymA()->getSymbol().isTemporary() ||
+          (Res.getSymA()->getSymbol().isELF() &&
+           cast<MCSymbolELF>(Res.getSymA()->getSymbol()).getBinding() ==
+               ELF::STB_LOCAL))) {
       const MCExpr *CallExpr =
           MipsMCExpr::create(MipsMCExpr::MEK_GOT_CALL, SymExpr, getContext());
       TOut.emitRRX(Mips::LW, DstReg, ABI.GetGlobalPtr(),

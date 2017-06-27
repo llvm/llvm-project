@@ -42,4 +42,51 @@ entry:
   ret float* %ret
 }
 
+; Make sure we properly handle the !nonnull attribute when we convert
+; a pointer load to an integer load.
+; FIXME: While this doesn't do anythnig actively harmful today, it really
+; should propagate the !nonnull metadata to range metadata. The irony is, it
+; *does* initially, but then we lose that !range metadata before we finish
+; SROA.
+define i8* @propagate_nonnull_to_int() {
+; CHECK-LABEL: define i8* @propagate_nonnull_to_int(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    %[[A:.*]] = alloca i64
+; CHECK-NEXT:    store i64 42, i64* %[[A]]
+; CHECK-NEXT:    %[[LOAD:.*]] = load volatile i64, i64* %[[A]]
+; CHECK-NEXT:    %[[CAST:.*]] = inttoptr i64 %[[LOAD]] to i8*
+; CHECK-NEXT:    ret i8* %[[CAST]]
+entry:
+  %a = alloca [2 x i8*]
+  %a.gep0 = getelementptr [2 x i8*], [2 x i8*]* %a, i32 0, i32 0
+  %a.gep1 = getelementptr [2 x i8*], [2 x i8*]* %a, i32 0, i32 1
+  %a.gep0.cast = bitcast i8** %a.gep0 to i64*
+  %a.gep1.cast = bitcast i8** %a.gep1 to i64*
+  store i64 42, i64* %a.gep1.cast
+  store i64 0, i64* %a.gep0.cast
+  %load = load volatile i8*, i8** %a.gep1, !nonnull !0
+  ret i8* %load
+}
+
+; Make sure we properly handle the !nonnull attribute when we convert
+; a pointer load to an integer load and immediately promote it to an SSA
+; register. This can fail in interesting ways due to the rewrite iteration of
+; SROA, resulting in PR32902.
+define i8* @propagate_nonnull_to_int_and_promote() {
+; CHECK-LABEL: define i8* @propagate_nonnull_to_int_and_promote(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    %[[PROMOTED_VALUE:.*]] = inttoptr i64 42 to i8*
+; CHECK-NEXT:    ret i8* %[[PROMOTED_VALUE]]
+entry:
+  %a = alloca [2 x i8*], align 8
+  %a.gep0 = getelementptr [2 x i8*], [2 x i8*]* %a, i32 0, i32 0
+  %a.gep1 = getelementptr [2 x i8*], [2 x i8*]* %a, i32 0, i32 1
+  %a.gep0.cast = bitcast i8** %a.gep0 to i64*
+  %a.gep1.cast = bitcast i8** %a.gep1 to i64*
+  store i64 42, i64* %a.gep1.cast
+  store i64 0, i64* %a.gep0.cast
+  %load = load i8*, i8** %a.gep1, align 8, !nonnull !0
+  ret i8* %load
+}
+
 !0 = !{}

@@ -178,6 +178,7 @@ static bool CodeGen(Scop &S, IslAstInfo &AI, LoopInfo &LI, DominatorTree &DT,
   BBPair StartExitBlocks =
       executeScopConditionally(S, Builder.getTrue(), DT, RI, LI);
   BasicBlock *StartBlock = std::get<0>(StartExitBlocks);
+  BasicBlock *ExitBlock = std::get<1>(StartExitBlocks);
 
   removeLifetimeMarkers(R);
   auto *SplitBlock = StartBlock->getSinglePredecessor();
@@ -194,10 +195,7 @@ static bool CodeGen(Scop &S, IslAstInfo &AI, LoopInfo &LI, DominatorTree &DT,
     P.initialize();
     P.insertRegionStart(SplitBlock->getTerminator());
 
-    BasicBlock *MergeBlock = SplitBlock->getTerminator()
-                                 ->getSuccessor(0)
-                                 ->getUniqueSuccessor()
-                                 ->getUniqueSuccessor();
+    BasicBlock *MergeBlock = ExitBlock->getUniqueSuccessor();
     P.insertRegionEnd(MergeBlock->getTerminator());
   }
 

@@ -150,10 +150,9 @@ void TextDiagnosticPrinter::HandleDiagnostic(DiagnosticsEngine::Level Level,
          "Unexpected diagnostic with no source manager");
   assert(TextDiag && "Unexpected diagnostic outside source file processing");
 
-  TextDiag->emitDiagnostic(Info.getLocation(), Level, DiagMessageStream.str(),
-                           Info.getRanges(),
-                           Info.getFixItHints(),
-                           &Info.getSourceManager());
+  TextDiag->emitDiagnostic(
+      FullSourceLoc(Info.getLocation(), Info.getSourceManager()), Level,
+      DiagMessageStream.str(), Info.getRanges(), Info.getFixItHints());
 
   OS.flush();
 }

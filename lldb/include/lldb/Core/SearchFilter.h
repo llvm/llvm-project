@@ -11,7 +11,7 @@
 #define liblldb_SearchFilter_h_
 
 #include "lldb/Core/FileSpecList.h"
-#include "lldb/Core/StructuredData.h"
+#include "lldb/Utility/StructuredData.h"
 
 #include "lldb/Utility/FileSpec.h" // for FileSpec
 #include "lldb/lldb-forward.h"     // for SearchFilterSP, TargetSP, Modu...

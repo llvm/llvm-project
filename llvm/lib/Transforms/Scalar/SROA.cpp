@@ -2402,9 +2402,20 @@ private:
       if (LI.isVolatile())
         NewLI->setAtomic(LI.getOrdering(), LI.getSynchScope());
 
+      // Any !nonnull metadata or !range metadata on the old load is also valid
+      // on the new load. This is even true in some cases even when the loads
+      // are different types, for example by mapping !nonnull metadata to
+      // !range metadata by modeling the null pointer constant converted to the
+      // integer type.
+      // FIXME: Add support for range metadata here. Currently the utilities
+      // for this don't propagate range metadata in trivial cases from one
+      // integer load to another, don't handle non-addrspace-0 null pointers
+      // correctly, and don't have any support for mapping ranges as the
+      // integer type becomes winder or narrower.
+      if (MDNode *N = LI.getMetadata(LLVMContext::MD_nonnull))
+        copyNonnullMetadata(LI, N, *NewLI);
+
       // Try to preserve nonnull metadata
-      if (TargetTy->isPointerTy())
-        NewLI->copyMetadata(LI, LLVMContext::MD_nonnull);
       V = NewLI;
 
       // If this is an integer load past the end of the slice (which means the

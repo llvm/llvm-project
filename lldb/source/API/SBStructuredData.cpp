@@ -11,11 +11,11 @@
 
 #include "lldb/API/SBStream.h"
 #include "lldb/Core/Event.h"
-#include "lldb/Core/StructuredData.h"
 #include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Target/StructuredDataPlugin.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/Utility/StructuredData.h"
 
 using namespace lldb;
 using namespace lldb_private;

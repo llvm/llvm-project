@@ -34,7 +34,6 @@
 #include "lldb/Core/Listener.h"
 #include "lldb/Core/LoadedModuleInfoList.h"
 #include "lldb/Core/PluginInterface.h"
-#include "lldb/Core/StructuredData.h"
 #include "lldb/Core/ThreadSafeValue.h"
 #include "lldb/Core/TraceOptions.h"
 #include "lldb/Core/UserSettingsController.h"
@@ -50,6 +49,7 @@
 #include "lldb/Target/ThreadList.h"
 #include "lldb/Utility/NameMatches.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/Utility/StructuredData.h"
 #include "lldb/lldb-private.h"
 
 #include "llvm/ADT/ArrayRef.h"

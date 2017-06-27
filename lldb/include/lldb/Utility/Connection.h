@@ -31,7 +31,7 @@ template <typename Ratio> class Timeout;
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class Connection Connection.h "lldb/Core/Connection.h"
+/// @class Connection Connection.h "lldb/Utility/Connection.h"
 /// @brief A communication connection class.
 ///
 /// A class that implements that actual communication functions for
@@ -48,15 +48,13 @@ public:
   //------------------------------------------------------------------
   /// Default constructor
   //------------------------------------------------------------------
-  Connection();
+  Connection() = default;
 
   //------------------------------------------------------------------
   /// Virtual destructor since this class gets subclassed and handed
   /// to a Communication object.
   //------------------------------------------------------------------
   virtual ~Connection();
-
-  static Connection *CreateDefaultConnection(const char *url);
 
   //------------------------------------------------------------------
   /// Connect using the connect string \a url.

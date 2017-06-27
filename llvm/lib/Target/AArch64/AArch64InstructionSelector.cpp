@@ -947,7 +947,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
     const RegisterBank &SrcRB = *RBI.getRegBank(SrcReg, MRI, TRI);
 
     if (DstRB.getID() != SrcRB.getID()) {
-      DEBUG(dbgs() << "G_TRUNC input/output on different banks\n");
+      DEBUG(dbgs() << "G_TRUNC/G_PTRTOINT input/output on different banks\n");
       return false;
     }
 
@@ -964,16 +964,21 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
 
       if (!RBI.constrainGenericRegister(SrcReg, *SrcRC, MRI) ||
           !RBI.constrainGenericRegister(DstReg, *DstRC, MRI)) {
-        DEBUG(dbgs() << "Failed to constrain G_TRUNC\n");
+        DEBUG(dbgs() << "Failed to constrain G_TRUNC/G_PTRTOINT\n");
         return false;
       }
 
       if (DstRC == SrcRC) {
         // Nothing to be done
+      } else if (Opcode == TargetOpcode::G_TRUNC && DstTy == LLT::scalar(32) &&
+                 SrcTy == LLT::scalar(64)) {
+        llvm_unreachable("TableGen can import this case");
+        return false;
       } else if (DstRC == &AArch64::GPR32RegClass &&
                  SrcRC == &AArch64::GPR64RegClass) {
         I.getOperand(1).setSubReg(AArch64::sub_32);
       } else {
+        DEBUG(dbgs() << "Unhandled mismatched classes in G_TRUNC/G_PTRTOINT\n");
         return false;
       }
 

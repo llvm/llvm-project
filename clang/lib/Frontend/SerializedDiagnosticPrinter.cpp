@@ -63,27 +63,20 @@ public:
   ~SDiagsRenderer() override {}
 
 protected:
-  void emitDiagnosticMessage(SourceLocation Loc,
-                             PresumedLoc PLoc,
-                             DiagnosticsEngine::Level Level,
-                             StringRef Message,
+  void emitDiagnosticMessage(FullSourceLoc Loc, PresumedLoc PLoc,
+                             DiagnosticsEngine::Level Level, StringRef Message,
                              ArrayRef<CharSourceRange> Ranges,
-                             const SourceManager *SM,
                              DiagOrStoredDiag D) override;
 
-  void emitDiagnosticLoc(SourceLocation Loc, PresumedLoc PLoc,
+  void emitDiagnosticLoc(FullSourceLoc Loc, PresumedLoc PLoc,
                          DiagnosticsEngine::Level Level,
-                         ArrayRef<CharSourceRange> Ranges,
-                         const SourceManager &SM) override {}
+                         ArrayRef<CharSourceRange> Ranges) override {}
 
-  void emitNote(SourceLocation Loc, StringRef Message,
-                const SourceManager *SM) override;
+  void emitNote(FullSourceLoc Loc, StringRef Message) override;
 
-  void emitCodeContext(SourceLocation Loc,
-                       DiagnosticsEngine::Level Level,
-                       SmallVectorImpl<CharSourceRange>& Ranges,
-                       ArrayRef<FixItHint> Hints,
-                       const SourceManager &SM) override;
+  void emitCodeContext(FullSourceLoc Loc, DiagnosticsEngine::Level Level,
+                       SmallVectorImpl<CharSourceRange> &Ranges,
+                       ArrayRef<FixItHint> Hints) override;
 
   void beginDiagnostic(DiagOrStoredDiag D,
                        DiagnosticsEngine::Level Level) override;
@@ -193,11 +186,8 @@ private:
   void ExitDiagBlock();
 
   /// \brief Emit a DIAG record.
-  void EmitDiagnosticMessage(SourceLocation Loc,
-                             PresumedLoc PLoc,
-                             DiagnosticsEngine::Level Level,
-                             StringRef Message,
-                             const SourceManager *SM,
+  void EmitDiagnosticMessage(FullSourceLoc Loc, PresumedLoc PLoc,
+                             DiagnosticsEngine::Level Level, StringRef Message,
                              DiagOrStoredDiag D);
 
   /// \brief Emit FIXIT and SOURCE_RANGE records for a diagnostic.
@@ -220,16 +210,14 @@ private:
   /// \brief Emit (lazily) the file string and retrieved the file identifier.
   unsigned getEmitFile(const char *Filename);
 
-  /// \brief Add SourceLocation information the specified record.  
-  void AddLocToRecord(SourceLocation Loc, const SourceManager *SM,
-                      PresumedLoc PLoc, RecordDataImpl &Record,
-                      unsigned TokSize = 0);
+  /// \brief Add SourceLocation information the specified record.
+  void AddLocToRecord(FullSourceLoc Loc, PresumedLoc PLoc,
+                      RecordDataImpl &Record, unsigned TokSize = 0);
 
   /// \brief Add SourceLocation information the specified record.
-  void AddLocToRecord(SourceLocation Loc, RecordDataImpl &Record,
-                      const SourceManager *SM,
+  void AddLocToRecord(FullSourceLoc Loc, RecordDataImpl &Record,
                       unsigned TokSize = 0) {
-    AddLocToRecord(Loc, SM, SM ? SM->getPresumedLoc(Loc) : PresumedLoc(),
+    AddLocToRecord(Loc, Loc.hasManager() ? Loc.getPresumedLoc() : PresumedLoc(),
                    Record, TokSize);
   }
 
@@ -350,11 +338,8 @@ static void EmitRecordID(unsigned ID, const char *Name,
   Stream.EmitRecord(llvm::bitc::BLOCKINFO_CODE_SETRECORDNAME, Record);
 }
 
-void SDiagsWriter::AddLocToRecord(SourceLocation Loc,
-                                  const SourceManager *SM,
-                                  PresumedLoc PLoc,
-                                  RecordDataImpl &Record,
-                                  unsigned TokSize) {
+void SDiagsWriter::AddLocToRecord(FullSourceLoc Loc, PresumedLoc PLoc,
+                                  RecordDataImpl &Record, unsigned TokSize) {
   if (PLoc.isInvalid()) {
     // Emit a "sentinel" location.
     Record.push_back((unsigned)0); // File.
@@ -367,19 +352,19 @@ void SDiagsWriter::AddLocToRecord(SourceLocation Loc,
   Record.push_back(getEmitFile(PLoc.getFilename()));
   Record.push_back(PLoc.getLine());
   Record.push_back(PLoc.getColumn()+TokSize);
-  Record.push_back(SM->getFileOffset(Loc));
+  Record.push_back(Loc.getFileOffset());
 }
 
 void SDiagsWriter::AddCharSourceRangeToRecord(CharSourceRange Range,
                                               RecordDataImpl &Record,
                                               const SourceManager &SM) {
-  AddLocToRecord(Range.getBegin(), Record, &SM);
+  AddLocToRecord(FullSourceLoc(Range.getBegin(), SM), Record);
   unsigned TokSize = 0;
   if (Range.isTokenRange())
     TokSize = Lexer::MeasureTokenLength(Range.getEnd(),
                                         SM, *LangOpts);
-  
-  AddLocToRecord(Range.getEnd(), Record, &SM, TokSize);
+
+  AddLocToRecord(FullSourceLoc(Range.getEnd(), SM), Record, TokSize);
 }
 
 unsigned SDiagsWriter::getEmitFile(const char *FileName){
@@ -606,8 +591,8 @@ void SDiagsWriter::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
     if (DiagLevel == DiagnosticsEngine::Note)
       EnterDiagBlock();
 
-    EmitDiagnosticMessage(SourceLocation(), PresumedLoc(), DiagLevel,
-                          State->diagBuf, nullptr, &Info);
+    EmitDiagnosticMessage(FullSourceLoc(), PresumedLoc(), DiagLevel,
+                          State->diagBuf, &Info);
 
     if (DiagLevel == DiagnosticsEngine::Note)
       ExitDiagBlock();
@@ -618,12 +603,9 @@ void SDiagsWriter::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
   assert(Info.hasSourceManager() && LangOpts &&
          "Unexpected diagnostic with valid location outside of a source file");
   SDiagsRenderer Renderer(*this, *LangOpts, &*State->DiagOpts);
-  Renderer.emitDiagnostic(Info.getLocation(), DiagLevel,
-                          State->diagBuf,
-                          Info.getRanges(),
-                          Info.getFixItHints(),
-                          &Info.getSourceManager(),
-                          &Info);
+  Renderer.emitDiagnostic(
+      FullSourceLoc(Info.getLocation(), Info.getSourceManager()), DiagLevel,
+      State->diagBuf, Info.getRanges(), Info.getFixItHints(), &Info);
 }
 
 static serialized_diags::Level getStableLevel(DiagnosticsEngine::Level Level) {
@@ -641,11 +623,9 @@ static serialized_diags::Level getStableLevel(DiagnosticsEngine::Level Level) {
   llvm_unreachable("invalid diagnostic level");
 }
 
-void SDiagsWriter::EmitDiagnosticMessage(SourceLocation Loc,
-                                         PresumedLoc PLoc,
+void SDiagsWriter::EmitDiagnosticMessage(FullSourceLoc Loc, PresumedLoc PLoc,
                                          DiagnosticsEngine::Level Level,
                                          StringRef Message,
-                                         const SourceManager *SM,
                                          DiagOrStoredDiag D) {
   llvm::BitstreamWriter &Stream = State->Stream;
   RecordData &Record = State->Record;
@@ -655,7 +635,7 @@ void SDiagsWriter::EmitDiagnosticMessage(SourceLocation Loc,
   Record.clear();
   Record.push_back(RECORD_DIAG);
   Record.push_back(getStableLevel(Level));
-  AddLocToRecord(Loc, SM, PLoc, Record);
+  AddLocToRecord(Loc, PLoc, Record);
 
   if (const Diagnostic *Info = D.dyn_cast<const Diagnostic*>()) {
     // Emit the category string lazily and get the category ID.
@@ -672,15 +652,11 @@ void SDiagsWriter::EmitDiagnosticMessage(SourceLocation Loc,
   Stream.EmitRecordWithBlob(Abbrevs.get(RECORD_DIAG), Record, Message);
 }
 
-void
-SDiagsRenderer::emitDiagnosticMessage(SourceLocation Loc,
-                                      PresumedLoc PLoc,
-                                      DiagnosticsEngine::Level Level,
-                                      StringRef Message,
-                                      ArrayRef<clang::CharSourceRange> Ranges,
-                                      const SourceManager *SM,
-                                      DiagOrStoredDiag D) {
-  Writer.EmitDiagnosticMessage(Loc, PLoc, Level, Message, SM, D);
+void SDiagsRenderer::emitDiagnosticMessage(
+    FullSourceLoc Loc, PresumedLoc PLoc, DiagnosticsEngine::Level Level,
+    StringRef Message, ArrayRef<clang::CharSourceRange> Ranges,
+    DiagOrStoredDiag D) {
+  Writer.EmitDiagnosticMessage(Loc, PLoc, Level, Message, D);
 }
 
 void SDiagsWriter::EnterDiagBlock() {
@@ -733,20 +709,18 @@ void SDiagsWriter::EmitCodeContext(SmallVectorImpl<CharSourceRange> &Ranges,
   }
 }
 
-void SDiagsRenderer::emitCodeContext(SourceLocation Loc,
+void SDiagsRenderer::emitCodeContext(FullSourceLoc Loc,
                                      DiagnosticsEngine::Level Level,
                                      SmallVectorImpl<CharSourceRange> &Ranges,
-                                     ArrayRef<FixItHint> Hints,
-                                     const SourceManager &SM) {
-  Writer.EmitCodeContext(Ranges, Hints, SM);
+                                     ArrayRef<FixItHint> Hints) {
+  Writer.EmitCodeContext(Ranges, Hints, Loc.getManager());
 }
 
-void SDiagsRenderer::emitNote(SourceLocation Loc, StringRef Message,
-                              const SourceManager *SM) {
+void SDiagsRenderer::emitNote(FullSourceLoc Loc, StringRef Message) {
   Writer.EnterDiagBlock();
-  PresumedLoc PLoc = SM ? SM->getPresumedLoc(Loc) : PresumedLoc();
-  Writer.EmitDiagnosticMessage(Loc, PLoc, DiagnosticsEngine::Note,
-                               Message, SM, DiagOrStoredDiag());
+  PresumedLoc PLoc = Loc.hasManager() ? Loc.getPresumedLoc() : PresumedLoc();
+  Writer.EmitDiagnosticMessage(Loc, PLoc, DiagnosticsEngine::Note, Message,
+                               DiagOrStoredDiag());
   Writer.ExitDiagBlock();
 }
 

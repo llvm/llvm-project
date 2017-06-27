@@ -12,10 +12,10 @@
 
 #include "Plugins/Process/gdb-remote/GDBRemoteCommunicationClient.h"
 #include "lldb/Core/ModuleSpec.h"
-#include "lldb/Core/StructuredData.h"
 #include "lldb/Core/TraceOptions.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Utility/DataBuffer.h"
+#include "lldb/Utility/StructuredData.h"
 #include "lldb/lldb-enumerations.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Testing/Support/Error.h"
