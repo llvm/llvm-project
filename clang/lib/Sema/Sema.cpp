@@ -740,6 +740,9 @@ void Sema::ActOnEndOfTranslationUnit() {
       // Load pending instantiations from the external source.
       SmallVector<PendingImplicitInstantiation, 4> Pending;
       ExternalSource->ReadPendingInstantiations(Pending);
+      for (auto PII : Pending)
+        if (auto Func = dyn_cast<FunctionDecl>(PII.first))
+          Func->setInstantiationIsPending(true);
       PendingInstantiations.insert(PendingInstantiations.begin(),
                                    Pending.begin(), Pending.end());
     }

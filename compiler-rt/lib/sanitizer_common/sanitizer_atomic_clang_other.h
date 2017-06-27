@@ -145,8 +145,7 @@ INLINE void atomic_store(volatile T *a, typename T::Type v, memory_order mo) {
       typename T::Type volatile *val_ptr =
           const_cast<typename T::Type volatile *>(&a->val_dont_use);
       cur = __mips_sync_val_compare_and_swap<u64>(
-          reinterpret_cast<u64 volatile *>(val_ptr), reinterpret_cast<u64> cmp,
-          reinterpret_cast<u64> v);
+          reinterpret_cast<u64 volatile *>(val_ptr), (u64)cmp, (u64)v);
 #else
       cur = __sync_val_compare_and_swap(&a->val_dont_use, cmp, v);
 #endif

@@ -30,14 +30,9 @@ public:
 
   unsigned getNumFixupKinds() const override { return AMDGPU::NumTargetFixupKinds; };
 
-  void processFixupValue(const MCAssembler &Asm,
-                         const MCAsmLayout &Layout,
-                         const MCFixup &Fixup, const MCFragment *DF,
-                         const MCValue &Target, uint64_t &Value,
-                         bool &IsResolved) override;
-
-  void applyFixup(const MCFixup &Fixup, char *Data, unsigned DataSize,
-                  uint64_t Value, bool IsPCRel, MCContext &Ctx) const override;
+  void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
+                  const MCValue &Target, MutableArrayRef<char> Data,
+                  uint64_t Value, bool IsPCRel) const override;
   bool fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
                             const MCRelaxableFragment *DF,
                             const MCAsmLayout &Layout) const override {
@@ -102,36 +97,11 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   }
 }
 
-void AMDGPUAsmBackend::processFixupValue(const MCAssembler &Asm,
-                                         const MCAsmLayout &Layout,
-                                         const MCFixup &Fixup, const MCFragment *DF,
-                                         const MCValue &Target, uint64_t &Value,
-                                         bool &IsResolved) {
-  MCValue Res;
-
-  // When we have complex expressions like: BB0_1 + (BB0_2 - 4), which are
-  // used for long branches, this function will be called with
-  // IsResolved = false and Value set to some pre-computed value.  In
-  // the example above, the value would be:
-  // (BB0_1 + (BB0_2 - 4)) - CurrentOffsetFromStartOfFunction.
-  // This is not what we want.  We just want the expression computation
-  // only.  The reason the MC layer subtracts the current offset from the
-  // expression is because the fixup is of kind FK_PCRel_4.
-  // For these scenarios, evaluateAsValue gives us the computation that we
-  // want.
-  if (!IsResolved && Fixup.getValue()->evaluateAsValue(Res, Layout) &&
-      Res.isAbsolute()) {
-    Value = Res.getConstant();
-    IsResolved = true;
-
-  }
-  if (IsResolved)
-    Value = adjustFixupValue(Fixup, Value, &Asm.getContext());
-}
-
-void AMDGPUAsmBackend::applyFixup(const MCFixup &Fixup, char *Data,
-                                  unsigned DataSize, uint64_t Value,
-                                  bool IsPCRel, MCContext &Ctx) const {
+void AMDGPUAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
+                                  const MCValue &Target,
+                                  MutableArrayRef<char> Data, uint64_t Value,
+                                  bool IsPCRel) const {
+  Value = adjustFixupValue(Fixup, Value, &Asm.getContext());
   if (!Value)
     return; // Doesn't change encoding.
 
@@ -142,7 +112,7 @@ void AMDGPUAsmBackend::applyFixup(const MCFixup &Fixup, char *Data,
 
   unsigned NumBytes = getFixupKindNumBytes(Fixup.getKind());
   uint32_t Offset = Fixup.getOffset();
-  assert(Offset + NumBytes <= DataSize && "Invalid fixup offset!");
+  assert(Offset + NumBytes <= Data.size() && "Invalid fixup offset!");
 
   // For each byte of the fragment that the fixup touches, mask in the bits from
   // the fixup value.

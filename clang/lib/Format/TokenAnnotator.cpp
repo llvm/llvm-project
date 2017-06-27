@@ -2480,8 +2480,8 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
       return Style.AllowShortFunctionsOnASingleLine == FormatStyle::SFS_None ||
              Style.AllowShortFunctionsOnASingleLine == FormatStyle::SFS_Empty ||
              (Left.NestingLevel == 0 && Line.Level == 0 &&
-              Style.AllowShortFunctionsOnASingleLine ==
-                  FormatStyle::SFS_Inline);
+              Style.AllowShortFunctionsOnASingleLine &
+                  FormatStyle::SFS_InlineOnly);
   } else if (Style.Language == FormatStyle::LK_Java) {
     if (Right.is(tok::plus) && Left.is(tok::string_literal) && Right.Next &&
         Right.Next->is(tok::string_literal))

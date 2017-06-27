@@ -17,6 +17,7 @@ namespace llvm {
 class MCSymbolWasm : public MCSymbol {
 private:
   bool IsFunction = false;
+  bool IsWeak = false;
   std::string ModuleName;
   SmallVector<wasm::ValType, 1> Returns;
   SmallVector<wasm::ValType, 4> Params;
@@ -38,6 +39,9 @@ public:
 
   bool isFunction() const { return IsFunction; }
   void setIsFunction(bool isFunc) { IsFunction = isFunc; }
+
+  bool isWeak() const { return IsWeak; }
+  void setWeak(bool isWeak) { IsWeak = isWeak; }
 
   const StringRef getModuleName() const { return ModuleName; }
 

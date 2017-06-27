@@ -522,31 +522,29 @@ void ASTDeclReader::VisitDecl(Decl *D) {
   D->setTopLevelDeclInObjCContainer(Record.readInt());
   D->setAccess((AccessSpecifier)Record.readInt());
   D->FromASTFile = true;
-  D->setModulePrivate(Record.readInt());
-  D->Hidden = D->isModulePrivate();
+  bool ModulePrivate = Record.readInt();
 
   // Determine whether this declaration is part of a (sub)module. If so, it
   // may not yet be visible.
   if (unsigned SubmoduleID = readSubmoduleID()) {
     // Store the owning submodule ID in the declaration.
+    D->setModuleOwnershipKind(
+        ModulePrivate ? Decl::ModuleOwnershipKind::ModulePrivate
+                      : Decl::ModuleOwnershipKind::VisibleWhenImported);
     D->setOwningModuleID(SubmoduleID);
 
-    if (D->Hidden) {
-      // Module-private declarations are never visible, so there is no work to do.
+    if (ModulePrivate) {
+      // Module-private declarations are never visible, so there is no work to
+      // do.
     } else if (Reader.getContext().getLangOpts().ModulesLocalVisibility) {
       // If local visibility is being tracked, this declaration will become
-      // hidden and visible as the owning module does. Inform Sema that this
-      // declaration might not be visible.
-      D->Hidden = true;
+      // hidden and visible as the owning module does.
     } else if (Module *Owner = Reader.getSubmodule(SubmoduleID)) {
-      if (Owner->NameVisibility != Module::AllVisible) {
-        // The owning module is not visible. Mark this declaration as hidden.
-        D->Hidden = true;
-
-        // Note that this declaration was hidden because its owning module is 
-        // not yet visible.
+      // Mark the declaration as visible when its owning module becomes visible.
+      if (Owner->NameVisibility == Module::AllVisible)
+        D->setVisibleDespiteOwningModule();
+      else
         Reader.HiddenNamesMap[Owner].push_back(D);
-      }
     }
   }
 }
@@ -3934,10 +3932,21 @@ void ASTDeclReader::UpdateDecl(Decl *D) {
       break;
     }
 
-    case UPD_CXX_INSTANTIATED_STATIC_DATA_MEMBER:
-      cast<VarDecl>(D)->getMemberSpecializationInfo()->setPointOfInstantiation(
+    case UPD_CXX_INSTANTIATED_STATIC_DATA_MEMBER: {
+      VarDecl *VD = cast<VarDecl>(D);
+      VD->getMemberSpecializationInfo()->setPointOfInstantiation(
           ReadSourceLocation());
+      uint64_t Val = Record.readInt();
+      if (Val && !VD->getInit()) {
+        VD->setInit(Record.readExpr());
+        if (Val > 1) { // IsInitKnownICE = 1, IsInitNotICE = 2, IsInitICE = 3
+          EvaluatedStmt *Eval = VD->ensureEvaluatedStmt();
+          Eval->CheckedICE = true;
+          Eval->IsICE = Val == 3;
+        }
+      }
       break;
+    }
 
     case UPD_CXX_INSTANTIATED_DEFAULT_ARGUMENT: {
       auto Param = cast<ParmVarDecl>(D);
@@ -4133,7 +4142,7 @@ void ASTDeclReader::UpdateDecl(Decl *D) {
         Reader.HiddenNamesMap[Owner].push_back(Exported);
       } else {
         // The declaration is now visible.
-        Exported->Hidden = false;
+        Exported->setVisibleDespiteOwningModule();
       }
       break;
     }

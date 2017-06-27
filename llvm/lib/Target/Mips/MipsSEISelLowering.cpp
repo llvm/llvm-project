@@ -1257,19 +1257,22 @@ static SDValue lowerMSACopyIntr(SDValue Op, SelectionDAG &DAG, unsigned Opc) {
 static SDValue lowerMSASplatZExt(SDValue Op, unsigned OpNr, SelectionDAG &DAG) {
   EVT ResVecTy = Op->getValueType(0);
   EVT ViaVecTy = ResVecTy;
+  bool BigEndian = !DAG.getSubtarget().getTargetTriple().isLittleEndian();
   SDLoc DL(Op);
 
   // When ResVecTy == MVT::v2i64, LaneA is the upper 32 bits of the lane and
   // LaneB is the lower 32-bits. Otherwise LaneA and LaneB are alternating
   // lanes.
-  SDValue LaneA;
-  SDValue LaneB = Op->getOperand(2);
+  SDValue LaneA = Op->getOperand(OpNr);
+  SDValue LaneB;
 
   if (ResVecTy == MVT::v2i64) {
-    LaneA = DAG.getConstant(0, DL, MVT::i32);
+    LaneB = DAG.getConstant(0, DL, MVT::i32);
     ViaVecTy = MVT::v4i32;
+    if(BigEndian)
+      std::swap(LaneA, LaneB);
   } else
-    LaneA = LaneB;
+    LaneB = LaneA;
 
   SDValue Ops[16] = { LaneA, LaneB, LaneA, LaneB, LaneA, LaneB, LaneA, LaneB,
                       LaneA, LaneB, LaneA, LaneB, LaneA, LaneB, LaneA, LaneB };
@@ -1277,8 +1280,11 @@ static SDValue lowerMSASplatZExt(SDValue Op, unsigned OpNr, SelectionDAG &DAG) {
   SDValue Result = DAG.getBuildVector(
       ViaVecTy, DL, makeArrayRef(Ops, ViaVecTy.getVectorNumElements()));
 
-  if (ViaVecTy != ResVecTy)
-    Result = DAG.getNode(ISD::BITCAST, DL, ResVecTy, Result);
+  if (ViaVecTy != ResVecTy) {
+    SDValue One = DAG.getConstant(1, DL, ViaVecTy);
+    Result = DAG.getNode(ISD::BITCAST, DL, ResVecTy,
+                         DAG.getNode(ISD::AND, DL, ViaVecTy, Result, One));
+  }
 
   return Result;
 }

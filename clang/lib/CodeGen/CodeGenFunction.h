@@ -116,9 +116,9 @@ enum TypeEvaluationKind {
   SANITIZER_CHECK(MulOverflow, mul_overflow, 0)                                \
   SANITIZER_CHECK(NegateOverflow, negate_overflow, 0)                          \
   SANITIZER_CHECK(NullabilityArg, nullability_arg, 0)                          \
-  SANITIZER_CHECK(NullabilityReturn, nullability_return, 0)                    \
+  SANITIZER_CHECK(NullabilityReturn, nullability_return, 1)                    \
   SANITIZER_CHECK(NonnullArg, nonnull_arg, 0)                                  \
-  SANITIZER_CHECK(NonnullReturn, nonnull_return, 0)                            \
+  SANITIZER_CHECK(NonnullReturn, nonnull_return, 1)                            \
   SANITIZER_CHECK(OutOfBounds, out_of_bounds, 0)                               \
   SANITIZER_CHECK(PointerOverflow, pointer_overflow, 0)                        \
   SANITIZER_CHECK(ShiftOutOfBounds, shift_out_of_bounds, 0)                    \
@@ -1407,6 +1407,17 @@ private:
     return RetValNullabilityPrecondition;
   }
 
+  /// Used to store precise source locations for return statements by the
+  /// runtime return value checks.
+  Address ReturnLocation = Address::invalid();
+
+  /// Check if the return value of this function requires sanitization.
+  bool requiresReturnValueCheck() const {
+    return requiresReturnValueNullabilityCheck() ||
+           (SanOpts.has(SanitizerKind::ReturnsNonnullAttribute) &&
+            CurCodeDecl && CurCodeDecl->getAttr<ReturnsNonNullAttr>());
+  }
+
   llvm::BasicBlock *TerminateLandingPad;
   llvm::BasicBlock *TerminateHandler;
   llvm::BasicBlock *TrapBB;
@@ -1778,7 +1789,7 @@ public:
                           SourceLocation EndLoc);
 
   /// Emit a test that checks if the return value \p RV is nonnull.
-  void EmitReturnValueCheck(llvm::Value *RV, SourceLocation EndLoc);
+  void EmitReturnValueCheck(llvm::Value *RV);
 
   /// EmitStartEHSpec - Emit the start of the exception spec.
   void EmitStartEHSpec(const Decl *D);

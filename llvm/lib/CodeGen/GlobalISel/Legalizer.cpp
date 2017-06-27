@@ -50,72 +50,9 @@ void Legalizer::getAnalysisUsage(AnalysisUsage &AU) const {
 void Legalizer::init(MachineFunction &MF) {
 }
 
-bool Legalizer::combineExtracts(MachineInstr &MI, MachineRegisterInfo &MRI,
-                                const TargetInstrInfo &TII) {
-  bool Changed = false;
-  if (MI.getOpcode() != TargetOpcode::G_EXTRACT)
-    return Changed;
-
-  unsigned NumDefs = (MI.getNumOperands() - 1) / 2;
-  unsigned SrcReg = MI.getOperand(NumDefs).getReg();
-  MachineInstr &SeqI = *MRI.def_instr_begin(SrcReg);
-  if (SeqI.getOpcode() != TargetOpcode::G_SEQUENCE)
-      return Changed;
-
-  unsigned NumSeqSrcs = (SeqI.getNumOperands() - 1) / 2;
-  bool AllDefsReplaced = true;
-
-  // Try to match each register extracted with a corresponding insertion formed
-  // by the G_SEQUENCE.
-  for (unsigned Idx = 0, SeqIdx = 0; Idx < NumDefs; ++Idx) {
-    MachineOperand &ExtractMO = MI.getOperand(Idx);
-    assert(ExtractMO.isReg() && ExtractMO.isDef() &&
-           "unexpected extract operand");
-
-    unsigned ExtractReg = ExtractMO.getReg();
-    unsigned ExtractPos = MI.getOperand(NumDefs + Idx + 1).getImm();
-
-    while (SeqIdx < NumSeqSrcs &&
-           SeqI.getOperand(2 * SeqIdx + 2).getImm() < ExtractPos)
-      ++SeqIdx;
-
-    if (SeqIdx == NumSeqSrcs) {
-      AllDefsReplaced = false;
-      continue;
-    }
-
-    unsigned OrigReg = SeqI.getOperand(2 * SeqIdx + 1).getReg();
-    if (SeqI.getOperand(2 * SeqIdx + 2).getImm() != ExtractPos ||
-        MRI.getType(OrigReg) != MRI.getType(ExtractReg)) {
-      AllDefsReplaced = false;
-      continue;
-    }
-
-    assert(!TargetRegisterInfo::isPhysicalRegister(OrigReg) &&
-           "unexpected physical register in G_SEQUENCE");
-
-    // Finally we can replace the uses.
-    MRI.replaceRegWith(ExtractReg, OrigReg);
-  }
-
-  if (AllDefsReplaced) {
-    // If SeqI was the next instruction in the BB and we removed it, we'd break
-    // the outer iteration.
-    assert(std::next(MachineBasicBlock::iterator(MI)) != SeqI &&
-           "G_SEQUENCE does not dominate G_EXTRACT");
-
-    MI.eraseFromParent();
-
-    if (MRI.use_empty(SrcReg))
-      SeqI.eraseFromParent();
-    Changed = true;
-  }
-
-  return Changed;
-}
-
 bool Legalizer::combineMerges(MachineInstr &MI, MachineRegisterInfo &MRI,
-                              const TargetInstrInfo &TII) {
+                              const TargetInstrInfo &TII,
+                              MachineIRBuilder &MIRBuilder) {
   if (MI.getOpcode() != TargetOpcode::G_UNMERGE_VALUES)
     return false;
 
@@ -125,18 +62,62 @@ bool Legalizer::combineMerges(MachineInstr &MI, MachineRegisterInfo &MRI,
   if (MergeI.getOpcode() != TargetOpcode::G_MERGE_VALUES)
     return false;
 
-  if (MergeI.getNumOperands() - 1 != NumDefs)
-    return false;
+  const unsigned NumMergeRegs = MergeI.getNumOperands() - 1;
 
-  // FIXME: is a COPY appropriate if the types mismatch? We know both registers
-  // are allocatable by now.
-  if (MRI.getType(MI.getOperand(0).getReg()) !=
-      MRI.getType(MergeI.getOperand(1).getReg()))
-    return false;
+  if (NumMergeRegs < NumDefs) {
+    if (NumDefs % NumMergeRegs != 0)
+      return false;
 
-  for (unsigned Idx = 0; Idx < NumDefs; ++Idx)
-    MRI.replaceRegWith(MI.getOperand(Idx).getReg(),
-                       MergeI.getOperand(Idx + 1).getReg());
+    MIRBuilder.setInstr(MI);
+    // Transform to UNMERGEs, for example
+    //   %1 = G_MERGE_VALUES %4, %5
+    //   %9, %10, %11, %12 = G_UNMERGE_VALUES %1
+    // to
+    //   %9, %10 = G_UNMERGE_VALUES %4
+    //   %11, %12 = G_UNMERGE_VALUES %5
+
+    const unsigned NewNumDefs = NumDefs / NumMergeRegs;
+    for (unsigned Idx = 0; Idx < NumMergeRegs; ++Idx) {
+      SmallVector<unsigned, 2> DstRegs;
+      for (unsigned j = 0, DefIdx = Idx * NewNumDefs; j < NewNumDefs;
+           ++j, ++DefIdx)
+        DstRegs.push_back(MI.getOperand(DefIdx).getReg());
+
+      MIRBuilder.buildUnmerge(DstRegs, MergeI.getOperand(Idx + 1).getReg());
+    }
+
+  } else if (NumMergeRegs > NumDefs) {
+    if (NumMergeRegs % NumDefs != 0)
+      return false;
+
+    MIRBuilder.setInstr(MI);
+    // Transform to MERGEs
+    //   %6 = G_MERGE_VALUES %17, %18, %19, %20
+    //   %7, %8 = G_UNMERGE_VALUES %6
+    // to
+    //   %7 = G_MERGE_VALUES %17, %18
+    //   %8 = G_MERGE_VALUES %19, %20
+
+    const unsigned NumRegs = NumMergeRegs / NumDefs;
+    for (unsigned DefIdx = 0; DefIdx < NumDefs; ++DefIdx) {
+      SmallVector<unsigned, 2> Regs;
+      for (unsigned j = 0, Idx = NumRegs * DefIdx + 1; j < NumRegs; ++j, ++Idx)
+        Regs.push_back(MergeI.getOperand(Idx).getReg());
+
+      MIRBuilder.buildMerge(MI.getOperand(DefIdx).getReg(), Regs);
+    }
+
+  } else {
+    // FIXME: is a COPY appropriate if the types mismatch? We know both
+    // registers are allocatable by now.
+    if (MRI.getType(MI.getOperand(0).getReg()) !=
+        MRI.getType(MergeI.getOperand(1).getReg()))
+      return false;
+
+    for (unsigned Idx = 0; Idx < NumDefs; ++Idx)
+      MRI.replaceRegWith(MI.getOperand(Idx).getReg(),
+                         MergeI.getOperand(Idx + 1).getReg());
+  }
 
   MI.eraseFromParent();
   if (MRI.use_empty(MergeI.getOperand(0).getReg()))
@@ -226,13 +207,7 @@ bool Legalizer::runOnMachineFunction(MachineFunction &MF) {
       // Get the next Instruction before we try to legalize, because there's a
       // good chance MI will be deleted.
       NextMI = std::next(MI);
-
-      // combineExtracts erases MI.
-      if (combineExtracts(*MI, MRI, TII)) {
-        Changed = true;
-        continue;
-      }
-      Changed |= combineMerges(*MI, MRI, TII);
+      Changed |= combineMerges(*MI, MRI, TII, Helper.MIRBuilder);
     }
   }
 

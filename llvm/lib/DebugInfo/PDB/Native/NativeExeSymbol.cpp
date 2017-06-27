@@ -9,6 +9,7 @@
 
 #include "llvm/DebugInfo/PDB/Native/NativeExeSymbol.h"
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/DebugInfo/PDB/Native/DbiStream.h"
 #include "llvm/DebugInfo/PDB/Native/InfoStream.h"
 #include "llvm/DebugInfo/PDB/Native/NativeEnumModules.h"
@@ -17,8 +18,12 @@
 namespace llvm {
 namespace pdb {
 
-NativeExeSymbol::NativeExeSymbol(NativeSession &Session)
-    : NativeRawSymbol(Session), File(Session.getPDBFile()) {}
+NativeExeSymbol::NativeExeSymbol(NativeSession &Session, uint32_t SymbolId)
+    : NativeRawSymbol(Session, SymbolId), File(Session.getPDBFile()) {}
+
+std::unique_ptr<NativeRawSymbol> NativeExeSymbol::clone() const {
+  return llvm::make_unique<NativeExeSymbol>(Session, SymbolId);
+}
 
 std::unique_ptr<IPDBEnumSymbols>
 NativeExeSymbol::findChildren(PDB_SymType Type) const {

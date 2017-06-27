@@ -197,12 +197,13 @@ public:
     WORKGROUP_ID_Y      = 11,
     WORKGROUP_ID_Z      = 12,
     PRIVATE_SEGMENT_WAVE_BYTE_OFFSET = 14,
+    IMPLICIT_BUFFER_PTR = 15,
 
     // VGPRS:
-    FIRST_VGPR_VALUE    = 15,
+    FIRST_VGPR_VALUE    = 16,
     WORKITEM_ID_X       = FIRST_VGPR_VALUE,
-    WORKITEM_ID_Y       = 16,
-    WORKITEM_ID_Z       = 17
+    WORKITEM_ID_Y       = 17,
+    WORKITEM_ID_Z       = 18
   };
 
   /// \brief Returns the physical register that \p Value is stored in.

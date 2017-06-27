@@ -34,20 +34,26 @@ namespace llvm {
 namespace orc {
 
 class RTDyldObjectLinkingLayerBase {
+public:
+
+  using ObjectPtr =
+    std::shared_ptr<object::OwningBinary<object::ObjectFile>>;
+
 protected:
+
   /// @brief Holds a set of objects to be allocated/linked as a unit in the JIT.
   ///
   /// An instance of this class will be created for each set of objects added
-  /// via JITObjectLayer::addObjectSet. Deleting the instance (via
-  /// removeObjectSet) frees its memory, removing all symbol definitions that
+  /// via JITObjectLayer::addObject. Deleting the instance (via
+  /// removeObject) frees its memory, removing all symbol definitions that
   /// had been provided by this instance. Higher level layers are responsible
   /// for taking any action required to handle the missing symbols.
-  class LinkedObjectSet {
+  class LinkedObject {
   public:
-    LinkedObjectSet() = default;
-    LinkedObjectSet(const LinkedObjectSet&) = delete;
-    void operator=(const LinkedObjectSet&) = delete;
-    virtual ~LinkedObjectSet() = default;
+    LinkedObject() = default;
+    LinkedObject(const LinkedObject&) = delete;
+    void operator=(const LinkedObject&) = delete;
+    virtual ~LinkedObject() = default;
 
     virtual void finalize() = 0;
 
@@ -74,19 +80,11 @@ protected:
     bool Finalized = false;
   };
 
-  using LinkedObjectSetListT = std::list<std::unique_ptr<LinkedObjectSet>>;
+  using LinkedObjectListT = std::list<std::unique_ptr<LinkedObject>>;
 
 public:
   /// @brief Handle to a set of loaded objects.
-  using ObjSetHandleT = LinkedObjectSetListT::iterator;
-};
-
-/// @brief Default (no-op) action to perform when loading objects.
-class DoNothingOnNotifyLoaded {
-public:
-  template <typename ObjSetT, typename LoadResult>
-  void operator()(RTDyldObjectLinkingLayerBase::ObjSetHandleT, const ObjSetT &,
-                  const LoadResult &) {}
+  using ObjHandleT = LinkedObjectListT::iterator;
 };
 
 /// @brief Bare bones object linking layer.
@@ -95,46 +93,54 @@ public:
 /// object files to be loaded into memory, linked, and the addresses of their
 /// symbols queried. All objects added to this layer can see each other's
 /// symbols.
-template <typename NotifyLoadedFtor = DoNothingOnNotifyLoaded>
 class RTDyldObjectLinkingLayer : public RTDyldObjectLinkingLayerBase {
 public:
+
+  using RTDyldObjectLinkingLayerBase::ObjectPtr;
+
+  /// @brief Functor for receiving object-loaded notifications.
+  using NotifyLoadedFtor = std::function<void(ObjHandleT, const ObjectPtr &Obj,
+                                              const LoadedObjectInfo &)>;
+
   /// @brief Functor for receiving finalization notifications.
-  using NotifyFinalizedFtor = std::function<void(ObjSetHandleT)>;
+  using NotifyFinalizedFtor = std::function<void(ObjHandleT)>;
 
 private:
-  template <typename ObjSetT, typename MemoryManagerPtrT,
-            typename SymbolResolverPtrT, typename FinalizerFtor>
-  class ConcreteLinkedObjectSet : public LinkedObjectSet {
+
+
+  template <typename MemoryManagerPtrT, typename SymbolResolverPtrT,
+            typename FinalizerFtor>
+  class ConcreteLinkedObject : public LinkedObject {
   public:
-    ConcreteLinkedObjectSet(ObjSetT Objects, MemoryManagerPtrT MemMgr,
-                            SymbolResolverPtrT Resolver,
-                            FinalizerFtor Finalizer,
-                            bool ProcessAllSections)
+    ConcreteLinkedObject(ObjectPtr Obj, MemoryManagerPtrT MemMgr,
+                         SymbolResolverPtrT Resolver,
+                         FinalizerFtor Finalizer,
+                         bool ProcessAllSections)
       : MemMgr(std::move(MemMgr)),
-        PFC(llvm::make_unique<PreFinalizeContents>(std::move(Objects),
+        PFC(llvm::make_unique<PreFinalizeContents>(std::move(Obj),
                                                    std::move(Resolver),
                                                    std::move(Finalizer),
                                                    ProcessAllSections)) {
-      buildInitialSymbolTable(PFC->Objects);
+      buildInitialSymbolTable(PFC->Obj);
     }
 
-    ~ConcreteLinkedObjectSet() override {
+    ~ConcreteLinkedObject() override {
       MemMgr->deregisterEHFrames();
     }
-    
-    void setHandle(ObjSetHandleT H) {
+
+    void setHandle(ObjHandleT H) {
       PFC->Handle = H;
     }
 
     void finalize() override {
-      assert(PFC && "mapSectionAddress called on finalized LinkedObjectSet");
+      assert(PFC && "mapSectionAddress called on finalized LinkedObject");
 
       RuntimeDyld RTDyld(*MemMgr, *PFC->Resolver);
       RTDyld.setProcessAllSections(PFC->ProcessAllSections);
       PFC->RTDyld = &RTDyld;
 
       this->Finalized = true;
-      PFC->Finalizer(PFC->Handle, RTDyld, std::move(PFC->Objects),
+      PFC->Finalizer(PFC->Handle, RTDyld, std::move(PFC->Obj),
                      [&]() {
                        this->updateSymbolTable(RTDyld);
                      });
@@ -156,27 +162,27 @@ private:
 
     void mapSectionAddress(const void *LocalAddress,
                            JITTargetAddress TargetAddr) const override {
-      assert(PFC && "mapSectionAddress called on finalized LinkedObjectSet");
-      assert(PFC->RTDyld && "mapSectionAddress called on raw LinkedObjectSet");
+      assert(PFC && "mapSectionAddress called on finalized LinkedObject");
+      assert(PFC->RTDyld && "mapSectionAddress called on raw LinkedObject");
       PFC->RTDyld->mapSectionAddress(LocalAddress, TargetAddr);
     }
 
   private:
-    void buildInitialSymbolTable(const ObjSetT &Objects) {
-      for (const auto &Obj : Objects)
-        for (auto &Symbol : getObject(*Obj).symbols()) {
-          if (Symbol.getFlags() & object::SymbolRef::SF_Undefined)
-            continue;
-          Expected<StringRef> SymbolName = Symbol.getName();
-          // FIXME: Raise an error for bad symbols.
-          if (!SymbolName) {
-            consumeError(SymbolName.takeError());
-            continue;
-          }
-          auto Flags = JITSymbolFlags::fromObjectSymbol(Symbol);
-          SymbolTable.insert(
-            std::make_pair(*SymbolName, JITEvaluatedSymbol(0, Flags)));
+
+    void buildInitialSymbolTable(const ObjectPtr &Obj) {
+      for (auto &Symbol : Obj->getBinary()->symbols()) {
+        if (Symbol.getFlags() & object::SymbolRef::SF_Undefined)
+          continue;
+        Expected<StringRef> SymbolName = Symbol.getName();
+        // FIXME: Raise an error for bad symbols.
+        if (!SymbolName) {
+          consumeError(SymbolName.takeError());
+          continue;
         }
+        auto Flags = JITSymbolFlags::fromObjectSymbol(Symbol);
+        SymbolTable.insert(
+          std::make_pair(*SymbolName, JITEvaluatedSymbol(0, Flags)));
+      }
     }
 
     void updateSymbolTable(const RuntimeDyld &RTDyld) {
@@ -187,17 +193,17 @@ private:
     // Contains the information needed prior to finalization: the object files,
     // memory manager, resolver, and flags needed for RuntimeDyld.
     struct PreFinalizeContents {
-      PreFinalizeContents(ObjSetT Objects, SymbolResolverPtrT Resolver,
+      PreFinalizeContents(ObjectPtr Obj, SymbolResolverPtrT Resolver,
                           FinalizerFtor Finalizer, bool ProcessAllSections)
-        : Objects(std::move(Objects)), Resolver(std::move(Resolver)),
+        : Obj(std::move(Obj)), Resolver(std::move(Resolver)),
           Finalizer(std::move(Finalizer)),
           ProcessAllSections(ProcessAllSections) {}
 
-      ObjSetT Objects;
+      ObjectPtr Obj;
       SymbolResolverPtrT Resolver;
       FinalizerFtor Finalizer;
       bool ProcessAllSections;
-      ObjSetHandleT Handle;
+      ObjHandleT Handle;
       RuntimeDyld *RTDyld;
     };
 
@@ -205,27 +211,22 @@ private:
     std::unique_ptr<PreFinalizeContents> PFC;
   };
 
-  template <typename ObjSetT, typename MemoryManagerPtrT,
-            typename SymbolResolverPtrT, typename FinalizerFtor>
+  template <typename MemoryManagerPtrT, typename SymbolResolverPtrT,
+            typename FinalizerFtor>
   std::unique_ptr<
-    ConcreteLinkedObjectSet<ObjSetT, MemoryManagerPtrT,
-                            SymbolResolverPtrT, FinalizerFtor>>
-  createLinkedObjectSet(ObjSetT Objects, MemoryManagerPtrT MemMgr,
-                        SymbolResolverPtrT Resolver,
-                        FinalizerFtor Finalizer,
-                        bool ProcessAllSections) {
-    using LOS = ConcreteLinkedObjectSet<ObjSetT, MemoryManagerPtrT,
-                                        SymbolResolverPtrT, FinalizerFtor>;
-    return llvm::make_unique<LOS>(std::move(Objects), std::move(MemMgr),
+    ConcreteLinkedObject<MemoryManagerPtrT, SymbolResolverPtrT, FinalizerFtor>>
+  createLinkedObject(ObjectPtr Obj, MemoryManagerPtrT MemMgr,
+                     SymbolResolverPtrT Resolver,
+                     FinalizerFtor Finalizer,
+                     bool ProcessAllSections) {
+    using LOS = ConcreteLinkedObject<MemoryManagerPtrT, SymbolResolverPtrT,
+                                     FinalizerFtor>;
+    return llvm::make_unique<LOS>(std::move(Obj), std::move(MemMgr),
                                   std::move(Resolver), std::move(Finalizer),
                                   ProcessAllSections);
   }
 
 public:
-  /// @brief LoadedObjectInfo list. Contains a list of owning pointers to
-  ///        RuntimeDyld::LoadedObjectInfo instances.
-  using LoadedObjInfoList =
-      std::vector<std::unique_ptr<RuntimeDyld::LoadedObjectInfo>>;
 
   /// @brief Construct an ObjectLinkingLayer with the given NotifyLoaded,
   ///        and NotifyFinalized functors.
@@ -250,23 +251,22 @@ public:
   ///
   /// @return A handle that can be used to refer to the loaded objects (for 
   ///         symbol searching, finalization, freeing memory, etc.).
-  template <typename ObjSetT,
-            typename MemoryManagerPtrT,
+  template <typename MemoryManagerPtrT,
             typename SymbolResolverPtrT>
-  ObjSetHandleT addObjectSet(ObjSetT Objects,
-                             MemoryManagerPtrT MemMgr,
-                             SymbolResolverPtrT Resolver) {
-    auto Finalizer = [&](ObjSetHandleT H, RuntimeDyld &RTDyld,
-                         const ObjSetT &Objs,
-                         std::function<void()> LOSHandleLoad) {
-      LoadedObjInfoList LoadedObjInfos;
+  ObjHandleT addObject(ObjectPtr Obj,
+                       MemoryManagerPtrT MemMgr,
+                       SymbolResolverPtrT Resolver) {
 
-      for (auto &Obj : Objs)
-        LoadedObjInfos.push_back(RTDyld.loadObject(this->getObject(*Obj)));
+    auto Finalizer = [&](ObjHandleT H, RuntimeDyld &RTDyld,
+                         const ObjectPtr &ObjToLoad,
+                         std::function<void()> LOSHandleLoad) {
+      std::unique_ptr<RuntimeDyld::LoadedObjectInfo> Info =
+        RTDyld.loadObject(*ObjToLoad->getBinary());
 
       LOSHandleLoad();
 
-      this->NotifyLoaded(H, Objs, LoadedObjInfos);
+      if (this->NotifyLoaded)
+        this->NotifyLoaded(H, ObjToLoad, *Info);
 
       RTDyld.finalizeWithMemoryManagerLocking();
 
@@ -274,17 +274,15 @@ public:
         this->NotifyFinalized(H);
     };
 
-    auto LOS =
-      createLinkedObjectSet(std::move(Objects), std::move(MemMgr),
-                            std::move(Resolver), std::move(Finalizer),
-                            ProcessAllSections);
+    auto LO =
+      createLinkedObject(std::move(Obj), std::move(MemMgr), std::move(Resolver),
+                         std::move(Finalizer), ProcessAllSections);
     // LOS is an owning-ptr. Keep a non-owning one so that we can set the handle
     // below.
-    auto *LOSPtr = LOS.get();
+    auto *LOPtr = LO.get();
 
-    ObjSetHandleT Handle = LinkedObjSetList.insert(LinkedObjSetList.end(),
-                                                   std::move(LOS));
-    LOSPtr->setHandle(Handle);
+    ObjHandleT Handle = LinkedObjList.insert(LinkedObjList.end(), std::move(LO));
+    LOPtr->setHandle(Handle);
 
     return Handle;
   }
@@ -297,9 +295,9 @@ public:
   /// indirectly) will result in undefined behavior. If dependence tracking is
   /// required to detect or resolve such issues it should be added at a higher
   /// layer.
-  void removeObjectSet(ObjSetHandleT H) {
+  void removeObject(ObjHandleT H) {
     // How do we invalidate the symbols in H?
-    LinkedObjSetList.erase(H);
+    LinkedObjList.erase(H);
   }
 
   /// @brief Search for the given named symbol.
@@ -307,7 +305,7 @@ public:
   /// @param ExportedSymbolsOnly If true, search only for exported symbols.
   /// @return A handle for the given named symbol, if it exists.
   JITSymbol findSymbol(StringRef Name, bool ExportedSymbolsOnly) {
-    for (auto I = LinkedObjSetList.begin(), E = LinkedObjSetList.end(); I != E;
+    for (auto I = LinkedObjList.begin(), E = LinkedObjList.end(); I != E;
          ++I)
       if (auto Symbol = findSymbolIn(I, Name, ExportedSymbolsOnly))
         return Symbol;
@@ -322,13 +320,13 @@ public:
   /// @param ExportedSymbolsOnly If true, search only for exported symbols.
   /// @return A handle for the given named symbol, if it is found in the
   ///         given object set.
-  JITSymbol findSymbolIn(ObjSetHandleT H, StringRef Name,
+  JITSymbol findSymbolIn(ObjHandleT H, StringRef Name,
                          bool ExportedSymbolsOnly) {
     return (*H)->getSymbol(Name, ExportedSymbolsOnly);
   }
 
   /// @brief Map section addresses for the objects associated with the handle H.
-  void mapSectionAddress(ObjSetHandleT H, const void *LocalAddress,
+  void mapSectionAddress(ObjHandleT H, const void *LocalAddress,
                          JITTargetAddress TargetAddr) {
     (*H)->mapSectionAddress(LocalAddress, TargetAddr);
   }
@@ -336,22 +334,13 @@ public:
   /// @brief Immediately emit and finalize the object set represented by the
   ///        given handle.
   /// @param H Handle for object set to emit/finalize.
-  void emitAndFinalize(ObjSetHandleT H) {
+  void emitAndFinalize(ObjHandleT H) {
     (*H)->finalize();
   }
 
 private:
-  static const object::ObjectFile& getObject(const object::ObjectFile &Obj) {
-    return Obj;
-  }
 
-  template <typename ObjT>
-  static const object::ObjectFile&
-  getObject(const object::OwningBinary<ObjT> &Obj) {
-    return *Obj.getBinary();
-  }
-
-  LinkedObjectSetListT LinkedObjSetList;
+  LinkedObjectListT LinkedObjList;
   NotifyLoadedFtor NotifyLoaded;
   NotifyFinalizedFtor NotifyFinalized;
   bool ProcessAllSections = false;

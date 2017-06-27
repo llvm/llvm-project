@@ -32,6 +32,19 @@ define internal void @_ZL3barv() !dbg !12 {
   ret void
 }
 
+; CHECK-LABEL: @recursive
+define void @recursive() !dbg !13 {
+; Recursive calls should not be early-inlined.
+; CHECK-NOT: call void @recursive
+; CHECK: call void @recursive
+; CHECK: call void @recursive
+; CHECK-NOT: call void @recursive
+; CHECK: ret
+  call void @recursive(), !dbg !14
+  call void @recursive(), !dbg !15
+  ret void
+}
+
 declare i32 @__gxx_personality_v0(...)
 
 !llvm.dbg.cu = !{!0}
@@ -46,3 +59,6 @@ declare i32 @__gxx_personality_v0(...)
 !10 = !DILocation(line: 8, column: 5, scope: !11)
 !11 = distinct !DILexicalBlock(scope: !6, file: !1, line: 7, column: 7)
 !12 = distinct !DISubprogram(linkageName: "_ZL3barv", scope: !1, file: !1, line: 20, scopeLine: 20, unit: !0)
+!13 = distinct !DISubprogram(linkageName: "recursive", scope: !1, file: !1, line: 20, scopeLine: 20, unit: !0)
+!14 = !DILocation(line: 21, column: 3, scope: !13)
+!15 = !DILocation(line: 22, column: 3, scope: !13)

@@ -9,6 +9,8 @@
 
 #include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
@@ -26,23 +28,27 @@
 using namespace llvm;
 using namespace dwarf;
 
-typedef DILineInfoSpecifier::FileLineInfoKind FileLineInfoKind;
+using FileLineInfoKind = DILineInfoSpecifier::FileLineInfoKind;
+
 namespace {
+
 struct ContentDescriptor {
   dwarf::LineNumberEntryFormat Type;
   dwarf::Form Form;
 };
-typedef SmallVector<ContentDescriptor, 4> ContentDescriptors;
+
+using ContentDescriptors = SmallVector<ContentDescriptor, 4>;
+
 } // end anonmyous namespace
 
 DWARFDebugLine::Prologue::Prologue() { clear(); }
 
 void DWARFDebugLine::Prologue::clear() {
-  TotalLength = Version = PrologueLength = 0;
-  AddressSize = SegSelectorSize = 0;
+  TotalLength = PrologueLength = 0;
+  SegSelectorSize = 0;
   MinInstLength = MaxOpsPerInst = DefaultIsStmt = LineBase = LineRange = 0;
   OpcodeBase = 0;
-  IsDWARF64 = false;
+  FormParams = DWARFFormParams({0, 0, DWARF32});
   StandardOpcodeLengths.clear();
   IncludeDirectories.clear();
   FileNames.clear();
@@ -51,12 +57,13 @@ void DWARFDebugLine::Prologue::clear() {
 void DWARFDebugLine::Prologue::dump(raw_ostream &OS) const {
   OS << "Line table prologue:\n"
      << format("    total_length: 0x%8.8" PRIx64 "\n", TotalLength)
-     << format("         version: %u\n", Version)
-     << format(Version >= 5 ? "    address_size: %u\n" : "", AddressSize)
-     << format(Version >= 5 ? " seg_select_size: %u\n" : "", SegSelectorSize)
-     << format(" prologue_length: 0x%8.8" PRIx64 "\n", PrologueLength)
+     << format("         version: %u\n", getVersion());
+  if (getVersion() >= 5)
+    OS << format("    address_size: %u\n", getAddressSize())
+       << format(" seg_select_size: %u\n", SegSelectorSize);
+  OS << format(" prologue_length: 0x%8.8" PRIx64 "\n", PrologueLength)
      << format(" min_inst_length: %u\n", MinInstLength)
-     << format(Version >= 4 ? "max_ops_per_inst: %u\n" : "", MaxOpsPerInst)
+     << format(getVersion() >= 4 ? "max_ops_per_inst: %u\n" : "", MaxOpsPerInst)
      << format(" default_is_stmt: %u\n", DefaultIsStmt)
      << format("       line_base: %i\n", LineBase)
      << format("      line_range: %u\n", LineRange)
@@ -137,6 +144,7 @@ parseV5EntryFormat(DataExtractor DebugLineData, uint32_t *OffsetPtr,
 static bool
 parseV5DirFileTables(DataExtractor DebugLineData, uint32_t *OffsetPtr,
                      uint64_t EndPrologueOffset,
+                     const DWARFFormParams &FormParams,
                      std::vector<StringRef> &IncludeDirectories,
                      std::vector<DWARFDebugLine::FileNameEntry> &FileNames) {
   // Get the directory entry description.
@@ -159,7 +167,7 @@ parseV5DirFileTables(DataExtractor DebugLineData, uint32_t *OffsetPtr,
         IncludeDirectories.push_back(Value.getAsCString().getValue());
         break;
       default:
-        if (!Value.skipValue(DebugLineData, OffsetPtr, nullptr))
+        if (!Value.skipValue(DebugLineData, OffsetPtr, FormParams))
           return false;
       }
     }
@@ -211,24 +219,26 @@ bool DWARFDebugLine::Prologue::parse(DataExtractor DebugLineData,
   clear();
   TotalLength = DebugLineData.getU32(OffsetPtr);
   if (TotalLength == UINT32_MAX) {
-    IsDWARF64 = true;
+    FormParams.Format = dwarf::DWARF64;
     TotalLength = DebugLineData.getU64(OffsetPtr);
-  } else if (TotalLength > 0xffffff00) {
+  } else if (TotalLength >= 0xffffff00) {
     return false;
   }
-  Version = DebugLineData.getU16(OffsetPtr);
-  if (Version < 2)
+  FormParams.Version = DebugLineData.getU16(OffsetPtr);
+  if (getVersion() < 2)
     return false;
 
-  if (Version >= 5) {
-    AddressSize = DebugLineData.getU8(OffsetPtr);
+  if (getVersion() >= 5) {
+    FormParams.AddrSize = DebugLineData.getU8(OffsetPtr);
+    assert(getAddressSize() == DebugLineData.getAddressSize() &&
+           "Line table header and data extractor disagree");
     SegSelectorSize = DebugLineData.getU8(OffsetPtr);
   }
 
   PrologueLength = DebugLineData.getUnsigned(OffsetPtr, sizeofPrologueLength());
   const uint64_t EndPrologueOffset = PrologueLength + *OffsetPtr;
   MinInstLength = DebugLineData.getU8(OffsetPtr);
-  if (Version >= 4)
+  if (getVersion() >= 4)
     MaxOpsPerInst = DebugLineData.getU8(OffsetPtr);
   DefaultIsStmt = DebugLineData.getU8(OffsetPtr);
   LineBase = DebugLineData.getU8(OffsetPtr);
@@ -241,9 +251,9 @@ bool DWARFDebugLine::Prologue::parse(DataExtractor DebugLineData,
     StandardOpcodeLengths.push_back(OpLen);
   }
 
-  if (Version >= 5) {
+  if (getVersion() >= 5) {
     if (!parseV5DirFileTables(DebugLineData, OffsetPtr, EndPrologueOffset,
-                              IncludeDirectories, FileNames)) {
+                              getFormParams(), IncludeDirectories, FileNames)) {
       fprintf(stderr,
               "warning: parsing line table prologue at 0x%8.8" PRIx64
               " found an invalid directory or file table description at"
@@ -333,7 +343,7 @@ void DWARFDebugLine::LineTable::clear() {
 }
 
 DWARFDebugLine::ParsingState::ParsingState(struct LineTable *LT)
-    : LineTable(LT), RowNumber(0) {
+    : LineTable(LT) {
   resetRowAndSequence();
 }
 

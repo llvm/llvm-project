@@ -19,7 +19,9 @@ class NativeSession;
 
 class NativeRawSymbol : public IPDBRawSymbol {
 public:
-  explicit NativeRawSymbol(NativeSession &PDBSession);
+  NativeRawSymbol(NativeSession &PDBSession, uint32_t SymbolId);
+
+  virtual std::unique_ptr<NativeRawSymbol> clone() const = 0;
 
   void dump(raw_ostream &OS, int Indent) const override;
 
@@ -201,6 +203,7 @@ public:
 
 protected:
   NativeSession &Session;
+  uint32_t SymbolId;
 };
 
 }

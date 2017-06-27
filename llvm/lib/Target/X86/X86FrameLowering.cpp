@@ -748,17 +748,7 @@ void X86FrameLowering::emitStackProbeCall(MachineFunction &MF,
   else
     CallOp = X86::CALLpcrel32;
 
-  const char *Symbol;
-  if (Is64Bit) {
-    if (STI.isTargetCygMing()) {
-      Symbol = "___chkstk_ms";
-    } else {
-      Symbol = "__chkstk";
-    }
-  } else if (STI.isTargetCygMing())
-    Symbol = "_alloca";
-  else
-    Symbol = "_chkstk";
+  StringRef Symbol = STI.getTargetLowering()->getStackProbeSymbolName(MF);
 
   MachineInstrBuilder CI;
   MachineBasicBlock::iterator ExpansionMBBI = std::prev(MBBI);
@@ -769,10 +759,11 @@ void X86FrameLowering::emitStackProbeCall(MachineFunction &MF,
     // For the large code model, we have to call through a register. Use R11,
     // as it is scratch in all supported calling conventions.
     BuildMI(MBB, MBBI, DL, TII.get(X86::MOV64ri), X86::R11)
-        .addExternalSymbol(Symbol);
+        .addExternalSymbol(MF.createExternalSymbolName(Symbol));
     CI = BuildMI(MBB, MBBI, DL, TII.get(CallOp)).addReg(X86::R11);
   } else {
-    CI = BuildMI(MBB, MBBI, DL, TII.get(CallOp)).addExternalSymbol(Symbol);
+    CI = BuildMI(MBB, MBBI, DL, TII.get(CallOp))
+        .addExternalSymbol(MF.createExternalSymbolName(Symbol));
   }
 
   unsigned AX = Is64Bit ? X86::RAX : X86::EAX;
@@ -783,13 +774,16 @@ void X86FrameLowering::emitStackProbeCall(MachineFunction &MF,
       .addReg(SP, RegState::Define | RegState::Implicit)
       .addReg(X86::EFLAGS, RegState::Define | RegState::Implicit);
 
-  if (Is64Bit) {
+  if (STI.isTargetWin64() || !STI.isOSWindows()) {
+    // MSVC x32's _chkstk and cygwin/mingw's _alloca adjust %esp themselves.
     // MSVC x64's __chkstk and cygwin/mingw's ___chkstk_ms do not adjust %rsp
-    // themselves. It also does not clobber %rax so we can reuse it when
+    // themselves. They also does not clobber %rax so we can reuse it when
     // adjusting %rsp.
-    BuildMI(MBB, MBBI, DL, TII.get(X86::SUB64rr), X86::RSP)
-        .addReg(X86::RSP)
-        .addReg(X86::RAX);
+    // All other platforms do not specify a particular ABI for the stack probe
+    // function, so we arbitrarily define it to not adjust %esp/%rsp itself.
+    BuildMI(MBB, MBBI, DL, TII.get(getSUBrrOpcode(Is64Bit)), SP)
+        .addReg(SP)
+        .addReg(AX);
   }
 
   if (InProlog) {
@@ -978,7 +972,8 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
     X86FI->setCalleeSavedFrameSize(
       X86FI->getCalleeSavedFrameSize() - TailCallReturnAddrDelta);
 
-  bool UseStackProbe = (STI.isOSWindows() && !STI.isTargetMachO());
+  bool UseRedZone = false;
+  bool UseStackProbe = !STI.getTargetLowering()->getStackProbeSymbolName(MF).empty();
 
   // The default stack probe size is 4096 if the function has no stackprobesize
   // attribute.
@@ -1007,6 +1002,7 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
       !TRI->needsStackRealignment(MF) &&
       !MFI.hasVarSizedObjects() &&             // No dynamic alloca.
       !MFI.adjustsStack() &&                   // No calls.
+      !UseStackProbe &&                        // No stack probes.
       !IsWin64CC &&                            // Win64 has no Red Zone
       !MFI.hasCopyImplyingStackAdjustment() && // Don't push and pop.
       !MF.shouldSplitStack()) {                // Regular stack
@@ -1015,6 +1011,7 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
     X86FI->setUsesRedZone(MinSize > 0 || StackSize > 0);
     StackSize = std::max(MinSize, StackSize > 128 ? StackSize - 128 : 0);
     MFI.setStackSize(StackSize);
+    UseRedZone = true;
   }
 
   // Insert stack pointer adjustment for later moving of return addr.  Only
@@ -1192,6 +1189,8 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
   if (IsWin64Prologue && !IsFunclet && TRI->needsStackRealignment(MF))
     AlignedNumBytes = alignTo(AlignedNumBytes, MaxAlign);
   if (AlignedNumBytes >= StackProbeSize && UseStackProbe) {
+    assert(!UseRedZone && "The Red Zone is not accounted for in stack probes");
+
     // Check whether EAX is livein for this block.
     bool isEAXAlive = isEAXLiveIn(MBB);
 

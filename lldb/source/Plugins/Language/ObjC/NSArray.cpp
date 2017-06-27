@@ -160,11 +160,47 @@ private:
   DataDescriptor_64 *m_data_64;
 };
 
-class NSArrayISyntheticFrontEnd : public SyntheticChildrenFrontEnd {
+class NSArrayMSyntheticFrontEnd_1400 : public NSArrayMSyntheticFrontEnd {
 public:
-  NSArrayISyntheticFrontEnd(lldb::ValueObjectSP valobj_sp);
+  NSArrayMSyntheticFrontEnd_1400(lldb::ValueObjectSP valobj_sp);
 
-  ~NSArrayISyntheticFrontEnd() override = default;
+  ~NSArrayMSyntheticFrontEnd_1400() override;
+
+  bool Update() override;
+
+protected:
+  lldb::addr_t GetDataAddress() override;
+
+  uint64_t GetUsedCount() override;
+
+  uint64_t GetOffset() override;
+
+  uint64_t GetSize() override;
+
+private:
+  struct DataDescriptor_32 {
+    uint32_t used;
+    uint32_t offset;
+    uint32_t size;
+    uint32_t list;
+  };
+
+  struct DataDescriptor_64 {
+    uint64_t used;
+    uint64_t offset;
+    uint64_t size;
+    uint64_t list;
+  };
+
+  DataDescriptor_32 *m_data_32;
+  DataDescriptor_64 *m_data_64;
+};
+
+class NSArrayISyntheticFrontEnd_1300 : public SyntheticChildrenFrontEnd {
+public:
+  NSArrayISyntheticFrontEnd_1300(lldb::ValueObjectSP valobj_sp);
+
+  ~NSArrayISyntheticFrontEnd_1300() override = default;
 
   size_t CalculateNumChildren() override;
 
@@ -181,6 +217,45 @@ private:
   uint8_t m_ptr_size;
   uint64_t m_items;
   lldb::addr_t m_data_ptr;
+  CompilerType m_id_type;
+};
+
+class NSArrayISyntheticFrontEnd_1400 : public SyntheticChildrenFrontEnd {
+public:
+  NSArrayISyntheticFrontEnd_1400(lldb::ValueObjectSP valobj_sp);
+
+  ~NSArrayISyntheticFrontEnd_1400() override;
+
+  size_t CalculateNumChildren() override;
+
+  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
+
+  bool Update() override;
+
+  bool MightHaveChildren() override;
+
+  size_t GetIndexOfChildWithName(const ConstString &name) override;
+
+private:
+  ExecutionContextRef m_exe_ctx_ref;
+  uint8_t m_ptr_size;
+
+  struct DataDescriptor_32 {
+    uint32_t used;
+    uint32_t offset;
+    uint32_t size;
+    uint32_t list;
+  };
+
+  struct DataDescriptor_64 {
+    uint64_t used;
+    uint64_t offset;
+    uint64_t size;
+    uint64_t list;
+  };
+
+  DataDescriptor_32 *m_data_32;
+  DataDescriptor_64 *m_data_64;
   CompilerType m_id_type;
 };
 
@@ -257,6 +332,8 @@ bool lldb_private::formatters::NSArraySummaryProvider(
   static const ConstString g_NSArray0("__NSArray0");
   static const ConstString g_NSArray1("__NSSingleObjectArrayI");
   static const ConstString g_NSArrayCF("__NSCFArray");
+  static const ConstString g_NSArrayMLegacy("__NSArrayM_Legacy");
+  static const ConstString g_NSArrayMImmutable("__NSArrayM_Immutable");
 
   if (class_name.IsEmpty())
     return false;
@@ -268,6 +345,18 @@ bool lldb_private::formatters::NSArraySummaryProvider(
     if (error.Fail())
       return false;
   } else if (class_name == g_NSArrayM) {
+    Status error;
+    value = process_sp->ReadUnsignedIntegerFromMemory(valobj_addr + ptr_size,
+                                                      ptr_size, 0, error);
+    if (error.Fail())
+      return false;
+  } else if (class_name == g_NSArrayMLegacy) {
+    Status error;
+    value = process_sp->ReadUnsignedIntegerFromMemory(valobj_addr + ptr_size,
+                                                      ptr_size, 0, error);
+    if (error.Fail())
+      return false;
+  } else if (class_name == g_NSArrayMImmutable) {
     Status error;
     value = process_sp->ReadUnsignedIntegerFromMemory(valobj_addr + ptr_size,
                                                       ptr_size, 0, error);
@@ -332,6 +421,11 @@ lldb_private::formatters::NSArrayMSyntheticFrontEnd_1010::
     : NSArrayMSyntheticFrontEnd(valobj_sp), m_data_32(nullptr),
       m_data_64(nullptr) {}
 
+lldb_private::formatters::NSArrayMSyntheticFrontEnd_1400::
+    NSArrayMSyntheticFrontEnd_1400(lldb::ValueObjectSP valobj_sp)
+    : NSArrayMSyntheticFrontEnd(valobj_sp), m_data_32(nullptr),
+      m_data_64(nullptr) {}
+
 size_t
 lldb_private::formatters::NSArrayMSyntheticFrontEnd::CalculateNumChildren() {
   return GetUsedCount();
@@ -386,6 +480,37 @@ bool lldb_private::formatters::NSArrayMSyntheticFrontEnd_109::Update() {
 }
 
 bool lldb_private::formatters::NSArrayMSyntheticFrontEnd_1010::Update() {
+  ValueObjectSP valobj_sp = m_backend.GetSP();
+  m_ptr_size = 0;
+  delete m_data_32;
+  m_data_32 = nullptr;
+  delete m_data_64;
+  m_data_64 = nullptr;
+  if (!valobj_sp)
+    return false;
+  m_exe_ctx_ref = valobj_sp->GetExecutionContextRef();
+  Status error;
+  error.Clear();
+  lldb::ProcessSP process_sp(valobj_sp->GetProcessSP());
+  if (!process_sp)
+    return false;
+  m_ptr_size = process_sp->GetAddressByteSize();
+  uint64_t data_location = valobj_sp->GetValueAsUnsigned(0) + m_ptr_size;
+  if (m_ptr_size == 4) {
+    m_data_32 = new DataDescriptor_32();
+    process_sp->ReadMemory(data_location, m_data_32, sizeof(DataDescriptor_32),
+                           error);
+  } else {
+    m_data_64 = new DataDescriptor_64();
+    process_sp->ReadMemory(data_location, m_data_64, sizeof(DataDescriptor_64),
+                           error);
+  }
+  if (error.Fail())
+    return false;
+  return false;
+}
+
+bool lldb_private::formatters::NSArrayMSyntheticFrontEnd_1400::Update() {
   ValueObjectSP valobj_sp = m_backend.GetSP();
   m_ptr_size = 0;
   delete m_data_32;
@@ -498,7 +623,42 @@ uint64_t lldb_private::formatters::NSArrayMSyntheticFrontEnd_1010::GetSize() {
   return m_data_32 ? m_data_32->_size : m_data_64->_size;
 }
 
-lldb_private::formatters::NSArrayISyntheticFrontEnd::NSArrayISyntheticFrontEnd(
+lldb_private::formatters::NSArrayMSyntheticFrontEnd_1400::
+    ~NSArrayMSyntheticFrontEnd_1400() {
+  delete m_data_32;
+  m_data_32 = nullptr;
+  delete m_data_64;
+  m_data_64 = nullptr;
+}
+
+lldb::addr_t
+lldb_private::formatters::NSArrayMSyntheticFrontEnd_1400::GetDataAddress() {
+  if (!m_data_32 && !m_data_64)
+    return LLDB_INVALID_ADDRESS;
+  return m_data_32 ? m_data_32->list : m_data_64->list;
+}
+
+uint64_t
+lldb_private::formatters::NSArrayMSyntheticFrontEnd_1400::GetUsedCount() {
+  if (!m_data_32 && !m_data_64)
+    return 0;
+  return m_data_32 ? m_data_32->used : m_data_64->used;
+}
+
+uint64_t lldb_private::formatters::NSArrayMSyntheticFrontEnd_1400::GetOffset() {
+  if (!m_data_32 && !m_data_64)
+    return 0;
+  return m_data_32 ? m_data_32->offset : m_data_64->offset;
+}
+
+uint64_t lldb_private::formatters::NSArrayMSyntheticFrontEnd_1400::GetSize() {
+  if (!m_data_32 && !m_data_64)
+    return 0;
+  return m_data_32 ? m_data_32->size : m_data_64->size;
+}
+
+
+lldb_private::formatters::NSArrayISyntheticFrontEnd_1300::NSArrayISyntheticFrontEnd_1300(
     lldb::ValueObjectSP valobj_sp)
     : SyntheticChildrenFrontEnd(*valobj_sp), m_exe_ctx_ref(), m_ptr_size(8),
       m_items(0), m_data_ptr(0) {
@@ -516,7 +676,7 @@ lldb_private::formatters::NSArrayISyntheticFrontEnd::NSArrayISyntheticFrontEnd(
 }
 
 size_t
-lldb_private::formatters::NSArrayISyntheticFrontEnd::GetIndexOfChildWithName(
+lldb_private::formatters::NSArrayISyntheticFrontEnd_1300::GetIndexOfChildWithName(
     const ConstString &name) {
   const char *item_name = name.GetCString();
   uint32_t idx = ExtractIndexFromString(item_name);
@@ -526,11 +686,11 @@ lldb_private::formatters::NSArrayISyntheticFrontEnd::GetIndexOfChildWithName(
 }
 
 size_t
-lldb_private::formatters::NSArrayISyntheticFrontEnd::CalculateNumChildren() {
+lldb_private::formatters::NSArrayISyntheticFrontEnd_1300::CalculateNumChildren() {
   return m_items;
 }
 
-bool lldb_private::formatters::NSArrayISyntheticFrontEnd::Update() {
+bool lldb_private::formatters::NSArrayISyntheticFrontEnd_1300::Update() {
   m_ptr_size = 0;
   m_items = 0;
   m_data_ptr = 0;
@@ -552,16 +712,109 @@ bool lldb_private::formatters::NSArrayISyntheticFrontEnd::Update() {
   return false;
 }
 
-bool lldb_private::formatters::NSArrayISyntheticFrontEnd::MightHaveChildren() {
+bool lldb_private::formatters::NSArrayISyntheticFrontEnd_1300::MightHaveChildren() {
   return true;
 }
 
 lldb::ValueObjectSP
-lldb_private::formatters::NSArrayISyntheticFrontEnd::GetChildAtIndex(
+lldb_private::formatters::NSArrayISyntheticFrontEnd_1300::GetChildAtIndex(
     size_t idx) {
   if (idx >= CalculateNumChildren())
     return lldb::ValueObjectSP();
   lldb::addr_t object_at_idx = m_data_ptr;
+  object_at_idx += (idx * m_ptr_size);
+  ProcessSP process_sp = m_exe_ctx_ref.GetProcessSP();
+  if (!process_sp)
+    return lldb::ValueObjectSP();
+  Status error;
+  if (error.Fail())
+    return lldb::ValueObjectSP();
+  StreamString idx_name;
+  idx_name.Printf("[%" PRIu64 "]", (uint64_t)idx);
+  return CreateValueObjectFromAddress(idx_name.GetString(), object_at_idx,
+                                      m_exe_ctx_ref, m_id_type);
+}
+
+lldb_private::formatters::NSArrayISyntheticFrontEnd_1400::NSArrayISyntheticFrontEnd_1400(
+    lldb::ValueObjectSP valobj_sp)
+    : SyntheticChildrenFrontEnd(*valobj_sp), m_exe_ctx_ref(), m_ptr_size(8),
+      m_data_32(nullptr), m_data_64(nullptr) {
+  if (valobj_sp) {
+    CompilerType type = valobj_sp->GetCompilerType();
+    if (type) {
+      ClangASTContext *ast = valobj_sp->GetExecutionContextRef()
+                                 .GetTargetSP()
+                                 ->GetScratchClangASTContext();
+      if (ast)
+        m_id_type = CompilerType(ast->getASTContext(),
+                                 ast->getASTContext()->ObjCBuiltinIdTy);
+    }
+  }
+}
+
+lldb_private::formatters::NSArrayISyntheticFrontEnd_1400::~NSArrayISyntheticFrontEnd_1400() {
+  delete m_data_32;
+  m_data_32 = nullptr;
+  delete m_data_64;
+  m_data_64 = nullptr;
+}
+
+size_t
+lldb_private::formatters::NSArrayISyntheticFrontEnd_1400::GetIndexOfChildWithName(
+    const ConstString &name) {
+  const char *item_name = name.GetCString();
+  uint32_t idx = ExtractIndexFromString(item_name);
+  if (idx < UINT32_MAX && idx >= CalculateNumChildren())
+    return UINT32_MAX;
+  return idx;
+}
+
+size_t
+lldb_private::formatters::NSArrayISyntheticFrontEnd_1400::CalculateNumChildren() {
+  return m_data_32 ? m_data_32->used : m_data_64->used;
+}
+
+bool lldb_private::formatters::NSArrayISyntheticFrontEnd_1400::Update() {
+  ValueObjectSP valobj_sp = m_backend.GetSP();
+  m_ptr_size = 0;
+  delete m_data_32;
+  m_data_32 = nullptr;
+  delete m_data_64;
+  m_data_64 = nullptr;
+  if (!valobj_sp)
+    return false;
+  m_exe_ctx_ref = valobj_sp->GetExecutionContextRef();
+  Status error;
+  error.Clear();
+  lldb::ProcessSP process_sp(valobj_sp->GetProcessSP());
+  if (!process_sp)
+    return false;
+  m_ptr_size = process_sp->GetAddressByteSize();
+  uint64_t data_location = valobj_sp->GetValueAsUnsigned(0) + m_ptr_size;
+  if (m_ptr_size == 4) {
+    m_data_32 = new DataDescriptor_32();
+    process_sp->ReadMemory(data_location, m_data_32, sizeof(DataDescriptor_32),
+                           error);
+  } else {
+    m_data_64 = new DataDescriptor_64();
+    process_sp->ReadMemory(data_location, m_data_64, sizeof(DataDescriptor_64),
+                           error);
+  }
+  if (error.Fail())
+    return false;
+  return false;
+}
+
+bool lldb_private::formatters::NSArrayISyntheticFrontEnd_1400::MightHaveChildren() {
+  return true;
+}
+
+lldb::ValueObjectSP
+lldb_private::formatters::NSArrayISyntheticFrontEnd_1400::GetChildAtIndex(
+    size_t idx) {
+  if (idx >= CalculateNumChildren())
+    return lldb::ValueObjectSP();
+  lldb::addr_t object_at_idx = m_data_32 ? m_data_32->list : m_data_64->list;
   object_at_idx += (idx * m_ptr_size);
   ProcessSP process_sp = m_exe_ctx_ref.GetProcessSP();
   if (!process_sp)
@@ -683,17 +936,24 @@ lldb_private::formatters::NSArraySyntheticFrontEndCreator(
   static const ConstString g_NSArrayM("__NSArrayM");
   static const ConstString g_NSArray0("__NSArray0");
   static const ConstString g_NSArray1("__NSSingleObjectArrayI");
+  static const ConstString g_NSArrayMLegacy("__NSArrayM_Legacy");
+  static const ConstString g_NSArrayMImmutable("__NSArrayM_Immutable");
 
   if (class_name.IsEmpty())
     return nullptr;
 
   if (class_name == g_NSArrayI) {
-    return (new NSArrayISyntheticFrontEnd(valobj_sp));
+      if (runtime->GetFoundationVersion() >= 1400)
+        return (new NSArrayISyntheticFrontEnd_1400(valobj_sp));
+      else
+        return (new NSArrayISyntheticFrontEnd_1300(valobj_sp));
   } else if (class_name == g_NSArray0) {
     return (new NSArray0SyntheticFrontEnd(valobj_sp));
   } else if (class_name == g_NSArray1) {
     return (new NSArray1SyntheticFrontEnd(valobj_sp));
   } else if (class_name == g_NSArrayM) {
+    if (runtime->GetFoundationVersion() >= 1400)
+      return (new NSArrayMSyntheticFrontEnd_1400(valobj_sp));
     if (runtime->GetFoundationVersion() >= 1100)
       return (new NSArrayMSyntheticFrontEnd_1010(valobj_sp));
     else

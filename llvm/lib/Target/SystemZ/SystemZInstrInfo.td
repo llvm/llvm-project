@@ -189,18 +189,15 @@ let isBranch = 1, isTerminator = 1 in {
 //===----------------------------------------------------------------------===//
 
 // Unconditional trap.
-// FIXME: This trap instruction should be marked as isTerminator, but there is
-// currently a general bug that allows non-terminators to be placed between
-// terminators. Temporarily leave this unmarked until the bug is fixed.
-let isBarrier = 1, hasCtrlDep = 1 in
+let hasCtrlDep = 1 in
   def Trap : Alias<4, (outs), (ins), [(trap)]>;
 
 // Conditional trap.
-let isTerminator = 1, hasCtrlDep = 1, Uses = [CC] in
+let hasCtrlDep = 1, Uses = [CC] in
   def CondTrap : Alias<4, (outs), (ins cond4:$valid, cond4:$R1), []>;
 
 // Fused compare-and-trap instructions.
-let isTerminator = 1, hasCtrlDep = 1 in {
+let hasCtrlDep = 1 in {
   // These patterns work the same way as for compare-and-branch.
   defm CRT   : CmpBranchRRFcPair<"crt",   0xB972, GR32>;
   defm CGRT  : CmpBranchRRFcPair<"cgrt",  0xB960, GR64>;
@@ -1449,7 +1446,7 @@ let Predicates = [FeatureExecutionHint] in {
 // A serialization instruction that acts as a barrier for all memory
 // accesses, which expands to "bcr 14, 0".
 let hasSideEffects = 1 in
-def Serialize : Alias<2, (outs), (ins), [(z_serialize)]>;
+def Serialize : Alias<2, (outs), (ins), []>;
 
 // A pseudo instruction that serves as a compiler barrier.
 let hasSideEffects = 1, hasNoSchedulingInfo = 1 in

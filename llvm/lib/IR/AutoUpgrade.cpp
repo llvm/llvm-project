@@ -142,6 +142,11 @@ static bool ShouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
       Name.startswith("avx512.mask.packssdw.") || // Added in 5.0
       Name.startswith("avx512.mask.packuswb.") || // Added in 5.0
       Name.startswith("avx512.mask.packusdw.") || // Added in 5.0
+      Name.startswith("avx512.mask.cmp.b") || // Added in 5.0
+      Name.startswith("avx512.mask.cmp.d") || // Added in 5.0
+      Name.startswith("avx512.mask.cmp.q") || // Added in 5.0
+      Name.startswith("avx512.mask.cmp.w") || // Added in 5.0
+      Name.startswith("avx512.mask.ucmp.") || // Added in 5.0
       Name == "avx512.mask.add.pd.128" || // Added in 4.0
       Name == "avx512.mask.add.pd.256" || // Added in 4.0
       Name == "avx512.mask.add.ps.128" || // Added in 4.0
@@ -783,12 +788,30 @@ static Value *upgradeIntMinMax(IRBuilder<> &Builder, CallInst &CI,
 }
 
 static Value *upgradeMaskedCompare(IRBuilder<> &Builder, CallInst &CI,
-                                   ICmpInst::Predicate Pred) {
+                                   unsigned CC, bool Signed) {
   Value *Op0 = CI.getArgOperand(0);
   unsigned NumElts = Op0->getType()->getVectorNumElements();
-  Value *Cmp = Builder.CreateICmp(Pred, Op0, CI.getArgOperand(1));
 
-  Value *Mask = CI.getArgOperand(2);
+  Value *Cmp;
+  if (CC == 3) {
+    Cmp = Constant::getNullValue(llvm::VectorType::get(Builder.getInt1Ty(), NumElts));
+  } else if (CC == 7) {
+    Cmp = Constant::getAllOnesValue(llvm::VectorType::get(Builder.getInt1Ty(), NumElts));
+  } else {
+    ICmpInst::Predicate Pred;
+    switch (CC) {
+    default: llvm_unreachable("Unknown condition code");
+    case 0: Pred = ICmpInst::ICMP_EQ;  break;
+    case 1: Pred = Signed ? ICmpInst::ICMP_SLT : ICmpInst::ICMP_ULT; break;
+    case 2: Pred = Signed ? ICmpInst::ICMP_SLE : ICmpInst::ICMP_ULE; break;
+    case 4: Pred = ICmpInst::ICMP_NE;  break;
+    case 5: Pred = Signed ? ICmpInst::ICMP_SGE : ICmpInst::ICMP_UGE; break;
+    case 6: Pred = Signed ? ICmpInst::ICMP_SGT : ICmpInst::ICMP_UGT; break;
+    }
+    Cmp = Builder.CreateICmp(Pred, Op0, CI.getArgOperand(1));
+  }
+
+  Value *Mask = CI.getArgOperand(CI.getNumArgOperands() - 1);
   const auto *C = dyn_cast<Constant>(Mask);
   if (!C || !C->isAllOnesValue())
     Cmp = Builder.CreateAnd(Cmp, getX86MaskVec(Builder, Mask, NumElts));
@@ -1007,9 +1030,13 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
     } else if (IsX86 && Name.startswith("avx512.mask.pcmp")) {
       // "avx512.mask.pcmpeq." or "avx512.mask.pcmpgt."
       bool CmpEq = Name[16] == 'e';
-      Rep = upgradeMaskedCompare(Builder, *CI,
-                                 CmpEq ? ICmpInst::ICMP_EQ
-                                       : ICmpInst::ICMP_SGT);
+      Rep = upgradeMaskedCompare(Builder, *CI, CmpEq ? 0 : 6, true);
+    } else if (IsX86 && Name.startswith("avx512.mask.cmp")) {
+      unsigned Imm = cast<ConstantInt>(CI->getArgOperand(2))->getZExtValue();
+      Rep = upgradeMaskedCompare(Builder, *CI, Imm, true);
+    } else if (IsX86 && Name.startswith("avx512.mask.ucmp")) {
+      unsigned Imm = cast<ConstantInt>(CI->getArgOperand(2))->getZExtValue();
+      Rep = upgradeMaskedCompare(Builder, *CI, Imm, false);
     } else if (IsX86 && (Name == "sse41.pmaxsb" ||
                          Name == "sse2.pmaxs.w" ||
                          Name == "sse41.pmaxsd" ||

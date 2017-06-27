@@ -265,9 +265,7 @@ define <2 x float> @test13(float* %base, <2 x float> %src0, <2 x i32> %trigger) 
 ; SKX:       # BB#0:
 ; SKX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; SKX-NEXT:    vpblendd {{.*#+}} xmm1 = xmm1[0],xmm2[1],xmm1[2],xmm2[3]
-; SKX-NEXT:    vpcmpeqq %xmm2, %xmm1, %k0
-; SKX-NEXT:    kshiftlb $6, %k0, %k0
-; SKX-NEXT:    kshiftrb $6, %k0, %k1
+; SKX-NEXT:    vpcmpeqq %xmm2, %xmm1, %k1
 ; SKX-NEXT:    vexpandps (%rdi), %xmm0 {%k1}
 ; SKX-NEXT:    retq
 ;
@@ -295,9 +293,7 @@ define void @test14(float* %base, <2 x float> %V, <2 x i32> %trigger) {
 ; SKX:       # BB#0:
 ; SKX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; SKX-NEXT:    vpblendd {{.*#+}} xmm1 = xmm1[0],xmm2[1],xmm1[2],xmm2[3]
-; SKX-NEXT:    vpcmpeqq %xmm2, %xmm1, %k0
-; SKX-NEXT:    kshiftlb $6, %k0, %k0
-; SKX-NEXT:    kshiftrb $6, %k0, %k1
+; SKX-NEXT:    vpcmpeqq %xmm2, %xmm1, %k1
 ; SKX-NEXT:    vcompressps %xmm0, (%rdi) {%k1}
 ; SKX-NEXT:    retq
 ;

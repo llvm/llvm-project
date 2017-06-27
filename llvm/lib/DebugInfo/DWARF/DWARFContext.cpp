@@ -13,6 +13,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DWARF/DWARFAcceleratorTable.h"
 #include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
@@ -36,7 +37,6 @@
 #include "llvm/Object/RelocVisitor.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/DataExtractor.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -44,8 +44,8 @@
 #include <algorithm>
 #include <cstdint>
 #include <map>
-#include <set>
 #include <string>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -55,9 +55,9 @@ using namespace object;
 
 #define DEBUG_TYPE "dwarf"
 
-typedef DWARFDebugLine::LineTable DWARFLineTable;
-typedef DILineInfoSpecifier::FileLineInfoKind FileLineInfoKind;
-typedef DILineInfoSpecifier::FunctionNameKind FunctionNameKind;
+using DWARFLineTable = DWARFDebugLine::LineTable;
+using FileLineInfoKind = DILineInfoSpecifier::FileLineInfoKind;
+using FunctionNameKind = DILineInfoSpecifier::FunctionNameKind;
 
 uint64_t llvm::getRelocatedValue(const DataExtractor &Data, uint32_t Size,
                                  uint32_t *Off, const RelocAddrMap *Relocs,
@@ -201,8 +201,7 @@ static void dumpStringOffsetsSection(raw_ostream &OS, StringRef SectionName,
   }
 }
 
-void DWARFContext::dump(raw_ostream &OS, DIDumpOptions DumpOpts){
-
+void DWARFContext::dump(raw_ostream &OS, DIDumpOptions DumpOpts) {
   DIDumpType DumpType = DumpOpts.DumpType;
   bool DumpEH = DumpOpts.DumpEH;
   bool SummarizeTypes = DumpOpts.SummarizeTypes;
@@ -1068,7 +1067,7 @@ DWARFContextInMemory::DWARFContextInMemory(const object::ObjectFile &Obj,
         errs() << "error: failed to compute relocation: " << Name << "\n";
         continue;
       }
-      llvm::RelocAddrEntry Rel = {SymInfoOrErr->SectionIndex, Val};
+      RelocAddrEntry Rel = {SymInfoOrErr->SectionIndex, Val};
       Map->insert({Reloc.getOffset(), Rel});
     }
   }

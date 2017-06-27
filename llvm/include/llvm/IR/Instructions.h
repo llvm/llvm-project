@@ -1243,6 +1243,16 @@ public:
 /// vectors of floating point values. The operands must be identical types.
 /// Represents a floating point comparison operator.
 class FCmpInst: public CmpInst {
+  void AssertOK() {
+    assert(getPredicate() <= FCmpInst::LAST_FCMP_PREDICATE &&
+           "Invalid FCmp predicate value");
+    assert(getOperand(0)->getType() == getOperand(1)->getType() &&
+           "Both operands to FCmp instruction are not of the same type!");
+    // Check that the operands are the right type
+    assert(getOperand(0)->getType()->isFPOrFPVectorTy() &&
+           "Invalid operand types for FCmp instruction");
+  }
+
 protected:
   // Note: Instruction needs to be a friend here to call cloneImpl.
   friend class Instruction;
@@ -1261,13 +1271,7 @@ public:
   ) : CmpInst(makeCmpResultType(LHS->getType()),
               Instruction::FCmp, pred, LHS, RHS, NameStr,
               InsertBefore) {
-    assert(pred <= FCmpInst::LAST_FCMP_PREDICATE &&
-           "Invalid FCmp predicate value");
-    assert(getOperand(0)->getType() == getOperand(1)->getType() &&
-           "Both operands to FCmp instruction are not of the same type!");
-    // Check that the operands are the right type
-    assert(getOperand(0)->getType()->isFPOrFPVectorTy() &&
-           "Invalid operand types for FCmp instruction");
+    AssertOK();
   }
 
   /// Constructor with insert-at-end semantics.
@@ -1280,13 +1284,7 @@ public:
   ) : CmpInst(makeCmpResultType(LHS->getType()),
               Instruction::FCmp, pred, LHS, RHS, NameStr,
               &InsertAtEnd) {
-    assert(pred <= FCmpInst::LAST_FCMP_PREDICATE &&
-           "Invalid FCmp predicate value");
-    assert(getOperand(0)->getType() == getOperand(1)->getType() &&
-           "Both operands to FCmp instruction are not of the same type!");
-    // Check that the operands are the right type
-    assert(getOperand(0)->getType()->isFPOrFPVectorTy() &&
-           "Invalid operand types for FCmp instruction");
+    AssertOK();
   }
 
   /// Constructor with no-insertion semantics
@@ -1297,13 +1295,7 @@ public:
     const Twine &NameStr = "" ///< Name of the instruction
   ) : CmpInst(makeCmpResultType(LHS->getType()),
               Instruction::FCmp, pred, LHS, RHS, NameStr) {
-    assert(pred <= FCmpInst::LAST_FCMP_PREDICATE &&
-           "Invalid FCmp predicate value");
-    assert(getOperand(0)->getType() == getOperand(1)->getType() &&
-           "Both operands to FCmp instruction are not of the same type!");
-    // Check that the operands are the right type
-    assert(getOperand(0)->getType()->isFPOrFPVectorTy() &&
-           "Invalid operand types for FCmp instruction");
+    AssertOK();
   }
 
   /// @returns true if the predicate of this instruction is EQ or NE.

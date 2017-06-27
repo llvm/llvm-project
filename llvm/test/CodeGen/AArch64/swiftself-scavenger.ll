@@ -5,7 +5,7 @@
 ; CHECK: str [[REG:x[0-9]+]], [sp, #8]
 ; CHECK: add [[REG]], sp, #248
 ; CHECK: str xzr, [{{\s*}}[[REG]], #32760]
-; CHECK: ldr x30, [sp, #8]
+; CHECK: ldr [[REG]], [sp, #8]
 target triple = "arm64-apple-ios"
 
 @ptr8 = external global i8*

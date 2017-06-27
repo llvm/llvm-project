@@ -400,3 +400,23 @@ entry:
   %r = zext i1 %v to i32
   ret i32 %r
 }
+
+define arm_aapcscc i32 @test_select_i32(i32 %a, i32 %b, i1 %cond) {
+; CHECK-LABEL: test_select_i32
+; CHECK: cmp r2, #0
+; CHECK: moveq r0, r1
+; CHECK: bx lr
+entry:
+  %r = select i1 %cond, i32 %a, i32 %b
+  ret i32 %r
+}
+
+define arm_aapcscc i32* @test_select_ptr(i32* %a, i32* %b, i1 %cond) {
+; CHECK-LABEL: test_select_ptr
+; CHECK: cmp r2, #0
+; CHECK: moveq r0, r1
+; CHECK: bx lr
+entry:
+  %r = select i1 %cond, i32* %a, i32* %b
+  ret i32* %r
+}

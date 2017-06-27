@@ -3426,6 +3426,23 @@ protected:
         result.GetOutputStream().Printf("\n");
       }
 
+      if (UnwindPlanSP plan_sp =
+              func_unwinders_sp->GetDebugFrameUnwindPlan(*target, 0)) {
+        result.GetOutputStream().Printf("debug_frame UnwindPlan:\n");
+        plan_sp->Dump(result.GetOutputStream(), thread.get(),
+                      LLDB_INVALID_ADDRESS);
+        result.GetOutputStream().Printf("\n");
+      }
+
+      if (UnwindPlanSP plan_sp =
+              func_unwinders_sp->GetDebugFrameAugmentedUnwindPlan(*target,
+                                                                  *thread, 0)) {
+        result.GetOutputStream().Printf("debug_frame augmented UnwindPlan:\n");
+        plan_sp->Dump(result.GetOutputStream(), thread.get(),
+                      LLDB_INVALID_ADDRESS);
+        result.GetOutputStream().Printf("\n");
+      }
+
       UnwindPlanSP arm_unwind_sp =
           func_unwinders_sp->GetArmUnwindUnwindPlan(*target, 0);
       if (arm_unwind_sp) {

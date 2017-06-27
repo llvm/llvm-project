@@ -106,65 +106,65 @@ public:
 };
 
 template <typename HandleT,
-          typename AddModuleSetFtor,
-          typename RemoveModuleSetFtor,
+          typename AddModuleFtor,
+          typename RemoveModuleFtor,
           typename FindSymbolFtor,
           typename FindSymbolInFtor>
 class MockBaseLayer {
 public:
 
-  typedef HandleT ModuleSetHandleT;
+  typedef HandleT ModuleHandleT;
 
-  MockBaseLayer(AddModuleSetFtor &&AddModuleSet,
-                RemoveModuleSetFtor &&RemoveModuleSet,
+  MockBaseLayer(AddModuleFtor &&AddModule,
+                RemoveModuleFtor &&RemoveModule,
                 FindSymbolFtor &&FindSymbol,
                 FindSymbolInFtor &&FindSymbolIn)
-      : AddModuleSet(AddModuleSet), RemoveModuleSet(RemoveModuleSet),
+      : AddModule(AddModule), RemoveModule(RemoveModule),
         FindSymbol(FindSymbol), FindSymbolIn(FindSymbolIn)
   {}
 
-  template <typename ModuleSetT, typename MemoryManagerPtrT,
+  template <typename ModuleT, typename MemoryManagerPtrT,
             typename SymbolResolverPtrT>
-  ModuleSetHandleT addModuleSet(ModuleSetT Ms, MemoryManagerPtrT MemMgr,
-                                SymbolResolverPtrT Resolver) {
-    return AddModuleSet(std::move(Ms), std::move(MemMgr), std::move(Resolver));
+  ModuleHandleT addModule(ModuleT Ms, MemoryManagerPtrT MemMgr,
+                          SymbolResolverPtrT Resolver) {
+    return AddModule(std::move(Ms), std::move(MemMgr), std::move(Resolver));
   }
 
-  void removeModuleSet(ModuleSetHandleT H) {
-    RemoveModuleSet(H);
+  void removeModule(ModuleHandleT H) {
+    RemoveModule(H);
   }
 
   JITSymbol findSymbol(const std::string &Name, bool ExportedSymbolsOnly) {
     return FindSymbol(Name, ExportedSymbolsOnly);
   }
 
-  JITSymbol findSymbolIn(ModuleSetHandleT H, const std::string &Name,
+  JITSymbol findSymbolIn(ModuleHandleT H, const std::string &Name,
                          bool ExportedSymbolsOnly) {
     return FindSymbolIn(H, Name, ExportedSymbolsOnly);
   }
 
 private:
-  AddModuleSetFtor AddModuleSet;
-  RemoveModuleSetFtor RemoveModuleSet;
+  AddModuleFtor AddModule;
+  RemoveModuleFtor RemoveModule;
   FindSymbolFtor FindSymbol;
   FindSymbolInFtor FindSymbolIn;
 };
 
-template <typename ModuleSetHandleT,
-          typename AddModuleSetFtor,
-          typename RemoveModuleSetFtor,
+template <typename ModuleHandleT,
+          typename AddModuleFtor,
+          typename RemoveModuleFtor,
           typename FindSymbolFtor,
           typename FindSymbolInFtor>
-MockBaseLayer<ModuleSetHandleT, AddModuleSetFtor, RemoveModuleSetFtor,
+MockBaseLayer<ModuleHandleT, AddModuleFtor, RemoveModuleFtor,
               FindSymbolFtor, FindSymbolInFtor>
-createMockBaseLayer(AddModuleSetFtor &&AddModuleSet,
-                    RemoveModuleSetFtor &&RemoveModuleSet,
+createMockBaseLayer(AddModuleFtor &&AddModule,
+                    RemoveModuleFtor &&RemoveModule,
                     FindSymbolFtor &&FindSymbol,
                     FindSymbolInFtor &&FindSymbolIn) {
-  return MockBaseLayer<ModuleSetHandleT, AddModuleSetFtor, RemoveModuleSetFtor,
+  return MockBaseLayer<ModuleHandleT, AddModuleFtor, RemoveModuleFtor,
                        FindSymbolFtor, FindSymbolInFtor>(
-                         std::forward<AddModuleSetFtor>(AddModuleSet),
-                         std::forward<RemoveModuleSetFtor>(RemoveModuleSet),
+                         std::forward<AddModuleFtor>(AddModule),
+                         std::forward<RemoveModuleFtor>(RemoveModule),
                          std::forward<FindSymbolFtor>(FindSymbol),
                          std::forward<FindSymbolInFtor>(FindSymbolIn));
 }

@@ -85,7 +85,7 @@ public:
   // Creates an Undefined symbol for a given name.
   SymbolBody *addUndefined(StringRef Name);
 
-  Symbol *addRelative(StringRef N, uint64_t VA);
+  Symbol *addSynthetic(StringRef N, Chunk *C);
   Symbol *addAbsolute(StringRef N, uint64_t VA);
 
   Symbol *addUndefined(StringRef Name, InputFile *F, bool IsWeakAlias);

@@ -44,8 +44,20 @@ bool llvm::isGCRelocate(ImmutableCallSite CS) {
   return CS.getInstruction() && isa<GCRelocateInst>(CS.getInstruction());
 }
 
+bool llvm::isGCRelocate(const Value *V) {
+  if (auto CS = ImmutableCallSite(V))
+    return isGCRelocate(CS);
+  return false;
+}
+
 bool llvm::isGCResult(ImmutableCallSite CS) {
   return CS.getInstruction() && isa<GCResultInst>(CS.getInstruction());
+}
+
+bool llvm::isGCResult(const Value *V) {
+  if (auto CS = ImmutableCallSite(V))
+    return isGCResult(CS);
+  return false;
 }
 
 bool llvm::isStatepointDirectiveAttr(Attribute Attr) {

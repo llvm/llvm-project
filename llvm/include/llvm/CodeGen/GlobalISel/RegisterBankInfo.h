@@ -1,4 +1,4 @@
-//==-- llvm/CodeGen/GlobalISel/RegisterBankInfo.h ----------------*- C++ -*-==//
+//===- llvm/CodeGen/GlobalISel/RegisterBankInfo.h ---------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,26 +12,27 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CODEGEN_GLOBALISEL_REGBANKINFO_H
-#define LLVM_CODEGEN_GLOBALISEL_REGBANKINFO_H
+#ifndef LLVM_CODEGEN_GLOBALISEL_REGISTERBANKINFO_H
+#define LLVM_CODEGEN_GLOBALISEL_REGISTERBANKINFO_H
 
-#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/CodeGen/GlobalISel/RegisterBank.h"
-#include "llvm/CodeGen/MachineValueType.h" // For SimpleValueType.
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/ErrorHandling.h"
-
 #include <cassert>
-#include <memory> // For unique_ptr.
+#include <initializer_list>
+#include <memory>
 
 namespace llvm {
+
 class MachineInstr;
 class MachineRegisterInfo;
-class TargetInstrInfo;
-class TargetRegisterInfo;
 class raw_ostream;
+class RegisterBank;
+class TargetInstrInfo;
+class TargetRegisterClass;
+class TargetRegisterInfo;
 
 /// Holds all the information related to register banks.
 class RegisterBankInfo {
@@ -48,10 +49,12 @@ public:
     /// original value.  The bits are counted from less significant
     /// bits to most significant bits.
     unsigned StartIdx;
+
     /// Length of this mapping in bits. This is how many bits this
     /// partial mapping covers in the original value:
     /// from StartIdx to StartIdx + Length -1.
     unsigned Length;
+
     /// Register bank where the partial value lives.
     const RegisterBank *RegBank;
 
@@ -180,13 +183,16 @@ public:
     /// Identifier of the mapping.
     /// This is used to communicate between the target and the optimizers
     /// which mapping should be realized.
-    unsigned ID;
+    unsigned ID = InvalidMappingID;
+
     /// Cost of this mapping.
-    unsigned Cost;
+    unsigned Cost = 0;
+
     /// Mapping of all the operands.
     const ValueMapping *OperandsMapping;
+
     /// Number of operands.
-    unsigned NumOperands;
+    unsigned NumOperands = 0;
 
     const ValueMapping &getOperandMapping(unsigned i) {
       assert(i < getNumOperands() && "Out of bound operand");
@@ -213,7 +219,7 @@ public:
 
     /// Default constructor.
     /// Use this constructor to express that the mapping is invalid.
-    InstructionMapping() : ID(InvalidMappingID), Cost(0), NumOperands(0) {}
+    InstructionMapping() = default;
 
     /// Get the cost.
     unsigned getCost() const { return Cost; }
@@ -264,7 +270,7 @@ public:
   /// Convenient type to represent the alternatives for mapping an
   /// instruction.
   /// \todo When we move to TableGen this should be an array ref.
-  typedef SmallVector<const InstructionMapping *, 4> InstructionMappings;
+  using InstructionMappings = SmallVector<const InstructionMapping *, 4>;
 
   /// Helper class used to get/create the virtual registers that will be used
   /// to replace the MachineOperand when applying a mapping.
@@ -273,12 +279,16 @@ public:
     /// OpIdx-th operand starts. -1 means we do not have such mapping yet.
     /// Note: We use a SmallVector to avoid heap allocation for most cases.
     SmallVector<int, 8> OpToNewVRegIdx;
+
     /// Hold the registers that will be used to map MI with InstrMapping.
     SmallVector<unsigned, 8> NewVRegs;
+
     /// Current MachineRegisterInfo, used to create new virtual registers.
     MachineRegisterInfo &MRI;
+
     /// Instruction being remapped.
     MachineInstr &MI;
+
     /// New mapping of the instruction.
     const InstructionMapping &InstrMapping;
 
@@ -373,6 +383,7 @@ public:
 protected:
   /// Hold the set of supported register banks.
   RegisterBank **RegBanks;
+
   /// Total number of register banks.
   unsigned NumRegBanks;
 
@@ -729,6 +740,7 @@ operator<<(raw_ostream &OS, const RegisterBankInfo::OperandsMapper &OpdMapper) {
 /// Hashing function for PartialMapping.
 /// It is required for the hashing of ValueMapping.
 hash_code hash_value(const RegisterBankInfo::PartialMapping &PartMapping);
-} // End namespace llvm.
 
-#endif
+} // end namespace llvm
+
+#endif // LLVM_CODEGEN_GLOBALISEL_REGISTERBANKINFO_H

@@ -39,6 +39,15 @@ bool isDereferenceableAndAlignedPointer(const Value *V, unsigned Align,
                                         const Instruction *CtxI = nullptr,
                                         const DominatorTree *DT = nullptr);
 
+/// Returns true if V is always dereferenceable for Size byte with alignment
+/// greater or equal than requested. If the context instruction is specified
+/// performs context-sensitive analysis and returns true if the pointer is
+/// dereferenceable at the specified instruction.
+bool isDereferenceableAndAlignedPointer(const Value *V, unsigned Align,
+                                        const APInt &Size, const DataLayout &DL,
+                                        const Instruction *CtxI = nullptr,
+                                        const DominatorTree *DT = nullptr);
+
 /// Return true if we know that executing a load from this value cannot trap.
 ///
 /// If DT and ScanFrom are specified this method performs context-sensitive

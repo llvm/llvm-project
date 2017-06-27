@@ -538,6 +538,27 @@ bool isSGPR(unsigned Reg, const MCRegisterInfo* TRI) {
     Reg == AMDGPU::SCC;
 }
 
+bool isRegIntersect(unsigned Reg0, unsigned Reg1, const MCRegisterInfo* TRI) {
+
+  if (Reg0 == Reg1) {
+    return true;
+  }
+
+  unsigned SubReg0 = TRI->getSubReg(Reg0, 1);
+  if (SubReg0 == 0) {
+    return TRI->getSubRegIndex(Reg1, Reg0) > 0;
+  }
+
+  for (unsigned Idx = 2; SubReg0 > 0; ++Idx) {
+    if (isRegIntersect(Reg1, SubReg0, TRI)) {
+      return true;
+    }
+    SubReg0 = TRI->getSubReg(Reg0, Idx);
+  }
+
+  return false;
+}
+
 unsigned getMCReg(unsigned Reg, const MCSubtargetInfo &STI) {
 
   switch(Reg) {

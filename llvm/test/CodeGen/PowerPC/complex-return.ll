@@ -9,7 +9,7 @@ entry:
   %x = alloca { ppc_fp128, ppc_fp128 }, align 16
   %real = getelementptr inbounds { ppc_fp128, ppc_fp128 }, { ppc_fp128, ppc_fp128 }* %x, i32 0, i32 0
   %imag = getelementptr inbounds { ppc_fp128, ppc_fp128 }, { ppc_fp128, ppc_fp128 }* %x, i32 0, i32 1
-  store ppc_fp128 0xM400C0000000000000000000000000000, ppc_fp128* %real
+  store ppc_fp128 0xM400C0000000000300000000010000000, ppc_fp128* %real
   store ppc_fp128 0xMC00547AE147AE1483CA47AE147AE147A, ppc_fp128* %imag
   %x.realp = getelementptr inbounds { ppc_fp128, ppc_fp128 }, { ppc_fp128, ppc_fp128 }* %x, i32 0, i32 0
   %x.real = load ppc_fp128, ppc_fp128* %x.realp

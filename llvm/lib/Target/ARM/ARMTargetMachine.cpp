@@ -17,6 +17,7 @@
 #include "ARMRegisterBankInfo.h"
 #endif
 #include "ARMSubtarget.h"
+#include "ARMMacroFusion.h"
 #include "ARMTargetMachine.h"
 #include "ARMTargetObjectFile.h"
 #include "ARMTargetTransformInfo.h"
@@ -394,6 +395,9 @@ public:
   createMachineScheduler(MachineSchedContext *C) const override {
     ScheduleDAGMILive *DAG = createGenericSchedLive(C);
     // add DAG Mutations here.
+    const ARMSubtarget &ST = C->MF->getSubtarget<ARMSubtarget>();
+    if (ST.hasFusion())
+      DAG->addMutation(createARMMacroFusionDAGMutation());
     return DAG;
   }
 
@@ -401,6 +405,9 @@ public:
   createPostMachineScheduler(MachineSchedContext *C) const override {
     ScheduleDAGMI *DAG = createGenericSchedPostRA(C);
     // add DAG Mutations here.
+    const ARMSubtarget &ST = C->MF->getSubtarget<ARMSubtarget>();
+    if (ST.hasFusion())
+      DAG->addMutation(createARMMacroFusionDAGMutation());
     return DAG;
   }
 

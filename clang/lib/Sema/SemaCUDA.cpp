@@ -629,12 +629,6 @@ static bool IsKnownEmitted(Sema &S, FunctionDecl *FD) {
   // emitted, because (say) the definition could include "inline".
   FunctionDecl *Def = FD->getDefinition();
 
-  // We may currently be parsing the body of FD, in which case
-  // FD->getDefinition() will be null, but we still want to treat FD as though
-  // it's a definition.
-  if (!Def && FD->willHaveBody())
-    Def = FD;
-
   if (Def &&
       !isDiscardableGVALinkage(S.getASTContext().GetGVALinkageForFunction(Def)))
     return true;

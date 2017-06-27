@@ -61,6 +61,29 @@ TEST_F(FormatTestProto, FormatsMessages) {
                "      really.really.long.qualified.type.aaa.aaaaaaa.aaaaaaaa\n"
                "          another_fiiiiiiiiiiiiiiiiiiiiield = 2;\n"
                "}");
+  verifyFormat("message SomeMessage {\n"
+               "  map<string, Project> projects = 1;\n"
+               "  optional map<string, int32> size_projects = 2;\n"
+               "  map<int, really.really.really.long.qualified.type.nameeee>\n"
+               "      projects = 3;\n"
+               "  map<int, really.really.really.really.long.qualified.type\n"
+               "               .nameeee> projects = 4;\n"
+               "  map<int,\n"
+               "      reallyreallyreallyreallyreallyreallyreallylongname>\n"
+               "      projects = 5;\n"
+               "  map<int, Project>\n"
+               "      longlonglonglonglonglonglonglonglonglongonglon = 6;\n"
+               "  map<releleallyreallyreallyreallyreallyreallyreallylongname,\n"
+               "      int> projects = 7;\n"
+               "  map<releleallyreallyreallyreallyreallyreallyreallylongname,\n"
+               "      releleallyreallyreallyreallyreallyreallyreallylongname>\n"
+               "      releleallyreallyreallyreallyreallyreallyreallylongnam =\n"
+               "          8;\n"
+               "  map<relele.llyreal.yreallyr.allyreally.eallyreal\n"
+               "          .sauenirylongname,\n"
+               "      really.really.really.really.long.qualified.type\n"
+               "          .nameeee> projects = 9;\n"
+               "}");
 }
 
 TEST_F(FormatTestProto, KeywordsInOtherLanguages) {

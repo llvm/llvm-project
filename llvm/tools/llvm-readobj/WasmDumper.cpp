@@ -183,6 +183,7 @@ void WasmDumper::printSymbol(const SymbolRef &Sym) {
   WasmSymbol Symbol = Obj->getWasmSymbol(Sym.getRawDataRefImpl());
   W.printString("Name", Symbol.Name);
   W.printEnum("Type", static_cast<unsigned>(Symbol.Type), makeArrayRef(WasmSymbolTypes));
+  W.printHex("Flags", Symbol.Flags);
 }
 
 }

@@ -26,8 +26,8 @@
 #include "lldb/Breakpoint/Stoppoint.h"
 #include "lldb/Core/Event.h"
 #include "lldb/Core/SearchFilter.h"
-#include "lldb/Core/StructuredData.h"
 #include "lldb/Utility/StringList.h"
+#include "lldb/Utility/StructuredData.h"
 
 namespace lldb_private {
 

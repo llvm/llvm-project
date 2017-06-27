@@ -49,6 +49,14 @@ struct DPair {
 
 struct Empty {};
 
+namespace {
+class Foo {};
+} // namespace
+
+namespace bar {
+class Bar {};
+} // namespace bar
+
 template <class T>
 using unique_ptr_ = std::unique_ptr<T>;
 
@@ -239,6 +247,20 @@ void initialization(int T, Base b) {
   std::unique_ptr<Empty> PEmpty = std::unique_ptr<Empty>(new Empty{});
   // CHECK-MESSAGES: :[[@LINE-1]]:35: warning: use std::make_unique instead
   // CHECK-FIXES: std::unique_ptr<Empty> PEmpty = std::make_unique<Empty>(Empty{});
+
+  std::unique_ptr<Foo> FF = std::unique_ptr<Foo>(new Foo());
+  // CHECK-MESSAGES: :[[@LINE-1]]:29: warning:
+  // CHECK-FIXES: std::unique_ptr<Foo> FF = std::make_unique<Foo>();
+  FF.reset(new Foo());
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning:
+  // CHECK-FIXES: FF = std::make_unique<Foo>();
+
+  std::unique_ptr<bar::Bar> BB = std::unique_ptr<bar::Bar>(new bar::Bar());
+  // CHECK-MESSAGES: :[[@LINE-1]]:34: warning:
+  // CHECK-FIXES: std::unique_ptr<bar::Bar> BB = std::make_unique<bar::Bar>();
+  BB.reset(new bar::Bar());
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning:
+  // CHECK-FIXES: BB = std::make_unique<bar::Bar>();
 }
 
 void aliases() {

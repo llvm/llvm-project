@@ -106,8 +106,22 @@ define void @store_factorf64_4(<16 x double>* %ptr, <4 x double> %v0, <4 x doubl
 ; CHECK-LABEL: @store_factorf64_4(
 ; CHECK-NEXT:    [[S0:%.*]] = shufflevector <4 x double> [[V0:%.*]], <4 x double> [[V1:%.*]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[S1:%.*]] = shufflevector <4 x double> [[V2:%.*]], <4 x double> [[V3:%.*]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <8 x double> [[S0]], <8 x double> [[S1]], <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 1, i32 5, i32 9, i32 13, i32 2, i32 6, i32 10, i32 14, i32 3, i32 7, i32 11, i32 15>
-; CHECK-NEXT:    store <16 x double> [[INTERLEAVED_VEC]], <16 x double>* [[PTR:%.*]], align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x double> [[S0]], <8 x double> [[S1]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x double> [[S0]], <8 x double> [[S1]], <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x double> [[S0]], <8 x double> [[S1]], <4 x i32> <i32 8, i32 9, i32 10, i32 11>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <8 x double> [[S0]], <8 x double> [[S1]], <4 x i32> <i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x double> [[TMP1]], <4 x double> [[TMP3]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x double> [[TMP2]], <4 x double> [[TMP4]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x double> [[TMP1]], <4 x double> [[TMP3]], <4 x i32> <i32 2, i32 3, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x double> [[TMP2]], <4 x double> [[TMP4]], <4 x i32> <i32 2, i32 3, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x double> [[TMP5]], <4 x double> [[TMP6]], <4 x i32> <i32 0, i32 4, i32 2, i32 6>
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x double> [[TMP7]], <4 x double> [[TMP8]], <4 x i32> <i32 0, i32 4, i32 2, i32 6>
+; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x double> [[TMP5]], <4 x double> [[TMP6]], <4 x i32> <i32 1, i32 5, i32 3, i32 7>
+; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <4 x double> [[TMP7]], <4 x double> [[TMP8]], <4 x i32> <i32 1, i32 5, i32 3, i32 7>
+; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <4 x double> [[TMP9]], <4 x double> [[TMP11]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <4 x double> [[TMP10]], <4 x double> [[TMP12]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP15:%.*]] = shufflevector <8 x double> [[TMP13]], <8 x double> [[TMP14]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    store <16 x double> [[TMP15]], <16 x double>* [[PTR:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %s0 = shufflevector <4 x double> %v0, <4 x double> %v1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -121,8 +135,22 @@ define void @store_factori64_4(<16 x i64>* %ptr, <4 x i64> %v0, <4 x i64> %v1, <
 ; CHECK-LABEL: @store_factori64_4(
 ; CHECK-NEXT:    [[S0:%.*]] = shufflevector <4 x i64> [[V0:%.*]], <4 x i64> [[V1:%.*]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[S1:%.*]] = shufflevector <4 x i64> [[V2:%.*]], <4 x i64> [[V3:%.*]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <8 x i64> [[S0]], <8 x i64> [[S1]], <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 1, i32 5, i32 9, i32 13, i32 2, i32 6, i32 10, i32 14, i32 3, i32 7, i32 11, i32 15>
-; CHECK-NEXT:    store <16 x i64> [[INTERLEAVED_VEC]], <16 x i64>* [[PTR:%.*]], align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i64> [[S0]], <8 x i64> [[S1]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i64> [[S0]], <8 x i64> [[S1]], <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i64> [[S0]], <8 x i64> [[S1]], <4 x i32> <i32 8, i32 9, i32 10, i32 11>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <8 x i64> [[S0]], <8 x i64> [[S1]], <4 x i32> <i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i64> [[TMP1]], <4 x i64> [[TMP3]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i64> [[TMP2]], <4 x i64> [[TMP4]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i64> [[TMP1]], <4 x i64> [[TMP3]], <4 x i32> <i32 2, i32 3, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i64> [[TMP2]], <4 x i64> [[TMP4]], <4 x i32> <i32 2, i32 3, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x i64> [[TMP5]], <4 x i64> [[TMP6]], <4 x i32> <i32 0, i32 4, i32 2, i32 6>
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x i64> [[TMP7]], <4 x i64> [[TMP8]], <4 x i32> <i32 0, i32 4, i32 2, i32 6>
+; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x i64> [[TMP5]], <4 x i64> [[TMP6]], <4 x i32> <i32 1, i32 5, i32 3, i32 7>
+; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <4 x i64> [[TMP7]], <4 x i64> [[TMP8]], <4 x i32> <i32 1, i32 5, i32 3, i32 7>
+; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <4 x i64> [[TMP9]], <4 x i64> [[TMP11]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <4 x i64> [[TMP10]], <4 x i64> [[TMP12]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP15:%.*]] = shufflevector <8 x i64> [[TMP13]], <8 x i64> [[TMP14]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    store <16 x i64> [[TMP15]], <16 x i64>* [[PTR:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %s0 = shufflevector <4 x i64> %v0, <4 x i64> %v1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -136,8 +164,22 @@ define void @store_factorf64_4_revMask(<16 x double>* %ptr, <4 x double> %v0, <4
 ; CHECK-LABEL: @store_factorf64_4_revMask(
 ; CHECK-NEXT:    [[S0:%.*]] = shufflevector <4 x double> [[V0:%.*]], <4 x double> [[V1:%.*]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[S1:%.*]] = shufflevector <4 x double> [[V2:%.*]], <4 x double> [[V3:%.*]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <8 x double> [[S0]], <8 x double> [[S1]], <16 x i32> <i32 12, i32 8, i32 4, i32 0, i32 13, i32 9, i32 5, i32 1, i32 14, i32 10, i32 6, i32 2, i32 15, i32 11, i32 7, i32 3>
-; CHECK-NEXT:    store <16 x double> [[INTERLEAVED_VEC]], <16 x double>* [[PTR:%.*]], align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x double> [[S0]], <8 x double> [[S1]], <4 x i32> <i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x double> [[S0]], <8 x double> [[S1]], <4 x i32> <i32 8, i32 9, i32 10, i32 11>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x double> [[S0]], <8 x double> [[S1]], <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <8 x double> [[S0]], <8 x double> [[S1]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x double> [[TMP1]], <4 x double> [[TMP3]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x double> [[TMP2]], <4 x double> [[TMP4]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x double> [[TMP1]], <4 x double> [[TMP3]], <4 x i32> <i32 2, i32 3, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x double> [[TMP2]], <4 x double> [[TMP4]], <4 x i32> <i32 2, i32 3, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x double> [[TMP5]], <4 x double> [[TMP6]], <4 x i32> <i32 0, i32 4, i32 2, i32 6>
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x double> [[TMP7]], <4 x double> [[TMP8]], <4 x i32> <i32 0, i32 4, i32 2, i32 6>
+; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x double> [[TMP5]], <4 x double> [[TMP6]], <4 x i32> <i32 1, i32 5, i32 3, i32 7>
+; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <4 x double> [[TMP7]], <4 x double> [[TMP8]], <4 x i32> <i32 1, i32 5, i32 3, i32 7>
+; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <4 x double> [[TMP9]], <4 x double> [[TMP11]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <4 x double> [[TMP10]], <4 x double> [[TMP12]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP15:%.*]] = shufflevector <8 x double> [[TMP13]], <8 x double> [[TMP14]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    store <16 x double> [[TMP15]], <16 x double>* [[PTR:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %s0 = shufflevector <4 x double> %v0, <4 x double> %v1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -151,8 +193,22 @@ define void @store_factorf64_4_arbitraryMask(<16 x double>* %ptr, <16 x double> 
 ; CHECK-LABEL: @store_factorf64_4_arbitraryMask(
 ; CHECK-NEXT:    [[S0:%.*]] = shufflevector <16 x double> [[V0:%.*]], <16 x double> [[V1:%.*]], <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
 ; CHECK-NEXT:    [[S1:%.*]] = shufflevector <16 x double> [[V2:%.*]], <16 x double> [[V3:%.*]], <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <32 x double> [[S0]], <32 x double> [[S1]], <16 x i32> <i32 4, i32 32, i32 16, i32 8, i32 5, i32 33, i32 17, i32 9, i32 6, i32 34, i32 18, i32 10, i32 7, i32 35, i32 19, i32 11>
-; CHECK-NEXT:    store <16 x double> [[INTERLEAVED_VEC]], <16 x double>* [[PTR:%.*]], align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <32 x double> [[S0]], <32 x double> [[S1]], <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <32 x double> [[S0]], <32 x double> [[S1]], <4 x i32> <i32 32, i32 33, i32 34, i32 35>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <32 x double> [[S0]], <32 x double> [[S1]], <4 x i32> <i32 16, i32 17, i32 18, i32 19>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <32 x double> [[S0]], <32 x double> [[S1]], <4 x i32> <i32 8, i32 9, i32 10, i32 11>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x double> [[TMP1]], <4 x double> [[TMP3]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x double> [[TMP2]], <4 x double> [[TMP4]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x double> [[TMP1]], <4 x double> [[TMP3]], <4 x i32> <i32 2, i32 3, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x double> [[TMP2]], <4 x double> [[TMP4]], <4 x i32> <i32 2, i32 3, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x double> [[TMP5]], <4 x double> [[TMP6]], <4 x i32> <i32 0, i32 4, i32 2, i32 6>
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x double> [[TMP7]], <4 x double> [[TMP8]], <4 x i32> <i32 0, i32 4, i32 2, i32 6>
+; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x double> [[TMP5]], <4 x double> [[TMP6]], <4 x i32> <i32 1, i32 5, i32 3, i32 7>
+; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <4 x double> [[TMP7]], <4 x double> [[TMP8]], <4 x i32> <i32 1, i32 5, i32 3, i32 7>
+; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <4 x double> [[TMP9]], <4 x double> [[TMP11]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <4 x double> [[TMP10]], <4 x double> [[TMP12]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP15:%.*]] = shufflevector <8 x double> [[TMP13]], <8 x double> [[TMP14]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    store <16 x double> [[TMP15]], <16 x double>* [[PTR:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %s0 = shufflevector <16 x double> %v0, <16 x double> %v1, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
@@ -161,4 +217,3 @@ define void @store_factorf64_4_arbitraryMask(<16 x double>* %ptr, <16 x double> 
   store <16 x double> %interleaved.vec, <16 x double>* %ptr, align 16
   ret void
 }
-

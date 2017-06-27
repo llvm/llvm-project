@@ -167,10 +167,8 @@ inline match_combine_or<match_zero, match_neg_zero> m_AnyZero() {
 
 struct match_nan {
   template <typename ITy> bool match(ITy *V) {
-    if (const auto *C = dyn_cast<ConstantFP>(V)) {
-      const APFloat &APF = C->getValueAPF();
-      return APF.isNaN();
-    }
+    if (const auto *C = dyn_cast<ConstantFP>(V))
+      return C->isNaN();
     return false;
   }
 };
@@ -419,7 +417,8 @@ inline bind_const_intval_ty m_ConstantInt(uint64_t &V) { return V; }
 //===----------------------------------------------------------------------===//
 // Matcher for any binary operator.
 //
-template <typename LHS_t, typename RHS_t> struct AnyBinaryOp_match {
+template <typename LHS_t, typename RHS_t, bool Commutable = false>
+struct AnyBinaryOp_match {
   LHS_t L;
   RHS_t R;
 
@@ -427,7 +426,9 @@ template <typename LHS_t, typename RHS_t> struct AnyBinaryOp_match {
 
   template <typename OpTy> bool match(OpTy *V) {
     if (auto *I = dyn_cast<BinaryOperator>(V))
-      return L.match(I->getOperand(0)) && R.match(I->getOperand(1));
+      return (L.match(I->getOperand(0)) && R.match(I->getOperand(1))) ||
+             (Commutable && R.match(I->getOperand(0)) &&
+              L.match(I->getOperand(1)));
     return false;
   }
 };
@@ -441,7 +442,8 @@ inline AnyBinaryOp_match<LHS, RHS> m_BinOp(const LHS &L, const RHS &R) {
 // Matchers for specific binary operators.
 //
 
-template <typename LHS_t, typename RHS_t, unsigned Opcode>
+template <typename LHS_t, typename RHS_t, unsigned Opcode,
+          bool Commutable = false>
 struct BinaryOp_match {
   LHS_t L;
   RHS_t R;
@@ -451,11 +453,15 @@ struct BinaryOp_match {
   template <typename OpTy> bool match(OpTy *V) {
     if (V->getValueID() == Value::InstructionVal + Opcode) {
       auto *I = cast<BinaryOperator>(V);
-      return L.match(I->getOperand(0)) && R.match(I->getOperand(1));
+      return (L.match(I->getOperand(0)) && R.match(I->getOperand(1))) ||
+             (Commutable && R.match(I->getOperand(0)) &&
+              L.match(I->getOperand(1)));
     }
     if (auto *CE = dyn_cast<ConstantExpr>(V))
-      return CE->getOpcode() == Opcode && L.match(CE->getOperand(0)) &&
-             R.match(CE->getOperand(1));
+      return CE->getOpcode() == Opcode &&
+             ((L.match(CE->getOperand(0)) && R.match(CE->getOperand(1))) ||
+              (Commutable && R.match(CE->getOperand(0)) &&
+               L.match(CE->getOperand(1))));
     return false;
   }
 };
@@ -660,47 +666,87 @@ m_NUWShl(const LHS &L, const RHS &R) {
 }
 
 //===----------------------------------------------------------------------===//
-// Class that matches two different binary ops.
+// Class that matches a group of binary opcodes.
 //
-template <typename LHS_t, typename RHS_t, unsigned Opc1, unsigned Opc2>
-struct BinOp2_match {
+template <typename LHS_t, typename RHS_t, typename Predicate>
+struct BinOpPred_match : Predicate {
   LHS_t L;
   RHS_t R;
 
-  BinOp2_match(const LHS_t &LHS, const RHS_t &RHS) : L(LHS), R(RHS) {}
+  BinOpPred_match(const LHS_t &LHS, const RHS_t &RHS) : L(LHS), R(RHS) {}
 
   template <typename OpTy> bool match(OpTy *V) {
-    if (V->getValueID() == Value::InstructionVal + Opc1 ||
-        V->getValueID() == Value::InstructionVal + Opc2) {
-      auto *I = cast<BinaryOperator>(V);
-      return L.match(I->getOperand(0)) && R.match(I->getOperand(1));
-    }
+    if (auto *I = dyn_cast<Instruction>(V))
+      return this->isOpType(I->getOpcode()) && L.match(I->getOperand(0)) &&
+             R.match(I->getOperand(1));
     if (auto *CE = dyn_cast<ConstantExpr>(V))
-      return (CE->getOpcode() == Opc1 || CE->getOpcode() == Opc2) &&
-             L.match(CE->getOperand(0)) && R.match(CE->getOperand(1));
+      return this->isOpType(CE->getOpcode()) && L.match(CE->getOperand(0)) &&
+             R.match(CE->getOperand(1));
     return false;
   }
 };
 
-/// \brief Matches LShr or AShr.
+struct is_shift_op {
+  bool isOpType(unsigned Opcode) { return Instruction::isShift(Opcode); }
+};
+
+struct is_right_shift_op {
+  bool isOpType(unsigned Opcode) {
+    return Opcode == Instruction::LShr || Opcode == Instruction::AShr;
+  }
+};
+
+struct is_logical_shift_op {
+  bool isOpType(unsigned Opcode) {
+    return Opcode == Instruction::LShr || Opcode == Instruction::Shl;
+  }
+};
+
+struct is_bitwiselogic_op {
+  bool isOpType(unsigned Opcode) {
+    return Instruction::isBitwiseLogicOp(Opcode);
+  }
+};
+
+struct is_idiv_op {
+  bool isOpType(unsigned Opcode) {
+    return Opcode == Instruction::SDiv || Opcode == Instruction::UDiv;
+  }
+};
+
+/// \brief Matches shift operations.
 template <typename LHS, typename RHS>
-inline BinOp2_match<LHS, RHS, Instruction::LShr, Instruction::AShr>
-m_Shr(const LHS &L, const RHS &R) {
-  return BinOp2_match<LHS, RHS, Instruction::LShr, Instruction::AShr>(L, R);
+inline BinOpPred_match<LHS, RHS, is_shift_op> m_Shift(const LHS &L,
+                                                      const RHS &R) {
+  return BinOpPred_match<LHS, RHS, is_shift_op>(L, R);
 }
 
-/// \brief Matches LShr or Shl.
+/// \brief Matches logical shift operations.
 template <typename LHS, typename RHS>
-inline BinOp2_match<LHS, RHS, Instruction::LShr, Instruction::Shl>
+inline BinOpPred_match<LHS, RHS, is_right_shift_op> m_Shr(const LHS &L,
+                                                          const RHS &R) {
+  return BinOpPred_match<LHS, RHS, is_right_shift_op>(L, R);
+}
+
+/// \brief Matches logical shift operations.
+template <typename LHS, typename RHS>
+inline BinOpPred_match<LHS, RHS, is_logical_shift_op>
 m_LogicalShift(const LHS &L, const RHS &R) {
-  return BinOp2_match<LHS, RHS, Instruction::LShr, Instruction::Shl>(L, R);
+  return BinOpPred_match<LHS, RHS, is_logical_shift_op>(L, R);
 }
 
-/// \brief Matches UDiv and SDiv.
+/// \brief Matches bitwise logic operations.
 template <typename LHS, typename RHS>
-inline BinOp2_match<LHS, RHS, Instruction::SDiv, Instruction::UDiv>
-m_IDiv(const LHS &L, const RHS &R) {
-  return BinOp2_match<LHS, RHS, Instruction::SDiv, Instruction::UDiv>(L, R);
+inline BinOpPred_match<LHS, RHS, is_bitwiselogic_op>
+m_BitwiseLogic(const LHS &L, const RHS &R) {
+  return BinOpPred_match<LHS, RHS, is_bitwiselogic_op>(L, R);
+}
+
+/// \brief Matches integer division operations.
+template <typename LHS, typename RHS>
+inline BinOpPred_match<LHS, RHS, is_idiv_op> m_IDiv(const LHS &L,
+                                                    const RHS &R) {
+  return BinOpPred_match<LHS, RHS, is_idiv_op>(L, R);
 }
 
 //===----------------------------------------------------------------------===//
@@ -726,7 +772,8 @@ template <typename T> inline Exact_match<T> m_Exact(const T &SubPattern) {
 // Matchers for CmpInst classes
 //
 
-template <typename LHS_t, typename RHS_t, typename Class, typename PredicateTy>
+template <typename LHS_t, typename RHS_t, typename Class, typename PredicateTy,
+          bool Commutable = false>
 struct CmpClass_match {
   PredicateTy &Predicate;
   LHS_t L;
@@ -737,7 +784,9 @@ struct CmpClass_match {
 
   template <typename OpTy> bool match(OpTy *V) {
     if (auto *I = dyn_cast<Class>(V))
-      if (L.match(I->getOperand(0)) && R.match(I->getOperand(1))) {
+      if ((L.match(I->getOperand(0)) && R.match(I->getOperand(1))) ||
+          (Commutable && R.match(I->getOperand(0)) &&
+           L.match(I->getOperand(1)))) {
         Predicate = I->getPredicate();
         return true;
       }
@@ -897,10 +946,7 @@ template <typename LHS_t> struct not_match {
 
 private:
   bool isAllOnes(Value *V) {
-    return (isa<ConstantInt>(V) || isa<ConstantDataVector>(V) ||
-            // FIXME: Remove CV.
-            isa<ConstantVector>(V)) &&
-           cast<Constant>(V)->isAllOnesValue();
+    return isa<Constant>(V) && cast<Constant>(V)->isAllOnesValue();
   }
 };
 
@@ -1002,7 +1048,8 @@ inline brc_match<Cond_t> m_Br(const Cond_t &C, BasicBlock *&T, BasicBlock *&F) {
 // Matchers for max/min idioms, eg: "select (sgt x, y), x, y" -> smax(x,y).
 //
 
-template <typename CmpInst_t, typename LHS_t, typename RHS_t, typename Pred_t>
+template <typename CmpInst_t, typename LHS_t, typename RHS_t, typename Pred_t,
+          bool Commutable = false>
 struct MaxMin_match {
   LHS_t L;
   RHS_t R;
@@ -1032,7 +1079,8 @@ struct MaxMin_match {
     if (!Pred_t::match(Pred))
       return false;
     // It does!  Bind the operands.
-    return L.match(LHS) && R.match(RHS);
+    return (L.match(LHS) && R.match(RHS)) ||
+           (Commutable && R.match(LHS) && L.match(RHS));
   }
 };
 
@@ -1376,89 +1424,78 @@ template <typename Val_t> inline Signum_match<Val_t> m_Signum(const Val_t &V) {
 //
 
 /// \brief Matches a BinaryOperator with LHS and RHS in either order.
-template<typename LHS, typename RHS>
-inline match_combine_or<AnyBinaryOp_match<LHS, RHS>,
-                        AnyBinaryOp_match<RHS, LHS>>
-m_c_BinOp(const LHS &L, const RHS &R) {
-  return m_CombineOr(m_BinOp(L, R), m_BinOp(R, L));
+template <typename LHS, typename RHS>
+inline AnyBinaryOp_match<LHS, RHS, true> m_c_BinOp(const LHS &L, const RHS &R) {
+  return AnyBinaryOp_match<LHS, RHS, true>(L, R);
 }
 
 /// \brief Matches an ICmp with a predicate over LHS and RHS in either order.
 /// Does not swap the predicate.
-template<typename LHS, typename RHS>
-inline match_combine_or<CmpClass_match<LHS, RHS, ICmpInst, ICmpInst::Predicate>,
-                        CmpClass_match<RHS, LHS, ICmpInst, ICmpInst::Predicate>>
+template <typename LHS, typename RHS>
+inline CmpClass_match<LHS, RHS, ICmpInst, ICmpInst::Predicate, true>
 m_c_ICmp(ICmpInst::Predicate &Pred, const LHS &L, const RHS &R) {
-  return m_CombineOr(m_ICmp(Pred, L, R), m_ICmp(Pred, R, L));
+  return CmpClass_match<LHS, RHS, ICmpInst, ICmpInst::Predicate, true>(Pred, L,
+                                                                       R);
 }
 
 /// \brief Matches a Add with LHS and RHS in either order.
-template<typename LHS, typename RHS>
-inline match_combine_or<BinaryOp_match<LHS, RHS, Instruction::Add>,
-                        BinaryOp_match<RHS, LHS, Instruction::Add>>
-m_c_Add(const LHS &L, const RHS &R) {
-  return m_CombineOr(m_Add(L, R), m_Add(R, L));
+template <typename LHS, typename RHS>
+inline BinaryOp_match<LHS, RHS, Instruction::Add, true> m_c_Add(const LHS &L,
+                                                                const RHS &R) {
+  return BinaryOp_match<LHS, RHS, Instruction::Add, true>(L, R);
 }
 
 /// \brief Matches a Mul with LHS and RHS in either order.
-template<typename LHS, typename RHS>
-inline match_combine_or<BinaryOp_match<LHS, RHS, Instruction::Mul>,
-                        BinaryOp_match<RHS, LHS, Instruction::Mul>>
-m_c_Mul(const LHS &L, const RHS &R) {
-  return m_CombineOr(m_Mul(L, R), m_Mul(R, L));
+template <typename LHS, typename RHS>
+inline BinaryOp_match<LHS, RHS, Instruction::Mul, true> m_c_Mul(const LHS &L,
+                                                                const RHS &R) {
+  return BinaryOp_match<LHS, RHS, Instruction::Mul, true>(L, R);
 }
 
 /// \brief Matches an And with LHS and RHS in either order.
-template<typename LHS, typename RHS>
-inline match_combine_or<BinaryOp_match<LHS, RHS, Instruction::And>,
-                        BinaryOp_match<RHS, LHS, Instruction::And>>
-m_c_And(const LHS &L, const RHS &R) {
-  return m_CombineOr(m_And(L, R), m_And(R, L));
+template <typename LHS, typename RHS>
+inline BinaryOp_match<LHS, RHS, Instruction::And, true> m_c_And(const LHS &L,
+                                                                const RHS &R) {
+  return BinaryOp_match<LHS, RHS, Instruction::And, true>(L, R);
 }
 
 /// \brief Matches an Or with LHS and RHS in either order.
-template<typename LHS, typename RHS>
-inline match_combine_or<BinaryOp_match<LHS, RHS, Instruction::Or>,
-                        BinaryOp_match<RHS, LHS, Instruction::Or>>
-m_c_Or(const LHS &L, const RHS &R) {
-  return m_CombineOr(m_Or(L, R), m_Or(R, L));
+template <typename LHS, typename RHS>
+inline BinaryOp_match<LHS, RHS, Instruction::Or, true> m_c_Or(const LHS &L,
+                                                              const RHS &R) {
+  return BinaryOp_match<LHS, RHS, Instruction::Or, true>(L, R);
 }
 
 /// \brief Matches an Xor with LHS and RHS in either order.
-template<typename LHS, typename RHS>
-inline match_combine_or<BinaryOp_match<LHS, RHS, Instruction::Xor>,
-                        BinaryOp_match<RHS, LHS, Instruction::Xor>>
-m_c_Xor(const LHS &L, const RHS &R) {
-  return m_CombineOr(m_Xor(L, R), m_Xor(R, L));
+template <typename LHS, typename RHS>
+inline BinaryOp_match<LHS, RHS, Instruction::Xor, true> m_c_Xor(const LHS &L,
+                                                                const RHS &R) {
+  return BinaryOp_match<LHS, RHS, Instruction::Xor, true>(L, R);
 }
 
 /// Matches an SMin with LHS and RHS in either order.
 template <typename LHS, typename RHS>
-inline match_combine_or<MaxMin_match<ICmpInst, LHS, RHS, smin_pred_ty>,
-                        MaxMin_match<ICmpInst, RHS, LHS, smin_pred_ty>>
+inline MaxMin_match<ICmpInst, LHS, RHS, smin_pred_ty, true>
 m_c_SMin(const LHS &L, const RHS &R) {
-  return m_CombineOr(m_SMin(L, R), m_SMin(R, L));
+  return MaxMin_match<ICmpInst, LHS, RHS, smin_pred_ty, true>(L, R);
 }
 /// Matches an SMax with LHS and RHS in either order.
 template <typename LHS, typename RHS>
-inline match_combine_or<MaxMin_match<ICmpInst, LHS, RHS, smax_pred_ty>,
-                        MaxMin_match<ICmpInst, RHS, LHS, smax_pred_ty>>
+inline MaxMin_match<ICmpInst, LHS, RHS, smax_pred_ty, true>
 m_c_SMax(const LHS &L, const RHS &R) {
-  return m_CombineOr(m_SMax(L, R), m_SMax(R, L));
+  return MaxMin_match<ICmpInst, LHS, RHS, smax_pred_ty, true>(L, R);
 }
 /// Matches a UMin with LHS and RHS in either order.
 template <typename LHS, typename RHS>
-inline match_combine_or<MaxMin_match<ICmpInst, LHS, RHS, umin_pred_ty>,
-                        MaxMin_match<ICmpInst, RHS, LHS, umin_pred_ty>>
+inline MaxMin_match<ICmpInst, LHS, RHS, umin_pred_ty, true>
 m_c_UMin(const LHS &L, const RHS &R) {
-  return m_CombineOr(m_UMin(L, R), m_UMin(R, L));
+  return MaxMin_match<ICmpInst, LHS, RHS, umin_pred_ty, true>(L, R);
 }
 /// Matches a UMax with LHS and RHS in either order.
 template <typename LHS, typename RHS>
-inline match_combine_or<MaxMin_match<ICmpInst, LHS, RHS, umax_pred_ty>,
-                        MaxMin_match<ICmpInst, RHS, LHS, umax_pred_ty>>
+inline MaxMin_match<ICmpInst, LHS, RHS, umax_pred_ty, true>
 m_c_UMax(const LHS &L, const RHS &R) {
-  return m_CombineOr(m_UMax(L, R), m_UMax(R, L));
+  return MaxMin_match<ICmpInst, LHS, RHS, umax_pred_ty, true>(L, R);
 }
 
 } // end namespace PatternMatch

@@ -8,23 +8,33 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
-
-#include "llvm/DebugInfo/MSF/IMSFFile.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/DebugInfo/MSF/MSFCommon.h"
 #include "llvm/DebugInfo/MSF/MSFStreamLayout.h"
-#include "llvm/Support/BinaryStreamError.h"
+#include "llvm/Support/Endian.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/MathExtras.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <cstring>
+#include <utility>
+#include <vector>
 
 using namespace llvm;
 using namespace llvm::msf;
 
 namespace {
+
 template <typename Base> class MappedBlockStreamImpl : public Base {
 public:
   template <typename... Args>
   MappedBlockStreamImpl(Args &&... Params)
       : Base(std::forward<Args>(Params)...) {}
 };
-}
+
+} // end anonymous namespace
 
 static void initializeFpmStreamLayout(const MSFLayout &Layout,
                                       MSFStreamLayout &FpmLayout) {
@@ -39,7 +49,8 @@ static void initializeFpmStreamLayout(const MSFLayout &Layout,
   FpmLayout.Length = msf::getFullFpmByteSize(Layout);
 }
 
-typedef std::pair<uint32_t, uint32_t> Interval;
+using Interval = std::pair<uint32_t, uint32_t>;
+
 static Interval intersect(const Interval &I1, const Interval &I2) {
   return std::make_pair(std::max(I1.first, I2.first),
                         std::min(I1.second, I2.second));
@@ -214,7 +225,7 @@ bool MappedBlockStream::tryReadContiguously(uint32_t Offset, uint32_t Size,
   uint32_t OffsetInBlock = Offset % BlockSize;
   uint32_t BytesFromFirstBlock = std::min(Size, BlockSize - OffsetInBlock);
   uint32_t NumAdditionalBlocks =
-      llvm::alignTo(Size - BytesFromFirstBlock, BlockSize) / BlockSize;
+      alignTo(Size - BytesFromFirstBlock, BlockSize) / BlockSize;
 
   uint32_t RequiredContiguousBlocks = NumAdditionalBlocks + 1;
   uint32_t E = StreamLayout.Blocks[BlockNum];

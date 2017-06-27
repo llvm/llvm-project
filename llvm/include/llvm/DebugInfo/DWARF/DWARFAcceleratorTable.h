@@ -32,8 +32,9 @@ class DWARFAcceleratorTable {
   };
 
   struct HeaderData {
-    typedef uint16_t AtomType;
-    typedef dwarf::Form Form;
+    using AtomType = uint16_t;
+    using Form = dwarf::Form;
+
     uint32_t DIEOffsetBase;
     SmallVector<std::pair<AtomType, Form>, 3> Atoms;
   };

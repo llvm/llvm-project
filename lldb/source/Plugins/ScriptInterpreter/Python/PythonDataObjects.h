@@ -21,10 +21,10 @@
 // Project includes
 #include "lldb/Utility/Flags.h"
 
-#include "lldb/Core/StructuredData.h"
 #include "lldb/Host/File.h"
 #include "lldb/Interpreter/OptionValue.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/StructuredData.h"
 #include "lldb/lldb-defines.h"
 
 #include "llvm/ADT/ArrayRef.h"

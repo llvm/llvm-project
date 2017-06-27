@@ -627,6 +627,12 @@ void t43() {
 // CHECK: call void asm sideeffect inteldialect "mov eax, $0", "*m,~{eax},~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}})
 }
 
+void dot_operator(){
+// CHECK-LABEL: define void @dot_operator
+	__asm { mov eax, 3[ebx]A.b}
+// CHECK: call void asm sideeffect inteldialect "mov eax, $$3[ebx].4", "~{eax},~{dirflag},~{fpsr},~{flags}"
+}
+
 void call_clobber() {
   __asm call t41
   // CHECK-LABEL: define void @call_clobber

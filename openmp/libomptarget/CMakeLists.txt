@@ -95,7 +95,7 @@ if(LIBOMPTARGET_HAVE_STD_CPP11_FLAG)
   # Build libomptarget library with libdl dependency.
   add_library(omptarget SHARED ${src_files})
   target_link_libraries(omptarget
-    dl
+    ${CMAKE_DL_LIBS}
     "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/exports")
   
   # Install libomptarget under the lib destination folder.

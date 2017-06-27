@@ -6,7 +6,7 @@
 define i32 @callee(i32 %arg) nounwind noinline uwtable "function-instrument"="xray-always" "xray-log-args"="1" {
   ret i32 %arg
 }
-; CHECK-LABEL: Lxray_synthetic_0:
+; CHECK-LABEL: Lxray_sleds_start0:
 ; CHECK:	.quad	{{\.?}}Lxray_sled_0
 ; CHECK:	.quad	{{_?}}callee
 ; CHECK:	.byte	3
@@ -22,7 +22,7 @@ define i32 @caller(i32 %arg) nounwind noinline uwtable "function-instrument"="xr
   %retval = tail call i32 @callee(i32 %arg)
   ret i32 %retval
 }
-; CHECK-LABEL: Lxray_synthetic_1:
+; CHECK-LABEL: Lxray_sleds_start1:
 ; CHECK:	.quad	{{\.?}}Lxray_sled_2
 ; CHECK:	.quad	{{_?}}caller
 ; CHECK:	.byte	3

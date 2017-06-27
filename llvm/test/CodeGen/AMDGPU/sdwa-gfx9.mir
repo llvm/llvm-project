@@ -1,0 +1,88 @@
+# RUN: llc -march=amdgcn -mcpu=kaveri -run-pass=si-peephole-sdwa -o - %s | FileCheck -check-prefix=CI -check-prefix=GCN %s
+# RUN: llc -march=amdgcn -mcpu=fiji -run-pass=si-peephole-sdwa -o - %s | FileCheck -check-prefix=VI -check-prefix=GCN %s
+# RUN: llc -march=amdgcn -mcpu=gfx900 -run-pass=si-peephole-sdwa -o - %s | FileCheck -check-prefix=GFX9 -check-prefix=GCN %s
+
+# GCN-LABEL: {{^}}name: add_shr_i32
+# GCN: [[SMOV:%[0-9]+]] = S_MOV_B32 123
+
+# CI: [[SHIFT:%[0-9]+]] = V_LSHRREV_B32_e64 16, %{{[0-9]+}}, implicit %exec
+# CI: %{{[0-9]+}} = V_ADD_I32_e32 [[SMOV]], killed [[SHIFT]], implicit-def %vcc, implicit %exec
+
+# VI: [[VMOV:%[0-9]+]] = V_MOV_B32_e32 [[SMOV]], implicit %exec
+# VI: %{{[0-9]+}} = V_ADD_I32_sdwa 0, [[VMOV]], 0, %{{[0-9]+}}, 0, 6, 0, 6, 5, implicit-def %vcc, implicit %exec
+
+# GFX9: %{{[0-9]+}} = V_ADD_I32_sdwa 0, [[SMOV]], 0, %{{[0-9]+}}, 0, 6, 0, 6, 5, implicit-def %vcc, implicit %exec
+
+---
+name:            add_shr_i32
+tracksRegLiveness: true
+registers:       
+  - { id: 0, class: vreg_64 }
+  - { id: 1, class: vreg_64 }
+  - { id: 2, class: sreg_64 }
+  - { id: 3, class: vgpr_32 }
+  - { id: 4, class: sreg_32_xm0 }
+  - { id: 5, class: sreg_32_xm0 }
+  - { id: 6, class: sreg_32 }
+  - { id: 7, class: sreg_32_xm0 }
+  - { id: 8, class: sreg_32 }
+  - { id: 9, class: vgpr_32 }
+  - { id: 10, class: vgpr_32 }
+  - { id: 11, class: vgpr_32 }
+  - { id: 12, class: sreg_32_xm0 }
+body:             |
+  bb.0:
+    liveins: %vgpr0_vgpr1, %vgpr2_vgpr3, %sgpr30_sgpr31
+  
+    %2 = COPY %sgpr30_sgpr31
+    %1 = COPY %vgpr2_vgpr3
+    %0 = COPY %vgpr0_vgpr1
+    %3 = FLAT_LOAD_DWORD %1, 0, 0, 0, implicit %exec, implicit %flat_scr :: (load 4)
+    %12 = S_MOV_B32 123
+    %10 = V_LSHRREV_B32_e64 16, %3, implicit %exec
+    %11 = V_ADD_I32_e32 %12, killed %10, implicit-def %vcc, implicit %exec
+    FLAT_STORE_DWORD %0, %11, 0, 0, 0, implicit %exec, implicit %flat_scr :: (store 4)
+    %sgpr30_sgpr31 = COPY %2
+    S_SETPC_B64_return %sgpr30_sgpr31
+
+...
+
+# GCN-LABEL: {{^}}name: trunc_shr_f32
+
+# CI: [[SHIFT:%[0-9]+]] = V_LSHRREV_B32_e64 16, %{{[0-9]+}}, implicit %exec
+# CI: %{{[0-9]+}} = V_TRUNC_F32_e64 0, killed [[SHIFT]], 1, 2, implicit-def %vcc, implicit %exec
+
+# VI: [[SHIFT:%[0-9]+]] = V_LSHRREV_B32_e64 16, %{{[0-9]+}}, implicit %exec
+# VI: %{{[0-9]+}} = V_TRUNC_F32_e64 0, killed [[SHIFT]], 1, 2, implicit-def %vcc, implicit %exec
+
+#GFX9: %{{[0-9]+}} = V_TRUNC_F32_sdwa 0, %{{[0-9]+}}, 1, 2, 6, 0, 5, implicit %exec
+
+---
+name:            trunc_shr_f32
+tracksRegLiveness: true
+registers:       
+  - { id: 0, class: vreg_64 }
+  - { id: 1, class: vreg_64 }
+  - { id: 2, class: sreg_64 }
+  - { id: 3, class: vgpr_32 }
+  - { id: 4, class: sreg_32_xm0 }
+  - { id: 5, class: sreg_32_xm0 }
+  - { id: 6, class: sreg_32 }
+  - { id: 7, class: sreg_32_xm0 }
+  - { id: 8, class: sreg_32 }
+  - { id: 9, class: vgpr_32 }
+  - { id: 10, class: vgpr_32 }
+  - { id: 11, class: vgpr_32 }
+body:             |
+  bb.0:
+    liveins: %vgpr0_vgpr1, %vgpr2_vgpr3, %sgpr30_sgpr31
+  
+    %2 = COPY %sgpr30_sgpr31
+    %1 = COPY %vgpr2_vgpr3
+    %0 = COPY %vgpr0_vgpr1
+    %3 = FLAT_LOAD_DWORD %1, 0, 0, 0, implicit %exec, implicit %flat_scr :: (load 4)
+    %10 = V_LSHRREV_B32_e64 16, %3, implicit %exec
+    %11 = V_TRUNC_F32_e64 0, killed %10, 1, 2, implicit-def %vcc, implicit %exec
+    FLAT_STORE_DWORD %0, %11, 0, 0, 0, implicit %exec, implicit %flat_scr :: (store 4)
+    %sgpr30_sgpr31 = COPY %2
+    S_SETPC_B64_return %sgpr30_sgpr31

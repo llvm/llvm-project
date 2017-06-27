@@ -39,8 +39,13 @@ struct CachePruningPolicy {
   /// available space on the the disk. Set to 100 to indicate no limit, 50 to
   /// indicate that the cache size will not be left over half the available disk
   /// space. A value over 100 will be reduced to 100. A value of 0 disables the
-  /// size-based pruning.
-  unsigned PercentageOfAvailableSpace = 75;
+  /// percentage size-based pruning.
+  unsigned MaxSizePercentageOfAvailableSpace = 75;
+
+  /// The maximum size for the cache directory in bytes. A value over the amount
+  /// of available space on the disk will be reduced to the amount of available
+  /// space. A value of 0 disables the absolute size-based pruning.
+  uint64_t MaxSizeBytes = 0;
 };
 
 /// Parse the given string as a cache pruning policy. Defaults are taken from a

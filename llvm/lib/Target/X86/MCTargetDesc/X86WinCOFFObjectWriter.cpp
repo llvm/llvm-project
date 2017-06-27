@@ -10,6 +10,7 @@
 #include "MCTargetDesc/X86FixupKinds.h"
 #include "MCTargetDesc/X86MCTargetDesc.h"
 #include "llvm/BinaryFormat/COFF.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCValue.h"
@@ -25,8 +26,8 @@ public:
   X86WinCOFFObjectWriter(bool Is64Bit);
   ~X86WinCOFFObjectWriter() override = default;
 
-  unsigned getRelocType(const MCValue &Target, const MCFixup &Fixup,
-                        bool IsCrossSection,
+  unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
+                        const MCFixup &Fixup, bool IsCrossSection,
                         const MCAsmBackend &MAB) const override;
 };
 
@@ -36,11 +37,19 @@ X86WinCOFFObjectWriter::X86WinCOFFObjectWriter(bool Is64Bit)
     : MCWinCOFFObjectTargetWriter(Is64Bit ? COFF::IMAGE_FILE_MACHINE_AMD64
                                           : COFF::IMAGE_FILE_MACHINE_I386) {}
 
-unsigned X86WinCOFFObjectWriter::getRelocType(const MCValue &Target,
+unsigned X86WinCOFFObjectWriter::getRelocType(MCContext &Ctx,
+                                              const MCValue &Target,
                                               const MCFixup &Fixup,
                                               bool IsCrossSection,
                                               const MCAsmBackend &MAB) const {
-  unsigned FixupKind = IsCrossSection ? FK_PCRel_4 : Fixup.getKind();
+  unsigned FixupKind = Fixup.getKind();
+  if (IsCrossSection) {
+    if (FixupKind != FK_Data_4) {
+      Ctx.reportError(Fixup.getLoc(), "Cannot represent this expression");
+      return COFF::IMAGE_REL_AMD64_ADDR32;
+    }
+    FixupKind = FK_PCRel_4;
+  }
 
   MCSymbolRefExpr::VariantKind Modifier = Target.isAbsolute() ?
     MCSymbolRefExpr::VK_None : Target.getSymA()->getKind();

@@ -2063,10 +2063,12 @@ getAttributeOffsets(const DWARFAbbreviationDeclaration *Abbrev, unsigned Idx,
   DataExtractor Data = Unit.getDebugInfoExtractor();
 
   for (unsigned i = 0; i < Idx; ++i)
-    DWARFFormValue::skipValue(Abbrev->getFormByIndex(i), Data, &Offset, &Unit);
+    DWARFFormValue::skipValue(Abbrev->getFormByIndex(i), Data, &Offset,
+                              Unit.getFormParams());
 
   uint32_t End = Offset;
-  DWARFFormValue::skipValue(Abbrev->getFormByIndex(Idx), Data, &End, &Unit);
+  DWARFFormValue::skipValue(Abbrev->getFormByIndex(Idx), Data, &End,
+                            Unit.getFormParams());
 
   return std::make_pair(Offset, End);
 }
@@ -2219,7 +2221,8 @@ void DwarfLinker::keepDIEAndDependencies(RelocationManager &RelocMgr,
     DWARFFormValue Val(AttrSpec.Form);
 
     if (!Val.isFormClass(DWARFFormValue::FC_Reference)) {
-      DWARFFormValue::skipValue(AttrSpec.Form, Data, &Offset, &Unit);
+      DWARFFormValue::skipValue(AttrSpec.Form, Data, &Offset,
+                                Unit.getFormParams());
       continue;
     }
 
@@ -2779,7 +2782,8 @@ DIE *DwarfLinker::DIECloner::cloneDIE(
   for (const auto &AttrSpec : Abbrev->attributes()) {
     if (shouldSkipAttribute(AttrSpec, Die->getTag(), Info.InDebugMap,
                             Flags & TF_SkipPC, Flags & TF_InFunctionScope)) {
-      DWARFFormValue::skipValue(AttrSpec.Form, Data, &Offset, &U);
+      DWARFFormValue::skipValue(AttrSpec.Form, Data, &Offset,
+                                U.getFormParams());
       // FIXME: dsymutil-classic keeps the old abbreviation around
       // even if it's not used. We can remove this (and the copyAbbrev
       // helper) as soon as bit-for-bit compatibility is not a goal anymore.
@@ -3077,7 +3081,7 @@ void DwarfLinker::patchLineTableForUnit(CompileUnit &Unit,
   // prologue over and that works because we act as both producer and
   // consumer. It would be nicer to have a real configurable line
   // table emitter.
-  if (LineTable.Prologue.Version != 2 ||
+  if (LineTable.Prologue.getVersion() != 2 ||
       LineTable.Prologue.DefaultIsStmt != DWARF2_LINE_DEFAULT_IS_STMT ||
       LineTable.Prologue.OpcodeBase > 13)
     reportWarning("line table parameters mismatch. Cannot emit.");

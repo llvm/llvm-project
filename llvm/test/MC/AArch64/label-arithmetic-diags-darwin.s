@@ -15,10 +15,10 @@ Lend:
 
   add w0, w1, #(Lend - var@TLVPPAGEOFF)
   cmp w0, #(Lend - var@TLVPPAGEOFF)
-  // CHECK: error: unknown AArch64 fixup kind!
+  // CHECK: error: unsupported subtraction of qualified symbol
   // CHECK-NEXT: add w0, w1, #(Lend - var@TLVPPAGEOFF)
   // CHECK-NEXT: ^
-  // CHECK: error: unknown AArch64 fixup kind!
+  // CHECK: error: unsupported subtraction of qualified symbol
   // CHECK-NEXT: cmp w0, #(Lend - var@TLVPPAGEOFF)
   // CHECK-NEXT: ^
 

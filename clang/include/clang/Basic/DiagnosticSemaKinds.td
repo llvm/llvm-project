@@ -507,7 +507,7 @@ def warn_deprecated_copy_operation : Warning<
   InGroup<Deprecated>, DefaultIgnore;
 def warn_cxx1z_compat_exception_spec_in_signature : Warning<
   "mangled name of %0 will change in C++17 due to non-throwing exception "
-  "specification in function signature">, InGroup<CXX1zCompat>;
+  "specification in function signature">, InGroup<CXX1zCompatMangling>;
 
 def warn_global_constructor : Warning<
   "declaration requires a global constructor">,
@@ -2870,8 +2870,13 @@ def note_protocol_method : Note<
 def warn_unguarded_availability :
   Warning<"%0 is only available on %1 %2 or newer">,
   InGroup<UnguardedAvailability>, DefaultIgnore;
+def warn_unguarded_availability_new :
+  Warning<warn_unguarded_availability.Text>,
+  InGroup<UnguardedAvailabilityNew>;
 def warn_partial_availability : Warning<"%0 is only available conditionally">,
     InGroup<UnguardedAvailability>, DefaultIgnore;
+def warn_partial_availability_new : Warning<warn_partial_availability.Text>,
+  InGroup<UnguardedAvailabilityNew>;
 def note_partial_availability_silence : Note<
   "explicitly redeclare %0 to silence this warning">;
 def note_unguarded_available_silence : Note<
@@ -2879,9 +2884,14 @@ def note_unguarded_available_silence : Note<
   " this warning">;
 def warn_partial_message : Warning<"%0 is partial: %1">,
     InGroup<UnguardedAvailability>, DefaultIgnore;
+def warn_partial_message_new : Warning<warn_partial_message.Text>,
+  InGroup<UnguardedAvailabilityNew>;
 def warn_partial_fwdclass_message : Warning<
     "%0 may be partial because the receiver type is unknown">,
     InGroup<UnguardedAvailability>, DefaultIgnore;
+def warn_partial_fwdclass_message_new :
+  Warning<warn_partial_fwdclass_message.Text>,
+  InGroup<UnguardedAvailabilityNew>;
 def warn_at_available_unchecked_use : Warning<
   "%select{@available|__builtin_available}0 does not guard availability here; "
   "use if (%select{@available|__builtin_available}0) instead">,
@@ -6341,6 +6351,15 @@ def err_exceptions_disabled : Error<
   "cannot use '%0' with exceptions disabled">;
 def err_objc_exceptions_disabled : Error<
   "cannot use '%0' with Objective-C exceptions disabled">;
+def warn_throw_in_noexcept_func 
+    : Warning<"%0 has a non-throwing exception specification but can still "
+      "throw, resulting in unexpected program termination">,
+      InGroup<Exceptions>;
+def note_throw_in_dtor 
+    : Note<"destructor or deallocator has a (possibly implicit) non-throwing "
+      "excepton specification">;
+def note_throw_in_function 
+    : Note<"non-throwing function declare here">;
 def err_seh_try_outside_functions : Error<
   "cannot use SEH '__try' in blocks, captured regions, or Obj-C method decls">;
 def err_mixing_cxx_try_seh_try : Error<
@@ -8311,6 +8330,9 @@ def err_opencl_ext_vector_component_invalid_length : Error<
   "vector component access has invalid length %0.  Supported: 1,2,3,4,8,16.">;
 def err_opencl_function_variable : Error<
   "%select{non-kernel function|function scope}0 variable cannot be declared in %1 address space">;
+def err_opencl_addrspace_scope : Error<
+  "variables in the %0 address space can only be declared in the outermost "
+  "scope of a kernel function">;
 def err_static_function_scope : Error<
   "variables in function scope cannot be declared static">;
 def err_opencl_bitfields : Error<

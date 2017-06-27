@@ -650,6 +650,8 @@ void tools::gnutools::Assembler::ConstructJob(Compilation &C,
                                               const InputInfoList &Inputs,
                                               const ArgList &Args,
                                               const char *LinkingOutput) const {
+  const auto &D = getToolChain().getDriver();
+
   claimNoWarnArgs(Args);
 
   ArgStringList CmdArgs;
@@ -659,6 +661,23 @@ void tools::gnutools::Assembler::ConstructJob(Compilation &C,
   bool IsPIE;
   std::tie(RelocationModel, PICLevel, IsPIE) =
       ParsePICArgs(getToolChain(), Args);
+
+  if (const Arg *A = Args.getLastArg(options::OPT_gz, options::OPT_gz_EQ)) {
+    if (A->getOption().getID() == options::OPT_gz) {
+      CmdArgs.push_back("-compress-debug-sections");
+    } else {
+      StringRef Value = A->getValue();
+      if (Value == "none") {
+        CmdArgs.push_back("-compress-debug-sections=none");
+      } else if (Value == "zlib" || Value == "zlib-gnu") {
+        CmdArgs.push_back(
+            Args.MakeArgString("-compress-debug-sections=" + Twine(Value)));
+      } else {
+        D.Diag(diag::err_drv_unsupported_option_argument)
+            << A->getOption().getName() << Value;
+      }
+    }
+  }
 
   switch (getToolChain().getArch()) {
   default:
@@ -2319,9 +2338,11 @@ bool Generic_GCC::IsIntegratedAssemblerDefault() const {
     return true;
   case llvm::Triple::mips64:
   case llvm::Triple::mips64el:
-    // Enabled for Debian mips64/mips64el only. Other targets are unable to
-    // distinguish N32 from N64.
-    if (getTriple().getEnvironment() == llvm::Triple::GNUABI64)
+    // Enabled for Debian and Android mips64/mipsel, as they can precisely
+    // identify the ABI in use (Debian) or only use N64 for MIPS64 (Android).
+    // Other targets are unable to distinguish N32 from N64.
+    if (getTriple().getEnvironment() == llvm::Triple::GNUABI64 ||
+        getTriple().isAndroid())
       return true;
     return false;
   default:

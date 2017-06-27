@@ -907,6 +907,11 @@ static SDValue performORCombine(SDNode *N, SelectionDAG &DAG,
         if (!(CN1 = dyn_cast<ConstantSDNode>(N->getOperand(1))))
           return SDValue();
       }
+      // Don't generate INS if constant OR operand doesn't fit into bits
+      // cleared by constant AND operand.
+      if (CN->getSExtValue() & CN1->getSExtValue())
+        return SDValue();
+
       SDLoc DL(N);
       EVT ValTy = N->getOperand(0)->getValueType(0);
       SDValue Const1;

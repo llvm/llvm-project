@@ -247,6 +247,8 @@ public:
     Instance.getFrontendOpts().Inputs.clear();
     Instance.getFrontendOpts().Inputs.emplace_back(
         Filename, InputKind(InputKind::Unknown, InputKind::Precompiled));
+    Instance.getFrontendOpts().ModuleFiles.clear();
+    Instance.getFrontendOpts().ModuleMapFiles.clear();
     // Don't recursively rewrite imports. We handle them all at the top level.
     Instance.getPreprocessorOutputOpts().RewriteImports = false;
 

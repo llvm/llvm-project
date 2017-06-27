@@ -78,7 +78,7 @@ static void resolveReloc(InputSectionBase &Sec, RelT &Rel,
     typename ELFT::uint Offset = D->Value;
     if (D->isSection())
       Offset += getAddend<ELFT>(Sec, Rel);
-    Fn({cast<InputSectionBase>(D->Section)->Repl, Offset});
+    Fn({cast<InputSectionBase>(D->Section), Offset});
   } else if (auto *U = dyn_cast<Undefined>(&B)) {
     for (InputSectionBase *Sec : CNamedSections.lookup(U->getName()))
       Fn({Sec, 0});

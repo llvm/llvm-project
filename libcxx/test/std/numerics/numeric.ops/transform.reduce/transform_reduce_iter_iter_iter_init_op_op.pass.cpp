@@ -15,8 +15,8 @@
 //    T transform_reduce(InputIterator1 first1, InputIterator1 last1,
 //                       InputIterator2 first2, T init,
 //                       BinaryOperation1 binary_op1, BinaryOperation2 binary_op2);
-//                      
-  
+//
+
 #include <numeric>
 #include <cassert>
 
@@ -26,7 +26,7 @@ template <class Iter1, class Iter2, class T, class Op1, class Op2>
 void
 test(Iter1 first1, Iter1 last1, Iter2 first2, T init, Op1 op1, Op2 op2, T x)
 {
-    static_assert( std::is_same_v<T, 
+    static_assert( std::is_same_v<T,
          decltype(std::transform_reduce(first1, last1, first2, init, op1, op2))> );
     assert(std::transform_reduce(first1, last1, first2, init, op1, op2) == x);
 }
@@ -54,7 +54,7 @@ template <typename T, typename Init>
 void test_return_type()
 {
     T *p = nullptr;
-    static_assert( std::is_same_v<Init, 
+    static_assert( std::is_same_v<Init,
        decltype(std::transform_reduce(p, p, p, Init{}, std::plus<>(), std::multiplies<>()))> );
 }
 

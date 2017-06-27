@@ -930,8 +930,8 @@ define void @movnt_dq(i8* %p, <2 x i64> %a1) nounwind {
 ; AVX-LABEL: movnt_dq:
 ; AVX:       ## BB#0:
 ; AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
-; AVX-NEXT:    vpaddq LCPI65_0, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xd4,0x05,A,A,A,A]
-; AVX-NEXT:    ## fixup A - offset: 4, value: LCPI65_0, kind: FK_Data_4
+; AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1 ## encoding: [0xc5,0xf1,0x76,0xc9]
+; AVX-NEXT:    vpsubq %xmm1, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xfb,0xc1]
 ; AVX-NEXT:    vmovntdq %ymm0, (%eax) ## encoding: [0xc5,0xfd,0xe7,0x00]
 ; AVX-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
 ; AVX-NEXT:    retl ## encoding: [0xc3]
@@ -939,8 +939,8 @@ define void @movnt_dq(i8* %p, <2 x i64> %a1) nounwind {
 ; AVX512VL-LABEL: movnt_dq:
 ; AVX512VL:       ## BB#0:
 ; AVX512VL-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
-; AVX512VL-NEXT:    vpaddq LCPI65_0, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0xd4,0x05,A,A,A,A]
-; AVX512VL-NEXT:    ## fixup A - offset: 4, value: LCPI65_0, kind: FK_Data_4
+; AVX512VL-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1 ## encoding: [0xc5,0xf1,0x76,0xc9]
+; AVX512VL-NEXT:    vpsubq %xmm1, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0xfb,0xc1]
 ; AVX512VL-NEXT:    vmovntdq %ymm0, (%eax) ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0xe7,0x00]
 ; AVX512VL-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]

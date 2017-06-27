@@ -39,6 +39,9 @@
   define void @test_icmp_s16() { ret void }
   define void @test_icmp_s32() { ret void }
 
+  define void @test_select_s32() { ret void }
+  define void @test_select_ptr() { ret void }
+
   define void @test_fadd_s32() #0 { ret void }
   define void @test_fadd_s64() #0 { ret void }
 
@@ -772,6 +775,58 @@ body:             |
     ; CHECK: {{%[0-9]+}}(s1) = G_ICMP intpred(eq), {{%[0-9]+}}(s32), {{%[0-9]+}}
     %3(s32) = G_ZEXT %2(s1)
     %r0 = COPY %3(s32)
+    BX_RET 14, _, implicit %r0
+...
+---
+name:            test_select_s32
+# CHECK-LABEL: name: test_select_s32
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0, %r1, %r2
+
+    %0(s32) = COPY %r0
+    %1(s32) = COPY %r1
+    %2(s1) = COPY %r2
+    %3(s32) = G_SELECT %2(s1), %0, %1
+    ; G_SELECT with s32 is legal, so we should find it unchanged in the output
+    ; CHECK: {{%[0-9]+}}(s32) = G_SELECT {{%[0-9]+}}(s1), {{%[0-9]+}}, {{%[0-9]+}}
+    %r0 = COPY %3(s32)
+    BX_RET 14, _, implicit %r0
+...
+---
+name:            test_select_ptr
+# CHECK-LABEL: name: test_select_ptr
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0, %r1, %r2
+
+    %0(p0) = COPY %r0
+    %1(p0) = COPY %r1
+    %2(s1) = COPY %r2
+    %3(p0) = G_SELECT %2(s1), %0, %1
+    ; G_SELECT with p0 is legal, so we should find it unchanged in the output
+    ; CHECK: {{%[0-9]+}}(p0) = G_SELECT {{%[0-9]+}}(s1), {{%[0-9]+}}, {{%[0-9]+}}
+    %r0 = COPY %3(p0)
     BX_RET 14, _, implicit %r0
 ...
 ---

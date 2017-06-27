@@ -542,10 +542,10 @@ void MachineSchedulerBase::print(raw_ostream &O, const Module* m) const {
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-LLVM_DUMP_METHOD void ReadyQueue::dump() {
+LLVM_DUMP_METHOD void ReadyQueue::dump() const {
   dbgs() << "Queue " << Name << ": ";
-  for (unsigned i = 0, e = Queue.size(); i < e; ++i)
-    dbgs() << Queue[i]->NodeNum << " ";
+  for (const SUnit *SU : Queue)
+    dbgs() << SU->NodeNum << " ";
   dbgs() << "\n";
 }
 #endif
@@ -609,10 +609,8 @@ void ScheduleDAGMI::releaseSucc(SUnit *SU, SDep *SuccEdge) {
 
 /// releaseSuccessors - Call releaseSucc on each of SU's successors.
 void ScheduleDAGMI::releaseSuccessors(SUnit *SU) {
-  for (SUnit::succ_iterator I = SU->Succs.begin(), E = SU->Succs.end();
-       I != E; ++I) {
-    releaseSucc(SU, &*I);
-  }
+  for (SDep &Succ : SU->Succs)
+    releaseSucc(SU, &Succ);
 }
 
 /// ReleasePred - Decrement the NumSuccsLeft count of a predecessor. When
@@ -648,10 +646,8 @@ void ScheduleDAGMI::releasePred(SUnit *SU, SDep *PredEdge) {
 
 /// releasePredecessors - Call releasePred on each of SU's predecessors.
 void ScheduleDAGMI::releasePredecessors(SUnit *SU) {
-  for (SUnit::pred_iterator I = SU->Preds.begin(), E = SU->Preds.end();
-       I != E; ++I) {
-    releasePred(SU, &*I);
-  }
+  for (SDep &Pred : SU->Preds)
+    releasePred(SU, &Pred);
 }
 
 /// enterRegion - Called back from MachineScheduler::runOnMachineFunction after
@@ -724,8 +720,8 @@ void ScheduleDAGMI::schedule() {
   DEBUG(
     if (EntrySU.getInstr() != nullptr)
       EntrySU.dumpAll(this);
-    for (unsigned su = 0, e = SUnits.size(); su != e; ++su)
-      SUnits[su].dumpAll(this);
+    for (const SUnit &SU : SUnits)
+      SU.dumpAll(this);
     if (ExitSU.getInstr() != nullptr)
       ExitSU.dumpAll(this);
   );
@@ -786,28 +782,25 @@ void ScheduleDAGMI::schedule() {
 
 /// Apply each ScheduleDAGMutation step in order.
 void ScheduleDAGMI::postprocessDAG() {
-  for (unsigned i = 0, e = Mutations.size(); i < e; ++i) {
-    Mutations[i]->apply(this);
-  }
+  for (auto &m : Mutations)
+    m->apply(this);
 }
 
 void ScheduleDAGMI::
 findRootsAndBiasEdges(SmallVectorImpl<SUnit*> &TopRoots,
                       SmallVectorImpl<SUnit*> &BotRoots) {
-  for (std::vector<SUnit>::iterator
-         I = SUnits.begin(), E = SUnits.end(); I != E; ++I) {
-    SUnit *SU = &(*I);
-    assert(!SU->isBoundaryNode() && "Boundary node should not be in SUnits");
+  for (SUnit &SU : SUnits) {
+    assert(!SU.isBoundaryNode() && "Boundary node should not be in SUnits");
 
     // Order predecessors so DFSResult follows the critical path.
-    SU->biasCriticalPath();
+    SU.biasCriticalPath();
 
     // A SUnit is ready to top schedule if it has no predecessors.
-    if (!I->NumPredsLeft)
-      TopRoots.push_back(SU);
+    if (!SU.NumPredsLeft)
+      TopRoots.push_back(&SU);
     // A SUnit is ready to bottom schedule if it has no successors.
-    if (!I->NumSuccsLeft)
-      BotRoots.push_back(SU);
+    if (!SU.NumSuccsLeft)
+      BotRoots.push_back(&SU);
   }
   ExitSU.biasCriticalPath();
 }
@@ -822,10 +815,9 @@ void ScheduleDAGMI::initQueues(ArrayRef<SUnit*> TopRoots,
   //
   // Nodes with unreleased weak edges can still be roots.
   // Release top roots in forward order.
-  for (SmallVectorImpl<SUnit*>::const_iterator
-         I = TopRoots.begin(), E = TopRoots.end(); I != E; ++I) {
-    SchedImpl->releaseTopNode(*I);
-  }
+  for (SUnit *SU : TopRoots)
+    SchedImpl->releaseTopNode(SU);
+
   // Release bottom roots in reverse order so the higher priority nodes appear
   // first. This is more natural and slightly more efficient.
   for (SmallVectorImpl<SUnit*>::const_reverse_iterator
@@ -1029,9 +1021,9 @@ void ScheduleDAGMILive::initRegPressure() {
     }
   }
   DEBUG(dbgs() << "Excess PSets: ";
-        for (unsigned i = 0, e = RegionCriticalPSets.size(); i != e; ++i)
+        for (const PressureChange &RCPS : RegionCriticalPSets)
           dbgs() << TRI->getRegPressureSetName(
-            RegionCriticalPSets[i].getPSet()) << " ";
+            RCPS.getPSet()) << " ";
         dbgs() << "\n");
 }
 
@@ -1040,11 +1032,10 @@ updateScheduledPressure(const SUnit *SU,
                         const std::vector<unsigned> &NewMaxPressure) {
   const PressureDiff &PDiff = getPressureDiff(SU);
   unsigned CritIdx = 0, CritEnd = RegionCriticalPSets.size();
-  for (PressureDiff::const_iterator I = PDiff.begin(), E = PDiff.end();
-       I != E; ++I) {
-    if (!I->isValid())
+  for (const PressureChange &PC : PDiff) {
+    if (!PC.isValid())
       break;
-    unsigned ID = I->getPSet();
+    unsigned ID = PC.getPSet();
     while (CritIdx != CritEnd && RegionCriticalPSets[CritIdx].getPSet() < ID)
       ++CritIdx;
     if (CritIdx != CritEnd && RegionCriticalPSets[CritIdx].getPSet() == ID) {
@@ -1508,8 +1499,7 @@ createStoreClusterDAGMutation(const TargetInstrInfo *TII,
 void BaseMemOpClusterMutation::clusterNeighboringMemOps(
     ArrayRef<SUnit *> MemOps, ScheduleDAGMI *DAG) {
   SmallVector<MemOpInfo, 32> MemOpRecords;
-  for (unsigned Idx = 0, End = MemOps.size(); Idx != End; ++Idx) {
-    SUnit *SU = MemOps[Idx];
+  for (SUnit *SU : MemOps) {
     unsigned BaseReg;
     int64_t Offset;
     if (TII->getMemOpBaseRegImmOfs(*SU->getInstr(), BaseReg, Offset, TRI))
@@ -1537,12 +1527,11 @@ void BaseMemOpClusterMutation::clusterNeighboringMemOps(
       // dependent on SUa can prevent load combining due to register reuse.
       // Predecessor edges do not need to be copied from SUb to SUa since nearby
       // loads should have effectively the same inputs.
-      for (SUnit::const_succ_iterator
-             SI = SUa->Succs.begin(), SE = SUa->Succs.end(); SI != SE; ++SI) {
-        if (SI->getSUnit() == SUb)
+      for (const SDep &Succ : SUa->Succs) {
+        if (Succ.getSUnit() == SUb)
           continue;
-        DEBUG(dbgs() << "  Copy Succ SU(" << SI->getSUnit()->NodeNum << ")\n");
-        DAG->addEdge(SI->getSUnit(), SDep(SUb, SDep::Artificial));
+        DEBUG(dbgs() << "  Copy Succ SU(" << Succ.getSUnit()->NodeNum << ")\n");
+        DAG->addEdge(Succ.getSUnit(), SDep(SUb, SDep::Artificial));
       }
       ++ClusterLength;
     } else
@@ -1559,17 +1548,15 @@ void BaseMemOpClusterMutation::apply(ScheduleDAGInstrs *DAGInstrs) {
   DenseMap<unsigned, unsigned> StoreChainIDs;
   // Map each store chain to a set of dependent MemOps.
   SmallVector<SmallVector<SUnit*,4>, 32> StoreChainDependents;
-  for (unsigned Idx = 0, End = DAG->SUnits.size(); Idx != End; ++Idx) {
-    SUnit *SU = &DAG->SUnits[Idx];
-    if ((IsLoad && !SU->getInstr()->mayLoad()) ||
-        (!IsLoad && !SU->getInstr()->mayStore()))
+  for (SUnit &SU : DAG->SUnits) {
+    if ((IsLoad && !SU.getInstr()->mayLoad()) ||
+        (!IsLoad && !SU.getInstr()->mayStore()))
       continue;
 
     unsigned ChainPredID = DAG->SUnits.size();
-    for (SUnit::const_pred_iterator
-           PI = SU->Preds.begin(), PE = SU->Preds.end(); PI != PE; ++PI) {
-      if (PI->isCtrl()) {
-        ChainPredID = PI->getSUnit()->NodeNum;
+    for (const SDep &Pred : SU.Preds) {
+      if (Pred.isCtrl()) {
+        ChainPredID = Pred.getSUnit()->NodeNum;
         break;
       }
     }
@@ -1580,12 +1567,12 @@ void BaseMemOpClusterMutation::apply(ScheduleDAGInstrs *DAGInstrs) {
       StoreChainIDs.insert(std::make_pair(ChainPredID, NumChains));
     if (Result.second)
       StoreChainDependents.resize(NumChains + 1);
-    StoreChainDependents[Result.first->second].push_back(SU);
+    StoreChainDependents[Result.first->second].push_back(&SU);
   }
 
   // Iterate over the store chains.
-  for (unsigned Idx = 0, End = StoreChainDependents.size(); Idx != End; ++Idx)
-    clusterNeighboringMemOps(StoreChainDependents[Idx], DAG);
+  for (auto &SCD : StoreChainDependents)
+    clusterNeighboringMemOps(SCD, DAG);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1728,16 +1715,14 @@ void CopyConstrain::constrainLocalCopy(SUnit *CopySU, ScheduleDAGMILive *DAG) {
   const VNInfo *LastLocalVN = LocalLI->getVNInfoBefore(LocalLI->endIndex());
   MachineInstr *LastLocalDef = LIS->getInstructionFromIndex(LastLocalVN->def);
   SUnit *LastLocalSU = DAG->getSUnit(LastLocalDef);
-  for (SUnit::const_succ_iterator
-         I = LastLocalSU->Succs.begin(), E = LastLocalSU->Succs.end();
-       I != E; ++I) {
-    if (I->getKind() != SDep::Data || I->getReg() != LocalReg)
+  for (const SDep &Succ : LastLocalSU->Succs) {
+    if (Succ.getKind() != SDep::Data || Succ.getReg() != LocalReg)
       continue;
-    if (I->getSUnit() == GlobalSU)
+    if (Succ.getSUnit() == GlobalSU)
       continue;
-    if (!DAG->canAddEdge(GlobalSU, I->getSUnit()))
+    if (!DAG->canAddEdge(GlobalSU, Succ.getSUnit()))
       return;
-    LocalUses.push_back(I->getSUnit());
+    LocalUses.push_back(Succ.getSUnit());
   }
   // Open the top of the GlobalLI hole by constraining any earlier global uses
   // to precede the start of LocalLI.
@@ -1745,15 +1730,14 @@ void CopyConstrain::constrainLocalCopy(SUnit *CopySU, ScheduleDAGMILive *DAG) {
   MachineInstr *FirstLocalDef =
     LIS->getInstructionFromIndex(LocalLI->beginIndex());
   SUnit *FirstLocalSU = DAG->getSUnit(FirstLocalDef);
-  for (SUnit::const_pred_iterator
-         I = GlobalSU->Preds.begin(), E = GlobalSU->Preds.end(); I != E; ++I) {
-    if (I->getKind() != SDep::Anti || I->getReg() != GlobalReg)
+  for (const SDep &Pred : GlobalSU->Preds) {
+    if (Pred.getKind() != SDep::Anti || Pred.getReg() != GlobalReg)
       continue;
-    if (I->getSUnit() == FirstLocalSU)
+    if (Pred.getSUnit() == FirstLocalSU)
       continue;
-    if (!DAG->canAddEdge(FirstLocalSU, I->getSUnit()))
+    if (!DAG->canAddEdge(FirstLocalSU, Pred.getSUnit()))
       return;
-    GlobalUses.push_back(I->getSUnit());
+    GlobalUses.push_back(Pred.getSUnit());
   }
   DEBUG(dbgs() << "Constraining copy SU(" << CopySU->NodeNum << ")\n");
   // Add the weak edges.
@@ -1784,12 +1768,11 @@ void CopyConstrain::apply(ScheduleDAGInstrs *DAGInstrs) {
   RegionEndIdx = DAG->getLIS()->getInstructionIndex(
       *priorNonDebug(DAG->end(), DAG->begin()));
 
-  for (unsigned Idx = 0, End = DAG->SUnits.size(); Idx != End; ++Idx) {
-    SUnit *SU = &DAG->SUnits[Idx];
-    if (!SU->getInstr()->isCopy())
+  for (SUnit &SU : DAG->SUnits) {
+    if (!SU.getInstr()->isCopy())
       continue;
 
-    constrainLocalCopy(SU, static_cast<ScheduleDAGMILive*>(DAG));
+    constrainLocalCopy(&SU, static_cast<ScheduleDAGMILive*>(DAG));
   }
 }
 
@@ -1840,10 +1823,9 @@ init(ScheduleDAGMI *DAG, const TargetSchedModel *SchedModel) {
   if (!SchedModel->hasInstrSchedModel())
     return;
   RemainingCounts.resize(SchedModel->getNumProcResourceKinds());
-  for (std::vector<SUnit>::iterator
-         I = DAG->SUnits.begin(), E = DAG->SUnits.end(); I != E; ++I) {
-    const MCSchedClassDesc *SC = DAG->getSchedClass(&*I);
-    RemIssueCount += SchedModel->getNumMicroOps(I->getInstr(), SC)
+  for (SUnit &SU : DAG->SUnits) {
+    const MCSchedClassDesc *SC = DAG->getSchedClass(&SU);
+    RemIssueCount += SchedModel->getNumMicroOps(SU.getInstr(), SC)
       * SchedModel->getMicroOpFactor();
     for (TargetSchedModel::ProcResIter
            PI = SchedModel->getWriteProcResBegin(SC),
@@ -1957,12 +1939,11 @@ unsigned SchedBoundary::
 findMaxLatency(ArrayRef<SUnit*> ReadySUs) {
   SUnit *LateSU = nullptr;
   unsigned RemLatency = 0;
-  for (ArrayRef<SUnit*>::iterator I = ReadySUs.begin(), E = ReadySUs.end();
-       I != E; ++I) {
-    unsigned L = getUnscheduledLatency(*I);
+  for (SUnit *SU : ReadySUs) {
+    unsigned L = getUnscheduledLatency(SU);
     if (L > RemLatency) {
       RemLatency = L;
-      LateSU = *I;
+      LateSU = SU;
     }
   }
   if (LateSU) {
@@ -2328,7 +2309,7 @@ SUnit *SchedBoundary::pickOnlyChoice() {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 // This is useful information to dump after bumpNode.
 // Note that the Queue contents are more useful before pickNodeFromQueue.
-LLVM_DUMP_METHOD void SchedBoundary::dumpScheduledState() {
+LLVM_DUMP_METHOD void SchedBoundary::dumpScheduledState() const {
   unsigned ResFactor;
   unsigned ResCount;
   if (ZoneCritResIdx) {
@@ -2667,7 +2648,7 @@ void GenericScheduler::initPolicy(MachineBasicBlock::iterator Begin,
   }
 }
 
-void GenericScheduler::dumpPolicy() {
+void GenericScheduler::dumpPolicy() const {
   // Cannot completely remove virtual function even in release mode.
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   dbgs() << "GenericScheduler RegionPolicy: "
@@ -2719,10 +2700,9 @@ void GenericScheduler::registerRoots() {
   Rem.CriticalPath = DAG->ExitSU.getDepth();
 
   // Some roots may not feed into ExitSU. Check all of them in case.
-  for (std::vector<SUnit*>::const_iterator
-         I = Bot.Available.begin(), E = Bot.Available.end(); I != E; ++I) {
-    if ((*I)->getDepth() > Rem.CriticalPath)
-      Rem.CriticalPath = (*I)->getDepth();
+  for (const SUnit *SU : Bot.Available) {
+    if (SU->getDepth() > Rem.CriticalPath)
+      Rem.CriticalPath = SU->getDepth();
   }
   DEBUG(dbgs() << "Critical Path(GS-RR ): " << Rem.CriticalPath << '\n');
   if (DumpCriticalPathLength) {
@@ -2969,10 +2949,10 @@ void GenericScheduler::pickNodeFromQueue(SchedBoundary &Zone,
   RegPressureTracker &TempTracker = const_cast<RegPressureTracker&>(RPTracker);
 
   ReadyQueue &Q = Zone.Available;
-  for (ReadyQueue::iterator I = Q.begin(), E = Q.end(); I != E; ++I) {
+  for (SUnit *SU : Q) {
 
     SchedCandidate TryCand(ZonePolicy);
-    initCandidate(TryCand, *I, Zone.isTop(), RPTracker, TempTracker);
+    initCandidate(TryCand, SU, Zone.isTop(), RPTracker, TempTracker);
     // Pass SchedBoundary only when comparing nodes from the same boundary.
     SchedBoundary *ZoneArg = Cand.AtTop == TryCand.AtTop ? &Zone : nullptr;
     tryCandidate(Cand, TryCand, ZoneArg);
@@ -3118,18 +3098,17 @@ void GenericScheduler::reschedulePhysRegCopies(SUnit *SU, bool isTop) {
 
   // Find already scheduled copies with a single physreg dependence and move
   // them just above the scheduled instruction.
-  for (SmallVectorImpl<SDep>::iterator I = Deps.begin(), E = Deps.end();
-       I != E; ++I) {
-    if (I->getKind() != SDep::Data || !TRI->isPhysicalRegister(I->getReg()))
+  for (SDep &Dep : Deps) {
+    if (Dep.getKind() != SDep::Data || !TRI->isPhysicalRegister(Dep.getReg()))
       continue;
-    SUnit *DepSU = I->getSUnit();
+    SUnit *DepSU = Dep.getSUnit();
     if (isTop ? DepSU->Succs.size() > 1 : DepSU->Preds.size() > 1)
       continue;
     MachineInstr *Copy = DepSU->getInstr();
     if (!Copy->isCopy())
       continue;
     DEBUG(dbgs() << "  Rescheduling physreg copy ";
-          I->getSUnit()->dump(DAG));
+          Dep.getSUnit()->dump(DAG));
     DAG->moveInstruction(Copy, InsertPos);
   }
 }
@@ -3204,10 +3183,9 @@ void PostGenericScheduler::registerRoots() {
   Rem.CriticalPath = DAG->ExitSU.getDepth();
 
   // Some roots may not feed into ExitSU. Check all of them in case.
-  for (SmallVectorImpl<SUnit*>::const_iterator
-         I = BotRoots.begin(), E = BotRoots.end(); I != E; ++I) {
-    if ((*I)->getDepth() > Rem.CriticalPath)
-      Rem.CriticalPath = (*I)->getDepth();
+  for (const SUnit *SU : BotRoots) {
+    if (SU->getDepth() > Rem.CriticalPath)
+      Rem.CriticalPath = SU->getDepth();
   }
   DEBUG(dbgs() << "Critical Path: (PGS-RR) " << Rem.CriticalPath << '\n');
   if (DumpCriticalPathLength) {
@@ -3260,9 +3238,9 @@ void PostGenericScheduler::tryCandidate(SchedCandidate &Cand,
 
 void PostGenericScheduler::pickNodeFromQueue(SchedCandidate &Cand) {
   ReadyQueue &Q = Top.Available;
-  for (ReadyQueue::iterator I = Q.begin(), E = Q.end(); I != E; ++I) {
+  for (SUnit *SU : Q) {
     SchedCandidate TryCand(Cand.Policy);
-    TryCand.SU = *I;
+    TryCand.SU = SU;
     TryCand.AtTop = true;
     TryCand.initResourceDelta(DAG, SchedModel);
     tryCandidate(Cand, TryCand);

@@ -116,6 +116,9 @@ struct InstrProfOptions {
   // Add the 'noredzone' attribute to added runtime library calls.
   bool NoRedZone = false;
 
+  // Do counter register promotion
+  bool DoCounterPromotion = false;
+
   // Name of the profile file to use as output
   std::string InstrProfileOutput;
 

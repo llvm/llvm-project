@@ -1,8 +1,8 @@
 ; RUN: llvm-pdbutil yaml2pdb -pdb=%t.1.pdb %p/Inputs/merge-ids-and-types-1.yaml
 ; RUN: llvm-pdbutil yaml2pdb -pdb=%t.2.pdb %p/Inputs/merge-ids-and-types-2.yaml
 ; RUN: llvm-pdbutil merge -pdb=%t.3.pdb %t.1.pdb %t.2.pdb
-; RUN: llvm-pdbutil raw -types %t.3.pdb | FileCheck -check-prefix=TPI-TYPES %s
-; RUN: llvm-pdbutil raw -ids %t.3.pdb | FileCheck -check-prefix=IPI-TYPES %s
+; RUN: llvm-pdbutil dump -types %t.3.pdb | FileCheck -check-prefix=TPI-TYPES %s
+; RUN: llvm-pdbutil dump -ids %t.3.pdb | FileCheck -check-prefix=IPI-TYPES %s
 
 TPI-TYPES:                          Types (TPI Stream)
 TPI-TYPES-NEXT: ============================================================

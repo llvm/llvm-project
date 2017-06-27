@@ -471,10 +471,12 @@ public:
   /// Build and insert \p Res = IMPLICIT_DEF.
   MachineInstrBuilder buildUndef(unsigned Dst);
 
-  /// Build and insert \p Res<def> = G_SEQUENCE \p Op0, \p Idx0...
+  /// Build and insert instructions to put \p Ops together at the specified p
+  /// Indices to form a larger register.
   ///
-  /// G_SEQUENCE inserts each element of Ops into an IMPLICIT_DEF register,
-  /// where each entry starts at the bit-index specified by \p Indices.
+  /// If the types of the input registers are uniform and cover the entirity of
+  /// \p Res then a G_MERGE_VALUES will be produced. Otherwise an IMPLICIT_DEF
+  /// followed by a sequence of G_INSERT instructions.
   ///
   /// \pre setBasicBlock or setMI must have been called.
   /// \pre The final element of the sequence must not extend past the end of the
@@ -482,11 +484,8 @@ public:
   /// \pre The bits defined by each Op (derived from index and scalar size) must
   ///      not overlap.
   /// \pre \p Indices must be in ascending order of bit position.
-  ///
-  /// \return a MachineInstrBuilder for the newly created instruction.
-  MachineInstrBuilder buildSequence(unsigned Res,
-                                    ArrayRef<unsigned> Ops,
-                                    ArrayRef<uint64_t> Indices);
+  void buildSequence(unsigned Res, ArrayRef<unsigned> Ops,
+                     ArrayRef<uint64_t> Indices);
 
   /// Build and insert \p Res<def> = G_MERGE_VALUES \p Op0, ...
   ///
@@ -512,24 +511,6 @@ public:
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
   MachineInstrBuilder buildUnmerge(ArrayRef<unsigned> Res, unsigned Op);
-
-  void addUsesWithIndices(MachineInstrBuilder MIB) {}
-
-  template <typename... ArgTys>
-  void addUsesWithIndices(MachineInstrBuilder MIB, unsigned Reg,
-                          unsigned BitIndex, ArgTys... Args) {
-    MIB.addUse(Reg).addImm(BitIndex);
-    addUsesWithIndices(MIB, Args...);
-  }
-
-  template <typename... ArgTys>
-  MachineInstrBuilder buildSequence(unsigned Res, unsigned Op,
-                                    unsigned Index, ArgTys... Args) {
-    MachineInstrBuilder MIB =
-        buildInstr(TargetOpcode::G_SEQUENCE).addDef(Res);
-    addUsesWithIndices(MIB, Op, Index, Args...);
-    return MIB;
-  }
 
   MachineInstrBuilder buildInsert(unsigned Res, unsigned Src,
                                   unsigned Op, unsigned Index);

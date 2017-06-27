@@ -1604,6 +1604,32 @@ uptr FindAvailableMemoryRange(uptr size, uptr alignment, uptr left_padding) {
   return 0;
 }
 
+bool GetRandom(void *buffer, uptr length) {
+  if (!buffer || !length || length > 256)
+    return false;
+#if defined(__NR_getrandom)
+  static atomic_uint8_t skip_getrandom_syscall;
+  if (!atomic_load_relaxed(&skip_getrandom_syscall)) {
+    // Up to 256 bytes, getrandom will not be interrupted.
+    uptr res = internal_syscall(SYSCALL(getrandom), buffer, length, 0);
+    int rverrno = 0;
+    if (internal_iserror(res, &rverrno) && rverrno == ENOSYS)
+      atomic_store_relaxed(&skip_getrandom_syscall, 1);
+    else if (res == length)
+      return true;
+  }
+#endif
+  uptr fd = internal_open("/dev/urandom", O_RDONLY);
+  if (internal_iserror(fd))
+    return false;
+  // internal_read deals with EINTR.
+  uptr res = internal_read(fd, buffer, length);
+  if (internal_iserror(res))
+    return false;
+  internal_close(fd);
+  return true;
+}
+
 } // namespace __sanitizer
 
 #endif // SANITIZER_FREEBSD || SANITIZER_LINUX

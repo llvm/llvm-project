@@ -266,7 +266,8 @@ struct Allocator {
   }
 
   void Initialize(const AllocatorOptions &options) {
-    allocator.Init(options.may_return_null, options.release_to_os_interval_ms);
+    SetAllocatorMayReturnNull(options.may_return_null);
+    allocator.Init(options.release_to_os_interval_ms);
     SharedInitCode(options);
   }
 
@@ -302,7 +303,7 @@ struct Allocator {
   }
 
   void ReInitialize(const AllocatorOptions &options) {
-    allocator.SetMayReturnNull(options.may_return_null);
+    SetAllocatorMayReturnNull(options.may_return_null);
     allocator.SetReleaseToOSIntervalMs(options.release_to_os_interval_ms);
     SharedInitCode(options);
 
@@ -323,7 +324,7 @@ struct Allocator {
     options->thread_local_quarantine_size_kb = quarantine.GetCacheSize() >> 10;
     options->min_redzone = atomic_load(&min_redzone, memory_order_acquire);
     options->max_redzone = atomic_load(&max_redzone, memory_order_acquire);
-    options->may_return_null = allocator.MayReturnNull();
+    options->may_return_null = AllocatorMayReturnNull();
     options->alloc_dealloc_mismatch =
         atomic_load(&alloc_dealloc_mismatch, memory_order_acquire);
     options->release_to_os_interval_ms = allocator.ReleaseToOSIntervalMs();
@@ -374,7 +375,7 @@ struct Allocator {
     if (UNLIKELY(!asan_inited))
       AsanInitFromRtl();
     if (RssLimitExceeded())
-      return allocator.ReturnNullOrDieOnOOM();
+      return AsanAllocator::FailureHandler::OnOOM();
     Flags &fl = *flags();
     CHECK(stack);
     const uptr min_alignment = SHADOW_GRANULARITY;
@@ -407,7 +408,7 @@ struct Allocator {
     if (size > kMaxAllowedMallocSize || needed_size > kMaxAllowedMallocSize) {
       Report("WARNING: AddressSanitizer failed to allocate 0x%zx bytes\n",
              (void*)size);
-      return allocator.ReturnNullOrDieOnBadRequest();
+      return AsanAllocator::FailureHandler::OnBadRequest();
     }
 
     AsanThread *t = GetCurrentThread();
@@ -420,8 +421,8 @@ struct Allocator {
       AllocatorCache *cache = &fallback_allocator_cache;
       allocated = allocator.Allocate(cache, needed_size, 8);
     }
-
-    if (!allocated) return allocator.ReturnNullOrDieOnOOM();
+    if (!allocated)
+      return nullptr;
 
     if (*(u8 *)MEM_TO_SHADOW((uptr)allocated) == 0 && CanPoisonMemory()) {
       // Heap poisoning is enabled, but the allocator provides an unpoisoned
@@ -632,7 +633,7 @@ struct Allocator {
 
   void *Calloc(uptr nmemb, uptr size, BufferedStackTrace *stack) {
     if (CallocShouldReturnNullDueToOverflow(size, nmemb))
-      return allocator.ReturnNullOrDieOnBadRequest();
+      return AsanAllocator::FailureHandler::OnBadRequest();
     void *ptr = Allocate(nmemb * size, 8, stack, FROM_MALLOC, false);
     // If the memory comes from the secondary allocator no need to clear it
     // as it comes directly from mmap.

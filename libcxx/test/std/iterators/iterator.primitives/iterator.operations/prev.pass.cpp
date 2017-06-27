@@ -71,5 +71,5 @@ int main()
     static_assert( constexpr_test(s+1, s), "" );
     }
 #endif
-    
+
 }

@@ -204,6 +204,11 @@ namespace {
     bool selectVectorAddr(SDNode *Parent, SDValue N, SDValue &Base,
                           SDValue &Scale, SDValue &Index, SDValue &Disp,
                           SDValue &Segment);
+    template <class GatherScatterSDNode>
+    bool selectAddrOfGatherScatterNode(GatherScatterSDNode *Parent, SDValue N,
+                                       SDValue &Base, SDValue &Scale,
+                                       SDValue &Index, SDValue &Disp,
+                                       SDValue &Segment);
     bool selectMOV64Imm32(SDValue N, SDValue &Imm);
     bool selectLEAAddr(SDValue N, SDValue &Base,
                        SDValue &Scale, SDValue &Index, SDValue &Disp,
@@ -1415,13 +1420,10 @@ bool X86DAGToDAGISel::matchAddressBase(SDValue N, X86ISelAddressMode &AM) {
   return false;
 }
 
-bool X86DAGToDAGISel::selectVectorAddr(SDNode *Parent, SDValue N, SDValue &Base,
-                                      SDValue &Scale, SDValue &Index,
-                                      SDValue &Disp, SDValue &Segment) {
-
-  MaskedGatherScatterSDNode *Mgs = dyn_cast<MaskedGatherScatterSDNode>(Parent);
-  if (!Mgs)
-    return false;
+template <class GatherScatterSDNode>
+bool X86DAGToDAGISel::selectAddrOfGatherScatterNode(
+    GatherScatterSDNode *Mgs, SDValue N, SDValue &Base, SDValue &Scale,
+    SDValue &Index, SDValue &Disp, SDValue &Segment) {
   X86ISelAddressMode AM;
   unsigned AddrSpace = Mgs->getPointerInfo().getAddrSpace();
   // AddrSpace 256 -> GS, 257 -> FS, 258 -> SS.
@@ -1451,6 +1453,18 @@ bool X86DAGToDAGISel::selectVectorAddr(SDNode *Parent, SDValue N, SDValue &Base,
     Segment = CurDAG->getRegister(0, MVT::i32);
   Disp = CurDAG->getTargetConstant(0, DL, MVT::i32);
   return true;
+}
+
+bool X86DAGToDAGISel::selectVectorAddr(SDNode *Parent, SDValue N, SDValue &Base,
+                                       SDValue &Scale, SDValue &Index,
+                                       SDValue &Disp, SDValue &Segment) {
+  if (auto Mgs = dyn_cast<MaskedGatherScatterSDNode>(Parent))
+    return selectAddrOfGatherScatterNode<MaskedGatherScatterSDNode>(
+        Mgs, N, Base, Scale, Index, Disp, Segment);
+  if (auto X86Gather = dyn_cast<X86MaskedGatherSDNode>(Parent))
+    return selectAddrOfGatherScatterNode<X86MaskedGatherSDNode>(
+        X86Gather, N, Base, Scale, Index, Disp, Segment);
+  return false;
 }
 
 /// Returns true if it is able to pattern match an addressing mode.

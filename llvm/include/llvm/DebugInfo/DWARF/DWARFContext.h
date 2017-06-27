@@ -10,7 +10,6 @@
 #ifndef LLVM_DEBUGINFO_DWARF_DWARFCONTEXT_H
 #define LLVM_DEBUGINFO_DWARF_DWARFCONTEXT_H
 
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -25,21 +24,24 @@
 #include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLoc.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugMacro.h"
+#include "llvm/DebugInfo/DWARF/DWARFDie.h"
 #include "llvm/DebugInfo/DWARF/DWARFGdbIndex.h"
 #include "llvm/DebugInfo/DWARF/DWARFSection.h"
 #include "llvm/DebugInfo/DWARF/DWARFTypeUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnitIndex.h"
+#include "llvm/Object/Binary.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/Host.h"
 #include <cstdint>
 #include <deque>
 #include <map>
 #include <memory>
-#include <utility>
 
 namespace llvm {
 
+class DataExtractor;
 class MemoryBuffer;
 class raw_ostream;
 
@@ -73,7 +75,7 @@ class DWARFContext : public DIContext {
   std::unique_ptr<DWARFDebugLocDWO> LocDWO;
 
   /// The maximum DWARF version of all units.
-  unsigned MaxVersion;
+  unsigned MaxVersion = 0;
 
   struct DWOFile {
     object::OwningBinary<object::ObjectFile> File;
@@ -100,7 +102,7 @@ class DWARFContext : public DIContext {
   void parseDWOTypeUnits();
 
 public:
-  DWARFContext() : DIContext(CK_DWARF), MaxVersion(0) {}
+  DWARFContext() : DIContext(CK_DWARF) {}
   DWARFContext(DWARFContext &) = delete;
   DWARFContext &operator=(DWARFContext &) = delete;
 
@@ -112,9 +114,9 @@ public:
 
   bool verify(raw_ostream &OS, DIDumpType DumpType = DIDT_All) override;
 
-  typedef DWARFUnitSection<DWARFCompileUnit>::iterator_range cu_iterator_range;
-  typedef DWARFUnitSection<DWARFTypeUnit>::iterator_range tu_iterator_range;
-  typedef iterator_range<decltype(TUs)::iterator> tu_section_iterator_range;
+  using cu_iterator_range = DWARFUnitSection<DWARFCompileUnit>::iterator_range;
+  using tu_iterator_range = DWARFUnitSection<DWARFTypeUnit>::iterator_range;
+  using tu_section_iterator_range = iterator_range<decltype(TUs)::iterator>;
 
   /// Get compile units in this context.
   cu_iterator_range compile_units() {
@@ -230,8 +232,10 @@ public:
   virtual bool isLittleEndian() const = 0;
   virtual uint8_t getAddressSize() const = 0;
   virtual const DWARFSection &getInfoSection() = 0;
-  typedef MapVector<object::SectionRef, DWARFSection,
-                    std::map<object::SectionRef, unsigned>> TypeSectionMap;
+
+  using TypeSectionMap = MapVector<object::SectionRef, DWARFSection,
+                                   std::map<object::SectionRef, unsigned>>;
+
   virtual const TypeSectionMap &getTypesSections() = 0;
   virtual StringRef getAbbrevSection() = 0;
   virtual const DWARFSection &getLocSection() = 0;

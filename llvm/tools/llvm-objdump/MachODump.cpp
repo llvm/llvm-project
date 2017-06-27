@@ -1135,7 +1135,8 @@ static void DumpInfoPlistSectionContents(StringRef Filename,
     DataRefImpl Ref = Section.getRawDataRefImpl();
     StringRef SegName = O->getSectionFinalSegmentName(Ref);
     if (SegName == "__TEXT" && SectName == "__info_plist") {
-      outs() << "Contents of (" << SegName << "," << SectName << ") section\n";
+      if (!NoLeadingHeaders)
+        outs() << "Contents of (" << SegName << "," << SectName << ") section\n";
       StringRef BytesStr;
       Section.getContents(BytesStr);
       const char *sect = reinterpret_cast<const char *>(BytesStr.data());
@@ -1223,8 +1224,13 @@ static void ProcessMachO(StringRef Name, MachOObjectFile *MachOOF,
     if (Error Err = MachOOF->checkSymbolTable())
       report_error(ArchiveName, FileName, std::move(Err), ArchitectureName);
 
-  if (Disassemble)
-    DisassembleMachO(FileName, MachOOF, "__TEXT", "__text");
+  if (Disassemble) {
+    if (MachOOF->getHeader().filetype == MachO::MH_KEXT_BUNDLE &&
+	MachOOF->getHeader().cputype == MachO::CPU_TYPE_ARM64)
+      DisassembleMachO(FileName, MachOOF, "__TEXT_EXEC", "__text");
+    else
+      DisassembleMachO(FileName, MachOOF, "__TEXT", "__text");
+  }
   if (IndirectSymbols)
     PrintIndirectSymbols(MachOOF, !NonVerbose);
   if (DataInCode)
@@ -1920,11 +1926,45 @@ static int SymbolizerGetOpInfo(void *DisInfo, uint64_t Pc, uint64_t Offset,
   if (Arch == Triple::x86_64) {
     if (Size != 1 && Size != 2 && Size != 4 && Size != 0)
       return 0;
+    // For non MH_OBJECT types, like MH_KEXT_BUNDLE, Search the external
+    // relocation entries of a linked image (if any) for an entry that matches
+    // this segment offset.
     if (info->O->getHeader().filetype != MachO::MH_OBJECT) {
-      // TODO:
-      // Search the external relocation entries of a fully linked image
-      // (if any) for an entry that matches this segment offset.
-      // uint64_t seg_offset = (Pc + Offset);
+      uint64_t seg_offset = Pc + Offset;
+      bool reloc_found = false;
+      DataRefImpl Rel;
+      MachO::any_relocation_info RE;
+      bool isExtern = false;
+      SymbolRef Symbol;
+      for (const RelocationRef &Reloc : info->O->external_relocations()) {
+        uint64_t RelocOffset = Reloc.getOffset();
+        if (RelocOffset == seg_offset) {
+          Rel = Reloc.getRawDataRefImpl();
+          RE = info->O->getRelocation(Rel);
+          // external relocation entries should always be external.
+          isExtern = info->O->getPlainRelocationExternal(RE);
+          if (isExtern) {
+            symbol_iterator RelocSym = Reloc.getSymbol();
+            Symbol = *RelocSym;
+          }
+          reloc_found = true;
+          break;
+        }
+      }
+      if (reloc_found && isExtern) {
+        // The Value passed in will be adjusted by the Pc if the instruction
+        // adds the Pc.  But for x86_64 external relocation entries the Value
+        // is the offset from the external symbol.
+        if (info->O->getAnyRelocationPCRel(RE))
+          op_info->Value -= Pc + Offset + Size;
+        Expected<StringRef> SymName = Symbol.getName();
+        if (!SymName)
+          report_error(info->O->getFileName(), SymName.takeError());
+        const char *name = SymName->data();
+        op_info->AddSymbol.Present = 1;
+        op_info->AddSymbol.Name = name;
+        return 1;
+      }
       return 0;
     }
     // In MH_OBJECT filetypes search the section's relocation entries (if any)
@@ -4572,6 +4612,12 @@ static void print_class64_t(uint64_t p, struct DisassembleInfo *info) {
                        n_value, c.superclass);
   if (name != nullptr)
     outs() << " " << name;
+  else {
+    name = get_dyld_bind_info_symbolname(S.getAddress() +
+             offset + offsetof(struct class64_t, superclass), info);
+    if (name != nullptr)
+      outs() << " " << name;
+  }
   outs() << "\n";
 
   outs() << "         cache " << format("0x%" PRIx64, c.cache);

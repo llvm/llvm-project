@@ -93,6 +93,7 @@ public:
   TypeIndex insertRecord(const RemappedType &Record);
   Expected<TypeIndex> visitTypeEndGetIndex(CVType &Record);
 
+  using TypeVisitorCallbacks::visitTypeBegin;
   Error visitTypeBegin(CVType &Record) override;
   Error visitTypeEnd(CVType &Record) override;
   Error visitMemberBegin(CVMemberRecord &Record) override;

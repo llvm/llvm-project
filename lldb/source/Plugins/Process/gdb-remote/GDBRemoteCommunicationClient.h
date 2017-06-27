@@ -23,9 +23,9 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Core/ArchSpec.h"
-#include "lldb/Core/StructuredData.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/StreamGDBRemote.h"
+#include "lldb/Utility/StructuredData.h"
 
 #include "llvm/ADT/Optional.h"
 

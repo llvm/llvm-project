@@ -93,11 +93,6 @@ class VOP1_SDWA_Pseudo <string OpName, VOPProfile P, list<dag> pattern=[]> :
   let AsmMatchConverter = "cvtSdwaVOP1";
 }
 
-class VOP1_SDWA9_Pseudo <string OpName, VOPProfile P, list<dag> pattern=[]> :
-  VOP_SDWA9_Pseudo <OpName, P, pattern> {
-  let AsmMatchConverter = "cvtSdwaVOP1";
-}
-
 class getVOP1Pat64 <SDPatternOperator node, VOPProfile P> : LetDummies {
   list<dag> ret =
     !if(P.HasModifiers,
@@ -117,7 +112,6 @@ multiclass VOP1Inst <string opName, VOPProfile P,
   def _e32 : VOP1_Pseudo <opName, P>;
   def _e64 : VOP3_Pseudo <opName, P, getVOP1Pat64<node, P>.ret>;
   def _sdwa : VOP1_SDWA_Pseudo <opName, P>;
-  def _sdwa9 : VOP1_SDWA9_Pseudo <opName, P>;
 }
 
 // Special profile for instructions which have clamp
@@ -274,12 +268,10 @@ def VOP_MOVRELD : VOPProfile<[untyped, i32, untyped, untyped]> {
   let Ins64 = (ins Src0RC64:$vdst, VSrc_b32:$src0);
   let InsDPP = (ins Src0RC32:$vdst, Src0RC32:$src0, dpp_ctrl:$dpp_ctrl, row_mask:$row_mask,
                     bank_mask:$bank_mask, bound_ctrl:$bound_ctrl);
+
   let InsSDWA = (ins Src0RC32:$vdst, Src0ModSDWA:$src0_modifiers, Src0SDWA:$src0,
-                     clampmod:$clamp, dst_sel:$dst_sel, dst_unused:$dst_unused,
+                     clampmod:$clamp, omod:$omod, dst_sel:$dst_sel, dst_unused:$dst_unused,
                      src0_sel:$src0_sel);
-  let InsSDWA9 = (ins Src0RC32:$vdst, Src0ModSDWA9:$src0_modifiers, Src0SDWA9:$src0,
-                      clampmod:$clamp, omod:$omod, dst_sel:$dst_sel, dst_unused:$dst_unused,
-                      src0_sel:$src0_sel);
 
   let Asm32 = getAsm32<1, 1>.ret;
   let Asm64 = getAsm64<1, 1, 0, 1>.ret;
@@ -545,8 +537,8 @@ multiclass VOP1_Real_vi <bits<10> op> {
     VOP1_SDWAe <op{7-0}, !cast<VOP1_SDWA_Pseudo>(NAME#"_sdwa").Pfl>;
 
   def _sdwa_gfx9 :
-    VOP_SDWA9_Real <!cast<VOP1_SDWA9_Pseudo>(NAME#"_sdwa9")>,
-    VOP1_SDWA9Ae <op{7-0}, !cast<VOP1_SDWA9_Pseudo>(NAME#"_sdwa9").Pfl>;
+    VOP_SDWA9_Real <!cast<VOP1_SDWA_Pseudo>(NAME#"_sdwa")>,
+    VOP1_SDWA9Ae <op{7-0}, !cast<VOP1_SDWA_Pseudo>(NAME#"_sdwa").Pfl>;
 
   // For now left dpp only for asm/dasm
   // TODO: add corresponding pseudo

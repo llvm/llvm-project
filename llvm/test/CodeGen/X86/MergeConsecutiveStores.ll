@@ -583,8 +583,6 @@ define void @merge_vec_element_and_scalar_load([6 x i64]* %array) {
 ; CHECK-NEXT: retq
 }
 
-
-
 ; Don't let a non-consecutive store thwart merging of the last two.
 define void @almost_consecutive_stores(i8* %p) {
   store i8 0, i8* %p
@@ -600,4 +598,33 @@ define void @almost_consecutive_stores(i8* %p) {
 ; CHECK-DAG: movb $1, 42(%rdi)
 ; CHECK-DAG: movw $770, 2(%rdi)
 ; CHECK: retq
+}
+
+; We should be able to merge these.
+define void @merge_bitcast(<4 x i32> %v, float* %ptr) {
+  %fv = bitcast <4 x i32> %v to <4 x float>
+
+  %vecext1 = extractelement <4 x i32> %v, i32 1
+  %vecext2 = extractelement <4 x i32> %v, i32 2
+  %vecext3 = extractelement <4 x i32> %v, i32 3
+  %f0 = extractelement <4 x float> %fv, i32 0
+  %f1 = bitcast i32 %vecext1 to float
+  %f2 = bitcast i32 %vecext2 to float
+  %f3 = bitcast i32 %vecext3 to float
+  %idx0 = getelementptr inbounds float, float* %ptr, i64 0
+  %idx1 = getelementptr inbounds float, float* %ptr, i64 1
+  %idx2 = getelementptr inbounds float, float* %ptr, i64 2
+  %idx3 = getelementptr inbounds float, float* %ptr, i64 3
+  store float %f0, float* %idx0, align 4
+  store float %f1, float* %idx1, align 4
+  store float %f2, float* %idx2, align 4
+  store float %f3, float* %idx3, align 4
+  ret void
+
+; CHECK-LABEL: merge_bitcast
+; CHECK:      vmovd	%xmm0, (%rdi)
+; CHECK-NEXT: vpextrd	$1, %xmm0, 4(%rdi)
+; CHECK-NEXT: vpextrd	$2, %xmm0, 8(%rdi)
+; CHECK-NEXT: vpextrd	$3, %xmm0, 12(%rdi)
+; CHECK-NEXT: retq
 }

@@ -36,15 +36,15 @@ int main()
     auto f = for_each_test(0);
     Iter it = std::for_each_n(Iter(ia), 0, std::ref(f));
     assert(it == Iter(ia));
-    assert(f.count == 0);    
+    assert(f.count == 0);
     }
 
     {
     auto f = for_each_test(0);
     Iter it = std::for_each_n(Iter(ia), s, std::ref(f));
-    
+
     assert(it == Iter(ia+s));
-    assert(f.count == s);    
+    assert(f.count == s);
     for (unsigned i = 0; i < s; ++i)
         assert(ia[i] == static_cast<int>(i+1));
     }
@@ -52,9 +52,9 @@ int main()
     {
     auto f = for_each_test(0);
     Iter it = std::for_each_n(Iter(ia), 1, std::ref(f));
-    
+
     assert(it == Iter(ia+1));
-    assert(f.count == 1);    
+    assert(f.count == 1);
     for (unsigned i = 0; i < 1; ++i)
         assert(ia[i] == static_cast<int>(i+2));
     }

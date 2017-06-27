@@ -304,6 +304,12 @@ public:
   relocation_iterator section_rel_begin(DataRefImpl Sec) const override;
   relocation_iterator section_rel_end(DataRefImpl Sec) const override;
 
+  relocation_iterator extrel_begin() const;
+  relocation_iterator extrel_end() const;
+  iterator_range<relocation_iterator> external_relocations() const {
+    return make_range(extrel_begin(), extrel_end());
+  }
+
   void moveRelocationNext(DataRefImpl &Rel) const override;
   uint64_t getRelocationOffset(DataRefImpl Rel) const override;
   symbol_iterator getRelocationSymbol(DataRefImpl Rel) const override;

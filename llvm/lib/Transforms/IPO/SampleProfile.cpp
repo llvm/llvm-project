@@ -690,6 +690,9 @@ bool SampleProfileLoader::inlineHotFunctions(
     for (auto I : CIS) {
       InlineFunctionInfo IFI(nullptr, ACT ? &GetAssumptionCache : nullptr);
       Function *CalledFunction = CallSite(I).getCalledFunction();
+      // Do not inline recursive calls.
+      if (CalledFunction == &F)
+        continue;
       Instruction *DI = I;
       if (!CalledFunction && !PromotedInsns.count(I) &&
           CallSite(I).isIndirectCall())

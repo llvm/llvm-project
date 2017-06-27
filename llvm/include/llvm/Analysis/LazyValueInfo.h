@@ -93,6 +93,13 @@ public:
   Constant *getConstantOnEdge(Value *V, BasicBlock *FromBB, BasicBlock *ToBB,
                               Instruction *CxtI = nullptr);
 
+  /// Return the ConstantRage constraint that is known to hold for the
+  /// specified value on the specified edge. This may be only be called
+  /// on integer-typed Values.
+  ConstantRange getConstantRangeOnEdge(Value *V, BasicBlock *FromBB,
+                                       BasicBlock *ToBB,
+                                       Instruction *CxtI = nullptr);
+
   /// Inform the analysis cache that we have threaded an edge from
   /// PredBB to OldSucc to be from PredBB to NewSucc instead.
   void threadEdge(BasicBlock *PredBB, BasicBlock *OldSucc, BasicBlock *NewSucc);

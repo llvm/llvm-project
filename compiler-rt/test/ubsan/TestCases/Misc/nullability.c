@@ -2,7 +2,7 @@
 // RUN: %run %t foo 2>&1 | count 0
 // RUN: %run %t 2>&1 | FileCheck %s
 
-// CHECK: nullability.c:[[@LINE+2]]:51: runtime error: null pointer returned from function declared to never return null
+// CHECK: nullability.c:[[@LINE+2]]:41: runtime error: null pointer returned from function declared to never return null
 // CHECK-NEXT: nullability.c:[[@LINE+1]]:6: note: _Nonnull return type annotation specified here
 int *_Nonnull nonnull_retval1(int *p) { return p; }
 

@@ -1896,6 +1896,18 @@ static Instruction *foldBitCastBitwiseLogic(BitCastInst &BitCast,
     return BinaryOperator::Create(BO->getOpcode(), CastedOp0, X);
   }
 
+  // Canonicalize vector bitcasts to come before vector bitwise logic with a
+  // constant. This eases recognition of special constants for later ops.
+  // Example:
+  // icmp u/s (a ^ signmask), (b ^ signmask) --> icmp s/u a, b
+  Constant *C;
+  if (match(BO->getOperand(1), m_Constant(C))) {
+    // bitcast (logic X, C) --> logic (bitcast X, C')
+    Value *CastedOp0 = Builder.CreateBitCast(BO->getOperand(0), DestTy);
+    Value *CastedC = ConstantExpr::getBitCast(C, DestTy);
+    return BinaryOperator::Create(BO->getOpcode(), CastedOp0, CastedC);
+  }
+
   return nullptr;
 }
 

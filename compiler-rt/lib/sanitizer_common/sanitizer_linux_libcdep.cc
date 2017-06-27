@@ -551,6 +551,13 @@ void LogMessageOnPrintf(const char *str) {
     WriteToSyslog(str);
 }
 
+#if SANITIZER_ANDROID && __ANDROID_API__ >= 21
+extern "C" void android_set_abort_message(const char *msg);
+void SetAbortMessage(const char *str) { android_set_abort_message(str); }
+#else
+void SetAbortMessage(const char *str) {}
+#endif
+
 #endif // SANITIZER_LINUX
 
 } // namespace __sanitizer

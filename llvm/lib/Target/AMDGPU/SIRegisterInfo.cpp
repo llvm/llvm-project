@@ -1352,12 +1352,11 @@ unsigned SIRegisterInfo::getPreloadedValue(const MachineFunction &MF,
   case SIRegisterInfo::PRIVATE_SEGMENT_WAVE_BYTE_OFFSET:
     return MFI->PrivateSegmentWaveByteOffsetSystemSGPR;
   case SIRegisterInfo::PRIVATE_SEGMENT_BUFFER:
-    if (ST.isAmdCodeObjectV2(MF)) {
-      assert(MFI->hasPrivateSegmentBuffer());
-      return MFI->PrivateSegmentBufferUserSGPR;
-    }
-    assert(MFI->hasPrivateMemoryInputPtr());
-    return MFI->PrivateMemoryPtrUserSGPR;
+    assert(MFI->hasPrivateSegmentBuffer());
+    return MFI->PrivateSegmentBufferUserSGPR;
+  case SIRegisterInfo::IMPLICIT_BUFFER_PTR:
+    assert(MFI->hasImplicitBufferPtr());
+    return MFI->ImplicitBufferPtrUserSGPR;
   case SIRegisterInfo::KERNARG_SEGMENT_PTR:
     assert(MFI->hasKernargSegmentPtr());
     return MFI->KernargSegmentPtrUserSGPR;

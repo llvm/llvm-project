@@ -16,6 +16,7 @@
 #include "llvm/DebugInfo/PDB/Native/RawTypes.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
 #include "llvm/Support/BinaryStreamArray.h"
+#include "llvm/Support/BinaryStreamRef.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include "llvm/Support/Error.h"
@@ -57,6 +58,8 @@ public:
 
   codeview::LazyRandomTypeCollection &typeCollection() { return *Types; }
 
+  BinarySubstreamRef getTypeRecordsSubstream() const;
+
   Error commit();
 
 private:
@@ -64,6 +67,8 @@ private:
   std::unique_ptr<msf::MappedBlockStream> Stream;
 
   std::unique_ptr<codeview::LazyRandomTypeCollection> Types;
+
+  BinarySubstreamRef TypeRecordsSubstream;
 
   codeview::CVTypeArray TypeRecords;
 

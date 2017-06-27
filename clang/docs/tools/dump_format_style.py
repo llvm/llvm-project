@@ -24,10 +24,10 @@ def doxygen2rst(text):
   text = re.sub(r'\\\w+ ', '', text)
   return text
 
-def indent(text, columns):
+def indent(text, columns, indent_first_line=True):
   indent = ' ' * columns
   s = re.sub(r'\n([^\n])', '\n' + indent + '\\1', text, flags=re.S)
-  if s.startswith('\n'):
+  if not indent_first_line or s.startswith('\n'):
     return s
   return indent + s
 
@@ -64,7 +64,9 @@ class NestedField:
     self.comment = comment.strip()
 
   def __str__(self):
-    return '\n* ``%s`` %s' % (self.name, doxygen2rst(self.comment))
+    return '\n* ``%s`` %s' % (
+        self.name,
+        doxygen2rst(indent(self.comment, 2, indent_first_line=False)))
 
 class Enum:
   def __init__(self, name, comment):
@@ -179,7 +181,7 @@ def read_options(header):
       if enums.has_key(option.type):
         option.enum = enums[option.type]
       elif nested_structs.has_key(option.type):
-        option.nested_struct = nested_structs[option.type];
+        option.nested_struct = nested_structs[option.type]
       else:
         raise Exception('Unknown type: %s' % option.type)
   return options
@@ -195,4 +197,3 @@ contents = substitute(contents, 'FORMAT_STYLE_OPTIONS', options_text)
 
 with open(DOC_FILE, 'wb') as output:
   output.write(contents)
-

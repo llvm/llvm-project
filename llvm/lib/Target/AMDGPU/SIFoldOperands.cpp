@@ -13,6 +13,7 @@
 #include "AMDGPUSubtarget.h"
 #include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"
+#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/CodeGen/LiveIntervalAnalysis.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -166,6 +167,8 @@ static bool updateOperand(FoldCandidate &Fold,
   if (TargetRegisterInfo::isVirtualRegister(Old.getReg()) &&
       TargetRegisterInfo::isVirtualRegister(New->getReg())) {
     Old.substVirtReg(New->getReg(), New->getSubReg(), TRI);
+
+    Old.setIsUndef(New->isUndef());
     return true;
   }
 
@@ -470,7 +473,7 @@ static MachineOperand *getImmOrMaterializedImm(MachineRegisterInfo &MRI,
       return &Op;
 
     MachineInstr *Def = MRI.getVRegDef(Op.getReg());
-    if (Def->isMoveImmediate()) {
+    if (Def && Def->isMoveImmediate()) {
       MachineOperand &ImmSrc = Def->getOperand(1);
       if (ImmSrc.isImm())
         return &ImmSrc;
@@ -921,12 +924,9 @@ bool SIFoldOperands::runOnMachineFunction(MachineFunction &MF) {
   // level.
   bool IsIEEEMode = ST->enableIEEEBit(MF) || !MFI->hasNoSignedZerosFPMath();
 
-  for (MachineFunction::iterator BI = MF.begin(), BE = MF.end();
-       BI != BE; ++BI) {
-
-    MachineBasicBlock &MBB = *BI;
+  for (MachineBasicBlock *MBB : depth_first(&MF)) {
     MachineBasicBlock::iterator I, Next;
-    for (I = MBB.begin(); I != MBB.end(); I = Next) {
+    for (I = MBB->begin(); I != MBB->end(); I = Next) {
       Next = std::next(I);
       MachineInstr &MI = *I;
 

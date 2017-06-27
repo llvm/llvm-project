@@ -202,26 +202,33 @@ public:
     OBJC_TQ_CSNullability = 0x40
   };
 
-protected:
-  // Enumeration values used in the bits stored in NextInContextAndBits.
-  enum {
-    /// \brief Whether this declaration is a top-level declaration (function,
-    /// global variable, etc.) that is lexically inside an objc container
-    /// definition.
-    TopLevelDeclInObjCContainerFlag = 0x01,
-    
-    /// \brief Whether this declaration is private to the module in which it was
-    /// defined.
-    ModulePrivateFlag = 0x02
+  /// The kind of ownership a declaration has, for visibility purposes.
+  /// This enumeration is designed such that higher values represent higher
+  /// levels of name hiding.
+  enum class ModuleOwnershipKind : unsigned {
+    /// This declaration is not owned by a module.
+    Unowned,
+    /// This declaration has an owning module, but is globally visible
+    /// (typically because its owning module is visible and we know that
+    /// modules cannot later become hidden in this compilation).
+    /// After serialization and deserialization, this will be converted
+    /// to VisibleWhenImported.
+    Visible,
+    /// This declaration has an owning module, and is visible when that
+    /// module is imported.
+    VisibleWhenImported,
+    /// This declaration has an owning module, but is only visible to
+    /// lookups that occur within that module.
+    ModulePrivate
   };
-  
+
+protected:
   /// \brief The next declaration within the same lexical
   /// DeclContext. These pointers form the linked list that is
   /// traversed via DeclContext's decls_begin()/decls_end().
   ///
-  /// The extra two bits are used for the TopLevelDeclInObjCContainer and
-  /// ModulePrivate bits.
-  llvm::PointerIntPair<Decl *, 2, unsigned> NextInContextAndBits;
+  /// The extra two bits are used for the ModuleOwnershipKind.
+  llvm::PointerIntPair<Decl *, 2, ModuleOwnershipKind> NextInContextAndBits;
 
 private:
   friend class DeclContext;
@@ -282,6 +289,11 @@ private:
   /// are regarded as "referenced" but not "used".
   unsigned Referenced : 1;
 
+  /// \brief Whether this declaration is a top-level declaration (function,
+  /// global variable, etc.) that is lexically inside an objc container
+  /// definition.
+  unsigned TopLevelDeclInObjCContainer : 1;
+  
   /// \brief Whether statistic collection is enabled.
   static bool StatisticsEnabled;
 
@@ -294,11 +306,6 @@ protected:
   /// \brief Whether this declaration was loaded from an AST file.
   unsigned FromASTFile : 1;
 
-  /// \brief Whether this declaration is hidden from normal name lookup, e.g.,
-  /// because it is was loaded from an AST file is either module-private or
-  /// because its submodule has not been made visible.
-  unsigned Hidden : 1;
-  
   /// IdentifierNamespace - This specifies what IDNS_* namespace this lives in.
   unsigned IdentifierNamespace : 13;
 
@@ -332,26 +339,38 @@ protected:
 private:
   bool AccessDeclContextSanity() const;
 
+  /// Get the module ownership kind to use for a local lexical child of \p DC,
+  /// which may be either a local or (rarely) an imported declaration.
+  static ModuleOwnershipKind getModuleOwnershipKindForChildOf(DeclContext *DC) {
+    if (DC) {
+      auto *D = cast<Decl>(DC);
+      auto MOK = D->getModuleOwnershipKind();
+      if (MOK != ModuleOwnershipKind::Unowned &&
+          (!D->isFromASTFile() || D->hasLocalOwningModuleStorage()))
+        return MOK;
+      // If D is not local and we have no local module storage, then we don't
+      // need to track module ownership at all.
+    }
+    return ModuleOwnershipKind::Unowned;
+  }
+
 protected:
   Decl(Kind DK, DeclContext *DC, SourceLocation L)
-      : NextInContextAndBits(), DeclCtx(DC), Loc(L), DeclKind(DK),
-        InvalidDecl(0), HasAttrs(false), Implicit(false), Used(false),
-        Referenced(false), Access(AS_none), FromASTFile(0),
-        Hidden(DC && cast<Decl>(DC)->Hidden &&
-               (!cast<Decl>(DC)->isFromASTFile() ||
-                hasLocalOwningModuleStorage())),
+      : NextInContextAndBits(nullptr, getModuleOwnershipKindForChildOf(DC)),
+        DeclCtx(DC), Loc(L), DeclKind(DK), InvalidDecl(0), HasAttrs(false),
+        Implicit(false), Used(false), Referenced(false),
+        TopLevelDeclInObjCContainer(false), Access(AS_none), FromASTFile(0),
         IdentifierNamespace(getIdentifierNamespaceForKind(DK)),
         CacheValidAndLinkage(0) {
     if (StatisticsEnabled) add(DK);
   }
 
   Decl(Kind DK, EmptyShell Empty)
-    : NextInContextAndBits(), DeclKind(DK), InvalidDecl(0),
-      HasAttrs(false), Implicit(false), Used(false), Referenced(false),
-      Access(AS_none), FromASTFile(0), Hidden(0),
-      IdentifierNamespace(getIdentifierNamespaceForKind(DK)),
-      CacheValidAndLinkage(0)
-  {
+      : NextInContextAndBits(), DeclKind(DK), InvalidDecl(0), HasAttrs(false),
+        Implicit(false), Used(false), Referenced(false),
+        TopLevelDeclInObjCContainer(false), Access(AS_none), FromASTFile(0),
+        IdentifierNamespace(getIdentifierNamespaceForKind(DK)),
+        CacheValidAndLinkage(0) {
     if (StatisticsEnabled) add(DK);
   }
 
@@ -551,16 +570,11 @@ public:
   /// global variable, etc.) that is lexically inside an objc container
   /// definition.
   bool isTopLevelDeclInObjCContainer() const {
-    return NextInContextAndBits.getInt() & TopLevelDeclInObjCContainerFlag;
+    return TopLevelDeclInObjCContainer;
   }
 
   void setTopLevelDeclInObjCContainer(bool V = true) {
-    unsigned Bits = NextInContextAndBits.getInt();
-    if (V)
-      Bits |= TopLevelDeclInObjCContainerFlag;
-    else
-      Bits &= ~TopLevelDeclInObjCContainerFlag;
-    NextInContextAndBits.setInt(Bits);
+    TopLevelDeclInObjCContainer = V;
   }
 
   /// \brief Looks on this and related declarations for an applicable
@@ -570,7 +584,7 @@ public:
   /// \brief Whether this declaration was marked as being private to the
   /// module in which it was defined.
   bool isModulePrivate() const {
-    return NextInContextAndBits.getInt() & ModulePrivateFlag;
+    return getModuleOwnershipKind() == ModuleOwnershipKind::ModulePrivate;
   }
 
   /// \brief Whether this declaration is exported (by virtue of being lexically
@@ -585,15 +599,14 @@ public:
   const Attr *getDefiningAttr() const;
 
 protected:
-  /// \brief Specify whether this declaration was marked as being private
+  /// \brief Specify that this declaration was marked as being private
   /// to the module in which it was defined.
-  void setModulePrivate(bool MP = true) {
-    unsigned Bits = NextInContextAndBits.getInt();
-    if (MP)
-      Bits |= ModulePrivateFlag;
-    else
-      Bits &= ~ModulePrivateFlag;
-    NextInContextAndBits.setInt(Bits);
+  void setModulePrivate() {
+    // The module-private specifier has no effect on unowned declarations.
+    // FIXME: We should track this in some way for source fidelity.
+    if (getModuleOwnershipKind() == ModuleOwnershipKind::Unowned)
+      return;
+    setModuleOwnershipKind(ModuleOwnershipKind::ModulePrivate);
   }
 
   /// \brief Set the owning module ID.
@@ -692,7 +705,7 @@ public:
   /// \brief Get the imported owning module, if this decl is from an imported
   /// (non-local) module.
   Module *getImportedOwningModule() const {
-    if (!isFromASTFile())
+    if (!isFromASTFile() || !hasOwningModule())
       return nullptr;
 
     return getOwningModuleSlow();
@@ -701,31 +714,57 @@ public:
   /// \brief Get the local owning module, if known. Returns nullptr if owner is
   /// not yet known or declaration is not from a module.
   Module *getLocalOwningModule() const {
-    if (isFromASTFile() || !Hidden)
+    if (isFromASTFile() || !hasOwningModule())
       return nullptr;
 
     assert(hasLocalOwningModuleStorage() &&
-           "hidden local decl but no local module storage");
+           "owned local decl but no local module storage");
     return reinterpret_cast<Module *const *>(this)[-1];
   }
   void setLocalOwningModule(Module *M) {
-    assert(!isFromASTFile() && Hidden && hasLocalOwningModuleStorage() &&
+    assert(!isFromASTFile() && hasOwningModule() &&
+           hasLocalOwningModuleStorage() &&
            "should not have a cached owning module");
     reinterpret_cast<Module **>(this)[-1] = M;
   }
 
+  /// Is this declaration owned by some module?
+  bool hasOwningModule() const {
+    return getModuleOwnershipKind() != ModuleOwnershipKind::Unowned;
+  }
+
+  /// Get the module that owns this declaration.
   Module *getOwningModule() const {
     return isFromASTFile() ? getImportedOwningModule() : getLocalOwningModule();
   }
 
-  /// \brief Determine whether this declaration is hidden from name lookup.
-  bool isHidden() const { return Hidden; }
+  /// \brief Determine whether this declaration might be hidden from name
+  /// lookup. Note that the declaration might be visible even if this returns
+  /// \c false, if the owning module is visible within the query context.
+  // FIXME: Rename this to make it clearer what it does.
+  bool isHidden() const {
+    return (int)getModuleOwnershipKind() > (int)ModuleOwnershipKind::Visible;
+  }
+
+  /// Set that this declaration is globally visible, even if it came from a
+  /// module that is not visible.
+  void setVisibleDespiteOwningModule() {
+    if (hasOwningModule())
+      setModuleOwnershipKind(ModuleOwnershipKind::Visible);
+  }
+
+  /// \brief Get the kind of module ownership for this declaration.
+  ModuleOwnershipKind getModuleOwnershipKind() const {
+    return NextInContextAndBits.getInt();
+  }
 
   /// \brief Set whether this declaration is hidden from name lookup.
-  void setHidden(bool Hide) {
-    assert((!Hide || isFromASTFile() || hasLocalOwningModuleStorage()) &&
-           "declaration with no owning module can't be hidden");
-    Hidden = Hide;
+  void setModuleOwnershipKind(ModuleOwnershipKind MOK) {
+    assert(!(getModuleOwnershipKind() == ModuleOwnershipKind::Unowned &&
+             MOK != ModuleOwnershipKind::Unowned && !isFromASTFile() &&
+             !hasLocalOwningModuleStorage()) &&
+           "no storage available for owning module for this declaration");
+    NextInContextAndBits.setInt(MOK);
   }
 
   unsigned getIdentifierNamespace() const {

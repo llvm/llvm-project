@@ -24,9 +24,8 @@
 class ScudoLargeMmapAllocator {
  public:
 
-  void Init(bool AllocatorMayReturnNull) {
+  void Init() {
     PageSize = GetPageSizeCached();
-    atomic_store_relaxed(&MayReturnNull, AllocatorMayReturnNull);
   }
 
   void *Allocate(AllocatorStats *Stats, uptr Size, uptr Alignment) {
@@ -42,7 +41,7 @@ class ScudoLargeMmapAllocator {
 
     uptr MapBeg = reinterpret_cast<uptr>(MmapNoAccess(MapSize));
     if (MapBeg == ~static_cast<uptr>(0))
-      return ReturnNullOrDieOnOOM();
+      return ReturnNullOrDieOnFailure::OnOOM();
     // A page-aligned pointer is assumed after that, so check it now.
     CHECK(IsAligned(MapBeg, PageSize));
     uptr MapEnd = MapBeg + MapSize;
@@ -96,12 +95,6 @@ class ScudoLargeMmapAllocator {
     return reinterpret_cast<void *>(Ptr);
   }
 
-  void *ReturnNullOrDieOnOOM() {
-    if (atomic_load_relaxed(&MayReturnNull))
-      return nullptr;
-    ReportAllocatorCannotReturnNull(true);
-  }
-
   void Deallocate(AllocatorStats *Stats, void *Ptr) {
     SecondaryHeader *Header = getHeader(Ptr);
     {
@@ -140,7 +133,6 @@ class ScudoLargeMmapAllocator {
   const uptr HeadersSize = SecondaryHeaderSize + AlignedChunkHeaderSize;
   uptr PageSize;
   SpinMutex StatsMutex;
-  atomic_uint8_t MayReturnNull;
 };
 
 #endif  // SCUDO_ALLOCATOR_SECONDARY_H_

@@ -97,14 +97,16 @@ define <32 x i8> @shuffle_v32i8_2323_domain(<32 x i8> %a, <32 x i8> %b) nounwind
 ; AVX1-LABEL: shuffle_v32i8_2323_domain:
 ; AVX1:       ## BB#0: ## %entry
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX1-NEXT:    vpaddb {{.*}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vpsubb %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3,2,3]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: shuffle_v32i8_2323_domain:
 ; AVX2:       ## BB#0: ## %entry
-; AVX2-NEXT:    vpaddb {{.*}}(%rip), %ymm0, %ymm0
+; AVX2-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; AVX2-NEXT:    vpsubb %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3,2,3]
 ; AVX2-NEXT:    retq
 entry:
@@ -127,14 +129,15 @@ entry:
 define <4 x i64> @shuffle_v4i64_6701_domain(<4 x i64> %a, <4 x i64> %b) nounwind uwtable readnone ssp {
 ; AVX1-LABEL: shuffle_v4i64_6701_domain:
 ; AVX1:       ## BB#0: ## %entry
-; AVX1-NEXT:    vpaddq {{.*}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vpsubq %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm1[2,3],ymm0[0,1]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: shuffle_v4i64_6701_domain:
 ; AVX2:       ## BB#0: ## %entry
-; AVX2-NEXT:    vpbroadcastq {{.*}}(%rip), %ymm2
-; AVX2-NEXT:    vpaddq %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
+; AVX2-NEXT:    vpsubq %ymm2, %ymm0, %ymm0
 ; AVX2-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm1[2,3],ymm0[0,1]
 ; AVX2-NEXT:    retq
 entry:
@@ -148,15 +151,16 @@ define <8 x i32> @shuffle_v8i32_u5u7cdef(<8 x i32> %a, <8 x i32> %b) nounwind uw
 ; AVX1-LABEL: shuffle_v8i32_u5u7cdef:
 ; AVX1:       ## BB#0: ## %entry
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX1-NEXT:    vpaddd {{.*}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vpsubd %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[2,3]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: shuffle_v8i32_u5u7cdef:
 ; AVX2:       ## BB#0: ## %entry
-; AVX2-NEXT:    vpbroadcastd {{.*}}(%rip), %ymm2
-; AVX2-NEXT:    vpaddd %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
+; AVX2-NEXT:    vpsubd %ymm2, %ymm0, %ymm0
 ; AVX2-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[2,3]
 ; AVX2-NEXT:    retq
 entry:
@@ -169,13 +173,15 @@ entry:
 define <16 x i16> @shuffle_v16i16_4501(<16 x i16> %a, <16 x i16> %b) nounwind uwtable readnone ssp {
 ; AVX1-LABEL: shuffle_v16i16_4501:
 ; AVX1:       ## BB#0: ## %entry
-; AVX1-NEXT:    vpaddw {{.*}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vpsubw %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: shuffle_v16i16_4501:
 ; AVX2:       ## BB#0: ## %entry
-; AVX2-NEXT:    vpaddw {{.*}}(%rip), %ymm0, %ymm0
+; AVX2-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
+; AVX2-NEXT:    vpsubw %ymm2, %ymm0, %ymm0
 ; AVX2-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
 ; AVX2-NEXT:    retq
 entry:
@@ -189,14 +195,16 @@ define <16 x i16> @shuffle_v16i16_4501_mem(<16 x i16>* %a, <16 x i16>* %b) nounw
 ; AVX1-LABEL: shuffle_v16i16_4501_mem:
 ; AVX1:       ## BB#0: ## %entry
 ; AVX1-NEXT:    vmovdqa (%rdi), %ymm0
-; AVX1-NEXT:    vpaddw {{.*}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vpsubw %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm0 = mem[0,1],ymm0[0,1]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: shuffle_v16i16_4501_mem:
 ; AVX2:       ## BB#0: ## %entry
 ; AVX2-NEXT:    vmovdqa (%rdi), %ymm0
-; AVX2-NEXT:    vpaddw {{.*}}(%rip), %ymm0, %ymm0
+; AVX2-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; AVX2-NEXT:    vpsubw %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vperm2i128 {{.*#+}} ymm0 = mem[0,1],ymm0[0,1]
 ; AVX2-NEXT:    retq
 entry:

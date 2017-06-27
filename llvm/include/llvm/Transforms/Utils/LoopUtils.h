@@ -362,6 +362,14 @@ private:
 BasicBlock *InsertPreheaderForLoop(Loop *L, DominatorTree *DT, LoopInfo *LI,
                                    bool PreserveLCSSA);
 
+/// Ensure that all exit blocks of the loop are dedicated exits.
+///
+/// For any loop exit block with non-loop predecessors, we split the loop
+/// predecessors to use a dedicated loop exit block. We update the dominator
+/// tree and loop info if provided, and will preserve LCSSA if requested.
+bool formDedicatedExitBlocks(Loop *L, DominatorTree *DT, LoopInfo *LI,
+                             bool PreserveLCSSA);
+
 /// Ensures LCSSA form for every instruction from the Worklist in the scope of
 /// innermost containing loop.
 ///

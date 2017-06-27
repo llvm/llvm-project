@@ -567,8 +567,19 @@ unsigned HexagonExpandCondsets::getCondTfrOpcode(const MachineOperand &SO,
     }
     llvm_unreachable("Invalid register operand");
   }
-  if (SO.isImm() || SO.isFPImm())
-    return IfTrue ? C2_cmoveit : C2_cmoveif;
+  switch (SO.getType()) {
+    case MachineOperand::MO_Immediate:
+    case MachineOperand::MO_FPImmediate:
+    case MachineOperand::MO_ConstantPoolIndex:
+    case MachineOperand::MO_TargetIndex:
+    case MachineOperand::MO_JumpTableIndex:
+    case MachineOperand::MO_ExternalSymbol:
+    case MachineOperand::MO_GlobalAddress:
+    case MachineOperand::MO_BlockAddress:
+      return IfTrue ? C2_cmoveit : C2_cmoveif;
+    default:
+      break;
+  }
   llvm_unreachable("Unexpected source operand");
 }
 

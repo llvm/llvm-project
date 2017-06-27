@@ -286,16 +286,15 @@ template <> void SymbolRecordImpl<ExportSym>::map(IO &IO) {
 }
 
 template <> void SymbolRecordImpl<ProcSym>::map(IO &IO) {
-  // TODO: Print the linkage name
-
-  IO.mapRequired("PtrParent", Symbol.Parent);
-  IO.mapRequired("PtrEnd", Symbol.End);
-  IO.mapRequired("PtrNext", Symbol.Next);
+  IO.mapOptional("PtrParent", Symbol.Parent, 0U);
+  IO.mapOptional("PtrEnd", Symbol.End, 0U);
+  IO.mapOptional("PtrNext", Symbol.Next, 0U);
   IO.mapRequired("CodeSize", Symbol.CodeSize);
   IO.mapRequired("DbgStart", Symbol.DbgStart);
   IO.mapRequired("DbgEnd", Symbol.DbgEnd);
   IO.mapRequired("FunctionType", Symbol.FunctionType);
-  IO.mapRequired("Segment", Symbol.Segment);
+  IO.mapOptional("Offset", Symbol.CodeOffset, 0U);
+  IO.mapOptional("Segment", Symbol.Segment, uint16_t(0));
   IO.mapRequired("Flags", Symbol.Flags);
   IO.mapRequired("DisplayName", Symbol.Name);
 }
@@ -308,8 +307,8 @@ template <> void SymbolRecordImpl<RegisterSym>::map(IO &IO) {
 
 template <> void SymbolRecordImpl<PublicSym32>::map(IO &IO) {
   IO.mapRequired("Flags", Symbol.Flags);
-  IO.mapRequired("Seg", Symbol.Segment);
-  IO.mapRequired("Off", Symbol.Offset);
+  IO.mapOptional("Offset", Symbol.Offset, 0U);
+  IO.mapOptional("Segment", Symbol.Segment, uint16_t(0));
   IO.mapRequired("Name", Symbol.Name);
 }
 
@@ -325,8 +324,8 @@ template <> void SymbolRecordImpl<EnvBlockSym>::map(IO &IO) {
 }
 
 template <> void SymbolRecordImpl<InlineSiteSym>::map(IO &IO) {
-  IO.mapRequired("PtrParent", Symbol.Parent);
-  IO.mapRequired("PtrEnd", Symbol.End);
+  IO.mapOptional("PtrParent", Symbol.Parent, 0U);
+  IO.mapOptional("PtrEnd", Symbol.End, 0U);
   IO.mapRequired("Inlinee", Symbol.Inlinee);
   // TODO: The binary annotations
 }
@@ -368,17 +367,17 @@ template <> void SymbolRecordImpl<DefRangeRegisterRelSym>::map(IO &IO) {
 }
 
 template <> void SymbolRecordImpl<BlockSym>::map(IO &IO) {
-  // TODO: Print the linkage name
-  IO.mapRequired("PtrParent", Symbol.Parent);
-  IO.mapRequired("PtrEnd", Symbol.End);
+  IO.mapOptional("PtrParent", Symbol.Parent, 0U);
+  IO.mapOptional("PtrEnd", Symbol.End, 0U);
   IO.mapRequired("CodeSize", Symbol.CodeSize);
-  IO.mapRequired("Segment", Symbol.Segment);
+  IO.mapOptional("Offset", Symbol.CodeOffset, 0U);
+  IO.mapOptional("Segment", Symbol.Segment, uint16_t(0));
   IO.mapRequired("BlockName", Symbol.Name);
 }
 
 template <> void SymbolRecordImpl<LabelSym>::map(IO &IO) {
-  // TODO: Print the linkage name
-  IO.mapRequired("Segment", Symbol.Segment);
+  IO.mapOptional("Offset", Symbol.CodeOffset, 0U);
+  IO.mapOptional("Segment", Symbol.Segment, uint16_t(0));
   IO.mapRequired("Flags", Symbol.Flags);
   IO.mapRequired("Flags", Symbol.Flags);
   IO.mapRequired("DisplayName", Symbol.Name);
@@ -428,8 +427,8 @@ template <> void SymbolRecordImpl<FrameProcSym>::map(IO &IO) {
 }
 
 template <> void SymbolRecordImpl<CallSiteInfoSym>::map(IO &IO) {
-  // TODO: Map Linkage Name
-  IO.mapRequired("Segment", Symbol.Segment);
+  IO.mapOptional("Offset", Symbol.CodeOffset, 0U);
+  IO.mapOptional("Segment", Symbol.Segment, uint16_t(0));
   IO.mapRequired("Type", Symbol.Type);
 }
 
@@ -441,14 +440,13 @@ template <> void SymbolRecordImpl<FileStaticSym>::map(IO &IO) {
 }
 
 template <> void SymbolRecordImpl<HeapAllocationSiteSym>::map(IO &IO) {
-  // TODO: Map Linkage Name
-  IO.mapRequired("Segment", Symbol.Segment);
+  IO.mapOptional("Offset", Symbol.CodeOffset, 0U);
+  IO.mapOptional("Segment", Symbol.Segment, uint16_t(0));
   IO.mapRequired("CallInstructionSize", Symbol.CallInstructionSize);
   IO.mapRequired("Type", Symbol.Type);
 }
 
 template <> void SymbolRecordImpl<FrameCookieSym>::map(IO &IO) {
-  // TODO: Map Linkage Name
   IO.mapRequired("Register", Symbol.Register);
   IO.mapRequired("CookieKind", Symbol.CookieKind);
   IO.mapRequired("Flags", Symbol.Flags);
@@ -487,14 +485,16 @@ template <> void SymbolRecordImpl<ConstantSym>::map(IO &IO) {
 }
 
 template <> void SymbolRecordImpl<DataSym>::map(IO &IO) {
-  // TODO: Map linkage name
   IO.mapRequired("Type", Symbol.Type);
+  IO.mapOptional("Offset", Symbol.DataOffset, 0U);
+  IO.mapOptional("Segment", Symbol.Segment, uint16_t(0));
   IO.mapRequired("DisplayName", Symbol.Name);
 }
 
 template <> void SymbolRecordImpl<ThreadLocalDataSym>::map(IO &IO) {
-  // TODO: Map linkage name
   IO.mapRequired("Type", Symbol.Type);
+  IO.mapOptional("Offset", Symbol.DataOffset, 0U);
+  IO.mapOptional("Segment", Symbol.Segment, uint16_t(0));
   IO.mapRequired("DisplayName", Symbol.Name);
 }
 }

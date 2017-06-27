@@ -845,7 +845,7 @@ void NativeProcessNetBSD::SigchldHandler() {
   if (exited)
     MonitorExited(wait_pid, wait_status);
   else {
-    assert(wait_status == WaitStatus::Stop);
+    assert(wait_status.type == WaitStatus::Stop);
     MonitorCallback(wait_pid, wait_status.status);
   }
 }

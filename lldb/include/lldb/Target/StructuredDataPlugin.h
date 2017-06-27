@@ -11,7 +11,7 @@
 #define StructuredDataPlugin_h
 
 #include "lldb/Core/PluginInterface.h"
-#include "lldb/Core/StructuredData.h"
+#include "lldb/Utility/StructuredData.h"
 
 namespace lldb_private {
 

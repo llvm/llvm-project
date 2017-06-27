@@ -67,6 +67,13 @@ void LazyRandomTypeCollection::reset(ArrayRef<uint8_t> Data,
   reset(toStringRef(Data), RecordCountHint);
 }
 
+uint32_t LazyRandomTypeCollection::getOffsetOfType(TypeIndex Index) {
+  error(ensureTypeExists(Index));
+  assert(contains(Index));
+
+  return Records[Index.toArrayIndex()].Offset;
+}
+
 CVType LazyRandomTypeCollection::getType(TypeIndex Index) {
   error(ensureTypeExists(Index));
   assert(contains(Index));

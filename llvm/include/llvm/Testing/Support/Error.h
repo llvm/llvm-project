@@ -30,8 +30,8 @@ template <typename T> ExpectedHolder<T> TakeExpected(Expected<T> &Exp) {
   return Result;
 }
 
-template <typename T> ExpectedHolder<T> TakeExpected(const Expected<T> &Exp) {
-  return TakeExpected(const_cast<Expected<T> &>(Exp));
+template <typename T> ExpectedHolder<T> TakeExpected(Expected<T> &&Exp) {
+  return TakeExpected(Exp);
 }
 } // namespace detail
 

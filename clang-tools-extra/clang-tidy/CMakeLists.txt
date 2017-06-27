@@ -26,6 +26,7 @@ add_clang_library(clangTidy
   clangToolingCore
   )
 
+add_subdirectory(android)
 add_subdirectory(boost)
 add_subdirectory(cert)
 add_subdirectory(cppcoreguidelines)

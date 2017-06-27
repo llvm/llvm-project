@@ -10,7 +10,7 @@
 #include "lldb/Core/Mangled.h"
 
 #if defined(_WIN32)
-#include <windows.h>
+#include "lldb/Host/windows/windows.h"
 
 #include <dbghelp.h>
 #pragma comment(lib, "dbghelp.lib")
