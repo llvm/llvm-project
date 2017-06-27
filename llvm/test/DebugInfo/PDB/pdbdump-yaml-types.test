@@ -785,7 +785,7 @@ YAML:             Name:            eIDLModuleUsage
 YAML:         - Kind:            LF_ENUMERATE
 YAML:           Enumerator:      
 YAML:             Attrs:           3
-YAML:             Value:           -32768
+YAML:             Value:           32768
 YAML:             Name:            eAnonymousUsage
 YAML:         - Kind:            LF_ENUMERATE
 YAML:           Enumerator:      

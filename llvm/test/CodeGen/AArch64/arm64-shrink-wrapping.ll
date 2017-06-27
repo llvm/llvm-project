@@ -78,9 +78,9 @@ declare i32 @doSomething(i32, i32*)
 ; Next BB.
 ; CHECK: [[LOOP:LBB[0-9_]+]]: ; %for.body
 ; CHECK: bl _something
-; CHECK-NEXT: sub [[IV]], [[IV]], #1
+; CHECK-NEXT: subs [[IV]], [[IV]], #1
 ; CHECK-NEXT: add [[SUM]], w0, [[SUM]]
-; CHECK-NEXT: cbnz [[IV]], [[LOOP]]
+; CHECK-NEXT: b.ne [[LOOP]]
 ;
 ; Next BB.
 ; Copy SUM into the returned register + << 3.
@@ -144,9 +144,9 @@ declare i32 @something(...)
 ; Next BB.
 ; CHECK: [[LOOP_LABEL:LBB[0-9_]+]]: ; %for.body
 ; CHECK: bl _something
-; CHECK-NEXT: sub [[IV]], [[IV]], #1
+; CHECK-NEXT: subs [[IV]], [[IV]], #1
 ; CHECK-NEXT: add [[SUM]], w0, [[SUM]]
-; CHECK-NEXT: cbnz [[IV]], [[LOOP_LABEL]]
+; CHECK-NEXT: b.ne [[LOOP_LABEL]]
 ; Next BB.
 ; CHECK: ; %for.end
 ; CHECK: mov w0, [[SUM]]
@@ -188,9 +188,9 @@ for.end:                                          ; preds = %for.body
 ;
 ; CHECK: [[LOOP_LABEL:LBB[0-9_]+]]: ; %for.body
 ; CHECK: bl _something
-; CHECK-NEXT: sub [[IV]], [[IV]], #1
+; CHECK-NEXT: subs [[IV]], [[IV]], #1
 ; CHECK-NEXT: add [[SUM]], w0, [[SUM]]
-; CHECK-NEXT: cbnz [[IV]], [[LOOP_LABEL]]
+; CHECK-NEXT: b.ne [[LOOP_LABEL]]
 ; Next BB.
 ; CHECK: bl _somethingElse
 ; CHECK-NEXT: lsl w0, [[SUM]], #3
@@ -259,9 +259,9 @@ declare void @somethingElse(...)
 ;
 ; CHECK: [[LOOP_LABEL:LBB[0-9_]+]]: ; %for.body
 ; CHECK: bl _something
-; CHECK-NEXT: sub [[IV]], [[IV]], #1
+; CHECK-NEXT: subs [[IV]], [[IV]], #1
 ; CHECK-NEXT: add [[SUM]], w0, [[SUM]]
-; CHECK-NEXT: cbnz [[IV]], [[LOOP_LABEL]]
+; CHECK-NEXT: b.ne [[LOOP_LABEL]]
 ; Next BB.
 ; CHECK: lsl w0, [[SUM]], #3
 ;
@@ -343,9 +343,9 @@ entry:
 ; CHECK-NEXT: add [[NEXT_VA_ADDR:x[0-9]+]], [[VA_ADDR]], #8
 ; CHECK-NEXT: str [[NEXT_VA_ADDR]], [sp, #8]
 ; CHECK-NEXT: ldr [[VA_VAL:w[0-9]+]], {{\[}}[[VA_ADDR]]]
-; CHECK-NEXT: sub w1, w1, #1
+; CHECK-NEXT: subs w1, w1, #1
 ; CHECK-NEXT: add [[SUM]], [[SUM]], [[VA_VAL]]
-; CHECK-NEXT: cbnz w1, [[LOOP_LABEL]]
+; CHECK-NEXT: b.ne [[LOOP_LABEL]]
 ; CHECK-NEXT: [[IFEND_LABEL]]:
 ; Epilogue code.
 ; CHECK: add sp, sp, #16
@@ -409,9 +409,9 @@ declare void @llvm.va_end(i8*)
 ;
 ; CHECK: [[LOOP_LABEL:LBB[0-9_]+]]: ; %for.body
 ; Inline asm statement.
-; CHECK: sub [[IV]], [[IV]], #1
+; CHECK: subs [[IV]], [[IV]], #1
 ; CHECK: add x19, x19, #1
-; CHECK: cbnz [[IV]], [[LOOP_LABEL]]
+; CHECK: b.ne [[LOOP_LABEL]]
 ; Next BB.
 ; CHECK: mov w0, wzr
 ; Epilogue code.

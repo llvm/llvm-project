@@ -99,29 +99,27 @@ Error DbiStream::reload() {
     return make_error<RawError>(raw_error_code::corrupt_file,
                                 "DBI type server substream not aligned.");
 
-  BinaryStreamRef ModInfoSubstream;
-  BinaryStreamRef FileInfoSubstream;
-  if (auto EC =
-          Reader.readStreamRef(ModInfoSubstream, Header->ModiSubstreamSize))
+  if (auto EC = Reader.readSubstream(ModiSubstream, Header->ModiSubstreamSize))
     return EC;
 
-  if (auto EC = Reader.readStreamRef(SecContrSubstream,
+  if (auto EC = Reader.readSubstream(SecContrSubstream,
                                      Header->SecContrSubstreamSize))
     return EC;
-  if (auto EC = Reader.readStreamRef(SecMapSubstream, Header->SectionMapSize))
+  if (auto EC = Reader.readSubstream(SecMapSubstream, Header->SectionMapSize))
     return EC;
-  if (auto EC = Reader.readStreamRef(FileInfoSubstream, Header->FileInfoSize))
+  if (auto EC = Reader.readSubstream(FileInfoSubstream, Header->FileInfoSize))
     return EC;
   if (auto EC =
-          Reader.readStreamRef(TypeServerMapSubstream, Header->TypeServerSize))
+          Reader.readSubstream(TypeServerMapSubstream, Header->TypeServerSize))
     return EC;
-  if (auto EC = Reader.readStreamRef(ECSubstream, Header->ECSubstreamSize))
+  if (auto EC = Reader.readSubstream(ECSubstream, Header->ECSubstreamSize))
     return EC;
   if (auto EC = Reader.readArray(
           DbgStreams, Header->OptionalDbgHdrSize / sizeof(ulittle16_t)))
     return EC;
 
-  if (auto EC = Modules.initialize(ModInfoSubstream, FileInfoSubstream))
+  if (auto EC = Modules.initialize(ModiSubstream.StreamData,
+                                   FileInfoSubstream.StreamData))
     return EC;
 
   if (auto EC = initializeSectionContributionData())
@@ -137,8 +135,8 @@ Error DbiStream::reload() {
     return make_error<RawError>(raw_error_code::corrupt_file,
                                 "Found unexpected bytes in DBI Stream.");
 
-  if (ECSubstream.getLength() > 0) {
-    BinaryStreamReader ECReader(ECSubstream);
+  if (!ECSubstream.empty()) {
+    BinaryStreamReader ECReader(ECSubstream.StreamData);
     if (auto EC = ECNames.reload(ECReader))
       return EC;
   }
@@ -228,10 +226,10 @@ void DbiStream::visitSectionContributions(
 }
 
 Error DbiStream::initializeSectionContributionData() {
-  if (SecContrSubstream.getLength() == 0)
+  if (SecContrSubstream.empty())
     return Error::success();
 
-  BinaryStreamReader SCReader(SecContrSubstream);
+  BinaryStreamReader SCReader(SecContrSubstream.StreamData);
   if (auto EC = SCReader.readEnum(SectionContribVersion))
     return EC;
 
@@ -302,11 +300,33 @@ Error DbiStream::initializeFpoRecords() {
   return Error::success();
 }
 
+BinarySubstreamRef DbiStream::getSectionContributionData() const {
+  return SecContrSubstream;
+}
+
+BinarySubstreamRef DbiStream::getSecMapSubstreamData() const {
+  return SecMapSubstream;
+}
+
+BinarySubstreamRef DbiStream::getModiSubstreamData() const {
+  return ModiSubstream;
+}
+
+BinarySubstreamRef DbiStream::getFileInfoSubstreamData() const {
+  return FileInfoSubstream;
+}
+
+BinarySubstreamRef DbiStream::getTypeServerMapSubstreamData() const {
+  return TypeServerMapSubstream;
+}
+
+BinarySubstreamRef DbiStream::getECSubstreamData() const { return ECSubstream; }
+
 Error DbiStream::initializeSectionMapData() {
-  if (SecMapSubstream.getLength() == 0)
+  if (SecMapSubstream.empty())
     return Error::success();
 
-  BinaryStreamReader SMReader(SecMapSubstream);
+  BinaryStreamReader SMReader(SecMapSubstream.StreamData);
   const SecMapHeader *Header;
   if (auto EC = SMReader.readObject(Header))
     return EC;

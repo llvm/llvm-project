@@ -860,6 +860,10 @@ void Type::applyModifier(char Mod) {
     Float = true;
     ElementBitwidth = 64;
     break;
+  case 'H':
+    Float = true;
+    ElementBitwidth = 16;
+    break;
   case 'g':
     if (AppliedQuad)
       Bitwidth /= 2;
@@ -1006,7 +1010,7 @@ std::string Intrinsic::getInstTypeCode(Type T, ClassKind CK) const {
 }
 
 static bool isFloatingPointProtoModifier(char Mod) {
-  return Mod == 'F' || Mod == 'f';
+  return Mod == 'F' || Mod == 'f' || Mod == 'H';
 }
 
 std::string Intrinsic::getBuiltinTypeStr() {

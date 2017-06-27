@@ -7,8 +7,8 @@ declare void @foobar(i32 %v0, i32 %v1)
 
 ; Make sure sub is scheduled in front of cbnz
 ; CHECK-LABEL: test_sub_cbz:
-; CHECK: sub w[[SUBRES:[0-9]+]], w0, #13
-; CHECK-NEXT: cbnz w[[SUBRES]], {{.?LBB[0-9_]+}}
+; CHECK: subs w[[SUBRES:[0-9]+]], w0, #13
+; CHECK: b.ne {{.?LBB[0-9_]+}}
 define void @test_sub_cbz(i32 %a0, i32 %a1) {
 entry:
   ; except for the fusion opportunity the sub/add should be equal so the

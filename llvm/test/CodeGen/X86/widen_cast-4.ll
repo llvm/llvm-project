@@ -9,7 +9,7 @@ define void @update(i64* %dst_i, i64* %src_i, i32 %n) nounwind {
 ; NARROW:       # BB#0: # %entry
 ; NARROW-NEXT:    subl $12, %esp
 ; NARROW-NEXT:    movl $0, (%esp)
-; NARROW-NEXT:    movdqa {{.*#+}} xmm0 = [1,1,1,1,1,1,1,1]
+; NARROW-NEXT:    pcmpeqd %xmm0, %xmm0
 ; NARROW-NEXT:    movdqa {{.*#+}} xmm1 = <0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u>
 ; NARROW-NEXT:    jmp .LBB0_1
 ; NARROW-NEXT:    .p2align 4, 0x90
@@ -26,7 +26,7 @@ define void @update(i64* %dst_i, i64* %src_i, i32 %n) nounwind {
 ; NARROW-NEXT:    movl (%esp), %ecx
 ; NARROW-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; NARROW-NEXT:    pmovzxbw {{.*#+}} xmm2 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
-; NARROW-NEXT:    paddw %xmm0, %xmm2
+; NARROW-NEXT:    psubw %xmm0, %xmm2
 ; NARROW-NEXT:    psllw $8, %xmm2
 ; NARROW-NEXT:    psraw $8, %xmm2
 ; NARROW-NEXT:    psraw $2, %xmm2
@@ -46,7 +46,7 @@ define void @update(i64* %dst_i, i64* %src_i, i32 %n) nounwind {
 ; WIDE:       # BB#0: # %entry
 ; WIDE-NEXT:    subl $12, %esp
 ; WIDE-NEXT:    movl $0, (%esp)
-; WIDE-NEXT:    movdqa {{.*#+}} xmm0 = <1,1,1,1,1,1,1,1,u,u,u,u,u,u,u,u>
+; WIDE-NEXT:    pcmpeqd %xmm0, %xmm0
 ; WIDE-NEXT:    movdqa {{.*#+}} xmm1 = [63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63]
 ; WIDE-NEXT:    movdqa {{.*#+}} xmm2 = [32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32]
 ; WIDE-NEXT:    jmp .LBB0_1
@@ -65,7 +65,7 @@ define void @update(i64* %dst_i, i64* %src_i, i32 %n) nounwind {
 ; WIDE-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; WIDE-NEXT:    movd {{.*#+}} xmm3 = mem[0],zero,zero,zero
 ; WIDE-NEXT:    pinsrd $1, 4(%eax,%ecx,8), %xmm3
-; WIDE-NEXT:    paddb %xmm0, %xmm3
+; WIDE-NEXT:    psubb %xmm0, %xmm3
 ; WIDE-NEXT:    psrlw $2, %xmm3
 ; WIDE-NEXT:    pand %xmm1, %xmm3
 ; WIDE-NEXT:    pxor %xmm2, %xmm3

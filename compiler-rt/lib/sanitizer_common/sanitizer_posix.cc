@@ -164,11 +164,14 @@ void *MmapOrDieOnFatalError(uptr size, const char *mem_type) {
 // We want to map a chunk of address space aligned to 'alignment'.
 // We do it by maping a bit more and then unmaping redundant pieces.
 // We probably can do it with fewer syscalls in some OS-dependent way.
-void *MmapAlignedOrDie(uptr size, uptr alignment, const char *mem_type) {
+void *MmapAlignedOrDieOnFatalError(uptr size, uptr alignment,
+                                   const char *mem_type) {
   CHECK(IsPowerOfTwo(size));
   CHECK(IsPowerOfTwo(alignment));
   uptr map_size = size + alignment;
-  uptr map_res = (uptr)MmapOrDie(map_size, mem_type);
+  uptr map_res = (uptr)MmapOrDieOnFatalError(map_size, mem_type);
+  if (!map_res)
+    return nullptr;
   uptr map_end = map_res + map_size;
   uptr res = map_res;
   if (res & (alignment - 1))  // Not aligned.
@@ -195,7 +198,7 @@ void *MmapNoReserveOrDie(uptr size, const char *mem_type) {
   return (void *)p;
 }
 
-void *MmapFixedOrDie(uptr fixed_addr, uptr size) {
+void *MmapFixedImpl(uptr fixed_addr, uptr size, bool tolerate_enomem) {
   uptr PageSize = GetPageSizeCached();
   uptr p = internal_mmap((void*)(fixed_addr & ~(PageSize - 1)),
       RoundUpTo(size, PageSize),
@@ -204,6 +207,8 @@ void *MmapFixedOrDie(uptr fixed_addr, uptr size) {
       -1, 0);
   int reserrno;
   if (internal_iserror(p, &reserrno)) {
+    if (tolerate_enomem && reserrno == ENOMEM)
+      return nullptr;
     char mem_type[30];
     internal_snprintf(mem_type, sizeof(mem_type), "memory at address 0x%zx",
                       fixed_addr);
@@ -211,6 +216,14 @@ void *MmapFixedOrDie(uptr fixed_addr, uptr size) {
   }
   IncreaseTotalMmap(size);
   return (void *)p;
+}
+
+void *MmapFixedOrDie(uptr fixed_addr, uptr size) {
+  return MmapFixedImpl(fixed_addr, size, false /*tolerate_enomem*/);
+}
+
+void *MmapFixedOrDieOnFatalError(uptr fixed_addr, uptr size) {
+  return MmapFixedImpl(fixed_addr, size, true /*tolerate_enomem*/);
 }
 
 bool MprotectNoAccess(uptr addr, uptr size) {

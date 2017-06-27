@@ -20,7 +20,7 @@ a:
         addu    $9,10            # CHECK: addiu $9, $9, 10    # encoding: [0x25,0x29,0x00,0x0a]
         align   $4, $2, $3, 2    # CHECK: align $4, $2, $3, 2 # encoding: [0x7c,0x43,0x22,0xa0]
         aluipc  $3, 56           # CHECK: aluipc $3, 56       # encoding: [0xec,0x7f,0x00,0x38]
-        aui     $3, $2, 23       # CHECK: aui $3, $2, 23      # encoding: [0x3c,0x62,0x00,0x17]
+        aui     $3, $2, 23       # CHECK: aui $3, $2, 23      # encoding: [0x3c,0x43,0x00,0x17]
         auipc   $3, -1           # CHECK: auipc $3, -1        # encoding: [0xec,0x7e,0xff,0xff]
         bal     21100            # CHECK: bal 21100           # encoding: [0x04,0x11,0x14,0x9b]
         balc 14572256            # CHECK: balc 14572256       # encoding: [0xe8,0x37,0x96,0xb8]

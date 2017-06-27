@@ -70,13 +70,13 @@ public:
                              SmallVectorImpl<MCFixup> &Fixups,
                              const MCSubtargetInfo &STI) const override;
 
-  unsigned getSDWA9SrcEncoding(const MCInst &MI, unsigned OpNo,
-                               SmallVectorImpl<MCFixup> &Fixups,
-                               const MCSubtargetInfo &STI) const override;
+  unsigned getSDWASrcEncoding(const MCInst &MI, unsigned OpNo,
+                              SmallVectorImpl<MCFixup> &Fixups,
+                              const MCSubtargetInfo &STI) const override;
 
-  unsigned getSDWA9VopcDstEncoding(const MCInst &MI, unsigned OpNo,
-                                   SmallVectorImpl<MCFixup> &Fixups,
-                                   const MCSubtargetInfo &STI) const override;
+  unsigned getSDWAVopcDstEncoding(const MCInst &MI, unsigned OpNo,
+                                  SmallVectorImpl<MCFixup> &Fixups,
+                                  const MCSubtargetInfo &STI) const override;
 };
 
 } // end anonymous namespace
@@ -252,9 +252,7 @@ uint32_t SIMCCodeEmitter::getLitEncoding(const MCOperand &MO,
   case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2FP16: {
     uint16_t Lo16 = static_cast<uint16_t>(Imm);
-    assert(Lo16 == static_cast<uint16_t>(Imm >> 16));
     uint32_t Encoding = getLit16Encoding(Lo16, STI);
-    assert(Encoding != 255 && "packed constants can only be inline immediates");
     return Encoding;
   }
   default:
@@ -328,11 +326,11 @@ unsigned SIMCCodeEmitter::getSOPPBrEncoding(const MCInst &MI, unsigned OpNo,
 }
 
 unsigned
-SIMCCodeEmitter::getSDWA9SrcEncoding(const MCInst &MI, unsigned OpNo,
-                                     SmallVectorImpl<MCFixup> &Fixups,
-                                     const MCSubtargetInfo &STI) const {
+SIMCCodeEmitter::getSDWASrcEncoding(const MCInst &MI, unsigned OpNo,
+                                    SmallVectorImpl<MCFixup> &Fixups,
+                                    const MCSubtargetInfo &STI) const {
   using namespace AMDGPU::SDWA;
-  
+
   uint64_t RegEnc = 0;
 
   const MCOperand &MO = MI.getOperand(OpNo);
@@ -347,9 +345,9 @@ SIMCCodeEmitter::getSDWA9SrcEncoding(const MCInst &MI, unsigned OpNo,
 }
 
 unsigned
-SIMCCodeEmitter::getSDWA9VopcDstEncoding(const MCInst &MI, unsigned OpNo,
-                                         SmallVectorImpl<MCFixup> &Fixups,
-                                         const MCSubtargetInfo &STI) const {
+SIMCCodeEmitter::getSDWAVopcDstEncoding(const MCInst &MI, unsigned OpNo,
+                                        SmallVectorImpl<MCFixup> &Fixups,
+                                        const MCSubtargetInfo &STI) const {
   using namespace AMDGPU::SDWA;
 
   uint64_t RegEnc = 0;
@@ -365,6 +363,25 @@ SIMCCodeEmitter::getSDWA9VopcDstEncoding(const MCInst &MI, unsigned OpNo,
   return RegEnc;
 }
 
+static bool needsPCRel(const MCExpr *Expr) {
+  switch (Expr->getKind()) {
+  case MCExpr::SymbolRef:
+    return true;
+  case MCExpr::Binary: {
+    auto *BE = cast<MCBinaryExpr>(Expr);
+    if (BE->getOpcode() == MCBinaryExpr::Sub)
+      return false;
+    return needsPCRel(BE->getLHS()) || needsPCRel(BE->getRHS());
+  }
+  case MCExpr::Unary:
+    return needsPCRel(cast<MCUnaryExpr>(Expr)->getSubExpr());
+  case MCExpr::Target:
+  case MCExpr::Constant:
+    return false;
+  }
+  llvm_unreachable("invalid kind");
+}
+
 uint64_t SIMCCodeEmitter::getMachineOpValue(const MCInst &MI,
                                             const MCOperand &MO,
                                        SmallVectorImpl<MCFixup> &Fixups,
@@ -373,12 +390,21 @@ uint64_t SIMCCodeEmitter::getMachineOpValue(const MCInst &MI,
     return MRI.getEncodingValue(MO.getReg());
 
   if (MO.isExpr() && MO.getExpr()->getKind() != MCExpr::Constant) {
-    const auto *Expr = dyn_cast<MCSymbolRefExpr>(MO.getExpr());
+    // FIXME: If this is expression is PCRel or not should not depend on what
+    // the expression looks like. Given that this is just a general expression,
+    // it should probably be FK_Data_4 and whatever is producing
+    //
+    //    s_add_u32 s2, s2, (extern_const_addrspace+16
+    //
+    // And expecting a PCRel should instead produce
+    //
+    // .Ltmp1:
+    //   s_add_u32 s2, s2, (extern_const_addrspace+16)-.Ltmp1
     MCFixupKind Kind;
-    if (Expr && Expr->getSymbol().isExternal())
-      Kind = FK_Data_4;
-    else
+    if (needsPCRel(MO.getExpr()))
       Kind = FK_PCRel_4;
+    else
+      Kind = FK_Data_4;
     Fixups.push_back(MCFixup::create(4, MO.getExpr(), Kind, MI.getLoc()));
   }
 

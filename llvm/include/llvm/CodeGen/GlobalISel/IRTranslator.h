@@ -1,4 +1,4 @@
-//===-- llvm/CodeGen/GlobalISel/IRTranslator.h - IRTranslator ---*- C++ -*-===//
+//===- llvm/CodeGen/GlobalISel/IRTranslator.h - IRTranslator ----*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -19,24 +19,33 @@
 #ifndef LLVM_CODEGEN_GLOBALISEL_IRTRANSLATOR_H
 #define LLVM_CODEGEN_GLOBALISEL_IRTRANSLATOR_H
 
-#include "Types.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/CodeGen/GlobalISel/Types.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/IR/Intrinsics.h"
+#include <memory>
+#include <utility>
 
 namespace llvm {
-// Forward declarations.
+
+class AllocaInst;
 class BasicBlock;
+class CallInst;
 class CallLowering;
 class Constant;
+class DataLayout;
 class Instruction;
 class MachineBasicBlock;
 class MachineFunction;
 class MachineInstr;
-class OptimizationRemarkEmitter;
 class MachineRegisterInfo;
+class OptimizationRemarkEmitter;
+class PHINode;
 class TargetPassConfig;
+class User;
+class Value;
 
 // Technically the pass should run on an hypothetical MachineModule,
 // since it should translate Global into some sort of MachineGlobal.
@@ -53,6 +62,7 @@ public:
 private:
   /// Interface used to lower the everything related to calls.
   const CallLowering *CLI;
+
   /// Mapping of the values of the current LLVM IR function
   /// to the related virtual registers.
   ValueToVReg ValToVReg;
@@ -67,7 +77,7 @@ private:
   // a mapping between the edges arriving at the BasicBlock to the corresponding
   // created MachineBasicBlocks. Some BasicBlocks that get translated to a
   // single MachineBasicBlock may also end up in this Map.
-  typedef std::pair<const BasicBlock *, const BasicBlock *> CFGEdge;
+  using CFGEdge = std::pair<const BasicBlock *, const BasicBlock *>;
   DenseMap<CFGEdge, SmallVector<MachineBasicBlock *, 1>> MachinePreds;
 
   // List of stubbed PHI instructions, for values and basic blocks to be filled
@@ -164,7 +174,6 @@ private:
   bool translateFCmp(const User &U, MachineIRBuilder &MIRBuilder) {
     return translateCompare(U, MIRBuilder);
   }
-
 
   /// Add remaining operands onto phis we've translated. Executed after all
   /// MachineBasicBlocks for the function have been created.
@@ -356,7 +365,7 @@ private:
   MachineFunction *MF;
 
   /// MachineRegisterInfo used to create virtual registers.
-  MachineRegisterInfo *MRI;
+  MachineRegisterInfo *MRI = nullptr;
 
   const DataLayout *DL;
 
@@ -430,5 +439,6 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
 };
 
-} // End namespace llvm.
-#endif
+} // end namespace llvm
+
+#endif // LLVM_CODEGEN_GLOBALISEL_IRTRANSLATOR_H

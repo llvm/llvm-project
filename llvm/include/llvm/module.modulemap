@@ -275,11 +275,9 @@ module LLVM_Utils {
     umbrella "Support"
     module * { export * }
 
-    // Exclude this; it's only included on Solaris.
-    exclude header "Support/Solaris.h"
-
-    // Exclude this; it's fundamentally non-modular.
+    // Exclude these; they are fundamentally non-modular.
     exclude header "Support/PluginLoader.h"
+    exclude header "Support/Solaris/sys/regset.h"
 
     // These are intended for textual inclusion.
     textual header "Support/ARMTargetParser.def"

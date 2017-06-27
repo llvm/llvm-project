@@ -24,7 +24,7 @@ template <class Iter1, class Iter2, class T>
 void
 test(Iter1 first1, Iter1 last1, Iter2 first2, T init, T x)
 {
-    static_assert( std::is_same_v<T, 
+    static_assert( std::is_same_v<T,
             decltype(std::transform_reduce(first1, last1, first2, init))> );
     assert(std::transform_reduce(first1, last1, first2, init) == x);
 }
@@ -52,7 +52,7 @@ template <typename T, typename Init>
 void test_return_type()
 {
     T *p = nullptr;
-    static_assert( std::is_same_v<Init, 
+    static_assert( std::is_same_v<Init,
                        decltype(std::transform_reduce(p, p, p, Init{}))> );
 }
 

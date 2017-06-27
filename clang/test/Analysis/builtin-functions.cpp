@@ -1,6 +1,7 @@
 // RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin10 -analyzer-checker=core,debug.ExprInspection %s -std=c++11 -verify
 
 void clang_analyzer_eval(bool);
+void clang_analyzer_warnIfReached();
 
 void testAddressof(int x) {
   clang_analyzer_eval(&x == __builtin_addressof(x)); // expected-warning{{TRUE}}
@@ -49,4 +50,17 @@ void test_assume_aligned_4(char *p) {
 
   q = (char*) __builtin_assume_aligned(p + 1, 16);
   clang_analyzer_eval(p == q); // expected-warning{{FALSE}}
+}
+
+void f(int i) {
+  __builtin_assume(i < 10);
+  clang_analyzer_eval(i < 15); // expected-warning {{TRUE}}
+}
+
+void g(int i) {
+  if (i > 5) {
+    __builtin_assume(i < 5);
+    clang_analyzer_warnIfReached(); // Assumtion contradicts constraints.
+                                    // We give up the analysis on this path.
+  }
 }

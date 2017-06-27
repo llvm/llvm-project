@@ -10,8 +10,8 @@
 
 ; CHECK:      foo:
 ; CHECK-NEXT: pushq	%rax
-; CHECK-NEXT: callq{{.*}}<__wrap_bar>
 ; CHECK-NEXT: callq{{.*}}<bar>
+; CHECK-NEXT: callq{{.*}}<__real_bar>
 
 ; Check that bar and __wrap_bar retain their original binding.
 ; BIND:      Name: bar

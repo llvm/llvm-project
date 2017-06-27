@@ -1,7 +1,7 @@
 +; RUN: llvm-pdbutil yaml2pdb -pdb=%t.1.pdb %p/Inputs/merge-types-1.yaml
 ; RUN: llvm-pdbutil yaml2pdb -pdb=%t.2.pdb %p/Inputs/merge-types-2.yaml
 ; RUN: llvm-pdbutil merge -pdb=%t.3.pdb %t.1.pdb %t.2.pdb
-; RUN: llvm-pdbutil raw -types %t.3.pdb | FileCheck -check-prefix=MERGED %s
+; RUN: llvm-pdbutil dump -types %t.3.pdb | FileCheck -check-prefix=MERGED %s
 
 
 MERGED:                          Types (TPI Stream)

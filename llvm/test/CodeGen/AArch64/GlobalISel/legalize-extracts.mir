@@ -1,0 +1,85 @@
+# RUN: llc -mtriple=aarch64-linux-gnu -O0 -run-pass=legalizer -global-isel %s -o - | FileCheck %s
+
+---
+name:            test_extracts_1
+body: |
+  bb.0:
+    liveins: %w0
+
+    ; Low part of extraction takes entirity of the low register entirely, so
+    ; value stored is forwarded directly from first load.
+
+    ; CHECK-LABEL: name: test_extracts_1
+    ; CHECK: [[LO:%[0-9]+]](s64) = G_LOAD
+    ; CHECK: {{%[0-9]+}}(s64) = G_LOAD
+    ; CHECK: [[VAL:%[0-9]+]](s64) = COPY [[LO]]
+    ; CHECK: G_STORE [[VAL]]
+    %0:_(s64) = COPY %x0
+    %1:_(s32) = COPY %w1
+    %2:_(p0) = COPY %x2
+    %3:_(s128) = G_LOAD %2(p0) :: (load 16)
+    %4:_(s64) = G_EXTRACT %3(s128), 0
+    G_STORE %4(s64), %2(p0) :: (store 8)
+    RET_ReallyLR
+...
+
+---
+name:            test_extracts_2
+body: |
+  bb.0:
+    liveins: %w0
+
+      ; Low extraction wipes takes whole low register. High extraction is real.
+    ; CHECK-LABEL: name: test_extracts_2
+    ; CHECK: [[LO_TMP:%[0-9]+]](s64) = G_LOAD
+    ; CHECK: [[HI:%[0-9]+]](s64) = G_LOAD
+    ; CHECK: [[LO:%[0-9]+]](s64) = COPY [[LO_TMP]]
+    ; CHECK: [[NEWHI_TMP:%[0-9]+]](s32) = G_EXTRACT [[HI]](s64), 0
+    ; CHECK: [[NEWHI:%[0-9]+]](s32) = COPY [[NEWHI_TMP]]
+    ; CHECK: G_STORE [[LO]]
+    ; CHECK: G_STORE [[NEWHI]]
+    %0:_(s64) = COPY %x0
+    %1:_(s32) = COPY %w1
+    %2:_(p0) = COPY %x2
+    %3:_(s128) = G_LOAD %2(p0) :: (load 16)
+    %4:_(s64) = G_EXTRACT %3(s128), 0
+    %5:_(s32) = G_EXTRACT %3(s128), 64
+    G_STORE %4(s64), %2(p0) :: (store 8)
+    G_STORE %5(s32), %2(p0) :: (store 4)
+    RET_ReallyLR
+...
+
+---
+name:            test_extracts_3
+body: |
+  bb.0:
+    liveins: %x0, %x1, %x2
+
+
+    ; CHECK-LABEL: name: test_extracts_3
+    ; CHECK: [[LO:%[0-9]+]](s32) = G_EXTRACT %0(s64), 32
+    ; CHECK: [[HI:%[0-9]+]](s32) = G_EXTRACT %1(s64), 0
+    ; CHECK: %3(s64) = G_MERGE_VALUES [[LO]](s32), [[HI]](s32)
+    %0:_(s64) = COPY %x0
+    %1:_(s64) = COPY %x1
+    %2:_(s128) = G_MERGE_VALUES %0, %1
+    %3:_(s64) = G_EXTRACT %2, 32
+    RET_ReallyLR
+...
+
+---
+name:            test_extracts_4
+body: |
+  bb.0:
+    liveins: %x0, %x1, %x2
+
+
+    ; CHECK-LABEL: name: test_extracts_4
+    ; CHECK: [[LO_TMP:%[0-9]+]](s32) = G_EXTRACT %0(s64), 32
+    ; CHECK: %3(s32) = COPY [[LO_TMP]]
+    %0:_(s64) = COPY %x0
+    %1:_(s64) = COPY %x1
+    %2:_(s128) = G_MERGE_VALUES %0, %1
+    %3:_(s32) = G_EXTRACT %2, 32
+    RET_ReallyLR
+...

@@ -34,14 +34,10 @@ sections:
         Records:
           - Kind:            S_GPROC32_ID
             ProcSym:
-              PtrParent:       0
-              PtrEnd:          0
-              PtrNext:         0
               CodeSize:        14
               DbgStart:        4
               DbgEnd:          9
               FunctionType:    4101
-              Segment:         0
               Flags:           [  ]
               DisplayName:     main
           - Kind:            S_FRAMEPROC

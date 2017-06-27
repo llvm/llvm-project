@@ -1,4 +1,4 @@
-//===-- Symbolize.h --------------------------------------------- C++ -----===//
+//===- Symbolize.h ----------------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -10,21 +10,27 @@
 // Header for LLVM symbolization library.
 //
 //===----------------------------------------------------------------------===//
+
 #ifndef LLVM_DEBUGINFO_SYMBOLIZE_SYMBOLIZE_H
 #define LLVM_DEBUGINFO_SYMBOLIZE_SYMBOLIZE_H
 
 #include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
+#include "llvm/Object/Binary.h"
 #include "llvm/Object/ObjectFile.h"
-#include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/Error.h"
+#include <algorithm>
+#include <cstdint>
 #include <map>
 #include <memory>
 #include <string>
 #include <utility>
+#include <vector>
 
 namespace llvm {
 namespace symbolize {
 
 using namespace object;
+
 using FunctionNameKind = DILineInfoSpecifier::FunctionNameKind;
 
 class LLVMSymbolizer {
@@ -36,6 +42,7 @@ public:
     bool RelativeAddresses : 1;
     std::string DefaultArch;
     std::vector<std::string> DsymHints;
+
     Options(FunctionNameKind PrintFunctions = FunctionNameKind::LinkageName,
             bool UseSymbolTable = true, bool Demangle = true,
             bool RelativeAddresses = false, std::string DefaultArch = "")
@@ -45,6 +52,7 @@ public:
   };
 
   LLVMSymbolizer(const Options &Opts = Options()) : Opts(Opts) {}
+
   ~LLVMSymbolizer() {
     flush();
   }
@@ -56,6 +64,7 @@ public:
   Expected<DIGlobal> symbolizeData(const std::string &ModuleName,
                                    uint64_t ModuleOffset);
   void flush();
+
   static std::string
   DemangleName(const std::string &Name,
                const SymbolizableModule *DbiModuleDescriptor);
@@ -63,7 +72,7 @@ public:
 private:
   // Bundles together object file with code/data and object file with
   // corresponding debug info. These objects can be the same.
-  typedef std::pair<ObjectFile*, ObjectFile*> ObjectPair;
+  using ObjectPair = std::pair<ObjectFile *, ObjectFile *>;
 
   /// Returns a SymbolizableModule or an error if loading debug info failed.
   /// Only one attempt is made to load a module, and errors during loading are
@@ -106,7 +115,7 @@ private:
   Options Opts;
 };
 
-} // namespace symbolize
-} // namespace llvm
+} // end namespace symbolize
+} // end namespace llvm
 
-#endif
+#endif // LLVM_DEBUGINFO_SYMBOLIZE_SYMBOLIZE_H

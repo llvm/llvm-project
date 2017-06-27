@@ -18,7 +18,7 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Core/PluginInterface.h"
-#include "lldb/Core/StructuredData.h"
+#include "lldb/Utility/StructuredData.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private.h"
 #include "lldb/lldb-types.h"

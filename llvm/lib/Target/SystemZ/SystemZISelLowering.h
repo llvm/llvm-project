@@ -139,9 +139,6 @@ enum NodeType : unsigned {
   // Store the CC value in bits 29 and 28 of an integer.
   IPM,
 
-  // Perform a serialization operation.  (BCR 15,0 or BCR 14,0.)
-  SERIALIZE,
-
   // Compiler barrier only; generate a no-op.
   MEMBARRIER,
 
@@ -471,8 +468,6 @@ public:
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
                       const SmallVectorImpl<SDValue> &OutVals, const SDLoc &DL,
                       SelectionDAG &DAG) const override;
-  SDValue prepareVolatileOrAtomicLoad(SDValue Chain, const SDLoc &DL,
-                                      SelectionDAG &DAG) const override;
   SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;
 
   ISD::NodeType getExtendForAtomicOps() const override {
@@ -522,7 +517,6 @@ private:
                               unsigned Opcode) const;
   SDValue lowerATOMIC_LOAD_SUB(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerATOMIC_CMP_SWAP(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerLOAD_SEQUENCE_POINT(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerSTACKSAVE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerSTACKRESTORE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerPREFETCH(SDValue Op, SelectionDAG &DAG) const;

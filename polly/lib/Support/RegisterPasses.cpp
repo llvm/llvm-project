@@ -355,11 +355,6 @@ void registerPollyPasses(llvm::legacy::PassManagerBase &PM) {
 
   if (CFGPrinter)
     PM.add(llvm::createCFGPrinterLegacyPassPass());
-
-  if (Target == TARGET_GPU) {
-    // Invariant load hoisting not yet supported by GPU code generation.
-    PollyInvariantLoadHoisting = false;
-  }
 }
 
 static bool shouldEnablePolly() {

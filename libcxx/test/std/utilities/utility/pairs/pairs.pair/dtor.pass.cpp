@@ -16,7 +16,7 @@
 // ~pair()
 
 // C++17 added:
-//   The destructor of pair shall be a trivial destructor 
+//   The destructor of pair shall be a trivial destructor
 //     if (is_trivially_destructible_v<T1> && is_trivially_destructible_v<T2>) is true.
 
 

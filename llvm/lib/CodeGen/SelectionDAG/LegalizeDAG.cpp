@@ -3530,17 +3530,24 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
         LC = RTLIB::MUL_I128;
       assert(LC != RTLIB::UNKNOWN_LIBCALL && "Cannot expand this operation!");
 
-      // The high part is obtained by SRA'ing all but one of the bits of low
-      // part.
-      unsigned LoSize = VT.getSizeInBits();
-      SDValue HiLHS =
-          DAG.getNode(ISD::SRA, dl, VT, LHS,
-                      DAG.getConstant(LoSize - 1, dl,
-                                      TLI.getPointerTy(DAG.getDataLayout())));
-      SDValue HiRHS =
-          DAG.getNode(ISD::SRA, dl, VT, RHS,
-                      DAG.getConstant(LoSize - 1, dl,
-                                      TLI.getPointerTy(DAG.getDataLayout())));
+      SDValue HiLHS;
+      SDValue HiRHS;
+      if (isSigned) {
+        // The high part is obtained by SRA'ing all but one of the bits of low
+        // part.
+        unsigned LoSize = VT.getSizeInBits();
+        HiLHS =
+            DAG.getNode(ISD::SRA, dl, VT, LHS,
+                        DAG.getConstant(LoSize - 1, dl,
+                                        TLI.getPointerTy(DAG.getDataLayout())));
+        HiRHS =
+            DAG.getNode(ISD::SRA, dl, VT, RHS,
+                        DAG.getConstant(LoSize - 1, dl,
+                                        TLI.getPointerTy(DAG.getDataLayout())));
+      } else {
+          HiLHS = DAG.getConstant(0, dl, VT);
+          HiRHS = DAG.getConstant(0, dl, VT);
+      }
 
       // Here we're passing the 2 arguments explicitly as 4 arguments that are
       // pre-lowered to the correct types. This all depends upon WideVT not

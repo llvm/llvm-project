@@ -46,6 +46,7 @@ public:
 } // namespace
 
 X86::X86() {
+  GotBaseSymOff = -1;
   CopyRel = R_386_COPY;
   GotRel = R_386_GLOB_DAT;
   PltRel = R_386_JUMP_SLOT;
@@ -59,9 +60,7 @@ X86::X86() {
   PltEntrySize = 16;
   PltHeaderSize = 16;
   TlsGdRelaxSkip = 2;
-
-  // 0xCC is the "int3" (call debug exception handler) instruction.
-  TrapInstr = 0xcccccccc;
+  TrapInstr = 0xcccccccc; // 0xcc = INT3
 }
 
 RelExpr X86::getRelExpr(uint32_t Type, const SymbolBody &S,

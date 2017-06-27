@@ -12,13 +12,21 @@
 #include "llvm-pdbutil.h"
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/DebugInfo/MSF/MSFCommon.h"
+#include "llvm/DebugInfo/MSF/MSFStreamLayout.h"
+#include "llvm/DebugInfo/MSF/MappedBlockStream.h"
+#include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/DebugInfo/PDB/UDTLayout.h"
+#include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/FormatAdapters.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Regex.h"
 
 #include <algorithm>
 
 using namespace llvm;
+using namespace llvm::msf;
 using namespace llvm::pdb;
 
 namespace {
@@ -103,6 +111,138 @@ void LinePrinter::formatBinary(StringRef Label, ArrayRef<uint8_t> Data,
                                   CurrentIndent + IndentSpaces, true);
     NewLine();
   }
+  OS << ")";
+}
+
+void LinePrinter::formatBinary(StringRef Label, ArrayRef<uint8_t> Data,
+                               uint64_t Base, uint32_t StartOffset) {
+  NewLine();
+  OS << Label << " (";
+  if (!Data.empty()) {
+    OS << "\n";
+    Base += StartOffset;
+    OS << format_bytes_with_ascii(Data, Base, 32, 4,
+                                  CurrentIndent + IndentSpaces, true);
+    NewLine();
+  }
+  OS << ")";
+}
+
+namespace {
+struct Run {
+  Run() = default;
+  explicit Run(uint32_t Block) : Block(Block) {}
+  uint32_t Block = 0;
+  uint32_t ByteLen = 0;
+};
+} // namespace
+
+static std::vector<Run> computeBlockRuns(uint32_t BlockSize,
+                                         const msf::MSFStreamLayout &Layout) {
+  std::vector<Run> Runs;
+  if (Layout.Length == 0)
+    return Runs;
+
+  ArrayRef<support::ulittle32_t> Blocks = Layout.Blocks;
+  assert(!Blocks.empty());
+  uint32_t StreamBytesRemaining = Layout.Length;
+  uint32_t CurrentBlock = Blocks[0];
+  Runs.emplace_back(CurrentBlock);
+  while (!Blocks.empty()) {
+    Run *CurrentRun = &Runs.back();
+    uint32_t NextBlock = Blocks.front();
+    if (NextBlock < CurrentBlock || (NextBlock - CurrentBlock > 1)) {
+      Runs.emplace_back(NextBlock);
+      CurrentRun = &Runs.back();
+    }
+    uint32_t Used = std::min(BlockSize, StreamBytesRemaining);
+    CurrentRun->ByteLen += Used;
+    StreamBytesRemaining -= Used;
+    CurrentBlock = NextBlock;
+    Blocks = Blocks.drop_front();
+  }
+  return Runs;
+}
+
+static std::pair<Run, uint32_t> findRun(uint32_t Offset, ArrayRef<Run> Runs) {
+  for (const auto &R : Runs) {
+    if (Offset < R.ByteLen)
+      return std::make_pair(R, Offset);
+    Offset -= R.ByteLen;
+  }
+  llvm_unreachable("Invalid offset!");
+}
+
+void LinePrinter::formatMsfStreamData(StringRef Label, PDBFile &File,
+                                      uint32_t StreamIdx,
+                                      StringRef StreamPurpose, uint32_t Offset,
+                                      uint32_t Size) {
+  if (StreamIdx >= File.getNumStreams()) {
+    formatLine("Stream {0}: Not present", StreamIdx);
+    return;
+  }
+  if (Size + Offset > File.getStreamByteSize(StreamIdx)) {
+    formatLine(
+        "Stream {0}: Invalid offset and size, range out of stream bounds",
+        StreamIdx);
+    return;
+  }
+
+  auto S = MappedBlockStream::createIndexedStream(
+      File.getMsfLayout(), File.getMsfBuffer(), StreamIdx, File.getAllocator());
+  if (!S) {
+    NewLine();
+    formatLine("Stream {0}: Not present", StreamIdx);
+    return;
+  }
+
+  uint32_t End =
+      (Size == 0) ? S->getLength() : std::min(Offset + Size, S->getLength());
+  Size = End - Offset;
+
+  formatLine("Stream {0}: {1} (dumping {2:N} / {3:N} bytes)", StreamIdx,
+             StreamPurpose, Size, S->getLength());
+  AutoIndent Indent(*this);
+  BinaryStreamRef Slice(*S);
+  BinarySubstreamRef Substream;
+  Substream.Offset = Offset;
+  Substream.StreamData = Slice.drop_front(Offset).keep_front(Size);
+
+  auto Layout = File.getStreamLayout(StreamIdx);
+  formatMsfStreamData(Label, File, Layout, Substream);
+}
+
+void LinePrinter::formatMsfStreamData(StringRef Label, PDBFile &File,
+                                      const msf::MSFStreamLayout &Stream,
+                                      BinarySubstreamRef Substream) {
+  BinaryStreamReader Reader(Substream.StreamData);
+
+  auto Runs = computeBlockRuns(File.getBlockSize(), Stream);
+
+  NewLine();
+  OS << Label << " (";
+  while (Reader.bytesRemaining() > 0) {
+    OS << "\n";
+
+    Run FoundRun;
+    uint32_t RunOffset;
+    std::tie(FoundRun, RunOffset) = findRun(Substream.Offset, Runs);
+    assert(FoundRun.ByteLen >= RunOffset);
+    uint32_t Len = FoundRun.ByteLen - RunOffset;
+    Len = std::min(Len, Reader.bytesRemaining());
+    uint64_t Base = FoundRun.Block * File.getBlockSize() + RunOffset;
+    ArrayRef<uint8_t> Data;
+    consumeError(Reader.readBytes(Data, Len));
+    OS << format_bytes_with_ascii(Data, Base, 32, 4,
+                                  CurrentIndent + IndentSpaces, true);
+    if (Reader.bytesRemaining() > 0) {
+      NewLine();
+      OS << formatv("  {0}",
+                    fmt_align("<discontinuity>", AlignStyle::Center, 114, '-'));
+    }
+    Substream.Offset += Len;
+  }
+  NewLine();
   OS << ")";
 }
 

@@ -31,8 +31,6 @@ class FLAT_Pseudo<string opName, dag outs, dag ins,
   let VM_CNT = 1;
   let LGKM_CNT = 1;
 
-  let Uses = [EXEC, FLAT_SCR]; // M0
-
   let UseNamedOperandTable = 1;
   let hasSideEffects = 0;
   let SchedRW = [WriteVMEM];
@@ -40,10 +38,16 @@ class FLAT_Pseudo<string opName, dag outs, dag ins,
   string Mnemonic = opName;
   string AsmOperands = asmOps;
 
+  bits<1> is_flat_global = 0;
+  bits<1> is_flat_scratch = 0;
+
   bits<1> has_vdst = 1;
   bits<1> has_data = 1;
   bits<1> has_glc  = 1;
   bits<1> glcValue = 0;
+
+  // TODO: M0 if it could possibly access LDS (before gfx9? only)?
+  let Uses = !if(is_flat_global, [EXEC], [EXEC, FLAT_SCR]);
 }
 
 class FLAT_Real <bits<7> op, FLAT_Pseudo ps> :
@@ -68,7 +72,10 @@ class FLAT_Real <bits<7> op, FLAT_Pseudo ps> :
 
   // Only valid on gfx9
   bits<1> lds = 0; // XXX - What does this actually do?
-  bits<2> seg; // Segment, 00=flat, 01=scratch, 10=global, 11=reserved
+
+  // Segment, 00=flat, 01=scratch, 10=global, 11=reserved
+  bits<2> seg = !if(ps.is_flat_global, 0b10,
+                  !if(ps.is_flat_scratch, 0b01, 0));
 
   // Signed offset. Highest bit ignored for flat and treated as 12-bit
   // unsigned for flat acceses.
@@ -81,7 +88,7 @@ class FLAT_Real <bits<7> op, FLAT_Pseudo ps> :
   // Only valid on GFX9+
   let Inst{12-0} = offset;
   let Inst{13} = lds;
-  let Inst{15-14} = 0;
+  let Inst{15-14} = seg;
 
   let Inst{16}    = !if(ps.has_glc, glc, ps.glcValue);
   let Inst{17}    = slc;
@@ -106,6 +113,16 @@ class FLAT_Load_Pseudo <string opName, RegisterClass regClass,
   let mayLoad = 1;
 }
 
+class FLAT_Global_Load_Pseudo<string opName, RegisterClass regClass> :
+  FLAT_Load_Pseudo<opName, regClass, 1> {
+  let is_flat_global = 1;
+}
+
+class FLAT_Scratch_Load_Pseudo<string opName, RegisterClass regClass> :
+  FLAT_Load_Pseudo<opName, regClass, 1> {
+  let is_flat_scratch = 1;
+}
+
 class FLAT_Store_Pseudo <string opName, RegisterClass vdataClass,
   bit HasSignedOffset = 0> : FLAT_Pseudo<
   opName,
@@ -117,6 +134,16 @@ class FLAT_Store_Pseudo <string opName, RegisterClass vdataClass,
   let mayLoad  = 0;
   let mayStore = 1;
   let has_vdst = 0;
+}
+
+class FLAT_Global_Store_Pseudo<string opName, RegisterClass regClass> :
+  FLAT_Store_Pseudo<opName, regClass, 1> {
+  let is_flat_global = 1;
+}
+
+class FLAT_Scratch_Store_Pseudo<string opName, RegisterClass regClass> :
+  FLAT_Store_Pseudo<opName, regClass, 1> {
+  let is_flat_scratch = 1;
 }
 
 multiclass FLAT_Atomic_Pseudo<
@@ -305,6 +332,26 @@ defm FLAT_ATOMIC_FMAX_X2     : FLAT_Atomic_Pseudo <"flat_atomic_fmax_x2",
                                 VReg_64, f64>;
 
 } // End SubtargetPredicate = isCI
+
+let SubtargetPredicate = HasFlatGlobalInsts in {
+def GLOBAL_LOAD_UBYTE    : FLAT_Global_Load_Pseudo <"global_load_ubyte", VGPR_32>;
+def GLOBAL_LOAD_SBYTE    : FLAT_Global_Load_Pseudo <"global_load_sbyte", VGPR_32>;
+def GLOBAL_LOAD_USHORT   : FLAT_Global_Load_Pseudo <"global_load_ushort", VGPR_32>;
+def GLOBAL_LOAD_SSHORT   : FLAT_Global_Load_Pseudo <"global_load_sshort", VGPR_32>;
+def GLOBAL_LOAD_DWORD    : FLAT_Global_Load_Pseudo <"global_load_dword", VGPR_32>;
+def GLOBAL_LOAD_DWORDX2  : FLAT_Global_Load_Pseudo <"global_load_dwordx2", VReg_64>;
+def GLOBAL_LOAD_DWORDX3  : FLAT_Global_Load_Pseudo <"global_load_dwordx3", VReg_96>;
+def GLOBAL_LOAD_DWORDX4  : FLAT_Global_Load_Pseudo <"global_load_dwordx4", VReg_128>;
+
+def GLOBAL_STORE_BYTE    : FLAT_Global_Store_Pseudo <"global_store_byte", VGPR_32>;
+def GLOBAL_STORE_SHORT   : FLAT_Global_Store_Pseudo <"global_store_short", VGPR_32>;
+def GLOBAL_STORE_DWORD   : FLAT_Global_Store_Pseudo <"global_store_dword", VGPR_32>;
+def GLOBAL_STORE_DWORDX2 : FLAT_Global_Store_Pseudo <"global_store_dwordx2", VReg_64>;
+def GLOBAL_STORE_DWORDX3 : FLAT_Global_Store_Pseudo <"global_store_dwordx3", VReg_96>;
+def GLOBAL_STORE_DWORDX4 : FLAT_Global_Store_Pseudo <"global_store_dwordx4", VReg_128>;
+
+} // End SubtargetPredicate = HasFlatGlobalInsts
+
 
 //===----------------------------------------------------------------------===//
 // Flat Patterns
@@ -557,3 +604,18 @@ defm FLAT_ATOMIC_XOR_X2     : FLAT_Real_Atomics_vi <0x6a, FLAT_ATOMIC_XOR_X2>;
 defm FLAT_ATOMIC_INC_X2     : FLAT_Real_Atomics_vi <0x6b, FLAT_ATOMIC_INC_X2>;
 defm FLAT_ATOMIC_DEC_X2     : FLAT_Real_Atomics_vi <0x6c, FLAT_ATOMIC_DEC_X2>;
 
+def GLOBAL_LOAD_UBYTE_vi : FLAT_Real_vi <0x10, GLOBAL_LOAD_UBYTE>;
+def GLOBAL_LOAD_SBYTE_vi : FLAT_Real_vi <0x11, GLOBAL_LOAD_SBYTE>;
+def GLOBAL_LOAD_USHORT_vi : FLAT_Real_vi <0x12, GLOBAL_LOAD_USHORT>;
+def GLOBAL_LOAD_SSHORT_vi : FLAT_Real_vi <0x13, GLOBAL_LOAD_SSHORT>;
+def GLOBAL_LOAD_DWORD_vi : FLAT_Real_vi <0x14, GLOBAL_LOAD_DWORD>;
+def GLOBAL_LOAD_DWORDX2_vi : FLAT_Real_vi <0x15, GLOBAL_LOAD_DWORDX2>;
+def GLOBAL_LOAD_DWORDX4_vi : FLAT_Real_vi <0x17, GLOBAL_LOAD_DWORDX4>;
+def GLOBAL_LOAD_DWORDX3_vi : FLAT_Real_vi <0x16, GLOBAL_LOAD_DWORDX3>;
+
+def GLOBAL_STORE_BYTE_vi : FLAT_Real_vi <0x18, GLOBAL_STORE_BYTE>;
+def GLOBAL_STORE_SHORT_vi : FLAT_Real_vi <0x1a, GLOBAL_STORE_SHORT>;
+def GLOBAL_STORE_DWORD_vi : FLAT_Real_vi <0x1c, GLOBAL_STORE_DWORD>;
+def GLOBAL_STORE_DWORDX2_vi : FLAT_Real_vi <0x1d, GLOBAL_STORE_DWORDX2>;
+def GLOBAL_STORE_DWORDX4_vi : FLAT_Real_vi <0x1f, GLOBAL_STORE_DWORDX4>;
+def GLOBAL_STORE_DWORDX3_vi : FLAT_Real_vi <0x1e, GLOBAL_STORE_DWORDX3>;

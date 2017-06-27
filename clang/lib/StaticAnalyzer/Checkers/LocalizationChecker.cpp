@@ -281,6 +281,9 @@ void NonLocalizedStringChecker::initUIMethods(ASTContext &Ctx) const {
   IdentifierInfo *setLabelNSSegmentedControl[] = {
       &Ctx.Idents.get("setLabel"), &Ctx.Idents.get("forSegment")};
   ADD_METHOD(NSSegmentedControl, setLabelNSSegmentedControl, 2, 0)
+  IdentifierInfo *setToolTipNSSegmentedControl[] = {
+      &Ctx.Idents.get("setToolTip"), &Ctx.Idents.get("forSegment")};
+  ADD_METHOD(NSSegmentedControl, setToolTipNSSegmentedControl, 2, 0)
 
   NEW_RECEIVER(NSButtonCell)
   ADD_UNARY_METHOD(NSButtonCell, setTitle, 0)
@@ -562,6 +565,46 @@ void NonLocalizedStringChecker::initUIMethods(ASTContext &Ctx) const {
   IdentifierInfo *setTitleUISegmentedControl[] = {
       &Ctx.Idents.get("setTitle"), &Ctx.Idents.get("forSegmentAtIndex")};
   ADD_METHOD(UISegmentedControl, setTitleUISegmentedControl, 2, 0)
+
+  NEW_RECEIVER(NSAccessibilityCustomRotorItemResult)
+  IdentifierInfo
+      *initWithItemLoadingTokenNSAccessibilityCustomRotorItemResult[] = {
+          &Ctx.Idents.get("initWithItemLoadingToken"),
+          &Ctx.Idents.get("customLabel")};
+  ADD_METHOD(NSAccessibilityCustomRotorItemResult,
+             initWithItemLoadingTokenNSAccessibilityCustomRotorItemResult, 2, 1)
+  ADD_UNARY_METHOD(NSAccessibilityCustomRotorItemResult, setCustomLabel, 0)
+
+  NEW_RECEIVER(UIContextualAction)
+  IdentifierInfo *contextualActionWithStyleUIContextualAction[] = {
+      &Ctx.Idents.get("contextualActionWithStyle"), &Ctx.Idents.get("title"),
+      &Ctx.Idents.get("handler")};
+  ADD_METHOD(UIContextualAction, contextualActionWithStyleUIContextualAction, 3,
+             1)
+  ADD_UNARY_METHOD(UIContextualAction, setTitle, 0)
+
+  NEW_RECEIVER(NSAccessibilityCustomRotor)
+  IdentifierInfo *initWithLabelNSAccessibilityCustomRotor[] = {
+      &Ctx.Idents.get("initWithLabel"), &Ctx.Idents.get("itemSearchDelegate")};
+  ADD_METHOD(NSAccessibilityCustomRotor,
+             initWithLabelNSAccessibilityCustomRotor, 2, 0)
+  ADD_UNARY_METHOD(NSAccessibilityCustomRotor, setLabel, 0)
+
+  NEW_RECEIVER(NSWindowTab)
+  ADD_UNARY_METHOD(NSWindowTab, setTitle, 0)
+  ADD_UNARY_METHOD(NSWindowTab, setToolTip, 0)
+
+  NEW_RECEIVER(NSAccessibilityCustomAction)
+  IdentifierInfo *initWithNameNSAccessibilityCustomAction[] = {
+      &Ctx.Idents.get("initWithName"), &Ctx.Idents.get("handler")};
+  ADD_METHOD(NSAccessibilityCustomAction,
+             initWithNameNSAccessibilityCustomAction, 2, 0)
+  IdentifierInfo *initWithNameTargetNSAccessibilityCustomAction[] = {
+      &Ctx.Idents.get("initWithName"), &Ctx.Idents.get("target"),
+      &Ctx.Idents.get("selector")};
+  ADD_METHOD(NSAccessibilityCustomAction,
+             initWithNameTargetNSAccessibilityCustomAction, 3, 0)
+  ADD_UNARY_METHOD(NSAccessibilityCustomAction, setName, 0)
 }
 
 #define LSF_INSERT(function_name) LSF.insert(&Ctx.Idents.get(function_name));

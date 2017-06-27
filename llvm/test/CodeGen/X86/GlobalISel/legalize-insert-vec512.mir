@@ -1,0 +1,63 @@
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx512f -global-isel -run-pass=legalizer -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ALL
+
+--- |
+  define void @test_insert_128() {
+    ret void
+  }
+
+  define void @test_insert_256() {
+    ret void
+  }
+...
+---
+name:            test_insert_128
+# ALL-LABEL: name:  test_insert_128
+alignment:       4
+legalized:       false
+regBankSelected: false
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+# ALL:          %0(<16 x s32>) = COPY %zmm0
+# ALL-NEXT:     %1(<4 x s32>) = COPY %xmm1
+# ALL-NEXT:     %2(<16 x s32>) = G_INSERT %0, %1(<4 x s32>), 0
+# ALL-NEXT:     %ymm0 = COPY %2(<16 x s32>)
+# ALL-NEXT:     RET 0, implicit %ymm0
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %zmm0, %ymm1
+
+    %0(<16 x s32>) = COPY %zmm0
+    %1(<4 x s32>) = COPY %xmm1
+    %2(<16 x s32>) = G_INSERT %0(<16 x s32>), %1(<4 x s32>), 0
+    %ymm0 = COPY %2(<16 x s32>)
+    RET 0, implicit %ymm0
+
+...
+---
+name:            test_insert_256
+# ALL-LABEL: name:  test_insert_256
+alignment:       4
+legalized:       false
+regBankSelected: false
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+# ALL:          %0(<16 x s32>) = COPY %zmm0
+# ALL-NEXT:     %1(<8 x s32>) = COPY %ymm1
+# ALL-NEXT:     %2(<16 x s32>) = G_INSERT %0, %1(<8 x s32>), 0
+# ALL-NEXT:     %ymm0 = COPY %2(<16 x s32>)
+# ALL-NEXT:     RET 0, implicit %ymm0
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %zmm0, %ymm1
+
+    %0(<16 x s32>) = COPY %zmm0
+    %1(<8 x s32>) = COPY %ymm1
+    %2(<16 x s32>) = G_INSERT %0(<16 x s32>), %1(<8 x s32>), 0
+    %ymm0 = COPY %2(<16 x s32>)
+    RET 0, implicit %ymm0
+
+...

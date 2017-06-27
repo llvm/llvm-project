@@ -247,7 +247,8 @@ entry:
 define <2 x i64> @vpandn(<2 x i64> %a, <2 x i64> %b) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: vpandn:
 ; CHECK:       # BB#0: # %entry
-; CHECK-NEXT:    vpaddq {{.*}}(%rip), %xmm0, %xmm1
+; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    vpsubq %xmm1, %xmm0, %xmm1
 ; CHECK-NEXT:    vpandn %xmm0, %xmm1, %xmm0
 ; CHECK-NEXT:    retq
 entry:
@@ -261,7 +262,8 @@ entry:
 define <2 x i64> @vpand(<2 x i64> %a, <2 x i64> %b) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: vpand:
 ; CHECK:       # BB#0: # %entry
-; CHECK-NEXT:    vpaddq {{.*}}(%rip), %xmm0, %xmm0
+; CHECK-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vpsubq %xmm2, %xmm0, %xmm0
 ; CHECK-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
 entry:

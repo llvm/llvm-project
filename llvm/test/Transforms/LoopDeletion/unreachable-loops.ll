@@ -334,3 +334,79 @@ exit:
  ret void
 }
 
+
+; 2 edges from a single exiting block to the exit block.
+define i64 @test12(i64 %n){
+;CHECK-LABEL: @test12
+; CHECK-NOT: L1:
+; CHECK-NOT: L1Latch:
+; CHECK-LABEL: L1.preheader:
+; CHECK-NEXT:    br label %exit
+; CHECK-LABEL: exit:
+; CHECK-NEXT:    %y.phi = phi i64 [ undef, %L1.preheader ]
+; CHECK-NEXT:    ret i64 %y.phi
+
+entry:
+  br i1 true, label %exit1, label %L1
+
+exit1:
+  ret i64 42
+
+L1:                                               ; preds = %L1Latch, %entry
+  %y.next = phi i64 [ 0, %entry ], [ %y.add, %L1Latch ]
+  br i1 true, label %L1Latch, label %exit
+
+L1Latch:                                          ; preds = %L1
+  %y = phi i64 [ %y.next, %L1 ]
+  %y.add = add i64 %y, %n
+  %cond2 = icmp eq i64 %y.add, 42
+  switch i64 %n, label %L1 [
+    i64 10, label %exit
+    i64 20, label %exit
+  ]
+
+exit:                                             ; preds = %L1Latch, %L1Latch
+  %y.phi = phi i64 [ 10, %L1Latch ], [ 10, %L1Latch ], [ %y.next, %L1]
+  ret i64 %y.phi
+}
+
+; multiple edges to exit block from the same exiting blocks
+define i64 @test13(i64 %n) {
+; CHECK-LABEL: @test13
+; CHECK-NOT: L1:
+; CHECK-NOT: L1Latch:
+; CHECK-LABEL: L1.preheader:
+; CHECK-NEXT:    br label %exit
+; CHECK-LABEL: exit:
+; CHECK-NEXT:    %y.phi = phi i64 [ undef, %L1.preheader ]
+; CHECK-NEXT:    ret i64 %y.phi
+
+entry:
+  br i1 true, label %exit1, label %L1
+
+exit1:
+  ret i64 42
+
+L1:                                               ; preds = %L1Latch, %entry
+  %y.next = phi i64 [ 0, %entry ], [ %y.add, %L1Latch ]
+  br i1 true, label %L1Block, label %exit
+
+L1Block:                                          ; preds = %L1
+  %y = phi i64 [ %y.next, %L1 ]
+  %y.add = add i64 %y, %n
+  %cond2 = icmp eq i64 %y.add, 42
+  switch i64 %n, label %L1Latch [
+    i64 10, label %exit
+    i64 20, label %exit
+  ]
+
+L1Latch:
+  switch i64 %n, label %L1 [
+    i64 30, label %exit
+    i64 40, label %exit
+  ]
+
+exit:                                             ; preds = %L1Block, %L1, %L1Latch
+  %y.phi = phi i64 [ 10, %L1Block ], [ 10, %L1Block ], [ %y.next, %L1 ], [ 30, %L1Latch ], [ 30, %L1Latch ]
+  ret i64 %y.phi
+}

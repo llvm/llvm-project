@@ -11,6 +11,7 @@ if (MSVC)
 endif()
 
 add_clang_unittest(ToolingTests
+  CastExprTest.cpp
   CommentHandlerTest.cpp
   CompilationDatabaseTest.cpp
   FixItTest.cpp

@@ -284,7 +284,7 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
     MF, SIRegisterInfo::PRIVATE_SEGMENT_WAVE_BYTE_OFFSET);
 
   unsigned PreloadedPrivateBufferReg = AMDGPU::NoRegister;
-  if (ST.isAmdCodeObjectV2(MF) || ST.isMesaGfxShader(MF)) {
+  if (ST.isAmdCodeObjectV2(MF)) {
     PreloadedPrivateBufferReg = TRI->getPreloadedValue(
       MF, SIRegisterInfo::PRIVATE_SEGMENT_BUFFER);
   }
@@ -363,14 +363,14 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
     // Use relocations to get the pointer, and setup the other bits manually.
     uint64_t Rsrc23 = TII->getScratchRsrcWords23();
 
-    if (MFI->hasPrivateMemoryInputPtr()) {
+    if (MFI->hasImplicitBufferPtr()) {
       unsigned Rsrc01 = TRI->getSubReg(ScratchRsrcReg, AMDGPU::sub0_sub1);
 
       if (AMDGPU::isCompute(MF.getFunction()->getCallingConv())) {
         const MCInstrDesc &Mov64 = TII->get(AMDGPU::S_MOV_B64);
 
         BuildMI(MBB, I, DL, Mov64, Rsrc01)
-          .addReg(PreloadedPrivateBufferReg)
+          .addReg(MFI->getImplicitBufferPtrUserSGPR())
           .addReg(ScratchRsrcReg, RegState::ImplicitDefine);
       } else {
         const MCInstrDesc &LoadDwordX2 = TII->get(AMDGPU::S_LOAD_DWORDX2_IMM);
@@ -385,7 +385,7 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
                                            MachineMemOperand::MODereferenceable,
                                            0, 0);
         BuildMI(MBB, I, DL, LoadDwordX2, Rsrc01)
-          .addReg(PreloadedPrivateBufferReg)
+          .addReg(MFI->getImplicitBufferPtrUserSGPR())
           .addImm(0) // offset
           .addImm(0) // glc
           .addMemOperand(MMO)
@@ -417,14 +417,69 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
 
 void SIFrameLowering::emitPrologue(MachineFunction &MF,
                                    MachineBasicBlock &MBB) const {
-  const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
-  if (MFI->isEntryFunction())
+  const SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
+  if (FuncInfo->isEntryFunction()) {
     emitEntryFunctionPrologue(MF, MBB);
+    return;
+  }
+
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
+  const SIInstrInfo *TII = ST.getInstrInfo();
+
+  unsigned StackPtrReg = FuncInfo->getStackPtrOffsetReg();
+  unsigned FramePtrReg = FuncInfo->getFrameOffsetReg();
+
+  MachineBasicBlock::iterator MBBI = MBB.begin();
+  DebugLoc DL;
+
+  bool NeedFP = hasFP(MF);
+  if (NeedFP) {
+    // If we need a base pointer, set it up here. It's whatever the value of
+    // the stack pointer is at this point. Any variable size objects will be
+    // allocated after this, so we can still use the base pointer to reference
+    // locals.
+    BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::COPY), FramePtrReg)
+      .addReg(StackPtrReg)
+      .setMIFlag(MachineInstr::FrameSetup);
+  }
+
+  uint32_t NumBytes = MFI.getStackSize();
+  if (NumBytes != 0 && hasSP(MF)) {
+    BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::S_ADD_U32), StackPtrReg)
+      .addReg(StackPtrReg)
+      .addImm(NumBytes * ST.getWavefrontSize())
+      .setMIFlag(MachineInstr::FrameSetup);
+  }
 }
 
 void SIFrameLowering::emitEpilogue(MachineFunction &MF,
                                    MachineBasicBlock &MBB) const {
+  const SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
+  if (FuncInfo->isEntryFunction())
+    return;
 
+  unsigned StackPtrReg = FuncInfo->getStackPtrOffsetReg();
+  if (StackPtrReg == AMDGPU::NoRegister)
+    return;
+
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  uint32_t NumBytes = MFI.getStackSize();
+
+  const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
+  const SIInstrInfo *TII = ST.getInstrInfo();
+  MachineBasicBlock::iterator MBBI = MBB.getFirstTerminator();
+  DebugLoc DL;
+
+  // FIXME: Clarify distinction between no set SP and SP. For callee functions,
+  // it's really whether we need SP to be accurate or not.
+
+  if (NumBytes != 0 && hasSP(MF)) {
+    BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::S_SUB_U32), StackPtrReg)
+      .addReg(StackPtrReg)
+      .addImm(NumBytes * ST.getWavefrontSize())
+      .setMIFlag(MachineInstr::FrameDestroy);
+  }
 }
 
 static bool allStackObjectsAreDead(const MachineFrameInfo &MFI) {
@@ -556,4 +611,20 @@ void SIFrameLowering::emitDebuggerPrologue(MachineFunction &MF,
     TII->storeRegToStackSlot(MBB, I, WorkItemIDVGPR, false,
       WorkItemIDObjectIdx, &AMDGPU::VGPR_32RegClass, TRI);
   }
+}
+
+bool SIFrameLowering::hasFP(const MachineFunction &MF) const {
+  // All stack operations are relative to the frame offset SGPR.
+  // TODO: Still want to eliminate sometimes.
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+
+  // XXX - Is this only called after frame is finalized? Should be able to check
+  // frame size.
+  return MFI.hasStackObjects() && !allStackObjectsAreDead(MFI);
+}
+
+bool SIFrameLowering::hasSP(const MachineFunction &MF) const {
+  // All stack operations are relative to the frame offset SGPR.
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  return MFI.hasCalls() || MFI.hasVarSizedObjects();
 }

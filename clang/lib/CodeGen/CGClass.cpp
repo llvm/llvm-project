@@ -2770,10 +2770,19 @@ CodeGenFunction::CanDevirtualizeMemberFunctionCall(const Expr *Base,
 
   // We can devirtualize calls on an object accessed by a class member access
   // expression, since by C++11 [basic.life]p6 we know that it can't refer to
-  // a derived class object constructed in the same location.
+  // a derived class object constructed in the same location. However, we avoid
+  // devirtualizing a call to a template function that we could instantiate
+  // implicitly, but have not decided to do so. This is needed because if this
+  // function does not get instantiated, the devirtualization will create a
+  // direct call to a function whose body may not exist. In contrast, calls to
+  // template functions that are not defined in this TU are allowed to be 
+  // devirtualized under assumption that it is user responsibility to
+  // instantiate them in some other TU.
   if (const MemberExpr *ME = dyn_cast<MemberExpr>(Base))
     if (const ValueDecl *VD = dyn_cast<ValueDecl>(ME->getMemberDecl()))
-      return VD->getType()->isRecordType();
+      return VD->getType()->isRecordType() && 
+             (MD->instantiationIsPending() || MD->isDefined() ||
+               !MD->isImplicitlyInstantiable());
 
   // Likewise for calls on an object accessed by a (non-reference) pointer to
   // member access.

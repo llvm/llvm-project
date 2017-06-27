@@ -134,6 +134,9 @@ class PseudoOverridesInSpecializations {
 
   template<typename U> struct InnerTemplate { };
   template<typename U> struct InnerTemplate <U*> { };
+
+  template<typename U>
+  class InnerClass { };
 };
 
 template<>
@@ -195,7 +198,21 @@ class PseudoOverridesInSpecializations<double, int> {
 // CHECK-NEXT: RelChild
 // CHECK-NEXT: RelSpecialization | InnerTemplate | c:@ST>2#T#T@PseudoOverridesInSpecializations@ST>1#T@InnerTemplate
   template<typename U> struct InnerTemplate <U*> { };
+
+  template<typename U>
+  class InnerClass;
+// CHECK: [[@LINE-1]]:9 | class(Gen)/C++ | InnerClass | c:@S@PseudoOverridesInSpecializations>#d#I@ST>1#T@InnerClass | <no-cgname> | Ref,RelCont,RelSpecialization | rel: 2
+// CHECK-NEXT: RelCont
+// CHECK-NEXT: RelSpecialization | InnerClass | c:@ST>2#T#T@PseudoOverridesInSpecializations@ST>1#T@InnerClass
 };
+
+template<typename U>
+class PseudoOverridesInSpecializations<double, int>::InnerClass {
+};
+// CHECK: [[@LINE-2]]:54 | class(Gen)/C++ | InnerClass | c:@S@PseudoOverridesInSpecializations>#d#I@ST>1#T@InnerClass | <no-cgname> | Def,RelChild | rel: 1
+// CHECK-NEXT: RelChild
+// CHECK: [[@LINE-4]]:7 | class(Gen)/C++ | PseudoOverridesInSpecializations | c:@ST>2#T#T@PseudoOverridesInSpecializations | <no-cgname> | Ref,RelCont | rel: 1
+// CHECK-NEXT: RelCont
 
 template<typename S>
 class PseudoOverridesInSpecializations<float, S> {
@@ -265,7 +282,9 @@ class SpecializationDecl { };
 
 template<>
 class SpecializationDecl<int>;
-// CHECK: [[@LINE-1]]:7 | class(Gen)/C++ | SpecializationDecl | c:@ST>1#T@SpecializationDecl | <no-cgname> | Ref | rel: 0
+// CHECK: [[@LINE-1]]:7 | class(Gen,TS)/C++ | SpecializationDecl | c:@S@SpecializationDecl>#I | <no-cgname> | Decl,RelSpecialization | rel: 1
+// CHECK-NEXT: RelSpecialization | SpecializationDecl | c:@ST>1#T@SpecializationDecl
+// CHECK: [[@LINE-3]]:7 | class(Gen)/C++ | SpecializationDecl | c:@ST>1#T@SpecializationDecl | <no-cgname> | Ref | rel: 0
 
 template<>
 class SpecializationDecl<int> { };
@@ -275,8 +294,10 @@ class SpecializationDecl<int> { };
 
 template<typename T>
 class PartialSpecilizationClass<Cls, T>;
-// CHECK: [[@LINE-1]]:7 | class(Gen)/C++ | PartialSpecilizationClass | c:@ST>2#T#T@PartialSpecilizationClass | <no-cgname> | Ref | rel: 0
-// CHECK-NEXT: [[@LINE-2]]:33 | class/C++ | Cls | c:@S@Cls | <no-cgname> | Ref | rel: 0
+// CHECK: [[@LINE-1]]:7 | class(Gen,TPS)/C++ | PartialSpecilizationClass | c:@SP>1#T@PartialSpecilizationClass>#$@S@Cls#t0.0 | <no-cgname> | Decl,RelSpecialization | rel: 1
+// CHECK-NEXT: RelSpecialization | PartialSpecilizationClass | c:@ST>2#T#T@PartialSpecilizationClass
+// CHECK: [[@LINE-3]]:7 | class(Gen)/C++ | PartialSpecilizationClass | c:@ST>2#T#T@PartialSpecilizationClass | <no-cgname> | Ref | rel: 0
+// CHECK-NEXT: [[@LINE-4]]:33 | class/C++ | Cls | c:@S@Cls | <no-cgname> | Ref | rel: 0
 
 template<>
 class PartialSpecilizationClass<Cls, Cls> : Cls { };

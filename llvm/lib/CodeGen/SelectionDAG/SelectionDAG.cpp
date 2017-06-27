@@ -4897,6 +4897,8 @@ static SDValue getMemcpyLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
   // TODO: In the AlwaysInline case, if the size is big then generate a loop
   // rather than maybe a humongous number of loads and stores.
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  const DataLayout &DL = DAG.getDataLayout();
+  LLVMContext &C = *DAG.getContext();
   std::vector<EVT> MemOps;
   bool DstAlignCanChange = false;
   MachineFunction &MF = DAG.getMachineFunction();
@@ -4923,15 +4925,15 @@ static SDValue getMemcpyLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
     return SDValue();
 
   if (DstAlignCanChange) {
-    Type *Ty = MemOps[0].getTypeForEVT(*DAG.getContext());
-    unsigned NewAlign = (unsigned)DAG.getDataLayout().getABITypeAlignment(Ty);
+    Type *Ty = MemOps[0].getTypeForEVT(C);
+    unsigned NewAlign = (unsigned)DL.getABITypeAlignment(Ty);
 
     // Don't promote to an alignment that would require dynamic stack
     // realignment.
     const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
     if (!TRI->needsStackRealignment(MF))
       while (NewAlign > Align &&
-             DAG.getDataLayout().exceedsNaturalStackAlignment(NewAlign))
+             DL.exceedsNaturalStackAlignment(NewAlign))
           NewAlign /= 2;
 
     if (NewAlign > Align) {
@@ -4991,12 +4993,19 @@ static SDValue getMemcpyLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
       // thing to do is generate a LoadExt/StoreTrunc pair.  These simplify
       // to Load/Store if NVT==VT.
       // FIXME does the case above also need this?
-      EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
+      EVT NVT = TLI.getTypeToTransformTo(C, VT);
       assert(NVT.bitsGE(VT));
+
+      bool isDereferenceable =
+        SrcPtrInfo.getWithOffset(SrcOff).isDereferenceable(VTSize, C, DL);
+      MachineMemOperand::Flags SrcMMOFlags = MMOFlags;
+      if (isDereferenceable)
+        SrcMMOFlags |= MachineMemOperand::MODereferenceable;
+
       Value = DAG.getExtLoad(ISD::EXTLOAD, dl, NVT, Chain,
                              DAG.getMemBasePlusOffset(Src, SrcOff, dl),
                              SrcPtrInfo.getWithOffset(SrcOff), VT,
-                             MinAlign(SrcAlign, SrcOff), MMOFlags);
+                             MinAlign(SrcAlign, SrcOff), SrcMMOFlags);
       OutChains.push_back(Value.getValue(1));
       Store = DAG.getTruncStore(
           Chain, dl, Value, DAG.getMemBasePlusOffset(Dst, DstOff, dl),
@@ -5024,6 +5033,8 @@ static SDValue getMemmoveLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
   // Expand memmove to a series of load and store ops if the size operand falls
   // below a certain threshold.
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  const DataLayout &DL = DAG.getDataLayout();
+  LLVMContext &C = *DAG.getContext();
   std::vector<EVT> MemOps;
   bool DstAlignCanChange = false;
   MachineFunction &MF = DAG.getMachineFunction();
@@ -5046,8 +5057,8 @@ static SDValue getMemmoveLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
     return SDValue();
 
   if (DstAlignCanChange) {
-    Type *Ty = MemOps[0].getTypeForEVT(*DAG.getContext());
-    unsigned NewAlign = (unsigned)DAG.getDataLayout().getABITypeAlignment(Ty);
+    Type *Ty = MemOps[0].getTypeForEVT(C);
+    unsigned NewAlign = (unsigned)DL.getABITypeAlignment(Ty);
     if (NewAlign > Align) {
       // Give the stack frame object a larger alignment if needed.
       if (MFI.getObjectAlignment(FI->getIndex()) < NewAlign)
@@ -5068,9 +5079,15 @@ static SDValue getMemmoveLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
     unsigned VTSize = VT.getSizeInBits() / 8;
     SDValue Value;
 
+    bool isDereferenceable =
+      SrcPtrInfo.getWithOffset(SrcOff).isDereferenceable(VTSize, C, DL);
+    MachineMemOperand::Flags SrcMMOFlags = MMOFlags;
+    if (isDereferenceable)
+      SrcMMOFlags |= MachineMemOperand::MODereferenceable;
+
     Value =
         DAG.getLoad(VT, dl, Chain, DAG.getMemBasePlusOffset(Src, SrcOff, dl),
-                    SrcPtrInfo.getWithOffset(SrcOff), SrcAlign, MMOFlags);
+                    SrcPtrInfo.getWithOffset(SrcOff), SrcAlign, SrcMMOFlags);
     LoadValues.push_back(Value);
     LoadChains.push_back(Value.getValue(1));
     SrcOff += VTSize;

@@ -15,11 +15,11 @@
 // Project includes
 #include "lldb/Core/ArchSpec.h"
 #include "lldb/Core/StreamFile.h"
-#include "lldb/Core/StructuredData.h"
 #include "lldb/DataFormatters/FormatManager.h"
 #include "lldb/Host/StringConvert.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/StringExtractor.h"
+#include "lldb/Utility/StructuredData.h"
 
 using namespace lldb;
 using namespace lldb_private;

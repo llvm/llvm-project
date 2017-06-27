@@ -1,4 +1,4 @@
-//== llvm/CodeGen/GlobalISel/RegBankSelect.h - Reg Bank Selector -*- C++ -*-==//
+//=- llvm/CodeGen/GlobalISel/RegBankSelect.h - Reg Bank Selector --*- C++ -*-=//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -64,20 +64,27 @@
 #ifndef LLVM_CODEGEN_GLOBALISEL_REGBANKSELECT_H
 #define LLVM_CODEGEN_GLOBALISEL_REGBANKSELECT_H
 
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/RegisterBankInfo.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
+#include <cassert>
+#include <cstdint>
+#include <memory>
 
 namespace llvm {
-// Forward declarations.
+
 class BlockFrequency;
-class MachineBranchProbabilityInfo;
 class MachineBlockFrequencyInfo;
+class MachineBranchProbabilityInfo;
+class MachineOperand;
 class MachineRegisterInfo;
+class Pass;
+class raw_ostream;
 class TargetPassConfig;
 class TargetRegisterInfo;
-class raw_ostream;
 
 /// This pass implements the reg bank selector pass used in the GlobalISel
 /// pipeline. At the end of this pass, all register operands have been assigned
@@ -105,6 +112,7 @@ public:
   protected:
     /// Tell if the insert point has already been materialized.
     bool WasMaterialized = false;
+
     /// Materialize the insertion point.
     ///
     /// If isSplit() is true, this involves actually splitting
@@ -128,7 +136,7 @@ public:
     virtual MachineBasicBlock::iterator getPointImpl() = 0;
 
   public:
-    virtual ~InsertPoint() {}
+    virtual ~InsertPoint() = default;
 
     /// The first call to this method will cause the splitting to
     /// happen if need be, then sub sequent calls just return
@@ -197,6 +205,7 @@ public:
   private:
     /// Insertion point.
     MachineInstr &Instr;
+
     /// Does the insertion point is before or after Instr.
     bool Before;
 
@@ -216,6 +225,7 @@ public:
   public:
     /// Create an insertion point before (\p Before=true) or after \p Instr.
     InstrInsertPoint(MachineInstr &Instr, bool Before = true);
+
     bool isSplit() const override;
     uint64_t frequency(const Pass &P) const override;
 
@@ -228,6 +238,7 @@ public:
   private:
     /// Insertion point.
     MachineBasicBlock &MBB;
+
     /// Does the insertion point is at the beginning or end of MBB.
     bool Beginning;
 
@@ -252,6 +263,7 @@ public:
       assert((Beginning || MBB.getFirstTerminator() == MBB.end()) &&
              "Invalid end point");
     }
+
     bool isSplit() const override { return false; }
     uint64_t frequency(const Pass &P) const override;
     bool canMaterialize() const override { return true; };
@@ -262,10 +274,12 @@ public:
   private:
     /// Source of the edge.
     MachineBasicBlock &Src;
+
     /// Destination of the edge.
     /// After the materialization is done, this hold the basic block
     /// that resulted from the splitting.
     MachineBasicBlock *DstOrSplit;
+
     /// P is used to update the analysis passes as applicable.
     Pass &P;
 
@@ -286,9 +300,11 @@ public:
   public:
     EdgeInsertPoint(MachineBasicBlock &Src, MachineBasicBlock &Dst, Pass &P)
         : InsertPoint(), Src(Src), DstOrSplit(&Dst), P(P) {}
+
     bool isSplit() const override {
       return Src.succ_size() > 1 && DstOrSplit->pred_size() > 1;
     }
+
     uint64_t frequency(const Pass &P) const override;
     bool canMaterialize() const override;
   };
@@ -311,9 +327,9 @@ public:
 
     /// \name Convenient types for a list of insertion points.
     /// @{
-    typedef SmallVector<std::unique_ptr<InsertPoint>, 2> InsertionPoints;
-    typedef InsertionPoints::iterator insertpt_iterator;
-    typedef InsertionPoints::const_iterator const_insertpt_iterator;
+    using InsertionPoints = SmallVector<std::unique_ptr<InsertPoint>, 2>;
+    using insertpt_iterator = InsertionPoints::iterator;
+    using const_insertpt_iterator = InsertionPoints::const_iterator;
     /// @}
 
   private:
@@ -324,7 +340,7 @@ public:
     /// Are all the insert points materializeable?
     bool CanMaterialize;
     /// Is there any of the insert points needing splitting?
-    bool HasSplit;
+    bool HasSplit = false;
     /// Insertion point for the repair code.
     /// The repairing code needs to happen just before these points.
     InsertionPoints InsertPoints;
@@ -407,10 +423,10 @@ private:
   private:
     /// Cost of the local instructions.
     /// This cost is free of basic block frequency.
-    uint64_t LocalCost;
+    uint64_t LocalCost = 0;
     /// Cost of the non-local instructions.
     /// This cost should include the frequency of the related blocks.
-    uint64_t NonLocalCost;
+    uint64_t NonLocalCost = 0;
     /// Frequency of the block where the local instructions live.
     uint64_t LocalFreq;
 
@@ -468,22 +484,22 @@ private:
 
   /// Interface to the target lowering info related
   /// to register banks.
-  const RegisterBankInfo *RBI;
+  const RegisterBankInfo *RBI = nullptr;
 
   /// MRI contains all the register class/bank information that this
   /// pass uses and updates.
-  MachineRegisterInfo *MRI;
+  MachineRegisterInfo *MRI = nullptr;
 
   /// Information on the register classes for the current function.
-  const TargetRegisterInfo *TRI;
+  const TargetRegisterInfo *TRI = nullptr;
 
   /// Get the frequency of blocks.
   /// This is required for non-fast mode.
-  MachineBlockFrequencyInfo *MBFI;
+  MachineBlockFrequencyInfo *MBFI = nullptr;
 
   /// Get the frequency of the edges.
   /// This is required for non-fast mode.
-  MachineBranchProbabilityInfo *MBPI;
+  MachineBranchProbabilityInfo *MBPI = nullptr;
 
   /// Current optimization remark emitter. Used to report failures.
   std::unique_ptr<MachineOptimizationRemarkEmitter> MORE;
@@ -644,6 +660,6 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
 };
 
-} // End namespace llvm.
+} // end namespace llvm
 
-#endif
+#endif // LLVM_CODEGEN_GLOBALISEL_REGBANKSELECT_H

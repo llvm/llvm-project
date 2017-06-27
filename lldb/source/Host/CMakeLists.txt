@@ -13,7 +13,6 @@ add_host_subdirectory(common
   common/HostNativeThreadBase.cpp
   common/HostProcess.cpp
   common/HostThread.cpp
-  common/IOObject.cpp
   common/LockFileBase.cpp
   common/MainLoop.cpp
   common/MonitoringProcessLauncher.cpp

@@ -237,6 +237,7 @@ Error DbiStreamBuilder::finalize() {
     return EC;
 
   DbiStreamHeader *H = Allocator.Allocate<DbiStreamHeader>();
+  ::memset(H, 0, sizeof(DbiStreamHeader));
   H->VersionHeader = *VerHeader;
   H->VersionSignature = -1;
   H->Age = Age;

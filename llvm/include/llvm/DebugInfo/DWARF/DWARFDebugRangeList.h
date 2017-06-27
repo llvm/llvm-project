@@ -12,10 +12,8 @@
 
 #include "llvm/DebugInfo/DWARF/DWARFRelocMap.h"
 #include "llvm/Support/DataExtractor.h"
-
 #include <cassert>
 #include <cstdint>
-#include <utility>
 #include <vector>
 
 namespace llvm {
@@ -29,7 +27,7 @@ struct DWARFAddressRange {
 };
 
 /// DWARFAddressRangesVector - represents a set of absolute address ranges.
-typedef std::vector<DWARFAddressRange> DWARFAddressRangesVector;
+using DWARFAddressRangesVector = std::vector<DWARFAddressRange>;
 
 class DWARFDebugRangeList {
 public:

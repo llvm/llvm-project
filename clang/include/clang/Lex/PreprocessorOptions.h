@@ -96,6 +96,10 @@ public:
   std::string TokenCache;
 
   /// When enabled, preprocessor is in a mode for parsing a single file only.
+  ///
+  /// Disables #includes of other files and if there are unresolved identifiers
+  /// in preprocessor directive conditions it causes all blocks to be parsed so
+  /// that the client can get the maximum amount of information from the parser.
   bool SingleFileParseMode = false;
 
   /// When enabled, the preprocessor will construct editor placeholder tokens.

@@ -13,9 +13,12 @@
 @implementation ClassB // expected-note {{implementation started here}}
 
 - (void) method:(ClassA *)mgr { // expected-note {{to match this '{'}}
-  mgr fileExistsAtPath:0
+  [mgr fileExistsAtPath:0
 } // expected-error {{expected ']'}}
 
-@implementation ClassC // expected-error {{missing '@end'}} // expected-error {{expected '}'}} // expected-warning {{cannot find interface declaration for 'ClassC'}}
+@implementation ClassC //              \
+  // expected-error {{missing '@end'}} \
+  // expected-error {{expected '}'}}   \
+  // expected-warning {{cannot find interface declaration for 'ClassC'}}
 
 @end

@@ -119,9 +119,8 @@ static AllocatorCache fallback_allocator_cache;
 static SpinMutex fallback_mutex;
 
 void MsanAllocatorInit() {
-  allocator.Init(
-      common_flags()->allocator_may_return_null,
-      common_flags()->allocator_release_to_os_interval_ms);
+  SetAllocatorMayReturnNull(common_flags()->allocator_may_return_null);
+  allocator.Init(common_flags()->allocator_release_to_os_interval_ms);
 }
 
 AllocatorCache *GetAllocatorCache(MsanThreadLocalMallocStorage *ms) {
@@ -139,7 +138,7 @@ static void *MsanAllocate(StackTrace *stack, uptr size, uptr alignment,
   if (size > kMaxAllowedMallocSize) {
     Report("WARNING: MemorySanitizer failed to allocate %p bytes\n",
            (void *)size);
-    return allocator.ReturnNullOrDieOnBadRequest();
+    return Allocator::FailureHandler::OnBadRequest();
   }
   MsanThread *t = GetCurrentThread();
   void *allocated;
@@ -197,7 +196,7 @@ void MsanDeallocate(StackTrace *stack, void *p) {
 
 void *MsanCalloc(StackTrace *stack, uptr nmemb, uptr size) {
   if (CallocShouldReturnNullDueToOverflow(size, nmemb))
-    return allocator.ReturnNullOrDieOnBadRequest();
+    return Allocator::FailureHandler::OnBadRequest();
   return MsanReallocate(stack, nullptr, nmemb * size, sizeof(u64), true);
 }
 

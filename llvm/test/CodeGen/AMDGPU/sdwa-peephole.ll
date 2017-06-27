@@ -1,5 +1,6 @@
 ; RUN: llc -march=amdgcn -mcpu=fiji -amdgpu-sdwa-peephole=0 -mattr=-fp64-fp16-denormals -verify-machineinstrs < %s | FileCheck -check-prefix=NOSDWA -check-prefix=GCN %s
-; RUN: llc -march=amdgcn -mcpu=fiji -amdgpu-sdwa-peephole -mattr=-fp64-fp16-denormals -verify-machineinstrs < %s | FileCheck -check-prefix=SDWA -check-prefix=GCN %s
+; RUN: llc -march=amdgcn -mcpu=fiji -amdgpu-sdwa-peephole -mattr=-fp64-fp16-denormals -verify-machineinstrs < %s | FileCheck -check-prefix=VI -check-prefix=SDWA -check-prefix=GCN %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -amdgpu-sdwa-peephole -mattr=-fp64-fp16-denormals -verify-machineinstrs < %s | FileCheck -check-prefix=GFX9 -check-prefix=SDWA -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}add_shr_i32:
 ; NOSDWA: v_lshrrev_b32_e32 v[[DST:[0-9]+]], 16, v{{[0-9]+}}
@@ -72,9 +73,11 @@ entry:
 ; NOSDWA: v_or_b32_e32 v{{[0-9]+}}, v[[DST_SHL]], v{{[0-9]+}}
 ; NOSDWA-NOT: v_mul_u32_u24_sdwa
 
-; SDWA-DAG: v_mul_u32_u24_sdwa v[[DST_MUL_LO:[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:WORD_0
-; SDWA-DAG: v_mul_u32_u24_sdwa v[[DST_MUL_HI:[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; SDWA: v_or_b32_sdwa v{{[0-9]+}}, v[[DST_MUL_LO]], v[[DST_MUL_HI]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; VI-DAG: v_mul_u32_u24_sdwa v[[DST_MUL_LO:[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:WORD_0
+; VI-DAG: v_mul_u32_u24_sdwa v[[DST_MUL_HI:[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI: v_or_b32_sdwa v{{[0-9]+}}, v[[DST_MUL_LO]], v[[DST_MUL_HI]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+
+; GFX9: v_pk_mul_lo_u16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 
 define amdgpu_kernel void @mul_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %ina, <2 x i16> addrspace(1)* %inb) {
 entry:
@@ -93,12 +96,15 @@ entry:
 ; NOSDWA: v_or_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 ; NOSDWA-NOT: v_mul_u32_u24_sdwa
 
-; SDWA-DAG: v_mul_u32_u24_sdwa v[[DST_MUL0:[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:WORD_0
-; SDWA-DAG: v_mul_u32_u24_sdwa v[[DST_MUL1:[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; SDWA-DAG: v_mul_u32_u24_sdwa v[[DST_MUL2:[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:WORD_0
-; SDWA-DAG: v_mul_u32_u24_sdwa v[[DST_MUL3:[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; SDWA-DAG: v_or_b32_sdwa v{{[0-9]+}}, v[[DST_MUL2]], v[[DST_MUL3]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
-; SDWA-DAG: v_or_b32_sdwa v{{[0-9]+}}, v[[DST_MUL0]], v[[DST_MUL1]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; VI-DAG: v_mul_u32_u24_sdwa v[[DST_MUL0:[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:WORD_0
+; VI-DAG: v_mul_u32_u24_sdwa v[[DST_MUL1:[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-DAG: v_mul_u32_u24_sdwa v[[DST_MUL2:[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:WORD_0
+; VI-DAG: v_mul_u32_u24_sdwa v[[DST_MUL3:[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-DAG: v_or_b32_sdwa v{{[0-9]+}}, v[[DST_MUL2]], v[[DST_MUL3]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; VI-DAG: v_or_b32_sdwa v{{[0-9]+}}, v[[DST_MUL0]], v[[DST_MUL1]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+
+; GFX9-DAG: v_pk_mul_lo_u16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; GFX9-DAG: v_pk_mul_lo_u16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 
 define amdgpu_kernel void @mul_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> addrspace(1)* %ina, <4 x i16> addrspace(1)* %inb) {
 entry:
@@ -117,18 +123,23 @@ entry:
 ; NOSDWA: v_or_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 ; NOSDWA-NOT: v_mul_u32_u24_sdwa
 
-; SDWA-DAG: v_mul_u32_u24_sdwa v[[DST_MUL0:[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:WORD_0
-; SDWA-DAG: v_mul_u32_u24_sdwa v[[DST_MUL1:[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; SDWA-DAG: v_mul_u32_u24_sdwa v[[DST_MUL2:[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:WORD_0
-; SDWA-DAG: v_mul_u32_u24_sdwa v[[DST_MUL3:[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; SDWA-DAG: v_mul_u32_u24_sdwa v[[DST_MUL4:[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:WORD_0
-; SDWA-DAG: v_mul_u32_u24_sdwa v[[DST_MUL5:[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; SDWA-DAG: v_mul_u32_u24_sdwa v[[DST_MUL6:[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:WORD_0
-; SDWA-DAG: v_mul_u32_u24_sdwa v[[DST_MUL7:[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; SDWA-DAG: v_or_b32_sdwa v{{[0-9]+}}, v[[DST_MUL6]], v[[DST_MUL7]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
-; SDWA-DAG: v_or_b32_sdwa v{{[0-9]+}}, v[[DST_MUL4]], v[[DST_MUL5]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
-; SDWA-DAG: v_or_b32_sdwa v{{[0-9]+}}, v[[DST_MUL2]], v[[DST_MUL3]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
-; SDWA-DAG: v_or_b32_sdwa v{{[0-9]+}}, v[[DST_MUL0]], v[[DST_MUL1]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; VI-DAG: v_mul_u32_u24_sdwa v[[DST_MUL0:[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:WORD_0
+; VI-DAG: v_mul_u32_u24_sdwa v[[DST_MUL1:[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-DAG: v_mul_u32_u24_sdwa v[[DST_MUL2:[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:WORD_0
+; VI-DAG: v_mul_u32_u24_sdwa v[[DST_MUL3:[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-DAG: v_mul_u32_u24_sdwa v[[DST_MUL4:[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:WORD_0
+; VI-DAG: v_mul_u32_u24_sdwa v[[DST_MUL5:[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-DAG: v_mul_u32_u24_sdwa v[[DST_MUL6:[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:WORD_0
+; VI-DAG: v_mul_u32_u24_sdwa v[[DST_MUL7:[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-DAG: v_or_b32_sdwa v{{[0-9]+}}, v[[DST_MUL6]], v[[DST_MUL7]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; VI-DAG: v_or_b32_sdwa v{{[0-9]+}}, v[[DST_MUL4]], v[[DST_MUL5]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; VI-DAG: v_or_b32_sdwa v{{[0-9]+}}, v[[DST_MUL2]], v[[DST_MUL3]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; VI-DAG: v_or_b32_sdwa v{{[0-9]+}}, v[[DST_MUL0]], v[[DST_MUL1]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+
+; GFX9-DAG: v_pk_mul_lo_u16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; GFX9-DAG: v_pk_mul_lo_u16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; GFX9-DAG: v_pk_mul_lo_u16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; GFX9-DAG: v_pk_mul_lo_u16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 
 define amdgpu_kernel void @mul_v8i16(<8 x i16> addrspace(1)* %out, <8 x i16> addrspace(1)* %ina, <8 x i16> addrspace(1)* %inb) {
 entry:
@@ -162,9 +173,12 @@ entry:
 ; NOSDWA: v_or_b32_e32 v{{[0-9]+}}, v[[DST_SHL]], v{{[0-9]+}}
 ; NOSDWA-NOT: v_mul_f16_sdwa
 
-; SDWA-DAG: v_mul_f16_sdwa v[[DST_MUL_HI:[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; SDWA-DAG: v_mul_f16_e32 v[[DST_MUL_LO:[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}}
-; SDWA: v_or_b32_e32 v{{[0-9]+}}, v[[DST_MUL_HI]], v[[DST_MUL_LO]]
+; VI-DAG: v_mul_f16_sdwa v[[DST_MUL_HI:[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-DAG: v_mul_f16_e32 v[[DST_MUL_LO:[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}}
+; VI: v_or_b32_e32 v{{[0-9]+}}, v[[DST_MUL_HI]], v[[DST_MUL_LO]]
+
+; GFX9: v_pk_mul_f16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+
 define amdgpu_kernel void @mul_v2half(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)* %ina, <2 x half> addrspace(1)* %inb) {
 entry:
   %a = load <2 x half>, <2 x half> addrspace(1)* %ina, align 4
@@ -182,10 +196,13 @@ entry:
 ; NOSDWA: v_or_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 ; NOSDWA-NOT: v_mul_f16_sdwa
 
-; SDWA-DAG: v_mul_f16_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; SDWA-DAG: v_mul_f16_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; SDWA-DAG: v_or_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
-; SDWA-DAG: v_or_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; VI-DAG: v_mul_f16_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-DAG: v_mul_f16_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-DAG: v_or_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; VI-DAG: v_or_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+
+; GFX9-DAG: v_pk_mul_f16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; GFX9-DAG: v_pk_mul_f16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 
 define amdgpu_kernel void @mul_v4half(<4 x half> addrspace(1)* %out, <4 x half> addrspace(1)* %ina, <4 x half> addrspace(1)* %inb) {
 entry:
@@ -204,14 +221,19 @@ entry:
 ; NOSDWA: v_or_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 ; NOSDWA-NOT: v_mul_f16_sdwa
 
-; SDWA-DAG: v_mul_f16_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; SDWA-DAG: v_mul_f16_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; SDWA-DAG: v_mul_f16_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; SDWA-DAG: v_mul_f16_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; SDWA-DAG: v_or_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
-; SDWA-DAG: v_or_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
-; SDWA-DAG: v_or_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
-; SDWA-DAG: v_or_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; VI-DAG: v_mul_f16_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-DAG: v_mul_f16_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-DAG: v_mul_f16_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-DAG: v_mul_f16_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-DAG: v_or_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; VI-DAG: v_or_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; VI-DAG: v_or_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; VI-DAG: v_or_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+
+; GFX9-DAG: v_pk_mul_f16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; GFX9-DAG: v_pk_mul_f16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; GFX9-DAG: v_pk_mul_f16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; GFX9-DAG: v_pk_mul_f16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 
 define amdgpu_kernel void @mul_v8half(<8 x half> addrspace(1)* %out, <8 x half> addrspace(1)* %ina, <8 x half> addrspace(1)* %inb) {
 entry:
@@ -245,7 +267,11 @@ entry:
 ; NOSDWA: v_or_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 ; NOSDWA-NOT: v_mul_u32_u24_sdwa
 
-; SDWA: v_mul_u32_u24_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:BYTE_1 dst_unused:UNUSED_PAD src0_sel:BYTE_1 src1_sel:BYTE_1
+; VI: v_mul_u32_u24_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:BYTE_1 dst_unused:UNUSED_PAD src0_sel:BYTE_1 src1_sel:BYTE_1
+
+; GFX9-DAG: v_mul_lo_u16_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:BYTE_1 dst_unused:UNUSED_PAD src0_sel:BYTE_1 src1_sel:BYTE_1
+; GFX9-DAG: v_mul_lo_u16_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; GFX9: v_or_b32_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 
 define amdgpu_kernel void @mul_v2i8(<2 x i8> addrspace(1)* %out, <2 x i8> addrspace(1)* %ina, <2 x i8> addrspace(1)* %inb) {
 entry:
@@ -264,9 +290,13 @@ entry:
 ; NOSDWA: v_or_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 ; NOSDWA-NOT: v_mul_u32_u24_sdwa
 
-; SDWA-DAG: v_mul_u32_u24_sdwa
-; SDWA-DAG: v_mul_u32_u24_sdwa
-; SDWA-DAG: v_mul_u32_u24_sdwa
+; VI-DAG: v_mul_u32_u24_sdwa
+; VI-DAG: v_mul_u32_u24_sdwa
+; VI-DAG: v_mul_u32_u24_sdwa
+
+; GFX9-DAG: v_mul_lo_u16_sdwa
+; GFX9-DAG: v_mul_lo_u16_sdwa
+; GFX9-DAG: v_mul_lo_u16_sdwa
 
 define amdgpu_kernel void @mul_v4i8(<4 x i8> addrspace(1)* %out, <4 x i8> addrspace(1)* %ina, <4 x i8> addrspace(1)* %inb) {
 entry:
@@ -285,12 +315,19 @@ entry:
 ; NOSDWA: v_or_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 ; NOSDWA-NOT: v_mul_u32_u24_sdwa
 
-; SDWA-DAG: v_mul_u32_u24_sdwa
-; SDWA-DAG: v_mul_u32_u24_sdwa
-; SDWA-DAG: v_mul_u32_u24_sdwa
-; SDWA-DAG: v_mul_u32_u24_sdwa
-; SDWA-DAG: v_mul_u32_u24_sdwa
-; SDWA-DAG: v_mul_u32_u24_sdwa
+; VI-DAG: v_mul_u32_u24_sdwa
+; VI-DAG: v_mul_u32_u24_sdwa
+; VI-DAG: v_mul_u32_u24_sdwa
+; VI-DAG: v_mul_u32_u24_sdwa
+; VI-DAG: v_mul_u32_u24_sdwa
+; VI-DAG: v_mul_u32_u24_sdwa
+
+; GFX9-DAG: v_mul_lo_u16_sdwa
+; GFX9-DAG: v_mul_lo_u16_sdwa
+; GFX9-DAG: v_mul_lo_u16_sdwa
+; GFX9-DAG: v_mul_lo_u16_sdwa
+; GFX9-DAG: v_mul_lo_u16_sdwa
+; GFX9-DAG: v_mul_lo_u16_sdwa
 
 define amdgpu_kernel void @mul_v8i8(<8 x i8> addrspace(1)* %out, <8 x i8> addrspace(1)* %ina, <8 x i8> addrspace(1)* %inb) {
 entry:
@@ -330,8 +367,11 @@ entry:
 ; NOSDWA: v_or_b32_e32 v{{[0-9]+}}, v[[DST_SHL]], v{{[0-9]+}}
 ; NOSDWA-NOT: v_mac_f16_sdwa
 
-; SDWA: v_mac_f16_sdwa v[[DST_MAC:[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; SDWA: v_lshlrev_b32_e32 v[[DST_SHL:[0-9]+]], 16, v[[DST_MAC]]
+; VI: v_mac_f16_sdwa v[[DST_MAC:[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI: v_lshlrev_b32_e32 v[[DST_SHL:[0-9]+]], 16, v[[DST_MAC]]
+
+; GFX9: v_pk_mul_f16 v[[DST_MUL:[0-9]+]], v{{[0-9]+}}, v[[SRC:[0-9]+]]
+; GFX9: v_pk_add_f16 v{{[0-9]+}}, v[[DST_MUL]], v[[SRC]]
 
 define amdgpu_kernel void @mac_v2half(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)* %ina, <2 x half> addrspace(1)* %inb) {
 entry:
@@ -345,10 +385,13 @@ entry:
 
 ; GCN-LABEL: {{^}}immediate_mul_v2i16:
 ; NOSDWA-NOT: v_mul_u32_u24_sdwa
-; SDWA-DAG: v_mov_b32_e32 v[[M321:[0-9]+]], 0x141
-; SDWA-DAG: v_mov_b32_e32 v[[M123:[0-9]+]], 0x7b
-; SDWA-DAG: v_mul_u32_u24_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v[[M123]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
-; SDWA-DAG: v_mul_u32_u24_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v[[M321]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-DAG: v_mov_b32_e32 v[[M321:[0-9]+]], 0x141
+; VI-DAG: v_mov_b32_e32 v[[M123:[0-9]+]], 0x7b
+; VI-DAG: v_mul_u32_u24_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v[[M123]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; VI-DAG: v_mul_u32_u24_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v[[M321]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+
+; GFX9: s_mov_b32 s[[IMM:[0-9]+]], 0x141007b
+; GFX9: v_pk_mul_lo_u16 v{{[0-9]+}}, v{{[0-9]+}}, s[[IMM]]
 
 define amdgpu_kernel void @immediate_mul_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in) {
 entry:
@@ -367,7 +410,10 @@ entry:
 ; NOSDWA: v_or_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 ; NOSDWA-NOT: v_mul_u32_u24_sdwa
 
-; SDWA: v_mul_u32_u24_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI: v_mul_u32_u24_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+
+; GFX9: v_pk_mul_lo_u16 v[[DST1:[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}}
+; GFX9: v_pk_mul_lo_u16 v{{[0-9]+}}, v[[DST1]], v{{[0-9]+}}
 
 define amdgpu_kernel void @mulmul_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %ina, <2 x i16> addrspace(1)* %inb) {
 entry:
@@ -382,7 +428,9 @@ entry:
 ; GCN-LABEL: {{^}}add_bb_v2i16:
 ; NOSDWA-NOT: v_add_i32_sdwa
 
-; SDWA: v_add_i32_sdwa v{{[0-9]+}}, vcc, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI: v_add_i32_sdwa v{{[0-9]+}}, vcc, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+
+; GFX9: v_pk_add_u16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 
 define amdgpu_kernel void @add_bb_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %ina, <2 x i16> addrspace(1)* %inb) {
 entry:
@@ -400,17 +448,19 @@ store_label:
 
 ; Check that "pulling out" SDWA operands works correctly.
 ; GCN-LABEL: {{^}}pulled_out_test:
-; NOSDWA-DAG: v_and_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; NOSDWA-DAG: v_and_b32_e32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}
 ; NOSDWA-DAG: v_lshlrev_b16_e32 v{{[0-9]+}}, 8, v{{[0-9]+}}
-; NOSDWA-DAG: v_and_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; NOSDWA-DAG: v_and_b32_e32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}
 ; NOSDWA-DAG: v_lshlrev_b16_e32 v{{[0-9]+}}, 8, v{{[0-9]+}}
 ; NOSDWA: v_or_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 ; NOSDWA-NOT: v_and_b32_sdwa
 ; NOSDWA-NOT: v_or_b32_sdwa
 
-; SDWA-DAG: v_and_b32_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-DAG: v_and_b32_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX9-DAG: v_and_b32_sdwa v{{[0-9]+}}, v{{[0-9]+}}, s{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; SDWA-DAG: v_lshlrev_b16_e32 v{{[0-9]+}}, 8, v{{[0-9]+}}
-; SDWA-DAG: v_and_b32_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-DAG: v_and_b32_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX9-DAG: v_and_b32_sdwa v{{[0-9]+}}, v{{[0-9]+}}, s{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; SDWA-DAG: v_lshlrev_b16_e32 v{{[0-9]+}}, 8, v{{[0-9]+}}
 ; SDWA: v_or_b32_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 

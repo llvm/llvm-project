@@ -14,7 +14,9 @@
 #include "llvm-pdbutil.h"
 
 #include "Analyze.h"
+#include "BytesOutputStyle.h"
 #include "Diff.h"
+#include "DumpOutputStyle.h"
 #include "LinePrinter.h"
 #include "OutputStyle.h"
 #include "PrettyCompilandDumper.h"
@@ -22,7 +24,6 @@
 #include "PrettyFunctionDumper.h"
 #include "PrettyTypeDumper.h"
 #include "PrettyVariableDumper.h"
-#include "RawOutputStyle.h"
 #include "YAMLOutputStyle.h"
 
 #include "llvm/ADT/ArrayRef.h"
@@ -86,7 +87,9 @@ using namespace llvm::pdb;
 
 namespace opts {
 
-cl::SubCommand RawSubcommand("raw", "Dump raw structure of the PDB file");
+cl::SubCommand DumpSubcommand("dump", "Dump MSF and CodeView debug info");
+cl::SubCommand BytesSubcommand("bytes", "Dump raw bytes from the PDB file");
+
 cl::SubCommand
     PrettySubcommand("pretty",
                      "Dump semantic information about types and symbols");
@@ -110,6 +113,31 @@ cl::SubCommand MergeSubcommand("merge",
 cl::OptionCategory TypeCategory("Symbol Type Options");
 cl::OptionCategory FilterCategory("Filtering and Sorting Options");
 cl::OptionCategory OtherOptions("Other Options");
+
+cl::ValuesClass ChunkValues = cl::values(
+    clEnumValN(ModuleSubsection::CrossScopeExports, "cme",
+               "Cross module exports (DEBUG_S_CROSSSCOPEEXPORTS subsection)"),
+    clEnumValN(ModuleSubsection::CrossScopeImports, "cmi",
+               "Cross module imports (DEBUG_S_CROSSSCOPEIMPORTS subsection)"),
+    clEnumValN(ModuleSubsection::FileChecksums, "fc",
+               "File checksums (DEBUG_S_CHECKSUMS subsection)"),
+    clEnumValN(ModuleSubsection::InlineeLines, "ilines",
+               "Inlinee lines (DEBUG_S_INLINEELINES subsection)"),
+    clEnumValN(ModuleSubsection::Lines, "lines",
+               "Lines (DEBUG_S_LINES subsection)"),
+    clEnumValN(ModuleSubsection::StringTable, "strings",
+               "String Table (DEBUG_S_STRINGTABLE subsection) (not "
+               "typically present in PDB file)"),
+    clEnumValN(ModuleSubsection::FrameData, "frames",
+               "Frame Data (DEBUG_S_FRAMEDATA subsection)"),
+    clEnumValN(ModuleSubsection::Symbols, "symbols",
+               "Symbols (DEBUG_S_SYMBOLS subsection) (not typically "
+               "present in PDB file)"),
+    clEnumValN(ModuleSubsection::CoffSymbolRVAs, "rvas",
+               "COFF Symbol RVAs (DEBUG_S_COFF_SYMBOL_RVA subsection)"),
+    clEnumValN(ModuleSubsection::Unknown, "unknown",
+               "Any subsection not covered by another option"),
+    clEnumValN(ModuleSubsection::All, "all", "All known subsections"));
 
 namespace pretty {
 cl::list<std::string> InputFilenames(cl::Positional,
@@ -256,11 +284,6 @@ cl::opt<bool> NoEnumDefs("no-enum-definitions",
 }
 
 namespace diff {
-cl::opt<bool> Pedantic("pedantic",
-                       cl::desc("Finds all differences (even structural ones "
-                                "that produce otherwise identical PDBs)"),
-                       cl::sub(DiffSubcommand));
-
 cl::list<std::string> InputFilenames(cl::Positional,
                                      cl::desc("<first> <second>"),
                                      cl::OneOrMore, cl::sub(DiffSubcommand));
@@ -268,7 +291,83 @@ cl::list<std::string> InputFilenames(cl::Positional,
 
 cl::OptionCategory FileOptions("Module & File Options");
 
-namespace raw {
+namespace bytes {
+cl::OptionCategory MsfBytes("MSF File Options");
+cl::OptionCategory DbiBytes("Dbi Stream Options");
+cl::OptionCategory PdbBytes("PDB Stream Options");
+cl::OptionCategory Types("Type Options");
+cl::OptionCategory ModuleCategory("Module Options");
+
+llvm::Optional<NumberRange> DumpBlockRange;
+llvm::Optional<NumberRange> DumpByteRange;
+
+cl::opt<std::string> DumpBlockRangeOpt(
+    "block-range", cl::value_desc("start[-end]"),
+    cl::desc("Dump binary data from specified range of blocks."),
+    cl::sub(BytesSubcommand), cl::cat(MsfBytes));
+
+cl::opt<std::string>
+    DumpByteRangeOpt("byte-range", cl::value_desc("start[-end]"),
+                     cl::desc("Dump binary data from specified range of bytes"),
+                     cl::sub(BytesSubcommand), cl::cat(MsfBytes));
+
+cl::list<std::string>
+    DumpStreamData("stream-data", cl::CommaSeparated, cl::ZeroOrMore,
+                   cl::desc("Dump binary data from specified streams.  Format "
+                            "is SN[:Start][@Size]"),
+                   cl::sub(BytesSubcommand), cl::cat(MsfBytes));
+
+cl::opt<bool> NameMap("name-map", cl::desc("Dump bytes of PDB Name Map"),
+                      cl::sub(BytesSubcommand), cl::cat(PdbBytes));
+
+cl::opt<bool> SectionContributions("sc", cl::desc("Dump section contributions"),
+                                   cl::sub(BytesSubcommand), cl::cat(DbiBytes));
+cl::opt<bool> SectionMap("sm", cl::desc("Dump section map"),
+                         cl::sub(BytesSubcommand), cl::cat(DbiBytes));
+cl::opt<bool> ModuleInfos("modi", cl::desc("Dump module info"),
+                          cl::sub(BytesSubcommand), cl::cat(DbiBytes));
+cl::opt<bool> FileInfo("files", cl::desc("Dump source file info"),
+                       cl::sub(BytesSubcommand), cl::cat(DbiBytes));
+cl::opt<bool> TypeServerMap("type-server", cl::desc("Dump type server map"),
+                            cl::sub(BytesSubcommand), cl::cat(DbiBytes));
+cl::opt<bool> ECData("ec", cl::desc("Dump edit and continue map"),
+                     cl::sub(BytesSubcommand), cl::cat(DbiBytes));
+
+cl::list<uint32_t>
+    TypeIndex("type",
+              cl::desc("Dump the type record with the given type index"),
+              cl::ZeroOrMore, cl::CommaSeparated, cl::sub(BytesSubcommand),
+              cl::cat(TypeCategory));
+cl::list<uint32_t>
+    IdIndex("id", cl::desc("Dump the id record with the given type index"),
+            cl::ZeroOrMore, cl::CommaSeparated, cl::sub(BytesSubcommand),
+            cl::cat(TypeCategory));
+
+cl::opt<uint32_t> ModuleIndex(
+    "mod",
+    cl::desc(
+        "Limit options in the Modules category to the specified module index"),
+    cl::Optional, cl::sub(BytesSubcommand), cl::cat(ModuleCategory));
+cl::opt<bool> ModuleSyms("syms", cl::desc("Dump symbol record substream"),
+                         cl::sub(BytesSubcommand), cl::cat(ModuleCategory));
+cl::opt<bool> ModuleC11("c11-chunks", cl::Hidden,
+                        cl::desc("Dump C11 CodeView debug chunks"),
+                        cl::sub(BytesSubcommand), cl::cat(ModuleCategory));
+cl::opt<bool> ModuleC13("chunks",
+                        cl::desc("Dump C13 CodeView debug chunk subsection"),
+                        cl::sub(BytesSubcommand), cl::cat(ModuleCategory));
+cl::opt<bool> SplitChunks(
+    "split-chunks",
+    cl::desc(
+        "When dumping debug chunks, show a different section for each chunk"),
+    cl::sub(BytesSubcommand), cl::cat(ModuleCategory));
+cl::list<std::string> InputFilenames(cl::Positional,
+                                     cl::desc("<input PDB files>"),
+                                     cl::OneOrMore, cl::sub(BytesSubcommand));
+
+} // namespace bytes
+
+namespace dump {
 
 cl::OptionCategory MsfOptions("MSF Container Options");
 cl::OptionCategory TypeOptions("Type Record Options");
@@ -277,109 +376,103 @@ cl::OptionCategory MiscOptions("Miscellaneous Options");
 
 // MSF OPTIONS
 cl::opt<bool> DumpSummary("summary", cl::desc("dump file summary"),
-                          cl::cat(MsfOptions), cl::sub(RawSubcommand));
+                          cl::cat(MsfOptions), cl::sub(DumpSubcommand));
 cl::opt<bool> DumpStreams("streams",
                           cl::desc("dump summary of the PDB streams"),
-                          cl::cat(MsfOptions), cl::sub(RawSubcommand));
-cl::opt<std::string>
-    DumpBlockRangeOpt("block-data", cl::value_desc("start[-end]"),
-                      cl::desc("Dump binary data from specified range."),
-                      cl::cat(MsfOptions), cl::sub(RawSubcommand));
-llvm::Optional<BlockRange> DumpBlockRange;
-
-cl::list<std::string>
-    DumpStreamData("stream-data", cl::CommaSeparated, cl::ZeroOrMore,
-                   cl::desc("Dump binary data from specified streams.  Format "
-                            "is SN[:Start][@Size]"),
-                   cl::cat(MsfOptions), cl::sub(RawSubcommand));
+                          cl::cat(MsfOptions), cl::sub(DumpSubcommand));
+cl::opt<bool> DumpStreamBlocks(
+    "stream-blocks",
+    cl::desc("Add block information to the output of -streams"),
+    cl::cat(MsfOptions), cl::sub(DumpSubcommand));
 
 // TYPE OPTIONS
 cl::opt<bool> DumpTypes("types",
                         cl::desc("dump CodeView type records from TPI stream"),
-                        cl::cat(TypeOptions), cl::sub(RawSubcommand));
+                        cl::cat(TypeOptions), cl::sub(DumpSubcommand));
 cl::opt<bool> DumpTypeData(
     "type-data",
     cl::desc("dump CodeView type record raw bytes from TPI stream"),
-    cl::cat(TypeOptions), cl::sub(RawSubcommand));
+    cl::cat(TypeOptions), cl::sub(DumpSubcommand));
 
 cl::opt<bool> DumpTypeExtras("type-extras",
                              cl::desc("dump type hashes and index offsets"),
-                             cl::cat(TypeOptions), cl::sub(RawSubcommand));
+                             cl::cat(TypeOptions), cl::sub(DumpSubcommand));
 
 cl::list<uint32_t> DumpTypeIndex(
     "type-index", cl::ZeroOrMore,
     cl::desc("only dump types with the specified hexadecimal type index"),
-    cl::cat(TypeOptions), cl::sub(RawSubcommand));
+    cl::cat(TypeOptions), cl::sub(DumpSubcommand));
 
 cl::opt<bool> DumpIds("ids",
                       cl::desc("dump CodeView type records from IPI stream"),
-                      cl::cat(TypeOptions), cl::sub(RawSubcommand));
+                      cl::cat(TypeOptions), cl::sub(DumpSubcommand));
 cl::opt<bool>
     DumpIdData("id-data",
                cl::desc("dump CodeView type record raw bytes from IPI stream"),
-               cl::cat(TypeOptions), cl::sub(RawSubcommand));
+               cl::cat(TypeOptions), cl::sub(DumpSubcommand));
 
 cl::opt<bool> DumpIdExtras("id-extras",
                            cl::desc("dump id hashes and index offsets"),
-                           cl::cat(TypeOptions), cl::sub(RawSubcommand));
+                           cl::cat(TypeOptions), cl::sub(DumpSubcommand));
 cl::list<uint32_t> DumpIdIndex(
     "id-index", cl::ZeroOrMore,
     cl::desc("only dump ids with the specified hexadecimal type index"),
-    cl::cat(TypeOptions), cl::sub(RawSubcommand));
+    cl::cat(TypeOptions), cl::sub(DumpSubcommand));
 
 // SYMBOL OPTIONS
 cl::opt<bool> DumpPublics("publics", cl::desc("dump Publics stream data"),
-                          cl::cat(SymbolOptions), cl::sub(RawSubcommand));
+                          cl::cat(SymbolOptions), cl::sub(DumpSubcommand));
 cl::opt<bool> DumpSymbols("symbols", cl::desc("dump module symbols"),
-                          cl::cat(SymbolOptions), cl::sub(RawSubcommand));
+                          cl::cat(SymbolOptions), cl::sub(DumpSubcommand));
 
 cl::opt<bool>
     DumpSymRecordBytes("sym-data",
                        cl::desc("dump CodeView symbol record raw bytes"),
-                       cl::cat(SymbolOptions), cl::sub(RawSubcommand));
+                       cl::cat(SymbolOptions), cl::sub(DumpSubcommand));
 
 // MODULE & FILE OPTIONS
 cl::opt<bool> DumpModules("modules", cl::desc("dump compiland information"),
-                          cl::cat(FileOptions), cl::sub(RawSubcommand));
+                          cl::cat(FileOptions), cl::sub(DumpSubcommand));
 cl::opt<bool> DumpModuleFiles(
     "files",
     cl::desc("Dump the source files that contribute to each module's."),
-    cl::cat(FileOptions), cl::sub(RawSubcommand));
+    cl::cat(FileOptions), cl::sub(DumpSubcommand));
 cl::opt<bool> DumpLines(
     "l",
     cl::desc("dump source file/line information (DEBUG_S_LINES subsection)"),
-    cl::cat(FileOptions), cl::sub(RawSubcommand));
+    cl::cat(FileOptions), cl::sub(DumpSubcommand));
 cl::opt<bool> DumpInlineeLines(
     "il",
     cl::desc("dump inlinee line information (DEBUG_S_INLINEELINES subsection)"),
-    cl::cat(FileOptions), cl::sub(RawSubcommand));
+    cl::cat(FileOptions), cl::sub(DumpSubcommand));
 cl::opt<bool> DumpXmi(
     "xmi",
     cl::desc(
         "dump cross module imports (DEBUG_S_CROSSSCOPEIMPORTS subsection)"),
-    cl::cat(FileOptions), cl::sub(RawSubcommand));
+    cl::cat(FileOptions), cl::sub(DumpSubcommand));
 cl::opt<bool> DumpXme(
     "xme",
     cl::desc(
         "dump cross module exports (DEBUG_S_CROSSSCOPEEXPORTS subsection)"),
-    cl::cat(FileOptions), cl::sub(RawSubcommand));
+    cl::cat(FileOptions), cl::sub(DumpSubcommand));
 
 // MISCELLANEOUS OPTIONS
 cl::opt<bool> DumpStringTable("string-table", cl::desc("dump PDB String Table"),
-                              cl::cat(MiscOptions), cl::sub(RawSubcommand));
+                              cl::cat(MiscOptions), cl::sub(DumpSubcommand));
 
 cl::opt<bool> DumpSectionContribs("section-contribs",
                                   cl::desc("dump section contributions"),
-                                  cl::cat(MiscOptions), cl::sub(RawSubcommand));
+                                  cl::cat(MiscOptions),
+                                  cl::sub(DumpSubcommand));
 cl::opt<bool> DumpSectionMap("section-map", cl::desc("dump section map"),
-                             cl::cat(MiscOptions), cl::sub(RawSubcommand));
+                             cl::cat(MiscOptions), cl::sub(DumpSubcommand));
 
 cl::opt<bool> RawAll("all", cl::desc("Implies most other options."),
-                     cl::cat(MiscOptions), cl::sub(RawSubcommand));
+                     cl::cat(MiscOptions), cl::sub(DumpSubcommand));
 
 cl::list<std::string> InputFilenames(cl::Positional,
                                      cl::desc("<input PDB files>"),
-                                     cl::OneOrMore, cl::sub(RawSubcommand));
+                                     cl::OneOrMore, cl::sub(DumpSubcommand));
 }
 
 namespace yaml2pdb {
@@ -438,33 +531,7 @@ cl::opt<bool> DumpModuleFiles("module-files", cl::desc("dump file information"),
                               cl::sub(PdbToYamlSubcommand));
 cl::list<ModuleSubsection> DumpModuleSubsections(
     "subsections", cl::ZeroOrMore, cl::CommaSeparated,
-    cl::desc("dump subsections from each module's debug stream"),
-    cl::values(
-        clEnumValN(
-            ModuleSubsection::CrossScopeExports, "cme",
-            "Cross module exports (DEBUG_S_CROSSSCOPEEXPORTS subsection)"),
-        clEnumValN(
-            ModuleSubsection::CrossScopeImports, "cmi",
-            "Cross module imports (DEBUG_S_CROSSSCOPEIMPORTS subsection)"),
-        clEnumValN(ModuleSubsection::FileChecksums, "fc",
-                   "File checksums (DEBUG_S_CHECKSUMS subsection)"),
-        clEnumValN(ModuleSubsection::InlineeLines, "ilines",
-                   "Inlinee lines (DEBUG_S_INLINEELINES subsection)"),
-        clEnumValN(ModuleSubsection::Lines, "lines",
-                   "Lines (DEBUG_S_LINES subsection)"),
-        clEnumValN(ModuleSubsection::StringTable, "strings",
-                   "String Table (DEBUG_S_STRINGTABLE subsection) (not "
-                   "typically present in PDB file)"),
-        clEnumValN(ModuleSubsection::FrameData, "frames",
-                   "Frame Data (DEBUG_S_FRAMEDATA subsection)"),
-        clEnumValN(ModuleSubsection::Symbols, "symbols",
-                   "Symbols (DEBUG_S_SYMBOLS subsection) (not typically "
-                   "present in PDB file)"),
-        clEnumValN(ModuleSubsection::CoffSymbolRVAs, "rvas",
-                   "COFF Symbol RVAs (DEBUG_S_COFF_SYMBOL_RVA subsection)"),
-        clEnumValN(ModuleSubsection::Unknown, "unknown",
-                   "Any subsection not covered by another option"),
-        clEnumValN(ModuleSubsection::All, "all", "All known subsections")),
+    cl::desc("dump subsections from each module's debug stream"), ChunkValues,
     cl::cat(FileOptions), cl::sub(PdbToYamlSubcommand));
 cl::opt<bool> DumpModuleSyms("module-syms", cl::desc("dump module symbols"),
                              cl::cat(FileOptions),
@@ -625,7 +692,16 @@ static void dumpRaw(StringRef Path) {
   std::unique_ptr<IPDBSession> Session;
   auto &File = loadPDB(Path, Session);
 
-  auto O = llvm::make_unique<RawOutputStyle>(File);
+  auto O = llvm::make_unique<DumpOutputStyle>(File);
+
+  ExitOnErr(O->dump());
+}
+
+static void dumpBytes(StringRef Path) {
+  std::unique_ptr<IPDBSession> Session;
+  auto &File = loadPDB(Path, Session);
+
+  auto O = llvm::make_unique<BytesOutputStyle>(File);
 
   ExitOnErr(O->dump());
 }
@@ -886,6 +962,37 @@ static void mergePdbs() {
   ExitOnErr(Builder.commit(OutFile));
 }
 
+static bool parseRange(StringRef Str,
+                       Optional<opts::bytes::NumberRange> &Parsed) {
+  if (Str.empty())
+    return true;
+
+  llvm::Regex R("^([^-]+)(-([^-]+))?$");
+  llvm::SmallVector<llvm::StringRef, 2> Matches;
+  if (!R.match(Str, &Matches))
+    return false;
+
+  Parsed.emplace();
+  if (!to_integer(Matches[1], Parsed->Min))
+    return false;
+
+  if (!Matches[3].empty()) {
+    Parsed->Max.emplace();
+    if (!to_integer(Matches[3], *Parsed->Max))
+      return false;
+  }
+  return true;
+}
+
+static void simplifyChunkList(llvm::cl::list<opts::ModuleSubsection> &Chunks) {
+  // If this list contains "All" plus some other stuff, remove the other stuff
+  // and just keep "All" in the list.
+  if (!llvm::is_contained(Chunks, opts::ModuleSubsection::All))
+    return;
+  Chunks.reset();
+  Chunks.push_back(opts::ModuleSubsection::All);
+}
+
 int main(int argc_, const char *argv_[]) {
   // Print a stack trace if we signal out.
   sys::PrintStackTraceOnErrorSignal(argv_[0]);
@@ -901,43 +1008,45 @@ int main(int argc_, const char *argv_[]) {
   llvm_shutdown_obj Y; // Call llvm_shutdown() on exit.
 
   cl::ParseCommandLineOptions(argv.size(), argv.data(), "LLVM PDB Dumper\n");
-  if (!opts::raw::DumpBlockRangeOpt.empty()) {
-    llvm::Regex R("^([0-9]+)(-([0-9]+))?$");
-    llvm::SmallVector<llvm::StringRef, 2> Matches;
-    if (!R.match(opts::raw::DumpBlockRangeOpt, &Matches)) {
-      errs() << "Argument '" << opts::raw::DumpBlockRangeOpt
+
+  if (opts::BytesSubcommand) {
+    if (!parseRange(opts::bytes::DumpBlockRangeOpt,
+                    opts::bytes::DumpBlockRange)) {
+      errs() << "Argument '" << opts::bytes::DumpBlockRangeOpt
              << "' invalid format.\n";
       errs().flush();
       exit(1);
     }
-    opts::raw::DumpBlockRange.emplace();
-    Matches[1].getAsInteger(10, opts::raw::DumpBlockRange->Min);
-    if (!Matches[3].empty()) {
-      opts::raw::DumpBlockRange->Max.emplace();
-      Matches[3].getAsInteger(10, *opts::raw::DumpBlockRange->Max);
+    if (!parseRange(opts::bytes::DumpByteRangeOpt,
+                    opts::bytes::DumpByteRange)) {
+      errs() << "Argument '" << opts::bytes::DumpByteRangeOpt
+             << "' invalid format.\n";
+      errs().flush();
+      exit(1);
     }
   }
 
-  if (opts::RawSubcommand) {
-    if (opts::raw::RawAll) {
-      opts::raw::DumpLines = true;
-      opts::raw::DumpInlineeLines = true;
-      opts::raw::DumpXme = true;
-      opts::raw::DumpXmi = true;
-      opts::raw::DumpIds = true;
-      opts::raw::DumpPublics = true;
-      opts::raw::DumpSectionContribs = true;
-      opts::raw::DumpSectionMap = true;
-      opts::raw::DumpStreams = true;
-      opts::raw::DumpStringTable = true;
-      opts::raw::DumpSummary = true;
-      opts::raw::DumpSymbols = true;
-      opts::raw::DumpIds = true;
-      opts::raw::DumpIdExtras = true;
-      opts::raw::DumpTypes = true;
-      opts::raw::DumpTypeExtras = true;
-      opts::raw::DumpModules = true;
-      opts::raw::DumpModuleFiles = true;
+  if (opts::DumpSubcommand) {
+    if (opts::dump::RawAll) {
+      opts::dump::DumpLines = true;
+      opts::dump::DumpInlineeLines = true;
+      opts::dump::DumpXme = true;
+      opts::dump::DumpXmi = true;
+      opts::dump::DumpIds = true;
+      opts::dump::DumpPublics = true;
+      opts::dump::DumpSectionContribs = true;
+      opts::dump::DumpSectionMap = true;
+      opts::dump::DumpStreams = true;
+      opts::dump::DumpStreamBlocks = true;
+      opts::dump::DumpStringTable = true;
+      opts::dump::DumpSummary = true;
+      opts::dump::DumpSymbols = true;
+      opts::dump::DumpIds = true;
+      opts::dump::DumpIdExtras = true;
+      opts::dump::DumpTypes = true;
+      opts::dump::DumpTypeExtras = true;
+      opts::dump::DumpModules = true;
+      opts::dump::DumpModuleFiles = true;
     }
   }
   if (opts::PdbToYamlSubcommand) {
@@ -954,13 +1063,8 @@ int main(int argc_, const char *argv_[]) {
       opts::pdb2yaml::DumpModuleSyms = true;
       opts::pdb2yaml::DumpModuleSubsections.push_back(
           opts::ModuleSubsection::All);
-      if (llvm::is_contained(opts::pdb2yaml::DumpModuleSubsections,
-                             opts::ModuleSubsection::All)) {
-        opts::pdb2yaml::DumpModuleSubsections.reset();
-        opts::pdb2yaml::DumpModuleSubsections.push_back(
-            opts::ModuleSubsection::All);
-      }
     }
+    simplifyChunkList(opts::pdb2yaml::DumpModuleSubsections);
 
     if (opts::pdb2yaml::DumpModuleSyms || opts::pdb2yaml::DumpModuleFiles)
       opts::pdb2yaml::DumpModules = true;
@@ -1019,9 +1123,12 @@ int main(int argc_, const char *argv_[]) {
     }
     std::for_each(opts::pretty::InputFilenames.begin(),
                   opts::pretty::InputFilenames.end(), dumpPretty);
-  } else if (opts::RawSubcommand) {
-    std::for_each(opts::raw::InputFilenames.begin(),
-                  opts::raw::InputFilenames.end(), dumpRaw);
+  } else if (opts::DumpSubcommand) {
+    std::for_each(opts::dump::InputFilenames.begin(),
+                  opts::dump::InputFilenames.end(), dumpRaw);
+  } else if (opts::BytesSubcommand) {
+    std::for_each(opts::bytes::InputFilenames.begin(),
+                  opts::bytes::InputFilenames.end(), dumpBytes);
   } else if (opts::DiffSubcommand) {
     if (opts::diff::InputFilenames.size() != 2) {
       errs() << "diff subcommand expects exactly 2 arguments.\n";

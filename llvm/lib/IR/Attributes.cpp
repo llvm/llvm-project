@@ -1638,6 +1638,39 @@ static void adjustCallerSSPLevel(Function &Caller, const Function &Callee) {
     Caller.addFnAttr(Attribute::StackProtect);
 }
 
+/// \brief If the inlined function required stack probes, then ensure that
+/// the calling function has those too.
+static void adjustCallerStackProbes(Function &Caller, const Function &Callee) {
+  if (!Caller.hasFnAttribute("probe-stack") &&
+      Callee.hasFnAttribute("probe-stack")) {
+    Caller.addFnAttr(Callee.getFnAttribute("probe-stack"));
+  }
+}
+
+/// \brief If the inlined function defines the size of guard region
+/// on the stack, then ensure that the calling function defines a guard region
+/// that is no larger.
+static void
+adjustCallerStackProbeSize(Function &Caller, const Function &Callee) {
+  if (Callee.hasFnAttribute("stack-probe-size")) {
+    uint64_t CalleeStackProbeSize;
+    Callee.getFnAttribute("stack-probe-size")
+          .getValueAsString()
+          .getAsInteger(0, CalleeStackProbeSize);
+    if (Caller.hasFnAttribute("stack-probe-size")) {
+      uint64_t CallerStackProbeSize;
+      Caller.getFnAttribute("stack-probe-size")
+            .getValueAsString()
+            .getAsInteger(0, CallerStackProbeSize);
+      if (CallerStackProbeSize > CalleeStackProbeSize) {
+        Caller.addFnAttr(Callee.getFnAttribute("stack-probe-size"));
+      }
+    } else {
+      Caller.addFnAttr(Callee.getFnAttribute("stack-probe-size"));
+    }
+  }
+}
+
 #define GET_ATTR_COMPAT_FUNC
 #include "AttributesCompatFunc.inc"
 

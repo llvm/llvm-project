@@ -169,6 +169,18 @@ isOnlyCopiedFromConstantGlobal(AllocaInst *AI,
   return nullptr;
 }
 
+/// Returns true if V is dereferenceable for size of alloca.
+static bool isDereferenceableForAllocaSize(const Value *V, const AllocaInst *AI,
+                                           const DataLayout &DL) {
+  if (AI->isArrayAllocation())
+    return false;
+  uint64_t AllocaSize = DL.getTypeStoreSize(AI->getAllocatedType());
+  if (!AllocaSize)
+    return false;
+  return isDereferenceableAndAlignedPointer(V, AI->getAlignment(),
+                                            APInt(64, AllocaSize), DL);
+}
+
 static Instruction *simplifyAllocaArraySize(InstCombiner &IC, AllocaInst &AI) {
   // Check for array size of 1 (scalar allocation).
   if (!AI.isArrayAllocation()) {
@@ -390,7 +402,8 @@ Instruction *InstCombiner::visitAllocaInst(AllocaInst &AI) {
     if (MemTransferInst *Copy = isOnlyCopiedFromConstantGlobal(&AI, ToDelete)) {
       unsigned SourceAlign = getOrEnforceKnownAlignment(
           Copy->getSource(), AI.getAlignment(), DL, &AI, &AC, &DT);
-      if (AI.getAlignment() <= SourceAlign) {
+      if (AI.getAlignment() <= SourceAlign &&
+          isDereferenceableForAllocaSize(Copy->getSource(), &AI, DL)) {
         DEBUG(dbgs() << "Found alloca equal to global: " << AI << '\n');
         DEBUG(dbgs() << "  memcpy = " << *Copy << '\n');
         for (unsigned i = 0, e = ToDelete.size(); i != e; ++i)
@@ -476,21 +489,7 @@ static LoadInst *combineLoadToNewType(InstCombiner &IC, LoadInst &LI, Type *NewT
       break;
 
     case LLVMContext::MD_nonnull:
-      // This only directly applies if the new type is also a pointer.
-      if (NewTy->isPointerTy()) {
-        NewLoad->setMetadata(ID, N);
-        break;
-      }
-      // If it's integral now, translate it to !range metadata.
-      if (NewTy->isIntegerTy()) {
-        auto *ITy = cast<IntegerType>(NewTy);
-        auto *NullInt = ConstantExpr::getPtrToInt(
-            ConstantPointerNull::get(cast<PointerType>(Ptr->getType())), ITy);
-        auto *NonNullInt =
-            ConstantExpr::getAdd(NullInt, ConstantInt::get(ITy, 1));
-        NewLoad->setMetadata(LLVMContext::MD_range,
-                             MDB.createRange(NonNullInt, NullInt));
-      }
+      copyNonnullMetadata(LI, N, *NewLoad);
       break;
     case LLVMContext::MD_align:
     case LLVMContext::MD_dereferenceable:
@@ -500,17 +499,7 @@ static LoadInst *combineLoadToNewType(InstCombiner &IC, LoadInst &LI, Type *NewT
         NewLoad->setMetadata(ID, N);
       break;
     case LLVMContext::MD_range:
-      // FIXME: It would be nice to propagate this in some way, but the type
-      // conversions make it hard.
-
-      // If it's a pointer now and the range does not contain 0, make it !nonnull.
-      if (NewTy->isPointerTy()) {
-        unsigned BitWidth = IC.getDataLayout().getTypeSizeInBits(NewTy);
-        if (!getConstantRangeFromMetadata(*N).contains(APInt(BitWidth, 0))) {
-          MDNode *NN = MDNode::get(LI.getContext(), None);
-          NewLoad->setMetadata(LLVMContext::MD_nonnull, NN);
-        }
-      }
+      copyRangeMetadata(IC.getDataLayout(), LI, N, *NewLoad);
       break;
     }
   }

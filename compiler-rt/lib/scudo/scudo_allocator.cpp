@@ -273,6 +273,8 @@ struct ScudoAllocator {
   static const uptr MaxAllowedMallocSize =
       FIRST_32_SECOND_64(2UL << 30, 1ULL << 40);
 
+  typedef ReturnNullOrDieOnFailure FailureHandler;
+
   ScudoBackendAllocator BackendAllocator;
   ScudoQuarantine AllocatorQuarantine;
 
@@ -326,7 +328,8 @@ struct ScudoAllocator {
     DeallocationTypeMismatch = Options.DeallocationTypeMismatch;
     DeleteSizeMismatch = Options.DeleteSizeMismatch;
     ZeroContents = Options.ZeroContents;
-    BackendAllocator.Init(Options.MayReturnNull, Options.ReleaseToOSIntervalMs);
+    SetAllocatorMayReturnNull(Options.MayReturnNull);
+    BackendAllocator.Init(Options.ReleaseToOSIntervalMs);
     AllocatorQuarantine.Init(
         static_cast<uptr>(Options.QuarantineSizeMb) << 20,
         static_cast<uptr>(Options.ThreadLocalQuarantineSizeKb) << 10);
@@ -354,11 +357,11 @@ struct ScudoAllocator {
       dieWithMessage("ERROR: alignment is not a power of 2\n");
     }
     if (Alignment > MaxAlignment)
-      return BackendAllocator.ReturnNullOrDieOnBadRequest();
+      return FailureHandler::OnBadRequest();
     if (Alignment < MinAlignment)
       Alignment = MinAlignment;
     if (Size >= MaxAllowedMallocSize)
-      return BackendAllocator.ReturnNullOrDieOnBadRequest();
+      return FailureHandler::OnBadRequest();
     if (Size == 0)
       Size = 1;
 
@@ -366,7 +369,7 @@ struct ScudoAllocator {
     uptr AlignedSize = (Alignment > MinAlignment) ?
         NeededSize + (Alignment - AlignedChunkHeaderSize) : NeededSize;
     if (AlignedSize >= MaxAllowedMallocSize)
-      return BackendAllocator.ReturnNullOrDieOnBadRequest();
+      return FailureHandler::OnBadRequest();
 
     // Primary and Secondary backed allocations have a different treatment. We
     // deal with alignment requirements of Primary serviced allocations here,
@@ -391,7 +394,7 @@ struct ScudoAllocator {
                                       AllocationAlignment, FromPrimary);
     }
     if (!Ptr)
-      return BackendAllocator.ReturnNullOrDieOnOOM();
+      return FailureHandler::OnOOM();
 
     // If requested, we will zero out the entire contents of the returned chunk.
     if ((ForceZeroContents || ZeroContents) && FromPrimary)
@@ -583,7 +586,7 @@ struct ScudoAllocator {
     initThreadMaybe();
     uptr Total = NMemB * Size;
     if (Size != 0 && Total / Size != NMemB)  // Overflow check
-      return BackendAllocator.ReturnNullOrDieOnBadRequest();
+      return FailureHandler::OnBadRequest();
     return allocate(Total, MinAlignment, FromMalloc, true);
   }
 

@@ -46,7 +46,7 @@ class ScopBuilder {
   ScalarEvolution &SE;
 
   /// Set of instructions that might read any memory location.
-  SmallVector<Instruction *, 16> GlobalReads;
+  SmallVector<std::pair<ScopStmt *, Instruction *>, 16> GlobalReads;
 
   /// Set of all accessed array base pointers.
   SmallSetVector<Value *, 16> ArrayBasePointers;
@@ -166,8 +166,9 @@ class ScopBuilder {
   /// Analyze and extract the cross-BB scalar dependences (or, dataflow
   /// dependencies) of an instruction.
   ///
-  /// @param Inst    The instruction to be analyzed.
-  void buildScalarDependences(Instruction *Inst);
+  /// @param UserStmt The statement @p Inst resides in.
+  /// @param Inst     The instruction to be analyzed.
+  void buildScalarDependences(ScopStmt *UserStmt, Instruction *Inst);
 
   /// Build the escaping dependences for @p Inst.
   ///
@@ -180,17 +181,15 @@ class ScopBuilder {
 
   /// Create MemoryAccesses for the given PHI node in the given region.
   ///
+  /// @param PHIStmt            The statement @p PHI resides in.
   /// @param PHI                The PHI node to be handled
   /// @param NonAffineSubRegion The non affine sub-region @p PHI is in.
   /// @param IsExitBlock        Flag to indicate that @p PHI is in the exit BB.
-  void buildPHIAccesses(PHINode *PHI, Region *NonAffineSubRegion,
-                        bool IsExitBlock = false);
+  void buildPHIAccesses(ScopStmt *PHIStmt, PHINode *PHI,
+                        Region *NonAffineSubRegion, bool IsExitBlock = false);
 
   /// Build the access functions for the subregion @p SR.
-  ///
-  /// @param SR           A subregion of @p R.
-  /// @param InsnToMemAcc The Instruction to MemoryAccess mapping.
-  void buildAccessFunctions(Region &SR);
+  void buildAccessFunctions();
 
   /// Create ScopStmt for all BBs and non-affine subregions of @p SR.
   ///
@@ -200,18 +199,20 @@ class ScopBuilder {
   /// access any memory and thus have no effect.
   void buildStmts(Region &SR);
 
-  /// Build the access functions for the basic block @p BB.
+  /// Build the access functions for the basic block @p BB in or represented by
+  /// @p Stmt.
   ///
+  /// @param Stmt               Statement to add MemoryAccesses to.
   /// @param BB                 A basic block in @p R.
   /// @param NonAffineSubRegion The non affine sub-region @p BB is in.
   /// @param IsExitBlock        Flag to indicate that @p BB is in the exit BB.
-  void buildAccessFunctions(BasicBlock &BB,
+  void buildAccessFunctions(ScopStmt *Stmt, BasicBlock &BB,
                             Region *NonAffineSubRegion = nullptr,
                             bool IsExitBlock = false);
 
   /// Create a new MemoryAccess object and add it to #AccFuncMap.
   ///
-  /// @param BB          The block where the access takes place.
+  /// @param Stmt        The statement where the access takes place.
   /// @param Inst        The instruction doing the access. It is not necessarily
   ///                    inside @p BB.
   /// @param AccType     The kind of access.
@@ -225,7 +226,7 @@ class ScopBuilder {
   ///
   /// @return The created MemoryAccess, or nullptr if the access is not within
   ///         the SCoP.
-  MemoryAccess *addMemoryAccess(BasicBlock *BB, Instruction *Inst,
+  MemoryAccess *addMemoryAccess(ScopStmt *Stmt, Instruction *Inst,
                                 MemoryAccess::AccessType AccType,
                                 Value *BaseAddress, Type *ElemType, bool Affine,
                                 Value *AccessValue,
@@ -235,6 +236,7 @@ class ScopBuilder {
   /// Create a MemoryAccess that represents either a LoadInst or
   /// StoreInst.
   ///
+  /// @param Stmt        The statement to add the MemoryAccess to.
   /// @param MemAccInst  The LoadInst or StoreInst.
   /// @param AccType     The kind of access.
   /// @param BaseAddress The accessed array's base address.
@@ -245,8 +247,9 @@ class ScopBuilder {
   /// @param AccessValue Value read or written.
   ///
   /// @see MemoryKind
-  void addArrayAccess(MemAccInst MemAccInst, MemoryAccess::AccessType AccType,
-                      Value *BaseAddress, Type *ElemType, bool IsAffine,
+  void addArrayAccess(ScopStmt *Stmt, MemAccInst MemAccInst,
+                      MemoryAccess::AccessType AccType, Value *BaseAddress,
+                      Type *ElemType, bool IsAffine,
                       ArrayRef<const SCEV *> Subscripts,
                       ArrayRef<const SCEV *> Sizes, Value *AccessValue);
 
@@ -263,12 +266,12 @@ class ScopBuilder {
   /// Ensure an llvm::Value is available in the BB's statement, creating a
   /// MemoryAccess for reloading it if necessary.
   ///
-  /// @param V      The value expected to be loaded.
-  /// @param UserBB Where to reload the value.
+  /// @param V        The value expected to be loaded.
+  /// @param UserStmt Where to reload the value.
   ///
   /// @see ensureValueStore()
   /// @see MemoryKind
-  void ensureValueRead(Value *V, BasicBlock *UserBB);
+  void ensureValueRead(Value *V, ScopStmt *UserStmt);
 
   /// Create a write MemoryAccess for the incoming block of a phi node.
   ///
@@ -276,6 +279,7 @@ class ScopBuilder {
   /// phi's block.
   ///
   /// @param PHI           PHINode under consideration.
+  /// @param IncomingStmt  The statement to add the MemoryAccess to.
   /// @param IncomingBlock Some predecessor block.
   /// @param IncomingValue @p PHI's value when coming from @p IncomingBlock.
   /// @param IsExitBlock   When true, uses the .s2a alloca instead of the
@@ -283,8 +287,9 @@ class ScopBuilder {
   ///                      PHINode in the SCoP region's exit block.
   /// @see addPHIReadAccess()
   /// @see MemoryKind
-  void ensurePHIWrite(PHINode *PHI, BasicBlock *IncomingBlock,
-                      Value *IncomingValue, bool IsExitBlock);
+  void ensurePHIWrite(PHINode *PHI, ScopStmt *IncomintStmt,
+                      BasicBlock *IncomingBlock, Value *IncomingValue,
+                      bool IsExitBlock);
 
   /// Create a MemoryAccess for reading the value of a phi.
   ///
@@ -292,12 +297,13 @@ class ScopBuilder {
   /// to the same location. Thus, this access will read the incoming block's
   /// value as instructed by this @p PHI.
   ///
-  /// @param PHI PHINode under consideration; the READ access will be added
-  /// here.
+  /// @param PHIStmt Statement @p PHI resides in.
+  /// @param PHI     PHINode under consideration; the READ access will be added
+  ///                here.
   ///
   /// @see ensurePHIWrite()
   /// @see MemoryKind
-  void addPHIReadAccess(PHINode *PHI);
+  void addPHIReadAccess(ScopStmt *PHIStmt, PHINode *PHI);
 
 public:
   explicit ScopBuilder(Region *R, AssumptionCache &AC, AliasAnalysis &AA,

@@ -561,7 +561,6 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     CI.setFileManager(&AST->getFileManager());
     CI.createSourceManager(CI.getFileManager());
     CI.getSourceManager().initializeForReplay(AST->getSourceManager());
-    CI.createPreprocessor(getTranslationUnitKind());
 
     // Set up the input file for replay purposes.
     auto Kind = AST->getInputKind();

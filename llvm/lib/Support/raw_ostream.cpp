@@ -548,7 +548,11 @@ void raw_fd_ostream::write_impl(const char *Ptr, size_t Size) {
   pos += Size;
 
 #ifndef LLVM_ON_WIN32
+#if defined(__linux__)
+  bool ShouldWriteInChunks = true;
+#else
   bool ShouldWriteInChunks = false;
+#endif
 #else
   // Writing a large size of output to Windows console returns ENOMEM. It seems
   // that, prior to Windows 8, WriteFile() is redirecting to WriteConsole(), and

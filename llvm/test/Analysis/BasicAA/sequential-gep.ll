@@ -11,7 +11,7 @@ define void @t1([8 x i32]* %p, i32 %addend, i32* %q) {
 }
 
 ; CHECK: Function: t2
-; CHECK: PartialAlias: i32* %gep1, i32* %gep2
+; CHECK: MayAlias: i32* %gep1, i32* %gep2
 define void @t2([8 x i32]* %p, i32 %addend, i32* %q) {
   %knownnonzero = load i32, i32* %q, !range !0
   %add = add nsw nuw i32 %addend, %knownnonzero
@@ -31,7 +31,7 @@ define void @t3([8 x i32]* %p, i32 %addend, i32* %q) {
 }
 
 ; CHECK: Function: t4
-; CHECK: PartialAlias: i32* %gep1, i32* %gep2
+; CHECK: MayAlias: i32* %gep1, i32* %gep2
 define void @t4([8 x i32]* %p, i32 %addend, i32* %q) {
   %knownnonzero = load i32, i32* %q, !range !0
   %add = add nsw nuw i32 %addend, %knownnonzero
@@ -41,7 +41,7 @@ define void @t4([8 x i32]* %p, i32 %addend, i32* %q) {
 }
 
 ; CHECK: Function: t5
-; CHECK: PartialAlias: i32* %gep2, i64* %bc
+; CHECK: MayAlias: i32* %gep2, i64* %bc
 define void @t5([8 x i32]* %p, i32 %addend, i32* %q) {
   %knownnonzero = load i32, i32* %q, !range !0
   %add = add nsw nuw i32 %addend, %knownnonzero

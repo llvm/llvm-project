@@ -220,7 +220,7 @@ W: http://randomhacks.net/
 D: llvm-config script
 
 N: Anton Korobeynikov
-E: asl@math.spbu.ru
+E: anton at korobeynikov dot info
 D: Mingw32 fixes, cross-compiling support, stdcall/fastcall calling conv.
 D: x86/linux PIC codegen, aliases, regparm/visibility attributes
 D: Switch lowering refactoring

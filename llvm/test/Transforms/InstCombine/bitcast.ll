@@ -31,12 +31,12 @@ define <2 x i32> @xor_two_vector_bitcasts(<1 x i64> %a, <1 x i64> %b) {
   ret <2 x i32> %t3
 }
 
-; Verify that 'xor' of vector and constant is done as a vector bitwise op before the bitcast.
+; No change. Bitcasts are canonicalized above bitwise logic.
 
 define <2 x i32> @xor_bitcast_vec_to_vec(<1 x i64> %a) {
 ; CHECK-LABEL: @xor_bitcast_vec_to_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <1 x i64> [[A:%.*]], <i64 8589934593>
-; CHECK-NEXT:    [[T2:%.*]] = bitcast <1 x i64> [[TMP1]] to <2 x i32>
+; CHECK-NEXT:    [[T1:%.*]] = bitcast <1 x i64> [[A:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[T2:%.*]] = xor <2 x i32> [[T1]], <i32 1, i32 2>
 ; CHECK-NEXT:    ret <2 x i32> [[T2]]
 ;
   %t1 = bitcast <1 x i64> %a to <2 x i32>
@@ -44,12 +44,12 @@ define <2 x i32> @xor_bitcast_vec_to_vec(<1 x i64> %a) {
   ret <2 x i32> %t2
 }
 
-; Verify that 'and' of integer and constant is done as a vector bitwise op before the bitcast.
+; No change. Bitcasts are canonicalized above bitwise logic.
 
 define i64 @and_bitcast_vec_to_int(<2 x i32> %a) {
 ; CHECK-LABEL: @and_bitcast_vec_to_int(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[A:%.*]], <i32 3, i32 0>
-; CHECK-NEXT:    [[T2:%.*]] = bitcast <2 x i32> [[TMP1]] to i64
+; CHECK-NEXT:    [[T1:%.*]] = bitcast <2 x i32> [[A:%.*]] to i64
+; CHECK-NEXT:    [[T2:%.*]] = and i64 [[T1]], 3
 ; CHECK-NEXT:    ret i64 [[T2]]
 ;
   %t1 = bitcast <2 x i32> %a to i64
@@ -57,12 +57,12 @@ define i64 @and_bitcast_vec_to_int(<2 x i32> %a) {
   ret i64 %t2
 }
 
-; Verify that 'or' of vector and constant is done as an integer bitwise op before the bitcast.
+; No change. Bitcasts are canonicalized above bitwise logic.
 
 define <2 x i32> @or_bitcast_int_to_vec(i64 %a) {
 ; CHECK-LABEL: @or_bitcast_int_to_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = or i64 [[A:%.*]], 8589934593
-; CHECK-NEXT:    [[T2:%.*]] = bitcast i64 [[TMP1]] to <2 x i32>
+; CHECK-NEXT:    [[T1:%.*]] = bitcast i64 [[A:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[T2:%.*]] = or <2 x i32> [[T1]], <i32 1, i32 2>
 ; CHECK-NEXT:    ret <2 x i32> [[T2]]
 ;
   %t1 = bitcast i64 %a to <2 x i32>
@@ -71,7 +71,7 @@ define <2 x i32> @or_bitcast_int_to_vec(i64 %a) {
 }
 
 ; PR26702 - https://bugs.llvm.org//show_bug.cgi?id=26702
-; Bitcast is canonicalized below logic, so we can see the not-not pattern.
+; Bitcast is canonicalized above logic, so we can see the not-not pattern.
 
 define <2 x i64> @is_negative(<4 x i32> %x) {
 ; CHECK-LABEL: @is_negative(
@@ -102,12 +102,12 @@ define <4 x i32> @is_negative_bonus_bitcast(<4 x i32> %x) {
   ret <4 x i32> %bc2
 }
 
-; Negative test: bitcasts are canonicalized below bitwise logic. No changes here.
+; Bitcasts are canonicalized above bitwise logic.
 
 define <2 x i8> @canonicalize_bitcast_logic_with_constant(<4 x i4> %x) {
 ; CHECK-LABEL: @canonicalize_bitcast_logic_with_constant(
-; CHECK-NEXT:    [[A:%.*]] = and <4 x i4> %x, <i4 0, i4 -8, i4 0, i4 -8>
-; CHECK-NEXT:    [[B:%.*]] = bitcast <4 x i4> [[A]] to <2 x i8>
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i4> [[X:%.*]] to <2 x i8>
+; CHECK-NEXT:    [[B:%.*]] = and <2 x i8> [[TMP1]], <i8 -128, i8 -128>
 ; CHECK-NEXT:    ret <2 x i8> [[B]]
 ;
   %a = and <4 x i4> %x, <i4 0, i4 8, i4 0, i4 8>

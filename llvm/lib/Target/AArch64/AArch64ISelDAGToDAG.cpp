@@ -201,7 +201,7 @@ private:
 
   bool SelectCVTFixedPosOperand(SDValue N, SDValue &FixedPos, unsigned Width);
 
-  void SelectCMP_SWAP(SDNode *N);
+  bool SelectCMP_SWAP(SDNode *N);
 
 };
 } // end anonymous namespace
@@ -2609,9 +2609,13 @@ bool AArch64DAGToDAGISel::tryWriteRegister(SDNode *N) {
 }
 
 /// We've got special pseudo-instructions for these
-void AArch64DAGToDAGISel::SelectCMP_SWAP(SDNode *N) {
+bool AArch64DAGToDAGISel::SelectCMP_SWAP(SDNode *N) {
   unsigned Opcode;
   EVT MemTy = cast<MemSDNode>(N)->getMemoryVT();
+
+  // Leave IR for LSE if subtarget supports it.
+  if (Subtarget->hasLSE()) return false;
+
   if (MemTy == MVT::i8)
     Opcode = AArch64::CMP_SWAP_8;
   else if (MemTy == MVT::i16)
@@ -2637,6 +2641,8 @@ void AArch64DAGToDAGISel::SelectCMP_SWAP(SDNode *N) {
   ReplaceUses(SDValue(N, 0), SDValue(CmpSwap, 0));
   ReplaceUses(SDValue(N, 1), SDValue(CmpSwap, 2));
   CurDAG->RemoveDeadNode(N);
+
+  return true;
 }
 
 void AArch64DAGToDAGISel::Select(SDNode *Node) {
@@ -2660,8 +2666,9 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
     break;
 
   case ISD::ATOMIC_CMP_SWAP:
-    SelectCMP_SWAP(Node);
-    return;
+    if (SelectCMP_SWAP(Node))
+      return;
+    break;
 
   case ISD::READ_REGISTER:
     if (tryReadRegister(Node))

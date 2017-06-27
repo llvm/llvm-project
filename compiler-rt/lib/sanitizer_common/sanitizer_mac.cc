@@ -923,6 +923,11 @@ void CheckNoDeepBind(const char *filename, int flag) {
   // Do nothing.
 }
 
+// FIXME: implement on this platform.
+bool GetRandom(void *buffer, uptr length) {
+  UNIMPLEMENTED();
+}
+
 }  // namespace __sanitizer
 
 #endif  // SANITIZER_MAC

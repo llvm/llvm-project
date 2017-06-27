@@ -117,6 +117,16 @@ static bool isDereferenceableAndAlignedPointer(
 }
 
 bool llvm::isDereferenceableAndAlignedPointer(const Value *V, unsigned Align,
+                                              const APInt &Size,
+                                              const DataLayout &DL,
+                                              const Instruction *CtxI,
+                                              const DominatorTree *DT) {
+  SmallPtrSet<const Value *, 32> Visited;
+  return ::isDereferenceableAndAlignedPointer(V, Align, Size, DL, CtxI, DT,
+                                              Visited);
+}
+
+bool llvm::isDereferenceableAndAlignedPointer(const Value *V, unsigned Align,
                                               const DataLayout &DL,
                                               const Instruction *CtxI,
                                               const DominatorTree *DT) {

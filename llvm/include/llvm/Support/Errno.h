@@ -14,6 +14,7 @@
 #ifndef LLVM_SUPPORT_ERRNO_H
 #define LLVM_SUPPORT_ERRNO_H
 
+#include <cerrno>
 #include <string>
 
 namespace llvm {

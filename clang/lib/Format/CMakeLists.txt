@@ -13,6 +13,7 @@ add_clang_library(clangFormat
   TokenAnnotator.cpp
   UnwrappedLineFormatter.cpp
   UnwrappedLineParser.cpp
+  UsingDeclarationsSorter.cpp
   WhitespaceManager.cpp
 
   LINK_LIBS

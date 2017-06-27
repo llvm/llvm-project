@@ -63,12 +63,16 @@ class WebAssemblyFastISel final : public FastISel {
   public:
     // Innocuous defaults for our address.
     Address() : Kind(RegBase), Offset(0), GV(0) { Base.Reg = 0; }
-    void setKind(BaseKind K) { Kind = K; }
+    void setKind(BaseKind K) {
+      assert(!isSet() && "Can't change kind with non-zero base");
+      Kind = K;
+    }
     BaseKind getKind() const { return Kind; }
     bool isRegBase() const { return Kind == RegBase; }
     bool isFIBase() const { return Kind == FrameIndexBase; }
     void setReg(unsigned Reg) {
       assert(isRegBase() && "Invalid base register access!");
+      assert(Base.Reg == 0 && "Overwriting non-zero register");
       Base.Reg = Reg;
     }
     unsigned getReg() const {
@@ -77,6 +81,7 @@ class WebAssemblyFastISel final : public FastISel {
     }
     void setFI(unsigned FI) {
       assert(isFIBase() && "Invalid base frame index access!");
+      assert(Base.FI == 0 && "Overwriting non-zero frame index");
       Base.FI = FI;
     }
     unsigned getFI() const {
@@ -91,6 +96,13 @@ class WebAssemblyFastISel final : public FastISel {
     int64_t getOffset() const { return Offset; }
     void setGlobalValue(const GlobalValue *G) { GV = G; }
     const GlobalValue *getGlobalValue() const { return GV; }
+    bool isSet() const {
+      if (isRegBase()) {
+        return Base.Reg != 0;
+      } else {
+        return Base.FI != 0;
+      }
+    }
   };
 
   /// Keep a pointer to the WebAssemblySubtarget around so that we can make the
@@ -297,6 +309,9 @@ bool WebAssemblyFastISel::computeAddress(const Value *Obj, Address &Addr) {
     DenseMap<const AllocaInst *, int>::iterator SI =
         FuncInfo.StaticAllocaMap.find(AI);
     if (SI != FuncInfo.StaticAllocaMap.end()) {
+      if (Addr.isSet()) {
+        return false;
+      }
       Addr.setKind(Address::FrameIndexBase);
       Addr.setFI(SI->second);
       return true;
@@ -340,6 +355,9 @@ bool WebAssemblyFastISel::computeAddress(const Value *Obj, Address &Addr) {
     }
     break;
   }
+  }
+  if (Addr.isSet()) {
+    return false;
   }
   Addr.setReg(getRegForValue(Obj));
   return Addr.getReg() != 0;

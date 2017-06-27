@@ -47,6 +47,11 @@ static cl::opt<bool> EnableCCMP("aarch64-enable-ccmp",
                                 cl::desc("Enable the CCMP formation pass"),
                                 cl::init(true), cl::Hidden);
 
+static cl::opt<bool>
+    EnableCondBrTuning("aarch64-enable-cond-br-tune",
+                       cl::desc("Enable the conditional branch tuning pass"),
+                       cl::init(true), cl::Hidden);
+
 static cl::opt<bool> EnableMCR("aarch64-enable-mcr",
                                cl::desc("Enable the machine combiner pass"),
                                cl::init(true), cl::Hidden);
@@ -429,6 +434,8 @@ bool AArch64PassConfig::addILPOpts() {
     addPass(createAArch64ConditionalCompares());
   if (EnableMCR)
     addPass(&MachineCombinerID);
+  if (EnableCondBrTuning)
+    addPass(createAArch64CondBrTuning());
   if (EnableEarlyIfConversion)
     addPass(&EarlyIfConverterID);
   if (EnableStPairSuppress)

@@ -113,11 +113,6 @@ class VOPC_SDWA_Pseudo <string OpName, VOPProfile P, list<dag> pattern=[]> :
   let AsmMatchConverter = "cvtSdwaVOPC";
 }
 
-class VOPC_SDWA9_Pseudo <string OpName, VOPProfile P, list<dag> pattern=[]> :
-  VOP_SDWA9_Pseudo <OpName, P, pattern> {
-  let AsmMatchConverter = "cvtSdwaVOPC";
-}
-
 // This class is used only with VOPC instructions. Use $sdst for out operand
 class VOPCInstAlias <VOP3_Pseudo ps, Instruction inst, VOPProfile p = ps.Pfl> :
   InstAlias <ps.OpName#" "#p.Asm32, (inst)>, PredicateControl {
@@ -184,13 +179,6 @@ multiclass VOPC_Pseudos <string opName,
   }
 
   def _sdwa : VOPC_SDWA_Pseudo <opName, P> {
-    let Defs = !if(DefExec, [VCC, EXEC], [VCC]);
-    let SchedRW = P.Schedule;
-    let isConvergent = DefExec;
-    let isCompare = 1;
-  }
-
-  def _sdwa9 : VOPC_SDWA9_Pseudo <opName, P> {
     let Defs = !if(DefExec, [VCC, EXEC], [VCC]);
     let SchedRW = P.Schedule;
     let isConvergent = DefExec;
@@ -540,14 +528,12 @@ class VOPC_Class_Profile<list<SchedReadWrite> sched, ValueType vt> :
   VOPC_Profile<sched, vt, i32> {
   let Ins64 = (ins Src0Mod:$src0_modifiers, Src0RC64:$src0, Src1RC64:$src1);
   let Asm64 = "$sdst, $src0_modifiers, $src1";
+
   let InsSDWA = (ins Src0ModSDWA:$src0_modifiers, Src0SDWA:$src0,
                      Src1ModSDWA:$src1_modifiers, Src1SDWA:$src1,
                      clampmod:$clamp, src0_sel:$src0_sel, src1_sel:$src1_sel);
-  let InsSDWA9 = (ins Src0ModSDWA9:$src0_modifiers, Src0SDWA9:$src0,
-                      Src1ModSDWA9:$src1_modifiers, Src1SDWA9:$src1,
-                      src0_sel:$src0_sel, src1_sel:$src1_sel);
+
   let AsmSDWA = " vcc, $src0_modifiers, $src1_modifiers$clamp $src0_sel $src1_sel";
-  //let AsmSDWA9 = " $sdst, $src0_modifiers, $src1_modifiers $src0_sel $src1_sel";
   let HasSrc1Mods = 0;
   let HasClamp = 0;
   let HasOMod = 0;
@@ -576,12 +562,6 @@ multiclass VOPC_Class_Pseudos <string opName, VOPC_Profile p, bit DefExec> {
   }
 
   def _sdwa : VOPC_SDWA_Pseudo <opName, p> {
-    let Defs = !if(DefExec, [VCC, EXEC], [VCC]);
-    let SchedRW = p.Schedule;
-    let isConvergent = DefExec;
-  }
-
-  def _sdwa9 : VOPC_SDWA9_Pseudo <opName, p> {
     let Defs = !if(DefExec, [VCC, EXEC], [VCC]);
     let SchedRW = p.Schedule;
     let isConvergent = DefExec;
@@ -954,8 +934,8 @@ multiclass VOPC_Real_vi <bits<10> op> {
     VOPC_SDWAe <op{7-0}, !cast<VOPC_SDWA_Pseudo>(NAME#"_sdwa").Pfl>;
 
   def _sdwa_gfx9 :
-    VOP_SDWA9_Real <!cast<VOPC_SDWA9_Pseudo>(NAME#"_sdwa9")>,
-    VOPC_SDWA9e <op{7-0}, !cast<VOPC_SDWA9_Pseudo>(NAME#"_sdwa9").Pfl>;
+    VOP_SDWA9_Real <!cast<VOPC_SDWA_Pseudo>(NAME#"_sdwa")>,
+    VOPC_SDWA9e <op{7-0}, !cast<VOPC_SDWA_Pseudo>(NAME#"_sdwa").Pfl>;
 
   def : VOPCInstAlias <!cast<VOP3_Pseudo>(NAME#"_e64"),
                        !cast<Instruction>(NAME#"_e32_vi")> {

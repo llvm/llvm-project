@@ -168,7 +168,7 @@ inline int64_t LocalAddressSpace::getSLEB128(pint_t &addr, pint_t end) {
   } while (byte & 0x80);
   // sign extend negative numbers
   if ((byte & 0x40) != 0)
-    result |= (-1LL) << bit;
+    result |= (-1ULL) << bit;
   addr = (pint_t) p;
   return result;
 }
@@ -265,7 +265,7 @@ LocalAddressSpace::getEncodedP(pint_t &addr, pint_t end, uint8_t encoding,
   return result;
 }
 
-#ifdef __APPLE__ 
+#ifdef __APPLE__
 
   struct dyld_unwind_sections
   {
@@ -284,7 +284,7 @@ LocalAddressSpace::getEncodedP(pint_t &addr, pint_t end, uint8_t encoding,
     // In 10.6.x and earlier, we need to implement this functionality. Note
     // that this requires a newer version of libmacho (from cctools) than is
     // present in libSystem on 10.6.x (for getsectiondata).
-    static inline bool _dyld_find_unwind_sections(void* addr, 
+    static inline bool _dyld_find_unwind_sections(void* addr,
                                                     dyld_unwind_sections* info) {
       // Find mach-o image containing address.
       Dl_info dlinfo;

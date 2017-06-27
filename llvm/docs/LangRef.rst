@@ -1468,6 +1468,19 @@ example:
     This attribute by itself does not imply restrictions on
     inter-procedural optimizations.  All of the semantic effects the
     patching may have to be separately conveyed via the linkage type.
+``"probe-stack"``
+    This attribute indicates that the function will trigger a guard region
+    in the end of the stack. It ensures that accesses to the stack must be
+    no further apart than the size of the guard region to a previous
+    access of the stack. It takes one required string value, the name of
+    the stack probing function that will be called.
+
+    If a function that has a ``"probe-stack"`` attribute is inlined into
+    a function with another ``"probe-stack"`` attribute, the resulting
+    function has the ``"probe-stack"`` attribute of the caller. If a
+    function that has a ``"probe-stack"`` attribute is inlined into a
+    function that has no ``"probe-stack"`` attribute at all, the resulting
+    function has the ``"probe-stack"`` attribute of the callee.
 ``readnone``
     On a function, this attribute indicates that the function computes its
     result (or decides to unwind an exception) based strictly on its arguments,
@@ -1498,6 +1511,21 @@ example:
     On an argument, this attribute indicates that the function does not write
     through this pointer argument, even though it may write to the memory that
     the pointer points to.
+``"stack-probe-size"``
+    This attribute controls the behavior of stack probes: either
+    the ``"probe-stack"`` attribute, or ABI-required stack probes, if any.
+    It defines the size of the guard region. It ensures that if the function
+    may use more stack space than the size of the guard region, stack probing
+    sequence will be emitted. It takes one required integer value, which
+    is 4096 by default.
+
+    If a function that has a ``"stack-probe-size"`` attribute is inlined into
+    a function with another ``"stack-probe-size"`` attribute, the resulting
+    function has the ``"stack-probe-size"`` attribute that has the lower
+    numeric value. If a function that has a ``"stack-probe-size"`` attribute is
+    inlined into a function that has no ``"stack-probe-size"`` attribute
+    at all, the resulting function has the ``"stack-probe-size"`` attribute
+    of the callee.
 ``writeonly``
     On a function, this attribute indicates that the function may write to but
     does not read from memory.

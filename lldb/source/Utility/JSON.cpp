@@ -191,7 +191,7 @@ JSONValue::SP JSONArray::GetObject(Index i) {
 
 JSONArray::Size JSONArray::GetNumElements() { return m_elements.size(); }
 
-JSONParser::JSONParser(const char *cstr) : StringExtractor(cstr) {}
+JSONParser::JSONParser(llvm::StringRef data) : StringExtractor(data) {}
 
 JSONParser::Token JSONParser::GetToken(std::string &value) {
   StreamString error;

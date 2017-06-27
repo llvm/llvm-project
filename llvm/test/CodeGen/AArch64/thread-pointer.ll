@@ -13,8 +13,8 @@
 ; CHECK: .LBB0_2:
 ; CHECK:   ldr w0, [x[[REG2]]]
 ; CHECK:   bl bar
-; CHECK:   sub w[[REG3:[0-9]+]], w{{[0-9]+}}, #1
-; CHECK:   cbnz w[[REG3]], .LBB0_2
+; CHECK:   subs w[[REG3:[0-9]+]], w{{[0-9]+}}, #1
+; CHECK:   b.ne .LBB0_2
 
 define void @test1(i32 %n) local_unnamed_addr {
 entry:

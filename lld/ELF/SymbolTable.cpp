@@ -167,8 +167,8 @@ template <class ELFT> void SymbolTable<ELFT>::addSymbolWrap(StringRef Name) {
   // Tell LTO not to eliminate this symbol
   Wrap->IsUsedInRegularObj = true;
 
-  Config->RenamedSymbols[Real] = RenamedSymbol{Sym, Real->Binding};
-  Config->RenamedSymbols[Sym] = RenamedSymbol{Wrap, Sym->Binding};
+  Config->RenamedSymbols[Real] = {Sym, Real->Binding};
+  Config->RenamedSymbols[Sym] = {Wrap, Sym->Binding};
 }
 
 // Creates alias for symbol. Used to implement --defsym=ALIAS=SYM.
@@ -184,7 +184,7 @@ template <class ELFT> void SymbolTable<ELFT>::addSymbolAlias(StringRef Alias,
 
   // Tell LTO not to eliminate this symbol
   Sym->IsUsedInRegularObj = true;
-  Config->RenamedSymbols[AliasSym] = RenamedSymbol{Sym, AliasSym->Binding};
+  Config->RenamedSymbols[AliasSym] = {Sym, AliasSym->Binding};
 }
 
 // Apply symbol renames created by -wrap and -defsym. The renames are created
@@ -193,14 +193,16 @@ template <class ELFT> void SymbolTable<ELFT>::addSymbolAlias(StringRef Alias,
 // symbols are finalized, we can perform the replacement.
 template <class ELFT> void SymbolTable<ELFT>::applySymbolRenames() {
   for (auto &KV : Config->RenamedSymbols) {
-    Symbol *Sym = KV.first;
-    Symbol *Rename = KV.second.Target;
-    Sym->Binding = KV.second.OrigBinding;
+    Symbol *Dst = KV.first;
+    Symbol *Src = KV.second.Target;
+    Dst->Binding = KV.second.OriginalBinding;
 
-    // We rename symbols by replacing the old symbol's SymbolBody with the new
-    // symbol's SymbolBody. This causes all SymbolBody pointers referring to the
-    // old symbol to instead refer to the new symbol.
-    memcpy(Sym->Body.buffer, Rename->Body.buffer, sizeof(Sym->Body));
+    // We rename symbols by replacing the old symbol's SymbolBody with
+    // the new symbol's SymbolBody. The only attribute we want to keep
+    // is the symbol name, so that two symbols don't have the same name.
+    StringRef S = Dst->body()->getName();
+    memcpy(Dst->Body.buffer, Src->Body.buffer, sizeof(Symbol::Body));
+    Dst->body()->setName(S);
   }
 }
 
@@ -518,18 +520,18 @@ SymbolBody *SymbolTable<ELFT>::findInCurrentDSO(StringRef Name) {
 }
 
 template <class ELFT>
-void SymbolTable<ELFT>::addLazyArchive(ArchiveFile *F,
-                                       const object::Archive::Symbol Sym) {
+Symbol *SymbolTable<ELFT>::addLazyArchive(ArchiveFile *F,
+                                          const object::Archive::Symbol Sym) {
   Symbol *S;
   bool WasInserted;
   StringRef Name = Sym.getName();
   std::tie(S, WasInserted) = insert(Name);
   if (WasInserted) {
     replaceBody<LazyArchive>(S, *F, Sym, SymbolBody::UnknownType);
-    return;
+    return S;
   }
   if (!S->body()->isUndefined())
-    return;
+    return S;
 
   // Weak undefined symbols should not fetch members from archives. If we were
   // to keep old symbol we would not know that an archive member was available
@@ -540,11 +542,12 @@ void SymbolTable<ELFT>::addLazyArchive(ArchiveFile *F,
   // to preserve its type. FIXME: Move the Type field to Symbol.
   if (S->isWeak()) {
     replaceBody<LazyArchive>(S, *F, Sym, S->body()->Type);
-    return;
+    return S;
   }
   std::pair<MemoryBufferRef, uint64_t> MBInfo = F->getMember(&Sym);
   if (!MBInfo.first.getBuffer().empty())
     addFile(createObjectFile(MBInfo.first, F->getName(), MBInfo.second));
+  return S;
 }
 
 template <class ELFT>

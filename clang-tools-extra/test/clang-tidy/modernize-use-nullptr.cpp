@@ -261,3 +261,17 @@ class TemplateClass {
 void IgnoreSubstTemplateType() {
   TemplateClass<int*> a(1);
 }
+
+// Test on casting nullptr.
+struct G {
+  explicit G(bool, const char * = NULL) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:35: warning: use nullptr
+  // CHECK-FIXES: explicit G(bool, const char * = nullptr) {}
+};
+bool g(const char*);
+void test_cast_nullptr() {
+  G(g(nullptr));
+  G(g((nullptr)));
+  G(g(static_cast<char*>(nullptr)));
+  G(g(static_cast<const char*>(nullptr)));
+}

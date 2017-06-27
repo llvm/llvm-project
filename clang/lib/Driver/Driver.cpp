@@ -11,6 +11,7 @@
 #include "InputInfo.h"
 #include "ToolChains/AMDGPU.h"
 #include "ToolChains/AVR.h"
+#include "ToolChains/Ananas.h"
 #include "ToolChains/Bitrig.h"
 #include "ToolChains/Clang.h"
 #include "ToolChains/CloudABI.h"
@@ -1227,7 +1228,32 @@ bool Driver::HandleImmediateArgs(const Compilation &C) {
   if (Arg *A = C.getArgs().getLastArg(options::OPT_autocomplete)) {
     // Print out all options that start with a given argument. This is used for
     // shell autocompletion.
-    llvm::outs() << llvm::join(Opts->findByPrefix(A->getValue()), " ") << '\n';
+    StringRef PassedFlags = A->getValue();
+    std::vector<std::string> SuggestedCompletions;
+
+    if (PassedFlags.find(',') == StringRef::npos) {
+      // If the flag is in the form of "--autocomplete=-foo",
+      // we were requested to print out all option names that start with "-foo".
+      // For example, "--autocomplete=-fsyn" is expanded to "-fsyntax-only".
+      SuggestedCompletions = Opts->findByPrefix(PassedFlags);
+    } else {
+      // If the flag is in the form of "--autocomplete=foo,bar", we were
+      // requested to print out all option values for "-foo" that start with
+      // "bar". For example,
+      // "--autocomplete=-stdlib=,l" is expanded to "libc++" and "libstdc++".
+      StringRef Option, Arg;
+      std::tie(Option, Arg) = PassedFlags.split(',');
+      SuggestedCompletions = Opts->suggestValueCompletions(Option, Arg);
+    }
+
+    // Sort the autocomplete candidates so that shells print them out in a
+    // deterministic order. We could sort in any way, but we chose
+    // case-insensitive sorting for consistency with the -help option
+    // which prints out options in the case-insensitive alphabetical order.
+    std::sort(SuggestedCompletions.begin(), SuggestedCompletions.end(),
+              [](StringRef A, StringRef B) { return A.compare_lower(B) < 0; });
+
+    llvm::outs() << llvm::join(SuggestedCompletions, " ") << '\n';
     return false;
   }
 
@@ -3723,6 +3749,9 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
     switch (Target.getOS()) {
     case llvm::Triple::Haiku:
       TC = llvm::make_unique<toolchains::Haiku>(*this, Target, Args);
+      break;
+    case llvm::Triple::Ananas:
+      TC = llvm::make_unique<toolchains::Ananas>(*this, Target, Args);
       break;
     case llvm::Triple::CloudABI:
       TC = llvm::make_unique<toolchains::CloudABI>(*this, Target, Args);

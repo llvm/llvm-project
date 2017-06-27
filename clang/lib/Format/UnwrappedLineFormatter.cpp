@@ -226,7 +226,7 @@ private:
         Style.AllowShortFunctionsOnASingleLine == FormatStyle::SFS_All ||
         (Style.AllowShortFunctionsOnASingleLine >= FormatStyle::SFS_Empty &&
          I[1]->First->is(tok::r_brace)) ||
-        (Style.AllowShortFunctionsOnASingleLine == FormatStyle::SFS_Inline &&
+        (Style.AllowShortFunctionsOnASingleLine & FormatStyle::SFS_InlineOnly &&
          TheLine->Level != 0);
 
     if (Style.CompactNamespaces) {

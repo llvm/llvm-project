@@ -6,7 +6,7 @@ define void @update(<3 x i8>* %dst, <3 x i8>* %src, i32 %n) nounwind {
 ; CHECK:       # BB#0: # %entry
 ; CHECK-NEXT:    subl $12, %esp
 ; CHECK-NEXT:    movl $0, (%esp)
-; CHECK-NEXT:    movdqa {{.*#+}} xmm0 = <1,1,1,u>
+; CHECK-NEXT:    pcmpeqd %xmm0, %xmm0
 ; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = <0,4,8,12,u,u,u,u,u,u,u,u,u,u,u,u>
 ; CHECK-NEXT:    jmp .LBB0_1
 ; CHECK-NEXT:    .p2align 4, 0x90
@@ -16,7 +16,7 @@ define void @update(<3 x i8>* %dst, <3 x i8>* %src, i32 %n) nounwind {
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; CHECK-NEXT:    pmovzxbd {{.*#+}} xmm2 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero
-; CHECK-NEXT:    paddd %xmm0, %xmm2
+; CHECK-NEXT:    psubd %xmm0, %xmm2
 ; CHECK-NEXT:    pextrb $8, %xmm2, 2(%ecx,%eax,4)
 ; CHECK-NEXT:    pshufb %xmm1, %xmm2
 ; CHECK-NEXT:    pextrw $0, %xmm2, (%ecx,%eax,4)

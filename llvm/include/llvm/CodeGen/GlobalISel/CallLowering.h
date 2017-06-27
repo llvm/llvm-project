@@ -1,4 +1,4 @@
-//===-- llvm/CodeGen/GlobalISel/CallLowering.h - Call lowering --*- C++ -*-===//
+//===- llvm/CodeGen/GlobalISel/CallLowering.h - Call lowering ---*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,21 +15,31 @@
 #ifndef LLVM_CODEGEN_GLOBALISEL_CALLLOWERING_H
 #define LLVM_CODEGEN_GLOBALISEL_CALLLOWERING_H
 
-#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/CodeGen/CallingConvLower.h"
-#include "llvm/CodeGen/ValueTypes.h"
-#include "llvm/IR/Function.h"
+#include "llvm/CodeGen/MachineValueType.h"
+#include "llvm/IR/CallSite.h"
+#include "llvm/IR/CallingConv.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetCallingConv.h"
+#include <cstdint>
+#include <functional>
 
 namespace llvm {
-// Forward declarations.
+
+class DataLayout;
+class Function;
 class MachineIRBuilder;
 class MachineOperand;
+struct MachinePointerInfo;
+class MachineRegisterInfo;
 class TargetLowering;
+class Type;
 class Value;
 
 class CallLowering {
   const TargetLowering *TLI;
+
 public:
   struct ArgInfo {
     unsigned Reg;
@@ -49,6 +59,12 @@ public:
   /// arugment should go, exactly what happens can vary slightly. This
   /// class abstracts the differences.
   struct ValueHandler {
+    ValueHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
+                 CCAssignFn *AssignFn)
+      : MIRBuilder(MIRBuilder), MRI(MRI), AssignFn(AssignFn) {}
+
+    virtual ~ValueHandler() = default;
+
     /// Materialize a VReg containing the address of the specified
     /// stack-based object. This is either based on a FrameIndex or
     /// direct SP manipulation, depending on the context. \p MPO
@@ -89,12 +105,6 @@ public:
       return AssignFn(ValNo, ValVT, LocVT, LocInfo, Info.Flags, State);
     }
 
-    ValueHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
-                 CCAssignFn *AssignFn)
-      : MIRBuilder(MIRBuilder), MRI(MRI), AssignFn(AssignFn) {}
-
-    virtual ~ValueHandler() {}
-
     MachineIRBuilder &MIRBuilder;
     MachineRegisterInfo &MRI;
     CCAssignFn *AssignFn;
@@ -112,7 +122,6 @@ protected:
     return static_cast<const XXXTargetLowering *>(TLI);
   }
 
-
   template <typename FuncInfoTy>
   void setArgFlags(ArgInfo &Arg, unsigned OpNum, const DataLayout &DL,
                    const FuncInfoTy &FuncInfo) const;
@@ -126,7 +135,7 @@ protected:
 
 public:
   CallLowering(const TargetLowering *TLI) : TLI(TLI) {}
-  virtual ~CallLowering() {}
+  virtual ~CallLowering() = default;
 
   /// This hook must be implemented to lower outgoing return values, described
   /// by \p Val, into the specified virtual register \p VReg.
@@ -200,6 +209,7 @@ public:
                  unsigned ResReg, ArrayRef<unsigned> ArgRegs,
                  std::function<unsigned()> GetCalleeReg) const;
 };
-} // End namespace llvm.
 
-#endif
+} // end namespace llvm
+
+#endif // LLVM_CODEGEN_GLOBALISEL_CALLLOWERING_H

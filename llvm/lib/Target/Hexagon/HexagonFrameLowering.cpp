@@ -1051,10 +1051,26 @@ int HexagonFrameLowering::getFrameIndexReference(const MachineFunction &MF,
   bool HasExtraAlign = HRI.needsStackRealignment(MF);
   bool NoOpt = MF.getTarget().getOptLevel() == CodeGenOpt::None;
 
+  unsigned FrameSize = MFI.getStackSize();
   unsigned SP = HRI.getStackRegister(), FP = HRI.getFrameRegister();
   auto &HMFI = *MF.getInfo<HexagonMachineFunctionInfo>();
   unsigned AP = HMFI.getStackAlignBasePhysReg();
-  unsigned FrameSize = MFI.getStackSize();
+  // It may happen that AP will be absent even HasAlloca && HasExtraAlign
+  // is true. HasExtraAlign may be set because of vector spills, without
+  // aligned locals or aligned outgoing function arguments. Since vector
+  // spills will ultimately be "unaligned", it is safe to use FP as the
+  // base register.
+  // In fact, in such a scenario the stack is actually not required to be
+  // aligned, although it may end up being aligned anyway, since this
+  // particular case is not easily detectable. The alignment will be
+  // unnecessary, but not incorrect.
+  // Unfortunately there is no quick way to verify that the above is
+  // indeed the case (and that it's not a result of an error), so just
+  // assume that missing AP will be replaced by FP.
+  // (A better fix would be to rematerialize AP from FP and always align
+  // vector spills.)
+  if (AP == 0)
+    AP = FP;
 
   bool UseFP = false, UseAP = false;  // Default: use SP (except at -O0).
   // Use FP at -O0, except when there are objects with extra alignment.
@@ -2454,9 +2470,44 @@ bool HexagonFrameLowering::mayOverflowFrameOffset(MachineFunction &MF) const {
   unsigned StackSize = MF.getFrameInfo().estimateStackSize(MF);
   auto &HST = MF.getSubtarget<HexagonSubtarget>();
   // A fairly simplistic guess as to whether a potential load/store to a
-  // stack location could require an extra register. It does not account
-  // for store-immediate instructions.
-  if (HST.useHVXOps())
-    return StackSize > 256;
+  // stack location could require an extra register.
+  if (HST.useHVXOps() && StackSize > 256)
+    return true;
+
+  // Check if the function has store-immediate instructions that access
+  // the stack. Since the offset field is not extendable, if the stack
+  // size exceeds the offset limit (6 bits, shifted), the stores will
+  // require a new base register.
+  bool HasImmStack = false;
+  unsigned MinLS = ~0u;   // Log_2 of the memory access size.
+
+  for (const MachineBasicBlock &B : MF) {
+    for (const MachineInstr &MI : B) {
+      unsigned LS = 0;
+      switch (MI.getOpcode()) {
+        case Hexagon::S4_storeirit_io:
+        case Hexagon::S4_storeirif_io:
+        case Hexagon::S4_storeiri_io:
+          ++LS;
+          LLVM_FALLTHROUGH;
+        case Hexagon::S4_storeirht_io:
+        case Hexagon::S4_storeirhf_io:
+        case Hexagon::S4_storeirh_io:
+          ++LS;
+          LLVM_FALLTHROUGH;
+        case Hexagon::S4_storeirbt_io:
+        case Hexagon::S4_storeirbf_io:
+        case Hexagon::S4_storeirb_io:
+          if (MI.getOperand(0).isFI())
+            HasImmStack = true;
+          MinLS = std::min(MinLS, LS);
+          break;
+      }
+    }
+  }
+
+  if (HasImmStack)
+    return !isUInt<6>(StackSize >> MinLS);
+
   return false;
 }

@@ -46,6 +46,10 @@ private:
                   MachineRegisterInfo &MRI, const TargetRegisterInfo &TRI,
                   const RegisterBankInfo &RBI) const;
 
+  bool selectSelect(MachineInstrBuilder &MIB, const ARMBaseInstrInfo &TII,
+                    MachineRegisterInfo &MRI, const TargetRegisterInfo &TRI,
+                    const RegisterBankInfo &RBI) const;
+
   const ARMBaseInstrInfo &TII;
   const ARMBaseRegisterInfo &TRI;
   const ARMBaseTargetMachine &TM;
@@ -346,6 +350,50 @@ bool ARMInstructionSelector::selectICmp(MachineInstrBuilder &MIB,
   return true;
 }
 
+bool ARMInstructionSelector::selectSelect(MachineInstrBuilder &MIB,
+                                          const ARMBaseInstrInfo &TII,
+                                          MachineRegisterInfo &MRI,
+                                          const TargetRegisterInfo &TRI,
+                                          const RegisterBankInfo &RBI) const {
+  auto &MBB = *MIB->getParent();
+  auto InsertBefore = std::next(MIB->getIterator());
+  auto &DebugLoc = MIB->getDebugLoc();
+
+  // Compare the condition to 0.
+  auto CondReg = MIB->getOperand(1).getReg();
+  assert(MRI.getType(CondReg).getSizeInBits() == 1 &&
+         RBI.getRegBank(CondReg, MRI, TRI)->getID() == ARM::GPRRegBankID &&
+         "Unsupported types for select operation");
+  auto CmpI = BuildMI(MBB, InsertBefore, DebugLoc, TII.get(ARM::CMPri))
+                  .addUse(CondReg)
+                  .addImm(0)
+                  .add(predOps(ARMCC::AL));
+  if (!constrainSelectedInstRegOperands(*CmpI, TII, TRI, RBI))
+    return false;
+
+  // Move a value into the result register based on the result of the
+  // comparison.
+  auto ResReg = MIB->getOperand(0).getReg();
+  auto TrueReg = MIB->getOperand(2).getReg();
+  auto FalseReg = MIB->getOperand(3).getReg();
+  assert(MRI.getType(ResReg) == MRI.getType(TrueReg) &&
+         MRI.getType(TrueReg) == MRI.getType(FalseReg) &&
+         MRI.getType(FalseReg).getSizeInBits() == 32 &&
+         RBI.getRegBank(TrueReg, MRI, TRI)->getID() == ARM::GPRRegBankID &&
+         RBI.getRegBank(FalseReg, MRI, TRI)->getID() == ARM::GPRRegBankID &&
+         "Unsupported types for select operation");
+  auto Mov1I = BuildMI(MBB, InsertBefore, DebugLoc, TII.get(ARM::MOVCCr))
+                   .addDef(ResReg)
+                   .addUse(TrueReg)
+                   .addUse(FalseReg)
+                   .add(predOps(ARMCC::EQ, ARM::CPSR));
+  if (!constrainSelectedInstRegOperands(*Mov1I, TII, TRI, RBI))
+    return false;
+
+  MIB->eraseFromParent();
+  return true;
+}
+
 bool ARMInstructionSelector::select(MachineInstr &I) const {
   assert(I.getParent() && "Instruction should be in a basic block!");
   assert(I.getParent()->getParent() && "Instruction should be in a function!");
@@ -448,6 +496,8 @@ bool ARMInstructionSelector::select(MachineInstr &I) const {
   }
   case G_ICMP:
     return selectICmp(MIB, TII, MRI, TRI, RBI);
+  case G_SELECT:
+    return selectSelect(MIB, TII, MRI, TRI, RBI);
   case G_GEP:
     I.setDesc(TII.get(ARM::ADDrr));
     MIB.add(predOps(ARMCC::AL)).add(condCodeOp());

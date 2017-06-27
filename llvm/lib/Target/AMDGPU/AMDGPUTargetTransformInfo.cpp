@@ -184,9 +184,9 @@ void AMDGPUTTIImpl::getUnrollingPreferences(Loop *L,
   }
 }
 
-unsigned AMDGPUTTIImpl::getNumberOfRegisters(bool Vec) {
-  if (Vec)
-    return 0;
+unsigned AMDGPUTTIImpl::getHardwareNumberOfRegisters(bool Vec) const {
+  // The concept of vector registers doesn't really exist. Some packed vector
+  // operations operate on the normal 32-bit registers.
 
   // Number of VGPRs on SI.
   if (ST->getGeneration() >= AMDGPUSubtarget::SOUTHERN_ISLANDS)
@@ -195,8 +195,18 @@ unsigned AMDGPUTTIImpl::getNumberOfRegisters(bool Vec) {
   return 4 * 128; // XXX - 4 channels. Should these count as vector instead?
 }
 
+unsigned AMDGPUTTIImpl::getNumberOfRegisters(bool Vec) const {
+  // This is really the number of registers to fill when vectorizing /
+  // interleaving loops, so we lie to avoid trying to use all registers.
+  return getHardwareNumberOfRegisters(Vec) >> 3;
+}
+
 unsigned AMDGPUTTIImpl::getRegisterBitWidth(bool Vector) const {
-  return Vector ? 0 : 32;
+  return 32;
+}
+
+unsigned AMDGPUTTIImpl::getMinVectorRegisterBitWidth() const {
+  return 32;
 }
 
 unsigned AMDGPUTTIImpl::getLoadStoreVecRegBitWidth(unsigned AddrSpace) const {
@@ -247,11 +257,11 @@ bool AMDGPUTTIImpl::isLegalToVectorizeStoreChain(unsigned ChainSizeInBytes,
 
 unsigned AMDGPUTTIImpl::getMaxInterleaveFactor(unsigned VF) {
   // Disable unrolling if the loop is not vectorized.
+  // TODO: Enable this again.
   if (VF == 1)
     return 1;
 
-  // Semi-arbitrary large amount.
-  return 64;
+  return 8;
 }
 
 int AMDGPUTTIImpl::getArithmeticInstrCost(

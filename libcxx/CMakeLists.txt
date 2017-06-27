@@ -118,6 +118,7 @@ if (LIBCXX_CXX_ABI STREQUAL "default")
     cxxabi.h
     PATHS ${LLVM_MAIN_SRC_DIR}/projects/libcxxabi/include
           ${LLVM_MAIN_SRC_DIR}/runtimes/libcxxabi/include
+          ${LLVM_MAIN_SRC_DIR}/../libcxxabi/include
     NO_DEFAULT_PATH
   )
   if (LIBCXX_TARGETING_MSVC)

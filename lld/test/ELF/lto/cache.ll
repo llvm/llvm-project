@@ -12,6 +12,17 @@
 ; Two cached objects, plus a timestamp file and "foo", minus the file we removed.
 ; RUN: ls %t.cache | count 4
 
+; Create a file of size 64KB.
+; RUN: %python -c "print(' ' * 65536)" > %t.cache/llvmcache-foo
+
+; This should leave the file in place.
+; RUN: ld.lld --thinlto-cache-dir=%t.cache --thinlto-cache-policy cache_size_bytes=128k -o %t3 %t2.o %t.o
+; RUN: ls %t.cache | count 5
+
+; This should remove it.
+; RUN: ld.lld --thinlto-cache-dir=%t.cache --thinlto-cache-policy cache_size_bytes=32k -o %t3 %t2.o %t.o
+; RUN: ls %t.cache | count 4
+
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 

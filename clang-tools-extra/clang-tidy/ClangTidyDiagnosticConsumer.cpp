@@ -36,10 +36,9 @@ public:
       : DiagnosticRenderer(LangOpts, DiagOpts), Error(Error) {}
 
 protected:
-  void emitDiagnosticMessage(SourceLocation Loc, PresumedLoc PLoc,
+  void emitDiagnosticMessage(FullSourceLoc Loc, PresumedLoc PLoc,
                              DiagnosticsEngine::Level Level, StringRef Message,
                              ArrayRef<CharSourceRange> Ranges,
-                             const SourceManager *SM,
                              DiagOrStoredDiag Info) override {
     // Remove check name from the message.
     // FIXME: Remove this once there's a better way to pass check names than
@@ -49,9 +48,10 @@ protected:
     if (Message.endswith(CheckNameInMessage))
       Message = Message.substr(0, Message.size() - CheckNameInMessage.size());
 
-    auto TidyMessage = Loc.isValid()
-                           ? tooling::DiagnosticMessage(Message, *SM, Loc)
-                           : tooling::DiagnosticMessage(Message);
+    auto TidyMessage =
+        Loc.isValid()
+            ? tooling::DiagnosticMessage(Message, Loc.getManager(), Loc)
+            : tooling::DiagnosticMessage(Message);
     if (Level == DiagnosticsEngine::Note) {
       Error.Notes.push_back(TidyMessage);
       return;
@@ -60,15 +60,13 @@ protected:
     Error.Message = TidyMessage;
   }
 
-  void emitDiagnosticLoc(SourceLocation Loc, PresumedLoc PLoc,
+  void emitDiagnosticLoc(FullSourceLoc Loc, PresumedLoc PLoc,
                          DiagnosticsEngine::Level Level,
-                         ArrayRef<CharSourceRange> Ranges,
-                         const SourceManager &SM) override {}
+                         ArrayRef<CharSourceRange> Ranges) override {}
 
-  void emitCodeContext(SourceLocation Loc, DiagnosticsEngine::Level Level,
+  void emitCodeContext(FullSourceLoc Loc, DiagnosticsEngine::Level Level,
                        SmallVectorImpl<CharSourceRange> &Ranges,
-                       ArrayRef<FixItHint> Hints,
-                       const SourceManager &SM) override {
+                       ArrayRef<FixItHint> Hints) override {
     assert(Loc.isValid());
     for (const auto &FixIt : Hints) {
       CharSourceRange Range = FixIt.RemoveRange;
@@ -77,7 +75,8 @@ protected:
       assert(Range.getBegin().isFileID() && Range.getEnd().isFileID() &&
              "Only file locations supported in fix-it hints.");
 
-      tooling::Replacement Replacement(SM, Range, FixIt.CodeToInsert);
+      tooling::Replacement Replacement(Loc.getManager(), Range,
+                                       FixIt.CodeToInsert);
       llvm::Error Err = Error.Fix[Replacement.getFilePath()].add(Replacement);
       // FIXME: better error handling (at least, don't let other replacements be
       // applied).
@@ -89,16 +88,13 @@ protected:
     }
   }
 
-  void emitIncludeLocation(SourceLocation Loc, PresumedLoc PLoc,
-                           const SourceManager &SM) override {}
+  void emitIncludeLocation(FullSourceLoc Loc, PresumedLoc PLoc) override {}
 
-  void emitImportLocation(SourceLocation Loc, PresumedLoc PLoc,
-                          StringRef ModuleName,
-                          const SourceManager &SM) override {}
+  void emitImportLocation(FullSourceLoc Loc, PresumedLoc PLoc,
+                          StringRef ModuleName) override {}
 
-  void emitBuildingModuleLocation(SourceLocation Loc, PresumedLoc PLoc,
-                                  StringRef ModuleName,
-                                  const SourceManager &SM) override {}
+  void emitBuildingModuleLocation(FullSourceLoc Loc, PresumedLoc PLoc,
+                                  StringRef ModuleName) override {}
 
   void endDiagnostic(DiagOrStoredDiag D,
                      DiagnosticsEngine::Level Level) override {
@@ -419,11 +415,12 @@ void ClangTidyDiagnosticConsumer::HandleDiagnostic(
       Errors.back());
   SmallString<100> Message;
   Info.FormatDiagnostic(Message);
-  SourceManager *Sources = nullptr;
-  if (Info.hasSourceManager())
-    Sources = &Info.getSourceManager();
-  Converter.emitDiagnostic(Info.getLocation(), DiagLevel, Message,
-                           Info.getRanges(), Info.getFixItHints(), Sources);
+  FullSourceLoc Loc =
+      (Info.getLocation().isInvalid())
+          ? FullSourceLoc()
+          : FullSourceLoc(Info.getLocation(), Info.getSourceManager());
+  Converter.emitDiagnostic(Loc, DiagLevel, Message, Info.getRanges(),
+                           Info.getFixItHints());
 
   checkFilters(Info.getLocation());
 }

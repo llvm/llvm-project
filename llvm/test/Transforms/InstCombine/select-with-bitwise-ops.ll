@@ -104,12 +104,11 @@ define i32 @select_icmp_ne_0_and_32_or_4096(i32 %x, i32 %y) {
 
 define i8 @select_icmp_ne_0_and_1073741824_or_8(i32 %x, i8 %y) {
 ; CHECK-LABEL: @select_icmp_ne_0_and_1073741824_or_8(
-; CHECK-NEXT:    [[AND:%.*]] = lshr i32 %x, 27
-; CHECK-NEXT:    [[AND_TR:%.*]] = trunc i32 [[AND]] to i8
-; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[AND_TR]], 8
-; CHECK-NEXT:    [[TMP2:%.*]] = xor i8 [[TMP1]], 8
-; CHECK-NEXT:    [[TMP3:%.*]] = or i8 [[TMP2]], %y
-; CHECK-NEXT:    ret i8 [[TMP3]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 1073741824
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[AND]], 0
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[Y:%.*]], 8
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP]], i8 [[Y]], i8 [[OR]]
+; CHECK-NEXT:    ret i8 [[SELECT]]
 ;
   %and = and i32 %x, 1073741824
   %cmp = icmp ne i32 0, %and
@@ -120,12 +119,11 @@ define i8 @select_icmp_ne_0_and_1073741824_or_8(i32 %x, i8 %y) {
 
 define i32 @select_icmp_ne_0_and_8_or_1073741824(i8 %x, i32 %y) {
 ; CHECK-LABEL: @select_icmp_ne_0_and_8_or_1073741824(
-; CHECK-NEXT:    [[AND:%.*]] = and i8 %x, 8
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[AND]] to i32
-; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw nsw i32 [[TMP1]], 27
-; CHECK-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP2]], 1073741824
-; CHECK-NEXT:    [[TMP4:%.*]] = or i32 [[TMP3]], %y
-; CHECK-NEXT:    ret i32 [[TMP4]]
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X:%.*]], 8
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[AND]], 0
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[Y:%.*]], 1073741824
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP]], i32 [[Y]], i32 [[OR]]
+; CHECK-NEXT:    ret i32 [[SELECT]]
 ;
   %and = and i8 %x, 8
   %cmp = icmp ne i8 0, %and
@@ -299,11 +297,10 @@ define i32 @test67(i16 %x) {
 
 define i32 @test68(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test68(
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[X:%.*]] to i8
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[TMP1]], -1
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[Y:%.*]], 2
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP]], i32 [[Y]], i32 [[OR]]
-; CHECK-NEXT:    ret i32 [[SELECT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[X:%.*]], 6
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 2
+; CHECK-NEXT:    [[TMP3:%.*]] = or i32 [[TMP2]], [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[TMP3]]
 ;
   %and = and i32 %x, 128
   %cmp = icmp eq i32 %and, 0
@@ -314,11 +311,11 @@ define i32 @test68(i32 %x, i32 %y) {
 
 define i32 @test69(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test69(
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[X:%.*]] to i8
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[TMP1]], 0
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[Y:%.*]], 2
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP]], i32 [[Y]], i32 [[OR]]
-; CHECK-NEXT:    ret i32 [[SELECT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[X:%.*]], 6
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 2
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP2]], 2
+; CHECK-NEXT:    [[TMP4:%.*]] = or i32 [[TMP3]], [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[TMP4]]
 ;
   %and = and i32 %x, 128
   %cmp = icmp ne i32 %and, 0
@@ -377,15 +374,13 @@ define i32 @no_shift_xor_multiuse_or(i32 %x, i32 %y) {
   ret i32 %res
 }
 
-; TODO this increased the number of instructions
 define i32 @shift_xor_multiuse_or(i32 %x, i32 %y) {
 ; CHECK-LABEL: @shift_xor_multiuse_or(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 4096
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[AND]], 0
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 [[Y:%.*]], 2048
-; CHECK-NEXT:    [[AND:%.*]] = lshr i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[AND]], 2048
-; CHECK-NEXT:    [[TMP2:%.*]] = xor i32 [[TMP1]], 2048
-; CHECK-NEXT:    [[TMP3:%.*]] = or i32 [[TMP2]], [[Y]]
-; CHECK-NEXT:    [[RES:%.*]] = mul i32 [[TMP3]], [[OR]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP]], i32 [[Y]], i32 [[OR]]
+; CHECK-NEXT:    [[RES:%.*]] = mul i32 [[SELECT]], [[OR]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %and = and i32 %x, 4096
@@ -452,16 +447,14 @@ define i32 @no_shift_xor_multiuse_cmp(i32 %x, i32 %y, i32 %z, i32 %w) {
   ret i32 %res
 }
 
-; TODO this increased the number of instructions
 define i32 @shift_xor_multiuse_cmp(i32 %x, i32 %y, i32 %z, i32 %w) {
 ; CHECK-LABEL: @shift_xor_multiuse_cmp(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 4096
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[AND]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr exact i32 [[AND]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = xor i32 [[TMP1]], 2048
-; CHECK-NEXT:    [[TMP3:%.*]] = or i32 [[TMP2]], [[Y:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[Y:%.*]], 2048
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP]], i32 [[Y]], i32 [[OR]]
 ; CHECK-NEXT:    [[SELECT2:%.*]] = select i1 [[CMP]], i32 [[Z:%.*]], i32 [[W:%.*]]
-; CHECK-NEXT:    [[RES:%.*]] = mul i32 [[TMP3]], [[SELECT2]]
+; CHECK-NEXT:    [[RES:%.*]] = mul i32 [[SELECT]], [[SELECT2]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %and = and i32 %x, 4096
@@ -473,16 +466,14 @@ define i32 @shift_xor_multiuse_cmp(i32 %x, i32 %y, i32 %z, i32 %w) {
   ret i32 %res
 }
 
-; TODO this increased the number of instructions
 define i32 @shift_no_xor_multiuse_cmp_or(i32 %x, i32 %y, i32 %z, i32 %w) {
 ; CHECK-LABEL: @shift_no_xor_multiuse_cmp_or(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 [[Y:%.*]], 2
-; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i32 [[AND]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = or i32 [[TMP1]], [[Y]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP]], i32 [[Y]], i32 [[OR]]
 ; CHECK-NEXT:    [[SELECT2:%.*]] = select i1 [[CMP]], i32 [[Z:%.*]], i32 [[W:%.*]]
-; CHECK-NEXT:    [[RES:%.*]] = mul i32 [[TMP2]], [[SELECT2]]
+; CHECK-NEXT:    [[RES:%.*]] = mul i32 [[SELECT]], [[SELECT2]]
 ; CHECK-NEXT:    [[RES2:%.*]] = mul i32 [[RES]], [[OR]]
 ; CHECK-NEXT:    ret i32 [[RES2]]
 ;
@@ -517,16 +508,14 @@ define i32 @no_shift_no_xor_multiuse_cmp_or(i32 %x, i32 %y, i32 %z, i32 %w) {
   ret i32 %res2
 }
 
-; TODO this increased the number of instructions
 define i32 @no_shift_xor_multiuse_cmp_or(i32 %x, i32 %y, i32 %z, i32 %w) {
 ; CHECK-LABEL: @no_shift_xor_multiuse_cmp_or(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 4096
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[AND]], 0
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 [[Y:%.*]], 4096
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[AND]], 4096
-; CHECK-NEXT:    [[TMP2:%.*]] = or i32 [[TMP1]], [[Y]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP]], i32 [[Y]], i32 [[OR]]
 ; CHECK-NEXT:    [[SELECT2:%.*]] = select i1 [[CMP]], i32 [[Z:%.*]], i32 [[W:%.*]]
-; CHECK-NEXT:    [[RES:%.*]] = mul i32 [[TMP2]], [[SELECT2]]
+; CHECK-NEXT:    [[RES:%.*]] = mul i32 [[SELECT]], [[SELECT2]]
 ; CHECK-NEXT:    [[RES2:%.*]] = mul i32 [[RES]], [[OR]]
 ; CHECK-NEXT:    ret i32 [[RES2]]
 ;
@@ -540,17 +529,14 @@ define i32 @no_shift_xor_multiuse_cmp_or(i32 %x, i32 %y, i32 %z, i32 %w) {
   ret i32 %res2
 }
 
-; TODO this increased the number of instructions
 define i32 @shift_xor_multiuse_cmp_or(i32 %x, i32 %y, i32 %z, i32 %w) {
 ; CHECK-LABEL: @shift_xor_multiuse_cmp_or(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 4096
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[AND]], 0
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 [[Y:%.*]], 2048
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr exact i32 [[AND]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = xor i32 [[TMP1]], 2048
-; CHECK-NEXT:    [[TMP3:%.*]] = or i32 [[TMP2]], [[Y]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP]], i32 [[Y]], i32 [[OR]]
 ; CHECK-NEXT:    [[SELECT2:%.*]] = select i1 [[CMP]], i32 [[Z:%.*]], i32 [[W:%.*]]
-; CHECK-NEXT:    [[RES:%.*]] = mul i32 [[TMP3]], [[SELECT2]]
+; CHECK-NEXT:    [[RES:%.*]] = mul i32 [[SELECT]], [[SELECT2]]
 ; CHECK-NEXT:    [[RES2:%.*]] = mul i32 [[RES]], [[OR]]
 ; CHECK-NEXT:    ret i32 [[RES2]]
 ;

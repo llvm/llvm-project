@@ -58,7 +58,7 @@
 //
 // The struct type node has a name and a list of pairs, one pair for each member
 // of the struct. The first element of each pair is a type node (a struct type
-// node or a sclar type node), specifying the type of the member, the second
+// node or a scalar type node), specifying the type of the member, the second
 // element of each pair is the offset of the member.
 //
 // Given an example

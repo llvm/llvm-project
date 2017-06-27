@@ -16,10 +16,10 @@
 
 #include "lldb/Host/posix/ConnectionFileDescriptorPosix.h"
 #include "lldb/Host/Config.h"
-#include "lldb/Host/IOObject.h"
 #include "lldb/Host/Socket.h"
 #include "lldb/Host/SocketAddress.h"
 #include "lldb/Utility/SelectHelper.h"
+#include "lldb/Utility/Timeout.h"
 
 // C Includes
 #include <errno.h>
@@ -42,7 +42,6 @@
 #include "llvm/ADT/SmallVector.h"
 #endif
 // Project includes
-#include "lldb/Core/Communication.h"
 #include "lldb/Core/Timer.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/Socket.h"

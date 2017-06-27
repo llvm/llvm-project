@@ -464,10 +464,15 @@ static void addPGOInstrPasses(ModulePassManager &MPM, bool DebugLogging,
   if (RunProfileGen) {
     MPM.addPass(PGOInstrumentationGen());
 
+    FunctionPassManager FPM;
+    FPM.addPass(createFunctionToLoopPassAdaptor(LoopRotatePass()));
+    MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
+
     // Add the profile lowering pass.
     InstrProfOptions Options;
     if (!ProfileGenFile.empty())
       Options.InstrProfileOutput = ProfileGenFile;
+    Options.DoCounterPromotion = true;
     MPM.addPass(InstrProfiling(Options));
   }
 
@@ -922,9 +927,6 @@ ModulePassManager PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
 #if 0
   MainFPM.add(AlignmentFromAssumptionsPass());
 #endif
-
-  // FIXME: Conditionally run LoadCombine here, after it's ported
-  // (in case we still have this pass, given its questionable usefulness).
 
   // FIXME: add peephole extensions to the PM here.
   MainFPM.addPass(InstCombinePass());

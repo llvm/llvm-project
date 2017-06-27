@@ -487,12 +487,6 @@ FunctionPass *createSpeculativeExecutionIfHasBranchDivergencePass();
 
 //===----------------------------------------------------------------------===//
 //
-// LoadCombine - Combine loads into bigger loads.
-//
-BasicBlockPass *createLoadCombinePass();
-
-//===----------------------------------------------------------------------===//
-//
 // StraightLineStrengthReduce - This pass strength-reduces some certain
 // instruction patterns in straight-line code.
 //

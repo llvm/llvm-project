@@ -9,7 +9,7 @@ define <32 x i8> @test_pabsb(<32 x i8> %a0, <32 x i8> *%a1) {
 ; HASWELL-NEXT:    vpabsb %ymm0, %ymm0 # sched: [1:0.50]
 ; HASWELL-NEXT:    vpabsb (%rdi), %ymm1 # sched: [5:0.50]
 ; HASWELL-NEXT:    vpor %ymm1, %ymm0, %ymm0 # sched: [1:0.33]
-; HASWELL-NEXT:    retq # sched: [1:1.00]
+; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; ZNVER1-LABEL: test_pabsb:
 ; ZNVER1:       # BB#0:
@@ -29,9 +29,9 @@ define <8 x i32> @test_pabsd(<8 x i32> %a0, <8 x i32> *%a1) {
 ; HASWELL-LABEL: test_pabsd:
 ; HASWELL:       # BB#0:
 ; HASWELL-NEXT:    vpabsd %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    vpabsd (%rdi), %ymm1 # sched: [5:0.50]
+; HASWELL-NEXT:    vpabsd (%rdi), %ymm1 # sched: [1:0.50]
 ; HASWELL-NEXT:    vpor %ymm1, %ymm0, %ymm0 # sched: [1:0.33]
-; HASWELL-NEXT:    retq # sched: [1:1.00]
+; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; ZNVER1-LABEL: test_pabsd:
 ; ZNVER1:       # BB#0:
@@ -51,9 +51,9 @@ define <16 x i16> @test_pabsw(<16 x i16> %a0, <16 x i16> *%a1) {
 ; HASWELL-LABEL: test_pabsw:
 ; HASWELL:       # BB#0:
 ; HASWELL-NEXT:    vpabsw %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    vpabsw (%rdi), %ymm1 # sched: [5:0.50]
+; HASWELL-NEXT:    vpabsw (%rdi), %ymm1 # sched: [1:0.50]
 ; HASWELL-NEXT:    vpor %ymm1, %ymm0, %ymm0 # sched: [1:0.33]
-; HASWELL-NEXT:    retq # sched: [1:1.00]
+; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; ZNVER1-LABEL: test_pabsw:
 ; ZNVER1:       # BB#0:
@@ -74,7 +74,7 @@ define <32 x i8> @test_paddb(<32 x i8> %a0, <32 x i8> %a1, <32 x i8> *%a2) {
 ; HASWELL:       # BB#0:
 ; HASWELL-NEXT:    vpaddb %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
 ; HASWELL-NEXT:    vpaddb (%rdi), %ymm0, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    retq # sched: [1:1.00]
+; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; ZNVER1-LABEL: test_paddb:
 ; ZNVER1:       # BB#0:
@@ -92,7 +92,7 @@ define <8 x i32> @test_paddd(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> *%a2) {
 ; HASWELL:       # BB#0:
 ; HASWELL-NEXT:    vpaddd %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
 ; HASWELL-NEXT:    vpaddd (%rdi), %ymm0, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    retq # sched: [1:1.00]
+; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; ZNVER1-LABEL: test_paddd:
 ; ZNVER1:       # BB#0:
@@ -109,8 +109,8 @@ define <4 x i64> @test_paddq(<4 x i64> %a0, <4 x i64> %a1, <4 x i64> *%a2) {
 ; HASWELL-LABEL: test_paddq:
 ; HASWELL:       # BB#0:
 ; HASWELL-NEXT:    vpaddq %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    vpaddq (%rdi), %ymm0, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    retq # sched: [1:1.00]
+; HASWELL-NEXT:    vpaddq (%rdi), %ymm0, %ymm0 # sched: [1:0.50]
+; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; ZNVER1-LABEL: test_paddq:
 ; ZNVER1:       # BB#0:
@@ -128,7 +128,7 @@ define <16 x i16> @test_paddw(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2) {
 ; HASWELL:       # BB#0:
 ; HASWELL-NEXT:    vpaddw %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
 ; HASWELL-NEXT:    vpaddw (%rdi), %ymm0, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    retq # sched: [1:1.00]
+; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; ZNVER1-LABEL: test_paddw:
 ; ZNVER1:       # BB#0:
@@ -145,9 +145,9 @@ define <4 x i64> @test_pand(<4 x i64> %a0, <4 x i64> %a1, <4 x i64> *%a2) {
 ; HASWELL-LABEL: test_pand:
 ; HASWELL:       # BB#0:
 ; HASWELL-NEXT:    vpand %ymm1, %ymm0, %ymm0 # sched: [1:0.33]
-; HASWELL-NEXT:    vpand (%rdi), %ymm0, %ymm0 # sched: [5:0.50]
+; HASWELL-NEXT:    vpand (%rdi), %ymm0, %ymm0 # sched: [1:0.50]
 ; HASWELL-NEXT:    vpaddq %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [1:1.00]
+; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; ZNVER1-LABEL: test_pand:
 ; ZNVER1:       # BB#0:
@@ -166,9 +166,9 @@ define <4 x i64> @test_pandn(<4 x i64> %a0, <4 x i64> %a1, <4 x i64> *%a2) {
 ; HASWELL-LABEL: test_pandn:
 ; HASWELL:       # BB#0:
 ; HASWELL-NEXT:    vpandn %ymm1, %ymm0, %ymm0 # sched: [1:0.33]
-; HASWELL-NEXT:    vpandn (%rdi), %ymm0, %ymm1 # sched: [5:0.50]
+; HASWELL-NEXT:    vpandn (%rdi), %ymm0, %ymm1 # sched: [1:0.50]
 ; HASWELL-NEXT:    vpaddq %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [1:1.00]
+; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; ZNVER1-LABEL: test_pandn:
 ; ZNVER1:       # BB#0:
@@ -190,7 +190,7 @@ define <8 x i32> @test_pmulld(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> *%a2) {
 ; HASWELL:       # BB#0:
 ; HASWELL-NEXT:    vpmulld %ymm1, %ymm0, %ymm0 # sched: [10:2.00]
 ; HASWELL-NEXT:    vpmulld (%rdi), %ymm0, %ymm0 # sched: [10:2.00]
-; HASWELL-NEXT:    retq # sched: [1:1.00]
+; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; ZNVER1-LABEL: test_pmulld:
 ; ZNVER1:       # BB#0:
@@ -207,8 +207,8 @@ define <16 x i16> @test_pmullw(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2) 
 ; HASWELL-LABEL: test_pmullw:
 ; HASWELL:       # BB#0:
 ; HASWELL-NEXT:    vpmullw %ymm1, %ymm0, %ymm0 # sched: [5:1.00]
-; HASWELL-NEXT:    vpmullw (%rdi), %ymm0, %ymm0 # sched: [9:1.00]
-; HASWELL-NEXT:    retq # sched: [1:1.00]
+; HASWELL-NEXT:    vpmullw (%rdi), %ymm0, %ymm0 # sched: [5:1.00]
+; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; ZNVER1-LABEL: test_pmullw:
 ; ZNVER1:       # BB#0:
@@ -225,9 +225,9 @@ define <4 x i64> @test_por(<4 x i64> %a0, <4 x i64> %a1, <4 x i64> *%a2) {
 ; HASWELL-LABEL: test_por:
 ; HASWELL:       # BB#0:
 ; HASWELL-NEXT:    vpor %ymm1, %ymm0, %ymm0 # sched: [1:0.33]
-; HASWELL-NEXT:    vpor (%rdi), %ymm0, %ymm0 # sched: [5:0.50]
+; HASWELL-NEXT:    vpor (%rdi), %ymm0, %ymm0 # sched: [1:0.50]
 ; HASWELL-NEXT:    vpaddq %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [1:1.00]
+; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; ZNVER1-LABEL: test_por:
 ; ZNVER1:       # BB#0:
@@ -246,8 +246,8 @@ define <32 x i8> @test_psubb(<32 x i8> %a0, <32 x i8> %a1, <32 x i8> *%a2) {
 ; HASWELL-LABEL: test_psubb:
 ; HASWELL:       # BB#0:
 ; HASWELL-NEXT:    vpsubb %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    vpsubb (%rdi), %ymm0, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    retq # sched: [1:1.00]
+; HASWELL-NEXT:    vpsubb (%rdi), %ymm0, %ymm0 # sched: [1:0.50]
+; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; ZNVER1-LABEL: test_psubb:
 ; ZNVER1:       # BB#0:
@@ -264,8 +264,8 @@ define <8 x i32> @test_psubd(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> *%a2) {
 ; HASWELL-LABEL: test_psubd:
 ; HASWELL:       # BB#0:
 ; HASWELL-NEXT:    vpsubd %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    vpsubd (%rdi), %ymm0, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    retq # sched: [1:1.00]
+; HASWELL-NEXT:    vpsubd (%rdi), %ymm0, %ymm0 # sched: [1:0.50]
+; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; ZNVER1-LABEL: test_psubd:
 ; ZNVER1:       # BB#0:
@@ -282,8 +282,8 @@ define <4 x i64> @test_psubq(<4 x i64> %a0, <4 x i64> %a1, <4 x i64> *%a2) {
 ; HASWELL-LABEL: test_psubq:
 ; HASWELL:       # BB#0:
 ; HASWELL-NEXT:    vpsubq %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    vpsubq (%rdi), %ymm0, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    retq # sched: [1:1.00]
+; HASWELL-NEXT:    vpsubq (%rdi), %ymm0, %ymm0 # sched: [1:0.50]
+; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; ZNVER1-LABEL: test_psubq:
 ; ZNVER1:       # BB#0:
@@ -300,8 +300,8 @@ define <16 x i16> @test_psubw(<16 x i16> %a0, <16 x i16> %a1, <16 x i16> *%a2) {
 ; HASWELL-LABEL: test_psubw:
 ; HASWELL:       # BB#0:
 ; HASWELL-NEXT:    vpsubw %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    vpsubw (%rdi), %ymm0, %ymm0 # sched: [5:0.50]
-; HASWELL-NEXT:    retq # sched: [1:1.00]
+; HASWELL-NEXT:    vpsubw (%rdi), %ymm0, %ymm0 # sched: [1:0.50]
+; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; ZNVER1-LABEL: test_psubw:
 ; ZNVER1:       # BB#0:
@@ -318,9 +318,9 @@ define <4 x i64> @test_pxor(<4 x i64> %a0, <4 x i64> %a1, <4 x i64> *%a2) {
 ; HASWELL-LABEL: test_pxor:
 ; HASWELL:       # BB#0:
 ; HASWELL-NEXT:    vpxor %ymm1, %ymm0, %ymm0 # sched: [1:0.33]
-; HASWELL-NEXT:    vpxor (%rdi), %ymm0, %ymm0 # sched: [5:0.50]
+; HASWELL-NEXT:    vpxor (%rdi), %ymm0, %ymm0 # sched: [1:0.50]
 ; HASWELL-NEXT:    vpaddq %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    retq # sched: [1:1.00]
+; HASWELL-NEXT:    retq # sched: [2:1.00]
 ;
 ; ZNVER1-LABEL: test_pxor:
 ; ZNVER1:       # BB#0:

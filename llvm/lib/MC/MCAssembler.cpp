@@ -193,13 +193,22 @@ bool MCAssembler::evaluateFixup(const MCAsmLayout &Layout,
   // FIXME: This code has some duplication with recordRelocation. We should
   // probably merge the two into a single callback that tries to evaluate a
   // fixup and records a relocation if one is needed.
+
+  // On error claim to have completely evaluated the fixup, to prevent any
+  // further processing from being done.
   const MCExpr *Expr = Fixup.getValue();
+  MCContext &Ctx = getContext();
+  Value = 0;
   if (!Expr->evaluateAsRelocatable(Target, &Layout, &Fixup)) {
-    getContext().reportError(Fixup.getLoc(), "expected relocatable expression");
-    // Claim to have completely evaluated the fixup, to prevent any further
-    // processing from being done.
-    Value = 0;
+    Ctx.reportError(Fixup.getLoc(), "expected relocatable expression");
     return true;
+  }
+  if (const MCSymbolRefExpr *RefB = Target.getSymB()) {
+    if (RefB->getKind() != MCSymbolRefExpr::VK_None) {
+      Ctx.reportError(Fixup.getLoc(),
+                      "unsupported subtraction of qualified symbol");
+      return true;
+    }
   }
 
   bool IsPCRel = Backend.getFixupKindInfo(
@@ -254,8 +263,7 @@ bool MCAssembler::evaluateFixup(const MCAsmLayout &Layout,
 
   // Let the backend adjust the fixup value if necessary, including whether
   // we need a relocation.
-  Backend.processFixupValue(*this, Layout, Fixup, DF, Target, Value,
-                            IsResolved);
+  Backend.processFixupValue(*this, Fixup, Target, IsResolved);
 
   return IsResolved;
 }
@@ -639,9 +647,9 @@ void MCAssembler::writeSectionData(const MCSection *Sec,
          Layout.getSectionAddressSize(Sec));
 }
 
-std::pair<uint64_t, bool> MCAssembler::handleFixup(const MCAsmLayout &Layout,
-                                                   MCFragment &F,
-                                                   const MCFixup &Fixup) {
+std::tuple<MCValue, uint64_t, bool>
+MCAssembler::handleFixup(const MCAsmLayout &Layout, MCFragment &F,
+                         const MCFixup &Fixup) {
   // Evaluate the fixup.
   MCValue Target;
   uint64_t FixedValue;
@@ -654,7 +662,7 @@ std::pair<uint64_t, bool> MCAssembler::handleFixup(const MCAsmLayout &Layout,
     getWriter().recordRelocation(*this, Layout, &F, Fixup, Target, IsPCRel,
                                  FixedValue);
   }
-  return std::make_pair(FixedValue, IsPCRel);
+  return std::make_tuple(Target, FixedValue, IsPCRel);
 }
 
 void MCAssembler::layout(MCAsmLayout &Layout) {
@@ -731,9 +739,11 @@ void MCAssembler::layout(MCAsmLayout &Layout) {
       for (const MCFixup &Fixup : Fixups) {
         uint64_t FixedValue;
         bool IsPCRel;
-        std::tie(FixedValue, IsPCRel) = handleFixup(Layout, Frag, Fixup);
-        getBackend().applyFixup(Fixup, Contents.data(), Contents.size(),
-                                FixedValue, IsPCRel, getContext());
+        MCValue Target;
+        std::tie(Target, FixedValue, IsPCRel) =
+            handleFixup(Layout, Frag, Fixup);
+        getBackend().applyFixup(*this, Fixup, Target, Contents, FixedValue,
+                                IsPCRel);
       }
     }
   }

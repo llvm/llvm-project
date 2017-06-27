@@ -9,8 +9,8 @@
 #ifndef lldb_server_Acceptor_h_
 #define lldb_server_Acceptor_h_
 
-#include "lldb/Core/Connection.h"
 #include "lldb/Host/Socket.h"
+#include "lldb/Utility/Connection.h"
 #include "lldb/Utility/Status.h"
 
 #include <functional>

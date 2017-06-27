@@ -6,7 +6,7 @@
 # RUN: llvm-pdbutil pdb2yaml -stream-metadata -stream-directory -pdb-stream \
 # RUN:   -dbi-stream -ipi-stream -tpi-stream %t.pdb | FileCheck %s
 
-# RUN: llvm-pdbutil raw -modules -section-map -section-contribs \
+# RUN: llvm-pdbutil dump -modules -section-map -section-contribs \
 # RUN:   -types -ids %t.pdb | FileCheck -check-prefix RAW %s
 
 # CHECK:      MSF:

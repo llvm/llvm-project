@@ -12,20 +12,21 @@ define <2 x i64> @footz(<2 x i64> %a) nounwind {
 ; CHECK-NEXT:    pxor %xmm2, %xmm2
 ; CHECK-NEXT:    psubq %xmm0, %xmm2
 ; CHECK-NEXT:    pand %xmm0, %xmm2
-; CHECK-NEXT:    psubq {{.*}}(%rip), %xmm2
-; CHECK-NEXT:    movdqa %xmm2, %xmm0
+; CHECK-NEXT:    pcmpeqd %xmm3, %xmm3
+; CHECK-NEXT:    paddq %xmm2, %xmm3
+; CHECK-NEXT:    movdqa %xmm3, %xmm0
 ; CHECK-NEXT:    psrlq $1, %xmm0
 ; CHECK-NEXT:    pand {{.*}}(%rip), %xmm0
-; CHECK-NEXT:    psubq %xmm0, %xmm2
+; CHECK-NEXT:    psubq %xmm0, %xmm3
 ; CHECK-NEXT:    movdqa {{.*#+}} xmm0 = [3689348814741910323,3689348814741910323]
-; CHECK-NEXT:    movdqa %xmm2, %xmm3
-; CHECK-NEXT:    pand %xmm0, %xmm3
-; CHECK-NEXT:    psrlq $2, %xmm2
+; CHECK-NEXT:    movdqa %xmm3, %xmm2
 ; CHECK-NEXT:    pand %xmm0, %xmm2
-; CHECK-NEXT:    paddq %xmm3, %xmm2
-; CHECK-NEXT:    movdqa %xmm2, %xmm0
+; CHECK-NEXT:    psrlq $2, %xmm3
+; CHECK-NEXT:    pand %xmm0, %xmm3
+; CHECK-NEXT:    paddq %xmm2, %xmm3
+; CHECK-NEXT:    movdqa %xmm3, %xmm0
 ; CHECK-NEXT:    psrlq $4, %xmm0
-; CHECK-NEXT:    paddq %xmm2, %xmm0
+; CHECK-NEXT:    paddq %xmm3, %xmm0
 ; CHECK-NEXT:    pand {{.*}}(%rip), %xmm0
 ; CHECK-NEXT:    psadbw %xmm1, %xmm0
 ; CHECK-NEXT:    retq
@@ -115,20 +116,21 @@ define <2 x i32> @promtz(<2 x i32> %a) nounwind {
 ; CHECK-NEXT:    pxor %xmm2, %xmm2
 ; CHECK-NEXT:    psubq %xmm0, %xmm2
 ; CHECK-NEXT:    pand %xmm0, %xmm2
-; CHECK-NEXT:    psubq {{.*}}(%rip), %xmm2
-; CHECK-NEXT:    movdqa %xmm2, %xmm0
+; CHECK-NEXT:    pcmpeqd %xmm3, %xmm3
+; CHECK-NEXT:    paddq %xmm2, %xmm3
+; CHECK-NEXT:    movdqa %xmm3, %xmm0
 ; CHECK-NEXT:    psrlq $1, %xmm0
 ; CHECK-NEXT:    pand {{.*}}(%rip), %xmm0
-; CHECK-NEXT:    psubq %xmm0, %xmm2
+; CHECK-NEXT:    psubq %xmm0, %xmm3
 ; CHECK-NEXT:    movdqa {{.*#+}} xmm0 = [3689348814741910323,3689348814741910323]
-; CHECK-NEXT:    movdqa %xmm2, %xmm3
-; CHECK-NEXT:    pand %xmm0, %xmm3
-; CHECK-NEXT:    psrlq $2, %xmm2
+; CHECK-NEXT:    movdqa %xmm3, %xmm2
 ; CHECK-NEXT:    pand %xmm0, %xmm2
-; CHECK-NEXT:    paddq %xmm3, %xmm2
-; CHECK-NEXT:    movdqa %xmm2, %xmm0
+; CHECK-NEXT:    psrlq $2, %xmm3
+; CHECK-NEXT:    pand %xmm0, %xmm3
+; CHECK-NEXT:    paddq %xmm2, %xmm3
+; CHECK-NEXT:    movdqa %xmm3, %xmm0
 ; CHECK-NEXT:    psrlq $4, %xmm0
-; CHECK-NEXT:    paddq %xmm2, %xmm0
+; CHECK-NEXT:    paddq %xmm3, %xmm0
 ; CHECK-NEXT:    pand {{.*}}(%rip), %xmm0
 ; CHECK-NEXT:    psadbw %xmm1, %xmm0
 ; CHECK-NEXT:    retq

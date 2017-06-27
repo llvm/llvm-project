@@ -65,8 +65,9 @@ protected:
     CompileContext *CCtx = static_cast<CompileContext*>(Ctx);
     auto *ET = CCtx->APIExecTest;
     CCtx->M = ET->createTestModule(ET->TM->getTargetTriple());
-    CCtx->H = LLVMOrcAddEagerlyCompiledIR(JITStack, wrap(CCtx->M.get()),
-                                          myResolver, nullptr);
+    LLVMSharedModuleRef SM = LLVMOrcMakeSharedModule(wrap(CCtx->M.release()));
+    CCtx->H = LLVMOrcAddEagerlyCompiledIR(JITStack, SM, myResolver, nullptr);
+    LLVMOrcDisposeSharedModuleRef(SM);
     CCtx->Compiled = true;
     LLVMOrcTargetAddress MainAddr = LLVMOrcGetSymbolAddress(JITStack, "main");
     LLVMOrcSetIndirectStubPointer(JITStack, "foo", MainAddr);
@@ -87,8 +88,10 @@ TEST_F(OrcCAPIExecutionTest, TestEagerIRCompilation) {
 
   LLVMOrcGetMangledSymbol(JIT, &testFuncName, "testFunc");
 
+  LLVMSharedModuleRef SM = LLVMOrcMakeSharedModule(wrap(M.release()));
   LLVMOrcModuleHandle H =
-    LLVMOrcAddEagerlyCompiledIR(JIT, wrap(M.get()), myResolver, nullptr);
+    LLVMOrcAddEagerlyCompiledIR(JIT, SM, myResolver, nullptr);
+  LLVMOrcDisposeSharedModuleRef(SM);
   MainFnTy MainFn = (MainFnTy)LLVMOrcGetSymbolAddress(JIT, "main");
   int Result = MainFn();
   EXPECT_EQ(Result, 42)
@@ -111,8 +114,10 @@ TEST_F(OrcCAPIExecutionTest, TestLazyIRCompilation) {
 
   LLVMOrcGetMangledSymbol(JIT, &testFuncName, "testFunc");
 
+  LLVMSharedModuleRef SM = LLVMOrcMakeSharedModule(wrap(M.release()));
   LLVMOrcModuleHandle H =
-    LLVMOrcAddLazilyCompiledIR(JIT, wrap(M.get()), myResolver, nullptr);
+    LLVMOrcAddLazilyCompiledIR(JIT, SM, myResolver, nullptr);
+  LLVMOrcDisposeSharedModuleRef(SM);
   MainFnTy MainFn = (MainFnTy)LLVMOrcGetSymbolAddress(JIT, "main");
   int Result = MainFn();
   EXPECT_EQ(Result, 42)

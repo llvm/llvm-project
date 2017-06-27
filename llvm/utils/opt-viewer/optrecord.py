@@ -24,13 +24,31 @@ p = subprocess.Popen(['c++filt', '-n'], stdin=subprocess.PIPE, stdout=subprocess
 p_lock = Lock()
 
 
+try:
+    dict.iteritems
+except AttributeError:
+    # Python 3
+    def itervalues(d):
+        return iter(d.values())
+    def iteritems(d):
+        return iter(d.items())
+else:
+    # Python 2
+    def itervalues(d):
+        return d.itervalues()
+    def iteritems(d):
+        return d.iteritems()
+
+
 def demangle(name):
     with p_lock:
         p.stdin.write(name + '\n')
         return p.stdout.readline().rstrip()
 
+
 def html_file_name(filename):
     return filename.replace('/', '_') + ".html"
+
 
 def make_link(File, Line):
     return "\"{}#L{}\"".format(html_file_name(File), Line)
@@ -117,7 +135,7 @@ class Remark(yaml.YAMLObject):
     def key(self):
         k = (self.__class__, self.PassWithDiffPrefix, self.Name, self.File, self.Line, self.Column, self.Function)
         for arg in self.Args:
-            for (key, value) in arg.iteritems():
+            for (key, value) in iteritems(arg):
                 if type(value) is dict:
                     value = tuple(value.items())
                 k += (key, value)
@@ -196,8 +214,8 @@ def gather_results(pmap, filenames):
     max_hotness = max(entry[0] for entry in remarks)
 
     def merge_file_remarks(file_remarks_job, all_remarks, merged):
-        for filename, d in file_remarks_job.iteritems():
-            for line, remarks in d.iteritems():
+        for filename, d in iteritems(file_remarks_job):
+            for line, remarks in iteritems(d):
                 for remark in remarks:
                     # Bring max_hotness into the remarks so that
                     # RelativeHotness does not depend on an external global.

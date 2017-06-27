@@ -20,11 +20,11 @@
 #include "lldb/Utility/Status.h"
 
 #include "lldb/Core/StreamFile.h"
-#include "lldb/Core/StructuredData.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
+#include "lldb/Utility/StructuredData.h"
 
 #include "llvm/Support/ConvertUTF.h"
 
@@ -99,19 +99,6 @@ void GetProcessExecutableAndTriple(const AutoHandle &handle,
 
 lldb::thread_t Host::GetCurrentThread() {
   return lldb::thread_t(::GetCurrentThread());
-}
-
-lldb::thread_key_t
-Host::ThreadLocalStorageCreate(ThreadLocalStorageCleanupCallback callback) {
-  return TlsAlloc();
-}
-
-void *Host::ThreadLocalStorageGet(lldb::thread_key_t key) {
-  return ::TlsGetValue(key);
-}
-
-void Host::ThreadLocalStorageSet(lldb::thread_key_t key, void *value) {
-  ::TlsSetValue(key, value);
 }
 
 void Host::Kill(lldb::pid_t pid, int signo) {

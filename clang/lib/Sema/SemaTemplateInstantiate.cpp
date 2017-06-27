@@ -2045,7 +2045,7 @@ Sema::InstantiateClass(SourceLocation PointOfInstantiation,
 
   // The instantiation is visible here, even if it was first declared in an
   // unimported module.
-  Instantiation->setHidden(false);
+  Instantiation->setVisibleDespiteOwningModule();
 
   // FIXME: This loses the as-written tag kind for an explicit instantiation.
   Instantiation->setTagKind(Pattern->getTagKind());
@@ -2247,7 +2247,7 @@ bool Sema::InstantiateEnum(SourceLocation PointOfInstantiation,
 
   // The instantiation is visible here, even if it was first declared in an
   // unimported module.
-  Instantiation->setHidden(false);
+  Instantiation->setVisibleDespiteOwningModule();
 
   // Enter the scope of this instantiation. We don't use
   // PushDeclContext because we don't have a scope.

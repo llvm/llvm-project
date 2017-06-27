@@ -26,6 +26,23 @@
 
 using namespace llvm;
 
+unsigned llvm::constrainRegToClass(MachineRegisterInfo &MRI,
+                                   const TargetInstrInfo &TII,
+                                   const RegisterBankInfo &RBI,
+                                   MachineInstr &InsertPt, unsigned Reg,
+                                   const TargetRegisterClass &RegClass) {
+  if (!RBI.constrainGenericRegister(Reg, RegClass, MRI)) {
+    unsigned NewReg = MRI.createVirtualRegister(&RegClass);
+    BuildMI(*InsertPt.getParent(), InsertPt, InsertPt.getDebugLoc(),
+            TII.get(TargetOpcode::COPY), NewReg)
+        .addReg(Reg);
+    return NewReg;
+  }
+
+  return Reg;
+}
+
+
 unsigned llvm::constrainOperandRegClass(
     const MachineFunction &MF, const TargetRegisterInfo &TRI,
     MachineRegisterInfo &MRI, const TargetInstrInfo &TII,
@@ -36,16 +53,7 @@ unsigned llvm::constrainOperandRegClass(
          "PhysReg not implemented");
 
   const TargetRegisterClass *RegClass = TII.getRegClass(II, OpIdx, &TRI, MF);
-
-  if (!RBI.constrainGenericRegister(Reg, *RegClass, MRI)) {
-    unsigned NewReg = MRI.createVirtualRegister(RegClass);
-    BuildMI(*InsertPt.getParent(), InsertPt, InsertPt.getDebugLoc(),
-            TII.get(TargetOpcode::COPY), NewReg)
-        .addReg(Reg);
-    return NewReg;
-  }
-
-  return Reg;
+  return constrainRegToClass(MRI, TII, RBI, InsertPt, Reg, *RegClass);
 }
 
 bool llvm::isTriviallyDead(const MachineInstr &MI,

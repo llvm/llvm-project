@@ -62,7 +62,8 @@ main_body:
   %tmp2 = shl i32 %6, 2
   %tmp3 = call i32 @llvm.SI.buffer.load.dword.i32.i32(<16 x i8> %tmp1, i32 %tmp2, i32 64, i32 0, i32 1, i32 0, i32 1, i32 0, i32 0)
   %tmp4 = add i32 %6, 16
-  call void @llvm.SI.tbuffer.store.i32(<16 x i8> %tmp1, i32 %tmp3, i32 1, i32 %tmp4, i32 %4, i32 0, i32 4, i32 4, i32 1, i32 0, i32 1, i32 1, i32 0)
+  %tmp1.4xi32 = bitcast <16 x i8> %tmp1 to <4 x i32>
+  call void @llvm.amdgcn.tbuffer.store.i32(i32 %tmp3, <4 x i32> %tmp1.4xi32, i32 0, i32 %tmp4, i32 %4, i32 0, i32 4, i32 4, i1 1, i1 1)
   ret void
 }
 
@@ -80,7 +81,8 @@ main_body:
   %tmp2 = shl i32 %6, 2
   %tmp3 = call i32 @llvm.SI.buffer.load.dword.i32.i32(<16 x i8> %tmp1, i32 %tmp2, i32 65, i32 0, i32 1, i32 0, i32 1, i32 0, i32 0)
   %tmp4 = add i32 %6, 16
-  call void @llvm.SI.tbuffer.store.i32(<16 x i8> %tmp1, i32 %tmp3, i32 1, i32 %tmp4, i32 %4, i32 0, i32 4, i32 4, i32 1, i32 0, i32 1, i32 1, i32 0)
+  %tmp1.4xi32 = bitcast <16 x i8> %tmp1 to <4 x i32>
+  call void @llvm.amdgcn.tbuffer.store.i32(i32 %tmp3, <4 x i32> %tmp1.4xi32, i32 0, i32 %tmp4, i32 %4, i32 0, i32 4, i32 4, i1 1, i1 1)
   ret void
 }
 
@@ -175,6 +177,6 @@ define amdgpu_kernel void @store_vgpr_ptr(i32 addrspace(1)* %out) #0 {
 }
 
 declare i32 @llvm.SI.buffer.load.dword.i32.i32(<16 x i8>, i32, i32, i32, i32, i32, i32, i32, i32) #0
-declare void @llvm.SI.tbuffer.store.i32(<16 x i8>, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32)
+declare void @llvm.amdgcn.tbuffer.store.i32(i32, <4 x i32>, i32, i32, i32, i32, i32, i32, i1, i1)
 
 attributes #0 = { nounwind readonly }

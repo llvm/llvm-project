@@ -255,6 +255,18 @@ ARMRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     OperandsMapping =
         getOperandsMapping({&ARM::ValueMappings[ARM::GPR3OpsIdx], nullptr});
     break;
+  case G_SELECT: {
+    LLT Ty2 = MRI.getType(MI.getOperand(1).getReg());
+    (void)Ty2;
+    assert(Ty.getSizeInBits() == 32 && "Unsupported size for G_SELECT");
+    assert(Ty2.getSizeInBits() == 1 && "Unsupported size for G_SELECT");
+    OperandsMapping =
+        getOperandsMapping({&ARM::ValueMappings[ARM::GPR3OpsIdx],
+                            &ARM::ValueMappings[ARM::GPR3OpsIdx],
+                            &ARM::ValueMappings[ARM::GPR3OpsIdx],
+                            &ARM::ValueMappings[ARM::GPR3OpsIdx]});
+    break;
+  }
   case G_ICMP: {
     LLT Ty2 = MRI.getType(MI.getOperand(2).getReg());
     (void)Ty2;

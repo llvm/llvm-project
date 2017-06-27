@@ -47,6 +47,7 @@ void Option::print(raw_ostream &O) const {
     P(UnknownClass);
     P(FlagClass);
     P(JoinedClass);
+    P(ValuesClass);
     P(SeparateClass);
     P(CommaJoinedClass);
     P(MultiArgClass);

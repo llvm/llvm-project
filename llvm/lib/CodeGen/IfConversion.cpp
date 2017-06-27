@@ -1474,8 +1474,11 @@ bool IfConverter::IfConvertSimple(BBInfo &BBI, IfcvtKind Kind) {
     DontKill.addLiveIns(NextMBB);
   }
 
+  // Remove the branches from the entry so we can add the contents of the true
+  // block to it.
+  BBI.NonPredSize -= TII->removeBranch(*BBI.BB);
+
   if (CvtMBB.pred_size() > 1) {
-    BBI.NonPredSize -= TII->removeBranch(*BBI.BB);
     // Copy instructions in the true block, predicate them, and add them to
     // the entry block.
     CopyAndPredicateBlock(BBI, *CvtBBI, Cond);
@@ -1484,11 +1487,11 @@ bool IfConverter::IfConvertSimple(BBInfo &BBI, IfcvtKind Kind) {
     // explicitly remove CvtBBI as a successor.
     BBI.BB->removeSuccessor(&CvtMBB, true);
   } else {
+    // Predicate the instructions in the true block.
     RemoveKills(CvtMBB.begin(), CvtMBB.end(), DontKill, *TRI);
     PredicateBlock(*CvtBBI, CvtMBB.end(), Cond);
 
     // Merge converted block into entry block.
-    BBI.NonPredSize -= TII->removeBranch(*BBI.BB);
     MergeBlocks(BBI, *CvtBBI);
   }
 
@@ -1588,8 +1591,11 @@ bool IfConverter::IfConvertTriangle(BBInfo &BBI, IfcvtKind Kind) {
     BBCvt = MBPI->getEdgeProbability(BBI.BB, &CvtMBB);
   }
 
+  // Remove the branches from the entry so we can add the contents of the true
+  // block to it.
+  BBI.NonPredSize -= TII->removeBranch(*BBI.BB);
+
   if (CvtMBB.pred_size() > 1) {
-    BBI.NonPredSize -= TII->removeBranch(*BBI.BB);
     // Copy instructions in the true block, predicate them, and add them to
     // the entry block.
     CopyAndPredicateBlock(BBI, *CvtBBI, Cond, true);
@@ -1603,7 +1609,6 @@ bool IfConverter::IfConvertTriangle(BBInfo &BBI, IfcvtKind Kind) {
     PredicateBlock(*CvtBBI, CvtMBB.end(), Cond);
 
     // Now merge the entry of the triangle with the true block.
-    BBI.NonPredSize -= TII->removeBranch(*BBI.BB);
     MergeBlocks(BBI, *CvtBBI, false);
   }
 

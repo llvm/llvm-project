@@ -25,6 +25,7 @@
 #include "clang/Lex/PreprocessingRecord.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
 #include "clang/Serialization/ASTBitCodes.h"
+#include "clang/Frontend/PrecompiledPreamble.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
@@ -199,102 +200,14 @@ private:
   /// of that loading. It must be cleared when preamble is recreated.
   llvm::StringMap<SourceLocation> PreambleSrcLocCache;
 
-public:
-  class PreambleData {
-    const FileEntry *File;
-    std::vector<char> Buffer;
-    mutable unsigned NumLines;
-    
-  public:
-    PreambleData() : File(nullptr), NumLines(0) { }
-    
-    void assign(const FileEntry *F, const char *begin, const char *end) {
-      File = F;
-      Buffer.assign(begin, end);
-      NumLines = 0;
-    }
-
-    void clear() { Buffer.clear(); File = nullptr; NumLines = 0; }
-
-    size_t size() const { return Buffer.size(); }
-    bool empty() const { return Buffer.empty(); }
-
-    const char *getBufferStart() const { return &Buffer[0]; }
-
-    unsigned getNumLines() const {
-      if (NumLines)
-        return NumLines;
-      countLines();
-      return NumLines;
-    }
-
-    SourceRange getSourceRange(const SourceManager &SM) const {
-      SourceLocation FileLoc = SM.getLocForStartOfFile(SM.getPreambleFileID());
-      return SourceRange(FileLoc, FileLoc.getLocWithOffset(size()-1));
-    }
-
-  private:
-    void countLines() const;
-  };
-
-  const PreambleData &getPreambleData() const {
-    return Preamble;
-  }
-
-  /// Data used to determine if a file used in the preamble has been changed.
-  struct PreambleFileHash {
-    /// All files have size set.
-    off_t Size;
-
-    /// Modification time is set for files that are on disk.  For memory
-    /// buffers it is zero.
-    time_t ModTime;
-
-    /// Memory buffers have MD5 instead of modification time.  We don't
-    /// compute MD5 for on-disk files because we hope that modification time is
-    /// enough to tell if the file was changed.
-    llvm::MD5::MD5Result MD5;
-
-    static PreambleFileHash createForFile(off_t Size, time_t ModTime);
-    static PreambleFileHash
-    createForMemoryBuffer(const llvm::MemoryBuffer *Buffer);
-
-    friend bool operator==(const PreambleFileHash &LHS,
-                           const PreambleFileHash &RHS);
-
-    friend bool operator!=(const PreambleFileHash &LHS,
-                           const PreambleFileHash &RHS) {
-      return !(LHS == RHS);
-    }
-  };
-
 private:
-  /// \brief The contents of the preamble that has been precompiled to
-  /// \c PreambleFile.
-  PreambleData Preamble;
-
-  /// \brief Whether the preamble ends at the start of a new line.
-  /// 
-  /// Used to inform the lexer as to whether it's starting at the beginning of
-  /// a line after skipping the preamble.
-  bool PreambleEndsAtStartOfLine;
-
-  /// \brief Keeps track of the files that were used when computing the 
-  /// preamble, with both their buffer size and their modification time.
-  ///
-  /// If any of the files have changed from one compile to the next,
-  /// the preamble must be thrown away.
-  llvm::StringMap<PreambleFileHash> FilesInPreamble;
+  /// The contents of the preamble.
+  llvm::Optional<PrecompiledPreamble> Preamble;
 
   /// \brief When non-NULL, this is the buffer used to store the contents of
   /// the main file when it has been padded for use with the precompiled
   /// preamble.
   std::unique_ptr<llvm::MemoryBuffer> SavedMainFileBuffer;
-
-  /// \brief When non-NULL, this is the buffer used to store the
-  /// contents of the preamble when it has been padded to build the
-  /// precompiled preamble.
-  std::unique_ptr<llvm::MemoryBuffer> PreambleBuffer;
 
   /// \brief The number of warnings that occurred while parsing the preamble.
   ///
@@ -437,21 +350,6 @@ private:
   bool Parse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
              std::unique_ptr<llvm::MemoryBuffer> OverrideMainBuffer,
              IntrusiveRefCntPtr<vfs::FileSystem> VFS);
-
-  struct ComputedPreamble {
-    llvm::MemoryBuffer *Buffer;
-    std::unique_ptr<llvm::MemoryBuffer> Owner;
-    unsigned Size;
-    bool PreambleEndsAtStartOfLine;
-    ComputedPreamble(llvm::MemoryBuffer *Buffer,
-                     std::unique_ptr<llvm::MemoryBuffer> Owner, unsigned Size,
-                     bool PreambleEndsAtStartOfLine)
-        : Buffer(Buffer), Owner(std::move(Owner)), Size(Size),
-          PreambleEndsAtStartOfLine(PreambleEndsAtStartOfLine) {}
-  };
-  ComputedPreamble ComputePreamble(CompilerInvocation &Invocation,
-                                   unsigned MaxLines,
-                                   IntrusiveRefCntPtr<vfs::FileSystem> VFS);
 
   std::unique_ptr<llvm::MemoryBuffer> getMainBufferWithPrecompiledPreamble(
       std::shared_ptr<PCHContainerOperations> PCHContainerOps,
@@ -606,12 +504,6 @@ public:
   /// a range. 
   void findFileRegionDecls(FileID File, unsigned Offset, unsigned Length,
                            SmallVectorImpl<Decl *> &Decls);
-
-  /// \brief Add a new top-level declaration, identified by its ID in
-  /// the precompiled preamble.
-  void addTopLevelDeclFromPreamble(serialization::DeclID D) {
-    TopLevelDeclsInPreamble.push_back(D);
-  }
 
   /// \brief Retrieve a reference to the current top-level name hash value.
   ///

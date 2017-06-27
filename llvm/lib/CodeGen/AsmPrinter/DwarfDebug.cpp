@@ -1000,12 +1000,14 @@ static bool validThroughout(LexicalScopes &LScopes,
     if (Pred->getFlag(MachineInstr::FrameSetup))
       break;
     auto PredDL = Pred->getDebugLoc();
-    if (!PredDL || Pred->isDebugValue())
+    if (!PredDL || Pred->isMetaInstruction())
       continue;
     // Check whether the instruction preceding the DBG_VALUE is in the same
     // (sub)scope as the DBG_VALUE.
-    if (DL->getScope() == PredDL->getScope() ||
-        LScope->dominates(LScopes.findLexicalScope(PredDL)))
+    if (DL->getScope() == PredDL->getScope())
+      return false;
+    auto *PredScope = LScopes.findLexicalScope(PredDL);
+    if (!PredScope || LScope->dominates(PredScope))
       return false;
   }
 

@@ -80,7 +80,7 @@ def : Proc<"cayman",     R600_VLIW4_Itin,
 // Southern Islands
 //===----------------------------------------------------------------------===//
 
-def : ProcessorModel<"gfx600",     SIFullSpeedModel, 
+def : ProcessorModel<"gfx600",     SIFullSpeedModel,
   [FeatureISAVersion6_0_0]>;
 
 def : ProcessorModel<"SI",         SIFullSpeedModel,
@@ -95,7 +95,7 @@ def : ProcessorModel<"gfx601",     SIQuarterSpeedModel,
   [FeatureISAVersion6_0_1]
 >;
 
-def : ProcessorModel<"pitcairn",   SIQuarterSpeedModel, 
+def : ProcessorModel<"pitcairn",   SIQuarterSpeedModel,
   [FeatureISAVersion6_0_1]>;
 
 def : ProcessorModel<"verde",      SIQuarterSpeedModel,

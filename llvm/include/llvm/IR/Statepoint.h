@@ -62,7 +62,10 @@ bool isStatepoint(const Value *V);
 bool isStatepoint(const Value &V);
 
 bool isGCRelocate(ImmutableCallSite CS);
+bool isGCRelocate(const Value *V);
+
 bool isGCResult(ImmutableCallSite CS);
+bool isGCResult(const Value *V);
 
 /// Analogous to CallSiteBase, this provides most of the actual
 /// functionality for Statepoint and ImmutableStatepoint.  It is

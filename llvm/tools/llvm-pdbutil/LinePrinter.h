@@ -13,6 +13,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Support/BinaryStreamRef.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/raw_ostream.h"
@@ -20,9 +21,14 @@
 #include <list>
 
 namespace llvm {
+class BinaryStreamReader;
+namespace msf {
+class MSFStreamLayout;
+} // namespace msf
 namespace pdb {
 
 class ClassLayout;
+class PDBFile;
 
 class LinePrinter {
   friend class WithColor;
@@ -45,6 +51,15 @@ public:
 
   void formatBinary(StringRef Label, ArrayRef<uint8_t> Data,
                     uint32_t StartOffset);
+  void formatBinary(StringRef Label, ArrayRef<uint8_t> Data, uint64_t BaseAddr,
+                    uint32_t StartOffset);
+
+  void formatMsfStreamData(StringRef Label, PDBFile &File, uint32_t StreamIdx,
+                           StringRef StreamPurpose, uint32_t Offset,
+                           uint32_t Size);
+  void formatMsfStreamData(StringRef Label, PDBFile &File,
+                           const msf::MSFStreamLayout &Stream,
+                           BinarySubstreamRef Substream);
 
   bool hasColor() const { return UseColor; }
   raw_ostream &getStream() { return OS; }

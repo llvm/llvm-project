@@ -138,7 +138,7 @@ StringRef ScalarTraits<TypeIndex>::input(StringRef Scalar, void *Ctx,
 
 void ScalarTraits<APSInt>::output(const APSInt &S, void *,
                                   llvm::raw_ostream &OS) {
-  S.print(OS, true);
+  S.print(OS, S.isSigned());
 }
 
 StringRef ScalarTraits<APSInt>::input(StringRef Scalar, void *Ctx, APSInt &S) {

@@ -1,8 +1,8 @@
 ; RUN: llvm-pdbutil yaml2pdb -pdb=%t.1.pdb %p/Inputs/merge-ids-1.yaml
 ; RUN: llvm-pdbutil yaml2pdb -pdb=%t.2.pdb %p/Inputs/merge-ids-2.yaml
 ; RUN: llvm-pdbutil merge -pdb=%t.3.pdb %t.1.pdb %t.2.pdb
-; RUN: llvm-pdbutil raw -ids %t.3.pdb | FileCheck -check-prefix=MERGED %s
-; RUN: llvm-pdbutil raw -types %t.3.pdb | FileCheck -check-prefix=TPI-EMPTY %s
+; RUN: llvm-pdbutil dump -ids %t.3.pdb | FileCheck -check-prefix=MERGED %s
+; RUN: llvm-pdbutil dump -types %t.3.pdb | FileCheck -check-prefix=TPI-EMPTY %s
 
 
 MERGED:                          Types (IPI Stream)

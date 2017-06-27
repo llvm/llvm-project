@@ -13,7 +13,7 @@
 // template<class InputIterator, class OutputIterator, class T, class BinaryOperation>
 //     OutputIterator
 //     exclusive_scan(InputIterator first, InputIterator last,
-//                    OutputIterator result, 
+//                    OutputIterator result,
 //                    T init, BinaryOperation binary_op); // C++17
 
 #include <numeric>
@@ -36,7 +36,7 @@ test(Iter1 first, Iter1 last, T init, Op op, Iter2 rFirst, Iter2 rLast)
     v.clear();
     v.assign(first, last);
     std::exclusive_scan(v.begin(), v.end(), v.begin(), init, op);
-    assert(std::equal(v.begin(), v.end(), rFirst, rLast));  
+    assert(std::equal(v.begin(), v.end(), rFirst, rLast));
 }
 
 
@@ -84,4 +84,3 @@ int main()
     }
     }
 }
- 

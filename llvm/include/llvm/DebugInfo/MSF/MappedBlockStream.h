@@ -1,5 +1,4 @@
-//===- MappedBlockStream.h - Discontiguous stream data in an MSF -*- C++
-//-*-===//
+//==- MappedBlockStream.h - Discontiguous stream data in an MSF --*- C++ -*-==//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -13,7 +12,6 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/DebugInfo/MSF/MSFStreamLayout.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/BinaryStream.h"
@@ -21,6 +19,7 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
+#include <memory>
 #include <vector>
 
 namespace llvm {
@@ -40,6 +39,7 @@ struct MSFLayout;
 /// of bytes.
 class MappedBlockStream : public BinaryStream {
   friend class WritableMappedBlockStream;
+
 public:
   static std::unique_ptr<MappedBlockStream>
   createStream(uint32_t BlockSize, const MSFStreamLayout &Layout,
@@ -57,8 +57,8 @@ public:
   createDirectoryStream(const MSFLayout &Layout, BinaryStreamRef MsfData,
                         BumpPtrAllocator &Allocator);
 
-  llvm::support::endianness getEndian() const override {
-    return llvm::support::little;
+  support::endianness getEndian() const override {
+    return support::little;
   }
 
   Error readBytes(uint32_t Offset, uint32_t Size,
@@ -68,7 +68,7 @@ public:
 
   uint32_t getLength() override;
 
-  llvm::BumpPtrAllocator &getAllocator() { return Allocator; }
+  BumpPtrAllocator &getAllocator() { return Allocator; }
 
   void invalidateCache();
 
@@ -92,7 +92,7 @@ private:
   const MSFStreamLayout StreamLayout;
   BinaryStreamRef MsfData;
 
-  typedef MutableArrayRef<uint8_t> CacheEntry;
+  using CacheEntry = MutableArrayRef<uint8_t>;
 
   // We just store the allocator by reference.  We use this to allocate
   // contiguous memory for things like arrays or strings that cross a block
@@ -124,8 +124,8 @@ public:
   createFpmStream(const MSFLayout &Layout, WritableBinaryStreamRef MsfData,
                   BumpPtrAllocator &Allocator);
 
-  llvm::support::endianness getEndian() const override {
-    return llvm::support::little;
+  support::endianness getEndian() const override {
+    return support::little;
   }
 
   Error readBytes(uint32_t Offset, uint32_t Size,
@@ -141,6 +141,7 @@ public:
   const MSFStreamLayout &getStreamLayout() const {
     return ReadInterface.getStreamLayout();
   }
+
   uint32_t getBlockSize() const { return ReadInterface.getBlockSize(); }
   uint32_t getNumBlocks() const { return ReadInterface.getNumBlocks(); }
   uint32_t getStreamLength() const { return ReadInterface.getStreamLength(); }
@@ -153,7 +154,6 @@ protected:
 
 private:
   MappedBlockStream ReadInterface;
-
   WritableBinaryStreamRef WriteInterface;
 };
 

@@ -1,6 +1,6 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs -enable-unsafe-fp-math < %s | FileCheck -check-prefix=GCN -check-prefix=SI -check-prefix=SIVI -check-prefix=SIGFX9 %s
+; RUN: llc -march=amdgcn -verify-machineinstrs -enable-unsafe-fp-math < %s | FileCheck -check-prefix=GCN -check-prefix=SI -check-prefix=SIVI %s
 ; RUN: llc -march=amdgcn -mcpu=fiji -mattr=-flat-for-global -verify-machineinstrs -enable-unsafe-fp-math < %s | FileCheck -check-prefix=GCN -check-prefix=VI -check-prefix=GFX89 %s
-; RUN: llc -march=amdgcn -mcpu=gfx901 -mattr=-flat-for-global -verify-machineinstrs -enable-unsafe-fp-math < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 -check-prefix=GFX89 -check-prefix=SIGFX9 %s
+; RUN: llc -march=amdgcn -mcpu=gfx901 -mattr=-flat-for-global -verify-machineinstrs -enable-unsafe-fp-math < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 -check-prefix=GFX89 %s
 
 ; GCN-LABEL: {{^}}fpext_f16_to_f32
 ; GCN: buffer_load_ushort v[[A_F16:[0-9]+]]
@@ -35,11 +35,10 @@ entry:
 
 ; GCN-LABEL: {{^}}fpext_v2f16_to_v2f32
 ; GCN: buffer_load_dword v[[A_V2_F16:[0-9]+]]
-; GFX9-DAG:  v_lshrrev_b32_e32 v[[A_F16_1:[0-9]+]], 16, v[[A_V2_F16]]
 ; GCN-DAG: v_cvt_f32_f16_e32 v[[R_F32_0:[0-9]+]], v[[A_V2_F16]]
 ; SI:  v_lshrrev_b32_e32 v[[A_F16_1:[0-9]+]], 16, v[[A_V2_F16]]
-; SIGFX9: v_cvt_f32_f16_e32 v[[R_F32_1:[0-9]+]], v[[A_F16_1]]
-; VI: v_cvt_f32_f16_sdwa v[[R_F32_1:[0-9]+]], v[[A_V2_F16]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
+; SI: v_cvt_f32_f16_e32 v[[R_F32_1:[0-9]+]], v[[A_F16_1]]
+; GFX89: v_cvt_f32_f16_sdwa v[[R_F32_1:[0-9]+]], v[[A_V2_F16]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
 ; GCN: buffer_store_dwordx2 v{{\[}}[[R_F32_0]]:[[R_F32_1]]{{\]}}
 ; GCN: s_endpgm
 
@@ -55,9 +54,9 @@ entry:
 
 ; GCN-LABEL: {{^}}fpext_v2f16_to_v2f64
 ; GCN: buffer_load_dword
-; SIGFX9-DAG: v_lshrrev_b32_e32
-; SIGFX9-DAG: v_cvt_f32_f16_e32
-; VI: v_cvt_f32_f16_sdwa
+; SI-DAG: v_lshrrev_b32_e32
+; SI-DAG: v_cvt_f32_f16_e32
+; GFX89: v_cvt_f32_f16_sdwa
 ; GCN: v_cvt_f32_f16_e32
 
 ; GCN: v_cvt_f64_f32_e32

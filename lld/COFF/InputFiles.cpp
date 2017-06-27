@@ -132,17 +132,17 @@ void ObjectFile::initializeChunks() {
     if (!Config->Debug && Name.startswith(".debug"))
       continue;
 
-    // CodeView sections are stored to a different vector because they are
-    // not linked in the regular manner.
-    if (Name == ".debug" || Name.startswith(".debug$")) {
-      DebugChunks.push_back(make<SectionChunk>(this, Sec));
-      continue;
-    }
-
     if (Sec->Characteristics & llvm::COFF::IMAGE_SCN_LNK_REMOVE)
       continue;
     auto *C = make<SectionChunk>(this, Sec);
-    Chunks.push_back(C);
+
+    // CodeView sections are stored to a different vector because they are not
+    // linked in the regular manner.
+    if (C->isCodeView())
+      DebugChunks.push_back(C);
+    else
+      Chunks.push_back(C);
+
     SparseChunks[I] = C;
   }
 }

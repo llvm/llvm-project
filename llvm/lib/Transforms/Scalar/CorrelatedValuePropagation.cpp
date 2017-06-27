@@ -232,8 +232,7 @@ static bool processSwitch(SwitchInst *SI, LazyValueInfo *LVI) {
   pred_iterator PB = pred_begin(BB), PE = pred_end(BB);
   if (PB == PE) return false;
 
-  // Analyse each switch case in turn.  This is done in reverse order so that
-  // removing a case doesn't cause trouble for the iteration.
+  // Analyse each switch case in turn.
   bool Changed = false;
   for (auto CI = SI->case_begin(), CE = SI->case_end(); CI != CE;) {
     ConstantInt *Case = CI->getCaseValue();
@@ -291,7 +290,7 @@ static bool processSwitch(SwitchInst *SI, LazyValueInfo *LVI) {
       break;
     }
 
-    // Increment the case iterator sense we didn't delete it.
+    // Increment the case iterator since we didn't delete it.
     ++CI;
   }
 

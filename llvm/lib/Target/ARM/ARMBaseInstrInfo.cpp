@@ -665,12 +665,14 @@ bool ARMBaseInstrInfo::isPredicable(const MachineInstr &MI) const {
   const ARMFunctionInfo *AFI =
       MI.getParent()->getParent()->getInfo<ARMFunctionInfo>();
 
+  // Neon instructions in Thumb2 IT blocks are deprecated, see ARMARM.
+  // In their ARM encoding, they can't be encoded in a conditional form.
+  if ((MI.getDesc().TSFlags & ARMII::DomainMask) == ARMII::DomainNEON)
+    return false;
+
   if (AFI->isThumb2Function()) {
     if (getSubtarget().restrictIT())
       return isV8EligibleForIT(&MI);
-  } else { // non-Thumb
-    if ((MI.getDesc().TSFlags & ARMII::DomainMask) == ARMII::DomainNEON)
-      return false;
   }
 
   return true;

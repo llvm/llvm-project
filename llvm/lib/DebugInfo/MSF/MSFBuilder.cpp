@@ -1,3 +1,4 @@
+//===- MSFBuilder.cpp -----------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,22 +7,30 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/DebugInfo/MSF/MSFBuilder.h"
 #include "llvm/DebugInfo/MSF/MSFError.h"
+#include "llvm/Support/Endian.h"
+#include "llvm/Support/Error.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <cstring>
+#include <memory>
+#include <utility>
+#include <vector>
 
 using namespace llvm;
 using namespace llvm::msf;
 using namespace llvm::support;
 
-namespace {
-const uint32_t kSuperBlockBlock = 0;
-const uint32_t kFreePageMap0Block = 1;
-const uint32_t kFreePageMap1Block = 2;
-const uint32_t kNumReservedPages = 3;
+static const uint32_t kSuperBlockBlock = 0;
+static const uint32_t kFreePageMap0Block = 1;
+static const uint32_t kFreePageMap1Block = 2;
+static const uint32_t kNumReservedPages = 3;
 
-const uint32_t kDefaultFreePageMap = kFreePageMap0Block;
-const uint32_t kDefaultBlockMapAddr = kNumReservedPages;
-}
+static const uint32_t kDefaultFreePageMap = kFreePageMap0Block;
+static const uint32_t kDefaultBlockMapAddr = kNumReservedPages;
 
 MSFBuilder::MSFBuilder(uint32_t BlockSize, uint32_t MinBlockCount, bool CanGrow,
                        BumpPtrAllocator &Allocator)
@@ -263,7 +272,7 @@ Expected<MSFLayout> MSFBuilder::build() {
 
   // The stream sizes should be re-allocated as a stable pointer and the stream
   // map should have each of its entries allocated as a separate stable pointer.
-  if (StreamData.size() > 0) {
+  if (!StreamData.empty()) {
     ulittle32_t *Sizes = Allocator.Allocate<ulittle32_t>(StreamData.size());
     L.StreamSizes = ArrayRef<ulittle32_t>(Sizes, StreamData.size());
     L.StreamMap.resize(StreamData.size());

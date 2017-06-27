@@ -1409,6 +1409,47 @@ static Instruction *foldCttzCtlz(IntrinsicInst &II, InstCombiner &IC) {
     }
   }
 
+  // Add range metadata since known bits can't completely reflect what we know.
+  // TODO: Handle splat vectors.
+  auto *IT = dyn_cast<IntegerType>(Op0->getType());
+  if (IT && IT->getBitWidth() != 1 && !II.getMetadata(LLVMContext::MD_range)) {
+    Metadata *LowAndHigh[] = {
+        ConstantAsMetadata::get(ConstantInt::get(IT, DefiniteZeros)),
+        ConstantAsMetadata::get(ConstantInt::get(IT, PossibleZeros + 1))};
+    II.setMetadata(LLVMContext::MD_range,
+                   MDNode::get(II.getContext(), LowAndHigh));
+    return &II;
+  }
+
+  return nullptr;
+}
+
+static Instruction *foldCtpop(IntrinsicInst &II, InstCombiner &IC) {
+  assert(II.getIntrinsicID() == Intrinsic::ctpop &&
+         "Expected ctpop intrinsic");
+  Value *Op0 = II.getArgOperand(0);
+  // FIXME: Try to simplify vectors of integers.
+  auto *IT = dyn_cast<IntegerType>(Op0->getType());
+  if (!IT)
+    return nullptr;
+
+  unsigned BitWidth = IT->getBitWidth();
+  KnownBits Known(BitWidth);
+  IC.computeKnownBits(Op0, Known, 0, &II);
+
+  unsigned MinCount = Known.countMinPopulation();
+  unsigned MaxCount = Known.countMaxPopulation();
+
+  // Add range metadata since known bits can't completely reflect what we know.
+  if (IT->getBitWidth() != 1 && !II.getMetadata(LLVMContext::MD_range)) {
+    Metadata *LowAndHigh[] = {
+        ConstantAsMetadata::get(ConstantInt::get(IT, MinCount)),
+        ConstantAsMetadata::get(ConstantInt::get(IT, MaxCount + 1))};
+    II.setMetadata(LLVMContext::MD_range,
+                   MDNode::get(II.getContext(), LowAndHigh));
+    return &II;
+  }
+
   return nullptr;
 }
 
@@ -1978,6 +2019,11 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   case Intrinsic::cttz:
   case Intrinsic::ctlz:
     if (auto *I = foldCttzCtlz(*II, *this))
+      return I;
+    break;
+
+  case Intrinsic::ctpop:
+    if (auto *I = foldCtpop(*II, *this))
       return I;
     break;
 

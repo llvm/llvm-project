@@ -23,6 +23,14 @@
 using namespace llvm;
 using namespace llvm::pdb;
 
+// FIXME: This shouldn't be necessary, but if we insert the strings in any
+// other order, cvdump cannot read the generated name map.  This suggests that
+// we may be using the wrong hash function.  A closer inspection of the cvdump
+// source code may reveal something, but for now this at least makes us work,
+// even if only by accident.
+static constexpr const char *OrderedStreamNames[] = {"/LinkInfo", "/names",
+                                                     "/src/headerblock"};
+
 NamedStreamMap::NamedStreamMap() = default;
 
 Error NamedStreamMap::load(BinaryStreamReader &Stream) {
@@ -73,9 +81,10 @@ Error NamedStreamMap::commit(BinaryStreamWriter &Writer) const {
   if (auto EC = Writer.writeInteger(FinalizedInfo->StringDataBytes))
     return EC;
 
-  // Now all of the string data itself.
-  for (const auto &Item : Mapping) {
-    if (auto EC = Writer.writeCString(Item.getKey()))
+  for (const auto &Name : OrderedStreamNames) {
+    auto Item = Mapping.find(Name);
+    assert(Item != Mapping.end());
+    if (auto EC = Writer.writeCString(Item->getKey()))
       return EC;
   }
 
@@ -93,9 +102,12 @@ uint32_t NamedStreamMap::finalize() {
   // Build the finalized hash table.
   FinalizedHashTable.clear();
   FinalizedInfo.emplace();
-  for (const auto &Item : Mapping) {
-    FinalizedHashTable.set(FinalizedInfo->StringDataBytes, Item.getValue());
-    FinalizedInfo->StringDataBytes += Item.getKeyLength() + 1;
+
+  for (const auto &Name : OrderedStreamNames) {
+    auto Item = Mapping.find(Name);
+    assert(Item != Mapping.end());
+    FinalizedHashTable.set(FinalizedInfo->StringDataBytes, Item->getValue());
+    FinalizedInfo->StringDataBytes += Item->getKeyLength() + 1;
   }
 
   // Number of bytes of string data.

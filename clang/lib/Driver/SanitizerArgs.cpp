@@ -208,12 +208,28 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   SanitizerMask TrappingKinds = parseSanitizeTrapArgs(D, Args);
   SanitizerMask InvalidTrappingKinds = TrappingKinds & NotAllowedWithTrap;
 
+  // The object size sanitizer should not be enabled at -O0.
+  Arg *OptLevel = Args.getLastArg(options::OPT_O_Group);
+  bool RemoveObjectSizeAtO0 =
+      !OptLevel || OptLevel->getOption().matches(options::OPT_O0);
+
   for (ArgList::const_reverse_iterator I = Args.rbegin(), E = Args.rend();
        I != E; ++I) {
     const auto *Arg = *I;
     if (Arg->getOption().matches(options::OPT_fsanitize_EQ)) {
       Arg->claim();
-      SanitizerMask Add = parseArgValues(D, Arg, true);
+      SanitizerMask Add = parseArgValues(D, Arg, /*AllowGroups=*/true);
+
+      if (RemoveObjectSizeAtO0) {
+        AllRemove |= SanitizerKind::ObjectSize;
+
+        // The user explicitly enabled the object size sanitizer. Warn that
+        // that this does nothing at -O0.
+        if (Add & SanitizerKind::ObjectSize)
+          D.Diag(diag::warn_drv_object_size_disabled_O0)
+              << Arg->getAsString(Args);
+      }
+
       AllAddedKinds |= expandSanitizerGroups(Add);
 
       // Avoid diagnosing any sanitizer which is disabled later.

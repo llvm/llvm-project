@@ -15,6 +15,7 @@
 #ifndef LLVM_LIB_TARGET_POWERPC_PPC_H
 #define LLVM_LIB_TARGET_POWERPC_PPC_H
 
+#include "llvm/Support/CodeGen.h"
 #include "MCTargetDesc/PPCMCTargetDesc.h"
 
 // GCC #defines PPC on Linux but we use it as our namespace name
@@ -41,7 +42,7 @@ namespace llvm {
   FunctionPass *createPPCMIPeepholePass();
   FunctionPass *createPPCBranchSelectionPass();
   FunctionPass *createPPCQPXLoadSplatPass();
-  FunctionPass *createPPCISelDag(PPCTargetMachine &TM);
+  FunctionPass *createPPCISelDag(PPCTargetMachine &TM, CodeGenOpt::Level OL);
   FunctionPass *createPPCTLSDynamicCallPass();
   FunctionPass *createPPCBoolRetToIntPass();
   FunctionPass *createPPCExpandISELPass();

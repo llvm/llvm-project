@@ -50,8 +50,9 @@ public:
     return SystemZ::NumTargetFixupKinds;
   }
   const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
-  void applyFixup(const MCFixup &Fixup, char *Data, unsigned DataSize,
-                  uint64_t Value, bool IsPCRel, MCContext &Ctx) const override;
+  void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
+                  const MCValue &Target, MutableArrayRef<char> Data,
+                  uint64_t Value, bool IsPCRel) const override;
   bool mayNeedRelaxation(const MCInst &Inst) const override {
     return false;
   }
@@ -89,15 +90,17 @@ SystemZMCAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   return Infos[Kind - FirstTargetFixupKind];
 }
 
-void SystemZMCAsmBackend::applyFixup(const MCFixup &Fixup, char *Data,
-                                     unsigned DataSize, uint64_t Value,
-                                     bool IsPCRel, MCContext &Ctx) const {
+void SystemZMCAsmBackend::applyFixup(const MCAssembler &Asm,
+                                     const MCFixup &Fixup,
+                                     const MCValue &Target,
+                                     MutableArrayRef<char> Data, uint64_t Value,
+                                     bool IsPCRel) const {
   MCFixupKind Kind = Fixup.getKind();
   unsigned Offset = Fixup.getOffset();
   unsigned BitSize = getFixupKindInfo(Kind).TargetSize;
   unsigned Size = (BitSize + 7) / 8;
 
-  assert(Offset + Size <= DataSize && "Invalid fixup offset!");
+  assert(Offset + Size <= Data.size() && "Invalid fixup offset!");
 
   // Big-endian insertion of Size bytes.
   Value = extractBitsForFixup(Kind, Value);

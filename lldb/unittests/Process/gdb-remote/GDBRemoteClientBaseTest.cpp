@@ -14,8 +14,8 @@
 #include "Plugins/Process/gdb-remote/GDBRemoteClientBase.h"
 #include "Plugins/Process/gdb-remote/GDBRemoteCommunicationServer.h"
 #include "lldb/Utility/StreamGDBRemote.h"
-
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Testing/Support/Error.h"
 
 using namespace lldb_private::process_gdb_remote;
 using namespace lldb_private;
@@ -45,13 +45,20 @@ struct TestClient : public GDBRemoteClientBase {
   }
 };
 
-struct ContinueFixture {
-  MockDelegate delegate;
+class GDBRemoteClientBaseTest : public GDBRemoteTest {
+public:
+  void SetUp() override {
+    ASSERT_THAT_ERROR(Connect(client, server), llvm::Succeeded());
+    ASSERT_EQ(TestClient::eBroadcastBitRunPacketSent,
+              listener_sp->StartListeningForEvents(
+                  &client, TestClient::eBroadcastBitRunPacketSent));
+  }
+
+protected:
   TestClient client;
   MockServer server;
-  ListenerSP listener_sp;
-
-  ContinueFixture();
+  MockDelegate delegate;
+  ListenerSP listener_sp = Listener::MakeListener("listener");
 
   StateType SendCPacket(StringExtractorGDBRemote &response) {
     return client.SendContinuePacketAndWaitForResponse(delegate, LinuxSignals(),
@@ -65,76 +72,61 @@ struct ContinueFixture {
   }
 };
 
-ContinueFixture::ContinueFixture()
-    : listener_sp(Listener::MakeListener("listener")) {
-  Connect(client, server);
-  listener_sp->StartListeningForEvents(&client,
-                                       TestClient::eBroadcastBitRunPacketSent);
-}
-
 } // end anonymous namespace
-
-class GDBRemoteClientBaseTest : public GDBRemoteTest {};
 
 TEST_F(GDBRemoteClientBaseTest, SendContinueAndWait) {
   StringExtractorGDBRemote response;
-  ContinueFixture fix;
-  if (HasFailure())
-    return;
 
   // Continue. The inferior will stop with a signal.
-  ASSERT_EQ(PacketResult::Success, fix.server.SendPacket("T01"));
-  ASSERT_EQ(eStateStopped, fix.SendCPacket(response));
+  ASSERT_EQ(PacketResult::Success, server.SendPacket("T01"));
+  ASSERT_EQ(eStateStopped, SendCPacket(response));
   ASSERT_EQ("T01", response.GetStringRef());
-  ASSERT_EQ(PacketResult::Success, fix.server.GetPacket(response));
+  ASSERT_EQ(PacketResult::Success, server.GetPacket(response));
   ASSERT_EQ("c", response.GetStringRef());
 
   // Continue. The inferior will exit.
-  ASSERT_EQ(PacketResult::Success, fix.server.SendPacket("W01"));
-  ASSERT_EQ(eStateExited, fix.SendCPacket(response));
+  ASSERT_EQ(PacketResult::Success, server.SendPacket("W01"));
+  ASSERT_EQ(eStateExited, SendCPacket(response));
   ASSERT_EQ("W01", response.GetStringRef());
-  ASSERT_EQ(PacketResult::Success, fix.server.GetPacket(response));
+  ASSERT_EQ(PacketResult::Success, server.GetPacket(response));
   ASSERT_EQ("c", response.GetStringRef());
 
   // Continue. The inferior will get killed.
-  ASSERT_EQ(PacketResult::Success, fix.server.SendPacket("X01"));
-  ASSERT_EQ(eStateExited, fix.SendCPacket(response));
+  ASSERT_EQ(PacketResult::Success, server.SendPacket("X01"));
+  ASSERT_EQ(eStateExited, SendCPacket(response));
   ASSERT_EQ("X01", response.GetStringRef());
-  ASSERT_EQ(PacketResult::Success, fix.server.GetPacket(response));
+  ASSERT_EQ(PacketResult::Success, server.GetPacket(response));
   ASSERT_EQ("c", response.GetStringRef());
 }
 
 TEST_F(GDBRemoteClientBaseTest, SendContinueAndAsyncSignal) {
   StringExtractorGDBRemote continue_response, response;
-  ContinueFixture fix;
-  if (HasFailure())
-    return;
 
   // SendAsyncSignal should do nothing when we are not running.
-  ASSERT_FALSE(fix.client.SendAsyncSignal(0x47));
+  ASSERT_FALSE(client.SendAsyncSignal(0x47));
 
   // Continue. After the run packet is sent, send an async signal.
   std::future<StateType> continue_state = std::async(
-      std::launch::async, [&] { return fix.SendCPacket(continue_response); });
-  ASSERT_EQ(PacketResult::Success, fix.server.GetPacket(response));
+      std::launch::async, [&] { return SendCPacket(continue_response); });
+  ASSERT_EQ(PacketResult::Success, server.GetPacket(response));
   ASSERT_EQ("c", response.GetStringRef());
-  fix.WaitForRunEvent();
+  WaitForRunEvent();
 
   std::future<bool> async_result = std::async(
-      std::launch::async, [&] { return fix.client.SendAsyncSignal(0x47); });
+      std::launch::async, [&] { return client.SendAsyncSignal(0x47); });
 
   // First we'll get interrupted.
-  ASSERT_EQ(PacketResult::Success, fix.server.GetPacket(response));
+  ASSERT_EQ(PacketResult::Success, server.GetPacket(response));
   ASSERT_EQ("\x03", response.GetStringRef());
-  ASSERT_EQ(PacketResult::Success, fix.server.SendPacket("T13"));
+  ASSERT_EQ(PacketResult::Success, server.SendPacket("T13"));
 
   // Then we get the signal packet.
-  ASSERT_EQ(PacketResult::Success, fix.server.GetPacket(response));
+  ASSERT_EQ(PacketResult::Success, server.GetPacket(response));
   ASSERT_EQ("C47", response.GetStringRef());
   ASSERT_TRUE(async_result.get());
 
   // And we report back a signal stop.
-  ASSERT_EQ(PacketResult::Success, fix.server.SendPacket("T47"));
+  ASSERT_EQ(PacketResult::Success, server.SendPacket("T47"));
   ASSERT_EQ(eStateStopped, continue_state.get());
   ASSERT_EQ("T47", continue_response.GetStringRef());
 }
@@ -142,72 +134,66 @@ TEST_F(GDBRemoteClientBaseTest, SendContinueAndAsyncSignal) {
 TEST_F(GDBRemoteClientBaseTest, SendContinueAndAsyncPacket) {
   StringExtractorGDBRemote continue_response, async_response, response;
   const bool send_async = true;
-  ContinueFixture fix;
-  if (HasFailure())
-    return;
 
   // Continue. After the run packet is sent, send an async packet.
   std::future<StateType> continue_state = std::async(
-      std::launch::async, [&] { return fix.SendCPacket(continue_response); });
-  ASSERT_EQ(PacketResult::Success, fix.server.GetPacket(response));
+      std::launch::async, [&] { return SendCPacket(continue_response); });
+  ASSERT_EQ(PacketResult::Success, server.GetPacket(response));
   ASSERT_EQ("c", response.GetStringRef());
-  fix.WaitForRunEvent();
+  WaitForRunEvent();
 
   // Sending without async enabled should fail.
   ASSERT_EQ(
       PacketResult::ErrorSendFailed,
-      fix.client.SendPacketAndWaitForResponse("qTest1", response, !send_async));
+      client.SendPacketAndWaitForResponse("qTest1", response, !send_async));
 
   std::future<PacketResult> async_result = std::async(std::launch::async, [&] {
-    return fix.client.SendPacketAndWaitForResponse("qTest2", async_response,
-                                                   send_async);
+    return client.SendPacketAndWaitForResponse("qTest2", async_response,
+                                               send_async);
   });
 
   // First we'll get interrupted.
-  ASSERT_EQ(PacketResult::Success, fix.server.GetPacket(response));
+  ASSERT_EQ(PacketResult::Success, server.GetPacket(response));
   ASSERT_EQ("\x03", response.GetStringRef());
-  ASSERT_EQ(PacketResult::Success, fix.server.SendPacket("T13"));
+  ASSERT_EQ(PacketResult::Success, server.SendPacket("T13"));
 
   // Then we get the async packet.
-  ASSERT_EQ(PacketResult::Success, fix.server.GetPacket(response));
+  ASSERT_EQ(PacketResult::Success, server.GetPacket(response));
   ASSERT_EQ("qTest2", response.GetStringRef());
 
   // Send the response and receive it.
-  ASSERT_EQ(PacketResult::Success, fix.server.SendPacket("QTest2"));
+  ASSERT_EQ(PacketResult::Success, server.SendPacket("QTest2"));
   ASSERT_EQ(PacketResult::Success, async_result.get());
   ASSERT_EQ("QTest2", async_response.GetStringRef());
 
   // And we get resumed again.
-  ASSERT_EQ(PacketResult::Success, fix.server.GetPacket(response));
+  ASSERT_EQ(PacketResult::Success, server.GetPacket(response));
   ASSERT_EQ("c", response.GetStringRef());
-  ASSERT_EQ(PacketResult::Success, fix.server.SendPacket("T01"));
+  ASSERT_EQ(PacketResult::Success, server.SendPacket("T01"));
   ASSERT_EQ(eStateStopped, continue_state.get());
   ASSERT_EQ("T01", continue_response.GetStringRef());
 }
 
 TEST_F(GDBRemoteClientBaseTest, SendContinueAndInterrupt) {
   StringExtractorGDBRemote continue_response, response;
-  ContinueFixture fix;
-  if (HasFailure())
-    return;
 
   // Interrupt should do nothing when we're not running.
-  ASSERT_FALSE(fix.client.Interrupt());
+  ASSERT_FALSE(client.Interrupt());
 
   // Continue. After the run packet is sent, send an interrupt.
   std::future<StateType> continue_state = std::async(
-      std::launch::async, [&] { return fix.SendCPacket(continue_response); });
-  ASSERT_EQ(PacketResult::Success, fix.server.GetPacket(response));
+      std::launch::async, [&] { return SendCPacket(continue_response); });
+  ASSERT_EQ(PacketResult::Success, server.GetPacket(response));
   ASSERT_EQ("c", response.GetStringRef());
-  fix.WaitForRunEvent();
+  WaitForRunEvent();
 
   std::future<bool> async_result =
-      std::async(std::launch::async, [&] { return fix.client.Interrupt(); });
+      std::async(std::launch::async, [&] { return client.Interrupt(); });
 
   // We get interrupted.
-  ASSERT_EQ(PacketResult::Success, fix.server.GetPacket(response));
+  ASSERT_EQ(PacketResult::Success, server.GetPacket(response));
   ASSERT_EQ("\x03", response.GetStringRef());
-  ASSERT_EQ(PacketResult::Success, fix.server.SendPacket("T13"));
+  ASSERT_EQ(PacketResult::Success, server.SendPacket("T13"));
 
   // And that's it.
   ASSERT_EQ(eStateStopped, continue_state.get());
@@ -217,62 +203,56 @@ TEST_F(GDBRemoteClientBaseTest, SendContinueAndInterrupt) {
 
 TEST_F(GDBRemoteClientBaseTest, SendContinueAndLateInterrupt) {
   StringExtractorGDBRemote continue_response, response;
-  ContinueFixture fix;
-  if (HasFailure())
-    return;
 
   // Continue. After the run packet is sent, send an interrupt.
   std::future<StateType> continue_state = std::async(
-      std::launch::async, [&] { return fix.SendCPacket(continue_response); });
-  ASSERT_EQ(PacketResult::Success, fix.server.GetPacket(response));
+      std::launch::async, [&] { return SendCPacket(continue_response); });
+  ASSERT_EQ(PacketResult::Success, server.GetPacket(response));
   ASSERT_EQ("c", response.GetStringRef());
-  fix.WaitForRunEvent();
+  WaitForRunEvent();
 
   std::future<bool> async_result =
-      std::async(std::launch::async, [&] { return fix.client.Interrupt(); });
+      std::async(std::launch::async, [&] { return client.Interrupt(); });
 
   // However, the target stops due to a different reason than the original
   // interrupt.
-  ASSERT_EQ(PacketResult::Success, fix.server.GetPacket(response));
+  ASSERT_EQ(PacketResult::Success, server.GetPacket(response));
   ASSERT_EQ("\x03", response.GetStringRef());
-  ASSERT_EQ(PacketResult::Success, fix.server.SendPacket("T01"));
+  ASSERT_EQ(PacketResult::Success, server.SendPacket("T01"));
   ASSERT_EQ(eStateStopped, continue_state.get());
   ASSERT_EQ("T01", continue_response.GetStringRef());
   ASSERT_TRUE(async_result.get());
 
   // The subsequent continue packet should work normally.
-  ASSERT_EQ(PacketResult::Success, fix.server.SendPacket("T01"));
-  ASSERT_EQ(eStateStopped, fix.SendCPacket(response));
+  ASSERT_EQ(PacketResult::Success, server.SendPacket("T01"));
+  ASSERT_EQ(eStateStopped, SendCPacket(response));
   ASSERT_EQ("T01", response.GetStringRef());
-  ASSERT_EQ(PacketResult::Success, fix.server.GetPacket(response));
+  ASSERT_EQ(PacketResult::Success, server.GetPacket(response));
   ASSERT_EQ("c", response.GetStringRef());
 }
 
 TEST_F(GDBRemoteClientBaseTest, SendContinueAndInterrupt2PacketBug) {
   StringExtractorGDBRemote continue_response, async_response, response;
   const bool send_async = true;
-  ContinueFixture fix;
-  if (HasFailure())
-    return;
 
   // Interrupt should do nothing when we're not running.
-  ASSERT_FALSE(fix.client.Interrupt());
+  ASSERT_FALSE(client.Interrupt());
 
   // Continue. After the run packet is sent, send an async signal.
   std::future<StateType> continue_state = std::async(
-      std::launch::async, [&] { return fix.SendCPacket(continue_response); });
-  ASSERT_EQ(PacketResult::Success, fix.server.GetPacket(response));
+      std::launch::async, [&] { return SendCPacket(continue_response); });
+  ASSERT_EQ(PacketResult::Success, server.GetPacket(response));
   ASSERT_EQ("c", response.GetStringRef());
-  fix.WaitForRunEvent();
+  WaitForRunEvent();
 
   std::future<bool> interrupt_result =
-      std::async(std::launch::async, [&] { return fix.client.Interrupt(); });
+      std::async(std::launch::async, [&] { return client.Interrupt(); });
 
   // We get interrupted. We'll send two packets to simulate a buggy stub.
-  ASSERT_EQ(PacketResult::Success, fix.server.GetPacket(response));
+  ASSERT_EQ(PacketResult::Success, server.GetPacket(response));
   ASSERT_EQ("\x03", response.GetStringRef());
-  ASSERT_EQ(PacketResult::Success, fix.server.SendPacket("T13"));
-  ASSERT_EQ(PacketResult::Success, fix.server.SendPacket("T13"));
+  ASSERT_EQ(PacketResult::Success, server.SendPacket("T13"));
+  ASSERT_EQ(PacketResult::Success, server.SendPacket("T13"));
 
   // We should stop.
   ASSERT_EQ(eStateStopped, continue_state.get());
@@ -281,37 +261,34 @@ TEST_F(GDBRemoteClientBaseTest, SendContinueAndInterrupt2PacketBug) {
 
   // Packet stream should remain synchronized.
   std::future<PacketResult> send_result = std::async(std::launch::async, [&] {
-    return fix.client.SendPacketAndWaitForResponse("qTest", async_response,
-                                                   !send_async);
+    return client.SendPacketAndWaitForResponse("qTest", async_response,
+                                               !send_async);
   });
-  ASSERT_EQ(PacketResult::Success, fix.server.GetPacket(response));
+  ASSERT_EQ(PacketResult::Success, server.GetPacket(response));
   ASSERT_EQ("qTest", response.GetStringRef());
-  ASSERT_EQ(PacketResult::Success, fix.server.SendPacket("QTest"));
+  ASSERT_EQ(PacketResult::Success, server.SendPacket("QTest"));
   ASSERT_EQ(PacketResult::Success, send_result.get());
   ASSERT_EQ("QTest", async_response.GetStringRef());
 }
 
 TEST_F(GDBRemoteClientBaseTest, SendContinueDelegateInterface) {
   StringExtractorGDBRemote response;
-  ContinueFixture fix;
-  if (HasFailure())
-    return;
 
   // Continue. We'll have the server send a bunch of async packets before it
   // stops.
-  ASSERT_EQ(PacketResult::Success, fix.server.SendPacket("O4142"));
-  ASSERT_EQ(PacketResult::Success, fix.server.SendPacket("Apro"));
-  ASSERT_EQ(PacketResult::Success, fix.server.SendPacket("O4344"));
-  ASSERT_EQ(PacketResult::Success, fix.server.SendPacket("Afile"));
-  ASSERT_EQ(PacketResult::Success, fix.server.SendPacket("T01"));
-  ASSERT_EQ(eStateStopped, fix.SendCPacket(response));
+  ASSERT_EQ(PacketResult::Success, server.SendPacket("O4142"));
+  ASSERT_EQ(PacketResult::Success, server.SendPacket("Apro"));
+  ASSERT_EQ(PacketResult::Success, server.SendPacket("O4344"));
+  ASSERT_EQ(PacketResult::Success, server.SendPacket("Afile"));
+  ASSERT_EQ(PacketResult::Success, server.SendPacket("T01"));
+  ASSERT_EQ(eStateStopped, SendCPacket(response));
   ASSERT_EQ("T01", response.GetStringRef());
-  ASSERT_EQ(PacketResult::Success, fix.server.GetPacket(response));
+  ASSERT_EQ(PacketResult::Success, server.GetPacket(response));
   ASSERT_EQ("c", response.GetStringRef());
 
-  EXPECT_EQ("ABCD", fix.delegate.output);
-  EXPECT_EQ("profile", fix.delegate.misc_data);
-  EXPECT_EQ(1u, fix.delegate.stop_reply_called);
+  EXPECT_EQ("ABCD", delegate.output);
+  EXPECT_EQ("profile", delegate.misc_data);
+  EXPECT_EQ(1u, delegate.stop_reply_called);
 }
 
 TEST_F(GDBRemoteClientBaseTest, SendContinueDelegateStructuredDataReceipt) {
@@ -327,42 +304,35 @@ TEST_F(GDBRemoteClientBaseTest, SendContinueDelegateStructuredDataReceipt) {
   stream.PutEscapedBytes(json_packet.c_str(), json_packet.length());
   stream.Flush();
 
-  // Set up the
   StringExtractorGDBRemote response;
-  ContinueFixture fix;
-  if (HasFailure())
-    return;
 
   // Send async structured data packet, then stop.
-  ASSERT_EQ(PacketResult::Success, fix.server.SendPacket(stream.GetData()));
-  ASSERT_EQ(PacketResult::Success, fix.server.SendPacket("T01"));
-  ASSERT_EQ(eStateStopped, fix.SendCPacket(response));
+  ASSERT_EQ(PacketResult::Success, server.SendPacket(stream.GetData()));
+  ASSERT_EQ(PacketResult::Success, server.SendPacket("T01"));
+  ASSERT_EQ(eStateStopped, SendCPacket(response));
   ASSERT_EQ("T01", response.GetStringRef());
-  ASSERT_EQ(1ul, fix.delegate.structured_data_packets.size());
+  ASSERT_EQ(1ul, delegate.structured_data_packets.size());
 
   // Verify the packet contents.  It should have been unescaped upon packet
   // reception.
-  ASSERT_EQ(json_packet, fix.delegate.structured_data_packets[0]);
+  ASSERT_EQ(json_packet, delegate.structured_data_packets[0]);
 }
 
 TEST_F(GDBRemoteClientBaseTest, InterruptNoResponse) {
   StringExtractorGDBRemote continue_response, response;
-  ContinueFixture fix;
-  if (HasFailure())
-    return;
 
   // Continue. After the run packet is sent, send an interrupt.
   std::future<StateType> continue_state = std::async(
-      std::launch::async, [&] { return fix.SendCPacket(continue_response); });
-  ASSERT_EQ(PacketResult::Success, fix.server.GetPacket(response));
+      std::launch::async, [&] { return SendCPacket(continue_response); });
+  ASSERT_EQ(PacketResult::Success, server.GetPacket(response));
   ASSERT_EQ("c", response.GetStringRef());
-  fix.WaitForRunEvent();
+  WaitForRunEvent();
 
   std::future<bool> async_result =
-      std::async(std::launch::async, [&] { return fix.client.Interrupt(); });
+      std::async(std::launch::async, [&] { return client.Interrupt(); });
 
   // We get interrupted, but we don't send a stop packet.
-  ASSERT_EQ(PacketResult::Success, fix.server.GetPacket(response));
+  ASSERT_EQ(PacketResult::Success, server.GetPacket(response));
   ASSERT_EQ("\x03", response.GetStringRef());
 
   // The functions should still terminate (after a timeout).

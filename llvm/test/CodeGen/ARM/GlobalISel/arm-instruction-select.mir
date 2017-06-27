@@ -42,6 +42,9 @@
   define void @test_constant_imm() { ret void }
   define void @test_constant_cimm() { ret void }
 
+  define void @test_select_s32() { ret void }
+  define void @test_select_ptr() { ret void }
+
   define void @test_soft_fp_double() #0 { ret void }
 
   attributes #0 = { "target-features"="+vfp2,-neonfp" }
@@ -1098,6 +1101,76 @@ body:             |
 
     %r0 = COPY %0(s32)
     BX_RET 14, _, implicit %r0
+...
+---
+name:            test_select_s32
+# CHECK-LABEL: name: test_select_s32
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+  - { id: 3, class: gprb }
+body:             |
+  bb.0:
+    liveins: %r0, %r1, %r2
+
+    %0(s32) = COPY %r0
+    ; CHECK: [[VREGX:%[0-9]+]] = COPY %r0
+
+    %1(s32) = COPY %r1
+    ; CHECK: [[VREGY:%[0-9]+]] = COPY %r1
+
+    %2(s1) = COPY %r2
+    ; CHECK: [[VREGC:%[0-9]+]] = COPY %r2
+
+    %3(s32) = G_SELECT %2(s1),  %0, %1
+    ; CHECK: CMPri [[VREGC]], 0, 14, _, implicit-def %cpsr
+    ; CHECK: [[RES:%[0-9]+]] = MOVCCr [[VREGX]], [[VREGY]], 0, %cpsr
+
+    %r0 = COPY %3(s32)
+    ; CHECK: %r0 = COPY [[RES]]
+
+    BX_RET 14, _, implicit %r0
+    ; CHECK: BX_RET 14, _, implicit %r0
+...
+---
+name:            test_select_ptr
+# CHECK-LABEL: name: test_select_ptr
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+  - { id: 3, class: gprb }
+body:             |
+  bb.0:
+    liveins: %r0, %r1, %r2
+
+    %0(p0) = COPY %r0
+    ; CHECK: [[VREGX:%[0-9]+]] = COPY %r0
+
+    %1(p0) = COPY %r1
+    ; CHECK: [[VREGY:%[0-9]+]] = COPY %r1
+
+    %2(s1) = COPY %r2
+    ; CHECK: [[VREGC:%[0-9]+]] = COPY %r2
+
+    %3(p0) = G_SELECT %2(s1),  %0, %1
+    ; CHECK: CMPri [[VREGC]], 0, 14, _, implicit-def %cpsr
+    ; CHECK: [[RES:%[0-9]+]] = MOVCCr [[VREGX]], [[VREGY]], 0, %cpsr
+
+    %r0 = COPY %3(p0)
+    ; CHECK: %r0 = COPY [[RES]]
+
+    BX_RET 14, _, implicit %r0
+    ; CHECK: BX_RET 14, _, implicit %r0
 ...
 ---
 name:            test_soft_fp_double

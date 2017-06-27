@@ -532,21 +532,34 @@ protected:
   /// Returns true if we should generate a scalar version of \p IV.
   bool needsScalarInduction(Instruction *IV) const;
 
-  /// Return a constant reference to the VectorParts corresponding to \p V from
-  /// the original loop. If the value has already been vectorized, the
-  /// corresponding vector entry in VectorLoopValueMap is returned. If,
+  /// getOrCreateVectorValue and getOrCreateScalarValue coordinate to generate a
+  /// vector or scalar value on-demand if one is not yet available. When
+  /// vectorizing a loop, we visit the definition of an instruction before its
+  /// uses. When visiting the definition, we either vectorize or scalarize the
+  /// instruction, creating an entry for it in the corresponding map. (In some
+  /// cases, such as induction variables, we will create both vector and scalar
+  /// entries.) Then, as we encounter uses of the definition, we derive values
+  /// for each scalar or vector use unless such a value is already available.
+  /// For example, if we scalarize a definition and one of its uses is vector,
+  /// we build the required vector on-demand with an insertelement sequence
+  /// when visiting the use. Otherwise, if the use is scalar, we can use the
+  /// existing scalar definition.
+  ///
+  /// Return a value in the new loop corresponding to \p V from the original
+  /// loop at unroll index \p Part. If the value has already been vectorized,
+  /// the corresponding vector entry in VectorLoopValueMap is returned. If,
   /// however, the value has a scalar entry in VectorLoopValueMap, we construct
-  /// new vector values on-demand by inserting the scalar values into vectors
+  /// a new vector value on-demand by inserting the scalar values into a vector
   /// with an insertelement sequence. If the value has been neither vectorized
   /// nor scalarized, it must be loop invariant, so we simply broadcast the
-  /// value into vectors.
-  const VectorParts &getVectorValue(Value *V);
+  /// value into a vector.
+  Value *getOrCreateVectorValue(Value *V, unsigned Part);
 
   /// Return a value in the new loop corresponding to \p V from the original
   /// loop at unroll index \p Part and vector index \p Lane. If the value has
   /// been vectorized but not scalarized, the necessary extractelement
   /// instruction will be generated.
-  Value *getScalarValue(Value *V, unsigned Part, unsigned Lane);
+  Value *getOrCreateScalarValue(Value *V, unsigned Part, unsigned Lane);
 
   /// Try to vectorize the interleaved access group that \p Instr belongs to.
   void vectorizeInterleaveGroup(Instruction *Instr);
@@ -601,90 +614,103 @@ protected:
   /// UF x VF scalar values in the new loop. UF and VF are the unroll and
   /// vectorization factors, respectively.
   ///
-  /// Entries can be added to either map with initVector and initScalar, which
-  /// initialize and return a constant reference to the new entry. If a
-  /// non-constant reference to a vector entry is required, getVector can be
-  /// used to retrieve a mutable entry. We currently directly modify the mapped
-  /// values during "fix-up" operations that occur once the first phase of
-  /// widening is complete. These operations include type truncation and the
-  /// second phase of recurrence widening.
+  /// Entries can be added to either map with setVectorValue and setScalarValue,
+  /// which assert that an entry was not already added before. If an entry is to
+  /// replace an existing one, call resetVectorValue. This is currently needed
+  /// to modify the mapped values during "fix-up" operations that occur once the
+  /// first phase of widening is complete. These operations include type
+  /// truncation and the second phase of recurrence widening.
   ///
-  /// Otherwise, entries from either map should be accessed using the
-  /// getVectorValue or getScalarValue functions from InnerLoopVectorizer.
-  /// getVectorValue and getScalarValue coordinate to generate a vector or
-  /// scalar value on-demand if one is not yet available. When vectorizing a
-  /// loop, we visit the definition of an instruction before its uses. When
-  /// visiting the definition, we either vectorize or scalarize the
-  /// instruction, creating an entry for it in the corresponding map. (In some
-  /// cases, such as induction variables, we will create both vector and scalar
-  /// entries.) Then, as we encounter uses of the definition, we derive values
-  /// for each scalar or vector use unless such a value is already available.
-  /// For example, if we scalarize a definition and one of its uses is vector,
-  /// we build the required vector on-demand with an insertelement sequence
-  /// when visiting the use. Otherwise, if the use is scalar, we can use the
-  /// existing scalar definition.
+  /// Entries from either map can be retrieved using the getVectorValue and
+  /// getScalarValue functions, which assert that the desired value exists.
+
   struct ValueMap {
 
     /// Construct an empty map with the given unroll and vectorization factors.
-    ValueMap(unsigned UnrollFactor, unsigned VecWidth)
-        : UF(UnrollFactor), VF(VecWidth) {
-      // The unroll and vectorization factors are only used in asserts builds
-      // to verify map entries are sized appropriately.
-      (void)UF;
-      (void)VF;
+    ValueMap(unsigned UF, unsigned VF) : UF(UF), VF(VF) {}
+
+    /// \return True if the map has any vector entry for \p Key.
+    bool hasAnyVectorValue(Value *Key) const {
+      return VectorMapStorage.count(Key);
     }
 
-    /// \return True if the map has a vector entry for \p Key.
-    bool hasVector(Value *Key) const { return VectorMapStorage.count(Key); }
-
-    /// \return True if the map has a scalar entry for \p Key.
-    bool hasScalar(Value *Key) const { return ScalarMapStorage.count(Key); }
-
-    /// \brief Map \p Key to the given VectorParts \p Entry, and return a
-    /// constant reference to the new vector map entry. The given key should
-    /// not already be in the map, and the given VectorParts should be
-    /// correctly sized for the current unroll factor.
-    const VectorParts &initVector(Value *Key, const VectorParts &Entry) {
-      assert(!hasVector(Key) && "Vector entry already initialized");
-      assert(Entry.size() == UF && "VectorParts has wrong dimensions");
-      VectorMapStorage[Key] = Entry;
-      return VectorMapStorage[Key];
+    /// \return True if the map has a vector entry for \p Key and \p Part.
+    bool hasVectorValue(Value *Key, unsigned Part) const {
+      assert(Part < UF && "Queried Vector Part is too large.");
+      if (!hasAnyVectorValue(Key))
+        return false;
+      const VectorParts &Entry = VectorMapStorage.find(Key)->second;
+      assert(Entry.size() == UF && "VectorParts has wrong dimensions.");
+      return Entry[Part] != nullptr;
     }
 
-    /// \brief Map \p Key to the given ScalarParts \p Entry, and return a
-    /// constant reference to the new scalar map entry. The given key should
-    /// not already be in the map, and the given ScalarParts should be
-    /// correctly sized for the current unroll and vectorization factors.
-    const ScalarParts &initScalar(Value *Key, const ScalarParts &Entry) {
-      assert(!hasScalar(Key) && "Scalar entry already initialized");
-      assert(Entry.size() == UF &&
-             all_of(make_range(Entry.begin(), Entry.end()),
-                    [&](const SmallVectorImpl<Value *> &Values) -> bool {
-                      return Values.size() == VF;
-                    }) &&
-             "ScalarParts has wrong dimensions");
-      ScalarMapStorage[Key] = Entry;
-      return ScalarMapStorage[Key];
+    /// \return True if the map has any scalar entry for \p Key.
+    bool hasAnyScalarValue(Value *Key) const {
+      return ScalarMapStorage.count(Key);
     }
 
-    /// \return A reference to the vector map entry corresponding to \p Key.
-    /// The key should already be in the map. This function should only be used
-    /// when it's necessary to update values that have already been vectorized.
-    /// This is the case for "fix-up" operations including type truncation and
-    /// the second phase of recurrence vectorization. If a non-const reference
-    /// isn't required, getVectorValue should be used instead.
-    VectorParts &getVector(Value *Key) {
-      assert(hasVector(Key) && "Vector entry not initialized");
-      return VectorMapStorage.find(Key)->second;
+    /// \return True if the map has a scalar entry for \p Key, \p Part and
+    /// \p Part.
+    bool hasScalarValue(Value *Key, unsigned Part, unsigned Lane) const {
+      assert(Part < UF && "Queried Scalar Part is too large.");
+      assert(Lane < VF && "Queried Scalar Lane is too large.");
+      if (!hasAnyScalarValue(Key))
+        return false;
+      const ScalarParts &Entry = ScalarMapStorage.find(Key)->second;
+      assert(Entry.size() == UF && "ScalarParts has wrong dimensions.");
+      assert(Entry[Part].size() == VF && "ScalarParts has wrong dimensions.");
+      return Entry[Part][Lane] != nullptr;
     }
 
-    /// Retrieve an entry from the vector or scalar maps. The preferred way to
-    /// access an existing mapped entry is with getVectorValue or
-    /// getScalarValue from InnerLoopVectorizer. Until those functions can be
-    /// moved inside ValueMap, we have to declare them as friends.
-    friend const VectorParts &InnerLoopVectorizer::getVectorValue(Value *V);
-    friend Value *InnerLoopVectorizer::getScalarValue(Value *V, unsigned Part,
-                                                      unsigned Lane);
+    /// Retrieve the existing vector value that corresponds to \p Key and
+    /// \p Part.
+    Value *getVectorValue(Value *Key, unsigned Part) {
+      assert(hasVectorValue(Key, Part) && "Getting non-existent value.");
+      return VectorMapStorage[Key][Part];
+    }
+
+    /// Retrieve the existing scalar value that corresponds to \p Key, \p Part
+    /// and \p Lane.
+    Value *getScalarValue(Value *Key, unsigned Part, unsigned Lane) {
+      assert(hasScalarValue(Key, Part, Lane) && "Getting non-existent value.");
+      return ScalarMapStorage[Key][Part][Lane];
+    }
+
+    /// Set a vector value associated with \p Key and \p Part. Assumes such a
+    /// value is not already set. If it is, use resetVectorValue() instead.
+    void setVectorValue(Value *Key, unsigned Part, Value *Vector) {
+      assert(!hasVectorValue(Key, Part) && "Vector value already set for part");
+      if (!VectorMapStorage.count(Key)) {
+        VectorParts Entry(UF);
+        VectorMapStorage[Key] = Entry;
+      }
+      VectorMapStorage[Key][Part] = Vector;
+    }
+
+    /// Set a scalar value associated with \p Key for \p Part and \p Lane.
+    /// Assumes such a value is not already set.
+    void setScalarValue(Value *Key, unsigned Part, unsigned Lane,
+                        Value *Scalar) {
+      assert(!hasScalarValue(Key, Part, Lane) && "Scalar value already set");
+      if (!ScalarMapStorage.count(Key)) {
+        ScalarParts Entry(UF);
+        for (unsigned Part = 0; Part < UF; ++Part)
+          Entry[Part].resize(VF, nullptr);
+          // TODO: Consider storing uniform values only per-part, as they occupy
+          //       lane 0 only, keeping the other VF-1 redundant entries null.
+        ScalarMapStorage[Key] = Entry;
+      }
+      ScalarMapStorage[Key][Part][Lane] = Scalar;
+    }
+
+    /// Reset the vector value associated with \p Key for the given \p Part.
+    /// This function can be used to update values that have already been
+    /// vectorized. This is the case for "fix-up" operations including type
+    /// truncation and the second phase of recurrence vectorization.
+    void resetVectorValue(Value *Key, unsigned Part, Value *Vector) {
+      assert(hasVectorValue(Key, Part) && "Vector value not set for part");
+      VectorMapStorage[Key][Part] = Vector;
+    }
 
   private:
     /// The unroll factor. Each entry in the vector map contains UF vector
@@ -2417,15 +2443,13 @@ void InnerLoopVectorizer::createVectorIntOrFpInductionPHI(
   PHINode *VecInd = PHINode::Create(SteppedStart->getType(), 2, "vec.ind",
                                     &*LoopVectorBody->getFirstInsertionPt());
   Instruction *LastInduction = VecInd;
-  VectorParts Entry(UF);
   for (unsigned Part = 0; Part < UF; ++Part) {
-    Entry[Part] = LastInduction;
+    VectorLoopValueMap.setVectorValue(EntryVal, Part, LastInduction);
+    if (isa<TruncInst>(EntryVal))
+      addMetadata(LastInduction, EntryVal);
     LastInduction = cast<Instruction>(addFastMathFlag(
         Builder.CreateBinOp(AddOp, LastInduction, SplatVF, "step.add")));
   }
-  VectorLoopValueMap.initVector(EntryVal, Entry);
-  if (isa<TruncInst>(EntryVal))
-    addMetadata(Entry, EntryVal);
 
   // Move the last step to the end of the latch block. This ensures consistent
   // placement of all induction updates.
@@ -2531,13 +2555,13 @@ void InnerLoopVectorizer::widenIntOrFpInduction(PHINode *IV, TruncInst *Trunc) {
   // induction variable, and build the necessary step vectors.
   if (!VectorizedIV) {
     Value *Broadcasted = getBroadcastInstrs(ScalarIV);
-    VectorParts Entry(UF);
-    for (unsigned Part = 0; Part < UF; ++Part)
-      Entry[Part] =
+    for (unsigned Part = 0; Part < UF; ++Part) {
+      Value *EntryPart =
           getStepVector(Broadcasted, VF * Part, Step, ID.getInductionOpcode());
-    VectorLoopValueMap.initVector(EntryVal, Entry);
-    if (Trunc)
-      addMetadata(Entry, Trunc);
+      VectorLoopValueMap.setVectorValue(EntryVal, Part, EntryPart);
+      if (Trunc)
+        addMetadata(EntryPart, Trunc);
+    }
   }
 
   // If an induction variable is only used for counting loop iterations or
@@ -2637,17 +2661,14 @@ void InnerLoopVectorizer::buildScalarSteps(Value *ScalarIV, Value *Step,
     Cost->isUniformAfterVectorization(cast<Instruction>(EntryVal), VF) ? 1 : VF;
 
   // Compute the scalar steps and save the results in VectorLoopValueMap.
-  ScalarParts Entry(UF);
   for (unsigned Part = 0; Part < UF; ++Part) {
-    Entry[Part].resize(VF);
     for (unsigned Lane = 0; Lane < Lanes; ++Lane) {
       auto *StartIdx = getSignedIntOrFpConstant(ScalarIVTy, VF * Part + Lane);
       auto *Mul = addFastMathFlag(Builder.CreateBinOp(MulOp, StartIdx, Step));
       auto *Add = addFastMathFlag(Builder.CreateBinOp(AddOp, ScalarIV, Mul));
-      Entry[Part][Lane] = Add;
+      VectorLoopValueMap.setScalarValue(EntryVal, Part, Lane, Add);
     }
   }
-  VectorLoopValueMap.initScalar(EntryVal, Entry);
 }
 
 int LoopVectorizationLegality::isConsecutivePtr(Value *Ptr) {
@@ -2665,8 +2686,7 @@ bool LoopVectorizationLegality::isUniform(Value *V) {
   return LAI->isUniform(V);
 }
 
-const InnerLoopVectorizer::VectorParts &
-InnerLoopVectorizer::getVectorValue(Value *V) {
+Value *InnerLoopVectorizer::getOrCreateVectorValue(Value *V, unsigned Part) {
   assert(V != Induction && "The new induction variable should not be used.");
   assert(!V->getType()->isVectorTy() && "Can't widen a vector");
   assert(!V->getType()->isVoidTy() && "Type does not produce a value");
@@ -2675,17 +2695,16 @@ InnerLoopVectorizer::getVectorValue(Value *V) {
   if (Legal->hasStride(V))
     V = ConstantInt::get(V->getType(), 1);
 
-  // If we have this scalar in the map, return it.
-  if (VectorLoopValueMap.hasVector(V))
-    return VectorLoopValueMap.VectorMapStorage[V];
+  // If we have a vector mapped to this value, return it.
+  if (VectorLoopValueMap.hasVectorValue(V, Part))
+    return VectorLoopValueMap.getVectorValue(V, Part);
 
   // If the value has not been vectorized, check if it has been scalarized
   // instead. If it has been scalarized, and we actually need the value in
   // vector form, we will construct the vector values on demand.
-  if (VectorLoopValueMap.hasScalar(V)) {
+  if (VectorLoopValueMap.hasAnyScalarValue(V)) {
 
-    // Initialize a new vector map entry.
-    VectorParts Entry(UF);
+    Value *ScalarValue = VectorLoopValueMap.getScalarValue(V, Part, 0);
 
     // If we've scalarized a value, that value should be an instruction.
     auto *I = cast<Instruction>(V);
@@ -2693,9 +2712,8 @@ InnerLoopVectorizer::getVectorValue(Value *V) {
     // If we aren't vectorizing, we can just copy the scalar map values over to
     // the vector map.
     if (VF == 1) {
-      for (unsigned Part = 0; Part < UF; ++Part)
-        Entry[Part] = getScalarValue(V, Part, 0);
-      return VectorLoopValueMap.initVector(V, Entry);
+      VectorLoopValueMap.setVectorValue(V, Part, ScalarValue);
+      return ScalarValue;
     }
 
     // Get the last scalar instruction we generated for V. If the value is
@@ -2703,7 +2721,8 @@ InnerLoopVectorizer::getVectorValue(Value *V) {
     // of the last unroll iteration. Otherwise, the last instruction is the one
     // we created for the last vector lane of the last unroll iteration.
     unsigned LastLane = Cost->isUniformAfterVectorization(I, VF) ? 0 : VF - 1;
-    auto *LastInst = cast<Instruction>(getScalarValue(V, UF - 1, LastLane));
+    auto *LastInst =
+        cast<Instruction>(getOrCreateScalarValue(V, UF - 1, LastLane));
 
     // Set the insert point after the last scalarized instruction. This ensures
     // the insertelement sequence will directly follow the scalar definitions.
@@ -2717,52 +2736,50 @@ InnerLoopVectorizer::getVectorValue(Value *V) {
     // iteration. Otherwise, we construct the vector values using insertelement
     // instructions. Since the resulting vectors are stored in
     // VectorLoopValueMap, we will only generate the insertelements once.
-    for (unsigned Part = 0; Part < UF; ++Part) {
-      Value *VectorValue = nullptr;
-      if (Cost->isUniformAfterVectorization(I, VF)) {
-        VectorValue = getBroadcastInstrs(getScalarValue(V, Part, 0));
-      } else {
-        VectorValue = UndefValue::get(VectorType::get(V->getType(), VF));
-        for (unsigned Lane = 0; Lane < VF; ++Lane)
-          VectorValue = Builder.CreateInsertElement(
-              VectorValue, getScalarValue(V, Part, Lane),
-              Builder.getInt32(Lane));
-      }
-      Entry[Part] = VectorValue;
+    Value *VectorValue = nullptr;
+    if (Cost->isUniformAfterVectorization(I, VF)) {
+      VectorValue = getBroadcastInstrs(ScalarValue);
+    } else {
+      VectorValue = UndefValue::get(VectorType::get(V->getType(), VF));
+      for (unsigned Lane = 0; Lane < VF; ++Lane)
+        VectorValue = Builder.CreateInsertElement(
+            VectorValue, getOrCreateScalarValue(V, Part, Lane),
+            Builder.getInt32(Lane));
     }
+    VectorLoopValueMap.setVectorValue(V, Part, VectorValue);
     Builder.restoreIP(OldIP);
-    return VectorLoopValueMap.initVector(V, Entry);
+    return VectorValue;
   }
 
   // If this scalar is unknown, assume that it is a constant or that it is
   // loop invariant. Broadcast V and save the value for future uses.
   Value *B = getBroadcastInstrs(V);
-  return VectorLoopValueMap.initVector(V, VectorParts(UF, B));
+  VectorLoopValueMap.setVectorValue(V, Part, B);
+  return B;
 }
 
-Value *InnerLoopVectorizer::getScalarValue(Value *V, unsigned Part,
-                                           unsigned Lane) {
+Value *InnerLoopVectorizer::getOrCreateScalarValue(Value *V, unsigned Part,
+                                                   unsigned Lane) {
 
   // If the value is not an instruction contained in the loop, it should
   // already be scalar.
   if (OrigLoop->isLoopInvariant(V))
     return V;
 
-  assert(Lane > 0 ?
-         !Cost->isUniformAfterVectorization(cast<Instruction>(V), VF)
-         : true && "Uniform values only have lane zero");
+  assert(Lane > 0 ? !Cost->isUniformAfterVectorization(cast<Instruction>(V), VF)
+                  : true && "Uniform values only have lane zero");
 
   // If the value from the original loop has not been vectorized, it is
   // represented by UF x VF scalar values in the new loop. Return the requested
   // scalar value.
-  if (VectorLoopValueMap.hasScalar(V))
-    return VectorLoopValueMap.ScalarMapStorage[V][Part][Lane];
+  if (VectorLoopValueMap.hasScalarValue(V, Part, Lane))
+    return VectorLoopValueMap.getScalarValue(V, Part, Lane);
 
   // If the value has not been scalarized, get its entry in VectorLoopValueMap
   // for the given unroll part. If this entry is not a vector type (i.e., the
   // vectorization factor is one), there is no need to generate an
   // extractelement instruction.
-  auto *U = getVectorValue(V)[Part];
+  auto *U = getOrCreateVectorValue(V, Part);
   if (!U->getType()->isVectorTy()) {
     assert(VF == 1 && "Value not scalarized has non-vector type");
     return U;
@@ -2844,7 +2861,7 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(Instruction *Instr) {
     Index += (VF - 1) * Group->getFactor();
 
   for (unsigned Part = 0; Part < UF; Part++) {
-    Value *NewPtr = getScalarValue(Ptr, Part, 0);
+    Value *NewPtr = getOrCreateScalarValue(Ptr, Part, 0);
 
     // Notice current instruction could be any index. Need to adjust the address
     // to the member of index 0.
@@ -2887,7 +2904,6 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(Instruction *Instr) {
       if (!Member)
         continue;
 
-      VectorParts Entry(UF);
       Constant *StrideMask = createStrideMask(Builder, I, InterleaveFactor, VF);
       for (unsigned Part = 0; Part < UF; Part++) {
         Value *StridedVec = Builder.CreateShuffleVector(
@@ -2899,10 +2915,11 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(Instruction *Instr) {
           StridedVec = Builder.CreateBitOrPointerCast(StridedVec, OtherVTy);
         }
 
-        Entry[Part] =
-            Group->isReverse() ? reverseVector(StridedVec) : StridedVec;
+        if (Group->isReverse())
+          StridedVec = reverseVector(StridedVec);
+
+        VectorLoopValueMap.setVectorValue(Member, Part, StridedVec);
       }
-      VectorLoopValueMap.initVector(Member, Entry);
     }
     return;
   }
@@ -2919,8 +2936,8 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(Instruction *Instr) {
       Instruction *Member = Group->getMember(i);
       assert(Member && "Fail to get a member from an interleaved store group");
 
-      Value *StoredVec =
-          getVectorValue(cast<StoreInst>(Member)->getValueOperand())[Part];
+      Value *StoredVec = getOrCreateVectorValue(
+          cast<StoreInst>(Member)->getValueOperand(), Part);
       if (Group->isReverse())
         StoredVec = reverseVector(StoredVec);
 
@@ -2981,16 +2998,14 @@ void InnerLoopVectorizer::vectorizeMemoryInstruction(Instruction *Instr) {
   bool CreateGatherScatter =
       (Decision == LoopVectorizationCostModel::CM_GatherScatter);
 
-  VectorParts VectorGep;
+  // Either Ptr feeds a vector load/store, or a vector GEP should feed a vector
+  // gather/scatter. Otherwise Decision should have been to Scalarize.
+  assert((ConsecutiveStride || CreateGatherScatter) &&
+         "The instruction should be scalarized");
 
   // Handle consecutive loads/stores.
-  if (ConsecutiveStride) {
-    Ptr = getScalarValue(Ptr, 0, 0);
-  } else {
-    // At this point we should vector version of GEP for Gather or Scatter
-    assert(CreateGatherScatter && "The instruction should be scalarized");
-    VectorGep = getVectorValue(Ptr);
-  }
+  if (ConsecutiveStride)
+    Ptr = getOrCreateScalarValue(Ptr, 0, 0);
 
   VectorParts Mask = createBlockInMask(Instr->getParent());
   // Handle Stores:
@@ -2998,16 +3013,15 @@ void InnerLoopVectorizer::vectorizeMemoryInstruction(Instruction *Instr) {
     assert(!Legal->isUniform(SI->getPointerOperand()) &&
            "We do not allow storing to uniform addresses");
     setDebugLocFromInst(Builder, SI);
-    // We don't want to update the value in the map as it might be used in
-    // another expression. So don't use a reference type for "StoredVal".
-    VectorParts StoredVal = getVectorValue(SI->getValueOperand());
 
     for (unsigned Part = 0; Part < UF; ++Part) {
       Instruction *NewSI = nullptr;
+      Value *StoredVal = getOrCreateVectorValue(SI->getValueOperand(), Part);
       if (CreateGatherScatter) {
         Value *MaskPart = Legal->isMaskRequired(SI) ? Mask[Part] : nullptr;
-        NewSI = Builder.CreateMaskedScatter(StoredVal[Part], VectorGep[Part],
-                                            Alignment, MaskPart);
+        Value *VectorGep = getOrCreateVectorValue(Ptr, Part);
+        NewSI = Builder.CreateMaskedScatter(StoredVal, VectorGep, Alignment,
+                                            MaskPart);
       } else {
         // Calculate the pointer for the specific unroll-part.
         Value *PartPtr =
@@ -3016,7 +3030,10 @@ void InnerLoopVectorizer::vectorizeMemoryInstruction(Instruction *Instr) {
         if (Reverse) {
           // If we store to reverse consecutive memory locations, then we need
           // to reverse the order of elements in the stored value.
-          StoredVal[Part] = reverseVector(StoredVal[Part]);
+          StoredVal = reverseVector(StoredVal);
+          // We don't want to update the value in the map as it might be used in
+          // another expression. So don't call resetVectorValue(StoredVal).
+
           // If the address is consecutive but reversed, then the
           // wide store needs to start at the last vector element.
           PartPtr =
@@ -3030,11 +3047,10 @@ void InnerLoopVectorizer::vectorizeMemoryInstruction(Instruction *Instr) {
             Builder.CreateBitCast(PartPtr, DataTy->getPointerTo(AddressSpace));
 
         if (Legal->isMaskRequired(SI))
-          NewSI = Builder.CreateMaskedStore(StoredVal[Part], VecPtr, Alignment,
+          NewSI = Builder.CreateMaskedStore(StoredVal, VecPtr, Alignment,
                                             Mask[Part]);
         else
-          NewSI =
-              Builder.CreateAlignedStore(StoredVal[Part], VecPtr, Alignment);
+          NewSI = Builder.CreateAlignedStore(StoredVal, VecPtr, Alignment);
       }
       addMetadata(NewSI, SI);
     }
@@ -3044,14 +3060,14 @@ void InnerLoopVectorizer::vectorizeMemoryInstruction(Instruction *Instr) {
   // Handle loads.
   assert(LI && "Must have a load instruction");
   setDebugLocFromInst(Builder, LI);
-  VectorParts Entry(UF);
   for (unsigned Part = 0; Part < UF; ++Part) {
-    Instruction *NewLI;
+    Value *NewLI;
     if (CreateGatherScatter) {
       Value *MaskPart = Legal->isMaskRequired(LI) ? Mask[Part] : nullptr;
-      NewLI = Builder.CreateMaskedGather(VectorGep[Part], Alignment, MaskPart,
+      Value *VectorGep = getOrCreateVectorValue(Ptr, Part);
+      NewLI = Builder.CreateMaskedGather(VectorGep, Alignment, MaskPart,
                                          nullptr, "wide.masked.gather");
-      Entry[Part] = NewLI;
+      addMetadata(NewLI, LI);
     } else {
       // Calculate the pointer for the specific unroll-part.
       Value *PartPtr =
@@ -3073,11 +3089,14 @@ void InnerLoopVectorizer::vectorizeMemoryInstruction(Instruction *Instr) {
                                          "wide.masked.load");
       else
         NewLI = Builder.CreateAlignedLoad(VecPtr, Alignment, "wide.load");
-      Entry[Part] = Reverse ? reverseVector(NewLI) : NewLI;
+
+      // Add metadata to the load, but setVectorValue to the reverse shuffle.
+      addMetadata(NewLI, LI);
+      if (Reverse)
+        NewLI = reverseVector(NewLI);
     }
-    addMetadata(NewLI, LI);
+    VectorLoopValueMap.setVectorValue(Instr, Part, NewLI);
   }
-  VectorLoopValueMap.initVector(Instr, Entry);
 }
 
 void InnerLoopVectorizer::scalarizeInstruction(Instruction *Instr,
@@ -3094,9 +3113,6 @@ void InnerLoopVectorizer::scalarizeInstruction(Instruction *Instr,
   // Does this instruction return a value ?
   bool IsVoidRetTy = Instr->getType()->isVoidTy();
 
-  // Initialize a new scalar map entry.
-  ScalarParts Entry(UF);
-
   VectorParts Cond;
   if (IfPredicateInstr)
     Cond = createBlockInMask(Instr->getParent());
@@ -3108,7 +3124,6 @@ void InnerLoopVectorizer::scalarizeInstruction(Instruction *Instr,
 
   // For each vector unroll 'part':
   for (unsigned Part = 0; Part < UF; ++Part) {
-    Entry[Part].resize(VF);
     // For each scalar that we create:
     for (unsigned Lane = 0; Lane < Lanes; ++Lane) {
 
@@ -3129,7 +3144,7 @@ void InnerLoopVectorizer::scalarizeInstruction(Instruction *Instr,
       // Replace the operands of the cloned instructions with their scalar
       // equivalents in the new loop.
       for (unsigned op = 0, e = Instr->getNumOperands(); op != e; ++op) {
-        auto *NewOp = getScalarValue(Instr->getOperand(op), Part, Lane);
+        auto *NewOp = getOrCreateScalarValue(Instr->getOperand(op), Part, Lane);
         Cloned->setOperand(op, NewOp);
       }
       addNewMetadata(Cloned, Instr);
@@ -3138,7 +3153,7 @@ void InnerLoopVectorizer::scalarizeInstruction(Instruction *Instr,
       Builder.Insert(Cloned);
 
       // Add the cloned scalar to the scalar map entry.
-      Entry[Part][Lane] = Cloned;
+      VectorLoopValueMap.setScalarValue(Instr, Part, Lane, Cloned);
 
       // If we just cloned a new assumption, add it the assumption cache.
       if (auto *II = dyn_cast<IntrinsicInst>(Cloned))
@@ -3150,7 +3165,6 @@ void InnerLoopVectorizer::scalarizeInstruction(Instruction *Instr,
         PredicatedInstructions.push_back(std::make_pair(Cloned, Cmp));
     }
   }
-  VectorLoopValueMap.initScalar(Instr, Entry);
 }
 
 PHINode *InnerLoopVectorizer::createInductionVariable(Loop *L, Value *Start,
@@ -3786,10 +3800,10 @@ void InnerLoopVectorizer::truncateToMinimalBitwidths() {
     // If the value wasn't vectorized, we must maintain the original scalar
     // type. The absence of the value from VectorLoopValueMap indicates that it
     // wasn't vectorized.
-    if (!VectorLoopValueMap.hasVector(KV.first))
+    if (!VectorLoopValueMap.hasAnyVectorValue(KV.first))
       continue;
-    VectorParts &Parts = VectorLoopValueMap.getVector(KV.first);
-    for (Value *&I : Parts) {
+    for (unsigned Part = 0; Part < UF; ++Part) {
+      Value *I = getOrCreateVectorValue(KV.first, Part);
       if (Erased.count(I) || I->use_empty() || !isa<Instruction>(I))
         continue;
       Type *OriginalTy = I->getType();
@@ -3878,7 +3892,7 @@ void InnerLoopVectorizer::truncateToMinimalBitwidths() {
       I->replaceAllUsesWith(Res);
       cast<Instruction>(I)->eraseFromParent();
       Erased.insert(I);
-      I = Res;
+      VectorLoopValueMap.resetVectorValue(KV.first, Part, Res);
     }
   }
 
@@ -3887,15 +3901,15 @@ void InnerLoopVectorizer::truncateToMinimalBitwidths() {
     // If the value wasn't vectorized, we must maintain the original scalar
     // type. The absence of the value from VectorLoopValueMap indicates that it
     // wasn't vectorized.
-    if (!VectorLoopValueMap.hasVector(KV.first))
+    if (!VectorLoopValueMap.hasAnyVectorValue(KV.first))
       continue;
-    VectorParts &Parts = VectorLoopValueMap.getVector(KV.first);
-    for (Value *&I : Parts) {
+    for (unsigned Part = 0; Part < UF; ++Part) {
+      Value *I = getOrCreateVectorValue(KV.first, Part);
       ZExtInst *Inst = dyn_cast<ZExtInst>(I);
       if (Inst && Inst->use_empty()) {
         Value *NewI = Inst->getOperand(0);
         Inst->eraseFromParent();
-        I = NewI;
+        VectorLoopValueMap.resetVectorValue(KV.first, Part, NewI);
       }
     }
   }
@@ -4025,8 +4039,8 @@ void InnerLoopVectorizer::fixFirstOrderRecurrence(PHINode *Phi) {
 
   // We constructed a temporary phi node in the first phase of vectorization.
   // This phi node will eventually be deleted.
-  VectorParts &PhiParts = VectorLoopValueMap.getVector(Phi);
-  Builder.SetInsertPoint(cast<Instruction>(PhiParts[0]));
+  Builder.SetInsertPoint(
+      cast<Instruction>(VectorLoopValueMap.getVectorValue(Phi, 0)));
 
   // Create a phi node for the new recurrence. The current value will either be
   // the initial value inserted into a vector or loop-varying vector value.
@@ -4034,19 +4048,19 @@ void InnerLoopVectorizer::fixFirstOrderRecurrence(PHINode *Phi) {
   VecPhi->addIncoming(VectorInit, LoopVectorPreHeader);
 
   // Get the vectorized previous value.
-  auto &PreviousParts = getVectorValue(Previous);
+  Value *PreviousLastPart = getOrCreateVectorValue(Previous, UF - 1);
 
   // Set the insertion point after the previous value if it is an instruction.
   // Note that the previous value may have been constant-folded so it is not
   // guaranteed to be an instruction in the vector loop. Also, if the previous
   // value is a phi node, we should insert after all the phi nodes to avoid
   // breaking basic block verification.
-  if (LI->getLoopFor(LoopVectorBody)->isLoopInvariant(PreviousParts[UF - 1]) ||
-      isa<PHINode>(PreviousParts[UF - 1]))
+  if (LI->getLoopFor(LoopVectorBody)->isLoopInvariant(PreviousLastPart) ||
+      isa<PHINode>(PreviousLastPart))
     Builder.SetInsertPoint(&*LoopVectorBody->getFirstInsertionPt());
   else
     Builder.SetInsertPoint(
-        &*++BasicBlock::iterator(cast<Instruction>(PreviousParts[UF - 1])));
+        &*++BasicBlock::iterator(cast<Instruction>(PreviousLastPart)));
 
   // We will construct a vector for the recurrence by combining the values for
   // the current and previous iterations. This is the required shuffle mask.
@@ -4061,15 +4075,16 @@ void InnerLoopVectorizer::fixFirstOrderRecurrence(PHINode *Phi) {
 
   // Shuffle the current and previous vector and update the vector parts.
   for (unsigned Part = 0; Part < UF; ++Part) {
+    Value *PreviousPart = getOrCreateVectorValue(Previous, Part);
+    Value *PhiPart = VectorLoopValueMap.getVectorValue(Phi, Part);
     auto *Shuffle =
-        VF > 1
-            ? Builder.CreateShuffleVector(Incoming, PreviousParts[Part],
-                                          ConstantVector::get(ShuffleMask))
-            : Incoming;
-    PhiParts[Part]->replaceAllUsesWith(Shuffle);
-    cast<Instruction>(PhiParts[Part])->eraseFromParent();
-    PhiParts[Part] = Shuffle;
-    Incoming = PreviousParts[Part];
+        VF > 1 ? Builder.CreateShuffleVector(Incoming, PreviousPart,
+                                             ConstantVector::get(ShuffleMask))
+               : Incoming;
+    PhiPart->replaceAllUsesWith(Shuffle);
+    cast<Instruction>(PhiPart)->eraseFromParent();
+    VectorLoopValueMap.resetVectorValue(Phi, Part, Shuffle);
+    Incoming = PreviousPart;
   }
 
   // Fix the latch value of the new recurrence in the vector loop.
@@ -4097,7 +4112,7 @@ void InnerLoopVectorizer::fixFirstOrderRecurrence(PHINode *Phi) {
   // `Incoming`. This is analogous to the vectorized case above: extracting the
   // second last element when VF > 1.
   else if (UF > 1)
-    ExtractForPhiUsedOutsideLoop = PreviousParts[UF - 2];
+    ExtractForPhiUsedOutsideLoop = getOrCreateVectorValue(Previous, UF - 2);
 
   // Fix the initial value of the original recurrence in the scalar loop.
   Builder.SetInsertPoint(&*LoopScalarPreHeader->begin());
@@ -4148,8 +4163,7 @@ void InnerLoopVectorizer::fixReduction(PHINode *Phi) {
   Builder.SetInsertPoint(LoopBypassBlocks[1]->getTerminator());
 
   // This is the vector-clone of the value that leaves the loop.
-  const VectorParts &VectorExit = getVectorValue(LoopExitInst);
-  Type *VecTy = VectorExit[0]->getType();
+  Type *VecTy = getOrCreateVectorValue(LoopExitInst, 0)->getType();
 
   // Find the reduction identity variable. Zero for addition, or, xor,
   // one for multiplication, -1 for And.
@@ -4187,18 +4201,17 @@ void InnerLoopVectorizer::fixReduction(PHINode *Phi) {
 
   // Reductions do not have to start at zero. They can start with
   // any loop invariant values.
-  const VectorParts &VecRdxPhi = getVectorValue(Phi);
   BasicBlock *Latch = OrigLoop->getLoopLatch();
   Value *LoopVal = Phi->getIncomingValueForBlock(Latch);
-  const VectorParts &Val = getVectorValue(LoopVal);
-  for (unsigned part = 0; part < UF; ++part) {
+  for (unsigned Part = 0; Part < UF; ++Part) {
+    Value *VecRdxPhi = getOrCreateVectorValue(Phi, Part);
+    Value *Val = getOrCreateVectorValue(LoopVal, Part);
     // Make sure to add the reduction stat value only to the
     // first unroll part.
-    Value *StartVal = (part == 0) ? VectorStart : Identity;
-    cast<PHINode>(VecRdxPhi[part])
-      ->addIncoming(StartVal, LoopVectorPreHeader);
-    cast<PHINode>(VecRdxPhi[part])
-      ->addIncoming(Val[part], LI->getLoopFor(LoopVectorBody)->getLoopLatch());
+    Value *StartVal = (Part == 0) ? VectorStart : Identity;
+    cast<PHINode>(VecRdxPhi)->addIncoming(StartVal, LoopVectorPreHeader);
+    cast<PHINode>(VecRdxPhi)
+      ->addIncoming(Val, LI->getLoopFor(LoopVectorBody)->getLoopLatch());
   }
 
   // Before each round, move the insertion point right between
@@ -4207,7 +4220,6 @@ void InnerLoopVectorizer::fixReduction(PHINode *Phi) {
   // instructions.
   Builder.SetInsertPoint(&*LoopMiddleBlock->getFirstInsertionPt());
 
-  VectorParts &RdxParts = VectorLoopValueMap.getVector(LoopExitInst);
   setDebugLocFromInst(Builder, LoopExitInst);
 
   // If the vector reduction can be performed in a smaller type, we truncate
@@ -4216,37 +4228,42 @@ void InnerLoopVectorizer::fixReduction(PHINode *Phi) {
   if (VF > 1 && Phi->getType() != RdxDesc.getRecurrenceType()) {
     Type *RdxVecTy = VectorType::get(RdxDesc.getRecurrenceType(), VF);
     Builder.SetInsertPoint(LoopVectorBody->getTerminator());
-    for (unsigned part = 0; part < UF; ++part) {
-      Value *Trunc = Builder.CreateTrunc(RdxParts[part], RdxVecTy);
+    VectorParts RdxParts(UF);
+    for (unsigned Part = 0; Part < UF; ++Part) {
+      RdxParts[Part] = VectorLoopValueMap.getVectorValue(LoopExitInst, Part);
+      Value *Trunc = Builder.CreateTrunc(RdxParts[Part], RdxVecTy);
       Value *Extnd = RdxDesc.isSigned() ? Builder.CreateSExt(Trunc, VecTy)
-        : Builder.CreateZExt(Trunc, VecTy);
-      for (Value::user_iterator UI = RdxParts[part]->user_begin();
-           UI != RdxParts[part]->user_end();)
+                                        : Builder.CreateZExt(Trunc, VecTy);
+      for (Value::user_iterator UI = RdxParts[Part]->user_begin();
+           UI != RdxParts[Part]->user_end();)
         if (*UI != Trunc) {
-          (*UI++)->replaceUsesOfWith(RdxParts[part], Extnd);
-          RdxParts[part] = Extnd;
+          (*UI++)->replaceUsesOfWith(RdxParts[Part], Extnd);
+          RdxParts[Part] = Extnd;
         } else {
           ++UI;
         }
     }
     Builder.SetInsertPoint(&*LoopMiddleBlock->getFirstInsertionPt());
-    for (unsigned part = 0; part < UF; ++part)
-      RdxParts[part] = Builder.CreateTrunc(RdxParts[part], RdxVecTy);
+    for (unsigned Part = 0; Part < UF; ++Part) {
+      RdxParts[Part] = Builder.CreateTrunc(RdxParts[Part], RdxVecTy);
+      VectorLoopValueMap.resetVectorValue(LoopExitInst, Part, RdxParts[Part]);
+    }
   }
 
   // Reduce all of the unrolled parts into a single vector.
-  Value *ReducedPartRdx = RdxParts[0];
+  Value *ReducedPartRdx = VectorLoopValueMap.getVectorValue(LoopExitInst, 0);
   unsigned Op = RecurrenceDescriptor::getRecurrenceBinOp(RK);
   setDebugLocFromInst(Builder, ReducedPartRdx);
-  for (unsigned part = 1; part < UF; ++part) {
+  for (unsigned Part = 1; Part < UF; ++Part) {
+    Value *RdxPart = VectorLoopValueMap.getVectorValue(LoopExitInst, Part);
     if (Op != Instruction::ICmp && Op != Instruction::FCmp)
       // Floating point operations had to be 'fast' to enable the reduction.
       ReducedPartRdx = addFastMathFlag(
-          Builder.CreateBinOp((Instruction::BinaryOps)Op, RdxParts[part],
+          Builder.CreateBinOp((Instruction::BinaryOps)Op, RdxPart,
                               ReducedPartRdx, "bin.rdx"));
     else
       ReducedPartRdx = RecurrenceDescriptor::createMinMaxOp(
-          Builder, MinMaxKind, ReducedPartRdx, RdxParts[part]);
+          Builder, MinMaxKind, ReducedPartRdx, RdxPart);
   }
 
   if (VF > 1) {
@@ -4518,14 +4535,16 @@ InnerLoopVectorizer::createEdgeMask(BasicBlock *Src, BasicBlock *Dst) {
   assert(BI && "Unexpected terminator found");
 
   if (BI->isConditional()) {
-    VectorParts EdgeMask = getVectorValue(BI->getCondition());
 
-    if (BI->getSuccessor(0) != Dst)
-      for (unsigned part = 0; part < UF; ++part)
-        EdgeMask[part] = Builder.CreateNot(EdgeMask[part]);
+    VectorParts EdgeMask(UF);
+    for (unsigned Part = 0; Part < UF; ++Part) {
+      auto *EdgeMaskPart = getOrCreateVectorValue(BI->getCondition(), Part);
+      if (BI->getSuccessor(0) != Dst)
+        EdgeMaskPart = Builder.CreateNot(EdgeMaskPart);
 
-    for (unsigned part = 0; part < UF; ++part)
-      EdgeMask[part] = Builder.CreateAnd(EdgeMask[part], SrcMask[part]);
+      EdgeMaskPart = Builder.CreateAnd(EdgeMaskPart, SrcMask[Part]);
+      EdgeMask[Part] = EdgeMaskPart;
+    }
 
     EdgeMaskCache[Edge] = EdgeMask;
     return EdgeMask;
@@ -4544,23 +4563,27 @@ InnerLoopVectorizer::createBlockInMask(BasicBlock *BB) {
   if (BCEntryIt != BlockMaskCache.end())
     return BCEntryIt->second;
 
+  VectorParts BlockMask(UF);
+
   // Loop incoming mask is all-one.
   if (OrigLoop->getHeader() == BB) {
     Value *C = ConstantInt::get(IntegerType::getInt1Ty(BB->getContext()), 1);
-    const VectorParts &BlockMask = getVectorValue(C);
+    for (unsigned Part = 0; Part < UF; ++Part)
+      BlockMask[Part] = getOrCreateVectorValue(C, Part);
     BlockMaskCache[BB] = BlockMask;
     return BlockMask;
   }
 
   // This is the block mask. We OR all incoming edges, and with zero.
   Value *Zero = ConstantInt::get(IntegerType::getInt1Ty(BB->getContext()), 0);
-  VectorParts BlockMask = getVectorValue(Zero);
+  for (unsigned Part = 0; Part < UF; ++Part)
+    BlockMask[Part] = getOrCreateVectorValue(Zero, Part);
 
   // For each pred:
-  for (pred_iterator it = pred_begin(BB), e = pred_end(BB); it != e; ++it) {
-    VectorParts EM = createEdgeMask(*it, BB);
-    for (unsigned part = 0; part < UF; ++part)
-      BlockMask[part] = Builder.CreateOr(BlockMask[part], EM[part]);
+  for (pred_iterator It = pred_begin(BB), E = pred_end(BB); It != E; ++It) {
+    VectorParts EM = createEdgeMask(*It, BB);
+    for (unsigned Part = 0; Part < UF; ++Part)
+      BlockMask[Part] = Builder.CreateOr(BlockMask[Part], EM[Part]);
   }
 
   BlockMaskCache[BB] = BlockMask;
@@ -4575,15 +4598,14 @@ void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN, unsigned UF,
   // stage #1: We create a new vector PHI node with no incoming edges. We'll use
   // this value when we vectorize all of the instructions that use the PHI.
   if (Legal->isReductionVariable(P) || Legal->isFirstOrderRecurrence(P)) {
-    VectorParts Entry(UF);
-    for (unsigned part = 0; part < UF; ++part) {
+    for (unsigned Part = 0; Part < UF; ++Part) {
       // This is phase one of vectorizing PHIs.
       Type *VecTy =
           (VF == 1) ? PN->getType() : VectorType::get(PN->getType(), VF);
-      Entry[part] = PHINode::Create(
+      Value *EntryPart = PHINode::Create(
           VecTy, 2, "vec.phi", &*LoopVectorBody->getFirstInsertionPt());
+      VectorLoopValueMap.setVectorValue(P, Part, EntryPart);
     }
-    VectorLoopValueMap.initVector(P, Entry);
     return;
   }
 
@@ -4607,21 +4629,22 @@ void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN, unsigned UF,
     for (unsigned In = 0; In < NumIncoming; In++) {
       VectorParts Cond =
           createEdgeMask(P->getIncomingBlock(In), P->getParent());
-      const VectorParts &In0 = getVectorValue(P->getIncomingValue(In));
 
-      for (unsigned part = 0; part < UF; ++part) {
+      for (unsigned Part = 0; Part < UF; ++Part) {
+        Value *In0 = getOrCreateVectorValue(P->getIncomingValue(In), Part);
         // We might have single edge PHIs (blocks) - use an identity
         // 'select' for the first PHI operand.
         if (In == 0)
-          Entry[part] = Builder.CreateSelect(Cond[part], In0[part], In0[part]);
+          Entry[Part] = Builder.CreateSelect(Cond[Part], In0, In0);
         else
           // Select between the current value and the previous incoming edge
           // based on the incoming mask.
-          Entry[part] = Builder.CreateSelect(Cond[part], In0[part], Entry[part],
+          Entry[Part] = Builder.CreateSelect(Cond[Part], In0, Entry[Part],
                                              "predphi");
       }
     }
-    VectorLoopValueMap.initVector(P, Entry);
+    for (unsigned Part = 0; Part < UF; ++Part)
+      VectorLoopValueMap.setVectorValue(P, Part, Entry[Part]);
     return;
   }
 
@@ -4652,18 +4675,15 @@ void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN, unsigned UF,
     unsigned Lanes = Cost->isUniformAfterVectorization(P, VF) ? 1 : VF;
     // These are the scalar results. Notice that we don't generate vector GEPs
     // because scalar GEPs result in better code.
-    ScalarParts Entry(UF);
     for (unsigned Part = 0; Part < UF; ++Part) {
-      Entry[Part].resize(VF);
       for (unsigned Lane = 0; Lane < Lanes; ++Lane) {
         Constant *Idx = ConstantInt::get(PtrInd->getType(), Lane + Part * VF);
         Value *GlobalIdx = Builder.CreateAdd(PtrInd, Idx);
         Value *SclrGep = II.transform(Builder, GlobalIdx, PSE.getSE(), DL);
         SclrGep->setName("next.gep");
-        Entry[Part][Lane] = SclrGep;
+        VectorLoopValueMap.setScalarValue(P, Part, Lane, SclrGep);
       }
     }
-    VectorLoopValueMap.initScalar(P, Entry);
     return;
   }
   }
@@ -4713,7 +4733,6 @@ void InnerLoopVectorizer::vectorizeInstruction(Instruction &I) {
     // is vector-typed. Thus, to keep the representation compact, we only use
     // vector-typed operands for loop-varying values.
     auto *GEP = cast<GetElementPtrInst>(&I);
-    VectorParts Entry(UF);
 
     if (VF > 1 && OrigLoop->hasLoopInvariantOperands(GEP)) {
       // If we are vectorizing, but the GEP has only loop-invariant operands,
@@ -4729,8 +4748,11 @@ void InnerLoopVectorizer::vectorizeInstruction(Instruction &I) {
       //       collectLoopScalars() and teach getVectorValue() to broadcast
       //       the lane-zero scalar value.
       auto *Clone = Builder.Insert(GEP->clone());
-      for (unsigned Part = 0; Part < UF; ++Part)
-        Entry[Part] = Builder.CreateVectorSplat(VF, Clone);
+      for (unsigned Part = 0; Part < UF; ++Part) {
+        Value *EntryPart = Builder.CreateVectorSplat(VF, Clone);
+        VectorLoopValueMap.setVectorValue(&I, Part, EntryPart);
+        addMetadata(EntryPart, GEP);
+      }
     } else {
       // If the GEP has at least one loop-varying operand, we are sure to
       // produce a vector of pointers. But if we are only unrolling, we want
@@ -4743,9 +4765,10 @@ void InnerLoopVectorizer::vectorizeInstruction(Instruction &I) {
 
         // The pointer operand of the new GEP. If it's loop-invariant, we
         // won't broadcast it.
-        auto *Ptr = OrigLoop->isLoopInvariant(GEP->getPointerOperand())
-                        ? GEP->getPointerOperand()
-                        : getVectorValue(GEP->getPointerOperand())[Part];
+        auto *Ptr =
+            OrigLoop->isLoopInvariant(GEP->getPointerOperand())
+                ? GEP->getPointerOperand()
+                : getOrCreateVectorValue(GEP->getPointerOperand(), Part);
 
         // Collect all the indices for the new GEP. If any index is
         // loop-invariant, we won't broadcast it.
@@ -4754,7 +4777,7 @@ void InnerLoopVectorizer::vectorizeInstruction(Instruction &I) {
           if (OrigLoop->isLoopInvariant(U.get()))
             Indices.push_back(U.get());
           else
-            Indices.push_back(getVectorValue(U.get())[Part]);
+            Indices.push_back(getOrCreateVectorValue(U.get(), Part));
         }
 
         // Create the new GEP. Note that this GEP may be a scalar if VF == 1,
@@ -4764,12 +4787,11 @@ void InnerLoopVectorizer::vectorizeInstruction(Instruction &I) {
                            : Builder.CreateGEP(Ptr, Indices);
         assert((VF == 1 || NewGEP->getType()->isVectorTy()) &&
                "NewGEP is not a pointer vector");
-        Entry[Part] = NewGEP;
+        VectorLoopValueMap.setVectorValue(&I, Part, NewGEP);
+        addMetadata(NewGEP, GEP);
       }
     }
 
-    VectorLoopValueMap.initVector(&I, Entry);
-    addMetadata(Entry, GEP);
     break;
   }
   case Instruction::UDiv:
@@ -4800,22 +4822,20 @@ void InnerLoopVectorizer::vectorizeInstruction(Instruction &I) {
     // Just widen binops.
     auto *BinOp = cast<BinaryOperator>(&I);
     setDebugLocFromInst(Builder, BinOp);
-    const VectorParts &A = getVectorValue(BinOp->getOperand(0));
-    const VectorParts &B = getVectorValue(BinOp->getOperand(1));
 
-    // Use this vector value for all users of the original instruction.
-    VectorParts Entry(UF);
     for (unsigned Part = 0; Part < UF; ++Part) {
-      Value *V = Builder.CreateBinOp(BinOp->getOpcode(), A[Part], B[Part]);
+      Value *A = getOrCreateVectorValue(BinOp->getOperand(0), Part);
+      Value *B = getOrCreateVectorValue(BinOp->getOperand(1), Part);
+      Value *V = Builder.CreateBinOp(BinOp->getOpcode(), A, B);
 
       if (BinaryOperator *VecOp = dyn_cast<BinaryOperator>(V))
         VecOp->copyIRFlags(BinOp);
 
-      Entry[Part] = V;
+      // Use this vector value for all users of the original instruction.
+      VectorLoopValueMap.setVectorValue(&I, Part, V);
+      addMetadata(V, BinOp);
     }
 
-    VectorLoopValueMap.initVector(&I, Entry);
-    addMetadata(Entry, BinOp);
     break;
   }
   case Instruction::Select: {
@@ -4831,20 +4851,19 @@ void InnerLoopVectorizer::vectorizeInstruction(Instruction &I) {
     // loop. This means that we can't just use the original 'cond' value.
     // We have to take the 'vectorized' value and pick the first lane.
     // Instcombine will make this a no-op.
-    const VectorParts &Cond = getVectorValue(I.getOperand(0));
-    const VectorParts &Op0 = getVectorValue(I.getOperand(1));
-    const VectorParts &Op1 = getVectorValue(I.getOperand(2));
 
-    auto *ScalarCond = getScalarValue(I.getOperand(0), 0, 0);
+    auto *ScalarCond = getOrCreateScalarValue(I.getOperand(0), 0, 0);
 
-    VectorParts Entry(UF);
     for (unsigned Part = 0; Part < UF; ++Part) {
-      Entry[Part] = Builder.CreateSelect(
-          InvariantCond ? ScalarCond : Cond[Part], Op0[Part], Op1[Part]);
+      Value *Cond = getOrCreateVectorValue(I.getOperand(0), Part);
+      Value *Op0 = getOrCreateVectorValue(I.getOperand(1), Part);
+      Value *Op1 = getOrCreateVectorValue(I.getOperand(2), Part);
+      Value *Sel =
+          Builder.CreateSelect(InvariantCond ? ScalarCond : Cond, Op0, Op1);
+      VectorLoopValueMap.setVectorValue(&I, Part, Sel);
+      addMetadata(Sel, &I);
     }
 
-    VectorLoopValueMap.initVector(&I, Entry);
-    addMetadata(Entry, &I);
     break;
   }
 
@@ -4854,22 +4873,20 @@ void InnerLoopVectorizer::vectorizeInstruction(Instruction &I) {
     bool FCmp = (I.getOpcode() == Instruction::FCmp);
     auto *Cmp = dyn_cast<CmpInst>(&I);
     setDebugLocFromInst(Builder, Cmp);
-    const VectorParts &A = getVectorValue(Cmp->getOperand(0));
-    const VectorParts &B = getVectorValue(Cmp->getOperand(1));
-    VectorParts Entry(UF);
     for (unsigned Part = 0; Part < UF; ++Part) {
+      Value *A = getOrCreateVectorValue(Cmp->getOperand(0), Part);
+      Value *B = getOrCreateVectorValue(Cmp->getOperand(1), Part);
       Value *C = nullptr;
       if (FCmp) {
-        C = Builder.CreateFCmp(Cmp->getPredicate(), A[Part], B[Part]);
+        C = Builder.CreateFCmp(Cmp->getPredicate(), A, B);
         cast<FCmpInst>(C)->copyFastMathFlags(Cmp);
       } else {
-        C = Builder.CreateICmp(Cmp->getPredicate(), A[Part], B[Part]);
+        C = Builder.CreateICmp(Cmp->getPredicate(), A, B);
       }
-      Entry[Part] = C;
+      VectorLoopValueMap.setVectorValue(&I, Part, C);
+      addMetadata(C, &I);
     }
 
-    VectorLoopValueMap.initVector(&I, Entry);
-    addMetadata(Entry, &I);
     break;
   }
 
@@ -4906,12 +4923,12 @@ void InnerLoopVectorizer::vectorizeInstruction(Instruction &I) {
     Type *DestTy =
         (VF == 1) ? CI->getType() : VectorType::get(CI->getType(), VF);
 
-    const VectorParts &A = getVectorValue(CI->getOperand(0));
-    VectorParts Entry(UF);
-    for (unsigned Part = 0; Part < UF; ++Part)
-      Entry[Part] = Builder.CreateCast(CI->getOpcode(), A[Part], DestTy);
-    VectorLoopValueMap.initVector(&I, Entry);
-    addMetadata(Entry, &I);
+    for (unsigned Part = 0; Part < UF; ++Part) {
+      Value *A = getOrCreateVectorValue(CI->getOperand(0), Part);
+      Value *Cast = Builder.CreateCast(CI->getOpcode(), A, DestTy);
+      VectorLoopValueMap.setVectorValue(&I, Part, Cast);
+      addMetadata(Cast, &I);
+    }
     break;
   }
 
@@ -4949,17 +4966,14 @@ void InnerLoopVectorizer::vectorizeInstruction(Instruction &I) {
       break;
     }
 
-    VectorParts Entry(UF);
     for (unsigned Part = 0; Part < UF; ++Part) {
       SmallVector<Value *, 4> Args;
       for (unsigned i = 0, ie = CI->getNumArgOperands(); i != ie; ++i) {
         Value *Arg = CI->getArgOperand(i);
         // Some intrinsics have a scalar argument - don't replace it with a
         // vector.
-        if (!UseVectorIntrinsic || !hasVectorInstrinsicScalarOpd(ID, i)) {
-          const VectorParts &VectorArg = getVectorValue(CI->getArgOperand(i));
-          Arg = VectorArg[Part];
-        }
+        if (!UseVectorIntrinsic || !hasVectorInstrinsicScalarOpd(ID, i))
+          Arg = getOrCreateVectorValue(CI->getArgOperand(i), Part);
         Args.push_back(Arg);
       }
 
@@ -4992,11 +5006,10 @@ void InnerLoopVectorizer::vectorizeInstruction(Instruction &I) {
       if (isa<FPMathOperator>(V))
         V->copyFastMathFlags(CI);
 
-      Entry[Part] = V;
+      VectorLoopValueMap.setVectorValue(&I, Part, V);
+      addMetadata(V, &I);
     }
 
-    VectorLoopValueMap.initVector(&I, Entry);
-    addMetadata(Entry, &I);
     break;
   }
 

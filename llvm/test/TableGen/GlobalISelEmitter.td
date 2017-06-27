@@ -10,6 +10,8 @@ def MyTarget : Target { let InstructionSet = MyTargetISA; }
 def R0 : Register<"r0"> { let Namespace = "MyTarget"; }
 def GPR32 : RegisterClass<"MyTarget", [i32], 32, (add R0)>;
 def GPR32Op : RegisterOperand<GPR32>;
+def F0 : Register<"f0"> { let Namespace = "MyTarget"; }
+def FPR32 : RegisterClass<"MyTarget", [f32], 32, (add F0)>;
 
 class I<dag OOps, dag IOps, list<dag> Pat>
   : Instruction {
@@ -461,6 +463,30 @@ def XORManyDefaults : I<(outs GPR32:$dst), (ins m1Z:$src3, Z:$src2, GPR32:$src1)
 
 def ORN : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2), []>;
 def : Pat<(not GPR32:$Wm), (ORN R0, GPR32:$Wm)>;
+
+//===- Test a COPY_TO_REGCLASS --------------------------------------------===//
+//
+
+// CHECK-LABEL: if ([&]() {
+// CHECK-NEXT:    MachineInstr &MI0 = I;
+// CHECK-NEXT:    if (MI0.getNumOperands() < 2)
+// CHECK-NEXT:      return false;
+// CHECK-NEXT:    if ((MI0.getOpcode() == TargetOpcode::G_BITCAST) &&
+// CHECK-NEXT:        ((/* dst */ (MRI.getType(MI0.getOperand(0).getReg()) == (LLT::scalar(32))) &&
+// CHECK-NEXT:         ((&RBI.getRegBankFromRegClass(MyTarget::GPR32RegClass) == RBI.getRegBank(MI0.getOperand(0).getReg(), MRI, TRI))))) &&
+// CHECK-NEXT:        ((/* src1 */ (MRI.getType(MI0.getOperand(1).getReg()) == (LLT::scalar(32))) &&
+// CHECK-NEXT:         ((&RBI.getRegBankFromRegClass(MyTarget::FPR32RegClass) == RBI.getRegBank(MI0.getOperand(1).getReg(), MRI, TRI))))))
+// CHECK-NEXT:      // (bitconvert:i32 FPR32:f32:$src1) => (COPY_TO_REGCLASS:i32 FPR32:f32:$src1, GPR32:i32)
+// CHECK-NEXT:      I.setDesc(TII.get(TargetOpcode::COPY));
+// CHECK-NEXT:      MachineInstr &NewI = I;
+// CHECK-NEXT:      constrainOperandRegToRegClass(NewI, 0, MyTarget::GPR32RegClass, TII, TRI, RBI);
+// CHECK-NEXT:      return true;
+// CHECK-NEXT:    }
+// CHECK-NEXT:    return false;
+// CHECK-NEXT:  }()) { return true; }
+
+def : Pat<(i32 (bitconvert FPR32:$src1)),
+          (COPY_TO_REGCLASS FPR32:$src1, GPR32)>;
 
 //===- Test a simple pattern with just a leaf immediate. ------------------===//
 

@@ -100,7 +100,8 @@ def FeatureRAS : SubtargetFeature<"ras", "HasRAS", "true",
                 "Enable Reliability, Availability and Serviceability extensions">;
 def FeatureFPAO : SubtargetFeature<"fpao", "HasFPAO", "true",
                 "Enable fast computation of positive address offsets">;
-
+def FeatureFuseAES : SubtargetFeature<"fuse-aes", "HasFuseAES", "true",
+                                      "CPU fuses AES crypto operations">;
 
 // Cyclone has preferred instructions for zeroing VFP registers, which can
 // execute in 0 cycles.
