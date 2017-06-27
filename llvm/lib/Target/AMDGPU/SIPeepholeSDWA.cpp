@@ -627,10 +627,13 @@ bool SIPeepholeSDWA::isConvertibleToSDWA(const MachineInstr &MI,
         return false;
     }
 
-    if (!ST.hasSDWAClampVOPC() && TII->hasModifiersSet(MI, AMDGPU::OpName::clamp))
+    if (!ST.hasSDWAOutModsVOPC() &&
+        (TII->hasModifiersSet(MI, AMDGPU::OpName::clamp) ||
+         TII->hasModifiersSet(MI, AMDGPU::OpName::omod)))
       return false;
 
-  } else if (TII->getNamedOperand(MI, AMDGPU::OpName::sdst)) {
+  } else if (TII->getNamedOperand(MI, AMDGPU::OpName::sdst) ||
+             !TII->getNamedOperand(MI, AMDGPU::OpName::vdst)) {
     return false;
   }
 
@@ -649,25 +652,24 @@ bool SIPeepholeSDWA::convertToSDWA(MachineInstr &MI,
     SDWAOpcode = AMDGPU::getSDWAOp(AMDGPU::getVOPe32(MI.getOpcode()));
   assert(SDWAOpcode != -1);
 
-  // Copy dst, if it is present in original then should also be present in SDWA
-  MachineOperand *Dst = TII->getNamedOperand(MI, AMDGPU::OpName::vdst);
-  if (!Dst && !TII->isVOPC(MI))
-    return false;
-
   const MCInstrDesc &SDWADesc = TII->get(SDWAOpcode);
 
   // Create SDWA version of instruction MI and initialize its operands
   MachineInstrBuilder SDWAInst =
     BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), SDWADesc);
 
+  // Copy dst, if it is present in original then should also be present in SDWA
+  MachineOperand *Dst = TII->getNamedOperand(MI, AMDGPU::OpName::vdst);
   if (Dst) {
     assert(AMDGPU::getNamedOperandIdx(SDWAOpcode, AMDGPU::OpName::vdst) != -1);
     SDWAInst.add(*Dst);
-  } else {
-    Dst = TII->getNamedOperand(MI, AMDGPU::OpName::sdst);
+  } else if ((Dst = TII->getNamedOperand(MI, AMDGPU::OpName::sdst))) {
     assert(Dst &&
            AMDGPU::getNamedOperandIdx(SDWAOpcode, AMDGPU::OpName::sdst) != -1);
     SDWAInst.add(*Dst);
+  } else {
+    assert(AMDGPU::getNamedOperandIdx(SDWAOpcode, AMDGPU::OpName::sdst) != -1);
+    SDWAInst.addReg(AMDGPU::VCC, RegState::Define);
   }
 
   // Copy src0, initialize src0_modifiers. All sdwa instructions has src0 and
@@ -714,20 +716,22 @@ bool SIPeepholeSDWA::convertToSDWA(MachineInstr &MI,
   }
 
   // Copy omod if present, initialize otherwise if needed
-  MachineOperand *OMod = TII->getNamedOperand(MI, AMDGPU::OpName::omod);
-  if (OMod) {
-    assert(AMDGPU::getNamedOperandIdx(SDWAOpcode, AMDGPU::OpName::omod) != -1);
-    SDWAInst.add(*OMod);
-  } else if (AMDGPU::getNamedOperandIdx(SDWAOpcode, AMDGPU::OpName::omod) != -1) {
-    SDWAInst.addImm(0);
+  if (AMDGPU::getNamedOperandIdx(SDWAOpcode, AMDGPU::OpName::omod) != -1) {
+    MachineOperand *OMod = TII->getNamedOperand(MI, AMDGPU::OpName::omod);
+    if (OMod) {
+      SDWAInst.add(*OMod);
+    } else {
+      SDWAInst.addImm(0);
+    }
   }
 
-  // Initialize dst_sel and dst_unused if present
-  if (Dst) {
-    assert(
-      AMDGPU::getNamedOperandIdx(SDWAOpcode, AMDGPU::OpName::dst_sel) != -1 &&
-      AMDGPU::getNamedOperandIdx(SDWAOpcode, AMDGPU::OpName::dst_unused) != -1);
+  // Initialize dst_sel if present
+  if (AMDGPU::getNamedOperandIdx(SDWAOpcode, AMDGPU::OpName::dst_sel) != -1) {
     SDWAInst.addImm(AMDGPU::SDWA::SdwaSel::DWORD);
+  }
+
+  // Initialize dst_unused if present
+  if (AMDGPU::getNamedOperandIdx(SDWAOpcode, AMDGPU::OpName::dst_unused) != -1) {
     SDWAInst.addImm(AMDGPU::SDWA::DstUnused::UNUSED_PAD);
   }
 

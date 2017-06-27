@@ -399,10 +399,7 @@ struct specific_intval {
       if (const auto *C = dyn_cast<Constant>(V))
         CI = dyn_cast_or_null<ConstantInt>(C->getSplatValue());
 
-    if (CI && CI->getBitWidth() <= 64)
-      return CI->getZExtValue() == Val;
-
-    return false;
+    return CI && CI->getValue() == Val;
   }
 };
 

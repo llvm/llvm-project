@@ -262,8 +262,8 @@ def FeatureSDWAMac : SubtargetFeature<"sdwa-mav",
   "Support v_mac_f32/f16 with SDWA (Sub-DWORD Addressing) extension"
 >;
 
-def FeatureSDWAClampVOPC : SubtargetFeature<"sdwa-clamp-vopc",
-  "HasSDWAClampVOPC",
+def FeatureSDWAOutModsVOPC : SubtargetFeature<"sdwa-out-mods-vopc",
+  "HasSDWAOutModsVOPC",
   "true",
   "Support clamp for VOPC with SDWA (Sub-DWORD Addressing) extension"
 >;
@@ -452,7 +452,7 @@ def FeatureVolcanicIslands : SubtargetFeatureGeneration<"VOLCANIC_ISLANDS",
    FeatureGCN3Encoding, FeatureCIInsts, Feature16BitInsts,
    FeatureSMemRealTime, FeatureVGPRIndexMode, FeatureMovrel,
    FeatureScalarStores, FeatureInv2PiInlineImm,
-   FeatureSDWA, FeatureSDWAClampVOPC, FeatureSDWAMac, FeatureDPP
+   FeatureSDWA, FeatureSDWAOutModsVOPC, FeatureSDWAMac, FeatureDPP
   ]
 >;
 

@@ -153,7 +153,7 @@ protected:
   bool HasSDWAScalar;
   bool HasSDWASdst;
   bool HasSDWAMac;
-  bool HasSDWAClampVOPC;
+  bool HasSDWAOutModsVOPC;
   bool HasDPP;
   bool FlatAddressSpace;
   bool FlatInstOffsets;
@@ -452,8 +452,8 @@ public:
     return HasSDWAMac;
   }
 
-  bool hasSDWAClampVOPC() const {
-    return HasSDWAClampVOPC;
+  bool hasSDWAOutModsVOPC() const {
+    return HasSDWAOutModsVOPC;
   }
 
   /// \brief Returns the offset in bytes from the start of the input buffer
