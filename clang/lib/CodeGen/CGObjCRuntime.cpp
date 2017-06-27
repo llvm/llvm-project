@@ -26,61 +26,27 @@
 using namespace clang;
 using namespace CodeGen;
 
-static uint64_t LookupFieldBitOffset(CodeGen::CodeGenModule &CGM,
-                                     const ObjCInterfaceDecl *OID,
-                                     const ObjCImplementationDecl *ID,
-                                     const ObjCIvarDecl *Ivar) {
-  const ObjCInterfaceDecl *Container = Ivar->getContainingInterface();
-
-  // FIXME: We should eliminate the need to have ObjCImplementationDecl passed
-  // in here; it should never be necessary because that should be the lexical
-  // decl context for the ivar.
-
-  // If we know have an implementation (and the ivar is in it) then
-  // look up in the implementation layout.
-  const ASTRecordLayout *RL;
-  if (ID && declaresSameEntity(ID->getClassInterface(), Container))
-    RL = &CGM.getContext().getASTObjCImplementationLayout(ID);
-  else
-    RL = &CGM.getContext().getASTObjCInterfaceLayout(Container);
-
-  // Compute field index.
-  //
-  // FIXME: The index here is closely tied to how ASTContext::getObjCLayout is
-  // implemented. This should be fixed to get the information from the layout
-  // directly.
-  unsigned Index = 0;
-
-  for (const ObjCIvarDecl *IVD = Container->all_declared_ivar_begin(); 
-       IVD; IVD = IVD->getNextIvar()) {
-    if (Ivar == IVD)
-      break;
-    ++Index;
-  }
-  assert(Index < RL->getFieldCount() && "Ivar is not inside record layout!");
-
-  return RL->getFieldOffset(Index);
-}
-
 uint64_t CGObjCRuntime::ComputeIvarBaseOffset(CodeGen::CodeGenModule &CGM,
                                               const ObjCInterfaceDecl *OID,
                                               const ObjCIvarDecl *Ivar) {
-  return LookupFieldBitOffset(CGM, OID, nullptr, Ivar) /
-    CGM.getContext().getCharWidth();
+  return CGM.getContext().lookupFieldBitOffset(OID, nullptr, Ivar) /
+         CGM.getContext().getCharWidth();
 }
 
 uint64_t CGObjCRuntime::ComputeIvarBaseOffset(CodeGen::CodeGenModule &CGM,
                                               const ObjCImplementationDecl *OID,
                                               const ObjCIvarDecl *Ivar) {
-  return LookupFieldBitOffset(CGM, OID->getClassInterface(), OID, Ivar) / 
-    CGM.getContext().getCharWidth();
+  return CGM.getContext().lookupFieldBitOffset(OID->getClassInterface(), OID,
+                                               Ivar) /
+         CGM.getContext().getCharWidth();
 }
 
 unsigned CGObjCRuntime::ComputeBitfieldBitOffset(
     CodeGen::CodeGenModule &CGM,
     const ObjCInterfaceDecl *ID,
     const ObjCIvarDecl *Ivar) {
-  return LookupFieldBitOffset(CGM, ID, ID->getImplementation(), Ivar);
+  return CGM.getContext().lookupFieldBitOffset(ID, ID->getImplementation(),
+                                               Ivar);
 }
 
 LValue CGObjCRuntime::EmitValueForIvarAtOffset(CodeGen::CodeGenFunction &CGF,
@@ -119,7 +85,8 @@ LValue CGObjCRuntime::EmitValueForIvarAtOffset(CodeGen::CodeGenFunction &CGF,
   // Note, there is a subtle invariant here: we can only call this routine on
   // non-synthesized ivars but we may be called for synthesized ivars.  However,
   // a synthesized ivar can never be a bit-field, so this is safe.
-  uint64_t FieldBitOffset = LookupFieldBitOffset(CGF.CGM, OID, nullptr, Ivar);
+  uint64_t FieldBitOffset =
+      CGF.CGM.getContext().lookupFieldBitOffset(OID, nullptr, Ivar);
   uint64_t BitOffset = FieldBitOffset % CGF.CGM.getContext().getCharWidth();
   uint64_t AlignmentBits = CGF.CGM.getTarget().getCharAlign();
   uint64_t BitFieldSize = Ivar->getBitWidthValue(CGF.getContext());

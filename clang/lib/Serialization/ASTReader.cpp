@@ -3455,12 +3455,6 @@ ASTReader::ReadModuleMapFileBlock(RecordData &Record, ModuleFile &F,
   unsigned Idx = 0;
   F.ModuleMapPath = ReadPath(F, Record, Idx);
 
-  if (F.Kind == MK_ExplicitModule || F.Kind == MK_PrebuiltModule) {
-    // For an explicitly-loaded module, we don't care whether the original
-    // module map file exists or matches.
-    return Success;
-  }
-
   // Try to resolve ModuleName in the current header search context and
   // verify that it is found in the same module map file as we saved. If the
   // top-level AST file is a main file, skip this check because there is no

@@ -436,29 +436,30 @@ TEST(SanitizerCommon, LargeMmapAllocatorMapUnmapCallback) {
   EXPECT_EQ(TestMapUnmapCallback::unmap_count, 1);
 }
 
-template<class Allocator>
-void FailInAssertionOnOOM() {
-  Allocator a;
-  a.Init(kReleaseToOSIntervalNever);
-  SizeClassAllocatorLocalCache<Allocator> cache;
-  memset(&cache, 0, sizeof(cache));
-  cache.Init(0);
-  AllocatorStats stats;
-  stats.Init();
-  const size_t kNumChunks = 128;
-  uint32_t chunks[kNumChunks];
-  for (int i = 0; i < 1000000; i++) {
-    a.GetFromAllocator(&stats, 52, chunks, kNumChunks);
-  }
-
-  a.TestOnlyUnmap();
-}
-
 // Don't test OOM conditions on Win64 because it causes other tests on the same
 // machine to OOM.
 #if SANITIZER_CAN_USE_ALLOCATOR64 && !SANITIZER_WINDOWS64 && !SANITIZER_ANDROID
 TEST(SanitizerCommon, SizeClassAllocator64Overflow) {
-  EXPECT_DEATH(FailInAssertionOnOOM<Allocator64>(), "Out of memory");
+  Allocator64 a;
+  a.Init(kReleaseToOSIntervalNever);
+  SizeClassAllocatorLocalCache<Allocator64> cache;
+  memset(&cache, 0, sizeof(cache));
+  cache.Init(0);
+  AllocatorStats stats;
+  stats.Init();
+
+  const size_t kNumChunks = 128;
+  uint32_t chunks[kNumChunks];
+  bool allocation_failed = false;
+  for (int i = 0; i < 1000000; i++) {
+    if (!a.GetFromAllocator(&stats, 52, chunks, kNumChunks)) {
+      allocation_failed = true;
+      break;
+    }
+  }
+  EXPECT_EQ(allocation_failed, true);
+
+  a.TestOnlyUnmap();
 }
 #endif
 
@@ -970,9 +971,9 @@ TEST(SanitizerCommon, SizeClassAllocator64PopulateFreeListOOM) {
   const uptr kAllocationSize = SpecialSizeClassMap::Size(kClassID);
   ASSERT_LT(2 * kAllocationSize, kRegionSize);
   ASSERT_GT(3 * kAllocationSize, kRegionSize);
-  cache.Allocate(a, kClassID);
-  EXPECT_DEATH(cache.Allocate(a, kClassID) && cache.Allocate(a, kClassID),
-               "The process has exhausted");
+  EXPECT_NE(cache.Allocate(a, kClassID), nullptr);
+  EXPECT_NE(cache.Allocate(a, kClassID), nullptr);
+  EXPECT_EQ(cache.Allocate(a, kClassID), nullptr);
 
   const uptr Class2 = 100;
   const uptr Size2 = SpecialSizeClassMap::Size(Class2);
@@ -980,11 +981,12 @@ TEST(SanitizerCommon, SizeClassAllocator64PopulateFreeListOOM) {
   char *p[7];
   for (int i = 0; i < 7; i++) {
     p[i] = (char*)cache.Allocate(a, Class2);
+    EXPECT_NE(p[i], nullptr);
     fprintf(stderr, "p[%d] %p s = %lx\n", i, (void*)p[i], Size2);
     p[i][Size2 - 1] = 42;
     if (i) ASSERT_LT(p[i - 1], p[i]);
   }
-  EXPECT_DEATH(cache.Allocate(a, Class2), "The process has exhausted");
+  EXPECT_EQ(cache.Allocate(a, Class2), nullptr);
   cache.Deallocate(a, Class2, p[0]);
   cache.Drain(a);
   ASSERT_EQ(p[6][Size2 - 1], 42);

@@ -7,7 +7,7 @@ target triple = "i386-apple-darwin"
 define void @test1(float* nocapture %arg, i32 %arg1) nounwind {
 ; CHECK-LABEL: @test1(
 ; CHECK: preheader
-; CHECK: insertelement <4 x double> zeroinitializer, double %tmp, i32 0
+; CHECK: insertelement <2 x double> zeroinitializer, double %tmp, i32 0
 ; CHECK: vector.memcheck
 
 bb:

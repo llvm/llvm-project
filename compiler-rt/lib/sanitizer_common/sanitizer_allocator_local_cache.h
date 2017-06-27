@@ -46,8 +46,10 @@ struct SizeClassAllocator64LocalCache {
     CHECK_NE(class_id, 0UL);
     CHECK_LT(class_id, kNumClasses);
     PerClass *c = &per_class_[class_id];
-    if (UNLIKELY(c->count == 0))
-      Refill(c, allocator, class_id);
+    if (UNLIKELY(c->count == 0)) {
+      if (UNLIKELY(!Refill(c, allocator, class_id)))
+        return nullptr;
+    }
     stats_.Add(AllocatorStatAllocated, c->class_size);
     CHECK_GT(c->count, 0);
     CompactPtrT chunk = c->chunks[--c->count];
@@ -101,13 +103,15 @@ struct SizeClassAllocator64LocalCache {
     }
   }
 
-  NOINLINE void Refill(PerClass *c, SizeClassAllocator *allocator,
+  NOINLINE bool Refill(PerClass *c, SizeClassAllocator *allocator,
                        uptr class_id) {
     InitCache();
     uptr num_requested_chunks = c->max_count / 2;
-    allocator->GetFromAllocator(&stats_, class_id, c->chunks,
-                                num_requested_chunks);
+    if (UNLIKELY(!allocator->GetFromAllocator(&stats_, class_id, c->chunks,
+                                              num_requested_chunks)))
+      return false;
     c->count = num_requested_chunks;
+    return true;
   }
 
   NOINLINE void Drain(PerClass *c, SizeClassAllocator *allocator, uptr class_id,

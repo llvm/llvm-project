@@ -111,6 +111,86 @@ define i8 @i8_select_neg1_or_0_commuted_as_math(i8 %x) {
   ret i8 %add
 }
 
+; (X <u Y) ? -1 : 0  --> cmp, sbb
+
+define i32 @ult_select_neg1_or_0(i32 %x, i32 %y) nounwind {
+; CHECK-LABEL: ult_select_neg1_or_0:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    cmpl %esi, %edi
+; CHECK-NEXT:    sbbl %eax, %eax
+; CHECK-NEXT:    retq
+  %cmp = icmp ult i32 %x, %y
+  %ext = sext i1 %cmp to i32
+  ret i32 %ext
+}
+
+; Swap the predicate and compare operands:
+; (Y >u X) ? -1 : 0  --> cmp, sbb
+
+define i32 @ugt_select_neg1_or_0(i32 %x, i32 %y) nounwind {
+; CHECK-LABEL: ugt_select_neg1_or_0:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    xorl %ecx, %ecx
+; CHECK-NEXT:    cmpl %edi, %esi
+; CHECK-NEXT:    movl $-1, %eax
+; CHECK-NEXT:    cmovbel %ecx, %eax
+; CHECK-NEXT:    retq
+  %cmp = icmp ugt i32 %y, %x
+  %ext = sext i1 %cmp to i32
+  ret i32 %ext
+}
+
+; Invert the predicate and effectively swap the select operands:
+; (X >=u Y) ? 0 : -1 --> (X <u Y) ? -1 : 0 --> cmp, sbb
+
+define i32 @uge_select_0_or_neg1(i32 %x, i32 %y) nounwind {
+; CHECK-LABEL: uge_select_0_or_neg1:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    cmpl %esi, %edi
+; CHECK-NEXT:    setae %al
+; CHECK-NEXT:    decl %eax
+; CHECK-NEXT:    retq
+  %cmp = icmp uge i32 %x, %y
+  %ext = zext i1 %cmp to i32
+  %add = add i32 %ext, -1
+  ret i32 %add
+}
+
+; Swap the predicate and compare operands:
+; (Y <=u X) ? 0 : -1 --> (X <u Y) ? -1 : 0 --> cmp, sbb
+
+define i32 @ule_select_0_or_neg1(i32 %x, i32 %y) nounwind {
+; CHECK-LABEL: ule_select_0_or_neg1:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    cmpl %edi, %esi
+; CHECK-NEXT:    setbe %al
+; CHECK-NEXT:    decl %eax
+; CHECK-NEXT:    retq
+  %cmp = icmp ule i32 %y, %x
+  %ext = zext i1 %cmp to i32
+  %add = add i32 %ext, -1
+  ret i32 %add
+}
+
+; Verify that subtract with constant is the same thing.
+; (X >=u Y) ? 0 : -1 --> (X <u Y) ? -1 : 0 --> cmp, sbb
+
+define i32 @uge_select_0_or_neg1_sub(i32 %x, i32 %y) nounwind {
+; CHECK-LABEL: uge_select_0_or_neg1_sub:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    cmpl %esi, %edi
+; CHECK-NEXT:    setae %al
+; CHECK-NEXT:    decl %eax
+; CHECK-NEXT:    retq
+  %cmp = icmp uge i32 %x, %y
+  %ext = zext i1 %cmp to i32
+  %sub = sub i32 %ext, 1
+  ret i32 %sub
+}
+
 ; Make sure we're creating nodes with the right value types. This would crash.
 ; https://bugs.llvm.org/show_bug.cgi?id=33560
 

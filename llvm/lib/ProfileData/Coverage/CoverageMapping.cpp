@@ -54,26 +54,26 @@ Counter CounterExpressionBuilder::get(const CounterExpression &E) {
   return Counter::getExpression(I);
 }
 
-void CounterExpressionBuilder::extractTerms(
-    Counter C, int Sign, SmallVectorImpl<std::pair<unsigned, int>> &Terms) {
+void CounterExpressionBuilder::extractTerms(Counter C, int Factor,
+                                            SmallVectorImpl<Term> &Terms) {
   switch (C.getKind()) {
   case Counter::Zero:
     break;
   case Counter::CounterValueReference:
-    Terms.push_back(std::make_pair(C.getCounterID(), Sign));
+    Terms.emplace_back(C.getCounterID(), Factor);
     break;
   case Counter::Expression:
     const auto &E = Expressions[C.getExpressionID()];
-    extractTerms(E.LHS, Sign, Terms);
-    extractTerms(E.RHS, E.Kind == CounterExpression::Subtract ? -Sign : Sign,
-                 Terms);
+    extractTerms(E.LHS, Factor, Terms);
+    extractTerms(
+        E.RHS, E.Kind == CounterExpression::Subtract ? -Factor : Factor, Terms);
     break;
   }
 }
 
 Counter CounterExpressionBuilder::simplify(Counter ExpressionTree) {
   // Gather constant terms.
-  SmallVector<std::pair<unsigned, int>, 32> Terms;
+  SmallVector<Term, 32> Terms;
   extractTerms(ExpressionTree, +1, Terms);
 
   // If there are no terms, this is just a zero. The algorithm below assumes at
@@ -82,17 +82,15 @@ Counter CounterExpressionBuilder::simplify(Counter ExpressionTree) {
     return Counter::getZero();
 
   // Group the terms by counter ID.
-  std::sort(Terms.begin(), Terms.end(),
-            [](const std::pair<unsigned, int> &LHS,
-               const std::pair<unsigned, int> &RHS) {
-    return LHS.first < RHS.first;
+  std::sort(Terms.begin(), Terms.end(), [](const Term &LHS, const Term &RHS) {
+    return LHS.CounterID < RHS.CounterID;
   });
 
   // Combine terms by counter ID to eliminate counters that sum to zero.
   auto Prev = Terms.begin();
   for (auto I = Prev + 1, E = Terms.end(); I != E; ++I) {
-    if (I->first == Prev->first) {
-      Prev->second += I->second;
+    if (I->CounterID == Prev->CounterID) {
+      Prev->Factor += I->Factor;
       continue;
     }
     ++Prev;
@@ -103,24 +101,24 @@ Counter CounterExpressionBuilder::simplify(Counter ExpressionTree) {
   Counter C;
   // Create additions. We do this before subtractions to avoid constructs like
   // ((0 - X) + Y), as opposed to (Y - X).
-  for (auto Term : Terms) {
-    if (Term.second <= 0)
+  for (auto T : Terms) {
+    if (T.Factor <= 0)
       continue;
-    for (int I = 0; I < Term.second; ++I)
+    for (int I = 0; I < T.Factor; ++I)
       if (C.isZero())
-        C = Counter::getCounter(Term.first);
+        C = Counter::getCounter(T.CounterID);
       else
         C = get(CounterExpression(CounterExpression::Add, C,
-                                  Counter::getCounter(Term.first)));
+                                  Counter::getCounter(T.CounterID)));
   }
 
   // Create subtractions.
-  for (auto Term : Terms) {
-    if (Term.second >= 0)
+  for (auto T : Terms) {
+    if (T.Factor >= 0)
       continue;
-    for (int I = 0; I < -Term.second; ++I)
+    for (int I = 0; I < -T.Factor; ++I)
       C = get(CounterExpression(CounterExpression::Subtract, C,
-                                Counter::getCounter(Term.first)));
+                                Counter::getCounter(T.CounterID)));
   }
   return C;
 }

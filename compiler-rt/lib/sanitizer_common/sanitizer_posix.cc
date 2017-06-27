@@ -198,7 +198,7 @@ void *MmapNoReserveOrDie(uptr size, const char *mem_type) {
   return (void *)p;
 }
 
-void *MmapFixedOrDie(uptr fixed_addr, uptr size) {
+void *MmapFixedImpl(uptr fixed_addr, uptr size, bool tolerate_enomem) {
   uptr PageSize = GetPageSizeCached();
   uptr p = internal_mmap((void*)(fixed_addr & ~(PageSize - 1)),
       RoundUpTo(size, PageSize),
@@ -207,6 +207,8 @@ void *MmapFixedOrDie(uptr fixed_addr, uptr size) {
       -1, 0);
   int reserrno;
   if (internal_iserror(p, &reserrno)) {
+    if (tolerate_enomem && reserrno == ENOMEM)
+      return nullptr;
     char mem_type[30];
     internal_snprintf(mem_type, sizeof(mem_type), "memory at address 0x%zx",
                       fixed_addr);
@@ -214,6 +216,14 @@ void *MmapFixedOrDie(uptr fixed_addr, uptr size) {
   }
   IncreaseTotalMmap(size);
   return (void *)p;
+}
+
+void *MmapFixedOrDie(uptr fixed_addr, uptr size) {
+  return MmapFixedImpl(fixed_addr, size, false /*tolerate_enomem*/);
+}
+
+void *MmapFixedOrDieOnFatalError(uptr fixed_addr, uptr size) {
+  return MmapFixedImpl(fixed_addr, size, true /*tolerate_enomem*/);
 }
 
 bool MprotectNoAccess(uptr addr, uptr size) {

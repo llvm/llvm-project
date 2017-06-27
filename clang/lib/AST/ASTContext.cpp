@@ -5990,9 +5990,19 @@ static void EncodeBitField(const ASTContext *Ctx, std::string& S,
   // compatibility with GCC, although providing it breaks anything that
   // actually uses runtime introspection and wants to work on both runtimes...
   if (Ctx->getLangOpts().ObjCRuntime.isGNUFamily()) {
-    const RecordDecl *RD = FD->getParent();
-    const ASTRecordLayout &RL = Ctx->getASTRecordLayout(RD);
-    S += llvm::utostr(RL.getFieldOffset(FD->getFieldIndex()));
+    uint64_t Offset;
+
+    if (const auto *IVD = dyn_cast<ObjCIvarDecl>(FD)) {
+      Offset = Ctx->lookupFieldBitOffset(IVD->getContainingInterface(), nullptr,
+                                         IVD);
+    } else {
+      const RecordDecl *RD = FD->getParent();
+      const ASTRecordLayout &RL = Ctx->getASTRecordLayout(RD);
+      Offset = RL.getFieldOffset(FD->getFieldIndex());
+    }
+
+    S += llvm::utostr(Offset);
+
     if (const EnumType *ET = T->getAs<EnumType>())
       S += ObjCEncodingForEnumType(Ctx, ET);
     else {

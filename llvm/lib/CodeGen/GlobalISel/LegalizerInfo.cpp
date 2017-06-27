@@ -1,4 +1,4 @@
-//===---- lib/CodeGen/GlobalISel/LegalizerInfo.cpp - Legalizer -------==//
+//===- lib/CodeGen/GlobalISel/LegalizerInfo.cpp - Legalizer ---------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -18,16 +18,23 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
-
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/ValueTypes.h"
-#include "llvm/IR/Type.h"
+#include "llvm/MC/MCInstrDesc.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/LowLevelTypeImpl.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetOpcodes.h"
+#include <algorithm>
+#include <cassert>
+#include <tuple>
+#include <utility>
+
 using namespace llvm;
 
-LegalizerInfo::LegalizerInfo() : TablesInitialized(false) {
+LegalizerInfo::LegalizerInfo() {
   // FIXME: these two can be legalized to the fundamental load/store Jakob
   // proposed. Once loads & stores are supported.
   DefaultActions[TargetOpcode::G_ANYEXT] = Legal;
@@ -171,23 +178,19 @@ Optional<LLT> LegalizerInfo::findLegalType(const InstrAspect &Aspect,
   case Libcall:
   case Custom:
     return Aspect.Type;
-  case NarrowScalar: {
+  case NarrowScalar:
     return findLegalType(Aspect,
                          [](LLT Ty) -> LLT { return Ty.halfScalarSize(); });
-  }
-  case WidenScalar: {
+  case WidenScalar:
     return findLegalType(Aspect, [](LLT Ty) -> LLT {
       return Ty.getSizeInBits() < 8 ? LLT::scalar(8) : Ty.doubleScalarSize();
     });
-  }
-  case FewerElements: {
+  case FewerElements:
     return findLegalType(Aspect,
                          [](LLT Ty) -> LLT { return Ty.halfElements(); });
-  }
-  case MoreElements: {
+  case MoreElements:
     return findLegalType(Aspect,
                          [](LLT Ty) -> LLT { return Ty.doubleElements(); });
-  }
   }
 }
 

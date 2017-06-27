@@ -1,4 +1,4 @@
-//==-- llvm/CodeGen/GlobalISel/LegalizerInfo.h -------------------*- C++ -*-==//
+//===- llvm/CodeGen/GlobalISel/LegalizerInfo.h ------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,33 +12,36 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CODEGEN_GLOBALISEL_MACHINELEGALIZER_H
-#define LLVM_CODEGEN_GLOBALISEL_MACHINELEGALIZER_H
+#ifndef LLVM_CODEGEN_GLOBALISEL_LEGALIZERINFO_H
+#define LLVM_CODEGEN_GLOBALISEL_LEGALIZERINFO_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/CodeGen/LowLevelType.h"
+#include "llvm/ADT/None.h"
+#include "llvm/ADT/Optional.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/LowLevelTypeImpl.h"
 #include "llvm/Target/TargetOpcodes.h"
-
 #include <cstdint>
-#include <functional>
+#include <cassert>
+#include <tuple>
+#include <utility>
 
 namespace llvm {
-class LLVMContext;
+
 class MachineInstr;
 class MachineIRBuilder;
 class MachineRegisterInfo;
-class Type;
-class VectorType;
 
 /// Legalization is decided based on an instruction's opcode, which type slot
 /// we're considering, and what the existing type is. These aspects are gathered
 /// together for convenience in the InstrAspect class.
 struct InstrAspect {
   unsigned Opcode;
-  unsigned Idx;
+  unsigned Idx = 0;
   LLT Type;
 
-  InstrAspect(unsigned Opcode, LLT Type) : Opcode(Opcode), Idx(0), Type(Type) {}
+  InstrAspect(unsigned Opcode, LLT Type) : Opcode(Opcode), Type(Type) {}
   InstrAspect(unsigned Opcode, unsigned Idx, LLT Type)
       : Opcode(Opcode), Idx(Idx), Type(Type) {}
 
@@ -125,7 +128,6 @@ public:
     ScalarInVectorActions[std::make_pair(Opcode, ScalarTy)] = Action;
   }
 
-
   /// Determine what action should be taken to legalize the given generic
   /// instruction opcode, type-index and type. Requires computeTables to have
   /// been called.
@@ -203,18 +205,17 @@ private:
   static const int FirstOp = TargetOpcode::PRE_ISEL_GENERIC_OPCODE_START;
   static const int LastOp = TargetOpcode::PRE_ISEL_GENERIC_OPCODE_END;
 
-  typedef DenseMap<LLT, LegalizeAction> TypeMap;
-  typedef DenseMap<std::pair<unsigned, LLT>, LegalizeAction> SIVActionMap;
+  using TypeMap = DenseMap<LLT, LegalizeAction>;
+  using SIVActionMap = DenseMap<std::pair<unsigned, LLT>, LegalizeAction>;
 
   SmallVector<TypeMap, 1> Actions[LastOp - FirstOp + 1];
   SIVActionMap ScalarInVectorActions;
   DenseMap<std::pair<unsigned, LLT>, uint16_t> MaxLegalVectorElts;
   DenseMap<unsigned, LegalizeAction> DefaultActions;
 
-  bool TablesInitialized;
+  bool TablesInitialized = false;
 };
 
+} // end namespace llvm
 
-} // End namespace llvm.
-
-#endif
+#endif // LLVM_CODEGEN_GLOBALISEL_LEGALIZERINFO_H

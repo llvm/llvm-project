@@ -1,4 +1,4 @@
-//===-- TargetPassConfig.h - Code Generation pass options -------*- C++ -*-===//
+//===- TargetPassConfig.h - Code Generation pass options --------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -16,19 +16,23 @@
 
 #include "llvm/Pass.h"
 #include "llvm/Support/CodeGen.h"
+#include <cassert> 
 #include <string>
 
 namespace llvm {
 
-class PassConfigImpl;
-class ScheduleDAGInstrs;
 class LLVMTargetMachine;
 struct MachineSchedContext;
+class PassConfigImpl;
+class ScheduleDAGInstrs;
 
 // The old pass manager infrastructure is hidden in a legacy namespace now.
 namespace legacy {
+
 class PassManagerBase;
-}
+
+} // end namespace legacy
+
 using legacy::PassManagerBase;
 
 /// Discriminated union of Pass ID types.
@@ -50,10 +54,11 @@ class IdentifyingPassPtr {
     AnalysisID ID;
     Pass *P;
   };
-  bool IsInstance;
+  bool IsInstance = false;
+
 public:
-  IdentifyingPassPtr() : P(nullptr), IsInstance(false) {}
-  IdentifyingPassPtr(AnalysisID IDPtr) : ID(IDPtr), IsInstance(false) {}
+  IdentifyingPassPtr() : P(nullptr) {}
+  IdentifyingPassPtr(AnalysisID IDPtr) : ID(IDPtr) {}
   IdentifyingPassPtr(Pass *InstancePtr) : P(InstancePtr), IsInstance(true) {}
 
   bool isValid() const { return P; }
@@ -63,6 +68,7 @@ public:
     assert(!IsInstance && "Not a Pass ID");
     return ID;
   }
+
   Pass *getInstance() const {
     assert(IsInstance && "Not a Pass Instance");
     return P;
@@ -93,31 +99,30 @@ public:
   static char PostRAMachineLICMID;
 
 private:
-  PassManagerBase *PM;
+  PassManagerBase *PM = nullptr;
   AnalysisID StartBefore = nullptr;
   AnalysisID StartAfter = nullptr;
   AnalysisID StopBefore = nullptr;
   AnalysisID StopAfter = nullptr;
-  bool Started;
-  bool Stopped;
-  bool AddingMachinePasses;
+  bool Started = true;
+  bool Stopped = false;
+  bool AddingMachinePasses = false;
 
 protected:
   LLVMTargetMachine *TM;
-  PassConfigImpl *Impl; // Internal data structures
-  bool Initialized;     // Flagged after all passes are configured.
+  PassConfigImpl *Impl = nullptr; // Internal data structures
+  bool Initialized = false; // Flagged after all passes are configured.
 
   // Target Pass Options
   // Targets provide a default setting, user flags override.
-  //
-  bool DisableVerify;
+  bool DisableVerify = false;
 
   /// Default setting for -enable-tail-merge on this target.
-  bool EnableTailMerge;
+  bool EnableTailMerge = true;
 
   /// Require processing of functions such that callees are generated before
   /// callers.
-  bool RequireCodeGenSCCOrder;
+  bool RequireCodeGenSCCOrder = false;
 
   /// Add the actual instruction selection passes. This does not include
   /// preparation passes on IR.
@@ -296,7 +301,6 @@ public:
 
   /// printAndVerify - Add a pass to dump then verify the machine function, if
   /// those steps are enabled.
-  ///
   void printAndVerify(const std::string &Banner);
 
   /// Add a pass to print the machine function if printing is enabled.
@@ -430,4 +434,4 @@ protected:
 
 } // end namespace llvm
 
-#endif
+#endif // LLVM_CODEGEN_TARGETPASSCONFIG_H

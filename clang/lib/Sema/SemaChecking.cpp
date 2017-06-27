@@ -6000,6 +6000,7 @@ shouldNotPrintDirectly(const ASTContext &Context,
   while (const TypedefType *UserTy = TyTy->getAs<TypedefType>()) {
     StringRef Name = UserTy->getDecl()->getName();
     QualType CastTy = llvm::StringSwitch<QualType>(Name)
+      .Case("CFIndex", Context.LongTy)
       .Case("NSInteger", Context.LongTy)
       .Case("NSUInteger", Context.UnsignedLongTy)
       .Case("SInt32", Context.IntTy)
@@ -9935,6 +9936,28 @@ void Sema::CheckBoolLikeConversion(Expr *E, SourceLocation CC) {
   ::CheckBoolLikeConversion(*this, E, CC);
 }
 
+/// Diagnose when expression is an integer constant expression and its evaluation
+/// results in integer overflow
+void Sema::CheckForIntOverflow (Expr *E) {
+  // Use a work list to deal with nested struct initializers.
+  SmallVector<Expr *, 2> Exprs(1, E);
+
+  do {
+    Expr *E = Exprs.pop_back_val();
+
+    if (isa<BinaryOperator>(E->IgnoreParenCasts())) {
+      E->IgnoreParenCasts()->EvaluateForOverflow(Context);
+      continue;
+    }
+
+    if (auto InitList = dyn_cast<InitListExpr>(E))
+      Exprs.append(InitList->inits().begin(), InitList->inits().end());
+
+    if (isa<ObjCBoxedExpr>(E))
+      E->IgnoreParenCasts()->EvaluateForOverflow(Context);
+  } while (!Exprs.empty());
+}
+
 namespace {
 /// \brief Visitor for expressions which looks for unsequenced operations on the
 /// same object.
@@ -10436,7 +10459,7 @@ void Sema::CheckCompletedExpr(Expr *E, SourceLocation CheckLoc,
   if (!E->isInstantiationDependent())
     CheckUnsequencedOperations(E);
   if (!IsConstexpr && !E->isValueDependent())
-    E->EvaluateForOverflow(Context);
+    CheckForIntOverflow(E);
   DiagnoseMisalignedMembers();
 }
 
