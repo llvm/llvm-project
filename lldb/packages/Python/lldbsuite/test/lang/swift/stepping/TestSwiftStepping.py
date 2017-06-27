@@ -289,11 +289,12 @@ class TestSwiftStepping(lldbtest.TestBase):
         # Step out of the protocol function, one step out should also
         # get us past any dispatch thunk.
         thread.StepOut()
-        self.hit_correct_line(thread, "indirect.protocol_func(20)")
-
+        stop_on_caller = self.hit_correct_line(thread, "indirect.protocol_func(20)", False)
+        
         # And one step over is necessary because step out doesn't
         # finish off the line.
-        thread.StepOver()
+        if stop_on_caller:
+            thread.StepOver()
         self.hit_correct_line(thread, "doSomethingWithFunction(cd_maker, 10)")
 
         thread.StepInto()
