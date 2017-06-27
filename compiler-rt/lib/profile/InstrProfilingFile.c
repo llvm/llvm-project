@@ -91,10 +91,11 @@ static const char *getCurFilename(char *FilenameBuf);
 static unsigned doMerging() { return lprofCurFilename.MergePoolSize; }
 
 /* Return 1 if there is an error, otherwise return  0.  */
-static uint32_t fileWriter(ProfDataIOVec *IOVecs, uint32_t NumIOVecs,
-                           void **WriterCtx) {
+static uint32_t fileWriter(ProfDataWriter *This, ProfDataIOVec *IOVecs,
+                           uint32_t NumIOVecs) {
+
   uint32_t I;
-  FILE *File = (FILE *)*WriterCtx;
+  FILE *File = (FILE *)This->WriterCtx;
   for (I = 0; I < NumIOVecs; I++) {
     if (fwrite(IOVecs[I].Data, IOVecs[I].ElmSize, IOVecs[I].NumElm, File) !=
         IOVecs[I].NumElm)
@@ -103,12 +104,22 @@ static uint32_t fileWriter(ProfDataIOVec *IOVecs, uint32_t NumIOVecs,
   return 0;
 }
 
+static void initFileWriter(ProfDataWriter *This, FILE *File) {
+  This->Write = fileWriter;
+  This->WriterCtx = File;
+}
+
 COMPILER_RT_VISIBILITY ProfBufferIO *
 lprofCreateBufferIOInternal(void *File, uint32_t BufferSz) {
   FreeHook = &free;
   DynamicBufferIOBuffer = (uint8_t *)calloc(BufferSz, 1);
   VPBufferSize = BufferSz;
-  return lprofCreateBufferIO(fileWriter, File);
+  ProfDataWriter *fileWriter =
+      (ProfDataWriter *)calloc(sizeof(ProfDataWriter), 1);
+  initFileWriter(fileWriter, File);
+  ProfBufferIO *IO = lprofCreateBufferIO(fileWriter);
+  IO->OwnFileWriter = 1;
+  return IO;
 }
 
 static void setupIOBuffer() {
@@ -226,7 +237,9 @@ static int writeFile(const char *OutputName) {
 
   FreeHook = &free;
   setupIOBuffer();
-  RetVal = lprofWriteData(fileWriter, OutputFile, lprofGetVPDataReader());
+  ProfDataWriter fileWriter;
+  initFileWriter(&fileWriter, OutputFile);
+  RetVal = lprofWriteData(&fileWriter, lprofGetVPDataReader());
 
   fclose(OutputFile);
   return RetVal;

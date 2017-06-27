@@ -265,7 +265,8 @@ private:
                         uint32_t NumFuncImports);
   void writeCodeRelocSection();
   void writeDataRelocSection(uint64_t DataSectionHeaderSize);
-  void writeLinkingMetaDataSection(ArrayRef<StringRef> WeakSymbols,
+  void writeLinkingMetaDataSection(uint32_t DataSize, uint32_t DataAlignment,
+                                   ArrayRef<StringRef> WeakSymbols,
                                    bool HasStackPointer,
                                    uint32_t StackPointerGlobal);
 
@@ -877,11 +878,8 @@ void WasmObjectWriter::writeDataRelocSection(uint64_t DataSectionHeaderSize) {
 }
 
 void WasmObjectWriter::writeLinkingMetaDataSection(
-    ArrayRef<StringRef> WeakSymbols, bool HasStackPointer,
-    uint32_t StackPointerGlobal) {
-  if (!HasStackPointer && WeakSymbols.empty())
-    return;
-
+    uint32_t DataSize, uint32_t DataAlignment, ArrayRef<StringRef> WeakSymbols,
+    bool HasStackPointer, uint32_t StackPointerGlobal) {
   SectionBookkeeping Section;
   startSection(Section, wasm::WASM_SEC_CUSTOM, "linking");
   SectionBookkeeping SubSection;
@@ -899,6 +897,16 @@ void WasmObjectWriter::writeLinkingMetaDataSection(
       writeString(Export);
       encodeULEB128(wasm::WASM_SYMBOL_FLAG_WEAK, getStream());
     }
+    endSection(SubSection);
+  }
+
+  if (DataSize > 0) {
+    startSection(SubSection, wasm::WASM_DATA_SIZE);
+    encodeULEB128(DataSize, getStream());
+    endSection(SubSection);
+
+    startSection(SubSection, wasm::WASM_DATA_ALIGNMENT);
+    encodeULEB128(DataAlignment, getStream());
     endSection(SubSection);
   }
 
@@ -923,6 +931,7 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
   unsigned NumFuncImports = 0;
   unsigned NumGlobalImports = 0;
   SmallVector<char, 0> DataBytes;
+  uint32_t DataAlignment = 1;
   uint32_t StackPointerGlobal = 0;
   bool HasStackPointer = false;
 
@@ -1157,6 +1166,7 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
         report_fatal_error("data sections must contain at most one variable");
 
       DataBytes.resize(alignTo(DataBytes.size(), DataSection.getAlignment()));
+      DataAlignment = std::max(DataAlignment, DataSection.getAlignment());
 
       DataSection.setSectionOffset(DataBytes.size());
 
@@ -1272,7 +1282,7 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
   writeNameSection(Functions, Imports, NumFuncImports);
   writeCodeRelocSection();
   writeDataRelocSection(DataSectionHeaderSize);
-  writeLinkingMetaDataSection(WeakSymbols, HasStackPointer, StackPointerGlobal);
+  writeLinkingMetaDataSection(DataBytes.size(), DataAlignment, WeakSymbols, HasStackPointer, StackPointerGlobal);
 
   // TODO: Translate the .comment section to the output.
   // TODO: Translate debug sections to the output.

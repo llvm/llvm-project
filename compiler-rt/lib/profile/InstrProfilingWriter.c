@@ -31,11 +31,11 @@ COMPILER_RT_VISIBILITY uint32_t VPBufferSize = 0;
 /* The buffer writer is reponsponsible in keeping writer state
  * across the call.
  */
-COMPILER_RT_VISIBILITY uint32_t lprofBufferWriter(ProfDataIOVec *IOVecs,
-                                                  uint32_t NumIOVecs,
-                                                  void **WriterCtx) {
+COMPILER_RT_VISIBILITY uint32_t lprofBufferWriter(ProfDataWriter *This,
+                                                  ProfDataIOVec *IOVecs,
+                                                  uint32_t NumIOVecs) {
   uint32_t I;
-  char **Buffer = (char **)WriterCtx;
+  char **Buffer = (char **)&This->WriterCtx;
   for (I = 0; I < NumIOVecs; I++) {
     size_t Length = IOVecs[I].ElmSize * IOVecs[I].NumElm;
     memcpy(*Buffer, IOVecs[I].Data, Length);
@@ -44,28 +44,30 @@ COMPILER_RT_VISIBILITY uint32_t lprofBufferWriter(ProfDataIOVec *IOVecs,
   return 0;
 }
 
-static void llvmInitBufferIO(ProfBufferIO *BufferIO, WriterCallback FileWriter,
-                             void *File, uint8_t *Buffer, uint32_t BufferSz) {
-  BufferIO->File = File;
+static void llvmInitBufferIO(ProfBufferIO *BufferIO, ProfDataWriter *FileWriter,
+                             uint8_t *Buffer, uint32_t BufferSz) {
   BufferIO->FileWriter = FileWriter;
+  BufferIO->OwnFileWriter = 0;
   BufferIO->BufferStart = Buffer;
   BufferIO->BufferSz = BufferSz;
   BufferIO->CurOffset = 0;
 }
 
 COMPILER_RT_VISIBILITY ProfBufferIO *
-lprofCreateBufferIO(WriterCallback FileWriter, void *File) {
+lprofCreateBufferIO(ProfDataWriter *FileWriter) {
   uint8_t *Buffer = DynamicBufferIOBuffer;
   uint32_t BufferSize = VPBufferSize;
   if (!Buffer) {
     Buffer = &BufferIOBuffer[0];
     BufferSize = sizeof(BufferIOBuffer);
   }
-  llvmInitBufferIO(&TheBufferIO, FileWriter, File, Buffer, BufferSize);
+  llvmInitBufferIO(&TheBufferIO, FileWriter, Buffer, BufferSize);
   return &TheBufferIO;
 }
 
 COMPILER_RT_VISIBILITY void lprofDeleteBufferIO(ProfBufferIO *BufferIO) {
+  if (BufferIO->OwnFileWriter)
+    FreeHook(BufferIO->FileWriter);
   if (DynamicBufferIOBuffer) {
     FreeHook(DynamicBufferIOBuffer);
     DynamicBufferIOBuffer = 0;
@@ -83,13 +85,16 @@ lprofBufferIOWrite(ProfBufferIO *BufferIO, const uint8_t *Data, uint32_t Size) {
   /* Special case, bypass the buffer completely. */
   ProfDataIOVec IO[] = {{Data, sizeof(uint8_t), Size}};
   if (Size > BufferIO->BufferSz) {
-    if (BufferIO->FileWriter(IO, 1, &BufferIO->File))
+    if (BufferIO->FileWriter->Write(BufferIO->FileWriter, IO, 1))
       return -1;
   } else {
     /* Write the data to buffer */
     uint8_t *Buffer = BufferIO->BufferStart + BufferIO->CurOffset;
-    lprofBufferWriter(IO, 1, (void **)&Buffer);
-    BufferIO->CurOffset = Buffer - BufferIO->BufferStart;
+    ProfDataWriter BufferWriter;
+    initBufferWriter(&BufferWriter, (char *)Buffer);
+    lprofBufferWriter(&BufferWriter, IO, 1);
+    BufferIO->CurOffset =
+        (uint8_t *)BufferWriter.WriterCtx - BufferIO->BufferStart;
   }
   return 0;
 }
@@ -98,7 +103,7 @@ COMPILER_RT_VISIBILITY int lprofBufferIOFlush(ProfBufferIO *BufferIO) {
   if (BufferIO->CurOffset) {
     ProfDataIOVec IO[] = {
         {BufferIO->BufferStart, sizeof(uint8_t), BufferIO->CurOffset}};
-    if (BufferIO->FileWriter(IO, 1, &BufferIO->File))
+    if (BufferIO->FileWriter->Write(BufferIO->FileWriter, IO, 1))
       return -1;
     BufferIO->CurOffset = 0;
   }
@@ -201,7 +206,7 @@ static int writeOneValueProfData(ProfBufferIO *BufferIO,
   return 0;
 }
 
-static int writeValueProfData(WriterCallback Writer, void *WriterCtx,
+static int writeValueProfData(ProfDataWriter *Writer,
                               VPDataReaderType *VPDataReader,
                               const __llvm_profile_data *DataBegin,
                               const __llvm_profile_data *DataEnd) {
@@ -211,7 +216,7 @@ static int writeValueProfData(WriterCallback Writer, void *WriterCtx,
   if (!VPDataReader)
     return 0;
 
-  BufferIO = lprofCreateBufferIO(Writer, WriterCtx);
+  BufferIO = lprofCreateBufferIO(Writer);
 
   for (DI = DataBegin; DI < DataEnd; DI++) {
     if (writeOneValueProfData(BufferIO, VPDataReader, DI))
@@ -225,8 +230,7 @@ static int writeValueProfData(WriterCallback Writer, void *WriterCtx,
   return 0;
 }
 
-COMPILER_RT_VISIBILITY int lprofWriteData(WriterCallback Writer,
-                                          void *WriterCtx,
+COMPILER_RT_VISIBILITY int lprofWriteData(ProfDataWriter *Writer,
                                           VPDataReaderType *VPDataReader) {
   /* Match logic in __llvm_profile_write_buffer(). */
   const __llvm_profile_data *DataBegin = __llvm_profile_begin_data();
@@ -235,14 +239,12 @@ COMPILER_RT_VISIBILITY int lprofWriteData(WriterCallback Writer,
   const uint64_t *CountersEnd = __llvm_profile_end_counters();
   const char *NamesBegin = __llvm_profile_begin_names();
   const char *NamesEnd = __llvm_profile_end_names();
-  return lprofWriteDataImpl(Writer, WriterCtx, DataBegin, DataEnd,
-                            CountersBegin, CountersEnd, VPDataReader,
-                            NamesBegin, NamesEnd);
+  return lprofWriteDataImpl(Writer, DataBegin, DataEnd, CountersBegin,
+                            CountersEnd, VPDataReader, NamesBegin, NamesEnd);
 }
 
 COMPILER_RT_VISIBILITY int
-lprofWriteDataImpl(WriterCallback Writer, void *WriterCtx,
-                   const __llvm_profile_data *DataBegin,
+lprofWriteDataImpl(ProfDataWriter *Writer, const __llvm_profile_data *DataBegin,
                    const __llvm_profile_data *DataEnd,
                    const uint64_t *CountersBegin, const uint64_t *CountersEnd,
                    VPDataReaderType *VPDataReader, const char *NamesBegin,
@@ -273,9 +275,8 @@ lprofWriteDataImpl(WriterCallback Writer, void *WriterCtx,
                            {CountersBegin, sizeof(uint64_t), CountersSize},
                            {NamesBegin, sizeof(uint8_t), NamesSize},
                            {Zeroes, sizeof(uint8_t), Padding}};
-  if (Writer(IOVec, sizeof(IOVec) / sizeof(*IOVec), &WriterCtx))
+  if (Writer->Write(Writer, IOVec, sizeof(IOVec) / sizeof(*IOVec)))
     return -1;
 
-  return writeValueProfData(Writer, WriterCtx, VPDataReader, DataBegin,
-                            DataEnd);
+  return writeValueProfData(Writer, VPDataReader, DataBegin, DataEnd);
 }

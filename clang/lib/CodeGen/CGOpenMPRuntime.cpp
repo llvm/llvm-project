@@ -5603,7 +5603,7 @@ public:
     // We have to process the component lists that relate with the same
     // declaration in a single chunk so that we can generate the map flags
     // correctly. Therefore, we organize all lists in a map.
-    llvm::DenseMap<const ValueDecl *, SmallVector<MapInfo, 8>> Info;
+    llvm::MapVector<const ValueDecl *, SmallVector<MapInfo, 8>> Info;
 
     // Helper function to fill the information map for the different supported
     // clauses.

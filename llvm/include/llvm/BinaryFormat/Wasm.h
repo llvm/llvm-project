@@ -112,6 +112,11 @@ struct WasmRelocation {
   int64_t Addend;  // A value to add to the symbol.
 };
 
+struct WasmLinkingData {
+  uint32_t DataSize;
+  uint32_t DataAlignment;
+};
+
 enum : unsigned {
   WASM_SEC_CUSTOM = 0,   // Custom / User-defined section
   WASM_SEC_TYPE = 1,     // Function signature declarations
@@ -175,8 +180,10 @@ enum class ValType {
 
 // Linking metadata kinds.
 enum : unsigned {
-  WASM_STACK_POINTER = 0x1,
-  WASM_SYMBOL_INFO  = 0x2,
+  WASM_STACK_POINTER  = 0x1,
+  WASM_SYMBOL_INFO    = 0x2,
+  WASM_DATA_SIZE      = 0x3,
+  WASM_DATA_ALIGNMENT = 0x4,
 };
 
 enum : unsigned {

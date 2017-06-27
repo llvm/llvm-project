@@ -4314,6 +4314,23 @@ SDValue SITargetLowering::splitBinaryBitConstantOp(
   return SDValue();
 }
 
+// Returns true if argument is a boolean value which is not serialized into
+// memory or argument and does not require v_cmdmask_b32 to be deserialized.
+static bool isBoolSGPR(SDValue V) {
+  if (V.getValueType() != MVT::i1)
+    return false;
+  switch (V.getOpcode()) {
+  default: break;
+  case ISD::SETCC:
+  case ISD::AND:
+  case ISD::OR:
+  case ISD::XOR:
+  case AMDGPUISD::FP_CLASS:
+    return true;
+  }
+  return false;
+}
+
 SDValue SITargetLowering::performAndCombine(SDNode *N,
                                             DAGCombinerInfo &DCI) const {
   if (DCI.isBeforeLegalize())
@@ -4400,6 +4417,16 @@ SDValue SITargetLowering::performAndCombine(SDNode *N,
                            X, DAG.getConstant(Mask, DL, MVT::i32));
       }
     }
+  }
+
+  if (VT == MVT::i32 &&
+      (RHS.getOpcode() == ISD::SIGN_EXTEND || LHS.getOpcode() == ISD::SIGN_EXTEND)) {
+    // and x, (sext cc from i1) => select cc, x, 0
+    if (RHS.getOpcode() != ISD::SIGN_EXTEND)
+      std::swap(LHS, RHS);
+    if (isBoolSGPR(RHS.getOperand(0)))
+      return DAG.getSelect(SDLoc(N), MVT::i32, RHS.getOperand(0),
+                           LHS, DAG.getConstant(0, SDLoc(N), MVT::i32));
   }
 
   return SDValue();
@@ -4941,8 +4968,7 @@ SDValue SITargetLowering::performAddCombine(SDNode *N,
   case ISD::SIGN_EXTEND:
   case ISD::ANY_EXTEND: {
     auto Cond = RHS.getOperand(0);
-    if (Cond.getOpcode() != ISD::SETCC &&
-        Cond.getOpcode() != AMDGPUISD::FP_CLASS)
+    if (!isBoolSGPR(Cond))
       break;
     SDVTList VTList = DAG.getVTList(MVT::i32, MVT::i1);
     SDValue Args[] = { LHS, DAG.getConstant(0, SL, MVT::i32), Cond };
@@ -5109,6 +5135,35 @@ SDValue SITargetLowering::performSetCCCombine(SDNode *N,
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
   EVT VT = LHS.getValueType();
+  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
+
+  auto CRHS = dyn_cast<ConstantSDNode>(RHS);
+  if (!CRHS) {
+    CRHS = dyn_cast<ConstantSDNode>(LHS);
+    if (CRHS) {
+      std::swap(LHS, RHS);
+      CC = getSetCCSwappedOperands(CC);
+    }
+  }
+
+  if (CRHS && VT == MVT::i32 && LHS.getOpcode() == ISD::SIGN_EXTEND &&
+      isBoolSGPR(LHS.getOperand(0))) {
+    // setcc (sext from i1 cc), -1, ne|sgt|ult) => not cc => xor cc, -1
+    // setcc (sext from i1 cc), -1, eq|sle|uge) => cc
+    // setcc (sext from i1 cc),  0, eq|sge|ule) => not cc => xor cc, -1
+    // setcc (sext from i1 cc),  0, ne|ugt|slt) => cc
+    if ((CRHS->isAllOnesValue() &&
+         (CC == ISD::SETNE || CC == ISD::SETGT || CC == ISD::SETULT)) ||
+        (CRHS->isNullValue() &&
+         (CC == ISD::SETEQ || CC == ISD::SETGE || CC == ISD::SETULE)))
+      return DAG.getNode(ISD::XOR, SL, MVT::i1, LHS.getOperand(0),
+                         DAG.getConstant(-1, SL, MVT::i1));
+    if ((CRHS->isAllOnesValue() &&
+         (CC == ISD::SETEQ || CC == ISD::SETLE || CC == ISD::SETUGE)) ||
+        (CRHS->isNullValue() &&
+         (CC == ISD::SETNE || CC == ISD::SETUGT || CC == ISD::SETLT)))
+      return LHS.getOperand(0);
+  }
 
   if (VT != MVT::f32 && VT != MVT::f64 && (Subtarget->has16BitInsts() &&
                                            VT != MVT::f16))
@@ -5116,7 +5171,6 @@ SDValue SITargetLowering::performSetCCCombine(SDNode *N,
 
   // Match isinf pattern
   // (fcmp oeq (fabs x), inf) -> (fp_class x, (p_infinity | n_infinity))
-  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
   if (CC == ISD::SETOEQ && LHS.getOpcode() == ISD::FABS) {
     const ConstantFPSDNode *CRHS = dyn_cast<ConstantFPSDNode>(RHS);
     if (!CRHS)

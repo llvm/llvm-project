@@ -1220,12 +1220,13 @@ entry:
 }
 
 define i32 @test_select_select0(i32 %a, i32 %r0, i32 %r1, i32 %v1, i32 %v2) {
-  ; CHECK-LABEL: @test_select_select0(
-  ; CHECK: %[[C0:.*]] = icmp sge i32 %a, %v1
-  ; CHECK-NEXT: %[[C1:.*]] = icmp slt i32 %a, %v2
-  ; CHECK-NEXT: %[[C:.*]] = and i1 %[[C1]], %[[C0]]
-  ; CHECK-NEXT: %[[SEL:.*]] = select i1 %[[C]], i32 %r0, i32 %r1
-  ; CHECK-NEXT: ret i32 %[[SEL]]
+; CHECK-LABEL: @test_select_select0(
+; CHECK-NEXT:    [[C0:%.*]] = icmp slt i32 %a, %v1
+; CHECK-NEXT:    [[S0:%.*]] = select i1 [[C0]], i32 %r1, i32 %r0
+; CHECK-NEXT:    [[C1:%.*]] = icmp slt i32 %a, %v2
+; CHECK-NEXT:    [[S1:%.*]] = select i1 [[C1]], i32 [[S0]], i32 %r1
+; CHECK-NEXT:    ret i32 [[S1]]
+;
   %c0 = icmp sge i32 %a, %v1
   %s0 = select i1 %c0, i32 %r0, i32 %r1
   %c1 = icmp slt i32 %a, %v2
@@ -1234,12 +1235,13 @@ define i32 @test_select_select0(i32 %a, i32 %r0, i32 %r1, i32 %v1, i32 %v2) {
 }
 
 define i32 @test_select_select1(i32 %a, i32 %r0, i32 %r1, i32 %v1, i32 %v2) {
-  ; CHECK-LABEL: @test_select_select1(
-  ; CHECK: %[[C0:.*]] = icmp sge i32 %a, %v1
-  ; CHECK-NEXT: %[[C1:.*]] = icmp slt i32 %a, %v2
-  ; CHECK-NEXT: %[[C:.*]] = or i1 %[[C1]], %[[C0]]
-  ; CHECK-NEXT: %[[SEL:.*]] = select i1 %[[C]], i32 %r0, i32 %r1
-  ; CHECK-NEXT: ret i32 %[[SEL]]
+; CHECK-LABEL: @test_select_select1(
+; CHECK-NEXT:    [[C0:%.*]] = icmp slt i32 %a, %v1
+; CHECK-NEXT:    [[S0:%.*]] = select i1 [[C0]], i32 %r1, i32 %r0
+; CHECK-NEXT:    [[C1:%.*]] = icmp slt i32 %a, %v2
+; CHECK-NEXT:    [[S1:%.*]] = select i1 [[C1]], i32 %r0, i32 [[S0]]
+; CHECK-NEXT:    ret i32 [[S1]]
+;
   %c0 = icmp sge i32 %a, %v1
   %s0 = select i1 %c0, i32 %r0, i32 %r1
   %c1 = icmp slt i32 %a, %v2

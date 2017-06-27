@@ -1315,6 +1315,8 @@ static bool HasExtension(const Preprocessor &PP, StringRef Extension) {
            .Case("cxx_binary_literals", true)
            .Case("cxx_init_captures", LangOpts.CPlusPlus11)
            .Case("cxx_variable_templates", LangOpts.CPlusPlus)
+           // Miscellaneous language extensions
+           .Case("overloadable_unmarked", true)
            .Default(false);
 }
 

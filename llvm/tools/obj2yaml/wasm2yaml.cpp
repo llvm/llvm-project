@@ -77,6 +77,8 @@ std::unique_ptr<WasmYAML::CustomSection> WasmDumper::dumpCustomSection(const Was
         LinkingSec->SymbolInfos.push_back(Info);
       }
     }
+    LinkingSec->DataSize = Obj.linkingData().DataSize;
+    LinkingSec->DataAlignment = Obj.linkingData().DataAlignment;
     CustomSec = std::move(LinkingSec);
   } else {
     CustomSec = make_unique<WasmYAML::CustomSection>(WasmSec.Name);

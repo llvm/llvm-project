@@ -605,19 +605,26 @@ semantics:
   for ``T`` and ``U`` to be incompatible.
 
 The declaration of ``overloadable`` functions is restricted to function
-declarations and definitions.  Most importantly, if any function with a given
-name is given the ``overloadable`` attribute, then all function declarations
-and definitions with that name (and in that scope) must have the
-``overloadable`` attribute.  This rule even applies to redeclarations of
-functions whose original declaration had the ``overloadable`` attribute, e.g.,
+declarations and definitions.  If a function is marked with the ``overloadable``
+attribute, then all declarations and definitions of functions with that name,
+except for at most one (see the note below about unmarked overloads), must have
+the ``overloadable`` attribute.  In addition, redeclarations of a function with
+the ``overloadable`` attribute must have the ``overloadable`` attribute, and
+redeclarations of a function without the ``overloadable`` attribute must *not*
+have the ``overloadable`` attribute. e.g.,
 
 .. code-block:: c
 
   int f(int) __attribute__((overloadable));
   float f(float); // error: declaration of "f" must have the "overloadable" attribute
+  int f(int); // error: redeclaration of "f" must have the "overloadable" attribute
 
   int g(int) __attribute__((overloadable));
   int g(int) { } // error: redeclaration of "g" must also have the "overloadable" attribute
+
+  int h(int);
+  int h(int) __attribute__((overloadable)); // error: declaration of "h" must not
+                                            // have the "overloadable" attribute
 
 Functions marked ``overloadable`` must have prototypes.  Therefore, the
 following code is ill-formed:
@@ -651,7 +658,28 @@ caveats to this use of name mangling:
   linkage specification, it's name *will* be mangled in the same way as it
   would in C.
 
-Query for this feature with ``__has_extension(attribute_overloadable)``.
+For the purpose of backwards compatibility, at most one function with the same
+name as other ``overloadable`` functions may omit the ``overloadable``
+attribute. In this case, the function without the ``overloadable`` attribute
+will not have its name mangled.
+
+For example:
+
+.. code-block:: c
+
+  // Notes with mangled names assume Itanium mangling.
+  int f(int);
+  int f(double) __attribute__((overloadable));
+  void foo() {
+    f(5); // Emits a call to f (not _Z1fi, as it would with an overload that
+          // was marked with overloadable).
+    f(1.0); // Emits a call to _Z1fd.
+  }
+
+Support for unmarked overloads is not present in some versions of clang. You may
+query for it using ``__has_extension(overloadable_unmarked)``.
+
+Query for this attribute with ``__has_attribute(overloadable)``.
   }];
 }
 

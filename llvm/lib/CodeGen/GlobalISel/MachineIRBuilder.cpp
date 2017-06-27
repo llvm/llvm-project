@@ -268,6 +268,8 @@ MachineInstrBuilder MachineIRBuilder::buildBrIndirect(unsigned Tgt) {
 }
 
 MachineInstrBuilder MachineIRBuilder::buildCopy(unsigned Res, unsigned Op) {
+  assert(MRI->getType(Res) == LLT() || MRI->getType(Op) == LLT() ||
+         MRI->getType(Res) == MRI->getType(Op));
   return buildInstr(TargetOpcode::COPY).addDef(Res).addUse(Op);
 }
 
@@ -384,7 +386,6 @@ MachineInstrBuilder MachineIRBuilder::buildZExtOrTrunc(unsigned Res,
   return buildInstr(Opcode).addDef(Res).addUse(Op);
 }
 
-
 MachineInstrBuilder MachineIRBuilder::buildCast(unsigned Dst, unsigned Src) {
   LLT SrcTy = MRI->getType(Src);
   LLT DstTy = MRI->getType(Dst);
@@ -483,7 +484,7 @@ MachineInstrBuilder MachineIRBuilder::buildMerge(unsigned Res,
 #endif
 
   if (Ops.size() == 1)
-    return buildCopy(Res, Ops[0]);
+    return buildCast(Res, Ops[0]);
 
   MachineInstrBuilder MIB = buildInstr(TargetOpcode::G_MERGE_VALUES);
   MIB.addDef(Res);

@@ -2423,8 +2423,8 @@ define i32 @f7(i32 %a, i32 %b) {
 ; CHECK-LABEL: @f7(
 ; CHECK-NEXT:    [[CMP_UNSHIFTED:%.*]] = xor i32 %a, %b
 ; CHECK-NEXT:    [[CMP_MASK:%.*]] = and i32 [[CMP_UNSHIFTED]], 511
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[CMP:%.*]].mask, 0
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[CMP]], i32 10000, i32 0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CMP_MASK]], 0
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[CMP]], i32 0, i32 10000
 ; CHECK-NEXT:    ret i32 [[S]]
 ;
   %sext = shl i32 %a, 23
