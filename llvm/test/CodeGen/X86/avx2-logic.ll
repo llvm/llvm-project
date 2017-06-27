@@ -5,14 +5,15 @@
 define <4 x i64> @vpandn(<4 x i64> %a, <4 x i64> %b) nounwind uwtable readnone ssp {
 ; X32-LABEL: vpandn:
 ; X32:       ## BB#0: ## %entry
-; X32-NEXT:    vpaddq LCPI0_0, %ymm0, %ymm1
+; X32-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; X32-NEXT:    vpsubq %ymm1, %ymm0, %ymm1
 ; X32-NEXT:    vpandn %ymm0, %ymm1, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: vpandn:
 ; X64:       ## BB#0: ## %entry
-; X64-NEXT:    vpbroadcastq {{.*}}(%rip), %ymm1
-; X64-NEXT:    vpaddq %ymm1, %ymm0, %ymm1
+; X64-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; X64-NEXT:    vpsubq %ymm1, %ymm0, %ymm1
 ; X64-NEXT:    vpandn %ymm0, %ymm1, %ymm0
 ; X64-NEXT:    retq
 entry:
@@ -26,14 +27,15 @@ entry:
 define <4 x i64> @vpand(<4 x i64> %a, <4 x i64> %b) nounwind uwtable readnone ssp {
 ; X32-LABEL: vpand:
 ; X32:       ## BB#0: ## %entry
-; X32-NEXT:    vpaddq LCPI1_0, %ymm0, %ymm0
+; X32-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
+; X32-NEXT:    vpsubq %ymm2, %ymm0, %ymm0
 ; X32-NEXT:    vpand %ymm1, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: vpand:
 ; X64:       ## BB#0: ## %entry
-; X64-NEXT:    vpbroadcastq {{.*}}(%rip), %ymm2
-; X64-NEXT:    vpaddq %ymm2, %ymm0, %ymm0
+; X64-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
+; X64-NEXT:    vpsubq %ymm2, %ymm0, %ymm0
 ; X64-NEXT:    vpand %ymm1, %ymm0, %ymm0
 ; X64-NEXT:    retq
 entry:
@@ -46,14 +48,15 @@ entry:
 define <4 x i64> @vpor(<4 x i64> %a, <4 x i64> %b) nounwind uwtable readnone ssp {
 ; X32-LABEL: vpor:
 ; X32:       ## BB#0: ## %entry
-; X32-NEXT:    vpaddq LCPI2_0, %ymm0, %ymm0
+; X32-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
+; X32-NEXT:    vpsubq %ymm2, %ymm0, %ymm0
 ; X32-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: vpor:
 ; X64:       ## BB#0: ## %entry
-; X64-NEXT:    vpbroadcastq {{.*}}(%rip), %ymm2
-; X64-NEXT:    vpaddq %ymm2, %ymm0, %ymm0
+; X64-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
+; X64-NEXT:    vpsubq %ymm2, %ymm0, %ymm0
 ; X64-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; X64-NEXT:    retq
 entry:
@@ -66,14 +69,15 @@ entry:
 define <4 x i64> @vpxor(<4 x i64> %a, <4 x i64> %b) nounwind uwtable readnone ssp {
 ; X32-LABEL: vpxor:
 ; X32:       ## BB#0: ## %entry
-; X32-NEXT:    vpaddq LCPI3_0, %ymm0, %ymm0
+; X32-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
+; X32-NEXT:    vpsubq %ymm2, %ymm0, %ymm0
 ; X32-NEXT:    vpxor %ymm1, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: vpxor:
 ; X64:       ## BB#0: ## %entry
-; X64-NEXT:    vpbroadcastq {{.*}}(%rip), %ymm2
-; X64-NEXT:    vpaddq %ymm2, %ymm0, %ymm0
+; X64-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
+; X64-NEXT:    vpsubq %ymm2, %ymm0, %ymm0
 ; X64-NEXT:    vpxor %ymm1, %ymm0, %ymm0
 ; X64-NEXT:    retq
 entry:

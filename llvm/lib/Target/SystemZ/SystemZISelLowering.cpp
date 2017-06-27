@@ -2054,6 +2054,7 @@ static void adjustForTestUnderMask(SelectionDAG &DAG, const SDLoc &DL,
   if (NewC.ICmpType != SystemZICMP::SignedOnly &&
       NewC.Op0.getOpcode() == ISD::SHL &&
       isSimpleShift(NewC.Op0, ShiftVal) &&
+      (MaskVal >> ShiftVal != 0) &&
       (NewCCMask = getTestUnderMaskCond(BitSize, NewC.CCMask,
                                         MaskVal >> ShiftVal,
                                         CmpVal >> ShiftVal,
@@ -2063,6 +2064,7 @@ static void adjustForTestUnderMask(SelectionDAG &DAG, const SDLoc &DL,
   } else if (NewC.ICmpType != SystemZICMP::SignedOnly &&
              NewC.Op0.getOpcode() == ISD::SRL &&
              isSimpleShift(NewC.Op0, ShiftVal) &&
+             (MaskVal << ShiftVal != 0) &&
              (NewCCMask = getTestUnderMaskCond(BitSize, NewC.CCMask,
                                                MaskVal << ShiftVal,
                                                CmpVal << ShiftVal,

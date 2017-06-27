@@ -352,7 +352,7 @@ bool PPCPassConfig::addILPOpts() {
 
 bool PPCPassConfig::addInstSelector() {
   // Install an instruction selector.
-  addPass(createPPCISelDag(getPPCTargetMachine()));
+  addPass(createPPCISelDag(getPPCTargetMachine(), getOptLevel()));
 
 #ifndef NDEBUG
   if (!DisableCTRLoops && getOptLevel() != CodeGenOpt::None)

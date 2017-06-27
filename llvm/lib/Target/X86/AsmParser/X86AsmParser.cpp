@@ -1705,8 +1705,7 @@ bool X86AsmParser::ParseIntelDotOperator(const MCExpr *Disp,
   if (isParsingInlineAsm() && Tok.is(AsmToken::Identifier)) {
     SMLoc Loc = SMLoc::getFromPointer(DotDispStr.data());
     unsigned Len = DotDispStr.size();
-    unsigned Val = OrigDispVal + DotDispVal;
-    InstInfo->AsmRewrites->emplace_back(AOK_DotOperator, Loc, Len, Val);
+    InstInfo->AsmRewrites->emplace_back(AOK_DotOperator, Loc, Len, DotDispVal);
   }
 
   NewDisp = MCConstantExpr::create(OrigDispVal + DotDispVal, getContext());

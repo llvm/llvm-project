@@ -16,6 +16,17 @@ namespace clang {
 namespace tidy {
 namespace modernize {
 
+namespace {
+StringRef GetNewExprName(const CXXNewExpr *NewExpr,
+                         const SourceManager &SM,
+                         const LangOptions &Lang) {
+  return Lexer::getSourceText(
+      CharSourceRange::getTokenRange(
+          NewExpr->getAllocatedTypeSourceInfo()->getTypeLoc().getSourceRange()),
+      SM, Lang);
+}
+} // namespace
+
 const char MakeSmartPtrCheck::PointerType[] = "pointerType";
 const char MakeSmartPtrCheck::ConstructorCall[] = "constructorCall";
 const char MakeSmartPtrCheck::ResetCall[] = "resetCall";
@@ -87,7 +98,7 @@ void MakeSmartPtrCheck::checkConstruct(SourceManager &SM,
   StringRef ExprStr = Lexer::getSourceText(
       CharSourceRange::getCharRange(
           ConstructCallStart, Construct->getParenOrBraceRange().getBegin()),
-      SM, LangOptions(), &Invalid);
+      SM, getLangOpts(), &Invalid);
   if (Invalid)
     return;
 
@@ -102,7 +113,8 @@ void MakeSmartPtrCheck::checkConstruct(SourceManager &SM,
     // we have to add it back.
     ConstructCallEnd = ConstructCallStart.getLocWithOffset(ExprStr.size());
     Diag << FixItHint::CreateInsertion(
-        ConstructCallEnd, "<" + Type->getAsString(getLangOpts()) + ">");
+        ConstructCallEnd,
+        "<" + GetNewExprName(New, SM, getLangOpts()).str() + ">");
   } else {
     ConstructCallEnd = ConstructCallStart.getLocWithOffset(LAngle);
   }
@@ -144,7 +156,7 @@ void MakeSmartPtrCheck::checkReset(SourceManager &SM,
   Diag << FixItHint::CreateReplacement(
       CharSourceRange::getCharRange(OperatorLoc, ExprEnd),
       (llvm::Twine(" = ") + makeSmartPtrFunctionName + "<" +
-       New->getAllocatedType().getAsString(getLangOpts()) + ">")
+       GetNewExprName(New, SM, getLangOpts()) + ">")
           .str());
 
   if (Expr->isArrow())

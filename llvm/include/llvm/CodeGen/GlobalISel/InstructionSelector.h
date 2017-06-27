@@ -1,4 +1,4 @@
-//==-- llvm/CodeGen/GlobalISel/InstructionSelector.h -------------*- C++ -*-==//
+//===- llvm/CodeGen/GlobalISel/InstructionSelector.h ------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -16,15 +16,16 @@
 #ifndef LLVM_CODEGEN_GLOBALISEL_INSTRUCTIONSELECTOR_H
 #define LLVM_CODEGEN_GLOBALISEL_INSTRUCTIONSELECTOR_H
 
-#include "llvm/ADT/Optional.h"
 #include <bitset>
+#include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <initializer_list>
 
 namespace llvm {
+
 class MachineInstr;
 class MachineInstrBuilder;
-class MachineFunction;
 class MachineOperand;
 class MachineRegisterInfo;
 class RegisterBankInfo;
@@ -60,7 +61,7 @@ public:
 /// Provides the logic to select generic machine instructions.
 class InstructionSelector {
 public:
-  virtual ~InstructionSelector() {}
+  virtual ~InstructionSelector() = default;
 
   /// Select the (possibly generic) instruction \p I to only use target-specific
   /// opcodes. It is OK to insert multiple instructions, but they cannot be
@@ -76,7 +77,7 @@ public:
   virtual bool select(MachineInstr &I) const = 0;
 
 protected:
-  typedef std::function<void(MachineInstrBuilder &)> ComplexRendererFn;
+  using ComplexRendererFn = std::function<void(MachineInstrBuilder &)>;
 
   InstructionSelector();
 
@@ -110,6 +111,6 @@ protected:
   bool isObviouslySafeToFold(MachineInstr &MI) const;
 };
 
-} // End namespace llvm.
+} // end namespace llvm
 
-#endif
+#endif // LLVM_CODEGEN_GLOBALISEL_INSTRUCTIONSELECTOR_H

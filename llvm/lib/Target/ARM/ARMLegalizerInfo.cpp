@@ -84,6 +84,9 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
   setAction({G_GEP, p0}, Legal);
   setAction({G_GEP, 1, s32}, Legal);
 
+  setAction({G_SELECT, s32}, Legal);
+  setAction({G_SELECT, 1, s1}, Legal);
+
   setAction({G_CONSTANT, s32}, Legal);
 
   setAction({G_ICMP, s1}, Legal);

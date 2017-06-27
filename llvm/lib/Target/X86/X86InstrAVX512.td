@@ -7265,13 +7265,13 @@ avx512_rndscale_scalar<bits<8> opc, string OpcodeStr, X86VectorVTInfo _> {
   let Predicates = [HasAVX512] in {
   def : Pat<(ffloor _.FRC:$src), (COPY_TO_REGCLASS
              (_.VT (!cast<Instruction>(NAME##r) (_.VT (IMPLICIT_DEF)),
-             (_.VT (COPY_TO_REGCLASS _.FRC:$src, _.RC)), (i32 0x1))), _.FRC)>;
+             (_.VT (COPY_TO_REGCLASS _.FRC:$src, _.RC)), (i32 0x9))), _.FRC)>;
   def : Pat<(fceil _.FRC:$src), (COPY_TO_REGCLASS
              (_.VT (!cast<Instruction>(NAME##r) (_.VT (IMPLICIT_DEF)),
-             (_.VT (COPY_TO_REGCLASS _.FRC:$src, _.RC)), (i32 0x2))), _.FRC)>;
+             (_.VT (COPY_TO_REGCLASS _.FRC:$src, _.RC)), (i32 0xa))), _.FRC)>;
   def : Pat<(ftrunc _.FRC:$src), (COPY_TO_REGCLASS
              (_.VT (!cast<Instruction>(NAME##r) (_.VT (IMPLICIT_DEF)),
-             (_.VT (COPY_TO_REGCLASS _.FRC:$src, _.RC)), (i32 0x3))), _.FRC)>;
+             (_.VT (COPY_TO_REGCLASS _.FRC:$src, _.RC)), (i32 0xb))), _.FRC)>;
   def : Pat<(frint _.FRC:$src), (COPY_TO_REGCLASS
              (_.VT (!cast<Instruction>(NAME##r) (_.VT (IMPLICIT_DEF)),
              (_.VT (COPY_TO_REGCLASS _.FRC:$src, _.RC)), (i32 0x4))), _.FRC)>;
@@ -7281,13 +7281,13 @@ avx512_rndscale_scalar<bits<8> opc, string OpcodeStr, X86VectorVTInfo _> {
 
   def : Pat<(ffloor (_.ScalarLdFrag addr:$src)), (COPY_TO_REGCLASS
              (_.VT (!cast<Instruction>(NAME##m) (_.VT (IMPLICIT_DEF)),
-             addr:$src, (i32 0x1))), _.FRC)>;
+             addr:$src, (i32 0x9))), _.FRC)>;
   def : Pat<(fceil (_.ScalarLdFrag addr:$src)), (COPY_TO_REGCLASS
              (_.VT (!cast<Instruction>(NAME##m) (_.VT (IMPLICIT_DEF)),
-             addr:$src, (i32 0x2))), _.FRC)>;
+             addr:$src, (i32 0xa))), _.FRC)>;
   def : Pat<(ftrunc (_.ScalarLdFrag addr:$src)), (COPY_TO_REGCLASS
              (_.VT (!cast<Instruction>(NAME##m) (_.VT (IMPLICIT_DEF)),
-             addr:$src, (i32 0x3))), _.FRC)>;
+             addr:$src, (i32 0xb))), _.FRC)>;
   def : Pat<(frint (_.ScalarLdFrag addr:$src)), (COPY_TO_REGCLASS
              (_.VT (!cast<Instruction>(NAME##m) (_.VT (IMPLICIT_DEF)),
              addr:$src, (i32 0x4))), _.FRC)>;
@@ -8471,26 +8471,26 @@ multiclass avx512_shuff_packed_128<string OpcodeStr, AVX512VLVectorVTInfo _,
 }
 let Predicates = [HasAVX512] in {
 def : Pat<(v16f32 (ffloor VR512:$src)),
-          (VRNDSCALEPSZrri VR512:$src, (i32 0x1))>;
+          (VRNDSCALEPSZrri VR512:$src, (i32 0x9))>;
 def : Pat<(v16f32 (fnearbyint VR512:$src)),
           (VRNDSCALEPSZrri VR512:$src, (i32 0xC))>;
 def : Pat<(v16f32 (fceil VR512:$src)),
-          (VRNDSCALEPSZrri VR512:$src, (i32 0x2))>;
+          (VRNDSCALEPSZrri VR512:$src, (i32 0xA))>;
 def : Pat<(v16f32 (frint VR512:$src)),
           (VRNDSCALEPSZrri VR512:$src, (i32 0x4))>;
 def : Pat<(v16f32 (ftrunc VR512:$src)),
-          (VRNDSCALEPSZrri VR512:$src, (i32 0x3))>;
+          (VRNDSCALEPSZrri VR512:$src, (i32 0xB))>;
 
 def : Pat<(v8f64 (ffloor VR512:$src)),
-          (VRNDSCALEPDZrri VR512:$src, (i32 0x1))>;
+          (VRNDSCALEPDZrri VR512:$src, (i32 0x9))>;
 def : Pat<(v8f64 (fnearbyint VR512:$src)),
           (VRNDSCALEPDZrri VR512:$src, (i32 0xC))>;
 def : Pat<(v8f64 (fceil VR512:$src)),
-          (VRNDSCALEPDZrri VR512:$src, (i32 0x2))>;
+          (VRNDSCALEPDZrri VR512:$src, (i32 0xA))>;
 def : Pat<(v8f64 (frint VR512:$src)),
           (VRNDSCALEPDZrri VR512:$src, (i32 0x4))>;
 def : Pat<(v8f64 (ftrunc VR512:$src)),
-          (VRNDSCALEPDZrri VR512:$src, (i32 0x3))>;
+          (VRNDSCALEPDZrri VR512:$src, (i32 0xB))>;
 }
 
 defm VSHUFF32X4 : avx512_shuff_packed_128<"vshuff32x4",avx512vl_f32_info, 0x23>,

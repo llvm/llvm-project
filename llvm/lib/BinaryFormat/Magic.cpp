@@ -51,7 +51,8 @@ file_magic llvm::identify_magic(StringRef Magic) {
       return file_magic::coff_import_library;
     }
     // Windows resource file
-    if (startswith(Magic, "\0\0\0\0\x20\0\0\0\xFF"))
+    if (Magic.size() >= sizeof(COFF::WinResMagic) &&
+        memcmp(Magic.data(), COFF::WinResMagic, sizeof(COFF::WinResMagic)) == 0)
       return file_magic::windows_resource;
     // 0x0000 = COFF unknown machine type
     if (Magic[1] == 0)

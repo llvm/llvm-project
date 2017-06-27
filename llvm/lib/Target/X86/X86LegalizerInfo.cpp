@@ -228,10 +228,14 @@ void X86LegalizerInfo::setLegalizerInfoAVX() {
     for (auto Ty : {v8s32, v4s64})
       setAction({MemOp, Ty}, Legal);
 
-  for (auto Ty : {v32s8, v16s16, v8s32, v4s64})
+  for (auto Ty : {v32s8, v16s16, v8s32, v4s64}) {
     setAction({G_INSERT, Ty}, Legal);
-  for (auto Ty : {v16s8, v8s16, v4s32, v2s64})
+    setAction({G_EXTRACT, 1, Ty}, Legal);
+  }
+  for (auto Ty : {v16s8, v8s16, v4s32, v2s64}) {
     setAction({G_INSERT, 1, Ty}, Legal);
+    setAction({G_EXTRACT, Ty}, Legal);
+  }
 }
 
 void X86LegalizerInfo::setLegalizerInfoAVX2() {
@@ -280,10 +284,14 @@ void X86LegalizerInfo::setLegalizerInfoAVX512() {
     for (auto Ty : {v16s32, v8s64})
       setAction({MemOp, Ty}, Legal);
 
-  for (auto Ty : {v64s8, v32s16, v16s32, v8s64})
+  for (auto Ty : {v64s8, v32s16, v16s32, v8s64}) {
     setAction({G_INSERT, Ty}, Legal);
-  for (auto Ty : {v32s8, v16s16, v8s32, v4s64, v16s8, v8s16, v4s32, v2s64})
+    setAction({G_EXTRACT, 1, Ty}, Legal);
+  }
+  for (auto Ty : {v32s8, v16s16, v8s32, v4s64, v16s8, v8s16, v4s32, v2s64}) {
     setAction({G_INSERT, 1, Ty}, Legal);
+    setAction({G_EXTRACT, Ty}, Legal);
+  }
 
   /************ VLX *******************/
   if (!Subtarget.hasVLX())

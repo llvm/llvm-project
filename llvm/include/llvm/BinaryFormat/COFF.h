@@ -46,6 +46,12 @@ static const char ClGlObjMagic[] = {
     '\xac', '\x9b', '\xd6', '\xb6', '\x22', '\x26', '\x53', '\xc2',
 };
 
+// The signature bytes that start a .res file.
+static const char WinResMagic[] = {
+    '\x00', '\x00', '\x00', '\x00', '\x20', '\x00', '\x00', '\x00',
+    '\xff', '\xff', '\x00', '\x00', '\xff', '\xff', '\x00', '\x00',
+};
+
 // Sizes in bytes of various things in the COFF format.
 enum {
   Header16Size = 20,
@@ -376,7 +382,7 @@ enum RelocationTypesARM64 {
   IMAGE_REL_ARM64_ADDR32 = 0x0001,
   IMAGE_REL_ARM64_ADDR32NB = 0x0002,
   IMAGE_REL_ARM64_BRANCH26 = 0x0003,
-  IMAGE_REL_ARM64_PAGEBASE_REL2 = 0x0004,
+  IMAGE_REL_ARM64_PAGEBASE_REL21 = 0x0004,
   IMAGE_REL_ARM64_REL21 = 0x0005,
   IMAGE_REL_ARM64_PAGEOFFSET_12A = 0x0006,
   IMAGE_REL_ARM64_PAGEOFFSET_12L = 0x0007,

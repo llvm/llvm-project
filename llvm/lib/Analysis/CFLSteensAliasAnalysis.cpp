@@ -90,17 +90,6 @@ const StratifiedIndex StratifiedLink::SetSentinel =
 /// Determines whether it would be pointless to add the given Value to our sets.
 static bool canSkipAddingToSets(Value *Val);
 
-static Optional<Function *> parentFunctionOfValue(Value *Val) {
-  if (auto *Inst = dyn_cast<Instruction>(Val)) {
-    auto *Bb = Inst->getParent();
-    return Bb->getParent();
-  }
-
-  if (auto *Arg = dyn_cast<Argument>(Val))
-    return Arg->getParent();
-  return None;
-}
-
 static bool canSkipAddingToSets(Value *Val) {
   // Constants can share instances, which may falsely unify multiple
   // sets, e.g. in
@@ -245,7 +234,7 @@ void CFLSteensAAResult::scan(Function *Fn) {
   auto FunInfo = buildSetsFrom(Fn);
   Cache[Fn] = std::move(FunInfo);
 
-  Handles.push_front(FunctionHandle(Fn, this));
+  Handles.emplace_front(Fn, this);
 }
 
 void CFLSteensAAResult::evict(Function *Fn) { Cache.erase(Fn); }
@@ -281,9 +270,9 @@ AliasResult CFLSteensAAResult::query(const MemoryLocation &LocA,
     return NoAlias;
 
   Function *Fn = nullptr;
-  auto MaybeFnA = parentFunctionOfValue(ValA);
-  auto MaybeFnB = parentFunctionOfValue(ValB);
-  if (!MaybeFnA.hasValue() && !MaybeFnB.hasValue()) {
+  Function *MaybeFnA = const_cast<Function *>(parentFunctionOfValue(ValA));
+  Function *MaybeFnB = const_cast<Function *>(parentFunctionOfValue(ValB));
+  if (!MaybeFnA && !MaybeFnB) {
     // The only times this is known to happen are when globals + InlineAsm are
     // involved
     DEBUG(dbgs()
@@ -291,12 +280,12 @@ AliasResult CFLSteensAAResult::query(const MemoryLocation &LocA,
     return MayAlias;
   }
 
-  if (MaybeFnA.hasValue()) {
-    Fn = *MaybeFnA;
-    assert((!MaybeFnB.hasValue() || *MaybeFnB == *MaybeFnA) &&
+  if (MaybeFnA) {
+    Fn = MaybeFnA;
+    assert((!MaybeFnB || MaybeFnB == MaybeFnA) &&
            "Interprocedural queries not supported");
   } else {
-    Fn = *MaybeFnB;
+    Fn = MaybeFnB;
   }
 
   assert(Fn != nullptr);

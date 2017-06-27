@@ -1051,10 +1051,26 @@ int HexagonFrameLowering::getFrameIndexReference(const MachineFunction &MF,
   bool HasExtraAlign = HRI.needsStackRealignment(MF);
   bool NoOpt = MF.getTarget().getOptLevel() == CodeGenOpt::None;
 
+  unsigned FrameSize = MFI.getStackSize();
   unsigned SP = HRI.getStackRegister(), FP = HRI.getFrameRegister();
   auto &HMFI = *MF.getInfo<HexagonMachineFunctionInfo>();
   unsigned AP = HMFI.getStackAlignBasePhysReg();
-  unsigned FrameSize = MFI.getStackSize();
+  // It may happen that AP will be absent even HasAlloca && HasExtraAlign
+  // is true. HasExtraAlign may be set because of vector spills, without
+  // aligned locals or aligned outgoing function arguments. Since vector
+  // spills will ultimately be "unaligned", it is safe to use FP as the
+  // base register.
+  // In fact, in such a scenario the stack is actually not required to be
+  // aligned, although it may end up being aligned anyway, since this
+  // particular case is not easily detectable. The alignment will be
+  // unnecessary, but not incorrect.
+  // Unfortunately there is no quick way to verify that the above is
+  // indeed the case (and that it's not a result of an error), so just
+  // assume that missing AP will be replaced by FP.
+  // (A better fix would be to rematerialize AP from FP and always align
+  // vector spills.)
+  if (AP == 0)
+    AP = FP;
 
   bool UseFP = false, UseAP = false;  // Default: use SP (except at -O0).
   // Use FP at -O0, except when there are objects with extra alignment.

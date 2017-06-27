@@ -114,6 +114,31 @@ cl::OptionCategory TypeCategory("Symbol Type Options");
 cl::OptionCategory FilterCategory("Filtering and Sorting Options");
 cl::OptionCategory OtherOptions("Other Options");
 
+cl::ValuesClass ChunkValues = cl::values(
+    clEnumValN(ModuleSubsection::CrossScopeExports, "cme",
+               "Cross module exports (DEBUG_S_CROSSSCOPEEXPORTS subsection)"),
+    clEnumValN(ModuleSubsection::CrossScopeImports, "cmi",
+               "Cross module imports (DEBUG_S_CROSSSCOPEIMPORTS subsection)"),
+    clEnumValN(ModuleSubsection::FileChecksums, "fc",
+               "File checksums (DEBUG_S_CHECKSUMS subsection)"),
+    clEnumValN(ModuleSubsection::InlineeLines, "ilines",
+               "Inlinee lines (DEBUG_S_INLINEELINES subsection)"),
+    clEnumValN(ModuleSubsection::Lines, "lines",
+               "Lines (DEBUG_S_LINES subsection)"),
+    clEnumValN(ModuleSubsection::StringTable, "strings",
+               "String Table (DEBUG_S_STRINGTABLE subsection) (not "
+               "typically present in PDB file)"),
+    clEnumValN(ModuleSubsection::FrameData, "frames",
+               "Frame Data (DEBUG_S_FRAMEDATA subsection)"),
+    clEnumValN(ModuleSubsection::Symbols, "symbols",
+               "Symbols (DEBUG_S_SYMBOLS subsection) (not typically "
+               "present in PDB file)"),
+    clEnumValN(ModuleSubsection::CoffSymbolRVAs, "rvas",
+               "COFF Symbol RVAs (DEBUG_S_COFF_SYMBOL_RVA subsection)"),
+    clEnumValN(ModuleSubsection::Unknown, "unknown",
+               "Any subsection not covered by another option"),
+    clEnumValN(ModuleSubsection::All, "all", "All known subsections"));
+
 namespace pretty {
 cl::list<std::string> InputFilenames(cl::Positional,
                                      cl::desc("<input PDB files>"),
@@ -328,9 +353,14 @@ cl::opt<bool> ModuleSyms("syms", cl::desc("Dump symbol record substream"),
 cl::opt<bool> ModuleC11("c11-chunks", cl::Hidden,
                         cl::desc("Dump C11 CodeView debug chunks"),
                         cl::sub(BytesSubcommand), cl::cat(ModuleCategory));
-cl::opt<bool> ModuleC13("chunks", cl::desc("Dump C13 CodeView debug chunks"),
+cl::opt<bool> ModuleC13("chunks",
+                        cl::desc("Dump C13 CodeView debug chunk subsection"),
                         cl::sub(BytesSubcommand), cl::cat(ModuleCategory));
-
+cl::opt<bool> SplitChunks(
+    "split-chunks",
+    cl::desc(
+        "When dumping debug chunks, show a different section for each chunk"),
+    cl::sub(BytesSubcommand), cl::cat(ModuleCategory));
 cl::list<std::string> InputFilenames(cl::Positional,
                                      cl::desc("<input PDB files>"),
                                      cl::OneOrMore, cl::sub(BytesSubcommand));
@@ -501,33 +531,7 @@ cl::opt<bool> DumpModuleFiles("module-files", cl::desc("dump file information"),
                               cl::sub(PdbToYamlSubcommand));
 cl::list<ModuleSubsection> DumpModuleSubsections(
     "subsections", cl::ZeroOrMore, cl::CommaSeparated,
-    cl::desc("dump subsections from each module's debug stream"),
-    cl::values(
-        clEnumValN(
-            ModuleSubsection::CrossScopeExports, "cme",
-            "Cross module exports (DEBUG_S_CROSSSCOPEEXPORTS subsection)"),
-        clEnumValN(
-            ModuleSubsection::CrossScopeImports, "cmi",
-            "Cross module imports (DEBUG_S_CROSSSCOPEIMPORTS subsection)"),
-        clEnumValN(ModuleSubsection::FileChecksums, "fc",
-                   "File checksums (DEBUG_S_CHECKSUMS subsection)"),
-        clEnumValN(ModuleSubsection::InlineeLines, "ilines",
-                   "Inlinee lines (DEBUG_S_INLINEELINES subsection)"),
-        clEnumValN(ModuleSubsection::Lines, "lines",
-                   "Lines (DEBUG_S_LINES subsection)"),
-        clEnumValN(ModuleSubsection::StringTable, "strings",
-                   "String Table (DEBUG_S_STRINGTABLE subsection) (not "
-                   "typically present in PDB file)"),
-        clEnumValN(ModuleSubsection::FrameData, "frames",
-                   "Frame Data (DEBUG_S_FRAMEDATA subsection)"),
-        clEnumValN(ModuleSubsection::Symbols, "symbols",
-                   "Symbols (DEBUG_S_SYMBOLS subsection) (not typically "
-                   "present in PDB file)"),
-        clEnumValN(ModuleSubsection::CoffSymbolRVAs, "rvas",
-                   "COFF Symbol RVAs (DEBUG_S_COFF_SYMBOL_RVA subsection)"),
-        clEnumValN(ModuleSubsection::Unknown, "unknown",
-                   "Any subsection not covered by another option"),
-        clEnumValN(ModuleSubsection::All, "all", "All known subsections")),
+    cl::desc("dump subsections from each module's debug stream"), ChunkValues,
     cl::cat(FileOptions), cl::sub(PdbToYamlSubcommand));
 cl::opt<bool> DumpModuleSyms("module-syms", cl::desc("dump module symbols"),
                              cl::cat(FileOptions),
@@ -980,6 +984,15 @@ static bool parseRange(StringRef Str,
   return true;
 }
 
+static void simplifyChunkList(llvm::cl::list<opts::ModuleSubsection> &Chunks) {
+  // If this list contains "All" plus some other stuff, remove the other stuff
+  // and just keep "All" in the list.
+  if (!llvm::is_contained(Chunks, opts::ModuleSubsection::All))
+    return;
+  Chunks.reset();
+  Chunks.push_back(opts::ModuleSubsection::All);
+}
+
 int main(int argc_, const char *argv_[]) {
   // Print a stack trace if we signal out.
   sys::PrintStackTraceOnErrorSignal(argv_[0]);
@@ -1050,13 +1063,8 @@ int main(int argc_, const char *argv_[]) {
       opts::pdb2yaml::DumpModuleSyms = true;
       opts::pdb2yaml::DumpModuleSubsections.push_back(
           opts::ModuleSubsection::All);
-      if (llvm::is_contained(opts::pdb2yaml::DumpModuleSubsections,
-                             opts::ModuleSubsection::All)) {
-        opts::pdb2yaml::DumpModuleSubsections.reset();
-        opts::pdb2yaml::DumpModuleSubsections.push_back(
-            opts::ModuleSubsection::All);
-      }
     }
+    simplifyChunkList(opts::pdb2yaml::DumpModuleSubsections);
 
     if (opts::pdb2yaml::DumpModuleSyms || opts::pdb2yaml::DumpModuleFiles)
       opts::pdb2yaml::DumpModules = true;

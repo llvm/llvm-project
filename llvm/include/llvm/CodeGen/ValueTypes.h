@@ -17,7 +17,10 @@
 #define LLVM_CODEGEN_VALUETYPES_H
 
 #include "llvm/CodeGen/MachineValueType.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/MathExtras.h"
 #include <cassert>
+#include <cstdint>
 #include <string>
 
 namespace llvm {
@@ -30,13 +33,13 @@ namespace llvm {
   /// can represent.
   struct EVT {
   private:
-    MVT V;
-    Type *LLVMTy;
+    MVT V = MVT::INVALID_SIMPLE_VALUE_TYPE;
+    Type *LLVMTy = nullptr;
 
   public:
-    constexpr EVT() : V(MVT::INVALID_SIMPLE_VALUE_TYPE), LLVMTy(nullptr) {}
-    constexpr EVT(MVT::SimpleValueType SVT) : V(SVT), LLVMTy(nullptr) {}
-    constexpr EVT(MVT S) : V(S), LLVMTy(nullptr) {}
+    constexpr EVT() = default;
+    constexpr EVT(MVT::SimpleValueType SVT) : V(SVT) {}
+    constexpr EVT(MVT S) : V(S) {}
 
     bool operator==(EVT VT) const {
       return !(*this != VT);
@@ -246,7 +249,6 @@ namespace llvm {
       return getSizeInBits() <= VT.getSizeInBits();
     }
 
-
     /// Return the SimpleValueType held in the specified simple EVT.
     MVT getSimpleVT() const {
       assert(isSimple() && "Expected a SimpleValueType!");
@@ -430,6 +432,6 @@ namespace llvm {
     unsigned getExtendedSizeInBits() const LLVM_READONLY;
   };
 
-} // End llvm namespace
+} // end namespace llvm
 
-#endif
+#endif // LLVM_CODEGEN_VALUETYPES_H

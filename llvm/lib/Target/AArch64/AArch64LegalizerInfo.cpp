@@ -99,6 +99,12 @@ AArch64LegalizerInfo::AArch64LegalizerInfo() {
     // G_INSERT (It seems entirely reasonable that inputs shouldn't overlap).
   }
 
+  for (auto Ty : {s1, s8, s16, s32, s64, p0})
+    setAction({G_EXTRACT, Ty}, Legal);
+
+  for (auto Ty : {s32, s64})
+    setAction({G_EXTRACT, 1, Ty}, Legal);
+
   for (unsigned MemOp : {G_LOAD, G_STORE}) {
     for (auto Ty : {s8, s16, s32, s64, p0, v2s32})
       setAction({MemOp, Ty}, Legal);

@@ -60,6 +60,10 @@ private:
 
   /// \brief Emits debugger prologue.
   void emitDebuggerPrologue(MachineFunction &MF, MachineBasicBlock &MBB) const;
+
+public:
+  bool hasFP(const MachineFunction &MF) const override;
+  bool hasSP(const MachineFunction &MF) const;
 };
 
 } // end namespace llvm

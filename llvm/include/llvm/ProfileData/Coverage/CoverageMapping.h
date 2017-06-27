@@ -168,13 +168,21 @@ class CounterExpressionBuilder {
   /// expression is added to the builder's collection of expressions.
   Counter get(const CounterExpression &E);
 
+  /// Represents a term in a counter expression tree.
+  struct Term {
+    unsigned CounterID;
+    int Factor;
+
+    Term(unsigned CounterID, int Factor)
+        : CounterID(CounterID), Factor(Factor) {}
+  };
+
   /// \brief Gather the terms of the expression tree for processing.
   ///
   /// This collects each addition and subtraction referenced by the counter into
   /// a sequence that can be sorted and combined to build a simplified counter
   /// expression.
-  void extractTerms(Counter C, int Sign,
-                    SmallVectorImpl<std::pair<unsigned, int>> &Terms);
+  void extractTerms(Counter C, int Sign, SmallVectorImpl<Term> &Terms);
 
   /// \brief Simplifies the given expression tree
   /// by getting rid of algebraically redundant operations.

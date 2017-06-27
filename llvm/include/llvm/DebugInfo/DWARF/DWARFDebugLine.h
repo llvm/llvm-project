@@ -12,6 +12,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/DIContext.h"
+#include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/DebugInfo/DWARF/DWARFRelocMap.h"
 #include "llvm/Support/DataExtractor.h"
 #include <cstdint>
@@ -43,10 +44,10 @@ public:
     /// The size in bytes of the statement information for this compilation unit
     /// (not including the total_length field itself).
     uint64_t TotalLength;
-    /// Version identifier for the statement information format.
-    uint16_t Version;
-    /// In v5, size in bytes of an address (or segment offset).
-    uint8_t AddressSize;
+    /// Version, address size (starting in v5), and DWARF32/64 format; these
+    /// parameters affect interpretation of forms (used in the directory and
+    /// file tables starting with v5).
+    DWARFFormParams FormParams;
     /// In v5, size in bytes of a segment selector.
     uint8_t SegSelectorSize;
     /// The number of bytes following the prologue_length field to the beginning
@@ -71,15 +72,18 @@ public:
     std::vector<StringRef> IncludeDirectories;
     std::vector<FileNameEntry> FileNames;
 
-    bool IsDWARF64;
+    const DWARFFormParams getFormParams() const { return FormParams; }
+    uint16_t getVersion() const { return FormParams.Version; }
+    uint8_t getAddressSize() const { return FormParams.AddrSize; }
+    bool isDWARF64() const { return FormParams.Format == dwarf::DWARF64; }
 
-    uint32_t sizeofTotalLength() const { return IsDWARF64 ? 12 : 4; }
+    uint32_t sizeofTotalLength() const { return isDWARF64() ? 12 : 4; }
 
-    uint32_t sizeofPrologueLength() const { return IsDWARF64 ? 8 : 4; }
+    uint32_t sizeofPrologueLength() const { return isDWARF64() ? 8 : 4; }
 
     /// Length of the prologue in bytes.
     uint32_t getLength() const {
-      return PrologueLength + sizeofTotalLength() + sizeof(Version) +
+      return PrologueLength + sizeofTotalLength() + sizeof(getVersion()) +
              sizeofPrologueLength();
     }
 

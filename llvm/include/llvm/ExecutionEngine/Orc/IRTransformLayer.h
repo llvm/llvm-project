@@ -18,6 +18,7 @@
 #include <string>
 
 namespace llvm {
+class Module;
 namespace orc {
 
 /// @brief IR mutating layer.

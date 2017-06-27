@@ -34,7 +34,7 @@ if __name__ == '__main__':
 
     bypass = defaultdict(int)
     byname = defaultdict(int)
-    for r in all_remarks.itervalues():
+    for r in optrecord.itervalues(all_remarks):
         bypass[r.Pass] += 1
         byname[r.Pass + "/" + r.Name] += 1
 
