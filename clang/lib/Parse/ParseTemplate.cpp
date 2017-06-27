@@ -674,7 +674,8 @@ Parser::ParseNonTypeTemplateParameter(unsigned Depth, unsigned Position) {
   // FIXME: The type should probably be restricted in some way... Not all
   // declarators (parts of declarators?) are accepted for parameters.
   DeclSpec DS(AttrFactory);
-  ParseDeclarationSpecifiers(DS);
+  ParseDeclarationSpecifiers(DS, ParsedTemplateInfo(), AS_none,
+                             DSC_template_param);
 
   // Parse this as a typename.
   Declarator ParamDecl(DS, Declarator::TemplateParamContext);

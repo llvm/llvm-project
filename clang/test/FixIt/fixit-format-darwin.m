@@ -8,12 +8,15 @@
 int printf(const char * restrict, ...);
 
 #if __LP64__
+typedef long CFIndex;
 typedef long NSInteger;
 typedef unsigned long NSUInteger;
 #else
+typedef int CFIndex;
 typedef int NSInteger;
 typedef unsigned int NSUInteger;
 #endif
+CFIndex getCFIndex();
 NSInteger getNSInteger();
 NSUInteger getNSUInteger();
 
@@ -73,4 +76,11 @@ void bug33447() {
   // CHECK: Outer2("test 8: %ld", (long)getNSInteger());
   Outer2("test 9: %s %s", getNSInteger(), getNSInteger());
   // CHECK: Outer2("test 9: %ld %ld", (long)getNSInteger(), (long)getNSInteger());
+}
+
+void testCFIndex() {
+  printf("test 10: %s", getCFIndex()); 
+  // CHECK: printf("test 10: %ld", (long)getCFIndex());
+  printf("test 11: %s %s", getCFIndex(), getCFIndex());
+  // CHECK: printf("test 11: %ld %ld", (long)getCFIndex(), (long)getCFIndex());
 }

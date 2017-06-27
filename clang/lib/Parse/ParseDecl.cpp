@@ -2680,6 +2680,8 @@ Parser::getDeclSpecContextFromDeclaratorContext(unsigned Context) {
     return DSC_class;
   if (Context == Declarator::FileContext)
     return DSC_top_level;
+  if (Context == Declarator::TemplateParamContext)
+    return DSC_template_param;
   if (Context == Declarator::TemplateTypeArgContext)
     return DSC_template_type_arg;
   if (Context == Declarator::TrailingReturnContext)
@@ -4312,7 +4314,9 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
                                    AS, DS.getModulePrivateSpecLoc(), TParams,
                                    Owned, IsDependent, ScopedEnumKWLoc,
                                    IsScopedUsingClassTag, BaseType,
-                                   DSC == DSC_type_specifier, &SkipBody);
+                                   DSC == DSC_type_specifier,
+                                   DSC == DSC_template_param ||
+                                   DSC == DSC_template_type_arg, &SkipBody);
 
   if (SkipBody.ShouldSkip) {
     assert(TUK == Sema::TUK_Definition && "can only skip a definition");

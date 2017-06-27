@@ -158,4 +158,90 @@ TEST(RecursiveASTVisitor, DefaultArgumentsAreVisited) {
                               "static int k = f();\n"));
 }
 
+// Check to ensure that InitListExpr is visited twice, once each for the
+// syntactic and semantic form.
+class InitListExprPreOrderVisitor
+    : public ExpectedLocationVisitor<InitListExprPreOrderVisitor> {
+public:
+  bool VisitInitListExpr(InitListExpr *ILE) {
+    Match(ILE->isSemanticForm() ? "semantic" : "syntactic", ILE->getLocStart());
+    return true;
+  }
+};
+
+class InitListExprPostOrderVisitor
+    : public ExpectedLocationVisitor<InitListExprPostOrderVisitor> {
+public:
+  bool shouldTraversePostOrder() const { return true; }
+
+  bool VisitInitListExpr(InitListExpr *ILE) {
+    Match(ILE->isSemanticForm() ? "semantic" : "syntactic", ILE->getLocStart());
+    return true;
+  }
+};
+
+class InitListExprPreOrderNoQueueVisitor
+    : public ExpectedLocationVisitor<InitListExprPreOrderNoQueueVisitor> {
+public:
+  bool TraverseInitListExpr(InitListExpr *ILE) {
+    return ExpectedLocationVisitor::TraverseInitListExpr(ILE);
+  }
+
+  bool VisitInitListExpr(InitListExpr *ILE) {
+    Match(ILE->isSemanticForm() ? "semantic" : "syntactic", ILE->getLocStart());
+    return true;
+  }
+};
+
+class InitListExprPostOrderNoQueueVisitor
+    : public ExpectedLocationVisitor<InitListExprPostOrderNoQueueVisitor> {
+public:
+  bool shouldTraversePostOrder() const { return true; }
+
+  bool TraverseInitListExpr(InitListExpr *ILE) {
+    return ExpectedLocationVisitor::TraverseInitListExpr(ILE);
+  }
+
+  bool VisitInitListExpr(InitListExpr *ILE) {
+    Match(ILE->isSemanticForm() ? "semantic" : "syntactic", ILE->getLocStart());
+    return true;
+  }
+};
+
+TEST(RecursiveASTVisitor, InitListExprIsPreOrderVisitedTwice) {
+  InitListExprPreOrderVisitor Visitor;
+  Visitor.ExpectMatch("syntactic", 2, 21);
+  Visitor.ExpectMatch("semantic", 2, 21);
+  EXPECT_TRUE(Visitor.runOver("struct S { int x; };\n"
+                              "static struct S s = {.x = 0};\n",
+                              InitListExprPreOrderVisitor::Lang_C));
+}
+
+TEST(RecursiveASTVisitor, InitListExprIsPostOrderVisitedTwice) {
+  InitListExprPostOrderVisitor Visitor;
+  Visitor.ExpectMatch("syntactic", 2, 21);
+  Visitor.ExpectMatch("semantic", 2, 21);
+  EXPECT_TRUE(Visitor.runOver("struct S { int x; };\n"
+                              "static struct S s = {.x = 0};\n",
+                              InitListExprPostOrderVisitor::Lang_C));
+}
+
+TEST(RecursiveASTVisitor, InitListExprIsPreOrderNoQueueVisitedTwice) {
+  InitListExprPreOrderNoQueueVisitor Visitor;
+  Visitor.ExpectMatch("syntactic", 2, 21);
+  Visitor.ExpectMatch("semantic", 2, 21);
+  EXPECT_TRUE(Visitor.runOver("struct S { int x; };\n"
+                              "static struct S s = {.x = 0};\n",
+                              InitListExprPreOrderNoQueueVisitor::Lang_C));
+}
+
+TEST(RecursiveASTVisitor, InitListExprIsPostOrderNoQueueVisitedTwice) {
+  InitListExprPostOrderNoQueueVisitor Visitor;
+  Visitor.ExpectMatch("syntactic", 2, 21);
+  Visitor.ExpectMatch("semantic", 2, 21);
+  EXPECT_TRUE(Visitor.runOver("struct S { int x; };\n"
+                              "static struct S s = {.x = 0};\n",
+                              InitListExprPostOrderNoQueueVisitor::Lang_C));
+}
+
 } // end anonymous namespace

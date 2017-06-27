@@ -672,20 +672,16 @@ TextDiagnostic::TextDiagnostic(raw_ostream &OS,
 
 TextDiagnostic::~TextDiagnostic() {}
 
-void
-TextDiagnostic::emitDiagnosticMessage(SourceLocation Loc,
-                                      PresumedLoc PLoc,
-                                      DiagnosticsEngine::Level Level,
-                                      StringRef Message,
-                                      ArrayRef<clang::CharSourceRange> Ranges,
-                                      const SourceManager *SM,
-                                      DiagOrStoredDiag D) {
+void TextDiagnostic::emitDiagnosticMessage(
+    FullSourceLoc Loc, PresumedLoc PLoc, DiagnosticsEngine::Level Level,
+    StringRef Message, ArrayRef<clang::CharSourceRange> Ranges,
+    DiagOrStoredDiag D) {
   uint64_t StartOfLocationInfo = OS.tell();
 
   // Emit the location of this particular diagnostic.
   if (Loc.isValid())
-    emitDiagnosticLoc(Loc, PLoc, Level, Ranges, *SM);
-  
+    emitDiagnosticLoc(Loc, PLoc, Level, Ranges);
+
   if (DiagOpts->ShowColors)
     OS.resetColor();
   
@@ -787,17 +783,16 @@ void TextDiagnostic::emitFilename(StringRef Filename, const SourceManager &SM) {
 /// This includes extracting as much location information as is present for
 /// the diagnostic and printing it, as well as any include stack or source
 /// ranges necessary.
-void TextDiagnostic::emitDiagnosticLoc(SourceLocation Loc, PresumedLoc PLoc,
+void TextDiagnostic::emitDiagnosticLoc(FullSourceLoc Loc, PresumedLoc PLoc,
                                        DiagnosticsEngine::Level Level,
-                                       ArrayRef<CharSourceRange> Ranges,
-                                       const SourceManager &SM) {
+                                       ArrayRef<CharSourceRange> Ranges) {
   if (PLoc.isInvalid()) {
     // At least print the file name if available:
-    FileID FID = SM.getFileID(Loc);
+    FileID FID = Loc.getFileID();
     if (FID.isValid()) {
-      const FileEntry* FE = SM.getFileEntryForID(FID);
+      const FileEntry *FE = Loc.getFileEntry();
       if (FE && FE->isValid()) {
-        emitFilename(FE->getName(), SM);
+        emitFilename(FE->getName(), Loc.getManager());
         if (FE->isInPCH())
           OS << " (in PCH)";
         OS << ": ";
@@ -813,7 +808,7 @@ void TextDiagnostic::emitDiagnosticLoc(SourceLocation Loc, PresumedLoc PLoc,
   if (DiagOpts->ShowColors)
     OS.changeColor(savedColor, true);
 
-  emitFilename(PLoc.getFilename(), SM);
+  emitFilename(PLoc.getFilename(), Loc.getManager());
   switch (DiagOpts->getFormat()) {
   case DiagnosticOptions::Clang: OS << ':'  << LineNo; break;
   case DiagnosticOptions::MSVC:  OS << '('  << LineNo; break;
@@ -848,8 +843,7 @@ void TextDiagnostic::emitDiagnosticLoc(SourceLocation Loc, PresumedLoc PLoc,
   }
 
   if (DiagOpts->ShowSourceRanges && !Ranges.empty()) {
-    FileID CaretFileID =
-      SM.getFileID(SM.getExpansionLoc(Loc));
+    FileID CaretFileID = Loc.getExpansionLoc().getFileID();
     bool PrintedRange = false;
 
     for (ArrayRef<CharSourceRange>::const_iterator RI = Ranges.begin(),
@@ -858,8 +852,10 @@ void TextDiagnostic::emitDiagnosticLoc(SourceLocation Loc, PresumedLoc PLoc,
       // Ignore invalid ranges.
       if (!RI->isValid()) continue;
 
-      SourceLocation B = SM.getExpansionLoc(RI->getBegin());
-      SourceLocation E = SM.getExpansionLoc(RI->getEnd());
+      FullSourceLoc B =
+          FullSourceLoc(RI->getBegin(), Loc.getManager()).getExpansionLoc();
+      FullSourceLoc E =
+          FullSourceLoc(RI->getEnd(), Loc.getManager()).getExpansionLoc();
 
       // If the End location and the start location are the same and are a
       // macro location, then the range was something that came from a
@@ -867,10 +863,12 @@ void TextDiagnostic::emitDiagnosticLoc(SourceLocation Loc, PresumedLoc PLoc,
       // best we can do is to highlight the range.  If this is a
       // function-like macro, we'd also like to highlight the arguments.
       if (B == E && RI->getEnd().isMacroID())
-        E = SM.getExpansionRange(RI->getEnd()).second;
+        E = FullSourceLoc(RI->getEnd(), Loc.getManager())
+                .getExpansionRange()
+                .second;
 
-      std::pair<FileID, unsigned> BInfo = SM.getDecomposedLoc(B);
-      std::pair<FileID, unsigned> EInfo = SM.getDecomposedLoc(E);
+      std::pair<FileID, unsigned> BInfo = B.getDecomposedLoc();
+      std::pair<FileID, unsigned> EInfo = E.getDecomposedLoc();
 
       // If the start or end of the range is in another file, just discard
       // it.
@@ -881,13 +879,10 @@ void TextDiagnostic::emitDiagnosticLoc(SourceLocation Loc, PresumedLoc PLoc,
       // tokens.
       unsigned TokSize = 0;
       if (RI->isTokenRange())
-        TokSize = Lexer::MeasureTokenLength(E, SM, LangOpts);
+        TokSize = Lexer::MeasureTokenLength(E, E.getManager(), LangOpts);
 
-      OS << '{' << SM.getLineNumber(BInfo.first, BInfo.second) << ':'
-        << SM.getColumnNumber(BInfo.first, BInfo.second) << '-'
-        << SM.getLineNumber(EInfo.first, EInfo.second) << ':'
-        << (SM.getColumnNumber(EInfo.first, EInfo.second)+TokSize)
-        << '}';
+      OS << '{' << B.getLineNumber() << ':' << B.getColumnNumber() << '-'
+         << E.getLineNumber() << ':' << (E.getColumnNumber() + TokSize) << '}';
       PrintedRange = true;
     }
 
@@ -897,9 +892,7 @@ void TextDiagnostic::emitDiagnosticLoc(SourceLocation Loc, PresumedLoc PLoc,
   OS << ' ';
 }
 
-void TextDiagnostic::emitIncludeLocation(SourceLocation Loc,
-                                         PresumedLoc PLoc,
-                                         const SourceManager &SM) {
+void TextDiagnostic::emitIncludeLocation(FullSourceLoc Loc, PresumedLoc PLoc) {
   if (DiagOpts->ShowLocation && PLoc.isValid())
     OS << "In file included from " << PLoc.getFilename() << ':'
        << PLoc.getLine() << ":\n";
@@ -907,9 +900,8 @@ void TextDiagnostic::emitIncludeLocation(SourceLocation Loc,
     OS << "In included file:\n"; 
 }
 
-void TextDiagnostic::emitImportLocation(SourceLocation Loc, PresumedLoc PLoc,
-                                        StringRef ModuleName,
-                                        const SourceManager &SM) {
+void TextDiagnostic::emitImportLocation(FullSourceLoc Loc, PresumedLoc PLoc,
+                                        StringRef ModuleName) {
   if (DiagOpts->ShowLocation && PLoc.isValid())
     OS << "In module '" << ModuleName << "' imported from "
        << PLoc.getFilename() << ':' << PLoc.getLine() << ":\n";
@@ -917,10 +909,9 @@ void TextDiagnostic::emitImportLocation(SourceLocation Loc, PresumedLoc PLoc,
     OS << "In module '" << ModuleName << "':\n";
 }
 
-void TextDiagnostic::emitBuildingModuleLocation(SourceLocation Loc,
+void TextDiagnostic::emitBuildingModuleLocation(FullSourceLoc Loc,
                                                 PresumedLoc PLoc,
-                                                StringRef ModuleName,
-                                                const SourceManager &SM) {
+                                                StringRef ModuleName) {
   if (DiagOpts->ShowLocation && PLoc.isValid())
     OS << "While building module '" << ModuleName << "' imported from "
       << PLoc.getFilename() << ':' << PLoc.getLine() << ":\n";
@@ -1134,10 +1125,8 @@ static std::string buildFixItInsertionLine(unsigned LineNo,
 /// \param Ranges The underlined ranges for this code snippet.
 /// \param Hints The FixIt hints active for this diagnostic.
 void TextDiagnostic::emitSnippetAndCaret(
-    SourceLocation Loc, DiagnosticsEngine::Level Level,
-    SmallVectorImpl<CharSourceRange>& Ranges,
-    ArrayRef<FixItHint> Hints,
-    const SourceManager &SM) {
+    FullSourceLoc Loc, DiagnosticsEngine::Level Level,
+    SmallVectorImpl<CharSourceRange> &Ranges, ArrayRef<FixItHint> Hints) {
   assert(Loc.isValid() && "must have a valid source location here");
   assert(Loc.isFileID() && "must have a file location here");
 
@@ -1154,18 +1143,18 @@ void TextDiagnostic::emitSnippetAndCaret(
     return;
 
   // Decompose the location into a FID/Offset pair.
-  std::pair<FileID, unsigned> LocInfo = SM.getDecomposedLoc(Loc);
+  std::pair<FileID, unsigned> LocInfo = Loc.getDecomposedLoc();
   FileID FID = LocInfo.first;
-  unsigned CaretFileOffset = LocInfo.second;
+  const SourceManager &SM = Loc.getManager();
 
   // Get information about the buffer it points into.
   bool Invalid = false;
-  StringRef BufData = SM.getBufferData(FID, &Invalid);
+  StringRef BufData = Loc.getBufferData(&Invalid);
   if (Invalid)
     return;
 
-  unsigned CaretLineNo = SM.getLineNumber(FID, CaretFileOffset);
-  unsigned CaretColNo = SM.getColumnNumber(FID, CaretFileOffset);
+  unsigned CaretLineNo = Loc.getLineNumber();
+  unsigned CaretColNo = Loc.getColumnNumber();
 
   // Arbitrarily stop showing snippets when the line is too long.
   static const size_t MaxLineLengthToPrint = 4096;
