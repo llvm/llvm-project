@@ -1,0 +1,61 @@
+# RUN: llc -march=amdgcn -mcpu=kaveri -run-pass=si-peephole-sdwa -o - %s | FileCheck -check-prefix=CI -check-prefix=GCN %s
+# RUN: llc -march=amdgcn -mcpu=fiji -run-pass=si-peephole-sdwa -o - %s | FileCheck -check-prefix=VI -check-prefix=GCN %s
+# RUN: llc -march=amdgcn -mcpu=gfx900 -run-pass=si-peephole-sdwa -o - %s | FileCheck -check-prefix=GFX9 -check-prefix=GCN %s
+
+# No conversion for VOP2 instructions that have only 64-bit encoding
+
+# GCN-LABEL: {{^}}name: vop2_64bit
+
+# GCN: %{{[0-9]+}} = V_BCNT_U32_B32_e64 %{{[0-9]+}}, killed %{{[0-9]+}}, implicit-def %vcc, implicit %exec
+# GCN: %{{[0-9]+}} = V_BFM_B32_e64 %{{[0-9]+}}, killed %{{[0-9]+}}, implicit-def %vcc, implicit %exec
+# GCN: %{{[0-9]+}} = V_CVT_PKNORM_I16_F32_e64 0, %{{[0-9]+}}, 0, killed %{{[0-9]+}}, 0, 0, implicit-def %vcc, implicit %exec
+# GCN: %{{[0-9]+}} = V_READLANE_B32 killed %{{[0-9]+}}, 0, implicit-def %vcc, implicit %exec
+
+---
+name:            vop2_64bit
+tracksRegLiveness: true
+registers:       
+  - { id: 0, class: vreg_64 }
+  - { id: 1, class: vreg_64 }
+  - { id: 2, class: sreg_64 }
+  - { id: 3, class: vgpr_32 }
+  - { id: 4, class: sreg_32_xm0 }
+  - { id: 5, class: sreg_32_xm0 }
+  - { id: 6, class: sreg_32 }
+  - { id: 7, class: sreg_32_xm0 }
+  - { id: 8, class: sreg_32 }
+  - { id: 9, class: vgpr_32 }
+  - { id: 12, class: vgpr_32 }
+  - { id: 13, class: vgpr_32 }
+  - { id: 14, class: vgpr_32 }
+  - { id: 15, class: vgpr_32 }
+  - { id: 16, class: vgpr_32 }
+  - { id: 17, class: vgpr_32 }
+  - { id: 18, class: vgpr_32 }
+  - { id: 19, class: sgpr_32 }
+  - { id: 20, class: vgpr_32 }
+body:             |
+  bb.0:
+    liveins: %vgpr0_vgpr1, %vgpr2_vgpr3, %sgpr30_sgpr31
+  
+    %2 = COPY %sgpr30_sgpr31
+    %1 = COPY %vgpr2_vgpr3
+    %0 = COPY %vgpr0_vgpr1
+    %3 = FLAT_LOAD_DWORD %1, 0, 0, 0, implicit %exec, implicit %flat_scr :: (load 4)
+
+    %12 = V_LSHRREV_B32_e64 16, %3, implicit %exec
+    %13 = V_BCNT_U32_B32_e64 %3, killed %12, implicit-def %vcc, implicit %exec
+
+    %14 = V_LSHRREV_B32_e64 16, %13, implicit %exec
+    %15 = V_BFM_B32_e64 %13, killed %14, implicit-def %vcc, implicit %exec
+
+    %16 = V_LSHRREV_B32_e64 16, %15, implicit %exec
+    %17 = V_CVT_PKNORM_I16_F32_e64 0, %15, 0, killed %16, 0, 0, implicit-def %vcc, implicit %exec
+
+    %18 = V_LSHRREV_B32_e64 16, %17, implicit %exec
+    %19 = V_READLANE_B32 killed %18, 0, implicit-def %vcc, implicit %exec
+    %20 = V_MOV_B32_e64 %19, implicit %exec
+
+    FLAT_STORE_DWORD %0, %20, 0, 0, 0, implicit %exec, implicit %flat_scr :: (store 4)
+    %sgpr30_sgpr31 = COPY %2
+    S_SETPC_B64_return %sgpr30_sgpr31

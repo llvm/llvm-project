@@ -13,6 +13,11 @@ void kernel foo(int x) {
   constant int L1 = 0;
   local int L2;
 
+  if (true) {
+    local int L1; // expected-error {{variables in the local address space can only be declared in the outermost scope of a kernel function}}
+    constant int L1 = 42; // expected-error {{variables in the constant address space can only be declared in the outermost scope of a kernel function}}
+  }
+
   auto int L3 = 7;                            // expected-error{{OpenCL version 1.2 does not support the 'auto' storage class specifier}}
   global int L4;                              // expected-error{{function scope variable cannot be declared in global address space}}
   __attribute__((address_space(100))) int L5; // expected-error{{automatic variable qualified with an invalid address space}}

@@ -53,6 +53,7 @@ public:
     unsigned short GroupID;
     unsigned short AliasID;
     const char *AliasArgs;
+    const char *Values;
   };
 
 private:
@@ -119,6 +120,19 @@ public:
   const char *getOptionMetaVar(OptSpecifier id) const {
     return getInfo(id).MetaVar;
   }
+
+  /// Find possible value for given flags. This is used for shell
+  /// autocompletion.
+  ///
+  /// \param [in] Option - Key flag like "-stdlib=" when "-stdlib=l"
+  /// was passed to clang.
+  ///
+  /// \param [in] Arg - Value which we want to autocomplete like "l"
+  /// when "-stdlib=l" was passed to clang.
+  ///
+  /// \return The vector of possible values.
+  std::vector<std::string> suggestValueCompletions(StringRef Option,
+                                                   StringRef Arg) const;
 
   /// Find flags from OptTable which starts with Cur.
   ///

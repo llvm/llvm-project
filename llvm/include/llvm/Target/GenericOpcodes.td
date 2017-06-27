@@ -386,6 +386,15 @@ def G_FMUL : Instruction {
   let isCommutable = 1;
 }
 
+// Generic fused multiply-add instruction.
+// Behaves like llvm fma intrinsic ie src1 * src2 + src3
+def G_FMA : Instruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2, type0:$src3);
+  let hasSideEffects = 0;
+  let isCommutable = 0;
+}
+
 // Generic FP division.
 def G_FDIV : Instruction {
   let OutOperandList = (outs type0:$dst);
@@ -453,15 +462,6 @@ def G_UNMERGE_VALUES : Instruction {
 def G_INSERT : Instruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src, type1:$op, unknown:$offset);
-  let hasSideEffects = 0;
-}
-
-// Combine a sequence of generic vregs into a single larger value (starting at
-// bit 0). Essentially a G_INSERT where $src is an IMPLICIT_DEF, but it's so
-// important to legalization it probably deserves its own instruction.
-def G_SEQUENCE : Instruction {
-  let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins variable_ops);
   let hasSideEffects = 0;
 }
 

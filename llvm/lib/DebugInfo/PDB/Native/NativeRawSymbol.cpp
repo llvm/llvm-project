@@ -22,8 +22,8 @@
 using namespace llvm;
 using namespace llvm::pdb;
 
-NativeRawSymbol::NativeRawSymbol(NativeSession &PDBSession)
-  : Session(PDBSession) {}
+NativeRawSymbol::NativeRawSymbol(NativeSession &PDBSession, uint32_t SymbolId)
+    : Session(PDBSession), SymbolId(SymbolId) {}
 
 void NativeRawSymbol::dump(raw_ostream &OS, int Indent) const {}
 
@@ -253,9 +253,7 @@ uint32_t NativeRawSymbol::getSubTypeId() const {
 
 std::string NativeRawSymbol::getSymbolsFileName() const { return ""; }
 
-uint32_t NativeRawSymbol::getSymIndexId() const {
-  return 0;
-}
+uint32_t NativeRawSymbol::getSymIndexId() const { return SymbolId; }
 
 uint32_t NativeRawSymbol::getTargetOffset() const {
   return 0;

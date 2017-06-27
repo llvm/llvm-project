@@ -24,10 +24,6 @@ if __name__ == '__main__':
         help='Max job count (defaults to %(default)s, the current CPU count)')
     args = parser.parse_args()
 
-    if len(args.yaml_files) == 0:
-        parser.print_help()
-        sys.exit(1)
-
     if args.jobs == 1:
         pmap = map
     else:
@@ -38,7 +34,7 @@ if __name__ == '__main__':
 
     bypass = defaultdict(int)
     byname = defaultdict(int)
-    for r in all_remarks.itervalues():
+    for r in optrecord.itervalues(all_remarks):
         bypass[r.Pass] += 1
         byname[r.Pass + "/" + r.Name] += 1
 

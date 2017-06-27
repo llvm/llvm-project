@@ -27,7 +27,7 @@ if.else:
 do.cond:
   %max.1 = phi i32 [ %0, %do.body ], [ %max.0, %if.else ]
   %min.1 = phi i32 [ %min.0, %do.body ], [ %.min.0, %if.else ]
-; CHECK: cbnz
+; CHECK: b.ne
   %dec = add i32 %n.addr.0, -1
   %tobool = icmp eq i32 %dec, 0
   br i1 %tobool, label %do.end, label %do.body

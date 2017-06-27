@@ -24,8 +24,8 @@
 #include "lldb/lldb-public.h"
 
 #include "lldb/Core/FormatEntity.h"
-#include "lldb/Core/StructuredData.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/Utility/StructuredData.h"
 
 namespace lldb_private {
 class TypeSummaryOptions {

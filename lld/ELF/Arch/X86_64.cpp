@@ -51,6 +51,7 @@ private:
 } // namespace
 
 template <class ELFT> X86_64<ELFT>::X86_64() {
+  GotBaseSymOff = -1;
   CopyRel = R_X86_64_COPY;
   GotRel = R_X86_64_GLOB_DAT;
   PltRel = R_X86_64_JUMP_SLOT;
@@ -64,13 +65,11 @@ template <class ELFT> X86_64<ELFT>::X86_64() {
   PltEntrySize = 16;
   PltHeaderSize = 16;
   TlsGdRelaxSkip = 2;
+  TrapInstr = 0xcccccccc; // 0xcc = INT3
 
   // Align to the large page size (known as a superpage or huge page).
   // FreeBSD automatically promotes large, superpage-aligned allocations.
   DefaultImageBase = 0x200000;
-
-  // 0xCC is the "int3" (call debug exception handler) instruction.
-  TrapInstr = 0xcccccccc;
 }
 
 template <class ELFT>

@@ -210,16 +210,46 @@ void OutputSection::writeHeaderTo(uint8_t *Buf) {
   }
 }
 
-uint64_t Defined::getSecrel() {
-  if (auto *D = dyn_cast<DefinedRegular>(this))
-    return getRVA() - D->getChunk()->getOutputSection()->getRVA();
-  fatal("SECREL relocation points to a non-regular symbol");
+uint32_t Defined::getSecrel() {
+  assert(this);
+  switch (kind()) {
+  case DefinedRegularKind:
+    return cast<DefinedRegular>(this)->getSecrel();
+  case DefinedCommonKind:
+    return cast<DefinedCommon>(this)->getSecrel();
+  case DefinedSyntheticKind:
+    return cast<DefinedSynthetic>(this)->getSecrel();
+  default:
+    break;
+  }
+  fatal("SECREL relocation points to a non-regular symbol: " + toString(*this));
 }
 
-uint64_t Defined::getSectionIndex() {
+uint32_t DefinedRegular::getSecrel() {
+  assert(getChunk()->isLive() && "relocation against discarded section");
+  uint64_t Diff = getRVA() - getChunk()->getOutputSection()->getRVA();
+  assert(Diff < UINT32_MAX && "section offset too large");
+  return (uint32_t)Diff;
+}
+
+uint16_t Defined::getSectionIndex() {
   if (auto *D = dyn_cast<DefinedRegular>(this))
     return D->getChunk()->getOutputSection()->SectionIndex;
-  fatal("SECTION relocation points to a non-regular symbol");
+  if (isa<DefinedAbsolute>(this))
+    return DefinedAbsolute::OutputSectionIndex;
+  if (auto *D = dyn_cast<DefinedCommon>(this))
+    return D->getSectionIndex();
+  if (auto *D = dyn_cast<DefinedSynthetic>(this)) {
+    if (!D->getChunk())
+      return 0;
+    return D->getChunk()->getOutputSection()->SectionIndex;
+  }
+  fatal("SECTION relocation points to a non-regular symbol: " +
+        toString(*this));
+}
+
+uint16_t DefinedCommon::getSectionIndex() {
+  return Data->getOutputSection()->SectionIndex;
 }
 
 bool Defined::isExecutable() {
@@ -345,12 +375,19 @@ void Writer::createMiscChunks() {
   for (lld::coff::ObjectFile *File : Symtab->ObjectFiles) {
     if (!File->SEHCompat)
       return;
-    for (SymbolBody *B : File->SEHandlers)
-      Handlers.insert(cast<Defined>(B));
+    for (SymbolBody *B : File->SEHandlers) {
+      // Make sure the handler is still live. Assume all handlers are regular
+      // symbols.
+      auto *D = dyn_cast<DefinedRegular>(B);
+      if (D && D->getChunk()->isLive())
+        Handlers.insert(D);
+    }
   }
 
-  SEHTable = make<SEHTableChunk>(Handlers);
-  RData->addChunk(SEHTable);
+  if (!Handlers.empty()) {
+    SEHTable = make<SEHTableChunk>(Handlers);
+    RData->addChunk(SEHTable);
+  }
 }
 
 // Create .idata section for the DLL-imported symbol table.
@@ -442,12 +479,15 @@ size_t Writer::addEntryToStringTable(StringRef Str) {
 
 Optional<coff_symbol16> Writer::createSymbol(Defined *Def) {
   // Relative symbols are unrepresentable in a COFF symbol table.
-  if (isa<DefinedRelative>(Def))
+  if (isa<DefinedSynthetic>(Def))
     return None;
 
-  if (auto *D = dyn_cast<DefinedRegular>(Def))
-    if (!D->getChunk()->isLive())
+  if (auto *D = dyn_cast<DefinedRegular>(Def)) {
+    // Don't write dead symbols or symbols in codeview sections to the symbol
+    // table.
+    if (!D->getChunk()->isLive() || D->getChunk()->isCodeView())
       return None;
+  }
 
   if (auto *Sym = dyn_cast<DefinedImportData>(Def))
     if (!Sym->File->Live)
@@ -599,6 +639,15 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
   auto *PE = reinterpret_cast<PEHeaderTy *>(Buf);
   Buf += sizeof(*PE);
   PE->Magic = Config->is64() ? PE32Header::PE32_PLUS : PE32Header::PE32;
+
+  // If {Major,Minor}LinkerVersion is left at 0.0, then for some
+  // reason signing the resulting PE file with Authenticode produces a
+  // signature that fails to validate on Windows 7 (but is OK on 10).
+  // Set it to 14.0, which is what VS2015 outputs, and which avoids
+  // that problem.
+  PE->MajorLinkerVersion = 14;
+  PE->MinorLinkerVersion = 0;
+
   PE->ImageBase = Config->ImageBase;
   PE->SectionAlignment = PageSize;
   PE->FileAlignment = SectorSize;
@@ -743,10 +792,13 @@ void Writer::openFile(StringRef Path) {
 void Writer::fixSafeSEHSymbols() {
   if (!SEHTable)
     return;
-  if (auto *T = dyn_cast<DefinedRelative>(Config->SEHTable->body()))
-    T->setRVA(SEHTable->getRVA());
-  if (auto *C = dyn_cast<DefinedAbsolute>(Config->SEHCount->body()))
-    C->setVA(SEHTable->getSize() / 4);
+  // Replace the absolute table symbol with a synthetic symbol pointing to the
+  // SEHTable chunk so that we can emit base relocations for it and resolve
+  // section relative relocations.
+  Symbol *T = Symtab->find("___safe_se_handler_table");
+  Symbol *C = Symtab->find("___safe_se_handler_count");
+  replaceBody<DefinedSynthetic>(T, T->body()->getName(), SEHTable);
+  cast<DefinedAbsolute>(C->body())->setVA(SEHTable->getSize() / 4);
 }
 
 // Handles /section options to allow users to overwrite
@@ -762,6 +814,10 @@ void Writer::setSectionPermissions() {
 
 // Write section contents to a mmap'ed file.
 void Writer::writeSections() {
+  // Record the section index that should be used when resolving a section
+  // relocation against an absolute symbol.
+  DefinedAbsolute::OutputSectionIndex = OutputSections.size() + 1;
+
   uint8_t *Buf = Buffer->getBufferStart();
   for (OutputSection *Sec : OutputSections) {
     uint8_t *SecBuf = Buf + Sec->getFileOff();

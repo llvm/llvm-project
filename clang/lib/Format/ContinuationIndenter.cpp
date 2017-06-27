@@ -56,6 +56,8 @@ static bool startsNextParameter(const FormatToken &Current,
   if (Current.is(TT_CtorInitializerComma) &&
       Style.BreakConstructorInitializers == FormatStyle::BCIS_BeforeComma)
     return true;
+  if (Style.Language == FormatStyle::LK_Proto && Current.is(TT_SelectorName))
+    return true;
   return Previous.is(tok::comma) && !Current.isTrailingComment() &&
          ((Previous.isNot(TT_CtorInitializerComma) ||
            Style.BreakConstructorInitializers !=
@@ -499,6 +501,13 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
   }
 }
 
+static bool lessOpensProtoMessageField(const FormatToken &LessTok,
+                                       const LineState &State) {
+  assert(LessTok.is(tok::less));
+  return LessTok.NestingLevel > 0 ||
+         (LessTok.Previous && LessTok.Previous->is(tok::equal));
+}
+
 unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
                                                  bool DryRun) {
   FormatToken &Current = *State.NextToken;
@@ -641,6 +650,9 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
   // before the corresponding } or ].
   if (PreviousNonComment &&
       (PreviousNonComment->isOneOf(tok::l_brace, TT_ArrayInitializerLSquare) ||
+      (Style.Language == FormatStyle::LK_Proto &&
+       PreviousNonComment->is(tok::less) &&
+       lessOpensProtoMessageField(*PreviousNonComment, State)) ||
        (PreviousNonComment->is(TT_TemplateString) &&
         PreviousNonComment->opensScope())))
     State.Stack.back().BreakBeforeClosingBrace = true;
@@ -682,7 +694,9 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
   if (NextNonComment->is(tok::l_brace) && NextNonComment->BlockKind == BK_Block)
     return Current.NestingLevel == 0 ? State.FirstIndent
                                      : State.Stack.back().Indent;
-  if (Current.isOneOf(tok::r_brace, tok::r_square) && State.Stack.size() > 1) {
+  if ((Current.isOneOf(tok::r_brace, tok::r_square) ||
+       (Current.is(tok::greater) && Style.Language == FormatStyle::LK_Proto)) &&
+      State.Stack.size() > 1) {
     if (Current.closesBlockOrBlockTypeList(Style))
       return State.Stack[State.Stack.size() - 2].NestedBlockIndent;
     if (Current.MatchingParen &&
@@ -1035,7 +1049,9 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
   bool BreakBeforeParameter = false;
   unsigned NestedBlockIndent = std::max(State.Stack.back().StartOfFunctionCall,
                                         State.Stack.back().NestedBlockIndent);
-  if (Current.isOneOf(tok::l_brace, TT_ArrayInitializerLSquare)) {
+  if (Current.isOneOf(tok::l_brace, TT_ArrayInitializerLSquare) ||
+      (Style.Language == FormatStyle::LK_Proto && Current.is(tok::less) &&
+       lessOpensProtoMessageField(Current, State))) {
     if (Current.opensBlockOrBlockTypeList(Style)) {
       NewIndent = Style.IndentWidth +
                   std::min(State.Column, State.Stack.back().NestedBlockIndent);

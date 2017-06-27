@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
-// The Cortex-A57 is a traditional superscaler microprocessor with a
+// The Cortex-A57 is a traditional superscalar microprocessor with a
 // conservative 3-wide in-order stage for decode and dispatch. Combined with the
 // much wider out-of-order issue stage, this produced a need to carefully
 // schedule micro-ops so that all three decoded each cycle are successfully

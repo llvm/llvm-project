@@ -1076,6 +1076,27 @@ T cantFail(Expected<T> ValOrErr) {
     llvm_unreachable("Failure value returned from cantFail wrapped call");
 }
 
+/// Report a fatal error if ValOrErr is a failure value, otherwise unwraps and
+/// returns the contained reference.
+///
+/// This function can be used to wrap calls to fallible functions ONLY when it
+/// is known that the Error will always be a success value. E.g.
+///
+///   @code{.cpp}
+///   // foo only attempts the fallible operation if DoFallibleOperation is
+///   // true. If DoFallibleOperation is false then foo always returns a Bar&.
+///   Expected<Bar&> foo(bool DoFallibleOperation);
+///
+///   Bar &X = cantFail(foo(false));
+///   @endcode
+template <typename T>
+T& cantFail(Expected<T&> ValOrErr) {
+  if (ValOrErr)
+    return *ValOrErr;
+  else
+    llvm_unreachable("Failure value returned from cantFail wrapped call");
+}
+
 } // end namespace llvm
 
 #endif // LLVM_SUPPORT_ERROR_H

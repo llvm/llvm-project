@@ -3073,6 +3073,41 @@ uint64_t ASTContext::getFieldOffset(const ValueDecl *VD) const {
   return OffsetInBits;
 }
 
+uint64_t ASTContext::lookupFieldBitOffset(const ObjCInterfaceDecl *OID,
+                                          const ObjCImplementationDecl *ID,
+                                          const ObjCIvarDecl *Ivar) const {
+  const ObjCInterfaceDecl *Container = Ivar->getContainingInterface();
+
+  // FIXME: We should eliminate the need to have ObjCImplementationDecl passed
+  // in here; it should never be necessary because that should be the lexical
+  // decl context for the ivar.
+
+  // If we know have an implementation (and the ivar is in it) then
+  // look up in the implementation layout.
+  const ASTRecordLayout *RL;
+  if (ID && declaresSameEntity(ID->getClassInterface(), Container))
+    RL = &getASTObjCImplementationLayout(ID);
+  else
+    RL = &getASTObjCInterfaceLayout(Container);
+
+  // Compute field index.
+  //
+  // FIXME: The index here is closely tied to how ASTContext::getObjCLayout is
+  // implemented. This should be fixed to get the information from the layout
+  // directly.
+  unsigned Index = 0;
+
+  for (const ObjCIvarDecl *IVD = Container->all_declared_ivar_begin();
+       IVD; IVD = IVD->getNextIvar()) {
+    if (Ivar == IVD)
+      break;
+    ++Index;
+  }
+  assert(Index < RL->getFieldCount() && "Ivar is not inside record layout!");
+
+  return RL->getFieldOffset(Index);
+}
+
 /// getObjCLayout - Get or compute information about the layout of the
 /// given interface.
 ///

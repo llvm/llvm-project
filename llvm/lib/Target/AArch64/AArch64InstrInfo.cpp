@@ -1036,7 +1036,7 @@ static bool UpdateOperandRegClass(MachineInstr &Instr) {
 /// \brief Return the opcode that does not set flags when possible - otherwise
 /// return the original opcode. The caller is responsible to do the actual
 /// substitution and legality checking.
-static unsigned convertFlagSettingOpcode(const MachineInstr &MI) {
+static unsigned convertToNonFlagSettingOpc(const MachineInstr &MI) {
   // Don't convert all compare instructions, because for some the zero register
   // encoding becomes the sp register.
   bool MIDefinesZeroReg = false;
@@ -1145,7 +1145,7 @@ bool AArch64InstrInfo::optimizeCompareInstr(
       return true;
     }
     unsigned Opc = CmpInstr.getOpcode();
-    unsigned NewOpc = convertFlagSettingOpcode(CmpInstr);
+    unsigned NewOpc = convertToNonFlagSettingOpc(CmpInstr);
     if (NewOpc == Opc)
       return false;
     const MCInstrDesc &MCID = get(NewOpc);
@@ -3318,7 +3318,7 @@ static bool getMaddPatterns(MachineInstr &Root,
     // When NZCV is live bail out.
     if (Cmp_NZCV == -1)
       return false;
-    unsigned NewOpc = convertFlagSettingOpcode(Root);
+    unsigned NewOpc = convertToNonFlagSettingOpc(Root);
     // When opcode can't change bail out.
     // CHECKME: do we miss any cases for opcode conversion?
     if (NewOpc == Opc)

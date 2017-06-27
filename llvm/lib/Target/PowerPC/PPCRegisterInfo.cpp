@@ -389,9 +389,14 @@ void PPCRegisterInfo::lowerDynamicAlloc(MachineBasicBlock::iterator II) const {
   unsigned Reg = MF.getRegInfo().createVirtualRegister(LP64 ? G8RC : GPRC);
 
   if (MaxAlign < TargetAlign && isInt<16>(FrameSize)) {
-    BuildMI(MBB, II, dl, TII.get(PPC::ADDI), Reg)
-      .addReg(PPC::R31)
-      .addImm(FrameSize);
+    if (LP64)
+      BuildMI(MBB, II, dl, TII.get(PPC::ADDI8), Reg)
+        .addReg(PPC::X31)
+        .addImm(FrameSize);
+    else
+      BuildMI(MBB, II, dl, TII.get(PPC::ADDI), Reg)
+        .addReg(PPC::R31)
+        .addImm(FrameSize);
   } else if (LP64) {
     BuildMI(MBB, II, dl, TII.get(PPC::LD), Reg)
       .addImm(0)
@@ -478,8 +483,10 @@ void PPCRegisterInfo::lowerDynamicAreaOffset(
   const TargetInstrInfo &TII = *Subtarget.getInstrInfo();
 
   unsigned maxCallFrameSize = MFI.getMaxCallFrameSize();
+  bool is64Bit = TM.isPPC64();
   DebugLoc dl = MI.getDebugLoc();
-  BuildMI(MBB, II, dl, TII.get(PPC::LI), MI.getOperand(0).getReg())
+  BuildMI(MBB, II, dl, TII.get(is64Bit ? PPC::LI8 : PPC::LI),
+          MI.getOperand(0).getReg())
       .addImm(maxCallFrameSize);
   MBB.erase(II);
 }

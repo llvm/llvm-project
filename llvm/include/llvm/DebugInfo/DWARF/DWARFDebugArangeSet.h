@@ -46,8 +46,8 @@ public:
   };
 
 private:
-  typedef std::vector<Descriptor> DescriptorColl;
-  typedef iterator_range<DescriptorColl::const_iterator> desc_iterator_range;
+  using DescriptorColl = std::vector<Descriptor>;
+  using desc_iterator_range = iterator_range<DescriptorColl::const_iterator>;
 
   uint32_t Offset;
   Header HeaderData;

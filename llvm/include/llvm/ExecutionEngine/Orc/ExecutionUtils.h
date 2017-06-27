@@ -94,7 +94,7 @@ public:
   /// @brief Construct a CtorDtorRunner for the given range using the given
   ///        name mangling function.
   CtorDtorRunner(std::vector<std::string> CtorDtorNames,
-                 typename JITLayerT::ModuleSetHandleT H)
+                 typename JITLayerT::ModuleHandleT H)
       : CtorDtorNames(std::move(CtorDtorNames)), H(H) {}
 
   /// @brief Run the recorded constructors/destructors through the given JIT
@@ -116,7 +116,7 @@ public:
 
 private:
   std::vector<std::string> CtorDtorNames;
-  typename JITLayerT::ModuleSetHandleT H;
+  typename JITLayerT::ModuleHandleT H;
 };
 
 /// @brief Support class for static dtor execution. For hosted (in-process) JITs

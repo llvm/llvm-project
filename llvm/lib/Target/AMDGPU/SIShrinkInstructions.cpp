@@ -92,6 +92,8 @@ static bool canShrink(MachineInstr &MI, const SIInstrInfo *TII,
 
       case AMDGPU::V_ADDC_U32_e64:
       case AMDGPU::V_SUBB_U32_e64:
+        if (TII->getNamedOperand(MI, AMDGPU::OpName::src1)->isImm())
+          return false;
         // Additional verification is needed for sdst/src2.
         return true;
 

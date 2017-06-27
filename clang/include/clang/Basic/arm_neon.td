@@ -227,6 +227,7 @@ def OP_UNAVAILABLE : Operation {
 // u: unsigned integer (int/float args)
 // f: float (int args)
 // F: double (int args)
+// H: half (int args)
 // d: default
 // g: default, ignore 'Q' size modifier.
 // j: default, force 'Q' size modifier.
@@ -345,6 +346,7 @@ def OP_MLSLHi   : Op<(call "vmlsl", $p0, (call "vget_high", $p1),
                                          (call "vget_high", $p2))>;
 def OP_MLSLHi_N : Op<(call "vmlsl_n", $p0, (call "vget_high", $p1), $p2)>;
 def OP_MUL_N    : Op<(op "*", $p0, (dup $p1))>;
+def OP_MULX_N   : Op<(call "vmulx", $p0, (dup $p1))>;
 def OP_MLA_N    : Op<(op "+", $p0, (op "*", $p1, (dup $p2)))>;
 def OP_MLS_N    : Op<(op "-", $p0, (op "*", $p1, (dup $p2)))>;
 def OP_FMLA_N   : Op<(call "vfma", $p0, $p1, (dup $p2))>;
@@ -1660,4 +1662,187 @@ def SCALAR_SQRDMLSH_LANEQ : SOpInst<"vqrdmlsh_laneq", "sssji", "SsSi", OP_SCALAR
 
 def SCALAR_VDUP_LANE : IInst<"vdup_lane", "sdi", "ScSsSiSlSfSdSUcSUsSUiSUlSPcSPs">;
 def SCALAR_VDUP_LANEQ : IInst<"vdup_laneq", "sji", "ScSsSiSlSfSdSUcSUsSUiSUlSPcSPs">;
+}
+
+// ARMv8.2-A FP16 intrinsics.
+let ArchGuard = "defined(__ARM_FEATURE_FP16_VECTOR_ARITHMETIC) && defined(__aarch64__)" in {
+
+  // ARMv8.2-A FP16 one-operand vector intrinsics.
+
+  // Comparison
+  def CMEQH    : SInst<"vceqz", "ud", "hQh">;
+  def CMGEH    : SInst<"vcgez", "ud", "hQh">;
+  def CMGTH    : SInst<"vcgtz", "ud", "hQh">;
+  def CMLEH    : SInst<"vclez", "ud", "hQh">;
+  def CMLTH    : SInst<"vcltz", "ud", "hQh">;
+
+  // Vector conversion
+  def VCVT_F16     : SInst<"vcvt_f16", "Hd",  "sUsQsQUs">;
+  def VCVT_S16     : SInst<"vcvt_s16", "xd",  "hQh">;
+  def VCVT_U16     : SInst<"vcvt_u16", "ud",  "hQh">;
+  def VCVTA_S16    : SInst<"vcvta_s16", "xd", "hQh">;
+  def VCVTA_U16    : SInst<"vcvta_u16", "ud", "hQh">;
+  def VCVTM_S16    : SInst<"vcvtm_s16", "xd", "hQh">;
+  def VCVTM_U16    : SInst<"vcvtm_u16", "ud", "hQh">;
+  def VCVTN_S16    : SInst<"vcvtn_s16", "xd", "hQh">;
+  def VCVTN_U16    : SInst<"vcvtn_u16", "ud", "hQh">;
+  def VCVTP_S16    : SInst<"vcvtp_s16", "xd", "hQh">;
+  def VCVTP_U16    : SInst<"vcvtp_u16", "ud", "hQh">;
+
+  // Vector rounding
+  def FRINTZH      : SInst<"vrnd",  "dd", "hQh">;
+  def FRINTNH      : SInst<"vrndn", "dd", "hQh">;
+  def FRINTAH      : SInst<"vrnda", "dd", "hQh">;
+  def FRINTPH      : SInst<"vrndp", "dd", "hQh">;
+  def FRINTMH      : SInst<"vrndm", "dd", "hQh">;
+  def FRINTXH      : SInst<"vrndx", "dd", "hQh">;
+  def FRINTIH      : SInst<"vrndi", "dd", "hQh">;
+
+  // Misc.
+  def VABSH        : SInst<"vabs", "dd", "hQh">;
+  def VNEGH        : SOpInst<"vneg", "dd", "hQh", OP_NEG>;
+  def VRECPEH      : SInst<"vrecpe", "dd", "hQh">;
+  def FRSQRTEH     : SInst<"vrsqrte", "dd", "hQh">;
+  def FSQRTH       : SInst<"vsqrt", "dd", "hQh">;
+
+  // ARMv8.2-A FP16 two-operands vector intrinsics.
+
+  // Misc.
+  def VADDH        : SOpInst<"vadd", "ddd", "hQh", OP_ADD>;
+  def VABDH        : SInst<"vabd", "ddd",  "hQh">;
+  def VSUBH         : SOpInst<"vsub", "ddd", "hQh", OP_SUB>;
+
+  // Comparison
+  let InstName = "vacge" in {
+	  def VCAGEH     : SInst<"vcage", "udd", "hQh">;
+	  def VCALEH     : SInst<"vcale", "udd", "hQh">;
+  }
+  let InstName = "vacgt" in {
+    def VCAGTH     : SInst<"vcagt", "udd", "hQh">;
+	  def VCALTH     : SInst<"vcalt", "udd", "hQh">;
+  }
+  def VCEQH        : SOpInst<"vceq", "udd", "hQh", OP_EQ>;
+  def VCGEH        : SOpInst<"vcge", "udd", "hQh", OP_GE>;
+  def VCGTH        : SOpInst<"vcgt", "udd", "hQh", OP_GT>;
+  let InstName = "vcge" in
+    def VCLEH      : SOpInst<"vcle", "udd", "hQh", OP_LE>;
+  let InstName = "vcgt" in
+    def VCLTH      : SOpInst<"vclt", "udd", "hQh", OP_LT>;
+
+  // Vector conversion
+  let isVCVT_N = 1 in {
+    def VCVT_N_F16 : SInst<"vcvt_n_f16", "Hdi", "sUsQsQUs">;
+    def VCVT_N_S16 : SInst<"vcvt_n_s16", "xdi", "hQh">;
+    def VCVT_N_U16 : SInst<"vcvt_n_u16", "udi", "hQh">;
+  }
+
+  // Max/Min
+  def VMAXH         : SInst<"vmax", "ddd", "hQh">;
+  def VMINH         : SInst<"vmin", "ddd", "hQh">;
+  def FMAXNMH       : SInst<"vmaxnm", "ddd", "hQh">;
+  def FMINNMH       : SInst<"vminnm", "ddd", "hQh">;
+
+  // Multiplication/Division
+  def VMULH         : SOpInst<"vmul", "ddd", "hQh", OP_MUL>;
+  def MULXH         : SInst<"vmulx", "ddd", "hQh">;
+  def FDIVH         : IOpInst<"vdiv", "ddd",  "hQh", OP_DIV>;
+
+  // Pairwise addition
+  def VPADDH        : SInst<"vpadd", "ddd", "hQh">;
+
+  // Pairwise Max/Min
+  def VPMAXH        : SInst<"vpmax", "ddd", "hQh">;
+  def VPMINH        : SInst<"vpmin", "ddd", "hQh">;
+  // Pairwise MaxNum/MinNum
+  def FMAXNMPH      : SInst<"vpmaxnm", "ddd", "hQh">;
+  def FMINNMPH      : SInst<"vpminnm", "ddd", "hQh">;
+
+  // Reciprocal/Sqrt
+  def VRECPSH       : SInst<"vrecps", "ddd", "hQh">;
+  def VRSQRTSH      : SInst<"vrsqrts", "ddd", "hQh">;
+
+  // ARMv8.2-A FP16 three-operands vector intrinsics.
+
+  // Vector fused multiply-add operations
+  def VFMAH        : SInst<"vfma", "dddd", "hQh">;
+  def VFMSH        : SOpInst<"vfms", "dddd", "hQh", OP_FMLS>;
+
+  // ARMv8.2-A FP16 lane vector intrinsics.
+
+  // FMA lane
+  def VFMA_LANEH   : IInst<"vfma_lane", "dddgi", "hQh">;
+  def VFMA_LANEQH  : IInst<"vfma_laneq", "dddji", "hQh">;
+
+  // FMA lane with scalar argument
+  def FMLA_NH      : SOpInst<"vfma_n", "ddds", "hQh", OP_FMLA_N>;
+  // Scalar floating point fused multiply-add (scalar, by element)
+  def SCALAR_FMLA_LANEH  : IInst<"vfma_lane", "sssdi", "Sh">;
+  def SCALAR_FMLA_LANEQH : IInst<"vfma_laneq", "sssji", "Sh">;
+
+  // FMS lane
+  def VFMS_LANEH   : IOpInst<"vfms_lane", "dddgi", "hQh", OP_FMS_LN>;
+  def VFMS_LANEQH  : IOpInst<"vfms_laneq", "dddji", "hQh", OP_FMS_LNQ>;
+  // FMS lane with scalar argument
+  def FMLS_NH      : SOpInst<"vfms_n", "ddds", "hQh", OP_FMLS_N>;
+  // Scalar floating foint fused multiply-subtract (scalar, by element)
+  def SCALAR_FMLS_LANEH  : IOpInst<"vfms_lane", "sssdi", "Sh", OP_FMS_LN>;
+  def SCALAR_FMLS_LANEQH : IOpInst<"vfms_laneq", "sssji", "Sh", OP_FMS_LNQ>;
+
+  // Mul lane
+  def VMUL_LANEH    : IOpInst<"vmul_lane", "ddgi", "hQh", OP_MUL_LN>;
+  def VMUL_LANEQH   : IOpInst<"vmul_laneq", "ddji", "hQh", OP_MUL_LN>;
+  def VMUL_NH       : IOpInst<"vmul_n", "dds", "hQh", OP_MUL_N>;
+  // Scalar floating point  multiply (scalar, by element)
+  def SCALAR_FMUL_LANEH  : IOpInst<"vmul_lane", "ssdi", "Sh", OP_SCALAR_MUL_LN>;
+  def SCALAR_FMUL_LANEQH : IOpInst<"vmul_laneq", "ssji", "Sh", OP_SCALAR_MUL_LN>;
+
+  // Mulx lane
+  def VMULX_LANEH   : IOpInst<"vmulx_lane", "ddgi", "hQh", OP_MULX_LN>;
+  def VMULX_LANEQH  : IOpInst<"vmulx_laneq", "ddji", "hQh", OP_MULX_LN>;
+  def VMULX_NH      : IOpInst<"vmulx_n", "dds", "hQh", OP_MULX_N>;
+  // TODO: Scalar floating point multiply extended (scalar, by element)
+  // Below ones are commented out because they need vmulx_f16(float16_t, float16_t)
+  // which will be implemented later with fp16 scalar intrinsic (arm_fp16.h)
+  //def SCALAR_FMULX_LANEH : IOpInst<"vmulx_lane", "ssdi", "Sh", OP_SCALAR_MUL_LN>;
+  //def SCALAR_FMULX_LANEQH : IOpInst<"vmulx_laneq", "ssji", "Sh", OP_SCALAR_MUL_LN>;
+
+  // ARMv8.2-A FP16 reduction vector intrinsics.
+  def VMAXVH   : SInst<"vmaxv", "sd", "hQh">;
+  def VMINVH   : SInst<"vminv", "sd", "hQh">;
+  def FMAXNMVH : SInst<"vmaxnmv", "sd", "hQh">;
+  def FMINNMVH : SInst<"vminnmv", "sd", "hQh">;
+
+  // Data processing intrinsics - section 5
+
+  // Logical operations
+  let isHiddenLInst = 1 in
+  def VBSLH    : SInst<"vbsl", "dudd", "hQh">;
+
+  // Transposition operations
+  def VZIPH    : WInst<"vzip", "2dd", "hQh">;
+  def VUZPH    : WInst<"vuzp", "2dd", "hQh">;
+  def VTRNH    : WInst<"vtrn", "2dd", "hQh">;
+
+  // Set all lanes to same value.
+  /* Already implemented prior to ARMv8.2-A.
+  def VMOV_NH  : WOpInst<"vmov_n", "ds", "hQh", OP_DUP>;
+  def VDUP_NH  : WOpInst<"vdup_n", "ds", "hQh", OP_DUP>;
+  def VDUP_LANE1H : WOpInst<"vdup_lane", "dgi", "hQh", OP_DUP_LN>;*/
+
+  // Vector Extract
+  def VEXTH      : WInst<"vext", "dddi", "hQh">;
+
+  // Reverse vector elements
+  def VREV64H    : WOpInst<"vrev64", "dd", "hQh", OP_REV64>;
+
+  // Permutation
+  def VTRN1H     : SOpInst<"vtrn1", "ddd", "hQh", OP_TRN1>;
+  def VZIP1H     : SOpInst<"vzip1", "ddd", "hQh", OP_ZIP1>;
+  def VUZP1H     : SOpInst<"vuzp1", "ddd", "hQh", OP_UZP1>;
+  def VTRN2H     : SOpInst<"vtrn2", "ddd", "hQh", OP_TRN2>;
+  def VZIP2H     : SOpInst<"vzip2", "ddd", "hQh", OP_ZIP2>;
+  def VUZP2H     : SOpInst<"vuzp2", "ddd", "hQh", OP_UZP2>;
+
+  def SCALAR_VDUP_LANEH  : IInst<"vdup_lane", "sdi", "Sh">;
+  def SCALAR_VDUP_LANEQH : IInst<"vdup_laneq", "sji", "Sh">;
 }

@@ -615,7 +615,10 @@ namespace llvm {
       // Vector truncating store with unsigned/signed saturation
       VTRUNCSTOREUS, VTRUNCSTORES,
       // Vector truncating masked store with unsigned/signed saturation
-      VMTRUNCSTOREUS, VMTRUNCSTORES
+      VMTRUNCSTOREUS, VMTRUNCSTORES,
+
+      // X86 specific gather
+      MGATHER
 
       // WARNING: Do not add anything in the end unless you want the node to
       // have memop! In fact, starting from FIRST_TARGET_MEMORY_OPCODE all
@@ -1056,6 +1059,8 @@ namespace llvm {
 
     bool supportSwiftError() const override;
 
+    StringRef getStackProbeSymbolName(MachineFunction &MF) const override;
+
     unsigned getMaxSupportedInterleaveFactor() const override { return 4; }
 
     /// \brief Lower interleaved load(s) into target specific
@@ -1064,6 +1069,12 @@ namespace llvm {
                               ArrayRef<ShuffleVectorInst *> Shuffles,
                               ArrayRef<unsigned> Indices,
                               unsigned Factor) const override;
+
+    /// \brief Lower interleaved store(s) into target specific
+    /// instructions/intrinsics.
+    bool lowerInterleavedStore(StoreInst *SI, ShuffleVectorInst *SVI,
+                               unsigned Factor) const override;
+
 
     void finalizeLowering(MachineFunction &MF) const override;
 
@@ -1394,6 +1405,19 @@ namespace llvm {
 
     static bool classof(const SDNode *N) {
       return N->getOpcode() == X86ISD::VMTRUNCSTOREUS;
+    }
+  };
+
+  // X86 specific Gather node.
+  class X86MaskedGatherSDNode : public MaskedGatherScatterSDNode {
+  public:
+    X86MaskedGatherSDNode(unsigned Order,
+                          const DebugLoc &dl, SDVTList VTs, EVT MemVT,
+                          MachineMemOperand *MMO)
+      : MaskedGatherScatterSDNode(X86ISD::MGATHER, Order, dl, VTs, MemVT, MMO)
+    {}
+    static bool classof(const SDNode *N) {
+      return N->getOpcode() == X86ISD::MGATHER;
     }
   };
 

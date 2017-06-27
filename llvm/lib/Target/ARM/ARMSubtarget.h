@@ -285,6 +285,10 @@ protected:
   /// HasFPAO - if true, processor  does positive address offset computation faster
   bool HasFPAO = false;
 
+  /// HasFuseAES - if true, processor executes back to back AES instruction
+  /// pairs faster.
+  bool HasFuseAES = false;
+
   /// If true, if conversion may decide to leave some instructions unpredicated.
   bool IsProfitableToUnpredicate = false;
 
@@ -560,6 +564,10 @@ public:
   bool hasFP16() const { return HasFP16; }
   bool hasD16() const { return HasD16; }
   bool hasFullFP16() const { return HasFullFP16; }
+
+  bool hasFuseAES() const { return HasFuseAES; }
+  /// \brief Return true if the CPU supports any kind of instruction fusion.
+  bool hasFusion() const { return hasFuseAES(); }
 
   const Triple &getTargetTriple() const { return TargetTriple; }
 

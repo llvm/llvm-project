@@ -58,6 +58,7 @@
 #include "lldb/Host/Predicate.h"
 #include "lldb/Host/ProcessLauncher.h"
 #include "lldb/Host/ThreadLauncher.h"
+#include "lldb/Host/posix/ConnectionFileDescriptorPosix.h"
 #include "lldb/Target/FileAction.h"
 #include "lldb/Target/ProcessLaunchInfo.h"
 #include "lldb/Target/UnixSignals.h"
@@ -73,6 +74,7 @@
 #include "llvm/Support/FileSystem.h"
 
 #if defined(_WIN32)
+#include "lldb/Host/windows/ConnectionGenericFileWindows.h"
 #include "lldb/Host/windows/ProcessLauncherWindows.h"
 #else
 #include "lldb/Host/posix/ProcessLauncherPosixFork.h"
@@ -622,6 +624,14 @@ const UnixSignalsSP &Host::GetUnixSignals() {
   static const auto s_unix_signals_sp =
       UnixSignals::Create(HostInfo::GetArchitecture());
   return s_unix_signals_sp;
+}
+
+std::unique_ptr<Connection> Host::CreateDefaultConnection(llvm::StringRef url) {
+#if defined(_WIN32)
+  if (url.startswith("file://"))
+    return std::unique_ptr<Connection>(new ConnectionGenericFile());
+#endif
+  return std::unique_ptr<Connection>(new ConnectionFileDescriptor());
 }
 
 #if defined(LLVM_ON_UNIX)

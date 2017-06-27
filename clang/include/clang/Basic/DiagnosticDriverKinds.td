@@ -226,6 +226,9 @@ def warn_drv_enabling_rtti_with_exceptions : Warning<
 def warn_drv_disabling_vptr_no_rtti_default : Warning<
   "implicitly disabling vptr sanitizer because rtti wasn't enabled">,
   InGroup<DiagGroup<"auto-disable-vptr-sanitizer">>;
+def warn_drv_object_size_disabled_O0 : Warning<
+  "the object size sanitizer has no effect at -O0, but is explicitly enabled: %0">,
+  InGroup<InvalidCommandLineArgument>;
 
 def note_drv_command_failed_diag_msg : Note<
   "diagnostic msg: %0">;

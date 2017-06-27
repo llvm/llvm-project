@@ -16,8 +16,8 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Core/StructuredData.h"
 #include "lldb/Target/OperatingSystem.h"
+#include "lldb/Utility/StructuredData.h"
 
 class DynamicRegisterInfo;
 

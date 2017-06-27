@@ -556,8 +556,7 @@ Instruction *InstCombiner::visitShl(BinaryOperator &I) {
     // The inexact versions are deferred to DAGCombine, so we don't hide shl
     // behind a bit mask.
     const APInt *ShOp1;
-    if (match(Op0, m_CombineOr(m_Exact(m_LShr(m_Value(X), m_APInt(ShOp1))),
-                               m_Exact(m_AShr(m_Value(X), m_APInt(ShOp1)))))) {
+    if (match(Op0, m_Exact(m_Shr(m_Value(X), m_APInt(ShOp1))))) {
       unsigned ShrAmt = ShOp1->getZExtValue();
       if (ShrAmt < ShAmt) {
         // If C1 < C2: (X >>?,exact C1) << C2 --> X << (C2 - C1)

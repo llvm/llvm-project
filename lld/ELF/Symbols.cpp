@@ -35,6 +35,7 @@ DefinedRegular *ElfSym::Edata1;
 DefinedRegular *ElfSym::Edata2;
 DefinedRegular *ElfSym::End1;
 DefinedRegular *ElfSym::End2;
+DefinedRegular *ElfSym::GlobalOffsetTable;
 DefinedRegular *ElfSym::MipsGp;
 DefinedRegular *ElfSym::MipsGpDisp;
 DefinedRegular *ElfSym::MipsLocalGp;

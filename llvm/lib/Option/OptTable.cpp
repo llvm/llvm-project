@@ -194,6 +194,37 @@ static unsigned matchOption(const OptTable::Info *I, StringRef Str,
   return 0;
 }
 
+// Returns true if one of the Prefixes + In.Names matches Option
+static bool optionMatches(const OptTable::Info &In, StringRef Option) {
+  if (In.Values && In.Prefixes)
+    for (size_t I = 0; In.Prefixes[I]; I++)
+      if (Option == std::string(In.Prefixes[I]) + In.Name)
+        return true;
+  return false;
+}
+
+// This function is for flag value completion.
+// Eg. When "-stdlib=" and "l" was passed to this function, it will return
+// appropiriate values for stdlib, which starts with l.
+std::vector<std::string>
+OptTable::suggestValueCompletions(StringRef Option, StringRef Arg) const {
+  // Search all options and return possible values.
+  for (const Info &In : OptionInfos.slice(FirstSearchableIndex)) {
+    if (!optionMatches(In, Option))
+      continue;
+
+    SmallVector<StringRef, 8> Candidates;
+    StringRef(In.Values).split(Candidates, ",", -1, false);
+
+    std::vector<std::string> Result;
+    for (StringRef Val : Candidates)
+      if (Val.startswith(Arg))
+        Result.push_back(Val);
+    return Result;
+  }
+  return {};
+}
+
 std::vector<std::string> OptTable::findByPrefix(StringRef Cur) const {
   std::vector<std::string> Ret;
   for (const Info &In : OptionInfos.slice(FirstSearchableIndex)) {
@@ -334,6 +365,9 @@ static std::string getOptionHelpName(const OptTable &Opts, OptSpecifier Id) {
     break;
 
   case Option::FlagClass:
+    break;
+
+  case Option::ValuesClass:
     break;
 
   case Option::SeparateClass: case Option::JoinedOrSeparateClass:

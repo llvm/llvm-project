@@ -35,7 +35,7 @@ test(It i, typename std::iterator_traits<It>::difference_type n, It x)
 
 #if TEST_STD_VER > 14
 template <class It>
-constexpr bool 
+constexpr bool
 constepxr_test(It i, typename std::iterator_traits<It>::difference_type n, It x)
 {
     std::advance(i, n);

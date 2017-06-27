@@ -1,4 +1,4 @@
-//===- CoverageMappingReader.cpp - Code coverage mapping reader -*- C++ -*-===//
+//===- CoverageMappingReader.cpp - Code coverage mapping reader -----------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -62,7 +62,7 @@ void CoverageMappingIterator::increment() {
 }
 
 Error RawCoverageReader::readULEB128(uint64_t &Result) {
-  if (Data.size() < 1)
+  if (Data.empty())
     return make_error<CoverageMapError>(coveragemap_error::truncated);
   unsigned N = 0;
   Result = decodeULEB128(reinterpret_cast<const uint8_t *>(Data.data()), &N);
@@ -392,9 +392,9 @@ struct CovMapFuncRecordReader {
 // A class for reading coverage mapping function records for a module.
 template <CovMapVersion Version, class IntPtrT, support::endianness Endian>
 class VersionedCovMapFuncRecordReader : public CovMapFuncRecordReader {
-  typedef typename CovMapTraits<
-      Version, IntPtrT>::CovMapFuncRecordType FuncRecordType;
-  typedef typename CovMapTraits<Version, IntPtrT>::NameRefType  NameRefType;
+  using FuncRecordType =
+      typename CovMapTraits<Version, IntPtrT>::CovMapFuncRecordType;
+  using NameRefType = typename CovMapTraits<Version, IntPtrT>::NameRefType;
 
   // Maps function's name references to the indexes of their records
   // in \c Records.
@@ -576,7 +576,7 @@ static Error loadTestingFormat(StringRef Data, InstrProfSymtab &ProfileNames,
   Endian = support::endianness::little;
 
   Data = Data.substr(StringRef(TestingFormatMagic).size());
-  if (Data.size() < 1)
+  if (Data.empty())
     return make_error<CoverageMapError>(coveragemap_error::truncated);
   unsigned N = 0;
   auto ProfileNamesSize =
@@ -584,7 +584,7 @@ static Error loadTestingFormat(StringRef Data, InstrProfSymtab &ProfileNames,
   if (N > Data.size())
     return make_error<CoverageMapError>(coveragemap_error::malformed);
   Data = Data.substr(N);
-  if (Data.size() < 1)
+  if (Data.empty())
     return make_error<CoverageMapError>(coveragemap_error::truncated);
   N = 0;
   uint64_t Address =
@@ -598,7 +598,7 @@ static Error loadTestingFormat(StringRef Data, InstrProfSymtab &ProfileNames,
     return E;
   CoverageMapping = Data.substr(ProfileNamesSize);
   // Skip the padding bytes because coverage map data has an alignment of 8.
-  if (CoverageMapping.size() < 1)
+  if (CoverageMapping.empty())
     return make_error<CoverageMapError>(coveragemap_error::truncated);
   size_t Pad = alignmentAdjustment(CoverageMapping.data(), 8);
   if (CoverageMapping.size() < Pad)

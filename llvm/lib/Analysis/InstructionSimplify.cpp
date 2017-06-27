@@ -2688,16 +2688,14 @@ static Value *simplifyICmpWithBinOp(CmpInst::Predicate Pred, Value *LHS,
   }
 
   // icmp pred (and X, Y), X
-  if (LBO && match(LBO, m_CombineOr(m_And(m_Value(), m_Specific(RHS)),
-                                    m_And(m_Specific(RHS), m_Value())))) {
+  if (LBO && match(LBO, m_c_And(m_Value(), m_Specific(RHS)))) {
     if (Pred == ICmpInst::ICMP_UGT)
       return getFalse(ITy);
     if (Pred == ICmpInst::ICMP_ULE)
       return getTrue(ITy);
   }
   // icmp pred X, (and X, Y)
-  if (RBO && match(RBO, m_CombineOr(m_And(m_Value(), m_Specific(LHS)),
-                                    m_And(m_Specific(LHS), m_Value())))) {
+  if (RBO && match(RBO, m_c_And(m_Value(), m_Specific(LHS)))) {
     if (Pred == ICmpInst::ICMP_UGE)
       return getTrue(ITy);
     if (Pred == ICmpInst::ICMP_ULT)

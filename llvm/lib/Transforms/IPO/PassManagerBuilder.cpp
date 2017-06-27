@@ -72,10 +72,6 @@ static cl::opt<bool>
 RunLoopRerolling("reroll-loops", cl::Hidden,
                  cl::desc("Run the loop rerolling pass"));
 
-static cl::opt<bool> RunLoadCombine("combine-loads", cl::init(false),
-                                    cl::Hidden,
-                                    cl::desc("Run the load combining pass"));
-
 static cl::opt<bool> RunNewGVN("enable-newgvn", cl::init(false), cl::Hidden,
                                cl::desc("Run the NewGVN pass"));
 
@@ -174,7 +170,6 @@ PassManagerBuilder::PassManagerBuilder() {
     SLPVectorize = RunSLPVectorization;
     LoopVectorize = RunLoopVectorization;
     RerollLoops = RunLoopRerolling;
-    LoadCombine = RunLoadCombine;
     NewGVN = RunNewGVN;
     DisableGVNLoadPRE = false;
     VerifyInput = false;
@@ -296,6 +291,8 @@ void PassManagerBuilder::addPGOInstrPasses(legacy::PassManagerBase &MPM) {
     InstrProfOptions Options;
     if (!PGOInstrGen.empty())
       Options.InstrProfileOutput = PGOInstrGen;
+    Options.DoCounterPromotion = true;
+    MPM.add(createLoopRotatePass());
     MPM.add(createInstrProfilingLegacyPass(Options));
   }
   if (!PGOInstrUse.empty())
@@ -406,9 +403,6 @@ void PassManagerBuilder::addFunctionSimplificationPasses(
         MPM.add(createLoopUnrollPass(OptLevel));
     }
   }
-
-  if (LoadCombine)
-    MPM.add(createLoadCombinePass());
 
   MPM.add(createAggressiveDCEPass());         // Delete dead instructions
   MPM.add(createCFGSimplificationPass()); // Merge & remove BBs
@@ -849,9 +843,6 @@ void PassManagerBuilder::addLTOOptimizationPasses(legacy::PassManagerBase &PM) {
   // After vectorization, assume intrinsics may tell us more about pointer
   // alignments.
   PM.add(createAlignmentFromAssumptionsPass());
-
-  if (LoadCombine)
-    PM.add(createLoadCombinePass());
 
   // Cleanup and simplify the code after the scalar optimizations.
   addInstructionCombiningPass(PM);

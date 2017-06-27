@@ -218,8 +218,8 @@ bool AliasSet::aliasesUnknownInst(const Instruction *Inst,
     return false;
 
   for (unsigned i = 0, e = UnknownInsts.size(); i != e; ++i) {
-    if (auto *Inst = getUnknownInst(i)) {
-      ImmutableCallSite C1(Inst), C2(Inst);
+    if (auto *UnknownInst = getUnknownInst(i)) {
+      ImmutableCallSite C1(UnknownInst), C2(Inst);
       if (!C1 || !C2 || AA.getModRefInfo(C1, C2) != MRI_NoModRef ||
           AA.getModRefInfo(C2, C1) != MRI_NoModRef)
         return true;

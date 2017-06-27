@@ -17,7 +17,7 @@ define i32 @fn() nounwind noinline uwtable "function-instrument"="xray-always" {
     ret i32 0
 }
 ; CHECK:       .section {{.*}}xray_instr_map
-; CHECK-LABEL: Lxray_synthetic_0:
+; CHECK-LABEL: Lxray_sleds_start0:
 ; CHECK:       .quad {{.*}}xray_event_sled_0
 
 declare void @llvm.xray.customevent(i8*, i32)

@@ -79,17 +79,6 @@ namespace {
       }
     }
   };
-  
-  struct OnDiskData {
-    /// \brief The file in which the precompiled preamble is stored.
-    std::string PreambleFile;
-
-    /// \brief Erase the preamble file.
-    void CleanPreambleFile();
-
-    /// \brief Erase temporary files and the preamble file.
-    void Cleanup();
-  };
 
   template <class T>
   std::unique_ptr<T> valueOrNull(llvm::ErrorOr<std::unique_ptr<T>> Val) {
@@ -105,81 +94,68 @@ namespace {
     Output = std::move(*Val);
     return true;
   }
-}
 
-static llvm::sys::SmartMutex<false> &getOnDiskMutex() {
-  static llvm::sys::SmartMutex<false> M(/* recursive = */ true);
-  return M;
-}
+/// \brief Get a source buffer for \p MainFilePath, handling all file-to-file
+/// and file-to-buffer remappings inside \p Invocation.
+static std::unique_ptr<llvm::MemoryBuffer>
+getBufferForFileHandlingRemapping(const CompilerInvocation &Invocation,
+                                  vfs::FileSystem *VFS,
+                                  StringRef FilePath) {
+  const auto &PreprocessorOpts = Invocation.getPreprocessorOpts();
 
-static void cleanupOnDiskMapAtExit();
+  // Try to determine if the main file has been remapped, either from the
+  // command line (to another file) or directly through the compiler
+  // invocation (to a memory buffer).
+  llvm::MemoryBuffer *Buffer = nullptr;
+  std::unique_ptr<llvm::MemoryBuffer> BufferOwner;
+  auto FileStatus = VFS->status(FilePath);
+  if (FileStatus) {
+    llvm::sys::fs::UniqueID MainFileID = FileStatus->getUniqueID();
 
-typedef llvm::DenseMap<const ASTUnit *,
-                       std::unique_ptr<OnDiskData>> OnDiskDataMap;
-static OnDiskDataMap &getOnDiskDataMap() {
-  static OnDiskDataMap M;
-  static bool hasRegisteredAtExit = false;
-  if (!hasRegisteredAtExit) {
-    hasRegisteredAtExit = true;
-    atexit(cleanupOnDiskMapAtExit);
+    // Check whether there is a file-file remapping of the main file
+    for (const auto &RF : PreprocessorOpts.RemappedFiles) {
+      std::string MPath(RF.first);
+      auto MPathStatus = VFS->status(MPath);
+      if (MPathStatus) {
+        llvm::sys::fs::UniqueID MID = MPathStatus->getUniqueID();
+        if (MainFileID == MID) {
+          // We found a remapping. Try to load the resulting, remapped source.
+          BufferOwner = valueOrNull(VFS->getBufferForFile(RF.second));
+          if (!BufferOwner)
+            return nullptr;
+        }
+      }
+    }
+
+    // Check whether there is a file-buffer remapping. It supercedes the
+    // file-file remapping.
+    for (const auto &RB : PreprocessorOpts.RemappedFileBuffers) {
+      std::string MPath(RB.first);
+      auto MPathStatus = VFS->status(MPath);
+      if (MPathStatus) {
+        llvm::sys::fs::UniqueID MID = MPathStatus->getUniqueID();
+        if (MainFileID == MID) {
+          // We found a remapping.
+          BufferOwner.reset();
+          Buffer = const_cast<llvm::MemoryBuffer *>(RB.second);
+        }
+      }
+    }
   }
-  return M;
-}
 
-static void cleanupOnDiskMapAtExit() {
-  // Use the mutex because there can be an alive thread destroying an ASTUnit.
-  llvm::MutexGuard Guard(getOnDiskMutex());
-  for (const auto &I : getOnDiskDataMap()) {
-    // We don't worry about freeing the memory associated with OnDiskDataMap.
-    // All we care about is erasing stale files.
-    I.second->Cleanup();
+  // If the main source file was not remapped, load it now.
+  if (!Buffer && !BufferOwner) {
+    BufferOwner = valueOrNull(VFS->getBufferForFile(FilePath));
+    if (!BufferOwner)
+      return nullptr;
   }
-}
 
-static OnDiskData &getOnDiskData(const ASTUnit *AU) {
-  // We require the mutex since we are modifying the structure of the
-  // DenseMap.
-  llvm::MutexGuard Guard(getOnDiskMutex());
-  OnDiskDataMap &M = getOnDiskDataMap();
-  auto &D = M[AU];
-  if (!D)
-    D = llvm::make_unique<OnDiskData>();
-  return *D;
+  if (BufferOwner)
+    return BufferOwner;
+  if (!Buffer)
+    return nullptr;
+  return llvm::MemoryBuffer::getMemBufferCopy(Buffer->getBuffer(), FilePath);
 }
-
-static void erasePreambleFile(const ASTUnit *AU) {
-  getOnDiskData(AU).CleanPreambleFile();
-}
-
-static void removeOnDiskEntry(const ASTUnit *AU) {
-  // We require the mutex since we are modifying the structure of the
-  // DenseMap.
-  llvm::MutexGuard Guard(getOnDiskMutex());
-  OnDiskDataMap &M = getOnDiskDataMap();
-  OnDiskDataMap::iterator I = M.find(AU);
-  if (I != M.end()) {
-    I->second->Cleanup();
-    M.erase(I);
-  }
-}
-
-static void setPreambleFile(const ASTUnit *AU, StringRef preambleFile) {
-  getOnDiskData(AU).PreambleFile = preambleFile;
-}
-
-static const std::string &getPreambleFile(const ASTUnit *AU) {
-  return getOnDiskData(AU).PreambleFile;  
-}
-
-void OnDiskData::CleanPreambleFile() {
-  if (!PreambleFile.empty()) {
-    llvm::sys::fs::remove(PreambleFile);
-    PreambleFile.clear();
-  }
-}
-
-void OnDiskData::Cleanup() {
-  CleanPreambleFile();
 }
 
 struct ASTUnit::ASTWriterData {
@@ -232,9 +208,6 @@ ASTUnit::~ASTUnit() {
   }
 
   clearFileLevelDecls();
-
-  // Clean up the temporary files and the preamble file.
-  removeOnDiskEntry(this);
 
   // Free the buffers associated with remapped files. We are required to
   // perform this operation here because we explicitly request that the
@@ -575,16 +548,24 @@ private:
 
   /// \brief Diagnostic consumer that saves each diagnostic it is given.
 class StoredDiagnosticConsumer : public DiagnosticConsumer {
-  SmallVectorImpl<StoredDiagnostic> &StoredDiags;
+  SmallVectorImpl<StoredDiagnostic> *StoredDiags;
+  SmallVectorImpl<ASTUnit::StandaloneDiagnostic> *StandaloneDiags;
+  const LangOptions *LangOpts;
   SourceManager *SourceMgr;
 
 public:
-  explicit StoredDiagnosticConsumer(
-                          SmallVectorImpl<StoredDiagnostic> &StoredDiags)
-    : StoredDiags(StoredDiags), SourceMgr(nullptr) {}
+  StoredDiagnosticConsumer(
+      SmallVectorImpl<StoredDiagnostic> *StoredDiags,
+      SmallVectorImpl<ASTUnit::StandaloneDiagnostic> *StandaloneDiags)
+      : StoredDiags(StoredDiags), StandaloneDiags(StandaloneDiags),
+        LangOpts(nullptr), SourceMgr(nullptr) {
+    assert((StoredDiags || StandaloneDiags) &&
+           "No output collections were passed to StoredDiagnosticConsumer.");
+  }
 
   void BeginSourceFile(const LangOptions &LangOpts,
                        const Preprocessor *PP = nullptr) override {
+    this->LangOpts = &LangOpts;
     if (PP)
       SourceMgr = &PP->getSourceManager();
   }
@@ -603,8 +584,9 @@ class CaptureDroppedDiagnostics {
 
 public:
   CaptureDroppedDiagnostics(bool RequestCapture, DiagnosticsEngine &Diags,
-                          SmallVectorImpl<StoredDiagnostic> &StoredDiags)
-    : Diags(Diags), Client(StoredDiags), PreviousClient(nullptr)
+                            SmallVectorImpl<StoredDiagnostic> *StoredDiags,
+                            SmallVectorImpl<ASTUnit::StandaloneDiagnostic> *StandaloneDiags)
+      : Diags(Diags), Client(StoredDiags, StandaloneDiags), PreviousClient(nullptr)
   {
     if (RequestCapture || Diags.getClient() == nullptr) {
       OwningPreviousClient = Diags.takeClient();
@@ -621,16 +603,35 @@ public:
 
 } // anonymous namespace
 
+static ASTUnit::StandaloneDiagnostic
+makeStandaloneDiagnostic(const LangOptions &LangOpts,
+                         const StoredDiagnostic &InDiag);
+
 void StoredDiagnosticConsumer::HandleDiagnostic(DiagnosticsEngine::Level Level,
-                                              const Diagnostic &Info) {
+                                                const Diagnostic &Info) {
   // Default implementation (Warnings/errors count).
   DiagnosticConsumer::HandleDiagnostic(Level, Info);
 
   // Only record the diagnostic if it's part of the source manager we know
   // about. This effectively drops diagnostics from modules we're building.
   // FIXME: In the long run, ee don't want to drop source managers from modules.
-  if (!Info.hasSourceManager() || &Info.getSourceManager() == SourceMgr)
-    StoredDiags.emplace_back(Level, Info);
+  if (!Info.hasSourceManager() || &Info.getSourceManager() == SourceMgr) {
+    StoredDiagnostic *ResultDiag = nullptr;
+    if (StoredDiags) {
+      StoredDiags->emplace_back(Level, Info);
+      ResultDiag = &StoredDiags->back();
+    }
+
+    if (StandaloneDiags) {
+      llvm::Optional<StoredDiagnostic> StoredDiag = llvm::None;
+      if (!ResultDiag) {
+        StoredDiag.emplace(Level, Info);
+        ResultDiag = StoredDiag.getPointer();
+      }
+      StandaloneDiags->push_back(
+          makeStandaloneDiagnostic(*LangOpts, *ResultDiag));
+    }
+  }
 }
 
 IntrusiveRefCntPtr<ASTReader> ASTUnit::getASTReader() const {
@@ -665,7 +666,7 @@ void ASTUnit::ConfigureDiags(IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
                              ASTUnit &AST, bool CaptureDiagnostics) {
   assert(Diags.get() && "no DiagnosticsEngine was provided");
   if (CaptureDiagnostics)
-    Diags->setClient(new StoredDiagnosticConsumer(AST.StoredDiagnostics));
+    Diags->setClient(new StoredDiagnosticConsumer(&AST.StoredDiagnostics, nullptr));
 }
 
 std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
@@ -780,6 +781,11 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
 
 namespace {
 
+/// \brief Add the given macro to the hash of all top-level entities.
+void AddDefinedMacroToHash(const Token &MacroNameTok, unsigned &Hash) {
+  Hash = llvm::HashString(MacroNameTok.getIdentifierInfo()->getName(), Hash);
+}
+
 /// \brief Preprocessor callback class that updates a hash value with the names 
 /// of all macros that have been defined by the translation unit.
 class MacroDefinitionTrackerPPCallbacks : public PPCallbacks {
@@ -790,7 +796,7 @@ public:
 
   void MacroDefined(const Token &MacroNameTok,
                     const MacroDirective *MD) override {
-    Hash = llvm::HashString(MacroNameTok.getIdentifierInfo()->getName(), Hash);
+    AddDefinedMacroToHash(MacroNameTok, Hash);
   }
 };
 
@@ -916,45 +922,27 @@ public:
   }
 };
 
-class PrecompilePreambleAction : public ASTFrontendAction {
-  ASTUnit &Unit;
-  bool HasEmittedPreamblePCH;
-
+class ASTUnitPreambleCallbacks : public PreambleCallbacks {
 public:
-  explicit PrecompilePreambleAction(ASTUnit &Unit)
-      : Unit(Unit), HasEmittedPreamblePCH(false) {}
+  unsigned getHash() const { return Hash; }
 
-  std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
-                                                 StringRef InFile) override;
-  bool hasEmittedPreamblePCH() const { return HasEmittedPreamblePCH; }
-  void setHasEmittedPreamblePCH() { HasEmittedPreamblePCH = true; }
-  bool shouldEraseOutputFiles() override { return !hasEmittedPreamblePCH(); }
+  std::vector<Decl *> takeTopLevelDecls() { return std::move(TopLevelDecls); }
 
-  bool hasCodeCompletionSupport() const override { return false; }
-  bool hasASTFileSupport() const override { return false; }
-  TranslationUnitKind getTranslationUnitKind() override { return TU_Prefix; }
-};
-
-class PrecompilePreambleConsumer : public PCHGenerator {
-  ASTUnit &Unit;
-  unsigned &Hash;
-  std::vector<Decl *> TopLevelDecls;
-  PrecompilePreambleAction *Action;
-  std::unique_ptr<raw_ostream> Out;
-
-public:
-  PrecompilePreambleConsumer(ASTUnit &Unit, PrecompilePreambleAction *Action,
-                             const Preprocessor &PP, StringRef isysroot,
-                             std::unique_ptr<raw_ostream> Out)
-      : PCHGenerator(PP, "", isysroot, std::make_shared<PCHBuffer>(),
-                     ArrayRef<std::shared_ptr<ModuleFileExtension>>(),
-                     /*AllowASTWithErrors=*/true),
-        Unit(Unit), Hash(Unit.getCurrentTopLevelHashValue()), Action(Action),
-        Out(std::move(Out)) {
-    Hash = 0;
+  std::vector<serialization::DeclID> takeTopLevelDeclIDs() {
+    return std::move(TopLevelDeclIDs);
   }
 
-  bool HandleTopLevelDecl(DeclGroupRef DG) override {
+  void AfterPCHEmitted(ASTWriter &Writer) override {
+    TopLevelDeclIDs.reserve(TopLevelDecls.size());
+    for (Decl *D : TopLevelDecls) {
+      // Invalid top-level decls may not have been serialized.
+      if (D->isInvalidDecl())
+        continue;
+      TopLevelDeclIDs.push_back(Writer.getDeclID(D));
+    }
+  }
+
+  void HandleTopLevelDecl(DeclGroupRef DG) override {
     for (Decl *D : DG) {
       // FIXME: Currently ObjC method declarations are incorrectly being
       // reported as top-level declarations, even though their DeclContext
@@ -965,58 +953,21 @@ public:
       AddTopLevelDeclarationToHash(D, Hash);
       TopLevelDecls.push_back(D);
     }
-    return true;
   }
 
-  void HandleTranslationUnit(ASTContext &Ctx) override {
-    PCHGenerator::HandleTranslationUnit(Ctx);
-    if (hasEmittedPCH()) {
-      // Write the generated bitstream to "Out".
-      *Out << getPCH();
-      // Make sure it hits disk now.
-      Out->flush();
-      // Free the buffer.
-      llvm::SmallVector<char, 0> Empty;
-      getPCH() = std::move(Empty);
-
-      // Translate the top-level declarations we captured during
-      // parsing into declaration IDs in the precompiled
-      // preamble. This will allow us to deserialize those top-level
-      // declarations when requested.
-      for (Decl *D : TopLevelDecls) {
-        // Invalid top-level decls may not have been serialized.
-        if (D->isInvalidDecl())
-          continue;
-        Unit.addTopLevelDeclFromPreamble(getWriter().getDeclID(D));
-      }
-
-      Action->setHasEmittedPreamblePCH();
-    }
+  void HandleMacroDefined(const Token &MacroNameTok,
+                          const MacroDirective *MD) override {
+    AddDefinedMacroToHash(MacroNameTok, Hash);
   }
+
+private:
+  unsigned Hash = 0;
+  std::vector<Decl *> TopLevelDecls;
+  std::vector<serialization::DeclID> TopLevelDeclIDs;
+  llvm::SmallVector<ASTUnit::StandaloneDiagnostic, 4> PreambleDiags;
 };
 
 } // anonymous namespace
-
-std::unique_ptr<ASTConsumer>
-PrecompilePreambleAction::CreateASTConsumer(CompilerInstance &CI,
-                                            StringRef InFile) {
-  std::string Sysroot;
-  std::string OutputFile;
-  std::unique_ptr<raw_ostream> OS =
-      GeneratePCHAction::ComputeASTConsumerArguments(CI, InFile, Sysroot,
-                                                     OutputFile);
-  if (!OS)
-    return nullptr;
-
-  if (!CI.getFrontendOpts().RelocatablePCH)
-    Sysroot.clear();
-
-  CI.getPreprocessor().addPPCallbacks(
-      llvm::make_unique<MacroDefinitionTrackerPPCallbacks>(
-                                           Unit.getCurrentTopLevelHashValue()));
-  return llvm::make_unique<PrecompilePreambleConsumer>(
-      Unit, this, CI.getPreprocessor(), Sysroot, std::move(OS));
-}
 
 static bool isNonDriverDiag(const StoredDiagnostic &StoredDiag) {
   return StoredDiag.getLocation().isValid();
@@ -1125,15 +1076,9 @@ bool ASTUnit::Parse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
   
   // If the main file has been overridden due to the use of a preamble,
   // make that override happen and introduce the preamble.
-  PreprocessorOptions &PreprocessorOpts = Clang->getPreprocessorOpts();
   if (OverrideMainBuffer) {
-    PreprocessorOpts.addRemappedFile(OriginalSourceFile,
-                                     OverrideMainBuffer.get());
-    PreprocessorOpts.PrecompiledPreambleBytes.first = Preamble.size();
-    PreprocessorOpts.PrecompiledPreambleBytes.second
-                                                    = PreambleEndsAtStartOfLine;
-    PreprocessorOpts.ImplicitPCHInclude = getPreambleFile(this);
-    PreprocessorOpts.DisablePCHValidation = true;
+    assert(Preamble && "No preamble was built, but OverrideMainBuffer is not null");
+    Preamble->AddImplicitPreamble(Clang->getInvocation(), OverrideMainBuffer.get());
     
     // The stored diagnostic has the old source manager in it; update
     // the locations to refer into the new source manager. Since we've
@@ -1185,116 +1130,6 @@ error:
   NumStoredDiagnosticsFromDriver = 0;
   return true;
 }
-
-/// \brief Simple function to retrieve a path for a preamble precompiled header.
-static std::string GetPreamblePCHPath() {
-  // FIXME: This is a hack so that we can override the preamble file during
-  // crash-recovery testing, which is the only case where the preamble files
-  // are not necessarily cleaned up.
-  const char *TmpFile = ::getenv("CINDEXTEST_PREAMBLE_FILE");
-  if (TmpFile)
-    return TmpFile;
-
-  SmallString<128> Path;
-  llvm::sys::fs::createTemporaryFile("preamble", "pch", Path);
-
-  return Path.str();
-}
-
-/// \brief Compute the preamble for the main file, providing the source buffer
-/// that corresponds to the main file along with a pair (bytes, start-of-line)
-/// that describes the preamble.
-ASTUnit::ComputedPreamble
-ASTUnit::ComputePreamble(CompilerInvocation &Invocation, unsigned MaxLines,
-                         IntrusiveRefCntPtr<vfs::FileSystem> VFS) {
-  FrontendOptions &FrontendOpts = Invocation.getFrontendOpts();
-  PreprocessorOptions &PreprocessorOpts = Invocation.getPreprocessorOpts();
-  
-  // Try to determine if the main file has been remapped, either from the 
-  // command line (to another file) or directly through the compiler invocation
-  // (to a memory buffer).
-  llvm::MemoryBuffer *Buffer = nullptr;
-  std::unique_ptr<llvm::MemoryBuffer> BufferOwner;
-  std::string MainFilePath(FrontendOpts.Inputs[0].getFile());
-  auto MainFileStatus = VFS->status(MainFilePath);
-  if (MainFileStatus) {
-    llvm::sys::fs::UniqueID MainFileID = MainFileStatus->getUniqueID();
-
-    // Check whether there is a file-file remapping of the main file
-    for (const auto &RF : PreprocessorOpts.RemappedFiles) {
-      std::string MPath(RF.first);
-      auto MPathStatus = VFS->status(MPath);
-      if (MPathStatus) {
-        llvm::sys::fs::UniqueID MID = MPathStatus->getUniqueID();
-        if (MainFileID == MID) {
-          // We found a remapping. Try to load the resulting, remapped source.
-          BufferOwner = valueOrNull(VFS->getBufferForFile(RF.second));
-          if (!BufferOwner)
-            return ComputedPreamble(nullptr, nullptr, 0, true);
-        }
-      }
-    }
-
-    // Check whether there is a file-buffer remapping. It supercedes the
-    // file-file remapping.
-    for (const auto &RB : PreprocessorOpts.RemappedFileBuffers) {
-      std::string MPath(RB.first);
-      auto MPathStatus = VFS->status(MPath);
-      if (MPathStatus) {
-        llvm::sys::fs::UniqueID MID = MPathStatus->getUniqueID();
-        if (MainFileID == MID) {
-          // We found a remapping.
-          BufferOwner.reset();
-          Buffer = const_cast<llvm::MemoryBuffer *>(RB.second);
-        }
-      }
-    }
-  }
-  
-  // If the main source file was not remapped, load it now.
-  if (!Buffer && !BufferOwner) {
-    BufferOwner = valueOrNull(VFS->getBufferForFile(FrontendOpts.Inputs[0].getFile()));
-    if (!BufferOwner)
-      return ComputedPreamble(nullptr, nullptr, 0, true);
-  }
-
-  if (!Buffer)
-    Buffer = BufferOwner.get();
-  auto Pre = Lexer::ComputePreamble(Buffer->getBuffer(),
-                                    *Invocation.getLangOpts(), MaxLines);
-  return ComputedPreamble(Buffer, std::move(BufferOwner), Pre.first,
-                          Pre.second);
-}
-
-ASTUnit::PreambleFileHash
-ASTUnit::PreambleFileHash::createForFile(off_t Size, time_t ModTime) {
-  PreambleFileHash Result;
-  Result.Size = Size;
-  Result.ModTime = ModTime;
-  Result.MD5 = {};
-  return Result;
-}
-
-ASTUnit::PreambleFileHash ASTUnit::PreambleFileHash::createForMemoryBuffer(
-    const llvm::MemoryBuffer *Buffer) {
-  PreambleFileHash Result;
-  Result.Size = Buffer->getBufferSize();
-  Result.ModTime = 0;
-
-  llvm::MD5 MD5Ctx;
-  MD5Ctx.update(Buffer->getBuffer().data());
-  MD5Ctx.final(Result.MD5);
-
-  return Result;
-}
-
-namespace clang {
-bool operator==(const ASTUnit::PreambleFileHash &LHS,
-                const ASTUnit::PreambleFileHash &RHS) {
-  return LHS.Size == RHS.Size && LHS.ModTime == RHS.ModTime &&
-         LHS.MD5 == RHS.MD5;
-}
-} // namespace clang
 
 static std::pair<unsigned, unsigned>
 makeStandaloneRange(CharSourceRange Range, const SourceManager &SM,
@@ -1367,135 +1202,41 @@ ASTUnit::getMainBufferWithPrecompiledPreamble(
     const CompilerInvocation &PreambleInvocationIn,
     IntrusiveRefCntPtr<vfs::FileSystem> VFS, bool AllowRebuild,
     unsigned MaxLines) {
-  assert(VFS && "VFS is null");
 
-  auto PreambleInvocation =
-      std::make_shared<CompilerInvocation>(PreambleInvocationIn);
-  FrontendOptions &FrontendOpts = PreambleInvocation->getFrontendOpts();
-  PreprocessorOptions &PreprocessorOpts
-    = PreambleInvocation->getPreprocessorOpts();
-
-  ComputedPreamble NewPreamble =
-      ComputePreamble(*PreambleInvocation, MaxLines, VFS);
-
-  if (!NewPreamble.Size) {
-    // We couldn't find a preamble in the main source. Clear out the current
-    // preamble, if we have one. It's obviously no good any more.
-    Preamble.clear();
-    erasePreambleFile(this);
-
-    // The next time we actually see a preamble, precompile it.
-    PreambleRebuildCounter = 1;
+  auto MainFilePath =
+      PreambleInvocationIn.getFrontendOpts().Inputs[0].getFile();
+  std::unique_ptr<llvm::MemoryBuffer> MainFileBuffer =
+      getBufferForFileHandlingRemapping(PreambleInvocationIn, VFS.get(),
+                                        MainFilePath);
+  if (!MainFileBuffer)
     return nullptr;
-  }
-  
-  if (!Preamble.empty()) {
-    // We've previously computed a preamble. Check whether we have the same
-    // preamble now that we did before, and that there's enough space in
-    // the main-file buffer within the precompiled preamble to fit the
-    // new main file.
-    if (Preamble.size() == NewPreamble.Size &&
-        PreambleEndsAtStartOfLine == NewPreamble.PreambleEndsAtStartOfLine &&
-        memcmp(Preamble.getBufferStart(), NewPreamble.Buffer->getBufferStart(),
-               NewPreamble.Size) == 0) {
-      // The preamble has not changed. We may be able to re-use the precompiled
-      // preamble.
 
-      // Check that none of the files used by the preamble have changed.
-      bool AnyFileChanged = false;
-          
-      // First, make a record of those files that have been overridden via
-      // remapping or unsaved_files.
-      std::map<llvm::sys::fs::UniqueID, PreambleFileHash> OverriddenFiles;
-      for (const auto &R : PreprocessorOpts.RemappedFiles) {
-        if (AnyFileChanged)
-          break;
+  PreambleBounds Bounds =
+      ComputePreambleBounds(*PreambleInvocationIn.getLangOpts(),
+                            MainFileBuffer.get(), MaxLines);
+  if (!Bounds.Size)
+    return nullptr;
 
-        vfs::Status Status;
-        if (!moveOnNoError(VFS->status(R.second), Status)) {
-          // If we can't stat the file we're remapping to, assume that something
-          // horrible happened.
-          AnyFileChanged = true;
-          break;
-        }
+  if (Preamble) {
+    if (Preamble->CanReuse(PreambleInvocationIn, MainFileBuffer.get(), Bounds,
+                           VFS.get())) {
+      // Okay! We can re-use the precompiled preamble.
 
-        OverriddenFiles[Status.getUniqueID()] = PreambleFileHash::createForFile(
-            Status.getSize(),
-            llvm::sys::toTimeT(Status.getLastModificationTime()));
-      }
+      // Set the state of the diagnostic object to mimic its state
+      // after parsing the preamble.
+      getDiagnostics().Reset();
+      ProcessWarningOptions(getDiagnostics(),
+                            PreambleInvocationIn.getDiagnosticOpts());
+      getDiagnostics().setNumWarnings(NumWarningsInPreamble);
 
-      for (const auto &RB : PreprocessorOpts.RemappedFileBuffers) {
-        if (AnyFileChanged)
-          break;
-
-        vfs::Status Status;
-        if (!moveOnNoError(VFS->status(RB.first), Status)) {
-          AnyFileChanged = true;
-          break;
-        }
-
-        OverriddenFiles[Status.getUniqueID()] =
-            PreambleFileHash::createForMemoryBuffer(RB.second);
-      }
-       
-      // Check whether anything has changed.
-      for (llvm::StringMap<PreambleFileHash>::iterator
-             F = FilesInPreamble.begin(), FEnd = FilesInPreamble.end();
-           !AnyFileChanged && F != FEnd; 
-           ++F) {
-        vfs::Status Status;
-        if (!moveOnNoError(VFS->status(F->first()), Status)) {
-          // If we can't stat the file, assume that something horrible happened.
-          AnyFileChanged = true;
-          break;
-        }
-
-        std::map<llvm::sys::fs::UniqueID, PreambleFileHash>::iterator Overridden
-          = OverriddenFiles.find(Status.getUniqueID());
-        if (Overridden != OverriddenFiles.end()) {
-          // This file was remapped; check whether the newly-mapped file 
-          // matches up with the previous mapping.
-          if (Overridden->second != F->second)
-            AnyFileChanged = true;
-          continue;
-        }
-        
-        // The file was not remapped; check whether it has changed on disk.
-        if (Status.getSize() != uint64_t(F->second.Size) ||
-            llvm::sys::toTimeT(Status.getLastModificationTime()) !=
-                F->second.ModTime)
-          AnyFileChanged = true;
-      }
-          
-      if (!AnyFileChanged) {
-        // Okay! We can re-use the precompiled preamble.
-
-        // Set the state of the diagnostic object to mimic its state
-        // after parsing the preamble.
-        getDiagnostics().Reset();
-        ProcessWarningOptions(getDiagnostics(), 
-                              PreambleInvocation->getDiagnosticOpts());
-        getDiagnostics().setNumWarnings(NumWarningsInPreamble);
-
-        return llvm::MemoryBuffer::getMemBufferCopy(
-            NewPreamble.Buffer->getBuffer(), FrontendOpts.Inputs[0].getFile());
-      }
+      PreambleRebuildCounter = 1;
+      return MainFileBuffer;
+    } else {
+      Preamble.reset();
+      PreambleDiagnostics.clear();
+      TopLevelDeclsInPreamble.clear();
+      PreambleRebuildCounter = 1;
     }
-
-    // If we aren't allowed to rebuild the precompiled preamble, just
-    // return now.
-    if (!AllowRebuild)
-      return nullptr;
-
-    // We can't reuse the previously-computed preamble. Build a new one.
-    Preamble.clear();
-    PreambleDiagnostics.clear();
-    erasePreambleFile(this);
-    PreambleRebuildCounter = 1;
-  } else if (!AllowRebuild) {
-    // We aren't allowed to rebuild the precompiled preamble; just
-    // return now.
-    return nullptr;
   }
 
   // If the preamble rebuild counter > 1, it's because we previously
@@ -1506,164 +1247,61 @@ ASTUnit::getMainBufferWithPrecompiledPreamble(
     return nullptr;
   }
 
-  // Create a temporary file for the precompiled preamble. In rare 
-  // circumstances, this can fail.
-  std::string PreamblePCHPath = GetPreamblePCHPath();
-  if (PreamblePCHPath.empty()) {
-    // Try again next time.
-    PreambleRebuildCounter = 1;
-    return nullptr;
-  }
-  
-  // We did not previously compute a preamble, or it can't be reused anyway.
-  SimpleTimer PreambleTimer(WantTiming);
-  PreambleTimer.setOutput("Precompiling preamble");
-
-  // Save the preamble text for later; we'll need to compare against it for
-  // subsequent reparses.
-  StringRef MainFilename = FrontendOpts.Inputs[0].getFile();
-  Preamble.assign(FileMgr->getFile(MainFilename),
-                  NewPreamble.Buffer->getBufferStart(),
-                  NewPreamble.Buffer->getBufferStart() + NewPreamble.Size);
-  PreambleEndsAtStartOfLine = NewPreamble.PreambleEndsAtStartOfLine;
-
-  PreambleBuffer = llvm::MemoryBuffer::getMemBufferCopy(
-      NewPreamble.Buffer->getBuffer().slice(0, Preamble.size()), MainFilename);
-
-  // Remap the main source file to the preamble buffer.
-  StringRef MainFilePath = FrontendOpts.Inputs[0].getFile();
-  PreprocessorOpts.addRemappedFile(MainFilePath, PreambleBuffer.get());
-
-  // Tell the compiler invocation to generate a temporary precompiled header.
-  FrontendOpts.ProgramAction = frontend::GeneratePCH;
-  // FIXME: Generate the precompiled header into memory?
-  FrontendOpts.OutputFile = PreamblePCHPath;
-  PreprocessorOpts.PrecompiledPreambleBytes.first = 0;
-  PreprocessorOpts.PrecompiledPreambleBytes.second = false;
-  
-  // Create the compiler instance to use for building the precompiled preamble.
-  std::unique_ptr<CompilerInstance> Clang(
-      new CompilerInstance(std::move(PCHContainerOps)));
-
-  // Recover resources if we crash before exiting this method.
-  llvm::CrashRecoveryContextCleanupRegistrar<CompilerInstance>
-    CICleanup(Clang.get());
-
-  Clang->setInvocation(std::move(PreambleInvocation));
-  OriginalSourceFile = Clang->getFrontendOpts().Inputs[0].getFile();
-  
-  // Set up diagnostics, capturing all of the diagnostics produced.
-  Clang->setDiagnostics(&getDiagnostics());
-  
-  // Create the target instance.
-  Clang->setTarget(TargetInfo::CreateTargetInfo(
-      Clang->getDiagnostics(), Clang->getInvocation().TargetOpts));
-  if (!Clang->hasTarget()) {
-    llvm::sys::fs::remove(FrontendOpts.OutputFile);
-    Preamble.clear();
-    PreambleRebuildCounter = DefaultPreambleRebuildInterval;
-    PreprocessorOpts.RemappedFileBuffers.pop_back();
-    return nullptr;
-  }
-  
-  // Inform the target of the language options.
-  //
-  // FIXME: We shouldn't need to do this, the target should be immutable once
-  // created. This complexity should be lifted elsewhere.
-  Clang->getTarget().adjust(Clang->getLangOpts());
-  
-  assert(Clang->getFrontendOpts().Inputs.size() == 1 &&
-         "Invocation must have exactly one source file!");
-  assert(Clang->getFrontendOpts().Inputs[0].getKind().getFormat() ==
-             InputKind::Source &&
-         "FIXME: AST inputs not yet supported here!");
-  assert(Clang->getFrontendOpts().Inputs[0].getKind().getLanguage() !=
-             InputKind::LLVM_IR &&
-         "IR inputs not support here!");
-  
-  // Clear out old caches and data.
-  getDiagnostics().Reset();
-  ProcessWarningOptions(getDiagnostics(), Clang->getDiagnosticOpts());
-  checkAndRemoveNonDriverDiags(StoredDiagnostics);
-  TopLevelDecls.clear();
-  TopLevelDeclsInPreamble.clear();
-  PreambleDiagnostics.clear();
-
-  VFS = createVFSFromCompilerInvocation(Clang->getInvocation(),
-                                        getDiagnostics(), VFS);
-  if (!VFS)
+  assert(!Preamble && "No Preamble should be stored at that point");
+  // If we aren't allowed to rebuild the precompiled preamble, just
+  // return now.
+  if (!AllowRebuild)
     return nullptr;
 
-  // Create a file manager object to provide access to and cache the filesystem.
-  Clang->setFileManager(new FileManager(Clang->getFileSystemOpts(), VFS));
+  SmallVector<StandaloneDiagnostic, 4> NewPreambleDiagsStandalone;
+  SmallVector<StoredDiagnostic, 4> NewPreambleDiags;
+  ASTUnitPreambleCallbacks Callbacks;
+  {
+    llvm::Optional<CaptureDroppedDiagnostics> Capture;
+    if (CaptureDiagnostics)
+      Capture.emplace(/*RequestCapture=*/true, *Diagnostics, &NewPreambleDiags,
+                      &NewPreambleDiagsStandalone);
 
-  // Create the source manager.
-  Clang->setSourceManager(new SourceManager(getDiagnostics(),
-                                            Clang->getFileManager()));
+    // We did not previously compute a preamble, or it can't be reused anyway.
+    SimpleTimer PreambleTimer(WantTiming);
+    PreambleTimer.setOutput("Precompiling preamble");
 
-  auto PreambleDepCollector = std::make_shared<DependencyCollector>();
-  Clang->addDependencyCollector(PreambleDepCollector);
-
-  std::unique_ptr<PrecompilePreambleAction> Act;
-  Act.reset(new PrecompilePreambleAction(*this));
-  if (!Act->BeginSourceFile(*Clang.get(), Clang->getFrontendOpts().Inputs[0])) {
-    llvm::sys::fs::remove(FrontendOpts.OutputFile);
-    Preamble.clear();
-    PreambleRebuildCounter = DefaultPreambleRebuildInterval;
-    PreprocessorOpts.RemappedFileBuffers.pop_back();
-    return nullptr;
-  }
-  
-  Act->Execute();
-
-  // Transfer any diagnostics generated when parsing the preamble into the set
-  // of preamble diagnostics.
-  for (stored_diag_iterator I = stored_diag_afterDriver_begin(),
-                            E = stored_diag_end();
-       I != E; ++I)
-    PreambleDiagnostics.push_back(
-        makeStandaloneDiagnostic(Clang->getLangOpts(), *I));
-
-  Act->EndSourceFile();
-
-  checkAndRemoveNonDriverDiags(StoredDiagnostics);
-
-  if (!Act->hasEmittedPreamblePCH()) {
-    // The preamble PCH failed (e.g. there was a module loading fatal error),
-    // so no precompiled header was generated. Forget that we even tried.
-    // FIXME: Should we leave a note for ourselves to try again?
-    llvm::sys::fs::remove(FrontendOpts.OutputFile);
-    Preamble.clear();
-    TopLevelDeclsInPreamble.clear();
-    PreambleRebuildCounter = DefaultPreambleRebuildInterval;
-    PreprocessorOpts.RemappedFileBuffers.pop_back();
-    return nullptr;
-  }
-  
-  // Keep track of the preamble we precompiled.
-  setPreambleFile(this, FrontendOpts.OutputFile);
-  NumWarningsInPreamble = getDiagnostics().getNumWarnings();
-  
-  // Keep track of all of the files that the source manager knows about,
-  // so we can verify whether they have changed or not.
-  FilesInPreamble.clear();
-  SourceManager &SourceMgr = Clang->getSourceManager();
-  for (auto &Filename : PreambleDepCollector->getDependencies()) {
-    const FileEntry *File = Clang->getFileManager().getFile(Filename);
-    if (!File || File == SourceMgr.getFileEntryForID(SourceMgr.getMainFileID()))
-      continue;
-    if (time_t ModTime = File->getModificationTime()) {
-      FilesInPreamble[File->getName()] = PreambleFileHash::createForFile(
-          File->getSize(), ModTime);
+    llvm::ErrorOr<PrecompiledPreamble> NewPreamble = PrecompiledPreamble::Build(
+        PreambleInvocationIn, MainFileBuffer.get(), Bounds, *Diagnostics, VFS,
+        PCHContainerOps, Callbacks);
+    if (NewPreamble) {
+      Preamble = std::move(*NewPreamble);
+      PreambleRebuildCounter = 1;
     } else {
-      llvm::MemoryBuffer *Buffer = SourceMgr.getMemoryBufferForFile(File);
-      FilesInPreamble[File->getName()] =
-          PreambleFileHash::createForMemoryBuffer(Buffer);
+      switch (static_cast<BuildPreambleError>(NewPreamble.getError().value())) {
+      case BuildPreambleError::CouldntCreateTempFile:
+      case BuildPreambleError::PreambleIsEmpty:
+        // Try again next time.
+        PreambleRebuildCounter = 1;
+        return nullptr;
+      case BuildPreambleError::CouldntCreateTargetInfo:
+      case BuildPreambleError::BeginSourceFileFailed:
+      case BuildPreambleError::CouldntEmitPCH:
+      case BuildPreambleError::CouldntCreateVFSOverlay:
+        // These erros are more likely to repeat, retry after some period.
+        PreambleRebuildCounter = DefaultPreambleRebuildInterval;
+        return nullptr;
+      }
+      llvm_unreachable("unexpected BuildPreambleError");
     }
   }
 
-  PreambleRebuildCounter = 1;
-  PreprocessorOpts.RemappedFileBuffers.pop_back();
+  assert(Preamble && "Preamble wasn't built");
+
+  TopLevelDecls.clear();
+  TopLevelDeclsInPreamble = Callbacks.takeTopLevelDeclIDs();
+  PreambleTopLevelHashValue = Callbacks.getHash();
+
+  NumWarningsInPreamble = getDiagnostics().getNumWarnings();
+
+  checkAndRemoveNonDriverDiags(NewPreambleDiags);
+  StoredDiagnostics = std::move(NewPreambleDiags);
+  PreambleDiagnostics = std::move(NewPreambleDiagsStandalone);
 
   // If the hash of top-level entities differs from the hash of the top-level
   // entities the last time we rebuilt the preamble, clear out the completion
@@ -1673,11 +1311,12 @@ ASTUnit::getMainBufferWithPrecompiledPreamble(
     PreambleTopLevelHashValue = CurrentTopLevelHashValue;
   }
 
-  return llvm::MemoryBuffer::getMemBufferCopy(NewPreamble.Buffer->getBuffer(),
-                                              MainFilename);
+  return MainFileBuffer;
 }
 
 void ASTUnit::RealizeTopLevelDeclsFromPreamble() {
+  assert(Preamble && "Should only be called when preamble was built");
+
   std::vector<Decl *> Resolved;
   Resolved.reserve(TopLevelDeclsInPreamble.size());
   ExternalASTSource &Source = *getASTContext().getExternalSource();
@@ -1995,8 +1634,8 @@ ASTUnit *ASTUnit::LoadFromCommandLine(
 
   {
 
-    CaptureDroppedDiagnostics Capture(CaptureDiagnostics, *Diags, 
-                                      StoredDiagnostics);
+    CaptureDroppedDiagnostics Capture(CaptureDiagnostics, *Diags,
+                                      &StoredDiagnostics, nullptr);
 
     CI = clang::createInvocationFromCommandLine(
         llvm::makeArrayRef(ArgBegin, ArgEnd), Diags);
@@ -2101,7 +1740,7 @@ bool ASTUnit::Reparse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
   // If we have a preamble file lying around, or if we might try to
   // build a precompiled preamble, do so now.
   std::unique_ptr<llvm::MemoryBuffer> OverrideMainBuffer;
-  if (!getPreambleFile(this).empty() || PreambleRebuildCounter > 0)
+  if (Preamble || PreambleRebuildCounter > 0)
     OverrideMainBuffer =
         getMainBufferWithPrecompiledPreamble(PCHContainerOps, *Invocation, VFS);
 
@@ -2435,7 +2074,7 @@ void ASTUnit::CodeComplete(
   Clang->setDiagnostics(&Diag);
   CaptureDroppedDiagnostics Capture(true, 
                                     Clang->getDiagnostics(), 
-                                    StoredDiagnostics);
+                                    &StoredDiagnostics, nullptr);
   ProcessWarningOptions(Diag, Inv.getDiagnosticOpts());
 
   // Create the target instance.
@@ -2484,7 +2123,7 @@ void ASTUnit::CodeComplete(
   // point is within the main file, after the end of the precompiled
   // preamble.
   std::unique_ptr<llvm::MemoryBuffer> OverrideMainBuffer;
-  if (!getPreambleFile(this).empty()) {
+  if (Preamble) {
     std::string CompleteFilePath(File);
 
     auto VFS = FileMgr.getVirtualFileSystem();
@@ -2506,14 +2145,8 @@ void ASTUnit::CodeComplete(
   // If the main file has been overridden due to the use of a preamble,
   // make that override happen and introduce the preamble.
   if (OverrideMainBuffer) {
-    PreprocessorOpts.addRemappedFile(OriginalSourceFile,
-                                     OverrideMainBuffer.get());
-    PreprocessorOpts.PrecompiledPreambleBytes.first = Preamble.size();
-    PreprocessorOpts.PrecompiledPreambleBytes.second
-                                                    = PreambleEndsAtStartOfLine;
-    PreprocessorOpts.ImplicitPCHInclude = getPreambleFile(this);
-    PreprocessorOpts.DisablePCHValidation = true;
-
+    assert(Preamble && "No preamble was built, but OverrideMainBuffer is not null");
+    Preamble->AddImplicitPreamble(Clang->getInvocation(), OverrideMainBuffer.get());
     OwnedBuffers.push_back(OverrideMainBuffer.release());
   } else {
     PreprocessorOpts.PrecompiledPreambleBytes.first = 0;
@@ -2760,11 +2393,11 @@ SourceLocation ASTUnit::mapLocationFromPreamble(SourceLocation Loc) {
   if (SourceMgr)
     PreambleID = SourceMgr->getPreambleFileID();
 
-  if (Loc.isInvalid() || Preamble.empty() || PreambleID.isInvalid())
+  if (Loc.isInvalid() || !Preamble || PreambleID.isInvalid())
     return Loc;
 
   unsigned Offs;
-  if (SourceMgr->isInFileID(Loc, PreambleID, &Offs) && Offs < Preamble.size()) {
+  if (SourceMgr->isInFileID(Loc, PreambleID, &Offs) && Offs < Preamble->getBounds().Size) {
     SourceLocation FileLoc
         = SourceMgr->getLocForStartOfFile(SourceMgr->getMainFileID());
     return FileLoc.getLocWithOffset(Offs);
@@ -2781,12 +2414,12 @@ SourceLocation ASTUnit::mapLocationToPreamble(SourceLocation Loc) {
   if (SourceMgr)
     PreambleID = SourceMgr->getPreambleFileID();
 
-  if (Loc.isInvalid() || Preamble.empty() || PreambleID.isInvalid())
+  if (Loc.isInvalid() || !Preamble || PreambleID.isInvalid())
     return Loc;
 
   unsigned Offs;
   if (SourceMgr->isInFileID(Loc, SourceMgr->getMainFileID(), &Offs) &&
-      Offs < Preamble.size()) {
+      Offs < Preamble->getBounds().Size) {
     SourceLocation FileLoc = SourceMgr->getLocForStartOfFile(PreambleID);
     return FileLoc.getLocWithOffset(Offs);
   }
@@ -2930,17 +2563,6 @@ InputKind ASTUnit::getInputKind() const {
   bool PP = false;
 
   return InputKind(Lang, Fmt, PP);
-}
-
-void ASTUnit::PreambleData::countLines() const {
-  NumLines = 0;
-  if (empty())
-    return;
-
-  NumLines = std::count(Buffer.begin(), Buffer.end(), '\n');
-
-  if (Buffer.back() != '\n')
-    ++NumLines;
 }
 
 #ifndef NDEBUG

@@ -1370,6 +1370,13 @@ public:
     return getRegion()->contains(BB);
   }
 
+  /// Return whether this statement contains @p Inst.
+  bool contains(Instruction *Inst) const {
+    if (!Inst)
+      return false;
+    return contains(Inst->getParent());
+  }
+
   /// Return the closest innermost loop that contains this statement, but is not
   /// contained in it.
   ///
@@ -2510,6 +2517,14 @@ public:
   /// Return the ScopStmt for the given @p BB or nullptr if there is
   ///        none.
   ScopStmt *getStmtFor(BasicBlock *BB) const;
+
+  /// Return the last statement representing @p BB.
+  ///
+  /// Of the sequence of statements that represent a @p BB, this is the last one
+  /// to be executed. It is typically used to determine which instruction to add
+  /// a MemoryKind::PHI WRITE to. For this purpose, it is not strictly required
+  /// to be executed last, only that the incoming value is available in it.
+  ScopStmt *getLastStmtFor(BasicBlock *BB) const { return getStmtFor(BB); }
 
   /// Return the ScopStmt that represents the Region @p R, or nullptr if
   ///        it is not represented by any statement in this Scop.

@@ -2801,26 +2801,24 @@ void AsmPrinter::emitXRayTable() {
   }
 
   // Before we switch over, we force a reference to a label inside the
-  // xray_instr_map and xray_fn_idx sections. Since this function is always
-  // called just before the function's end, we assume that this is happening
-  // after the last return instruction. We also use the synthetic label in the
-  // xray_inster_map as a delimeter for the range of sleds for this function in
-  // the index.
+  // xray_fn_idx sections. This makes sure that the xray_fn_idx section is kept
+  // live by the linker if the function is not garbage-collected. Since this
+  // function is always called just before the function's end, we assume that
+  // this is happening after the last return instruction.
   auto WordSizeBytes = MAI->getCodePointerSize();
-  MCSymbol *SledsStart = OutContext.createTempSymbol("xray_synthetic_", true);
   MCSymbol *IdxRef = OutContext.createTempSymbol("xray_fn_idx_synth_", true);
   OutStreamer->EmitCodeAlignment(16);
-  OutStreamer->EmitSymbolValue(SledsStart, WordSizeBytes, false);
   OutStreamer->EmitSymbolValue(IdxRef, WordSizeBytes, false);
 
   // Now we switch to the instrumentation map section. Because this is done
   // per-function, we are able to create an index entry that will represent the
   // range of sleds associated with a function.
+  MCSymbol *SledsStart = OutContext.createTempSymbol("xray_sleds_start", true);
   OutStreamer->SwitchSection(InstMap);
   OutStreamer->EmitLabel(SledsStart);
   for (const auto &Sled : Sleds)
     Sled.emit(WordSizeBytes, OutStreamer.get(), CurrentFnSym);
-  MCSymbol *SledsEnd = OutContext.createTempSymbol("xray_synthetic_end", true);
+  MCSymbol *SledsEnd = OutContext.createTempSymbol("xray_sleds_end", true);
   OutStreamer->EmitLabel(SledsEnd);
 
   // We then emit a single entry in the index per function. We use the symbols

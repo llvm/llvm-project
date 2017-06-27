@@ -629,7 +629,7 @@ bool HexagonNewValueJump::runOnMachineFunction(MachineFunction &MF) {
             if (MO.isReg() && MO.isUse()) {
               unsigned feederReg = MO.getReg();
               for (MachineBasicBlock::iterator localII = feederPos,
-                   end = jmpPos; localII != end; localII++) {
+                   end = cmpInstr->getIterator(); localII != end; localII++) {
                 MachineInstr &localMI = *localII;
                 for (unsigned j = 0; j < localMI.getNumOperands(); j++) {
                   MachineOperand &localMO = localMI.getOperand(j);

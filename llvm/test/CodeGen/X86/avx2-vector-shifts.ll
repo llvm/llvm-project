@@ -381,6 +381,7 @@ define <4 x i32> @srl_trunc_and_v4i64(<4 x i32> %x, <4 x i64> %y) nounwind {
 ; X32-NEXT:    vpsrlvd %xmm1, %xmm0, %xmm0
 ; X32-NEXT:    vzeroupper
 ; X32-NEXT:    retl
+; X32-NEXT:    ## -- End function
 ;
 ; X64-LABEL: srl_trunc_and_v4i64:
 ; X64:       ## BB#0:
@@ -391,6 +392,7 @@ define <4 x i32> @srl_trunc_and_v4i64(<4 x i32> %x, <4 x i64> %y) nounwind {
 ; X64-NEXT:    vpsrlvd %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
+; X64-NEXT:    ## -- End function
   %and = and <4 x i64> %y, <i64 8, i64 8, i64 8, i64 8>
   %trunc = trunc <4 x i64> %and to <4 x i32>
   %sra = lshr <4 x i32> %x, %trunc
@@ -412,6 +414,7 @@ define <8 x i16> @shl_8i16(<8 x i16> %r, <8 x i16> %a) nounwind {
 ; X32-NEXT:    ## kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; X32-NEXT:    vzeroupper
 ; X32-NEXT:    retl
+; X32-NEXT:    ## -- End function
 ;
 ; X64-LABEL: shl_8i16:
 ; X64:       ## BB#0:
@@ -423,6 +426,7 @@ define <8 x i16> @shl_8i16(<8 x i16> %r, <8 x i16> %a) nounwind {
 ; X64-NEXT:    ## kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
+; X64-NEXT:    ## -- End function
   %shl = shl <8 x i16> %r, %a
   ret <8 x i16> %shl
 }
@@ -434,13 +438,14 @@ define <16 x i16> @shl_16i16(<16 x i16> %r, <16 x i16> %a) nounwind {
 ; X32-NEXT:    vpunpckhwd {{.*#+}} ymm3 = ymm1[4],ymm2[4],ymm1[5],ymm2[5],ymm1[6],ymm2[6],ymm1[7],ymm2[7],ymm1[12],ymm2[12],ymm1[13],ymm2[13],ymm1[14],ymm2[14],ymm1[15],ymm2[15]
 ; X32-NEXT:    vpunpckhwd {{.*#+}} ymm4 = ymm2[4],ymm0[4],ymm2[5],ymm0[5],ymm2[6],ymm0[6],ymm2[7],ymm0[7],ymm2[12],ymm0[12],ymm2[13],ymm0[13],ymm2[14],ymm0[14],ymm2[15],ymm0[15]
 ; X32-NEXT:    vpsllvd %ymm3, %ymm4, %ymm3
-; X32-NEXT:    vpsrld $16, %ymm3, %ymm3
 ; X32-NEXT:    vpunpcklwd {{.*#+}} ymm1 = ymm1[0],ymm2[0],ymm1[1],ymm2[1],ymm1[2],ymm2[2],ymm1[3],ymm2[3],ymm1[8],ymm2[8],ymm1[9],ymm2[9],ymm1[10],ymm2[10],ymm1[11],ymm2[11]
 ; X32-NEXT:    vpunpcklwd {{.*#+}} ymm0 = ymm2[0],ymm0[0],ymm2[1],ymm0[1],ymm2[2],ymm0[2],ymm2[3],ymm0[3],ymm2[8],ymm0[8],ymm2[9],ymm0[9],ymm2[10],ymm0[10],ymm2[11],ymm0[11]
 ; X32-NEXT:    vpsllvd %ymm1, %ymm0, %ymm0
+; X32-NEXT:    vpsrld $16, %ymm3, %ymm1
 ; X32-NEXT:    vpsrld $16, %ymm0, %ymm0
-; X32-NEXT:    vpackusdw %ymm3, %ymm0, %ymm0
+; X32-NEXT:    vpackusdw %ymm1, %ymm0, %ymm0
 ; X32-NEXT:    retl
+; X32-NEXT:    ## -- End function
 ;
 ; X64-LABEL: shl_16i16:
 ; X64:       ## BB#0:
@@ -448,13 +453,14 @@ define <16 x i16> @shl_16i16(<16 x i16> %r, <16 x i16> %a) nounwind {
 ; X64-NEXT:    vpunpckhwd {{.*#+}} ymm3 = ymm1[4],ymm2[4],ymm1[5],ymm2[5],ymm1[6],ymm2[6],ymm1[7],ymm2[7],ymm1[12],ymm2[12],ymm1[13],ymm2[13],ymm1[14],ymm2[14],ymm1[15],ymm2[15]
 ; X64-NEXT:    vpunpckhwd {{.*#+}} ymm4 = ymm2[4],ymm0[4],ymm2[5],ymm0[5],ymm2[6],ymm0[6],ymm2[7],ymm0[7],ymm2[12],ymm0[12],ymm2[13],ymm0[13],ymm2[14],ymm0[14],ymm2[15],ymm0[15]
 ; X64-NEXT:    vpsllvd %ymm3, %ymm4, %ymm3
-; X64-NEXT:    vpsrld $16, %ymm3, %ymm3
 ; X64-NEXT:    vpunpcklwd {{.*#+}} ymm1 = ymm1[0],ymm2[0],ymm1[1],ymm2[1],ymm1[2],ymm2[2],ymm1[3],ymm2[3],ymm1[8],ymm2[8],ymm1[9],ymm2[9],ymm1[10],ymm2[10],ymm1[11],ymm2[11]
 ; X64-NEXT:    vpunpcklwd {{.*#+}} ymm0 = ymm2[0],ymm0[0],ymm2[1],ymm0[1],ymm2[2],ymm0[2],ymm2[3],ymm0[3],ymm2[8],ymm0[8],ymm2[9],ymm0[9],ymm2[10],ymm0[10],ymm2[11],ymm0[11]
 ; X64-NEXT:    vpsllvd %ymm1, %ymm0, %ymm0
+; X64-NEXT:    vpsrld $16, %ymm3, %ymm1
 ; X64-NEXT:    vpsrld $16, %ymm0, %ymm0
-; X64-NEXT:    vpackusdw %ymm3, %ymm0, %ymm0
+; X64-NEXT:    vpackusdw %ymm1, %ymm0, %ymm0
 ; X64-NEXT:    retq
+; X64-NEXT:    ## -- End function
   %shl = shl <16 x i16> %r, %a
   ret <16 x i16> %shl
 }
@@ -474,6 +480,7 @@ define <32 x i8> @shl_32i8(<32 x i8> %r, <32 x i8> %a) nounwind {
 ; X32-NEXT:    vpaddb %ymm1, %ymm1, %ymm1
 ; X32-NEXT:    vpblendvb %ymm1, %ymm2, %ymm0, %ymm0
 ; X32-NEXT:    retl
+; X32-NEXT:    ## -- End function
 ;
 ; X64-LABEL: shl_32i8:
 ; X64:       ## BB#0:
@@ -489,6 +496,7 @@ define <32 x i8> @shl_32i8(<32 x i8> %r, <32 x i8> %a) nounwind {
 ; X64-NEXT:    vpaddb %ymm1, %ymm1, %ymm1
 ; X64-NEXT:    vpblendvb %ymm1, %ymm2, %ymm0, %ymm0
 ; X64-NEXT:    retq
+; X64-NEXT:    ## -- End function
   %shl = shl <32 x i8> %r, %a
   ret <32 x i8> %shl
 }
@@ -504,6 +512,7 @@ define <8 x i16> @ashr_8i16(<8 x i16> %r, <8 x i16> %a) nounwind {
 ; X32-NEXT:    ## kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; X32-NEXT:    vzeroupper
 ; X32-NEXT:    retl
+; X32-NEXT:    ## -- End function
 ;
 ; X64-LABEL: ashr_8i16:
 ; X64:       ## BB#0:
@@ -515,6 +524,7 @@ define <8 x i16> @ashr_8i16(<8 x i16> %r, <8 x i16> %a) nounwind {
 ; X64-NEXT:    ## kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
+; X64-NEXT:    ## -- End function
   %ashr = ashr <8 x i16> %r, %a
   ret <8 x i16> %ashr
 }
@@ -526,13 +536,14 @@ define <16 x i16> @ashr_16i16(<16 x i16> %r, <16 x i16> %a) nounwind {
 ; X32-NEXT:    vpunpckhwd {{.*#+}} ymm3 = ymm1[4],ymm2[4],ymm1[5],ymm2[5],ymm1[6],ymm2[6],ymm1[7],ymm2[7],ymm1[12],ymm2[12],ymm1[13],ymm2[13],ymm1[14],ymm2[14],ymm1[15],ymm2[15]
 ; X32-NEXT:    vpunpckhwd {{.*#+}} ymm4 = ymm2[4],ymm0[4],ymm2[5],ymm0[5],ymm2[6],ymm0[6],ymm2[7],ymm0[7],ymm2[12],ymm0[12],ymm2[13],ymm0[13],ymm2[14],ymm0[14],ymm2[15],ymm0[15]
 ; X32-NEXT:    vpsravd %ymm3, %ymm4, %ymm3
-; X32-NEXT:    vpsrld $16, %ymm3, %ymm3
 ; X32-NEXT:    vpunpcklwd {{.*#+}} ymm1 = ymm1[0],ymm2[0],ymm1[1],ymm2[1],ymm1[2],ymm2[2],ymm1[3],ymm2[3],ymm1[8],ymm2[8],ymm1[9],ymm2[9],ymm1[10],ymm2[10],ymm1[11],ymm2[11]
 ; X32-NEXT:    vpunpcklwd {{.*#+}} ymm0 = ymm2[0],ymm0[0],ymm2[1],ymm0[1],ymm2[2],ymm0[2],ymm2[3],ymm0[3],ymm2[8],ymm0[8],ymm2[9],ymm0[9],ymm2[10],ymm0[10],ymm2[11],ymm0[11]
 ; X32-NEXT:    vpsravd %ymm1, %ymm0, %ymm0
+; X32-NEXT:    vpsrld $16, %ymm3, %ymm1
 ; X32-NEXT:    vpsrld $16, %ymm0, %ymm0
-; X32-NEXT:    vpackusdw %ymm3, %ymm0, %ymm0
+; X32-NEXT:    vpackusdw %ymm1, %ymm0, %ymm0
 ; X32-NEXT:    retl
+; X32-NEXT:    ## -- End function
 ;
 ; X64-LABEL: ashr_16i16:
 ; X64:       ## BB#0:
@@ -540,13 +551,14 @@ define <16 x i16> @ashr_16i16(<16 x i16> %r, <16 x i16> %a) nounwind {
 ; X64-NEXT:    vpunpckhwd {{.*#+}} ymm3 = ymm1[4],ymm2[4],ymm1[5],ymm2[5],ymm1[6],ymm2[6],ymm1[7],ymm2[7],ymm1[12],ymm2[12],ymm1[13],ymm2[13],ymm1[14],ymm2[14],ymm1[15],ymm2[15]
 ; X64-NEXT:    vpunpckhwd {{.*#+}} ymm4 = ymm2[4],ymm0[4],ymm2[5],ymm0[5],ymm2[6],ymm0[6],ymm2[7],ymm0[7],ymm2[12],ymm0[12],ymm2[13],ymm0[13],ymm2[14],ymm0[14],ymm2[15],ymm0[15]
 ; X64-NEXT:    vpsravd %ymm3, %ymm4, %ymm3
-; X64-NEXT:    vpsrld $16, %ymm3, %ymm3
 ; X64-NEXT:    vpunpcklwd {{.*#+}} ymm1 = ymm1[0],ymm2[0],ymm1[1],ymm2[1],ymm1[2],ymm2[2],ymm1[3],ymm2[3],ymm1[8],ymm2[8],ymm1[9],ymm2[9],ymm1[10],ymm2[10],ymm1[11],ymm2[11]
 ; X64-NEXT:    vpunpcklwd {{.*#+}} ymm0 = ymm2[0],ymm0[0],ymm2[1],ymm0[1],ymm2[2],ymm0[2],ymm2[3],ymm0[3],ymm2[8],ymm0[8],ymm2[9],ymm0[9],ymm2[10],ymm0[10],ymm2[11],ymm0[11]
 ; X64-NEXT:    vpsravd %ymm1, %ymm0, %ymm0
+; X64-NEXT:    vpsrld $16, %ymm3, %ymm1
 ; X64-NEXT:    vpsrld $16, %ymm0, %ymm0
-; X64-NEXT:    vpackusdw %ymm3, %ymm0, %ymm0
+; X64-NEXT:    vpackusdw %ymm1, %ymm0, %ymm0
 ; X64-NEXT:    retq
+; X64-NEXT:    ## -- End function
   %ashr = ashr <16 x i16> %r, %a
   ret <16 x i16> %ashr
 }
@@ -579,6 +591,7 @@ define <32 x i8> @ashr_32i8(<32 x i8> %r, <32 x i8> %a) nounwind {
 ; X32-NEXT:    vpsrlw $8, %ymm0, %ymm0
 ; X32-NEXT:    vpackuswb %ymm2, %ymm0, %ymm0
 ; X32-NEXT:    retl
+; X32-NEXT:    ## -- End function
 ;
 ; X64-LABEL: ashr_32i8:
 ; X64:       ## BB#0:
@@ -607,6 +620,7 @@ define <32 x i8> @ashr_32i8(<32 x i8> %r, <32 x i8> %a) nounwind {
 ; X64-NEXT:    vpsrlw $8, %ymm0, %ymm0
 ; X64-NEXT:    vpackuswb %ymm2, %ymm0, %ymm0
 ; X64-NEXT:    retq
+; X64-NEXT:    ## -- End function
   %ashr = ashr <32 x i8> %r, %a
   ret <32 x i8> %ashr
 }
@@ -622,6 +636,7 @@ define <8 x i16> @lshr_8i16(<8 x i16> %r, <8 x i16> %a) nounwind {
 ; X32-NEXT:    ## kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; X32-NEXT:    vzeroupper
 ; X32-NEXT:    retl
+; X32-NEXT:    ## -- End function
 ;
 ; X64-LABEL: lshr_8i16:
 ; X64:       ## BB#0:
@@ -633,6 +648,7 @@ define <8 x i16> @lshr_8i16(<8 x i16> %r, <8 x i16> %a) nounwind {
 ; X64-NEXT:    ## kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
+; X64-NEXT:    ## -- End function
   %lshr = lshr <8 x i16> %r, %a
   ret <8 x i16> %lshr
 }
@@ -644,13 +660,14 @@ define <16 x i16> @lshr_16i16(<16 x i16> %r, <16 x i16> %a) nounwind {
 ; X32-NEXT:    vpunpckhwd {{.*#+}} ymm3 = ymm1[4],ymm2[4],ymm1[5],ymm2[5],ymm1[6],ymm2[6],ymm1[7],ymm2[7],ymm1[12],ymm2[12],ymm1[13],ymm2[13],ymm1[14],ymm2[14],ymm1[15],ymm2[15]
 ; X32-NEXT:    vpunpckhwd {{.*#+}} ymm4 = ymm2[4],ymm0[4],ymm2[5],ymm0[5],ymm2[6],ymm0[6],ymm2[7],ymm0[7],ymm2[12],ymm0[12],ymm2[13],ymm0[13],ymm2[14],ymm0[14],ymm2[15],ymm0[15]
 ; X32-NEXT:    vpsrlvd %ymm3, %ymm4, %ymm3
-; X32-NEXT:    vpsrld $16, %ymm3, %ymm3
 ; X32-NEXT:    vpunpcklwd {{.*#+}} ymm1 = ymm1[0],ymm2[0],ymm1[1],ymm2[1],ymm1[2],ymm2[2],ymm1[3],ymm2[3],ymm1[8],ymm2[8],ymm1[9],ymm2[9],ymm1[10],ymm2[10],ymm1[11],ymm2[11]
 ; X32-NEXT:    vpunpcklwd {{.*#+}} ymm0 = ymm2[0],ymm0[0],ymm2[1],ymm0[1],ymm2[2],ymm0[2],ymm2[3],ymm0[3],ymm2[8],ymm0[8],ymm2[9],ymm0[9],ymm2[10],ymm0[10],ymm2[11],ymm0[11]
 ; X32-NEXT:    vpsrlvd %ymm1, %ymm0, %ymm0
+; X32-NEXT:    vpsrld $16, %ymm3, %ymm1
 ; X32-NEXT:    vpsrld $16, %ymm0, %ymm0
-; X32-NEXT:    vpackusdw %ymm3, %ymm0, %ymm0
+; X32-NEXT:    vpackusdw %ymm1, %ymm0, %ymm0
 ; X32-NEXT:    retl
+; X32-NEXT:    ## -- End function
 ;
 ; X64-LABEL: lshr_16i16:
 ; X64:       ## BB#0:
@@ -658,13 +675,14 @@ define <16 x i16> @lshr_16i16(<16 x i16> %r, <16 x i16> %a) nounwind {
 ; X64-NEXT:    vpunpckhwd {{.*#+}} ymm3 = ymm1[4],ymm2[4],ymm1[5],ymm2[5],ymm1[6],ymm2[6],ymm1[7],ymm2[7],ymm1[12],ymm2[12],ymm1[13],ymm2[13],ymm1[14],ymm2[14],ymm1[15],ymm2[15]
 ; X64-NEXT:    vpunpckhwd {{.*#+}} ymm4 = ymm2[4],ymm0[4],ymm2[5],ymm0[5],ymm2[6],ymm0[6],ymm2[7],ymm0[7],ymm2[12],ymm0[12],ymm2[13],ymm0[13],ymm2[14],ymm0[14],ymm2[15],ymm0[15]
 ; X64-NEXT:    vpsrlvd %ymm3, %ymm4, %ymm3
-; X64-NEXT:    vpsrld $16, %ymm3, %ymm3
 ; X64-NEXT:    vpunpcklwd {{.*#+}} ymm1 = ymm1[0],ymm2[0],ymm1[1],ymm2[1],ymm1[2],ymm2[2],ymm1[3],ymm2[3],ymm1[8],ymm2[8],ymm1[9],ymm2[9],ymm1[10],ymm2[10],ymm1[11],ymm2[11]
 ; X64-NEXT:    vpunpcklwd {{.*#+}} ymm0 = ymm2[0],ymm0[0],ymm2[1],ymm0[1],ymm2[2],ymm0[2],ymm2[3],ymm0[3],ymm2[8],ymm0[8],ymm2[9],ymm0[9],ymm2[10],ymm0[10],ymm2[11],ymm0[11]
 ; X64-NEXT:    vpsrlvd %ymm1, %ymm0, %ymm0
+; X64-NEXT:    vpsrld $16, %ymm3, %ymm1
 ; X64-NEXT:    vpsrld $16, %ymm0, %ymm0
-; X64-NEXT:    vpackusdw %ymm3, %ymm0, %ymm0
+; X64-NEXT:    vpackusdw %ymm1, %ymm0, %ymm0
 ; X64-NEXT:    retq
+; X64-NEXT:    ## -- End function
   %lshr = lshr <16 x i16> %r, %a
   ret <16 x i16> %lshr
 }
@@ -685,6 +703,7 @@ define <32 x i8> @lshr_32i8(<32 x i8> %r, <32 x i8> %a) nounwind {
 ; X32-NEXT:    vpaddb %ymm1, %ymm1, %ymm1
 ; X32-NEXT:    vpblendvb %ymm1, %ymm2, %ymm0, %ymm0
 ; X32-NEXT:    retl
+; X32-NEXT:    ## -- End function
 ;
 ; X64-LABEL: lshr_32i8:
 ; X64:       ## BB#0:
@@ -701,6 +720,7 @@ define <32 x i8> @lshr_32i8(<32 x i8> %r, <32 x i8> %a) nounwind {
 ; X64-NEXT:    vpaddb %ymm1, %ymm1, %ymm1
 ; X64-NEXT:    vpblendvb %ymm1, %ymm2, %ymm0, %ymm0
 ; X64-NEXT:    retq
+; X64-NEXT:    ## -- End function
   %lshr = lshr <32 x i8> %r, %a
   ret <32 x i8> %lshr
 }

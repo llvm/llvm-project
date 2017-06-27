@@ -37,7 +37,7 @@ public:
   DWARFCallFrameInfo(ObjectFile &objfile, lldb::SectionSP &section,
                      lldb::RegisterKind reg_kind, bool is_eh_frame);
 
-  ~DWARFCallFrameInfo();
+  ~DWARFCallFrameInfo() = default;
 
   // Locate an AddressRange that includes the provided Address in this
   // object's eh_frame/debug_info
@@ -74,12 +74,20 @@ public:
 
 private:
   enum { CFI_AUG_MAX_SIZE = 8, CFI_HEADER_SIZE = 8 };
+  enum CFIVersion {
+    CFI_VERSION1 = 1, // DWARF v.2
+    CFI_VERSION3 = 3, // DWARF v.3
+    CFI_VERSION4 = 4  // DWARF v.4, v.5
+  };
 
   struct CIE {
     dw_offset_t cie_offset;
     uint8_t version;
     char augmentation[CFI_AUG_MAX_SIZE]; // This is typically empty or very
                                          // short.
+    uint8_t address_size = sizeof(uint32_t); // The size of a target address.
+    uint8_t segment_size = 0;                // The size of a segment selector.
+
     uint32_t code_align;
     int32_t data_align;
     uint32_t return_addr_reg_num;

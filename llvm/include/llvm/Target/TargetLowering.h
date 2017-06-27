@@ -410,6 +410,10 @@ public:
     return false;
   }
 
+  /// Should we merge stores after Legalization (generally
+  /// better quality) or before (simpler)
+  virtual bool mergeStoresAfterLegalization() const { return false; }
+
   /// Returns if it's reasonable to merge stores to MemVT size.
   virtual bool canMergeStoresTo(unsigned AddressSpace, EVT MemVT) const {
     return true;
@@ -1369,6 +1373,12 @@ protected:
 public:
   /// Returns the target-specific address of the unsafe stack pointer.
   virtual Value *getSafeStackPointerLocation(IRBuilder<> &IRB) const;
+
+  /// Returns the name of the symbol used to emit stack probes or the empty
+  /// string if not applicable.
+  virtual StringRef getStackProbeSymbolName(MachineFunction &MF) const {
+    return "";
+  }
 
   /// Returns true if a cast between SrcAS and DestAS is a noop.
   virtual bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const {

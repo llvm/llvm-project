@@ -2630,7 +2630,7 @@ void Sema::DeclareGlobalAllocationFunction(DeclarationName Name,
           // Make the function visible to name lookup, even if we found it in
           // an unimported module. It either is an implicitly-declared global
           // allocation function, or is suppressing that function.
-          Func->setHidden(false);
+          Func->setVisibleDespiteOwningModule();
           return;
         }
       }
@@ -2662,7 +2662,7 @@ void Sema::DeclareGlobalAllocationFunction(DeclarationName Name,
         FnType, /*TInfo=*/nullptr, SC_None, false, true);
     Alloc->setImplicit();
     // Global allocation functions should always be visible.
-    Alloc->setHidden(false);
+    Alloc->setVisibleDespiteOwningModule();
 
     // Implicit sized deallocation functions always have default visibility.
     Alloc->addAttr(

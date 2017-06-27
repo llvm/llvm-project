@@ -449,11 +449,22 @@ bool llvm::sys::commandLineFitsWithinSystemLimits(StringRef Program, ArrayRef<co
   size_t ArgLength = Program.size() + 1;
   for (ArrayRef<const char*>::iterator I = Args.begin(), E = Args.end();
        I != E; ++I) {
-    ArgLength += strlen(*I) + 1;
+    size_t length = strlen(*I);
+
+    // Ensure that we do not exceed the MAX_ARG_STRLEN constant on Linux, which
+    // does not have a constant unlike what the man pages would have you
+    // believe. Since this limit is pretty high, perform the check
+    // unconditionally rather than trying to be aggressive and limiting it to
+    // Linux only.
+    if (length >= (32 * 4096))
+      return false;
+
+    ArgLength += length + 1;
     if (ArgLength > size_t(HalfArgMax)) {
       return false;
     }
   }
+
   return true;
 }
 }

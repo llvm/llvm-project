@@ -351,9 +351,11 @@ public:
         IndexCtx.indexTagDecl(D, Relations);
       } else {
         auto *Parent = dyn_cast<NamedDecl>(D->getDeclContext());
+        SmallVector<SymbolRelation, 1> Relations;
+        gatherTemplatePseudoOverrides(D, Relations);
         return IndexCtx.handleReference(D, D->getLocation(), Parent,
                                         D->getLexicalDeclContext(),
-                                        SymbolRoleSet());
+                                        SymbolRoleSet(), Relations);
       }
     }
     return true;
@@ -609,18 +611,16 @@ public:
                                            ClassTemplateSpecializationDecl *D) {
     // FIXME: Notify subsequent callbacks if info comes from implicit
     // instantiation.
-    if (D->isThisDeclarationADefinition()) {
-      llvm::PointerUnion<ClassTemplateDecl *,
-                         ClassTemplatePartialSpecializationDecl *>
-          Template = D->getSpecializedTemplateOrPartial();
-      const Decl *SpecializationOf =
-          Template.is<ClassTemplateDecl *>()
-              ? (Decl *)Template.get<ClassTemplateDecl *>()
-              : Template.get<ClassTemplatePartialSpecializationDecl *>();
-      IndexCtx.indexTagDecl(
-          D, SymbolRelation(SymbolRoleSet(SymbolRole::RelationSpecializationOf),
-                            SpecializationOf));
-    }
+    llvm::PointerUnion<ClassTemplateDecl *,
+                       ClassTemplatePartialSpecializationDecl *>
+        Template = D->getSpecializedTemplateOrPartial();
+    const Decl *SpecializationOf =
+        Template.is<ClassTemplateDecl *>()
+            ? (Decl *)Template.get<ClassTemplateDecl *>()
+            : Template.get<ClassTemplatePartialSpecializationDecl *>();
+    IndexCtx.indexTagDecl(
+        D, SymbolRelation(SymbolRoleSet(SymbolRole::RelationSpecializationOf),
+                          SpecializationOf));
     if (TypeSourceInfo *TSI = D->getTypeAsWritten())
       IndexCtx.indexTypeSourceInfo(TSI, /*Parent=*/nullptr,
                                    D->getLexicalDeclContext());

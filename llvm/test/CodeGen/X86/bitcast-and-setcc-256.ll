@@ -453,10 +453,10 @@ define i32 @v32i8(<32 x i8> %a, <32 x i8> %b, <32 x i8> %c, <32 x i8> %d) {
 ; SSE2-SSSE3-NEXT:    pcmpgtb %xmm2, %xmm0
 ; SSE2-SSSE3-NEXT:    pcmpgtb %xmm3, %xmm1
 ; SSE2-SSSE3-NEXT:    pcmpgtb %xmm6, %xmm4
-; SSE2-SSSE3-NEXT:    pand %xmm0, %xmm4
 ; SSE2-SSSE3-NEXT:    pcmpgtb %xmm7, %xmm5
 ; SSE2-SSSE3-NEXT:    pand %xmm1, %xmm5
 ; SSE2-SSSE3-NEXT:    movdqa %xmm5, -{{[0-9]+}}(%rsp)
+; SSE2-SSSE3-NEXT:    pand %xmm0, %xmm4
 ; SSE2-SSSE3-NEXT:    movdqa %xmm4, -{{[0-9]+}}(%rsp)
 ; SSE2-SSSE3-NEXT:    movb -{{[0-9]+}}(%rsp), %al
 ; SSE2-SSSE3-NEXT:    andb $1, %al

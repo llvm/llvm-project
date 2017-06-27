@@ -54,7 +54,7 @@ callee_high:
 // CHECK-NEXT:   1001c:       ff f3 fd 97     b.w     #16777210
 // CHECK-NEXT:   10020:       3f f3 ff af     bgt.w   #1048574
 // CHECK-NEXT:   10024:       70 47   bx      lr
-// CHECK-NEXT:   10026:       00 00   movs    r0, r0
+// CHECK-NEXT:   10026:
 // CHECK-NEXT: Disassembly of section .callee2:
 // CHECK-NEXT: callee_high:
 // CHECK-NEXT:   10028:       70 47   bx      lr

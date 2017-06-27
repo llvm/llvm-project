@@ -318,10 +318,33 @@ entry:
   ret i16 %cond
 }
 
+define i128 @test7(i128 %x) {
+; CHECK-LABEL: @test7(
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call i128 @llvm.ctlz.i128(i128 [[X:%.*]], i1 false), !range !3
+; CHECK-NEXT:    ret i128 [[TMP1]]
+;
+  %1 = tail call i128 @llvm.ctlz.i128(i128 %x, i1 true)
+  %tobool = icmp ne i128 %x, 0
+  %cond = select i1 %tobool, i128 %1, i128 128
+  ret i128 %cond
+}
+
+define i128 @test8(i128 %x) {
+; CHECK-LABEL: @test8(
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call i128 @llvm.cttz.i128(i128 [[X:%.*]], i1 false), !range !3
+; CHECK-NEXT:    ret i128 [[TMP1]]
+;
+  %1 = tail call i128 @llvm.cttz.i128(i128 %x, i1 true)
+  %tobool = icmp ne i128 %x, 0
+  %cond = select i1 %tobool, i128 %1, i128 128
+  ret i128 %cond
+}
 
 declare i16 @llvm.ctlz.i16(i16, i1)
 declare i32 @llvm.ctlz.i32(i32, i1)
 declare i64 @llvm.ctlz.i64(i64, i1)
+declare i128 @llvm.ctlz.i128(i128, i1)
 declare i16 @llvm.cttz.i16(i16, i1)
 declare i32 @llvm.cttz.i32(i32, i1)
 declare i64 @llvm.cttz.i64(i64, i1)
+declare i128 @llvm.cttz.i128(i128, i1)

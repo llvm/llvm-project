@@ -475,6 +475,33 @@ class AMDGPUBufferStore : Intrinsic <
 def int_amdgcn_buffer_store_format : AMDGPUBufferStore;
 def int_amdgcn_buffer_store : AMDGPUBufferStore;
 
+def int_amdgcn_tbuffer_load : Intrinsic <
+    [llvm_any_ty],    // overloaded for types f32/i32, v2f32/v2i32, v4f32/v4i32
+    [llvm_v4i32_ty,   // rsrc(SGPR)
+     llvm_i32_ty,     // vindex(VGPR)
+     llvm_i32_ty,     // voffset(VGPR)
+     llvm_i32_ty,     // soffset(SGPR)
+     llvm_i32_ty,     // offset(imm)
+     llvm_i32_ty,     // dfmt(imm)
+     llvm_i32_ty,     // nfmt(imm)
+     llvm_i1_ty,     // glc(imm)
+     llvm_i1_ty],    // slc(imm)
+    []>;
+
+def int_amdgcn_tbuffer_store : Intrinsic <
+    [],
+    [llvm_any_ty,    // vdata(VGPR), overloaded for types f32/i32, v2f32/v2i32, v4f32/v4i32
+     llvm_v4i32_ty,  // rsrc(SGPR)
+     llvm_i32_ty,    // vindex(VGPR)
+     llvm_i32_ty,    // voffset(VGPR)
+     llvm_i32_ty,    // soffset(SGPR)
+     llvm_i32_ty,    // offset(imm)
+     llvm_i32_ty,    // dfmt(imm)
+     llvm_i32_ty,    // nfmt(imm)
+     llvm_i1_ty,     // glc(imm)
+     llvm_i1_ty],    // slc(imm)
+    []>;
+
 class AMDGPUBufferAtomic : Intrinsic <
   [llvm_i32_ty],
   [llvm_i32_ty,       // vdata(VGPR)

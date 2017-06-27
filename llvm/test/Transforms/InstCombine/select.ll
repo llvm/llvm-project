@@ -926,7 +926,7 @@ while.body:
 
 define i32 @test76(i1 %flag, i32* %x) {
 ; The load here must not be speculated around the select. One side of the
-; select is trivially dereferencable but may have a lower alignment than the
+; select is trivially dereferenceable but may have a lower alignment than the
 ; load does.
 ; CHECK-LABEL: @test76(
 ; CHECK: store i32 0, i32* %x
@@ -943,7 +943,7 @@ declare void @scribble_on_i32(i32*)
 
 define i32 @test77(i1 %flag, i32* %x) {
 ; The load here must not be speculated around the select. One side of the
-; select is trivially dereferencable but may have a lower alignment than the
+; select is trivially dereferenceable but may have a lower alignment than the
 ; load does.
 ; CHECK-LABEL: @test77(
 ; CHECK: %[[A:.*]] = alloca i32, align 1

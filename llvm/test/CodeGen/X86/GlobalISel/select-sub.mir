@@ -14,16 +14,6 @@
     ret i32 %ret
   }
 
-  define float @test_sub_float(float %arg1, float %arg2) {
-    %ret = fsub float %arg1, %arg2
-    ret float %ret
-  }
-
-  define double @test_sub_double(double %arg1, double %arg2) {
-    %ret = fsub double %arg1, %arg2
-    ret double %ret
-  }
-
   define <4 x i32> @test_sub_v4i32(<4 x i32> %arg1, <4 x i32> %arg2) {
     %ret = sub <4 x i32> %arg1, %arg2
     ret <4 x i32> %ret
@@ -85,73 +75,6 @@ body:             |
     %2(s32) = G_SUB %0, %1
     %rax = COPY %2(s32)
 
-...
----
-name:            test_sub_float
-alignment:       4
-legalized:       true
-regBankSelected: true
-selected:        false
-tracksRegLiveness: true
-# ALL: registers:
-# NO_AVX512F-NEXT:  - { id: 0, class: fr32, preferred-register: '' }
-# NO_AVX512F-NEXT:  - { id: 1, class: fr32, preferred-register: '' }
-# NO_AVX512F-NEXT:  - { id: 2, class: fr32, preferred-register: '' }
-# AVX512ALL-NEXT:  - { id: 0, class: fr32x, preferred-register: '' }
-# AVX512ALL-NEXT:  - { id: 1, class: fr32x, preferred-register: '' }
-# AVX512ALL-NEXT:  - { id: 2, class: fr32x, preferred-register: '' }
-registers:
-  - { id: 0, class: vecr }
-  - { id: 1, class: vecr }
-  - { id: 2, class: vecr }
-# ALL:          %0 = COPY %xmm0
-# ALL-NEXT:     %1 = COPY %xmm1
-# SSE-NEXT:     %2 = SUBSSrr %0, %1
-# AVX-NEXT:     %2 = VSUBSSrr %0, %1
-# AVX512F-NEXT: %2 = VSUBSSZrr %0, %1
-body:             |
-  bb.1 (%ir-block.0):
-    liveins: %xmm0, %xmm1
-
-    %0(s32) = COPY %xmm0
-    %1(s32) = COPY %xmm1
-    %2(s32) = G_FSUB %0, %1
-    %xmm0 = COPY %2(s32)
-    RET 0, implicit %xmm0
-
-...
----
-name:            test_sub_double
-alignment:       4
-legalized:       true
-regBankSelected: true
-selected:        false
-tracksRegLiveness: true
-# ALL: registers:
-# NO_AVX512F-NEXT:  - { id: 0, class: fr64, preferred-register: '' }
-# NO_AVX512F-NEXT:  - { id: 1, class: fr64, preferred-register: '' }
-# NO_AVX512F-NEXT:  - { id: 2, class: fr64, preferred-register: '' }
-# AVX512ALL-NEXT:  - { id: 0, class: fr64x, preferred-register: '' }
-# AVX512ALL-NEXT:  - { id: 1, class: fr64x, preferred-register: '' }
-# AVX512ALL-NEXT:  - { id: 2, class: fr64x, preferred-register: '' }
-registers:
-  - { id: 0, class: vecr }
-  - { id: 1, class: vecr }
-  - { id: 2, class: vecr }
-# ALL:          %0 = COPY %xmm0
-# ALL-NEXT:     %1 = COPY %xmm1
-# SSE-NEXT:     %2 = SUBSDrr %0, %1
-# AVX-NEXT:     %2 = VSUBSDrr %0, %1
-# AVX512F-NEXT: %2 = VSUBSDZrr %0, %1
-body:             |
-  bb.1 (%ir-block.0):
-    liveins: %xmm0, %xmm1
-
-    %0(s64) = COPY %xmm0
-    %1(s64) = COPY %xmm1
-    %2(s64) = G_FSUB %0, %1
-    %xmm0 = COPY %2(s64)
-    RET 0, implicit %xmm0
 ...
 ---
 name:            test_sub_v4i32

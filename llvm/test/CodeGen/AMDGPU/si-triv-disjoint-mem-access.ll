@@ -1,7 +1,7 @@
 ; RUN: llc -march=amdgcn -mcpu=bonaire -enable-amdgpu-aa=0 -verify-machineinstrs -enable-misched -enable-aa-sched-mi < %s | FileCheck -check-prefix=FUNC -check-prefix=CI %s
 
-declare void @llvm.SI.tbuffer.store.i32(<16 x i8>, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32)
-declare void @llvm.SI.tbuffer.store.v4i32(<16 x i8>, <4 x i32>, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32)
+declare void @llvm.amdgcn.tbuffer.store.i32(i32, <4 x i32>, i32, i32, i32, i32, i32, i32, i1, i1)
+declare void @llvm.amdgcn.tbuffer.store.v4i32(<4 x i32>, <4 x i32>, i32, i32, i32, i32, i32, i32, i1, i1)
 declare void @llvm.amdgcn.s.barrier() #1
 declare i32 @llvm.amdgcn.workitem.id.x() #2
 
@@ -258,9 +258,8 @@ define amdgpu_kernel void @reorder_global_offsets_addr64_soffset0(i32 addrspace(
 ;   %tmp1 = load i32, i32 addrspace(3)* %ptr1, align 4
 
 ;   %vdata = insertelement <4 x i32> undef, i32 %a1, i32 0
-;   call void @llvm.SI.tbuffer.store.v4i32(<16 x i8> undef, <4 x i32> %vdata,
-;         i32 4, i32 %vaddr, i32 0, i32 32, i32 14, i32 4, i32 1, i32 0, i32 1,
-;         i32 1, i32 0)
+;   call void @llvm.amdgcn.tbuffer.store.v4i32(<4 x i32> %vdata, <4 x i32> undef,
+;         i32 %vaddr, i32 0, i32 0, i32 32, i32 14, i32 4, i1 1, i1 1)
 
 ;   %tmp2 = load i32, i32 addrspace(3)* %ptr2, align 4
 

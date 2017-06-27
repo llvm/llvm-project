@@ -358,11 +358,27 @@ static uint32_t joinHalfWords(uint32_t FirstHalf, uint32_t SecondHalf,
   return Value;
 }
 
-unsigned ARMAsmBackend::adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
+unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
+                                         const MCFixup &Fixup,
+                                         const MCValue &Target, uint64_t Value,
                                          bool IsPCRel, MCContext &Ctx,
                                          bool IsLittleEndian,
                                          bool IsResolved) const {
   unsigned Kind = Fixup.getKind();
+
+  // MachO tries to make .o files that look vaguely pre-linked, so for MOVW/MOVT
+  // and .word relocations they put the Thumb bit into the addend if possible.
+  // Other relocation types don't want this bit though (branches couldn't encode
+  // it if it *was* present, and no other relocations exist) and it can
+  // interfere with checking valid expressions.
+  if (const MCSymbolRefExpr *A = Target.getSymA()) {
+    if (A->hasSubsectionsViaSymbols() && Asm.isThumbFunc(&A->getSymbol()) &&
+        (Kind == FK_Data_4 || Kind == ARM::fixup_arm_movw_lo16 ||
+         Kind == ARM::fixup_arm_movt_hi16 || Kind == ARM::fixup_t2_movw_lo16 ||
+         Kind == ARM::fixup_t2_movt_hi16))
+      Value |= 1;
+  }
+
   switch (Kind) {
   default:
     Ctx.reportError(Fixup.getLoc(), "bad relocation fixup type");
@@ -505,6 +521,13 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
     return swapHalfWords(out, IsLittleEndian);
   }
   case ARM::fixup_arm_thumb_bl: {
+    // FIXME: We get both thumb1 and thumb2 in here, so we can only check for
+    // the less strict thumb2 value.
+    if (!isInt<26>(Value - 4)) {
+      Ctx.reportError(Fixup.getLoc(), "Relocation out of range");
+      return 0;
+    }
+
     // The value doesn't encode the low bit (always zero) and is offset by
     // four. The 32-bit immediate value is encoded as
     //   imm32 = SignExtend(S:I1:I2:imm10:imm11:0)
@@ -716,29 +739,11 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
 }
 
 void ARMAsmBackend::processFixupValue(const MCAssembler &Asm,
-                                      const MCAsmLayout &Layout,
                                       const MCFixup &Fixup,
-                                      const MCFragment *DF,
-                                      const MCValue &Target, uint64_t &Value,
-                                      bool &IsResolved) {
+                                      const MCValue &Target, bool &IsResolved) {
   const MCSymbolRefExpr *A = Target.getSymA();
   const MCSymbol *Sym = A ? &A->getSymbol() : nullptr;
   const unsigned FixupKind = Fixup.getKind() ;
-  // MachO (the only user of "Value") tries to make .o files that look vaguely
-  // pre-linked, so for MOVW/MOVT and .word relocations they put the Thumb bit
-  // into the addend if possible. Other relocation types don't want this bit
-  // though (branches couldn't encode it if it *was* present, and no other
-  // relocations exist) and it can interfere with checking valid expressions.
-  if (FixupKind == FK_Data_4 ||
-      FixupKind == ARM::fixup_arm_movw_lo16 ||
-      FixupKind == ARM::fixup_arm_movt_hi16 ||
-      FixupKind == ARM::fixup_t2_movw_lo16 ||
-      FixupKind == ARM::fixup_t2_movt_hi16) {
-    if (Sym) {
-      if (Asm.isThumbFunc(Sym))
-        Value |= 1;
-    }
-  }
   if (IsResolved && (unsigned)Fixup.getKind() == ARM::fixup_arm_thumb_bl) {
     assert(Sym && "How did we resolve this?");
 
@@ -747,7 +752,7 @@ void ARMAsmBackend::processFixupValue(const MCAssembler &Asm,
 
     // If the symbol is out of range, produce a relocation and hope the
     // linker can handle it. GNU AS produces an error in this case.
-    if (Sym->isExternal() || Value >= 0x400004)
+    if (Sym->isExternal())
       IsResolved = false;
   }
   // Create relocations for unconditional branches to function symbols with
@@ -759,6 +764,7 @@ void ARMAsmBackend::processFixupValue(const MCAssembler &Asm,
         IsResolved = false;
       if (!Asm.isThumbFunc(Sym) && (FixupKind == ARM::fixup_arm_thumb_br ||
                                     FixupKind == ARM::fixup_arm_thumb_bl ||
+                                    FixupKind == ARM::fixup_t2_condbranch ||
                                     FixupKind == ARM::fixup_t2_uncondbranch))
         IsResolved = false;
     }
@@ -875,22 +881,25 @@ static unsigned getFixupKindContainerSizeBytes(unsigned Kind) {
   }
 }
 
-void ARMAsmBackend::applyFixup(const MCFixup &Fixup, char *Data,
-                               unsigned DataSize, uint64_t Value, bool IsPCRel,
-                               MCContext &Ctx) const {
+void ARMAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
+                               const MCValue &Target,
+                               MutableArrayRef<char> Data, uint64_t Value,
+                               bool IsPCRel) const {
   unsigned NumBytes = getFixupKindNumBytes(Fixup.getKind());
-  Value = adjustFixupValue(Fixup, Value, IsPCRel, Ctx, IsLittleEndian, true);
+  MCContext &Ctx = Asm.getContext();
+  Value = adjustFixupValue(Asm, Fixup, Target, Value, IsPCRel, Ctx,
+                           IsLittleEndian, true);
   if (!Value)
     return; // Doesn't change encoding.
 
   unsigned Offset = Fixup.getOffset();
-  assert(Offset + NumBytes <= DataSize && "Invalid fixup offset!");
+  assert(Offset + NumBytes <= Data.size() && "Invalid fixup offset!");
 
   // Used to point to big endian bytes.
   unsigned FullSizeBytes;
   if (!IsLittleEndian) {
     FullSizeBytes = getFixupKindContainerSizeBytes(Fixup.getKind());
-    assert((Offset + FullSizeBytes) <= DataSize && "Invalid fixup size!");
+    assert((Offset + FullSizeBytes) <= Data.size() && "Invalid fixup size!");
     assert(NumBytes <= FullSizeBytes && "Invalid fixup size!");
   }
 

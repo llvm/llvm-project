@@ -1021,11 +1021,14 @@ static AliasResult aliasSameBasePointerGEPs(const GEPOperator *GEP1,
         // asking about values from different loop iterations. See PR32314.
         // TODO: We may be able to change the check so we only do this when
         // we definitely looked through a PHINode.
-        KnownBits Known1 = computeKnownBits(GEP1LastIdx, DL);
-        KnownBits Known2 = computeKnownBits(GEP2LastIdx, DL);
-        if (Known1.Zero.intersects(Known2.One) ||
-            Known1.One.intersects(Known2.Zero))
-          return NoAlias;
+        if (GEP1LastIdx != GEP2LastIdx &&
+            GEP1LastIdx->getType() == GEP2LastIdx->getType()) {
+          KnownBits Known1 = computeKnownBits(GEP1LastIdx, DL);
+          KnownBits Known2 = computeKnownBits(GEP2LastIdx, DL);
+          if (Known1.Zero.intersects(Known2.One) ||
+              Known1.One.intersects(Known2.Zero))
+            return NoAlias;
+        }
       } else if (isKnownNonEqual(GEP1LastIdx, GEP2LastIdx, DL))
         return NoAlias;
     }
@@ -1345,11 +1348,7 @@ AliasResult BasicAAResult::aliasGEP(const GEPOperator *GEP1, uint64_t V1Size,
   // Statically, we can see that the base objects are the same, but the
   // pointers have dynamic offsets which we can't resolve. And none of our
   // little tricks above worked.
-  //
-  // TODO: Returning PartialAlias instead of MayAlias is a mild hack; the
-  // practical effect of this is protecting TBAA in the case of dynamic
-  // indices into arrays of unions or malloc'd memory.
-  return PartialAlias;
+  return MayAlias;
 }
 
 static AliasResult MergeAliasResults(AliasResult A, AliasResult B) {

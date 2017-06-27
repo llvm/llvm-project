@@ -28,7 +28,6 @@ function(compiler_rt_build_runtime runtime)
 endfunction()
 
 function(compiler_rt_build_sanitizer sanitizer)
-  string(TOUPPER ${sanitizer} sanitizer_uppercase)
   string(TOLOWER ${sanitizer} sanitizer_lowercase)
   list(FIND COMPILER_RT_SANITIZERS_TO_BUILD ${sanitizer_lowercase} result)
   if(NOT ${result} EQUAL -1)

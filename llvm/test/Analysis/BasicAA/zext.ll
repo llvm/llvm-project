@@ -69,7 +69,7 @@ for.loop.exit:
 }
 
 ; CHECK-LABEL: test_sign_extension
-; CHECK:  PartialAlias: i64* %b.i64, i8* %a
+; CHECK:  MayAlias: i64* %b.i64, i8* %a
 
 define void @test_sign_extension(i32 %p) {
   %1 = tail call i8* @malloc(i64 120)
@@ -83,7 +83,7 @@ define void @test_sign_extension(i32 %p) {
 }
 
 ; CHECK-LABEL: test_fe_tools
-; CHECK:  PartialAlias: i32* %a, i32* %b
+; CHECK:  MayAlias: i32* %a, i32* %b
 
 define void @test_fe_tools([8 x i32]* %values) {
   br label %reorder
@@ -108,7 +108,7 @@ for.loop.exit:
 @d = global i32 0, align 4
 
 ; CHECK-LABEL: test_spec2006
-; CHECK:  PartialAlias: i32** %x, i32** %y
+; CHECK:  MayAlias: i32** %x, i32** %y
 
 define void @test_spec2006() {
   %h = alloca [1 x [2 x i32*]], align 16
@@ -164,7 +164,7 @@ for.loop.exit:
 }
 
 ; CHECK-LABEL: test_modulo_analysis_with_global
-; CHECK:  PartialAlias: i32** %x, i32** %y
+; CHECK:  MayAlias: i32** %x, i32** %y
 
 define void @test_modulo_analysis_with_global() {
   %h = alloca [1 x [2 x i32*]], align 16

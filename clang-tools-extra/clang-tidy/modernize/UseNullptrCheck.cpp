@@ -200,12 +200,14 @@ public:
       return true;
     }
 
-    if (!FirstSubExpr)
-      FirstSubExpr = C->getSubExpr()->IgnoreParens();
-
-    // Ignore the expr if it is already a nullptr literal expr.
-    if (isa<CXXNullPtrLiteralExpr>(FirstSubExpr))
+    auto* CastSubExpr = C->getSubExpr()->IgnoreParens();
+    // Ignore cast expressions which cast nullptr literal.
+    if (isa<CXXNullPtrLiteralExpr>(CastSubExpr)) {
       return true;
+    }
+
+    if (!FirstSubExpr)
+      FirstSubExpr = CastSubExpr;
 
     if (C->getCastKind() != CK_NullToPointer &&
         C->getCastKind() != CK_NullToMemberPointer) {

@@ -966,16 +966,71 @@ void MicrosoftCXXNameMangler::mangleNestedName(const NamedDecl *ND) {
     }
 
     if (const BlockDecl *BD = dyn_cast<BlockDecl>(DC)) {
-      DiagnosticsEngine &Diags = Context.getDiags();
-      unsigned DiagID =
-          Diags.getCustomDiagID(DiagnosticsEngine::Error,
-                                "cannot mangle a local inside this block yet");
-      Diags.Report(BD->getLocation(), DiagID);
+      auto Discriminate =
+          [](StringRef Name, const unsigned Discriminator,
+             const unsigned ParameterDiscriminator) -> std::string {
+        std::string Buffer;
+        llvm::raw_string_ostream Stream(Buffer);
+        Stream << Name;
+        if (Discriminator)
+          Stream << '_' << Discriminator;
+        if (ParameterDiscriminator)
+          Stream << '_' << ParameterDiscriminator;
+        return Stream.str();
+      };
 
-      // FIXME: This is completely, utterly, wrong; see ItaniumMangle
-      // for how this should be done.
-      Out << "__block_invoke" << Context.getBlockId(BD, false);
-      Out << '@';
+      unsigned Discriminator = BD->getBlockManglingNumber();
+      if (!Discriminator)
+        Discriminator = Context.getBlockId(BD, /*Local=*/false);
+
+      // Mangle the parameter position as a discriminator to deal with unnamed
+      // parameters.  Rather than mangling the unqualified parameter name,
+      // always use the position to give a uniform mangling.
+      unsigned ParameterDiscriminator = 0;
+      if (const auto *MC = BD->getBlockManglingContextDecl())
+        if (const auto *P = dyn_cast<ParmVarDecl>(MC))
+          if (const auto *F = dyn_cast<FunctionDecl>(P->getDeclContext()))
+            ParameterDiscriminator =
+                F->getNumParams() - P->getFunctionScopeIndex();
+
+      DC = getEffectiveDeclContext(BD);
+
+      Out << '?';
+      mangleSourceName(Discriminate("_block_invoke", Discriminator,
+                                    ParameterDiscriminator));
+      // If we have a block mangling context, encode that now.  This allows us
+      // to discriminate between named static data initializers in the same
+      // scope.  This is handled differently from parameters, which use
+      // positions to discriminate between multiple instances.
+      if (const auto *MC = BD->getBlockManglingContextDecl())
+        if (!isa<ParmVarDecl>(MC))
+          if (const auto *ND = dyn_cast<NamedDecl>(MC))
+            mangleUnqualifiedName(ND);
+      // MS ABI and Itanium manglings are in inverted scopes.  In the case of a
+      // RecordDecl, mangle the entire scope hierachy at this point rather than
+      // just the unqualified name to get the ordering correct.
+      if (const auto *RD = dyn_cast<RecordDecl>(DC))
+        mangleName(RD);
+      else
+        Out << '@';
+      // void __cdecl
+      Out << "YAX";
+      // struct __block_literal *
+      Out << 'P';
+      // __ptr64
+      if (PointersAre64Bit)
+        Out << 'E';
+      Out << 'A';
+      mangleArtificalTagType(TTK_Struct,
+                             Discriminate("__block_literal", Discriminator,
+                                          ParameterDiscriminator));
+      Out << "@Z";
+
+      // If the effective context was a Record, we have fully mangled the
+      // qualified name and do not need to continue.
+      if (isa<RecordDecl>(DC))
+        break;
+      continue;
     } else if (const ObjCMethodDecl *Method = dyn_cast<ObjCMethodDecl>(DC)) {
       mangleObjCMethodName(Method);
     } else if (isa<NamedDecl>(DC)) {

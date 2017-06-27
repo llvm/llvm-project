@@ -1619,10 +1619,10 @@ define <8 x float>  @test_gather_mask(<8 x float> %a0, float* %a, <8 x i32> %idx
 ;
 ; AVX512VL-LABEL: test_gather_mask:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
-; AVX512VL-NEXT:    vmovaps %ymm2, %ymm3 ## EVEX TO VEX Compression encoding: [0xc5,0xfc,0x28,0xda]
-; AVX512VL-NEXT:    vgatherdps %ymm3, (%eax,%ymm1,4), %ymm0 ## encoding: [0xc4,0xe2,0x65,0x92,0x04,0x88]
 ; AVX512VL-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x08]
+; AVX512VL-NEXT:    movl {{[0-9]+}}(%esp), %ecx ## encoding: [0x8b,0x4c,0x24,0x04]
+; AVX512VL-NEXT:    vmovaps %ymm2, %ymm3 ## EVEX TO VEX Compression encoding: [0xc5,0xfc,0x28,0xda]
+; AVX512VL-NEXT:    vgatherdps %ymm3, (%ecx,%ymm1,4), %ymm0 ## encoding: [0xc4,0xe2,0x65,0x92,0x04,0x89]
 ; AVX512VL-NEXT:    vmovups %ymm2, (%eax) ## EVEX TO VEX Compression encoding: [0xc5,0xfc,0x11,0x10]
 ; AVX512VL-NEXT:    retl ## encoding: [0xc3]
   %a_i8 = bitcast float* %a to i8*

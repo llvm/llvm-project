@@ -307,7 +307,7 @@ raw_ostream &operator<<(raw_ostream &OS, const MCFixup &AF) {
 } // end namespace llvm
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-LLVM_DUMP_METHOD void MCFragment::dump() {
+LLVM_DUMP_METHOD void MCFragment::dump() const {
   raw_ostream &OS = errs();
 
   OS << "<";
@@ -328,9 +328,9 @@ LLVM_DUMP_METHOD void MCFragment::dump() {
   case MCFragment::FT_Dummy: OS << "MCDummyFragment"; break;
   }
 
-  OS << "<MCFragment " << (void*) this << " LayoutOrder:" << LayoutOrder
+  OS << "<MCFragment " << (const void*) this << " LayoutOrder:" << LayoutOrder
      << " Offset:" << Offset
-     << " HasInstructions:" << hasInstructions() 
+     << " HasInstructions:" << hasInstructions()
      << " BundlePadding:" << static_cast<unsigned>(getBundlePadding()) << ">";
 
   switch (getKind()) {
@@ -382,7 +382,8 @@ LLVM_DUMP_METHOD void MCFragment::dump() {
   }
   case MCFragment::FT_Fill:  {
     const MCFillFragment *FF = cast<MCFillFragment>(this);
-    OS << " Value:" << FF->getValue() << " Size:" << FF->getSize();
+    OS << " Value:" << static_cast<unsigned>(FF->getValue())
+       << " Size:" << FF->getSize();
     break;
   }
   case MCFragment::FT_Relaxable:  {
@@ -395,7 +396,8 @@ LLVM_DUMP_METHOD void MCFragment::dump() {
   case MCFragment::FT_Org:  {
     const MCOrgFragment *OF = cast<MCOrgFragment>(this);
     OS << "\n       ";
-    OS << " Offset:" << OF->getOffset() << " Value:" << OF->getValue();
+    OS << " Offset:" << OF->getOffset()
+       << " Value:" << static_cast<unsigned>(OF->getValue());
     break;
   }
   case MCFragment::FT_Dwarf:  {
@@ -445,19 +447,19 @@ LLVM_DUMP_METHOD void MCFragment::dump() {
   OS << ">";
 }
 
-LLVM_DUMP_METHOD void MCAssembler::dump() {
+LLVM_DUMP_METHOD void MCAssembler::dump() const{
   raw_ostream &OS = errs();
 
   OS << "<MCAssembler\n";
   OS << "  Sections:[\n    ";
-  for (iterator it = begin(), ie = end(); it != ie; ++it) {
+  for (const_iterator it = begin(), ie = end(); it != ie; ++it) {
     if (it != begin()) OS << ",\n    ";
     it->dump();
   }
   OS << "],\n";
   OS << "  Symbols:[";
 
-  for (symbol_iterator it = symbol_begin(), ie = symbol_end(); it != ie; ++it) {
+  for (const_symbol_iterator it = symbol_begin(), ie = symbol_end(); it != ie; ++it) {
     if (it != symbol_begin()) OS << ",\n           ";
     OS << "(";
     it->dump();

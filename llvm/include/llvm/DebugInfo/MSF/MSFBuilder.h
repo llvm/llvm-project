@@ -12,18 +12,16 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
-
 #include "llvm/DebugInfo/MSF/MSFCommon.h"
-
 #include "llvm/Support/Allocator.h"
-#include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
-
+#include <cstdint>
 #include <utility>
 #include <vector>
 
 namespace llvm {
 namespace msf {
+
 class MSFBuilder {
 public:
   /// \brief Create a new `MSFBuilder`.
@@ -122,7 +120,7 @@ private:
   Error allocateBlocks(uint32_t NumBlocks, MutableArrayRef<uint32_t> Blocks);
   uint32_t computeDirectoryByteSize() const;
 
-  typedef std::vector<uint32_t> BlockList;
+  using BlockList = std::vector<uint32_t>;
 
   BumpPtrAllocator &Allocator;
 
@@ -136,7 +134,8 @@ private:
   std::vector<uint32_t> DirectoryBlocks;
   std::vector<std::pair<uint32_t, BlockList>> StreamData;
 };
-} // namespace msf
-} // namespace llvm
+
+} // end namespace msf
+} // end namespace llvm
 
 #endif // LLVM_DEBUGINFO_MSF_MSFBUILDER_H

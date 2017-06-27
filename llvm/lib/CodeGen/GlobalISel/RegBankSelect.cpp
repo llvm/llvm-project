@@ -1,4 +1,4 @@
-//===- llvm/CodeGen/GlobalISel/RegBankSelect.cpp - RegBankSelect -*- C++ -*-==//
+//==- llvm/CodeGen/GlobalISel/RegBankSelect.cpp - RegBankSelect --*- C++ -*-==//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,18 +12,39 @@
 
 #include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/GlobalISel/RegisterBank.h"
+#include "llvm/CodeGen/GlobalISel/RegisterBankInfo.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/Attributes.h"
+#include "llvm/Pass.h"
 #include "llvm/Support/BlockFrequency.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetOpcodes.h"
+#include "llvm/Target/TargetRegisterInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <limits>
+#include <memory>
+#include <utility>
 
 #define DEBUG_TYPE "regbankselect"
 
@@ -37,6 +58,7 @@ static cl::opt<RegBankSelect::Mode> RegBankSelectMode(
                           "Use the Greedy mode (best local mapping)")));
 
 char RegBankSelect::ID = 0;
+
 INITIALIZE_PASS_BEGIN(RegBankSelect, DEBUG_TYPE,
                       "Assign register bank of generic virtual registers",
                       false, false);
@@ -48,8 +70,7 @@ INITIALIZE_PASS_END(RegBankSelect, DEBUG_TYPE,
                     false)
 
 RegBankSelect::RegBankSelect(Mode RunningMode)
-    : MachineFunctionPass(ID), RBI(nullptr), MRI(nullptr), TRI(nullptr),
-      MBFI(nullptr), MBPI(nullptr), OptMode(RunningMode) {
+    : MachineFunctionPass(ID), OptMode(RunningMode) {
   initializeRegBankSelectPass(*PassRegistry::getPassRegistry());
   if (RegBankSelectMode.getNumOccurrences() != 0) {
     OptMode = RegBankSelectMode;
@@ -72,7 +93,7 @@ void RegBankSelect::init(MachineFunction &MF) {
     MBPI = nullptr;
   }
   MIRBuilder.setMF(MF);
-  MORE = make_unique<MachineOptimizationRemarkEmitter>(MF, MBFI);
+  MORE = llvm::make_unique<MachineOptimizationRemarkEmitter>(MF, MBFI);
 }
 
 void RegBankSelect::getAnalysisUsage(AnalysisUsage &AU) const {
@@ -202,11 +223,11 @@ uint64_t RegBankSelect::getRepairCost(
         RBI->copyCost(*DesiredRegBrank, *CurRegBank,
                       RegisterBankInfo::getSizeInBits(MO.getReg(), *MRI, *TRI));
     // TODO: use a dedicated constant for ImpossibleCost.
-    if (Cost != UINT_MAX)
+    if (Cost != std::numeric_limits<unsigned>::max())
       return Cost;
     // Return the legalization cost of that repairing.
   }
-  return UINT_MAX;
+  return std::numeric_limits<unsigned>::max();
 }
 
 const RegisterBankInfo::InstructionMapping &RegBankSelect::findBestMapping(
@@ -352,7 +373,7 @@ void RegBankSelect::tryAvoidingSplit(
       // the repairing cost because of the PHIs already proceeded
       // as already stated.
       // Though the code will be correct.
-      assert(0 && "Repairing cost may not be accurate");
+      assert(false && "Repairing cost may not be accurate");
     } else {
       // We need to do non-local repairing. Basically, patch all
       // the uses (i.e., phis) that we already proceeded.
@@ -450,7 +471,7 @@ RegBankSelect::MappingCost RegBankSelect::computeMapping(
     uint64_t RepairCost = getRepairCost(MO, ValMapping);
 
     // This is an impossible to repair cost.
-    if (RepairCost == UINT_MAX)
+    if (RepairCost == std::numeric_limits<unsigned>::max())
       continue;
 
     // Bias used for splitting: 5%.
@@ -638,11 +659,8 @@ RegBankSelect::RepairingPlacement::RepairingPlacement(
     MachineInstr &MI, unsigned OpIdx, const TargetRegisterInfo &TRI, Pass &P,
     RepairingPlacement::RepairingKind Kind)
     // Default is, we are going to insert code to repair OpIdx.
-    : Kind(Kind),
-      OpIdx(OpIdx),
-      CanMaterialize(Kind != RepairingKind::Impossible),
-      HasSplit(false),
-      P(P) {
+    : Kind(Kind), OpIdx(OpIdx),
+      CanMaterialize(Kind != RepairingKind::Impossible), P(P) {
   const MachineOperand &MO = MI.getOperand(OpIdx);
   assert(MO.isReg() && "Trying to repair a non-reg operand");
 
@@ -847,7 +865,7 @@ bool RegBankSelect::EdgeInsertPoint::canMaterialize() const {
 }
 
 RegBankSelect::MappingCost::MappingCost(const BlockFrequency &LocalFreq)
-    : LocalCost(0), NonLocalCost(0), LocalFreq(LocalFreq.getFrequency()) {}
+    : LocalFreq(LocalFreq.getFrequency()) {}
 
 bool RegBankSelect::MappingCost::addLocalCost(uint64_t Cost) {
   // Check if this overflows.
@@ -920,7 +938,6 @@ bool RegBankSelect::MappingCost::operator<(const MappingCost &Cost) const {
       OtherLocalAdjust = Cost.LocalCost - LocalCost;
     else
       ThisLocalAdjust = LocalCost - Cost.LocalCost;
-
   } else {
     ThisLocalAdjust = LocalCost;
     OtherLocalAdjust = Cost.LocalCost;

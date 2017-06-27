@@ -1324,12 +1324,12 @@ getValueFromConditionImpl(Value *Val, Value *Cond, bool isTrueDest,
     return getValueFromICmpCondition(Val, ICI, isTrueDest);
 
   // Handle conditions in the form of (cond1 && cond2), we know that on the
-  // true dest path both of the conditions hold.
-  if (!isTrueDest)
-    return LVILatticeVal::getOverdefined();
-
+  // true dest path both of the conditions hold. Similarly for conditions of
+  // the form (cond1 || cond2), we know that on the false dest path neither
+  // condition holds.
   BinaryOperator *BO = dyn_cast<BinaryOperator>(Cond);
-  if (!BO || BO->getOpcode() != BinaryOperator::And)
+  if (!BO || (isTrueDest && BO->getOpcode() != BinaryOperator::And) ||
+             (!isTrueDest && BO->getOpcode() != BinaryOperator::Or))
     return LVILatticeVal::getOverdefined();
 
   auto RHS = getValueFromCondition(Val, BO->getOperand(0), isTrueDest, Visited);
@@ -1658,6 +1658,26 @@ Constant *LazyValueInfo::getConstantOnEdge(Value *V, BasicBlock *FromBB,
       return ConstantInt::get(V->getContext(), *SingleVal);
   }
   return nullptr;
+}
+
+ConstantRange LazyValueInfo::getConstantRangeOnEdge(Value *V,
+                                                    BasicBlock *FromBB,
+                                                    BasicBlock *ToBB,
+                                                    Instruction *CxtI) {
+  unsigned Width = V->getType()->getIntegerBitWidth();
+  const DataLayout &DL = FromBB->getModule()->getDataLayout();
+  LVILatticeVal Result =
+      getImpl(PImpl, AC, &DL, DT).getValueOnEdge(V, FromBB, ToBB, CxtI);
+
+  if (Result.isUndefined())
+    return ConstantRange(Width, /*isFullSet=*/false);
+  if (Result.isConstantRange())
+    return Result.getConstantRange();
+  // We represent ConstantInt constants as constant ranges but other kinds
+  // of integer constants, i.e. ConstantExpr will be tagged as constants
+  assert(!(Result.isConstant() && isa<ConstantInt>(Result.getConstant())) &&
+         "ConstantInt value must be represented as constantrange");
+  return ConstantRange(Width, /*isFullSet=*/true);
 }
 
 static LazyValueInfo::Tristate getPredicateResult(unsigned Pred, Constant *C,

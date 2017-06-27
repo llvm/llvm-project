@@ -75,8 +75,10 @@ public:
     return TTI::PSK_FastHardware;
   }
 
-  unsigned getNumberOfRegisters(bool Vector);
-  unsigned getRegisterBitWidth(bool Vector) const;
+  unsigned getHardwareNumberOfRegisters(bool Vector) const;
+  unsigned getNumberOfRegisters(bool Vector) const;
+  unsigned getRegisterBitWidth(bool Vector) const ;
+  unsigned getMinVectorRegisterBitWidth() const;
   unsigned getLoadStoreVecRegBitWidth(unsigned AddrSpace) const;
 
   bool isLegalToVectorizeMemChain(unsigned ChainSizeInBytes,

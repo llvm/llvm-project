@@ -238,6 +238,9 @@ public:
                                        uint32_t line_no);
 
   static size_t GetEnvironment(StringList &env);
+
+  static std::unique_ptr<Connection>
+  CreateDefaultConnection(llvm::StringRef url);
 };
 
 } // namespace lldb_private

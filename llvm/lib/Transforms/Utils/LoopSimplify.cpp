@@ -72,7 +72,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "loop-simplify"
 
-STATISTIC(NumInserted, "Number of pre-header or exit blocks inserted");
 STATISTIC(NumNested  , "Number of nested loops split out");
 
 // If the block isn't already, move the new block to right after some 'outside
@@ -150,37 +149,6 @@ BasicBlock *llvm::InsertPreheaderForLoop(Loop *L, DominatorTree *DT,
   placeSplitBlockCarefully(PreheaderBB, OutsideBlocks, L);
 
   return PreheaderBB;
-}
-
-/// \brief Ensure that the loop preheader dominates all exit blocks.
-///
-/// This method is used to split exit blocks that have predecessors outside of
-/// the loop.
-static BasicBlock *rewriteLoopExitBlock(Loop *L, BasicBlock *Exit,
-                                        DominatorTree *DT, LoopInfo *LI,
-                                        bool PreserveLCSSA) {
-  SmallVector<BasicBlock*, 8> LoopBlocks;
-  for (pred_iterator I = pred_begin(Exit), E = pred_end(Exit); I != E; ++I) {
-    BasicBlock *P = *I;
-    if (L->contains(P)) {
-      // Don't do this if the loop is exited via an indirect branch.
-      if (isa<IndirectBrInst>(P->getTerminator())) return nullptr;
-
-      LoopBlocks.push_back(P);
-    }
-  }
-
-  assert(!LoopBlocks.empty() && "No edges coming in from outside the loop?");
-  BasicBlock *NewExitBB = nullptr;
-
-  NewExitBB = SplitBlockPredecessors(Exit, LoopBlocks, ".loopexit", DT, LI,
-                                     PreserveLCSSA);
-  if (!NewExitBB)
-    return nullptr;
-
-  DEBUG(dbgs() << "LoopSimplify: Creating dedicated exit block "
-               << NewExitBB->getName() << "\n");
-  return NewExitBB;
 }
 
 /// Add the specified block, and all of its predecessors, to the specified set,
@@ -346,16 +314,7 @@ static Loop *separateNestedLoop(Loop *L, BasicBlock *Preheader,
 
   // Split edges to exit blocks from the inner loop, if they emerged in the
   // process of separating the outer one.
-  SmallVector<BasicBlock *, 8> ExitBlocks;
-  L->getExitBlocks(ExitBlocks);
-  SmallSetVector<BasicBlock *, 8> ExitBlockSet(ExitBlocks.begin(),
-                                               ExitBlocks.end());
-  for (BasicBlock *ExitBlock : ExitBlockSet) {
-    if (any_of(predecessors(ExitBlock),
-               [L](BasicBlock *BB) { return !L->contains(BB); })) {
-      rewriteLoopExitBlock(L, ExitBlock, DT, LI, PreserveLCSSA);
-    }
-  }
+  formDedicatedExitBlocks(L, DT, LI, PreserveLCSSA);
 
   if (PreserveLCSSA) {
     // Fix LCSSA form for L. Some values, which previously were only used inside
@@ -563,29 +522,16 @@ ReprocessLoop:
   BasicBlock *Preheader = L->getLoopPreheader();
   if (!Preheader) {
     Preheader = InsertPreheaderForLoop(L, DT, LI, PreserveLCSSA);
-    if (Preheader) {
-      ++NumInserted;
+    if (Preheader)
       Changed = true;
-    }
   }
 
   // Next, check to make sure that all exit nodes of the loop only have
   // predecessors that are inside of the loop.  This check guarantees that the
   // loop preheader/header will dominate the exit blocks.  If the exit block has
   // predecessors from outside of the loop, split the edge now.
-  SmallVector<BasicBlock*, 8> ExitBlocks;
-  L->getExitBlocks(ExitBlocks);
-
-  SmallSetVector<BasicBlock *, 8> ExitBlockSet(ExitBlocks.begin(),
-                                               ExitBlocks.end());
-  for (BasicBlock *ExitBlock : ExitBlockSet) {
-    if (any_of(predecessors(ExitBlock),
-               [L](BasicBlock *BB) { return !L->contains(BB); })) {
-      rewriteLoopExitBlock(L, ExitBlock, DT, LI, PreserveLCSSA);
-      ++NumInserted;
-      Changed = true;
-    }
-  }
+  if (formDedicatedExitBlocks(L, DT, LI, PreserveLCSSA))
+    Changed = true;
 
   // If the header has more than two predecessors at this point (from the
   // preheader and from multiple backedges), we must adjust the loop.
@@ -614,10 +560,8 @@ ReprocessLoop:
     // insert a new block that all backedges target, then make it jump to the
     // loop header.
     LoopLatch = insertUniqueBackedgeBlock(L, Preheader, DT, LI);
-    if (LoopLatch) {
-      ++NumInserted;
+    if (LoopLatch)
       Changed = true;
-    }
   }
 
   const DataLayout &DL = L->getHeader()->getModule()->getDataLayout();
@@ -645,7 +589,22 @@ ReprocessLoop:
   // loop-invariant instructions out of the way to open up more
   // opportunities, and the disadvantage of having the responsibility
   // to preserve dominator information.
-  if (ExitBlockSet.size() == 1) {
+  auto HasUniqueExitBlock = [&]() {
+    BasicBlock *UniqueExit = nullptr;
+    for (auto *ExitingBB : ExitingBlocks)
+      for (auto *SuccBB : successors(ExitingBB)) {
+        if (L->contains(SuccBB))
+          continue;
+
+        if (!UniqueExit)
+          UniqueExit = SuccBB;
+        else if (UniqueExit != SuccBB)
+          return false;
+      }
+
+    return true;
+  };
+  if (HasUniqueExitBlock()) {
     for (unsigned i = 0, e = ExitingBlocks.size(); i != e; ++i) {
       BasicBlock *ExitingBlock = ExitingBlocks[i];
       if (!ExitingBlock->getSinglePredecessor()) continue;

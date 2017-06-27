@@ -66,7 +66,7 @@ public:
   void addShared(SharedFile<ELFT> *F, StringRef Name, const Elf_Sym &Sym,
                  const typename ELFT::Verdef *Verdef);
 
-  void addLazyArchive(ArchiveFile *F, const llvm::object::Archive::Symbol S);
+  Symbol *addLazyArchive(ArchiveFile *F, const llvm::object::Archive::Symbol S);
   void addLazyObject(StringRef Name, LazyObjectFile &Obj);
   Symbol *addBitcode(StringRef Name, uint8_t Binding, uint8_t StOther,
                      uint8_t Type, bool CanOmitFromDynSym, BitcodeFile *File);

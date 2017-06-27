@@ -24,7 +24,7 @@ body:             |
   bb.0:
     liveins: %w0
     %0:gpr(s32) = COPY %w0
-    %1:gpr(s32) = G_SEQUENCE %0(s32), 0
-    %2:gpr(s32) = G_EXTRACT %1(s32), 0
+    %1:gpr(s32) = G_MERGE_VALUES %0(s32)
+    %2:gpr(s32) = G_UNMERGE_VALUES %1(s32)
     %w0 = COPY %2(s32)
 ...

@@ -232,11 +232,11 @@ class VOP3Pe <bits<10> op, VOPProfile P> : Enc64 {
   let Inst{9} = !if(P.HasSrc1Mods, src1_modifiers{1}, 0); // neg_hi src1
   let Inst{10} = !if(P.HasSrc2Mods, src2_modifiers{1}, 0); // neg_hi src2
 
-  let Inst{11} = !if(P.HasOpSel, src0_modifiers{2}, 0); // op_sel(0)
-  let Inst{12} = !if(P.HasOpSel, src1_modifiers{2}, 0); // op_sel(1)
-  let Inst{13} = !if(P.HasOpSel, src2_modifiers{2}, 0); // op_sel(2)
+  let Inst{11} = !if(!and(P.HasSrc0, P.HasOpSel), src0_modifiers{2}, 0); // op_sel(0)
+  let Inst{12} = !if(!and(P.HasSrc1, P.HasOpSel), src1_modifiers{2}, 0); // op_sel(1)
+  let Inst{13} = !if(!and(P.HasSrc2, P.HasOpSel), src2_modifiers{2}, 0); // op_sel(2)
 
-  let Inst{14} = !if(P.HasOpSel, src2_modifiers{3}, 0); // op_sel_hi(2)
+  let Inst{14} = !if(!and(P.HasSrc2, P.HasOpSel), src2_modifiers{3}, 0); // op_sel_hi(2)
 
   let Inst{15} = !if(P.HasClamp, clamp{0}, 0);
 
@@ -245,8 +245,8 @@ class VOP3Pe <bits<10> op, VOPProfile P> : Enc64 {
   let Inst{40-32} = !if(P.HasSrc0, src0, 0);
   let Inst{49-41} = !if(P.HasSrc1, src1, 0);
   let Inst{58-50} = !if(P.HasSrc2, src2, 0);
-  let Inst{59}    = !if(P.HasOpSel, src0_modifiers{3}, 0); // op_sel_hi(0)
-  let Inst{60}    = !if(P.HasOpSel, src1_modifiers{3}, 0); // op_sel_hi(1)
+  let Inst{59}    = !if(!and(P.HasSrc0, P.HasOpSel), src0_modifiers{3}, 0); // op_sel_hi(0)
+  let Inst{60}    = !if(!and(P.HasSrc1, P.HasOpSel), src1_modifiers{3}, 0); // op_sel_hi(1)
   let Inst{61}    = !if(P.HasSrc0Mods, src0_modifiers{0}, 0); // neg (lo)
   let Inst{62}    = !if(P.HasSrc1Mods, src1_modifiers{0}, 0); // neg (lo)
   let Inst{63}    = !if(P.HasSrc2Mods, src2_modifiers{0}, 0); // neg (lo)
@@ -299,6 +299,19 @@ class VOP_SDWAe<VOPProfile P> : Enc64 {
   let Inst{59}    = !if(P.HasSrc1IntMods, src1_modifiers{0}, 0);
   let Inst{61-60} = !if(P.HasSrc1FloatMods, src1_modifiers{1-0}, 0);
 }
+
+// GFX9 adds two features to SDWA:
+// 1.	Add 3 fields to the SDWA microcode word: S0, S1 and OMOD.
+//    a. S0 and S1 indicate that source 0 and 1 respectively are SGPRs rather
+//       than VGPRs (at most 1 can be an SGPR);
+//    b. OMOD is the standard output modifier (result *2, *4, /2)
+// 2.	Add a new version of the SDWA microcode word for VOPC: SDWAB. This
+//    replaces OMOD and the dest fields with SD and SDST (SGPR destination)
+//    field.
+//    a. When SD=1, the SDST is used as the destination for the compare result;
+//    b. When SD=0, VCC is used.
+//
+// In GFX9, V_MAC_F16, V_MAC_F32 opcodes cannot be used with SDWA
 
 // gfx9 SDWA basic encoding
 class VOP_SDWA9e<VOPProfile P> : Enc64 {
@@ -353,6 +366,7 @@ class VOP_SDWA_Pseudo <string opName, VOPProfile P, list<dag> pattern=[]> :
 
   string Mnemonic = opName;
   string AsmOperands = P.AsmSDWA;
+  string AsmOperands9 = P.AsmSDWA9;
 
   let Size = 8;
   let mayLoad = 0;
@@ -372,53 +386,9 @@ class VOP_SDWA_Pseudo <string opName, VOPProfile P, list<dag> pattern=[]> :
   VOPProfile Pfl = P;
 }
 
-// GFX9 adds two features to SDWA:
-// 1.	Add 3 fields to the SDWA microcode word: S0, S1 and OMOD.
-//    a. S0 and S1 indicate that source 0 and 1 respectively are SGPRs rather
-//       than VGPRs (at most 1 can be an SGPR);
-//    b. OMOD is the standard output modifier (result *2, *4, /2)
-// 2.	Add a new version of the SDWA microcode word for VOPC: SDWAB. This
-//    replaces OMOD and the dest fields with SD and SDST (SGPR destination)
-//    field.
-//    a. When SD=1, the SDST is used as the destination for the compare result;
-//    b.when SD=0, VCC is used.
-// 
-// In GFX9, V_MAC_F16, V_MAC_F32 opcodes cannot be used with SDWA
-
-class VOP_SDWA9_Pseudo <string opName, VOPProfile P, list<dag> pattern=[]> :
-  InstSI <P.OutsSDWA9, P.InsSDWA9, "", pattern>,
-  VOP <opName>,
-  SIMCInstr <opName#"_sdwa9", SIEncodingFamily.NONE>,
-  MnemonicAlias <opName#"_sdwa9", opName> {
-
-  let isPseudo = 1;
-  let isCodeGenOnly = 1;
-  let UseNamedOperandTable = 1;
-
-  string Mnemonic = opName;
-  string AsmOperands = P.AsmSDWA9;
-
-  let Size = 8;
-  let mayLoad = 0;
-  let mayStore = 0;
-  let hasSideEffects = 0;
-
-  let VALU = 1;
-  let SDWA = 1;
-  let Uses = [EXEC];
-
-  let SubtargetPredicate = !if(P.HasSDWA9, HasSDWA9, DisableInst);
-  let AssemblerPredicate = !if(P.HasSDWA9, HasSDWA9, DisableInst);
-  let AsmVariantName = !if(P.HasSDWA9, AMDGPUAsmVariants.SDWA9,
-                                     AMDGPUAsmVariants.Disable);
-  let DecoderNamespace = "SDWA9";
-
-  VOPProfile Pfl = P;
-}
-
 class VOP_SDWA_Real <VOP_SDWA_Pseudo ps> :
   InstSI <ps.OutOperandList, ps.InOperandList, ps.Mnemonic # ps.AsmOperands, []>,
-  SIMCInstr <ps.PseudoInstr, SIEncodingFamily.VI> {
+  SIMCInstr <ps.PseudoInstr, SIEncodingFamily.SDWA> {
 
   let isPseudo = 0;
   let isCodeGenOnly = 0;
@@ -443,9 +413,9 @@ class VOP_SDWA_Real <VOP_SDWA_Pseudo ps> :
   let TSFlags              = ps.TSFlags;
 }
 
-class VOP_SDWA9_Real <VOP_SDWA9_Pseudo ps> :
-  InstSI <ps.OutOperandList, ps.InOperandList, ps.Mnemonic # ps.AsmOperands, []>,
-  SIMCInstr <ps.PseudoInstr, SIEncodingFamily.VI> {
+class VOP_SDWA9_Real <VOP_SDWA_Pseudo ps> :
+  InstSI <ps.OutOperandList, ps.InOperandList, ps.Mnemonic # ps.AsmOperands9, []>,
+  SIMCInstr <ps.PseudoInstr, SIEncodingFamily.SDWA9> {
 
   let isPseudo = 0;
   let isCodeGenOnly = 0;
@@ -458,13 +428,15 @@ class VOP_SDWA9_Real <VOP_SDWA9_Pseudo ps> :
   let Constraints     = ps.Constraints;
   let DisableEncoding = ps.DisableEncoding;
 
+  let SubtargetPredicate = !if(ps.Pfl.HasSDWA9, HasSDWA9, DisableInst);
+  let AssemblerPredicate = !if(ps.Pfl.HasSDWA9, HasSDWA9, DisableInst);
+  let AsmVariantName = !if(ps.Pfl.HasSDWA9, AMDGPUAsmVariants.SDWA9,
+                                            AMDGPUAsmVariants.Disable);
+  let DecoderNamespace = "SDWA9";
+
   // Copy relevant pseudo op flags
-  let SubtargetPredicate   = ps.SubtargetPredicate;
-  let AssemblerPredicate   = ps.AssemblerPredicate;
   let AsmMatchConverter    = ps.AsmMatchConverter;
-  let AsmVariantName       = ps.AsmVariantName;
   let UseNamedOperandTable = ps.UseNamedOperandTable;
-  let DecoderNamespace     = ps.DecoderNamespace;
   let Constraints          = ps.Constraints;
   let DisableEncoding      = ps.DisableEncoding;
   let TSFlags              = ps.TSFlags;

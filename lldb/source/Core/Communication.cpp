@@ -9,11 +9,11 @@
 
 #include "lldb/Core/Communication.h"
 
-#include "lldb/Core/Connection.h"
 #include "lldb/Core/Event.h"
 #include "lldb/Core/Listener.h"
 #include "lldb/Host/HostThread.h"
 #include "lldb/Host/ThreadLauncher.h"
+#include "lldb/Utility/Connection.h"
 #include "lldb/Utility/ConstString.h" // for ConstString
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Logging.h" // for LogIfAnyCategoriesSet, LIBLLDB...

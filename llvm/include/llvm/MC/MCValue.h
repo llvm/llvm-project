@@ -42,7 +42,7 @@ class MCValue {
   int64_t Cst;
   uint32_t RefKind;
 public:
-
+  MCValue() : SymA(nullptr), SymB(nullptr), Cst(0), RefKind(0) {}
   int64_t getConstant() const { return Cst; }
   const MCSymbolRefExpr *getSymA() const { return SymA; }
   const MCSymbolRefExpr *getSymB() const { return SymB; }

@@ -262,6 +262,65 @@ public:
   bool isInvalid() const { return !isValid(); }
 };
 
+/// \brief Represents an unpacked "presumed" location which can be presented
+/// to the user.
+///
+/// A 'presumed' location can be modified by \#line and GNU line marker
+/// directives and is always the expansion point of a normal location.
+///
+/// You can get a PresumedLoc from a SourceLocation with SourceManager.
+class PresumedLoc {
+  const char *Filename;
+  unsigned Line, Col;
+  SourceLocation IncludeLoc;
+
+public:
+  PresumedLoc() : Filename(nullptr) {}
+  PresumedLoc(const char *FN, unsigned Ln, unsigned Co, SourceLocation IL)
+      : Filename(FN), Line(Ln), Col(Co), IncludeLoc(IL) {}
+
+  /// \brief Return true if this object is invalid or uninitialized.
+  ///
+  /// This occurs when created with invalid source locations or when walking
+  /// off the top of a \#include stack.
+  bool isInvalid() const { return Filename == nullptr; }
+  bool isValid() const { return Filename != nullptr; }
+
+  /// \brief Return the presumed filename of this location.
+  ///
+  /// This can be affected by \#line etc.
+  const char *getFilename() const {
+    assert(isValid());
+    return Filename;
+  }
+
+  /// \brief Return the presumed line number of this location.
+  ///
+  /// This can be affected by \#line etc.
+  unsigned getLine() const {
+    assert(isValid());
+    return Line;
+  }
+
+  /// \brief Return the presumed column number of this location.
+  ///
+  /// This cannot be affected by \#line, but is packaged here for convenience.
+  unsigned getColumn() const {
+    assert(isValid());
+    return Col;
+  }
+
+  /// \brief Return the presumed include location of this location.
+  ///
+  /// This can be affected by GNU linemarker directives.
+  SourceLocation getIncludeLoc() const {
+    assert(isValid());
+    return IncludeLoc;
+  }
+};
+
+class FileEntry;
+
 /// \brief A SourceLocation and its associated SourceManager.
 ///
 /// This is useful for argument passing to functions that expect both objects.
@@ -274,6 +333,12 @@ public:
   explicit FullSourceLoc(SourceLocation Loc, const SourceManager &SM)
     : SourceLocation(Loc), SrcMgr(&SM) {}
 
+  bool hasManager() const {
+      bool hasSrcMgr =  SrcMgr != nullptr;
+      assert(hasSrcMgr == isValid() && "FullSourceLoc has location but no manager");
+      return hasSrcMgr;
+  }
+
   /// \pre This FullSourceLoc has an associated SourceManager.
   const SourceManager &getManager() const {
     assert(SrcMgr && "SourceManager is NULL.");
@@ -284,6 +349,13 @@ public:
 
   FullSourceLoc getExpansionLoc() const;
   FullSourceLoc getSpellingLoc() const;
+  FullSourceLoc getFileLoc() const;
+  std::pair<FullSourceLoc, FullSourceLoc> getImmediateExpansionRange() const;
+  PresumedLoc getPresumedLoc(bool UseLineDirectives = true) const;
+  bool isMacroArgExpansion(FullSourceLoc *StartLoc = nullptr) const;
+  FullSourceLoc getImmediateMacroCallerLoc() const;
+  std::pair<FullSourceLoc, StringRef> getModuleImportLoc() const;
+  unsigned getFileOffset() const;
 
   unsigned getExpansionLineNumber(bool *Invalid = nullptr) const;
   unsigned getExpansionColumnNumber(bool *Invalid = nullptr) const;
@@ -293,6 +365,12 @@ public:
 
   const char *getCharacterData(bool *Invalid = nullptr) const;
 
+  unsigned getLineNumber(bool *Invalid = nullptr) const;
+  unsigned getColumnNumber(bool *Invalid = nullptr) const;
+
+  std::pair<FullSourceLoc, FullSourceLoc> getExpansionRange() const;
+
+  const FileEntry *getFileEntry() const;
 
   /// \brief Return a StringRef to the source buffer data for the
   /// specified FileID.
@@ -345,50 +423,6 @@ public:
 
 };
 
-/// \brief Represents an unpacked "presumed" location which can be presented
-/// to the user.
-///
-/// A 'presumed' location can be modified by \#line and GNU line marker
-/// directives and is always the expansion point of a normal location.
-///
-/// You can get a PresumedLoc from a SourceLocation with SourceManager.
-class PresumedLoc {
-  const char *Filename;
-  unsigned Line, Col;
-  SourceLocation IncludeLoc;
-public:
-  PresumedLoc() : Filename(nullptr) {}
-  PresumedLoc(const char *FN, unsigned Ln, unsigned Co, SourceLocation IL)
-    : Filename(FN), Line(Ln), Col(Co), IncludeLoc(IL) {
-  }
-
-  /// \brief Return true if this object is invalid or uninitialized.
-  ///
-  /// This occurs when created with invalid source locations or when walking
-  /// off the top of a \#include stack.
-  bool isInvalid() const { return Filename == nullptr; }
-  bool isValid() const { return Filename != nullptr; }
-
-  /// \brief Return the presumed filename of this location.
-  ///
-  /// This can be affected by \#line etc.
-  const char *getFilename() const { assert(isValid()); return Filename; }
-
-  /// \brief Return the presumed line number of this location.
-  ///
-  /// This can be affected by \#line etc.
-  unsigned getLine() const { assert(isValid()); return Line; }
-
-  /// \brief Return the presumed column number of this location.
-  ///
-  /// This cannot be affected by \#line, but is packaged here for convenience.
-  unsigned getColumn() const { assert(isValid()); return Col; }
-
-  /// \brief Return the presumed include location of this location.
-  ///
-  /// This can be affected by GNU linemarker directives.
-  SourceLocation getIncludeLoc() const { assert(isValid()); return IncludeLoc; }
-};
 
 
 }  // end namespace clang

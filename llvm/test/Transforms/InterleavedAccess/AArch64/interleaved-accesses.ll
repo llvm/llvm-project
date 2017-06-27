@@ -774,3 +774,28 @@ define void @load_factor2_fp128(<4 x fp128>* %ptr) {
   %v1 = shufflevector <4 x fp128> %interleaved.vec, <4 x fp128> undef, <2 x i32> <i32 1, i32 3>
   ret void
 }
+
+define <4 x i1> @load_large_vector(<12 x i64 *>* %p) {
+; NEON-LABEL:    @load_large_vector(
+; NEON:            [[LDN:%.*]] = call { <2 x i64>, <2 x i64>, <2 x i64> } @llvm.aarch64.neon.ld3.v2i64.p0v2i64(<2 x i64>*
+; NEON-NEXT:       [[TMP1:%.*]] = extractvalue { <2 x i64>, <2 x i64>, <2 x i64> } [[LDN]], 1
+; NEON-NEXT:       [[TMP2:%.*]] = inttoptr <2 x i64> [[TMP1]] to <2 x i64*>
+; NEON-NEXT:       [[TMP3:%.*]] = extractvalue { <2 x i64>, <2 x i64>, <2 x i64> } [[LDN]], 0
+; NEON-NEXT:       [[TMP4:%.*]] = inttoptr <2 x i64> [[TMP3]] to <2 x i64*>
+; NEON:            [[LDN1:%.*]] = call { <2 x i64>, <2 x i64>, <2 x i64> } @llvm.aarch64.neon.ld3.v2i64.p0v2i64(<2 x i64>*
+; NEON-NEXT:       [[TMP5:%.*]] = extractvalue { <2 x i64>, <2 x i64>, <2 x i64> } [[LDN1]], 1
+; NEON-NEXT:       [[TMP6:%.*]] = inttoptr <2 x i64> [[TMP5]] to <2 x i64*>
+; NEON-NEXT:       [[TMP7:%.*]] = extractvalue { <2 x i64>, <2 x i64>, <2 x i64> } [[LDN1]], 0
+; NEON-NEXT:       [[TMP8:%.*]] = inttoptr <2 x i64> [[TMP7]] to <2 x i64*>
+; NEON-NEXT:       shufflevector <2 x i64*> [[TMP2]], <2 x i64*> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; NEON-NEXT:       shufflevector <2 x i64*> [[TMP4]], <2 x i64*> [[TMP8]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; NO_NEON-LABEL: @load_large_vector(
+; NO_NEON-NOT:     @llvm.aarch64.neon
+; NO_NEON:         ret
+;
+  %l = load <12 x i64 *>, <12 x i64 *>* %p
+  %s1 = shufflevector <12 x i64 *> %l, <12 x i64 *> undef, <4 x i32> <i32 0, i32 3, i32 6, i32 9>
+  %s2 = shufflevector <12 x i64 *> %l, <12 x i64 *> undef, <4 x i32> <i32 1, i32 4, i32 7, i32 10>
+  %ret = icmp ne <4 x i64 *> %s1, %s2
+  ret <4 x i1> %ret
+}

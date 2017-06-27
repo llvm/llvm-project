@@ -1,8 +1,13 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -ast-dump -ast-dump-filter Test %s | FileCheck -check-prefix CHECK -strict-whitespace %s
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -ast-dump %s | FileCheck -check-prefix CHECK-TU -strict-whitespace %s
+// RUN: %clang_cc1 -fmodules -fmodules-local-submodule-visibility -fmodule-name=X -triple x86_64-unknown-unknown -fmodule-map-file=%S/Inputs/module.modulemap -ast-dump -ast-dump-filter Test %s -DMODULES | FileCheck -check-prefix CHECK -check-prefix CHECK-MODULES -strict-whitespace %s
 
 int TestLocation;
-// CHECK: VarDecl 0x{{[^ ]*}} <{{.*}}:4:1, col:5> col:5 TestLocation
+// CHECK: VarDecl 0x{{[^ ]*}} <{{.*}}:[[@LINE-1]]:1, col:5> col:5 TestLocation
+
+#ifdef MODULES
+#pragma clang module begin X
+#endif
 
 struct TestIndent {
   int x;
@@ -33,7 +38,7 @@ typedef int TestTypedefDecl;
 // CHECK:      TypedefDecl{{.*}} TestTypedefDecl 'int'
 
 __module_private__ typedef int TestTypedefDeclPrivate;
-// CHECK:      TypedefDecl{{.*}} TestTypedefDeclPrivate 'int' __module_private__
+// CHECK-MODULE:      TypedefDecl{{.*}} TestTypedefDeclPrivate 'int' __module_private__
 
 enum TestEnumDecl {
   testEnumDecl
@@ -53,7 +58,7 @@ enum TestEnumDeclForward;
 // CHECK:      EnumDecl{{.*}} TestEnumDeclForward
 
 __module_private__ enum TestEnumDeclPrivate;
-// CHECK:      EnumDecl{{.*}} TestEnumDeclPrivate __module_private__
+// CHECK-MODULE:      EnumDecl{{.*}} TestEnumDeclPrivate __module_private__
 
 struct TestRecordDecl {
   int i;
@@ -83,7 +88,7 @@ struct TestRecordDeclForward;
 // CHECK:      RecordDecl{{.*}} struct TestRecordDeclForward
 
 __module_private__ struct TestRecordDeclPrivate;
-// CHECK:      RecordDecl{{.*}} struct TestRecordDeclPrivate __module_private__
+// CHECK-MODULE:      RecordDecl{{.*}} struct TestRecordDeclPrivate __module_private__
 
 enum testEnumConstantDecl {
   TestEnumConstantDecl,
@@ -136,7 +141,7 @@ struct testFieldDecl {
 // CHECK:      FieldDecl{{.*}} TestFieldDecl 'int'
 // CHECK:      FieldDecl{{.*}} TestFieldDeclWidth 'int'
 // CHECK-NEXT:   IntegerLiteral
-// CHECK:      FieldDecl{{.*}} TestFieldDeclPrivate 'int' __module_private__
+// CHECK-MODULE:      FieldDecl{{.*}} TestFieldDeclPrivate 'int' __module_private__
 
 int TestVarDecl;
 // CHECK:      VarDecl{{.*}} TestVarDecl 'int'
@@ -148,7 +153,7 @@ __thread int TestVarDeclThread;
 // CHECK:      VarDecl{{.*}} TestVarDeclThread 'int' tls{{$}}
 
 __module_private__ int TestVarDeclPrivate;
-// CHECK:      VarDecl{{.*}} TestVarDeclPrivate 'int' __module_private__
+// CHECK-MODULE:      VarDecl{{.*}} TestVarDeclPrivate 'int' __module_private__
 
 int TestVarDeclInit = 0;
 // CHECK:      VarDecl{{.*}} TestVarDeclInit 'int'
@@ -156,3 +161,8 @@ int TestVarDeclInit = 0;
 
 void testParmVarDecl(int TestParmVarDecl);
 // CHECK: ParmVarDecl{{.*}} TestParmVarDecl 'int'
+
+#ifdef MODULES
+#pragma clang module end
+#endif
+

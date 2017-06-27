@@ -1,4 +1,14 @@
 ; RUN: llc -march=amdgcn -verify-machineinstrs -amdgpu-s-branch-bits=4 < %s | FileCheck -check-prefix=GCN %s
+
+
+; FIXME: We should use llvm-mc for this, but we can't even parse our own output.
+;        See PR33579.
+; RUN: llc -march=amdgcn -verify-machineinstrs -amdgpu-s-branch-bits=4 -o %t.o -filetype=obj %s
+; RUN: llvm-readobj -r %t.o | FileCheck --check-prefix=OBJ %s
+
+; OBJ:       Relocations [
+; OBJ-NEXT: ]
+
 ; Restrict maximum branch to between +7 and -8 dwords
 
 ; Used to emit an always 4 byte instruction. Inline asm always assumes

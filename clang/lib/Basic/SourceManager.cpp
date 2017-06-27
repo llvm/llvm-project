@@ -359,15 +359,6 @@ void SourceManager::initializeForReplay(const SourceManager &Old) {
     return Clone;
   };
 
-  // Set up our main file ID as a copy of the old source manager's main file.
-  const SLocEntry &OldMainFile = Old.getSLocEntry(Old.getMainFileID());
-  assert(OldMainFile.isFile() && "main file is macro expansion?");
-  auto *MainCC = CloneContentCache(OldMainFile.getFile().getContentCache());
-  MemBufferInfos.push_back(MainCC);
-  setMainFileID(createFileID(MainCC, SourceLocation(),
-                             OldMainFile.getFile().getFileCharacteristic(),
-                             0, 0));
-
   // Ensure all SLocEntries are loaded from the external source.
   for (unsigned I = 0, N = Old.LoadedSLocEntryTable.size(); I != N; ++I)
     if (!Old.SLocEntryLoaded[I])

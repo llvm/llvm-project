@@ -241,8 +241,6 @@ HANDLE_TARGET_OPCODE(G_INSERT)
 
 /// Generic instruction to paste a variable number of components together into a
 /// larger register.
-HANDLE_TARGET_OPCODE(G_SEQUENCE)
-
 HANDLE_TARGET_OPCODE(G_MERGE_VALUES)
 
 /// Generic pointer to int conversion.
@@ -358,6 +356,9 @@ HANDLE_TARGET_OPCODE(G_FSUB)
 
 /// Generic FP multiplication.
 HANDLE_TARGET_OPCODE(G_FMUL)
+
+/// Generic FMA multiplication. Behaves like llvm fma intrinsic
+HANDLE_TARGET_OPCODE(G_FMA)
 
 /// Generic FP division.
 HANDLE_TARGET_OPCODE(G_FDIV)

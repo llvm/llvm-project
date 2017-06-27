@@ -30,30 +30,33 @@ void GDBRemoteTest::TearDownTestCase() {
 #endif
 }
 
-void Connect(GDBRemoteCommunication &client, GDBRemoteCommunication &server) {
+llvm::Error GDBRemoteTest::Connect(GDBRemoteCommunication &client,
+                                   GDBRemoteCommunication &server) {
   bool child_processes_inherit = false;
-  Status error;
   TCPSocket listen_socket(true, child_processes_inherit);
-  ASSERT_FALSE(error.Fail());
-  error = listen_socket.Listen("127.0.0.1:0", 5);
-  ASSERT_FALSE(error.Fail());
+  if (llvm::Error error = listen_socket.Listen("127.0.0.1:0", 5).ToError())
+    return error;
 
   Socket *accept_socket;
-  std::future<Status> accept_error = std::async(
+  std::future<Status> accept_status = std::async(
       std::launch::async, [&] { return listen_socket.Accept(accept_socket); });
 
-  char connect_remote_address[64];
-  snprintf(connect_remote_address, sizeof(connect_remote_address),
-           "connect://localhost:%u", listen_socket.GetLocalPortNumber());
+  llvm::SmallString<32> remote_addr;
+  llvm::raw_svector_ostream(remote_addr)
+      << "connect://localhost:" << listen_socket.GetLocalPortNumber();
 
-  std::unique_ptr<ConnectionFileDescriptor> conn_ap(
+  std::unique_ptr<ConnectionFileDescriptor> conn_up(
       new ConnectionFileDescriptor());
-  ASSERT_EQ(conn_ap->Connect(connect_remote_address, nullptr),
-            lldb::eConnectionStatusSuccess);
+  if (conn_up->Connect(remote_addr, nullptr) != lldb::eConnectionStatusSuccess)
+    return llvm::make_error<llvm::StringError>("Unable to connect",
+                                               llvm::inconvertibleErrorCode());
 
-  client.SetConnection(conn_ap.release());
-  ASSERT_TRUE(accept_error.get().Success());
+  client.SetConnection(conn_up.release());
+  if (llvm::Error error = accept_status.get().ToError())
+    return error;
+
   server.SetConnection(new ConnectionFileDescriptor(accept_socket));
+  return llvm::Error::success();
 }
 
 } // namespace process_gdb_remote

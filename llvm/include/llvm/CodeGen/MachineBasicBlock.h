@@ -376,6 +376,9 @@ public:
   /// Indicates if this is the entry block of a cleanup funclet.
   void setIsCleanupFuncletEntry(bool V = true) { IsCleanupFuncletEntry = V; }
 
+  /// Returns true if it is legal to hoist instructions into this block.
+  bool isLegalToHoistInto() const;
+
   // Code Layout methods.
 
   /// Move 'this' block before or after the specified block.  This only moves

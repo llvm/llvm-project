@@ -34,19 +34,20 @@ namespace orc {
 
 /// @brief Lazy-emitting IR layer.
 ///
-///   This layer accepts sets of LLVM IR Modules (via addModuleSet), but does
-/// not immediately emit them the layer below. Instead, emissing to the base
-/// layer is deferred until the first time the client requests the address
-/// (via JITSymbol::getAddress) for a symbol contained in this layer.
+///   This layer accepts LLVM IR Modules (via addModule), but does not
+/// immediately emit them the layer below. Instead, emissing to the base layer
+/// is deferred until the first time the client requests the address (via
+/// JITSymbol::getAddress) for a symbol contained in this layer.
 template <typename BaseLayerT> class LazyEmittingLayer {
 public:
-  using BaseLayerHandleT = typename BaseLayerT::ModuleSetHandleT;
+
+  using BaseLayerHandleT = typename BaseLayerT::ModuleHandleT;
 
 private:
-  class EmissionDeferredSet {
+  class EmissionDeferredModule {
   public:
-    EmissionDeferredSet() = default;
-    virtual ~EmissionDeferredSet() = default;
+    EmissionDeferredModule() = default;
+    virtual ~EmissionDeferredModule() = default;
 
     JITSymbol find(StringRef Name, bool ExportedSymbolsOnly, BaseLayerT &B) {
       switch (EmitState) {
@@ -84,9 +85,9 @@ private:
       llvm_unreachable("Invalid emit-state.");
     }
 
-    void removeModulesFromBaseLayer(BaseLayerT &BaseLayer) {
+    void removeModuleFromBaseLayer(BaseLayerT &BaseLayer) {
       if (EmitState != NotEmitted)
-        BaseLayer.removeModuleSet(Handle);
+        BaseLayer.removeModule(Handle);
     }
 
     void emitAndFinalize(BaseLayerT &BaseLayer) {
@@ -100,10 +101,9 @@ private:
       BaseLayer.emitAndFinalize(Handle);
     }
 
-    template <typename ModuleSetT, typename MemoryManagerPtrT,
-              typename SymbolResolverPtrT>
-    static std::unique_ptr<EmissionDeferredSet>
-    create(BaseLayerT &B, ModuleSetT Ms, MemoryManagerPtrT MemMgr,
+    template <typename MemoryManagerPtrT, typename SymbolResolverPtrT>
+    static std::unique_ptr<EmissionDeferredModule>
+    create(BaseLayerT &B, std::shared_ptr<Module> M, MemoryManagerPtrT MemMgr,
            SymbolResolverPtrT Resolver);
 
   protected:
@@ -116,14 +116,13 @@ private:
     BaseLayerHandleT Handle;
   };
 
-  template <typename ModuleSetT, typename MemoryManagerPtrT,
-            typename SymbolResolverPtrT>
-  class EmissionDeferredSetImpl : public EmissionDeferredSet {
+  template <typename MemoryManagerPtrT, typename SymbolResolverPtrT>
+  class EmissionDeferredModuleImpl : public EmissionDeferredModule {
   public:
-    EmissionDeferredSetImpl(ModuleSetT Ms,
-                            MemoryManagerPtrT MemMgr,
-                            SymbolResolverPtrT Resolver)
-        : Ms(std::move(Ms)), MemMgr(std::move(MemMgr)),
+    EmissionDeferredModuleImpl(std::shared_ptr<Module> M,
+                               MemoryManagerPtrT MemMgr,
+                               SymbolResolverPtrT Resolver)
+        : M(std::move(M)), MemMgr(std::move(MemMgr)),
           Resolver(std::move(Resolver)) {}
 
   protected:
@@ -154,8 +153,8 @@ private:
       // We don't need the mangled names set any more: Once we've emitted this
       // to the base layer we'll just look for symbols there.
       MangledSymbols.reset();
-      return BaseLayer.addModuleSet(std::move(Ms), std::move(MemMgr),
-                                    std::move(Resolver));
+      return BaseLayer.addModule(std::move(M), std::move(MemMgr),
+                                 std::move(Resolver));
     }
 
   private:
@@ -197,56 +196,54 @@ private:
 
       auto Symbols = llvm::make_unique<StringMap<const GlobalValue*>>();
 
-      for (const auto &M : Ms) {
-        Mangler Mang;
+      Mangler Mang;
 
-        for (const auto &GO : M->global_objects())
+      for (const auto &GO : M->global_objects())
           if (auto GV = addGlobalValue(*Symbols, GO, Mang, SearchName,
                                        ExportedSymbolsOnly))
             return GV;
-      }
 
       MangledSymbols = std::move(Symbols);
       return nullptr;
     }
 
-    ModuleSetT Ms;
+    std::shared_ptr<Module> M;
     MemoryManagerPtrT MemMgr;
     SymbolResolverPtrT Resolver;
     mutable std::unique_ptr<StringMap<const GlobalValue*>> MangledSymbols;
   };
 
-  using ModuleSetListT = std::list<std::unique_ptr<EmissionDeferredSet>>;
+  using ModuleListT = std::list<std::unique_ptr<EmissionDeferredModule>>;
 
   BaseLayerT &BaseLayer;
-  ModuleSetListT ModuleSetList;
+  ModuleListT ModuleList;
 
 public:
-  /// @brief Handle to a set of loaded modules.
-  using ModuleSetHandleT = typename ModuleSetListT::iterator;
+  /// @brief Handle to a loaded module.
+  using ModuleHandleT = typename ModuleListT::iterator;
 
   /// @brief Construct a lazy emitting layer.
   LazyEmittingLayer(BaseLayerT &BaseLayer) : BaseLayer(BaseLayer) {}
 
-  /// @brief Add the given set of modules to the lazy emitting layer.
-  template <typename ModuleSetT, typename MemoryManagerPtrT,
-            typename SymbolResolverPtrT>
-  ModuleSetHandleT addModuleSet(ModuleSetT Ms,
-                                MemoryManagerPtrT MemMgr,
-                                SymbolResolverPtrT Resolver) {
-    return ModuleSetList.insert(
-        ModuleSetList.end(),
-        EmissionDeferredSet::create(BaseLayer, std::move(Ms), std::move(MemMgr),
-                                    std::move(Resolver)));
+  /// @brief Add the given module to the lazy emitting layer.
+  template <typename MemoryManagerPtrT, typename SymbolResolverPtrT>
+  ModuleHandleT addModule(std::shared_ptr<Module> M,
+                          MemoryManagerPtrT MemMgr,
+                          SymbolResolverPtrT Resolver) {
+    return ModuleList.insert(
+        ModuleList.end(),
+        EmissionDeferredModule::create(BaseLayer, std::move(M),
+                                       std::move(MemMgr),
+                                       std::move(Resolver)));
   }
 
-  /// @brief Remove the module set represented by the given handle.
+  /// @brief Remove the module represented by the given handle.
   ///
-  ///   This method will free the memory associated with the given module set,
-  /// both in this layer, and the base layer.
-  void removeModuleSet(ModuleSetHandleT H) {
-    (*H)->removeModulesFromBaseLayer(BaseLayer);
-    ModuleSetList.erase(H);
+  ///   This method will free the memory associated with the given module, both
+  /// in this layer, and the base layer.
+  void removeModule(ModuleHandleT H) {
+    (*H)->removeModuleFromBaseLayer(BaseLayer);
+    ModuleList.erase(H);
   }
 
   /// @brief Search for the given named symbol.
@@ -258,42 +255,40 @@ public:
     if (auto Symbol = BaseLayer.findSymbol(Name, ExportedSymbolsOnly))
       return Symbol;
 
-    // If not found then search the deferred sets. If any of these contain a
+    // If not found then search the deferred modules. If any of these contain a
     // definition of 'Name' then they will return a JITSymbol that will emit
     // the corresponding module when the symbol address is requested.
-    for (auto &DeferredSet : ModuleSetList)
-      if (auto Symbol = DeferredSet->find(Name, ExportedSymbolsOnly, BaseLayer))
+    for (auto &DeferredMod : ModuleList)
+      if (auto Symbol = DeferredMod->find(Name, ExportedSymbolsOnly, BaseLayer))
         return Symbol;
 
     // If no definition found anywhere return a null symbol.
     return nullptr;
   }
 
-  /// @brief Get the address of the given symbol in the context of the set of
+  /// @brief Get the address of the given symbol in the context of the of
   ///        compiled modules represented by the handle H.
-  JITSymbol findSymbolIn(ModuleSetHandleT H, const std::string &Name,
+  JITSymbol findSymbolIn(ModuleHandleT H, const std::string &Name,
                          bool ExportedSymbolsOnly) {
     return (*H)->find(Name, ExportedSymbolsOnly, BaseLayer);
   }
 
-  /// @brief Immediately emit and finalize the moduleOB set represented by the
-  ///        given handle.
-  /// @param H Handle for module set to emit/finalize.
-  void emitAndFinalize(ModuleSetHandleT H) {
+  /// @brief Immediately emit and finalize the module represented by the given
+  ///        handle.
+  /// @param H Handle for module to emit/finalize.
+  void emitAndFinalize(ModuleHandleT H) {
     (*H)->emitAndFinalize(BaseLayer);
   }
 };
 
 template <typename BaseLayerT>
-template <typename ModuleSetT, typename MemoryManagerPtrT,
-          typename SymbolResolverPtrT>
-std::unique_ptr<typename LazyEmittingLayer<BaseLayerT>::EmissionDeferredSet>
-LazyEmittingLayer<BaseLayerT>::EmissionDeferredSet::create(
-    BaseLayerT &B, ModuleSetT Ms, MemoryManagerPtrT MemMgr,
+template <typename MemoryManagerPtrT, typename SymbolResolverPtrT>
+std::unique_ptr<typename LazyEmittingLayer<BaseLayerT>::EmissionDeferredModule>
+LazyEmittingLayer<BaseLayerT>::EmissionDeferredModule::create(
+    BaseLayerT &B, std::shared_ptr<Module> M, MemoryManagerPtrT MemMgr,
     SymbolResolverPtrT Resolver) {
-  using EDS = EmissionDeferredSetImpl<ModuleSetT, MemoryManagerPtrT,
-                                      SymbolResolverPtrT>;
-  return llvm::make_unique<EDS>(std::move(Ms), std::move(MemMgr),
+  using EDS = EmissionDeferredModuleImpl<MemoryManagerPtrT, SymbolResolverPtrT>;
+  return llvm::make_unique<EDS>(std::move(M), std::move(MemMgr),
                                 std::move(Resolver));
 }
 

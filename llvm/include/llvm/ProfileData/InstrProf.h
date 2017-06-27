@@ -410,7 +410,7 @@ uint64_t ComputeHash(StringRef K);
 /// on how PGO name is formed.
 class InstrProfSymtab {
 public:
-  typedef std::vector<std::pair<uint64_t, uint64_t>> AddrHashMap;
+  using AddrHashMap = std::vector<std::pair<uint64_t, uint64_t>>;
 
 private:
   StringRef Data;
@@ -599,7 +599,7 @@ struct InstrProfRecord {
   InstrProfRecord(StringRef Name, uint64_t Hash, std::vector<uint64_t> Counts)
       : Name(Name), Hash(Hash), Counts(std::move(Counts)) {}
 
-  typedef std::vector<std::pair<uint64_t, uint64_t>> ValueMapType;
+  using ValueMapType = std::vector<std::pair<uint64_t, uint64_t>>;
 
   /// Return the number of value profile kinds with non-zero number
   /// of profile sites.
@@ -673,8 +673,8 @@ struct InstrProfRecord {
 private:
   std::vector<InstrProfValueSiteRecord> IndirectCallSites;
   std::vector<InstrProfValueSiteRecord> MemOPSizes;
-  const std::vector<InstrProfValueSiteRecord> &
 
+  const std::vector<InstrProfValueSiteRecord> &
   getValueSitesForKind(uint32_t ValueKind) const {
     switch (ValueKind) {
     case IPVK_IndirectCallTarget:
@@ -878,6 +878,11 @@ struct Summary {
   // The number of Cutoff Entries (Summary::Entry) following summary fields.
   uint64_t NumCutoffEntries;
 
+  Summary() = delete;
+  Summary(uint32_t Size) { memset(this, 0, Size); }
+
+  void operator delete(void *ptr) { ::operator delete(ptr); }
+
   static uint32_t getSize(uint32_t NumSumFields, uint32_t NumCutoffEntries) {
     return sizeof(Summary) + NumCutoffEntries * sizeof(Entry) +
            NumSumFields * sizeof(uint64_t);
@@ -916,11 +921,6 @@ struct Summary {
     ER.MinBlockCount = E.MinCount;
     ER.NumBlocks = E.NumCounts;
   }
-
-  Summary(uint32_t Size) { memset(this, 0, Size); }
-  void operator delete(void *ptr) { ::operator delete(ptr); }
-
-  Summary() = delete;
 };
 
 inline std::unique_ptr<Summary> allocSummary(uint32_t TotalSize) {

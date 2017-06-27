@@ -47,9 +47,9 @@ if.end:                                           ; preds = %entry
 define i32 @f3(i32 zeroext %a, i32 *%base, i64 %offset) {
 ; CHECK-LABEL: f3:
 ; CHECK: cl %r2, 0(%r{{[0-5]}},%r3)
+; CHECK: lhi %r2, 0
 ; CHECK-LABEL: .Ltmp0
 ; CHECK: jh .Ltmp0+2
-; CHECK: lhi %r2, 0
 ; CHECK: br %r14
 entry:
   %ptr = getelementptr i32, i32 *%base, i64 %offset
@@ -70,9 +70,9 @@ if.end:                                           ; preds = %entry
 define i64 @f4(i64 %a, i64 *%base, i64 %offset) {
 ; CHECK-LABEL: f4:
 ; CHECK: clg %r2, 0(%r{{[0-5]}},%r3)
+; CHECK: lghi %r2, 0
 ; CHECK-LABEL: .Ltmp1
 ; CHECK: jh .Ltmp1+2
-; CHECK: lghi %r2, 0
 ; CHECK: br %r14
 entry:
   %ptr = getelementptr i64, i64 *%base, i64 %offset
