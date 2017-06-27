@@ -2901,7 +2901,9 @@ bool SwiftLanguageRuntime::GetTargetOfPartialApply(SymbolContext &curr_sc,
 bool SwiftLanguageRuntime::IsSymbolARuntimeThunk(const Symbol &symbol) {
 
   llvm::StringRef symbol_name = symbol.GetMangled().GetMangledName().GetStringRef();
-  
+  if (symbol_name.empty())
+    return false;
+
   swift::Demangle::Context demangle_ctx;
   return demangle_ctx.isThunkSymbol(symbol_name);
 }
