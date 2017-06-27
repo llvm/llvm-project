@@ -351,13 +351,13 @@ bool lldb_private::formatters::NSArraySummaryProvider(
     if (error.Fail())
       return false;
   } else if (class_name == g_NSArrayMLegacy) {
-    Status error;
+    Error error;
     value = process_sp->ReadUnsignedIntegerFromMemory(valobj_addr + ptr_size,
                                                       ptr_size, 0, error);
     if (error.Fail())
       return false;
   } else if (class_name == g_NSArrayMImmutable) {
-    Status error;
+    Error error;
     value = process_sp->ReadUnsignedIntegerFromMemory(valobj_addr + ptr_size,
                                                       ptr_size, 0, error);
     if (error.Fail())
@@ -520,7 +520,7 @@ bool lldb_private::formatters::NSArrayMSyntheticFrontEnd_1400::Update() {
   if (!valobj_sp)
     return false;
   m_exe_ctx_ref = valobj_sp->GetExecutionContextRef();
-  Status error;
+  Error error;
   error.Clear();
   lldb::ProcessSP process_sp(valobj_sp->GetProcessSP());
   if (!process_sp)
@@ -784,7 +784,7 @@ bool lldb_private::formatters::NSArrayISyntheticFrontEnd_1400::Update() {
   if (!valobj_sp)
     return false;
   m_exe_ctx_ref = valobj_sp->GetExecutionContextRef();
-  Status error;
+  Error error;
   error.Clear();
   lldb::ProcessSP process_sp(valobj_sp->GetProcessSP());
   if (!process_sp)
@@ -819,7 +819,7 @@ lldb_private::formatters::NSArrayISyntheticFrontEnd_1400::GetChildAtIndex(
   ProcessSP process_sp = m_exe_ctx_ref.GetProcessSP();
   if (!process_sp)
     return lldb::ValueObjectSP();
-  Status error;
+  Error error;
   if (error.Fail())
     return lldb::ValueObjectSP();
   StreamString idx_name;

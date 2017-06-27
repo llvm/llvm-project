@@ -748,7 +748,7 @@ lldb_private::formatters::NSDictionaryMSyntheticFrontEnd::GetChildAtIndex(
       ProcessSP process_sp = m_exe_ctx_ref.GetProcessSP();
       if (!process_sp)
         return lldb::ValueObjectSP();
-      Status error;
+      Error error;
       key_at_idx = process_sp->ReadPointerFromMemory(key_at_idx, error);
       if (error.Fail())
         return lldb::ValueObjectSP();
@@ -846,7 +846,7 @@ bool lldb_private::formatters::NSDictionaryMLegacySyntheticFrontEnd::Update() {
   if (!valobj_sp)
     return false;
   m_exe_ctx_ref = valobj_sp->GetExecutionContextRef();
-  Status error;
+  Error error;
   error.Clear();
   lldb::ProcessSP process_sp(valobj_sp->GetProcessSP());
   if (!process_sp)
