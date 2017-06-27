@@ -2781,13 +2781,12 @@ GetThunkKind(llvm::StringRef symbol_name)
   if (num_global_children == 0)
     return ThunkKind::Unknown;
 
-  swift::Demangle::NodePointer global_node_ptr = nodes->getFirstChild();
-  if (global_node_ptr->getKind() != swift::Demangle::Node::Kind::Global)
+  if (nodes->getKind() != swift::Demangle::Node::Kind::Global)
     return ThunkKind::Unknown;
-  if (global_node_ptr->getNumChildren() == 0)
+  if (nodes->getNumChildren() == 0)
     return ThunkKind::Unknown;
 
-  swift::Demangle::NodePointer node_ptr = global_node_ptr->getFirstChild();
+  swift::Demangle::NodePointer node_ptr = nodes->getFirstChild();
   kind = node_ptr->getKind();
   switch (kind)
   {
@@ -2803,6 +2802,8 @@ GetThunkKind(llvm::StringRef symbol_name)
     break;
   case swift::Demangle::Node::Kind::ReabstractionThunkHelper:
     return ThunkKind::Reabstraction;
+  case swift::Demangle::Node::Kind::PartialApplyForwarder:
+    return ThunkKind::PartialApply;
   case swift::Demangle::Node::Kind::Allocator:
     if (node_ptr->getNumChildren() == 0)
       return ThunkKind::Unknown;
@@ -2848,7 +2849,7 @@ GetThunkAction (ThunkKind kind)
       case ThunkKind::ObjCAttribute:
         return ThunkAction::GetThunkTarget;
       case ThunkKind::Reabstraction:
-        return ThunkAction::GetThunkTarget;
+        return ThunkAction::StepThrough;
       case ThunkKind::ProtocolConformance:
         return ThunkAction::StepIntoConformance;
     }
