@@ -74,6 +74,7 @@
 ; CHECK-O-NEXT: Starting llvm::Function pass manager run.
 ; CHECK-O-NEXT: Running pass: SROA
 ; CHECK-O-NEXT: Running pass: EarlyCSEPass
+; CHECK-O-NEXT: Running analysis: MemorySSAAnalysis
 ; CHECK-O-NEXT: Running pass: SpeculativeExecutionPass
 ; CHECK-O-NEXT: Running pass: JumpThreadingPass
 ; CHECK-O-NEXT: Running analysis: LazyValueAnalysis

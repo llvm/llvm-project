@@ -1679,6 +1679,7 @@ class MemCmpExpansion {
   void emitMemCmpResultBlock();
   Value *getMemCmpExpansionZeroCase(unsigned Size);
   Value *getMemCmpEqZeroOneBlock(unsigned Size);
+  Value *getMemCmpOneBlock(unsigned Size);
   unsigned getLoadSize(unsigned Size);
   unsigned getNumLoads(unsigned Size);
 
@@ -1711,7 +1712,7 @@ MemCmpExpansion::MemCmpExpansion(CallInst *CI, uint64_t Size,
   // we choose to handle this case too to avoid fragmented lowering.
   IsUsedForZeroCmp = isOnlyUsedInZeroEqualityComparison(CI);
   NumBlocks = calculateNumBlocks(Size);
-  if (!IsUsedForZeroCmp || NumBlocks != 1) {
+  if ((!IsUsedForZeroCmp && NumLoadsPerBlock != 1) || NumBlocks != 1) {
     BasicBlock *StartBlock = CI->getParent();
     EndBlock = StartBlock->splitBasicBlock(CI, "endblock");
     setupEndBlockPHINodes();
@@ -1987,16 +1988,13 @@ void MemCmpExpansion::emitLoadCompareBlock(unsigned Index, unsigned LoadSize,
     ResBlock.PhiSrc2->addIncoming(LoadSrc2, LoadCmpBlocks[Index]);
   }
 
-  Value *Diff = Builder.CreateSub(LoadSrc1, LoadSrc2);
-
-  Value *Cmp = Builder.CreateICmp(ICmpInst::ICMP_NE, Diff,
-                                  ConstantInt::get(Diff->getType(), 0));
+  Value *Cmp = Builder.CreateICmp(ICmpInst::ICMP_EQ, LoadSrc1, LoadSrc2);
   BasicBlock *NextBB = (Index == (LoadCmpBlocks.size() - 1))
                            ? EndBlock
                            : LoadCmpBlocks[Index + 1];
   // Early exit branch if difference found to ResultBlock. Otherwise, continue
   // to next LoadCmpBlock or EndBlock.
-  BranchInst *CmpBr = BranchInst::Create(ResBlock.BB, NextBB, Cmp);
+  BranchInst *CmpBr = BranchInst::Create(NextBB, ResBlock.BB, Cmp);
   Builder.Insert(CmpBr);
 
   // Add a phi edge for the last LoadCmpBlock to Endblock with a value of 0
@@ -2093,12 +2091,51 @@ Value *MemCmpExpansion::getMemCmpEqZeroOneBlock(unsigned Size) {
   return Builder.CreateZExt(Cmp, Type::getInt32Ty(CI->getContext()));
 }
 
+/// A memcmp expansion that only has one block of load and compare can bypass
+/// the compare, branch, and phi IR that is required in the general case.
+Value *MemCmpExpansion::getMemCmpOneBlock(unsigned Size) {
+  assert(NumLoadsPerBlock == 1 && "Only handles one load pair per block");
+
+  Type *LoadSizeType = IntegerType::get(CI->getContext(), Size * 8);
+  Value *Source1 = CI->getArgOperand(0);
+  Value *Source2 = CI->getArgOperand(1);
+
+  // Cast source to LoadSizeType*.
+  if (Source1->getType() != LoadSizeType)
+    Source1 = Builder.CreateBitCast(Source1, LoadSizeType->getPointerTo());
+  if (Source2->getType() != LoadSizeType)
+    Source2 = Builder.CreateBitCast(Source2, LoadSizeType->getPointerTo());
+
+  // Load LoadSizeType from the base address.
+  Value *LoadSrc1 = Builder.CreateLoad(LoadSizeType, Source1);
+  Value *LoadSrc2 = Builder.CreateLoad(LoadSizeType, Source2);
+
+  if (DL.isLittleEndian() && Size != 1) {
+    Function *Bswap = Intrinsic::getDeclaration(CI->getModule(),
+                                                Intrinsic::bswap, LoadSizeType);
+    LoadSrc1 = Builder.CreateCall(Bswap, LoadSrc1);
+    LoadSrc2 = Builder.CreateCall(Bswap, LoadSrc2);
+  }
+
+  // TODO: Instead of comparing ULT, just subtract and return the difference?
+  Value *CmpNE = Builder.CreateICmpNE(LoadSrc1, LoadSrc2);
+  Value *CmpULT = Builder.CreateICmpULT(LoadSrc1, LoadSrc2);
+  Type *I32 = Builder.getInt32Ty();
+  Value *Sel1 = Builder.CreateSelect(CmpULT, ConstantInt::get(I32, -1),
+                                             ConstantInt::get(I32, 1));
+  return Builder.CreateSelect(CmpNE, Sel1, ConstantInt::get(I32, 0));
+}
+
 // This function expands the memcmp call into an inline expansion and returns
 // the memcmp result.
 Value *MemCmpExpansion::getMemCmpExpansion(uint64_t Size) {
   if (IsUsedForZeroCmp)
     return NumBlocks == 1 ? getMemCmpEqZeroOneBlock(Size) :
                             getMemCmpExpansionZeroCase(Size);
+
+  // TODO: Handle more than one load pair per block in getMemCmpOneBlock().
+  if (NumBlocks == 1 && NumLoadsPerBlock == 1)
+    return getMemCmpOneBlock(Size);
 
   // This loop calls emitLoadCompareBlock for comparing Size bytes of the two
   // memcmp sources. It starts with loading using the maximum load size set by

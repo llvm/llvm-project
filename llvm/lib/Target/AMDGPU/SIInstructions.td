@@ -933,10 +933,9 @@ def : Pat<(i32 (trunc (srl i64:$src0, (and i32:$src1, (i32 31))))),
           (V_ALIGNBIT_B32 (i32 (EXTRACT_SUBREG (i64 $src0), sub1)),
                           (i32 (EXTRACT_SUBREG (i64 $src0), sub0)), $src1)>;
 
-def : Pat<(i32 (trunc (shl i64:$src0, (and i32:$src1, (i32 31))))),
+def : Pat<(i32 (trunc (srl i64:$src0, (i32 ShiftAmt32Imm:$src1)))),
           (V_ALIGNBIT_B32 (i32 (EXTRACT_SUBREG (i64 $src0), sub1)),
-                          (i32 (EXTRACT_SUBREG (i64 $src0), sub0)),
-                          (S_SUB_I32 (i32 32), $src1))>;
+                          (i32 (EXTRACT_SUBREG (i64 $src0), sub0)), $src1)>;
 
 /********** ====================== **********/
 /**********   Indirect addressing  **********/

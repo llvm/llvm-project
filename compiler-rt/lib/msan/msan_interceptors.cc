@@ -538,49 +538,6 @@ INTERCEPTOR(int, mbrtowc, wchar_t *dest, const char *src, SIZE_T n, void *ps) {
   return res;
 }
 
-INTERCEPTOR(SIZE_T, wcslen, const wchar_t *s) {
-  ENSURE_MSAN_INITED();
-  SIZE_T res = REAL(wcslen)(s);
-  CHECK_UNPOISONED(s, sizeof(wchar_t) * (res + 1));
-  return res;
-}
-
-INTERCEPTOR(SIZE_T, wcsnlen, const wchar_t *s, SIZE_T n) {
-  ENSURE_MSAN_INITED();
-  SIZE_T res = REAL(wcsnlen)(s, n);
-  CHECK_UNPOISONED(s, sizeof(wchar_t) * Min(res + 1, n));
-  return res;
-}
-
-// wchar_t *wcschr(const wchar_t *wcs, wchar_t wc);
-INTERCEPTOR(wchar_t *, wcschr, void *s, wchar_t wc, void *ps) {
-  ENSURE_MSAN_INITED();
-  wchar_t *res = REAL(wcschr)(s, wc, ps);
-  return res;
-}
-
-// wchar_t *wcscpy(wchar_t *dest, const wchar_t *src);
-INTERCEPTOR(wchar_t *, wcscpy, wchar_t *dest, const wchar_t *src) {
-  ENSURE_MSAN_INITED();
-  GET_STORE_STACK_TRACE;
-  wchar_t *res = REAL(wcscpy)(dest, src);
-  CopyShadowAndOrigin(dest, src, sizeof(wchar_t) * (REAL(wcslen)(src) + 1),
-                      &stack);
-  return res;
-}
-
-INTERCEPTOR(wchar_t *, wcsncpy, wchar_t *dest, const wchar_t *src,
-            SIZE_T n) {  // NOLINT
-  ENSURE_MSAN_INITED();
-  GET_STORE_STACK_TRACE;
-  SIZE_T copy_size = REAL(wcsnlen)(src, n);
-  if (copy_size < n) copy_size++;           // trailing \0
-  wchar_t *res = REAL(wcsncpy)(dest, src, n);  // NOLINT
-  CopyShadowAndOrigin(dest, src, copy_size * sizeof(wchar_t), &stack);
-  __msan_unpoison(dest + copy_size, (n - copy_size) * sizeof(wchar_t));
-  return res;
-}
-
 // wchar_t *wmemcpy(wchar_t *dest, const wchar_t *src, SIZE_T n);
 INTERCEPTOR(wchar_t *, wmemcpy, wchar_t *dest, const wchar_t *src, SIZE_T n) {
   ENSURE_MSAN_INITED();
@@ -1344,11 +1301,11 @@ int OnExit() {
     return __msan_memcpy(to, from, size);                   \
   }
 
-#define COMMON_INTERCEPTOR_COPY_STRING(ctx, to, from, size)                    \
-  do {                                                                         \
-    GET_STORE_STACK_TRACE;                                                     \
-    CopyShadowAndOrigin(to, from, size, &stack);                               \
-    __msan_unpoison(to + size, 1);                                             \
+#define COMMON_INTERCEPTOR_COPY_STRING(ctx, to, from, size) \
+  do {                                                      \
+    GET_STORE_STACK_TRACE;                                  \
+    CopyShadowAndOrigin(to, from, size, &stack);            \
+    __msan_unpoison(to + size, 1);                          \
   } while (false)
 
 #include "sanitizer_common/sanitizer_platform_interceptors.h"
@@ -1421,6 +1378,35 @@ INTERCEPTOR(int, dl_iterate_phdr, dl_iterate_phdr_cb callback, void *data) {
   cbdata.callback = callback;
   cbdata.data = data;
   int res = REAL(dl_iterate_phdr)(msan_dl_iterate_phdr_cb, (void *)&cbdata);
+  return res;
+}
+
+// wchar_t *wcschr(const wchar_t *wcs, wchar_t wc);
+INTERCEPTOR(wchar_t *, wcschr, void *s, wchar_t wc, void *ps) {
+  ENSURE_MSAN_INITED();
+  wchar_t *res = REAL(wcschr)(s, wc, ps);
+  return res;
+}
+
+// wchar_t *wcscpy(wchar_t *dest, const wchar_t *src);
+INTERCEPTOR(wchar_t *, wcscpy, wchar_t *dest, const wchar_t *src) {
+  ENSURE_MSAN_INITED();
+  GET_STORE_STACK_TRACE;
+  wchar_t *res = REAL(wcscpy)(dest, src);
+  CopyShadowAndOrigin(dest, src, sizeof(wchar_t) * (REAL(wcslen)(src) + 1),
+                      &stack);
+  return res;
+}
+
+INTERCEPTOR(wchar_t *, wcsncpy, wchar_t *dest, const wchar_t *src,
+            SIZE_T n) {  // NOLINT
+  ENSURE_MSAN_INITED();
+  GET_STORE_STACK_TRACE;
+  SIZE_T copy_size = REAL(wcsnlen)(src, n);
+  if (copy_size < n) copy_size++;           // trailing \0
+  wchar_t *res = REAL(wcsncpy)(dest, src, n);  // NOLINT
+  CopyShadowAndOrigin(dest, src, copy_size * sizeof(wchar_t), &stack);
+  __msan_unpoison(dest + copy_size, (n - copy_size) * sizeof(wchar_t));
   return res;
 }
 

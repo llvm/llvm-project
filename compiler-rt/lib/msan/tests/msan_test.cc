@@ -1707,6 +1707,48 @@ TEST(MemorySanitizer, strncat_overflow) {  // NOLINT
   EXPECT_POISONED(a[7]);
 }
 
+TEST(MemorySanitizer, wcscat) {
+  wchar_t a[10];
+  wchar_t b[] = L"def";
+  wcscpy(a, L"abc");
+
+  wcscat(a, b);
+  EXPECT_EQ(6U, wcslen(a));
+  EXPECT_POISONED(a[7]);
+
+  a[3] = 0;
+  __msan_poison(b + 1, sizeof(wchar_t));
+  EXPECT_UMR(wcscat(a, b));
+
+  __msan_unpoison(b + 1, sizeof(wchar_t));
+  __msan_poison(a + 2, sizeof(wchar_t));
+  EXPECT_UMR(wcscat(a, b));
+}
+
+TEST(MemorySanitizer, wcsncat) {
+  wchar_t a[10];
+  wchar_t b[] = L"def";
+  wcscpy(a, L"abc");
+
+  wcsncat(a, b, 5);
+  EXPECT_EQ(6U, wcslen(a));
+  EXPECT_POISONED(a[7]);
+
+  a[3] = 0;
+  __msan_poison(a + 4, sizeof(wchar_t) * 6);
+  wcsncat(a, b, 2);
+  EXPECT_EQ(5U, wcslen(a));
+  EXPECT_POISONED(a[6]);
+
+  a[3] = 0;
+  __msan_poison(b + 1, sizeof(wchar_t));
+  EXPECT_UMR(wcsncat(a, b, 2));
+
+  __msan_unpoison(b + 1, sizeof(wchar_t));
+  __msan_poison(a + 2, sizeof(wchar_t));
+  EXPECT_UMR(wcsncat(a, b, 2));
+}
+
 #define TEST_STRTO_INT(func_name, char_type, str_prefix) \
   TEST(MemorySanitizer, func_name) {                     \
     char_type *e;                                        \

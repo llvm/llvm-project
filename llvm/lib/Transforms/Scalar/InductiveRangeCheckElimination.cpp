@@ -917,7 +917,6 @@ LoopConstrainer::calculateSubRanges() const {
   // I think we can be more aggressive here and make this nuw / nsw if the
   // addition that feeds into the icmp for the latch's terminating branch is nuw
   // / nsw.  In any case, a wrapping 2's complement addition is safe.
-  ConstantInt *One = ConstantInt::get(Ty, 1);
   const SCEV *Start = SE.getSCEV(MainLoopStructure.IndVarStart);
   const SCEV *End = SE.getSCEV(MainLoopStructure.LoopExitAt);
 
@@ -948,8 +947,9 @@ LoopConstrainer::calculateSubRanges() const {
     //    will be an empty range.  Returning an empty range is always safe.
     //
 
-    Smallest = SE.getAddExpr(End, SE.getSCEV(One));
-    Greatest = SE.getAddExpr(Start, SE.getSCEV(One));
+    const SCEV *One = SE.getOne(Ty);
+    Smallest = SE.getAddExpr(End, One);
+    Greatest = SE.getAddExpr(Start, One);
   }
 
   auto Clamp = [this, Smallest, Greatest](const SCEV *S) {

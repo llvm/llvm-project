@@ -100,28 +100,26 @@ define signext i32 @zeroEqualityTest04() {
 ; CHECK-NEXT:    addi 5, 4, .LzeroEqualityTest02.buffer2@toc@l
 ; CHECK-NEXT:    ldbrx 3, 0, 6
 ; CHECK-NEXT:    ldbrx 4, 0, 5
-; CHECK-NEXT:    subf. 7, 4, 3
+; CHECK-NEXT:    cmpld 3, 4
 ; CHECK-NEXT:    bne 0, .LBB3_2
 ; CHECK-NEXT:  # BB#1: # %loadbb1
 ; CHECK-NEXT:    li 4, 8
 ; CHECK-NEXT:    ldbrx 3, 6, 4
 ; CHECK-NEXT:    ldbrx 4, 5, 4
-; CHECK-NEXT:    subf. 5, 4, 3
-; CHECK-NEXT:    beq 0, .LBB3_4
+; CHECK-NEXT:    li 5, 0
+; CHECK-NEXT:    cmpld 3, 4
+; CHECK-NEXT:    beq 0, .LBB3_3
 ; CHECK-NEXT:  .LBB3_2: # %res_block
 ; CHECK-NEXT:    cmpld 3, 4
-; CHECK-NEXT:    li 3, 1
+; CHECK-NEXT:    li 11, 1
 ; CHECK-NEXT:    li 12, -1
-; CHECK-NEXT:    isel 3, 12, 3, 0
+; CHECK-NEXT:    isel 5, 12, 11, 0
 ; CHECK-NEXT:  .LBB3_3: # %endblock
-; CHECK-NEXT:    cmpwi 3, 1
+; CHECK-NEXT:    cmpwi 5, 1
 ; CHECK-NEXT:    li 3, 0
 ; CHECK-NEXT:    li 4, 1
 ; CHECK-NEXT:    isel 3, 4, 3, 0
 ; CHECK-NEXT:    blr
-; CHECK-NEXT:  .LBB3_4:
-; CHECK-NEXT:    li 3, 0
-; CHECK-NEXT:    b .LBB3_3
   %call = tail call signext i32 @memcmp(i8* bitcast ([4 x i32]* @zeroEqualityTest02.buffer1 to i8*), i8* bitcast ([4 x i32]* @zeroEqualityTest02.buffer2 to i8*), i64 16)
   %not.cmp = icmp slt i32 %call, 1
   %. = zext i1 %not.cmp to i32
@@ -138,27 +136,25 @@ define signext i32 @zeroEqualityTest05() {
 ; CHECK-NEXT:    addi 5, 4, .LzeroEqualityTest03.buffer2@toc@l
 ; CHECK-NEXT:    ldbrx 3, 0, 6
 ; CHECK-NEXT:    ldbrx 4, 0, 5
-; CHECK-NEXT:    subf. 7, 4, 3
+; CHECK-NEXT:    cmpld 3, 4
 ; CHECK-NEXT:    bne 0, .LBB4_2
 ; CHECK-NEXT:  # BB#1: # %loadbb1
 ; CHECK-NEXT:    li 4, 8
 ; CHECK-NEXT:    ldbrx 3, 6, 4
 ; CHECK-NEXT:    ldbrx 4, 5, 4
-; CHECK-NEXT:    subf. 5, 4, 3
-; CHECK-NEXT:    beq 0, .LBB4_4
+; CHECK-NEXT:    li 5, 0
+; CHECK-NEXT:    cmpld 3, 4
+; CHECK-NEXT:    beq 0, .LBB4_3
 ; CHECK-NEXT:  .LBB4_2: # %res_block
 ; CHECK-NEXT:    cmpld 3, 4
-; CHECK-NEXT:    li 3, 1
+; CHECK-NEXT:    li 11, 1
 ; CHECK-NEXT:    li 12, -1
-; CHECK-NEXT:    isel 3, 12, 3, 0
+; CHECK-NEXT:    isel 5, 12, 11, 0
 ; CHECK-NEXT:  .LBB4_3: # %endblock
-; CHECK-NEXT:    srwi 3, 3, 31
+; CHECK-NEXT:    srwi 3, 5, 31
 ; CHECK-NEXT:    xori 3, 3, 1
 ; CHECK-NEXT:    clrldi 3, 3, 32
 ; CHECK-NEXT:    blr
-; CHECK-NEXT:  .LBB4_4:
-; CHECK-NEXT:    li 3, 0
-; CHECK-NEXT:    b .LBB4_3
   %call = tail call signext i32 @memcmp(i8* bitcast ([4 x i32]* @zeroEqualityTest03.buffer1 to i8*), i8* bitcast ([4 x i32]* @zeroEqualityTest03.buffer2 to i8*), i64 16)
   %call.lobit = lshr i32 %call, 31
   %call.lobit.not = xor i32 %call.lobit, 1

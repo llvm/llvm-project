@@ -138,8 +138,8 @@ static cl::opt<int> PreInlineThreshold(
              "(default = 75)"));
 
 static cl::opt<bool> EnableEarlyCSEMemSSA(
-    "enable-earlycse-memssa", cl::init(false), cl::Hidden,
-    cl::desc("Enable the EarlyCSE w/ MemorySSA pass (default = off)"));
+    "enable-earlycse-memssa", cl::init(true), cl::Hidden,
+    cl::desc("Enable the EarlyCSE w/ MemorySSA pass (default = on)"));
 
 static cl::opt<bool> EnableGVNHoist(
     "enable-gvn-hoist", cl::init(false), cl::Hidden,

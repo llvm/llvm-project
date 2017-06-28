@@ -218,7 +218,6 @@ static FILE *openFileForMerging(const char *ProfileFileName) {
     fclose(ProfileFile);
     return NULL;
   }
-  fseek(ProfileFile, 0L, SEEK_SET);
   return ProfileFile;
 }
 

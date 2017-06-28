@@ -33,7 +33,7 @@
 ; CHECK-NEXT:  </GLOBALVAL_SUMMARY_BLOCK>
 
 ; CHECK: <STRTAB_BLOCK
-; CHECK-NEXT: blob data = 'hot_functionhot1hot2hot3hot4coldnone1none2none3'
+; CHECK-NEXT: blob data = 'hot_functionhot1hot2hot3hot4coldnone1none2none3{{.*}}'
 
 ; COMBINED:       <GLOBALVAL_SUMMARY_BLOCK
 ; COMBINED-NEXT:    <VERSION

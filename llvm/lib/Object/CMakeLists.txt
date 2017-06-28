@@ -27,4 +27,5 @@ add_llvm_library(LLVMObject
 
   DEPENDS
   intrinsics_gen
+  llvm_vcsrevision_h
   )

@@ -161,8 +161,8 @@ static cl::opt<bool>
               cl::desc("Run NewGVN instead of GVN"));
 
 static cl::opt<bool> EnableEarlyCSEMemSSA(
-    "enable-npm-earlycse-memssa", cl::init(false), cl::Hidden,
-    cl::desc("Enable the EarlyCSE w/ MemorySSA pass for the new PM (default = off)"));
+    "enable-npm-earlycse-memssa", cl::init(true), cl::Hidden,
+    cl::desc("Enable the EarlyCSE w/ MemorySSA pass for the new PM (default = on)"));
 
 static cl::opt<bool> EnableGVNHoist(
     "enable-npm-gvn-hoist", cl::init(false), cl::Hidden,
