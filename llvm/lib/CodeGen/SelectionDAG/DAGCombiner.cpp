@@ -8210,18 +8210,20 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
   if (N0.getOpcode() == ISD::SHL && N0.hasOneUse() &&
       (!LegalOperations || TLI.isOperationLegalOrCustom(ISD::SHL, VT)) &&
       TLI.isTypeDesirableForOp(ISD::SHL, VT)) {
-    if (const ConstantSDNode *CAmt = isConstOrConstSplat(N0.getOperand(1))) {
-      uint64_t Amt = CAmt->getZExtValue();
-      unsigned Size = VT.getScalarSizeInBits();
+    SDValue Amt = N0.getOperand(1);
+    KnownBits Known;
+    DAG.computeKnownBits(Amt, Known);
+    unsigned Size = VT.getScalarSizeInBits();
+    if (Known.getBitWidth() - Known.countMinLeadingZeros() <= Log2_32(Size)) {
+      SDLoc SL(N);
+      EVT AmtVT = TLI.getShiftAmountTy(VT, DAG.getDataLayout());
 
-      if (Amt < Size) {
-        SDLoc SL(N);
-        EVT AmtVT = TLI.getShiftAmountTy(VT, DAG.getDataLayout());
-
-        SDValue Trunc = DAG.getNode(ISD::TRUNCATE, SL, VT, N0.getOperand(0));
-        return DAG.getNode(ISD::SHL, SL, VT, Trunc,
-                           DAG.getConstant(Amt, SL, AmtVT));
+      SDValue Trunc = DAG.getNode(ISD::TRUNCATE, SL, VT, N0.getOperand(0));
+      if (AmtVT != Amt.getValueType()) {
+        Amt = DAG.getZExtOrTrunc(Amt, SL, AmtVT);
+        AddToWorklist(Amt.getNode());
       }
+      return DAG.getNode(ISD::SHL, SL, VT, Trunc, Amt);
     }
   }
 
@@ -9748,6 +9750,52 @@ SDValue DAGCombiner::visitFMUL(SDNode *N) {
                            GetNegatedExpression(N0, DAG, LegalOperations),
                            GetNegatedExpression(N1, DAG, LegalOperations),
                            Flags);
+    }
+  }
+
+  // fold (fmul X, (select (fcmp X > 0.0), -1.0, 1.0)) -> (fneg (fabs X))
+  // fold (fmul X, (select (fcmp X > 0.0), 1.0, -1.0)) -> (fabs X)
+  if (Flags.hasNoNaNs() && Flags.hasNoSignedZeros() &&
+      (N0.getOpcode() == ISD::SELECT || N1.getOpcode() == ISD::SELECT) &&
+      TLI.isOperationLegal(ISD::FABS, VT)) {
+    SDValue Select = N0, X = N1;
+    if (Select.getOpcode() != ISD::SELECT)
+      std::swap(Select, X);
+
+    SDValue Cond = Select.getOperand(0);
+    auto TrueOpnd  = dyn_cast<ConstantFPSDNode>(Select.getOperand(1));
+    auto FalseOpnd = dyn_cast<ConstantFPSDNode>(Select.getOperand(2));
+
+    if (TrueOpnd && FalseOpnd &&
+        Cond.getOpcode() == ISD::SETCC && Cond.getOperand(0) == X &&
+        isa<ConstantFPSDNode>(Cond.getOperand(1)) &&
+        cast<ConstantFPSDNode>(Cond.getOperand(1))->isExactlyValue(0.0)) {
+      ISD::CondCode CC = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
+      switch (CC) {
+      default: break;
+      case ISD::SETOLT:
+      case ISD::SETULT:
+      case ISD::SETOLE:
+      case ISD::SETULE:
+      case ISD::SETLT:
+      case ISD::SETLE:
+        std::swap(TrueOpnd, FalseOpnd);
+        // Fall through
+      case ISD::SETOGT:
+      case ISD::SETUGT:
+      case ISD::SETOGE:
+      case ISD::SETUGE:
+      case ISD::SETGT:
+      case ISD::SETGE:
+        if (TrueOpnd->isExactlyValue(-1.0) && FalseOpnd->isExactlyValue(1.0) &&
+            TLI.isOperationLegal(ISD::FNEG, VT))
+          return DAG.getNode(ISD::FNEG, DL, VT,
+                   DAG.getNode(ISD::FABS, DL, VT, X));
+        if (TrueOpnd->isExactlyValue(1.0) && FalseOpnd->isExactlyValue(-1.0))
+          return DAG.getNode(ISD::FABS, DL, VT, X);
+
+        break;
+      }
     }
   }
 

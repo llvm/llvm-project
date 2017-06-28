@@ -3294,13 +3294,15 @@ def warn_iboutletcollection_property_assign : Warning<
   "IBOutletCollection properties should be copy/strong and not assign">,
   InGroup<ObjCInvalidIBOutletProperty>;
   
-def err_attribute_overloadable_missing : Error<
-  "%select{overloaded function|redeclaration of}0 %1 must have the "
-  "'overloadable' attribute">;
+def err_attribute_overloadable_mismatch : Error<
+  "redeclaration of %0 must %select{not |}1have the 'overloadable' attribute">;
 def note_attribute_overloadable_prev_overload : Note<
-  "previous overload of function is here">;
+  "previous %select{unmarked |}0overload of function is here">;
 def err_attribute_overloadable_no_prototype : Error<
   "'overloadable' function %0 must have a prototype">;
+def err_attribute_overloadable_multiple_unmarked_overloads : Error<
+  "at most one overload for a given name may lack the 'overloadable' "
+  "attribute">;
 def warn_ns_attribute_wrong_return_type : Warning<
   "%0 attribute only applies to %select{functions|methods|properties}1 that "
   "return %select{an Objective-C object|a pointer|a non-retainable pointer}2">,

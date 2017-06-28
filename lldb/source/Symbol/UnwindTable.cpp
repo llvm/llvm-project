@@ -52,14 +52,14 @@ void UnwindTable::Initialize() {
 
   SectionSP sect = sl->FindSectionByType(eSectionTypeEHFrame, true);
   if (sect.get()) {
-    m_eh_frame_up.reset(new DWARFCallFrameInfo(m_object_file, sect,
-                                               eRegisterKindEHFrame, true));
+    m_eh_frame_up.reset(
+        new DWARFCallFrameInfo(m_object_file, sect, DWARFCallFrameInfo::EH));
   }
 
   sect = sl->FindSectionByType(eSectionTypeDWARFDebugFrame, true);
   if (sect) {
     m_debug_frame_up.reset(
-        new DWARFCallFrameInfo(m_object_file, sect, eRegisterKindDWARF, false));
+        new DWARFCallFrameInfo(m_object_file, sect, DWARFCallFrameInfo::DWARF));
   }
 
   sect = sl->FindSectionByType(eSectionTypeCompactUnwind, true);

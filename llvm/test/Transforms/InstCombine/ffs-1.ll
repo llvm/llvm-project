@@ -150,8 +150,8 @@ define i32 @test_simplify13(i32 %x) {
 ; ALL-LABEL: @test_simplify13(
 ; ALL-NEXT:    [[CTTZ:%.*]] = call i32 @llvm.cttz.i32(i32 %x, i1 true)
 ; ALL-NEXT:    [[TMP1:%.*]] = add nuw nsw i32 [[CTTZ]], 1
-; ALL-NEXT:    [[TMP2:%.*]] = icmp ne i32 %x, 0
-; ALL-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i32 [[TMP1]], i32 0
+; ALL-NEXT:    [[TMP2:%.*]] = icmp eq i32 %x, 0
+; ALL-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i32 0, i32 [[TMP1]]
 ; ALL-NEXT:    ret i32 [[TMP3]]
 ;
   %ret = call i32 @ffs(i32 %x)
@@ -166,8 +166,8 @@ define i32 @test_simplify14(i32 %x) {
 ; TARGET-LABEL: @test_simplify14(
 ; TARGET-NEXT:    [[CTTZ:%.*]] = call i32 @llvm.cttz.i32(i32 %x, i1 true)
 ; TARGET-NEXT:    [[TMP1:%.*]] = add nuw nsw i32 [[CTTZ]], 1
-; TARGET-NEXT:    [[TMP2:%.*]] = icmp ne i32 %x, 0
-; TARGET-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i32 [[TMP1]], i32 0
+; TARGET-NEXT:    [[TMP2:%.*]] = icmp eq i32 %x, 0
+; TARGET-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i32 0, i32 [[TMP1]]
 ; TARGET-NEXT:    ret i32 [[TMP3]]
 ;
   %ret = call i32 @ffsl(i32 %x)
@@ -183,8 +183,8 @@ define i32 @test_simplify15(i64 %x) {
 ; TARGET-NEXT:    [[CTTZ:%.*]] = call i64 @llvm.cttz.i64(i64 %x, i1 true)
 ; TARGET-NEXT:    [[TMP1:%.*]] = add nuw nsw i64 [[CTTZ]], 1
 ; TARGET-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i32
-; TARGET-NEXT:    [[TMP3:%.*]] = icmp ne i64 %x, 0
-; TARGET-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i32 [[TMP2]], i32 0
+; TARGET-NEXT:    [[TMP3:%.*]] = icmp eq i64 %x, 0
+; TARGET-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i32 0, i32 [[TMP2]]
 ; TARGET-NEXT:    ret i32 [[TMP4]]
 ;
   %ret = call i32 @ffsll(i64 %x)

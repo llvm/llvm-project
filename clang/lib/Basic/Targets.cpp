@@ -6550,6 +6550,43 @@ public:
   }
 };
 
+class MicrosoftARM64TargetInfo
+    : public WindowsTargetInfo<AArch64leTargetInfo> {
+  const llvm::Triple Triple;
+
+public:
+  MicrosoftARM64TargetInfo(const llvm::Triple &Triple,
+                             const TargetOptions &Opts)
+      : WindowsTargetInfo<AArch64leTargetInfo>(Triple, Opts), Triple(Triple) {
+    WCharType = UnsignedShort;
+    SizeType = UnsignedLongLong;
+    TheCXXABI.set(TargetCXXABI::Microsoft);
+  }
+
+  void setDataLayout() override {
+    resetDataLayout("e-m:w-i64:64-i128:128-n32:64-S128");
+  }
+
+  void getVisualStudioDefines(const LangOptions &Opts,
+                              MacroBuilder &Builder) const {
+    WindowsTargetInfo<AArch64leTargetInfo>::getVisualStudioDefines(Opts,
+                                                                   Builder);
+    Builder.defineMacro("_WIN32", "1");
+    Builder.defineMacro("_WIN64", "1");
+    Builder.defineMacro("_M_ARM64", "1");
+  }
+
+  void getTargetDefines(const LangOptions &Opts,
+                        MacroBuilder &Builder) const override {
+    WindowsTargetInfo::getTargetDefines(Opts, Builder);
+    getVisualStudioDefines(Opts, Builder);
+  }
+
+  BuiltinVaListKind getBuiltinVaListKind() const override {
+    return TargetInfo::CharPtrBuiltinVaList;
+  }
+};
+
 class AArch64beTargetInfo : public AArch64TargetInfo {
   void setDataLayout() override {
     assert(!getTriple().isOSBinFormatMachO());
@@ -9406,6 +9443,8 @@ static TargetInfo *AllocateTarget(const llvm::Triple &Triple,
       return new NetBSDTargetInfo<AArch64leTargetInfo>(Triple, Opts);
     case llvm::Triple::OpenBSD:
       return new OpenBSDTargetInfo<AArch64leTargetInfo>(Triple, Opts);
+    case llvm::Triple::Win32:
+      return new MicrosoftARM64TargetInfo(Triple, Opts);
     default:
       return new AArch64leTargetInfo(Triple, Opts);
     }

@@ -227,8 +227,8 @@ Instruction *InstCombiner::visitMul(BinaryOperator &I) {
         if (I.hasNoUnsignedWrap())
           Shl->setHasNoUnsignedWrap();
         if (I.hasNoSignedWrap()) {
-          uint64_t V;
-          if (match(NewCst, m_ConstantInt(V)) && V != Width - 1)
+          const APInt *V;
+          if (match(NewCst, m_APInt(V)) && *V != Width - 1)
             Shl->setHasNoSignedWrap();
         }
 

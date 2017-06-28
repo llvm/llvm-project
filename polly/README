@@ -10,4 +10,3 @@ optimal loop structure. These transformations can be used to do constant
 propagation through arrays, remove dead loop iterations, optimize loops for
 cache locality, optimize arrays, apply advanced automatic parallelization, drive
 vectorization, or they can be used to do software pipelining.
-

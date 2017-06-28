@@ -33,6 +33,8 @@ Sections:
         Index:           0x00000002
   - Type:            CUSTOM
     Name:            linking
+    DataSize:        0
+    DataAlignment:   2
     SymbolInfo:
       - Name:            weak_global_func
         Flags:           1

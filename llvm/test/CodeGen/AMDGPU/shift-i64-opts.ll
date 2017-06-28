@@ -243,3 +243,77 @@ define amdgpu_kernel void @trunc_shl_31_i32_i64_multi_use(i32 addrspace(1)* %out
   store volatile i64 %shl, i64 addrspace(1)* %in
   ret void
 }
+
+; GCN-LABEL: {{^}}trunc_shl_and31:
+; GCN:     s_and_b32 s[[AMT:[0-9]+]], s{{[0-9]+}}, 31
+; GCN:     v_lshlrev_b32_e32 v{{[0-9]+}}, s[[AMT]], v{{[0-9]+}}
+; GCN-NOT: v_lshl_b64
+; GCN-NOT: v_lshlrev_b64
+define amdgpu_kernel void @trunc_shl_and31(i64 addrspace(1)* nocapture readonly %arg, i32 addrspace(1)* nocapture %arg1, i32 %arg2) {
+bb:
+  %tmp = load i64, i64 addrspace(1)* %arg, align 8
+  %tmp3 = and i32 %arg2, 31
+  %tmp4 = zext i32 %tmp3 to i64
+  %tmp5 = shl i64 %tmp, %tmp4
+  %tmp6 = trunc i64 %tmp5 to i32
+  store i32 %tmp6, i32 addrspace(1)* %arg1, align 4
+  ret void
+}
+
+; GCN-LABEL: {{^}}trunc_shl_and30:
+; GCN:     s_and_b32 s[[AMT:[0-9]+]], s{{[0-9]+}}, 30
+; GCN:     v_lshlrev_b32_e32 v{{[0-9]+}}, s[[AMT]], v{{[0-9]+}}
+; GCN-NOT: v_lshl_b64
+; GCN-NOT: v_lshlrev_b64
+define amdgpu_kernel void @trunc_shl_and30(i64 addrspace(1)* nocapture readonly %arg, i32 addrspace(1)* nocapture %arg1, i32 %arg2) {
+bb:
+  %tmp = load i64, i64 addrspace(1)* %arg, align 8
+  %tmp3 = and i32 %arg2, 30
+  %tmp4 = zext i32 %tmp3 to i64
+  %tmp5 = shl i64 %tmp, %tmp4
+  %tmp6 = trunc i64 %tmp5 to i32
+  store i32 %tmp6, i32 addrspace(1)* %arg1, align 4
+  ret void
+}
+
+; GCN-LABEL: {{^}}trunc_shl_wrong_and63:
+; Negative test, wrong constant
+; GCN: v_lshl_b64
+define amdgpu_kernel void @trunc_shl_wrong_and63(i64 addrspace(1)* nocapture readonly %arg, i32 addrspace(1)* nocapture %arg1, i32 %arg2) {
+bb:
+  %tmp = load i64, i64 addrspace(1)* %arg, align 8
+  %tmp3 = and i32 %arg2, 63
+  %tmp4 = zext i32 %tmp3 to i64
+  %tmp5 = shl i64 %tmp, %tmp4
+  %tmp6 = trunc i64 %tmp5 to i32
+  store i32 %tmp6, i32 addrspace(1)* %arg1, align 4
+  ret void
+}
+
+; GCN-LABEL: {{^}}trunc_shl_no_and:
+; Negative test, shift can be full 64 bit
+; GCN: v_lshl_b64
+define amdgpu_kernel void @trunc_shl_no_and(i64 addrspace(1)* nocapture readonly %arg, i32 addrspace(1)* nocapture %arg1, i32 %arg2) {
+bb:
+  %tmp = load i64, i64 addrspace(1)* %arg, align 8
+  %tmp4 = zext i32 %arg2 to i64
+  %tmp5 = shl i64 %tmp, %tmp4
+  %tmp6 = trunc i64 %tmp5 to i32
+  store i32 %tmp6, i32 addrspace(1)* %arg1, align 4
+  ret void
+}
+
+; GCN-LABEL: {{^}}trunc_shl_vec_vec:
+; GCN-DAG: v_lshlrev_b32_e32 v{{[0-9]+}}, 3, v{{[0-9]+}}
+; GCN-DAG: v_lshlrev_b32_e32 v{{[0-9]+}}, 4, v{{[0-9]+}}
+; GCN-DAG: v_lshlrev_b32_e32 v{{[0-9]+}}, 5, v{{[0-9]+}}
+; GCN-DAG: v_lshlrev_b32_e32 v{{[0-9]+}}, 6, v{{[0-9]+}}
+; GCN-NOT: v_lshl_b64
+; GCN-NOT: v_lshlrev_b64
+define amdgpu_kernel void @trunc_shl_vec_vec(<4 x i64> addrspace(1)* %arg) {
+bb:
+  %v = load <4 x i64>, <4 x i64> addrspace(1)* %arg, align 32
+  %shl = shl <4 x i64> %v, <i64 3, i64 4, i64 5, i64 6>
+  store <4 x i64> %shl, <4 x i64> addrspace(1)* %arg, align 32
+  ret void
+}

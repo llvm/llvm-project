@@ -201,6 +201,11 @@ void PrintDomTree(const DomTreeNodeBase<NodeT> *N, raw_ostream &O,
     PrintDomTree<NodeT>(*I, O, Lev + 1);
 }
 
+namespace DomTreeBuilder {
+template <class NodeT>
+struct SemiNCAInfo;
+}  // namespace DomTreeBuilder
+
 // The calculate routine is provided in a separate header but referenced here.
 template <class FuncT, class N>
 void Calculate(DominatorTreeBaseByGraphTraits<GraphTraits<N>> &DT, FuncT &F);
@@ -228,9 +233,6 @@ template <class NodeT> class DominatorTreeBase : public DominatorBase<NodeT> {
   /// assignable and destroyable state, but otherwise invalid.
   void wipe() {
     DomTreeNodes.clear();
-    IDoms.clear();
-    Vertex.clear();
-    Info.clear();
     RootNode = nullptr;
   }
 
@@ -242,29 +244,10 @@ protected:
 
   mutable bool DFSInfoValid = false;
   mutable unsigned int SlowQueries = 0;
-  // Information record used during immediate dominators computation.
-  struct InfoRec {
-    unsigned DFSNum = 0;
-    unsigned Parent = 0;
-    unsigned Semi = 0;
-    NodeT *Label = nullptr;
-
-    InfoRec() = default;
-  };
-
-  DenseMap<NodeT *, NodeT *> IDoms;
-
-  // Vertex - Map the DFS number to the NodeT*
-  std::vector<NodeT *> Vertex;
-
-  // Info - Collection of information used during the computation of idoms.
-  DenseMap<NodeT *, InfoRec> Info;
 
   void reset() {
     DomTreeNodes.clear();
-    IDoms.clear();
     this->Roots.clear();
-    Vertex.clear();
     RootNode = nullptr;
     DFSInfoValid = false;
     SlowQueries = 0;
@@ -338,8 +321,7 @@ public:
         DomTreeNodes(std::move(Arg.DomTreeNodes)),
         RootNode(std::move(Arg.RootNode)),
         DFSInfoValid(std::move(Arg.DFSInfoValid)),
-        SlowQueries(std::move(Arg.SlowQueries)), IDoms(std::move(Arg.IDoms)),
-        Vertex(std::move(Arg.Vertex)), Info(std::move(Arg.Info)) {
+        SlowQueries(std::move(Arg.SlowQueries)) {
     Arg.wipe();
   }
 
@@ -350,9 +332,6 @@ public:
     RootNode = std::move(RHS.RootNode);
     DFSInfoValid = std::move(RHS.DFSInfoValid);
     SlowQueries = std::move(RHS.SlowQueries);
-    IDoms = std::move(RHS.IDoms);
-    Vertex = std::move(RHS.Vertex);
-    Info = std::move(RHS.Info);
     RHS.wipe();
     return *this;
   }
@@ -674,41 +653,12 @@ public:
   }
 
 protected:
-  template <class GraphT>
-  friend typename GraphT::NodeRef
-  Eval(DominatorTreeBaseByGraphTraits<GraphT> &DT, typename GraphT::NodeRef V,
-       unsigned LastLinked);
+ friend struct DomTreeBuilder::SemiNCAInfo<NodeT>;
+ using SNCAInfoTy = DomTreeBuilder::SemiNCAInfo<NodeT>;
 
-  template <class GraphT>
-  friend unsigned ReverseDFSPass(DominatorTreeBaseByGraphTraits<GraphT> &DT,
-                                 typename GraphT::NodeRef V, unsigned N);
-
-  template <class GraphT>
-  friend unsigned DFSPass(DominatorTreeBaseByGraphTraits<GraphT> &DT,
-                          typename GraphT::NodeRef V, unsigned N);
-
-  template <class FuncT, class N>
-  friend void Calculate(DominatorTreeBaseByGraphTraits<GraphTraits<N>> &DT,
-                        FuncT &F);
-
-  DomTreeNodeBase<NodeT> *getNodeForBlock(NodeT *BB) {
-    if (DomTreeNodeBase<NodeT> *Node = getNode(BB))
-      return Node;
-
-    // Haven't calculated this node yet?  Get or calculate the node for the
-    // immediate dominator.
-    NodeT *IDom = getIDom(BB);
-
-    assert(IDom || DomTreeNodes[nullptr]);
-    DomTreeNodeBase<NodeT> *IDomNode = getNodeForBlock(IDom);
-
-    // Add a new tree node for this NodeT, and link it as a child of
-    // IDomNode
-    return (DomTreeNodes[BB] = IDomNode->addChild(
-                llvm::make_unique<DomTreeNodeBase<NodeT>>(BB, IDomNode))).get();
-  }
-
-  NodeT *getIDom(NodeT *BB) const { return IDoms.lookup(BB); }
+ template <class FuncT, class NodeTy>
+ friend void Calculate(DominatorTreeBaseByGraphTraits<GraphTraits<NodeTy>> &DT,
+                       FuncT &F);
 
   void addRoot(NodeT *BB) { this->Roots.push_back(BB); }
 
@@ -767,7 +717,6 @@ public:
   template <class FT> void recalculate(FT &F) {
     using TraitsTy = GraphTraits<FT *>;
     reset();
-    Vertex.push_back(nullptr);
 
     if (!this->IsPostDominators) {
       // Initialize root

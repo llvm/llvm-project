@@ -125,6 +125,7 @@ static const char *GetBlockName(unsigned BlockID,
                                       return "FULL_LTO_GLOBALVAL_SUMMARY_BLOCK";
   case bitc::MODULE_STRTAB_BLOCK_ID:       return "MODULE_STRTAB_BLOCK";
   case bitc::STRTAB_BLOCK_ID:              return "STRTAB_BLOCK";
+  case bitc::SYMTAB_BLOCK_ID:              return "SYMTAB_BLOCK";
   }
 }
 
@@ -392,6 +393,11 @@ static const char *GetCodeName(unsigned CodeID, unsigned BlockID,
     switch(CodeID) {
     default: return nullptr;
     case bitc::STRTAB_BLOB: return "BLOB";
+    }
+  case bitc::SYMTAB_BLOCK_ID:
+    switch(CodeID) {
+    default: return nullptr;
+    case bitc::SYMTAB_BLOB: return "BLOB";
     }
   }
 #undef STRINGIFY_CODE

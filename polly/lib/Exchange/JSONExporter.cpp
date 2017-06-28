@@ -694,17 +694,32 @@ bool JSONImporter::importArrays(Scop &S, Json::Value &JScop) {
   }
 
   for (; ArrayIdx < Arrays.size(); ArrayIdx++) {
-    auto *ElementType = parseTextType(Arrays[ArrayIdx]["type"].asCString(),
-                                      S.getSE()->getContext());
+    auto &Array = Arrays[ArrayIdx];
+    auto *ElementType =
+        parseTextType(Array["type"].asCString(), S.getSE()->getContext());
     if (!ElementType) {
       errs() << "Error while parsing element type for new array.\n";
       return false;
     }
     std::vector<unsigned> DimSizes;
-    for (unsigned i = 0; i < Arrays[ArrayIdx]["sizes"].size(); i++)
-      DimSizes.push_back(std::stoi(Arrays[ArrayIdx]["sizes"][i].asCString()));
-    S.createScopArrayInfo(ElementType, Arrays[ArrayIdx]["name"].asCString(),
-                          DimSizes);
+    for (unsigned i = 0; i < Array["sizes"].size(); i++) {
+      auto Size = std::stoi(Array["sizes"][i].asCString());
+
+      // Check if the size if positive.
+      if (Size <= 0) {
+        errs() << "The size at index " << i << " is =< 0.\n";
+        return false;
+      }
+
+      DimSizes.push_back(Size);
+    }
+
+    auto NewSAI =
+        S.createScopArrayInfo(ElementType, Array["name"].asCString(), DimSizes);
+
+    if (Array.isMember("allocation")) {
+      NewSAI->setIsOnHeap(Array["allocation"].asString() == "heap");
+    }
   }
 
   return true;

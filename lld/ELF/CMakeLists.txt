@@ -15,6 +15,7 @@ add_lld_library(lldELF
   Arch/MipsArchTree.cpp
   Arch/PPC.cpp
   Arch/PPC64.cpp
+  Arch/SPARCV9.cpp
   Arch/X86.cpp
   Arch/X86_64.cpp
   Driver.cpp

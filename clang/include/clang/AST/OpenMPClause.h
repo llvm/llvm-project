@@ -20,6 +20,7 @@
 #include "clang/AST/Stmt.h"
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/SourceLocation.h"
+#include "llvm/ADT/MapVector.h"
 
 namespace clang {
 
@@ -3001,7 +3002,7 @@ protected:
     // Organize the components by declaration and retrieve the original
     // expression. Original expressions are always the first component of the
     // mappable component list.
-    llvm::DenseMap<ValueDecl *, SmallVector<MappableExprComponentListRef, 8>>
+    llvm::MapVector<ValueDecl *, SmallVector<MappableExprComponentListRef, 8>>
         ComponentListMap;
     {
       auto CI = ComponentLists.begin();

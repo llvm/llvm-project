@@ -131,7 +131,7 @@ static const unsigned NoThreshold = UINT_MAX;
 /// Gather the various unrolling parameters based on the defaults, compiler
 /// flags, TTI overrides and user specified parameters.
 static TargetTransformInfo::UnrollingPreferences gatherUnrollingPreferences(
-    Loop *L, const TargetTransformInfo &TTI, int OptLevel,
+    Loop *L, ScalarEvolution &SE, const TargetTransformInfo &TTI, int OptLevel,
     Optional<unsigned> UserThreshold, Optional<unsigned> UserCount,
     Optional<bool> UserAllowPartial, Optional<bool> UserRuntime,
     Optional<bool> UserUpperBound) {
@@ -158,7 +158,7 @@ static TargetTransformInfo::UnrollingPreferences gatherUnrollingPreferences(
   UP.AllowPeeling = true;
 
   // Override with any target specific settings
-  TTI.getUnrollingPreferences(L, UP);
+  TTI.getUnrollingPreferences(L, SE, UP);
 
   // Apply size attributes
   if (L->getHeader()->getParent()->optForSize()) {
@@ -699,7 +699,7 @@ static uint64_t getUnrolledLoopSize(
 // Calculates unroll count and writes it to UP.Count.
 static bool computeUnrollCount(
     Loop *L, const TargetTransformInfo &TTI, DominatorTree &DT, LoopInfo *LI,
-    ScalarEvolution *SE, OptimizationRemarkEmitter *ORE, unsigned &TripCount,
+    ScalarEvolution &SE, OptimizationRemarkEmitter *ORE, unsigned &TripCount,
     unsigned MaxTripCount, unsigned &TripMultiple, unsigned LoopSize,
     TargetTransformInfo::UnrollingPreferences &UP, bool &UseUpperBound) {
   // Check for explicit Count.
@@ -770,7 +770,7 @@ static bool computeUnrollCount(
       // helps to remove a significant number of instructions.
       // To check that, run additional analysis on the loop.
       if (Optional<EstimatedUnrollCost> Cost = analyzeLoopUnrollCost(
-              L, FullUnrollTripCount, DT, *SE, TTI,
+              L, FullUnrollTripCount, DT, SE, TTI,
               UP.Threshold * UP.MaxPercentThresholdBoost / 100)) {
         unsigned Boost =
             getFullUnrollBoostingFactor(*Cost, UP.MaxPercentThresholdBoost);
@@ -836,6 +836,8 @@ static bool computeUnrollCount(
     } else {
       UP.Count = TripCount;
     }
+    if (UP.Count > UP.MaxCount)
+      UP.Count = UP.MaxCount;
     if ((PragmaFullUnroll || PragmaEnableUnroll) && TripCount &&
         UP.Count != TripCount)
       ORE->emit(
@@ -926,7 +928,7 @@ static bool computeUnrollCount(
 }
 
 static bool tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI,
-                            ScalarEvolution *SE, const TargetTransformInfo &TTI,
+                            ScalarEvolution &SE, const TargetTransformInfo &TTI,
                             AssumptionCache &AC, OptimizationRemarkEmitter &ORE,
                             bool PreserveLCSSA, int OptLevel,
                             Optional<unsigned> ProvidedCount,
@@ -948,8 +950,8 @@ static bool tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI,
   bool NotDuplicatable;
   bool Convergent;
   TargetTransformInfo::UnrollingPreferences UP = gatherUnrollingPreferences(
-      L, TTI, OptLevel, ProvidedThreshold, ProvidedCount, ProvidedAllowPartial,
-      ProvidedRuntime, ProvidedUpperBound);
+      L, SE, TTI, OptLevel, ProvidedThreshold, ProvidedCount,
+      ProvidedAllowPartial, ProvidedRuntime, ProvidedUpperBound);
   // Exit early if unrolling is disabled.
   if (UP.Threshold == 0 && (!UP.Partial || UP.PartialThreshold == 0))
     return false;
@@ -977,8 +979,8 @@ static bool tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI,
   if (!ExitingBlock || !L->isLoopExiting(ExitingBlock))
     ExitingBlock = L->getExitingBlock();
   if (ExitingBlock) {
-    TripCount = SE->getSmallConstantTripCount(L, ExitingBlock);
-    TripMultiple = SE->getSmallConstantTripMultiple(L, ExitingBlock);
+    TripCount = SE.getSmallConstantTripCount(L, ExitingBlock);
+    TripMultiple = SE.getSmallConstantTripMultiple(L, ExitingBlock);
   }
 
   // If the loop contains a convergent operation, the prelude we'd add
@@ -1000,8 +1002,8 @@ static bool tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI,
   // count.
   bool MaxOrZero = false;
   if (!TripCount) {
-    MaxTripCount = SE->getSmallConstantMaxTripCount(L);
-    MaxOrZero = SE->isBackedgeTakenCountMaxOrZero(L);
+    MaxTripCount = SE.getSmallConstantMaxTripCount(L);
+    MaxOrZero = SE.isBackedgeTakenCountMaxOrZero(L);
     // We can unroll by the upper bound amount if it's generally allowed or if
     // we know that the loop is executed either the upper bound or zero times.
     // (MaxOrZero unrolling keeps only the first loop test, so the number of
@@ -1030,7 +1032,7 @@ static bool tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI,
   // Unroll the loop.
   if (!UnrollLoop(L, UP.Count, TripCount, UP.Force, UP.Runtime,
                   UP.AllowExpensiveTripCount, UseUpperBound, MaxOrZero,
-                  TripMultiple, UP.PeelCount, LI, SE, &DT, &AC, &ORE,
+                  TripMultiple, UP.PeelCount, LI, &SE, &DT, &AC, &ORE,
                   PreserveLCSSA))
     return false;
 
@@ -1073,7 +1075,7 @@ public:
 
     auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
     LoopInfo *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-    ScalarEvolution *SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
+    ScalarEvolution &SE = getAnalysis<ScalarEvolutionWrapperPass>().getSE();
     const TargetTransformInfo &TTI =
         getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
     auto &AC = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
@@ -1157,7 +1159,7 @@ PreservedAnalyses LoopUnrollPass::run(Loop &L, LoopAnalysisManager &AM,
   if (!AllowPartialUnrolling)
     AllowPartialParam = RuntimeParam = UpperBoundParam = false;
   bool Changed = tryToUnrollLoop(
-      &L, AR.DT, &AR.LI, &AR.SE, AR.TTI, AR.AC, *ORE,
+      &L, AR.DT, &AR.LI, AR.SE, AR.TTI, AR.AC, *ORE,
       /*PreserveLCSSA*/ true, OptLevel, /*Count*/ None,
       /*Threshold*/ None, AllowPartialParam, RuntimeParam, UpperBoundParam);
   if (!Changed)

@@ -66,6 +66,12 @@ static cl::opt<int>
                          cl::ZeroOrMore,
                          cl::desc("Threshold for hot callsites "));
 
+static cl::opt<int> ColdCallSiteRelFreq(
+    "cold-callsite-rel-freq", cl::Hidden, cl::init(2), cl::ZeroOrMore,
+    cl::desc("Maxmimum block frequency, expressed as a percentage of caller's "
+             "entry frequency, for a callsite to be cold in the absence of "
+             "profile information."));
+
 namespace {
 
 class CallAnalyzer : public InstVisitor<CallAnalyzer, bool> {
@@ -171,6 +177,9 @@ class CallAnalyzer : public InstVisitor<CallAnalyzer, bool> {
 
   /// Return true if size growth is allowed when inlining the callee at CS.
   bool allowSizeGrowth(CallSite CS);
+
+  /// Return true if \p CS is a cold callsite.
+  bool isColdCallSite(CallSite CS, BlockFrequencyInfo *CallerBFI);
 
   // Custom analysis routines.
   bool analyzeBlock(BasicBlock *BB, SmallPtrSetImpl<const Value *> &EphValues);
@@ -631,6 +640,26 @@ bool CallAnalyzer::allowSizeGrowth(CallSite CS) {
   return true;
 }
 
+bool CallAnalyzer::isColdCallSite(CallSite CS, BlockFrequencyInfo *CallerBFI) {
+  // If global profile summary is available, then callsite's coldness is
+  // determined based on that.
+  if (PSI->hasProfileSummary())
+    return PSI->isColdCallSite(CS, CallerBFI);
+  if (!CallerBFI)
+    return false;
+
+  // In the absence of global profile summary, determine if the callsite is cold
+  // relative to caller's entry. We could potentially cache the computation of
+  // scaled entry frequency, but the added complexity is not worth it unless
+  // this scaling shows up high in the profiles.
+  const BranchProbability ColdProb(ColdCallSiteRelFreq, 100);
+  auto CallSiteBB = CS.getInstruction()->getParent();
+  auto CallSiteFreq = CallerBFI->getBlockFreq(CallSiteBB);
+  auto CallerEntryFreq =
+      CallerBFI->getBlockFreq(&(CS.getCaller()->getEntryBlock()));
+  return CallSiteFreq < CallerEntryFreq * ColdProb;
+}
+
 void CallAnalyzer::updateThreshold(CallSite CS, Function &Callee) {
   // If no size growth is allowed for this inlining, set Threshold to 0.
   if (!allowSizeGrowth(CS)) {
@@ -676,7 +705,7 @@ void CallAnalyzer::updateThreshold(CallSite CS, Function &Callee) {
         if (PSI->isHotCallSite(CS, CallerBFI)) {
           DEBUG(dbgs() << "Hot callsite.\n");
           Threshold = Params.HotCallSiteThreshold.getValue();
-        } else if (PSI->isColdCallSite(CS, CallerBFI)) {
+        } else if (isColdCallSite(CS, CallerBFI)) {
           DEBUG(dbgs() << "Cold callsite.\n");
           Threshold = MinIfValid(Threshold, Params.ColdCallSiteThreshold);
         }
@@ -1010,7 +1039,7 @@ bool CallAnalyzer::visitSwitchInst(SwitchInst &SI) {
     if (isa<ConstantInt>(V))
       return true;
 
-  // Assume the most general case where the swith is lowered into
+  // Assume the most general case where the switch is lowered into
   // either a jump table, bit test, or a balanced binary tree consisting of
   // case clusters without merging adjacent clusters with the same
   // destination. We do not consider the switches that are lowered with a mix

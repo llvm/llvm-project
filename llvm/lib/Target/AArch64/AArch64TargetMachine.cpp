@@ -167,6 +167,8 @@ extern "C" void LLVMInitializeAArch64Target() {
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
   if (TT.isOSBinFormatMachO())
     return llvm::make_unique<AArch64_MachoTargetObjectFile>();
+  if (TT.isOSBinFormatCOFF())
+    return llvm::make_unique<AArch64_COFFTargetObjectFile>();
 
   return llvm::make_unique<AArch64_ELFTargetObjectFile>();
 }
@@ -179,6 +181,8 @@ static std::string computeDataLayout(const Triple &TT,
     return "e-m:e-p:32:32-i8:8-i16:16-i64:64-S128";
   if (TT.isOSBinFormatMachO())
     return "e-m:o-i64:64-i128:128-n32:64-S128";
+  if (TT.isOSBinFormatCOFF())
+    return "e-m:w-i64:64-i128:128-n32:64-S128";
   if (LittleEndian)
     return "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128";
   return "E-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128";

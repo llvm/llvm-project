@@ -1327,15 +1327,17 @@ void Sema::ActOnExitFunctionContext() {
 /// overloaded function declaration or has the "overloadable"
 /// attribute.
 static bool AllowOverloadingOfFunction(LookupResult &Previous,
-                                       ASTContext &Context) {
+                                       ASTContext &Context,
+                                       const FunctionDecl *New) {
   if (Context.getLangOpts().CPlusPlus)
     return true;
 
   if (Previous.getResultKind() == LookupResult::FoundOverloaded)
     return true;
 
-  return (Previous.getResultKind() == LookupResult::Found
-          && Previous.getFoundDecl()->hasAttr<OverloadableAttr>());
+  return Previous.getResultKind() == LookupResult::Found &&
+         (Previous.getFoundDecl()->hasAttr<OverloadableAttr>() ||
+          New->hasAttr<OverloadableAttr>());
 }
 
 /// Add this decl to the scope shadowed decl chains.
@@ -2931,6 +2933,41 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD,
         << New->getDeclName();
     notePreviousDefinition(Old, New->getLocation());
     New->dropAttr<InternalLinkageAttr>();
+  }
+
+  if (!getLangOpts().CPlusPlus) {
+    bool OldOvl = Old->hasAttr<OverloadableAttr>();
+    if (OldOvl != New->hasAttr<OverloadableAttr>() && !Old->isImplicit()) {
+      Diag(New->getLocation(), diag::err_attribute_overloadable_mismatch)
+        << New << OldOvl;
+
+      // Try our best to find a decl that actually has the overloadable
+      // attribute for the note. In most cases (e.g. programs with only one
+      // broken declaration/definition), this won't matter.
+      //
+      // FIXME: We could do this if we juggled some extra state in
+      // OverloadableAttr, rather than just removing it.
+      const Decl *DiagOld = Old;
+      if (OldOvl) {
+        auto OldIter = llvm::find_if(Old->redecls(), [](const Decl *D) {
+          const auto *A = D->getAttr<OverloadableAttr>();
+          return A && !A->isImplicit();
+        });
+        // If we've implicitly added *all* of the overloadable attrs to this
+        // chain, emitting a "previous redecl" note is pointless.
+        DiagOld = OldIter == Old->redecls_end() ? nullptr : *OldIter;
+      }
+
+      if (DiagOld)
+        Diag(DiagOld->getLocation(),
+             diag::note_attribute_overloadable_prev_overload)
+          << OldOvl;
+
+      if (OldOvl)
+        New->addAttr(OverloadableAttr::CreateImplicit(Context));
+      else
+        New->dropAttr<OverloadableAttr>();
+    }
   }
 
   // If a function is first declared with a calling convention, but is later
@@ -9179,6 +9216,7 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
 
   bool Redeclaration = false;
   NamedDecl *OldDecl = nullptr;
+  bool MayNeedOverloadableChecks = false;
 
   // Merge or overload the declaration with an existing declaration of
   // the same name, if appropriate.
@@ -9187,13 +9225,14 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
     // a declaration that requires merging. If it's an overload,
     // there's no more work to do here; we'll just add the new
     // function to the scope.
-    if (!AllowOverloadingOfFunction(Previous, Context)) {
+    if (!AllowOverloadingOfFunction(Previous, Context, NewFD)) {
       NamedDecl *Candidate = Previous.getRepresentativeDecl();
       if (shouldLinkPossiblyHiddenDecl(Candidate, NewFD)) {
         Redeclaration = true;
         OldDecl = Candidate;
       }
     } else {
+      MayNeedOverloadableChecks = true;
       switch (CheckOverload(S, NewFD, Previous, OldDecl,
                             /*NewIsUsingDecl*/ false)) {
       case Ovl_Match:
@@ -9207,18 +9246,6 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
       case Ovl_Overload:
         Redeclaration = false;
         break;
-      }
-
-      if (!getLangOpts().CPlusPlus && !NewFD->hasAttr<OverloadableAttr>()) {
-        // If a function name is overloadable in C, then every function
-        // with that name must be marked "overloadable".
-        Diag(NewFD->getLocation(), diag::err_attribute_overloadable_missing)
-          << Redeclaration << NewFD;
-        NamedDecl *OverloadedDecl =
-            Redeclaration ? OldDecl : Previous.getRepresentativeDecl();
-        Diag(OverloadedDecl->getLocation(),
-             diag::note_attribute_overloadable_prev_overload);
-        NewFD->addAttr(OverloadableAttr::CreateImplicit(Context));
       }
     }
   }
@@ -9234,15 +9261,10 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
       MergeTypeWithPrevious = false;
 
       // ... except in the presence of __attribute__((overloadable)).
-      if (OldDecl->hasAttr<OverloadableAttr>()) {
-        if (!getLangOpts().CPlusPlus && !NewFD->hasAttr<OverloadableAttr>()) {
-          Diag(NewFD->getLocation(), diag::err_attribute_overloadable_missing)
-            << Redeclaration << NewFD;
-          Diag(Previous.getFoundDecl()->getLocation(),
-               diag::note_attribute_overloadable_prev_overload);
-          NewFD->addAttr(OverloadableAttr::CreateImplicit(Context));
-        }
+      if (OldDecl->hasAttr<OverloadableAttr>() ||
+          NewFD->hasAttr<OverloadableAttr>()) {
         if (IsOverload(NewFD, cast<FunctionDecl>(OldDecl), false)) {
+          MayNeedOverloadableChecks = true;
           Redeclaration = false;
           OldDecl = nullptr;
         }
@@ -9336,6 +9358,29 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
         if (isa<CXXMethodDecl>(NewFD))
           NewFD->setAccess(OldDecl->getAccess());
       }
+    }
+  } else if (!getLangOpts().CPlusPlus && MayNeedOverloadableChecks &&
+             !NewFD->getAttr<OverloadableAttr>()) {
+    assert((Previous.empty() ||
+            llvm::any_of(Previous,
+                         [](const NamedDecl *ND) {
+                           return ND->hasAttr<OverloadableAttr>();
+                         })) &&
+           "Non-redecls shouldn't happen without overloadable present");
+
+    auto OtherUnmarkedIter = llvm::find_if(Previous, [](const NamedDecl *ND) {
+      const auto *FD = dyn_cast<FunctionDecl>(ND);
+      return FD && !FD->hasAttr<OverloadableAttr>();
+    });
+
+    if (OtherUnmarkedIter != Previous.end()) {
+      Diag(NewFD->getLocation(),
+           diag::err_attribute_overloadable_multiple_unmarked_overloads);
+      Diag((*OtherUnmarkedIter)->getLocation(),
+           diag::note_attribute_overloadable_prev_overload)
+          << false;
+
+      NewFD->addAttr(OverloadableAttr::CreateImplicit(Context));
     }
   }
 

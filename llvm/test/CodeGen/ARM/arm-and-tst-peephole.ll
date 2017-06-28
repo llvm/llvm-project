@@ -171,8 +171,8 @@ define i32 @test_tst_assessment(i32 %a, i32 %b) {
 ;
 ; V8-LABEL: test_tst_assessment:
 ; V8:       @ BB#0:
-; V8-NEXT:    lsls r1, r1, #31
 ; V8-NEXT:    and r0, r0, #1
+; V8-NEXT:    lsls r1, r1, #31
 ; V8-NEXT:    it ne
 ; V8-NEXT:    subne r0, #1
 ; V8-NEXT:    bx lr

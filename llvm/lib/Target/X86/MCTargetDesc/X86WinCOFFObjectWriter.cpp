@@ -44,7 +44,7 @@ unsigned X86WinCOFFObjectWriter::getRelocType(MCContext &Ctx,
                                               const MCAsmBackend &MAB) const {
   unsigned FixupKind = Fixup.getKind();
   if (IsCrossSection) {
-    if (FixupKind != FK_Data_4) {
+    if (FixupKind != FK_Data_4 && FixupKind != llvm::X86::reloc_signed_4byte) {
       Ctx.reportError(Fixup.getLoc(), "Cannot represent this expression");
       return COFF::IMAGE_REL_AMD64_ADDR32;
     }

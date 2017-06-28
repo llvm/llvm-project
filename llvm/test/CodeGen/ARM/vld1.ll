@@ -78,7 +78,7 @@ define <16 x i8> @vld1Qi8(i8* %A) nounwind {
 ;Check for a post-increment updating load.
 define <16 x i8> @vld1Qi8_update(i8** %ptr) nounwind {
 ;CHECK-LABEL: vld1Qi8_update:
-;CHECK: vld1.8 {d16, d17}, [{{r[0-9]+}}:64]!
+;CHECK: vld1.8 {d16, d17}, [{{r[0-9]+|lr}}:64]!
 	%A = load i8*, i8** %ptr
 	%tmp1 = call <16 x i8> @llvm.arm.neon.vld1.v16i8.p0i8(i8* %A, i32 8)
 	%tmp2 = getelementptr i8, i8* %A, i32 16

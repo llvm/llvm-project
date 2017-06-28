@@ -154,6 +154,8 @@ struct LinkingSection : CustomSection {
   }
 
   std::vector<SymbolInfo> SymbolInfos;
+  uint32_t DataSize;
+  uint32_t DataAlignment;
 };
 
 struct TypeSection : Section {

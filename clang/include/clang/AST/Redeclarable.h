@@ -21,6 +21,60 @@
 namespace clang {
 class ASTContext;
 
+// Some notes on redeclarables:
+//
+//  - Every redeclarable is on a circular linked list.
+//
+//  - Every decl has a pointer to the first element of the chain _and_ a
+//    DeclLink that may point to one of 3 possible states:
+//      - the "previous" (temporal) element in the chain
+//      - the "latest" (temporal) element in the chain
+//      - the an "uninitialized-latest" value (when newly-constructed)
+//
+//  - The first element is also often called the canonical element. Every
+//    element has a pointer to it so that "getCanonical" can be fast.
+//
+//  - Most links in the chain point to previous, except the link out of
+//    the first; it points to latest.
+//
+//  - Elements are called "first", "previous", "latest" or
+//    "most-recent" when referring to temporal order: order of addition
+//    to the chain.
+//
+//  - To make matters confusing, the DeclLink type uses the term "next"
+//    for its pointer-storage internally (thus functions like
+//    NextIsPrevious). It's easiest to just ignore the implementation of
+//    DeclLink when making sense of the redeclaration chain.
+//
+//  - There's also a "definition" link for several types of
+//    redeclarable, where only one definition should exist at any given
+//    time (and the defn pointer is stored in the decl's "data" which
+//    is copied to every element on the chain when it's changed).
+//
+//    Here is some ASCII art:
+//
+//      "first"                                     "latest"
+//      "canonical"                                 "most recent"
+//      +------------+         first                +--------------+
+//      |            | <--------------------------- |              |
+//      |            |                              |              |
+//      |            |                              |              |
+//      |            |       +--------------+       |              |
+//      |            | first |              |       |              |
+//      |            | <---- |              |       |              |
+//      |            |       |              |       |              |
+//      | @class A   |  link | @interface A |  link | @class A     |
+//      | seen first | <---- | seen second  | <---- | seen third   |
+//      |            |       |              |       |              |
+//      +------------+       +--------------+       +--------------+
+//      | data       | defn  | data         |  defn | data         |
+//      |            | ----> |              | <---- |              |
+//      +------------+       +--------------+       +--------------+
+//        |                     |     ^                  ^
+//        |                     |defn |                  |
+//        | link                +-----+                  |
+//        +-->-------------------------------------------+
+
 /// \brief Provides common interface for the Decls that can be redeclared.
 template<typename decl_type>
 class Redeclarable {

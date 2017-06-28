@@ -31,8 +31,8 @@ entry:
 
 ; CHECK-LABEL: use_arg:
 ; CHECK: push {[[csr:[^ ]*]], lr}
-; CHECK: ldr [[csr]], [sp, #8]
 ; CHECK: add r0, sp, #8
+; CHECK: ldr [[csr]], [sp, #8]
 ; CHECK: bl addrof_i32
 ; CHECK: mov r0, [[csr]]
 ; CHECK: pop {[[csr]], pc}
@@ -50,8 +50,8 @@ entry:
 ; CHECK: push    {r4, r5, r11, lr}
 ; CHECK: sub     sp, sp, #8
 ; CHECK: ldr     r4, [sp, #28]
-; CHECK: ldr     r5, [sp, #24]
 ; CHECK: mov     r0, sp
+; CHECK: ldr     r5, [sp, #24]
 ; CHECK: str     r4, [sp, #4]
 ; CHECK: str     r5, [sp]
 ; CHECK: bl      addrof_i64

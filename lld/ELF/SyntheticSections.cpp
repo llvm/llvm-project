@@ -1090,8 +1090,17 @@ template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
   if (In<ELFT>::RelaPlt->getParent()->Size > 0) {
     add({DT_JMPREL, In<ELFT>::RelaPlt});
     add({DT_PLTRELSZ, In<ELFT>::RelaPlt->getParent()->Size});
-    add({Config->EMachine == EM_MIPS ? DT_MIPS_PLTGOT : DT_PLTGOT,
-         InX::GotPlt});
+    switch (Config->EMachine) {
+    case EM_MIPS:
+      add({DT_MIPS_PLTGOT, In<ELFT>::GotPlt});
+      break;
+    case EM_SPARCV9:
+      add({DT_PLTGOT, In<ELFT>::Plt});
+      break;
+    default:
+      add({DT_PLTGOT, In<ELFT>::GotPlt});
+      break;
+    }
     add({DT_PLTREL, uint64_t(Config->IsRela ? DT_RELA : DT_REL)});
   }
 
@@ -1376,7 +1385,6 @@ template <class ELFT> void SymbolTableSection<ELFT>::writeTo(uint8_t *Buf) {
     }
 
     ESym->st_name = Ent.StrTabOffset;
-    ESym->st_size = Body->getSize<ELFT>();
 
     // Set a section index.
     if (const OutputSection *OutSec = Body->getOutputSection())
@@ -1385,6 +1393,14 @@ template <class ELFT> void SymbolTableSection<ELFT>::writeTo(uint8_t *Buf) {
       ESym->st_shndx = SHN_ABS;
     else if (isa<DefinedCommon>(Body))
       ESym->st_shndx = SHN_COMMON;
+
+    // Copy symbol size if it is a defined symbol. st_size is not significant
+    // for undefined symbols, so whether copying it or not is up to us if that's
+    // the case. We'll leave it as zero because by not setting a value, we can
+    // get the exact same outputs for two sets of input files that differ only
+    // in undefined symbol size in DSOs.
+    if (ESym->st_shndx != SHN_UNDEF)
+      ESym->st_size = Body->getSize<ELFT>();
 
     // st_value is usually an address of a symbol, but that has a
     // special meaining for uninstantiated common symbols (this can
@@ -1625,7 +1641,12 @@ template <class ELFT> void HashTableSection<ELFT>::writeTo(uint8_t *Buf) {
 
 PltSection::PltSection(size_t S)
     : SyntheticSection(SHF_ALLOC | SHF_EXECINSTR, SHT_PROGBITS, 16, ".plt"),
-      HeaderSize(S) {}
+      HeaderSize(S) {
+  // The PLT needs to be writable on SPARC as the dynamic linker will
+  // modify the instructions in the PLT entries.
+  if (Config->EMachine == EM_SPARCV9)
+    this->Flags |= SHF_WRITE;
+}
 
 void PltSection::writeTo(uint8_t *Buf) {
   // At beginning of PLT but not the IPLT, we have code to call the dynamic

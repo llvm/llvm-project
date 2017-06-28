@@ -175,6 +175,7 @@ clang_getCursorCompletionString
 clang_getCursorDefinition
 clang_getCursorDisplayName
 clang_getCursorExtent
+clang_getCursorExceptionSpecificationType
 clang_getCursorKind
 clang_getCursorKindSpelling
 clang_getCursorLanguage
@@ -210,6 +211,7 @@ clang_getElementType
 clang_getEnumConstantDeclUnsignedValue
 clang_getEnumConstantDeclValue
 clang_getEnumDeclIntegerType
+clang_getExceptionSpecificationType
 clang_getFieldDeclBitWidth
 clang_getExpansionLocation
 clang_getFile

@@ -281,16 +281,16 @@ define i64 @opaque_constant1(i1 %cond, i64 %x) {
 ; CHECK:       @ BB#0:
 ; CHECK-NEXT:    .save {r4, lr}
 ; CHECK-NEXT:    push {r4, lr}
-; CHECK-NEXT:    ands r12, r0, #1
 ; CHECK-NEXT:    mov lr, #1
+; CHECK-NEXT:    ands r12, r0, #1
 ; CHECK-NEXT:    mov r0, #23
-; CHECK-NEXT:    eor r3, r3, #1
 ; CHECK-NEXT:    orr lr, lr, #65536
 ; CHECK-NEXT:    mvnne r0, #3
-; CHECK-NEXT:    movne r12, #1
 ; CHECK-NEXT:    and r4, r0, lr
-; CHECK-NEXT:    eor r2, r2, lr
+; CHECK-NEXT:    movne r12, #1
 ; CHECK-NEXT:    subs r0, r4, #1
+; CHECK-NEXT:    eor r2, r2, lr
+; CHECK-NEXT:    eor r3, r3, #1
 ; CHECK-NEXT:    sbc r1, r12, #0
 ; CHECK-NEXT:    orrs r2, r2, r3
 ; CHECK-NEXT:    movne r0, r4
