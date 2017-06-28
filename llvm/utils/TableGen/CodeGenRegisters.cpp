@@ -920,7 +920,7 @@ CodeGenRegisterClass::getMatchingSubClassWithSubRegs(
     CodeGenRegBank &RegBank, const CodeGenSubRegIndex *SubIdx) const {
   auto SizeOrder = [](const CodeGenRegisterClass *A,
                       const CodeGenRegisterClass *B) {
-    return A->getMembers().size() >= B->getMembers().size();
+    return A->getMembers().size() > B->getMembers().size();
   };
 
   auto &RegClasses = RegBank.getRegClasses();

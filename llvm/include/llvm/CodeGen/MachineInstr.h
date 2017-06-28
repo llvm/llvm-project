@@ -789,6 +789,7 @@ public:
       && getOperand(1).isImm();
   }
 
+  bool isDirective() const { return isDebugValue() || isCFIInstruction(); }
   bool isPHI() const { return getOpcode() == TargetOpcode::PHI; }
   bool isKill() const { return getOpcode() == TargetOpcode::KILL; }
   bool isImplicitDef() const { return getOpcode()==TargetOpcode::IMPLICIT_DEF; }

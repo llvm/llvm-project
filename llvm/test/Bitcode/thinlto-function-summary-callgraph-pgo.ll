@@ -20,7 +20,7 @@
 ; CHECK-NEXT:    <PERMODULE_PROFILE {{.*}} op4=1 op5=2/>
 ; CHECK-NEXT:  </GLOBALVAL_SUMMARY_BLOCK>
 ; CHECK: <STRTAB_BLOCK
-; CHECK-NEXT: blob data = 'mainfunc'
+; CHECK-NEXT: blob data = 'mainfunc{{.*}}'
 
 ; COMBINED:       <GLOBALVAL_SUMMARY_BLOCK
 ; COMBINED-NEXT:    <VERSION

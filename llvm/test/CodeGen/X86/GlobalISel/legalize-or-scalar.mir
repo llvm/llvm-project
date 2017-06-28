@@ -1,0 +1,124 @@
+# RUN: llc -mtriple=x86_64-linux-gnu -global-isel -run-pass=legalizer %s -o - | FileCheck %s
+
+--- |
+  define i8 @test_or_i8() {
+    %ret = or i8 undef, undef
+    ret i8 %ret
+  }
+
+  define i16 @test_or_i16() {
+    %ret = or i16 undef, undef
+    ret i16 %ret
+  }
+
+  define i32 @test_or_i32() {
+    %ret = or i32 undef, undef
+    ret i32 %ret
+  }
+
+  define i64 @test_or_i64() {
+    %ret = or i64 undef, undef
+    ret i64 %ret
+  }
+
+...
+---
+name:            test_or_i8
+# CHECK-LABEL: name:  test_or_i8
+alignment:       4
+legalized:       false
+regBankSelected: false
+registers:
+  - { id: 0, class: _, preferred-register: '' }
+  - { id: 1, class: _, preferred-register: '' }
+liveins:
+fixedStack:
+stack:
+constants:
+# CHECK:          %0(s8) = IMPLICIT_DEF
+# CHECK-NEXT:     %1(s8) = G_OR %0, %0
+# CHECK-NEXT:     %al = COPY %1(s8)
+# CHECK-NEXT:     RET 0, implicit %al
+body:             |
+  bb.1 (%ir-block.0):
+    %0(s8) = IMPLICIT_DEF
+    %1(s8) = G_OR %0, %0
+    %al = COPY %1(s8)
+    RET 0, implicit %al
+
+...
+---
+name:            test_or_i16
+# CHECK-LABEL: name:  test_or_i16
+alignment:       4
+legalized:       false
+regBankSelected: false
+registers:
+  - { id: 0, class: _, preferred-register: '' }
+  - { id: 1, class: _, preferred-register: '' }
+liveins:
+fixedStack:
+stack:
+constants:
+# CHECK:          %0(s16) = IMPLICIT_DEF
+# CHECK-NEXT:     %1(s16) = G_OR %0, %0
+# CHECK-NEXT:     %ax = COPY %1(s16)
+# CHECK-NEXT:     RET 0, implicit %ax
+body:             |
+  bb.1 (%ir-block.0):
+    %0(s16) = IMPLICIT_DEF
+    %1(s16) = G_OR %0, %0
+    %ax = COPY %1(s16)
+    RET 0, implicit %ax
+
+...
+---
+name:            test_or_i32
+# CHECK-LABEL: name:  test_or_i32
+alignment:       4
+legalized:       false
+regBankSelected: false
+registers:
+  - { id: 0, class: _, preferred-register: '' }
+  - { id: 1, class: _, preferred-register: '' }
+liveins:
+fixedStack:
+stack:
+constants:
+# CHECK:          %0(s32) = IMPLICIT_DEF
+# CHECK-NEXT:     %1(s32) = G_OR %0, %0
+# CHECK-NEXT:     %eax = COPY %1(s32)
+# CHECK-NEXT:     RET 0, implicit %eax
+body:             |
+  bb.1 (%ir-block.0):
+    %0(s32) = IMPLICIT_DEF
+    %1(s32) = G_OR %0, %0
+    %eax = COPY %1(s32)
+    RET 0, implicit %eax
+
+...
+---
+name:            test_or_i64
+# CHECK-LABEL: name:  test_or_i64
+alignment:       4
+legalized:       false
+regBankSelected: false
+registers:
+  - { id: 0, class: _, preferred-register: '' }
+  - { id: 1, class: _, preferred-register: '' }
+liveins:
+fixedStack:
+stack:
+constants:
+# CHECK:          %0(s64) = IMPLICIT_DEF
+# CHECK-NEXT:     %1(s64) = G_OR %0, %0
+# CHECK-NEXT:     %rax = COPY %1(s64)
+# CHECK-NEXT:     RET 0, implicit %rax
+body:             |
+  bb.1 (%ir-block.0):
+    %0(s64) = IMPLICIT_DEF
+    %1(s64) = G_OR %0, %0
+    %rax = COPY %1(s64)
+    RET 0, implicit %rax
+
+...

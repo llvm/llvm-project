@@ -124,6 +124,18 @@ struct Uncommon {
 };
 
 struct Header {
+  /// Version number of the symtab format. This number should be incremented
+  /// when the format changes, but it does not need to be incremented if a
+  /// change to LLVM would cause it to create a different symbol table.
+  Word Version;
+  enum { kCurrentVersion = 0 };
+
+  /// The producer's version string (LLVM_VERSION_STRING " " LLVM_REVISION).
+  /// Consumers should rebuild the symbol table from IR if the producer's
+  /// version does not match the consumer's version due to potential differences
+  /// in symbol table format, symbol enumeration order and so on.
+  Str Producer;
+
   Range<Module> Modules;
   Range<Comdat> Comdats;
   Range<Symbol> Symbols;
@@ -242,6 +254,8 @@ public:
   /// The symbols enumerated by this method are ephemeral, but they can be
   /// copied into an irsymtab::Symbol object.
   symbol_range symbols() const;
+
+  size_t getNumModules() const { return Modules.size(); }
 
   /// Returns a slice of the symbol table for the I'th module in the file.
   /// The symbols enumerated by this method are ephemeral, but they can be

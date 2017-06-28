@@ -59,6 +59,33 @@ bool CodeExtractor::isBlockValidForExtraction(const BasicBlock &BB) {
   // Landing pads must be in the function where they were inserted for cleanup.
   if (BB.isEHPad())
     return false;
+  // taking the address of a basic block moved to another function is illegal
+  if (BB.hasAddressTaken())
+    return false;
+
+  // don't hoist code that uses another basicblock address, as it's likely to
+  // lead to unexpected behavior, like cross-function jumps
+  SmallPtrSet<User const *, 16> Visited;
+  SmallVector<User const *, 16> ToVisit;
+
+  for (Instruction const &Inst : BB)
+    ToVisit.push_back(&Inst);
+
+  while (!ToVisit.empty()) {
+    User const *Curr = ToVisit.pop_back_val();
+    if (!Visited.insert(Curr).second)
+      continue;
+    if (isa<BlockAddress const>(Curr))
+      return false; // even a reference to self is likely to be not compatible
+
+    if (isa<Instruction>(Curr) && cast<Instruction>(Curr)->getParent() != &BB)
+      continue;
+
+    for (auto const &U : Curr->operands()) {
+      if (auto *UU = dyn_cast<User>(U))
+        ToVisit.push_back(UU);
+    }
+  }
 
   // Don't hoist code containing allocas, invokes, or vastarts.
   for (BasicBlock::const_iterator I = BB.begin(), E = BB.end(); I != E; ++I) {

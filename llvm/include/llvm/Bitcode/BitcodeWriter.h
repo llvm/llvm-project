@@ -28,9 +28,16 @@ namespace llvm {
     std::unique_ptr<BitstreamWriter> Stream;
 
     StringTableBuilder StrtabBuilder{StringTableBuilder::RAW};
-    bool WroteStrtab = false;
+
+    // Owns any strings created by the irsymtab writer until we create the
+    // string table.
+    BumpPtrAllocator Alloc;
+
+    bool WroteStrtab = false, WroteSymtab = false;
 
     void writeBlob(unsigned Block, unsigned Record, StringRef Blob);
+
+    std::vector<Module *> Mods;
 
    public:
     /// Create a BitcodeWriter that writes to Buffer.
@@ -38,8 +45,17 @@ namespace llvm {
 
     ~BitcodeWriter();
 
+    /// Attempt to write a symbol table to the bitcode file. This must be called
+    /// at most once after all modules have been written.
+    ///
+    /// A reader does not require a symbol table to interpret a bitcode file;
+    /// the symbol table is needed only to improve link-time performance. So
+    /// this function may decide not to write a symbol table. It may so decide
+    /// if, for example, the target is unregistered or the IR is malformed.
+    void writeSymtab();
+
     /// Write the bitcode file's string table. This must be called exactly once
-    /// after all modules have been written.
+    /// after all modules and the optional symbol table have been written.
     void writeStrtab();
 
     /// Copy the string table for another module into this bitcode file. This

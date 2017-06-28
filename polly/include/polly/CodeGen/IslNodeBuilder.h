@@ -98,7 +98,7 @@ public:
   void create(__isl_take isl_ast_node *Node);
 
   /// Allocate memory for all new arrays created by Polly.
-  void allocateNewArrays();
+  void allocateNewArrays(BBPair StartExitBlocks);
 
   /// Preload all memory loads that are invariant.
   bool preloadInvariantLoads();

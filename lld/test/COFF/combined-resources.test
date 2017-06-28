@@ -1,0 +1,17 @@
+// Check that lld properly handles merging multiple .res files.
+// The inputs were generated with the following commands, using the original
+// Windows rc.exe
+// > rc /fo combined-resources.res /nologo combined-resources.rc
+// > rc /fo combined-resources-2.res /nologo combined-resources-2.rc
+
+# RUN: yaml2obj < %p/Inputs/ret42.yaml > %t.obj
+# RUN: lld-link /out:%t.exe /entry:main %t.obj %p/Inputs/resource.res \
+# RUN:   %p/Inputs/combined-resources.res %p/Inputs/combined-resources-2.res
+
+# RUN: llvm-readobj -coff-resources -file-headers %t.exe | FileCheck %s
+
+
+CHECK:      ResourceTableRVA: 0x1000
+CHECK-NEXT: ResourceTableSize: 0xC1C
+CHECK-DAG:  Resources [
+CHECK-NEXT:   Total Number of Resources: 13

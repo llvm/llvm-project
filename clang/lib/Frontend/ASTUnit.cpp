@@ -1638,7 +1638,7 @@ ASTUnit *ASTUnit::LoadFromCommandLine(
                                       &StoredDiagnostics, nullptr);
 
     CI = clang::createInvocationFromCommandLine(
-        llvm::makeArrayRef(ArgBegin, ArgEnd), Diags);
+        llvm::makeArrayRef(ArgBegin, ArgEnd), Diags, VFS);
     if (!CI)
       return nullptr;
   }

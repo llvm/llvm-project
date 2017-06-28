@@ -5360,8 +5360,9 @@ const std::error_category &llvm::BitcodeErrorCategory() {
   return *ErrorCategory;
 }
 
-static Expected<StringRef> readStrtab(BitstreamCursor &Stream) {
-  if (Stream.EnterSubBlock(bitc::STRTAB_BLOCK_ID))
+static Expected<StringRef> readBlobInRecord(BitstreamCursor &Stream,
+                                            unsigned Block, unsigned RecordID) {
+  if (Stream.EnterSubBlock(Block))
     return error("Invalid record");
 
   StringRef Strtab;
@@ -5382,7 +5383,7 @@ static Expected<StringRef> readStrtab(BitstreamCursor &Stream) {
     case BitstreamEntry::Record:
       StringRef Blob;
       SmallVector<uint64_t, 1> Record;
-      if (Stream.readRecord(Entry.ID, Record, &Blob) == bitc::STRTAB_BLOB)
+      if (Stream.readRecord(Entry.ID, Record, &Blob) == RecordID)
         Strtab = Blob;
       break;
     }
@@ -5450,7 +5451,8 @@ llvm::getBitcodeFileContents(MemoryBufferRef Buffer) {
       }
 
       if (Entry.ID == bitc::STRTAB_BLOCK_ID) {
-        Expected<StringRef> Strtab = readStrtab(Stream);
+        Expected<StringRef> Strtab =
+            readBlobInRecord(Stream, bitc::STRTAB_BLOCK_ID, bitc::STRTAB_BLOB);
         if (!Strtab)
           return Strtab.takeError();
         // This string table is used by every preceding bitcode module that does
@@ -5462,6 +5464,28 @@ llvm::getBitcodeFileContents(MemoryBufferRef Buffer) {
             break;
           I->Strtab = *Strtab;
         }
+        // Similarly, the string table is used by every preceding symbol table;
+        // normally there will be just one unless the bitcode file was created
+        // by binary concatenation.
+        if (!F.Symtab.empty() && F.StrtabForSymtab.empty())
+          F.StrtabForSymtab = *Strtab;
+        continue;
+      }
+
+      if (Entry.ID == bitc::SYMTAB_BLOCK_ID) {
+        Expected<StringRef> SymtabOrErr =
+            readBlobInRecord(Stream, bitc::SYMTAB_BLOCK_ID, bitc::SYMTAB_BLOB);
+        if (!SymtabOrErr)
+          return SymtabOrErr.takeError();
+
+        // We can expect the bitcode file to have multiple symbol tables if it
+        // was created by binary concatenation. In that case we silently
+        // ignore any subsequent symbol tables, which is fine because this is a
+        // low level function. The client is expected to notice that the number
+        // of modules in the symbol table does not match the number of modules
+        // in the input file and regenerate the symbol table.
+        if (F.Symtab.empty())
+          F.Symtab = *SymtabOrErr;
         continue;
       }
 

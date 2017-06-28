@@ -604,8 +604,8 @@ bool TailDuplicator::shouldTailDuplicate(bool IsSimple,
     if (PreRegAlloc && MI.isCall())
       return false;
 
-    if (!MI.isPHI() && !MI.isDebugValue())
-      InstrCount += 1;
+    if (!MI.isPHI() && !MI.isDirective())
+        InstrCount += 1;
 
     if (InstrCount > MaxDuplicateCount)
       return false;
@@ -857,6 +857,9 @@ bool TailDuplicator::tailDuplicate(bool IsSimple, MachineBasicBlock *TailBB,
     for (MachineBasicBlock *Succ : TailBB->successors())
       PredBB->addSuccessor(Succ, MBPI->getEdgeProbability(TailBB, Succ));
 
+    // Update the CFI info for PredBB.
+    PredBB->mergeCFIInfo(TailBB);
+
     Changed = true;
     ++NumTailDups;
   }
@@ -917,6 +920,9 @@ bool TailDuplicator::tailDuplicate(bool IsSimple, MachineBasicBlock *TailBB,
     PrevBB->transferSuccessors(TailBB);
     TDBBs.push_back(PrevBB);
     Changed = true;
+
+    // Update the CFI info for PrevBB.
+    PrevBB->mergeCFIInfo(TailBB);
   }
 
   // If this is after register allocation, there are no phis to fix.

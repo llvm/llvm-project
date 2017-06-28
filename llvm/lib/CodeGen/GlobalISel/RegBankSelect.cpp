@@ -154,9 +154,11 @@ bool RegBankSelect::repairReg(
           TargetRegisterInfo::isPhysicalRegister(Dst)) &&
          "We are about to create several defs for Dst");
 
-  // Build the instruction used to repair, then clone it at the right places.
-  MachineInstr *MI = MIRBuilder.buildCopy(Dst, Src);
-  MI->removeFromParent();
+  // Build the instruction used to repair, then clone it at the right
+  // places. Avoiding buildCopy bypasses the check that Src and Dst have the
+  // same types because the type is a placeholder when this function is called.
+  MachineInstr *MI =
+      MIRBuilder.buildInstrNoInsert(TargetOpcode::COPY).addDef(Dst).addUse(Src);
   DEBUG(dbgs() << "Copy: " << PrintReg(Src) << " to: " << PrintReg(Dst)
                << '\n');
   // TODO:
@@ -556,9 +558,11 @@ bool RegBankSelect::applyMapping(
       llvm_unreachable("Other kind should not happen");
     }
   }
+
   // Second, rewrite the instruction.
   DEBUG(dbgs() << "Actual mapping of the operands: " << OpdMapper << '\n');
   RBI->applyMapping(OpdMapper);
+
   return true;
 }
 

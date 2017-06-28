@@ -8,14 +8,14 @@
 ; CHECK:       ********** MI Scheduling **********
 ; CHECK:      foo:BB#0 entry
 
-; GENERIC:    SDIV
+; GENERIC:    LDRi12
 ; GENERIC:    Latency    : 1
 ; GENERIC:    EORrr
 ; GENERIC:    Latency    : 1
-; GENERIC:    LDRi12
-; GENERIC:    Latency    : 4
 ; GENERIC:    ADDrr
 ; GENERIC:    Latency    : 1
+; GENERIC:    SDIV
+; GENERIC:    Latency    : 0
 ; GENERIC:    SUBrr
 ; GENERIC:    Latency    : 1
 

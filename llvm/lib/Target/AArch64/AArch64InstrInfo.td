@@ -735,7 +735,7 @@ def : ShiftAlias<"rorv", RORVWr, GPR32>;
 def : ShiftAlias<"rorv", RORVXr, GPR64>;
 
 // Multiply-add
-let AddedComplexity = 7 in {
+let AddedComplexity = 5 in {
 defm MADD : MulAccum<0, "madd", add>;
 defm MSUB : MulAccum<1, "msub", sub>;
 
@@ -752,7 +752,7 @@ def : Pat<(i32 (mul (ineg GPR32:$Rn), GPR32:$Rm)),
           (MSUBWrrr GPR32:$Rn, GPR32:$Rm, WZR)>;
 def : Pat<(i64 (mul (ineg GPR64:$Rn), GPR64:$Rm)),
           (MSUBXrrr GPR64:$Rn, GPR64:$Rm, XZR)>;
-} // AddedComplexity = 7
+} // AddedComplexity = 5
 
 let AddedComplexity = 5 in {
 def SMADDLrrr : WideMulAccum<0, 0b001, "smaddl", add, sext>;

@@ -336,6 +336,10 @@ def NegSubInlineConst16 : ImmLeaf<i16, [{
   return Imm < -16 && Imm >= -64;
 }], NegateImm>;
 
+def ShiftAmt32Imm : PatLeaf <(imm), [{
+  return N->getZExtValue() < 32;
+}]>;
+
 //===----------------------------------------------------------------------===//
 // Custom Operands
 //===----------------------------------------------------------------------===//

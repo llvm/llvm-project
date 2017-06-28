@@ -295,14 +295,14 @@ for.cond.cleanup3:
 ; UNROLL-NO-IC-NEXT:    [[TMP28:%.*]] = load i32, i32* {{.*}}
 ; UNROLL-NO-IC-NEXT:    [[TMP29:%.*]] = load i32, i32* {{.*}}
 ; UNROLL-NO-IC-NEXT:    [[TMP30:%.*]] = load i32, i32* {{.*}}
-; UNROLL-NO-IC-NEXT:    [[TMP31:%.*]] = load i32, i32* {{.*}}
-; UNROLL-NO-IC-NEXT:    [[TMP32:%.*]] = load i32, i32* {{.*}}
-; UNROLL-NO-IC-NEXT:    [[TMP33:%.*]] = load i32, i32* {{.*}}
-; UNROLL-NO-IC-NEXT:    [[TMP34:%.*]] = load i32, i32* {{.*}}
 ; UNROLL-NO-IC-NEXT:    [[TMP35:%.*]] = insertelement <4 x i32> undef, i32 [[TMP27]], i32 0
 ; UNROLL-NO-IC-NEXT:    [[TMP36:%.*]] = insertelement <4 x i32> [[TMP35]], i32 [[TMP28]], i32 1
 ; UNROLL-NO-IC-NEXT:    [[TMP37:%.*]] = insertelement <4 x i32> [[TMP36]], i32 [[TMP29]], i32 2
 ; UNROLL-NO-IC-NEXT:    [[TMP38:%.*]] = insertelement <4 x i32> [[TMP37]], i32 [[TMP30]], i32 3
+; UNROLL-NO-IC-NEXT:    [[TMP31:%.*]] = load i32, i32* {{.*}}
+; UNROLL-NO-IC-NEXT:    [[TMP32:%.*]] = load i32, i32* {{.*}}
+; UNROLL-NO-IC-NEXT:    [[TMP33:%.*]] = load i32, i32* {{.*}}
+; UNROLL-NO-IC-NEXT:    [[TMP34:%.*]] = load i32, i32* {{.*}}
 ; UNROLL-NO-IC-NEXT:    [[TMP39:%.*]] = insertelement <4 x i32> undef, i32 [[TMP31]], i32 0
 ; UNROLL-NO-IC-NEXT:    [[TMP40:%.*]] = insertelement <4 x i32> [[TMP39]], i32 [[TMP32]], i32 1
 ; UNROLL-NO-IC-NEXT:    [[TMP41:%.*]] = insertelement <4 x i32> [[TMP40]], i32 [[TMP33]], i32 2
@@ -395,4 +395,55 @@ for.body:
 
 for.end:
   ret i32 %val.phi
+}
+
+; We vectorize this first order recurrence, with a set of insertelements for
+; each unrolled part. Make sure these insertelements are generated in-order,
+; because the shuffle of the first order recurrence will be added after the
+; insertelement of the last part UF - 1, assuming the latter appears after the
+; insertelements of all other parts.
+;
+; int PR33613(double *b, double j, int d) {
+;   int a = 0;
+;   for(int i = 0; i < 10240; i++, b+=25) {
+;     double f = b[d]; // Scalarize to form insertelements
+;     if (j * f)
+;       a++;
+;     j = f;
+;   }
+;   return a;
+; }
+;
+; UNROLL-NO-IC-LABEL: @PR33613(
+; UNROLL-NO-IC:     vector.body:
+; UNROLL-NO-IC:       [[VECTOR_RECUR:%.*]] = phi <4 x double>
+; UNROLL-NO-IC:       shufflevector <4 x double> [[VECTOR_RECUR]], <4 x double> {{.*}}, <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; UNROLL-NO-IC-NEXT:  shufflevector <4 x double> {{.*}}, <4 x double> {{.*}}, <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; UNROLL-NO-IC-NOT:   insertelement <4 x double>
+; UNROLL-NO-IC:     middle.block:
+;
+define i32 @PR33613(double* %b, double %j, i32 %d) {
+entry:
+  %idxprom = sext i32 %d to i64
+  br label %for.body
+
+for.cond.cleanup:
+  %a.1.lcssa = phi i32 [ %a.1, %for.body ]
+  ret i32 %a.1.lcssa
+
+for.body:
+  %b.addr.012 = phi double* [ %b, %entry ], [ %add.ptr, %for.body ]
+  %i.011 = phi i32 [ 0, %entry ], [ %inc1, %for.body ]
+  %a.010 = phi i32 [ 0, %entry ], [ %a.1, %for.body ]
+  %j.addr.09 = phi double [ %j, %entry ], [ %0, %for.body ]
+  %arrayidx = getelementptr inbounds double, double* %b.addr.012, i64 %idxprom
+  %0 = load double, double* %arrayidx, align 8
+  %mul = fmul double %j.addr.09, %0
+  %tobool = fcmp une double %mul, 0.000000e+00
+  %inc = zext i1 %tobool to i32
+  %a.1 = add nsw i32 %a.010, %inc
+  %inc1 = add nuw nsw i32 %i.011, 1
+  %add.ptr = getelementptr inbounds double, double* %b.addr.012, i64 25
+  %exitcond = icmp eq i32 %inc1, 10240
+  br i1 %exitcond, label %for.cond.cleanup, label %for.body
 }

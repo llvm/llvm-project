@@ -63,7 +63,7 @@ static bool dependsOnLocalPhi(const Loop *L, const Value *Cond,
   return false;
 }
 
-void AMDGPUTTIImpl::getUnrollingPreferences(Loop *L,
+void AMDGPUTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                             TTI::UnrollingPreferences &UP) {
   UP.Threshold = 300; // Twice the default.
   UP.MaxCount = UINT_MAX;

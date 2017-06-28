@@ -1851,9 +1851,9 @@ isProfitableToIfCvt(MachineBasicBlock &MBB,
 }
 
 bool ARMBaseInstrInfo::
-isProfitableToIfCvt(MachineBasicBlock &,
+isProfitableToIfCvt(MachineBasicBlock &TBB,
                     unsigned TCycles, unsigned TExtra,
-                    MachineBasicBlock &,
+                    MachineBasicBlock &FBB,
                     unsigned FCycles, unsigned FExtra,
                     BranchProbability Probability) const {
   if (!TCycles)
@@ -1863,14 +1863,43 @@ isProfitableToIfCvt(MachineBasicBlock &,
   // Here we scale up each component of UnpredCost to avoid precision issue when
   // scaling TCycles/FCycles by Probability.
   const unsigned ScalingUpFactor = 1024;
-  unsigned TUnpredCost = Probability.scale(TCycles * ScalingUpFactor);
-  unsigned FUnpredCost =
-      Probability.getCompl().scale(FCycles * ScalingUpFactor);
-  unsigned UnpredCost = TUnpredCost + FUnpredCost;
-  UnpredCost += 1 * ScalingUpFactor; // The branch itself
-  UnpredCost += Subtarget.getMispredictionPenalty() * ScalingUpFactor / 10;
 
-  return (TCycles + FCycles + TExtra + FExtra) * ScalingUpFactor <= UnpredCost;
+  unsigned PredCost = (TCycles + FCycles + TExtra + FExtra) * ScalingUpFactor;
+  unsigned UnpredCost;
+  if (!Subtarget.hasBranchPredictor()) {
+    // When we don't have a branch predictor it's always cheaper to not take a
+    // branch than take it, so we have to take that into account.
+    unsigned NotTakenBranchCost = 1;
+    unsigned TakenBranchCost = Subtarget.getMispredictionPenalty();
+    unsigned TUnpredCycles, FUnpredCycles;
+    if (!FCycles) {
+      // Triangle: TBB is the fallthrough
+      TUnpredCycles = TCycles + NotTakenBranchCost;
+      FUnpredCycles = TakenBranchCost;
+    } else {
+      // Diamond: TBB is the block that is branched to, FBB is the fallthrough
+      TUnpredCycles = TCycles + TakenBranchCost;
+      FUnpredCycles = FCycles + NotTakenBranchCost;
+    }
+    // The total cost is the cost of each path scaled by their probabilites
+    unsigned TUnpredCost = Probability.scale(TUnpredCycles * ScalingUpFactor);
+    unsigned FUnpredCost = Probability.getCompl().scale(FUnpredCycles * ScalingUpFactor);
+    UnpredCost = TUnpredCost + FUnpredCost;
+    // When predicating assume that the first IT can be folded away but later
+    // ones cost one cycle each
+    if (Subtarget.isThumb2() && TCycles + FCycles > 4) {
+      PredCost += ((TCycles + FCycles - 4) / 4) * ScalingUpFactor;
+    }
+  } else {
+    unsigned TUnpredCost = Probability.scale(TCycles * ScalingUpFactor);
+    unsigned FUnpredCost =
+      Probability.getCompl().scale(FCycles * ScalingUpFactor);
+    UnpredCost = TUnpredCost + FUnpredCost;
+    UnpredCost += 1 * ScalingUpFactor; // The branch itself
+    UnpredCost += Subtarget.getMispredictionPenalty() * ScalingUpFactor / 10;
+  }
+
+  return PredCost <= UnpredCost;
 }
 
 bool

@@ -134,3 +134,22 @@ body:             |
     S_SETPC_B64_return %sgpr30_sgpr31, implicit %sgpr5
 
 ...
+
+# GCN-LABEL: name: inf_loop_tied_operand
+# GCN: bb.0:
+# GCN-NEXT: undef %2.sub0 = V_MAC_F32_e32 1073741824, undef %0, undef %2.sub0, implicit %exec
+# GCN-NEXT: dead undef %3.sub1 = COPY %2.sub0
+
+name:            inf_loop_tied_operand
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vgpr_32, preferred-register: '' }
+  - { id: 1, class: vgpr_32, preferred-register: '' }
+  - { id: 2, class: vreg_128, preferred-register: '' }
+body:             |
+  bb.0:
+    %1 = V_MAC_F32_e32 1073741824, undef %0, undef %1, implicit %exec
+    undef %2.sub0 = COPY %1
+    %2.sub1 = COPY %1
+
+...

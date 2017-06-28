@@ -1250,9 +1250,9 @@ GDBRemoteCommunicationServerLLGS::Handle_jTraceRead(
 
   lldb::user_id_t uid = LLDB_INVALID_UID;
 
-  size_t byte_count = std::numeric_limits<size_t>::max();
+  uint64_t byte_count = std::numeric_limits<uint64_t>::max();
   lldb::tid_t tid = LLDB_INVALID_THREAD_ID;
-  size_t offset = std::numeric_limits<size_t>::max();
+  uint64_t offset = std::numeric_limits<uint64_t>::max();
 
   auto json_object = StructuredData::ParseJSON(packet.Peek());
 
@@ -1286,8 +1286,8 @@ GDBRemoteCommunicationServerLLGS::Handle_jTraceRead(
   if (error.Fail())
     return SendErrorResponse(error.GetError());
 
-  for (size_t i = 0; i < buf.size(); ++i)
-    response.PutHex8(buf[i]);
+  for (auto i : buf)
+    response.PutHex8(i);
 
   StreamGDBRemote escaped_response;
   escaped_response.PutEscapedBytes(response.GetData(), response.GetSize());

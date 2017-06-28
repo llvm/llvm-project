@@ -687,8 +687,8 @@ define void @test_maxnan(half* %p) #0 {
 ; CHECK-LIBCALL: bl __aeabi_h2f
 ; CHECK-LIBCALL: bl __aeabi_h2f
 ; CHECK-VFP-LIBCALL: vbsl
-; CHECK-NOVFP: bic
 ; CHECK-NOVFP: and
+; CHECK-NOVFP: bic
 ; CHECK-NOVFP: orr
 ; CHECK-LIBCALL: bl __aeabi_f2h
 define void @test_copysign(half* %p, half* %q) #0 {
@@ -818,25 +818,24 @@ define void @test_fmuladd(half* %p, half* %q, half* %r) #0 {
 ; CHECK-ALL-LABEL: test_insertelement:
 ; CHECK-ALL: sub sp, sp, #8
 ; CHECK-ALL: ldrh
-; CHECK-ALL: strh
 ; CHECK-ALL: ldrh
-; CHECK-ALL: strh
 ; CHECK-ALL: ldrh
-; CHECK-ALL: strh
 ; CHECK-ALL: ldrh
-; CHECK-ALL: strh
-; CHECK-ALL: mov
+; CHECK-ALL-DAG: strh
+; CHECK-ALL-DAG: strh
+; CHECK-ALL-DAG: mov
 ; CHECK-ALL-DAG: ldrh
 ; CHECK-ALL-DAG: orr
-; CHECK-ALL: strh
-; CHECK-ALL: ldrh
-; CHECK-ALL: strh
-; CHECK-ALL: ldrh
-; CHECK-ALL: strh
-; CHECK-ALL: ldrh
-; CHECK-ALL: strh
-; CHECK-ALL: ldrh
-; CHECK-ALL: strh
+; CHECK-ALL-DAG: strh
+; CHECK-ALL-DAG: strh
+; CHECK-ALL-DAG: strh
+; CHECK-ALL-DAG: ldrh
+; CHECK-ALL-DAG: ldrh
+; CHECK-ALL-DAG: ldrh
+; CHECK-ALL-DAG: strh
+; CHECK-ALL-DAG: strh
+; CHECK-ALL-DAG: strh
+; CHECK-ALL-DAG: strh
 ; CHECK-ALL: add sp, sp, #8
 define void @test_insertelement(half* %p, <4 x half>* %q, i32 %i) #0 {
   %a = load half, half* %p, align 2

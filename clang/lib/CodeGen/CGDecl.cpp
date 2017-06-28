@@ -1860,6 +1860,10 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
         lt = Qualifiers::OCL_ExplicitNone;
       }
 
+      // Load objects passed indirectly.
+      if (Arg.isIndirect() && !ArgVal)
+        ArgVal = Builder.CreateLoad(DeclPtr);
+
       if (lt == Qualifiers::OCL_Strong) {
         if (!isConsumed) {
           if (CGM.getCodeGenOpts().OptimizationLevel == 0) {

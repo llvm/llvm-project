@@ -2502,7 +2502,7 @@ size_t ObjectFileMachO::ParseSymtab() {
       if (text_section_sp.get() && eh_frame_section_sp.get() &&
           m_type != eTypeDebugInfo) {
         DWARFCallFrameInfo eh_frame(*this, eh_frame_section_sp,
-                                    eRegisterKindEHFrame, true);
+                                    DWARFCallFrameInfo::EH);
         DWARFCallFrameInfo::FunctionAddressAndSizeVector functions;
         eh_frame.GetFunctionAddressAndSizeVector(functions);
         addr_t text_base_addr = text_section_sp->GetFileAddress();

@@ -1383,7 +1383,7 @@ bool IslNodeBuilder::preloadInvariantEquivClass(
   return true;
 }
 
-void IslNodeBuilder::allocateNewArrays() {
+void IslNodeBuilder::allocateNewArrays(BBPair StartExitBlocks) {
   for (auto &SAI : S.arrays()) {
     if (SAI->getBasePtr())
       continue;
@@ -1393,6 +1393,9 @@ void IslNodeBuilder::allocateNewArrays() {
            "created arrays that require memory allocation.");
 
     Type *NewArrayType = nullptr;
+
+    // Get the size of the array = size(dim_1)*...*size(dim_n)
+    uint64_t ArraySizeInt = 1;
     for (int i = SAI->getNumberOfDimensions() - 1; i >= 0; i--) {
       auto *DimSize = SAI->getDimensionSize(i);
       unsigned UnsignedDimSize = static_cast<const SCEVConstant *>(DimSize)
@@ -1403,14 +1406,43 @@ void IslNodeBuilder::allocateNewArrays() {
         NewArrayType = SAI->getElementType();
 
       NewArrayType = ArrayType::get(NewArrayType, UnsignedDimSize);
+      ArraySizeInt *= UnsignedDimSize;
     }
 
-    auto InstIt =
-        Builder.GetInsertBlock()->getParent()->getEntryBlock().getTerminator();
-    auto *CreatedArray = new AllocaInst(NewArrayType, DL.getAllocaAddrSpace(),
-                                        SAI->getName(), &*InstIt);
-    CreatedArray->setAlignment(PollyTargetFirstLevelCacheLineSize);
-    SAI->setBasePtr(CreatedArray);
+    if (SAI->isOnHeap()) {
+      LLVMContext &Ctx = NewArrayType->getContext();
+
+      // Get the IntPtrTy from the Datalayout
+      auto IntPtrTy = DL.getIntPtrType(Ctx);
+
+      // Get the size of the element type in bits
+      unsigned Size = SAI->getElemSizeInBytes();
+
+      // Insert the malloc call at polly.start
+      auto InstIt = std::get<0>(StartExitBlocks)->getTerminator();
+      auto *CreatedArray = CallInst::CreateMalloc(
+          &*InstIt, IntPtrTy, SAI->getElementType(),
+          ConstantInt::get(Type::getInt64Ty(Ctx), Size),
+          ConstantInt::get(Type::getInt64Ty(Ctx), ArraySizeInt), nullptr,
+          SAI->getName());
+
+      SAI->setBasePtr(CreatedArray);
+
+      // Insert the free call at polly.exiting
+      CallInst::CreateFree(CreatedArray,
+                           std::get<1>(StartExitBlocks)->getTerminator());
+
+    } else {
+      auto InstIt = Builder.GetInsertBlock()
+                        ->getParent()
+                        ->getEntryBlock()
+                        .getTerminator();
+
+      auto *CreatedArray = new AllocaInst(NewArrayType, DL.getAllocaAddrSpace(),
+                                          SAI->getName(), &*InstIt);
+      CreatedArray->setAlignment(PollyTargetFirstLevelCacheLineSize);
+      SAI->setBasePtr(CreatedArray);
+    }
   }
 }
 

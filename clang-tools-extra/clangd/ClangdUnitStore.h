@@ -30,12 +30,13 @@ public:
   /// store, ClangdUnit::reparse will be called with the new contents before
   /// running \p Action.
   template <class Func>
-  void runOnUnit(PathRef File, StringRef FileContents,
+  void runOnUnit(PathRef File, StringRef FileContents, StringRef ResourceDir,
                  GlobalCompilationDatabase &CDB,
                  std::shared_ptr<PCHContainerOperations> PCHs,
                  IntrusiveRefCntPtr<vfs::FileSystem> VFS, Func Action) {
-    runOnUnitImpl(File, FileContents, CDB, PCHs, /*ReparseBeforeAction=*/true,
-                  VFS, std::forward<Func>(Action));
+    runOnUnitImpl(File, FileContents, ResourceDir, CDB, PCHs,
+                  /*ReparseBeforeAction=*/true, VFS,
+                  std::forward<Func>(Action));
   }
 
   /// Run specified \p Action on the ClangdUnit for \p File.
@@ -44,18 +45,19 @@ public:
   /// store, the \p Action will be run directly on it.
   template <class Func>
   void runOnUnitWithoutReparse(PathRef File, StringRef FileContents,
+                               StringRef ResourceDir,
                                GlobalCompilationDatabase &CDB,
                                std::shared_ptr<PCHContainerOperations> PCHs,
                                IntrusiveRefCntPtr<vfs::FileSystem> VFS,
                                Func Action) {
-    runOnUnitImpl(File, FileContents, CDB, PCHs, /*ReparseBeforeAction=*/false,
-                  VFS, std::forward<Func>(Action));
+    runOnUnitImpl(File, FileContents, ResourceDir, CDB, PCHs,
+                  /*ReparseBeforeAction=*/false, VFS,
+                  std::forward<Func>(Action));
   }
 
   /// Run the specified \p Action on the ClangdUnit for \p File.
   /// Unit for \p File should exist in the store.
-  template <class Func>
-  void runOnExistingUnit(PathRef File, Func Action) {
+  template <class Func> void runOnExistingUnit(PathRef File, Func Action) {
     std::lock_guard<std::mutex> Lock(Mutex);
 
     auto It = OpenedFiles.find(File);
@@ -71,7 +73,7 @@ private:
   /// Run specified \p Action on the ClangdUnit for \p File.
   template <class Func>
   void runOnUnitImpl(PathRef File, StringRef FileContents,
-                     GlobalCompilationDatabase &CDB,
+                     StringRef ResourceDir, GlobalCompilationDatabase &CDB,
                      std::shared_ptr<PCHContainerOperations> PCHs,
                      bool ReparseBeforeAction,
                      IntrusiveRefCntPtr<vfs::FileSystem> VFS, Func Action) {
@@ -85,8 +87,9 @@ private:
     auto It = OpenedFiles.find(File);
     if (It == OpenedFiles.end()) {
       It = OpenedFiles
-               .insert(std::make_pair(
-                   File, ClangdUnit(File, FileContents, PCHs, Commands, VFS)))
+               .insert(std::make_pair(File, ClangdUnit(File, FileContents,
+                                                       ResourceDir, PCHs,
+                                                       Commands, VFS)))
                .first;
     } else if (ReparseBeforeAction) {
       It->second.reparse(FileContents, VFS);

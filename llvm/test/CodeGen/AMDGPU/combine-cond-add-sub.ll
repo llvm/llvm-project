@@ -150,6 +150,26 @@ bb:
   ret void
 }
 
+; GCN-LABEL: {{^}}add_and:
+; GCN: s_and_b64 [[CC:[^,]+]],
+; GCN: v_addc_u32_e{{32|64}} v{{[0-9]+}}, {{[^,]+}}, 0, v{{[0-9]+}}, [[CC]]
+; GCN-NOT: v_cndmask
+
+define amdgpu_kernel void @add_and(i32 addrspace(1)* nocapture %arg) {
+bb:
+  %x = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %y = tail call i32 @llvm.amdgcn.workitem.id.y()
+  %gep = getelementptr inbounds i32, i32 addrspace(1)* %arg, i32 %x
+  %v = load i32, i32 addrspace(1)* %gep, align 4
+  %cmp1 = icmp ugt i32 %x, %y
+  %cmp2 = icmp ugt i32 %x, 1
+  %cmp = and i1 %cmp1, %cmp2
+  %ext = zext i1 %cmp to i32
+  %add = add i32 %v, %ext
+  store i32 %add, i32 addrspace(1)* %gep, align 4
+  ret void
+}
+
 declare i1 @llvm.amdgcn.class.f32(float, i32) #0
 
 declare i32 @llvm.amdgcn.workitem.id.x() #0

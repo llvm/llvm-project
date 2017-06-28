@@ -16,9 +16,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/LTO/Caching.h"
+#include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/IR/DiagnosticPrinter.h"
+#include "llvm/LTO/Caching.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
@@ -298,6 +299,17 @@ static int run(int argc, char **argv) {
 static int dumpSymtab(int argc, char **argv) {
   for (StringRef F : make_range(argv + 1, argv + argc)) {
     std::unique_ptr<MemoryBuffer> MB = check(MemoryBuffer::getFile(F), F);
+    BitcodeFileContents BFC = check(getBitcodeFileContents(*MB), F);
+
+    if (BFC.Symtab.size() >= sizeof(irsymtab::storage::Header)) {
+      auto *Hdr = reinterpret_cast<const irsymtab::storage::Header *>(
+          BFC.Symtab.data());
+      outs() << "version: " << Hdr->Version << '\n';
+      if (Hdr->Version == irsymtab::storage::Header::kCurrentVersion)
+        outs() << "producer: " << Hdr->Producer.get(BFC.StrtabForSymtab)
+               << '\n';
+    }
+
     std::unique_ptr<InputFile> Input =
         check(InputFile::create(MB->getMemBufferRef()), F);
 

@@ -69,6 +69,8 @@ public:
                     JSONOutput &Out) override;
   void onCompletion(TextDocumentPositionParams Params, StringRef ID,
                     JSONOutput &Out) override;
+  void onGoToDefinition(TextDocumentPositionParams Params, StringRef ID,
+                            JSONOutput &Out) override;
 
 private:
   ClangdLSPServer &LangServer;
@@ -84,7 +86,8 @@ void ClangdLSPServer::LSPProtocolCallbacks::onInitialize(StringRef ID,
           "documentRangeFormattingProvider": true,
           "documentOnTypeFormattingProvider": {"firstTriggerCharacter":"}","moreTriggerCharacter":[]},
           "codeActionProvider": true,
-          "completionProvider": {"resolveProvider": false, "triggerCharacters": [".",">"]}
+          "completionProvider": {"resolveProvider": false, "triggerCharacters": [".",">"]},
+          "definitionProvider": true
         }}})");
 }
 
@@ -189,6 +192,25 @@ void ClangdLSPServer::LSPProtocolCallbacks::onCompletion(
   Out.writeMessage(
       R"({"jsonrpc":"2.0","id":)" + ID.str() +
       R"(,"result":[)" + Completions + R"(]})");
+}
+
+void ClangdLSPServer::LSPProtocolCallbacks::onGoToDefinition(
+    TextDocumentPositionParams Params, StringRef ID, JSONOutput &Out) {
+
+  auto Items = LangServer.Server.findDefinitions(
+      Params.textDocument.uri.file,
+      Position{Params.position.line, Params.position.character}).Value;
+
+  std::string Locations;
+  for (const auto &Item : Items) {
+    Locations += Location::unparse(Item);
+    Locations += ",";
+  }
+  if (!Locations.empty())
+    Locations.pop_back();
+  Out.writeMessage(
+      R"({"jsonrpc":"2.0","id":)" + ID.str() +
+      R"(,"result":[)" + Locations + R"(]})");
 }
 
 ClangdLSPServer::ClangdLSPServer(JSONOutput &Out, bool RunSynchronously)

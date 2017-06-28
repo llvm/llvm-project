@@ -56,3 +56,20 @@
     add eax, 6 XOR 3
 // CHECK: addl $5, %eax
     add eax, 6 XOR 3 shl 1 SHR 1
+// CHECK: movl  $-9, %eax
+    mov eax, not(1 shl 3)
+// CHECK: movl    $-2, %eax
+    mov eax, ~(0x8 shr 3)
+// CHECK: movl  $-4, %eax
+    mov eax,  not(1 or 3)
+// CHECK: movl  $-2, %eax
+    mov eax, -(1 xor 3)
+// CHECK: movl  $-2, %eax
+    mov eax, not(1 and 3)
+// CHECK: movl  $3, %eax
+    mov eax, not(not 3)
+// CHECK: movl  $-3, %eax
+    mov eax, ~(5 mod 3)
+// CHECK: movl  $-2, %eax
+    mov eax, (-5 mod 3)
+

@@ -1253,10 +1253,16 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       LivePhysRegs LiveAtMI(HRI);
       getLiveRegsAt(LiveAtMI, MI);
       bool IsDestLive = !LiveAtMI.available(MRI, Op0.getReg());
+      unsigned PReg = Op1.getReg();
+      assert(Op1.getSubReg() == 0);
+      unsigned PState = getRegState(Op1);
+
       if (Op0.getReg() != Op2.getReg()) {
+        unsigned S = Op0.getReg() != Op3.getReg() ? PState & ~RegState::Kill
+                                                  : PState;
         auto T = BuildMI(MBB, MI, DL, get(Hexagon::V6_vcmov))
                      .add(Op0)
-                     .add(Op1)
+                     .addReg(PReg, S)
                      .add(Op2);
         if (IsDestLive)
           T.addReg(Op0.getReg(), RegState::Implicit);
@@ -1265,7 +1271,7 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       if (Op0.getReg() != Op3.getReg()) {
         auto T = BuildMI(MBB, MI, DL, get(Hexagon::V6_vncmov))
                      .add(Op0)
-                     .add(Op1)
+                     .addReg(PReg, PState)
                      .add(Op3);
         if (IsDestLive)
           T.addReg(Op0.getReg(), RegState::Implicit);
@@ -1282,12 +1288,18 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       LivePhysRegs LiveAtMI(HRI);
       getLiveRegsAt(LiveAtMI, MI);
       bool IsDestLive = !LiveAtMI.available(MRI, Op0.getReg());
+      unsigned PReg = Op1.getReg();
+      assert(Op1.getSubReg() == 0);
+      unsigned PState = getRegState(Op1);
 
       if (Op0.getReg() != Op2.getReg()) {
+        unsigned S = Op0.getReg() != Op3.getReg() ? PState & ~RegState::Kill
+                                                  : PState;
         unsigned SrcLo = HRI.getSubReg(Op2.getReg(), Hexagon::vsub_lo);
         unsigned SrcHi = HRI.getSubReg(Op2.getReg(), Hexagon::vsub_hi);
         auto T = BuildMI(MBB, MI, DL, get(Hexagon::V6_vccombine))
                      .add(Op0)
+                     .addReg(PReg, S)
                      .add(Op1)
                      .addReg(SrcHi)
                      .addReg(SrcLo);
@@ -1300,7 +1312,7 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
         unsigned SrcHi = HRI.getSubReg(Op3.getReg(), Hexagon::vsub_hi);
         auto T = BuildMI(MBB, MI, DL, get(Hexagon::V6_vnccombine))
                      .add(Op0)
-                     .add(Op1)
+                     .addReg(PReg, PState)
                      .addReg(SrcHi)
                      .addReg(SrcLo);
         if (IsDestLive)
