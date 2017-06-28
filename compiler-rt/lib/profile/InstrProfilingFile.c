@@ -93,13 +93,17 @@ static unsigned doMerging() { return lprofCurFilename.MergePoolSize; }
 /* Return 1 if there is an error, otherwise return  0.  */
 static uint32_t fileWriter(ProfDataWriter *This, ProfDataIOVec *IOVecs,
                            uint32_t NumIOVecs) {
-
   uint32_t I;
   FILE *File = (FILE *)This->WriterCtx;
   for (I = 0; I < NumIOVecs; I++) {
-    if (fwrite(IOVecs[I].Data, IOVecs[I].ElmSize, IOVecs[I].NumElm, File) !=
-        IOVecs[I].NumElm)
-      return 1;
+    if (IOVecs[I].Data) {
+      if (fwrite(IOVecs[I].Data, IOVecs[I].ElmSize, IOVecs[I].NumElm, File) !=
+          IOVecs[I].NumElm)
+        return 1;
+    } else {
+      if (fseek(File, IOVecs[I].ElmSize * IOVecs[I].NumElm, SEEK_CUR) == -1)
+        return 1;
+    }
   }
   return 0;
 }
@@ -133,9 +137,10 @@ static void setupIOBuffer() {
 
 /* Read profile data in \c ProfileFile and merge with in-memory
    profile counters. Returns -1 if there is fatal error, otheriwse
-   0 is returned.
+   0 is returned. Returning 0 does not mean merge is actually
+   performed. If merge is actually done, *MergeDone is set to 1.
 */
-static int doProfileMerging(FILE *ProfileFile) {
+static int doProfileMerging(FILE *ProfileFile, int *MergeDone) {
   uint64_t ProfileFileSize;
   char *ProfileBuffer;
 
@@ -180,6 +185,8 @@ static int doProfileMerging(FILE *ProfileFile) {
   __llvm_profile_merge_from_buffer(ProfileBuffer, ProfileFileSize);
   (void)munmap(ProfileBuffer, ProfileFileSize);
 
+  *MergeDone = 1;
+
   return 0;
 }
 
@@ -201,7 +208,7 @@ static void createProfileDir(const char *Filename) {
  * dumper. With profile merging enabled, each executable as well as any of
  * its instrumented shared libraries dump profile data into their own data file.
 */
-static FILE *openFileForMerging(const char *ProfileFileName) {
+static FILE *openFileForMerging(const char *ProfileFileName, int *MergeDone) {
   FILE *ProfileFile;
   int rc;
 
@@ -210,8 +217,8 @@ static FILE *openFileForMerging(const char *ProfileFileName) {
   if (!ProfileFile)
     return NULL;
 
-  rc = doProfileMerging(ProfileFile);
-  if (rc || COMPILER_RT_FTRUNCATE(ProfileFile, 0L) ||
+  rc = doProfileMerging(ProfileFile, MergeDone);
+  if (rc || (!*MergeDone && COMPILER_RT_FTRUNCATE(ProfileFile, 0L)) ||
       fseek(ProfileFile, 0L, SEEK_SET) == -1) {
     PROF_ERR("Profile Merging of file %s failed: %s\n", ProfileFileName,
              strerror(errno));
@@ -226,10 +233,11 @@ static int writeFile(const char *OutputName) {
   int RetVal;
   FILE *OutputFile;
 
+  int MergeDone = 0;
   if (!doMerging())
     OutputFile = fopen(OutputName, "ab");
   else
-    OutputFile = openFileForMerging(OutputName);
+    OutputFile = openFileForMerging(OutputName, &MergeDone);
 
   if (!OutputFile)
     return -1;
@@ -238,7 +246,7 @@ static int writeFile(const char *OutputName) {
   setupIOBuffer();
   ProfDataWriter fileWriter;
   initFileWriter(&fileWriter, OutputFile);
-  RetVal = lprofWriteData(&fileWriter, lprofGetVPDataReader());
+  RetVal = lprofWriteData(&fileWriter, lprofGetVPDataReader(), MergeDone);
 
   fclose(OutputFile);
   return RetVal;

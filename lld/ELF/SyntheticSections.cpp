@@ -1090,8 +1090,17 @@ template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
   if (In<ELFT>::RelaPlt->getParent()->Size > 0) {
     add({DT_JMPREL, In<ELFT>::RelaPlt});
     add({DT_PLTRELSZ, In<ELFT>::RelaPlt->getParent()->Size});
-    add({Config->EMachine == EM_MIPS ? DT_MIPS_PLTGOT : DT_PLTGOT,
-         InX::GotPlt});
+    switch (Config->EMachine) {
+    case EM_MIPS:
+      add({DT_MIPS_PLTGOT, In<ELFT>::GotPlt});
+      break;
+    case EM_SPARCV9:
+      add({DT_PLTGOT, In<ELFT>::Plt});
+      break;
+    default:
+      add({DT_PLTGOT, In<ELFT>::GotPlt});
+      break;
+    }
     add({DT_PLTREL, uint64_t(Config->IsRela ? DT_RELA : DT_REL)});
   }
 
@@ -1632,7 +1641,12 @@ template <class ELFT> void HashTableSection<ELFT>::writeTo(uint8_t *Buf) {
 
 PltSection::PltSection(size_t S)
     : SyntheticSection(SHF_ALLOC | SHF_EXECINSTR, SHT_PROGBITS, 16, ".plt"),
-      HeaderSize(S) {}
+      HeaderSize(S) {
+  // The PLT needs to be writable on SPARC as the dynamic linker will
+  // modify the instructions in the PLT entries.
+  if (Config->EMachine == EM_SPARCV9)
+    this->Flags |= SHF_WRITE;
+}
 
 void PltSection::writeTo(uint8_t *Buf) {
   // At beginning of PLT but not the IPLT, we have code to call the dynamic

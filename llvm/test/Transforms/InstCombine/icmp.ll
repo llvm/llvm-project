@@ -762,16 +762,11 @@ define i1 @test52(i32 %x1) {
   ret i1 %A
 }
 
-; TODO we have a 64-bit or less restriction in the handling for this pattern. We should remove that and do the same thing we do above.
 define i1 @test52b(i128 %x1) {
 ; CHECK-LABEL: @test52b(
-; CHECK-NEXT:    [[CONV:%.*]] = and i128 [[X1:%.*]], 255
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i128 [[CONV]], 127
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr i128 [[X1]], 16
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc i128 [[TMP2]] to i8
-; CHECK-NEXT:    [[CMP15:%.*]] = icmp eq i8 [[TMP3]], 76
-; CHECK-NEXT:    [[A:%.*]] = and i1 [[CMP]], [[CMP15]]
-; CHECK-NEXT:    ret i1 [[A]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i128 [[X1:%.*]], 16711935
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i128 [[TMP1]], 4980863
+; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %conv = and i128 %x1, 255
   %cmp = icmp eq i128 %conv, 127
@@ -2978,5 +2973,65 @@ define <2 x i1> @eq_mul_constants_with_tz_splat(<2 x i32> %x, <2 x i32> %y) {
   %B = mul <2 x i32> %y, <i32 12, i32 12>
   %C = icmp eq <2 x i32> %A, %B
   ret <2 x i1> %C
+}
+
+declare i32 @llvm.bswap.i32(i32)
+
+define i1 @bswap_ne(i32 %x, i32 %y) {
+; CHECK-LABEL: @bswap_ne(
+; CHECK-NEXT:    [[SWAPX:%.*]] = call i32 @llvm.bswap.i32(i32 %x)
+; CHECK-NEXT:    [[SWAPY:%.*]] = call i32 @llvm.bswap.i32(i32 %y)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[SWAPX]], [[SWAPY]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %swapx = call i32 @llvm.bswap.i32(i32 %x)
+  %swapy = call i32 @llvm.bswap.i32(i32 %y)
+  %cmp = icmp ne i32 %swapx, %swapy
+  ret i1 %cmp
+}
+
+declare <8 x i16> @llvm.bswap.v8i16(<8 x i16>)
+
+define <8 x i1> @bswap_vec_eq(<8 x i16> %x, <8 x i16> %y) {
+; CHECK-LABEL: @bswap_vec_eq(
+; CHECK-NEXT:    [[SWAPX:%.*]] = call <8 x i16> @llvm.bswap.v8i16(<8 x i16> %x)
+; CHECK-NEXT:    [[SWAPY:%.*]] = call <8 x i16> @llvm.bswap.v8i16(<8 x i16> %y)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <8 x i16> [[SWAPX]], [[SWAPY]]
+; CHECK-NEXT:    ret <8 x i1> [[CMP]]
+;
+  %swapx = call <8 x i16> @llvm.bswap.v8i16(<8 x i16> %x)
+  %swapy = call <8 x i16> @llvm.bswap.v8i16(<8 x i16> %y)
+  %cmp = icmp eq <8 x i16> %swapx, %swapy
+  ret <8 x i1> %cmp
+}
+
+declare i64 @llvm.bitreverse.i64(i64)
+
+define i1 @bitreverse_eq(i64 %x, i64 %y) {
+; CHECK-LABEL: @bitreverse_eq(
+; CHECK-NEXT:    [[REVX:%.*]] = call i64 @llvm.bitreverse.i64(i64 %x)
+; CHECK-NEXT:    [[REVY:%.*]] = call i64 @llvm.bitreverse.i64(i64 %y)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[REVX]], [[REVY]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %revx = call i64 @llvm.bitreverse.i64(i64 %x)
+  %revy = call i64 @llvm.bitreverse.i64(i64 %y)
+  %cmp = icmp eq i64 %revx, %revy
+  ret i1 %cmp
+}
+
+declare <8 x i16> @llvm.bitreverse.v8i16(<8 x i16>)
+
+define <8 x i1> @bitreverse_vec_ne(<8 x i16> %x, <8 x i16> %y) {
+; CHECK-LABEL: @bitreverse_vec_ne(
+; CHECK-NEXT:    [[REVX:%.*]] = call <8 x i16> @llvm.bitreverse.v8i16(<8 x i16> %x)
+; CHECK-NEXT:    [[REVY:%.*]] = call <8 x i16> @llvm.bitreverse.v8i16(<8 x i16> %y)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <8 x i16> [[REVX]], [[REVY]]
+; CHECK-NEXT:    ret <8 x i1> [[CMP]]
+;
+  %revx = call <8 x i16> @llvm.bitreverse.v8i16(<8 x i16> %x)
+  %revy = call <8 x i16> @llvm.bitreverse.v8i16(<8 x i16> %y)
+  %cmp = icmp ne <8 x i16> %revx, %revy
+  ret <8 x i1> %cmp
 }
 

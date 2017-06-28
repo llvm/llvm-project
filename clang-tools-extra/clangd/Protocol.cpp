@@ -54,7 +54,7 @@ URI URI::parse(llvm::yaml::ScalarNode *Param) {
 }
 
 std::string URI::unparse(const URI &U) {
-  return U.uri;
+  return "\"" + U.uri + "\"";
 }
 
 llvm::Optional<TextDocumentIdentifier>
@@ -159,6 +159,14 @@ std::string Range::unparse(const Range &P) {
   llvm::raw_string_ostream(Result) << llvm::format(
       R"({"start": %s, "end": %s})", Position::unparse(P.start).c_str(),
       Position::unparse(P.end).c_str());
+  return Result;
+}
+
+std::string Location::unparse(const Location &P) {
+  std::string Result;
+  llvm::raw_string_ostream(Result) << llvm::format(
+      R"({"uri": %s, "range": %s})", URI::unparse(P.uri).c_str(),
+      Range::unparse(P.range).c_str());
   return Result;
 }
 

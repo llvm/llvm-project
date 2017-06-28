@@ -59,6 +59,8 @@ public:
   std::vector<CompletionItem>
   codeComplete(StringRef Contents, Position Pos,
                IntrusiveRefCntPtr<vfs::FileSystem> VFS);
+  /// Get definition of symbol at a specified \p Line and \p Column in \p File.
+  std::vector<Location> findDefinitions(Position Pos);
   /// Returns diagnostics and corresponding FixIts for each diagnostic that are
   /// located in the current file.
   std::vector<DiagWithFixIts> getLocalDiagnostics() const;
@@ -71,6 +73,8 @@ private:
   Path FileName;
   std::unique_ptr<ASTUnit> Unit;
   std::shared_ptr<PCHContainerOperations> PCHs;
+
+  SourceLocation getBeginningOfIdentifier(const Position& Pos, const FileEntry* FE) const;
 };
 
 } // namespace clangd

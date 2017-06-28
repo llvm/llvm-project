@@ -68,7 +68,8 @@ public:
 
   bool hasBranchDivergence() { return true; }
 
-  void getUnrollingPreferences(Loop *L, TTI::UnrollingPreferences &UP);
+  void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
+                               TTI::UnrollingPreferences &UP);
 
   TTI::PopcntSupportKind getPopcntSupport(unsigned TyWidth) {
     assert(isPowerOf2_32(TyWidth) && "Ty width must be power of 2");

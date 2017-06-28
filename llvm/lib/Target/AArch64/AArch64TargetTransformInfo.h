@@ -122,7 +122,8 @@ public:
 
   int getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys);
 
-  void getUnrollingPreferences(Loop *L, TTI::UnrollingPreferences &UP);
+  void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
+                               TTI::UnrollingPreferences &UP);
 
   Value *getOrCreateResultFromMemIntrinsic(IntrinsicInst *Inst,
                                            Type *ExpectedType);

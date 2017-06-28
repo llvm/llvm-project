@@ -271,3 +271,17 @@ std::string ClangdServer::dumpAST(PathRef File) {
   });
   return DumpFuture.get();
 }
+
+Tagged<std::vector<Location>>
+ClangdServer::findDefinitions(PathRef File, Position Pos) {
+  auto FileContents = DraftMgr.getDraft(File);
+  assert(FileContents.Draft && "findDefinitions is called for non-added document");
+
+  std::vector<Location> Result;
+  auto TaggedFS = FSProvider.getTaggedFileSystem(File);
+  Units.runOnUnit(File, *FileContents.Draft, ResourceDir, CDB, PCHs,
+      TaggedFS.Value, [&](ClangdUnit &Unit) {
+        Result = Unit.findDefinitions(Pos);
+      });
+  return make_tagged(std::move(Result), TaggedFS.Tag);
+}

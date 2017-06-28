@@ -179,6 +179,8 @@ public:
   Tagged<std::vector<CompletionItem>>
   codeComplete(PathRef File, Position Pos,
                llvm::Optional<StringRef> OverridenContents = llvm::None);
+  /// Get definition of symbol at a specified \p Line and \p Column in \p File.
+  Tagged<std::vector<Location>> findDefinitions(PathRef File, Position Pos);
 
   /// Run formatting for \p Rng inside \p File.
   std::vector<tooling::Replacement> formatRange(PathRef File, Range Rng);

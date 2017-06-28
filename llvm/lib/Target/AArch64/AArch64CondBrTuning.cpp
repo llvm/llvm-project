@@ -22,7 +22,7 @@
 ///    cbz w8, .LBB1_2 -> b.eq .LBB1_2
 ///
 /// 3) sub w8, w0, w1       -> subs w8, w0, w1   ; w8 has multiple uses.
-///    tbz w8, #31, .LBB6_2 -> b.ge .LBB6_2
+///    tbz w8, #31, .LBB6_2 -> b.pl .LBB6_2
 ///
 //===----------------------------------------------------------------------===//
 
@@ -129,11 +129,11 @@ MachineInstr *AArch64CondBrTuning::convertToCondBr(MachineInstr &MI) {
     break;
   case AArch64::TBZW:
   case AArch64::TBZX:
-    CC = AArch64CC::GE;
+    CC = AArch64CC::PL;
     break;
   case AArch64::TBNZW:
   case AArch64::TBNZX:
-    CC = AArch64CC::LT;
+    CC = AArch64CC::MI;
     break;
   }
   return BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), TII->get(AArch64::Bcc))

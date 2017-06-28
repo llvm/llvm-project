@@ -371,10 +371,7 @@ bool LiveRangeCalc::findReachingDefs(LiveRange &LR, MachineBasicBlock &UseMBB,
 #endif
     FoundUndef |= MBB->pred_empty();
 
-    for (MachineBasicBlock::pred_iterator PI = MBB->pred_begin(),
-         PE = MBB->pred_end(); PI != PE; ++PI) {
-       MachineBasicBlock *Pred = *PI;
-
+    for (MachineBasicBlock *Pred : MBB->predecessors()) {
        // Is this a known live-out block?
        if (Seen.test(Pred->getNumber())) {
          if (VNInfo *VNI = Map[Pred].first) {
@@ -412,7 +409,7 @@ bool LiveRangeCalc::findReachingDefs(LiveRange &LR, MachineBasicBlock &UseMBB,
   }
 
   LiveIn.clear();
-  FoundUndef |= (TheVNI == nullptr);
+  FoundUndef |= (TheVNI == nullptr || TheVNI == &UndefVNI);
   if (Undefs.size() > 0 && FoundUndef)
     UniqueVNI = false;
 
@@ -457,7 +454,8 @@ bool LiveRangeCalc::findReachingDefs(LiveRange &LR, MachineBasicBlock &UseMBB,
   LiveIn.reserve(WorkList.size());
   for (unsigned BN : WorkList) {
     MachineBasicBlock *MBB = MF->getBlockNumbered(BN);
-    if (Undefs.size() > 0 && !isDefOnEntry(LR, Undefs, *MBB, DefOnEntry, UndefOnEntry))
+    if (Undefs.size() > 0 &&
+        !isDefOnEntry(LR, Undefs, *MBB, DefOnEntry, UndefOnEntry))
       continue;
     addLiveInBlock(LR, DomTree->getNode(MBB));
     if (MBB == &UseMBB)
@@ -475,9 +473,9 @@ void LiveRangeCalc::updateSSA() {
   assert(DomTree && "Missing dominator tree");
 
   // Interate until convergence.
-  unsigned Changes;
+  bool Changed;
   do {
-    Changes = 0;
+    Changed = false;
     // Propagate live-out values down the dominator tree, inserting phi-defs
     // when necessary.
     for (LiveInBlock &I : LiveIn) {
@@ -500,14 +498,14 @@ void LiveRangeCalc::updateSSA() {
         IDomValue = Map[IDom->getBlock()];
 
         // Cache the DomTree node that defined the value.
-        if (IDomValue.first && IDomValue.first != &UndefVNI)
-          if (!IDomValue.second)
-            Map[IDom->getBlock()].second = IDomValue.second =
-              DomTree->getNode(Indexes->getMBBFromIndex(IDomValue.first->def));
+        if (IDomValue.first && IDomValue.first != &UndefVNI &&
+            !IDomValue.second) {
+          Map[IDom->getBlock()].second = IDomValue.second =
+            DomTree->getNode(Indexes->getMBBFromIndex(IDomValue.first->def));
+        }
 
-        for (MachineBasicBlock::pred_iterator PI = MBB->pred_begin(),
-               PE = MBB->pred_end(); PI != PE; ++PI) {
-          LiveOutPair &Value = Map[*PI];
+        for (MachineBasicBlock *Pred : MBB->predecessors()) {
+          LiveOutPair &Value = Map[Pred];
           if (!Value.first || Value.first == IDomValue.first)
             continue;
           if (Value.first == &UndefVNI) {
@@ -537,7 +535,7 @@ void LiveRangeCalc::updateSSA() {
 
       // Create a phi-def if required.
       if (needPHI) {
-        ++Changes;
+        Changed = true;
         assert(Alloc && "Need VNInfo allocator to create PHI-defs");
         SlotIndex Start, End;
         std::tie(Start, End) = Indexes->getMBBRange(MBB);
@@ -568,9 +566,9 @@ void LiveRangeCalc::updateSSA() {
         // MBB is live-out and doesn't define its own value.
         if (LOP.first == IDomValue.first)
           continue;
-        ++Changes;
+        Changed = true;
         LOP = IDomValue;
       }
     }
-  } while (Changes);
+  } while (Changed);
 }

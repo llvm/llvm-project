@@ -38,7 +38,8 @@ COMPILER_RT_VISIBILITY uint32_t lprofBufferWriter(ProfDataWriter *This,
   char **Buffer = (char **)&This->WriterCtx;
   for (I = 0; I < NumIOVecs; I++) {
     size_t Length = IOVecs[I].ElmSize * IOVecs[I].NumElm;
-    memcpy(*Buffer, IOVecs[I].Data, Length);
+    if (IOVecs[I].Data)
+      memcpy(*Buffer, IOVecs[I].Data, Length);
     *Buffer += Length;
   }
   return 0;
@@ -231,7 +232,8 @@ static int writeValueProfData(ProfDataWriter *Writer,
 }
 
 COMPILER_RT_VISIBILITY int lprofWriteData(ProfDataWriter *Writer,
-                                          VPDataReaderType *VPDataReader) {
+                                          VPDataReaderType *VPDataReader,
+                                          int SkipNameDataWrite) {
   /* Match logic in __llvm_profile_write_buffer(). */
   const __llvm_profile_data *DataBegin = __llvm_profile_begin_data();
   const __llvm_profile_data *DataEnd = __llvm_profile_end_data();
@@ -240,7 +242,8 @@ COMPILER_RT_VISIBILITY int lprofWriteData(ProfDataWriter *Writer,
   const char *NamesBegin = __llvm_profile_begin_names();
   const char *NamesEnd = __llvm_profile_end_names();
   return lprofWriteDataImpl(Writer, DataBegin, DataEnd, CountersBegin,
-                            CountersEnd, VPDataReader, NamesBegin, NamesEnd);
+                            CountersEnd, VPDataReader, NamesBegin, NamesEnd,
+                            SkipNameDataWrite);
 }
 
 COMPILER_RT_VISIBILITY int
@@ -248,7 +251,7 @@ lprofWriteDataImpl(ProfDataWriter *Writer, const __llvm_profile_data *DataBegin,
                    const __llvm_profile_data *DataEnd,
                    const uint64_t *CountersBegin, const uint64_t *CountersEnd,
                    VPDataReaderType *VPDataReader, const char *NamesBegin,
-                   const char *NamesEnd) {
+                   const char *NamesEnd, int SkipNameDataWrite) {
 
   /* Calculate size of sections. */
   const uint64_t DataSize = __llvm_profile_get_data_size(DataBegin, DataEnd);
@@ -270,11 +273,12 @@ lprofWriteDataImpl(ProfDataWriter *Writer, const __llvm_profile_data *DataBegin,
 #include "InstrProfData.inc"
 
   /* Write the data. */
-  ProfDataIOVec IOVec[] = {{&Header, sizeof(__llvm_profile_header), 1},
-                           {DataBegin, sizeof(__llvm_profile_data), DataSize},
-                           {CountersBegin, sizeof(uint64_t), CountersSize},
-                           {NamesBegin, sizeof(uint8_t), NamesSize},
-                           {Zeroes, sizeof(uint8_t), Padding}};
+  ProfDataIOVec IOVec[] = {
+      {&Header, sizeof(__llvm_profile_header), 1},
+      {DataBegin, sizeof(__llvm_profile_data), DataSize},
+      {CountersBegin, sizeof(uint64_t), CountersSize},
+      {SkipNameDataWrite ? NULL : NamesBegin, sizeof(uint8_t), NamesSize},
+      {Zeroes, sizeof(uint8_t), Padding}};
   if (Writer->Write(Writer, IOVec, sizeof(IOVec) / sizeof(*IOVec)))
     return -1;
 

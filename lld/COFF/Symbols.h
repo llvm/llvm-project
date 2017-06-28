@@ -110,17 +110,9 @@ public:
   // writer sets and uses RVAs.
   uint64_t getRVA();
 
-  // Returns the RVA relative to the beginning of the output section.
-  // Used to implement SECREL relocation type.
-  uint32_t getSecrel();
-
-  // Returns the output section index.
-  // Used to implement SECTION relocation type.
-  uint16_t getSectionIndex();
-
-  // Returns true if this symbol points to an executable (e.g. .text) section.
-  // Used to implement ARM relocations.
-  bool isExecutable();
+  // Returns the chunk containing this symbol. Absolute symbols and __ImageBase
+  // do not have chunks, so this may return null.
+  Chunk *getChunk();
 };
 
 // Symbols defined via a COFF object file or bitcode file.  For COFF files, this
@@ -167,7 +159,6 @@ public:
   bool isCOMDAT() { return IsCOMDAT; }
   SectionChunk *getChunk() { return *Data; }
   uint32_t getValue() { return Sym->Value; }
-  uint32_t getSecrel();
 
 private:
   SectionChunk **Data;
@@ -187,8 +178,7 @@ public:
   }
 
   uint64_t getRVA() { return Data->getRVA(); }
-  uint32_t getSecrel() { return Data->OutputSectionOff; }
-  uint16_t getSectionIndex();
+  Chunk *getChunk() { return Data; }
 
 private:
   friend SymbolTable;
@@ -219,6 +209,7 @@ public:
   // against absolute symbols resolve to this 16 bit number, and it is the
   // largest valid section index plus one. This is written by the Writer.
   static uint16_t OutputSectionIndex;
+  uint16_t getSecIdx() { return OutputSectionIndex; }
 
 private:
   uint64_t VA;
@@ -237,9 +228,8 @@ public:
 
   // A null chunk indicates that this is __ImageBase. Otherwise, this is some
   // other synthesized chunk, like SEHTableChunk.
-  uint32_t getRVA() const { return C ? C->getRVA() : 0; }
-  uint32_t getSecrel() const { return C ? C->OutputSectionOff : 0; }
-  Chunk *getChunk() const { return C; }
+  uint32_t getRVA() { return C ? C->getRVA() : 0; }
+  Chunk *getChunk() { return C; }
 
 private:
   Chunk *C;
@@ -304,9 +294,11 @@ public:
   }
 
   uint64_t getRVA() { return File->Location->getRVA(); }
+  Chunk *getChunk() { return File->Location; }
+  void setLocation(Chunk *AddressTable) { File->Location = AddressTable; }
+
   StringRef getDLLName() { return File->DLLName; }
   StringRef getExternalName() { return File->ExternalName; }
-  void setLocation(Chunk *AddressTable) { File->Location = AddressTable; }
   uint16_t getOrdinal() { return File->Hdr->OrdinalHint; }
 
   ImportFile *File;
@@ -374,6 +366,29 @@ inline uint64_t Defined::getRVA() {
   case LazyKind:
   case UndefinedKind:
     llvm_unreachable("Cannot get the address for an undefined symbol.");
+  }
+  llvm_unreachable("unknown symbol kind");
+}
+
+inline Chunk *Defined::getChunk() {
+  switch (kind()) {
+  case DefinedRegularKind:
+    return cast<DefinedRegular>(this)->getChunk();
+  case DefinedAbsoluteKind:
+    return nullptr;
+  case DefinedSyntheticKind:
+    return cast<DefinedSynthetic>(this)->getChunk();
+  case DefinedImportDataKind:
+    return cast<DefinedImportData>(this)->getChunk();
+  case DefinedImportThunkKind:
+    return cast<DefinedImportThunk>(this)->getChunk();
+  case DefinedLocalImportKind:
+    return cast<DefinedLocalImport>(this)->getChunk();
+  case DefinedCommonKind:
+    return cast<DefinedCommon>(this)->getChunk();
+  case LazyKind:
+  case UndefinedKind:
+    llvm_unreachable("Cannot get the chunk of an undefined symbol.");
   }
   llvm_unreachable("unknown symbol kind");
 }

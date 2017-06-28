@@ -29,7 +29,7 @@ HexagonTTIImpl::getPopcntSupport(unsigned IntTyWidthInBit) const {
 }
 
 // The Hexagon target can unroll loops with run-time trip counts.
-void HexagonTTIImpl::getUnrollingPreferences(Loop *L,
+void HexagonTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                              TTI::UnrollingPreferences &UP) {
   UP.Runtime = UP.Partial = true;
 }

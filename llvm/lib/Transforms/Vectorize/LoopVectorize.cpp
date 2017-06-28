@@ -2716,13 +2716,13 @@ Value *InnerLoopVectorizer::getOrCreateVectorValue(Value *V, unsigned Part) {
       return ScalarValue;
     }
 
-    // Get the last scalar instruction we generated for V. If the value is
-    // known to be uniform after vectorization, this corresponds to lane zero
-    // of the last unroll iteration. Otherwise, the last instruction is the one
-    // we created for the last vector lane of the last unroll iteration.
+    // Get the last scalar instruction we generated for V and Part. If the value
+    // is known to be uniform after vectorization, this corresponds to lane zero
+    // of the Part unroll iteration. Otherwise, the last instruction is the one
+    // we created for the last vector lane of the Part unroll iteration.
     unsigned LastLane = Cost->isUniformAfterVectorization(I, VF) ? 0 : VF - 1;
     auto *LastInst =
-        cast<Instruction>(getOrCreateScalarValue(V, UF - 1, LastLane));
+        cast<Instruction>(VectorLoopValueMap.getScalarValue(V, Part, LastLane));
 
     // Set the insert point after the last scalarized instruction. This ensures
     // the insertelement sequence will directly follow the scalar definitions.
@@ -4047,7 +4047,8 @@ void InnerLoopVectorizer::fixFirstOrderRecurrence(PHINode *Phi) {
   auto *VecPhi = Builder.CreatePHI(VectorInit->getType(), 2, "vector.recur");
   VecPhi->addIncoming(VectorInit, LoopVectorPreHeader);
 
-  // Get the vectorized previous value.
+  // Get the vectorized previous value of the last part UF - 1. It appears last
+  // among all unrolled iterations, due to the order of their construction.
   Value *PreviousLastPart = getOrCreateVectorValue(Previous, UF - 1);
 
   // Set the insertion point after the previous value if it is an instruction.
