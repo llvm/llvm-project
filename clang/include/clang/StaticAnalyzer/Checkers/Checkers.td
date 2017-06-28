@@ -38,6 +38,11 @@ def CoreAlpha : Package<"core">, InPackage<Alpha>, Hidden;
 // default. Such checkers belong in the alpha package.
 def OptIn : Package<"optin">;
 
+// In the Portability package reside checkers for finding code that relies on
+// implementation-defined behavior. Such checks are wanted for cross-platform
+// development, but unwanted for developers who target only a single platform.
+def PortabilityOptIn : Package<"portability">, InPackage<OptIn>;
+
 def Nullability : Package<"nullability">;
 
 def Cplusplus : Package<"cplusplus">;
@@ -416,7 +421,7 @@ def GenericTaintChecker : Checker<"TaintPropagation">,
 
 let ParentPackage = Unix in {
 
-def UnixAPIChecker : Checker<"API">,
+def UnixAPIMisuseChecker : Checker<"API">,
   HelpText<"Check calls to various UNIX/Posix functions">,
   DescFile<"UnixAPIChecker.cpp">;
 
@@ -754,3 +759,14 @@ def CloneChecker : Checker<"CloneChecker">,
 
 } // end "clone"
 
+//===----------------------------------------------------------------------===//
+// Portability checkers.
+//===----------------------------------------------------------------------===//
+
+let ParentPackage = PortabilityOptIn in {
+
+def UnixAPIPortabilityChecker : Checker<"UnixAPI">,
+  HelpText<"Finds implementation-defined behavior in UNIX/Posix functions">,
+  DescFile<"UnixAPIChecker.cpp">;
+
+} // end optin.portability
