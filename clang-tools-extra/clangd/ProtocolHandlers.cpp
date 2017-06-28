@@ -186,6 +186,24 @@ private:
   ProtocolCallbacks &Callbacks;
 };
 
+struct GotoDefinitionHandler : Handler {
+  GotoDefinitionHandler(JSONOutput &Output, ProtocolCallbacks &Callbacks)
+      : Handler(Output), Callbacks(Callbacks) {}
+
+  void handleMethod(llvm::yaml::MappingNode *Params, StringRef ID) override {
+    auto TDPP = TextDocumentPositionParams::parse(Params);
+    if (!TDPP) {
+      Output.log("Failed to decode TextDocumentPositionParams!\n");
+      return;
+    }
+
+    Callbacks.onGoToDefinition(*TDPP, ID, Output);
+  }
+
+private:
+  ProtocolCallbacks &Callbacks;
+};
+
 } // namespace
 
 void clangd::regiterCallbackHandlers(JSONRPCDispatcher &Dispatcher,
@@ -219,4 +237,6 @@ void clangd::regiterCallbackHandlers(JSONRPCDispatcher &Dispatcher,
   Dispatcher.registerHandler(
       "textDocument/completion",
       llvm::make_unique<CompletionHandler>(Out, Callbacks));
+  Dispatcher.registerHandler("textDocument/definition",
+      llvm::make_unique<GotoDefinitionHandler>(Out, Callbacks));
 }

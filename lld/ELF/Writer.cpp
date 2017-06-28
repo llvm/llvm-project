@@ -1014,13 +1014,13 @@ findOrphanPos(std::vector<BaseCommand *>::iterator B,
 }
 
 template <class ELFT> void Writer<ELFT>::sortSections() {
+  if (Script->Opt.HasSections)
+    Script->adjustSectionsBeforeSorting();
+
   // Don't sort if using -r. It is not necessary and we want to preserve the
   // relative order for SHF_LINK_ORDER sections.
   if (Config->Relocatable)
-    return;
-
-  if (Script->Opt.HasSections)
-    Script->adjustSectionsBeforeSorting();
+      return;
 
   for (BaseCommand *Base : Script->Opt.Commands)
     if (auto *Cmd = dyn_cast<OutputSectionCommand>(Base))

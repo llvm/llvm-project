@@ -281,6 +281,9 @@ public:
   /// Return the base pointer.
   Value *getBasePtr() const { return BasePtr; }
 
+  // Set IsOnHeap to the value in parameter.
+  void setIsOnHeap(bool value) { IsOnHeap = value; }
+
   /// For indirect accesses return the origin SAI of the BP, else null.
   const ScopArrayInfo *getBasePtrOriginSAI() const { return BasePtrOriginSAI; }
 
@@ -355,6 +358,12 @@ public:
   /// Is this array info modeling an array?
   bool isArrayKind() const { return Kind == MemoryKind::Array; }
 
+  /// Is this array allocated on heap
+  ///
+  /// This property is only relevant if the array is allocated by Polly instead
+  /// of pre-existing. If false, it is allocated using alloca instead malloca.
+  bool isOnHeap() const { return IsOnHeap; }
+
   /// Dump a readable representation to stderr.
   void dump() const;
 
@@ -411,6 +420,9 @@ private:
 
   /// The isl id for the base pointer.
   isl_id *Id;
+
+  /// True if the newly allocated array is on heap.
+  bool IsOnHeap;
 
   /// The sizes of each dimension as SCEV*.
   SmallVector<const SCEV *, 4> DimensionSizes;
@@ -2593,20 +2605,19 @@ public:
   /// @param ElementType The type of the elements stored in this array.
   /// @param Kind        The kind of the array info object.
   /// @param BaseName    The optional name of this memory reference.
-  const ScopArrayInfo *getOrCreateScopArrayInfo(Value *BasePtr,
-                                                Type *ElementType,
-                                                ArrayRef<const SCEV *> Sizes,
-                                                MemoryKind Kind,
-                                                const char *BaseName = nullptr);
+  ScopArrayInfo *getOrCreateScopArrayInfo(Value *BasePtr, Type *ElementType,
+                                          ArrayRef<const SCEV *> Sizes,
+                                          MemoryKind Kind,
+                                          const char *BaseName = nullptr);
 
   /// Create an array and return the corresponding ScopArrayInfo object.
   ///
   /// @param ElementType The type of the elements stored in this array.
   /// @param BaseName    The name of this memory reference.
   /// @param Sizes       The sizes of dimensions.
-  const ScopArrayInfo *createScopArrayInfo(Type *ElementType,
-                                           const std::string &BaseName,
-                                           const std::vector<unsigned> &Sizes);
+  ScopArrayInfo *createScopArrayInfo(Type *ElementType,
+                                     const std::string &BaseName,
+                                     const std::vector<unsigned> &Sizes);
 
   /// Return the cached ScopArrayInfo object for @p BasePtr.
   ///

@@ -139,6 +139,9 @@ void DefinitionsInHeadersCheck::check(const MatchFinder::MatchResult &Result) {
     // Ignore variable definition within function scope.
     if (VD->hasLocalStorage() || VD->isStaticLocal())
       return;
+    // Ignore inline variables.
+    if (VD->isInline())
+      return;
 
     diag(VD->getLocation(),
          "variable %0 defined in a header file; "

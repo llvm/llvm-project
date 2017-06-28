@@ -38,6 +38,18 @@ struct URI {
 
   static URI parse(llvm::yaml::ScalarNode *Param);
   static std::string unparse(const URI &U);
+
+  friend bool operator==(const URI &LHS, const URI &RHS) {
+    return LHS.uri == RHS.uri;
+  }
+
+  friend bool operator!=(const URI &LHS, const URI &RHS) {
+    return !(LHS == RHS);
+  }
+
+  friend bool operator<(const URI &LHS, const URI &RHS) {
+    return LHS.uri < RHS.uri;
+  }
 };
 
 struct TextDocumentIdentifier {
@@ -84,6 +96,26 @@ struct Range {
 
   static llvm::Optional<Range> parse(llvm::yaml::MappingNode *Params);
   static std::string unparse(const Range &P);
+};
+
+struct Location {
+  /// The text document's URI.
+  URI uri;
+  Range range;
+
+  friend bool operator==(const Location &LHS, const Location &RHS) {
+    return LHS.uri == RHS.uri && LHS.range == RHS.range;
+  }
+
+  friend bool operator!=(const Location &LHS, const Location &RHS) {
+    return !(LHS == RHS);
+  }
+
+  friend bool operator<(const Location &LHS, const Location &RHS) {
+    return std::tie(LHS.uri, LHS.range) < std::tie(RHS.uri, RHS.range);
+  }
+
+  static std::string unparse(const Location &P);
 };
 
 struct TextEdit {

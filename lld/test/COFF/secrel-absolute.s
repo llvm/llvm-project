@@ -3,7 +3,7 @@
 
 # secrel relocations against absolute symbols are errors.
 
-# CHECK: SECREL relocation points to a non-regular symbol: __guard_fids_table
+# CHECK: SECREL relocation cannot be applied to absolute symbols
 
 .text
 .global main

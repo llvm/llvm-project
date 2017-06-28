@@ -52,6 +52,13 @@ void markLive(const std::vector<Chunk *> &Chunks) {
 
   while (!Worklist.empty()) {
     SectionChunk *SC = Worklist.pop_back_val();
+
+    // If this section was discarded, there are relocations referring to
+    // discarded sections. Ignore these sections to avoid crashing. They will be
+    // diagnosed during relocation processing.
+    if (SC->isDiscarded())
+      continue;
+
     assert(SC->isLive() && "We mark as live when pushing onto the worklist!");
 
     // Mark all symbols listed in the relocation table for this section.

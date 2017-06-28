@@ -74,6 +74,14 @@ from multiple translation units.
    template <typename T>
    void B<T>::f1() {}
 
+   class CE {
+     constexpr static int i = 5; // OK: inline variable definition.
+   };
+
+   inline int i = 5; // OK: inline variable definition.
+
+   constexpr int k = 1; // OK: constexpr variable has internal linkage.
+
 Options
 -------
 
