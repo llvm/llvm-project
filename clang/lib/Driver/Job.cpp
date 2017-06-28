@@ -67,6 +67,8 @@ static bool skipArgs(const char *Flag, bool HaveCrashVFS, int &SkipNum,
     .Default(false);
   if (IsInclude)
     return HaveCrashVFS ? false : true;
+  if (StringRef(Flag).startswith("-index-store-path"))
+    return true;
 
   // The remaining flags are treated as a single argument.
 
@@ -221,6 +223,7 @@ void Command::Print(raw_ostream &OS, const char *Terminator, bool Quote,
   }
 
   bool HaveCrashVFS = CrashInfo && !CrashInfo->VFSPath.empty();
+  bool HaveIndexStorePath = CrashInfo && !CrashInfo->IndexStorePath.empty();
   for (size_t i = 0, e = Args.size(); i < e; ++i) {
     const char *const Arg = Args[i];
 
@@ -283,6 +286,24 @@ void Command::Print(raw_ostream &OS, const char *Terminator, bool Quote,
     OS << ' ';
     printArg(OS, ModCachePath, Quote);
   }
+
+  if (CrashInfo && HaveIndexStorePath) {
+    SmallString<128> IndexStoreDir;
+
+    if (HaveCrashVFS) {
+      IndexStoreDir = llvm::sys::path::parent_path(
+          llvm::sys::path::parent_path(CrashInfo->VFSPath));
+      llvm::sys::path::append(IndexStoreDir, "index-store");
+    } else {
+      IndexStoreDir = "index-store";
+    }
+
+    OS << ' ';
+    printArg(OS, "-index-store-path", Quote);
+    OS << ' ';
+    printArg(OS, IndexStoreDir.c_str(), Quote);
+  }
+
 
   if (ResponseFile != nullptr) {
     OS << "\n Arguments passed via response file:\n";
