@@ -372,6 +372,15 @@ bool ThreadPlanStepOut::ShouldStop(Event *event_ptr) {
     } else {
       m_step_out_further_plan_sp =
           QueueStepOutFromHerePlan(m_flags, eFrameCompareOlder);
+      if (m_step_out_further_plan_sp->GetKind() == eKindStepOut)
+      {
+        // If we are planning to step out further, then the frame we are going
+        // to step out to is about to go away, so we need to reset the frame
+        // we are stepping out to to the one our step out plan is aiming for.
+        ThreadPlanStepOut *as_step_out 
+          = static_cast<ThreadPlanStepOut *>(m_step_out_further_plan_sp.get());
+        m_step_out_to_id = as_step_out->m_step_out_to_id;
+      }
       done = false;
     }
   }
