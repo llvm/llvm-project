@@ -32,7 +32,7 @@ public:
 
   IOObject(FDType type, bool should_close)
       : m_fd_type(type), m_should_close_fd(should_close) {}
-  virtual ~IOObject() {}
+  virtual ~IOObject();
 
   virtual Status Read(void *buf, size_t &num_bytes) = 0;
   virtual Status Write(const void *buf, size_t &num_bytes) = 0;
@@ -51,6 +51,6 @@ protected:
 private:
   DISALLOW_COPY_AND_ASSIGN(IOObject);
 };
-}
+} // namespace lldb_private
 
 #endif

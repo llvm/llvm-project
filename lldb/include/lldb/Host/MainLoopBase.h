@@ -10,12 +10,10 @@
 #ifndef lldb_Host_posix_MainLoopBase_h_
 #define lldb_Host_posix_MainLoopBase_h_
 
-#include <functional>
-
-#include "llvm/Support/ErrorHandling.h"
-
-#include "lldb/Host/IOObject.h"
+#include "lldb/Utility/IOObject.h"
 #include "lldb/Utility/Status.h"
+#include "llvm/Support/ErrorHandling.h"
+#include <functional>
 
 namespace lldb_private {
 

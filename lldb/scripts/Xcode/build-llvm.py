@@ -43,6 +43,9 @@ def process_repo(r):
     }
 
 def XCODE_REPOSITORIES():
+    override = repo.get_override()
+    if override:
+        return [process_repo(r) for r in override]
     identifier = repo.identifier()
     if identifier == None:
         identifier = "<invalid>" # repo.find will just use the fallback file

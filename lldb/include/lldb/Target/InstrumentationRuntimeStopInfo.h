@@ -16,8 +16,8 @@
 
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Core/StructuredData.h"
 #include "lldb/Target/StopInfo.h"
+#include "lldb/Utility/StructuredData.h"
 
 namespace lldb_private {
 

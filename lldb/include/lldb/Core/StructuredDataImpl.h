@@ -11,10 +11,10 @@
 #define liblldb_StructuredDataImpl_h_
 
 #include "lldb/Core/Event.h"
-#include "lldb/Core/StructuredData.h"
 #include "lldb/Target/StructuredDataPlugin.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/Utility/StructuredData.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
 #include "llvm/ADT/StringRef.h"

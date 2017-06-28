@@ -18,6 +18,7 @@ public:
   type *release();
   void reset();
   void reset(type *pt);
+  void reset(type pt);
   unique_ptr &operator=(unique_ptr &&);
   template <typename T>
   unique_ptr &operator=(unique_ptr<T> &&);
@@ -261,6 +262,36 @@ void initialization(int T, Base b) {
   BB.reset(new bar::Bar());
   // CHECK-MESSAGES: :[[@LINE-1]]:6: warning:
   // CHECK-FIXES: BB = std::make_unique<bar::Bar>();
+
+  std::unique_ptr<Foo[]> FFs;
+  FFs.reset(new Foo[5]);
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning:
+  // CHECK-FIXES: FFs = std::make_unique<Foo[]>(5);
+  FFs.reset(new Foo[5]());
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning:
+  // CHECK-FIXES: FFs = std::make_unique<Foo[]>(5);
+  const int Num = 1;
+  FFs.reset(new Foo[Num]);
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning:
+  // CHECK-FIXES: FFs = std::make_unique<Foo[]>(Num);
+  int Num2 = 1;
+  FFs.reset(new Foo[Num2]);
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning:
+  // CHECK-FIXES: FFs = std::make_unique<Foo[]>(Num2);
+
+  std::unique_ptr<int[]> FI;
+  FI.reset(new int[5]);
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning:
+  // CHECK-FIXES: FI = std::make_unique<int[]>(5);
+  FI.reset(new int[5]());
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning:
+  // CHECK-FIXES: FI = std::make_unique<int[]>(5);
+  FI.reset(new int[Num]);
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning:
+  // CHECK-FIXES: FI = std::make_unique<int[]>(Num);
+  FI.reset(new int[Num2]);
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning:
+  // CHECK-FIXES: FI = std::make_unique<int[]>(Num2);
 }
 
 void aliases() {
