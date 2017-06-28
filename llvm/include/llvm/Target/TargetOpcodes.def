@@ -369,6 +369,12 @@ HANDLE_TARGET_OPCODE(G_FREM)
 /// Generic FP exponentiation.
 HANDLE_TARGET_OPCODE(G_FPOW)
 
+/// Generic base-e exponential of a value.
+HANDLE_TARGET_OPCODE(G_FEXP)
+
+/// Generic base-2 exponential of a value.
+HANDLE_TARGET_OPCODE(G_FEXP2)
+
 /// Generic FP negation.
 HANDLE_TARGET_OPCODE(G_FNEG)
 

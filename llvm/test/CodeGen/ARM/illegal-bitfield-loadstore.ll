@@ -55,8 +55,8 @@ define void @i24_and_or(i24* %a) {
 define void @i24_insert_bit(i24* %a, i1 zeroext %bit) {
 ; LE-LABEL: i24_insert_bit:
 ; LE:       @ BB#0:
-; LE-NEXT:    ldrh r2, [r0]
 ; LE-NEXT:    mov r3, #255
+; LE-NEXT:    ldrh r2, [r0]
 ; LE-NEXT:    orr r3, r3, #57088
 ; LE-NEXT:    and r2, r2, r3
 ; LE-NEXT:    orr r1, r2, r1, lsl #13
@@ -99,8 +99,8 @@ define void @i56_or(i56* %a) {
 ; BE-NEXT:    orr r2, r3, r2, lsl #8
 ; BE-NEXT:    orr r2, r2, r12, lsl #24
 ; BE-NEXT:    orr r2, r2, #384
-; BE-NEXT:    lsr r3, r2, #8
 ; BE-NEXT:    strb r2, [r1, #2]
+; BE-NEXT:    lsr r3, r2, #8
 ; BE-NEXT:    strh r3, [r1]
 ; BE-NEXT:    bic r1, r12, #255
 ; BE-NEXT:    orr r1, r1, r2, lsr #24
@@ -127,8 +127,8 @@ define void @i56_and_or(i56* %a) {
 ; BE-NEXT:    mov r3, #128
 ; BE-NEXT:    ldrh r2, [r1, #4]!
 ; BE-NEXT:    strb r3, [r1, #2]
-; BE-NEXT:    lsl r2, r2, #8
 ; BE-NEXT:    ldr r12, [r0]
+; BE-NEXT:    lsl r2, r2, #8
 ; BE-NEXT:    orr r2, r2, r12, lsl #24
 ; BE-NEXT:    orr r2, r2, #384
 ; BE-NEXT:    lsr r3, r2, #8

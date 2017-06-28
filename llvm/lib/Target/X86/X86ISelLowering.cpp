@@ -5065,6 +5065,20 @@ static SDValue insert256BitVector(SDValue Result, SDValue Vec, unsigned IdxVal,
   return insertSubVector(Result, Vec, IdxVal, DAG, dl, 256);
 }
 
+// Return true if the instruction zeroes the unused upper part of the
+// destination and accepts mask.
+static bool isMaskedZeroUpperBitsvXi1(unsigned int Opcode) {
+  switch (Opcode) {
+  default:
+    return false;
+  case X86ISD::PCMPEQM:
+  case X86ISD::PCMPGTM:
+  case X86ISD::CMPM:
+  case X86ISD::CMPMU:
+    return true;
+  }
+}
+
 /// Insert i1-subvector to i1-vector.
 static SDValue insert1BitVector(SDValue Op, SelectionDAG &DAG,
                                 const X86Subtarget &Subtarget) {
@@ -5096,6 +5110,22 @@ static SDValue insert1BitVector(SDValue Op, SelectionDAG &DAG,
   //    (IdxVal + SubVecNumElems == NumElems)
   // 3. Subvector should be inserted in the middle (for example v2i1
   //    to v16i1, index 2)
+
+  // If this node widens - by concatenating zeroes - the type of the result
+  // of a node with instruction that zeroes all upper (irrelevant) bits of the
+  // output register, mark this node as legal to enable replacing them with
+  // the v8i1 version of the previous instruction during instruction selection.
+  // For example, VPCMPEQDZ128rr instruction stores its v4i1 result in a k-reg,
+  // while zeroing all the upper remaining 60 bits of the register. if the
+  // result of such instruction is inserted into an allZeroVector, then we can
+  // safely remove insert_vector (in instruction selection) as the cmp instr
+  // already zeroed the rest of the register.
+  if (ISD::isBuildVectorAllZeros(Vec.getNode()) && IdxVal == 0 &&
+      (isMaskedZeroUpperBitsvXi1(SubVec.getOpcode()) ||
+       (SubVec.getOpcode() == ISD::AND &&
+        (isMaskedZeroUpperBitsvXi1(SubVec.getOperand(0).getOpcode()) ||
+         isMaskedZeroUpperBitsvXi1(SubVec.getOperand(1).getOpcode())))))
+    return Op;
 
   // extend to natively supported kshift
   MVT MinVT = Subtarget.hasDQI() ? MVT::v8i1 : MVT::v16i1;
@@ -7919,6 +7949,60 @@ static SDValue LowerAVXCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG) {
   return concat256BitVectors(V1, V2, ResVT, NumElems, DAG, dl);
 }
 
+// Return true if all the operands of the given CONCAT_VECTORS node are zeros
+// except for the first one. (CONCAT_VECTORS Op, 0, 0,...,0)
+static bool isExpandWithZeros(const SDValue &Op) {
+  assert(Op.getOpcode() == ISD::CONCAT_VECTORS &&
+         "Expand with zeros only possible in CONCAT_VECTORS nodes!");
+
+  for (unsigned i = 1; i < Op.getNumOperands(); i++)
+    if (!ISD::isBuildVectorAllZeros(Op.getOperand(i).getNode()))
+      return false;
+
+  return true;
+}
+
+// Returns true if the given node is a type promotion (by concatenating i1
+// zeros) of the result of a node that already zeros all upper bits of
+// k-register.
+static SDValue isTypePromotionOfi1ZeroUpBits(SDValue Op) {
+  unsigned Opc = Op.getOpcode();
+
+  assert(Opc == ISD::CONCAT_VECTORS &&
+         Op.getSimpleValueType().getVectorElementType() == MVT::i1 &&
+         "Unexpected node to check for type promotion!");
+
+  // As long as we are concatenating zeros to the upper part of a previous node
+  // result, climb up the tree until a node with different opcode is
+  // encountered
+  while (Opc == ISD::INSERT_SUBVECTOR || Opc == ISD::CONCAT_VECTORS) {
+    if (Opc == ISD::INSERT_SUBVECTOR) {
+      if (ISD::isBuildVectorAllZeros(Op.getOperand(0).getNode()) &&
+          Op.getConstantOperandVal(2) == 0)
+        Op = Op.getOperand(1);
+      else
+        return SDValue();
+    } else { // Opc == ISD::CONCAT_VECTORS
+      if (isExpandWithZeros(Op))
+        Op = Op.getOperand(0);
+      else
+        return SDValue();
+    }
+    Opc = Op.getOpcode();
+  }
+
+  // Check if the first inserted node zeroes the upper bits, or an 'and' result
+  // of a node that zeros the upper bits (its masked version).
+  if (isMaskedZeroUpperBitsvXi1(Op.getOpcode()) ||
+      (Op.getOpcode() == ISD::AND &&
+       (isMaskedZeroUpperBitsvXi1(Op.getOperand(0).getOpcode()) ||
+        isMaskedZeroUpperBitsvXi1(Op.getOperand(1).getOpcode())))) {
+    return Op;
+  }
+
+  return SDValue();
+}
+
 static SDValue LowerCONCAT_VECTORSvXi1(SDValue Op,
                                        const X86Subtarget &Subtarget,
                                        SelectionDAG & DAG) {
@@ -7928,6 +8012,17 @@ static SDValue LowerCONCAT_VECTORSvXi1(SDValue Op,
 
   assert(isPowerOf2_32(NumOfOperands) &&
          "Unexpected number of operands in CONCAT_VECTORS");
+
+  // If this node promotes - by concatenating zeroes - the type of the result
+  // of a node with instruction that zeroes all upper (irrelevant) bits of the
+  // output register, mark it as legal and catch the pattern in instruction
+  // selection to avoid emitting extra insturctions (for zeroing upper bits).
+  if (SDValue Promoted = isTypePromotionOfi1ZeroUpBits(Op)) {
+    SDValue ZeroC = DAG.getConstant(0, dl, MVT::i64);
+    SDValue AllZeros = DAG.getSplatBuildVector(ResVT, dl, ZeroC);
+    return DAG.getNode(ISD::INSERT_SUBVECTOR, dl, ResVT, AllZeros, Promoted,
+                       ZeroC);
+  }
 
   SDValue Undef = DAG.getUNDEF(ResVT);
   if (NumOfOperands > 2) {

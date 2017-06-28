@@ -12,10 +12,10 @@
 ; GENERIC:    Latency    : 1
 ; R52_SCHED:  Latency    : 3
 ; CHECK:      MLA
-; GENERIC:    Latency    : 1
+; GENERIC:    Latency    : 2
 ; R52_SCHED:  Latency    : 4
 ; CHECK:      SDIV
-; GENERIC:    Latency    : 1
+; GENERIC:    Latency    : 0
 ; R52_SCHED:  Latency    : 8
 ; CHECK:      ** Final schedule for BB#0 ***
 ; GENERIC:    EORrr

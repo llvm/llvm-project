@@ -15,6 +15,7 @@
 #define LLVM_EXECUTIONENGINE_ORC_IRTRANSFORMLAYER_H
 
 #include "llvm/ExecutionEngine/JITSymbol.h"
+#include <memory>
 #include <string>
 
 namespace llvm {

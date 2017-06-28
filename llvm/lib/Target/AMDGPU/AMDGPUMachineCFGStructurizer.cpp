@@ -1776,7 +1776,7 @@ static void removeExternalCFGEdges(MachineBasicBlock *StartMBB,
                                           E = EndMBB->succ_end();
          PI != E; ++PI) {
       // Either we have a back-edge to the entry block, or a back-edge to the
-      // succesor of the entry block since the block may be split.
+      // successor of the entry block since the block may be split.
       if ((*PI) != StartMBB &&
           !((*PI) == StartMBBSucc && StartMBB != EndMBB && SuccSize == 1)) {
         Succs.insert(
@@ -1831,7 +1831,7 @@ MachineBasicBlock *AMDGPUMachineCFGStructurizer::createIfBlock(
   IfBB->addSuccessor(CodeBBStart);
 
   DEBUG(dbgs() << "Created If block: " << IfBB->getNumber() << "\n");
-  // Ensure that the MergeBB is a succesor of the CodeEndBB.
+  // Ensure that the MergeBB is a successor of the CodeEndBB.
   if (!CodeBBEnd->isSuccessor(MergeBB))
     CodeBBEnd->addSuccessor(MergeBB);
 

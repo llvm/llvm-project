@@ -20,6 +20,20 @@ using namespace llvm;
 
 #define DEBUG_TYPE "aarch64tti"
 
+bool AArch64TTIImpl::areInlineCompatible(const Function *Caller,
+                                         const Function *Callee) const {
+  const TargetMachine &TM = getTLI()->getTargetMachine();
+
+  const FeatureBitset &CallerBits =
+      TM.getSubtargetImpl(*Caller)->getFeatureBits();
+  const FeatureBitset &CalleeBits =
+      TM.getSubtargetImpl(*Callee)->getFeatureBits();
+
+  // Inline a callee if its target-features are a subset of the callers
+  // target-features.
+  return (CallerBits & CalleeBits) == CalleeBits;
+}
+
 /// \brief Calculate the cost of materializing a 64-bit value. This helper
 /// method might only calculate a fraction of a larger immediate. Therefore it
 /// is valid to return a cost of ZERO.

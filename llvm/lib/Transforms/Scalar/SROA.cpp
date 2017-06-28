@@ -3591,10 +3591,11 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
     int Idx = 0, Size = Offsets.Splits.size();
     for (;;) {
       auto *PartTy = Type::getIntNTy(Ty->getContext(), PartSize * 8);
-      auto *PartPtrTy = PartTy->getPointerTo(LI->getPointerAddressSpace());
+      auto AS = LI->getPointerAddressSpace();
+      auto *PartPtrTy = PartTy->getPointerTo(AS);
       LoadInst *PLoad = IRB.CreateAlignedLoad(
           getAdjustedPtr(IRB, DL, BasePtr,
-                         APInt(DL.getPointerSizeInBits(), PartOffset),
+                         APInt(DL.getPointerSizeInBits(AS), PartOffset),
                          PartPtrTy, BasePtr->getName() + "."),
           getAdjustedAlignment(LI, PartOffset, DL), /*IsVolatile*/ false,
           LI->getName());

@@ -112,23 +112,23 @@ define void @i56_and_or(i56* %a) {
 define void @i56_insert_bit(i56* %a, i1 zeroext %bit) {
 ; CHECK-LABEL: i56_insert_bit:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movzbl %sil, %eax
-; CHECK-NEXT:    movzwl 4(%rdi), %ecx
-; CHECK-NEXT:    movzbl 6(%rdi), %edx
-; CHECK-NEXT:    movl (%rdi), %esi
-; CHECK-NEXT:    movb %dl, 6(%rdi)
-; CHECK-NEXT:    # kill: %EDX<def> %EDX<kill> %RDX<kill> %RDX<def>
-; CHECK-NEXT:    shll $16, %edx
-; CHECK-NEXT:    orl %ecx, %edx
-; CHECK-NEXT:    shlq $32, %rdx
-; CHECK-NEXT:    orq %rdx, %rsi
-; CHECK-NEXT:    shlq $13, %rax
-; CHECK-NEXT:    movabsq $72057594037919743, %rcx # imm = 0xFFFFFFFFFFDFFF
-; CHECK-NEXT:    andq %rsi, %rcx
-; CHECK-NEXT:    orq %rax, %rcx
-; CHECK-NEXT:    movl %ecx, (%rdi)
-; CHECK-NEXT:    shrq $32, %rcx
-; CHECK-NEXT:    movw %cx, 4(%rdi)
+; CHECK-NEXT:    movzwl 4(%rdi), %eax
+; CHECK-NEXT:    movzbl 6(%rdi), %ecx
+; CHECK-NEXT:    movl (%rdi), %edx
+; CHECK-NEXT:    movb %cl, 6(%rdi)
+; CHECK-NEXT:    movzbl %sil, %esi
+; CHECK-NEXT:    # kill: %ECX<def> %ECX<kill> %RCX<kill> %RCX<def>
+; CHECK-NEXT:    shll $16, %ecx
+; CHECK-NEXT:    orl %eax, %ecx
+; CHECK-NEXT:    shlq $32, %rcx
+; CHECK-NEXT:    orq %rcx, %rdx
+; CHECK-NEXT:    shlq $13, %rsi
+; CHECK-NEXT:    movabsq $72057594037919743, %rax # imm = 0xFFFFFFFFFFDFFF
+; CHECK-NEXT:    andq %rdx, %rax
+; CHECK-NEXT:    orq %rsi, %rax
+; CHECK-NEXT:    movl %eax, (%rdi)
+; CHECK-NEXT:    shrq $32, %rax
+; CHECK-NEXT:    movw %ax, 4(%rdi)
 ; CHECK-NEXT:    retq
   %extbit = zext i1 %bit to i56
   %b = load i56, i56* %a, align 1

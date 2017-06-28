@@ -929,6 +929,14 @@ def : UMad24Pat<V_MAD_U32_U24>;
 defm : BFIPatterns <V_BFI_B32, S_MOV_B32, SReg_64>;
 def : ROTRPattern <V_ALIGNBIT_B32>;
 
+def : Pat<(i32 (trunc (srl i64:$src0, (and i32:$src1, (i32 31))))),
+          (V_ALIGNBIT_B32 (i32 (EXTRACT_SUBREG (i64 $src0), sub1)),
+                          (i32 (EXTRACT_SUBREG (i64 $src0), sub0)), $src1)>;
+
+def : Pat<(i32 (trunc (srl i64:$src0, (i32 ShiftAmt32Imm:$src1)))),
+          (V_ALIGNBIT_B32 (i32 (EXTRACT_SUBREG (i64 $src0), sub1)),
+                          (i32 (EXTRACT_SUBREG (i64 $src0), sub0)), $src1)>;
+
 /********** ====================== **********/
 /**********   Indirect addressing  **********/
 /********** ====================== **********/

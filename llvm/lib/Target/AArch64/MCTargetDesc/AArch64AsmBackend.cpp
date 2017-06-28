@@ -567,6 +567,18 @@ void ELFAArch64AsmBackend::processFixupValue(const MCAssembler &Asm,
 
 }
 
+namespace {
+class COFFAArch64AsmBackend : public AArch64AsmBackend {
+public:
+  COFFAArch64AsmBackend(const Target &T, const Triple &TheTriple)
+      : AArch64AsmBackend(T, /*IsLittleEndian*/true) {}
+
+  MCObjectWriter *createObjectWriter(raw_pwrite_stream &OS) const override {
+    return createAArch64WinCOFFObjectWriter(OS);
+  }
+};
+}
+
 MCAsmBackend *llvm::createAArch64leAsmBackend(const Target &T,
                                               const MCRegisterInfo &MRI,
                                               const Triple &TheTriple,
@@ -575,7 +587,12 @@ MCAsmBackend *llvm::createAArch64leAsmBackend(const Target &T,
   if (TheTriple.isOSBinFormatMachO())
     return new DarwinAArch64AsmBackend(T, MRI);
 
-  assert(TheTriple.isOSBinFormatELF() && "Expect either MachO or ELF target");
+  if (TheTriple.isOSBinFormatCOFF())
+    return new COFFAArch64AsmBackend(T, TheTriple);
+
+  assert(TheTriple.isOSBinFormatELF() &&
+         "Expect either MachO, ELF or COFF target");
+
   uint8_t OSABI = MCELFObjectTargetWriter::getOSABI(TheTriple.getOS());
   bool IsILP32 = Options.getABIName() == "ilp32";
   return new ELFAArch64AsmBackend(T, OSABI, /*IsLittleEndian=*/true, IsILP32);

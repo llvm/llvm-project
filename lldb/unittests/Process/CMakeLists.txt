@@ -1,3 +1,5 @@
 add_subdirectory(gdb-remote)
-add_subdirectory(Linux)
+if (CMAKE_SYSTEM_NAME MATCHES "Linux|Android")
+  add_subdirectory(Linux)
+endif()
 add_subdirectory(minidump)

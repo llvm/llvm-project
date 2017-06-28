@@ -49,8 +49,11 @@ static const char OpPrecedence[] = {
   4, // IC_MINUS
   5, // IC_MULTIPLY
   5, // IC_DIVIDE
-  6, // IC_RPAREN
-  7, // IC_LPAREN
+  5, // IC_MOD
+  6, // IC_NOT
+  7, // IC_NEG
+  8, // IC_RPAREN
+  9, // IC_LPAREN
   0, // IC_IMM
   0  // IC_REGISTER
 };
@@ -92,6 +95,9 @@ private:
     IC_MINUS,
     IC_MULTIPLY,
     IC_DIVIDE,
+    IC_MOD,
+    IC_NOT,
+    IC_NEG,
     IC_RPAREN,
     IC_LPAREN,
     IC_IMM,
@@ -110,6 +116,10 @@ private:
     typedef std::pair< InfixCalculatorTok, int64_t > ICToken;
     SmallVector<InfixCalculatorTok, 4> InfixOperatorStack;
     SmallVector<ICToken, 4> PostfixStack;
+
+    bool isUnaryOperator(const InfixCalculatorTok Op) {
+      return Op == IC_NEG || Op == IC_NOT;
+    }
 
   public:
     int64_t popOperand() {
@@ -192,6 +202,22 @@ private:
         ICToken Op = PostfixStack[i];
         if (Op.first == IC_IMM || Op.first == IC_REGISTER) {
           OperandStack.push_back(Op);
+        } else if (isUnaryOperator(Op.first)) {
+          assert (OperandStack.size() > 0 && "Too few operands.");
+          ICToken Operand = OperandStack.pop_back_val();
+          assert (Operand.first == IC_IMM &&
+                  "Unary operation with a register!");
+          switch (Op.first) {
+          default:
+            report_fatal_error("Unexpected operator!");
+            break;
+          case IC_NEG:
+            OperandStack.push_back(std::make_pair(IC_IMM, -Operand.second));
+            break;
+          case IC_NOT:
+            OperandStack.push_back(std::make_pair(IC_IMM, ~Operand.second));
+            break;
+          }
         } else {
           assert (OperandStack.size() > 1 && "Too few operands.");
           int64_t Val;
@@ -220,6 +246,12 @@ private:
                     "Divide operation with an immediate and a register!");
             assert (Op2.second != 0 && "Division by zero!");
             Val = Op1.second / Op2.second;
+            OperandStack.push_back(std::make_pair(IC_IMM, Val));
+            break;
+          case IC_MOD:
+            assert (Op1.first == IC_IMM && Op2.first == IC_IMM &&
+                    "Modulo operation with an immediate and a register!");
+            Val = Op1.second % Op2.second;
             OperandStack.push_back(std::make_pair(IC_IMM, Val));
             break;
           case IC_OR:
@@ -271,6 +303,7 @@ private:
     IES_NOT,
     IES_MULTIPLY,
     IES_DIVIDE,
+    IES_MOD,
     IES_LBRAC,
     IES_RBRAC,
     IES_LPAREN,
@@ -421,10 +454,16 @@ private:
       default:
         State = IES_ERROR;
         break;
+      case IES_OR:
+      case IES_XOR:
+      case IES_AND:
+      case IES_LSHIFT:
+      case IES_RSHIFT:
       case IES_PLUS:
       case IES_NOT:
       case IES_MULTIPLY:
       case IES_DIVIDE:
+      case IES_MOD:
       case IES_LPAREN:
       case IES_RPAREN:
       case IES_LBRAC:
@@ -432,11 +471,12 @@ private:
       case IES_INTEGER:
       case IES_REGISTER:
         State = IES_MINUS;
-        // Only push the minus operator if it is not a unary operator.
-        if (!(CurrState == IES_PLUS || CurrState == IES_MINUS ||
-              CurrState == IES_MULTIPLY || CurrState == IES_DIVIDE ||
-              CurrState == IES_LPAREN || CurrState == IES_LBRAC))
+        // push minus operator if it is not a negate operator
+        if (CurrState == IES_REGISTER || CurrState == IES_RPAREN ||
+            CurrState == IES_INTEGER  || CurrState == IES_RBRAC)
           IC.pushOperator(IC_MINUS);
+        else
+          IC.pushOperator(IC_NEG);
         if (CurrState == IES_REGISTER && PrevState != IES_MULTIPLY) {
           // If we already have a BaseReg, then assume this is the IndexReg with
           // a scale of 1.
@@ -458,9 +498,21 @@ private:
       default:
         State = IES_ERROR;
         break;
+      case IES_OR:
+      case IES_XOR:
+      case IES_AND:
+      case IES_LSHIFT:
+      case IES_RSHIFT:
       case IES_PLUS:
+      case IES_MINUS:
       case IES_NOT:
+      case IES_MULTIPLY:
+      case IES_DIVIDE:
+      case IES_MOD:
+      case IES_LPAREN:
+      case IES_LBRAC:
         State = IES_NOT;
+        IC.pushOperator(IC_NOT);
         break;
       }
       PrevState = CurrState;
@@ -525,6 +577,7 @@ private:
       case IES_LSHIFT:
       case IES_RSHIFT:
       case IES_DIVIDE:
+      case IES_MOD:
       case IES_MULTIPLY:
       case IES_LPAREN:
         State = IES_INTEGER;
@@ -539,26 +592,6 @@ private:
           }
           // Get the scale and replace the 'Register * Scale' with '0'.
           IC.popOperator();
-        } else if ((PrevState == IES_PLUS || PrevState == IES_MINUS ||
-                    PrevState == IES_OR || PrevState == IES_AND ||
-                    PrevState == IES_LSHIFT || PrevState == IES_RSHIFT ||
-                    PrevState == IES_MULTIPLY || PrevState == IES_DIVIDE ||
-                    PrevState == IES_LPAREN || PrevState == IES_LBRAC ||
-                    PrevState == IES_NOT || PrevState == IES_XOR) &&
-                   CurrState == IES_MINUS) {
-          // Unary minus.  No need to pop the minus operand because it was never
-          // pushed.
-          IC.pushOperand(IC_IMM, -TmpInt); // Push -Imm.
-        } else if ((PrevState == IES_PLUS || PrevState == IES_MINUS ||
-                    PrevState == IES_OR || PrevState == IES_AND ||
-                    PrevState == IES_LSHIFT || PrevState == IES_RSHIFT ||
-                    PrevState == IES_MULTIPLY || PrevState == IES_DIVIDE ||
-                    PrevState == IES_LPAREN || PrevState == IES_LBRAC ||
-                    PrevState == IES_NOT || PrevState == IES_XOR) &&
-                   CurrState == IES_NOT) {
-          // Unary not.  No need to pop the not operand because it was never
-          // pushed.
-          IC.pushOperand(IC_IMM, ~TmpInt); // Push ~Imm.
         } else {
           IC.pushOperand(IC_IMM, TmpInt);
         }
@@ -591,6 +624,19 @@ private:
       case IES_RPAREN:
         State = IES_DIVIDE;
         IC.pushOperator(IC_DIVIDE);
+        break;
+      }
+    }
+    void onMod() {
+      PrevState = State;
+      switch (State) {
+      default:
+        State = IES_ERROR;
+        break;
+      case IES_INTEGER:
+      case IES_RPAREN:
+        State = IES_MOD;
+        IC.pushOperator(IC_MOD);
         break;
       }
     }
@@ -647,18 +693,8 @@ private:
       case IES_RSHIFT:
       case IES_MULTIPLY:
       case IES_DIVIDE:
+      case IES_MOD:
       case IES_LPAREN:
-        // FIXME: We don't handle this type of unary minus or not, yet.
-        if ((PrevState == IES_PLUS || PrevState == IES_MINUS ||
-            PrevState == IES_OR || PrevState == IES_AND ||
-            PrevState == IES_LSHIFT || PrevState == IES_RSHIFT ||
-            PrevState == IES_MULTIPLY || PrevState == IES_DIVIDE ||
-            PrevState == IES_LPAREN || PrevState == IES_LBRAC ||
-            PrevState == IES_NOT || PrevState == IES_XOR) &&
-            (CurrState == IES_MINUS || CurrState == IES_NOT)) {
-          State = IES_ERROR;
-          break;
-        }
         State = IES_LPAREN;
         IC.pushOperator(IC_LPAREN);
         break;
@@ -1302,6 +1338,8 @@ bool X86AsmParser::ParseIntelNamedOperator(StringRef Name, IntelExprStateMachine
     SM.onXor();
   else if (Name.equals_lower("and"))
     SM.onAnd();
+  else if (Name.equals_lower("mod"))
+    SM.onMod();
   else
     return false;
   return true;

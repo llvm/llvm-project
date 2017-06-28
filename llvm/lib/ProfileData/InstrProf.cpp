@@ -642,8 +642,9 @@ static ValueProfRecordClosure InstrProfRecordClosure = {
 
 // Wrapper implementation using the closure mechanism.
 uint32_t ValueProfData::getSize(const InstrProfRecord &Record) {
-  InstrProfRecordClosure.Record = &Record;
-  return getValueProfDataSize(&InstrProfRecordClosure);
+  auto Closure = InstrProfRecordClosure;
+  Closure.Record = &Record;
+  return getValueProfDataSize(&Closure);
 }
 
 // Wrapper implementation using the closure mechanism.

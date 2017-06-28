@@ -416,6 +416,19 @@ def G_FPOW : Instruction {
   let hasSideEffects = 0;
 }
 
+// Floating point base-e exponential of a value.
+def G_FEXP : Instruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1);
+  let hasSideEffects = 0;
+}
+
+// Floating point base-2 exponential of a value.
+def G_FEXP2 : Instruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1);
+  let hasSideEffects = 0;
+}
 //------------------------------------------------------------------------------
 // Memory ops
 //------------------------------------------------------------------------------

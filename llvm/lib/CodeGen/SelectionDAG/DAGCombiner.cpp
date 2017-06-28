@@ -8210,18 +8210,20 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
   if (N0.getOpcode() == ISD::SHL && N0.hasOneUse() &&
       (!LegalOperations || TLI.isOperationLegalOrCustom(ISD::SHL, VT)) &&
       TLI.isTypeDesirableForOp(ISD::SHL, VT)) {
-    if (const ConstantSDNode *CAmt = isConstOrConstSplat(N0.getOperand(1))) {
-      uint64_t Amt = CAmt->getZExtValue();
-      unsigned Size = VT.getScalarSizeInBits();
+    SDValue Amt = N0.getOperand(1);
+    KnownBits Known;
+    DAG.computeKnownBits(Amt, Known);
+    unsigned Size = VT.getScalarSizeInBits();
+    if (Known.getBitWidth() - Known.countMinLeadingZeros() <= Log2_32(Size)) {
+      SDLoc SL(N);
+      EVT AmtVT = TLI.getShiftAmountTy(VT, DAG.getDataLayout());
 
-      if (Amt < Size) {
-        SDLoc SL(N);
-        EVT AmtVT = TLI.getShiftAmountTy(VT, DAG.getDataLayout());
-
-        SDValue Trunc = DAG.getNode(ISD::TRUNCATE, SL, VT, N0.getOperand(0));
-        return DAG.getNode(ISD::SHL, SL, VT, Trunc,
-                           DAG.getConstant(Amt, SL, AmtVT));
+      SDValue Trunc = DAG.getNode(ISD::TRUNCATE, SL, VT, N0.getOperand(0));
+      if (AmtVT != Amt.getValueType()) {
+        Amt = DAG.getZExtOrTrunc(Amt, SL, AmtVT);
+        AddToWorklist(Amt.getNode());
       }
+      return DAG.getNode(ISD::SHL, SL, VT, Trunc, Amt);
     }
   }
 
@@ -12829,6 +12831,7 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
     // This variable refers to the size and not index in the array.
     unsigned LastLegalVectorType = 1;
     unsigned LastLegalIntegerType = 1;
+    bool isDereferenceable = true;
     bool DoIntegerTruncate = false;
     StartAddress = LoadNodes[0].OffsetFromBase;
     SDValue FirstChain = FirstLoad->getChain();
@@ -12841,6 +12844,10 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
       if (CurrAddress - StartAddress != (ElementSizeBytes * i))
         break;
       LastConsecutiveLoad = i;
+
+      if (isDereferenceable && !LoadNodes[i].MemNode->isDereferenceable())
+        isDereferenceable = false;
+
       // Find a legal type for the vector store.
       EVT StoreTy = EVT::getVectorVT(Context, MemVT, i + 1);
       bool IsFastSt, IsFastLd;
@@ -12926,11 +12933,16 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
     SDValue NewStoreChain = getMergeStoreChains(StoreNodes, NumElem);
     AddToWorklist(NewStoreChain.getNode());
 
+    MachineMemOperand::Flags MMOFlags = isDereferenceable ? 
+                                          MachineMemOperand::MODereferenceable:
+                                          MachineMemOperand::MONone;
+
     SDValue NewLoad, NewStore;
     if (UseVectorTy || !DoIntegerTruncate) {
       NewLoad = DAG.getLoad(JointMemOpVT, LoadDL, FirstLoad->getChain(),
                             FirstLoad->getBasePtr(),
-                            FirstLoad->getPointerInfo(), FirstLoadAlign);
+                            FirstLoad->getPointerInfo(), FirstLoadAlign,
+                            MMOFlags);
       NewStore = DAG.getStore(NewStoreChain, StoreDL, NewLoad,
                               FirstInChain->getBasePtr(),
                               FirstInChain->getPointerInfo(), FirstStoreAlign);
@@ -12940,7 +12952,7 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
       NewLoad =
           DAG.getExtLoad(ISD::EXTLOAD, LoadDL, ExtendedTy, FirstLoad->getChain(),
                          FirstLoad->getBasePtr(), FirstLoad->getPointerInfo(),
-                         JointMemOpVT, FirstLoadAlign);
+                         JointMemOpVT, FirstLoadAlign, MMOFlags);
       NewStore = DAG.getTruncStore(NewStoreChain, StoreDL, NewLoad,
                                    FirstInChain->getBasePtr(),
                                    FirstInChain->getPointerInfo(), JointMemOpVT,

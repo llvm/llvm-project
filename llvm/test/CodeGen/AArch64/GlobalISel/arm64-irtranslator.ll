@@ -1271,6 +1271,26 @@ define float @test_fma_intrin(float %a, float %b, float %c) {
   ret float %res
 }
 
+declare float @llvm.exp.f32(float)
+define float @test_exp_intrin(float %a) {
+; CHECK-LABEL: name: test_exp_intrin
+; CHECK: [[A:%[0-9]+]](s32) = COPY %s0
+; CHECK: [[RES:%[0-9]+]](s32) = G_FEXP [[A]]
+; CHECK: %s0 = COPY [[RES]]
+  %res = call float @llvm.exp.f32(float %a)
+  ret float %res
+}
+
+declare float @llvm.exp2.f32(float)
+define float @test_exp2_intrin(float %a) {
+; CHECK-LABEL: name: test_exp2_intrin
+; CHECK: [[A:%[0-9]+]](s32) = COPY %s0
+; CHECK: [[RES:%[0-9]+]](s32) = G_FEXP2 [[A]]
+; CHECK: %s0 = COPY [[RES]]
+  %res = call float @llvm.exp2.f32(float %a)
+  ret float %res
+}
+
 declare void @llvm.lifetime.start.p0i8(i64, i8*)
 declare void @llvm.lifetime.end.p0i8(i64, i8*)
 define void @test_lifetime_intrin() {

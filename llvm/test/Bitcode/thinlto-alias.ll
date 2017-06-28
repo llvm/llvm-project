@@ -18,7 +18,7 @@
 ; CHECK-NEXT:  </GLOBALVAL_SUMMARY_BLOCK>
 
 ; CHECK: <STRTAB_BLOCK
-; CHECK-NEXT: blob data = 'mainanalias'
+; CHECK-NEXT: blob data = 'mainanalias{{.*}}'
 
 ; COMBINED:       <GLOBALVAL_SUMMARY_BLOCK
 ; COMBINED-NEXT:    <VERSION

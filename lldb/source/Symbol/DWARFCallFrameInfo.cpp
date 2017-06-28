@@ -151,15 +151,8 @@ GetGNUEHPointer(const DataExtractor &DE, offset_t *offset_ptr,
 }
 
 DWARFCallFrameInfo::DWARFCallFrameInfo(ObjectFile &objfile,
-                                       SectionSP &section_sp,
-                                       lldb::RegisterKind reg_kind,
-                                       bool is_eh_frame)
-    : m_objfile(objfile), m_section_sp(section_sp),
-      m_reg_kind(reg_kind), // The flavor of registers that the CFI data uses
-                            // (enum RegisterKind)
-      m_flags(), m_cie_map(), m_cfi_data(), m_cfi_data_initialized(false),
-      m_fde_index(), m_fde_index_initialized(false),
-      m_is_eh_frame(is_eh_frame) {}
+                                       SectionSP &section_sp, Type type)
+    : m_objfile(objfile), m_section_sp(section_sp), m_type(type) {}
 
 bool DWARFCallFrameInfo::GetUnwindPlan(Address addr, UnwindPlan &unwind_plan) {
   FDEEntryMap::Entry fde_entry;
@@ -266,8 +259,8 @@ DWARFCallFrameInfo::ParseCIE(const dw_offset_t cie_offset) {
     cie_id = m_cfi_data.GetU32(&offset);
     end_offset = cie_offset + length + 4;
   }
-  if (length > 0 && ((!m_is_eh_frame && cie_id == UINT32_MAX) ||
-                     (m_is_eh_frame && cie_id == 0ul))) {
+  if (length > 0 && ((m_type == DWARF && cie_id == UINT32_MAX) ||
+                     (m_type == EH && cie_id == 0ul))) {
     size_t i;
     //    cie.offset = cie_offset;
     //    cie.length = length;
@@ -303,7 +296,7 @@ DWARFCallFrameInfo::ParseCIE(const dw_offset_t cie_offset) {
 
     // m_cfi_data uses address size from target architecture of the process
     // may ignore these fields?
-    if (!m_is_eh_frame && cie_sp->version >= CFI_VERSION4) {
+    if (m_type == DWARF && cie_sp->version >= CFI_VERSION4) {
       cie_sp->address_size = m_cfi_data.GetU8(&offset);
       cie_sp->segment_size = m_cfi_data.GetU8(&offset);
     }
@@ -312,7 +305,7 @@ DWARFCallFrameInfo::ParseCIE(const dw_offset_t cie_offset) {
     cie_sp->data_align = (int32_t)m_cfi_data.GetSLEB128(&offset);
 
     cie_sp->return_addr_reg_num =
-        !m_is_eh_frame && cie_sp->version >= CFI_VERSION3
+        m_type == DWARF && cie_sp->version >= CFI_VERSION3
             ? static_cast<uint32_t>(m_cfi_data.GetULEB128(&offset))
             : m_cfi_data.GetU8(&offset);
 
@@ -482,7 +475,7 @@ void DWARFCallFrameInfo::GetFDEIndex() {
     // in eh_frame. CIE_pointer is an offset into the .debug_frame section.
     // So, variable cie_offset should be equal to cie_id for debug_frame.
     // FDE entries with cie_id == 0 shouldn't be ignored for it.
-    if ((cie_id == 0 && m_is_eh_frame) || cie_id == UINT32_MAX || len == 0) {
+    if ((cie_id == 0 && m_type == EH) || cie_id == UINT32_MAX || len == 0) {
       auto cie_sp = ParseCIE(current_entry);
       if (!cie_sp) {
         // Cannot parse, the reason is already logged
@@ -496,7 +489,7 @@ void DWARFCallFrameInfo::GetFDEIndex() {
       continue;
     }
 
-    if (!m_is_eh_frame)
+    if (m_type == DWARF)
       cie_offset = cie_id;
 
     if (cie_offset > m_cfi_data.GetByteSize()) {
@@ -564,12 +557,12 @@ bool DWARFCallFrameInfo::FDEToUnwindPlan(dw_offset_t dwarf_offset,
   }
 
   // FDE entries with zeroth cie_offset may occur for debug_frame.
-  assert(!(m_is_eh_frame && 0 == cie_offset) && cie_offset != UINT32_MAX);
+  assert(!(m_type == EH && 0 == cie_offset) && cie_offset != UINT32_MAX);
 
   // Translate the CIE_id from the eh_frame format, which
   // is relative to the FDE offset, into a __eh_frame section
   // offset
-  if (m_is_eh_frame) {
+  if (m_type == EH) {
     unwind_plan.SetSourceName("eh_frame CFI");
     cie_offset = current_entry + (is_64bit ? 12 : 4) - cie_offset;
     unwind_plan.SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
@@ -644,7 +637,7 @@ bool DWARFCallFrameInfo::FDEToUnwindPlan(dw_offset_t dwarf_offset,
   *cie_initial_row = cie->initial_row;
   UnwindPlan::RowSP row(cie_initial_row);
 
-  unwind_plan.SetRegisterKind(m_reg_kind);
+  unwind_plan.SetRegisterKind(GetRegisterKind());
   unwind_plan.SetReturnAddressRegister(cie->return_addr_reg_num);
 
   std::vector<UnwindPlan::RowSP> stack;

@@ -720,6 +720,16 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
         .addUse(getOrCreateVReg(*CI.getArgOperand(0)))
         .addUse(getOrCreateVReg(*CI.getArgOperand(1)));
     return true;
+  case Intrinsic::exp:
+    MIRBuilder.buildInstr(TargetOpcode::G_FEXP)
+        .addDef(getOrCreateVReg(CI))
+        .addUse(getOrCreateVReg(*CI.getArgOperand(0)));
+    return true;
+  case Intrinsic::exp2:
+    MIRBuilder.buildInstr(TargetOpcode::G_FEXP2)
+        .addDef(getOrCreateVReg(CI))
+        .addUse(getOrCreateVReg(*CI.getArgOperand(0)));
+    return true;
   case Intrinsic::fma:
     MIRBuilder.buildInstr(TargetOpcode::G_FMA)
         .addDef(getOrCreateVReg(CI))

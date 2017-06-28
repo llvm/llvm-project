@@ -59,8 +59,8 @@ define void @foo() local_unnamed_addr {
 ; X86-NEXT:    cmovnel %ecx, %esi
 ; X86-NEXT:    cmpl %edx, %edi
 ; X86-NEXT:    movl %ebp, var_50+4
-; X86-NEXT:    movl %esi, var_50
 ; X86-NEXT:    setge var_205
+; X86-NEXT:    movl %esi, var_50
 ; X86-NEXT:    imull %eax, %ebx
 ; X86-NEXT:    movb %bl, var_218
 ; X86-NEXT:    popl %esi
