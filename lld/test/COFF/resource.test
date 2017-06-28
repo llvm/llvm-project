@@ -6,7 +6,28 @@
 
 EXE: {{H.e.l.l.o}}
 
-# RUN: llvm-readobj -file-headers %t.exe | FileCheck  --check-prefix=HEADER %s
+# Verify the resource tree layout in the final executable.
+# RUN: llvm-readobj -file-headers -coff-resources %t.exe | FileCheck \
+# RUN:   --check-prefix=RESOURCE_INFO %s
 
-HEADER: ResourceTableRVA: 0x1000
-HEADER: ResourceTableSize: 0x88
+RESOURCE_INFO:      ResourceTableRVA: 0x1000
+RESOURCE_INFO-NEXT: ResourceTableSize: 0x88
+RESOURCE_INFO-DAG:  Resources [
+RESOURCE_INFO-NEXT:   Total Number of Resources: 1
+RESOURCE_INFO-NEXT:   Base Table Address: 0x400
+RESOURCE_INFO-DAG:    Number of String Entries: 0
+RESOURCE_INFO-NEXT:   Number of ID Entries: 1
+RESOURCE_INFO-NEXT:   Type: kRT_STRING (ID 6) [
+RESOURCE_INFO-NEXT:     Table Offset: 0x18
+RESOURCE_INFO-NEXT:     Number of String Entries: 0
+RESOURCE_INFO-NEXT:     Number of ID Entries: 1
+RESOURCE_INFO-NEXT:     Name: (ID 1) [
+RESOURCE_INFO-NEXT:       Table Offset: 0x30
+RESOURCE_INFO-NEXT:       Number of String Entries: 0
+RESOURCE_INFO-NEXT:       Number of ID Entries: 1
+RESOURCE_INFO-NEXT:       Language: (ID 1033) [
+RESOURCE_INFO-NEXT:         Entry Offset: 0x48
+RESOURCE_INFO-NEXT:         Time/Date Stamp: 1970-01-01 00:00:00 (0x0)
+RESOURCE_INFO-NEXT:         Major Version: 0
+RESOURCE_INFO-NEXT:         Minor Version: 0
+RESOURCE_INFO-NEXT:         Characteristics: 0

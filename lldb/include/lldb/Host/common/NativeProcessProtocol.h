@@ -333,7 +333,7 @@ public:
   //------------------------------------------------------------------
   /// StopTracing API as the name suggests stops a tracing instance.
   ///
-  /// @param[in] uid
+  /// @param[in] traceid
   ///     The user id of the trace intended to be stopped. Now a
   ///     user_id may map to multiple threads in which case this API
   ///     could be used to stop the tracing for a specific thread by
@@ -346,7 +346,7 @@ public:
   /// @return
   ///     Status indicating what went wrong.
   //------------------------------------------------------------------
-  virtual Status StopTrace(lldb::user_id_t uid,
+  virtual Status StopTrace(lldb::user_id_t traceid,
                            lldb::tid_t thread = LLDB_INVALID_THREAD_ID) {
     return Status("Not implemented");
   }
@@ -355,8 +355,8 @@ public:
   /// This API provides the trace data collected in the form of raw
   /// data.
   ///
-  /// @param[in] uid thread
-  ///     The uid and thread provide the context for the trace
+  /// @param[in] traceid thread
+  ///     The traceid and thread provide the context for the trace
   ///     instance.
   ///
   /// @param[in] buffer
@@ -372,7 +372,7 @@ public:
   /// @return
   ///     The size of the data actually read.
   //------------------------------------------------------------------
-  virtual Status GetData(lldb::user_id_t uid, lldb::tid_t thread,
+  virtual Status GetData(lldb::user_id_t traceid, lldb::tid_t thread,
                          llvm::MutableArrayRef<uint8_t> &buffer,
                          size_t offset = 0) {
     return Status("Not implemented");
@@ -382,7 +382,7 @@ public:
   /// Similar API as above except it aims to provide any extra data
   /// useful for decoding the actual trace data.
   //------------------------------------------------------------------
-  virtual Status GetMetaData(lldb::user_id_t uid, lldb::tid_t thread,
+  virtual Status GetMetaData(lldb::user_id_t traceid, lldb::tid_t thread,
                              llvm::MutableArrayRef<uint8_t> &buffer,
                              size_t offset = 0) {
     return Status("Not implemented");
@@ -391,7 +391,7 @@ public:
   //------------------------------------------------------------------
   /// API to query the TraceOptions for a given user id
   ///
-  /// @param[in] uid
+  /// @param[in] traceid
   ///     The user id of the tracing instance.
   ///
   /// @param[in] config
@@ -405,7 +405,7 @@ public:
   /// @param[out] config
   ///     The actual configuration being used for tracing.
   //------------------------------------------------------------------
-  virtual Status GetTraceConfig(lldb::user_id_t uid, TraceOptions &config) {
+  virtual Status GetTraceConfig(lldb::user_id_t traceid, TraceOptions &config) {
     return Status("Not implemented");
   }
 

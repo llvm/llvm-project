@@ -20,11 +20,11 @@
 #include "lldb/Utility/Status.h"
 
 #include "lldb/Core/StreamFile.h"
-#include "lldb/Core/StructuredData.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
+#include "lldb/Utility/StructuredData.h"
 
 #include "llvm/Support/ConvertUTF.h"
 

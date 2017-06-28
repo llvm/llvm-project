@@ -13,7 +13,7 @@
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
 
-#include "lldb/Core/StructuredData.h"
+#include "lldb/Utility/StructuredData.h"
 
 namespace lldb_private {
 class TraceOptions {

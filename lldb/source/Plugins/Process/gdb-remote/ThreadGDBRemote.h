@@ -16,9 +16,9 @@
 
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Core/StructuredData.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Utility/StructuredData.h"
 
 class StringExtractor;
 

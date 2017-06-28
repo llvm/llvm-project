@@ -15,8 +15,8 @@
 # OBJ-NEXT:                         00000000:  R_MIPS_GOT16 .data
 # OBJ-NEXT:        4:       27 24 00 00     addiu   $4, $25, 0
 # OBJ-NEXT:                         00000004:  R_MIPS_LO16  .data
-# OBJ-NEXT:        8:       00 00 00 00     nop
-# OBJ-NEXT:        c:       00 00 00 00     nop
+# OBJ-NEXT:        8:       ef ef ef ef     <unknown>
+# OBJ-NEXT:        c:       ef ef ef ef     <unknown>
 # OBJ-NEXT:       10:       8f 99 00 00     lw      $25, 0($gp)
 # OBJ-NEXT:                         00000010:  R_MIPS_GOT16 .data
 # OBJ-NEXT:       14:       27 24 00 10     addiu   $4, $25, 16
@@ -26,8 +26,8 @@
 # SO-NEXT: .text:
 # SO-NEXT:    10000:       8f 99 80 18     lw      $25, -32744($gp)
 # SO-NEXT:    10004:       27 24 00 00     addiu   $4, $25, 0
-# SO-NEXT:    10008:       00 00 00 00     nop
-# SO-NEXT:    1000c:       00 00 00 00     nop
+# SO-NEXT:    10008:       ef ef ef ef     <unknown>
+# SO-NEXT:    1000c:       ef ef ef ef     <unknown>
 # SO-NEXT:    10010:       8f 99 80 18     lw      $25, -32744($gp)
 # SO-NEXT:    10014:       27 24 00 10     addiu   $4, $25, 16
 

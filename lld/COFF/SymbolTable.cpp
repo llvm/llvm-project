@@ -219,13 +219,13 @@ Symbol *SymbolTable::addAbsolute(StringRef N, uint64_t VA) {
   return S;
 }
 
-Symbol *SymbolTable::addRelative(StringRef N, uint64_t VA) {
+Symbol *SymbolTable::addSynthetic(StringRef N, Chunk *C) {
   Symbol *S;
   bool WasInserted;
   std::tie(S, WasInserted) = insert(N);
   S->IsUsedInRegularObj = true;
   if (WasInserted || isa<Undefined>(S->body()) || isa<Lazy>(S->body()))
-    replaceBody<DefinedRelative>(S, N, VA);
+    replaceBody<DefinedSynthetic>(S, N, C);
   else if (!isa<DefinedCOFF>(S->body()))
     reportDuplicate(S, nullptr);
   return S;

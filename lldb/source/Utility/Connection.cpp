@@ -1,4 +1,4 @@
-//===-- IOObject.cpp --------------------------------------------*- C++ -*-===//
+//===-- Connection.cpp ------------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Host/IOObject.h"
+#include "lldb/Utility/Connection.h"
 
 using namespace lldb_private;
 
-const IOObject::WaitableHandle IOObject::kInvalidHandleValue = -1;
+Connection::~Connection() = default;

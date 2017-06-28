@@ -16,9 +16,9 @@ _start:
  bx lr
  .align 2
 .LGOT:
- // gas implicitly uses (GOT_PREL) for _GLOBAL_OFFSET_TABLE_ in PIC
- // llvm-mc needs the (GOT_PREL) suffix or it generates R_ARM_REL32
- .word _GLOBAL_OFFSET_TABLE_(GOT_PREL) - (.LPIC+8)
+ // gas implicitly uses (R_ARM_BASE_PREL) for _GLOBAL_OFFSET_TABLE_ in PIC
+ // llvm-mc generates R_ARM_REL32, this will need updating when MC changes
+ .word _GLOBAL_OFFSET_TABLE_ - (.LPIC+8)
  .word function(GOT)
 
  .globl function
@@ -28,17 +28,17 @@ function:
  bx lr
 
 // CHECK: Dynamic Relocations {
-// CHECK-NEXT:  0x204C R_ARM_GLOB_DAT function 0x0
+// CHECK-NEXT:  0x2048 R_ARM_GLOB_DAT function 0x0
 
 // CHECK: Name: _GLOBAL_OFFSET_TABLE_
-// CHECK-NEXT:    Value: 0x0
+// CHECK-NEXT:    Value: 0x2048
 // CHECK-NEXT:    Size:
 // CHECK-NEXT:    Binding: Local
 // CHECK-NEXT:    Type: None
 // CHECK-NEXT:    Other [
 // CHECK-NEXT:      STV_HIDDEN
 // CHECK-NEXT:    ]
-// CHECK-NEXT:    Section: Absolute
+// CHECK-NEXT:    Section: .got
 
 // CODE: Disassembly of section .text:
 // CODE-NEXT: _start:
@@ -49,5 +49,5 @@ function:
 // CODE:$d.1:
 // (_GLOBAL_OFFSET_TABLE_ = 0x2048) - (0x1008 + 8) 0x1038
 // CODE-NEXT:    1010:        38 10 00 00
-// (Got(function) - GotBase = 0x4
-// CODE-NEXT:    1014:        04 00 00 00
+// (Got(function) - GotBase = 0x0
+// CODE-NEXT:    1014:        00 00 00 00

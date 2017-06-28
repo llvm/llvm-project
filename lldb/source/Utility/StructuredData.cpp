@@ -7,28 +7,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/StructuredData.h"
-
-#include "lldb/Host/File.h"
-#include "lldb/Host/StringConvert.h"
+#include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/JSON.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h" // for Stream
 #include "lldb/Utility/StreamString.h"
-#include "lldb/lldb-enumerations.h" // for FilePermissions::eFilePermiss...
-#include "lldb/lldb-forward.h"      // for DataBufferSP
-
 #include "llvm/ADT/STLExtras.h" // for make_unique
-
-#include <limits> // for numeric_limits
-
-#include <errno.h>
+#include <cerrno>
+#include <cstdlib>
 #include <inttypes.h>
-#include <stdio.h> // for printf
-#include <stdlib.h>
-#include <sys/types.h> // for off_t
+#include <limits> // for numeric_limits
 
 using namespace lldb_private;
 
@@ -43,36 +33,20 @@ StructuredData::ObjectSP
 StructuredData::ParseJSONFromFile(const FileSpec &input_spec, Status &error) {
   StructuredData::ObjectSP return_sp;
   if (!input_spec.Exists()) {
-    error.SetErrorStringWithFormat("input file %s does not exist.",
-                                   input_spec.GetPath().c_str());
+    error.SetErrorStringWithFormatv("input file {0} does not exist.",
+                                    input_spec);
     return return_sp;
   }
 
-  File input_file(nullptr, File::OpenOptions::eOpenOptionRead,
-                  lldb::eFilePermissionsUserRead);
-  std::string input_path = input_spec.GetPath();
-  error =
-      input_file.Open(input_path.c_str(), File::OpenOptions::eOpenOptionRead,
-                      lldb::eFilePermissionsUserRead);
-
-  if (!error.Success()) {
-    error.SetErrorStringWithFormat("could not open input file: %s - %s.",
-                                   input_spec.GetPath().c_str(),
-                                   error.AsCString());
+  auto buffer_or_error = llvm::MemoryBuffer::getFile(input_spec.GetPath());
+  if (!buffer_or_error) {
+    error.SetErrorStringWithFormatv("could not open input file: {0} - {1}.",
+                                    input_spec.GetPath(),
+                                    buffer_or_error.getError().message());
     return return_sp;
   }
 
-  lldb::DataBufferSP input_data;
-  size_t num_bytes = std::numeric_limits<size_t>::max();
-  off_t offset = 0;
-  error = input_file.Read(num_bytes, offset, true, input_data);
-  if (!error.Success()) {
-    error.SetErrorStringWithFormat("could not read input file: %s - %s.",
-                                   input_spec.GetPath().c_str(),
-                                   error.AsCString());
-    return return_sp;
-  }
-  JSONParser json_parser((char *)input_data->GetBytes());
+  JSONParser json_parser(buffer_or_error.get()->getBuffer());
   return_sp = ParseJSONValue(json_parser);
   return return_sp;
 }
@@ -146,16 +120,14 @@ static StructuredData::ObjectSP ParseJSONValue(JSONParser &json_parser) {
     return ParseJSONArray(json_parser);
 
   case JSONParser::Token::Integer: {
-    bool success = false;
-    uint64_t uval = StringConvert::ToUInt64(value.c_str(), 0, 0, &success);
-    if (success)
+    uint64_t uval;
+    if (llvm::to_integer(value, uval, 0))
       return std::make_shared<StructuredData::Integer>(uval);
   } break;
 
   case JSONParser::Token::Float: {
-    bool success = false;
-    double val = StringConvert::ToDouble(value.c_str(), 0.0, &success);
-    if (success)
+    double val;
+    if (llvm::to_float(value, val))
       return std::make_shared<StructuredData::Float>(val);
   } break;
 
@@ -219,7 +191,7 @@ StructuredData::Object::GetObjectForDotSeparatedPath(llvm::StringRef path) {
 void StructuredData::Object::DumpToStdout(bool pretty_print) const {
   StreamString stream;
   Dump(stream, pretty_print);
-  printf("%s\n", stream.GetData());
+  llvm::outs() << stream.GetString();
 }
 
 void StructuredData::Array::Dump(Stream &s, bool pretty_print) const {

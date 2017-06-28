@@ -33,8 +33,8 @@
 # CHECK-NEXT:    2002c:       08 00 80 10     j       131136 <foo2>
 # CHECK-NEXT:    20030:       27 39 00 40     addiu   $25, $25, 64
 # CHECK-NEXT:    20034:       00 00 00 00     nop
-# CHECK-NEXT:    20038:       00 00 00 00     nop
-# CHECK-NEXT:    2003c:       00 00 00 00     nop
+# CHECK-NEXT:    20038:       ef ef ef ef     <unknown>
+# CHECK-NEXT:    2003c:       ef ef ef ef     <unknown>
 # CHECK: foo2:
 # CHECK-NEXT:    20040:       00 00 00 00     nop
 # CHECK: __LA25Thunk_fpic:
@@ -42,14 +42,14 @@
 # CHECK-NEXT:    20048:       08 00 80 18     j       131168 <fpic>
 # CHECK-NEXT:    2004c:       27 39 00 60     addiu   $25, $25, 96
 # CHECK-NEXT:    20050:       00 00 00 00     nop
-# CHECK-NEXT:    20054:       00 00 00 00     nop
-# CHECK-NEXT:    20058:       00 00 00 00     nop
-# CHECK-NEXT:    2005c:       00 00 00 00     nop
+# CHECK-NEXT:    20054:       ef ef ef ef     <unknown>
+# CHECK-NEXT:    20058:       ef ef ef ef     <unknown>
+# CHECK-NEXT:    2005c:       ef ef ef ef     <unknown>
 # CHECK: fpic:
 # CHECK-NEXT:    20060:       00 00 00 00     nop
-# CHECK-NEXT:    20064:       00 00 00 00     nop
-# CHECK-NEXT:    20068:       00 00 00 00     nop
-# CHECK-NEXT:    2006c:       00 00 00 00     nop
+# CHECK-NEXT:    20064:       ef ef ef ef     <unknown>
+# CHECK-NEXT:    20068:       ef ef ef ef     <unknown>
+# CHECK-NEXT:    2006c:       ef ef ef ef     <unknown>
 # CHECK: fnpic:
 # CHECK-NEXT:    20070:       00 00 00 00     nop
 # CHECK-NEXT: Disassembly of section differentos:
@@ -93,13 +93,13 @@
 # REVERSE-NEXT:    2002c:       08 00 80 10     j       131136 <foo2>
 # REVERSE-NEXT:    20030:       27 39 00 40     addiu   $25, $25, 64
 # REVERSE-NEXT:    20034:       00 00 00 00     nop
-# REVERSE-NEXT:    20038:       00 00 00 00     nop
-# REVERSE-NEXT:    2003c:       00 00 00 00     nop
+# REVERSE-NEXT:    20038:       ef ef ef ef     <unknown>
+# REVERSE-NEXT:    2003c:       ef ef ef ef     <unknown>
 # REVERSE: foo2:
 # REVERSE-NEXT:    20040:       00 00 00 00     nop
-# REVERSE-NEXT:    20044:       00 00 00 00     nop
-# REVERSE-NEXT:    20048:       00 00 00 00     nop
-# REVERSE-NEXT:    2004c:       00 00 00 00     nop
+# REVERSE-NEXT:    20044:       ef ef ef ef     <unknown>
+# REVERSE-NEXT:    20048:       ef ef ef ef     <unknown>
+# REVERSE-NEXT:    2004c:       ef ef ef ef     <unknown>
 # REVERSE: __LA25Thunk_fpic:
 # REVERSE-NEXT:    20050:       3c 19 00 02     lui     $25, 2
 # REVERSE-NEXT:    20054:       08 00 80 18     j       131168 <fpic>
@@ -107,9 +107,9 @@
 # REVERSE-NEXT:    2005c:       00 00 00 00     nop
 # REVERSE: fpic:
 # REVERSE-NEXT:    20060:       00 00 00 00     nop
-# REVERSE-NEXT:    20064:       00 00 00 00     nop
-# REVERSE-NEXT:    20068:       00 00 00 00     nop
-# REVERSE-NEXT:    2006c:       00 00 00 00     nop
+# REVERSE-NEXT:    20064:       ef ef ef ef     <unknown>
+# REVERSE-NEXT:    20068:       ef ef ef ef     <unknown>
+# REVERSE-NEXT:    2006c:       ef ef ef ef     <unknown>
 # REVERSE: fnpic:
 # REVERSE-NEXT:    20070:       00 00 00 00     nop
 # REVERSE-NEXT: Disassembly of section differentos:

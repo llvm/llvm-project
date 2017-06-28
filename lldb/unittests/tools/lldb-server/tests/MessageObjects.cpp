@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MessageObjects.h"
-#include "lldb/Core/StructuredData.h"
+#include "lldb/Utility/StructuredData.h"
 #include "llvm/ADT/StringExtras.h"
 #include "gtest/gtest.h"
 

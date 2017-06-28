@@ -16,6 +16,21 @@ namespace clang {
 namespace tidy {
 namespace modernize {
 
+namespace {
+std::string GetNewExprName(const CXXNewExpr *NewExpr,
+                           const SourceManager &SM,
+                           const LangOptions &Lang) {
+  StringRef WrittenName = Lexer::getSourceText(
+      CharSourceRange::getTokenRange(
+          NewExpr->getAllocatedTypeSourceInfo()->getTypeLoc().getSourceRange()),
+      SM, Lang);
+  if (NewExpr->isArray()) {
+    return WrittenName.str() + "[]";
+  }
+  return WrittenName.str();
+}
+} // namespace
+
 const char MakeSmartPtrCheck::PointerType[] = "pointerType";
 const char MakeSmartPtrCheck::ConstructorCall[] = "constructorCall";
 const char MakeSmartPtrCheck::ResetCall[] = "resetCall";
@@ -87,7 +102,7 @@ void MakeSmartPtrCheck::checkConstruct(SourceManager &SM,
   StringRef ExprStr = Lexer::getSourceText(
       CharSourceRange::getCharRange(
           ConstructCallStart, Construct->getParenOrBraceRange().getBegin()),
-      SM, LangOptions(), &Invalid);
+      SM, getLangOpts(), &Invalid);
   if (Invalid)
     return;
 
@@ -102,7 +117,8 @@ void MakeSmartPtrCheck::checkConstruct(SourceManager &SM,
     // we have to add it back.
     ConstructCallEnd = ConstructCallStart.getLocWithOffset(ExprStr.size());
     Diag << FixItHint::CreateInsertion(
-        ConstructCallEnd, "<" + Type->getAsString(getLangOpts()) + ">");
+        ConstructCallEnd,
+        "<" + GetNewExprName(New, SM, getLangOpts()) + ">");
   } else {
     ConstructCallEnd = ConstructCallStart.getLocWithOffset(LAngle);
   }
@@ -125,7 +141,7 @@ void MakeSmartPtrCheck::checkConstruct(SourceManager &SM,
         ")");
   }
 
-  replaceNew(Diag, New);
+  replaceNew(Diag, New, SM);
 }
 
 void MakeSmartPtrCheck::checkReset(SourceManager &SM,
@@ -144,29 +160,55 @@ void MakeSmartPtrCheck::checkReset(SourceManager &SM,
   Diag << FixItHint::CreateReplacement(
       CharSourceRange::getCharRange(OperatorLoc, ExprEnd),
       (llvm::Twine(" = ") + makeSmartPtrFunctionName + "<" +
-       New->getAllocatedType().getAsString(getLangOpts()) + ">")
+       GetNewExprName(New, SM, getLangOpts()) + ">")
           .str());
 
   if (Expr->isArrow())
     Diag << FixItHint::CreateInsertion(ExprStart, "*");
 
-  replaceNew(Diag, New);
+  replaceNew(Diag, New, SM);
 }
 
 void MakeSmartPtrCheck::replaceNew(DiagnosticBuilder &Diag,
-                                   const CXXNewExpr *New) {
+                                   const CXXNewExpr *New,
+                                   SourceManager& SM) {
   SourceLocation NewStart = New->getSourceRange().getBegin();
   SourceLocation NewEnd = New->getSourceRange().getEnd();
+
+  std::string ArraySizeExpr;
+  if (const auto* ArraySize = New->getArraySize()) {
+    ArraySizeExpr = Lexer::getSourceText(CharSourceRange::getTokenRange(
+                                             ArraySize->getSourceRange()),
+                                         SM, getLangOpts())
+                        .str();
+  }
+
   switch (New->getInitializationStyle()) {
   case CXXNewExpr::NoInit: {
-    Diag << FixItHint::CreateRemoval(SourceRange(NewStart, NewEnd));
+    if (ArraySizeExpr.empty()) {
+      Diag << FixItHint::CreateRemoval(SourceRange(NewStart, NewEnd));
+    } else {
+      // New array expression without written initializer:
+      //   smart_ptr<Foo[]>(new Foo[5]);
+      Diag << FixItHint::CreateReplacement(SourceRange(NewStart, NewEnd),
+                                           ArraySizeExpr);
+    }
     break;
   }
   case CXXNewExpr::CallInit: {
-    SourceRange InitRange = New->getDirectInitRange();
-    Diag << FixItHint::CreateRemoval(
-        SourceRange(NewStart, InitRange.getBegin()));
-    Diag << FixItHint::CreateRemoval(SourceRange(InitRange.getEnd(), NewEnd));
+    if (ArraySizeExpr.empty()) {
+      SourceRange InitRange = New->getDirectInitRange();
+      Diag << FixItHint::CreateRemoval(
+          SourceRange(NewStart, InitRange.getBegin()));
+      Diag << FixItHint::CreateRemoval(SourceRange(InitRange.getEnd(), NewEnd));
+    }
+    else {
+      // New array expression with default/value initialization:
+      //   smart_ptr<Foo[]>(new int[5]());
+      //   smart_ptr<Foo[]>(new Foo[5]());
+      Diag << FixItHint::CreateReplacement(SourceRange(NewStart, NewEnd),
+                                           ArraySizeExpr);
+    }
     break;
   }
   case CXXNewExpr::ListInit: {

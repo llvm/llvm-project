@@ -19,8 +19,8 @@
 #include "lldb/Breakpoint/BreakpointOptions.h"
 #include "lldb/Core/Broadcaster.h"
 #include "lldb/Core/PluginInterface.h"
-#include "lldb/Core/StructuredData.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/Utility/StructuredData.h"
 
 #include "lldb/Host/PseudoTerminal.h"
 

@@ -949,6 +949,8 @@ static bool compareByFilePosition(InputSection *A, InputSection *B) {
 template <class ELFT>
 static void finalizeShtGroup(OutputSection *OS,
                              ArrayRef<InputSection *> Sections) {
+  assert(Config->Relocatable && Sections.size() == 1);
+
   // sh_link field for SHT_GROUP sections should contain the section index of
   // the symbol table.
   OS->Link = InX::SymTab->getParent()->SectionIndex;
@@ -956,7 +958,6 @@ static void finalizeShtGroup(OutputSection *OS,
   // sh_info then contain index of an entry in symbol table section which
   // provides signature of the section group.
   elf::ObjectFile<ELFT> *Obj = Sections[0]->getFile<ELFT>();
-  assert(Config->Relocatable && Sections.size() == 1);
   ArrayRef<SymbolBody *> Symbols = Obj->getSymbols();
   OS->Info = InX::SymTab->getSymbolIndex(Symbols[Sections[0]->Info - 1]);
 }

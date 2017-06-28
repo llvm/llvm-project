@@ -49,7 +49,8 @@ private:
                       const QualType *Type, const CXXNewExpr *New);
   void checkReset(SourceManager &SM, const CXXMemberCallExpr *Member,
                   const CXXNewExpr *New);
-  void replaceNew(DiagnosticBuilder &Diag, const CXXNewExpr *New);
+  void replaceNew(DiagnosticBuilder &Diag, const CXXNewExpr *New,
+                  SourceManager &SM);
 };
 
 } // namespace modernize

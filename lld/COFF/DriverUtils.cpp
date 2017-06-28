@@ -20,6 +20,7 @@
 #include "Symbols.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/BinaryFormat/COFF.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/WindowsResource.h"
 #include "llvm/Option/Arg.h"
@@ -27,6 +28,7 @@
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileUtilities.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/raw_ostream.h"
@@ -41,6 +43,9 @@ using llvm::sys::Process;
 namespace lld {
 namespace coff {
 namespace {
+
+const uint16_t SUBLANG_ENGLISH_US = 0x0409;
+const uint16_t RT_MANIFEST = 24;
 
 class Executor {
 public:
@@ -258,26 +263,6 @@ void parseManifestUAC(StringRef Arg) {
   }
 }
 
-// Quote each line with "". Existing double-quote is converted
-// to two double-quotes.
-static void quoteAndPrint(raw_ostream &Out, StringRef S) {
-  while (!S.empty()) {
-    StringRef Line;
-    std::tie(Line, S) = S.split("\n");
-    if (Line.empty())
-      continue;
-    Out << '\"';
-    for (int I = 0, E = Line.size(); I != E; ++I) {
-      if (Line[I] == '\"') {
-        Out << "\"\"";
-      } else {
-        Out << Line[I];
-      }
-    }
-    Out << "\"\n";
-  }
-}
-
 // An RAII temporary file class that automatically removes a temporary file.
 namespace {
 class TemporaryFile {
@@ -391,38 +376,64 @@ static std::string createManifestXml() {
   return readFile(File2.Path);
 }
 
+static std::unique_ptr<MemoryBuffer>
+createMemoryBufferForManifestRes(size_t ManifestSize) {
+  size_t ResSize = alignTo(object::WIN_RES_MAGIC_SIZE +
+                           object::WIN_RES_NULL_ENTRY_SIZE +
+                           sizeof(object::WinResHeaderPrefix) +
+                           sizeof(object::WinResIDs) +
+                           sizeof(object::WinResHeaderSuffix) +
+                           ManifestSize,
+                           object::WIN_RES_DATA_ALIGNMENT);
+  return MemoryBuffer::getNewMemBuffer(ResSize);
+}
+
+static void writeResFileHeader(char *&Buf) {
+  memcpy(Buf, COFF::WinResMagic, sizeof(COFF::WinResMagic));
+  Buf += sizeof(COFF::WinResMagic);
+  memset(Buf, 0, object::WIN_RES_NULL_ENTRY_SIZE);
+  Buf += object::WIN_RES_NULL_ENTRY_SIZE;
+}
+
+static void writeResEntryHeader(char *&Buf, size_t ManifestSize) {
+  // Write the prefix.
+  auto *Prefix = reinterpret_cast<object::WinResHeaderPrefix *>(Buf);
+  Prefix->DataSize = ManifestSize;
+  Prefix->HeaderSize = sizeof(object::WinResHeaderPrefix) +
+                       sizeof(object::WinResIDs) +
+                       sizeof(object::WinResHeaderSuffix);
+  Buf += sizeof(object::WinResHeaderPrefix);
+
+  // Write the Type/Name IDs.
+  auto *IDs = reinterpret_cast<object::WinResIDs *>(Buf);
+  IDs->setType(RT_MANIFEST);
+  IDs->setName(Config->ManifestID);
+  Buf += sizeof(object::WinResIDs);
+
+  // Write the suffix.
+  auto *Suffix = reinterpret_cast<object::WinResHeaderSuffix *>(Buf);
+  Suffix->DataVersion = 0;
+  Suffix->MemoryFlags = object::WIN_RES_PURE_MOVEABLE;
+  Suffix->Language = SUBLANG_ENGLISH_US;
+  Suffix->Version = 0;
+  Suffix->Characteristics = 0;
+  Buf += sizeof(object::WinResHeaderSuffix);
+}
+
 // Create a resource file containing a manifest XML.
 std::unique_ptr<MemoryBuffer> createManifestRes() {
-  // Create a temporary file for the resource script file.
-  TemporaryFile RCFile("manifest", "rc");
+  std::string Manifest = createManifestXml();
 
-  // Open the temporary file for writing.
-  std::error_code EC;
-  raw_fd_ostream Out(RCFile.Path, EC, sys::fs::F_Text);
-  if (EC)
-    fatal(EC, "failed to open " + RCFile.Path);
+  std::unique_ptr<MemoryBuffer> Res =
+      createMemoryBufferForManifestRes(Manifest.size());
 
-  // Write resource script to the RC file.
-  Out << "#define LANG_ENGLISH 9\n"
-      << "#define SUBLANG_DEFAULT 1\n"
-      << "#define APP_MANIFEST " << Config->ManifestID << "\n"
-      << "#define RT_MANIFEST 24\n"
-      << "LANGUAGE LANG_ENGLISH, SUBLANG_DEFAULT\n"
-      << "APP_MANIFEST RT_MANIFEST {\n";
-  quoteAndPrint(Out, createManifestXml());
-  Out << "}\n";
-  Out.close();
+  char *Buf = const_cast<char *>(Res->getBufferStart());
+  writeResFileHeader(Buf);
+  writeResEntryHeader(Buf, Manifest.size());
 
-  // Create output resource file.
-  TemporaryFile ResFile("output-resource", "res");
-
-  Executor E("rc.exe");
-  E.add("/fo");
-  E.add(ResFile.Path);
-  E.add("/nologo");
-  E.add(RCFile.Path);
-  E.run();
-  return ResFile.getMemoryBuffer();
+  // Copy the manifest data into the .res file.
+  std::copy(Manifest.begin(), Manifest.end(), Buf);
+  return Res;
 }
 
 void createSideBySideManifest() {

@@ -39,7 +39,9 @@ FuncUnwinders::FuncUnwinders(UnwindTable &unwind_table, AddressRange range)
       m_unwind_plan_arch_default_sp(),
       m_unwind_plan_arch_default_at_func_entry_sp(),
       m_tried_unwind_plan_assembly(false), m_tried_unwind_plan_eh_frame(false),
+      m_tried_unwind_plan_debug_frame(false),
       m_tried_unwind_plan_eh_frame_augmented(false),
+      m_tried_unwind_plan_debug_frame_augmented(false),
       m_tried_unwind_plan_compact_unwind(false),
       m_tried_unwind_plan_arm_unwind(false), m_tried_unwind_fast(false),
       m_tried_unwind_arch_default(false),
@@ -56,17 +58,14 @@ UnwindPlanSP FuncUnwinders::GetUnwindPlanAtCallSite(Target &target,
                                                     int current_offset) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
-  UnwindPlanSP unwind_plan_sp = GetEHFrameUnwindPlan(target, current_offset);
-  if (unwind_plan_sp)
-    return unwind_plan_sp;
-
-  unwind_plan_sp = GetCompactUnwindUnwindPlan(target, current_offset);
-  if (unwind_plan_sp)
-    return unwind_plan_sp;
-
-  unwind_plan_sp = GetArmUnwindUnwindPlan(target, current_offset);
-  if (unwind_plan_sp)
-    return unwind_plan_sp;
+  if (UnwindPlanSP plan_sp = GetEHFrameUnwindPlan(target, current_offset))
+    return plan_sp;
+  if (UnwindPlanSP plan_sp = GetDebugFrameUnwindPlan(target, current_offset))
+    return plan_sp;
+  if (UnwindPlanSP plan_sp = GetCompactUnwindUnwindPlan(target, current_offset))
+    return plan_sp;
+  if (UnwindPlanSP plan_sp = GetArmUnwindUnwindPlan(target, current_offset))
+    return plan_sp;
 
   return nullptr;
 }
@@ -119,6 +118,29 @@ UnwindPlanSP FuncUnwinders::GetEHFrameUnwindPlan(Target &target,
     }
   }
   return m_unwind_plan_eh_frame_sp;
+}
+
+UnwindPlanSP FuncUnwinders::GetDebugFrameUnwindPlan(Target &target,
+                                                    int current_offset) {
+  std::lock_guard<std::recursive_mutex> guard(m_mutex);
+  if (m_unwind_plan_debug_frame_sp || m_tried_unwind_plan_debug_frame)
+    return m_unwind_plan_debug_frame_sp;
+
+  m_tried_unwind_plan_debug_frame = true;
+  if (m_range.GetBaseAddress().IsValid()) {
+    Address current_pc(m_range.GetBaseAddress());
+    if (current_offset != -1)
+      current_pc.SetOffset(current_pc.GetOffset() + current_offset);
+    DWARFCallFrameInfo *debug_frame = m_unwind_table.GetDebugFrameInfo();
+    if (debug_frame) {
+      m_unwind_plan_debug_frame_sp.reset(
+          new UnwindPlan(lldb::eRegisterKindGeneric));
+      if (!debug_frame->GetUnwindPlan(current_pc,
+                                      *m_unwind_plan_debug_frame_sp))
+        m_unwind_plan_debug_frame_sp.reset();
+    }
+  }
+  return m_unwind_plan_debug_frame_sp;
 }
 
 UnwindPlanSP FuncUnwinders::GetArmUnwindUnwindPlan(Target &target,
@@ -187,6 +209,48 @@ UnwindPlanSP FuncUnwinders::GetEHFrameAugmentedUnwindPlan(Target &target,
   return m_unwind_plan_eh_frame_augmented_sp;
 }
 
+UnwindPlanSP
+FuncUnwinders::GetDebugFrameAugmentedUnwindPlan(Target &target, Thread &thread,
+                                                int current_offset) {
+  std::lock_guard<std::recursive_mutex> guard(m_mutex);
+  if (m_unwind_plan_debug_frame_augmented_sp.get() ||
+      m_tried_unwind_plan_debug_frame_augmented)
+    return m_unwind_plan_debug_frame_augmented_sp;
+
+  // Only supported on x86 architectures where we get debug_frame from the
+  // compiler that describes the prologue instructions perfectly, and sometimes
+  // the epilogue instructions too.
+  if (target.GetArchitecture().GetCore() != ArchSpec::eCore_x86_32_i386 &&
+      target.GetArchitecture().GetCore() != ArchSpec::eCore_x86_64_x86_64 &&
+      target.GetArchitecture().GetCore() != ArchSpec::eCore_x86_64_x86_64h) {
+    m_tried_unwind_plan_debug_frame_augmented = true;
+    return m_unwind_plan_debug_frame_augmented_sp;
+  }
+
+  m_tried_unwind_plan_debug_frame_augmented = true;
+
+  UnwindPlanSP debug_frame_plan =
+      GetDebugFrameUnwindPlan(target, current_offset);
+  if (!debug_frame_plan)
+    return m_unwind_plan_debug_frame_augmented_sp;
+
+  m_unwind_plan_debug_frame_augmented_sp.reset(
+      new UnwindPlan(*debug_frame_plan));
+
+  // Augment the debug_frame instructions with epilogue descriptions if
+  // necessary so the UnwindPlan can be used at any instruction in the function.
+
+  UnwindAssemblySP assembly_profiler_sp(GetUnwindAssemblyProfiler(target));
+  if (assembly_profiler_sp) {
+    if (!assembly_profiler_sp->AugmentUnwindPlanFromCallSite(
+            m_range, thread, *m_unwind_plan_debug_frame_augmented_sp)) {
+      m_unwind_plan_debug_frame_augmented_sp.reset();
+    }
+  } else
+    m_unwind_plan_debug_frame_augmented_sp.reset();
+  return m_unwind_plan_debug_frame_augmented_sp;
+}
+
 UnwindPlanSP FuncUnwinders::GetAssemblyUnwindPlan(Target &target,
                                                   Thread &thread,
                                                   int current_offset) {
@@ -248,6 +312,8 @@ UnwindPlanSP FuncUnwinders::GetUnwindPlanAtNonCallSite(Target &target,
                                                        Thread &thread,
                                                        int current_offset) {
   UnwindPlanSP eh_frame_sp = GetEHFrameUnwindPlan(target, current_offset);
+  if (!eh_frame_sp)
+    eh_frame_sp = GetDebugFrameUnwindPlan(target, current_offset);
   UnwindPlanSP arch_default_at_entry_sp =
       GetUnwindPlanArchitectureDefaultAtFunctionEntry(thread);
   UnwindPlanSP arch_default_sp = GetUnwindPlanArchitectureDefault(thread);
@@ -255,28 +321,22 @@ UnwindPlanSP FuncUnwinders::GetUnwindPlanAtNonCallSite(Target &target,
       GetAssemblyUnwindPlan(target, thread, current_offset);
 
   // This point of this code is to detect when a function is using a
-  // non-standard ABI, and the eh_frame
-  // correctly describes that alternate ABI.  This is addressing a specific
-  // situation on x86_64 linux
-  // systems where one function in a library pushes a value on the stack and
-  // jumps to another function.
-  // So using an assembly instruction based unwind will not work when you're in
-  // the second function -
-  // the stack has been modified in a non-ABI way.  But we have eh_frame that
-  // correctly describes how to
-  // unwind from this location.  So we're looking to see if the initial pc
-  // register save location from
-  // the eh_frame is different from the assembly unwind, the arch default
-  // unwind, and the arch default at
-  // initial function entry.
+  // non-standard ABI, and the eh_frame correctly describes that alternate ABI.
+  // This is addressing a specific situation on x86_64 linux systems where one
+  // function in a library pushes a value on the stack and jumps to another
+  // function.  So using an assembly instruction based unwind will not work when
+  // you're in the second function - the stack has been modified in a non-ABI
+  // way.  But we have eh_frame that correctly describes how to unwind from this
+  // location.  So we're looking to see if the initial pc register save location
+  // from the eh_frame is different from the assembly unwind, the arch default
+  // unwind, and the arch default at initial function entry.
   //
   // We may have eh_frame that describes the entire function -- or we may have
-  // eh_frame that only describes
-  // the unwind after the prologue has executed -- so we need to check both the
-  // arch default (once the prologue
-  // has executed) and the arch default at initial function entry.  And we may
-  // be running on a target where
-  // we have only some of the assembly/arch default unwind plans available.
+  // eh_frame that only describes the unwind after the prologue has executed --
+  // so we need to check both the arch default (once the prologue has executed)
+  // and the arch default at initial function entry.  And we may be running on a
+  // target where we have only some of the assembly/arch default unwind plans
+  // available.
 
   if (CompareUnwindPlansForIdenticalInitialPCLocation(
           thread, eh_frame_sp, arch_default_at_entry_sp) == eLazyBoolNo &&
@@ -287,11 +347,12 @@ UnwindPlanSP FuncUnwinders::GetUnwindPlanAtNonCallSite(Target &target,
     return eh_frame_sp;
   }
 
-  UnwindPlanSP eh_frame_augmented_sp =
-      GetEHFrameAugmentedUnwindPlan(target, thread, current_offset);
-  if (eh_frame_augmented_sp) {
-    return eh_frame_augmented_sp;
-  }
+  if (UnwindPlanSP plan_sp =
+          GetEHFrameAugmentedUnwindPlan(target, thread, current_offset))
+    return plan_sp;
+  if (UnwindPlanSP plan_sp =
+          GetDebugFrameAugmentedUnwindPlan(target, thread, current_offset))
+    return plan_sp;
 
   return assembly_sp;
 }

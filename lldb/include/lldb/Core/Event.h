@@ -11,9 +11,9 @@
 #define liblldb_Event_h_
 
 #include "lldb/Core/Broadcaster.h"
-#include "lldb/Core/StructuredData.h"
 #include "lldb/Host/Predicate.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/StructuredData.h"
 #include "lldb/lldb-defines.h" // for DISALLOW_COPY_AND_ASSIGN
 #include "lldb/lldb-forward.h" // for EventDataSP, ProcessSP, Struct...
 

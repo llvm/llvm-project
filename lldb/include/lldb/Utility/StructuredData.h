@@ -16,6 +16,9 @@
 #include "lldb/Utility/FileSpec.h"  // for FileSpec
 #include "lldb/lldb-enumerations.h" // for StructuredDataType
 
+#include <cassert> // for assert
+#include <cstddef> // for size_t
+#include <cstdint> // for uint64_t
 #include <functional>
 #include <map>
 #include <memory>
@@ -23,10 +26,6 @@
 #include <type_traits> // for move
 #include <utility>
 #include <vector>
-
-#include <assert.h> // for assert
-#include <stddef.h> // for size_t
-#include <stdint.h> // for uint64_t
 
 namespace lldb_private {
 class Status;
@@ -38,7 +37,7 @@ class Stream;
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class StructuredData StructuredData.h "lldb/Core/StructuredData.h"
+/// @class StructuredData StructuredData.h "lldb/Utility/StructuredData.h"
 /// @brief A class which can hold structured data
 ///
 /// The StructuredData class is designed to hold the data from a JSON
@@ -94,10 +93,9 @@ public:
     }
 
     Dictionary *GetAsDictionary() {
-      return (
-          (m_type == lldb::eStructuredDataTypeDictionary)
-              ? static_cast<Dictionary *>(this)
-              : nullptr);
+      return ((m_type == lldb::eStructuredDataTypeDictionary)
+                  ? static_cast<Dictionary *>(this)
+                  : nullptr);
     }
 
     Integer *GetAsInteger() {
@@ -302,8 +300,8 @@ public:
 
   class Float : public Object {
   public:
-    Float(double d = 0.0) : Object(lldb::eStructuredDataTypeFloat),
-          m_value(d) {}
+    Float(double d = 0.0)
+        : Object(lldb::eStructuredDataTypeFloat), m_value(d) {}
 
     ~Float() override = default;
 
@@ -319,8 +317,8 @@ public:
 
   class Boolean : public Object {
   public:
-    Boolean(bool b = false) : Object(lldb::eStructuredDataTypeBoolean),
-          m_value(b) {}
+    Boolean(bool b = false)
+        : Object(lldb::eStructuredDataTypeBoolean), m_value(b) {}
 
     ~Boolean() override = default;
 
@@ -338,8 +336,7 @@ public:
   public:
     String() : Object(lldb::eStructuredDataTypeString) {}
     explicit String(llvm::StringRef S)
-        : Object(lldb::eStructuredDataTypeString),
-          m_value(S) {}
+        : Object(lldb::eStructuredDataTypeString), m_value(S) {}
 
     void SetValue(llvm::StringRef S) { m_value = S; }
 
@@ -353,8 +350,7 @@ public:
 
   class Dictionary : public Object {
   public:
-    Dictionary() : Object(lldb::eStructuredDataTypeDictionary),
-          m_dict() {}
+    Dictionary() : Object(lldb::eStructuredDataTypeDictionary), m_dict() {}
 
     ~Dictionary() override = default;
 

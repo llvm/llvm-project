@@ -269,7 +269,7 @@ public:
     EndOfFile
   };
 
-  JSONParser(const char *cstr);
+  JSONParser(llvm::StringRef data);
 
   int GetEscapedChar(bool &was_escaped);
 

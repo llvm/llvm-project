@@ -18,6 +18,7 @@ public:
   type *release();
   void reset();
   void reset(type *pt);
+  void reset(type pt);
   unique_ptr &operator=(unique_ptr &&);
   template <typename T>
   unique_ptr &operator=(unique_ptr<T> &&);
@@ -48,6 +49,14 @@ struct DPair {
 };
 
 struct Empty {};
+
+namespace {
+class Foo {};
+} // namespace
+
+namespace bar {
+class Bar {};
+} // namespace bar
 
 template <class T>
 using unique_ptr_ = std::unique_ptr<T>;
@@ -239,6 +248,50 @@ void initialization(int T, Base b) {
   std::unique_ptr<Empty> PEmpty = std::unique_ptr<Empty>(new Empty{});
   // CHECK-MESSAGES: :[[@LINE-1]]:35: warning: use std::make_unique instead
   // CHECK-FIXES: std::unique_ptr<Empty> PEmpty = std::make_unique<Empty>(Empty{});
+
+  std::unique_ptr<Foo> FF = std::unique_ptr<Foo>(new Foo());
+  // CHECK-MESSAGES: :[[@LINE-1]]:29: warning:
+  // CHECK-FIXES: std::unique_ptr<Foo> FF = std::make_unique<Foo>();
+  FF.reset(new Foo());
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning:
+  // CHECK-FIXES: FF = std::make_unique<Foo>();
+
+  std::unique_ptr<bar::Bar> BB = std::unique_ptr<bar::Bar>(new bar::Bar());
+  // CHECK-MESSAGES: :[[@LINE-1]]:34: warning:
+  // CHECK-FIXES: std::unique_ptr<bar::Bar> BB = std::make_unique<bar::Bar>();
+  BB.reset(new bar::Bar());
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning:
+  // CHECK-FIXES: BB = std::make_unique<bar::Bar>();
+
+  std::unique_ptr<Foo[]> FFs;
+  FFs.reset(new Foo[5]);
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning:
+  // CHECK-FIXES: FFs = std::make_unique<Foo[]>(5);
+  FFs.reset(new Foo[5]());
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning:
+  // CHECK-FIXES: FFs = std::make_unique<Foo[]>(5);
+  const int Num = 1;
+  FFs.reset(new Foo[Num]);
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning:
+  // CHECK-FIXES: FFs = std::make_unique<Foo[]>(Num);
+  int Num2 = 1;
+  FFs.reset(new Foo[Num2]);
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning:
+  // CHECK-FIXES: FFs = std::make_unique<Foo[]>(Num2);
+
+  std::unique_ptr<int[]> FI;
+  FI.reset(new int[5]);
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning:
+  // CHECK-FIXES: FI = std::make_unique<int[]>(5);
+  FI.reset(new int[5]());
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning:
+  // CHECK-FIXES: FI = std::make_unique<int[]>(5);
+  FI.reset(new int[Num]);
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning:
+  // CHECK-FIXES: FI = std::make_unique<int[]>(Num);
+  FI.reset(new int[Num2]);
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning:
+  // CHECK-FIXES: FI = std::make_unique<int[]>(Num2);
 }
 
 void aliases() {

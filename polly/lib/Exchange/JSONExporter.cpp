@@ -701,8 +701,16 @@ bool JSONImporter::importArrays(Scop &S, Json::Value &JScop) {
       return false;
     }
     std::vector<unsigned> DimSizes;
-    for (unsigned i = 0; i < Arrays[ArrayIdx]["sizes"].size(); i++)
+    for (unsigned i = 0; i < Arrays[ArrayIdx]["sizes"].size(); i++) {
+      auto Size = std::stoi(Arrays[ArrayIdx]["sizes"][i].asCString());
+
+      // Check if the size if positive.
+      if (Size <= 0) {
+        errs() << "The size at index " << i << " is =< 0.\n";
+        return false;
+      }
       DimSizes.push_back(std::stoi(Arrays[ArrayIdx]["sizes"][i].asCString()));
+    }
     S.createScopArrayInfo(ElementType, Arrays[ArrayIdx]["name"].asCString(),
                           DimSizes);
   }
