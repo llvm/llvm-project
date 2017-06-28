@@ -44,7 +44,7 @@ struct DiagWithFixIts {
 /// would want to perform on parsed C++ files.
 class ClangdUnit {
 public:
-  ClangdUnit(PathRef FileName, StringRef Contents,
+  ClangdUnit(PathRef FileName, StringRef Contents, StringRef ResourceDir,
              std::shared_ptr<PCHContainerOperations> PCHs,
              std::vector<tooling::CompileCommand> Commands,
              IntrusiveRefCntPtr<vfs::FileSystem> VFS);

@@ -17,22 +17,24 @@ entry:
   %add6 = add nsw i256 %or, %d
   store i256 %add6, i256* %b, align 8
   ret void
-  ; CHECK-DAG: ldm r3
   ; CHECK-DAG: ldm r2
-  ; CHECK-DAG: ldr {{.*}}, [r3, #20]
+  ; CHECK-DAG: ldr {{.*}}, [r3]
+  ; CHECK-DAG: ldr {{.*}}, [r3, #4]
+  ; CHECK-DAG: ldr {{.*}}, [r3, #8]
+  ; CHECK-DAG: ldr {{.*}}, [r3, #12]
   ; CHECK-DAG: ldr {{.*}}, [r3, #16]
-  ; CHECK-DAG: ldr {{.*}}, [r3, #28]
+  ; CHECK-DAG: ldr {{.*}}, [r3, #20]
   ; CHECK-DAG: ldr {{.*}}, [r3, #24]
+  ; CHECK-DAG: ldr {{.*}}, [r3, #28]
   ; CHECK-DAG: ldr {{.*}}, [r2, #20]
-  ; CHECK-DAG: ldr {{.*}}, [r2, #16]
-  ; CHECK-DAG: ldr {{.*}}, [r2, #28]
   ; CHECK-DAG: ldr {{.*}}, [r2, #24]
-  ; CHECK-DAG: stmib r0
-  ; CHECK-DAG: str {{.*}}, [r0]
+  ; CHECK-DAG: ldr {{.*}}, [r2, #28]
+  ; CHECK-DAG: stm r0
+  ; CHECK-DAG: str {{.*}}, [r0, #20]
   ; CHECK-DAG: str {{.*}}, [r0, #24]
   ; CHECK-DAG: str {{.*}}, [r0, #28]
-  ; CHECK-DAG: str {{.*}}, [r1]
-  ; CHECK-DAG: stmib r1
+  ; CHECK-DAG: stm r1
+  ; CHECK-DAG: str {{.*}}, [r1, #20]
   ; CHECK-DAG: str {{.*}}, [r1, #24]
   ; CHECK-DAG: str {{.*}}, [r1, #28]
 }

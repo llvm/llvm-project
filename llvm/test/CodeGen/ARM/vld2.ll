@@ -14,7 +14,7 @@
 define <8 x i8> @vld2i8(i8* %A) nounwind {
 ;CHECK-LABEL: vld2i8:
 ;Check the alignment value.  Max for this instruction is 128 bits:
-;CHECK: vld2.8 {d16, d17}, [r0:64]
+;CHECK: vld2.8 {d16, d17}, [{{r[0-9]+|lr}}:64]
 	%tmp1 = call %struct.__neon_int8x8x2_t @llvm.arm.neon.vld2.v8i8.p0i8(i8* %A, i32 8)
         %tmp2 = extractvalue %struct.__neon_int8x8x2_t %tmp1, 0
         %tmp3 = extractvalue %struct.__neon_int8x8x2_t %tmp1, 1
@@ -25,7 +25,7 @@ define <8 x i8> @vld2i8(i8* %A) nounwind {
 define <4 x i16> @vld2i16(i16* %A) nounwind {
 ;CHECK-LABEL: vld2i16:
 ;Check the alignment value.  Max for this instruction is 128 bits:
-;CHECK: vld2.16 {d16, d17}, [r0:128]
+;CHECK: vld2.16 {d16, d17}, [{{r[0-9]+|lr}}:128]
 	%tmp0 = bitcast i16* %A to i8*
 	%tmp1 = call %struct.__neon_int16x4x2_t @llvm.arm.neon.vld2.v4i16.p0i8(i8* %tmp0, i32 32)
         %tmp2 = extractvalue %struct.__neon_int16x4x2_t %tmp1, 0
@@ -59,7 +59,7 @@ define <2 x float> @vld2f(float* %A) nounwind {
 ;Check for a post-increment updating load. 
 define <2 x float> @vld2f_update(float** %ptr) nounwind {
 ;CHECK-LABEL: vld2f_update:
-;CHECK: vld2.32 {d16, d17}, [r1]!
+;CHECK: vld2.32 {d16, d17}, [{{r[0-9]+|lr}}]!
 	%A = load float*, float** %ptr
 	%tmp0 = bitcast float* %A to i8*
 	%tmp1 = call %struct.__neon_float32x2x2_t @llvm.arm.neon.vld2.v2f32.p0i8(i8* %tmp0, i32 1)
@@ -74,7 +74,7 @@ define <2 x float> @vld2f_update(float** %ptr) nounwind {
 define <1 x i64> @vld2i64(i64* %A) nounwind {
 ;CHECK-LABEL: vld2i64:
 ;Check the alignment value.  Max for this instruction is 128 bits:
-;CHECK: vld1.64 {d16, d17}, [r0:128]
+;CHECK: vld1.64 {d16, d17}, [{{r[0-9]+|lr}}:128]
 	%tmp0 = bitcast i64* %A to i8*
 	%tmp1 = call %struct.__neon_int64x1x2_t @llvm.arm.neon.vld2.v1i64.p0i8(i8* %tmp0, i32 32)
         %tmp2 = extractvalue %struct.__neon_int64x1x2_t %tmp1, 0
@@ -86,7 +86,7 @@ define <1 x i64> @vld2i64(i64* %A) nounwind {
 define <16 x i8> @vld2Qi8(i8* %A) nounwind {
 ;CHECK-LABEL: vld2Qi8:
 ;Check the alignment value.  Max for this instruction is 256 bits:
-;CHECK: vld2.8 {d16, d17, d18, d19}, [r0:64]
+;CHECK: vld2.8 {d16, d17, d18, d19}, [{{r[0-9]+|lr}}:64]
 	%tmp1 = call %struct.__neon_int8x16x2_t @llvm.arm.neon.vld2.v16i8.p0i8(i8* %A, i32 8)
         %tmp2 = extractvalue %struct.__neon_int8x16x2_t %tmp1, 0
         %tmp3 = extractvalue %struct.__neon_int8x16x2_t %tmp1, 1
@@ -97,7 +97,7 @@ define <16 x i8> @vld2Qi8(i8* %A) nounwind {
 ;Check for a post-increment updating load with register increment.
 define <16 x i8> @vld2Qi8_update(i8** %ptr, i32 %inc) nounwind {
 ;CHECK-LABEL: vld2Qi8_update:
-;CHECK: vld2.8 {d16, d17, d18, d19}, [r2:128], r1
+;CHECK: vld2.8 {d16, d17, d18, d19}, [{{r[0-9]+|lr}}:128], r1
 	%A = load i8*, i8** %ptr
 	%tmp1 = call %struct.__neon_int8x16x2_t @llvm.arm.neon.vld2.v16i8.p0i8(i8* %A, i32 16)
         %tmp2 = extractvalue %struct.__neon_int8x16x2_t %tmp1, 0
@@ -111,7 +111,7 @@ define <16 x i8> @vld2Qi8_update(i8** %ptr, i32 %inc) nounwind {
 define <8 x i16> @vld2Qi16(i16* %A) nounwind {
 ;CHECK-LABEL: vld2Qi16:
 ;Check the alignment value.  Max for this instruction is 256 bits:
-;CHECK: vld2.16 {d16, d17, d18, d19}, [r0:128]
+;CHECK: vld2.16 {d16, d17, d18, d19}, [{{r[0-9]+|lr}}:128]
 	%tmp0 = bitcast i16* %A to i8*
 	%tmp1 = call %struct.__neon_int16x8x2_t @llvm.arm.neon.vld2.v8i16.p0i8(i8* %tmp0, i32 16)
         %tmp2 = extractvalue %struct.__neon_int16x8x2_t %tmp1, 0
@@ -123,7 +123,7 @@ define <8 x i16> @vld2Qi16(i16* %A) nounwind {
 define <4 x i32> @vld2Qi32(i32* %A) nounwind {
 ;CHECK-LABEL: vld2Qi32:
 ;Check the alignment value.  Max for this instruction is 256 bits:
-;CHECK: vld2.32 {d16, d17, d18, d19}, [r0:256]
+;CHECK: vld2.32 {d16, d17, d18, d19}, [{{r[0-9]+|lr}}:256]
 	%tmp0 = bitcast i32* %A to i8*
 	%tmp1 = call %struct.__neon_int32x4x2_t @llvm.arm.neon.vld2.v4i32.p0i8(i8* %tmp0, i32 64)
         %tmp2 = extractvalue %struct.__neon_int32x4x2_t %tmp1, 0

@@ -18,9 +18,14 @@ entry:
 }
 
 ; CHECK-LABEL: noDebug
-; CHECK:       addq  $24, %rsp
+; CHECK:       addq  $16, %rsp
+; CHECK:       addq  $8, %rsp
 ; CHECK:       popq  %rbx
+; CHECK-NEXT:  :
+; CHECK-NEXT:  .cfi_def_cfa_offset 16
 ; CHECK-NEXT:  popq  %r14
+; CHECK-NEXT:  :
+; CHECK-NEXT:  .cfi_def_cfa_offset 8
 ; CHECK-NEXT:  retq
 
 
@@ -41,9 +46,14 @@ entry:
 
 ; CHECK-LABEL: withDebug
 ; CHECK:       #DEBUG_VALUE: test:j <- %RBX
-; CHECK-NEXT:  addq  $24, %rsp
+; CHECK-NEXT:  addq  $16, %rsp
+; CHECK:       addq  $8, %rsp
 ; CHECK:       popq  %rbx
+; CHECK-NEXT:  :
+; CHECK-NEXT:  .cfi_def_cfa_offset 16
 ; CHECK-NEXT:  popq  %r14
+; CHECK-NEXT:  :
+; CHECK-NEXT:  .cfi_def_cfa_offset 8
 ; CHECK-NEXT:  retq
 
 declare { i64, i1 } @llvm.uadd.with.overflow.i64(i64, i64)

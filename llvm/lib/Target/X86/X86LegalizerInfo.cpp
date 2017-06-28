@@ -56,7 +56,7 @@ void X86LegalizerInfo::setLegalizerInfo32bit() {
   const LLT s32 = LLT::scalar(32);
   const LLT s64 = LLT::scalar(64);
 
-  for (unsigned BinOp : {G_ADD, G_SUB, G_MUL})
+  for (unsigned BinOp : {G_ADD, G_SUB, G_MUL, G_AND, G_OR, G_XOR})
     for (auto Ty : {s8, s16, s32})
       setAction({BinOp, Ty}, Legal);
 
@@ -117,7 +117,7 @@ void X86LegalizerInfo::setLegalizerInfo64bit() {
   const LLT s32 = LLT::scalar(32);
   const LLT s64 = LLT::scalar(64);
 
-  for (unsigned BinOp : {G_ADD, G_SUB, G_MUL})
+  for (unsigned BinOp : {G_ADD, G_SUB, G_MUL, G_AND, G_OR, G_XOR})
     for (auto Ty : {s8, s16, s32, s64})
       setAction({BinOp, Ty}, Legal);
 

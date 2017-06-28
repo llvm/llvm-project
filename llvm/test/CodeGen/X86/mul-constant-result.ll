@@ -33,84 +33,148 @@ define i32 @mult(i32, i32) local_unnamed_addr #0 {
 ; X86-NEXT:  .LBB0_6:
 ; X86-NEXT:    addl %eax, %eax
 ; X86-NEXT:    popl %esi
+; X86-NEXT:  .Lcfi2:
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ; X86-NEXT:  .LBB0_39:
+; X86-NEXT:  .Lcfi3:
+; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:  .LBB0_40:
 ; X86-NEXT:    popl %esi
+; X86-NEXT:  .Lcfi4:
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ; X86-NEXT:  .LBB0_7:
+; X86-NEXT:  .Lcfi5:
+; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    leal (%eax,%eax,2), %eax
 ; X86-NEXT:    popl %esi
+; X86-NEXT:  .Lcfi6:
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ; X86-NEXT:  .LBB0_8:
+; X86-NEXT:  .Lcfi7:
+; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    shll $2, %eax
 ; X86-NEXT:    popl %esi
+; X86-NEXT:  .Lcfi8:
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ; X86-NEXT:  .LBB0_9:
+; X86-NEXT:  .Lcfi9:
+; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    leal (%eax,%eax,4), %eax
 ; X86-NEXT:    popl %esi
+; X86-NEXT:  .Lcfi10:
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ; X86-NEXT:  .LBB0_10:
+; X86-NEXT:  .Lcfi11:
+; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    addl %eax, %eax
 ; X86-NEXT:    leal (%eax,%eax,2), %eax
 ; X86-NEXT:    popl %esi
+; X86-NEXT:  .Lcfi12:
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ; X86-NEXT:  .LBB0_11:
+; X86-NEXT:  .Lcfi13:
+; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    leal (,%eax,8), %ecx
 ; X86-NEXT:    jmp .LBB0_12
 ; X86-NEXT:  .LBB0_13:
 ; X86-NEXT:    shll $3, %eax
 ; X86-NEXT:    popl %esi
+; X86-NEXT:  .Lcfi14:
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ; X86-NEXT:  .LBB0_14:
+; X86-NEXT:  .Lcfi15:
+; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    leal (%eax,%eax,8), %eax
 ; X86-NEXT:    popl %esi
+; X86-NEXT:  .Lcfi16:
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ; X86-NEXT:  .LBB0_15:
+; X86-NEXT:  .Lcfi17:
+; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    addl %eax, %eax
 ; X86-NEXT:    leal (%eax,%eax,4), %eax
 ; X86-NEXT:    popl %esi
+; X86-NEXT:  .Lcfi18:
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ; X86-NEXT:  .LBB0_16:
+; X86-NEXT:  .Lcfi19:
+; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    leal (%eax,%eax,4), %ecx
 ; X86-NEXT:    leal (%eax,%ecx,2), %eax
 ; X86-NEXT:    popl %esi
+; X86-NEXT:  .Lcfi20:
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ; X86-NEXT:  .LBB0_17:
+; X86-NEXT:  .Lcfi21:
+; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    shll $2, %eax
 ; X86-NEXT:    leal (%eax,%eax,2), %eax
 ; X86-NEXT:    popl %esi
+; X86-NEXT:  .Lcfi22:
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ; X86-NEXT:  .LBB0_18:
+; X86-NEXT:  .Lcfi23:
+; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    leal (%eax,%eax,2), %ecx
 ; X86-NEXT:    leal (%eax,%ecx,4), %eax
 ; X86-NEXT:    popl %esi
+; X86-NEXT:  .Lcfi24:
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ; X86-NEXT:  .LBB0_19:
+; X86-NEXT:  .Lcfi25:
+; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    leal (%eax,%eax,2), %ecx
 ; X86-NEXT:    jmp .LBB0_20
 ; X86-NEXT:  .LBB0_21:
 ; X86-NEXT:    leal (%eax,%eax,4), %eax
 ; X86-NEXT:    leal (%eax,%eax,2), %eax
 ; X86-NEXT:    popl %esi
+; X86-NEXT:  .Lcfi26:
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ; X86-NEXT:  .LBB0_22:
+; X86-NEXT:  .Lcfi27:
+; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    shll $4, %eax
 ; X86-NEXT:    popl %esi
+; X86-NEXT:  .Lcfi28:
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ; X86-NEXT:  .LBB0_23:
+; X86-NEXT:  .Lcfi29:
+; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    movl %eax, %ecx
 ; X86-NEXT:    shll $4, %ecx
 ; X86-NEXT:    addl %ecx, %eax
 ; X86-NEXT:    popl %esi
+; X86-NEXT:  .Lcfi30:
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ; X86-NEXT:  .LBB0_24:
+; X86-NEXT:  .Lcfi31:
+; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    addl %eax, %eax
 ; X86-NEXT:    leal (%eax,%eax,8), %eax
 ; X86-NEXT:    popl %esi
+; X86-NEXT:  .Lcfi32:
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ; X86-NEXT:  .LBB0_25:
+; X86-NEXT:  .Lcfi33:
+; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    leal (%eax,%eax,4), %ecx
 ; X86-NEXT:    shll $2, %ecx
 ; X86-NEXT:    jmp .LBB0_12
@@ -118,20 +182,32 @@ define i32 @mult(i32, i32) local_unnamed_addr #0 {
 ; X86-NEXT:    shll $2, %eax
 ; X86-NEXT:    leal (%eax,%eax,4), %eax
 ; X86-NEXT:    popl %esi
+; X86-NEXT:  .Lcfi34:
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ; X86-NEXT:  .LBB0_27:
+; X86-NEXT:  .Lcfi35:
+; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    leal (%eax,%eax,4), %ecx
 ; X86-NEXT:    leal (%eax,%ecx,4), %eax
 ; X86-NEXT:    popl %esi
+; X86-NEXT:  .Lcfi36:
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ; X86-NEXT:  .LBB0_28:
+; X86-NEXT:  .Lcfi37:
+; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    leal (%eax,%eax,4), %ecx
 ; X86-NEXT:  .LBB0_20:
 ; X86-NEXT:    leal (%eax,%ecx,4), %ecx
 ; X86-NEXT:    addl %ecx, %eax
 ; X86-NEXT:    popl %esi
+; X86-NEXT:  .Lcfi38:
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ; X86-NEXT:  .LBB0_29:
+; X86-NEXT:  .Lcfi39:
+; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    leal (%eax,%eax,2), %ecx
 ; X86-NEXT:    shll $3, %ecx
 ; X86-NEXT:    jmp .LBB0_12
@@ -139,13 +215,21 @@ define i32 @mult(i32, i32) local_unnamed_addr #0 {
 ; X86-NEXT:    shll $3, %eax
 ; X86-NEXT:    leal (%eax,%eax,2), %eax
 ; X86-NEXT:    popl %esi
+; X86-NEXT:  .Lcfi40:
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ; X86-NEXT:  .LBB0_31:
+; X86-NEXT:  .Lcfi41:
+; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    leal (%eax,%eax,4), %eax
 ; X86-NEXT:    leal (%eax,%eax,4), %eax
 ; X86-NEXT:    popl %esi
+; X86-NEXT:  .Lcfi42:
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ; X86-NEXT:  .LBB0_32:
+; X86-NEXT:  .Lcfi43:
+; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    leal (%eax,%eax,8), %ecx
 ; X86-NEXT:    leal (%ecx,%ecx,2), %ecx
 ; X86-NEXT:    jmp .LBB0_12
@@ -153,21 +237,33 @@ define i32 @mult(i32, i32) local_unnamed_addr #0 {
 ; X86-NEXT:    leal (%eax,%eax,8), %eax
 ; X86-NEXT:    leal (%eax,%eax,2), %eax
 ; X86-NEXT:    popl %esi
+; X86-NEXT:  .Lcfi44:
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ; X86-NEXT:  .LBB0_34:
+; X86-NEXT:  .Lcfi45:
+; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    leal (%eax,%eax,8), %ecx
 ; X86-NEXT:    leal (%ecx,%ecx,2), %ecx
 ; X86-NEXT:    addl %ecx, %eax
 ; X86-NEXT:    popl %esi
+; X86-NEXT:  .Lcfi46:
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ; X86-NEXT:  .LBB0_35:
+; X86-NEXT:  .Lcfi47:
+; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    leal (%eax,%eax,8), %ecx
 ; X86-NEXT:    leal (%ecx,%ecx,2), %ecx
 ; X86-NEXT:    addl %eax, %ecx
 ; X86-NEXT:    addl %ecx, %eax
 ; X86-NEXT:    popl %esi
+; X86-NEXT:  .Lcfi48:
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ; X86-NEXT:  .LBB0_36:
+; X86-NEXT:  .Lcfi49:
+; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    movl %eax, %ecx
 ; X86-NEXT:    shll $5, %ecx
 ; X86-NEXT:    subl %eax, %ecx
@@ -179,10 +275,16 @@ define i32 @mult(i32, i32) local_unnamed_addr #0 {
 ; X86-NEXT:    subl %eax, %ecx
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    popl %esi
+; X86-NEXT:  .Lcfi50:
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ; X86-NEXT:  .LBB0_38:
+; X86-NEXT:  .Lcfi51:
+; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    shll $5, %eax
 ; X86-NEXT:    popl %esi
+; X86-NEXT:  .Lcfi52:
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-HSW-LABEL: mult:
@@ -525,431 +627,431 @@ define i32 @foo() local_unnamed_addr #0 {
 ; X86-LABEL: foo:
 ; X86:       # BB#0:
 ; X86-NEXT:    pushl %ebx
-; X86-NEXT:  .Lcfi2:
+; X86-NEXT:  .Lcfi53:
 ; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    pushl %edi
-; X86-NEXT:  .Lcfi3:
+; X86-NEXT:  .Lcfi54:
 ; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:  .Lcfi4:
+; X86-NEXT:  .Lcfi55:
 ; X86-NEXT:    .cfi_def_cfa_offset 16
-; X86-NEXT:  .Lcfi5:
+; X86-NEXT:  .Lcfi56:
 ; X86-NEXT:    .cfi_offset %esi, -16
-; X86-NEXT:  .Lcfi6:
+; X86-NEXT:  .Lcfi57:
 ; X86-NEXT:    .cfi_offset %edi, -12
-; X86-NEXT:  .Lcfi7:
+; X86-NEXT:  .Lcfi58:
 ; X86-NEXT:    .cfi_offset %ebx, -8
 ; X86-NEXT:    pushl $0
-; X86-NEXT:  .Lcfi8:
-; X86-NEXT:    .cfi_adjust_cfa_offset 4
-; X86-NEXT:    pushl $1
-; X86-NEXT:  .Lcfi9:
-; X86-NEXT:    .cfi_adjust_cfa_offset 4
-; X86-NEXT:    calll mult
-; X86-NEXT:    addl $8, %esp
-; X86-NEXT:  .Lcfi10:
-; X86-NEXT:    .cfi_adjust_cfa_offset -8
-; X86-NEXT:    movl %eax, %esi
-; X86-NEXT:    xorl $1, %esi
-; X86-NEXT:    pushl $1
-; X86-NEXT:  .Lcfi11:
-; X86-NEXT:    .cfi_adjust_cfa_offset 4
-; X86-NEXT:    pushl $2
-; X86-NEXT:  .Lcfi12:
-; X86-NEXT:    .cfi_adjust_cfa_offset 4
-; X86-NEXT:    calll mult
-; X86-NEXT:    addl $8, %esp
-; X86-NEXT:  .Lcfi13:
-; X86-NEXT:    .cfi_adjust_cfa_offset -8
-; X86-NEXT:    movl %eax, %edi
-; X86-NEXT:    xorl $2, %edi
-; X86-NEXT:    pushl $1
-; X86-NEXT:  .Lcfi14:
-; X86-NEXT:    .cfi_adjust_cfa_offset 4
-; X86-NEXT:    pushl $3
-; X86-NEXT:  .Lcfi15:
-; X86-NEXT:    .cfi_adjust_cfa_offset 4
-; X86-NEXT:    calll mult
-; X86-NEXT:    addl $8, %esp
-; X86-NEXT:  .Lcfi16:
-; X86-NEXT:    .cfi_adjust_cfa_offset -8
-; X86-NEXT:    movl %eax, %ebx
-; X86-NEXT:    xorl $3, %ebx
-; X86-NEXT:    orl %edi, %ebx
-; X86-NEXT:    pushl $2
-; X86-NEXT:  .Lcfi17:
-; X86-NEXT:    .cfi_adjust_cfa_offset 4
-; X86-NEXT:    pushl $4
-; X86-NEXT:  .Lcfi18:
-; X86-NEXT:    .cfi_adjust_cfa_offset 4
-; X86-NEXT:    calll mult
-; X86-NEXT:    addl $8, %esp
-; X86-NEXT:  .Lcfi19:
-; X86-NEXT:    .cfi_adjust_cfa_offset -8
-; X86-NEXT:    movl %eax, %edi
-; X86-NEXT:    xorl $4, %edi
-; X86-NEXT:    orl %ebx, %edi
-; X86-NEXT:    pushl $2
-; X86-NEXT:  .Lcfi20:
-; X86-NEXT:    .cfi_adjust_cfa_offset 4
-; X86-NEXT:    pushl $5
-; X86-NEXT:  .Lcfi21:
-; X86-NEXT:    .cfi_adjust_cfa_offset 4
-; X86-NEXT:    calll mult
-; X86-NEXT:    addl $8, %esp
-; X86-NEXT:  .Lcfi22:
-; X86-NEXT:    .cfi_adjust_cfa_offset -8
-; X86-NEXT:    movl %eax, %ebx
-; X86-NEXT:    xorl $5, %ebx
-; X86-NEXT:    orl %edi, %ebx
-; X86-NEXT:    pushl $3
-; X86-NEXT:  .Lcfi23:
-; X86-NEXT:    .cfi_adjust_cfa_offset 4
-; X86-NEXT:    pushl $6
-; X86-NEXT:  .Lcfi24:
-; X86-NEXT:    .cfi_adjust_cfa_offset 4
-; X86-NEXT:    calll mult
-; X86-NEXT:    addl $8, %esp
-; X86-NEXT:  .Lcfi25:
-; X86-NEXT:    .cfi_adjust_cfa_offset -8
-; X86-NEXT:    movl %eax, %edi
-; X86-NEXT:    xorl $6, %edi
-; X86-NEXT:    orl %ebx, %edi
-; X86-NEXT:    pushl $3
-; X86-NEXT:  .Lcfi26:
-; X86-NEXT:    .cfi_adjust_cfa_offset 4
-; X86-NEXT:    pushl $7
-; X86-NEXT:  .Lcfi27:
-; X86-NEXT:    .cfi_adjust_cfa_offset 4
-; X86-NEXT:    calll mult
-; X86-NEXT:    addl $8, %esp
-; X86-NEXT:  .Lcfi28:
-; X86-NEXT:    .cfi_adjust_cfa_offset -8
-; X86-NEXT:    movl %eax, %ebx
-; X86-NEXT:    xorl $7, %ebx
-; X86-NEXT:    orl %edi, %ebx
-; X86-NEXT:    pushl $4
-; X86-NEXT:  .Lcfi29:
-; X86-NEXT:    .cfi_adjust_cfa_offset 4
-; X86-NEXT:    pushl $8
-; X86-NEXT:  .Lcfi30:
-; X86-NEXT:    .cfi_adjust_cfa_offset 4
-; X86-NEXT:    calll mult
-; X86-NEXT:    addl $8, %esp
-; X86-NEXT:  .Lcfi31:
-; X86-NEXT:    .cfi_adjust_cfa_offset -8
-; X86-NEXT:    movl %eax, %edi
-; X86-NEXT:    xorl $8, %edi
-; X86-NEXT:    orl %ebx, %edi
-; X86-NEXT:    pushl $4
-; X86-NEXT:  .Lcfi32:
-; X86-NEXT:    .cfi_adjust_cfa_offset 4
-; X86-NEXT:    pushl $9
-; X86-NEXT:  .Lcfi33:
-; X86-NEXT:    .cfi_adjust_cfa_offset 4
-; X86-NEXT:    calll mult
-; X86-NEXT:    addl $8, %esp
-; X86-NEXT:  .Lcfi34:
-; X86-NEXT:    .cfi_adjust_cfa_offset -8
-; X86-NEXT:    movl %eax, %ebx
-; X86-NEXT:    xorl $9, %ebx
-; X86-NEXT:    orl %edi, %ebx
-; X86-NEXT:    pushl $5
-; X86-NEXT:  .Lcfi35:
-; X86-NEXT:    .cfi_adjust_cfa_offset 4
-; X86-NEXT:    pushl $10
-; X86-NEXT:  .Lcfi36:
-; X86-NEXT:    .cfi_adjust_cfa_offset 4
-; X86-NEXT:    calll mult
-; X86-NEXT:    addl $8, %esp
-; X86-NEXT:  .Lcfi37:
-; X86-NEXT:    .cfi_adjust_cfa_offset -8
-; X86-NEXT:    movl %eax, %edi
-; X86-NEXT:    xorl $10, %edi
-; X86-NEXT:    orl %ebx, %edi
-; X86-NEXT:    pushl $5
-; X86-NEXT:  .Lcfi38:
-; X86-NEXT:    .cfi_adjust_cfa_offset 4
-; X86-NEXT:    pushl $11
-; X86-NEXT:  .Lcfi39:
-; X86-NEXT:    .cfi_adjust_cfa_offset 4
-; X86-NEXT:    calll mult
-; X86-NEXT:    addl $8, %esp
-; X86-NEXT:  .Lcfi40:
-; X86-NEXT:    .cfi_adjust_cfa_offset -8
-; X86-NEXT:    movl %eax, %ebx
-; X86-NEXT:    xorl $11, %ebx
-; X86-NEXT:    orl %edi, %ebx
-; X86-NEXT:    pushl $6
-; X86-NEXT:  .Lcfi41:
-; X86-NEXT:    .cfi_adjust_cfa_offset 4
-; X86-NEXT:    pushl $12
-; X86-NEXT:  .Lcfi42:
-; X86-NEXT:    .cfi_adjust_cfa_offset 4
-; X86-NEXT:    calll mult
-; X86-NEXT:    addl $8, %esp
-; X86-NEXT:  .Lcfi43:
-; X86-NEXT:    .cfi_adjust_cfa_offset -8
-; X86-NEXT:    movl %eax, %edi
-; X86-NEXT:    xorl $12, %edi
-; X86-NEXT:    orl %ebx, %edi
-; X86-NEXT:    pushl $6
-; X86-NEXT:  .Lcfi44:
-; X86-NEXT:    .cfi_adjust_cfa_offset 4
-; X86-NEXT:    pushl $13
-; X86-NEXT:  .Lcfi45:
-; X86-NEXT:    .cfi_adjust_cfa_offset 4
-; X86-NEXT:    calll mult
-; X86-NEXT:    addl $8, %esp
-; X86-NEXT:  .Lcfi46:
-; X86-NEXT:    .cfi_adjust_cfa_offset -8
-; X86-NEXT:    movl %eax, %ebx
-; X86-NEXT:    xorl $13, %ebx
-; X86-NEXT:    orl %edi, %ebx
-; X86-NEXT:    pushl $7
-; X86-NEXT:  .Lcfi47:
-; X86-NEXT:    .cfi_adjust_cfa_offset 4
-; X86-NEXT:    pushl $14
-; X86-NEXT:  .Lcfi48:
-; X86-NEXT:    .cfi_adjust_cfa_offset 4
-; X86-NEXT:    calll mult
-; X86-NEXT:    addl $8, %esp
-; X86-NEXT:  .Lcfi49:
-; X86-NEXT:    .cfi_adjust_cfa_offset -8
-; X86-NEXT:    movl %eax, %edi
-; X86-NEXT:    xorl $14, %edi
-; X86-NEXT:    orl %ebx, %edi
-; X86-NEXT:    pushl $7
-; X86-NEXT:  .Lcfi50:
-; X86-NEXT:    .cfi_adjust_cfa_offset 4
-; X86-NEXT:    pushl $15
-; X86-NEXT:  .Lcfi51:
-; X86-NEXT:    .cfi_adjust_cfa_offset 4
-; X86-NEXT:    calll mult
-; X86-NEXT:    addl $8, %esp
-; X86-NEXT:  .Lcfi52:
-; X86-NEXT:    .cfi_adjust_cfa_offset -8
-; X86-NEXT:    movl %eax, %ebx
-; X86-NEXT:    xorl $15, %ebx
-; X86-NEXT:    orl %edi, %ebx
-; X86-NEXT:    pushl $8
-; X86-NEXT:  .Lcfi53:
-; X86-NEXT:    .cfi_adjust_cfa_offset 4
-; X86-NEXT:    pushl $16
-; X86-NEXT:  .Lcfi54:
-; X86-NEXT:    .cfi_adjust_cfa_offset 4
-; X86-NEXT:    calll mult
-; X86-NEXT:    addl $8, %esp
-; X86-NEXT:  .Lcfi55:
-; X86-NEXT:    .cfi_adjust_cfa_offset -8
-; X86-NEXT:    movl %eax, %edi
-; X86-NEXT:    xorl $16, %edi
-; X86-NEXT:    orl %ebx, %edi
-; X86-NEXT:    pushl $8
-; X86-NEXT:  .Lcfi56:
-; X86-NEXT:    .cfi_adjust_cfa_offset 4
-; X86-NEXT:    pushl $17
-; X86-NEXT:  .Lcfi57:
-; X86-NEXT:    .cfi_adjust_cfa_offset 4
-; X86-NEXT:    calll mult
-; X86-NEXT:    addl $8, %esp
-; X86-NEXT:  .Lcfi58:
-; X86-NEXT:    .cfi_adjust_cfa_offset -8
-; X86-NEXT:    movl %eax, %ebx
-; X86-NEXT:    xorl $17, %ebx
-; X86-NEXT:    orl %edi, %ebx
-; X86-NEXT:    pushl $9
 ; X86-NEXT:  .Lcfi59:
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
-; X86-NEXT:    pushl $18
+; X86-NEXT:    pushl $1
 ; X86-NEXT:  .Lcfi60:
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    calll mult
 ; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:  .Lcfi61:
 ; X86-NEXT:    .cfi_adjust_cfa_offset -8
-; X86-NEXT:    movl %eax, %edi
-; X86-NEXT:    xorl $18, %edi
-; X86-NEXT:    orl %ebx, %edi
-; X86-NEXT:    pushl $9
+; X86-NEXT:    movl %eax, %esi
+; X86-NEXT:    xorl $1, %esi
+; X86-NEXT:    pushl $1
 ; X86-NEXT:  .Lcfi62:
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
-; X86-NEXT:    pushl $19
+; X86-NEXT:    pushl $2
 ; X86-NEXT:  .Lcfi63:
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    calll mult
 ; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:  .Lcfi64:
 ; X86-NEXT:    .cfi_adjust_cfa_offset -8
-; X86-NEXT:    movl %eax, %ebx
-; X86-NEXT:    xorl $19, %ebx
-; X86-NEXT:    orl %edi, %ebx
-; X86-NEXT:    pushl $10
+; X86-NEXT:    movl %eax, %edi
+; X86-NEXT:    xorl $2, %edi
+; X86-NEXT:    pushl $1
 ; X86-NEXT:  .Lcfi65:
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
-; X86-NEXT:    pushl $20
+; X86-NEXT:    pushl $3
 ; X86-NEXT:  .Lcfi66:
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    calll mult
 ; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:  .Lcfi67:
 ; X86-NEXT:    .cfi_adjust_cfa_offset -8
-; X86-NEXT:    movl %eax, %edi
-; X86-NEXT:    xorl $20, %edi
-; X86-NEXT:    orl %ebx, %edi
-; X86-NEXT:    pushl $10
+; X86-NEXT:    movl %eax, %ebx
+; X86-NEXT:    xorl $3, %ebx
+; X86-NEXT:    orl %edi, %ebx
+; X86-NEXT:    pushl $2
 ; X86-NEXT:  .Lcfi68:
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
-; X86-NEXT:    pushl $21
+; X86-NEXT:    pushl $4
 ; X86-NEXT:  .Lcfi69:
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    calll mult
 ; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:  .Lcfi70:
 ; X86-NEXT:    .cfi_adjust_cfa_offset -8
-; X86-NEXT:    movl %eax, %ebx
-; X86-NEXT:    xorl $21, %ebx
-; X86-NEXT:    orl %edi, %ebx
-; X86-NEXT:    pushl $11
+; X86-NEXT:    movl %eax, %edi
+; X86-NEXT:    xorl $4, %edi
+; X86-NEXT:    orl %ebx, %edi
+; X86-NEXT:    pushl $2
 ; X86-NEXT:  .Lcfi71:
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
-; X86-NEXT:    pushl $22
+; X86-NEXT:    pushl $5
 ; X86-NEXT:  .Lcfi72:
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    calll mult
 ; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:  .Lcfi73:
 ; X86-NEXT:    .cfi_adjust_cfa_offset -8
-; X86-NEXT:    movl %eax, %edi
-; X86-NEXT:    xorl $22, %edi
-; X86-NEXT:    orl %ebx, %edi
-; X86-NEXT:    pushl $11
+; X86-NEXT:    movl %eax, %ebx
+; X86-NEXT:    xorl $5, %ebx
+; X86-NEXT:    orl %edi, %ebx
+; X86-NEXT:    pushl $3
 ; X86-NEXT:  .Lcfi74:
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
-; X86-NEXT:    pushl $23
+; X86-NEXT:    pushl $6
 ; X86-NEXT:  .Lcfi75:
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    calll mult
 ; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:  .Lcfi76:
 ; X86-NEXT:    .cfi_adjust_cfa_offset -8
-; X86-NEXT:    movl %eax, %ebx
-; X86-NEXT:    xorl $23, %ebx
-; X86-NEXT:    orl %edi, %ebx
-; X86-NEXT:    pushl $12
+; X86-NEXT:    movl %eax, %edi
+; X86-NEXT:    xorl $6, %edi
+; X86-NEXT:    orl %ebx, %edi
+; X86-NEXT:    pushl $3
 ; X86-NEXT:  .Lcfi77:
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
-; X86-NEXT:    pushl $24
+; X86-NEXT:    pushl $7
 ; X86-NEXT:  .Lcfi78:
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    calll mult
 ; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:  .Lcfi79:
 ; X86-NEXT:    .cfi_adjust_cfa_offset -8
-; X86-NEXT:    movl %eax, %edi
-; X86-NEXT:    xorl $24, %edi
-; X86-NEXT:    orl %ebx, %edi
-; X86-NEXT:    pushl $12
+; X86-NEXT:    movl %eax, %ebx
+; X86-NEXT:    xorl $7, %ebx
+; X86-NEXT:    orl %edi, %ebx
+; X86-NEXT:    pushl $4
 ; X86-NEXT:  .Lcfi80:
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
-; X86-NEXT:    pushl $25
+; X86-NEXT:    pushl $8
 ; X86-NEXT:  .Lcfi81:
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    calll mult
 ; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:  .Lcfi82:
 ; X86-NEXT:    .cfi_adjust_cfa_offset -8
-; X86-NEXT:    movl %eax, %ebx
-; X86-NEXT:    xorl $25, %ebx
-; X86-NEXT:    orl %edi, %ebx
-; X86-NEXT:    pushl $13
+; X86-NEXT:    movl %eax, %edi
+; X86-NEXT:    xorl $8, %edi
+; X86-NEXT:    orl %ebx, %edi
+; X86-NEXT:    pushl $4
 ; X86-NEXT:  .Lcfi83:
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
-; X86-NEXT:    pushl $26
+; X86-NEXT:    pushl $9
 ; X86-NEXT:  .Lcfi84:
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    calll mult
 ; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:  .Lcfi85:
 ; X86-NEXT:    .cfi_adjust_cfa_offset -8
-; X86-NEXT:    movl %eax, %edi
-; X86-NEXT:    xorl $26, %edi
-; X86-NEXT:    orl %ebx, %edi
-; X86-NEXT:    pushl $13
+; X86-NEXT:    movl %eax, %ebx
+; X86-NEXT:    xorl $9, %ebx
+; X86-NEXT:    orl %edi, %ebx
+; X86-NEXT:    pushl $5
 ; X86-NEXT:  .Lcfi86:
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
-; X86-NEXT:    pushl $27
+; X86-NEXT:    pushl $10
 ; X86-NEXT:  .Lcfi87:
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    calll mult
 ; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:  .Lcfi88:
 ; X86-NEXT:    .cfi_adjust_cfa_offset -8
-; X86-NEXT:    movl %eax, %ebx
-; X86-NEXT:    xorl $27, %ebx
-; X86-NEXT:    orl %edi, %ebx
-; X86-NEXT:    pushl $14
+; X86-NEXT:    movl %eax, %edi
+; X86-NEXT:    xorl $10, %edi
+; X86-NEXT:    orl %ebx, %edi
+; X86-NEXT:    pushl $5
 ; X86-NEXT:  .Lcfi89:
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
-; X86-NEXT:    pushl $28
+; X86-NEXT:    pushl $11
 ; X86-NEXT:  .Lcfi90:
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    calll mult
 ; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:  .Lcfi91:
 ; X86-NEXT:    .cfi_adjust_cfa_offset -8
-; X86-NEXT:    movl %eax, %edi
-; X86-NEXT:    xorl $28, %edi
-; X86-NEXT:    orl %ebx, %edi
-; X86-NEXT:    pushl $14
+; X86-NEXT:    movl %eax, %ebx
+; X86-NEXT:    xorl $11, %ebx
+; X86-NEXT:    orl %edi, %ebx
+; X86-NEXT:    pushl $6
 ; X86-NEXT:  .Lcfi92:
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
-; X86-NEXT:    pushl $29
+; X86-NEXT:    pushl $12
 ; X86-NEXT:  .Lcfi93:
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    calll mult
 ; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:  .Lcfi94:
 ; X86-NEXT:    .cfi_adjust_cfa_offset -8
-; X86-NEXT:    movl %eax, %ebx
-; X86-NEXT:    xorl $29, %ebx
-; X86-NEXT:    orl %edi, %ebx
-; X86-NEXT:    pushl $15
+; X86-NEXT:    movl %eax, %edi
+; X86-NEXT:    xorl $12, %edi
+; X86-NEXT:    orl %ebx, %edi
+; X86-NEXT:    pushl $6
 ; X86-NEXT:  .Lcfi95:
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
-; X86-NEXT:    pushl $30
+; X86-NEXT:    pushl $13
 ; X86-NEXT:  .Lcfi96:
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    calll mult
 ; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:  .Lcfi97:
 ; X86-NEXT:    .cfi_adjust_cfa_offset -8
-; X86-NEXT:    movl %eax, %edi
-; X86-NEXT:    xorl $30, %edi
-; X86-NEXT:    orl %ebx, %edi
-; X86-NEXT:    pushl $15
+; X86-NEXT:    movl %eax, %ebx
+; X86-NEXT:    xorl $13, %ebx
+; X86-NEXT:    orl %edi, %ebx
+; X86-NEXT:    pushl $7
 ; X86-NEXT:  .Lcfi98:
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
-; X86-NEXT:    pushl $31
+; X86-NEXT:    pushl $14
 ; X86-NEXT:  .Lcfi99:
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    calll mult
 ; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:  .Lcfi100:
 ; X86-NEXT:    .cfi_adjust_cfa_offset -8
-; X86-NEXT:    movl %eax, %ebx
-; X86-NEXT:    xorl $31, %ebx
-; X86-NEXT:    orl %edi, %ebx
-; X86-NEXT:    orl %esi, %ebx
-; X86-NEXT:    pushl $16
+; X86-NEXT:    movl %eax, %edi
+; X86-NEXT:    xorl $14, %edi
+; X86-NEXT:    orl %ebx, %edi
+; X86-NEXT:    pushl $7
 ; X86-NEXT:  .Lcfi101:
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
-; X86-NEXT:    pushl $32
+; X86-NEXT:    pushl $15
 ; X86-NEXT:  .Lcfi102:
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    calll mult
 ; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:  .Lcfi103:
+; X86-NEXT:    .cfi_adjust_cfa_offset -8
+; X86-NEXT:    movl %eax, %ebx
+; X86-NEXT:    xorl $15, %ebx
+; X86-NEXT:    orl %edi, %ebx
+; X86-NEXT:    pushl $8
+; X86-NEXT:  .Lcfi104:
+; X86-NEXT:    .cfi_adjust_cfa_offset 4
+; X86-NEXT:    pushl $16
+; X86-NEXT:  .Lcfi105:
+; X86-NEXT:    .cfi_adjust_cfa_offset 4
+; X86-NEXT:    calll mult
+; X86-NEXT:    addl $8, %esp
+; X86-NEXT:  .Lcfi106:
+; X86-NEXT:    .cfi_adjust_cfa_offset -8
+; X86-NEXT:    movl %eax, %edi
+; X86-NEXT:    xorl $16, %edi
+; X86-NEXT:    orl %ebx, %edi
+; X86-NEXT:    pushl $8
+; X86-NEXT:  .Lcfi107:
+; X86-NEXT:    .cfi_adjust_cfa_offset 4
+; X86-NEXT:    pushl $17
+; X86-NEXT:  .Lcfi108:
+; X86-NEXT:    .cfi_adjust_cfa_offset 4
+; X86-NEXT:    calll mult
+; X86-NEXT:    addl $8, %esp
+; X86-NEXT:  .Lcfi109:
+; X86-NEXT:    .cfi_adjust_cfa_offset -8
+; X86-NEXT:    movl %eax, %ebx
+; X86-NEXT:    xorl $17, %ebx
+; X86-NEXT:    orl %edi, %ebx
+; X86-NEXT:    pushl $9
+; X86-NEXT:  .Lcfi110:
+; X86-NEXT:    .cfi_adjust_cfa_offset 4
+; X86-NEXT:    pushl $18
+; X86-NEXT:  .Lcfi111:
+; X86-NEXT:    .cfi_adjust_cfa_offset 4
+; X86-NEXT:    calll mult
+; X86-NEXT:    addl $8, %esp
+; X86-NEXT:  .Lcfi112:
+; X86-NEXT:    .cfi_adjust_cfa_offset -8
+; X86-NEXT:    movl %eax, %edi
+; X86-NEXT:    xorl $18, %edi
+; X86-NEXT:    orl %ebx, %edi
+; X86-NEXT:    pushl $9
+; X86-NEXT:  .Lcfi113:
+; X86-NEXT:    .cfi_adjust_cfa_offset 4
+; X86-NEXT:    pushl $19
+; X86-NEXT:  .Lcfi114:
+; X86-NEXT:    .cfi_adjust_cfa_offset 4
+; X86-NEXT:    calll mult
+; X86-NEXT:    addl $8, %esp
+; X86-NEXT:  .Lcfi115:
+; X86-NEXT:    .cfi_adjust_cfa_offset -8
+; X86-NEXT:    movl %eax, %ebx
+; X86-NEXT:    xorl $19, %ebx
+; X86-NEXT:    orl %edi, %ebx
+; X86-NEXT:    pushl $10
+; X86-NEXT:  .Lcfi116:
+; X86-NEXT:    .cfi_adjust_cfa_offset 4
+; X86-NEXT:    pushl $20
+; X86-NEXT:  .Lcfi117:
+; X86-NEXT:    .cfi_adjust_cfa_offset 4
+; X86-NEXT:    calll mult
+; X86-NEXT:    addl $8, %esp
+; X86-NEXT:  .Lcfi118:
+; X86-NEXT:    .cfi_adjust_cfa_offset -8
+; X86-NEXT:    movl %eax, %edi
+; X86-NEXT:    xorl $20, %edi
+; X86-NEXT:    orl %ebx, %edi
+; X86-NEXT:    pushl $10
+; X86-NEXT:  .Lcfi119:
+; X86-NEXT:    .cfi_adjust_cfa_offset 4
+; X86-NEXT:    pushl $21
+; X86-NEXT:  .Lcfi120:
+; X86-NEXT:    .cfi_adjust_cfa_offset 4
+; X86-NEXT:    calll mult
+; X86-NEXT:    addl $8, %esp
+; X86-NEXT:  .Lcfi121:
+; X86-NEXT:    .cfi_adjust_cfa_offset -8
+; X86-NEXT:    movl %eax, %ebx
+; X86-NEXT:    xorl $21, %ebx
+; X86-NEXT:    orl %edi, %ebx
+; X86-NEXT:    pushl $11
+; X86-NEXT:  .Lcfi122:
+; X86-NEXT:    .cfi_adjust_cfa_offset 4
+; X86-NEXT:    pushl $22
+; X86-NEXT:  .Lcfi123:
+; X86-NEXT:    .cfi_adjust_cfa_offset 4
+; X86-NEXT:    calll mult
+; X86-NEXT:    addl $8, %esp
+; X86-NEXT:  .Lcfi124:
+; X86-NEXT:    .cfi_adjust_cfa_offset -8
+; X86-NEXT:    movl %eax, %edi
+; X86-NEXT:    xorl $22, %edi
+; X86-NEXT:    orl %ebx, %edi
+; X86-NEXT:    pushl $11
+; X86-NEXT:  .Lcfi125:
+; X86-NEXT:    .cfi_adjust_cfa_offset 4
+; X86-NEXT:    pushl $23
+; X86-NEXT:  .Lcfi126:
+; X86-NEXT:    .cfi_adjust_cfa_offset 4
+; X86-NEXT:    calll mult
+; X86-NEXT:    addl $8, %esp
+; X86-NEXT:  .Lcfi127:
+; X86-NEXT:    .cfi_adjust_cfa_offset -8
+; X86-NEXT:    movl %eax, %ebx
+; X86-NEXT:    xorl $23, %ebx
+; X86-NEXT:    orl %edi, %ebx
+; X86-NEXT:    pushl $12
+; X86-NEXT:  .Lcfi128:
+; X86-NEXT:    .cfi_adjust_cfa_offset 4
+; X86-NEXT:    pushl $24
+; X86-NEXT:  .Lcfi129:
+; X86-NEXT:    .cfi_adjust_cfa_offset 4
+; X86-NEXT:    calll mult
+; X86-NEXT:    addl $8, %esp
+; X86-NEXT:  .Lcfi130:
+; X86-NEXT:    .cfi_adjust_cfa_offset -8
+; X86-NEXT:    movl %eax, %edi
+; X86-NEXT:    xorl $24, %edi
+; X86-NEXT:    orl %ebx, %edi
+; X86-NEXT:    pushl $12
+; X86-NEXT:  .Lcfi131:
+; X86-NEXT:    .cfi_adjust_cfa_offset 4
+; X86-NEXT:    pushl $25
+; X86-NEXT:  .Lcfi132:
+; X86-NEXT:    .cfi_adjust_cfa_offset 4
+; X86-NEXT:    calll mult
+; X86-NEXT:    addl $8, %esp
+; X86-NEXT:  .Lcfi133:
+; X86-NEXT:    .cfi_adjust_cfa_offset -8
+; X86-NEXT:    movl %eax, %ebx
+; X86-NEXT:    xorl $25, %ebx
+; X86-NEXT:    orl %edi, %ebx
+; X86-NEXT:    pushl $13
+; X86-NEXT:  .Lcfi134:
+; X86-NEXT:    .cfi_adjust_cfa_offset 4
+; X86-NEXT:    pushl $26
+; X86-NEXT:  .Lcfi135:
+; X86-NEXT:    .cfi_adjust_cfa_offset 4
+; X86-NEXT:    calll mult
+; X86-NEXT:    addl $8, %esp
+; X86-NEXT:  .Lcfi136:
+; X86-NEXT:    .cfi_adjust_cfa_offset -8
+; X86-NEXT:    movl %eax, %edi
+; X86-NEXT:    xorl $26, %edi
+; X86-NEXT:    orl %ebx, %edi
+; X86-NEXT:    pushl $13
+; X86-NEXT:  .Lcfi137:
+; X86-NEXT:    .cfi_adjust_cfa_offset 4
+; X86-NEXT:    pushl $27
+; X86-NEXT:  .Lcfi138:
+; X86-NEXT:    .cfi_adjust_cfa_offset 4
+; X86-NEXT:    calll mult
+; X86-NEXT:    addl $8, %esp
+; X86-NEXT:  .Lcfi139:
+; X86-NEXT:    .cfi_adjust_cfa_offset -8
+; X86-NEXT:    movl %eax, %ebx
+; X86-NEXT:    xorl $27, %ebx
+; X86-NEXT:    orl %edi, %ebx
+; X86-NEXT:    pushl $14
+; X86-NEXT:  .Lcfi140:
+; X86-NEXT:    .cfi_adjust_cfa_offset 4
+; X86-NEXT:    pushl $28
+; X86-NEXT:  .Lcfi141:
+; X86-NEXT:    .cfi_adjust_cfa_offset 4
+; X86-NEXT:    calll mult
+; X86-NEXT:    addl $8, %esp
+; X86-NEXT:  .Lcfi142:
+; X86-NEXT:    .cfi_adjust_cfa_offset -8
+; X86-NEXT:    movl %eax, %edi
+; X86-NEXT:    xorl $28, %edi
+; X86-NEXT:    orl %ebx, %edi
+; X86-NEXT:    pushl $14
+; X86-NEXT:  .Lcfi143:
+; X86-NEXT:    .cfi_adjust_cfa_offset 4
+; X86-NEXT:    pushl $29
+; X86-NEXT:  .Lcfi144:
+; X86-NEXT:    .cfi_adjust_cfa_offset 4
+; X86-NEXT:    calll mult
+; X86-NEXT:    addl $8, %esp
+; X86-NEXT:  .Lcfi145:
+; X86-NEXT:    .cfi_adjust_cfa_offset -8
+; X86-NEXT:    movl %eax, %ebx
+; X86-NEXT:    xorl $29, %ebx
+; X86-NEXT:    orl %edi, %ebx
+; X86-NEXT:    pushl $15
+; X86-NEXT:  .Lcfi146:
+; X86-NEXT:    .cfi_adjust_cfa_offset 4
+; X86-NEXT:    pushl $30
+; X86-NEXT:  .Lcfi147:
+; X86-NEXT:    .cfi_adjust_cfa_offset 4
+; X86-NEXT:    calll mult
+; X86-NEXT:    addl $8, %esp
+; X86-NEXT:  .Lcfi148:
+; X86-NEXT:    .cfi_adjust_cfa_offset -8
+; X86-NEXT:    movl %eax, %edi
+; X86-NEXT:    xorl $30, %edi
+; X86-NEXT:    orl %ebx, %edi
+; X86-NEXT:    pushl $15
+; X86-NEXT:  .Lcfi149:
+; X86-NEXT:    .cfi_adjust_cfa_offset 4
+; X86-NEXT:    pushl $31
+; X86-NEXT:  .Lcfi150:
+; X86-NEXT:    .cfi_adjust_cfa_offset 4
+; X86-NEXT:    calll mult
+; X86-NEXT:    addl $8, %esp
+; X86-NEXT:  .Lcfi151:
+; X86-NEXT:    .cfi_adjust_cfa_offset -8
+; X86-NEXT:    movl %eax, %ebx
+; X86-NEXT:    xorl $31, %ebx
+; X86-NEXT:    orl %edi, %ebx
+; X86-NEXT:    orl %esi, %ebx
+; X86-NEXT:    pushl $16
+; X86-NEXT:  .Lcfi152:
+; X86-NEXT:    .cfi_adjust_cfa_offset 4
+; X86-NEXT:    pushl $32
+; X86-NEXT:  .Lcfi153:
+; X86-NEXT:    .cfi_adjust_cfa_offset 4
+; X86-NEXT:    calll mult
+; X86-NEXT:    addl $8, %esp
+; X86-NEXT:  .Lcfi154:
 ; X86-NEXT:    .cfi_adjust_cfa_offset -8
 ; X86-NEXT:    xorl $32, %eax
 ; X86-NEXT:    orl %ebx, %eax
@@ -959,8 +1061,14 @@ define i32 @foo() local_unnamed_addr #0 {
 ; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:  .LBB1_2:
 ; X86-NEXT:    popl %esi
+; X86-NEXT:  .Lcfi155:
+; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    popl %edi
+; X86-NEXT:  .Lcfi156:
+; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    popl %ebx
+; X86-NEXT:  .Lcfi157:
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-HSW-LABEL: foo:
@@ -1184,10 +1292,20 @@ define i32 @foo() local_unnamed_addr #0 {
 ; X64-HSW-NEXT:    movl $-1, %eax
 ; X64-HSW-NEXT:    cmovel %r12d, %eax
 ; X64-HSW-NEXT:    popq %rbx
+; X64-HSW-NEXT:  .Lcfi10:
+; X64-HSW-NEXT:    .cfi_def_cfa_offset 40
 ; X64-HSW-NEXT:    popq %r12
+; X64-HSW-NEXT:  .Lcfi11:
+; X64-HSW-NEXT:    .cfi_def_cfa_offset 32
 ; X64-HSW-NEXT:    popq %r14
+; X64-HSW-NEXT:  .Lcfi12:
+; X64-HSW-NEXT:    .cfi_def_cfa_offset 24
 ; X64-HSW-NEXT:    popq %r15
+; X64-HSW-NEXT:  .Lcfi13:
+; X64-HSW-NEXT:    .cfi_def_cfa_offset 16
 ; X64-HSW-NEXT:    popq %rbp
+; X64-HSW-NEXT:  .Lcfi14:
+; X64-HSW-NEXT:    .cfi_def_cfa_offset 8
 ; X64-HSW-NEXT:    retq
   %1 = tail call i32 @mult(i32 1, i32 0)
   %2 = icmp ne i32 %1, 1

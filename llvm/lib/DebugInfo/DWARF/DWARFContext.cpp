@@ -870,13 +870,13 @@ static Expected<SymInfo> getSymbolInfo(const object::ObjectFile &Obj,
 
     Expected<uint64_t> SymAddrOrErr = Sym->getAddress();
     if (!SymAddrOrErr)
-      return createError("error: failed to compute symbol address: ",
+      return createError("failed to compute symbol address: ",
                          SymAddrOrErr.takeError());
 
     // Also remember what section this symbol is in for later
     auto SectOrErr = Sym->getSection();
     if (!SectOrErr)
-      return createError("error: failed to get symbol section: ",
+      return createError("failed to get symbol section: ",
                          SectOrErr.takeError());
 
     RSec = *SectOrErr;
@@ -937,8 +937,14 @@ Error DWARFContextInMemory::maybeDecompress(const SectionRef &Sec,
   return Error::success();
 }
 
-DWARFContextInMemory::DWARFContextInMemory(const object::ObjectFile &Obj,
-                                           const LoadedObjectInfo *L)
+ErrorPolicy DWARFContextInMemory::defaultErrorHandler(Error E) {
+  errs() << "error: " + toString(std::move(E)) << '\n';
+  return ErrorPolicy::Continue;
+}
+
+DWARFContextInMemory::DWARFContextInMemory(
+    const object::ObjectFile &Obj, const LoadedObjectInfo *L,
+    function_ref<ErrorPolicy(Error)> HandleError)
     : FileName(Obj.getFileName()), IsLittleEndian(Obj.isLittleEndian()),
       AddressSize(Obj.getBytesInAddress()) {
   for (const SectionRef &Section : Obj.sections()) {
@@ -961,9 +967,10 @@ DWARFContextInMemory::DWARFContextInMemory(const object::ObjectFile &Obj,
       Section.getContents(data);
 
     if (auto Err = maybeDecompress(Section, name, data)) {
-      errs() << "error: failed to decompress '" + name + "', " +
-                    toString(std::move(Err))
-             << '\n';
+      ErrorPolicy EP = HandleError(
+          createError("failed to decompress '" + name + "', ", std::move(Err)));
+      if (EP == ErrorPolicy::Halt)
+        return;
       continue;
     }
 
@@ -1055,7 +1062,8 @@ DWARFContextInMemory::DWARFContextInMemory(const object::ObjectFile &Obj,
 
       Expected<SymInfo> SymInfoOrErr = getSymbolInfo(Obj, Reloc, L, AddrCache);
       if (!SymInfoOrErr) {
-        errs() << toString(SymInfoOrErr.takeError()) << '\n';
+        if (HandleError(SymInfoOrErr.takeError()) == ErrorPolicy::Halt)
+          return;
         continue;
       }
 
@@ -1064,7 +1072,11 @@ DWARFContextInMemory::DWARFContextInMemory(const object::ObjectFile &Obj,
       if (V.error()) {
         SmallString<32> Name;
         Reloc.getTypeName(Name);
-        errs() << "error: failed to compute relocation: " << Name << "\n";
+        ErrorPolicy EP = HandleError(
+            createError("failed to compute relocation: " + name + ", ",
+                        errorCodeToError(object_error::parse_failed)));
+        if (EP == ErrorPolicy::Halt)
+          return;
         continue;
       }
       RelocAddrEntry Rel = {SymInfoOrErr->SectionIndex, Val};

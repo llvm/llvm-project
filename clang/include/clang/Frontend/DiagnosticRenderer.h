@@ -128,8 +128,6 @@ public:
   /// \param Message The diagnostic message to emit.
   /// \param Ranges The underlined ranges for this code snippet.
   /// \param FixItHints The FixIt hints active for this diagnostic.
-  /// \param SM The SourceManager; will be null if the diagnostic came from the
-  ///        frontend, thus \p Loc will be invalid.
   void emitDiagnostic(FullSourceLoc Loc, DiagnosticsEngine::Level Level,
                       StringRef Message, ArrayRef<CharSourceRange> Ranges,
                       ArrayRef<FixItHint> FixItHints,

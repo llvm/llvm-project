@@ -540,7 +540,7 @@ def ARMv7s   : Architecture<"armv7s",      "ARMv7a",   [ARMv7a]>;
 //
 
 // Dummy CPU, used to target architectures
-def : ProcNoItin<"generic",                             []>;
+def : ProcessorModel<"generic",     CortexA8Model,      []>;
 
 def : ProcNoItin<"arm8",                                [ARMv4]>;
 def : ProcNoItin<"arm810",                              [ARMv4]>;

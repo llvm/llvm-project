@@ -19,6 +19,7 @@ using namespace clang::clangd;
 using namespace clang;
 
 ClangdUnit::ClangdUnit(PathRef FileName, StringRef Contents,
+                       StringRef ResourceDir,
                        std::shared_ptr<PCHContainerOperations> PCHs,
                        std::vector<tooling::CompileCommand> Commands,
                        IntrusiveRefCntPtr<vfs::FileSystem> VFS)
@@ -27,10 +28,7 @@ ClangdUnit::ClangdUnit(PathRef FileName, StringRef Contents,
 
   // Inject the resource dir.
   // FIXME: Don't overwrite it if it's already there.
-  static int Dummy; // Just an address in this process.
-  std::string ResourceDir =
-      CompilerInvocation::GetResourcesPath("clangd", (void *)&Dummy);
-  Commands.front().CommandLine.push_back("-resource-dir=" + ResourceDir);
+  Commands.front().CommandLine.push_back("-resource-dir=" + std::string(ResourceDir));
 
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
       CompilerInstance::createDiagnostics(new DiagnosticOptions);

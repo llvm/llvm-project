@@ -33,6 +33,11 @@ std::vector<tooling::Replacement> formatCode(StringRef Code, StringRef Filename,
   return std::vector<tooling::Replacement>(Result.begin(), Result.end());
 }
 
+std::string getStandardResourceDir() {
+  static int Dummy; // Just an address in this process.
+  return CompilerInvocation::GetResourcesPath("clangd", (void *)&Dummy);
+}
+
 } // namespace
 
 size_t clangd::positionToOffset(StringRef Code, Position P) {
@@ -141,8 +146,10 @@ void ClangdScheduler::addToEnd(std::function<void()> Request) {
 ClangdServer::ClangdServer(GlobalCompilationDatabase &CDB,
                            DiagnosticsConsumer &DiagConsumer,
                            FileSystemProvider &FSProvider,
-                           bool RunSynchronously)
+                           bool RunSynchronously,
+                           llvm::Optional<StringRef> ResourceDir)
     : CDB(CDB), DiagConsumer(DiagConsumer), FSProvider(FSProvider),
+      ResourceDir(ResourceDir ? ResourceDir->str() : getStandardResourceDir()),
       PCHs(std::make_shared<PCHContainerOperations>()),
       WorkScheduler(RunSynchronously) {}
 
@@ -158,7 +165,7 @@ void ClangdServer::addDocument(PathRef File, StringRef Contents) {
            "No contents inside a file that was scheduled for reparse");
     auto TaggedFS = FSProvider.getTaggedFileSystem(FileStr);
     Units.runOnUnit(
-        FileStr, *FileContents.Draft, CDB, PCHs, TaggedFS.Value,
+        FileStr, *FileContents.Draft, ResourceDir, CDB, PCHs, TaggedFS.Value,
         [&](ClangdUnit const &Unit) {
           DiagConsumer.onDiagnosticsReady(
               FileStr, make_tagged(Unit.getLocalDiagnostics(), TaggedFS.Tag));
@@ -201,8 +208,8 @@ ClangdServer::codeComplete(PathRef File, Position Pos,
   // It would be nice to use runOnUnitWithoutReparse here, but we can't
   // guarantee the correctness of code completion cache here if we don't do the
   // reparse.
-  Units.runOnUnit(File, *OverridenContents, CDB, PCHs, TaggedFS.Value,
-                  [&](ClangdUnit &Unit) {
+  Units.runOnUnit(File, *OverridenContents, ResourceDir, CDB, PCHs,
+                  TaggedFS.Value, [&](ClangdUnit &Unit) {
                     Result = Unit.codeComplete(*OverridenContents, Pos,
                                                TaggedFS.Value);
                   });

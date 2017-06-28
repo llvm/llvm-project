@@ -255,8 +255,8 @@ ScopArrayInfo::ScopArrayInfo(Value *BasePtr, Type *ElementType, isl_ctx *Ctx,
                              ArrayRef<const SCEV *> Sizes, MemoryKind Kind,
                              const DataLayout &DL, Scop *S,
                              const char *BaseName)
-    : BasePtr(BasePtr), ElementType(ElementType), Kind(Kind), DL(DL), S(*S),
-      FAD(nullptr) {
+    : BasePtr(BasePtr), ElementType(ElementType), IsOnHeap(false), Kind(Kind),
+      DL(DL), S(*S), FAD(nullptr) {
   std::string BasePtrName =
       BaseName ? BaseName
                : getIslCompatibleName("MemRef", BasePtr, S->getNextArrayIdx(),
@@ -4083,10 +4083,10 @@ void Scop::canonicalizeDynamicBasePtrs() {
   }
 }
 
-const ScopArrayInfo *
-Scop::getOrCreateScopArrayInfo(Value *BasePtr, Type *ElementType,
-                               ArrayRef<const SCEV *> Sizes, MemoryKind Kind,
-                               const char *BaseName) {
+ScopArrayInfo *Scop::getOrCreateScopArrayInfo(Value *BasePtr, Type *ElementType,
+                                              ArrayRef<const SCEV *> Sizes,
+                                              MemoryKind Kind,
+                                              const char *BaseName) {
   assert((BasePtr || BaseName) &&
          "BasePtr and BaseName can not be nullptr at the same time.");
   assert(!(BasePtr && BaseName) && "BaseName is redundant.");
@@ -4107,9 +4107,9 @@ Scop::getOrCreateScopArrayInfo(Value *BasePtr, Type *ElementType,
   return SAI.get();
 }
 
-const ScopArrayInfo *
-Scop::createScopArrayInfo(Type *ElementType, const std::string &BaseName,
-                          const std::vector<unsigned> &Sizes) {
+ScopArrayInfo *Scop::createScopArrayInfo(Type *ElementType,
+                                         const std::string &BaseName,
+                                         const std::vector<unsigned> &Sizes) {
   auto *DimSizeType = Type::getInt64Ty(getSE()->getContext());
   std::vector<const SCEV *> SCEVSizes;
 

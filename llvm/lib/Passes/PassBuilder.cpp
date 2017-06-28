@@ -480,6 +480,14 @@ static void addPGOInstrPasses(ModulePassManager &MPM, bool DebugLogging,
     MPM.addPass(PGOInstrumentationUse(ProfileUseFile));
 }
 
+static InlineParams
+getInlineParamsFromOptLevel(PassBuilder::OptimizationLevel Level) {
+  auto O3 = PassBuilder::O3;
+  unsigned OptLevel = Level > O3 ? 2 : Level;
+  unsigned SizeLevel = Level > O3 ? Level - O3 : 0;
+  return getInlineParams(OptLevel, SizeLevel);
+}
+
 ModulePassManager
 PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
                                                bool DebugLogging) {
@@ -558,8 +566,7 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   // Run the inliner first. The theory is that we are walking bottom-up and so
   // the callees have already been fully optimized, and we want to inline them
   // into the callers so that our optimizations can reflect that.
-  // FIXME; Customize the threshold based on optimization level.
-  MainCGPipeline.addPass(InlinerPass());
+  MainCGPipeline.addPass(InlinerPass(getInlineParamsFromOptLevel(Level)));
 
   // Now deduce any function attributes based in the current code.
   MainCGPipeline.addPass(PostOrderFunctionAttrsPass());
@@ -868,7 +875,8 @@ ModulePassManager PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   // valuable as the inliner doesn't currently care whether it is inlining an
   // invoke or a call.
   // Run the inliner now.
-  MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(InlinerPass()));
+  MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(
+      InlinerPass(getInlineParamsFromOptLevel(Level))));
 
   // Optimize globals again after we ran the inliner.
   MPM.addPass(GlobalOptPass());

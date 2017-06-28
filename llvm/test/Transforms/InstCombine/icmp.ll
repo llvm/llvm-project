@@ -762,6 +762,27 @@ define i1 @test52(i32 %x1) {
   ret i1 %A
 }
 
+; TODO we have a 64-bit or less restriction in the handling for this pattern. We should remove that and do the same thing we do above.
+define i1 @test52b(i128 %x1) {
+; CHECK-LABEL: @test52b(
+; CHECK-NEXT:    [[CONV:%.*]] = and i128 [[X1:%.*]], 255
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i128 [[CONV]], 127
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i128 [[X1]], 16
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc i128 [[TMP2]] to i8
+; CHECK-NEXT:    [[CMP15:%.*]] = icmp eq i8 [[TMP3]], 76
+; CHECK-NEXT:    [[A:%.*]] = and i1 [[CMP]], [[CMP15]]
+; CHECK-NEXT:    ret i1 [[A]]
+;
+  %conv = and i128 %x1, 255
+  %cmp = icmp eq i128 %conv, 127
+  %tmp2 = lshr i128 %x1, 16
+  %tmp3 = trunc i128 %tmp2 to i8
+  %cmp15 = icmp eq i8 %tmp3, 76
+
+  %A = and i1 %cmp, %cmp15
+  ret i1 %A
+}
+
 ; PR9838
 define i1 @test53(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test53(

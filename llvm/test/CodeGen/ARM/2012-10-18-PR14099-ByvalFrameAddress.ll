@@ -24,7 +24,7 @@ entry:
 ; CHECK-LABEL: caller:
 define void @caller() {
 
-; CHECK:      ldm     r0, {r1, r2, r3}
+; CHECK:      ldm     r{{[0-9]+}}, {r1, r2, r3}
   call void @t(i32 0, %struct.s* @v);
   ret void
 }

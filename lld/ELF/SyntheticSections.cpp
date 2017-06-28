@@ -1376,7 +1376,6 @@ template <class ELFT> void SymbolTableSection<ELFT>::writeTo(uint8_t *Buf) {
     }
 
     ESym->st_name = Ent.StrTabOffset;
-    ESym->st_size = Body->getSize<ELFT>();
 
     // Set a section index.
     if (const OutputSection *OutSec = Body->getOutputSection())
@@ -1385,6 +1384,14 @@ template <class ELFT> void SymbolTableSection<ELFT>::writeTo(uint8_t *Buf) {
       ESym->st_shndx = SHN_ABS;
     else if (isa<DefinedCommon>(Body))
       ESym->st_shndx = SHN_COMMON;
+
+    // Copy symbol size if it is a defined symbol. st_size is not significant
+    // for undefined symbols, so whether copying it or not is up to us if that's
+    // the case. We'll leave it as zero because by not setting a value, we can
+    // get the exact same outputs for two sets of input files that differ only
+    // in undefined symbol size in DSOs.
+    if (ESym->st_shndx != SHN_UNDEF)
+      ESym->st_size = Body->getSize<ELFT>();
 
     // st_value is usually an address of a symbol, but that has a
     // special meaining for uninstantiated common symbols (this can

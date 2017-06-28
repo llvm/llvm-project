@@ -1447,7 +1447,9 @@ void has_trivial_default_constructor() {
   { int arr[T(__has_trivial_constructor(const Int))]; }
   { int arr[T(__has_trivial_constructor(AllDefaulted))]; }
   { int arr[T(__has_trivial_constructor(AllDeleted))]; }
+  { int arr[T(__has_trivial_constructor(ACompleteType[]))]; }
 
+  { int arr[F(__has_trivial_constructor(AnIncompleteType[]))]; } // expected-error {{incomplete type}}
   { int arr[F(__has_trivial_constructor(HasCons))]; }
   { int arr[F(__has_trivial_constructor(HasRef))]; }
   { int arr[F(__has_trivial_constructor(HasCopy))]; }
@@ -1478,7 +1480,9 @@ void has_trivial_move_constructor() {
   { int arr[T(__has_trivial_move_constructor(HasCons))]; }
   { int arr[T(__has_trivial_move_constructor(HasStaticMemberMoveCtor))]; }
   { int arr[T(__has_trivial_move_constructor(AllDeleted))]; }
-  
+  { int arr[T(__has_trivial_move_constructor(ACompleteType[]))]; }
+
+  { int arr[F(__has_trivial_move_constructor(AnIncompleteType[]))]; } // expected-error {{incomplete type}}
   { int arr[F(__has_trivial_move_constructor(HasVirt))]; }
   { int arr[F(__has_trivial_move_constructor(DerivesVirt))]; }
   { int arr[F(__has_trivial_move_constructor(HasMoveCtor))]; }
@@ -1508,7 +1512,9 @@ void has_trivial_copy_constructor() {
   { int arr[T(__has_trivial_copy(AllDeleted))]; }
   { int arr[T(__has_trivial_copy(DerivesAr))]; }
   { int arr[T(__has_trivial_copy(DerivesHasRef))]; }
+  { int arr[T(__has_trivial_copy(ACompleteType[]))]; }
 
+  { int arr[F(__has_trivial_copy(AnIncompleteType[]))]; } // expected-error {{incomplete type}}
   { int arr[F(__has_trivial_copy(HasCopy))]; }
   { int arr[F(__has_trivial_copy(HasTemplateCons))]; }
   { int arr[F(__has_trivial_copy(VirtAr))]; }
@@ -1536,7 +1542,9 @@ void has_trivial_copy_assignment() {
   { int arr[T(__has_trivial_assign(AllDeleted))]; }
   { int arr[T(__has_trivial_assign(DerivesAr))]; }
   { int arr[T(__has_trivial_assign(DerivesHasRef))]; }
+  { int arr[T(__has_trivial_assign(ACompleteType[]))]; }
 
+  { int arr[F(__has_trivial_assign(AnIncompleteType[]))]; } // expected-error {{incomplete type}}
   { int arr[F(__has_trivial_assign(IntRef))]; }
   { int arr[F(__has_trivial_assign(HasCopyAssign))]; }
   { int arr[F(__has_trivial_assign(const Int))]; }
@@ -1572,8 +1580,10 @@ void has_trivial_destructor() {
   { int arr[T(__has_trivial_destructor(AllDefaulted))]; }
   { int arr[T(__has_trivial_destructor(AllDeleted))]; }
   { int arr[T(__has_trivial_destructor(DerivesHasRef))]; }
+  { int arr[T(__has_trivial_destructor(ACompleteType[]))]; }
 
   { int arr[F(__has_trivial_destructor(HasDest))]; }
+  { int arr[F(__has_trivial_destructor(AnIncompleteType[]))]; } // expected-error {{incomplete type}}
   { int arr[F(__has_trivial_destructor(void))]; }
   { int arr[F(__has_trivial_destructor(cvoid))]; }
   { int arr[F(__has_trivial_destructor(AllPrivate))]; }
@@ -1625,7 +1635,9 @@ void has_nothrow_assign() {
   { int arr[T(__has_nothrow_assign(AllPrivate))]; }
   { int arr[T(__has_nothrow_assign(UsingAssign))]; }
   { int arr[T(__has_nothrow_assign(DerivesAr))]; }
+  { int arr[T(__has_nothrow_assign(ACompleteType[]))]; }
 
+  { int arr[F(__has_nothrow_assign(AnIncompleteType[]))]; } // expected-error {{incomplete type}}
   { int arr[F(__has_nothrow_assign(IntRef))]; }
   { int arr[F(__has_nothrow_assign(HasCopyAssign))]; }
   { int arr[F(__has_nothrow_assign(HasMultipleCopyAssign))]; }
@@ -1650,8 +1662,9 @@ void has_nothrow_move_assign() {
   { int arr[T(__has_nothrow_move_assign(HasMemberNoThrowMoveAssign))]; }
   { int arr[T(__has_nothrow_move_assign(HasMemberNoExceptNoThrowMoveAssign))]; }
   { int arr[T(__has_nothrow_move_assign(AllDeleted))]; }
+  { int arr[T(__has_nothrow_move_assign(ACompleteType[]))]; }
 
-
+  { int arr[F(__has_nothrow_move_assign(AnIncompleteType[]))]; } // expected-error {{incomplete type}}
   { int arr[F(__has_nothrow_move_assign(HasThrowMoveAssign))]; }
   { int arr[F(__has_nothrow_move_assign(HasNoExceptFalseMoveAssign))]; }
   { int arr[F(__has_nothrow_move_assign(HasMemberThrowMoveAssign))]; }
@@ -1683,7 +1696,9 @@ void has_trivial_move_assign() {
   { int arr[T(__has_trivial_move_assign(Int))]; }
   { int arr[T(__has_trivial_move_assign(HasStaticMemberMoveAssign))]; }
   { int arr[T(__has_trivial_move_assign(AllDeleted))]; }
+  { int arr[T(__has_trivial_move_assign(ACompleteType[]))]; }
 
+  { int arr[F(__has_trivial_move_assign(AnIncompleteType[]))]; } // expected-error {{incomplete type}}
   { int arr[F(__has_trivial_move_assign(HasVirt))]; }
   { int arr[F(__has_trivial_move_assign(DerivesVirt))]; }
   { int arr[F(__has_trivial_move_assign(HasMoveAssign))]; }
@@ -1717,7 +1732,9 @@ void has_nothrow_copy() {
   { int arr[T(__has_nothrow_copy(HasTemplateCons))]; }
   { int arr[T(__has_nothrow_copy(AllPrivate))]; }
   { int arr[T(__has_nothrow_copy(DerivesAr))]; }
+  { int arr[T(__has_nothrow_copy(ACompleteType[]))]; }
 
+  { int arr[F(__has_nothrow_copy(AnIncompleteType[]))]; } // expected-error {{incomplete type}}
   { int arr[F(__has_nothrow_copy(HasCopy))]; }
   { int arr[F(__has_nothrow_copy(HasMultipleCopy))]; }
   { int arr[F(__has_nothrow_copy(VirtAr))]; }
@@ -1743,7 +1760,9 @@ void has_nothrow_constructor() {
   { int arr[T(__has_nothrow_constructor(HasVirtDest))]; }
   // { int arr[T(__has_nothrow_constructor(VirtAr))]; } // not implemented
   { int arr[T(__has_nothrow_constructor(AllPrivate))]; }
+  { int arr[T(__has_nothrow_constructor(ACompleteType[]))]; }
 
+  { int arr[F(__has_nothrow_constructor(AnIncompleteType[]))]; } // expected-error {{incomplete type}}
   { int arr[F(__has_nothrow_constructor(HasCons))]; }
   { int arr[F(__has_nothrow_constructor(HasRef))]; }
   { int arr[F(__has_nothrow_constructor(HasCopy))]; }
@@ -1779,7 +1798,9 @@ void has_virtual_destructor() {
   { int arr[F(__has_virtual_destructor(HasMoveAssign))]; }
   { int arr[F(__has_virtual_destructor(IntRef))]; }
   { int arr[F(__has_virtual_destructor(VirtAr))]; }
+  { int arr[F(__has_virtual_destructor(ACompleteType[]))]; }
 
+  { int arr[F(__has_virtual_destructor(AnIncompleteType[]))]; } // expected-error {{incomplete type}}
   { int arr[T(__has_virtual_destructor(HasVirtDest))]; }
   { int arr[T(__has_virtual_destructor(DerivedVirtDest))]; }
   { int arr[F(__has_virtual_destructor(VirtDestAr))]; }

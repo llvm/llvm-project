@@ -177,6 +177,8 @@ public:
                               MachineBasicBlock::iterator MBBI,
                               const DebugLoc &DL, bool RestoreSP = false) const;
 
+  void initializeCFIInfo(MachineFunction &MF) const override;
+
 private:
   uint64_t calculateMaxStackAlign(const MachineFunction &MF) const;
 

@@ -150,9 +150,14 @@ public:
   /// a vfs::FileSystem provided by \p FSProvider. Results of code
   /// completion/diagnostics also include a tag, that \p FSProvider returns
   /// along with the vfs::FileSystem.
+  /// When \p ResourceDir is set, it will be used to search for internal headers
+  /// (overriding defaults and -resource-dir compiler flag, if set). If \p
+  /// ResourceDir is None, ClangdServer will attempt to set it to a standard
+  /// location, obtained via CompilerInvocation::GetResourcePath.
   ClangdServer(GlobalCompilationDatabase &CDB,
                DiagnosticsConsumer &DiagConsumer,
-               FileSystemProvider &FSProvider, bool RunSynchronously);
+               FileSystemProvider &FSProvider, bool RunSynchronously,
+               llvm::Optional<StringRef> ResourceDir = llvm::None);
 
   /// Add a \p File to the list of tracked C++ files or update the contents if
   /// \p File is already tracked. Also schedules parsing of the AST for it on a
@@ -199,6 +204,7 @@ private:
   FileSystemProvider &FSProvider;
   DraftStore DraftMgr;
   ClangdUnitStore Units;
+  std::string ResourceDir;
   std::shared_ptr<PCHContainerOperations> PCHs;
   // WorkScheduler has to be the last member, because its destructor has to be
   // called before all other members to stop the worker thread that references
