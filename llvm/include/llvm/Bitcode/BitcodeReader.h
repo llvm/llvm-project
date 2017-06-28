@@ -111,9 +111,14 @@ namespace llvm {
 
   struct BitcodeFileContents {
     std::vector<BitcodeModule> Mods;
+    StringRef Symtab, StrtabForSymtab;
   };
 
-  /// Returns the contents of a bitcode file.
+  /// Returns the contents of a bitcode file. This includes the raw contents of
+  /// the symbol table embedded in the bitcode file. Clients which require a
+  /// symbol table should prefer to use irsymtab::read instead of this function
+  /// because it creates a reader for the irsymtab and handles upgrading bitcode
+  /// files without a symbol table or with an old symbol table.
   Expected<BitcodeFileContents> getBitcodeFileContents(MemoryBufferRef Buffer);
 
   /// Returns a list of modules in the specified bitcode buffer.

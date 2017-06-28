@@ -187,7 +187,7 @@ static bool CodeGen(Scop &S, IslAstInfo &AI, LoopInfo &LI, DominatorTree &DT,
 
   // All arrays must have their base pointers known before
   // ScopAnnotator::buildAliasScopes.
-  NodeBuilder.allocateNewArrays();
+  NodeBuilder.allocateNewArrays(StartExitBlocks);
   Annotator.buildAliasScopes(S);
 
   if (PerfMonitoring) {
@@ -232,7 +232,14 @@ static bool CodeGen(Scop &S, IslAstInfo &AI, LoopInfo &LI, DominatorTree &DT,
     Value *RTC = NodeBuilder.createRTC(AI.getRunCondition());
 
     Builder.GetInsertBlock()->getTerminator()->setOperand(0, RTC);
-    Builder.SetInsertPoint(&StartBlock->front());
+
+    // Explicitly set the insert point to the end of the block to avoid that a
+    // split at the builder's current
+    // insert position would move the malloc calls to the wrong BasicBlock.
+    // Ideally we would just split the block during allocation of the new
+    // arrays, but this would break the assumption that there are no blocks
+    // between polly.start and polly.exiting (at this point).
+    Builder.SetInsertPoint(StartBlock->getTerminator());
 
     NodeBuilder.create(AstRoot);
     NodeBuilder.finalize();

@@ -74,22 +74,14 @@ bool DWARFUnit::getAddrOffsetSectionItem(uint32_t Index,
 
 bool DWARFUnit::getStringOffsetSectionItem(uint32_t Index,
                                            uint64_t &Result) const {
-  unsigned ItemSize = getFormat() == DWARF64 ? 8 : 4;
+  unsigned ItemSize = getDwarfOffsetByteSize();
   uint32_t Offset = StringOffsetSectionBase + Index * ItemSize;
   if (StringOffsetSection.Data.size() < Offset + ItemSize)
     return false;
   DataExtractor DA(StringOffsetSection.Data, isLittleEndian, 0);
-  Result = ItemSize == 4 ? DA.getU32(&Offset) : DA.getU64(&Offset);
+  Result = getRelocatedValue(DA, ItemSize, &Offset,
+                             &StringOffsetSection.Relocs);
   return true;
-}
-
-uint64_t DWARFUnit::getStringOffsetSectionRelocation(uint32_t Index) const {
-  unsigned ItemSize = getFormat() == DWARF64 ? 8 : 4;
-  uint64_t ByteOffset = StringOffsetSectionBase + Index * ItemSize;
-  RelocAddrMap::const_iterator AI = getStringOffsetsRelocMap().find(ByteOffset);
-  if (AI != getStringOffsetsRelocMap().end())
-    return AI->second.Value;
-  return 0;
 }
 
 bool DWARFUnit::extractImpl(DataExtractor debug_info, uint32_t *offset_ptr) {

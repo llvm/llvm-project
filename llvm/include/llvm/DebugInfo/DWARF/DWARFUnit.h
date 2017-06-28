@@ -194,9 +194,7 @@ public:
   }
 
   bool getAddrOffsetSectionItem(uint32_t Index, uint64_t &Result) const;
-  // FIXME: Result should be uint64_t in DWARF64.
   bool getStringOffsetSectionItem(uint32_t Index, uint64_t &Result) const;
-  uint64_t getStringOffsetSectionRelocation(uint32_t Index) const;
 
   DataExtractor getDebugInfoExtractor() const {
     return DataExtractor(InfoSection.Data, isLittleEndian,

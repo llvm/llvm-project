@@ -66,5 +66,5 @@ if __name__ == '__main__':
         r.Added = True
     for r in removed:
         r.Added = False
-    stream = file(args.output, 'w')
-    yaml.dump_all(added | removed, stream)
+    with open(args.output, 'w') as stream:
+        yaml.dump_all(added | removed, stream)

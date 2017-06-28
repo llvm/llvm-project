@@ -195,14 +195,8 @@ template <class ELFT> void SymbolTable<ELFT>::applySymbolRenames() {
   for (auto &KV : Config->RenamedSymbols) {
     Symbol *Dst = KV.first;
     Symbol *Src = KV.second.Target;
+    Dst->body()->copy(Src->body());
     Dst->Binding = KV.second.OriginalBinding;
-
-    // We rename symbols by replacing the old symbol's SymbolBody with
-    // the new symbol's SymbolBody. The only attribute we want to keep
-    // is the symbol name, so that two symbols don't have the same name.
-    StringRef S = Dst->body()->getName();
-    memcpy(Dst->Body.buffer, Src->Body.buffer, sizeof(Symbol::Body));
-    Dst->body()->setName(S);
   }
 }
 

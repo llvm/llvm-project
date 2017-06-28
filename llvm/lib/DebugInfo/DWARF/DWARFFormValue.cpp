@@ -576,7 +576,6 @@ Optional<const char *> DWARFFormValue::getAsCString() const {
     uint64_t StrOffset;
     if (!U->getStringOffsetSectionItem(Offset, StrOffset))
       return None;
-    StrOffset += U->getStringOffsetSectionRelocation(Offset);
     Offset = StrOffset;
   }
   if (const char *Str = U->getStringExtractor().getCStr(&Offset)) {

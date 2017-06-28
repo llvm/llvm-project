@@ -47,12 +47,12 @@ define i1 @test_cmpxchg_weak_to_bool(i32, i32 *%addr, i32 %desired, i32 %new) {
 ; CHECK-NEXT:     strex   [[SUCCESS:r[0-9]+]], r3, [r1]
 ; CHECK-NEXT:     cmp     [[SUCCESS]], #0
 ; CHECK-NEXT:     bxne    lr
-; CHECK-NEXT:     dmb     ish
 ; CHECK-NEXT:     mov     r0, #1
+; CHECK-NEXT:     dmb     ish
 ; CHECK-NEXT:     bx      lr
 ; CHECK-NEXT: [[LDFAILBB]]:
-; CHECK-NEXT:     clrex
 ; CHECK-NEXT:     mov     r0, #0
+; CHECK-NEXT:     clrex
 ; CHECK-NEXT:     bx      lr
 
   ret i1 %success

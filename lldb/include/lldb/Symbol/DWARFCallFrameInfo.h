@@ -34,8 +34,9 @@ namespace lldb_private {
 
 class DWARFCallFrameInfo {
 public:
-  DWARFCallFrameInfo(ObjectFile &objfile, lldb::SectionSP &section,
-                     lldb::RegisterKind reg_kind, bool is_eh_frame);
+  enum Type { EH, DWARF };
+
+  DWARFCallFrameInfo(ObjectFile &objfile, lldb::SectionSP &section, Type type);
 
   ~DWARFCallFrameInfo() = default;
 
@@ -142,21 +143,24 @@ private:
 
   ObjectFile &m_objfile;
   lldb::SectionSP m_section_sp;
-  lldb::RegisterKind m_reg_kind;
-  Flags m_flags;
+  Flags m_flags = 0;
   cie_map_t m_cie_map;
 
   DataExtractor m_cfi_data;
-  bool m_cfi_data_initialized; // only copy the section into the DE once
+  bool m_cfi_data_initialized = false; // only copy the section into the DE once
 
   FDEEntryMap m_fde_index;
-  bool m_fde_index_initialized; // only scan the section for FDEs once
+  bool m_fde_index_initialized = false; // only scan the section for FDEs once
   std::mutex m_fde_index_mutex; // and isolate the thread that does it
 
-  bool m_is_eh_frame;
+  Type m_type;
 
   CIESP
   ParseCIE(const uint32_t cie_offset);
+
+  lldb::RegisterKind GetRegisterKind() const {
+    return m_type == EH ? lldb::eRegisterKindEHFrame : lldb::eRegisterKindDWARF;
+  }
 };
 
 } // namespace lldb_private

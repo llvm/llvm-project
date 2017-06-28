@@ -238,7 +238,7 @@ SystemZTTIImpl::getPopcntSupport(unsigned TyWidth) {
   return TTI::PSK_Software;
 }
 
-void SystemZTTIImpl::getUnrollingPreferences(Loop *L,
+void SystemZTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                              TTI::UnrollingPreferences &UP) {
   // Find out if L contains a call, what the machine instruction count
   // estimate is, and how many stores there are.

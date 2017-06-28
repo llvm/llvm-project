@@ -27,6 +27,8 @@ entry:
 ; CHECK-NEXT:         Name:            foo
 ; CHECK-NEXT:   - Type:            CUSTOM
 ; CHECK-NEXT:     Name:            linking
+; CHECK-NEXT:     DataSize:        0
+; CHECK-NEXT:     DataAlignment:   0
 ; CHECK-NEXT:     SymbolInfo:      
 ; CHECK-NEXT:       - Name:            foo_alias
 ; CHECK-NEXT:         Flags:           1

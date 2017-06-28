@@ -49,10 +49,11 @@ AArch64ELFObjectWriter::AArch64ELFObjectWriter(uint8_t OSABI,
                               /*HasRelocationAddend*/ true),
       IsILP32(IsILP32) {}
 
-#define R_CLS(rtype) \
-        IsILP32 ? ELF::R_AARCH64_P32_##rtype : ELF::R_AARCH64_##rtype
-#define BAD_ILP32_MOV(lp64rtype) "ILP32 absolute MOV relocation not "\
-        "supported (LP64 eqv: " #lp64rtype ")"
+#define R_CLS(rtype)                                                           \
+  IsILP32 ? ELF::R_AARCH64_P32_##rtype : ELF::R_AARCH64_##rtype
+#define BAD_ILP32_MOV(lp64rtype)                                               \
+  "ILP32 absolute MOV relocation not "                                         \
+  "supported (LP64 eqv: " #lp64rtype ")"
 
 // assumes IsILP32 is true
 static bool isNonILP32reloc(const MCFixup &Fixup,
@@ -60,44 +61,45 @@ static bool isNonILP32reloc(const MCFixup &Fixup,
                             MCContext &Ctx) {
   if ((unsigned)Fixup.getKind() != AArch64::fixup_aarch64_movw)
     return false;
-  switch(RefKind) {
-    case AArch64MCExpr::VK_ABS_G3:
-      Ctx.reportError(Fixup.getLoc(), BAD_ILP32_MOV(MOVW_UABS_G3));
-      return true;
-    case AArch64MCExpr::VK_ABS_G2:
-      Ctx.reportError(Fixup.getLoc(), BAD_ILP32_MOV(MOVW_UABS_G2));
-      return true;
-    case AArch64MCExpr::VK_ABS_G2_S:
-      Ctx.reportError(Fixup.getLoc(), BAD_ILP32_MOV(MOVW_SABS_G2));
-      return true;
-    case AArch64MCExpr::VK_ABS_G2_NC:
-      Ctx.reportError(Fixup.getLoc(), BAD_ILP32_MOV(MOVW_UABS_G2_NC));
-      return true;
-    case AArch64MCExpr::VK_ABS_G1_S:
-      Ctx.reportError(Fixup.getLoc(), BAD_ILP32_MOV(MOVW_SABS_G1));
-      return true;
-    case AArch64MCExpr::VK_ABS_G1_NC:
-      Ctx.reportError(Fixup.getLoc(), BAD_ILP32_MOV(MOVW_UABS_G1_NC));
-      return true;
-    case AArch64MCExpr::VK_DTPREL_G2:
-      Ctx.reportError(Fixup.getLoc(), BAD_ILP32_MOV(TLSLD_MOVW_DTPREL_G2));
-      return true;
-    case AArch64MCExpr::VK_DTPREL_G1_NC:
-      Ctx.reportError(Fixup.getLoc(), BAD_ILP32_MOV(TLSLD_MOVW_DTPREL_G1_NC));
-      return true;
-    case AArch64MCExpr::VK_TPREL_G2:
-      Ctx.reportError(Fixup.getLoc(), BAD_ILP32_MOV(TLSLE_MOVW_TPREL_G2));
-      return true;
-    case AArch64MCExpr::VK_TPREL_G1_NC:
-      Ctx.reportError(Fixup.getLoc(), BAD_ILP32_MOV(TLSLE_MOVW_TPREL_G1_NC));
-      return true;
-    case AArch64MCExpr::VK_GOTTPREL_G1:
-      Ctx.reportError(Fixup.getLoc(), BAD_ILP32_MOV(TLSIE_MOVW_GOTTPREL_G1));
-      return true;
-    case AArch64MCExpr::VK_GOTTPREL_G0_NC:
-      Ctx.reportError(Fixup.getLoc(), BAD_ILP32_MOV(TLSIE_MOVW_GOTTPREL_G0_NC));
-      return true;
-    default: return false;
+  switch (RefKind) {
+  case AArch64MCExpr::VK_ABS_G3:
+    Ctx.reportError(Fixup.getLoc(), BAD_ILP32_MOV(MOVW_UABS_G3));
+    return true;
+  case AArch64MCExpr::VK_ABS_G2:
+    Ctx.reportError(Fixup.getLoc(), BAD_ILP32_MOV(MOVW_UABS_G2));
+    return true;
+  case AArch64MCExpr::VK_ABS_G2_S:
+    Ctx.reportError(Fixup.getLoc(), BAD_ILP32_MOV(MOVW_SABS_G2));
+    return true;
+  case AArch64MCExpr::VK_ABS_G2_NC:
+    Ctx.reportError(Fixup.getLoc(), BAD_ILP32_MOV(MOVW_UABS_G2_NC));
+    return true;
+  case AArch64MCExpr::VK_ABS_G1_S:
+    Ctx.reportError(Fixup.getLoc(), BAD_ILP32_MOV(MOVW_SABS_G1));
+    return true;
+  case AArch64MCExpr::VK_ABS_G1_NC:
+    Ctx.reportError(Fixup.getLoc(), BAD_ILP32_MOV(MOVW_UABS_G1_NC));
+    return true;
+  case AArch64MCExpr::VK_DTPREL_G2:
+    Ctx.reportError(Fixup.getLoc(), BAD_ILP32_MOV(TLSLD_MOVW_DTPREL_G2));
+    return true;
+  case AArch64MCExpr::VK_DTPREL_G1_NC:
+    Ctx.reportError(Fixup.getLoc(), BAD_ILP32_MOV(TLSLD_MOVW_DTPREL_G1_NC));
+    return true;
+  case AArch64MCExpr::VK_TPREL_G2:
+    Ctx.reportError(Fixup.getLoc(), BAD_ILP32_MOV(TLSLE_MOVW_TPREL_G2));
+    return true;
+  case AArch64MCExpr::VK_TPREL_G1_NC:
+    Ctx.reportError(Fixup.getLoc(), BAD_ILP32_MOV(TLSLE_MOVW_TPREL_G1_NC));
+    return true;
+  case AArch64MCExpr::VK_GOTTPREL_G1:
+    Ctx.reportError(Fixup.getLoc(), BAD_ILP32_MOV(TLSIE_MOVW_GOTTPREL_G1));
+    return true;
+  case AArch64MCExpr::VK_GOTTPREL_G0_NC:
+    Ctx.reportError(Fixup.getLoc(), BAD_ILP32_MOV(TLSIE_MOVW_GOTTPREL_G0_NC));
+    return true;
+  default:
+    return false;
   }
   return false;
 }
@@ -130,7 +132,8 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
       return R_CLS(PREL32);
     case FK_Data_8:
       if (IsILP32) {
-        Ctx.reportError(Fixup.getLoc(), "ILP32 8 byte PC relative data "
+        Ctx.reportError(Fixup.getLoc(),
+                        "ILP32 8 byte PC relative data "
                         "relocation not supported (LP64 eqv: PREL64)");
         return ELF::R_AARCH64_NONE;
       } else
@@ -178,7 +181,7 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
     }
   } else {
     if (IsILP32 && isNonILP32reloc(Fixup, RefKind, Ctx))
-        return ELF::R_AARCH64_NONE;
+      return ELF::R_AARCH64_NONE;
     switch ((unsigned)Fixup.getKind()) {
     case FK_Data_1:
       Ctx.reportError(Fixup.getLoc(), "1-byte data relocations not supported");
@@ -189,8 +192,9 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
       return R_CLS(ABS32);
     case FK_Data_8:
       if (IsILP32) {
-        Ctx.reportError(Fixup.getLoc(), "ILP32 8 byte absolute data "
-			"relocation not supported (LP64 eqv: ABS64)");
+        Ctx.reportError(Fixup.getLoc(),
+                        "ILP32 8 byte absolute data "
+                        "relocation not supported (LP64 eqv: ABS64)");
         return ELF::R_AARCH64_NONE;
       } else
         return ELF::R_AARCH64_ABS64;
@@ -262,7 +266,7 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
         } else {
           Ctx.reportError(Fixup.getLoc(),
                           "LP64 4 byte unchecked GOT load/store relocation "
-			  "not supported (ILP32 eqv: LD32_GOT_LO12_NC");
+                          "not supported (ILP32 eqv: LD32_GOT_LO12_NC");
           return ELF::R_AARCH64_NONE;
         }
       }
@@ -270,12 +274,12 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
         if (IsILP32) {
           Ctx.reportError(Fixup.getLoc(),
                           "ILP32 4 byte checked GOT load/store relocation "
-			  "not supported (unchecked eqv: LD32_GOT_LO12_NC)");
+                          "not supported (unchecked eqv: LD32_GOT_LO12_NC)");
         } else {
           Ctx.reportError(Fixup.getLoc(),
                           "LP64 4 byte checked GOT load/store relocation "
-			  "not supported (unchecked/ILP32 eqv: "
-			  "LD32_GOT_LO12_NC)");
+                          "not supported (unchecked/ILP32 eqv: "
+                          "LD32_GOT_LO12_NC)");
         }
         return ELF::R_AARCH64_NONE;
       }
@@ -283,7 +287,8 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
         if (IsILP32) {
           return ELF::R_AARCH64_P32_TLSIE_LD32_GOTTPREL_LO12_NC;
         } else {
-          Ctx.reportError(Fixup.getLoc(), "LP64 32-bit load/store "
+          Ctx.reportError(Fixup.getLoc(),
+                          "LP64 32-bit load/store "
                           "relocation not supported (ILP32 eqv: "
                           "TLSIE_LD32_GOTTPREL_LO12_NC)");
           return ELF::R_AARCH64_NONE;
@@ -295,14 +300,14 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
         } else {
           Ctx.reportError(Fixup.getLoc(),
                           "LP64 4 byte TLSDESC load/store relocation "
-			  "not supported (ILP32 eqv: TLSDESC_LD64_LO12)");
+                          "not supported (ILP32 eqv: TLSDESC_LD64_LO12)");
           return ELF::R_AARCH64_NONE;
         }
       }
 
       Ctx.reportError(Fixup.getLoc(),
                       "invalid fixup for 32-bit load/store instruction "
-		      "fixup_aarch64_ldst_imm12_scale4");
+                      "fixup_aarch64_ldst_imm12_scale4");
       return ELF::R_AARCH64_NONE;
     case AArch64::fixup_aarch64_ldst_imm12_scale8:
       if (SymLoc == AArch64MCExpr::VK_ABS && IsNC)
@@ -312,8 +317,8 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
           return ELF::R_AARCH64_LD64_GOT_LO12_NC;
         } else {
           Ctx.reportError(Fixup.getLoc(), "ILP32 64-bit load/store "
-                          "relocation not supported (LP64 eqv: "
-                          "LD64_GOT_LO12_NC)");
+                                          "relocation not supported (LP64 eqv: "
+                                          "LD64_GOT_LO12_NC)");
           return ELF::R_AARCH64_NONE;
         }
       }
@@ -330,8 +335,8 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
           return ELF::R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC;
         } else {
           Ctx.reportError(Fixup.getLoc(), "ILP32 64-bit load/store "
-                          "relocation not supported (LP64 eqv: "
-                          "TLSIE_LD64_GOTTPREL_LO12_NC)");
+                                          "relocation not supported (LP64 eqv: "
+                                          "TLSIE_LD64_GOTTPREL_LO12_NC)");
           return ELF::R_AARCH64_NONE;
         }
       }
@@ -340,8 +345,8 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
           return ELF::R_AARCH64_TLSDESC_LD64_LO12;
         } else {
           Ctx.reportError(Fixup.getLoc(), "ILP32 64-bit load/store "
-                          "relocation not supported (LP64 eqv: "
-                          "TLSDESC_LD64_LO12)");
+                                          "relocation not supported (LP64 eqv: "
+                                          "TLSDESC_LD64_LO12)");
           return ELF::R_AARCH64_NONE;
         }
       }

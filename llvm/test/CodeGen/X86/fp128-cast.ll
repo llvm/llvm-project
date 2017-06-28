@@ -61,10 +61,10 @@ entry:
 ; X32:       retl
 ;
 ; X64-LABEL: TestFPToSIF128_I32:
-; X64:        movaps     vf128(%rip), %xmm0
-; X64-NEXT:   callq      __fixtfsi
-; X64-NEXT:   movl       %eax, vi32(%rip)
-; X64:        retq
+; X64:       movaps     vf128(%rip), %xmm0
+; X64-NEXT:  callq      __fixtfsi
+; X64-NEXT:  movl       %eax, vi32(%rip)
+; X64:       retq
 }
 
 define void @TestFPToUIF128_U32() {
@@ -78,10 +78,10 @@ entry:
 ; X32:       retl
 ;
 ; X64-LABEL: TestFPToUIF128_U32:
-; X64:        movaps     vf128(%rip), %xmm0
-; X64-NEXT:   callq      __fixunstfsi
-; X64-NEXT:   movl       %eax, vu32(%rip)
-; X64:        retq
+; X64:       movaps     vf128(%rip), %xmm0
+; X64-NEXT:  callq      __fixunstfsi
+; X64-NEXT:  movl       %eax, vu32(%rip)
+; X64:       retq
 }
 
 define void @TestFPToSIF128_I64() {

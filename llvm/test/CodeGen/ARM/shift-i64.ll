@@ -29,8 +29,8 @@ define i64 @test_shl(i64 %val, i64 %amt) {
 ; Explanation for lshr is pretty much the reverse of shl.
 define i64 @test_lshr(i64 %val, i64 %amt) {
 ; CHECK-LABEL: test_lshr:
-; CHECK: lsr r0, r0, r2
 ; CHECK: rsb [[REVERSE_SHIFT:.*]], r2, #32
+; CHECK: lsr r0, r0, r2
 ; CHECK: orr r0, r0, r1, lsl [[REVERSE_SHIFT]]
 ; CHECK: sub [[EXTRA_SHIFT:.*]], r2, #32
 ; CHECK: cmp [[EXTRA_SHIFT]], #0

@@ -207,6 +207,142 @@ TEST_F(FormatTestProto, FormatsOptions) {
                "  field_c: \"OK\",\n"
                "  msg_field: <field_d: 123>\n"
                "};");
+
+  verifyFormat("option (MyProto.options) = {\n"
+               "  msg_field: <>\n"
+               "  field_c: \"OK\",\n"
+               "  msg_field: <field_d: 123>\n"
+               "  field_e: OK\n"
+               "  msg_field: <field_d: 12>\n"
+               "};");
+
+  verifyFormat("option (MyProto.options) = <\n"
+               "  field_a: OK\n"
+               "  field_b: \"OK\"\n"
+               "  field_c: 1\n"
+               "  field_d: 12.5\n"
+               "  field_e: OK\n"
+               ">;");
+
+  verifyFormat("option (MyProto.options) = <\n"
+               "  field_a: OK,\n"
+               "  field_b: \"OK\",\n"
+               "  field_c: 1,\n"
+               "  field_d: 12.5,\n"
+               "  field_e: OK,\n"
+               ">;");
+
+  verifyFormat("option (MyProto.options) = <\n"
+               "  field_a: \"OK\"\n"
+               "  msg_field: {field_b: OK}\n"
+               "  field_g: OK\n"
+               "  field_g: OK\n"
+               "  field_g: OK\n"
+               ">;");
+
+  verifyFormat("option (MyProto.options) = <\n"
+               "  field_a: \"OK\"\n"
+               "  msg_field<\n"
+               "    field_b: OK\n"
+               "    field_c: OK\n"
+               "    field_d: OK\n"
+               "    field_e: OK\n"
+               "    field_f: OK\n"
+               "  >\n"
+               "  field_g: OK\n"
+               ">;");
+
+  verifyFormat("option (MyProto.options) = <\n"
+               "  field_a: \"OK\"\n"
+               "  msg_field<\n"
+               "    field_b: OK,\n"
+               "    field_c: OK,\n"
+               "    field_d: OK,\n"
+               "    field_e: OK,\n"
+               "    field_f: OK\n"
+               "  >\n"
+               "  field_g: OK\n"
+               ">;");
+
+  verifyFormat("option (MyProto.options) = <\n"
+               "  field_a: \"OK\"\n"
+               "  msg_field: <\n"
+               "    field_b: OK\n"
+               "    field_c: OK\n"
+               "    field_d: OK\n"
+               "    field_e: OK\n"
+               "    field_f: OK\n"
+               "  >\n"
+               "  field_g: OK\n"
+               ">;");
+
+  verifyFormat("option (MyProto.options) = <\n"
+               "  field_a: \"OK\"\n"
+               "  msg_field: {\n"
+               "    field_b: OK\n"
+               "    field_c: OK\n"
+               "    field_d: OK\n"
+               "    field_e: OK\n"
+               "    field_f: OK\n"
+               "  }\n"
+               "  field_g: OK\n"
+               ">;");
+
+  verifyFormat("option (MyProto.options) = <\n"
+               "  field_a: \"OK\"\n"
+               "  msg_field{\n"
+               "    field_b: OK\n"
+               "    field_c: OK\n"
+               "    field_d: OK\n"
+               "    field_e: OK\n"
+               "    field_f: OK\n"
+               "  }\n"
+               "  field_g: OK\n"
+               ">;");
+
+  verifyFormat("option (MyProto.options) = {\n"
+               "  field_a: \"OK\"\n"
+               "  msg_field<\n"
+               "    field_b: OK\n"
+               "    field_c: OK\n"
+               "    field_d: OK\n"
+               "    field_e: OK\n"
+               "    field_f: OK\n"
+               "  >\n"
+               "  field_g: OK\n"
+               "};");
+
+  verifyFormat("option (MyProto.options) = {\n"
+               "  field_a: \"OK\"\n"
+               "  msg_field: <\n"
+               "    field_b: OK\n"
+               "    field_c: OK\n"
+               "    field_d: OK\n"
+               "    field_e: OK\n"
+               "    field_f: OK\n"
+               "  >\n"
+               "  field_g: OK\n"
+               "};");
+
+  verifyFormat("option (MyProto.options) = <\n"
+               "  field_a: \"OK\"\n"
+               "  msg_field{\n"
+               "    field_b: OK\n"
+               "    field_c: OK\n"
+               "    field_d: OK\n"
+               "    msg_field<\n"
+               "      field_A: 1\n"
+               "      field_B: 2\n"
+               "      field_C: 3\n"
+               "      field_D: 4\n"
+               "      field_E: 5\n"
+               "    >\n"
+               "    msg_field<field_A: 1 field_B: 2 field_C: 3 field_D: 4>\n"
+               "    field_e: OK\n"
+               "    field_f: OK\n"
+               "  }\n"
+               "  field_g: OK\n"
+               ">;");
 }
 
 TEST_F(FormatTestProto, FormatsService) {

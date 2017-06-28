@@ -20,11 +20,14 @@ using namespace llvm;
 
 #define DEBUG_TYPE "regalloc"
 
+// Reserve an address that indicates a value that is known to be "undef".
+static VNInfo UndefVNI(0xbad, SlotIndex());
+
 void LiveRangeCalc::resetLiveOutMap() {
   unsigned NumBlocks = MF->getNumBlockIDs();
   Seen.clear();
   Seen.resize(NumBlocks);
-  EntryInfoMap.clear();
+  EntryInfos.clear();
   Map.resize(NumBlocks);
 }
 
@@ -283,8 +286,11 @@ bool LiveRangeCalc::isDefOnEntry(LiveRange &LR, ArrayRef<SlotIndex> Undefs,
     // Determine if the exit from the block is reached by some def.
     unsigned N = WorkList[i];
     MachineBasicBlock &B = *MF->getBlockNumbered(N);
-    if (Seen[N] && Map[&B].first != nullptr)
-      return MarkDefined(B);
+    if (Seen[N]) {
+      const LiveOutPair &LOB = Map[&B];
+      if (LOB.first != nullptr && LOB.first != &UndefVNI)
+        return MarkDefined(B);
+    }
     SlotIndex Begin, End;
     std::tie(Begin, End) = Indexes->getMBBRange(&B);
     // Treat End as not belonging to B.
@@ -365,10 +371,7 @@ bool LiveRangeCalc::findReachingDefs(LiveRange &LR, MachineBasicBlock &UseMBB,
 #endif
     FoundUndef |= MBB->pred_empty();
 
-    for (MachineBasicBlock::pred_iterator PI = MBB->pred_begin(),
-         PE = MBB->pred_end(); PI != PE; ++PI) {
-       MachineBasicBlock *Pred = *PI;
-
+    for (MachineBasicBlock *Pred : MBB->predecessors()) {
        // Is this a known live-out block?
        if (Seen.test(Pred->getNumber())) {
          if (VNInfo *VNI = Map[Pred].first) {
@@ -387,7 +390,7 @@ bool LiveRangeCalc::findReachingDefs(LiveRange &LR, MachineBasicBlock &UseMBB,
        auto EP = LR.extendInBlock(Undefs, Start, End);
        VNInfo *VNI = EP.first;
        FoundUndef |= EP.second;
-       setLiveOutValue(Pred, VNI);
+       setLiveOutValue(Pred, EP.second ? &UndefVNI : VNI);
        if (VNI) {
          if (TheVNI && TheVNI != VNI)
            UniqueVNI = false;
@@ -406,7 +409,7 @@ bool LiveRangeCalc::findReachingDefs(LiveRange &LR, MachineBasicBlock &UseMBB,
   }
 
   LiveIn.clear();
-  FoundUndef |= (TheVNI == nullptr);
+  FoundUndef |= (TheVNI == nullptr || TheVNI == &UndefVNI);
   if (Undefs.size() > 0 && FoundUndef)
     UniqueVNI = false;
 
@@ -417,7 +420,7 @@ bool LiveRangeCalc::findReachingDefs(LiveRange &LR, MachineBasicBlock &UseMBB,
 
   // If a unique reaching def was found, blit in the live ranges immediately.
   if (UniqueVNI) {
-    assert(TheVNI != nullptr);
+    assert(TheVNI != nullptr && TheVNI != &UndefVNI);
     LiveRangeUpdater Updater(&LR);
     for (unsigned BN : WorkList) {
       SlotIndex Start, End;
@@ -433,22 +436,26 @@ bool LiveRangeCalc::findReachingDefs(LiveRange &LR, MachineBasicBlock &UseMBB,
   }
 
   // Prepare the defined/undefined bit vectors.
-  auto EF = EntryInfoMap.find(&LR);
-  if (EF == EntryInfoMap.end()) {
+  EntryInfoMap::iterator Entry;
+  bool DidInsert;
+  std::tie(Entry, DidInsert) = EntryInfos.insert(
+      std::make_pair(&LR, std::make_pair(BitVector(), BitVector())));
+  if (DidInsert) {
+    // Initialize newly inserted entries.
     unsigned N = MF->getNumBlockIDs();
-    EF = EntryInfoMap.insert({&LR, {BitVector(), BitVector()}}).first;
-    EF->second.first.resize(N);
-    EF->second.second.resize(N);
+    Entry->second.first.resize(N);
+    Entry->second.second.resize(N);
   }
-  BitVector &DefOnEntry = EF->second.first;
-  BitVector &UndefOnEntry = EF->second.second;
+  BitVector &DefOnEntry = Entry->second.first;
+  BitVector &UndefOnEntry = Entry->second.second;
 
   // Multiple values were found, so transfer the work list to the LiveIn array
   // where UpdateSSA will use it as a work list.
   LiveIn.reserve(WorkList.size());
   for (unsigned BN : WorkList) {
     MachineBasicBlock *MBB = MF->getBlockNumbered(BN);
-    if (Undefs.size() > 0 && !isDefOnEntry(LR, Undefs, *MBB, DefOnEntry, UndefOnEntry))
+    if (Undefs.size() > 0 &&
+        !isDefOnEntry(LR, Undefs, *MBB, DefOnEntry, UndefOnEntry))
       continue;
     addLiveInBlock(LR, DomTree->getNode(MBB));
     if (MBB == &UseMBB)
@@ -466,9 +473,9 @@ void LiveRangeCalc::updateSSA() {
   assert(DomTree && "Missing dominator tree");
 
   // Interate until convergence.
-  unsigned Changes;
+  bool Changed;
   do {
-    Changes = 0;
+    Changed = false;
     // Propagate live-out values down the dominator tree, inserting phi-defs
     // when necessary.
     for (LiveInBlock &I : LiveIn) {
@@ -491,15 +498,20 @@ void LiveRangeCalc::updateSSA() {
         IDomValue = Map[IDom->getBlock()];
 
         // Cache the DomTree node that defined the value.
-        if (IDomValue.first && !IDomValue.second)
+        if (IDomValue.first && IDomValue.first != &UndefVNI &&
+            !IDomValue.second) {
           Map[IDom->getBlock()].second = IDomValue.second =
             DomTree->getNode(Indexes->getMBBFromIndex(IDomValue.first->def));
+        }
 
-        for (MachineBasicBlock::pred_iterator PI = MBB->pred_begin(),
-               PE = MBB->pred_end(); PI != PE; ++PI) {
-          LiveOutPair &Value = Map[*PI];
+        for (MachineBasicBlock *Pred : MBB->predecessors()) {
+          LiveOutPair &Value = Map[Pred];
           if (!Value.first || Value.first == IDomValue.first)
             continue;
+          if (Value.first == &UndefVNI) {
+            needPHI = true;
+            break;
+          }
 
           // Cache the DomTree node that defined the value.
           if (!Value.second)
@@ -523,7 +535,7 @@ void LiveRangeCalc::updateSSA() {
 
       // Create a phi-def if required.
       if (needPHI) {
-        ++Changes;
+        Changed = true;
         assert(Alloc && "Need VNInfo allocator to create PHI-defs");
         SlotIndex Start, End;
         std::tie(Start, End) = Indexes->getMBBRange(MBB);
@@ -542,7 +554,7 @@ void LiveRangeCalc::updateSSA() {
             LR.addSegment(LiveInterval::Segment(Start, End, VNI));
           LOP = LiveOutPair(VNI, Node);
         }
-      } else if (IDomValue.first) {
+      } else if (IDomValue.first && IDomValue.first != &UndefVNI) {
         // No phi-def here. Remember incoming value.
         I.Value = IDomValue.first;
 
@@ -554,9 +566,9 @@ void LiveRangeCalc::updateSSA() {
         // MBB is live-out and doesn't define its own value.
         if (LOP.first == IDomValue.first)
           continue;
-        ++Changes;
+        Changed = true;
         LOP = IDomValue;
       }
     }
-  } while (Changes);
+  } while (Changed);
 }

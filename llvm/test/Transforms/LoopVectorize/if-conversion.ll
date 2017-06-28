@@ -18,7 +18,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 
 ;CHECK-LABEL: @function0(
 ;CHECK: load <4 x i32>
-;CHECK: icmp sle <4 x i32>
+;CHECK: icmp sgt <4 x i32>
 ;CHECK: mul <4 x i32>
 ;CHECK: add <4 x i32>
 ;CHECK: select <4 x i1>

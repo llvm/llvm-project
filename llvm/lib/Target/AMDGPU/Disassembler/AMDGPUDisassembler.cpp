@@ -626,7 +626,9 @@ MCOperand AMDGPUDisassembler::decodeSDWASrc(const OpWidthTy Width,
   using namespace AMDGPU::SDWA;
 
   if (STI.getFeatureBits()[AMDGPU::FeatureGFX9]) {
-    if (SDWA9EncValues::SRC_VGPR_MIN <= Val &&
+    // XXX: static_cast<int> is needed to avoid stupid warning:
+    // compare with unsigned is always true
+    if (SDWA9EncValues::SRC_VGPR_MIN <= static_cast<int>(Val) &&
         Val <= SDWA9EncValues::SRC_VGPR_MAX) {
       return createRegOperand(getVgprClassId(Width),
                               Val - SDWA9EncValues::SRC_VGPR_MIN);

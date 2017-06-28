@@ -716,7 +716,7 @@ bool ConstantFP::isExactlyValue(const APFloat &V) const {
 
 /// Remove the constant from the constant table.
 void ConstantFP::destroyConstantImpl() {
-  llvm_unreachable("You can't ConstantInt->destroyConstantImpl()!");
+  llvm_unreachable("You can't ConstantFP->destroyConstantImpl()!");
 }
 
 //===----------------------------------------------------------------------===//

@@ -21,6 +21,17 @@ def identifier():
 		pass
 	return None
 
+def get_override():
+	dir = os.path.dirname(os.path.realpath(__file__))
+	repos_dir = os.path.join(dir, "repos")
+	json_regex = re.compile(r"^.*.json$")
+	override_path = os.path.join(repos_dir, "OVERRIDE")
+	if os.path.isfile(override_path):
+		override_set = json.load(open(override_path))
+		return override_set["repos"]
+        else:
+		return None
+
 def find(identifier):
 	dir = os.path.dirname(os.path.realpath(__file__))
 	repos_dir = os.path.join(dir, "repos")

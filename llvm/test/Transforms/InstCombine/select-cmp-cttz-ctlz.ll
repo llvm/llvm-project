@@ -320,10 +320,8 @@ entry:
 
 define i128 @test7(i128 %x) {
 ; CHECK-LABEL: @test7(
-; CHECK-NEXT:    [[TMP0:%.*]] = tail call i128 @llvm.ctlz.i128(i128 [[X:%.*]], i1 true), !range !3
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i128 [[X]], 0
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], i128 [[TMP0]], i128 128
-; CHECK-NEXT:    ret i128 [[COND]]
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call i128 @llvm.ctlz.i128(i128 [[X:%.*]], i1 false), !range !3
+; CHECK-NEXT:    ret i128 [[TMP1]]
 ;
   %1 = tail call i128 @llvm.ctlz.i128(i128 %x, i1 true)
   %tobool = icmp ne i128 %x, 0
@@ -333,10 +331,8 @@ define i128 @test7(i128 %x) {
 
 define i128 @test8(i128 %x) {
 ; CHECK-LABEL: @test8(
-; CHECK-NEXT:    [[TMP0:%.*]] = tail call i128 @llvm.cttz.i128(i128 [[X:%.*]], i1 true), !range !3
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i128 [[X]], 0
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], i128 [[TMP0]], i128 128
-; CHECK-NEXT:    ret i128 [[COND]]
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call i128 @llvm.cttz.i128(i128 [[X:%.*]], i1 false), !range !3
+; CHECK-NEXT:    ret i128 [[TMP1]]
 ;
   %1 = tail call i128 @llvm.cttz.i128(i128 %x, i1 true)
   %tobool = icmp ne i128 %x, 0

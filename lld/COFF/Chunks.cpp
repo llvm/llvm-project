@@ -11,6 +11,7 @@
 #include "Error.h"
 #include "InputFiles.h"
 #include "Symbols.h"
+#include "Writer.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/Object/COFF.h"
@@ -52,18 +53,27 @@ static void add32(uint8_t *P, int32_t V) { write32le(P, read32le(P) + V); }
 static void add64(uint8_t *P, int64_t V) { write64le(P, read64le(P) + V); }
 static void or16(uint8_t *P, uint16_t V) { write16le(P, read16le(P) | V); }
 
-static void applySecRel(const SectionChunk *Sec, uint8_t *Off, Defined *Sym) {
-  // Don't apply section relative relocations to absolute symbols in codeview
-  // debug info sections. MSVC does not treat such relocations as fatal errors,
-  // and they can be found in the standard library for linker-provided symbols
-  // like __guard_fids_table and __safe_se_handler_table.
-  if (!(isa<DefinedAbsolute>(Sym) && Sec->isCodeView()))
-    add32(Off, Sym->getSecrel());
+static void applySecRel(const SectionChunk *Sec, uint8_t *Off,
+                        OutputSection *OS, uint64_t S) {
+  if (!OS) {
+    if (Sec->isCodeView())
+      return;
+    fatal("SECREL relocation cannot be applied to absolute symbols");
+  }
+  uint64_t SecRel = S - OS->getRVA();
+  assert(SecRel < INT32_MAX && "overflow in SECREL relocation");
+  add32(Off, SecRel);
 }
 
-void SectionChunk::applyRelX64(uint8_t *Off, uint16_t Type, Defined *Sym,
-                               uint64_t P) const {
-  uint64_t S = Sym->getRVA();
+static void applySecIdx(uint8_t *Off, OutputSection *OS) {
+  // If we have no output section, this must be an absolute symbol. Use the
+  // sentinel absolute symbol section index.
+  uint16_t SecIdx = OS ? OS->SectionIndex : DefinedAbsolute::OutputSectionIndex;
+  add16(Off, SecIdx);
+}
+
+void SectionChunk::applyRelX64(uint8_t *Off, uint16_t Type, OutputSection *OS,
+                               uint64_t S, uint64_t P) const {
   switch (Type) {
   case IMAGE_REL_AMD64_ADDR32:   add32(Off, S + Config->ImageBase); break;
   case IMAGE_REL_AMD64_ADDR64:   add64(Off, S + Config->ImageBase); break;
@@ -74,23 +84,22 @@ void SectionChunk::applyRelX64(uint8_t *Off, uint16_t Type, Defined *Sym,
   case IMAGE_REL_AMD64_REL32_3:  add32(Off, S - P - 7); break;
   case IMAGE_REL_AMD64_REL32_4:  add32(Off, S - P - 8); break;
   case IMAGE_REL_AMD64_REL32_5:  add32(Off, S - P - 9); break;
-  case IMAGE_REL_AMD64_SECTION:  add16(Off, Sym->getSectionIndex()); break;
-  case IMAGE_REL_AMD64_SECREL:   applySecRel(this, Off, Sym); break;
+  case IMAGE_REL_AMD64_SECTION:  applySecIdx(Off, OS); break;
+  case IMAGE_REL_AMD64_SECREL:   applySecRel(this, Off, OS, S); break;
   default:
     fatal("unsupported relocation type 0x" + Twine::utohexstr(Type));
   }
 }
 
-void SectionChunk::applyRelX86(uint8_t *Off, uint16_t Type, Defined *Sym,
-                               uint64_t P) const {
-  uint64_t S = Sym->getRVA();
+void SectionChunk::applyRelX86(uint8_t *Off, uint16_t Type, OutputSection *OS,
+                               uint64_t S, uint64_t P) const {
   switch (Type) {
   case IMAGE_REL_I386_ABSOLUTE: break;
   case IMAGE_REL_I386_DIR32:    add32(Off, S + Config->ImageBase); break;
   case IMAGE_REL_I386_DIR32NB:  add32(Off, S); break;
   case IMAGE_REL_I386_REL32:    add32(Off, S - P - 4); break;
-  case IMAGE_REL_I386_SECTION:  add16(Off, Sym->getSectionIndex()); break;
-  case IMAGE_REL_I386_SECREL:   applySecRel(this, Off, Sym); break;
+  case IMAGE_REL_I386_SECTION:  applySecIdx(Off, OS); break;
+  case IMAGE_REL_I386_SECREL:   applySecRel(this, Off, OS, S); break;
   default:
     fatal("unsupported relocation type 0x" + Twine::utohexstr(Type));
   }
@@ -137,20 +146,21 @@ static void applyBranch24T(uint8_t *Off, int32_t V) {
   write16le(Off + 2, (read16le(Off + 2) & 0xd000) | (J1 << 13) | (J2 << 11) | ((V >> 1) & 0x7ff));
 }
 
-void SectionChunk::applyRelARM(uint8_t *Off, uint16_t Type, Defined *Sym,
-                               uint64_t P) const {
-  uint64_t S = Sym->getRVA();
+void SectionChunk::applyRelARM(uint8_t *Off, uint16_t Type, OutputSection *OS,
+                               uint64_t S, uint64_t P) const {
   // Pointer to thumb code must have the LSB set.
-  if (Sym->isExecutable())
-    S |= 1;
+  uint64_t SX = S;
+  if (OS && (OS->getPermissions() & IMAGE_SCN_MEM_EXECUTE))
+    SX |= 1;
   switch (Type) {
-  case IMAGE_REL_ARM_ADDR32:    add32(Off, S + Config->ImageBase); break;
-  case IMAGE_REL_ARM_ADDR32NB:  add32(Off, S); break;
-  case IMAGE_REL_ARM_MOV32T:    applyMOV32T(Off, S + Config->ImageBase); break;
-  case IMAGE_REL_ARM_BRANCH20T: applyBranch20T(Off, S - P - 4); break;
-  case IMAGE_REL_ARM_BRANCH24T: applyBranch24T(Off, S - P - 4); break;
-  case IMAGE_REL_ARM_BLX23T:    applyBranch24T(Off, S - P - 4); break;
-  case IMAGE_REL_ARM_SECREL:    applySecRel(this, Off, Sym); break;
+  case IMAGE_REL_ARM_ADDR32:    add32(Off, SX + Config->ImageBase); break;
+  case IMAGE_REL_ARM_ADDR32NB:  add32(Off, SX); break;
+  case IMAGE_REL_ARM_MOV32T:    applyMOV32T(Off, SX + Config->ImageBase); break;
+  case IMAGE_REL_ARM_BRANCH20T: applyBranch20T(Off, SX - P - 4); break;
+  case IMAGE_REL_ARM_BRANCH24T: applyBranch24T(Off, SX - P - 4); break;
+  case IMAGE_REL_ARM_BLX23T:    applyBranch24T(Off, SX - P - 4); break;
+  case IMAGE_REL_ARM_SECTION:   applySecIdx(Off, OS); break;
+  case IMAGE_REL_ARM_SECREL:    applySecRel(this, Off, OS, S); break;
   default:
     fatal("unsupported relocation type 0x" + Twine::utohexstr(Type));
   }
@@ -166,18 +176,39 @@ void SectionChunk::writeTo(uint8_t *Buf) const {
   // Apply relocations.
   for (const coff_relocation &Rel : Relocs) {
     uint8_t *Off = Buf + OutputSectionOff + Rel.VirtualAddress;
+
+    // Get the output section of the symbol for this relocation.  The output
+    // section is needed to compute SECREL and SECTION relocations used in debug
+    // info.
     SymbolBody *Body = File->getSymbolBody(Rel.SymbolTableIndex);
     Defined *Sym = cast<Defined>(Body);
+    Chunk *C = Sym->getChunk();
+    OutputSection *OS = C ? C->getOutputSection() : nullptr;
+
+    // Only absolute and __ImageBase symbols lack an output section. For any
+    // other symbol, this indicates that the chunk was discarded.  Normally
+    // relocations against discarded sections are an error.  However, debug info
+    // sections are not GC roots and can end up with these kinds of relocations.
+    // Skip these relocations.
+    if (!OS && !isa<DefinedAbsolute>(Sym) && !isa<DefinedSynthetic>(Sym)) {
+      if (isCodeView())
+        continue;
+      fatal("relocation against symbol in discarded section: " +
+            Sym->getName());
+    }
+    uint64_t S = Sym->getRVA();
+
+    // Compute the RVA of the relocation for relative relocations.
     uint64_t P = RVA + Rel.VirtualAddress;
     switch (Config->Machine) {
     case AMD64:
-      applyRelX64(Off, Rel.Type, Sym, P);
+      applyRelX64(Off, Rel.Type, OS, S, P);
       break;
     case I386:
-      applyRelX86(Off, Rel.Type, Sym, P);
+      applyRelX86(Off, Rel.Type, OS, S, P);
       break;
     case ARMNT:
-      applyRelARM(Off, Rel.Type, Sym, P);
+      applyRelARM(Off, Rel.Type, OS, S, P);
       break;
     default:
       llvm_unreachable("unknown machine type");

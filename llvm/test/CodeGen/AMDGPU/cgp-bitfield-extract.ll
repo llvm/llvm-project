@@ -176,14 +176,13 @@ ret:
 ; OPT: ret
 
 ; GCN-LABEL: {{^}}sink_ubfe_i64_span_midpoint:
-; GCN: s_cbranch_scc1 BB3_2
 
-; GCN: s_lshr_b64 s{{\[}}[[LO:[0-9]+]]:{{[0-9]+}}], s{{\[[0-9]+:[0-9]+\]}}, 30
-; GCN: s_and_b32 s{{[0-9]+}}, s[[LO]], 0xff
+; GCN: v_alignbit_b32 v[[LO:[0-9]+]], s{{[0-9]+}}, v{{[0-9]+}}, 30
+; GCN: s_cbranch_scc1 BB3_2
+; GCN: v_and_b32_e32 v{{[0-9]+}}, 0xff, v[[LO]]
 
 ; GCN: BB3_2:
-; GCN: s_lshr_b64 s{{\[}}[[LO:[0-9]+]]:{{[0-9]+}}], s{{\[[0-9]+:[0-9]+\]}}, 30
-; GCN: s_and_b32 s{{[0-9]+}}, s[[LO]], 0x7f
+; GCN: v_and_b32_e32 v{{[0-9]+}}, 0x7f, v[[LO]]
 
 ; GCN: BB3_3:
 ; GCN: buffer_store_dwordx2

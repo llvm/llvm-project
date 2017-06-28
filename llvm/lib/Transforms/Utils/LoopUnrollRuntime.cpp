@@ -495,7 +495,11 @@ bool llvm::UnrollRuntimeLoopRemainder(Loop *L, unsigned Count,
 
   // Only unroll loops with a computable trip count, and the trip count needs
   // to be an int value (allowing a pointer type is a TODO item).
-  const SCEV *BECountSC = SE->getBackedgeTakenCount(L);
+  // We calculate the backedge count by using getExitCount on the Latch block,
+  // which is proven to be the only exiting block in this loop. This is same as
+  // calculating getBackedgeTakenCount on the loop (which computes SCEV for all
+  // exiting blocks).
+  const SCEV *BECountSC = SE->getExitCount(L, Latch);
   if (isa<SCEVCouldNotCompute>(BECountSC) ||
       !BECountSC->getType()->isIntegerTy())
     return false;

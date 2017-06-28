@@ -89,7 +89,8 @@ private:
         continue;
       }
       if (CurrentToken->isOneOf(tok::r_paren, tok::r_square, tok::r_brace) ||
-          (CurrentToken->isOneOf(tok::colon, tok::question) && InExprContext))
+          (CurrentToken->isOneOf(tok::colon, tok::question) && InExprContext &&
+           Style.Language != FormatStyle::LK_Proto))
         return false;
       // If a && or || is found and interpreted as a binary operator, this set
       // of angles is likely part of something like "a < b && c > d". If the
@@ -103,6 +104,14 @@ private:
           !Line.startsWith(tok::kw_template))
         return false;
       updateParameterCount(Left, CurrentToken);
+      if (Style.Language == FormatStyle::LK_Proto) {
+        if (FormatToken *Previous = CurrentToken->getPreviousNonComment()) {
+          if (CurrentToken->is(tok::colon) ||
+              (CurrentToken->isOneOf(tok::l_brace, tok::less) &&
+               Previous->isNot(tok::colon)))
+            Previous->Type = TT_SelectorName;
+        }
+      }
       if (!consumeToken())
         return false;
     }
@@ -440,7 +449,7 @@ private:
         if (CurrentToken->isOneOf(tok::r_paren, tok::r_square))
           return false;
         updateParameterCount(Left, CurrentToken);
-        if (CurrentToken->isOneOf(tok::colon, tok::l_brace)) {
+        if (CurrentToken->isOneOf(tok::colon, tok::l_brace, tok::less)) {
           FormatToken *Previous = CurrentToken->getPreviousNonComment();
           if (((CurrentToken->is(tok::colon) &&
                 (!Contexts.back().ColonIsDictLiteral || !Style.isCpp())) ||
@@ -2549,10 +2558,16 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
     // deliberate choice and might have aligned the contents of the string
     // literal accordingly. Thus, we try keep existing line breaks.
     return Right.NewlinesBefore > 0;
-  if (Right.Previous->is(tok::l_brace) && Right.NestingLevel == 1 &&
-      Style.Language == FormatStyle::LK_Proto)
-    // Don't put enums onto single lines in protocol buffers.
+  if ((Right.Previous->is(tok::l_brace) ||
+       (Right.Previous->is(tok::less) &&
+        Right.Previous->Previous &&
+        Right.Previous->Previous->is(tok::equal))
+        ) &&
+      Right.NestingLevel == 1 && Style.Language == FormatStyle::LK_Proto) {
+    // Don't put enums or option definitions onto single lines in protocol
+    // buffers.
     return true;
+  }
   if (Right.is(TT_InlineASMBrace))
     return Right.HasUnescapedNewline;
   if (isAllmanBrace(Left) || isAllmanBrace(Right))

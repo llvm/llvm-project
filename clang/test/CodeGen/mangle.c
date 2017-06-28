@@ -9,6 +9,10 @@ void __attribute__((__overloadable__)) f0(int a) {}
 // CHECK: @_Z2f0l
 void __attribute__((__overloadable__)) f0(long b) {}
 
+// Unless it's unmarked.
+// CHECK: @f0
+void f0(float b) {}
+
 // CHECK: @bar
 
 // These should get merged.

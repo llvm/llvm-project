@@ -62,19 +62,15 @@ define i32 @poo(i32 %a, i32 %b, i32 %c, i32 %d) {
   ret i32 %t3
 }
 
-; TODO: For the next 4 tests, are there potential canonicalizations and/or folds for these
-; in InstCombine? Independent of that, tests like this that may not show any transforms 
-; still have value because they can help identify conflicting canonicalization rules that 
-; lead to infinite looping. 
-
 ; PR32791 - https://bugs.llvm.org//show_bug.cgi?id=32791
-; Fold two selects with inverted predicates and zero operands.
+; The 2nd compare/select are canonicalized, so CSE and another round of instcombine or some other pass will fold this.
+
 define i32 @fold_inverted_icmp_preds(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-LABEL: @fold_inverted_icmp_preds(
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 %a, %b
 ; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[CMP1]], i32 %c, i32 0
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp sge i32 %a, %b
-; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[CMP2]], i32 %d, i32 0
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 %a, %b
+; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[CMP2]], i32 0, i32 %d
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SEL1]], [[SEL2]]
 ; CHECK-NEXT:    ret i32 [[OR]]
 ;
@@ -86,12 +82,14 @@ define i32 @fold_inverted_icmp_preds(i32 %a, i32 %b, i32 %c, i32 %d) {
   ret i32 %or
 }
 
+; The 2nd compare/select are canonicalized, so CSE and another round of instcombine or some other pass will fold this.
+
 define i32 @fold_inverted_icmp_preds_reverse(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-LABEL: @fold_inverted_icmp_preds_reverse(
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 %a, %b
 ; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[CMP1]], i32 0, i32 %c
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp sge i32 %a, %b
-; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[CMP2]], i32 0, i32 %d
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 %a, %b
+; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[CMP2]], i32 %d, i32 0
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SEL1]], [[SEL2]]
 ; CHECK-NEXT:    ret i32 [[OR]]
 ;
@@ -102,6 +100,8 @@ define i32 @fold_inverted_icmp_preds_reverse(i32 %a, i32 %b, i32 %c, i32 %d) {
   %or = or i32 %sel1, %sel2
   ret i32 %or
 }
+
+; TODO: Should fcmp have the same sort of predicate canonicalization as icmp?
 
 define i32 @fold_inverted_fcmp_preds(float %a, float %b, i32 %c, i32 %d) {
 ; CHECK-LABEL: @fold_inverted_fcmp_preds(
@@ -120,10 +120,12 @@ define i32 @fold_inverted_fcmp_preds(float %a, float %b, i32 %c, i32 %d) {
   ret i32 %or
 }
 
+; The 2nd compare/select are canonicalized, so CSE and another round of instcombine or some other pass will fold this.
+
 define <2 x i32> @fold_inverted_icmp_vector_preds(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c, <2 x i32> %d) {
 ; CHECK-LABEL: @fold_inverted_icmp_vector_preds(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne <2 x i32> %a, %b
-; CHECK-NEXT:    [[SEL1:%.*]] = select <2 x i1> [[CMP1]], <2 x i32> %c, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq <2 x i32> %a, %b
+; CHECK-NEXT:    [[SEL1:%.*]] = select <2 x i1> [[CMP1]], <2 x i32> zeroinitializer, <2 x i32> %c
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq <2 x i32> %a, %b
 ; CHECK-NEXT:    [[SEL2:%.*]] = select <2 x i1> [[CMP2]], <2 x i32> %d, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[OR:%.*]] = or <2 x i32> [[SEL1]], [[SEL2]]

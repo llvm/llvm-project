@@ -21,7 +21,7 @@
 ; CHECK-NEXT:    <PERMODULE {{.*}} op3=1
 ; CHECK-NEXT:  </GLOBALVAL_SUMMARY_BLOCK>
 ; CHECK: <STRTAB_BLOCK
-; CHECK-NEXT: blob data = 'undefinedglobmainfunc'
+; CHECK-NEXT: blob data = 'undefinedglobmainfunc{{.*}}'
 
 
 ; COMBINED:       <GLOBALVAL_SUMMARY_BLOCK

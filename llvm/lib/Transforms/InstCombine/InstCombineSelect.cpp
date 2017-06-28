@@ -1167,6 +1167,23 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
   if (Instruction *I = canonicalizeSelectToShuffle(SI))
     return I;
 
+  // Canonicalize a one-use integer compare with a non-canonical predicate by
+  // inverting the predicate and swapping the select operands. This matches a
+  // compare canonicalization for conditional branches.
+  // TODO: Should we do the same for FP compares?
+  CmpInst::Predicate Pred;
+  if (match(CondVal, m_OneUse(m_ICmp(Pred, m_Value(), m_Value()))) &&
+      !isCanonicalPredicate(Pred)) {
+    // Swap true/false values and condition.
+    CmpInst *Cond = cast<CmpInst>(CondVal);
+    Cond->setPredicate(CmpInst::getInversePredicate(Pred));
+    SI.setOperand(1, FalseVal);
+    SI.setOperand(2, TrueVal);
+    SI.swapProfMetadata();
+    Worklist.Add(Cond);
+    return &SI;
+  }
+
   if (SelType->getScalarType()->isIntegerTy(1) &&
       TrueVal->getType() == CondVal->getType()) {
     if (match(TrueVal, m_One())) {
@@ -1357,9 +1374,16 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
     auto SPF = SPR.Flavor;
 
     if (SelectPatternResult::isMinOrMax(SPF)) {
-      // Canonicalize so that type casts are outside select patterns.
-      if (LHS->getType()->getPrimitiveSizeInBits() !=
-          SelType->getPrimitiveSizeInBits()) {
+      // Canonicalize so that
+      // - type casts are outside select patterns.
+      // - float clamp is transformed to min/max pattern
+      Value *CmpLHS = cast<CmpInst>(CondVal)->getOperand(0);
+      Value *CmpRHS = cast<CmpInst>(CondVal)->getOperand(1);
+      if ((LHS->getType()->getPrimitiveSizeInBits() !=
+           SelType->getPrimitiveSizeInBits()) ||
+          (LHS->getType()->isFPOrFPVectorTy() &&
+           ((CmpLHS != LHS && CmpLHS != RHS) ||
+            (CmpRHS != LHS && CmpRHS != RHS)))) {
         CmpInst::Predicate Pred = getCmpPredicateForMinMax(SPF, SPR.Ordered);
 
         Value *Cmp;

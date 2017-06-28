@@ -83,7 +83,7 @@ L2:
 
 ; CHECK-LABEL: test_add_tbz:
 ; CHECK: adds
-; CHECK: b.ge
+; CHECK: b.pl
 ; CHECK: ret
 define void @test_add_tbz(i32 %a, i32 %b, i32* %ptr) {
 entry:
@@ -99,7 +99,7 @@ L2:
 
 ; CHECK-LABEL: test_subs_tbz:
 ; CHECK: subs
-; CHECK: b.ge
+; CHECK: b.pl
 ; CHECK: ret
 define void @test_subs_tbz(i32 %a, i32 %b, i32* %ptr) {
 entry:
@@ -115,7 +115,7 @@ L2:
 
 ; CHECK-LABEL: test_add_tbnz
 ; CHECK: adds
-; CHECK: b.lt
+; CHECK: b.mi
 ; CHECK: ret
 define void @test_add_tbnz(i32 %a, i32 %b, i32* %ptr) {
 entry:
@@ -131,7 +131,7 @@ L2:
 
 ; CHECK-LABEL: test_subs_tbnz
 ; CHECK: subs
-; CHECK: b.lt
+; CHECK: b.mi
 ; CHECK: ret
 define void @test_subs_tbnz(i32 %a, i32 %b, i32* %ptr) {
 entry:

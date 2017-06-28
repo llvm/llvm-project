@@ -46,7 +46,7 @@ public:
 protected:
   llvm::SmallString<128> m_inputs_folder;
 
-  void TestBasic(bool eh_frame, llvm::StringRef symbol);
+  void TestBasic(DWARFCallFrameInfo::Type type, llvm::StringRef symbol);
 };
 
 #define ASSERT_NO_ERROR(x)                                                     \
@@ -94,7 +94,8 @@ static UnwindPlan::Row GetExpectedRow2() {
   return row;
 }
 
-void DWARFCallFrameInfoTest::TestBasic(bool eh_frame, llvm::StringRef symbol) {
+void DWARFCallFrameInfoTest::TestBasic(DWARFCallFrameInfo::Type type,
+                                       llvm::StringRef symbol) {
   llvm::SmallString<128> yaml = m_inputs_folder;
   llvm::sys::path::append(yaml, "basic-call-frame-info.yaml");
   llvm::SmallString<128> obj = m_inputs_folder;
@@ -116,13 +117,13 @@ void DWARFCallFrameInfoTest::TestBasic(bool eh_frame, llvm::StringRef symbol) {
   SectionList *list = module_sp->GetSectionList();
   ASSERT_NE(nullptr, list);
 
-  auto section_sp = list->FindSectionByType(
-      eh_frame ? eSectionTypeEHFrame : eSectionTypeDWARFDebugFrame, false);
+  auto section_sp = list->FindSectionByType(type == DWARFCallFrameInfo::EH
+                                                ? eSectionTypeEHFrame
+                                                : eSectionTypeDWARFDebugFrame,
+                                            false);
   ASSERT_NE(nullptr, section_sp);
 
-  DWARFCallFrameInfo cfi(*module_sp->GetObjectFile(), section_sp,
-                         eh_frame ? eRegisterKindEHFrame : eRegisterKindDWARF,
-                         eh_frame);
+  DWARFCallFrameInfo cfi(*module_sp->GetObjectFile(), section_sp, type);
 
   const Symbol *sym = module_sp->FindFirstSymbolWithNameAndType(
       ConstString(symbol), eSymbolTypeAny);
@@ -137,11 +138,13 @@ void DWARFCallFrameInfoTest::TestBasic(bool eh_frame, llvm::StringRef symbol) {
 }
 
 TEST_F(DWARFCallFrameInfoTest, Basic_dwarf3) {
-  TestBasic(false, "debug_frame3");
+  TestBasic(DWARFCallFrameInfo::DWARF, "debug_frame3");
 }
 
 TEST_F(DWARFCallFrameInfoTest, Basic_dwarf4) {
-  TestBasic(false, "debug_frame4");
+  TestBasic(DWARFCallFrameInfo::DWARF, "debug_frame4");
 }
 
-TEST_F(DWARFCallFrameInfoTest, Basic_eh) { TestBasic(true, "eh_frame"); }
+TEST_F(DWARFCallFrameInfoTest, Basic_eh) {
+  TestBasic(DWARFCallFrameInfo::EH, "eh_frame");
+}

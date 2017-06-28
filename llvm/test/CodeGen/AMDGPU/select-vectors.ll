@@ -66,7 +66,7 @@ define amdgpu_kernel void @v_select_v16i8(<16 x i8> addrspace(1)* %out, <16 x i8
 }
 
 ; GCN-LABEL: {{^}}select_v4i8:
-; GCN: v_cndmask_b32_e32
+; GCN: v_cndmask_b32
 ; GCN-NOT: cndmask
 define amdgpu_kernel void @select_v4i8(<4 x i8> addrspace(1)* %out, <4 x i8> %a, <4 x i8> %b, i8 %c) #0 {
   %cmp = icmp eq i8 %c, 0

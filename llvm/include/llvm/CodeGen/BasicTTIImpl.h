@@ -277,7 +277,8 @@ public:
 
   unsigned getInliningThresholdMultiplier() { return 1; }
 
-  void getUnrollingPreferences(Loop *L, TTI::UnrollingPreferences &UP) {
+  void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
+                               TTI::UnrollingPreferences &UP) {
     // This unrolling functionality is target independent, but to provide some
     // motivation for its intended use, for x86:
 

@@ -1,7 +1,7 @@
 # Please add "source /path/to/bash-autocomplete.sh" to your .bashrc to use this.
 _clang()
 {
-  local cur prev words cword arg
+  local cur prev words cword arg flags
   _init_completion -n : || return
 
   # bash always separates '=' as a token even if there's no space before/after '='.
@@ -24,7 +24,14 @@ _clang()
     arg="$w2=,$cur"
   fi
 
-  local flags=$( clang --autocomplete="$arg" )
+  flags=$( "${COMP_WORDS[0]}" --autocomplete="$arg" 2>/dev/null )
+  # If clang is old that it does not support --autocomplete,
+  # fall back to the filename completion.
+  if [[ "$?" != 0 ]]; then
+    _filedir
+    return
+  fi
+
   if [[ "$cur" == '=' ]]; then
     COMPREPLY=( $( compgen -W "$flags" -- "") )
   elif [[ "$flags" == "" || "$arg" == "" ]]; then

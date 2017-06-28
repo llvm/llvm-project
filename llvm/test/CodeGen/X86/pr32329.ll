@@ -64,9 +64,17 @@ define void @foo() local_unnamed_addr {
 ; X86-NEXT:    imull %eax, %ebx
 ; X86-NEXT:    movb %bl, var_218
 ; X86-NEXT:    popl %esi
+; X86-NEXT:  .Lcfi8:
+; X86-NEXT:    .cfi_def_cfa_offset 16
 ; X86-NEXT:    popl %edi
+; X86-NEXT:  .Lcfi9:
+; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    popl %ebx
+; X86-NEXT:  .Lcfi10:
+; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    popl %ebp
+; X86-NEXT:  .Lcfi11:
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: foo:

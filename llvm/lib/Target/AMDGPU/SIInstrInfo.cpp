@@ -2444,8 +2444,6 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     }
 
     int DstIdx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::vdst);
-    if ( DstIdx == -1)
-      DstIdx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::sdst);
 
     const int OpIndicies[] = { DstIdx, Src0Idx, Src1Idx, Src2Idx };
 
@@ -2488,12 +2486,18 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
           ErrInfo = "Only VCC allowed as dst in SDWA instructions on VI";
           return false;
         }
-      } else if (!ST.hasSDWAClampVOPC()) {
+      } else if (!ST.hasSDWAOutModsVOPC()) {
         // No clamp allowed on GFX9 for VOPC
         const MachineOperand *Clamp = getNamedOperand(MI, AMDGPU::OpName::clamp);
-        if (Clamp != nullptr &&
-          (!Clamp->isImm() || Clamp->getImm() != 0)) {
+        if (Clamp && (!Clamp->isImm() || Clamp->getImm() != 0)) {
           ErrInfo = "Clamp not allowed in VOPC SDWA instructions on VI";
+          return false;
+        }
+
+        // No omod allowed on GFX9 for VOPC
+        const MachineOperand *OMod = getNamedOperand(MI, AMDGPU::OpName::omod);
+        if (OMod && (!OMod->isImm() || OMod->getImm() != 0)) {
+          ErrInfo = "OMod not allowed in VOPC SDWA instructions on VI";
           return false;
         }
       }

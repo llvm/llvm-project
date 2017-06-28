@@ -20,6 +20,23 @@ using namespace llvm;
 
 #define DEBUG_TYPE "aarch64tti"
 
+static cl::opt<bool> EnableFalkorHWPFUnrollFix("enable-falkor-hwpf-unroll-fix",
+                                               cl::init(true), cl::Hidden);
+
+bool AArch64TTIImpl::areInlineCompatible(const Function *Caller,
+                                         const Function *Callee) const {
+  const TargetMachine &TM = getTLI()->getTargetMachine();
+
+  const FeatureBitset &CallerBits =
+      TM.getSubtargetImpl(*Caller)->getFeatureBits();
+  const FeatureBitset &CalleeBits =
+      TM.getSubtargetImpl(*Callee)->getFeatureBits();
+
+  // Inline a callee if its target-features are a subset of the callers
+  // target-features.
+  return (CallerBits & CalleeBits) == CalleeBits;
+}
+
 /// \brief Calculate the cost of materializing a 64-bit value. This helper
 /// method might only calculate a fraction of a larger immediate. Therefore it
 /// is valid to return a cost of ZERO.
@@ -631,10 +648,62 @@ unsigned AArch64TTIImpl::getMaxInterleaveFactor(unsigned VF) {
   return ST->getMaxInterleaveFactor();
 }
 
-void AArch64TTIImpl::getUnrollingPreferences(Loop *L,
+// For Falkor, we want to avoid having too many strided loads in a loop since
+// that can exhaust the HW prefetcher resources.  We adjust the unroller
+// MaxCount preference below to attempt to ensure unrolling doesn't create too
+// many strided loads.
+static void
+getFalkorUnrollingPreferences(Loop *L, ScalarEvolution &SE,
+                              TargetTransformInfo::UnrollingPreferences &UP) {
+  enum { MaxStridedLoads = 7 };
+  auto countStridedLoads = [](Loop *L, ScalarEvolution &SE) {
+    int StridedLoads = 0;
+    // FIXME? We could make this more precise by looking at the CFG and
+    // e.g. not counting loads in each side of an if-then-else diamond.
+    for (const auto BB : L->blocks()) {
+      for (auto &I : *BB) {
+        LoadInst *LMemI = dyn_cast<LoadInst>(&I);
+        if (!LMemI)
+          continue;
+
+        Value *PtrValue = LMemI->getPointerOperand();
+        if (L->isLoopInvariant(PtrValue))
+          continue;
+
+        const SCEV *LSCEV = SE.getSCEV(PtrValue);
+        const SCEVAddRecExpr *LSCEVAddRec = dyn_cast<SCEVAddRecExpr>(LSCEV);
+        if (!LSCEVAddRec || !LSCEVAddRec->isAffine())
+          continue;
+
+        // FIXME? We could take pairing of unrolled load copies into account
+        // by looking at the AddRec, but we would probably have to limit this
+        // to loops with no stores or other memory optimization barriers.
+        ++StridedLoads;
+        // We've seen enough strided loads that seeing more won't make a
+        // difference.
+        if (StridedLoads > MaxStridedLoads / 2)
+          return StridedLoads;
+      }
+    }
+    return StridedLoads;
+  };
+
+  int StridedLoads = countStridedLoads(L, SE);
+  DEBUG(dbgs() << "falkor-hwpf: detected " << StridedLoads
+               << " strided loads\n");
+  // Pick the largest power of 2 unroll count that won't result in too many
+  // strided loads.
+  if (StridedLoads) {
+    UP.MaxCount = 1 << Log2_32(MaxStridedLoads / StridedLoads);
+    DEBUG(dbgs() << "falkor-hwpf: setting unroll MaxCount to " << UP.MaxCount
+                 << '\n');
+  }
+}
+
+void AArch64TTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                              TTI::UnrollingPreferences &UP) {
   // Enable partial unrolling and runtime unrolling.
-  BaseT::getUnrollingPreferences(L, UP);
+  BaseT::getUnrollingPreferences(L, SE, UP);
 
   // For inner loop, it is more likely to be a hot one, and the runtime check
   // can be promoted out from LICM pass, so the overhead is less, let's try
@@ -644,6 +713,10 @@ void AArch64TTIImpl::getUnrollingPreferences(Loop *L,
 
   // Disable partial & runtime unrolling on -Os.
   UP.PartialOptSizeThreshold = 0;
+
+  if (ST->getProcFamily() == AArch64Subtarget::Falkor &&
+      EnableFalkorHWPFUnrollFix)
+    getFalkorUnrollingPreferences(L, SE, UP);
 }
 
 Value *AArch64TTIImpl::getOrCreateResultFromMemIntrinsic(IntrinsicInst *Inst,
