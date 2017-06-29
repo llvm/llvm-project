@@ -9,6 +9,7 @@ add_clang_subdirectory(clang-import-test)
 add_clang_subdirectory(clang-offload-bundler)
 
 add_clang_subdirectory(c-index-test)
+add_clang_subdirectory(IndexStore)
 
 if(CLANG_ENABLE_ARCMT)
   add_clang_subdirectory(arcmt-test)
