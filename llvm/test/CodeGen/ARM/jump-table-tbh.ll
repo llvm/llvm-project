@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=thumbv7m-linux-gnu -o - %s | FileCheck %s --check-prefix=T2
-; RUN: llc -mtriple=thumbv6m-linux-gnu -o - %s | FileCheck %s --check-prefix=T1
+; RUN: llc -mtriple=thumbv7m-linux-gnu -verify-machineinstrs -o - %s | FileCheck %s --check-prefix=T2
+; RUN: llc -mtriple=thumbv6m-linux-gnu -verify-machineinstrs -o - %s | FileCheck %s --check-prefix=T1
 
 declare void @foo(double)
 declare i32 @llvm.arm.space(i32, i32)

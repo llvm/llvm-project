@@ -207,13 +207,10 @@ std::error_code Process::FixupStandardFileDescriptors() {
   for (int StandardFD : StandardFDs) {
     struct stat st;
     errno = 0;
-    while (fstat(StandardFD, &st) < 0) {
+    if (RetryAfterSignal(-1, fstat, StandardFD, &st) < 0) {
       assert(errno && "expected errno to be set if fstat failed!");
       // fstat should return EBADF if the file descriptor is closed.
-      if (errno == EBADF)
-        break;
-      // retry fstat if we got EINTR, otherwise bubble up the failure.
-      if (errno != EINTR)
+      if (errno != EBADF)
         return std::error_code(errno, std::generic_category());
     }
     // if fstat succeeds, move on to the next FD.
@@ -222,11 +219,8 @@ std::error_code Process::FixupStandardFileDescriptors() {
     assert(errno == EBADF && "expected errno to have EBADF at this point!");
 
     if (NullFD < 0) {
-      while ((NullFD = open("/dev/null", O_RDWR)) < 0) {
-        if (errno == EINTR)
-          continue;
+      if ((NullFD = RetryAfterSignal(-1, open, "/dev/null", O_RDWR)) < 0)
         return std::error_code(errno, std::generic_category());
-      }
     }
 
     if (NullFD == StandardFD)

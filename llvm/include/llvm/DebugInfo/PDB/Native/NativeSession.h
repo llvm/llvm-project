@@ -7,11 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_PDB_RAW_RAWSESSION_H
-#define LLVM_DEBUGINFO_PDB_RAW_RAWSESSION_H
+#ifndef LLVM_DEBUGINFO_PDB_NATIVE_NATIVESESSION_H
+#define LLVM_DEBUGINFO_PDB_NATIVE_NATIVESESSION_H
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/PDB/IPDBSession.h"
+#include "llvm/DebugInfo/PDB/Native/DbiModuleDescriptor.h"
+#include "llvm/DebugInfo/PDB/Native/NativeRawSymbol.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Error.h"
 
@@ -29,6 +31,9 @@ public:
                              std::unique_ptr<IPDBSession> &Session);
   static Error createFromExe(StringRef Path,
                              std::unique_ptr<IPDBSession> &Session);
+
+  std::unique_ptr<PDBSymbolCompiland>
+  createCompilandSymbol(DbiModuleDescriptor MI);
 
   uint64_t getLoadAddress() const override;
   void setLoadAddress(uint64_t Address) override;
@@ -71,6 +76,7 @@ public:
 private:
   std::unique_ptr<PDBFile> Pdb;
   std::unique_ptr<BumpPtrAllocator> Allocator;
+  std::vector<std::unique_ptr<NativeRawSymbol>> SymbolCache;
 };
 }
 }

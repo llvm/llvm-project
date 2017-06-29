@@ -504,9 +504,11 @@ void InstrProfRecord::mergeValueProfData(uint32_t ValueKind,
     SIPE.addError(instrprof_error::value_site_count_mismatch);
     return;
   }
+  if (!ThisNumValueSites)
+    return;
   std::vector<InstrProfValueSiteRecord> &ThisSiteRecords =
-      getValueSitesForKind(ValueKind);
-  std::vector<InstrProfValueSiteRecord> &OtherSiteRecords =
+      getOrCreateValueSitesForKind(ValueKind);
+  MutableArrayRef<InstrProfValueSiteRecord> OtherSiteRecords =
       Src.getValueSitesForKind(ValueKind);
   for (uint32_t I = 0; I < ThisNumValueSites; I++)
     ThisSiteRecords[I].merge(SIPE, OtherSiteRecords[I], Weight);
@@ -533,11 +535,8 @@ void InstrProfRecord::merge(InstrProfRecord &Other, uint64_t Weight) {
 }
 
 void InstrProfRecord::scaleValueProfData(uint32_t ValueKind, uint64_t Weight) {
-  uint32_t ThisNumValueSites = getNumValueSites(ValueKind);
-  std::vector<InstrProfValueSiteRecord> &ThisSiteRecords =
-      getValueSitesForKind(ValueKind);
-  for (uint32_t I = 0; I < ThisNumValueSites; I++)
-    ThisSiteRecords[I].scale(SIPE, Weight);
+  for (auto &R : getValueSitesForKind(ValueKind))
+    R.scale(SIPE, Weight);
 }
 
 void InstrProfRecord::scale(uint64_t Weight) {
@@ -583,7 +582,7 @@ void InstrProfRecord::addValueData(uint32_t ValueKind, uint32_t Site,
     VData[I].Value = remapValue(VData[I].Value, ValueKind, ValueMap);
   }
   std::vector<InstrProfValueSiteRecord> &ValueSites =
-      getValueSitesForKind(ValueKind);
+      getOrCreateValueSitesForKind(ValueKind);
   if (N == 0)
     ValueSites.emplace_back();
   else

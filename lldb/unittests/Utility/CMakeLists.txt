@@ -1,4 +1,4 @@
-add_subdirectory(Mocks)
+add_subdirectory(Helpers)
 
 add_lldb_unittest(UtilityTests
   ConstStringTest.cpp
@@ -15,7 +15,7 @@ add_lldb_unittest(UtilityTests
 
   LINK_LIBS
       lldbUtility
-      lldbUtilityMocks
+      lldbUtilityHelpers
   LINK_COMPONENTS
     Support
   )

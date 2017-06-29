@@ -1398,8 +1398,7 @@ bool ASTReader::ReadSLocEntry(int ID) {
     }
 
     const SrcMgr::ContentCache *ContentCache
-      = SourceMgr.getOrCreateContentCache(File,
-                              /*isSystemFile=*/FileCharacter != SrcMgr::C_User);
+      = SourceMgr.getOrCreateContentCache(File, isSystem(FileCharacter));
     if (OverriddenBuffer && !ContentCache->BufferOverridden &&
         ContentCache->ContentsEntry == ContentCache->OrigEntry &&
         !ContentCache->getRawBuffer()) {
@@ -1697,9 +1696,9 @@ HeaderFileInfoTrait::ReadData(internal_key_ref key, const unsigned char *d,
   HeaderFileInfo HFI;
   unsigned Flags = *d++;
   // FIXME: Refactor with mergeHeaderFileInfo in HeaderSearch.cpp.
-  HFI.isImport |= (Flags >> 4) & 0x01;
-  HFI.isPragmaOnce |= (Flags >> 3) & 0x01;
-  HFI.DirInfo = (Flags >> 1) & 0x03;
+  HFI.isImport |= (Flags >> 5) & 0x01;
+  HFI.isPragmaOnce |= (Flags >> 4) & 0x01;
+  HFI.DirInfo = (Flags >> 1) & 0x07;
   HFI.IndexHeaderMapHeader = Flags & 0x01;
   // FIXME: Find a better way to handle this. Maybe just store a
   // "has been included" flag?
@@ -2029,6 +2028,7 @@ ASTReader::readInputFileInfo(ModuleFile &F, unsigned ID) {
   R.StoredTime = static_cast<time_t>(Record[2]);
   R.Overridden = static_cast<bool>(Record[3]);
   R.Transient = static_cast<bool>(Record[4]);
+  R.TopLevelModuleMap = static_cast<bool>(Record[5]);
   R.Filename = Blob;
   ResolveImportedPath(F, R.Filename);
   return R;
@@ -8906,6 +8906,19 @@ void ASTReader::visitInputFiles(serialization::ModuleFile &MF,
     bool IsSystem = I >= NumUserInputs;
     InputFile IF = getInputFile(MF, I+1, Complain);
     Visitor(IF, IsSystem);
+  }
+}
+
+void ASTReader::visitTopLevelModuleMaps(
+    serialization::ModuleFile &MF,
+    llvm::function_ref<void(const FileEntry *FE)> Visitor) {
+  unsigned NumInputs = MF.InputFilesLoaded.size();
+  for (unsigned I = 0; I < NumInputs; ++I) {
+    InputFileInfo IFI = readInputFileInfo(MF, I + 1);
+    if (IFI.TopLevelModuleMap)
+      // FIXME: This unnecessarily re-reads the InputFileInfo.
+      if (auto *FE = getInputFile(MF, I + 1).getFile())
+        Visitor(FE);
   }
 }
 

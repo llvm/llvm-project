@@ -1,117 +1,50 @@
-from __future__ import absolute_import
-import os
-
-import lit.Test
-import lit.util
+import abc
 
 class TestFormat(object):
-    pass
+    """Base class for test formats.
 
-###
+    A TestFormat encapsulates logic for finding and executing a certain type of
+    test. For example, a subclass FooTestFormat would contain the logic for
+    finding tests written in the 'Foo' format, and the logic for running a
+    single one.
 
-class FileBasedTest(TestFormat):
-    def getTestsInDirectory(self, testSuite, path_in_suite,
-                            litConfig, localConfig):
-        source_path = testSuite.getSourcePath(path_in_suite)
-        for filename in os.listdir(source_path):
-            # Ignore dot files and excluded tests.
-            if (filename.startswith('.') or
-                filename in localConfig.excludes):
-                continue
+    TestFormat is an Abstract Base Class (ABC). It uses the Python abc.ABCMeta
+    type and associated @abc.abstractmethod decorator. Together, these provide
+    subclass behaviour which is notionally similar to C++ pure virtual classes:
+    only subclasses which implement all abstract methods can be instantiated
+    (the implementation may come from an intermediate base).
 
-            filepath = os.path.join(source_path, filename)
-            if not os.path.isdir(filepath):
-                base,ext = os.path.splitext(filename)
-                if ext in localConfig.suffixes:
-                    yield lit.Test.Test(testSuite, path_in_suite + (filename,),
-                                        localConfig)
+    For details on ABCs, see: https://docs.python.org/2/library/abc.html. Note
+    that Python ABCs have extensive abilities beyond what is used here. For
+    TestFormat, we only care about enforcing that abstract methods are
+    implemented.
+    """
 
-###
+    __metaclass__ = abc.ABCMeta
 
-import re
-import tempfile
+    @abc.abstractmethod
+    def getTestsInDirectory(self, testSuite, path_in_suite, litConfig,
+                            localConfig):
+      """Finds tests of this format in the given directory.
 
-class OneCommandPerFileTest(TestFormat):
-    # FIXME: Refactor into generic test for running some command on a directory
-    # of inputs.
+      Args:
+          testSuite: a Test.TestSuite object.
+          path_in_suite: the subpath under testSuite to look for tests.
+          litConfig: the LitConfig for the test suite.
+          localConfig: a LitConfig with local specializations.
 
-    def __init__(self, command, dir, recursive=False,
-                 pattern=".*", useTempInput=False):
-        if isinstance(command, str):
-            self.command = [command]
-        else:
-            self.command = list(command)
-        if dir is not None:
-            dir = str(dir)
-        self.dir = dir
-        self.recursive = bool(recursive)
-        self.pattern = re.compile(pattern)
-        self.useTempInput = useTempInput
+      Returns:
+          An iterable of Test.Test objects.
+      """
 
-    def getTestsInDirectory(self, testSuite, path_in_suite,
-                            litConfig, localConfig):
-        dir = self.dir
-        if dir is None:
-            dir = testSuite.getSourcePath(path_in_suite)
-
-        for dirname,subdirs,filenames in os.walk(dir):
-            if not self.recursive:
-                subdirs[:] = []
-
-            subdirs[:] = [d for d in subdirs
-                          if (d != '.svn' and
-                              d not in localConfig.excludes)]
-
-            for filename in filenames:
-                if (filename.startswith('.') or
-                    not self.pattern.match(filename) or
-                    filename in localConfig.excludes):
-                    continue
-
-                path = os.path.join(dirname,filename)
-                suffix = path[len(dir):]
-                if suffix.startswith(os.sep):
-                    suffix = suffix[1:]
-                test = lit.Test.Test(
-                    testSuite, path_in_suite + tuple(suffix.split(os.sep)),
-                    localConfig)
-                # FIXME: Hack?
-                test.source_path = path
-                yield test
-
-    def createTempInput(self, tmp, test):
-        raise NotImplementedError('This is an abstract method.')
-
+    @abc.abstractmethod
     def execute(self, test, litConfig):
-        if test.config.unsupported:
-            return (lit.Test.UNSUPPORTED, 'Test is unsupported')
+      """Runs the given 'test', which is of this format.
 
-        cmd = list(self.command)
+      Args:
+          test: a Test.Test object describing the test to run.
+          litConfig: the LitConfig for the test suite.
 
-        # If using temp input, create a temporary file and hand it to the
-        # subclass.
-        if self.useTempInput:
-            tmp = tempfile.NamedTemporaryFile(suffix='.cpp')
-            self.createTempInput(tmp, test)
-            tmp.flush()
-            cmd.append(tmp.name)
-        elif hasattr(test, 'source_path'):
-            cmd.append(test.source_path)
-        else:
-            cmd.append(test.getSourcePath())
-
-        out, err, exitCode = lit.util.executeCommand(cmd)
-
-        diags = out + err
-        if not exitCode and not diags.strip():
-            return lit.Test.PASS,''
-
-        # Try to include some useful information.
-        report = """Command: %s\n""" % ' '.join(["'%s'" % a
-                                                 for a in cmd])
-        if self.useTempInput:
-            report += """Temporary File: %s\n""" % tmp.name
-            report += "--\n%s--\n""" % open(tmp.name).read()
-        report += """Output:\n--\n%s--""" % diags
-
-        return lit.Test.FAIL, report
+      Returns:
+          A tuple of (status:Test.ResultCode, message:str)
+      """

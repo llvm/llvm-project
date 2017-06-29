@@ -1039,7 +1039,7 @@ bool CallAnalyzer::visitSwitchInst(SwitchInst &SI) {
     if (isa<ConstantInt>(V))
       return true;
 
-  // Assume the most general case where the swith is lowered into
+  // Assume the most general case where the switch is lowered into
   // either a jump table, bit test, or a balanced binary tree consisting of
   // case clusters without merging adjacent clusters with the same
   // destination. We do not consider the switches that are lowered with a mix

@@ -2425,9 +2425,15 @@ Instruction *InstCombiner::visitExtractValueInst(ExtractValueInst &EV) {
       Builder->SetInsertPoint(L);
       Value *GEP = Builder->CreateInBoundsGEP(L->getType(),
                                               L->getPointerOperand(), Indices);
+      Instruction *NL = Builder->CreateLoad(GEP);
+      // Whatever aliasing information we had for the orignal load must also
+      // hold for the smaller load, so propagate the annotations.
+      AAMDNodes Nodes;
+      L->getAAMetadata(Nodes);
+      NL->setAAMetadata(Nodes);
       // Returning the load directly will cause the main loop to insert it in
       // the wrong spot, so use replaceInstUsesWith().
-      return replaceInstUsesWith(EV, Builder->CreateLoad(GEP));
+      return replaceInstUsesWith(EV, NL);
     }
   // We could simplify extracts from other values. Note that nested extracts may
   // already be simplified implicitly by the above: extract (extract (insert) )

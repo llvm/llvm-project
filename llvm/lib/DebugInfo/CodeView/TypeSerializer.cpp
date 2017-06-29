@@ -1,4 +1,4 @@
-//===- TypeSerialzier.cpp ---------------------------------------*- C++ -*-===//
+//===- TypeSerialzier.cpp -------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -8,16 +8,27 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/CodeView/TypeSerializer.h"
-
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/DebugInfo/CodeView/CodeView.h"
+#include "llvm/DebugInfo/CodeView/RecordSerialization.h"
+#include "llvm/DebugInfo/CodeView/TypeIndex.h"
+#include "llvm/Support/Allocator.h"
+#include "llvm/Support/BinaryByteStream.h"
 #include "llvm/Support/BinaryStreamWriter.h"
-
-#include <string.h>
+#include "llvm/Support/Endian.h"
+#include "llvm/Support/Error.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <cstring>
 
 using namespace llvm;
 using namespace llvm::codeview;
 
 namespace {
+
 struct HashedType {
   uint64_t Hash;
   const uint8_t *Data;
@@ -30,20 +41,26 @@ struct HashedType {
 struct HashedTypePtr {
   HashedTypePtr() = default;
   HashedTypePtr(HashedType *Ptr) : Ptr(Ptr) {}
+
   HashedType *Ptr = nullptr;
 };
-} // namespace
+
+} // end anonymous namespace
 
 namespace llvm {
+
 template <> struct DenseMapInfo<HashedTypePtr> {
   static inline HashedTypePtr getEmptyKey() { return HashedTypePtr(nullptr); }
+
   static inline HashedTypePtr getTombstoneKey() {
     return HashedTypePtr(reinterpret_cast<HashedType *>(1));
   }
+
   static unsigned getHashValue(HashedTypePtr Val) {
     assert(Val.Ptr != getEmptyKey().Ptr && Val.Ptr != getTombstoneKey().Ptr);
     return Val.Ptr->Hash;
   }
+
   static bool isEqual(HashedTypePtr LHSP, HashedTypePtr RHSP) {
     HashedType *LHS = LHSP.Ptr;
     HashedType *RHS = RHSP.Ptr;
@@ -54,7 +71,8 @@ template <> struct DenseMapInfo<HashedTypePtr> {
     return ::memcmp(LHS->Data, RHS->Data, LHS->Size) == 0;
   }
 };
-}
+
+} // end namespace llvm
 
 /// Private implementation so that we don't leak our DenseMap instantiations to
 /// users.
@@ -159,13 +177,13 @@ TypeSerializer::addPadding(MutableArrayRef<uint8_t> Record) {
 
 TypeSerializer::TypeSerializer(BumpPtrAllocator &Storage, bool Hash)
     : RecordStorage(Storage), RecordBuffer(MaxRecordLength * 2),
-      Stream(RecordBuffer, llvm::support::little), Writer(Stream),
+      Stream(RecordBuffer, support::little), Writer(Stream),
       Mapping(Writer) {
   // RecordBuffer needs to be able to hold enough data so that if we are 1
   // byte short of MaxRecordLen, and then we try to write MaxRecordLen bytes,
   // we won't overflow.
   if (Hash)
-    Hasher = make_unique<TypeHasher>(Storage);
+    Hasher = llvm::make_unique<TypeHasher>(Storage);
 }
 
 TypeSerializer::~TypeSerializer() = default;
@@ -331,7 +349,7 @@ Error TypeSerializer::visitMemberEnd(CVMemberRecord &Record) {
 
     uint8_t *SegmentBytes = RecordStorage.Allocate<uint8_t>(LengthWithSize);
     auto SavedSegment = MutableArrayRef<uint8_t>(SegmentBytes, LengthWithSize);
-    MutableBinaryByteStream CS(SavedSegment, llvm::support::little);
+    MutableBinaryByteStream CS(SavedSegment, support::little);
     BinaryStreamWriter CW(CS);
     if (auto EC = CW.writeBytes(CopyData))
       return EC;

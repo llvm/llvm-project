@@ -63,7 +63,7 @@ static MCAsmInfo *createAArch64MCAsmInfo(const MCRegisterInfo &MRI,
   else if (TheTriple.isOSBinFormatCOFF())
     MAI = new AArch64MCAsmInfoCOFF();
   else {
-    assert(TheTriple.isOSBinFormatELF() && "Only expect Darwin, ELF or COFF");
+    assert(TheTriple.isOSBinFormatELF() && "Invalid target");
     MAI = new AArch64MCAsmInfoELF(TheTriple);
   }
 
@@ -78,8 +78,7 @@ static MCAsmInfo *createAArch64MCAsmInfo(const MCRegisterInfo &MRI,
 static void adjustCodeGenOpts(const Triple &TT, Reloc::Model RM,
                               CodeModel::Model &CM) {
   assert((TT.isOSBinFormatELF() || TT.isOSBinFormatMachO() ||
-          TT.isOSBinFormatCOFF()) &&
-         "Only expect Darwin, ELF and COFF targets");
+          TT.isOSBinFormatCOFF()) && "Invalid target");
 
   if (CM == CodeModel::Default)
     CM = CodeModel::Small;

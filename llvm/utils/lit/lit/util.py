@@ -8,24 +8,57 @@ import subprocess
 import sys
 import threading
 
-def to_bytes(str):
-    # Encode to UTF-8 to get binary data.
-    if isinstance(str, bytes):
-        return str
-    return str.encode('utf-8')
+def to_bytes(s):
+    """Return the parameter as type 'bytes', possibly encoding it.
 
-def to_string(bytes):
-    if isinstance(bytes, str):
-        return bytes
-    return to_bytes(bytes)
+    In Python2, the 'bytes' type is the same as 'str'. In Python3, they are
+    distinct.
+    """
+    if isinstance(s, bytes):
+        # In Python2, this branch is taken for both 'str' and 'bytes'.
+        # In Python3, this branch is taken only for 'bytes'.
+        return s
+    # In Python2, 's' is a 'unicode' object.
+    # In Python3, 's' is a 'str' object.
+    # Encode to UTF-8 to get 'bytes' data.
+    return s.encode('utf-8')
 
-def convert_string(bytes):
+def to_string(b):
+    """Return the parameter as type 'str', possibly encoding it.
+
+    In Python2, the 'str' type is the same as 'bytes'. In Python3, the
+    'str' type is (essentially) Python2's 'unicode' type, and 'bytes' is
+    distinct.
+    """
+    if isinstance(b, str):
+        # In Python2, this branch is taken for types 'str' and 'bytes'.
+        # In Python3, this branch is taken only for 'str'.
+        return b
+    if isinstance(b, bytes):
+        # In Python2, this branch is never taken ('bytes' is handled as 'str').
+        # In Python3, this is true only for 'bytes'.
+        try:
+            return b.decode('utf-8')
+        except UnicodeDecodeError:
+            # If the value is not valid Unicode, return the default
+            # repr-line encoding.
+            return str(b)
+
+    # By this point, here's what we *don't* have:
+    #
+    #  - In Python2:
+    #    - 'str' or 'bytes' (1st branch above)
+    #  - In Python3:
+    #    - 'str' (1st branch above)
+    #    - 'bytes' (2nd branch above)
+    #
+    # The last type we might expect is the Python2 'unicode' type. There is no
+    # 'unicode' type in Python3 (all the Python3 cases were already handled). In
+    # order to get a 'str' object, we need to encode the 'unicode' object.
     try:
-        return to_string(bytes.decode('utf-8'))
-    except AttributeError: # 'str' object has no attribute 'decode'.
-        return str(bytes)
-    except UnicodeError:
-        return str(bytes)
+        return b.encode('utf-8')
+    except AttributeError:
+        raise TypeError('not sure how to convert %s to %s' % (type(b), str))
 
 def detectCPUs():
     """
@@ -39,7 +72,8 @@ def detectCPUs():
             if isinstance(ncpus, int) and ncpus > 0:
                 return ncpus
         else: # OSX:
-            return int(capture(['sysctl', '-n', 'hw.ncpu']))
+            return int(subprocess.check_output(['sysctl', '-n', 'hw.ncpu'],
+                                               stderr=subprocess.STDOUT))
     # Windows:
     if "NUMBER_OF_PROCESSORS" in os.environ:
         ncpus = int(os.environ["NUMBER_OF_PROCESSORS"])
@@ -66,21 +100,6 @@ def mkdir_p(path):
         # Ignore EEXIST, which may occur during a race condition.
         if e.errno != errno.EEXIST:
             raise
-
-def capture(args, env=None):
-    """capture(command) - Run the given command (or argv list) in a shell and
-    return the standard output. Raises a CalledProcessError if the command
-    exits with a non-zero status."""
-    p = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                         env=env)
-    out, err = p.communicate()
-    out = convert_string(out)
-    err = convert_string(err)
-    if p.returncode != 0:
-        raise subprocess.CalledProcessError(cmd=args,
-                                            returncode=p.returncode,
-                                            output="{}\n{}".format(out, err))
-    return out
 
 def which(command, paths = None):
     """which(command, [paths]) - Look up the given command in the paths string
@@ -233,8 +252,8 @@ def executeCommand(command, cwd=None, env=None, input=None, timeout=0):
             timerObject.cancel()
 
     # Ensure the resulting output is always of string type.
-    out = convert_string(out)
-    err = convert_string(err)
+    out = to_string(out)
+    err = to_string(err)
 
     if hitTimeOut[0]:
         raise ExecuteCommandTimeoutException(

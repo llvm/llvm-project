@@ -1,0 +1,74 @@
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx512f -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ALL
+--- |
+  define void @test_merge_v128() {
+    ret void
+  }
+
+  define void @test_merge_v256() {
+    ret void
+  }
+
+...
+---
+name:            test_merge_v128
+# ALL-LABEL: name:  test_merge_v128
+alignment:       4
+legalized:       true
+regBankSelected: true
+# ALL:      registers:
+# ALL-NEXT:   - { id: 0, class: vr128x, preferred-register: '' }
+# ALL-NEXT:   - { id: 1, class: vr512, preferred-register: '' }
+# ALL-NEXT:   - { id: 2, class: vr512, preferred-register: '' }
+# ALL-NEXT:   - { id: 3, class: vr512, preferred-register: '' }
+# ALL-NEXT:   - { id: 4, class: vr512, preferred-register: '' }
+# ALL-NEXT:   - { id: 5, class: vr512, preferred-register: '' }
+registers:
+  - { id: 0, class: vecr }
+  - { id: 1, class: vecr }
+# ALL:          %0 = IMPLICIT_DEF
+# ALL-NEXT:     undef %2.sub_xmm = COPY %0
+# ALL-NEXT:     %3 = VINSERTF32x4Zrr %2, %0, 1
+# ALL-NEXT:     %4 = VINSERTF32x4Zrr %3, %0, 2
+# ALL-NEXT:     %5 = VINSERTF32x4Zrr %4, %0, 3
+# ALL-NEXT:     %1 = COPY %5
+# ALL-NEXT:     %zmm0 = COPY %1
+# ALL-NEXT:     RET 0, implicit %zmm0
+body:             |
+  bb.1 (%ir-block.0):
+
+    %0(<4 x s32>) = IMPLICIT_DEF
+    %1(<16 x s32>) = G_MERGE_VALUES %0(<4 x s32>), %0(<4 x s32>), %0(<4 x s32>), %0(<4 x s32>)
+    %zmm0 = COPY %1(<16 x s32>)
+    RET 0, implicit %zmm0
+
+...
+---
+name:            test_merge_v256
+# ALL-LABEL: name:  test_merge_v256
+alignment:       4
+legalized:       true
+regBankSelected: true
+# ALL:      registers:
+# ALL-NEXT:   - { id: 0, class: vr256x, preferred-register: '' }
+# ALL-NEXT:   - { id: 1, class: vr512, preferred-register: '' }
+# ALL-NEXT:   - { id: 2, class: vr512, preferred-register: '' }
+# ALL-NEXT:   - { id: 3, class: vr512, preferred-register: '' }
+registers:
+  - { id: 0, class: vecr }
+  - { id: 1, class: vecr }
+# ALL:          %0 = IMPLICIT_DEF
+# ALL-NEXT:     undef %2.sub_ymm = COPY %0
+# ALL-NEXT:     %3 = VINSERTF64x4Zrr %2, %0, 1
+# ALL-NEXT:     %1 = COPY %3
+# ALL-NEXT:     %zmm0 = COPY %1
+# ALL-NEXT:     RET 0, implicit %zmm0
+body:             |
+  bb.1 (%ir-block.0):
+
+    %0(<8 x s32>) = IMPLICIT_DEF
+    %1(<16 x s32>) = G_MERGE_VALUES %0(<8 x s32>), %0(<8 x s32>)
+    %zmm0 = COPY %1(<16 x s32>)
+    RET 0, implicit %zmm0
+
+...
+

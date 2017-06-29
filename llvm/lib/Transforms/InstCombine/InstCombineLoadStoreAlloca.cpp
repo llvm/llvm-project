@@ -661,6 +661,9 @@ static Instruction *unpackLoadToAggregate(InstCombiner &IC, LoadInst &LI) {
     if (NumElements == 1) {
       LoadInst *NewLoad = combineLoadToNewType(IC, LI, ST->getTypeAtIndex(0U),
                                                ".unpack");
+      AAMDNodes AAMD;
+      LI.getAAMetadata(AAMD);
+      NewLoad->setAAMetadata(AAMD);
       return IC.replaceInstUsesWith(LI, IC.Builder->CreateInsertValue(
         UndefValue::get(T), NewLoad, 0, Name));
     }
@@ -690,6 +693,10 @@ static Instruction *unpackLoadToAggregate(InstCombiner &IC, LoadInst &LI) {
                                                 Name + ".elt");
       auto EltAlign = MinAlign(Align, SL->getElementOffset(i));
       auto *L = IC.Builder->CreateAlignedLoad(Ptr, EltAlign, Name + ".unpack");
+      // Propagate AA metadata. It'll still be valid on the narrowed load.
+      AAMDNodes AAMD;
+      LI.getAAMetadata(AAMD);
+      L->setAAMetadata(AAMD);
       V = IC.Builder->CreateInsertValue(V, L, i);
     }
 
@@ -702,6 +709,9 @@ static Instruction *unpackLoadToAggregate(InstCombiner &IC, LoadInst &LI) {
     auto NumElements = AT->getNumElements();
     if (NumElements == 1) {
       LoadInst *NewLoad = combineLoadToNewType(IC, LI, ET, ".unpack");
+      AAMDNodes AAMD;
+      LI.getAAMetadata(AAMD);
+      NewLoad->setAAMetadata(AAMD);
       return IC.replaceInstUsesWith(LI, IC.Builder->CreateInsertValue(
         UndefValue::get(T), NewLoad, 0, Name));
     }
@@ -734,6 +744,9 @@ static Instruction *unpackLoadToAggregate(InstCombiner &IC, LoadInst &LI) {
                                                 Name + ".elt");
       auto *L = IC.Builder->CreateAlignedLoad(Ptr, MinAlign(Align, Offset),
                                               Name + ".unpack");
+      AAMDNodes AAMD;
+      LI.getAAMetadata(AAMD);
+      L->setAAMetadata(AAMD);
       V = IC.Builder->CreateInsertValue(V, L, i);
       Offset += EltSize;
     }
@@ -1192,7 +1205,11 @@ static bool unpackStoreToAggregate(InstCombiner &IC, StoreInst &SI) {
                                                 AddrName);
       auto *Val = IC.Builder->CreateExtractValue(V, i, EltName);
       auto EltAlign = MinAlign(Align, SL->getElementOffset(i));
-      IC.Builder->CreateAlignedStore(Val, Ptr, EltAlign);
+      llvm::Instruction *NS =
+          IC.Builder->CreateAlignedStore(Val, Ptr, EltAlign);
+      AAMDNodes AAMD;
+      SI.getAAMetadata(AAMD);
+      NS->setAAMetadata(AAMD);
     }
 
     return true;
@@ -1239,7 +1256,10 @@ static bool unpackStoreToAggregate(InstCombiner &IC, StoreInst &SI) {
                                                 AddrName);
       auto *Val = IC.Builder->CreateExtractValue(V, i, EltName);
       auto EltAlign = MinAlign(Align, Offset);
-      IC.Builder->CreateAlignedStore(Val, Ptr, EltAlign);
+      Instruction *NS = IC.Builder->CreateAlignedStore(Val, Ptr, EltAlign);
+      AAMDNodes AAMD;
+      SI.getAAMetadata(AAMD);
+      NS->setAAMetadata(AAMD);
       Offset += EltSize;
     }
 

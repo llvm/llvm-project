@@ -7,19 +7,26 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_CODEVIEW_BUGINLINEELINESSUBSECTION_H
-#define LLVM_DEBUGINFO_CODEVIEW_BUGINLINEELINESSUBSECTION_H
+#ifndef LLVM_DEBUGINFO_CODEVIEW_DEBUGINLINEELINESSUBSECTION_H
+#define LLVM_DEBUGINFO_CODEVIEW_DEBUGINLINEELINESSUBSECTION_H
 
+#include "llvm/ADT/StringRef.h"
+#include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/DebugSubsection.h"
 #include "llvm/DebugInfo/CodeView/Line.h"
+#include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/Support/BinaryStreamArray.h"
 #include "llvm/Support/BinaryStreamReader.h"
+#include "llvm/Support/BinaryStreamRef.h"
+#include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
+#include <cstdint>
+#include <vector>
 
 namespace llvm {
+
 namespace codeview {
 
-class DebugInlineeLinesSubsectionRef;
 class DebugChecksumsSubsection;
 
 enum class InlineeLinesSignature : uint32_t {
@@ -40,18 +47,21 @@ struct InlineeSourceLine {
   const InlineeSourceLineHeader *Header;
   FixedStreamArray<support::ulittle32_t> ExtraFiles;
 };
-}
+
+} // end namespace codeview
 
 template <> struct VarStreamArrayExtractor<codeview::InlineeSourceLine> {
   Error operator()(BinaryStreamRef Stream, uint32_t &Len,
                    codeview::InlineeSourceLine &Item);
+
   bool HasExtraFiles = false;
 };
 
 namespace codeview {
+
 class DebugInlineeLinesSubsectionRef final : public DebugSubsectionRef {
-  typedef VarStreamArray<InlineeSourceLine> LinesArray;
-  typedef LinesArray::Iterator Iterator;
+  using LinesArray = VarStreamArray<InlineeSourceLine>;
+  using Iterator = LinesArray::Iterator;
 
 public:
   DebugInlineeLinesSubsectionRef();
@@ -99,13 +109,13 @@ public:
 
 private:
   DebugChecksumsSubsection &Checksums;
-
   bool HasExtraFiles = false;
   uint32_t ExtraFileCount = 0;
-
   std::vector<Entry> Entries;
 };
-}
-}
 
-#endif
+} // end namespace codeview
+
+} // end namespace llvm
+
+#endif // LLVM_DEBUGINFO_CODEVIEW_DEBUGINLINEELINESSUBSECTION_H

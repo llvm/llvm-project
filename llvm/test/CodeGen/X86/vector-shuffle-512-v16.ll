@@ -279,6 +279,35 @@ define <16 x i32> @shuffle_v16i32_0_1_2_19_u_u_u_u_u_u_u_u_u_u_u_u(<16 x i32> %a
   ret <16 x i32> %c
 }
 
+;FIXME: can do better with vpcompress
+define <8 x i32> @test_v16i32_1_3_5_7_9_11_13_15(<16 x i32> %v) {
+; ALL-LABEL: test_v16i32_1_3_5_7_9_11_13_15:
+; ALL:       # BB#0:
+; ALL-NEXT:    vextracti32x8 $1, %zmm0, %ymm1
+; ALL-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[1,3],ymm1[1,3],ymm0[5,7],ymm1[5,7]
+; ALL-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
+; ALL-NEXT:    retq
+  %res = shufflevector <16 x i32> %v, <16 x i32> undef, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+  ret <8 x i32> %res
+}
+
+;FIXME: can do better with vpcompress
+define <4 x i32> @test_v16i32_0_1_2_12 (<16 x i32> %v) {
+; ALL-LABEL: test_v16i32_0_1_2_12:
+; ALL:       # BB#0:
+; ALL-NEXT:    vpextrd $1, %xmm0, %eax
+; ALL-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm1
+; ALL-NEXT:    vpextrd $2, %xmm0, %eax
+; ALL-NEXT:    vpinsrd $2, %eax, %xmm1, %xmm1
+; ALL-NEXT:    vextracti32x4 $3, %zmm0, %xmm0
+; ALL-NEXT:    vmovd %xmm0, %eax
+; ALL-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm0
+; ALL-NEXT:    vzeroupper
+; ALL-NEXT:    retq
+  %res = shufflevector <16 x i32> %v, <16 x i32> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 12>
+  ret <4 x i32> %res
+}
+
 define <8 x float> @shuffle_v16f32_extract_256(float* %RET, float* %a) {
 ; ALL-LABEL: shuffle_v16f32_extract_256:
 ; ALL:       # BB#0:
@@ -288,6 +317,34 @@ define <8 x float> @shuffle_v16f32_extract_256(float* %RET, float* %a) {
   %v_a = load <16 x float>, <16 x float>* %ptr_a, align 4
   %v2 = shufflevector <16 x float> %v_a, <16 x float> undef, <8 x i32>  <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   ret <8 x float> %v2
+}
+
+;FIXME: can do better with vcompressp
+define <8 x float> @test_v16f32_0_1_2_3_4_6_7_10 (<16 x float> %v) {
+; ALL-LABEL: test_v16f32_0_1_2_3_4_6_7_10:
+; ALL:       # BB#0:
+; ALL-NEXT:    vextractf32x8 $1, %zmm0, %ymm1
+; ALL-NEXT:    vmovsldup {{.*#+}} xmm1 = xmm1[0,0,2,2]
+; ALL-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm1
+; ALL-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[0,1,2,3,4,6,7,u]
+; ALL-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3,4,5,6],ymm1[7]
+; ALL-NEXT:    retq
+  %res = shufflevector <16 x float> %v, <16 x float> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 6, i32 7, i32 10>
+  ret <8 x float> %res
+}
+
+;FIXME: can do better with vcompressp
+define <4 x float> @test_v16f32_0_1_3_6 (<16 x float> %v) {
+; ALL-LABEL: test_v16f32_0_1_3_6:
+; ALL:       # BB#0:
+; ALL-NEXT:    vextractf32x4 $1, %zmm0, %xmm1
+; ALL-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm1[1,0]
+; ALL-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,1,3,3]
+; ALL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[0]
+; ALL-NEXT:    vzeroupper
+; ALL-NEXT:    retq
+  %res = shufflevector <16 x float> %v, <16 x float> undef, <4 x i32> <i32 0, i32 1, i32 3, i32 6>
+  ret <4 x float> %res
 }
 
 define <16 x i32> @shuffle_v16i16_1_0_0_0_5_4_4_4_9_8_8_8_13_12_12_12(<16 x i32> %a, <16 x i32> %b)  {

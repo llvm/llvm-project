@@ -1,4 +1,4 @@
-//===- LazyRandomTypeCollection.h ---------------------------- *- C++ --*-===//
+//===- LazyRandomTypeCollection.h -------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -10,12 +10,18 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_LAZYRANDOMTYPECOLLECTION_H
 #define LLVM_DEBUGINFO_CODEVIEW_LAZYRANDOMTYPECOLLECTION_H
 
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/Optional.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/CodeView/TypeCollection.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/BinaryStreamArray.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/StringSaver.h"
+#include <cstdint>
+#include <vector>
 
 namespace llvm {
 namespace codeview {
@@ -43,7 +49,8 @@ namespace codeview {
 /// into M chunks of roughly equal size, this yields a worst case lookup time
 /// of O(N/M) and an amortized time of O(1).
 class LazyRandomTypeCollection : public TypeCollection {
-  typedef FixedStreamArray<TypeIndexOffset> PartialOffsetArray;
+  using PartialOffsetArray = FixedStreamArray<TypeIndexOffset>;
+
   struct CacheEntry {
     CVType Type;
     uint32_t Offset;

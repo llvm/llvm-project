@@ -3005,3 +3005,33 @@ define <8 x i1> @bswap_vec_eq(<8 x i16> %x, <8 x i16> %y) {
   ret <8 x i1> %cmp
 }
 
+declare i64 @llvm.bitreverse.i64(i64)
+
+define i1 @bitreverse_eq(i64 %x, i64 %y) {
+; CHECK-LABEL: @bitreverse_eq(
+; CHECK-NEXT:    [[REVX:%.*]] = call i64 @llvm.bitreverse.i64(i64 %x)
+; CHECK-NEXT:    [[REVY:%.*]] = call i64 @llvm.bitreverse.i64(i64 %y)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[REVX]], [[REVY]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %revx = call i64 @llvm.bitreverse.i64(i64 %x)
+  %revy = call i64 @llvm.bitreverse.i64(i64 %y)
+  %cmp = icmp eq i64 %revx, %revy
+  ret i1 %cmp
+}
+
+declare <8 x i16> @llvm.bitreverse.v8i16(<8 x i16>)
+
+define <8 x i1> @bitreverse_vec_ne(<8 x i16> %x, <8 x i16> %y) {
+; CHECK-LABEL: @bitreverse_vec_ne(
+; CHECK-NEXT:    [[REVX:%.*]] = call <8 x i16> @llvm.bitreverse.v8i16(<8 x i16> %x)
+; CHECK-NEXT:    [[REVY:%.*]] = call <8 x i16> @llvm.bitreverse.v8i16(<8 x i16> %y)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <8 x i16> [[REVX]], [[REVY]]
+; CHECK-NEXT:    ret <8 x i1> [[CMP]]
+;
+  %revx = call <8 x i16> @llvm.bitreverse.v8i16(<8 x i16> %x)
+  %revy = call <8 x i16> @llvm.bitreverse.v8i16(<8 x i16> %y)
+  %cmp = icmp ne <8 x i16> %revx, %revy
+  ret <8 x i1> %cmp
+}
+

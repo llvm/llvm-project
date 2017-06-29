@@ -160,7 +160,11 @@ struct QuarantineCallback {
   }
 
   void *Allocate(uptr size) {
-    return get_allocator().Allocate(cache_, size, 1);
+    void *res = get_allocator().Allocate(cache_, size, 1);
+    // TODO(alekseys): Consider making quarantine OOM-friendly.
+    if (UNLIKELY(!res))
+      return DieOnFailure::OnOOM();
+    return res;
   }
 
   void Deallocate(void *p) {
@@ -524,8 +528,7 @@ struct Allocator {
 
   // Expects the chunk to already be marked as quarantined by using
   // AtomicallySetQuarantineFlagIfAllocated.
-  void QuarantineChunk(AsanChunk *m, void *ptr, BufferedStackTrace *stack,
-                       AllocType alloc_type) {
+  void QuarantineChunk(AsanChunk *m, void *ptr, BufferedStackTrace *stack) {
     CHECK_EQ(m->chunk_state, CHUNK_QUARANTINE);
     CHECK_GE(m->alloc_tid, 0);
     if (SANITIZER_WORDSIZE == 64)  // On 32-bits this resides in user area.
@@ -603,7 +606,7 @@ struct Allocator {
       ReportNewDeleteSizeMismatch(p, delete_size, stack);
     }
 
-    QuarantineChunk(m, ptr, stack, alloc_type);
+    QuarantineChunk(m, ptr, stack);
   }
 
   void *Reallocate(void *old_ptr, uptr new_size, BufferedStackTrace *stack) {

@@ -92,6 +92,16 @@ protected:
   virtual lldb::ValueObjectSP
   GetReturnValueObjectImpl(Thread &thread, llvm::Type &ir_type) const;
 
+  //------------------------------------------------------------------
+  /// Request to get a Process shared pointer.
+  ///
+  /// This ABI object may not have been created with a Process object,
+  /// or the Process object may no longer be alive.  Be sure to handle
+  /// the case where the shared pointer returned does not have an
+  /// object inside it.
+  //------------------------------------------------------------------
+  lldb::ProcessSP GetProcessSP() const { return m_process_wp.lock(); }
+
 public:
   virtual bool CreateFunctionEntryUnwindPlan(UnwindPlan &unwind_plan) = 0;
 
@@ -131,13 +141,18 @@ public:
 
   virtual bool GetPointerReturnRegister(const char *&name) { return false; }
 
-  static lldb::ABISP FindPlugin(const ArchSpec &arch);
+  static lldb::ABISP FindPlugin(lldb::ProcessSP process_sp, const ArchSpec &arch);
 
 protected:
   //------------------------------------------------------------------
   // Classes that inherit from ABI can see and modify these
   //------------------------------------------------------------------
-  ABI();
+  ABI(lldb::ProcessSP process_sp) {
+    if (process_sp.get())
+        m_process_wp = process_sp;
+  }
+
+  lldb::ProcessWP m_process_wp;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(ABI);
