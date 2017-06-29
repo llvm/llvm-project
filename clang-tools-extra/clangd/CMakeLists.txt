@@ -18,6 +18,8 @@ add_clang_library(clangDaemon
   clangBasic
   clangFormat
   clangFrontend
+  clangIndex
+  clangLex
   clangSema
   clangTooling
   clangToolingCore

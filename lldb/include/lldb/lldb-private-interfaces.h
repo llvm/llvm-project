@@ -21,7 +21,7 @@
 #include <set>
 
 namespace lldb_private {
-typedef lldb::ABISP (*ABICreateInstance)(const ArchSpec &arch);
+typedef lldb::ABISP (*ABICreateInstance)(lldb::ProcessSP process_sp, const ArchSpec &arch);
 typedef Disassembler *(*DisassemblerCreateInstance)(const ArchSpec &arch,
                                                     const char *flavor);
 typedef DynamicLoader *(*DynamicLoaderCreateInstance)(Process *process,

@@ -159,6 +159,21 @@ bool SymbolBody::isPreemptible() const {
   return true;
 }
 
+// Overwrites all attributes except symbol name with Other's so that
+// this symbol becomes an alias to Other. This is useful for handling
+// some options such as --wrap.
+//
+// The reason why we want to keep the symbol name is because, if we
+// copy symbol names, we'll end up having symbol tables in resulting
+// executables or DSOs containing two or more identical symbols, which
+// is just inconvenient.
+void SymbolBody::copy(SymbolBody *Other) {
+  StringRef S = Name;
+  memcpy(symbol()->Body.buffer, Other->symbol()->Body.buffer,
+         sizeof(Symbol::Body));
+  Name = S;
+}
+
 uint64_t SymbolBody::getVA(int64_t Addend) const {
   uint64_t OutVA = getSymVA(*this, Addend);
   return OutVA + Addend;

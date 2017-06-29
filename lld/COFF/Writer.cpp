@@ -210,55 +210,6 @@ void OutputSection::writeHeaderTo(uint8_t *Buf) {
   }
 }
 
-uint32_t Defined::getSecrel() {
-  assert(this);
-  switch (kind()) {
-  case DefinedRegularKind:
-    return cast<DefinedRegular>(this)->getSecrel();
-  case DefinedCommonKind:
-    return cast<DefinedCommon>(this)->getSecrel();
-  case DefinedSyntheticKind:
-    return cast<DefinedSynthetic>(this)->getSecrel();
-  default:
-    break;
-  }
-  fatal("SECREL relocation points to a non-regular symbol: " + toString(*this));
-}
-
-uint32_t DefinedRegular::getSecrel() {
-  assert(getChunk()->isLive() && "relocation against discarded section");
-  uint64_t Diff = getRVA() - getChunk()->getOutputSection()->getRVA();
-  assert(Diff < UINT32_MAX && "section offset too large");
-  return (uint32_t)Diff;
-}
-
-uint16_t Defined::getSectionIndex() {
-  if (auto *D = dyn_cast<DefinedRegular>(this))
-    return D->getChunk()->getOutputSection()->SectionIndex;
-  if (isa<DefinedAbsolute>(this))
-    return DefinedAbsolute::OutputSectionIndex;
-  if (auto *D = dyn_cast<DefinedCommon>(this))
-    return D->getSectionIndex();
-  if (auto *D = dyn_cast<DefinedSynthetic>(this)) {
-    if (!D->getChunk())
-      return 0;
-    return D->getChunk()->getOutputSection()->SectionIndex;
-  }
-  fatal("SECTION relocation points to a non-regular symbol: " +
-        toString(*this));
-}
-
-uint16_t DefinedCommon::getSectionIndex() {
-  return Data->getOutputSection()->SectionIndex;
-}
-
-bool Defined::isExecutable() {
-  const auto X = IMAGE_SCN_MEM_EXECUTE;
-  if (auto *D = dyn_cast<DefinedRegular>(this))
-    return D->getChunk()->getOutputSection()->getPermissions() & X;
-  return isa<DefinedImportThunk>(this);
-}
-
 } // namespace coff
 } // namespace lld
 

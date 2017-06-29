@@ -1326,7 +1326,7 @@ size_t ABIMacOSX_arm::GetRedZoneSize() const { return 0; }
 //------------------------------------------------------------------
 
 ABISP
-ABIMacOSX_arm::CreateInstance(const ArchSpec &arch) {
+ABIMacOSX_arm::CreateInstance(ProcessSP process_sp, const ArchSpec &arch) {
   static ABISP g_abi_sp;
   const llvm::Triple::ArchType arch_type = arch.GetTriple().getArch();
   const llvm::Triple::VendorType vendor_type = arch.GetTriple().getVendor();
@@ -1335,7 +1335,7 @@ ABIMacOSX_arm::CreateInstance(const ArchSpec &arch) {
     if ((arch_type == llvm::Triple::arm) ||
         (arch_type == llvm::Triple::thumb)) {
       if (!g_abi_sp)
-        g_abi_sp.reset(new ABIMacOSX_arm);
+        g_abi_sp.reset(new ABIMacOSX_arm(process_sp));
       return g_abi_sp;
     }
   }
@@ -1546,16 +1546,14 @@ bool ABIMacOSX_arm::GetArgumentValues(Thread &thread, ValueList &values) const {
   return true;
 }
 
-bool ABIMacOSX_arm::IsArmv7kProcess(Thread *thread) const {
+bool ABIMacOSX_arm::IsArmv7kProcess() const {
   bool is_armv7k = false;
-  if (thread) {
-    ProcessSP process_sp(thread->GetProcess());
-    if (process_sp) {
-      const ArchSpec &arch(process_sp->GetTarget().GetArchitecture());
-      const ArchSpec::Core system_core = arch.GetCore();
-      if (system_core == ArchSpec::eCore_arm_armv7k) {
-        is_armv7k = true;
-      }
+  ProcessSP process_sp(GetProcessSP());
+  if (process_sp) {
+    const ArchSpec &arch(process_sp->GetTarget().GetArchitecture());
+    const ArchSpec::Core system_core = arch.GetCore();
+    if (system_core == ArchSpec::eCore_arm_armv7k) {
+      is_armv7k = true;
     }
   }
   return is_armv7k;
@@ -1588,7 +1586,7 @@ ValueObjectSP ABIMacOSX_arm::GetReturnValueObjectImpl(
     default:
       return return_valobj_sp;
     case 128:
-      if (IsArmv7kProcess(&thread)) {
+      if (IsArmv7kProcess()) {
         // "A composite type not larger than 16 bytes is returned in r0-r3. The
         // format is
         // as if the result had been stored in memory at a word-aligned address
@@ -1755,8 +1753,7 @@ Status ABIMacOSX_arm::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
             set_it_simple = true;
         }
       }
-    } else if (num_bytes <= 16 &&
-               IsArmv7kProcess(frame_sp->GetThread().get())) {
+    } else if (num_bytes <= 16 && IsArmv7kProcess()) {
       // "A composite type not larger than 16 bytes is returned in r0-r3. The
       // format is
       // as if the result had been stored in memory at a word-aligned address

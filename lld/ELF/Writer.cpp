@@ -104,7 +104,7 @@ StringRef elf::getOutputSectionName(StringRef Name) {
   for (StringRef V :
        {".text.", ".rodata.", ".data.rel.ro.", ".data.", ".bss.rel.ro.",
         ".bss.", ".init_array.", ".fini_array.", ".ctors.", ".dtors.", ".tbss.",
-        ".gcc_except_table.", ".tdata.", ".ARM.exidx."}) {
+        ".gcc_except_table.", ".tdata.", ".ARM.exidx.", ".ARM.extab."}) {
     StringRef Prefix = V.drop_back();
     if (Name.startswith(V) || Name == Prefix)
       return Prefix;
@@ -1014,13 +1014,13 @@ findOrphanPos(std::vector<BaseCommand *>::iterator B,
 }
 
 template <class ELFT> void Writer<ELFT>::sortSections() {
+  if (Script->Opt.HasSections)
+    Script->adjustSectionsBeforeSorting();
+
   // Don't sort if using -r. It is not necessary and we want to preserve the
   // relative order for SHF_LINK_ORDER sections.
   if (Config->Relocatable)
     return;
-
-  if (Script->Opt.HasSections)
-    Script->adjustSectionsBeforeSorting();
 
   for (BaseCommand *Base : Script->Opt.Commands)
     if (auto *Cmd = dyn_cast<OutputSectionCommand>(Base))
