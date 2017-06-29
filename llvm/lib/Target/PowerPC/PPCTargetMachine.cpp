@@ -93,6 +93,7 @@ extern "C" void LLVMInitializePowerPCTarget() {
   PassRegistry &PR = *PassRegistry::getPassRegistry();
   initializePPCBoolRetToIntPass(PR);
   initializePPCExpandISELPass(PR);
+  initializePPCTLSDynamicCallPass(PR);
 }
 
 /// Return the datalayout string of a subtarget.

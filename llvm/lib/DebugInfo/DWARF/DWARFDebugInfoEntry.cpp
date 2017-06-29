@@ -21,13 +21,13 @@ using namespace dwarf;
 
 bool DWARFDebugInfoEntry::extractFast(const DWARFUnit &U,
                                              uint32_t *OffsetPtr) {
-  DataExtractor DebugInfoData = U.getDebugInfoExtractor();
+  DWARFDataExtractor DebugInfoData = U.getDebugInfoExtractor();
   const uint32_t UEndOffset = U.getNextUnitOffset();
   return extractFast(U, OffsetPtr, DebugInfoData, UEndOffset, 0);
 }
 
 bool DWARFDebugInfoEntry::extractFast(const DWARFUnit &U, uint32_t *OffsetPtr,
-                                      const DataExtractor &DebugInfoData,
+                                      const DWARFDataExtractor &DebugInfoData,
                                       uint32_t UEndOffset, uint32_t D) {
   Offset = *OffsetPtr;
   Depth = D;

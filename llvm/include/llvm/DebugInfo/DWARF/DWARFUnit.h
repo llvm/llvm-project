@@ -58,7 +58,7 @@ protected:
   virtual void parseImpl(DWARFContext &Context, const DWARFSection &Section,
                          const DWARFDebugAbbrev *DA, const DWARFSection *RS,
                          StringRef SS, const DWARFSection &SOS,
-                         const DWARFSection *AOS, StringRef LS,
+                         const DWARFSection *AOS, const DWARFSection &LS,
                          bool isLittleEndian, bool isDWO) = 0;
 };
 
@@ -91,7 +91,7 @@ private:
   void parseImpl(DWARFContext &Context, const DWARFSection &Section,
                  const DWARFDebugAbbrev *DA, const DWARFSection *RS,
                  StringRef SS, const DWARFSection &SOS, const DWARFSection *AOS,
-                 StringRef LS, bool LE, bool IsDWO) override {
+                 const DWARFSection &LS, bool LE, bool IsDWO) override {
     if (Parsed)
       return;
     const auto &Index = getDWARFUnitIndex(Context, UnitType::Section);
@@ -118,7 +118,7 @@ class DWARFUnit {
   const DWARFDebugAbbrev *Abbrev;
   const DWARFSection *RangeSection;
   uint32_t RangeSectionBase;
-  StringRef LineSection;
+  const DWARFSection &LineSection;
   StringRef StringSection;
   const DWARFSection &StringOffsetSection;
   uint64_t StringOffsetSectionBase = 0;
@@ -166,15 +166,16 @@ protected:
 public:
   DWARFUnit(DWARFContext &Context, const DWARFSection &Section,
             const DWARFDebugAbbrev *DA, const DWARFSection *RS, StringRef SS,
-            const DWARFSection &SOS, const DWARFSection *AOS, StringRef LS,
-            bool LE, bool IsDWO, const DWARFUnitSectionBase &UnitSection,
+            const DWARFSection &SOS, const DWARFSection *AOS,
+            const DWARFSection &LS, bool LE, bool IsDWO,
+            const DWARFUnitSectionBase &UnitSection,
             const DWARFUnitIndex::Entry *IndexEntry = nullptr);
 
   virtual ~DWARFUnit();
 
   DWARFContext& getContext() const { return Context; }
 
-  StringRef getLineSection() const { return LineSection; }
+  const DWARFSection &getLineSection() const { return LineSection; }
   StringRef getStringSection() const { return StringSection; }
   const DWARFSection &getStringOffsetSection() const {
     return StringOffsetSection;
@@ -196,9 +197,9 @@ public:
   bool getAddrOffsetSectionItem(uint32_t Index, uint64_t &Result) const;
   bool getStringOffsetSectionItem(uint32_t Index, uint64_t &Result) const;
 
-  DataExtractor getDebugInfoExtractor() const {
-    return DataExtractor(InfoSection.Data, isLittleEndian,
-                         getAddressByteSize());
+  DWARFDataExtractor getDebugInfoExtractor() const {
+    return DWARFDataExtractor(InfoSection, isLittleEndian,
+                              getAddressByteSize());
   }
 
   DataExtractor getStringExtractor() const {

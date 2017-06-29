@@ -74,6 +74,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Transforms/Utils/OrderedInstructions.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -89,7 +90,6 @@ class Instruction;
 class MemoryAccess;
 class LLVMContext;
 class raw_ostream;
-class OrderedBasicBlock;
 
 enum PredicateType { PT_Branch, PT_Assume, PT_Switch };
 
@@ -115,7 +115,8 @@ class PredicateWithCondition : public PredicateBase {
 public:
   Value *Condition;
   static inline bool classof(const PredicateBase *PB) {
-    return PB->Type == PT_Assume || PB->Type == PT_Branch || PB->Type == PT_Switch;
+    return PB->Type == PT_Assume || PB->Type == PT_Branch ||
+           PB->Type == PT_Switch;
   }
 
 protected:
@@ -244,6 +245,7 @@ private:
   Function &F;
   DominatorTree &DT;
   AssumptionCache &AC;
+  OrderedInstructions OI;
   // This maps from copy operands to Predicate Info. Note that it does not own
   // the Predicate Info, they belong to the ValueInfo structs in the ValueInfos
   // vector.
@@ -256,8 +258,6 @@ private:
   // 0 is not a valid Value Info index, you can use DenseMap::lookup and tell
   // whether it returned a valid result.
   DenseMap<Value *, unsigned int> ValueInfoNums;
-  // OrderedBasicBlocks used during sorting uses
-  DenseMap<const BasicBlock *, std::unique_ptr<OrderedBasicBlock>> OBBMap;
   // The set of edges along which we can only handle phi uses, due to critical
   // edges.
   DenseSet<std::pair<BasicBlock *, BasicBlock *>> EdgeUsesOnly;

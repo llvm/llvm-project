@@ -38,6 +38,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
@@ -340,6 +341,49 @@ void ConstantHoistingPass::collectConstantCandidates(
   }
 }
 
+
+/// \brief Check the operand for instruction Inst at index Idx.
+void ConstantHoistingPass::collectConstantCandidates(
+    ConstCandMapType &ConstCandMap, Instruction *Inst, unsigned Idx) {
+  Value *Opnd = Inst->getOperand(Idx);
+
+  // Visit constant integers.
+  if (auto ConstInt = dyn_cast<ConstantInt>(Opnd)) {
+    collectConstantCandidates(ConstCandMap, Inst, Idx, ConstInt);
+    return;
+  }
+
+  // Visit cast instructions that have constant integers.
+  if (auto CastInst = dyn_cast<Instruction>(Opnd)) {
+    // Only visit cast instructions, which have been skipped. All other
+    // instructions should have already been visited.
+    if (!CastInst->isCast())
+      return;
+
+    if (auto *ConstInt = dyn_cast<ConstantInt>(CastInst->getOperand(0))) {
+      // Pretend the constant is directly used by the instruction and ignore
+      // the cast instruction.
+      collectConstantCandidates(ConstCandMap, Inst, Idx, ConstInt);
+      return;
+    }
+  }
+
+  // Visit constant expressions that have constant integers.
+  if (auto ConstExpr = dyn_cast<ConstantExpr>(Opnd)) {
+    // Only visit constant cast expressions.
+    if (!ConstExpr->isCast())
+      return;
+
+    if (auto ConstInt = dyn_cast<ConstantInt>(ConstExpr->getOperand(0))) {
+      // Pretend the constant is directly used by the instruction and ignore
+      // the constant expression.
+      collectConstantCandidates(ConstCandMap, Inst, Idx, ConstInt);
+      return;
+    }
+  }
+}
+
+
 /// \brief Scan the instruction for expensive integer constants and record them
 /// in the constant candidate vector.
 void ConstantHoistingPass::collectConstantCandidates(
@@ -365,44 +409,25 @@ void ConstantHoistingPass::collectConstantCandidates(
   if (AI && AI->isStaticAlloca())
     return;
 
+  // Constants in GEPs that index into a struct type should not be hoisted.
+  if (isa<GetElementPtrInst>(Inst)) {
+    gep_type_iterator GTI = gep_type_begin(Inst);
+
+    // Collect constant for first operand.
+    collectConstantCandidates(ConstCandMap, Inst, 0);
+    // Scan rest operands.
+    for (unsigned Idx = 1, E = Inst->getNumOperands(); Idx != E; ++Idx, ++GTI) {
+      // Only collect constants that index into a non struct type.
+      if (!GTI.isStruct()) {
+        collectConstantCandidates(ConstCandMap, Inst, Idx);
+      }
+    }
+    return;
+  }
+
   // Scan all operands.
   for (unsigned Idx = 0, E = Inst->getNumOperands(); Idx != E; ++Idx) {
-    Value *Opnd = Inst->getOperand(Idx);
-
-    // Visit constant integers.
-    if (auto ConstInt = dyn_cast<ConstantInt>(Opnd)) {
-      collectConstantCandidates(ConstCandMap, Inst, Idx, ConstInt);
-      continue;
-    }
-
-    // Visit cast instructions that have constant integers.
-    if (auto CastInst = dyn_cast<Instruction>(Opnd)) {
-      // Only visit cast instructions, which have been skipped. All other
-      // instructions should have already been visited.
-      if (!CastInst->isCast())
-        continue;
-
-      if (auto *ConstInt = dyn_cast<ConstantInt>(CastInst->getOperand(0))) {
-        // Pretend the constant is directly used by the instruction and ignore
-        // the cast instruction.
-        collectConstantCandidates(ConstCandMap, Inst, Idx, ConstInt);
-        continue;
-      }
-    }
-
-    // Visit constant expressions that have constant integers.
-    if (auto ConstExpr = dyn_cast<ConstantExpr>(Opnd)) {
-      // Only visit constant cast expressions.
-      if (!ConstExpr->isCast())
-        continue;
-
-      if (auto ConstInt = dyn_cast<ConstantInt>(ConstExpr->getOperand(0))) {
-        // Pretend the constant is directly used by the instruction and ignore
-        // the constant expression.
-        collectConstantCandidates(ConstCandMap, Inst, Idx, ConstInt);
-        continue;
-      }
-    }
+    collectConstantCandidates(ConstCandMap, Inst, Idx);
   } // end of for all operands
 }
 

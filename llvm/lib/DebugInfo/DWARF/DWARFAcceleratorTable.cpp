@@ -121,8 +121,7 @@ LLVM_DUMP_METHOD void DWARFAcceleratorTable::dump(raw_ostream &OS) const {
         continue;
       }
       while (AccelSection.isValidOffsetForDataOfSize(DataOffset, 4)) {
-        unsigned StringOffset =
-            getRelocatedValue(AccelSection, 4, &DataOffset, &Relocs);
+        unsigned StringOffset = AccelSection.getRelocatedValue(4, &DataOffset);
         if (!StringOffset)
           break;
         OS << format("    Name: %08x \"%s\"\n", StringOffset,

@@ -304,9 +304,9 @@ static unsigned ComputeCommonTailLength(MachineBasicBlock *MBB1,
   while (I1 != MBB1->begin() && I2 != MBB2->begin()) {
     --I1; --I2;
     // Skip debugging pseudos; necessary to avoid changing the code.
-    while (I1->isDirective()) {
+    while (I1->isDebugValue()) {
       if (I1==MBB1->begin()) {
-        while (I2->isDirective()) {
+        while (I2->isDebugValue()) {
           if (I2==MBB2->begin())
             // I1==DBG at begin; I2==DBG at begin
             return TailLen;
@@ -319,7 +319,7 @@ static unsigned ComputeCommonTailLength(MachineBasicBlock *MBB1,
       --I1;
     }
     // I1==first (untested) non-DBG preceding known match
-    while (I2->isDirective()) {
+    while (I2->isDebugValue()) {
       if (I2==MBB2->begin()) {
         ++I1;
         // I1==non-DBG, or first of DBGs not at begin; I2==DBG at begin
@@ -361,35 +361,6 @@ static unsigned ComputeCommonTailLength(MachineBasicBlock *MBB1,
       --I1;
     }
     ++I1;
-  }
-
-  // Ensure that I1 and I2 do not point to a CFI_INSTRUCTION. This can happen if
-  // I1 and I2 are non-identical when compared and then one or both of them ends
-  // up pointing to a CFI instruction after being incremented. For example:
-  /*
-    BB1:
-    ...
-    INSTRUCTION_A
-    ADD32ri8  <- last common instruction
-    ...
-    BB2:
-    ...
-    INSTRUCTION_B
-    CFI_INSTRUCTION
-    ADD32ri8  <- last common instruction
-    ...
-  */
-  // When INSTRUCTION_A and INSTRUCTION_B are compared as not equal, after
-  // incrementing the iterators, I1 will point to ADD, however I2 will point to
-  // the CFI instruction. Later on, this leads to BB2 being 'hacked off' at the
-  // wrong place (in ReplaceTailWithBranchTo()) which results in losing this CFI
-  // instruction.
-  while (I1 != MBB1->end() && I1->isCFIInstruction()) {
-    ++I1;
-  }
-
-  while (I2 != MBB2->end() && I2->isCFIInstruction()) {
-    ++I2;
   }
   return TailLen;
 }
@@ -446,14 +417,6 @@ MachineBasicBlock *BranchFolder::SplitMBBAt(MachineBasicBlock &CurMBB,
     FuncletMembership[NewMBB] = n;
   }
 
-  // Recalculate CFI info for CurMBB. Use existing incoming cfa offset and
-  // register.
-  CurMBB.recalculateCFIInfo(true);
-  // Recalculate CFI info for NewMBB. Use CurMBB's outgoing cfa offset and
-  // register as NewMBB's incoming.
-  NewMBB->recalculateCFIInfo(false, CurMBB.getOutgoingCFAOffset(),
-                             CurMBB.getOutgoingCFARegister());
-
   return NewMBB;
 }
 
@@ -463,7 +426,7 @@ static unsigned EstimateRuntime(MachineBasicBlock::iterator I,
                                 MachineBasicBlock::iterator E) {
   unsigned Time = 0;
   for (; I != E; ++I) {
-    if (I->isDirective())
+    if (I->isDebugValue())
       continue;
     if (I->isCall())
       Time += 10;
@@ -817,7 +780,7 @@ void BranchFolder::MergeCommonTailDebugLocs(unsigned commonTailIndex) {
   }
 
   for (auto &MI : *MBB) {
-    if (MI.isDirective())
+    if (MI.isDebugValue())
       continue;
     DebugLoc DL = MI.getDebugLoc();
     for (unsigned int i = 0 ; i < NextCommonInsts.size() ; i++) {
@@ -827,7 +790,7 @@ void BranchFolder::MergeCommonTailDebugLocs(unsigned commonTailIndex) {
       auto &Pos = NextCommonInsts[i];
       assert(Pos != SameTails[i].getBlock()->end() &&
           "Reached BB end within common tail");
-      while (Pos->isDirective()) {
+      while (Pos->isDebugValue()) {
         ++Pos;
         assert(Pos != SameTails[i].getBlock()->end() &&
             "Reached BB end within common tail");
@@ -860,12 +823,12 @@ mergeOperations(MachineBasicBlock::iterator MBBIStartPos,
     assert(MBBI != MBBIE && "Reached BB end within common tail length!");
     (void)MBBIE;
 
-    if (MBBI->isDirective()) {
+    if (MBBI->isDebugValue()) {
       ++MBBI;
       continue;
     }
 
-    while ((MBBICommon != MBBIECommon) && MBBICommon->isDirective())
+    while ((MBBICommon != MBBIECommon) && MBBICommon->isDebugValue())
       ++MBBICommon;
 
     assert(MBBICommon != MBBIECommon &&
@@ -1008,11 +971,6 @@ bool BranchFolder::TryTailMergeBlocks(MachineBasicBlock *SuccBB,
       mergeOperations(SameTails[i].getTailStartPos(), *MBB);
       // Hack the end off BB i, making it jump to BB commonTailIndex instead.
       ReplaceTailWithBranchTo(SameTails[i].getTailStartPos(), MBB);
-
-      // Recalculate CFI info for BB. Use existing incoming cfa offset and
-      // register.
-      SameTails[i].getBlock()->recalculateCFIInfo(true);
-
       // BB i is no longer a predecessor of SuccBB; remove it from the worklist.
       MergePotentials.erase(SameTails[i].getMPIter());
     }
@@ -1423,10 +1381,6 @@ ReoptimizeBlock:
       assert(PrevBB.succ_empty());
       PrevBB.transferSuccessors(MBB);
       MadeChange = true;
-
-      // Update CFI info for PrevBB.
-      PrevBB.mergeCFIInfo(MBB);
-
       return MadeChange;
     }
 

@@ -4,6 +4,8 @@ Clang-Tidy Checks
 =================
 
 .. toctree::
+   android-cloexec-creat
+   android-cloexec-fopen
    android-file-open-flag
    boost-use-to-string
    cert-dcl03-c (redirects to misc-static-assert) <cert-dcl03-c>

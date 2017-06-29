@@ -12,8 +12,8 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
 #include "llvm/DebugInfo/DWARF/DWARFRelocMap.h"
-#include "llvm/Support/DataExtractor.h"
 #include <cstdint>
 #include <utility>
 
@@ -41,14 +41,13 @@ class DWARFAcceleratorTable {
 
   struct Header Hdr;
   struct HeaderData HdrData;
-  DataExtractor AccelSection;
+  DWARFDataExtractor AccelSection;
   DataExtractor StringSection;
-  const RelocAddrMap& Relocs;
 
 public:
-  DWARFAcceleratorTable(DataExtractor AccelSection, DataExtractor StringSection,
-                        const RelocAddrMap &Relocs)
-    : AccelSection(AccelSection), StringSection(StringSection), Relocs(Relocs) {}
+  DWARFAcceleratorTable(const DWARFDataExtractor &AccelSection,
+                        DataExtractor StringSection)
+      : AccelSection(AccelSection), StringSection(StringSection) {}
 
   bool extract();
   uint32_t getNumBuckets();

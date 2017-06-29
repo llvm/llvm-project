@@ -12,9 +12,9 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/DIContext.h"
+#include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/DebugInfo/DWARF/DWARFRelocMap.h"
-#include "llvm/Support/DataExtractor.h"
 #include <cstdint>
 #include <map>
 #include <string>
@@ -26,9 +26,6 @@ class raw_ostream;
 
 class DWARFDebugLine {
 public:
-  DWARFDebugLine(const RelocAddrMap *LineInfoRelocMap)
-      : RelocMap(LineInfoRelocMap) {}
-
   struct FileNameEntry {
     FileNameEntry() = default;
 
@@ -98,7 +95,7 @@ public:
 
     void clear();
     void dump(raw_ostream &OS) const;
-    bool parse(DataExtractor DebugLineData, uint32_t *OffsetPtr);
+    bool parse(const DWARFDataExtractor &DebugLineData, uint32_t *OffsetPtr);
   };
 
   /// Standard .debug_line state machine structure.
@@ -220,8 +217,7 @@ public:
     void clear();
 
     /// Parse prologue and all rows.
-    bool parse(DataExtractor DebugLineData, const RelocAddrMap *RMap,
-               uint32_t *OffsetPtr);
+    bool parse(const DWARFDataExtractor &DebugLineData, uint32_t *OffsetPtr);
 
     using RowVector = std::vector<Row>;
     using RowIter = RowVector::const_iterator;
@@ -238,7 +234,7 @@ public:
   };
 
   const LineTable *getLineTable(uint32_t Offset) const;
-  const LineTable *getOrParseLineTable(DataExtractor DebugLineData,
+  const LineTable *getOrParseLineTable(const DWARFDataExtractor &DebugLineData,
                                        uint32_t Offset);
 
 private:
@@ -261,7 +257,6 @@ private:
   using LineTableIter = LineTableMapTy::iterator;
   using LineTableConstIter = LineTableMapTy::const_iterator;
 
-  const RelocAddrMap *RelocMap;
   LineTableMapTy LineTableMap;
 };
 

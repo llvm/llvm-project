@@ -46,8 +46,9 @@ unsigned HexagonTTIImpl::getCacheLineSize() const {
   return getST()->getL1CacheLineSize();
 }
 
-int HexagonTTIImpl::getUserCost(const User *U) {
-  auto isCastFoldedIntoLoad = [] (const CastInst *CI) -> bool {
+int HexagonTTIImpl::getUserCost(const User *U,
+                                ArrayRef<const Value *> Operands) {
+  auto isCastFoldedIntoLoad = [](const CastInst *CI) -> bool {
     if (!CI->isIntegerCast())
       return false;
     const LoadInst *LI = dyn_cast<const LoadInst>(CI->getOperand(0));
@@ -67,5 +68,5 @@ int HexagonTTIImpl::getUserCost(const User *U) {
   if (const CastInst *CI = dyn_cast<const CastInst>(U))
     if (isCastFoldedIntoLoad(CI))
       return TargetTransformInfo::TCC_Free;
-  return BaseT::getUserCost(U);
+  return BaseT::getUserCost(U, Operands);
 }

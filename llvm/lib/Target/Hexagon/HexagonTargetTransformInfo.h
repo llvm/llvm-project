@@ -62,7 +62,7 @@ public:
 
   /// @}
 
-  int getUserCost(const User *U);
+  int getUserCost(const User *U, ArrayRef<const Value *> Operands);
 };
 
 } // end namespace llvm
