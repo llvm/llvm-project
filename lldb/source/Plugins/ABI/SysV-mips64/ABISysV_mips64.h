@@ -87,7 +87,7 @@ public:
 
   static void Terminate();
 
-  static lldb::ABISP CreateInstance(const lldb_private::ArchSpec &arch);
+  static lldb::ABISP CreateInstance(lldb::ProcessSP process_sp, const lldb_private::ArchSpec &arch);
 
   static lldb_private::ConstString GetPluginNameStatic();
 
@@ -109,7 +109,7 @@ protected:
   bool RegisterIsCalleeSaved(const lldb_private::RegisterInfo *reg_info);
 
 private:
-  ABISysV_mips64() : lldb_private::ABI() {
+  ABISysV_mips64(lldb::ProcessSP process_sp) : lldb_private::ABI(process_sp) {
     // Call CreateInstance instead.
   }
 };

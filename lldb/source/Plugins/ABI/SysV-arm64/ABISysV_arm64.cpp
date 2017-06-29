@@ -1670,7 +1670,7 @@ size_t ABISysV_arm64::GetRedZoneSize() const { return 128; }
 //------------------------------------------------------------------
 
 ABISP
-ABISysV_arm64::CreateInstance(const ArchSpec &arch) {
+ABISysV_arm64::CreateInstance(lldb::ProcessSP process_sp, const ArchSpec &arch) {
   static ABISP g_abi_sp;
   const llvm::Triple::ArchType arch_type = arch.GetTriple().getArch();
   const llvm::Triple::VendorType vendor_type = arch.GetTriple().getVendor();
@@ -1678,7 +1678,7 @@ ABISysV_arm64::CreateInstance(const ArchSpec &arch) {
   if (vendor_type != llvm::Triple::Apple) {
     if (arch_type == llvm::Triple::aarch64) {
       if (!g_abi_sp)
-        g_abi_sp.reset(new ABISysV_arm64);
+        g_abi_sp.reset(new ABISysV_arm64(process_sp));
       return g_abi_sp;
     }
   }
