@@ -339,6 +339,19 @@ public:
           return false;
     return true;
   }
+
+  // Set initial incoming and outgoing cfa offset and register values for basic
+  // blocks. Initial values are the ones valid at the beginning of the function
+  // (before any stack operations). Incoming and outgoing cfa offset and
+  // register values are used to keep track of offset and register that are
+  // valid at basic block entry and exit. This information is used by a late
+  // pass that corrects the CFA calculation rule for a basic block if needed.
+  // Having CFI instructions in function epilogue can cause incorrect CFA
+  // calculation rule for some basic blocks. This can happen if, due to basic
+  // block reordering, or the existence of multiple epilogue blocks, some of the
+  // blocks have wrong cfa offset and register values set by the epilogue block
+  // above them.
+  virtual void initializeCFIInfo(MachineFunction & MF) const {}
 };
 
 } // End llvm namespace

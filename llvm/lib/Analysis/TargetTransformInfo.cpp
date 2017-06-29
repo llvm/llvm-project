@@ -116,8 +116,8 @@ bool TargetTransformInfo::isLoweredToCall(const Function *F) const {
 }
 
 void TargetTransformInfo::getUnrollingPreferences(
-    Loop *L, UnrollingPreferences &UP) const {
-  return TTIImpl->getUnrollingPreferences(L, UP);
+    Loop *L, ScalarEvolution &SE, UnrollingPreferences &UP) const {
+  return TTIImpl->getUnrollingPreferences(L, SE, UP);
 }
 
 bool TargetTransformInfo::isLegalAddImmediate(int64_t Imm) const {

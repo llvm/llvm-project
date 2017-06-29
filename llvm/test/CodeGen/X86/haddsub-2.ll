@@ -736,11 +736,23 @@ define <16 x i16> @avx2_vphadd_w_test(<16 x i16> %a, <16 x i16> %b) {
 ; SSE3-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
 ; SSE3-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm5[0]
 ; SSE3-NEXT:    popq %rbx
+; SSE3-NEXT:  .Lcfi12:
+; SSE3-NEXT:    .cfi_def_cfa_offset 48
 ; SSE3-NEXT:    popq %r12
+; SSE3-NEXT:  .Lcfi13:
+; SSE3-NEXT:    .cfi_def_cfa_offset 40
 ; SSE3-NEXT:    popq %r13
+; SSE3-NEXT:  .Lcfi14:
+; SSE3-NEXT:    .cfi_def_cfa_offset 32
 ; SSE3-NEXT:    popq %r14
+; SSE3-NEXT:  .Lcfi15:
+; SSE3-NEXT:    .cfi_def_cfa_offset 24
 ; SSE3-NEXT:    popq %r15
+; SSE3-NEXT:  .Lcfi16:
+; SSE3-NEXT:    .cfi_def_cfa_offset 16
 ; SSE3-NEXT:    popq %rbp
+; SSE3-NEXT:  .Lcfi17:
+; SSE3-NEXT:    .cfi_def_cfa_offset 8
 ; SSE3-NEXT:    retq
 ;
 ; SSSE3-LABEL: avx2_vphadd_w_test:
@@ -1263,34 +1275,34 @@ define <16 x i16> @avx2_hadd_w(<16 x i16> %a, <16 x i16> %b) {
 ; SSE3-LABEL: avx2_hadd_w:
 ; SSE3:       # BB#0:
 ; SSE3-NEXT:    pushq %rbp
-; SSE3-NEXT:  .Lcfi12:
+; SSE3-NEXT:  .Lcfi18:
 ; SSE3-NEXT:    .cfi_def_cfa_offset 16
 ; SSE3-NEXT:    pushq %r15
-; SSE3-NEXT:  .Lcfi13:
+; SSE3-NEXT:  .Lcfi19:
 ; SSE3-NEXT:    .cfi_def_cfa_offset 24
 ; SSE3-NEXT:    pushq %r14
-; SSE3-NEXT:  .Lcfi14:
+; SSE3-NEXT:  .Lcfi20:
 ; SSE3-NEXT:    .cfi_def_cfa_offset 32
 ; SSE3-NEXT:    pushq %r13
-; SSE3-NEXT:  .Lcfi15:
+; SSE3-NEXT:  .Lcfi21:
 ; SSE3-NEXT:    .cfi_def_cfa_offset 40
 ; SSE3-NEXT:    pushq %r12
-; SSE3-NEXT:  .Lcfi16:
+; SSE3-NEXT:  .Lcfi22:
 ; SSE3-NEXT:    .cfi_def_cfa_offset 48
 ; SSE3-NEXT:    pushq %rbx
-; SSE3-NEXT:  .Lcfi17:
-; SSE3-NEXT:    .cfi_def_cfa_offset 56
-; SSE3-NEXT:  .Lcfi18:
-; SSE3-NEXT:    .cfi_offset %rbx, -56
-; SSE3-NEXT:  .Lcfi19:
-; SSE3-NEXT:    .cfi_offset %r12, -48
-; SSE3-NEXT:  .Lcfi20:
-; SSE3-NEXT:    .cfi_offset %r13, -40
-; SSE3-NEXT:  .Lcfi21:
-; SSE3-NEXT:    .cfi_offset %r14, -32
-; SSE3-NEXT:  .Lcfi22:
-; SSE3-NEXT:    .cfi_offset %r15, -24
 ; SSE3-NEXT:  .Lcfi23:
+; SSE3-NEXT:    .cfi_def_cfa_offset 56
+; SSE3-NEXT:  .Lcfi24:
+; SSE3-NEXT:    .cfi_offset %rbx, -56
+; SSE3-NEXT:  .Lcfi25:
+; SSE3-NEXT:    .cfi_offset %r12, -48
+; SSE3-NEXT:  .Lcfi26:
+; SSE3-NEXT:    .cfi_offset %r13, -40
+; SSE3-NEXT:  .Lcfi27:
+; SSE3-NEXT:    .cfi_offset %r14, -32
+; SSE3-NEXT:  .Lcfi28:
+; SSE3-NEXT:    .cfi_offset %r15, -24
+; SSE3-NEXT:  .Lcfi29:
 ; SSE3-NEXT:    .cfi_offset %rbp, -16
 ; SSE3-NEXT:    movd %xmm0, %eax
 ; SSE3-NEXT:    pextrw $1, %xmm0, %r10d
@@ -1375,11 +1387,23 @@ define <16 x i16> @avx2_hadd_w(<16 x i16> %a, <16 x i16> %b) {
 ; SSE3-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
 ; SSE3-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm5[0]
 ; SSE3-NEXT:    popq %rbx
+; SSE3-NEXT:  .Lcfi30:
+; SSE3-NEXT:    .cfi_def_cfa_offset 48
 ; SSE3-NEXT:    popq %r12
+; SSE3-NEXT:  .Lcfi31:
+; SSE3-NEXT:    .cfi_def_cfa_offset 40
 ; SSE3-NEXT:    popq %r13
+; SSE3-NEXT:  .Lcfi32:
+; SSE3-NEXT:    .cfi_def_cfa_offset 32
 ; SSE3-NEXT:    popq %r14
+; SSE3-NEXT:  .Lcfi33:
+; SSE3-NEXT:    .cfi_def_cfa_offset 24
 ; SSE3-NEXT:    popq %r15
+; SSE3-NEXT:  .Lcfi34:
+; SSE3-NEXT:    .cfi_def_cfa_offset 16
 ; SSE3-NEXT:    popq %rbp
+; SSE3-NEXT:  .Lcfi35:
+; SSE3-NEXT:    .cfi_def_cfa_offset 8
 ; SSE3-NEXT:    retq
 ;
 ; SSSE3-LABEL: avx2_hadd_w:

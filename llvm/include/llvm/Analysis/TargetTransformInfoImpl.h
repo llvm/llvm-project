@@ -217,7 +217,8 @@ public:
     return true;
   }
 
-  void getUnrollingPreferences(Loop *, TTI::UnrollingPreferences &) {}
+  void getUnrollingPreferences(Loop *, ScalarEvolution &,
+                               TTI::UnrollingPreferences &) {}
 
   bool isLegalAddImmediate(int64_t Imm) { return false; }
 

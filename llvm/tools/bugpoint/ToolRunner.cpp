@@ -861,7 +861,7 @@ Error CC::MakeSharedObject(const std::string &InputFile, FileType fileType,
         errs() << "\n";);
   if (RunProgramWithTimeout(CCPath, &CCArgs[0], "", "", ""))
     return ProcessFailure(CCPath, &CCArgs[0]);
-  return Error::success();;
+  return Error::success();
 }
 
 /// create - Try to find the CC executable

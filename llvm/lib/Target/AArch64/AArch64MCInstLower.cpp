@@ -168,8 +168,7 @@ MCOperand AArch64MCInstLower::LowerSymbolOperand(const MachineOperand &MO,
   if (Printer.TM.getTargetTriple().isOSBinFormatCOFF())
     return lowerSymbolOperandCOFF(MO, Sym);
 
-  assert(Printer.TM.getTargetTriple().isOSBinFormatELF() &&
-         "Expect Darwin, ELF or COFF target");
+  assert(Printer.TM.getTargetTriple().isOSBinFormatELF() && "Invalid target");
   return lowerSymbolOperandELF(MO, Sym);
 }
 

@@ -590,8 +590,7 @@ MCAsmBackend *llvm::createAArch64leAsmBackend(const Target &T,
   if (TheTriple.isOSBinFormatCOFF())
     return new COFFAArch64AsmBackend(T, TheTriple);
 
-  assert(TheTriple.isOSBinFormatELF() &&
-         "Expect either MachO, ELF or COFF target");
+  assert(TheTriple.isOSBinFormatELF() && "Invalid target");
 
   uint8_t OSABI = MCELFObjectTargetWriter::getOSABI(TheTriple.getOS());
   bool IsILP32 = Options.getABIName() == "ilp32";

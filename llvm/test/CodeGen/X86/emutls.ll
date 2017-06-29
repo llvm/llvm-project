@@ -16,12 +16,16 @@ define i32 @my_get_xyz() {
 ; X32-NEXT:    calll my_emutls_get_address
 ; X32-NEXT:    movl (%eax), %eax
 ; X32-NEXT:    addl $12, %esp
+; X32-NEXT:    :
+; X32-NEXT:    .cfi_def_cfa_offset 4
 ; X32-NEXT:    retl
 ; X64-LABEL: my_get_xyz:
 ; X64:         movl $my_emutls_v_xyz, %edi
 ; X64-NEXT:    callq my_emutls_get_address
 ; X64-NEXT:    movl (%rax), %eax
 ; X64-NEXT:    popq %rcx
+; X64-NEXT:    :
+; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    retq
 
 entry:
@@ -45,12 +49,16 @@ define i32 @f1() {
 ; X32-NEXT:    calll __emutls_get_address
 ; X32-NEXT:    movl (%eax), %eax
 ; X32-NEXT:    addl $12, %esp
+; X32-NEXT:    :
+; X32-NEXT:    .cfi_def_cfa_offset 4
 ; X32-NEXT:    retl
 ; X64-LABEL: f1:
 ; X64:         movl $__emutls_v.i1, %edi
 ; X64-NEXT:    callq __emutls_get_address
 ; X64-NEXT:    movl (%rax), %eax
 ; X64-NEXT:    popq %rcx
+; X64-NEXT:    :
+; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    retq
 
 entry:
@@ -63,11 +71,15 @@ define i32* @f2() {
 ; X32:         movl $__emutls_v.i1, (%esp)
 ; X32-NEXT:    calll __emutls_get_address
 ; X32-NEXT:    addl $12, %esp
+; X32-NEXT:    :
+; X32-NEXT:    .cfi_def_cfa_offset 4
 ; X32-NEXT:    retl
 ; X64-LABEL: f2:
 ; X64:         movl $__emutls_v.i1, %edi
 ; X64-NEXT:    callq __emutls_get_address
 ; X64-NEXT:    popq %rcx
+; X64-NEXT:    :
+; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    retq
 
 entry:
@@ -92,6 +104,8 @@ define i32* @f4() {
 ; X32:         movl $__emutls_v.i2, (%esp)
 ; X32-NEXT:    calll __emutls_get_address
 ; X32-NEXT:    addl $12, %esp
+; X32-NEXT:    :
+; X32-NEXT:    .cfi_def_cfa_offset 4
 ; X32-NEXT:    retl
 
 entry:
@@ -116,6 +130,8 @@ define i32* @f6() {
 ; X32:         movl $__emutls_v.i3, (%esp)
 ; X32-NEXT:    calll __emutls_get_address
 ; X32-NEXT:    addl $12, %esp
+; X32-NEXT:    :
+; X32-NEXT:    .cfi_def_cfa_offset 4
 ; X32-NEXT:    retl
 
 entry:
@@ -128,6 +144,8 @@ define i32 @f7() {
 ; X32-NEXT:    calll __emutls_get_address
 ; X32-NEXT:    movl (%eax), %eax
 ; X32-NEXT:    addl $12, %esp
+; X32-NEXT:    :
+; X32-NEXT:    .cfi_def_cfa_offset 4
 ; X32-NEXT:    retl
 
 entry:
@@ -140,6 +158,8 @@ define i32* @f8() {
 ; X32:         movl $__emutls_v.i4, (%esp)
 ; X32-NEXT:    calll __emutls_get_address
 ; X32-NEXT:    addl $12, %esp
+; X32-NEXT:    :
+; X32-NEXT:    .cfi_def_cfa_offset 4
 ; X32-NEXT:    retl
 
 entry:
@@ -152,6 +172,8 @@ define i32 @f9() {
 ; X32-NEXT:    calll __emutls_get_address
 ; X32-NEXT:    movl (%eax), %eax
 ; X32-NEXT:    addl $12, %esp
+; X32-NEXT:    :
+; X32-NEXT:    .cfi_def_cfa_offset 4
 ; X32-NEXT:    retl
 
 entry:
@@ -164,6 +186,8 @@ define i32* @f10() {
 ; X32:         movl $__emutls_v.i5, (%esp)
 ; X32-NEXT:    calll __emutls_get_address
 ; X32-NEXT:    addl $12, %esp
+; X32-NEXT:    :
+; X32-NEXT:    .cfi_def_cfa_offset 4
 ; X32-NEXT:    retl
 
 entry:
@@ -176,6 +200,8 @@ define i16 @f11() {
 ; X32-NEXT:    calll __emutls_get_address
 ; X32-NEXT:    movzwl (%eax), %eax
 ; X32-NEXT:    addl $12, %esp
+; X32-NEXT:    :
+; X32-NEXT:    .cfi_def_cfa_offset 4
 ; X32-NEXT:    retl
 
 entry:
@@ -189,6 +215,8 @@ define i32 @f12() {
 ; X32-NEXT:    calll __emutls_get_address
 ; X32-NEXT:    movswl (%eax), %eax
 ; X32-NEXT:    addl $12, %esp
+; X32-NEXT:    :
+; X32-NEXT:    .cfi_def_cfa_offset 4
 ; X32-NEXT:    retl
 
 entry:
@@ -203,6 +231,8 @@ define i8 @f13() {
 ; X32-NEXT:    calll __emutls_get_address
 ; X32-NEXT:    movb (%eax), %al
 ; X32-NEXT:    addl $12, %esp
+; X32-NEXT:    :
+; X32-NEXT:    .cfi_def_cfa_offset 4
 ; X32-NEXT:    retl
 
 entry:
@@ -216,6 +246,8 @@ define i32 @f14() {
 ; X32-NEXT:    calll __emutls_get_address
 ; X32-NEXT:    movsbl (%eax), %eax
 ; X32-NEXT:    addl $12, %esp
+; X32-NEXT:    :
+; X32-NEXT:    .cfi_def_cfa_offset 4
 ; X32-NEXT:    retl
 
 entry:

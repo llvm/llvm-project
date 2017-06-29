@@ -3301,12 +3301,12 @@ Instruction *InstCombiner::foldICmpEquality(ICmpInst &I) {
     return nullptr;
 
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
+  const CmpInst::Predicate Pred = I.getPredicate();
   Value *A, *B, *C, *D;
   if (match(Op0, m_Xor(m_Value(A), m_Value(B)))) {
     if (A == Op1 || B == Op1) { // (A^B) == A  ->  B == 0
       Value *OtherVal = A == Op1 ? B : A;
-      return new ICmpInst(I.getPredicate(), OtherVal,
-                          Constant::getNullValue(A->getType()));
+      return new ICmpInst(Pred, OtherVal, Constant::getNullValue(A->getType()));
     }
 
     if (match(Op1, m_Xor(m_Value(C), m_Value(D)))) {
@@ -3316,26 +3316,25 @@ Instruction *InstCombiner::foldICmpEquality(ICmpInst &I) {
           Op1->hasOneUse()) {
         Constant *NC = Builder->getInt(C1->getValue() ^ C2->getValue());
         Value *Xor = Builder->CreateXor(C, NC);
-        return new ICmpInst(I.getPredicate(), A, Xor);
+        return new ICmpInst(Pred, A, Xor);
       }
 
       // A^B == A^D -> B == D
       if (A == C)
-        return new ICmpInst(I.getPredicate(), B, D);
+        return new ICmpInst(Pred, B, D);
       if (A == D)
-        return new ICmpInst(I.getPredicate(), B, C);
+        return new ICmpInst(Pred, B, C);
       if (B == C)
-        return new ICmpInst(I.getPredicate(), A, D);
+        return new ICmpInst(Pred, A, D);
       if (B == D)
-        return new ICmpInst(I.getPredicate(), A, C);
+        return new ICmpInst(Pred, A, C);
     }
   }
 
   if (match(Op1, m_Xor(m_Value(A), m_Value(B))) && (A == Op0 || B == Op0)) {
     // A == (A^B)  ->  B == 0
     Value *OtherVal = A == Op0 ? B : A;
-    return new ICmpInst(I.getPredicate(), OtherVal,
-                        Constant::getNullValue(A->getType()));
+    return new ICmpInst(Pred, OtherVal, Constant::getNullValue(A->getType()));
   }
 
   // (X&Z) == (Y&Z) -> (X^Y) & Z == 0
@@ -3380,8 +3379,7 @@ Instruction *InstCombiner::foldICmpEquality(ICmpInst &I) {
     APInt Pow2 = Cst1->getValue() + 1;
     if (Pow2.isPowerOf2() && isa<IntegerType>(A->getType()) &&
         Pow2.logBase2() == cast<IntegerType>(A->getType())->getBitWidth())
-      return new ICmpInst(I.getPredicate(), A,
-                          Builder->CreateTrunc(B, A->getType()));
+      return new ICmpInst(Pred, A, Builder->CreateTrunc(B, A->getType()));
   }
 
   // (A >> C) == (B >> C) --> (A^B) u< (1 << C)
@@ -3393,12 +3391,11 @@ Instruction *InstCombiner::foldICmpEquality(ICmpInst &I) {
     unsigned TypeBits = Cst1->getBitWidth();
     unsigned ShAmt = (unsigned)Cst1->getLimitedValue(TypeBits);
     if (ShAmt < TypeBits && ShAmt != 0) {
-      ICmpInst::Predicate Pred = I.getPredicate() == ICmpInst::ICMP_NE
-                                     ? ICmpInst::ICMP_UGE
-                                     : ICmpInst::ICMP_ULT;
+      ICmpInst::Predicate NewPred =
+          Pred == ICmpInst::ICMP_NE ? ICmpInst::ICMP_UGE : ICmpInst::ICMP_ULT;
       Value *Xor = Builder->CreateXor(A, B, I.getName() + ".unshifted");
       APInt CmpVal = APInt::getOneBitSet(TypeBits, ShAmt);
-      return new ICmpInst(Pred, Xor, Builder->getInt(CmpVal));
+      return new ICmpInst(NewPred, Xor, Builder->getInt(CmpVal));
     }
   }
 
@@ -3412,8 +3409,7 @@ Instruction *InstCombiner::foldICmpEquality(ICmpInst &I) {
       APInt AndVal = APInt::getLowBitsSet(TypeBits, TypeBits - ShAmt);
       Value *And = Builder->CreateAnd(Xor, Builder->getInt(AndVal),
                                       I.getName() + ".mask");
-      return new ICmpInst(I.getPredicate(), And,
-                          Constant::getNullValue(Cst1->getType()));
+      return new ICmpInst(Pred, And, Constant::getNullValue(Cst1->getType()));
     }
   }
 
@@ -3437,7 +3433,7 @@ Instruction *InstCombiner::foldICmpEquality(ICmpInst &I) {
       CmpV <<= ShAmt;
 
       Value *Mask = Builder->CreateAnd(A, Builder->getInt(MaskV));
-      return new ICmpInst(I.getPredicate(), Mask, Builder->getInt(CmpV));
+      return new ICmpInst(Pred, Mask, Builder->getInt(CmpV));
     }
   }
 

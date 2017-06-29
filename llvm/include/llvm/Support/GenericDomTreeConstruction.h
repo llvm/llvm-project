@@ -31,228 +31,267 @@
 
 namespace llvm {
 
-// External storage for depth first iterator that reuses the info lookup map
-// domtree already has.  We don't have a set, but a map instead, so we are
-// converting the one argument insert calls.
-template <class NodeRef, class InfoType> struct df_iterator_dom_storage {
-public:
-  using BaseSet = DenseMap<NodeRef, InfoType>;
-  df_iterator_dom_storage(BaseSet &Storage) : Storage(Storage) {}
+namespace DomTreeBuilder {
+// Information record used by Semi-NCA during tree construction.
+template <typename NodeT>
+struct SemiNCAInfo {
+  using NodePtr = NodeT *;
+  using DomTreeT = DominatorTreeBase<NodeT>;
+  using TreeNodePtr = DomTreeNodeBase<NodeT> *;
 
-  using iterator = typename BaseSet::iterator;
-  std::pair<iterator, bool> insert(NodeRef N) {
-    return Storage.insert({N, InfoType()});
+  struct InfoRec {
+    unsigned DFSNum = 0;
+    unsigned Parent = 0;
+    unsigned Semi = 0;
+    NodePtr Label = nullptr;
+    NodePtr IDom = nullptr;
+  };
+
+  DomTreeT &DT;
+  std::vector<NodePtr> NumToNode;
+  DenseMap<NodePtr, InfoRec> NodeToInfo;
+
+  SemiNCAInfo(DomTreeT &DT) : DT(DT) {}
+
+  NodePtr getIDom(NodePtr BB) const {
+    auto InfoIt = NodeToInfo.find(BB);
+    if (InfoIt == NodeToInfo.end()) return nullptr;
+
+    return InfoIt->second.IDom;
   }
-  void completed(NodeRef) {}
 
-private:
-  BaseSet &Storage;
-};
+  TreeNodePtr getNodeForBlock(NodePtr BB) {
+    if (TreeNodePtr Node = DT.getNode(BB)) return Node;
 
-template <class GraphT>
-unsigned ReverseDFSPass(DominatorTreeBaseByGraphTraits<GraphT> &DT,
-                        typename GraphT::NodeRef V, unsigned N) {
-  df_iterator_dom_storage<
-      typename GraphT::NodeRef,
-      typename DominatorTreeBaseByGraphTraits<GraphT>::InfoRec>
-      DFStorage(DT.Info);
-  bool IsChildOfArtificialExit = (N != 0);
-  for (auto I = idf_ext_begin(V, DFStorage), E = idf_ext_end(V, DFStorage);
-       I != E; ++I) {
-    typename GraphT::NodeRef BB = *I;
-    auto &BBInfo = DT.Info[BB];
-    BBInfo.DFSNum = BBInfo.Semi = ++N;
-    BBInfo.Label = BB;
-    // Set the parent to the top of the visited stack.  The stack includes us,
-    // and is 1 based, so we subtract to account for both of these.
-    if (I.getPathLength() > 1)
-      BBInfo.Parent = DT.Info[I.getPath(I.getPathLength() - 2)].DFSNum;
-    DT.Vertex.push_back(BB); // Vertex[n] = V;
+    // Haven't calculated this node yet?  Get or calculate the node for the
+    // immediate dominator.
+    NodePtr IDom = getIDom(BB);
 
-    if (IsChildOfArtificialExit)
-      BBInfo.Parent = 1;
+    assert(IDom || DT.DomTreeNodes[nullptr]);
+    TreeNodePtr IDomNode = getNodeForBlock(IDom);
 
-    IsChildOfArtificialExit = false;
+    // Add a new tree node for this NodeT, and link it as a child of
+    // IDomNode
+    return (DT.DomTreeNodes[BB] = IDomNode->addChild(
+                llvm::make_unique<DomTreeNodeBase<NodeT>>(BB, IDomNode)))
+        .get();
   }
-  return N;
-}
-template <class GraphT>
-unsigned DFSPass(DominatorTreeBaseByGraphTraits<GraphT> &DT,
-                 typename GraphT::NodeRef V, unsigned N) {
-  df_iterator_dom_storage<
-      typename GraphT::NodeRef,
-      typename DominatorTreeBaseByGraphTraits<GraphT>::InfoRec>
-      DFStorage(DT.Info);
-  for (auto I = df_ext_begin(V, DFStorage), E = df_ext_end(V, DFStorage);
-       I != E; ++I) {
-    typename GraphT::NodeRef BB = *I;
-    auto &BBInfo = DT.Info[BB];
-    BBInfo.DFSNum = BBInfo.Semi = ++N;
-    BBInfo.Label = BB;
-    // Set the parent to the top of the visited stack.  The stack includes us,
-    // and is 1 based, so we subtract to account for both of these.
-    if (I.getPathLength() > 1)
-      BBInfo.Parent = DT.Info[I.getPath(I.getPathLength() - 2)].DFSNum;
-    DT.Vertex.push_back(BB); // Vertex[n] = V;
-  }
-  return N;
-}
 
-template <class GraphT>
-typename GraphT::NodeRef Eval(DominatorTreeBaseByGraphTraits<GraphT> &DT,
-                              typename GraphT::NodeRef VIn,
-                              unsigned LastLinked) {
-  using NodePtr = typename GraphT::NodeRef;
+  // External storage for depth first iterator that reuses the info lookup map
+  // SemiNCAInfo already has. We don't have a set, but a map instead, so we are
+  // converting the one argument insert calls.
+  struct df_iterator_dom_storage {
+   public:
+    using BaseSet = decltype(NodeToInfo);
+    df_iterator_dom_storage(BaseSet &Storage) : Storage(Storage) {}
 
-  auto &VInInfo = DT.Info[VIn];
-  if (VInInfo.DFSNum < LastLinked)
-    return VIn;
-
-  SmallVector<NodePtr, 32> Work;
-  SmallPtrSet<NodePtr, 32> Visited;
-
-  if (VInInfo.Parent >= LastLinked)
-    Work.push_back(VIn);
-
-  while (!Work.empty()) {
-    NodePtr V = Work.back();
-    auto &VInfo = DT.Info[V];
-    NodePtr VAncestor = DT.Vertex[VInfo.Parent];
-
-    // Process Ancestor first
-    if (Visited.insert(VAncestor).second && VInfo.Parent >= LastLinked) {
-      Work.push_back(VAncestor);
-      continue;
+    using iterator = typename BaseSet::iterator;
+    std::pair<iterator, bool> insert(NodePtr N) {
+      return Storage.insert({N, InfoRec()});
     }
-    Work.pop_back();
+    void completed(NodePtr) {}
 
-    // Update VInfo based on Ancestor info
-    if (VInfo.Parent < LastLinked)
-      continue;
+   private:
+    BaseSet &Storage;
+  };
 
-    auto &VAInfo = DT.Info[VAncestor];
-    NodePtr VAncestorLabel = VAInfo.Label;
-    NodePtr VLabel = VInfo.Label;
-    if (DT.Info[VAncestorLabel].Semi < DT.Info[VLabel].Semi)
-      VInfo.Label = VAncestorLabel;
-    VInfo.Parent = VAInfo.Parent;
+  df_iterator_dom_storage getStorage() { return {NodeToInfo}; }
+
+  unsigned runReverseDFS(NodePtr V, unsigned N) {
+    auto DFStorage = getStorage();
+
+    bool IsChildOfArtificialExit = (N != 0);
+    for (auto I = idf_ext_begin(V, DFStorage), E = idf_ext_end(V, DFStorage);
+         I != E; ++I) {
+      NodePtr BB = *I;
+      auto &BBInfo = NodeToInfo[BB];
+      BBInfo.DFSNum = BBInfo.Semi = ++N;
+      BBInfo.Label = BB;
+      // Set the parent to the top of the visited stack.  The stack includes us,
+      // and is 1 based, so we subtract to account for both of these.
+      if (I.getPathLength() > 1)
+        BBInfo.Parent = NodeToInfo[I.getPath(I.getPathLength() - 2)].DFSNum;
+      NumToNode.push_back(BB);  // NumToNode[n] = V;
+
+      if (IsChildOfArtificialExit)
+        BBInfo.Parent = 1;
+
+      IsChildOfArtificialExit = false;
+    }
+    return N;
   }
 
-  return VInInfo.Label;
-}
+  unsigned runDFS(NodePtr V, unsigned N) {
+    auto DFStorage = getStorage();
+
+    for (auto I = df_ext_begin(V, DFStorage), E = df_ext_end(V, DFStorage);
+         I != E; ++I) {
+      NodePtr BB = *I;
+      auto &BBInfo = NodeToInfo[BB];
+      BBInfo.DFSNum = BBInfo.Semi = ++N;
+      BBInfo.Label = BB;
+      // Set the parent to the top of the visited stack.  The stack includes us,
+      // and is 1 based, so we subtract to account for both of these.
+      if (I.getPathLength() > 1)
+        BBInfo.Parent = NodeToInfo[I.getPath(I.getPathLength() - 2)].DFSNum;
+      NumToNode.push_back(BB);  // NumToNode[n] = V;
+    }
+    return N;
+  }
+
+  NodePtr eval(NodePtr VIn, unsigned LastLinked) {
+    auto &VInInfo = NodeToInfo[VIn];
+    if (VInInfo.DFSNum < LastLinked)
+      return VIn;
+
+    SmallVector<NodePtr, 32> Work;
+    SmallPtrSet<NodePtr, 32> Visited;
+
+    if (VInInfo.Parent >= LastLinked)
+      Work.push_back(VIn);
+
+    while (!Work.empty()) {
+      NodePtr V = Work.back();
+      auto &VInfo = NodeToInfo[V];
+      NodePtr VAncestor = NumToNode[VInfo.Parent];
+
+      // Process Ancestor first
+      if (Visited.insert(VAncestor).second && VInfo.Parent >= LastLinked) {
+        Work.push_back(VAncestor);
+        continue;
+      }
+      Work.pop_back();
+
+      // Update VInfo based on Ancestor info
+      if (VInfo.Parent < LastLinked)
+        continue;
+
+      auto &VAInfo = NodeToInfo[VAncestor];
+      NodePtr VAncestorLabel = VAInfo.Label;
+      NodePtr VLabel = VInfo.Label;
+      if (NodeToInfo[VAncestorLabel].Semi < NodeToInfo[VLabel].Semi)
+        VInfo.Label = VAncestorLabel;
+      VInfo.Parent = VAInfo.Parent;
+    }
+
+    return VInInfo.Label;
+  }
+
+  template <typename NodeType>
+  void runSemiNCA(unsigned NumBlocks) {
+    unsigned N = 0;
+    NumToNode.push_back(nullptr);
+
+    bool MultipleRoots = (DT.Roots.size() > 1);
+    if (MultipleRoots) {
+      auto &BBInfo = NodeToInfo[nullptr];
+      BBInfo.DFSNum = BBInfo.Semi = ++N;
+      BBInfo.Label = nullptr;
+
+      NumToNode.push_back(nullptr); // NumToNode[n] = V;
+    }
+
+    // Step #1: Number blocks in depth-first order and initialize variables used
+    // in later stages of the algorithm.
+    if (DT.isPostDominator()){
+      for (unsigned i = 0, e = static_cast<unsigned>(DT.Roots.size());
+           i != e; ++i)
+        N = runReverseDFS(DT.Roots[i], N);
+    } else {
+      N = runDFS(DT.Roots[0], N);
+    }
+
+    // It might be that some blocks did not get a DFS number (e.g., blocks of
+    // infinite loops). In these cases an artificial exit node is required.
+    MultipleRoots |= (DT.isPostDominator() && N != NumBlocks);
+
+    // Initialize IDoms to spanning tree parents.
+    for (unsigned i = 1; i <= N; ++i) {
+      const NodePtr V = NumToNode[i];
+      auto &VInfo = NodeToInfo[V];
+      VInfo.IDom = NumToNode[VInfo.Parent];
+    }
+
+    // Step #2: Calculate the semidominators of all vertices.
+    for (unsigned i = N; i >= 2; --i) {
+      NodePtr W = NumToNode[i];
+      auto &WInfo = NodeToInfo[W];
+
+      // Initialize the semi dominator to point to the parent node.
+      WInfo.Semi = WInfo.Parent;
+      for (const auto &N : inverse_children<NodeType>(W))
+        if (NodeToInfo.count(N)) {  // Only if this predecessor is reachable!
+          unsigned SemiU = NodeToInfo[eval(N, i + 1)].Semi;
+          if (SemiU < WInfo.Semi)
+            WInfo.Semi = SemiU;
+        }
+    }
+
+    // Step #3: Explicitly define the immediate dominator of each vertex.
+    //          IDom[i] = NCA(SDom[i], SpanningTreeParent(i)).
+    // Note that the parents were stored in IDoms and later got invalidated
+    // during path compression in Eval.
+    for (unsigned i = 2; i <= N; ++i) {
+      const NodePtr W = NumToNode[i];
+      auto &WInfo = NodeToInfo[W];
+      const unsigned SDomNum = NodeToInfo[NumToNode[WInfo.Semi]].DFSNum;
+      NodePtr WIDomCandidate = WInfo.IDom;
+      while (NodeToInfo[WIDomCandidate].DFSNum > SDomNum)
+        WIDomCandidate = NodeToInfo[WIDomCandidate].IDom;
+
+      WInfo.IDom = WIDomCandidate;
+    }
+
+    if (DT.Roots.empty()) return;
+
+    // Add a node for the root.  This node might be the actual root, if there is
+    // one exit block, or it may be the virtual exit (denoted by
+    // (BasicBlock *)0) which postdominates all real exits if there are multiple
+    // exit blocks, or an infinite loop.
+    NodePtr Root = !MultipleRoots ? DT.Roots[0] : nullptr;
+
+    DT.RootNode =
+        (DT.DomTreeNodes[Root] =
+             llvm::make_unique<DomTreeNodeBase<NodeT>>(Root, nullptr))
+            .get();
+
+    // Loop over all of the reachable blocks in the function...
+    for (unsigned i = 2; i <= N; ++i) {
+      NodePtr W = NumToNode[i];
+
+      // Don't replace this with 'count', the insertion side effect is important
+      if (DT.DomTreeNodes[W])
+        continue; // Haven't calculated this node yet?
+
+      NodePtr ImmDom = getIDom(W);
+
+      assert(ImmDom || DT.DomTreeNodes[nullptr]);
+
+      // Get or calculate the node for the immediate dominator
+      TreeNodePtr IDomNode = getNodeForBlock(ImmDom);
+
+      // Add a new tree node for this BasicBlock, and link it as a child of
+      // IDomNode
+      DT.DomTreeNodes[W] = IDomNode->addChild(
+          llvm::make_unique<DomTreeNodeBase<NodeT>>(W, IDomNode));
+    }
+
+    DT.updateDFSNumbers();
+  }
+};
+}  // namespace DomTreeBuilder
 
 template <class FuncT, class NodeT>
 void Calculate(DominatorTreeBaseByGraphTraits<GraphTraits<NodeT>> &DT,
                FuncT &F) {
-  using GraphT = GraphTraits<NodeT>;
-  using NodePtr = typename GraphT::NodeRef;
+  using NodePtr = typename GraphTraits<NodeT>::NodeRef;
   static_assert(std::is_pointer<NodePtr>::value,
-                "NodeRef should be pointer type");
-  using NodeType = typename std::remove_pointer<NodePtr>::type;
+                "NodePtr should be a pointer type");
 
-  unsigned N = 0;
-  bool MultipleRoots = (DT.Roots.size() > 1);
-  if (MultipleRoots) {
-    auto &BBInfo = DT.Info[nullptr];
-    BBInfo.DFSNum = BBInfo.Semi = ++N;
-    BBInfo.Label = nullptr;
-
-    DT.Vertex.push_back(nullptr);       // Vertex[n] = V;
-  }
-
-  // Step #1: Number blocks in depth-first order and initialize variables used
-  // in later stages of the algorithm.
-  if (DT.isPostDominator()){
-    for (unsigned i = 0, e = static_cast<unsigned>(DT.Roots.size());
-         i != e; ++i)
-      N = ReverseDFSPass<GraphT>(DT, DT.Roots[i], N);
-  } else {
-    N = DFSPass<GraphT>(DT, DT.Roots[0], N);
-  }
-
-  // It might be that some blocks did not get a DFS number (e.g., blocks of
-  // infinite loops). In these cases an artificial exit node is required.
-  MultipleRoots |= (DT.isPostDominator() && N != GraphTraits<FuncT*>::size(&F));
-
-  // Initialize IDoms to spanning tree parents.
-  for (unsigned i = 1; i <= N; ++i) {
-    const NodePtr V = DT.Vertex[i];
-    DT.IDoms[V] = DT.Vertex[DT.Info[V].Parent];
-  }
-
-  // Step #2: Calculate the semidominators of all vertices.
-  for (unsigned i = N; i >= 2; --i) {
-    NodePtr W = DT.Vertex[i];
-    auto &WInfo = DT.Info[W];
-
-    // Initialize the semi dominator to point to the parent node.
-    WInfo.Semi = WInfo.Parent;
-    for (const auto &N : inverse_children<NodeT>(W))
-      if (DT.Info.count(N)) { // Only if this predecessor is reachable!
-        unsigned SemiU = DT.Info[Eval<GraphT>(DT, N, i + 1)].Semi;
-        if (SemiU < WInfo.Semi)
-          WInfo.Semi = SemiU;
-      }
-  }
-
-
-  // Step #3: Explicitly define the immediate dominator of each vertex.
-  //          IDom[i] = NCA(SDom[i], SpanningTreeParent(i)).
-  // Note that the parents were stored in IDoms and later got invalidated during
-  // path compression in Eval.
-  for (unsigned i = 2; i <= N; ++i) {
-    const NodePtr W = DT.Vertex[i];
-    const auto &WInfo = DT.Info[W];
-    const unsigned SDomNum = DT.Info[DT.Vertex[WInfo.Semi]].DFSNum;
-    NodePtr WIDomCandidate = DT.IDoms[W];
-    while (DT.Info[WIDomCandidate].DFSNum > SDomNum)
-      WIDomCandidate = DT.IDoms[WIDomCandidate];
-
-    DT.IDoms[W] = WIDomCandidate;
-  }
-
-  if (DT.Roots.empty()) return;
-
-  // Add a node for the root.  This node might be the actual root, if there is
-  // one exit block, or it may be the virtual exit (denoted by (BasicBlock *)0)
-  // which postdominates all real exits if there are multiple exit blocks, or
-  // an infinite loop.
-  NodePtr Root = !MultipleRoots ? DT.Roots[0] : nullptr;
-
-  DT.RootNode =
-      (DT.DomTreeNodes[Root] =
-           llvm::make_unique<DomTreeNodeBase<NodeType>>(Root, nullptr))
-          .get();
-
-  // Loop over all of the reachable blocks in the function...
-  for (unsigned i = 2; i <= N; ++i) {
-    NodePtr W = DT.Vertex[i];
-
-    // Don't replace this with 'count', the insertion side effect is important
-    if (DT.DomTreeNodes[W])
-      continue; // Haven't calculated this node yet?
-
-    NodePtr ImmDom = DT.getIDom(W);
-
-    assert(ImmDom || DT.DomTreeNodes[nullptr]);
-
-    // Get or calculate the node for the immediate dominator
-    DomTreeNodeBase<NodeType> *IDomNode = DT.getNodeForBlock(ImmDom);
-
-    // Add a new tree node for this BasicBlock, and link it as a child of
-    // IDomNode
-    DT.DomTreeNodes[W] = IDomNode->addChild(
-        llvm::make_unique<DomTreeNodeBase<NodeType>>(W, IDomNode));
-  }
-
-  // Free temporary memory used to construct idom's
-  DT.IDoms.clear();
-  DT.Info.clear();
-  DT.Vertex.clear();
-  DT.Vertex.shrink_to_fit();
-
-  DT.updateDFSNumbers();
+  DomTreeBuilder::SemiNCAInfo<typename std::remove_pointer<NodePtr>::type>
+      SNCA(DT);
+  SNCA.template runSemiNCA<NodeT>(GraphTraits<FuncT *>::size(&F));
 }
-}
+}  // namespace llvm
 
 #endif
