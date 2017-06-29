@@ -36,7 +36,8 @@ ClangdUnit::ClangdUnit(PathRef FileName, StringRef Contents,
 
   // Inject the resource dir.
   // FIXME: Don't overwrite it if it's already there.
-  Commands.front().CommandLine.push_back("-resource-dir=" + std::string(ResourceDir));
+  Commands.front().CommandLine.push_back("-resource-dir=" +
+                                         std::string(ResourceDir));
 
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
       CompilerInstance::createDiagnostics(new DiagnosticOptions);
@@ -277,14 +278,14 @@ class DeclarationLocationsFinder : public index::IndexDataConsumer {
 public:
   DeclarationLocationsFinder(raw_ostream &OS,
       const SourceLocation &SearchedLocation, ASTUnit &Unit) :
-      SearchedLocation(SearchedLocation), Unit(Unit) {
-  }
+      SearchedLocation(SearchedLocation), Unit(Unit) {}
 
   std::vector<Location> takeLocations() {
     // Don't keep the same location multiple times.
     // This can happen when nodes in the AST are visited twice.
     std::sort(DeclarationLocations.begin(), DeclarationLocations.end());
-    auto last = std::unique(DeclarationLocations.begin(), DeclarationLocations.end());
+    auto last =
+        std::unique(DeclarationLocations.begin(), DeclarationLocations.end());
     DeclarationLocations.erase(last, DeclarationLocations.end());
     return std::move(DeclarationLocations);
   }
@@ -312,13 +313,13 @@ private:
     SourceLocation LocStart = ValSourceRange.getBegin();
     SourceLocation LocEnd = Lexer::getLocForEndOfToken(ValSourceRange.getEnd(),
         0, SourceMgr, LangOpts);
-    Position P1;
-    P1.line = SourceMgr.getSpellingLineNumber(LocStart) - 1;
-    P1.character = SourceMgr.getSpellingColumnNumber(LocStart) - 1;
-    Position P2;
-    P2.line = SourceMgr.getSpellingLineNumber(LocEnd) - 1;
-    P2.character = SourceMgr.getSpellingColumnNumber(LocEnd) - 1;
-    Range R = { P1, P2 };
+    Position Begin;
+    Begin.line = SourceMgr.getSpellingLineNumber(LocStart) - 1;
+    Begin.character = SourceMgr.getSpellingColumnNumber(LocStart) - 1;
+    Position End;
+    End.line = SourceMgr.getSpellingLineNumber(LocEnd) - 1;
+    End.character = SourceMgr.getSpellingColumnNumber(LocEnd) - 1;
+    Range R = {Begin, End};
     Location L;
     L.uri = URI::fromFile(
         SourceMgr.getFilename(SourceMgr.getSpellingLoc(LocStart)));
@@ -326,8 +327,7 @@ private:
     DeclarationLocations.push_back(L);
   }
 
-  void finish() override
-  {
+  void finish() override {
     // Also handle possible macro at the searched location.
     Token Result;
     if (!Lexer::getRawToken(SearchedLocation, Result, Unit.getSourceManager(),
@@ -366,8 +366,8 @@ std::vector<Location> ClangdUnit::findDefinitions(Position Pos) {
 
   SourceLocation SourceLocationBeg = getBeginningOfIdentifier(Pos, FE);
 
-  auto DeclLocationsFinder = std::make_shared<DeclarationLocationsFinder>(llvm::errs(),
-      SourceLocationBeg, *Unit);
+  auto DeclLocationsFinder = std::make_shared<DeclarationLocationsFinder>(
+      llvm::errs(), SourceLocationBeg, *Unit);
   index::IndexingOptions IndexOpts;
   IndexOpts.SystemSymbolFilter =
       index::IndexingOptions::SystemSymbolFilterKind::All;

@@ -102,7 +102,6 @@ int lprofBufferIOFlush(ProfBufferIO *BufferIO);
  * and profile data writer.  */
 uint32_t lprofBufferWriter(ProfDataWriter *This, ProfDataIOVec *IOVecs,
                            uint32_t NumIOVecs);
-
 void initBufferWriter(ProfDataWriter *BufferWriter, char *Buffer);
 
 struct ValueProfData;
@@ -139,14 +138,17 @@ typedef struct VPDataReaderType {
                                         uint32_t N);
 } VPDataReaderType;
 
-int lprofWriteData(ProfDataWriter *Writer, VPDataReaderType *VPDataReader);
+/* Write profile data to destinitation. If SkipNameDataWrite is set to 1,
+   the name data is already in destintation, we just skip over it. */
+int lprofWriteData(ProfDataWriter *Writer, VPDataReaderType *VPDataReader,
+                   int SkipNameDataWrite);
 int lprofWriteDataImpl(ProfDataWriter *Writer,
                        const __llvm_profile_data *DataBegin,
                        const __llvm_profile_data *DataEnd,
                        const uint64_t *CountersBegin,
                        const uint64_t *CountersEnd,
                        VPDataReaderType *VPDataReader, const char *NamesBegin,
-                       const char *NamesEnd);
+                       const char *NamesEnd, int SkipNameDataWrite);
 
 /* Merge value profile data pointed to by SrcValueProfData into
  * in-memory profile counters pointed by to DstData.  */

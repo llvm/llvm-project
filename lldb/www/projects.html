@@ -441,6 +441,18 @@
                                                 And then you have to explain these conditions the user in some helpful way.
                                               </p>
                                             </li>
+                                            <li>
+                                              Unified IR interpreter.
+                                              <p>
+                                                Currently IRInterpreter implements a portion of the LLVM IR, but it doesn't handle
+                                                vector data types and there are plenty of instructions it also doesn't support.
+                                                Conversely, lli supports most of LLVM's IR but it doesn't handle remote memory and
+                                                its function calling support is very rudimentary.  It would be useful to unify these
+                                                and make the IR interpreter -- both for LLVM and LLDB -- better.  An alternate strategy
+                                                would be simply to JIT into the current process but have callbacks for non-stack memory
+                                                access.
+                                              </p>
+                                            </li>
                                           </ol>
                 </div>
           	<div class="postfooter"></div>

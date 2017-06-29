@@ -713,13 +713,13 @@ size_t ABIMacOSX_i386::GetRedZoneSize() const { return 0; }
 //------------------------------------------------------------------
 
 ABISP
-ABIMacOSX_i386::CreateInstance(const ArchSpec &arch) {
+ABIMacOSX_i386::CreateInstance(lldb::ProcessSP process_sp, const ArchSpec &arch) {
   static ABISP g_abi_sp;
   if ((arch.GetTriple().getArch() == llvm::Triple::x86) &&
       (arch.GetTriple().isMacOSX() || arch.GetTriple().isiOS() ||
        arch.GetTriple().isWatchOS())) {
     if (!g_abi_sp)
-      g_abi_sp.reset(new ABIMacOSX_i386);
+      g_abi_sp.reset(new ABIMacOSX_i386(process_sp));
     return g_abi_sp;
   }
   return ABISP();

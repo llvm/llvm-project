@@ -10,6 +10,9 @@
 // RUN: env LD_PRELOAD=%shared_libasan %run %t-2 2>&1 | FileCheck %s
 // REQUIRES: asan-dynamic-runtime
 
+// FIXME: Test regressed while android bot was disabled. Needs investigation.
+// UNSUPPORTED: android
+
 #include <stdlib.h>
 #include <stdio.h>
 

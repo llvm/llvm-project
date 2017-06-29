@@ -54,7 +54,7 @@ void initBufferWriter(ProfDataWriter *BufferWriter, char *Buffer) {
 COMPILER_RT_VISIBILITY int __llvm_profile_write_buffer(char *Buffer) {
   ProfDataWriter BufferWriter;
   initBufferWriter(&BufferWriter, Buffer);
-  return lprofWriteData(&BufferWriter, 0);
+  return lprofWriteData(&BufferWriter, 0, 0);
 }
 
 COMPILER_RT_VISIBILITY int __llvm_profile_write_buffer_internal(
@@ -64,5 +64,5 @@ COMPILER_RT_VISIBILITY int __llvm_profile_write_buffer_internal(
   ProfDataWriter BufferWriter;
   initBufferWriter(&BufferWriter, Buffer);
   return lprofWriteDataImpl(&BufferWriter, DataBegin, DataEnd, CountersBegin,
-                            CountersEnd, 0, NamesBegin, NamesEnd);
+                            CountersEnd, 0, NamesBegin, NamesEnd, 0);
 }

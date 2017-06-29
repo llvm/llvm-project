@@ -70,5 +70,5 @@ add_lit_testsuite(check-clang-tools "Running the Clang extra tools' regression t
   DEPENDS ${CLANG_TOOLS_TEST_DEPS}
   ARGS ${CLANG_TOOLS_TEST_EXTRA_ARGS}
   )
-set_target_properties(check-clang-tools PROPERTIES FOLDER "Clang extra tools' tests")
 
+set_target_properties(check-clang-tools PROPERTIES FOLDER "Clang extra tools' tests")

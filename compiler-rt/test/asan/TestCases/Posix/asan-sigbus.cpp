@@ -1,8 +1,8 @@
 // Check handle_bus flag
 // Defaults to true
 // RUN: %clangxx_asan -std=c++11 %s -o %t
-// RUN: not %run %t %T/file 2>&1 | FileCheck %s -check-prefix=CHECK-BUS
-// RUN: %env_asan_opts=handle_sigbus=0 not --crash %run %t %T/file 2>&1 | FileCheck %s
+// RUN: not %run %t 2>&1 | FileCheck %s -check-prefix=CHECK-BUS
+// RUN: %env_asan_opts=handle_sigbus=0 not --crash %run %t 2>&1 | FileCheck %s
 
 // UNSUPPORTED: ios
 
@@ -12,11 +12,11 @@
 #include <stdlib.h>
 #include <sys/mman.h>
 #include <unistd.h>
+#include <string>
 
 char array[4096];
 int main(int argc, char **argv) {
-  assert(argc > 1);
-  int fd = open(argv[1], O_RDWR | O_CREAT, 0700);
+  int fd = open((std::string(argv[0]) + ".m").c_str(), O_RDWR | O_CREAT, 0700);
   if (fd < 0) {
     perror("open");
     exit(1);
