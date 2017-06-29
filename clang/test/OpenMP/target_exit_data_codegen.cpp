@@ -46,8 +46,10 @@ void foo(int arg) {
 
   // CK1-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
   // CK1-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
-  // CK1-DAG: store i8* bitcast ([100 x double]* @gc to i8*), i8** [[BP0]]
-  // CK1-DAG: store i8* bitcast ([100 x double]* @gc to i8*), i8** [[P0]]
+  // CK1-DAG: [[BPC0:%.+]] = bitcast i8** [[BP0]] to [100 x double]**
+  // CK1-DAG: [[PC0:%.+]] = bitcast i8** [[P0]] to [100 x double]**
+  // CK1-DAG: store [100 x double]* @gc, [100 x double]** [[BPC0]]
+  // CK1-DAG: store [100 x double]* @gc, [100 x double]** [[PC0]]
 
   // CK1: %{{.+}} = add nsw i32 %{{[^,]+}}, 1
   #pragma omp target exit data if(1+3-5) device(arg) map(from: gc)
@@ -68,10 +70,10 @@ void foo(int arg) {
 
   // CK1-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
   // CK1-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
-  // CK1-DAG: store i8* [[CBPVAL0:%[^,]+]], i8** [[BP0]]
-  // CK1-DAG: store i8* [[CPVAL0:%[^,]+]], i8** [[P0]]
-  // CK1-DAG: [[CBPVAL0]] = bitcast i32* [[VAR0:%.+]] to i8*
-  // CK1-DAG: [[CPVAL0]] = bitcast i32* [[VAR0]] to i8*
+  // CK1-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to i32**
+  // CK1-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to i32**
+  // CK1-DAG: store i32* [[VAL0:%[^,]+]], i32** [[CBP0]]
+  // CK1-DAG: store i32* [[VAL0]], i32** [[CP0]]
   // CK1: br label %[[IFEND:[^,]+]]
 
   // CK1: [[IFELSE]]
@@ -94,11 +96,11 @@ void foo(int arg) {
   // CK1-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
   // CK1-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
   // CK1-DAG: [[S0:%.+]] = getelementptr inbounds {{.+}}[[S]], i{{.+}} 0, i{{.+}} 0
-  // CK1-DAG: store i8* [[CBPVAL0:%[^,]+]], i8** [[BP0]]
-  // CK1-DAG: store i8* [[CPVAL0:%[^,]+]], i8** [[P0]]
+  // CK1-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to float**
+  // CK1-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to float**
+  // CK1-DAG: store float* [[VAL0:%[^,]+]], float** [[CBP0]]
+  // CK1-DAG: store float* [[VAL0]], float** [[CP0]]
   // CK1-DAG: store i[[sz]] [[CSVAL0:%[^,]+]], i[[sz]]* [[S0]]
-  // CK1-DAG: [[CBPVAL0]] = bitcast float* [[VAR0:%.+]] to i8*
-  // CK1-DAG: [[CPVAL0]] = bitcast float* [[VAR0]] to i8*
   // CK1-DAG: [[CSVAL0]] = mul nuw i[[sz]] %{{[^,]+}}, 4
   // CK1: %{{.+}} = add nsw i32 %{{[^,]+}}, 1
   #pragma omp target exit data map(always, from: lb)
@@ -115,15 +117,18 @@ void foo(int arg) {
 
   // CK1-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
   // CK1-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
-  // CK1-DAG: store i8* bitcast ([[ST]]* @gb to i8*), i8** [[BP0]]
-  // CK1-DAG: store i8* bitcast (double** getelementptr inbounds ([[ST]], [[ST]]* @gb, i32 0, i32 1) to i8*), i8** [[P0]]
+  // CK1-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to [[ST]]**
+  // CK1-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to double***
+  // CK1-DAG: store [[ST]]* @gb, [[ST]]** [[CBP0]]
+  // CK1-DAG: store double** getelementptr inbounds ([[ST]], [[ST]]* @gb, i32 0, i32 1), double*** [[CP0]]
 
 
   // CK1-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
   // CK1-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
-  // CK1-DAG: store i8* bitcast (double** getelementptr inbounds ([[ST]], [[ST]]* @gb, i32 0, i32 1) to i8*), i8** [[BP1]]
-  // CK1-DAG: store i8* [[CPVAL1:%[^,]+]], i8** [[P1]]
-  // CK1-DAG: [[CPVAL1]] = bitcast double* [[SEC1:%.+]] to i8*
+  // CK1-DAG: [[CBP1:%.+]] = bitcast i8** [[BP1]] to double***
+  // CK1-DAG: [[CP1:%.+]] = bitcast i8** [[P1]] to double**
+  // CK1-DAG: store double** getelementptr inbounds ([[ST]], [[ST]]* @gb, i32 0, i32 1), double*** [[CBP1]]
+  // CK1-DAG: store double* [[SEC1:%[^,]+]], double** [[CP1]]
   // CK1-DAG: [[SEC1]] = getelementptr inbounds {{.+}}double* [[SEC11:%[^,]+]], i{{.+}} 0
   // CK1-DAG: [[SEC11]] = load double*, double** getelementptr inbounds ([[ST]], [[ST]]* @gb, i32 0, i32 1),
 
@@ -175,19 +180,19 @@ int bar(int arg){
 
 // CK2-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
 // CK2-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
-// CK2-DAG: store i8* [[CBPVAL0:%[^,]+]], i8** [[BP0]]
-// CK2-DAG: store i8* [[CPVAL0:%[^,]+]], i8** [[P0]]
-// CK2-DAG: [[CBPVAL0]] = bitcast [[ST]]* [[VAR0:%.+]] to i8*
-// CK2-DAG: [[CPVAL0]] = bitcast double** [[SEC0:%[^,]+]] to i8*
+// CK2-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to [[ST]]**
+// CK2-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to double***
+// CK2-DAG: store [[ST]]* [[VAR0:%[^,]+]], [[ST]]** [[CBP0]]
+// CK2-DAG: store double** [[SEC0:%[^,]+]], double*** [[CP0]]
 // CK2-DAG: [[SEC0]] = getelementptr inbounds {{.*}}[[ST]]* [[VAR0]], i32 0, i32 1
 
 
 // CK2-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
 // CK2-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
-// CK2-DAG: store i8* [[CBPVAL1:%[^,]+]], i8** [[BP1]]
-// CK2-DAG: store i8* [[CPVAL1:%[^,]+]], i8** [[P1]]
-// CK2-DAG: [[CBPVAL1]] = bitcast double** [[SEC0]] to i8*
-// CK2-DAG: [[CPVAL1]] = bitcast double* [[SEC1:%[^,]+]] to i8*
+// CK2-DAG: [[CBP1:%.+]] = bitcast i8** [[BP1]] to double***
+// CK2-DAG: [[CP1:%.+]] = bitcast i8** [[P1]] to double**
+// CK2-DAG: store double** [[SEC0]], double*** [[CBP1]]
+// CK2-DAG: store double* [[SEC1:%[^,]+]], double** [[CP1]]
 // CK2-DAG: [[SEC1]] = getelementptr inbounds {{.*}}double* [[SEC11:%[^,]+]], i{{.+}} 1
 // CK2-DAG: [[SEC11]] = load double*, double** [[SEC111:%[^,]+]],
 // CK2-DAG: [[SEC111]] = getelementptr inbounds {{.*}}[[ST]]* [[VAR0]], i32 0, i32 1

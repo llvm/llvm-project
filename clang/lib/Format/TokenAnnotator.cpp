@@ -1570,8 +1570,10 @@ private:
       const FormatToken *NextNonComment = Current->getNextNonComment();
       if (Current->is(TT_ConditionalExpr))
         return prec::Conditional;
-      if (NextNonComment && NextNonComment->is(tok::colon) &&
-          NextNonComment->is(TT_DictLiteral))
+      if (NextNonComment && Current->is(TT_SelectorName) &&
+          (NextNonComment->is(TT_DictLiteral) ||
+           (Style.Language == FormatStyle::LK_Proto &&
+            NextNonComment->is(tok::less))))
         return prec::Assignment;
       if (Current->is(TT_JsComputedPropertyName))
         return prec::Assignment;

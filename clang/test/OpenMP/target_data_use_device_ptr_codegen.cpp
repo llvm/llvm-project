@@ -33,12 +33,11 @@ void foo(float *&lr, T *&tr) {
   float *l;
   T *t;
 
-  // CK1-DAG: [[RVAL:%.+]] = bitcast double* [[T:%.+]] to i8*
-  // CK1-DAG: [[T]] = load double*, double** [[DECL:@g]],
+  // CK1:     [[T:%.+]] = load double*, double** [[DECL:@g]],
   // CK1:     [[BP:%.+]] = getelementptr inbounds [1 x i8*], [1 x i8*]* %{{.+}}, i32 0, i32 0
-  // CK1:     store i8* [[RVAL]], i8** [[BP]],
-  // CK1:     call void @__tgt_target_data_begin{{.+}}[[MTYPE00]]
   // CK1:     [[CBP:%.+]] = bitcast i8** [[BP]] to double**
+  // CK1:     store double* [[T]], double** [[CBP]],
+  // CK1:     call void @__tgt_target_data_begin{{.+}}[[MTYPE00]]
   // CK1:     [[VAL:%.+]] = load double*, double** [[CBP]],
   // CK1-NOT: store double* [[VAL]], double** [[DECL]],
   // CK1:     store double* [[VAL]], double** [[PVT:%.+]],
@@ -53,12 +52,11 @@ void foo(float *&lr, T *&tr) {
   // CK1:     getelementptr inbounds double, double* [[TTT]], i32 1
   ++g;
 
-  // CK1-DAG: [[RVAL:%.+]] = bitcast float* [[T1:%.+]] to i8*
-  // CK1-DAG: [[T1]] = load float*, float** [[DECL:%.+]],
+  // CK1:     [[T1:%.+]] = load float*, float** [[DECL:%.+]],
   // CK1:     [[BP:%.+]] = getelementptr inbounds [1 x i8*], [1 x i8*]* %{{.+}}, i32 0, i32 0
-  // CK1:     store i8* [[RVAL]], i8** [[BP]],
-  // CK1:     call void @__tgt_target_data_begin{{.+}}[[MTYPE01]]
   // CK1:     [[CBP:%.+]] = bitcast i8** [[BP]] to float**
+  // CK1:     store float* [[T1]], float** [[CBP]],
+  // CK1:     call void @__tgt_target_data_begin{{.+}}[[MTYPE01]]
   // CK1:     [[VAL:%.+]] = load float*, float** [[CBP]],
   // CK1-NOT: store float* [[VAL]], float** [[DECL]],
   // CK1:     store float* [[VAL]], float** [[PVT:%.+]],
@@ -85,12 +83,11 @@ void foo(float *&lr, T *&tr) {
   // CK1:     getelementptr inbounds float, float* [[TTT]], i32 1
   ++l;
 
-  // CK1-DAG: [[RVAL:%.+]] = bitcast float* [[T1:%.+]] to i8*
-  // CK1-DAG: [[T1]] = load float*, float** [[DECL:%.+]],
+  // CK1:     [[T1:%.+]] = load float*, float** [[DECL:%.+]],
   // CK1:     [[BP:%.+]] = getelementptr inbounds [1 x i8*], [1 x i8*]* %{{.+}}, i32 0, i32 0
-  // CK1:     store i8* [[RVAL]], i8** [[BP]],
-  // CK1:     call void @__tgt_target_data_begin{{.+}}[[MTYPE03]]
   // CK1:     [[CBP:%.+]] = bitcast i8** [[BP]] to float**
+  // CK1:     store float* [[T1]], float** [[CBP]],
+  // CK1:     call void @__tgt_target_data_begin{{.+}}[[MTYPE03]]
   // CK1:     [[VAL:%.+]] = load float*, float** [[CBP]],
   // CK1-NOT: store float* [[VAL]], float** [[DECL]],
   // CK1:     store float* [[VAL]], float** [[PVT:%.+]],
@@ -109,12 +106,11 @@ void foo(float *&lr, T *&tr) {
   // CK1:     br i1 [[CMP]], label %[[BTHEN:.+]], label %[[BELSE:.+]]
 
   // CK1:     [[BTHEN]]:
-  // CK1-DAG: [[RVAL:%.+]] = bitcast float* [[T1:%.+]] to i8*
-  // CK1-DAG: [[T1]] = load float*, float** [[DECL:%.+]],
+  // CK1:     [[T1:%.+]] = load float*, float** [[DECL:%.+]],
   // CK1:     [[BP:%.+]] = getelementptr inbounds [1 x i8*], [1 x i8*]* %{{.+}}, i32 0, i32 0
-  // CK1:     store i8* [[RVAL]], i8** [[BP]],
-  // CK1:     call void @__tgt_target_data_begin{{.+}}[[MTYPE04]]
   // CK1:     [[CBP:%.+]] = bitcast i8** [[BP]] to float**
+  // CK1:     store float* [[T1]], float** [[CBP]],
+  // CK1:     call void @__tgt_target_data_begin{{.+}}[[MTYPE04]]
   // CK1:     [[VAL:%.+]] = load float*, float** [[CBP]],
   // CK1-NOT: store float* [[VAL]], float** [[DECL]],
   // CK1:     store float* [[VAL]], float** [[PVT:%.+]],
@@ -146,13 +142,12 @@ void foo(float *&lr, T *&tr) {
   // CK1:     getelementptr inbounds float, float* [[TTT]], i32 1
   ++l;
 
-  // CK1-DAG: [[RVAL:%.+]] = bitcast float* [[T1:%.+]] to i8*
-  // CK1-DAG: [[T1]] = load float*, float** [[T2:%.+]],
-  // CK1-DAG: [[T2]] = load float**, float*** [[DECL:%.+]],
+  // CK1:     [[T2:%.+]] = load float**, float*** [[DECL:%.+]],
+  // CK1:     [[T1:%.+]] = load float*, float** [[T2]],
   // CK1:     [[BP:%.+]] = getelementptr inbounds [1 x i8*], [1 x i8*]* %{{.+}}, i32 0, i32 0
-  // CK1:     store i8* [[RVAL]], i8** [[BP]],
-  // CK1:     call void @__tgt_target_data_begin{{.+}}[[MTYPE05]]
   // CK1:     [[CBP:%.+]] = bitcast i8** [[BP]] to float**
+  // CK1:     store float* [[T1]], float** [[CBP]],
+  // CK1:     call void @__tgt_target_data_begin{{.+}}[[MTYPE05]]
   // CK1:     [[VAL:%.+]] = load float*, float** [[CBP]],
   // CK1:     store float* [[VAL]], float** [[PVTV:%.+]],
   // CK1-NOT: store float** [[PVTV]], float*** [[DECL]],
@@ -170,12 +165,11 @@ void foo(float *&lr, T *&tr) {
   // CK1:     getelementptr inbounds float, float* [[TTTT]], i32 1
   ++lr;
 
-  // CK1-DAG: [[RVAL:%.+]] = bitcast i32* [[T1:%.+]] to i8*
-  // CK1-DAG: [[T1]] = load i32*, i32** [[DECL:%.+]],
+  // CK1:     [[T1:%.+]] = load i32*, i32** [[DECL:%.+]],
   // CK1:     [[BP:%.+]] = getelementptr inbounds [1 x i8*], [1 x i8*]* %{{.+}}, i32 0, i32 0
-  // CK1:     store i8* [[RVAL]], i8** [[BP]],
-  // CK1:     call void @__tgt_target_data_begin{{.+}}[[MTYPE06]]
   // CK1:     [[CBP:%.+]] = bitcast i8** [[BP]] to i32**
+  // CK1:     store i32* [[T1]], i32** [[CBP]],
+  // CK1:     call void @__tgt_target_data_begin{{.+}}[[MTYPE06]]
   // CK1:     [[VAL:%.+]] = load i32*, i32** [[CBP]],
   // CK1-NOT: store i32* [[VAL]], i32** [[DECL]],
   // CK1:     store i32* [[VAL]], i32** [[PVT:%.+]],
@@ -190,13 +184,12 @@ void foo(float *&lr, T *&tr) {
   // CK1:     getelementptr inbounds i32, i32* [[TTT]], i32 1
   ++t;
 
-  // CK1-DAG: [[RVAL:%.+]] = bitcast i32* [[T1:%.+]] to i8*
-  // CK1-DAG: [[T1]] = load i32*, i32** [[T2:%.+]],
-  // CK1-DAG: [[T2]] = load i32**, i32*** [[DECL:%.+]],
+  // CK1:     [[T2:%.+]] = load i32**, i32*** [[DECL:%.+]],
+  // CK1:     [[T1:%.+]] = load i32*, i32** [[T2]],
   // CK1:     [[BP:%.+]] = getelementptr inbounds [1 x i8*], [1 x i8*]* %{{.+}}, i32 0, i32 0
-  // CK1:     store i8* [[RVAL]], i8** [[BP]],
-  // CK1:     call void @__tgt_target_data_begin{{.+}}[[MTYPE07]]
   // CK1:     [[CBP:%.+]] = bitcast i8** [[BP]] to i32**
+  // CK1:     store i32* [[T1]], i32** [[CBP]],
+  // CK1:     call void @__tgt_target_data_begin{{.+}}[[MTYPE07]]
   // CK1:     [[VAL:%.+]] = load i32*, i32** [[CBP]],
   // CK1:     store i32* [[VAL]], i32** [[PVTV:%.+]],
   // CK1-NOT: store i32** [[PVTV]], i32*** [[DECL]],
@@ -214,12 +207,11 @@ void foo(float *&lr, T *&tr) {
   // CK1:     getelementptr inbounds i32, i32* [[TTTT]], i32 1
   ++tr;
 
-  // CK1-DAG: [[RVAL:%.+]] = bitcast float* [[T1:%.+]] to i8*
-  // CK1-DAG: [[T1]] = load float*, float** [[DECL:%.+]],
+  // CK1:     [[T1:%.+]] = load float*, float** [[DECL:%.+]],
   // CK1:     [[BP:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* %{{.+}}, i32 0, i32
-  // CK1:     store i8* [[RVAL]], i8** [[BP]],
-  // CK1:     call void @__tgt_target_data_begin{{.+}}[[MTYPE08]]
   // CK1:     [[CBP:%.+]] = bitcast i8** [[BP]] to float**
+  // CK1:     store float* [[T1]], float** [[CBP]],
+  // CK1:     call void @__tgt_target_data_begin{{.+}}[[MTYPE08]]
   // CK1:     [[VAL:%.+]] = load float*, float** [[CBP]],
   // CK1-NOT: store float* [[VAL]], float** [[DECL]],
   // CK1:     store float* [[VAL]], float** [[PVT:%.+]],
@@ -235,11 +227,11 @@ void foo(float *&lr, T *&tr) {
   ++l; ++t;
 
 
-  // CK1:     call void @__tgt_target_data_begin{{.+}}[[MTYPE09]]
   // CK1:     [[_CBP:%.+]] = bitcast i8** {{%.+}} to float**
+  // CK1:     [[CBP:%.+]] = bitcast i8** {{%.+}} to i32**
+  // CK1:     call void @__tgt_target_data_begin{{.+}}[[MTYPE09]]
   // CK1:     [[_VAL:%.+]] = load float*, float** [[_CBP]],
   // CK1:     store float* [[_VAL]], float** [[_PVT:%.+]],
-  // CK1:     [[CBP:%.+]] = bitcast i8** {{%.+}} to i32**
   // CK1:     [[VAL:%.+]] = load i32*, i32** [[CBP]],
   // CK1:     store i32* [[VAL]], i32** [[PVT:%.+]],
   // CK1:     [[_TT1:%.+]] = load float*, float** [[_PVT]],
@@ -257,11 +249,11 @@ void foo(float *&lr, T *&tr) {
   // CK1:     getelementptr inbounds i32, i32* [[TTT]], i32 1
   ++l; ++t;
 
-  // CK1:     call void @__tgt_target_data_begin{{.+}}[[MTYPE10]]
   // CK1:     [[_CBP:%.+]] = bitcast i8** {{%.+}} to float**
+  // CK1:     [[CBP:%.+]] = bitcast i8** {{%.+}} to i32**
+  // CK1:     call void @__tgt_target_data_begin{{.+}}[[MTYPE10]]
   // CK1:     [[_VAL:%.+]] = load float*, float** [[_CBP]],
   // CK1:     store float* [[_VAL]], float** [[_PVT:%.+]],
-  // CK1:     [[CBP:%.+]] = bitcast i8** {{%.+}} to i32**
   // CK1:     [[VAL:%.+]] = load i32*, i32** [[CBP]],
   // CK1:     store i32* [[VAL]], i32** [[PVT:%.+]],
   // CK1:     [[_TT1:%.+]] = load float*, float** [[_PVT]],
@@ -279,12 +271,11 @@ void foo(float *&lr, T *&tr) {
   // CK1:     getelementptr inbounds i32, i32* [[TTT]], i32 1
   ++l; ++t;
 
-  // CK1-DAG: [[RVAL:%.+]] = bitcast i32* [[T1:%.+]] to i8*
-  // CK1-DAG: [[T1]] = load i32*, i32** [[DECL:%.+]],
+  // CK1:     [[T1:%.+]] = load i32*, i32** [[DECL:%.+]],
   // CK1:     [[BP:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* %{{.+}}, i32 0, i32 0
-  // CK1:     store i8* [[RVAL]], i8** [[BP]],
-  // CK1:     call void @__tgt_target_data_begin{{.+}}[[MTYPE11]]
   // CK1:     [[CBP:%.+]] = bitcast i8** [[BP]] to i32**
+  // CK1:     store i32* [[T1]], i32** [[CBP]],
+  // CK1:     call void @__tgt_target_data_begin{{.+}}[[MTYPE11]]
   // CK1:     [[VAL:%.+]] = load i32*, i32** [[CBP]],
   // CK1-NOT: store i32* [[VAL]], i32** [[DECL]],
   // CK1:     store i32* [[VAL]], i32** [[PVT:%.+]],
@@ -299,13 +290,12 @@ void foo(float *&lr, T *&tr) {
   // CK1:     getelementptr inbounds i32, i32* [[TTT]], i32 1
   ++l; ++t;
 
-  // CK1-DAG: [[RVAL:%.+]] = bitcast i32* [[T1:%.+]] to i8*
-  // CK1-DAG: [[T1]] = load i32*, i32** [[T2:%.+]],
-  // CK1-DAG: [[T2]] = load i32**, i32*** [[DECL:%.+]],
+  // CK1:     [[T2:%.+]] = load i32**, i32*** [[DECL:%.+]],
+  // CK1:     [[T1:%.+]] = load i32*, i32** [[T2]],
   // CK1:     [[BP:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* %{{.+}}, i32 0, i32 0
-  // CK1:     store i8* [[RVAL]], i8** [[BP]],
-  // CK1:     call void @__tgt_target_data_begin{{.+}}[[MTYPE12]]
   // CK1:     [[CBP:%.+]] = bitcast i8** [[BP]] to i32**
+  // CK1:     store i32* [[T1]], i32** [[CBP]],
+  // CK1:     call void @__tgt_target_data_begin{{.+}}[[MTYPE12]]
   // CK1:     [[VAL:%.+]] = load i32*, i32** [[CBP]],
   // CK1:     store i32* [[VAL]], i32** [[PVTV:%.+]],
   // CK1-NOT: store i32** [[PVTV]], i32*** [[DECL]],
@@ -356,10 +346,11 @@ struct ST {
     int *la = 0;
 
     // CK2:     [[BP:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* %{{.+}}, i32 0, i32 1
-    // CK2:     store i8* [[RVAL:%.+]], i8** [[BP]],
+    // CK2:     [[CBP:%.+]] = bitcast i8** [[BP]] to double***
+    // CK2:     store double** [[RVAL:%.+]], double*** [[CBP]],
     // CK2:     call void @__tgt_target_data_begin{{.+}}[[MTYPE00]]
-    // CK2:     [[CBP:%.+]] = bitcast i8** [[BP]] to double**
-    // CK2:     [[VAL:%.+]] = load double*, double** [[CBP]],
+    // CK2:     [[CBP1:%.+]] = bitcast double*** [[CBP]] to double**
+    // CK2:     [[VAL:%.+]] = load double*, double** [[CBP1]],
     // CK2:     store double* [[VAL]], double** [[PVT:%.+]],
     // CK2:     store double** [[PVT]], double*** [[PVT2:%.+]],
     // CK2:     [[TT1:%.+]] = load double**, double*** [[PVT2]],
@@ -376,10 +367,11 @@ struct ST {
     a++;
 
     // CK2:     [[BP:%.+]] = getelementptr inbounds [3 x i8*], [3 x i8*]* %{{.+}}, i32 0, i32 2
-    // CK2:     store i8* [[RVAL:%.+]], i8** [[BP]],
+    // CK2:     [[CBP:%.+]] = bitcast i8** [[BP]] to double***
+    // CK2:     store double** [[RVAL:%.+]], double*** [[CBP]],
     // CK2:     call void @__tgt_target_data_begin{{.+}}[[MTYPE01]]
-    // CK2:     [[CBP:%.+]] = bitcast i8** [[BP]] to double**
-    // CK2:     [[VAL:%.+]] = load double*, double** [[CBP]],
+    // CK2:     [[CBP1:%.+]] = bitcast double*** [[CBP]] to double**
+    // CK2:     [[VAL:%.+]] = load double*, double** [[CBP1]],
     // CK2:     store double* [[VAL]], double** [[PVT:%.+]],
     // CK2:     store double** [[PVT]], double*** [[PVT2:%.+]],
     // CK2:     [[TT1:%.+]] = load double**, double*** [[PVT2]],
@@ -397,9 +389,9 @@ struct ST {
     b++;
 
     // CK2:     [[BP:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* %{{.+}}, i32 0, i32 0
-    // CK2:     store i8* [[RVAL:%.+]], i8** [[BP]],
-    // CK2:     call void @__tgt_target_data_begin{{.+}}[[MTYPE02]]
     // CK2:     [[CBP:%.+]] = bitcast i8** [[BP]] to double**
+    // CK2:     store double* [[RVAL:%.+]], double** [[CBP]],
+    // CK2:     call void @__tgt_target_data_begin{{.+}}[[MTYPE02]]
     // CK2:     [[VAL:%.+]] = load double*, double** [[CBP]],
     // CK2:     store double* [[VAL]], double** [[PVT:%.+]],
     // CK2:     store double** [[PVT]], double*** [[PVT2:%.+]],
@@ -419,16 +411,17 @@ struct ST {
     la++;
 
     // CK2:     [[BP:%.+]] = getelementptr inbounds [4 x i8*], [4 x i8*]* %{{.+}}, i32 0, i32 0
-    // CK2:     store i8* [[RVAL:%.+]], i8** [[BP]],
-    // CK2:     [[_BP:%.+]] = getelementptr inbounds [4 x i8*], [4 x i8*]* %{{.+}}, i32 0, i32 3
-    // CK2:     store i8* [[_RVAL:%.+]], i8** [[_BP]],
-    // CK2:     call void @__tgt_target_data_begin{{.+}}[[MTYPE03]]
     // CK2:     [[CBP:%.+]] = bitcast i8** [[BP]] to double**
+    // CK2:     store double* [[RVAL:%.+]], double** [[CBP]],
+    // CK2:     [[_BP:%.+]] = getelementptr inbounds [4 x i8*], [4 x i8*]* %{{.+}}, i32 0, i32 3
+    // CK2:     [[_CBP:%.+]] = bitcast i8** [[_BP]] to double***
+    // CK2:     store double** [[_RVAL:%.+]], double*** [[_CBP]],
+    // CK2:     call void @__tgt_target_data_begin{{.+}}[[MTYPE03]]
     // CK2:     [[VAL:%.+]] = load double*, double** [[CBP]],
     // CK2:     store double* [[VAL]], double** [[PVT:%.+]],
     // CK2:     store double** [[PVT]], double*** [[PVT2:%.+]],
-    // CK2:     [[_CBP:%.+]] = bitcast i8** [[_BP]] to double**
-    // CK2:     [[_VAL:%.+]] = load double*, double** [[_CBP]],
+    // CK2:     [[_CBP1:%.+]] = bitcast double*** [[_CBP]] to double**
+    // CK2:     [[_VAL:%.+]] = load double*, double** [[_CBP1]],
     // CK2:     store double* [[_VAL]], double** [[_PVT:%.+]],
     // CK2:     store double** [[_PVT]], double*** [[_PVT2:%.+]],
     // CK2:     [[TT1:%.+]] = load double**, double*** [[PVT2]],

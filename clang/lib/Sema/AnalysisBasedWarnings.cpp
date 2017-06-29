@@ -305,10 +305,14 @@ static bool isThrowCaught(const CXXThrowExpr *Throw,
     CaughtType = CaughtType->castAs<ReferenceType>()
                      ->getPointeeType()
                      ->getUnqualifiedDesugaredType();
+  if (ThrowType->isPointerType() && CaughtType->isPointerType()) {
+    ThrowType = ThrowType->getPointeeType()->getUnqualifiedDesugaredType();
+    CaughtType = CaughtType->getPointeeType()->getUnqualifiedDesugaredType();
+  }
   if (CaughtType == ThrowType)
     return true;
   const CXXRecordDecl *CaughtAsRecordType =
-      CaughtType->getPointeeCXXRecordDecl();
+      CaughtType->getAsCXXRecordDecl();
   const CXXRecordDecl *ThrowTypeAsRecordType = ThrowType->getAsCXXRecordDecl();
   if (CaughtAsRecordType && ThrowTypeAsRecordType)
     return ThrowTypeAsRecordType->isDerivedFrom(CaughtAsRecordType);
