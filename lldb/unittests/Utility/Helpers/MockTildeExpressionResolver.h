@@ -32,6 +32,6 @@ public:
                     llvm::SmallVectorImpl<char> &Output) override;
   bool ResolvePartial(llvm::StringRef Expr, llvm::StringSet<> &Output) override;
 };
-}
+} // namespace lldb_private
 
 #endif

@@ -1540,14 +1540,6 @@ public:
   /// @param NewDomain The new statement domain.
   void restrictDomain(__isl_take isl_set *NewDomain);
 
-  /// Compute the isl representation for the SCEV @p E in this stmt.
-  ///
-  /// @param E           The SCEV that should be translated.
-  /// @param NonNegative Flag to indicate the @p E has to be non-negative.
-  ///
-  /// Note that this function will also adjust the invalid context accordingly.
-  __isl_give isl_pw_aff *getPwAff(const SCEV *E, bool NonNegative = false);
-
   /// Get the loop for a dimension.
   ///
   /// @param Dimension The dimension of the induction variable
@@ -1837,14 +1829,17 @@ private:
   /// block in the @p FinishedExitBlocks set so we can later skip edges from
   /// within the region to that block.
   ///
-  /// @param BB The block for which the domain is currently propagated.
-  /// @param BBLoop The innermost affine loop surrounding @p BB.
+  /// @param BB                 The block for which the domain is currently
+  ///                           propagated.
+  /// @param BBLoop             The innermost affine loop surrounding @p BB.
   /// @param FinishedExitBlocks Set of region exits the domain was set for.
-  /// @param LI The LoopInfo for the current function.
-  ///
+  /// @param LI                 The LoopInfo for the current function.
+  /// @param InvalidDomainMap   BB to InvalidDomain map for the BB of current
+  ///                           region.
   void propagateDomainConstraintsToRegionExit(
       BasicBlock *BB, Loop *BBLoop,
-      SmallPtrSetImpl<BasicBlock *> &FinishedExitBlocks, LoopInfo &LI);
+      SmallPtrSetImpl<BasicBlock *> &FinishedExitBlocks, LoopInfo &LI,
+      DenseMap<BasicBlock *, __isl_keep isl_set *> &InvalidDomainMap);
 
   /// Compute the union of predecessor domains for @p BB.
   ///
@@ -1864,30 +1859,43 @@ private:
 
   /// Add loop carried constraints to the header block of the loop @p L.
   ///
-  /// @param L  The loop to process.
-  /// @param LI The LoopInfo for the current function.
+  /// @param L                The loop to process.
+  /// @param LI               The LoopInfo for the current function.
+  /// @param InvalidDomainMap BB to InvalidDomain map for the BB of current
+  ///                         region.
   ///
   /// @returns True if there was no problem and false otherwise.
-  bool addLoopBoundsToHeaderDomain(Loop *L, LoopInfo &LI);
+  bool addLoopBoundsToHeaderDomain(
+      Loop *L, LoopInfo &LI,
+      DenseMap<BasicBlock *, __isl_keep isl_set *> &InvalidDomainMap);
 
   /// Compute the branching constraints for each basic block in @p R.
   ///
-  /// @param R  The region we currently build branching conditions for.
-  /// @param DT The DominatorTree for the current function.
-  /// @param LI The LoopInfo for the current function.
+  /// @param R                The region we currently build branching conditions
+  ///                         for.
+  /// @param DT               The DominatorTree for the current function.
+  /// @param LI               The LoopInfo for the current function.
+  /// @param InvalidDomainMap BB to InvalidDomain map for the BB of current
+  ///                         region.
   ///
   /// @returns True if there was no problem and false otherwise.
-  bool buildDomainsWithBranchConstraints(Region *R, DominatorTree &DT,
-                                         LoopInfo &LI);
+  bool buildDomainsWithBranchConstraints(
+      Region *R, DominatorTree &DT, LoopInfo &LI,
+      DenseMap<BasicBlock *, __isl_keep isl_set *> &InvalidDomainMap);
 
   /// Propagate the domain constraints through the region @p R.
   ///
-  /// @param R  The region we currently build branching conditions for.
-  /// @param DT The DominatorTree for the current function.
-  /// @param LI The LoopInfo for the current function.
+  /// @param R                The region we currently build branching conditions
+  /// for.
+  /// @param DT               The DominatorTree for the current function.
+  /// @param LI               The LoopInfo for the current function.
+  /// @param InvalidDomainMap BB to InvalidDomain map for the BB of current
+  ///                         region.
   ///
   /// @returns True if there was no problem and false otherwise.
-  bool propagateDomainConstraints(Region *R, DominatorTree &DT, LoopInfo &LI);
+  bool propagateDomainConstraints(
+      Region *R, DominatorTree &DT, LoopInfo &LI,
+      DenseMap<BasicBlock *, __isl_keep isl_set *> &InvalidDomainMap);
 
   /// Propagate invalid domains of statements through @p R.
   ///
@@ -1896,21 +1904,29 @@ private:
   /// of error statements and those only reachable via error statements will be
   /// replaced by an empty set. Later those will be removed completely.
   ///
-  /// @param R  The currently traversed region.
-  /// @param DT The DominatorTree for the current function.
-  /// @param LI The LoopInfo for the current function.
-  ///
+  /// @param R                The currently traversed region.
+  /// @param DT               The DominatorTree for the current function.
+  /// @param LI               The LoopInfo for the current function.
+  /// @param InvalidDomainMap BB to InvalidDomain map for the BB of current
+  ///                         region.
+  //
   /// @returns True if there was no problem and false otherwise.
-  bool propagateInvalidStmtDomains(Region *R, DominatorTree &DT, LoopInfo &LI);
+  bool propagateInvalidStmtDomains(
+      Region *R, DominatorTree &DT, LoopInfo &LI,
+      DenseMap<BasicBlock *, __isl_keep isl_set *> &InvalidDomainMap);
 
   /// Compute the domain for each basic block in @p R.
   ///
-  /// @param R  The region we currently traverse.
-  /// @param DT The DominatorTree for the current function.
-  /// @param LI The LoopInfo for the current function.
+  /// @param R                The region we currently traverse.
+  /// @param DT               The DominatorTree for the current function.
+  /// @param LI               The LoopInfo for the current function.
+  /// @param InvalidDomainMap BB to InvalidDomain map for the BB of current
+  ///                         region.
   ///
   /// @returns True if there was no problem and false otherwise.
-  bool buildDomains(Region *R, DominatorTree &DT, LoopInfo &LI);
+  bool
+  buildDomains(Region *R, DominatorTree &DT, LoopInfo &LI,
+               DenseMap<BasicBlock *, __isl_keep isl_set *> &InvalidDomainMap);
 
   /// Add parameter constraints to @p C that imply a non-empty domain.
   __isl_give isl_set *addNonEmptyDomainConstraints(__isl_take isl_set *C) const;
@@ -2018,7 +2034,9 @@ private:
   void buildContext();
 
   /// Add user provided parameter constraints to context (source code).
-  void addUserAssumptions(AssumptionCache &AC, DominatorTree &DT, LoopInfo &LI);
+  void addUserAssumptions(
+      AssumptionCache &AC, DominatorTree &DT, LoopInfo &LI,
+      DenseMap<BasicBlock *, __isl_keep isl_set *> &InvalidDomainMap);
 
   /// Add user provided parameter constraints to context (command line).
   void addUserContext();

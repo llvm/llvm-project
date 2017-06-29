@@ -1629,7 +1629,7 @@
 		26474CC518D0CB5B0073DEBA /* RegisterContextPOSIX_mips64.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RegisterContextPOSIX_mips64.h; path = Utility/RegisterContextPOSIX_mips64.h; sourceTree = "<group>"; };
 		26474CC618D0CB5B0073DEBA /* RegisterContextPOSIX_x86.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = RegisterContextPOSIX_x86.cpp; path = Utility/RegisterContextPOSIX_x86.cpp; sourceTree = "<group>"; };
 		26474CC718D0CB5B0073DEBA /* RegisterContextPOSIX_x86.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RegisterContextPOSIX_x86.h; path = Utility/RegisterContextPOSIX_x86.h; sourceTree = "<group>"; };
-		26474CC818D0CB5B0073DEBA /* RegisterContextPOSIX.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RegisterContextPOSIX.h; path = Utility/RegisterContextPOSIX.h; sourceTree = "<group>"; };
+		26474CC818D0CB5B0073DEBA /* RegisterContextPOSIX.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RegisterContextPOSIX.h; sourceTree = "<group>"; };
 		26474CD018D0CB700073DEBA /* RegisterInfos_i386.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RegisterInfos_i386.h; path = Utility/RegisterInfos_i386.h; sourceTree = "<group>"; };
 		26474CD118D0CB710073DEBA /* RegisterInfos_mips64.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RegisterInfos_mips64.h; path = Utility/RegisterInfos_mips64.h; sourceTree = "<group>"; };
 		26474CD218D0CB710073DEBA /* RegisterInfos_x86_64.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RegisterInfos_x86_64.h; path = Utility/RegisterInfos_x86_64.h; sourceTree = "<group>"; };
@@ -2069,7 +2069,7 @@
 		26BC7D7710F1B77400F91463 /* State.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = State.h; path = include/lldb/Core/State.h; sourceTree = "<group>"; };
 		26BC7D7810F1B77400F91463 /* STLUtils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = STLUtils.h; path = include/lldb/Core/STLUtils.h; sourceTree = "<group>"; };
 		26BC7D7A10F1B77400F91463 /* StreamFile.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = StreamFile.h; path = include/lldb/Core/StreamFile.h; sourceTree = "<group>"; };
-		26BC7D7E10F1B77400F91463 /* Timer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Timer.h; path = include/lldb/Core/Timer.h; sourceTree = "<group>"; };
+		26BC7D7E10F1B77400F91463 /* Timer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Timer.h; path = include/lldb/Utility/Timer.h; sourceTree = "<group>"; };
 		26BC7D8110F1B77400F91463 /* Value.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Value.h; path = include/lldb/Core/Value.h; sourceTree = "<group>"; };
 		26BC7D8210F1B77400F91463 /* ValueObject.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ValueObject.h; path = include/lldb/Core/ValueObject.h; sourceTree = "<group>"; };
 		26BC7D8310F1B77400F91463 /* ValueObjectChild.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ValueObjectChild.h; path = include/lldb/Core/ValueObjectChild.h; sourceTree = "<group>"; };
@@ -2150,7 +2150,7 @@
 		26BC7E8F10F1B85900F91463 /* SourceManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SourceManager.cpp; path = source/Core/SourceManager.cpp; sourceTree = "<group>"; };
 		26BC7E9010F1B85900F91463 /* State.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = State.cpp; path = source/Core/State.cpp; sourceTree = "<group>"; };
 		26BC7E9210F1B85900F91463 /* StreamFile.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = StreamFile.cpp; path = source/Core/StreamFile.cpp; sourceTree = "<group>"; };
-		26BC7E9610F1B85900F91463 /* Timer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Timer.cpp; path = source/Core/Timer.cpp; sourceTree = "<group>"; };
+		26BC7E9610F1B85900F91463 /* Timer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Timer.cpp; path = source/Utility/Timer.cpp; sourceTree = "<group>"; };
 		26BC7E9910F1B85900F91463 /* Value.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Value.cpp; path = source/Core/Value.cpp; sourceTree = "<group>"; };
 		26BC7E9A10F1B85900F91463 /* ValueObject.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ValueObject.cpp; path = source/Core/ValueObject.cpp; sourceTree = "<group>"; };
 		26BC7E9B10F1B85900F91463 /* ValueObjectChild.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ValueObjectChild.cpp; path = source/Core/ValueObjectChild.cpp; sourceTree = "<group>"; };
@@ -3421,6 +3421,7 @@
 			children = (
 				AF3F54B21B3BA5D500186E73 /* POSIXStopInfo.cpp */,
 				AF3F54B31B3BA5D500186E73 /* POSIXStopInfo.h */,
+				26474CC818D0CB5B0073DEBA /* RegisterContextPOSIX.h */,
 				AF3F54B81B3BA5D500186E73 /* RegisterContextPOSIXProcessMonitor_arm.cpp */,
 				AF3F54B91B3BA5D500186E73 /* RegisterContextPOSIXProcessMonitor_arm.h */,
 				AF3F54BA1B3BA5D500186E73 /* RegisterContextPOSIXProcessMonitor_arm64.cpp */,
@@ -4295,6 +4296,8 @@
 				6DEC6F381BD66D750091ABA6 /* TaskPool.cpp */,
 				AFF8FF0B1E779D4B003830EF /* TildeExpressionResolver.cpp */,
 				AFF8FF0D1E779D51003830EF /* TildeExpressionResolver.h */,
+				26BC7D7E10F1B77400F91463 /* Timer.h */,
+				26BC7E9610F1B85900F91463 /* Timer.cpp */,
 				2654A6911E552F3C00DA1013 /* UriParser.h */,
 				33064C991A5C7A330033D415 /* UriParser.cpp */,
 				AFC2DCEA1E6E2F7D00283714 /* UserID.cpp */,
@@ -4649,7 +4652,6 @@
 				267F68561CC02EAE0086832B /* RegisterContextPOSIX_s390x.h */,
 				26474CC618D0CB5B0073DEBA /* RegisterContextPOSIX_x86.cpp */,
 				26474CC718D0CB5B0073DEBA /* RegisterContextPOSIX_x86.h */,
-				26474CC818D0CB5B0073DEBA /* RegisterContextPOSIX.h */,
 				26CA979F172B1FD5005DC71B /* RegisterContextThreadMemory.cpp */,
 				26CA97A0172B1FD5005DC71B /* RegisterContextThreadMemory.h */,
 				23EDE3371926AAD500F6A132 /* RegisterInfoInterface.h */,
@@ -4798,8 +4800,6 @@
 				26B167A41123BF5500DC7B4F /* ThreadSafeValue.h */,
 				263FEDA5112CC1DA00E4C208 /* ThreadSafeSTLMap.h */,
 				940B01FE1D2D82220058795E /* ThreadSafeSTLVector.h */,
-				26BC7D7E10F1B77400F91463 /* Timer.h */,
-				26BC7E9610F1B85900F91463 /* Timer.cpp */,
 				94ED54A119C8A822007BE2EA /* ThreadSafeDenseMap.h */,
 				9449B8031B30E0690019342B /* ThreadSafeDenseSet.h */,
 				268A813F115B19D000F645B0 /* UniqueCStringMap.h */,

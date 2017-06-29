@@ -9,8 +9,8 @@
 
 #include "DWARFDebugPubnames.h"
 
-#include "lldb/Core/Timer.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/Utility/Timer.h"
 
 #include "DWARFCompileUnit.h"
 #include "DWARFDIECollection.h"

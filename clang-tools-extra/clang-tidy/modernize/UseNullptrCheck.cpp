@@ -235,7 +235,7 @@ public:
           allArgUsesValid(C)) {
         replaceWithNullptr(Check, SM, FileLocStart, FileLocEnd);
       }
-      return skipSubTree();
+      return true;
     }
 
     if (SM.isMacroBodyExpansion(StartLoc) && SM.isMacroBodyExpansion(EndLoc)) {
