@@ -21,8 +21,6 @@
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/Support/BinaryStreamArray.h"
 #include "llvm/Support/Endian.h"
-#include "llvm/Support/Error.h"
-#include <cstddef>
 #include <cstdint>
 #include <vector>
 
@@ -35,6 +33,7 @@ protected:
 
 public:
   SymbolRecordKind getKind() const { return Kind; }
+
   SymbolRecordKind Kind;
 };
 
@@ -153,6 +152,7 @@ public:
       : SymbolRecord(Kind), RecordOffset(RecordOffset) {}
 
   std::vector<TypeIndex> Indices;
+
   uint32_t RecordOffset;
 };
 
@@ -165,8 +165,8 @@ struct BinaryAnnotationIterator {
     int32_t S1;
   };
 
-  BinaryAnnotationIterator(ArrayRef<uint8_t> Annotations) : Data(Annotations) {}
   BinaryAnnotationIterator() = default;
+  BinaryAnnotationIterator(ArrayRef<uint8_t> Annotations) : Data(Annotations) {}
   BinaryAnnotationIterator(const BinaryAnnotationIterator &Other)
       : Data(Other.Data) {}
 
@@ -342,9 +342,9 @@ public:
       : SymbolRecord(SymbolRecordKind::InlineSiteSym),
         RecordOffset(RecordOffset) {}
 
-  llvm::iterator_range<BinaryAnnotationIterator> annotations() const {
-    return llvm::make_range(BinaryAnnotationIterator(AnnotationData),
-                            BinaryAnnotationIterator());
+  iterator_range<BinaryAnnotationIterator> annotations() const {
+    return make_range(BinaryAnnotationIterator(AnnotationData),
+                      BinaryAnnotationIterator());
   }
 
   uint32_t Parent;
@@ -479,6 +479,7 @@ public:
     ulittle16_t Register;
     ulittle16_t MayHaveNoName;
   };
+
   explicit DefRangeRegisterSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
   DefRangeRegisterSym(uint32_t RecordOffset)
       : SymbolRecord(SymbolRecordKind::DefRangeRegisterSym),
@@ -501,6 +502,7 @@ public:
     ulittle16_t MayHaveNoName;
     ulittle32_t OffsetInParent;
   };
+
   explicit DefRangeSubfieldRegisterSym(SymbolRecordKind Kind)
       : SymbolRecord(Kind) {}
   DefRangeSubfieldRegisterSym(uint32_t RecordOffset)
@@ -546,6 +548,7 @@ public:
     ulittle16_t Flags;
     little32_t BasePointerOffset;
   };
+
   explicit DefRangeRegisterRelSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
   explicit DefRangeRegisterRelSym(uint32_t RecordOffset)
       : SymbolRecord(SymbolRecordKind::DefRangeRegisterRelSym),
@@ -935,8 +938,8 @@ public:
   uint32_t RecordOffset;
 };
 
-typedef CVRecord<SymbolKind> CVSymbol;
-typedef VarStreamArray<CVSymbol> CVSymbolArray;
+using CVSymbol = CVRecord<SymbolKind>;
+using CVSymbolArray = VarStreamArray<CVSymbol>;
 
 } // end namespace codeview
 } // end namespace llvm

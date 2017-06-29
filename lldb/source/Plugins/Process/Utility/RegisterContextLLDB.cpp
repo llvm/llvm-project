@@ -297,6 +297,14 @@ void RegisterContextLLDB::InitializeNonZerothFrame() {
     return;
   }
 
+  ExecutionContext exe_ctx(m_thread.shared_from_this());
+  Process *process = exe_ctx.GetProcessPtr();
+  // Let ABIs fixup code addresses to make sure they are valid. In ARM ABIs
+  // this will strip bit zero in case we read a PC from memory or from the LR.
+  ABI *abi = process->GetABI().get();
+  if (abi)
+    pc = abi->FixCodeAddress(pc);
+
   if (log) {
     UnwindLogMsg("pc = 0x%" PRIx64, pc);
     addr_t reg_val;
@@ -320,14 +328,6 @@ void RegisterContextLLDB::InitializeNonZerothFrame() {
       return;
     }
   }
-
-  ExecutionContext exe_ctx(m_thread.shared_from_this());
-  Process *process = exe_ctx.GetProcessPtr();
-  // Let ABIs fixup code addresses to make sure they are valid. In ARM ABIs
-  // this will strip bit zero in case we read a PC from memory or from the LR.
-  ABI *abi = process->GetABI().get();
-  if (abi)
-    pc = abi->FixCodeAddress(pc);
 
   const bool allow_section_end = true;
   m_current_pc.SetLoadAddress(pc, &process->GetTarget(), allow_section_end);
@@ -2054,11 +2054,6 @@ bool RegisterContextLLDB::ReadPC(addr_t &pc) {
     // unwind past that frame to help
     // find the bug.
 
-    if (m_all_registers_available == false && above_trap_handler == false &&
-        (pc == 0 || pc == 1)) {
-      return false;
-    }
-    
     ProcessSP process_sp (m_thread.GetProcess());
     if (process_sp)
     {
@@ -2066,6 +2061,12 @@ bool RegisterContextLLDB::ReadPC(addr_t &pc) {
         if (abi)
             pc = abi->FixCodeAddress(pc);
     }
+
+    if (m_all_registers_available == false && above_trap_handler == false &&
+        (pc == 0 || pc == 1)) {
+      return false;
+    }
+
     return true;
   } else {
     return false;

@@ -1,4 +1,4 @@
-//===- DebugSubsectionRecord.cpp -----------------------------*- C++-*-===//
+//===- DebugSubsectionRecord.cpp ------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -8,16 +8,20 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/CodeView/DebugSubsectionRecord.h"
+#include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/DebugSubsection.h"
-
 #include "llvm/Support/BinaryStreamReader.h"
+#include "llvm/Support/BinaryStreamWriter.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/MathExtras.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
 
 using namespace llvm;
 using namespace llvm::codeview;
 
-DebugSubsectionRecord::DebugSubsectionRecord()
-    : Container(CodeViewContainer::ObjectFile),
-      Kind(DebugSubsectionKind::None) {}
+DebugSubsectionRecord::DebugSubsectionRecord() = default;
 
 DebugSubsectionRecord::DebugSubsectionRecord(DebugSubsectionKind Kind,
                                              BinaryStreamRef Data,

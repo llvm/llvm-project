@@ -1,3 +1,5 @@
+# REQUIRES: winres
+
 # RUN: yaml2obj < %p/Inputs/export.yaml > %t.obj
 # RUN: lld-link /out:%t.dll /dll %t.obj
 # RUN: llvm-readobj -file-headers %t.dll | FileCheck -check-prefix=ENTRY %s

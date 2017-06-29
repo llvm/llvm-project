@@ -63,12 +63,17 @@ struct nothrow_t {};
 enum class align_val_t: size_t {};
 }  // namespace std
 
-#define OPERATOR_NEW_BODY(type) \
+// TODO(alekseys): throw std::bad_alloc instead of dying on OOM.
+#define OPERATOR_NEW_BODY(type, nothrow) \
   GET_STACK_TRACE_MALLOC;\
-  return asan_memalign(0, size, &stack, type);
-#define OPERATOR_NEW_BODY_ALIGN(type) \
+  void *res = asan_memalign(0, size, &stack, type);\
+  if (!nothrow && UNLIKELY(!res)) DieOnFailure::OnOOM();\
+  return res;
+#define OPERATOR_NEW_BODY_ALIGN(type, nothrow) \
   GET_STACK_TRACE_MALLOC;\
-  return asan_memalign((uptr)align, size, &stack, type);
+  void *res = asan_memalign((uptr)align, size, &stack, type);\
+  if (!nothrow && UNLIKELY(!res)) DieOnFailure::OnOOM();\
+  return res;
 
 // On OS X it's not enough to just provide our own 'operator new' and
 // 'operator delete' implementations, because they're going to be in the
@@ -79,40 +84,42 @@ enum class align_val_t: size_t {};
 // OS X we need to intercept them using their mangled names.
 #if !SANITIZER_MAC
 CXX_OPERATOR_ATTRIBUTE
-void *operator new(size_t size) { OPERATOR_NEW_BODY(FROM_NEW); }
+void *operator new(size_t size)
+{ OPERATOR_NEW_BODY(FROM_NEW, false /*nothrow*/); }
 CXX_OPERATOR_ATTRIBUTE
-void *operator new[](size_t size) { OPERATOR_NEW_BODY(FROM_NEW_BR); }
+void *operator new[](size_t size)
+{ OPERATOR_NEW_BODY(FROM_NEW_BR, false /*nothrow*/); }
 CXX_OPERATOR_ATTRIBUTE
 void *operator new(size_t size, std::nothrow_t const&)
-{ OPERATOR_NEW_BODY(FROM_NEW); }
+{ OPERATOR_NEW_BODY(FROM_NEW, true /*nothrow*/); }
 CXX_OPERATOR_ATTRIBUTE
 void *operator new[](size_t size, std::nothrow_t const&)
-{ OPERATOR_NEW_BODY(FROM_NEW_BR); }
+{ OPERATOR_NEW_BODY(FROM_NEW_BR, true /*nothrow*/); }
 CXX_OPERATOR_ATTRIBUTE
 void *operator new(size_t size, std::align_val_t align)
-{ OPERATOR_NEW_BODY_ALIGN(FROM_NEW); }
+{ OPERATOR_NEW_BODY_ALIGN(FROM_NEW, false /*nothrow*/); }
 CXX_OPERATOR_ATTRIBUTE
 void *operator new[](size_t size, std::align_val_t align)
-{ OPERATOR_NEW_BODY_ALIGN(FROM_NEW_BR); }
+{ OPERATOR_NEW_BODY_ALIGN(FROM_NEW_BR, false /*nothrow*/); }
 CXX_OPERATOR_ATTRIBUTE
 void *operator new(size_t size, std::align_val_t align, std::nothrow_t const&)
-{ OPERATOR_NEW_BODY_ALIGN(FROM_NEW); }
+{ OPERATOR_NEW_BODY_ALIGN(FROM_NEW, true /*nothrow*/); }
 CXX_OPERATOR_ATTRIBUTE
 void *operator new[](size_t size, std::align_val_t align, std::nothrow_t const&)
-{ OPERATOR_NEW_BODY_ALIGN(FROM_NEW_BR); }
+{ OPERATOR_NEW_BODY_ALIGN(FROM_NEW_BR, true /*nothrow*/); }
 
 #else  // SANITIZER_MAC
 INTERCEPTOR(void *, _Znwm, size_t size) {
-  OPERATOR_NEW_BODY(FROM_NEW);
+  OPERATOR_NEW_BODY(FROM_NEW, false /*nothrow*/);
 }
 INTERCEPTOR(void *, _Znam, size_t size) {
-  OPERATOR_NEW_BODY(FROM_NEW_BR);
+  OPERATOR_NEW_BODY(FROM_NEW_BR, false /*nothrow*/);
 }
 INTERCEPTOR(void *, _ZnwmRKSt9nothrow_t, size_t size, std::nothrow_t const&) {
-  OPERATOR_NEW_BODY(FROM_NEW);
+  OPERATOR_NEW_BODY(FROM_NEW, true /*nothrow*/);
 }
 INTERCEPTOR(void *, _ZnamRKSt9nothrow_t, size_t size, std::nothrow_t const&) {
-  OPERATOR_NEW_BODY(FROM_NEW_BR);
+  OPERATOR_NEW_BODY(FROM_NEW_BR, true /*nothrow*/);
 }
 #endif
 

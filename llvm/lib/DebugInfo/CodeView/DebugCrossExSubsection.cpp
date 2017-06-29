@@ -1,4 +1,4 @@
-//===- DebugCrossExSubsection.cpp -------------------------------*- C++ -*-===//
+//===- DebugCrossExSubsection.cpp -----------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -8,8 +8,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/CodeView/DebugCrossExSubsection.h"
-
 #include "llvm/DebugInfo/CodeView/CodeViewError.h"
+#include "llvm/Support/BinaryStreamWriter.h"
+#include "llvm/Support/Error.h"
+#include <cstdint>
 
 using namespace llvm;
 using namespace llvm::codeview;
