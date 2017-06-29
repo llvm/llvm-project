@@ -166,8 +166,22 @@ class MockCompilationDatabase : public GlobalCompilationDatabase {
 public:
   std::vector<tooling::CompileCommand>
   getCompileCommands(PathRef File) override {
-    return {};
+    if (ExtraClangFlags.empty())
+      return {};
+
+    std::vector<std::string> CommandLine;
+    CommandLine.reserve(3 + ExtraClangFlags.size());
+    CommandLine.insert(CommandLine.end(), {"clang", "-fsyntax-only"});
+    CommandLine.insert(CommandLine.end(), ExtraClangFlags.begin(),
+                       ExtraClangFlags.end());
+    CommandLine.push_back(File.str());
+
+    return {tooling::CompileCommand(llvm::sys::path::parent_path(File),
+                                    llvm::sys::path::filename(File),
+                                    CommandLine, "")};
   }
+
+  std::vector<std::string> ExtraClangFlags;
 };
 
 class MockFSProvider : public FileSystemProvider {
@@ -392,6 +406,53 @@ TEST_F(ClangdVFSTest, CheckVersions) {
   Server.addDocument(FooCpp, SourceContents);
   EXPECT_EQ(DiagConsumer.lastVFSTag(), FS.Tag);
   EXPECT_EQ(Server.codeComplete(FooCpp, Position{0, 0}).Tag, FS.Tag);
+}
+
+TEST_F(ClangdVFSTest, SearchLibDir) {
+  // Checks that searches for GCC installation is done through vfs.
+  MockFSProvider FS;
+  ErrorCheckingDiagConsumer DiagConsumer;
+  MockCompilationDatabase CDB;
+  CDB.ExtraClangFlags = {"-xc++", "-target", "x86_64-linux-unknown", "-m64"};
+  ClangdServer Server(CDB, DiagConsumer, FS,
+                      /*RunSynchronously=*/true);
+
+  // Just a random gcc version string
+  SmallString<8> Version("4.9.3");
+
+  // A lib dir for gcc installation
+  SmallString<64> LibDir("/usr/lib/gcc/x86_64-linux-gnu");
+  llvm::sys::path::append(LibDir, Version);
+
+  // Put crtbegin.o into LibDir/64 to trick clang into thinking there's a gcc
+  // installation there.
+  SmallString<64> DummyLibFile;
+  llvm::sys::path::append(DummyLibFile, LibDir, "64", "crtbegin.o");
+  FS.Files[DummyLibFile] = "";
+
+  SmallString<64> IncludeDir("/usr/include/c++");
+  llvm::sys::path::append(IncludeDir, Version);
+
+  SmallString<64> StringPath;
+  llvm::sys::path::append(StringPath, IncludeDir, "string");
+  FS.Files[StringPath] = "class mock_string {};";
+
+  auto FooCpp = getVirtualTestFilePath("foo.cpp");
+  const auto SourceContents = R"cpp(
+#include <string>
+mock_string x;
+)cpp";
+  FS.Files[FooCpp] = SourceContents;
+
+  Server.addDocument(FooCpp, SourceContents);
+  EXPECT_FALSE(DiagConsumer.hadErrorInLastDiags());
+
+  const auto SourceContentsWithError = R"cpp(
+#include <string>
+std::string x;
+)cpp";
+  Server.addDocument(FooCpp, SourceContentsWithError);
+  EXPECT_TRUE(DiagConsumer.hadErrorInLastDiags());
 }
 
 class ClangdCompletionTest : public ClangdVFSTest {

@@ -6381,16 +6381,15 @@ llvm::Value *CGObjCNonFragileABIMac::GenerateProtocolRef(CodeGenFunction &CGF,
   llvm::GlobalVariable *PTGV = CGM.getModule().getGlobalVariable(ProtocolName);
   if (PTGV)
     return CGF.Builder.CreateAlignedLoad(PTGV, Align);
-  PTGV = new llvm::GlobalVariable(
-    CGM.getModule(),
-    Init->getType(), false,
-    llvm::GlobalValue::WeakAnyLinkage,
-    Init,
-    ProtocolName);
+  PTGV = new llvm::GlobalVariable(CGM.getModule(), Init->getType(), false,
+                                  llvm::GlobalValue::WeakAnyLinkage, Init,
+                                  ProtocolName);
   PTGV->setSection(GetSectionName("__objc_protorefs",
                                   "coalesced,no_dead_strip"));
   PTGV->setVisibility(llvm::GlobalValue::HiddenVisibility);
   PTGV->setAlignment(Align.getQuantity());
+  if (!CGM.getTriple().isOSBinFormatMachO())
+    PTGV->setComdat(CGM.getModule().getOrInsertComdat(ProtocolName));
   CGM.addCompilerUsedGlobal(PTGV);
   return CGF.Builder.CreateAlignedLoad(PTGV, Align);
 }
