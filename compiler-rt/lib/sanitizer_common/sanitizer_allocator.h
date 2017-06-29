@@ -39,8 +39,8 @@ struct ReturnNullOrDieOnFailure {
 };
 // Always dies on the failure.
 struct DieOnFailure {
-  static void *OnBadRequest();
-  static void *OnOOM();
+  static void NORETURN *OnBadRequest();
+  static void NORETURN *OnOOM();
 };
 
 // Returns true if allocator detected OOM condition. Can be used to avoid memory

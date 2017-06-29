@@ -4,6 +4,8 @@
 // > rc /fo combined-resources.res /nologo combined-resources.rc
 // > rc /fo combined-resources-2.res /nologo combined-resources-2.rc
 
+# REQUIRES: winres
+
 # RUN: yaml2obj < %p/Inputs/ret42.yaml > %t.obj
 # RUN: lld-link /out:%t.exe /entry:main %t.obj %p/Inputs/resource.res \
 # RUN:   %p/Inputs/combined-resources.res %p/Inputs/combined-resources-2.res

@@ -246,11 +246,11 @@ void *ReturnNullOrDieOnFailure::OnOOM() {
   ReportAllocatorCannotReturnNull();
 }
 
-void *DieOnFailure::OnBadRequest() {
+void NORETURN *DieOnFailure::OnBadRequest() {
   ReportAllocatorCannotReturnNull();
 }
 
-void *DieOnFailure::OnOOM() {
+void NORETURN *DieOnFailure::OnOOM() {
   atomic_store_relaxed(&allocator_out_of_memory, 1);
   ReportAllocatorCannotReturnNull();
 }

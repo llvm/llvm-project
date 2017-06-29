@@ -56,9 +56,6 @@ RelExpr SPARCV9::getRelExpr(uint32_t Type, const SymbolBody &S,
     return R_ABS;
   case R_SPARC_PC10:
   case R_SPARC_PC22:
-    if (&S == ElfSym::GlobalOffsetTable)
-      return R_GOTONLY_PC;
-    LLVM_FALLTHROUGH;
   case R_SPARC_DISP32:
   case R_SPARC_WDISP30:
     return R_PC;

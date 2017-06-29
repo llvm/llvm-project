@@ -1,4 +1,4 @@
-//===- LazyRandomTypeCollection.cpp ---------------------------- *- C++--*-===//
+//===- LazyRandomTypeCollection.cpp ---------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -8,12 +8,20 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/CodeView/LazyRandomTypeCollection.h"
-
-#include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/None.h"
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/CodeView/CodeViewError.h"
 #include "llvm/DebugInfo/CodeView/TypeName.h"
-#include "llvm/DebugInfo/CodeView/TypeServerHandler.h"
-#include "llvm/DebugInfo/CodeView/TypeVisitorCallbacks.h"
+#include "llvm/DebugInfo/CodeView/TypeRecord.h"
+#include "llvm/Support/BinaryStreamReader.h"
+#include "llvm/Support/Endian.h"
+#include "llvm/Support/Error.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <iterator>
 
 using namespace llvm;
 using namespace llvm::codeview;
