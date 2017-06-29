@@ -10,8 +10,8 @@
 #ifndef LLVM_DEBUGINFO_DWARF_DWARFDEBUGRANGELIST_H
 #define LLVM_DEBUGINFO_DWARF_DWARFDEBUGRANGELIST_H
 
+#include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
 #include "llvm/DebugInfo/DWARF/DWARFRelocMap.h"
-#include "llvm/Support/DataExtractor.h"
 #include <cassert>
 #include <cstdint>
 #include <vector>
@@ -79,7 +79,7 @@ public:
 
   void clear();
   void dump(raw_ostream &OS) const;
-  bool extract(DataExtractor data, uint32_t *offset_ptr, const RelocAddrMap& Relocs);
+  bool extract(const DWARFDataExtractor &data, uint32_t *offset_ptr);
   const std::vector<RangeListEntry> &getEntries() { return Entries; }
 
   /// getAbsoluteRanges - Returns absolute address ranges defined by this range

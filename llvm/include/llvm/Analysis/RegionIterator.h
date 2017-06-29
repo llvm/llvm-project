@@ -271,7 +271,7 @@ inline RNSuccIterator<NodeRef, BlockT, RegionT> succ_end(NodeRef Node) {
   template <> struct GraphTraits<FlatIt<NodeT *>> {                            \
     using NodeRef = NodeT *;                                                   \
     using ChildIteratorType =                                                  \
-        RNSuccIterator<FlatIt<NodeRef>, BlockT, RegionT>;		       \
+        RNSuccIterator<FlatIt<NodeRef>, BlockT, RegionT>;                      \
     static NodeRef getEntryNode(NodeRef N) { return N; }                       \
     static inline ChildIteratorType child_begin(NodeRef N) {                   \
       return RNSuccIterator<FlatIt<NodeRef>, BlockT, RegionT>(N);              \

@@ -769,14 +769,7 @@ void TargetPassConfig::addMachinePasses() {
   if (getOptLevel() != CodeGenOpt::None)
     addBlockPlacement();
 
-  // Verify basic block incoming and outgoing cfa offset and register values.
-  addPass(createCFIInfoVerifier());
-
   addPreEmitPass();
-
-  // Correct CFA calculation rule where needed by inserting appropriate CFI
-  // instructions.
-  addPass(createCFIInstrInserter(), false);
 
   if (TM->Options.EnableIPRA)
     // Collect register usage information and produce a register mask of

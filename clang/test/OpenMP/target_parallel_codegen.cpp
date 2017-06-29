@@ -121,10 +121,10 @@ int foo(int n) {
   // CHECK-DAG:   [[P]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[PR:%[^,]+]], i32 0, i32 0
   // CHECK-DAG:   [[BPADDR0:%.+]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[BPR]], i32 0, i32 [[IDX0:[0-9]+]]
   // CHECK-DAG:   [[PADDR0:%.+]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[PR]], i32 0, i32 [[IDX0]]
-  // CHECK-DAG:   store i8* [[BP0:%[^,]+]], i8** [[BPADDR0]]
-  // CHECK-DAG:   store i8* [[P0:%[^,]+]], i8** [[PADDR0]]
-  // CHECK-DAG:   [[BP0]] = inttoptr i[[SZ]] %{{.+}} to i8*
-  // CHECK-DAG:   [[P0]] = inttoptr i[[SZ]] %{{.+}} to i8*
+  // CHECK-DAG:   [[CBPADDR0:%.+]] = bitcast i8** [[BPADDR0]] to i[[SZ]]*
+  // CHECK-DAG:   [[CPADDR0:%.+]] = bitcast i8** [[PADDR0]] to i[[SZ]]*
+  // CHECK-DAG:   store i[[SZ]] [[VAL0:%.+]], i[[SZ]]* [[CBPADDR0]],
+  // CHECK-DAG:   store i[[SZ]] [[VAL0]], i[[SZ]]* [[CPADDR0]],
 
   // CHECK:       store i32 [[RET]], i32* [[RHV:%.+]], align 4
   // CHECK:       [[RET2:%.+]] = load i32, i32* [[RHV]], align 4
@@ -148,17 +148,17 @@ int foo(int n) {
 
   // CHECK-DAG:   [[BPADDR0:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[BP]], i32 0, i32 0
   // CHECK-DAG:   [[PADDR0:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[P]], i32 0, i32 0
-  // CHECK-DAG:   store i8* [[BP0:%[^,]+]], i8** [[BPADDR0]]
-  // CHECK-DAG:   store i8* [[P0:%[^,]+]], i8** [[PADDR0]]
-  // CHECK-DAG:   [[BP0]] = inttoptr i[[SZ]] %{{.+}} to i8*
-  // CHECK-DAG:   [[P0]] = inttoptr i[[SZ]] %{{.+}} to i8*
+  // CHECK-DAG:   [[CBPADDR0:%.+]] = bitcast i8** [[BPADDR0]] to i[[SZ]]*
+  // CHECK-DAG:   [[CPADDR0:%.+]] = bitcast i8** [[PADDR0]] to i[[SZ]]*
+  // CHECK-DAG:   store i[[SZ]] [[VAL0:%.+]], i[[SZ]]* [[CBPADDR0]],
+  // CHECK-DAG:   store i[[SZ]] [[VAL0]], i[[SZ]]* [[CPADDR0]],
 
   // CHECK-DAG:   [[BPADDR1:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[BP]], i32 0, i32 1
   // CHECK-DAG:   [[PADDR1:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[P]], i32 0, i32 1
-  // CHECK-DAG:   store i8* [[BP1:%[^,]+]], i8** [[BPADDR1]]
-  // CHECK-DAG:   store i8* [[P1:%[^,]+]], i8** [[PADDR1]]
-  // CHECK-DAG:   [[BP1]] = inttoptr i[[SZ]] %{{.+}} to i8*
-  // CHECK-DAG:   [[P1]] = inttoptr i[[SZ]] %{{.+}} to i8*
+  // CHECK-DAG:   [[CBPADDR1:%.+]] = bitcast i8** [[BPADDR1]] to i[[SZ]]*
+  // CHECK-DAG:   [[CPADDR1:%.+]] = bitcast i8** [[PADDR1]] to i[[SZ]]*
+  // CHECK-DAG:   store i[[SZ]] [[VAL1:%.+]], i[[SZ]]* [[CBPADDR1]],
+  // CHECK-DAG:   store i[[SZ]] [[VAL1]], i[[SZ]]* [[CPADDR1]],
   // CHECK:       store i32 [[RET]], i32* [[RHV:%.+]], align 4
   // CHECK-NEXT:  br label %[[IFEND:.+]]
 
@@ -232,56 +232,58 @@ int foo(int n) {
 
   // The names below are not necessarily consistent with the names used for the
   // addresses above as some are repeated.
-  // CHECK-DAG:   [[BP0:%[^,]+]] = inttoptr i[[SZ]] [[VLA0]] to i8*
-  // CHECK-DAG:   [[P0:%[^,]+]] = inttoptr i[[SZ]] [[VLA0]] to i8*
-  // CHECK-DAG:   store i8* [[BP0]], i8** {{%[^,]+}}
-  // CHECK-DAG:   store i8* [[P0]], i8** {{%[^,]+}}
+  // CHECK-DAG:   store i[[SZ]] [[VLA0]], i[[SZ]]* [[CBPADDR0:%.+]],
+  // CHECK-DAG:   store i[[SZ]] [[VLA0]], i[[SZ]]* [[CPADDR0:%.+]],
+  // CHECK-DAG:   [[CBPADDR0]] = bitcast i8** {{%[^,]+}} to i[[SZ]]*
+  // CHECK-DAG:   [[CPADDR0]] = bitcast i8** {{%[^,]+}} to i[[SZ]]*
   // CHECK-DAG:   store i[[SZ]] {{4|8}}, i[[SZ]]* {{%[^,]+}}
 
-  // CHECK-DAG:   [[BP1:%[^,]+]] = inttoptr i[[SZ]] [[VLA1]] to i8*
-  // CHECK-DAG:   [[P1:%[^,]+]] = inttoptr i[[SZ]] [[VLA1]] to i8*
-  // CHECK-DAG:   store i8* [[BP1]], i8** {{%[^,]+}}
-  // CHECK-DAG:   store i8* [[P1]], i8** {{%[^,]+}}
+  // CHECK-DAG:   store i[[SZ]] [[VLA1]], i[[SZ]]* [[CBPADDR1:%.+]],
+  // CHECK-DAG:   store i[[SZ]] [[VLA1]], i[[SZ]]* [[CPADDR1:%.+]],
+  // CHECK-DAG:   [[CBPADDR1]] = bitcast i8** {{%[^,]+}} to i[[SZ]]*
+  // CHECK-DAG:   [[CPADDR1]] = bitcast i8** {{%[^,]+}} to i[[SZ]]*
   // CHECK-DAG:   store i[[SZ]] {{4|8}}, i[[SZ]]* {{%[^,]+}}
 
-  // CHECK-DAG:   store i8* inttoptr (i[[SZ]] 5 to i8*), i8** {{%[^,]+}}
-  // CHECK-DAG:   store i8* inttoptr (i[[SZ]] 5 to i8*), i8** {{%[^,]+}}
+  // CHECK-DAG:   store i[[SZ]] 5, i[[SZ]]* [[CBPADDR2:%.+]],
+  // CHECK-DAG:   store i[[SZ]] 5, i[[SZ]]* [[CPADDR2:%.+]],
+  // CHECK-DAG:   [[CBPADDR2]] = bitcast i8** {{%[^,]+}} to i[[SZ]]*
+  // CHECK-DAG:   [[CPADDR2]] = bitcast i8** {{%[^,]+}} to i[[SZ]]*
   // CHECK-DAG:   store i[[SZ]] {{4|8}}, i[[SZ]]* {{%[^,]+}}
 
-  // CHECK-DAG:   [[BP3:%[^,]+]] = inttoptr i[[SZ]] [[A_CVAL]] to i8*
-  // CHECK-DAG:   [[P3:%[^,]+]] = inttoptr i[[SZ]] [[A_CVAL]] to i8*
-  // CHECK-DAG:   store i8* [[BP3]], i8** {{%[^,]+}}
-  // CHECK-DAG:   store i8* [[P3]], i8** {{%[^,]+}}
+  // CHECK-DAG:   store i[[SZ]] [[A_CVAL]], i[[SZ]]* [[CBPADDR3:%.+]],
+  // CHECK-DAG:   store i[[SZ]] [[A_CVAL]], i[[SZ]]* [[CPADDR3:%.+]],
+  // CHECK-DAG:   [[CBPADDR3]] = bitcast i8** {{%[^,]+}} to i[[SZ]]*
+  // CHECK-DAG:   [[CPADDR3]] = bitcast i8** {{%[^,]+}} to i[[SZ]]*
   // CHECK-DAG:   store i[[SZ]] 4, i[[SZ]]* {{%[^,]+}}
 
-  // CHECK-DAG:   [[BP4:%[^,]+]] = bitcast [10 x float]* %{{.+}} to i8*
-  // CHECK-DAG:   [[P4:%[^,]+]] = bitcast [10 x float]* %{{.+}} to i8*
-  // CHECK-DAG:   store i8* [[BP4]], i8** {{%[^,]+}}
-  // CHECK-DAG:   store i8* [[P4]], i8** {{%[^,]+}}
+  // CHECK-DAG:   store [10 x float]* %{{.+}}, [10 x float]** [[CBPADDR4:%.+]],
+  // CHECK-DAG:   store [10 x float]* %{{.+}}, [10 x float]** [[CPADDR4:%.+]],
+  // CHECK-DAG:   [[CBPADDR4]] = bitcast i8** {{%[^,]+}} to [10 x float]**
+  // CHECK-DAG:   [[CPADDR4]] = bitcast i8** {{%[^,]+}} to [10 x float]**
   // CHECK-DAG:   store i[[SZ]] 40, i[[SZ]]* {{%[^,]+}}
 
-  // CHECK-DAG:   [[BP5:%[^,]+]] = bitcast float* %{{.+}} to i8*
-  // CHECK-DAG:   [[P5:%[^,]+]] = bitcast float* %{{.+}} to i8*
-  // CHECK-DAG:   store i8* [[BP5]], i8** {{%[^,]+}}
-  // CHECK-DAG:   store i8* [[P5]], i8** {{%[^,]+}}
+  // CHECK-DAG:   store float* %{{.+}}, float** [[CBPADDR5:%.+]],
+  // CHECK-DAG:   store float* %{{.+}}, float** [[CPADDR5:%.+]],
+  // CHECK-DAG:   [[CBPADDR5]] = bitcast i8** {{%[^,]+}} to float**
+  // CHECK-DAG:   [[CPADDR5]] = bitcast i8** {{%[^,]+}} to float**
   // CHECK-DAG:   store i[[SZ]] [[BNSIZE]], i[[SZ]]* {{%[^,]+}}
 
-  // CHECK-DAG:   [[BP6:%[^,]+]] = bitcast [5 x [10 x double]]* %{{.+}} to i8*
-  // CHECK-DAG:   [[P6:%[^,]+]] = bitcast [5 x [10 x double]]* %{{.+}} to i8*
-  // CHECK-DAG:   store i8* [[BP6]], i8** {{%[^,]+}}
-  // CHECK-DAG:   store i8* [[P6]], i8** {{%[^,]+}}
+  // CHECK-DAG:   store [5 x [10 x double]]* %{{.+}}, [5 x [10 x double]]** [[CBPADDR6:%.+]],
+  // CHECK-DAG:   store [5 x [10 x double]]* %{{.+}}, [5 x [10 x double]]** [[CPADDR6:%.+]],
+  // CHECK-DAG:   [[CBPADDR6]] = bitcast i8** {{%[^,]+}} to [5 x [10 x double]]**
+  // CHECK-DAG:   [[CPADDR6]] = bitcast i8** {{%[^,]+}} to [5 x [10 x double]]**
   // CHECK-DAG:   store i[[SZ]] 400, i[[SZ]]* {{%[^,]+}}
 
-  // CHECK-DAG:   [[BP7:%[^,]+]] = bitcast double* %{{.+}} to i8*
-  // CHECK-DAG:   [[P7:%[^,]+]] = bitcast double* %{{.+}} to i8*
-  // CHECK-DAG:   store i8* [[BP7]], i8** {{%[^,]+}}
-  // CHECK-DAG:   store i8* [[P7]], i8** {{%[^,]+}}
+  // CHECK-DAG:   store double* %{{.+}}, double** [[CBPADDR7:%.+]],
+  // CHECK-DAG:   store double* %{{.+}}, double** [[CPADDR7:%.+]],
+  // CHECK-DAG:   [[CBPADDR7]] = bitcast i8** {{%[^,]+}} to double**
+  // CHECK-DAG:   [[CPADDR7]] = bitcast i8** {{%[^,]+}} to double**
   // CHECK-DAG:   store i[[SZ]] [[CNSIZE]], i[[SZ]]* {{%[^,]+}}
 
-  // CHECK-DAG:   [[BP8:%[^,]+]] = bitcast [[TT]]* %{{.+}} to i8*
-  // CHECK-DAG:   [[P8:%[^,]+]] = bitcast [[TT]]* %{{.+}} to i8*
-  // CHECK-DAG:   store i8* [[BP8]], i8** {{%[^,]+}}
-  // CHECK-DAG:   store i8* [[P8]], i8** {{%[^,]+}}
+  // CHECK-DAG:   store [[TT]]* %{{.+}}, [[TT]]** [[CBPADDR8:%.+]],
+  // CHECK-DAG:   store [[TT]]* %{{.+}}, [[TT]]** [[CPADDR8:%.+]],
+  // CHECK-DAG:   [[CBPADDR8]] = bitcast i8** {{%[^,]+}} to [[TT]]**
+  // CHECK-DAG:   [[CPADDR8]] = bitcast i8** {{%[^,]+}} to [[TT]]**
   // CHECK-DAG:   store i[[SZ]] {{12|16}}, i[[SZ]]* {{%[^,]+}}
 
   // CHECK:       store i32 [[RET]], i32* [[RHV:%.+]], align 4
@@ -550,32 +552,34 @@ int bar(int n){
 
 // The names below are not necessarily consistent with the names used for the
 // addresses above as some are repeated.
-// CHECK-DAG:   [[BP0:%[^,]+]] = inttoptr i[[SZ]] [[VLA0]] to i8*
-// CHECK-DAG:   [[P0:%[^,]+]] = inttoptr i[[SZ]] [[VLA0]] to i8*
-// CHECK-DAG:   store i8* [[BP0]], i8** {{%[^,]+}}
-// CHECK-DAG:   store i8* [[P0]], i8** {{%[^,]+}}
+// CHECK-DAG:   store i[[SZ]] [[VLA0]], i[[SZ]]* [[CBPADDR0:%.+]],
+// CHECK-DAG:   store i[[SZ]] [[VLA0]], i[[SZ]]* [[CPADDR0:%.+]],
+// CHECK-DAG:   [[CBPADDR0]] = bitcast i8** {{%[^,]+}} to i[[SZ]]*
+// CHECK-DAG:   [[CPADDR0]] = bitcast i8** {{%[^,]+}} to i[[SZ]]*
 // CHECK-DAG:   store i[[SZ]] {{4|8}}, i[[SZ]]* {{%[^,]+}}
 
-// CHECK-DAG:   store i8* inttoptr (i[[SZ]] 2 to i8*), i8** {{%[^,]+}}
-// CHECK-DAG:   store i8* inttoptr (i[[SZ]] 2 to i8*), i8** {{%[^,]+}}
+// CHECK-DAG:   store i[[SZ]] 2, i[[SZ]]* [[CBPADDR1:%.+]],
+// CHECK-DAG:   store i[[SZ]] 2, i[[SZ]]* [[CPADDR1:%.+]],
+// CHECK-DAG:   [[CBPADDR1]] = bitcast i8** {{%[^,]+}} to i[[SZ]]*
+// CHECK-DAG:   [[CPADDR1]] = bitcast i8** {{%[^,]+}} to i[[SZ]]*
 // CHECK-DAG:   store i[[SZ]] {{4|8}}, i[[SZ]]* {{%[^,]+}}
 
-// CHECK-DAG:   [[BP2:%[^,]+]] = inttoptr i[[SZ]] [[B_CVAL]] to i8*
-// CHECK-DAG:   [[P2:%[^,]+]] = inttoptr i[[SZ]] [[B_CVAL]] to i8*
-// CHECK-DAG:   store i8* [[BP2]], i8** {{%[^,]+}}
-// CHECK-DAG:   store i8* [[P2]], i8** {{%[^,]+}}
+// CHECK-DAG:   store i[[SZ]] [[B_CVAL]], i[[SZ]]* [[CBPADDR2:%.+]],
+// CHECK-DAG:   store i[[SZ]] [[B_CVAL]], i[[SZ]]* [[CPADDR2:%.+]],
+// CHECK-DAG:   [[CBPADDR2]] = bitcast i8** {{%[^,]+}} to i[[SZ]]*
+// CHECK-DAG:   [[CPADDR2]] = bitcast i8** {{%[^,]+}} to i[[SZ]]*
 // CHECK-DAG:   store i[[SZ]] 4, i[[SZ]]* {{%[^,]+}}
 
-// CHECK-DAG:   [[BP3:%[^,]+]] = bitcast [[S1]]* %{{.+}} to i8*
-// CHECK-DAG:   [[P3:%[^,]+]] = bitcast [[S1]]* %{{.+}} to i8*
-// CHECK-DAG:   store i8* [[BP3]], i8** {{%[^,]+}}
-// CHECK-DAG:   store i8* [[P3]], i8** {{%[^,]+}}
+// CHECK-DAG:   store [[S1]]* %{{.+}}, [[S1]]** [[CBPADDR3:%.+]],
+// CHECK-DAG:   store [[S1]]* %{{.+}}, [[S1]]** [[CPADDR3:%.+]],
+// CHECK-DAG:   [[CBPADDR3]] = bitcast i8** {{%[^,]+}} to [[S1]]**
+// CHECK-DAG:   [[CPADDR3]] = bitcast i8** {{%[^,]+}} to [[S1]]**
 // CHECK-DAG:   store i[[SZ]] 8, i[[SZ]]* {{%[^,]+}}
 
-// CHECK-DAG:   [[BP4:%[^,]+]] = bitcast i16* %{{.+}} to i8*
-// CHECK-DAG:   [[P4:%[^,]+]] = bitcast i16* %{{.+}} to i8*
-// CHECK-DAG:   store i8* [[BP4]], i8** {{%[^,]+}}
-// CHECK-DAG:   store i8* [[P4]], i8** {{%[^,]+}}
+// CHECK-DAG:   store i16* %{{.+}}, i16** [[CBPADDR4:%.+]],
+// CHECK-DAG:   store i16* %{{.+}}, i16** [[CPADDR4:%.+]],
+// CHECK-DAG:   [[CBPADDR4]] = bitcast i8** {{%[^,]+}} to i16**
+// CHECK-DAG:   [[CPADDR4]] = bitcast i8** {{%[^,]+}} to i16**
 // CHECK-DAG:   store i[[SZ]] [[CSIZE]], i[[SZ]]* {{%[^,]+}}
 
 // CHECK:       store i32 [[RET]], i32* [[RHV:%.+]], align 4
@@ -600,29 +604,31 @@ int bar(int n){
 
 // CHECK-DAG:   [[BPADDR0:%.+]] = getelementptr inbounds [4 x i8*], [4 x i8*]* [[BP]], i32 0, i32 0
 // CHECK-DAG:   [[PADDR0:%.+]] = getelementptr inbounds [4 x i8*], [4 x i8*]* [[P]], i32 0, i32 0
-// CHECK-DAG:   store i8* [[BP0:%[^,]+]], i8** [[BPADDR0]]
-// CHECK-DAG:   store i8* [[P0:%[^,]+]], i8** [[PADDR0]]
-// CHECK-DAG:   [[BP0]] = inttoptr i[[SZ]] [[VAL0:%.+]] to i8*
-// CHECK-DAG:   [[P0]] = inttoptr i[[SZ]] [[VAL0]] to i8*
+// CHECK-DAG:   [[CBPADDR0:%.+]] = bitcast i8** [[BPADDR0]] to i[[SZ]]*
+// CHECK-DAG:   [[CPADDR0:%.+]] = bitcast i8** [[PADDR0]] to i[[SZ]]*
+// CHECK-DAG:   store i[[SZ]] [[VAL0:%.+]], i[[SZ]]* [[CBPADDR0]],
+// CHECK-DAG:   store i[[SZ]] [[VAL0]], i[[SZ]]* [[CPADDR0]],
 
 // CHECK-DAG:   [[BPADDR1:%.+]] = getelementptr inbounds [4 x i8*], [4 x i8*]* [[BP]], i32 0, i32 1
 // CHECK-DAG:   [[PADDR1:%.+]] = getelementptr inbounds [4 x i8*], [4 x i8*]* [[P]], i32 0, i32 1
-// CHECK-DAG:   store i8* [[BP1:%[^,]+]], i8** [[BPADDR1]]
-// CHECK-DAG:   store i8* [[P1:%[^,]+]], i8** [[PADDR1]]
-// CHECK-DAG:   [[BP1]] = inttoptr i[[SZ]] [[VAL1:%.+]] to i8*
-// CHECK-DAG:   [[P1]] = inttoptr i[[SZ]] [[VAL1]] to i8*
+// CHECK-DAG:   [[CBPADDR1:%.+]] = bitcast i8** [[BPADDR1]] to i[[SZ]]*
+// CHECK-DAG:   [[CPADDR1:%.+]] = bitcast i8** [[PADDR1]] to i[[SZ]]*
+// CHECK-DAG:   store i[[SZ]] [[VAL1:%.+]], i[[SZ]]* [[CBPADDR1]],
+// CHECK-DAG:   store i[[SZ]] [[VAL1]], i[[SZ]]* [[CPADDR1]],
 
 // CHECK-DAG:   [[BPADDR2:%.+]] = getelementptr inbounds [4 x i8*], [4 x i8*]* [[BP]], i32 0, i32 2
 // CHECK-DAG:   [[PADDR2:%.+]] = getelementptr inbounds [4 x i8*], [4 x i8*]* [[P]], i32 0, i32 2
-// CHECK-DAG:   store i8* [[BP2:%[^,]+]], i8** [[BPADDR2]]
-// CHECK-DAG:   store i8* [[P2:%[^,]+]], i8** [[PADDR2]]
+// CHECK-DAG:   [[CBPADDR2:%.+]] = bitcast i8** [[BPADDR2]] to i[[SZ]]*
+// CHECK-DAG:   [[CPADDR2:%.+]] = bitcast i8** [[PADDR2]] to i[[SZ]]*
+// CHECK-DAG:   store i[[SZ]] [[VAL2:%.+]], i[[SZ]]* [[CBPADDR2]],
+// CHECK-DAG:   store i[[SZ]] [[VAL2]], i[[SZ]]* [[CPADDR2]],
 
 // CHECK-DAG:   [[BPADDR3:%.+]] = getelementptr inbounds [4 x i8*], [4 x i8*]* [[BP]], i32 0, i32 3
 // CHECK-DAG:   [[PADDR3:%.+]] = getelementptr inbounds [4 x i8*], [4 x i8*]* [[P]], i32 0, i32 3
-// CHECK-DAG:   store i8* [[BP3:%[^,]+]], i8** [[BPADDR3]]
-// CHECK-DAG:   store i8* [[P3:%[^,]+]], i8** [[PADDR3]]
-// CHECK-DAG:   [[BP3]] = bitcast [10 x i32]* %{{.+}} to i8*
-// CHECK-DAG:   [[P3]] = bitcast [10 x i32]* %{{.+}} to i8*
+// CHECK-DAG:   [[CBPADDR3:%.+]] = bitcast i8** [[BPADDR3]] to [10 x i32]**
+// CHECK-DAG:   [[CPADDR3:%.+]] = bitcast i8** [[PADDR3]] to [10 x i32]**
+// CHECK-DAG:   store [10 x i32]* [[VAL3:%.+]], [10 x i32]** [[CBPADDR3]],
+// CHECK-DAG:   store [10 x i32]* [[VAL3]], [10 x i32]** [[CPADDR3]],
 
 // CHECK:       store i32 [[RET]], i32* [[RHV:%.+]], align 4
 // CHECK-NEXT:  br label %[[IFEND:.+]]
@@ -652,24 +658,24 @@ int bar(int n){
 
 // CHECK-DAG:   [[BPADDR0:%.+]] = getelementptr inbounds [3 x i8*], [3 x i8*]* [[BP]], i32 0, i32 0
 // CHECK-DAG:   [[PADDR0:%.+]] = getelementptr inbounds [3 x i8*], [3 x i8*]* [[P]], i32 0, i32 0
-// CHECK-DAG:   store i8* [[BP0:%[^,]+]], i8** [[BPADDR0]]
-// CHECK-DAG:   store i8* [[P0:%[^,]+]], i8** [[PADDR0]]
-// CHECK-DAG:   [[BP0]] = inttoptr i[[SZ]] [[VAL0:%.+]] to i8*
-// CHECK-DAG:   [[P0]] = inttoptr i[[SZ]] [[VAL0]] to i8*
+// CHECK-DAG:   [[CBPADDR0:%.+]] = bitcast i8** [[BPADDR0]] to i[[SZ]]*
+// CHECK-DAG:   [[CPADDR0:%.+]] = bitcast i8** [[PADDR0]] to i[[SZ]]*
+// CHECK-DAG:   store i[[SZ]] [[VAL0:%.+]], i[[SZ]]* [[CBPADDR0]],
+// CHECK-DAG:   store i[[SZ]] [[VAL0]], i[[SZ]]* [[CPADDR0]],
 
 // CHECK-DAG:   [[BPADDR1:%.+]] = getelementptr inbounds [3 x i8*], [3 x i8*]* [[BP]], i32 0, i32 1
 // CHECK-DAG:   [[PADDR1:%.+]] = getelementptr inbounds [3 x i8*], [3 x i8*]* [[P]], i32 0, i32 1
-// CHECK-DAG:   store i8* [[BP1:%[^,]+]], i8** [[BPADDR1]]
-// CHECK-DAG:   store i8* [[P1:%[^,]+]], i8** [[PADDR1]]
-// CHECK-DAG:   [[BP1]] = inttoptr i[[SZ]] [[VAL1:%.+]] to i8*
-// CHECK-DAG:   [[P1]] = inttoptr i[[SZ]] [[VAL1]] to i8*
+// CHECK-DAG:   [[CBPADDR1:%.+]] = bitcast i8** [[BPADDR1]] to i[[SZ]]*
+// CHECK-DAG:   [[CPADDR1:%.+]] = bitcast i8** [[PADDR1]] to i[[SZ]]*
+// CHECK-DAG:   store i[[SZ]] [[VAL1:%.+]], i[[SZ]]* [[CBPADDR1]],
+// CHECK-DAG:   store i[[SZ]] [[VAL1]], i[[SZ]]* [[CPADDR1]],
 
 // CHECK-DAG:   [[BPADDR2:%.+]] = getelementptr inbounds [3 x i8*], [3 x i8*]* [[BP]], i32 0, i32 2
 // CHECK-DAG:   [[PADDR2:%.+]] = getelementptr inbounds [3 x i8*], [3 x i8*]* [[P]], i32 0, i32 2
-// CHECK-DAG:   store i8* [[BP2:%[^,]+]], i8** [[BPADDR2]]
-// CHECK-DAG:   store i8* [[P2:%[^,]+]], i8** [[PADDR2]]
-// CHECK-DAG:   [[BP2]] = bitcast [10 x i32]* %{{.+}} to i8*
-// CHECK-DAG:   [[P2]] = bitcast [10 x i32]* %{{.+}} to i8*
+// CHECK-DAG:   [[CBPADDR2:%.+]] = bitcast i8** [[BPADDR2]] to [10 x i32]**
+// CHECK-DAG:   [[CPADDR2:%.+]] = bitcast i8** [[PADDR2]] to [10 x i32]**
+// CHECK-DAG:   store [10 x i32]* [[VAL2:%.+]], [10 x i32]** [[CBPADDR2]],
+// CHECK-DAG:   store [10 x i32]* [[VAL2]], [10 x i32]** [[CPADDR2]],
 
 // CHECK:       store i32 [[RET]], i32* [[RHV:%.+]], align 4
 // CHECK-NEXT:  br label %[[IFEND:.+]]

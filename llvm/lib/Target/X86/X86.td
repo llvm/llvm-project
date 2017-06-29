@@ -300,6 +300,8 @@ def ProcIntelAtom : SubtargetFeature<"atom", "X86ProcFamily", "IntelAtom",
                     "Intel Atom processors">;
 def ProcIntelSLM  : SubtargetFeature<"slm", "X86ProcFamily", "IntelSLM",
                     "Intel Silvermont processors">;
+def ProcIntelGLM  : SubtargetFeature<"glm", "X86ProcFamily", "IntelGLM",
+                    "Intel Goldmont processors">;
 
 class Proc<string Name, list<SubtargetFeature> Features>
  : ProcessorModel<Name, GenericModel, Features>;
@@ -429,6 +431,34 @@ class SilvermontProc<string Name> : ProcessorModel<Name, SLMModel, [
 ]>;
 def : SilvermontProc<"silvermont">;
 def : SilvermontProc<"slm">; // Legacy alias.
+
+class GoldmontProc<string Name> : ProcessorModel<Name, SLMModel, [
+  ProcIntelGLM,
+  FeatureX87,
+  FeatureMMX,
+  FeatureSSE42,
+  FeatureFXSR,
+  FeatureCMPXCHG16B,
+  FeatureMOVBE,
+  FeaturePOPCNT,
+  FeaturePCLMUL,
+  FeatureAES,
+  FeaturePRFCHW,
+  FeatureCallRegIndirect,
+  FeatureSlowLEA,
+  FeatureSlowIncDec,
+  FeatureSlowBTMem,
+  FeatureLAHFSAHF,
+  FeatureMPX,
+  FeatureSHA,
+  FeatureRDSEED,
+  FeatureXSAVE,
+  FeatureXSAVEOPT,
+  FeatureXSAVEC,
+  FeatureXSAVES,
+  FeatureCLFLUSHOPT
+]>;
+def : GoldmontProc<"goldmont">;
 
 // "Arrandale" along with corei3 and corei5
 class NehalemProc<string Name> : ProcessorModel<Name, SandyBridgeModel, [

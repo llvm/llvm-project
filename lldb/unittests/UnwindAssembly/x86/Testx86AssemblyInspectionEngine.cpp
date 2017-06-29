@@ -18,6 +18,7 @@
 #include "lldb/Core/AddressRange.h"
 #include "lldb/Core/ArchSpec.h"
 #include "lldb/Symbol/UnwindPlan.h"
+#include "lldb/Utility/StreamString.h"
 
 #include "llvm/Support/TargetSelect.h"
 
@@ -129,6 +130,15 @@ std::unique_ptr<x86AssemblyInspectionEngine> Geti386Inspector() {
   engine->Initialize(lldb_regnums);
   return engine;
 }
+
+namespace lldb_private {
+static std::ostream &operator<<(std::ostream &OS,
+                                const UnwindPlan::Row::CFAValue &CFA) {
+  StreamString S;
+  CFA.Dump(S, nullptr, nullptr);
+  return OS << S.GetData();
+}
+} // namespace lldb_private
 
 TEST_F(Testx86AssemblyInspectionEngine, TestSimple64bitFrameFunction) {
   std::unique_ptr<x86AssemblyInspectionEngine> engine = Getx86_64Inspector();
@@ -2336,4 +2346,72 @@ TEST_F(Testx86AssemblyInspectionEngine, Test32BitOnlyInstruction) {
   EXPECT_EQ(8, row_sp->GetCFAValue().GetOffset());
 
   EXPECT_FALSE(row_sp->GetRegisterInfo(k_rbp, regloc));
+}
+
+TEST_F(Testx86AssemblyInspectionEngine, TestStackRealign8BitDisp_i386) {
+  std::unique_ptr<x86AssemblyInspectionEngine> engine = Geti386Inspector();
+
+  uint8_t data[] = {
+      0x55,             // pushl %ebp
+      0x89, 0xe5,       // movl %esp, %ebp
+      0x53,             // pushl %ebx
+      0x83, 0xe4, 0xf0, // andl $-16, %esp
+      0x83, 0xec, 0x10, // subl $16, %esp
+      0x8d, 0x65, 0xfc, // leal -4(%ebp), %esp
+      0x5b,             // popl %ebx
+      0x5d,             // popl %ebp
+      0xc3,             // retl
+  };
+
+  AddressRange sample_range(0x1000, sizeof(data));
+  UnwindPlan plan(eRegisterKindLLDB);
+  ASSERT_TRUE(engine->GetNonCallSiteUnwindPlanFromAssembly(data, sizeof(data),
+                                                           sample_range, plan));
+
+  UnwindPlan::Row::CFAValue esp_plus_4, esp_plus_8, ebp_plus_8;
+  esp_plus_4.SetIsRegisterPlusOffset(k_esp, 4);
+  esp_plus_8.SetIsRegisterPlusOffset(k_esp, 8);
+  ebp_plus_8.SetIsRegisterPlusOffset(k_ebp, 8);
+
+  EXPECT_EQ(esp_plus_4, plan.GetRowForFunctionOffset(0)->GetCFAValue());
+  EXPECT_EQ(esp_plus_8, plan.GetRowForFunctionOffset(1)->GetCFAValue());
+  for (size_t i = 3; i < sizeof(data) - 2; ++i)
+    EXPECT_EQ(ebp_plus_8, plan.GetRowForFunctionOffset(i)->GetCFAValue())
+        << "i: " << i;
+  EXPECT_EQ(esp_plus_4,
+            plan.GetRowForFunctionOffset(sizeof(data) - 1)->GetCFAValue());
+}
+
+TEST_F(Testx86AssemblyInspectionEngine, TestStackRealign32BitDisp_x86_64) {
+  std::unique_ptr<x86AssemblyInspectionEngine> engine = Getx86_64Inspector();
+
+  uint8_t data[] = {
+      0x55,                                     // pushq %rbp
+      0x48, 0x89, 0xe5,                         // movq %rsp, %rbp
+      0x53,                                     // pushl %rbx
+      0x48, 0x83, 0xe4, 0xf0,                   // andq $-16, %rsp
+      0x48, 0x81, 0xec, 0x00, 0x01, 0x00, 0x00, // subq $256, %rsp
+      0x48, 0x8d, 0x65, 0xf8,                   // leaq -8(%rbp), %rsp
+      0x5b,                                     // popq %rbx
+      0x5d,                                     // popq %rbp
+      0xc3,                                     // retq
+  };
+
+  AddressRange sample_range(0x1000, sizeof(data));
+  UnwindPlan plan(eRegisterKindLLDB);
+  ASSERT_TRUE(engine->GetNonCallSiteUnwindPlanFromAssembly(data, sizeof(data),
+                                                           sample_range, plan));
+
+  UnwindPlan::Row::CFAValue rsp_plus_8, rsp_plus_16, rbp_plus_16;
+  rsp_plus_8.SetIsRegisterPlusOffset(k_rsp, 8);
+  rsp_plus_16.SetIsRegisterPlusOffset(k_rsp, 16);
+  rbp_plus_16.SetIsRegisterPlusOffset(k_rbp, 16);
+
+  EXPECT_EQ(rsp_plus_8, plan.GetRowForFunctionOffset(0)->GetCFAValue());
+  EXPECT_EQ(rsp_plus_16, plan.GetRowForFunctionOffset(1)->GetCFAValue());
+  for (size_t i = 4; i < sizeof(data) - 2; ++i)
+    EXPECT_EQ(rbp_plus_16, plan.GetRowForFunctionOffset(i)->GetCFAValue())
+        << "i: " << i;
+  EXPECT_EQ(rsp_plus_8,
+            plan.GetRowForFunctionOffset(sizeof(data) - 1)->GetCFAValue());
 }

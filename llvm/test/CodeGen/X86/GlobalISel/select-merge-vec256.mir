@@ -1,0 +1,52 @@
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx               -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=AVX
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx512f,+avx512vl -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=AVX512VL
+--- |
+  define void @test_merge() {
+    ret void
+  }
+...
+---
+name:            test_merge
+# AVX-LABEL: name:  test_merge
+#
+# AVX512VL-LABEL: name:  test_merge
+alignment:       4
+legalized:       true
+regBankSelected: true
+# AVX:           registers:
+# AVX-NEXT:        - { id: 0, class: vr128, preferred-register: '' }
+# AVX-NEXT:        - { id: 1, class: vr256, preferred-register: '' }
+# AVX-NEXT:        - { id: 2, class: vr256, preferred-register: '' }
+# AVX-NEXT:        - { id: 3, class: vr256, preferred-register: '' }
+#
+# AVX512VL:      registers:
+# AVX512VL-NEXT:   - { id: 0, class: vr128x, preferred-register: '' }
+# AVX512VL-NEXT:   - { id: 1, class: vr256x, preferred-register: '' }
+# AVX512VL-NEXT:   - { id: 2, class: vr256x, preferred-register: '' }
+# AVX512VL-NEXT:   - { id: 3, class: vr256x, preferred-register: '' }
+registers:
+  - { id: 0, class: vecr }
+  - { id: 1, class: vecr }
+# AVX:               %0 = IMPLICIT_DEF
+# AVX-NEXT:          undef %2.sub_xmm = COPY %0
+# AVX-NEXT:          %3 = VINSERTF128rr %2, %0, 1
+# AVX-NEXT:          %1 = COPY %3
+# AVX-NEXT:          %ymm0 = COPY %1
+# AVX-NEXT:          RET 0, implicit %ymm0
+#
+# AVX512VL:          %0 = IMPLICIT_DEF
+# AVX512VL-NEXT:     undef %2.sub_xmm = COPY %0
+# AVX512VL-NEXT:     %3 = VINSERTF32x4Z256rr %2, %0, 1
+# AVX512VL-NEXT:     %1 = COPY %3
+# AVX512VL-NEXT:     %ymm0 = COPY %1
+# AVX512VL-NEXT:     RET 0, implicit %ymm0
+body:             |
+  bb.1 (%ir-block.0):
+
+    %0(<4 x s32>) = IMPLICIT_DEF
+    %1(<8 x s32>) = G_MERGE_VALUES %0(<4 x s32>), %0(<4 x s32>)
+    %ymm0 = COPY %1(<8 x s32>)
+    RET 0, implicit %ymm0
+
+...
+

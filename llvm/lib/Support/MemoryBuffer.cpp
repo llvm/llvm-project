@@ -240,11 +240,9 @@ getMemoryBufferForStream(int FD, const Twine &BufferName) {
   // Read into Buffer until we hit EOF.
   do {
     Buffer.reserve(Buffer.size() + ChunkSize);
-    ReadBytes = read(FD, Buffer.end(), ChunkSize);
-    if (ReadBytes == -1) {
-      if (errno == EINTR) continue;
+    ReadBytes = sys::RetryAfterSignal(-1, read, FD, Buffer.end(), ChunkSize);
+    if (ReadBytes == -1)
       return std::error_code(errno, std::generic_category());
-    }
     Buffer.set_size(Buffer.size() + ReadBytes);
   } while (ReadBytes != 0);
 
@@ -391,13 +389,12 @@ getOpenFileImpl(int FD, const Twine &Filename, uint64_t FileSize,
 
   while (BytesLeft) {
 #ifdef HAVE_PREAD
-    ssize_t NumRead = ::pread(FD, BufPtr, BytesLeft, MapSize-BytesLeft+Offset);
+    ssize_t NumRead = sys::RetryAfterSignal(-1, ::pread, FD, BufPtr, BytesLeft,
+                                            MapSize - BytesLeft + Offset);
 #else
-    ssize_t NumRead = ::read(FD, BufPtr, BytesLeft);
+    ssize_t NumRead = sys::RetryAfterSignal(-1, ::read, FD, BufPtr, BytesLeft);
 #endif
     if (NumRead == -1) {
-      if (errno == EINTR)
-        continue;
       // Error while reading.
       return std::error_code(errno, std::generic_category());
     }

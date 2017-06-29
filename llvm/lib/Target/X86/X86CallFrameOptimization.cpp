@@ -234,12 +234,6 @@ bool X86CallFrameOptimization::runOnMachineFunction(MachineFunction &MF) {
   assert(isPowerOf2_32(SlotSize) && "Expect power of 2 stack slot size");
   Log2SlotSize = Log2_32(SlotSize);
 
-  // Set initial incoming and outgoing cfa offset and register values for basic
-  // blocks. This is done here because this pass runs before PEI and can insert
-  // CFI instructions.
-  // TODO: Find a better solution to this problem.
-  TFL->initializeCFIInfo(MF);
-
   if (skipFunction(*MF.getFunction()) || !isLegal(MF))
     return false;
 
@@ -542,13 +536,11 @@ void X86CallFrameOptimization::adjustCallSequence(MachineFunction &MF,
     // For debugging, when using SP-based CFA, we need to adjust the CFA
     // offset after each push.
     // TODO: This is needed only if we require precise CFA.
-    if (!TFL->hasFP(MF)) {
-      TFL->BuildCFI(MBB, std::next(Push), DL,
-                    MCCFIInstruction::createAdjustCfaOffset(nullptr, SlotSize));
-      // Update the CFI information for MBB and it's successors.
-      MBB.updateCFIInfo(std::next(Push));
-      MBB.updateCFIInfoSucc();
-    }
+    if (!TFL->hasFP(MF))
+      TFL->BuildCFI(
+          MBB, std::next(Push), DL,
+          MCCFIInstruction::createAdjustCfaOffset(nullptr, SlotSize));
+
     MBB.erase(MOV);
   }
 

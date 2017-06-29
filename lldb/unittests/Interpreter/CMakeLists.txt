@@ -4,7 +4,7 @@ add_lldb_unittest(InterpreterTests
 
   LINK_LIBS
     lldbInterpreter
-    lldbUtilityMocks
+    lldbUtilityHelpers
   )
 
 target_link_libraries(InterpreterTests

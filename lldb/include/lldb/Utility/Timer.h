@@ -12,27 +12,15 @@
 
 #include "lldb/lldb-defines.h" // for DISALLOW_COPY_AND_ASSIGN
 #include "llvm/Support/Chrono.h"
-
 #include <atomic>
-
 #include <stdint.h> // for uint32_t
 
 namespace lldb_private {
 class Stream;
-}
-
-namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class Timer Timer.h "lldb/Core/Timer.h"
+/// @class Timer Timer.h "lldb/Utility/Timer.h"
 /// @brief A timer class that simplifies common timing metrics.
-///
-/// A scoped timer class that allows a variety of pthread mutex
-/// objects to have a mutex locked when a Timer::Locker
-/// object is created, and unlocked when it goes out of scope or
-/// when the Timer::Locker::Reset(pthread_mutex_t *)
-/// is called. This provides an exception safe way to lock a mutex
-/// in a scope.
 //----------------------------------------------------------------------
 
 class Timer {

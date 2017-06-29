@@ -22,8 +22,7 @@
 #include "sanitizer_common/sanitizer_allocator_interface.h"
 #include "sanitizer_common/sanitizer_quarantine.h"
 
-#include <limits.h>
-#include <pthread.h>
+#include <errno.h>
 #include <string.h>
 
 namespace __scudo {
@@ -341,7 +340,7 @@ struct ScudoAllocator {
   // Helper function that checks for a valid Scudo chunk. nullptr isn't.
   bool isValidPointer(const void *UserPtr) {
     initThreadMaybe();
-    if (!UserPtr)
+    if (UNLIKELY(!UserPtr))
       return false;
     uptr UserBeg = reinterpret_cast<uptr>(UserPtr);
     if (!IsAligned(UserBeg, MinAlignment))
@@ -353,22 +352,19 @@ struct ScudoAllocator {
   void *allocate(uptr Size, uptr Alignment, AllocType Type,
                  bool ForceZeroContents = false) {
     initThreadMaybe();
-    if (UNLIKELY(!IsPowerOfTwo(Alignment))) {
-      dieWithMessage("ERROR: alignment is not a power of 2\n");
-    }
-    if (Alignment > MaxAlignment)
+    if (UNLIKELY(Alignment > MaxAlignment))
       return FailureHandler::OnBadRequest();
-    if (Alignment < MinAlignment)
+    if (UNLIKELY(Alignment < MinAlignment))
       Alignment = MinAlignment;
-    if (Size >= MaxAllowedMallocSize)
+    if (UNLIKELY(Size >= MaxAllowedMallocSize))
       return FailureHandler::OnBadRequest();
-    if (Size == 0)
+    if (UNLIKELY(Size == 0))
       Size = 1;
 
     uptr NeededSize = RoundUpTo(Size, MinAlignment) + AlignedChunkHeaderSize;
     uptr AlignedSize = (Alignment > MinAlignment) ?
         NeededSize + (Alignment - AlignedChunkHeaderSize) : NeededSize;
-    if (AlignedSize >= MaxAllowedMallocSize)
+    if (UNLIKELY(AlignedSize >= MaxAllowedMallocSize))
       return FailureHandler::OnBadRequest();
 
     // Primary and Secondary backed allocations have a different treatment. We
@@ -393,7 +389,7 @@ struct ScudoAllocator {
       Ptr = BackendAllocator.Allocate(&FallbackAllocatorCache, AllocationSize,
                                       AllocationAlignment, FromPrimary);
     }
-    if (!Ptr)
+    if (UNLIKELY(!Ptr))
       return FailureHandler::OnOOM();
 
     // If requested, we will zero out the entire contents of the returned chunk.
@@ -404,7 +400,7 @@ struct ScudoAllocator {
     UnpackedHeader Header = {};
     uptr AllocBeg = reinterpret_cast<uptr>(Ptr);
     uptr UserBeg = AllocBeg + AlignedChunkHeaderSize;
-    if (!IsAligned(UserBeg, Alignment)) {
+    if (UNLIKELY(!IsAligned(UserBeg, Alignment))) {
       // Since the Secondary takes care of alignment, a non-aligned pointer
       // means it is from the Primary. It is also the only case where the offset
       // field of the header would be non-zero.
@@ -481,7 +477,7 @@ struct ScudoAllocator {
   void deallocate(void *UserPtr, uptr DeleteSize, AllocType Type) {
     initThreadMaybe();
     // if (&__sanitizer_free_hook) __sanitizer_free_hook(UserPtr);
-    if (!UserPtr)
+    if (UNLIKELY(!UserPtr))
       return;
     uptr UserBeg = reinterpret_cast<uptr>(UserPtr);
     if (UNLIKELY(!IsAligned(UserBeg, MinAlignment))) {
@@ -568,7 +564,7 @@ struct ScudoAllocator {
   // Helper function that returns the actual usable size of a chunk.
   uptr getUsableSize(const void *Ptr) {
     initThreadMaybe();
-    if (!Ptr)
+    if (UNLIKELY(!Ptr))
       return 0;
     uptr UserBeg = reinterpret_cast<uptr>(Ptr);
     ScudoChunk *Chunk = getScudoChunk(UserBeg);
@@ -584,10 +580,10 @@ struct ScudoAllocator {
 
   void *calloc(uptr NMemB, uptr Size) {
     initThreadMaybe();
-    uptr Total = NMemB * Size;
-    if (Size != 0 && Total / Size != NMemB)  // Overflow check
+    // TODO(kostyak): switch to CheckForCallocOverflow once D34799 lands.
+    if (CallocShouldReturnNullDueToOverflow(NMemB, Size))
       return FailureHandler::OnBadRequest();
-    return allocate(Total, MinAlignment, FromMalloc, true);
+    return allocate(NMemB * Size, MinAlignment, FromMalloc, true);
   }
 
   void commitBack(ScudoThreadContext *ThreadContext) {
@@ -655,10 +651,6 @@ void *scudoValloc(uptr Size) {
   return Instance.allocate(Size, GetPageSizeCached(), FromMemalign);
 }
 
-void *scudoMemalign(uptr Alignment, uptr Size) {
-  return Instance.allocate(Size, Alignment, FromMemalign);
-}
-
 void *scudoPvalloc(uptr Size) {
   uptr PageSize = GetPageSizeCached();
   Size = RoundUpTo(Size, PageSize);
@@ -669,16 +661,27 @@ void *scudoPvalloc(uptr Size) {
   return Instance.allocate(Size, PageSize, FromMemalign);
 }
 
+void *scudoMemalign(uptr Alignment, uptr Size) {
+  if (UNLIKELY(!IsPowerOfTwo(Alignment)))
+    return ScudoAllocator::FailureHandler::OnBadRequest();
+  return Instance.allocate(Size, Alignment, FromMemalign);
+}
+
 int scudoPosixMemalign(void **MemPtr, uptr Alignment, uptr Size) {
+  if (UNLIKELY(!IsPowerOfTwo(Alignment) || (Alignment % sizeof(void *)) != 0)) {
+    *MemPtr = ScudoAllocator::FailureHandler::OnBadRequest();
+    return EINVAL;
+  }
   *MemPtr = Instance.allocate(Size, Alignment, FromMemalign);
+  if (!*MemPtr)
+    return ENOMEM;
   return 0;
 }
 
 void *scudoAlignedAlloc(uptr Alignment, uptr Size) {
-  // size must be a multiple of the alignment. To avoid a division, we first
-  // make sure that alignment is a power of 2.
-  CHECK(IsPowerOfTwo(Alignment));
-  CHECK_EQ((Size & (Alignment - 1)), 0);
+  // Alignment must be a power of 2, Size must be a multiple of Alignment.
+  if (UNLIKELY(!IsPowerOfTwo(Alignment) || (Size & (Alignment - 1)) != 0))
+    return ScudoAllocator::FailureHandler::OnBadRequest();
   return Instance.allocate(Size, Alignment, FromMalloc);
 }
 

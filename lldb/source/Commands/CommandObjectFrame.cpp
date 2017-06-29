@@ -17,7 +17,6 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/StreamFile.h"
-#include "lldb/Core/Timer.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Core/ValueObjectVariable.h"
@@ -47,6 +46,7 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/Utility/Timer.h"
 
 using namespace lldb;
 using namespace lldb_private;

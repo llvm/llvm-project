@@ -2018,56 +2018,13 @@ bool SourceManager::isBeforeInTranslationUnit(SourceLocation LHS,
   if (LOffs.first.isInvalid() || ROffs.first.isInvalid())
     return LOffs.first.isInvalid() && !ROffs.first.isInvalid();
 
-  // If the source locations are in the same file, just compare offsets.
-  if (LOffs.first == ROffs.first)
-    return LOffs.second < ROffs.second;
-
-  // If we are comparing a source location with multiple locations in the same
-  // file, we get a big win by caching the result.
-  InBeforeInTUCacheEntry &IsBeforeInTUCache =
-    getInBeforeInTUCache(LOffs.first, ROffs.first);
-
-  // If we are comparing a source location with multiple locations in the same
-  // file, we get a big win by caching the result.
-  if (IsBeforeInTUCache.isCacheValid(LOffs.first, ROffs.first))
-    return IsBeforeInTUCache.getCachedResult(LOffs.second, ROffs.second);
-
-  // Okay, we missed in the cache, start updating the cache for this query.
-  IsBeforeInTUCache.setQueryFIDs(LOffs.first, ROffs.first,
-                          /*isLFIDBeforeRFID=*/LOffs.first.ID < ROffs.first.ID);
-
-  // We need to find the common ancestor. The only way of doing this is to
-  // build the complete include chain for one and then walking up the chain
-  // of the other looking for a match.
-  // We use a map from FileID to Offset to store the chain. Easier than writing
-  // a custom set hash info that only depends on the first part of a pair.
-  typedef llvm::SmallDenseMap<FileID, unsigned, 16> LocSet;
-  LocSet LChain;
-  do {
-    LChain.insert(LOffs);
-    // We catch the case where LOffs is in a file included by ROffs and
-    // quit early. The other way round unfortunately remains suboptimal.
-  } while (LOffs.first != ROffs.first && !MoveUpIncludeHierarchy(LOffs, *this));
-  LocSet::iterator I;
-  while((I = LChain.find(ROffs.first)) == LChain.end()) {
-    if (MoveUpIncludeHierarchy(ROffs, *this))
-      break; // Met at topmost file.
-  }
-  if (I != LChain.end())
-    LOffs = *I;
-
-  // If we exited because we found a nearest common ancestor, compare the
-  // locations within the common file and cache them.
-  if (LOffs.first == ROffs.first) {
-    IsBeforeInTUCache.setCommonLoc(LOffs.first, LOffs.second, ROffs.second);
-    return IsBeforeInTUCache.getCachedResult(LOffs.second, ROffs.second);
-  }
+  std::pair<bool, bool> InSameTU = isInTheSameTranslationUnit(LOffs, ROffs);
+  if (InSameTU.first)
+    return InSameTU.second;
 
   // If we arrived here, the location is either in a built-ins buffer or
   // associated with global inline asm. PR5662 and PR22576 are examples.
 
-  // Clear the lookup cache, it depends on a common location.
-  IsBeforeInTUCache.clear();
   StringRef LB = getBuffer(LOffs.first)->getBufferIdentifier();
   StringRef RB = getBuffer(ROffs.first)->getBufferIdentifier();
   bool LIsBuiltins = LB == "<built-in>";
@@ -2098,6 +2055,60 @@ bool SourceManager::isBeforeInTranslationUnit(SourceLocation LHS,
     return LOffs.second < ROffs.second;
   }
   llvm_unreachable("Unsortable locations found");
+}
+
+std::pair<bool, bool> SourceManager::isInTheSameTranslationUnit(
+    std::pair<FileID, unsigned> &LOffs,
+    std::pair<FileID, unsigned> &ROffs) const {
+  // If the source locations are in the same file, just compare offsets.
+  if (LOffs.first == ROffs.first)
+    return std::make_pair(true, LOffs.second < ROffs.second);
+
+  // If we are comparing a source location with multiple locations in the same
+  // file, we get a big win by caching the result.
+  InBeforeInTUCacheEntry &IsBeforeInTUCache =
+    getInBeforeInTUCache(LOffs.first, ROffs.first);
+
+  // If we are comparing a source location with multiple locations in the same
+  // file, we get a big win by caching the result.
+  if (IsBeforeInTUCache.isCacheValid(LOffs.first, ROffs.first))
+    return std::make_pair(
+        true, IsBeforeInTUCache.getCachedResult(LOffs.second, ROffs.second));
+
+  // Okay, we missed in the cache, start updating the cache for this query.
+  IsBeforeInTUCache.setQueryFIDs(LOffs.first, ROffs.first,
+                          /*isLFIDBeforeRFID=*/LOffs.first.ID < ROffs.first.ID);
+
+  // We need to find the common ancestor. The only way of doing this is to
+  // build the complete include chain for one and then walking up the chain
+  // of the other looking for a match.
+  // We use a map from FileID to Offset to store the chain. Easier than writing
+  // a custom set hash info that only depends on the first part of a pair.
+  typedef llvm::SmallDenseMap<FileID, unsigned, 16> LocSet;
+  LocSet LChain;
+  do {
+    LChain.insert(LOffs);
+    // We catch the case where LOffs is in a file included by ROffs and
+    // quit early. The other way round unfortunately remains suboptimal.
+  } while (LOffs.first != ROffs.first && !MoveUpIncludeHierarchy(LOffs, *this));
+  LocSet::iterator I;
+  while((I = LChain.find(ROffs.first)) == LChain.end()) {
+    if (MoveUpIncludeHierarchy(ROffs, *this))
+      break; // Met at topmost file.
+  }
+  if (I != LChain.end())
+    LOffs = *I;
+
+  // If we exited because we found a nearest common ancestor, compare the
+  // locations within the common file and cache them.
+  if (LOffs.first == ROffs.first) {
+    IsBeforeInTUCache.setCommonLoc(LOffs.first, LOffs.second, ROffs.second);
+    return std::make_pair(
+        true, IsBeforeInTUCache.getCachedResult(LOffs.second, ROffs.second));
+  }
+  // Clear the lookup cache, it depends on a common location.
+  IsBeforeInTUCache.clear();
+  return std::make_pair(false, false);
 }
 
 void SourceManager::PrintStats() const {

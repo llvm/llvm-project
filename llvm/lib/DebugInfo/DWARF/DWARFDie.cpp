@@ -308,7 +308,7 @@ void DWARFDie::dump(raw_ostream &OS, unsigned RecurseDepth, unsigned Indent,
                     DIDumpOptions DumpOpts) const {
   if (!isValid())
     return;
-  DataExtractor debug_info_data = U->getDebugInfoExtractor();
+  DWARFDataExtractor debug_info_data = U->getDebugInfoExtractor();
   const uint32_t Offset = getOffset();
   uint32_t offset = Offset;
   

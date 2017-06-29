@@ -627,10 +627,8 @@ void ScopBuilder::buildAccessFunctions() {
 
 void ScopBuilder::buildStmts(Region &SR) {
   if (scop->isNonAffineSubRegion(&SR)) {
-    Loop *SurroundingLoop = LI.getLoopFor(SR.getEntry());
-    auto &BoxedLoops = scop->getBoxedLoops();
-    while (BoxedLoops.count(SurroundingLoop))
-      SurroundingLoop = SurroundingLoop->getParentLoop();
+    Loop *SurroundingLoop =
+        getFirstNonBoxedLoopFor(SR.getEntry(), LI, scop->getBoxedLoops());
     scop->addScopStmt(&SR, SurroundingLoop);
     return;
   }
@@ -930,6 +928,12 @@ static void verifyUses(Scop *S, LoopInfo &LI, DominatorTree &DT) {
 }
 #endif
 
+/// Return the block that is the representing block for @p RN.
+static inline BasicBlock *getRegionNodeBasicBlock(RegionNode *RN) {
+  return RN->isSubRegion() ? RN->getNodeAs<Region>()->getEntry()
+                           : RN->getNodeAs<BasicBlock>();
+}
+
 void ScopBuilder::buildScop(Region &R, AssumptionCache &AC) {
   scop.reset(new Scop(R, SE, LI, *SD.getDetectionContext(&R)));
 
@@ -959,10 +963,29 @@ void ScopBuilder::buildScop(Region &R, AssumptionCache &AC) {
 
   scop->buildInvariantEquivalenceClasses();
 
-  if (!scop->buildDomains(&R, DT, LI))
-    return;
+  /// A map from basic blocks to their invalid domains.
+  DenseMap<BasicBlock *, isl_set *> InvalidDomainMap;
 
-  scop->addUserAssumptions(AC, DT, LI);
+  if (!scop->buildDomains(&R, DT, LI, InvalidDomainMap)) {
+    for (auto It : InvalidDomainMap)
+      isl_set_free(It.second);
+    return;
+  }
+
+  scop->addUserAssumptions(AC, DT, LI, InvalidDomainMap);
+
+  // Initialize the invalid domain.
+  for (ScopStmt &Stmt : scop->Stmts)
+    if (Stmt.isBlockStmt())
+      Stmt.setInvalidDomain(
+          isl_set_copy(InvalidDomainMap[Stmt.getEntryBlock()]));
+    else
+      Stmt.setInvalidDomain(
+          isl_set_copy(InvalidDomainMap[getRegionNodeBasicBlock(
+              Stmt.getRegion()->getNode())]));
+
+  for (auto It : InvalidDomainMap)
+    isl_set_free(It.second);
 
   // Remove empty statements.
   // Exit early in case there are no executable statements left in this scop.

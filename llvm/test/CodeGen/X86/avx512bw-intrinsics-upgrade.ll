@@ -289,8 +289,6 @@ define i64 @test_pcmpeq_b(<64 x i8> %a, <64 x i8> %b) {
 ; AVX512F-32-NEXT:    movl (%esp), %eax
 ; AVX512F-32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; AVX512F-32-NEXT:    addl $12, %esp
-; AVX512F-32-NEXT:  .Lcfi1:
-; AVX512F-32-NEXT:    .cfi_def_cfa_offset 4
 ; AVX512F-32-NEXT:    retl
   %res = call i64 @llvm.x86.avx512.mask.pcmpeq.b.512(<64 x i8> %a, <64 x i8> %b, i64 -1)
   ret i64 %res
@@ -307,7 +305,7 @@ define i64 @test_mask_pcmpeq_b(<64 x i8> %a, <64 x i8> %b, i64 %mask) {
 ; AVX512F-32-LABEL: test_mask_pcmpeq_b:
 ; AVX512F-32:       # BB#0:
 ; AVX512F-32-NEXT:    subl $12, %esp
-; AVX512F-32-NEXT:  .Lcfi2:
+; AVX512F-32-NEXT:  .Lcfi1:
 ; AVX512F-32-NEXT:    .cfi_def_cfa_offset 16
 ; AVX512F-32-NEXT:    kmovq {{[0-9]+}}(%esp), %k1
 ; AVX512F-32-NEXT:    vpcmpeqb %zmm1, %zmm0, %k0 {%k1}
@@ -315,8 +313,6 @@ define i64 @test_mask_pcmpeq_b(<64 x i8> %a, <64 x i8> %b, i64 %mask) {
 ; AVX512F-32-NEXT:    movl (%esp), %eax
 ; AVX512F-32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; AVX512F-32-NEXT:    addl $12, %esp
-; AVX512F-32-NEXT:  .Lcfi3:
-; AVX512F-32-NEXT:    .cfi_def_cfa_offset 4
 ; AVX512F-32-NEXT:    retl
   %res = call i64 @llvm.x86.avx512.mask.pcmpeq.b.512(<64 x i8> %a, <64 x i8> %b, i64 %mask)
   ret i64 %res
@@ -370,15 +366,13 @@ define i64 @test_pcmpgt_b(<64 x i8> %a, <64 x i8> %b) {
 ; AVX512F-32-LABEL: test_pcmpgt_b:
 ; AVX512F-32:       # BB#0:
 ; AVX512F-32-NEXT:    subl $12, %esp
-; AVX512F-32-NEXT:  .Lcfi4:
+; AVX512F-32-NEXT:  .Lcfi2:
 ; AVX512F-32-NEXT:    .cfi_def_cfa_offset 16
 ; AVX512F-32-NEXT:    vpcmpgtb %zmm1, %zmm0, %k0
 ; AVX512F-32-NEXT:    kmovq %k0, (%esp)
 ; AVX512F-32-NEXT:    movl (%esp), %eax
 ; AVX512F-32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; AVX512F-32-NEXT:    addl $12, %esp
-; AVX512F-32-NEXT:  .Lcfi5:
-; AVX512F-32-NEXT:    .cfi_def_cfa_offset 4
 ; AVX512F-32-NEXT:    retl
   %res = call i64 @llvm.x86.avx512.mask.pcmpgt.b.512(<64 x i8> %a, <64 x i8> %b, i64 -1)
   ret i64 %res
@@ -395,7 +389,7 @@ define i64 @test_mask_pcmpgt_b(<64 x i8> %a, <64 x i8> %b, i64 %mask) {
 ; AVX512F-32-LABEL: test_mask_pcmpgt_b:
 ; AVX512F-32:       # BB#0:
 ; AVX512F-32-NEXT:    subl $12, %esp
-; AVX512F-32-NEXT:  .Lcfi6:
+; AVX512F-32-NEXT:  .Lcfi3:
 ; AVX512F-32-NEXT:    .cfi_def_cfa_offset 16
 ; AVX512F-32-NEXT:    kmovq {{[0-9]+}}(%esp), %k1
 ; AVX512F-32-NEXT:    vpcmpgtb %zmm1, %zmm0, %k0 {%k1}
@@ -403,8 +397,6 @@ define i64 @test_mask_pcmpgt_b(<64 x i8> %a, <64 x i8> %b, i64 %mask) {
 ; AVX512F-32-NEXT:    movl (%esp), %eax
 ; AVX512F-32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; AVX512F-32-NEXT:    addl $12, %esp
-; AVX512F-32-NEXT:  .Lcfi7:
-; AVX512F-32-NEXT:    .cfi_def_cfa_offset 4
 ; AVX512F-32-NEXT:    retl
   %res = call i64 @llvm.x86.avx512.mask.pcmpgt.b.512(<64 x i8> %a, <64 x i8> %b, i64 %mask)
   ret i64 %res
@@ -1601,7 +1593,7 @@ define i64 @test_cmp_b_512(<64 x i8> %a0, <64 x i8> %a1) {
 ; AVX512F-32-LABEL: test_cmp_b_512:
 ; AVX512F-32:       # BB#0:
 ; AVX512F-32-NEXT:    subl $60, %esp
-; AVX512F-32-NEXT:  .Lcfi8:
+; AVX512F-32-NEXT:  .Lcfi4:
 ; AVX512F-32-NEXT:    .cfi_def_cfa_offset 64
 ; AVX512F-32-NEXT:    vpcmpeqb %zmm1, %zmm0, %k0
 ; AVX512F-32-NEXT:    kmovq %k0, {{[0-9]+}}(%esp)
@@ -1632,8 +1624,6 @@ define i64 @test_cmp_b_512(<64 x i8> %a0, <64 x i8> %a1) {
 ; AVX512F-32-NEXT:    addl {{[0-9]+}}(%esp), %eax
 ; AVX512F-32-NEXT:    adcxl {{[0-9]+}}(%esp), %edx
 ; AVX512F-32-NEXT:    addl $60, %esp
-; AVX512F-32-NEXT:  .Lcfi9:
-; AVX512F-32-NEXT:    .cfi_def_cfa_offset 4
 ; AVX512F-32-NEXT:    retl
   %res0 = call i64 @llvm.x86.avx512.mask.cmp.b.512(<64 x i8> %a0, <64 x i8> %a1, i32 0, i64 -1)
   %res1 = call i64 @llvm.x86.avx512.mask.cmp.b.512(<64 x i8> %a0, <64 x i8> %a1, i32 1, i64 -1)
@@ -1683,17 +1673,17 @@ define i64 @test_mask_cmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %mask) {
 ; AVX512F-32-LABEL: test_mask_cmp_b_512:
 ; AVX512F-32:       # BB#0:
 ; AVX512F-32-NEXT:    pushl %ebx
-; AVX512F-32-NEXT:  .Lcfi10:
+; AVX512F-32-NEXT:  .Lcfi5:
 ; AVX512F-32-NEXT:    .cfi_def_cfa_offset 8
 ; AVX512F-32-NEXT:    pushl %esi
-; AVX512F-32-NEXT:  .Lcfi11:
+; AVX512F-32-NEXT:  .Lcfi6:
 ; AVX512F-32-NEXT:    .cfi_def_cfa_offset 12
 ; AVX512F-32-NEXT:    subl $60, %esp
-; AVX512F-32-NEXT:  .Lcfi12:
+; AVX512F-32-NEXT:  .Lcfi7:
 ; AVX512F-32-NEXT:    .cfi_def_cfa_offset 72
-; AVX512F-32-NEXT:  .Lcfi13:
+; AVX512F-32-NEXT:  .Lcfi8:
 ; AVX512F-32-NEXT:    .cfi_offset %esi, -12
-; AVX512F-32-NEXT:  .Lcfi14:
+; AVX512F-32-NEXT:  .Lcfi9:
 ; AVX512F-32-NEXT:    .cfi_offset %ebx, -8
 ; AVX512F-32-NEXT:    vmovdqa64 %zmm1, %zmm6
 ; AVX512F-32-NEXT:    vmovdqa64 %zmm0, %zmm5
@@ -2438,14 +2428,8 @@ define i64 @test_mask_cmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %mask) {
 ; AVX512F-32-NEXT:    addl %esi, %eax
 ; AVX512F-32-NEXT:    adcxl %ecx, %edx
 ; AVX512F-32-NEXT:    addl $60, %esp
-; AVX512F-32-NEXT:  .Lcfi15:
-; AVX512F-32-NEXT:    .cfi_def_cfa_offset 12
 ; AVX512F-32-NEXT:    popl %esi
-; AVX512F-32-NEXT:  .Lcfi16:
-; AVX512F-32-NEXT:    .cfi_def_cfa_offset 8
 ; AVX512F-32-NEXT:    popl %ebx
-; AVX512F-32-NEXT:  .Lcfi17:
-; AVX512F-32-NEXT:    .cfi_def_cfa_offset 4
 ; AVX512F-32-NEXT:    retl
   %res0 = call i64 @llvm.x86.avx512.mask.cmp.b.512(<64 x i8> %a0, <64 x i8> %a1, i32 0, i64 %mask)
   %res1 = call i64 @llvm.x86.avx512.mask.cmp.b.512(<64 x i8> %a0, <64 x i8> %a1, i32 1, i64 %mask)
@@ -2495,7 +2479,7 @@ define i64 @test_ucmp_b_512(<64 x i8> %a0, <64 x i8> %a1) {
 ; AVX512F-32-LABEL: test_ucmp_b_512:
 ; AVX512F-32:       # BB#0:
 ; AVX512F-32-NEXT:    subl $60, %esp
-; AVX512F-32-NEXT:  .Lcfi18:
+; AVX512F-32-NEXT:  .Lcfi10:
 ; AVX512F-32-NEXT:    .cfi_def_cfa_offset 64
 ; AVX512F-32-NEXT:    vpcmpeqb %zmm1, %zmm0, %k0
 ; AVX512F-32-NEXT:    kmovq %k0, {{[0-9]+}}(%esp)
@@ -2526,8 +2510,6 @@ define i64 @test_ucmp_b_512(<64 x i8> %a0, <64 x i8> %a1) {
 ; AVX512F-32-NEXT:    addl {{[0-9]+}}(%esp), %eax
 ; AVX512F-32-NEXT:    adcxl {{[0-9]+}}(%esp), %edx
 ; AVX512F-32-NEXT:    addl $60, %esp
-; AVX512F-32-NEXT:  .Lcfi19:
-; AVX512F-32-NEXT:    .cfi_def_cfa_offset 4
 ; AVX512F-32-NEXT:    retl
   %res0 = call i64 @llvm.x86.avx512.mask.ucmp.b.512(<64 x i8> %a0, <64 x i8> %a1, i32 0, i64 -1)
   %res1 = call i64 @llvm.x86.avx512.mask.ucmp.b.512(<64 x i8> %a0, <64 x i8> %a1, i32 1, i64 -1)
@@ -2577,17 +2559,17 @@ define i64 @test_mask_x86_avx512_ucmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %m
 ; AVX512F-32-LABEL: test_mask_x86_avx512_ucmp_b_512:
 ; AVX512F-32:       # BB#0:
 ; AVX512F-32-NEXT:    pushl %ebx
-; AVX512F-32-NEXT:  .Lcfi20:
+; AVX512F-32-NEXT:  .Lcfi11:
 ; AVX512F-32-NEXT:    .cfi_def_cfa_offset 8
 ; AVX512F-32-NEXT:    pushl %esi
-; AVX512F-32-NEXT:  .Lcfi21:
+; AVX512F-32-NEXT:  .Lcfi12:
 ; AVX512F-32-NEXT:    .cfi_def_cfa_offset 12
 ; AVX512F-32-NEXT:    subl $60, %esp
-; AVX512F-32-NEXT:  .Lcfi22:
+; AVX512F-32-NEXT:  .Lcfi13:
 ; AVX512F-32-NEXT:    .cfi_def_cfa_offset 72
-; AVX512F-32-NEXT:  .Lcfi23:
+; AVX512F-32-NEXT:  .Lcfi14:
 ; AVX512F-32-NEXT:    .cfi_offset %esi, -12
-; AVX512F-32-NEXT:  .Lcfi24:
+; AVX512F-32-NEXT:  .Lcfi15:
 ; AVX512F-32-NEXT:    .cfi_offset %ebx, -8
 ; AVX512F-32-NEXT:    vmovdqa64 %zmm1, %zmm6
 ; AVX512F-32-NEXT:    vmovdqa64 %zmm0, %zmm5
@@ -3332,14 +3314,8 @@ define i64 @test_mask_x86_avx512_ucmp_b_512(<64 x i8> %a0, <64 x i8> %a1, i64 %m
 ; AVX512F-32-NEXT:    addl %esi, %eax
 ; AVX512F-32-NEXT:    adcxl %ecx, %edx
 ; AVX512F-32-NEXT:    addl $60, %esp
-; AVX512F-32-NEXT:  .Lcfi25:
-; AVX512F-32-NEXT:    .cfi_def_cfa_offset 12
 ; AVX512F-32-NEXT:    popl %esi
-; AVX512F-32-NEXT:  .Lcfi26:
-; AVX512F-32-NEXT:    .cfi_def_cfa_offset 8
 ; AVX512F-32-NEXT:    popl %ebx
-; AVX512F-32-NEXT:  .Lcfi27:
-; AVX512F-32-NEXT:    .cfi_def_cfa_offset 4
 ; AVX512F-32-NEXT:    retl
   %res0 = call i64 @llvm.x86.avx512.mask.ucmp.b.512(<64 x i8> %a0, <64 x i8> %a1, i32 0, i64 %mask)
   %res1 = call i64 @llvm.x86.avx512.mask.ucmp.b.512(<64 x i8> %a0, <64 x i8> %a1, i32 1, i64 %mask)

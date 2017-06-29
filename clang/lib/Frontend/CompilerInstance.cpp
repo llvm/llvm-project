@@ -825,8 +825,11 @@ bool CompilerInstance::InitializeSourceManager(
     const FrontendInputFile &Input, DiagnosticsEngine &Diags,
     FileManager &FileMgr, SourceManager &SourceMgr, HeaderSearch *HS,
     DependencyOutputOptions &DepOpts, const FrontendOptions &Opts) {
-  SrcMgr::CharacteristicKind
-    Kind = Input.isSystem() ? SrcMgr::C_System : SrcMgr::C_User;
+  SrcMgr::CharacteristicKind Kind =
+      Input.getKind().getFormat() == InputKind::ModuleMap
+          ? Input.isSystem() ? SrcMgr::C_System_ModuleMap
+                             : SrcMgr::C_User_ModuleMap
+          : Input.isSystem() ? SrcMgr::C_System : SrcMgr::C_User;
 
   if (Input.isBuffer()) {
     SourceMgr.setMainFileID(SourceMgr.createFileID(
@@ -933,8 +936,9 @@ bool CompilerInstance::ExecuteAction(FrontendAction &Act) {
   if (!hasTarget())
     return false;
 
-  // Create TargetInfo for the other side of CUDA compilation.
-  if (getLangOpts().CUDA && !getFrontendOpts().AuxTriple.empty()) {
+  // Create TargetInfo for the other side of CUDA and OpenMP compilation.
+  if ((getLangOpts().CUDA || getLangOpts().OpenMPIsDevice) &&
+      !getFrontendOpts().AuxTriple.empty()) {
     auto TO = std::make_shared<TargetOptions>();
     TO->Triple = getFrontendOpts().AuxTriple;
     TO->HostTriple = getTarget().getTriple().str();

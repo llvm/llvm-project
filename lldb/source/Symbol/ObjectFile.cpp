@@ -13,7 +13,6 @@
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
-#include "lldb/Core/Timer.h"
 #include "lldb/Symbol/ObjectContainer.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Target/Process.h"
@@ -25,6 +24,7 @@
 #include "lldb/Utility/DataBufferLLVM.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegularExpression.h"
+#include "lldb/Utility/Timer.h"
 #include "lldb/lldb-private.h"
 
 using namespace lldb;

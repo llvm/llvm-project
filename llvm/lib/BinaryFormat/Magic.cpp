@@ -190,8 +190,8 @@ file_magic llvm::identify_magic(StringRef Magic) {
     }
     break;
 
-  case 0x64: // x86-64 Windows.
-    if (Magic[1] == char(0x86))
+  case 0x64: // x86-64 or ARM64 Windows.
+    if (Magic[1] == char(0x86) || Magic[1] == char(0xaa))
       return file_magic::coff_object;
     break;
 

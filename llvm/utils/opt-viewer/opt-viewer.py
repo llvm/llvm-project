@@ -202,7 +202,13 @@ def generate_report(pmap, all_remarks, file_remarks, source_dir, output_dir, sho
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=desc)
     parser.add_argument('yaml_files', nargs='+')
-    parser.add_argument('output_dir')
+    parser.add_argument(
+        '--output-dir',
+        '-o',
+        default='html',
+        help='Path to a directory where generated HTML files will be output. '
+             'If the directory does not already exist, it will be created. '
+             '"%(default)s" by default.')
     parser.add_argument(
         '--jobs',
         '-j',

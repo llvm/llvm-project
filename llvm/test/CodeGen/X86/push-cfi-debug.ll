@@ -23,10 +23,8 @@ declare x86_stdcallcc void @stdfoo(i32, i32) #0
 ; CHECK: .cfi_adjust_cfa_offset 4
 ; CHECK: calll stdfoo
 ; CHECK: .cfi_adjust_cfa_offset -8
-; CHECK: addl $8, %esp
+; CHECK: addl $20, %esp
 ; CHECK: .cfi_adjust_cfa_offset -8
-; CHECK: addl $12, %esp
-; CHECK: .cfi_def_cfa_offset 4
 define void @test1() #0 !dbg !4 {
 entry:
   tail call void @foo(i32 1, i32 2) #1, !dbg !10

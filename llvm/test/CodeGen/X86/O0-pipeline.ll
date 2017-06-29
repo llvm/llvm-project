@@ -46,9 +46,7 @@
 ; CHECK-NEXT:       Post-RA pseudo instruction expansion pass
 ; CHECK-NEXT:       X86 pseudo instruction expansion pass
 ; CHECK-NEXT:       Analyze Machine Code For Garbage Collection
-; CHECK-NEXT:       Verify that corresponding in/out CFI info matches
 ; CHECK-NEXT:       X86 vzeroupper inserter
-; CHECK-NEXT:       CFI Instruction Inserter
 ; CHECK-NEXT:       Contiguously Lay Out Funclets
 ; CHECK-NEXT:       StackMap Liveness Analysis
 ; CHECK-NEXT:       Live DEBUG_VALUE analysis

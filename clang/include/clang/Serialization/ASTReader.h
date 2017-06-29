@@ -1146,6 +1146,7 @@ private:
     time_t StoredTime;
     bool Overridden;
     bool Transient;
+    bool TopLevelModuleMap;
   };
 
   /// \brief Reads the stored information about an input file.
@@ -2248,6 +2249,12 @@ public:
                        bool IncludeSystem, bool Complain,
           llvm::function_ref<void(const serialization::InputFile &IF,
                                   bool isSystem)> Visitor);
+
+  /// Visit all the top-level module maps loaded when building the given module
+  /// file.
+  void visitTopLevelModuleMaps(serialization::ModuleFile &MF,
+                               llvm::function_ref<
+                                   void(const FileEntry *)> Visitor);
 
   bool isProcessingUpdateRecords() { return ProcessingUpdateRecords; }
 };

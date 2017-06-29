@@ -591,8 +591,6 @@ define void @avg_v64i8(<64 x i8>* %a, <64 x i8>* %b) {
 ; AVX1-NEXT:    vmovups %ymm0, (%rax)
 ; AVX1-NEXT:    vmovups %ymm1, (%rax)
 ; AVX1-NEXT:    addq $24, %rsp
-; AVX1-NEXT:  .Lcfi1:
-; AVX1-NEXT:    .cfi_def_cfa_offset 8
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;

@@ -30,7 +30,6 @@
 #include "lldb/Core/SourceManager.h"
 #include "lldb/Core/State.h"
 #include "lldb/Core/StreamFile.h"
-#include "lldb/Core/Timer.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Expression/REPL.h"
 #include "lldb/Expression/UserExpression.h"
@@ -58,6 +57,7 @@
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/Utility/Timer.h"
 
 using namespace lldb;
 using namespace lldb_private;

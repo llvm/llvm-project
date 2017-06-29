@@ -57,7 +57,7 @@ public:
                       int64_t &Off);
 
   /// Parses tree in Ptr for base, index, offset addresses.
-  static BaseIndexOffset match(SDValue Ptr);
+  static BaseIndexOffset match(SDValue Ptr, const SelectionDAG &DAG);
 };
 } // namespace llvm
 

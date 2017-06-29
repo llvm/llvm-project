@@ -31,6 +31,7 @@ add_lldb_library(lldbUtility
   StructuredData.cpp
   TaskPool.cpp
   TildeExpressionResolver.cpp
+  Timer.cpp
   UserID.cpp
   UriParser.cpp
   UUID.cpp

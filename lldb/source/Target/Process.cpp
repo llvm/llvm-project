@@ -1735,7 +1735,7 @@ addr_t Process::GetImageInfoAddress() { return LLDB_INVALID_ADDRESS; }
 
 const lldb::ABISP &Process::GetABI() {
   if (!m_abi_sp)
-    m_abi_sp = ABI::FindPlugin(GetTarget().GetArchitecture());
+    m_abi_sp = ABI::FindPlugin(shared_from_this(), GetTarget().GetArchitecture());
   return m_abi_sp;
 }
 
