@@ -46,7 +46,7 @@ public:
 
   StringRef getTargetTriple() const;
 
-  static inline bool classof(const Binary *v) {
+  static bool classof(const Binary *v) {
     return v->isIR();
   }
 

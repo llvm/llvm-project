@@ -94,7 +94,7 @@ public:
   explicit FixedStackPseudoSourceValue(int FI)
       : PseudoSourceValue(FixedStack), FI(FI) {}
 
-  static inline bool classof(const PseudoSourceValue *V) {
+  static bool classof(const PseudoSourceValue *V) {
     return V->kind() == FixedStack;
   }
 
@@ -126,7 +126,7 @@ class GlobalValuePseudoSourceValue : public CallEntryPseudoSourceValue {
 public:
   GlobalValuePseudoSourceValue(const GlobalValue *GV);
 
-  static inline bool classof(const PseudoSourceValue *V) {
+  static bool classof(const PseudoSourceValue *V) {
     return V->kind() == GlobalValueCallEntry;
   }
 
@@ -140,7 +140,7 @@ class ExternalSymbolPseudoSourceValue : public CallEntryPseudoSourceValue {
 public:
   ExternalSymbolPseudoSourceValue(const char *ES);
 
-  static inline bool classof(const PseudoSourceValue *V) {
+  static bool classof(const PseudoSourceValue *V) {
     return V->kind() == ExternalSymbolCallEntry;
   }
 

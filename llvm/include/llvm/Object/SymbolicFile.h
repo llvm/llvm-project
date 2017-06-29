@@ -173,7 +173,7 @@ public:
   static Expected<OwningBinary<SymbolicFile>>
   createSymbolicFile(StringRef ObjectPath);
 
-  static inline bool classof(const Binary *v) {
+  static bool classof(const Binary *v) {
     return v->isSymbolic();
   }
 };

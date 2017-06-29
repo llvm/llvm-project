@@ -62,8 +62,8 @@ Improvements to clang-tidy
 
   Detect usage of ``creat()``.
 
-- New `android-file-open-flag
-  <http://clang.llvm.org/extra/clang-tidy/checks/android-file-open-flag.html>`_ check
+- New `android-cloexec-open
+  <http://clang.llvm.org/extra/clang-tidy/checks/android-cloexec-open.html>`_ check
 
   Checks if the required file flag ``O_CLOEXEC`` exists in ``open()``,
   ``open64()`` and ``openat()``.

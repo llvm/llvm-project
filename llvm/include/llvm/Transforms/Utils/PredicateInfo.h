@@ -114,7 +114,7 @@ protected:
 class PredicateWithCondition : public PredicateBase {
 public:
   Value *Condition;
-  static inline bool classof(const PredicateBase *PB) {
+  static bool classof(const PredicateBase *PB) {
     return PB->Type == PT_Assume || PB->Type == PT_Branch ||
            PB->Type == PT_Switch;
   }
@@ -134,7 +134,7 @@ public:
       : PredicateWithCondition(PT_Assume, Op, Condition),
         AssumeInst(AssumeInst) {}
   PredicateAssume() = delete;
-  static inline bool classof(const PredicateBase *PB) {
+  static bool classof(const PredicateBase *PB) {
     return PB->Type == PT_Assume;
   }
 };
@@ -147,7 +147,7 @@ public:
   BasicBlock *From;
   BasicBlock *To;
   PredicateWithEdge() = delete;
-  static inline bool classof(const PredicateBase *PB) {
+  static bool classof(const PredicateBase *PB) {
     return PB->Type == PT_Branch || PB->Type == PT_Switch;
   }
 
@@ -167,7 +167,7 @@ public:
       : PredicateWithEdge(PT_Branch, Op, BranchBB, SplitBB, Condition),
         TrueEdge(TakenEdge) {}
   PredicateBranch() = delete;
-  static inline bool classof(const PredicateBase *PB) {
+  static bool classof(const PredicateBase *PB) {
     return PB->Type == PT_Branch;
   }
 };
@@ -183,7 +183,7 @@ public:
                           SI->getCondition()),
         CaseValue(CaseValue), Switch(SI) {}
   PredicateSwitch() = delete;
-  static inline bool classof(const PredicateBase *PB) {
+  static bool classof(const PredicateBase *PB) {
     return PB->Type == PT_Switch;
   }
 };
