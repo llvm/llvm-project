@@ -5118,6 +5118,25 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     Args.AddLastArg(CmdArgs, options::OPT_objcmt_whitelist_dir_path);
   }
 
+  if (Args.hasArg(options::OPT_index_store_path)) {
+    Args.AddLastArg(CmdArgs, options::OPT_index_store_path);
+    Args.AddLastArg(CmdArgs, options::OPT_index_ignore_system_symbols);
+    Args.AddLastArg(CmdArgs, options::OPT_index_record_codegen_name);
+
+    // If '-o' is passed along with '-fsyntax-only' pass it along the cc1
+    // invocation so that the index action knows what the out file is.
+    if (isa<CompileJobAction>(JA) && JA.getType() == types::TY_Nothing) {
+      Args.AddLastArg(CmdArgs, options::OPT_o);
+    }
+  }
+
+  if (const char *IdxStorePath = ::getenv("CLANG_PROJECT_INDEX_PATH")) {
+    CmdArgs.push_back("-index-store-path");
+    CmdArgs.push_back(IdxStorePath);
+    CmdArgs.push_back("-index-ignore-system-symbols");
+    CmdArgs.push_back("-index-record-codegen-name");
+  }
+
   // Add preprocessing options like -I, -D, etc. if we are using the
   // preprocessor.
   //
@@ -8547,6 +8566,10 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // comes from specs (starting with link_command). Consult gcc for
   // more information.
   ArgStringList CmdArgs;
+
+  Args.ClaimAllArgs(options::OPT_index_store_path);
+  Args.ClaimAllArgs(options::OPT_index_ignore_system_symbols);
+  Args.ClaimAllArgs(options::OPT_index_record_codegen_name);
 
   /// Hack(tm) to ignore linking errors when we are doing ARC migration.
   if (Args.hasArg(options::OPT_ccc_arcmt_check,
