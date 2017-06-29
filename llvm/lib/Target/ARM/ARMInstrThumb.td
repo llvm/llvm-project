@@ -1416,12 +1416,12 @@ def tLEApcrelJT : tPseudoInst<(outs tGPR:$Rd),
 let Size = 2, isBranch = 1, isTerminator = 1, isBarrier = 1,
     isIndirectBranch = 1 in {
 def tTBB_JT : tPseudoInst<(outs),
-        (ins tGPR:$base, tGPR:$index, i32imm:$jt, i32imm:$pclbl), 0, IIC_Br, []>,
-        Sched<[WriteBr]>;
+        (ins tGPRwithpc:$base, tGPR:$index, i32imm:$jt, i32imm:$pclbl), 0,
+         IIC_Br, []>, Sched<[WriteBr]>;
 
 def tTBH_JT : tPseudoInst<(outs),
-        (ins tGPR:$base, tGPR:$index, i32imm:$jt, i32imm:$pclbl), 0, IIC_Br, []>,
-        Sched<[WriteBr]>;
+        (ins tGPRwithpc:$base, tGPR:$index, i32imm:$jt, i32imm:$pclbl), 0,
+         IIC_Br, []>,  Sched<[WriteBr]>;
 }
 
 //===----------------------------------------------------------------------===//

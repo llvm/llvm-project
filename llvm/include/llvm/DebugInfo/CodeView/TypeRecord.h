@@ -15,6 +15,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
@@ -25,31 +26,30 @@
 #include <vector>
 
 namespace llvm {
-
-class BinaryStreamReader;
-
 namespace codeview {
 
 using support::little32_t;
 using support::ulittle16_t;
 using support::ulittle32_t;
 
-typedef CVRecord<TypeLeafKind> CVType;
-typedef RemappedRecord<TypeLeafKind> RemappedType;
+using CVType = CVRecord<TypeLeafKind>;
+using RemappedType = RemappedRecord<TypeLeafKind>;
 
 struct CVMemberRecord {
   TypeLeafKind Kind;
   ArrayRef<uint8_t> Data;
 };
-typedef VarStreamArray<CVType> CVTypeArray;
-typedef iterator_range<CVTypeArray::Iterator> CVTypeRange;
+using CVTypeArray = VarStreamArray<CVType>;
+using CVTypeRange = iterator_range<CVTypeArray::Iterator>;
 
 /// Equvalent to CV_fldattr_t in cvinfo.h.
 struct MemberAttributes {
   uint16_t Attrs = 0;
+
   enum {
     MethodKindShift = 2,
   };
+
   MemberAttributes() = default;
 
   explicit MemberAttributes(MemberAccess Access)
@@ -226,6 +226,7 @@ public:
   TypeIndex getClassType() const { return ClassType; }
   TypeIndex getFunctionType() const { return FunctionType; }
   StringRef getName() const { return Name; }
+
   TypeIndex ClassType;
   TypeIndex FunctionType;
   StringRef Name;
@@ -330,7 +331,6 @@ public:
 
   TypeIndex ReferentType;
   uint32_t Attrs;
-
   Optional<MemberPointerInfo> MemberInfo;
 
 private:
@@ -490,6 +490,7 @@ public:
         UnderlyingType(UnderlyingType) {}
 
   TypeIndex getUnderlyingType() const { return UnderlyingType; }
+
   TypeIndex UnderlyingType;
 };
 
@@ -505,6 +506,7 @@ public:
   TypeIndex getType() const { return Type; }
   uint8_t getBitOffset() const { return BitOffset; }
   uint8_t getBitSize() const { return BitSize; }
+
   TypeIndex Type;
   uint8_t BitSize;
   uint8_t BitOffset;
@@ -527,6 +529,7 @@ public:
   }
 
   uint32_t getEntryCount() const { return getSlots().size(); }
+
   ArrayRef<VFTableSlotKind> SlotsRef;
   std::vector<VFTableSlotKind> Slots;
 };
@@ -541,9 +544,7 @@ public:
         Name(Name) {}
 
   StringRef getGuid() const { return Guid; }
-
   uint32_t getAge() const { return Age; }
-
   StringRef getName() const { return Name; }
 
   StringRef Guid;
@@ -560,8 +561,8 @@ public:
       : TypeRecord(TypeRecordKind::StringId), Id(Id), String(String) {}
 
   TypeIndex getId() const { return Id; }
-
   StringRef getString() const { return String; }
+
   TypeIndex Id;
   StringRef String;
 };
@@ -576,9 +577,7 @@ public:
         FunctionType(FunctionType), Name(Name) {}
 
   TypeIndex getParentScope() const { return ParentScope; }
-
   TypeIndex getFunctionType() const { return FunctionType; }
-
   StringRef getName() const { return Name; }
 
   TypeIndex ParentScope;
@@ -635,6 +634,7 @@ public:
         ArgIndices(ArgIndices.begin(), ArgIndices.end()) {}
 
   ArrayRef<TypeIndex> getArgs() const { return ArgIndices; }
+
   SmallVector<TypeIndex, 4> ArgIndices;
 };
 
@@ -656,6 +656,7 @@ public:
   TypeIndex getOverriddenVTable() const { return OverriddenVFTable; }
   uint32_t getVFPtrOffset() const { return VFPtrOffset; }
   StringRef getName() const { return makeArrayRef(MethodNames).front(); }
+
   ArrayRef<StringRef> getMethodNames() const {
     return makeArrayRef(MethodNames).drop_front();
   }
@@ -707,6 +708,7 @@ public:
       : TypeRecord(TypeRecordKind::MethodOverloadList), Methods(Methods) {}
 
   ArrayRef<OneMethodRecord> getMethods() const { return Methods; }
+
   std::vector<OneMethodRecord> Methods;
 };
 
@@ -723,6 +725,7 @@ public:
   uint16_t getNumOverloads() const { return NumOverloads; }
   TypeIndex getMethodList() const { return MethodList; }
   StringRef getName() const { return Name; }
+
   uint16_t NumOverloads;
   TypeIndex MethodList;
   StringRef Name;
@@ -874,7 +877,6 @@ public:
 };
 
 } // end namespace codeview
-
 } // end namespace llvm
 
 #endif // LLVM_DEBUGINFO_CODEVIEW_TYPERECORD_H

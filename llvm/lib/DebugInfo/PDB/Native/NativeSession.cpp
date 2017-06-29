@@ -13,6 +13,7 @@
 #include "llvm/DebugInfo/PDB/GenericError.h"
 #include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
 #include "llvm/DebugInfo/PDB/IPDBSourceFile.h"
+#include "llvm/DebugInfo/PDB/Native/NativeCompilandSymbol.h"
 #include "llvm/DebugInfo/PDB/Native/NativeExeSymbol.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Native/RawError.h"
@@ -23,8 +24,10 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/MemoryBuffer.h"
+
 #include <algorithm>
 #include <memory>
+#include <utility>
 
 using namespace llvm;
 using namespace llvm::msf;
@@ -66,12 +69,23 @@ Error NativeSession::createFromExe(StringRef Path,
   return make_error<RawError>(raw_error_code::feature_unsupported);
 }
 
+std::unique_ptr<PDBSymbolCompiland>
+NativeSession::createCompilandSymbol(DbiModuleDescriptor MI) {
+  const auto Id = static_cast<uint32_t>(SymbolCache.size());
+  SymbolCache.push_back(
+      llvm::make_unique<NativeCompilandSymbol>(*this, Id, MI));
+  return llvm::make_unique<PDBSymbolCompiland>(
+      *this, std::unique_ptr<IPDBRawSymbol>(SymbolCache[Id]->clone()));
+}
+
 uint64_t NativeSession::getLoadAddress() const { return 0; }
 
 void NativeSession::setLoadAddress(uint64_t Address) {}
 
 std::unique_ptr<PDBSymbolExe> NativeSession::getGlobalScope() {
-  auto RawSymbol = llvm::make_unique<NativeExeSymbol>(*this, 0);
+  const auto Id = static_cast<uint32_t>(SymbolCache.size());
+  SymbolCache.push_back(llvm::make_unique<NativeExeSymbol>(*this, Id));
+  auto RawSymbol = SymbolCache[Id]->clone();
   auto PdbSymbol(PDBSymbol::create(*this, std::move(RawSymbol)));
   std::unique_ptr<PDBSymbolExe> ExeSymbol(
       static_cast<PDBSymbolExe *>(PdbSymbol.release()));
@@ -80,7 +94,10 @@ std::unique_ptr<PDBSymbolExe> NativeSession::getGlobalScope() {
 
 std::unique_ptr<PDBSymbol>
 NativeSession::getSymbolById(uint32_t SymbolId) const {
-  return nullptr;
+  // If the caller has a SymbolId, it'd better be in our SymbolCache.
+  return SymbolId < SymbolCache.size()
+             ? PDBSymbol::create(*this, SymbolCache[SymbolId]->clone())
+             : nullptr;
 }
 
 std::unique_ptr<PDBSymbol>

@@ -203,12 +203,12 @@ ABISysV_i386::GetRegisterInfoArray(uint32_t &count) {
 //------------------------------------------------------------------
 
 ABISP
-ABISysV_i386::CreateInstance(const ArchSpec &arch) {
+ABISysV_i386::CreateInstance(lldb::ProcessSP process_sp, const ArchSpec &arch) {
   static ABISP g_abi_sp;
   if ((arch.GetTriple().getArch() == llvm::Triple::x86) &&
       arch.GetTriple().isOSLinux()) {
     if (!g_abi_sp)
-      g_abi_sp.reset(new ABISysV_i386);
+      g_abi_sp.reset(new ABISysV_i386(process_sp));
     return g_abi_sp;
   }
   return ABISP();

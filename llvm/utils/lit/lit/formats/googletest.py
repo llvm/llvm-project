@@ -30,19 +30,24 @@ class GoogleTest(TestFormat):
           localConfig: TestingConfig instance"""
 
         try:
-            lines = lit.util.capture([path, '--gtest_list_tests'],
-                                     env=localConfig.environment)
-            if kIsWindows:
-              lines = lines.replace('\r', '')
-            lines = lines.split('\n')
-        except Exception as exc:
-            out = exc.output if isinstance(exc, subprocess.CalledProcessError) else ''
-            litConfig.warning("unable to discover google-tests in %r: %s. Process output: %s"
-                              % (path, sys.exc_info()[1], out))
+            output = subprocess.check_output([path, '--gtest_list_tests'],
+                                             env=localConfig.environment)
+        except subprocess.CalledProcessError as exc:
+            litConfig.warning(
+                "unable to discover google-tests in %r: %s. Process output: %s"
+                % (path, sys.exc_info()[1], exc.output))
             raise StopIteration
 
         nested_tests = []
-        for ln in lines:
+        for ln in output.splitlines(False):  # Don't keep newlines.
+            ln = lit.util.to_string(ln)
+
+            if 'Running main() from gtest_main.cc' in ln:
+                # Upstream googletest prints this to stdout prior to running
+                # tests. LLVM removed that print statement in r61540, but we
+                # handle it here in case upstream googletest is being used.
+                continue
+
             # The test name list includes trailing comments beginning with
             # a '#' on some lines, so skip those. We don't support test names
             # that use escaping to embed '#' into their name as the names come
@@ -50,12 +55,6 @@ class GoogleTest(TestFormat):
             # uninteresting to support.
             ln = ln.split('#', 1)[0].rstrip()
             if not ln.lstrip():
-                continue
-
-            if 'Running main() from gtest_main.cc' in ln:
-                # Upstream googletest prints this to stdout prior to running
-                # tests. LLVM removed that print statement in r61540, but we
-                # handle it here in case upstream googletest is being used.
                 continue
 
             index = 0

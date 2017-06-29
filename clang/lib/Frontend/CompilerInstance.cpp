@@ -825,8 +825,11 @@ bool CompilerInstance::InitializeSourceManager(
     const FrontendInputFile &Input, DiagnosticsEngine &Diags,
     FileManager &FileMgr, SourceManager &SourceMgr, HeaderSearch *HS,
     DependencyOutputOptions &DepOpts, const FrontendOptions &Opts) {
-  SrcMgr::CharacteristicKind
-    Kind = Input.isSystem() ? SrcMgr::C_System : SrcMgr::C_User;
+  SrcMgr::CharacteristicKind Kind =
+      Input.getKind().getFormat() == InputKind::ModuleMap
+          ? Input.isSystem() ? SrcMgr::C_System_ModuleMap
+                             : SrcMgr::C_User_ModuleMap
+          : Input.isSystem() ? SrcMgr::C_System : SrcMgr::C_User;
 
   if (Input.isBuffer()) {
     SourceMgr.setMainFileID(SourceMgr.createFileID(

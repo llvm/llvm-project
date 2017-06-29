@@ -2456,10 +2456,9 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
     }
   }
 
-  // xor (cmp A, B), true = not (cmp A, B) = !cmp A, B
+  // not (cmp A, B) = !cmp A, B
   ICmpInst::Predicate Pred;
-  if (match(Op0, m_OneUse(m_Cmp(Pred, m_Value(), m_Value()))) &&
-      match(Op1, m_AllOnes())) {
+  if (match(&I, m_Not(m_OneUse(m_Cmp(Pred, m_Value(), m_Value()))))) {
     cast<CmpInst>(Op0)->setPredicate(CmpInst::getInversePredicate(Pred));
     return replaceInstUsesWith(I, Op0);
   }

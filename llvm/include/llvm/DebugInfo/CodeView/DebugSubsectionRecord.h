@@ -1,4 +1,4 @@
-//===- DebugSubsection.h ------------------------------------*- C++ -*-===//
+//===- DebugSubsectionRecord.h ----------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,17 +7,22 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_CODEVIEW_MODULEDEBUGFRAGMENTRECORD_H
-#define LLVM_DEBUGINFO_CODEVIEW_MODULEDEBUGFRAGMENTRECORD_H
+#ifndef LLVM_DEBUGINFO_CODEVIEW_DEBUGSUBSECTIONRECORD_H
+#define LLVM_DEBUGINFO_CODEVIEW_DEBUGSUBSECTIONRECORD_H
 
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/Support/BinaryStreamArray.h"
 #include "llvm/Support/BinaryStreamRef.h"
-#include "llvm/Support/BinaryStreamWriter.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/MathExtras.h"
+#include <cstdint>
+#include <memory>
 
 namespace llvm {
+
+class BinaryStreamWriter;
+
 namespace codeview {
 
 class DebugSubsection;
@@ -42,8 +47,8 @@ public:
   BinaryStreamRef getRecordData() const;
 
 private:
-  CodeViewContainer Container;
-  DebugSubsectionKind Kind;
+  CodeViewContainer Container = CodeViewContainer::ObjectFile;
+  DebugSubsectionKind Kind = DebugSubsectionKind::None;
   BinaryStreamRef Data;
 };
 
@@ -71,7 +76,7 @@ private:
   CodeViewContainer Container;
 };
 
-} // namespace codeview
+} // end namespace codeview
 
 template <> struct VarStreamArrayExtractor<codeview::DebugSubsectionRecord> {
   Error operator()(BinaryStreamRef Stream, uint32_t &Length,
@@ -88,8 +93,11 @@ template <> struct VarStreamArrayExtractor<codeview::DebugSubsectionRecord> {
 };
 
 namespace codeview {
-typedef VarStreamArray<DebugSubsectionRecord> DebugSubsectionArray;
-}
-} // namespace llvm
 
-#endif // LLVM_DEBUGINFO_CODEVIEW_MODULEDEBUGFRAGMENTRECORD_H
+using DebugSubsectionArray = VarStreamArray<DebugSubsectionRecord>;
+
+} // end namespace codeview
+
+} // end namespace llvm
+
+#endif // LLVM_DEBUGINFO_CODEVIEW_DEBUGSUBSECTIONRECORD_H

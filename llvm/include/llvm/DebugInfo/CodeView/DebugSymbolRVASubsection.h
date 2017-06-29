@@ -10,17 +10,23 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_DEBUGSYMBOLRVASUBSECTION_H
 #define LLVM_DEBUGINFO_CODEVIEW_DEBUGSYMBOLRVASUBSECTION_H
 
+#include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/DebugSubsection.h"
 #include "llvm/Support/BinaryStreamArray.h"
-#include "llvm/Support/BinaryStreamReader.h"
+#include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
+#include <cstdint>
+#include <vector>
 
 namespace llvm {
+
+class BinaryStreamReader;
+
 namespace codeview {
 
 class DebugSymbolRVASubsectionRef final : public DebugSubsectionRef {
 public:
-  typedef FixedStreamArray<support::ulittle32_t> ArrayType;
+  using ArrayType = FixedStreamArray<support::ulittle32_t>;
 
   DebugSymbolRVASubsectionRef();
 
@@ -53,7 +59,9 @@ public:
 private:
   std::vector<support::ulittle32_t> RVAs;
 };
-} // namespace codeview
-} // namespace llvm
 
-#endif
+} // end namespace codeview
+
+} // end namespace llvm
+
+#endif // LLVM_DEBUGINFO_CODEVIEW_DEBUGSYMBOLRVASUBSECTION_H

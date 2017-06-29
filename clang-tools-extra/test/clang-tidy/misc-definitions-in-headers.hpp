@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s misc-definitions-in-headers %t -- -- -std=c++11
+// RUN: %check_clang_tidy %s misc-definitions-in-headers %t
 
 int f() {
 // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: function 'f' defined in a header file; function definitions in header files can lead to ODR violations [misc-definitions-in-headers]
@@ -177,3 +177,5 @@ int CD<T, int>::f() { // OK: partial template specialization.
 }
 
 constexpr int k = 1; // OK: constexpr variable has internal linkage.
+
+constexpr int f10() { return 0; } // OK: constexpr function definition.
