@@ -1391,6 +1391,28 @@ ThreadPlanSP Thread::QueueThreadPlanForStepInRange(
   return thread_plan_sp;
 }
 
+ThreadPlanSP Thread::QueueThreadPlanForStepInRangeNoShouldStop(
+    bool abort_other_plans, const AddressRange &range,
+    const SymbolContext &addr_context, const char *step_in_target,
+    lldb::RunMode stop_other_threads,
+    LazyBool step_in_avoids_code_without_debug_info,
+    LazyBool step_out_avoids_code_without_debug_info) {
+  ThreadPlanSP thread_plan_sp(
+      new ThreadPlanStepInRange(*this, range, addr_context, stop_other_threads,
+                                step_in_avoids_code_without_debug_info,
+                                step_out_avoids_code_without_debug_info));
+  ThreadPlanStepInRange *plan =
+      static_cast<ThreadPlanStepInRange *>(thread_plan_sp.get());
+
+  if (step_in_target)
+    plan->SetStepInTarget(step_in_target);
+    
+  plan->ClearShouldStopHereCallbacks();
+
+  QueueThreadPlan(thread_plan_sp, abort_other_plans);
+  return thread_plan_sp;
+}
+
 // Call the QueueThreadPlanForStepInRange method which takes an address range.
 ThreadPlanSP Thread::QueueThreadPlanForStepInRange(
     bool abort_other_plans, const LineEntry &line_entry,
