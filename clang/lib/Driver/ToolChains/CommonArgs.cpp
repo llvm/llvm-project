@@ -617,7 +617,8 @@ bool tools::addSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
                            NonWholeStaticRuntimes, HelperStaticRuntimes,
                            RequiredSymbols);
   // Inject libfuzzer dependencies.
-  if (TC.getSanitizerArgs().needsFuzzer()) {
+  if (TC.getSanitizerArgs().needsFuzzer()
+      && !Args.hasArg(options::OPT_shared)) {
     addLibFuzzerRuntime(TC, Args, CmdArgs);
   }
 

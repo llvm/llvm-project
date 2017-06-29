@@ -10,6 +10,7 @@ add_lldb_unittest(UtilityTests
   TaskPoolTest.cpp
   TildeExpressionResolverTest.cpp
   TimeoutTest.cpp
+  TimerTest.cpp
   UriParserTest.cpp
   VASprintfTest.cpp
 

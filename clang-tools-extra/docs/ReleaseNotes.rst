@@ -57,11 +57,21 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
-- New `android-file-open-flag
-  <http://clang.llvm.org/extra/clang-tidy/checks/android-file-open-flag.html>`_ check
+- New `android-cloexec-creat
+  <http://clang.llvm.org/extra/clang-tidy/checks/android-cloexec-creat.html>`_ check
+
+  Detect usage of ``creat()``.
+
+- New `android-cloexec-open
+  <http://clang.llvm.org/extra/clang-tidy/checks/android-cloexec-open.html>`_ check
 
   Checks if the required file flag ``O_CLOEXEC`` exists in ``open()``,
   ``open64()`` and ``openat()``.
+
+- New `android-cloexec-fopen
+  <http://clang.llvm.org/extra/clang-tidy/checks/android-cloexec-fopen.html>`_ check
+
+  Checks if the required mode ``e`` exists in the mode argument of ``fopen()``.
 
 - New `cert-dcl21-cpp
   <http://clang.llvm.org/extra/clang-tidy/checks/cert-dcl21-cpp.html>`_ check

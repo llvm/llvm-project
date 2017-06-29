@@ -5927,16 +5927,11 @@ emitOffloadingArrays(CodeGenFunction &CGF,
 
     for (unsigned i = 0; i < Info.NumberOfPtrs; ++i) {
       llvm::Value *BPVal = *BasePointers[i];
-      if (BPVal->getType()->isPointerTy())
-        BPVal = CGF.Builder.CreateBitCast(BPVal, CGM.VoidPtrTy);
-      else {
-        assert(BPVal->getType()->isIntegerTy() &&
-               "If not a pointer, the value type must be an integer.");
-        BPVal = CGF.Builder.CreateIntToPtr(BPVal, CGM.VoidPtrTy);
-      }
       llvm::Value *BP = CGF.Builder.CreateConstInBoundsGEP2_32(
           llvm::ArrayType::get(CGM.VoidPtrTy, Info.NumberOfPtrs),
           Info.BasePointersArray, 0, i);
+      BP = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
+          BP, BPVal->getType()->getPointerTo(/*AddrSpace=*/0));
       Address BPAddr(BP, Ctx.getTypeAlignInChars(Ctx.VoidPtrTy));
       CGF.Builder.CreateStore(BPVal, BPAddr);
 
@@ -5945,16 +5940,11 @@ emitOffloadingArrays(CodeGenFunction &CGF,
           Info.CaptureDeviceAddrMap.insert(std::make_pair(DevVD, BPAddr));
 
       llvm::Value *PVal = Pointers[i];
-      if (PVal->getType()->isPointerTy())
-        PVal = CGF.Builder.CreateBitCast(PVal, CGM.VoidPtrTy);
-      else {
-        assert(PVal->getType()->isIntegerTy() &&
-               "If not a pointer, the value type must be an integer.");
-        PVal = CGF.Builder.CreateIntToPtr(PVal, CGM.VoidPtrTy);
-      }
       llvm::Value *P = CGF.Builder.CreateConstInBoundsGEP2_32(
           llvm::ArrayType::get(CGM.VoidPtrTy, Info.NumberOfPtrs),
           Info.PointersArray, 0, i);
+      P = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
+          P, PVal->getType()->getPointerTo(/*AddrSpace=*/0));
       Address PAddr(P, Ctx.getTypeAlignInChars(Ctx.VoidPtrTy));
       CGF.Builder.CreateStore(PVal, PAddr);
 

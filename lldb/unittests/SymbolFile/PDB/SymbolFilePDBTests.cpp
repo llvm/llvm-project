@@ -55,12 +55,8 @@ public:
     ClangASTContext::Initialize();
     SymbolFilePDB::Initialize();
 
-    llvm::StringRef exe_folder = llvm::sys::path::parent_path(TestMainArgv0);
-    llvm::SmallString<128> inputs_folder = exe_folder;
-    llvm::sys::path::append(inputs_folder, "Inputs");
-
-    m_pdb_test_exe = GetInputFile("test-pdb.exe");
-    m_types_test_exe = GetInputFile("test-pdb-types.exe");
+    m_pdb_test_exe = GetInputFilePath("test-pdb.exe");
+    m_types_test_exe = GetInputFilePath("test-pdb-types.exe");
   }
 
   void TearDown() override {

@@ -10,12 +10,11 @@
 #ifndef liblldb_ProcessorTrace_H_
 #define liblldb_ProcessorTrace_H_
 
+#include "lldb/Utility/Status.h"
+#include "lldb/Utility/TraceOptions.h"
+#include "lldb/lldb-types.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
-
-#include "lldb/Core/TraceOptions.h"
-#include "lldb/Utility/Status.h"
-#include "lldb/lldb-types.h"
 
 #include <linux/perf_event.h>
 #include <sys/mman.h>

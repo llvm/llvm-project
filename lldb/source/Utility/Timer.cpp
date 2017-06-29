@@ -6,11 +6,8 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-#include "lldb/Core/Timer.h"
-
-#include "lldb/Host/Host.h"
+#include "lldb/Utility/Timer.h"
 #include "lldb/Utility/Stream.h"
-#include "lldb/lldb-types.h" // for thread_key_t
 
 #include <algorithm>
 #include <map>

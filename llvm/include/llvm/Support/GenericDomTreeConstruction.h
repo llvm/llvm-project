@@ -30,8 +30,8 @@
 #include "llvm/Support/GenericDomTree.h"
 
 namespace llvm {
-
 namespace DomTreeBuilder {
+
 // Information record used by Semi-NCA during tree construction.
 template <typename NodeT>
 struct SemiNCAInfo {
@@ -47,11 +47,13 @@ struct SemiNCAInfo {
     NodePtr IDom = nullptr;
   };
 
-  DomTreeT &DT;
   std::vector<NodePtr> NumToNode;
   DenseMap<NodePtr, InfoRec> NodeToInfo;
 
-  SemiNCAInfo(DomTreeT &DT) : DT(DT) {}
+  void clear() {
+    NumToNode.clear();
+    NodeToInfo.clear();
+  }
 
   NodePtr getIDom(NodePtr BB) const {
     auto InfoIt = NodeToInfo.find(BB);
@@ -60,7 +62,7 @@ struct SemiNCAInfo {
     return InfoIt->second.IDom;
   }
 
-  TreeNodePtr getNodeForBlock(NodePtr BB) {
+  TreeNodePtr getNodeForBlock(NodePtr BB, DomTreeT &DT) {
     if (TreeNodePtr Node = DT.getNode(BB)) return Node;
 
     // Haven't calculated this node yet?  Get or calculate the node for the
@@ -68,7 +70,7 @@ struct SemiNCAInfo {
     NodePtr IDom = getIDom(BB);
 
     assert(IDom || DT.DomTreeNodes[nullptr]);
-    TreeNodePtr IDomNode = getNodeForBlock(IDom);
+    TreeNodePtr IDomNode = getNodeForBlock(IDom, DT);
 
     // Add a new tree node for this NodeT, and link it as a child of
     // IDomNode
@@ -121,7 +123,7 @@ struct SemiNCAInfo {
     return N;
   }
 
-  unsigned runDFS(NodePtr V, unsigned N) {
+  unsigned runForwardDFS(NodePtr V, unsigned N) {
     auto DFStorage = getStorage();
 
     for (auto I = df_ext_begin(V, DFStorage), E = df_ext_end(V, DFStorage);
@@ -178,7 +180,7 @@ struct SemiNCAInfo {
   }
 
   template <typename NodeType>
-  void runSemiNCA(unsigned NumBlocks) {
+  void runSemiNCA(DomTreeT &DT, unsigned NumBlocks) {
     unsigned N = 0;
     NumToNode.push_back(nullptr);
 
@@ -198,7 +200,7 @@ struct SemiNCAInfo {
            i != e; ++i)
         N = runReverseDFS(DT.Roots[i], N);
     } else {
-      N = runDFS(DT.Roots[0], N);
+      N = runForwardDFS(DT.Roots[0], N);
     }
 
     // It might be that some blocks did not get a DFS number (e.g., blocks of
@@ -268,7 +270,7 @@ struct SemiNCAInfo {
       assert(ImmDom || DT.DomTreeNodes[nullptr]);
 
       // Get or calculate the node for the immediate dominator
-      TreeNodePtr IDomNode = getNodeForBlock(ImmDom);
+      TreeNodePtr IDomNode = getNodeForBlock(ImmDom, DT);
 
       // Add a new tree node for this BasicBlock, and link it as a child of
       // IDomNode
@@ -278,8 +280,115 @@ struct SemiNCAInfo {
 
     DT.updateDFSNumbers();
   }
+
+  void doFullDFSWalk(const DomTreeT &DT) {
+    unsigned Num = 0;
+    for (auto *Root : DT.Roots)
+      if (!DT.isPostDominator())
+        Num = runForwardDFS(Root, Num);
+      else
+        Num = runReverseDFS(Root, Num);
+  }
+
+  static void PrintBlockOrNullptr(raw_ostream &O, NodePtr Obj) {
+    if (!Obj)
+      O << "nullptr";
+    else
+      Obj->printAsOperand(O, false);
+  }
+
+  // Checks if the tree contains all reachable nodes in the input graph.
+  bool verifyReachability(const DomTreeT &DT) {
+    clear();
+    doFullDFSWalk(DT);
+
+    for (auto &NodeToTN : DT.DomTreeNodes) {
+      const TreeNodePtr TN = NodeToTN.second.get();
+      const NodePtr BB = TN->getBlock();
+      if (!BB) continue;
+
+      if (NodeToInfo.count(BB) == 0) {
+        errs() << "DomTree node ";
+        PrintBlockOrNullptr(errs(), BB);
+        errs() << " not found by DFS walk!\n";
+        errs().flush();
+
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  // Checks if the tree has the parent property: if for all edges from V to W in
+  // the input graph, such that V is reachable, the parent of W in the tree is
+  // an ancestor of V in the tree.
+  //
+  // This means that if a node gets disconnected from the graph, then all of
+  // the nodes it dominated previously will now become unreachable.
+  bool verifyParentProperty(const DomTreeT &DT) {
+    for (auto &NodeToTN : DT.DomTreeNodes) {
+      const TreeNodePtr TN = NodeToTN.second.get();
+      const NodePtr BB = TN->getBlock();
+      if (!BB || TN->getChildren().empty()) continue;
+
+      clear();
+      NodeToInfo.insert({BB, {}});
+      doFullDFSWalk(DT);
+
+      for (TreeNodePtr Child : TN->getChildren())
+        if (NodeToInfo.count(Child->getBlock()) != 0) {
+          errs() << "Child ";
+          PrintBlockOrNullptr(errs(), Child->getBlock());
+          errs() << " reachable after its parent ";
+          PrintBlockOrNullptr(errs(), BB);
+          errs() << " is removed!\n";
+          errs().flush();
+
+          return false;
+        }
+    }
+
+    return true;
+  }
+
+  // Check if the tree has sibling property: if a node V does not dominate a
+  // node W for all siblings V and W in the tree.
+  //
+  // This means that if a node gets disconnected from the graph, then all of its
+  // siblings will now still be reachable.
+  bool verifySiblingProperty(const DomTreeT &DT) {
+    for (auto &NodeToTN : DT.DomTreeNodes) {
+      const TreeNodePtr TN = NodeToTN.second.get();
+      const NodePtr BB = TN->getBlock();
+      if (!BB || TN->getChildren().empty()) continue;
+
+      const auto &Siblings = TN->getChildren();
+      for (const TreeNodePtr N : Siblings) {
+        clear();
+        NodeToInfo.insert({N->getBlock(), {}});
+        doFullDFSWalk(DT);
+
+        for (const TreeNodePtr S : Siblings) {
+          if (S == N) continue;
+
+          if (NodeToInfo.count(S->getBlock()) == 0) {
+            errs() << "Node ";
+            PrintBlockOrNullptr(errs(), S->getBlock());
+            errs() << " not reachable when its sibling ";
+            PrintBlockOrNullptr(errs(), N->getBlock());
+            errs() << " is removed!\n";
+            errs().flush();
+
+            return false;
+          }
+        }
+      }
+    }
+
+    return true;
+  }
 };
-}  // namespace DomTreeBuilder
 
 template <class FuncT, class NodeT>
 void Calculate(DominatorTreeBaseByGraphTraits<GraphTraits<NodeT>> &DT,
@@ -287,11 +396,23 @@ void Calculate(DominatorTreeBaseByGraphTraits<GraphTraits<NodeT>> &DT,
   using NodePtr = typename GraphTraits<NodeT>::NodeRef;
   static_assert(std::is_pointer<NodePtr>::value,
                 "NodePtr should be a pointer type");
-
-  DomTreeBuilder::SemiNCAInfo<typename std::remove_pointer<NodePtr>::type>
-      SNCA(DT);
-  SNCA.template runSemiNCA<NodeT>(GraphTraits<FuncT *>::size(&F));
+  SemiNCAInfo<typename std::remove_pointer<NodePtr>::type> SNCA;
+  SNCA.template runSemiNCA<NodeT>(DT, GraphTraits<FuncT *>::size(&F));
 }
+
+template <class NodeT>
+bool Verify(const DominatorTreeBaseByGraphTraits<GraphTraits<NodeT>> &DT) {
+  using NodePtr = typename GraphTraits<NodeT>::NodeRef;
+  static_assert(std::is_pointer<NodePtr>::value,
+                "NodePtr should be a pointer type");
+  SemiNCAInfo<typename std::remove_pointer<NodePtr>::type> SNCA;
+
+  return SNCA.verifyReachability(DT) && SNCA.verifyParentProperty(DT) &&
+         SNCA.verifySiblingProperty(DT);
+
+}
+
+}  // namespace DomTreeBuilder
 }  // namespace llvm
 
 #endif

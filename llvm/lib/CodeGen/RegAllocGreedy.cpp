@@ -2622,7 +2622,7 @@ unsigned RAGreedy::selectOrSplitImpl(LiveInterval &VirtReg,
   }
 
   // If we couldn't allocate a register from spilling, there is probably some
-  // invalid inline assembly. The base class wil report it.
+  // invalid inline assembly. The base class will report it.
   if (Stage >= RS_Done || !VirtReg.isSpillable())
     return tryLastChanceRecoloring(VirtReg, Order, NewVRegs, FixedRegisters,
                                    Depth);

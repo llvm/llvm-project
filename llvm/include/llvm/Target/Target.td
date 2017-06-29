@@ -824,7 +824,7 @@ def CFI_INSTRUCTION : Instruction {
   let InOperandList = (ins i32imm:$id);
   let AsmString = "";
   let hasCtrlDep = 1;
-  let isNotDuplicable = 0;
+  let isNotDuplicable = 1;
 }
 def EH_LABEL : Instruction {
   let OutOperandList = (outs);

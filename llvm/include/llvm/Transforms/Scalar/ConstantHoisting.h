@@ -132,6 +132,8 @@ private:
                                  Instruction *Inst, unsigned Idx,
                                  ConstantInt *ConstInt);
   void collectConstantCandidates(ConstCandMapType &ConstCandMap,
+                                 Instruction *Inst, unsigned Idx);
+  void collectConstantCandidates(ConstCandMapType &ConstCandMap,
                                  Instruction *Inst);
   void collectConstantCandidates(Function &Fn);
   void findAndMakeBaseConstant(ConstCandVecType::iterator S,

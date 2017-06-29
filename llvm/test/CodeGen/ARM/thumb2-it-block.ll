@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=thumb-eabi -mcpu=arm1156t2-s -mattr=+thumb2 %s -o - | FileCheck %s
-; RUN: llc -mtriple=thumbv8 %s -o - | FileCheck %s
+; RUN: llc -mtriple=thumb-eabi -mcpu=arm1156t2-s -mattr=+thumb2 < %s | FileCheck %s
+; RUN: llc -mtriple=thumbv8 < %s | FileCheck %s
 ; PR11107
 
 define i32 @test(i32 %a, i32 %b) {

@@ -11,6 +11,7 @@
 
 #include "llvm/CodeGen/SelectionDAGAddressAnalysis.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 
@@ -18,28 +19,41 @@ namespace llvm {
 
 bool BaseIndexOffset::equalBaseIndex(BaseIndexOffset &Other,
                                      const SelectionDAG &DAG, int64_t &Off) {
-  // Obvious equivalent
+  // Initial Offset difference.
   Off = Other.Offset - Offset;
-  if (Other.Base == Base && Other.Index == Index &&
-      Other.IsIndexSignExt == IsIndexSignExt)
-    return true;
 
-  // Match GlobalAddresses
-  if (Index == Other.Index)
-    if (GlobalAddressSDNode *A = dyn_cast<GlobalAddressSDNode>(Base))
-      if (GlobalAddressSDNode *B = dyn_cast<GlobalAddressSDNode>(Other.Base))
+  if ((Other.Index == Index) && (Other.IsIndexSignExt == IsIndexSignExt)) {
+    // Trivial match.
+    if (Other.Base == Base)
+      return true;
+
+    // Match GlobalAddresses
+    if (auto *A = dyn_cast<GlobalAddressSDNode>(Base))
+      if (auto *B = dyn_cast<GlobalAddressSDNode>(Other.Base))
         if (A->getGlobal() == B->getGlobal()) {
           Off += B->getOffset() - A->getOffset();
           return true;
         }
 
-  // TODO: we should be able to add FrameIndex analysis improvements here.
+    const MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
 
+    // Match non-equal FrameIndexes - a FrameIndex stemming from an
+    // alloca will not have it's ObjectOffset set until post-DAG and
+    // as such we must assume the two framesIndices are incomparable.
+    if (auto *A = dyn_cast<FrameIndexSDNode>(Base))
+      if (auto *B = dyn_cast<FrameIndexSDNode>(Other.Base))
+        if (!MFI.getObjectAllocation(A->getIndex()) &&
+            !MFI.getObjectAllocation(B->getIndex())) {
+          Off += MFI.getObjectOffset(B->getIndex()) -
+                 MFI.getObjectOffset(A->getIndex());
+          return true;
+        }
+  }
   return false;
 }
 
 /// Parses tree in Ptr for base, index, offset addresses.
-BaseIndexOffset BaseIndexOffset::match(SDValue Ptr) {
+BaseIndexOffset BaseIndexOffset::match(SDValue Ptr, const SelectionDAG &DAG) {
   // (((B + I*M) + c)) + c ...
   SDValue Base = Ptr;
   SDValue Index = SDValue();

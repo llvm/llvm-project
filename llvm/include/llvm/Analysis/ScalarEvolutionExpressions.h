@@ -46,7 +46,7 @@ namespace llvm {
     Type *getType() const { return V->getType(); }
 
     /// Methods for support type inquiry through isa, cast, and dyn_cast:
-    static inline bool classof(const SCEV *S) {
+    static bool classof(const SCEV *S) {
       return S->getSCEVType() == scConstant;
     }
   };
@@ -65,7 +65,7 @@ namespace llvm {
     Type *getType() const { return Ty; }
 
     /// Methods for support type inquiry through isa, cast, and dyn_cast:
-    static inline bool classof(const SCEV *S) {
+    static bool classof(const SCEV *S) {
       return S->getSCEVType() == scTruncate ||
              S->getSCEVType() == scZeroExtend ||
              S->getSCEVType() == scSignExtend;
@@ -82,7 +82,7 @@ namespace llvm {
 
   public:
     /// Methods for support type inquiry through isa, cast, and dyn_cast:
-    static inline bool classof(const SCEV *S) {
+    static bool classof(const SCEV *S) {
       return S->getSCEVType() == scTruncate;
     }
   };
@@ -97,7 +97,7 @@ namespace llvm {
 
   public:
     /// Methods for support type inquiry through isa, cast, and dyn_cast:
-    static inline bool classof(const SCEV *S) {
+    static bool classof(const SCEV *S) {
       return S->getSCEVType() == scZeroExtend;
     }
   };
@@ -112,7 +112,7 @@ namespace llvm {
 
   public:
     /// Methods for support type inquiry through isa, cast, and dyn_cast:
-    static inline bool classof(const SCEV *S) {
+    static bool classof(const SCEV *S) {
       return S->getSCEVType() == scSignExtend;
     }
   };
@@ -167,7 +167,7 @@ namespace llvm {
     }
 
     /// Methods for support type inquiry through isa, cast, and dyn_cast:
-    static inline bool classof(const SCEV *S) {
+    static bool classof(const SCEV *S) {
       return S->getSCEVType() == scAddExpr ||
              S->getSCEVType() == scMulExpr ||
              S->getSCEVType() == scSMaxExpr ||
@@ -185,7 +185,7 @@ namespace llvm {
 
   public:
     /// Methods for support type inquiry through isa, cast, and dyn_cast:
-    static inline bool classof(const SCEV *S) {
+    static bool classof(const SCEV *S) {
       return S->getSCEVType() == scAddExpr ||
              S->getSCEVType() == scMulExpr ||
              S->getSCEVType() == scSMaxExpr ||
@@ -217,7 +217,7 @@ namespace llvm {
     }
 
     /// Methods for support type inquiry through isa, cast, and dyn_cast:
-    static inline bool classof(const SCEV *S) {
+    static bool classof(const SCEV *S) {
       return S->getSCEVType() == scAddExpr;
     }
   };
@@ -234,7 +234,7 @@ namespace llvm {
 
   public:
     /// Methods for support type inquiry through isa, cast, and dyn_cast:
-    static inline bool classof(const SCEV *S) {
+    static bool classof(const SCEV *S) {
       return S->getSCEVType() == scMulExpr;
     }
   };
@@ -263,7 +263,7 @@ namespace llvm {
     }
 
     /// Methods for support type inquiry through isa, cast, and dyn_cast:
-    static inline bool classof(const SCEV *S) {
+    static bool classof(const SCEV *S) {
       return S->getSCEVType() == scUDivExpr;
     }
   };
@@ -345,7 +345,7 @@ namespace llvm {
     }
 
     /// Methods for support type inquiry through isa, cast, and dyn_cast:
-    static inline bool classof(const SCEV *S) {
+    static bool classof(const SCEV *S) {
       return S->getSCEVType() == scAddRecExpr;
     }
   };
@@ -363,7 +363,7 @@ namespace llvm {
 
   public:
     /// Methods for support type inquiry through isa, cast, and dyn_cast:
-    static inline bool classof(const SCEV *S) {
+    static bool classof(const SCEV *S) {
       return S->getSCEVType() == scSMaxExpr;
     }
   };
@@ -382,7 +382,7 @@ namespace llvm {
 
   public:
     /// Methods for support type inquiry through isa, cast, and dyn_cast:
-    static inline bool classof(const SCEV *S) {
+    static bool classof(const SCEV *S) {
       return S->getSCEVType() == scUMaxExpr;
     }
   };
@@ -428,7 +428,7 @@ namespace llvm {
     Type *getType() const { return getValPtr()->getType(); }
 
     /// Methods for support type inquiry through isa, cast, and dyn_cast:
-    static inline bool classof(const SCEV *S) {
+    static bool classof(const SCEV *S) {
       return S->getSCEVType() == scUnknown;
     }
   };

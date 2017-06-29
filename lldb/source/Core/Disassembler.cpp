@@ -17,7 +17,6 @@
 #include "lldb/Core/ModuleList.h" // for ModuleList
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/SourceManager.h" // for SourceManager
-#include "lldb/Core/Timer.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Interpreter/OptionValue.h"
 #include "lldb/Interpreter/OptionValueArray.h"
@@ -37,8 +36,9 @@
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Status.h"
-#include "lldb/Utility/Stream.h"            // for Stream
-#include "lldb/Utility/StreamString.h"      // for StreamString
+#include "lldb/Utility/Stream.h"       // for Stream
+#include "lldb/Utility/StreamString.h" // for StreamString
+#include "lldb/Utility/Timer.h"
 #include "lldb/lldb-private-enumerations.h" // for InstructionType:...
 #include "lldb/lldb-private-interfaces.h"   // for DisassemblerCrea...
 #include "lldb/lldb-private-types.h"        // for RegisterInfo

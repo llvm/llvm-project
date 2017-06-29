@@ -23,7 +23,6 @@
 #include "llvm/CodeGen/MachineInstrBundleIterator.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/MC/LaneBitmask.h"
-#include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/BranchProbability.h"
 #include <cassert>
@@ -758,52 +757,6 @@ private:
   /// unless you know what you're doing, because it doesn't update Pred's
   /// successors list. Use Pred->removeSuccessor instead.
   void removePredecessor(MachineBasicBlock *Pred);
-
-  // Value of cfa offset valid at basic block entry.
-  int IncomingCFAOffset = -1;
-  // Value of cfa offset valid at basic block exit.
-  int OutgoingCFAOffset = -1;
-  // Value of cfa register valid at basic block entry.
-  unsigned IncomingCFARegister = 0;
-  // Value of cfa register valid at basic block exit.
-  unsigned OutgoingCFARegister = 0;
-  // If a block contains a def_cfa_offset or def_cfa directive.
-  bool DefOffset = false;
-  // If a block contains a def_cfa_register or def_cfa directive.
-  bool DefRegister = false;
-
- public:
-  int getIncomingCFAOffset() { return IncomingCFAOffset; }
-  void setIncomingCFAOffset(int Offset) { IncomingCFAOffset = Offset; }
-  int getOutgoingCFAOffset() { return OutgoingCFAOffset; }
-  void setOutgoingCFAOffset(int Offset) { OutgoingCFAOffset = Offset; }
-  unsigned getIncomingCFARegister() { return IncomingCFARegister; }
-  void setIncomingCFARegister(unsigned Register) {
-    IncomingCFARegister = Register;
-  }
-  unsigned getOutgoingCFARegister() { return OutgoingCFARegister; }
-  void setOutgoingCFARegister(unsigned Register) {
-    OutgoingCFARegister = Register;
-  }
-
-  bool hasDefOffset() { return DefOffset; }
-  bool hasDefRegister() { return DefRegister; }
-  void setDefOffset(bool SetsOffset) { DefOffset = SetsOffset; }
-  void setDefRegister(bool SetsRegister) { DefRegister = SetsRegister; }
-
-  // Update the outgoing cfa offset and register for this block based on the CFI
-  // instruction inserted at Pos.
-  void updateCFIInfo(MachineBasicBlock::iterator Pos);
-  // Update the cfa offset and register values for all successors of this block.
-  void updateCFIInfoSucc();
-  // Recalculate outgoing cfa offset and register. Use existing incoming offset
-  // and register values if UseExistingIncoming is set to true. If it is false,
-  // use new values passed as arguments.
-  void recalculateCFIInfo(bool UseExistingIncoming, int NewIncomingOffset = -1,
-                          unsigned NewIncomingRegister = 0);
-  // Update outgoing cfa offset and register of the block after it is merged
-  // with MBB.
-  void mergeCFIInfo(MachineBasicBlock *MBB);
 };
 
 raw_ostream& operator<<(raw_ostream &OS, const MachineBasicBlock &MBB);

@@ -239,21 +239,47 @@ static QualType getCanonicalParamType(ASTContext &C, QualType T) {
   return C.getCanonicalParamType(T);
 }
 
-llvm::Function *
-CodeGenFunction::GenerateOpenMPCapturedStmtFunction(const CapturedStmt &S) {
-  assert(
-      CapturedStmtInfo &&
-      "CapturedStmtInfo should be set when generating the captured function");
-  const CapturedDecl *CD = S.getCapturedDecl();
-  const RecordDecl *RD = S.getCapturedRecordDecl();
+namespace {
+  /// Contains required data for proper outlined function codegen.
+  struct FunctionOptions {
+    /// Captured statement for which the function is generated.
+    const CapturedStmt *S = nullptr;
+    /// true if cast to/from  UIntPtr is required for variables captured by
+    /// value.
+    bool UIntPtrCastRequired = true;
+    /// true if only casted argumefnts must be registered as local args or VLA
+    /// sizes.
+    bool RegisterCastedArgsOnly = false;
+    /// Name of the generated function.
+    StringRef FunctionName;
+    explicit FunctionOptions(const CapturedStmt *S, bool UIntPtrCastRequired,
+                             bool RegisterCastedArgsOnly,
+                             StringRef FunctionName)
+        : S(S), UIntPtrCastRequired(UIntPtrCastRequired),
+          RegisterCastedArgsOnly(UIntPtrCastRequired && RegisterCastedArgsOnly),
+          FunctionName(FunctionName) {}
+  };
+}
+
+static std::pair<llvm::Function *, bool> emitOutlinedFunctionPrologue(
+    CodeGenFunction &CGF, FunctionArgList &Args,
+    llvm::DenseMap<const Decl *, std::pair<const VarDecl *, Address>>
+        &LocalAddrs,
+    llvm::DenseMap<const Decl *, std::pair<const Expr *, llvm::Value *>>
+        &VLASizes,
+    llvm::Value *&CXXThisValue, const FunctionOptions &FO) {
+  const CapturedDecl *CD = FO.S->getCapturedDecl();
+  const RecordDecl *RD = FO.S->getCapturedRecordDecl();
   assert(CD->hasBody() && "missing CapturedDecl body");
 
+  CXXThisValue = nullptr;
   // Build the argument list.
+  CodeGenModule &CGM = CGF.CGM;
   ASTContext &Ctx = CGM.getContext();
-  FunctionArgList Args;
+  bool HasUIntPtrArgs = false;
   Args.append(CD->param_begin(),
               std::next(CD->param_begin(), CD->getContextParamPosition()));
-  auto I = S.captures().begin();
+  auto I = FO.S->captures().begin();
   for (auto *FD : RD->fields()) {
     QualType ArgType = FD->getType();
     IdentifierInfo *II = nullptr;
@@ -265,23 +291,24 @@ CodeGenFunction::GenerateOpenMPCapturedStmtFunction(const CapturedStmt &S) {
     // deal with pointers. We can pass in the same way the VLA type sizes to the
     // outlined function.
     if ((I->capturesVariableByCopy() && !ArgType->isAnyPointerType()) ||
-        I->capturesVariableArrayType())
-      ArgType = Ctx.getUIntPtrType();
+        I->capturesVariableArrayType()) {
+      HasUIntPtrArgs = true;
+      if (FO.UIntPtrCastRequired)
+        ArgType = Ctx.getUIntPtrType();
+    }
 
     if (I->capturesVariable() || I->capturesVariableByCopy()) {
       CapVar = I->getCapturedVar();
       II = CapVar->getIdentifier();
     } else if (I->capturesThis())
-      II = &getContext().Idents.get("this");
+      II = &Ctx.Idents.get("this");
     else {
       assert(I->capturesVariableArrayType());
-      II = &getContext().Idents.get("vla");
+      II = &Ctx.Idents.get("vla");
     }
-    if (ArgType->isVariablyModifiedType()) {
-      ArgType =
-          getCanonicalParamType(getContext(), ArgType.getNonReferenceType());
-    }
-    Args.push_back(ImplicitParamDecl::Create(getContext(), /*DC=*/nullptr,
+    if (ArgType->isVariablyModifiedType())
+      ArgType = getCanonicalParamType(Ctx, ArgType.getNonReferenceType());
+    Args.push_back(ImplicitParamDecl::Create(Ctx, /*DC=*/nullptr,
                                              FD->getLocation(), II, ArgType,
                                              ImplicitParamDecl::Other));
     ++I;
@@ -296,90 +323,166 @@ CodeGenFunction::GenerateOpenMPCapturedStmtFunction(const CapturedStmt &S) {
       CGM.getTypes().arrangeBuiltinFunctionDeclaration(Ctx.VoidTy, Args);
   llvm::FunctionType *FuncLLVMTy = CGM.getTypes().GetFunctionType(FuncInfo);
 
-  llvm::Function *F = llvm::Function::Create(
-      FuncLLVMTy, llvm::GlobalValue::InternalLinkage,
-      CapturedStmtInfo->getHelperName(), &CGM.getModule());
+  llvm::Function *F =
+      llvm::Function::Create(FuncLLVMTy, llvm::GlobalValue::InternalLinkage,
+                             FO.FunctionName, &CGM.getModule());
   CGM.SetInternalFunctionAttributes(CD, F, FuncInfo);
   if (CD->isNothrow())
     F->addFnAttr(llvm::Attribute::NoUnwind);
 
   // Generate the function.
-  StartFunction(CD, Ctx.VoidTy, F, FuncInfo, Args, CD->getLocation(),
-                CD->getBody()->getLocStart());
+  CGF.StartFunction(CD, Ctx.VoidTy, F, FuncInfo, Args, CD->getLocation(),
+                    CD->getBody()->getLocStart());
   unsigned Cnt = CD->getContextParamPosition();
-  I = S.captures().begin();
+  I = FO.S->captures().begin();
   for (auto *FD : RD->fields()) {
     // If we are capturing a pointer by copy we don't need to do anything, just
     // use the value that we get from the arguments.
     if (I->capturesVariableByCopy() && FD->getType()->isAnyPointerType()) {
       const VarDecl *CurVD = I->getCapturedVar();
-      Address LocalAddr = GetAddrOfLocalVar(Args[Cnt]);
+      Address LocalAddr = CGF.GetAddrOfLocalVar(Args[Cnt]);
       // If the variable is a reference we need to materialize it here.
       if (CurVD->getType()->isReferenceType()) {
-        Address RefAddr = CreateMemTemp(CurVD->getType(), getPointerAlign(),
-                                        ".materialized_ref");
-        EmitStoreOfScalar(LocalAddr.getPointer(), RefAddr, /*Volatile=*/false,
-                          CurVD->getType());
+        Address RefAddr = CGF.CreateMemTemp(
+            CurVD->getType(), CGM.getPointerAlign(), ".materialized_ref");
+        CGF.EmitStoreOfScalar(LocalAddr.getPointer(), RefAddr,
+                              /*Volatile=*/false, CurVD->getType());
         LocalAddr = RefAddr;
       }
-      setAddrOfLocalVar(CurVD, LocalAddr);
+      if (!FO.RegisterCastedArgsOnly)
+        LocalAddrs.insert({Args[Cnt], {CurVD, LocalAddr}});
       ++Cnt;
       ++I;
       continue;
     }
 
     LValueBaseInfo BaseInfo(AlignmentSource::Decl, false);
-    LValue ArgLVal =
-        MakeAddrLValue(GetAddrOfLocalVar(Args[Cnt]), Args[Cnt]->getType(),
-                       BaseInfo);
+    LValue ArgLVal = CGF.MakeAddrLValue(CGF.GetAddrOfLocalVar(Args[Cnt]),
+                                        Args[Cnt]->getType(), BaseInfo);
     if (FD->hasCapturedVLAType()) {
-      LValue CastedArgLVal =
-          MakeAddrLValue(castValueFromUintptr(*this, FD->getType(),
-                                              Args[Cnt]->getName(), ArgLVal),
-                         FD->getType(), BaseInfo);
+      if (FO.UIntPtrCastRequired) {
+        ArgLVal = CGF.MakeAddrLValue(castValueFromUintptr(CGF, FD->getType(),
+                                                          Args[Cnt]->getName(),
+                                                          ArgLVal),
+                                     FD->getType(), BaseInfo);
+      }
       auto *ExprArg =
-          EmitLoadOfLValue(CastedArgLVal, SourceLocation()).getScalarVal();
+          CGF.EmitLoadOfLValue(ArgLVal, SourceLocation()).getScalarVal();
       auto VAT = FD->getCapturedVLAType();
-      VLASizeMap[VAT->getSizeExpr()] = ExprArg;
+      VLASizes.insert({Args[Cnt], {VAT->getSizeExpr(), ExprArg}});
     } else if (I->capturesVariable()) {
       auto *Var = I->getCapturedVar();
       QualType VarTy = Var->getType();
       Address ArgAddr = ArgLVal.getAddress();
       if (!VarTy->isReferenceType()) {
         if (ArgLVal.getType()->isLValueReferenceType()) {
-          ArgAddr = EmitLoadOfReference(
+          ArgAddr = CGF.EmitLoadOfReference(
               ArgAddr, ArgLVal.getType()->castAs<ReferenceType>());
         } else if (!VarTy->isVariablyModifiedType() || !VarTy->isPointerType()) {
           assert(ArgLVal.getType()->isPointerType());
-          ArgAddr = EmitLoadOfPointer(
+          ArgAddr = CGF.EmitLoadOfPointer(
               ArgAddr, ArgLVal.getType()->castAs<PointerType>());
         }
       }
-      setAddrOfLocalVar(
-          Var, Address(ArgAddr.getPointer(), getContext().getDeclAlign(Var)));
+      if (!FO.RegisterCastedArgsOnly) {
+        LocalAddrs.insert(
+            {Args[Cnt],
+             {Var, Address(ArgAddr.getPointer(), Ctx.getDeclAlign(Var))}});
+      }
     } else if (I->capturesVariableByCopy()) {
       assert(!FD->getType()->isAnyPointerType() &&
              "Not expecting a captured pointer.");
       auto *Var = I->getCapturedVar();
       QualType VarTy = Var->getType();
-      setAddrOfLocalVar(Var, castValueFromUintptr(*this, FD->getType(),
-                                                  Args[Cnt]->getName(), ArgLVal,
-                                                  VarTy->isReferenceType()));
+      LocalAddrs.insert(
+          {Args[Cnt],
+           {Var,
+            FO.UIntPtrCastRequired
+                ? castValueFromUintptr(CGF, FD->getType(), Args[Cnt]->getName(),
+                                       ArgLVal, VarTy->isReferenceType())
+                : ArgLVal.getAddress()}});
     } else {
       // If 'this' is captured, load it into CXXThisValue.
       assert(I->capturesThis());
-      CXXThisValue =
-          EmitLoadOfLValue(ArgLVal, Args[Cnt]->getLocation()).getScalarVal();
+      CXXThisValue = CGF.EmitLoadOfLValue(ArgLVal, Args[Cnt]->getLocation())
+                         .getScalarVal();
+      LocalAddrs.insert({Args[Cnt], {nullptr, ArgLVal.getAddress()}});
     }
     ++Cnt;
     ++I;
   }
 
+  return {F, HasUIntPtrArgs};
+}
+
+llvm::Function *
+CodeGenFunction::GenerateOpenMPCapturedStmtFunction(const CapturedStmt &S) {
+  assert(
+      CapturedStmtInfo &&
+      "CapturedStmtInfo should be set when generating the captured function");
+  const CapturedDecl *CD = S.getCapturedDecl();
+  // Build the argument list.
+  bool NeedWrapperFunction =
+      getDebugInfo() &&
+      CGM.getCodeGenOpts().getDebugInfo() >= codegenoptions::LimitedDebugInfo;
+  FunctionArgList Args;
+  llvm::DenseMap<const Decl *, std::pair<const VarDecl *, Address>> LocalAddrs;
+  llvm::DenseMap<const Decl *, std::pair<const Expr *, llvm::Value *>> VLASizes;
+  FunctionOptions FO(&S, !NeedWrapperFunction, /*RegisterCastedArgsOnly=*/false,
+                     CapturedStmtInfo->getHelperName());
+  llvm::Function *F;
+  bool HasUIntPtrArgs;
+  std::tie(F, HasUIntPtrArgs) = emitOutlinedFunctionPrologue(
+      *this, Args, LocalAddrs, VLASizes, CXXThisValue, FO);
+  for (const auto &LocalAddrPair : LocalAddrs) {
+    if (LocalAddrPair.second.first) {
+      setAddrOfLocalVar(LocalAddrPair.second.first,
+                        LocalAddrPair.second.second);
+    }
+  }
+  for (const auto &VLASizePair : VLASizes)
+    VLASizeMap[VLASizePair.second.first] = VLASizePair.second.second;
   PGO.assignRegionCounters(GlobalDecl(CD), F);
   CapturedStmtInfo->EmitBody(*this, CD->getBody());
   FinishFunction(CD->getBodyRBrace());
+  if (!NeedWrapperFunction || !HasUIntPtrArgs)
+    return F;
 
-  return F;
+  FunctionOptions WrapperFO(&S, /*UIntPtrCastRequired=*/true,
+                            /*RegisterCastedArgsOnly=*/true,
+                            ".nondebug_wrapper.");
+  CodeGenFunction WrapperCGF(CGM, /*suppressNewContext=*/true);
+  WrapperCGF.disableDebugInfo();
+  Args.clear();
+  LocalAddrs.clear();
+  VLASizes.clear();
+  llvm::Function *WrapperF =
+      emitOutlinedFunctionPrologue(WrapperCGF, Args, LocalAddrs, VLASizes,
+                                   WrapperCGF.CXXThisValue, WrapperFO).first;
+  LValueBaseInfo BaseInfo(AlignmentSource::Decl, false);
+  llvm::SmallVector<llvm::Value *, 4> CallArgs;
+  for (const auto *Arg : Args) {
+    llvm::Value *CallArg;
+    auto I = LocalAddrs.find(Arg);
+    if (I != LocalAddrs.end()) {
+      LValue LV =
+          WrapperCGF.MakeAddrLValue(I->second.second, Arg->getType(), BaseInfo);
+      CallArg = WrapperCGF.EmitLoadOfScalar(LV, SourceLocation());
+    } else {
+      auto EI = VLASizes.find(Arg);
+      if (EI != VLASizes.end())
+        CallArg = EI->second.second;
+      else {
+        LValue LV = WrapperCGF.MakeAddrLValue(WrapperCGF.GetAddrOfLocalVar(Arg),
+                                              Arg->getType(), BaseInfo);
+        CallArg = WrapperCGF.EmitLoadOfScalar(LV, SourceLocation());
+      }
+    }
+    CallArgs.emplace_back(CallArg);
+  }
+  WrapperCGF.Builder.CreateCall(F, CallArgs);
+  WrapperCGF.FinishFunction();
+  return WrapperF;
 }
 
 //===----------------------------------------------------------------------===//

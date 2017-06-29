@@ -54,9 +54,9 @@ public:
     return Instruction::UserOp1;
   }
 
-  static inline bool classof(const Instruction *) { return true; }
-  static inline bool classof(const ConstantExpr *) { return true; }
-  static inline bool classof(const Value *V) {
+  static bool classof(const Instruction *) { return true; }
+  static bool classof(const ConstantExpr *) { return true; }
+  static bool classof(const Value *V) {
     return isa<Instruction>(V) || isa<ConstantExpr>(V);
   }
 };
@@ -97,19 +97,19 @@ public:
     return (SubclassOptionalData & NoSignedWrap) != 0;
   }
 
-  static inline bool classof(const Instruction *I) {
+  static bool classof(const Instruction *I) {
     return I->getOpcode() == Instruction::Add ||
            I->getOpcode() == Instruction::Sub ||
            I->getOpcode() == Instruction::Mul ||
            I->getOpcode() == Instruction::Shl;
   }
-  static inline bool classof(const ConstantExpr *CE) {
+  static bool classof(const ConstantExpr *CE) {
     return CE->getOpcode() == Instruction::Add ||
            CE->getOpcode() == Instruction::Sub ||
            CE->getOpcode() == Instruction::Mul ||
            CE->getOpcode() == Instruction::Shl;
   }
-  static inline bool classof(const Value *V) {
+  static bool classof(const Value *V) {
     return (isa<Instruction>(V) && classof(cast<Instruction>(V))) ||
            (isa<ConstantExpr>(V) && classof(cast<ConstantExpr>(V)));
   }
@@ -144,13 +144,13 @@ public:
            OpC == Instruction::LShr;
   }
 
-  static inline bool classof(const ConstantExpr *CE) {
+  static bool classof(const ConstantExpr *CE) {
     return isPossiblyExactOpcode(CE->getOpcode());
   }
-  static inline bool classof(const Instruction *I) {
+  static bool classof(const Instruction *I) {
     return isPossiblyExactOpcode(I->getOpcode());
   }
-  static inline bool classof(const Value *V) {
+  static bool classof(const Value *V) {
     return (isa<Instruction>(V) && classof(cast<Instruction>(V))) ||
            (isa<ConstantExpr>(V) && classof(cast<ConstantExpr>(V)));
   }
@@ -324,17 +324,17 @@ public:
   /// precision.
   float getFPAccuracy() const;
 
-  static inline bool classof(const Instruction *I) {
+  static bool classof(const Instruction *I) {
     return I->getType()->isFPOrFPVectorTy() ||
       I->getOpcode() == Instruction::FCmp;
   }
 
-  static inline bool classof(const ConstantExpr *CE) {
+  static bool classof(const ConstantExpr *CE) {
     return CE->getType()->isFPOrFPVectorTy() ||
            CE->getOpcode() == Instruction::FCmp;
   }
 
-  static inline bool classof(const Value *V) {
+  static bool classof(const Value *V) {
     return (isa<Instruction>(V) && classof(cast<Instruction>(V))) ||
            (isa<ConstantExpr>(V) && classof(cast<ConstantExpr>(V)));
   }
@@ -344,13 +344,13 @@ public:
 template<typename SuperClass, unsigned Opc>
 class ConcreteOperator : public SuperClass {
 public:
-  static inline bool classof(const Instruction *I) {
+  static bool classof(const Instruction *I) {
     return I->getOpcode() == Opc;
   }
-  static inline bool classof(const ConstantExpr *CE) {
+  static bool classof(const ConstantExpr *CE) {
     return CE->getOpcode() == Opc;
   }
-  static inline bool classof(const Value *V) {
+  static bool classof(const Value *V) {
     return (isa<Instruction>(V) && classof(cast<Instruction>(V))) ||
            (isa<ConstantExpr>(V) && classof(cast<ConstantExpr>(V)));
   }
