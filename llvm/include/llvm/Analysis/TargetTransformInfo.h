@@ -216,9 +216,23 @@ public:
   /// other context they may not be folded. This routine can distinguish such
   /// cases.
   ///
+  /// \p Operands is a list of operands which can be a result of transformations
+  /// of the current operands. The number of the operands on the list must equal
+  /// to the number of the current operands the IR user has. Their order on the
+  /// list must be the same as the order of the current operands the IR user
+  /// has.
+  ///
   /// The returned cost is defined in terms of \c TargetCostConstants, see its
   /// comments for a detailed explanation of the cost values.
-  int getUserCost(const User *U) const;
+  int getUserCost(const User *U, ArrayRef<const Value *> Operands) const;
+
+  /// \brief This is a helper function which calls the two-argument getUserCost
+  /// with \p Operands which are the current operands U has.
+  int getUserCost(const User *U) const {
+    SmallVector<const Value *, 4> Operands(U->value_op_begin(),
+                                           U->value_op_end());
+    return getUserCost(U, Operands);
+  }
 
   /// \brief Return true if branch divergence exists.
   ///
@@ -824,7 +838,8 @@ public:
                                ArrayRef<const Value *> Arguments) = 0;
   virtual unsigned getEstimatedNumberOfCaseClusters(const SwitchInst &SI,
                                                     unsigned &JTSize) = 0;
-  virtual int getUserCost(const User *U) = 0;
+  virtual int
+  getUserCost(const User *U, ArrayRef<const Value *> Operands) = 0;
   virtual bool hasBranchDivergence() = 0;
   virtual bool isSourceOfDivergence(const Value *V) = 0;
   virtual bool isAlwaysUniform(const Value *V) = 0;
@@ -1000,7 +1015,9 @@ public:
                        ArrayRef<const Value *> Arguments) override {
     return Impl.getIntrinsicCost(IID, RetTy, Arguments);
   }
-  int getUserCost(const User *U) override { return Impl.getUserCost(U); }
+  int getUserCost(const User *U, ArrayRef<const Value *> Operands) override {
+    return Impl.getUserCost(U, Operands);
+  }
   bool hasBranchDivergence() override { return Impl.hasBranchDivergence(); }
   bool isSourceOfDivergence(const Value *V) override {
     return Impl.isSourceOfDivergence(V);

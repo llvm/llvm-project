@@ -10,8 +10,7 @@
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Target/ModuleCache.h"
-
-extern const char *TestMainArgv0;
+#include "unittests/Utility/Helpers/TestUtilities.h"
 
 using namespace lldb_private;
 using namespace lldb;
@@ -26,7 +25,7 @@ public:
 
 protected:
   static FileSpec s_cache_dir;
-  static llvm::SmallString<128> s_test_executable;
+  static std::string s_test_executable;
 
   void TryGetAndPut(const FileSpec &cache_dir, const char *hostname,
                     bool expect_download);
@@ -34,7 +33,7 @@ protected:
 }
 
 FileSpec ModuleCacheTest::s_cache_dir;
-llvm::SmallString<128> ModuleCacheTest::s_test_executable;
+std::string ModuleCacheTest::s_test_executable;
 
 static const char dummy_hostname[] = "dummy_hostname";
 static const char dummy_remote_dir[] = "bin";
@@ -71,10 +70,7 @@ void ModuleCacheTest::SetUpTestCase() {
 
   FileSpec tmpdir_spec;
   HostInfo::GetLLDBPath(lldb::ePathTypeLLDBTempSystemDir, s_cache_dir);
-
-  llvm::StringRef exe_folder = llvm::sys::path::parent_path(TestMainArgv0);
-  s_test_executable = exe_folder;
-  llvm::sys::path::append(s_test_executable, "Inputs", module_name);
+  s_test_executable = GetInputFilePath(module_name);
 }
 
 void ModuleCacheTest::TearDownTestCase() {

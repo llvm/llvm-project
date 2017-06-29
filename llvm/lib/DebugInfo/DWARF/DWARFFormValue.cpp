@@ -275,7 +275,7 @@ bool DWARFFormValue::isFormClass(DWARFFormValue::FormClass FC) const {
          FC == FC_SectionOffset;
 }
 
-bool DWARFFormValue::extractValue(const DataExtractor &Data,
+bool DWARFFormValue::extractValue(const DWARFDataExtractor &Data,
                                   uint32_t *OffsetPtr, const DWARFUnit *CU) {
   U = CU;
   bool Indirect = false;
@@ -290,10 +290,9 @@ bool DWARFFormValue::extractValue(const DataExtractor &Data,
     case DW_FORM_ref_addr: {
       if (!U)
         return false;
-      uint16_t AddrSize = (Form == DW_FORM_addr) ? U->getAddressByteSize()
-                                                 : U->getRefAddrByteSize();
-      Value.uval = getRelocatedValue(Data, AddrSize, OffsetPtr,
-                                     U->getRelocMap(), &Value.SectionIndex);
+      uint16_t Size = (Form == DW_FORM_addr) ? U->getAddressByteSize()
+                                             : U->getRefAddrByteSize();
+      Value.uval = Data.getRelocatedValue(Size, OffsetPtr, &Value.SectionIndex);
       break;
     }
     case DW_FORM_exprloc:
@@ -333,11 +332,9 @@ bool DWARFFormValue::extractValue(const DataExtractor &Data,
     case DW_FORM_ref4:
     case DW_FORM_ref_sup4:
     case DW_FORM_strx4:
-    case DW_FORM_addrx4: {
-      const RelocAddrMap *RelocMap = U ? U->getRelocMap() : nullptr;
-      Value.uval = getRelocatedValue(Data, 4, OffsetPtr, RelocMap);
+    case DW_FORM_addrx4:
+      Value.uval = Data.getRelocatedValue(4, OffsetPtr);
       break;
-    }
     case DW_FORM_data8:
     case DW_FORM_ref8:
     case DW_FORM_ref_sup8:
@@ -365,8 +362,8 @@ bool DWARFFormValue::extractValue(const DataExtractor &Data,
     case DW_FORM_strp_sup: {
       if (!U)
         return false;
-      Value.uval = getRelocatedValue(Data, U->getDwarfOffsetByteSize(),
-                                     OffsetPtr, U->getRelocMap());
+      Value.uval =
+          Data.getRelocatedValue(U->getDwarfOffsetByteSize(), OffsetPtr);
       break;
     }
     case DW_FORM_flag_present:

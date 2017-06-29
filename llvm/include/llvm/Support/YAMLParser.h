@@ -188,7 +188,7 @@ public:
   NullNode(std::unique_ptr<Document> &D)
       : Node(NK_Null, D, StringRef(), StringRef()) {}
 
-  static inline bool classof(const Node *N) { return N->getType() == NK_Null; }
+  static bool classof(const Node *N) { return N->getType() == NK_Null; }
 };
 
 /// \brief A scalar node is an opaque datum that can be presented as a
@@ -220,7 +220,7 @@ public:
   ///        This happens with escaped characters and multi-line literals.
   StringRef getValue(SmallVectorImpl<char> &Storage) const;
 
-  static inline bool classof(const Node *N) {
+  static bool classof(const Node *N) {
     return N->getType() == NK_Scalar;
   }
 
@@ -254,7 +254,7 @@ public:
   /// \brief Gets the value of this node as a StringRef.
   StringRef getValue() const { return Value; }
 
-  static inline bool classof(const Node *N) {
+  static bool classof(const Node *N) {
     return N->getType() == NK_BlockScalar;
   }
 
@@ -296,7 +296,7 @@ public:
       Val->skip();
   }
 
-  static inline bool classof(const Node *N) {
+  static bool classof(const Node *N) {
     return N->getType() == NK_KeyValue;
   }
 
@@ -419,7 +419,7 @@ public:
 
   void skip() override { yaml::skip(*this); }
 
-  static inline bool classof(const Node *N) {
+  static bool classof(const Node *N) {
     return N->getType() == NK_Mapping;
   }
 
@@ -476,7 +476,7 @@ public:
 
   void skip() override { yaml::skip(*this); }
 
-  static inline bool classof(const Node *N) {
+  static bool classof(const Node *N) {
     return N->getType() == NK_Sequence;
   }
 
@@ -502,7 +502,7 @@ public:
   StringRef getName() const { return Name; }
   Node *getTarget();
 
-  static inline bool classof(const Node *N) { return N->getType() == NK_Alias; }
+  static bool classof(const Node *N) { return N->getType() == NK_Alias; }
 
 private:
   StringRef Name;

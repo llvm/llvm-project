@@ -93,12 +93,12 @@ int foo(int n, double *ptr) {
   // CHECK-64:  store i{{[0-9]+}} [[AVAL]], i{{[0-9]+}}* [[CONV]],
   // CHECK-32:  store i{{[0-9]+}} [[AVAL]], i{{[0-9]+}}* [[ACAST]],
   // CHECK:  [[ACAST_VAL:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[ACAST]],
-  // CHECK:  [[ACAST_TOPTR:%.+]] = inttoptr i{{[0-9]+}} [[ACAST_VAL]] to i8*
   // CHECK:  [[BASE_PTR_GEP:%.+]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[BASE_PTR_ARR]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
-  // CHECK:  store i8* [[ACAST_TOPTR]], i8** [[BASE_PTR_GEP]],
-  // CHECK:  [[ACAST_TOPTR2:%.+]] = inttoptr i{{[0-9]+}} [[ACAST_VAL]] to i8*
+  // CHECK:  [[ACAST_TOPTR:%.+]] = bitcast i8** [[BASE_PTR_GEP]] to i{{[0-9]+}}*
+  // CHECK:  store i{{[0-9]+}} [[ACAST_VAL]], i{{[0-9]+}}* [[ACAST_TOPTR]],
   // CHECK:  [[PTR_GEP:%.+]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[PTR_ARR]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
-  // CHECK:  store i8* [[ACAST_TOPTR2]], i8** [[PTR_GEP]],
+  // CHECK:  [[ACAST_TOPTR2:%.+]] = bitcast i8** [[PTR_GEP]] to i{{[0-9]+}}*
+  // CHECK:  store i{{[0-9]+}} [[ACAST_VAL]], i{{[0-9]+}}* [[ACAST_TOPTR2]],
   // CHECK:  [[BASE_PTR_GEP_ARG:%.+]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[BASE_PTR_ARR]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
   // CHECK:  [[PTR_GEP_ARG:%.+]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[PTR_ARR]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
   // CHECK:  {{.+}} = call i32 @__tgt_target(i32 -1, {{.+}}, i32 1, i8** [[BASE_PTR_GEP_ARG]], i8** [[PTR_GEP_ARG]], i[[SZ]]* getelementptr inbounds ([1 x i[[SZ]]], [1 x i[[SZ]]]* [[SIZET]], i32 0, i32 0), i32* getelementptr inbounds ([1 x i32], [1 x i32]* [[MAPT]], i32 0, i32 0))
@@ -132,85 +132,87 @@ int foo(int n, double *ptr) {
   // CHECK:  [[CN_SIZE_2:%.+]] = mul{{.+}} i{{[0-9]+}} [[CN_SIZE_1]], 8
 
   // firstprivate(aa) --> base_ptr = aa, ptr = aa, size = 2 (short)
-  // CHECK:  [[A2CAST_TO_INT:%.+]] = inttoptr i{{[0-9]+}} [[A2CAST_VAL]] to i8*
   // CHECK:  [[BASE_PTR_GEP2_0:%.+]] = getelementptr inbounds [9 x i8*], [9 x i8*]* [[BASE_PTR_ARR2]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
-  // CHECK:  store i8* [[A2CAST_TO_INT]], i8** [[BASE_PTR_GEP2_0]],
-  // CHECK:  [[A2CAST_TO_INT_2:%.+]] = inttoptr i{{[0-9]+}} [[A2CAST_VAL]] to i8*
+  // CHECK:  [[ACAST_TOPTR:%.+]] = bitcast i8** [[BASE_PTR_GEP2_0]] to i{{[0-9]+}}*
+  // CHECK:  store i{{[0-9]+}} [[A2CAST_VAL]], i{{[0-9]+}}* [[ACAST_TOPTR]],
   // CHECK:  [[PTR_GEP2_0:%.+]] = getelementptr inbounds [9 x i8*], [9 x i8*]* [[PTR_ARR2]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
-  // CHECK:  store i8* [[A2CAST_TO_INT_2]], i8** [[PTR_GEP2_0]],
+  // CHECK:  [[ACAST_TOPTR:%.+]] = bitcast i8** [[PTR_GEP2_0]] to i{{[0-9]+}}*
+  // CHECK:  store i{{[0-9]+}} [[A2CAST_VAL]], i{{[0-9]+}}* [[ACAST_TOPTR]],
   // CHECK:  [[SIZE_GEPA2:%.+]] = getelementptr inbounds [9 x i{{[0-9]+}}], [9 x i{{[0-9]+}}]* [[SIZET2]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
   // CHECK:  store i{{[0-9]+}} 2, i{{[0-9]+}}* [[SIZE_GEPA2]],
 
   // firstprivate(b): base_ptr = &b[0], ptr = &b[0], size = 40 (sizeof(float)*10)
-  // CHECK:  [[BCAST:%.+]] = bitcast [10 x float]* [[B]] to i8*
   // CHECK:  [[BASE_PTR_GEP2_1:%.+]] = getelementptr inbounds [9 x i8*], [9 x i8*]* [[BASE_PTR_ARR2]], i{{[0-9]+}} 0, i{{[0-9]+}} 1
-  // CHECK:  store i8* [[BCAST]], i8** [[BASE_PTR_GEP2_1]],
-  // CHECK:  [[BCAST2:%.+]] = bitcast [10 x float]* [[B]] to i8*
+  // CHECK:  [[BCAST_TOPTR:%.+]] = bitcast i8** [[BASE_PTR_GEP2_1]] to [10 x float]**
+  // CHECK:  store [10 x float]* [[B]], [10 x float]** [[BCAST_TOPTR]],
   // CHECK:  [[PTR_GEP2_1:%.+]] = getelementptr inbounds [9 x i8*], [9 x i8*]* [[PTR_ARR2]], i{{[0-9]+}} 0, i{{[0-9]+}} 1
-  // CHECK:  store i8* [[BCAST2]], i8** [[PTR_GEP2_1]],
+  // CHECK:  [[BCAST_TOPTR:%.+]] = bitcast i8** [[PTR_GEP2_1]] to [10 x float]**
+  // CHECK:  store [10 x float]* [[B]], [10 x float]** [[BCAST_TOPTR]],
   // CHECK:  [[SIZE_GEPB:%.+]] = getelementptr inbounds [9 x i{{[0-9]+}}], [9 x i{{[0-9]+}}]* [[SIZET2]], i{{[0-9]+}} 0, i{{[0-9]+}} 1
   // CHECK:  store i{{[0-9]+}} 40, i{{[0-9]+}}* [[SIZE_GEPB]],
 
   // firstprivate(bn), 2 entries, n and bn: (1) base_ptr = n, ptr = n, size = 8 ; (2) base_ptr = &c[0], ptr = &c[0], size = n*sizeof(float)
-  // CHECK-64:  [[N_EXT3_1:%.+]] = inttoptr i{{[0-9]+}} [[N_EXT]] to i8*
-  // CHECK-32:  [[N_EXT3_1:%.+]] = inttoptr i{{[0-9]+}} [[N_ADDR_VAL]] to i8*
   // CHECK:  [[BASE_PTR_GEP2_2:%.+]] = getelementptr inbounds [9 x i8*], [9 x i8*]* [[BASE_PTR_ARR2]], i{{[0-9]+}} 0, i{{[0-9]+}} 2
-  // CHECK:  store i8* [[N_EXT3_1]], i8** [[BASE_PTR_GEP2_2]],
-  // CHECK-64:  [[N_EXT3_2:%.+]] = inttoptr i{{[0-9]+}} [[N_EXT]] to i8*
-  // CHECK-32:  [[N_EXT3_2:%.+]] = inttoptr i{{[0-9]+}} [[N_ADDR_VAL]] to i8*
+  // CHECK:  [[BCAST_TOPTR:%.+]] = bitcast i8** [[BASE_PTR_GEP2_2]] to i{{[0-9]+}}*
+  // CHECK-64:  store i{{[0-9]+}} [[N_EXT]], i{{[0-9]+}}* [[BCAST_TOPTR]],
+  // CHECK-32:  store i{{[0-9]+}} [[N_ADDR_VAL]], i{{[0-9]+}}* [[BCAST_TOPTR]],
   // CHECK:  [[PTR_GEP2_2:%.+]] = getelementptr inbounds [9 x i8*], [9 x i8*]* [[PTR_ARR2]], i{{[0-9]+}} 0, i{{[0-9]+}} 2
-  // CHECK:  store i8* [[N_EXT3_2]], i8** [[PTR_GEP2_2]],
+  // CHECK:  [[BCAST_TOPTR:%.+]] = bitcast i8** [[PTR_GEP2_2]] to i{{[0-9]+}}*
+  // CHECK-64:  store i{{[0-9]+}} [[N_EXT]], i{{[0-9]+}}* [[BCAST_TOPTR]],
+  // CHECK-32:  store i{{[0-9]+}} [[N_ADDR_VAL]], i{{[0-9]+}}* [[BCAST_TOPTR]],
   // CHECK:  [[SIZE_GEPBN_1:%.+]] = getelementptr inbounds [9 x i{{[0-9]+}}], [9 x i{{[0-9]+}}]* [[SIZET2]], i{{[0-9]+}} 0, i{{[0-9]+}} 2
   // CHECK:  store i{{[0-9]+}} {{[0-9]}}, i{{[0-9]+}}* [[SIZE_GEPBN_1]],
-  // CHECK:  [[VLABN_BCAST:%.+]] = bitcast float* [[BN_VLA]] to i8*
   // CHECK:  [[BASE_PTR_GEP2_3:%.+]] = getelementptr inbounds [9 x i8*], [9 x i8*]* [[BASE_PTR_ARR2]], i{{[0-9]+}} 0, i{{[0-9]+}} 3
-  // CHECK:  store i8* [[VLABN_BCAST]], i8** [[BASE_PTR_GEP2_3]],
+  // CHECK:  [[BCAST_TOPTR:%.+]] = bitcast i8** [[BASE_PTR_GEP2_3]] to float**
+  // CHECK:  store float* [[BN_VLA]], float** [[BCAST_TOPTR]],
   // CHECK: [[SIZE_GEPBN_3:%.+]] = getelementptr inbounds [9 x i{{[0-9]+}}], [9 x i{{[0-9]+}}]* [[SIZET2]], i{{[0-9]+}} 0, i{{[0-9]+}} 3
   // CHECK:  store i{{[0-9]+}} [[BN_SIZE]], i{{[0-9]+}}* [[SIZE_GEPBN_3]]
   
   // firstprivate(c): base_ptr = &c[0], ptr = &c[0], size = 400 (5*10*sizeof(double))
-  // CHECK:  [[C_BCAST:%.+]] = bitcast [5 x [10 x double]]* [[C]] to i8*
   // CHECK:  [[BASE_PTR_GEP2_4:%.+]] = getelementptr inbounds [9 x i8*], [9 x i8*]* [[BASE_PTR_ARR2]], i{{[0-9]+}} 0, i{{[0-9]+}} 4
-  // CHECK:  store i8* [[C_BCAST]], i8** [[BASE_PTR_GEP2_4]],
-  // CHECK:  [[C_BCAST2:%.+]] = bitcast [5 x [10 x double]]* [[C]] to i8*
+  // CHECK:  [[BCAST_TOPTR:%.+]] = bitcast i8** [[BASE_PTR_GEP2_4]] to [5 x [10 x double]]**
+  // CHECK:  store [5 x [10 x double]]* [[C]], [5 x [10 x double]]** [[BCAST_TOPTR]],
   // CHECK:  [[PTR_GEP2_4:%.+]] = getelementptr inbounds [9 x i8*], [9 x i8*]* [[PTR_ARR2]], i{{[0-9]+}} 0, i{{[0-9]+}} 4
-  // CHECK:  store i8* [[C_BCAST2]], i8** [[PTR_GEP2_4]],
+  // CHECK:  [[BCAST_TOPTR:%.+]] = bitcast i8** [[PTR_GEP2_4]] to [5 x [10 x double]]**
+  // CHECK:  store [5 x [10 x double]]* [[C]], [5 x [10 x double]]** [[BCAST_TOPTR]],
   // CHECK:  [[SIZE_GEPC_4:%.+]] = getelementptr inbounds [9 x i{{[0-9]+}}], [9 x i{{[0-9]+}}]* [[SIZET2]], i{{[0-9]+}} 0, i{{[0-9]+}} 4
   // CHECK:  store i{{[0-9]+}} 400, i{{[0-9]+}}* [[SIZE_GEPC_4]],
   
   // firstprivate(cn), 3 entries, 5, n, cn: (1) base_ptr = 5, ptr = 5, size = 8; (2) (1) base_ptr = n, ptr = n, size = 8; (3) base_ptr = &cn[0], ptr = &cn[0], size = 5*n*sizeof(double)
   // CHECK:  [[BASE_PTR_GEP2_5:%.+]] = getelementptr inbounds [9 x i8*], [9 x i8*]* [[BASE_PTR_ARR2]], i{{[0-9]+}} 0, i{{[0-9]+}} 5
-  // CHECK:  store i8* inttoptr (i{{[0-9]+}} 5 to i8*), i8** [[BASE_PTR_GEP2_5]],
+  // CHECK:  [[BCAST_TOPTR:%.+]] = bitcast i8** [[BASE_PTR_GEP2_5]] to i{{[0-9]+}}*
+  // CHECK:  store i{{[0-9]+}} 5, i{{[0-9]+}}* [[BCAST_TOPTR]],
   // CHECK:  [[PTR_GEP2_5:%.+]] = getelementptr inbounds [9 x i8*], [9 x i8*]* [[PTR_ARR2]], i{{[0-9]+}} 0, i{{[0-9]+}} 5
-  // CHECK:  store i8* inttoptr (i{{[0-9]+}} 5 to i8*), i8** [[PTR_GEP2_5]],
+  // CHECK:  [[BCAST_TOPTR:%.+]] = bitcast i8** [[PTR_GEP2_5]] to i{{[0-9]+}}*
+  // CHECK:  store i{{[0-9]+}} 5, i{{[0-9]+}}* [[BCAST_TOPTR]],
   // CHECK:  [[SIZE_GEPCN_5:%.+]] = getelementptr inbounds [9 x i{{[0-9]+}}], [9 x i{{[0-9]+}}]* [[SIZET2]], i{{[0-9]+}} 0, i{{[0-9]+}} 5
   // CHECK:  store i{{[0-9]+}} {{[0-9]}}, i{{[0-9]+}}* [[SIZE_GEPCN_5]],
-  // CHECK-64:  [[CN_SZ_2_1:%.+]] = inttoptr i{{[0-9]+}} [[N_EXT2]] to i8*
-  // CHECK-32:  [[CN_SZ_2_1:%.+]] = inttoptr i{{[0-9]+}} [[N_ADDR_VAL2]] to i8*
   // CHECK:  [[BASE_PTR_GEP2_6:%.+]] = getelementptr inbounds [9 x i8*], [9 x i8*]* [[BASE_PTR_ARR2]], i{{[0-9]+}} 0, i{{[0-9]+}} 6
-  // CHECK:  store i8* [[CN_SZ_2_1]], i8** [[BASE_PTR_GEP2_6]],
-  // CHECK-64:  [[CN_SZ_2_2:%.+]] = inttoptr i{{[0-9]+}} [[N_EXT2]] to i8*
-  // CHECK-32:  [[CN_SZ_2_2:%.+]] = inttoptr i{{[0-9]+}} [[N_ADDR_VAL2]] to i8*
+  // CHECK:  [[BCAST_TOPTR:%.+]] = bitcast i8** [[BASE_PTR_GEP2_6]] to i{{[0-9]+}}*
+  // CHECK-64:  store i{{[0-9]+}} [[N_EXT2]], i{{[0-9]+}}* [[BCAST_TOPTR]],
+  // CHECK-32:  store i{{[0-9]+}} [[N_ADDR_VAL2]], i{{[0-9]+}}* [[BCAST_TOPTR]],
   // CHECK:  [[PTR_GEP2_6:%.+]] = getelementptr inbounds [9 x i8*], [9 x i8*]* [[PTR_ARR2]], i{{[0-9]+}} 0, i{{[0-9]+}} 6
-  // CHECK:  store i8* [[CN_SZ_2_2]], i8** [[PTR_GEP2_6]],
+  // CHECK:  [[BCAST_TOPTR:%.+]] = bitcast i8** [[PTR_GEP2_6]] to i{{[0-9]+}}*
+  // CHECK-64:  store i{{[0-9]+}} [[N_EXT2]], i{{[0-9]+}}* [[BCAST_TOPTR]],
+  // CHECK-32:  store i{{[0-9]+}} [[N_ADDR_VAL2]], i{{[0-9]+}}* [[BCAST_TOPTR]],
   // CHECK:  [[SIZE_GEPCN_6:%.+]] = getelementptr inbounds [9 x i{{[0-9]+}}], [9 x i{{[0-9]+}}]* [[SIZET2]], i{{[0-9]+}} 0, i{{[0-9]+}} 6
   // CHECK:  store i{{[0-9]+}} {{[0-9]}}, i{{[0-9]+}}* [[SIZE_GEPCN_6]],
-  // CHECK:  [[VLA_CN_BCAST:%.+]] = bitcast double* [[CN_VLA]] to i8*
   // CHECK:  [[BASE_PTR_GEP2_7:%.+]] = getelementptr inbounds [9 x i8*], [9 x i8*]* [[BASE_PTR_ARR2]], i{{[0-9]+}} 0, i{{[0-9]+}} 7
-  // CHECK:  store i8* [[VLA_CN_BCAST]], i8** [[BASE_PTR_GEP2_7]],
-  // CHECK:  [[VLA_CN_BCAST2:%.+]] = bitcast double* [[CN_VLA]] to i8*
+  // CHECK:  [[BCAST_TOPTR:%.+]] = bitcast i8** [[BASE_PTR_GEP2_7]] to double**
+  // CHECK:  store double* [[CN_VLA]], double** [[BCAST_TOPTR]],
   // CHECK:  [[PTR_GEP2_7:%.+]] = getelementptr inbounds [9 x i8*], [9 x i8*]* [[PTR_ARR2]], i{{[0-9]+}} 0, i{{[0-9]+}} 7
-  // CHECK:  store i8* [[VLA_CN_BCAST2]], i8** [[PTR_GEP2_7]],
+  // CHECK:  [[BCAST_TOPTR:%.+]] = bitcast i8** [[PTR_GEP2_7]] to double**
+  // CHECK:  store double* [[CN_VLA]], double** [[BCAST_TOPTR]],
   // CHECK:  [[SIZE_GEPCN_7:%.+]] = getelementptr inbounds [9 x i{{[0-9]+}}], [9 x i{{[0-9]+}}]* [[SIZET2]], i{{[0-9]+}} 0, i{{[0-9]+}} 7
   // CHECK:  store i{{[0-9]+}} [[CN_SIZE_2]], i{{[0-9]+}}* [[SIZE_GEPCN_7]],
   
   // firstprivate(d): base_ptr = &d, ptr = &d, size = 16 
-  // CHECK:  [[D_REF:%.+]] = bitcast [[TT]]* [[D]] to i8*
   // CHECK:  [[BASE_PTR_GEP2_8:%.+]] = getelementptr inbounds [9 x i8*], [9 x i8*]* [[BASE_PTR_ARR2]], i{{[0-9]+}} 0, i{{[0-9]+}} 8
-  // CHECK:  store i8* [[D_REF]], i8** [[BASE_PTR_GEP2_8]],
-  // CHECK:  [[D_REF2:%.+]] = bitcast [[TT]]* [[D]] to i8*
+  // CHECK:  [[BCAST_TOPTR:%.+]] = bitcast i8** [[BASE_PTR_GEP2_8]] to [[TT]]**
+  // CHECK:  store [[TT]]* [[D]], [[TT]]** [[BCAST_TOPTR]],
   // CHECK:  [[PTR_GEP2_8:%.+]] = getelementptr inbounds [9 x i8*], [9 x i8*]* [[PTR_ARR2]], i{{[0-9]+}} 0, i{{[0-9]+}} 8
-  // CHECK:  store i8* [[D_REF2]], i8** [[PTR_GEP2_8]],
+  // CHECK:  [[BCAST_TOPTR:%.+]] = bitcast i8** [[PTR_GEP2_8]] to [[TT]]**
+  // CHECK:  store [[TT]]* [[D]], [[TT]]** [[BCAST_TOPTR]],
   // CHECK:  [[SIZE_GEPCN_8:%.+]] = getelementptr inbounds [9 x i{{[0-9]+}}], [9 x i{{[0-9]+}}]* [[SIZET2]], i{{[0-9]+}} 0, i{{[0-9]+}} 8
   // CHECK:  store i{{[0-9]+}} {{[0-9]+}}, i{{[0-9]+}}* [[SIZE_GEPCN_8]],
   
@@ -299,13 +301,13 @@ int foo(int n, double *ptr) {
     ptr[0]++;
   }
   // CHECK:  [[PTR_ADDR_REF:%.+]] = load double*, double** [[PTR_ADDR]],
-  // CHECK:  [[PTR_ADDR_BCAST:%.+]] = bitcast double* [[PTR_ADDR_REF]] to i8*
 
   // CHECK:  [[BASE_PTR_GEP3_0:%.+]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[BASE_PTR_ARR3]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
-  // CHECK:  store i8* [[PTR_ADDR_BCAST]], i8** [[BASE_PTR_GEP3_0]],
-  // CHECK:  [[PTR_ADDR_BCAST2:%.+]] = bitcast double* [[PTR_ADDR_REF]] to i8*
+  // CHECK:  [[BCAST_TOPTR:%.+]] = bitcast i8** [[BASE_PTR_GEP3_0]] to double**
+  // CHECK:  store double* [[PTR_ADDR_REF]], double** [[BCAST_TOPTR]],
   // CHECK:  [[PTR_GEP3_0:%.+]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[PTR_ARR3]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
-  // CHECK:  store i8* [[PTR_ADDR_BCAST2]], i8** [[PTR_GEP3_0]],
+  // CHECK:  [[BCAST_TOPTR:%.+]] = bitcast i8** [[PTR_GEP3_0]] to double**
+  // CHECK:  store double* [[PTR_ADDR_REF]], double** [[BCAST_TOPTR]],
 
   // CHECK:  [[BASE_PTR_GEP_ARG3:%.+]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[BASE_PTR_ARR3]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
   // CHECK:  [[PTR_GEP_ARG3:%.+]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[PTR_ARR3]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
@@ -407,38 +409,40 @@ struct S1 {
   // CHECK:  store {{.+}}, {{.+}}
 
   // firstprivate(b): base_ptr = b, ptr = b, size = 4 (pass by-value)
-  // CHECK:  [[B_CAST_PTR:%.+]] = inttoptr i{{[0-9]+}} [[B_CAST:%.+]] to i8*
   // CHECK:  [[BASE_PTRS_GEP4_1:%.+]] = getelementptr inbounds [5 x i8*], [5 x i8*]* [[BASE_PTRS4]], i{{[0-9]+}} 0, i{{[0-9]+}} 1
-  // CHECK:  store i8* [[B_CAST_PTR]], i8** [[BASE_PTRS_GEP4_1]],
-  // CHECK:  [[B_CAST_PTR2:%.+]] = inttoptr i{{[0-9]+}} [[B_CAST:%.+]] to i8*
+  // CHECK:  [[BCAST_TOPTR:%.+]] = bitcast i8** [[BASE_PTRS_GEP4_1]] to i{{[0-9]+}}*
+  // CHECK:  store i{{[0-9]+}} [[B_CAST:%.+]], i{{[0-9]+}}* [[BCAST_TOPTR]],
   // CHECK:  [[PTRS_GEP4_1:%.+]] = getelementptr inbounds [5 x i8*], [5 x i8*]* [[PTRS4]], i{{[0-9]+}} 0, i{{[0-9]+}} 1
-  // CHECK:  store i8* [[B_CAST_PTR2]], i8** [[PTRS_GEP4_1]],
+  // CHECK:  [[BCAST_TOPTR:%.+]] = bitcast i8** [[PTRS_GEP4_1]] to i{{[0-9]+}}*
+  // CHECK:  store i{{[0-9]+}} [[B_CAST]], i{{[0-9]+}}* [[BCAST_TOPTR]],
   // CHECK:  [[SIZES_GEP4_1:%.+]] = getelementptr inbounds [5 x i{{[0-9]+}}], [5 x i{{[0-9]+}}]* [[SIZET4]], i{{[0-9]+}} 0, i{{[0-9]+}} 1
   // CHECK:  store i{{[0-9]+}} 4, i{{[0-9]+}}* [[SIZES_GEP4_1]],
 
   // firstprivate(c), 3 entries: 2, n, c
   // CHECK:  [[BASE_PTRS_GEP4_2:%.+]] = getelementptr inbounds [5 x i8*], [5 x i8*]* [[BASE_PTRS4]], i{{[0-9]+}} 0, i{{[0-9]+}} 2
-  // CHECK:  store i8* inttoptr (i{{[0-9]+}} 2 to i8*), i8** [[BASE_PTRS_GEP4_2]],
+  // CHECK:  [[BCAST_TOPTR:%.+]] = bitcast i8** [[BASE_PTRS_GEP4_2]] to i{{[0-9]+}}*
+  // CHECK:  store i{{[0-9]+}} 2, i{{[0-9]+}}* [[BCAST_TOPTR]],
   // CHECK:  [[PTRS_GEP4_2:%.+]] = getelementptr inbounds [5 x i8*], [5 x i8*]* [[PTRS4]], i{{[0-9]+}} 0, i{{[0-9]+}} 2
-  // CHECK:  store i8* inttoptr (i{{[0-9]+}} 2 to i8*), i8** [[PTRS_GEP4_2]],
+  // CHECK:  [[BCAST_TOPTR:%.+]] = bitcast i8** [[PTRS_GEP4_2]] to i{{[0-9]+}}*
+  // CHECK:  store i{{[0-9]+}} 2, i{{[0-9]+}}* [[BCAST_TOPTR]],
   // CHECK:  [[SIZES_GEP4_2:%.+]] = getelementptr inbounds [5 x i{{[0-9]+}}], [5 x i{{[0-9]+}}]* [[SIZET4]], i{{[0-9]+}} 0, i{{[0-9]+}} 2
   // CHECK-64:  store i{{[0-9]+}} 8, i{{[0-9]+}}* [[SIZES_GEP4_2]],
   // CHECK-32:  store i{{[0-9]+}} 4, i{{[0-9]+}}* [[SIZES_GEP4_2]],
-  // CHECK:  [[N_PTR:%.+]] = inttoptr i{{[0-9]+}} [[N:%.+]] to i8*
   // CHECK:  [[BASE_PTRS_GEP4_3:%.+]] = getelementptr inbounds [5 x i8*], [5 x i8*]* [[BASE_PTRS4]], i{{[0-9]+}} 0, i{{[0-9]+}} 3
-  // CHECK:  store i8* [[N_PTR]], i8** [[BASE_PTRS_GEP4_3]],
-  // CHECK:  [[N_PTR2:%.+]] = inttoptr i{{[0-9]+}} [[N:%.+]] to i8*
+  // CHECK:  [[BCAST_TOPTR:%.+]] = bitcast i8** [[BASE_PTRS_GEP4_3]] to i{{[0-9]+}}*
+  // CHECK:  store i{{[0-9]+}} [[N:%.+]], i{{[0-9]+}}* [[BCAST_TOPTR]],
   // CHECK:  [[PTRS_GEP4_3:%.+]] = getelementptr inbounds [5 x i8*], [5 x i8*]* [[PTRS4]], i{{[0-9]+}} 0, i{{[0-9]+}} 3
-  // CHECK:  store i8* [[N_PTR2]], i8** [[PTRS_GEP4_3]],
+  // CHECK:  [[BCAST_TOPTR:%.+]] = bitcast i8** [[PTRS_GEP4_3]] to i{{[0-9]+}}*
+  // CHECK:  store i{{[0-9]+}} [[N]], i{{[0-9]+}}* [[BCAST_TOPTR]],
   // CHECK:  [[SIZES_GEP4_3:%.+]] = getelementptr inbounds [5 x i{{[0-9]+}}], [5 x i{{[0-9]+}}]* [[SIZET4]], i{{[0-9]+}} 0, i{{[0-9]+}} 3
   // CHECK-64:  store i{{[0-9]+}} 8, i{{[0-9]+}}* [[SIZES_GEP4_3]],
   // CHECK-32:  store i{{[0-9]+}} 4, i{{[0-9]+}}* [[SIZES_GEP4_3]],
-  // CHECK:  [[B_BCAST:%.+]] = bitcast i{{[0-9]+}}* [[B:%.+]] to i8*
   // CHECK:  [[BASE_PTRS_GEP4_4:%.+]] = getelementptr inbounds [5 x i8*], [5 x i8*]* [[BASE_PTRS4]], i{{[0-9]+}} 0, i{{[0-9]+}} 4
-  // CHECK:  store i8* [[B_BCAST]], i8** [[BASE_PTRS_GEP4_4]],
-  // CHECK:  [[B_BCAST2:%.+]] = bitcast i{{[0-9]+}}* [[B:%.+]] to i8*
+  // CHECK:  [[BCAST_TOPTR:%.+]] = bitcast i8** [[BASE_PTRS_GEP4_4]] to i{{[0-9]+}}**
+  // CHECK:  store i{{[0-9]+}}* [[B:%.+]], i{{[0-9]+}}** [[BCAST_TOPTR]],
   // CHECK:  [[PTRS_GEP4_4:%.+]] = getelementptr inbounds [5 x i8*], [5 x i8*]* [[PTRS4]], i{{[0-9]+}} 0, i{{[0-9]+}} 4
-  // CHECK:  store i8* [[B_BCAST2]], i8** [[PTRS_GEP4_4]],
+  // CHECK:  [[BCAST_TOPTR:%.+]] = bitcast i8** [[PTRS_GEP4_4]] to i{{[0-9]+}}**
+  // CHECK:  store i{{[0-9]+}}* [[B]], i{{[0-9]+}}** [[BCAST_TOPTR]],
   // CHECK:  [[SIZES_GEP4_4:%.+]] = getelementptr inbounds [5 x i{{[0-9]+}}], [5 x i{{[0-9]+}}]* [[SIZET4]], i{{[0-9]+}} 0, i{{[0-9]+}} 4
   // CHECK:  store i{{[0-9]+}} [[B_SIZE:%.+]], i{{[0-9]+}}* [[SIZES_GEP4_4]],
 
@@ -492,28 +496,28 @@ struct S1 {
   // CHECK:  [[PTRS5:%.+]] = alloca [3 x i8*],
 
   // firstprivate(a): by value
-  // CHECK:  [[A_CAST_PTR:%.+]] = inttoptr i{{[0-9]+}} [[A_CAST:%.+]] to i8*
   // CHECK:  [[BASE_PTRS_GEP5_0:%.+]] = getelementptr inbounds [3 x i8*], [3 x i8*]* [[BASE_PTRS5]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
-  // CHECK:  store i8* [[A_CAST_PTR]], i8** [[BASE_PTRS_GEP5_0]],
-  // CHECK:  [[A_CAST_PTR2:%.+]] = inttoptr i{{[0-9]+}} [[A_CAST:%.+]] to i8*
+  // CHECK:  [[BCAST_TOPTR:%.+]] = bitcast i8** [[BASE_PTRS_GEP5_0]] to i{{[0-9]+}}*
+  // CHECK:  store i{{[0-9]+}} [[A_CAST:%.+]], i{{[0-9]+}}* [[BCAST_TOPTR]],
   // CHECK:  [[PTRS_GEP5_0:%.+]] = getelementptr inbounds [3 x i8*], [3 x i8*]* [[PTRS5]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
-  // CHECK:  store i8* [[A_CAST_PTR2]], i8** [[PTRS_GEP5_0]],
+  // CHECK:  [[BCAST_TOPTR:%.+]] = bitcast i8** [[PTRS_GEP5_0]] to i{{[0-9]+}}*
+  // CHECK:  store i{{[0-9]+}} [[A_CAST]], i{{[0-9]+}}* [[BCAST_TOPTR]],
 
   // firstprivate(aaa): by value
-  // CHECK:  [[A3_CAST_PTR:%.+]] = inttoptr i{{[0-9]+}} [[A3_CAST:%.+]] to i8*
   // CHECK:  [[BASE_PTRS_GEP5_1:%.+]] = getelementptr inbounds [3 x i8*], [3 x i8*]* [[BASE_PTRS5]], i{{[0-9]+}} 0, i{{[0-9]+}} 1
-  // CHECK:  store i8* [[A3_CAST_PTR]], i8** [[BASE_PTRS_GEP5_1]],
-  // CHECK:  [[A3_CAST_PTR2:%.+]] = inttoptr i{{[0-9]+}} [[A3_CAST:%.+]] to i8*
+  // CHECK:  [[BCAST_TOPTR:%.+]] = bitcast i8** [[BASE_PTRS_GEP5_1]] to i{{[0-9]+}}*
+  // CHECK:  store i{{[0-9]+}} [[A3_CAST:%.+]], i{{[0-9]+}}* [[BCAST_TOPTR]],
   // CHECK:  [[PTRS_GEP5_1:%.+]] = getelementptr inbounds [3 x i8*], [3 x i8*]* [[PTRS5]], i{{[0-9]+}} 0, i{{[0-9]+}} 1
-  // CHECK:  store i8* [[A3_CAST_PTR2]], i8** [[PTRS_GEP5_1]],
+  // CHECK:  [[BCAST_TOPTR:%.+]] = bitcast i8** [[PTRS_GEP5_1]] to i{{[0-9]+}}*
+  // CHECK:  store i{{[0-9]+}} [[A3_CAST]], i{{[0-9]+}}* [[BCAST_TOPTR]],
 
   // firstprivate(b): base_ptr = &b[0], ptr= &b[0]
-  // CHECK:  [[B_BCAST:%.+]] = bitcast [10 x i{{[0-9]+}}]* [[B:%.+]] to i8*
   // CHECK:  [[BASE_PTRS_GEP5_2:%.+]] = getelementptr inbounds [3 x i8*], [3 x i8*]* [[BASE_PTRS5]], i{{[0-9]+}} 0, i{{[0-9]+}} 2
-  // CHECK:  store i8* [[B_BCAST]], i8** [[BASE_PTRS_GEP5_2]],
-  // CHECK:  [[B_BCAST2:%.+]] = bitcast [10 x i{{[0-9]+}}]* [[B:%.+]] to i8*
+  // CHECK:  [[BCAST_TOPTR:%.+]] = bitcast i8** [[BASE_PTRS_GEP5_2]] to [10 x i{{[0-9]+}}]**
+  // CHECK:  store [10 x i{{[0-9]+}}]* [[B:%.+]], [10 x i{{[0-9]+}}]** [[BCAST_TOPTR]],
   // CHECK:  [[PTRS_GEP5_2:%.+]] = getelementptr inbounds [3 x i8*], [3 x i8*]* [[PTRS5]], i{{[0-9]+}} 0, i{{[0-9]+}} 2
-  // CHECK:  store i8* [[B_BCAST2]], i8** [[PTRS_GEP5_2]],
+  // CHECK:  [[BCAST_TOPTR:%.+]] = bitcast i8** [[PTRS_GEP5_2]] to [10 x i{{[0-9]+}}]**
+  // CHECK:  store [10 x i{{[0-9]+}}]* [[B]], [10 x i{{[0-9]+}}]** [[BCAST_TOPTR]],
 
   // only check that the right sizes and map types are used
   // CHECK:  call i32 @__tgt_target(i32 -1, {{.+}}, i32 3, i8** {{.+}}, i8** {{.+}}, i[[SZ]]* getelementptr inbounds ([3 x i[[SZ]]], [3 x i[[SZ]]]* [[SIZET5]], i32 0, i32 0), i32* getelementptr inbounds ([3 x i32], [3 x i32]* [[MAPT5]], i32 0, i32 0))
@@ -539,20 +543,20 @@ int bar(int n, double *ptr){
 // CHECK:  [[PTRS6:%.+]] = alloca [2 x i8*],
 
 // firstprivate(a): by value
-// CHECK:  [[AT_CAST_PTR:%.+]] = inttoptr i{{[0-9]+}} [[AT_CAST:%.+]] to i8*
 // CHECK:  [[BASE_PTRS_GEP6_0:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[BASE_PTRS6]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
-// CHECK:  store i8* [[AT_CAST_PTR]], i8** [[BASE_PTRS_GEP6_0]],
-// CHECK:  [[AT_CAST_PTR2:%.+]] = inttoptr i{{[0-9]+}} [[AT_CAST:%.+]] to i8*
+// CHECK:  [[BCAST_TOPTR:%.+]] = bitcast i8** [[BASE_PTRS_GEP6_0]] to i{{[0-9]+}}*
+// CHECK:  store i{{[0-9]+}} [[AT_CAST:%.+]], i{{[0-9]+}}* [[BCAST_TOPTR]],
 // CHECK:  [[PTRS_GEP6_0:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[PTRS6]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
-// CHECK:  store i8* [[AT_CAST_PTR2]], i8** [[PTRS_GEP6_0]],
+// CHECK:  [[BCAST_TOPTR:%.+]] = bitcast i8** [[PTRS_GEP6_0]] to i{{[0-9]+}}*
+// CHECK:  store i{{[0-9]+}} [[AT_CAST]], i{{[0-9]+}}* [[BCAST_TOPTR]],
 
 // firstprivate(b): pointer
-// CHECK:  [[B_BCAST:%.+]] = bitcast [10 x i{{[0-9]+}}]* [[B:%.+]] to i8*
 // CHECK:  [[BASE_PTRS_GEP6_1:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[BASE_PTRS6]], i{{[0-9]+}} 0, i{{[0-9]+}} 1
-// CHECK:  store i8* [[B_BCAST]], i8** [[BASE_PTRS_GEP6_1]],
-// CHECK:  [[B_BCAST2:%.+]] = bitcast [10 x i{{[0-9]+}}]* [[B:%.+]] to i8*
+// CHECK:  [[BCAST_TOPTR:%.+]] = bitcast i8** [[BASE_PTRS_GEP6_1]] to [10 x i{{[0-9]+}}]**
+// CHECK:  store [10 x i{{[0-9]+}}]* [[B:%.+]], [10 x i{{[0-9]+}}]** [[BCAST_TOPTR]],
 // CHECK:  [[PTRS_GEP6_1:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[PTRS6]], i{{[0-9]+}} 0, i{{[0-9]+}} 1
-// CHECK:  store i8* [[B_BCAST2]], i8** [[PTRS_GEP6_1]],
+// CHECK:  [[BCAST_TOPTR:%.+]] = bitcast i8** [[PTRS_GEP6_1]] to [10 x i{{[0-9]+}}]**
+// CHECK:  store [10 x i{{[0-9]+}}]* [[B]], [10 x i{{[0-9]+}}]** [[BCAST_TOPTR]],
 
 // CHECK:  call i32 @__tgt_target(i32 -1, {{.+}}, i32 2, i8** {{.+}}, i8** {{.+}}, i[[SZ]]* getelementptr inbounds ([2 x i[[SZ]]], [2 x i[[SZ]]]* [[SIZET6]], i32 0, i32 0), i32* getelementptr inbounds ([2 x i32], [2 x i32]* [[MAPT6]], i32 0, i32 0))
 

@@ -8,6 +8,7 @@ add_lldb_unittest(TargetTests
       lldbSymbol
       lldbUtility
       lldbPluginObjectFileELF
+      lldbUtilityHelpers
     LINK_COMPONENTS
       Support
   )

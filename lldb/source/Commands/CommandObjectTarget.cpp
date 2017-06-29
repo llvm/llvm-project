@@ -16,7 +16,6 @@
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Core/State.h"
-#include "lldb/Core/Timer.h"
 #include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/DataFormatters/ValueObjectPrinter.h"
 #include "lldb/Host/OptionParser.h"
@@ -50,6 +49,7 @@
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadSpec.h"
+#include "lldb/Utility/Timer.h"
 
 #include "llvm/Support/FileSystem.h"
 

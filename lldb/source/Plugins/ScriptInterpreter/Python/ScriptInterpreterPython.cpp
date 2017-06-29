@@ -33,7 +33,6 @@
 #include "lldb/Core/Communication.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/Timer.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/TypeSummary.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
@@ -44,6 +43,7 @@
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadPlan.h"
+#include "lldb/Utility/Timer.h"
 
 #if defined(_WIN32)
 #include "lldb/Host/windows/ConnectionGenericFileWindows.h"

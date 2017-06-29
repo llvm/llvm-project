@@ -208,7 +208,7 @@ public:
     Children.resize(NC);
   }
 
-  static inline bool classof(const Matcher *N) {
+  static bool classof(const Matcher *N) {
     return N->getKind() == Scope;
   }
 
@@ -233,7 +233,7 @@ public:
   const std::string &getWhatFor() const { return WhatFor; }
   unsigned getResultNo() const { return ResultNo; }
 
-  static inline bool classof(const Matcher *N) {
+  static bool classof(const Matcher *N) {
     return N->getKind() == RecordNode;
   }
 
@@ -265,7 +265,7 @@ public:
   const std::string &getWhatFor() const { return WhatFor; }
   unsigned getResultNo() const { return ResultNo; }
 
-  static inline bool classof(const Matcher *N) {
+  static bool classof(const Matcher *N) {
     return N->getKind() == RecordChild;
   }
 
@@ -281,7 +281,7 @@ class RecordMemRefMatcher : public Matcher {
 public:
   RecordMemRefMatcher() : Matcher(RecordMemRef) {}
 
-  static inline bool classof(const Matcher *N) {
+  static bool classof(const Matcher *N) {
     return N->getKind() == RecordMemRef;
   }
 
@@ -297,7 +297,7 @@ class CaptureGlueInputMatcher : public Matcher {
 public:
   CaptureGlueInputMatcher() : Matcher(CaptureGlueInput) {}
 
-  static inline bool classof(const Matcher *N) {
+  static bool classof(const Matcher *N) {
     return N->getKind() == CaptureGlueInput;
   }
 
@@ -315,7 +315,7 @@ public:
 
   unsigned getChildNo() const { return ChildNo; }
 
-  static inline bool classof(const Matcher *N) {
+  static bool classof(const Matcher *N) {
     return N->getKind() == MoveChild;
   }
 
@@ -332,7 +332,7 @@ class MoveParentMatcher : public Matcher {
 public:
   MoveParentMatcher() : Matcher(MoveParent) {}
 
-  static inline bool classof(const Matcher *N) {
+  static bool classof(const Matcher *N) {
     return N->getKind() == MoveParent;
   }
 
@@ -352,7 +352,7 @@ public:
 
   unsigned getMatchNumber() const { return MatchNumber; }
 
-  static inline bool classof(const Matcher *N) {
+  static bool classof(const Matcher *N) {
     return N->getKind() == CheckSame;
   }
 
@@ -376,7 +376,7 @@ public:
   unsigned getChildNo() const { return ChildNo; }
   unsigned getMatchNumber() const { return MatchNumber; }
 
-  static inline bool classof(const Matcher *N) {
+  static bool classof(const Matcher *N) {
     return N->getKind() == CheckChildSame;
   }
 
@@ -399,7 +399,7 @@ public:
 
   StringRef getPredicate() const { return Predicate; }
 
-  static inline bool classof(const Matcher *N) {
+  static bool classof(const Matcher *N) {
     return N->getKind() == CheckPatternPredicate;
   }
 
@@ -419,7 +419,7 @@ public:
 
   TreePredicateFn getPredicate() const;
 
-  static inline bool classof(const Matcher *N) {
+  static bool classof(const Matcher *N) {
     return N->getKind() == CheckPredicate;
   }
 
@@ -441,7 +441,7 @@ public:
 
   const SDNodeInfo &getOpcode() const { return Opcode; }
 
-  static inline bool classof(const Matcher *N) {
+  static bool classof(const Matcher *N) {
     return N->getKind() == CheckOpcode;
   }
 
@@ -462,7 +462,7 @@ public:
     : Matcher(SwitchOpcode), Cases(cases.begin(), cases.end()) {}
   ~SwitchOpcodeMatcher() override;
 
-  static inline bool classof(const Matcher *N) {
+  static bool classof(const Matcher *N) {
     return N->getKind() == SwitchOpcode;
   }
 
@@ -489,7 +489,7 @@ public:
   MVT::SimpleValueType getType() const { return Type; }
   unsigned getResNo() const { return ResNo; }
 
-  static inline bool classof(const Matcher *N) {
+  static bool classof(const Matcher *N) {
     return N->getKind() == CheckType;
   }
 
@@ -512,7 +512,7 @@ public:
   : Matcher(SwitchType), Cases(cases.begin(), cases.end()) {}
   ~SwitchTypeMatcher() override;
 
-  static inline bool classof(const Matcher *N) {
+  static bool classof(const Matcher *N) {
     return N->getKind() == SwitchType;
   }
 
@@ -540,7 +540,7 @@ public:
   unsigned getChildNo() const { return ChildNo; }
   MVT::SimpleValueType getType() const { return Type; }
 
-  static inline bool classof(const Matcher *N) {
+  static bool classof(const Matcher *N) {
     return N->getKind() == CheckChildType;
   }
 
@@ -564,7 +564,7 @@ public:
 
   int64_t getValue() const { return Value; }
 
-  static inline bool classof(const Matcher *N) {
+  static bool classof(const Matcher *N) {
     return N->getKind() == CheckInteger;
   }
 
@@ -588,7 +588,7 @@ public:
   unsigned getChildNo() const { return ChildNo; }
   int64_t getValue() const { return Value; }
 
-  static inline bool classof(const Matcher *N) {
+  static bool classof(const Matcher *N) {
     return N->getKind() == CheckChildInteger;
   }
 
@@ -611,7 +611,7 @@ public:
 
   StringRef getCondCodeName() const { return CondCodeName; }
 
-  static inline bool classof(const Matcher *N) {
+  static bool classof(const Matcher *N) {
     return N->getKind() == CheckCondCode;
   }
 
@@ -632,7 +632,7 @@ public:
 
   StringRef getTypeName() const { return TypeName; }
 
-  static inline bool classof(const Matcher *N) {
+  static bool classof(const Matcher *N) {
     return N->getKind() == CheckValueType;
   }
 
@@ -673,7 +673,7 @@ public:
   const std::string getName() const { return Name; }
   unsigned getFirstResult() const { return FirstResult; }
 
-  static inline bool classof(const Matcher *N) {
+  static bool classof(const Matcher *N) {
     return N->getKind() == CheckComplexPat;
   }
 
@@ -695,7 +695,7 @@ public:
 
   int64_t getValue() const { return Value; }
 
-  static inline bool classof(const Matcher *N) {
+  static bool classof(const Matcher *N) {
     return N->getKind() == CheckAndImm;
   }
 
@@ -716,7 +716,7 @@ public:
 
   int64_t getValue() const { return Value; }
 
-  static inline bool classof(const Matcher *N) {
+  static bool classof(const Matcher *N) {
     return N->getKind() == CheckOrImm;
   }
 
@@ -734,7 +734,7 @@ public:
   CheckFoldableChainNodeMatcher()
     : Matcher(CheckFoldableChainNode) {}
 
-  static inline bool classof(const Matcher *N) {
+  static bool classof(const Matcher *N) {
     return N->getKind() == CheckFoldableChainNode;
   }
 
@@ -754,7 +754,7 @@ public:
   int64_t getValue() const { return Val; }
   MVT::SimpleValueType getVT() const { return VT; }
 
-  static inline bool classof(const Matcher *N) {
+  static bool classof(const Matcher *N) {
     return N->getKind() == EmitInteger;
   }
 
@@ -778,7 +778,7 @@ public:
   const std::string &getValue() const { return Val; }
   MVT::SimpleValueType getVT() const { return VT; }
 
-  static inline bool classof(const Matcher *N) {
+  static bool classof(const Matcher *N) {
     return N->getKind() == EmitStringInteger;
   }
 
@@ -803,7 +803,7 @@ public:
   const CodeGenRegister *getReg() const { return Reg; }
   MVT::SimpleValueType getVT() const { return VT; }
 
-  static inline bool classof(const Matcher *N) {
+  static bool classof(const Matcher *N) {
     return N->getKind() == EmitRegister;
   }
 
@@ -826,7 +826,7 @@ public:
 
   unsigned getSlot() const { return Slot; }
 
-  static inline bool classof(const Matcher *N) {
+  static bool classof(const Matcher *N) {
     return N->getKind() == EmitConvertToTarget;
   }
 
@@ -854,7 +854,7 @@ public:
     return ChainNodes[i];
   }
 
-  static inline bool classof(const Matcher *N) {
+  static bool classof(const Matcher *N) {
     return N->getKind() == EmitMergeInputChains;
   }
 
@@ -878,7 +878,7 @@ public:
   unsigned getSrcSlot() const { return SrcSlot; }
   Record *getDestPhysReg() const { return DestPhysReg; }
 
-  static inline bool classof(const Matcher *N) {
+  static bool classof(const Matcher *N) {
     return N->getKind() == EmitCopyToReg;
   }
 
@@ -904,7 +904,7 @@ public:
   unsigned getSlot() const { return Slot; }
   Record *getNodeXForm() const { return NodeXForm; }
 
-  static inline bool classof(const Matcher *N) {
+  static bool classof(const Matcher *N) {
     return N->getKind() == EmitNodeXForm;
   }
 
@@ -964,7 +964,7 @@ public:
   bool hasMemRefs() const { return HasMemRefs; }
   int getNumFixedArityOperands() const { return NumFixedArityOperands; }
 
-  static inline bool classof(const Matcher *N) {
+  static bool classof(const Matcher *N) {
     return N->getKind() == EmitNode || N->getKind() == MorphNodeTo;
   }
 
@@ -991,7 +991,7 @@ public:
 
   unsigned getFirstResultSlot() const { return FirstResultSlot; }
 
-  static inline bool classof(const Matcher *N) {
+  static bool classof(const Matcher *N) {
     return N->getKind() == EmitNode;
   }
 
@@ -1015,7 +1015,7 @@ public:
 
   const PatternToMatch &getPattern() const { return Pattern; }
 
-  static inline bool classof(const Matcher *N) {
+  static bool classof(const Matcher *N) {
     return N->getKind() == MorphNodeTo;
   }
 };
@@ -1036,7 +1036,7 @@ public:
   unsigned getResult(unsigned R) const { return Results[R]; }
   const PatternToMatch &getPattern() const { return Pattern; }
 
-  static inline bool classof(const Matcher *N) {
+  static bool classof(const Matcher *N) {
     return N->getKind() == CompleteMatch;
   }
 

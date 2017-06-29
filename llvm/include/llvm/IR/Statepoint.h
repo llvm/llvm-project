@@ -329,12 +329,12 @@ public:
 /// Currently, the only projections available are gc.result and gc.relocate.
 class GCProjectionInst : public IntrinsicInst {
 public:
-  static inline bool classof(const IntrinsicInst *I) {
+  static bool classof(const IntrinsicInst *I) {
     return I->getIntrinsicID() == Intrinsic::experimental_gc_relocate ||
       I->getIntrinsicID() == Intrinsic::experimental_gc_result;
   }
 
-  static inline bool classof(const Value *V) {
+  static bool classof(const Value *V) {
     return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
   }
 
@@ -373,11 +373,11 @@ public:
 /// Represents calls to the gc.relocate intrinsic.
 class GCRelocateInst : public GCProjectionInst {
 public:
-  static inline bool classof(const IntrinsicInst *I) {
+  static bool classof(const IntrinsicInst *I) {
     return I->getIntrinsicID() == Intrinsic::experimental_gc_relocate;
   }
 
-  static inline bool classof(const Value *V) {
+  static bool classof(const Value *V) {
     return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
   }
 
@@ -408,11 +408,11 @@ public:
 /// Represents calls to the gc.result intrinsic.
 class GCResultInst : public GCProjectionInst {
 public:
-  static inline bool classof(const IntrinsicInst *I) {
+  static bool classof(const IntrinsicInst *I) {
     return I->getIntrinsicID() == Intrinsic::experimental_gc_result;
   }
 
-  static inline bool classof(const Value *V) {
+  static bool classof(const Value *V) {
     return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
   }
 };

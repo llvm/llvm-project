@@ -89,7 +89,7 @@ public:
   bool isPowerOf2ByteWidth() const;
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast.
-  static inline bool classof(const Type *T) {
+  static bool classof(const Type *T) {
     return T->getTypeID() == IntegerTyID;
   }
 };
@@ -139,7 +139,7 @@ public:
   unsigned getNumParams() const { return NumContainedTys - 1; }
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast.
-  static inline bool classof(const Type *T) {
+  static bool classof(const Type *T) {
     return T->getTypeID() == FunctionTyID;
   }
 };
@@ -171,7 +171,7 @@ public:
   bool indexValid(unsigned Idx) const;
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast.
-  static inline bool classof(const Type *T) {
+  static bool classof(const Type *T) {
     return T->getTypeID() == ArrayTyID ||
            T->getTypeID() == StructTyID ||
            T->getTypeID() == VectorTyID;
@@ -317,7 +317,7 @@ public:
   }
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast.
-  static inline bool classof(const Type *T) {
+  static bool classof(const Type *T) {
     return T->getTypeID() == StructTyID;
   }
 };
@@ -360,7 +360,7 @@ public:
   Type *getElementType() const { return ContainedType; }
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast.
-  static inline bool classof(const Type *T) {
+  static bool classof(const Type *T) {
     return T->getTypeID() == ArrayTyID || T->getTypeID() == VectorTyID;
   }
 };
@@ -380,7 +380,7 @@ public:
   static bool isValidElementType(Type *ElemTy);
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast.
-  static inline bool classof(const Type *T) {
+  static bool classof(const Type *T) {
     return T->getTypeID() == ArrayTyID;
   }
 };
@@ -454,7 +454,7 @@ public:
   }
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast.
-  static inline bool classof(const Type *T) {
+  static bool classof(const Type *T) {
     return T->getTypeID() == VectorTyID;
   }
 };
@@ -495,7 +495,7 @@ public:
   inline unsigned getAddressSpace() const { return getSubclassData(); }
 
   /// Implement support type inquiry through isa, cast, and dyn_cast.
-  static inline bool classof(const Type *T) {
+  static bool classof(const Type *T) {
     return T->getTypeID() == PointerTyID;
   }
 };

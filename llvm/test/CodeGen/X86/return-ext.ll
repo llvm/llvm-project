@@ -106,8 +106,6 @@ entry:
 ; CHECK: call
 ; CHECK-NEXT: movzbl
 ; CHECK-NEXT: {{pop|add}}
-; CHECK-NEXT: :
-; CHECK-NEXT: .cfi_def_cfa_offset {{4|8}}
 ; CHECK-NEXT: ret
 }
 
@@ -122,8 +120,6 @@ entry:
 ; CHECK: call
 ; CHECK-NEXT: movzbl
 ; CHECK-NEXT: {{pop|add}}
-; CHECK-NEXT: :
-; CHECK-NEXT: .cfi_def_cfa_offset {{4|8}}
 ; CHECK-NEXT: ret
 }
 
@@ -138,7 +134,5 @@ entry:
 ; CHECK: call
 ; CHECK-NEXT: movzwl
 ; CHECK-NEXT: {{pop|add}}
-; CHECK-NEXT: :
-; CHECK-NEXT: .cfi_def_cfa_offset {{4|8}}
 ; CHECK-NEXT: ret
 }

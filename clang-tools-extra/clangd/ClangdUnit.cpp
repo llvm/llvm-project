@@ -400,8 +400,12 @@ SourceLocation ClangdUnit::getBeginningOfIdentifier(const Position &Pos,
       Pos.character);
   const SourceManager &SourceMgr = Unit->getSourceManager();
   Token Result;
-  Lexer::getRawToken(PeekBeforeLocation, Result, SourceMgr,
-      Unit->getASTContext().getLangOpts(), false);
+  if (Lexer::getRawToken(PeekBeforeLocation, Result, SourceMgr,
+                         Unit->getASTContext().getLangOpts(), false)) {
+    // getRawToken failed, just use InputLocation.
+    return InputLocation;
+  }
+
   if (Result.is(tok::raw_identifier)) {
     return Lexer::GetBeginningOfToken(PeekBeforeLocation, SourceMgr,
         Unit->getASTContext().getLangOpts());

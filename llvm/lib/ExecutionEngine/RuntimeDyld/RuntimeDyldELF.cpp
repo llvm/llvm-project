@@ -78,11 +78,11 @@ public:
   void updateSymbolAddress(const SymbolRef &SymRef, uint64_t Addr);
 
   // Methods for type inquiry through isa, cast and dyn_cast
-  static inline bool classof(const Binary *v) {
+  static bool classof(const Binary *v) {
     return (isa<ELFObjectFile<ELFT>>(v) &&
             classof(cast<ELFObjectFile<ELFT>>(v)));
   }
-  static inline bool classof(const ELFObjectFile<ELFT> *v) {
+  static bool classof(const ELFObjectFile<ELFT> *v) {
     return v->isDyldType();
   }
 };

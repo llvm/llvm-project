@@ -1743,7 +1743,7 @@ public:
 
   bool isConstant() const;
 
-  static inline bool classof(const SDNode *N) {
+  static bool classof(const SDNode *N) {
     return N->getOpcode() == ISD::BUILD_VECTOR;
   }
 };

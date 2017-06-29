@@ -4400,14 +4400,16 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
     // If the real base value actually came from an inttoptr, then the matcher
     // will look through it and provide only the integer value. In that case,
     // use it here.
-    if (!ResultPtr && AddrMode.BaseReg) {
-      ResultPtr =
-        Builder.CreateIntToPtr(AddrMode.BaseReg, Addr->getType(), "sunkaddr");
-      AddrMode.BaseReg = nullptr;
-    } else if (!ResultPtr && AddrMode.Scale == 1) {
-      ResultPtr =
-        Builder.CreateIntToPtr(AddrMode.ScaledReg, Addr->getType(), "sunkaddr");
-      AddrMode.Scale = 0;
+    if (!DL->isNonIntegralPointerType(Addr->getType())) {
+      if (!ResultPtr && AddrMode.BaseReg) {
+        ResultPtr = Builder.CreateIntToPtr(AddrMode.BaseReg, Addr->getType(),
+                                           "sunkaddr");
+        AddrMode.BaseReg = nullptr;
+      } else if (!ResultPtr && AddrMode.Scale == 1) {
+        ResultPtr = Builder.CreateIntToPtr(AddrMode.ScaledReg, Addr->getType(),
+                                           "sunkaddr");
+        AddrMode.Scale = 0;
+      }
     }
 
     if (!ResultPtr &&
@@ -4488,6 +4490,19 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
         SunkAddr = Builder.CreatePointerCast(SunkAddr, Addr->getType());
     }
   } else {
+    // We'd require a ptrtoint/inttoptr down the line, which we can't do for
+    // non-integral pointers, so in that case bail out now.
+    Type *BaseTy = AddrMode.BaseReg ? AddrMode.BaseReg->getType() : nullptr;
+    Type *ScaleTy = AddrMode.Scale ? AddrMode.ScaledReg->getType() : nullptr;
+    PointerType *BasePtrTy = dyn_cast_or_null<PointerType>(BaseTy);
+    PointerType *ScalePtrTy = dyn_cast_or_null<PointerType>(ScaleTy);
+    if (DL->isNonIntegralPointerType(Addr->getType()) ||
+        (BasePtrTy && DL->isNonIntegralPointerType(BasePtrTy)) ||
+        (ScalePtrTy && DL->isNonIntegralPointerType(ScalePtrTy)) ||
+        (AddrMode.BaseGV &&
+         DL->isNonIntegralPointerType(AddrMode.BaseGV->getType())))
+      return false;
+
     DEBUG(dbgs() << "CGP: SINKING nonlocal addrmode: " << AddrMode << " for "
                  << *MemoryInst << "\n");
     Type *IntPtrTy = DL->getIntPtrType(Addr->getType());

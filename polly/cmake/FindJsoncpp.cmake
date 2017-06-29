@@ -5,7 +5,7 @@ if (PkgConfig_FOUND)
   # Get the libraries full paths, to be consistent with find_library().
   set(fulllibs)
   foreach (libname IN LISTS JSONCPP_LIBRARIES)
-    find_library(lib NAMES ${libname} 
+    find_library(lib NAMES ${libname}
       HINTS ${JSONCPP_LIBDIR} ${JSONCPP_LIBRARY_DIRS}
       NO_DEFAULT_PATH
     )

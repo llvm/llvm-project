@@ -125,17 +125,9 @@ define <2 x i64> @test5(<2 x i64> %A, <2 x i64> %B) {
 ; CHECK-NEXT:    movl %esi, 4(%eax)
 ; CHECK-NEXT:    movl %edi, (%eax)
 ; CHECK-NEXT:    popl %esi
-; CHECK-NEXT:  .Lcfi8:
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    popl %edi
-; CHECK-NEXT:  .Lcfi9:
-; CHECK-NEXT:    .cfi_def_cfa_offset 12
 ; CHECK-NEXT:    popl %ebx
-; CHECK-NEXT:  .Lcfi10:
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    popl %ebp
-; CHECK-NEXT:  .Lcfi11:
-; CHECK-NEXT:    .cfi_def_cfa_offset 4
 ; CHECK-NEXT:    retl $4
   %shl = shl <2 x i64> %A, %B
   ret <2 x i64> %shl
@@ -146,12 +138,12 @@ define i32 @test6() {
 ; CHECK-LABEL: test6:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    pushl %ebp
-; CHECK-NEXT:  .Lcfi12:
+; CHECK-NEXT:  .Lcfi8:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
-; CHECK-NEXT:  .Lcfi13:
+; CHECK-NEXT:  .Lcfi9:
 ; CHECK-NEXT:    .cfi_offset %ebp, -8
 ; CHECK-NEXT:    movl %esp, %ebp
-; CHECK-NEXT:  .Lcfi14:
+; CHECK-NEXT:  .Lcfi10:
 ; CHECK-NEXT:    .cfi_def_cfa_register %ebp
 ; CHECK-NEXT:    andl $-8, %esp
 ; CHECK-NEXT:    subl $16, %esp
@@ -180,8 +172,6 @@ define i32 @test6() {
 ; CHECK-NEXT:  .LBB5_4: # %if.then
 ; CHECK-NEXT:    movl %ebp, %esp
 ; CHECK-NEXT:    popl %ebp
-; CHECK-NEXT:  .Lcfi15:
-; CHECK-NEXT:    .cfi_def_cfa %esp, 4
 ; CHECK-NEXT:    retl
   %x = alloca i32, align 4
   %t = alloca i64, align 8

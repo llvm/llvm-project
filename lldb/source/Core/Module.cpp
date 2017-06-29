@@ -17,7 +17,6 @@
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/SearchFilter.h" // for SearchFilt...
 #include "lldb/Core/Section.h"
-#include "lldb/Core/Timer.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
@@ -45,6 +44,7 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h" // for Stream
 #include "lldb/Utility/StreamString.h"
+#include "lldb/Utility/Timer.h"
 
 #if defined(LLVM_ON_WIN32)
 #include "lldb/Host/windows/PosixApi.h" // for PATH_MAX

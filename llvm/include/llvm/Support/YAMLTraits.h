@@ -1148,7 +1148,7 @@ private:
     HNode(Node *n) : _node(n) { }
     virtual ~HNode() = default;
 
-    static inline bool classof(const HNode *) { return true; }
+    static bool classof(const HNode *) { return true; }
 
     Node *_node;
   };
@@ -1159,11 +1159,9 @@ private:
   public:
     EmptyHNode(Node *n) : HNode(n) { }
 
-    static inline bool classof(const HNode *n) {
-      return NullNode::classof(n->_node);
-    }
+    static bool classof(const HNode *n) { return NullNode::classof(n->_node); }
 
-    static inline bool classof(const EmptyHNode *) { return true; }
+    static bool classof(const EmptyHNode *) { return true; }
   };
 
   class ScalarHNode : public HNode {
@@ -1174,12 +1172,12 @@ private:
 
     StringRef value() const { return _value; }
 
-    static inline bool classof(const HNode *n) {
+    static bool classof(const HNode *n) {
       return ScalarNode::classof(n->_node) ||
              BlockScalarNode::classof(n->_node);
     }
 
-    static inline bool classof(const ScalarHNode *) { return true; }
+    static bool classof(const ScalarHNode *) { return true; }
 
   protected:
     StringRef _value;
@@ -1191,11 +1189,11 @@ private:
   public:
     MapHNode(Node *n) : HNode(n) { }
 
-    static inline bool classof(const HNode *n) {
+    static bool classof(const HNode *n) {
       return MappingNode::classof(n->_node);
     }
 
-    static inline bool classof(const MapHNode *) { return true; }
+    static bool classof(const MapHNode *) { return true; }
 
     using NameToNode = StringMap<std::unique_ptr<HNode>>;
 
@@ -1209,11 +1207,11 @@ private:
   public:
     SequenceHNode(Node *n) : HNode(n) { }
 
-    static inline bool classof(const HNode *n) {
+    static bool classof(const HNode *n) {
       return SequenceNode::classof(n->_node);
     }
 
-    static inline bool classof(const SequenceHNode *) { return true; }
+    static bool classof(const SequenceHNode *) { return true; }
 
     std::vector<std::unique_ptr<HNode>> Entries;
   };

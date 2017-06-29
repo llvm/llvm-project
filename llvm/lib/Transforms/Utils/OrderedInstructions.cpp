@@ -27,7 +27,6 @@ bool OrderedInstructions::dominates(const Instruction *InstA,
     if (OBB == OBBMap.end())
       OBB = OBBMap.insert({IBB, make_unique<OrderedBasicBlock>(IBB)}).first;
     return OBB->second->dominates(InstA, InstB);
-  } else {
-    return DT->dominates(InstA->getParent(), InstB->getParent());
   }
+  return DT->dominates(InstA->getParent(), InstB->getParent());
 }

@@ -535,9 +535,9 @@ bool HexagonOptAddrMode::processBlock(NodeAddr<BlockNode *> BA) {
         !MI->getOperand(1).isGlobal())
       continue;
 
-    DEBUG(dbgs() << "[Analyzing A2_tfrsi]: " << *MI << "\n");
-    DEBUG(dbgs() << "\t[InstrNode]: " << Print<NodeAddr<InstrNode *>>(IA, *DFG)
-                 << "\n");
+    DEBUG(dbgs() << "[Analyzing " << HII->getName(MI->getOpcode()) << "]: "
+                 << *MI << "\n\t[InstrNode]: "
+                 << Print<NodeAddr<InstrNode *>>(IA, *DFG) << '\n');
 
     NodeList UNodeList;
     getAllRealUses(SA, UNodeList);
@@ -605,7 +605,9 @@ bool HexagonOptAddrMode::runOnMachineFunction(MachineFunction &MF) {
   const TargetOperandInfo TOI(*HII);
 
   DataFlowGraph G(MF, *HII, TRI, *MDT, MDF, TOI);
-  G.build();
+  // Need to keep dead phis because we can propagate uses of registers into
+  // nodes dominated by those would-be phis.
+  G.build(BuildOptions::KeepDeadPhis);
   DFG = &G;
 
   Liveness L(MRI, *DFG);

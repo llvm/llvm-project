@@ -116,6 +116,11 @@ struct AP32 {
 typedef SizeClassAllocator32<AP32> PrimaryAllocator;
 #endif  // SANITIZER_CAN_USE_ALLOCATOR64
 
+// __sanitizer::RoundUp has a CHECK that is extraneous for us. Use our own.
+INLINE uptr RoundUpTo(uptr Size, uptr Boundary) {
+  return (Size + Boundary - 1) & ~(Boundary - 1);
+}
+
 #include "scudo_allocator_secondary.h"
 #include "scudo_allocator_combined.h"
 

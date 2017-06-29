@@ -1646,6 +1646,27 @@ static bool isLegalArrayNewInitializer(CXXNewExpr::InitializationStyle Style,
   return false;
 }
 
+// Emit a diagnostic if an aligned allocation/deallocation function that is not
+// implemented in the standard library is selected.
+static void diagnoseUnavailableAlignedAllocation(const FunctionDecl &FD,
+                                                 SourceLocation Loc, bool IsDelete,
+                                                 Sema &S) {
+  if (!S.getLangOpts().AlignedAllocationUnavailable)
+    return;
+
+  // Return if there is a definition.
+  if (FD.isDefined())
+    return;
+
+  bool IsAligned = false;
+  if (FD.isReplaceableGlobalAllocationFunction(&IsAligned) && IsAligned) {
+    S.Diag(Loc, diag::warn_aligned_allocation_unavailable)
+         << IsDelete << FD.getType().getAsString()
+         << S.getASTContext().getTargetInfo().getTriple().str();
+    S.Diag(Loc, diag::note_silence_unligned_allocation_unavailable);
+  }
+}
+
 ExprResult
 Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
                   SourceLocation PlacementLParen,
@@ -2023,11 +2044,13 @@ Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
     if (DiagnoseUseOfDecl(OperatorNew, StartLoc))
       return ExprError();
     MarkFunctionReferenced(StartLoc, OperatorNew);
+    diagnoseUnavailableAlignedAllocation(*OperatorNew, StartLoc, false, *this);
   }
   if (OperatorDelete) {
     if (DiagnoseUseOfDecl(OperatorDelete, StartLoc))
       return ExprError();
     MarkFunctionReferenced(StartLoc, OperatorDelete);
+    diagnoseUnavailableAlignedAllocation(*OperatorDelete, StartLoc, true, *this);
   }
 
   // C++0x [expr.new]p17:
@@ -3243,6 +3266,9 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
                       PDiag(diag::err_access_dtor) << PointeeElem);
       }
     }
+
+    diagnoseUnavailableAlignedAllocation(*OperatorDelete, StartLoc, true,
+                                         *this);
   }
 
   CXXDeleteExpr *Result = new (Context) CXXDeleteExpr(

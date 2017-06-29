@@ -14,7 +14,7 @@
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/BinaryFormat/Dwarf.h"
-#include "llvm/Support/DataExtractor.h"
+#include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
 #include <cstdint>
 
 namespace llvm {
@@ -105,14 +105,13 @@ public:
 
   /// Extracts a value in \p Data at offset \p *OffsetPtr.
   ///
-  /// The passed DWARFUnit is allowed to be nullptr, in which
-  /// case no relocation processing will be performed and some
+  /// The passed DWARFUnit is allowed to be nullptr, in which case some
   /// kind of forms that depend on Unit information are disallowed.
-  /// \param Data The DataExtractor to use.
-  /// \param OffsetPtr The offset within DataExtractor where the data starts.
+  /// \param Data The DWARFDataExtractor to use.
+  /// \param OffsetPtr The offset within \p Data where the data starts.
   /// \param U The optional DWARFUnit supplying information for some forms.
   /// \returns whether the extraction succeeded.
-  bool extractValue(const DataExtractor &Data, uint32_t *OffsetPtr,
+  bool extractValue(const DWARFDataExtractor &Data, uint32_t *OffsetPtr,
                     const DWARFUnit *U);
 
   bool isInlinedCStr() const {

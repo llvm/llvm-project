@@ -2106,6 +2106,8 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   Opts.AlignedAllocation =
       Args.hasFlag(OPT_faligned_allocation, OPT_fno_aligned_allocation,
                    Opts.AlignedAllocation);
+  Opts.AlignedAllocationUnavailable =
+      Opts.AlignedAllocation && Args.hasArg(OPT_aligned_alloc_unavailable);
   Opts.NewAlignOverride =
       getLastArgIntValue(Args, OPT_fnew_alignment_EQ, 0, Diags);
   if (Opts.NewAlignOverride && !llvm::isPowerOf2_32(Opts.NewAlignOverride)) {
@@ -2643,6 +2645,10 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
     if (LangOpts.CUDAIsDevice)
       Res.getTargetOpts().HostTriple = Res.getFrontendOpts().AuxTriple;
   }
+
+  // Set the triple of the host for OpenMP device compile.
+  if (LangOpts.OpenMPIsDevice)
+    Res.getTargetOpts().HostTriple = Res.getFrontendOpts().AuxTriple;
 
   // FIXME: Override value name discarding when asan or msan is used because the
   // backend passes depend on the name of the alloca in order to print out

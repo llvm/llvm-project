@@ -280,11 +280,10 @@ bool DWARFVerifier::handleDebugLine() {
 bool DWARFVerifier::handleAppleNames() {
   NumAppleNamesErrors = 0;
 
-  DataExtractor AppleNamesSection(DCtx.getAppleNamesSection().Data,
-                                  DCtx.isLittleEndian(), 0);
+  DWARFDataExtractor AppleNamesSection(DCtx.getAppleNamesSection(),
+                                       DCtx.isLittleEndian(), 0);
   DataExtractor StrData(DCtx.getStringSection(), DCtx.isLittleEndian(), 0);
-  DWARFAcceleratorTable AppleNames(AppleNamesSection, StrData,
-                                   DCtx.getAppleNamesSection().Relocs);
+  DWARFAcceleratorTable AppleNames(AppleNamesSection, StrData);
 
   if (!AppleNames.extract()) {
     return true;
@@ -292,19 +291,79 @@ bool DWARFVerifier::handleAppleNames() {
 
   OS << "Verifying .apple_names...\n";
 
-  // Verify that all buckets have a valid hash index or are empty
+  // Verify that all buckets have a valid hash index or are empty.
   uint32_t NumBuckets = AppleNames.getNumBuckets();
   uint32_t NumHashes = AppleNames.getNumHashes();
 
   uint32_t BucketsOffset =
       AppleNames.getSizeHdr() + AppleNames.getHeaderDataLength();
+  uint32_t HashesBase = BucketsOffset + NumBuckets * 4;
+  uint32_t OffsetsBase = HashesBase + NumHashes * 4;
 
   for (uint32_t BucketIdx = 0; BucketIdx < NumBuckets; ++BucketIdx) {
     uint32_t HashIdx = AppleNamesSection.getU32(&BucketsOffset);
     if (HashIdx >= NumHashes && HashIdx != UINT32_MAX) {
-      OS << format("error: Bucket[%d] has invalid hash index: [%d]\n",
-                   BucketIdx, HashIdx);
+      OS << format("error: Bucket[%d] has invalid hash index: %u\n", BucketIdx,
+                   HashIdx);
       ++NumAppleNamesErrors;
+    }
+  }
+
+  uint32_t NumAtoms = AppleNames.getAtomsDesc().size();
+  if (NumAtoms == 0) {
+    OS << "error: no atoms; failed to read HashData\n";
+    ++NumAppleNamesErrors;
+    return false;
+  }
+
+  if (!AppleNames.validateForms()) {
+    OS << "error: unsupported form; failed to read HashData\n";
+    ++NumAppleNamesErrors;
+    return false;
+  }
+
+  for (uint32_t HashIdx = 0; HashIdx < NumHashes; ++HashIdx) {
+    uint32_t HashOffset = HashesBase + 4 * HashIdx;
+    uint32_t DataOffset = OffsetsBase + 4 * HashIdx;
+    uint32_t Hash = AppleNamesSection.getU32(&HashOffset);
+    uint32_t HashDataOffset = AppleNamesSection.getU32(&DataOffset);
+    if (!AppleNamesSection.isValidOffsetForDataOfSize(HashDataOffset,
+                                                      sizeof(uint64_t))) {
+      OS << format("error: Hash[%d] has invalid HashData offset: 0x%08x\n",
+                   HashIdx, HashDataOffset);
+      ++NumAppleNamesErrors;
+    }
+
+    uint32_t StrpOffset;
+    uint32_t StringOffset;
+    uint32_t StringCount = 0;
+    uint32_t DieOffset = dwarf::DW_INVALID_OFFSET;
+
+    while ((StrpOffset = AppleNamesSection.getU32(&HashDataOffset)) != 0) {
+      const uint32_t NumHashDataObjects =
+          AppleNamesSection.getU32(&HashDataOffset);
+      for (uint32_t HashDataIdx = 0; HashDataIdx < NumHashDataObjects;
+           ++HashDataIdx) {
+        DieOffset = AppleNames.readAtoms(HashDataOffset);
+        if (!DCtx.getDIEForOffset(DieOffset)) {
+          const uint32_t BucketIdx =
+              NumBuckets ? (Hash % NumBuckets) : UINT32_MAX;
+          StringOffset = StrpOffset;
+          const char *Name = StrData.getCStr(&StringOffset);
+          if (!Name)
+            Name = "<NULL>";
+
+          OS << format(
+              "error: .apple_names Bucket[%d] Hash[%d] = 0x%08x "
+              "Str[%u] = 0x%08x "
+              "DIE[%d] = 0x%08x is not a valid DIE offset for \"%s\".\n",
+              BucketIdx, HashIdx, Hash, StringCount, StrpOffset, HashDataIdx,
+              DieOffset, Name);
+
+          ++NumAppleNamesErrors;
+        }
+      }
+      ++StringCount;
     }
   }
   return NumAppleNamesErrors == 0;

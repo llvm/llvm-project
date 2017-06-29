@@ -63,15 +63,22 @@ bool BasicBlockEdge::isSingleEdge() const {
 template class llvm::DomTreeNodeBase<BasicBlock>;
 template class llvm::DominatorTreeBase<BasicBlock>;
 
-template void llvm::Calculate<Function, BasicBlock *>(
+template void llvm::DomTreeBuilder::Calculate<Function, BasicBlock *>(
     DominatorTreeBase<
         typename std::remove_pointer<GraphTraits<BasicBlock *>::NodeRef>::type>
         &DT,
     Function &F);
-template void llvm::Calculate<Function, Inverse<BasicBlock *>>(
+template void llvm::DomTreeBuilder::Calculate<Function, Inverse<BasicBlock *>>(
     DominatorTreeBase<typename std::remove_pointer<
         GraphTraits<Inverse<BasicBlock *>>::NodeRef>::type> &DT,
     Function &F);
+template bool llvm::DomTreeBuilder::Verify<BasicBlock *>(
+    const DominatorTreeBase<
+        typename std::remove_pointer<GraphTraits<BasicBlock *>::NodeRef>::type>
+        &DT);
+template bool llvm::DomTreeBuilder::Verify<Inverse<BasicBlock *>>(
+    const DominatorTreeBase<typename std::remove_pointer<
+        GraphTraits<Inverse<BasicBlock *>>::NodeRef>::type> &DT);
 
 bool DominatorTree::invalidate(Function &F, const PreservedAnalyses &PA,
                                FunctionAnalysisManager::Invalidator &) {
@@ -285,6 +292,12 @@ bool DominatorTree::isReachableFromEntry(const Use &U) const {
 }
 
 void DominatorTree::verifyDomTree() const {
+  if (!verify()) {
+    errs() << "\n~~~~~~~~~~~\n\t\tDomTree verification failed!\n~~~~~~~~~~~\n";
+    print(errs());
+    abort();
+  }
+
   Function &F = *getRoot()->getParent();
 
   DominatorTree OtherDT;

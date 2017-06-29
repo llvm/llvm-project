@@ -129,6 +129,13 @@ forAllAssociatedToolChains(Compilation &C, const JobAction &JA,
   else if (JA.isDeviceOffloading(Action::OFK_Cuda))
     Work(*C.getSingleOffloadToolChain<Action::OFK_Host>());
 
+  if (JA.isHostOffloading(Action::OFK_OpenMP)) {
+    auto TCs = C.getOffloadToolChains<Action::OFK_OpenMP>();
+    for (auto II = TCs.first, IE = TCs.second; II != IE; ++II)
+      Work(*II->second);
+  } else if (JA.isDeviceOffloading(Action::OFK_OpenMP))
+    Work(*C.getSingleOffloadToolChain<Action::OFK_Host>());
+
   //
   // TODO: Add support for other offloading programming models here.
   //
@@ -1988,6 +1995,16 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                              ->getTriple()
                              .normalize();
 
+    CmdArgs.push_back("-aux-triple");
+    CmdArgs.push_back(Args.MakeArgString(NormalizedTriple));
+  }
+
+  if (IsOpenMPDevice) {
+    // We have to pass the triple of the host if compiling for an OpenMP device.
+    std::string NormalizedTriple =
+        C.getSingleOffloadToolChain<Action::OFK_Host>()
+            ->getTriple()
+            .normalize();
     CmdArgs.push_back("-aux-triple");
     CmdArgs.push_back(Args.MakeArgString(NormalizedTriple));
   }
@@ -4412,10 +4429,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // device declarations can be identified. Also, -fopenmp-is-device is passed
   // along to tell the frontend that it is generating code for a device, so that
   // only the relevant declarations are emitted.
-  if (IsOpenMPDevice && Inputs.size() == 2) {
+  if (IsOpenMPDevice) {
     CmdArgs.push_back("-fopenmp-is-device");
-    CmdArgs.push_back("-fopenmp-host-ir-file-path");
-    CmdArgs.push_back(Args.MakeArgString(Inputs.back().getFilename()));
+    if (Inputs.size() == 2) {
+      CmdArgs.push_back("-fopenmp-host-ir-file-path");
+      CmdArgs.push_back(Args.MakeArgString(Inputs.back().getFilename()));
+    }
   }
 
   // For all the host OpenMP offloading compile jobs we need to pass the targets
