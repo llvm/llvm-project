@@ -16,13 +16,12 @@
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/DWARFCallFrameInfo.h"
 #include "lldb/Utility/StreamString.h"
+#include "unittests/Utility/Helpers/TestUtilities.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
-
-extern const char *TestMainArgv0;
 
 using namespace lldb_private;
 using namespace lldb;
@@ -32,10 +31,6 @@ public:
   void SetUp() override {
     HostInfo::Initialize();
     ObjectFileELF::Initialize();
-
-    m_inputs_folder = llvm::sys::path::parent_path(TestMainArgv0);
-    llvm::sys::path::append(m_inputs_folder, "Inputs");
-    llvm::sys::fs::make_absolute(m_inputs_folder);
   }
 
   void TearDown() override {
@@ -44,8 +39,6 @@ public:
   }
 
 protected:
-  llvm::SmallString<128> m_inputs_folder;
-
   void TestBasic(DWARFCallFrameInfo::Type type, llvm::StringRef symbol);
 };
 
@@ -96,9 +89,8 @@ static UnwindPlan::Row GetExpectedRow2() {
 
 void DWARFCallFrameInfoTest::TestBasic(DWARFCallFrameInfo::Type type,
                                        llvm::StringRef symbol) {
-  llvm::SmallString<128> yaml = m_inputs_folder;
-  llvm::sys::path::append(yaml, "basic-call-frame-info.yaml");
-  llvm::SmallString<128> obj = m_inputs_folder;
+  std::string yaml = GetInputFilePath("basic-call-frame-info.yaml");
+  llvm::SmallString<128> obj;
 
   ASSERT_NO_ERROR(llvm::sys::fs::createTemporaryFile(
       "basic-call-frame-info-%%%%%%", "obj", obj));

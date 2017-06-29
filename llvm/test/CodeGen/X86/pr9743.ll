@@ -14,6 +14,4 @@ define void @f() {
 ; CHECK-NEXT: :
 ; CHECK-NEXT:  .cfi_def_cfa_register %rbp
 ; CHECK-NEXT:  popq    %rbp
-; CHECK-NEXT: :
-; CHECK-NEXT:  .cfi_def_cfa %rsp, 8
 ; CHECK-NEXT:  ret

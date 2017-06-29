@@ -1,6 +1,6 @@
 #include "gtest/gtest.h"
 
-#include "Mocks/MockTildeExpressionResolver.h"
+#include "Helpers/MockTildeExpressionResolver.h"
 #include "lldb/Utility/TildeExpressionResolver.h"
 
 #include "llvm/ADT/SmallString.h"

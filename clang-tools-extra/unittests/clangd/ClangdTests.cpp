@@ -408,6 +408,8 @@ TEST_F(ClangdVFSTest, CheckVersions) {
   EXPECT_EQ(Server.codeComplete(FooCpp, Position{0, 0}).Tag, FS.Tag);
 }
 
+// Only enable this test on Unix
+#ifdef LLVM_ON_UNIX
 TEST_F(ClangdVFSTest, SearchLibDir) {
   // Checks that searches for GCC installation is done through vfs.
   MockFSProvider FS;
@@ -454,6 +456,7 @@ std::string x;
   Server.addDocument(FooCpp, SourceContentsWithError);
   EXPECT_TRUE(DiagConsumer.hadErrorInLastDiags());
 }
+#endif // LLVM_ON_UNIX
 
 class ClangdCompletionTest : public ClangdVFSTest {
 protected:

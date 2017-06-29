@@ -977,10 +977,6 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &Fn) {
 void PEI::insertPrologEpilogCode(MachineFunction &Fn) {
   const TargetFrameLowering &TFI = *Fn.getSubtarget().getFrameLowering();
 
-  // Set initial incoming and outgoing cfa offset and register values for basic
-  // blocks.
-  TFI.initializeCFIInfo(Fn);
-
   // Add prologue to the function...
   for (MachineBasicBlock *SaveBlock : SaveBlocks)
     TFI.emitPrologue(Fn, *SaveBlock);

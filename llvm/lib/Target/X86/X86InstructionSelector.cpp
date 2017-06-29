@@ -75,6 +75,8 @@ private:
   bool selectUadde(MachineInstr &I, MachineRegisterInfo &MRI,
                    MachineFunction &MF) const;
   bool selectCopy(MachineInstr &I, MachineRegisterInfo &MRI) const;
+  bool selectMergeValues(MachineInstr &I, MachineRegisterInfo &MRI,
+                         MachineFunction &MF) const;
   bool selectInsert(MachineInstr &I, MachineRegisterInfo &MRI,
                     MachineFunction &MF) const;
   bool selectExtract(MachineInstr &I, MachineRegisterInfo &MRI,
@@ -269,6 +271,8 @@ bool X86InstructionSelector::select(MachineInstr &I) const {
   if (selectCmp(I, MRI, MF))
     return true;
   if (selectUadde(I, MRI, MF))
+    return true;
+  if (selectMergeValues(I, MRI, MF))
     return true;
   if (selectExtract(I, MRI, MF))
     return true;
@@ -914,6 +918,55 @@ bool X86InstructionSelector::selectInsert(MachineInstr &I,
   return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
 }
 
+bool X86InstructionSelector::selectMergeValues(MachineInstr &I,
+                                               MachineRegisterInfo &MRI,
+                                               MachineFunction &MF) const {
+  if (I.getOpcode() != TargetOpcode::G_MERGE_VALUES)
+    return false;
+
+  // Split to inserts.
+  unsigned DstReg = I.getOperand(0).getReg();
+  unsigned SrcReg0 = I.getOperand(1).getReg();
+
+  const LLT DstTy = MRI.getType(DstReg);
+  const LLT SrcTy = MRI.getType(SrcReg0);
+  unsigned SrcSize = SrcTy.getSizeInBits();
+
+  const RegisterBank &RegBank = *RBI.getRegBank(DstReg, MRI, TRI);
+
+  // For the first src use insertSubReg.
+  unsigned DefReg = MRI.createGenericVirtualRegister(DstTy);
+  MRI.setRegBank(DefReg, RegBank);
+  if (!emitInsertSubreg(DefReg, I.getOperand(1).getReg(), I, MRI, MF))
+    return false;
+
+  for (unsigned Idx = 2; Idx < I.getNumOperands(); ++Idx) {
+
+    unsigned Tmp = MRI.createGenericVirtualRegister(DstTy);
+    MRI.setRegBank(Tmp, RegBank);
+
+    MachineInstr &InsertInst = *BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                                        TII.get(TargetOpcode::G_INSERT), Tmp)
+                                    .addReg(DefReg)
+                                    .addReg(I.getOperand(Idx).getReg())
+                                    .addImm((Idx - 1) * SrcSize);
+
+    DefReg = Tmp;
+
+    if (!select(InsertInst))
+      return false;
+  }
+
+  MachineInstr &CopyInst = *BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                                    TII.get(TargetOpcode::COPY), DstReg)
+                                .addReg(DefReg);
+
+  if (!select(CopyInst))
+    return false;
+
+  I.eraseFromParent();
+  return true;
+}
 InstructionSelector *
 llvm::createX86InstructionSelector(const X86TargetMachine &TM,
                                    X86Subtarget &Subtarget,

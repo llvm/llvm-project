@@ -586,6 +586,27 @@ TEST(ParseFixedCompilationDatabase, HandlesPositionalArgs) {
   EXPECT_EQ(2, Argc);
 }
 
+TEST(ParseFixedCompilationDatabase, HandlesPositionalArgsSyntaxOnly) {
+  // Adjust the given command line arguments to ensure that any positional
+  // arguments in them are stripped.
+  const char *Argv[] = {"--", "somefile.cpp", "-fsyntax-only", "-DDEF3"};
+  int Argc = llvm::array_lengthof(Argv);
+  std::string ErrorMessage;
+  std::unique_ptr<CompilationDatabase> Database =
+      FixedCompilationDatabase::loadFromCommandLine(Argc, Argv, ErrorMessage);
+  ASSERT_TRUE((bool)Database);
+  ASSERT_TRUE(ErrorMessage.empty());
+  std::vector<CompileCommand> Result = Database->getCompileCommands("source");
+  ASSERT_EQ(1ul, Result.size());
+  ASSERT_EQ(".", Result[0].Directory);
+  std::vector<std::string> Expected;
+  Expected.push_back("clang-tool");
+  Expected.push_back("-fsyntax-only");
+  Expected.push_back("-DDEF3");
+  Expected.push_back("source");
+  ASSERT_EQ(Expected, Result[0].CommandLine);
+}
+
 TEST(ParseFixedCompilationDatabase, HandlesArgv0) {
   const char *Argv[] = {"1", "2", "--", "mytool", "somefile.cpp"};
   int Argc = sizeof(Argv) / sizeof(char*);

@@ -88,8 +88,6 @@ define void @full_test() {
 ; X32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; X32-NEXT:    movsd %xmm0, {{[0-9]+}}(%esp)
 ; X32-NEXT:    addl $60, %esp
-; X32-NEXT:  .Lcfi1:
-; X32-NEXT:    .cfi_def_cfa_offset 4
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: full_test:

@@ -327,6 +327,7 @@ enum ProcessorSubtypes {
   INTEL_COREI7_SKYLAKE_AVX512,
   INTEL_ATOM_BONNELL,
   INTEL_ATOM_SILVERMONT,
+  INTEL_ATOM_GOLDMONT,
   INTEL_KNIGHTS_LANDING,
   AMDPENTIUM_K6,
   AMDPENTIUM_K62,
@@ -707,7 +708,12 @@ getIntelProcessorTypeAndSubtype(unsigned int Family, unsigned int Model,
       *Type = INTEL_ATOM;
       *Subtype = INTEL_ATOM_SILVERMONT;
       break; // "silvermont"
-
+    // Goldmont:
+    case 0x5c:
+    case 0x5f:
+      *Type = INTEL_ATOM;
+      *Subtype = INTEL_ATOM_GOLDMONT;
+      break; // "goldmont"
     case 0x57:
       *Type = INTEL_XEONPHI; // knl
       *Subtype = INTEL_KNIGHTS_LANDING;
@@ -1070,6 +1076,8 @@ StringRef sys::getHostCPUName() {
       switch (Subtype) {
       case INTEL_ATOM_BONNELL:
         return "bonnell";
+      case INTEL_ATOM_GOLDMONT:
+        return "goldmont";
       case INTEL_ATOM_SILVERMONT:
         return "silvermont";
       default:

@@ -1,4 +1,4 @@
-//===--- FileOpenFlagCheck.cpp - clang-tidy--------------------------------===//
+//===--- CloexecOpenCheck.cpp - clang-tidy---------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "FileOpenFlagCheck.h"
+#include "CloexecOpenCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
@@ -21,11 +21,12 @@ namespace android {
 namespace {
 static constexpr const char *O_CLOEXEC = "O_CLOEXEC";
 
-bool HasCloseOnExecFlag(const Expr *Flags, const SourceManager &SM,
+bool hasCloseOnExecFlag(const Expr *Flags, const SourceManager &SM,
                         const LangOptions &LangOpts) {
   // If the Flag is an integer constant, check it.
   if (isa<IntegerLiteral>(Flags)) {
-    if (!SM.isMacroBodyExpansion(Flags->getLocStart()))
+    if (!SM.isMacroBodyExpansion(Flags->getLocStart()) &&
+        !SM.isMacroArgExpansion(Flags->getLocStart()))
       return false;
 
     // Get the Marco name.
@@ -37,16 +38,16 @@ bool HasCloseOnExecFlag(const Expr *Flags, const SourceManager &SM,
   // If it's a binary OR operation.
   if (const auto *BO = dyn_cast<BinaryOperator>(Flags))
     if (BO->getOpcode() == clang::BinaryOperatorKind::BO_Or)
-      return HasCloseOnExecFlag(BO->getLHS()->IgnoreParenCasts(), SM,
+      return hasCloseOnExecFlag(BO->getLHS()->IgnoreParenCasts(), SM,
                                 LangOpts) ||
-             HasCloseOnExecFlag(BO->getRHS()->IgnoreParenCasts(), SM, LangOpts);
+             hasCloseOnExecFlag(BO->getRHS()->IgnoreParenCasts(), SM, LangOpts);
 
   // Otherwise, assume it has the flag.
   return true;
 }
 } // namespace
 
-void FileOpenFlagCheck::registerMatchers(MatchFinder *Finder) {
+void CloexecOpenCheck::registerMatchers(MatchFinder *Finder) {
   auto CharPointerType = hasType(pointerType(pointee(isAnyCharacter())));
 
   Finder->addMatcher(
@@ -68,7 +69,7 @@ void FileOpenFlagCheck::registerMatchers(MatchFinder *Finder) {
       this);
 }
 
-void FileOpenFlagCheck::check(const MatchFinder::MatchResult &Result) {
+void CloexecOpenCheck::check(const MatchFinder::MatchResult &Result) {
   const Expr *FlagArg = nullptr;
   if (const auto *OpenFnCall = Result.Nodes.getNodeAs<CallExpr>("openFn"))
     FlagArg = OpenFnCall->getArg(1);
@@ -81,12 +82,13 @@ void FileOpenFlagCheck::check(const MatchFinder::MatchResult &Result) {
 
   // Check the required flag.
   SourceManager &SM = *Result.SourceManager;
-  if (HasCloseOnExecFlag(FlagArg->IgnoreParenCasts(), SM,
+  if (hasCloseOnExecFlag(FlagArg->IgnoreParenCasts(), SM,
                          Result.Context->getLangOpts()))
     return;
 
-  SourceLocation EndLoc = Lexer::getLocForEndOfToken(
-      FlagArg->getLocEnd(), 0, SM, Result.Context->getLangOpts());
+  SourceLocation EndLoc =
+      Lexer::getLocForEndOfToken(SM.getFileLoc(FlagArg->getLocEnd()), 0, SM,
+                                 Result.Context->getLangOpts());
 
   diag(EndLoc, "%0 should use %1 where possible")
       << FD << O_CLOEXEC

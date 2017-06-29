@@ -14,9 +14,9 @@
 
 #include <algorithm>
 
-#include "lldb/Core/Timer.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/Utility/Timer.h"
 
 #include "DWARFCompileUnit.h"
 #include "DWARFDebugInfo.h"

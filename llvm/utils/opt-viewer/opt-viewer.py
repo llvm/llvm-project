@@ -2,24 +2,28 @@
 
 from __future__ import print_function
 
+import argparse
+import cgi
+import errno
+import functools
+from multiprocessing import cpu_count
+import os.path
+import re
+import shutil
+
+from pygments import highlight
+from pygments.lexers.c_cpp import CppLexer
+from pygments.formatters import HtmlFormatter
+
+import optpmap
+import optrecord
+
+
 desc = '''Generate HTML output to visualize optimization records from the YAML files
 generated with -fsave-optimization-record and -fdiagnostics-show-hotness.
 
 The tools requires PyYAML and Pygments Python packages.'''
 
-import optrecord
-import functools
-from multiprocessing import Pool
-from multiprocessing import Lock, cpu_count
-import errno
-import argparse
-import os.path
-import re
-import shutil
-from pygments import highlight
-from pygments.lexers.c_cpp import CppLexer
-from pygments.formatters import HtmlFormatter
-import cgi
 
 # This allows passing the global context to the child processes.
 class Context:
@@ -169,7 +173,7 @@ def _render_file(source_dir, output_dir, ctx, entry):
 def map_remarks(all_remarks):
     # Set up a map between function names and their source location for
     # function where inlining happened
-    for remark in all_remarks.itervalues():
+    for remark in optrecord.itervalues(all_remarks):
         if isinstance(remark, optrecord.Passed) and remark.Pass == "inline" and remark.Name == "Inlined":
             for arg in remark.Args:
                 caller = arg.get('Caller')
@@ -177,7 +181,13 @@ def map_remarks(all_remarks):
                     context.caller_loc[caller] = arg['DebugLoc']
 
 
-def generate_report(pmap, all_remarks, file_remarks, source_dir, output_dir, should_display_hotness):
+def generate_report(all_remarks,
+                    file_remarks,
+                    source_dir,
+                    output_dir,
+                    should_display_hotness,
+                    num_jobs,
+                    should_print_progress):
     try:
         os.makedirs(output_dir)
     except OSError as e:
@@ -187,12 +197,17 @@ def generate_report(pmap, all_remarks, file_remarks, source_dir, output_dir, sho
             raise
 
     _render_file_bound = functools.partial(_render_file, source_dir, output_dir, context)
-    pmap(_render_file_bound, file_remarks.items())
+    if should_print_progress:
+        print('Rendering HTML files...')
+    optpmap.pmap(_render_file_bound,
+                 file_remarks.items(),
+                 num_jobs,
+                 should_print_progress)
 
     if should_display_hotness:
-        sorted_remarks = sorted(all_remarks.itervalues(), key=lambda r: (r.Hotness, r.File, r.Line, r.Column, r.__dict__), reverse=True)
+        sorted_remarks = sorted(optrecord.itervalues(all_remarks), key=lambda r: (r.Hotness, r.File, r.Line, r.Column, r.PassWithDiffPrefix, r.yaml_tag, r.Function), reverse=True)
     else:
-        sorted_remarks = sorted(all_remarks.itervalues(), key=lambda r: (r.File, r.Line, r.Column, r.__dict__))
+        sorted_remarks = sorted(optrecord.itervalues(all_remarks), key=lambda r: (r.File, r.Line, r.Column, r.PassWithDiffPrefix, r.yaml_tag, r.Function))
     IndexRenderer(args.output_dir).render(sorted_remarks)
 
     shutil.copy(os.path.join(os.path.dirname(os.path.realpath(__file__)),
@@ -202,7 +217,13 @@ def generate_report(pmap, all_remarks, file_remarks, source_dir, output_dir, sho
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=desc)
     parser.add_argument('yaml_files', nargs='+')
-    parser.add_argument('output_dir')
+    parser.add_argument(
+        '--output-dir',
+        '-o',
+        default='html',
+        help='Path to a directory where generated HTML files will be output. '
+             'If the directory does not already exist, it will be created. '
+             '"%(default)s" by default.')
     parser.add_argument(
         '--jobs',
         '-j',
@@ -214,16 +235,25 @@ if __name__ == '__main__':
         '-s',
         default='',
         help='set source directory')
+    parser.add_argument(
+        '--no-progress-indicator',
+        '-n',
+        action='store_true',
+        default=False,
+        help='Do not display any indicator of how many YAML files were read '
+             'or rendered into HTML.')
     args = parser.parse_args()
 
-    if args.jobs == 1:
-        pmap = map
-    else:
-        pool = Pool(processes=args.jobs)
-        pmap = pool.map
-
-    all_remarks, file_remarks, should_display_hotness = optrecord.gather_results(pmap, args.yaml_files)
+    print_progress = not args.no_progress_indicator
+    all_remarks, file_remarks, should_display_hotness = \
+        optrecord.gather_results(args.yaml_files, args.jobs, print_progress)
 
     map_remarks(all_remarks)
 
-    generate_report(pmap, all_remarks, file_remarks, args.source_dir, args.output_dir, should_display_hotness)
+    generate_report(all_remarks,
+                    file_remarks,
+                    args.source_dir,
+                    args.output_dir,
+                    should_display_hotness,
+                    args.jobs,
+                    print_progress)

@@ -958,8 +958,7 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
           ? getX86SubSuperRegister(FramePtr, 64) : FramePtr;
   unsigned BasePtr = TRI->getBaseRegister();
   bool HasWinCFI = false;
-  bool InsertedCFI = false;
-
+  
   // Debug location must be unknown since the first debug location is used
   // to determine the end of the prologue.
   DebugLoc DL;
@@ -1094,9 +1093,6 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
       assert(StackSize);
       BuildCFI(MBB, MBBI, DL,
                MCCFIInstruction::createDefCfaOffset(nullptr, 2 * stackGrowth));
-      MBB.setDefOffset(true);
-      MBB.updateCFIInfo(std::prev(MBBI));
-      InsertedCFI = true;
 
       // Change the rule for the FramePtr to be an "offset" rule.
       unsigned DwarfFramePtr = TRI->getDwarfRegNum(MachineFramePtr, true);
@@ -1125,9 +1121,6 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
         unsigned DwarfFramePtr = TRI->getDwarfRegNum(MachineFramePtr, true);
         BuildCFI(MBB, MBBI, DL, MCCFIInstruction::createDefCfaRegister(
                                     nullptr, DwarfFramePtr));
-        MBB.setDefRegister(true);
-        MBB.updateCFIInfo(std::prev(MBBI));
-        InsertedCFI = true;
       }
     }
   } else {
@@ -1159,9 +1152,6 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
       assert(StackSize);
       BuildCFI(MBB, MBBI, DL,
                MCCFIInstruction::createDefCfaOffset(nullptr, StackOffset));
-      MBB.setDefOffset(true);
-      MBB.updateCFIInfo(std::prev(MBBI));
-      InsertedCFI = true;
       StackOffset += stackGrowth;
     }
 
@@ -1427,9 +1417,6 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
       assert(StackSize);
       BuildCFI(MBB, MBBI, DL, MCCFIInstruction::createDefCfaOffset(
                                   nullptr, -StackSize + stackGrowth));
-      MBB.setDefOffset(true);
-      MBB.updateCFIInfo(std::prev(MBBI));
-      InsertedCFI = true;
     }
 
     // Emit DWARF info specifying the offsets of the callee-saved registers.
@@ -1451,9 +1438,6 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
 
   // At this point we know if the function has WinCFI or not.
   MF.setHasWinCFI(HasWinCFI);
-
-  if (InsertedCFI)
-    MBB.updateCFIInfoSucc();
 }
 
 bool X86FrameLowering::canUseLEAForSPInEpilogue(
@@ -1564,12 +1548,6 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
   unsigned CSSize = X86FI->getCalleeSavedFrameSize();
   uint64_t NumBytes = 0;
 
-  bool NeedsDwarfCFI = (MF.getMMI().hasDebugInfo() ||
-                        MF.getFunction()->needsUnwindTableEntry()) &&
-                       (!MF.getSubtarget<X86Subtarget>().isTargetDarwin() &&
-                        !MF.getSubtarget<X86Subtarget>().isOSWindows());
-  bool InsertedCFI = false;
-
   if (RetOpcode && *RetOpcode == X86::CATCHRET) {
     // SEH shouldn't use catchret.
     assert(!isAsynchronousEHPersonality(
@@ -1604,17 +1582,6 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
     BuildMI(MBB, MBBI, DL,
             TII.get(Is64Bit ? X86::POP64r : X86::POP32r), MachineFramePtr)
         .setMIFlag(MachineInstr::FrameDestroy);
-    if (NeedsDwarfCFI) {
-      unsigned DwarfStackPtr =
-          TRI->getDwarfRegNum(Is64Bit ? X86::RSP : X86::ESP, true);
-      BuildCFI(MBB, MBBI, DL, MCCFIInstruction::createDefCfa(
-                                  nullptr, DwarfStackPtr, -SlotSize));
-      --MBBI;
-      MBB.setDefOffset(true);
-      MBB.setDefRegister(true);
-      MBB.updateCFIInfo(MBBI);
-      InsertedCFI = true;
-    }
   } else {
     NumBytes = StackSize - CSSize;
   }
@@ -1699,14 +1666,6 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
   } else if (NumBytes) {
     // Adjust stack pointer back: ESP += numbytes.
     emitSPUpdate(MBB, MBBI, NumBytes, /*InEpilogue=*/true);
-    if (!hasFP(MF) && NeedsDwarfCFI) {
-      // Define the current CFA rule to use the provided offset.
-      BuildCFI(MBB, MBBI, DL, MCCFIInstruction::createDefCfaOffset(
-                                  nullptr, -CSSize - SlotSize));
-      MBB.setDefOffset(true);
-      MBB.updateCFIInfo(std::prev(MBBI));
-      InsertedCFI = true;
-    }
     --MBBI;
   }
 
@@ -1718,26 +1677,6 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
   // final emitted code.
   if (NeedsWinCFI && MF.hasWinCFI())
     BuildMI(MBB, MBBI, DL, TII.get(X86::SEH_Epilogue));
-
-  if (!hasFP(MF) && NeedsDwarfCFI) {
-    MBBI = FirstCSPop;
-    int64_t Offset = -CSSize - SlotSize;
-    // Mark callee-saved pop instruction.
-    // Define the current CFA rule to use the provided offset.
-    while (MBBI != MBB.end()) {
-      MachineBasicBlock::iterator PI = MBBI;
-      unsigned Opc = PI->getOpcode();
-      ++MBBI;
-      if (Opc == X86::POP32r || Opc == X86::POP64r) {
-        Offset += SlotSize;
-        BuildCFI(MBB, MBBI, DL,
-                 MCCFIInstruction::createDefCfaOffset(nullptr, Offset));
-        MBB.setDefOffset(true);
-        MBB.updateCFIInfo(std::prev(MBBI));
-        InsertedCFI = true;
-      }
-    }
-  }
 
   if (!RetOpcode || !isTailCallOpcode(*RetOpcode)) {
     // Add the return addr area delta back since we are not tail calling.
@@ -1751,9 +1690,6 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
       emitSPUpdate(MBB, MBBI, Offset, /*InEpilogue=*/true);
     }
   }
-
-  if (InsertedCFI)
-    MBB.updateCFIInfoSucc();
 }
 
 int X86FrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
@@ -2428,19 +2364,6 @@ void X86FrameLowering::adjustForSegmentedStacks(
   checkMBB->addSuccessor(allocMBB);
   checkMBB->addSuccessor(&PrologueMBB);
 
-  int InitialOffset = TRI->getSlotSize();
-  unsigned InitialRegister = TRI->getDwarfRegNum(StackPtr, true);
-  // Set CFI info for checkMBB.
-  checkMBB->setIncomingCFAOffset(InitialOffset);
-  checkMBB->setIncomingCFARegister(InitialRegister);
-  checkMBB->setOutgoingCFAOffset(InitialOffset);
-  checkMBB->setOutgoingCFARegister(InitialRegister);
-  // Set CFI info for allocMBB.
-  allocMBB->setIncomingCFAOffset(InitialOffset);
-  allocMBB->setIncomingCFARegister(InitialRegister);
-  allocMBB->setOutgoingCFAOffset(InitialOffset);
-  allocMBB->setOutgoingCFARegister(InitialRegister);
-
 #ifdef EXPENSIVE_CHECKS
   MF.verify();
 #endif
@@ -2612,19 +2535,6 @@ void X86FrameLowering::adjustForHiPEPrologue(
     stackCheckMBB->addSuccessor(incStackMBB, {1, 100});
     incStackMBB->addSuccessor(&PrologueMBB, {99, 100});
     incStackMBB->addSuccessor(incStackMBB, {1, 100});
-
-    int InitialOffset = TRI->getSlotSize();
-    unsigned InitialRegister = TRI->getDwarfRegNum(StackPtr, true);
-    // Set CFI info to stackCheckMBB.
-    stackCheckMBB->setIncomingCFAOffset(InitialOffset);
-    stackCheckMBB->setIncomingCFARegister(InitialRegister);
-    stackCheckMBB->setOutgoingCFAOffset(InitialOffset);
-    stackCheckMBB->setOutgoingCFARegister(InitialRegister);
-    // Set CFI info to incStackMBB.
-    incStackMBB->setIncomingCFAOffset(InitialOffset);
-    incStackMBB->setIncomingCFARegister(InitialRegister);
-    incStackMBB->setOutgoingCFAOffset(InitialOffset);
-    incStackMBB->setOutgoingCFARegister(InitialRegister);
   }
 #ifdef EXPENSIVE_CHECKS
   MF.verify();
@@ -2730,7 +2640,6 @@ eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
     bool WindowsCFI = MF.getTarget().getMCAsmInfo()->usesWindowsCFI();
     bool DwarfCFI = !WindowsCFI && 
                     (MMI.hasDebugInfo() || Fn->needsUnwindTableEntry());
-    bool InsertedCFI = false;
 
     // If we have any exception handlers in this function, and we adjust
     // the SP before calls, we may need to indicate this to the unwinder
@@ -2756,12 +2665,10 @@ eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
     // TODO: This is needed only if we require precise CFA.
     // If this is a callee-pop calling convention, emit a CFA adjust for
     // the amount the callee popped.
-    if (isDestroy && InternalAmt && DwarfCFI && !hasFP(MF)) {
+    if (isDestroy && InternalAmt && DwarfCFI && !hasFP(MF))
       BuildCFI(MBB, InsertPos, DL,
                MCCFIInstruction::createAdjustCfaOffset(nullptr, -InternalAmt));
-      MBB.updateCFIInfo(std::prev(InsertPos));
-      InsertedCFI = true;
-    }
+
     // Add Amount to SP to destroy a frame, or subtract to setup.
     int64_t StackAdjustment = isDestroy ? Amount : -Amount;
     int64_t CfaAdjustment = -StackAdjustment;
@@ -2795,12 +2702,8 @@ eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
         BuildCFI(MBB, InsertPos, DL,
                  MCCFIInstruction::createAdjustCfaOffset(nullptr,
                                                          CfaAdjustment));
-        MBB.updateCFIInfo(std::prev(InsertPos));
-        InsertedCFI = true;
       }
     }
-
-    if (InsertedCFI) MBB.updateCFIInfoSucc();
 
     return I;
   }
@@ -2921,22 +2824,6 @@ MachineBasicBlock::iterator X86FrameLowering::restoreWin32EHStackPointers(
     llvm_unreachable("32-bit frames with WinEH must use FramePtr or BasePtr");
   }
   return MBBI;
-}
-
-void X86FrameLowering::initializeCFIInfo(MachineFunction &MF) const {
-  int InitialOffset = TRI->getSlotSize();
-  unsigned InitialRegister = TRI->getDwarfRegNum(StackPtr, true);
-  // Initialize CFI info if it hasn't already been initialized.
-  for (auto &MBB : MF) {
-    if (MBB.getIncomingCFAOffset() == -1)
-      MBB.setIncomingCFAOffset(InitialOffset);
-    if (MBB.getOutgoingCFAOffset() == -1)
-      MBB.setOutgoingCFAOffset(InitialOffset);
-    if (MBB.getIncomingCFARegister() == 0)
-      MBB.setIncomingCFARegister(InitialRegister);
-    if (MBB.getOutgoingCFARegister() == 0)
-      MBB.setOutgoingCFARegister(InitialRegister);
-  }
 }
 
 namespace {

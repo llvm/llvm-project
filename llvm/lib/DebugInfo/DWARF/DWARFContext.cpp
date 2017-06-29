@@ -59,26 +59,13 @@ using DWARFLineTable = DWARFDebugLine::LineTable;
 using FileLineInfoKind = DILineInfoSpecifier::FileLineInfoKind;
 using FunctionNameKind = DILineInfoSpecifier::FunctionNameKind;
 
-uint64_t llvm::getRelocatedValue(const DataExtractor &Data, uint32_t Size,
-                                 uint32_t *Off, const RelocAddrMap *Relocs,
-                                 uint64_t *SectionIndex) {
-  if (!Relocs)
-    return Data.getUnsigned(Off, Size);
-  RelocAddrMap::const_iterator AI = Relocs->find(*Off);
-  if (AI == Relocs->end())
-    return Data.getUnsigned(Off, Size);
-  if (SectionIndex)
-    *SectionIndex = AI->second.SectionIndex;
-  return Data.getUnsigned(Off, Size) + AI->second.Value;
-}
-
 static void dumpAccelSection(raw_ostream &OS, StringRef Name,
                              const DWARFSection& Section, StringRef StringSection,
                              bool LittleEndian) {
-  DataExtractor AccelSection(Section.Data, LittleEndian, 0);
+  DWARFDataExtractor AccelSection(Section, LittleEndian, 0);
   DataExtractor StrData(StringSection, LittleEndian, 0);
   OS << "\n." << Name << " contents:\n";
-  DWARFAcceleratorTable Accel(AccelSection, StrData, Section.Relocs);
+  DWARFAcceleratorTable Accel(AccelSection, StrData);
   if (!Accel.extract())
     return;
   Accel.dump(OS);
@@ -88,7 +75,7 @@ static void
 dumpDWARFv5StringOffsetsSection(raw_ostream &OS, StringRef SectionName,
                                 const DWARFSection &StringOffsetsSection,
                                 StringRef StringSection, bool LittleEndian) {
-  DataExtractor StrOffsetExt(StringOffsetsSection.Data, LittleEndian, 0);
+  DWARFDataExtractor StrOffsetExt(StringOffsetsSection, LittleEndian, 0);
   uint32_t Offset = 0;
   uint64_t SectionSize = StringOffsetsSection.Data.size();
 
@@ -144,8 +131,8 @@ dumpDWARFv5StringOffsetsSection(raw_ostream &OS, StringRef SectionName,
     while (Offset - ContributionBase < ContributionSize) {
       OS << format("0x%8.8x: ", Offset);
       // FIXME: We can only extract strings in DWARF32 format at the moment.
-      uint64_t StringOffset = getRelocatedValue(
-          StrOffsetExt, EntrySize, &Offset, &StringOffsetsSection.Relocs);
+      uint64_t StringOffset =
+          StrOffsetExt.getRelocatedValue(EntrySize, &Offset);
       if (Format == DWARF32) {
         OS << format("%8.8x ", StringOffset);
         uint32_t StringOffset32 = (uint32_t)StringOffset;
@@ -287,11 +274,11 @@ void DWARFContext::dump(raw_ostream &OS, DIDumpOptions DumpOpts) {
       if (!CUDIE)
         continue;
       if (auto StmtOffset = toSectionOffset(CUDIE.find(DW_AT_stmt_list))) {
-        DataExtractor lineData(getLineSection().Data, isLittleEndian(),
-                               savedAddressByteSize);
+        DWARFDataExtractor lineData(getLineSection(), isLittleEndian(),
+                                    savedAddressByteSize);
         DWARFDebugLine::LineTable LineTable;
         uint32_t Offset = *StmtOffset;
-        LineTable.parse(lineData, &getLineSection().Relocs, &Offset);
+        LineTable.parse(lineData, &Offset);
         LineTable.dump(OS);
       }
     }
@@ -310,8 +297,8 @@ void DWARFContext::dump(raw_ostream &OS, DIDumpOptions DumpOpts) {
   if (DumpType == DIDT_All || DumpType == DIDT_LineDwo) {
     OS << "\n.debug_line.dwo contents:\n";
     unsigned stmtOffset = 0;
-    DataExtractor lineData(getLineDWOSection().Data, isLittleEndian(),
-                           savedAddressByteSize);
+    DWARFDataExtractor lineData(getLineDWOSection(), isLittleEndian(),
+                                savedAddressByteSize);
     DWARFDebugLine::LineTable LineTable;
     while (LineTable.Prologue.parse(lineData, &stmtOffset)) {
       LineTable.dump(OS);
@@ -348,11 +335,11 @@ void DWARFContext::dump(raw_ostream &OS, DIDumpOptions DumpOpts) {
     // sizes, but for simplicity we just use the address byte size of the last
     // compile unit (there is no easy and fast way to associate address range
     // list and the compile unit it describes).
-    DataExtractor rangesData(getRangeSection().Data, isLittleEndian(),
-                             savedAddressByteSize);
+    DWARFDataExtractor rangesData(getRangeSection(), isLittleEndian(),
+                                  savedAddressByteSize);
     offset = 0;
     DWARFDebugRangeList rangeList;
-    while (rangeList.extract(rangesData, &offset, getRangeSection().Relocs))
+    while (rangeList.extract(rangesData, &offset))
       rangeList.dump(OS);
   }
 
@@ -499,11 +486,13 @@ const DWARFDebugLoc *DWARFContext::getDebugLoc() {
   if (Loc)
     return Loc.get();
 
-  DataExtractor LocData(getLocSection().Data, isLittleEndian(), 0);
-  Loc.reset(new DWARFDebugLoc(getLocSection().Relocs));
+  Loc.reset(new DWARFDebugLoc);
   // assume all compile units have the same address byte size
-  if (getNumCompileUnits())
-    Loc->parse(LocData, getCompileUnitAtIndex(0)->getAddressByteSize());
+  if (getNumCompileUnits()) {
+    DWARFDataExtractor LocData(getLocSection(), isLittleEndian(),
+                               getCompileUnitAtIndex(0)->getAddressByteSize());
+    Loc->parse(LocData);
+  }
   return Loc.get();
 }
 
@@ -570,7 +559,7 @@ const DWARFDebugMacro *DWARFContext::getDebugMacro() {
 const DWARFLineTable *
 DWARFContext::getLineTableForUnit(DWARFUnit *U) {
   if (!Line)
-    Line.reset(new DWARFDebugLine(&getLineSection().Relocs));
+    Line.reset(new DWARFDebugLine);
 
   auto UnitDIE = U->getUnitDIE();
   if (!UnitDIE)
@@ -586,12 +575,12 @@ DWARFContext::getLineTableForUnit(DWARFUnit *U) {
     return lt;
 
   // Make sure the offset is good before we try to parse.
-  if (stmtOffset >= U->getLineSection().size())
+  if (stmtOffset >= U->getLineSection().Data.size())
     return nullptr;  
 
   // We have to parse it first.
-  DataExtractor lineData(U->getLineSection(), isLittleEndian(),
-                         U->getAddressByteSize());
+  DWARFDataExtractor lineData(U->getLineSection(), isLittleEndian(),
+                              U->getAddressByteSize());
   return Line->getOrParseLineTable(lineData, stmtOffset);
 }
 
@@ -1073,7 +1062,7 @@ DWARFContextInMemory::DWARFContextInMemory(
         SmallString<32> Name;
         Reloc.getTypeName(Name);
         ErrorPolicy EP = HandleError(
-            createError("failed to compute relocation: " + name + ", ",
+            createError("failed to compute relocation: " + Name + ", ",
                         errorCodeToError(object_error::parse_failed)));
         if (EP == ErrorPolicy::Halt)
           return;

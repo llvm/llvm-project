@@ -74,6 +74,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Transforms/Utils/OrderedInstructions.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -89,7 +90,6 @@ class Instruction;
 class MemoryAccess;
 class LLVMContext;
 class raw_ostream;
-class OrderedBasicBlock;
 
 enum PredicateType { PT_Branch, PT_Assume, PT_Switch };
 
@@ -114,8 +114,9 @@ protected:
 class PredicateWithCondition : public PredicateBase {
 public:
   Value *Condition;
-  static inline bool classof(const PredicateBase *PB) {
-    return PB->Type == PT_Assume || PB->Type == PT_Branch || PB->Type == PT_Switch;
+  static bool classof(const PredicateBase *PB) {
+    return PB->Type == PT_Assume || PB->Type == PT_Branch ||
+           PB->Type == PT_Switch;
   }
 
 protected:
@@ -133,7 +134,7 @@ public:
       : PredicateWithCondition(PT_Assume, Op, Condition),
         AssumeInst(AssumeInst) {}
   PredicateAssume() = delete;
-  static inline bool classof(const PredicateBase *PB) {
+  static bool classof(const PredicateBase *PB) {
     return PB->Type == PT_Assume;
   }
 };
@@ -146,7 +147,7 @@ public:
   BasicBlock *From;
   BasicBlock *To;
   PredicateWithEdge() = delete;
-  static inline bool classof(const PredicateBase *PB) {
+  static bool classof(const PredicateBase *PB) {
     return PB->Type == PT_Branch || PB->Type == PT_Switch;
   }
 
@@ -166,7 +167,7 @@ public:
       : PredicateWithEdge(PT_Branch, Op, BranchBB, SplitBB, Condition),
         TrueEdge(TakenEdge) {}
   PredicateBranch() = delete;
-  static inline bool classof(const PredicateBase *PB) {
+  static bool classof(const PredicateBase *PB) {
     return PB->Type == PT_Branch;
   }
 };
@@ -182,7 +183,7 @@ public:
                           SI->getCondition()),
         CaseValue(CaseValue), Switch(SI) {}
   PredicateSwitch() = delete;
-  static inline bool classof(const PredicateBase *PB) {
+  static bool classof(const PredicateBase *PB) {
     return PB->Type == PT_Switch;
   }
 };
@@ -244,6 +245,7 @@ private:
   Function &F;
   DominatorTree &DT;
   AssumptionCache &AC;
+  OrderedInstructions OI;
   // This maps from copy operands to Predicate Info. Note that it does not own
   // the Predicate Info, they belong to the ValueInfo structs in the ValueInfos
   // vector.
@@ -256,8 +258,6 @@ private:
   // 0 is not a valid Value Info index, you can use DenseMap::lookup and tell
   // whether it returned a valid result.
   DenseMap<Value *, unsigned int> ValueInfoNums;
-  // OrderedBasicBlocks used during sorting uses
-  DenseMap<const BasicBlock *, std::unique_ptr<OrderedBasicBlock>> OBBMap;
   // The set of edges along which we can only handle phi uses, due to critical
   // edges.
   DenseSet<std::pair<BasicBlock *, BasicBlock *>> EdgeUsesOnly;

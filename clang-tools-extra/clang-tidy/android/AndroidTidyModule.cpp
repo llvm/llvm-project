@@ -10,7 +10,9 @@
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
-#include "FileOpenFlagCheck.h"
+#include "CloexecCreatCheck.h"
+#include "CloexecFopenCheck.h"
+#include "CloexecOpenCheck.h"
 
 using namespace clang::ast_matchers;
 
@@ -22,7 +24,9 @@ namespace android {
 class AndroidModule : public ClangTidyModule {
 public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
-    CheckFactories.registerCheck<FileOpenFlagCheck>("android-file-open-flag");
+    CheckFactories.registerCheck<CloexecCreatCheck>("android-cloexec-creat");
+    CheckFactories.registerCheck<CloexecFopenCheck>("android-cloexec-fopen");
+    CheckFactories.registerCheck<CloexecOpenCheck>("android-cloexec-open");
   }
 };
 

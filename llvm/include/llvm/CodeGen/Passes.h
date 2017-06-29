@@ -420,14 +420,6 @@ namespace llvm {
   /// shuffles.
   FunctionPass *createExpandReductionsPass();
 
-  /// This pass verifies that outgoing cfa offset and register of predecessor
-  /// blocks match incoming cfa offset and register of their successors.
-  FunctionPass *createCFIInfoVerifier();
-
-  /// This pass inserts required CFI instruction at basic block beginning to
-  /// correct the CFA calculation rule for that block if necessary.
-  FunctionPass *createCFIInstrInserter();
-
 } // End llvm namespace
 
 #endif

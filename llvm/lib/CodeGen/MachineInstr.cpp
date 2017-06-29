@@ -305,33 +305,8 @@ bool MachineOperand::isIdenticalTo(const MachineOperand &Other) const {
   }
   case MachineOperand::MO_MCSymbol:
     return getMCSymbol() == Other.getMCSymbol();
-  case MachineOperand::MO_CFIIndex: {
-    const MachineFunction *MF = getParent()->getParent()->getParent();
-    const MachineFunction *OtherMF =
-        Other.getParent()->getParent()->getParent();
-    MCCFIInstruction Inst = MF->getFrameInstructions()[getCFIIndex()];
-    MCCFIInstruction OtherInst =
-        OtherMF->getFrameInstructions()[Other.getCFIIndex()];
-    MCCFIInstruction::OpType op = Inst.getOperation();
-    if (op != OtherInst.getOperation()) return false;
-    if (op == MCCFIInstruction::OpDefCfa || op == MCCFIInstruction::OpOffset ||
-        op == MCCFIInstruction::OpRestore ||
-        op == MCCFIInstruction::OpUndefined ||
-        op == MCCFIInstruction::OpSameValue ||
-        op == MCCFIInstruction::OpDefCfaRegister ||
-        op == MCCFIInstruction::OpRelOffset ||
-        op == MCCFIInstruction::OpRegister)
-      if (Inst.getRegister() != OtherInst.getRegister()) return false;
-    if (op == MCCFIInstruction::OpRegister)
-      if (Inst.getRegister2() != OtherInst.getRegister2()) return false;
-    if (op == MCCFIInstruction::OpDefCfa || op == MCCFIInstruction::OpOffset ||
-        op == MCCFIInstruction::OpRelOffset ||
-        op == MCCFIInstruction::OpDefCfaOffset ||
-        op == MCCFIInstruction::OpAdjustCfaOffset ||
-        op == MCCFIInstruction::OpGnuArgsSize)
-      if (Inst.getOffset() != OtherInst.getOffset()) return false;
-    return true;
-  }
+  case MachineOperand::MO_CFIIndex:
+    return getCFIIndex() == Other.getCFIIndex();
   case MachineOperand::MO_Metadata:
     return getMetadata() == Other.getMetadata();
   case MachineOperand::MO_IntrinsicID:
@@ -380,13 +355,8 @@ hash_code llvm::hash_value(const MachineOperand &MO) {
     return hash_combine(MO.getType(), MO.getTargetFlags(), MO.getMetadata());
   case MachineOperand::MO_MCSymbol:
     return hash_combine(MO.getType(), MO.getTargetFlags(), MO.getMCSymbol());
-  case MachineOperand::MO_CFIIndex: {
-    const MachineFunction *MF = MO.getParent()->getParent()->getParent();
-    MCCFIInstruction Inst = MF->getFrameInstructions()[MO.getCFIIndex()];
-    return hash_combine(MO.getType(), MO.getTargetFlags(), Inst.getOperation(),
-                        Inst.getRegister(), Inst.getRegister2(),
-                        Inst.getOffset());
-  }
+  case MachineOperand::MO_CFIIndex:
+    return hash_combine(MO.getType(), MO.getTargetFlags(), MO.getCFIIndex());
   case MachineOperand::MO_IntrinsicID:
     return hash_combine(MO.getType(), MO.getTargetFlags(), MO.getIntrinsicID());
   case MachineOperand::MO_Predicate:

@@ -94,8 +94,8 @@ void DWARFDebugLine::Prologue::dump(raw_ostream &OS) const {
 
 // Parse v2-v4 directory and file tables.
 static void
-parseV2DirFileTables(DataExtractor DebugLineData, uint32_t *OffsetPtr,
-                     uint64_t EndPrologueOffset,
+parseV2DirFileTables(const DWARFDataExtractor &DebugLineData,
+                     uint32_t *OffsetPtr, uint64_t EndPrologueOffset,
                      std::vector<StringRef> &IncludeDirectories,
                      std::vector<DWARFDebugLine::FileNameEntry> &FileNames) {
   while (*OffsetPtr < EndPrologueOffset) {
@@ -122,7 +122,7 @@ parseV2DirFileTables(DataExtractor DebugLineData, uint32_t *OffsetPtr,
 // Returns the descriptors, or an empty vector if we did not find a path or
 // ran off the end of the prologue.
 static ContentDescriptors
-parseV5EntryFormat(DataExtractor DebugLineData, uint32_t *OffsetPtr,
+parseV5EntryFormat(const DWARFDataExtractor &DebugLineData, uint32_t *OffsetPtr,
                    uint64_t EndPrologueOffset) {
   ContentDescriptors Descriptors;
   int FormatCount = DebugLineData.getU8(OffsetPtr);
@@ -142,8 +142,8 @@ parseV5EntryFormat(DataExtractor DebugLineData, uint32_t *OffsetPtr,
 }
 
 static bool
-parseV5DirFileTables(DataExtractor DebugLineData, uint32_t *OffsetPtr,
-                     uint64_t EndPrologueOffset,
+parseV5DirFileTables(const DWARFDataExtractor &DebugLineData,
+                     uint32_t *OffsetPtr, uint64_t EndPrologueOffset,
                      const DWARFFormParams &FormParams,
                      std::vector<StringRef> &IncludeDirectories,
                      std::vector<DWARFDebugLine::FileNameEntry> &FileNames) {
@@ -212,7 +212,7 @@ parseV5DirFileTables(DataExtractor DebugLineData, uint32_t *OffsetPtr,
   return true;
 }
 
-bool DWARFDebugLine::Prologue::parse(DataExtractor DebugLineData,
+bool DWARFDebugLine::Prologue::parse(const DWARFDataExtractor &DebugLineData,
                                      uint32_t *OffsetPtr) {
   const uint64_t PrologueOffset = *OffsetPtr;
 
@@ -381,20 +381,19 @@ DWARFDebugLine::getLineTable(uint32_t Offset) const {
 }
 
 const DWARFDebugLine::LineTable *
-DWARFDebugLine::getOrParseLineTable(DataExtractor DebugLineData,
+DWARFDebugLine::getOrParseLineTable(const DWARFDataExtractor &DebugLineData,
                                     uint32_t Offset) {
   std::pair<LineTableIter, bool> Pos =
       LineTableMap.insert(LineTableMapTy::value_type(Offset, LineTable()));
   LineTable *LT = &Pos.first->second;
   if (Pos.second) {
-    if (!LT->parse(DebugLineData, RelocMap, &Offset))
+    if (!LT->parse(DebugLineData, &Offset))
       return nullptr;
   }
   return LT;
 }
 
-bool DWARFDebugLine::LineTable::parse(DataExtractor DebugLineData,
-                                      const RelocAddrMap *RMap,
+bool DWARFDebugLine::LineTable::parse(const DWARFDataExtractor &DebugLineData,
                                       uint32_t *OffsetPtr) {
   const uint32_t DebugLineOffset = *OffsetPtr;
 
@@ -443,8 +442,7 @@ bool DWARFDebugLine::LineTable::parse(DataExtractor DebugLineData,
         // relocatable address. All of the other statement program opcodes
         // that affect the address register add a delta to it. This instruction
         // stores a relocatable value into it instead.
-        State.Row.Address = getRelocatedValue(
-            DebugLineData, DebugLineData.getAddressSize(), OffsetPtr, RMap);
+        State.Row.Address = DebugLineData.getRelocatedAddress(OffsetPtr);
         break;
 
       case DW_LNE_define_file:

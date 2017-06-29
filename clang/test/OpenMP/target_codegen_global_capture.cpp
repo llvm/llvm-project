@@ -36,10 +36,10 @@ double Gd = 4.0;
 // CHECK-SAME: i16 {{[^,]*}}[[B:%[^,]+]],
 // CHECK-SAME: i16 {{[^,]*}}[[C:%[^,]+]],
 // CHECK-SAME: i16 {{[^,]*}}[[D:%[^,]+]])
-// CHECK: [[LA:%.+]] = alloca i16
-// CHECK: [[LB:%.+]] = alloca i16
-// CHECK: [[LC:%.+]] = alloca i16
-// CHECK: [[LD:%.+]] = alloca i16
+// CHECK: [[LA:%.+]] = alloca i16,
+// CHECK: [[LB:%.+]] = alloca i16,
+// CHECK: [[LC:%.+]] = alloca i16,
+// CHECK: [[LD:%.+]] = alloca i16,
 int foo(short a, short b, short c, short d){
   static float Sa = 5.0;
   static float Sb = 6.0;
@@ -61,22 +61,22 @@ int foo(short a, short b, short c, short d){
   // CHECK-DAG: store i16 [[VALLB]], i16* [[CONVLB:%.+]],
   // CHECK-DAG: [[CONVLB]] = bitcast i[[sz:64|32]]* [[CADDRLB:%.+]] to i16*
   // CHECK-DAG: [[CVALLB:%.+]] = load i[[sz]], i[[sz]]* [[CADDRLB]],
-  // CHECK-DAG: [[CPTRLB:%.+]] = inttoptr i[[sz]] [[CVALLB]] to i8*
-  // CHECK-DAG: store i8* [[CPTRLB]], i8** [[GEPLB:%.+]],
+  // CHECK-DAG: store i[[sz]] [[CVALLB]], i[[sz]]* [[CBP:%.+]],
+  // CHECK-DAG: [[CBP]] = bitcast i8** [[GEPLB:%.+]] to i[[sz]]*
   // CHECK-DAG: [[GEPLB]] = getelementptr inbounds [9 x i8*], [9 x i8*]* %{{.+}}, i32 0, i32 {{[0-8]}}
 
   // CHECK-DAG: store i16 [[VALLC]], i16* [[CONVLC:%.+]],
   // CHECK-DAG: [[CONVLC]] = bitcast i[[sz]]* [[CADDRLC:%.+]] to i16*
   // CHECK-DAG: [[CVALLC:%.+]] = load i[[sz]], i[[sz]]* [[CADDRLC]],
-  // CHECK-DAG: [[CPTRLC:%.+]] = inttoptr i[[sz]] [[CVALLC]] to i8*
-  // CHECK-DAG: store i8* [[CPTRLC]], i8** [[GEPLC:%.+]],
+  // CHECK-DAG: store i[[sz]] [[CVALLC]], i[[sz]]* [[CBP:%.+]],
+  // CHECK-DAG: [[CBP]] = bitcast i8** [[GEPLC:%.+]] to i[[sz]]*
   // CHECK-DAG: [[GEPLC]] = getelementptr inbounds [9 x i8*], [9 x i8*]* %{{.+}}, i32 0, i32 {{[0-8]}}
 
   // CHECK-DAG: store i16 [[VALLD]], i16* [[CONVLD:%.+]],
   // CHECK-DAG: [[CONVLD]] = bitcast i[[sz]]* [[CADDRLD:%.+]] to i16*
   // CHECK-DAG: [[CVALLD:%.+]] = load i[[sz]], i[[sz]]* [[CADDRLD]],
-  // CHECK-DAG: [[CPTRLD:%.+]] = inttoptr i[[sz]] [[CVALLD]] to i8*
-  // CHECK-DAG: store i8* [[CPTRLD]], i8** [[GEPLD:%.+]],
+  // CHECK-DAG: store i[[sz]] [[CVALLD]], i[[sz]]* [[CBP:%.+]],
+  // CHECK-DAG: [[CBP]] = bitcast i8** [[GEPLD:%.+]] to i[[sz]]*
   // CHECK-DAG: [[GEPLD]] = getelementptr inbounds [9 x i8*], [9 x i8*]* %{{.+}}, i32 0, i32 {{[0-8]}}
 
   // 3 static vars being captured.
@@ -84,22 +84,22 @@ int foo(short a, short b, short c, short d){
   // CHECK-DAG: store float [[VALFB]], float* [[CONVFB:%.+]],
   // CHECK-DAG: [[CONVFB]] = bitcast i[[sz]]* [[CADDRFB:%.+]] to float*
   // CHECK-DAG: [[CVALFB:%.+]] = load i[[sz]], i[[sz]]* [[CADDRFB]],
-  // CHECK-DAG: [[CPTRFB:%.+]] = inttoptr i[[sz]] [[CVALFB]] to i8*
-  // CHECK-DAG: store i8* [[CPTRFB]], i8** [[GEPFB:%.+]],
+  // CHECK-DAG: store i[[sz]] [[CVALFB]], i[[sz]]* [[CBP:%.+]],
+  // CHECK-DAG: [[CBP]] = bitcast i8** [[GEPFB:%.+]] to i[[sz]]*
   // CHECK-DAG: [[GEPFB]] = getelementptr inbounds [9 x i8*], [9 x i8*]* %{{.+}}, i32 0, i32 {{[0-8]}}
 
   // CHECK-DAG: store float [[VALFC]], float* [[CONVFC:%.+]],
   // CHECK-DAG: [[CONVFC]] = bitcast i[[sz]]* [[CADDRFC:%.+]] to float*
   // CHECK-DAG: [[CVALFC:%.+]] = load i[[sz]], i[[sz]]* [[CADDRFC]],
-  // CHECK-DAG: [[CPTRFC:%.+]] = inttoptr i[[sz]] [[CVALFC]] to i8*
-  // CHECK-DAG: store i8* [[CPTRFC]], i8** [[GEPFC:%.+]],
+  // CHECK-DAG: store i[[sz]] [[CVALFC]], i[[sz]]* [[CBP:%.+]],
+  // CHECK-DAG: [[CBP]] = bitcast i8** [[GEPFC:%.+]] to i[[sz]]*
   // CHECK-DAG: [[GEPFC]] = getelementptr inbounds [9 x i8*], [9 x i8*]* %{{.+}}, i32 0, i32 {{[0-8]}}
 
   // CHECK-DAG: store float [[VALFD]], float* [[CONVFD:%.+]],
   // CHECK-DAG: [[CONVFD]] = bitcast i[[sz]]* [[CADDRFD:%.+]] to float*
   // CHECK-DAG: [[CVALFD:%.+]] = load i[[sz]], i[[sz]]* [[CADDRFD]],
-  // CHECK-DAG: [[CPTRFD:%.+]] = inttoptr i[[sz]] [[CVALFD]] to i8*
-  // CHECK-DAG: store i8* [[CPTRFD]], i8** [[GEPFD:%.+]],
+  // CHECK-DAG: store i[[sz]] [[CVALFD]], i[[sz]]* [[CBP:%.+]],
+  // CHECK-DAG: [[CBP]] = bitcast i8** [[GEPFD:%.+]] to i[[sz]]*
   // CHECK-DAG: [[GEPFD]] = getelementptr inbounds [9 x i8*], [9 x i8*]* %{{.+}}, i32 0, i32 {{[0-8]}}
 
   // 3 static global vars being captured.
@@ -107,25 +107,28 @@ int foo(short a, short b, short c, short d){
   // CHECK-64-DAG: store double [[VALGB]], double* [[CONVGB:%.+]],
   // CHECK-64-DAG: [[CONVGB]] = bitcast i[[sz]]* [[CADDRGB:%.+]] to double*
   // CHECK-64-DAG: [[CVALGB:%.+]] = load i[[sz]], i[[sz]]* [[CADDRGB]],
-  // CHECK-64-DAG: [[CPTRGB:%.+]] = inttoptr i[[sz]] [[CVALGB]] to i8*
-  // CHECK-64-DAG: store i8* [[CPTRGB]], i8** [[GEPGB:%.+]],
-  // CHECK-32-DAG: store i8* bitcast (double* @Gb to i8*), i8** [[GEPGB:%.+]],
+  // CHECK-64-DAG: store i[[sz]] [[CVALGB]], i[[sz]]* [[CBP:%.+]],
+  // CHECK-64-DAG: [[CBP]] = bitcast i8** [[GEPGB:%.+]] to i[[sz]]*
+  // CHECK-32-DAG: store double* @Gb, double** [[CBP:%.+]],
+  // CHECK-32-DAG: [[CBP]] = bitcast i8** [[GEPGB:%.+]] to double**
   // CHECK-DAG: [[GEPGB]] = getelementptr inbounds [9 x i8*], [9 x i8*]* %{{.+}}, i32 0, i32 {{[0-8]}}
 
   // CHECK-64-DAG: store double [[VALGC]], double* [[CONVGC:%.+]],
   // CHECK-64-DAG: [[CONVGC]] = bitcast i[[sz]]* [[CADDRGC:%.+]] to double*
   // CHECK-64-DAG: [[CVALGC:%.+]] = load i[[sz]], i[[sz]]* [[CADDRGC]],
-  // CHECK-64-DAG: [[CPTRGC:%.+]] = inttoptr i[[sz]] [[CVALGC]] to i8*
-  // CHECK-64-DAG: store i8* [[CPTRGC]], i8** [[GEPGC:%.+]],
-  // CHECK-32-DAG: store i8* bitcast (double* @Gc to i8*), i8** [[GEPGC:%.+]],
+  // CHECK-64-DAG: store i[[sz]] [[CVALGC]], i[[sz]]* [[CBP:%.+]],
+  // CHECK-64-DAG: [[CBP]] = bitcast i8** [[GEPGC:%.+]] to i[[sz]]*
+  // CHECK-32-DAG: store double* @Gc, double** [[CBP:%.+]],
+  // CHECK-32-DAG: [[CBP]] = bitcast i8** [[GEPGC:%.+]] to double**
   // CHECK-DAG: [[GEPGC]] = getelementptr inbounds [9 x i8*], [9 x i8*]* %{{.+}}, i32 0, i32 {{[0-8]}}
 
   // CHECK-64-DAG: store double [[VALGD]], double* [[CONVGD:%.+]],
   // CHECK-64-DAG: [[CONVGD]] = bitcast i[[sz]]* [[CADDRGD:%.+]] to double*
   // CHECK-64-DAG: [[CVALGD:%.+]] = load i[[sz]], i[[sz]]* [[CADDRGD]],
-  // CHECK-64-DAG: [[CPTRGD:%.+]] = inttoptr i[[sz]] [[CVALGD]] to i8*
-  // CHECK-64-DAG: store i8* [[CPTRGD]], i8** [[GEPGD:%.+]],
-  // CHECK-32-DAG: store i8* bitcast (double* @Gd to i8*), i8** [[GEPGD:%.+]],
+  // CHECK-64-DAG: store i[[sz]] [[CVALGD]], i[[sz]]* [[CBP:%.+]],
+  // CHECK-64-DAG: [[CBP]] = bitcast i8** [[GEPGD:%.+]] to i[[sz]]*
+  // CHECK-32-DAG: store double* @Gd, double** [[CBP:%.+]],
+  // CHECK-32-DAG: [[CBP]] = bitcast i8** [[GEPGD:%.+]] to double**
   // CHECK-DAG: [[GEPGD]] = getelementptr inbounds [9 x i8*], [9 x i8*]* %{{.+}}, i32 0, i32 {{[0-8]}}
 
   // CHECK: call i32 @__tgt_target
@@ -197,22 +200,22 @@ int bar(short a, short b, short c, short d){
     // CHECK-DAG: store i16 [[VALLB]], i16* [[CONVLB:%.+]],
     // CHECK-DAG: [[CONVLB]] = bitcast i[[sz:64|32]]* [[CADDRLB:%.+]] to i16*
     // CHECK-DAG: [[CVALLB:%.+]] = load i[[sz]], i[[sz]]* [[CADDRLB]],
-    // CHECK-DAG: [[CPTRLB:%.+]] = inttoptr i[[sz]] [[CVALLB]] to i8*
-    // CHECK-DAG: store i8* [[CPTRLB]], i8** [[GEPLB:%.+]],
+    // CHECK-DAG: store i[[sz]] [[CVALLB]], i[[sz]]* [[CBP:%.+]],
+    // CHECK-DAG: [[CBP]] = bitcast i8** [[GEPLB:%.+]] to i[[sz]]*
     // CHECK-DAG: [[GEPLB]] = getelementptr inbounds [9 x i8*], [9 x i8*]* %{{.+}}, i32 0, i32 {{[0-8]}}
 
     // CHECK-DAG: store i16 [[VALLC]], i16* [[CONVLC:%.+]],
     // CHECK-DAG: [[CONVLC]] = bitcast i[[sz]]* [[CADDRLC:%.+]] to i16*
     // CHECK-DAG: [[CVALLC:%.+]] = load i[[sz]], i[[sz]]* [[CADDRLC]],
-    // CHECK-DAG: [[CPTRLC:%.+]] = inttoptr i[[sz]] [[CVALLC]] to i8*
-    // CHECK-DAG: store i8* [[CPTRLC]], i8** [[GEPLC:%.+]],
+    // CHECK-DAG: store i[[sz]] [[CVALLC]], i[[sz]]* [[CBP:%.+]],
+    // CHECK-DAG: [[CBP]] = bitcast i8** [[GEPLC:%.+]] to i[[sz]]*
     // CHECK-DAG: [[GEPLC]] = getelementptr inbounds [9 x i8*], [9 x i8*]* %{{.+}}, i32 0, i32 {{[0-8]}}
 
     // CHECK-DAG: store i16 [[VALLD]], i16* [[CONVLD:%.+]],
     // CHECK-DAG: [[CONVLD]] = bitcast i[[sz]]* [[CADDRLD:%.+]] to i16*
     // CHECK-DAG: [[CVALLD:%.+]] = load i[[sz]], i[[sz]]* [[CADDRLD]],
-    // CHECK-DAG: [[CPTRLD:%.+]] = inttoptr i[[sz]] [[CVALLD]] to i8*
-    // CHECK-DAG: store i8* [[CPTRLD]], i8** [[GEPLD:%.+]],
+    // CHECK-DAG: store i[[sz]] [[CVALLD]], i[[sz]]* [[CBP:%.+]],
+    // CHECK-DAG: [[CBP]] = bitcast i8** [[GEPLD:%.+]] to i[[sz]]*
     // CHECK-DAG: [[GEPLD]] = getelementptr inbounds [9 x i8*], [9 x i8*]* %{{.+}}, i32 0, i32 {{[0-8]}}
 
     // 3 static vars being captured.
@@ -220,22 +223,22 @@ int bar(short a, short b, short c, short d){
     // CHECK-DAG: store float [[VALFB]], float* [[CONVFB:%.+]],
     // CHECK-DAG: [[CONVFB]] = bitcast i[[sz]]* [[CADDRFB:%.+]] to float*
     // CHECK-DAG: [[CVALFB:%.+]] = load i[[sz]], i[[sz]]* [[CADDRFB]],
-    // CHECK-DAG: [[CPTRFB:%.+]] = inttoptr i[[sz]] [[CVALFB]] to i8*
-    // CHECK-DAG: store i8* [[CPTRFB]], i8** [[GEPFB:%.+]],
+    // CHECK-DAG: store i[[sz]] [[CVALFB]], i[[sz]]* [[CBP:%.+]],
+    // CHECK-DAG: [[CBP]] = bitcast i8** [[GEPFB:%.+]] to i[[sz]]*
     // CHECK-DAG: [[GEPFB]] = getelementptr inbounds [9 x i8*], [9 x i8*]* %{{.+}}, i32 0, i32 {{[0-8]}}
 
     // CHECK-DAG: store float [[VALFC]], float* [[CONVFC:%.+]],
     // CHECK-DAG: [[CONVFC]] = bitcast i[[sz]]* [[CADDRFC:%.+]] to float*
     // CHECK-DAG: [[CVALFC:%.+]] = load i[[sz]], i[[sz]]* [[CADDRFC]],
-    // CHECK-DAG: [[CPTRFC:%.+]] = inttoptr i[[sz]] [[CVALFC]] to i8*
-    // CHECK-DAG: store i8* [[CPTRFC]], i8** [[GEPFC:%.+]],
+    // CHECK-DAG: store i[[sz]] [[CVALFC]], i[[sz]]* [[CBP:%.+]],
+    // CHECK-DAG: [[CBP]] = bitcast i8** [[GEPFC:%.+]] to i[[sz]]*
     // CHECK-DAG: [[GEPFC]] = getelementptr inbounds [9 x i8*], [9 x i8*]* %{{.+}}, i32 0, i32 {{[0-8]}}
 
     // CHECK-DAG: store float [[VALFD]], float* [[CONVFD:%.+]],
     // CHECK-DAG: [[CONVFD]] = bitcast i[[sz]]* [[CADDRFD:%.+]] to float*
     // CHECK-DAG: [[CVALFD:%.+]] = load i[[sz]], i[[sz]]* [[CADDRFD]],
-    // CHECK-DAG: [[CPTRFD:%.+]] = inttoptr i[[sz]] [[CVALFD]] to i8*
-    // CHECK-DAG: store i8* [[CPTRFD]], i8** [[GEPFD:%.+]],
+    // CHECK-DAG: store i[[sz]] [[CVALFD]], i[[sz]]* [[CBP:%.+]],
+    // CHECK-DAG: [[CBP]] = bitcast i8** [[GEPFD:%.+]] to i[[sz]]*
     // CHECK-DAG: [[GEPFD]] = getelementptr inbounds [9 x i8*], [9 x i8*]* %{{.+}}, i32 0, i32 {{[0-8]}}
 
     // 3 static global vars being captured.
@@ -243,25 +246,28 @@ int bar(short a, short b, short c, short d){
     // CHECK-64-DAG: store double [[VALGB]], double* [[CONVGB:%.+]],
     // CHECK-64-DAG: [[CONVGB]] = bitcast i[[sz]]* [[CADDRGB:%.+]] to double*
     // CHECK-64-DAG: [[CVALGB:%.+]] = load i[[sz]], i[[sz]]* [[CADDRGB]],
-    // CHECK-64-DAG: [[CPTRGB:%.+]] = inttoptr i[[sz]] [[CVALGB]] to i8*
-    // CHECK-64-DAG: store i8* [[CPTRGB]], i8** [[GEPGB:%.+]],
-    // CHECK-32-DAG: store i8* bitcast (double* @Gb to i8*), i8** [[GEPGB:%.+]],
+    // CHECK-64-DAG: store i[[sz]] [[CVALGB]], i[[sz]]* [[CBP:%.+]],
+    // CHECK-64-DAG: [[CBP]] = bitcast i8** [[GEPGB:%.+]] to i[[sz]]*
+    // CHECK-32-DAG: store double* @Gb, double** [[CBP:%.+]],
+    // CHECK-32-DAG: [[CBP]] = bitcast i8** [[GEPGB:%.+]] to double**
     // CHECK-DAG: [[GEPGB]] = getelementptr inbounds [9 x i8*], [9 x i8*]* %{{.+}}, i32 0, i32 {{[0-8]}}
 
     // CHECK-64-DAG: store double [[VALGC]], double* [[CONVGC:%.+]],
     // CHECK-64-DAG: [[CONVGC]] = bitcast i[[sz]]* [[CADDRGC:%.+]] to double*
     // CHECK-64-DAG: [[CVALGC:%.+]] = load i[[sz]], i[[sz]]* [[CADDRGC]],
-    // CHECK-64-DAG: [[CPTRGC:%.+]] = inttoptr i[[sz]] [[CVALGC]] to i8*
-    // CHECK-64-DAG: store i8* [[CPTRGC]], i8** [[GEPGC:%.+]],
-    // CHECK-32-DAG: store i8* bitcast (double* @Gc to i8*), i8** [[GEPGC:%.+]],
+    // CHECK-64-DAG: store i[[sz]] [[CVALGC]], i[[sz]]* [[CBP:%.+]],
+    // CHECK-64-DAG: [[CBP]] = bitcast i8** [[GEPGC:%.+]] to i[[sz]]*
+    // CHECK-32-DAG: store double* @Gc, double** [[CBP:%.+]],
+    // CHECK-32-DAG: [[CBP]] = bitcast i8** [[GEPGC:%.+]] to double**
     // CHECK-DAG: [[GEPGC]] = getelementptr inbounds [9 x i8*], [9 x i8*]* %{{.+}}, i32 0, i32 {{[0-8]}}
 
     // CHECK-64-DAG: store double [[VALGD]], double* [[CONVGD:%.+]],
     // CHECK-64-DAG: [[CONVGD]] = bitcast i[[sz]]* [[CADDRGD:%.+]] to double*
     // CHECK-64-DAG: [[CVALGD:%.+]] = load i[[sz]], i[[sz]]* [[CADDRGD]],
-    // CHECK-64-DAG: [[CPTRGD:%.+]] = inttoptr i[[sz]] [[CVALGD]] to i8*
-    // CHECK-64-DAG: store i8* [[CPTRGD]], i8** [[GEPGD:%.+]],
-    // CHECK-32-DAG: store i8* bitcast (double* @Gd to i8*), i8** [[GEPGD:%.+]],
+    // CHECK-64-DAG: store i[[sz]] [[CVALGD]], i[[sz]]* [[CBP:%.+]],
+    // CHECK-64-DAG: [[CBP]] = bitcast i8** [[GEPGD:%.+]] to i[[sz]]*
+    // CHECK-32-DAG: store double* @Gd, double** [[CBP:%.+]],
+    // CHECK-32-DAG: [[CBP]] = bitcast i8** [[GEPGD:%.+]] to double**
     // CHECK-DAG: [[GEPGD]] = getelementptr inbounds [9 x i8*], [9 x i8*]* %{{.+}}, i32 0, i32 {{[0-8]}}
 
     // CHECK: call i32 @__tgt_target
@@ -339,22 +345,22 @@ int tbar(T a, T b, T c, T d){
     // CHECK-DAG: store i16 [[VALLB]], i16* [[CONVLB:%.+]],
     // CHECK-DAG: [[CONVLB]] = bitcast i[[sz:64|32]]* [[CADDRLB:%.+]] to i16*
     // CHECK-DAG: [[CVALLB:%.+]] = load i[[sz]], i[[sz]]* [[CADDRLB]],
-    // CHECK-DAG: [[CPTRLB:%.+]] = inttoptr i[[sz]] [[CVALLB]] to i8*
-    // CHECK-DAG: store i8* [[CPTRLB]], i8** [[GEPLB:%.+]],
+    // CHECK-DAG: store i[[sz]] [[CVALLB]], i[[sz]]* [[CBP:%.+]],
+    // CHECK-DAG: [[CBP]] = bitcast i8** [[GEPLB:%.+]] to i[[sz]]*
     // CHECK-DAG: [[GEPLB]] = getelementptr inbounds [9 x i8*], [9 x i8*]* %{{.+}}, i32 0, i32 {{[0-8]}}
 
     // CHECK-DAG: store i16 [[VALLC]], i16* [[CONVLC:%.+]],
     // CHECK-DAG: [[CONVLC]] = bitcast i[[sz]]* [[CADDRLC:%.+]] to i16*
     // CHECK-DAG: [[CVALLC:%.+]] = load i[[sz]], i[[sz]]* [[CADDRLC]],
-    // CHECK-DAG: [[CPTRLC:%.+]] = inttoptr i[[sz]] [[CVALLC]] to i8*
-    // CHECK-DAG: store i8* [[CPTRLC]], i8** [[GEPLC:%.+]],
+    // CHECK-DAG: store i[[sz]] [[CVALLC]], i[[sz]]* [[CBP:%.+]],
+    // CHECK-DAG: [[CBP]] = bitcast i8** [[GEPLC:%.+]] to i[[sz]]*
     // CHECK-DAG: [[GEPLC]] = getelementptr inbounds [9 x i8*], [9 x i8*]* %{{.+}}, i32 0, i32 {{[0-8]}}
 
     // CHECK-DAG: store i16 [[VALLD]], i16* [[CONVLD:%.+]],
     // CHECK-DAG: [[CONVLD]] = bitcast i[[sz]]* [[CADDRLD:%.+]] to i16*
     // CHECK-DAG: [[CVALLD:%.+]] = load i[[sz]], i[[sz]]* [[CADDRLD]],
-    // CHECK-DAG: [[CPTRLD:%.+]] = inttoptr i[[sz]] [[CVALLD]] to i8*
-    // CHECK-DAG: store i8* [[CPTRLD]], i8** [[GEPLD:%.+]],
+    // CHECK-DAG: store i[[sz]] [[CVALLD]], i[[sz]]* [[CBP:%.+]],
+    // CHECK-DAG: [[CBP]] = bitcast i8** [[GEPLD:%.+]] to i[[sz]]*
     // CHECK-DAG: [[GEPLD]] = getelementptr inbounds [9 x i8*], [9 x i8*]* %{{.+}}, i32 0, i32 {{[0-8]}}
 
     // 3 static vars being captured.
@@ -362,22 +368,22 @@ int tbar(T a, T b, T c, T d){
     // CHECK-DAG: store float [[VALFB]], float* [[CONVFB:%.+]],
     // CHECK-DAG: [[CONVFB]] = bitcast i[[sz]]* [[CADDRFB:%.+]] to float*
     // CHECK-DAG: [[CVALFB:%.+]] = load i[[sz]], i[[sz]]* [[CADDRFB]],
-    // CHECK-DAG: [[CPTRFB:%.+]] = inttoptr i[[sz]] [[CVALFB]] to i8*
-    // CHECK-DAG: store i8* [[CPTRFB]], i8** [[GEPFB:%.+]],
+    // CHECK-DAG: store i[[sz]] [[CVALFB]], i[[sz]]* [[CBP:%.+]],
+    // CHECK-DAG: [[CBP]] = bitcast i8** [[GEPFB:%.+]] to i[[sz]]*
     // CHECK-DAG: [[GEPFB]] = getelementptr inbounds [9 x i8*], [9 x i8*]* %{{.+}}, i32 0, i32 {{[0-8]}}
 
     // CHECK-DAG: store float [[VALFC]], float* [[CONVFC:%.+]],
     // CHECK-DAG: [[CONVFC]] = bitcast i[[sz]]* [[CADDRFC:%.+]] to float*
     // CHECK-DAG: [[CVALFC:%.+]] = load i[[sz]], i[[sz]]* [[CADDRFC]],
-    // CHECK-DAG: [[CPTRFC:%.+]] = inttoptr i[[sz]] [[CVALFC]] to i8*
-    // CHECK-DAG: store i8* [[CPTRFC]], i8** [[GEPFC:%.+]],
+    // CHECK-DAG: store i[[sz]] [[CVALFC]], i[[sz]]* [[CBP:%.+]],
+    // CHECK-DAG: [[CBP]] = bitcast i8** [[GEPFC:%.+]] to i[[sz]]*
     // CHECK-DAG: [[GEPFC]] = getelementptr inbounds [9 x i8*], [9 x i8*]* %{{.+}}, i32 0, i32 {{[0-8]}}
 
     // CHECK-DAG: store float [[VALFD]], float* [[CONVFD:%.+]],
     // CHECK-DAG: [[CONVFD]] = bitcast i[[sz]]* [[CADDRFD:%.+]] to float*
     // CHECK-DAG: [[CVALFD:%.+]] = load i[[sz]], i[[sz]]* [[CADDRFD]],
-    // CHECK-DAG: [[CPTRFD:%.+]] = inttoptr i[[sz]] [[CVALFD]] to i8*
-    // CHECK-DAG: store i8* [[CPTRFD]], i8** [[GEPFD:%.+]],
+    // CHECK-DAG: store i[[sz]] [[CVALFD]], i[[sz]]* [[CBP:%.+]],
+    // CHECK-DAG: [[CBP]] = bitcast i8** [[GEPFD:%.+]] to i[[sz]]*
     // CHECK-DAG: [[GEPFD]] = getelementptr inbounds [9 x i8*], [9 x i8*]* %{{.+}}, i32 0, i32 {{[0-8]}}
 
     // 3 static global vars being captured.
@@ -385,25 +391,28 @@ int tbar(T a, T b, T c, T d){
     // CHECK-64-DAG: store double [[VALGB]], double* [[CONVGB:%.+]],
     // CHECK-64-DAG: [[CONVGB]] = bitcast i[[sz]]* [[CADDRGB:%.+]] to double*
     // CHECK-64-DAG: [[CVALGB:%.+]] = load i[[sz]], i[[sz]]* [[CADDRGB]],
-    // CHECK-64-DAG: [[CPTRGB:%.+]] = inttoptr i[[sz]] [[CVALGB]] to i8*
-    // CHECK-64-DAG: store i8* [[CPTRGB]], i8** [[GEPGB:%.+]],
-    // CHECK-32-DAG: store i8* bitcast (double* @Gb to i8*), i8** [[GEPGB:%.+]],
+    // CHECK-64-DAG: store i[[sz]] [[CVALGB]], i[[sz]]* [[CBP:%.+]],
+    // CHECK-64-DAG: [[CBP]] = bitcast i8** [[GEPGB:%.+]] to i[[sz]]*
+    // CHECK-32-DAG: store double* @Gb, double** [[CBP:%.+]],
+    // CHECK-32-DAG: [[CBP]] = bitcast i8** [[GEPGB:%.+]] to double**
     // CHECK-DAG: [[GEPGB]] = getelementptr inbounds [9 x i8*], [9 x i8*]* %{{.+}}, i32 0, i32 {{[0-8]}}
 
     // CHECK-64-DAG: store double [[VALGC]], double* [[CONVGC:%.+]],
     // CHECK-64-DAG: [[CONVGC]] = bitcast i[[sz]]* [[CADDRGC:%.+]] to double*
     // CHECK-64-DAG: [[CVALGC:%.+]] = load i[[sz]], i[[sz]]* [[CADDRGC]],
-    // CHECK-64-DAG: [[CPTRGC:%.+]] = inttoptr i[[sz]] [[CVALGC]] to i8*
-    // CHECK-64-DAG: store i8* [[CPTRGC]], i8** [[GEPGC:%.+]],
-    // CHECK-32-DAG: store i8* bitcast (double* @Gc to i8*), i8** [[GEPGC:%.+]],
+    // CHECK-64-DAG: store i[[sz]] [[CVALGC]], i[[sz]]* [[CBP:%.+]],
+    // CHECK-64-DAG: [[CBP]] = bitcast i8** [[GEPGC:%.+]] to i[[sz]]*
+    // CHECK-32-DAG: store double* @Gc, double** [[CBP:%.+]],
+    // CHECK-32-DAG: [[CBP]] = bitcast i8** [[GEPGC:%.+]] to double**
     // CHECK-DAG: [[GEPGC]] = getelementptr inbounds [9 x i8*], [9 x i8*]* %{{.+}}, i32 0, i32 {{[0-8]}}
 
     // CHECK-64-DAG: store double [[VALGD]], double* [[CONVGD:%.+]],
     // CHECK-64-DAG: [[CONVGD]] = bitcast i[[sz]]* [[CADDRGD:%.+]] to double*
     // CHECK-64-DAG: [[CVALGD:%.+]] = load i[[sz]], i[[sz]]* [[CADDRGD]],
-    // CHECK-64-DAG: [[CPTRGD:%.+]] = inttoptr i[[sz]] [[CVALGD]] to i8*
-    // CHECK-64-DAG: store i8* [[CPTRGD]], i8** [[GEPGD:%.+]],
-    // CHECK-32-DAG: store i8* bitcast (double* @Gd to i8*), i8** [[GEPGD:%.+]],
+    // CHECK-64-DAG: store i[[sz]] [[CVALGD]], i[[sz]]* [[CBP:%.+]],
+    // CHECK-64-DAG: [[CBP]] = bitcast i8** [[GEPGD:%.+]] to i[[sz]]*
+    // CHECK-32-DAG: store double* @Gd, double** [[CBP:%.+]],
+    // CHECK-32-DAG: [[CBP]] = bitcast i8** [[GEPGD:%.+]] to double**
     // CHECK-DAG: [[GEPGD]] = getelementptr inbounds [9 x i8*], [9 x i8*]* %{{.+}}, i32 0, i32 {{[0-8]}}
 
     // CHECK: call i32 @__tgt_target
