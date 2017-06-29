@@ -6199,7 +6199,6 @@ INTERCEPTOR(int, mprobe, void *ptr) {
 }
 #endif
 
-#if SANITIZER_INTERCEPT_WCSLEN
 INTERCEPTOR(SIZE_T, wcslen, const wchar_t *s) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, wcslen, s);
@@ -6218,9 +6217,6 @@ INTERCEPTOR(SIZE_T, wcsnlen, const wchar_t *s, SIZE_T n) {
 #define INIT_WCSLEN                  \
   COMMON_INTERCEPT_FUNCTION(wcslen); \
   COMMON_INTERCEPT_FUNCTION(wcsnlen);
-#else
-#define INIT_WCSLEN
-#endif
 
 #if SANITIZER_INTERCEPT_WCSCAT
 INTERCEPTOR(wchar_t *, wcscat, wchar_t *dst, const wchar_t *src) {

@@ -45,7 +45,7 @@ static void initOnce() {
   NumberOfContexts = getNumberOfCPUs();
   ThreadContexts = reinterpret_cast<ScudoThreadContext *>(
       MmapOrDie(sizeof(ScudoThreadContext) * NumberOfContexts, __func__));
-  for (int i = 0; i < NumberOfContexts; i++)
+  for (uptr i = 0; i < NumberOfContexts; i++)
     ThreadContexts[i].init();
 }
 

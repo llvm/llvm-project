@@ -32,7 +32,6 @@ add_lldb_library(lldbCore
   State.cpp
   StreamAsynchronousIO.cpp
   StreamFile.cpp
-  Timer.cpp
   UserSettingsController.cpp
   Value.cpp
   ValueObject.cpp

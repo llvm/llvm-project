@@ -90,3 +90,7 @@ else
 
 	ARCH_LDFLAGS += $(NDK_ROOT)/sources/cxx-stl/gnu-libstdc++/4.9/libs/$(STL_ARCH)/libgnustl_static.a
 endif
+
+ifeq "$(ARCH)" "i386"
+	ARCH_CFLAGS += -mstackrealign
+endif

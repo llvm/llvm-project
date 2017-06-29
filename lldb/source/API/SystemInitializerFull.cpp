@@ -20,7 +20,6 @@
 #endif
 
 #include "lldb/Core/Debugger.h"
-#include "lldb/Core/Timer.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Initialization/SystemInitializerCommon.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
@@ -28,6 +27,7 @@
 #include "lldb/Symbol/GoASTContext.h"
 #include "lldb/Symbol/JavaASTContext.h"
 #include "lldb/Symbol/OCamlASTContext.h"
+#include "lldb/Utility/Timer.h"
 
 #include "Plugins/ABI/MacOSX-arm/ABIMacOSX_arm.h"
 #include "Plugins/ABI/MacOSX-arm64/ABIMacOSX_arm64.h"

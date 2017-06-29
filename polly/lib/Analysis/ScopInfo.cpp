@@ -1275,12 +1275,6 @@ __isl_give isl_map *ScopStmt::getSchedule() const {
   return M;
 }
 
-__isl_give isl_pw_aff *ScopStmt::getPwAff(const SCEV *E, bool NonNegative) {
-  PWACtx PWAC = getParent()->getPwAff(E, getEntryBlock(), NonNegative);
-  InvalidDomain = isl_set_union(InvalidDomain, PWAC.second);
-  return PWAC.first;
-}
-
 void ScopStmt::restrictDomain(__isl_take isl_set *NewDomain) {
   assert(isl_set_is_subset(NewDomain, Domain) &&
          "New domain is not a subset of old domain!");
@@ -1472,23 +1466,43 @@ static __isl_give isl_set *buildConditionSet(ICmpInst::Predicate Pred,
   return setDimensionIds(Domain, ConsequenceCondSet);
 }
 
+/// Compute the isl representation for the SCEV @p E in this BB.
+///
+/// @param S                The Scop in which @p BB resides in.
+/// @param BB               The BB for which isl representation is to be
+/// computed.
+/// @param InvalidDomainMap A map of BB to their invalid domains.
+/// @param E                The SCEV that should be translated.
+/// @param NonNegative      Flag to indicate the @p E has to be non-negative.
+///
+/// Note that this function will also adjust the invalid context accordingly.
+
+__isl_give isl_pw_aff *
+getPwAff(Scop &S, BasicBlock *BB,
+         DenseMap<BasicBlock *, __isl_keep isl_set *> &InvalidDomainMap,
+         const SCEV *E, bool NonNegative = false) {
+  PWACtx PWAC = S.getPwAff(E, BB, NonNegative);
+  InvalidDomainMap[BB] = isl_set_union(InvalidDomainMap[BB], PWAC.second);
+  return PWAC.first;
+}
+
 /// Build the conditions sets for the switch @p SI in the @p Domain.
 ///
 /// This will fill @p ConditionSets with the conditions under which control
 /// will be moved from @p SI to its successors. Hence, @p ConditionSets will
 /// have as many elements as @p SI has successors.
-static bool
-buildConditionSets(ScopStmt &Stmt, SwitchInst *SI, Loop *L,
-                   __isl_keep isl_set *Domain,
-                   SmallVectorImpl<__isl_give isl_set *> &ConditionSets) {
+static bool buildConditionSets(
+    Scop &S, BasicBlock *BB, SwitchInst *SI, Loop *L,
+    __isl_keep isl_set *Domain,
+    DenseMap<BasicBlock *, __isl_keep isl_set *> &InvalidDomainMap,
+    SmallVectorImpl<__isl_give isl_set *> &ConditionSets) {
 
   Value *Condition = getConditionFromTerminator(SI);
   assert(Condition && "No condition for switch");
 
-  Scop &S = *Stmt.getParent();
   ScalarEvolution &SE = *S.getSE();
   isl_pw_aff *LHS, *RHS;
-  LHS = Stmt.getPwAff(SE.getSCEVAtScope(Condition, L));
+  LHS = getPwAff(S, BB, InvalidDomainMap, SE.getSCEVAtScope(Condition, L));
 
   unsigned NumSuccessors = SI->getNumSuccessors();
   ConditionSets.resize(NumSuccessors);
@@ -1496,7 +1510,7 @@ buildConditionSets(ScopStmt &Stmt, SwitchInst *SI, Loop *L,
     unsigned Idx = Case.getSuccessorIndex();
     ConstantInt *CaseValue = Case.getCaseValue();
 
-    RHS = Stmt.getPwAff(SE.getSCEV(CaseValue));
+    RHS = getPwAff(S, BB, InvalidDomainMap, SE.getSCEV(CaseValue));
     isl_set *CaseConditionSet =
         buildConditionSet(ICmpInst::ICMP_EQ, isl_pw_aff_copy(LHS), RHS, Domain);
     ConditionSets[Idx] = isl_set_coalesce(
@@ -1524,12 +1538,12 @@ buildConditionSets(ScopStmt &Stmt, SwitchInst *SI, Loop *L,
 /// have as many elements as @p TI has successors. If @p TI is nullptr the
 /// context under which @p Condition is true/false will be returned as the
 /// new elements of @p ConditionSets.
-static bool
-buildConditionSets(ScopStmt &Stmt, Value *Condition, TerminatorInst *TI,
-                   Loop *L, __isl_keep isl_set *Domain,
-                   SmallVectorImpl<__isl_give isl_set *> &ConditionSets) {
+static bool buildConditionSets(
+    Scop &S, BasicBlock *BB, Value *Condition, TerminatorInst *TI, Loop *L,
+    __isl_keep isl_set *Domain,
+    DenseMap<BasicBlock *, __isl_keep isl_set *> &InvalidDomainMap,
+    SmallVectorImpl<__isl_give isl_set *> &ConditionSets) {
 
-  Scop &S = *Stmt.getParent();
   isl_set *ConsequenceCondSet = nullptr;
   if (auto *CCond = dyn_cast<ConstantInt>(Condition)) {
     if (CCond->isZero())
@@ -1540,10 +1554,10 @@ buildConditionSets(ScopStmt &Stmt, Value *Condition, TerminatorInst *TI,
     auto Opcode = BinOp->getOpcode();
     assert(Opcode == Instruction::And || Opcode == Instruction::Or);
 
-    bool Valid = buildConditionSets(Stmt, BinOp->getOperand(0), TI, L, Domain,
-                                    ConditionSets) &&
-                 buildConditionSets(Stmt, BinOp->getOperand(1), TI, L, Domain,
-                                    ConditionSets);
+    bool Valid = buildConditionSets(S, BB, BinOp->getOperand(0), TI, L, Domain,
+                                    InvalidDomainMap, ConditionSets) &&
+                 buildConditionSets(S, BB, BinOp->getOperand(1), TI, L, Domain,
+                                    InvalidDomainMap, ConditionSets);
     if (!Valid) {
       while (!ConditionSets.empty())
         isl_set_free(ConditionSets.pop_back_val());
@@ -1570,8 +1584,10 @@ buildConditionSets(ScopStmt &Stmt, Value *Condition, TerminatorInst *TI,
     // to be set. The comparison is equal to a signed comparison under this
     // assumption.
     bool NonNeg = ICond->isUnsigned();
-    LHS = Stmt.getPwAff(SE.getSCEVAtScope(ICond->getOperand(0), L), NonNeg);
-    RHS = Stmt.getPwAff(SE.getSCEVAtScope(ICond->getOperand(1), L), NonNeg);
+    LHS = getPwAff(S, BB, InvalidDomainMap,
+                   SE.getSCEVAtScope(ICond->getOperand(0), L), NonNeg);
+    RHS = getPwAff(S, BB, InvalidDomainMap,
+                   SE.getSCEVAtScope(ICond->getOperand(1), L), NonNeg);
     ConsequenceCondSet =
         buildConditionSet(ICond->getPredicate(), LHS, RHS, Domain);
   }
@@ -1613,13 +1629,15 @@ buildConditionSets(ScopStmt &Stmt, Value *Condition, TerminatorInst *TI,
 /// This will fill @p ConditionSets with the conditions under which control
 /// will be moved from @p TI to its successors. Hence, @p ConditionSets will
 /// have as many elements as @p TI has successors.
-static bool
-buildConditionSets(ScopStmt &Stmt, TerminatorInst *TI, Loop *L,
-                   __isl_keep isl_set *Domain,
-                   SmallVectorImpl<__isl_give isl_set *> &ConditionSets) {
+static bool buildConditionSets(
+    Scop &S, BasicBlock *BB, TerminatorInst *TI, Loop *L,
+    __isl_keep isl_set *Domain,
+    DenseMap<BasicBlock *, __isl_keep isl_set *> &InvalidDomainMap,
+    SmallVectorImpl<__isl_give isl_set *> &ConditionSets) {
 
   if (SwitchInst *SI = dyn_cast<SwitchInst>(TI))
-    return buildConditionSets(Stmt, SI, L, Domain, ConditionSets);
+    return buildConditionSets(S, BB, SI, L, Domain, InvalidDomainMap,
+                              ConditionSets);
 
   assert(isa<BranchInst>(TI) && "Terminator was neither branch nor switch.");
 
@@ -1631,7 +1649,8 @@ buildConditionSets(ScopStmt &Stmt, TerminatorInst *TI, Loop *L,
   Value *Condition = getConditionFromTerminator(TI);
   assert(Condition && "No condition for Terminator");
 
-  return buildConditionSets(Stmt, Condition, TI, L, Domain, ConditionSets);
+  return buildConditionSets(S, BB, Condition, TI, L, Domain, InvalidDomainMap,
+                            ConditionSets);
 }
 
 void ScopStmt::buildDomain() {
@@ -2136,8 +2155,9 @@ bool Scop::isDominatedBy(const DominatorTree &DT, BasicBlock *BB) const {
   return DT.dominates(BB, getEntry());
 }
 
-void Scop::addUserAssumptions(AssumptionCache &AC, DominatorTree &DT,
-                              LoopInfo &LI) {
+void Scop::addUserAssumptions(
+    AssumptionCache &AC, DominatorTree &DT, LoopInfo &LI,
+    DenseMap<BasicBlock *, __isl_keep isl_set *> &InvalidDomainMap) {
   auto &F = getFunction();
   for (auto &Assumption : AC.assumptions()) {
     auto *CI = dyn_cast_or_null<CallInst>(Assumption);
@@ -2172,7 +2192,8 @@ void Scop::addUserAssumptions(AssumptionCache &AC, DominatorTree &DT,
     auto *TI = InScop ? CI->getParent()->getTerminator() : nullptr;
     auto &Stmt = InScop ? *getStmtFor(CI->getParent()) : *Stmts.begin();
     auto *Dom = InScop ? getDomainConditions(&Stmt) : isl_set_copy(Context);
-    bool Valid = buildConditionSets(Stmt, Val, TI, L, Dom, ConditionSets);
+    bool Valid = buildConditionSets(*this, Stmt.getEntryBlock(), Val, TI, L,
+                                    Dom, InvalidDomainMap, ConditionSets);
     isl_set_free(Dom);
 
     if (!Valid)
@@ -2633,7 +2654,9 @@ __isl_give isl_set *Scop::getDomainConditions(BasicBlock *BB) const {
   return getDomainConditions(BBR->getEntry());
 }
 
-bool Scop::buildDomains(Region *R, DominatorTree &DT, LoopInfo &LI) {
+bool Scop::buildDomains(
+    Region *R, DominatorTree &DT, LoopInfo &LI,
+    DenseMap<BasicBlock *, __isl_keep isl_set *> &InvalidDomainMap) {
 
   bool IsOnlyNonAffineRegion = isNonAffineSubRegion(R);
   auto *EntryBB = R->getEntry();
@@ -2646,19 +2669,16 @@ bool Scop::buildDomains(Region *R, DominatorTree &DT, LoopInfo &LI) {
     L = L->getParentLoop();
   }
 
-  // Initialize the invalid domain.
-  auto *EntryStmt = getStmtFor(EntryBB);
-  EntryStmt->setInvalidDomain(isl_set_empty(isl_set_get_space(S)));
-
+  InvalidDomainMap[EntryBB] = isl_set_empty(isl_set_get_space(S));
   DomainMap[EntryBB] = S;
 
   if (IsOnlyNonAffineRegion)
     return !containsErrorBlock(R->getNode(), *R, LI, DT);
 
-  if (!buildDomainsWithBranchConstraints(R, DT, LI))
+  if (!buildDomainsWithBranchConstraints(R, DT, LI, InvalidDomainMap))
     return false;
 
-  if (!propagateDomainConstraints(R, DT, LI))
+  if (!propagateDomainConstraints(R, DT, LI, InvalidDomainMap))
     return false;
 
   // Error blocks and blocks dominated by them have been assumed to never be
@@ -2673,7 +2693,7 @@ bool Scop::buildDomains(Region *R, DominatorTree &DT, LoopInfo &LI) {
   // with an empty set. Additionally, we will record for each block under which
   // parameter combination it would be reached via an error block in its
   // InvalidDomain. This information is needed during load hoisting.
-  if (!propagateInvalidStmtDomains(R, DT, LI))
+  if (!propagateInvalidStmtDomains(R, DT, LI, InvalidDomainMap))
     return false;
 
   return true;
@@ -2729,8 +2749,10 @@ static __isl_give isl_set *adjustDomainDimensions(Scop &S,
   return Dom;
 }
 
-bool Scop::propagateInvalidStmtDomains(Region *R, DominatorTree &DT,
-                                       LoopInfo &LI) {
+bool Scop::propagateInvalidStmtDomains(
+    Region *R, DominatorTree &DT, LoopInfo &LI,
+    DenseMap<BasicBlock *, __isl_keep isl_set *> &InvalidDomainMap) {
+
   ReversePostOrderTraversal<Region *> RTraversal(R);
   for (auto *RN : RTraversal) {
 
@@ -2739,18 +2761,18 @@ bool Scop::propagateInvalidStmtDomains(Region *R, DominatorTree &DT,
     if (RN->isSubRegion()) {
       Region *SubRegion = RN->getNodeAs<Region>();
       if (!isNonAffineSubRegion(SubRegion)) {
-        propagateInvalidStmtDomains(SubRegion, DT, LI);
+        propagateInvalidStmtDomains(SubRegion, DT, LI, InvalidDomainMap);
         continue;
       }
     }
 
     bool ContainsErrorBlock = containsErrorBlock(RN, getRegion(), LI, DT);
     BasicBlock *BB = getRegionNodeBasicBlock(RN);
-    ScopStmt *Stmt = getStmtFor(BB);
     isl_set *&Domain = DomainMap[BB];
     assert(Domain && "Cannot propagate a nullptr");
 
-    auto *InvalidDomain = Stmt->getInvalidDomain();
+    auto *InvalidDomain = InvalidDomainMap[BB];
+
     bool IsInvalidBlock =
         ContainsErrorBlock || isl_set_is_subset(Domain, InvalidDomain);
 
@@ -2766,7 +2788,7 @@ bool Scop::propagateInvalidStmtDomains(Region *R, DominatorTree &DT,
     }
 
     if (isl_set_is_empty(InvalidDomain)) {
-      Stmt->setInvalidDomain(InvalidDomain);
+      InvalidDomainMap[BB] = InvalidDomain;
       continue;
     }
 
@@ -2775,25 +2797,27 @@ bool Scop::propagateInvalidStmtDomains(Region *R, DominatorTree &DT,
     unsigned NumSuccs = RN->isSubRegion() ? 1 : TI->getNumSuccessors();
     for (unsigned u = 0; u < NumSuccs; u++) {
       auto *SuccBB = getRegionNodeSuccessor(RN, TI, u);
-      auto *SuccStmt = getStmtFor(SuccBB);
 
       // Skip successors outside the SCoP.
-      if (!SuccStmt)
+      if (!contains(SuccBB))
         continue;
 
       // Skip backedges.
       if (DT.dominates(SuccBB, BB))
         continue;
 
-      auto *SuccBBLoop = SuccStmt->getSurroundingLoop();
+      Loop *SuccBBLoop = getFirstNonBoxedLoopFor(SuccBB, LI, getBoxedLoops());
+
       auto *AdjustedInvalidDomain = adjustDomainDimensions(
           *this, isl_set_copy(InvalidDomain), BBLoop, SuccBBLoop);
-      auto *SuccInvalidDomain = SuccStmt->getInvalidDomain();
+
+      auto *SuccInvalidDomain = InvalidDomainMap[SuccBB];
       SuccInvalidDomain =
           isl_set_union(SuccInvalidDomain, AdjustedInvalidDomain);
       SuccInvalidDomain = isl_set_coalesce(SuccInvalidDomain);
       unsigned NumConjucts = isl_set_n_basic_set(SuccInvalidDomain);
-      SuccStmt->setInvalidDomain(SuccInvalidDomain);
+
+      InvalidDomainMap[SuccBB] = SuccInvalidDomain;
 
       // Check if the maximal number of domain disjunctions was reached.
       // In case this happens we will bail.
@@ -2805,7 +2829,7 @@ bool Scop::propagateInvalidStmtDomains(Region *R, DominatorTree &DT,
       return false;
     }
 
-    Stmt->setInvalidDomain(InvalidDomain);
+    InvalidDomainMap[BB] = InvalidDomain;
   }
 
   return true;
@@ -2813,7 +2837,8 @@ bool Scop::propagateInvalidStmtDomains(Region *R, DominatorTree &DT,
 
 void Scop::propagateDomainConstraintsToRegionExit(
     BasicBlock *BB, Loop *BBLoop,
-    SmallPtrSetImpl<BasicBlock *> &FinishedExitBlocks, LoopInfo &LI) {
+    SmallPtrSetImpl<BasicBlock *> &FinishedExitBlocks, LoopInfo &LI,
+    DenseMap<BasicBlock *, __isl_keep isl_set *> &InvalidDomainMap) {
 
   // Check if the block @p BB is the entry of a region. If so we propagate it's
   // domain to the exit block of the region. Otherwise we are done.
@@ -2838,8 +2863,7 @@ void Scop::propagateDomainConstraintsToRegionExit(
   auto *Domain = DomainMap[BB];
   assert(Domain && "Cannot propagate a nullptr");
 
-  auto *ExitStmt = getStmtFor(ExitBB);
-  auto *ExitBBLoop = ExitStmt->getSurroundingLoop();
+  Loop *ExitBBLoop = getFirstNonBoxedLoopFor(ExitBB, LI, getBoxedLoops());
 
   // Since the dimensions of @p BB and @p ExitBB might be different we have to
   // adjust the domain before we can propagate it.
@@ -2853,13 +2877,18 @@ void Scop::propagateDomainConstraintsToRegionExit(
       ExitDomain ? isl_set_union(AdjustedDomain, ExitDomain) : AdjustedDomain;
 
   // Initialize the invalid domain.
-  ExitStmt->setInvalidDomain(isl_set_empty(isl_set_get_space(ExitDomain)));
+  auto IDIt = InvalidDomainMap.find(ExitBB);
+  if (IDIt != InvalidDomainMap.end())
+    isl_set_free(IDIt->getSecond());
+  InvalidDomainMap[ExitBB] = isl_set_empty(isl_set_get_space(ExitDomain));
 
   FinishedExitBlocks.insert(ExitBB);
 }
 
-bool Scop::buildDomainsWithBranchConstraints(Region *R, DominatorTree &DT,
-                                             LoopInfo &LI) {
+bool Scop::buildDomainsWithBranchConstraints(
+    Region *R, DominatorTree &DT, LoopInfo &LI,
+    DenseMap<BasicBlock *, __isl_keep isl_set *> &InvalidDomainMap) {
+
   // To create the domain for each block in R we iterate over all blocks and
   // subregions in R and propagate the conditions under which the current region
   // element is executed. To this end we iterate in reverse post order over R as
@@ -2880,7 +2909,8 @@ bool Scop::buildDomainsWithBranchConstraints(Region *R, DominatorTree &DT,
     if (RN->isSubRegion()) {
       Region *SubRegion = RN->getNodeAs<Region>();
       if (!isNonAffineSubRegion(SubRegion)) {
-        if (!buildDomainsWithBranchConstraints(SubRegion, DT, LI))
+        if (!buildDomainsWithBranchConstraints(SubRegion, DT, LI,
+                                               InvalidDomainMap))
           return false;
         continue;
       }
@@ -2903,7 +2933,8 @@ bool Scop::buildDomainsWithBranchConstraints(Region *R, DominatorTree &DT,
     auto *BBLoop = getRegionNodeLoop(RN, LI);
     // Propagate the domain from BB directly to blocks that have a superset
     // domain, at the moment only region exit nodes of regions that start in BB.
-    propagateDomainConstraintsToRegionExit(BB, BBLoop, FinishedExitBlocks, LI);
+    propagateDomainConstraintsToRegionExit(BB, BBLoop, FinishedExitBlocks, LI,
+                                           InvalidDomainMap);
 
     // If all successors of BB have been set a domain through the propagation
     // above we do not need to build condition sets but can just skip this
@@ -2923,8 +2954,8 @@ bool Scop::buildDomainsWithBranchConstraints(Region *R, DominatorTree &DT,
     SmallVector<isl_set *, 8> ConditionSets;
     if (RN->isSubRegion())
       ConditionSets.push_back(isl_set_copy(Domain));
-    else if (!buildConditionSets(*getStmtFor(BB), TI, BBLoop, Domain,
-                                 ConditionSets))
+    else if (!buildConditionSets(*this, BB, TI, BBLoop, Domain,
+                                 InvalidDomainMap, ConditionSets))
       return false;
 
     // Now iterate over the successors and set their initial domain based on
@@ -2936,9 +2967,8 @@ bool Scop::buildDomainsWithBranchConstraints(Region *R, DominatorTree &DT,
       isl_set *CondSet = ConditionSets[u];
       BasicBlock *SuccBB = getRegionNodeSuccessor(RN, TI, u);
 
-      auto *SuccStmt = getStmtFor(SuccBB);
       // Skip blocks outside the region.
-      if (!SuccStmt) {
+      if (!contains(SuccBB)) {
         isl_set_free(CondSet);
         continue;
       }
@@ -2956,7 +2986,8 @@ bool Scop::buildDomainsWithBranchConstraints(Region *R, DominatorTree &DT,
         continue;
       }
 
-      auto *SuccBBLoop = SuccStmt->getSurroundingLoop();
+      Loop *SuccBBLoop = getFirstNonBoxedLoopFor(SuccBB, LI, getBoxedLoops());
+
       CondSet = adjustDomainDimensions(*this, CondSet, BBLoop, SuccBBLoop);
 
       // Set the domain for the successor or merge it with an existing domain in
@@ -2968,7 +2999,10 @@ bool Scop::buildDomainsWithBranchConstraints(Region *R, DominatorTree &DT,
         SuccDomain = isl_set_coalesce(isl_set_union(SuccDomain, CondSet));
       } else {
         // Initialize the invalid domain.
-        SuccStmt->setInvalidDomain(isl_set_empty(isl_set_get_space(CondSet)));
+        auto IDIt = InvalidDomainMap.find(SuccBB);
+        if (IDIt != InvalidDomainMap.end())
+          isl_set_free(IDIt->getSecond());
+        InvalidDomainMap[SuccBB] = isl_set_empty(isl_set_get_space(CondSet));
         SuccDomain = CondSet;
       }
 
@@ -3000,7 +3034,7 @@ Scop::getPredecessorDomainConstraints(BasicBlock *BB,
   // The region info of this function.
   auto &RI = *R.getRegionInfo();
 
-  auto *BBLoop = getStmtFor(BB)->getSurroundingLoop();
+  Loop *BBLoop = getFirstNonBoxedLoopFor(BB, LI, getBoxedLoops());
 
   // A domain to collect all predecessor domains, thus all conditions under
   // which the block is executed. To this end we start with the empty domain.
@@ -3036,7 +3070,8 @@ Scop::getPredecessorDomainConstraints(BasicBlock *BB,
     }
 
     auto *PredBBDom = getDomainConditions(PredBB);
-    auto *PredBBLoop = getStmtFor(PredBB)->getSurroundingLoop();
+    Loop *PredBBLoop = getFirstNonBoxedLoopFor(PredBB, LI, getBoxedLoops());
+
     PredBBDom = adjustDomainDimensions(*this, PredBBDom, PredBBLoop, BBLoop);
 
     PredDom = isl_set_union(PredDom, PredBBDom);
@@ -3045,8 +3080,9 @@ Scop::getPredecessorDomainConstraints(BasicBlock *BB,
   return PredDom;
 }
 
-bool Scop::propagateDomainConstraints(Region *R, DominatorTree &DT,
-                                      LoopInfo &LI) {
+bool Scop::propagateDomainConstraints(
+    Region *R, DominatorTree &DT, LoopInfo &LI,
+    DenseMap<BasicBlock *, __isl_keep isl_set *> &InvalidDomainMap) {
   // Iterate over the region R and propagate the domain constrains from the
   // predecessors to the current node. In contrast to the
   // buildDomainsWithBranchConstraints function, this one will pull the domain
@@ -3064,7 +3100,7 @@ bool Scop::propagateDomainConstraints(Region *R, DominatorTree &DT,
     if (RN->isSubRegion()) {
       Region *SubRegion = RN->getNodeAs<Region>();
       if (!isNonAffineSubRegion(SubRegion)) {
-        if (!propagateDomainConstraints(SubRegion, DT, LI))
+        if (!propagateDomainConstraints(SubRegion, DT, LI, InvalidDomainMap))
           return false;
         continue;
       }
@@ -3081,7 +3117,7 @@ bool Scop::propagateDomainConstraints(Region *R, DominatorTree &DT,
 
     Loop *BBLoop = getRegionNodeLoop(RN, LI);
     if (BBLoop && BBLoop->getHeader() == BB && contains(BBLoop))
-      if (!addLoopBoundsToHeaderDomain(BBLoop, LI))
+      if (!addLoopBoundsToHeaderDomain(BBLoop, LI, InvalidDomainMap))
         return false;
   }
 
@@ -3111,7 +3147,9 @@ createNextIterationMap(__isl_take isl_space *SetSpace, unsigned Dim) {
   return NextIterationMap;
 }
 
-bool Scop::addLoopBoundsToHeaderDomain(Loop *L, LoopInfo &LI) {
+bool Scop::addLoopBoundsToHeaderDomain(
+    Loop *L, LoopInfo &LI,
+    DenseMap<BasicBlock *, __isl_keep isl_set *> &InvalidDomainMap) {
   int LoopDepth = getRelativeLoopDepth(L);
   assert(LoopDepth >= 0 && "Loop in region should have at least depth one");
 
@@ -3146,8 +3184,8 @@ bool Scop::addLoopBoundsToHeaderDomain(Loop *L, LoopInfo &LI) {
     else {
       SmallVector<isl_set *, 8> ConditionSets;
       int idx = BI->getSuccessor(0) != HeaderBB;
-      if (!buildConditionSets(*getStmtFor(LatchBB), TI, L, LatchBBDom,
-                              ConditionSets)) {
+      if (!buildConditionSets(*this, LatchBB, TI, L, LatchBBDom,
+                              InvalidDomainMap, ConditionSets)) {
         isl_map_free(NextIterationMap);
         isl_set_free(UnionBackedgeCondition);
         return false;

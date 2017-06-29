@@ -1,11 +1,12 @@
 // RUN: %clang_scudo %s -o %t
-// RUN:     %run %t valid   2>&1
-// RUN: not %run %t invalid 2>&1 | FileCheck %s
+// RUN: %run %t valid   2>&1
+// RUN: %run %t invalid 2>&1
 
 // Tests that the various aligned allocation functions work as intended. Also
 // tests for the condition where the alignment is not a power of 2.
 
 #include <assert.h>
+#include <errno.h>
 #include <malloc.h>
 #include <stdlib.h>
 #include <string.h>
@@ -24,6 +25,7 @@ int main(int argc, char **argv)
   void *p = nullptr;
   size_t alignment = 1U << 12;
   size_t size = 1U << 12;
+  int err;
 
   assert(argc == 2);
 
@@ -57,10 +59,22 @@ int main(int argc, char **argv)
     }
   }
   if (!strcmp(argv[1], "invalid")) {
+    // Alignment is not a power of 2.
     p = memalign(alignment - 1, size);
-    free(p);
+    assert(!p);
+    // Size is not a multiple of alignment.
+    p = aligned_alloc(alignment, size >> 1);
+    assert(!p);
+    p = (void *)0x42UL;
+    // Alignment is not a power of 2.
+    err = posix_memalign(&p, 3, size);
+    assert(!p);
+    assert(err == EINVAL);
+    p = (void *)0x42UL;
+    // Alignment is a power of 2, but not a multiple of size(void *).
+    err = posix_memalign(&p, 2, size);
+    assert(!p);
+    assert(err == EINVAL);
   }
   return 0;
 }
-
-// CHECK: ERROR: alignment is not a power of 2

@@ -15,7 +15,6 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/State.h"
-#include "lldb/Core/Timer.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
@@ -24,6 +23,7 @@
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/TildeExpressionResolver.h"
+#include "lldb/Utility/Timer.h"
 
 // Other libraries and framework includes
 #include "llvm/ADT/SmallString.h"

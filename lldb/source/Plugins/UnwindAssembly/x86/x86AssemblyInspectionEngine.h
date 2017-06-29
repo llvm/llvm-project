@@ -102,6 +102,7 @@ private:
   bool sub_rsp_pattern_p(int &amount);
   bool add_rsp_pattern_p(int &amount);
   bool lea_rsp_pattern_p(int &amount);
+  bool lea_rbp_rsp_pattern_p(int &amount);
   bool push_reg_p(int &regno);
   bool pop_reg_p(int &regno);
   bool pop_rbp_pattern_p();
