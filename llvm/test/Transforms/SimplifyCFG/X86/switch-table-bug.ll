@@ -8,7 +8,7 @@ target triple = "x86_64-apple-darwin12.0.0"
 ; CHECK: entry:
 ; CHECK-NEXT: sub i2 %0, -2
 ; CHECK-NEXT: zext i2 %switch.tableidx to i3
-; CHECK-NEXT: getelementptr inbounds [4 x i64], [4 x i64]* @switch.table, i32 0, i3 %switch.tableidx.zext
+; CHECK-NEXT: getelementptr inbounds [4 x i64], [4 x i64]* @switch.table._TFO6reduce1E5toRawfS0_FT_Si, i32 0, i3 %switch.tableidx.zext
 ; CHECK-NEXT: load i64, i64* %switch.gep
 ; CHECK-NEXT: ret i64 %switch.load
 define i64 @_TFO6reduce1E5toRawfS0_FT_Si(i2) {

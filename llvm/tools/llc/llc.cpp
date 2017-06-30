@@ -323,7 +323,7 @@ int main(int argc, char **argv) {
   Context.setInlineAsmDiagnosticHandler(InlineAsmDiagHandler, &HasError);
 
   if (PassRemarksWithHotness)
-    Context.setDiagnosticHotnessRequested(true);
+    Context.setDiagnosticsHotnessRequested(true);
 
   std::unique_ptr<tool_output_file> YamlFile;
   if (RemarksFilename != "") {

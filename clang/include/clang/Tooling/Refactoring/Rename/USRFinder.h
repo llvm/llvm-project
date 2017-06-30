@@ -1,4 +1,4 @@
-//===--- tools/extra/clang-rename/USRFinder.h - Clang rename tool ---------===//
+//===--- USRFinder.h - Clang refactoring library --------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -13,8 +13,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_RENAME_USR_FINDER_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_RENAME_USR_FINDER_H
+#ifndef LLVM_CLANG_TOOLING_REFACTOR_RENAME_USR_FINDER_H
+#define LLVM_CLANG_TOOLING_REFACTOR_RENAME_USR_FINDER_H
 
 #include "clang/AST/AST.h"
 #include "clang/AST/ASTContext.h"
@@ -32,7 +32,7 @@ class Decl;
 class SourceLocation;
 class NamedDecl;
 
-namespace rename {
+namespace tooling {
 
 // Given an AST context and a point, returns a NamedDecl identifying the symbol
 // at the point. Returns null if nothing is found at the point.
@@ -78,7 +78,7 @@ private:
   MatchFinder Finder;
 };
 
-} // namespace rename
-} // namespace clang
+} // end namespace tooling
+} // end namespace clang
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_RENAME_USR_FINDER_H
+#endif // LLVM_CLANG_TOOLING_REFACTOR_RENAME_USR_FINDER_H

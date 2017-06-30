@@ -68,9 +68,19 @@ def FeaturePopulationCount : SystemZFeature<
   "Assume that the population-count facility is installed"
 >;
 
+def FeatureMessageSecurityAssist3 : SystemZFeature<
+  "message-security-assist-extension3", "MessageSecurityAssist3",
+  "Assume that the message-security-assist extension facility 3 is installed"
+>;
+
 def FeatureMessageSecurityAssist4 : SystemZFeature<
   "message-security-assist-extension4", "MessageSecurityAssist4",
   "Assume that the message-security-assist extension facility 4 is installed"
+>;
+
+def FeatureResetReferenceBitsMultiple : SystemZFeature<
+  "reset-reference-bits-multiple", "ResetReferenceBitsMultiple",
+  "Assume that the reset-reference-bits-multiple facility is installed"
 >;
 
 def Arch9NewFeatures : SystemZFeatureList<[
@@ -81,7 +91,9 @@ def Arch9NewFeatures : SystemZFeatureList<[
     FeatureInterlockedAccess1,
     FeatureLoadStoreOnCond,
     FeaturePopulationCount,
-    FeatureMessageSecurityAssist4
+    FeatureMessageSecurityAssist3,
+    FeatureMessageSecurityAssist4,
+    FeatureResetReferenceBitsMultiple
 ]>;
 
 //===----------------------------------------------------------------------===//
@@ -120,13 +132,19 @@ def FeatureDFPZonedConversion : SystemZFeature<
   "Assume that the DFP zoned-conversion facility is installed"
 >;
 
+def FeatureEnhancedDAT2 : SystemZFeature<
+  "enhanced-dat-2", "EnhancedDAT2",
+  "Assume that the enhanced-DAT facility 2 is installed"
+>;
+
 def Arch10NewFeatures : SystemZFeatureList<[
     FeatureExecutionHint,
     FeatureLoadAndTrap,
     FeatureMiscellaneousExtensions,
     FeatureProcessorAssist,
     FeatureTransactionalExecution,
-    FeatureDFPZonedConversion
+    FeatureDFPZonedConversion,
+    FeatureEnhancedDAT2
 ]>;
 
 //===----------------------------------------------------------------------===//

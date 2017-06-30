@@ -476,6 +476,19 @@ struct FormatToken {
     return MatchingParen && MatchingParen->opensBlockOrBlockTypeList(Style);
   }
 
+  /// \brief Return the actual namespace token, if this token starts a namespace
+  /// block.
+  const FormatToken *getNamespaceToken() const {
+    const FormatToken *NamespaceTok = this;
+    if (is(tok::comment))
+      NamespaceTok = NamespaceTok->getNextNonComment();
+    // Detect "(inline)? namespace" in the beginning of a line.
+    if (NamespaceTok && NamespaceTok->is(tok::kw_inline))
+      NamespaceTok = NamespaceTok->getNextNonComment();
+    return NamespaceTok && NamespaceTok->is(tok::kw_namespace) ? NamespaceTok
+                                                               : nullptr;
+  }
+
 private:
   // Disallow copying.
   FormatToken(const FormatToken &) = delete;

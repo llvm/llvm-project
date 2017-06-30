@@ -73,7 +73,7 @@ bool MachineOptimizationRemarkEmitterPass::runOnMachineFunction(
     MachineFunction &MF) {
   MachineBlockFrequencyInfo *MBFI;
 
-  if (MF.getFunction()->getContext().getDiagnosticHotnessRequested())
+  if (MF.getFunction()->getContext().getDiagnosticsHotnessRequested())
     MBFI = &getAnalysis<LazyMachineBlockFrequencyInfoPass>().getBFI();
   else
     MBFI = nullptr;

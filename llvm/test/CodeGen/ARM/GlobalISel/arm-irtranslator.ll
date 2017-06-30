@@ -910,7 +910,7 @@ define arm_aapcscc {i32, i32} @test_structs({i32, i32} %x) {
 define i32 @test_shufflevector_s32_v2s32(i32 %arg) {
 ; CHECK-LABEL: name: test_shufflevector_s32_v2s32
 ; CHECK: [[ARG:%[0-9]+]](s32) = COPY %r0
-; CHECK-DAG: [[UNDEF:%[0-9]+]](s32) = IMPLICIT_DEF
+; CHECK-DAG: [[UNDEF:%[0-9]+]](s32) = G_IMPLICIT_DEF
 ; CHECK-DAG: [[C0:%[0-9]+]](s32) = G_CONSTANT i32 0
 ; CHECK-DAG: [[MASK:%[0-9]+]](<2 x s32>) = G_MERGE_VALUES [[C0]](s32), [[C0]](s32)
 ; CHECK: [[VEC:%[0-9]+]](<2 x s32>) = G_SHUFFLE_VECTOR [[ARG]](s32), [[UNDEF]], [[MASK]](<2 x s32>)
@@ -925,7 +925,7 @@ define i32 @test_shufflevector_v2s32_v3s32(i32 %arg1, i32 %arg2) {
 ; CHECK-LABEL: name: test_shufflevector_v2s32_v3s32
 ; CHECK: [[ARG1:%[0-9]+]](s32) = COPY %r0
 ; CHECK: [[ARG2:%[0-9]+]](s32) = COPY %r1
-; CHECK-DAG: [[UNDEF:%[0-9]+]](<2 x s32>) = IMPLICIT_DEF
+; CHECK-DAG: [[UNDEF:%[0-9]+]](<2 x s32>) = G_IMPLICIT_DEF
 ; CHECK-DAG: [[C0:%[0-9]+]](s32) = G_CONSTANT i32 0
 ; CHECK-DAG: [[C1:%[0-9]+]](s32) = G_CONSTANT i32 1
 ; CHECK-DAG: [[MASK:%[0-9]+]](<3 x s32>) = G_MERGE_VALUES [[C1]](s32), [[C0]](s32), [[C1]](s32)
@@ -945,7 +945,7 @@ define i32 @test_shufflevector_v2s32_v4s32(i32 %arg1, i32 %arg2) {
 ; CHECK-LABEL: name: test_shufflevector_v2s32_v4s32
 ; CHECK: [[ARG1:%[0-9]+]](s32) = COPY %r0
 ; CHECK: [[ARG2:%[0-9]+]](s32) = COPY %r1
-; CHECK-DAG: [[UNDEF:%[0-9]+]](<2 x s32>) = IMPLICIT_DEF
+; CHECK-DAG: [[UNDEF:%[0-9]+]](<2 x s32>) = G_IMPLICIT_DEF
 ; CHECK-DAG: [[C0:%[0-9]+]](s32) = G_CONSTANT i32 0
 ; CHECK-DAG: [[C1:%[0-9]+]](s32) = G_CONSTANT i32 1
 ; CHECK-DAG: [[MASK:%[0-9]+]](<4 x s32>) = G_MERGE_VALUES [[C0]](s32), [[C0]](s32), [[C0]](s32), [[C0]](s32)
@@ -966,7 +966,7 @@ define i32 @test_shufflevector_v4s32_v2s32(i32 %arg1, i32 %arg2, i32 %arg3, i32 
 ; CHECK: [[ARG2:%[0-9]+]](s32) = COPY %r1
 ; CHECK: [[ARG3:%[0-9]+]](s32) = COPY %r2
 ; CHECK: [[ARG4:%[0-9]+]](s32) = COPY %r3
-; CHECK-DAG: [[UNDEF:%[0-9]+]](<4 x s32>) = IMPLICIT_DEF
+; CHECK-DAG: [[UNDEF:%[0-9]+]](<4 x s32>) = G_IMPLICIT_DEF
 ; CHECK-DAG: [[C0:%[0-9]+]](s32) = G_CONSTANT i32 0
 ; CHECK-DAG: [[C1:%[0-9]+]](s32) = G_CONSTANT i32 1
 ; CHECK-DAG: [[C2:%[0-9]+]](s32) = G_CONSTANT i32 2
@@ -1009,7 +1009,7 @@ define i32 @test_constantstruct_v2s32_s32_s32() {
 ; CHECK: [[VEC:%[0-9]+]](<2 x s32>) = G_MERGE_VALUES [[C1]](s32), [[C2]](s32)
 ; CHECK: [[C3:%[0-9]+]](s32) = G_CONSTANT i32 3
 ; CHECK: [[C4:%[0-9]+]](s32) = G_CONSTANT i32 4
-; CHECK: [[C5:%[0-9]+]](s128) = IMPLICIT_DEF
+; CHECK: [[C5:%[0-9]+]](s128) = G_IMPLICIT_DEF
 ; CHECK: [[C6:%[0-9]+]](s128) = G_INSERT [[C5]], [[VEC]](<2 x s32>), 0
 ; CHECK: [[C7:%[0-9]+]](s128) = G_INSERT [[C6]], [[C3]](s32), 64
 ; CHECK: [[C8:%[0-9]+]](s128) = G_INSERT [[C7]], [[C4]](s32), 96

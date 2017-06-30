@@ -3224,7 +3224,6 @@ bool X86TargetInfo::initFeatureMap(
     setFeatureEnabledImpl(Features, "cx16", true);
     break;
   case CK_Core2:
-  case CK_Bonnell:
     setFeatureEnabledImpl(Features, "ssse3", true);
     setFeatureEnabledImpl(Features, "fxsr", true);
     setFeatureEnabledImpl(Features, "cx16", true);
@@ -3279,7 +3278,6 @@ bool X86TargetInfo::initFeatureMap(
     setFeatureEnabledImpl(Features, "xsaveopt", true);
     LLVM_FALLTHROUGH;
   case CK_Westmere:
-  case CK_Silvermont:
     setFeatureEnabledImpl(Features, "aes", true);
     setFeatureEnabledImpl(Features, "pclmul", true);
     LLVM_FALLTHROUGH;
@@ -3290,6 +3288,7 @@ bool X86TargetInfo::initFeatureMap(
     break;
   case CK_Goldmont:
     setFeatureEnabledImpl(Features, "sha", true);
+    setFeatureEnabledImpl(Features, "rdrnd", true);
     setFeatureEnabledImpl(Features, "rdseed", true);
     setFeatureEnabledImpl(Features, "xsave", true);
     setFeatureEnabledImpl(Features, "xsaveopt", true);
@@ -3297,12 +3296,18 @@ bool X86TargetInfo::initFeatureMap(
     setFeatureEnabledImpl(Features, "xsaves", true);
     setFeatureEnabledImpl(Features, "clflushopt", true);
     setFeatureEnabledImpl(Features, "mpx", true);
+    LLVM_FALLTHROUGH;
+  case CK_Silvermont:
     setFeatureEnabledImpl(Features, "aes", true);
     setFeatureEnabledImpl(Features, "pclmul", true);
     setFeatureEnabledImpl(Features, "sse4.2", true);
+    LLVM_FALLTHROUGH;
+  case CK_Bonnell:
+    setFeatureEnabledImpl(Features, "movbe", true);
+    setFeatureEnabledImpl(Features, "ssse3", true);
     setFeatureEnabledImpl(Features, "fxsr", true);
     setFeatureEnabledImpl(Features, "cx16", true);
-  break;
+    break;
   case CK_KNL:
     setFeatureEnabledImpl(Features, "avx512f", true);
     setFeatureEnabledImpl(Features, "avx512cd", true);
@@ -3542,6 +3547,7 @@ void X86TargetInfo::setSSELevel(llvm::StringMap<bool> &Features,
         Features["avx512pf"] = Features["avx512dq"] = Features["avx512bw"] =
             Features["avx512vl"] = Features["avx512vbmi"] =
                 Features["avx512ifma"] = Features["avx512vpopcntdq"] = false;
+    break;
   }
 }
 
@@ -3574,6 +3580,7 @@ void X86TargetInfo::setMMXLevel(llvm::StringMap<bool> &Features,
     LLVM_FALLTHROUGH;
   case AMD3DNowAthlon:
     Features["3dnowa"] = false;
+    break;
   }
 }
 
@@ -3608,6 +3615,7 @@ void X86TargetInfo::setXOPLevel(llvm::StringMap<bool> &Features, XOPEnum Level,
     LLVM_FALLTHROUGH;
   case XOP:
     Features["xop"] = false;
+    break;
   }
 }
 
@@ -4177,6 +4185,7 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
       break;
     default:
       Builder.defineMacro("_M_IX86_FP", Twine(0));
+      break;
     }
   }
 

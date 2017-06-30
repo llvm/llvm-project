@@ -641,36 +641,8 @@ def : InstRW<[LSU, Lat30, GroupAlone], (instregex "UPT$")>;
 def : InstRW<[LSU, Lat30, GroupAlone], (instregex "CKSM$")>;
 def : InstRW<[LSU, Lat30, GroupAlone], (instregex "CMPSC$")>;
 
-// Move with key
-def : InstRW<[LSU, Lat8, GroupAlone], (instregex "MVCK$")>;
-
-// Monitor call
-def : InstRW<[FXU], (instregex "MC$")>;
-
-// Extract CPU attribute
-def : InstRW<[FXU, Lat30], (instregex "ECAG$")>;
-
-// Extract CPU Time
-def : InstRW<[FXU, Lat5, LSU], (instregex "ECTG$")>;
-
-// Extract PSW
-def : InstRW<[FXU, Lat30], (instregex "EPSW$")>;
-
 // Execute
 def : InstRW<[LSU, GroupAlone], (instregex "EX(RL)?$")>;
-
-// Program return
-def : InstRW<[FXU, Lat30], (instregex "PR$")>;
-
-// Inline assembly
-def : InstRW<[FXU, LSU, Lat15], (instregex "STCK$")>;
-def : InstRW<[FXU, LSU, Lat12], (instregex "STCKF$")>;
-def : InstRW<[LSU, FXU, Lat5], (instregex "STCKE$")>;
-def : InstRW<[FXU, LSU, Lat5], (instregex "STFLE$")>;
-def : InstRW<[FXU, Lat30], (instregex "SVC$")>;
-
-// Store real address
-def : InstRW<[FXU, LSU, Lat5], (instregex "STRAG$")>;
 
 //===----------------------------------------------------------------------===//
 // .insn directive instructions
@@ -1064,6 +1036,161 @@ def : InstRW<[DFU, Lat9], (instregex "CEXTR$")>;
 // Test Data Class/Group
 def : InstRW<[LSU, DFU, Lat15], (instregex "TD(C|G)(E|D)T$")>;
 def : InstRW<[LSU, DFU2, DFU2, Lat15, GroupAlone], (instregex "TD(C|G)XT$")>;
+
+
+// -------------------------------- System ---------------------------------- //
+
+//===----------------------------------------------------------------------===//
+// System: Program-Status Word Instructions
+//===----------------------------------------------------------------------===//
+
+def : InstRW<[FXU, Lat30], (instregex "EPSW$")>;
+def : InstRW<[FXU, LSU, Lat30], (instregex "LPSW(E)?$")>;
+def : InstRW<[FXU, Lat3], (instregex "IPK$")>;
+def : InstRW<[LSU], (instregex "SPKA$")>;
+def : InstRW<[LSU], (instregex "SSM$")>;
+def : InstRW<[FXU], (instregex "ST(N|O)SM$")>;
+def : InstRW<[FXU, Lat3], (instregex "IAC$")>;
+def : InstRW<[LSU], (instregex "SAC(F)?$")>;
+
+//===----------------------------------------------------------------------===//
+// System: Control Register Instructions
+//===----------------------------------------------------------------------===//
+
+def : InstRW<[FXU, LSU, Lat30], (instregex "LCTL(G)?$")>;
+def : InstRW<[LSU, Lat30], (instregex "STCT(L|G)$")>;
+def : InstRW<[LSU], (instregex "E(P|S)A(I)?R$")>;
+def : InstRW<[FXU, Lat30], (instregex "SSA(I)?R$")>;
+def : InstRW<[FXU, Lat30], (instregex "ESEA$")>;
+
+//===----------------------------------------------------------------------===//
+// System: Prefix-Register Instructions
+//===----------------------------------------------------------------------===//
+
+def : InstRW<[FXU, LSU, Lat30], (instregex "SPX$")>;
+def : InstRW<[FXU, LSU, Lat30], (instregex "STPX$")>;
+
+//===----------------------------------------------------------------------===//
+// System: Storage-Key and Real Memory Instructions
+//===----------------------------------------------------------------------===//
+
+def : InstRW<[FXU, Lat30], (instregex "ISKE$")>;
+def : InstRW<[FXU, Lat30], (instregex "IVSK$")>;
+def : InstRW<[FXU, Lat30], (instregex "SSKE(Opt)?$")>;
+def : InstRW<[FXU, Lat30], (instregex "RRB(E|M)$")>;
+def : InstRW<[FXU, Lat30], (instregex "PFMF$")>;
+def : InstRW<[FXU, Lat30], (instregex "TB$")>;
+def : InstRW<[FXU, LSU, Lat30], (instregex "PGIN$")>;
+def : InstRW<[FXU, LSU, Lat30], (instregex "PGOUT$")>;
+
+//===----------------------------------------------------------------------===//
+// System: Dynamic-Address-Translation Instructions
+//===----------------------------------------------------------------------===//
+
+def : InstRW<[FXU, LSU, Lat30], (instregex "IPTE(Opt)?(Opt)?$")>;
+def : InstRW<[FXU, Lat30], (instregex "IDTE(Opt)?$")>;
+def : InstRW<[FXU, Lat30], (instregex "PTLB$")>;
+def : InstRW<[FXU, LSU, Lat30], (instregex "CSP(G)?$")>;
+def : InstRW<[FXU, LSU, Lat30], (instregex "LPTEA$")>;
+def : InstRW<[FXU, LSU, Lat30], (instregex "LRA(Y|G)?$")>;
+def : InstRW<[FXU, LSU, Lat30], (instregex "STRAG$")>;
+def : InstRW<[FXU, LSU, Lat30], (instregex "LURA(G)?$")>;
+def : InstRW<[FXU, LSU, Lat30], (instregex "STUR(A|G)$")>;
+def : InstRW<[FXU, LSU, Lat30], (instregex "TPROT$")>;
+
+//===----------------------------------------------------------------------===//
+// System: Memory-move Instructions
+//===----------------------------------------------------------------------===//
+
+def : InstRW<[LSU, Lat8, GroupAlone], (instregex "MVC(K|P|S)$")>;
+def : InstRW<[LSU, Lat6, GroupAlone], (instregex "MVC(S|D)K$")>;
+def : InstRW<[FXU, LSU, Lat30], (instregex "MVCOS$")>;
+def : InstRW<[LSU, Lat30], (instregex "MVPG$")>;
+
+//===----------------------------------------------------------------------===//
+// System: Address-Space Instructions
+//===----------------------------------------------------------------------===//
+
+def : InstRW<[FXU, LSU, Lat30], (instregex "LASP$")>;
+def : InstRW<[LSU], (instregex "PALB$")>;
+def : InstRW<[FXU, LSU, Lat30], (instregex "PC$")>;
+def : InstRW<[FXU, Lat30], (instregex "PR$")>;
+def : InstRW<[FXU, Lat30], (instregex "PT(I)?$")>;
+def : InstRW<[FXU, LSU, Lat30], (instregex "RP$")>;
+def : InstRW<[FXU, Lat30], (instregex "BS(G|A)$")>;
+def : InstRW<[FXU, Lat20], (instregex "TAR$")>;
+
+//===----------------------------------------------------------------------===//
+// System: Linkage-Stack Instructions
+//===----------------------------------------------------------------------===//
+
+def : InstRW<[FXU, LSU, Lat30], (instregex "BAKR$")>;
+def : InstRW<[FXU, Lat30], (instregex "EREG(G)?$")>;
+def : InstRW<[FXU, Lat30], (instregex "(E|M)STA$")>;
+
+//===----------------------------------------------------------------------===//
+// System: Time-Related Instructions
+//===----------------------------------------------------------------------===//
+
+def : InstRW<[FXU, Lat30], (instregex "PTFF$")>;
+def : InstRW<[FXU, LSU, Lat20], (instregex "SCK$")>;
+def : InstRW<[FXU, Lat30], (instregex "SCKPF$")>;
+def : InstRW<[FXU, LSU, Lat20], (instregex "SCKC$")>;
+def : InstRW<[FXU, LSU, Lat20], (instregex "SPT$")>;
+def : InstRW<[FXU, LSU, Lat15], (instregex "STCK$")>;
+def : InstRW<[FXU, LSU, Lat12], (instregex "STCKF$")>;
+def : InstRW<[FXU, LSU, Lat30], (instregex "STCKE$")>;
+def : InstRW<[FXU, LSU, Lat9], (instregex "STCKC$")>;
+def : InstRW<[FXU, LSU, Lat8], (instregex "STPT$")>;
+
+//===----------------------------------------------------------------------===//
+// System: CPU-Related Instructions
+//===----------------------------------------------------------------------===//
+
+def : InstRW<[FXU, LSU, Lat30], (instregex "STAP$")>;
+def : InstRW<[FXU, LSU, Lat30], (instregex "STIDP$")>;
+def : InstRW<[FXU, LSU, Lat30], (instregex "STSI$")>;
+def : InstRW<[FXU, LSU, Lat30], (instregex "STFL(E)?$")>;
+def : InstRW<[FXU, LSU, Lat30], (instregex "ECAG$")>;
+def : InstRW<[FXU, LSU, Lat30], (instregex "ECTG$")>;
+def : InstRW<[FXU, Lat30], (instregex "PTF$")>;
+def : InstRW<[FXU, Lat30], (instregex "PCKMO$")>;
+
+//===----------------------------------------------------------------------===//
+// System: Miscellaneous Instructions
+//===----------------------------------------------------------------------===//
+
+def : InstRW<[FXU, Lat30], (instregex "SVC$")>;
+def : InstRW<[FXU], (instregex "MC$")>;
+def : InstRW<[FXU, Lat30], (instregex "DIAG$")>;
+def : InstRW<[FXU], (instregex "TRAC(E|G)$")>;
+def : InstRW<[FXU, Lat30], (instregex "TRAP(2|4)$")>;
+def : InstRW<[FXU, Lat30], (instregex "SIGP$")>;
+def : InstRW<[FXU, LSU, Lat30], (instregex "SIGA$")>;
+def : InstRW<[FXU, LSU, Lat30], (instregex "SIE$")>;
+
+//===----------------------------------------------------------------------===//
+// System: CPU-Measurement Facility Instructions
+//===----------------------------------------------------------------------===//
+
+def : InstRW<[FXU], (instregex "LPP$")>;
+def : InstRW<[FXU, Lat30], (instregex "ECPGA$")>;
+def : InstRW<[FXU, Lat30], (instregex "E(C|P)CTR$")>;
+def : InstRW<[FXU, LSU, Lat30], (instregex "L(C|P|S)CTL$")>;
+def : InstRW<[FXU, LSU, Lat30], (instregex "Q(S|CTR)I$")>;
+def : InstRW<[FXU, Lat30], (instregex "S(C|P)CTR$")>;
+
+//===----------------------------------------------------------------------===//
+// System: I/O Instructions
+//===----------------------------------------------------------------------===//
+
+def : InstRW<[FXU, Lat30], (instregex "(C|H|R|X)SCH$")>;
+def : InstRW<[FXU, LSU, Lat30], (instregex "(M|S|ST|T)SCH$")>;
+def : InstRW<[FXU, Lat30], (instregex "RCHP$")>;
+def : InstRW<[FXU, Lat30], (instregex "SCHM$")>;
+def : InstRW<[FXU, LSU, Lat30], (instregex "STC(PS|RW)$")>;
+def : InstRW<[FXU, LSU, Lat30], (instregex "TPI$")>;
+def : InstRW<[FXU, Lat30], (instregex "SAL$")>;
 
 }
 

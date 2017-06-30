@@ -1,4 +1,4 @@
-//===--- tools/extra/clang-rename/USRLocFinder.h - Clang rename tool ------===//
+//===--- USRLocFinder.h - Clang refactoring library -----------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -13,8 +13,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_RENAME_USR_LOC_FINDER_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_RENAME_USR_LOC_FINDER_H
+#ifndef LLVM_CLANG_TOOLING_REFACTOR_RENAME_USR_LOC_FINDER_H
+#define LLVM_CLANG_TOOLING_REFACTOR_RENAME_USR_LOC_FINDER_H
 
 #include "clang/AST/AST.h"
 #include "clang/Tooling/Core/Replacement.h"
@@ -24,7 +24,7 @@
 #include <vector>
 
 namespace clang {
-namespace rename {
+namespace tooling {
 
 /// Create atomic changes for renaming all symbol references which are
 /// identified by the USRs set to a given new name.
@@ -43,7 +43,7 @@ std::vector<SourceLocation>
 getLocationsOfUSRs(const std::vector<std::string> &USRs,
                    llvm::StringRef PrevName, Decl *Decl);
 
-} // namespace rename
-} // namespace clang
+} // end namespace tooling
+} // end namespace clang
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_RENAME_USR_LOC_FINDER_H
+#endif // LLVM_CLANG_TOOLING_REFACTOR_RENAME_USR_LOC_FINDER_H

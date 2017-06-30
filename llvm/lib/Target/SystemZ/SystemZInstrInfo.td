@@ -1932,53 +1932,11 @@ let mayLoad = 1, Defs = [CC] in
 let mayLoad = 1, mayStore = 1, Defs = [CC, R1D], Uses = [R0L, R1D] in
   def CMPSC : SideEffectBinaryMemMemRRE<"cmpsc", 0xB263, GR128, GR128>;
 
-// Supervisor call.
-let hasSideEffects = 1, isCall = 1, Defs = [CC] in
-  def SVC : SideEffectUnaryI<"svc", 0x0A, imm32zx8>;
-
-// Monitor call.
-let hasSideEffects = 1, isCall = 1 in
-  def MC : SideEffectBinarySI<"mc", 0xAF, imm32zx8>;
-
-// Store clock.
-let hasSideEffects = 1, Defs = [CC] in {
-  def STCK  : StoreInherentS<"stck",  0xB205, null_frag, 8>;
-  def STCKF : StoreInherentS<"stckf", 0xB27C, null_frag, 8>;
-  def STCKE : StoreInherentS<"stcke", 0xB278, null_frag, 16>;
-}
-
-// Store facility list.
-let hasSideEffects = 1, Uses = [R0D], Defs = [R0D, CC] in
-  def STFLE : StoreInherentS<"stfle", 0xB2B0, null_frag, 0>;
-
-// Extract CPU attribute.
-let hasSideEffects = 1 in
-  def ECAG : BinaryRSY<"ecag", 0xEB4C, null_frag, GR64>;
-
-// Extract CPU time.
-let Defs = [R0D, R1D], hasSideEffects = 1, mayLoad = 1 in
-  def ECTG : SideEffectTernarySSF<"ectg", 0xC81, GR64>;
-
-// Extract PSW.
-let hasSideEffects = 1, Uses = [CC] in
-  def EPSW : InherentDualRRE<"epsw", 0xB98D, GR32>;
-
 // Execute.
 let hasSideEffects = 1 in {
   def EX   : SideEffectBinaryRX<"ex", 0x44, GR64>;
   def EXRL : SideEffectBinaryRILPC<"exrl", 0xC60, GR64>;
 }
-
-// Program return.
-let hasSideEffects = 1, Defs = [CC] in
-  def PR : SideEffectInherentE<"pr", 0x0101>;
-
-// Move with key.
-let mayLoad = 1, mayStore = 1, Defs = [CC] in
-  def MVCK : MemoryBinarySSd<"mvck", 0xD9, GR64>;
-
-// Store real address.
-def STRAG : StoreSSE<"strag", 0xE502>;
 
 //===----------------------------------------------------------------------===//
 // .insn directive instructions

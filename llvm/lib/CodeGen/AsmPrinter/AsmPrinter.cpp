@@ -631,7 +631,9 @@ void AsmPrinter::EmitFunctionHeader() {
   const Function *F = MF->getFunction();
 
   if (isVerbose())
-    OutStreamer->GetCommentOS() << "-- Begin function " << F->getName() << '\n';
+    OutStreamer->GetCommentOS()
+        << "-- Begin function "
+        << GlobalValue::dropLLVMManglingEscape(F->getName()) << '\n';
 
   // Print out constants referenced by the function
   EmitConstantPool();

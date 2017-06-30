@@ -30,8 +30,6 @@ using namespace llvm::pdb;
 using namespace llvm::pdb::yaml;
 using namespace llvm::yaml;
 
-LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(uint32_t)
-LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::StringRef)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::pdb::yaml::NamedStreamMapping)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::pdb::yaml::PdbDbiModuleInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::pdb::yaml::StreamBlockList)

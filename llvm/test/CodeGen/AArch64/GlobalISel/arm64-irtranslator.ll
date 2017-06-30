@@ -577,7 +577,7 @@ define i32 @constant_int_start() {
 }
 
 ; CHECK-LABEL: name: test_undef
-; CHECK: [[UNDEF:%[0-9]+]](s32) = IMPLICIT_DEF
+; CHECK: [[UNDEF:%[0-9]+]](s32) = G_IMPLICIT_DEF
 ; CHECK: %w0 = COPY [[UNDEF]]
 define i32 @test_undef() {
   ret i32 undef
@@ -807,7 +807,7 @@ define float @test_frem(float %arg1, float %arg2) {
 ; CHECK: [[RHS:%[0-9]+]](s32) = COPY %w1
 ; CHECK: [[ADDR:%[0-9]+]](p0) = COPY %x2
 ; CHECK: [[VAL:%[0-9]+]](s32), [[OVERFLOW:%[0-9]+]](s1) = G_SADDO [[LHS]], [[RHS]]
-; CHECK: [[TMP:%[0-9]+]](s64) = IMPLICIT_DEF
+; CHECK: [[TMP:%[0-9]+]](s64) = G_IMPLICIT_DEF
 ; CHECK: [[TMP1:%[0-9]+]](s64) = G_INSERT [[TMP]], [[VAL]](s32), 0
 ; CHECK: [[RES:%[0-9]+]](s64) = G_INSERT [[TMP1]], [[OVERFLOW]](s1), 32
 ; CHECK: G_STORE [[RES]](s64), [[ADDR]](p0)
@@ -824,7 +824,7 @@ define void @test_sadd_overflow(i32 %lhs, i32 %rhs, { i32, i1 }* %addr) {
 ; CHECK: [[ADDR:%[0-9]+]](p0) = COPY %x2
 ; CHECK: [[ZERO:%[0-9]+]](s1) = G_CONSTANT i1 false
 ; CHECK: [[VAL:%[0-9]+]](s32), [[OVERFLOW:%[0-9]+]](s1) = G_UADDE [[LHS]], [[RHS]], [[ZERO]]
-; CHECK: [[TMP:%[0-9]+]](s64) = IMPLICIT_DEF
+; CHECK: [[TMP:%[0-9]+]](s64) = G_IMPLICIT_DEF
 ; CHECK: [[TMP1:%[0-9]+]](s64) = G_INSERT [[TMP]], [[VAL]](s32), 0
 ; CHECK: [[RES:%[0-9]+]](s64) = G_INSERT [[TMP1]], [[OVERFLOW]](s1), 32
 ; CHECK: G_STORE [[RES]](s64), [[ADDR]](p0)
@@ -840,7 +840,7 @@ define void @test_uadd_overflow(i32 %lhs, i32 %rhs, { i32, i1 }* %addr) {
 ; CHECK: [[RHS:%[0-9]+]](s32) = COPY %w1
 ; CHECK: [[ADDR:%[0-9]+]](p0) = COPY %x2
 ; CHECK: [[VAL:%[0-9]+]](s32), [[OVERFLOW:%[0-9]+]](s1) = G_SSUBO [[LHS]], [[RHS]]
-; CHECK: [[TMP:%[0-9]+]](s64) = IMPLICIT_DEF
+; CHECK: [[TMP:%[0-9]+]](s64) = G_IMPLICIT_DEF
 ; CHECK: [[TMP1:%[0-9]+]](s64) = G_INSERT [[TMP]], [[VAL]](s32), 0
 ; CHECK: [[RES:%[0-9]+]](s64) = G_INSERT [[TMP1]], [[OVERFLOW]](s1), 32
 ; CHECK: G_STORE [[RES]](s64), [[ADDR]](p0)
@@ -857,7 +857,7 @@ define void @test_ssub_overflow(i32 %lhs, i32 %rhs, { i32, i1 }* %subr) {
 ; CHECK: [[ADDR:%[0-9]+]](p0) = COPY %x2
 ; CHECK: [[ZERO:%[0-9]+]](s1) = G_CONSTANT i1 false
 ; CHECK: [[VAL:%[0-9]+]](s32), [[OVERFLOW:%[0-9]+]](s1) = G_USUBE [[LHS]], [[RHS]], [[ZERO]]
-; CHECK: [[TMP:%[0-9]+]](s64) = IMPLICIT_DEF
+; CHECK: [[TMP:%[0-9]+]](s64) = G_IMPLICIT_DEF
 ; CHECK: [[TMP1:%[0-9]+]](s64) = G_INSERT [[TMP]], [[VAL]](s32), 0
 ; CHECK: [[RES:%[0-9]+]](s64) = G_INSERT [[TMP1]], [[OVERFLOW]](s1), 32
 ; CHECK: G_STORE [[RES]](s64), [[ADDR]](p0)
@@ -873,7 +873,7 @@ define void @test_usub_overflow(i32 %lhs, i32 %rhs, { i32, i1 }* %subr) {
 ; CHECK: [[RHS:%[0-9]+]](s32) = COPY %w1
 ; CHECK: [[ADDR:%[0-9]+]](p0) = COPY %x2
 ; CHECK: [[VAL:%[0-9]+]](s32), [[OVERFLOW:%[0-9]+]](s1) = G_SMULO [[LHS]], [[RHS]]
-; CHECK: [[TMP:%[0-9]+]](s64) = IMPLICIT_DEF
+; CHECK: [[TMP:%[0-9]+]](s64) = G_IMPLICIT_DEF
 ; CHECK: [[TMP1:%[0-9]+]](s64) = G_INSERT [[TMP]], [[VAL]](s32), 0
 ; CHECK: [[RES:%[0-9]+]](s64) = G_INSERT [[TMP1]], [[OVERFLOW]](s1), 32
 ; CHECK: G_STORE [[RES]](s64), [[ADDR]](p0)
@@ -889,7 +889,7 @@ define void @test_smul_overflow(i32 %lhs, i32 %rhs, { i32, i1 }* %addr) {
 ; CHECK: [[RHS:%[0-9]+]](s32) = COPY %w1
 ; CHECK: [[ADDR:%[0-9]+]](p0) = COPY %x2
 ; CHECK: [[VAL:%[0-9]+]](s32), [[OVERFLOW:%[0-9]+]](s1) = G_UMULO [[LHS]], [[RHS]]
-; CHECK: [[TMP:%[0-9]+]](s64) = IMPLICIT_DEF
+; CHECK: [[TMP:%[0-9]+]](s64) = G_IMPLICIT_DEF
 ; CHECK: [[TMP1:%[0-9]+]](s64) = G_INSERT [[TMP]], [[VAL]](s32), 0
 ; CHECK: [[RES:%[0-9]+]](s64) = G_INSERT [[TMP1]], [[OVERFLOW]](s1), 32
 ; CHECK: G_STORE [[RES]](s64), [[ADDR]](p0)
@@ -1503,7 +1503,7 @@ define float @test_different_call_conv_target(float %x) {
 define <2 x i32> @test_shufflevector_s32_v2s32(i32 %arg) {
 ; CHECK-LABEL: name: test_shufflevector_s32_v2s32
 ; CHECK: [[ARG:%[0-9]+]](s32) = COPY %w0
-; CHECK-DAG: [[UNDEF:%[0-9]+]](s32) = IMPLICIT_DEF
+; CHECK-DAG: [[UNDEF:%[0-9]+]](s32) = G_IMPLICIT_DEF
 ; CHECK-DAG: [[C0:%[0-9]+]](s32) = G_CONSTANT i32 0
 ; CHECK-DAG: [[MASK:%[0-9]+]](<2 x s32>) = G_MERGE_VALUES [[C0]](s32), [[C0]](s32)
 ; CHECK: [[VEC:%[0-9]+]](<2 x s32>) = G_SHUFFLE_VECTOR [[ARG]](s32), [[UNDEF]], [[MASK]](<2 x s32>)
@@ -1516,7 +1516,7 @@ define <2 x i32> @test_shufflevector_s32_v2s32(i32 %arg) {
 define i32 @test_shufflevector_v2s32_s32(<2 x i32> %arg) {
 ; CHECK-LABEL: name: test_shufflevector_v2s32_s32
 ; CHECK: [[ARG:%[0-9]+]](<2 x s32>) = COPY %d0
-; CHECK-DAG: [[UNDEF:%[0-9]+]](<2 x s32>) = IMPLICIT_DEF
+; CHECK-DAG: [[UNDEF:%[0-9]+]](<2 x s32>) = G_IMPLICIT_DEF
 ; CHECK-DAG: [[C1:%[0-9]+]](s32) = G_CONSTANT i32 1
 ; CHECK: [[RES:%[0-9]+]](s32) = G_SHUFFLE_VECTOR [[ARG]](<2 x s32>), [[UNDEF]], [[C1]](s32)
 ; CHECK: %w0 = COPY [[RES]](s32)
@@ -1528,7 +1528,7 @@ define i32 @test_shufflevector_v2s32_s32(<2 x i32> %arg) {
 define <2 x i32> @test_shufflevector_v2s32_v2s32(<2 x i32> %arg) {
 ; CHECK-LABEL: name: test_shufflevector_v2s32_v2s32
 ; CHECK: [[ARG:%[0-9]+]](<2 x s32>) = COPY %d0
-; CHECK-DAG: [[UNDEF:%[0-9]+]](<2 x s32>) = IMPLICIT_DEF
+; CHECK-DAG: [[UNDEF:%[0-9]+]](<2 x s32>) = G_IMPLICIT_DEF
 ; CHECK-DAG: [[C1:%[0-9]+]](s32) = G_CONSTANT i32 1
 ; CHECK-DAG: [[C0:%[0-9]+]](s32) = G_CONSTANT i32 0
 ; CHECK-DAG: [[MASK:%[0-9]+]](<2 x s32>) = G_MERGE_VALUES [[C1]](s32), [[C0]](s32)
@@ -1541,7 +1541,7 @@ define <2 x i32> @test_shufflevector_v2s32_v2s32(<2 x i32> %arg) {
 define i32 @test_shufflevector_v2s32_v3s32(<2 x i32> %arg) {
 ; CHECK-LABEL: name: test_shufflevector_v2s32_v3s32
 ; CHECK: [[ARG:%[0-9]+]](<2 x s32>) = COPY %d0
-; CHECK-DAG: [[UNDEF:%[0-9]+]](<2 x s32>) = IMPLICIT_DEF
+; CHECK-DAG: [[UNDEF:%[0-9]+]](<2 x s32>) = G_IMPLICIT_DEF
 ; CHECK-DAG: [[C1:%[0-9]+]](s32) = G_CONSTANT i32 1
 ; CHECK-DAG: [[C0:%[0-9]+]](s32) = G_CONSTANT i32 0
 ; CHECK-DAG: [[MASK:%[0-9]+]](<3 x s32>) = G_MERGE_VALUES [[C1]](s32), [[C0]](s32), [[C1]](s32)
@@ -1570,7 +1570,7 @@ define <4 x i32> @test_shufflevector_v2s32_v4s32(<2 x i32> %arg1, <2 x i32> %arg
 define <2 x i32> @test_shufflevector_v4s32_v2s32(<4 x i32> %arg) {
 ; CHECK-LABEL: name: test_shufflevector_v4s32_v2s32
 ; CHECK: [[ARG:%[0-9]+]](<4 x s32>) = COPY %q0
-; CHECK-DAG: [[UNDEF:%[0-9]+]](<4 x s32>) = IMPLICIT_DEF
+; CHECK-DAG: [[UNDEF:%[0-9]+]](<4 x s32>) = G_IMPLICIT_DEF
 ; CHECK-DAG: [[C1:%[0-9]+]](s32) = G_CONSTANT i32 1
 ; CHECK-DAG: [[C3:%[0-9]+]](s32) = G_CONSTANT i32 3
 ; CHECK-DAG: [[MASK:%[0-9]+]](<2 x s32>) = G_MERGE_VALUES [[C1]](s32), [[C3]](s32)
@@ -1609,7 +1609,7 @@ define <16 x i8> @test_shufflevector_v8s8_v16s8(<8 x i8> %arg1, <8 x i8> %arg2) 
 }
 
 ; CHECK-LABEL: test_constant_vector
-; CHECK: [[UNDEF:%[0-9]+]](s16) = IMPLICIT_DEF
+; CHECK: [[UNDEF:%[0-9]+]](s16) = G_IMPLICIT_DEF
 ; CHECK: [[F:%[0-9]+]](s16) = G_FCONSTANT half 0xH3C00
 ; CHECK: [[M:%[0-9]+]](<4 x s16>) = G_MERGE_VALUES [[UNDEF]](s16), [[UNDEF]](s16), [[UNDEF]](s16), [[F]](s16)
 ; CHECK: %d0 = COPY [[M]](<4 x s16>)

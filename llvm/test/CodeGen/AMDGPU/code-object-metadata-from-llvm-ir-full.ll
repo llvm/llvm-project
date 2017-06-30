@@ -16,7 +16,9 @@
 
 ; CHECK: ---
 ; CHECK:  Version: [ 1, 0 ]
-; CHECK:  Printf: [ '1:1:4:%d\n', '2:1:8:%g\n' ]
+; CHECK:  Printf:
+; CHECK:    - '1:1:4:%d\n'
+; CHECK:    - '2:1:8:%g\n'
 ; CHECK:  Kernels:
 
 ; CHECK:      - Name:            test_char
@@ -1253,8 +1255,8 @@ define amdgpu_kernel void @test_pointee_align(i64 addrspace(1)* %a,
 ; NOTES-NEXT: Owner    Data size    Description
 ; NOTES-NEXT: AMD      0x00000008   Unknown note type: (0x00000001)
 ; NOTES-NEXT: AMD      0x0000001b   Unknown note type: (0x00000003)
-; GFX700:     AMD      0x00008b06   Unknown note type: (0x0000000a)
-; GFX800:     AMD      0x00008e6a   Unknown note type: (0x0000000a)
-; GFX900:     AMD      0x00008b06   Unknown note type: (0x0000000a)
+; GFX700:     AMD      0x00008b0a   Unknown note type: (0x0000000a)
+; GFX800:     AMD      0x00008e6e   Unknown note type: (0x0000000a)
+; GFX900:     AMD      0x00008b0a   Unknown note type: (0x0000000a)
 
 ; PARSER: AMDGPU Code Object Metadata Parser Test: PASS

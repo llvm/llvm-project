@@ -2468,6 +2468,14 @@ class UnaryRRE<string mnemonic, bits<16> opcode, SDPatternOperator operator,
   let OpType = "reg";
 }
 
+class UnaryTiedRRE<string mnemonic, bits<16> opcode, RegisterOperand cls>
+  : InstRRE<opcode, (outs cls:$R1), (ins cls:$R1src),
+            mnemonic#"\t$R1", []> {
+  let Constraints = "$R1 = $R1src";
+  let DisableEncoding = "$R1src";
+  let R2 = 0;
+}
+
 class UnaryMemRRFc<string mnemonic, bits<16> opcode,
                    RegisterOperand cls1, RegisterOperand cls2>
   : InstRRFc<opcode, (outs cls2:$R2, cls1:$R1), (ins cls1:$R1src),
@@ -2702,6 +2710,26 @@ class SideEffectBinaryRILPC<string mnemonic, bits<12> opcode,
   let AddedComplexity = 7;
 }
 
+class SideEffectBinaryRRE<string mnemonic, bits<16> opcode,
+                          RegisterOperand cls1, RegisterOperand cls2>
+  : InstRRE<opcode, (outs), (ins cls1:$R1, cls2:$R2),
+            mnemonic#"\t$R1, $R2", []>;
+
+class SideEffectBinaryRRFa<string mnemonic, bits<16> opcode,
+                           RegisterOperand cls1, RegisterOperand cls2>
+  : InstRRFa<opcode, (outs), (ins cls1:$R1, cls2:$R2),
+             mnemonic#"\t$R1, $R2", []> {
+  let R3 = 0;
+  let M4 = 0;
+}
+
+class SideEffectBinaryRRFc<string mnemonic, bits<16> opcode,
+                           RegisterOperand cls1, RegisterOperand cls2>
+  : InstRRFc<opcode, (outs), (ins cls1:$R1, cls2:$R2),
+             mnemonic#"\t$R1, $R2", []> {
+  let M3 = 0;
+}
+
 class SideEffectBinaryIE<string mnemonic, bits<16> opcode,
                          Immediate imm1, Immediate imm2>
   : InstIE<opcode, (outs), (ins imm1:$I1, imm2:$I2),
@@ -2728,6 +2756,10 @@ class SideEffectBinarySSb<string mnemonic, bits<8> opcode>
 class SideEffectBinarySSf<string mnemonic, bits<8> opcode>
   : InstSSf<opcode, (outs), (ins bdaddr12only:$BD1, bdladdr12onlylen8:$BDL2),
             mnemonic##"\t$BD1, $BDL2", []>;
+
+class SideEffectBinarySSE<string mnemonic, bits<16> opcode>
+  : InstSSE<opcode, (outs), (ins bdaddr12only:$BD1, bdaddr12only:$BD2),
+            mnemonic#"\t$BD1, $BD2", []>;
 
 class SideEffectBinaryMemMemRR<string mnemonic, bits<8> opcode,
                                RegisterOperand cls1, RegisterOperand cls2>
@@ -3612,6 +3644,22 @@ class SideEffectTernarySSc<string mnemonic, bits<8> opcode>
                                  shift12only:$BD2, imm32zx4:$I3),
             mnemonic##"\t$BDL1, $BD2, $I3", []>;
 
+class SideEffectTernaryRRFa<string mnemonic, bits<16> opcode,
+                            RegisterOperand cls1, RegisterOperand cls2,
+                            RegisterOperand cls3>
+  : InstRRFa<opcode, (outs), (ins cls1:$R1, cls2:$R2, cls3:$R3),
+             mnemonic#"\t$R1, $R2, $R3", []> {
+  let M4 = 0;
+}
+
+class SideEffectTernaryRRFb<string mnemonic, bits<16> opcode,
+                            RegisterOperand cls1, RegisterOperand cls2,
+                            RegisterOperand cls3>
+  : InstRRFb<opcode, (outs), (ins cls1:$R1, cls2:$R2, cls3:$R3),
+             mnemonic#"\t$R1, $R3, $R2", []> {
+  let M4 = 0;
+}
+
 class SideEffectTernaryMemMemMemRRFb<string mnemonic, bits<16> opcode,
                                      RegisterOperand cls1,
                                      RegisterOperand cls2,
@@ -3629,6 +3677,13 @@ class SideEffectTernaryRRFc<string mnemonic, bits<16> opcode,
                             Immediate imm>
   : InstRRFc<opcode, (outs), (ins cls1:$R1, cls2:$R2, imm:$M3),
              mnemonic#"\t$R1, $R2, $M3", []>;
+
+multiclass SideEffectTernaryRRFcOpt<string mnemonic, bits<16> opcode,
+                                    RegisterOperand cls1,
+                                    RegisterOperand cls2> {
+  def "" : SideEffectTernaryRRFc<mnemonic, opcode, cls1, cls2, imm32zx4>;
+  def Opt : SideEffectBinaryRRFc<mnemonic, opcode, cls1, cls2>;
+}
 
 class SideEffectTernaryMemMemRRFc<string mnemonic, bits<16> opcode,
                                   RegisterOperand cls1, RegisterOperand cls2,
@@ -3719,6 +3774,18 @@ multiclass TernaryRSPair<string mnemonic, bits<8> rsOpcode, bits<16> rsyOpcode,
       def Y  : TernaryRSY<mnemonic#"y", rsyOpcode, cls, bytes, bdaddr20pair>;
   }
 }
+
+class SideEffectTernaryRS<string mnemonic, bits<8> opcode,
+                          RegisterOperand cls1, RegisterOperand cls2>
+  : InstRSa<opcode, (outs),
+            (ins cls1:$R1, cls2:$R3, bdaddr12only:$BD2),
+            mnemonic#"\t$R1, $R3, $BD2", []>;
+
+class SideEffectTernaryRSY<string mnemonic, bits<16> opcode,
+                           RegisterOperand cls1, RegisterOperand cls2>
+  : InstRSYa<opcode, (outs),
+             (ins cls1:$R1, cls2:$R3, bdaddr20only:$BD2),
+             mnemonic#"\t$R1, $R3, $BD2", []>;
 
 class SideEffectTernaryMemMemRS<string mnemonic, bits<8> opcode,
                                 RegisterOperand cls1, RegisterOperand cls2>
@@ -3997,6 +4064,35 @@ multiclass QuaternaryOptVRRdSPairGeneric<string mnemonic, bits<16> opcode> {
                                             VR128:$V4, imm32zx4:$M5, 0)>;
 }
 
+class SideEffectQuaternaryRRFa<string mnemonic, bits<16> opcode,
+                               RegisterOperand cls1, RegisterOperand cls2,
+                               RegisterOperand cls3>
+  : InstRRFa<opcode, (outs), (ins cls1:$R1, cls2:$R2, cls3:$R3, imm32zx4:$M4),
+             mnemonic#"\t$R1, $R2, $R3, $M4", []>;
+
+multiclass SideEffectQuaternaryRRFaOptOpt<string mnemonic, bits<16> opcode,
+                                          RegisterOperand cls1,
+                                          RegisterOperand cls2,
+                                          RegisterOperand cls3> {
+  def "" : SideEffectQuaternaryRRFa<mnemonic, opcode, cls1, cls2, cls3>;
+  def Opt : SideEffectTernaryRRFa<mnemonic, opcode, cls1, cls2, cls3>;
+  def OptOpt : SideEffectBinaryRRFa<mnemonic, opcode, cls1, cls2>;
+}
+
+class SideEffectQuaternaryRRFb<string mnemonic, bits<16> opcode,
+                               RegisterOperand cls1, RegisterOperand cls2,
+                               RegisterOperand cls3>
+  : InstRRFb<opcode, (outs), (ins cls1:$R1, cls2:$R2, cls3:$R3, imm32zx4:$M4),
+             mnemonic#"\t$R1, $R3, $R2, $M4", []>;
+
+multiclass SideEffectQuaternaryRRFbOpt<string mnemonic, bits<16> opcode,
+                                       RegisterOperand cls1,
+                                       RegisterOperand cls2,
+                                       RegisterOperand cls3> {
+  def "" : SideEffectQuaternaryRRFb<mnemonic, opcode, cls1, cls2, cls3>;
+  def Opt : SideEffectTernaryRRFb<mnemonic, opcode, cls1, cls2, cls3>;
+}
+
 class SideEffectQuaternarySSe<string mnemonic, bits<8> opcode,
                               RegisterOperand cls>
   : InstSSe<opcode, (outs),
@@ -4008,6 +4104,16 @@ class LoadAndOpRSY<string mnemonic, bits<16> opcode, SDPatternOperator operator,
   : InstRSYa<opcode, (outs cls:$R1), (ins cls:$R3, mode:$BD2),
              mnemonic#"\t$R1, $R3, $BD2",
              [(set cls:$R1, (operator mode:$BD2, cls:$R3))]> {
+  let mayLoad = 1;
+  let mayStore = 1;
+}
+
+class CmpSwapRRE<string mnemonic, bits<16> opcode,
+                 RegisterOperand cls1, RegisterOperand cls2>
+  : InstRRE<opcode, (outs cls1:$R1), (ins cls1:$R1src, cls2:$R2),
+            mnemonic#"\t$R1, $R2", []> {
+  let Constraints = "$R1 = $R1src";
+  let DisableEncoding = "$R1src";
   let mayLoad = 1;
   let mayStore = 1;
 }

@@ -472,6 +472,36 @@ Error LTO::addModule(InputFile &Input, unsigned ModI,
   return Error::success();
 }
 
+// Checks whether the given global value is in a non-prevailing comdat
+// (comdat containing values the linker indicated were not prevailing,
+// which we then dropped to available_externally), and if so, removes
+// it from the comdat. This is called for all global values to ensure the
+// comdat is empty rather than leaving an incomplete comdat. It is needed for
+// regular LTO modules, in case we are in a mixed-LTO mode (both regular
+// and thin LTO modules) compilation. Since the regular LTO module will be
+// linked first in the final native link, we want to make sure the linker
+// doesn't select any of these incomplete comdats that would be left
+// in the regular LTO module without this cleanup.
+static void
+handleNonPrevailingComdat(GlobalValue &GV,
+                          std::set<const Comdat *> &NonPrevailingComdats) {
+  Comdat *C = GV.getComdat();
+  if (!C)
+    return;
+
+  if (!NonPrevailingComdats.count(C))
+    return;
+
+  // Additionally need to drop externally visible global values from the comdat
+  // to available_externally, so that there aren't multiply defined linker
+  // errors.
+  if (!GV.hasLocalLinkage())
+    GV.setLinkage(GlobalValue::AvailableExternallyLinkage);
+
+  if (auto GO = dyn_cast<GlobalObject>(&GV))
+    GO->setComdat(nullptr);
+}
+
 // Add a regular LTO object to the link.
 // The resulting module needs to be linked into the combined LTO module with
 // linkRegularLTO.
@@ -523,6 +553,7 @@ LTO::addRegularLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
   };
   Skip();
 
+  std::set<const Comdat *> NonPrevailingComdats;
   for (const InputFile::Symbol &Sym : Syms) {
     assert(ResI != ResE);
     SymbolResolution Res = *ResI++;
@@ -557,6 +588,8 @@ LTO::addRegularLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
         // module (in linkRegularLTO), based on whether it is undefined.
         Mod.Keep.push_back(GV);
         GV->setLinkage(GlobalValue::AvailableExternallyLinkage);
+        if (GV->hasComdat())
+          NonPrevailingComdats.insert(GV->getComdat());
         cast<GlobalObject>(GV)->setComdat(nullptr);
       }
     }
@@ -574,6 +607,9 @@ LTO::addRegularLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
 
     // FIXME: use proposed local attribute for FinalDefinitionInLinkageUnit.
   }
+  if (!M.getComdatSymbolTable().empty())
+    for (GlobalValue &GV : M.global_values())
+      handleNonPrevailingComdat(GV, NonPrevailingComdats);
   assert(MsymI == MsymE);
   return std::move(Mod);
 }
@@ -1087,7 +1123,7 @@ lto::setupOptimizationRemarks(LLVMContext &Context,
   Context.setDiagnosticsOutputFile(
       llvm::make_unique<yaml::Output>(DiagnosticFile->os()));
   if (LTOPassRemarksWithHotness)
-    Context.setDiagnosticHotnessRequested(true);
+    Context.setDiagnosticsHotnessRequested(true);
   DiagnosticFile->keep();
   return std::move(DiagnosticFile);
 }

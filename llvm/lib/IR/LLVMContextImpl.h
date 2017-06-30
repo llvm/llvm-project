@@ -1169,7 +1169,7 @@ public:
   LLVMContext::DiagnosticHandlerTy DiagnosticHandler = nullptr;
   void *DiagnosticContext = nullptr;
   bool RespectDiagnosticFilters = false;
-  bool DiagnosticHotnessRequested = false;
+  bool DiagnosticsHotnessRequested = false;
   std::unique_ptr<yaml::Output> DiagnosticsOutputFile;
 
   LLVMContext::YieldCallbackTy YieldCallback = nullptr;

@@ -114,11 +114,11 @@ ALL-NEXT:            referent = 0x1004, mode = pointer, opts = const, kind = ptr
 ALL-NEXT:   0x1006 | LF_ARGLIST [size = 12, hash = 194342]
 ALL-NEXT:            0x1003: `__vc_attributes::threadingAttribute::threading_e`
 ALL-NEXT:   0x1007 | LF_MFUNCTION [size = 28, hash = 254156]
-ALL-NEXT:            return type = 1, # args = 0x1006, param list = 0x0003 (void)
+ALL-NEXT:            return type = 0x0003 (void), # args = 1, param list = 0x1006
 ALL-NEXT:            class type = 0x1004, this type = 0x1005, this adjust = 0
 ALL-NEXT:            calling conv = thiscall, options = constructor
 ALL-NEXT:   0x1008 | LF_MFUNCTION [size = 28, hash = 194536]
-ALL-NEXT:            return type = 0, # args = 0x1000, param list = 0x0003 (void)
+ALL-NEXT:            return type = 0x0003 (void), # args = 0, param list = 0x1000
 ALL-NEXT:            class type = 0x1004, this type = 0x1005, this adjust = 0
 ALL-NEXT:            calling conv = thiscall, options = constructor
 ALL-NEXT:   0x1009 | LF_METHODLIST [size = 20, hash = 167492]
@@ -153,17 +153,17 @@ ALL-NEXT:   0x1010 | LF_ARGLIST [size = 16, hash = 134580]
 ALL-NEXT:            0x100D: `__vc_attributes::event_receiverAttribute::type_e`
 ALL-NEXT:            0x0030 (bool): `bool`
 ALL-NEXT:   0x1011 | LF_MFUNCTION [size = 28, hash = 148190]
-ALL-NEXT:            return type = 2, # args = 0x1010, param list = 0x0003 (void)
+ALL-NEXT:            return type = 0x0003 (void), # args = 2, param list = 0x1010
 ALL-NEXT:            class type = 0x100E, this type = 0x100F, this adjust = 0
 ALL-NEXT:            calling conv = thiscall, options = constructor
 ALL-NEXT:   0x1012 | LF_ARGLIST [size = 12, hash = 113636]
 ALL-NEXT:            0x100D: `__vc_attributes::event_receiverAttribute::type_e`
 ALL-NEXT:   0x1013 | LF_MFUNCTION [size = 28, hash = 53336]
-ALL-NEXT:            return type = 1, # args = 0x1012, param list = 0x0003 (void)
+ALL-NEXT:            return type = 0x0003 (void), # args = 1, param list = 0x1012
 ALL-NEXT:            class type = 0x100E, this type = 0x100F, this adjust = 0
 ALL-NEXT:            calling conv = thiscall, options = constructor
 ALL-NEXT:   0x1014 | LF_MFUNCTION [size = 28, hash = 55779]
-ALL-NEXT:            return type = 0, # args = 0x1000, param list = 0x0003 (void)
+ALL-NEXT:            return type = 0x0003 (void), # args = 0, param list = 0x1000
 ALL-NEXT:            class type = 0x100E, this type = 0x100F, this adjust = 0
 ALL-NEXT:            calling conv = thiscall, options = constructor
 ALL-NEXT:   0x1015 | LF_METHODLIST [size = 28, hash = 220695]
@@ -199,11 +199,11 @@ ALL-NEXT:            referent = 0x101A, mode = pointer, opts = const, kind = ptr
 ALL-NEXT:   0x101C | LF_ARGLIST [size = 12, hash = 159978]
 ALL-NEXT:            0x1019: `__vc_attributes::aggregatableAttribute::type_e`
 ALL-NEXT:   0x101D | LF_MFUNCTION [size = 28, hash = 249504]
-ALL-NEXT:            return type = 1, # args = 0x101C, param list = 0x0003 (void)
+ALL-NEXT:            return type = 0x0003 (void), # args = 1, param list = 0x101C
 ALL-NEXT:            class type = 0x101A, this type = 0x101B, this adjust = 0
 ALL-NEXT:            calling conv = thiscall, options = constructor
 ALL-NEXT:   0x101E | LF_MFUNCTION [size = 28, hash = 141941]
-ALL-NEXT:            return type = 0, # args = 0x1000, param list = 0x0003 (void)
+ALL-NEXT:            return type = 0x0003 (void), # args = 0, param list = 0x1000
 ALL-NEXT:            class type = 0x101A, this type = 0x101B, this adjust = 0
 ALL-NEXT:            calling conv = thiscall, options = constructor
 ALL-NEXT:   0x101F | LF_METHODLIST [size = 20, hash = 238785]
@@ -241,11 +241,11 @@ ALL-NEXT:            referent = 0x1025, mode = pointer, opts = const, kind = ptr
 ALL-NEXT:   0x1027 | LF_ARGLIST [size = 12, hash = 17744]
 ALL-NEXT:            0x1022: `__vc_attributes::event_sourceAttribute::type_e`
 ALL-NEXT:   0x1028 | LF_MFUNCTION [size = 28, hash = 239514]
-ALL-NEXT:            return type = 1, # args = 0x1027, param list = 0x0003 (void)
+ALL-NEXT:            return type = 0x0003 (void), # args = 1, param list = 0x1027
 ALL-NEXT:            class type = 0x1025, this type = 0x1026, this adjust = 0
 ALL-NEXT:            calling conv = thiscall, options = constructor
 ALL-NEXT:   0x1029 | LF_MFUNCTION [size = 28, hash = 173189]
-ALL-NEXT:            return type = 0, # args = 0x1000, param list = 0x0003 (void)
+ALL-NEXT:            return type = 0x0003 (void), # args = 0, param list = 0x1000
 ALL-NEXT:            class type = 0x1025, this type = 0x1026, this adjust = 0
 ALL-NEXT:            calling conv = thiscall, options = constructor
 ALL-NEXT:   0x102A | LF_METHODLIST [size = 20, hash = 130544]
@@ -303,17 +303,17 @@ ALL-NEXT:            0x0030 (bool): `bool`
 ALL-NEXT:            0x1032: `const char*`
 ALL-NEXT:            0x1032: `const char*`
 ALL-NEXT:   0x1034 | LF_MFUNCTION [size = 28, hash = 48854]
-ALL-NEXT:            return type = 15, # args = 0x1033, param list = 0x0003 (void)
+ALL-NEXT:            return type = 0x0003 (void), # args = 15, param list = 0x1033
 ALL-NEXT:            class type = 0x102F, this type = 0x1030, this adjust = 0
 ALL-NEXT:            calling conv = thiscall, options = constructor
 ALL-NEXT:   0x1035 | LF_ARGLIST [size = 12, hash = 170035]
 ALL-NEXT:            0x102E: `__vc_attributes::moduleAttribute::type_e`
 ALL-NEXT:   0x1036 | LF_MFUNCTION [size = 28, hash = 177041]
-ALL-NEXT:            return type = 1, # args = 0x1035, param list = 0x0003 (void)
+ALL-NEXT:            return type = 0x0003 (void), # args = 1, param list = 0x1035
 ALL-NEXT:            class type = 0x102F, this type = 0x1030, this adjust = 0
 ALL-NEXT:            calling conv = thiscall, options = constructor
 ALL-NEXT:   0x1037 | LF_MFUNCTION [size = 28, hash = 102745]
-ALL-NEXT:            return type = 0, # args = 0x1000, param list = 0x0003 (void)
+ALL-NEXT:            return type = 0x0003 (void), # args = 0, param list = 0x1000
 ALL-NEXT:            class type = 0x102F, this type = 0x1030, this adjust = 0
 ALL-NEXT:            calling conv = thiscall, options = constructor
 ALL-NEXT:   0x1038 | LF_METHODLIST [size = 28, hash = 16947]
@@ -389,7 +389,7 @@ ALL-NEXT:            referent = 0x103D, mode = pointer, opts = const, kind = ptr
 ALL-NEXT:   0x103F | LF_ARGLIST [size = 12, hash = 49018]
 ALL-NEXT:            0x0075 (unsigned): `unsigned`
 ALL-NEXT:   0x1040 | LF_MFUNCTION [size = 28, hash = 43821]
-ALL-NEXT:            return type = 1, # args = 0x103F, param list = 0x0003 (void)
+ALL-NEXT:            return type = 0x0003 (void), # args = 1, param list = 0x103F
 ALL-NEXT:            class type = 0x103D, this type = 0x103E, this adjust = 0
 ALL-NEXT:            calling conv = thiscall, options = constructor
 ALL-NEXT:   0x1041 | LF_FIELDLIST [size = 60, hash = 202555]
@@ -422,7 +422,7 @@ ALL-NEXT:            referent = 0x1045, mode = pointer, opts = const, kind = ptr
 ALL-NEXT:   0x1047 | LF_ARGLIST [size = 12, hash = 103930]
 ALL-NEXT:            0x1044: `__vc_attributes::helper_attributes::v1_alttypeAttribute::type_e`
 ALL-NEXT:   0x1048 | LF_MFUNCTION [size = 28, hash = 110942]
-ALL-NEXT:            return type = 1, # args = 0x1047, param list = 0x0003 (void)
+ALL-NEXT:            return type = 0x0003 (void), # args = 1, param list = 0x1047
 ALL-NEXT:            class type = 0x1045, this type = 0x1046, this adjust = 0
 ALL-NEXT:            calling conv = thiscall, options = constructor
 ALL-NEXT:   0x1049 | LF_FIELDLIST [size = 64, hash = 17991]

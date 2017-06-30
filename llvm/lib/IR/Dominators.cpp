@@ -292,7 +292,8 @@ bool DominatorTree::isReachableFromEntry(const Use &U) const {
 }
 
 void DominatorTree::verifyDomTree() const {
-  if (!verify()) {
+  // Perform the expensive checks only when VerifyDomInfo is set.
+  if (VerifyDomInfo && !verify()) {
     errs() << "\n~~~~~~~~~~~\n\t\tDomTree verification failed!\n~~~~~~~~~~~\n";
     print(errs());
     abort();

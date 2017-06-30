@@ -198,6 +198,20 @@
 	clgtnl	%r0, 0(%r15)
 	clgtnh	%r0, 0(%r15)
 
+#CHECK: crdte	%r0, %r0, %r0               # encoding: [0xb9,0x8f,0x00,0x00]
+#CHECK: crdte	%r0, %r0, %r14              # encoding: [0xb9,0x8f,0x00,0x0e]
+#CHECK: crdte	%r0, %r15, %r0              # encoding: [0xb9,0x8f,0xf0,0x00]
+#CHECK: crdte	%r14, %r0, %r0              # encoding: [0xb9,0x8f,0x00,0xe0]
+#CHECK: crdte	%r0, %r0, %r0, 15           # encoding: [0xb9,0x8f,0x0f,0x00]
+#CHECK: crdte	%r4, %r5, %r6, 7            # encoding: [0xb9,0x8f,0x57,0x46]
+
+	crdte	%r0, %r0, %r0
+	crdte	%r0, %r0, %r14
+	crdte	%r0, %r15, %r0
+	crdte	%r14, %r0, %r0
+	crdte	%r0, %r0, %r0, 15
+	crdte	%r4, %r5, %r6, 7
+
 #CHECK: cxzt	%f0, 0(1), 0                # encoding: [0xed,0x00,0x00,0x00,0x00,0xab]
 #CHECK: cxzt	%f13, 0(1), 0               # encoding: [0xed,0x00,0x00,0x00,0xd0,0xab]
 #CHECK: cxzt	%f0, 0(1), 15               # encoding: [0xed,0x00,0x00,0x00,0x0f,0xab]
