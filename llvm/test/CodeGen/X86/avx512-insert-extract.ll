@@ -1446,3 +1446,95 @@ define zeroext i8 @test_extractelement_v64i1(<64 x i8> %a, <64 x i8> %b) {
   %res = select i1 %t2, i8 3, i8 4
   ret i8 %res
 }
+
+define i8 @test_extractelement_var_v64i8(<64 x i8> %x, i32 %idx) {
+; KNL-LABEL: test_extractelement_var_v64i8:
+; KNL:       ## BB#0:
+; KNL-NEXT:    pushq %rbp
+; KNL-NEXT:  Lcfi3:
+; KNL-NEXT:    .cfi_def_cfa_offset 16
+; KNL-NEXT:  Lcfi4:
+; KNL-NEXT:    .cfi_offset %rbp, -16
+; KNL-NEXT:    movq %rsp, %rbp
+; KNL-NEXT:  Lcfi5:
+; KNL-NEXT:    .cfi_def_cfa_register %rbp
+; KNL-NEXT:    andq $-64, %rsp
+; KNL-NEXT:    subq $128, %rsp
+; KNL-NEXT:    ## kill: %EDI<def> %EDI<kill> %RDI<def>
+; KNL-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
+; KNL-NEXT:    vmovaps %ymm0, (%rsp)
+; KNL-NEXT:    andl $63, %edi
+; KNL-NEXT:    movq %rsp, %rax
+; KNL-NEXT:    movb (%rdi,%rax), %al
+; KNL-NEXT:    movq %rbp, %rsp
+; KNL-NEXT:    popq %rbp
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: test_extractelement_var_v64i8:
+; SKX:       ## BB#0:
+; SKX-NEXT:    pushq %rbp
+; SKX-NEXT:  Lcfi0:
+; SKX-NEXT:    .cfi_def_cfa_offset 16
+; SKX-NEXT:  Lcfi1:
+; SKX-NEXT:    .cfi_offset %rbp, -16
+; SKX-NEXT:    movq %rsp, %rbp
+; SKX-NEXT:  Lcfi2:
+; SKX-NEXT:    .cfi_def_cfa_register %rbp
+; SKX-NEXT:    andq $-64, %rsp
+; SKX-NEXT:    subq $128, %rsp
+; SKX-NEXT:    ## kill: %EDI<def> %EDI<kill> %RDI<def>
+; SKX-NEXT:    vmovdqu8 %zmm0, (%rsp)
+; SKX-NEXT:    andl $63, %edi
+; SKX-NEXT:    movq %rsp, %rax
+; SKX-NEXT:    movb (%rdi,%rax), %al
+; SKX-NEXT:    movq %rbp, %rsp
+; SKX-NEXT:    popq %rbp
+; SKX-NEXT:    retq
+  %tmp0 = extractelement <64 x i8> %x, i32 %idx
+  ret i8 %tmp0
+}
+
+define i16 @test_extractelement_var_v64i16(<32 x i16> %x, i32 %idx) {
+; KNL-LABEL: test_extractelement_var_v64i16:
+; KNL:       ## BB#0:
+; KNL-NEXT:    pushq %rbp
+; KNL-NEXT:  Lcfi6:
+; KNL-NEXT:    .cfi_def_cfa_offset 16
+; KNL-NEXT:  Lcfi7:
+; KNL-NEXT:    .cfi_offset %rbp, -16
+; KNL-NEXT:    movq %rsp, %rbp
+; KNL-NEXT:  Lcfi8:
+; KNL-NEXT:    .cfi_def_cfa_register %rbp
+; KNL-NEXT:    andq $-64, %rsp
+; KNL-NEXT:    subq $128, %rsp
+; KNL-NEXT:    ## kill: %EDI<def> %EDI<kill> %RDI<def>
+; KNL-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)
+; KNL-NEXT:    vmovaps %ymm0, (%rsp)
+; KNL-NEXT:    andl $31, %edi
+; KNL-NEXT:    movzwl (%rsp,%rdi,2), %eax
+; KNL-NEXT:    movq %rbp, %rsp
+; KNL-NEXT:    popq %rbp
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: test_extractelement_var_v64i16:
+; SKX:       ## BB#0:
+; SKX-NEXT:    pushq %rbp
+; SKX-NEXT:  Lcfi3:
+; SKX-NEXT:    .cfi_def_cfa_offset 16
+; SKX-NEXT:  Lcfi4:
+; SKX-NEXT:    .cfi_offset %rbp, -16
+; SKX-NEXT:    movq %rsp, %rbp
+; SKX-NEXT:  Lcfi5:
+; SKX-NEXT:    .cfi_def_cfa_register %rbp
+; SKX-NEXT:    andq $-64, %rsp
+; SKX-NEXT:    subq $128, %rsp
+; SKX-NEXT:    ## kill: %EDI<def> %EDI<kill> %RDI<def>
+; SKX-NEXT:    vmovdqu16 %zmm0, (%rsp)
+; SKX-NEXT:    andl $31, %edi
+; SKX-NEXT:    movzwl (%rsp,%rdi,2), %eax
+; SKX-NEXT:    movq %rbp, %rsp
+; SKX-NEXT:    popq %rbp
+; SKX-NEXT:    retq
+  %tmp0 = extractelement <32 x i16> %x, i32 %idx
+  ret i16 %tmp0
+}

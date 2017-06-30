@@ -13655,7 +13655,8 @@ X86TargetLowering::LowerEXTRACT_VECTOR_ELT(SDValue Op,
     return ExtractBitFromMaskVector(Op, DAG);
 
   if (!isa<ConstantSDNode>(Idx)) {
-    if (VecVT.is512BitVector() ||
+    if ((VecVT.is512BitVector() && (VecVT.getScalarSizeInBits() == 32 ||
+                                    VecVT.getScalarSizeInBits() == 64)) ||
         (VecVT.is256BitVector() && Subtarget.hasInt256() &&
          VecVT.getScalarSizeInBits() == 32)) {
 
