@@ -139,6 +139,7 @@ module Clang_Tooling {
   // matchers (and thus the AST), which clang-format should not have.
   exclude header "Tooling/RefactoringCallbacks.h"
   exclude header "Tooling/Refactor/USRFinder.h"
+  exclude header "Tooling/Refactoring/Rename/USRFinder.h"
 
   textual header "Tooling/Refactor/RefactoringActions.def"
 }

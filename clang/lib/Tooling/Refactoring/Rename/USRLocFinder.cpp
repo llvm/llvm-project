@@ -1,4 +1,4 @@
-//===--- tools/extra/clang-rename/USRLocFinder.cpp - Clang rename tool ----===//
+//===--- USRLocFinder.cpp - Clang refactoring library ---------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -8,14 +8,13 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief Mehtods for finding all instances of a USR. Our strategy is very
+/// \brief Methods for finding all instances of a USR. Our strategy is very
 /// simple; we just compare the USR at every relevant AST node with the one
 /// provided.
 ///
 //===----------------------------------------------------------------------===//
 
-#include "USRLocFinder.h"
-#include "USRFinder.h"
+#include "clang/Tooling/Refactoring/Rename/USRLocFinder.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/LLVM.h"
@@ -23,6 +22,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Tooling/Core/Lookup.h"
+#include "clang/Tooling/Refactoring/Rename/USRFinder.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include <cstddef>
@@ -33,7 +33,7 @@
 using namespace llvm;
 
 namespace clang {
-namespace rename {
+namespace tooling {
 
 namespace {
 
@@ -505,5 +505,5 @@ createRenameAtomicChanges(llvm::ArrayRef<std::string> USRs,
   return AtomicChanges;
 }
 
-} // namespace rename
-} // namespace clang
+} // end namespace tooling
+} // end namespace clang

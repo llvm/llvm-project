@@ -13,8 +13,6 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "../RenamingAction.h"
-#include "../USRFindingAction.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/FileManager.h"
@@ -26,6 +24,8 @@
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Refactoring.h"
+#include "clang/Tooling/Refactoring/Rename/RenamingAction.h"
+#include "clang/Tooling/Refactoring/Rename/USRFindingAction.h"
 #include "clang/Tooling/ReplacementsYaml.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
@@ -160,7 +160,7 @@ int main(int argc, const char **argv) {
 
   auto Files = OP.getSourcePathList();
   tooling::RefactoringTool Tool(OP.getCompilations(), Files);
-  rename::USRFindingAction FindingAction(SymbolOffsets, QualifiedNames, Force);
+  tooling::USRFindingAction FindingAction(SymbolOffsets, QualifiedNames, Force);
   Tool.run(tooling::newFrontendActionFactory(&FindingAction).get());
   const std::vector<std::vector<std::string>> &USRList =
       FindingAction.getUSRList();
@@ -183,8 +183,8 @@ int main(int argc, const char **argv) {
   }
 
   // Perform the renaming.
-  rename::RenamingAction RenameAction(NewNames, PrevNames, USRList,
-                                      Tool.getReplacements(), PrintLocations);
+  tooling::RenamingAction RenameAction(NewNames, PrevNames, USRList,
+                                       Tool.getReplacements(), PrintLocations);
   std::unique_ptr<tooling::FrontendActionFactory> Factory =
       tooling::newFrontendActionFactory(&RenameAction);
   int ExitCode;

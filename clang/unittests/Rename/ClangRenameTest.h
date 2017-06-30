@@ -7,8 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "RenamingAction.h"
-#include "USRFindingAction.h"
 #include "unittests/Tooling/RewriterTestContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Basic/FileManager.h"
@@ -18,6 +16,8 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/PCHContainerOperations.h"
 #include "clang/Tooling/Refactoring.h"
+#include "clang/Tooling/Refactoring/Rename/RenamingAction.h"
+#include "clang/Tooling/Refactoring/Rename/USRFindingAction.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/StringRef.h"
@@ -56,7 +56,7 @@ protected:
     Context.createInMemoryFile(HeaderName, HeaderContent);
     clang::FileID InputFileID = Context.createInMemoryFile(CCName, NewCode);
 
-    rename::USRFindingAction FindingAction({}, {OldName}, false);
+    tooling::USRFindingAction FindingAction({}, {OldName}, false);
     std::unique_ptr<tooling::FrontendActionFactory> USRFindingActionFactory =
         tooling::newFrontendActionFactory(&FindingAction);
 
@@ -70,8 +70,8 @@ protected:
         FindingAction.getUSRList();
     std::vector<std::string> NewNames = {NewName};
     std::map<std::string, tooling::Replacements> FileToReplacements;
-    rename::QualifiedRenamingAction RenameAction(NewNames, USRList,
-                                                 FileToReplacements);
+    tooling::QualifiedRenamingAction RenameAction(NewNames, USRList,
+                                                  FileToReplacements);
     auto RenameActionFactory = tooling::newFrontendActionFactory(&RenameAction);
     if (!tooling::runToolOnCodeWithArgs(
             RenameActionFactory->create(), NewCode, {"-std=c++11"}, CCName,

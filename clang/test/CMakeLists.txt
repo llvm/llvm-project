@@ -48,6 +48,7 @@ list(APPEND CLANG_TEST_DEPS
   clang-offload-bundler
   clang-refactor-test
   clang-import-test
+  clang-rename
   )
 
 if(CLANG_ENABLE_STATIC_ANALYZER)
