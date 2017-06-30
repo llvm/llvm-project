@@ -129,7 +129,7 @@ void *MmapOrDie(uptr size, const char *mem_type, bool raw_report) {
                            PROT_READ | PROT_WRITE,
                            MAP_PRIVATE | MAP_ANON, -1, 0);
   int reserrno;
-  if (internal_iserror(res, &reserrno))
+  if (UNLIKELY(internal_iserror(res, &reserrno)))
     ReportMmapFailureAndDie(size, mem_type, "allocate", reserrno, raw_report);
   IncreaseTotalMmap(size);
   return (void *)res;
@@ -138,7 +138,7 @@ void *MmapOrDie(uptr size, const char *mem_type, bool raw_report) {
 void UnmapOrDie(void *addr, uptr size) {
   if (!addr || !size) return;
   uptr res = internal_munmap(addr, size);
-  if (internal_iserror(res)) {
+  if (UNLIKELY(internal_iserror(res))) {
     Report("ERROR: %s failed to deallocate 0x%zx (%zd) bytes at address %p\n",
            SanitizerToolName, size, size, addr);
     CHECK("unable to unmap" && 0);
@@ -152,7 +152,7 @@ void *MmapOrDieOnFatalError(uptr size, const char *mem_type) {
                            PROT_READ | PROT_WRITE,
                            MAP_PRIVATE | MAP_ANON, -1, 0);
   int reserrno;
-  if (internal_iserror(res, &reserrno)) {
+  if (UNLIKELY(internal_iserror(res, &reserrno))) {
     if (reserrno == ENOMEM)
       return nullptr;
     ReportMmapFailureAndDie(size, mem_type, "allocate", reserrno);
@@ -170,15 +170,15 @@ void *MmapAlignedOrDieOnFatalError(uptr size, uptr alignment,
   CHECK(IsPowerOfTwo(alignment));
   uptr map_size = size + alignment;
   uptr map_res = (uptr)MmapOrDieOnFatalError(map_size, mem_type);
-  if (!map_res)
+  if (UNLIKELY(!map_res))
     return nullptr;
   uptr map_end = map_res + map_size;
   uptr res = map_res;
-  if (res & (alignment - 1))  // Not aligned.
-    res = (map_res + alignment) & ~(alignment - 1);
-  uptr end = res + size;
-  if (res != map_res)
+  if (!IsAligned(res, alignment)) {
+    res = (map_res + alignment - 1) & ~(alignment - 1);
     UnmapOrDie((void*)map_res, res - map_res);
+  }
+  uptr end = res + size;
   if (end != map_end)
     UnmapOrDie((void*)end, map_end - end);
   return (void*)res;
@@ -192,7 +192,7 @@ void *MmapNoReserveOrDie(uptr size, const char *mem_type) {
                          MAP_PRIVATE | MAP_ANON | MAP_NORESERVE,
                          -1, 0);
   int reserrno;
-  if (internal_iserror(p, &reserrno))
+  if (UNLIKELY(internal_iserror(p, &reserrno)))
     ReportMmapFailureAndDie(size, mem_type, "allocate noreserve", reserrno);
   IncreaseTotalMmap(size);
   return (void *)p;
@@ -206,10 +206,10 @@ void *MmapFixedImpl(uptr fixed_addr, uptr size, bool tolerate_enomem) {
       MAP_PRIVATE | MAP_ANON | MAP_FIXED,
       -1, 0);
   int reserrno;
-  if (internal_iserror(p, &reserrno)) {
+  if (UNLIKELY(internal_iserror(p, &reserrno))) {
     if (tolerate_enomem && reserrno == ENOMEM)
       return nullptr;
-    char mem_type[30];
+    char mem_type[40];
     internal_snprintf(mem_type, sizeof(mem_type), "memory at address 0x%zx",
                       fixed_addr);
     ReportMmapFailureAndDie(size, mem_type, "allocate", reserrno);
