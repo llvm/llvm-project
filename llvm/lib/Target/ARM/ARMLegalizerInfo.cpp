@@ -55,10 +55,7 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
 
   for (unsigned Op : {G_SDIV, G_UDIV}) {
     for (auto Ty : {s8, s16})
-      // FIXME: We need WidenScalar here, but in the case of targets with
-      // software division we'll also need Libcall afterwards. Treat as Custom
-      // until we have better support for chaining legalization actions.
-      setAction({Op, Ty}, Custom);
+      setAction({Op, Ty}, WidenScalar);
     if (ST.hasDivideInARMMode())
       setAction({Op, s32}, Legal);
     else
@@ -122,40 +119,6 @@ bool ARMLegalizerInfo::legalizeCustom(MachineInstr &MI,
   switch (MI.getOpcode()) {
   default:
     return false;
-  case G_SDIV:
-  case G_UDIV: {
-    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
-    if (Ty != LLT::scalar(16) && Ty != LLT::scalar(8))
-      return false;
-
-    // We need to widen to 32 bits and then maybe, if the target requires,
-    // transform into a libcall.
-    LegalizerHelper Helper(MIRBuilder.getMF());
-
-    MachineInstr *NewMI = nullptr;
-    Helper.MIRBuilder.recordInsertions([&](MachineInstr *MI) {
-      // Store the new, 32-bit div instruction.
-      if (MI->getOpcode() == G_SDIV || MI->getOpcode() == G_UDIV)
-        NewMI = MI;
-    });
-
-    auto Result = Helper.widenScalar(MI, 0, LLT::scalar(32));
-    Helper.MIRBuilder.stopRecordingInsertions();
-    if (Result == LegalizerHelper::UnableToLegalize) {
-      return false;
-    }
-    assert(NewMI && "Couldn't find widened instruction");
-    assert((NewMI->getOpcode() == G_SDIV || NewMI->getOpcode() == G_UDIV) &&
-           "Unexpected widened instruction");
-    assert(MRI.getType(NewMI->getOperand(0).getReg()).getSizeInBits() == 32 &&
-           "Unexpected type for the widened instruction");
-
-    Result = Helper.legalizeInstrStep(*NewMI);
-    if (Result == LegalizerHelper::UnableToLegalize) {
-      return false;
-    }
-    return true;
-  }
   case G_SREM:
   case G_UREM: {
     unsigned OriginalResult = MI.getOperand(0).getReg();

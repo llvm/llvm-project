@@ -462,7 +462,7 @@ int main(int argc_, const char **argv_) {
 
   std::unique_ptr<Compilation> C(TheDriver.BuildCompilation(argv));
   int Res = 1;
-  if (C.get()) {
+  if (C && !C->containsError()) {
     SmallVector<std::pair<int, const Command *>, 4> FailingCommands;
     Res = TheDriver.ExecuteCompilation(*C, FailingCommands);
 

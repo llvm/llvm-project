@@ -883,6 +883,12 @@ let Defs = [CC], CCValues = 0xF, CompareZeroCCMask = 0x8 in {
   }
   def AGFR : BinaryRRE<"agfr", 0xB918, null_frag, GR64, GR32>;
 
+  // Addition to a high register.
+  def AHHHR : BinaryRRFa<"ahhhr", 0xB9C8, null_frag, GRH32, GRH32, GRH32>,
+              Requires<[FeatureHighWord]>;
+  def AHHLR : BinaryRRFa<"ahhlr", 0xB9D8, null_frag, GRH32, GRH32, GR32>,
+              Requires<[FeatureHighWord]>;
+
   // Addition of signed 16-bit immediates.
   defm AHIMux : BinaryRIAndKPseudo<"ahimux", add, GRX32, imm32sx16>;
   defm AHI  : BinaryRIAndK<"ahi",  0xA7A, 0xECD8, add, GR32, imm32sx16>;
@@ -917,6 +923,12 @@ let Defs = [CC] in {
   }
   def ALGFR : BinaryRRE<"algfr", 0xB91A, null_frag, GR64, GR32>;
 
+  // Addition to a high register.
+  def ALHHHR : BinaryRRFa<"alhhhr", 0xB9CA, null_frag, GRH32, GRH32, GRH32>,
+               Requires<[FeatureHighWord]>;
+  def ALHHLR : BinaryRRFa<"alhhlr", 0xB9DA, null_frag, GRH32, GRH32, GR32>,
+               Requires<[FeatureHighWord]>;
+
   // Addition of signed 16-bit immediates.
   def ALHSIK  : BinaryRIE<"alhsik",  0xECDA, addc, GR32, imm32sx16>,
                 Requires<[FeatureDistinctOps]>;
@@ -926,6 +938,10 @@ let Defs = [CC] in {
   // Addition of unsigned 32-bit immediates.
   def ALFI  : BinaryRIL<"alfi",  0xC2B, addc, GR32, uimm32>;
   def ALGFI : BinaryRIL<"algfi", 0xC2A, addc, GR64, imm64zx32>;
+
+  // Addition of signed 32-bit immediates.
+  def ALSIH : BinaryRIL<"alsih", 0xCCA, null_frag, GRH32, simm32>,
+              Requires<[FeatureHighWord]>;
 
   // Addition of memory.
   defm AL   : BinaryRXPair<"al", 0x5E, 0xE35E, addc, GR32, load, 4>;
@@ -949,6 +965,10 @@ let Defs = [CC], Uses = [CC] in {
   def ALCG : BinaryRXY<"alcg", 0xE388, adde, GR64, load, 8>;
 }
 
+// Addition that does not modify the condition code.
+def ALSIHN : BinaryRIL<"alsihn", 0xCCB, null_frag, GRH32, simm32>,
+             Requires<[FeatureHighWord]>;
+
 //===----------------------------------------------------------------------===//
 // Subtraction
 //===----------------------------------------------------------------------===//
@@ -960,6 +980,12 @@ let Defs = [CC], CCValues = 0xF, CompareZeroCCMask = 0x8 in {
   defm SR : BinaryRRAndK<"sr", 0x1B, 0xB9F9, sub, GR32, GR32>;
   def SGFR : BinaryRRE<"sgfr", 0xB919, null_frag, GR64, GR32>;
   defm SGR : BinaryRREAndK<"sgr", 0xB909, 0xB9E9, sub, GR64, GR64>;
+
+  // Subtraction from a high register.
+  def SHHHR : BinaryRRFa<"shhhr", 0xB9C9, null_frag, GRH32, GRH32, GRH32>,
+              Requires<[FeatureHighWord]>;
+  def SHHLR : BinaryRRFa<"shhlr", 0xB9D9, null_frag, GRH32, GRH32, GR32>,
+              Requires<[FeatureHighWord]>;
 
   // Subtraction of memory.
   defm SH  : BinaryRXPair<"sh", 0x4B, 0xE37B, sub, GR32, asextloadi16, 2>;
@@ -975,6 +1001,12 @@ let Defs = [CC] in {
   defm SLR : BinaryRRAndK<"slr", 0x1F, 0xB9FB, subc, GR32, GR32>;
   def SLGFR : BinaryRRE<"slgfr", 0xB91B, null_frag, GR64, GR32>;
   defm SLGR : BinaryRREAndK<"slgr", 0xB90B, 0xB9EB, subc, GR64, GR64>;
+
+  // Subtraction from a high register.
+  def SLHHHR : BinaryRRFa<"slhhhr", 0xB9CB, null_frag, GRH32, GRH32, GRH32>,
+               Requires<[FeatureHighWord]>;
+  def SLHHLR : BinaryRRFa<"slhhlr", 0xB9DB, null_frag, GRH32, GRH32, GR32>,
+               Requires<[FeatureHighWord]>;
 
   // Subtraction of unsigned 32-bit immediates.  These don't match
   // subc because we prefer addc for constants.
@@ -1298,6 +1330,12 @@ let Defs = [CC], CCValues = 0xE in {
   def CGFR : CompareRRE<"cgfr", 0xB930, null_frag, GR64, GR32>;
   def CGR  : CompareRRE<"cgr",  0xB920, z_scmp,    GR64, GR64>;
 
+  // Comparison with a high register.
+  def CHHR : CompareRRE<"chhr", 0xB9CD, null_frag, GRH32, GRH32>,
+             Requires<[FeatureHighWord]>;
+  def CHLR : CompareRRE<"chlr", 0xB9DD, null_frag, GRH32, GR32>,
+             Requires<[FeatureHighWord]>;
+
   // Comparison with a signed 16-bit immediate.  CHIMux expands to CHI or CIH,
   // depending on the choice of register.
   def CHIMux : CompareRIPseudo<z_scmp, GRX32, imm32sx16>,
@@ -1343,6 +1381,12 @@ let Defs = [CC], CCValues = 0xE, IsLogical = 1 in {
   def CLR   : CompareRR <"clr",   0x15,   z_ucmp,    GR32, GR32>;
   def CLGFR : CompareRRE<"clgfr", 0xB931, null_frag, GR64, GR32>;
   def CLGR  : CompareRRE<"clgr",  0xB921, z_ucmp,    GR64, GR64>;
+
+  // Comparison with a high register.
+  def CLHHR : CompareRRE<"clhhr", 0xB9CF, null_frag, GRH32, GRH32>,
+              Requires<[FeatureHighWord]>;
+  def CLHLR : CompareRRE<"clhlr", 0xB9DF, null_frag, GRH32, GR32>,
+              Requires<[FeatureHighWord]>;
 
   // Comparison with an unsigned 32-bit immediate.  CLFIMux expands to CLFI
   // or CLIH, depending on the choice of register.

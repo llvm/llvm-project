@@ -195,34 +195,10 @@ struct apint_match {
     return false;
   }
 };
-// Either constexpr if or renaming ConstantFP::getValueAPF to
-// ConstantFP::getValue is needed to do it via single template
-// function for both apint/apfloat.
-struct apfloat_match {
-  const APFloat *&Res;
-  apfloat_match(const APFloat *&R) : Res(R) {}
-  template <typename ITy> bool match(ITy *V) {
-    if (auto *CI = dyn_cast<ConstantFP>(V)) {
-      Res = &CI->getValueAPF();
-      return true;
-    }
-    if (V->getType()->isVectorTy())
-      if (const auto *C = dyn_cast<Constant>(V))
-        if (auto *CI = dyn_cast_or_null<ConstantFP>(C->getSplatValue())) {
-          Res = &CI->getValueAPF();
-          return true;
-        }
-    return false;
-  }
-};
 
 /// \brief Match a ConstantInt or splatted ConstantVector, binding the
 /// specified pointer to the contained APInt.
 inline apint_match m_APInt(const APInt *&Res) { return Res; }
-
-/// \brief Match a ConstantFP or splatted ConstantVector, binding the
-/// specified pointer to the contained APFloat.
-inline apfloat_match m_APFloat(const APFloat *&Res) { return Res; }
 
 template <int64_t Val> struct constantint_match {
   template <typename ITy> bool match(ITy *V) {

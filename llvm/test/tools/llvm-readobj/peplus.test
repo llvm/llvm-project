@@ -16,6 +16,7 @@ CHECK:     IMAGE_FILE_LARGE_ADDRESS_AWARE (0x20)
 CHECK:   ]
 CHECK: }
 CHECK: ImageOptionalHeader {
+CHECK:   Magic: 0x20B
 CHECK:   MajorLinkerVersion: 11
 CHECK:   MinorLinkerVersion: 0
 CHECK:   SizeOfCode: 512

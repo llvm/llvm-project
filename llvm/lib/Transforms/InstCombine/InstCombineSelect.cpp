@@ -1374,16 +1374,9 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
     auto SPF = SPR.Flavor;
 
     if (SelectPatternResult::isMinOrMax(SPF)) {
-      // Canonicalize so that
-      // - type casts are outside select patterns.
-      // - float clamp is transformed to min/max pattern
-      Value *CmpLHS = cast<CmpInst>(CondVal)->getOperand(0);
-      Value *CmpRHS = cast<CmpInst>(CondVal)->getOperand(1);
-      if ((LHS->getType()->getPrimitiveSizeInBits() !=
-           SelType->getPrimitiveSizeInBits()) ||
-          (LHS->getType()->isFPOrFPVectorTy() &&
-           ((CmpLHS != LHS && CmpLHS != RHS) ||
-            (CmpRHS != LHS && CmpRHS != RHS)))) {
+      // Canonicalize so that type casts are outside select patterns.
+      if (LHS->getType()->getPrimitiveSizeInBits() !=
+          SelType->getPrimitiveSizeInBits()) {
         CmpInst::Predicate Pred = getCmpPredicateForMinMax(SPF, SPR.Ordered);
 
         Value *Cmp;
