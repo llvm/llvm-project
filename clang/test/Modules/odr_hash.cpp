@@ -1762,6 +1762,22 @@ struct S2 {
 #else
 S2 s2;
 #endif
+
+#if defined(FIRST)
+using A3 = const int;
+using B3 = volatile A3;
+struct S3 {
+  B3 x = 1;
+};
+#elif defined(SECOND)
+using A3 = volatile const int;
+using B3 = A3;
+struct S3 {
+  B3 x = 1;
+};
+#else
+S3 s3;
+#endif
 }
 
 // Keep macros contained to one file.

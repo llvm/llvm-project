@@ -354,7 +354,7 @@ bool SimplifyIndvar::eliminateOverflowIntrinsic(CallInst *CI) {
   typedef const SCEV *(ScalarEvolution::*OperationFunctionTy)(
       const SCEV *, const SCEV *, SCEV::NoWrapFlags, unsigned);
   typedef const SCEV *(ScalarEvolution::*ExtensionFunctionTy)(
-      const SCEV *, Type *);
+      const SCEV *, Type *, unsigned);
 
   OperationFunctionTy Operation;
   ExtensionFunctionTy Extension;
@@ -406,11 +406,11 @@ bool SimplifyIndvar::eliminateOverflowIntrinsic(CallInst *CI) {
     IntegerType::get(NarrowTy->getContext(), NarrowTy->getBitWidth() * 2);
 
   const SCEV *A =
-      (SE->*Extension)((SE->*Operation)(LHS, RHS, SCEV::FlagAnyWrap, 0u),
-                       WideTy);
+      (SE->*Extension)((SE->*Operation)(LHS, RHS, SCEV::FlagAnyWrap, 0),
+                       WideTy, 0);
   const SCEV *B =
-      (SE->*Operation)((SE->*Extension)(LHS, WideTy),
-                       (SE->*Extension)(RHS, WideTy), SCEV::FlagAnyWrap, 0u);
+      (SE->*Operation)((SE->*Extension)(LHS, WideTy, 0),
+                       (SE->*Extension)(RHS, WideTy, 0), SCEV::FlagAnyWrap, 0);
 
   if (A != B)
     return false;

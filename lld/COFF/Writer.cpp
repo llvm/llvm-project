@@ -120,7 +120,6 @@ private:
   void writeSections();
   void sortExceptionTable();
   void writeBuildId();
-  void applyRelocations();
 
   llvm::Optional<coff_symbol16> createSymbol(Defined *D);
   size_t addEntryToStringTable(StringRef Str);

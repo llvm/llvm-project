@@ -451,19 +451,8 @@ public:
 
   /// \brief Load the coverage mapping using the given readers.
   static Expected<std::unique_ptr<CoverageMapping>>
-  load(CoverageMappingReader &CoverageReader,
-       IndexedInstrProfReader &ProfileReader);
-
-  static Expected<std::unique_ptr<CoverageMapping>>
   load(ArrayRef<std::unique_ptr<CoverageMappingReader>> CoverageReaders,
        IndexedInstrProfReader &ProfileReader);
-
-  /// \brief Load the coverage mapping from the given files.
-  static Expected<std::unique_ptr<CoverageMapping>>
-  load(StringRef ObjectFilename, StringRef ProfileFilename,
-       StringRef Arch = StringRef()) {
-    return load(ArrayRef<StringRef>(ObjectFilename), ProfileFilename, Arch);
-  }
 
   static Expected<std::unique_ptr<CoverageMapping>>
   load(ArrayRef<StringRef> ObjectFilenames, StringRef ProfileFilename,

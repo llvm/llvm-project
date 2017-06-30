@@ -31,8 +31,8 @@ class TargetMachine;
 struct PGOOptions {
   std::string ProfileGenFile = "";
   std::string ProfileUseFile = "";
+  std::string SampleProfileFile = "";
   bool RunProfileGen = false;
-  bool SamplePGO = false;
 };
 
 /// \brief This class provides access to building LLVM's passes.

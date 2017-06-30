@@ -628,6 +628,15 @@ public:
          IntrusiveRefCntPtr<DiagnosticsEngine> Diags, bool CaptureDiagnostics,
          bool UserFilesAreVolatile);
 
+  enum WhatToLoad {
+    /// Load options and the preprocessor state.
+    LoadPreprocessorOnly,
+    /// Load the AST, but do not restore Sema state.
+    LoadASTOnly,
+    /// Load everything, including Sema.
+    LoadEverything
+  };
+
   /// \brief Create a ASTUnit from an AST file.
   ///
   /// \param Filename - The AST file to load.
@@ -640,7 +649,7 @@ public:
   /// \returns - The initialized ASTUnit or null if the AST failed to load.
   static std::unique_ptr<ASTUnit> LoadFromASTFile(
       const std::string &Filename, const PCHContainerReader &PCHContainerRdr,
-      IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
+      WhatToLoad ToLoad, IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
       const FileSystemOptions &FileSystemOpts, bool UseDebugInfo = false,
       bool OnlyLocalDecls = false, ArrayRef<RemappedFile> RemappedFiles = None,
       bool CaptureDiagnostics = false, bool AllowPCHWithCompilerErrors = false,

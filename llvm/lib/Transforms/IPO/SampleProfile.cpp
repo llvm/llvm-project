@@ -1484,7 +1484,8 @@ bool SampleProfileLoader::runOnFunction(Function &F) {
 PreservedAnalyses SampleProfileLoaderPass::run(Module &M,
                                                ModuleAnalysisManager &AM) {
 
-  SampleProfileLoader SampleLoader(SampleProfileFile);
+  SampleProfileLoader SampleLoader(
+      ProfileFileName.empty() ? SampleProfileFile : ProfileFileName);
 
   SampleLoader.doInitialization(M);
 

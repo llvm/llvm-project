@@ -108,6 +108,11 @@ Changes to the OCaml bindings
  During this release ...
 
 
+Changes to the C API
+--------------------
+
+ During this release ...
+
 External Open Source Projects Using LLVM 5
 ==========================================
 

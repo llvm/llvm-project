@@ -430,6 +430,13 @@ public:
     Hash.AddQualType(T);
   }
 
+  void AddType(const Type *T) {
+    Hash.AddBoolean(T);
+    if (T) {
+      Hash.AddType(T);
+    }
+  }
+
   void AddNestedNameSpecifier(const NestedNameSpecifier *NNS) {
     Hash.AddNestedNameSpecifier(NNS);
   }
@@ -517,7 +524,13 @@ public:
 
   void VisitTypedefType(const TypedefType *T) {
     AddDecl(T->getDecl());
-    AddQualType(T->getDecl()->getUnderlyingType().getCanonicalType());
+    QualType UnderlyingType = T->getDecl()->getUnderlyingType();
+    VisitQualifiers(UnderlyingType.getQualifiers());
+    while (const TypedefType *Underlying =
+               dyn_cast<TypedefType>(UnderlyingType.getTypePtr())) {
+      UnderlyingType = Underlying->getDecl()->getUnderlyingType();
+    }
+    AddType(UnderlyingType.getTypePtr());
     VisitType(T);
   }
 

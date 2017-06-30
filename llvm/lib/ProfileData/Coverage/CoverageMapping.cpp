@@ -245,18 +245,6 @@ Error CoverageMapping::loadFunctionRecord(
   return Error::success();
 }
 
-Expected<std::unique_ptr<CoverageMapping>>
-CoverageMapping::load(CoverageMappingReader &CoverageReader,
-                      IndexedInstrProfReader &ProfileReader) {
-  auto Coverage = std::unique_ptr<CoverageMapping>(new CoverageMapping());
-
-  for (const auto &Record : CoverageReader)
-    if (Error E = Coverage->loadFunctionRecord(Record, ProfileReader))
-      return std::move(E);
-
-  return std::move(Coverage);
-}
-
 Expected<std::unique_ptr<CoverageMapping>> CoverageMapping::load(
     ArrayRef<std::unique_ptr<CoverageMappingReader>> CoverageReaders,
     IndexedInstrProfReader &ProfileReader) {

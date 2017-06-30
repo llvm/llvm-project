@@ -635,7 +635,7 @@ struct Allocator {
   }
 
   void *Calloc(uptr nmemb, uptr size, BufferedStackTrace *stack) {
-    if (CallocShouldReturnNullDueToOverflow(size, nmemb))
+    if (CheckForCallocOverflow(size, nmemb))
       return AsanAllocator::FailureHandler::OnBadRequest();
     void *ptr = Allocate(nmemb * size, 8, stack, FROM_MALLOC, false);
     // If the memory comes from the secondary allocator no need to clear it

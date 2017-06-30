@@ -535,13 +535,17 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
 
   // Add all the requested passes for PGO, if requested.
   if (PGOOpt) {
-    assert(PGOOpt->RunProfileGen || PGOOpt->SamplePGO ||
+    assert(PGOOpt->RunProfileGen || !PGOOpt->SampleProfileFile.empty() ||
            !PGOOpt->ProfileUseFile.empty());
-    addPGOInstrPasses(MPM, DebugLogging, Level, PGOOpt->RunProfileGen,
-                      PGOOpt->ProfileGenFile, PGOOpt->ProfileUseFile);
+    if (PGOOpt->SampleProfileFile.empty())
+      addPGOInstrPasses(MPM, DebugLogging, Level, PGOOpt->RunProfileGen,
+                        PGOOpt->ProfileGenFile, PGOOpt->ProfileUseFile);
+    else
+      MPM.addPass(SampleProfileLoaderPass(PGOOpt->SampleProfileFile));
 
     // Indirect call promotion that promotes intra-module targes only.
-    MPM.addPass(PGOIndirectCallPromotion(false, PGOOpt && PGOOpt->SamplePGO));
+    MPM.addPass(PGOIndirectCallPromotion(
+        false, PGOOpt && !PGOOpt->SampleProfileFile.empty()));
   }
 
   // Require the GlobalsAA analysis for the module so we can query it within
@@ -758,9 +762,6 @@ PassBuilder::buildThinLTOPreLinkDefaultPipeline(OptimizationLevel Level,
   // Reduce the size of the IR as much as possible.
   MPM.addPass(GlobalOptPass());
 
-  // Rename anon globals to be able to export them in the summary.
-  MPM.addPass(NameAnonGlobalPass());
-
   return MPM;
 }
 
@@ -779,9 +780,9 @@ PassBuilder::buildThinLTODefaultPipeline(OptimizationLevel Level,
   // During the ThinLTO backend phase we perform early indirect call promotion
   // here, before globalopt. Otherwise imported available_externally functions
   // look unreferenced and are removed.
-  MPM.addPass(PGOIndirectCallPromotion(true /* InLTO */,
-                                       PGOOpt && PGOOpt->SamplePGO &&
-                                           !PGOOpt->ProfileUseFile.empty()));
+  MPM.addPass(PGOIndirectCallPromotion(
+      true /* InLTO */, PGOOpt && !PGOOpt->SampleProfileFile.empty() &&
+                            !PGOOpt->ProfileUseFile.empty()));
 
   // Add the core simplification pipeline.
   MPM.addPass(buildModuleSimplificationPipeline(Level, DebugLogging));
@@ -821,8 +822,8 @@ ModulePassManager PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
     // left by the earlier promotion pass that promotes intra-module targets.
     // This two-step promotion is to save the compile time. For LTO, it should
     // produce the same result as if we only do promotion here.
-    MPM.addPass(PGOIndirectCallPromotion(true /* InLTO */,
-                                         PGOOpt && PGOOpt->SamplePGO));
+    MPM.addPass(PGOIndirectCallPromotion(
+        true /* InLTO */, PGOOpt && !PGOOpt->SampleProfileFile.empty()));
 
     // Propagate constants at call sites into the functions they call.  This
     // opens opportunities for globalopt (and inlining) by substituting function
