@@ -127,6 +127,16 @@
 	ah	%r0, -1
 	ah	%r0, 4096
 
+#CHECK: error: instruction requires: high-word
+#CHECK: ahhhr	%r0, %r0, %r0
+
+	ahhhr	%r0, %r0, %r0
+
+#CHECK: error: instruction requires: high-word
+#CHECK: ahhlr	%r0, %r0, %r0
+
+	ahhlr	%r0, %r0, %r0
+
 #CHECK: error: invalid operand
 #CHECK: ahi	%r0, -32769
 #CHECK: error: invalid operand
@@ -222,6 +232,16 @@
 
 	algrk	%r2,%r3,%r4
 
+#CHECK: error: instruction requires: high-word
+#CHECK: alhhhr	%r0, %r0, %r0
+
+	alhhhr	%r0, %r0, %r0
+
+#CHECK: error: instruction requires: high-word
+#CHECK: alhhlr	%r0, %r0, %r0
+
+	alhhlr	%r0, %r0, %r0
+
 #CHECK: error: instruction requires: distinct-ops
 #CHECK: alhsik	%r1, %r2, 3
 
@@ -265,6 +285,16 @@
 	alsi	0(%r1,%r2), 0
 	alsi	0, -129
 	alsi	0, 128
+
+#CHECK: error: instruction requires: high-word
+#CHECK: alsih	%r0, 0
+
+	alsih	%r0, 0
+
+#CHECK: error: instruction requires: high-word
+#CHECK: alsihn	%r0, 0
+
+	alsihn	%r0, 0
 
 #CHECK: error: invalid operand
 #CHECK: aly	%r0, -524289
@@ -1176,6 +1206,11 @@
 
 	chf	%r0, 0
 
+#CHECK: error: instruction requires: high-word
+#CHECK: chhr	%r0, %r0
+
+	chhr	%r0, %r0
+
 #CHECK: error: invalid operand
 #CHECK: chhsi	-1, 0
 #CHECK: error: invalid operand
@@ -1203,6 +1238,11 @@
 	chi	%r0, -32769
 	chi	%r0, 32768
 	chi	%r0, foo
+
+#CHECK: error: instruction requires: high-word
+#CHECK: chlr	%r0, %r0
+
+	chlr	%r0, %r0
 
 #CHECK: error: offset out of range
 #CHECK: chrl	%r0, -0x1000000002
@@ -1628,6 +1668,11 @@
 
 	clhf	%r0, 0
 
+#CHECK: error: instruction requires: high-word
+#CHECK: clhhr	%r0, %r0
+
+	clhhr	%r0, %r0
+
 #CHECK: error: invalid operand
 #CHECK: clhhsi	-1, 0
 #CHECK: error: invalid operand
@@ -1644,6 +1689,11 @@
 	clhhsi	0(%r1,%r2), 0
 	clhhsi	0, -1
 	clhhsi	0, 65536
+
+#CHECK: error: instruction requires: high-word
+#CHECK: clhlr	%r0, %r0
+
+	clhlr	%r0, %r0
 
 #CHECK: error: offset out of range
 #CHECK: clhrl	%r0, -0x1000000002
@@ -5403,6 +5453,16 @@
 	sh	%r0, -1
 	sh	%r0, 4096
 
+#CHECK: error: instruction requires: high-word
+#CHECK: shhhr	%r0, %r0, %r0
+
+	shhhr	%r0, %r0, %r0
+
+#CHECK: error: instruction requires: high-word
+#CHECK: shhlr	%r0, %r0, %r0
+
+	shhlr	%r0, %r0, %r0
+
 #CHECK: error: invalid operand
 #CHECK: shy	%r0, -524289
 #CHECK: error: invalid operand
@@ -5546,6 +5606,16 @@
 #CHECK: slgrk	%r2,%r3,%r4
 
 	slgrk	%r2,%r3,%r4
+
+#CHECK: error: instruction requires: high-word
+#CHECK: slhhhr	%r0, %r0, %r0
+
+	slhhhr	%r0, %r0, %r0
+
+#CHECK: error: instruction requires: high-word
+#CHECK: slhhlr	%r0, %r0, %r0
+
+	slhhlr	%r0, %r0, %r0
 
 #CHECK: error: invalid operand
 #CHECK: sll	%r0,-1

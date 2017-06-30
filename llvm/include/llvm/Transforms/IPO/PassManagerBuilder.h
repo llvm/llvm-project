@@ -145,7 +145,6 @@ public:
   bool DisableTailCalls;
   bool DisableUnitAtATime;
   bool DisableUnrollLoops;
-  bool BBVectorize;
   bool SLPVectorize;
   bool LoopVectorize;
   bool RerollLoops;

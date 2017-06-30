@@ -44,16 +44,17 @@ define void @example1() nounwind uwtable ssp {
   ret void
 }
 
+; Select VF=4 because sext <8 x i1> to <8 x i32> is expensive.
 ;CHECK-LABEL: @example10b(
-;CHECK: load <8 x i16>
-;CHECK: sext <8 x i16>
-;CHECK: store <8 x i32>
+;CHECK: load <4 x i16>
+;CHECK: sext <4 x i16>
+;CHECK: store <4 x i32>
 ;CHECK: ret void
 ;UNROLL-LABEL: @example10b(
-;UNROLL: load <8 x i16>
-;UNROLL: load <8 x i16>
-;UNROLL: store <8 x i32>
-;UNROLL: store <8 x i32>
+;UNROLL: load <4 x i16>
+;UNROLL: load <4 x i16>
+;UNROLL: store <4 x i32>
+;UNROLL: store <4 x i32>
 ;UNROLL: ret void
 define void @example10b(i16* noalias nocapture %sa, i16* noalias nocapture %sb, i16* noalias nocapture %sc, i32* noalias nocapture %ia, i32* noalias nocapture %ib, i32* noalias nocapture %ic) nounwind uwtable ssp {
   br label %1

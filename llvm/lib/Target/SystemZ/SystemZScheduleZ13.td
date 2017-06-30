@@ -353,6 +353,9 @@ def : InstRW<[FXa], (instregex "ALGF(I|R)$")>;
 def : InstRW<[FXa], (instregex "ALGR(K)?$")>;
 def : InstRW<[FXa], (instregex "ALR(K)?$")>;
 def : InstRW<[FXa], (instregex "AR(K)?$")>;
+def : InstRW<[FXa], (instregex "A(L)?HHHR$")>;
+def : InstRW<[FXa, Lat2], (instregex "A(L)?HHLR$")>;
+def : InstRW<[FXa], (instregex "ALSIH(N)?$")>;
 def : InstRW<[FXb, LSU, Lat5], (instregex "A(L)?(G)?SI$")>;
 
 // Logical addition with carry
@@ -376,6 +379,8 @@ def : InstRW<[FXa], (instregex "SLGF(I|R)$")>;
 def : InstRW<[FXa], (instregex "SLGR(K)?$")>;
 def : InstRW<[FXa], (instregex "SLR(K)?$")>;
 def : InstRW<[FXa], (instregex "SR(K)?$")>;
+def : InstRW<[FXa], (instregex "S(L)?HHHR$")>;
+def : InstRW<[FXa, Lat2], (instregex "S(L)?HHLR$")>;
 
 // Subtraction with borrow
 def : InstRW<[FXa, LSU, Lat6, GroupAlone], (instregex "SLB(G)?$")>;
@@ -506,6 +511,8 @@ def : InstRW<[FXb], (instregex "CLIH$")>;
 def : InstRW<[FXb, LSU, Lat5], (instregex "CLI(Y)?$")>;
 def : InstRW<[FXb], (instregex "CLR$")>;
 def : InstRW<[FXb, LSU, Lat5], (instregex "CLRL$")>;
+def : InstRW<[FXb], (instregex "C(L)?HHR$")>;
+def : InstRW<[FXb, Lat2], (instregex "C(L)?HLR$")>;
 
 // Compare halfword
 def : InstRW<[FXb, LSU, Lat6], (instregex "CH(Y|RL)?$")>;
