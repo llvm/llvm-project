@@ -876,8 +876,8 @@ static struct option g_long_options[] = {
      'u'}, // If we need to handshake with our parent process, an option will be
            // passed down that specifies a unix socket name to use
     {"fd", required_argument, NULL,
-     'FDSC'}, // A file descriptor was passed to this process when spawned that
-              // is already open and ready for communication
+     '2'}, // A file descriptor was passed to this process when spawned that
+           // is already open and ready for communication
     {"named-pipe", required_argument, NULL, 'P'},
     {"reverse-connect", no_argument, NULL, 'R'},
     {"env", required_argument, NULL,
@@ -1261,7 +1261,7 @@ int main(int argc, char *argv[]) {
       }
       break;
 
-    case 'FDSC':
+    case '2':
       // File descriptor passed to this process during fork/exec and is already
       // open and ready for communication.
       communication_fd = atoi(optarg);

@@ -1053,7 +1053,7 @@ void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
     AddLinkSanitizerLibArgs(Args, CmdArgs, "ubsan");
   if (Sanitize.needsTsanRt())
     AddLinkSanitizerLibArgs(Args, CmdArgs, "tsan");
-  if (Sanitize.needsFuzzer())
+  if (Sanitize.needsFuzzer() && !Args.hasArg(options::OPT_dynamiclib))
     AddFuzzerLinkArgs(Args, CmdArgs);
   if (Sanitize.needsStatsRt()) {
     StringRef OS = isTargetMacOS() ? "osx" : "iossim";
@@ -1665,6 +1665,28 @@ void MachO::AddLinkRuntimeLibArgs(const ArgList &Args,
   CompilerRT += Args.hasArg(options::OPT_fPIC) ? "_pic.a" : "_static.a";
 
   AddLinkRuntimeLib(Args, CmdArgs, CompilerRT, false, true);
+}
+
+bool Darwin::isAlignedAllocationUnavailable() const {
+  switch (TargetPlatform) {
+  case MacOS: // Earlier than 10.13.
+    return TargetVersion < VersionTuple(10U, 13U, 0U);
+  case IPhoneOS:
+  case IPhoneOSSimulator:
+  case TvOS:
+  case TvOSSimulator: // Earlier than 11.0.
+    return TargetVersion < VersionTuple(11U, 0U, 0U);
+  case WatchOS:
+  case WatchOSSimulator: // Earlier than 4.0.
+    return TargetVersion < VersionTuple(4U, 0U, 0U);
+  }
+  llvm_unreachable("Unsupported platform");
+}
+
+void Darwin::addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
+                                   llvm::opt::ArgStringList &CC1Args) const {
+  if (isAlignedAllocationUnavailable())
+    CC1Args.push_back("-faligned-alloc-unavailable");
 }
 
 DerivedArgList *

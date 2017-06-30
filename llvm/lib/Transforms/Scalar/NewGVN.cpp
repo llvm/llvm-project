@@ -2423,8 +2423,7 @@ void NewGVN::addPhiOfOps(PHINode *Op, BasicBlock *BB,
   AllTempInstructions.insert(Op);
   PHIOfOpsPHIs[BB].push_back(Op);
   TempToBlock[Op] = BB;
-  if (ExistingValue)
-    RealToTemp[ExistingValue] = Op;
+  RealToTemp[ExistingValue] = Op;
 }
 
 static bool okayForPHIOfOps(const Instruction *I) {

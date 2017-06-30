@@ -193,11 +193,11 @@ public:
     }
     auto *MPtr = M.release();
     ShouldDelete[MPtr] = true;
-    auto Deleter =
-      [this](Module *Mod) {
-        if (ShouldDelete[Mod])
-	  delete Mod;
-      };
+    auto Deleter = [this](Module *Mod) {
+      auto I = ShouldDelete.find(Mod);
+      if (I != ShouldDelete.end() && I->second)
+        delete Mod;
+    };
     LocalModules.push_back(std::shared_ptr<Module>(MPtr, std::move(Deleter)));
     LazyEmitLayer.addModule(LocalModules.back(), &MemMgr, &Resolver);
   }

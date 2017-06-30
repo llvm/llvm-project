@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 %s -fxray-instrument -std=c++11 -x c++ -emit-llvm -o - -triple x86_64-unknown-linux-gnu | FileCheck %s
-// RUN: %clang_cc1 %s -fxray-instrument -std=c++11 -x c++ -emit-llvm -o - -triple arm-unknown-linux-gnu | FileCheck %s
+// RUN: %clang_cc1 %s -fxray-instrument -std=c++11 -x c++ -emit-llvm -o - -triple arm-unknown-linux-gnu -target-abi apcs-gnu | FileCheck %s
 // RUN: %clang_cc1 %s -fxray-instrument -std=c++11 -x c++ -emit-llvm -o - -triple mips-unknown-linux-gnu | FileCheck %s
 // RUN: %clang_cc1 %s -fxray-instrument -std=c++11 -x c++ -emit-llvm -o - -triple mipsel-unknown-linux-gnu | FileCheck %s
 // RUN: %clang_cc1 %s -fxray-instrument -std=c++11 -x c++ -emit-llvm -o - -triple mips64-unknown-linux-gnu | FileCheck %s

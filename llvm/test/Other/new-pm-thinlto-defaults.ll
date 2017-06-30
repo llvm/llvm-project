@@ -9,19 +9,19 @@
 ;
 ; Prelink pipelines:
 ; RUN: opt -disable-verify -debug-pass-manager \
-; RUN:     -passes='thinlto-pre-link<O1>' -S %s 2>&1 \
+; RUN:     -passes='thinlto-pre-link<O1>,name-anon-globals' -S %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O1,CHECK-PRELINK-O,CHECK-PRELINK-O1
 ; RUN: opt -disable-verify -debug-pass-manager \
-; RUN:     -passes='thinlto-pre-link<O2>' -S  %s 2>&1 \
+; RUN:     -passes='thinlto-pre-link<O2>,name-anon-globals' -S  %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O2,CHECK-PRELINK-O,CHECK-PRELINK-O2
 ; RUN: opt -disable-verify -debug-pass-manager \
-; RUN:     -passes='thinlto-pre-link<O3>' -S  %s 2>&1 \
+; RUN:     -passes='thinlto-pre-link<O3>,name-anon-globals' -S  %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O3,CHECK-PRELINK-O,CHECK-PRELINK-O3
 ; RUN: opt -disable-verify -debug-pass-manager \
-; RUN:     -passes='thinlto-pre-link<Os>' -S %s 2>&1 \
+; RUN:     -passes='thinlto-pre-link<Os>,name-anon-globals' -S %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-Os,CHECK-PRELINK-O,CHECK-PRELINK-Os
 ; RUN: opt -disable-verify -debug-pass-manager \
-; RUN:     -passes='thinlto-pre-link<Oz>' -S %s 2>&1 \
+; RUN:     -passes='thinlto-pre-link<Oz>,name-anon-globals' -S %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-Oz,CHECK-PRELINK-O,CHECK-PRELINK-Oz
 ;
 ; Postlink pipelines:
@@ -154,7 +154,6 @@
 ; CHECK-O-NEXT: Finished CGSCC pass manager run.
 ; CHECK-O-NEXT: Finished llvm::Module pass manager run.
 ; CHECK-PRELINK-O-NEXT: Running pass: GlobalOptPass
-; CHECK-PRELINK-O-NEXT: Running pass: NameAnonGlobalPass
 ; CHECK-POSTLINK-O-NEXT: Running pass: PassManager<{{.*}}Module{{.*}}>
 ; CHECK-POSTLINK-O-NEXT: Starting llvm::Module pass manager run.
 ; CHECK-POSTLINK-O-NEXT: Running pass: GlobalOptPass
@@ -188,6 +187,7 @@
 ; CHECK-POSTLINK-O-NEXT: Running pass: ConstantMergePass
 ; CHECK-POSTLINK-O-NEXT: Finished llvm::Module pass manager run.
 ; CHECK-O-NEXT: Finished llvm::Module pass manager run.
+; CHECK-PRELINK-O-NEXT: Running pass: NameAnonGlobalPass
 ; CHECK-O-NEXT: Running pass: PrintModulePass
 
 ; Make sure we get the IR back out without changes when we print the module.

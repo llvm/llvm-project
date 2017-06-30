@@ -1,4 +1,4 @@
-//===--- FileOpenFlagCheck.h - clang-tidy----------------------------------===//
+//===--- CloexecOpenCheck.h - clang-tidy-----------------------------------===//
 //
 //                      The LLVM Compiler Infrastructure
 //
@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ANDROID_FILE_OPEN_FLAG_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ANDROID_FILE_OPEN_FLAG_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ANDROID_CLOEXEC_OPEN_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ANDROID_CLOEXEC_OPEN_H
 
 #include "../ClangTidy.h"
 
@@ -25,9 +25,9 @@ namespace android {
 ///
 /// Only the symbolic 'O_CLOEXEC' macro definition is checked, not the concrete
 /// value.
-class FileOpenFlagCheck : public ClangTidyCheck {
+class CloexecOpenCheck : public ClangTidyCheck {
 public:
-  FileOpenFlagCheck(StringRef Name, ClangTidyContext *Context)
+  CloexecOpenCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context) {}
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
@@ -37,4 +37,4 @@ public:
 } // namespace tidy
 } // namespace clang
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ANDROID_FILE_OPEN_FLAG_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ANDROID_CLOEXEC_OPEN_H

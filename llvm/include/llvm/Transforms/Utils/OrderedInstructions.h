@@ -46,7 +46,7 @@ public:
   /// i.e. If an instruction is deleted or added to the basic block, the user
   /// should call this function to invalidate the OrderedBasicBlock cache for
   /// this basic block.
-  void invalidateBlock(BasicBlock *BB) { OBBMap.erase(BB); }
+  void invalidateBlock(const BasicBlock *BB) { OBBMap.erase(BB); }
 };
 
 } // end namespace llvm

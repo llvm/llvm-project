@@ -57,6 +57,8 @@ CODEGENOPT(DisableLifetimeMarkers, 1, 0) ///< Don't emit any lifetime markers
 CODEGENOPT(DisableO0ImplyOptNone , 1, 0) ///< Don't annonate function with optnone at O0
 CODEGENOPT(ExperimentalNewPassManager, 1, 0) ///< Enables the new, experimental
                                              ///< pass manager.
+CODEGENOPT(DebugPassManager, 1, 0) ///< Prints debug information for the new
+                                   ///< pass manager.
 CODEGENOPT(DisableRedZone    , 1, 0) ///< Set when -mno-red-zone is enabled.
 CODEGENOPT(DisableTailCalls  , 1, 0) ///< Do not emit tail calls.
 CODEGENOPT(EmitDeclMetadata  , 1, 0) ///< Emit special metadata indicating what

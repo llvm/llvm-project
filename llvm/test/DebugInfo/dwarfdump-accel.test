@@ -1,4 +1,5 @@
 RUN: llvm-dwarfdump %p/Inputs/dwarfdump-objc.x86_64.o | FileCheck %s
+RUN: llvm-dwarfdump -verify %p/Inputs/dwarfdump-objc.x86_64.o | FileCheck %s --check-prefix=VERIFY
 
 Gather some DIE indexes to verify the accelerator table contents.
 CHECK: .debug_info contents
@@ -63,3 +64,7 @@ CHECK-NOT: Name
 CHECK:     {Atom[0]: [[READONLY]]}
 CHECK:     {Atom[0]: [[ASSIGN]]}
 CHECK:     {Atom[0]: [[SETASSIGN]]}
+
+Verify the debug info in the apple_names accelerator table.
+VERIFY: Verifying .apple_names
+VERIFY-NEXT: No errors.

@@ -966,7 +966,7 @@ struct FormatStyle {
   ///   IncludeCategories:
   ///     - Regex:           '^"(llvm|llvm-c|clang|clang-c)/'
   ///       Priority:        2
-  ///     - Regex:           '^(<|"(gtest|isl|json)/)'
+  ///     - Regex:           '^(<|"(gtest|gmock|isl|json)/)'
   ///       Priority:        3
   ///     - Regex:           '.*'
   ///       Priority:        1

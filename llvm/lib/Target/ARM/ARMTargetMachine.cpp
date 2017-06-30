@@ -110,60 +110,20 @@ static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
 static ARMBaseTargetMachine::ARMABI
 computeTargetABI(const Triple &TT, StringRef CPU,
                  const TargetOptions &Options) {
-  if (Options.MCOptions.getABIName() == "aapcs16")
+  StringRef ABIName = Options.MCOptions.getABIName();
+
+  if (ABIName.empty())
+    ABIName = ARM::computeDefaultTargetABI(TT, CPU);
+
+  if (ABIName == "aapcs16")
     return ARMBaseTargetMachine::ARM_ABI_AAPCS16;
-  else if (Options.MCOptions.getABIName().startswith("aapcs"))
+  else if (ABIName.startswith("aapcs"))
     return ARMBaseTargetMachine::ARM_ABI_AAPCS;
-  else if (Options.MCOptions.getABIName().startswith("apcs"))
+  else if (ABIName.startswith("apcs"))
     return ARMBaseTargetMachine::ARM_ABI_APCS;
 
-  assert(Options.MCOptions.getABIName().empty() &&
-         "Unknown target-abi option!");
-
-  ARMBaseTargetMachine::ARMABI TargetABI =
-      ARMBaseTargetMachine::ARM_ABI_UNKNOWN;
-
-  unsigned ArchKind = ARM::parseCPUArch(CPU);
-  StringRef ArchName = ARM::getArchName(ArchKind);
-  // FIXME: This is duplicated code from the front end and should be unified.
-  if (TT.isOSBinFormatMachO()) {
-    if (TT.getEnvironment() == Triple::EABI ||
-        (TT.getOS() == Triple::UnknownOS && TT.isOSBinFormatMachO()) ||
-        ARM::parseArchProfile(ArchName) == ARM::PK_M) {
-      TargetABI = ARMBaseTargetMachine::ARM_ABI_AAPCS;
-    } else if (TT.isWatchABI()) {
-      TargetABI = ARMBaseTargetMachine::ARM_ABI_AAPCS16;
-    } else {
-      TargetABI = ARMBaseTargetMachine::ARM_ABI_APCS;
-    }
-  } else if (TT.isOSWindows()) {
-    // FIXME: this is invalid for WindowsCE
-    TargetABI = ARMBaseTargetMachine::ARM_ABI_AAPCS;
-  } else {
-    // Select the default based on the platform.
-    switch (TT.getEnvironment()) {
-    case Triple::Android:
-    case Triple::GNUEABI:
-    case Triple::GNUEABIHF:
-    case Triple::MuslEABI:
-    case Triple::MuslEABIHF:
-    case Triple::EABIHF:
-    case Triple::EABI:
-      TargetABI = ARMBaseTargetMachine::ARM_ABI_AAPCS;
-      break;
-    case Triple::GNU:
-      TargetABI = ARMBaseTargetMachine::ARM_ABI_APCS;
-      break;
-    default:
-      if (TT.isOSNetBSD())
-        TargetABI = ARMBaseTargetMachine::ARM_ABI_APCS;
-      else
-        TargetABI = ARMBaseTargetMachine::ARM_ABI_AAPCS;
-      break;
-    }
-  }
-
-  return TargetABI;
+  llvm_unreachable("Unhandled/unknown ABI Name!");
+  return ARMBaseTargetMachine::ARM_ABI_UNKNOWN;
 }
 
 static std::string computeDataLayout(const Triple &TT, StringRef CPU,

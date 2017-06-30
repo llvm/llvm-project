@@ -1291,6 +1291,25 @@ define float @test_exp2_intrin(float %a) {
   ret float %res
 }
 
+declare float @llvm.log.f32(float)
+define float @test_log_intrin(float %a) {
+; CHECK-LABEL: name: test_log_intrin
+; CHECK: [[A:%[0-9]+]](s32) = COPY %s0
+; CHECK: [[RES:%[0-9]+]](s32) = G_FLOG [[A]]
+; CHECK: %s0 = COPY [[RES]]
+  %res = call float @llvm.log.f32(float %a)
+  ret float %res
+}
+
+declare float @llvm.log2.f32(float)
+define float @test_log2_intrin(float %a) {
+; CHECK-LABEL: name: test_log2_intrin
+; CHECK: [[A:%[0-9]+]](s32) = COPY %s0
+; CHECK: [[RES:%[0-9]+]](s32) = G_FLOG2 [[A]]
+; CHECK: %s0 = COPY [[RES]]
+  %res = call float @llvm.log2.f32(float %a)
+  ret float %res
+}
 declare void @llvm.lifetime.start.p0i8(i64, i8*)
 declare void @llvm.lifetime.end.p0i8(i64, i8*)
 define void @test_lifetime_intrin() {

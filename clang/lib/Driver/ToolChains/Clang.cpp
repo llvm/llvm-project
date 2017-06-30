@@ -35,6 +35,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
+#include "llvm/Support/TargetParser.h"
 #include "llvm/Support/YAMLParser.h"
 
 #ifdef LLVM_ON_UNIX
@@ -1315,43 +1316,13 @@ void Clang::AddARMTargetArgs(const llvm::Triple &Triple, const ArgList &Args,
   // FIXME: Support -meabi.
   // FIXME: Parts of this are duplicated in the backend, unify this somehow.
   const char *ABIName = nullptr;
-  if (Arg *A = Args.getLastArg(options::OPT_mabi_EQ)) {
+  if (Arg *A = Args.getLastArg(options::OPT_mabi_EQ))
     ABIName = A->getValue();
-  } else if (Triple.isOSBinFormatMachO()) {
-    if (arm::useAAPCSForMachO(Triple)) {
-      ABIName = "aapcs";
-    } else if (Triple.isWatchABI()) {
-      ABIName = "aapcs16";
-    } else {
-      ABIName = "apcs-gnu";
-    }
-  } else if (Triple.isOSWindows()) {
-    // FIXME: this is invalid for WindowsCE
-    ABIName = "aapcs";
-  } else {
-    // Select the default based on the platform.
-    switch (Triple.getEnvironment()) {
-    case llvm::Triple::Android:
-    case llvm::Triple::GNUEABI:
-    case llvm::Triple::GNUEABIHF:
-    case llvm::Triple::MuslEABI:
-    case llvm::Triple::MuslEABIHF:
-      ABIName = "aapcs-linux";
-      break;
-    case llvm::Triple::EABIHF:
-    case llvm::Triple::EABI:
-      ABIName = "aapcs";
-      break;
-    default:
-      if (Triple.getOS() == llvm::Triple::NetBSD)
-        ABIName = "apcs-gnu";
-      else if (Triple.getOS() == llvm::Triple::OpenBSD)
-        ABIName = "aapcs-linux";
-      else
-        ABIName = "aapcs";
-      break;
-    }
+  else {
+    StringRef CPU = getCPUName(Args, Triple, /*FromAs*/ false);
+    ABIName = llvm::ARM::computeDefaultTargetABI(Triple, CPU).data();
   }
+
   CmdArgs.push_back("-target-abi");
   CmdArgs.push_back(ABIName);
 

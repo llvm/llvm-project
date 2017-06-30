@@ -25,22 +25,26 @@
 // dllexport would normally do. We need to export them in order to make the
 // VS2015 dynamic CRT (MD) work.
 #if SANITIZER_WINDOWS
-# define CXX_OPERATOR_ATTRIBUTE
-# ifdef _WIN64
-#  pragma comment(linker, "/export:??2@YAPEAX_K@Z")   // operator new
-#  pragma comment(linker, "/export:??3@YAXPEAX@Z")    // operator delete
-#  pragma comment(linker, "/export:??3@YAXPEAX_K@Z")  // sized operator delete
-#  pragma comment(linker, "/export:??_U@YAPEAX_K@Z")  // operator new[]
-#  pragma comment(linker, "/export:??_V@YAXPEAX@Z")   // operator delete[]
-# else
-#  pragma comment(linker, "/export:??2@YAPAXI@Z")   // operator new
-#  pragma comment(linker, "/export:??3@YAXPAX@Z")   // operator delete
-#  pragma comment(linker, "/export:??3@YAXPAXI@Z")  // sized operator delete
-#  pragma comment(linker, "/export:??_U@YAPAXI@Z")  // operator new[]
-#  pragma comment(linker, "/export:??_V@YAXPAX@Z")  // operator delete[]
-# endif
+#define CXX_OPERATOR_ATTRIBUTE
+#define COMMENT_EXPORT(sym) __pragma(comment(linker, "/export:"##sym))
+#ifdef _WIN64
+COMMENT_EXPORT("??2@YAPEAX_K@Z")                     // operator new
+COMMENT_EXPORT("??2@YAPEAX_KAEBUnothrow_t@std@@@Z")  // operator new nothrow
+COMMENT_EXPORT("??3@YAXPEAX@Z")                      // operator delete
+COMMENT_EXPORT("??3@YAXPEAX_K@Z")                    // sized operator delete
+COMMENT_EXPORT("??_U@YAPEAX_K@Z")                    // operator new[]
+COMMENT_EXPORT("??_V@YAXPEAX@Z")                     // operator delete[]
 #else
-# define CXX_OPERATOR_ATTRIBUTE INTERCEPTOR_ATTRIBUTE
+COMMENT_EXPORT("??2@YAPAXI@Z")                    // operator new
+COMMENT_EXPORT("??2@YAPAXIABUnothrow_t@std@@@Z")  // operator new nothrow
+COMMENT_EXPORT("??3@YAXPAX@Z")                    // operator delete
+COMMENT_EXPORT("??3@YAXPAXI@Z")                   // sized operator delete
+COMMENT_EXPORT("??_U@YAPAXI@Z")                   // operator new[]
+COMMENT_EXPORT("??_V@YAXPAX@Z")                   // operator delete[]
+#endif
+#undef COMMENT_EXPORT
+#else
+#define CXX_OPERATOR_ATTRIBUTE INTERCEPTOR_ATTRIBUTE
 #endif
 
 using namespace __asan;  // NOLINT

@@ -70,7 +70,7 @@ public:
 
   elf_symbol_iterator_range symbols() const;
 
-  static inline bool classof(const Binary *v) { return v->isELF(); }
+  static bool classof(const Binary *v) { return v->isELF(); }
 
   SubtargetFeatures getFeatures() const override;
 
@@ -389,7 +389,7 @@ public:
   const ELFFile<ELFT> *getELFFile() const { return &EF; }
 
   bool isDyldType() const { return isDyldELFObject; }
-  static inline bool classof(const Binary *v) {
+  static bool classof(const Binary *v) {
     return v->getType() == getELFType(ELFT::TargetEndianness == support::little,
                                       ELFT::Is64Bits);
   }

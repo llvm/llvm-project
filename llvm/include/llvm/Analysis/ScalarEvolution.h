@@ -262,7 +262,7 @@ public:
   const SCEVConstant *getRHS() const { return RHS; }
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
-  static inline bool classof(const SCEVPredicate *P) {
+  static bool classof(const SCEVPredicate *P) {
     return P->getKind() == P_Equal;
   }
 };
@@ -360,7 +360,7 @@ public:
   bool isAlwaysTrue() const override;
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
-  static inline bool classof(const SCEVPredicate *P) {
+  static bool classof(const SCEVPredicate *P) {
     return P->getKind() == P_Wrap;
   }
 };
@@ -406,7 +406,7 @@ public:
   unsigned getComplexity() const override { return Preds.size(); }
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
-  static inline bool classof(const SCEVPredicate *P) {
+  static bool classof(const SCEVPredicate *P) {
     return P->getKind() == P_Union;
   }
 };
@@ -1244,7 +1244,6 @@ public:
   }
   const SCEV *getUDivExpr(const SCEV *LHS, const SCEV *RHS);
   const SCEV *getUDivExactExpr(const SCEV *LHS, const SCEV *RHS);
-  const SCEV *getURemExpr(const SCEV *LHS, const SCEV *RHS);
   const SCEV *getAddRecExpr(const SCEV *Start, const SCEV *Step, const Loop *L,
                             SCEV::NoWrapFlags Flags);
   const SCEV *getAddRecExpr(SmallVectorImpl<const SCEV *> &Operands,

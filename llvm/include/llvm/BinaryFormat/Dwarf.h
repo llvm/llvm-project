@@ -62,6 +62,9 @@ enum LLVMConstants : uint32_t {
 const uint32_t DW_CIE_ID = UINT32_MAX;
 const uint64_t DW64_CIE_ID = UINT64_MAX;
 
+// Identifier of an invalid DIE offset in the .debug_info section.
+const uint32_t DW_INVALID_OFFSET = UINT32_MAX;
+
 enum Tag : uint16_t {
 #define HANDLE_DW_TAG(ID, NAME, VERSION, VENDOR) DW_TAG_##NAME = ID,
 #include "llvm/BinaryFormat/Dwarf.def"

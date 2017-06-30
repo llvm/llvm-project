@@ -1,7 +1,7 @@
-.. title:: clang-tidy - android-file-open-flag
+.. title:: clang-tidy - android-cloexec-open
 
-android-file-open-flag
-======================
+android-cloexec-open
+====================
 
 A common source of security bugs is code that opens a file without using the
 ``O_CLOEXEC`` flag.  Without that flag, an opened sensitive file would remain

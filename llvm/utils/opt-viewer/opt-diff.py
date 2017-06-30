@@ -44,20 +44,21 @@ if __name__ == '__main__':
         default=cpu_count(),
         type=int,
         help='Max job count (defaults to %(default)s, the current CPU count)')
+    parser.add_argument(
+        '--no-progress-indicator',
+        '-n',
+        action='store_true',
+        default=False,
+        help='Do not display any indicator of how many YAML files were read.')
     parser.add_argument('--output', '-o', default='diff.opt.yaml')
     args = parser.parse_args()
-
-    if args.jobs == 1:
-        pmap = map
-    else:
-        pool = Pool(processes=args.jobs)
-        pmap = pool.map
 
     files1 = find_files(args.yaml_dir_or_file_1)
     files2 = find_files(args.yaml_dir_or_file_2)
 
-    all_remarks1, _, _ = optrecord.gather_results(pmap, files1)
-    all_remarks2, _, _ = optrecord.gather_results(pmap, files2)
+    print_progress = not args.no_progress_indicator
+    all_remarks1, _, _ = optrecord.gather_results(files1, args.jobs, print_progress)
+    all_remarks2, _, _ = optrecord.gather_results(files2, args.jobs, print_progress)
 
     added = set(all_remarks2.values()) - set(all_remarks1.values())
     removed = set(all_remarks1.values()) - set(all_remarks2.values())
