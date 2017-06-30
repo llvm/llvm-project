@@ -572,6 +572,12 @@ static int printStoreUnits(StringRef StorePath, raw_ostream &OS) {
   return 1;
 }
 
+static int printStoreFileRecord(StringRef storePath, StringRef filePath,
+                                Optional<unsigned> lineStart, unsigned lineCount,
+                                raw_ostream &OS) {
+  return 1;
+}
+
 #endif
 
 //===----------------------------------------------------------------------===//
@@ -772,6 +778,8 @@ static int watchDirectory(StringRef dirPath) {
   }
 #if HAVE_CORESERVICES
   dispatch_main();
+#else
+  return 1;
 #endif
 }
 
@@ -881,9 +889,11 @@ int indextest_core_main(int argc, const char **argv) {
       return printUnit(options::InputFiles[0], outs());
   }
 
+#if INDEXSTORE_HAS_BLOCKS
   if (options::Action == ActionType::PrintStoreFormatVersion) {
     outs() << indexstore::IndexStore::formatVersion() << '\n';
   }
+#endif
 
   if (options::Action == ActionType::AggregateAsJSON) {
     if (options::InputFiles.empty()) {
