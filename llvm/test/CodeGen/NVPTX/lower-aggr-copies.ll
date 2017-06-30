@@ -17,8 +17,6 @@ entry:
   ret i8* %dst
 
 ; IR-LABEL:   @memcpy_caller
-; IR:         [[CMPREG:%[0-9]+]] = icmp eq i64 0, %n
-; IR:         br i1 [[CMPREG]], label %split, label %loadstoreloop
 ; IR:         loadstoreloop:
 ; IR:         [[LOADPTR:%[0-9]+]] = getelementptr inbounds i8, i8* %src, i64
 ; IR-NEXT:    [[VAL:%[0-9]+]] = load i8, i8* [[LOADPTR]]
@@ -75,8 +73,6 @@ entry:
 
 ; IR-LABEL:   @memset_caller
 ; IR:         [[VAL:%[0-9]+]] = trunc i32 %c to i8
-; IR:         [[CMPREG:%[0-9]+]] = icmp eq i64 0, %n
-; IR:         br i1 [[CMPREG]], label %split, label %loadstoreloop
 ; IR:         loadstoreloop:
 ; IR:         [[STOREPTR:%[0-9]+]] = getelementptr inbounds i8, i8* %dst, i64
 ; IR-NEXT:    store i8 [[VAL]], i8* [[STOREPTR]]

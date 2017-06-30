@@ -178,7 +178,7 @@ define i32 @test13(i32 %x, i32 %y) {
 ; ((x | ~y) ^ (~x | y)) -> x ^ y
 define i32 @test14(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test14(
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 %x, %y
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 %y, %x
 ; CHECK-NEXT:    ret i32 [[XOR]]
 ;
   %noty = xor i32 %y, -1
@@ -191,7 +191,7 @@ define i32 @test14(i32 %x, i32 %y) {
 
 define i32 @test14_commuted(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test14_commuted(
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 %x, %y
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 %y, %x
 ; CHECK-NEXT:    ret i32 [[XOR]]
 ;
   %noty = xor i32 %y, -1
@@ -205,7 +205,7 @@ define i32 @test14_commuted(i32 %x, i32 %y) {
 ; ((x & ~y) ^ (~x & y)) -> x ^ y
 define i32 @test15(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test15(
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 %x, %y
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 %y, %x
 ; CHECK-NEXT:    ret i32 [[XOR]]
 ;
   %noty = xor i32 %y, -1
@@ -218,7 +218,7 @@ define i32 @test15(i32 %x, i32 %y) {
 
 define i32 @test15_commuted(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test15_commuted(
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 %x, %y
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 %y, %x
 ; CHECK-NEXT:    ret i32 [[XOR]]
 ;
   %noty = xor i32 %y, -1
@@ -343,4 +343,72 @@ define i8 @test18(i8 %A, i8 %B) {
   %or = or i8 %xor2, %xor1
   %res = mul i8 %or, %xor2 ; to increase the use count for the xor
   ret i8 %res
+}
+
+; ((x | y) ^ (~x | ~y)) -> ~(x ^ y)
+define i32 @test19(i32 %x, i32 %y) {
+; CHECK-LABEL: @test19(
+; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[OR2_DEMORGAN:%.*]] = and i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[OR2:%.*]] = xor i32 [[OR2_DEMORGAN]], -1
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[OR1]], [[OR2]]
+; CHECK-NEXT:    ret i32 [[XOR]]
+;
+  %noty = xor i32 %y, -1
+  %notx = xor i32 %x, -1
+  %or1 = or i32 %x, %y
+  %or2 = or i32 %notx, %noty
+  %xor = xor i32 %or1, %or2
+  ret i32 %xor
+}
+
+; ((x | y) ^ (~y | ~x)) -> ~(x ^ y)
+define i32 @test20(i32 %x, i32 %y) {
+; CHECK-LABEL: @test20(
+; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[OR2_DEMORGAN:%.*]] = and i32 [[Y]], [[X]]
+; CHECK-NEXT:    [[OR2:%.*]] = xor i32 [[OR2_DEMORGAN]], -1
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[OR1]], [[OR2]]
+; CHECK-NEXT:    ret i32 [[XOR]]
+;
+  %noty = xor i32 %y, -1
+  %notx = xor i32 %x, -1
+  %or1 = or i32 %x, %y
+  %or2 = or i32 %noty, %notx
+  %xor = xor i32 %or1, %or2
+  ret i32 %xor
+}
+
+; ((~x | ~y) ^ (x | y)) -> ~(x ^ y)
+define i32 @test21(i32 %x, i32 %y) {
+; CHECK-LABEL: @test21(
+; CHECK-NEXT:    [[OR1_DEMORGAN:%.*]] = and i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[OR1:%.*]] = xor i32 [[OR1_DEMORGAN]], -1
+; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[OR2]], [[OR1]]
+; CHECK-NEXT:    ret i32 [[XOR]]
+;
+  %noty = xor i32 %y, -1
+  %notx = xor i32 %x, -1
+  %or1 = or i32 %notx, %noty
+  %or2 = or i32 %x, %y
+  %xor = xor i32 %or1, %or2
+  ret i32 %xor
+}
+
+; ((~x | ~y) ^ (y | x)) -> ~(x ^ y)
+define i32 @test22(i32 %x, i32 %y) {
+; CHECK-LABEL: @test22(
+; CHECK-NEXT:    [[OR1_DEMORGAN:%.*]] = and i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[OR1:%.*]] = xor i32 [[OR1_DEMORGAN]], -1
+; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[Y]], [[X]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[OR2]], [[OR1]]
+; CHECK-NEXT:    ret i32 [[XOR]]
+;
+  %noty = xor i32 %y, -1
+  %notx = xor i32 %x, -1
+  %or1 = or i32 %notx, %noty
+  %or2 = or i32 %y, %x
+  %xor = xor i32 %or1, %or2
+  ret i32 %xor
 }

@@ -70,7 +70,7 @@ D: Branch weights and BlockFrequencyInfo
 
 N: Hal Finkel
 E: hfinkel@anl.gov
-D: BBVectorize, the loop reroller, alias analysis and the PowerPC target
+D: The loop reroller, alias analysis and the PowerPC target
 
 N: Dan Gohman
 E: sunfish@mozilla.com

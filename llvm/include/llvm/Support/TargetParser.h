@@ -17,6 +17,7 @@
 
 // FIXME: vector is used because that's what clang uses for subtarget feature
 // lists, but SmallVector would probably be better
+#include "llvm/ADT/Triple.h"
 #include <vector>
 
 namespace llvm {
@@ -139,6 +140,8 @@ unsigned parseArchISA(StringRef Arch);
 unsigned parseArchEndian(StringRef Arch);
 unsigned parseArchProfile(StringRef Arch);
 unsigned parseArchVersion(StringRef Arch);
+
+StringRef computeDefaultTargetABI(const Triple &TT, StringRef CPU);
 
 } // namespace ARM
 

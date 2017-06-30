@@ -88,8 +88,6 @@ const StratifiedIndex StratifiedLink::SetSentinel =
 //===----------------------------------------------------------------------===//
 
 /// Determines whether it would be pointless to add the given Value to our sets.
-static bool canSkipAddingToSets(Value *Val);
-
 static bool canSkipAddingToSets(Value *Val) {
   // Constants can share instances, which may falsely unify multiple
   // sets, e.g. in

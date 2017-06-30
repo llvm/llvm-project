@@ -62,6 +62,45 @@ uint32_t DWARFAcceleratorTable::getHeaderDataLength() {
   return Hdr.HeaderDataLength;
 }
 
+ArrayRef<std::pair<DWARFAcceleratorTable::HeaderData::AtomType,
+                   DWARFAcceleratorTable::HeaderData::Form>>
+DWARFAcceleratorTable::getAtomsDesc() {
+  return HdrData.Atoms;
+}
+
+bool DWARFAcceleratorTable::validateForms() {
+  for (auto Atom : getAtomsDesc()) {
+    DWARFFormValue FormValue(Atom.second);
+    switch (Atom.first) {
+    case dwarf::DW_ATOM_die_offset:
+      if ((!FormValue.isFormClass(DWARFFormValue::FC_Constant) &&
+           !FormValue.isFormClass(DWARFFormValue::FC_Flag)) ||
+          FormValue.getForm() == dwarf::DW_FORM_sdata)
+        return false;
+    default:
+      break;
+    }
+  }
+  return true;
+}
+
+uint32_t DWARFAcceleratorTable::readAtoms(uint32_t &HashDataOffset) {
+  uint32_t DieOffset = dwarf::DW_INVALID_OFFSET;
+
+  for (auto Atom : getAtomsDesc()) {
+    DWARFFormValue FormValue(Atom.second);
+    FormValue.extractValue(AccelSection, &HashDataOffset, NULL);
+    switch (Atom.first) {
+    case dwarf::DW_ATOM_die_offset:
+      DieOffset = *FormValue.getAsUnsignedConstant();
+      break;
+    default:
+      break;
+    }
+  }
+  return DieOffset;
+}
+
 LLVM_DUMP_METHOD void DWARFAcceleratorTable::dump(raw_ostream &OS) const {
   // Dump the header.
   OS << "Magic = " << format("0x%08x", Hdr.Magic) << '\n'

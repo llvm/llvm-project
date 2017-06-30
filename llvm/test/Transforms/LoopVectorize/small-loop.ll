@@ -7,7 +7,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 @c = common global [2048 x i32] zeroinitializer, align 16
 
 ;CHECK-LABEL: @example1(
-;CHECK-NOT: load <4 x i32>
+;CHECK: load <4 x i32>
 ;CHECK: ret void
 define void @example1() nounwind uwtable ssp {
   br label %1
@@ -23,8 +23,8 @@ define void @example1() nounwind uwtable ssp {
   store i32 %6, i32* %7, align 4
   %indvars.iv.next = add i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
-  %exitcond = icmp eq i32 %lftr.wideiv, 8  ;   <-----  A really small trip count.
-  br i1 %exitcond, label %8, label %1
+  %exitcond = icmp eq i32 %lftr.wideiv, 8  ;   <-----  A really small trip count
+  br i1 %exitcond, label %8, label %1      ;           w/o scalar iteration overhead.
 
 ; <label>:8                                       ; preds = %1
   ret void

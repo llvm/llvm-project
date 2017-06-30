@@ -564,7 +564,7 @@ Iter Filler::replaceWithCompactBranch(MachineBasicBlock &MBB, Iter Branch,
 
 // For given opcode returns opcode of corresponding instruction with short
 // delay slot.
-// For the pseudo TAILCALL*_MM instrunctions return the short delay slot
+// For the pseudo TAILCALL*_MM instructions return the short delay slot
 // form. Unfortunately, TAILCALL<->b16 is denied as b16 has a limited range
 // that is too short to make use of for tail calls.
 static int getEquivalentCallShort(int Opcode) {

@@ -220,6 +220,7 @@ TEST(DominatorTree, Unreachable) {
         EXPECT_EQ(PostDominatedBBs.size(), 0UL);
 
         // Check DFS Numbers before
+        DT->updateDFSNumbers();
         EXPECT_EQ(DT->getNode(BB0)->getDFSNumIn(), 0UL);
         EXPECT_EQ(DT->getNode(BB0)->getDFSNumOut(), 7UL);
         EXPECT_EQ(DT->getNode(BB1)->getDFSNumIn(), 1UL);
@@ -235,6 +236,7 @@ TEST(DominatorTree, Unreachable) {
         DT->recalculate(F);
 
         // Check DFS Numbers after
+        DT->updateDFSNumbers();
         EXPECT_EQ(DT->getNode(BB0)->getDFSNumIn(), 0UL);
         EXPECT_EQ(DT->getNode(BB0)->getDFSNumOut(), 9UL);
         EXPECT_EQ(DT->getNode(BB1)->getDFSNumIn(), 1UL);

@@ -54,8 +54,9 @@ Non-comprehensive list of changes in this release
   its nature as a general purpose PDB manipulation / diagnostics tool that does
   more than just dumping contents.
   
-
-* ... next change ...
+* The ``BBVectorize`` pass has been removed. It was fully replaced and no
+  longer used back in 2014 but we didn't get around to removing it. Now it is
+  gone. The SLP vectorizer is the suggested non-loop vectorization pass.
 
 .. NOTE
    If you would like to document a larger change, then you can add a
@@ -106,6 +107,15 @@ Changes to the OCaml bindings
 -----------------------------
 
  During this release ...
+
+
+Changes to the C API
+--------------------
+
+* Deprecated the ``LLVMAddBBVectorizePass`` interface since the ``BBVectorize``
+  pass has been removed. It is now a no-op and will be removed in the next
+  release. Use ``LLVMAddSLPVectorizePass`` instead to get the supported SLP
+  vectorizer.
 
 
 External Open Source Projects Using LLVM 5

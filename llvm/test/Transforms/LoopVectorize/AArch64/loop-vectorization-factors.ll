@@ -88,9 +88,9 @@ for.body:                                         ; preds = %entry, %for.body
 }
 
 ; CHECK-LABEL: @add_c(
-; CHECK: load <16 x i8>, <16 x i8>*
-; CHECK: add <16 x i16>
-; CHECK: store <16 x i16>
+; CHECK: load <8 x i8>, <8 x i8>*
+; CHECK: add <8 x i16>
+; CHECK: store <8 x i16>
 ; Function Attrs: nounwind
 define void @add_c(i8* noalias nocapture readonly %p, i16* noalias nocapture %q, i32 %len) #0 {
 entry:
@@ -116,9 +116,9 @@ for.body:                                         ; preds = %entry, %for.body
 }
 
 ; CHECK-LABEL: @add_d(
-; CHECK: load <8 x i16>
-; CHECK: add nsw <8 x i32>
-; CHECK: store <8 x i32>
+; CHECK: load <4 x i16>
+; CHECK: add nsw <4 x i32>
+; CHECK: store <4 x i32>
 define void @add_d(i16* noalias nocapture readonly %p, i32* noalias nocapture %q, i32 %len) #0 {
 entry:
   %cmp7 = icmp sgt i32 %len, 0
@@ -187,16 +187,16 @@ for.body:                                         ; preds = %for.body, %for.body
 }
 
 ; CHECK-LABEL: @add_f
-; CHECK: load <16 x i16>
-; CHECK: trunc <16 x i16>
-; CHECK: shl <16 x i8>
-; CHECK: add <16 x i8>
-; CHECK: or <16 x i8>
-; CHECK: mul <16 x i8>
-; CHECK: and <16 x i8>
-; CHECK: xor <16 x i8>
-; CHECK: mul <16 x i8>
-; CHECK: store <16 x i8>
+; CHECK: load <8 x i16>
+; CHECK: trunc <8 x i16>
+; CHECK: shl <8 x i8>
+; CHECK: add <8 x i8>
+; CHECK: or <8 x i8>
+; CHECK: mul <8 x i8>
+; CHECK: and <8 x i8>
+; CHECK: xor <8 x i8>
+; CHECK: mul <8 x i8>
+; CHECK: store <8 x i8>
 define void @add_f(i16* noalias nocapture readonly %p, i8* noalias nocapture %q, i8 %arg1, i8 %arg2, i32 %len) #0 {
 entry:
   %cmp.32 = icmp sgt i32 %len, 0
