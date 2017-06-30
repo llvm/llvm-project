@@ -6571,7 +6571,7 @@ void Sema::ProcessDeclAttributeList(Scope *S, Decl *D,
   }
 }
 
-// Helper for delayed proccessing TransparentUnion attribute.
+// Helper for delayed processing TransparentUnion attribute.
 void Sema::ProcessDeclAttributeDelayed(Decl *D, const AttributeList *AttrList) {
   for (const AttributeList *Attr = AttrList; Attr; Attr = Attr->getNext())
     if (Attr->getKind() == AttributeList::AT_TransparentUnion) {

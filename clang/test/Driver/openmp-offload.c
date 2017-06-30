@@ -593,7 +593,7 @@
 /// ###########################################################################
 
 /// Check -fopenmp-is-device is passed when compiling for the device.
-// RUN:   %clang -### -fopenmp=libomp -fopenmp-targets=powerpc64le-ibm-linux-gnu %s 2>&1 \
+// RUN:   %clang -### -target powerpc64le-linux -fopenmp=libomp -fopenmp-targets=powerpc64le-ibm-linux-gnu %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-FOPENMP-IS-DEVICE %s
 
-// CHK-FOPENMP-IS-DEVICE: clang{{.*}} "-aux-triple" "powerpc64le-unknown-linux-gnu" {{.*}}.c" "-fopenmp-is-device" "-fopenmp-host-ir-file-path"
+// CHK-FOPENMP-IS-DEVICE: clang{{.*}} "-aux-triple" "powerpc64le--linux" {{.*}}.c" "-fopenmp-is-device" "-fopenmp-host-ir-file-path"

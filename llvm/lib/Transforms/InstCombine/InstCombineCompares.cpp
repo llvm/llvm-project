@@ -112,10 +112,10 @@ static bool subWithOverflow(Constant *&Result, Constant *In1,
 
 /// Given an icmp instruction, return true if any use of this comparison is a
 /// branch on sign bit comparison.
-static bool isBranchOnSignBitCheck(ICmpInst &I, bool isSignBit) {
+static bool hasBranchUse(ICmpInst &I) {
   for (auto *U : I.users())
     if (isa<BranchInst>(U))
-      return isSignBit;
+      return true;
   return false;
 }
 
@@ -1448,12 +1448,13 @@ Instruction *InstCombiner::foldICmpWithConstant(ICmpInst &Cmp) {
     // of a test and branch. So we avoid canonicalizing in such situations
     // because test and branch instruction has better branch displacement
     // than compare and branch instruction.
-    if (!isBranchOnSignBitCheck(Cmp, IsSignBit) && !Cmp.isEquality()) {
-      if (auto *AI = Intersection.getSingleElement())
-        return new ICmpInst(ICmpInst::ICMP_EQ, X, Builder->getInt(*AI));
-      if (auto *AD = Difference.getSingleElement())
-        return new ICmpInst(ICmpInst::ICMP_NE, X, Builder->getInt(*AD));
-    }
+    if (Cmp.isEquality() || (IsSignBit && hasBranchUse(Cmp)))
+      return nullptr;
+
+    if (auto *AI = Intersection.getSingleElement())
+      return new ICmpInst(ICmpInst::ICMP_EQ, X, Builder->getInt(*AI));
+    if (auto *AD = Difference.getSingleElement())
+      return new ICmpInst(ICmpInst::ICMP_NE, X, Builder->getInt(*AD));
   }
 
   return nullptr;

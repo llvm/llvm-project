@@ -230,7 +230,7 @@ void VerifyPCHAction::ExecuteAction() {
   bool Preamble = CI.getPreprocessorOpts().PrecompiledPreambleBytes.first != 0;
   const std::string &Sysroot = CI.getHeaderSearchOpts().Sysroot;
   std::unique_ptr<ASTReader> Reader(new ASTReader(
-      CI.getPreprocessor(), CI.getASTContext(), CI.getPCHContainerReader(),
+      CI.getPreprocessor(), &CI.getASTContext(), CI.getPCHContainerReader(),
       CI.getFrontendOpts().ModuleFileExtensions,
       Sysroot.empty() ? "" : Sysroot.c_str(),
       /*DisableValidation*/ false,

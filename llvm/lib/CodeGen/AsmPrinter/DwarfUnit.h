@@ -291,6 +291,15 @@ public:
 
   void constructTypeDIE(DIE &Buffer, const DICompositeType *CTy);
 
+  /// addSectionDelta - Add a label delta attribute data and value.
+  DIE::value_iterator addSectionDelta(DIE &Die, dwarf::Attribute Attribute,
+                                      const MCSymbol *Hi, const MCSymbol *Lo);
+
+  /// Add a Dwarf section label attribute data and value.
+  DIE::value_iterator addSectionLabel(DIE &Die, dwarf::Attribute Attribute,
+                                      const MCSymbol *Label,
+                                      const MCSymbol *Sec);
+
 protected:
   ~DwarfUnit();
 

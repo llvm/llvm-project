@@ -580,8 +580,7 @@ struct ScudoAllocator {
 
   void *calloc(uptr NMemB, uptr Size) {
     initThreadMaybe();
-    // TODO(kostyak): switch to CheckForCallocOverflow once D34799 lands.
-    if (CallocShouldReturnNullDueToOverflow(NMemB, Size))
+    if (CheckForCallocOverflow(NMemB, Size))
       return FailureHandler::OnBadRequest();
     return allocate(NMemB * Size, MinAlignment, FromMalloc, true);
   }

@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=armv6-linux-gnu | FileCheck %s
+; RUN: llc < %s -mtriple=armv6-linux-gnu -target-abi=apcs | FileCheck %s
 
 @b = external global i64*
 

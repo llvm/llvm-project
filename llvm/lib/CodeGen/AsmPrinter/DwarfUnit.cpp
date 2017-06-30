@@ -1587,6 +1587,26 @@ void DwarfTypeUnit::emitHeader(bool UseOffsets) {
                                  sizeof(Ty->getOffset()));
 }
 
+DIE::value_iterator
+DwarfUnit::addSectionDelta(DIE &Die, dwarf::Attribute Attribute,
+                           const MCSymbol *Hi, const MCSymbol *Lo) {
+  return Die.addValue(DIEValueAllocator, Attribute,
+                      DD->getDwarfVersion() >= 4 ? dwarf::DW_FORM_sec_offset
+                                                 : dwarf::DW_FORM_data4,
+                      new (DIEValueAllocator) DIEDelta(Hi, Lo));
+}
+
+DIE::value_iterator
+DwarfUnit::addSectionLabel(DIE &Die, dwarf::Attribute Attribute,
+                           const MCSymbol *Label, const MCSymbol *Sec) {
+  if (Asm->MAI->doesDwarfUseRelocationsAcrossSections())
+    return addLabel(Die, Attribute,
+                    DD->getDwarfVersion() >= 4 ? dwarf::DW_FORM_sec_offset
+                                               : dwarf::DW_FORM_data4,
+                    Label);
+  return addSectionDelta(Die, Attribute, Label, Sec);
+}
+
 bool DwarfTypeUnit::isDwoUnit() const {
   // Since there are no skeleton type units, all type units are dwo type units
   // when split DWARF is being used.

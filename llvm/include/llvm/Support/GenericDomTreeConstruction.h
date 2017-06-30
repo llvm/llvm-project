@@ -277,8 +277,6 @@ struct SemiNCAInfo {
       DT.DomTreeNodes[W] = IDomNode->addChild(
           llvm::make_unique<DomTreeNodeBase<NodeT>>(W, IDomNode));
     }
-
-    DT.updateDFSNumbers();
   }
 
   void doFullDFSWalk(const DomTreeT &DT) {
