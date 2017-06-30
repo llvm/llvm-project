@@ -114,11 +114,11 @@ ALL-NEXT:            referent = 0x1004, mode = pointer, opts = const, kind = ptr
 ALL-NEXT:   0x1006 | LF_ARGLIST [size = 12, hash = 194342]
 ALL-NEXT:            0x1003: `__vc_attributes::threadingAttribute::threading_e`
 ALL-NEXT:   0x1007 | LF_MFUNCTION [size = 28, hash = 254156]
-ALL-NEXT:            return type = 1, # args = 0x1006, param list = 0x0003 (void)
+ALL-NEXT:            return type = 0x0003 (void), # args = 1, param list = 0x1006
 ALL-NEXT:            class type = 0x1004, this type = 0x1005, this adjust = 0
 ALL-NEXT:            calling conv = thiscall, options = constructor
 ALL-NEXT:   0x1008 | LF_MFUNCTION [size = 28, hash = 194536]
-ALL-NEXT:            return type = 0, # args = 0x1000, param list = 0x0003 (void)
+ALL-NEXT:            return type = 0x0003 (void), # args = 0, param list = 0x1000
 ALL-NEXT:            class type = 0x1004, this type = 0x1005, this adjust = 0
 ALL-NEXT:            calling conv = thiscall, options = constructor
 ALL-NEXT:   0x1009 | LF_METHODLIST [size = 20, hash = 167492]
@@ -153,17 +153,17 @@ ALL-NEXT:   0x1010 | LF_ARGLIST [size = 16, hash = 134580]
 ALL-NEXT:            0x100D: `__vc_attributes::event_receiverAttribute::type_e`
 ALL-NEXT:            0x0030 (bool): `bool`
 ALL-NEXT:   0x1011 | LF_MFUNCTION [size = 28, hash = 148190]
-ALL-NEXT:            return type = 2, # args = 0x1010, param list = 0x0003 (void)
+ALL-NEXT:            return type = 0x0003 (void), # args = 2, param list = 0x1010
 ALL-NEXT:            class type = 0x100E, this type = 0x100F, this adjust = 0
 ALL-NEXT:            calling conv = thiscall, options = constructor
 ALL-NEXT:   0x1012 | LF_ARGLIST [size = 12, hash = 113636]
 ALL-NEXT:            0x100D: `__vc_attributes::event_receiverAttribute::type_e`
 ALL-NEXT:   0x1013 | LF_MFUNCTION [size = 28, hash = 53336]
-ALL-NEXT:            return type = 1, # args = 0x1012, param list = 0x0003 (void)
+ALL-NEXT:            return type = 0x0003 (void), # args = 1, param list = 0x1012
 ALL-NEXT:            class type = 0x100E, this type = 0x100F, this adjust = 0
 ALL-NEXT:            calling conv = thiscall, options = constructor
 ALL-NEXT:   0x1014 | LF_MFUNCTION [size = 28, hash = 55779]
-ALL-NEXT:            return type = 0, # args = 0x1000, param list = 0x0003 (void)
+ALL-NEXT:            return type = 0x0003 (void), # args = 0, param list = 0x1000
 ALL-NEXT:            class type = 0x100E, this type = 0x100F, this adjust = 0
 ALL-NEXT:            calling conv = thiscall, options = constructor
 ALL-NEXT:   0x1015 | LF_METHODLIST [size = 28, hash = 220695]
@@ -199,11 +199,11 @@ ALL-NEXT:            referent = 0x101A, mode = pointer, opts = const, kind = ptr
 ALL-NEXT:   0x101C | LF_ARGLIST [size = 12, hash = 159978]
 ALL-NEXT:            0x1019: `__vc_attributes::aggregatableAttribute::type_e`
 ALL-NEXT:   0x101D | LF_MFUNCTION [size = 28, hash = 249504]
-ALL-NEXT:            return type = 1, # args = 0x101C, param list = 0x0003 (void)
+ALL-NEXT:            return type = 0x0003 (void), # args = 1, param list = 0x101C
 ALL-NEXT:            class type = 0x101A, this type = 0x101B, this adjust = 0
 ALL-NEXT:            calling conv = thiscall, options = constructor
 ALL-NEXT:   0x101E | LF_MFUNCTION [size = 28, hash = 141941]
-ALL-NEXT:            return type = 0, # args = 0x1000, param list = 0x0003 (void)
+ALL-NEXT:            return type = 0x0003 (void), # args = 0, param list = 0x1000
 ALL-NEXT:            class type = 0x101A, this type = 0x101B, this adjust = 0
 ALL-NEXT:            calling conv = thiscall, options = constructor
 ALL-NEXT:   0x101F | LF_METHODLIST [size = 20, hash = 238785]
@@ -241,11 +241,11 @@ ALL-NEXT:            referent = 0x1025, mode = pointer, opts = const, kind = ptr
 ALL-NEXT:   0x1027 | LF_ARGLIST [size = 12, hash = 17744]
 ALL-NEXT:            0x1022: `__vc_attributes::event_sourceAttribute::type_e`
 ALL-NEXT:   0x1028 | LF_MFUNCTION [size = 28, hash = 239514]
-ALL-NEXT:            return type = 1, # args = 0x1027, param list = 0x0003 (void)
+ALL-NEXT:            return type = 0x0003 (void), # args = 1, param list = 0x1027
 ALL-NEXT:            class type = 0x1025, this type = 0x1026, this adjust = 0
 ALL-NEXT:            calling conv = thiscall, options = constructor
 ALL-NEXT:   0x1029 | LF_MFUNCTION [size = 28, hash = 173189]
-ALL-NEXT:            return type = 0, # args = 0x1000, param list = 0x0003 (void)
+ALL-NEXT:            return type = 0x0003 (void), # args = 0, param list = 0x1000
 ALL-NEXT:            class type = 0x1025, this type = 0x1026, this adjust = 0
 ALL-NEXT:            calling conv = thiscall, options = constructor
 ALL-NEXT:   0x102A | LF_METHODLIST [size = 20, hash = 130544]
@@ -303,17 +303,17 @@ ALL-NEXT:            0x0030 (bool): `bool`
 ALL-NEXT:            0x1032: `const char*`
 ALL-NEXT:            0x1032: `const char*`
 ALL-NEXT:   0x1034 | LF_MFUNCTION [size = 28, hash = 48854]
-ALL-NEXT:            return type = 15, # args = 0x1033, param list = 0x0003 (void)
+ALL-NEXT:            return type = 0x0003 (void), # args = 15, param list = 0x1033
 ALL-NEXT:            class type = 0x102F, this type = 0x1030, this adjust = 0
 ALL-NEXT:            calling conv = thiscall, options = constructor
 ALL-NEXT:   0x1035 | LF_ARGLIST [size = 12, hash = 170035]
 ALL-NEXT:            0x102E: `__vc_attributes::moduleAttribute::type_e`
 ALL-NEXT:   0x1036 | LF_MFUNCTION [size = 28, hash = 177041]
-ALL-NEXT:            return type = 1, # args = 0x1035, param list = 0x0003 (void)
+ALL-NEXT:            return type = 0x0003 (void), # args = 1, param list = 0x1035
 ALL-NEXT:            class type = 0x102F, this type = 0x1030, this adjust = 0
 ALL-NEXT:            calling conv = thiscall, options = constructor
 ALL-NEXT:   0x1037 | LF_MFUNCTION [size = 28, hash = 102745]
-ALL-NEXT:            return type = 0, # args = 0x1000, param list = 0x0003 (void)
+ALL-NEXT:            return type = 0x0003 (void), # args = 0, param list = 0x1000
 ALL-NEXT:            class type = 0x102F, this type = 0x1030, this adjust = 0
 ALL-NEXT:            calling conv = thiscall, options = constructor
 ALL-NEXT:   0x1038 | LF_METHODLIST [size = 28, hash = 16947]
@@ -389,7 +389,7 @@ ALL-NEXT:            referent = 0x103D, mode = pointer, opts = const, kind = ptr
 ALL-NEXT:   0x103F | LF_ARGLIST [size = 12, hash = 49018]
 ALL-NEXT:            0x0075 (unsigned): `unsigned`
 ALL-NEXT:   0x1040 | LF_MFUNCTION [size = 28, hash = 43821]
-ALL-NEXT:            return type = 1, # args = 0x103F, param list = 0x0003 (void)
+ALL-NEXT:            return type = 0x0003 (void), # args = 1, param list = 0x103F
 ALL-NEXT:            class type = 0x103D, this type = 0x103E, this adjust = 0
 ALL-NEXT:            calling conv = thiscall, options = constructor
 ALL-NEXT:   0x1041 | LF_FIELDLIST [size = 60, hash = 202555]
@@ -422,7 +422,7 @@ ALL-NEXT:            referent = 0x1045, mode = pointer, opts = const, kind = ptr
 ALL-NEXT:   0x1047 | LF_ARGLIST [size = 12, hash = 103930]
 ALL-NEXT:            0x1044: `__vc_attributes::helper_attributes::v1_alttypeAttribute::type_e`
 ALL-NEXT:   0x1048 | LF_MFUNCTION [size = 28, hash = 110942]
-ALL-NEXT:            return type = 1, # args = 0x1047, param list = 0x0003 (void)
+ALL-NEXT:            return type = 0x0003 (void), # args = 1, param list = 0x1047
 ALL-NEXT:            class type = 0x1045, this type = 0x1046, this adjust = 0
 ALL-NEXT:            calling conv = thiscall, options = constructor
 ALL-NEXT:   0x1049 | LF_FIELDLIST [size = 64, hash = 17991]
@@ -474,64 +474,64 @@ ALL-NEXT:     TI: 0x1000, Offset: 0
 ALL:        Hash Adjusters:
 ALL:                             Public Symbols
 ALL-NEXT: ============================================================
-ALL-NEXT:   - S_PUB32 [size = 36] `?__purecall@@3PAXA`
+ALL-NEXT:    0 | S_PUB32 [size = 36] `?__purecall@@3PAXA`
 ALL-NEXT:       flags = none, addr = 0003:0000
-ALL-NEXT:   - S_PUB32 [size = 20] `_main`
+ALL-NEXT:   36 | S_PUB32 [size = 20] `_main`
 ALL-NEXT:       flags = function, addr = 0001:0016
-ALL-NEXT:   - S_PROCREF [size = 20] `main`
+ALL-NEXT:   56 | S_PROCREF [size = 20] `main`
 ALL-NEXT:       module = 1, sum name = 0, offset = 120
-ALL-NEXT:   - S_GDATA32 [size = 28] `__purecall`
+ALL-NEXT:   76 | S_GDATA32 [size = 28] `__purecall`
 ALL-NEXT:       type = 0x0403 (void*), addr = 0003:0000
 ALL:                                Symbols
 ALL-NEXT: ============================================================
 ALL-NEXT:   Mod 0000 | `d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj`:
-ALL-NEXT:   - S_OBJNAME [size = 56] sig=0, `d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj`
-ALL-NEXT:   - S_COMPILE3 [size = 60]
-ALL-NEXT:       machine = intel pentium 3, Ver = Microsoft (R) Optimizing Compiler, language = c++
-ALL-NEXT:       frontend = 18.0.31101.0, backend = 18.0.31101.0
-ALL-NEXT:       flags = security checks
-ALL-NEXT:   - S_GPROC32 [size = 44] `main`
-ALL-NEXT:       parent = 0, addr = 0001:0016, code size = 10, end = 196
-ALL-NEXT:       debug start = 3, debug end = 8, flags = has fp
-ALL-NEXT:   - S_FRAMEPROC [size = 32]
-ALL-NEXT:       size = 0, padding size = 0, offset to padding = 0
-ALL-NEXT:       bytes of callee saved registers = 0, exception handler addr = 0000:0000
-ALL-NEXT:       flags = has async eh | opt speed
-ALL-NEXT:   - S_END [size = 4]
-ALL-NEXT:   - S_BUILDINFO [size = 8] BuildId = `4110`
+ALL-NEXT:      4 | S_OBJNAME [size = 56] sig=0, `d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj`
+ALL-NEXT:     60 | S_COMPILE3 [size = 60]
+ALL-NEXT:          machine = intel pentium 3, Ver = Microsoft (R) Optimizing Compiler, language = c++
+ALL-NEXT:          frontend = 18.0.31101.0, backend = 18.0.31101.0
+ALL-NEXT:          flags = security checks
+ALL-NEXT:    120 | S_GPROC32 [size = 44] `main`
+ALL-NEXT:          parent = 0, end = 196, addr = 0001:0016, code size = 10
+ALL-NEXT:          debug start = 3, debug end = 8, flags = has fp
+ALL-NEXT:    164 | S_FRAMEPROC [size = 32]
+ALL-NEXT:          size = 0, padding size = 0, offset to padding = 0
+ALL-NEXT:          bytes of callee saved registers = 0, exception handler addr = 0000:0000
+ALL-NEXT:          flags = has async eh | opt speed
+ALL-NEXT:    196 | S_END [size = 4]
+ALL-NEXT:    200 | S_BUILDINFO [size = 8] BuildId = `4110`
 ALL-NEXT:   Mod 0001 | `* Linker *`:
-ALL-NEXT:   - S_OBJNAME [size = 20] sig=0, `* Linker *`
-ALL-NEXT:   - S_COMPILE3 [size = 48]
-ALL-NEXT:       machine = intel 80386, Ver = Microsoft (R) LINK, language = link
-ALL-NEXT:       frontend = 0.0.0.0, backend = 12.0.31101.0
-ALL-NEXT:       flags = none
-ALL-NEXT:   - S_ENVBLOCK [size = 172]
-ALL-NEXT:     - cwd
-ALL-NEXT:     - d:\src\llvm\test\DebugInfo\PDB\Inputs
-ALL-NEXT:     - exe
-ALL-NEXT:     - C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\BIN\link.exe
-ALL-NEXT:     - pdb
-ALL-NEXT:     - d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.pdb
-ALL-NEXT:   - S_TRAMPOLINE [size = 20]
-ALL-NEXT:       type = tramp incremental, size = 5, source = 0001:0005, target = 0001:0005
-ALL-NEXT:   - S_SECTION [size = 28] `.text`
-ALL-NEXT:       length = 4122, alignment = 12, rva = 4096, section # = 1, characteristics = 1610612768
-ALL-NEXT:   - S_COFFGROUP [size = 28] `.text$mn`
-ALL-NEXT:       length = 4122, addr = 0001:0000, characteristics = 1610612768
-ALL-NEXT:   - S_SECTION [size = 28] `.rdata`
-ALL-NEXT:       length = 690, alignment = 12, rva = 12288, section # = 2, characteristics = 1073741888
-ALL-NEXT:   - S_COFFGROUP [size = 28] `.rdata`
-ALL-NEXT:       length = 323, addr = 0002:0000, characteristics = 1073741888
-ALL-NEXT:   - S_COFFGROUP [size = 28] `.edata`
-ALL-NEXT:       length = 0, addr = 0002:0323, characteristics = 1073741888
-ALL-NEXT:   - S_COFFGROUP [size = 32] `.rdata$debug`
-ALL-NEXT:       length = 366, addr = 0002:0324, characteristics = 1073741888
-ALL-NEXT:   - S_SECTION [size = 28] `.data`
-ALL-NEXT:       length = 4, alignment = 12, rva = 16384, section # = 3, characteristics = 3221225536
-ALL-NEXT:   - S_COFFGROUP [size = 24] `.bss`
-ALL-NEXT:       length = 4, addr = 0003:0000, characteristics = 3221225600
-ALL-NEXT:   - S_SECTION [size = 28] `.reloc`
-ALL-NEXT:       length = 8, alignment = 12, rva = 20480, section # = 4, characteristics = 1107296320
+ALL-NEXT:      4 | S_OBJNAME [size = 20] sig=0, `* Linker *`
+ALL-NEXT:     24 | S_COMPILE3 [size = 48]
+ALL-NEXT:          machine = intel 80386, Ver = Microsoft (R) LINK, language = link
+ALL-NEXT:          frontend = 0.0.0.0, backend = 12.0.31101.0
+ALL-NEXT:          flags = none
+ALL-NEXT:     72 | S_ENVBLOCK [size = 172]
+ALL-NEXT:          - cwd
+ALL-NEXT:          - d:\src\llvm\test\DebugInfo\PDB\Inputs
+ALL-NEXT:          - exe
+ALL-NEXT:          - C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\BIN\link.exe
+ALL-NEXT:          - pdb
+ALL-NEXT:          - d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.pdb
+ALL-NEXT:    244 | S_TRAMPOLINE [size = 20]
+ALL-NEXT:          type = tramp incremental, size = 5, source = 0001:0005, target = 0001:0005
+ALL-NEXT:    264 | S_SECTION [size = 28] `.text`
+ALL-NEXT:          length = 4122, alignment = 12, rva = 4096, section # = 1, characteristics = 1610612768
+ALL-NEXT:    292 | S_COFFGROUP [size = 28] `.text$mn`
+ALL-NEXT:          length = 4122, addr = 0001:0000, characteristics = 1610612768
+ALL-NEXT:    320 | S_SECTION [size = 28] `.rdata`
+ALL-NEXT:          length = 690, alignment = 12, rva = 12288, section # = 2, characteristics = 1073741888
+ALL-NEXT:    348 | S_COFFGROUP [size = 28] `.rdata`
+ALL-NEXT:          length = 323, addr = 0002:0000, characteristics = 1073741888
+ALL-NEXT:    376 | S_COFFGROUP [size = 28] `.edata`
+ALL-NEXT:          length = 0, addr = 0002:0323, characteristics = 1073741888
+ALL-NEXT:    404 | S_COFFGROUP [size = 32] `.rdata$debug`
+ALL-NEXT:          length = 366, addr = 0002:0324, characteristics = 1073741888
+ALL-NEXT:    436 | S_SECTION [size = 28] `.data`
+ALL-NEXT:          length = 4, alignment = 12, rva = 16384, section # = 3, characteristics = 3221225536
+ALL-NEXT:    464 | S_COFFGROUP [size = 24] `.bss`
+ALL-NEXT:          length = 4, addr = 0003:0000, characteristics = 3221225600
+ALL-NEXT:    488 | S_SECTION [size = 28] `.reloc`
+ALL-NEXT:          length = 8, alignment = 12, rva = 20480, section # = 4, characteristics = 1107296320
 ALL:                         Section Contributions
 ALL-NEXT: ============================================================
 ALL-NEXT:   SC  | mod = 1, 0001:0000, size = 10, data crc = 0, reloc crc = 0

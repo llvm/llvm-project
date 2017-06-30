@@ -8410,7 +8410,7 @@ def warn_opencl_attr_deprecated_ignored : Warning <
 def err_opencl_variadic_function : Error<
   "invalid prototype, variadic arguments are not allowed in OpenCL">;
 def err_opencl_requires_extension : Error<
-  "use of %select{type |declaration}0%1 requires %2 extension to be enabled">;
+  "use of %select{type|declaration}0 %1 requires %2 extension to be enabled">;
 
 // OpenCL v2.0 s6.13.6 -- Builtin Pipe Functions
 def err_opencl_builtin_pipe_first_arg : Error<

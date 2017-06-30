@@ -222,6 +222,8 @@ HANDLE_TARGET_OPCODE(G_OR)
 HANDLE_TARGET_OPCODE(G_XOR)
 
 
+HANDLE_TARGET_OPCODE(G_IMPLICIT_DEF)
+
 /// Generic instruction to materialize the address of an alloca or other
 /// stack-based object.
 HANDLE_TARGET_OPCODE(G_FRAME_INDEX)

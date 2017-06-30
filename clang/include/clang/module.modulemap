@@ -133,9 +133,10 @@ module Clang_StaticAnalyzer_Frontend {
 
 module Clang_Tooling {
   requires cplusplus umbrella "Tooling" module * { export * }
-  // FIXME: Exclude this header to avoid pulling all of the AST matchers
+  // FIXME: Exclude these headers to avoid pulling all of the AST matchers
   // library into clang-format. Due to inline key functions in the headers,
   // importing the AST matchers library gives a link dependency on the AST
   // matchers (and thus the AST), which clang-format should not have.
   exclude header "Tooling/RefactoringCallbacks.h"
+  exclude header "Tooling/Refactoring/Rename/USRFinder.h"
 }

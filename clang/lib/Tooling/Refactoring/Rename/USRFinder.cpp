@@ -1,4 +1,4 @@
-//===--- tools/extra/clang-rename/USRFinder.cpp - Clang rename tool -------===//
+//===--- USRFinder.cpp - Clang refactoring library ------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,7 +12,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "USRFinder.h"
+#include "clang/Tooling/Refactoring/Rename/USRFinder.h"
 #include "clang/AST/AST.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/RecursiveASTVisitor.h"
@@ -23,7 +23,7 @@
 using namespace llvm;
 
 namespace clang {
-namespace rename {
+namespace tooling {
 
 // NamedDeclFindingASTVisitor recursively visits each AST node to find the
 // symbol underneath the cursor.
@@ -209,5 +209,5 @@ std::string getUSRForDecl(const Decl *Decl) {
   return std::string(Buff.data(), Buff.size());
 }
 
-} // namespace rename
-} // namespace clang
+} // end namespace tooling
+} // end namespace clang

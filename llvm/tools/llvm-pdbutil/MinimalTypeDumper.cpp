@@ -377,7 +377,7 @@ Error MinimalTypeDumpVisitor::visitKnownRecord(CVType &CVR,
 Error MinimalTypeDumpVisitor::visitKnownRecord(CVType &CVR,
                                                MemberFunctionRecord &MF) {
   P.formatLine("return type = {0}, # args = {1}, param list = {2}",
-               MF.ParameterCount, MF.ArgumentList, MF.ReturnType);
+               MF.ReturnType, MF.ParameterCount, MF.ArgumentList);
   P.formatLine("class type = {0}, this type = {1}, this adjust = {2}",
                MF.ClassType, MF.ThisType, MF.ThisPointerAdjustment);
   P.formatLine("calling conv = {0}, options = {1}",

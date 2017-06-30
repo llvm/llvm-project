@@ -33,6 +33,9 @@ namespace llvm {
 
     unsigned getSmallDataSize() const;
 
+    bool shouldPutJumpTableInFunctionSection(bool UsesLabelDifference,
+                                             const Function &F) const override;
+
   private:
     MCSectionELF *SmallDataSection;
     MCSectionELF *SmallBSSSection;

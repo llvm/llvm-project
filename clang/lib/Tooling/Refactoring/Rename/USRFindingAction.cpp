@@ -1,4 +1,4 @@
-//===--- tools/extra/clang-rename/USRFindingAction.cpp - Clang rename tool ===//
+//===--- USRFindingAction.cpp - Clang refactoring library -----------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -13,8 +13,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "USRFindingAction.h"
-#include "USRFinder.h"
+#include "clang/Tooling/Refactoring/Rename/USRFindingAction.h"
 #include "clang/AST/AST.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
@@ -27,6 +26,7 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Refactoring.h"
+#include "clang/Tooling/Refactoring/Rename/USRFinder.h"
 #include "clang/Tooling/Tooling.h"
 
 #include <algorithm>
@@ -37,7 +37,7 @@
 using namespace llvm;
 
 namespace clang {
-namespace rename {
+namespace tooling {
 
 namespace {
 // \brief NamedDeclFindingConsumer should delegate finding USRs of given Decl to
@@ -232,5 +232,5 @@ std::unique_ptr<ASTConsumer> USRFindingAction::newASTConsumer() {
       ErrorOccurred);
 }
 
-} // namespace rename
-} // namespace clang
+} // end namespace tooling
+} // end namespace clang

@@ -2007,6 +2007,16 @@
 	csg	%r0, %r0, 524288
 	csg	%r0, %r0, 0(%r1,%r2)
 
+#CHECK: error: invalid register pair
+#CHECK: csp	%r1, %r0
+
+	csp	%r1, %r0
+
+#CHECK: error: invalid register pair
+#CHECK: cspg	%r1, %r0
+
+	cspg	%r1, %r0
+
 #CHECK: error: invalid use of indexed addressing
 #CHECK: csst	160(%r1,%r15), 160(%r15), %r2
 #CHECK: error: invalid operand
@@ -2375,6 +2385,17 @@
 	deb	%f0, 4096
 
 #CHECK: error: invalid operand
+#CHECK: diag	%r0, %r0, -1
+#CHECK: error: invalid operand
+#CHECK: diag	%r0, %r0, 4096
+#CHECK: error: invalid use of indexed addressing
+#CHECK: diag	%r0, %r0, 0(%r1,%r2)
+
+	diag	%r0, %r0, -1
+	diag	%r0, %r0, 4096
+	diag	%r0, %r0, 0(%r1,%r2)
+
+#CHECK: error: invalid operand
 #CHECK: didbr	%f0, %f0, %f0, -1
 #CHECK: error: invalid operand
 #CHECK: didbr	%f0, %f0, %f0, 16
@@ -2669,6 +2690,11 @@
 	eextr	%f2, %f0
 
 #CHECK: error: invalid register pair
+#CHECK: esta	%r1, %r0
+
+	esta	%r1, %r0
+
+#CHECK: error: invalid register pair
 #CHECK: esxtr	%f0, %f2
 #CHECK: error: invalid register pair
 #CHECK: esxtr	%f2, %f0
@@ -2834,6 +2860,14 @@
 	icy	%r0, -524289
 	icy	%r0, 524288
 
+#CHECK: error: invalid operand
+#CHECK: idte	%r0, %r0, %r0, -1
+#CHECK: error: invalid operand
+#CHECK: idte	%r0, %r0, %r0, 16
+
+	idte	%r0, %r0, %r0, -1
+	idte	%r0, %r0, %r0, 16
+
 #CHECK: error: invalid register pair
 #CHECK: iextr	%f0, %f0, %f2
 #CHECK: error: invalid register pair
@@ -2892,6 +2926,14 @@
 
 	iill	%r0, -1
 	iill	%r0, 0x10000
+
+#CHECK: error: invalid operand
+#CHECK: ipte	%r0, %r0, %r0, -1
+#CHECK: error: invalid operand
+#CHECK: ipte	%r0, %r0, %r0, 16
+
+	ipte	%r0, %r0, %r0, -1
+	ipte	%r0, %r0, %r0, 16
 
 #CHECK: error: invalid operand
 #CHECK: kdb	%f0, -1
@@ -3068,6 +3110,23 @@
 	larl	%r0, 1
 	larl	%r0, 0x100000000
 
+#CHECK: error: invalid use of indexed addressing
+#CHECK: lasp	160(%r1,%r15),160(%r15)
+#CHECK: error: invalid operand
+#CHECK: lasp	-1(%r1),160(%r15)
+#CHECK: error: invalid operand
+#CHECK: lasp	4096(%r1),160(%r15)
+#CHECK: error: invalid operand
+#CHECK: lasp	0(%r1),-1(%r15)
+#CHECK: error: invalid operand
+#CHECK: lasp	0(%r1),4096(%r15)
+
+        lasp	160(%r1,%r15),160(%r15)
+        lasp	-1(%r1),160(%r15)
+        lasp	4096(%r1),160(%r15)
+        lasp	0(%r1),-1(%r15)
+        lasp	0(%r1),4096(%r15)
+
 #CHECK: error: instruction requires: interlocked-access1
 #CHECK: lax	%r1, %r2, 100(%r3)
 	lax	%r1, %r2, 100(%r3)
@@ -3096,6 +3155,39 @@
 #CHECK: lbh	%r0, 0
 
 	lbh	%r0, 0
+
+#CHECK: error: invalid operand
+#CHECK: lcctl	-1
+#CHECK: error: invalid operand
+#CHECK: lcctl	4096
+#CHECK: error: invalid use of indexed addressing
+#CHECK: lcctl	0(%r1,%r2)
+
+	lcctl	-1
+	lcctl	4096
+	lcctl	0(%r1,%r2)
+
+#CHECK: error: invalid operand
+#CHECK: lctl	%c0, %c0, -1
+#CHECK: error: invalid operand
+#CHECK: lctl	%c0, %c0, 4096
+#CHECK: error: invalid use of indexed addressing
+#CHECK: lctl	%c0, %c0, 0(%r1,%r2)
+
+	lctl	%c0, %c0, -1
+	lctl	%c0, %c0, 4096
+	lctl	%c0, %c0, 0(%r1,%r2)
+
+#CHECK: error: invalid operand
+#CHECK: lctlg	%c0, %c0, -524289
+#CHECK: error: invalid operand
+#CHECK: lctlg	%c0, %c0, 524288
+#CHECK: error: invalid use of indexed addressing
+#CHECK: lctlg	%c0, %c0, 0(%r1,%r2)
+
+	lctlg	%c0, %c0, -524289
+	lctlg	%c0, %c0, 524288
+	lctlg	%c0, %c0, 0(%r1,%r2)
 
 #CHECK: error: invalid register pair
 #CHECK: lcxbr	%f0, %f2
@@ -3624,6 +3716,17 @@
 	lnxr	%f0, %f2
 	lnxr	%f2, %f0
 
+#CHECK: error: invalid operand
+#CHECK: lpctl	-1
+#CHECK: error: invalid operand
+#CHECK: lpctl	4096
+#CHECK: error: invalid use of indexed addressing
+#CHECK: lpctl	0(%r1,%r2)
+
+	lpctl	-1
+	lpctl	4096
+	lpctl	0(%r1,%r2)
+
 #CHECK: error: instruction requires: interlocked-access1
 #CHECK: lpd	%r0, 0, 0
 	lpd	%r0, 0, 0
@@ -3631,6 +3734,17 @@
 #CHECK: error: instruction requires: interlocked-access1
 #CHECK: lpdg	%r0, 0, 0
 	lpdg	%r0, 0, 0
+
+#CHECK: error: invalid operand
+#CHECK: lpp	-1
+#CHECK: error: invalid operand
+#CHECK: lpp	4096
+#CHECK: error: invalid use of indexed addressing
+#CHECK: lpp	0(%r1,%r2)
+
+	lpp	-1
+	lpp	4096
+	lpp	0(%r1,%r2)
 
 #CHECK: error: invalid register pair
 #CHECK: lpq	%r1, 0
@@ -3642,6 +3756,36 @@
 	lpq	%r1, 0
 	lpq	%r0, -524289
 	lpq	%r0, 524288
+
+#CHECK: error: invalid operand
+#CHECK: lptea	%r0, %r0, %r0, -1
+#CHECK: error: invalid operand
+#CHECK: lptea	%r0, %r0, %r0, 16
+
+	lptea	%r0, %r0, %r0, -1
+	lptea	%r0, %r0, %r0, 16
+
+#CHECK: error: invalid operand
+#CHECK: lpsw	-1
+#CHECK: error: invalid operand
+#CHECK: lpsw	4096
+#CHECK: error: invalid use of indexed addressing
+#CHECK: lpsw	0(%r1,%r2)
+
+	lpsw	-1
+	lpsw	4096
+	lpsw	0(%r1,%r2)
+
+#CHECK: error: invalid operand
+#CHECK: lpswe	-1
+#CHECK: error: invalid operand
+#CHECK: lpswe	4096
+#CHECK: error: invalid use of indexed addressing
+#CHECK: lpswe	0(%r1,%r2)
+
+	lpswe	-1
+	lpswe	4096
+	lpswe	0(%r1,%r2)
 
 #CHECK: error: invalid register pair
 #CHECK: lpxbr	%f0, %f2
@@ -3658,6 +3802,30 @@
 
 	lpxr	%f0, %f2
 	lpxr	%f2, %f0
+
+#CHECK: error: invalid operand
+#CHECK: lra	%r0, -1
+#CHECK: error: invalid operand
+#CHECK: lra	%r0, 4096
+
+	lra	%r0, -1
+	lra	%r0, 4096
+
+#CHECK: error: invalid operand
+#CHECK: lrag	%r0, -524289
+#CHECK: error: invalid operand
+#CHECK: lrag	%r0, 524288
+
+	lrag	%r0, -524289
+	lrag	%r0, 524288
+
+#CHECK: error: invalid operand
+#CHECK: lray	%r0, -524289
+#CHECK: error: invalid operand
+#CHECK: lray	%r0, 524288
+
+	lray	%r0, -524289
+	lray	%r0, 524288
 
 #CHECK: error: invalid register pair
 #CHECK: lrdr	%f0, %f2
@@ -3693,6 +3861,17 @@
 
 	lrvg	%r0, -524289
 	lrvg	%r0, 524288
+
+#CHECK: error: invalid operand
+#CHECK: lsctl	-1
+#CHECK: error: invalid operand
+#CHECK: lsctl	4096
+#CHECK: error: invalid use of indexed addressing
+#CHECK: lsctl	0(%r1,%r2)
+
+	lsctl	-1
+	lsctl	4096
+	lsctl	0(%r1,%r2)
 
 #CHECK: error: invalid operand
 #CHECK: lt	%r0, -524289
@@ -4139,6 +4318,17 @@
 	ms	%r0, 4096
 
 #CHECK: error: invalid operand
+#CHECK: msch	-1
+#CHECK: error: invalid operand
+#CHECK: msch	4096
+#CHECK: error: invalid use of indexed addressing
+#CHECK: msch	0(%r1,%r2)
+
+	msch	-1
+	msch	4096
+	msch	0(%r1,%r2)
+
+#CHECK: error: invalid operand
 #CHECK: msd	%f0, %f0, -1
 #CHECK: error: invalid operand
 #CHECK: msd	%f0, %f0, 4096
@@ -4202,6 +4392,11 @@
 	msgfi	%r0, (-1 << 31) - 1
 	msgfi	%r0, (1 << 31)
 
+#CHECK: error: invalid register pair
+#CHECK: msta	%r1
+
+	msta	%r1
+
 #CHECK: error: invalid operand
 #CHECK: msy	%r0, -524289
 #CHECK: error: invalid operand
@@ -4253,6 +4448,23 @@
 	mvc	0(%r1,%r2), 0(%r1)
 	mvc	0(1,%r2), 0(%r1,%r2)
 	mvc	0(-), 0
+
+#CHECK: error: invalid use of indexed addressing
+#CHECK: mvcdk	160(%r1,%r15),160(%r15)
+#CHECK: error: invalid operand
+#CHECK: mvcdk	-1(%r1),160(%r15)
+#CHECK: error: invalid operand
+#CHECK: mvcdk	4096(%r1),160(%r15)
+#CHECK: error: invalid operand
+#CHECK: mvcdk	0(%r1),-1(%r15)
+#CHECK: error: invalid operand
+#CHECK: mvcdk	0(%r1),4096(%r15)
+
+        mvcdk	160(%r1,%r15),160(%r15)
+        mvcdk	-1(%r1),160(%r15)
+        mvcdk	4096(%r1),160(%r15)
+        mvcdk	0(%r1),-1(%r15)
+        mvcdk	0(%r1),4096(%r15)
 
 #CHECK: error: missing length in address
 #CHECK: mvcin	0, 0
@@ -4362,6 +4574,98 @@
 	mvclu	%r0, %r1, 0
 	mvclu	%r0, %r0, -524289
 	mvclu	%r0, %r0, 524288
+
+#CHECK: error: invalid use of indexed addressing
+#CHECK: mvcos	160(%r1,%r15), 160(%r15), %r2
+#CHECK: error: invalid operand
+#CHECK: mvcos	-1(%r1), 160(%r15), %r2
+#CHECK: error: invalid operand
+#CHECK: mvcos	4096(%r1), 160(%r15), %r2
+#CHECK: error: invalid operand
+#CHECK: mvcos	0(%r1), -1(%r15), %r2
+#CHECK: error: invalid operand
+#CHECK: mvcos	0(%r1), 4096(%r15), %r2
+
+        mvcos	160(%r1,%r15), 160(%r15), %r2
+        mvcos	-1(%r1), 160(%r15), %r2
+        mvcos	4096(%r1), 160(%r15), %r2
+        mvcos	0(%r1), -1(%r15), %r2
+        mvcos	0(%r1), 4096(%r15), %r2
+
+#CHECK: error: invalid use of length addressing
+#CHECK: mvcp	0(%r1,%r1), 0(2,%r1), %r3
+#CHECK: error: invalid operand
+#CHECK: mvcp	-1(%r1,%r1), 0(%r1), %r3
+#CHECK: error: invalid operand
+#CHECK: mvcp	4096(%r1,%r1), 0(%r1), %r3
+#CHECK: error: invalid operand
+#CHECK: mvcp	0(%r1,%r1), -1(%r1), %r3
+#CHECK: error: invalid operand
+#CHECK: mvcp	0(%r1,%r1), 4096(%r1), %r3
+#CHECK: error: %r0 used in an address
+#CHECK: mvcp	0(%r1,%r0), 0(%r1), %r3
+#CHECK: error: %r0 used in an address
+#CHECK: mvcp	0(%r1,%r1), 0(%r0), %r3
+#CHECK: error: invalid use of indexed addressing
+#CHECK: mvcp	0(%r1,%r2), 0(%r1,%r2), %r3
+#CHECK: error: unknown token in expression
+#CHECK: mvcp	0(-), 0, %r3
+
+	mvcp	0(%r1,%r1), 0(2,%r1), %r3
+	mvcp	-1(%r1,%r1), 0(%r1), %r3
+	mvcp	4096(%r1,%r1), 0(%r1), %r3
+	mvcp	0(%r1,%r1), -1(%r1), %r3
+	mvcp	0(%r1,%r1), 4096(%r1), %r3
+	mvcp	0(%r1,%r0), 0(%r1), %r3
+	mvcp	0(%r1,%r1), 0(%r0), %r3
+	mvcp	0(%r1,%r2), 0(%r1,%r2), %r3
+	mvcp	0(-), 0, %r3
+
+#CHECK: error: invalid use of length addressing
+#CHECK: mvcs	0(%r1,%r1), 0(2,%r1), %r3
+#CHECK: error: invalid operand
+#CHECK: mvcs	-1(%r1,%r1), 0(%r1), %r3
+#CHECK: error: invalid operand
+#CHECK: mvcs	4096(%r1,%r1), 0(%r1), %r3
+#CHECK: error: invalid operand
+#CHECK: mvcs	0(%r1,%r1), -1(%r1), %r3
+#CHECK: error: invalid operand
+#CHECK: mvcs	0(%r1,%r1), 4096(%r1), %r3
+#CHECK: error: %r0 used in an address
+#CHECK: mvcs	0(%r1,%r0), 0(%r1), %r3
+#CHECK: error: %r0 used in an address
+#CHECK: mvcs	0(%r1,%r1), 0(%r0), %r3
+#CHECK: error: invalid use of indexed addressing
+#CHECK: mvcs	0(%r1,%r2), 0(%r1,%r2), %r3
+#CHECK: error: unknown token in expression
+#CHECK: mvcs	0(-), 0, %r3
+
+	mvcs	0(%r1,%r1), 0(2,%r1), %r3
+	mvcs	-1(%r1,%r1), 0(%r1), %r3
+	mvcs	4096(%r1,%r1), 0(%r1), %r3
+	mvcs	0(%r1,%r1), -1(%r1), %r3
+	mvcs	0(%r1,%r1), 4096(%r1), %r3
+	mvcs	0(%r1,%r0), 0(%r1), %r3
+	mvcs	0(%r1,%r1), 0(%r0), %r3
+	mvcs	0(%r1,%r2), 0(%r1,%r2), %r3
+	mvcs	0(-), 0, %r3
+
+#CHECK: error: invalid use of indexed addressing
+#CHECK: mvcsk	160(%r1,%r15),160(%r15)
+#CHECK: error: invalid operand
+#CHECK: mvcsk	-1(%r1),160(%r15)
+#CHECK: error: invalid operand
+#CHECK: mvcsk	4096(%r1),160(%r15)
+#CHECK: error: invalid operand
+#CHECK: mvcsk	0(%r1),-1(%r15)
+#CHECK: error: invalid operand
+#CHECK: mvcsk	0(%r1),4096(%r15)
+
+        mvcsk	160(%r1,%r15),160(%r15)
+        mvcsk	-1(%r1),160(%r15)
+        mvcsk	4096(%r1),160(%r15)
+        mvcsk	0(%r1),-1(%r15)
+        mvcsk	0(%r1),4096(%r15)
 
 #CHECK: error: invalid operand
 #CHECK: mvghi	-1, 0
@@ -5058,10 +5362,26 @@
 	pack	0(1,%r2), 0(%r1,%r2)
 	pack	0(-), 0(1)
 
+#CHECK: error: invalid operand
+#CHECK: pc	-1
+#CHECK: error: invalid operand
+#CHECK: pc	4096
+#CHECK: error: invalid use of indexed addressing
+#CHECK: pc	0(%r1,%r2)
+
+	pc	-1
+	pc	4096
+	pc	0(%r1,%r2)
+
 #CHECK: error: instruction requires: message-security-assist-extension4
 #CHECK: pcc
 
 	pcc
+
+#CHECK: error: instruction requires: message-security-assist-extension3
+#CHECK: pckmo
+
+	pckmo
 
 #CHECK: error: invalid operand
 #CHECK: pfd	-1, 0
@@ -5237,6 +5557,28 @@
 	qaxtr	%f2, %f0, %f0, 0
 
 #CHECK: error: invalid operand
+#CHECK: qctri	-1
+#CHECK: error: invalid operand
+#CHECK: qctri	4096
+#CHECK: error: invalid use of indexed addressing
+#CHECK: qctri	0(%r1,%r2)
+
+	qctri	-1
+	qctri	4096
+	qctri	0(%r1,%r2)
+
+#CHECK: error: invalid operand
+#CHECK: qsi	-1
+#CHECK: error: invalid operand
+#CHECK: qsi	4096
+#CHECK: error: invalid use of indexed addressing
+#CHECK: qsi	0(%r1,%r2)
+
+	qsi	-1
+	qsi	4096
+	qsi	0(%r1,%r2)
+
+#CHECK: error: invalid operand
 #CHECK: risbg	%r0,%r0,0,0,-1
 #CHECK: error: invalid operand
 #CHECK: risbg	%r0,%r0,0,0,64
@@ -5335,6 +5677,22 @@
 	rosbg	%r0,%r0,256,0,0
 
 #CHECK: error: invalid operand
+#CHECK: rp	-1
+#CHECK: error: invalid operand
+#CHECK: rp	4096
+#CHECK: error: invalid use of indexed addressing
+#CHECK: rp	0(%r1,%r2)
+
+	rp	-1
+	rp	4096
+	rp	0(%r1,%r2)
+
+#CHECK: error: instruction requires: reset-reference-bits-multiple
+#CHECK: rrbm	%r0, %r0
+
+	rrbm	%r0, %r0
+
+#CHECK: error: invalid operand
 #CHECK: rrdtr	%f0, %f0, %f0, -1
 #CHECK: error: invalid operand
 #CHECK: rrdtr	%f0, %f0, %f0, 16
@@ -5386,6 +5744,50 @@
 
 	s	%r0, -1
 	s	%r0, 4096
+
+#CHECK: error: invalid operand
+#CHECK: sac	-1
+#CHECK: error: invalid operand
+#CHECK: sac	4096
+#CHECK: error: invalid use of indexed addressing
+#CHECK: sac	0(%r1,%r2)
+
+	sac	-1
+	sac	4096
+	sac	0(%r1,%r2)
+
+#CHECK: error: invalid operand
+#CHECK: sacf	-1
+#CHECK: error: invalid operand
+#CHECK: sacf	4096
+#CHECK: error: invalid use of indexed addressing
+#CHECK: sacf	0(%r1,%r2)
+
+	sacf	-1
+	sacf	4096
+	sacf	0(%r1,%r2)
+
+#CHECK: error: invalid operand
+#CHECK: sck	-1
+#CHECK: error: invalid operand
+#CHECK: sck	4096
+#CHECK: error: invalid use of indexed addressing
+#CHECK: sck	0(%r1,%r2)
+
+	sck	-1
+	sck	4096
+	sck	0(%r1,%r2)
+
+#CHECK: error: invalid operand
+#CHECK: sckc	-1
+#CHECK: error: invalid operand
+#CHECK: sckc	4096
+#CHECK: error: invalid use of indexed addressing
+#CHECK: sckc	0(%r1,%r2)
+
+	sckc	-1
+	sckc	4096
+	sckc	0(%r1,%r2)
 
 #CHECK: error: invalid operand
 #CHECK: sd	%f0, -1
@@ -5470,6 +5872,39 @@
 
 	shy	%r0, -524289
 	shy	%r0, 524288
+
+#CHECK: error: invalid operand
+#CHECK: sie	-1
+#CHECK: error: invalid operand
+#CHECK: sie	4096
+#CHECK: error: invalid use of indexed addressing
+#CHECK: sie	0(%r1,%r2)
+
+	sie	-1
+	sie	4096
+	sie	0(%r1,%r2)
+
+#CHECK: error: invalid operand
+#CHECK: siga	-1
+#CHECK: error: invalid operand
+#CHECK: siga	4096
+#CHECK: error: invalid use of indexed addressing
+#CHECK: siga	0(%r1,%r2)
+
+	siga	-1
+	siga	4096
+	siga	0(%r1,%r2)
+
+#CHECK: error: invalid operand
+#CHECK: sigp	%r0, %r0, -1
+#CHECK: error: invalid operand
+#CHECK: sigp	%r0, %r0, 4096
+#CHECK: error: invalid use of indexed addressing
+#CHECK: sigp	%r0, %r0, 0(%r1,%r2)
+
+	sigp	%r0, %r0, -1
+	sigp	%r0, %r0, 4096
+	sigp	%r0, %r0, 0(%r1,%r2)
 
 #CHECK: error: invalid operand
 #CHECK: sl	%r0, -1
@@ -5731,6 +6166,39 @@
 	sp	0(-), 0(1)
 
 #CHECK: error: invalid operand
+#CHECK: spka	-1
+#CHECK: error: invalid operand
+#CHECK: spka	4096
+#CHECK: error: invalid use of indexed addressing
+#CHECK: spka	0(%r1,%r2)
+
+	spka	-1
+	spka	4096
+	spka	0(%r1,%r2)
+
+#CHECK: error: invalid operand
+#CHECK: spt	-1
+#CHECK: error: invalid operand
+#CHECK: spt	4096
+#CHECK: error: invalid use of indexed addressing
+#CHECK: spt	0(%r1,%r2)
+
+	spt	-1
+	spt	4096
+	spt	0(%r1,%r2)
+
+#CHECK: error: invalid operand
+#CHECK: spx	-1
+#CHECK: error: invalid operand
+#CHECK: spx	4096
+#CHECK: error: invalid use of indexed addressing
+#CHECK: spx	0(%r1,%r2)
+
+	spx	-1
+	spx	4096
+	spx	0(%r1,%r2)
+
+#CHECK: error: invalid operand
 #CHECK: sqd	%f0, -1
 #CHECK: error: invalid operand
 #CHECK: sqd	%f0, 4096
@@ -5983,6 +6451,36 @@
 	srxt	%f2, %f0, 0
 
 #CHECK: error: invalid operand
+#CHECK: ssch	-1
+#CHECK: error: invalid operand
+#CHECK: ssch	4096
+#CHECK: error: invalid use of indexed addressing
+#CHECK: ssch	0(%r1,%r2)
+
+	ssch	-1
+	ssch	4096
+	ssch	0(%r1,%r2)
+
+#CHECK: error: invalid operand
+#CHECK: sske	%r0, %r0, -1
+#CHECK: error: invalid operand
+#CHECK: sske	%r0, %r0, 16
+
+	sske	%r0, %r0, -1
+	sske	%r0, %r0, 16
+
+#CHECK: error: invalid operand
+#CHECK: ssm	-1
+#CHECK: error: invalid operand
+#CHECK: ssm	4096
+#CHECK: error: invalid use of indexed addressing
+#CHECK: ssm	0(%r1,%r2)
+
+	ssm	-1
+	ssm	4096
+	ssm	0(%r1,%r2)
+
+#CHECK: error: invalid operand
 #CHECK: st	%r0, -1
 #CHECK: error: invalid operand
 #CHECK: st	%r0, 4096
@@ -6010,6 +6508,17 @@
 	stamy	%a0, %a0, 0(%r1,%r2)
 
 #CHECK: error: invalid operand
+#CHECK: stap	-1
+#CHECK: error: invalid operand
+#CHECK: stap	4096
+#CHECK: error: invalid use of indexed addressing
+#CHECK: stap	0(%r1,%r2)
+
+	stap	-1
+	stap	4096
+	stap	0(%r1,%r2)
+
+#CHECK: error: invalid operand
 #CHECK: stc	%r0, -1
 #CHECK: error: invalid operand
 #CHECK: stc	%r0, 4096
@@ -6021,6 +6530,50 @@
 #CHECK: stch	%r0, 0
 
 	stch	%r0, 0
+
+#CHECK: error: invalid operand
+#CHECK: stck	-1
+#CHECK: error: invalid operand
+#CHECK: stck	4096
+#CHECK: error: invalid use of indexed addressing
+#CHECK: stck	0(%r1,%r2)
+
+	stck	-1
+	stck	4096
+	stck	0(%r1,%r2)
+
+#CHECK: error: invalid operand
+#CHECK: stckc	-1
+#CHECK: error: invalid operand
+#CHECK: stckc	4096
+#CHECK: error: invalid use of indexed addressing
+#CHECK: stckc	0(%r1,%r2)
+
+	stckc	-1
+	stckc	4096
+	stckc	0(%r1,%r2)
+
+#CHECK: error: invalid operand
+#CHECK: stcke	-1
+#CHECK: error: invalid operand
+#CHECK: stcke	4096
+#CHECK: error: invalid use of indexed addressing
+#CHECK: stcke	0(%r1,%r2)
+
+	stcke	-1
+	stcke	4096
+	stcke	0(%r1,%r2)
+
+#CHECK: error: invalid operand
+#CHECK: stckf	-1
+#CHECK: error: invalid operand
+#CHECK: stckf	4096
+#CHECK: error: invalid use of indexed addressing
+#CHECK: stckf	0(%r1,%r2)
+
+	stckf	-1
+	stckf	4096
+	stckf	0(%r1,%r2)
 
 #CHECK: error: invalid operand
 #CHECK: stcm	%r0, 0, -1
@@ -6063,6 +6616,50 @@
 	stcmy	%r0, 0, 524288
 	stcmy	%r0, -1, 0
 	stcmy	%r0, 16, 0
+
+#CHECK: error: invalid operand
+#CHECK: stcps	-1
+#CHECK: error: invalid operand
+#CHECK: stcps	4096
+#CHECK: error: invalid use of indexed addressing
+#CHECK: stcps	0(%r1,%r2)
+
+	stcps	-1
+	stcps	4096
+	stcps	0(%r1,%r2)
+
+#CHECK: error: invalid operand
+#CHECK: stcrw	-1
+#CHECK: error: invalid operand
+#CHECK: stcrw	4096
+#CHECK: error: invalid use of indexed addressing
+#CHECK: stcrw	0(%r1,%r2)
+
+	stcrw	-1
+	stcrw	4096
+	stcrw	0(%r1,%r2)
+
+#CHECK: error: invalid operand
+#CHECK: stctg	%c0, %c0, -524289
+#CHECK: error: invalid operand
+#CHECK: stctg	%c0, %c0, 524288
+#CHECK: error: invalid use of indexed addressing
+#CHECK: stctg	%c0, %c0, 0(%r1,%r2)
+
+	stctg	%c0, %c0, -524289
+	stctg	%c0, %c0, 524288
+	stctg	%c0, %c0, 0(%r1,%r2)
+
+#CHECK: error: invalid operand
+#CHECK: stctl	%c0, %c0, -1
+#CHECK: error: invalid operand
+#CHECK: stctl	%c0, %c0, 4096
+#CHECK: error: invalid use of indexed addressing
+#CHECK: stctl	%c0, %c0, 0(%r1,%r2)
+
+	stctl	%c0, %c0, -1
+	stctl	%c0, %c0, 4096
+	stctl	%c0, %c0, 0(%r1,%r2)
 
 #CHECK: error: invalid operand
 #CHECK: stcy	%r0, -524289
@@ -6108,6 +6705,28 @@
 #CHECK: stfh	%r0, 0
 
 	stfh	%r0, 0
+
+#CHECK: error: invalid operand
+#CHECK: stfl	-1
+#CHECK: error: invalid operand
+#CHECK: stfl	4096
+#CHECK: error: invalid use of indexed addressing
+#CHECK: stfl	0(%r1,%r2)
+
+	stfl	-1
+	stfl	4096
+	stfl	0(%r1,%r2)
+
+#CHECK: error: invalid operand
+#CHECK: stfle	-1
+#CHECK: error: invalid operand
+#CHECK: stfle	4096
+#CHECK: error: invalid use of indexed addressing
+#CHECK: stfle	0(%r1,%r2)
+
+	stfle	-1
+	stfle	4096
+	stfle	0(%r1,%r2)
 
 #CHECK: error: invalid operand
 #CHECK: stfpc	-1
@@ -6178,6 +6797,17 @@
 	sthy	%r0, 524288
 
 #CHECK: error: invalid operand
+#CHECK: stidp	-1
+#CHECK: error: invalid operand
+#CHECK: stidp	4096
+#CHECK: error: invalid use of indexed addressing
+#CHECK: stidp	0(%r1,%r2)
+
+	stidp	-1
+	stidp	4096
+	stidp	0(%r1,%r2)
+
+#CHECK: error: invalid operand
 #CHECK: stm	%r0, %r0, 4096
 #CHECK: error: invalid use of indexed addressing
 #CHECK: stm	%r0, %r0, 0(%r1,%r2)
@@ -6218,6 +6848,51 @@
 	stmy	%r0, %r0, 524288
 	stmy	%r0, %r0, 0(%r1,%r2)
 
+#CHECK: error: invalid operand
+#CHECK: stnsm	-1, 0
+#CHECK: error: invalid operand
+#CHECK: stnsm	4096, 0
+#CHECK: error: invalid use of indexed addressing
+#CHECK: stnsm	0(%r1,%r2), 0
+#CHECK: error: invalid operand
+#CHECK: stnsm	0, -1
+#CHECK: error: invalid operand
+#CHECK: stnsm	0, 256
+
+	stnsm	-1, 0
+	stnsm	4096, 0
+	stnsm	0(%r1,%r2), 0
+	stnsm	0, -1
+	stnsm	0, 256
+
+#CHECK: error: invalid operand
+#CHECK: stosm	-1, 0
+#CHECK: error: invalid operand
+#CHECK: stosm	4096, 0
+#CHECK: error: invalid use of indexed addressing
+#CHECK: stosm	0(%r1,%r2), 0
+#CHECK: error: invalid operand
+#CHECK: stosm	0, -1
+#CHECK: error: invalid operand
+#CHECK: stosm	0, 256
+
+	stosm	-1, 0
+	stosm	4096, 0
+	stosm	0(%r1,%r2), 0
+	stosm	0, -1
+	stosm	0, 256
+
+#CHECK: error: invalid operand
+#CHECK: stpt	-1
+#CHECK: error: invalid operand
+#CHECK: stpt	4096
+#CHECK: error: invalid use of indexed addressing
+#CHECK: stpt	0(%r1,%r2)
+
+	stpt	-1
+	stpt	4096
+	stpt	0(%r1,%r2)
+
 #CHECK: error: invalid register pair
 #CHECK: stpq	%r1, 0
 #CHECK: error: invalid operand
@@ -6228,6 +6903,17 @@
 	stpq	%r1, 0
 	stpq	%r0, -524289
 	stpq	%r0, 524288
+
+#CHECK: error: invalid operand
+#CHECK: stpx	-1
+#CHECK: error: invalid operand
+#CHECK: stpx	4096
+#CHECK: error: invalid use of indexed addressing
+#CHECK: stpx	0(%r1,%r2)
+
+	stpx	-1
+	stpx	4096
+	stpx	0(%r1,%r2)
 
 #CHECK: error: invalid use of indexed addressing
 #CHECK: strag   160(%r1,%r15),160(%r15)
@@ -6275,6 +6961,28 @@
 
 	strvg	%r0, -524289
 	strvg	%r0, 524288
+
+#CHECK: error: invalid operand
+#CHECK: stsch	-1
+#CHECK: error: invalid operand
+#CHECK: stsch	4096
+#CHECK: error: invalid use of indexed addressing
+#CHECK: stsch	0(%r1,%r2)
+
+	stsch	-1
+	stsch	4096
+	stsch	0(%r1,%r2)
+
+#CHECK: error: invalid operand
+#CHECK: stsi	-1
+#CHECK: error: invalid operand
+#CHECK: stsi	4096
+#CHECK: error: invalid use of indexed addressing
+#CHECK: stsi	0(%r1,%r2)
+
+	stsi	-1
+	stsi	4096
+	stsi	0(%r1,%r2)
 
 #CHECK: error: invalid operand
 #CHECK: sty	%r0, -524289
@@ -6545,6 +7253,34 @@
 	tp	0(%r1,%r2)
 	tp	0(-)
 
+#CHECK: error: invalid operand
+#CHECK: tpi	-1
+#CHECK: error: invalid operand
+#CHECK: tpi	4096
+#CHECK: error: invalid use of indexed addressing
+#CHECK: tpi	0(%r1,%r2)
+
+	tpi	-1
+	tpi	4096
+	tpi	0(%r1,%r2)
+
+#CHECK: error: invalid use of indexed addressing
+#CHECK: tprot   160(%r1,%r15),160(%r15)
+#CHECK: error: invalid operand
+#CHECK: tprot   -1(%r1),160(%r15)
+#CHECK: error: invalid operand
+#CHECK: tprot   4096(%r1),160(%r15)
+#CHECK: error: invalid operand
+#CHECK: tprot   0(%r1),-1(%r15)
+#CHECK: error: invalid operand
+#CHECK: tprot   0(%r1),4096(%r15)
+
+        tprot   160(%r1,%r15),160(%r15)
+        tprot   -1(%r1),160(%r15)
+        tprot   4096(%r1),160(%r15)
+        tprot   0(%r1),-1(%r15)
+        tprot   0(%r1),4096(%r15)
+
 #CHECK: error: missing length in address
 #CHECK: tr	0, 0
 #CHECK: error: missing length in address
@@ -6588,6 +7324,39 @@
 	tr	0(%r1,%r2), 0(%r1)
 	tr	0(1,%r2), 0(%r1,%r2)
 	tr	0(-), 0
+
+#CHECK: error: invalid operand
+#CHECK: trace	%r0, %r0, -1
+#CHECK: error: invalid operand
+#CHECK: trace	%r0, %r0, 4096
+#CHECK: error: invalid use of indexed addressing
+#CHECK: trace	%r0, %r0, 0(%r1,%r2)
+
+	trace	%r0, %r0, -1
+	trace	%r0, %r0, 4096
+	trace	%r0, %r0, 0(%r1,%r2)
+
+#CHECK: error: invalid operand
+#CHECK: tracg	%r0, %r0, -524289
+#CHECK: error: invalid operand
+#CHECK: tracg	%r0, %r0, 524288
+#CHECK: error: invalid use of indexed addressing
+#CHECK: tracg	%r0, %r0, 0(%r1,%r2)
+
+	tracg	%r0, %r0, -524289
+	tracg	%r0, %r0, 524288
+	tracg	%r0, %r0, 0(%r1,%r2)
+
+#CHECK: error: invalid operand
+#CHECK: trap4	-1
+#CHECK: error: invalid operand
+#CHECK: trap4	4096
+#CHECK: error: invalid use of indexed addressing
+#CHECK: trap4	0(%r1,%r2)
+
+	trap4	-1
+	trap4	4096
+	trap4	0(%r1,%r2)
 
 #CHECK: error: invalid register pair
 #CHECK: tre	%r1, %r0
@@ -6758,6 +7527,17 @@
 	ts	-1
 	ts	4096
 	ts	0(%r1,%r2)
+
+#CHECK: error: invalid operand
+#CHECK: tsch	-1
+#CHECK: error: invalid operand
+#CHECK: tsch	4096
+#CHECK: error: invalid use of indexed addressing
+#CHECK: tsch	0(%r1,%r2)
+
+	tsch	-1
+	tsch	4096
+	tsch	0(%r1,%r2)
 
 #CHECK: error: missing length in address
 #CHECK: unpk	0, 0(1)

@@ -64,7 +64,7 @@ define void @test_multiple_args(i64 %in) {
 ; CHECK: [[I8:%[0-9]+]](s8) = COPY %w1
 ; CHECK: [[ADDR:%[0-9]+]](p0) = COPY %x2
 
-; CHECK: [[UNDEF:%[0-9]+]](s192) = IMPLICIT_DEF
+; CHECK: [[UNDEF:%[0-9]+]](s192) = G_IMPLICIT_DEF
 ; CHECK: [[ARG0:%[0-9]+]](s192) = G_INSERT [[UNDEF]], [[DBL]](s64), 0
 ; CHECK: [[ARG1:%[0-9]+]](s192) = G_INSERT [[ARG0]], [[I64]](s64), 64
 ; CHECK: [[ARG2:%[0-9]+]](s192) = G_INSERT [[ARG1]], [[I8]](s8), 128

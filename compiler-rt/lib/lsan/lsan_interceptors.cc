@@ -70,7 +70,6 @@ INTERCEPTOR(void*, calloc, uptr nmemb, uptr size) {
     CHECK(allocated < kCallocPoolSize);
     return mem;
   }
-  if (CheckForCallocOverflow(size, nmemb)) return nullptr;
   ENSURE_LSAN_INITED;
   GET_STACK_TRACE_MALLOC;
   return lsan_calloc(nmemb, size, stack);
@@ -199,6 +198,7 @@ INTERCEPTOR(int, mprobe, void *ptr) {
 }
 #endif // SANITIZER_INTERCEPT_MCHECK_MPROBE
 
+
 // TODO(alekseys): throw std::bad_alloc instead of dying on OOM.
 #define OPERATOR_NEW_BODY(nothrow)                         \
   ENSURE_LSAN_INITED;                                      \
@@ -207,22 +207,28 @@ INTERCEPTOR(int, mprobe, void *ptr) {
   if (!nothrow && UNLIKELY(!res)) DieOnFailure::OnOOM();\
   return res;
 
+#define OPERATOR_DELETE_BODY \
+  ENSURE_LSAN_INITED;        \
+  Deallocate(ptr);
+
+// On OS X it's not enough to just provide our own 'operator new' and
+// 'operator delete' implementations, because they're going to be in the runtime
+// dylib, and the main executable will depend on both the runtime dylib and
+// libstdc++, each of has its implementation of new and delete.
+// To make sure that C++ allocation/deallocation operators are overridden on
+// OS X we need to intercept them using their mangled names.
+#if !SANITIZER_MAC
+
 INTERCEPTOR_ATTRIBUTE
 void *operator new(size_t size) { OPERATOR_NEW_BODY(false /*nothrow*/); }
 INTERCEPTOR_ATTRIBUTE
 void *operator new[](size_t size) { OPERATOR_NEW_BODY(false /*nothrow*/); }
 INTERCEPTOR_ATTRIBUTE
-void *operator new(size_t size, std::nothrow_t const&) {
-  OPERATOR_NEW_BODY(true /*nothrow*/);
-}
+void *operator new(size_t size, std::nothrow_t const&)
+{ OPERATOR_NEW_BODY(true /*nothrow*/); }
 INTERCEPTOR_ATTRIBUTE
-void *operator new[](size_t size, std::nothrow_t const&) {
-  OPERATOR_NEW_BODY(true /*nothrow*/);
-}
-
-#define OPERATOR_DELETE_BODY \
-  ENSURE_LSAN_INITED;        \
-  Deallocate(ptr);
+void *operator new[](size_t size, std::nothrow_t const&)
+{ OPERATOR_NEW_BODY(true /*nothrow*/); }
 
 INTERCEPTOR_ATTRIBUTE
 void operator delete(void *ptr) NOEXCEPT { OPERATOR_DELETE_BODY; }
@@ -231,9 +237,31 @@ void operator delete[](void *ptr) NOEXCEPT { OPERATOR_DELETE_BODY; }
 INTERCEPTOR_ATTRIBUTE
 void operator delete(void *ptr, std::nothrow_t const&) { OPERATOR_DELETE_BODY; }
 INTERCEPTOR_ATTRIBUTE
-void operator delete[](void *ptr, std::nothrow_t const &) {
-  OPERATOR_DELETE_BODY;
-}
+void operator delete[](void *ptr, std::nothrow_t const &)
+{ OPERATOR_DELETE_BODY; }
+
+#else  // SANITIZER_MAC
+
+INTERCEPTOR(void *, _Znwm, size_t size)
+{ OPERATOR_NEW_BODY(false /*nothrow*/); }
+INTERCEPTOR(void *, _Znam, size_t size)
+{ OPERATOR_NEW_BODY(false /*nothrow*/); }
+INTERCEPTOR(void *, _ZnwmRKSt9nothrow_t, size_t size, std::nothrow_t const&)
+{ OPERATOR_NEW_BODY(true /*nothrow*/); }
+INTERCEPTOR(void *, _ZnamRKSt9nothrow_t, size_t size, std::nothrow_t const&)
+{ OPERATOR_NEW_BODY(true /*nothrow*/); }
+
+INTERCEPTOR(void, _ZdlPv, void *ptr)
+{ OPERATOR_DELETE_BODY; }
+INTERCEPTOR(void, _ZdaPv, void *ptr)
+{ OPERATOR_DELETE_BODY; }
+INTERCEPTOR(void, _ZdlPvRKSt9nothrow_t, void *ptr, std::nothrow_t const&)
+{ OPERATOR_DELETE_BODY; }
+INTERCEPTOR(void, _ZdaPvRKSt9nothrow_t, void *ptr, std::nothrow_t const&)
+{ OPERATOR_DELETE_BODY; }
+
+#endif  // !SANITIZER_MAC
+
 
 ///// Thread initialization and finalization. /////
 

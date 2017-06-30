@@ -24,7 +24,7 @@ TPI-TYPES-NEXT:            referent = 0x1003, mode = pointer, opts = None, kind 
 TPI-TYPES-NEXT:   0x1005 | LF_ARGLIST [size = 12]
 TPI-TYPES-NEXT:            0x0074 (int): `int`
 TPI-TYPES-NEXT:   0x1006 | LF_MFUNCTION [size = 28]
-TPI-TYPES-NEXT:            return type = 1, # args = 0x1005, param list = 0x0003 (void)
+TPI-TYPES-NEXT:            return type = 0x0003 (void), # args = 1, param list = 0x1005
 TPI-TYPES-NEXT:            class type = 0x1003, this type = 0x1004, this adjust = 0
 TPI-TYPES-NEXT:            calling conv = thiscall, options = constructor
 TPI-TYPES-NEXT:   0x1007 | LF_PROCEDURE [size = 16]

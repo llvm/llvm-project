@@ -118,7 +118,6 @@ class SizeClassAllocator32 {
   }
 
   void *MapWithCallback(uptr size) {
-    size = RoundUpTo(size, GetPageSizeCached());
     void *res = MmapOrDie(size, "SizeClassAllocator32");
     MapUnmapCallback().OnMap((uptr)res, size);
     return res;
@@ -285,7 +284,7 @@ class SizeClassAllocator32 {
       return 0;
     MapUnmapCallback().OnMap(res, kRegionSize);
     stat->Add(AllocatorStatMapped, kRegionSize);
-    CHECK_EQ(0U, (res & (kRegionSize - 1)));
+    CHECK(IsAligned(res, kRegionSize));
     possible_regions.set(ComputeRegionId(res), static_cast<u8>(class_id));
     return res;
   }
@@ -303,17 +302,17 @@ class SizeClassAllocator32 {
       return false;
     uptr n_chunks = kRegionSize / (size + kMetadataSize);
     uptr max_count = TransferBatch::MaxCached(class_id);
+    CHECK_GT(max_count, 0);
     TransferBatch *b = nullptr;
     for (uptr i = reg; i < reg + n_chunks * size; i += size) {
       if (!b) {
         b = c->CreateBatch(class_id, this, (TransferBatch*)i);
-        if (!b)
+        if (UNLIKELY(!b))
           return false;
         b->Clear();
       }
       b->Add((void*)i);
       if (b->Count() == max_count) {
-        CHECK_GT(b->Count(), 0);
         sci->free_list.push_back(b);
         b = nullptr;
       }

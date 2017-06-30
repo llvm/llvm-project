@@ -1985,7 +1985,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     Value *X = nullptr;
 
     // bitreverse(bitreverse(x)) -> x
-    if (match(IIOperand, m_Intrinsic<Intrinsic::bitreverse>(m_Value(X))))
+    if (match(IIOperand, m_BitReverse(m_Value(X))))
       return replaceInstUsesWith(CI, X);
     break;
   }

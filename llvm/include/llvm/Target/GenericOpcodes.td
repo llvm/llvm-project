@@ -49,6 +49,12 @@ def G_TRUNC : Instruction {
   let hasSideEffects = 0;
 }
 
+def G_IMPLICIT_DEF : Instruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins);
+  let hasSideEffects = 0;
+}
+
 def G_FRAME_INDEX : Instruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins unknown:$src2);

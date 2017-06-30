@@ -1063,12 +1063,12 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
                        Current.MatchingParen->Previous &&
                        Current.MatchingParen->Previous->is(tok::comma);
     AvoidBinPacking =
-        (Current.is(TT_ArrayInitializerLSquare) && EndsInComma) ||
-        Current.is(TT_DictLiteral) ||
+        EndsInComma || Current.is(TT_DictLiteral) ||
         Style.Language == FormatStyle::LK_Proto || !Style.BinPackArguments ||
         (NextNoComment &&
          NextNoComment->isOneOf(TT_DesignatedInitializerPeriod,
                                 TT_DesignatedInitializerLSquare));
+    BreakBeforeParameter = EndsInComma;
     if (Current.ParameterCount > 1)
       NestedBlockIndent = std::max(NestedBlockIndent, State.Column + 1);
   } else {

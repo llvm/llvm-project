@@ -1678,7 +1678,10 @@ struct NullReturnState {
 
   /// Complete the null-return operation.  It is valid to call this
   /// regardless of whether 'init' has been called.
-  RValue complete(CodeGenFunction &CGF, RValue result, QualType resultType,
+  RValue complete(CodeGenFunction &CGF,
+                  ReturnValueSlot returnSlot,
+                  RValue result,
+                  QualType resultType,
                   const CallArgList &CallArgs,
                   const ObjCMethodDecl *Method) {
     // If we never had to do a null-check, just use the raw result.
@@ -1745,7 +1748,8 @@ struct NullReturnState {
     // memory or (2) agg values in registers.
     if (result.isAggregate()) {
       assert(result.isAggregate() && "null init of non-aggregate result?");
-      CGF.EmitNullInitialization(result.getAggregateAddress(), resultType);
+      if (!returnSlot.isUnused())
+        CGF.EmitNullInitialization(result.getAggregateAddress(), resultType);
       if (contBB) CGF.EmitBlock(contBB);
       return result;
     }
@@ -2117,11 +2121,11 @@ CGObjCCommonMac::EmitMessageSend(CodeGen::CodeGenFunction &CGF,
     }
   }
 
-  NullReturnState nullReturn;
+  bool RequiresNullCheck = false;
 
   llvm::Constant *Fn = nullptr;
   if (CGM.ReturnSlotInterferesWithArgs(MSI.CallInfo)) {
-    if (ReceiverCanBeNull) nullReturn.init(CGF, Arg0);
+    if (ReceiverCanBeNull) RequiresNullCheck = true;
     Fn = (ObjCABI == 2) ?  ObjCTypes.getSendStretFn2(IsSuper)
       : ObjCTypes.getSendStretFn(IsSuper);
   } else if (CGM.ReturnTypeUsesFPRet(ResultType)) {
@@ -2134,22 +2138,29 @@ CGObjCCommonMac::EmitMessageSend(CodeGen::CodeGenFunction &CGF,
     // arm64 uses objc_msgSend for stret methods and yet null receiver check
     // must be made for it.
     if (ReceiverCanBeNull && CGM.ReturnTypeUsesSRet(MSI.CallInfo))
-      nullReturn.init(CGF, Arg0);
+      RequiresNullCheck = true;
     Fn = (ObjCABI == 2) ? ObjCTypes.getSendFn2(IsSuper)
       : ObjCTypes.getSendFn(IsSuper);
   }
 
+  // We don't need to emit a null check to zero out an indirect result if the
+  // result is ignored.
+  if (Return.isUnused())
+    RequiresNullCheck = false;
+
   // Emit a null-check if there's a consumed argument other than the receiver.
-  bool RequiresNullCheck = false;
-  if (ReceiverCanBeNull && CGM.getLangOpts().ObjCAutoRefCount && Method) {
+  if (!RequiresNullCheck && CGM.getLangOpts().ObjCAutoRefCount && Method) {
     for (const auto *ParamDecl : Method->parameters()) {
       if (ParamDecl->hasAttr<NSConsumedAttr>()) {
-        if (!nullReturn.NullBB)
-          nullReturn.init(CGF, Arg0);
         RequiresNullCheck = true;
         break;
       }
     }
+  }
+
+  NullReturnState nullReturn;
+  if (RequiresNullCheck) {
+    nullReturn.init(CGF, Arg0);
   }
   
   llvm::Instruction *CallSite;
@@ -2164,7 +2175,7 @@ CGObjCCommonMac::EmitMessageSend(CodeGen::CodeGenFunction &CGF,
     llvm::CallSite(CallSite).setDoesNotReturn();
   }
 
-  return nullReturn.complete(CGF, rvalue, ResultType, CallArgs,
+  return nullReturn.complete(CGF, Return, rvalue, ResultType, CallArgs,
                              RequiresNullCheck ? Method : nullptr);
 }
 
@@ -7073,7 +7084,7 @@ CGObjCNonFragileABIMac::EmitVTableMessageSend(CodeGenFunction &CGF,
   CGCallee callee(CGCalleeInfo(), calleePtr);
 
   RValue result = CGF.EmitCall(MSI.CallInfo, callee, returnSlot, args);
-  return nullReturn.complete(CGF, result, resultType, formalArgs,
+  return nullReturn.complete(CGF, returnSlot, result, resultType, formalArgs,
                              requiresnullCheck ? method : nullptr);
 }
 

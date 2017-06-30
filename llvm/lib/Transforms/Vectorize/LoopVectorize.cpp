@@ -1604,6 +1604,9 @@ public:
   /// Return the first-order recurrences found in the loop.
   RecurrenceSet *getFirstOrderRecurrences() { return &FirstOrderRecurrences; }
 
+  /// Return the set of instructions to sink to handle first-order recurrences.
+  DenseMap<Instruction *, Instruction *> &getSinkAfter() { return SinkAfter; }
+
   /// Returns the widest induction type.
   Type *getWidestInductionType() { return WidestIndTy; }
 
@@ -1806,6 +1809,9 @@ private:
   InductionList Inductions;
   /// Holds the phi nodes that are first-order recurrences.
   RecurrenceSet FirstOrderRecurrences;
+  /// Holds instructions that need to sink past other instructions to handle
+  /// first-order recurrences.
+  DenseMap<Instruction *, Instruction *> SinkAfter;
   /// Holds the widest induction type encountered.
   Type *WidestIndTy;
 
@@ -5378,7 +5384,8 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
           continue;
         }
 
-        if (RecurrenceDescriptor::isFirstOrderRecurrence(Phi, TheLoop, DT)) {
+        if (RecurrenceDescriptor::isFirstOrderRecurrence(Phi, TheLoop,
+                                                         SinkAfter, DT)) {
           FirstOrderRecurrences.insert(Phi);
           continue;
         }
@@ -7650,6 +7657,15 @@ void LoopVectorizationPlanner::executePlan(InnerLoopVectorizer &ILV) {
   //===------------------------------------------------===//
 
   // 2. Copy and widen instructions from the old loop into the new loop.
+
+  // Move instructions to handle first-order recurrences.
+  DenseMap<Instruction *, Instruction *> SinkAfter = Legal->getSinkAfter();
+  for (auto &Entry : SinkAfter) {
+    Entry.first->removeFromParent();
+    Entry.first->insertAfter(Entry.second);
+    DEBUG(dbgs() << "Sinking" << *Entry.first << " after" << *Entry.second
+                 << " to vectorize a 1st order recurrence.\n");
+  }
 
   // Collect instructions from the original loop that will become trivially dead
   // in the vectorized loop. We don't need to vectorize these instructions. For

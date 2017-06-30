@@ -27,8 +27,6 @@ using OptionsSource = clang::tidy::ClangTidyOptionsProvider::OptionsSource;
 
 LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(FileFilter)
 LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(FileFilter::LineRange)
-LLVM_YAML_IS_SEQUENCE_VECTOR(ClangTidyOptions::StringPair)
-LLVM_YAML_IS_SEQUENCE_VECTOR(std::string)
 
 namespace llvm {
 namespace yaml {
