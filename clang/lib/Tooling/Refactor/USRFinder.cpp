@@ -556,6 +556,7 @@ const NamedDecl *getNamedDeclAt(const ASTContext &Context,
                                 SourceLocation Point) {
   if (Point.isMacroID())
     Point = Context.getSourceManager().getSpellingLoc(Point);
+  // FIXME: If point is in a system header, return early here.
 
   OccurrenceCheckerType PointChecker = [Point, &Context](
       const NamedDecl *Decl, SourceLocation Start, SourceLocation End) -> bool {
@@ -566,13 +567,16 @@ const NamedDecl *getNamedDeclAt(const ASTContext &Context,
   NamedDeclFindingASTVisitor Visitor(PointChecker, Context);
 
   // We only want to search the decls that exist in the same file as the point.
-  StringRef SearchFile = Context.getSourceManager().getFilename(Point);
+  FileID InitiationFile = Context.getSourceManager().getFileID(Point);
   for (auto *CurrDecl : Context.getTranslationUnitDecl()->decls()) {
-    const SourceLocation FileLoc = CurrDecl->getLocStart();
-    StringRef FileName = Context.getSourceManager().getFilename(FileLoc);
-    // FIME: Skip system headers.
+    const SourceRange DeclRange = CurrDecl->getSourceRange();
+    SourceLocation FileLoc;
+    if (DeclRange.getBegin().isMacroID() && !DeclRange.getEnd().isMacroID())
+      FileLoc = DeclRange.getEnd();
+    else
+      FileLoc = Context.getSourceManager().getSpellingLoc(DeclRange.getBegin());
     // FIXME: Add test.
-    if (FileName == SearchFile)
+    if (Context.getSourceManager().getFileID(FileLoc) == InitiationFile)
       Visitor.TraverseDecl(CurrDecl);
     if (Visitor.isDone())
       break;

@@ -36,5 +36,14 @@ typedef OPAQUE(Separate) { // CHECK3: rename [[@LINE]]:16 -> [[@LINE]]:24
 Separate separateT; // CHECK3: rename [[@LINE]]:1 -> [[@LINE]]:9
 struct Separate separateE;  // CHECK4: rename [[@LINE]]:8 -> [[@LINE]]:16
 
-// RUN: clang-refactor-test rename-initiate -at=%s:31:16 -at=%s:36:1 -new-name=foo -dump-symbols %s | FileCheck --check-prefix=CHECK3 %s
-// RUN: clang-refactor-test rename-initiate -at=%s:37:8 -new-name=foo -dump-symbols %s | FileCheck --check-prefix=CHECK4 %s
+// RUN: clang-refactor-test rename-initiate -at=%s:36:1 -new-name=foo -dump-symbols %s | FileCheck --check-prefix=CHECK3 %s
+// RUN: clang-refactor-test rename-initiate -at=%s:31:16 -at=%s:37:8 -new-name=foo -dump-symbols %s | FileCheck --check-prefix=CHECK4 %s
+
+#include "Inputs/TransparentEnum.h"
+
+// CHECK5: 'c:@E@AnotherEnum2'
+typedef TRANSPARENT_ENUM(AnotherEnum2, int) { // CHECK5: rename [[@LINE]]:26 -> [[@LINE]]:38
+  EnumThing = 0, // CHECK6: [[@LINE]]:3 -> [[@LINE]]:12
+};
+// RUN: clang-refactor-test rename-initiate -at=%s:45:26 -new-name=foo -dump-symbols %s | FileCheck --check-prefix=CHECK5 %s
+// RUN: clang-refactor-test rename-initiate -at=%s:46:3 -new-name=foo %s | FileCheck --check-prefix=CHECK6 %s
