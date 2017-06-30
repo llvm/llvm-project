@@ -145,7 +145,7 @@ def dwarf_debug_flags : Separate<["-"], "dwarf-debug-flags">,
   HelpText<"The string to embed in the Dwarf debug flags record.">;
 def compress_debug_sections : Flag<["-", "--"], "compress-debug-sections">,
     HelpText<"DWARF debug sections compression">;
-def compress_debug_sections_EQ : Flag<["-"], "compress-debug-sections=">,
+def compress_debug_sections_EQ : Joined<["-"], "compress-debug-sections=">,
     HelpText<"DWARF debug sections compression type">;
 def mno_exec_stack : Flag<["-"], "mnoexecstack">,
   HelpText<"Mark the file as not needing an executable stack">;

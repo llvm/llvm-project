@@ -152,5 +152,16 @@ TEST(ToolChainTest, DefaultDriverMode) {
   EXPECT_TRUE(CXXDriver.CCCIsCXX());
   EXPECT_TRUE(CLDriver.IsCLMode());
 }
+TEST(ToolChainTest, InvalidArgument) {
+  IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
+  struct TestDiagnosticConsumer : public DiagnosticConsumer {};
+  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
+  DiagnosticsEngine Diags(DiagID, &*DiagOpts, new TestDiagnosticConsumer);
+  Driver TheDriver("/bin/clang", "arm-linux-gnueabihf", Diags);
+  std::unique_ptr<Compilation> C(TheDriver.BuildCompilation(
+      {"-fsyntax-only", "-fan-unknown-option", "foo.cpp"}));
+  EXPECT_TRUE(C);
+  EXPECT_TRUE(C->containsError());
+}
 
 } // end anonymous namespace.

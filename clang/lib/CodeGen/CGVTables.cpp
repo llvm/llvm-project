@@ -64,10 +64,6 @@ static void setThunkProperties(CodeGenModule &CGM, const ThunkInfo &Thunk,
   const CXXMethodDecl *MD = cast<CXXMethodDecl>(GD.getDecl());
   setThunkVisibility(CGM, MD, Thunk, ThunkFn);
 
-  // Propagate dllexport storage.
-  if (MD->hasAttr<DLLExportAttr>())
-    ThunkFn->setDLLStorageClass(llvm::GlobalValue::DLLExportStorageClass);
-
   if (CGM.supportsCOMDAT() && ThunkFn->isWeakForLinker())
     ThunkFn->setComdat(CGM.getModule().getOrInsertComdat(ThunkFn->getName()));
 }
