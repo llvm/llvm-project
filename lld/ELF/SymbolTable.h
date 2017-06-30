@@ -18,7 +18,7 @@
 
 namespace lld {
 namespace elf {
-class Lazy;
+
 struct Symbol;
 
 // SymbolTable is a bucket of all known symbols, including defined,

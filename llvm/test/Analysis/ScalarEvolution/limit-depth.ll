@@ -1,4 +1,4 @@
-; RUN: opt -scalar-evolution-max-arith-depth=0 -analyze -scalar-evolution < %s | FileCheck %s
+; RUN: opt -scalar-evolution-max-arith-depth=0 -scalar-evolution-max-ext-depth=0 -analyze -scalar-evolution < %s | FileCheck %s
 
 ; Check that depth set to 0 prevents getAddExpr and getMulExpr from making
 ; transformations in SCEV. We expect the result to be very straightforward.
@@ -40,5 +40,61 @@ define void @test_mul(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f) {
 
   %s1 = mul i32 %p1, %p2
   %s2 = mul i32 %s1, %p3
+  ret void
+}
+
+define void @test_sext(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f) {
+; CHECK-LABEL: @test_sext
+; CHECK:        %se2 = sext i64 %iv2.inc to i128
+; CHECK-NEXT:   -->  {(1 + (sext i64 {(sext i32 (1 + %a) to i64),+,1}<nsw><%loop> to i128))<nsw>,+,1}<nsw><%loop2>
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ %a, %entry ], [ %iv.inc, %loop ]
+  %iv.inc = add nsw i32 %iv, 1
+  %cond = icmp sle i32 %iv.inc, 50
+  br i1 %cond, label %loop, label %between
+
+between:
+  %se = sext i32 %iv.inc to i64
+  br label %loop2
+
+loop2:
+  %iv2 = phi i64 [ %se, %between ], [ %iv2.inc, %loop2 ]
+  %iv2.inc = add nsw i64 %iv2, 1
+  %cond2 = icmp sle i64 %iv2.inc, 50
+  br i1 %cond2, label %loop2, label %exit
+
+exit:
+  %se2 = sext i64 %iv2.inc to i128
+  ret void
+}
+
+define void @test_zext(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f) {
+; CHECK-LABEL: @test_zext
+; CHECK:          %ze2 = zext i64 %iv2.inc to i128
+; CHECK-NEXT:     -->  {(1 + (zext i64 {7,+,1}<nuw><nsw><%loop> to i128))<nuw><nsw>,+,1}<nuw><%loop2>
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 6, %entry ], [ %iv.inc, %loop ]
+  %iv.inc = add nsw i32 %iv, 1
+  %cond = icmp sle i32 %iv.inc, 50
+  br i1 %cond, label %loop, label %between
+
+between:
+  %ze = zext i32 %iv.inc to i64
+  br label %loop2
+
+loop2:
+  %iv2 = phi i64 [ %ze, %between ], [ %iv2.inc, %loop2 ]
+  %iv2.inc = add nuw i64 %iv2, 1
+  %cond2 = icmp sle i64 %iv2.inc, 50
+  br i1 %cond2, label %loop2, label %exit
+
+exit:
+  %ze2 = zext i64 %iv2.inc to i128
   ret void
 }

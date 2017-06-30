@@ -672,12 +672,14 @@ static Optional<std::string> demangle(StringRef Name, bool StripUnderscore) {
     return None;
 
   int Status;
-  std::unique_ptr<char> Undecorated(
-      itaniumDemangle(Name.str().c_str(), nullptr, nullptr, &Status));
+  char *Undecorated =
+      itaniumDemangle(Name.str().c_str(), nullptr, nullptr, &Status);
   if (Status != 0)
     return None;
 
-  return std::string(Undecorated.get());
+  std::string S(Undecorated);
+  free(Undecorated);
+  return S;
 }
 
 static bool symbolIsDefined(const NMSymbol &Sym) {

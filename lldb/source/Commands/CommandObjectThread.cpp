@@ -209,7 +209,7 @@ protected:
     Process *process = m_exe_ctx.GetProcessPtr();
     Thread *thread = process->GetThreadList().FindThreadByID(tid).get();
     if (thread == nullptr) {
-      result.AppendErrorWithFormat("Failed to process thread# %lu.\n", tid);
+      result.AppendErrorWithFormat("Failed to process thread# %llu.\n", tid);
       result.SetStatus(eReturnStatusFailed);
       return false;
     }

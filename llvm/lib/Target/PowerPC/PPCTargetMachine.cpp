@@ -337,7 +337,7 @@ bool PPCPassConfig::addPreISel() {
     addPass(createPPCLoopPreIncPrepPass(getPPCTargetMachine()));
 
   if (!DisableCTRLoops && getOptLevel() != CodeGenOpt::None)
-    addPass(createPPCCTRLoops(getPPCTargetMachine()));
+    addPass(createPPCCTRLoops());
 
   return false;
 }

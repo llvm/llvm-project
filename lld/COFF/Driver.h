@@ -34,7 +34,6 @@ extern LinkerDriver *Driver;
 using llvm::COFF::MachineTypes;
 using llvm::COFF::WindowsSubsystem;
 using llvm::Optional;
-class InputFile;
 
 // Implemented in MarkLive.cpp.
 void markLive(const std::vector<Chunk *> &Chunks);

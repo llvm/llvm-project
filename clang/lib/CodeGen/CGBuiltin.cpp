@@ -9372,6 +9372,16 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     Value *Callee = CGM.getIntrinsic(Intrinsic::wasm_grow_memory, X->getType());
     return Builder.CreateCall(Callee, X);
   }
+  case WebAssembly::BI__builtin_wasm_throw: {
+    Value *Tag = EmitScalarExpr(E->getArg(0));
+    Value *Obj = EmitScalarExpr(E->getArg(1));
+    Value *Callee = CGM.getIntrinsic(Intrinsic::wasm_throw);
+    return Builder.CreateCall(Callee, {Tag, Obj});
+  }
+  case WebAssembly::BI__builtin_wasm_rethrow: {
+    Value *Callee = CGM.getIntrinsic(Intrinsic::wasm_rethrow);
+    return Builder.CreateCall(Callee);
+  }
 
   default:
     return nullptr;

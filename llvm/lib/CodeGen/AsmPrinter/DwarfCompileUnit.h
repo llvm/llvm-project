@@ -127,10 +127,6 @@ public:
   void addLocalLabelAddress(DIE &Die, dwarf::Attribute Attribute,
                             const MCSymbol *Label);
 
-  /// addSectionDelta - Add a label delta attribute data and value.
-  DIE::value_iterator addSectionDelta(DIE &Die, dwarf::Attribute Attribute,
-                                      const MCSymbol *Hi, const MCSymbol *Lo);
-
   DwarfCompileUnit &getCU() override { return *this; }
 
   unsigned getOrCreateSourceID(StringRef FileName, StringRef DirName) override;
@@ -150,12 +146,6 @@ public:
   void addRange(RangeSpan Range);
 
   void attachLowHighPC(DIE &D, const MCSymbol *Begin, const MCSymbol *End);
-
-  /// addSectionLabel - Add a Dwarf section label attribute data and value.
-  ///
-  DIE::value_iterator addSectionLabel(DIE &Die, dwarf::Attribute Attribute,
-                                      const MCSymbol *Label,
-                                      const MCSymbol *Sec);
 
   /// \brief Find DIE for the given subprogram and attach appropriate
   /// DW_AT_low_pc and DW_AT_high_pc attributes. If there are global

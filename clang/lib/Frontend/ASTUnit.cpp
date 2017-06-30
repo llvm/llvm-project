@@ -458,7 +458,7 @@ namespace {
 /// a Preprocessor.
 class ASTInfoCollector : public ASTReaderListener {
   Preprocessor &PP;
-  ASTContext &Context;
+  ASTContext *Context;
   HeaderSearchOptions &HSOpts;
   PreprocessorOptions &PPOpts;
   LangOptions &LangOpt;
@@ -468,7 +468,7 @@ class ASTInfoCollector : public ASTReaderListener {
 
   bool InitializedLanguage;
 public:
-  ASTInfoCollector(Preprocessor &PP, ASTContext &Context,
+  ASTInfoCollector(Preprocessor &PP, ASTContext *Context,
                    HeaderSearchOptions &HSOpts, PreprocessorOptions &PPOpts,
                    LangOptions &LangOpt,
                    std::shared_ptr<TargetOptions> &TargetOpts,
@@ -536,12 +536,15 @@ private:
     // Initialize the preprocessor.
     PP.Initialize(*Target);
 
+    if (!Context)
+      return;
+
     // Initialize the ASTContext
-    Context.InitBuiltinTypes(*Target);
+    Context->InitBuiltinTypes(*Target);
 
     // We didn't have access to the comment options when the ASTContext was
     // constructed, so register them now.
-    Context.getCommentCommandTraits().registerCommentOptions(
+    Context->getCommentCommandTraits().registerCommentOptions(
         LangOpt.CommentOpts);
   }
 };
@@ -671,7 +674,7 @@ void ASTUnit::ConfigureDiags(IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
 
 std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
     const std::string &Filename, const PCHContainerReader &PCHContainerRdr,
-    IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
+    WhatToLoad ToLoad, IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
     const FileSystemOptions &FileSystemOpts, bool UseDebugInfo,
     bool OnlyLocalDecls, ArrayRef<RemappedFile> RemappedFiles,
     bool CaptureDiagnostics, bool AllowPCHWithCompilerErrors,
@@ -722,21 +725,21 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
       /*OwnsHeaderSearch=*/false);
   Preprocessor &PP = *AST->PP;
 
-  AST->Ctx = new ASTContext(*AST->LangOpts, AST->getSourceManager(),
-                            PP.getIdentifierTable(), PP.getSelectorTable(),
-                            PP.getBuiltinInfo());
-  ASTContext &Context = *AST->Ctx;
+  if (ToLoad >= LoadASTOnly)
+    AST->Ctx = new ASTContext(*AST->LangOpts, AST->getSourceManager(),
+                              PP.getIdentifierTable(), PP.getSelectorTable(),
+                              PP.getBuiltinInfo());
 
   bool disableValid = false;
   if (::getenv("LIBCLANG_DISABLE_PCH_VALIDATION"))
     disableValid = true;
-  AST->Reader = new ASTReader(PP, Context, PCHContainerRdr, { },
+  AST->Reader = new ASTReader(PP, AST->Ctx.get(), PCHContainerRdr, { },
                               /*isysroot=*/"",
                               /*DisableValidation=*/disableValid,
                               AllowPCHWithCompilerErrors);
 
   AST->Reader->setListener(llvm::make_unique<ASTInfoCollector>(
-      *AST->PP, Context, *AST->HSOpts, *AST->PPOpts, *AST->LangOpts,
+      *AST->PP, AST->Ctx.get(), *AST->HSOpts, *AST->PPOpts, *AST->LangOpts,
       AST->TargetOpts, AST->Target, Counter));
 
   // Attach the AST reader to the AST context as an external AST
@@ -744,7 +747,8 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
   // AST file as needed.
   // We need the external source to be set up before we read the AST, because
   // eagerly-deserialized declarations may use it.
-  Context.setExternalSource(AST->Reader);
+  if (AST->Ctx)
+    AST->Ctx->setExternalSource(AST->Reader);
 
   switch (AST->Reader->ReadAST(Filename, serialization::MK_MainFile,
                           SourceLocation(), ASTReader::ARR_None)) {
@@ -766,15 +770,18 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
   PP.setCounterValue(Counter);
 
   // Create an AST consumer, even though it isn't used.
-  AST->Consumer.reset(new ASTConsumer);
-  
+  if (ToLoad >= LoadASTOnly)
+    AST->Consumer.reset(new ASTConsumer);
+
   // Create a semantic analysis object and tell the AST reader about it.
-  AST->TheSema.reset(new Sema(PP, Context, *AST->Consumer));
-  AST->TheSema->Initialize();
-  AST->Reader->InitializeSema(*AST->TheSema);
+  if (ToLoad >= LoadEverything) {
+    AST->TheSema.reset(new Sema(PP, *AST->Ctx, *AST->Consumer));
+    AST->TheSema->Initialize();
+    AST->Reader->InitializeSema(*AST->TheSema);
+  }
 
   // Tell the diagnostic client that we have started a source file.
-  AST->getDiagnostics().getClient()->BeginSourceFile(Context.getLangOpts(),&PP);
+  AST->getDiagnostics().getClient()->BeginSourceFile(PP.getLangOpts(), &PP);
 
   return AST;
 }
