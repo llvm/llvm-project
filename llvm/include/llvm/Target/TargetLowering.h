@@ -2722,7 +2722,7 @@ public:
   //  This transformation may not be desirable if it disrupts a particularly
   //  auspicious target-specific tree (e.g. bitfield extraction in AArch64).
   //  By default, it returns true.
-  virtual bool isDesirableToCommuteWithShift(const SDNode *N /*Op*/) const {
+  virtual bool isDesirableToCommuteWithShift(const SDNode *N) const {
     return true;
   }
 

@@ -6,6 +6,7 @@ set(LLVM_LINK_COMPONENTS
   Object
   ObjectYAML
   Support
+  TestingSupport
   )
 
 set(DebugInfoSources
