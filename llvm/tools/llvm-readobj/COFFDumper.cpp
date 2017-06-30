@@ -335,6 +335,7 @@ static const EnumEntry<COFF::MachineTypes> ImageFileMachineType[] = {
   LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_AM33     ),
   LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_AMD64    ),
   LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_ARM      ),
+  LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_ARM64    ),
   LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_ARMNT    ),
   LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_EBC      ),
   LLVM_READOBJ_ENUM_ENT(COFF, IMAGE_FILE_MACHINE_I386     ),
@@ -678,6 +679,7 @@ void COFFDumper::printDOSHeader(const dos_header *DH) {
 template <class PEHeader>
 void COFFDumper::printPEHeader(const PEHeader *Hdr) {
   DictScope D(W, "ImageOptionalHeader");
+  W.printHex   ("Magic", Hdr->Magic);
   W.printNumber("MajorLinkerVersion", Hdr->MajorLinkerVersion);
   W.printNumber("MinorLinkerVersion", Hdr->MinorLinkerVersion);
   W.printNumber("SizeOfCode", Hdr->SizeOfCode);

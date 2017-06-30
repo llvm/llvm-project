@@ -897,7 +897,7 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runEHOnFunction(Function &F) {
     }
   }
 
-  // Look for orphan landingpads, can occur in blocks with no predecesors
+  // Look for orphan landingpads, can occur in blocks with no predecessors
   for (BasicBlock &BB : F) {
     Instruction *I = BB.getFirstNonPHI();
     if (auto *LPI = dyn_cast<LandingPadInst>(I))

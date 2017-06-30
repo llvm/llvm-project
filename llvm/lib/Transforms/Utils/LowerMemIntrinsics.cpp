@@ -27,11 +27,8 @@ void llvm::createMemCpyLoop(Instruction *InsertBefore,
   BasicBlock *LoopBB = BasicBlock::Create(F->getContext(), "loadstoreloop",
                                           F, NewBB);
 
+  OrigBB->getTerminator()->setSuccessor(0, LoopBB);
   IRBuilder<> Builder(OrigBB->getTerminator());
-  Builder.CreateCondBr(
-      Builder.CreateICmpEQ(ConstantInt::get(TypeOfCopyLen, 0), CopyLen), NewBB,
-      LoopBB);
-  OrigBB->getTerminator()->eraseFromParent();
 
   // SrcAddr and DstAddr are expected to be pointer types,
   // so no check is made here.
@@ -170,7 +167,6 @@ static void createMemMoveLoop(Instruction *InsertBefore,
 static void createMemSetLoop(Instruction *InsertBefore,
                              Value *DstAddr, Value *CopyLen, Value *SetValue,
                              unsigned Align, bool IsVolatile) {
-  Type *TypeOfCopyLen = CopyLen->getType();
   BasicBlock *OrigBB = InsertBefore->getParent();
   Function *F = OrigBB->getParent();
   BasicBlock *NewBB =
@@ -178,11 +174,8 @@ static void createMemSetLoop(Instruction *InsertBefore,
   BasicBlock *LoopBB
     = BasicBlock::Create(F->getContext(), "loadstoreloop", F, NewBB);
 
+  OrigBB->getTerminator()->setSuccessor(0, LoopBB);
   IRBuilder<> Builder(OrigBB->getTerminator());
-  Builder.CreateCondBr(
-      Builder.CreateICmpEQ(ConstantInt::get(TypeOfCopyLen, 0), CopyLen), NewBB,
-      LoopBB);
-  OrigBB->getTerminator()->eraseFromParent();
 
   // Cast pointer to the type of value getting stored
   unsigned dstAS = cast<PointerType>(DstAddr->getType())->getAddressSpace();
@@ -190,8 +183,8 @@ static void createMemSetLoop(Instruction *InsertBefore,
                                   PointerType::get(SetValue->getType(), dstAS));
 
   IRBuilder<> LoopBuilder(LoopBB);
-  PHINode *LoopIndex = LoopBuilder.CreatePHI(TypeOfCopyLen, 0);
-  LoopIndex->addIncoming(ConstantInt::get(TypeOfCopyLen, 0), OrigBB);
+  PHINode *LoopIndex = LoopBuilder.CreatePHI(CopyLen->getType(), 0);
+  LoopIndex->addIncoming(ConstantInt::get(CopyLen->getType(), 0), OrigBB);
 
   LoopBuilder.CreateStore(
       SetValue,
@@ -199,7 +192,7 @@ static void createMemSetLoop(Instruction *InsertBefore,
       IsVolatile);
 
   Value *NewIndex =
-      LoopBuilder.CreateAdd(LoopIndex, ConstantInt::get(TypeOfCopyLen, 1));
+      LoopBuilder.CreateAdd(LoopIndex, ConstantInt::get(CopyLen->getType(), 1));
   LoopIndex->addIncoming(NewIndex, LoopBB);
 
   LoopBuilder.CreateCondBr(LoopBuilder.CreateICmpULT(NewIndex, CopyLen), LoopBB,

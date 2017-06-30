@@ -5615,6 +5615,17 @@ public:
 
   bool setFPMath(StringRef Name) override;
 
+  void getTargetDefinesARMV81A(const LangOptions &Opts,
+                               MacroBuilder &Builder) const {
+    Builder.defineMacro("__ARM_FEATURE_QRDMX", "1");
+  }
+
+  void getTargetDefinesARMV82A(const LangOptions &Opts,
+                               MacroBuilder &Builder) const {
+    // Also include the ARMv8.1-A defines
+    getTargetDefinesARMV81A(Opts, Builder);
+  }
+
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override {
     // Target identification.
@@ -5813,8 +5824,15 @@ public:
     if (Opts.UnsafeFPMath)
       Builder.defineMacro("__ARM_FP_FAST", "1");
 
-    if (ArchKind == llvm::ARM::AK_ARMV8_1A)
-      Builder.defineMacro("__ARM_FEATURE_QRDMX", "1");
+    switch(ArchKind) {
+    default: break;
+    case llvm::ARM::AK_ARMV8_1A:
+      getTargetDefinesARMV81A(Opts, Builder);
+      break;
+    case llvm::ARM::AK_ARMV8_2A:
+      getTargetDefinesARMV82A(Opts, Builder);
+      break;
+    }
   }
 
   ArrayRef<Builtin::Info> getTargetBuiltins() const override {
@@ -6207,9 +6225,8 @@ class AArch64TargetInfo : public TargetInfo {
   unsigned CRC;
   unsigned Crypto;
   unsigned Unaligned;
-  unsigned V8_1A;
-  unsigned V8_2A;
   unsigned HasFullFP16;
+  llvm::AArch64::ArchKind ArchKind;
 
   static const Builtin::Info BuiltinInfo[];
 
@@ -6273,6 +6290,20 @@ public:
     return Name == "generic" ||
            llvm::AArch64::parseCPUArch(Name) !=
            static_cast<unsigned>(llvm::AArch64::ArchKind::AK_INVALID);
+  }
+
+  void getTargetDefinesARMV81A(const LangOptions &Opts,
+                        MacroBuilder &Builder) const {
+    Builder.defineMacro("__ARM_FEATURE_QRDMX", "1");
+  }
+
+  void getTargetDefinesARMV82A(const LangOptions &Opts,
+                        MacroBuilder &Builder) const {
+    // Also include the ARMv8.1 defines
+    getTargetDefinesARMV81A(Opts, Builder);
+
+    if (FPU == NeonMode && HasFullFP16)
+      Builder.defineMacro("__ARM_FEATURE_FP16_VECTOR_ARITHMETIC", "1");
   }
 
   void getTargetDefines(const LangOptions &Opts,
@@ -6339,10 +6370,15 @@ public:
     if (Unaligned)
       Builder.defineMacro("__ARM_FEATURE_UNALIGNED", "1");
 
-    if (V8_1A)
-      Builder.defineMacro("__ARM_FEATURE_QRDMX", "1");
-    if (V8_2A && FPU == NeonMode && HasFullFP16)
-      Builder.defineMacro("__ARM_FEATURE_FP16_VECTOR_ARITHMETIC", "1");
+    switch(ArchKind) {
+    default: break;
+    case llvm::AArch64::ArchKind::AK_ARMV8_1A:
+      getTargetDefinesARMV81A(Opts, Builder);
+      break;
+    case llvm::AArch64::ArchKind::AK_ARMV8_2A:
+      getTargetDefinesARMV82A(Opts, Builder);
+      break;
+    }
 
     // All of the __sync_(bool|val)_compare_and_swap_(1|2|4|8) builtins work.
     Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1");
@@ -6369,9 +6405,8 @@ public:
     CRC = 0;
     Crypto = 0;
     Unaligned = 1;
-    V8_1A = 0;
-    V8_2A = 0;
     HasFullFP16 = 0;
+    ArchKind = llvm::AArch64::ArchKind::AK_ARMV8A;
 
     for (const auto &Feature : Features) {
       if (Feature == "+neon")
@@ -6383,9 +6418,9 @@ public:
       if (Feature == "+strict-align")
         Unaligned = 0;
       if (Feature == "+v8.1a")
-        V8_1A = 1;
+        ArchKind = llvm::AArch64::ArchKind::AK_ARMV8_1A;
       if (Feature == "+v8.2a")
-        V8_2A = 1;
+        ArchKind = llvm::AArch64::ArchKind::AK_ARMV8_2A;
       if (Feature == "+fullfp16")
         HasFullFP16 = 1;
     }

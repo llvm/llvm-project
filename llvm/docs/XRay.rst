@@ -150,7 +150,7 @@ variable, where we list down the options and their defaults below.
 | xray_logfile_base | ``const char*`` | ``xray-log.`` | Filename base for the  |
 |                   |                 |               | XRay logfile.          |
 +-------------------+-----------------+---------------+------------------------+
-| xray_fdr_log      | ``bool``        | ``false``     | Whether to install the  |
+| xray_fdr_log      | ``bool``        | ``false``     | Whether to install the |
 |                   |                 |               | Flight Data Recorder   |
 |                   |                 |               | (FDR) mode.            |
 +-------------------+-----------------+---------------+------------------------+

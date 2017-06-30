@@ -260,28 +260,20 @@ for.end:                                          ; preds = %for.cond
 ;  }
 ;}
 
-;AVX1-LABEL: @foo3
-;AVX1: icmp slt <4 x i32> %wide.load, <i32 100, i32 100,
-;AVX1: call <4 x double> @llvm.masked.load.v4f64.p0v4f64
-;AVX1: sitofp <4 x i32> %wide.load to <4 x double>
-;AVX1: fadd <4 x double>
-;AVX1: call void @llvm.masked.store.v4f64.p0v4f64
-;AVX1: ret void
-
-;AVX2-LABEL: @foo3
-;AVX2: icmp slt <8 x i32> %wide.load, <i32 100, i32 100,
-;AVX2: call <8 x double> @llvm.masked.load.v8f64.p0v8f64
-;AVX2: sitofp <8 x i32> %wide.load to <8 x double>
-;AVX2: fadd <8 x double>
-;AVX2: call void @llvm.masked.store.v8f64.p0v8f64
-;AVX2: ret void
+;AVX-LABEL: @foo3
+;AVX: icmp slt <4 x i32> %wide.load, <i32 100, i32 100,
+;AVX: call <4 x double> @llvm.masked.load.v4f64.p0v4f64
+;AVX: sitofp <4 x i32> %wide.load to <4 x double>
+;AVX: fadd <4 x double>
+;AVX: call void @llvm.masked.store.v4f64.p0v4f64
+;AVX: ret void
 
 ;AVX512-LABEL: @foo3
-;AVX512: icmp slt <16 x i32> %wide.load, <i32 100, i32 100,
-;AVX512: call <16 x double> @llvm.masked.load.v16f64.p0v16f64
-;AVX512: sitofp <16 x i32> %wide.load to <16 x double>
-;AVX512: fadd <16 x double>
-;AVX512: call void @llvm.masked.store.v16f64.p0v16f64
+;AVX512: icmp slt <8 x i32> %wide.load, <i32 100, i32 100,
+;AVX512: call <8 x double> @llvm.masked.load.v8f64.p0v8f64
+;AVX512: sitofp <8 x i32> %wide.load to <8 x double>
+;AVX512: fadd <8 x double>
+;AVX512: call void @llvm.masked.store.v8f64.p0v8f64
 ;AVX512: ret void
 
 
@@ -510,19 +502,19 @@ for.end:                                          ; preds = %for.cond
 ;  }
 ;}
 ;AVX2-LABEL: @foo6
-;AVX2: icmp sgt <8 x i32> %reverse, zeroinitializer
-;AVX2: shufflevector <8 x i1>{{.*}}<8 x i32> <i32 7, i32 6, i32 5, i32 4
-;AVX2: call <8 x double> @llvm.masked.load.v8f64.p0v8f64
-;AVX2: fadd <8 x double>
-;AVX2: call void @llvm.masked.store.v8f64.p0v8f64
+;AVX2: icmp sgt <4 x i32> %reverse, zeroinitializer
+;AVX2: shufflevector <4 x i1>{{.*}}<4 x i32> <i32 3, i32 2, i32 1, i32 0>
+;AVX2: call <4 x double> @llvm.masked.load.v4f64.p0v4f64
+;AVX2: fadd <4 x double>
+;AVX2: call void @llvm.masked.store.v4f64.p0v4f64
 ;AVX2: ret void
 
 ;AVX512-LABEL: @foo6
-;AVX512: icmp sgt <16 x i32> %reverse, zeroinitializer
-;AVX512: shufflevector <16 x i1>{{.*}}<16 x i32> <i32 15, i32 14, i32 13, i32 12
-;AVX512: call <16 x double> @llvm.masked.load.v16f64.p0v16f64
-;AVX512: fadd <16 x double>
-;AVX512: call void @llvm.masked.store.v16f64.p0v16f64
+;AVX512: icmp sgt <8 x i32> %reverse, zeroinitializer
+;AVX512: shufflevector <8 x i1>{{.*}}<8 x i32> <i32 7, i32 6, i32 5, i32 4
+;AVX512: call <8 x double> @llvm.masked.load.v8f64.p0v8f64
+;AVX512: fadd <8 x double>
+;AVX512: call void @llvm.masked.store.v8f64.p0v8f64
 ;AVX512: ret void
 
 
@@ -590,8 +582,8 @@ for.end:                                          ; preds = %for.cond
 ; }
 
 ;AVX512-LABEL: @foo7
-;AVX512: call <64 x double*> @llvm.masked.load.v64p0f64.p0v64p0f64(<64 x double*>*
-;AVX512: call void @llvm.masked.store.v64f64.p0v64f64
+;AVX512: call <8 x double*> @llvm.masked.load.v8p0f64.p0v8p0f64(<8 x double*>*
+;AVX512: call void @llvm.masked.store.v8f64.p0v8f64
 ;AVX512: ret void
 
 define void @foo7(double* noalias %out, double** noalias %in, i8* noalias %trigger, i32 %size) #0 {
@@ -662,8 +654,8 @@ for.end:                                          ; preds = %for.cond
 ;}
 
 ;AVX512-LABEL: @foo8
-;AVX512: call <64 x i32 ()*> @llvm.masked.load.v64p0f_i32f.p0v64p0f_i32f(<64 x i32 ()*>* %
-;AVX512: call void @llvm.masked.store.v64f64.p0v64f64
+;AVX512: call <8 x i32 ()*> @llvm.masked.load.v8p0f_i32f.p0v8p0f_i32f(<8 x i32 ()*>* %
+;AVX512: call void @llvm.masked.store.v8f64.p0v8f64
 ;AVX512: ret void
 
 define void @foo8(double* noalias %out, i32 ()** noalias %in, i8* noalias %trigger, i32 %size) #0 {

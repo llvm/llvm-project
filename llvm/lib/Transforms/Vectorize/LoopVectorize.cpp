@@ -114,15 +114,16 @@ static cl::opt<bool>
     EnableIfConversion("enable-if-conversion", cl::init(true), cl::Hidden,
                        cl::desc("Enable if-conversion during vectorization."));
 
-/// We don't vectorize loops with a known constant trip count below this number.
+/// Loops with a known constant trip count below this number are vectorized only
+/// if no scalar iteration overheads are incurred.
 static cl::opt<unsigned> TinyTripCountVectorThreshold(
     "vectorizer-min-trip-count", cl::init(16), cl::Hidden,
-    cl::desc("Don't vectorize loops with a constant "
-             "trip count that is smaller than this "
-             "value."));
+    cl::desc("Loops with a constant trip count that is smaller than this "
+             "value are vectorized only if no scalar iteration overheads "
+             "are incurred."));
 
 static cl::opt<bool> MaximizeBandwidth(
-    "vectorizer-maximize-bandwidth", cl::init(true), cl::Hidden,
+    "vectorizer-maximize-bandwidth", cl::init(false), cl::Hidden,
     cl::desc("Maximize bandwidth when selecting vectorization factor which "
              "will be determined by the smallest type in loop."));
 
@@ -7801,34 +7802,6 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     return false;
   }
 
-  // Check the loop for a trip count threshold:
-  // do not vectorize loops with a tiny trip count.
-  unsigned ExpectedTC = SE->getSmallConstantMaxTripCount(L);
-  bool HasExpectedTC = (ExpectedTC > 0);
-
-  if (!HasExpectedTC && LoopVectorizeWithBlockFrequency) {
-    auto EstimatedTC = getLoopEstimatedTripCount(L);
-    if (EstimatedTC) {
-      ExpectedTC = *EstimatedTC;
-      HasExpectedTC = true;
-    }
-  }
-
-  if (HasExpectedTC && ExpectedTC < TinyTripCountVectorThreshold) {
-    DEBUG(dbgs() << "LV: Found a loop with a very small trip count. "
-                 << "This loop is not worth vectorizing.");
-    if (Hints.getForce() == LoopVectorizeHints::FK_Enabled)
-      DEBUG(dbgs() << " But vectorizing was explicitly forced.\n");
-    else {
-      DEBUG(dbgs() << "\n");
-      ORE->emit(createMissedAnalysis(Hints.vectorizeAnalysisPassName(),
-                                     "NotBeneficial", L)
-                << "vectorization is not beneficial "
-                   "and is not explicitly forced");
-      return false;
-    }
-  }
-
   PredicatedScalarEvolution PSE(*SE, *L);
 
   // Check if it is legal to vectorize the loop.
@@ -7845,6 +7818,34 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   // optimized for size.
   bool OptForSize =
       Hints.getForce() != LoopVectorizeHints::FK_Enabled && F->optForSize();
+
+  // Check the loop for a trip count threshold: vectorize loops with a tiny trip
+  // count by optimizing for size, to minimize overheads.
+  unsigned ExpectedTC = SE->getSmallConstantMaxTripCount(L);
+  bool HasExpectedTC = (ExpectedTC > 0);
+
+  if (!HasExpectedTC && LoopVectorizeWithBlockFrequency) {
+    auto EstimatedTC = getLoopEstimatedTripCount(L);
+    if (EstimatedTC) {
+      ExpectedTC = *EstimatedTC;
+      HasExpectedTC = true;
+    }
+  }
+
+  if (HasExpectedTC && ExpectedTC < TinyTripCountVectorThreshold) {
+    DEBUG(dbgs() << "LV: Found a loop with a very small trip count. "
+                 << "This loop is worth vectorizing only if no scalar "
+                 << "iteration overheads are incurred.");
+    if (Hints.getForce() == LoopVectorizeHints::FK_Enabled)
+      DEBUG(dbgs() << " But vectorizing was explicitly forced.\n");
+    else {
+      DEBUG(dbgs() << "\n");
+      // Loops with a very small trip count are considered for vectorization
+      // under OptForSize, thereby making sure the cost of their loop body is
+      // dominant, free of runtime guards and scalar iteration overheads.
+      OptForSize = true;
+    }
+  }
 
   // Check the function attributes to see if implicit floats are allowed.
   // FIXME: This check doesn't seem possibly correct -- what if the loop is

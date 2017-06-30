@@ -153,8 +153,10 @@ void Driver::setDriverModeFromOption(StringRef Opt) {
     Diag(diag::err_drv_unsupported_option_argument) << OptName << Value;
 }
 
-InputArgList Driver::ParseArgStrings(ArrayRef<const char *> ArgStrings) {
+InputArgList Driver::ParseArgStrings(ArrayRef<const char *> ArgStrings,
+                                     bool &ContainsError) {
   llvm::PrettyStackTraceString CrashInfo("Command line argument parsing");
+  ContainsError = false;
 
   unsigned IncludedFlagsBitmask;
   unsigned ExcludedFlagsBitmask;
@@ -167,27 +169,41 @@ InputArgList Driver::ParseArgStrings(ArrayRef<const char *> ArgStrings) {
                           IncludedFlagsBitmask, ExcludedFlagsBitmask);
 
   // Check for missing argument error.
-  if (MissingArgCount)
-    Diag(clang::diag::err_drv_missing_argument)
+  if (MissingArgCount) {
+    Diag(diag::err_drv_missing_argument)
         << Args.getArgString(MissingArgIndex) << MissingArgCount;
+    ContainsError |=
+        Diags.getDiagnosticLevel(diag::err_drv_missing_argument,
+                                 SourceLocation()) > DiagnosticsEngine::Warning;
+  }
 
   // Check for unsupported options.
   for (const Arg *A : Args) {
     if (A->getOption().hasFlag(options::Unsupported)) {
-      Diag(clang::diag::err_drv_unsupported_opt) << A->getAsString(Args);
+      Diag(diag::err_drv_unsupported_opt) << A->getAsString(Args);
+      ContainsError |= Diags.getDiagnosticLevel(diag::err_drv_unsupported_opt,
+                                                SourceLocation()) >
+                       DiagnosticsEngine::Warning;
       continue;
     }
 
     // Warn about -mcpu= without an argument.
     if (A->getOption().matches(options::OPT_mcpu_EQ) && A->containsValue("")) {
-      Diag(clang::diag::warn_drv_empty_joined_argument) << A->getAsString(Args);
+      Diag(diag::warn_drv_empty_joined_argument) << A->getAsString(Args);
+      ContainsError |= Diags.getDiagnosticLevel(
+                           diag::warn_drv_empty_joined_argument,
+                           SourceLocation()) > DiagnosticsEngine::Warning;
     }
   }
 
-  for (const Arg *A : Args.filtered(options::OPT_UNKNOWN))
-    Diags.Report(IsCLMode() ? diag::warn_drv_unknown_argument_clang_cl :
-                              diag::err_drv_unknown_argument)
-      << A->getAsString(Args);
+  for (const Arg *A : Args.filtered(options::OPT_UNKNOWN)) {
+    auto ID = IsCLMode() ? diag::warn_drv_unknown_argument_clang_cl
+                         : diag::err_drv_unknown_argument;
+
+    Diags.Report(ID) << A->getAsString(Args);
+    ContainsError |= Diags.getDiagnosticLevel(ID, SourceLocation()) >
+                     DiagnosticsEngine::Warning;
+  }
 
   return Args;
 }
@@ -600,9 +616,8 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
   // FIXME: This stuff needs to go into the Compilation, not the driver.
   bool CCCPrintPhases;
 
-  InputArgList Args = ParseArgStrings(ArgList.slice(1));
-  if (Diags.hasErrorOccurred())
-    return nullptr;
+  bool ContainsError;
+  InputArgList Args = ParseArgStrings(ArgList.slice(1), ContainsError);
 
   // Silence driver warnings if requested
   Diags.setIgnoreAllWarnings(Args.hasArg(options::OPT_w));
@@ -692,7 +707,8 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
       *UArgs, computeTargetTriple(*this, DefaultTargetTriple, *UArgs));
 
   // The compilation takes ownership of Args.
-  Compilation *C = new Compilation(*this, TC, UArgs.release(), TranslatedArgs);
+  Compilation *C = new Compilation(*this, TC, UArgs.release(), TranslatedArgs,
+                                   ContainsError);
 
   if (!HandleImmediateArgs(*C))
     return C;

@@ -67,6 +67,11 @@ We don't use ICM, STCM, or CLM.
 
 --
 
+We don't use ADD (LOGICAL) HIGH, SUBTRACT (LOGICAL) HIGH,
+or COMPARE (LOGICAL) HIGH yet.
+
+--
+
 DAGCombiner doesn't yet fold truncations of extended loads.  Functions like:
 
     unsigned long f (unsigned long x, unsigned short *y)

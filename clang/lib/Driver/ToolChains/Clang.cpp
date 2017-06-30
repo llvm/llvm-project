@@ -1319,7 +1319,7 @@ void Clang::AddARMTargetArgs(const llvm::Triple &Triple, const ArgList &Args,
   if (Arg *A = Args.getLastArg(options::OPT_mabi_EQ))
     ABIName = A->getValue();
   else {
-    StringRef CPU = getCPUName(Args, Triple, /*FromAs*/ false);
+    std::string CPU = getCPUName(Args, Triple, /*FromAs*/ false);
     ABIName = llvm::ARM::computeDefaultTargetABI(Triple, CPU).data();
   }
 

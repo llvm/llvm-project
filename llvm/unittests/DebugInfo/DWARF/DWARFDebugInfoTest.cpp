@@ -29,6 +29,8 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/TargetRegistry.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 #include <climits>
 #include <cstdint>
@@ -61,28 +63,19 @@ Triple getHostTripleForAddrSize(uint8_t AddrSize) {
   return PT;
 }
 
-/// Take any llvm::Expected and check and handle any errors.
-///
-/// \param Expected a llvm::Excepted instance to check.
-/// \returns true if there were errors, false otherwise.
-template <typename T>
-static bool HandleExpectedError(T &Expected) {
-  std::string ErrorMsg;
-  handleAllErrors(Expected.takeError(), [&](const ErrorInfoBase &EI) {
-    ErrorMsg = EI.message();
-  });
-  if (!ErrorMsg.empty()) {
-    ::testing::AssertionFailure() << "error: " << ErrorMsg;
-    return true;
-  }
-  return false;
+static bool isConfigurationSupported(Triple &T) {
+  initLLVMIfNeeded();
+  std::string Err;
+  return TargetRegistry::lookupTarget(T.getTriple(), Err);
 }
 
 template <uint16_t Version, class AddrType, class RefAddrType>
 void TestAllForms() {
-  // Test that we can decode all DW_FORM values correctly.
+  Triple Triple = getHostTripleForAddrSize(sizeof(AddrType));
+  if (!isConfigurationSupported(Triple))
+    return;
 
-  const uint8_t AddrSize = sizeof(AddrType);
+  // Test that we can decode all DW_FORM values correctly.
   const AddrType AddrValue = (AddrType)0x0123456789abcdefULL;
   const uint8_t BlockData[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 0};
   const uint32_t BlockSize = sizeof(BlockData);
@@ -101,11 +94,9 @@ void TestAllForms() {
   const uint32_t Dwarf32Values[] = {1, 2, 3, 4, 5, 6, 7, 8};
   const char *StringValue = "Hello";
   const char *StrpValue = "World";
-  initLLVMIfNeeded();
-  Triple Triple = getHostTripleForAddrSize(AddrSize);
+
   auto ExpectedDG = dwarfgen::Generator::create(Triple, Version);
-  if (HandleExpectedError(ExpectedDG))
-    return;
+  ASSERT_THAT_EXPECTED(ExpectedDG, Succeeded());
   dwarfgen::Generator *DG = ExpectedDG.get().get();
   dwarfgen::CompileUnit &CU = DG->addCompileUnit();
   dwarfgen::DIE CUDie = CU.getUnitDIE();
@@ -431,16 +422,16 @@ TEST(DWARFDebugInfo, TestDWARF32Version5Addr8AllForms) {
 }
 
 template <uint16_t Version, class AddrType> void TestChildren() {
+  Triple Triple = getHostTripleForAddrSize(sizeof(AddrType));
+  if (!isConfigurationSupported(Triple))
+    return;
+
   // Test that we can decode DW_FORM_ref_addr values correctly in DWARF 2 with
   // 4 byte addresses. DW_FORM_ref_addr values should be 4 bytes when using
   // 8 byte addresses.
 
-  const uint8_t AddrSize = sizeof(AddrType);
-  initLLVMIfNeeded();
-  Triple Triple = getHostTripleForAddrSize(AddrSize);
   auto ExpectedDG = dwarfgen::Generator::create(Triple, Version);
-  if (HandleExpectedError(ExpectedDG))
-    return;
+  ASSERT_THAT_EXPECTED(ExpectedDG, Succeeded());
   dwarfgen::Generator *DG = ExpectedDG.get().get();
   dwarfgen::CompileUnit &CU = DG->addCompileUnit();
   dwarfgen::DIE CUDie = CU.getUnitDIE();
@@ -555,14 +546,13 @@ TEST(DWARFDebugInfo, TestDWARF32Version4Addr8Children) {
 }
 
 template <uint16_t Version, class AddrType> void TestReferences() {
-  // Test that we can decode DW_FORM_refXXX values correctly in DWARF.
-
-  const uint8_t AddrSize = sizeof(AddrType);
-  initLLVMIfNeeded();
-  Triple Triple = getHostTripleForAddrSize(AddrSize);
-  auto ExpectedDG = dwarfgen::Generator::create(Triple, Version);
-  if (HandleExpectedError(ExpectedDG))
+  Triple Triple = getHostTripleForAddrSize(sizeof(AddrType));
+  if (!isConfigurationSupported(Triple))
     return;
+
+  // Test that we can decode DW_FORM_refXXX values correctly in DWARF.
+  auto ExpectedDG = dwarfgen::Generator::create(Triple, Version);
+  ASSERT_THAT_EXPECTED(ExpectedDG, Succeeded());
   dwarfgen::Generator *DG = ExpectedDG.get().get();
   dwarfgen::CompileUnit &CU1 = DG->addCompileUnit();
   dwarfgen::CompileUnit &CU2 = DG->addCompileUnit();
@@ -804,15 +794,15 @@ TEST(DWARFDebugInfo, TestDWARF32Version4Addr8References) {
 }
 
 template <uint16_t Version, class AddrType> void TestAddresses() {
+  Triple Triple = getHostTripleForAddrSize(sizeof(AddrType));
+  if (!isConfigurationSupported(Triple))
+    return;
+
   // Test the DWARF APIs related to accessing the DW_AT_low_pc and
   // DW_AT_high_pc.
-  const uint8_t AddrSize = sizeof(AddrType);
   const bool SupportsHighPCAsOffset = Version >= 4;
-  initLLVMIfNeeded();
-  Triple Triple = getHostTripleForAddrSize(AddrSize);
   auto ExpectedDG = dwarfgen::Generator::create(Triple, Version);
-  if (HandleExpectedError(ExpectedDG))
-    return;
+  ASSERT_THAT_EXPECTED(ExpectedDG, Succeeded());
   dwarfgen::Generator *DG = ExpectedDG.get().get();
   dwarfgen::CompileUnit &CU = DG->addCompileUnit();
   dwarfgen::DIE CUDie = CU.getUnitDIE();
@@ -975,16 +965,15 @@ TEST(DWARFDebugInfo, TestDWARF32Version4Addr8Addresses) {
 }
 
 TEST(DWARFDebugInfo, TestRelations) {
+  Triple Triple = getHostTripleForAddrSize(sizeof(void *));
+  if (!isConfigurationSupported(Triple))
+    return;
+
   // Test the DWARF APIs related to accessing the DW_AT_low_pc and
   // DW_AT_high_pc.
   uint16_t Version = 4;
-
-  const uint8_t AddrSize = sizeof(void *);
-  initLLVMIfNeeded();
-  Triple Triple = getHostTripleForAddrSize(AddrSize);
   auto ExpectedDG = dwarfgen::Generator::create(Triple, Version);
-  if (HandleExpectedError(ExpectedDG))
-    return;
+  ASSERT_THAT_EXPECTED(ExpectedDG, Succeeded());
   dwarfgen::Generator *DG = ExpectedDG.get().get();
   dwarfgen::CompileUnit &CU = DG->addCompileUnit();
 
@@ -1106,16 +1095,15 @@ TEST(DWARFDebugInfo, TestDWARFDie) {
 }
 
 TEST(DWARFDebugInfo, TestChildIterators) {
+  Triple Triple = getHostTripleForAddrSize(sizeof(void *));
+  if (!isConfigurationSupported(Triple))
+    return;
+
   // Test the DWARF APIs related to iterating across the children of a DIE using
   // the DWARFDie::iterator class.
   uint16_t Version = 4;
-
-  const uint8_t AddrSize = sizeof(void *);
-  initLLVMIfNeeded();
-  Triple Triple = getHostTripleForAddrSize(AddrSize);
   auto ExpectedDG = dwarfgen::Generator::create(Triple, Version);
-  if (HandleExpectedError(ExpectedDG))
-    return;
+  ASSERT_THAT_EXPECTED(ExpectedDG, Succeeded());
   dwarfgen::Generator *DG = ExpectedDG.get().get();
   dwarfgen::CompileUnit &CU = DG->addCompileUnit();
 
@@ -1218,16 +1206,15 @@ TEST(DWARFDebugInfo, TestEmptyChildren) {
 }
 
 TEST(DWARFDebugInfo, TestAttributeIterators) {
+  Triple Triple = getHostTripleForAddrSize(sizeof(void *));
+  if (!isConfigurationSupported(Triple))
+    return;
+
   // Test the DWARF APIs related to iterating across all attribute values in a
   // a DWARFDie.
   uint16_t Version = 4;
-
-  const uint8_t AddrSize = sizeof(void *);
-  initLLVMIfNeeded();
-  Triple Triple = getHostTripleForAddrSize(AddrSize);
   auto ExpectedDG = dwarfgen::Generator::create(Triple, Version);
-  if (HandleExpectedError(ExpectedDG))
-    return;
+  ASSERT_THAT_EXPECTED(ExpectedDG, Succeeded());
   dwarfgen::Generator *DG = ExpectedDG.get().get();
   dwarfgen::CompileUnit &CU = DG->addCompileUnit();
   const uint64_t CULowPC = 0x1000;
@@ -1280,14 +1267,13 @@ TEST(DWARFDebugInfo, TestAttributeIterators) {
 }
 
 TEST(DWARFDebugInfo, TestFindRecurse) {
-  uint16_t Version = 4;
-
-  const uint8_t AddrSize = sizeof(void *);
-  initLLVMIfNeeded();
-  Triple Triple = getHostTripleForAddrSize(AddrSize);
-  auto ExpectedDG = dwarfgen::Generator::create(Triple, Version);
-  if (HandleExpectedError(ExpectedDG))
+  Triple Triple = getHostTripleForAddrSize(sizeof(void *));
+  if (!isConfigurationSupported(Triple))
     return;
+
+  uint16_t Version = 4;
+  auto ExpectedDG = dwarfgen::Generator::create(Triple, Version);
+  ASSERT_THAT_EXPECTED(ExpectedDG, Succeeded());
   dwarfgen::Generator *DG = ExpectedDG.get().get();
   dwarfgen::CompileUnit &CU = DG->addCompileUnit();
 
@@ -1494,16 +1480,15 @@ TEST(DWARFDebugInfo, TestDwarfToFunctions) {
 }
 
 TEST(DWARFDebugInfo, TestFindAttrs) {
+  Triple Triple = getHostTripleForAddrSize(sizeof(void *));
+  if (!isConfigurationSupported(Triple))
+    return;
+
   // Test the DWARFDie::find() and DWARFDie::findRecursively() that take an
   // ArrayRef<dwarf::Attribute> value to make sure they work correctly.
   uint16_t Version = 4;
-
-  const uint8_t AddrSize = sizeof(void *);
-  initLLVMIfNeeded();
-  Triple Triple = getHostTripleForAddrSize(AddrSize);
   auto ExpectedDG = dwarfgen::Generator::create(Triple, Version);
-  if (HandleExpectedError(ExpectedDG))
-    return;
+  ASSERT_THAT_EXPECTED(ExpectedDG, Succeeded());
   dwarfgen::Generator *DG = ExpectedDG.get().get();
   dwarfgen::CompileUnit &CU = DG->addCompileUnit();
 
@@ -1557,14 +1542,13 @@ TEST(DWARFDebugInfo, TestFindAttrs) {
 }
 
 TEST(DWARFDebugInfo, TestImplicitConstAbbrevs) {
-  uint16_t Version = 5;
-
-  const uint8_t AddrSize = sizeof(void *);
-  initLLVMIfNeeded();
-  Triple Triple = getHostTripleForAddrSize(AddrSize);
-  auto ExpectedDG = dwarfgen::Generator::create(Triple, Version);
-  if (HandleExpectedError(ExpectedDG))
+  Triple Triple = getHostTripleForAddrSize(sizeof(void *));
+  if (!isConfigurationSupported(Triple))
     return;
+
+  uint16_t Version = 5;
+  auto ExpectedDG = dwarfgen::Generator::create(Triple, Version);
+  ASSERT_THAT_EXPECTED(ExpectedDG, Succeeded());
   dwarfgen::Generator *DG = ExpectedDG.get().get();
   dwarfgen::CompileUnit &CU = DG->addCompileUnit();
   dwarfgen::DIE CUDie = CU.getUnitDIE();
@@ -2151,11 +2135,12 @@ TEST(DWARFDebugInfo, TestDwarfVerifyCUDontShareLineTable) {
 }
 
 TEST(DWARFDebugInfo, TestErrorReportingPolicy) {
-  initLLVMIfNeeded();
-  auto ExpectedDG = dwarfgen::Generator::create(Triple("x86_64-pc-linux"),
-                                                4 /*DwarfVersion*/);
-  if (HandleExpectedError(ExpectedDG))
-    return;
+  Triple Triple("x86_64-pc-linux");
+  if (!isConfigurationSupported(Triple))
+      return;
+
+  auto ExpectedDG = dwarfgen::Generator::create(Triple, 4 /*DwarfVersion*/);
+  ASSERT_THAT_EXPECTED(ExpectedDG, Succeeded());
   dwarfgen::Generator *DG = ExpectedDG.get().get();
   AsmPrinter *AP = DG->getAsmPrinter();
   MCContext *MC = DG->getMCContext();

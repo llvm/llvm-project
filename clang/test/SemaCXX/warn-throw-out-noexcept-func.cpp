@@ -253,6 +253,43 @@ void with_try_block1() noexcept try { //expected-note {{non-throwing function de
 } catch (char *) {
 }
 
+namespace derived {
+struct B {};
+struct D: B {};
+void goodPlain() noexcept {
+  try {
+    throw D();
+  } catch (B) {}
+}
+void goodReference() noexcept {
+  try {
+    throw D();
+  } catch (B &) {}
+}
+void goodPointer() noexcept {
+  D d;
+  try {
+    throw &d;
+  } catch (B *) {}
+}
+void badPlain() noexcept { // expected-note {{non-throwing function declare here}}
+  try {
+    throw B(); // expected-warning {{'badPlain' has a non-throwing exception specification but can still throw, resulting in unexpected program termination}}
+  } catch (D) {}
+}
+void badReference() noexcept { // expected-note {{non-throwing function declare here}}
+  try {
+    throw B(); // expected-warning {{'badReference' has a non-throwing exception specification but can still throw, resulting in unexpected program termination}}
+  } catch (D &) {}
+}
+void badPointer() noexcept { // expected-note {{non-throwing function declare here}}
+  B b;
+  try {
+    throw &b; // expected-warning {{'badPointer' has a non-throwing exception specification but can still throw, resulting in unexpected program termination}}
+  } catch (D *) {}
+}
+}
+
 int main() {
   R1_ShouldDiag<int> o; //expected-note {{in instantiation of member function}}
   S1_ShouldDiag<int> b; //expected-note {{in instantiation of member function}}

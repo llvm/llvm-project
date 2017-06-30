@@ -2301,10 +2301,10 @@ static Instruction *foldXorToXor(BinaryOperator &I) {
   // (~B | A) ^ (~A | B) -> A ^ B
   // (~A | B) ^ (A | ~B) -> A ^ B
   // (B | ~A) ^ (A | ~B) -> A ^ B
-  if ((match(Op0, m_c_Or(m_Value(A), m_Not(m_Value(B)))) &&
-       match(Op1, m_Or(m_Not(m_Specific(A)), m_Specific(B)))) ||
-      (match(Op0, m_c_Or(m_Not(m_Value(A)), m_Value(B))) &&
-       match(Op1, m_Or(m_Specific(A), m_Not(m_Specific(B)))))) {
+  if ((match(Op0, m_Or(m_Value(A), m_Not(m_Value(B)))) &&
+       match(Op1, m_c_Or(m_Not(m_Specific(A)), m_Specific(B)))) ||
+      (match(Op0, m_Or(m_Not(m_Value(A)), m_Value(B))) &&
+       match(Op1, m_c_Or(m_Specific(A), m_Not(m_Specific(B)))))) {
     I.setOperand(0, A);
     I.setOperand(1, B);
     return &I;
@@ -2314,10 +2314,10 @@ static Instruction *foldXorToXor(BinaryOperator &I) {
   // (~B & A) ^ (~A & B) -> A ^ B
   // (~A & B) ^ (A & ~B) -> A ^ B
   // (B & ~A) ^ (A & ~B) -> A ^ B
-  if ((match(Op0, m_c_And(m_Value(A), m_Not(m_Value(B)))) &&
-       match(Op1, m_And(m_Not(m_Specific(A)), m_Specific(B)))) ||
-      (match(Op0, m_c_And(m_Not(m_Value(A)), m_Value(B))) &&
-       match(Op1, m_And(m_Specific(A), m_Not(m_Specific(B)))))) {
+  if ((match(Op0, m_And(m_Value(A), m_Not(m_Value(B)))) &&
+       match(Op1, m_c_And(m_Not(m_Specific(A)), m_Specific(B)))) ||
+      (match(Op0, m_And(m_Not(m_Value(A)), m_Value(B))) &&
+       match(Op1, m_c_And(m_Specific(A), m_Not(m_Specific(B)))))) {
     I.setOperand(0, A);
     I.setOperand(1, B);
     return &I;

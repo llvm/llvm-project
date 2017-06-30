@@ -3933,62 +3933,6 @@ static bool isKnownNonZero(const Value *V) {
   return false;
 }
 
-/// Match clamp pattern for float types without care about NaNs or signed zeros.
-/// Given non-min/max outer cmp/select from the clamp pattern this
-/// function recognizes if it can be substitued by a "canonical" min/max
-/// pattern.
-static SelectPatternResult matchFastFloatClamp(CmpInst::Predicate Pred,
-                                               Value *CmpLHS, Value *CmpRHS,
-                                               Value *TrueVal, Value *FalseVal,
-                                               Value *&LHS, Value *&RHS) {
-  // Try to match
-  //   X < C1 ? C1 : Min(X, C2) --> Max(C1, Min(X, C2))
-  //   X > C1 ? C1 : Max(X, C2) --> Min(C1, Max(X, C2))
-  // and return description of the outer Max/Min.
-
-  // First, check if select has inverse order:
-  if (CmpRHS == FalseVal) {
-    std::swap(TrueVal, FalseVal);
-    Pred = CmpInst::getInversePredicate(Pred);
-  }
-
-  // Assume success now. If there's no match, callers should not use these anyway.
-  LHS = TrueVal;
-  RHS = FalseVal;
-
-  const APFloat *FC1;
-  if (CmpRHS != TrueVal || !match(CmpRHS, m_APFloat(FC1)) || !FC1->isFinite())
-    return {SPF_UNKNOWN, SPNB_NA, false};
-
-  const APFloat *FC2;
-  switch (Pred) {
-  case CmpInst::FCMP_OLT:
-  case CmpInst::FCMP_OLE:
-  case CmpInst::FCMP_ULT:
-  case CmpInst::FCMP_ULE:
-    if (match(FalseVal,
-              m_CombineOr(m_OrdFMin(m_Specific(CmpLHS), m_APFloat(FC2)),
-                          m_UnordFMin(m_Specific(CmpLHS), m_APFloat(FC2)))) &&
-        FC1->compare(*FC2) == APFloat::cmpResult::cmpLessThan)
-      return {SPF_FMAXNUM, SPNB_RETURNS_ANY, false};
-    break;
-  case CmpInst::FCMP_OGT:
-  case CmpInst::FCMP_OGE:
-  case CmpInst::FCMP_UGT:
-  case CmpInst::FCMP_UGE:
-    if (match(FalseVal,
-              m_CombineOr(m_OrdFMax(m_Specific(CmpLHS), m_APFloat(FC2)),
-                          m_UnordFMax(m_Specific(CmpLHS), m_APFloat(FC2)))) &&
-        FC1->compare(*FC2) == APFloat::cmpResult::cmpGreaterThan)
-      return {SPF_FMINNUM, SPNB_RETURNS_ANY, false};
-    break;
-  default:
-    break;
-  }
-
-  return {SPF_UNKNOWN, SPNB_NA, false};
-}
-
 /// Match non-obvious integer minimum and maximum sequences.
 static SelectPatternResult matchMinMax(CmpInst::Predicate Pred,
                                        Value *CmpLHS, Value *CmpRHS,
@@ -4196,18 +4140,7 @@ static SelectPatternResult matchSelectPattern(CmpInst::Predicate Pred,
     }
   }
 
-  if (CmpInst::isIntPredicate(Pred))
-    return matchMinMax(Pred, CmpLHS, CmpRHS, TrueVal, FalseVal, LHS, RHS);
-
-  // According to (IEEE 754-2008 5.3.1), minNum(0.0, -0.0) and similar
-  // may return either -0.0 or 0.0, so fcmp/select pair has stricter
-  // semantics than minNum. Be conservative in such case.
-  if (NaNBehavior != SPNB_RETURNS_ANY ||
-      (!FMF.noSignedZeros() && !isKnownNonZero(CmpLHS) &&
-       !isKnownNonZero(CmpRHS)))
-    return {SPF_UNKNOWN, SPNB_NA, false};
-
-  return matchFastFloatClamp(Pred, CmpLHS, CmpRHS, TrueVal, FalseVal, LHS, RHS);
+  return matchMinMax(Pred, CmpLHS, CmpRHS, TrueVal, FalseVal, LHS, RHS);
 }
 
 static Value *lookThroughCast(CmpInst *CmpI, Value *V1, Value *V2,

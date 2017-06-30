@@ -15,15 +15,13 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Target/Process.h"
-#include "lldb/Utility/Log.h"
-#include "lldb/Utility/Status.h"
-
-#include "lldb/Core/StreamFile.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
+#include "lldb/Target/Process.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
+#include "lldb/Utility/Log.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/Utility/StructuredData.h"
 
 #include "llvm/Support/ConvertUTF.h"

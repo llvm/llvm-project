@@ -43,6 +43,22 @@
 	aih	%r0, (1 << 31)
 
 #CHECK: error: invalid operand
+#CHECK: alsih	%r0, (-1 << 31) - 1
+#CHECK: error: invalid operand
+#CHECK: alsih	%r0, (1 << 31)
+
+	alsih	%r0, (-1 << 31) - 1
+	alsih	%r0, (1 << 31)
+
+#CHECK: error: invalid operand
+#CHECK: alsihn	%r0, (-1 << 31) - 1
+#CHECK: error: invalid operand
+#CHECK: alsihn	%r0, (1 << 31)
+
+	alsihn	%r0, (-1 << 31) - 1
+	alsihn	%r0, (1 << 31)
+
+#CHECK: error: invalid operand
 #CHECK: axtra	%f0, %f0, %f0, -1
 #CHECK: error: invalid operand
 #CHECK: axtra	%f0, %f0, %f0, 16
