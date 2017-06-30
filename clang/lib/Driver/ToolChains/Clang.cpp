@@ -1319,7 +1319,7 @@ void Clang::AddARMTargetArgs(const llvm::Triple &Triple, const ArgList &Args,
   if (Arg *A = Args.getLastArg(options::OPT_mabi_EQ))
     ABIName = A->getValue();
   else {
-    StringRef CPU = getCPUName(Args, Triple, /*FromAs*/ false);
+    std::string CPU = getCPUName(Args, Triple, /*FromAs*/ false);
     ABIName = llvm::ARM::computeDefaultTargetABI(Triple, CPU).data();
   }
 
@@ -4126,11 +4126,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasFlag(options::OPT_fslp_vectorize, SLPVectAliasOption,
                    options::OPT_fno_slp_vectorize, EnableSLPVec))
     CmdArgs.push_back("-vectorize-slp");
-
-  // -fno-slp-vectorize-aggressive is default.
-  if (Args.hasFlag(options::OPT_fslp_vectorize_aggressive,
-                   options::OPT_fno_slp_vectorize_aggressive, false))
-    CmdArgs.push_back("-vectorize-slp-aggressive");
 
   if (Arg *A = Args.getLastArg(options::OPT_fshow_overloads_EQ))
     A->render(Args, CmdArgs);

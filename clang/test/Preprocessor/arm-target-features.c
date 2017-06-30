@@ -441,4 +441,5 @@
 // CHECK-V82A: #define __ARM_ARCH 8
 // CHECK-V82A: #define __ARM_ARCH_8_2A__ 1
 // CHECK-V82A: #define __ARM_ARCH_PROFILE 'A'
+// CHECK-V82A: #define __ARM_FEATURE_QRDMX 1
 // CHECK-V82A: #define __ARM_FP 0xE

@@ -8,7 +8,7 @@ add_lldb_unittest(SymbolFilePDBTests
     lldbPluginObjectFilePECOFF
     lldbPluginSymbolFileDWARF
     lldbPluginSymbolFilePDB
-    lldbUtiltyHelpers
+    lldbUtilityHelpers
   LINK_COMPONENTS
     Support
     DebugInfoPDB

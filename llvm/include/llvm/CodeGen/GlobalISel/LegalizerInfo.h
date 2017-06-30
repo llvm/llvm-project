@@ -107,6 +107,19 @@ public:
   /// before any query is made or incorrect results may be returned.
   void computeTables();
 
+  static bool needsLegalizingToDifferentSize(const LegalizeAction Action) {
+    switch (Action) {
+    case NarrowScalar:
+    case WidenScalar:
+    case FewerElements:
+    case MoreElements:
+    case Unsupported:
+      return true;
+    default:
+      return false;
+    }
+  }
+
   /// More friendly way to set an action for common types that have an LLT
   /// representation.
   void setAction(const InstrAspect &Aspect, LegalizeAction Action) {
@@ -147,8 +160,8 @@ public:
 
   /// Iterate the given function (typically something like doubling the width)
   /// on Ty until we find a legal type for this operation.
-  Optional<LLT> findLegalType(const InstrAspect &Aspect,
-                    function_ref<LLT(LLT)> NextType) const {
+  Optional<LLT> findLegalizableSize(const InstrAspect &Aspect,
+                                    function_ref<LLT(LLT)> NextType) const {
     LegalizeAction Action;
     const TypeMap &Map = Actions[Aspect.Opcode - FirstOp][Aspect.Idx];
     LLT Ty = Aspect.Type;
@@ -160,10 +173,9 @@ public:
         if (DefaultIt == DefaultActions.end())
           return None;
         Action = DefaultIt->second;
-      }
-      else
+      } else
         Action = ActionIt->second;
-    } while(Action != Legal);
+    } while (needsLegalizingToDifferentSize(Action));
     return Ty;
   }
 
