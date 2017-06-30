@@ -1176,11 +1176,6 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
 #define _LIBCPP_AVAILABILITY_ATOMIC_SHARED_PTR                                 \
   __attribute__((availability(macosx,strict,introduced=10.9)))                 \
   __attribute__((availability(ios,strict,introduced=7.0)))
-#define _LIBCPP_AVAILABILITY_ALIGNED_ALLOCATION                                \
-  __attribute__((availability(macosx,strict,introduced=10.13)))                \
-  __attribute__((availability(ios,strict,introduced=11.0)))                    \
-  __attribute__((availability(tvos,strict,introduced=11.0)))                   \
-  __attribute__((availability(watchos,strict,introduced=4.0)))
 #else
 #define _LIBCPP_AVAILABILITY_SHARED_MUTEX
 #define _LIBCPP_AVAILABILITY_BAD_OPTIONAL_ACCESS
@@ -1192,7 +1187,6 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
 #define _LIBCPP_AVAILABILITY_TYPEINFO_VTABLE
 #define _LIBCPP_AVAILABILITY_LOCALE_CATEGORY
 #define _LIBCPP_AVAILABILITY_ATOMIC_SHARED_PTR
-#define _LIBCPP_AVAILABILITY_ALIGNED_ALLOCATION
 #endif
 
 // Define availability that depends on _LIBCPP_NO_EXCEPTIONS.

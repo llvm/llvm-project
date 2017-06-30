@@ -53,12 +53,3 @@ USEMEMFUNC(outer<char>::inner, f)
 
 // CHECK: declare dllimport {{.*}} @_ZN5outerIcE1fEv
 // CHECK: define {{.*}} @_ZN5outerIcE5inner1fEv
-
-struct base {
-  virtual ~base();
-};
-struct __declspec(dllexport) derived : public virtual base {
-  virtual ~derived() {}
-};
-
-// CHECK: define {{.*}} dllexport {{.*}} @_ZTv0_n12_N7derivedD0Ev

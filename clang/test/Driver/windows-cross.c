@@ -80,3 +80,8 @@
 // CHECK-ISYSTEM-AFTER: "-internal-isystem" "Windows Kits{{[/\\]}}10{{[/\\]}}Include{{[/\\]}}10.0.10586.0{{[/\\]}}um"
 // CHECK-ISYSTEM-AFTER: "-internal-isystem" "Windows Kits{{[/\\]}}10{{[/\\]}}Include{{[/\\]}}10.0.10586.0{{[/\\]}}shared"
 
+// RUN: %clang -### -target armv7-windows-itanium -nostdinc -isystem-after "Windows Kits/10/Include/10.0.10586.0/ucrt" -c %s -o /dev/null 2>&1 \
+// RUN:     | FileCheck %s --check-prefix CHECK-NOSTDINC-ISYSTEM-AFTER
+// CHECK-NOSTDINC-ISYSTEM-AFTER: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
+// CHECK-NOSTDINC-ISYSTEM-AFTER-NOT: "-internal-isystem" "[[RESOURCE_DIR]]{{(/|\\\\)}}include"
+// CHECK-NOSTDINC-ISYSTEM-AFTER: "-internal-isystem" "Windows Kits{{[/\\]}}10{{[/\\]}}Include{{[/\\]}}10.0.10586.0{{[/\\]}}ucrt"

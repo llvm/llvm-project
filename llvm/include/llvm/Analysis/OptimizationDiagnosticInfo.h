@@ -34,7 +34,7 @@ class Value;
 ///
 /// It allows reporting when optimizations are performed and when they are not
 /// along with the reasons for it.  Hotness information of the corresponding
-/// code region can be included in the remark if DiagnosticHotnessRequested is
+/// code region can be included in the remark if DiagnosticsHotnessRequested is
 /// enabled in the LLVM context.
 class OptimizationRemarkEmitter {
 public:
@@ -45,10 +45,10 @@ public:
   /// analysis pass).
   ///
   /// Note that this ctor has a very different cost depending on whether
-  /// F->getContext().getDiagnosticHotnessRequested() is on or not.  If it's off
+  /// F->getContext().getDiagnosticsHotnessRequested() is on or not.  If it's off
   /// the operation is free.
   ///
-  /// Whereas if DiagnosticHotnessRequested is on, it is fairly expensive
+  /// Whereas if DiagnosticsHotnessRequested is on, it is fairly expensive
   /// operation since BFI and all its required analyses are computed.  This is
   /// for example useful for CGSCC passes that can't use function analyses
   /// passes in the old PM.

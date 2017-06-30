@@ -27,7 +27,6 @@ using namespace llvm::CodeViewYAML;
 using namespace llvm::CodeViewYAML::detail;
 using namespace llvm::yaml;
 
-LLVM_YAML_IS_SEQUENCE_VECTOR(StringRef)
 LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(TypeIndex)
 
 // We only need to declare these, the definitions are in CodeViewYAMLTypes.cpp

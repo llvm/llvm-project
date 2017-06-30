@@ -4781,7 +4781,7 @@ public:
   SwitchLookupTable(
       Module &M, uint64_t TableSize, ConstantInt *Offset,
       const SmallVectorImpl<std::pair<ConstantInt *, Constant *>> &Values,
-      Constant *DefaultValue, const DataLayout &DL);
+      Constant *DefaultValue, const DataLayout &DL, const StringRef &FuncName);
 
   /// Build instructions with Builder to retrieve the value at
   /// the position given by Index in the lookup table.
@@ -4835,7 +4835,7 @@ private:
 SwitchLookupTable::SwitchLookupTable(
     Module &M, uint64_t TableSize, ConstantInt *Offset,
     const SmallVectorImpl<std::pair<ConstantInt *, Constant *>> &Values,
-    Constant *DefaultValue, const DataLayout &DL)
+    Constant *DefaultValue, const DataLayout &DL, const StringRef &FuncName)
     : SingleValue(nullptr), BitMap(nullptr), BitMapElementTy(nullptr),
       LinearOffset(nullptr), LinearMultiplier(nullptr), Array(nullptr) {
   assert(Values.size() && "Can't build lookup table without values!");
@@ -4943,7 +4943,7 @@ SwitchLookupTable::SwitchLookupTable(
 
   Array = new GlobalVariable(M, ArrayTy, /*constant=*/true,
                              GlobalVariable::PrivateLinkage, Initializer,
-                             "switch.table");
+                             "switch.table." + FuncName);
   Array->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
   Kind = ArrayKind;
 }
@@ -5333,7 +5333,9 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
 
     // If using a bitmask, use any value to fill the lookup table holes.
     Constant *DV = NeedMask ? ResultLists[PHI][0].second : DefaultResults[PHI];
-    SwitchLookupTable Table(Mod, TableSize, MinCaseVal, ResultList, DV, DL);
+    StringRef FuncName = SI->getParent()->getParent()->getName();
+    SwitchLookupTable Table(Mod, TableSize, MinCaseVal, ResultList, DV, DL,
+                            FuncName);
 
     Value *Result = Table.BuildLookup(TableIndex, Builder);
 

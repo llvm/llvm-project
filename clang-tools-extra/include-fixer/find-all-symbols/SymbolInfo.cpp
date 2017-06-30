@@ -22,7 +22,6 @@ using clang::find_all_symbols::SymbolAndSignals;
 using SymbolKind = clang::find_all_symbols::SymbolInfo::SymbolKind;
 
 LLVM_YAML_IS_DOCUMENT_LIST_VECTOR(SymbolAndSignals)
-LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(std::string)
 LLVM_YAML_IS_SEQUENCE_VECTOR(SymbolInfo::Context)
 
 namespace llvm {

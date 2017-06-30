@@ -21,6 +21,10 @@ using namespace llvm;
 
 #define DEBUG_TYPE "hexagontti"
 
+static cl::opt<bool> EmitLookupTables("hexagon-emit-lookup-tables",
+  cl::init(true), cl::Hidden,
+  cl::desc("Control lookup table emission on Hexagon target"));
+
 TargetTransformInfo::PopcntSupportKind
 HexagonTTIImpl::getPopcntSupport(unsigned IntTyWidthInBit) const {
   // Return Fast Hardware support as every input  < 64 bits will be promoted
@@ -69,4 +73,8 @@ int HexagonTTIImpl::getUserCost(const User *U,
     if (isCastFoldedIntoLoad(CI))
       return TargetTransformInfo::TCC_Free;
   return BaseT::getUserCost(U, Operands);
+}
+
+bool HexagonTTIImpl::shouldBuildLookupTables() const {
+   return EmitLookupTables;
 }

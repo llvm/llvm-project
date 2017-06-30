@@ -572,7 +572,7 @@ void WindowsResourceCOFFWriter::writeSymbolTable() {
     Symbol = reinterpret_cast<coff_symbol16 *>(BufferStart + CurrentOffset);
     strncpy(Symbol->Name.ShortName, RelocationName, (size_t)COFF::NameSize);
     Symbol->Value = DataOffsets[i];
-    Symbol->SectionNumber = 1;
+    Symbol->SectionNumber = 2;
     Symbol->Type = COFF::IMAGE_SYM_DTYPE_NULL;
     Symbol->StorageClass = COFF::IMAGE_SYM_CLASS_STATIC;
     Symbol->NumberOfAuxSymbols = 0;

@@ -1,4 +1,4 @@
-//===--- tools/extra/clang-rename/RenamingAction.h - Clang rename tool ----===//
+//===--- RenamingAction.h - Clang refactoring library ---------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,8 +12,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_RENAME_RENAMING_ACTION_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_RENAME_RENAMING_ACTION_H
+#ifndef LLVM_CLANG_TOOLING_REFACTOR_RENAME_RENAMING_ACTION_H
+#define LLVM_CLANG_TOOLING_REFACTOR_RENAME_RENAMING_ACTION_H
 
 #include "clang/Tooling/Refactoring.h"
 
@@ -21,7 +21,7 @@ namespace clang {
 class ASTConsumer;
 class CompilerInstance;
 
-namespace rename {
+namespace tooling {
 
 class RenamingAction {
 public:
@@ -64,7 +64,7 @@ private:
   std::map<std::string, tooling::Replacements> &FileToReplaces;
 };
 
-} // namespace rename
-} // namespace clang
+} // end namespace tooling
+} // end namespace clang
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_RENAME_RENAMING_ACTION_H
+#endif // LLVM_CLANG_TOOLING_REFACTOR_RENAME_RENAMING_ACTION_H

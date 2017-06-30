@@ -7580,6 +7580,9 @@ static SDValue createGPRPairNode(SelectionDAG &DAG, SDValue V) {
   SDValue VHi = DAG.getAnyExtOrTrunc(
       DAG.getNode(ISD::SRL, dl, MVT::i64, V, DAG.getConstant(32, dl, MVT::i32)),
       dl, MVT::i32);
+  bool isBigEndian = DAG.getDataLayout().isBigEndian();
+  if (isBigEndian)
+    std::swap (VLo, VHi);
   SDValue RegClass =
       DAG.getTargetConstant(ARM::GPRPairRegClassID, dl, MVT::i32);
   SDValue SubReg0 = DAG.getTargetConstant(ARM::gsub_0, dl, MVT::i32);
@@ -7607,10 +7610,14 @@ static void ReplaceCMP_SWAP_64Results(SDNode *N,
   MemOp[0] = cast<MemSDNode>(N)->getMemOperand();
   cast<MachineSDNode>(CmpSwap)->setMemRefs(MemOp, MemOp + 1);
 
-  Results.push_back(DAG.getTargetExtractSubreg(ARM::gsub_0, SDLoc(N), MVT::i32,
-                                               SDValue(CmpSwap, 0)));
-  Results.push_back(DAG.getTargetExtractSubreg(ARM::gsub_1, SDLoc(N), MVT::i32,
-                                               SDValue(CmpSwap, 0)));
+  bool isBigEndian = DAG.getDataLayout().isBigEndian();
+
+  Results.push_back(
+      DAG.getTargetExtractSubreg(isBigEndian ? ARM::gsub_1 : ARM::gsub_0,
+                                 SDLoc(N), MVT::i32, SDValue(CmpSwap, 0)));
+  Results.push_back(
+      DAG.getTargetExtractSubreg(isBigEndian ? ARM::gsub_0 : ARM::gsub_1,
+                                 SDLoc(N), MVT::i32, SDValue(CmpSwap, 0)));
   Results.push_back(SDValue(CmpSwap, 2));
 }
 

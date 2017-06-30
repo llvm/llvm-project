@@ -173,6 +173,11 @@ static unsigned getAltOpcode(unsigned Op) {
   }
 }
 
+/// true if the \p Value is odd, false otherwise.
+static bool isOdd(unsigned Value) {
+  return Value & 1;
+}
+
 ///\returns bool representing if Opcode \p Op can be part
 /// of an alternate sequence which can later be merged as
 /// a ShuffleVector instruction.
@@ -190,7 +195,7 @@ static unsigned isAltInst(ArrayRef<Value *> VL) {
   unsigned AltOpcode = getAltOpcode(Opcode);
   for (int i = 1, e = VL.size(); i < e; i++) {
     Instruction *I = dyn_cast<Instruction>(VL[i]);
-    if (!I || I->getOpcode() != ((i & 1) ? AltOpcode : Opcode))
+    if (!I || I->getOpcode() != (isOdd(i) ? AltOpcode : Opcode))
       return 0;
   }
   return Instruction::ShuffleVector;
@@ -2820,7 +2825,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       unsigned e = E->Scalars.size();
       SmallVector<Constant *, 8> Mask(e);
       for (unsigned i = 0; i < e; ++i) {
-        if (i & 1) {
+        if (isOdd(i)) {
           Mask[i] = Builder.getInt32(e + i);
           OddScalars.push_back(E->Scalars[i]);
         } else {

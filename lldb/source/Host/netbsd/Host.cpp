@@ -26,21 +26,18 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Core/Module.h"
-#include "lldb/Core/StreamFile.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Utility/DataExtractor.h"
-#include "lldb/Utility/Endian.h"
-#include "lldb/Utility/Log.h"
-#include "lldb/Utility/Status.h"
-#include "lldb/Utility/StreamString.h"
-
 #include "lldb/Utility/CleanUp.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
+#include "lldb/Utility/Endian.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/NameMatches.h"
+#include "lldb/Utility/Status.h"
+#include "lldb/Utility/StreamString.h"
 
 #include "llvm/Support/Host.h"
 

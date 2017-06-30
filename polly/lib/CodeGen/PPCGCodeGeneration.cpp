@@ -2840,8 +2840,10 @@ public:
     auto PPCGProg = createPPCGProg(PPCGScop);
     auto PPCGGen = generateGPU(PPCGScop, PPCGProg);
 
-    if (PPCGGen->tree)
+    if (PPCGGen->tree) {
       generateCode(isl_ast_node_copy(PPCGGen->tree), PPCGProg);
+      CurrentScop.markAsToBeSkipped();
+    }
 
     freeOptions(PPCGScop);
     freePPCGGen(PPCGGen);

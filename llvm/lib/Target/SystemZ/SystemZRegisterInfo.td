@@ -304,3 +304,13 @@ foreach I = 0-15 in {
 defm AR32 : SystemZRegClass<"AR32", [i32], 32,
                             (add (sequence "A%u", 0, 15)), 0>;
 
+// Control registers.
+class CREG64<bits<16> num, string n> : SystemZReg<n> {
+  let HWEncoding = num;
+}
+foreach I = 0-15 in {
+  def C#I : CREG64<I, "c"#I>, DwarfRegNum<[!add(I, 32)]>;
+}
+defm CR64 : SystemZRegClass<"CR64", [i64], 64,
+                            (add (sequence "C%u", 0, 15)), 0>;
+

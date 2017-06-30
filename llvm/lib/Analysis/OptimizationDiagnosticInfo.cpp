@@ -25,7 +25,7 @@ using namespace llvm;
 
 OptimizationRemarkEmitter::OptimizationRemarkEmitter(const Function *F)
     : F(F), BFI(nullptr) {
-  if (!F->getContext().getDiagnosticHotnessRequested())
+  if (!F->getContext().getDiagnosticsHotnessRequested())
     return;
 
   // First create a dominator tree.
@@ -176,7 +176,7 @@ OptimizationRemarkEmitterWrapperPass::OptimizationRemarkEmitterWrapperPass()
 bool OptimizationRemarkEmitterWrapperPass::runOnFunction(Function &Fn) {
   BlockFrequencyInfo *BFI;
 
-  if (Fn.getContext().getDiagnosticHotnessRequested())
+  if (Fn.getContext().getDiagnosticsHotnessRequested())
     BFI = &getAnalysis<LazyBlockFrequencyInfoPass>().getBFI();
   else
     BFI = nullptr;
@@ -198,7 +198,7 @@ OptimizationRemarkEmitterAnalysis::run(Function &F,
                                        FunctionAnalysisManager &AM) {
   BlockFrequencyInfo *BFI;
 
-  if (F.getContext().getDiagnosticHotnessRequested())
+  if (F.getContext().getDiagnosticsHotnessRequested())
     BFI = &AM.getResult<BlockFrequencyAnalysis>(F);
   else
     BFI = nullptr;

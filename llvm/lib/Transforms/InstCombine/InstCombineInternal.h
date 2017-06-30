@@ -131,11 +131,10 @@ static inline bool IsFreeToInvert(Value *V, bool WillInvertAllUses) {
     return true;
 
   // A vector of constant integers can be inverted easily.
-  Constant *CV;
-  if (V->getType()->isVectorTy() && match(V, PatternMatch::m_Constant(CV))) {
+  if (V->getType()->isVectorTy() && isa<Constant>(V)) {
     unsigned NumElts = V->getType()->getVectorNumElements();
     for (unsigned i = 0; i != NumElts; ++i) {
-      Constant *Elt = CV->getAggregateElement(i);
+      Constant *Elt = cast<Constant>(V)->getAggregateElement(i);
       if (!Elt)
         return false;
 

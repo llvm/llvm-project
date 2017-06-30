@@ -996,6 +996,7 @@
 // CHECK_GLM_M32: #define __MPX__ 1
 // CHECK_GLM_M32: #define __PCLMUL__ 1
 // CHECK_GLM_M32: #define __POPCNT__ 1
+// CHECK_GLM_M32: #define __RDRND__ 1
 // CHECK_GLM_M32: #define __RDSEED__ 1
 // CHECK_GLM_M32: #define __SHA__ 1
 // CHECK_GLM_M32: #define __SSE2__ 1
@@ -1034,6 +1035,7 @@
 // CHECK_GLM_M64: #define __MPX__ 1
 // CHECK_GLM_M64: #define __PCLMUL__ 1
 // CHECK_GLM_M64: #define __POPCNT__ 1
+// CHECK_GLM_M64: #define __RDRND__ 1
 // CHECK_GLM_M64: #define __RDSEED__ 1
 // CHECK_GLM_M64: #define __SSE2__ 1
 // CHECK_GLM_M64: #define __SSE3__ 1

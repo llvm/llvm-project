@@ -542,6 +542,7 @@ void ScalarEnumerationTraits<ELFYAML::ELF_REL>::enumeration(
     llvm_unreachable("Unsupported architecture");
   }
 #undef ELF_RELOC
+  IO.enumFallback<Hex32>(Value);
 }
 
 void ScalarEnumerationTraits<ELFYAML::MIPS_AFL_REG>::enumeration(

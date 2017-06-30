@@ -116,6 +116,13 @@ const unsigned SystemZMC::AR32Regs[16] = {
   SystemZ::A12, SystemZ::A13, SystemZ::A14, SystemZ::A15
 };
 
+const unsigned SystemZMC::CR64Regs[16] = {
+  SystemZ::C0, SystemZ::C1, SystemZ::C2, SystemZ::C3,
+  SystemZ::C4, SystemZ::C5, SystemZ::C6, SystemZ::C7,
+  SystemZ::C8, SystemZ::C9, SystemZ::C10, SystemZ::C11,
+  SystemZ::C12, SystemZ::C13, SystemZ::C14, SystemZ::C15
+};
+
 unsigned SystemZMC::getFirstReg(unsigned Reg) {
   static unsigned Map[SystemZ::NUM_TARGET_REGS];
   static bool Initialized = false;

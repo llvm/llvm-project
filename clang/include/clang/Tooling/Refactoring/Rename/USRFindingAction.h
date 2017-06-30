@@ -1,4 +1,4 @@
-//===--- tools/extra/clang-rename/USRFindingAction.h - Clang rename tool --===//
+//===--- USRFindingAction.h - Clang refactoring library -------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -12,8 +12,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_RENAME_USR_FINDING_ACTION_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_RENAME_USR_FINDING_ACTION_H
+#ifndef LLVM_CLANG_TOOLING_REFACTOR_RENAME_USR_FINDING_ACTION_H
+#define LLVM_CLANG_TOOLING_REFACTOR_RENAME_USR_FINDING_ACTION_H
 
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -26,7 +26,7 @@ class ASTConsumer;
 class CompilerInstance;
 class NamedDecl;
 
-namespace rename {
+namespace tooling {
 
 struct USRFindingAction {
   USRFindingAction(ArrayRef<unsigned> SymbolOffsets,
@@ -48,7 +48,7 @@ private:
   bool Force;
 };
 
-} // namespace rename
-} // namespace clang
+} // end namespace tooling
+} // end namespace clang
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_RENAME_USR_FINDING_ACTION_H
+#endif // LLVM_CLANG_TOOLING_REFACTOR_RENAME_USR_FINDING_ACTION_H
