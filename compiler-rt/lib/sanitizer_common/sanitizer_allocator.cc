@@ -160,7 +160,7 @@ void *InternalRealloc(void *addr, uptr size, InternalAllocatorCache *cache) {
 }
 
 void *InternalCalloc(uptr count, uptr size, InternalAllocatorCache *cache) {
-  if (CallocShouldReturnNullDueToOverflow(count, size))
+  if (CheckForCallocOverflow(count, size))
     return InternalAllocator::FailureHandler::OnBadRequest();
   void *p = InternalAlloc(count * size, cache);
   if (p) internal_memset(p, 0, count * size);
@@ -202,7 +202,7 @@ void SetLowLevelAllocateCallback(LowLevelAllocateCallback callback) {
   low_level_alloc_callback = callback;
 }
 
-bool CallocShouldReturnNullDueToOverflow(uptr size, uptr n) {
+bool CheckForCallocOverflow(uptr size, uptr n) {
   if (!size) return false;
   uptr max = (uptr)-1L;
   return (max / size) < n;

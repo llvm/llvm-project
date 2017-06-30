@@ -18,7 +18,7 @@ statement body:
     v.push_back(n);
     // This will trigger the warning since the push_back may cause multiple
     // memory reallocations in v. This can be avoid by inserting a 'reserve(n)'
-    // statment before the for statment.
+    // statement before the for statement.
   }
 
 
@@ -36,7 +36,7 @@ statement body:
     v.push_back(element);
     // This will trigger the warning since the 'push_back' may cause multiple
     // memory reallocations in v. This can be avoid by inserting a
-    // 'reserve(data.size())' statment before the for statment.
+    // 'reserve(data.size())' statement before the for statement.
   }
 
 

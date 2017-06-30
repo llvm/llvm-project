@@ -195,7 +195,7 @@ void MsanDeallocate(StackTrace *stack, void *p) {
 }
 
 void *MsanCalloc(StackTrace *stack, uptr nmemb, uptr size) {
-  if (CallocShouldReturnNullDueToOverflow(size, nmemb))
+  if (CheckForCallocOverflow(size, nmemb))
     return Allocator::FailureHandler::OnBadRequest();
   return MsanReallocate(stack, nullptr, nmemb * size, sizeof(u64), true);
 }

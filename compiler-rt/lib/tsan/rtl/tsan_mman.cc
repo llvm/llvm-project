@@ -162,7 +162,7 @@ void *user_alloc(ThreadState *thr, uptr pc, uptr sz, uptr align, bool signal) {
 }
 
 void *user_calloc(ThreadState *thr, uptr pc, uptr size, uptr n) {
-  if (CallocShouldReturnNullDueToOverflow(size, n))
+  if (CheckForCallocOverflow(size, n))
     return Allocator::FailureHandler::OnBadRequest();
   void *p = user_alloc(thr, pc, n * size);
   if (p)
