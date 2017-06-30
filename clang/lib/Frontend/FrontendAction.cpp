@@ -536,8 +536,8 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     ASTDiags->setClient(Diags->getClient(), /*OwnsClient*/false);
 
     std::unique_ptr<ASTUnit> AST = ASTUnit::LoadFromASTFile(
-        InputFile, CI.getPCHContainerReader(), ASTDiags, CI.getFileSystemOpts(),
-        CI.getCodeGenOpts().DebugTypeExtRefs);
+        InputFile, CI.getPCHContainerReader(), ASTUnit::LoadPreprocessorOnly,
+        ASTDiags, CI.getFileSystemOpts(), CI.getCodeGenOpts().DebugTypeExtRefs);
     if (!AST)
       goto failure;
 
@@ -576,6 +576,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
       Module *ASTModule =
           AST->getPreprocessor().getHeaderSearchInfo().lookupModule(
               AST->getLangOpts().CurrentModule, /*AllowSearch*/ false);
+      assert(ASTModule && "module file does not define its own module");
       Input = FrontendInputFile(ASTModule->PresumedModuleMapFile, Kind);
     } else {
       auto &SM = CI.getSourceManager();
@@ -598,8 +599,8 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     IntrusiveRefCntPtr<DiagnosticsEngine> Diags(&CI.getDiagnostics());
 
     std::unique_ptr<ASTUnit> AST = ASTUnit::LoadFromASTFile(
-        InputFile, CI.getPCHContainerReader(), Diags, CI.getFileSystemOpts(),
-        CI.getCodeGenOpts().DebugTypeExtRefs);
+        InputFile, CI.getPCHContainerReader(), ASTUnit::LoadEverything, Diags,
+        CI.getFileSystemOpts(), CI.getCodeGenOpts().DebugTypeExtRefs);
 
     if (!AST)
       goto failure;

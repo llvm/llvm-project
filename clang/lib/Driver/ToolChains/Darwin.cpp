@@ -1057,7 +1057,7 @@ void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
     AddLinkSanitizerLibArgs(Args, CmdArgs, "ubsan");
   if (Sanitize.needsTsanRt())
     AddLinkSanitizerLibArgs(Args, CmdArgs, "tsan");
-  if (Sanitize.needsFuzzer())
+  if (Sanitize.needsFuzzer() && !Args.hasArg(options::OPT_dynamiclib))
     AddFuzzerLinkArgs(Args, CmdArgs);
   if (Sanitize.needsStatsRt()) {
     StringRef OS = isTargetMacOS() ? "osx" : "iossim";
@@ -1684,6 +1684,7 @@ bool Darwin::isAlignedAllocationUnavailable() const {
   case WatchOSSimulator: // Earlier than 4.0.
     return TargetVersion < VersionTuple(4U, 0U, 0U);
   }
+  llvm_unreachable("Unsupported platform");
 }
 
 void Darwin::addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,

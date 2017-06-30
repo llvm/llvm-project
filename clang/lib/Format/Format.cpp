@@ -579,9 +579,9 @@ FormatStyle getLLVMStyle() {
   LLVMStyle.ForEachMacros.push_back("Q_FOREACH");
   LLVMStyle.ForEachMacros.push_back("BOOST_FOREACH");
   LLVMStyle.IncludeCategories = {{"^\"(llvm|llvm-c|clang|clang-c)/", 2},
-                                 {"^(<|\"(gtest|isl|json)/)", 3},
+                                 {"^(<|\"(gtest|gmock|isl|json)/)", 3},
                                  {".*", 1}};
-  LLVMStyle.IncludeIsMainRegex = "$";
+  LLVMStyle.IncludeIsMainRegex = "(Test)?$";
   LLVMStyle.IndentCaseLabels = false;
   LLVMStyle.IndentWrappedFunctionNames = false;
   LLVMStyle.IndentWidth = 2;
@@ -1409,7 +1409,7 @@ public:
       : Style(Style), FileName(FileName) {
     FileStem = llvm::sys::path::stem(FileName);
     for (const auto &Category : Style.IncludeCategories)
-      CategoryRegexs.emplace_back(Category.Regex);
+      CategoryRegexs.emplace_back(Category.Regex, llvm::Regex::IgnoreCase);
     IsMainFile = FileName.endswith(".c") || FileName.endswith(".cc") ||
                  FileName.endswith(".cpp") || FileName.endswith(".c++") ||
                  FileName.endswith(".cxx") || FileName.endswith(".m") ||
@@ -1437,9 +1437,11 @@ private:
       return false;
     StringRef HeaderStem =
         llvm::sys::path::stem(IncludeName.drop_front(1).drop_back(1));
-    if (FileStem.startswith(HeaderStem)) {
+    if (FileStem.startswith(HeaderStem) ||
+        FileStem.startswith_lower(HeaderStem)) {
       llvm::Regex MainIncludeRegex(
-          (HeaderStem + Style.IncludeIsMainRegex).str());
+          (HeaderStem + Style.IncludeIsMainRegex).str(),
+          llvm::Regex::IgnoreCase);
       if (MainIncludeRegex.match(FileStem))
         return true;
     }

@@ -21,4 +21,8 @@
 BUILTIN(__builtin_wasm_current_memory, "z", "n")
 BUILTIN(__builtin_wasm_grow_memory, "zz", "n")
 
+// Exception handling builtins.
+BUILTIN(__builtin_wasm_throw, "vUiv*", "r")
+BUILTIN(__builtin_wasm_rethrow, "v", "r")
+
 #undef BUILTIN

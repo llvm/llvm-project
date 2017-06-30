@@ -18,6 +18,8 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/Sema/Sema.h"
 
+#include "llvm/ADT/Optional.h"
+
 namespace clang {
 
 /// @brief Represents the results of name lookup.
@@ -465,9 +467,10 @@ public:
         Paths = nullptr;
       }
     } else {
-      AmbiguityKind SavedAK = Ambiguity;
+      llvm::Optional<AmbiguityKind> SavedAK;
       bool WasAmbiguous = false;
       if (ResultKind == Ambiguous) {
+        SavedAK = Ambiguity;
         WasAmbiguous = true;
       }
       ResultKind = Found;
@@ -478,7 +481,7 @@ public:
       if (ResultKind == Ambiguous) {
         (void)WasAmbiguous;
         assert(WasAmbiguous);
-        Ambiguity = SavedAK;
+        Ambiguity = SavedAK.getValue();
       } else if (Paths) {
         deletePaths(Paths);
         Paths = nullptr;

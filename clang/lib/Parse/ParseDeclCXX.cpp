@@ -1915,7 +1915,7 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
   }
 
   if (!TagOrTempResult.isInvalid())
-    // Delayed proccessing of attributes.
+    // Delayed processing of attributes.
     Actions.ProcessDeclAttributeDelayed(TagOrTempResult.get(), attrs.getList());
 
   const char *PrevSpec = nullptr;
