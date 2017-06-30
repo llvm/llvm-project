@@ -6,7 +6,6 @@ set(LLVM_LINK_COMPONENTS
   Object
   ObjectYAML
   Support
-  TestingSupport
   )
 
 set(DebugInfoSources
@@ -18,3 +17,5 @@ set(DebugInfoSources
 add_llvm_unittest(DebugInfoDWARFTests
   ${DebugInfoSources}
   )
+
+target_link_libraries(DebugInfoDWARFTests LLVMTestingSupport)

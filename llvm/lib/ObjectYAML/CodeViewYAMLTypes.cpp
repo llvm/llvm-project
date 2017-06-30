@@ -29,7 +29,6 @@ using namespace llvm::CodeViewYAML::detail;
 using namespace llvm::yaml;
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(OneMethodRecord)
-LLVM_YAML_IS_SEQUENCE_VECTOR(StringRef)
 LLVM_YAML_IS_SEQUENCE_VECTOR(VFTableSlotKind)
 LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(TypeIndex)
 

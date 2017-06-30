@@ -389,7 +389,7 @@ class SizeClassAllocator64 {
 
   bool MapWithCallback(uptr beg, uptr size) {
     uptr mapped = reinterpret_cast<uptr>(MmapFixedOrDieOnFatalError(beg, size));
-    if (!mapped)
+    if (UNLIKELY(!mapped))
       return false;
     CHECK_EQ(beg, mapped);
     MapUnmapCallback().OnMap(beg, size);

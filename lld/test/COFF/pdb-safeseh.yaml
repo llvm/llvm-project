@@ -8,28 +8,28 @@
 # MSVC's for these absolute, linker-provided symbols.
 
 # CHECK: Mod 0000 |
-# CHECK-NEXT: - S_GDATA32 [size = 40] `___safe_se_handler_table`
+# CHECK-NEXT: 4 | S_GDATA32 [size = 40] `___safe_se_handler_table`
 # CHECK-NEXT:     type = 0x0022 (unsigned long), addr = 0003:0000
 # CHECK-NEXT: Mod 0001 | `* Linker *`:
 
 --- !COFF
-header:          
+header:
   Machine:         IMAGE_FILE_MACHINE_I386
   Characteristics: [  ]
-sections:        
+sections:
   - Name:            '.debug$S'
     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
     Alignment:       1
-    Subsections:     
+    Subsections:
       - !Symbols
-        Records:         
+        Records:
           - Kind:            S_GDATA32
-            DataSym:         
+            DataSym:
               Type:            34
               DisplayName:     ___safe_se_handler_table
       - !StringTable
-        Strings:         
-    Relocations:     
+        Strings:
+    Relocations:
       - VirtualAddress:  20
         SymbolName:      ___safe_se_handler_table
         Type:            IMAGE_REL_I386_SECREL
@@ -40,18 +40,18 @@ sections:
     Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
     Alignment:       16
     SectionData:     488D0500000000C3
-    Relocations:     
+    Relocations:
       - VirtualAddress:  3
         SymbolName:      ___safe_se_handler_table
         Type:            IMAGE_REL_I386_REL32
-symbols:         
+symbols:
   - Name:            '.debug$S'
     Value:           0
     SectionNumber:   1
     SimpleType:      IMAGE_SYM_TYPE_NULL
     ComplexType:     IMAGE_SYM_DTYPE_NULL
     StorageClass:    IMAGE_SYM_CLASS_STATIC
-    SectionDefinition: 
+    SectionDefinition:
       Length:          372
       NumberOfRelocations: 6
       NumberOfLinenumbers: 0
@@ -63,7 +63,7 @@ symbols:
     SimpleType:      IMAGE_SYM_TYPE_NULL
     ComplexType:     IMAGE_SYM_DTYPE_NULL
     StorageClass:    IMAGE_SYM_CLASS_STATIC
-    SectionDefinition: 
+    SectionDefinition:
       Length:          8
       NumberOfRelocations: 1
       NumberOfLinenumbers: 0

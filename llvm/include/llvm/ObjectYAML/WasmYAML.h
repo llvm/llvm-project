@@ -280,7 +280,6 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::WasmYAML::LocalDecl)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::WasmYAML::Relocation)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::WasmYAML::NameEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::WasmYAML::SymbolInfo)
-LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(uint32_t)
 
 namespace llvm {
 namespace yaml {

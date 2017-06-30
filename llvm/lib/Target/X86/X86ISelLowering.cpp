@@ -27107,6 +27107,9 @@ static bool matchUnaryPermuteVectorShuffle(MVT MaskVT, ArrayRef<int> Mask,
                                            unsigned &Shuffle, MVT &ShuffleVT,
                                            unsigned &PermuteImm) {
   unsigned NumMaskElts = Mask.size();
+  unsigned InputSizeInBits = MaskVT.getSizeInBits();
+  unsigned MaskScalarSizeInBits = InputSizeInBits / NumMaskElts;
+  MVT MaskEltVT = MVT::getIntegerVT(MaskScalarSizeInBits);
 
   bool ContainsZeros = false;
   APInt Zeroable(NumMaskElts, false);
@@ -27122,7 +27125,7 @@ static bool matchUnaryPermuteVectorShuffle(MVT MaskVT, ArrayRef<int> Mask,
   if (AllowIntDomain && ((MaskVT.is128BitVector() && Subtarget.hasSSE2()) ||
                          (MaskVT.is256BitVector() && Subtarget.hasAVX2()))) {
     int ShiftAmt = matchVectorShuffleAsShift(ShuffleVT, Shuffle,
-                                             MaskVT.getScalarSizeInBits(), Mask,
+                                             MaskScalarSizeInBits, Mask,
                                              0, Zeroable, Subtarget);
     if (0 < ShiftAmt) {
       PermuteImm = (unsigned)ShiftAmt;
@@ -27137,10 +27140,6 @@ static bool matchUnaryPermuteVectorShuffle(MVT MaskVT, ArrayRef<int> Mask,
   assert(llvm::all_of(Mask, [&](int M) {
                         return SM_SentinelUndef <= M && M < (int)NumMaskElts;
                       }) && "Expected unary shuffle");
-
-  unsigned InputSizeInBits = MaskVT.getSizeInBits();
-  unsigned MaskScalarSizeInBits = InputSizeInBits / Mask.size();
-  MVT MaskEltVT = MVT::getIntegerVT(MaskScalarSizeInBits);
 
   // Handle PSHUFLW/PSHUFHW repeated patterns.
   if (MaskScalarSizeInBits == 16) {

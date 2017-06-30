@@ -60,6 +60,11 @@ declare !type !8 void @f(i32 %x)
 ; SUMMARY-NEXT:       SizeM1BitWidth:  0
 ; SUMMARY-NEXT:     WPDRes:
 
-; SUMMARY:      CfiFunctionDefs: [ f, g, h ]
-; SUMMARY-NEXT: CfiFunctionDecls: [ external, external_weak ]
+; SUMMARY:      CfiFunctionDefs:
+; SUMMARY-NEXT:   - f
+; SUMMARY-NEXT:   - g
+; SUMMARY-NEXT:   - h
+; SUMMARY-NEXT: CfiFunctionDecls:
+; SUMMARY-NEXT:   - external
+; SUMMARY-NEXT:   - external_weak
 ; SUMMARY-NEXT: ...

@@ -1360,6 +1360,11 @@ m_Intrinsic(const T0 &Op0, const T1 &Op1, const T2 &Op2, const T3 &Op3) {
 
 // Helper intrinsic matching specializations.
 template <typename Opnd0>
+inline typename m_Intrinsic_Ty<Opnd0>::Ty m_BitReverse(const Opnd0 &Op0) {
+  return m_Intrinsic<Intrinsic::bitreverse>(Op0);
+}
+
+template <typename Opnd0>
 inline typename m_Intrinsic_Ty<Opnd0>::Ty m_BSwap(const Opnd0 &Op0) {
   return m_Intrinsic<Intrinsic::bswap>(Op0);
 }

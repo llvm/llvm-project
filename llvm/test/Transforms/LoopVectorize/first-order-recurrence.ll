@@ -2,6 +2,8 @@
 ; RUN: opt < %s -loop-vectorize -force-vector-width=4 -force-vector-interleave=2 -dce -instcombine -S | FileCheck %s --check-prefix=UNROLL
 ; RUN: opt < %s -loop-vectorize -force-vector-width=4 -force-vector-interleave=2 -S | FileCheck %s --check-prefix=UNROLL-NO-IC
 ; RUN: opt < %s -loop-vectorize -force-vector-width=1 -force-vector-interleave=2 -S | FileCheck %s --check-prefix=UNROLL-NO-VF
+; RUN: opt < %s -loop-vectorize -force-vector-width=4 -force-vector-interleave=1 -S | FileCheck %s --check-prefix=SINK-AFTER
+; RUN: opt < %s -loop-vectorize -force-vector-width=4 -force-vector-interleave=1 -S | FileCheck %s --check-prefix=NO-SINK-AFTER
 
 target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 
@@ -446,4 +448,82 @@ for.body:
   %add.ptr = getelementptr inbounds double, double* %b.addr.012, i64 25
   %exitcond = icmp eq i32 %inc1, 10240
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
+}
+
+; void sink_after(short *a, int n, int *b) {
+;   for(int i = 0; i < n; i++)
+;     b[i] = (a[i] * a[i + 1]);
+; }
+;
+; SINK-AFTER-LABEL: sink_after
+; Check that the sext sank after the load in the vector loop.
+; SINK-AFTER: vector.body
+; SINK-AFTER:   %vector.recur = phi <4 x i16> [ %vector.recur.init, %vector.ph ], [ %wide.load, %vector.body ]
+; SINK-AFTER:   %wide.load = load <4 x i16>
+; SINK-AFTER:   %[[VSHUF:.+]] = shufflevector <4 x i16> %vector.recur, <4 x i16> %wide.load, <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; SINK-AFTER:   %[[VCONV:.+]] = sext <4 x i16> %[[VSHUF]] to <4 x i32>
+; SINK-AFTER:   %[[VCONV3:.+]] = sext <4 x i16> %wide.load to <4 x i32>
+; SINK-AFTER:   mul nsw <4 x i32> %[[VCONV3]], %[[VCONV]]
+; Check also that the sext sank after the load in the scalar loop.
+; SINK-AFTER: for.body
+; SINK-AFTER:   %scalar.recur = phi i16 [ %scalar.recur.init, %scalar.ph ], [ %[[LOAD:.+]], %for.body ]
+; SINK-AFTER:   %[[LOAD]] = load i16, i16* %arrayidx2
+; SINK-AFTER:   %[[CONV:.+]] = sext i16 %scalar.recur to i32
+; SINK-AFTER:   %[[CONV3:.+]] = sext i16 %[[LOAD]] to i32
+; SINK-AFTER:   %mul = mul nsw i32 %[[CONV3]], %[[CONV]]
+;
+define void @sink_after(i16* %a, i32* %b, i64 %n) {
+entry:
+  %.pre = load i16, i16* %a
+  br label %for.body
+
+for.body:
+  %0 = phi i16 [ %.pre, %entry ], [ %1, %for.body ]
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %conv = sext i16 %0 to i32
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %arrayidx2 = getelementptr inbounds i16, i16* %a, i64 %indvars.iv.next
+  %1 = load i16, i16* %arrayidx2
+  %conv3 = sext i16 %1 to i32
+  %mul = mul nsw i32 %conv3, %conv
+  %arrayidx5 = getelementptr inbounds i32, i32* %b, i64 %indvars.iv
+  store i32 %mul, i32* %arrayidx5
+  %exitcond = icmp eq i64 %indvars.iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+; void no_sink_after(short *a, int n, int *b) {
+;   for(int i = 0; i < n; i++)
+;     b[i] = ((a[i] + 2) * a[i + 1]);
+; }
+;
+; NO-SINK-AFTER-LABEL: no_sink_after
+; NO-SINK-AFTER-NOT:   vector.ph:
+; NO-SINK-AFTER:       }
+;
+define void @no_sink_after(i16* %a, i32* %b, i64 %n) {
+entry:
+  %.pre = load i16, i16* %a
+  br label %for.body
+
+for.body:
+  %0 = phi i16 [ %.pre, %entry ], [ %1, %for.body ]
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %conv = sext i16 %0 to i32
+  %add = add nsw i32 %conv, 2
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %arrayidx2 = getelementptr inbounds i16, i16* %a, i64 %indvars.iv.next
+  %1 = load i16, i16* %arrayidx2
+  %conv3 = sext i16 %1 to i32
+  %mul = mul nsw i32 %add, %conv3
+  %arrayidx5 = getelementptr inbounds i32, i32* %b, i64 %indvars.iv
+  store i32 %mul, i32* %arrayidx5
+  %exitcond = icmp eq i64 %indvars.iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
 }

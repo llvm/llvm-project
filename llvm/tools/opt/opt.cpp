@@ -420,7 +420,7 @@ int main(int argc, char **argv) {
     Context.enableDebugTypeODRUniquing();
 
   if (PassRemarksWithHotness)
-    Context.setDiagnosticHotnessRequested(true);
+    Context.setDiagnosticsHotnessRequested(true);
 
   std::unique_ptr<tool_output_file> YamlFile;
   if (RemarksFilename != "") {

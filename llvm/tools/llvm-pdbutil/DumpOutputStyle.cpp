@@ -37,6 +37,7 @@
 #include "llvm/DebugInfo/CodeView/SymbolVisitorCallbackPipeline.h"
 #include "llvm/DebugInfo/CodeView/SymbolVisitorCallbacks.h"
 #include "llvm/DebugInfo/CodeView/TypeDumpVisitor.h"
+#include "llvm/DebugInfo/CodeView/TypeIndexDiscovery.h"
 #include "llvm/DebugInfo/CodeView/TypeVisitorCallbackPipeline.h"
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/Native/DbiModuleDescriptor.h"
@@ -116,12 +117,14 @@ Error DumpOutputStyle::dump() {
       return EC;
   }
 
-  if (opts::dump::DumpTypes || opts::dump::DumpTypeExtras) {
+  if (opts::dump::DumpTypes || !opts::dump::DumpTypeIndex.empty() ||
+      opts::dump::DumpTypeExtras) {
     if (auto EC = dumpTpiStream(StreamTPI))
       return EC;
   }
 
-  if (opts::dump::DumpIds || opts::dump::DumpIdExtras) {
+  if (opts::dump::DumpIds || !opts::dump::DumpIdIndex.empty() ||
+      opts::dump::DumpIdExtras) {
     if (auto EC = dumpTpiStream(StreamIPI))
       return EC;
   }
@@ -620,6 +623,76 @@ Error DumpOutputStyle::dumpStringTable() {
   return Error::success();
 }
 
+static void buildDepSet(LazyRandomTypeCollection &Types,
+                        ArrayRef<TypeIndex> Indices,
+                        std::map<TypeIndex, CVType> &DepSet) {
+  SmallVector<TypeIndex, 4> DepList;
+  for (const auto &I : Indices) {
+    TypeIndex TI(I);
+    if (DepSet.find(TI) != DepSet.end() || TI.isSimple() || TI.isNoneType())
+      continue;
+
+    CVType Type = Types.getType(TI);
+    DepSet[TI] = Type;
+    codeview::discoverTypeIndices(Type, DepList);
+    buildDepSet(Types, DepList, DepSet);
+  }
+}
+
+static void dumpFullTypeStream(LinePrinter &Printer,
+                               LazyRandomTypeCollection &Types,
+                               TpiStream &Stream, bool Bytes, bool Extras) {
+  Printer.formatLine("Showing {0:N} records", Stream.getNumTypeRecords());
+  uint32_t Width =
+      NumDigits(TypeIndex::FirstNonSimpleIndex + Stream.getNumTypeRecords());
+
+  MinimalTypeDumpVisitor V(Printer, Width + 2, Bytes, Extras, Types,
+                           Stream.getHashValues());
+
+  if (auto EC = codeview::visitTypeStream(Types, V)) {
+    Printer.formatLine("An error occurred dumping type records: {0}",
+                       toString(std::move(EC)));
+  }
+}
+
+static void dumpPartialTypeStream(LinePrinter &Printer,
+                                  LazyRandomTypeCollection &Types,
+                                  TpiStream &Stream, ArrayRef<TypeIndex> TiList,
+                                  bool Bytes, bool Extras, bool Deps) {
+  uint32_t Width =
+      NumDigits(TypeIndex::FirstNonSimpleIndex + Stream.getNumTypeRecords());
+
+  MinimalTypeDumpVisitor V(Printer, Width + 2, Bytes, Extras, Types,
+                           Stream.getHashValues());
+
+  if (opts::dump::DumpTypeDependents) {
+    // If we need to dump all dependents, then iterate each index and find
+    // all dependents, adding them to a map ordered by TypeIndex.
+    std::map<TypeIndex, CVType> DepSet;
+    buildDepSet(Types, TiList, DepSet);
+
+    Printer.formatLine(
+        "Showing {0:N} records and their dependents ({1:N} records total)",
+        TiList.size(), DepSet.size());
+
+    for (auto &Dep : DepSet) {
+      if (auto EC = codeview::visitTypeRecord(Dep.second, Dep.first, V))
+        Printer.formatLine("An error occurred dumping type record {0}: {1}",
+                           Dep.first, toString(std::move(EC)));
+    }
+  } else {
+    Printer.formatLine("Showing {0:N} records.", TiList.size());
+
+    for (const auto &I : TiList) {
+      TypeIndex TI(I);
+      CVType Type = Types.getType(TI);
+      if (auto EC = codeview::visitTypeRecord(Type, TI, V))
+        Printer.formatLine("An error occurred dumping type record {0}: {1}", TI,
+                           toString(std::move(EC)));
+    }
+  }
+}
+
 Error DumpOutputStyle::dumpTpiStream(uint32_t StreamIdx) {
   assert(StreamIdx == StreamTPI || StreamIdx == StreamIPI);
 
@@ -659,27 +732,13 @@ Error DumpOutputStyle::dumpTpiStream(uint32_t StreamIdx) {
 
   auto &Types = Err(initializeTypes(StreamIdx));
 
-  if (DumpTypes) {
-    P.formatLine("Showing {0:N} records", Stream.getNumTypeRecords());
-    uint32_t Width =
-        NumDigits(TypeIndex::FirstNonSimpleIndex + Stream.getNumTypeRecords());
-
-    MinimalTypeDumpVisitor V(P, Width + 2, DumpBytes, DumpExtras, Types,
-                             Stream.getHashValues());
-
-    if (Indices.empty()) {
-      if (auto EC = codeview::visitTypeStream(Types, V)) {
-        P.formatLine("An error occurred dumping type records: {0}",
-                     toString(std::move(EC)));
-      }
-    } else {
-      for (const auto &I : Indices) {
-        TypeIndex TI(I);
-        CVType Type = Types.getType(TI);
-        if (auto EC = codeview::visitTypeRecord(Type, TI, V))
-          P.formatLine("An error occurred dumping type record {0}: {1}", TI,
-                       toString(std::move(EC)));
-      }
+  if (DumpTypes || !Indices.empty()) {
+    if (Indices.empty())
+      dumpFullTypeStream(P, Types, Stream, DumpBytes, DumpExtras);
+    else {
+      std::vector<TypeIndex> TiList(Indices.begin(), Indices.end());
+      dumpPartialTypeStream(P, Types, Stream, TiList, DumpBytes, DumpExtras,
+                            opts::dump::DumpTypeDependents);
     }
   }
 
@@ -775,7 +834,8 @@ Error DumpOutputStyle::dumpModuleSyms() {
     Pipeline.addCallbackToPipeline(Deserializer);
     Pipeline.addCallbackToPipeline(Dumper);
     CVSymbolVisitor Visitor(Pipeline);
-    if (auto EC = Visitor.visitSymbolStream(ModS.getSymbolArray())) {
+    auto SS = ModS.getSymbolsSubstream();
+    if (auto EC = Visitor.visitSymbolStream(ModS.getSymbolArray(), SS.Offset)) {
       P.formatLine("Error while processing symbol records.  {0}",
                    toString(std::move(EC)));
       continue;
@@ -804,13 +864,14 @@ Error DumpOutputStyle::dumpPublics() {
   Pipeline.addCallbackToPipeline(Deserializer);
   Pipeline.addCallbackToPipeline(Dumper);
   CVSymbolVisitor Visitor(Pipeline);
+
   auto ExpectedSymbols = Publics.getSymbolArray();
   if (!ExpectedSymbols) {
     P.formatLine("Could not read public symbol record stream");
     return Error::success();
   }
 
-  if (auto EC = Visitor.visitSymbolStream(*ExpectedSymbols))
+  if (auto EC = Visitor.visitSymbolStream(*ExpectedSymbols, 0))
     P.formatLine("Error while processing public symbol records.  {0}",
                  toString(std::move(EC)));
 

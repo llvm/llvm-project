@@ -528,8 +528,9 @@ bool RecurrenceDescriptor::isReductionPHI(PHINode *Phi, Loop *TheLoop,
   return false;
 }
 
-bool RecurrenceDescriptor::isFirstOrderRecurrence(PHINode *Phi, Loop *TheLoop,
-                                                  DominatorTree *DT) {
+bool RecurrenceDescriptor::isFirstOrderRecurrence(
+    PHINode *Phi, Loop *TheLoop,
+    DenseMap<Instruction *, Instruction *> &SinkAfter, DominatorTree *DT) {
 
   // Ensure the phi node is in the loop header and has two incoming values.
   if (Phi->getParent() != TheLoop->getHeader() ||
@@ -551,12 +552,24 @@ bool RecurrenceDescriptor::isFirstOrderRecurrence(PHINode *Phi, Loop *TheLoop,
   // Get the previous value. The previous value comes from the latch edge while
   // the initial value comes form the preheader edge.
   auto *Previous = dyn_cast<Instruction>(Phi->getIncomingValueForBlock(Latch));
-  if (!Previous || !TheLoop->contains(Previous) || isa<PHINode>(Previous))
+  if (!Previous || !TheLoop->contains(Previous) || isa<PHINode>(Previous) ||
+      SinkAfter.count(Previous)) // Cannot rely on dominance due to motion.
     return false;
 
   // Ensure every user of the phi node is dominated by the previous value.
   // The dominance requirement ensures the loop vectorizer will not need to
   // vectorize the initial value prior to the first iteration of the loop.
+  // TODO: Consider extending this sinking to handle other kinds of instructions
+  // and expressions, beyond sinking a single cast past Previous.
+  if (Phi->hasOneUse()) {
+    auto *I = Phi->user_back();
+    if (I->isCast() && (I->getParent() == Phi->getParent()) && I->hasOneUse() &&
+        DT->dominates(Previous, I->user_back())) {
+      SinkAfter[I] = Previous;
+      return true;
+    }
+  }
+
   for (User *U : Phi->users())
     if (auto *I = dyn_cast<Instruction>(U)) {
       if (!DT->dominates(Previous, I))

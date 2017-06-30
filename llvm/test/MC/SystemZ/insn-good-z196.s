@@ -1761,6 +1761,10 @@
 
 	pcc
 
+#CHECK: pckmo                           # encoding: [0xb9,0x28,0x00,0x00]
+
+	pckmo
+
 #CHECK: popcnt	%r0, %r0                # encoding: [0xb9,0xe1,0x00,0x00]
 #CHECK: popcnt	%r0, %r15               # encoding: [0xb9,0xe1,0x00,0x0f]
 #CHECK: popcnt	%r15, %r0               # encoding: [0xb9,0xe1,0x00,0xf0]
@@ -1802,6 +1806,18 @@
 	risblg	%r0,%r15,0,0,0
 	risblg	%r15,%r0,0,0,0
 	risblg	%r4,%r5,6,7,8
+
+#CHECK: rrbm	%r0, %r0                # encoding: [0xb9,0xae,0x00,0x00]
+#CHECK: rrbm	%r0, %r15               # encoding: [0xb9,0xae,0x00,0x0f]
+#CHECK: rrbm	%r15, %r0               # encoding: [0xb9,0xae,0x00,0xf0]
+#CHECK: rrbm	%r7, %r8                # encoding: [0xb9,0xae,0x00,0x78]
+#CHECK: rrbm	%r15, %r15              # encoding: [0xb9,0xae,0x00,0xff]
+
+	rrbm	%r0,%r0
+	rrbm	%r0,%r15
+	rrbm	%r15,%r0
+	rrbm	%r7,%r8
+	rrbm	%r15,%r15
 
 #CHECK: sdtra	%f0, %f0, %f0, 0        # encoding: [0xb3,0xd3,0x00,0x00]
 #CHECK: sdtra	%f0, %f0, %f0, 15       # encoding: [0xb3,0xd3,0x0f,0x00]

@@ -9,8 +9,8 @@
 EXE: {{H.e.l.l.o}}
 
 # Verify the resource tree layout in the final executable.
-# RUN: llvm-readobj -file-headers -coff-resources %t.exe | FileCheck \
-# RUN:   --check-prefix=RESOURCE_INFO %s
+# RUN: llvm-readobj -file-headers -coff-resources -section-data %t.exe | \
+# RUN:   FileCheck --check-prefix=RESOURCE_INFO %s
 
 RESOURCE_INFO:      ResourceTableRVA: 0x1000
 RESOURCE_INFO-NEXT: ResourceTableSize: 0x88
@@ -33,3 +33,14 @@ RESOURCE_INFO-NEXT:         Time/Date Stamp: 1970-01-01 00:00:00 (0x0)
 RESOURCE_INFO-NEXT:         Major Version: 0
 RESOURCE_INFO-NEXT:         Minor Version: 0
 RESOURCE_INFO-NEXT:         Characteristics: 0
+RESOURCE_INFO-DAG: .rsrc Data (
+RESOURCE_INFO-NEXT: 0000: 00000000 00000000 00000000 00000100  |................|
+RESOURCE_INFO-NEXT: 0010: 06000000 18000080 00000000 00000000  |................|
+RESOURCE_INFO-NEXT: 0020: 00000000 00000100 01000000 30000080  |............0...|
+RESOURCE_INFO-NEXT: 0030: 00000000 00000000 00000000 00000100  |................|
+RESOURCE_INFO-NEXT: 0040: 09040000 48000000 58100000 2A000000  |....H...X...*...|
+RESOURCE_INFO-NEXT: 0050: 00000000 00000000 00000500 48006500  |............H.e.|
+RESOURCE_INFO-NEXT: 0060: 6C006C00 6F000000 00000000 00000000  |l.l.o...........|
+RESOURCE_INFO-NEXT: 0070: 00000000 00000000 00000000 00000000  |................|
+RESOURCE_INFO-NEXT: 0080: 00000000 00000000                    |........|
+RESOURCE_INFO-NEXT: )

@@ -40,6 +40,7 @@ public:
   ~X86TargetMachine() override;
 
   const X86Subtarget *getSubtargetImpl(const Function &F) const override;
+  const X86Subtarget *getSubtargetImpl() const = delete;
 
   TargetIRAnalysis getTargetIRAnalysis() override;
 

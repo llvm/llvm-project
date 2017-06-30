@@ -166,6 +166,20 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
   switch (MI.getOpcode()) {
   default:
     return UnableToLegalize;
+  case TargetOpcode::G_IMPLICIT_DEF: {
+    int NumParts = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits() /
+                   NarrowTy.getSizeInBits();
+
+    SmallVector<unsigned, 2> DstRegs;
+    for (int i = 0; i < NumParts; ++i) {
+      unsigned Dst = MRI.createGenericVirtualRegister(NarrowTy);
+      MIRBuilder.buildUndef(Dst);
+      DstRegs.push_back(Dst);
+    }
+    MIRBuilder.buildMerge(MI.getOperand(0).getReg(), DstRegs);
+    MI.eraseFromParent();
+    return Legalized;
+  }
   case TargetOpcode::G_ADD: {
     // Expand in terms of carry-setting/consuming G_ADDE instructions.
     int NumParts = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits() /

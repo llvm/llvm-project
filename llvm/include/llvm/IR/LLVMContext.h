@@ -188,10 +188,10 @@ public:
 
   /// \brief Return if a code hotness metric should be included in optimization
   /// diagnostics.
-  bool getDiagnosticHotnessRequested() const;
+  bool getDiagnosticsHotnessRequested() const;
   /// \brief Set if a code hotness metric should be included in optimization
   /// diagnostics.
-  void setDiagnosticHotnessRequested(bool Requested);
+  void setDiagnosticsHotnessRequested(bool Requested);
 
   /// \brief Return the YAML file used by the backend to save optimization
   /// diagnostics.  If null, diagnostics are not saved in a file but only

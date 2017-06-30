@@ -136,10 +136,7 @@ private:
 
 bool isNamespaceDeclaration(const AnnotatedLine *Line) {
   const FormatToken *NamespaceTok = Line->First;
-  // Detect "(inline)? namespace" in the beginning of a line.
-  if (NamespaceTok->is(tok::kw_inline))
-    NamespaceTok = NamespaceTok->getNextNonComment();
-  return NamespaceTok && NamespaceTok->is(tok::kw_namespace);
+  return NamespaceTok && NamespaceTok->getNamespaceToken();
 }
 
 bool isEndOfNamespace(const AnnotatedLine *Line,
@@ -216,9 +213,30 @@ private:
 
     if (TheLine->Last->is(TT_FunctionLBrace) &&
         TheLine->First == TheLine->Last &&
-        !Style.BraceWrapping.SplitEmptyFunctionBody &&
+        !Style.BraceWrapping.SplitEmptyFunction &&
         I[1]->First->is(tok::r_brace))
       return tryMergeSimpleBlock(I, E, Limit);
+
+    // Handle empty record blocks where the brace has already been wrapped
+    if (TheLine->Last->is(tok::l_brace) && TheLine->First == TheLine->Last &&
+        I != AnnotatedLines.begin()) {
+      bool EmptyBlock = I[1]->First->is(tok::r_brace);
+
+      const FormatToken *Tok = I[-1]->First;
+      if (Tok && Tok->is(tok::comment))
+        Tok = Tok->getNextNonComment();
+
+      if (Tok && Tok->getNamespaceToken())
+        return !Style.BraceWrapping.SplitEmptyNamespace && EmptyBlock
+            ? tryMergeSimpleBlock(I, E, Limit) : 0;
+
+      if (Tok && Tok->is(tok::kw_typedef))
+        Tok = Tok->getNextNonComment();
+      if (Tok && Tok->isOneOf(tok::kw_class, tok::kw_struct, tok::kw_union,
+                              Keywords.kw_interface))
+        return !Style.BraceWrapping.SplitEmptyRecord && EmptyBlock
+            ? tryMergeSimpleBlock(I, E, Limit) : 0;
+    }
 
     // FIXME: TheLine->Level != 0 might or might not be the right check to do.
     // If necessary, change to something smarter.
