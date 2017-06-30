@@ -517,11 +517,11 @@ bool lldb_private::formatters::NSNumberSummaryProvider(
 
         bool is_preserved_number = cfinfoa & 0x8;
         if (is_preserved_number) {
-          lldbassert(!"We should handle preserved numbers!");
+          lldbassert(!static_cast<bool>("We should handle preserved numbers!"));
           return false;
         }
 
-        type_code = (TypeCodes)(cfinfoa & 0x7);
+        type_code = static_cast<TypeCodes>(cfinfoa & 0x7);
       } else {
         uint8_t data_type =
         process_sp->ReadUnsignedIntegerFromMemory(valobj_addr + ptr_size, 1,

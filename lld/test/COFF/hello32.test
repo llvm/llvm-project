@@ -21,6 +21,7 @@ HEADER-NEXT:     IMAGE_FILE_EXECUTABLE_IMAGE (0x2)
 HEADER-NEXT:   ]
 HEADER-NEXT: }
 HEADER-NEXT: ImageOptionalHeader {
+HEADER-NEXT:   Magic: 0x10B
 HEADER-NEXT:   MajorLinkerVersion: 14
 HEADER-NEXT:   MinorLinkerVersion: 0
 HEADER-NEXT:   SizeOfCode: 512
