@@ -14,28 +14,28 @@
 # CHECK:                           Symbols
 # CHECK: ============================================================
 # CHECK:   Mod 0000 | `{{.*}}pdb-import-gc.yaml.tmp.obj`:
-# CHECK:   - S_GDATA32 [size = 32] `__imp___wc_mb_cur`
+# CHECK:     4 | S_GDATA32 [size = 32] `__imp___wc_mb_cur`
 # CHECK-NEXT:       type = 0x0070 (char), addr = 0000:0000
 # CHECK:   Mod 0001 | `* Linker *`:
 
 --- !COFF
-header:          
+header:
   Machine:         IMAGE_FILE_MACHINE_AMD64
   Characteristics: [  ]
-sections:        
+sections:
   - Name:            '.debug$S'
     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
     Alignment:       1
-    Subsections:     
+    Subsections:
       - !Symbols
-        Records:         
+        Records:
           - Kind:            S_GDATA32
-            DataSym:         
+            DataSym:
               Type:            112
               DisplayName:     __imp___wc_mb_cur
       - !StringTable
-        Strings:         
-    Relocations:     
+        Strings:
+    Relocations:
       - VirtualAddress:  20
         SymbolName:      __imp___wc_mb_cur
         Type:            IMAGE_REL_AMD64_SECREL
@@ -46,7 +46,7 @@ sections:
     Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_LNK_COMDAT, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
     Alignment:       16
     SectionData:     488B05000000000FBE00C3
-    Relocations:     
+    Relocations:
       - VirtualAddress:  3
         SymbolName:      __imp___wc_mb_cur
         Type:            IMAGE_REL_AMD64_REL32
@@ -54,14 +54,14 @@ sections:
     Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_LNK_COMDAT, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
     Alignment:       16
     SectionData:     B82A000000C3
-symbols:         
+symbols:
   - Name:            '.debug$S'
     Value:           0
     SectionNumber:   1
     SimpleType:      IMAGE_SYM_TYPE_NULL
     ComplexType:     IMAGE_SYM_DTYPE_NULL
     StorageClass:    IMAGE_SYM_CLASS_STATIC
-    SectionDefinition: 
+    SectionDefinition:
       Length:          240
       NumberOfRelocations: 2
       NumberOfLinenumbers: 0
@@ -73,7 +73,7 @@ symbols:
     SimpleType:      IMAGE_SYM_TYPE_NULL
     ComplexType:     IMAGE_SYM_DTYPE_NULL
     StorageClass:    IMAGE_SYM_CLASS_STATIC
-    SectionDefinition: 
+    SectionDefinition:
       Length:          11
       NumberOfRelocations: 1
       NumberOfLinenumbers: 0
@@ -86,7 +86,7 @@ symbols:
     SimpleType:      IMAGE_SYM_TYPE_NULL
     ComplexType:     IMAGE_SYM_DTYPE_NULL
     StorageClass:    IMAGE_SYM_CLASS_STATIC
-    SectionDefinition: 
+    SectionDefinition:
       Length:          6
       NumberOfRelocations: 0
       NumberOfLinenumbers: 0

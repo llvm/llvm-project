@@ -118,7 +118,6 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
 
     SmallVector<LocalVariable, 1> Locals;
 
-    DebugLoc LastLoc;
     const MCSymbol *Begin = nullptr;
     const MCSymbol *End = nullptr;
     unsigned FuncId = 0;

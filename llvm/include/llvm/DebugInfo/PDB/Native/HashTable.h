@@ -7,36 +7,36 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_PDB_RAW_HASHTABLE_H
-#define LLVM_DEBUGINFO_PDB_RAW_HASHTABLE_H
+#ifndef LLVM_DEBUGINFO_PDB_NATIVE_HASHTABLE_H
+#define LLVM_DEBUGINFO_PDB_NATIVE_HASHTABLE_H
 
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SparseBitVector.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
-#include "llvm/Support/BinaryStreamArray.h"
-#include "llvm/Support/BinaryStreamReader.h"
-#include "llvm/Support/BinaryStreamWriter.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/MathExtras.h"
-
 #include <cstdint>
+#include <iterator>
 #include <utility>
+#include <vector>
 
 namespace llvm {
+
+class BinaryStreamReader;
+class BinaryStreamWriter;
+
 namespace pdb {
 
 class HashTableIterator;
 
 class HashTable {
   friend class HashTableIterator;
+
   struct Header {
     support::ulittle32_t Size;
     support::ulittle32_t Capacity;
   };
 
-  typedef std::vector<std::pair<uint32_t, uint32_t>> BucketList;
+  using BucketList = std::vector<std::pair<uint32_t, uint32_t>>;
 
 public:
   HashTable();
@@ -63,6 +63,7 @@ public:
 protected:
   bool isPresent(uint32_t K) const { return Present.test(K); }
   bool isDeleted(uint32_t K) const { return Deleted.test(K); }
+
   BucketList Buckets;
   mutable SparseBitVector<> Present;
   mutable SparseBitVector<> Deleted;
@@ -81,6 +82,7 @@ class HashTableIterator
     : public iterator_facade_base<HashTableIterator, std::forward_iterator_tag,
                                   std::pair<uint32_t, uint32_t>> {
   friend class HashTable;
+
   HashTableIterator(const HashTable &Map, uint32_t Index, bool IsEnd);
 
 public:
@@ -101,6 +103,7 @@ private:
 };
 
 } // end namespace pdb
+
 } // end namespace llvm
 
-#endif // LLVM_DEBUGINFO_PDB_RAW_HASHTABLE_H
+#endif // LLVM_DEBUGINFO_PDB_NATIVE_HASHTABLE_H

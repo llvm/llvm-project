@@ -1,4 +1,4 @@
-//===- DbiModuleList.cpp - PDB module information list ----------*- C++ -*-===//
+//===- DbiModuleList.cpp - PDB module information list --------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,10 +6,17 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-#include "llvm/DebugInfo/PDB/Native/DbiModuleList.h"
 
+#include "llvm/DebugInfo/PDB/Native/DbiModuleList.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/DebugInfo/PDB/Native/RawError.h"
+#include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/Error.h"
+#include <algorithm>
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
 
 using namespace llvm;
 using namespace llvm::pdb;

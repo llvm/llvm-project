@@ -449,16 +449,16 @@ bool AVRAsmBackend::writeNopData(uint64_t Count, MCObjectWriter *OW) const {
   return true;
 }
 
-void AVRAsmBackend::processFixupValue(const MCAssembler &Asm,
-                                      const MCFixup &Fixup,
-                                      const MCValue &Target, bool &IsResolved) {
+bool AVRAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
+                                          const MCFixup &Fixup,
+                                          const MCValue &Target) {
   switch ((unsigned) Fixup.getKind()) {
+  default: return false;
   // Fixups which should always be recorded as relocations.
   case AVR::fixup_7_pcrel:
   case AVR::fixup_13_pcrel:
   case AVR::fixup_call:
-    IsResolved = false;
-    break;
+    return true;
   }
 }
 

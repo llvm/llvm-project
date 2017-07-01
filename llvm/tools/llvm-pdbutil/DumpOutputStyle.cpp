@@ -834,7 +834,8 @@ Error DumpOutputStyle::dumpModuleSyms() {
     Pipeline.addCallbackToPipeline(Deserializer);
     Pipeline.addCallbackToPipeline(Dumper);
     CVSymbolVisitor Visitor(Pipeline);
-    if (auto EC = Visitor.visitSymbolStream(ModS.getSymbolArray())) {
+    auto SS = ModS.getSymbolsSubstream();
+    if (auto EC = Visitor.visitSymbolStream(ModS.getSymbolArray(), SS.Offset)) {
       P.formatLine("Error while processing symbol records.  {0}",
                    toString(std::move(EC)));
       continue;
@@ -863,13 +864,14 @@ Error DumpOutputStyle::dumpPublics() {
   Pipeline.addCallbackToPipeline(Deserializer);
   Pipeline.addCallbackToPipeline(Dumper);
   CVSymbolVisitor Visitor(Pipeline);
+
   auto ExpectedSymbols = Publics.getSymbolArray();
   if (!ExpectedSymbols) {
     P.formatLine("Could not read public symbol record stream");
     return Error::success();
   }
 
-  if (auto EC = Visitor.visitSymbolStream(*ExpectedSymbols))
+  if (auto EC = Visitor.visitSymbolStream(*ExpectedSymbols, 0))
     P.formatLine("Error while processing public symbol records.  {0}",
                  toString(std::move(EC)));
 

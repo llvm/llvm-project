@@ -367,11 +367,17 @@ static std::string formatGaps(uint32_t IndentLevel,
 }
 
 Error MinimalSymbolDumper::visitSymbolBegin(codeview::CVSymbol &Record) {
+  return visitSymbolBegin(Record, 0);
+}
+
+Error MinimalSymbolDumper::visitSymbolBegin(codeview::CVSymbol &Record,
+                                            uint32_t Offset) {
   // formatLine puts the newline at the beginning, so we use formatLine here
   // to start a new line, and then individual visit methods use format to
   // append to the existing line.
-  P.formatLine("- {0} [size = {1}]", getSymbolKindName(Record.Type),
-               Record.length());
+  P.formatLine("{0} | {1} [size = {2}]",
+               fmt_align(Offset, AlignStyle::Right, 6),
+               getSymbolKindName(Record.Type), Record.length());
   P.Indent();
   return Error::success();
 }
@@ -394,28 +400,28 @@ std::string MinimalSymbolDumper::typeIndex(TypeIndex TI) const {
 
 Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR, BlockSym &Block) {
   P.format(" `{0}`", Block.Name);
-  AutoIndent Indent(P);
-  P.formatLine("parent = {0}, addr = {1}", Block.Parent,
+  AutoIndent Indent(P, 7);
+  P.formatLine("parent = {0}, end = {1}", Block.Parent, Block.End);
+  P.formatLine("code size = {0}, addr = {1}", Block.CodeSize,
                formatSegmentOffset(Block.Segment, Block.CodeOffset));
-  P.formatLine("code size = {0}, end = {1}", Block.CodeSize, Block.End);
   return Error::success();
 }
 
 Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR, Thunk32Sym &Thunk) {
   P.format(" `{0}`", Thunk.Name);
-  AutoIndent Indent(P);
-  P.formatLine("parent = {0}, addr = {1}", Thunk.Parent,
-               formatSegmentOffset(Thunk.Segment, Thunk.Offset));
-  P.formatLine("kind = {0}, size = {1}, end = {2}, next = {3}",
-               formatThunkOrdinal(Thunk.Thunk), Thunk.Length, Thunk.End,
+  AutoIndent Indent(P, 7);
+  P.formatLine("parent = {0}, end = {1}, next = {2}", Thunk.Parent, Thunk.End,
                Thunk.Next);
+  P.formatLine("kind = {0}, size = {1}, addr = {2}",
+               formatThunkOrdinal(Thunk.Thunk), Thunk.Length,
+               formatSegmentOffset(Thunk.Segment, Thunk.Offset));
 
   return Error::success();
 }
 
 Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
                                             TrampolineSym &Tramp) {
-  AutoIndent Indent(P);
+  AutoIndent Indent(P, 7);
   P.formatLine("type = {0}, size = {1}, source = {2}, target = {3}",
                formatTrampolineType(Tramp.Type), Tramp.Size,
                formatSegmentOffset(Tramp.ThunkSection, Tramp.ThunkOffset),
@@ -427,7 +433,7 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
 Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
                                             SectionSym &Section) {
   P.format(" `{0}`", Section.Name);
-  AutoIndent Indent(P);
+  AutoIndent Indent(P, 7);
   P.formatLine("length = {0}, alignment = {1}, rva = {2}, section # = {3}, "
                "characteristics = {4}",
                Section.Length, Section.Alignment, Section.Rva,
@@ -437,7 +443,7 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
 
 Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR, CoffGroupSym &CG) {
   P.format(" `{0}`", CG.Name);
-  AutoIndent Indent(P);
+  AutoIndent Indent(P, 7);
   P.formatLine("length = {0}, addr = {1}, characteristics = {2}", CG.Size,
                formatSegmentOffset(CG.Segment, CG.Offset), CG.Characteristics);
   return Error::success();
@@ -446,7 +452,7 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR, CoffGroupSym &CG) {
 Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
                                             BPRelativeSym &BPRel) {
   P.format(" `{0}`", BPRel.Name);
-  AutoIndent Indent(P);
+  AutoIndent Indent(P, 7);
   P.formatLine("type = {0}, offset = {1}", typeIndex(BPRel.Type), BPRel.Offset);
   return Error::success();
 }
@@ -459,7 +465,7 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
 
 Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
                                             CallSiteInfoSym &CSI) {
-  AutoIndent Indent(P);
+  AutoIndent Indent(P, 7);
   P.formatLine("type = {0}, addr = {1}", typeIndex(CSI.Type),
                formatSegmentOffset(CSI.Segment, CSI.CodeOffset));
   return Error::success();
@@ -467,6 +473,7 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
 
 Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
                                             EnvBlockSym &EnvBlock) {
+  AutoIndent Indent(P, 7);
   for (const auto &Entry : EnvBlock.Fields) {
     P.formatLine("- {0}", Entry);
   }
@@ -475,7 +482,7 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
 
 Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR, FileStaticSym &FS) {
   P.format(" `{0}`", FS.Name);
-  AutoIndent Indent(P);
+  AutoIndent Indent(P, 7);
   P.formatLine("type = {0}, file name offset = {1}, flags = {2}",
                typeIndex(FS.Index), FS.ModFilenameOffset,
                formatLocalSymFlags(P.getIndentLevel() + 9, FS.Flags));
@@ -484,7 +491,7 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR, FileStaticSym &FS) {
 
 Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR, ExportSym &Export) {
   P.format(" `{0}`", Export.Name);
-  AutoIndent Indent(P);
+  AutoIndent Indent(P, 7);
   P.formatLine("ordinal = {0}, flags = {1}", Export.Ordinal,
                formatExportFlags(P.getIndentLevel() + 9, Export.Flags));
   return Error::success();
@@ -492,7 +499,7 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR, ExportSym &Export) {
 
 Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
                                             Compile2Sym &Compile2) {
-  AutoIndent Indent(P);
+  AutoIndent Indent(P, 7);
   SourceLanguage Lang = static_cast<SourceLanguage>(
       Compile2.Flags & CompileSym2Flags::SourceLanguageMask);
   P.formatLine("machine = {0}, ver = {1}, language = {2}",
@@ -512,7 +519,7 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
 
 Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
                                             Compile3Sym &Compile3) {
-  AutoIndent Indent(P);
+  AutoIndent Indent(P, 7);
   SourceLanguage Lang = static_cast<SourceLanguage>(
       Compile3.Flags & CompileSym3Flags::SourceLanguageMask);
   P.formatLine("machine = {0}, Ver = {1}, language = {2}",
@@ -531,7 +538,7 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
 Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
                                             ConstantSym &Constant) {
   P.format(" `{0}`", Constant.Name);
-  AutoIndent Indent(P);
+  AutoIndent Indent(P, 7);
   P.formatLine("type = {0}, value = {1}", typeIndex(Constant.Type),
                Constant.Value.toString(10));
   return Error::success();
@@ -539,7 +546,7 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
 
 Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR, DataSym &Data) {
   P.format(" `{0}`", Data.Name);
-  AutoIndent Indent(P);
+  AutoIndent Indent(P, 7);
   P.formatLine("type = {0}, addr = {1}", typeIndex(Data.Type),
                formatSegmentOffset(Data.Segment, Data.DataOffset));
   return Error::success();
@@ -553,7 +560,7 @@ Error MinimalSymbolDumper::visitKnownRecord(
 
 Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
                                             DefRangeFramePointerRelSym &Def) {
-  AutoIndent Indent(P);
+  AutoIndent Indent(P, 7);
   P.formatLine("offset = {0}, range = {1}", Def.Offset, formatRange(Def.Range));
   P.formatLine("gaps = {2}", Def.Offset,
                formatGaps(P.getIndentLevel() + 9, Def.Gaps));
@@ -562,7 +569,7 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
 
 Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
                                             DefRangeRegisterRelSym &Def) {
-  AutoIndent Indent(P);
+  AutoIndent Indent(P, 7);
   P.formatLine("register = {0}, base ptr = {1}, offset in parent = {2}, has "
                "spilled udt = {3}",
                uint16_t(Def.Hdr.Register), int32_t(Def.Hdr.BasePointerOffset),
@@ -574,7 +581,7 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
 
 Error MinimalSymbolDumper::visitKnownRecord(
     CVSymbol &CVR, DefRangeRegisterSym &DefRangeRegister) {
-  AutoIndent Indent(P);
+  AutoIndent Indent(P, 7);
   P.formatLine("register = {0}, may have no name = {1}, range start = "
                "{2}, length = {3}",
                uint16_t(DefRangeRegister.Hdr.Register),
@@ -589,7 +596,7 @@ Error MinimalSymbolDumper::visitKnownRecord(
 
 Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
                                             DefRangeSubfieldRegisterSym &Def) {
-  AutoIndent Indent(P);
+  AutoIndent Indent(P, 7);
   bool NoName = !!(Def.Hdr.MayHaveNoName == 0);
   P.formatLine("register = {0}, may have no name = {1}, offset in parent = {2}",
                uint16_t(Def.Hdr.Register), NoName,
@@ -601,7 +608,7 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
 
 Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
                                             DefRangeSubfieldSym &Def) {
-  AutoIndent Indent(P);
+  AutoIndent Indent(P, 7);
   P.formatLine("program = {0}, offset in parent = {1}, range = {2}",
                Def.Program, Def.OffsetInParent, formatRange(Def.Range));
   P.formatLine("gaps = {0}", formatGaps(P.getIndentLevel() + 9, Def.Gaps));
@@ -609,7 +616,7 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
 }
 
 Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR, DefRangeSym &Def) {
-  AutoIndent Indent(P);
+  AutoIndent Indent(P, 7);
   P.formatLine("program = {0}, range = {1}", Def.Program,
                formatRange(Def.Range));
   P.formatLine("gaps = {0}", formatGaps(P.getIndentLevel() + 9, Def.Gaps));
@@ -617,7 +624,7 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR, DefRangeSym &Def) {
 }
 
 Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR, FrameCookieSym &FC) {
-  AutoIndent Indent(P);
+  AutoIndent Indent(P, 7);
   P.formatLine("code offset = {0}, Register = {1}, kind = {2}, flags = {3}",
                FC.CodeOffset, FC.Register, formatCookieKind(FC.CookieKind),
                FC.Flags);
@@ -625,7 +632,7 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR, FrameCookieSym &FC) {
 }
 
 Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR, FrameProcSym &FP) {
-  AutoIndent Indent(P);
+  AutoIndent Indent(P, 7);
   P.formatLine("size = {0}, padding size = {1}, offset to padding = {2}",
                FP.TotalFrameBytes, FP.PaddingFrameBytes, FP.OffsetToPadding);
   P.formatLine("bytes of callee saved registers = {0}, exception handler addr "
@@ -640,7 +647,7 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR, FrameProcSym &FP) {
 
 Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
                                             HeapAllocationSiteSym &HAS) {
-  AutoIndent Indent(P);
+  AutoIndent Indent(P, 7);
   P.formatLine("type = {0}, addr = {1} call size = {2}", typeIndex(HAS.Type),
                formatSegmentOffset(HAS.Segment, HAS.CodeOffset),
                HAS.CallInstructionSize);
@@ -648,7 +655,7 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
 }
 
 Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR, InlineSiteSym &IS) {
-  AutoIndent Indent(P);
+  AutoIndent Indent(P, 7);
   auto Bytes = makeArrayRef(IS.AnnotationData);
   StringRef Annotations(reinterpret_cast<const char *>(Bytes.begin()),
                         Bytes.size());
@@ -662,7 +669,7 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR, InlineSiteSym &IS) {
 Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
                                             RegisterSym &Register) {
   P.format(" `{0}`", Register.Name);
-  AutoIndent Indent(P);
+  AutoIndent Indent(P, 7);
   P.formatLine("register = {0}, type = {1}",
                formatRegisterId(Register.Register), typeIndex(Register.Index));
   return Error::success();
@@ -671,7 +678,7 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
 Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
                                             PublicSym32 &Public) {
   P.format(" `{0}`", Public.Name);
-  AutoIndent Indent(P);
+  AutoIndent Indent(P, 7);
   P.formatLine("flags = {0}, addr = {1}",
                formatPublicSymFlags(P.getIndentLevel() + 9, Public.Flags),
                formatSegmentOffset(Public.Segment, Public.Offset));
@@ -680,7 +687,7 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
 
 Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR, ProcRefSym &PR) {
   P.format(" `{0}`", PR.Name);
-  AutoIndent Indent(P);
+  AutoIndent Indent(P, 7);
   P.formatLine("module = {0}, sum name = {1}, offset = {2}", PR.Module,
                PR.SumName, PR.SymOffset);
   return Error::success();
@@ -689,7 +696,7 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR, ProcRefSym &PR) {
 Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR, LabelSym &Label) {
   P.format(" `{0}` (addr = {1})", Label.Name,
            formatSegmentOffset(Label.Segment, Label.CodeOffset));
-  AutoIndent Indent(P);
+  AutoIndent Indent(P, 7);
   P.formatLine("flags = {0}",
                formatProcSymFlags(P.getIndentLevel() + 9, Label.Flags));
   return Error::success();
@@ -697,7 +704,7 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR, LabelSym &Label) {
 
 Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR, LocalSym &Local) {
   P.format(" `{0}`", Local.Name);
-  AutoIndent Indent(P);
+  AutoIndent Indent(P, 7);
 
   std::string FlagStr =
       formatLocalSymFlags(P.getIndentLevel() + 9, Local.Flags);
@@ -713,10 +720,11 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
 
 Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR, ProcSym &Proc) {
   P.format(" `{0}`", Proc.Name);
-  AutoIndent Indent(P);
-  P.formatLine("parent = {0}, addr = {1}, code size = {2}, end = {3}",
-               Proc.Parent, formatSegmentOffset(Proc.Segment, Proc.CodeOffset),
-               Proc.CodeSize, Proc.End);
+  AutoIndent Indent(P, 7);
+  P.formatLine("parent = {0}, end = {1}, addr = {2}, code size = {3}",
+               Proc.Parent, Proc.End,
+               formatSegmentOffset(Proc.Segment, Proc.CodeOffset),
+               Proc.CodeSize);
   P.formatLine("debug start = {0}, debug end = {1}, flags = {2}", Proc.DbgStart,
                Proc.DbgEnd,
                formatProcSymFlags(P.getIndentLevel() + 9, Proc.Flags));
@@ -729,7 +737,7 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
 }
 
 Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR, CallerSym &Caller) {
-  AutoIndent Indent(P);
+  AutoIndent Indent(P, 7);
   for (const auto &I : Caller.Indices) {
     P.formatLine("callee: {0}", typeIndex(I));
   }
@@ -739,7 +747,7 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR, CallerSym &Caller) {
 Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
                                             RegRelativeSym &RegRel) {
   P.format(" `{0}`", RegRel.Name);
-  AutoIndent Indent(P);
+  AutoIndent Indent(P, 7);
   P.formatLine("type = {0}, register = {1}, offset = {2}",
                typeIndex(RegRel.Type), formatRegisterId(RegRel.Register),
                RegRel.Offset);
@@ -749,7 +757,7 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
 Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
                                             ThreadLocalDataSym &Data) {
   P.format(" `{0}`", Data.Name);
-  AutoIndent Indent(P);
+  AutoIndent Indent(P, 7);
   P.formatLine("type = {0}, addr = {1}", typeIndex(Data.Type),
                formatSegmentOffset(Data.Segment, Data.DataOffset));
   return Error::success();
@@ -757,7 +765,7 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
 
 Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR, UDTSym &UDT) {
   P.format(" `{0}`", UDT.Name);
-  AutoIndent Indent(P);
+  AutoIndent Indent(P, 7);
   P.formatLine("original type = {0}", UDT.Type);
   return Error::success();
 }

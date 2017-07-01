@@ -155,6 +155,13 @@ void OptimizationRemarkEmitter::emit(
     DiagnosticInfoOptimizationBase &OptDiagBase) {
   auto &OptDiag = cast<DiagnosticInfoIROptimization>(OptDiagBase);
   computeHotness(OptDiag);
+  // If a diagnostic has a hotness value, then only emit it if its hotness
+  // meets the threshold.
+  if (OptDiag.getHotness() &&
+      *OptDiag.getHotness() <
+          F->getContext().getDiagnosticsHotnessThreshold()) {
+    return;
+  }
 
   yaml::Output *Out = F->getContext().getDiagnosticsOutputFile();
   if (Out) {

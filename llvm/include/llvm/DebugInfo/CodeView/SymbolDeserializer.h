@@ -51,6 +51,10 @@ public:
                               CodeViewContainer Container)
       : Delegate(Delegate), Container(Container) {}
 
+  Error visitSymbolBegin(CVSymbol &Record, uint32_t Offset) override {
+    return visitSymbolBegin(Record);
+  }
+
   Error visitSymbolBegin(CVSymbol &Record) override {
     assert(!Mapping && "Already in a symbol mapping!");
     Mapping = llvm::make_unique<MappingInfo>(Record.content(), Container);

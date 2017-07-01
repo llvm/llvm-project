@@ -41,49 +41,48 @@ CHECK-LABEL:   Mod 0002 | `* Linker *`:
 CHECK:                           Symbols
 CHECK: ============================================================
 CHECK-LABEL:   Mod 0000 | `{{.*}}pdb_comdat_main.obj`:
-CHECK:   - S_OBJNAME [size = 56] sig=0, `C:\src\llvm-project\build\pdb_comdat_main.obj`
-CHECK:   - S_COMPILE3 [size = 60]
-CHECK:       machine = intel x86-x64, Ver = Microsoft (R) Optimizing Compiler, language = c
-CHECK:       frontend = 19.0.24215.1, backend = 19.0.24215.1
-CHECK:       flags = security checks | hot patchable
-CHECK:   - S_GPROC32_ID [size = 44] `main`
-    FIXME: We need to fill in "end".
-CHECK:       parent = 0, addr = 0002:0000, code size = 24, end = 0
-CHECK:       debug start = 4, debug end = 19, flags = none
-CHECK:   - S_FRAMEPROC [size = 32]
-CHECK:       size = 40, padding size = 0, offset to padding = 0
-CHECK:       bytes of callee saved registers = 0, exception handler addr = 0000:0000
-CHECK:       flags = has async eh | opt speed
-CHECK:   - S_END [size = 4]
-CHECK:   - S_GDATA32 [size = 24] `global`
-CHECK:       type = 0x0074 (int), addr = 0000:0000
-CHECK:   - S_BUILDINFO [size = 8] BuildId = `4106`
-CHECK:   - S_GPROC32_ID [size = 44] `foo`
-CHECK:       parent = 0, addr = 0002:0032, code size = 15, end = 0
-CHECK:       debug start = 0, debug end = 14, flags = none
-CHECK:   - S_FRAMEPROC [size = 32]
-CHECK:       size = 0, padding size = 0, offset to padding = 0
-CHECK:       bytes of callee saved registers = 0, exception handler addr = 0000:0000
-CHECK:       flags = marked inline | has async eh | opt speed
-CHECK:   - S_END [size = 4]
+CHECK:     4 | S_OBJNAME [size = 56] sig=0, `C:\src\llvm-project\build\pdb_comdat_main.obj`
+CHECK:    60 | S_COMPILE3 [size = 60]
+CHECK:         machine = intel x86-x64, Ver = Microsoft (R) Optimizing Compiler, language = c
+CHECK:         frontend = 19.0.24215.1, backend = 19.0.24215.1
+CHECK:         flags = security checks | hot patchable
+CHECK:   120 | S_GPROC32_ID [size = 44] `main`
+CHECK:         parent = 0, end = 0, addr = 0002:0000, code size = 24
+CHECK:         debug start = 4, debug end = 19, flags = none
+CHECK:   164 | S_FRAMEPROC [size = 32]
+CHECK:         size = 40, padding size = 0, offset to padding = 0
+CHECK:         bytes of callee saved registers = 0, exception handler addr = 0000:0000
+CHECK:         flags = has async eh | opt speed
+CHECK:   196 | S_END [size = 4]
+CHECK:   200 | S_GDATA32 [size = 24] `global`
+CHECK:         type = 0x0074 (int), addr = 0000:0000
+CHECK:   224 | S_BUILDINFO [size = 8] BuildId = `4106`
+CHECK:   232 | S_GPROC32_ID [size = 44] `foo`
+CHECK:         parent = 0, end = 0, addr = 0002:0032, code size = 15
+CHECK:         debug start = 0, debug end = 14, flags = none
+CHECK:   276 | S_FRAMEPROC [size = 32]
+CHECK:         size = 0, padding size = 0, offset to padding = 0
+CHECK:         bytes of callee saved registers = 0, exception handler addr = 0000:0000
+CHECK:         flags = marked inline | has async eh | opt speed
+CHECK:   308 | S_END [size = 4]
 CHECK-LABEL:   Mod 0001 | `{{.*}}pdb_comdat_bar.obj`:
-CHECK:   - S_OBJNAME [size = 56] sig=0, `C:\src\llvm-project\build\pdb_comdat_bar.obj`
-CHECK:   - S_COMPILE3 [size = 60]
+CHECK:     4 | S_OBJNAME [size = 56] sig=0, `C:\src\llvm-project\build\pdb_comdat_bar.obj`
+CHECK:    60 | S_COMPILE3 [size = 60]
 CHECK:       machine = intel x86-x64, Ver = Microsoft (R) Optimizing Compiler, language = c
 CHECK:       frontend = 19.0.24215.1, backend = 19.0.24215.1
 CHECK:       flags = security checks | hot patchable
-CHECK:   - S_GPROC32_ID [size = 44] `bar`
-CHECK:       parent = 0, addr = 0002:0048, code size = 14, end = 0
+CHECK:   120 | S_GPROC32_ID [size = 44] `bar`
+CHECK:       parent = 0, end = 0, addr = 0002:0048, code size = 14
 CHECK:       debug start = 4, debug end = 9, flags = none
-CHECK:   - S_FRAMEPROC [size = 32]
+CHECK:   164 | S_FRAMEPROC [size = 32]
 CHECK:       size = 40, padding size = 0, offset to padding = 0
 CHECK:       bytes of callee saved registers = 0, exception handler addr = 0000:0000
 CHECK:       flags = has async eh | opt speed
-CHECK:   - S_END [size = 4]
-CHECK:   - S_GDATA32 [size = 24] `global`
+CHECK:   196 | S_END [size = 4]
+CHECK:   200 | S_GDATA32 [size = 24] `global`
 CHECK:       type = 0x0074 (int), addr = 0000:0000
-CHECK:   - S_BUILDINFO [size = 8] BuildId = `4109`
-CHECK-NOT:   - S_GPROC32_ID {{.*}} `foo`
+CHECK:   224 | S_BUILDINFO [size = 8] BuildId = `4109`
+CHECK-NOT:   S_GPROC32_ID {{.*}} `foo`
 CHECK-LABEL:   Mod 0002 | `* Linker *`:
 
 Reorder the object files and verify that the other table is selected.

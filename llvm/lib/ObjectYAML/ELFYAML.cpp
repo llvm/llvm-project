@@ -12,12 +12,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ObjectYAML/ELFYAML.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MipsABIFlags.h"
+#include "llvm/Support/YAMLTraits.h"
+#include <cassert>
+#include <cstdint>
 
 namespace llvm {
 
-ELFYAML::Section::~Section() {}
+ELFYAML::Section::~Section() = default;
 
 namespace yaml {
 
@@ -644,6 +650,7 @@ void MappingTraits<ELFYAML::FileHeader>::mapping(IO &IO,
 }
 
 namespace {
+
 struct NormalizedOther {
   NormalizedOther(IO &)
       : Visibility(ELFYAML::ELF_STV(0)), Other(ELFYAML::ELF_STO(0)) {}
@@ -655,7 +662,8 @@ struct NormalizedOther {
   ELFYAML::ELF_STV Visibility;
   ELFYAML::ELF_STO Other;
 };
-}
+
+} // end anonymous namespace
 
 void MappingTraits<ELFYAML::Symbol>::mapping(IO &IO, ELFYAML::Symbol &Symbol) {
   IO.mapOptional("Name", Symbol.Name, StringRef());
@@ -778,6 +786,7 @@ StringRef MappingTraits<std::unique_ptr<ELFYAML::Section>>::validate(
 }
 
 namespace {
+
 struct NormalizedMips64RelType {
   NormalizedMips64RelType(IO &)
       : Type(ELFYAML::ELF_REL(ELF::R_MIPS_NONE)),
@@ -798,7 +807,8 @@ struct NormalizedMips64RelType {
   ELFYAML::ELF_REL Type3;
   ELFYAML::ELF_RSS SpecSym;
 };
-}
+
+} // end anonymous namespace
 
 void MappingTraits<ELFYAML::Relocation>::mapping(IO &IO,
                                                  ELFYAML::Relocation &Rel) {
@@ -839,4 +849,5 @@ LLVM_YAML_STRONG_TYPEDEF(uint32_t, MIPS_AFL_ASE)
 LLVM_YAML_STRONG_TYPEDEF(uint32_t, MIPS_AFL_FLAGS1)
 
 } // end namespace yaml
+
 } // end namespace llvm

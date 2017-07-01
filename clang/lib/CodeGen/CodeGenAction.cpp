@@ -229,6 +229,9 @@ namespace clang {
       void *OldDiagnosticContext = Ctx.getDiagnosticContext();
       Ctx.setDiagnosticHandler(DiagnosticHandler, this);
       Ctx.setDiagnosticsHotnessRequested(CodeGenOpts.DiagnosticsWithHotness);
+      if (CodeGenOpts.DiagnosticsHotnessThreshold != 0)
+        Ctx.setDiagnosticsHotnessThreshold(
+            CodeGenOpts.DiagnosticsHotnessThreshold);
 
       PerformPrelinkPasses(Diags, HeaderSearchOpts, CodeGenOpts, TargetOpts,
                            LangOpts, C.getTargetInfo().getDataLayout(),

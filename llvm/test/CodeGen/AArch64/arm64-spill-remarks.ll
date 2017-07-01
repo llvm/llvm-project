@@ -3,6 +3,15 @@
 ; RUN: llc < %s -mtriple=arm64-apple-ios7.0 -aarch64-neon-syntax=apple 2>&1 | FileCheck -check-prefix=NO_REMARK %s
 ; RUN: llc < %s -mtriple=arm64-apple-ios7.0 -aarch64-neon-syntax=apple -pass-remarks-output=%t.yaml -pass-remarks-with-hotness 2>&1 | FileCheck -check-prefix=NO_REMARK %s
 ; RUN: cat %t.yaml | FileCheck -check-prefix=YAML %s
+;
+; Verify that remarks below the hotness threshold are not output.
+; RUN: llc < %s -mtriple=arm64-apple-ios7.0 -aarch64-neon-syntax=apple -pass-remarks-missed=regalloc \
+; RUN:       -pass-remarks-with-hotness -pass-remarks-hotness-threshold=500 \
+; RUN:       2>&1 | FileCheck -check-prefix=THRESHOLD %s
+; RUN: llc < %s -mtriple=arm64-apple-ios7.0 -aarch64-neon-syntax=apple -pass-remarks-output=%t.threshold.yaml \
+; RUN:       -pass-remarks-with-hotness -pass-remarks-hotness-threshold=500 \
+; RUN:       2>&1 | FileCheck -check-prefix=NO_REMARK %s
+; RUN: cat %t.threshold.yaml | FileCheck -check-prefix=THRESHOLD_YAML %s
 
 ; This has two nested loops, each with one value that has to be spilled and
 ; then reloaded.
@@ -22,6 +31,9 @@
 ; HOTNESS: remark: /tmp/kk.c:1:20: 2 spills 2 reloads generated in loop (hotness: 300)
 
 ; NO_REMARK-NOT: remark
+
+; THRESHOLD-NOT: (hotness: 300)
+; THRESHOLD: remark: /tmp/kk.c:2:20: 1 spills 1 reloads generated in loop (hotness: 30000)
 
 ; YAML: --- !Missed
 ; YAML: Pass:            regalloc
@@ -62,6 +74,21 @@
 ; YAML:   - String:          ' reloads '
 ; YAML:   - String:          generated in loop
 ; YAML: ...
+
+; THRESHOLD_YAML-NOT: Hotness:         300{{$}}
+; THRESHOLD_YAML: --- !Missed
+; THRESHOLD_YAML: Pass:            regalloc
+; THRESHOLD_YAML: Name:            LoopSpillReload
+; THRESHOLD_YAML: DebugLoc:        { File: /tmp/kk.c, Line: 2, Column: 20 }
+; THRESHOLD_YAML: Function:        fpr128
+; THRESHOLD_YAML: Hotness:         30000
+; THRESHOLD_YAML: Args:
+; THRESHOLD_YAML:   - NumSpills:       '1'
+; THRESHOLD_YAML:   - String:          ' spills '
+; THRESHOLD_YAML:   - NumReloads:      '1'
+; THRESHOLD_YAML:   - String:          ' reloads '
+; THRESHOLD_YAML:   - String:          generated in loop
+; THRESHOLD_YAML: ...
 
 define void @fpr128(<4 x float>* %p) nounwind ssp !prof !11 {
 entry:

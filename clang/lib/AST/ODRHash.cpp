@@ -82,25 +82,13 @@ void ODRHash::AddDeclarationName(DeclarationName Name) {
 }
 
 void ODRHash::AddNestedNameSpecifier(const NestedNameSpecifier *NNS) {
-  // Unlike the other pointer handling functions, allow null pointers here.
-  if (!NNS) {
-    AddBoolean(false);
-    return;
+  assert(NNS && "Expecting non-null pointer.");
+  const auto *Prefix = NNS->getPrefix();
+  AddBoolean(Prefix);
+  if (Prefix) {
+    AddNestedNameSpecifier(Prefix);
   }
-
-  // Skip inlined namespaces.
   auto Kind = NNS->getKind();
-  if (Kind == NestedNameSpecifier::Namespace) {
-    if (NNS->getAsNamespace()->isInline()) {
-      return AddNestedNameSpecifier(NNS->getPrefix());
-    }
-  }
-
-  AddBoolean(true);
-
-  // Process prefix
-  AddNestedNameSpecifier(NNS->getPrefix());
-
   ID.AddInteger(Kind);
   switch (Kind) {
   case NestedNameSpecifier::Identifier:
@@ -146,7 +134,10 @@ void ODRHash::AddTemplateArgument(TemplateArgument TA) {
 
   switch (Kind) {
     case TemplateArgument::Null:
+      llvm_unreachable("Expected valid TemplateArgument");
     case TemplateArgument::Type:
+      AddQualType(TA.getAsType());
+      break;
     case TemplateArgument::Declaration:
     case TemplateArgument::NullPtr:
     case TemplateArgument::Integral:
@@ -438,7 +429,10 @@ public:
   }
 
   void AddNestedNameSpecifier(const NestedNameSpecifier *NNS) {
-    Hash.AddNestedNameSpecifier(NNS);
+    Hash.AddBoolean(NNS);
+    if (NNS) {
+      Hash.AddNestedNameSpecifier(NNS);
+    }
   }
 
   void AddIdentifierInfo(const IdentifierInfo *II) {
