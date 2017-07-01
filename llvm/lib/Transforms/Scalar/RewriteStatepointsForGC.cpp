@@ -1954,7 +1954,7 @@ static void rematerializeLiveValues(CallSite CS,
       // to identify the newly generated AlternateRootPhi (.base version of phi)
       // and RootOfChain (the original phi node itself) are the same, so that we
       // can rematerialize the gep and casts. This is a workaround for the
-      // deficieny in the findBasePointer algorithm.
+      // deficiency in the findBasePointer algorithm.
       if (!AreEquivalentPhiNodes(*OrigRootPhi, *AlternateRootPhi))
         continue;
       // Now that the phi nodes are proved to be the same, assert that
