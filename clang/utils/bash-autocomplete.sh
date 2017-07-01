@@ -24,7 +24,9 @@ _clang()
     arg="$w2=,$cur"
   fi
 
-  flags=$( "${COMP_WORDS[0]}" --autocomplete="$arg" 2>/dev/null )
+  # expand ~ to $HOME
+  eval local path=${COMP_WORDS[0]}
+  flags=$( "$path" --autocomplete="$arg" 2>/dev/null )
   # If clang is old that it does not support --autocomplete,
   # fall back to the filename completion.
   if [[ "$?" != 0 ]]; then

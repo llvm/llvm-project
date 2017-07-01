@@ -18,6 +18,7 @@
 #include <string>
 #include <vector>
 #include "clang/Basic/OpenCLOptions.h"
+#include "llvm/Target/TargetOptions.h"
 
 namespace clang {
 
@@ -41,7 +42,7 @@ public:
   std::string ABI;
 
   /// The EABI version to use
-  std::string EABIVersion;
+  llvm::EABI EABIVersion;
 
   /// If given, the version string of the linker in use.
   std::string LinkerVersion;
