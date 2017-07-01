@@ -29,7 +29,8 @@
 // RUN:   | FileCheck %s --check-prefixes=CHECK-MALLOC-REALLOC,CHECK-NULL
 
 // ASan shadow memory on s390 is too large for this test.
-// UNSUPPORTED: s390
+// TODO(alekseys): Android lit do not run ulimit on device.
+// UNSUPPORTED: s390,android
 
 #include <stdlib.h>
 #include <string.h>
