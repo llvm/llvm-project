@@ -125,11 +125,18 @@ void LLVMContext::setDiagnosticHandler(DiagnosticHandlerTy DiagnosticHandler,
   pImpl->RespectDiagnosticFilters = RespectFilters;
 }
 
-void LLVMContext::setDiagnosticHotnessRequested(bool Requested) {
-  pImpl->DiagnosticHotnessRequested = Requested;
+void LLVMContext::setDiagnosticsHotnessRequested(bool Requested) {
+  pImpl->DiagnosticsHotnessRequested = Requested;
 }
-bool LLVMContext::getDiagnosticHotnessRequested() const {
-  return pImpl->DiagnosticHotnessRequested;
+bool LLVMContext::getDiagnosticsHotnessRequested() const {
+  return pImpl->DiagnosticsHotnessRequested;
+}
+
+void LLVMContext::setDiagnosticsHotnessThreshold(uint64_t Threshold) {
+  pImpl->DiagnosticsHotnessThreshold = Threshold;
+}
+uint64_t LLVMContext::getDiagnosticsHotnessThreshold() const {
+  return pImpl->DiagnosticsHotnessThreshold;
 }
 
 yaml::Output *LLVMContext::getDiagnosticsOutputFile() {

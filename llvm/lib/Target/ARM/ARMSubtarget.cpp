@@ -11,6 +11,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "ARM.h"
+
+#ifdef LLVM_BUILD_GLOBAL_ISEL
+#include "ARMCallLowering.h"
+#include "ARMLegalizerInfo.h"
+#include "ARMRegisterBankInfo.h"
+#endif
 #include "ARMSubtarget.h"
 #include "ARMFrameLowering.h"
 #include "ARMInstrInfo.h"
@@ -23,6 +30,13 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
+#ifdef LLVM_BUILD_GLOBAL_ISEL
+#include "llvm/CodeGen/GlobalISel/GISelAccessor.h"
+#include "llvm/CodeGen/GlobalISel/IRTranslator.h"
+#include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
+#include "llvm/CodeGen/GlobalISel/Legalizer.h"
+#include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
+#endif
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
@@ -78,11 +92,6 @@ ARMSubtarget &ARMSubtarget::initializeSubtargetDependencies(StringRef CPU,
   return *this;
 }
 
-/// EnableExecuteOnly - Enables the generation of execute-only code on supported
-/// targets
-static cl::opt<bool>
-EnableExecuteOnly("arm-execute-only");
-
 ARMFrameLowering *ARMSubtarget::initializeFrameLowering(StringRef CPU,
                                                         StringRef FS) {
   ARMSubtarget &STI = initializeSubtargetDependencies(CPU, FS);
@@ -92,13 +101,41 @@ ARMFrameLowering *ARMSubtarget::initializeFrameLowering(StringRef CPU,
   return new ARMFrameLowering(STI);
 }
 
+#ifdef LLVM_BUILD_GLOBAL_ISEL
+namespace {
+
+struct ARMGISelActualAccessor : public GISelAccessor {
+  std::unique_ptr<CallLowering> CallLoweringInfo;
+  std::unique_ptr<InstructionSelector> InstSelector;
+  std::unique_ptr<LegalizerInfo> Legalizer;
+  std::unique_ptr<RegisterBankInfo> RegBankInfo;
+
+  const CallLowering *getCallLowering() const override {
+    return CallLoweringInfo.get();
+  }
+
+  const InstructionSelector *getInstructionSelector() const override {
+    return InstSelector.get();
+  }
+
+  const LegalizerInfo *getLegalizerInfo() const override {
+    return Legalizer.get();
+  }
+
+  const RegisterBankInfo *getRegBankInfo() const override {
+    return RegBankInfo.get();
+  }
+};
+
+} // end anonymous namespace
+#endif
+
 ARMSubtarget::ARMSubtarget(const Triple &TT, const std::string &CPU,
                            const std::string &FS,
                            const ARMBaseTargetMachine &TM, bool IsLittle)
     : ARMGenSubtargetInfo(TT, CPU, FS), UseMulOps(UseFusedMulOps),
-      GenExecuteOnly(EnableExecuteOnly), CPUString(CPU), IsLittle(IsLittle),
-      TargetTriple(TT), Options(TM.Options), TM(TM),
-      FrameLowering(initializeFrameLowering(CPU, FS)),
+      CPUString(CPU), IsLittle(IsLittle), TargetTriple(TT), Options(TM.Options),
+      TM(TM), FrameLowering(initializeFrameLowering(CPU, FS)),
       // At this point initializeSubtargetDependencies has been called so
       // we can query directly.
       InstrInfo(isThumb1Only()
@@ -106,7 +143,29 @@ ARMSubtarget::ARMSubtarget(const Triple &TT, const std::string &CPU,
                     : !isThumb()
                           ? (ARMBaseInstrInfo *)new ARMInstrInfo(*this)
                           : (ARMBaseInstrInfo *)new Thumb2InstrInfo(*this)),
-      TLInfo(TM, *this) {}
+      TLInfo(TM, *this) {
+  assert((isThumb() || hasARMOps()) &&
+         "Target must either be thumb or support ARM operations!");
+
+#ifndef LLVM_BUILD_GLOBAL_ISEL
+  GISelAccessor *GISel = new GISelAccessor();
+#else
+  ARMGISelActualAccessor *GISel = new ARMGISelActualAccessor();
+  GISel->CallLoweringInfo.reset(new ARMCallLowering(*getTargetLowering()));
+  GISel->Legalizer.reset(new ARMLegalizerInfo(*this));
+
+  auto *RBI = new ARMRegisterBankInfo(*getRegisterInfo());
+
+  // FIXME: At this point, we can't rely on Subtarget having RBI.
+  // It's awkward to mix passing RBI and the Subtarget; should we pass
+  // TII/TRI as well?
+  GISel->InstSelector.reset(createARMInstructionSelector(
+      *static_cast<const ARMBaseTargetMachine *>(&TM), *this, *RBI));
+
+  GISel->RegBankInfo.reset(RBI);
+#endif
+  setGISelAccessor(*GISel);
+}
 
 const CallLowering *ARMSubtarget::getCallLowering() const {
   assert(GISel && "Access to GlobalISel APIs not set");

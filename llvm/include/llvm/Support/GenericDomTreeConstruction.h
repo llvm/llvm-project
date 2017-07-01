@@ -280,6 +280,7 @@ struct SemiNCAInfo {
   }
 
   void doFullDFSWalk(const DomTreeT &DT) {
+    NumToNode.push_back(nullptr);
     unsigned Num = 0;
     for (auto *Root : DT.Roots)
       if (!DT.isPostDominator())
@@ -317,6 +318,114 @@ struct SemiNCAInfo {
 
     return true;
   }
+
+  // Check if for every parent with a level L in the tree all of its children
+  // have level L + 1.
+  static bool VerifyLevels(const DomTreeT &DT) {
+    for (auto &NodeToTN : DT.DomTreeNodes) {
+      const TreeNodePtr TN = NodeToTN.second.get();
+      const NodePtr BB = TN->getBlock();
+      if (!BB) continue;
+
+      const TreeNodePtr IDom = TN->getIDom();
+      if (!IDom && TN->getLevel() != 0) {
+        errs() << "Node without an IDom ";
+        PrintBlockOrNullptr(errs(), BB);
+        errs() << " has a nonzero level " << TN->getLevel() << "!\n";
+        errs().flush();
+
+        return false;
+      }
+
+      if (IDom && TN->getLevel() != IDom->getLevel() + 1) {
+        errs() << "Node ";
+        PrintBlockOrNullptr(errs(), BB);
+        errs() << " has level " << TN->getLevel() << " while it's IDom ";
+        PrintBlockOrNullptr(errs(), IDom->getBlock());
+        errs() << " has level " << IDom->getLevel() << "!\n";
+        errs().flush();
+
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  // Checks if for every edge From -> To in the graph
+  //     NCD(From, To) == IDom(To) or To.
+  bool verifyNCD(const DomTreeT &DT) {
+    clear();
+    doFullDFSWalk(DT);
+
+    for (auto &BlockToInfo : NodeToInfo) {
+      auto &Info = BlockToInfo.second;
+
+      const NodePtr From = NumToNode[Info.Parent];
+      if (!From) continue;
+
+      const NodePtr To = BlockToInfo.first;
+      const TreeNodePtr ToTN = DT.getNode(To);
+      assert(ToTN);
+
+      const NodePtr NCD = DT.findNearestCommonDominator(From, To);
+      const TreeNodePtr NCDTN = NCD ? DT.getNode(NCD) : nullptr;
+      const TreeNodePtr ToIDom = ToTN->getIDom();
+      if (NCDTN != ToTN && NCDTN != ToIDom) {
+        errs() << "NearestCommonDominator verification failed:\n\tNCD(From:";
+        PrintBlockOrNullptr(errs(), From);
+        errs() << ", To:";
+        PrintBlockOrNullptr(errs(), To);
+        errs() << ") = ";
+        PrintBlockOrNullptr(errs(), NCD);
+        errs() << ",\t (should be To or IDom[To]: ";
+        PrintBlockOrNullptr(errs(), ToIDom ? ToIDom->getBlock() : nullptr);
+        errs() << ")\n";
+        errs().flush();
+
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  // The below routines verify the correctness of the dominator tree relative to
+  // the CFG it's coming from.  A tree is a dominator tree iff it has two
+  // properties, called the parent property and the sibling property.  Tarjan
+  // and Lengauer prove (but don't explicitly name) the properties as part of
+  // the proofs in their 1972 paper, but the proofs are mostly part of proving
+  // things about semidominators and idoms, and some of them are simply asserted
+  // based on even earlier papers (see, e.g., lemma 2).  Some papers refer to
+  // these properties as "valid" and "co-valid".  See, e.g., "Dominators,
+  // directed bipolar orders, and independent spanning trees" by Loukas
+  // Georgiadis and Robert E. Tarjan, as well as "Dominator Tree Verification
+  // and Vertex-Disjoint Paths " by the same authors.
+
+  // A very simple and direct explanation of these properties can be found in
+  // "An Experimental Study of Dynamic Dominators", found at
+  // https://arxiv.org/abs/1604.02711
+
+  // The easiest way to think of the parent property is that it's a requirement
+  // of being a dominator.  Let's just take immediate dominators.  For PARENT to
+  // be an immediate dominator of CHILD, all paths in the CFG must go through
+  // PARENT before they hit CHILD.  This implies that if you were to cut PARENT
+  // out of the CFG, there should be no paths to CHILD that are reachable.  If
+  // there are, then you now have a path from PARENT to CHILD that goes around
+  // PARENT and still reaches CHILD, which by definition, means PARENT can't be
+  // a dominator of CHILD (let alone an immediate one).
+
+  // The sibling property is similar.  It says that for each pair of sibling
+  // nodes in the dominator tree (LEFT and RIGHT) , they must not dominate each
+  // other.  If sibling LEFT dominated sibling RIGHT, it means there are no
+  // paths in the CFG from sibling LEFT to sibling RIGHT that do not go through
+  // LEFT, and thus, LEFT is really an ancestor (in the dominator tree) of
+  // RIGHT, not a sibling.
+
+  // It is possible to verify the parent and sibling properties in
+  // linear time, but the algorithms are complex. Instead, we do it in a
+  // straightforward N^2 and N^3 way below, using direct path reachability.
+
 
   // Checks if the tree has the parent property: if for all edges from V to W in
   // the input graph, such that V is reachable, the parent of W in the tree is
@@ -405,9 +514,9 @@ bool Verify(const DominatorTreeBaseByGraphTraits<GraphTraits<NodeT>> &DT) {
                 "NodePtr should be a pointer type");
   SemiNCAInfo<typename std::remove_pointer<NodePtr>::type> SNCA;
 
-  return SNCA.verifyReachability(DT) && SNCA.verifyParentProperty(DT) &&
+  return SNCA.verifyReachability(DT) && SNCA.VerifyLevels(DT) &&
+         SNCA.verifyNCD(DT) && SNCA.verifyParentProperty(DT) &&
          SNCA.verifySiblingProperty(DT);
-
 }
 
 }  // namespace DomTreeBuilder

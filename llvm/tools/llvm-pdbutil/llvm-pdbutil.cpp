@@ -419,6 +419,13 @@ cl::list<uint32_t> DumpIdIndex(
     cl::desc("only dump ids with the specified hexadecimal type index"),
     cl::cat(TypeOptions), cl::sub(DumpSubcommand));
 
+cl::opt<bool> DumpTypeDependents(
+    "dependents",
+    cl::desc("In conjunection with -type-index and -id-index, dumps the entire "
+             "dependency graph for the specified index instead of "
+             "just the single record with the specified index"),
+    cl::cat(TypeOptions), cl::sub(DumpSubcommand));
+
 // SYMBOL OPTIONS
 cl::opt<bool> DumpPublics("publics", cl::desc("dump Publics stream data"),
                           cl::cat(SymbolOptions), cl::sub(DumpSubcommand));

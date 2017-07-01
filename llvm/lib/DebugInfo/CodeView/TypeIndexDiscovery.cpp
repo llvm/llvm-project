@@ -438,6 +438,25 @@ void llvm::codeview::discoverTypeIndices(const CVType &Type,
   ::discoverTypeIndices(Type.content(), Type.kind(), Refs);
 }
 
+void llvm::codeview::discoverTypeIndices(const CVType &Type,
+                                         SmallVectorImpl<TypeIndex> &Indices) {
+
+  Indices.clear();
+
+  SmallVector<TiReference, 4> Refs;
+  discoverTypeIndices(Type, Refs);
+  if (Refs.empty())
+    return;
+
+  BinaryStreamReader Reader(Type.content(), support::little);
+  for (const auto &Ref : Refs) {
+    Reader.setOffset(Ref.Offset);
+    FixedStreamArray<TypeIndex> Run;
+    cantFail(Reader.readArray(Run, Ref.Count));
+    Indices.append(Run.begin(), Run.end());
+  }
+}
+
 void llvm::codeview::discoverTypeIndices(ArrayRef<uint8_t> RecordData,
                                          SmallVectorImpl<TiReference> &Refs) {
   const RecordPrefix *P =

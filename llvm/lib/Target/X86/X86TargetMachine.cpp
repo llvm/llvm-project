@@ -15,9 +15,6 @@
 #include "X86.h"
 #include "X86CallLowering.h"
 #include "X86LegalizerInfo.h"
-#ifdef LLVM_BUILD_GLOBAL_ISEL
-#include "X86RegisterBankInfo.h"
-#endif
 #include "X86MacroFusion.h"
 #include "X86Subtarget.h"
 #include "X86TargetMachine.h"
@@ -31,7 +28,6 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/ExecutionDepsFix.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
-#include "llvm/CodeGen/GlobalISel/GISelAccessor.h"
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
 #include "llvm/CodeGen/GlobalISel/Legalizer.h"
@@ -212,35 +208,6 @@ X86TargetMachine::X86TargetMachine(const Target &T, const Triple &TT,
 
 X86TargetMachine::~X86TargetMachine() = default;
 
-#ifdef LLVM_BUILD_GLOBAL_ISEL
-namespace {
-
-struct X86GISelActualAccessor : public GISelAccessor {
-  std::unique_ptr<CallLowering> CallLoweringInfo;
-  std::unique_ptr<LegalizerInfo> Legalizer;
-  std::unique_ptr<RegisterBankInfo> RegBankInfo;
-  std::unique_ptr<InstructionSelector> InstSelector;
-
-  const CallLowering *getCallLowering() const override {
-    return CallLoweringInfo.get();
-  }
-
-  const InstructionSelector *getInstructionSelector() const override {
-    return InstSelector.get();
-  }
-
-  const LegalizerInfo *getLegalizerInfo() const override {
-    return Legalizer.get();
-  }
-
-  const RegisterBankInfo *getRegBankInfo() const override {
-    return RegBankInfo.get();
-  }
-};
-
-} // end anonymous namespace
-#endif
-
 const X86Subtarget *
 X86TargetMachine::getSubtargetImpl(const Function &F) const {
   Attribute CPUAttr = F.getFnAttribute("target-cpu");
@@ -280,20 +247,6 @@ X86TargetMachine::getSubtargetImpl(const Function &F) const {
     resetTargetOptions(F);
     I = llvm::make_unique<X86Subtarget>(TargetTriple, CPU, FS, *this,
                                         Options.StackAlignmentOverride);
-#ifndef LLVM_BUILD_GLOBAL_ISEL
-    GISelAccessor *GISel = new GISelAccessor();
-#else
-    X86GISelActualAccessor *GISel = new X86GISelActualAccessor();
-
-    GISel->CallLoweringInfo.reset(new X86CallLowering(*I->getTargetLowering()));
-    GISel->Legalizer.reset(new X86LegalizerInfo(*I, *this));
-
-    auto *RBI = new X86RegisterBankInfo(*I->getRegisterInfo());
-    GISel->RegBankInfo.reset(RBI);
-    GISel->InstSelector.reset(createX86InstructionSelector(
-        *this, *I, *RBI));
-#endif
-    I->setGISelAccessor(*GISel);
   }
   return I.get();
 }

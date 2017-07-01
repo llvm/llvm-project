@@ -13,14 +13,29 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ObjectYAML/CodeViewYAMLTypes.h"
-#include "llvm/ADT/StringExtras.h"
-#include "llvm/ADT/StringSwitch.h"
+#include "llvm/ADT/APSInt.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/BinaryFormat/COFF.h"
 #include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
+#include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/CodeViewError.h"
-#include "llvm/DebugInfo/CodeView/EnumTables.h"
 #include "llvm/DebugInfo/CodeView/TypeDeserializer.h"
+#include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/CodeView/TypeTableBuilder.h"
+#include "llvm/DebugInfo/CodeView/TypeVisitorCallbacks.h"
+#include "llvm/Support/Allocator.h"
+#include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/BinaryStreamWriter.h"
+#include "llvm/Support/Endian.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/YAMLTraits.h"
+#include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <vector>
 
 using namespace llvm;
 using namespace llvm::codeview;
@@ -29,7 +44,6 @@ using namespace llvm::CodeViewYAML::detail;
 using namespace llvm::yaml;
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(OneMethodRecord)
-LLVM_YAML_IS_SEQUENCE_VECTOR(StringRef)
 LLVM_YAML_IS_SEQUENCE_VECTOR(VFTableSlotKind)
 LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(TypeIndex)
 
@@ -63,9 +77,10 @@ namespace detail {
 
 struct LeafRecordBase {
   TypeLeafKind Kind;
-  explicit LeafRecordBase(TypeLeafKind K) : Kind(K) {}
 
-  virtual ~LeafRecordBase() {}
+  explicit LeafRecordBase(TypeLeafKind K) : Kind(K) {}
+  virtual ~LeafRecordBase() = default;
+
   virtual void map(yaml::IO &io) = 0;
   virtual CVType toCodeViewRecord(TypeTableBuilder &TTB) const = 0;
   virtual Error fromCodeViewRecord(CVType Type) = 0;
@@ -101,9 +116,10 @@ template <> struct LeafRecordImpl<FieldListRecord> : public LeafRecordBase {
 
 struct MemberRecordBase {
   TypeLeafKind Kind;
-  explicit MemberRecordBase(TypeLeafKind K) : Kind(K) {}
 
-  virtual ~MemberRecordBase() {}
+  explicit MemberRecordBase(TypeLeafKind K) : Kind(K) {}
+  virtual ~MemberRecordBase() = default;
+
   virtual void map(yaml::IO &io) = 0;
   virtual void writeTo(FieldListRecordBuilder &FLRB) = 0;
 };
@@ -111,6 +127,7 @@ struct MemberRecordBase {
 template <typename T> struct MemberRecordImpl : public MemberRecordBase {
   explicit MemberRecordImpl(TypeLeafKind K)
       : MemberRecordBase(K), Record(static_cast<TypeRecordKind>(K)) {}
+
   void map(yaml::IO &io) override;
 
   void writeTo(FieldListRecordBuilder &FLRB) override {
@@ -119,12 +136,13 @@ template <typename T> struct MemberRecordImpl : public MemberRecordBase {
 
   mutable T Record;
 };
-}
-}
-}
+
+} // end namespace detail
+} // end namespace CodeViewYAML
+} // end namespace llvm
 
 void ScalarTraits<TypeIndex>::output(const TypeIndex &S, void *,
-                                     llvm::raw_ostream &OS) {
+                                     raw_ostream &OS) {
   OS << S.getIndex();
 }
 
@@ -136,8 +154,7 @@ StringRef ScalarTraits<TypeIndex>::input(StringRef Scalar, void *Ctx,
   return Result;
 }
 
-void ScalarTraits<APSInt>::output(const APSInt &S, void *,
-                                  llvm::raw_ostream &OS) {
+void ScalarTraits<APSInt>::output(const APSInt &S, void *, raw_ostream &OS) {
   S.print(OS, S.isSigned());
 }
 
@@ -346,6 +363,7 @@ void MappingTraits<MemberPointerInfo>::mapping(IO &IO, MemberPointerInfo &MPI) {
 namespace llvm {
 namespace CodeViewYAML {
 namespace detail {
+
 template <> void LeafRecordImpl<ModifierRecord>::map(IO &IO) {
   IO.mapRequired("ModifiedType", Record.ModifiedType);
   IO.mapRequired("Modifiers", Record.Modifiers);
@@ -404,11 +422,13 @@ template <> void LeafRecordImpl<ArrayRecord>::map(IO &IO) {
 void LeafRecordImpl<FieldListRecord>::map(IO &IO) {
   IO.mapRequired("FieldList", Members);
 }
-}
-}
-}
+
+} // end namespace detail
+} // end namespace CodeViewYAML
+} // end namespace llvm
 
 namespace {
+
 class MemberRecordConversionVisitor : public TypeVisitorCallbacks {
 public:
   explicit MemberRecordConversionVisitor(std::vector<MemberRecord> &Records)
@@ -433,7 +453,8 @@ private:
 
   std::vector<MemberRecord> &Records;
 };
-}
+
+} // end anonymous namespace
 
 Error LeafRecordImpl<FieldListRecord>::fromCodeViewRecord(CVType Type) {
   MemberRecordConversionVisitor V(Members);
@@ -461,13 +482,13 @@ void MappingTraits<OneMethodRecord>::mapping(IO &io, OneMethodRecord &Record) {
 namespace llvm {
 namespace CodeViewYAML {
 namespace detail {
+
 template <> void LeafRecordImpl<ClassRecord>::map(IO &IO) {
   IO.mapRequired("MemberCount", Record.MemberCount);
   IO.mapRequired("Options", Record.Options);
   IO.mapRequired("FieldList", Record.FieldList);
   IO.mapRequired("Name", Record.Name);
   IO.mapRequired("UniqueName", Record.UniqueName);
-
   IO.mapRequired("DerivationList", Record.DerivationList);
   IO.mapRequired("VTableShape", Record.VTableShape);
   IO.mapRequired("Size", Record.Size);
@@ -479,7 +500,6 @@ template <> void LeafRecordImpl<UnionRecord>::map(IO &IO) {
   IO.mapRequired("FieldList", Record.FieldList);
   IO.mapRequired("Name", Record.Name);
   IO.mapRequired("UniqueName", Record.UniqueName);
-
   IO.mapRequired("Size", Record.Size);
 }
 
@@ -489,7 +509,6 @@ template <> void LeafRecordImpl<EnumRecord>::map(IO &IO) {
   IO.mapRequired("FieldList", Record.FieldList);
   IO.mapRequired("Name", Record.Name);
   IO.mapRequired("UniqueName", Record.UniqueName);
-
   IO.mapRequired("UnderlyingType", Record.UnderlyingType);
 }
 
@@ -603,9 +622,10 @@ template <> void MemberRecordImpl<VirtualBaseClassRecord>::map(IO &IO) {
 template <> void MemberRecordImpl<ListContinuationRecord>::map(IO &IO) {
   IO.mapRequired("ContinuationIndex", Record.ContinuationIndex);
 }
-}
-}
-}
+
+} // end namespace detail
+} // end namespace CodeViewYAML
+} // end namespace llvm
 
 template <typename T>
 static inline Expected<LeafRecord> fromCodeViewRecordImpl(CVType Type) {
@@ -628,7 +648,8 @@ Expected<LeafRecord> LeafRecord::fromCodeViewRecord(CVType Type) {
 #define MEMBER_RECORD_ALIAS(EnumName, EnumVal, AliasName, ClassName)
   switch (Type.kind()) {
 #include "llvm/DebugInfo/CodeView/CodeViewTypes.def"
-  default: { llvm_unreachable("Unknown leaf kind!"); }
+  default:
+      llvm_unreachable("Unknown leaf kind!");
   }
   return make_error<CodeViewError>(cv_error_code::corrupt_record);
 }
@@ -644,6 +665,7 @@ CVType LeafRecord::toCodeViewRecord(TypeTableBuilder &TTB) const {
 
 namespace llvm {
 namespace yaml {
+
 template <> struct MappingTraits<LeafRecordBase> {
   static void mapping(IO &io, LeafRecordBase &Record) { Record.map(io); }
 };
@@ -651,8 +673,9 @@ template <> struct MappingTraits<LeafRecordBase> {
 template <> struct MappingTraits<MemberRecordBase> {
   static void mapping(IO &io, MemberRecordBase &Record) { Record.map(io); }
 };
-}
-}
+
+} // end namespace yaml
+} // end namespace llvm
 
 template <typename ConcreteType>
 static void mapLeafRecordImpl(IO &IO, const char *Class, TypeLeafKind Kind,

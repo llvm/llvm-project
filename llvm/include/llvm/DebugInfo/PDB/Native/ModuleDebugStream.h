@@ -1,4 +1,4 @@
-//===- ModuleDebugStream.h - PDB Module Info Stream Access ----------------===//
+//===- ModuleDebugStream.h - PDB Module Info Stream Access ------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,26 +7,26 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_PDB_RAW_MODULEDEBUGSTREAM_H
-#define LLVM_DEBUGINFO_PDB_RAW_MODULEDEBUGSTREAM_H
+#ifndef LLVM_DEBUGINFO_PDB_NATIVE_MODULEDEBUGSTREAM_H
+#define LLVM_DEBUGINFO_PDB_NATIVE_MODULEDEBUGSTREAM_H
 
 #include "llvm/ADT/iterator_range.h"
-#include "llvm/DebugInfo/CodeView/CVRecord.h"
 #include "llvm/DebugInfo/CodeView/DebugChecksumsSubsection.h"
 #include "llvm/DebugInfo/CodeView/DebugSubsectionRecord.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
-#include "llvm/Support/BinaryStreamArray.h"
 #include "llvm/Support/BinaryStreamRef.h"
 #include "llvm/Support/Error.h"
+#include <cstdint>
+#include <memory>
 
 namespace llvm {
 namespace pdb {
-class PDBFile;
+
 class DbiModuleDescriptor;
 
 class ModuleDebugStreamRef {
-  typedef codeview::DebugSubsectionArray::Iterator DebugSubsectionIterator;
+  using DebugSubsectionIterator = codeview::DebugSubsectionArray::Iterator;
 
 public:
   ModuleDebugStreamRef(const DbiModuleDescriptor &Module,
@@ -50,7 +50,7 @@ public:
 
   ModuleDebugStreamRef &operator=(ModuleDebugStreamRef &&Other) = default;
 
-  llvm::iterator_range<DebugSubsectionIterator> subsections() const;
+  iterator_range<DebugSubsectionIterator> subsections() const;
 
   bool hasDebugSubsections() const;
 
@@ -75,7 +75,8 @@ private:
 
   codeview::DebugSubsectionArray Subsections;
 };
-}
-}
 
-#endif
+} // end namespace pdb
+} // end namespace llvm
+
+#endif // LLVM_DEBUGINFO_PDB_NATIVE_MODULEDEBUGSTREAM_H

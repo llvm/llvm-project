@@ -39,7 +39,9 @@ protected:
   bool HasHighWord;
   bool HasFPExtension;
   bool HasPopulationCount;
+  bool HasMessageSecurityAssist3;
   bool HasMessageSecurityAssist4;
+  bool HasResetReferenceBitsMultiple;
   bool HasFastSerialization;
   bool HasInterlockedAccess1;
   bool HasMiscellaneousExtensions;
@@ -48,6 +50,7 @@ protected:
   bool HasTransactionalExecution;
   bool HasProcessorAssist;
   bool HasDFPZonedConversion;
+  bool HasEnhancedDAT2;
   bool HasVector;
   bool HasLoadStoreOnCond2;
   bool HasLoadAndZeroRightmostByte;
@@ -109,8 +112,17 @@ public:
   bool hasPopulationCount() const { return HasPopulationCount; }
 
   // Return true if the target has the message-security-assist
+  // extension facility 3.
+  bool hasMessageSecurityAssist3() const { return HasMessageSecurityAssist3; }
+
+  // Return true if the target has the message-security-assist
   // extension facility 4.
   bool hasMessageSecurityAssist4() const { return HasMessageSecurityAssist4; }
+
+  // Return true if the target has the reset-reference-bits-multiple facility.
+  bool hasResetReferenceBitsMultiple() const {
+    return HasResetReferenceBitsMultiple;
+  }
 
   // Return true if the target has the fast-serialization facility.
   bool hasFastSerialization() const { return HasFastSerialization; }
@@ -137,6 +149,9 @@ public:
 
   // Return true if the target has the DFP zoned-conversion facility.
   bool hasDFPZonedConversion() const { return HasDFPZonedConversion; }
+
+  // Return true if the target has the enhanced-DAT facility 2.
+  bool hasEnhancedDAT2() const { return HasEnhancedDAT2; }
 
   // Return true if the target has the load-and-zero-rightmost-byte facility.
   bool hasLoadAndZeroRightmostByte() const {

@@ -162,6 +162,12 @@ static DecodeStatus DecodeAR32BitRegisterClass(MCInst &Inst, uint64_t RegNo,
   return decodeRegisterClass(Inst, RegNo, SystemZMC::AR32Regs, 16);
 }
 
+static DecodeStatus DecodeCR64BitRegisterClass(MCInst &Inst, uint64_t RegNo,
+                                               uint64_t Address,
+                                               const void *Decoder) {
+  return decodeRegisterClass(Inst, RegNo, SystemZMC::CR64Regs, 16);
+}
+
 template<unsigned N>
 static DecodeStatus decodeUImmOperand(MCInst &Inst, uint64_t Imm) {
   if (!isUInt<N>(Imm))

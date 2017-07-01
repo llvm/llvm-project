@@ -188,10 +188,19 @@ public:
 
   /// \brief Return if a code hotness metric should be included in optimization
   /// diagnostics.
-  bool getDiagnosticHotnessRequested() const;
+  bool getDiagnosticsHotnessRequested() const;
   /// \brief Set if a code hotness metric should be included in optimization
   /// diagnostics.
-  void setDiagnosticHotnessRequested(bool Requested);
+  void setDiagnosticsHotnessRequested(bool Requested);
+
+  /// \brief Return the minimum hotness value a diagnostic would need in order
+  /// to be included in optimization diagnostics. If there is no minimum, this
+  /// returns None.
+  uint64_t getDiagnosticsHotnessThreshold() const;
+
+  /// \brief Set the minimum hotness value a diagnostic needs in order to be
+  /// included in optimization diagnostics.
+  void setDiagnosticsHotnessThreshold(uint64_t Threshold);
 
   /// \brief Return the YAML file used by the backend to save optimization
   /// diagnostics.  If null, diagnostics are not saved in a file but only

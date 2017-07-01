@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=thumbv8m.base-eabi -arm-execute-only %s -o - | FileCheck --check-prefix=CHECK --check-prefix=CHECK-T2BASE %s
-; RUN: llc -mtriple=thumbv7m-eabi      -arm-execute-only %s -o - | FileCheck --check-prefix=CHECK --check-prefix=CHECK-T2 %s
-; RUN: llc -mtriple=thumbv8m.main-eabi -arm-execute-only %s -o - | FileCheck --check-prefix=CHECK --check-prefix=CHECK-T2 %s
+; RUN: llc -mtriple=thumbv8m.base-eabi -mattr=+execute-only %s -o - | FileCheck --check-prefix=CHECK --check-prefix=CHECK-T2BASE %s
+; RUN: llc -mtriple=thumbv7m-eabi      -mattr=+execute-only %s -o - | FileCheck --check-prefix=CHECK --check-prefix=CHECK-T2 %s
+; RUN: llc -mtriple=thumbv8m.main-eabi -mattr=+execute-only %s -o - | FileCheck --check-prefix=CHECK --check-prefix=CHECK-T2 %s
 
 @var = global i32 0
 

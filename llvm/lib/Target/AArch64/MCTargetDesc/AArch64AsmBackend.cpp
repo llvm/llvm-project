@@ -541,14 +541,13 @@ public:
     return createAArch64ELFObjectWriter(OS, OSABI, IsLittleEndian, IsILP32);
   }
 
-  void processFixupValue(const MCAssembler &Asm, const MCFixup &Fixup,
-                         const MCValue &Target, bool &IsResolved) override;
+  bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
+                             const MCValue &Target) override;
 };
 
-void ELFAArch64AsmBackend::processFixupValue(const MCAssembler &Asm,
-                                             const MCFixup &Fixup,
-                                             const MCValue &Target,
-                                             bool &IsResolved) {
+bool ELFAArch64AsmBackend::shouldForceRelocation(const MCAssembler &Asm,
+                                                 const MCFixup &Fixup,
+                                                 const MCValue &Target) {
   // The ADRP instruction adds some multiple of 0x1000 to the current PC &
   // ~0xfff. This means that the required offset to reach a symbol can vary by
   // up to one step depending on where the ADRP is in memory. For example:
@@ -562,7 +561,8 @@ void ELFAArch64AsmBackend::processFixupValue(const MCAssembler &Asm,
   // section isn't 0x1000-aligned, we therefore need to delegate this decision
   // to the linker -- a relocation!
   if ((uint32_t)Fixup.getKind() == AArch64::fixup_aarch64_pcrel_adrp_imm21)
-    IsResolved = false;
+    return true;
+  return false;
 }
 
 }

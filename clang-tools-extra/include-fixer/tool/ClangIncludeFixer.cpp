@@ -28,7 +28,6 @@ using namespace llvm;
 using clang::include_fixer::IncludeFixerContext;
 
 LLVM_YAML_IS_DOCUMENT_LIST_VECTOR(IncludeFixerContext)
-LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(std::string)
 LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(IncludeFixerContext::HeaderInfo)
 LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(IncludeFixerContext::QuerySymbolInfo)
 

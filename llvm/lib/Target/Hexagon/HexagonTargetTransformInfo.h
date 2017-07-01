@@ -63,6 +63,9 @@ public:
   /// @}
 
   int getUserCost(const User *U, ArrayRef<const Value *> Operands);
+
+  // Hexagon specific decision to generate a lookup table.
+  bool shouldBuildLookupTables() const;
 };
 
 } // end namespace llvm

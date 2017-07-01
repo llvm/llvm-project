@@ -20,8 +20,6 @@
 using namespace llvm::AMDGPU;
 using namespace llvm::AMDGPU::CodeObject;
 
-LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(uint32_t)
-LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(std::string)
 LLVM_YAML_IS_SEQUENCE_VECTOR(Kernel::Arg::Metadata)
 LLVM_YAML_IS_SEQUENCE_VECTOR(Kernel::Metadata)
 

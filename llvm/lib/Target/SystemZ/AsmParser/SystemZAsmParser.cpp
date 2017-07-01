@@ -61,6 +61,7 @@ enum RegisterKind {
   VR64Reg,
   VR128Reg,
   AR32Reg,
+  CR64Reg,
 };
 
 enum MemoryKind {
@@ -343,6 +344,7 @@ public:
   bool isVF128() const { return false; }
   bool isVR128() const { return isReg(VR128Reg); }
   bool isAR32() const { return isReg(AR32Reg); }
+  bool isCR64() const { return isReg(CR64Reg); }
   bool isAnyReg() const { return (isReg() || isImm(0, 15)); }
   bool isBDAddr32Disp12() const { return isMemDisp12(BDMem, ADDR32Reg); }
   bool isBDAddr32Disp20() const { return isMemDisp20(BDMem, ADDR32Reg); }
@@ -379,7 +381,8 @@ private:
     RegGR,
     RegFP,
     RegV,
-    RegAR
+    RegAR,
+    RegCR
   };
   struct Register {
     RegisterGroup Group;
@@ -486,6 +489,9 @@ public:
   }
   OperandMatchResultTy parseAR32(OperandVector &Operands) {
     return parseRegister(Operands, RegAR, SystemZMC::AR32Regs, AR32Reg);
+  }
+  OperandMatchResultTy parseCR64(OperandVector &Operands) {
+    return parseRegister(Operands, RegCR, SystemZMC::CR64Regs, CR64Reg);
   }
   OperandMatchResultTy parseAnyReg(OperandVector &Operands) {
     return parseAnyRegister(Operands);
@@ -648,6 +654,8 @@ bool SystemZAsmParser::parseRegister(Register &Reg) {
     Reg.Group = RegV;
   else if (Prefix == 'a' && Reg.Num < 16)
     Reg.Group = RegAR;
+  else if (Prefix == 'c' && Reg.Num < 16)
+    Reg.Group = RegCR;
   else
     return Error(Reg.StartLoc, "invalid register");
 
@@ -740,6 +748,10 @@ SystemZAsmParser::parseAnyRegister(OperandVector &Operands) {
     else if (Reg.Group == RegAR) {
       Kind = AR32Reg;
       RegNo = SystemZMC::AR32Regs[Reg.Num];
+    }
+    else if (Reg.Group == RegCR) {
+      Kind = CR64Reg;
+      RegNo = SystemZMC::CR64Regs[Reg.Num];
     }
     else {
       return MatchOperand_ParseFail;
@@ -1056,6 +1068,8 @@ bool SystemZAsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
     RegNo = SystemZMC::VR128Regs[Reg.Num];
   else if (Reg.Group == RegAR)
     RegNo = SystemZMC::AR32Regs[Reg.Num];
+  else if (Reg.Group == RegCR)
+    RegNo = SystemZMC::CR64Regs[Reg.Num];
   StartLoc = Reg.StartLoc;
   EndLoc = Reg.EndLoc;
   return false;

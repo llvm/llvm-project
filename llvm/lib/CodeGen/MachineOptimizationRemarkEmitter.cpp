@@ -52,6 +52,14 @@ void MachineOptimizationRemarkEmitter::emit(
   computeHotness(OptDiag);
 
   LLVMContext &Ctx = MF.getFunction()->getContext();
+
+  // If a diagnostic has a hotness value, then only emit it if its hotness
+  // meets the threshold.
+  if (OptDiag.getHotness() &&
+      *OptDiag.getHotness() < Ctx.getDiagnosticsHotnessThreshold()) {
+    return;
+  }
+
   yaml::Output *Out = Ctx.getDiagnosticsOutputFile();
   if (Out) {
     auto *P = &const_cast<DiagnosticInfoOptimizationBase &>(OptDiagCommon);
@@ -73,7 +81,7 @@ bool MachineOptimizationRemarkEmitterPass::runOnMachineFunction(
     MachineFunction &MF) {
   MachineBlockFrequencyInfo *MBFI;
 
-  if (MF.getFunction()->getContext().getDiagnosticHotnessRequested())
+  if (MF.getFunction()->getContext().getDiagnosticsHotnessRequested())
     MBFI = &getAnalysis<LazyMachineBlockFrequencyInfoPass>().getBFI();
   else
     MBFI = nullptr;

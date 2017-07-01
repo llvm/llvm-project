@@ -13,13 +13,25 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ObjectYAML/CodeViewYAMLSymbols.h"
-#include "llvm/ADT/StringExtras.h"
-#include "llvm/ADT/StringSwitch.h"
-#include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/CodeViewError.h"
 #include "llvm/DebugInfo/CodeView/EnumTables.h"
+#include "llvm/DebugInfo/CodeView/RecordSerialization.h"
 #include "llvm/DebugInfo/CodeView/SymbolDeserializer.h"
+#include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/DebugInfo/CodeView/SymbolSerializer.h"
+#include "llvm/DebugInfo/CodeView/TypeIndex.h"
+#include "llvm/ObjectYAML/YAML.h"
+#include "llvm/Support/Allocator.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/YAMLTraits.h"
+#include <algorithm>
+#include <cstdint>
+#include <cstring>
+#include <string>
+#include <vector>
 
 using namespace llvm;
 using namespace llvm::codeview;
@@ -27,7 +39,6 @@ using namespace llvm::CodeViewYAML;
 using namespace llvm::CodeViewYAML::detail;
 using namespace llvm::yaml;
 
-LLVM_YAML_IS_SEQUENCE_VECTOR(StringRef)
 LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(TypeIndex)
 
 // We only need to declare these, the definitions are in CodeViewYAMLTypes.cpp
@@ -49,15 +60,16 @@ LLVM_YAML_DECLARE_ENUM_TRAITS(RegisterId)
 LLVM_YAML_DECLARE_ENUM_TRAITS(TrampolineType)
 LLVM_YAML_DECLARE_ENUM_TRAITS(ThunkOrdinal)
 
-LLVM_YAML_STRONG_TYPEDEF(llvm::StringRef, TypeName)
+LLVM_YAML_STRONG_TYPEDEF(StringRef, TypeName)
 
 LLVM_YAML_DECLARE_SCALAR_TRAITS(TypeName, true)
 
 StringRef ScalarTraits<TypeName>::input(StringRef S, void *V, TypeName &T) {
   return ScalarTraits<StringRef>::input(S, V, T.value);
 }
+
 void ScalarTraits<TypeName>::output(const TypeName &T, void *V,
-                                    llvm::raw_ostream &R) {
+                                    raw_ostream &R) {
   ScalarTraits<StringRef>::output(T.value, V, R);
 }
 
@@ -174,9 +186,10 @@ namespace detail {
 
 struct SymbolRecordBase {
   codeview::SymbolKind Kind;
-  explicit SymbolRecordBase(codeview::SymbolKind K) : Kind(K) {}
 
-  virtual ~SymbolRecordBase() {}
+  explicit SymbolRecordBase(codeview::SymbolKind K) : Kind(K) {}
+  virtual ~SymbolRecordBase() = default;
+
   virtual void map(yaml::IO &io) = 0;
   virtual codeview::CVSymbol
   toCodeViewSymbol(BumpPtrAllocator &Allocator,
@@ -195,6 +208,7 @@ template <typename T> struct SymbolRecordImpl : public SymbolRecordBase {
                    CodeViewContainer Container) const override {
     return SymbolSerializer::writeOneSymbol(Symbol, Allocator, Container);
   }
+
   Error fromCodeViewSymbol(codeview::CVSymbol CVS) override {
     return SymbolDeserializer::deserializeAs<T>(CVS, Symbol);
   }
@@ -218,6 +232,7 @@ struct UnknownSymbolRecord : public SymbolRecordBase {
     ::memcpy(Buffer + sizeof(RecordPrefix), Data.data(), Data.size());
     return CVSymbol(Kind, ArrayRef<uint8_t>(Buffer, TotalLen));
   }
+
   Error fromCodeViewSymbol(CVSymbol CVS) override {
     this->Kind = CVS.kind();
     Data = CVS.RecordData.drop_front(sizeof(RecordPrefix));
@@ -497,9 +512,10 @@ template <> void SymbolRecordImpl<ThreadLocalDataSym>::map(IO &IO) {
   IO.mapOptional("Segment", Symbol.Segment, uint16_t(0));
   IO.mapRequired("DisplayName", Symbol.Name);
 }
-}
-}
-}
+
+} // end namespace detail
+} // end namespace CodeViewYAML
+} // end namespace llvm
 
 CVSymbol CodeViewYAML::SymbolRecord::toCodeViewSymbol(
     BumpPtrAllocator &Allocator, CodeViewContainer Container) const {
@@ -508,11 +524,13 @@ CVSymbol CodeViewYAML::SymbolRecord::toCodeViewSymbol(
 
 namespace llvm {
 namespace yaml {
+
 template <> struct MappingTraits<SymbolRecordBase> {
   static void mapping(IO &io, SymbolRecordBase &Record) { Record.map(io); }
 };
-}
-}
+
+} // end namespace yaml
+} // end namespace llvm
 
 template <typename SymbolType>
 static inline Expected<CodeViewYAML::SymbolRecord>

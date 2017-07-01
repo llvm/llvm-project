@@ -1002,51 +1002,46 @@ bool HexagonTargetLowering::getPostIndexedAddressParts(SDNode *N, SDNode *Op,
 
 SDValue
 HexagonTargetLowering::LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const {
-  SDNode *Node = Op.getNode();
   MachineFunction &MF = DAG.getMachineFunction();
-  auto &FuncInfo = *MF.getInfo<HexagonMachineFunctionInfo>();
-  switch (Node->getOpcode()) {
-    case ISD::INLINEASM: {
-      unsigned NumOps = Node->getNumOperands();
-      if (Node->getOperand(NumOps-1).getValueType() == MVT::Glue)
-        --NumOps;  // Ignore the flag operand.
+  auto &HMFI = *MF.getInfo<HexagonMachineFunctionInfo>();
+  const HexagonRegisterInfo &HRI = *Subtarget.getRegisterInfo();
+  unsigned LR = HRI.getRARegister();
 
-      for (unsigned i = InlineAsm::Op_FirstOperand; i != NumOps;) {
-        if (FuncInfo.hasClobberLR())
-          break;
-        unsigned Flags =
-          cast<ConstantSDNode>(Node->getOperand(i))->getZExtValue();
-        unsigned NumVals = InlineAsm::getNumOperandRegisters(Flags);
-        ++i;  // Skip the ID value.
+  if (Op.getOpcode() != ISD::INLINEASM || HMFI.hasClobberLR())
+    return Op;
 
-        switch (InlineAsm::getKind(Flags)) {
-        default: llvm_unreachable("Bad flags!");
-          case InlineAsm::Kind_RegDef:
-          case InlineAsm::Kind_RegUse:
-          case InlineAsm::Kind_Imm:
-          case InlineAsm::Kind_Clobber:
-          case InlineAsm::Kind_Mem: {
-            for (; NumVals; --NumVals, ++i) {}
-            break;
-          }
-          case InlineAsm::Kind_RegDefEarlyClobber: {
-            for (; NumVals; --NumVals, ++i) {
-              unsigned Reg =
-                cast<RegisterSDNode>(Node->getOperand(i))->getReg();
+  unsigned NumOps = Op.getNumOperands();
+  if (Op.getOperand(NumOps-1).getValueType() == MVT::Glue)
+    --NumOps;  // Ignore the flag operand.
 
-              // Check it to be lr
-              const HexagonRegisterInfo *QRI = Subtarget.getRegisterInfo();
-              if (Reg == QRI->getRARegister()) {
-                FuncInfo.setHasClobberLR(true);
-                break;
-              }
-            }
-            break;
-          }
+  for (unsigned i = InlineAsm::Op_FirstOperand; i != NumOps;) {
+    unsigned Flags = cast<ConstantSDNode>(Op.getOperand(i))->getZExtValue();
+    unsigned NumVals = InlineAsm::getNumOperandRegisters(Flags);
+    ++i;  // Skip the ID value.
+
+    switch (InlineAsm::getKind(Flags)) {
+      default:
+        llvm_unreachable("Bad flags!");
+      case InlineAsm::Kind_RegUse:
+      case InlineAsm::Kind_Imm:
+      case InlineAsm::Kind_Mem:
+        i += NumVals;
+        break;
+      case InlineAsm::Kind_Clobber:
+      case InlineAsm::Kind_RegDef:
+      case InlineAsm::Kind_RegDefEarlyClobber: {
+        for (; NumVals; --NumVals, ++i) {
+          unsigned Reg = cast<RegisterSDNode>(Op.getOperand(i))->getReg();
+          if (Reg != LR)
+            continue;
+          HMFI.setHasClobberLR(true);
+          return Op;
         }
+        break;
       }
     }
-  } // Node->getOpcode
+  }
+
   return Op;
 }
 

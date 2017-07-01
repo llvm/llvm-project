@@ -269,6 +269,10 @@ def FeatureLongCalls : SubtargetFeature<"long-calls", "GenLongCalls", "true",
                                         "Generate calls via indirect call "
                                         "instructions">;
 
+def FeatureExecuteOnly
+    : SubtargetFeature<"execute-only", "GenExecuteOnly", "true",
+                       "Enable the generation of execute only code.">;
+
 def FeatureReserveR9 : SubtargetFeature<"reserve-r9", "ReserveR9", "true",
                                         "Reserve R9, making it unavailable as "
                                         "GPR">;

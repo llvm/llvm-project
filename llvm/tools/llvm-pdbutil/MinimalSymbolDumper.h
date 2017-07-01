@@ -27,6 +27,7 @@ public:
       : P(P), Types(Types) {}
 
   Error visitSymbolBegin(codeview::CVSymbol &Record) override;
+  Error visitSymbolBegin(codeview::CVSymbol &Record, uint32_t Offset) override;
   Error visitSymbolEnd(codeview::CVSymbol &Record) override;
 
 #define SYMBOL_RECORD(EnumName, EnumVal, Name)                                 \

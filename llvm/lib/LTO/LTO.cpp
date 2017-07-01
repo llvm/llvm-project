@@ -1123,7 +1123,7 @@ lto::setupOptimizationRemarks(LLVMContext &Context,
   Context.setDiagnosticsOutputFile(
       llvm::make_unique<yaml::Output>(DiagnosticFile->os()));
   if (LTOPassRemarksWithHotness)
-    Context.setDiagnosticHotnessRequested(true);
+    Context.setDiagnosticsHotnessRequested(true);
   DiagnosticFile->keep();
   return std::move(DiagnosticFile);
 }

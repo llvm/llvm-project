@@ -608,6 +608,11 @@
 	clih	%r0, -1
 	clih	%r0, (1 << 32)
 
+#CHECK: error: instruction requires: enhanced-dat-2
+#CHECK: crdte   %r0, %r0, %r0, 0
+
+	crdte   %r0, %r0, %r0, 0
+
 #CHECK: error: invalid operand
 #CHECK: cxfbra	%f0, 0, %r0, -1
 #CHECK: error: invalid operand

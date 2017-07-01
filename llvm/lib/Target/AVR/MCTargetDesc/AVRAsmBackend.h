@@ -64,8 +64,8 @@ public:
 
   bool writeNopData(uint64_t Count, MCObjectWriter *OW) const override;
 
-  void processFixupValue(const MCAssembler &Asm, const MCFixup &Fixup,
-                         const MCValue &Target, bool &IsResolved) override;
+  bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
+                             const MCValue &Target) override;
 
 private:
   Triple::OSType OSType;

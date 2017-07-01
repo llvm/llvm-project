@@ -37,8 +37,6 @@ private:
 
   Error dumpFileSummary();
   Error dumpStreamSummary();
-  Error dumpBlockRanges();
-  Error dumpStreamBytes();
   Error dumpStringTable();
   Error dumpLines();
   Error dumpInlineeLines();

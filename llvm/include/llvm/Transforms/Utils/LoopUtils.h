@@ -184,9 +184,14 @@ public:
   /// Returns true if Phi is a first-order recurrence. A first-order recurrence
   /// is a non-reduction recurrence relation in which the value of the
   /// recurrence in the current loop iteration equals a value defined in the
-  /// previous iteration.
-  static bool isFirstOrderRecurrence(PHINode *Phi, Loop *TheLoop,
-                                     DominatorTree *DT);
+  /// previous iteration. \p SinkAfter includes pairs of instructions where the
+  /// first will be rescheduled to appear after the second if/when the loop is
+  /// vectorized. It may be augmented with additional pairs if needed in order
+  /// to handle Phi as a first-order recurrence.
+  static bool
+  isFirstOrderRecurrence(PHINode *Phi, Loop *TheLoop,
+                         DenseMap<Instruction *, Instruction *> &SinkAfter,
+                         DominatorTree *DT);
 
   RecurrenceKind getRecurrenceKind() { return Kind; }
 

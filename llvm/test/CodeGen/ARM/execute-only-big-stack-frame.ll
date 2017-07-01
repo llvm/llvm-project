@@ -1,8 +1,8 @@
-; RUN: llc < %s -mtriple=thumbv7m -arm-execute-only -O0 %s -o - \
+; RUN: llc < %s -mtriple=thumbv7m -mattr=+execute-only -O0 %s -o - \
 ; RUN:  | FileCheck --check-prefix=CHECK-SUBW-ADDW %s
-; RUN: llc < %s -mtriple=thumbv8m.base -arm-execute-only -O0 %s -o - \
+; RUN: llc < %s -mtriple=thumbv8m.base -mattr=+execute-only -O0 %s -o - \
 ; RUN:  | FileCheck --check-prefix=CHECK-MOVW-MOVT-ADD %s
-; RUN: llc < %s -mtriple=thumbv8m.main -arm-execute-only -O0 %s -o - \
+; RUN: llc < %s -mtriple=thumbv8m.main -mattr=+execute-only -O0 %s -o - \
 ; RUN:  | FileCheck --check-prefix=CHECK-SUBW-ADDW %s
 
 define i8 @test_big_stack_frame() {

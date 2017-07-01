@@ -35,6 +35,8 @@
 using namespace llvm;
 
 LegalizerInfo::LegalizerInfo() {
+  DefaultActions[TargetOpcode::G_IMPLICIT_DEF] = NarrowScalar;
+
   // FIXME: these two can be legalized to the fundamental load/store Jakob
   // proposed. Once loads & stores are supported.
   DefaultActions[TargetOpcode::G_ANYEXT] = Legal;

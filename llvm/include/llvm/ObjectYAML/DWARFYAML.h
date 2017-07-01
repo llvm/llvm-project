@@ -16,8 +16,11 @@
 #ifndef LLVM_OBJECTYAML_DWARFYAML_H
 #define LLVM_OBJECTYAML_DWARFYAML_H
 
+#include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Dwarf.h"
-#include "llvm/ObjectYAML/YAML.h"
+#include "llvm/Support/YAMLTraits.h"
+#include <cstdint>
+#include <vector>
 
 namespace llvm {
 namespace DWARFYAML {
@@ -76,13 +79,11 @@ struct PubEntry {
 };
 
 struct PubSection {
-  PubSection() : IsGNUStyle(false) {}
-
   InitialLength Length;
   uint16_t Version;
   uint32_t UnitOffset;
   uint32_t UnitSize;
-  bool IsGNUStyle;
+  bool IsGNUStyle = false;
   std::vector<PubEntry> Entries;
 };
 
@@ -158,12 +159,10 @@ struct Data {
   bool isEmpty() const;
 };
 
-} // namespace llvm::DWARFYAML
-} // namespace llvm
+} // end namespace DWARFYAML
+} // end namespace llvm
 
-LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(uint8_t)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::yaml::Hex64)
-LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::StringRef)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::yaml::Hex8)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DWARFYAML::AttributeAbbrev)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DWARFYAML::Abbrev)
@@ -304,7 +303,7 @@ template <> struct ScalarEnumerationTraits<dwarf::Constants> {
   }
 };
 
-} // namespace llvm::yaml
-} // namespace llvm
+} // end namespace yaml
+} // end namespace llvm
 
-#endif
+#endif // LLVM_OBJECTYAML_DWARFYAML_H
