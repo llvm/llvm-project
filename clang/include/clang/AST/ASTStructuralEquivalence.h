@@ -62,9 +62,11 @@ struct StructuralEquivalenceContext {
   StructuralEquivalenceContext(
       ASTContext &FromCtx, ASTContext &ToCtx,
       llvm::DenseSet<std::pair<Decl *, Decl *>> &NonEquivalentDecls,
-      bool StrictTypeSpelling = false, bool Complain = true)
+      bool StrictTypeSpelling = false, bool Complain = true,
+      bool ErrorOnTagTypeMismatch = false)
       : FromCtx(FromCtx), ToCtx(ToCtx), NonEquivalentDecls(NonEquivalentDecls),
-        StrictTypeSpelling(StrictTypeSpelling), Complain(Complain),
+        StrictTypeSpelling(StrictTypeSpelling),
+        ErrorOnTagTypeMismatch(ErrorOnTagTypeMismatch), Complain(Complain),
         LastDiagFromC2(false) {}
 
   DiagnosticBuilder Diag1(SourceLocation Loc, unsigned DiagID);

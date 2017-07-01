@@ -65,12 +65,14 @@ template <class NodeT> class DomTreeNodeBase {
 
   NodeT *TheBB;
   DomTreeNodeBase *IDom;
+  unsigned Level;
   std::vector<DomTreeNodeBase *> Children;
   mutable unsigned DFSNumIn = ~0;
   mutable unsigned DFSNumOut = ~0;
 
  public:
-  DomTreeNodeBase(NodeT *BB, DomTreeNodeBase *iDom) : TheBB(BB), IDom(iDom) {}
+  DomTreeNodeBase(NodeT *BB, DomTreeNodeBase *iDom)
+      : TheBB(BB), IDom(iDom), Level(IDom ? IDom->Level + 1 : 0) {}
 
   using iterator = typename std::vector<DomTreeNodeBase *>::iterator;
   using const_iterator =
@@ -83,6 +85,7 @@ template <class NodeT> class DomTreeNodeBase {
 
   NodeT *getBlock() const { return TheBB; }
   DomTreeNodeBase *getIDom() const { return IDom; }
+  unsigned getLevel() const { return Level; }
 
   const std::vector<DomTreeNodeBase *> &getChildren() const { return Children; }
 
@@ -100,6 +103,8 @@ template <class NodeT> class DomTreeNodeBase {
     if (getNumChildren() != Other->getNumChildren())
       return true;
 
+    if (Level != Other->Level) return true;
+
     SmallPtrSet<const NodeT *, 4> OtherChildren;
     for (const DomTreeNodeBase *I : *Other) {
       const NodeT *Nd = I->getBlock();
@@ -116,18 +121,19 @@ template <class NodeT> class DomTreeNodeBase {
 
   void setIDom(DomTreeNodeBase *NewIDom) {
     assert(IDom && "No immediate dominator?");
-    if (IDom != NewIDom) {
-      typename std::vector<DomTreeNodeBase *>::iterator I =
-          find(IDom->Children, this);
-      assert(I != IDom->Children.end() &&
-             "Not in immediate dominator children set!");
-      // I am no longer your child...
-      IDom->Children.erase(I);
+    if (IDom == NewIDom) return;
 
-      // Switch to new dominator
-      IDom = NewIDom;
-      IDom->Children.push_back(this);
-    }
+    auto I = find(IDom->Children, this);
+    assert(I != IDom->Children.end() &&
+           "Not in immediate dominator children set!");
+    // I am no longer your child...
+    IDom->Children.erase(I);
+
+    // Switch to new dominator
+    IDom = NewIDom;
+    IDom->Children.push_back(this);
+
+    UpdateLevel();
   }
 
   /// getDFSNumIn/getDFSNumOut - These return the DFS visitation order for nodes
@@ -143,6 +149,23 @@ private:
     return this->DFSNumIn >= other->DFSNumIn &&
            this->DFSNumOut <= other->DFSNumOut;
   }
+
+  void UpdateLevel() {
+    assert(IDom);
+    if (Level == IDom->Level + 1) return;
+
+    SmallVector<DomTreeNodeBase *, 64> WorkStack = {this};
+
+    while (!WorkStack.empty()) {
+      DomTreeNodeBase *Current = WorkStack.pop_back_val();
+      Current->Level = Current->IDom->Level + 1;
+
+      for (DomTreeNodeBase *C : *Current) {
+        assert(C->IDom);
+        if (C->Level != C->IDom->Level + 1) WorkStack.push_back(C);
+      }
+    }
+  }
 };
 
 template <class NodeT>
@@ -152,9 +175,10 @@ raw_ostream &operator<<(raw_ostream &O, const DomTreeNodeBase<NodeT> *Node) {
   else
     O << " <<exit node>>";
 
-  O << " {" << Node->getDFSNumIn() << "," << Node->getDFSNumOut() << "}";
+  O << " {" << Node->getDFSNumIn() << "," << Node->getDFSNumOut() << "} ["
+    << Node->getLevel() << "]\n";
 
-  return O << "\n";
+  return O;
 }
 
 template <class NodeT>
@@ -345,6 +369,13 @@ template <class NodeT> class DominatorTreeBase {
     if (!isReachableFromEntry(A))
       return false;
 
+    if (B->getIDom() == A) return true;
+
+    if (A->getIDom() == B) return false;
+
+    // A can only dominate B if it is higher in the tree.
+    if (A->getLevel() >= B->getLevel()) return false;
+
     // Compare the result of the tree walk and the dfs numbers, if expensive
     // checks are enabled.
 #ifdef EXPENSIVE_CHECKS
@@ -376,7 +407,7 @@ template <class NodeT> class DominatorTreeBase {
 
   /// findNearestCommonDominator - Find nearest common dominator basic block
   /// for basic block A and B. If there is no such block then return NULL.
-  NodeT *findNearestCommonDominator(NodeT *A, NodeT *B) {
+  NodeT *findNearestCommonDominator(NodeT *A, NodeT *B) const {
     assert(A->getParent() == B->getParent() &&
            "Two blocks are not in same function");
 
@@ -388,54 +419,24 @@ template <class NodeT> class DominatorTreeBase {
         return &Entry;
     }
 
-    // If B dominates A then B is nearest common dominator.
-    if (dominates(B, A))
-      return B;
-
-    // If A dominates B then A is nearest common dominator.
-    if (dominates(A, B))
-      return A;
-
     DomTreeNodeBase<NodeT> *NodeA = getNode(A);
     DomTreeNodeBase<NodeT> *NodeB = getNode(B);
 
-    // If we have DFS info, then we can avoid all allocations by just querying
-    // it from each IDom. Note that because we call 'dominates' twice above, we
-    // expect to call through this code at most 16 times in a row without
-    // building valid DFS information. This is important as below is a *very*
-    // slow tree walk.
-    if (DFSInfoValid) {
-      DomTreeNodeBase<NodeT> *IDomA = NodeA->getIDom();
-      while (IDomA) {
-        if (NodeB->DominatedBy(IDomA))
-          return IDomA->getBlock();
-        IDomA = IDomA->getIDom();
-      }
-      return nullptr;
+    if (!NodeA || !NodeB) return nullptr;
+
+    // Use level information to go up the tree until the levels match. Then
+    // continue going up til we arrive at the same node.
+    while (NodeA && NodeA != NodeB) {
+      if (NodeA->getLevel() < NodeB->getLevel()) std::swap(NodeA, NodeB);
+
+      NodeA = NodeA->IDom;
     }
 
-    // Collect NodeA dominators set.
-    SmallPtrSet<DomTreeNodeBase<NodeT> *, 16> NodeADoms;
-    NodeADoms.insert(NodeA);
-    DomTreeNodeBase<NodeT> *IDomA = NodeA->getIDom();
-    while (IDomA) {
-      NodeADoms.insert(IDomA);
-      IDomA = IDomA->getIDom();
-    }
-
-    // Walk NodeB immediate dominators chain and find common dominator node.
-    DomTreeNodeBase<NodeT> *IDomB = NodeB->getIDom();
-    while (IDomB) {
-      if (NodeADoms.count(IDomB) != 0)
-        return IDomB->getBlock();
-
-      IDomB = IDomB->getIDom();
-    }
-
-    return nullptr;
+    return NodeA ? NodeA->getBlock() : nullptr;
   }
 
-  const NodeT *findNearestCommonDominator(const NodeT *A, const NodeT *B) {
+  const NodeT *findNearestCommonDominator(const NodeT *A,
+                                          const NodeT *B) const {
     // Cast away the const qualifiers here. This is ok since
     // const is re-introduced on the return type.
     return findNearestCommonDominator(const_cast<NodeT *>(A),
@@ -481,8 +482,10 @@ template <class NodeT> class DominatorTreeBase {
     } else {
       assert(Roots.size() == 1);
       NodeT *OldRoot = Roots.front();
-      DomTreeNodes[OldRoot] =
-        NewNode->addChild(std::move(DomTreeNodes[OldRoot]));
+      auto &OldNode = DomTreeNodes[OldRoot];
+      OldNode = NewNode->addChild(std::move(DomTreeNodes[OldRoot]));
+      OldNode->IDom = NewNode;
+      OldNode->UpdateLevel();
       Roots[0] = BB;
     }
     return RootNode = NewNode;

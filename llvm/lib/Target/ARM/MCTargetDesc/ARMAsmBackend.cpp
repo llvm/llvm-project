@@ -738,13 +738,13 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
   }
 }
 
-void ARMAsmBackend::processFixupValue(const MCAssembler &Asm,
-                                      const MCFixup &Fixup,
-                                      const MCValue &Target, bool &IsResolved) {
+bool ARMAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
+                                          const MCFixup &Fixup,
+                                          const MCValue &Target) {
   const MCSymbolRefExpr *A = Target.getSymA();
   const MCSymbol *Sym = A ? &A->getSymbol() : nullptr;
   const unsigned FixupKind = Fixup.getKind() ;
-  if (IsResolved && (unsigned)Fixup.getKind() == ARM::fixup_arm_thumb_bl) {
+  if ((unsigned)Fixup.getKind() == ARM::fixup_arm_thumb_bl) {
     assert(Sym && "How did we resolve this?");
 
     // If the symbol is external the linker will handle it.
@@ -753,7 +753,7 @@ void ARMAsmBackend::processFixupValue(const MCAssembler &Asm,
     // If the symbol is out of range, produce a relocation and hope the
     // linker can handle it. GNU AS produces an error in this case.
     if (Sym->isExternal())
-      IsResolved = false;
+      return true;
   }
   // Create relocations for unconditional branches to function symbols with
   // different execution mode in ELF binaries.
@@ -761,12 +761,12 @@ void ARMAsmBackend::processFixupValue(const MCAssembler &Asm,
     unsigned Type = dyn_cast<MCSymbolELF>(Sym)->getType();
     if ((Type == ELF::STT_FUNC || Type == ELF::STT_GNU_IFUNC)) {
       if (Asm.isThumbFunc(Sym) && (FixupKind == ARM::fixup_arm_uncondbranch))
-        IsResolved = false;
+        return true;
       if (!Asm.isThumbFunc(Sym) && (FixupKind == ARM::fixup_arm_thumb_br ||
                                     FixupKind == ARM::fixup_arm_thumb_bl ||
                                     FixupKind == ARM::fixup_t2_condbranch ||
                                     FixupKind == ARM::fixup_t2_uncondbranch))
-        IsResolved = false;
+        return true;
     }
   }
   // We must always generate a relocation for BL/BLX instructions if we have
@@ -776,7 +776,8 @@ void ARMAsmBackend::processFixupValue(const MCAssembler &Asm,
             FixupKind == ARM::fixup_arm_blx ||
             FixupKind == ARM::fixup_arm_uncondbl ||
             FixupKind == ARM::fixup_arm_condbl))
-    IsResolved = false;
+    return true;
+  return false;
 }
 
 /// getFixupKindNumBytes - The number of bytes the fixup may change.

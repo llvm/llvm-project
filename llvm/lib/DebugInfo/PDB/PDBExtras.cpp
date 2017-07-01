@@ -1,4 +1,4 @@
-//===- PDBExtras.cpp - helper functions and classes for PDBs -----*- C++-*-===//
+//===- PDBExtras.cpp - helper functions and classes for PDBs --------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -8,9 +8,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/PDB/PDBExtras.h"
-
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/DebugInfo/CodeView/Formatters.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 using namespace llvm::pdb;

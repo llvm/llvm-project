@@ -11,10 +11,23 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "X86.h"
+
+#ifdef LLVM_BUILD_GLOBAL_ISEL
+#include "X86CallLowering.h"
+#include "X86LegalizerInfo.h"
+#include "X86RegisterBankInfo.h"
+#endif
 #include "X86Subtarget.h"
 #include "MCTargetDesc/X86BaseInfo.h"
 #include "X86TargetMachine.h"
 #include "llvm/ADT/Triple.h"
+#ifdef LLVM_BUILD_GLOBAL_ISEL
+#include "llvm/CodeGen/GlobalISel/CallLowering.h"
+#include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
+#include "llvm/CodeGen/GlobalISel/Legalizer.h"
+#include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
+#endif
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Function.h"
@@ -336,6 +349,35 @@ X86Subtarget &X86Subtarget::initializeSubtargetDependencies(StringRef CPU,
   return *this;
 }
 
+#ifdef LLVM_BUILD_GLOBAL_ISEL
+namespace {
+
+struct X86GISelActualAccessor : public GISelAccessor {
+  std::unique_ptr<CallLowering> CallLoweringInfo;
+  std::unique_ptr<LegalizerInfo> Legalizer;
+  std::unique_ptr<RegisterBankInfo> RegBankInfo;
+  std::unique_ptr<InstructionSelector> InstSelector;
+
+  const CallLowering *getCallLowering() const override {
+    return CallLoweringInfo.get();
+  }
+
+  const InstructionSelector *getInstructionSelector() const override {
+    return InstSelector.get();
+  }
+
+  const LegalizerInfo *getLegalizerInfo() const override {
+    return Legalizer.get();
+  }
+
+  const RegisterBankInfo *getRegBankInfo() const override {
+    return RegBankInfo.get();
+  }
+};
+
+} // end anonymous namespace
+#endif
+
 X86Subtarget::X86Subtarget(const Triple &TT, StringRef CPU, StringRef FS,
                            const X86TargetMachine &TM,
                            unsigned StackAlignOverride)
@@ -360,6 +402,19 @@ X86Subtarget::X86Subtarget(const Triple &TT, StringRef CPU, StringRef FS,
     setPICStyle(PICStyles::StubPIC);
   else if (isTargetELF())
     setPICStyle(PICStyles::GOT);
+#ifndef LLVM_BUILD_GLOBAL_ISEL
+  GISelAccessor *GISel = new GISelAccessor();
+#else
+  X86GISelActualAccessor *GISel = new X86GISelActualAccessor();
+
+  GISel->CallLoweringInfo.reset(new X86CallLowering(*getTargetLowering()));
+  GISel->Legalizer.reset(new X86LegalizerInfo(*this, TM));
+
+  auto *RBI = new X86RegisterBankInfo(*getRegisterInfo());
+  GISel->RegBankInfo.reset(RBI);
+  GISel->InstSelector.reset(createX86InstructionSelector(TM, *this, *RBI));
+#endif
+  setGISelAccessor(*GISel);
 }
 
 const CallLowering *X86Subtarget::getCallLowering() const {

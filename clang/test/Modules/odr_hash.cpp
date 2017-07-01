@@ -968,6 +968,24 @@ S9 s9;
 // expected-error@second.h:* {{'NestedNamespaceSpecifier::S9' has different definitions in different modules; first difference is definition in module 'SecondModule' found field 'x' with type 'P9::I' (aka 'int')}}
 // expected-note@first.h:* {{but in 'FirstModule' found field 'x' with type 'O9::I' (aka 'int')}}
 #endif
+
+namespace N10 {
+#if defined(FIRST)
+inline namespace A { struct X {}; }
+struct S10 {
+  A::X x;
+};
+#elif defined(SECOND)
+inline namespace B { struct X {}; }
+struct S10 {
+  B::X x;
+};
+#else
+S10 s10;
+// expected-error@second.h:* {{'NestedNamespaceSpecifier::N10::S10::x' from module 'SecondModule' is not present in definition of 'NestedNamespaceSpecifier::N10::S10' in module 'FirstModule'}}
+// expected-note@first.h:* {{declaration of 'x' does not match}}
+#endif
+}
 }
 
 namespace TemplateSpecializationType {
@@ -1069,6 +1087,40 @@ struct S4 {
 S4 s4;
 // expected-error@first.h:* {{'TemplateArgument::S4::x' from module 'FirstModule' is not present in definition of 'TemplateArgument::S4' in module 'SecondModule'}}
 // expected-note@second.h:* {{declaration of 'x' does not match}}
+#endif
+
+#if defined(FIRST)
+template <class T> struct U5 {};
+struct S5 {
+  U5<int> x;
+};
+#elif defined(SECOND)
+template <class T> struct U5 {};
+struct S5 {
+  U5<short> x;
+};
+#else
+S5 s5;
+// expected-error@first.h:* {{'TemplateArgument::S5::x' from module 'FirstModule' is not present in definition of 'TemplateArgument::S5' in module 'SecondModule'}}
+// expected-note@second.h:* {{declaration of 'x' does not match}}
+#endif
+
+#if defined(FIRST)
+template <class T> struct U6 {};
+struct S6 {
+  U6<int> x;
+  U6<short> y;
+};
+#elif defined(SECOND)
+template <class T> struct U6 {};
+struct S6 {
+  U6<short> y;
+  U6<int> x;
+};
+#else
+S6 s6;
+// expected-error@second.h:* {{'TemplateArgument::S6' has different definitions in different modules; first difference is definition in module 'SecondModule' found field 'y'}}
+// expected-note@first.h:* {{but in 'FirstModule' found field 'x'}}
 #endif
 }
 

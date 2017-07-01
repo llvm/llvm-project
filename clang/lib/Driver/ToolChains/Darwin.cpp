@@ -1150,6 +1150,17 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
       Args.getLastArg(options::OPT_mwatchos_version_min_EQ,
                       options::OPT_mwatchos_simulator_version_min_EQ);
 
+  unsigned Major, Minor, Micro;
+  bool HadExtra;
+
+  // iOS 10 is the maximum deployment target for 32-bit targets.
+  if (iOSVersion && getTriple().isArch32Bit() &&
+      Driver::GetReleaseVersion(iOSVersion->getValue(), Major, Minor, Micro,
+                                HadExtra) &&
+      Major > 10)
+    getDriver().Diag(diag::err_invalid_ios_deployment_target)
+        << iOSVersion->getAsString(Args);
+
   // Add a macro to differentiate between m(iphone|tv|watch)os-version-min=X.Y and
   // -m(iphone|tv|watch)simulator-version-min=X.Y.
   if (Args.hasArg(options::OPT_mios_simulator_version_min_EQ) ||
@@ -1190,6 +1201,14 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
       TvOSTarget = env;
     if (char *env = ::getenv("WATCHOS_DEPLOYMENT_TARGET"))
       WatchOSTarget = env;
+
+    // iOS 10 is the maximum deployment target for 32-bit targets.
+    if (!iOSTarget.empty() && getTriple().isArch32Bit() &&
+        Driver::GetReleaseVersion(iOSTarget.c_str(), Major, Minor, Micro,
+                                  HadExtra) &&
+        Major > 10)
+      getDriver().Diag(diag::err_invalid_ios_deployment_target)
+          << std::string("IPHONEOS_DEPLOYMENT_TARGET=") + iOSTarget;
 
     // If there is no command-line argument to specify the Target version and
     // no environment variable defined, see if we can set the default based
@@ -1308,8 +1327,6 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
     llvm_unreachable("Unable to infer Darwin variant");
 
   // Set the tool chain target information.
-  unsigned Major, Minor, Micro;
-  bool HadExtra;
   if (Platform == MacOS) {
     assert((!iOSVersion && !TvOSVersion && !WatchOSVersion) &&
            "Unknown target platform!");
@@ -1325,6 +1342,13 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
         HadExtra || Major >= 100 || Minor >= 100 || Micro >= 100)
       getDriver().Diag(diag::err_drv_invalid_version_number)
           << iOSVersion->getAsString(Args);
+      // iOS 10 is the maximum deployment target for 32-bit targets. If the
+      // inferred deployment target is iOS 11 or later, set it to 10.99.
+      if (getTriple().isArch32Bit() && Major >= 11) {
+        Major = 10;
+        Minor = 99;
+        Micro = 99;
+      }
   } else if (Platform == TvOS) {
     if (!Driver::GetReleaseVersion(TvOSVersion->getValue(), Major, Minor,
                                    Micro, HadExtra) || HadExtra ||

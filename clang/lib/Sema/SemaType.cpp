@@ -15,6 +15,7 @@
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTMutationListener.h"
+#include "clang/AST/ASTStructuralEquivalence.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
@@ -7109,6 +7110,20 @@ bool Sema::RequireCompleteType(SourceLocation Loc, QualType T,
     }
   }
   return false;
+}
+
+bool Sema::hasStructuralCompatLayout(Decl *D, Decl *Suggested) {
+  llvm::DenseSet<std::pair<Decl *, Decl *>> NonEquivalentDecls;
+  if (!Suggested)
+    return false;
+
+  // FIXME: Add a specific mode for C11 6.2.7/1 in StructuralEquivalenceContext
+  // and isolate from other C++ specific checks.
+  StructuralEquivalenceContext Ctx(
+      D->getASTContext(), Suggested->getASTContext(), NonEquivalentDecls,
+      false /*StrictTypeSpelling*/, true /*Complain*/,
+      true /*ErrorOnTagTypeMismatch*/);
+  return Ctx.IsStructurallyEquivalent(D, Suggested);
 }
 
 /// \brief Determine whether there is any declaration of \p D that was ever a

@@ -325,11 +325,10 @@ void PruningFunctionCloner::CloneBlock(const BasicBlock *BB,
       // the basic block.
       if (Value *V =
               SimplifyInstruction(NewInst, BB->getModule()->getDataLayout())) {
-        assert((!isa<Instruction>(V) ||
-                cast<Instruction>(V)->getParent() == nullptr ||
-                cast<Instruction>(V)->getFunction() != OldFunc ||
-                OldFunc == NewFunc) &&
-               "Simplified Instruction should not be in the old function.");
+        // On the off-chance that this simplifies to an instruction in the old
+        // function, map it back into the new function.
+        if (Value *MappedV = VMap.lookup(V))
+          V = MappedV;
 
         if (!NewInst->mayHaveSideEffects()) {
           VMap[&*II] = V;
