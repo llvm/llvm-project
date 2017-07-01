@@ -11,8 +11,8 @@ from .base import TestFormat
 kIsWindows = sys.platform in ['win32', 'cygwin']
 
 class GoogleTest(TestFormat):
-    def __init__(self, test_sub_dir, test_suffix):
-        self.test_sub_dir = os.path.normcase(str(test_sub_dir)).split(';')
+    def __init__(self, test_sub_dirs, test_suffix):
+        self.test_sub_dirs = os.path.normcase(str(test_sub_dirs)).split(';')
         self.test_suffix = str(test_suffix)
 
         # On Windows, assume tests will also end in '.exe'.
@@ -74,38 +74,19 @@ class GoogleTest(TestFormat):
             else:
                 yield ''.join(nested_tests) + ln
 
-    # Note: path_in_suite should not include the executable name.
-    def getTestsInExecutable(self, testSuite, path_in_suite, execpath,
-                             litConfig, localConfig):
-        if not execpath.endswith(self.test_suffix):
-            return
-        (dirname, basename) = os.path.split(execpath)
-        # Discover the tests in this executable.
-        for testname in self.getGTestTests(execpath, litConfig, localConfig):
-            testPath = path_in_suite + (basename, testname)
-            yield lit.Test.Test(testSuite, testPath, localConfig, file_path=execpath)
-
     def getTestsInDirectory(self, testSuite, path_in_suite,
                             litConfig, localConfig):
         source_path = testSuite.getSourcePath(path_in_suite)
-        for filename in os.listdir(source_path):
-            filepath = os.path.join(source_path, filename)
-            if os.path.isdir(filepath):
-                # Iterate over executables in a directory.
-                if not os.path.normcase(filename) in self.test_sub_dir:
-                    continue
-                dirpath_in_suite = path_in_suite + (filename, )
-                for subfilename in os.listdir(filepath):
-                    execpath = os.path.join(filepath, subfilename)
-                    for test in self.getTestsInExecutable(
-                            testSuite, dirpath_in_suite, execpath,
-                            litConfig, localConfig):
-                      yield test
-            elif ('.' in self.test_sub_dir):
-                for test in self.getTestsInExecutable(
-                        testSuite, path_in_suite, filepath,
-                        litConfig, localConfig):
-                    yield test
+        for subdir in self.test_sub_dirs:
+            for fn in lit.util.listdir_files(os.path.join(source_path, subdir),
+                                             suffixes={self.test_suffix}):
+                # Discover the tests in this executable.
+                execpath = os.path.join(source_path, subdir, fn)
+                testnames = self.getGTestTests(execpath, litConfig, localConfig)
+                for testname in testnames:
+                    testPath = path_in_suite + (subdir, fn, testname)
+                    yield lit.Test.Test(testSuite, testPath, localConfig,
+                                        file_path=execpath)
 
     def execute(self, test, litConfig):
         testPath,testName = os.path.split(test.getSourcePath())

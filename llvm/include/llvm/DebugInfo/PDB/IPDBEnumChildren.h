@@ -18,8 +18,8 @@ namespace pdb {
 
 template <typename ChildType> class IPDBEnumChildren {
 public:
-  typedef std::unique_ptr<ChildType> ChildTypePtr;
-  typedef IPDBEnumChildren<ChildType> MyType;
+  using ChildTypePtr = std::unique_ptr<ChildType>;
+  using MyType = IPDBEnumChildren<ChildType>;
 
   virtual ~IPDBEnumChildren() = default;
 

@@ -8,10 +8,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/PDB/Native/Hash.h"
-
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/JamCRC.h"
+#include <cstdint>
 
 using namespace llvm;
 using namespace llvm::support;

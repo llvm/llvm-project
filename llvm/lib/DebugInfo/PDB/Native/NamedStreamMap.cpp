@@ -1,4 +1,4 @@
-//===- NamedStreamMap.cpp - PDB Named Stream Map ----------------*- C++ -*-===//
+//===- NamedStreamMap.cpp - PDB Named Stream Map --------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -8,17 +8,20 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/PDB/Native/NamedStreamMap.h"
-
-#include "llvm/ADT/SparseBitVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/DebugInfo/PDB/Native/HashTable.h"
 #include "llvm/DebugInfo/PDB/Native/RawError.h"
 #include "llvm/Support/BinaryStreamReader.h"
+#include "llvm/Support/BinaryStreamRef.h"
+#include "llvm/Support/BinaryStreamWriter.h"
+#include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include <algorithm>
+#include <cassert>
 #include <cstdint>
+#include <tuple>
 
 using namespace llvm;
 using namespace llvm::pdb;

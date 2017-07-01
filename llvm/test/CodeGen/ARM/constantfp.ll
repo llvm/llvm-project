@@ -5,25 +5,25 @@
 ; RUN: llc -mtriple=thumbv7m -mcpu=cortex-m4 %s -o - \
 ; RUN: | FileCheck --check-prefix=CHECK-NO-XO %s
 
-; RUN: llc -mtriple=thumbv7m -arm-execute-only -mcpu=cortex-m4 %s -o - \
+; RUN: llc -mtriple=thumbv7m -mattr=+execute-only -mcpu=cortex-m4 %s -o - \
 ; RUN: | FileCheck --check-prefix=CHECK-XO-FLOAT --check-prefix=CHECK-XO-DOUBLE %s
 
-; RUN: llc -mtriple=thumbv7meb -arm-execute-only -mcpu=cortex-m4 %s -o - \
+; RUN: llc -mtriple=thumbv7meb -mattr=+execute-only -mcpu=cortex-m4 %s -o - \
 ; RUN: | FileCheck --check-prefix=CHECK-XO-FLOAT --check-prefix=CHECK-XO-DOUBLE-BE %s
 
-; RUN: llc -mtriple=thumbv7m -arm-execute-only -mcpu=cortex-m4 -relocation-model=ropi %s -o - \
+; RUN: llc -mtriple=thumbv7m -mattr=+execute-only -mcpu=cortex-m4 -relocation-model=ropi %s -o - \
 ; RUN: | FileCheck --check-prefix=CHECK-XO-ROPI %s
 
 ; RUN: llc -mtriple=thumbv8m.main -mattr=fp-armv8 %s -o - \
 ; RUN: | FileCheck --check-prefix=CHECK-NO-XO %s
 
-; RUN: llc -mtriple=thumbv8m.main -arm-execute-only -mattr=fp-armv8 %s -o - \
+; RUN: llc -mtriple=thumbv8m.main -mattr=+execute-only -mattr=fp-armv8 %s -o - \
 ; RUN: | FileCheck --check-prefix=CHECK-XO-FLOAT --check-prefix=CHECK-XO-DOUBLE %s
 
-; RUN: llc -mtriple=thumbv8m.maineb -arm-execute-only -mattr=fp-armv8 %s -o - \
+; RUN: llc -mtriple=thumbv8m.maineb -mattr=+execute-only -mattr=fp-armv8 %s -o - \
 ; RUN: | FileCheck --check-prefix=CHECK-XO-FLOAT --check-prefix=CHECK-XO-DOUBLE-BE %s
 
-; RUN: llc -mtriple=thumbv8m.main -arm-execute-only -mattr=fp-armv8 -relocation-model=ropi %s -o - \
+; RUN: llc -mtriple=thumbv8m.main -mattr=+execute-only -mattr=fp-armv8 -relocation-model=ropi %s -o - \
 ; RUN: | FileCheck --check-prefix=CHECK-XO-ROPI %s
 
 define arm_aapcs_vfpcc float @test_vmov_f32() {

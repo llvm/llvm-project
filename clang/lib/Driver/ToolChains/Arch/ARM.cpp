@@ -392,9 +392,7 @@ void arm::getARMTargetFeatures(const ToolChain &TC,
           if (B->getOption().matches(options::OPT_mlong_calls))
             D.Diag(diag::err_opt_not_valid_with_opt) << A->getAsString(Args) << B->getAsString(Args);
         }
-
-        CmdArgs.push_back("-backend-option");
-        CmdArgs.push_back("-arm-execute-only");
+	Features.push_back("+execute-only");
       }
     }
   }

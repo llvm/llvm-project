@@ -52,6 +52,14 @@ void MachineOptimizationRemarkEmitter::emit(
   computeHotness(OptDiag);
 
   LLVMContext &Ctx = MF.getFunction()->getContext();
+
+  // If a diagnostic has a hotness value, then only emit it if its hotness
+  // meets the threshold.
+  if (OptDiag.getHotness() &&
+      *OptDiag.getHotness() < Ctx.getDiagnosticsHotnessThreshold()) {
+    return;
+  }
+
   yaml::Output *Out = Ctx.getDiagnosticsOutputFile();
   if (Out) {
     auto *P = &const_cast<DiagnosticInfoOptimizationBase &>(OptDiagCommon);

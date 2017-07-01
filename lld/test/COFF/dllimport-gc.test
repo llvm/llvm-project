@@ -1,5 +1,3 @@
-# REQUIRES: winres
-
 # RUN: yaml2obj < %p/Inputs/export.yaml > %t-lib.obj
 # RUN: lld-link /out:%t.dll /dll %t-lib.obj /implib:%t.lib /export:exportfn1
 

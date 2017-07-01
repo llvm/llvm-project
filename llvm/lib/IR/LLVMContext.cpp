@@ -132,6 +132,13 @@ bool LLVMContext::getDiagnosticsHotnessRequested() const {
   return pImpl->DiagnosticsHotnessRequested;
 }
 
+void LLVMContext::setDiagnosticsHotnessThreshold(uint64_t Threshold) {
+  pImpl->DiagnosticsHotnessThreshold = Threshold;
+}
+uint64_t LLVMContext::getDiagnosticsHotnessThreshold() const {
+  return pImpl->DiagnosticsHotnessThreshold;
+}
+
 yaml::Output *LLVMContext::getDiagnosticsOutputFile() {
   return pImpl->DiagnosticsOutputFile.get();
 }

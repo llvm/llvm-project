@@ -199,11 +199,8 @@ public:
     return Infos[Kind - FirstTargetFixupKind];
   }
 
-  /// processFixupValue - Target hook to adjust the literal value of a fixup
-  /// if necessary. IsResolved signals whether the caller believes a relocation
-  /// is needed; the target can modify the value. The default does nothing.
-  void processFixupValue(const MCAssembler &Asm, const MCFixup &Fixup,
-                         const MCValue &Target, bool &IsResolved) override {
+  bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
+                             const MCValue &Target) override {
     MCFixupKind Kind = Fixup.getKind();
 
     switch((unsigned)Kind) {
@@ -299,8 +296,7 @@ public:
       case fixup_Hexagon_LD_PLT_B22_PCREL_X:
       case fixup_Hexagon_LD_PLT_B32_PCREL_X:
         // These relocations should always have a relocation recorded
-        IsResolved = false;
-        return;
+        return true;
 
       case fixup_Hexagon_B22_PCREL:
         //IsResolved = false;
@@ -317,7 +313,7 @@ public:
       case fixup_Hexagon_B7_PCREL:
       case fixup_Hexagon_B7_PCREL_X:
         if (DisableFixup)
-          IsResolved = false;
+          return true;
         break;
 
       case FK_Data_1:
@@ -326,8 +322,9 @@ public:
       case FK_PCRel_4:
       case fixup_Hexagon_32:
         // Leave these relocations alone as they are used for EH.
-        return;
+        return false;
     }
+    return false;
   }
 
   /// getFixupKindNumBytes - The number of bytes the fixup may change.

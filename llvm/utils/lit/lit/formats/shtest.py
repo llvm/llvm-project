@@ -4,6 +4,7 @@ import os
 
 import lit.Test
 import lit.TestRunner
+import lit.util
 from .base import TestFormat
 
 class ShTest(TestFormat):
@@ -34,19 +35,12 @@ class ShTest(TestFormat):
     def getTestsInDirectory(self, testSuite, path_in_suite,
                             litConfig, localConfig):
         """Yields test files matching 'suffixes' from the localConfig."""
-        source_path = testSuite.getSourcePath(path_in_suite)
-        for filename in os.listdir(source_path):
-            # Ignore dot files and excluded tests.
-            if (filename.startswith('.') or
-                filename in localConfig.excludes):
-                continue
-
-            filepath = os.path.join(source_path, filename)
-            if not os.path.isdir(filepath):
-                base,ext = os.path.splitext(filename)
-                if ext in localConfig.suffixes:
-                    yield lit.Test.Test(testSuite, path_in_suite + (filename,),
-                                        localConfig)
+        file_matches = lit.util.listdir_files(
+            testSuite.getSourcePath(path_in_suite),
+            localConfig.suffixes, localConfig.excludes)
+        for filename in file_matches:
+            yield lit.Test.Test(testSuite, path_in_suite + (filename,),
+                                localConfig)
 
     def execute(self, test, litConfig):
         """Interprets and runs the given test file, and returns the result."""
