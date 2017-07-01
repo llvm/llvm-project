@@ -85,6 +85,7 @@ MachineTypes getMachineType(StringRef S) {
                         .Cases("x64", "amd64", AMD64)
                         .Cases("x86", "i386", I386)
                         .Case("arm", ARMNT)
+                        .Case("arm64", ARM64)
                         .Default(IMAGE_FILE_MACHINE_UNKNOWN);
   if (MT != IMAGE_FILE_MACHINE_UNKNOWN)
     return MT;
@@ -95,6 +96,8 @@ StringRef machineToStr(MachineTypes MT) {
   switch (MT) {
   case ARMNT:
     return "arm";
+  case ARM64:
+    return "arm64";
   case AMD64:
     return "x64";
   case I386:
