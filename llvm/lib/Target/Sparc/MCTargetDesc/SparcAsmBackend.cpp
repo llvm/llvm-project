@@ -203,13 +203,14 @@ namespace {
       return InfosBE[Kind - FirstTargetFixupKind];
     }
 
-    void processFixupValue(const MCAssembler &Asm, const MCFixup &Fixup,
-                           const MCValue &Target, bool &IsResolved) override {
+    bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
+                               const MCValue &Target) override {
       switch ((Sparc::Fixups)Fixup.getKind()) {
-      default: break;
+      default:
+        return false;
       case Sparc::fixup_sparc_wplt30:
         if (Target.getSymA()->getSymbol().isTemporary())
-          return;
+          return false;
       case Sparc::fixup_sparc_tls_gd_hi22:
       case Sparc::fixup_sparc_tls_gd_lo10:
       case Sparc::fixup_sparc_tls_gd_add:
@@ -227,7 +228,8 @@ namespace {
       case Sparc::fixup_sparc_tls_ie_ldx:
       case Sparc::fixup_sparc_tls_ie_add:
       case Sparc::fixup_sparc_tls_le_hix22:
-      case Sparc::fixup_sparc_tls_le_lox10:  IsResolved = false; break;
+      case Sparc::fixup_sparc_tls_le_lox10:
+        return true;
       }
     }
 

@@ -275,7 +275,7 @@ public:
   /// declarations, such as those in modules that have not yet been imported.
   bool isHiddenDeclarationVisible(NamedDecl *ND) const {
     return AllowHidden ||
-           (isForRedeclaration() && ND->isExternallyVisible());
+           (isForRedeclaration() && ND->hasExternalFormalLinkage());
   }
 
   /// Sets whether tag declarations should be hidden by non-tag

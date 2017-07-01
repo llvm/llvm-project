@@ -101,6 +101,45 @@ def mkdir_p(path):
         if e.errno != errno.EEXIST:
             raise
 
+def listdir_files(dirname, suffixes=None, exclude_filenames=None):
+    """Yields files in a directory.
+
+    Filenames that are not excluded by rules below are yielded one at a time, as
+    basenames (i.e., without dirname).
+
+    Files starting with '.' are always skipped.
+
+    If 'suffixes' is not None, then only filenames ending with one of its
+    members will be yielded. These can be extensions, like '.exe', or strings,
+    like 'Test'. (It is a lexicographic check; so an empty sequence will yield
+    nothing, but a single empty string will yield all filenames.)
+
+    If 'exclude_filenames' is not None, then none of the file basenames in it
+    will be yielded.
+
+    If specified, the containers for 'suffixes' and 'exclude_filenames' must
+    support membership checking for strs.
+
+    Args:
+        dirname: a directory path.
+        suffixes: (optional) a sequence of strings (set, list, etc.).
+        exclude_filenames: (optional) a sequence of strings.
+
+    Yields:
+        Filenames as returned by os.listdir (generally, str).
+    """
+    if exclude_filenames is None:
+        exclude_filenames = set()
+    if suffixes is None:
+        suffixes = {''}
+    for filename in os.listdir(dirname):
+        if (os.path.isdir(os.path.join(dirname, filename)) or
+            filename.startswith('.') or
+            filename in exclude_filenames or
+            not any(filename.endswith(sfx) for sfx in suffixes)):
+            continue
+        yield filename
+
 def which(command, paths = None):
     """which(command, [paths]) - Look up the given command in the paths string
     (or the PATH environment variable, if unspecified)."""

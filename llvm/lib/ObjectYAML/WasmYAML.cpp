@@ -12,9 +12,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ObjectYAML/WasmYAML.h"
-#include "llvm/Object/Wasm.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/MipsABIFlags.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/YAMLTraits.h"
 
 namespace llvm {
 
@@ -22,7 +23,7 @@ namespace WasmYAML {
 
 // Declared here rather than in the header to comply with:
 // http://llvm.org/docs/CodingStandards.html#provide-a-virtual-method-anchor-for-classes-in-headers
-Section::~Section() {}
+Section::~Section() = default;
 
 } // end namespace WasmYAML
 
@@ -405,4 +406,5 @@ void ScalarEnumerationTraits<WasmYAML::RelocType>::enumeration(
 }
 
 } // end namespace yaml
+
 } // end namespace llvm

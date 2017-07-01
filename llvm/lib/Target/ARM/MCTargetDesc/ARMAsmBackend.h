@@ -38,10 +38,8 @@ public:
 
   const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
 
-  /// processFixupValue - Target hook to process the literal value of a fixup
-  /// if necessary.
-  void processFixupValue(const MCAssembler &Asm, const MCFixup &Fixup,
-                         const MCValue &Target, bool &IsResolved) override;
+  bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
+                             const MCValue &Target) override;
 
   unsigned adjustFixupValue(const MCAssembler &Asm, const MCFixup &Fixup,
                             const MCValue &Target, uint64_t Value, bool IsPCRel,

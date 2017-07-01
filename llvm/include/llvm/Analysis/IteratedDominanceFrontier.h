@@ -86,7 +86,6 @@ public:
 private:
   DominatorTreeBase<BasicBlock> &DT;
   bool useLiveIn;
-  DenseMap<DomTreeNode *, unsigned> DomLevels;
   const SmallPtrSetImpl<BasicBlock *> *LiveInBlocks;
   const SmallPtrSetImpl<BasicBlock *> *DefBlocks;
 };

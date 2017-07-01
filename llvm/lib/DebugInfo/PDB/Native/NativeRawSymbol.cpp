@@ -1,4 +1,4 @@
-//===- NativeRawSymbol.cpp - Native implementation of IPDBRawSymbol -*- C++ -*-===//
+//===- NativeRawSymbol.cpp - Native implementation of IPDBRawSymbol -------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -8,16 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/PDB/Native/NativeRawSymbol.h"
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
-#include "llvm/DebugInfo/PDB/Native/NativeSession.h"
-#include "llvm/DebugInfo/PDB/PDBExtras.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeBuiltin.h"
-#include "llvm/DebugInfo/PDB/PDBSymbolTypeVTable.h"
-#include "llvm/DebugInfo/PDB/PDBSymbolTypeVTableShape.h"
-#include "llvm/Support/ConvertUTF.h"
-#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 using namespace llvm::pdb;
@@ -49,7 +40,7 @@ NativeRawSymbol::findInlineFramesByRVA(uint32_t RVA) const {
   return nullptr;
 }
 
-void NativeRawSymbol::getDataBytes(llvm::SmallVector<uint8_t, 32> &bytes) const {
+void NativeRawSymbol::getDataBytes(SmallVector<uint8_t, 32> &bytes) const {
   bytes.clear();
 }
 
@@ -109,7 +100,7 @@ uint32_t NativeRawSymbol::getClassParentId() const {
 }
 
 std::string NativeRawSymbol::getCompilerName() const {
-  return 0;
+  return {};
 }
 
 uint32_t NativeRawSymbol::getCount() const {
@@ -136,7 +127,7 @@ uint32_t NativeRawSymbol::getLexicalParentId() const {
 }
 
 std::string NativeRawSymbol::getLibraryName() const {
-  return "";
+  return {};
 }
 
 uint32_t NativeRawSymbol::getLiveRangeStartAddressOffset() const {
@@ -164,7 +155,7 @@ uint32_t NativeRawSymbol::getMemorySpaceKind() const {
 }
 
 std::string NativeRawSymbol::getName() const {
-  return 0;
+  return {};
 }
 
 uint32_t NativeRawSymbol::getNumberOfAcceleratorPointerTags() const {
@@ -188,7 +179,7 @@ uint32_t NativeRawSymbol::getNumberOfRows() const {
 }
 
 std::string NativeRawSymbol::getObjectFileName() const {
-  return "";
+  return {};
 }
 
 uint32_t NativeRawSymbol::getOemId() const {
@@ -240,7 +231,7 @@ uint32_t NativeRawSymbol::getSlot() const {
 }
 
 std::string NativeRawSymbol::getSourceFileName() const {
-  return 0;
+  return {};
 }
 
 uint32_t NativeRawSymbol::getStride() const {
@@ -251,7 +242,7 @@ uint32_t NativeRawSymbol::getSubTypeId() const {
   return 0;
 }
 
-std::string NativeRawSymbol::getSymbolsFileName() const { return ""; }
+std::string NativeRawSymbol::getSymbolsFileName() const { return {}; }
 
 uint32_t NativeRawSymbol::getSymIndexId() const { return SymbolId; }
 
@@ -292,7 +283,7 @@ uint32_t NativeRawSymbol::getUavSlot() const {
 }
 
 std::string NativeRawSymbol::getUndecoratedName() const {
-  return 0;
+  return {};
 }
 
 uint32_t NativeRawSymbol::getUnmodifiedTypeId() const {
@@ -701,5 +692,5 @@ bool NativeRawSymbol::wasInlined() const {
 }
 
 std::string NativeRawSymbol::getUnused() const {
-  return "";
+  return {};
 }

@@ -7,27 +7,31 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_PDB_RAW_PDBNAMEDSTREAMMAP_H
-#define LLVM_DEBUGINFO_PDB_RAW_PDBNAMEDSTREAMMAP_H
+#ifndef LLVM_DEBUGINFO_PDB_NATIVE_NAMEDSTREAMMAP_H
+#define LLVM_DEBUGINFO_PDB_NATIVE_NAMEDSTREAMMAP_H
 
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/DebugInfo/PDB/Native/HashTable.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
 
 namespace llvm {
+
 class BinaryStreamReader;
 class BinaryStreamWriter;
 
 namespace pdb {
-class NamedStreamMapBuilder;
+
 class NamedStreamMap {
+  friend class NamedStreamMapBuilder;
+
   struct FinalizationInfo {
     uint32_t StringDataBytes = 0;
     uint32_t SerializedLength = 0;
   };
-  friend NamedStreamMapBuilder;
 
 public:
   NamedStreamMap();
@@ -50,6 +54,7 @@ private:
 };
 
 } // end namespace pdb
+
 } // end namespace llvm
 
-#endif // LLVM_DEBUGINFO_PDB_RAW_PDBNAMEDSTREAMMAP_H
+#endif // LLVM_DEBUGINFO_PDB_NATIVE_NAMEDSTREAMMAP_H

@@ -9,11 +9,11 @@
 
 #include "llvm/DebugInfo/PDB/Native/ModuleDebugStream.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/DebugInfo/CodeView/CodeView.h"
+#include "llvm/DebugInfo/CodeView/DebugChecksumsSubsection.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/DebugInfo/PDB/Native/DbiModuleDescriptor.h"
-#include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Native/RawError.h"
-#include "llvm/DebugInfo/PDB/Native/RawTypes.h"
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/BinaryStreamRef.h"
 #include "llvm/Support/Error.h"
@@ -97,7 +97,7 @@ ModuleDebugStreamRef::symbols(bool *HadError) const {
   return make_range(SymbolArray.begin(HadError), SymbolArray.end());
 }
 
-llvm::iterator_range<ModuleDebugStreamRef::DebugSubsectionIterator>
+iterator_range<ModuleDebugStreamRef::DebugSubsectionIterator>
 ModuleDebugStreamRef::subsections() const {
   return make_range(Subsections.begin(), Subsections.end());
 }
