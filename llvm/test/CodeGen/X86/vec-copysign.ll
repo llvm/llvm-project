@@ -1,7 +1,7 @@
 ; RUN: llc < %s -mtriple=x86_64-apple-macosx10.10.0 -mattr=+sse2 | FileCheck %s --check-prefix=SSE2 --check-prefix=CHECK
 ; RUN: llc < %s -mtriple=x86_64-apple-macosx10.10.0 -mattr=+avx | FileCheck %s --check-prefix=AVX --check-prefix=CHECK
 
-; Assertions have been enhanced from utils/update_test_checks.py to show the constant pool values.
+; Assertions have been enhanced from utils/update_llc_test_checks.py to show the constant pool values.
 ; Use a macosx triple to make sure the format of those constant strings is exact.
 
 ; CHECK:       [[SIGNMASK1:L.+]]:

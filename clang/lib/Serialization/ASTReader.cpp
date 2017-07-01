@@ -8263,7 +8263,7 @@ ASTReader::getSourceDescriptor(unsigned ID) {
     return ExternalASTSource::ASTSourceDescriptor(*M);
 
   // If there is only a single PCH, return it instead.
-  // Chained PCH are not suported.
+  // Chained PCH are not supported.
   const auto &PCHChain = ModuleMgr.pch_modules();
   if (std::distance(std::begin(PCHChain), std::end(PCHChain))) {
     ModuleFile &MF = ModuleMgr.getPrimaryModule();

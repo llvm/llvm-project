@@ -248,7 +248,7 @@ std::error_code ModuleDependencyCollector::copyToRoot(StringRef Src,
   // Always map a canonical src path to its real path into the YAML, by doing
   // this we map different virtual src paths to the same entry in the VFS
   // overlay, which is a way to emulate symlink inside the VFS; this is also
-  // needed for correctness, not doing that can lead to module redifinition
+  // needed for correctness, not doing that can lead to module redefinition
   // errors.
   addFileMapping(VirtualPath, CacheDst);
   return std::error_code();
