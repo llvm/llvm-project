@@ -1056,6 +1056,9 @@ void implicit_maps_template_type_capture (int a){
 // CK19: [[SIZE00:@.+]] = private {{.*}}constant [1 x i[[Z:64|32]]] [i[[Z:64|32]] 4]
 // CK19: [[MTYPE00:@.+]] = private {{.*}}constant [1 x i32] [i32 32]
 
+// CK19: [[SIZE00n:@.+]] = private {{.*}}constant [1 x i[[Z:64|32]]] [i[[Z:64|32]] 4]
+// CK19: [[MTYPE00n:@.+]] = private {{.*}}constant [1 x i32] [i32 32]
+
 // CK19: [[SIZE01:@.+]] = private {{.*}}constant [1 x i[[Z]]] [i[[Z]] 400]
 // CK19: [[MTYPE01:@.+]] = private {{.*}}constant [1 x i32] [i32 33]
 
@@ -1192,6 +1195,28 @@ void explicit_maps_single (int ii){
   #pragma omp target map(alloc:a)
   {
     ++a;
+  }
+
+  // Map of a scalar in nested region.
+  int b = a;
+
+  // Region 00n
+  // CK19-DAG: call i32 @__tgt_target(i32 {{[^,]+}}, i8* {{[^,]+}}, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE00n]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE00n]]{{.+}})
+  // CK19-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
+  // CK19-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
+
+  // CK19-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
+  // CK19-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
+  // CK19-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to i32**
+  // CK19-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to i32**
+  // CK19-DAG: store i32* [[VAR0:%.+]], i32** [[CBP0]]
+  // CK19-DAG: store i32* [[VAR0]], i32** [[CP0]]
+
+  // CK19: call void [[CALL00n:@.+]](i32* {{[^,]+}})
+  #pragma omp target map(alloc:b)
+  #pragma omp parallel
+  {
+    ++b;
   }
 
   // Map of an array.
@@ -2388,6 +2413,7 @@ void explicit_maps_single (int ii){
 }
 
 // CK19: define {{.+}}[[CALL00]]
+// CK19: define {{.+}}[[CALL00n]]
 // CK19: define {{.+}}[[CALL01]]
 // CK19: define {{.+}}[[CALL02]]
 // CK19: define {{.+}}[[CALL03]]
