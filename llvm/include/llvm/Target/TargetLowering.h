@@ -2051,7 +2051,7 @@ public:
   /// this information should not be provided because it will generate more
   /// loads.
   virtual bool hasPairedLoad(EVT /*LoadedType*/,
-                             unsigned & /*RequiredAligment*/) const {
+                             unsigned & /*RequiredAlignment*/) const {
     return false;
   }
 

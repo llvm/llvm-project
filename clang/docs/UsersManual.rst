@@ -322,18 +322,27 @@ output format of the diagnostics that it generates.
    by category, so it should be a high level category. We want dozens
    of these, not hundreds or thousands of them.
 
+.. _opt_fsave-optimization-record:
+
+**-fsave-optimization-record**
+   Write optimization remarks to a YAML file.
+
+   This option, which defaults to off, controls whether Clang writes
+   optimization reports to a YAML file. By recording diagnostics in a file,
+   using a structured YAML format, users can parse or sort the remarks in a
+   convenient way.
+
 .. _opt_fdiagnostics-show-hotness:
 
 **-f[no-]diagnostics-show-hotness**
    Enable profile hotness information in diagnostic line.
 
-   This option, which defaults to off, controls whether Clang prints the
-   profile hotness associated with a diagnostics in the presence of
-   profile-guided optimization information.  This is currently supported with
-   optimization remarks (see :ref:`Options to Emit Optimization Reports
-   <rpass>`).  The hotness information allows users to focus on the hot
-   optimization remarks that are likely to be more relevant for run-time
-   performance.
+   This option controls whether Clang prints the profile hotness associated
+   with diagnostics in the presence of profile-guided optimization information.
+   This is currently supported with optimization remarks (see
+   :ref:`Options to Emit Optimization Reports <rpass>`). The hotness information
+   allows users to focus on the hot optimization remarks that are likely to be
+   more relevant for run-time performance.
 
    For example, in this output, the block containing the callsite of `foo` was
    executed 3000 times according to the profile data:
@@ -343,6 +352,23 @@ output format of the diagnostics that it generates.
          s.c:7:10: remark: foo inlined into bar (hotness: 3000) [-Rpass-analysis=inline]
            sum += foo(x, x - 2);
                   ^
+
+   This option is implied when
+   :ref:`-fsave-optimization-record <opt_fsave-optimization-record>` is used.
+   Otherwise, it defaults to off.
+
+.. _opt_fdiagnostics-hotness-threshold:
+
+**-fdiagnostics-hotness-threshold**
+   Prevent optimization remarks from being output if they do not have at least
+   this hotness value.
+
+   This option, which defaults to zero, controls the minimum hotness an
+   optimization remark would need in order to be output by Clang. This is
+   currently supported with optimization remarks (see :ref:`Options to Emit
+   Optimization Reports <rpass>`) when profile hotness information in
+   diagnostics is enabled (see
+   :ref:`-fdiagnostics-show-hotness <opt_fdiagnostics-show-hotness>`).
 
 .. _opt_fdiagnostics-fixit-info:
 

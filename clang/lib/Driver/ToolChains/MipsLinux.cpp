@@ -109,7 +109,7 @@ std::string MipsLLVMToolChain::findLibCxxIncludePath() const {
 void MipsLLVMToolChain::AddCXXStdlibLibArgs(const ArgList &Args,
                                             ArgStringList &CmdArgs) const {
   assert((GetCXXStdlibType(Args) == ToolChain::CST_Libcxx) &&
-         "Only -lc++ (aka libxx) is suported in this toolchain.");
+         "Only -lc++ (aka libxx) is supported in this toolchain.");
 
   CmdArgs.push_back("-lc++");
   CmdArgs.push_back("-lc++abi");

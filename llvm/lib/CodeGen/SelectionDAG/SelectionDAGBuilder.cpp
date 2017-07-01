@@ -3375,7 +3375,7 @@ void SelectionDAGBuilder::visitGetElementPtr(const User &I) {
       SDValue IdxN = getValue(Idx);
 
       if (!IdxN.getValueType().isVector() && VectorWidth) {
-        MVT VT = MVT::getVectorVT(IdxN.getValueType().getSimpleVT(), VectorWidth);
+        EVT VT = EVT::getVectorVT(*Context, IdxN.getValueType(), VectorWidth);
         IdxN = DAG.getSplatBuildVector(VT, dl, IdxN);
       }
 

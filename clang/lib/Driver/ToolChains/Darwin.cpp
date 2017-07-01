@@ -1342,13 +1342,13 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
         HadExtra || Major >= 100 || Minor >= 100 || Micro >= 100)
       getDriver().Diag(diag::err_drv_invalid_version_number)
           << iOSVersion->getAsString(Args);
-      // iOS 10 is the maximum deployment target for 32-bit targets. If the
-      // inferred deployment target is iOS 11 or later, set it to 10.99.
-      if (getTriple().isArch32Bit() && Major >= 11) {
-        Major = 10;
-        Minor = 99;
-        Micro = 99;
-      }
+    // iOS 10 is the maximum deployment target for 32-bit targets. If the
+    // inferred deployment target is iOS 11 or later, set it to 10.99.
+    if (getTriple().isArch32Bit() && Major >= 11) {
+      Major = 10;
+      Minor = 99;
+      Micro = 99;
+    }
   } else if (Platform == TvOS) {
     if (!Driver::GetReleaseVersion(TvOSVersion->getValue(), Major, Minor,
                                    Micro, HadExtra) || HadExtra ||

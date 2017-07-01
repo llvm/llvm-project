@@ -535,8 +535,8 @@ entry:
 ; CHECK: ret i1
 
 
-; Check that loads of shadow have the same aligment as the original loads.
-; Check that loads of origin have the aligment of max(4, original alignment).
+; Check that loads of shadow have the same alignment as the original loads.
+; Check that loads of origin have the alignment of max(4, original alignment).
 
 define i32 @ShadowLoadAlignmentLarge() nounwind uwtable sanitize_memory {
   %y = alloca i32, align 64
