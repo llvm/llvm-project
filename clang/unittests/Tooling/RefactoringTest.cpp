@@ -1171,8 +1171,10 @@ TEST_F(AtomicChangeTest, AtomicChangeToYAML) {
                "Key:             'input.cpp:20'\n"
                "FilePath:        input.cpp\n"
                "Error:           ''\n"
-               "InsertedHeaders: [ a.h ]\n"
-               "RemovedHeaders:  [ b.h ]\n"
+               "InsertedHeaders: \n" // Extra whitespace here!
+               "  - a.h\n"
+               "RemovedHeaders:  \n" // Extra whitespace here!
+               "  - b.h\n"
                "Replacements:    \n" // Extra whitespace here!
                "  - FilePath:        input.cpp\n"
                "    Offset:          20\n"
@@ -1191,8 +1193,10 @@ TEST_F(AtomicChangeTest, YAMLToAtomicChange) {
                             "Key:             'input.cpp:20'\n"
                             "FilePath:        input.cpp\n"
                             "Error:           'ok'\n"
-                            "InsertedHeaders: [ a.h ]\n"
-                            "RemovedHeaders:  [ b.h ]\n"
+                            "InsertedHeaders: \n" // Extra whitespace here!
+                            "  - a.h\n"
+                            "RemovedHeaders:  \n" // Extra whitespace here!
+                            "  - b.h\n"
                             "Replacements:    \n" // Extra whitespace here!
                             "  - FilePath:        input.cpp\n"
                             "    Offset:          20\n"

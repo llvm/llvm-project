@@ -33,7 +33,7 @@ Baz baz;
 Baz baz2(1);
 Quux qux("fi", "fo", "fum");
 
-// Profile data for complete constructors and destructors must absent.
+// Profile data for complete constructors and destructors must be absent.
 
 // INSTR: @__profc__ZN3BazC1Ev =
 // INSTR: @__profc__ZN3BazC1Ei =

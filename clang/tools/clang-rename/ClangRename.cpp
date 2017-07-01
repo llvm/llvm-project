@@ -33,7 +33,6 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
-#include <cstdlib>
 #include <string>
 #include <system_error>
 
@@ -127,13 +126,13 @@ int main(int argc, const char **argv) {
   // Check the arguments for correctness.
   if (NewNames.empty()) {
     errs() << "clang-rename: -new-name must be specified.\n\n";
-    exit(1);
+    return 1;
   }
 
   if (SymbolOffsets.empty() == QualifiedNames.empty()) {
     errs() << "clang-rename: -offset and -qualified-name can't be present at "
               "the same time.\n";
-    exit(1);
+    return 1;
   }
 
   // Check if NewNames is a valid identifier in C++17.
@@ -145,7 +144,7 @@ int main(int argc, const char **argv) {
     auto NewNameTokKind = Table.get(NewName).getTokenID();
     if (!tok::isAnyIdentifier(NewNameTokKind)) {
       errs() << "ERROR: new name is not a valid identifier in C++17.\n\n";
-      exit(1);
+      return 1;
     }
   }
 
@@ -155,7 +154,7 @@ int main(int argc, const char **argv) {
            << ") must be equal to number of new names(" << NewNames.size()
            << ").\n\n";
     cl::PrintHelpMessage();
-    exit(1);
+    return 1;
   }
 
   auto Files = OP.getSourcePathList();
@@ -173,13 +172,13 @@ int main(int argc, const char **argv) {
 
   if (FindingAction.errorOccurred()) {
     // Diagnostics are already issued at this point.
-    exit(1);
+    return 1;
   }
 
   if (Force && PrevNames.size() < NewNames.size()) {
     // No matching PrevName for all NewNames. Without Force this is an error
     // above already.
-    exit(0);
+    return 0;
   }
 
   // Perform the renaming.
@@ -199,7 +198,7 @@ int main(int argc, const char **argv) {
       llvm::raw_fd_ostream OS(ExportFixes, EC, llvm::sys::fs::F_None);
       if (EC) {
         llvm::errs() << "Error opening output file: " << EC.message() << '\n';
-        exit(1);
+        return 1;
       }
 
       // Export replacements.
@@ -212,7 +211,7 @@ int main(int argc, const char **argv) {
       yaml::Output YAML(OS);
       YAML << TUR;
       OS.close();
-      exit(0);
+      return 0;
     }
 
     // Write every file to stdout. Right now we just barf the files without any
@@ -236,5 +235,5 @@ int main(int argc, const char **argv) {
     }
   }
 
-  exit(ExitCode);
+  return ExitCode;
 }
