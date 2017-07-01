@@ -229,6 +229,9 @@ namespace clang {
       void *OldDiagnosticContext = Ctx.getDiagnosticContext();
       Ctx.setDiagnosticHandler(DiagnosticHandler, this);
       Ctx.setDiagnosticsHotnessRequested(CodeGenOpts.DiagnosticsWithHotness);
+      if (CodeGenOpts.DiagnosticsHotnessThreshold != 0)
+        Ctx.setDiagnosticsHotnessThreshold(
+            CodeGenOpts.DiagnosticsHotnessThreshold);
 
       std::unique_ptr<llvm::tool_output_file> OptRecordFile;
       if (!CodeGenOpts.OptRecordFile.empty()) {
