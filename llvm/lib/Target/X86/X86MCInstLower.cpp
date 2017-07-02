@@ -1042,7 +1042,7 @@ void X86AsmPrinter::LowerPATCHPOINT(const MachineInstr &MI,
 
 void X86AsmPrinter::LowerPATCHABLE_EVENT_CALL(const MachineInstr &MI,
                                               X86MCInstLower &MCIL) {
-  assert(Subtarget->is64Bit() && "XRay custom events only suports X86-64");
+  assert(Subtarget->is64Bit() && "XRay custom events only supports X86-64");
 
   // We want to emit the following pattern, which follows the x86 calling
   // convention to prepare for the trampoline call to be patched in.

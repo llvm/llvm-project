@@ -570,10 +570,8 @@ define i32 @xor_to_xnor1(float %fa, float %fb) {
 ; CHECK-LABEL: @xor_to_xnor1(
 ; CHECK-NEXT:    [[A:%.*]] = fptosi float [[FA:%.*]] to i32
 ; CHECK-NEXT:    [[B:%.*]] = fptosi float [[FB:%.*]] to i32
-; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[A]], [[B]]
-; CHECK-NEXT:    [[OR2_DEMORGAN:%.*]] = and i32 [[A]], [[B]]
-; CHECK-NEXT:    [[OR2:%.*]] = xor i32 [[OR2_DEMORGAN]], -1
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[OR1]], [[OR2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[A]], [[B]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[TMP1]], -1
 ; CHECK-NEXT:    ret i32 [[XOR]]
 ;
   %a = fptosi float %fa to i32
@@ -591,10 +589,8 @@ define i32 @xor_to_xnor2(float %fa, float %fb) {
 ; CHECK-LABEL: @xor_to_xnor2(
 ; CHECK-NEXT:    [[A:%.*]] = fptosi float [[FA:%.*]] to i32
 ; CHECK-NEXT:    [[B:%.*]] = fptosi float [[FB:%.*]] to i32
-; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[A]], [[B]]
-; CHECK-NEXT:    [[OR2_DEMORGAN:%.*]] = and i32 [[B]], [[A]]
-; CHECK-NEXT:    [[OR2:%.*]] = xor i32 [[OR2_DEMORGAN]], -1
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[OR1]], [[OR2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[A]], [[B]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[TMP1]], -1
 ; CHECK-NEXT:    ret i32 [[XOR]]
 ;
   %a = fptosi float %fa to i32
@@ -612,10 +608,8 @@ define i32 @xor_to_xnor3(float %fa, float %fb) {
 ; CHECK-LABEL: @xor_to_xnor3(
 ; CHECK-NEXT:    [[A:%.*]] = fptosi float [[FA:%.*]] to i32
 ; CHECK-NEXT:    [[B:%.*]] = fptosi float [[FB:%.*]] to i32
-; CHECK-NEXT:    [[OR1_DEMORGAN:%.*]] = and i32 [[A]], [[B]]
-; CHECK-NEXT:    [[OR1:%.*]] = xor i32 [[OR1_DEMORGAN]], -1
-; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[A]], [[B]]
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[OR2]], [[OR1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[A]], [[B]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[TMP1]], -1
 ; CHECK-NEXT:    ret i32 [[XOR]]
 ;
   %a = fptosi float %fa to i32
@@ -633,10 +627,8 @@ define i32 @xor_to_xnor4(float %fa, float %fb) {
 ; CHECK-LABEL: @xor_to_xnor4(
 ; CHECK-NEXT:    [[A:%.*]] = fptosi float [[FA:%.*]] to i32
 ; CHECK-NEXT:    [[B:%.*]] = fptosi float [[FB:%.*]] to i32
-; CHECK-NEXT:    [[OR1_DEMORGAN:%.*]] = and i32 [[A]], [[B]]
-; CHECK-NEXT:    [[OR1:%.*]] = xor i32 [[OR1_DEMORGAN]], -1
-; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[B]], [[A]]
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[OR2]], [[OR1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[B]], [[A]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[TMP1]], -1
 ; CHECK-NEXT:    ret i32 [[XOR]]
 ;
   %a = fptosi float %fa to i32
