@@ -16,7 +16,7 @@
 
 using namespace llvm;
 
-/// \brief The target which suports all AMD GPUs.  This will eventually
+/// \brief The target which supports all AMD GPUs.  This will eventually
 ///         be deprecated and there will be a R600 target and a GCN target.
 Target &llvm::getTheAMDGPUTarget() {
   static Target TheAMDGPUTarget;
