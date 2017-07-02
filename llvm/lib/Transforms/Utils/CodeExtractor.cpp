@@ -1116,12 +1116,6 @@ Function *CodeExtractor::extractCodeRegion() {
         }
     }
 
-  //cerr << "NEW FUNCTION: " << *newFunction;
-  //  verifyFunction(*newFunction);
-
-  //  cerr << "OLD FUNCTION: " << *oldFunction;
-  //  verifyFunction(*oldFunction);
-
   DEBUG(if (verifyFunction(*newFunction)) 
         report_fatal_error("verifyFunction failed!"));
   return newFunction;

@@ -1259,8 +1259,7 @@ static LinkageInfo computeLVForDecl(const NamedDecl *D,
     case Decl::TypeAlias:
       // A typedef declaration has linkage if it gives a type a name for
       // linkage purposes.
-      if (!D->getASTContext().getLangOpts().CPlusPlus ||
-          !cast<TypedefNameDecl>(D)
+      if (!cast<TypedefNameDecl>(D)
                ->getAnonDeclWithTypedefName(/*AnyRedecl*/true))
         return LinkageInfo::none();
       break;

@@ -56,7 +56,7 @@ private:
   /// the patterns that don't require complex C++.
   bool selectImpl(MachineInstr &I) const;
 
-  // TODO: remove after suported by Tablegen-erated instruction selection.
+  // TODO: remove after supported by Tablegen-erated instruction selection.
   unsigned getLoadStoreOp(LLT &Ty, const RegisterBank &RB, unsigned Opc,
                           uint64_t Alignment) const;
 

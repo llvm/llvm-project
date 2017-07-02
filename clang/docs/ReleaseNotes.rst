@@ -60,6 +60,16 @@ New Compiler Flags
 
 The option ....
 
+Deprecated Compiler Flags
+-------------------------
+
+The following options are deprecated and ignored. They will be removed in
+future versions of Clang.
+
+- -fslp-vectorize-aggressive used to enable the BB vectorizing pass. They have been superseeded
+  by the normal SLP vectorizer.
+- -fno-slp-vectorize-aggressive used to be the default behavior of clang.
+
 New Pragmas in Clang
 -----------------------
 

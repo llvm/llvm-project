@@ -2974,6 +2974,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     A->claim();
   }
 
+  for (const Arg *A :
+       Args.filtered(options::OPT_clang_ignored_legacy_options_Group)) {
+    D.Diag(diag::warn_ignored_clang_option) << A->getAsString(Args);
+    A->claim();
+  }
+
   claimNoWarnArgs(Args);
 
   Args.AddAllArgs(CmdArgs, options::OPT_R_Group);
