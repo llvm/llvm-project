@@ -380,6 +380,8 @@ MachineTypes BitcodeFile::getMachineType() {
     return I386;
   case Triple::arm:
     return ARMNT;
+  case Triple::aarch64:
+    return ARM64;
   default:
     return IMAGE_FILE_MACHINE_UNKNOWN;
   }

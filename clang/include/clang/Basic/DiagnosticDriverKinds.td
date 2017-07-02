@@ -178,6 +178,8 @@ def warn_drv_optimization_value : Warning<"optimization level '%0' is not suppor
   InGroup<InvalidCommandLineArgument>;
 def warn_ignored_gcc_optimization : Warning<"optimization flag '%0' is not supported">,
   InGroup<IgnoredOptimizationArgument>;
+def warn_ignored_clang_option : Warning<"the flag '%0' has been deprecated and will be ignored">,
+  InGroup<UnusedCommandLineArgument>;
 def warn_drv_unsupported_opt_for_target : Warning<
   "optimization flag '%0' is not supported for target '%1'">,
   InGroup<IgnoredOptimizationArgument>;

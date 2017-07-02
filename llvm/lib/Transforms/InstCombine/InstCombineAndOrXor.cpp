@@ -2276,7 +2276,8 @@ Instruction *InstCombiner::visitOr(BinaryOperator &I) {
 
 /// A ^ B can be specified using other logic ops in a variety of patterns. We
 /// can fold these early and efficiently by morphing an existing instruction.
-static Instruction *foldXorToXor(BinaryOperator &I) {
+static Instruction *foldXorToXor(BinaryOperator &I,
+                                 InstCombiner::BuilderTy &Builder) {
   assert(I.getOpcode() == Instruction::Xor);
   Value *Op0 = I.getOperand(0);
   Value *Op1 = I.getOperand(1);
@@ -2322,6 +2323,21 @@ static Instruction *foldXorToXor(BinaryOperator &I) {
     I.setOperand(1, B);
     return &I;
   }
+
+  // For the remaining cases we need to get rid of one of the operands.
+  if (!Op0->hasOneUse() && !Op1->hasOneUse())
+    return nullptr;
+
+  // (A | B) ^ ~(A & B) -> ~(A ^ B)
+  // (A | B) ^ ~(B & A) -> ~(A ^ B)
+  // (A & B) ^ ~(A | B) -> ~(A ^ B)
+  // (A & B) ^ ~(B | A) -> ~(A ^ B)
+  // Complexity sorting ensures the not will be on the right side.
+  if ((match(Op0, m_Or(m_Value(A), m_Value(B))) &&
+       match(Op1, m_Not(m_c_And(m_Specific(A), m_Specific(B))))) ||
+      (match(Op0, m_And(m_Value(A), m_Value(B))) &&
+       match(Op1, m_Not(m_c_Or(m_Specific(A), m_Specific(B))))))
+    return BinaryOperator::CreateNot(Builder.CreateXor(A, B));
 
   return nullptr;
 }
@@ -2381,7 +2397,7 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
   if (Value *V = SimplifyXorInst(Op0, Op1, SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
 
-  if (Instruction *NewXor = foldXorToXor(I))
+  if (Instruction *NewXor = foldXorToXor(I, *Builder))
     return NewXor;
 
   // (A&B)^(A&C) -> A&(B^C) etc

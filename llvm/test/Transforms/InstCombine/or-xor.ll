@@ -348,10 +348,8 @@ define i8 @test18(i8 %A, i8 %B) {
 ; ((x | y) ^ (~x | ~y)) -> ~(x ^ y)
 define i32 @test19(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test19(
-; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[OR2_DEMORGAN:%.*]] = and i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[OR2:%.*]] = xor i32 [[OR2_DEMORGAN]], -1
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[OR1]], [[OR2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[TMP1]], -1
 ; CHECK-NEXT:    ret i32 [[XOR]]
 ;
   %noty = xor i32 %y, -1
@@ -365,10 +363,8 @@ define i32 @test19(i32 %x, i32 %y) {
 ; ((x | y) ^ (~y | ~x)) -> ~(x ^ y)
 define i32 @test20(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test20(
-; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[OR2_DEMORGAN:%.*]] = and i32 [[Y]], [[X]]
-; CHECK-NEXT:    [[OR2:%.*]] = xor i32 [[OR2_DEMORGAN]], -1
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[OR1]], [[OR2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[TMP1]], -1
 ; CHECK-NEXT:    ret i32 [[XOR]]
 ;
   %noty = xor i32 %y, -1
@@ -382,10 +378,8 @@ define i32 @test20(i32 %x, i32 %y) {
 ; ((~x | ~y) ^ (x | y)) -> ~(x ^ y)
 define i32 @test21(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test21(
-; CHECK-NEXT:    [[OR1_DEMORGAN:%.*]] = and i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[OR1:%.*]] = xor i32 [[OR1_DEMORGAN]], -1
-; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[OR2]], [[OR1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[TMP1]], -1
 ; CHECK-NEXT:    ret i32 [[XOR]]
 ;
   %noty = xor i32 %y, -1
@@ -399,10 +393,8 @@ define i32 @test21(i32 %x, i32 %y) {
 ; ((~x | ~y) ^ (y | x)) -> ~(x ^ y)
 define i32 @test22(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test22(
-; CHECK-NEXT:    [[OR1_DEMORGAN:%.*]] = and i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[OR1:%.*]] = xor i32 [[OR1_DEMORGAN]], -1
-; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[Y]], [[X]]
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[OR2]], [[OR1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[TMP1]], -1
 ; CHECK-NEXT:    ret i32 [[XOR]]
 ;
   %noty = xor i32 %y, -1
