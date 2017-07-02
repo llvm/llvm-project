@@ -148,7 +148,7 @@ define <4 x double> @fpext(<4 x double> %a, <4 x double> %b, <4 x float> %c, <4 
 ; SSE2-NEXT:    andnps %xmm5, %xmm0
 ; SSE2-NEXT:    orps %xmm4, %xmm0
 ; SSE2-NEXT:    cvtps2pd %xmm0, %xmm2
-; SSE2-NEXT:    psrldq {{.*#+}} xmm0 = xmm0[8,9,10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; SSE2-NEXT:    cvtps2pd %xmm0, %xmm1
 ; SSE2-NEXT:    movaps %xmm2, %xmm0
 ; SSE2-NEXT:    retq

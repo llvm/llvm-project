@@ -155,17 +155,9 @@ define <16 x i16> @testv16i16(<16 x i16> %in) nounwind {
 ;
 ; AVX512VPOPCNTDQ-LABEL: testv16i16:
 ; AVX512VPOPCNTDQ:       # BB#0:
-; AVX512VPOPCNTDQ-NEXT:    vmovdqa {{.*#+}} ymm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
-; AVX512VPOPCNTDQ-NEXT:    vpand %ymm1, %ymm0, %ymm2
-; AVX512VPOPCNTDQ-NEXT:    vmovdqa {{.*#+}} ymm3 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
-; AVX512VPOPCNTDQ-NEXT:    vpshufb %ymm2, %ymm3, %ymm2
-; AVX512VPOPCNTDQ-NEXT:    vpsrlw $4, %ymm0, %ymm0
-; AVX512VPOPCNTDQ-NEXT:    vpand %ymm1, %ymm0, %ymm0
-; AVX512VPOPCNTDQ-NEXT:    vpshufb %ymm0, %ymm3, %ymm0
-; AVX512VPOPCNTDQ-NEXT:    vpaddb %ymm2, %ymm0, %ymm0
-; AVX512VPOPCNTDQ-NEXT:    vpsllw $8, %ymm0, %ymm1
-; AVX512VPOPCNTDQ-NEXT:    vpaddb %ymm0, %ymm1, %ymm0
-; AVX512VPOPCNTDQ-NEXT:    vpsrlw $8, %ymm0, %ymm0
+; AVX512VPOPCNTDQ-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
+; AVX512VPOPCNTDQ-NEXT:    vpopcntd %zmm0, %zmm0
+; AVX512VPOPCNTDQ-NEXT:    vpmovdw %zmm0, %ymm0
 ; AVX512VPOPCNTDQ-NEXT:    retq
   %out = call <16 x i16> @llvm.ctpop.v16i16(<16 x i16> %in)
   ret <16 x i16> %out
