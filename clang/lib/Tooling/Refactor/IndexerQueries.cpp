@@ -59,7 +59,6 @@ struct QueryYAMLNode {
 
 } // end anonymous namespace
 
-LLVM_YAML_IS_SEQUENCE_VECTOR(int)
 LLVM_YAML_IS_SEQUENCE_VECTOR(QueryPredicateNode)
 LLVM_YAML_IS_SEQUENCE_VECTOR(QueryYAMLNode)
 
