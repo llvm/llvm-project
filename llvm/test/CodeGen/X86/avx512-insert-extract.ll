@@ -12,6 +12,7 @@ define <16 x float> @test1(<16 x float> %x, float* %br, float %y) nounwind {
 ; KNL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],xmm1[0],xmm0[3]
 ; KNL-NEXT:    vinsertf32x4 $3, %xmm0, %zmm2, %zmm0
 ; KNL-NEXT:    retq
+; KNL-NEXT:    ## -- End function
 ;
 ; SKX-LABEL: test1:
 ; SKX:       ## BB#0:
@@ -21,6 +22,7 @@ define <16 x float> @test1(<16 x float> %x, float* %br, float %y) nounwind {
 ; SKX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],xmm1[0],xmm0[3]
 ; SKX-NEXT:    vinsertf32x4 $3, %xmm0, %zmm2, %zmm0
 ; SKX-NEXT:    retq
+; SKX-NEXT:    ## -- End function
   %rrr = load float, float* %br
   %rrr2 = insertelement <16 x float> %x, float %rrr, i32 1
   %rrr3 = insertelement <16 x float> %rrr2, float %y, i32 14
@@ -36,6 +38,7 @@ define <8 x double> @test2(<8 x double> %x, double* %br, double %y) nounwind {
 ; KNL-NEXT:    vmovsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
 ; KNL-NEXT:    vinsertf32x4 $3, %xmm0, %zmm2, %zmm0
 ; KNL-NEXT:    retq
+; KNL-NEXT:    ## -- End function
 ;
 ; SKX-LABEL: test2:
 ; SKX:       ## BB#0:
@@ -45,6 +48,7 @@ define <8 x double> @test2(<8 x double> %x, double* %br, double %y) nounwind {
 ; SKX-NEXT:    vmovsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
 ; SKX-NEXT:    vinsertf64x2 $3, %xmm0, %zmm2, %zmm0
 ; SKX-NEXT:    retq
+; SKX-NEXT:    ## -- End function
   %rrr = load double, double* %br
   %rrr2 = insertelement <8 x double> %x, double %rrr, i32 1
   %rrr3 = insertelement <8 x double> %rrr2, double %y, i32 6
@@ -58,6 +62,7 @@ define <16 x float> @test3(<16 x float> %x) nounwind {
 ; KNL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm0[0],xmm1[0],xmm0[2,3]
 ; KNL-NEXT:    vinsertf32x4 $0, %xmm1, %zmm0, %zmm0
 ; KNL-NEXT:    retq
+; KNL-NEXT:    ## -- End function
 ;
 ; SKX-LABEL: test3:
 ; SKX:       ## BB#0:
@@ -65,6 +70,7 @@ define <16 x float> @test3(<16 x float> %x) nounwind {
 ; SKX-NEXT:    vinsertps {{.*#+}} xmm1 = xmm0[0],xmm1[0],xmm0[2,3]
 ; SKX-NEXT:    vinsertf32x4 $0, %xmm1, %zmm0, %zmm0
 ; SKX-NEXT:    retq
+; SKX-NEXT:    ## -- End function
   %eee = extractelement <16 x float> %x, i32 4
   %rrr2 = insertelement <16 x float> %x, float %eee, i32 1
   ret <16 x float> %rrr2
@@ -78,6 +84,7 @@ define <8 x i64> @test4(<8 x i64> %x) nounwind {
 ; KNL-NEXT:    vpinsrq $1, %rax, %xmm0, %xmm1
 ; KNL-NEXT:    vinserti32x4 $0, %xmm1, %zmm0, %zmm0
 ; KNL-NEXT:    retq
+; KNL-NEXT:    ## -- End function
 ;
 ; SKX-LABEL: test4:
 ; SKX:       ## BB#0:
@@ -86,6 +93,7 @@ define <8 x i64> @test4(<8 x i64> %x) nounwind {
 ; SKX-NEXT:    vpinsrq $1, %rax, %xmm0, %xmm1
 ; SKX-NEXT:    vinserti64x2 $0, %xmm1, %zmm0, %zmm0
 ; SKX-NEXT:    retq
+; SKX-NEXT:    ## -- End function
   %eee = extractelement <8 x i64> %x, i32 4
   %rrr2 = insertelement <8 x i64> %x, i64 %eee, i32 1
   ret <8 x i64> %rrr2
@@ -96,11 +104,13 @@ define i32 @test5(<4 x float> %x) nounwind {
 ; KNL:       ## BB#0:
 ; KNL-NEXT:    vextractps $3, %xmm0, %eax
 ; KNL-NEXT:    retq
+; KNL-NEXT:    ## -- End function
 ;
 ; SKX-LABEL: test5:
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    vextractps $3, %xmm0, %eax
 ; SKX-NEXT:    retq
+; SKX-NEXT:    ## -- End function
   %ef = extractelement <4 x float> %x, i32 3
   %ei = bitcast float %ef to i32
   ret i32 %ei
@@ -111,11 +121,13 @@ define void @test6(<4 x float> %x, float* %out) nounwind {
 ; KNL:       ## BB#0:
 ; KNL-NEXT:    vextractps $3, %xmm0, (%rdi)
 ; KNL-NEXT:    retq
+; KNL-NEXT:    ## -- End function
 ;
 ; SKX-LABEL: test6:
 ; SKX:       ## BB#0:
 ; SKX-NEXT:    vextractps $3, %xmm0, (%rdi)
 ; SKX-NEXT:    retq
+; SKX-NEXT:    ## -- End function
   %ef = extractelement <4 x float> %x, i32 3
   store float %ef, float* %out, align 4
   ret void
@@ -135,6 +147,7 @@ define float @test7(<16 x float> %x, i32 %ind) nounwind {
 ; KNL-NEXT:    movq %rbp, %rsp
 ; KNL-NEXT:    popq %rbp
 ; KNL-NEXT:    retq
+; KNL-NEXT:    ## -- End function
 ;
 ; SKX-LABEL: test7:
 ; SKX:       ## BB#0:
@@ -150,6 +163,7 @@ define float @test7(<16 x float> %x, i32 %ind) nounwind {
 ; SKX-NEXT:    popq %rbp
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
+; SKX-NEXT:    ## -- End function
   %e = extractelement <16 x float> %x, i32 %ind
   ret float %e
 }
@@ -168,6 +182,7 @@ define double @test8(<8 x double> %x, i32 %ind) nounwind {
 ; KNL-NEXT:    movq %rbp, %rsp
 ; KNL-NEXT:    popq %rbp
 ; KNL-NEXT:    retq
+; KNL-NEXT:    ## -- End function
 ;
 ; SKX-LABEL: test8:
 ; SKX:       ## BB#0:
@@ -183,6 +198,7 @@ define double @test8(<8 x double> %x, i32 %ind) nounwind {
 ; SKX-NEXT:    popq %rbp
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
+; SKX-NEXT:    ## -- End function
   %e = extractelement <8 x double> %x, i32 %ind
   ret double %e
 }
@@ -201,6 +217,7 @@ define float @test9(<8 x float> %x, i32 %ind) nounwind {
 ; KNL-NEXT:    movq %rbp, %rsp
 ; KNL-NEXT:    popq %rbp
 ; KNL-NEXT:    retq
+; KNL-NEXT:    ## -- End function
 ;
 ; SKX-LABEL: test9:
 ; SKX:       ## BB#0:
@@ -216,6 +233,7 @@ define float @test9(<8 x float> %x, i32 %ind) nounwind {
 ; SKX-NEXT:    popq %rbp
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
+; SKX-NEXT:    ## -- End function
   %e = extractelement <8 x float> %x, i32 %ind
   ret float %e
 }
@@ -234,6 +252,7 @@ define i32 @test10(<16 x i32> %x, i32 %ind) nounwind {
 ; KNL-NEXT:    movq %rbp, %rsp
 ; KNL-NEXT:    popq %rbp
 ; KNL-NEXT:    retq
+; KNL-NEXT:    ## -- End function
 ;
 ; SKX-LABEL: test10:
 ; SKX:       ## BB#0:
@@ -249,6 +268,7 @@ define i32 @test10(<16 x i32> %x, i32 %ind) nounwind {
 ; SKX-NEXT:    popq %rbp
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
+; SKX-NEXT:    ## -- End function
   %e = extractelement <16 x i32> %x, i32 %ind
   ret i32 %e
 }
