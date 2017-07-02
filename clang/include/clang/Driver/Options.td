@@ -194,6 +194,16 @@ def clang_ignored_f_Group : OptionGroup<"<clang ignored f group>">,
 def clang_ignored_m_Group : OptionGroup<"<clang ignored m group>">,
   Group<m_Group>, Flags<[Ignored]>;
 
+// Group for clang options in the process of deprecation.
+// Please include the version that deprecated the flag as comment to allow
+// easier garbage collection.
+def clang_ignored_legacy_options_Group : OptionGroup<"<clang legacy flags>">,
+  Group<f_Group>, Flags<[Ignored]>;
+
+// Retired with clang-5.0
+def : Flag<["-"], "fslp-vectorize-aggressive">, Group<clang_ignored_legacy_options_Group>;
+def : Flag<["-"], "fno-slp-vectorize-aggressive">, Group<clang_ignored_legacy_options_Group>;
+
 // Group that ignores all gcc optimizations that won't be implemented
 def clang_ignored_gcc_optimization_f_Group : OptionGroup<
   "<clang_ignored_gcc_optimization_f_Group>">, Group<f_Group>, Flags<[Ignored]>;
