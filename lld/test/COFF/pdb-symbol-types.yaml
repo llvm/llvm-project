@@ -16,33 +16,33 @@
 # CHECK:                           Symbols
 # CHECK: ============================================================
 # CHECK-LABEL:   Mod 0000 | `{{.*}}pdb-symbol-types.yaml.tmp.obj`:
-# CHECK:   - S_OBJNAME [size = 52] sig=0, `C:\src\llvm-project\build\symbol-types.obj`
-# CHECK:   - S_COMPILE3 [size = 60]
-# CHECK:       machine = intel x86-x64, Ver = Microsoft (R) Optimizing Compiler, language = c
-# CHECK:       frontend = 19.0.24215.1, backend = 19.0.24215.1
-# CHECK:       flags = security checks | hot patchable
-# CHECK:   - S_GPROC32_ID [size = 44] `main`
-# CHECK:       parent = 0, addr = 0002:0000, code size = 7, end = 0
-# CHECK:       debug start = 0, debug end = 6, flags = none
-# CHECK:   - S_FRAMEPROC [size = 32]
-# CHECK:       size = 0, padding size = 0, offset to padding = 0
-# CHECK:       bytes of callee saved registers = 0, exception handler addr = 0000:0000
-# CHECK:       flags = has async eh | opt speed
-# CHECK:   - S_END [size = 4]
-# CHECK:   - S_GDATA32 [size = 28] `global_foo`
-# CHECK:       type = 0x1004 (Foo), addr = 0001:0000
-# CHECK:   - S_UDT [size = 16] `UDT_Foo`
-# CHECK:       original type = 0x1004
-# CHECK:   - S_UDT [size = 12] `Foo`
-# CHECK:       original type = 0x1004
-# CHECK:   - S_BUILDINFO [size = 8] BuildId = `4106`
+# CHECK:     4 | S_OBJNAME [size = 52] sig=0, `C:\src\llvm-project\build\symbol-types.obj`
+# CHECK:    56 | S_COMPILE3 [size = 60]
+# CHECK:         machine = intel x86-x64, Ver = Microsoft (R) Optimizing Compiler, language = c
+# CHECK:         frontend = 19.0.24215.1, backend = 19.0.24215.1
+# CHECK:         flags = security checks | hot patchable
+# CHECK:   116 | S_GPROC32_ID [size = 44] `main`
+# CHECK:         parent = 0, end = 0, addr = 0002:0000, code size = 7
+# CHECK:         debug start = 0, debug end = 6, flags = none
+# CHECK:   160 | S_FRAMEPROC [size = 32]
+# CHECK:         size = 0, padding size = 0, offset to padding = 0
+# CHECK:         bytes of callee saved registers = 0, exception handler addr = 0000:0000
+# CHECK:         flags = has async eh | opt speed
+# CHECK:   192 | S_END [size = 4]
+# CHECK:   196 | S_GDATA32 [size = 28] `global_foo`
+# CHECK:         type = 0x1004 (Foo), addr = 0001:0000
+# CHECK:   224 | S_UDT [size = 16] `UDT_Foo`
+# CHECK:         original type = 0x1004
+# CHECK:   240 | S_UDT [size = 12] `Foo`
+# CHECK:         original type = 0x1004
+# CHECK:   252 | S_BUILDINFO [size = 8] BuildId = `4106`
 # CHECK-LABEL:   Mod 0001 | `* Linker *`:
 
 --- !COFF
-header:          
+header:
   Machine:         IMAGE_FILE_MACHINE_AMD64
   Characteristics: [  ]
-sections:        
+sections:
   - Name:            .drectve
     Characteristics: [ IMAGE_SCN_LNK_INFO, IMAGE_SCN_LNK_REMOVE ]
     Alignment:       1
@@ -50,15 +50,15 @@ sections:
   - Name:            '.debug$S'
     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
     Alignment:       1
-    Subsections:     
+    Subsections:
       - !Symbols
-        Records:         
+        Records:
           - Kind:            S_OBJNAME
-            ObjNameSym:      
+            ObjNameSym:
               Signature:       0
               ObjectName:      'C:\src\llvm-project\build\symbol-types.obj'
           - Kind:            S_COMPILE3
-            Compile3Sym:     
+            Compile3Sym:
               Flags:           [ SecurityChecks, HotPatch ]
               Machine:         X64
               FrontendMajor:   19
@@ -71,9 +71,9 @@ sections:
               BackendQFE:      1
               Version:         'Microsoft (R) Optimizing Compiler'
       - !Symbols
-        Records:         
+        Records:
           - Kind:            S_GPROC32_ID
-            ProcSym:         
+            ProcSym:
               CodeSize:        7
               DbgStart:        0
               DbgEnd:          6
@@ -81,7 +81,7 @@ sections:
               Flags:           [  ]
               DisplayName:     main
           - Kind:            S_FRAMEPROC
-            FrameProcSym:    
+            FrameProcSym:
               TotalFrameBytes: 0
               PaddingFrameBytes: 0
               OffsetToPadding: 0
@@ -90,15 +90,15 @@ sections:
               SectionIdOfExceptionHandler: 0
               Flags:           [ AsynchronousExceptionHandling, OptimizedForSpeed ]
           - Kind:            S_PROC_ID_END
-            ScopeEndSym:     
+            ScopeEndSym:
       - !Lines
         CodeSize:        7
         Flags:           [  ]
         RelocOffset:     0
         RelocSegment:    0
-        Blocks:          
+        Blocks:
           - FileName:        'c:\src\llvm-project\build\symbol-types.c'
-            Lines:           
+            Lines:
               - Offset:          0
                 LineStart:       4
                 IsStatement:     true
@@ -111,35 +111,35 @@ sections:
                 LineStart:       6
                 IsStatement:     true
                 EndDelta:        0
-            Columns:         
+            Columns:
       - !Symbols
-        Records:         
+        Records:
           - Kind:            S_GDATA32
-            DataSym:         
+            DataSym:
               Type:            4101
               DisplayName:     global_foo
           - Kind:            S_UDT
-            UDTSym:          
+            UDTSym:
               Type:            4101
               UDTName:         UDT_Foo
           - Kind:            S_UDT
-            UDTSym:          
+            UDTSym:
               Type:            4101
               UDTName:         Foo
       - !FileChecksums
-        Checksums:       
+        Checksums:
           - FileName:        'c:\src\llvm-project\build\symbol-types.c'
             Kind:            MD5
             Checksum:        F833E1A4909FF6FEC5689A664F3BE725
       - !StringTable
-        Strings:         
+        Strings:
           - 'c:\src\llvm-project\build\symbol-types.c'
       - !Symbols
-        Records:         
+        Records:
           - Kind:            S_BUILDINFO
-            BuildInfoSym:    
+            BuildInfoSym:
               BuildId:         4111
-    Relocations:     
+    Relocations:
       - VirtualAddress:  164
         SymbolName:      main
         Type:            IMAGE_REL_AMD64_SECREL
@@ -161,24 +161,24 @@ sections:
   - Name:            '.debug$T'
     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
     Alignment:       1
-    Types:           
+    Types:
       - Kind:            LF_ARGLIST
-        ArgList:         
+        ArgList:
           ArgIndices:      [ 0 ]
       - Kind:            LF_PROCEDURE
-        Procedure:       
+        Procedure:
           ReturnType:      116
           CallConv:        NearC
           Options:         [ None ]
           ParameterCount:  0
           ArgumentList:    4096
       - Kind:            LF_FUNC_ID
-        FuncId:          
+        FuncId:
           ParentScope:     0
           FunctionType:    4097
           Name:            main
       - Kind:            LF_STRUCTURE
-        Class:           
+        Class:
           MemberCount:     0
           Options:         [ None, ForwardReference, HasUniqueName ]
           FieldList:       0
@@ -188,15 +188,15 @@ sections:
           VTableShape:     0
           Size:            0
       - Kind:            LF_FIELDLIST
-        FieldList:       
+        FieldList:
           - Kind:            LF_MEMBER
-            DataMember:      
+            DataMember:
               Attrs:           3
               Type:            116
               FieldOffset:     0
               Name:            x
       - Kind:            LF_STRUCTURE
-        Class:           
+        Class:
           MemberCount:     1
           Options:         [ None, HasUniqueName ]
           FieldList:       4100
@@ -206,43 +206,43 @@ sections:
           VTableShape:     0
           Size:            4
       - Kind:            LF_STRING_ID
-        StringId:        
+        StringId:
           Id:              0
           String:          'c:\src\llvm-project\build\symbol-types.c'
       - Kind:            LF_UDT_SRC_LINE
-        UdtSourceLine:   
+        UdtSourceLine:
           UDT:             4101
           SourceFile:      4102
           LineNumber:      1
       - Kind:            LF_STRING_ID
-        StringId:        
+        StringId:
           Id:              0
           String:          'C:\src\llvm-project\build'
       - Kind:            LF_STRING_ID
-        StringId:        
+        StringId:
           Id:              0
           String:          'C:\PROGRA~2\MICROS~1.0\VC\Bin\amd64\cl.exe'
       - Kind:            LF_STRING_ID
-        StringId:        
+        StringId:
           Id:              0
           String:          '-c -Z7 -MT -IC:\PROGRA~2\MICROS~1.0\VC\include -IC:\PROGRA~2\MICROS~1.0\VC\atlmfc\include -IC:\PROGRA~2\WI3CF2~1\10\include\10.0.14393.0\ucrt -IC:\PROGRA~2\WI3CF2~1\10\include\10.0.14393.0\shared -IC:\PROGRA~2\WI3CF2~1\10\include\10.0.14393.0\um'
       - Kind:            LF_SUBSTR_LIST
-        StringList:      
+        StringList:
           StringIndices:   [ 4106 ]
       - Kind:            LF_STRING_ID
-        StringId:        
+        StringId:
           Id:              4107
           String:          ' -IC:\PROGRA~2\WI3CF2~1\10\include\10.0.14393.0\winrt -TC -X'
       - Kind:            LF_STRING_ID
-        StringId:        
+        StringId:
           Id:              0
           String:          symbol-types.c
       - Kind:            LF_STRING_ID
-        StringId:        
+        StringId:
           Id:              0
           String:          'C:\src\llvm-project\build\vc140.pdb'
       - Kind:            LF_BUILDINFO
-        BuildInfo:       
+        BuildInfo:
           ArgIndices:      [ 4104, 4105, 4109, 4110, 4108 ]
   - Name:            .data
     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_WRITE ]
@@ -252,11 +252,11 @@ sections:
     Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
     Alignment:       16
     SectionData:     8B0500000000C3
-    Relocations:     
+    Relocations:
       - VirtualAddress:  2
         SymbolName:      global_foo
         Type:            IMAGE_REL_AMD64_REL32
-symbols:         
+symbols:
   - Name:            '@comp.id'
     Value:           17063575
     SectionNumber:   -1
@@ -275,7 +275,7 @@ symbols:
     SimpleType:      IMAGE_SYM_TYPE_NULL
     ComplexType:     IMAGE_SYM_DTYPE_NULL
     StorageClass:    IMAGE_SYM_CLASS_STATIC
-    SectionDefinition: 
+    SectionDefinition:
       Length:          47
       NumberOfRelocations: 0
       NumberOfLinenumbers: 0
@@ -287,7 +287,7 @@ symbols:
     SimpleType:      IMAGE_SYM_TYPE_NULL
     ComplexType:     IMAGE_SYM_DTYPE_NULL
     StorageClass:    IMAGE_SYM_CLASS_STATIC
-    SectionDefinition: 
+    SectionDefinition:
       Length:          432
       NumberOfRelocations: 6
       NumberOfLinenumbers: 0
@@ -299,7 +299,7 @@ symbols:
     SimpleType:      IMAGE_SYM_TYPE_NULL
     ComplexType:     IMAGE_SYM_DTYPE_NULL
     StorageClass:    IMAGE_SYM_CLASS_STATIC
-    SectionDefinition: 
+    SectionDefinition:
       Length:          732
       NumberOfRelocations: 0
       NumberOfLinenumbers: 0
@@ -311,7 +311,7 @@ symbols:
     SimpleType:      IMAGE_SYM_TYPE_NULL
     ComplexType:     IMAGE_SYM_DTYPE_NULL
     StorageClass:    IMAGE_SYM_CLASS_STATIC
-    SectionDefinition: 
+    SectionDefinition:
       Length:          4
       NumberOfRelocations: 0
       NumberOfLinenumbers: 0
@@ -329,7 +329,7 @@ symbols:
     SimpleType:      IMAGE_SYM_TYPE_NULL
     ComplexType:     IMAGE_SYM_DTYPE_NULL
     StorageClass:    IMAGE_SYM_CLASS_STATIC
-    SectionDefinition: 
+    SectionDefinition:
       Length:          7
       NumberOfRelocations: 1
       NumberOfLinenumbers: 0

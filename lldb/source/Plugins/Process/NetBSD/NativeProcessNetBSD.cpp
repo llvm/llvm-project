@@ -21,6 +21,7 @@
 #include "lldb/Host/common/NativeRegisterContext.h"
 #include "lldb/Host/posix/ProcessLauncherPosixFork.h"
 #include "lldb/Target/Process.h"
+#include "llvm/Support/Errno.h"
 
 // System includes - They have to be included after framework includes because
 // they define some
@@ -820,15 +821,13 @@ void NativeProcessNetBSD::SigchldHandler() {
   Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PROCESS));
   // Process all pending waitpid notifications.
   int status;
-  ::pid_t wait_pid = waitpid(GetID(), &status, WALLSIG | WNOHANG);
+  ::pid_t wait_pid =
+      llvm::sys::RetryAfterSignal(-1, waitpid, GetID(), &status, WALLSIG | WNOHANG);
 
   if (wait_pid == 0)
     return; // We are done.
 
   if (wait_pid == -1) {
-    if (errno == EINTR)
-      return;
-
     Status error(errno, eErrorTypePOSIX);
     LLDB_LOG(log, "waitpid ({0}, &status, _) failed: {1}", GetID(), error);
   }
