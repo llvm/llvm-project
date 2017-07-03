@@ -1,0 +1,29 @@
+# RUN: llc -march=amdgcn -run-pass none -o - %s | FileCheck %s
+--- |
+  define amdgpu_kernel void @flags() {
+    ret void
+  }
+
+  declare void @foo()
+...
+---
+
+# CHECK: SI_PC_ADD_REL_OFFSET target-flags(amdgpu-rel32-lo) @foo + 4, target-flags(amdgpu-rel32-hi) @foo + 4, implicit-def dead %scc
+# CHECK: %1 = S_MOV_B64 target-flags(amdgpu-gotprel) @foo
+
+name: flags
+liveins:
+  - { reg: '%sgpr0_sgpr1' }
+frameInfo:
+  maxAlignment:  8
+registers:
+  - { id: 0, class: sreg_64, preferred-register: '' }
+  - { id: 1, class: sreg_64, preferred-register: '' }
+body: |
+  bb.0:
+    liveins: %sgpr0_sgpr1
+    %0 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-rel32-lo) @foo + 4, target-flags(amdgpu-rel32-hi) @foo + 4, implicit-def dead %scc
+  %1 = S_MOV_B64 target-flags(amdgpu-gotprel) @foo
+
+    S_ENDPGM
+...
