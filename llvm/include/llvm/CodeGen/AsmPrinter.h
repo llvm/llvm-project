@@ -608,8 +608,8 @@ private:
   // Internal Implementation Details
   //===------------------------------------------------------------------===//
 
-  /// This emits visibility information about symbol, if this is suported by the
-  /// target.
+  /// This emits visibility information about symbol, if this is supported by
+  /// the target.
   void EmitVisibility(MCSymbol *Sym, unsigned Visibility,
                       bool IsDefinition = true) const;
 

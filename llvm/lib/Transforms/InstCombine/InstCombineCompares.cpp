@@ -2740,23 +2740,26 @@ Instruction *InstCombiner::foldICmpIntrinsicWithConstant(ICmpInst &Cmp,
   if (!II || !Cmp.isEquality())
     return nullptr;
 
-  // Handle icmp {eq|ne} <intrinsic>, intcst.
+  // Handle icmp {eq|ne} <intrinsic>, Constant.
+  Type *Ty = II->getType();
   switch (II->getIntrinsicID()) {
   case Intrinsic::bswap:
     Worklist.Add(II);
     Cmp.setOperand(0, II->getArgOperand(0));
-    Cmp.setOperand(1, Builder->getInt(C->byteSwap()));
+    Cmp.setOperand(1, ConstantInt::get(Ty, C->byteSwap()));
     return &Cmp;
+
   case Intrinsic::ctlz:
   case Intrinsic::cttz:
     // ctz(A) == bitwidth(A)  ->  A == 0 and likewise for !=
     if (*C == C->getBitWidth()) {
       Worklist.Add(II);
       Cmp.setOperand(0, II->getArgOperand(0));
-      Cmp.setOperand(1, ConstantInt::getNullValue(II->getType()));
+      Cmp.setOperand(1, ConstantInt::getNullValue(Ty));
       return &Cmp;
     }
     break;
+
   case Intrinsic::ctpop: {
     // popcount(A) == 0  ->  A == 0 and likewise for !=
     // popcount(A) == bitwidth(A)  ->  A == -1 and likewise for !=
@@ -2764,8 +2767,8 @@ Instruction *InstCombiner::foldICmpIntrinsicWithConstant(ICmpInst &Cmp,
     if (IsZero || *C == C->getBitWidth()) {
       Worklist.Add(II);
       Cmp.setOperand(0, II->getArgOperand(0));
-      auto *NewOp = IsZero ? Constant::getNullValue(II->getType())
-                           : Constant::getAllOnesValue(II->getType());
+      auto *NewOp =
+          IsZero ? Constant::getNullValue(Ty) : Constant::getAllOnesValue(Ty);
       Cmp.setOperand(1, NewOp);
       return &Cmp;
     }
@@ -2774,6 +2777,7 @@ Instruction *InstCombiner::foldICmpIntrinsicWithConstant(ICmpInst &Cmp,
   default:
     break;
   }
+
   return nullptr;
 }
 
@@ -3437,6 +3441,15 @@ Instruction *InstCombiner::foldICmpEquality(ICmpInst &I) {
       return new ICmpInst(Pred, Mask, Builder->getInt(CmpV));
     }
   }
+
+  // If both operands are byte-swapped or bit-reversed, just compare the
+  // original values.
+  // TODO: Move this to a function similar to foldICmpIntrinsicWithConstant()
+  // and handle more intrinsics.
+  if ((match(Op0, m_BSwap(m_Value(A))) && match(Op1, m_BSwap(m_Value(B)))) ||
+      (match(Op0, m_BitReverse(m_Value(A))) &&
+       match(Op1, m_BitReverse(m_Value(B)))))
+    return new ICmpInst(Pred, A, B);
 
   return nullptr;
 }

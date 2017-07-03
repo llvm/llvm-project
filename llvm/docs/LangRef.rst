@@ -5034,7 +5034,7 @@ which is the string ``llvm.loop.licm_versioning.disable``. For example:
 
 Loop distribution allows splitting a loop into multiple loops.  Currently,
 this is only performed if the entire loop cannot be vectorized due to unsafe
-memory dependencies.  The transformation will atempt to isolate the unsafe
+memory dependencies.  The transformation will attempt to isolate the unsafe
 dependencies into their own loop.
 
 This metadata can be used to selectively enable or disable distribution of the

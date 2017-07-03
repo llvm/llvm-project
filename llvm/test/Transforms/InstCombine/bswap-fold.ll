@@ -1,35 +1,5 @@
 ; RUN: opt < %s -instcombine -S | FileCheck %s
 
-define i1 @test1(i16 %t) {
-; CHECK-LABEL: @test1(
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i16 %t, 256
-; CHECK-NEXT:    ret i1 [[TMP2]]
-;
-  %tmp1 = call i16 @llvm.bswap.i16( i16 %t )
-  %tmp2 = icmp eq i16 %tmp1, 1
-  ret i1 %tmp2
-}
-
-define i1 @test2(i32 %tmp) {
-; CHECK-LABEL: @test2(
-; CHECK-NEXT:    [[TMP_UPGRD_1:%.*]] = icmp eq i32 %tmp, 16777216
-; CHECK-NEXT:    ret i1 [[TMP_UPGRD_1]]
-;
-  %tmp34 = tail call i32 @llvm.bswap.i32( i32 %tmp )
-  %tmp.upgrd.1 = icmp eq i32 %tmp34, 1
-  ret i1 %tmp.upgrd.1
-}
-
-define i1 @test3(i64 %tmp) {
-; CHECK-LABEL: @test3(
-; CHECK-NEXT:    [[TMP_UPGRD_2:%.*]] = icmp eq i64 %tmp, 72057594037927936
-; CHECK-NEXT:    ret i1 [[TMP_UPGRD_2]]
-;
-  %tmp34 = tail call i64 @llvm.bswap.i64( i64 %tmp )
-  %tmp.upgrd.2 = icmp eq i64 %tmp34, 1
-  ret i1 %tmp.upgrd.2
-}
-
 ; rdar://5992453
 ; A & 255
 define i32 @test4(i32 %a) nounwind  {

@@ -4320,6 +4320,24 @@ SIInstrInfo::CreateTargetPostRAHazardRecognizer(const MachineFunction &MF) const
   return new GCNHazardRecognizer(MF);
 }
 
+std::pair<unsigned, unsigned>
+SIInstrInfo::decomposeMachineOperandsTargetFlags(unsigned TF) const {
+  return std::make_pair(TF & MO_MASK, TF & ~MO_MASK);
+}
+
+ArrayRef<std::pair<unsigned, const char *>>
+SIInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
+  static const std::pair<unsigned, const char *> TargetFlags[] = {
+    { MO_GOTPCREL, "amdgpu-gotprel" },
+    { MO_GOTPCREL32_LO, "amdgpu-gotprel32-lo" },
+    { MO_GOTPCREL32_HI, "amdgpu-gotprel32-hi" },
+    { MO_REL32_LO, "amdgpu-rel32-lo" },
+    { MO_REL32_HI, "amdgpu-rel32-hi" }
+  };
+
+  return makeArrayRef(TargetFlags);
+}
+
 bool SIInstrInfo::isBasicBlockPrologue(const MachineInstr &MI) const {
   return !MI.isTerminator() && MI.getOpcode() != AMDGPU::COPY &&
          MI.modifiesRegister(AMDGPU::EXEC, &RI);

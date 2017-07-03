@@ -680,11 +680,6 @@ class ConstantDataArray final : public ConstantDataSequential {
   explicit ConstantDataArray(Type *ty, const char *Data)
       : ConstantDataSequential(ty, ConstantDataArrayVal, Data) {}
 
-  /// Allocate space for exactly zero operands.
-  void *operator new(size_t s) {
-    return User::operator new(s, 0);
-  }
-
 public:
   ConstantDataArray(const ConstantDataArray &) = delete;
 
@@ -738,11 +733,6 @@ class ConstantDataVector final : public ConstantDataSequential {
 
   explicit ConstantDataVector(Type *ty, const char *Data)
       : ConstantDataSequential(ty, ConstantDataVectorVal, Data) {}
-
-  // allocate space for exactly zero operands.
-  void *operator new(size_t s) {
-    return User::operator new(s, 0);
-  }
 
 public:
   ConstantDataVector(const ConstantDataVector &) = delete;
