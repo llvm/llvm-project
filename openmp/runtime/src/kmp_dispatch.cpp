@@ -172,7 +172,7 @@ template <>
 __forceinline kmp_int32 test_then_add<kmp_int32>(volatile kmp_int32 *p,
                                                  kmp_int32 d) {
   kmp_int32 r;
-  r = KMP_TEST_THEN_ADD32(p, d);
+  r = KMP_TEST_THEN_ADD32(CCAST(kmp_int32 *, p), d);
   return r;
 }
 
@@ -180,7 +180,7 @@ template <>
 __forceinline kmp_int64 test_then_add<kmp_int64>(volatile kmp_int64 *p,
                                                  kmp_int64 d) {
   kmp_int64 r;
-  r = KMP_TEST_THEN_ADD64(p, d);
+  r = KMP_TEST_THEN_ADD64(CCAST(kmp_int64 *, p), d);
   return r;
 }
 
@@ -190,14 +190,14 @@ template <typename T> static __forceinline T test_then_inc_acq(volatile T *p);
 template <>
 __forceinline kmp_int32 test_then_inc_acq<kmp_int32>(volatile kmp_int32 *p) {
   kmp_int32 r;
-  r = KMP_TEST_THEN_INC_ACQ32(p);
+  r = KMP_TEST_THEN_INC_ACQ32(CCAST(kmp_int32 *, p));
   return r;
 }
 
 template <>
 __forceinline kmp_int64 test_then_inc_acq<kmp_int64>(volatile kmp_int64 *p) {
   kmp_int64 r;
-  r = KMP_TEST_THEN_INC_ACQ64(p);
+  r = KMP_TEST_THEN_INC_ACQ64(CCAST(kmp_int64 *, p));
   return r;
 }
 
@@ -207,14 +207,14 @@ template <typename T> static __forceinline T test_then_inc(volatile T *p);
 template <>
 __forceinline kmp_int32 test_then_inc<kmp_int32>(volatile kmp_int32 *p) {
   kmp_int32 r;
-  r = KMP_TEST_THEN_INC32(p);
+  r = KMP_TEST_THEN_INC32(CCAST(kmp_int32 *, p));
   return r;
 }
 
 template <>
 __forceinline kmp_int64 test_then_inc<kmp_int64>(volatile kmp_int64 *p) {
   kmp_int64 r;
-  r = KMP_TEST_THEN_INC64(p);
+  r = KMP_TEST_THEN_INC64(CCAST(kmp_int64 *, p));
   return r;
 }
 
@@ -262,7 +262,7 @@ static UT // unsigned 4- or 8-byte type
   register kmp_uint32 (*f)(UT, UT) = pred;
   register UT r;
 
-  KMP_FSYNC_SPIN_INIT(obj, (void *)spin);
+  KMP_FSYNC_SPIN_INIT(obj, CCAST(UT *, spin));
   KMP_INIT_YIELD(spins);
   // main wait spin loop
   while (!f(r = *spin, check)) {
@@ -440,7 +440,7 @@ static void __kmp_dispatch_dxo(int *gtid_ref, int *cid_ref, ident_t *loc_ref) {
           th->th.th_dispatch->th_dispatch_pr_current);
     }
 
-    KMP_FSYNC_RELEASING(&sh->u.s.ordered_iteration);
+    KMP_FSYNC_RELEASING(CCAST(UT *, &sh->u.s.ordered_iteration));
 #if !defined(KMP_GOMP_COMPAT)
     if (__kmp_env_consistency_check) {
       if (pr->ordered_bumped != 0) {
@@ -1162,7 +1162,9 @@ __kmp_dispatch_init(ident_t *loc, int gtid, enum sched_type schedule, T lb,
                    gtid, my_buffer_index, sh->buffer_index));
 
     th->th.th_dispatch->th_dispatch_pr_current = (dispatch_private_info_t *)pr;
-    th->th.th_dispatch->th_dispatch_sh_current = (dispatch_shared_info_t *)sh;
+    th->th.th_dispatch->th_dispatch_sh_current =
+        RCAST(dispatch_shared_info_t *,
+              CCAST(dispatch_shared_info_template<UT> *, sh));
 #if USE_ITT_BUILD
     if (pr->ordered) {
       __kmp_itt_ordered_init(gtid);
@@ -1978,7 +1980,8 @@ static int __kmp_dispatch_next(ident_t *loc, int gtid, kmp_int32 *p_last,
               pr->u.p.parm2) { // compare with K*nproc*(chunk+1), K=2 by default
             // use dynamic-style shcedule
             // atomically inrement iterations, get old value
-            init = test_then_add<ST>((ST *)&sh->u.s.iteration, (ST)chunkspec);
+            init = test_then_add<ST>(
+                RCAST(ST *, CCAST(UT *, &sh->u.s.iteration)), (ST)chunkspec);
             remaining = trip - init;
             if (remaining <= 0) {
               status = 0; // all iterations got by other threads
@@ -1995,8 +1998,8 @@ static int __kmp_dispatch_next(ident_t *loc, int gtid, kmp_int32 *p_last,
           } // if
           limit = init + (UT)(remaining *
                               *(double *)&pr->u.p.parm3); // divide by K*nproc
-          if (compare_and_swap<ST>((ST *)&sh->u.s.iteration, (ST)init,
-                                   (ST)limit)) {
+          if (compare_and_swap<ST>(RCAST(ST *, CCAST(UT *, &sh->u.s.iteration)),
+                                   (ST)init, (ST)limit)) {
             // CAS was successful, chunk obtained
             status = 1;
             --limit;
@@ -2056,7 +2059,8 @@ static int __kmp_dispatch_next(ident_t *loc, int gtid, kmp_int32 *p_last,
           if ((T)remaining < pr->u.p.parm2) {
             // use dynamic-style shcedule
             // atomically inrement iterations, get old value
-            init = test_then_add<ST>((ST *)&sh->u.s.iteration, (ST)chunk);
+            init = test_then_add<ST>(
+                RCAST(ST *, CCAST(UT *, &sh->u.s.iteration)), (ST)chunk);
             remaining = trip - init;
             if (remaining <= 0) {
               status = 0; // all iterations got by other threads
@@ -2078,8 +2082,8 @@ static int __kmp_dispatch_next(ident_t *loc, int gtid, kmp_int32 *p_last,
           if (rem) // adjust so that span%chunk == 0
             span += chunk - rem;
           limit = init + span;
-          if (compare_and_swap<ST>((ST *)&sh->u.s.iteration, (ST)init,
-                                   (ST)limit)) {
+          if (compare_and_swap<ST>(RCAST(ST *, CCAST(UT *, &sh->u.s.iteration)),
+                                   (ST)init, (ST)limit)) {
             // CAS was successful, chunk obtained
             status = 1;
             --limit;
@@ -2716,7 +2720,7 @@ __kmp_wait_yield_4(volatile kmp_uint32 *spinner, kmp_uint32 checker,
   register kmp_uint32 (*f)(kmp_uint32, kmp_uint32) = pred;
   register kmp_uint32 r;
 
-  KMP_FSYNC_SPIN_INIT(obj, (void *)spin);
+  KMP_FSYNC_SPIN_INIT(obj, CCAST(kmp_uint32 *, spin));
   KMP_INIT_YIELD(spins);
   // main wait spin loop
   while (!f(r = TCR_4(*spin), check)) {

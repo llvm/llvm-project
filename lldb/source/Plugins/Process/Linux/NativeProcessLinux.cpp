@@ -662,14 +662,11 @@ void NativeProcessLinux::WaitForNewThread(::pid_t tid) {
 
   // The thread is not tracked yet, let's wait for it to appear.
   int status = -1;
-  ::pid_t wait_pid;
-  do {
-    LLDB_LOG(log,
-             "received thread creation event for tid {0}. tid not tracked "
-             "yet, waiting for thread to appear...",
-             tid);
-    wait_pid = waitpid(tid, &status, __WALL);
-  } while (wait_pid == -1 && errno == EINTR);
+  LLDB_LOG(log,
+           "received thread creation event for tid {0}. tid not tracked "
+           "yet, waiting for thread to appear...",
+           tid);
+  ::pid_t wait_pid = llvm::sys::RetryAfterSignal(-1, ::waitpid, tid, &status, __WALL);
   // Since we are waiting on a specific tid, this must be the creation event.
   // But let's do some checks just in case.
   if (wait_pid != tid) {
@@ -2363,15 +2360,13 @@ void NativeProcessLinux::SigchldHandler() {
   // Process all pending waitpid notifications.
   while (true) {
     int status = -1;
-    ::pid_t wait_pid = waitpid(-1, &status, __WALL | __WNOTHREAD | WNOHANG);
+    ::pid_t wait_pid = llvm::sys::RetryAfterSignal(-1, ::waitpid, -1, &status,
+                                          __WALL | __WNOTHREAD | WNOHANG);
 
     if (wait_pid == 0)
       break; // We are done.
 
     if (wait_pid == -1) {
-      if (errno == EINTR)
-        continue;
-
       Status error(errno, eErrorTypePOSIX);
       LLDB_LOG(log, "waitpid (-1, &status, _) failed: {0}", error);
       break;

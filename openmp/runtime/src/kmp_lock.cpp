@@ -950,9 +950,8 @@ static int __kmp_release_nested_ticket_lock_with_checks(kmp_ticket_lock_t *lck,
 void __kmp_init_nested_ticket_lock(kmp_ticket_lock_t *lck) {
   __kmp_init_ticket_lock(lck);
   std::atomic_store_explicit(&lck->lk.depth_locked, 0,
-                             std::memory_order_relaxed); // >= 0 for nestable
-                                                         // locks, -1 for simple
-                                                         // locks
+                             std::memory_order_relaxed);
+  // >= 0 for nestable locks, -1 for simple locks
 }
 
 static void __kmp_init_nested_ticket_lock_with_checks(kmp_ticket_lock_t *lck) {
@@ -1468,9 +1467,9 @@ int __kmp_release_queuing_lock(kmp_queuing_lock_t *lck, kmp_int32 gtid) {
         KMP_DEBUG_ASSERT(head > 0);
 
         /* try (h,h)->(-1,0) */
-        dequeued = KMP_COMPARE_AND_STORE_REL64((kmp_int64 *)tail_id_p,
-                                               KMP_PACK_64(head, head),
-                                               KMP_PACK_64(-1, 0));
+        dequeued = KMP_COMPARE_AND_STORE_REL64(
+            RCAST(kmp_int64 *, CCAST(kmp_int32 *, tail_id_p)),
+            KMP_PACK_64(head, head), KMP_PACK_64(-1, 0));
 #ifdef DEBUG_QUEUING_LOCKS
         TRACE_LOCK(gtid + 1, "rel deq: (h,h)->(-1,0)");
 #endif
@@ -2290,11 +2289,10 @@ static inline bool __kmp_is_drdpa_lock_nestable(kmp_drdpa_lock_t *lck) {
 
 __forceinline static int
 __kmp_acquire_drdpa_lock_timed_template(kmp_drdpa_lock_t *lck, kmp_int32 gtid) {
-  kmp_uint64 ticket = KMP_TEST_THEN_INC64((kmp_int64 *)&lck->lk.next_ticket);
+  kmp_uint64 ticket = KMP_TEST_THEN_INC64(
+      RCAST(kmp_int64 *, CCAST(kmp_uint64 *, &lck->lk.next_ticket)));
   kmp_uint64 mask = TCR_8(lck->lk.mask); // volatile load
-  volatile struct kmp_base_drdpa_lock::kmp_lock_poll *polls =
-      (volatile struct kmp_base_drdpa_lock::kmp_lock_poll *)TCR_PTR(
-          lck->lk.polls); // volatile load
+  volatile struct kmp_base_drdpa_lock::kmp_lock_poll *polls = lck->lk.polls;
 
 #ifdef USE_LOCK_PROFILE
   if (TCR_8(polls[ticket & mask].poll) != ticket)
@@ -2331,8 +2329,7 @@ __kmp_acquire_drdpa_lock_timed_template(kmp_drdpa_lock_t *lck, kmp_int32 gtid) {
     // values, and we get the new value of mask and the old polls pointer, we
     // could access memory beyond the end of the old polling area.
     mask = TCR_8(lck->lk.mask); // volatile load
-    polls = (volatile struct kmp_base_drdpa_lock::kmp_lock_poll *)TCR_PTR(
-        lck->lk.polls); // volatile load
+    polls = lck->lk.polls; // volatile load
   }
 
   // Critical section starts here
@@ -2347,7 +2344,7 @@ __kmp_acquire_drdpa_lock_timed_template(kmp_drdpa_lock_t *lck, kmp_int32 gtid) {
   // The >= check is in case __kmp_test_drdpa_lock() allocated the cleanup
   // ticket.
   if ((lck->lk.old_polls != NULL) && (ticket >= lck->lk.cleanup_ticket)) {
-    __kmp_free((void *)lck->lk.old_polls);
+    __kmp_free(CCAST(kmp_base_drdpa_lock::kmp_lock_poll *, lck->lk.old_polls));
     lck->lk.old_polls = NULL;
     lck->lk.cleanup_ticket = 0;
   }
@@ -2462,13 +2459,11 @@ int __kmp_test_drdpa_lock(kmp_drdpa_lock_t *lck, kmp_int32 gtid) {
   // First get a ticket, then read the polls pointer and the mask.
   // The polls pointer must be read before the mask!!! (See above)
   kmp_uint64 ticket = TCR_8(lck->lk.next_ticket); // volatile load
-  volatile struct kmp_base_drdpa_lock::kmp_lock_poll *polls =
-      (volatile struct kmp_base_drdpa_lock::kmp_lock_poll *)TCR_PTR(
-          lck->lk.polls); // volatile load
+  volatile struct kmp_base_drdpa_lock::kmp_lock_poll *polls = lck->lk.polls;
   kmp_uint64 mask = TCR_8(lck->lk.mask); // volatile load
   if (TCR_8(polls[ticket & mask].poll) == ticket) {
     kmp_uint64 next_ticket = ticket + 1;
-    if (KMP_COMPARE_AND_STORE_ACQ64((kmp_int64 *)&lck->lk.next_ticket, ticket,
+    if (KMP_COMPARE_AND_STORE_ACQ64(&lck->lk.next_ticket, ticket,
                                     next_ticket)) {
       KMP_FSYNC_ACQUIRED(lck);
       KA_TRACE(1000, ("__kmp_test_drdpa_lock: ticket #%lld acquired lock %p\n",
@@ -2509,9 +2504,7 @@ int __kmp_release_drdpa_lock(kmp_drdpa_lock_t *lck, kmp_int32 gtid) {
   // Read the ticket value from the lock data struct, then the polls pointer and
   // the mask.  The polls pointer must be read before the mask!!! (See above)
   kmp_uint64 ticket = lck->lk.now_serving + 1; // non-volatile load
-  volatile struct kmp_base_drdpa_lock::kmp_lock_poll *polls =
-      (volatile struct kmp_base_drdpa_lock::kmp_lock_poll *)TCR_PTR(
-          lck->lk.polls); // volatile load
+  volatile struct kmp_base_drdpa_lock::kmp_lock_poll *polls = lck->lk.polls;
   kmp_uint64 mask = TCR_8(lck->lk.mask); // volatile load
   KA_TRACE(1000, ("__kmp_release_drdpa_lock: ticket #%lld released lock %p\n",
                   ticket - 1, lck));
@@ -2568,11 +2561,11 @@ void __kmp_destroy_drdpa_lock(kmp_drdpa_lock_t *lck) {
   lck->lk.initialized = NULL;
   lck->lk.location = NULL;
   if (lck->lk.polls != NULL) {
-    __kmp_free((void *)lck->lk.polls);
+    __kmp_free(CCAST(kmp_base_drdpa_lock::kmp_lock_poll *, lck->lk.polls));
     lck->lk.polls = NULL;
   }
   if (lck->lk.old_polls != NULL) {
-    __kmp_free((void *)lck->lk.old_polls);
+    __kmp_free(CCAST(kmp_base_drdpa_lock::kmp_lock_poll *, lck->lk.old_polls));
     lck->lk.old_polls = NULL;
   }
   lck->lk.mask = 0;

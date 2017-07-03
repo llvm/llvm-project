@@ -746,15 +746,9 @@ ProcessMonitor::ProcessMonitor(
   if (!error.Success())
     return;
 
-WAIT_AGAIN:
-  // Wait for the operation thread to initialize.
-  if (sem_wait(&args->m_semaphore)) {
-    if (errno == EINTR)
-      goto WAIT_AGAIN;
-    else {
-      error.SetErrorToErrno();
-      return;
-    }
+  if (llvm::sys::RetryAfterSignal(-1, sem_wait, &args->m_semaphore) == -1) {
+    error.SetErrorToErrno();
+    return;
   }
 
   // Check that the launch was a success.
@@ -790,15 +784,9 @@ ProcessMonitor::ProcessMonitor(ProcessFreeBSD *process, lldb::pid_t pid,
   if (!error.Success())
     return;
 
-WAIT_AGAIN:
-  // Wait for the operation thread to initialize.
-  if (sem_wait(&args->m_semaphore)) {
-    if (errno == EINTR)
-      goto WAIT_AGAIN;
-    else {
-      error.SetErrorToErrno();
-      return;
-    }
+  if (llvm::sys::RetryAfterSignal(-1, sem_wait, &args->m_semaphore) == -1) {
+    error.SetErrorToErrno();
+    return;
   }
 
   // Check that the attach was a success.

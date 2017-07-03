@@ -230,7 +230,31 @@ public:
       SmallVector<SymbolRelation, 2> Relations;
       addCallRole(Roles, Relations);
       Stmt *Containing = getParentStmt();
-      if (E->isImplicit() || (Containing && isa<PseudoObjectExpr>(Containing)))
+
+      auto IsImplicitProperty = [](const PseudoObjectExpr *POE) -> bool {
+        const auto *E = POE->getSyntacticForm();
+        if (const auto *BinOp = dyn_cast<BinaryOperator>(E))
+          E = BinOp->getLHS();
+        const auto *PRE = dyn_cast<ObjCPropertyRefExpr>(E);
+        if (!PRE)
+          return false;
+        if (PRE->isExplicitProperty())
+          return false;
+        if (const ObjCMethodDecl *Getter = PRE->getImplicitPropertyGetter()) {
+          // Class properties that are explicitly defined using @property
+          // declarations are represented implicitly as there is no ivar for
+          // class properties.
+          if (Getter->isClassMethod() &&
+              Getter->getCanonicalDecl()->findPropertyDecl())
+            return false;
+        }
+        return true;
+      };
+      bool IsPropCall = Containing && isa<PseudoObjectExpr>(Containing);
+      // Implicit property message sends are not 'implicit'.
+      if ((E->isImplicit() || IsPropCall) &&
+          !(IsPropCall &&
+            IsImplicitProperty(cast<PseudoObjectExpr>(Containing))))
         Roles |= (unsigned)SymbolRole::Implicit;
 
       if (isDynamic(E)) {

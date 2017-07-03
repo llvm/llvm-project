@@ -298,12 +298,12 @@ static void __kmp_bget_dequeue(kmp_info_t *th) {
 #if USE_CMP_XCHG_FOR_BGET
     {
       volatile void *old_value = TCR_SYNC_PTR(th->th.th_local.bget_list);
-      while (!KMP_COMPARE_AND_STORE_PTR(&th->th.th_local.bget_list, old_value,
-                                        NULL)) {
+      while (!KMP_COMPARE_AND_STORE_PTR(&th->th.th_local.bget_list,
+                                        CCAST(void *, old_value), NULL)) {
         KMP_CPU_PAUSE();
         old_value = TCR_SYNC_PTR(th->th.th_local.bget_list);
       }
-      p = (void *)old_value;
+      p = CCAST(void *, old_value);
     }
 #else /* ! USE_CMP_XCHG_FOR_BGET */
 #ifdef USE_QUEUING_LOCK_FOR_BGET
@@ -362,15 +362,15 @@ static void __kmp_bget_enqueue(kmp_info_t *th, void *buf
     volatile void *old_value = TCR_PTR(th->th.th_local.bget_list);
     /* the next pointer must be set before setting bget_list to buf to avoid
        exposing a broken list to other threads, even for an instant. */
-    b->ql.flink = BFH(old_value);
+    b->ql.flink = BFH(CCAST(void *, old_value));
 
-    while (!KMP_COMPARE_AND_STORE_PTR(&th->th.th_local.bget_list, old_value,
-                                      buf)) {
+    while (!KMP_COMPARE_AND_STORE_PTR(&th->th.th_local.bget_list,
+                                      CCAST(void *, old_value), buf)) {
       KMP_CPU_PAUSE();
       old_value = TCR_PTR(th->th.th_local.bget_list);
       /* the next pointer must be set before setting bget_list to buf to avoid
          exposing a broken list to other threads, even for an instant. */
-      b->ql.flink = BFH(old_value);
+      b->ql.flink = BFH(CCAST(void *, old_value));
     }
   }
 #else /* ! USE_CMP_XCHG_FOR_BGET */
@@ -607,7 +607,7 @@ static void *bget(kmp_info_t *th, bufsize requested_size) {
   if (thr->acqfcn != 0) {
     if (size > (bufsize)(thr->exp_incr - sizeof(bhead_t))) {
       /* Request is too large to fit in a single expansion block.
-	 Try to satisy it by a direct buffer acquisition. */
+         Try to satisy it by a direct buffer acquisition. */
       bdhead_t *bdh;
 
       size += sizeof(bdhead_t) - sizeof(bhead_t);

@@ -245,11 +245,7 @@ ConnectionStatus ConnectionFileDescriptor::Connect(llvm::StringRef path,
     } else if ((addr = GetURLAddress(path, FILE_SCHEME))) {
       std::string addr_str = addr->str();
       // file:///PATH
-      int fd = -1;
-      do {
-        fd = ::open(addr_str.c_str(), O_RDWR);
-      } while (fd == -1 && errno == EINTR);
-
+      int fd = llvm::sys::RetryAfterSignal(-1, ::open, addr_str.c_str(), O_RDWR);
       if (fd == -1) {
         if (error_ptr)
           error_ptr->SetErrorToErrno();
@@ -620,20 +616,17 @@ ConnectionFileDescriptor::BytesAvailable(const Timeout<std::micro> &timeout,
         if (select_helper.FDIsSetRead(pipe_fd)) {
           // There is an interrupt or exit command in the command pipe
           // Read the data from that pipe:
-          char buffer[1];
+          char c;
 
-          ssize_t bytes_read;
-
-          do {
-            bytes_read = ::read(pipe_fd, buffer, sizeof(buffer));
-          } while (bytes_read < 0 && errno == EINTR);
-
-          switch (buffer[0]) {
+          ssize_t bytes_read = llvm::sys::RetryAfterSignal(-1, ::read, pipe_fd, &c, 1);
+          assert(bytes_read == 1);
+          (void)bytes_read;
+          switch (c) {
           case 'q':
             if (log)
               log->Printf("%p ConnectionFileDescriptor::BytesAvailable() "
                           "got data: %c from the command channel.",
-                          static_cast<void *>(this), buffer[0]);
+                          static_cast<void *>(this), c);
             return eConnectionStatusEndOfFile;
           case 'i':
             // Interrupt the current read

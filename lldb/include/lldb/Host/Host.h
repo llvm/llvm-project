@@ -7,14 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_Host_h_
-#define liblldb_Host_h_
-#if defined(__cplusplus)
-
-#include <stdarg.h>
-
-#include <map>
-#include <string>
+#ifndef LLDB_HOST_HOST_H
+#define LLDB_HOST_HOST_H
 
 #include "lldb/Host/File.h"
 #include "lldb/Host/HostThread.h"
@@ -22,6 +16,11 @@
 #include "lldb/Utility/StringList.h"
 #include "lldb/lldb-private-forward.h"
 #include "lldb/lldb-private.h"
+#include <cerrno>
+#include <map>
+#include <stdarg.h>
+#include <string>
+#include <type_traits>
 
 namespace lldb_private {
 
@@ -254,5 +253,4 @@ template <> struct format_provider<lldb_private::WaitStatus> {
 };
 } // namespace llvm
 
-#endif // #if defined(__cplusplus)
-#endif // liblldb_Host_h_
+#endif // LLDB_HOST_HOST_H
