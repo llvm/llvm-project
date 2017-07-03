@@ -100,6 +100,8 @@ protected:
 public:
 
   enum TargetOperandFlags {
+    MO_MASK = 0x7,
+
     MO_NONE = 0,
     // MO_GOTPCREL -> symbol@GOTPCREL -> R_AMDGPU_GOTPCREL.
     MO_GOTPCREL = 1,
@@ -781,8 +783,14 @@ public:
   void convertNonUniformLoopRegion(MachineBasicBlock *LoopEntry,
                                    MachineBasicBlock *LoopEnd) const;
 
+  std::pair<unsigned, unsigned>
+  decomposeMachineOperandsTargetFlags(unsigned TF) const override;
+
   ArrayRef<std::pair<int, const char *>>
   getSerializableTargetIndices() const override;
+
+  ArrayRef<std::pair<unsigned, const char *>>
+  getSerializableDirectMachineOperandTargetFlags() const override;
 
   ScheduleHazardRecognizer *
   CreateTargetPostRAHazardRecognizer(const InstrItineraryData *II,
