@@ -258,9 +258,9 @@ void __kmp_str_fname_init(kmp_str_fname_t *fname, char const *path) {
 } // kmp_str_fname_init
 
 void __kmp_str_fname_free(kmp_str_fname_t *fname) {
-  __kmp_str_free((char const **)(&fname->path));
-  __kmp_str_free((char const **)(&fname->dir));
-  __kmp_str_free((char const **)(&fname->base));
+  __kmp_str_free(CCAST(char const **, &fname->path));
+  __kmp_str_free(CCAST(char const **, &fname->dir));
+  __kmp_str_free(CCAST(char const **, &fname->base));
 } // kmp_str_fname_free
 
 int __kmp_str_fname_match(kmp_str_fname_t const *fname, char const *pattern) {
@@ -329,7 +329,7 @@ kmp_str_loc_t __kmp_str_loc_init(char const *psource, int init_fname) {
 
 void __kmp_str_loc_free(kmp_str_loc_t *loc) {
   __kmp_str_fname_free(&loc->fname);
-  __kmp_str_free((const char **)&(loc->_bulk));
+  __kmp_str_free(CCAST(const char **, &(loc->_bulk)));
   loc->file = NULL;
   loc->func = NULL;
 } // kmp_str_loc_free
@@ -430,7 +430,7 @@ char *__kmp_str_format( // Allocated string.
 
 void __kmp_str_free(char const **str) {
   KMP_DEBUG_ASSERT(str != NULL);
-  KMP_INTERNAL_FREE((void *)*str);
+  KMP_INTERNAL_FREE(CCAST(char *, *str));
   *str = NULL;
 } // func __kmp_str_free
 

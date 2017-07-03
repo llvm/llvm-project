@@ -51,4 +51,13 @@ define i64 @const_i64_i32() {
   ret i64 -1
 }
 
+define void @main(i32 ** %data) {
+; ALL-LABEL: main:
+; ALL:       # BB#0:
+; ALL-NEXT:    movq $0, %rax
+; ALL-NEXT:    movq %rax, (%rdi)
+; ALL-NEXT:    retq
+  store i32* null, i32** %data, align 8
+  ret void
+}
 

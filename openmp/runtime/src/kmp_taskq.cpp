@@ -272,7 +272,8 @@ static void __kmp_dump_task_queue(kmp_taskq_t *tq, kmpc_task_queue_t *queue,
     if (in_parallel) {
       if (queue->tq_taskq_slot != NULL) {
         __kmp_printf("    TaskQ slot:\n");
-        __kmp_dump_thunk(tq, (kmpc_thunk_t *)queue->tq_taskq_slot, global_tid);
+        __kmp_dump_thunk(tq, CCAST(kmpc_thunk_t *, queue->tq_taskq_slot),
+                         global_tid);
         __kmp_printf("\n");
       }
       //__kmp_release_lock(& queue->tq_queue_lck, global_tid);
@@ -348,7 +349,7 @@ static void __kmp_aux_dump_task_queue_tree(kmp_taskq_t *tq,
     KMP_MB();
 
     if (curr_queue->tq_first_child) {
-      for (queue = (kmpc_task_queue_t *)curr_queue->tq_first_child;
+      for (queue = CCAST(kmpc_task_queue_t *, curr_queue->tq_first_child);
            queue != NULL; queue = queue->tq_next_child) {
         __kmp_aux_dump_task_queue_tree(tq, queue, level + 1, global_tid);
       }
@@ -541,8 +542,8 @@ static void __kmp_free_taskq(kmp_taskq_t *tq, kmpc_task_queue_t *p,
   __kmpc_taskq_free(p->tq_queue, global_tid);
 
   /* free shared var structure storage */
-  __kmpc_taskq_free((void *)p->tq_shareds[0].ai_data, global_tid);
-
+  __kmpc_taskq_free(CCAST(kmpc_shared_vars_t *, p->tq_shareds[0].ai_data),
+                    global_tid);
   /* free array of pointers to shared vars storage */
   __kmpc_taskq_free(p->tq_shareds, global_tid);
 
@@ -798,7 +799,7 @@ static kmpc_thunk_t *__kmp_find_task_in_queue(kmp_int32 global_tid,
           (queue->tq_nfull <= queue->tq_hiwat)) {
         /* if there's enough room in the queue and the dispatcher */
         /* (taskq task) is available, schedule more tasks         */
-        pt = (kmpc_thunk_t *)queue->tq_taskq_slot;
+        pt = CCAST(kmpc_thunk_t *, queue->tq_taskq_slot);
         queue->tq_taskq_slot = NULL;
       } else if (queue->tq_nfull == 0 ||
                  queue->tq_th_thunks[tid].ai_data >=
@@ -845,7 +846,7 @@ __kmp_find_task_in_descendant_queue(kmp_int32 global_tid,
     // Seems to work without this call for digital/alpha, needed for IBM/RS6000
     KMP_MB();
 
-    queue = (kmpc_task_queue_t *)curr_queue->tq_first_child;
+    queue = CCAST(kmpc_task_queue_t *, curr_queue->tq_first_child);
     if (queue == NULL) {
       __kmp_release_lock(&curr_queue->tq_link_lck, global_tid);
       return NULL;
@@ -1111,7 +1112,7 @@ static void __kmp_find_and_remove_finished_child_taskq(
     // Seems to work without this call for digital/alpha, needed for IBM/RS6000
     KMP_MB();
 
-    queue = (kmpc_task_queue_t *)curr_queue->tq_first_child;
+    queue = CCAST(kmpc_task_queue_t *, curr_queue->tq_first_child);
     if (queue != NULL) {
       __kmp_release_lock(&curr_queue->tq_link_lck, global_tid);
       return;
@@ -1181,7 +1182,7 @@ static void __kmp_remove_all_child_taskq(kmp_taskq_t *tq, kmp_int32 global_tid,
                                          kmpc_task_queue_t *queue) {
   kmpc_task_queue_t *next_child;
 
-  queue = (kmpc_task_queue_t *)queue->tq_first_child;
+  queue = CCAST(kmpc_task_queue_t *, queue->tq_first_child);
 
   while (queue != NULL) {
     __kmp_remove_all_child_taskq(tq, global_tid, queue);
@@ -1222,7 +1223,7 @@ static void __kmp_execute_task_from_queue(kmp_taskq_t *tq, ident_t *loc,
   if (!(thunk->th_flags & TQF_TASKQ_TASK)) {
     kmp_int32 index = (queue == tq->tq_root) ? tid : 0;
     thunk->th.th_shareds =
-        (kmpc_shared_vars_t *)queue->tq_shareds[index].ai_data;
+        CCAST(kmpc_shared_vars_t *, queue->tq_shareds[index].ai_data);
 
     if (__kmp_env_consistency_check) {
       __kmp_push_workshare(global_tid,
@@ -1343,8 +1344,8 @@ kmpc_thunk_t *__kmpc_taskq(ident_t *loc, kmp_int32 global_tid,
         /* enqueued, and the master thread released this barrier.  This      */
         /* worker thread can now proceed and execute tasks.  See also the    */
         /* TQF_RELEASE_WORKERS which is used to handle this case.            */
-        *shareds = (kmpc_shared_vars_t *)tq->tq_root->tq_shareds[tid].ai_data;
-
+        *shareds =
+            CCAST(kmpc_shared_vars_t *, tq->tq_root->tq_shareds[tid].ai_data);
         KE_TRACE(10, ("__kmpc_taskq return (%d)\n", global_tid));
 
         return NULL;
@@ -1418,7 +1419,7 @@ kmpc_thunk_t *__kmpc_taskq(ident_t *loc, kmp_int32 global_tid,
   }
 
   /*  create a new thunk for the taskq_task in the new_queue  */
-  *shareds = (kmpc_shared_vars_t *)new_queue->tq_shareds[0].ai_data;
+  *shareds = CCAST(kmpc_shared_vars_t *, new_queue->tq_shareds[0].ai_data);
 
   new_taskq_thunk->th.th_shareds = *shareds;
   new_taskq_thunk->th_task = taskq_task;
@@ -1459,7 +1460,7 @@ kmpc_thunk_t *__kmpc_taskq(ident_t *loc, kmp_int32 global_tid,
       KMP_MB();
 
       new_queue->tq_next_child =
-          (struct kmpc_task_queue_t *)curr_queue->tq_first_child;
+          CCAST(struct kmpc_task_queue_t *, curr_queue->tq_first_child);
 
       if (curr_queue->tq_first_child != NULL)
         curr_queue->tq_first_child->tq_prev_child = new_queue;
@@ -1920,8 +1921,8 @@ void __kmpc_end_taskq_task(ident_t *loc, kmp_int32 global_tid,
 
   if (in_parallel) {
 #if KMP_ARCH_X86 || KMP_ARCH_X86_64
-
-    KMP_TEST_THEN_OR32(&queue->tq_flags, (kmp_int32)TQF_ALL_TASKS_QUEUED);
+    KMP_TEST_THEN_OR32(CCAST(kmp_int32 *, &queue->tq_flags),
+                       (kmp_int32)TQF_ALL_TASKS_QUEUED);
 #else
     {
       __kmp_acquire_lock(&queue->tq_queue_lck, global_tid);
@@ -1951,8 +1952,8 @@ void __kmpc_end_taskq_task(ident_t *loc, kmp_int32 global_tid,
       queue->tq_flags |= TQF_IS_LAST_TASK;
     } else {
 #if KMP_ARCH_X86 || KMP_ARCH_X86_64
-
-      KMP_TEST_THEN_OR32(&queue->tq_flags, (kmp_int32)TQF_IS_LAST_TASK);
+      KMP_TEST_THEN_OR32(CCAST(kmp_int32 *, &queue->tq_flags),
+                         (kmp_int32)TQF_IS_LAST_TASK);
 #else
       {
         __kmp_acquire_lock(&queue->tq_queue_lck, global_tid);
@@ -2009,7 +2010,8 @@ kmpc_thunk_t *__kmpc_task_buffer(ident_t *loc, kmp_int32 global_tid,
      the next to be enqueued in __kmpc_task(). */
 
   new_thunk = __kmp_alloc_thunk(queue, in_parallel, global_tid);
-  new_thunk->th.th_shareds = (kmpc_shared_vars_t *)queue->tq_shareds[0].ai_data;
+  new_thunk->th.th_shareds =
+      CCAST(kmpc_shared_vars_t *, queue->tq_shareds[0].ai_data);
   new_thunk->th_encl_thunk = NULL;
   new_thunk->th_task = task;
 

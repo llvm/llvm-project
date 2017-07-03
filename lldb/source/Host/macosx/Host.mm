@@ -74,6 +74,7 @@
 #include "lldb/Utility/StructuredData.h"
 
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Errno.h"
 
 #include "cfcpp/CFCBundle.h"
 #include "cfcpp/CFCMutableArray.h"
@@ -1663,10 +1664,7 @@ HostThread Host::StartMonitoringChildProcess(
       int wait_pid = 0;
       bool cancel = false;
       bool exited = false;
-      do {
-        wait_pid = ::waitpid(pid, &status, 0);
-      } while (wait_pid < 0 && errno == EINTR);
-
+      wait_pid = llvm::sys::RetryAfterSignal(-1, ::waitpid, pid, &status, 0);
       if (wait_pid >= 0) {
         int signal = 0;
         int exit_status = 0;
