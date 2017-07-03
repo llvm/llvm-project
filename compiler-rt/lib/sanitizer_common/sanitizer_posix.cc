@@ -162,7 +162,7 @@ void *MmapOrDieOnFatalError(uptr size, const char *mem_type) {
 }
 
 // We want to map a chunk of address space aligned to 'alignment'.
-// We do it by maping a bit more and then unmaping redundant pieces.
+// We do it by mapping a bit more and then unmapping redundant pieces.
 // We probably can do it with fewer syscalls in some OS-dependent way.
 void *MmapAlignedOrDieOnFatalError(uptr size, uptr alignment,
                                    const char *mem_type) {

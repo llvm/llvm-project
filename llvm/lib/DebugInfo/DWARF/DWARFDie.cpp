@@ -395,7 +395,7 @@ DWARFDie::attribute_iterator::attribute_iterator(DWARFDie D, bool End) :
 void DWARFDie::attribute_iterator::updateForIndex(
     const DWARFAbbreviationDeclaration &AbbrDecl, uint32_t I) {
   Index = I;
-  // AbbrDecl must be valid befor calling this function.
+  // AbbrDecl must be valid before calling this function.
   auto NumAttrs = AbbrDecl.getNumAttributes();
   if (Index < NumAttrs) {
     AttrValue.Attr = AbbrDecl.getAttrByIndex(Index);

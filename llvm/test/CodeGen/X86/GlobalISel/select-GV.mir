@@ -1,0 +1,99 @@
+# RUN: llc -mtriple=x86_64-linux-gnu                          -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=X64ALL --check-prefix=X64
+# RUN: llc -mtriple=x86_64-apple-darwin -relocation-model=pic -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=X64ALL --check-prefix=X64_DARWIN_PIC
+# RUN: llc -mtriple=i386-linux-gnu                            -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=X32ALL --check-prefix=X32
+# RUN: llc -mtriple=x86_64-linux-gnux32                       -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=X32ALL --check-prefix=X32ABI
+
+--- |
+
+  @g_int = global i32 0, align 4
+
+  define i32* @test_global_ptrv() {
+  entry:
+    ret i32* @g_int
+  }
+
+  define i32 @test_global_valv() {
+  entry:
+    %0 = load i32, i32* @g_int, align 4
+    ret i32 %0
+  }
+
+...
+---
+name:            test_global_ptrv
+# CHECK-LABEL: name:  test_global_ptrv
+alignment:       4
+legalized:       true
+regBankSelected: true
+# X64ALL:              registers:
+# X64ALL-NEXT:           - { id: 0, class: gr64, preferred-register: '' }
+#
+# X32ALL:              registers:
+# X32ALL-NEXT:           - { id: 0, class: gr32, preferred-register: '' }
+registers:
+  - { id: 0, class: gpr, preferred-register: '' }
+# X64:                     %0 = LEA64r _, 1, _, @g_int, _
+# X64-NEXT:                %rax = COPY %0
+# X64-NEXT:                RET 0, implicit %rax
+#
+# X64_DARWIN_PIC:          %0 = LEA64r %rip, 1, _, @g_int, _
+# X64_DARWIN_PIC-NEXT:     %rax = COPY %0
+# X64_DARWIN_PIC-NEXT:     RET 0, implicit %rax
+#
+# X32:                     %0 = LEA32r _, 1, _, @g_int, _
+# X32-NEXT:                %rax = COPY %0
+# X32-NEXT:                RET 0, implicit %rax
+#
+# X32ABI:                  %0 = LEA64_32r _, 1, _, @g_int, _
+# X32ABI-NEXT:             %rax = COPY %0
+# X32ABI-NEXT:             RET 0, implicit %rax
+body:             |
+  bb.1.entry:
+    %0(p0) = G_GLOBAL_VALUE @g_int
+    %rax = COPY %0(p0)
+    RET 0, implicit %rax
+
+...
+---
+name:            test_global_valv
+# CHECK-LABEL: name:  test_global_valv
+alignment:       4
+legalized:       true
+regBankSelected: true
+# X64ALL:              registers:
+# X64ALL-NEXT:           - { id: 0, class: gr32, preferred-register: '' }
+# X64ALL-NEXT:           - { id: 1, class: gr64, preferred-register: '' }
+#
+# X32ALL:              registers:
+# X32ALL-NEXT:           - { id: 0, class: gr32, preferred-register: '' }
+# X32ALL-NEXT:           - { id: 1, class: gr32, preferred-register: '' }
+registers:
+  - { id: 0, class: gpr, preferred-register: '' }
+  - { id: 1, class: gpr, preferred-register: '' }
+# X64:                     %1 = LEA64r _, 1, _, @g_int, _
+# X64-NEXT:                %0 = MOV32rm %1, 1, _, 0, _ :: (load 4 from @g_int)
+# X64-NEXT:                %eax = COPY %0
+# X64-NEXT:                RET 0, implicit %eax
+#
+# X64_DARWIN_PIC:          %1 = LEA64r %rip, 1, _, @g_int, _
+# X64_DARWIN_PIC-NEXT:     %0 = MOV32rm %1, 1, _, 0, _ :: (load 4 from @g_int)
+# X64_DARWIN_PIC-NEXT:     %eax = COPY %0
+# X64_DARWIN_PIC-NEXT:     RET 0, implicit %eax
+#
+# X32:                     %1 = LEA32r _, 1, _, @g_int, _
+# X32-NEXT:                %0 = MOV32rm %1, 1, _, 0, _ :: (load 4 from @g_int)
+# X32-NEXT:                %eax = COPY %0
+# X32-NEXT:                RET 0, implicit %eax
+#
+# X32ABI:                  %1 = LEA64_32r _, 1, _, @g_int, _
+# X32ABI-NEXT:             %0 = MOV32rm %1, 1, _, 0, _ :: (load 4 from @g_int)
+# X32ABI-NEXT:             %eax = COPY %0
+# X32ABI-NEXT:             RET 0, implicit %eax
+body:             |
+  bb.1.entry:
+    %1(p0) = G_GLOBAL_VALUE @g_int
+    %0(s32) = G_LOAD %1(p0) :: (load 4 from @g_int)
+    %eax = COPY %0(s32)
+    RET 0, implicit %eax
+
+...

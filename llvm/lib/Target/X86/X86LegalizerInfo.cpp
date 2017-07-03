@@ -75,6 +75,7 @@ void X86LegalizerInfo::setLegalizerInfo32bit() {
 
   // Pointer-handling
   setAction({G_FRAME_INDEX, p0}, Legal);
+  setAction({G_GLOBAL_VALUE, p0}, Legal);
 
   setAction({G_GEP, p0}, Legal);
   setAction({G_GEP, 1, s32}, Legal);
@@ -131,6 +132,7 @@ void X86LegalizerInfo::setLegalizerInfo64bit() {
 
   // Pointer-handling
   setAction({G_FRAME_INDEX, p0}, Legal);
+  setAction({G_GLOBAL_VALUE, p0}, Legal);
 
   setAction({G_GEP, p0}, Legal);
   setAction({G_GEP, 1, s32}, Legal);

@@ -142,10 +142,15 @@ int X86TTIImpl::getArithmeticInstrCost(
     { ISD::FDIV, MVT::v2f64, 69 }, // divpd
     { ISD::FADD, MVT::v2f64, 2  }, // addpd
     { ISD::FSUB, MVT::v2f64, 2  }, // subpd
-    // v2i64/v4i64 mul is custom lowered as a series of long
-    // multiplies(3), shifts(3) and adds(2).
-    // slm muldq version throughput is 2
-    { ISD::MUL,  MVT::v2i64, 11 },
+    // v2i64/v4i64 mul is custom lowered as a series of long:
+    // multiplies(3), shifts(3) and adds(2)
+    // slm muldq version throughput is 2 and addq throughput 4 
+    // thus: 3X2 (muldq throughput) + 3X1 (shift throuput) +
+    //       3X4 (addq throughput) = 17 
+    { ISD::MUL,  MVT::v2i64, 17 },
+    // slm addq\subq throughput is 4
+    { ISD::ADD,  MVT::v2i64, 4  },
+    { ISD::SUB,  MVT::v2i64, 4  },
   };
 
   if (ST->isSLM()) {
