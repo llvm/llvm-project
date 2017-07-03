@@ -1,4 +1,4 @@
-// Check that ignore_interceptors_accesses=1 supresses reporting races from
+// Check that ignore_interceptors_accesses=1 suppresses reporting races from
 // system libraries on OS X. There are currently false positives coming from
 // libxpc, libdispatch, CoreFoundation and others, because these libraries use
 // TSan-invisible atomics as synchronization.

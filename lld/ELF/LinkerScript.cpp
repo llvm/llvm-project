@@ -746,10 +746,15 @@ void LinkerScript::adjustSectionsAfterSorting() {
     if (!Cmd)
       continue;
 
-    if (Cmd->Phdrs.empty())
-      Cmd->Phdrs = DefPhdrs;
-    else
+    if (Cmd->Phdrs.empty()) {
+      OutputSection *Sec = Cmd->Sec;
+      // To match the bfd linker script behaviour, only propagate program
+      // headers to sections that are allocated.
+      if (Sec && (Sec->Flags & SHF_ALLOC))
+        Cmd->Phdrs = DefPhdrs;
+    } else {
       DefPhdrs = Cmd->Phdrs;
+    }
   }
 
   removeEmptyCommands();
@@ -880,8 +885,6 @@ std::vector<PhdrEntry> LinkerScript::createPhdrs() {
   // Add output sections to program headers.
   for (OutputSectionCommand *Cmd : OutputSectionCommands) {
     OutputSection *Sec = Cmd->Sec;
-    if (!(Sec->Flags & SHF_ALLOC))
-      break;
 
     // Assign headers specified by linker script
     for (size_t Id : getPhdrIndices(Sec)) {
