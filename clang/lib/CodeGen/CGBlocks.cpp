@@ -1255,7 +1255,7 @@ CodeGenFunction::GenerateBlockFunction(GlobalDecl GD,
 
   // For OpenCL passed block pointer can be private AS local variable or
   // global AS program scope variable (for the case with and without captures).
-  // Generic AS is used therefore to be able to accomodate both private and
+  // Generic AS is used therefore to be able to accommodate both private and
   // generic AS in one implementation.
   if (getLangOpts().OpenCL)
     selfTy = getContext().getPointerType(getContext().getAddrSpaceQualType(
