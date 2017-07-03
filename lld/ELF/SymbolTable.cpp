@@ -712,31 +712,15 @@ void SymbolTable<ELFT>::assignWildcardVersion(SymbolVersion Ver,
       B->symbol()->VersionId = VersionId;
 }
 
-static bool isDefaultVersion(SymbolBody *B) {
-  return B->isInCurrentDSO() && B->getName().find("@@") != StringRef::npos;
-}
-
 // This function processes version scripts by updating VersionId
 // member of symbols.
 template <class ELFT> void SymbolTable<ELFT>::scanVersionScript() {
   // Symbol themselves might know their versions because symbols
   // can contain versions in the form of <name>@<version>.
-  // Let them parse and update their names to exclude version suffix.
-  for (Symbol *Sym : SymVector) {
-    SymbolBody *Body = Sym->body();
-    bool IsDefault = isDefaultVersion(Body);
-    Body->parseSymbolVersion();
-
-    if (!IsDefault)
-      continue;
-
-    // <name>@@<version> means the symbol is the default version. If that's the
-    // case, the symbol is not used only to resolve <name> of version <version>
-    // but also undefined unversioned symbols with name <name>.
-    SymbolBody *S = find(Body->getName());
-    if (S && S->isUndefined())
-      S->copy(Body);
-  }
+  // Let them parse their names.
+  if (!Config->VersionDefinitions.empty())
+    for (Symbol *Sym : SymVector)
+      Sym->body()->parseSymbolVersion();
 
   // Handle edge cases first.
   handleAnonymousVersion();

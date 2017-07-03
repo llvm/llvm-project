@@ -626,7 +626,7 @@ static unsigned scavengeVReg(MachineRegisterInfo &MRI, RegScavenger &RS,
   assert(RealDef != nullptr && "Must have at least 1 Def");
 #endif
 
-  // We should only have one definition of the register. However to accomodate
+  // We should only have one definition of the register. However to accommodate
   // the requirements of two address code we also allow definitions in
   // subsequent instructions provided they also read the register. That way
   // we get a single contiguous lifetime.

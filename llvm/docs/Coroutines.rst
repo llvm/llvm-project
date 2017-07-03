@@ -846,7 +846,7 @@ Overview:
 """""""""
 
 The '``llvm.coro.alloc``' intrinsic returns `true` if dynamic allocation is
-required to obtain a memory for the corutine frame and `false` otherwise.
+required to obtain a memory for the coroutine frame and `false` otherwise.
 
 Arguments:
 """"""""""

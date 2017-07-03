@@ -127,7 +127,7 @@ MachineInstr *SystemZLDCleanup::ReplaceTLSCall(MachineInstr *I,
   return Copy;
 }
 
-// Create a virtal register in *TLSBaseAddrReg, and populate it by
+// Create a virtual register in *TLSBaseAddrReg, and populate it by
 // inserting a copy instruction after I. Returns the new instruction.
 MachineInstr *SystemZLDCleanup::SetRegister(MachineInstr *I,
                                             unsigned *TLSBaseAddrReg) {
