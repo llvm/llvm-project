@@ -788,8 +788,8 @@ typedef enum kmp_cancel_kind_t {
 
 // KMP_HW_SUBSET support:
 typedef struct kmp_hws_item {
-    int num;
-    int offset;
+  int num;
+  int offset;
 } kmp_hws_item_t;
 
 extern kmp_hws_item_t __kmp_hws_socket;
@@ -1533,9 +1533,9 @@ typedef struct KMP_ALIGN_CACHE dispatch_private_info32 {
   kmp_uint32 ordered_lower;
   kmp_uint32 ordered_upper;
 #if KMP_OS_WINDOWS
-// This var can be placed in the hole between 'tc' and 'parm1', instead of
-// 'static_steal_counter'. It would be nice to measure execution times.
-// Conditional if/endif can be removed at all.
+  // This var can be placed in the hole between 'tc' and 'parm1', instead of
+  // 'static_steal_counter'. It would be nice to measure execution times.
+  // Conditional if/endif can be removed at all.
   kmp_int32 last_upper;
 #endif /* KMP_OS_WINDOWS */
 } dispatch_private_info32_t;
@@ -1568,9 +1568,9 @@ typedef struct KMP_ALIGN_CACHE dispatch_private_info64 {
   kmp_uint64 ordered_lower;
   kmp_uint64 ordered_upper;
 #if KMP_OS_WINDOWS
-// This var can be placed in the hole between 'tc' and 'parm1', instead of
-// 'static_steal_counter'. It would be nice to measure execution times.
-// Conditional if/endif can be removed at all.
+  // This var can be placed in the hole between 'tc' and 'parm1', instead of
+  // 'static_steal_counter'. It would be nice to measure execution times.
+  // Conditional if/endif can be removed at all.
   kmp_int64 last_upper;
 #endif /* KMP_OS_WINDOWS */
 } dispatch_private_info64_t;
@@ -2109,7 +2109,7 @@ typedef struct kmp_task { /* GEH: Shouldn't this be aligned somehow? */
 
 #if OMP_40_ENABLED
 typedef struct kmp_taskgroup {
-  kmp_uint32 count; // number of allocated and not yet complete tasks
+  kmp_int32 count; // number of allocated and not yet complete tasks
   kmp_int32 cancel_request; // request for cancellation of this taskgroup
   struct kmp_taskgroup *parent; // parent taskgroup
 // TODO: change to OMP_50_ENABLED, need to change build tools for this to work
@@ -2250,10 +2250,10 @@ struct kmp_taskdata { /* aligned during dynamic allocation       */
   kmp_int32 td_taskwait_thread; /* gtid + 1 of thread encountered taskwait */
   KMP_ALIGN_CACHE kmp_internal_control_t
       td_icvs; /* Internal control variables for the task */
-  KMP_ALIGN_CACHE volatile kmp_uint32
+  KMP_ALIGN_CACHE volatile kmp_int32
       td_allocated_child_tasks; /* Child tasks (+ current task) not yet
                                    deallocated */
-  volatile kmp_uint32
+  volatile kmp_int32
       td_incomplete_child_tasks; /* Child tasks not yet complete */
 #if OMP_40_ENABLED
   kmp_taskgroup_t
@@ -2328,7 +2328,7 @@ typedef struct kmp_base_task_team {
 #endif
 
   KMP_ALIGN_CACHE
-  volatile kmp_uint32 tt_unfinished_threads; /* #threads still active      */
+  volatile kmp_int32 tt_unfinished_threads; /* #threads still active      */
 
   KMP_ALIGN_CACHE
   volatile kmp_uint32
@@ -2401,7 +2401,6 @@ typedef struct KMP_ALIGN_CACHE kmp_base_info {
 #else
   kmp_uint64 th_team_bt_intervals;
 #endif
-
 
 #if KMP_AFFINITY_SUPPORTED
   kmp_affin_mask_t *th_affin_mask; /* thread's current affinity mask */
@@ -3786,7 +3785,6 @@ extern int _You_must_link_with_Intel_OpenMP_library;
 #if KMP_OS_WINDOWS && (KMP_VERSION_MAJOR > 4)
 extern int _You_must_link_with_Microsoft_OpenMP_library;
 #endif
-
 
 // The routines below are not exported.
 // Consider making them 'static' in corresponding source files.

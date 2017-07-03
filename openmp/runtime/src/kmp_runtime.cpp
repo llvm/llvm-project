@@ -1888,8 +1888,7 @@ int __kmp_fork_call(ident_t *loc, int gtid,
         // we were called from GNU native code
         KA_TRACE(20, ("__kmp_fork_call: T#%d serial exit\n", gtid));
         return FALSE;
-      }
-      else {
+      } else {
         KMP_ASSERT2(call_context < fork_context_last,
                     "__kmp_fork_call: unknown fork_context parameter");
       }
@@ -3378,9 +3377,9 @@ void __kmp_print_structure(void) {
   __kmp_printf("\n------------------------------\nPools\n----------------------"
                "--------\n");
   __kmp_print_structure_thread("Thread pool:          ",
-                               (kmp_info_t *)__kmp_thread_pool);
+                               CCAST(kmp_info_t *, __kmp_thread_pool));
   __kmp_print_structure_team("Team pool:            ",
-                             (kmp_team_t *)__kmp_team_pool);
+                             CCAST(kmp_team_t *, __kmp_team_pool));
   __kmp_printf("\n");
 
   // Free team list.
@@ -4148,7 +4147,7 @@ kmp_info_t *__kmp_allocate_thread(kmp_root_t *root, kmp_team_t *team,
   /* first, try to get one from the thread pool */
   if (__kmp_thread_pool) {
 
-    new_thr = (kmp_info_t *)__kmp_thread_pool;
+    new_thr = CCAST(kmp_info_t *, __kmp_thread_pool);
     __kmp_thread_pool = (volatile kmp_info_t *)new_thr->th.th_next_pool;
     if (new_thr == __kmp_thread_pool_insert_pt) {
       __kmp_thread_pool_insert_pt = NULL;
@@ -5097,7 +5096,7 @@ __kmp_allocate_team(kmp_root_t *root, int new_nproc, int max_nproc,
 
   /* next, let's try to take one from the team pool */
   KMP_MB();
-  for (team = (kmp_team_t *)__kmp_team_pool; (team);) {
+  for (team = CCAST(kmp_team_t *, __kmp_team_pool); (team);) {
     /* TODO: consider resizing undersized teams instead of reaping them, now
        that we have a resizing mechanism */
     if (team->t.t_max_nproc >= max_nproc) {
@@ -5322,7 +5321,7 @@ void __kmp_free_team(kmp_root_t *root,
 
     /* put the team back in the team pool */
     /* TODO limit size of team pool, call reap_team if pool too large */
-    team->t.t_next_pool = (kmp_team_t *)__kmp_team_pool;
+    team->t.t_next_pool = CCAST(kmp_team_t *, __kmp_team_pool);
     __kmp_team_pool = (volatile kmp_team_t *)team;
   }
 
@@ -5420,7 +5419,7 @@ void __kmp_free_thread(kmp_info_t *this_th) {
   if (__kmp_thread_pool_insert_pt != NULL) {
     scan = &(__kmp_thread_pool_insert_pt->th.th_next_pool);
   } else {
-    scan = (kmp_info_t **)&__kmp_thread_pool;
+    scan = CCAST(kmp_info_t **, &__kmp_thread_pool);
   }
   for (; (*scan != NULL) && ((*scan)->th.th_info.ds.ds_gtid < gtid);
        scan = &((*scan)->th.th_next_pool))
@@ -5704,7 +5703,7 @@ static void __kmp_reap_thread(kmp_info_t *thread, int is_root) {
     // so there are no harmful side effects.
     if (thread->th.th_active_in_pool) {
       thread->th.th_active_in_pool = FALSE;
-      KMP_TEST_THEN_DEC32((kmp_int32 *)&__kmp_thread_pool_active_nth);
+      KMP_TEST_THEN_DEC32(CCAST(kmp_int32 *, &__kmp_thread_pool_active_nth));
       KMP_DEBUG_ASSERT(TCR_4(__kmp_thread_pool_active_nth) >= 0);
     }
 
@@ -5839,7 +5838,7 @@ static void __kmp_internal_end(void) {
     // This is valid for now, but be careful if threads are reaped sooner.
     while (__kmp_thread_pool != NULL) { // Loop thru all the thread in the pool.
       // Get the next thread from the pool.
-      kmp_info_t *thread = (kmp_info_t *)__kmp_thread_pool;
+      kmp_info_t *thread = CCAST(kmp_info_t *, __kmp_thread_pool);
       __kmp_thread_pool = thread->th.th_next_pool;
       // Reap it.
       KMP_DEBUG_ASSERT(thread->th.th_reap_state == KMP_SAFE_TO_REAP);
@@ -5852,7 +5851,7 @@ static void __kmp_internal_end(void) {
     // Reap teams.
     while (__kmp_team_pool != NULL) { // Loop thru all the teams in the pool.
       // Get the next team from the pool.
-      kmp_team_t *team = (kmp_team_t *)__kmp_team_pool;
+      kmp_team_t *team = CCAST(kmp_team_t *, __kmp_team_pool);
       __kmp_team_pool = team->t.t_next_pool;
       // Reap it.
       team->t.t_next_pool = NULL;
@@ -7234,7 +7233,7 @@ void __kmp_cleanup(void) {
 #endif
 
 #if KMP_AFFINITY_SUPPORTED
-  KMP_INTERNAL_FREE((void *)__kmp_cpuinfo_file);
+  KMP_INTERNAL_FREE(CCAST(char *, __kmp_cpuinfo_file));
   __kmp_cpuinfo_file = NULL;
 #endif /* KMP_AFFINITY_SUPPORTED */
 

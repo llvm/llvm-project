@@ -369,7 +369,7 @@ LINKAGE void __kmp_itt_metadata_loop(ident_t *loc, kmp_uint64 sched_type,
   char *s_col;
   KMP_DEBUG_ASSERT(loc->psource);
 #ifdef __cplusplus
-  s_line = strchr((char *)loc->psource, ';');
+  s_line = strchr(CCAST(char *, loc->psource), ';');
 #else
   s_line = strchr(loc->psource, ';');
 #endif

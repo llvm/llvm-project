@@ -164,7 +164,7 @@ static int DoOpen(const char *path, int flags, int mode) {
   if (!llvm::ConvertUTF8toWide(path, wpath))
     return -1;
   int result;
-  ::_wsopen_s(&result, wpath.c_str(), oflag, _SH_DENYNO, mode);
+  ::_wsopen_s(&result, wpath.c_str(), flags, _SH_DENYNO, mode);
   return result;
 #else
   return ::open(path, flags, mode);
