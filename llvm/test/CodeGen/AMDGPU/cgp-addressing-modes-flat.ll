@@ -1,9 +1,9 @@
 ; RUN: opt -S -codegenprepare -mtriple=amdgcn-unknown-unknown -mcpu=bonaire < %s | FileCheck -check-prefix=OPT -check-prefix=OPT-CI -check-prefix=OPT-CIVI %s
 ; RUN: opt -S -codegenprepare -mtriple=amdgcn-unknown-unknown -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -check-prefix=OPT -check-prefix=OPT-VI -check-prefix=OPT-CIVI %s
 ; RUN: opt -S -codegenprepare -mtriple=amdgcn-unknown-unknown -mcpu=gfx900 -mattr=-flat-for-global < %s | FileCheck -check-prefix=OPT -check-prefix=OPT-GFX9 %s
-; RUN: llc -march=amdgcn -mcpu=bonaire -mattr=-promote-alloca < %s | FileCheck -check-prefix=GCN -check-prefix=CI -check-prefix=CIVI %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -mattr=-promote-alloca < %s | FileCheck -check-prefix=GCN -check-prefix=VI -check-prefix=CIVI %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -mattr=-promote-alloca < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 %s
+; RUN: llc -march=amdgcn -amdgpu-scalarize-global-loads=false -mcpu=bonaire -mattr=-promote-alloca < %s | FileCheck -check-prefix=GCN -check-prefix=CI -check-prefix=CIVI %s
+; RUN: llc -march=amdgcn -amdgpu-scalarize-global-loads=false -mcpu=tonga -mattr=-flat-for-global -mattr=-promote-alloca < %s | FileCheck -check-prefix=GCN -check-prefix=VI -check-prefix=CIVI %s
+; RUN: llc -march=amdgcn -amdgpu-scalarize-global-loads=false -mcpu=gfx900 -mattr=-flat-for-global -mattr=-promote-alloca < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 %s
 
 ; OPT-LABEL: @test_no_sink_flat_small_offset_i32(
 ; OPT-CIVI: getelementptr i32, i32 addrspace(4)* %in
@@ -40,7 +40,7 @@ done:
 
 ; OPT-LABEL: @test_sink_noop_addrspacecast_flat_to_global_i32(
 ; OPT: getelementptr i32, i32 addrspace(4)* %out,
-; OPT-CI-NOT: getelementptr
+; rOPT-CI-NOT: getelementptr
 ; OPT: br i1
 
 ; OPT-CI: addrspacecast

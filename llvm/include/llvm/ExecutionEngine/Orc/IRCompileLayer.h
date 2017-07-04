@@ -50,14 +50,11 @@ public:
   ///        along with the given memory manager and symbol resolver.
   ///
   /// @return A handle for the added module.
-  template <typename MemoryManagerPtrT, typename SymbolResolverPtrT>
   ModuleHandleT addModule(std::shared_ptr<Module> M,
-                          MemoryManagerPtrT MemMgr,
-                          SymbolResolverPtrT Resolver) {
+                          std::shared_ptr<JITSymbolResolver> Resolver) {
     using CompileResult = decltype(Compile(*M));
     auto Obj = std::make_shared<CompileResult>(Compile(*M));
-    return BaseLayer.addObject(std::move(Obj), std::move(MemMgr),
-                               std::move(Resolver));
+    return BaseLayer.addObject(std::move(Obj), std::move(Resolver));
   }
 
   /// @brief Remove the module associated with the handle H.

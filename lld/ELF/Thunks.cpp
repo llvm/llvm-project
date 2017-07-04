@@ -71,7 +71,7 @@ public:
 class ThumbV7ABSLongThunk final : public Thunk {
 public:
   ThumbV7ABSLongThunk(const SymbolBody &Dest) : Thunk(Dest) {
-    this->alignment = 2;
+    alignment = 2;
   }
 
   uint32_t size() const override { return 10; }
@@ -82,7 +82,7 @@ public:
 class ThumbV7PILongThunk final : public Thunk {
 public:
   ThumbV7PILongThunk(const SymbolBody &Dest) : Thunk(Dest) {
-    this->alignment = 2;
+    alignment = 2;
   }
 
   uint32_t size() const override { return 12; }
@@ -191,7 +191,7 @@ void ThumbV7PILongThunk::addSymbols(ThunkSection &IS) {
 
 // Write MIPS LA25 thunk code to call PIC function from the non-PIC one.
 void MipsThunk::writeTo(uint8_t *Buf, ThunkSection &) const {
-  uint64_t S = this->Destination.getVA();
+  uint64_t S = Destination.getVA();
   write32(Buf, 0x3c190000, Config->Endianness);                // lui   $25, %hi(func)
   write32(Buf + 4, 0x08000000 | (S >> 2), Config->Endianness); // j     func
   write32(Buf + 8, 0x27390000, Config->Endianness);            // addiu $25, $25, %lo(func)

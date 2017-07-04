@@ -143,6 +143,9 @@ namespace {
   };
 }
 
+static void DiagnoseCastQual(Sema &Self, const ExprResult &SrcExpr,
+                             QualType DestType);
+
 // The Try functions attempt a specific way of casting. If they succeed, they
 // return TC_Success. If their way of casting is not appropriate for the given
 // arguments, they return TC_NotApplicable and *may* set diag to a diagnostic
@@ -427,6 +430,10 @@ static void diagnoseBadCast(Sema &S, unsigned msg, CastType castType,
 /// the same kind of pointer (plain or to-member). Unlike the Sema function,
 /// this one doesn't care if the two pointers-to-member don't point into the
 /// same class. This is because CastsAwayConstness doesn't care.
+/// And additionally, it handles C++ references. If both the types are
+/// references, then their pointee types are returned,
+/// else if only one of them is reference, it's pointee type is returned,
+/// and the other type is returned as-is.
 static bool UnwrapDissimilarPointerTypes(QualType& T1, QualType& T2) {
   const PointerType *T1PtrType = T1->getAs<PointerType>(),
                     *T2PtrType = T2->getAs<PointerType>();
@@ -475,6 +482,26 @@ static bool UnwrapDissimilarPointerTypes(QualType& T1, QualType& T2) {
     return true;
   }
   
+  const LValueReferenceType *T1RefType = T1->getAs<LValueReferenceType>(),
+                            *T2RefType = T2->getAs<LValueReferenceType>();
+  if (T1RefType && T2RefType) {
+    T1 = T1RefType->getPointeeType();
+    T2 = T2RefType->getPointeeType();
+    return true;
+  }
+
+  if (T1RefType) {
+    T1 = T1RefType->getPointeeType();
+    // T2 = T2;
+    return true;
+  }
+
+  if (T2RefType) {
+    // T1 = T1;
+    T2 = T2RefType->getPointeeType();
+    return true;
+  }
+
   return false;
 }
 
@@ -503,11 +530,13 @@ CastsAwayConstness(Sema &Self, QualType SrcType, QualType DestType,
   // the rules are non-trivial. So first we construct Tcv *...cv* as described
   // in C++ 5.2.11p8.
   assert((SrcType->isAnyPointerType() || SrcType->isMemberPointerType() ||
-          SrcType->isBlockPointerType()) &&
+          SrcType->isBlockPointerType() ||
+          DestType->isLValueReferenceType()) &&
          "Source type is not pointer or pointer to member.");
   assert((DestType->isAnyPointerType() || DestType->isMemberPointerType() ||
-          DestType->isBlockPointerType()) &&
-         "Destination type is not pointer or pointer to member.");
+          DestType->isBlockPointerType() ||
+          DestType->isLValueReferenceType()) &&
+         "Destination type is not pointer or pointer to member, or reference.");
 
   QualType UnwrappedSrcType = Self.Context.getCanonicalType(SrcType), 
            UnwrappedDestType = Self.Context.getCanonicalType(DestType);
@@ -2177,6 +2206,8 @@ static TryCastResult TryReinterpretCast(Sema &Self, ExprResult &SrcExpr,
 
 void CastOperation::CheckCXXCStyleCast(bool FunctionalStyle,
                                        bool ListInitialization) {
+  assert(Self.getLangOpts().CPlusPlus);
+
   // Handle placeholders.
   if (isPlaceholder()) {
     // C-style casts can resolve __unknown_any types.
@@ -2580,30 +2611,42 @@ void CastOperation::CheckCStyleCast() {
 
   if (Kind == CK_BitCast)
     checkCastAlign();
+}
 
-  // -Wcast-qual
+/// DiagnoseCastQual - Warn whenever casts discards a qualifiers, be it either
+/// const, volatile or both.
+static void DiagnoseCastQual(Sema &Self, const ExprResult &SrcExpr,
+                             QualType DestType) {
+  if (SrcExpr.isInvalid())
+    return;
+
+  QualType SrcType = SrcExpr.get()->getType();
+  if (!((SrcType->isAnyPointerType() && DestType->isAnyPointerType()) ||
+        DestType->isLValueReferenceType()))
+    return;
+
   QualType TheOffendingSrcType, TheOffendingDestType;
   Qualifiers CastAwayQualifiers;
-  if (SrcType->isAnyPointerType() && DestType->isAnyPointerType() &&
-      CastsAwayConstness(Self, SrcType, DestType, true, false,
-                         &TheOffendingSrcType, &TheOffendingDestType,
-                         &CastAwayQualifiers)) {
-    int qualifiers = -1;
-    if (CastAwayQualifiers.hasConst() && CastAwayQualifiers.hasVolatile()) {
-      qualifiers = 0;
-    } else if (CastAwayQualifiers.hasConst()) {
-      qualifiers = 1;
-    } else if (CastAwayQualifiers.hasVolatile()) {
-      qualifiers = 2;
-    }
-    // This is a variant of int **x; const int **y = (const int **)x;
-    if (qualifiers == -1)
-      Self.Diag(SrcExpr.get()->getLocStart(), diag::warn_cast_qual2) <<
-        SrcType << DestType;
-    else
-      Self.Diag(SrcExpr.get()->getLocStart(), diag::warn_cast_qual) <<
-        TheOffendingSrcType << TheOffendingDestType << qualifiers;
+  if (!CastsAwayConstness(Self, SrcType, DestType, true, false,
+                          &TheOffendingSrcType, &TheOffendingDestType,
+                          &CastAwayQualifiers))
+    return;
+
+  int qualifiers = -1;
+  if (CastAwayQualifiers.hasConst() && CastAwayQualifiers.hasVolatile()) {
+    qualifiers = 0;
+  } else if (CastAwayQualifiers.hasConst()) {
+    qualifiers = 1;
+  } else if (CastAwayQualifiers.hasVolatile()) {
+    qualifiers = 2;
   }
+  // This is a variant of int **x; const int **y = (const int **)x;
+  if (qualifiers == -1)
+    Self.Diag(SrcExpr.get()->getLocStart(), diag::warn_cast_qual2)
+        << SrcType << DestType;
+  else
+    Self.Diag(SrcExpr.get()->getLocStart(), diag::warn_cast_qual)
+        << TheOffendingSrcType << TheOffendingDestType << qualifiers;
 }
 
 ExprResult Sema::BuildCStyleCastExpr(SourceLocation LPLoc,
@@ -2623,6 +2666,9 @@ ExprResult Sema::BuildCStyleCastExpr(SourceLocation LPLoc,
 
   if (Op.SrcExpr.isInvalid())
     return ExprError();
+
+  // -Wcast-qual
+  DiagnoseCastQual(Op.Self, Op.SrcExpr, Op.DestType);
 
   return Op.complete(CStyleCastExpr::Create(Context, Op.ResultType,
                               Op.ValueKind, Op.Kind, Op.SrcExpr.get(),

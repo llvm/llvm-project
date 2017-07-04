@@ -61,7 +61,8 @@ public:
              IndirectStubsManagerBuilder IndirectStubsMgrBuilder,
              bool InlineStubs)
       : TM(std::move(TM)), DL(this->TM->createDataLayout()),
-        CCMgr(std::move(CCMgr)),
+	CCMgr(std::move(CCMgr)),
+	ObjectLayer([]() { return std::make_shared<SectionMemoryManager>(); }),
         CompileLayer(ObjectLayer, orc::SimpleCompiler(*this->TM)),
         IRDumpLayer(CompileLayer, createDebugDumper()),
         CODLayer(IRDumpLayer, extractSingleFunction, *this->CCMgr,
@@ -125,9 +126,7 @@ public:
 
       // Add the module to the JIT.
       ModulesHandle =
-        CODLayer.addModule(std::move(M),
-                           llvm::make_unique<SectionMemoryManager>(),
-                           std::move(Resolver));
+        CODLayer.addModule(std::move(M), std::move(Resolver));
     } else
       CODLayer.addExtraModule(ModulesHandle, std::move(M));
 

@@ -328,6 +328,15 @@ int isl_vec_cmp_element(__isl_keep isl_vec *vec1, __isl_keep isl_vec *vec2,
 	return isl_int_cmp(vec1->el[pos], vec2->el[pos]);
 }
 
+/* Does "vec" contain only zero elements?
+ */
+isl_bool isl_vec_is_zero(__isl_keep isl_vec *vec)
+{
+	if (!vec)
+		return isl_bool_error;
+	return isl_seq_first_non_zero(vec->el, vec->size) < 0;
+}
+
 isl_bool isl_vec_is_equal(__isl_keep isl_vec *vec1, __isl_keep isl_vec *vec2)
 {
 	if (!vec1 || !vec2)

@@ -228,13 +228,20 @@ private:
 
 public:
 
+  /// @brief Functor for creating memory managers.
+  using MemoryManagerGetter =
+    std::function<std::shared_ptr<RuntimeDyld::MemoryManager>()>;
+
   /// @brief Construct an ObjectLinkingLayer with the given NotifyLoaded,
   ///        and NotifyFinalized functors.
   RTDyldObjectLinkingLayer(
+      MemoryManagerGetter GetMemMgr,
       NotifyLoadedFtor NotifyLoaded = NotifyLoadedFtor(),
       NotifyFinalizedFtor NotifyFinalized = NotifyFinalizedFtor())
-      : NotifyLoaded(std::move(NotifyLoaded)),
-        NotifyFinalized(std::move(NotifyFinalized)) {}
+      : GetMemMgr(GetMemMgr),
+        NotifyLoaded(std::move(NotifyLoaded)),
+        NotifyFinalized(std::move(NotifyFinalized)),
+        ProcessAllSections(false) {}
 
   /// @brief Set the 'ProcessAllSections' flag.
   ///
@@ -251,12 +258,8 @@ public:
   ///
   /// @return A handle that can be used to refer to the loaded objects (for 
   ///         symbol searching, finalization, freeing memory, etc.).
-  template <typename MemoryManagerPtrT,
-            typename SymbolResolverPtrT>
   ObjHandleT addObject(ObjectPtr Obj,
-                       MemoryManagerPtrT MemMgr,
-                       SymbolResolverPtrT Resolver) {
-
+                       std::shared_ptr<JITSymbolResolver> Resolver) {
     auto Finalizer = [&](ObjHandleT H, RuntimeDyld &RTDyld,
                          const ObjectPtr &ObjToLoad,
                          std::function<void()> LOSHandleLoad) {
@@ -275,8 +278,9 @@ public:
     };
 
     auto LO =
-      createLinkedObject(std::move(Obj), std::move(MemMgr), std::move(Resolver),
-                         std::move(Finalizer), ProcessAllSections);
+      createLinkedObject(std::move(Obj), GetMemMgr(),
+                         std::move(Resolver), std::move(Finalizer),
+                         ProcessAllSections);
     // LOS is an owning-ptr. Keep a non-owning one so that we can set the handle
     // below.
     auto *LOPtr = LO.get();
@@ -341,6 +345,7 @@ public:
 private:
 
   LinkedObjectListT LinkedObjList;
+  MemoryManagerGetter GetMemMgr;
   NotifyLoadedFtor NotifyLoaded;
   NotifyFinalizedFtor NotifyFinalized;
   bool ProcessAllSections = false;

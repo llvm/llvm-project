@@ -19,10 +19,10 @@ define amdgpu_kernel void @test_i128_vreg(i128 addrspace(1)* noalias %out, i128 
 
 ; Check that the SGPR add operand is correctly moved to a VGPR.
 ; GCN-LABEL: {{^}}sgpr_operand:
-; GCN: v_add_i32
-; GCN: v_addc_u32
-; GCN: v_addc_u32
-; GCN: v_addc_u32
+; GCN: s_add_u32
+; GCN: s_addc_u32
+; GCN: s_addc_u32
+; GCN: s_addc_u32
 define amdgpu_kernel void @sgpr_operand(i128 addrspace(1)* noalias %out, i128 addrspace(1)* noalias %in, i128 %a) {
   %foo = load i128, i128 addrspace(1)* %in, align 8
   %result = add i128 %foo, %a
@@ -31,10 +31,10 @@ define amdgpu_kernel void @sgpr_operand(i128 addrspace(1)* noalias %out, i128 ad
 }
 
 ; GCN-LABEL: {{^}}sgpr_operand_reversed:
-; GCN: v_add_i32
-; GCN: v_addc_u32
-; GCN: v_addc_u32
-; GCN: v_addc_u32
+; GCN: s_add_u32
+; GCN: s_addc_u32
+; GCN: s_addc_u32
+; GCN: s_addc_u32
 define amdgpu_kernel void @sgpr_operand_reversed(i128 addrspace(1)* noalias %out, i128 addrspace(1)* noalias %in, i128 %a) {
   %foo = load i128, i128 addrspace(1)* %in, align 8
   %result = add i128 %a, %foo

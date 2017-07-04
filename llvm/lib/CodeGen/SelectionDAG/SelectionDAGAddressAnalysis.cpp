@@ -37,13 +37,13 @@ bool BaseIndexOffset::equalBaseIndex(BaseIndexOffset &Other,
 
     const MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
 
-    // Match non-equal FrameIndexes - a FrameIndex stemming from an
-    // alloca will not have it's ObjectOffset set until post-DAG and
-    // as such we must assume the two framesIndices are incomparable.
+    // Match non-equal FrameIndexes - If both frame indices are fixed
+    // we know their relative offsets and can compare them. Otherwise
+    // we must be conservative.
     if (auto *A = dyn_cast<FrameIndexSDNode>(Base))
       if (auto *B = dyn_cast<FrameIndexSDNode>(Other.Base))
-        if (!MFI.getObjectAllocation(A->getIndex()) &&
-            !MFI.getObjectAllocation(B->getIndex())) {
+        if (MFI.isFixedObjectIndex(A->getIndex()) &&
+            MFI.isFixedObjectIndex(B->getIndex())) {
           Off += MFI.getObjectOffset(B->getIndex()) -
                  MFI.getObjectOffset(A->getIndex());
           return true;

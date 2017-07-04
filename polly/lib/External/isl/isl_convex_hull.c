@@ -1346,23 +1346,29 @@ error:
 }
 
 /* Compute the lineality space of a basic set.
- * We currently do not allow the basic set to have any divs.
  * We basically just drop the constants and turn every inequality
  * into an equality.
+ * Any explicit representations of local variables are removed
+ * because they may no longer be valid representations
+ * in the lineality space.
  */
 __isl_give isl_basic_set *isl_basic_set_lineality_space(
 	__isl_take isl_basic_set *bset)
 {
 	int i, k;
 	struct isl_basic_set *lin = NULL;
-	unsigned dim;
+	unsigned n_div, dim;
 
 	if (!bset)
 		goto error;
-	isl_assert(bset->ctx, bset->n_div == 0, goto error);
+	n_div = isl_basic_set_dim(bset, isl_dim_div);
 	dim = isl_basic_set_total_dim(bset);
 
-	lin = isl_basic_set_alloc_space(isl_basic_set_get_space(bset), 0, dim, 0);
+	lin = isl_basic_set_alloc_space(isl_basic_set_get_space(bset),
+					n_div, dim, 0);
+	for (i = 0; i < n_div; ++i)
+		if (isl_basic_set_alloc_div(lin) < 0)
+			goto error;
 	if (!lin)
 		goto error;
 	for (i = 0; i < bset->n_eq; ++i) {
@@ -1394,9 +1400,9 @@ error:
 }
 
 /* Compute the (linear) hull of the lineality spaces of the basic sets in the
- * "underlying" set "set".
+ * set "set".
  */
-static __isl_give isl_basic_set *uset_combined_lineality_space(
+__isl_give isl_basic_set *isl_set_combined_lineality_space(
 	__isl_take isl_set *set)
 {
 	int i;
@@ -1772,7 +1778,7 @@ static __isl_give isl_basic_set *uset_convex_hull(__isl_take isl_set *set)
 	if (bounded && set->ctx->opt->convex == ISL_CONVEX_HULL_WRAP)
 		return uset_convex_hull_wrap(set);
 
-	lin = uset_combined_lineality_space(isl_set_copy(set));
+	lin = isl_set_combined_lineality_space(isl_set_copy(set));
 	if (!lin)
 		goto error;
 	if (isl_basic_set_plain_is_universe(lin)) {
@@ -1852,6 +1858,8 @@ static __isl_give isl_basic_set *modulo_affine_hull(
 	convex_hull = isl_basic_set_intersect(convex_hull, affine_hull);
 	return convex_hull;
 error:
+	isl_mat_free(T);
+	isl_mat_free(T2);
 	isl_basic_set_free(affine_hull);
 	isl_set_free(set);
 	return NULL;

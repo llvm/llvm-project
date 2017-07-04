@@ -45,6 +45,7 @@ public:
 
   KaleidoscopeJIT()
       : TM(EngineBuilder().selectTarget()), DL(TM->createDataLayout()),
+        ObjectLayer([]() { return std::make_shared<SectionMemoryManager>(); }),
         CompileLayer(ObjectLayer, SimpleCompiler(*TM)) {
     llvm::sys::DynamicLibrary::LoadLibraryPermanently(nullptr);
   }
@@ -63,7 +64,6 @@ public:
         },
         [](const std::string &S) { return nullptr; });
     auto H = CompileLayer.addModule(std::move(M),
-                                    make_unique<SectionMemoryManager>(),
                                     std::move(Resolver));
 
     ModuleHandles.push_back(H);

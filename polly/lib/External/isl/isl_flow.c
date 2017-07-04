@@ -23,6 +23,7 @@
 #include <isl/flow.h>
 #include <isl/schedule_node.h>
 #include <isl_sort.h>
+#include <isl/stream.h>
 
 enum isl_restriction_type {
 	isl_restriction_type_empty,
@@ -159,10 +160,15 @@ struct isl_labeled_map {
 	int		must;
 };
 
+typedef int (*isl_access_coscheduled)(void *first, void *second);
+
 /* A structure containing the input for dependence analysis:
  * - a sink
  * - n_must + n_may (<= max_source) sources
  * - a function for determining the relative order of sources and sink
+ * - an optional function "coscheduled" for determining whether sources
+ *   may be coscheduled.  If "coscheduled" is NULL, then the sources
+ *   are assumed not to be coscheduled.
  * The must sources are placed before the may sources.
  *
  * domain_map is an auxiliary map that maps the sink access relation
@@ -177,6 +183,7 @@ struct isl_access_info {
 	isl_map				*domain_map;
 	struct isl_labeled_map		sink;
 	isl_access_level_before		level_before;
+	isl_access_coscheduled		coscheduled;
 
 	isl_access_restrict		restrict_fn;
 	void				*restrict_user;
@@ -840,6 +847,140 @@ static __isl_give isl_map *all_intermediate_sources(
 	return map;
 }
 
+/* Given a dependence relation "old_map" between a must-source and the sink,
+ * return a subset of the dependences, augmented with instances
+ * of the source at position "pos" in "acc" that are coscheduled
+ * with the must-source and that access the same element.
+ * That is, if the input lives in a space T -> K, then the output
+ * lives in the space [T -> S] -> K, with S the space of source "pos", and
+ * the domain factor of the domain product is a subset of the input.
+ * The sources are considered to be coscheduled if they have the same values
+ * for the initial "depth" coordinates.
+ *
+ * First construct a dependence relation S -> K and a mapping
+ * between coscheduled sources T -> S.
+ * The second is combined with the original dependence relation T -> K
+ * to form a relation in T -> [S -> K], which is subsequently
+ * uncurried to [T -> S] -> K.
+ * This result is then intersected with the dependence relation S -> K
+ * to form the output.
+ */
+static __isl_give isl_map *coscheduled_source(__isl_keep isl_access_info *acc,
+	__isl_keep isl_map *old_map, int pos, int depth)
+{
+	isl_space *space;
+	isl_set *set_C;
+	isl_map *read_map;
+	isl_map *write_map;
+	isl_map *dep_map;
+	isl_map *equal;
+	isl_map *map;
+
+	set_C = isl_map_range(isl_map_copy(old_map));
+	read_map = isl_map_copy(acc->sink.map);
+	read_map = isl_map_intersect_domain(read_map, set_C);
+	write_map = isl_map_copy(acc->source[pos].map);
+	dep_map = isl_map_domain_product(write_map, read_map);
+	dep_map = isl_set_unwrap(isl_map_domain(dep_map));
+	space = isl_space_join(isl_map_get_space(old_map),
+				isl_space_reverse(isl_map_get_space(dep_map)));
+	equal = isl_map_from_basic_map(isl_basic_map_equal(space, depth));
+	map = isl_map_range_product(equal, isl_map_copy(old_map));
+	map = isl_map_uncurry(map);
+	map = isl_map_intersect_domain_factor_range(map, dep_map);
+
+	return map;
+}
+
+/* After the dependences derived from a must-source have been computed
+ * at a certain level, check if any of the sources of the must-dependences
+ * may be coscheduled with other sources.
+ * If they are any such sources, then there is no way of determining
+ * which of the sources actually comes last and the must-dependences
+ * need to be turned into may-dependences, while dependences from
+ * the other sources need to be added to the may-dependences as well.
+ * "acc" describes the sources and a callback for checking whether
+ * two sources may be coscheduled.  If acc->coscheduled is NULL then
+ * the sources are assumed not to be coscheduled.
+ * "must_rel" and "may_rel" describe the must and may-dependence relations
+ * computed at the current level for the must-sources.  Some of the dependences
+ * may be moved from "must_rel" to "may_rel".
+ * "flow" contains all dependences computed so far (apart from those
+ * in "must_rel" and "may_rel") and may be updated with additional
+ * dependences derived from may-sources.
+ *
+ * In particular, consider all the must-sources with a non-empty
+ * dependence relation in "must_rel".  They are considered in reverse
+ * order because that is the order in which they are considered in the caller.
+ * If any of the must-sources are coscheduled, then the last one
+ * is the one that will have a corresponding dependence relation.
+ * For each must-source i, consider both all the previous must-sources
+ * and all the may-sources.  If any of those may be coscheduled with
+ * must-source i, then compute the coscheduled instances that access
+ * the same memory elements.  The result is a relation [T -> S] -> K.
+ * The projection onto T -> K is a subset of the must-dependence relation
+ * that needs to be turned into may-dependences.
+ * The projection onto S -> K needs to be added to the may-dependences
+ * of source S.
+ * Since a given must-source instance may be coscheduled with several
+ * other source instances, the dependences that need to be turned
+ * into may-dependences are first collected and only actually removed
+ * from the must-dependences after all other sources have been considered.
+ */
+static __isl_give isl_flow *handle_coscheduled(__isl_keep isl_access_info *acc,
+	__isl_keep isl_map **must_rel, __isl_keep isl_map **may_rel,
+	__isl_take isl_flow *flow)
+{
+	int i, j;
+
+	if (!acc->coscheduled)
+		return flow;
+	for (i = acc->n_must - 1; i >= 0; --i) {
+		isl_map *move;
+
+		if (isl_map_plain_is_empty(must_rel[i]))
+			continue;
+		move = isl_map_empty(isl_map_get_space(must_rel[i]));
+		for (j = i - 1; j >= 0; --j) {
+			int depth;
+			isl_map *map, *factor;
+
+			if (!acc->coscheduled(acc->source[i].data,
+						acc->source[j].data))
+				continue;
+			depth = acc->level_before(acc->source[i].data,
+						acc->source[j].data) / 2;
+			map = coscheduled_source(acc, must_rel[i], j, depth);
+			factor = isl_map_domain_factor_range(isl_map_copy(map));
+			may_rel[j] = isl_map_union(may_rel[j], factor);
+			map = isl_map_domain_factor_domain(map);
+			move = isl_map_union(move, map);
+		}
+		for (j = 0; j < acc->n_may; ++j) {
+			int depth, pos;
+			isl_map *map, *factor;
+
+			pos = acc->n_must + j;
+			if (!acc->coscheduled(acc->source[i].data,
+						acc->source[pos].data))
+				continue;
+			depth = acc->level_before(acc->source[i].data,
+						acc->source[pos].data) / 2;
+			map = coscheduled_source(acc, must_rel[i], pos, depth);
+			factor = isl_map_domain_factor_range(isl_map_copy(map));
+			pos = 2 * acc->n_must + j;
+			flow->dep[pos].map = isl_map_union(flow->dep[pos].map,
+							    factor);
+			map = isl_map_domain_factor_domain(map);
+			move = isl_map_union(move, map);
+		}
+		must_rel[i] = isl_map_subtract(must_rel[i], isl_map_copy(move));
+		may_rel[i] = isl_map_union(may_rel[i], move);
+	}
+
+	return flow;
+}
+
 /* Compute dependences for the case where all accesses are "may"
  * accesses, which boils down to computing memory based dependences.
  * The generic algorithm would also work in this case, but it would
@@ -917,7 +1058,12 @@ static __isl_give isl_flow *compute_mem_based_dependences(
  * need to be considered.  These iterations are split into those that
  * haven't been matched to any source access (mustdo) and those that have only
  * been matched to may accesses (maydo).
- * At the end of each level, we also consider the may accesses.
+ * At the end of each level, must-sources and may-sources that are coscheduled
+ * with the sources of the must-dependences at that level are considered.
+ * If any coscheduled instances are found, then corresponding may-dependences
+ * are added and the original must-dependences are turned into may-dependences.
+ * Afterwards, the may accesses that occur after must-dependence sources
+ * are considered.
  * In particular, we consider may accesses that precede the remaining
  * sink iterations, moving elements from mustdo to maydo when appropriate,
  * and may accesses that occur between a must source and a sink of any 
@@ -1003,6 +1149,8 @@ static __isl_give isl_flow *compute_val_based_dependences(
 			intermediate_sources(acc, must_rel, j, level);
 			intermediate_sources(acc, may_rel, j, level);
 		}
+
+		handle_coscheduled(acc, must_rel, may_rel, res);
 
 		for (j = 0; j < acc->n_may; ++j) {
 			int plevel;
@@ -1219,11 +1367,28 @@ error:
 	return NULL;
 }
 
+/* The different types of access relations that isl_union_access_info
+ * keeps track of.
+
+ * "isl_access_sink" represents the sink accesses.
+ * "isl_access_must_source" represents the definite source accesses.
+ * "isl_access_may_source" represents the possible source accesses.
+ * "isl_access_kill" represents the kills.
+ *
+ * isl_access_sink is sometimes treated differently and
+ * should therefore appear first.
+ */
+enum isl_access_type {
+	isl_access_sink,
+	isl_access_must_source,
+	isl_access_may_source,
+	isl_access_kill,
+	isl_access_end
+};
+
 /* This structure represents the input for a dependence analysis computation.
  *
- * "sink" represents the sink accesses.
- * "must_source" represents the definite source accesses.
- * "may_source" represents the possible source accesses.
+ * "access" contains the access relations.
  *
  * "schedule" or "schedule_map" represents the execution order.
  * Exactly one of these fields should be NULL.  The other field
@@ -1236,9 +1401,7 @@ error:
  * the "schedule_map" field no longer contains useful information.
  */
 struct isl_union_access_info {
-	isl_union_map *sink;
-	isl_union_map *must_source;
-	isl_union_map *may_source;
+	isl_union_map *access[isl_access_end];
 
 	isl_schedule *schedule;
 	isl_union_map *schedule_map;
@@ -1249,12 +1412,13 @@ struct isl_union_access_info {
 __isl_null isl_union_access_info *isl_union_access_info_free(
 	__isl_take isl_union_access_info *access)
 {
+	enum isl_access_type i;
+
 	if (!access)
 		return NULL;
 
-	isl_union_map_free(access->sink);
-	isl_union_map_free(access->must_source);
-	isl_union_map_free(access->may_source);
+	for (i = isl_access_sink; i < isl_access_end; ++i)
+		isl_union_map_free(access->access[i]);
 	isl_schedule_free(access->schedule);
 	isl_union_map_free(access->schedule_map);
 	free(access);
@@ -1266,46 +1430,98 @@ __isl_null isl_union_access_info *isl_union_access_info_free(
  */
 isl_ctx *isl_union_access_info_get_ctx(__isl_keep isl_union_access_info *access)
 {
-	return access ? isl_union_map_get_ctx(access->sink) : NULL;
+	if (!access)
+		return NULL;
+	return isl_union_map_get_ctx(access->access[isl_access_sink]);
 }
 
-/* Create a new isl_union_access_info with the given sink accesses and
- * and no source accesses or schedule information.
+/* Construct an empty (invalid) isl_union_access_info object.
+ * The caller is responsible for setting the sink access relation and
+ * initializing all the other fields, e.g., by calling
+ * isl_union_access_info_init.
+ */
+static __isl_give isl_union_access_info *isl_union_access_info_alloc(
+	isl_ctx *ctx)
+{
+	return isl_calloc_type(ctx, isl_union_access_info);
+}
+
+/* Initialize all the fields of "info", except the sink access relation,
+ * which is assumed to have been set by the caller.
  *
  * By default, we use the schedule field of the isl_union_access_info,
  * but this may be overridden by a call
  * to isl_union_access_info_set_schedule_map.
  */
+static __isl_give isl_union_access_info *isl_union_access_info_init(
+	__isl_take isl_union_access_info *info)
+{
+	isl_space *space;
+	isl_union_map *empty;
+	enum isl_access_type i;
+
+	if (!info)
+		return NULL;
+	if (!info->access[isl_access_sink])
+		return isl_union_access_info_free(info);
+
+	space = isl_union_map_get_space(info->access[isl_access_sink]);
+	empty = isl_union_map_empty(isl_space_copy(space));
+	for (i = isl_access_sink + 1; i < isl_access_end; ++i)
+		if (!info->access[i])
+			info->access[i] = isl_union_map_copy(empty);
+	isl_union_map_free(empty);
+	if (!info->schedule && !info->schedule_map)
+		info->schedule = isl_schedule_empty(isl_space_copy(space));
+	isl_space_free(space);
+
+	for (i = isl_access_sink + 1; i < isl_access_end; ++i)
+		if (!info->access[i])
+			return isl_union_access_info_free(info);
+	if (!info->schedule && !info->schedule_map)
+		return isl_union_access_info_free(info);
+
+	return info;
+}
+
+/* Create a new isl_union_access_info with the given sink accesses and
+ * and no other accesses or schedule information.
+ */
 __isl_give isl_union_access_info *isl_union_access_info_from_sink(
 	__isl_take isl_union_map *sink)
 {
 	isl_ctx *ctx;
-	isl_space *space;
-	isl_union_map *empty;
 	isl_union_access_info *access;
 
 	if (!sink)
 		return NULL;
 	ctx = isl_union_map_get_ctx(sink);
-	access = isl_alloc_type(ctx, isl_union_access_info);
+	access = isl_union_access_info_alloc(ctx);
 	if (!access)
 		goto error;
-
-	space = isl_union_map_get_space(sink);
-	empty = isl_union_map_empty(isl_space_copy(space));
-	access->sink = sink;
-	access->must_source = isl_union_map_copy(empty);
-	access->may_source = empty;
-	access->schedule = isl_schedule_empty(space);
-	access->schedule_map = NULL;
-
-	if (!access->sink || !access->must_source ||
-	    !access->may_source || !access->schedule)
-		return isl_union_access_info_free(access);
-
-	return access;
+	access->access[isl_access_sink] = sink;
+	return isl_union_access_info_init(access);
 error:
 	isl_union_map_free(sink);
+	return NULL;
+}
+
+/* Replace the access relation of type "type" of "info" by "access".
+ */
+static __isl_give isl_union_access_info *isl_union_access_info_set(
+	__isl_take isl_union_access_info *info,
+	enum isl_access_type type, __isl_take isl_union_map *access)
+{
+	if (!info || !access)
+		goto error;
+
+	isl_union_map_free(info->access[type]);
+	info->access[type] = access;
+
+	return info;
+error:
+	isl_union_access_info_free(info);
+	isl_union_map_free(access);
 	return NULL;
 }
 
@@ -1315,17 +1531,8 @@ __isl_give isl_union_access_info *isl_union_access_info_set_must_source(
 	__isl_take isl_union_access_info *access,
 	__isl_take isl_union_map *must_source)
 {
-	if (!access || !must_source)
-		goto error;
-
-	isl_union_map_free(access->must_source);
-	access->must_source = must_source;
-
-	return access;
-error:
-	isl_union_access_info_free(access);
-	isl_union_map_free(must_source);
-	return NULL;
+	return isl_union_access_info_set(access, isl_access_must_source,
+					must_source);
 }
 
 /* Replace the possible source accesses of "access" by "may_source".
@@ -1334,17 +1541,63 @@ __isl_give isl_union_access_info *isl_union_access_info_set_may_source(
 	__isl_take isl_union_access_info *access,
 	__isl_take isl_union_map *may_source)
 {
-	if (!access || !may_source)
-		goto error;
+	return isl_union_access_info_set(access, isl_access_may_source,
+					may_source);
+}
 
-	isl_union_map_free(access->may_source);
-	access->may_source = may_source;
+/* Replace the kills of "info" by "kill".
+ */
+__isl_give isl_union_access_info *isl_union_access_info_set_kill(
+	__isl_take isl_union_access_info *info, __isl_take isl_union_map *kill)
+{
+	return isl_union_access_info_set(info, isl_access_kill, kill);
+}
 
-	return access;
-error:
-	isl_union_access_info_free(access);
-	isl_union_map_free(may_source);
-	return NULL;
+/* Return the access relation of type "type" of "info".
+ */
+static __isl_give isl_union_map *isl_union_access_info_get(
+	__isl_keep isl_union_access_info *info, enum isl_access_type type)
+{
+	if (!info)
+		return NULL;
+	return isl_union_map_copy(info->access[type]);
+}
+
+/* Return the definite source accesses of "info".
+ */
+__isl_give isl_union_map *isl_union_access_info_get_must_source(
+	__isl_keep isl_union_access_info *info)
+{
+	return isl_union_access_info_get(info, isl_access_must_source);
+}
+
+/* Return the possible source accesses of "info".
+ */
+__isl_give isl_union_map *isl_union_access_info_get_may_source(
+	__isl_keep isl_union_access_info *info)
+{
+	return isl_union_access_info_get(info, isl_access_may_source);
+}
+
+/* Return the kills of "info".
+ */
+__isl_give isl_union_map *isl_union_access_info_get_kill(
+	__isl_keep isl_union_access_info *info)
+{
+	return isl_union_access_info_get(info, isl_access_kill);
+}
+
+/* Does "info" specify any kills?
+ */
+static isl_bool isl_union_access_has_kill(
+	__isl_keep isl_union_access_info *info)
+{
+	isl_bool empty;
+
+	if (!info)
+		return isl_bool_error;
+	empty = isl_union_map_is_empty(info->access[isl_access_kill]);
+	return isl_bool_not(empty);
 }
 
 /* Replace the schedule of "access" by "schedule".
@@ -1393,15 +1646,15 @@ __isl_give isl_union_access_info *isl_union_access_info_copy(
 	__isl_keep isl_union_access_info *access)
 {
 	isl_union_access_info *copy;
+	enum isl_access_type i;
 
 	if (!access)
 		return NULL;
 	copy = isl_union_access_info_from_sink(
-				isl_union_map_copy(access->sink));
-	copy = isl_union_access_info_set_must_source(copy,
-				isl_union_map_copy(access->must_source));
-	copy = isl_union_access_info_set_may_source(copy,
-				isl_union_map_copy(access->may_source));
+		    isl_union_map_copy(access->access[isl_access_sink]));
+	for (i = isl_access_sink + 1; i < isl_access_end; ++i)
+		copy = isl_union_access_info_set(copy, i,
+					isl_union_map_copy(access->access[i]));
 	if (access->schedule)
 		copy = isl_union_access_info_set_schedule(copy,
 				isl_schedule_copy(access->schedule));
@@ -1428,26 +1681,76 @@ static __isl_give isl_printer *print_union_map_field(__isl_take isl_printer *p,
 	return p;
 }
 
+/* An enumeration of the various keys that may appear in a YAML mapping
+ * of an isl_union_access_info object.
+ * The keys for the access relation types are assumed to have the same values
+ * as the access relation types in isl_access_type.
+ */
+enum isl_ai_key {
+	isl_ai_key_error = -1,
+	isl_ai_key_sink = isl_access_sink,
+	isl_ai_key_must_source = isl_access_must_source,
+	isl_ai_key_may_source = isl_access_may_source,
+	isl_ai_key_kill = isl_access_kill,
+	isl_ai_key_schedule_map,
+	isl_ai_key_schedule,
+	isl_ai_key_end
+};
+
+/* Textual representations of the YAML keys for an isl_union_access_info
+ * object.
+ */
+static char *key_str[] = {
+	[isl_ai_key_sink] = "sink",
+	[isl_ai_key_must_source] = "must_source",
+	[isl_ai_key_may_source] = "may_source",
+	[isl_ai_key_kill] = "kill",
+	[isl_ai_key_schedule_map] = "schedule_map",
+	[isl_ai_key_schedule] = "schedule",
+};
+
+/* Print a key-value pair corresponding to the access relation of type "type"
+ * of a YAML mapping of "info" to "p".
+ *
+ * The sink access relation is always printed, but any other access relation
+ * is only printed if it is non-empty.
+ */
+static __isl_give isl_printer *print_access_field(__isl_take isl_printer *p,
+	__isl_keep isl_union_access_info *info, enum isl_access_type type)
+{
+	if (type != isl_access_sink) {
+		isl_bool empty;
+
+		empty = isl_union_map_is_empty(info->access[type]);
+		if (empty < 0)
+			return isl_printer_free(p);
+		if (empty)
+			return p;
+	}
+	return print_union_map_field(p, key_str[type], info->access[type]);
+}
+
 /* Print the information contained in "access" to "p".
  * The information is printed as a YAML document.
  */
 __isl_give isl_printer *isl_printer_print_union_access_info(
 	__isl_take isl_printer *p, __isl_keep isl_union_access_info *access)
 {
+	enum isl_access_type i;
+
 	if (!access)
 		return isl_printer_free(p);
 
 	p = isl_printer_yaml_start_mapping(p);
-	p = print_union_map_field(p, "sink", access->sink);
-	p = print_union_map_field(p, "must_source", access->must_source);
-	p = print_union_map_field(p, "may_source", access->may_source);
+	for (i = isl_access_sink; i < isl_access_end; ++i)
+		p = print_access_field(p, access, i);
 	if (access->schedule) {
-		p = isl_printer_print_str(p, "schedule");
+		p = isl_printer_print_str(p, key_str[isl_ai_key_schedule]);
 		p = isl_printer_yaml_next(p);
 		p = isl_printer_print_schedule(p, access->schedule);
 		p = isl_printer_yaml_next(p);
 	} else {
-		p = print_union_map_field(p, "schedule_map",
+		p = print_union_map_field(p, key_str[isl_ai_key_schedule_map],
 						access->schedule_map);
 	}
 	p = isl_printer_yaml_end_mapping(p);
@@ -1476,6 +1779,119 @@ __isl_give char *isl_union_access_info_to_str(
 	return s;
 }
 
+#undef KEY
+#define KEY enum isl_ai_key
+#undef KEY_ERROR
+#define KEY_ERROR isl_ai_key_error
+#undef KEY_END
+#define KEY_END isl_ai_key_end
+#include "extract_key.c"
+
+#undef BASE
+#define BASE union_map
+#include "read_in_string_templ.c"
+
+/* Read an isl_union_access_info object from "s".
+ *
+ * Start off with an empty (invalid) isl_union_access_info object and
+ * then fill up the fields based on the input.
+ * The input needs to contain at least a description of the sink
+ * access relation as well as some form of schedule.
+ * The other access relations are set to empty relations
+ * by isl_union_access_info_init if they are not specified in the input.
+ */
+__isl_give isl_union_access_info *isl_stream_read_union_access_info(
+	isl_stream *s)
+{
+	isl_ctx *ctx;
+	isl_union_access_info *info;
+	int more;
+	int sink_set = 0;
+	int schedule_set = 0;
+
+	if (isl_stream_yaml_read_start_mapping(s))
+		return NULL;
+
+	ctx = isl_stream_get_ctx(s);
+	info = isl_union_access_info_alloc(ctx);
+	while ((more = isl_stream_yaml_next(s)) > 0) {
+		enum isl_ai_key key;
+		isl_union_map *access, *schedule_map;
+		isl_schedule *schedule;
+
+		key = get_key(s);
+		if (isl_stream_yaml_next(s) < 0)
+			return isl_union_access_info_free(info);
+		switch (key) {
+		case isl_ai_key_end:
+		case isl_ai_key_error:
+			return isl_union_access_info_free(info);
+		case isl_ai_key_sink:
+			sink_set = 1;
+		case isl_ai_key_must_source:
+		case isl_ai_key_may_source:
+		case isl_ai_key_kill:
+			access = read_union_map(s);
+			info = isl_union_access_info_set(info, key, access);
+			if (!info)
+				return NULL;
+			break;
+		case isl_ai_key_schedule_map:
+			schedule_set = 1;
+			schedule_map = read_union_map(s);
+			info = isl_union_access_info_set_schedule_map(info,
+								schedule_map);
+			if (!info)
+				return NULL;
+			break;
+		case isl_ai_key_schedule:
+			schedule_set = 1;
+			schedule = isl_stream_read_schedule(s);
+			info = isl_union_access_info_set_schedule(info,
+								schedule);
+			if (!info)
+				return NULL;
+			break;
+		}
+	}
+	if (more < 0)
+		return isl_union_access_info_free(info);
+
+	if (isl_stream_yaml_read_end_mapping(s) < 0) {
+		isl_stream_error(s, NULL, "unexpected extra elements");
+		return isl_union_access_info_free(info);
+	}
+
+	if (!sink_set) {
+		isl_stream_error(s, NULL, "no sink specified");
+		return isl_union_access_info_free(info);
+	}
+
+	if (!schedule_set) {
+		isl_stream_error(s, NULL, "no schedule specified");
+		return isl_union_access_info_free(info);
+	}
+
+	return isl_union_access_info_init(info);
+}
+
+/* Read an isl_union_access_info object from the file "input".
+ */
+__isl_give isl_union_access_info *isl_union_access_info_read_from_file(
+	isl_ctx *ctx, FILE *input)
+{
+	isl_stream *s;
+	isl_union_access_info *access;
+
+	s = isl_stream_new_file(ctx, input);
+	if (!s)
+		return NULL;
+	access = isl_stream_read_union_access_info(s);
+	isl_stream_free(s);
+
+	return access;
+}
+
 /* Update the fields of "access" such that they all have the same parameters,
  * keeping in mind that the schedule_map field may be NULL and ignoring
  * the schedule field.
@@ -1484,23 +1900,21 @@ static __isl_give isl_union_access_info *isl_union_access_info_align_params(
 	__isl_take isl_union_access_info *access)
 {
 	isl_space *space;
+	enum isl_access_type i;
 
 	if (!access)
 		return NULL;
 
-	space = isl_union_map_get_space(access->sink);
-	space = isl_space_align_params(space,
-				isl_union_map_get_space(access->must_source));
-	space = isl_space_align_params(space,
-				isl_union_map_get_space(access->may_source));
+	space = isl_union_map_get_space(access->access[isl_access_sink]);
+	for (i = isl_access_sink + 1; i < isl_access_end; ++i)
+		space = isl_space_align_params(space,
+				isl_union_map_get_space(access->access[i]));
 	if (access->schedule_map)
 		space = isl_space_align_params(space,
 				isl_union_map_get_space(access->schedule_map));
-	access->sink = isl_union_map_align_params(access->sink,
-							isl_space_copy(space));
-	access->must_source = isl_union_map_align_params(access->must_source,
-							isl_space_copy(space));
-	access->may_source = isl_union_map_align_params(access->may_source,
+	for (i = isl_access_sink; i < isl_access_end; ++i)
+		access->access[i] =
+			isl_union_map_align_params(access->access[i],
 							isl_space_copy(space));
 	if (!access->schedule_map) {
 		isl_space_free(space);
@@ -1511,8 +1925,9 @@ static __isl_give isl_union_access_info *isl_union_access_info_align_params(
 			return isl_union_access_info_free(access);
 	}
 
-	if (!access->sink || !access->must_source || !access->may_source)
-		return isl_union_access_info_free(access);
+	for (i = isl_access_sink; i < isl_access_end; ++i)
+		if (!access->access[i])
+			return isl_union_access_info_free(access);
 
 	return access;
 }
@@ -1544,22 +1959,23 @@ isl_union_access_info_introduce_schedule(
 	__isl_take isl_union_access_info *access)
 {
 	isl_union_map *sm;
+	enum isl_access_type i;
 
 	if (!access)
 		return NULL;
 
 	sm = isl_union_map_reverse(access->schedule_map);
 	sm = isl_union_map_range_map(sm);
-	access->sink = isl_union_map_apply_range(isl_union_map_copy(sm),
-						access->sink);
-	access->may_source = isl_union_map_apply_range(isl_union_map_copy(sm),
-						access->may_source);
-	access->must_source = isl_union_map_apply_range(isl_union_map_copy(sm),
-						access->must_source);
+	for (i = isl_access_sink; i < isl_access_end; ++i)
+		access->access[i] =
+			isl_union_map_apply_range(isl_union_map_copy(sm),
+						access->access[i]);
 	access->schedule_map = sm;
 
-	if (!access->sink || !access->must_source ||
-	    !access->may_source || !access->schedule_map)
+	for (i = isl_access_sink; i < isl_access_end; ++i)
+		if (!access->access[i])
+			return isl_union_access_info_free(access);
+	if (!access->schedule_map)
 		return isl_union_access_info_free(access);
 
 	return access;
@@ -1939,6 +2355,40 @@ static int before(void *first, void *second)
 	return 2 * n1;
 }
 
+/* Check if the given two accesses may be coscheduled.
+ * If so, return 1.  Otherwise return 0.
+ *
+ * Two accesses may only be coscheduled if the fixed schedule
+ * coordinates have the same values.
+ */
+static int coscheduled(void *first, void *second)
+{
+	struct isl_sched_info *info1 = first;
+	struct isl_sched_info *info2 = second;
+	int n1, n2;
+	int i;
+
+	n1 = isl_vec_size(info1->cst);
+	n2 = isl_vec_size(info2->cst);
+
+	if (n2 < n1)
+		n1 = n2;
+
+	for (i = 0; i < n1; ++i) {
+		int cmp;
+
+		if (!info1->is_cst[i])
+			continue;
+		if (!info2->is_cst[i])
+			continue;
+		cmp = isl_vec_cmp_element(info1->cst, info2->cst, i);
+		if (cmp != 0)
+			return 0;
+	}
+
+	return 1;
+}
+
 /* Given a sink access, look for all the source accesses that access
  * the same array and perform dataflow analysis on them using
  * isl_access_info_compute_flow_core.
@@ -1978,6 +2428,7 @@ static isl_stat compute_flow(__isl_take isl_map *map, void *user)
 	if (!data->sink_info || (data->count && !data->source_info) ||
 	    !data->accesses)
 		goto error;
+	data->accesses->coscheduled = &coscheduled;
 	data->count = 0;
 	data->must = 1;
 	if (isl_union_map_foreach_map(data->must_source,
@@ -2034,6 +2485,69 @@ error:
 	return isl_stat_error;
 }
 
+/* Add the kills of "info" to the must-sources.
+ */
+static __isl_give isl_union_access_info *
+isl_union_access_info_add_kill_to_must_source(
+	__isl_take isl_union_access_info *info)
+{
+	isl_union_map *must, *kill;
+
+	must = isl_union_access_info_get_must_source(info);
+	kill = isl_union_access_info_get_kill(info);
+	must = isl_union_map_union(must, kill);
+	return isl_union_access_info_set_must_source(info, must);
+}
+
+/* Drop dependences from "flow" that purely originate from kills.
+ * That is, only keep those dependences that originate from
+ * the original must-sources "must" and/or the original may-sources "may".
+ * In particular, "must" contains the must-sources from before
+ * the kills were added and "may" contains the may-source from before
+ * the kills were removed.
+ *
+ * The dependences are of the form
+ *
+ *	Source -> [Sink -> Data]
+ *
+ * Only those dependences are kept where the Source -> Data part
+ * is a subset of the original may-sources or must-sources.
+ * Of those, only the must-dependences that intersect with the must-sources
+ * remain must-dependences.
+ * If there is some overlap between the may-sources and the must-sources,
+ * then the may-dependences and must-dependences may also overlap.
+ * This should be fine since the may-dependences are only kept
+ * disjoint from the must-dependences for the isl_union_map_compute_flow
+ * interface.  This interface does not support kills, so it will
+ * not end up calling this function.
+ */
+static __isl_give isl_union_flow *isl_union_flow_drop_kill_source(
+	__isl_take isl_union_flow *flow, __isl_take isl_union_map *must,
+	__isl_take isl_union_map *may)
+{
+	isl_union_map *move;
+
+	if (!flow)
+		goto error;
+	move = isl_union_map_copy(flow->must_dep);
+	move = isl_union_map_intersect_range_factor_range(move,
+				isl_union_map_copy(may));
+	may = isl_union_map_union(may, isl_union_map_copy(must));
+	flow->may_dep = isl_union_map_intersect_range_factor_range(
+				flow->may_dep, may);
+	flow->must_dep = isl_union_map_intersect_range_factor_range(
+				flow->must_dep, must);
+	flow->may_dep = isl_union_map_union(flow->may_dep, move);
+	if (!flow->must_dep || !flow->may_dep)
+		return isl_union_flow_free(flow);
+
+	return flow;
+error:
+	isl_union_map_free(must);
+	isl_union_map_free(may);
+	return NULL;
+}
+
 /* Remove the must accesses from the may accesses.
  *
  * A must access always trumps a may access, so there is no need
@@ -2046,9 +2560,10 @@ static __isl_give isl_union_access_info *isl_union_access_info_normalize(
 {
 	if (!access)
 		return NULL;
-	access->may_source = isl_union_map_subtract(access->may_source,
-				    isl_union_map_copy(access->must_source));
-	if (!access->may_source)
+	access->access[isl_access_may_source] =
+		isl_union_map_subtract(access->access[isl_access_may_source],
+		    isl_union_map_copy(access->access[isl_access_must_source]));
+	if (!access->access[isl_access_may_source])
 		return isl_union_access_info_free(access);
 
 	return access;
@@ -2077,18 +2592,20 @@ static __isl_give isl_union_flow *compute_flow_union_map(
 	__isl_take isl_union_access_info *access)
 {
 	struct isl_compute_flow_data data;
+	isl_union_map *sink;
 
 	access = isl_union_access_info_align_params(access);
 	access = isl_union_access_info_introduce_schedule(access);
 	if (!access)
 		return NULL;
 
-	data.must_source = access->must_source;
-	data.may_source = access->may_source;
+	data.must_source = access->access[isl_access_must_source];
+	data.may_source = access->access[isl_access_may_source];
 
-	data.flow = isl_union_flow_alloc(isl_union_map_get_space(access->sink));
+	sink = access->access[isl_access_sink];
+	data.flow = isl_union_flow_alloc(isl_union_map_get_space(sink));
 
-	if (isl_union_map_foreach_map(access->sink, &compute_flow, &data) < 0)
+	if (isl_union_map_foreach_map(sink, &compute_flow, &data) < 0)
 		goto error;
 
 	data.flow = isl_union_flow_drop_schedule(data.flow);
@@ -2218,21 +2735,21 @@ static isl_bool count_sink_source(__isl_keep isl_schedule_node *node,
 
 	domain = isl_schedule_node_get_universe_domain(node);
 
-	umap = isl_union_map_copy(data->access->sink);
+	umap = isl_union_map_copy(data->access->access[isl_access_sink]);
 	umap = isl_union_map_intersect_domain(umap, isl_union_set_copy(domain));
 	data->n_sink += isl_union_map_n_map(umap);
 	isl_union_map_free(umap);
 	if (!umap)
 		r = isl_bool_error;
 
-	umap = isl_union_map_copy(data->access->must_source);
+	umap = isl_union_map_copy(data->access->access[isl_access_must_source]);
 	umap = isl_union_map_intersect_domain(umap, isl_union_set_copy(domain));
 	data->n_source += isl_union_map_n_map(umap);
 	isl_union_map_free(umap);
 	if (!umap)
 		r = isl_bool_error;
 
-	umap = isl_union_map_copy(data->access->may_source);
+	umap = isl_union_map_copy(data->access->access[isl_access_may_source]);
 	umap = isl_union_map_intersect_domain(umap, isl_union_set_copy(domain));
 	data->n_source += isl_union_map_n_map(umap);
 	isl_union_map_free(umap);
@@ -2307,7 +2824,7 @@ static isl_bool collect_sink_source(__isl_keep isl_schedule_node *node,
 	prefix = isl_union_map_range_map(prefix);
 
 	data->set_sink = 1;
-	umap = isl_union_map_copy(data->access->sink);
+	umap = isl_union_map_copy(data->access->access[isl_access_sink]);
 	umap = isl_union_map_apply_range(isl_union_map_copy(prefix), umap);
 	if (isl_union_map_foreach_map(umap, &extract_sink_source, data) < 0)
 		r = isl_bool_error;
@@ -2315,7 +2832,7 @@ static isl_bool collect_sink_source(__isl_keep isl_schedule_node *node,
 
 	data->set_sink = 0;
 	data->must = 1;
-	umap = isl_union_map_copy(data->access->must_source);
+	umap = isl_union_map_copy(data->access->access[isl_access_must_source]);
 	umap = isl_union_map_apply_range(isl_union_map_copy(prefix), umap);
 	if (isl_union_map_foreach_map(umap, &extract_sink_source, data) < 0)
 		r = isl_bool_error;
@@ -2323,7 +2840,7 @@ static isl_bool collect_sink_source(__isl_keep isl_schedule_node *node,
 
 	data->set_sink = 0;
 	data->must = 0;
-	umap = isl_union_map_copy(data->access->may_source);
+	umap = isl_union_map_copy(data->access->access[isl_access_may_source]);
 	umap = isl_union_map_apply_range(isl_union_map_copy(prefix), umap);
 	if (isl_union_map_foreach_map(umap, &extract_sink_source, data) < 0)
 		r = isl_bool_error;
@@ -2376,6 +2893,19 @@ static int before_node(void *first, void *second)
 	isl_schedule_node_free(shared);
 
 	return 2 * depth + before;
+}
+
+/* Check if the given two accesses may be coscheduled.
+ * If so, return 1.  Otherwise return 0.
+ *
+ * Two accesses may only be coscheduled if they appear in the same leaf.
+ */
+static int coscheduled_node(void *first, void *second)
+{
+	isl_schedule_node *node1 = first;
+	isl_schedule_node *node2 = second;
+
+	return node1 == node2;
 }
 
 /* Add the scheduled sources from "data" that access
@@ -2448,6 +2978,8 @@ static __isl_give isl_union_flow *compute_single_flow(
 
 	access = isl_access_info_alloc(isl_map_copy(sink->access), sink->node,
 					&before_node, data->n_source);
+	if (access)
+		access->coscheduled = &coscheduled_node;
 	access = add_matching_sources(access, sink, data);
 
 	flow = access_info_compute_flow_core(access);
@@ -2505,6 +3037,7 @@ static __isl_give isl_union_flow *compute_flow_schedule(
 	struct isl_compute_flow_schedule_data data = { access };
 	int i, n;
 	isl_ctx *ctx;
+	isl_space *space;
 	isl_union_flow *flow;
 
 	ctx = isl_union_access_info_get_ctx(access);
@@ -2527,7 +3060,8 @@ static __isl_give isl_union_flow *compute_flow_schedule(
 					    &collect_sink_source, &data) < 0)
 		goto error;
 
-	flow = isl_union_flow_alloc(isl_union_map_get_space(access->sink));
+	space = isl_union_map_get_space(access->access[isl_access_sink]);
+	flow = isl_union_flow_alloc(space);
 
 	isl_compute_flow_schedule_data_align_params(&data);
 
@@ -2556,6 +3090,10 @@ error:
  * map domain elements of access->{may,must)_source to
  * domain elements of access->sink.
  *
+ * If any kills have been specified, then they are treated as
+ * must-sources internally.  Any dependence that purely derives
+ * from an original kill is removed from the output.
+ *
  * We check whether the schedule is available as a schedule tree
  * or a schedule map and call the corresponding function to perform
  * the analysis.
@@ -2563,13 +3101,33 @@ error:
 __isl_give isl_union_flow *isl_union_access_info_compute_flow(
 	__isl_take isl_union_access_info *access)
 {
+	isl_bool has_kill;
+	isl_union_map *must = NULL, *may = NULL;
+	isl_union_flow *flow;
+
+	has_kill = isl_union_access_has_kill(access);
+	if (has_kill < 0)
+		goto error;
+	if (has_kill) {
+		must = isl_union_access_info_get_must_source(access);
+		may = isl_union_access_info_get_may_source(access);
+	}
+	access = isl_union_access_info_add_kill_to_must_source(access);
 	access = isl_union_access_info_normalize(access);
 	if (!access)
-		return NULL;
+		goto error;
 	if (access->schedule)
-		return compute_flow_schedule(access);
+		flow = compute_flow_schedule(access);
 	else
-		return compute_flow_union_map(access);
+		flow = compute_flow_union_map(access);
+	if (has_kill)
+		flow = isl_union_flow_drop_kill_source(flow, must, may);
+	return flow;
+error:
+	isl_union_access_info_free(access);
+	isl_union_map_free(must);
+	isl_union_map_free(may);
+	return NULL;
 }
 
 /* Print the information contained in "flow" to "p".
@@ -2584,8 +3142,10 @@ __isl_give isl_printer *isl_printer_print_union_flow(
 		return isl_printer_free(p);
 
 	p = isl_printer_yaml_start_mapping(p);
-	p = print_union_map_field(p, "must_dependence", flow->must_dep);
-	umap = isl_union_flow_get_may_dependence(flow);
+	umap = isl_union_flow_get_full_must_dependence(flow);
+	p = print_union_map_field(p, "must_dependence", umap);
+	isl_union_map_free(umap);
+	umap = isl_union_flow_get_full_may_dependence(flow);
 	p = print_union_map_field(p, "may_dependence", umap);
 	isl_union_map_free(umap);
 	p = print_union_map_field(p, "must_no_source", flow->must_no_source);

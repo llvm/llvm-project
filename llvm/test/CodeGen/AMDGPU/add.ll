@@ -5,9 +5,9 @@
 ;FUNC-LABEL: {{^}}test1:
 ;EG: ADD_INT {{[* ]*}}T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
 
-;SI: v_add_i32_e32 [[REG:v[0-9]+]], vcc, {{v[0-9]+, v[0-9]+}}
-;SI-NOT: [[REG]]
-;SI: buffer_store_dword [[REG]],
+;SI: s_add_i32 s[[REG:[0-9]+]], {{s[0-9]+, s[0-9]+}}
+;SI: v_mov_b32_e32 v[[REG]], s[[REG]]
+;SI: buffer_store_dword v[[REG]],
 define amdgpu_kernel void @test1(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
   %b_ptr = getelementptr i32, i32 addrspace(1)* %in, i32 1
   %a = load i32, i32 addrspace(1)* %in
@@ -21,8 +21,8 @@ define amdgpu_kernel void @test1(i32 addrspace(1)* %out, i32 addrspace(1)* %in) 
 ;EG: ADD_INT {{[* ]*}}T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
 ;EG: ADD_INT {{[* ]*}}T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
 
-;SI: v_add_i32_e32 v{{[0-9]+, vcc, v[0-9]+, v[0-9]+}}
-;SI: v_add_i32_e32 v{{[0-9]+, vcc, v[0-9]+, v[0-9]+}}
+;SI: s_add_i32 s{{[0-9]+, s[0-9]+, s[0-9]+}}
+;SI: s_add_i32 s{{[0-9]+, s[0-9]+, s[0-9]+}}
 
 define amdgpu_kernel void @test2(<2 x i32> addrspace(1)* %out, <2 x i32> addrspace(1)* %in) {
   %b_ptr = getelementptr <2 x i32>, <2 x i32> addrspace(1)* %in, i32 1
@@ -39,10 +39,10 @@ define amdgpu_kernel void @test2(<2 x i32> addrspace(1)* %out, <2 x i32> addrspa
 ;EG: ADD_INT {{[* ]*}}T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
 ;EG: ADD_INT {{[* ]*}}T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
 
-;SI: v_add_i32_e32 v{{[0-9]+, vcc, v[0-9]+, v[0-9]+}}
-;SI: v_add_i32_e32 v{{[0-9]+, vcc, v[0-9]+, v[0-9]+}}
-;SI: v_add_i32_e32 v{{[0-9]+, vcc, v[0-9]+, v[0-9]+}}
-;SI: v_add_i32_e32 v{{[0-9]+, vcc, v[0-9]+, v[0-9]+}}
+;SI: s_add_i32 s{{[0-9]+, s[0-9]+, s[0-9]+}}
+;SI: s_add_i32 s{{[0-9]+, s[0-9]+, s[0-9]+}}
+;SI: s_add_i32 s{{[0-9]+, s[0-9]+, s[0-9]+}}
+;SI: s_add_i32 s{{[0-9]+, s[0-9]+, s[0-9]+}}
 
 define amdgpu_kernel void @test4(<4 x i32> addrspace(1)* %out, <4 x i32> addrspace(1)* %in) {
   %b_ptr = getelementptr <4 x i32>, <4 x i32> addrspace(1)* %in, i32 1

@@ -10,7 +10,7 @@ declare <2 x i64> @llvm.bswap.v2i64(<2 x i64>) nounwind readnone
 declare <4 x i64> @llvm.bswap.v4i64(<4 x i64>) nounwind readnone
 
 ; FUNC-LABEL: @test_bswap_i32
-; SI: buffer_load_dword [[VAL:v[0-9]+]]
+; SI: s_load_dword [[VAL:s[0-9]+]]
 ; SI-DAG: v_alignbit_b32 [[TMP0:v[0-9]+]], [[VAL]], [[VAL]], 8
 ; SI-DAG: v_alignbit_b32 [[TMP1:v[0-9]+]], [[VAL]], [[VAL]], 24
 ; SI-DAG: s_mov_b32 [[K:s[0-9]+]], 0xff00ff

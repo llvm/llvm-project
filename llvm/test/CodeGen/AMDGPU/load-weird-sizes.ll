@@ -1,8 +1,8 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI-NOHSA -check-prefix=SI -check-prefix=FUNC %s
-; RUN: llc -mtriple=amdgcn-amdhsa -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -check-prefix=FUNC -check-prefix=CI-HSA -check-prefix=SI %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=SI-NOHSA -check-prefix=SI -check-prefix=FUNC %s
-; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -check-prefix=R600 -check-prefix=EG -check-prefix=FUNC %s
-; RUN: llc -march=r600 -mcpu=cayman < %s | FileCheck -check-prefix=R600 -check-prefix=CM -check-prefix=FUNC %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI-NOHSA -check-prefix=SI -check-prefix=FUNC %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn-amdhsa -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -check-prefix=FUNC -check-prefix=CI-HSA -check-prefix=SI %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=SI-NOHSA -check-prefix=SI -check-prefix=FUNC %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=r600 -mcpu=redwood < %s | FileCheck -check-prefix=R600 -check-prefix=EG -check-prefix=FUNC %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=r600 -mcpu=cayman < %s | FileCheck -check-prefix=R600 -check-prefix=CM -check-prefix=FUNC %s
 
 ; FUNC-LABEL: {{^}}load_i24:
 ; SI: {{flat|buffer}}_load_ubyte

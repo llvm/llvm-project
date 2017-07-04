@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=verde -amdgpu-early-ifcvt=1 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=verde -amdgpu-early-ifcvt=1 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 ; XUN: llc -march=amdgcn -mcpu=tonga -amdgpu-early-ifcvt=1 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
 ; FIXME: This leaves behind a now unnecessary and with exec

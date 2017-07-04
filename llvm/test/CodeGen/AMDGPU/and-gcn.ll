@@ -2,8 +2,7 @@
 ; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 
 ; FUNC-LABEL: {{^}}v_and_i64_br:
-; SI: v_and_b32
-; SI: v_and_b32
+; SI: s_and_b64
 define amdgpu_kernel void @v_and_i64_br(i64 addrspace(1)* %out, i64 addrspace(1)* %aptr, i64 addrspace(1)* %bptr) {
 entry:
   %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0

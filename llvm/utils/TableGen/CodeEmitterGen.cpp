@@ -187,20 +187,18 @@ AddCodeToMergeInOperand(Record *R, BitsInit *BI, const std::string &VarName,
 std::string CodeEmitterGen::getInstructionCase(Record *R,
                                                CodeGenTarget &Target) {
   std::string Case;
-  
   BitsInit *BI = R->getValueAsBitsInit("Inst");
-  const std::vector<RecordVal> &Vals = R->getValues();
   unsigned NumberedOp = 0;
-
   std::set<unsigned> NamedOpIndices;
+
   // Collect the set of operand indices that might correspond to named
   // operand, and skip these when assigning operands based on position.
   if (Target.getInstructionSet()->
        getValueAsBit("noNamedPositionallyEncodedOperands")) {
     CodeGenInstruction &CGI = Target.getInstruction(R);
-    for (unsigned i = 0, e = Vals.size(); i != e; ++i) {
+    for (const RecordVal &RV : R->getValues()) {
       unsigned OpIdx;
-      if (!CGI.Operands.hasOperandNamed(Vals[i].getName(), OpIdx))
+      if (!CGI.Operands.hasOperandNamed(RV.getName(), OpIdx))
         continue;
 
       NamedOpIndices.insert(OpIdx);
@@ -209,13 +207,13 @@ std::string CodeEmitterGen::getInstructionCase(Record *R,
 
   // Loop over all of the fields in the instruction, determining which are the
   // operands to the instruction.
-  for (unsigned i = 0, e = Vals.size(); i != e; ++i) {
+  for (const RecordVal &RV : R->getValues()) { 
     // Ignore fixed fields in the record, we're looking for values like:
     //    bits<5> RST = { ?, ?, ?, ?, ? };
-    if (Vals[i].getPrefix() || Vals[i].getValue()->isComplete())
+    if (RV.getPrefix() || RV.getValue()->isComplete())
       continue;
     
-    AddCodeToMergeInOperand(R, BI, Vals[i].getName(), NumberedOp,
+    AddCodeToMergeInOperand(R, BI, RV.getName(), NumberedOp,
                             NamedOpIndices, Case, Target);
   }
 

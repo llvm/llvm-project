@@ -56,6 +56,7 @@ template <> struct ScalarEnumerationTraits<FormatStyle::LanguageKind> {
     IO.enumCase(Value, "ObjC", FormatStyle::LK_ObjC);
     IO.enumCase(Value, "Proto", FormatStyle::LK_Proto);
     IO.enumCase(Value, "TableGen", FormatStyle::LK_TableGen);
+    IO.enumCase(Value, "TextProto", FormatStyle::LK_TextProto);
   }
 };
 
@@ -631,6 +632,12 @@ FormatStyle getLLVMStyle() {
 }
 
 FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
+  if (Language == FormatStyle::LK_TextProto) {
+    FormatStyle GoogleStyle = getGoogleStyle(FormatStyle::LK_Proto);
+    GoogleStyle.Language = FormatStyle::LK_TextProto;
+    return GoogleStyle;
+  }
+
   FormatStyle GoogleStyle = getLLVMStyle();
   GoogleStyle.Language = Language;
 

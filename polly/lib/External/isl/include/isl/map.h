@@ -301,8 +301,8 @@ __isl_export
 __isl_give isl_map *isl_map_union(
 		__isl_take isl_map *map1,
 		__isl_take isl_map *map2);
-struct isl_map *isl_map_union_disjoint(
-			struct isl_map *map1, struct isl_map *map2);
+__isl_give isl_map *isl_map_union_disjoint(
+		__isl_take isl_map *map1, __isl_take isl_map *map2);
 __isl_export
 __isl_give isl_map *isl_map_intersect_domain(
 		__isl_take isl_map *map,
@@ -311,6 +311,10 @@ __isl_export
 __isl_give isl_map *isl_map_intersect_range(
 		__isl_take isl_map *map,
 		__isl_take isl_set *set);
+__isl_give isl_map *isl_map_intersect_domain_factor_range(
+	__isl_take isl_map *map, __isl_take isl_map *factor);
+__isl_give isl_map *isl_map_intersect_range_factor_range(
+	__isl_take isl_map *map, __isl_take isl_map *factor);
 __isl_export
 __isl_give isl_map *isl_map_apply_domain(
 		__isl_take isl_map *map1,

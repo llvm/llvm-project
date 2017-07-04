@@ -125,6 +125,9 @@ __isl_give isl_multi_aff *isl_multi_aff_align_divs(
 __isl_give isl_multi_aff *isl_multi_aff_from_basic_set_equalities(
 	__isl_take isl_basic_set *bset);
 
+__isl_give isl_multi_aff *isl_multi_aff_from_aff_mat(
+	__isl_take isl_space *space, __isl_take isl_mat *mat);
+
 __isl_give isl_pw_multi_aff *isl_pw_multi_aff_reset_domain_space(
 	__isl_take isl_pw_multi_aff *pwmaff, __isl_take isl_space *space);
 __isl_give isl_pw_multi_aff *isl_pw_multi_aff_reset_space(

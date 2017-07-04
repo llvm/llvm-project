@@ -23,6 +23,8 @@ void isl_vec_lcm(struct isl_vec *vec, isl_int *lcm);
 int isl_vec_get_element(__isl_keep isl_vec *vec, int pos, isl_int *v);
 __isl_give isl_vec *isl_vec_set(__isl_take isl_vec *vec, isl_int v);
 
+isl_bool isl_vec_is_zero(__isl_keep isl_vec *vec);
+
 __isl_give isl_vec *isl_vec_expand(__isl_take isl_vec *vec, int pos, int n,
 	int *exp, int expanded);
 

@@ -177,6 +177,7 @@ TEST(MathExtras, reverseBits) {
 }
 
 TEST(MathExtras, isPowerOf2_32) {
+  EXPECT_FALSE(isPowerOf2_32(0));
   EXPECT_TRUE(isPowerOf2_32(1 << 6));
   EXPECT_TRUE(isPowerOf2_32(1 << 12));
   EXPECT_FALSE(isPowerOf2_32((1 << 19) + 3));
@@ -184,6 +185,7 @@ TEST(MathExtras, isPowerOf2_32) {
 }
 
 TEST(MathExtras, isPowerOf2_64) {
+  EXPECT_FALSE(isPowerOf2_64(0));
   EXPECT_TRUE(isPowerOf2_64(1LL << 46));
   EXPECT_TRUE(isPowerOf2_64(1LL << 12));
   EXPECT_FALSE(isPowerOf2_64((1LL << 53) + 3));

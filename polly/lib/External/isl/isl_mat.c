@@ -271,13 +271,22 @@ static isl_stat check_col(__isl_keep isl_mat *mat, int col)
 	return isl_stat_ok;
 }
 
-int isl_mat_get_element(__isl_keep isl_mat *mat, int row, int col, isl_int *v)
+/* Check that "row" is a valid row position for "mat".
+ */
+static isl_stat check_row(__isl_keep isl_mat *mat, int row)
 {
 	if (!mat)
-		return -1;
+		return isl_stat_error;
 	if (row < 0 || row >= mat->n_row)
-		isl_die(mat->ctx, isl_error_invalid, "row out of range",
-			return -1);
+		isl_die(isl_mat_get_ctx(mat), isl_error_invalid,
+			"row out of range", return isl_stat_error);
+	return isl_stat_ok;
+}
+
+int isl_mat_get_element(__isl_keep isl_mat *mat, int row, int col, isl_int *v)
+{
+	if (check_row(mat, row) < 0)
+		return -1;
 	if (check_col(mat, col) < 0)
 		return -1;
 	isl_int_set(*v, mat->row[row][col]);
@@ -291,14 +300,11 @@ __isl_give isl_val *isl_mat_get_element_val(__isl_keep isl_mat *mat,
 {
 	isl_ctx *ctx;
 
-	if (!mat)
+	if (check_row(mat, row) < 0)
 		return NULL;
-	ctx = isl_mat_get_ctx(mat);
-	if (row < 0 || row >= mat->n_row)
-		isl_die(ctx, isl_error_invalid, "row out of range",
-			return NULL);
 	if (check_col(mat, col) < 0)
 		return NULL;
+	ctx = isl_mat_get_ctx(mat);
 	return isl_val_int_from_isl_int(ctx, mat->row[row][col]);
 }
 
@@ -306,36 +312,24 @@ __isl_give isl_mat *isl_mat_set_element(__isl_take isl_mat *mat,
 	int row, int col, isl_int v)
 {
 	mat = isl_mat_cow(mat);
-	if (!mat)
-		return NULL;
-	if (row < 0 || row >= mat->n_row)
-		isl_die(mat->ctx, isl_error_invalid, "row out of range",
-			goto error);
+	if (check_row(mat, row) < 0)
+		return isl_mat_free(mat);
 	if (check_col(mat, col) < 0)
 		return isl_mat_free(mat);
 	isl_int_set(mat->row[row][col], v);
 	return mat;
-error:
-	isl_mat_free(mat);
-	return NULL;
 }
 
 __isl_give isl_mat *isl_mat_set_element_si(__isl_take isl_mat *mat,
 	int row, int col, int v)
 {
 	mat = isl_mat_cow(mat);
-	if (!mat)
-		return NULL;
-	if (row < 0 || row >= mat->n_row)
-		isl_die(mat->ctx, isl_error_invalid, "row out of range",
-			goto error);
+	if (check_row(mat, row) < 0)
+		return isl_mat_free(mat);
 	if (check_col(mat, col) < 0)
 		return isl_mat_free(mat);
 	isl_int_set_si(mat->row[row][col], v);
 	return mat;
-error:
-	isl_mat_free(mat);
-	return NULL;
 }
 
 /* Replace the element at row "row", column "col" of "mat" by "v".
@@ -687,6 +681,109 @@ error:
 	}
 	isl_mat_free(M);
 	return NULL;
+}
+
+/* Use row "row" of "mat" to eliminate column "col" from all other rows.
+ */
+static __isl_give isl_mat *eliminate(__isl_take isl_mat *mat, int row, int col)
+{
+	int k, nr, nc;
+	isl_ctx *ctx;
+
+	if (!mat)
+		return NULL;
+
+	ctx = isl_mat_get_ctx(mat);
+	nr = isl_mat_rows(mat);
+	nc = isl_mat_cols(mat);
+
+	for (k = 0; k < nr; ++k) {
+		if (k == row)
+			continue;
+		if (isl_int_is_zero(mat->row[k][col]))
+			continue;
+		mat = isl_mat_cow(mat);
+		if (!mat)
+			return NULL;
+		isl_seq_elim(mat->row[k], mat->row[row], col, nc, NULL);
+		isl_seq_normalize(ctx, mat->row[k], nc);
+	}
+
+	return mat;
+}
+
+/* Perform Gaussian elimination on the rows of "mat", but start
+ * from the final row and the final column.
+ * Any zero rows that result from the elimination are removed.
+ *
+ * In particular, for each column from last to first,
+ * look for the last row with a non-zero coefficient in that column,
+ * move it last (but before other rows moved last in previous steps) and
+ * use it to eliminate the column from the other rows.
+ */
+__isl_give isl_mat *isl_mat_reverse_gauss(__isl_take isl_mat *mat)
+{
+	int k, row, last, nr, nc;
+
+	if (!mat)
+		return NULL;
+
+	nr = isl_mat_rows(mat);
+	nc = isl_mat_cols(mat);
+
+	last = nc - 1;
+	for (row = nr - 1; row >= 0; --row) {
+		for (; last >= 0; --last) {
+			for (k = row; k >= 0; --k)
+				if (!isl_int_is_zero(mat->row[k][last]))
+					break;
+			if (k >= 0)
+				break;
+		}
+		if (last < 0)
+			break;
+		if (k != row)
+			mat = isl_mat_swap_rows(mat, k, row);
+		if (!mat)
+			return NULL;
+		if (isl_int_is_neg(mat->row[row][last]))
+			mat = isl_mat_row_neg(mat, row);
+		mat = eliminate(mat, row, last);
+		if (!mat)
+			return NULL;
+	}
+	mat = isl_mat_drop_rows(mat, 0, row + 1);
+
+	return mat;
+}
+
+/* Negate the lexicographically negative rows of "mat" such that
+ * all rows in the result are lexicographically non-negative.
+ */
+__isl_give isl_mat *isl_mat_lexnonneg_rows(__isl_take isl_mat *mat)
+{
+	int i, nr, nc;
+
+	if (!mat)
+		return NULL;
+
+	nr = isl_mat_rows(mat);
+	nc = isl_mat_cols(mat);
+
+	for (i = 0; i < nr; ++i) {
+		int pos;
+
+		pos = isl_seq_first_non_zero(mat->row[i], nc);
+		if (pos < 0)
+			continue;
+		if (isl_int_is_nonneg(mat->row[i][pos]))
+			continue;
+		mat = isl_mat_row_neg(mat, i);
+		if (!mat)
+			return NULL;
+	}
+
+	return mat;
 }
 
 struct isl_mat *isl_mat_right_kernel(struct isl_mat *mat)
@@ -1545,6 +1642,21 @@ __isl_give isl_mat *isl_mat_col_neg(__isl_take isl_mat *mat, int col)
 	return mat;
 }
 
+/* Negate row "row" of "mat" and return the result.
+ */
+__isl_give isl_mat *isl_mat_row_neg(__isl_take isl_mat *mat, int row)
+{
+	if (check_row(mat, row) < 0)
+		return isl_mat_free(mat);
+	if (isl_seq_first_non_zero(mat->row[row], mat->n_col) == -1)
+		return mat;
+	mat = isl_mat_cow(mat);
+	if (!mat)
+		return NULL;
+	isl_seq_neg(mat->row[row], mat->row[row], mat->n_col);
+	return mat;
+}
+
 __isl_give isl_mat *isl_mat_unimodular_complete(__isl_take isl_mat *M, int row)
 {
 	int r;
@@ -1720,12 +1832,9 @@ error:
  */
 isl_stat isl_mat_row_gcd(__isl_keep isl_mat *mat, int row, isl_int *gcd)
 {
-	if (!mat)
+	if (check_row(mat, row) < 0)
 		return isl_stat_error;
 
-	if (row < 0 || row >= mat->n_row)
-		isl_die(isl_mat_get_ctx(mat), isl_error_invalid,
-			"row out of range", return isl_stat_error);
 	isl_seq_gcd(mat->row[row], mat->n_col, gcd);
 
 	return isl_stat_ok;
