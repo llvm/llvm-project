@@ -1132,7 +1132,7 @@ static void applySynthetic(const std::vector<SyntheticSection *> &Sections,
 // to make them visible from linkescript side. But not all sections are always
 // required to be in output. For example we don't need dynamic section content
 // sometimes. This function filters out such unused sections from the output.
-static void removeUnusedSyntheticSections(std::vector<OutputSection *> &V) {
+static void removeUnusedSyntheticSections() {
   // All input synthetic sections that can be empty are placed after
   // all regular ones. We iterate over them all and exit at first
   // non-synthetic.
@@ -1145,12 +1145,34 @@ static void removeUnusedSyntheticSections(std::vector<OutputSection *> &V) {
       continue;
     if ((SS == InX::Got || SS == InX::MipsGot) && ElfSym::GlobalOffsetTable)
       continue;
-    OS->Sections.erase(std::find(OS->Sections.begin(), OS->Sections.end(), SS));
-    SS->Live = false;
+
+    OutputSectionCommand *Cmd = Script->getCmd(OS);
+    std::vector<BaseCommand *>::iterator Empty = Cmd->Commands.end();
+    for (auto I = Cmd->Commands.begin(), E = Cmd->Commands.end(); I != E; ++I) {
+      BaseCommand *B = *I;
+      if (auto *ISD = dyn_cast<InputSectionDescription>(B)) {
+        auto P = std::find(ISD->Sections.begin(), ISD->Sections.end(), SS);
+        if (P != ISD->Sections.end())
+          ISD->Sections.erase(P);
+        if (ISD->Sections.empty())
+          Empty = I;
+      }
+    }
+    if (Empty != Cmd->Commands.end())
+      Cmd->Commands.erase(Empty);
+
     // If there are no other sections in the output section, remove it from the
     // output.
-    if (OS->Sections.empty())
-      V.erase(std::find(V.begin(), V.end(), OS));
+    if (Cmd->Commands.empty()) {
+      // Also remove script commands matching the output section.
+      auto &Cmds = Script->Opt.Commands;
+      auto I = std::remove_if(Cmds.begin(), Cmds.end(), [&](BaseCommand *Cmd) {
+        if (auto *OSCmd = dyn_cast<OutputSectionCommand>(Cmd))
+          return OSCmd->Sec == OS;
+        return false;
+      });
+      Cmds.erase(I, Cmds.end());
+    }
   }
 }
 
@@ -1218,9 +1240,9 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     return;
 
   addPredefinedSections();
-  removeUnusedSyntheticSections(OutputSections);
-
   clearOutputSections();
+  removeUnusedSyntheticSections();
+
   sortSections();
 
   // Now that we have the final list, create a list of all the

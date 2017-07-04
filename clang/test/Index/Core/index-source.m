@@ -413,3 +413,28 @@ void classReceivers() {
   (void)ClassReceivers.implicit;
 // CHECK: [[@LINE-1]]:9 | class/ObjC | ClassReceivers | c:objc(cs)ClassReceivers | _OBJC_CLASS_$_ClassReceivers | Ref,RelCont | rel: 1
 }
+
+@interface ImplicitProperties
+
+- (int)implicit;
+- (void)setImplicit:(int)x;
+
++ (int)classImplicit;
++ (void)setClassImplicit:(int)y;
+
+@end
+
+void testImplicitProperties(ImplicitProperties *c) {
+  c.implicit = 0;
+// CHECK: [[@LINE-1]]:5 | instance-method/ObjC | setImplicit: | c:objc(cs)ImplicitProperties(im)setImplicit: | -[ImplicitProperties setImplicit:] | Ref,Call,Dyn,RelRec,RelCall,RelCont | rel: 2
+// CHECK-NEXT: RelCall,RelCont | testImplicitProperties | c:@F@testImplicitProperties
+  c.implicit;
+// CHECK: [[@LINE-1]]:5 | instance-method/ObjC | implicit | c:objc(cs)ImplicitProperties(im)implicit | -[ImplicitProperties implicit] | Ref,Call,Dyn,RelRec,RelCall,RelCont | rel: 2
+// CHECK-NEXT: RelCall,RelCont | testImplicitProperties | c:@F@testImplicitProperties
+  ImplicitProperties.classImplicit = 1;
+// CHECK: [[@LINE-1]]:22 | class-method/ObjC | setClassImplicit: | c:objc(cs)ImplicitProperties(cm)setClassImplicit: | +[ImplicitProperties setClassImplicit:] | Ref,Call,RelCall,RelCont | rel: 1
+// CHECK-NEXT: RelCall,RelCont | testImplicitProperties | c:@F@testImplicitProperties
+  ImplicitProperties.classImplicit;
+// CHECK: [[@LINE-1]]:22 | class-method/ObjC | classImplicit | c:objc(cs)ImplicitProperties(cm)classImplicit | +[ImplicitProperties classImplicit] | Ref,Call,RelCall,RelCont | rel: 1
+// CHECK-NEXT: RelCall,RelCont | testImplicitProperties | c:@F@testImplicitProperties
+}

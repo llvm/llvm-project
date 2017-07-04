@@ -466,7 +466,8 @@ struct FormatToken {
            (is(tok::l_brace) &&
             (BlockKind == BK_Block || is(TT_DictLiteral) ||
              (!Style.Cpp11BracedListStyle && NestingLevel == 0))) ||
-           (is(tok::less) && Style.Language == FormatStyle::LK_Proto);
+           (is(tok::less) && (Style.Language == FormatStyle::LK_Proto ||
+                              Style.Language == FormatStyle::LK_TextProto));
   }
 
   /// \brief Same as opensBlockOrBlockTypeList, but for the closing token.

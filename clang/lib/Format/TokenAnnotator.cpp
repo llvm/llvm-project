@@ -90,7 +90,8 @@ private:
       }
       if (CurrentToken->isOneOf(tok::r_paren, tok::r_square, tok::r_brace) ||
           (CurrentToken->isOneOf(tok::colon, tok::question) && InExprContext &&
-           Style.Language != FormatStyle::LK_Proto))
+           Style.Language != FormatStyle::LK_Proto &&
+           Style.Language != FormatStyle::LK_TextProto))
         return false;
       // If a && or || is found and interpreted as a binary operator, this set
       // of angles is likely part of something like "a < b && c > d". If the
@@ -453,7 +454,8 @@ private:
           FormatToken *Previous = CurrentToken->getPreviousNonComment();
           if (((CurrentToken->is(tok::colon) &&
                 (!Contexts.back().ColonIsDictLiteral || !Style.isCpp())) ||
-               Style.Language == FormatStyle::LK_Proto) &&
+               Style.Language == FormatStyle::LK_Proto ||
+               Style.Language == FormatStyle::LK_TextProto) &&
               (Previous->Tok.getIdentifierInfo() ||
                Previous->is(tok::string_literal)))
             Previous->Type = TT_SelectorName;
@@ -536,8 +538,13 @@ private:
         }
       }
       if (Contexts.back().ColonIsDictLiteral ||
-          Style.Language == FormatStyle::LK_Proto) {
+          Style.Language == FormatStyle::LK_Proto ||
+          Style.Language == FormatStyle::LK_TextProto) {
         Tok->Type = TT_DictLiteral;
+        if (Style.Language == FormatStyle::LK_TextProto) {
+          if (FormatToken *Previous = Tok->getPreviousNonComment())
+            Previous->Type = TT_SelectorName;
+        }
       } else if (Contexts.back().ColonIsObjCMethodExpr ||
                  Line.startsWith(TT_ObjCMethodSpecifier)) {
         Tok->Type = TT_ObjCMethodExpr;
@@ -635,12 +642,22 @@ private:
         return false;
       break;
     case tok::l_brace:
+      if (Style.Language == FormatStyle::LK_TextProto) {
+        FormatToken *Previous =Tok->getPreviousNonComment();
+        if (Previous && Previous->Type != TT_DictLiteral)
+          Previous->Type = TT_SelectorName;
+      }
       if (!parseBrace())
         return false;
       break;
     case tok::less:
       if (parseAngle()) {
         Tok->Type = TT_TemplateOpener;
+        if (Style.Language == FormatStyle::LK_TextProto) {
+          FormatToken *Previous = Tok->getPreviousNonComment();
+          if (Previous && Previous->Type != TT_DictLiteral)
+            Previous->Type = TT_SelectorName;
+        }
       } else {
         Tok->Type = TT_BinaryOperator;
         NonTemplateLess.insert(Tok);
@@ -1572,7 +1589,8 @@ private:
         return prec::Conditional;
       if (NextNonComment && Current->is(TT_SelectorName) &&
           (NextNonComment->is(TT_DictLiteral) ||
-           (Style.Language == FormatStyle::LK_Proto &&
+           ((Style.Language == FormatStyle::LK_Proto ||
+             Style.Language == FormatStyle::LK_TextProto) &&
             NextNonComment->is(tok::less))))
         return prec::Assignment;
       if (Current->is(TT_JsComputedPropertyName))
@@ -2274,7 +2292,8 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
   if (Style.isCpp()) {
     if (Left.is(tok::kw_operator))
       return Right.is(tok::coloncolon);
-  } else if (Style.Language == FormatStyle::LK_Proto) {
+  } else if (Style.Language == FormatStyle::LK_Proto ||
+             Style.Language == FormatStyle::LK_TextProto) {
     if (Right.is(tok::period) &&
         Left.isOneOf(Keywords.kw_optional, Keywords.kw_required,
                      Keywords.kw_repeated, Keywords.kw_extend))
