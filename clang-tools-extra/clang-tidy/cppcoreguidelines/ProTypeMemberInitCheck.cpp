@@ -449,6 +449,9 @@ void ProTypeMemberInitCheck::checkMissingBaseClassInitializer(
 
   // Remove any bases that were explicitly written in the initializer list.
   if (Ctor) {
+    if (Ctor->isImplicit())
+      return;
+
     for (const CXXCtorInitializer *Init : Ctor->inits()) {
       if (Init->isBaseInitializer() && Init->isWritten())
         BasesToInit.erase(Init->getBaseClass()->getAsCXXRecordDecl());
