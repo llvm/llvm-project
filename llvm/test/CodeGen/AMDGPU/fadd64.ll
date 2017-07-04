@@ -5,8 +5,11 @@
 ; CHECK: v_add_f64 {{v[[0-9]+:[0-9]+]}}, {{v[[0-9]+:[0-9]+]}}, {{v[[0-9]+:[0-9]+]}}
 define amdgpu_kernel void @v_fadd_f64(double addrspace(1)* %out, double addrspace(1)* %in1,
                         double addrspace(1)* %in2) {
-  %r0 = load double, double addrspace(1)* %in1
-  %r1 = load double, double addrspace(1)* %in2
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %gep1 = getelementptr inbounds double, double addrspace(1)* %in1, i32 %tid
+  %gep2 = getelementptr inbounds double, double addrspace(1)* %in2, i32 %tid
+  %r0 = load double, double addrspace(1)* %gep1
+  %r1 = load double, double addrspace(1)* %gep2
   %r2 = fadd double %r0, %r1
   store double %r2, double addrspace(1)* %out
   ret void
@@ -42,3 +45,8 @@ define amdgpu_kernel void @s_fadd_v2f64(<2 x double> addrspace(1)* %out, <2 x do
   store <2 x double> %r2, <2 x double> addrspace(1)* %out
   ret void
 }
+
+declare i32 @llvm.amdgcn.workitem.id.x() #1
+
+attributes #0 = { nounwind }
+attributes #1 = { nounwind readnone }

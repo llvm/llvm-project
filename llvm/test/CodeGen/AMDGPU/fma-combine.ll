@@ -1,6 +1,6 @@
-; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs -fp-contract=fast < %s | FileCheck -check-prefix=SI-NOFMA -check-prefix=SI-SAFE -check-prefix=SI -check-prefix=FUNC %s
-; RUN: llc -march=amdgcn -mcpu=verde -verify-machineinstrs -fp-contract=fast < %s | FileCheck -check-prefix=SI-NOFMA -check-prefix=SI-SAFE -check-prefix=SI -check-prefix=FUNC %s
-; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs -fp-contract=fast -enable-no-infs-fp-math -enable-unsafe-fp-math -mattr=+fp32-denormals < %s | FileCheck -check-prefix=SI-FMA -check-prefix=SI-UNSAFE -check-prefix=SI -check-prefix=FUNC %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=tahiti -verify-machineinstrs -fp-contract=fast < %s | FileCheck -check-prefix=SI-NOFMA -check-prefix=SI-SAFE -check-prefix=SI -check-prefix=FUNC %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=verde -verify-machineinstrs -fp-contract=fast < %s | FileCheck -check-prefix=SI-NOFMA -check-prefix=SI-SAFE -check-prefix=SI -check-prefix=FUNC %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=tahiti -verify-machineinstrs -fp-contract=fast -enable-no-infs-fp-math -enable-unsafe-fp-math -mattr=+fp32-denormals < %s | FileCheck -check-prefix=SI-FMA -check-prefix=SI-UNSAFE -check-prefix=SI -check-prefix=FUNC %s
 
 ; Note: The SI-FMA conversions of type x * (y + 1) --> x * y + x would be
 ; beneficial even without fp32 denormals, but they do require no-infs-fp-math

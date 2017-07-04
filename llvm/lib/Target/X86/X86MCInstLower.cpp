@@ -1332,6 +1332,32 @@ static std::string getShuffleComment(const MachineInstr *MI,
   return Comment;
 }
 
+static void printConstant(const Constant *COp, raw_ostream &CS) {
+  if (isa<UndefValue>(COp)) {
+    CS << "u";
+  } else if (auto *CI = dyn_cast<ConstantInt>(COp)) {
+    if (CI->getBitWidth() <= 64) {
+      CS << CI->getZExtValue();
+    } else {
+      // print multi-word constant as (w0,w1)
+      const auto &Val = CI->getValue();
+      CS << "(";
+      for (int i = 0, N = Val.getNumWords(); i < N; ++i) {
+        if (i > 0)
+          CS << ",";
+        CS << Val.getRawData()[i];
+      }
+      CS << ")";
+    }
+  } else if (auto *CF = dyn_cast<ConstantFP>(COp)) {
+    SmallString<32> Str;
+    CF->getValueAPF().toString(Str);
+    CS << Str;
+  } else {
+    CS << "?";
+  }
+}
+
 void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
   X86MCInstLower MCInstLowering(*MF, *this);
   const X86RegisterInfo *RI = MF->getSubtarget<X86Subtarget>().getRegisterInfo();
@@ -1766,59 +1792,73 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
   // For loads from a constant pool to a vector register, print the constant
   // loaded.
   CASE_ALL_MOV_RM()
+  case X86::VBROADCASTF128:
+  case X86::VBROADCASTI128:
+  case X86::VBROADCASTF32X4Z256rm:
+  case X86::VBROADCASTF32X4rm:
+  case X86::VBROADCASTF32X8rm:
+  case X86::VBROADCASTF64X2Z128rm:
+  case X86::VBROADCASTF64X2rm:
+  case X86::VBROADCASTF64X4rm:
+  case X86::VBROADCASTI32X4Z256rm:
+  case X86::VBROADCASTI32X4rm:
+  case X86::VBROADCASTI32X8rm:
+  case X86::VBROADCASTI64X2Z128rm:
+  case X86::VBROADCASTI64X2rm:
+  case X86::VBROADCASTI64X4rm:
     if (!OutStreamer->isVerboseAsm())
       break;
     if (MI->getNumOperands() <= 4)
       break;
     if (auto *C = getConstantFromPool(*MI, MI->getOperand(4))) {
+      int NumLanes = 1;
+      // Override NumLanes for the broadcast instructions.
+      switch (MI->getOpcode()) {
+      case X86::VBROADCASTF128:         NumLanes = 2;  break;
+      case X86::VBROADCASTI128:         NumLanes = 2;  break;
+      case X86::VBROADCASTF32X4Z256rm:  NumLanes = 2;  break;
+      case X86::VBROADCASTF32X4rm:      NumLanes = 4;  break;
+      case X86::VBROADCASTF32X8rm:      NumLanes = 2;  break;
+      case X86::VBROADCASTF64X2Z128rm:  NumLanes = 2;  break;
+      case X86::VBROADCASTF64X2rm:      NumLanes = 4;  break;
+      case X86::VBROADCASTF64X4rm:      NumLanes = 2;  break;
+      case X86::VBROADCASTI32X4Z256rm:  NumLanes = 2;  break;
+      case X86::VBROADCASTI32X4rm:      NumLanes = 4;  break;
+      case X86::VBROADCASTI32X8rm:      NumLanes = 2;  break;
+      case X86::VBROADCASTI64X2Z128rm:  NumLanes = 2;  break;
+      case X86::VBROADCASTI64X2rm:      NumLanes = 4;  break;
+      case X86::VBROADCASTI64X4rm:      NumLanes = 2;  break;
+      }
+
       std::string Comment;
       raw_string_ostream CS(Comment);
       const MachineOperand &DstOp = MI->getOperand(0);
       CS << X86ATTInstPrinter::getRegisterName(DstOp.getReg()) << " = ";
       if (auto *CDS = dyn_cast<ConstantDataSequential>(C)) {
         CS << "[";
-        for (int i = 0, NumElements = CDS->getNumElements(); i < NumElements; ++i) {
-          if (i != 0)
-            CS << ",";
-          if (CDS->getElementType()->isIntegerTy())
-            CS << CDS->getElementAsInteger(i);
-          else if (CDS->getElementType()->isFloatTy())
-            CS << CDS->getElementAsFloat(i);
-          else if (CDS->getElementType()->isDoubleTy())
-            CS << CDS->getElementAsDouble(i);
-          else
-            CS << "?";
+        for (int l = 0; l != NumLanes; ++l) {
+          for (int i = 0, NumElements = CDS->getNumElements(); i < NumElements; ++i) {
+            if (i != 0 || l != 0)
+              CS << ",";
+            if (CDS->getElementType()->isIntegerTy())
+              CS << CDS->getElementAsInteger(i);
+            else if (CDS->getElementType()->isFloatTy())
+              CS << CDS->getElementAsFloat(i);
+            else if (CDS->getElementType()->isDoubleTy())
+              CS << CDS->getElementAsDouble(i);
+            else
+              CS << "?";
+          }
         }
         CS << "]";
         OutStreamer->AddComment(CS.str(), !EnablePrintSchedInfo);
       } else if (auto *CV = dyn_cast<ConstantVector>(C)) {
         CS << "<";
-        for (int i = 0, NumOperands = CV->getNumOperands(); i < NumOperands; ++i) {
-          if (i != 0)
-            CS << ",";
-          Constant *COp = CV->getOperand(i);
-          if (isa<UndefValue>(COp)) {
-            CS << "u";
-          } else if (auto *CI = dyn_cast<ConstantInt>(COp)) {
-            if (CI->getBitWidth() <= 64) {
-              CS << CI->getZExtValue();
-            } else {
-              // print multi-word constant as (w0,w1)
-              const auto &Val = CI->getValue();
-              CS << "(";
-              for (int i = 0, N = Val.getNumWords(); i < N; ++i) {
-                if (i > 0)
-                  CS << ",";
-                CS << Val.getRawData()[i];
-              }
-              CS << ")";
-            }
-          } else if (auto *CF = dyn_cast<ConstantFP>(COp)) {
-            SmallString<32> Str;
-            CF->getValueAPF().toString(Str);
-            CS << Str;
-          } else {
-            CS << "?";
+        for (int l = 0; l != NumLanes; ++l) {
+          for (int i = 0, NumOperands = CV->getNumOperands(); i < NumOperands; ++i) {
+            if (i != 0 || l != 0)
+              CS << ",";
+            printConstant(CV->getOperand(i), CS);
           }
         }
         CS << ">";
@@ -1826,6 +1866,85 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
       }
     }
     break;
+  case X86::VBROADCASTSSrm:
+  case X86::VBROADCASTSSYrm:
+  case X86::VBROADCASTSSZ128m:
+  case X86::VBROADCASTSSZ256m:
+  case X86::VBROADCASTSSZm:
+  case X86::VBROADCASTSDYrm:
+  case X86::VBROADCASTSDZ256m:
+  case X86::VBROADCASTSDZm:
+  case X86::VPBROADCASTBrm:
+  case X86::VPBROADCASTBYrm:
+  case X86::VPBROADCASTBZ128m:
+  case X86::VPBROADCASTBZ256m:
+  case X86::VPBROADCASTBZm:
+  case X86::VPBROADCASTDrm:
+  case X86::VPBROADCASTDYrm:
+  case X86::VPBROADCASTDZ128m:
+  case X86::VPBROADCASTDZ256m:
+  case X86::VPBROADCASTDZm:
+  case X86::VPBROADCASTQrm:
+  case X86::VPBROADCASTQYrm:
+  case X86::VPBROADCASTQZ128m:
+  case X86::VPBROADCASTQZ256m:
+  case X86::VPBROADCASTQZm:
+  case X86::VPBROADCASTWrm:
+  case X86::VPBROADCASTWYrm:
+  case X86::VPBROADCASTWZ128m:
+  case X86::VPBROADCASTWZ256m:
+  case X86::VPBROADCASTWZm:
+    if (!OutStreamer->isVerboseAsm())
+      break;
+    if (MI->getNumOperands() <= 4)
+      break;
+    if (auto *C = getConstantFromPool(*MI, MI->getOperand(4))) {
+      int NumElts;
+      switch (MI->getOpcode()) {
+      default: llvm_unreachable("Invalid opcode");
+      case X86::VBROADCASTSSrm:    NumElts = 4;  break;
+      case X86::VBROADCASTSSYrm:   NumElts = 8;  break;
+      case X86::VBROADCASTSSZ128m: NumElts = 4;  break;
+      case X86::VBROADCASTSSZ256m: NumElts = 8;  break;
+      case X86::VBROADCASTSSZm:    NumElts = 16; break;
+      case X86::VBROADCASTSDYrm:   NumElts = 4;  break;
+      case X86::VBROADCASTSDZ256m: NumElts = 4;  break;
+      case X86::VBROADCASTSDZm:    NumElts = 8;  break;
+      case X86::VPBROADCASTBrm:    NumElts = 16; break;
+      case X86::VPBROADCASTBYrm:   NumElts = 32; break;
+      case X86::VPBROADCASTBZ128m: NumElts = 16; break;
+      case X86::VPBROADCASTBZ256m: NumElts = 32; break;
+      case X86::VPBROADCASTBZm:    NumElts = 64; break;
+      case X86::VPBROADCASTDrm:    NumElts = 4;  break;
+      case X86::VPBROADCASTDYrm:   NumElts = 8;  break;
+      case X86::VPBROADCASTDZ128m: NumElts = 4;  break;
+      case X86::VPBROADCASTDZ256m: NumElts = 8;  break;
+      case X86::VPBROADCASTDZm:    NumElts = 16; break;
+      case X86::VPBROADCASTQrm:    NumElts = 2;  break;
+      case X86::VPBROADCASTQYrm:   NumElts = 4;  break;
+      case X86::VPBROADCASTQZ128m: NumElts = 2;  break;
+      case X86::VPBROADCASTQZ256m: NumElts = 4;  break;
+      case X86::VPBROADCASTQZm:    NumElts = 8;  break;
+      case X86::VPBROADCASTWrm:    NumElts = 8;  break;
+      case X86::VPBROADCASTWYrm:   NumElts = 16; break;
+      case X86::VPBROADCASTWZ128m: NumElts = 8;  break;
+      case X86::VPBROADCASTWZ256m: NumElts = 16; break;
+      case X86::VPBROADCASTWZm:    NumElts = 32; break;
+      }
+
+      std::string Comment;
+      raw_string_ostream CS(Comment);
+      const MachineOperand &DstOp = MI->getOperand(0);
+      CS << X86ATTInstPrinter::getRegisterName(DstOp.getReg()) << " = ";
+      CS << "[";
+      for (int i = 0; i != NumElts; ++i) {
+        if (i != 0)
+          CS << ",";
+        printConstant(C, CS);
+      }
+      CS << "]";
+      OutStreamer->AddComment(CS.str(), !EnablePrintSchedInfo);
+    }
   }
 
   MCInst TmpInst;

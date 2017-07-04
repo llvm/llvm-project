@@ -1416,12 +1416,6 @@ hasSideEffects = 0 in
                      []>,
                Requires<[HasLPMX]>;
 
-  def LPMWRdZ : Pseudo<(outs DREGS:$dst),
-                       (ins ZREGS:$z),
-                       "lpmw\t$dst, $z",
-                       []>,
-                Requires<[HasLPMX]>;
-
   // Load program memory, while postincrementing the Z register.
   let mayLoad = 1,
   Defs = [R31R30] in
@@ -1433,6 +1427,12 @@ hasSideEffects = 0 in
                          "lpm\t$dst, $z+",
                          []>,
                    Requires<[HasLPMX]>;
+
+    def LPMWRdZ : Pseudo<(outs DREGS:$dst),
+                         (ins ZREGS:$z),
+                         "lpmw\t$dst, $z",
+                         []>,
+                  Requires<[HasLPMX]>;
 
     def LPMWRdZPi : Pseudo<(outs DREGS:$dst),
                            (ins ZREGS:$z),

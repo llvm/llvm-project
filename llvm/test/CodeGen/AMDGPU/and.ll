@@ -8,8 +8,8 @@ declare i32 @llvm.r600.read.tidig.x() #0
 ; EG: AND_INT {{\*? *}}T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
 ; EG: AND_INT {{\*? *}}T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
 
-; SI: v_and_b32_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
-; SI: v_and_b32_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
+; SI: s_and_b32 s{{[0-9]+, s[0-9]+, s[0-9]+}}
+; SI: s_and_b32 s{{[0-9]+, s[0-9]+, s[0-9]+}}
 
 define amdgpu_kernel void @test2(<2 x i32> addrspace(1)* %out, <2 x i32> addrspace(1)* %in) {
   %b_ptr = getelementptr <2 x i32>, <2 x i32> addrspace(1)* %in, i32 1
@@ -26,10 +26,11 @@ define amdgpu_kernel void @test2(<2 x i32> addrspace(1)* %out, <2 x i32> addrspa
 ; EG: AND_INT {{\** *}}T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
 ; EG: AND_INT {{\** *}}T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
 
-; SI: v_and_b32_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
-; SI: v_and_b32_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
-; SI: v_and_b32_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
-; SI: v_and_b32_e32 v{{[0-9]+, v[0-9]+, v[0-9]+}}
+
+; SI: s_and_b32 s{{[0-9]+, s[0-9]+, s[0-9]+}}
+; SI: s_and_b32 s{{[0-9]+, s[0-9]+, s[0-9]+}}
+; SI: s_and_b32 s{{[0-9]+, s[0-9]+, s[0-9]+}}
+; SI: s_and_b32 s{{[0-9]+, s[0-9]+, s[0-9]+}}
 
 define amdgpu_kernel void @test4(<4 x i32> addrspace(1)* %out, <4 x i32> addrspace(1)* %in) {
   %b_ptr = getelementptr <4 x i32>, <4 x i32> addrspace(1)* %in, i32 1
@@ -136,7 +137,9 @@ define amdgpu_kernel void @v_and_i32_vgpr_sgpr(i32 addrspace(1)* %out, i32 addrs
 ; FUNC-LABEL: {{^}}v_and_constant_i32
 ; SI: v_and_b32_e32 v{{[0-9]+}}, 0x12d687, v{{[0-9]+}}
 define amdgpu_kernel void @v_and_constant_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr) {
-  %a = load i32, i32 addrspace(1)* %aptr, align 4
+  %tid = call i32 @llvm.r600.read.tidig.x() #0
+  %gep = getelementptr i32, i32 addrspace(1)* %aptr, i32 %tid
+  %a = load i32, i32 addrspace(1)* %gep, align 4
   %and = and i32 %a, 1234567
   store i32 %and, i32 addrspace(1)* %out, align 4
   ret void
@@ -145,7 +148,9 @@ define amdgpu_kernel void @v_and_constant_i32(i32 addrspace(1)* %out, i32 addrsp
 ; FUNC-LABEL: {{^}}v_and_inline_imm_64_i32
 ; SI: v_and_b32_e32 v{{[0-9]+}}, 64, v{{[0-9]+}}
 define amdgpu_kernel void @v_and_inline_imm_64_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr) {
-  %a = load i32, i32 addrspace(1)* %aptr, align 4
+  %tid = call i32 @llvm.r600.read.tidig.x() #0
+  %gep = getelementptr i32, i32 addrspace(1)* %aptr, i32 %tid
+  %a = load i32, i32 addrspace(1)* %gep, align 4
   %and = and i32 %a, 64
   store i32 %and, i32 addrspace(1)* %out, align 4
   ret void
@@ -154,7 +159,9 @@ define amdgpu_kernel void @v_and_inline_imm_64_i32(i32 addrspace(1)* %out, i32 a
 ; FUNC-LABEL: {{^}}v_and_inline_imm_neg_16_i32
 ; SI: v_and_b32_e32 v{{[0-9]+}}, -16, v{{[0-9]+}}
 define amdgpu_kernel void @v_and_inline_imm_neg_16_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %aptr) {
-  %a = load i32, i32 addrspace(1)* %aptr, align 4
+  %tid = call i32 @llvm.r600.read.tidig.x() #0
+  %gep = getelementptr i32, i32 addrspace(1)* %aptr, i32 %tid
+  %a = load i32, i32 addrspace(1)* %gep, align 4
   %and = and i32 %a, -16
   store i32 %and, i32 addrspace(1)* %out, align 4
   ret void
@@ -239,8 +246,11 @@ define amdgpu_kernel void @s_and_multi_use_inline_imm_i64(i64 addrspace(1)* %out
 ; SI: v_and_b32
 ; SI: v_and_b32
 define amdgpu_kernel void @v_and_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %aptr, i64 addrspace(1)* %bptr) {
-  %a = load i64, i64 addrspace(1)* %aptr, align 8
-  %b = load i64, i64 addrspace(1)* %bptr, align 8
+  %tid = call i32 @llvm.r600.read.tidig.x() #0
+  %gep.a = getelementptr i64, i64 addrspace(1)* %aptr, i32 %tid
+  %a = load i64, i64 addrspace(1)* %gep.a, align 8
+  %gep.b = getelementptr i64, i64 addrspace(1)* %bptr, i32 %tid
+  %b = load i64, i64 addrspace(1)* %gep.b, align 8
   %and = and i64 %a, %b
   store i64 %and, i64 addrspace(1)* %out, align 8
   ret void
@@ -251,7 +261,9 @@ define amdgpu_kernel void @v_and_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %
 ; SI-DAG: v_and_b32_e32 {{v[0-9]+}}, 0x11e, {{v[0-9]+}}
 ; SI: buffer_store_dwordx2
 define amdgpu_kernel void @v_and_constant_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %aptr) {
-  %a = load i64, i64 addrspace(1)* %aptr, align 8
+  %tid = call i32 @llvm.r600.read.tidig.x() #0
+  %gep.a = getelementptr i64, i64 addrspace(1)* %aptr, i32 %tid
+  %a = load i64, i64 addrspace(1)* %gep.a, align 8
   %and = and i64 %a, 1231231234567
   store i64 %and, i64 addrspace(1)* %out, align 8
   ret void
@@ -299,26 +311,30 @@ define amdgpu_kernel void @v_and_multi_use_inline_imm_i64(i64 addrspace(1)* %out
 }
 
 ; FUNC-LABEL: {{^}}v_and_i64_32_bit_constant:
-; SI: buffer_load_dword [[VAL:v[0-9]+]]
+; SI: {{buffer|flat}}_load_dword [[VAL:v[0-9]+]]
 ; SI-NOT: and
 ; SI: v_and_b32_e32 {{v[0-9]+}}, 0x12d687, [[VAL]]
 ; SI-NOT: and
 ; SI: buffer_store_dwordx2
 define amdgpu_kernel void @v_and_i64_32_bit_constant(i64 addrspace(1)* %out, i64 addrspace(1)* %aptr) {
-  %a = load i64, i64 addrspace(1)* %aptr, align 8
+  %tid = call i32 @llvm.r600.read.tidig.x() #0
+  %gep.a = getelementptr i64, i64 addrspace(1)* %aptr, i32 %tid
+  %a = load i64, i64 addrspace(1)* %gep.a, align 8
   %and = and i64 %a, 1234567
   store i64 %and, i64 addrspace(1)* %out, align 8
   ret void
 }
 
 ; FUNC-LABEL: {{^}}v_and_inline_imm_i64:
-; SI: buffer_load_dword v{{[0-9]+}}
+; SI: {{buffer|flat}}_load_dword v{{[0-9]+}}
 ; SI-NOT: and
 ; SI: v_and_b32_e32 {{v[0-9]+}}, 64, {{v[0-9]+}}
 ; SI-NOT: and
 ; SI: buffer_store_dwordx2
 define amdgpu_kernel void @v_and_inline_imm_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %aptr) {
-  %a = load i64, i64 addrspace(1)* %aptr, align 8
+  %tid = call i32 @llvm.r600.read.tidig.x() #0
+  %gep.a = getelementptr i64, i64 addrspace(1)* %aptr, i32 %tid
+  %a = load i64, i64 addrspace(1)* %gep.a, align 8
   %and = and i64 %a, 64
   store i64 %and, i64 addrspace(1)* %out, align 8
   ret void
@@ -326,13 +342,15 @@ define amdgpu_kernel void @v_and_inline_imm_i64(i64 addrspace(1)* %out, i64 addr
 
 ; FIXME: Should be able to reduce load width
 ; FUNC-LABEL: {{^}}v_and_inline_neg_imm_i64:
-; SI: buffer_load_dwordx2 v{{\[}}[[VAL_LO:[0-9]+]]:[[VAL_HI:[0-9]+]]{{\]}}
+; SI: {{buffer|flat}}_load_dwordx2 v{{\[}}[[VAL_LO:[0-9]+]]:[[VAL_HI:[0-9]+]]{{\]}}
 ; SI-NOT: and
 ; SI: v_and_b32_e32 v[[VAL_LO]], -8, v[[VAL_LO]]
 ; SI-NOT: and
 ; SI: buffer_store_dwordx2 v{{\[}}[[VAL_LO]]:[[VAL_HI]]{{\]}}
 define amdgpu_kernel void @v_and_inline_neg_imm_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %aptr) {
-  %a = load i64, i64 addrspace(1)* %aptr, align 8
+  %tid = call i32 @llvm.r600.read.tidig.x() #0
+  %gep.a = getelementptr i64, i64 addrspace(1)* %aptr, i32 %tid
+  %a = load i64, i64 addrspace(1)* %gep.a, align 8
   %and = and i64 %a, -8
   store i64 %and, i64 addrspace(1)* %out, align 8
   ret void
@@ -549,5 +567,4 @@ define amdgpu_kernel void @s_and_inline_high_imm_f32_neg_4.0_i64(i64 addrspace(1
   store i64 %and, i64 addrspace(1)* %out, align 8
   ret void
 }
-
 attributes #0 = { nounwind readnone }

@@ -2,9 +2,9 @@
 ; RUN: llc -march=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}any_extend_vector_inreg_v16i8_to_v4i32:
-; GCN: {{buffer|flat}}_load_dwordx4
-; GCN-DAG: {{buffer|flat}}_load_dwordx4
-; GCN-DAG: {{buffer|flat}}_load_dword
+; GCN: s_load_dwordx4
+; GCN-DAG: s_load_dwordx4
+; GCN-DAG: s_load_dword
 
 ; GCN: {{buffer|flat}}_store_byte
 ; GCN: {{buffer|flat}}_store_byte

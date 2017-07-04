@@ -927,6 +927,31 @@ inline void isl_sioimath_cdiv_q(isl_sioimath_ptr dst, isl_sioimath_src lhs,
 	isl_sioimath_try_demote(dst);
 }
 
+/* Compute the division of lhs by a rhs of type unsigned long, rounding towards
+ * positive infinity (Ceil).
+ */
+inline void isl_sioimath_cdiv_q_ui(isl_sioimath_ptr dst, isl_sioimath_src lhs,
+	unsigned long rhs)
+{
+	isl_sioimath_scratchspace_t lhsscratch, rhsscratch;
+	int32_t lhssmall, q;
+
+	if (isl_sioimath_decode_small(lhs, &lhssmall) && (rhs <= INT32_MAX)) {
+		if (lhssmall >= 0)
+			q = ((int64_t) lhssmall + ((int64_t) rhs - 1)) /
+			    (int64_t) rhs;
+		else
+			q = lhssmall / (int32_t) rhs;
+		isl_sioimath_set_small(dst, q);
+		return;
+	}
+
+	impz_cdiv_q(isl_sioimath_reinit_big(dst),
+	    isl_sioimath_bigarg_src(lhs, &lhsscratch),
+	    isl_sioimath_uiarg_src(rhs, &rhsscratch));
+	isl_sioimath_try_demote(dst);
+}
+
 /* Divide lhs by rhs, rounding to negative infinity (Floor).
  */
 inline void isl_sioimath_fdiv_q(isl_sioimath_ptr dst, isl_sioimath_src lhs,
@@ -1199,6 +1224,7 @@ typedef isl_sioimath isl_int[1];
 #define isl_int_divexact_ui(r, i, j)	isl_sioimath_tdiv_q_ui((r), *(i), j)
 #define isl_int_tdiv_q(r, i, j)		isl_sioimath_tdiv_q((r), *(i), *(j))
 #define isl_int_cdiv_q(r, i, j)		isl_sioimath_cdiv_q((r), *(i), *(j))
+#define isl_int_cdiv_q_ui(r, i, j)	isl_sioimath_cdiv_q_ui((r), *(i), j)
 #define isl_int_fdiv_q(r, i, j)		isl_sioimath_fdiv_q((r), *(i), *(j))
 #define isl_int_fdiv_r(r, i, j)		isl_sioimath_fdiv_r((r), *(i), *(j))
 #define isl_int_fdiv_q_ui(r, i, j)	isl_sioimath_fdiv_q_ui((r), *(i), j)

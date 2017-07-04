@@ -916,6 +916,31 @@ error:
 }
 
 /* Divide "v1" by "v2".
+ */
+__isl_give isl_val *isl_val_div_ui(__isl_take isl_val *v1, unsigned long v2)
+{
+	if (!v1)
+		return NULL;
+	if (isl_val_is_nan(v1))
+		return v1;
+	if (v2 == 0)
+		return isl_val_set_nan(v1);
+	if (v2 == 1)
+		return v1;
+	if (isl_val_is_zero(v1))
+		return v1;
+	if (isl_val_is_infty(v1) || isl_val_is_neginfty(v1))
+		return v1;
+	v1 = isl_val_cow(v1);
+	if (!v1)
+		return NULL;
+
+	isl_int_mul_ui(v1->d, v1->d, v2);
+
+	return isl_val_normalize(v1);
+}
+
+/* Divide "v1" by "v2".
  *
  * This is a private copy of isl_val_div for use in the generic
  * isl_multi_*_scale_down_val instantiated for isl_val.

@@ -65,6 +65,7 @@ while [[ $# -gt 0 ]]; do
     -r|--revision)
       shift
       LLVM_SVN_REV="$1"
+      shift
       ;;
     -b|--branch)
       shift
