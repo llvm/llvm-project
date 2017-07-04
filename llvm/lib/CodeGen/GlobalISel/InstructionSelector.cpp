@@ -26,6 +26,9 @@
 
 using namespace llvm;
 
+InstructionSelector::MatcherState::MatcherState(unsigned MaxRenderers)
+    : Renderers(MaxRenderers, nullptr), MIs() {}
+
 InstructionSelector::InstructionSelector() = default;
 
 bool InstructionSelector::constrainOperandRegToRegClass(

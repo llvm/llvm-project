@@ -66,6 +66,7 @@ public:
       llvm::opt::ArgStringList &CC1Args) const override;
 
   bool IsUnwindTablesDefault() const override { return true; }
+  SanitizerMask getSupportedSanitizers() const override;
 
 protected:
   Tool *buildAssembler() const override;

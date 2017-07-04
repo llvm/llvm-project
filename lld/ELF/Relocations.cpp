@@ -557,9 +557,9 @@ static RelExpr adjustExpr(SymbolBody &Body, RelExpr Expr, uint32_t Type,
   // the refered symbol can be preemepted to refer to the executable.
   if (Config->Shared || (Config->Pic && !isRelExpr(Expr))) {
     error("can't create dynamic relocation " + toString(Type) + " against " +
-          (Body.getName().empty() ? "local symbol in readonly segment"
+          (Body.getName().empty() ? "local symbol"
                                   : "symbol: " + toString(Body)) +
-          getLocation<ELFT>(S, Body, RelOff));
+          " in readonly segment" + getLocation<ELFT>(S, Body, RelOff));
     return Expr;
   }
 

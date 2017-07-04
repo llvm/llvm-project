@@ -1,4 +1,4 @@
-; RUN: llc -stress-early-ifcvt -amdgpu-early-ifcvt=1 -march=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -stress-early-ifcvt -amdgpu-early-ifcvt=1 -march=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
 ; FIXME: Most of these cases that don't trigger because of broken cost
 ; heuristics. Should not need -stress-early-ifcvt

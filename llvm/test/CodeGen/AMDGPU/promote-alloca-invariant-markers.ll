@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mattr=+promote-alloca -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mattr=+promote-alloca -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
 declare {}* @llvm.invariant.start.p0i8(i64, i8* nocapture) #0
 declare void @llvm.invariant.end.p0i8({}*, i64, i8* nocapture) #0

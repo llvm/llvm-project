@@ -2456,7 +2456,7 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
             // v2f16 was loaded as an i32. Now we must bitcast it back.
             else if (EltVT == MVT::v2f16)
               Elt = DAG.getNode(ISD::BITCAST, dl, MVT::v2f16, Elt);
-            // Extend the element if necesary (e.g. an i8 is loaded
+            // Extend the element if necessary (e.g. an i8 is loaded
             // into an i16 register)
             if (Ins[InsIdx].VT.isInteger() &&
                 Ins[InsIdx].VT.getSizeInBits() > LoadVT.getSizeInBits()) {

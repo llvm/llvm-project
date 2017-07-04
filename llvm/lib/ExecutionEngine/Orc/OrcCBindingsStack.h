@@ -105,6 +105,10 @@ public:
                     IndirectStubsManagerBuilder IndirectStubsMgrBuilder)
       : DL(TM.createDataLayout()), IndirectStubsMgr(IndirectStubsMgrBuilder()),
         CCMgr(std::move(CCMgr)),
+        ObjectLayer(
+          []() {
+            return std::make_shared<SectionMemoryManager>();
+          }),
         CompileLayer(ObjectLayer, orc::SimpleCompiler(TM)),
         CODLayer(CompileLayer,
                  [](Function &F) { return std::set<Function *>({&F}); },
@@ -155,7 +159,7 @@ public:
     return mapError(IndirectStubsMgr->updatePointer(Name, Addr));
   }
 
-  std::unique_ptr<JITSymbolResolver>
+  std::shared_ptr<JITSymbolResolver>
   createResolver(LLVMOrcSymbolResolverFn ExternalResolver,
                  void *ExternalResolverCtx) {
     return orc::createLambdaResolver(
@@ -204,8 +208,7 @@ public:
     auto Resolver = createResolver(ExternalResolver, ExternalResolverCtx);
 
     // Add the module to the JIT.
-    auto LH = Layer.addModule(std::move(M), std::move(MemMgr),
-                              std::move(Resolver));
+    auto LH = Layer.addModule(std::move(M), std::move(Resolver));
     ModuleHandleT H = createHandle(Layer, LH);
 
     // Run the static constructors, and save the static destructor runner for

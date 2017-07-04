@@ -1,6 +1,8 @@
 ; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=GCN -check-prefix=FUNC %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=VI -check-prefix=GCN -check-prefix=FUNC %s
 
+declare i32 @llvm.r600.read.tidig.x() nounwind readnone
+
 declare i64 @llvm.ctpop.i64(i64) nounwind readnone
 declare <2 x i64> @llvm.ctpop.v2i64(<2 x i64>) nounwind readnone
 declare <4 x i64> @llvm.ctpop.v4i64(<4 x i64>) nounwind readnone
@@ -25,14 +27,16 @@ define amdgpu_kernel void @s_ctpop_i64(i32 addrspace(1)* noalias %out, i64 %val)
 }
 
 ; FUNC-LABEL: {{^}}v_ctpop_i64:
-; GCN: buffer_load_dwordx2 v{{\[}}[[LOVAL:[0-9]+]]:[[HIVAL:[0-9]+]]{{\]}},
+; GCN: {{buffer|flat}}_load_dwordx2 v{{\[}}[[LOVAL:[0-9]+]]:[[HIVAL:[0-9]+]]{{\]}},
 ; GCN: v_bcnt_u32_b32{{(_e64)*}} [[MIDRESULT:v[0-9]+]], v[[LOVAL]], 0
 ; SI-NEXT: v_bcnt_u32_b32_e32 [[RESULT:v[0-9]+]], v[[HIVAL]], [[MIDRESULT]]
 ; VI-NEXT: v_bcnt_u32_b32 [[RESULT:v[0-9]+]], v[[HIVAL]], [[MIDRESULT]]
 ; GCN: buffer_store_dword [[RESULT]],
 ; GCN: s_endpgm
 define amdgpu_kernel void @v_ctpop_i64(i32 addrspace(1)* noalias %out, i64 addrspace(1)* noalias %in) nounwind {
-  %val = load i64, i64 addrspace(1)* %in, align 8
+  %tid = call i32 @llvm.r600.read.tidig.x()
+  %in.gep = getelementptr i64, i64 addrspace(1)* %in, i32 %tid
+  %val = load i64, i64 addrspace(1)* %in.gep, align 8
   %ctpop = call i64 @llvm.ctpop.i64(i64 %val) nounwind readnone
   %truncctpop = trunc i64 %ctpop to i32
   store i32 %truncctpop, i32 addrspace(1)* %out, align 4
@@ -40,7 +44,7 @@ define amdgpu_kernel void @v_ctpop_i64(i32 addrspace(1)* noalias %out, i64 addrs
 }
 
 ; FUNC-LABEL: {{^}}v_ctpop_i64_user:
-; GCN: buffer_load_dwordx2 v{{\[}}[[LOVAL:[0-9]+]]:[[HIVAL:[0-9]+]]{{\]}},
+; GCN: {{buffer|flat}}_load_dwordx2 v{{\[}}[[LOVAL:[0-9]+]]:[[HIVAL:[0-9]+]]{{\]}},
 ; GCN: v_bcnt_u32_b32{{(_e64)*}} [[MIDRESULT:v[0-9]+]], v[[LOVAL]], 0
 ; SI-NEXT: v_bcnt_u32_b32_e32 [[RESULT:v[0-9]+]], v[[HIVAL]], [[MIDRESULT]]
 ; VI-NEXT: v_bcnt_u32_b32 [[RESULT:v[0-9]+]], v[[HIVAL]], [[MIDRESULT]]
@@ -49,7 +53,9 @@ define amdgpu_kernel void @v_ctpop_i64(i32 addrspace(1)* noalias %out, i64 addrs
 ; GCN: buffer_store_dwordx2 v{{\[}}[[RESULT_LO]]:[[RESULT_HI]]{{\]}}
 ; GCN: s_endpgm
 define amdgpu_kernel void @v_ctpop_i64_user(i64 addrspace(1)* noalias %out, i64 addrspace(1)* noalias %in, i64 %s.val) nounwind {
-  %val = load i64, i64 addrspace(1)* %in, align 8
+  %tid = call i32 @llvm.r600.read.tidig.x()
+  %in.gep = getelementptr i64, i64 addrspace(1)* %in, i32 %tid
+  %val = load i64, i64 addrspace(1)* %in.gep, align 8
   %ctpop = call i64 @llvm.ctpop.i64(i64 %val) nounwind readnone
   %or = or i64 %ctpop, %s.val
   store i64 %or, i64 addrspace(1)* %out
@@ -87,7 +93,9 @@ define amdgpu_kernel void @s_ctpop_v4i64(<4 x i32> addrspace(1)* noalias %out, <
 ; GCN: v_bcnt_u32_b32
 ; GCN: s_endpgm
 define amdgpu_kernel void @v_ctpop_v2i64(<2 x i32> addrspace(1)* noalias %out, <2 x i64> addrspace(1)* noalias %in) nounwind {
-  %val = load <2 x i64>, <2 x i64> addrspace(1)* %in, align 16
+  %tid = call i32 @llvm.r600.read.tidig.x()
+  %in.gep = getelementptr <2 x i64>, <2 x i64> addrspace(1)* %in, i32 %tid
+  %val = load <2 x i64>, <2 x i64> addrspace(1)* %in.gep, align 16
   %ctpop = call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %val) nounwind readnone
   %truncctpop = trunc <2 x i64> %ctpop to <2 x i32>
   store <2 x i32> %truncctpop, <2 x i32> addrspace(1)* %out, align 8
@@ -105,7 +113,9 @@ define amdgpu_kernel void @v_ctpop_v2i64(<2 x i32> addrspace(1)* noalias %out, <
 ; GCN: v_bcnt_u32_b32
 ; GCN: s_endpgm
 define amdgpu_kernel void @v_ctpop_v4i64(<4 x i32> addrspace(1)* noalias %out, <4 x i64> addrspace(1)* noalias %in) nounwind {
-  %val = load <4 x i64>, <4 x i64> addrspace(1)* %in, align 32
+  %tid = call i32 @llvm.r600.read.tidig.x()
+  %in.gep = getelementptr <4 x i64>, <4 x i64> addrspace(1)* %in, i32 %tid
+  %val = load <4 x i64>, <4 x i64> addrspace(1)* %in.gep, align 32
   %ctpop = call <4 x i64> @llvm.ctpop.v4i64(<4 x i64> %val) nounwind readnone
   %truncctpop = trunc <4 x i64> %ctpop to <4 x i32>
   store <4 x i32> %truncctpop, <4 x i32> addrspace(1)* %out, align 16
@@ -169,7 +179,8 @@ define amdgpu_kernel void @s_ctpop_i65(i32 addrspace(1)* noalias %out, i65 %val)
 ; FIXME: Should not have extra add
 
 ; FUNC-LABEL: {{^}}v_ctpop_i128:
-; GCN: buffer_load_dwordx4 v{{\[}}[[VAL0:[0-9]+]]:[[VAL3:[0-9]+]]{{\]}}, off, s{{\[[0-9]+:[0-9]+\]}}, 0{{$}}
+; SI: buffer_load_dwordx4 v{{\[}}[[VAL0:[0-9]+]]:[[VAL3:[0-9]+]]{{\]}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64
+; VI: flat_load_dwordx4   v{{\[}}[[VAL0:[0-9]+]]:[[VAL3:[0-9]+]]{{\]}}, v{{\[[0-9]+:[0-9]+\]}}
 
 ; GCN-DAG: v_bcnt_u32_b32{{(_e64)*}} [[MIDRESULT0:v[0-9]+]], v{{[0-9]+}}, 0
 ; GCN-DAG: v_bcnt_u32_b32{{(_e32)*(_e64)*}} [[MIDRESULT1:v[0-9]+]], v[[VAL3]], [[MIDRESULT0]]
@@ -182,7 +193,9 @@ define amdgpu_kernel void @s_ctpop_i65(i32 addrspace(1)* noalias %out, i65 %val)
 ; GCN: buffer_store_dword [[RESULT]],
 ; GCN: s_endpgm
 define amdgpu_kernel void @v_ctpop_i128(i32 addrspace(1)* noalias %out, i128 addrspace(1)* noalias %in) nounwind {
-  %val = load i128, i128 addrspace(1)* %in, align 8
+  %tid = call i32 @llvm.r600.read.tidig.x()
+  %in.gep = getelementptr i128, i128 addrspace(1)* %in, i32 %tid
+  %val = load i128, i128 addrspace(1)* %in.gep, align 8
   %ctpop = call i128 @llvm.ctpop.i128(i128 %val) nounwind readnone
   %truncctpop = trunc i128 %ctpop to i32
   store i32 %truncctpop, i32 addrspace(1)* %out, align 4

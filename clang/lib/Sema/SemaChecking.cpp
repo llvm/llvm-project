@@ -309,7 +309,8 @@ static bool SemaOpenCLBuiltinKernelWorkGroupSize(Sema &S, CallExpr *TheCall) {
   Expr *BlockArg = TheCall->getArg(0);
   if (!isBlockPointer(BlockArg)) {
     S.Diag(BlockArg->getLocStart(),
-           diag::err_opencl_enqueue_kernel_expected_type) << "block";
+           diag::err_opencl_builtin_expected_type)
+        << TheCall->getDirectCallee() << "block";
     return true;
   }
   return checkOpenCLBlockArgs(S, BlockArg);
@@ -394,24 +395,24 @@ static bool SemaOpenCLBuiltinEnqueueKernel(Sema &S, CallExpr *TheCall) {
   // First argument always needs to be a queue_t type.
   if (!Arg0->getType()->isQueueT()) {
     S.Diag(TheCall->getArg(0)->getLocStart(),
-           diag::err_opencl_enqueue_kernel_expected_type)
-        << S.Context.OCLQueueTy;
+           diag::err_opencl_builtin_expected_type)
+        << TheCall->getDirectCallee() << S.Context.OCLQueueTy;
     return true;
   }
 
   // Second argument always needs to be a kernel_enqueue_flags_t enum value.
   if (!Arg1->getType()->isIntegerType()) {
     S.Diag(TheCall->getArg(1)->getLocStart(),
-           diag::err_opencl_enqueue_kernel_expected_type)
-        << "'kernel_enqueue_flags_t' (i.e. uint)";
+           diag::err_opencl_builtin_expected_type)
+        << TheCall->getDirectCallee() << "'kernel_enqueue_flags_t' (i.e. uint)";
     return true;
   }
 
   // Third argument is always an ndrange_t type.
   if (Arg2->getType().getUnqualifiedType().getAsString() != "ndrange_t") {
     S.Diag(TheCall->getArg(2)->getLocStart(),
-           diag::err_opencl_enqueue_kernel_expected_type)
-        << "'ndrange_t'";
+           diag::err_opencl_builtin_expected_type)
+        << TheCall->getDirectCallee() << "'ndrange_t'";
     return true;
   }
 
@@ -420,8 +421,8 @@ static bool SemaOpenCLBuiltinEnqueueKernel(Sema &S, CallExpr *TheCall) {
   if (NumArgs == 4) {
     // check that the last argument is the right block type.
     if (!isBlockPointer(Arg3)) {
-      S.Diag(Arg3->getLocStart(), diag::err_opencl_enqueue_kernel_expected_type)
-          << "block";
+      S.Diag(Arg3->getLocStart(), diag::err_opencl_builtin_expected_type)
+          << TheCall->getDirectCallee() << "block";
       return true;
     }
     // we have a block type, check the prototype
@@ -443,8 +444,8 @@ static bool SemaOpenCLBuiltinEnqueueKernel(Sema &S, CallExpr *TheCall) {
     // check common block argument.
     Expr *Arg6 = TheCall->getArg(6);
     if (!isBlockPointer(Arg6)) {
-      S.Diag(Arg6->getLocStart(), diag::err_opencl_enqueue_kernel_expected_type)
-          << "block";
+      S.Diag(Arg6->getLocStart(), diag::err_opencl_builtin_expected_type)
+          << TheCall->getDirectCallee() << "block";
       return true;
     }
     if (checkOpenCLBlockArgs(S, Arg6))
@@ -453,8 +454,8 @@ static bool SemaOpenCLBuiltinEnqueueKernel(Sema &S, CallExpr *TheCall) {
     // Forth argument has to be any integer type.
     if (!Arg3->getType()->isIntegerType()) {
       S.Diag(TheCall->getArg(3)->getLocStart(),
-             diag::err_opencl_enqueue_kernel_expected_type)
-          << "integer";
+             diag::err_opencl_builtin_expected_type)
+          << TheCall->getDirectCallee() << "integer";
       return true;
     }
     // check remaining common arguments.
@@ -466,7 +467,8 @@ static bool SemaOpenCLBuiltinEnqueueKernel(Sema &S, CallExpr *TheCall) {
                                      Expr::NPC_ValueDependentIsNotNull) &&
         !Arg4->getType()->getPointeeOrArrayElementType()->isClkEventT()) {
       S.Diag(TheCall->getArg(4)->getLocStart(),
-             diag::err_opencl_enqueue_kernel_expected_type)
+             diag::err_opencl_builtin_expected_type)
+          << TheCall->getDirectCallee()
           << S.Context.getPointerType(S.Context.OCLClkEventTy);
       return true;
     }
@@ -477,7 +479,8 @@ static bool SemaOpenCLBuiltinEnqueueKernel(Sema &S, CallExpr *TheCall) {
         !(Arg5->getType()->isPointerType() &&
           Arg5->getType()->getPointeeType()->isClkEventT())) {
       S.Diag(TheCall->getArg(5)->getLocStart(),
-             diag::err_opencl_enqueue_kernel_expected_type)
+             diag::err_opencl_builtin_expected_type)
+          << TheCall->getDirectCallee()
           << S.Context.getPointerType(S.Context.OCLClkEventTy);
       return true;
     }

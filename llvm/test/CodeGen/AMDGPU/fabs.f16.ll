@@ -134,7 +134,9 @@ define amdgpu_kernel void @fabs_free_v2f16(<2 x half> addrspace(1)* %out, i32 %i
 ; GFX9: v_and_b32_e32 [[FABS:v[0-9]+]], 0x7fff7fff, [[VAL]]
 ; GFX9: v_pk_mul_f16 v{{[0-9]+}}, [[FABS]], v{{[0-9]+$}}
 define amdgpu_kernel void @v_fabs_fold_v2f16(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)* %in) #0 {
-  %val = load <2 x half>, <2 x half> addrspace(1)* %in
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %gep = getelementptr <2 x half>, <2 x half> addrspace(1)* %in, i32 %tid 
+  %val = load <2 x half>, <2 x half> addrspace(1)* %gep
   %fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %val)
   %fmul = fmul <2 x half> %fabs, %val
   store <2 x half> %fmul, <2 x half> addrspace(1)* %out

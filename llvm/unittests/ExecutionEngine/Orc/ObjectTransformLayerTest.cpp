@@ -14,18 +14,13 @@
 #include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
 #include "llvm/ExecutionEngine/Orc/NullResolver.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
+#include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/Object/ObjectFile.h"
 #include "gtest/gtest.h"
 
 using namespace llvm::orc;
 
 namespace {
-
-// Stand-in for RuntimeDyld::MemoryManager
-typedef int MockMemoryManager;
-
-// Stand-in for RuntimeDyld::SymbolResolver
-typedef int MockSymbolResolver;
 
 // stand-in for object::ObjectFile
 typedef int MockObjectFile;
@@ -54,24 +49,24 @@ public:
 
   MockBaseLayer() : MockSymbol(nullptr) { resetExpectations(); }
 
-  template <typename ObjPtrT, typename MemoryManagerPtrT,
-            typename SymbolResolverPtrT>
-  ObjHandleT addObject(ObjPtrT Obj, MemoryManagerPtrT MemMgr,
-                       SymbolResolverPtrT Resolver) {
-    EXPECT_EQ(MockManager, *MemMgr) << "MM should pass through";
-    EXPECT_EQ(MockResolver, *Resolver) << "Resolver should pass through";
+  template <typename ObjPtrT>
+  ObjHandleT addObject(ObjPtrT Obj,
+                       std::shared_ptr<llvm::JITSymbolResolver> Resolver) {
+    EXPECT_EQ(MockResolver, Resolver) << "Resolver should pass through";
     EXPECT_EQ(MockObject + 1, *Obj) << "Transform should be applied";
     LastCalled = "addObject";
     MockObjHandle = 111;
     return MockObjHandle;
   }
+
   template <typename ObjPtrT>
-  void expectAddObject(ObjPtrT Obj, MockMemoryManager *MemMgr,
-                       MockSymbolResolver *Resolver) {
-    MockManager = *MemMgr;
-    MockResolver = *Resolver;
+  void expectAddObject(ObjPtrT Obj,
+                       std::shared_ptr<llvm::JITSymbolResolver> Resolver) {
+    MockResolver = Resolver;
     MockObject = *Obj;
   }
+
+
   void verifyAddObject(ObjHandleT Returned) {
     EXPECT_EQ("addObject", LastCalled);
     EXPECT_EQ(MockObjHandle, Returned) << "Return should pass through";
@@ -160,8 +155,7 @@ public:
 private:
   // Backing fields for remembering parameter/return values
   std::string LastCalled;
-  MockMemoryManager MockManager;
-  MockSymbolResolver MockResolver;
+  std::shared_ptr<llvm::JITSymbolResolver> MockResolver;
   MockObjectFile MockObject;
   ObjHandleT MockObjHandle;
   std::string MockName;
@@ -174,8 +168,7 @@ private:
   // Clear remembered parameters between calls
   void resetExpectations() {
     LastCalled = "nothing";
-    MockManager = 0;
-    MockResolver = 0;
+    MockResolver = nullptr;
     MockObject = 0;
     MockObjHandle = 0;
     MockName = "bogus";
@@ -204,22 +197,17 @@ TEST(ObjectTransformLayerTest, Main) {
     return Obj;
   });
 
-  // Instantiate some mock objects to use below
-  MockMemoryManager MockManager = 233;
-  MockSymbolResolver MockResolver = 244;
-
   // Test addObject with T1 (allocating)
   auto Obj1 = std::make_shared<MockObjectFile>(211);
-  auto MM = llvm::make_unique<MockMemoryManager>(MockManager);
-  auto SR = llvm::make_unique<MockSymbolResolver>(MockResolver);
-  M.expectAddObject(Obj1, MM.get(), SR.get());
-  auto H = T1.addObject(std::move(Obj1), std::move(MM), std::move(SR));
+  auto SR = std::make_shared<NullResolver>();
+  M.expectAddObject(Obj1, SR);
+  auto H = T1.addObject(std::move(Obj1), SR);
   M.verifyAddObject(H);
 
   // Test addObjectSet with T2 (mutating)
   auto Obj2 = std::make_shared<MockObjectFile>(222);
-  M.expectAddObject(Obj2, &MockManager, &MockResolver);
-  H = T2.addObject(Obj2, &MockManager, &MockResolver);
+  M.expectAddObject(Obj2, SR);
+  H = T2.addObject(Obj2, SR);
   M.verifyAddObject(H);
   EXPECT_EQ(223, *Obj2) << "Expected mutation";
 
@@ -295,7 +283,11 @@ TEST(ObjectTransformLayerTest, Main) {
   };
 
   // Construct the jit layers.
-  RTDyldObjectLinkingLayer BaseLayer;
+  RTDyldObjectLinkingLayer BaseLayer(
+    []() {
+      return std::make_shared<llvm::SectionMemoryManager>();
+    });
+
   auto IdentityTransform =
     [](std::shared_ptr<llvm::object::OwningBinary<llvm::object::ObjectFile>>
        Obj) {
@@ -312,9 +304,8 @@ TEST(ObjectTransformLayerTest, Main) {
 
   // Make sure that the calls from IRCompileLayer to ObjectTransformLayer
   // compile.
-  NullResolver Resolver;
-  NullManager Manager;
-  CompileLayer.addModule(std::shared_ptr<llvm::Module>(), &Manager, &Resolver);
+  auto Resolver = std::make_shared<NullResolver>();
+  CompileLayer.addModule(std::shared_ptr<llvm::Module>(), Resolver);
 
   // Make sure that the calls from ObjectTransformLayer to ObjectLinkingLayer
   // compile.

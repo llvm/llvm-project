@@ -19,19 +19,19 @@ kernel void enqueue_kernel_tests() {
     return 0;
   });
 
-  enqueue_kernel(vptr, flags, ndrange, ^(void) { // expected-error{{illegal call to enqueue_kernel, expected 'queue_t' argument type}}
+  enqueue_kernel(vptr, flags, ndrange, ^(void) { // expected-error{{illegal call to 'enqueue_kernel', expected 'queue_t' argument type}}
     return 0;
   });
 
-  enqueue_kernel(default_queue, vptr, ndrange, ^(void) { // expected-error{{illegal call to enqueue_kernel, expected 'kernel_enqueue_flags_t' (i.e. uint) argument type}}
+  enqueue_kernel(default_queue, vptr, ndrange, ^(void) { // expected-error{{illegal call to 'enqueue_kernel', expected 'kernel_enqueue_flags_t' (i.e. uint) argument type}}
     return 0;
   });
 
-  enqueue_kernel(default_queue, flags, vptr, ^(void) { // expected-error{{illegal call to enqueue_kernel, expected 'ndrange_t' argument type}}
+  enqueue_kernel(default_queue, flags, vptr, ^(void) { // expected-error{{illegal call to 'enqueue_kernel', expected 'ndrange_t' argument type}}
     return 0;
   });
 
-  enqueue_kernel(default_queue, flags, ndrange, vptr); // expected-error{{illegal call to enqueue_kernel, expected block argument}}
+  enqueue_kernel(default_queue, flags, ndrange, vptr); // expected-error{{illegal call to 'enqueue_kernel', expected block argument}}
 
   enqueue_kernel(default_queue, flags, ndrange, ^(int i) { // expected-error{{blocks with parameters are not accepted in this prototype of enqueue_kernel call}}
     return 0;
@@ -46,21 +46,21 @@ kernel void enqueue_kernel_tests() {
                                                            return 0;
                                                          });
 
-  enqueue_kernel(default_queue, flags, ndrange, vptr, &event_wait_list, &evt, ^(void) { // expected-error{{illegal call to enqueue_kernel, expected integer argument type}}
+  enqueue_kernel(default_queue, flags, ndrange, vptr, &event_wait_list, &evt, ^(void) { // expected-error{{illegal call to 'enqueue_kernel', expected integer argument type}}
     return 0;
   });
 
-  enqueue_kernel(default_queue, flags, ndrange, 1, vptr, &evt, ^(void) // expected-error{{illegal call to enqueue_kernel, expected 'clk_event_t *' argument type}}
+  enqueue_kernel(default_queue, flags, ndrange, 1, vptr, &evt, ^(void) // expected-error{{illegal call to 'enqueue_kernel', expected 'clk_event_t *' argument type}}
                                                                {
                                                                  return 0;
                                                                });
 
-  enqueue_kernel(default_queue, flags, ndrange, 1, &event_wait_list, vptr, ^(void) // expected-error{{illegal call to enqueue_kernel, expected 'clk_event_t *' argument type}}
+  enqueue_kernel(default_queue, flags, ndrange, 1, &event_wait_list, vptr, ^(void) // expected-error{{illegal call to 'enqueue_kernel', expected 'clk_event_t *' argument type}}
                                                                            {
                                                                              return 0;
                                                                            });
 
-  enqueue_kernel(default_queue, flags, ndrange, 1, &event_wait_list, &evt, vptr); // expected-error{{illegal call to enqueue_kernel, expected block argument}}
+  enqueue_kernel(default_queue, flags, ndrange, 1, &event_wait_list, &evt, vptr); // expected-error{{illegal call to 'enqueue_kernel', expected block argument}}
 
   // Testing the third overload type
   enqueue_kernel(default_queue, flags, ndrange,

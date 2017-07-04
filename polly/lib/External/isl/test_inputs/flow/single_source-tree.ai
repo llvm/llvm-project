@@ -1,0 +1,8 @@
+sink: "{ S[] -> a[] }"
+must_source: "{ T[] -> a[] }"
+schedule:
+  domain: "{ S[]; T[] }"
+  child:
+    sequence:
+    - filter: "{ T[] }"
+    - filter: "{ S[] }"

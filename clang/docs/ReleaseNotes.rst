@@ -52,6 +52,9 @@ Major New Features
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+-  -Wcast-qual was implemented for C++. C-style casts are now properly
+   diagnosed.
+
 -  -Wunused-lambda-capture warns when a variable explicitly captured
    by a lambda is not used in the body of the lambda.
 

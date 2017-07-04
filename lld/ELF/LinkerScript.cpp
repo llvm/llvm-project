@@ -485,12 +485,11 @@ void LinkerScript::addOrphanSections(OutputSectionFactory &Factory) {
     if (!S->Live || S->Parent)
       continue;
     StringRef Name = getOutputSectionName(S->Name);
-    auto I = std::find_if(
-        Opt.Commands.begin(), Opt.Commands.end(), [&](BaseCommand *Base) {
-          if (auto *Cmd = dyn_cast<OutputSectionCommand>(Base))
-            return Cmd->Name == Name;
-          return false;
-        });
+    auto I = llvm::find_if(Opt.Commands, [&](BaseCommand *Base) {
+      if (auto *Cmd = dyn_cast<OutputSectionCommand>(Base))
+        return Cmd->Name == Name;
+      return false;
+    });
     if (I == Opt.Commands.end()) {
       Factory.addInputSec(S, Name);
     } else {
@@ -784,22 +783,21 @@ void LinkerScript::processNonSectionCommands() {
   }
 }
 
-static bool
+static void
 allocateHeaders(std::vector<PhdrEntry> &Phdrs,
                 ArrayRef<OutputSectionCommand *> OutputSectionCommands,
                 uint64_t Min) {
-  auto FirstPTLoad =
-      std::find_if(Phdrs.begin(), Phdrs.end(),
-                   [](const PhdrEntry &E) { return E.p_type == PT_LOAD; });
+  auto FirstPTLoad = llvm::find_if(
+      Phdrs, [](const PhdrEntry &E) { return E.p_type == PT_LOAD; });
   if (FirstPTLoad == Phdrs.end())
-    return false;
+    return;
 
   uint64_t HeaderSize = getHeaderSize();
   if (HeaderSize <= Min || Script->hasPhdrsCommands()) {
     Min = alignDown(Min - HeaderSize, Config->MaxPageSize);
     Out::ElfHeader->Addr = Min;
     Out::ProgramHeaders->Addr = Min + Out::ElfHeader->Size;
-    return true;
+    return;
   }
 
   assert(FirstPTLoad->First == Out::ElfHeader);
@@ -822,12 +820,10 @@ allocateHeaders(std::vector<PhdrEntry> &Phdrs,
     Phdrs.erase(FirstPTLoad);
   }
 
-  auto PhdrI = std::find_if(Phdrs.begin(), Phdrs.end(), [](const PhdrEntry &E) {
-    return E.p_type == PT_PHDR;
-  });
+  auto PhdrI = llvm::find_if(
+      Phdrs, [](const PhdrEntry &E) { return E.p_type == PT_PHDR; });
   if (PhdrI != Phdrs.end())
     Phdrs.erase(PhdrI);
-  return false;
 }
 
 void LinkerScript::assignAddresses(std::vector<PhdrEntry> &Phdrs) {
