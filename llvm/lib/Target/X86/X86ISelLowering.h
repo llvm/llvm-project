@@ -767,6 +767,19 @@ namespace llvm {
 
     SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;
 
+    // Return true if it is profitable to combine a BUILD_VECTOR to a TRUNCATE
+    // for given operand and result types.
+    // Example of such a combine:
+    // v4i32 build_vector((extract_elt V, 0),
+    //                    (extract_elt V, 2),
+    //                    (extract_elt V, 4),
+    //                    (extract_elt V, 6))
+    //  -->
+    // v4i32 truncate (bitcast V to v4i64)
+    bool isDesirableToCombineBuildVectorToTruncate() const override {
+      return true;
+    }
+
     /// Return true if the target has native support for
     /// the specified value type and it is 'desirable' to use the type for the
     /// given node type. e.g. On x86 i16 is legal, but undesirable since i16

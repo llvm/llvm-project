@@ -37,7 +37,7 @@ sw.bb2:                                           ; preds = %if.end, %entry
   %3 = load double, double* %arrayidx5, align 8
 ; CHECK: sw.bb2:
 ; CHECK-NOT: sext
-; CHECK: phi double [
+; CHECK-NEXT: phi double [
 ; CHECK-NOT: load
   %sub6 = fsub double 3.000000e+00, %3
   br label %return

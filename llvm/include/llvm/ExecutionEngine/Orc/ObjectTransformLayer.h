@@ -42,12 +42,10 @@ public:
   ///        memory manager and symbol resolver.
   ///
   /// @return A handle for the added objects.
-  template <typename ObjPtrT, typename MemoryManagerPtrT,
-            typename SymbolResolverPtrT>
-  ObjHandleT addObject(ObjPtrT Obj, MemoryManagerPtrT MemMgr,
-                       SymbolResolverPtrT Resolver) {
-    return BaseLayer.addObject(Transform(std::move(Obj)), std::move(MemMgr),
-                               std::move(Resolver));
+  template <typename ObjectPtr>
+  ObjHandleT addObject(ObjectPtr Obj,
+                       std::shared_ptr<JITSymbolResolver> Resolver) {
+    return BaseLayer.addObject(Transform(std::move(Obj)), std::move(Resolver));
   }
 
   /// @brief Remove the object set associated with the handle H.

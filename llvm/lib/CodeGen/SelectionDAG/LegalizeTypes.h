@@ -416,16 +416,6 @@ private:
   }
   void SetSoftenedFloat(SDValue Op, SDValue Result);
 
-  // Call ReplaceValueWith(SDValue(N, ResNo), Res) if necessary.
-  void ReplaceSoftenFloatResult(SDNode *N, unsigned ResNo, SDValue &NewRes) {
-    // When the result type can be kept in HW registers, the converted
-    // NewRes node could have the same type. We can save the effort in
-    // cloning every user of N in SoftenFloatOperand or other legalization functions,
-    // by calling ReplaceValueWith here to update all users.
-    if (NewRes.getNode() != N && isLegalInHWReg(N->getValueType(ResNo)))
-      ReplaceValueWith(SDValue(N, ResNo), NewRes);
-  }
-
   // Convert Float Results to Integer for Non-HW-supported Operations.
   bool SoftenFloatResult(SDNode *N, unsigned ResNo);
   SDValue SoftenFloatRes_MERGE_VALUES(SDNode *N, unsigned ResNo);
@@ -471,17 +461,23 @@ private:
   SDValue SoftenFloatRes_XINT_TO_FP(SDNode *N);
 
   // Return true if we can skip softening the given operand or SDNode because
-  // it was soften before by SoftenFloatResult and references to the operand
-  // were replaced by ReplaceValueWith.
+  // either it was soften before by SoftenFloatResult and references to the 
+  // operand were replaced by ReplaceValueWith or it's value type is legal in HW
+  // registers and the operand can be left unchanged.
   bool CanSkipSoftenFloatOperand(SDNode *N, unsigned OpNo);
 
   // Convert Float Operand to Integer for Non-HW-supported Operations.
   bool SoftenFloatOperand(SDNode *N, unsigned OpNo);
   SDValue SoftenFloatOp_BITCAST(SDNode *N);
+  SDValue SoftenFloatOp_COPY_TO_REG(SDNode *N);
   SDValue SoftenFloatOp_BR_CC(SDNode *N);
+  SDValue SoftenFloatOp_FABS(SDNode *N);
+  SDValue SoftenFloatOp_FCOPYSIGN(SDNode *N);
+  SDValue SoftenFloatOp_FNEG(SDNode *N);
   SDValue SoftenFloatOp_FP_EXTEND(SDNode *N);
   SDValue SoftenFloatOp_FP_ROUND(SDNode *N);
   SDValue SoftenFloatOp_FP_TO_XINT(SDNode *N);
+  SDValue SoftenFloatOp_SELECT(SDNode *N);
   SDValue SoftenFloatOp_SELECT_CC(SDNode *N);
   SDValue SoftenFloatOp_SETCC(SDNode *N);
   SDValue SoftenFloatOp_STORE(SDNode *N, unsigned OpNo);

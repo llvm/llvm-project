@@ -95,7 +95,8 @@ AVRRegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
 }
 
 /// Fold a frame offset shared between two add instructions into a single one.
-static void foldFrameOffset(MachineInstr &MI, int &Offset, unsigned DstReg) {
+static void foldFrameOffset(MachineBasicBlock::iterator &II, int &Offset, unsigned DstReg) {
+  MachineInstr &MI = *II;
   int Opcode = MI.getOpcode();
 
   // Don't bother trying if the next instruction is not an add or a sub.
@@ -120,6 +121,7 @@ static void foldFrameOffset(MachineInstr &MI, int &Offset, unsigned DstReg) {
   }
 
   // Finally remove the instruction.
+  II++;
   MI.eraseFromParent();
 }
 
@@ -158,6 +160,8 @@ void AVRRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     unsigned DstReg = MI.getOperand(0).getReg();
     assert(DstReg != AVR::R29R28 && "Dest reg cannot be the frame pointer");
 
+    II++; // Skip over the FRMIDX (and now MOVW) instruction.
+
     // Generally, to load a frame address two add instructions are emitted that
     // could get folded into a single one:
     //  movw    r31:r30, r29:r28
@@ -166,7 +170,8 @@ void AVRRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     // to:
     //  movw    r31:r30, r29:r28
     //  adiw    r31:r30, 45
-    foldFrameOffset(*std::next(II), Offset, DstReg);
+    if (II != MBB.end())
+      foldFrameOffset(II, Offset, DstReg);
 
     // Select the best opcode based on DstReg and the offset size.
     switch (DstReg) {
@@ -187,7 +192,7 @@ void AVRRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     }
     }
 
-    MachineInstr *New = BuildMI(MBB, std::next(II), dl, TII.get(Opcode), DstReg)
+    MachineInstr *New = BuildMI(MBB, II, dl, TII.get(Opcode), DstReg)
                             .addReg(DstReg, RegState::Kill)
                             .addImm(Offset);
     New->getOperand(3).setIsDead();

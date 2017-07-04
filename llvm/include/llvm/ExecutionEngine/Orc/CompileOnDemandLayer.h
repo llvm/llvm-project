@@ -146,7 +146,7 @@ private:
                     std::unique_ptr<JITSymbolResolver>)>;
 
     struct SourceModuleEntry {
-      std::unique_ptr<ResourceOwner<Module>> SourceMod;
+      std::shared_ptr<Module> SourceMod;
       std::set<Function*> StubsToClone;
     };
 
@@ -154,7 +154,7 @@ private:
     using SourceModuleHandle = typename SourceModulesList::size_type;
 
     SourceModuleHandle
-    addSourceModule(std::unique_ptr<ResourceOwner<Module>> M) {
+    addSourceModule(std::shared_ptr<Module> M) {
       SourceModuleHandle H = SourceModules.size();
       SourceModules.push_back(SourceModuleEntry());
       SourceModules.back().SourceMod = std::move(M);
@@ -162,7 +162,7 @@ private:
     }
 
     Module& getSourceModule(SourceModuleHandle H) {
-      return SourceModules[H].SourceMod->getResource();
+      return *SourceModules[H].SourceMod;
     }
 
     std::set<Function*>& getStubsToClone(SourceModuleHandle H) {
@@ -184,11 +184,9 @@ private:
         BaseLayer.removeModule(BLH);
     }
 
-    std::unique_ptr<JITSymbolResolver> ExternalSymbolResolver;
-    std::unique_ptr<ResourceOwner<RuntimeDyld::MemoryManager>> MemMgr;
+    std::shared_ptr<JITSymbolResolver> ExternalSymbolResolver;
     std::unique_ptr<IndirectStubsMgrT> StubsMgr;
     StaticGlobalRenamer StaticRenamer;
-    ModuleAdderFtor ModuleAdder;
     SourceModulesList SourceModules;
     std::vector<BaseLayerModuleHandleT> BaseLayerHandles;
   };
@@ -196,6 +194,7 @@ private:
   using LogicalDylibList = std::list<LogicalDylib>;
 
 public:
+
   /// @brief Handle to loaded module.
   using ModuleHandleT = typename LogicalDylibList::iterator;
 
@@ -222,27 +221,16 @@ public:
   }
 
   /// @brief Add a module to the compile-on-demand layer.
-  template <typename MemoryManagerPtrT, typename SymbolResolverPtrT>
   ModuleHandleT addModule(std::shared_ptr<Module> M,
-                          MemoryManagerPtrT MemMgr,
-                          SymbolResolverPtrT Resolver) {
+                          std::shared_ptr<JITSymbolResolver> Resolver) {
 
     LogicalDylibs.push_back(LogicalDylib());
     auto &LD = LogicalDylibs.back();
     LD.ExternalSymbolResolver = std::move(Resolver);
     LD.StubsMgr = CreateIndirectStubsManager();
 
-    auto &MemMgrRef = *MemMgr;
-    LD.MemMgr = wrapOwnership<RuntimeDyld::MemoryManager>(std::move(MemMgr));
-
-    LD.ModuleAdder =
-      [&MemMgrRef](BaseLayerT &B, std::unique_ptr<Module> M,
-                   std::unique_ptr<JITSymbolResolver> R) {
-        return B.addModule(std::move(M), &MemMgrRef, std::move(R));
-      };
-
     // Process each of the modules in this module set.
-    addLogicalModule(LogicalDylibs.back(), std::move(M));
+    addLogicalModule(LD, std::move(M));
 
     return std::prev(LogicalDylibs.end());
   }
@@ -309,8 +297,9 @@ public:
   }
 
 private:
-  template <typename ModulePtrT>
-  void addLogicalModule(LogicalDylib &LD, ModulePtrT SrcMPtr) {
+
+  void addLogicalModule(LogicalDylib &LD, std::shared_ptr<Module> SrcMPtr) {
+
     // Rename all static functions / globals to $static.X :
     // This will unique the names across all modules in the logical dylib,
     // simplifying symbol lookup.
@@ -322,7 +311,7 @@ private:
 
     // Create a logical module handle for SrcM within the logical dylib.
     Module &SrcM = *SrcMPtr;
-    auto LMId = LD.addSourceModule(wrapOwnership<Module>(std::move(SrcMPtr)));
+    auto LMId = LD.addSourceModule(std::move(SrcMPtr));
 
     // Create stub functions.
     const DataLayout &DL = SrcM.getDataLayout();
@@ -448,8 +437,7 @@ private:
           return LD.ExternalSymbolResolver->findSymbol(Name);
         });
 
-    auto GVsH = LD.ModuleAdder(BaseLayer, std::move(GVsM),
-                               std::move(GVsResolver));
+    auto GVsH = BaseLayer.addModule(std::move(GVsM), std::move(GVsResolver));
     LD.BaseLayerHandles.push_back(GVsH);
   }
 
@@ -575,7 +563,7 @@ private:
           return LD.ExternalSymbolResolver->findSymbol(Name);
         });
 
-    return LD.ModuleAdder(BaseLayer, std::move(M), std::move(Resolver));
+    return BaseLayer.addModule(std::move(M), std::move(Resolver));
   }
 
   BaseLayerT &BaseLayer;

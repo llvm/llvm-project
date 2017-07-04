@@ -42,12 +42,9 @@ public:
   ///        the layer below, along with the memory manager and symbol resolver.
   ///
   /// @return A handle for the added modules.
-  template <typename MemoryManagerPtrT, typename SymbolResolverPtrT>
   ModuleHandleT addModule(std::shared_ptr<Module> M,
-                          MemoryManagerPtrT MemMgr,
-                          SymbolResolverPtrT Resolver) {
-    return BaseLayer.addModule(Transform(std::move(M)), std::move(MemMgr),
-                               std::move(Resolver));
+                          std::shared_ptr<JITSymbolResolver> Resolver) {
+    return BaseLayer.addModule(Transform(std::move(M)), std::move(Resolver));
   }
 
   /// @brief Remove the module associated with the handle H.

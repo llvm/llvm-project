@@ -172,10 +172,13 @@ public:
       std::shared_ptr<JITSymbolResolver> ClientResolver,
       std::unique_ptr<TargetMachine> TM)
       : ExecutionEngine(TM->createDataLayout()), TM(std::move(TM)),
-        MemMgr(*this, std::move(MemMgr)), Resolver(*this),
+        MemMgr(std::make_shared<MCJITReplacementMemMgr>(*this,
+                                                        std::move(MemMgr))),
+        Resolver(std::make_shared<LinkingResolver>(*this)),
         ClientResolver(std::move(ClientResolver)), NotifyObjectLoaded(*this),
         NotifyFinalized(*this),
-        ObjectLayer(NotifyObjectLoaded, NotifyFinalized),
+        ObjectLayer([this]() { return this->MemMgr; }, NotifyObjectLoaded,
+                    NotifyFinalized),
         CompileLayer(ObjectLayer, SimpleCompiler(*this->TM)),
         LazyEmitLayer(CompileLayer) {}
 
@@ -199,20 +202,20 @@ public:
         delete Mod;
     };
     LocalModules.push_back(std::shared_ptr<Module>(MPtr, std::move(Deleter)));
-    LazyEmitLayer.addModule(LocalModules.back(), &MemMgr, &Resolver);
+    LazyEmitLayer.addModule(LocalModules.back(), Resolver);
   }
 
   void addObjectFile(std::unique_ptr<object::ObjectFile> O) override {
     auto Obj =
       std::make_shared<object::OwningBinary<object::ObjectFile>>(std::move(O),
                                                                  nullptr);
-    ObjectLayer.addObject(std::move(Obj), &MemMgr, &Resolver);
+    ObjectLayer.addObject(std::move(Obj), Resolver);
   }
 
   void addObjectFile(object::OwningBinary<object::ObjectFile> O) override {
     auto Obj =
       std::make_shared<object::OwningBinary<object::ObjectFile>>(std::move(O));
-    ObjectLayer.addObject(std::move(Obj), &MemMgr, &Resolver);
+    ObjectLayer.addObject(std::move(Obj), Resolver);
   }
 
   void addArchive(object::OwningBinary<object::Archive> A) override {
@@ -320,7 +323,7 @@ private:
           auto Obj =
             std::make_shared<object::OwningBinary<object::ObjectFile>>(
               std::move(ChildObj), nullptr);
-          ObjectLayer.addObject(std::move(Obj), &MemMgr, &Resolver);
+          ObjectLayer.addObject(std::move(Obj), Resolver);
           if (auto Sym = ObjectLayer.findSymbol(Name, true))
             return Sym;
         }
@@ -341,7 +344,7 @@ private:
                     const LoadedObjectInfo &Info) const {
       M.UnfinalizedSections[H] = std::move(M.SectionsAllocatedSinceLastLoad);
       M.SectionsAllocatedSinceLastLoad = SectionAddrSet();
-      M.MemMgr.notifyObjectLoaded(&M, *Obj->getBinary());
+      M.MemMgr->notifyObjectLoaded(&M, *Obj->getBinary());
     }
   private:
     OrcMCJITReplacement &M;
@@ -373,8 +376,8 @@ private:
   using LazyEmitLayerT = LazyEmittingLayer<CompileLayerT>;
 
   std::unique_ptr<TargetMachine> TM;
-  MCJITReplacementMemMgr MemMgr;
-  LinkingResolver Resolver;
+  std::shared_ptr<MCJITReplacementMemMgr> MemMgr;
+  std::shared_ptr<LinkingResolver> Resolver;
   std::shared_ptr<JITSymbolResolver> ClientResolver;
   Mangler Mang;
 

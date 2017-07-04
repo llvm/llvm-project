@@ -4217,6 +4217,8 @@ static bool isTargetShuffle(unsigned Opcode) {
   case X86ISD::PSHUFLW:
   case X86ISD::SHUFP:
   case X86ISD::INSERTPS:
+  case X86ISD::EXTRQI:
+  case X86ISD::INSERTQI:
   case X86ISD::PALIGNR:
   case X86ISD::VSHLDQ:
   case X86ISD::VSRLDQ:
@@ -5553,6 +5555,24 @@ static bool getTargetShuffleMask(SDNode *N, MVT VT, bool AllowSentinelZero,
     ImmN = N->getOperand(N->getNumOperands()-1);
     DecodeINSERTPSMask(cast<ConstantSDNode>(ImmN)->getZExtValue(), Mask);
     IsUnary = IsFakeUnary = N->getOperand(0) == N->getOperand(1);
+    break;
+  case X86ISD::EXTRQI:
+    if (VT == MVT::v16i8 && isa<ConstantSDNode>(N->getOperand(1)) &&
+        isa<ConstantSDNode>(N->getOperand(2))) {
+      int BitLen = N->getConstantOperandVal(1);
+      int BitIdx = N->getConstantOperandVal(2);
+      DecodeEXTRQIMask(BitLen, BitIdx, Mask);
+      IsUnary = true;
+    }
+    break;
+  case X86ISD::INSERTQI:
+    if (VT == MVT::v16i8 && isa<ConstantSDNode>(N->getOperand(2)) &&
+      isa<ConstantSDNode>(N->getOperand(3))) {
+      int BitLen = N->getConstantOperandVal(2);
+      int BitIdx = N->getConstantOperandVal(3);
+      DecodeINSERTQIMask(BitLen, BitIdx, Mask);
+      IsUnary = IsFakeUnary = N->getOperand(0) == N->getOperand(1);
+    }
     break;
   case X86ISD::UNPCKH:
     DecodeUNPCKHMask(VT, Mask);
@@ -35544,6 +35564,8 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::PINSRW:      return combineVectorInsert(N, DAG, DCI, Subtarget);
   case X86ISD::SHUFP:       // Handle all target specific shuffles
   case X86ISD::INSERTPS:
+  case X86ISD::EXTRQI:
+  case X86ISD::INSERTQI:
   case X86ISD::PALIGNR:
   case X86ISD::VSHLDQ:
   case X86ISD::VSRLDQ:

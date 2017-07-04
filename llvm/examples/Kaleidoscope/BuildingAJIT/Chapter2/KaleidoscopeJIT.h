@@ -57,6 +57,7 @@ public:
 
   KaleidoscopeJIT()
       : TM(EngineBuilder().selectTarget()), DL(TM->createDataLayout()),
+        ObjectLayer([]() { return std::make_shared<SectionMemoryManager>(); }),
         CompileLayer(ObjectLayer, SimpleCompiler(*TM)),
         OptimizeLayer(CompileLayer,
                       [this](std::shared_ptr<Module> M) {
@@ -88,7 +89,6 @@ public:
     // Add the set to the JIT with the resolver we created above and a newly
     // created SectionMemoryManager.
     return OptimizeLayer.addModule(std::move(M),
-                                   make_unique<SectionMemoryManager>(),
                                    std::move(Resolver));
   }
 
