@@ -80,6 +80,7 @@ void DAGTypeLegalizer::PerformExpensiveChecks() {
 
     for (unsigned i = 0, e = Node.getNumValues(); i != e; ++i) {
       SDValue Res(&Node, i);
+      EVT VT = Res.getValueType();
       bool Failed = false;
 
       unsigned Mapped = 0;
@@ -129,13 +130,17 @@ void DAGTypeLegalizer::PerformExpensiveChecks() {
           dbgs() << "Unprocessed value in a map!";
           Failed = true;
         }
-      } else if (isTypeLegal(Res.getValueType()) || IgnoreNodeResults(&Node)) {
+      } else if (isTypeLegal(VT) || IgnoreNodeResults(&Node)) {
         if (Mapped > 1) {
           dbgs() << "Value with legal type was transformed!";
           Failed = true;
         }
       } else {
-        if (Mapped == 0) {
+        // If the value can be kept in HW registers, softening machinery can
+        // leave it unchanged and don't put it to any map.
+        if (Mapped == 0 &&
+            !(getTypeAction(VT) == TargetLowering::TypeSoftenFloat &&
+              isLegalInHWReg(VT))) {
           dbgs() << "Processed value not in any map!";
           Failed = true;
         } else if (Mapped & (Mapped - 1)) {
@@ -330,11 +335,6 @@ ScanOperands:
     // to the worklist etc.
     if (NeedsReanalyzing) {
       assert(N->getNodeId() == ReadyToProcess && "Node ID recalculated?");
-
-      // Remove any result values from SoftenedFloats as N will be revisited
-      // again.
-      for (unsigned i = 0, NumResults = N->getNumValues(); i < NumResults; ++i)
-        SoftenedFloats.erase(SDValue(N, i));
 
       N->setNodeId(NewNode);
       // Recompute the NodeId and correct processed operands, adding the node to
@@ -754,8 +754,6 @@ void DAGTypeLegalizer::ReplaceValueWith(SDValue From, SDValue To) {
     // new uses of From due to CSE. If this happens, replace the new uses of
     // From with To.
   } while (!From.use_empty());
-
-  SoftenedFloats.erase(From);
 }
 
 void DAGTypeLegalizer::SetPromotedInteger(SDValue Op, SDValue Result) {

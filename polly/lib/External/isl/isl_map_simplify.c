@@ -3371,6 +3371,34 @@ error:
 	return NULL;
 }
 
+/* Remove the constraints in "context" from "set".
+ * If any of the disjuncts in the result turns out to be the universe,
+ * then return this universe.
+ * "context" is assumed to have explicit representations
+ * for all local variables.
+ */
+__isl_give isl_set *isl_set_plain_gist_basic_set(__isl_take isl_set *set,
+	__isl_take isl_basic_set *context)
+{
+	return set_from_map(isl_map_plain_gist_basic_map(set_to_map(set),
+							bset_to_bmap(context)));
+}
+
+/* Remove the constraints in "context" from "map".
+ * If any of the disjuncts in the result turns out to be the universe,
+ * then return this universe.
+ * "context" is assumed to consist of a single disjunct and
+ * to have explicit representations for all local variables.
+ */
+__isl_give isl_map *isl_map_plain_gist(__isl_take isl_map *map,
+	__isl_take isl_map *context)
+{
+	isl_basic_map *hull;
+
+	hull = isl_map_unshifted_simple_hull(context);
+	return isl_map_plain_gist_basic_map(map, hull);
+}
+
 /* Replace "map" by a universe map in the same space and free "drop".
  */
 static __isl_give isl_map *replace_by_universe(__isl_take isl_map *map,
@@ -3717,13 +3745,24 @@ isl_bool isl_map_plain_is_disjoint(__isl_keep isl_map *map1,
 }
 
 /* Are "map1" and "map2" disjoint?
+ * The parameters are assumed to have been aligned.
+ *
+ * In particular, check whether all pairs of basic maps are disjoint.
+ */
+static isl_bool isl_map_is_disjoint_aligned(__isl_keep isl_map *map1,
+	__isl_keep isl_map *map2)
+{
+	return all_pairs(map1, map2, &isl_basic_map_is_disjoint);
+}
+
+/* Are "map1" and "map2" disjoint?
  *
  * They are disjoint if they are "obviously disjoint" or if one of them
  * is empty.  Otherwise, they are not disjoint if one of them is universal.
  * If the two inputs are (obviously) equal and not empty, then they are
  * not disjoint.
  * If none of these cases apply, then check if all pairs of basic maps
- * are disjoint.
+ * are disjoint after aligning the parameters.
  */
 isl_bool isl_map_is_disjoint(__isl_keep isl_map *map1, __isl_keep isl_map *map2)
 {
@@ -3754,7 +3793,8 @@ isl_bool isl_map_is_disjoint(__isl_keep isl_map *map1, __isl_keep isl_map *map2)
 	if (intersect < 0 || intersect)
 		return isl_bool_not(intersect);
 
-	return all_pairs(map1, map2, &isl_basic_map_is_disjoint);
+	return isl_map_align_params_map_map_and_test(map1, map2,
+						&isl_map_is_disjoint_aligned);
 }
 
 /* Are "bmap1" and "bmap2" disjoint?

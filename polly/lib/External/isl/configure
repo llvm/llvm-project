@@ -19611,6 +19611,21 @@ rm -f conftest*
 
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
+#include <clang/Frontend/FrontendOptions.h>
+
+_ACEOF
+if (eval "$ac_cpp conftest.$ac_ext") 2>&5 |
+  $EGREP "IK_C" >/dev/null 2>&1; then :
+
+else
+
+$as_echo "#define IK_C InputKind::C" >>confdefs.h
+
+fi
+rm -f conftest*
+
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
 
 	#include <clang/Basic/TargetOptions.h>
 	#include <clang/Lex/PreprocessorOptions.h>
@@ -20005,6 +20020,8 @@ ac_config_files="$ac_config_files bound_test.sh"
 ac_config_files="$ac_config_files codegen_test.sh"
 
 ac_config_files="$ac_config_files pip_test.sh"
+
+ac_config_files="$ac_config_files flow_test.sh"
 
 
 cat >confcache <<\_ACEOF
@@ -21201,6 +21218,7 @@ do
     "bound_test.sh") CONFIG_FILES="$CONFIG_FILES bound_test.sh" ;;
     "codegen_test.sh") CONFIG_FILES="$CONFIG_FILES codegen_test.sh" ;;
     "pip_test.sh") CONFIG_FILES="$CONFIG_FILES pip_test.sh" ;;
+    "flow_test.sh") CONFIG_FILES="$CONFIG_FILES flow_test.sh" ;;
 
   *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5;;
   esac
@@ -23202,6 +23220,7 @@ fi ; rm conftest.sed # DONE generate $pkgconfig_uninstalled
     "bound_test.sh":F) chmod +x bound_test.sh ;;
     "codegen_test.sh":F) chmod +x codegen_test.sh ;;
     "pip_test.sh":F) chmod +x pip_test.sh ;;
+    "flow_test.sh":F) chmod +x flow_test.sh ;;
 
   esac
 done # for ac_tag

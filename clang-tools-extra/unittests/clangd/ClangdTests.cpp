@@ -164,6 +164,13 @@ private:
 
 class MockCompilationDatabase : public GlobalCompilationDatabase {
 public:
+  MockCompilationDatabase(bool AddFreestandingFlag) {
+    // We have to add -ffreestanding to VFS-specific tests to avoid errors on
+    // implicit includes of stdc-predef.h.
+    if (AddFreestandingFlag)
+      ExtraClangFlags.push_back("-ffreestanding");
+  }
+
   std::vector<tooling::CompileCommand>
   getCompileCommands(PathRef File) override {
     if (ExtraClangFlags.empty())
@@ -259,7 +266,7 @@ protected:
       bool ExpectErrors = false) {
     MockFSProvider FS;
     ErrorCheckingDiagConsumer DiagConsumer;
-    MockCompilationDatabase CDB;
+    MockCompilationDatabase CDB(/*AddFreestandingFlag=*/true);
     ClangdServer Server(CDB, DiagConsumer, FS,
                         /*RunSynchronously=*/false);
     for (const auto &FileWithContents : ExtraFiles)
@@ -315,7 +322,7 @@ int b = a;
 TEST_F(ClangdVFSTest, Reparse) {
   MockFSProvider FS;
   ErrorCheckingDiagConsumer DiagConsumer;
-  MockCompilationDatabase CDB;
+  MockCompilationDatabase CDB(/*AddFreestandingFlag=*/true);
   ClangdServer Server(CDB, DiagConsumer, FS,
                       /*RunSynchronously=*/false);
 
@@ -350,7 +357,7 @@ int b = a;
 TEST_F(ClangdVFSTest, ReparseOnHeaderChange) {
   MockFSProvider FS;
   ErrorCheckingDiagConsumer DiagConsumer;
-  MockCompilationDatabase CDB;
+  MockCompilationDatabase CDB(/*AddFreestandingFlag=*/true);
 
   ClangdServer Server(CDB, DiagConsumer, FS,
                       /*RunSynchronously=*/false);
@@ -388,7 +395,7 @@ int b = a;
 TEST_F(ClangdVFSTest, CheckVersions) {
   MockFSProvider FS;
   ErrorCheckingDiagConsumer DiagConsumer;
-  MockCompilationDatabase CDB;
+  MockCompilationDatabase CDB(/*AddFreestandingFlag=*/true);
   ClangdServer Server(CDB, DiagConsumer, FS,
                       /*RunSynchronously=*/true);
 
@@ -414,8 +421,10 @@ TEST_F(ClangdVFSTest, SearchLibDir) {
   // Checks that searches for GCC installation is done through vfs.
   MockFSProvider FS;
   ErrorCheckingDiagConsumer DiagConsumer;
-  MockCompilationDatabase CDB;
-  CDB.ExtraClangFlags = {"-xc++", "-target", "x86_64-linux-unknown", "-m64"};
+  MockCompilationDatabase CDB(/*AddFreestandingFlag=*/true);
+  CDB.ExtraClangFlags.insert(
+      CDB.ExtraClangFlags.end(),
+      {"-xc++", "-target", "x86_64-linux-unknown", "-m64"});
   ClangdServer Server(CDB, DiagConsumer, FS,
                       /*RunSynchronously=*/true);
 
@@ -472,7 +481,7 @@ protected:
 TEST_F(ClangdCompletionTest, CheckContentsOverride) {
   MockFSProvider FS;
   ErrorCheckingDiagConsumer DiagConsumer;
-  MockCompilationDatabase CDB;
+  MockCompilationDatabase CDB(/*AddFreestandingFlag=*/true);
 
   ClangdServer Server(CDB, DiagConsumer, FS,
                       /*RunSynchronously=*/false);

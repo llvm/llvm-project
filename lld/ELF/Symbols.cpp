@@ -272,7 +272,12 @@ void SymbolBody::parseSymbolVersion() {
   }
 
   // It is an error if the specified version is not defined.
-  error(toString(File) + ": symbol " + S + " has undefined version " + Verstr);
+  // Usually version script is not provided when linking executable,
+  // but we may still want to override a versioned symbol from DSO,
+  // so we do not report error in this case.
+  if (Config->Shared)
+    error(toString(File) + ": symbol " + S + " has undefined version " +
+          Verstr);
 }
 
 Defined::Defined(Kind K, StringRefZ Name, bool IsLocal, uint8_t StOther,

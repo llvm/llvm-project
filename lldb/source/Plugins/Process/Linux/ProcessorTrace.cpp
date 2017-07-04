@@ -46,13 +46,11 @@ Status ProcessorTraceMonitor::GetTraceConfig(TraceOptions &config) const {
 
 Status ProcessorTraceMonitor::StartTrace(lldb::pid_t pid, lldb::tid_t tid,
                                          const TraceOptions &config) {
-  Status error;
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PTRACE));
-  LLDB_LOG(log, "{0}", config.getThreadID());
-
 #ifndef PERF_ATTR_SIZE_VER5
   llvm_unreachable("perf event not supported");
 #else
+  Status error;
+  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PTRACE));
 
   LLDB_LOG(log, "called thread id {0}", tid);
   uint64_t page_size = getpagesize();
@@ -66,7 +64,6 @@ Status ProcessorTraceMonitor::StartTrace(lldb::pid_t pid, lldb::tid_t tid,
 
   numpages = static_cast<uint64_t>(
       llvm::PowerOf2Floor((metabufsize + page_size - 1) / page_size));
-  numpages = std::max(0ul, numpages);
   metabufsize = page_size * numpages;
 
   perf_event_attr attr;
@@ -117,7 +114,7 @@ Status ProcessorTraceMonitor::StartTrace(lldb::pid_t pid, lldb::tid_t tid,
     return error;
   }
 
-  m_fd = std::move(std::unique_ptr<int, file_close>(new int(fd), file_close()));
+  m_fd = std::unique_ptr<int, file_close>(new int(fd), file_close());
 
   errno = 0;
   auto base =
@@ -129,9 +126,9 @@ Status ProcessorTraceMonitor::StartTrace(lldb::pid_t pid, lldb::tid_t tid,
     return error;
   }
 
-  m_mmap_meta = std::move(std::unique_ptr<perf_event_mmap_page, munmap_delete>(
+  m_mmap_meta = std::unique_ptr<perf_event_mmap_page, munmap_delete>(
       reinterpret_cast<perf_event_mmap_page *>(base),
-      munmap_delete(metabufsize + page_size)));
+      munmap_delete(metabufsize + page_size));
 
   m_mmap_meta->aux_offset = m_mmap_meta->data_offset + m_mmap_meta->data_size;
   m_mmap_meta->aux_size = bufsize;
@@ -145,10 +142,10 @@ Status ProcessorTraceMonitor::StartTrace(lldb::pid_t pid, lldb::tid_t tid,
     error.SetErrorString("Trace buffer allocation failed");
     return error;
   }
-  m_mmap_aux = std::move(std::unique_ptr<uint8_t, munmap_delete>(
-      reinterpret_cast<uint8_t *>(mmap_aux), munmap_delete(bufsize)));
-#endif
+  m_mmap_aux = std::unique_ptr<uint8_t, munmap_delete>(
+      reinterpret_cast<uint8_t *>(mmap_aux), munmap_delete(bufsize));
   return error;
+#endif
 }
 
 llvm::MutableArrayRef<uint8_t> ProcessorTraceMonitor::GetDataBuffer() {
@@ -251,14 +248,14 @@ ProcessorTraceMonitor::Create(lldb::pid_t pid, lldb::tid_t tid,
   Status error;
   if (tid == LLDB_INVALID_THREAD_ID) {
     error.SetErrorString("thread not specified");
-    return std::move(error.ToError());
+    return error.ToError();
   }
 
   ProcessorTraceMonitorUP pt_monitor_up(new ProcessorTraceMonitor);
 
   error = pt_monitor_up->StartTrace(pid, tid, config);
   if (error.Fail())
-    return std::move(error.ToError());
+    return error.ToError();
 
   pt_monitor_up->SetThreadID(tid);
 
@@ -274,13 +271,11 @@ ProcessorTraceMonitor::Create(lldb::pid_t pid, lldb::tid_t tid,
 Status
 ProcessorTraceMonitor::ReadPerfTraceAux(llvm::MutableArrayRef<uint8_t> &buffer,
                                         size_t offset) {
-
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PTRACE));
-  Status error;
-
 #ifndef PERF_ATTR_SIZE_VER5
   llvm_unreachable("perf event not supported");
 #else
+  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PTRACE));
+  Status error;
   uint64_t head = m_mmap_meta->aux_head;
 
   LLDB_LOG(log, "Aux size -{0} , Head - {1}", m_mmap_meta->aux_size, head);
@@ -306,12 +301,12 @@ ProcessorTraceMonitor::ReadPerfTraceAux(llvm::MutableArrayRef<uint8_t> &buffer,
 Status
 ProcessorTraceMonitor::ReadPerfTraceData(llvm::MutableArrayRef<uint8_t> &buffer,
                                          size_t offset) {
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PTRACE));
-  uint64_t bytes_remaining = buffer.size();
-  Status error;
 #ifndef PERF_ATTR_SIZE_VER5
   llvm_unreachable("perf event not supported");
 #else
+  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PTRACE));
+  uint64_t bytes_remaining = buffer.size();
+  Status error;
 
   uint64_t head = m_mmap_meta->data_head;
 

@@ -32,6 +32,8 @@
 
 #define DEBUG_TYPE "X86-isel"
 
+#include "llvm/CodeGen/GlobalISel/InstructionSelectorImpl.h"
+
 using namespace llvm;
 
 #ifndef LLVM_BUILD_GLOBAL_ISEL
@@ -525,7 +527,8 @@ bool X86InstructionSelector::selectConstant(MachineInstr &I,
   const unsigned DefReg = I.getOperand(0).getReg();
   LLT Ty = MRI.getType(DefReg);
 
-  assert(Ty.isScalar() && "invalid element type.");
+  if (RBI.getRegBank(DefReg, MRI, TRI)->getID() != X86::GPRRegBankID)
+    return false;
 
   uint64_t Val = 0;
   if (I.getOperand(1).isCImm()) {

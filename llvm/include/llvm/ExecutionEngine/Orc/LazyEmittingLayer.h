@@ -46,8 +46,9 @@ public:
 private:
   class EmissionDeferredModule {
   public:
-    EmissionDeferredModule() = default;
-    virtual ~EmissionDeferredModule() = default;
+    EmissionDeferredModule(std::shared_ptr<Module> M,
+                           std::shared_ptr<JITSymbolResolver> Resolver)
+      : M(std::move(M)), Resolver(std::move(Resolver)) {}
 
     JITSymbol find(StringRef Name, bool ExportedSymbolsOnly, BaseLayerT &B) {
       switch (EmitState) {
@@ -101,33 +102,10 @@ private:
       BaseLayer.emitAndFinalize(Handle);
     }
 
-    template <typename MemoryManagerPtrT, typename SymbolResolverPtrT>
-    static std::unique_ptr<EmissionDeferredModule>
-    create(BaseLayerT &B, std::shared_ptr<Module> M, MemoryManagerPtrT MemMgr,
-           SymbolResolverPtrT Resolver);
-
-  protected:
-    virtual const GlobalValue* searchGVs(StringRef Name,
-                                         bool ExportedSymbolsOnly) const = 0;
-    virtual BaseLayerHandleT emitToBaseLayer(BaseLayerT &BaseLayer) = 0;
-
   private:
-    enum { NotEmitted, Emitting, Emitted } EmitState = NotEmitted;
-    BaseLayerHandleT Handle;
-  };
 
-  template <typename MemoryManagerPtrT, typename SymbolResolverPtrT>
-  class EmissionDeferredModuleImpl : public EmissionDeferredModule {
-  public:
-    EmissionDeferredModuleImpl(std::shared_ptr<Module> M,
-                               MemoryManagerPtrT MemMgr,
-                               SymbolResolverPtrT Resolver)
-        : M(std::move(M)), MemMgr(std::move(MemMgr)),
-          Resolver(std::move(Resolver)) {}
-
-  protected:
     const GlobalValue* searchGVs(StringRef Name,
-                                 bool ExportedSymbolsOnly) const override {
+                                 bool ExportedSymbolsOnly) const {
       // FIXME: We could clean all this up if we had a way to reliably demangle
       //        names: We could just demangle name and search, rather than
       //        mangling everything else.
@@ -149,15 +127,13 @@ private:
       return buildMangledSymbols(Name, ExportedSymbolsOnly);
     }
 
-    BaseLayerHandleT emitToBaseLayer(BaseLayerT &BaseLayer) override {
+    BaseLayerHandleT emitToBaseLayer(BaseLayerT &BaseLayer) {
       // We don't need the mangled names set any more: Once we've emitted this
       // to the base layer we'll just look for symbols there.
       MangledSymbols.reset();
-      return BaseLayer.addModule(std::move(M), std::move(MemMgr),
-                                 std::move(Resolver));
+      return BaseLayer.addModule(std::move(M), std::move(Resolver));
     }
 
-  private:
     // If the mangled name of the given GlobalValue matches the given search
     // name (and its visibility conforms to the ExportedSymbolsOnly flag) then
     // return the symbol. Otherwise, add the mangled name to the Names map and
@@ -207,9 +183,10 @@ private:
       return nullptr;
     }
 
+    enum { NotEmitted, Emitting, Emitted } EmitState = NotEmitted;
+    BaseLayerHandleT Handle;
     std::shared_ptr<Module> M;
-    MemoryManagerPtrT MemMgr;
-    SymbolResolverPtrT Resolver;
+    std::shared_ptr<JITSymbolResolver> Resolver;
     mutable std::unique_ptr<StringMap<const GlobalValue*>> MangledSymbols;
   };
 
@@ -219,6 +196,7 @@ private:
   ModuleListT ModuleList;
 
 public:
+
   /// @brief Handle to a loaded module.
   using ModuleHandleT = typename ModuleListT::iterator;
 
@@ -226,15 +204,12 @@ public:
   LazyEmittingLayer(BaseLayerT &BaseLayer) : BaseLayer(BaseLayer) {}
 
   /// @brief Add the given module to the lazy emitting layer.
-  template <typename MemoryManagerPtrT, typename SymbolResolverPtrT>
   ModuleHandleT addModule(std::shared_ptr<Module> M,
-                          MemoryManagerPtrT MemMgr,
-                          SymbolResolverPtrT Resolver) {
+                          std::shared_ptr<JITSymbolResolver> Resolver) {
     return ModuleList.insert(
         ModuleList.end(),
-        EmissionDeferredModule::create(BaseLayer, std::move(M),
-                                       std::move(MemMgr),
-                                       std::move(Resolver)));
+        llvm::make_unique<EmissionDeferredModule>(std::move(M),
+                                                  std::move(Resolver)));
   }
 
   /// @brief Remove the module represented by the given handle.
@@ -280,17 +255,6 @@ public:
     (*H)->emitAndFinalize(BaseLayer);
   }
 };
-
-template <typename BaseLayerT>
-template <typename MemoryManagerPtrT, typename SymbolResolverPtrT>
-std::unique_ptr<typename LazyEmittingLayer<BaseLayerT>::EmissionDeferredModule>
-LazyEmittingLayer<BaseLayerT>::EmissionDeferredModule::create(
-    BaseLayerT &B, std::shared_ptr<Module> M, MemoryManagerPtrT MemMgr,
-    SymbolResolverPtrT Resolver) {
-  using EDS = EmissionDeferredModuleImpl<MemoryManagerPtrT, SymbolResolverPtrT>;
-  return llvm::make_unique<EDS>(std::move(M), std::move(MemMgr),
-                                std::move(Resolver));
-}
 
 } // end namespace orc
 } // end namespace llvm

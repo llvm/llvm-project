@@ -3092,8 +3092,8 @@ void __kmpc_doacross_init(ident_t *loc, int gtid, int num_dims,
   // __kmp_dispatch_num_buffers)
   if (idx != sh_buf->doacross_buf_idx) {
     // Shared buffer is occupied, wait for it to be free
-    __kmp_wait_yield_4((kmp_uint32 *)&sh_buf->doacross_buf_idx, idx, __kmp_eq_4,
-                       NULL);
+    __kmp_wait_yield_4((volatile kmp_uint32 *)&sh_buf->doacross_buf_idx, idx,
+                       __kmp_eq_4, NULL);
   }
   // Check if we are the first thread. After the CAS the first thread gets 0,
   // others get 1 if initialization is in progress, allocated pointer otherwise.
@@ -3258,8 +3258,8 @@ void __kmpc_doacross_post(ident_t *loc, int gtid, long long *vec) {
   iter_number >>= 5; // divided by 32
   flag = 1 << shft;
   if ((flag & pr_buf->th_doacross_flags[iter_number]) == 0)
-    KMP_TEST_THEN_OR32((kmp_int32 *)&pr_buf->th_doacross_flags[iter_number],
-                       (kmp_int32)flag);
+    KMP_TEST_THEN_OR32(
+        CCAST(kmp_uint32 *, &pr_buf->th_doacross_flags[iter_number]), flag);
   KA_TRACE(20, ("__kmpc_doacross_post() exit: T#%d iter %lld posted\n", gtid,
                 (iter_number << 5) + shft));
 }
@@ -3285,7 +3285,7 @@ void __kmpc_doacross_fini(ident_t *loc, int gtid) {
                      (kmp_int64)&sh_buf->doacross_num_done);
     KMP_DEBUG_ASSERT(num_done == (kmp_int64)sh_buf->doacross_num_done);
     KMP_DEBUG_ASSERT(idx == sh_buf->doacross_buf_idx);
-    __kmp_thread_free(th, (void *)sh_buf->doacross_flags);
+    __kmp_thread_free(th, CCAST(kmp_uint32 *, sh_buf->doacross_flags));
     sh_buf->doacross_flags = NULL;
     sh_buf->doacross_num_done = 0;
     sh_buf->doacross_buf_idx +=

@@ -1,6 +1,6 @@
-; RUN: llc -verify-machineinstrs -march=amdgcn < %s | FileCheck -check-prefix=GCN -check-prefix=SI %s
-; RUN: llc -verify-machineinstrs -march=amdgcn -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
-; RUN: llc -verify-machineinstrs -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -verify-machineinstrs -march=amdgcn < %s | FileCheck -check-prefix=GCN -check-prefix=SI %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -verify-machineinstrs -march=amdgcn -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -verify-machineinstrs -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 %s
 
 ; Test expansion of scalar selects on vectors.
 ; Evergreen not enabled since it seems to be having problems with doubles.

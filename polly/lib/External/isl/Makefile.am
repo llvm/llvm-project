@@ -11,8 +11,10 @@ lib_LTLIBRARIES = libisl.la
 noinst_PROGRAMS = isl_test isl_polyhedron_sample isl_pip \
 	isl_polyhedron_minimize isl_polytope_scan \
 	isl_polyhedron_detect_equalities isl_cat \
-	isl_closure isl_bound isl_schedule isl_codegen isl_test_int
-TESTS = isl_test codegen_test.sh pip_test.sh bound_test.sh isl_test_int
+	isl_closure isl_bound isl_schedule isl_codegen isl_test_int \
+	isl_flow isl_flow_cmp
+TESTS = isl_test codegen_test.sh pip_test.sh bound_test.sh isl_test_int \
+	flow_test.sh
 
 if IMATH_FOR_MP
 
@@ -181,6 +183,7 @@ libisl_la_SOURCES = \
 	isl_transitive_closure.c \
 	isl_union_map.c \
 	isl_union_map_private.h \
+	isl_union_set_private.h \
 	isl_val.c \
 	isl_val_private.h \
 	isl_vec_private.h \
@@ -217,6 +220,16 @@ isl_schedule_LDFLAGS = @MP_LDFLAGS@
 isl_schedule_LDADD = libisl.la @MP_LIBS@
 isl_schedule_SOURCES = \
 	schedule.c
+
+isl_flow_LDFLAGS = @MP_LDFLAGS@
+isl_flow_LDADD = libisl.la @MP_LIBS@
+isl_flow_SOURCES = \
+	flow.c
+
+isl_flow_cmp_LDFLAGS = @MP_LDFLAGS@
+isl_flow_cmp_LDADD = libisl.la @MP_LIBS@
+isl_flow_cmp_SOURCES = \
+	flow_cmp.c
 
 isl_codegen_LDFLAGS = @MP_LDFLAGS@
 isl_codegen_LDADD = libisl.la @MP_LIBS@
@@ -341,9 +354,11 @@ EXTRA_DIST = \
 	basis_reduction_templ.c \
 	bset_to_bmap.c \
 	bset_from_bmap.c \
+	extract_key.c \
 	isl_list_templ.c \
 	isl_list_templ.h \
 	isl_map_lexopt_templ.c \
+	isl_maybe_map.h \
 	isl_multi_macro.h \
 	isl_multi_templ.c \
 	isl_multi_templ.h \

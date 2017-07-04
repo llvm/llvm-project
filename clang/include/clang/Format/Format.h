@@ -1120,7 +1120,10 @@ struct FormatStyle {
     /// (https://developers.google.com/protocol-buffers/).
     LK_Proto,
     /// Should be used for TableGen code.
-    LK_TableGen
+    LK_TableGen,
+    /// Should be used for Protocol Buffer messages in text format
+    /// (https://developers.google.com/protocol-buffers/).
+    LK_TextProto
   };
   bool isCpp() const { return Language == LK_Cpp || Language == LK_ObjC; }
 

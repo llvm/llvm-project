@@ -4,6 +4,8 @@
 // RUN: %clang_cc1 %s -O0 -triple amdgcn-amd-amdhsa-opencl -DCL20 -cl-std=CL2.0 -emit-llvm -o - | FileCheck %s --check-prefixes=CL20,CL20SPIR
 // RUN: %clang_cc1 %s -O0 -triple amdgcn-amd-amdhsa-amdgizcl -emit-llvm -o - | FileCheck %s -check-prefixes=CHECK,GIZ
 // RUN: %clang_cc1 %s -O0 -triple amdgcn-amd-amdhsa-amdgizcl -DCL20 -cl-std=CL2.0 -emit-llvm -o - | FileCheck %s --check-prefixes=CL20,CL20GIZ
+// RUN: %clang_cc1 %s -O0 -triple amdgcn-mesa-mesa3d -emit-llvm -o - | FileCheck --check-prefixes=CHECK,SPIR %s
+// RUN: %clang_cc1 %s -O0 -triple r600-- -emit-llvm -o - | FileCheck --check-prefixes=CHECK,SPIR %s
 
 // SPIR: i32* %arg
 // GIZ: i32 addrspace(5)* %arg

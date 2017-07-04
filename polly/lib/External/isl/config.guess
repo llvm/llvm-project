@@ -2,7 +2,7 @@
 # Attempt to guess a canonical system name.
 #   Copyright 1992-2016 Free Software Foundation, Inc.
 
-timestamp='2016-04-02'
+timestamp='2016-10-02'
 
 # This file is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by
@@ -186,9 +186,12 @@ case "${UNAME_MACHINE}:${UNAME_SYSTEM}:${UNAME_RELEASE}:${UNAME_VERSION}" in
 	    *) machine=${UNAME_MACHINE_ARCH}-unknown ;;
 	esac
 	# The Operating System including object format, if it has switched
-	# to ELF recently, or will in the future.
+	# to ELF recently (or will in the future) and ABI.
 	case "${UNAME_MACHINE_ARCH}" in
-	    arm*|earm*|i386|m68k|ns32k|sh3*|sparc|vax)
+	    earm*)
+		os=netbsdelf
+		;;
+	    arm*|i386|m68k|ns32k|sh3*|sparc|vax)
 		eval $set_cc_for_build
 		if echo __ELF__ | $CC_FOR_BUILD -E - 2>/dev/null \
 			| grep -q __ELF__
@@ -997,6 +1000,9 @@ EOF
 	eval `$CC_FOR_BUILD -E $dummy.c 2>/dev/null | grep '^CPU'`
 	test x"${CPU}" != x && { echo "${CPU}-unknown-linux-${LIBC}"; exit; }
 	;;
+    mips64el:Linux:*:*)
+	echo ${UNAME_MACHINE}-unknown-linux-${LIBC}
+	exit ;;
     openrisc*:Linux:*:*)
 	echo or1k-unknown-linux-${LIBC}
 	exit ;;
@@ -1028,6 +1034,9 @@ EOF
 	exit ;;
     ppcle:Linux:*:*)
 	echo powerpcle-unknown-linux-${LIBC}
+	exit ;;
+    riscv32:Linux:*:* | riscv64:Linux:*:*)
+	echo ${UNAME_MACHINE}-unknown-linux-${LIBC}
 	exit ;;
     s390:Linux:*:* | s390x:Linux:*:*)
 	echo ${UNAME_MACHINE}-ibm-linux-${LIBC}
@@ -1408,18 +1417,17 @@ esac
 cat >&2 <<EOF
 $0: unable to guess system type
 
-This script, last modified $timestamp, has failed to recognize
-the operating system you are using. It is advised that you
-download the most up to date version of the config scripts from
+This script (version $timestamp), has failed to recognize the
+operating system you are using. If your script is old, overwrite
+config.guess and config.sub with the latest versions from:
 
   http://git.savannah.gnu.org/gitweb/?p=config.git;a=blob_plain;f=config.guess
 and
   http://git.savannah.gnu.org/gitweb/?p=config.git;a=blob_plain;f=config.sub
 
-If the version you run ($0) is already up to date, please
-send the following data and any information you think might be
-pertinent to <config-patches@gnu.org> in order to provide the needed
-information to handle your system.
+If $0 has already been updated, send the following data and any
+information you think might be pertinent to config-patches@gnu.org to
+provide the necessary information to handle your system.
 
 config.guess timestamp = $timestamp
 

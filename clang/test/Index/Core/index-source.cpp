@@ -496,3 +496,19 @@ void localStructuredBindingAndRef() {
 }
 
 }
+
+namespace rd33122110 {
+
+struct Outer {
+    template<typename T>
+    struct Nested { };
+};
+
+}
+
+template<>
+struct rd33122110::Outer::Nested<int>;
+// CHECK: [[@LINE-1]]:8 | namespace/C++ | rd33122110 | c:@N@rd33122110 | <no-cgname> | Ref,RelCont | rel: 1
+// CHECK-NEXT: RelCont | Nested | c:@N@rd33122110@S@Outer@S@Nested>#I
+// CHECK: [[@LINE-3]]:20 | struct/C++ | Outer | c:@N@rd33122110@S@Outer | <no-cgname> | Ref,RelCont | rel: 1
+// CHECK-NEXT: RelCont | Nested | c:@N@rd33122110@S@Outer@S@Nested>#I

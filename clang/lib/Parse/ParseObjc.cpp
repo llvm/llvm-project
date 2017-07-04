@@ -2255,7 +2255,7 @@ Parser::ObjCImplParsingDataRAII::~ObjCImplParsingDataRAII() {
 
 void Parser::ObjCImplParsingDataRAII::finish(SourceRange AtEnd) {
   assert(!Finished);
-  P.Actions.DefaultSynthesizeProperties(P.getCurScope(), Dcl);
+  P.Actions.DefaultSynthesizeProperties(P.getCurScope(), Dcl, AtEnd.getBegin());
   for (size_t i = 0; i < LateParsedObjCMethods.size(); ++i)
     P.ParseLexedObjCMethodDefs(*LateParsedObjCMethods[i], 
                                true/*Methods*/);

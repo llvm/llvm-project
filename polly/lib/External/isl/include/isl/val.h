@@ -84,6 +84,7 @@ __isl_give isl_val *isl_val_mul(__isl_take isl_val *v1, __isl_take isl_val *v2);
 __isl_give isl_val *isl_val_mul_ui(__isl_take isl_val *v1, unsigned long v2);
 __isl_export
 __isl_give isl_val *isl_val_div(__isl_take isl_val *v1, __isl_take isl_val *v2);
+__isl_give isl_val *isl_val_div_ui(__isl_take isl_val *v1, unsigned long v2);
 __isl_export
 __isl_give isl_val *isl_val_mod(__isl_take isl_val *v1, __isl_take isl_val *v2);
 __isl_export

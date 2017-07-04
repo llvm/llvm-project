@@ -618,6 +618,8 @@ public:
         Template.is<ClassTemplateDecl *>()
             ? (Decl *)Template.get<ClassTemplateDecl *>()
             : Template.get<ClassTemplatePartialSpecializationDecl *>();
+    if (!D->isThisDeclarationADefinition())
+      IndexCtx.indexNestedNameSpecifierLoc(D->getQualifierLoc(), D);
     IndexCtx.indexTagDecl(
         D, SymbolRelation(SymbolRoleSet(SymbolRole::RelationSpecializationOf),
                           SpecializationOf));

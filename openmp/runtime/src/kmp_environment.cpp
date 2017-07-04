@@ -147,7 +147,7 @@ char *__kmp_env_get(char const *name) {
 void __kmp_env_free(char const **value) {
 
   KMP_DEBUG_ASSERT(value != NULL);
-  KMP_INTERNAL_FREE((void *)*value);
+  KMP_INTERNAL_FREE(CCAST(char *, *value));
   *value = NULL;
 
 } // func __kmp_env_free
@@ -475,7 +475,8 @@ void __kmp_env_blk_sort(
     kmp_env_blk_t *block // M: Block of environment variables to sort.
     ) {
 
-  qsort((void *)block->vars, block->count, sizeof(kmp_env_var_t),
+  qsort(CCAST(kmp_env_var_t *, block->vars), block->count,
+        sizeof(kmp_env_var_t),
         (int (*)(void const *, void const *)) & ___kmp_env_var_cmp);
 
 } // __kmp_env_block_sort
@@ -484,7 +485,7 @@ void __kmp_env_blk_free(
     kmp_env_blk_t *block // M: Block of environment variables to free.
     ) {
 
-  KMP_INTERNAL_FREE((void *)block->vars);
+  KMP_INTERNAL_FREE(CCAST(kmp_env_var_t *, block->vars));
   __kmp_str_free(&(block->bulk));
 
   block->count = 0;

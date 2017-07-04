@@ -321,7 +321,7 @@ struct IncomingValueHandler : public CallLowering::ValueHandler {
     assert(VA.getValVT().getSizeInBits() <= 64 && "Unsupported value size");
     assert(VA.getLocVT().getSizeInBits() <= 64 && "Unsupported location size");
 
-    // The necesary extensions are handled on the other side of the ABI
+    // The necessary extensions are handled on the other side of the ABI
     // boundary.
     markPhysRegUsed(PhysReg);
     MIRBuilder.buildCopy(ValVReg, PhysReg);

@@ -451,6 +451,7 @@ class GoldmontProc<string Name> : ProcessorModel<Name, SLMModel, [
   FeatureLAHFSAHF,
   FeatureMPX,
   FeatureSHA,
+  FeatureRDRAND,
   FeatureRDSEED,
   FeatureXSAVE,
   FeatureXSAVEOPT,

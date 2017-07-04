@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -show-mc-encoding -verify-machineinstrs < %s | FileCheck %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -show-mc-encoding -verify-machineinstrs < %s | FileCheck %s
 
 declare i32 @llvm.amdgcn.workitem.id.x() readnone
 

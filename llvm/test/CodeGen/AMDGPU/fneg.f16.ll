@@ -1,6 +1,6 @@
-; RUN: llc -march=amdgcn -mcpu=kaveri -mtriple=amdgcn--amdhsa -verify-machineinstrs < %s | FileCheck -check-prefix=CI -check-prefix=CIVI -check-prefix=GCN %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mtriple=amdgcn--amdhsa -verify-machineinstrs < %s | FileCheck -check-prefix=VI -check-prefix=CIVI -check-prefix=GCN -check-prefix=GFX89 %s
-; RUN: llc -march=amdgcn -mcpu=gfx901 -mtriple=amdgcn--amdhsa -verify-machineinstrs < %s | FileCheck -check-prefix=GFX9 -check-prefix=GCN -check-prefix=GFX89 %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=kaveri -mtriple=amdgcn--amdhsa -verify-machineinstrs < %s | FileCheck -check-prefix=CI -check-prefix=CIVI -check-prefix=GCN %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=tonga -mtriple=amdgcn--amdhsa -verify-machineinstrs < %s | FileCheck -check-prefix=VI -check-prefix=CIVI -check-prefix=GCN -check-prefix=GFX89 %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=gfx901 -mtriple=amdgcn--amdhsa -verify-machineinstrs < %s | FileCheck -check-prefix=GFX9 -check-prefix=GCN -check-prefix=GFX89 %s
 
 ; FIXME: Should be able to do scalar op
 ; GCN-LABEL: {{^}}s_fneg_f16:
