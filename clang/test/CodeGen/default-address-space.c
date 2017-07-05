@@ -50,7 +50,7 @@ void test3() {
 // PIZ: %[[arrayidx:.*]] = getelementptr inbounds i32, i32 addrspace(4)* %[[r0]]
 // PIZ: store i32 0, i32 addrspace(4)* %[[arrayidx]]
 // CHECK-LABEL: define void @test4(i32* %a)
-// CHECK: %[[alloca:.*]] = alloca i32*, align 4, addrspace(5)
+// CHECK: %[[alloca:.*]] = alloca i32*, align 8, addrspace(5)
 // CHECK: %[[a_addr:.*]] = addrspacecast{{.*}} %[[alloca]] to i32**
 // CHECK: store i32* %a, i32** %[[a_addr]]
 // CHECK: %[[r0:.*]] = load i32*, i32** %[[a_addr]]

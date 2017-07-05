@@ -283,7 +283,7 @@ void Decl::setLexicalDeclContext(DeclContext *DC) {
       setLocalOwningModule(cast<Decl>(DC)->getOwningModule());
   }
 
-  assert((!hasOwningModule() || getOwningModule()) &&
+  assert((!hasOwningModule() || getOwningModule() || isModulePrivate()) &&
          "hidden declaration has no owning module");
 }
 
