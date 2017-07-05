@@ -266,11 +266,6 @@ public:
 
   void setUsedForHeaderGuard(bool Val) { UsedForHeaderGuard = Val; }
 
-  // FIXME: hack to get past build failures
-  unsigned getOwningModuleID() const {
-    return 0;
-  }
-
   void dump() const;
 
 private:
@@ -514,6 +509,9 @@ public:
     ID.AddPointer(OwningModule);
     ID.AddPointer(II);
   }
+
+  /// Get the name of the macro.
+  IdentifierInfo *getName() const { return II; }
 
   /// Get the ID of the module that exports this macro.
   Module *getOwningModule() const { return OwningModule; }
