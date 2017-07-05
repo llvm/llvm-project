@@ -86,14 +86,11 @@ enum NodeType : unsigned {
   // Count number of bits set in operand 0 per byte.
   POPCNT,
 
-  // Wrappers around the ISD opcodes of the same name.  The output and
-  // first input operands are GR128s.  The trailing numbers are the
-  // widths of the second operand in bits.
-  UMUL_LOHI64,
-  SDIVREM32,
-  SDIVREM64,
-  UDIVREM32,
-  UDIVREM64,
+  // Wrappers around the ISD opcodes of the same name.  The output is GR128.
+  // Input operands may be GR64 or GR32, depending on the instruction.
+  UMUL_LOHI,
+  SDIVREM,
+  UDIVREM,
 
   // Use a series of MVCs to copy bytes from one memory location to another.
   // The operands are:
@@ -562,7 +559,7 @@ private:
                                    unsigned StoreOpcode, unsigned STOCOpcode,
                                    bool Invert) const;
   MachineBasicBlock *emitExt128(MachineInstr &MI, MachineBasicBlock *MBB,
-                                bool ClearEven, unsigned SubReg) const;
+                                bool ClearEven) const;
   MachineBasicBlock *emitAtomicLoadBinary(MachineInstr &MI,
                                           MachineBasicBlock *BB,
                                           unsigned BinOpcode, unsigned BitSize,

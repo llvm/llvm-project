@@ -198,10 +198,10 @@ protected:
 
   lldb_private::Status
   EvaluateLibdlExpression(lldb_private::Process *process, const char *expr_cstr,
-                          const char *expr_prefix,
+                          llvm::StringRef expr_prefix,
                           lldb::ValueObjectSP &result_valobj_sp);
 
-  virtual const char *GetLibdlFunctionDeclarations() const;
+  virtual llvm::StringRef GetLibdlFunctionDeclarations();
 
 private:
   DISALLOW_COPY_AND_ASSIGN(PlatformPOSIX);

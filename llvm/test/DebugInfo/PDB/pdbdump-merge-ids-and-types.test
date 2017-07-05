@@ -14,8 +14,7 @@ TPI-TYPES-NEXT:            - LF_MEMBER [name = `FooMember`, Type = 0x0403 (void*
 TPI-TYPES-NEXT:   0x1002 | LF_ARGLIST [size = 16]
 TPI-TYPES-NEXT:            0x0074 (int): `int`
 TPI-TYPES-NEXT:            0x1000: `char**`
-TPI-TYPES-NEXT:   0x1003 | LF_STRUCTURE [size = 36]
-TPI-TYPES-NEXT:            class name: `FooBar`
+TPI-TYPES-NEXT:   0x1003 | LF_STRUCTURE [size = 36] `FooBar`
 TPI-TYPES-NEXT:            unique name: `FooBar`
 TPI-TYPES-NEXT:            vtable: <no type>, base list: <no type>, field list: 0x1001
 TPI-TYPES-NEXT:            options: has unique name

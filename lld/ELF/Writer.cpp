@@ -181,7 +181,6 @@ template <class ELFT> void Writer<ELFT>::run() {
     // Linker scripts may have left some input sections unassigned.
     // Assign such sections using the default rule.
     Script->addOrphanSections(Factory);
-    Script->createOrphanCommands();
   } else {
     // If linker script does not contain SECTIONS commands, create
     // output sections by default rules. We still need to give the

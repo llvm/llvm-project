@@ -299,7 +299,7 @@ Error MinimalTypeDumpVisitor::visitKnownRecord(CVType &CVR,
 
 Error MinimalTypeDumpVisitor::visitKnownRecord(CVType &CVR,
                                                ClassRecord &Class) {
-  P.formatLine("class name: `{0}`", Class.Name);
+  P.format(" `{0}`", Class.Name);
   if (Class.hasUniqueName())
     P.formatLine("unique name: `{0}`", Class.UniqueName);
   P.formatLine("vtable: {0}, base list: {1}, field list: {2}",
@@ -311,7 +311,7 @@ Error MinimalTypeDumpVisitor::visitKnownRecord(CVType &CVR,
 
 Error MinimalTypeDumpVisitor::visitKnownRecord(CVType &CVR,
                                                UnionRecord &Union) {
-  P.formatLine("class name: `{0}`", Union.Name);
+  P.format(" `{0}`", Union.Name);
   if (Union.hasUniqueName())
     P.formatLine("unique name: `{0}`", Union.UniqueName);
   P.formatLine("field list: {0}", Union.FieldList);
@@ -321,7 +321,7 @@ Error MinimalTypeDumpVisitor::visitKnownRecord(CVType &CVR,
 }
 
 Error MinimalTypeDumpVisitor::visitKnownRecord(CVType &CVR, EnumRecord &Enum) {
-  P.formatLine("name: `{0}`", Enum.Name);
+  P.format(" `{0}`", Enum.Name);
   if (Enum.hasUniqueName())
     P.formatLine("unique name: `{0}`", Enum.UniqueName);
   P.formatLine("field list: {0}, underlying type: {1}", Enum.FieldList,

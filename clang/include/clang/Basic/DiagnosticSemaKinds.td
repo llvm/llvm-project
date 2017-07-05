@@ -2880,7 +2880,7 @@ def warn_partial_availability : Warning<"%0 is only available conditionally">,
 def warn_partial_availability_new : Warning<warn_partial_availability.Text>,
   InGroup<UnguardedAvailabilityNew>;
 def note_partial_availability_silence : Note<
-  "explicitly redeclare %0 to silence this warning">;
+  "annotate %select{%1|anonymous %1}0 with an availability attribute to silence">;
 def note_unguarded_available_silence : Note<
   "enclose %0 in %select{an @available|a __builtin_available}1 check to silence"
   " this warning">;
@@ -6355,15 +6355,13 @@ def err_exceptions_disabled : Error<
   "cannot use '%0' with exceptions disabled">;
 def err_objc_exceptions_disabled : Error<
   "cannot use '%0' with Objective-C exceptions disabled">;
-def warn_throw_in_noexcept_func 
-    : Warning<"%0 has a non-throwing exception specification but can still "
-      "throw, resulting in unexpected program termination">,
-      InGroup<Exceptions>;
-def note_throw_in_dtor 
-    : Note<"destructor or deallocator has a (possibly implicit) non-throwing "
-      "excepton specification">;
-def note_throw_in_function 
-    : Note<"non-throwing function declare here">;
+def warn_throw_in_noexcept_func : Warning<
+  "%0 has a non-throwing exception specification but can still throw">,
+  InGroup<Exceptions>;
+def note_throw_in_dtor : Note<
+  "%select{destructor|deallocator}0 has a %select{non-throwing|implicit "
+  "non-throwing}1 exception specification">;
+def note_throw_in_function : Note<"function declared non-throwing here">;
 def err_seh_try_outside_functions : Error<
   "cannot use SEH '__try' in blocks, captured regions, or Obj-C method decls">;
 def err_mixing_cxx_try_seh_try : Error<

@@ -87,24 +87,9 @@ static void DiagnoseUnusedOfDecl(Sema &S, NamedDecl *D, SourceLocation Loc) {
   }
 }
 
-static bool HasRedeclarationWithoutAvailabilityInCategory(const Decl *D) {
-  const auto *OMD = dyn_cast<ObjCMethodDecl>(D);
-  if (!OMD)
-    return false;
-  const ObjCInterfaceDecl *OID = OMD->getClassInterface();
-  if (!OID)
-    return false;
-
-  for (const ObjCCategoryDecl *Cat : OID->visible_categories())
-    if (ObjCMethodDecl *CatMeth =
-            Cat->getMethod(OMD->getSelector(), OMD->isInstanceMethod()))
-      if (!CatMeth->hasAttr<AvailabilityAttr>())
-        return true;
-  return false;
-}
-
-AvailabilityResult
-Sema::ShouldDiagnoseAvailabilityOfDecl(NamedDecl *&D, std::string *Message) {
+std::pair<AvailabilityResult, const NamedDecl *>
+Sema::ShouldDiagnoseAvailabilityOfDecl(const NamedDecl *D,
+                                       std::string *Message) {
   AvailabilityResult Result = D->getAvailability(Message);
 
   // For typedefs, if the typedef declaration appears available look
@@ -121,45 +106,23 @@ Sema::ShouldDiagnoseAvailabilityOfDecl(NamedDecl *&D, std::string *Message) {
   }
 
   // Forward class declarations get their attributes from their definition.
-  if (ObjCInterfaceDecl *IDecl = dyn_cast<ObjCInterfaceDecl>(D)) {
+  if (const ObjCInterfaceDecl *IDecl = dyn_cast<ObjCInterfaceDecl>(D)) {
     if (IDecl->getDefinition()) {
       D = IDecl->getDefinition();
       Result = D->getAvailability(Message);
     }
   }
 
-  if (const EnumConstantDecl *ECD = dyn_cast<EnumConstantDecl>(D))
+  if (const auto *ECD = dyn_cast<EnumConstantDecl>(D))
     if (Result == AR_Available) {
       const DeclContext *DC = ECD->getDeclContext();
-      if (const EnumDecl *TheEnumDecl = dyn_cast<EnumDecl>(DC))
+      if (const auto *TheEnumDecl = dyn_cast<EnumDecl>(DC)) {
         Result = TheEnumDecl->getAvailability(Message);
+        D = TheEnumDecl;
+      }
     }
 
-  if (Result == AR_NotYetIntroduced) {
-    // Don't do this for enums, they can't be redeclared.
-    if (isa<EnumConstantDecl>(D) || isa<EnumDecl>(D))
-      return AR_Available;
-
-    bool Warn = !D->getAttr<AvailabilityAttr>()->isInherited();
-    // Objective-C method declarations in categories are not modelled as
-    // redeclarations, so manually look for a redeclaration in a category
-    // if necessary.
-    if (Warn && HasRedeclarationWithoutAvailabilityInCategory(D))
-      Warn = false;
-    // In general, D will point to the most recent redeclaration. However,
-    // for `@class A;` decls, this isn't true -- manually go through the
-    // redecl chain in that case.
-    if (Warn && isa<ObjCInterfaceDecl>(D))
-      for (Decl *Redecl = D->getMostRecentDecl(); Redecl && Warn;
-           Redecl = Redecl->getPreviousDecl())
-        if (!Redecl->hasAttr<AvailabilityAttr>() ||
-            Redecl->getAttr<AvailabilityAttr>()->isInherited())
-          Warn = false;
-
-    return Warn ? AR_NotYetIntroduced : AR_Available;
-  }
-
-  return Result;
+  return {Result, D};
 }
 
 static void
@@ -167,32 +130,34 @@ DiagnoseAvailabilityOfDecl(Sema &S, NamedDecl *D, SourceLocation Loc,
                            const ObjCInterfaceDecl *UnknownObjCClass,
                            bool ObjCPropertyAccess) {
   std::string Message;
+  AvailabilityResult Result;
+  const NamedDecl* OffendingDecl;
   // See if this declaration is unavailable, deprecated, or partial.
-  if (AvailabilityResult Result =
-          S.ShouldDiagnoseAvailabilityOfDecl(D, &Message)) {
+  std::tie(Result, OffendingDecl) = S.ShouldDiagnoseAvailabilityOfDecl(D, &Message);
+  if (Result == AR_Available)
+    return;
 
-    if (Result == AR_NotYetIntroduced) {
-      if (S.getCurFunctionOrMethodDecl()) {
-        S.getEnclosingFunction()->HasPotentialAvailabilityViolations = true;
-        return;
-      } else if (S.getCurBlock() || S.getCurLambda()) {
-        S.getCurFunction()->HasPotentialAvailabilityViolations = true;
-        return;
-      }
+  if (Result == AR_NotYetIntroduced) {
+    if (S.getCurFunctionOrMethodDecl()) {
+      S.getEnclosingFunction()->HasPotentialAvailabilityViolations = true;
+      return;
+    } else if (S.getCurBlock() || S.getCurLambda()) {
+      S.getCurFunction()->HasPotentialAvailabilityViolations = true;
+      return;
     }
-
-    const ObjCPropertyDecl *ObjCPDecl = nullptr;
-    if (const ObjCMethodDecl *MD = dyn_cast<ObjCMethodDecl>(D)) {
-      if (const ObjCPropertyDecl *PD = MD->findPropertyDecl()) {
-        AvailabilityResult PDeclResult = PD->getAvailability(nullptr);
-        if (PDeclResult == Result)
-          ObjCPDecl = PD;
-      }
-    }
-
-    S.EmitAvailabilityWarning(Result, D, Message, Loc, UnknownObjCClass,
-                              ObjCPDecl, ObjCPropertyAccess);
   }
+
+  const ObjCPropertyDecl *ObjCPDecl = nullptr;
+  if (const ObjCMethodDecl *MD = dyn_cast<ObjCMethodDecl>(D)) {
+    if (const ObjCPropertyDecl *PD = MD->findPropertyDecl()) {
+      AvailabilityResult PDeclResult = PD->getAvailability(nullptr);
+      if (PDeclResult == Result)
+        ObjCPDecl = PD;
+    }
+  }
+
+  S.EmitAvailabilityWarning(Result, D, OffendingDecl, Message, Loc,
+                            UnknownObjCClass, ObjCPDecl, ObjCPropertyAccess);
 }
 
 /// \brief Emit a note explaining that this function is deleted.

@@ -227,12 +227,11 @@ void mips::getMIPSTargetFeatures(const Driver &D, const llvm::Triple &Triple,
          O.matches(options::OPT_fno_PIE) || O.matches(options::OPT_fno_pie));
   }
 
-  if (IsN64 && NonPIC) {
+  if (IsN64 && NonPIC)
     Features.push_back("+noabicalls");
-  } else {
+  else
     AddTargetFeature(Args, Features, options::OPT_mno_abicalls,
                      options::OPT_mabicalls, "noabicalls");
-  }
 
   mips::FloatABI FloatABI = mips::getMipsFloatABI(D, Args);
   if (FloatABI == mips::FloatABI::Soft) {
@@ -298,13 +297,8 @@ void mips::getMIPSTargetFeatures(const Driver &D, const llvm::Triple &Triple,
 
   AddTargetFeature(Args, Features, options::OPT_mno_odd_spreg,
                    options::OPT_modd_spreg, "nooddspreg");
-
-  if (Arg *A = Args.getLastArg(options::OPT_mmadd4, options::OPT_mno_madd4)) {
-    if (A->getOption().matches(options::OPT_mmadd4))
-      Features.push_back("-nomadd4");
-    else
-      Features.push_back("+nomadd4");
-  }
+  AddTargetFeature(Args, Features, options::OPT_mno_madd4, options::OPT_mmadd4,
+                   "nomadd4");
 }
 
 mips::NanEncoding mips::getSupportedNanEncoding(StringRef &CPU) {
