@@ -9830,6 +9830,15 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
       return;
     }
 
+    // We found a specific requirement that disabled the enable_if.
+    if (PDiag && PDiag->second.getDiagID() ==
+        diag::err_typename_nested_not_found_requirement) {
+      S.Diag(Templated->getLocation(),
+             diag::note_ovl_candidate_disabled_by_requirement)
+        << PDiag->second.getStringArg(0) << TemplateArgString;
+      return;
+    }
+
     // Format the SFINAE diagnostic into the argument string.
     // FIXME: Add a general mechanism to include a PartialDiagnostic *'s
     //        formatted message in another diagnostic.

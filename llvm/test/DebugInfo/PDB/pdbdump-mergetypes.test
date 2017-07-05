@@ -11,8 +11,7 @@ MERGED-NEXT:   0x1000 | LF_POINTER [size = 12]
 MERGED-NEXT:            referent = 0x0075 (unsigned), mode = pointer, opts = None, kind = ptr32
 MERGED-NEXT:   0x1001 | LF_POINTER [size = 12]
 MERGED-NEXT:            referent = 0x0076 (__int64), mode = pointer, opts = None, kind = ptr32
-MERGED-NEXT:   0x1002 | LF_STRUCTURE [size = 48]
-MERGED-NEXT:            class name: `OnlyInMerge1`
+MERGED-NEXT:   0x1002 | LF_STRUCTURE [size = 48] `OnlyInMerge1`
 MERGED-NEXT:            unique name: `OnlyInMerge1`
 MERGED-NEXT:            vtable: <no type>, base list: <no type>, field list: <no type>
 MERGED-NEXT:            options: forward ref | has unique name
@@ -29,8 +28,7 @@ MERGED-NEXT:            0x1003: `unsigned**`
 MERGED-NEXT:   0x1007 | LF_PROCEDURE [size = 16]
 MERGED-NEXT:            return type = 0x0075 (unsigned), # args = 0, param list = 0x1006
 MERGED-NEXT:            calling conv = cdecl, options = None
-MERGED-NEXT:   0x1008 | LF_STRUCTURE [size = 48]
-MERGED-NEXT:            class name: `OnlyInMerge2`
+MERGED-NEXT:   0x1008 | LF_STRUCTURE [size = 48] `OnlyInMerge2`
 MERGED-NEXT:            unique name: `OnlyInMerge2`
 MERGED-NEXT:            vtable: <no type>, base list: <no type>, field list: <no type>
 MERGED-NEXT:            options: forward ref | has unique name

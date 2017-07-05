@@ -2,8 +2,8 @@
 struct A_ShouldDiag {
   ~A_ShouldDiag(); // implicitly noexcept(true)
 };
-A_ShouldDiag::~A_ShouldDiag() { // expected-note {{destructor or deallocator has a (possibly implicit) non-throwing excepton specification}}
-  throw 1; // expected-warning {{has a non-throwing exception specification but can still throw, resulting in unexpected program termination}}
+A_ShouldDiag::~A_ShouldDiag() { // expected-note {{destructor has a implicit non-throwing exception specification}}
+  throw 1; // expected-warning {{has a non-throwing exception specification but can still throw}}
 }
 struct B_ShouldDiag {
   int i;
@@ -11,7 +11,7 @@ struct B_ShouldDiag {
 };
 struct R_ShouldDiag : A_ShouldDiag {
   B_ShouldDiag b;
-  ~R_ShouldDiag() {     // expected-note  {{destructor or deallocator has a}}
+  ~R_ShouldDiag() { // expected-note  {{destructor has a implicit non-throwing exception specification}}
     throw 1; // expected-warning {{has a non-throwing exception specification but}}
   }
 };
@@ -30,18 +30,18 @@ struct N_ShouldDiag {
   ~N_ShouldDiag(); //implicitly noexcept(true)
 };
 
-N_ShouldDiag::~N_ShouldDiag() {  // expected-note  {{destructor or deallocator has a}}
+N_ShouldDiag::~N_ShouldDiag() { // expected-note  {{destructor has a implicit non-throwing exception specification}}
   throw 1; // expected-warning {{has a non-throwing exception specification but}}
 }
 struct X_ShouldDiag {
   B_ShouldDiag b;
-  ~X_ShouldDiag() noexcept { // expected-note  {{destructor or deallocator has a}}
-    throw 1;      // expected-warning {{has a non-throwing exception specification but}}
+  ~X_ShouldDiag() noexcept { // expected-note  {{destructor has a non-throwing exception}}
+    throw 1; // expected-warning {{has a non-throwing exception specification but}}
   }
 };
 struct Y_ShouldDiag : A_ShouldDiag {
-  ~Y_ShouldDiag() noexcept(true) { // expected-note  {{destructor or deallocator has a}}
-    throw 1;            // expected-warning {{has a non-throwing exception specification but}}
+  ~Y_ShouldDiag() noexcept(true) { // expected-note  {{destructor has a non-throwing exception specification}}
+    throw 1; // expected-warning {{has a non-throwing exception specification but}}
   }
 };
 struct C_ShouldNotDiag {
@@ -54,7 +54,7 @@ struct D_ShouldNotDiag {
     throw 1;
   }
 };
-struct E_ShouldNotDiag  {
+struct E_ShouldNotDiag {
   C_ShouldNotDiag c;
   ~E_ShouldNotDiag(); //implicitly noexcept(false)
 };
@@ -68,7 +68,7 @@ class A1_ShouldDiag {
   T b;
 
 public:
-  ~A1_ShouldDiag() {    // expected-note  {{destructor or deallocator has a}}
+  ~A1_ShouldDiag() { // expected-note  {{destructor has a implicit non-throwing exception specification}}
     throw 1; // expected-warning {{has a non-throwing exception specification but}}
   }
 };
@@ -81,19 +81,19 @@ template <typename T>
 struct R1_ShouldDiag : A1_ShouldDiag<T> //expected-note {{in instantiation of member function}}
 {
   B1_ShouldDiag<T> b;
-  ~R1_ShouldDiag() {    // expected-note  {{destructor or deallocator has a}}
+  ~R1_ShouldDiag() { // expected-note  {{destructor has a implicit non-throwing exception specification}}
     throw 1; // expected-warning {{has a non-throwing exception specification but}}
   }
 };
 template <typename T>
 struct S1_ShouldDiag : A1_ShouldDiag<T> {
   B1_ShouldDiag<T> b;
-  ~S1_ShouldDiag() noexcept { // expected-note  {{destructor or deallocator has a}}
-    throw 1;       // expected-warning {{has a non-throwing exception specification but}}
+  ~S1_ShouldDiag() noexcept { // expected-note  {{destructor has a non-throwing exception specification}}
+    throw 1; // expected-warning {{has a non-throwing exception specification but}}
   }
 };
-void operator delete(void *ptr) noexcept { // expected-note  {{destructor or deallocator has a}}
-  throw 1;                                 // expected-warning {{has a non-throwing exception specification but}}
+void operator delete(void *ptr) noexcept { // expected-note  {{deallocator has a non-throwing exception specification}}
+  throw 1; // expected-warning {{has a non-throwing exception specification but}}
 }
 struct except_fun {
   static const bool i = false;
@@ -109,18 +109,18 @@ struct dependent_warn {
 };
 template <typename T>
 struct dependent_warn_noexcept {
-  ~dependent_warn_noexcept() noexcept(T::i) { // expected-note  {{destructor or deallocator has a}}
-    throw 1;                                  // expected-warning {{has a non-throwing exception specification but}}
+  ~dependent_warn_noexcept() noexcept(T::i) { // expected-note  {{destructor has a non-throwing exception specification}}
+    throw 1; // expected-warning {{has a non-throwing exception specification but}}
   }
 };
 template <typename T>
 struct dependent_warn_both {
-  ~dependent_warn_both() noexcept(T::i) { // expected-note  {{destructor or deallocator has a}}
-    throw 1;                              // expected-warning {{has a non-throwing exception specification but}}
+  ~dependent_warn_both() noexcept(T::i) { // expected-note  {{destructor has a non-throwing exception specification}}
+    throw 1; // expected-warning {{has a non-throwing exception specification but}}
   }
 };
-void foo() noexcept { //expected-note {{non-throwing function declare here}}
-  throw 1;            // expected-warning {{has a non-throwing exception specification but}}
+void foo() noexcept { //expected-note {{function declared non-throwing here}}
+  throw 1; // expected-warning {{has a non-throwing exception specification but}}
 }
 struct Throws {
   ~Throws() noexcept(false);
@@ -128,14 +128,14 @@ struct Throws {
 
 struct ShouldDiagnose {
   Throws T;
-  ~ShouldDiagnose() noexcept { //expected-note {{destructor or deallocator has a}}
+  ~ShouldDiagnose() noexcept { //expected-note {{destructor has a non-throwing exception specification}}
     throw; // expected-warning {{has a non-throwing exception specification but}}
   }
 };
 struct ShouldNotDiagnose {
   Throws T;
-  ~ShouldNotDiagnose() { 
-    throw; 
+  ~ShouldNotDiagnose() {
+    throw;
   }
 };
 
@@ -158,21 +158,21 @@ void g_ShouldNotDiag() noexcept {
   }
 }
 
-void h_ShouldDiag() noexcept { //expected-note {{non-throwing function declare here}}
+void h_ShouldDiag() noexcept { //expected-note {{function declared non-throwing here}}
   try {
     throw 12; // expected-warning {{has a non-throwing exception specification but}}
   } catch (const char *) {
   }
 }
 
-void i_ShouldDiag() noexcept { //expected-note {{non-throwing function declare here}}
+void i_ShouldDiag() noexcept { //expected-note {{function declared non-throwing here}}
   try {
     throw 12;
   } catch (int) {
     throw; // expected-warning {{has a non-throwing exception specification but}}
   }
 }
-void j_ShouldDiag() noexcept { //expected-note {{non-throwing function declare here}}
+void j_ShouldDiag() noexcept { //expected-note {{function declared non-throwing here}}
   try {
     throw 12;
   } catch (int) {
@@ -180,7 +180,7 @@ void j_ShouldDiag() noexcept { //expected-note {{non-throwing function declare h
   }
 }
 
-void k_ShouldDiag() noexcept { //expected-note {{non-throwing function declare here}}
+void k_ShouldDiag() noexcept { //expected-note {{function declared non-throwing here}}
   try {
     throw 12;
   } catch (...) {
@@ -188,7 +188,7 @@ void k_ShouldDiag() noexcept { //expected-note {{non-throwing function declare h
   }
 }
 
-void loo_ShouldDiag(int i) noexcept { //expected-note {{non-throwing function declare here}}
+void loo_ShouldDiag(int i) noexcept { //expected-note {{function declared non-throwing here}}
   if (i)
     try {
       throw 12;
@@ -203,13 +203,13 @@ void loo1_ShouldNotDiag() noexcept {
     throw 12;
 }
 
-void loo2_ShouldDiag() noexcept { //expected-note {{non-throwing function declare here}}
+void loo2_ShouldDiag() noexcept { //expected-note {{function declared non-throwing here}}
   if (1)
     throw 12; // expected-warning {{has a non-throwing exception specification but}}
 }
 struct S {};
 
-void l_ShouldDiag() noexcept { //expected-note {{non-throwing function declare here}}
+void l_ShouldDiag() noexcept { //expected-note {{function declared non-throwing here}}
   try {
     throw S{}; //expected-warning {{has a non-throwing exception specification but}}
   } catch (S *s) {
@@ -222,7 +222,6 @@ void m_ShouldNotDiag() noexcept {
     throw s;
   } catch (S s) {
   }
-
 }
 void n_ShouldNotDiag() noexcept {
   try {
@@ -231,7 +230,7 @@ void n_ShouldNotDiag() noexcept {
   } catch (const S &s) {
   }
 }
-void o_ShouldDiag() noexcept { //expected-note {{non-throwing function declare here}}
+void o_ShouldDiag() noexcept { //expected-note {{function declared non-throwing here}}
   try {
     throw; //expected-warning {{has a non-throwing exception specification but}}
   } catch (...) {
@@ -239,7 +238,7 @@ void o_ShouldDiag() noexcept { //expected-note {{non-throwing function declare h
 }
 
 #define NOEXCEPT noexcept
-void with_macro() NOEXCEPT { //expected-note {{non-throwing function declare here}}
+void with_macro() NOEXCEPT { //expected-note {{function declared non-throwing here}}
   throw 1; // expected-warning {{has a non-throwing exception specification but}}
 }
 
@@ -248,8 +247,8 @@ void with_try_block() try {
 } catch (...) {
 }
 
-void with_try_block1() noexcept try { //expected-note {{non-throwing function declare here}}
-  throw 2;  // expected-warning {{has a non-throwing exception specification but}}
+void with_try_block1() noexcept try { //expected-note {{function declared non-throwing here}}
+  throw 2; // expected-warning {{has a non-throwing exception specification but}}
 } catch (char *) {
 }
 
@@ -272,20 +271,20 @@ void goodPointer() noexcept {
     throw &d;
   } catch (B *) {}
 }
-void badPlain() noexcept { // expected-note {{non-throwing function declare here}}
+void badPlain() noexcept { //expected-note {{function declared non-throwing here}}
   try {
-    throw B(); // expected-warning {{'badPlain' has a non-throwing exception specification but can still throw, resulting in unexpected program termination}}
+    throw B(); // expected-warning {{'badPlain' has a non-throwing exception specification but can still throw}}
   } catch (D) {}
 }
-void badReference() noexcept { // expected-note {{non-throwing function declare here}}
+void badReference() noexcept { //expected-note {{function declared non-throwing here}}
   try {
-    throw B(); // expected-warning {{'badReference' has a non-throwing exception specification but can still throw, resulting in unexpected program termination}}
+    throw B(); // expected-warning {{'badReference' has a non-throwing exception specification but can still throw}}
   } catch (D &) {}
 }
-void badPointer() noexcept { // expected-note {{non-throwing function declare here}}
+void badPointer() noexcept { //expected-note {{function declared non-throwing here}}
   B b;
   try {
-    throw &b; // expected-warning {{'badPointer' has a non-throwing exception specification but can still throw, resulting in unexpected program termination}}
+    throw &b; // expected-warning {{'badPointer' has a non-throwing exception specification but can still throw}}
   } catch (D *) {}
 }
 }

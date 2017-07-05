@@ -107,7 +107,7 @@ struct WasmElemSegment {
 
 struct WasmRelocation {
   uint32_t Type;   // The type of the relocation.
-  int32_t Index;   // Index into function to global index space.
+  uint32_t Index;  // Index into function to global index space.
   uint64_t Offset; // Offset from the start of the section.
   int64_t Addend;  // A value to add to the symbol.
 };

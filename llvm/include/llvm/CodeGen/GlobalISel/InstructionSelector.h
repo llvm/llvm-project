@@ -112,11 +112,13 @@ enum {
   /// - OpIdx - Operand index
   GIM_CheckIsMBB,
 
-  /// A successful match
-  GIM_Accept,
-};
+  /// Check if the specified operand is safe to fold into the current
+  /// instruction.
+  /// - InsnID - Instruction ID
+  GIM_CheckIsSafeToFold,
 
-enum {
+  //=== Renderers ===
+
   /// Mutate an instruction
   /// - NewInsnID - Instruction ID to define
   /// - OldInsnID - Instruction ID to mutate
@@ -225,15 +227,12 @@ protected:
   template <class TgtInstructionSelector, class PredicateBitset,
             class ComplexMatcherMemFn>
   bool executeMatchTable(
-      TgtInstructionSelector &ISel, MatcherState &State,
+      TgtInstructionSelector &ISel, NewMIVector &OutMIs, MatcherState &State,
       const MatcherInfoTy<PredicateBitset, ComplexMatcherMemFn> &MatcherInfo,
-      const int64_t *MatchTable, MachineRegisterInfo &MRI,
-      const TargetRegisterInfo &TRI, const RegisterBankInfo &RBI,
+      const int64_t *MatchTable, const TargetInstrInfo &TII,
+      MachineRegisterInfo &MRI, const TargetRegisterInfo &TRI,
+      const RegisterBankInfo &RBI,
       const PredicateBitset &AvailableFeatures) const;
-  void executeEmitTable(NewMIVector &OutMIs, MatcherState &State,
-                        const int64_t *EmitTable, const TargetInstrInfo &TII,
-                        const TargetRegisterInfo &TRI,
-                        const RegisterBankInfo &RBI) const;
 
   /// Constrain a register operand of an instruction \p I to a specified
   /// register class. This could involve inserting COPYs before (for uses) or

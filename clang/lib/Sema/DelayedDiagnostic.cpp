@@ -22,7 +22,8 @@ using namespace sema;
 DelayedDiagnostic
 DelayedDiagnostic::makeAvailability(AvailabilityResult AR,
                                     SourceLocation Loc,
-                                    const NamedDecl *D,
+                                    const NamedDecl *ReferringDecl,
+                                    const NamedDecl *OffendingDecl,
                                     const ObjCInterfaceDecl *UnknownObjCClass,
                                     const ObjCPropertyDecl  *ObjCProperty,
                                     StringRef Msg,
@@ -31,7 +32,8 @@ DelayedDiagnostic::makeAvailability(AvailabilityResult AR,
   DD.Kind = Availability;
   DD.Triggered = false;
   DD.Loc = Loc;
-  DD.AvailabilityData.Decl = D;
+  DD.AvailabilityData.ReferringDecl = ReferringDecl;
+  DD.AvailabilityData.OffendingDecl = OffendingDecl;
   DD.AvailabilityData.UnknownObjCClass = UnknownObjCClass;
   DD.AvailabilityData.ObjCProperty = ObjCProperty;
   char *MessageData = nullptr;

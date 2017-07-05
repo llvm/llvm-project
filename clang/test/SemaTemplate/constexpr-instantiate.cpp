@@ -191,7 +191,7 @@ namespace Unevaluated {
       static constexpr bool f() { return sizeof(T) < U::size; }
 
       template<typename U>
-      static typename enable_if<f<U>(), void>::type g() {} // expected-note {{disabled by 'enable_if'}}
+      static typename enable_if<f<U>(), void>::type g() {} // expected-note {{requirement 'f<Unevaluated::PR13423::U>()' was not satisfied}}
     };
 
     struct U { static constexpr int size = 2; };
