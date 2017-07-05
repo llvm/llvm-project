@@ -1049,10 +1049,17 @@ ThunkSection *ThunkCreator::addThunkSection(OutputSection *OS,
 
 std::pair<Thunk *, bool> ThunkCreator::getThunk(SymbolBody &Body,
                                                 uint32_t Type) {
-  auto res = ThunkedSymbols.insert({&Body, nullptr});
-  if (res.second)
-    res.first->second = addThunk(Type, Body);
-  return std::make_pair(res.first->second, res.second);
+  auto Res = ThunkedSymbols.insert({&Body, std::vector<Thunk *>()});
+  if (!Res.second) {
+    // Check existing Thunks for Body to see if they can be reused
+    for (Thunk *ET : Res.first->second)
+      if (ET->isCompatibleWith(Type))
+        return std::make_pair(ET, false);
+  }
+  // No existing compatible Thunk in range, create a new one
+  Thunk *T = addThunk(Type, Body);
+  Res.first->second.push_back(T);
+  return std::make_pair(T, true);
 }
 
 // Call Fn on every executable InputSection accessed via the linker script

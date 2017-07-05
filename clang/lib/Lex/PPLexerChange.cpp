@@ -46,12 +46,6 @@ bool Preprocessor::isInPrimaryFile() const {
   });
 }
 
-bool Preprocessor::isInMainFile() const {
-  if (IsFileLexer())
-    return IncludeMacroStack.size() == 0;
-  return true;
-}
-
 /// getCurrentLexer - Return the current file lexer being lexed from.  Note
 /// that this ignores any potentially active macro expansions and _Pragma
 /// expansions going on at the time.

@@ -28,6 +28,10 @@ using namespace llvm;
 #error "You shouldn't build this"
 #endif
 
+static bool AEABI(const ARMSubtarget &ST) {
+  return ST.isTargetAEABI() || ST.isTargetGNUAEABI() || ST.isTargetMuslAEABI();
+}
+
 ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
   using namespace TargetOpcode;
 
@@ -66,8 +70,7 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
   for (unsigned Op : {G_SREM, G_UREM})
     if (ST.hasDivideInARMMode())
       setAction({Op, s32}, Lower);
-    else if (ST.isTargetAEABI() || ST.isTargetGNUAEABI() ||
-             ST.isTargetMuslAEABI())
+    else if (AEABI(ST))
       setAction({Op, s32}, Custom);
     else
       setAction({Op, s32}, Libcall);
@@ -116,6 +119,8 @@ bool ARMLegalizerInfo::legalizeCustom(MachineInstr &MI,
                                       MachineIRBuilder &MIRBuilder) const {
   using namespace TargetOpcode;
 
+  MIRBuilder.setInstr(MI);
+
   switch (MI.getOpcode()) {
   default:
     return false;
@@ -137,9 +142,9 @@ bool ARMLegalizerInfo::legalizeCustom(MachineInstr &MI,
     auto RetVal = MRI.createGenericVirtualRegister(
         getLLTForType(*RetTy, MIRBuilder.getMF().getDataLayout()));
 
-    auto Status = replaceWithLibcall(MI, MIRBuilder, Libcall, {RetVal, RetTy},
-                                     {{MI.getOperand(1).getReg(), ArgTy},
-                                      {MI.getOperand(2).getReg(), ArgTy}});
+    auto Status = createLibcall(MIRBuilder, Libcall, {RetVal, RetTy},
+                                {{MI.getOperand(1).getReg(), ArgTy},
+                                 {MI.getOperand(2).getReg(), ArgTy}});
     if (Status != LegalizerHelper::Legalized)
       return false;
 
@@ -150,7 +155,10 @@ bool ARMLegalizerInfo::legalizeCustom(MachineInstr &MI,
         {MRI.createGenericVirtualRegister(LLT::scalar(32)), OriginalResult},
         RetVal);
 
-    return LegalizerHelper::Legalized;
+    break;
   }
   }
+
+  MI.eraseFromParent();
+  return true;
 }

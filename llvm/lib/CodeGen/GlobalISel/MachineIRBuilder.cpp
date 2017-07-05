@@ -166,17 +166,22 @@ MachineInstrBuilder MachineIRBuilder::buildGlobalValue(unsigned Res,
       .addGlobalAddress(GV);
 }
 
-MachineInstrBuilder MachineIRBuilder::buildAdd(unsigned Res, unsigned Op0,
+MachineInstrBuilder MachineIRBuilder::buildBinaryOp(unsigned Opcode, unsigned Res, unsigned Op0,
                                                unsigned Op1) {
   assert((MRI->getType(Res).isScalar() || MRI->getType(Res).isVector()) &&
          "invalid operand type");
   assert(MRI->getType(Res) == MRI->getType(Op0) &&
          MRI->getType(Res) == MRI->getType(Op1) && "type mismatch");
 
-  return buildInstr(TargetOpcode::G_ADD)
+  return buildInstr(Opcode)
       .addDef(Res)
       .addUse(Op0)
       .addUse(Op1);
+}
+
+MachineInstrBuilder MachineIRBuilder::buildAdd(unsigned Res, unsigned Op0,
+                                               unsigned Op1) {
+  return buildBinaryOp(TargetOpcode::G_ADD, Res, Op0, Op1);
 }
 
 MachineInstrBuilder MachineIRBuilder::buildGEP(unsigned Res, unsigned Op0,
@@ -222,41 +227,22 @@ MachineInstrBuilder MachineIRBuilder::buildPtrMask(unsigned Res, unsigned Op0,
 
 MachineInstrBuilder MachineIRBuilder::buildSub(unsigned Res, unsigned Op0,
                                                unsigned Op1) {
-  assert((MRI->getType(Res).isScalar() || MRI->getType(Res).isVector()) &&
-         "invalid operand type");
-  assert(MRI->getType(Res) == MRI->getType(Op0) &&
-         MRI->getType(Res) == MRI->getType(Op1) && "type mismatch");
-
-  return buildInstr(TargetOpcode::G_SUB)
-      .addDef(Res)
-      .addUse(Op0)
-      .addUse(Op1);
+  return buildBinaryOp(TargetOpcode::G_SUB, Res, Op0, Op1);
 }
 
 MachineInstrBuilder MachineIRBuilder::buildMul(unsigned Res, unsigned Op0,
                                                unsigned Op1) {
-  assert((MRI->getType(Res).isScalar() || MRI->getType(Res).isVector()) &&
-         "invalid operand type");
-  assert(MRI->getType(Res) == MRI->getType(Op0) &&
-         MRI->getType(Res) == MRI->getType(Op1) && "type mismatch");
-
-  return buildInstr(TargetOpcode::G_MUL)
-      .addDef(Res)
-      .addUse(Op0)
-      .addUse(Op1);
+  return buildBinaryOp(TargetOpcode::G_MUL, Res, Op0, Op1);
 }
 
 MachineInstrBuilder MachineIRBuilder::buildAnd(unsigned Res, unsigned Op0,
                                                unsigned Op1) {
-  assert((MRI->getType(Res).isScalar() || MRI->getType(Res).isVector()) &&
-         "invalid operand type");
-  assert(MRI->getType(Res) == MRI->getType(Op0) &&
-         MRI->getType(Res) == MRI->getType(Op1) && "type mismatch");
+  return buildBinaryOp(TargetOpcode::G_AND, Res, Op0, Op1);
+}
 
-  return buildInstr(TargetOpcode::G_AND)
-      .addDef(Res)
-      .addUse(Op0)
-      .addUse(Op1);
+MachineInstrBuilder MachineIRBuilder::buildOr(unsigned Res, unsigned Op0,
+                                              unsigned Op1) {
+  return buildBinaryOp(TargetOpcode::G_OR, Res, Op0, Op1);
 }
 
 MachineInstrBuilder MachineIRBuilder::buildBr(MachineBasicBlock &Dest) {

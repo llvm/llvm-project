@@ -57,6 +57,7 @@ public:
   uint32_t size() const override { return 12; }
   void writeTo(uint8_t *Buf, ThunkSection &IS) const override;
   void addSymbols(ThunkSection &IS) override;
+  bool isCompatibleWith(uint32_t RelocType) const override;
 };
 
 class ARMV7PILongThunk final : public Thunk {
@@ -66,6 +67,7 @@ public:
   uint32_t size() const override { return 16; }
   void writeTo(uint8_t *Buf, ThunkSection &IS) const override;
   void addSymbols(ThunkSection &IS) override;
+  bool isCompatibleWith(uint32_t RelocType) const override;
 };
 
 class ThumbV7ABSLongThunk final : public Thunk {
@@ -77,6 +79,7 @@ public:
   uint32_t size() const override { return 10; }
   void writeTo(uint8_t *Buf, ThunkSection &IS) const override;
   void addSymbols(ThunkSection &IS) override;
+  bool isCompatibleWith(uint32_t RelocType) const override;
 };
 
 class ThumbV7PILongThunk final : public Thunk {
@@ -88,6 +91,7 @@ public:
   uint32_t size() const override { return 12; }
   void writeTo(uint8_t *Buf, ThunkSection &IS) const override;
   void addSymbols(ThunkSection &IS) override;
+  bool isCompatibleWith(uint32_t RelocType) const override;
 };
 
 // MIPS LA25 thunk
@@ -128,6 +132,11 @@ void ARMV7ABSLongThunk::addSymbols(ThunkSection &IS) {
   addSyntheticLocal("$a", STT_NOTYPE, Offset, 0, &IS);
 }
 
+bool ARMV7ABSLongThunk::isCompatibleWith(uint32_t RelocType) const {
+  // Thumb branch relocations can't use BLX
+  return RelocType != R_ARM_THM_JUMP19 && RelocType != R_ARM_THM_JUMP24;
+}
+
 void ThumbV7ABSLongThunk::writeTo(uint8_t *Buf, ThunkSection &IS) const {
   const uint8_t Data[] = {
       0x40, 0xf2, 0x00, 0x0c, // movw         ip, :lower16:S
@@ -145,6 +154,12 @@ void ThumbV7ABSLongThunk::addSymbols(ThunkSection &IS) {
       Saver.save("__Thumbv7ABSLongThunk_" + Destination.getName()), STT_FUNC,
       Offset | 0x1, size(), &IS);
   addSyntheticLocal("$t", STT_NOTYPE, Offset, 0, &IS);
+}
+
+bool ThumbV7ABSLongThunk::isCompatibleWith(uint32_t RelocType) const {
+  // ARM branch relocations can't use BLX
+  return RelocType != R_ARM_JUMP24 && RelocType != R_ARM_PC24 &&
+         RelocType != R_ARM_PLT32;
 }
 
 void ARMV7PILongThunk::writeTo(uint8_t *Buf, ThunkSection &IS) const {
@@ -168,6 +183,11 @@ void ARMV7PILongThunk::addSymbols(ThunkSection &IS) {
   addSyntheticLocal("$a", STT_NOTYPE, Offset, 0, &IS);
 }
 
+bool ARMV7PILongThunk::isCompatibleWith(uint32_t RelocType) const {
+  // Thumb branch relocations can't use BLX
+  return RelocType != R_ARM_THM_JUMP19 && RelocType != R_ARM_THM_JUMP24;
+}
+
 void ThumbV7PILongThunk::writeTo(uint8_t *Buf, ThunkSection &IS) const {
   const uint8_t Data[] = {
       0x4f, 0xf6, 0xf4, 0x7c, // P:  movw ip,:lower16:S - (P + (L1-P) + 4)
@@ -187,6 +207,12 @@ void ThumbV7PILongThunk::addSymbols(ThunkSection &IS) {
       Saver.save("__ThumbV7PILongThunk_" + Destination.getName()), STT_FUNC,
       Offset | 0x1, size(), &IS);
   addSyntheticLocal("$t", STT_NOTYPE, Offset, 0, &IS);
+}
+
+bool ThumbV7PILongThunk::isCompatibleWith(uint32_t RelocType) const {
+  // ARM branch relocations can't use BLX
+  return RelocType != R_ARM_JUMP24 && RelocType != R_ARM_PC24 &&
+         RelocType != R_ARM_PLT32;
 }
 
 // Write MIPS LA25 thunk code to call PIC function from the non-PIC one.

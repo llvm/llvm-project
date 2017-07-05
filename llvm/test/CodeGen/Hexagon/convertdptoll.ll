@@ -17,8 +17,8 @@ entry:
   %0 = load double, double* %a, align 8
   %1 = load double, double* %b, align 8
   %add = fadd double %0, %1
-  store double %add, double* %c, align 8
-  %2 = load double, double* %c, align 8
+  store volatile double %add, double* %c, align 8
+  %2 = load volatile double, double* %c, align 8
   %conv = fptosi double %2 to i64
   store i64 %conv, i64* %i, align 8
   %3 = load i64, i64* %i, align 8
