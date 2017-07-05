@@ -2049,7 +2049,7 @@ ArrayRef<const char *> NVPTXTargetInfo::getGCCRegNames() const {
   return llvm::makeArrayRef(GCCRegNames);
 }
 
-static const LangAS::Map AMDGPUNonOpenCLPrivateIsZeroMap = {
+static const LangAS::Map AMDGPUPrivIsZeroDefIsGenMap = {
     4, // Default
     1, // opencl_global
     3, // opencl_local
@@ -2059,7 +2059,7 @@ static const LangAS::Map AMDGPUNonOpenCLPrivateIsZeroMap = {
     2, // cuda_constant
     3  // cuda_shared
 };
-static const LangAS::Map AMDGPUNonOpenCLGenericIsZeroMap = {
+static const LangAS::Map AMDGPUGenIsZeroDefIsGenMap = {
     0, // Default
     1, // opencl_global
     3, // opencl_local
@@ -2069,7 +2069,7 @@ static const LangAS::Map AMDGPUNonOpenCLGenericIsZeroMap = {
     2, // cuda_constant
     3  // cuda_shared
 };
-static const LangAS::Map AMDGPUOpenCLPrivateIsZeroMap = {
+static const LangAS::Map AMDGPUPrivIsZeroDefIsPrivMap = {
     0, // Default
     1, // opencl_global
     3, // opencl_local
@@ -2079,7 +2079,7 @@ static const LangAS::Map AMDGPUOpenCLPrivateIsZeroMap = {
     2, // cuda_constant
     3  // cuda_shared
 };
-static const LangAS::Map AMDGPUOpenCLGenericIsZeroMap = {
+static const LangAS::Map AMDGPUGenIsZeroDefIsPrivMap = {
     5, // Default
     1, // opencl_global
     3, // opencl_local
@@ -2184,18 +2184,35 @@ public:
                     : DataLayoutStringR600);
     assert(DataLayout->getAllocaAddrSpace() == AS.Private);
 
+    setAddressSpaceMap(Triple.getOS() == llvm::Triple::Mesa3D ||
+                       Triple.getEnvironment() == llvm::Triple::OpenCL ||
+                       Triple.getEnvironmentName() == "amdgizcl" ||
+                       !isAMDGCN(Triple));
     UseAddrSpaceMapMangling = true;
+
+    // Set pointer width and alignment for target address space 0.
+    PointerWidth = PointerAlign = DataLayout->getPointerSizeInBits();
+    if (getMaxPointerWidth() == 64) {
+      LongWidth = LongAlign = 64;
+      SizeType = UnsignedLong;
+      PtrDiffType = SignedLong;
+      IntPtrType = SignedLong;
+    }
+  }
+
+  void setAddressSpaceMap(bool DefaultIsPrivate) {
+    if (isGenericZero(getTriple())) {
+      AddrSpaceMap = DefaultIsPrivate ? &AMDGPUGenIsZeroDefIsPrivMap
+                                      : &AMDGPUGenIsZeroDefIsGenMap;
+    } else {
+      AddrSpaceMap = DefaultIsPrivate ? &AMDGPUPrivIsZeroDefIsPrivMap
+                                      : &AMDGPUPrivIsZeroDefIsGenMap;
+    }
   }
 
   void adjust(LangOptions &Opts) override {
     TargetInfo::adjust(Opts);
-    if (isGenericZero(getTriple())) {
-      AddrSpaceMap = Opts.OpenCL ? &AMDGPUOpenCLGenericIsZeroMap
-                                 : &AMDGPUNonOpenCLGenericIsZeroMap;
-    } else {
-      AddrSpaceMap = Opts.OpenCL ? &AMDGPUOpenCLPrivateIsZeroMap
-                                 : &AMDGPUNonOpenCLPrivateIsZeroMap;
-    }
+    setAddressSpaceMap(Opts.OpenCL || !isAMDGCN(getTriple()));
   }
 
   uint64_t getPointerWidthV(unsigned AddrSpace) const override {
@@ -2206,6 +2223,10 @@ public:
       return 32;
     }
     return 64;
+  }
+
+  uint64_t getPointerAlignV(unsigned AddrSpace) const override {
+    return getPointerWidthV(AddrSpace);
   }
 
   uint64_t getMaxPointerWidth() const override {
@@ -2384,12 +2405,7 @@ public:
   }
 
   /// \returns Target specific vtbl ptr address space.
-  unsigned getVtblPtrAddressSpace() const override {
-    // \todo: We currently have address spaces defined in AMDGPU Backend. It
-    // would be nice if we could use it here instead of using bare numbers (same
-    // applies to getDWARFAddressSpace).
-    return 2; // constant.
-  }
+  unsigned getVtblPtrAddressSpace() const override { return AS.Constant; }
 
   /// \returns If a target requires an address within a target specific address
   /// space \p AddressSpace to be converted in order to be used, then return the

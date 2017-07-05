@@ -2319,7 +2319,11 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     if ((Left.is(TT_TemplateString) && Left.TokenText.endswith("${")) ||
         (Right.is(TT_TemplateString) && Right.TokenText.startswith("}")))
       return false;
-    if (Left.is(tok::identifier) && Right.is(TT_TemplateString))
+    // In tagged template literals ("html`bar baz`"), there is no space between
+    // the tag identifier and the template string. getIdentifierInfo makes sure
+    // that the identifier is not a pseudo keyword like `yield`, either.
+    if (Left.is(tok::identifier) && Keywords.IsJavaScriptIdentifier(Left) &&
+        Right.is(TT_TemplateString))
       return false;
     if (Right.is(tok::star) &&
         Left.isOneOf(Keywords.kw_function, Keywords.kw_yield))

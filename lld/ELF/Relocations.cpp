@@ -1050,7 +1050,7 @@ ThunkSection *ThunkCreator::addThunkSection(OutputSection *OS,
 std::pair<Thunk *, bool> ThunkCreator::getThunk(SymbolBody &Body,
                                                 uint32_t Type) {
   auto res = ThunkedSymbols.insert({&Body, nullptr});
-  if (res.second)
+  if (res.second || !res.first->second->isCompatibleWith(Type))
     res.first->second = addThunk(Type, Body);
   return std::make_pair(res.first->second, res.second);
 }

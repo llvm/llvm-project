@@ -573,6 +573,8 @@ void ASTDeclReader::VisitDecl(Decl *D) {
       else
         Reader.HiddenNamesMap[Owner].push_back(D);
     }
+  } else if (ModulePrivate) {
+    D->setModuleOwnershipKind(Decl::ModuleOwnershipKind::ModulePrivate);
   }
 }
 

@@ -8,7 +8,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "MakeSharedCheck.h"
+#include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/Lexer.h"
+#include "clang/Lex/Preprocessor.h"
 
 using namespace clang::ast_matchers;
 
@@ -17,6 +19,9 @@ namespace tidy {
 namespace modernize {
 
 namespace {
+
+constexpr char StdMemoryHeader[] = "memory";
+
 std::string GetNewExprName(const CXXNewExpr *NewExpr,
                            const SourceManager &SM,
                            const LangOptions &Lang) {
@@ -29,6 +34,7 @@ std::string GetNewExprName(const CXXNewExpr *NewExpr,
   }
   return WrittenName.str();
 }
+
 } // namespace
 
 const char MakeSmartPtrCheck::PointerType[] = "pointerType";
@@ -37,9 +43,28 @@ const char MakeSmartPtrCheck::ResetCall[] = "resetCall";
 const char MakeSmartPtrCheck::NewExpression[] = "newExpression";
 
 MakeSmartPtrCheck::MakeSmartPtrCheck(StringRef Name, ClangTidyContext *Context,
-                                     std::string makeSmartPtrFunctionName)
+                                     StringRef MakeSmartPtrFunctionName)
     : ClangTidyCheck(Name, Context),
-      makeSmartPtrFunctionName(std::move(makeSmartPtrFunctionName)) {}
+      IncludeStyle(utils::IncludeSorter::parseIncludeStyle(
+          Options.get("IncludeStyle", "llvm"))),
+      MakeSmartPtrFunctionHeader(
+          Options.get("MakeSmartPtrFunctionHeader", StdMemoryHeader)),
+      MakeSmartPtrFunctionName(
+          Options.get("MakeSmartPtrFunction", MakeSmartPtrFunctionName)) {}
+
+void MakeSmartPtrCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "IncludeStyle", IncludeStyle);
+  Options.store(Opts, "MakeSmartPtrFunctionHeader", MakeSmartPtrFunctionHeader);
+  Options.store(Opts, "MakeSmartPtrFunction", MakeSmartPtrFunctionName);
+}
+
+void MakeSmartPtrCheck::registerPPCallbacks(CompilerInstance &Compiler) {
+  if (getLangOpts().CPlusPlus11) {
+    Inserter.reset(new utils::IncludeInserter(
+        Compiler.getSourceManager(), Compiler.getLangOpts(), IncludeStyle));
+    Compiler.getPreprocessor().addPPCallbacks(Inserter->CreatePPCallbacks());
+  }
+}
 
 void MakeSmartPtrCheck::registerMatchers(ast_matchers::MatchFinder *Finder) {
   if (!getLangOpts().CPlusPlus11)
@@ -107,7 +132,7 @@ void MakeSmartPtrCheck::checkConstruct(SourceManager &SM,
     return;
 
   auto Diag = diag(ConstructCallStart, "use %0 instead")
-              << makeSmartPtrFunctionName;
+              << MakeSmartPtrFunctionName;
 
   // Find the location of the template's left angle.
   size_t LAngle = ExprStr.find("<");
@@ -125,7 +150,7 @@ void MakeSmartPtrCheck::checkConstruct(SourceManager &SM,
 
   Diag << FixItHint::CreateReplacement(
       CharSourceRange::getCharRange(ConstructCallStart, ConstructCallEnd),
-      makeSmartPtrFunctionName);
+      MakeSmartPtrFunctionName);
 
   // If the smart_ptr is built with brace enclosed direct initialization, use
   // parenthesis instead.
@@ -142,6 +167,7 @@ void MakeSmartPtrCheck::checkConstruct(SourceManager &SM,
   }
 
   replaceNew(Diag, New, SM);
+  insertHeader(Diag, SM.getFileID(ConstructCallStart));
 }
 
 void MakeSmartPtrCheck::checkReset(SourceManager &SM,
@@ -155,11 +181,11 @@ void MakeSmartPtrCheck::checkReset(SourceManager &SM,
       Lexer::getLocForEndOfToken(Expr->getLocEnd(), 0, SM, getLangOpts());
 
   auto Diag = diag(ResetCallStart, "use %0 instead")
-              << makeSmartPtrFunctionName;
+              << MakeSmartPtrFunctionName;
 
   Diag << FixItHint::CreateReplacement(
       CharSourceRange::getCharRange(OperatorLoc, ExprEnd),
-      (llvm::Twine(" = ") + makeSmartPtrFunctionName + "<" +
+      (llvm::Twine(" = ") + MakeSmartPtrFunctionName + "<" +
        GetNewExprName(New, SM, getLangOpts()) + ">")
           .str());
 
@@ -167,6 +193,7 @@ void MakeSmartPtrCheck::checkReset(SourceManager &SM,
     Diag << FixItHint::CreateInsertion(ExprStart, "*");
 
   replaceNew(Diag, New, SM);
+  insertHeader(Diag, SM.getFileID(OperatorLoc));
 }
 
 void MakeSmartPtrCheck::replaceNew(DiagnosticBuilder &Diag,
@@ -240,6 +267,17 @@ void MakeSmartPtrCheck::replaceNew(DiagnosticBuilder &Diag,
         SourceRange(InitRange.getEnd().getLocWithOffset(1), NewEnd));
     break;
   }
+  }
+}
+
+void MakeSmartPtrCheck::insertHeader(DiagnosticBuilder &Diag, FileID FD) {
+  if (MakeSmartPtrFunctionHeader.empty()) {
+    return;
+  }
+  if (auto IncludeFixit = Inserter->CreateIncludeInsertion(
+          FD, MakeSmartPtrFunctionHeader,
+          /*IsAngled=*/MakeSmartPtrFunctionHeader == StdMemoryHeader)) {
+    Diag << *IncludeFixit;
   }
 }
 
