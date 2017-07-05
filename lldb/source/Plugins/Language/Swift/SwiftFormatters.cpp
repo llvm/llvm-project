@@ -383,7 +383,7 @@ bool lldb_private::formatters::swift::Bool_SummaryProvider(
   // But at present CompilerType has no way to represent that information.
   // So for now we hard code it.
   uint64_t value = value_child->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
-  uint64_t mask = 1 << 0;
+  const uint64_t mask = 1 << 0;
   value &= mask;
   
   switch (value) {
