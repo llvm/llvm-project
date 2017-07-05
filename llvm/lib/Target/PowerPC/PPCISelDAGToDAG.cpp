@@ -4034,11 +4034,13 @@ void PPCDAGToDAGISel::foldBoolExts(SDValue &Res, SDNode *&N) {
                                             O0.getNode(), O1.getNode());
     };
 
+    // FIXME: When the semantics of the interaction between select and undef
+    // are clearly defined, it may turn out to be unnecessary to break here.
     SDValue TrueRes = TryFold(ConstTrue);
-    if (!TrueRes)
+    if (!TrueRes || TrueRes.isUndef())
       break;
     SDValue FalseRes = TryFold(ConstFalse);
-    if (!FalseRes)
+    if (!FalseRes || FalseRes.isUndef())
       break;
 
     // For us to materialize these using one instruction, we must be able to

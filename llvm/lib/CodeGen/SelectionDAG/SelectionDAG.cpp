@@ -34,6 +34,7 @@
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/RuntimeLibcalls.h"
+#include "llvm/CodeGen/SelectionDAGAddressAnalysis.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 #include "llvm/CodeGen/ValueTypes.h"
@@ -7630,45 +7631,13 @@ bool SelectionDAG::areNonVolatileConsecutiveLoads(LoadSDNode *LD,
 
   SDValue Loc = LD->getOperand(1);
   SDValue BaseLoc = Base->getOperand(1);
-  if (Loc.getOpcode() == ISD::FrameIndex) {
-    if (BaseLoc.getOpcode() != ISD::FrameIndex)
-      return false;
-    const MachineFrameInfo &MFI = getMachineFunction().getFrameInfo();
-    int FI  = cast<FrameIndexSDNode>(Loc)->getIndex();
-    int BFI = cast<FrameIndexSDNode>(BaseLoc)->getIndex();
-    int FS  = MFI.getObjectSize(FI);
-    int BFS = MFI.getObjectSize(BFI);
-    if (FS != BFS || FS != (int)Bytes) return false;
-    return MFI.getObjectOffset(FI) == (MFI.getObjectOffset(BFI) + Dist*Bytes);
-  }
 
-  // Handle X + C.
-  if (isBaseWithConstantOffset(Loc)) {
-    int64_t LocOffset = cast<ConstantSDNode>(Loc.getOperand(1))->getSExtValue();
-    if (Loc.getOperand(0) == BaseLoc) {
-      // If the base location is a simple address with no offset itself, then
-      // the second load's first add operand should be the base address.
-      if (LocOffset == Dist * (int)Bytes)
-        return true;
-    } else if (isBaseWithConstantOffset(BaseLoc)) {
-      // The base location itself has an offset, so subtract that value from the
-      // second load's offset before comparing to distance * size.
-      int64_t BOffset =
-        cast<ConstantSDNode>(BaseLoc.getOperand(1))->getSExtValue();
-      if (Loc.getOperand(0) == BaseLoc.getOperand(0)) {
-        if ((LocOffset - BOffset) == Dist * (int)Bytes)
-          return true;
-      }
-    }
-  }
-  const GlobalValue *GV1 = nullptr;
-  const GlobalValue *GV2 = nullptr;
-  int64_t Offset1 = 0;
-  int64_t Offset2 = 0;
-  bool isGA1 = TLI->isGAPlusOffset(Loc.getNode(), GV1, Offset1);
-  bool isGA2 = TLI->isGAPlusOffset(BaseLoc.getNode(), GV2, Offset2);
-  if (isGA1 && isGA2 && GV1 == GV2)
-    return Offset1 == (Offset2 + Dist*Bytes);
+  auto BaseLocDecomp = BaseIndexOffset::match(BaseLoc, *this);
+  auto LocDecomp = BaseIndexOffset::match(Loc, *this);
+
+  int64_t Offset = 0;
+  if (BaseLocDecomp.equalBaseIndex(LocDecomp, *this, Offset))
+    return (Dist * Bytes == Offset);
   return false;
 }
 

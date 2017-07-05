@@ -200,7 +200,6 @@ FakeStack *AsanThread::AsyncSignalSafeLazyInitFakeStack() {
   uptr stack_size = this->stack_size();
   if (stack_size == 0)  // stack_size is not yet available, don't use FakeStack.
     return nullptr;
-  CHECK_LE(stack_size, 0x10000000);
   uptr old_val = 0;
   // fake_stack_ has 3 states:
   // 0   -- not initialized

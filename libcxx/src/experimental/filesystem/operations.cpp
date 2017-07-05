@@ -426,17 +426,20 @@ void __current_path(const path& p, std::error_code *ec) {
 
 bool __equivalent(const path& p1, const path& p2, std::error_code *ec)
 {
+    auto make_unsupported_error = [&]() {
+      set_or_throw(make_error_code(errc::not_supported), ec,
+                     "equivalent", p1, p2);
+      return false;
+    };
     std::error_code ec1, ec2;
     struct ::stat st1 = {};
     struct ::stat st2 = {};
     auto s1 = detail::posix_stat(p1.native(), st1, &ec1);
+    if (!exists(s1))
+      return make_unsupported_error();
     auto s2 = detail::posix_stat(p2.native(), st2, &ec2);
-
-    if ((!exists(s1) && !exists(s2)) || (is_other(s1) && is_other(s2))) {
-        set_or_throw(make_error_code(errc::not_supported), ec,
-                     "equivalent", p1, p2);
-        return false;
-    }
+    if (!exists(s2))
+      return make_unsupported_error();
     if (ec) ec->clear();
     return (st1.st_dev == st2.st_dev && st1.st_ino == st2.st_ino);
 }

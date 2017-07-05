@@ -60,12 +60,18 @@ BaseIndexOffset BaseIndexOffset::match(SDValue Ptr, const SelectionDAG &DAG) {
   int64_t Offset = 0;
   bool IsIndexSignExt = false;
 
-  // Consume constant adds
-  while (Base->getOpcode() == ISD::ADD &&
-         isa<ConstantSDNode>(Base->getOperand(1))) {
-    int64_t POffset = cast<ConstantSDNode>(Base->getOperand(1))->getSExtValue();
-    Offset += POffset;
-    Base = Base->getOperand(0);
+  // Consume constant adds & ors with appropriate masking.
+  while (Base->getOpcode() == ISD::ADD || Base->getOpcode() == ISD::OR) {
+    if (auto *C = dyn_cast<ConstantSDNode>(Base->getOperand(1))) {
+      // Only consider ORs which act as adds.
+      if (Base->getOpcode() == ISD::OR &&
+          !DAG.MaskedValueIsZero(Base->getOperand(0), C->getAPIntValue()))
+        break;
+      Offset += C->getSExtValue();
+      Base = Base->getOperand(0);
+      continue;
+    }
+    break;
   }
 
   if (Base->getOpcode() == ISD::ADD) {

@@ -10,7 +10,7 @@ declare i8 @llvm.ctlz.i8(i8)
 
 ; CHECK-LABEL: count_leading_zeros:
 ; CHECK: cpi    [[RESULT:r[0-9]+]], 0
-; CHECK: breq   LBB0_2
+; CHECK: breq   LBB0_1
 ; CHECK: mov    [[SCRATCH:r[0-9]+]], {{.*}}[[RESULT]]
 ; CHECK: lsr    {{.*}}[[SCRATCH]]
 ; CHECK: or     {{.*}}[[SCRATCH]], {{.*}}[[RESULT]]
@@ -43,6 +43,6 @@ declare i8 @llvm.ctlz.i8(i8)
 ; CHECK: add    {{.*}}[[RESULT]], {{.*}}[[SCRATCH]]
 ; CHECK: andi   {{.*}}[[RESULT]], 15
 ; CHECK: ret
-; CHECK: LBB0_2:
+; CHECK: LBB0_1:
 ; CHECK: ldi    {{.*}}[[RESULT]], 8
 ; CHECK: ret

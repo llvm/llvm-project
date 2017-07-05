@@ -16054,8 +16054,6 @@ Sema::DeclGroupPtrTy Sema::ActOnModuleDecl(SourceLocation StartLoc,
     return nullptr;
   }
 
-  // FIXME: Create a ModuleDecl and return it.
-
   // FIXME: Most of this work should be done by the preprocessor rather than
   // here, in order to support macro import.
 
@@ -16069,6 +16067,8 @@ Sema::DeclGroupPtrTy Sema::ActOnModuleDecl(SourceLocation StartLoc,
     ModuleName += Piece.first->getName();
   }
 
+  // FIXME: If we've already seen a module-declaration, report an error.
+
   // If a module name was explicitly specified on the command line, it must be
   // correct.
   if (!getLangOpts().CurrentModule.empty() &&
@@ -16081,6 +16081,7 @@ Sema::DeclGroupPtrTy Sema::ActOnModuleDecl(SourceLocation StartLoc,
   const_cast<LangOptions&>(getLangOpts()).CurrentModule = ModuleName;
 
   auto &Map = PP.getHeaderSearchInfo().getModuleMap();
+  Module *Mod;
 
   switch (MDK) {
   case ModuleDeclKind::Module: {
@@ -16099,12 +16100,9 @@ Sema::DeclGroupPtrTy Sema::ActOnModuleDecl(SourceLocation StartLoc,
     }
 
     // Create a Module for the module that we're defining.
-    Module *Mod = Map.createModuleForInterfaceUnit(ModuleLoc, ModuleName);
+    Mod = Map.createModuleForInterfaceUnit(ModuleLoc, ModuleName);
     assert(Mod && "module creation should not fail");
-
-    // Enter the semantic scope of the module.
-    ActOnModuleBegin(ModuleLoc, Mod);
-    return nullptr;
+    break;
   }
 
   case ModuleDeclKind::Partition:
@@ -16114,14 +16112,26 @@ Sema::DeclGroupPtrTy Sema::ActOnModuleDecl(SourceLocation StartLoc,
   case ModuleDeclKind::Implementation:
     std::pair<IdentifierInfo *, SourceLocation> ModuleNameLoc(
         PP.getIdentifierInfo(ModuleName), Path[0].second);
-
-    DeclResult Import = ActOnModuleImport(ModuleLoc, ModuleLoc, ModuleNameLoc);
-    if (Import.isInvalid())
+    Mod = getModuleLoader().loadModule(ModuleLoc, Path, Module::AllVisible,
+                                       /*IsIncludeDirective=*/false);
+    if (!Mod)
       return nullptr;
-    return ConvertDeclToDeclGroup(Import.get());
+    break;
   }
 
-  llvm_unreachable("unexpected module decl kind");
+  // Enter the semantic scope of the module.
+  ModuleScopes.push_back({});
+  ModuleScopes.back().Module = Mod;
+  ModuleScopes.back().OuterVisibleModules = std::move(VisibleModules);
+  VisibleModules.setVisible(Mod, ModuleLoc);
+
+  // From now on, we have an owning module for all declarations we see.
+  // However, those declarations are module-private unless explicitly
+  // exported.
+  Context.getTranslationUnitDecl()->setLocalOwningModule(Mod);
+
+  // FIXME: Create a ModuleDecl.
+  return nullptr;
 }
 
 DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
@@ -16310,6 +16320,7 @@ Decl *Sema::ActOnStartExportDecl(Scope *S, SourceLocation ExportLoc,
 
   CurContext->addDecl(D);
   PushDeclContext(S, D);
+  D->setModuleOwnershipKind(Decl::ModuleOwnershipKind::VisibleWhenImported);
   return D;
 }
 

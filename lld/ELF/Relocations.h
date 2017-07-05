@@ -144,14 +144,17 @@ private:
   std::pair<Thunk *, bool> getThunk(SymbolBody &Body, uint32_t Type);
   ThunkSection *addThunkSection(OutputSection *OS,
                                 std::vector<InputSection *> *, uint64_t Off);
-  // Track Symbols that already have a Thunk
-  llvm::DenseMap<SymbolBody *, Thunk *> ThunkedSymbols;
+  // Record all the available Thunks for a Symbol
+  llvm::DenseMap<SymbolBody *, std::vector<Thunk *>> ThunkedSymbols;
 
   // Find a Thunk from the Thunks symbol definition, we can use this to find
   // the Thunk from a relocation to the Thunks symbol definition.
   llvm::DenseMap<SymbolBody *, Thunk *> Thunks;
 
-  // Track InputSections that have a ThunkSection placed in front
+  // Track InputSections that have an inline ThunkSection placed in front
+  // an inline ThunkSection may have control fall through to the section below
+  // so we need to make sure that there is only one of them.
+  // The Mips LA25 Thunk is an example of an inline ThunkSection.
   llvm::DenseMap<InputSection *, ThunkSection *> ThunkedSections;
 
   // All the ThunkSections that we have created, organised by OutputSection

@@ -1595,7 +1595,7 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
                                           ContainsUnexpandedParameterPack);
   // If the lambda expression's call operator is not explicitly marked constexpr
   // and we are not in a dependent context, analyze the call operator to infer
-  // its constexpr-ness, supressing diagnostics while doing so.
+  // its constexpr-ness, suppressing diagnostics while doing so.
   if (getLangOpts().CPlusPlus1z && !CallOperator->isInvalidDecl() &&
       !CallOperator->isConstexpr() &&
       !isa<CoroutineBodyStmt>(CallOperator->getBody()) &&

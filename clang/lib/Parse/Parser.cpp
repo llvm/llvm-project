@@ -516,6 +516,8 @@ void Parser::Initialize() {
 
   // Prime the lexer look-ahead.
   ConsumeToken();
+
+  PP.replayPreambleConditionalStack();
 }
 
 void Parser::LateTemplateParserCleanupCallback(void *P) {
@@ -526,6 +528,8 @@ void Parser::LateTemplateParserCleanupCallback(void *P) {
 }
 
 bool Parser::ParseFirstTopLevelDecl(DeclGroupPtrTy &Result) {
+  Actions.ActOnStartOfTranslationUnit();
+
   // C11 6.9p1 says translation units must have at least one top-level
   // declaration. C++ doesn't have this restriction. We also don't want to
   // complain if we have a precompiled header, although technically if the PCH

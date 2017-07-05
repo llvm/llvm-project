@@ -2189,6 +2189,15 @@ public:
                        Triple.getEnvironmentName() == "amdgizcl" ||
                        !isAMDGCN(Triple));
     UseAddrSpaceMapMangling = true;
+
+    // Set pointer width and alignment for target address space 0.
+    PointerWidth = PointerAlign = DataLayout->getPointerSizeInBits();
+    if (getMaxPointerWidth() == 64) {
+      LongWidth = LongAlign = 64;
+      SizeType = UnsignedLong;
+      PtrDiffType = SignedLong;
+      IntPtrType = SignedLong;
+    }
   }
 
   void setAddressSpaceMap(bool DefaultIsPrivate) {
@@ -2214,6 +2223,10 @@ public:
       return 32;
     }
     return 64;
+  }
+
+  uint64_t getPointerAlignV(unsigned AddrSpace) const override {
+    return getPointerWidthV(AddrSpace);
   }
 
   uint64_t getMaxPointerWidth() const override {
@@ -2392,12 +2405,7 @@ public:
   }
 
   /// \returns Target specific vtbl ptr address space.
-  unsigned getVtblPtrAddressSpace() const override {
-    // \todo: We currently have address spaces defined in AMDGPU Backend. It
-    // would be nice if we could use it here instead of using bare numbers (same
-    // applies to getDWARFAddressSpace).
-    return 2; // constant.
-  }
+  unsigned getVtblPtrAddressSpace() const override { return AS.Constant; }
 
   /// \returns If a target requires an address within a target specific address
   /// space \p AddressSpace to be converted in order to be used, then return the
