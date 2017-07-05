@@ -1,12 +1,12 @@
-; RUN: llc -verify-machineinstrs -mcpu=tahiti -mattr=-fp32-denormals,+fast-fmaf -fp-contract=on   < %s | FileCheck -check-prefixes=GCN,GCN-FLUSH-STRICT,GCN-FLUSH,SI-FLUSH,GCN-FLUSH-FASTFMA,GCN-FLUSH-FASTFMA-STRICT,SI %s
-; RUN: llc -verify-machineinstrs -mcpu=tahiti -mattr=+fp32-denormals,+fast-fmaf -fp-contract=on   < %s | FileCheck -check-prefixes=GCN,GCN-DENORM-STRICT,GCN-DENORM,SI-DENORM,GCN-DENORM-FASTFMA,GCN-DENORM-FASTFMA-STRICT,SI %s
-; RUN: llc -verify-machineinstrs -mcpu=verde  -mattr=-fp32-denormals,-fast-fmaf -fp-contract=on   < %s | FileCheck -check-prefixes=GCN,GCN-FLUSH-STRICT,GCN-FLUSH,SI-FLUSH,GCN-FLUSH-SLOWFMA,GCN-FLUSH-SLOWFMA-STRICT,SI %s
-; RUN: llc -verify-machineinstrs -mcpu=verde  -mattr=+fp32-denormals,-fast-fmaf -fp-contract=on   < %s | FileCheck -check-prefixes=GCN,GCN-DENORM-STRICT,GCN-DENORM,SI-DENORM,GCN-DENORM-SLOWFMA,GCN-DENORM-SLOWFMA-STRICT,SI %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -verify-machineinstrs -mcpu=tahiti -mattr=-fp32-denormals,+fast-fmaf -fp-contract=on   < %s | FileCheck -check-prefixes=GCN,GCN-FLUSH-STRICT,GCN-FLUSH,SI-FLUSH,GCN-FLUSH-FASTFMA,GCN-FLUSH-FASTFMA-STRICT,SI %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -verify-machineinstrs -mcpu=tahiti -mattr=+fp32-denormals,+fast-fmaf -fp-contract=on   < %s | FileCheck -check-prefixes=GCN,GCN-DENORM-STRICT,GCN-DENORM,SI-DENORM,GCN-DENORM-FASTFMA,GCN-DENORM-FASTFMA-STRICT,SI %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -verify-machineinstrs -mcpu=verde  -mattr=-fp32-denormals,-fast-fmaf -fp-contract=on   < %s | FileCheck -check-prefixes=GCN,GCN-FLUSH-STRICT,GCN-FLUSH,SI-FLUSH,GCN-FLUSH-SLOWFMA,GCN-FLUSH-SLOWFMA-STRICT,SI %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -verify-machineinstrs -mcpu=verde  -mattr=+fp32-denormals,-fast-fmaf -fp-contract=on   < %s | FileCheck -check-prefixes=GCN,GCN-DENORM-STRICT,GCN-DENORM,SI-DENORM,GCN-DENORM-SLOWFMA,GCN-DENORM-SLOWFMA-STRICT,SI %s
 
-; RUN: llc -verify-machineinstrs -mcpu=tahiti -mattr=-fp32-denormals,+fast-fmaf -fp-contract=fast < %s | FileCheck -check-prefixes=GCN,GCN-FLUSH-CONTRACT,GCN-FLUSH,SI-FLUSH,GCN-FLUSH-FASTFMA,GCN-FLUSH-FASTFMA-CONTRACT,SI %s
-; RUN: llc -verify-machineinstrs -mcpu=tahiti -mattr=+fp32-denormals,+fast-fmaf -fp-contract=fast < %s | FileCheck -check-prefixes=GCN,GCN-DENORM-CONTRACT,GCN-DENORM,SI-DENORM,GCN-DENORM-FASTFMA,GCN-DENORM-FASTFMA-CONTRACT,SI %s
-; RUN: llc -verify-machineinstrs -mcpu=verde  -mattr=-fp32-denormals,-fast-fmaf -fp-contract=fast < %s | FileCheck -check-prefixes=GCN,GCN-FLUSH-CONTRACT,GCN-FLUSH,SI-FLUSH,GCN-FLUSH-SLOWFMA,GCN-FLUSH-SLOWFMA-CONTRACT,SI %s
-; RUN: llc -verify-machineinstrs -mcpu=verde  -mattr=+fp32-denormals,-fast-fmaf -fp-contract=fast < %s | FileCheck -check-prefixes=GCN,GCN-DENORM-CONTRACT,GCN-DENORM,SI-DENORM,GCN-DENORM-SLOWFMA,GCN-DENORM-SLOWFMA-CONTRACT,SI %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -verify-machineinstrs -mcpu=tahiti -mattr=-fp32-denormals,+fast-fmaf -fp-contract=fast < %s | FileCheck -check-prefixes=GCN,GCN-FLUSH-CONTRACT,GCN-FLUSH,SI-FLUSH,GCN-FLUSH-FASTFMA,GCN-FLUSH-FASTFMA-CONTRACT,SI %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -verify-machineinstrs -mcpu=tahiti -mattr=+fp32-denormals,+fast-fmaf -fp-contract=fast < %s | FileCheck -check-prefixes=GCN,GCN-DENORM-CONTRACT,GCN-DENORM,SI-DENORM,GCN-DENORM-FASTFMA,GCN-DENORM-FASTFMA-CONTRACT,SI %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -verify-machineinstrs -mcpu=verde  -mattr=-fp32-denormals,-fast-fmaf -fp-contract=fast < %s | FileCheck -check-prefixes=GCN,GCN-FLUSH-CONTRACT,GCN-FLUSH,SI-FLUSH,GCN-FLUSH-SLOWFMA,GCN-FLUSH-SLOWFMA-CONTRACT,SI %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -verify-machineinstrs -mcpu=verde  -mattr=+fp32-denormals,-fast-fmaf -fp-contract=fast < %s | FileCheck -check-prefixes=GCN,GCN-DENORM-CONTRACT,GCN-DENORM,SI-DENORM,GCN-DENORM-SLOWFMA,GCN-DENORM-SLOWFMA-CONTRACT,SI %s
 
 ; Test all permutations of: fp32 denormals, fast fp contract, fp contract enabled for fmuladd, fmaf fast/slow.
 

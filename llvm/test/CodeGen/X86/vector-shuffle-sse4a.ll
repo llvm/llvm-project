@@ -11,7 +11,6 @@
 define <2 x i64> @extrqi_len0_idx0(<2 x i64> %a) {
 ; ALL-LABEL: extrqi_len0_idx0:
 ; ALL:       # BB#0:
-; ALL-NEXT:    extrq {{.*#+}} xmm0 = xmm0[0,1,2,3,4,5,6,7,u,u,u,u,u,u,u,u]
 ; ALL-NEXT:    retq
   %1 = tail call <2 x i64> @llvm.x86.sse4a.extrqi(<2 x i64> %a, i8 0, i8 0)
   ret <2 x i64> %1
@@ -130,10 +129,7 @@ define <16 x i8> @shuf_01zzzzzz23zzzzzz(<16 x i8> %a0) {
 ;
 ; BTVER1-LABEL: shuf_01zzzzzz23zzzzzz:
 ; BTVER1:       # BB#0:
-; BTVER1-NEXT:    movdqa %xmm0, %xmm1
-; BTVER1-NEXT:    extrq {{.*#+}} xmm1 = xmm1[2,3],zero,zero,zero,zero,zero,zero,xmm1[u,u,u,u,u,u,u,u]
-; BTVER1-NEXT:    extrq {{.*#+}} xmm0 = xmm0[0,1],zero,zero,zero,zero,zero,zero,xmm0[u,u,u,u,u,u,u,u]
-; BTVER1-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; BTVER1-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,1],zero,zero,zero,zero,zero,zero,xmm0[2,3],zero,zero,zero,zero,zero,zero
 ; BTVER1-NEXT:    retq
 ;
 ; BTVER2-LABEL: shuf_01zzzzzz23zzzzzz:
@@ -172,10 +168,21 @@ define <8 x i16> @shuf_12zzuuuu(<8 x i16> %a0) {
 }
 
 define <8 x i16> @shuf_012zuuuu(<8 x i16> %a0) {
-; ALL-LABEL: shuf_012zuuuu:
-; ALL:       # BB#0:
-; ALL-NEXT:    extrq {{.*#+}} xmm0 = xmm0[0,1,2,3,4,5],zero,zero,xmm0[u,u,u,u,u,u,u,u]
-; ALL-NEXT:    retq
+; AMD10H-LABEL: shuf_012zuuuu:
+; AMD10H:       # BB#0:
+; AMD10H-NEXT:    extrq {{.*#+}} xmm0 = xmm0[0,1,2,3,4,5],zero,zero,xmm0[u,u,u,u,u,u,u,u]
+; AMD10H-NEXT:    retq
+;
+; BTVER1-LABEL: shuf_012zuuuu:
+; BTVER1:       # BB#0:
+; BTVER1-NEXT:    extrq {{.*#+}} xmm0 = xmm0[0,1,2,3,4,5],zero,zero,xmm0[u,u,u,u,u,u,u,u]
+; BTVER1-NEXT:    retq
+;
+; BTVER2-LABEL: shuf_012zuuuu:
+; BTVER2:       # BB#0:
+; BTVER2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BTVER2-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[3],xmm0[4,5,6,7]
+; BTVER2-NEXT:    retq
   %s = shufflevector <8 x i16> %a0, <8 x i16> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 8, i32 undef, i32 undef, i32 undef, i32 undef>
   ret <8 x i16> %s
 }
@@ -191,10 +198,7 @@ define <8 x i16> @shuf_0zzz1zzz(<8 x i16> %a0) {
 ;
 ; BTVER1-LABEL: shuf_0zzz1zzz:
 ; BTVER1:       # BB#0:
-; BTVER1-NEXT:    movdqa %xmm0, %xmm1
-; BTVER1-NEXT:    extrq {{.*#+}} xmm1 = xmm1[2,3],zero,zero,zero,zero,zero,zero,xmm1[u,u,u,u,u,u,u,u]
-; BTVER1-NEXT:    extrq {{.*#+}} xmm0 = xmm0[0,1],zero,zero,zero,zero,zero,zero,xmm0[u,u,u,u,u,u,u,u]
-; BTVER1-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; BTVER1-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,1],zero,zero,zero,zero,zero,zero,xmm0[2,3],zero,zero,zero,zero,zero,zero
 ; BTVER1-NEXT:    retq
 ;
 ; BTVER2-LABEL: shuf_0zzz1zzz:
@@ -232,10 +236,20 @@ define <4 x i32> @shuf_0z1z(<4 x i32> %a0) {
 
 ; A length of zero is equivalent to a bit length of 64.
 define <2 x i64> @insertqi_len0_idx0(<2 x i64> %a, <2 x i64> %b) {
-; ALL-LABEL: insertqi_len0_idx0:
-; ALL:       # BB#0:
-; ALL-NEXT:    insertq {{.*#+}} xmm0 = xmm1[0,1,2,3,4,5,6,7],xmm0[u,u,u,u,u,u,u,u]
-; ALL-NEXT:    retq
+; AMD10H-LABEL: insertqi_len0_idx0:
+; AMD10H:       # BB#0:
+; AMD10H-NEXT:    movaps %xmm1, %xmm0
+; AMD10H-NEXT:    retq
+;
+; BTVER1-LABEL: insertqi_len0_idx0:
+; BTVER1:       # BB#0:
+; BTVER1-NEXT:    movaps %xmm1, %xmm0
+; BTVER1-NEXT:    retq
+;
+; BTVER2-LABEL: insertqi_len0_idx0:
+; BTVER2:       # BB#0:
+; BTVER2-NEXT:    vmovaps %xmm1, %xmm0
+; BTVER2-NEXT:    retq
   %1 = tail call <2 x i64> @llvm.x86.sse4a.insertqi(<2 x i64> %a, <2 x i64> %b, i8 0, i8 0)
   ret <2 x i64> %1
 }

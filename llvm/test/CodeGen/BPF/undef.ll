@@ -1,4 +1,5 @@
-; RUN: not llc < %s -march=bpf | FileCheck %s
+; RUN: not llc < %s -march=bpfel | FileCheck -check-prefixes=CHECK,EL %s
+; RUN: not llc < %s -march=bpfeb | FileCheck -check-prefixes=CHECK,EB %s
 
 %struct.bpf_map_def = type { i32, i32, i32, i32 }
 %struct.__sk_buff = type opaque
@@ -13,36 +14,31 @@
 
 ; Function Attrs: nounwind uwtable
 define i32 @ebpf_filter(%struct.__sk_buff* nocapture readnone %ebpf_packet) #0 section "socket1" {
-; CHECK: r2 = r10
-; CHECK: r2 += -2
-; CHECK: r1 = 0
-; CHECK: *(u16 *)(r2 + 6) = r1
-; CHECK: *(u16 *)(r2 + 4) = r1
-; CHECK: *(u16 *)(r2 + 2) = r1
-; CHECK: r2 = 6
-; CHECK: *(u8 *)(r10 - 7) = r2
-; CHECK: r2 = 5
-; CHECK: *(u8 *)(r10 - 8) = r2
-; CHECK: r2 = 7
-; CHECK: *(u8 *)(r10 - 6) = r2
-; CHECK: r2 = 8
-; CHECK: *(u8 *)(r10 - 5) = r2
-; CHECK: r2 = 9
-; CHECK: *(u8 *)(r10 - 4) = r2
-; CHECK: r2 = 10
-; CHECK: *(u8 *)(r10 - 3) = r2
-; CHECK: *(u16 *)(r10 + 24) = r1
-; CHECK: *(u16 *)(r10 + 22) = r1
-; CHECK: *(u16 *)(r10 + 20) = r1
-; CHECK: *(u16 *)(r10 + 18) = r1
-; CHECK: *(u16 *)(r10 + 16) = r1
-; CHECK: *(u16 *)(r10 + 14) = r1
-; CHECK: *(u16 *)(r10 + 12) = r1
-; CHECK: *(u16 *)(r10 + 10) = r1
-; CHECK: *(u16 *)(r10 + 8) = r1
-; CHECK: *(u16 *)(r10 + 6) = r1
-; CHECK: *(u16 *)(r10 - 2) = r1
-; CHECK: *(u16 *)(r10 + 26) = r1
+; CHECK: r1 = r10
+; CHECK: r1 += -2
+; CHECK: r2 = 0
+; CHECK: *(u16 *)(r1 + 6) = r2
+; CHECK: *(u16 *)(r1 + 4) = r2
+; CHECK: *(u16 *)(r1 + 2) = r2
+; EL: r1 = 134678021
+; EB: r1 = 84281096
+; CHECK: *(u32 *)(r10 - 8) = r1
+; CHECK: r1 = 9
+; CHECK: *(u8 *)(r10 - 4) = r1
+; CHECK: r1 = 10
+; CHECK: *(u8 *)(r10 - 3) = r1
+; CHECK: *(u16 *)(r10 + 24) = r2
+; CHECK: *(u16 *)(r10 + 22) = r2
+; CHECK: *(u16 *)(r10 + 20) = r2
+; CHECK: *(u16 *)(r10 + 18) = r2
+; CHECK: *(u16 *)(r10 + 16) = r2
+; CHECK: *(u16 *)(r10 + 14) = r2
+; CHECK: *(u16 *)(r10 + 12) = r2
+; CHECK: *(u16 *)(r10 + 10) = r2
+; CHECK: *(u16 *)(r10 + 8) = r2
+; CHECK: *(u16 *)(r10 + 6) = r2
+; CHECK: *(u16 *)(r10 - 2) = r2
+; CHECK: *(u16 *)(r10 + 26) = r2
 ; CHECK: r2 = r10
 ; CHECK: r2 += -8
 ; CHECK: r1 = <MCOperand Expr:(routing)>ll

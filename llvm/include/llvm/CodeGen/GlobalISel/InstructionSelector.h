@@ -16,14 +16,17 @@
 #ifndef LLVM_CODEGEN_GLOBALISEL_INSTRUCTIONSELECTOR_H
 #define LLVM_CODEGEN_GLOBALISEL_INSTRUCTIONSELECTOR_H
 
+#include "llvm/ADT/SmallVector.h"
 #include <bitset>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <initializer_list>
+#include <vector>
 
 namespace llvm {
 
+class LLT;
 class MachineInstr;
 class MachineInstrBuilder;
 class MachineOperand;
@@ -58,6 +61,124 @@ public:
   }
 };
 
+enum {
+  /// Record the specified instruction
+  /// - NewInsnID - Instruction ID to define
+  /// - InsnID - Instruction ID
+  /// - OpIdx - Operand index
+  GIM_RecordInsn,
+
+  /// Check the feature bits
+  /// - Expected features
+  GIM_CheckFeatures,
+
+  /// Check the opcode on the specified instruction
+  /// - InsnID - Instruction ID
+  /// - Expected opcode
+  GIM_CheckOpcode,
+  /// Check the instruction has the right number of operands
+  /// - InsnID - Instruction ID
+  /// - Expected number of operands
+  GIM_CheckNumOperands,
+
+  /// Check the type for the specified operand
+  /// - InsnID - Instruction ID
+  /// - OpIdx - Operand index
+  /// - Expected type
+  GIM_CheckType,
+  /// Check the register bank for the specified operand
+  /// - InsnID - Instruction ID
+  /// - OpIdx - Operand index
+  /// - Expected register bank (specified as a register class)
+  GIM_CheckRegBankForClass,
+  /// Check the operand matches a complex predicate
+  /// - InsnID - Instruction ID
+  /// - OpIdx - Operand index
+  /// - RendererID - The renderer to hold the result
+  /// - Complex predicate ID
+  GIM_CheckComplexPattern,
+  /// Check the operand is a specific integer
+  /// - InsnID - Instruction ID
+  /// - OpIdx - Operand index
+  /// - Expected integer
+  GIM_CheckConstantInt,
+  /// Check the operand is a specific literal integer (i.e. MO.isImm() or MO.isCImm() is true).
+  /// - InsnID - Instruction ID
+  /// - OpIdx - Operand index
+  /// - Expected integer
+  GIM_CheckLiteralInt,
+  /// Check the specified operand is an MBB
+  /// - InsnID - Instruction ID
+  /// - OpIdx - Operand index
+  GIM_CheckIsMBB,
+
+  /// A successful match
+  GIM_Accept,
+};
+
+enum {
+  /// Mutate an instruction
+  /// - NewInsnID - Instruction ID to define
+  /// - OldInsnID - Instruction ID to mutate
+  /// - NewOpcode - The new opcode to use
+  GIR_MutateOpcode,
+  /// Build a new instruction
+  /// - InsnID - Instruction ID to define
+  /// - Opcode - The new opcode to use
+  GIR_BuildMI,
+
+  /// Copy an operand to the specified instruction
+  /// - NewInsnID - Instruction ID to modify
+  /// - OldInsnID - Instruction ID to copy from
+  /// - OpIdx - The operand to copy
+  GIR_Copy,
+  /// Copy an operand to the specified instruction
+  /// - NewInsnID - Instruction ID to modify
+  /// - OldInsnID - Instruction ID to copy from
+  /// - OpIdx - The operand to copy
+  /// - SubRegIdx - The subregister to copy
+  GIR_CopySubReg,
+  /// Add an implicit register def to the specified instruction
+  /// - InsnID - Instruction ID to modify
+  /// - RegNum - The register to add
+  GIR_AddImplicitDef,
+  /// Add an implicit register use to the specified instruction
+  /// - InsnID - Instruction ID to modify
+  /// - RegNum - The register to add
+  GIR_AddImplicitUse,
+  /// Add an register to the specified instruction
+  /// - InsnID - Instruction ID to modify
+  /// - RegNum - The register to add
+  GIR_AddRegister,
+  /// Add an immediate to the specified instruction
+  /// - InsnID - Instruction ID to modify
+  /// - Imm - The immediate to add
+  GIR_AddImm,
+  /// Render complex operands to the specified instruction
+  /// - InsnID - Instruction ID to modify
+  /// - RendererID - The renderer to call
+  GIR_ComplexRenderer,
+
+  /// Constrain an instruction operand to a register class.
+  /// - InsnID - Instruction ID to modify
+  /// - OpIdx - Operand index
+  /// - RCEnum - Register class enumeration value
+  GIR_ConstrainOperandRC,
+  /// Constrain an instructions operands according to the instruction
+  /// description.
+  /// - InsnID - Instruction ID to modify
+  GIR_ConstrainSelectedInstOperands,
+  /// Merge all memory operands into instruction.
+  /// - InsnID - Instruction ID to modify
+  GIR_MergeMemOperands,
+  /// Erase from parent.
+  /// - InsnID - Instruction ID to erase
+  GIR_EraseFromParent,
+
+  /// A successful emission
+  GIR_Done,
+};
+
 /// Provides the logic to select generic machine instructions.
 class InstructionSelector {
 public:
@@ -78,8 +199,41 @@ public:
 
 protected:
   using ComplexRendererFn = std::function<void(MachineInstrBuilder &)>;
+  using RecordedMIVector = SmallVector<MachineInstr *, 4>;
+  using NewMIVector = SmallVector<MachineInstrBuilder, 4>;
 
+  struct MatcherState {
+    std::vector<ComplexRendererFn> Renderers;
+    RecordedMIVector MIs;
+
+    MatcherState(unsigned MaxRenderers);
+  };
+
+public:
+  template <class PredicateBitset, class ComplexMatcherMemFn>
+  struct MatcherInfoTy {
+    const LLT *TypeObjects;
+    const PredicateBitset *FeatureBitsets;
+    const std::vector<ComplexMatcherMemFn> ComplexPredicates;
+  };
+
+protected:
   InstructionSelector();
+
+  /// Execute a given matcher table and return true if the match was successful
+  /// and false otherwise.
+  template <class TgtInstructionSelector, class PredicateBitset,
+            class ComplexMatcherMemFn>
+  bool executeMatchTable(
+      TgtInstructionSelector &ISel, MatcherState &State,
+      const MatcherInfoTy<PredicateBitset, ComplexMatcherMemFn> &MatcherInfo,
+      const int64_t *MatchTable, MachineRegisterInfo &MRI,
+      const TargetRegisterInfo &TRI, const RegisterBankInfo &RBI,
+      const PredicateBitset &AvailableFeatures) const;
+  void executeEmitTable(NewMIVector &OutMIs, MatcherState &State,
+                        const int64_t *EmitTable, const TargetInstrInfo &TII,
+                        const TargetRegisterInfo &TRI,
+                        const RegisterBankInfo &RBI) const;
 
   /// Constrain a register operand of an instruction \p I to a specified
   /// register class. This could involve inserting COPYs before (for uses) or

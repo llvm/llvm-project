@@ -285,9 +285,9 @@ define i64 @bs_and64_multiuse1(i64 %a, i64 %b) #0 {
 ; CHECK-LABEL: @bs_and64_multiuse1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.bswap.i64(i64 [[A:%.*]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call i64 @llvm.bswap.i64(i64 [[B:%.*]])
-; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[A]], [[B]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.bswap.i64(i64 [[TMP1]])
-; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and i64 [[A]], [[B]]
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.bswap.i64(i64 [[TMP3]])
+; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP6]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], [[TMP2]]
 ; CHECK-NEXT:    ret i64 [[TMP5]]
 ;
@@ -302,9 +302,9 @@ define i64 @bs_and64_multiuse1(i64 %a, i64 %b) #0 {
 define i64 @bs_and64_multiuse2(i64 %a, i64 %b) #0 {
 ; CHECK-LABEL: @bs_and64_multiuse2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.bswap.i64(i64 [[A:%.*]])
-; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[A]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.bswap.i64(i64 [[TMP1]])
-; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i64 [[A]], [[B:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.bswap.i64(i64 [[TMP2]])
+; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP3]], [[TMP1]]
 ; CHECK-NEXT:    ret i64 [[TMP4]]
 ;
   %tmp1 = tail call i64 @llvm.bswap.i64(i64 %a)
@@ -318,8 +318,8 @@ define i64 @bs_and64_multiuse3(i64 %a, i64 %b) #0 {
 ; CHECK-LABEL: @bs_and64_multiuse3(
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call i64 @llvm.bswap.i64(i64 [[B:%.*]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[A:%.*]], [[B]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.bswap.i64(i64 [[TMP1]])
-; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP2]], [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.bswap.i64(i64 [[TMP1]])
+; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP3]], [[TMP2]]
 ; CHECK-NEXT:    ret i64 [[TMP4]]
 ;
   %tmp1 = tail call i64 @llvm.bswap.i64(i64 %a)
@@ -332,9 +332,9 @@ define i64 @bs_and64_multiuse3(i64 %a, i64 %b) #0 {
 define i64 @bs_and64i_multiuse(i64 %a, i64 %b) #0 {
 ; CHECK-LABEL: @bs_and64i_multiuse(
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.bswap.i64(i64 [[A:%.*]])
-; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[A]], 129085117527228416
-; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.bswap.i64(i64 [[TMP1]])
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i64 [[A]], 129085117527228416
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.bswap.i64(i64 [[TMP2]])
+; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP4]], [[TMP1]]
 ; CHECK-NEXT:    ret i64 [[TMP3]]
 ;
   %tmp1 = tail call i64 @llvm.bswap.i64(i64 %a)

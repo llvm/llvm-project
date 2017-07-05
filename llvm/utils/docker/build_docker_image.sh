@@ -37,7 +37,9 @@ will produce two docker images:
 Please note that this example produces a not very useful installation, since it
 doesn't override CMake defaults, which produces a Debug and non-boostrapped
 version of clang.
-For an example of a somewhat more useful build, see build_clang_image.sh.
+
+For an example of a somewhat more useful build, search for 2-stage build
+instructions in llvm/docs/Docker.rst.
 EOF
 )
   echo "$usage"

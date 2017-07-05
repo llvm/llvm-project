@@ -20,6 +20,8 @@
 
 #define DEBUG_TYPE "arm-isel"
 
+#include "llvm/CodeGen/GlobalISel/InstructionSelectorImpl.h"
+
 using namespace llvm;
 
 #ifndef LLVM_BUILD_GLOBAL_ISEL

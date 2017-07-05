@@ -383,7 +383,7 @@ loadAllFilesForIndex(const ModuleSummaryIndex &Index) {
 
   for (auto &ModPath : Index.modulePaths()) {
     const auto &Filename = ModPath.first();
-    auto CurrentActivity = "loading file '" + Filename + "'";
+    std::string CurrentActivity = ("loading file '" + Filename + "'").str();
     auto InputOrErr = MemoryBuffer::getFile(Filename);
     error(InputOrErr, "error " + CurrentActivity);
     InputBuffers.push_back(std::move(*InputOrErr));
@@ -475,7 +475,7 @@ private:
     std::vector<std::unique_ptr<MemoryBuffer>> InputBuffers;
     for (unsigned i = 0; i < InputFilenames.size(); ++i) {
       auto &Filename = InputFilenames[i];
-      StringRef CurrentActivity = "loading file '" + Filename + "'";
+      std::string CurrentActivity = "loading file '" + Filename + "'";
       auto InputOrErr = MemoryBuffer::getFile(Filename);
       error(InputOrErr, "error " + CurrentActivity);
       InputBuffers.push_back(std::move(*InputOrErr));
@@ -710,7 +710,7 @@ private:
     std::vector<std::unique_ptr<MemoryBuffer>> InputBuffers;
     for (unsigned i = 0; i < InputFilenames.size(); ++i) {
       auto &Filename = InputFilenames[i];
-      StringRef CurrentActivity = "loading file '" + Filename + "'";
+      std::string CurrentActivity = "loading file '" + Filename + "'";
       auto InputOrErr = MemoryBuffer::getFile(Filename);
       error(InputOrErr, "error " + CurrentActivity);
       InputBuffers.push_back(std::move(*InputOrErr));

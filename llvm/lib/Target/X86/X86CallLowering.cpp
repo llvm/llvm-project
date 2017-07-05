@@ -19,6 +19,7 @@
 #include "X86InstrInfo.h"
 #include "X86TargetMachine.h"
 
+#include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineValueType.h"
@@ -35,7 +36,7 @@ using namespace llvm;
 X86CallLowering::X86CallLowering(const X86TargetLowering &TLI)
     : CallLowering(&TLI) {}
 
-void X86CallLowering::splitToValueTypes(const ArgInfo &OrigArg,
+bool X86CallLowering::splitToValueTypes(const ArgInfo &OrigArg,
                                         SmallVectorImpl<ArgInfo> &SplitArgs,
                                         const DataLayout &DL,
                                         MachineRegisterInfo &MRI,
@@ -43,14 +44,24 @@ void X86CallLowering::splitToValueTypes(const ArgInfo &OrigArg,
 
   const X86TargetLowering &TLI = *getTLI<X86TargetLowering>();
   LLVMContext &Context = OrigArg.Ty->getContext();
-  EVT VT = TLI.getValueType(DL, OrigArg.Ty);
+
+  SmallVector<EVT, 4> SplitVTs;
+  SmallVector<uint64_t, 4> Offsets;
+  ComputeValueVTs(TLI, DL, OrigArg.Ty, SplitVTs, &Offsets, 0);
+
+  if (SplitVTs.size() != 1) {
+    // TODO: support struct/array split
+    return false;
+  }
+
+  EVT VT = SplitVTs[0];
   unsigned NumParts = TLI.getNumRegisters(Context, VT);
 
   if (NumParts == 1) {
     // replace the original type ( pointer -> GPR ).
     SplitArgs.emplace_back(OrigArg.Reg, VT.getTypeForEVT(Context),
                            OrigArg.Flags, OrigArg.IsFixed);
-    return;
+    return true;
   }
 
   SmallVector<unsigned, 8> SplitRegs;
@@ -67,6 +78,7 @@ void X86CallLowering::splitToValueTypes(const ArgInfo &OrigArg,
   }
 
   PerformArgSplit(SplitRegs);
+  return true;
 }
 
 namespace {
@@ -113,9 +125,11 @@ bool X86CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
     setArgFlags(OrigArg, AttributeList::ReturnIndex, DL, F);
 
     SmallVector<ArgInfo, 8> SplitArgs;
-    splitToValueTypes(
-        OrigArg, SplitArgs, DL, MRI,
-        [&](ArrayRef<unsigned> Regs) { MIRBuilder.buildUnmerge(Regs, VReg); });
+    if (!splitToValueTypes(OrigArg, SplitArgs, DL, MRI,
+                           [&](ArrayRef<unsigned> Regs) {
+                             MIRBuilder.buildUnmerge(Regs, VReg);
+                           }))
+      return false;
 
     FuncReturnHandler Handler(MIRBuilder, MRI, MIB, RetCC_X86);
     if (!handleAssignments(MIRBuilder, SplitArgs, Handler))
@@ -183,10 +197,11 @@ bool X86CallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   for (auto &Arg : F.args()) {
     ArgInfo OrigArg(VRegs[Idx], Arg.getType());
     setArgFlags(OrigArg, Idx + 1, DL, F);
-    splitToValueTypes(OrigArg, SplitArgs, DL, MRI,
-                      [&](ArrayRef<unsigned> Regs) {
-                        MIRBuilder.buildMerge(VRegs[Idx], Regs);
-                      });
+    if (!splitToValueTypes(OrigArg, SplitArgs, DL, MRI,
+                           [&](ArrayRef<unsigned> Regs) {
+                             MIRBuilder.buildMerge(VRegs[Idx], Regs);
+                           }))
+      return false;
     Idx++;
   }
 

@@ -228,7 +228,7 @@ OptTable::suggestValueCompletions(StringRef Option, StringRef Arg) const {
 std::vector<std::string> OptTable::findByPrefix(StringRef Cur) const {
   std::vector<std::string> Ret;
   for (const Info &In : OptionInfos.slice(FirstSearchableIndex)) {
-    if (!In.Prefixes)
+    if (!In.Prefixes || (!In.HelpText && !In.GroupID))
       continue;
     for (int I = 0; In.Prefixes[I]; I++) {
       std::string S = std::string(In.Prefixes[I]) + std::string(In.Name);

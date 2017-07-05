@@ -5557,20 +5557,20 @@ static bool getTargetShuffleMask(SDNode *N, MVT VT, bool AllowSentinelZero,
     IsUnary = IsFakeUnary = N->getOperand(0) == N->getOperand(1);
     break;
   case X86ISD::EXTRQI:
-    if (VT == MVT::v16i8 && isa<ConstantSDNode>(N->getOperand(1)) &&
+    if (isa<ConstantSDNode>(N->getOperand(1)) &&
         isa<ConstantSDNode>(N->getOperand(2))) {
       int BitLen = N->getConstantOperandVal(1);
       int BitIdx = N->getConstantOperandVal(2);
-      DecodeEXTRQIMask(BitLen, BitIdx, Mask);
+      DecodeEXTRQIMask(VT, BitLen, BitIdx, Mask);
       IsUnary = true;
     }
     break;
   case X86ISD::INSERTQI:
-    if (VT == MVT::v16i8 && isa<ConstantSDNode>(N->getOperand(2)) &&
-      isa<ConstantSDNode>(N->getOperand(3))) {
+    if (isa<ConstantSDNode>(N->getOperand(2)) &&
+        isa<ConstantSDNode>(N->getOperand(3))) {
       int BitLen = N->getConstantOperandVal(2);
       int BitIdx = N->getConstantOperandVal(3);
-      DecodeINSERTQIMask(BitLen, BitIdx, Mask);
+      DecodeINSERTQIMask(VT, BitLen, BitIdx, Mask);
       IsUnary = IsFakeUnary = N->getOperand(0) == N->getOperand(1);
     }
     break;

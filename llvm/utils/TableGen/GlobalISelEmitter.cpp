@@ -53,6 +53,8 @@ STATISTIC(NumPatternTotal, "Total number of patterns");
 STATISTIC(NumPatternImported, "Number of patterns imported from SelectionDAG");
 STATISTIC(NumPatternImportsSkipped, "Number of SelectionDAG imports skipped");
 STATISTIC(NumPatternEmitted, "Number of patterns emitted");
+/// A unique identifier for a MatchTable.
+static unsigned CurrentMatchTableID = 0;
 
 cl::OptionCategory GlobalISelEmitterCat("Options for -gen-global-isel");
 
@@ -74,6 +76,18 @@ private:
 public:
   LLTCodeGen(const LLT &Ty) : Ty(Ty) {}
 
+  void emitCxxEnumValue(raw_ostream &OS) const {
+    if (Ty.isScalar()) {
+      OS << "GILLT_s" << Ty.getSizeInBits();
+      return;
+    }
+    if (Ty.isVector()) {
+      OS << "GILLT_v" << Ty.getNumElements() << "s" << Ty.getScalarSizeInBits();
+      return;
+    }
+    llvm_unreachable("Unhandled LLT");
+  }
+
   void emitCxxConstructorCall(raw_ostream &OS) const {
     if (Ty.isScalar()) {
       OS << "LLT::scalar(" << Ty.getSizeInBits() << ")";
@@ -88,6 +102,33 @@ public:
   }
 
   const LLT &get() const { return Ty; }
+
+  /// This ordering is used for std::unique() and std::sort(). There's no
+  /// particular logic behind the order.
+  bool operator<(const LLTCodeGen &Other) const {
+    if (!Ty.isValid())
+      return Other.Ty.isValid();
+    if (Ty.isScalar()) {
+      if (!Other.Ty.isValid())
+        return false;
+      if (Other.Ty.isScalar())
+        return Ty.getSizeInBits() < Other.Ty.getSizeInBits();
+      return false;
+    }
+    if (Ty.isVector()) {
+      if (!Other.Ty.isValid() || Other.Ty.isScalar())
+        return false;
+      if (Other.Ty.isVector()) {
+        if (Ty.getNumElements() < Other.Ty.getNumElements())
+          return true;
+        if (Ty.getNumElements() > Other.Ty.getNumElements())
+          return false;
+        return Ty.getSizeInBits() < Other.Ty.getSizeInBits();
+      }
+      return false;
+    }
+    llvm_unreachable("Unhandled LLT");
+  }
 };
 
 class InstructionMatcher;
@@ -169,6 +210,13 @@ static Record *getInitValueAsRegClass(Init *V) {
   return nullptr;
 }
 
+std::string
+getNameForFeatureBitset(const std::vector<Record *> &FeatureBitset) {
+  std::string Name = "GIFBS";
+  for (const auto &Feature : FeatureBitset)
+    Name += ("_" + Feature->getName()).str();
+  return Name;
+}
 //===- Matchers -----------------------------------------------------------===//
 
 class OperandMatcher;
@@ -188,7 +236,7 @@ class RuleMatcher {
 
   /// A map of instruction matchers to the local variables created by
   /// emitCxxCaptureStmts().
-  std::map<const InstructionMatcher *, std::string> InsnVariableNames;
+  std::map<const InstructionMatcher *, unsigned> InsnVariableIDs;
 
   /// ID for the next instruction variable defined with defineInsnVar()
   unsigned NextInsnVarID;
@@ -197,35 +245,39 @@ class RuleMatcher {
 
 public:
   RuleMatcher()
-      : Matchers(), Actions(), InsnVariableNames(), NextInsnVarID(0) {}
+      : Matchers(), Actions(), InsnVariableIDs(), NextInsnVarID(0) {}
   RuleMatcher(RuleMatcher &&Other) = default;
   RuleMatcher &operator=(RuleMatcher &&Other) = default;
 
   InstructionMatcher &addInstructionMatcher();
   void addRequiredFeature(Record *Feature);
+  const std::vector<Record *> &getRequiredFeatures() const;
 
   template <class Kind, class... Args> Kind &addAction(Args &&... args);
 
-  std::string defineInsnVar(raw_ostream &OS, const InstructionMatcher &Matcher,
-                            StringRef Value);
-  StringRef getInsnVarName(const InstructionMatcher &InsnMatcher) const;
+  /// Define an instruction without emitting any code to do so.
+  /// This is used for the root of the match.
+  unsigned implicitlyDefineInsnVar(const InstructionMatcher &Matcher);
+  /// Define an instruction and emit corresponding state-machine opcodes.
+  unsigned defineInsnVar(raw_ostream &OS, const InstructionMatcher &Matcher,
+                         unsigned InsnVarID, unsigned OpIdx);
+  unsigned getInsnVarID(const InstructionMatcher &InsnMatcher) const;
 
-  void emitCxxCapturedInsnList(raw_ostream &OS);
-  void emitCxxCaptureStmts(raw_ostream &OS, StringRef Expr);
+  void emitCxxCaptureStmts(raw_ostream &OS);
 
-void emit(raw_ostream &OS, SubtargetFeatureInfoMap SubtargetFeatures);
+  void emit(raw_ostream &OS);
 
-/// Compare the priority of this object and B.
-///
-/// Returns true if this object is more important than B.
-bool isHigherPriorityThan(const RuleMatcher &B) const;
+  /// Compare the priority of this object and B.
+  ///
+  /// Returns true if this object is more important than B.
+  bool isHigherPriorityThan(const RuleMatcher &B) const;
 
-/// Report the maximum number of temporary operands needed by the rule
-/// matcher.
-unsigned countRendererFns() const;
+  /// Report the maximum number of temporary operands needed by the rule
+  /// matcher.
+  unsigned countRendererFns() const;
 
-// FIXME: Remove this as soon as possible
-InstructionMatcher &insnmatcher_front() const { return *Matchers.front(); }
+  // FIXME: Remove this as soon as possible
+  InstructionMatcher &insnmatcher_front() const { return *Matchers.front(); }
 };
 
 template <class PredicateTy> class PredicateListMatcher {
@@ -259,17 +311,12 @@ public:
   template <class... Args>
   void emitCxxPredicateListExpr(raw_ostream &OS, Args &&... args) const {
     if (Predicates.empty()) {
-      OS << "true";
+      OS << "// No predicates\n";
       return;
     }
 
-    StringRef Separator = "";
-    for (const auto &Predicate : predicates()) {
-      OS << Separator << "(";
+    for (const auto &Predicate : predicates())
       Predicate->emitCxxPredicateExpr(OS, std::forward<Args>(args)...);
-      OS << ")";
-      Separator = " &&\n";
-    }
   }
 };
 
@@ -322,11 +369,12 @@ public:
   ///
   /// Only InstructionOperandMatcher needs to do anything for this method.
   virtual void emitCxxCaptureStmts(raw_ostream &OS, RuleMatcher &Rule,
-                                   StringRef Expr) const {}
+                                   unsigned InsnVarID, unsigned OpIdx) const {}
 
   /// Emit a C++ expression that checks the predicate for the given operand.
   virtual void emitCxxPredicateExpr(raw_ostream &OS, RuleMatcher &Rule,
-                                    StringRef OperandExpr) const = 0;
+                                    unsigned InsnVarID,
+                                    unsigned OpIdx) const = 0;
 
   /// Compare the priority of this object and B.
   ///
@@ -354,10 +402,11 @@ public:
   }
 
   void emitCxxPredicateExpr(raw_ostream &OS, RuleMatcher &Rule,
-                            StringRef OperandExpr) const override {
-    OS << "MRI.getType(" << OperandExpr << ".getReg()) == (";
-    Ty.emitCxxConstructorCall(OS);
-    OS << ")";
+                            unsigned InsnVarID, unsigned OpIdx) const override {
+    OS << "    GIM_CheckType, /*MI*/" << InsnVarID << ", /*Op*/" << OpIdx
+       << ", /*Type*/";
+    Ty.emitCxxEnumValue(OS);
+    OS << ", \n";
   }
 };
 
@@ -380,10 +429,11 @@ public:
   }
 
   void emitCxxPredicateExpr(raw_ostream &OS, RuleMatcher &Rule,
-                            StringRef OperandExpr) const override {
+                            unsigned InsnVarID, unsigned OpIdx) const override {
     unsigned ID = getAllocatedTemporariesBaseID();
-    OS << "(Renderer" << ID << " = " << TheDef.getValueAsString("MatcherFn")
-       << "(" << OperandExpr << "))";
+    OS << "    GIM_CheckComplexPattern, /*MI*/" << InsnVarID << ", /*Op*/"
+       << OpIdx << ", /*Renderer*/" << ID << ", GICP_"
+       << TheDef.getName() << ",\n";
   }
 
   unsigned countRendererFns() const override {
@@ -405,10 +455,9 @@ public:
   }
 
   void emitCxxPredicateExpr(raw_ostream &OS, RuleMatcher &Rule,
-                            StringRef OperandExpr) const override {
-    OS << "(&RBI.getRegBankFromRegClass(" << RC.getQualifiedName()
-       << "RegClass) == RBI.getRegBank(" << OperandExpr
-       << ".getReg(), MRI, TRI))";
+                            unsigned InsnVarID, unsigned OpIdx) const override {
+    OS << "    GIM_CheckRegBankForClass, /*MI*/" << InsnVarID << ", /*Op*/"
+       << OpIdx << ", /*RC*/" << RC.getQualifiedName() << "RegClassID,\n";
   }
 };
 
@@ -422,8 +471,8 @@ public:
   }
 
   void emitCxxPredicateExpr(raw_ostream &OS, RuleMatcher &Rule,
-                            StringRef OperandExpr) const override {
-    OS << OperandExpr << ".isMBB()";
+                            unsigned InsnVarID, unsigned OpIdx) const override {
+    OS << "    GIM_CheckIsMBB, /*MI*/" << InsnVarID << ", /*Op*/" << OpIdx << ",\n";
   }
 };
 
@@ -442,8 +491,9 @@ public:
   }
 
   void emitCxxPredicateExpr(raw_ostream &OS, RuleMatcher &Rule,
-                            StringRef OperandExpr) const override {
-    OS << "isOperandImmEqual(" << OperandExpr << ", " << Value << ", MRI)";
+                            unsigned InsnVarID, unsigned OpIdx) const override {
+    OS << "    GIM_CheckConstantInt, /*MI*/" << InsnVarID << ", /*Op*/"
+       << OpIdx << ", " << Value << ",\n";
   }
 };
 
@@ -462,9 +512,9 @@ public:
   }
 
   void emitCxxPredicateExpr(raw_ostream &OS, RuleMatcher &Rule,
-                            StringRef OperandExpr) const override {
-    OS << OperandExpr << ".isCImm() && " << OperandExpr
-       << ".getCImm()->equalsInt(" << Value << ")";
+                            unsigned InsnVarID, unsigned OpIdx) const override {
+    OS << "    GIM_CheckLiteralInt, /*MI*/" << InsnVarID << ", /*Op*/"
+       << OpIdx << ", " << Value << ",\n";
   }
 };
 
@@ -496,8 +546,9 @@ public:
   }
   unsigned getOperandIndex() const { return OpIdx; }
 
-  std::string getOperandExpr(StringRef InsnVarName) const {
-    return (InsnVarName + ".getOperand(" + llvm::to_string(OpIdx) + ")").str();
+  std::string getOperandExpr(unsigned InsnVarID) const {
+    return "State.MIs[" + llvm::to_string(InsnVarID) + "]->getOperand(" +
+           llvm::to_string(OpIdx) + ")";
   }
 
   Optional<const OperandMatcher *>
@@ -517,23 +568,22 @@ public:
 
   /// Emit C++ statements to capture instructions into local variables.
   void emitCxxCaptureStmts(raw_ostream &OS, RuleMatcher &Rule,
-                           StringRef OperandExpr) const {
+                           unsigned InsnVarID) const {
     for (const auto &Predicate : predicates())
-      Predicate->emitCxxCaptureStmts(OS, Rule, OperandExpr);
+      Predicate->emitCxxCaptureStmts(OS, Rule, InsnVarID, OpIdx);
   }
 
   /// Emit a C++ expression that tests whether the instruction named in
-  /// InsnVarName matches all the predicate and all the operands.
+  /// InsnVarID matches all the predicates and all the operands.
   void emitCxxPredicateExpr(raw_ostream &OS, RuleMatcher &Rule,
-                            StringRef InsnVarName) const {
-    OS << "(/* ";
+                            unsigned InsnVarID) const {
+    OS << "    // MIs[" << InsnVarID << "] ";
     if (SymbolicName.empty())
       OS << "Operand " << OpIdx;
     else
       OS << SymbolicName;
-    OS << " */ ";
-    emitCxxPredicateListExpr(OS, Rule, getOperandExpr(InsnVarName));
-    OS << ")";
+    OS << "\n";
+    emitCxxPredicateListExpr(OS, Rule, InsnVarID, OpIdx);
   }
 
   /// Compare the priority of this object and B.
@@ -600,9 +650,9 @@ public:
   PredicateKind getKind() const { return Kind; }
 
   /// Emit a C++ expression that tests whether the instruction named in
-  /// InsnVarName matches the predicate.
+  /// InsnVarID matches the predicate.
   virtual void emitCxxPredicateExpr(raw_ostream &OS, RuleMatcher &Rule,
-                                    StringRef InsnVarName) const = 0;
+                                    unsigned InsnVarID) const = 0;
 
   /// Compare the priority of this object and B.
   ///
@@ -631,9 +681,9 @@ public:
   }
 
   void emitCxxPredicateExpr(raw_ostream &OS, RuleMatcher &Rule,
-                            StringRef InsnVarName) const override {
-    OS << InsnVarName << ".getOpcode() == " << I->Namespace
-       << "::" << I->TheDef->getName();
+                            unsigned InsnVarID) const override {
+    OS << "    GIM_CheckOpcode, /*MI*/" << InsnVarID << ", " << I->Namespace
+       << "::" << I->TheDef->getName() << ",\n";
   }
 
   /// Compare the priority of this object and B.
@@ -723,24 +773,21 @@ public:
 
   /// Emit C++ statements to check the shape of the match and capture
   /// instructions into local variables.
-  void emitCxxCaptureStmts(raw_ostream &OS, RuleMatcher &Rule, StringRef Expr) {
-    OS << "if (" << Expr << ".getNumOperands() < " << getNumOperands() << ")\n"
-       << "  return false;\n";
-    for (const auto &Operand : Operands) {
-      Operand->emitCxxCaptureStmts(OS, Rule, Operand->getOperandExpr(Expr));
-    }
+  void emitCxxCaptureStmts(raw_ostream &OS, RuleMatcher &Rule,
+                           unsigned InsnID) {
+    OS << "    GIM_CheckNumOperands, /*MI*/" << InsnID << ", /*Expected*/"
+       << getNumOperands() << ",\n";
+    for (const auto &Operand : Operands)
+      Operand->emitCxxCaptureStmts(OS, Rule, InsnID);
   }
 
   /// Emit a C++ expression that tests whether the instruction named in
   /// InsnVarName matches all the predicates and all the operands.
   void emitCxxPredicateExpr(raw_ostream &OS, RuleMatcher &Rule,
-                            StringRef InsnVarName) const {
-    emitCxxPredicateListExpr(OS, Rule, InsnVarName);
-    for (const auto &Operand : Operands) {
-      OS << " &&\n(";
-      Operand->emitCxxPredicateExpr(OS, Rule, InsnVarName);
-      OS << ")";
-    }
+                            unsigned InsnVarID) const {
+    emitCxxPredicateListExpr(OS, Rule, InsnVarID);
+    for (const auto &Operand : Operands)
+      Operand->emitCxxPredicateExpr(OS, Rule, InsnVarID);
   }
 
   /// Compare the priority of this object and B.
@@ -818,23 +865,16 @@ public:
   }
 
   void emitCxxCaptureStmts(raw_ostream &OS, RuleMatcher &Rule,
-                           StringRef OperandExpr) const override {
-    OS << "if (!" << OperandExpr + ".isReg())\n"
-       << "  return false;\n"
-       << "if (TRI.isPhysicalRegister(" << OperandExpr + ".getReg()))\n"
-       << "  return false;\n";
-    std::string InsnVarName = Rule.defineInsnVar(
-        OS, *InsnMatcher,
-        ("*MRI.getVRegDef(" + OperandExpr + ".getReg())").str());
-    InsnMatcher->emitCxxCaptureStmts(OS, Rule, InsnVarName);
+                           unsigned InsnID, unsigned OpIdx) const override {
+    unsigned InsnVarID = Rule.defineInsnVar(OS, *InsnMatcher, InsnID, OpIdx);
+    InsnMatcher->emitCxxCaptureStmts(OS, Rule, InsnVarID);
   }
 
   void emitCxxPredicateExpr(raw_ostream &OS, RuleMatcher &Rule,
-                            StringRef OperandExpr) const override {
-    OperandExpr = Rule.getInsnVarName(*InsnMatcher);
-    OS << "(";
-    InsnMatcher->emitCxxPredicateExpr(OS, Rule, OperandExpr);
-    OS << ")\n";
+                            unsigned InsnVarID_,
+                            unsigned OpIdx_) const override {
+    unsigned InsnVarID = Rule.getInsnVarID(*InsnMatcher);
+    InsnMatcher->emitCxxPredicateExpr(OS, Rule, InsnVarID);
   }
 };
 
@@ -865,6 +905,7 @@ public:
 /// instruction to the one being built.
 class CopyRenderer : public OperandRenderer {
 protected:
+  unsigned NewInsnID;
   /// The matcher for the instruction that this operand is copied from.
   /// This provides the facility for looking up an a operand by it's name so
   /// that it can be used as a source for the instruction being built.
@@ -873,9 +914,10 @@ protected:
   const StringRef SymbolicName;
 
 public:
-  CopyRenderer(const InstructionMatcher &Matched, StringRef SymbolicName)
-      : OperandRenderer(OR_Copy), Matched(Matched), SymbolicName(SymbolicName) {
-  }
+  CopyRenderer(unsigned NewInsnID, const InstructionMatcher &Matched,
+               StringRef SymbolicName)
+      : OperandRenderer(OR_Copy), NewInsnID(NewInsnID), Matched(Matched),
+        SymbolicName(SymbolicName) {}
 
   static bool classof(const OperandRenderer *R) {
     return R->getKind() == OR_Copy;
@@ -885,10 +927,10 @@ public:
 
   void emitCxxRenderStmts(raw_ostream &OS, RuleMatcher &Rule) const override {
     const OperandMatcher &Operand = Matched.getOperand(SymbolicName);
-    StringRef InsnVarName =
-        Rule.getInsnVarName(Operand.getInstructionMatcher());
-    std::string OperandExpr = Operand.getOperandExpr(InsnVarName);
-    OS << "    MIB.add(" << OperandExpr << "/*" << SymbolicName << "*/);\n";
+    unsigned OldInsnVarID = Rule.getInsnVarID(Operand.getInstructionMatcher());
+    OS << "      GIR_Copy, /*NewInsnID*/" << NewInsnID << ", /*OldInsnID*/"
+       << OldInsnVarID << ", /*OpIdx*/" << Operand.getOperandIndex() << ", // "
+       << SymbolicName << "\n";
   }
 };
 
@@ -897,6 +939,7 @@ public:
 /// subregister should be copied.
 class CopySubRegRenderer : public OperandRenderer {
 protected:
+  unsigned NewInsnID;
   /// The matcher for the instruction that this operand is copied from.
   /// This provides the facility for looking up an a operand by it's name so
   /// that it can be used as a source for the instruction being built.
@@ -907,9 +950,9 @@ protected:
   const CodeGenSubRegIndex *SubReg;
 
 public:
-  CopySubRegRenderer(const InstructionMatcher &Matched, StringRef SymbolicName,
-                     const CodeGenSubRegIndex *SubReg)
-      : OperandRenderer(OR_CopySubReg), Matched(Matched),
+  CopySubRegRenderer(unsigned NewInsnID, const InstructionMatcher &Matched,
+                     StringRef SymbolicName, const CodeGenSubRegIndex *SubReg)
+      : OperandRenderer(OR_CopySubReg), NewInsnID(NewInsnID), Matched(Matched),
         SymbolicName(SymbolicName), SubReg(SubReg) {}
 
   static bool classof(const OperandRenderer *R) {
@@ -920,11 +963,11 @@ public:
 
   void emitCxxRenderStmts(raw_ostream &OS, RuleMatcher &Rule) const override {
     const OperandMatcher &Operand = Matched.getOperand(SymbolicName);
-    StringRef InsnVarName =
-        Rule.getInsnVarName(Operand.getInstructionMatcher());
-    std::string OperandExpr = Operand.getOperandExpr(InsnVarName);
-    OS << "    MIB.addReg(" << OperandExpr << ".getReg() /*" << SymbolicName
-       << "*/, 0, " << SubReg->EnumValue << ");\n";
+    unsigned OldInsnVarID = Rule.getInsnVarID(Operand.getInstructionMatcher());
+    OS << "      GIR_CopySubReg, /*NewInsnID*/" << NewInsnID
+       << ", /*OldInsnID*/" << OldInsnVarID << ", /*OpIdx*/"
+       << Operand.getOperandIndex() << ", /*SubRegIdx*/" << SubReg->EnumValue
+       << ", // " << SymbolicName << "\n";
   }
 };
 
@@ -932,39 +975,44 @@ public:
 /// This is typically useful for WZR/XZR on AArch64.
 class AddRegisterRenderer : public OperandRenderer {
 protected:
+  unsigned InsnID;
   const Record *RegisterDef;
 
 public:
-  AddRegisterRenderer(const Record *RegisterDef)
-      : OperandRenderer(OR_Register), RegisterDef(RegisterDef) {}
+  AddRegisterRenderer(unsigned InsnID, const Record *RegisterDef)
+      : OperandRenderer(OR_Register), InsnID(InsnID), RegisterDef(RegisterDef) {
+  }
 
   static bool classof(const OperandRenderer *R) {
     return R->getKind() == OR_Register;
   }
 
   void emitCxxRenderStmts(raw_ostream &OS, RuleMatcher &Rule) const override {
-    OS << "    MIB.addReg(" << (RegisterDef->getValue("Namespace")
-                                    ? RegisterDef->getValueAsString("Namespace")
-                                    : "")
-       << "::" << RegisterDef->getName() << ");\n";
+    OS << "      GIR_AddRegister, /*InsnID*/" << InsnID << ", "
+       << (RegisterDef->getValue("Namespace")
+               ? RegisterDef->getValueAsString("Namespace")
+               : "")
+       << "::" << RegisterDef->getName() << ",\n";
   }
 };
 
 /// Adds a specific immediate to the instruction being built.
 class ImmRenderer : public OperandRenderer {
 protected:
+  unsigned InsnID;
   int64_t Imm;
 
 public:
-  ImmRenderer(int64_t Imm)
-      : OperandRenderer(OR_Imm), Imm(Imm) {}
+  ImmRenderer(unsigned InsnID, int64_t Imm)
+      : OperandRenderer(OR_Imm), InsnID(InsnID), Imm(Imm) {}
 
   static bool classof(const OperandRenderer *R) {
     return R->getKind() == OR_Imm;
   }
 
   void emitCxxRenderStmts(raw_ostream &OS, RuleMatcher &Rule) const override {
-    OS << "    MIB.addImm(" << Imm << ");\n";
+    OS << "      GIR_AddImm, /*InsnID*/" << InsnID << ", /*Imm*/" << Imm
+       << ",\n";
   }
 };
 
@@ -972,6 +1020,7 @@ public:
 /// matcher function.
 class RenderComplexPatternOperand : public OperandRenderer {
 private:
+  unsigned InsnID;
   const Record &TheDef;
   /// The name of the operand.
   const StringRef SymbolicName;
@@ -984,9 +1033,9 @@ private:
   }
 
 public:
-  RenderComplexPatternOperand(const Record &TheDef, StringRef SymbolicName,
-                              unsigned RendererID)
-      : OperandRenderer(OR_ComplexPattern), TheDef(TheDef),
+  RenderComplexPatternOperand(unsigned InsnID, const Record &TheDef,
+                              StringRef SymbolicName, unsigned RendererID)
+      : OperandRenderer(OR_ComplexPattern), InsnID(InsnID), TheDef(TheDef),
         SymbolicName(SymbolicName), RendererID(RendererID) {}
 
   static bool classof(const OperandRenderer *R) {
@@ -994,7 +1043,8 @@ public:
   }
 
   void emitCxxRenderStmts(raw_ostream &OS, RuleMatcher &Rule) const override {
-    OS << "Renderer" << RendererID << "(MIB);\n";
+    OS << "      GIR_ComplexRenderer, /*InsnID*/" << InsnID
+       << ", /*RendererID*/" << RendererID << ",\n";
   }
 };
 
@@ -1009,11 +1059,11 @@ public:
 
   /// Emit the C++ statements to implement the action.
   ///
-  /// \param RecycleVarName If given, it's an instruction to recycle. The
-  ///                       requirements on the instruction vary from action to
-  ///                       action.
+  /// \param RecycleInsnID If given, it's an instruction to recycle. The
+  ///                      requirements on the instruction vary from action to
+  ///                      action.
   virtual void emitCxxActionStmts(raw_ostream &OS, RuleMatcher &Rule,
-                                  StringRef RecycleVarName) const = 0;
+                                  unsigned RecycleInsnID) const = 0;
 };
 
 /// Generates a comment describing the matched rule being acted upon.
@@ -1025,8 +1075,9 @@ public:
   DebugCommentAction(const PatternToMatch &P) : P(P) {}
 
   void emitCxxActionStmts(raw_ostream &OS, RuleMatcher &Rule,
-                          StringRef RecycleVarName) const override {
-    OS << "// " << *P.getSrcPattern() << "  =>  " << *P.getDstPattern() << "\n";
+                          unsigned RecycleInsnID) const override {
+    OS << "      // " << *P.getSrcPattern() << "  =>  " << *P.getDstPattern()
+       << "\n";
   }
 };
 
@@ -1034,7 +1085,7 @@ public:
 /// into the desired instruction when this is possible.
 class BuildMIAction : public MatchAction {
 private:
-  std::string Name;
+  unsigned InsnID;
   const CodeGenInstruction *I;
   const InstructionMatcher &Matched;
   std::vector<std::unique_ptr<OperandRenderer>> OperandRenderers;
@@ -1058,9 +1109,9 @@ private:
   }
 
 public:
-  BuildMIAction(const StringRef Name, const CodeGenInstruction *I,
+  BuildMIAction(unsigned InsnID, const CodeGenInstruction *I,
                 const InstructionMatcher &Matched)
-      : Name(Name), I(I), Matched(Matched) {}
+      : InsnID(InsnID), I(I), Matched(Matched) {}
 
   template <class Kind, class... Args>
   Kind &addRenderer(Args&&... args) {
@@ -1070,84 +1121,74 @@ public:
   }
 
   void emitCxxActionStmts(raw_ostream &OS, RuleMatcher &Rule,
-                          StringRef RecycleVarName) const override {
+                          unsigned RecycleInsnID) const override {
     if (canMutate()) {
-      OS << "    " << RecycleVarName << ".setDesc(TII.get(" << I->Namespace
-         << "::" << I->TheDef->getName() << "));\n";
+      OS << "      GIR_MutateOpcode, /*InsnID*/" << InsnID
+         << ", /*RecycleInsnID*/ " << RecycleInsnID << ", /*Opcode*/"
+         << I->Namespace << "::" << I->TheDef->getName() << ",\n";
 
       if (!I->ImplicitDefs.empty() || !I->ImplicitUses.empty()) {
-        OS << "    auto MIB = MachineInstrBuilder(MF, &" << RecycleVarName
-           << ");\n";
-
         for (auto Def : I->ImplicitDefs) {
           auto Namespace = Def->getValue("Namespace")
                                ? Def->getValueAsString("Namespace")
                                : "";
-          OS << "    MIB.addDef(" << Namespace << "::" << Def->getName()
-             << ", RegState::Implicit);\n";
+          OS << "      GIR_AddImplicitDef, " << InsnID << ", " << Namespace
+             << "::" << Def->getName() << ",\n";
         }
         for (auto Use : I->ImplicitUses) {
           auto Namespace = Use->getValue("Namespace")
                                ? Use->getValueAsString("Namespace")
                                : "";
-          OS << "    MIB.addUse(" << Namespace << "::" << Use->getName()
-             << ", RegState::Implicit);\n";
+          OS << "      GIR_AddImplicitUse, " << InsnID << ", " << Namespace
+             << "::" << Use->getName() << ",\n";
         }
       }
-
-      OS << "    MachineInstr &" << Name << " = " << RecycleVarName << ";\n";
       return;
     }
 
     // TODO: Simple permutation looks like it could be almost as common as
     //       mutation due to commutative operations.
 
-    OS << "MachineInstrBuilder MIB = BuildMI(*I.getParent(), I, "
-          "I.getDebugLoc(), TII.get("
-       << I->Namespace << "::" << I->TheDef->getName() << "));\n";
+    OS << "      GIR_BuildMI, /*InsnID*/" << InsnID << ", /*Opcode*/"
+       << I->Namespace << "::" << I->TheDef->getName() << ",\n";
     for (const auto &Renderer : OperandRenderers)
       Renderer->emitCxxRenderStmts(OS, Rule);
-    OS << "    for (const auto *FromMI : ";
-    Rule.emitCxxCapturedInsnList(OS);
-    OS << ")\n";
-    OS << "      for (const auto &MMO : FromMI->memoperands())\n";
-    OS << "        MIB.addMemOperand(MMO);\n";
-    OS << "    " << RecycleVarName << ".eraseFromParent();\n";
-    OS << "    MachineInstr &" << Name << " = *MIB;\n";
+
+    OS << "      GIR_MergeMemOperands, /*InsnID*/" << InsnID << ",\n"
+       << "      GIR_EraseFromParent, /*InsnID*/" << RecycleInsnID << ",\n";
   }
 };
 
 /// Generates code to constrain the operands of an output instruction to the
 /// register classes specified by the definition of that instruction.
 class ConstrainOperandsToDefinitionAction : public MatchAction {
-  std::string Name;
+  unsigned InsnID;
 
 public:
-  ConstrainOperandsToDefinitionAction(const StringRef Name) : Name(Name) {}
+  ConstrainOperandsToDefinitionAction(unsigned InsnID) : InsnID(InsnID) {}
 
   void emitCxxActionStmts(raw_ostream &OS, RuleMatcher &Rule,
-                          StringRef RecycleVarName) const override {
-    OS << "      constrainSelectedInstRegOperands(" << Name
-       << ", TII, TRI, RBI);\n";
+                          unsigned RecycleInsnID) const override {
+    OS << "      GIR_ConstrainSelectedInstOperands, /*InsnID*/" << InsnID << ",\n";
   }
 };
 
 /// Generates code to constrain the specified operand of an output instruction
 /// to the specified register class.
 class ConstrainOperandToRegClassAction : public MatchAction {
-  std::string Name;
+  unsigned InsnID;
   unsigned OpIdx;
   const CodeGenRegisterClass &RC;
 
 public:
-  ConstrainOperandToRegClassAction(const StringRef Name, unsigned OpIdx,
+  ConstrainOperandToRegClassAction(unsigned InsnID, unsigned OpIdx,
                                    const CodeGenRegisterClass &RC)
-      : Name(Name), OpIdx(OpIdx), RC(RC) {}
+      : InsnID(InsnID), OpIdx(OpIdx), RC(RC) {}
 
   void emitCxxActionStmts(raw_ostream &OS, RuleMatcher &Rule,
-                          StringRef RecycleVarName) const override {
-    OS << "      constrainOperandRegToRegClass(" << Name << ", " << OpIdx
-       << ", " << RC.getQualifiedName() << "RegClass, TII, TRI, RBI);\n";
+                          unsigned RecycleInsnID) const override {
+    OS << "      GIR_ConstrainOperandRC, /*InsnID*/" << InsnID << ", /*Op*/"
+       << OpIdx << ", /*RC " << RC.getName() << "*/ " << RC.EnumValue << ",\n";
   }
 };
 
@@ -1160,53 +1201,49 @@ void RuleMatcher::addRequiredFeature(Record *Feature) {
   RequiredFeatures.push_back(Feature);
 }
 
+const std::vector<Record *> &RuleMatcher::getRequiredFeatures() const {
+  return RequiredFeatures;
+}
+
 template <class Kind, class... Args>
 Kind &RuleMatcher::addAction(Args &&... args) {
   Actions.emplace_back(llvm::make_unique<Kind>(std::forward<Args>(args)...));
   return *static_cast<Kind *>(Actions.back().get());
 }
 
-std::string RuleMatcher::defineInsnVar(raw_ostream &OS,
-                                       const InstructionMatcher &Matcher,
-                                       StringRef Value) {
-  std::string InsnVarName = "MI" + llvm::to_string(NextInsnVarID++);
-  OS << "MachineInstr &" << InsnVarName << " = " << Value << ";\n";
-  InsnVariableNames[&Matcher] = InsnVarName;
-  return InsnVarName;
+unsigned
+RuleMatcher::implicitlyDefineInsnVar(const InstructionMatcher &Matcher) {
+  unsigned NewInsnVarID = NextInsnVarID++;
+  InsnVariableIDs[&Matcher] = NewInsnVarID;
+  return NewInsnVarID;
 }
 
-StringRef
-RuleMatcher::getInsnVarName(const InstructionMatcher &InsnMatcher) const {
-  const auto &I = InsnVariableNames.find(&InsnMatcher);
-  if (I != InsnVariableNames.end())
+unsigned RuleMatcher::defineInsnVar(raw_ostream &OS,
+                                    const InstructionMatcher &Matcher,
+                                    unsigned InsnID, unsigned OpIdx) {
+  unsigned NewInsnVarID = implicitlyDefineInsnVar(Matcher);
+  OS << "    GIM_RecordInsn, /*DefineMI*/" << NewInsnVarID << ", /*MI*/"
+     << InsnID << ", /*OpIdx*/" << OpIdx << ", // MIs[" << NewInsnVarID
+     << "]\n";
+  return NewInsnVarID;
+}
+
+unsigned RuleMatcher::getInsnVarID(const InstructionMatcher &InsnMatcher) const {
+  const auto &I = InsnVariableIDs.find(&InsnMatcher);
+  if (I != InsnVariableIDs.end())
     return I->second;
   llvm_unreachable("Matched Insn was not captured in a local variable");
 }
 
-/// Emit a C++ initializer_list containing references to every matched
-/// instruction.
-void RuleMatcher::emitCxxCapturedInsnList(raw_ostream &OS) {
-  SmallVector<StringRef, 2> Names;
-  for (const auto &Pair : InsnVariableNames)
-    Names.push_back(Pair.second);
-  std::sort(Names.begin(), Names.end());
-
-  OS << "{";
-  for (const auto &Name : Names)
-    OS << "&" << Name << ", ";
-  OS << "}";
-}
-
 /// Emit C++ statements to check the shape of the match and capture
 /// instructions into local variables.
-void RuleMatcher::emitCxxCaptureStmts(raw_ostream &OS, StringRef Expr) {
+void RuleMatcher::emitCxxCaptureStmts(raw_ostream &OS) {
   assert(Matchers.size() == 1 && "Cannot handle multi-root matchers yet");
-  std::string InsnVarName = defineInsnVar(OS, *Matchers.front(), Expr);
-  Matchers.front()->emitCxxCaptureStmts(OS, *this, InsnVarName);
+  unsigned InsnVarID = implicitlyDefineInsnVar(*Matchers.front());
+  Matchers.front()->emitCxxCaptureStmts(OS, *this, InsnVarID);
 }
 
-void RuleMatcher::emit(raw_ostream &OS,
-                       SubtargetFeatureInfoMap SubtargetFeatures) {
+void RuleMatcher::emit(raw_ostream &OS) {
   if (Matchers.empty())
     llvm_unreachable("Unexpected empty matcher!");
 
@@ -1221,47 +1258,45 @@ void RuleMatcher::emit(raw_ostream &OS,
   // on some targets but we don't need to make use of that yet.
   assert(Matchers.size() == 1 && "Cannot handle multi-root matchers yet");
 
-  OS << "if (";
-  OS << "[&]() {\n";
+  OS << "  const static int64_t MatchTable" << CurrentMatchTableID << "[] = {\n";
   if (!RequiredFeatures.empty()) {
-    OS << "  PredicateBitset ExpectedFeatures = {";
-    StringRef Separator = "";
-    for (const auto &Predicate : RequiredFeatures) {
-      const auto &I = SubtargetFeatures.find(Predicate);
-      assert(I != SubtargetFeatures.end() && "Didn't import predicate?");
-      OS << Separator << I->second.getEnumBitName();
-      Separator = ", ";
-    }
-    OS << "};\n";
-    OS << "if ((AvailableFeatures & ExpectedFeatures) != ExpectedFeatures)\n"
-       << "  return false;\n";
+    OS << "    GIM_CheckFeatures, " << getNameForFeatureBitset(RequiredFeatures)
+       << ",\n";
   }
 
-  emitCxxCaptureStmts(OS, "I");
 
-  OS << "    if (";
+  emitCxxCaptureStmts(OS);
+
   Matchers.front()->emitCxxPredicateExpr(OS, *this,
-                                         getInsnVarName(*Matchers.front()));
-  OS << ") {\n";
+                                         getInsnVarID(*Matchers.front()));
+
+  OS << "    GIM_Accept,\n"
+     << "  };\n"
+     << "  State.MIs.clear();\n"
+     << "  State.MIs.push_back(&I);\n"
+     << "  DEBUG(dbgs() << \"Processing MatchTable" << NumPatternEmitted
+     << "\\n\");\n"
+     << "  if (executeMatchTable(*this, State, MatcherInfo, MatchTable"
+     << CurrentMatchTableID << ", MRI, TRI, RBI, AvailableFeatures)) {\n";
 
   // We must also check if it's safe to fold the matched instructions.
-  if (InsnVariableNames.size() >= 2) {
+  if (InsnVariableIDs.size() >= 2) {
     // Invert the map to create stable ordering (by var names)
-    SmallVector<StringRef, 2> Names;
-    for (const auto &Pair : InsnVariableNames) {
+    SmallVector<unsigned, 2> InsnIDs;
+    for (const auto &Pair : InsnVariableIDs) {
       // Skip the root node since it isn't moving anywhere. Everything else is
       // sinking to meet it.
       if (Pair.first == Matchers.front().get())
         continue;
 
-      Names.push_back(Pair.second);
+      InsnIDs.push_back(Pair.second);
     }
-    std::sort(Names.begin(), Names.end());
+    std::sort(InsnIDs.begin(), InsnIDs.end());
 
-    for (const auto &Name : Names) {
+    for (const auto &InsnID : InsnIDs) {
       // Reject the difficult cases until we have a more accurate check.
-      OS << "      if (!isObviouslySafeToFold(" << Name
-         << ")) return false;\n";
+      OS << "    if (!isObviouslySafeToFold(*State.MIs[" << InsnID << "]))\n"
+         << "      return false;\n";
 
       // FIXME: Emit checks to determine it's _actually_ safe to fold and/or
       //        account for unsafe cases.
@@ -1300,14 +1335,19 @@ void RuleMatcher::emit(raw_ostream &OS,
     }
   }
 
-  for (const auto &MA : Actions) {
-    MA->emitCxxActionStmts(OS, *this, "I");
-  }
+  OS << "    const static int64_t EmitTable" << NumPatternEmitted << "[] = {\n";
+  for (const auto &MA : Actions)
+    MA->emitCxxActionStmts(OS, *this, 0);
+  OS << "      GIR_Done,\n"
+     << "    };\n"
+     << "    NewMIVector OutMIs;\n"
+     << "    DEBUG(dbgs() << \"Processing EmitTable" << NumPatternEmitted
+     << "\\n\");\n"
+     << "    executeEmitTable(OutMIs, State, EmitTable" << NumPatternEmitted
+     << ", TII, TRI, RBI);\n";
 
-  OS << "      return true;\n";
-  OS << "    }\n";
-  OS << "    return false;\n";
-  OS << "  }()) { return true; }\n\n";
+  OS << "    return true;\n";
+  OS << "  }\n\n";
 }
 
 bool RuleMatcher::isHigherPriorityThan(const RuleMatcher &B) const {
@@ -1581,7 +1621,7 @@ Error GlobalISelEmitter::importExplicitUseRenderer(
     if (DstChild->getOperator()->isSubClassOf("SDNode")) {
       auto &ChildSDNI = CGP.getSDNodeInfo(DstChild->getOperator());
       if (ChildSDNI.getSDClassName() == "BasicBlockSDNode") {
-        DstMIBuilder.addRenderer<CopyRenderer>(InsnMatcher,
+        DstMIBuilder.addRenderer<CopyRenderer>(0, InsnMatcher,
                                                DstChild->getName());
         return Error::success();
       }
@@ -1606,13 +1646,14 @@ Error GlobalISelEmitter::importExplicitUseRenderer(
       return failedImport("Dst operand has an unsupported type");
 
     if (ChildRec->isSubClassOf("Register")) {
-      DstMIBuilder.addRenderer<AddRegisterRenderer>(ChildRec);
+      DstMIBuilder.addRenderer<AddRegisterRenderer>(0, ChildRec);
       return Error::success();
     }
 
     if (ChildRec->isSubClassOf("RegisterClass") ||
         ChildRec->isSubClassOf("RegisterOperand")) {
-      DstMIBuilder.addRenderer<CopyRenderer>(InsnMatcher, DstChild->getName());
+      DstMIBuilder.addRenderer<CopyRenderer>(0, InsnMatcher,
+                                             DstChild->getName());
       return Error::success();
     }
 
@@ -1624,7 +1665,7 @@ Error GlobalISelEmitter::importExplicitUseRenderer(
 
       const OperandMatcher &OM = InsnMatcher.getOperand(DstChild->getName());
       DstMIBuilder.addRenderer<RenderComplexPatternOperand>(
-          *ComplexPattern->second, DstChild->getName(),
+          0, *ComplexPattern->second, DstChild->getName(),
           OM.getAllocatedTemporariesBaseID());
       return Error::success();
     }
@@ -1667,12 +1708,12 @@ Expected<BuildMIAction &> GlobalISelEmitter::createAndImportInstructionRenderer(
     IsExtractSubReg = true;
   }
 
-  auto &DstMIBuilder = M.addAction<BuildMIAction>("NewI", DstI, InsnMatcher);
+  auto &DstMIBuilder = M.addAction<BuildMIAction>(0, DstI, InsnMatcher);
 
   // Render the explicit defs.
   for (unsigned I = 0; I < DstI->Operands.NumDefs; ++I) {
     const CGIOperandList::OperandInfo &DstIOperand = DstI->Operands[I];
-    DstMIBuilder.addRenderer<CopyRenderer>(InsnMatcher, DstIOperand.Name);
+    DstMIBuilder.addRenderer<CopyRenderer>(0, InsnMatcher, DstIOperand.Name);
   }
 
   // EXTRACT_SUBREG needs to use a subregister COPY.
@@ -1695,7 +1736,7 @@ Expected<BuildMIAction &> GlobalISelEmitter::createAndImportInstructionRenderer(
       }
 
       DstMIBuilder.addRenderer<CopySubRegRenderer>(
-          InsnMatcher, Dst->getChild(0)->getName(), SubIdx);
+          0, InsnMatcher, Dst->getChild(0)->getName(), SubIdx);
       return DstMIBuilder;
     }
 
@@ -1751,12 +1792,12 @@ Error GlobalISelEmitter::importDefaultOperandRenderers(
     }
 
     if (const DefInit *DefaultDefOp = dyn_cast<DefInit>(DefaultOp)) {
-      DstMIBuilder.addRenderer<AddRegisterRenderer>(DefaultDefOp->getDef());
+      DstMIBuilder.addRenderer<AddRegisterRenderer>(0, DefaultDefOp->getDef());
       continue;
     }
 
     if (const IntInit *DefaultIntOp = dyn_cast<IntInit>(DefaultOp)) {
-      DstMIBuilder.addRenderer<ImmRenderer>(DefaultIntOp->getValue());
+      DstMIBuilder.addRenderer<ImmRenderer>(0, DefaultIntOp->getValue());
       continue;
     }
 
@@ -1875,7 +1916,7 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
       return failedImport("COPY_TO_REGCLASS operand #1 isn't a register class");
 
     M.addAction<ConstrainOperandToRegClassAction>(
-        "NewI", 0, Target.getRegisterClass(DstIOpRec));
+        0, 0, Target.getRegisterClass(DstIOpRec));
 
     // We're done with this pattern!  It's eligible for GISel emission; return
     // it.
@@ -1903,8 +1944,7 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
       return failedImport("EXTRACT_SUBREG operand #1 isn't a register class");
 
     CodeGenSubRegIndex *SubIdx = CGRegs.getSubRegIdx(SubRegInit->getDef());
-    CodeGenRegisterClass *SrcRC = CGRegs.getRegClass(
-        getInitValueAsRegClass(Dst->getChild(0)->getLeafValue()));
+    CodeGenRegisterClass *SrcRC = CGRegs.getRegClass(DstIOpRec);
 
     // It would be nice to leave this constraint implicit but we're required
     // to pick a register class so constrain the result to a register class
@@ -1918,12 +1958,16 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
     const auto &SrcRCDstRCPair =
         SrcRC->getMatchingSubClassWithSubRegs(CGRegs, SubIdx);
     assert(SrcRCDstRCPair->second && "Couldn't find a matching subclass");
-    M.addAction<ConstrainOperandToRegClassAction>("NewI", 0,
-                                                  *SrcRCDstRCPair->second);
-    M.addAction<ConstrainOperandToRegClassAction>("NewI", 1,
-                                                  *SrcRCDstRCPair->first);
-  } else
-    M.addAction<ConstrainOperandsToDefinitionAction>("NewI");
+    M.addAction<ConstrainOperandToRegClassAction>(0, 0, *SrcRCDstRCPair->second);
+    M.addAction<ConstrainOperandToRegClassAction>(0, 1, *SrcRCDstRCPair->first);
+
+    // We're done with this pattern!  It's eligible for GISel emission; return
+    // it.
+    ++NumPatternImported;
+    return std::move(M);
+  }
+
+  M.addAction<ConstrainOperandsToDefinitionAction>(0);
 
   // We're done with this pattern!  It's eligible for GISel emission; return it.
   ++NumPatternImported;
@@ -1969,6 +2013,14 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
               return false;
             });
 
+  std::vector<Record *> ComplexPredicates =
+      RK.getAllDerivedDefinitions("GIComplexOperandMatcher");
+  std::sort(ComplexPredicates.begin(), ComplexPredicates.end(),
+            [](const Record *A, const Record *B) {
+              if (A->getName() < B->getName())
+                return true;
+              return false;
+            });
   unsigned MaxTemporaries = 0;
   for (const auto &Rule : Rules)
     MaxTemporaries = std::max(MaxTemporaries, Rule.countRendererFns());
@@ -1980,15 +2032,26 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
         "llvm::PredicateBitsetImpl<MAX_SUBTARGET_PREDICATES>;\n"
      << "#endif // ifdef GET_GLOBALISEL_PREDICATE_BITSET\n\n";
 
-  OS << "#ifdef GET_GLOBALISEL_TEMPORARIES_DECL\n";
-  for (unsigned I = 0; I < MaxTemporaries; ++I)
-    OS << "  mutable ComplexRendererFn Renderer" << I << ";\n";
-  OS << "#endif // ifdef GET_GLOBALISEL_TEMPORARIES_DECL\n\n";
+  OS << "#ifdef GET_GLOBALISEL_TEMPORARIES_DECL\n"
+     << "  mutable MatcherState State;\n"
+     << "  typedef "
+        "ComplexRendererFn("
+     << Target.getName()
+     << "InstructionSelector::*ComplexMatcherMemFn)(MachineOperand &) const;\n"
+     << "const MatcherInfoTy<PredicateBitset, ComplexMatcherMemFn> "
+        "MatcherInfo;\n"
+     << "#endif // ifdef GET_GLOBALISEL_TEMPORARIES_DECL\n\n";
 
-  OS << "#ifdef GET_GLOBALISEL_TEMPORARIES_INIT\n";
-  for (unsigned I = 0; I < MaxTemporaries; ++I)
-    OS << ", Renderer" << I << "(nullptr)\n";
-  OS << "#endif // ifdef GET_GLOBALISEL_TEMPORARIES_INIT\n\n";
+  OS << "#ifdef GET_GLOBALISEL_TEMPORARIES_INIT\n"
+     << ", State(" << MaxTemporaries << "),\n"
+     << "MatcherInfo({TypeObjects, FeatureBitsets, {\n"
+     << "  nullptr, // GICP_Invalid\n";
+  for (const auto &Record : ComplexPredicates)
+    OS << "  &" << Target.getName()
+       << "InstructionSelector::" << Record->getValueAsString("MatcherFn")
+       << ", // " << Record->getName() << "\n";
+  OS << "}})\n"
+     << "#endif // ifdef GET_GLOBALISEL_TEMPORARIES_INIT\n\n";
 
   OS << "#ifdef GET_GLOBALISEL_IMPL\n";
   SubtargetFeatureInfo::emitSubtargetFeatureBitEnumeration(SubtargetFeatures,
@@ -2016,10 +2079,92 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
       "computeAvailableFunctionFeatures", FunctionFeatures, OS,
       "const MachineFunction *MF");
 
+  // Emit a table containing the LLT objects needed by the matcher and an enum
+  // for the matcher to reference them with.
+  std::vector<LLTCodeGen> TypeObjects = {
+      LLT::scalar(8),      LLT::scalar(16),     LLT::scalar(32),
+      LLT::scalar(64),     LLT::scalar(80),     LLT::vector(8, 1),
+      LLT::vector(16, 1),  LLT::vector(32, 1),  LLT::vector(64, 1),
+      LLT::vector(8, 8),   LLT::vector(16, 8),  LLT::vector(32, 8),
+      LLT::vector(64, 8),  LLT::vector(4, 16),  LLT::vector(8, 16),
+      LLT::vector(16, 16), LLT::vector(32, 16), LLT::vector(2, 32),
+      LLT::vector(4, 32),  LLT::vector(8, 32),  LLT::vector(16, 32),
+      LLT::vector(2, 64),  LLT::vector(4, 64),  LLT::vector(8, 64),
+  };
+  std::sort(TypeObjects.begin(), TypeObjects.end());
+  OS << "enum {\n";
+  for (const auto &TypeObject : TypeObjects) {
+    OS << "  ";
+    TypeObject.emitCxxEnumValue(OS);
+    OS << ",\n";
+  }
+  OS << "};\n"
+     << "const static LLT TypeObjects[] = {\n";
+  for (const auto &TypeObject : TypeObjects) {
+    OS << "  ";
+    TypeObject.emitCxxConstructorCall(OS);
+    OS << ",\n";
+  }
+  OS << "};\n\n";
+
+  // Emit a table containing the PredicateBitsets objects needed by the matcher
+  // and an enum for the matcher to reference them with.
+  std::vector<std::vector<Record *>> FeatureBitsets;
+  for (auto &Rule : Rules)
+    FeatureBitsets.push_back(Rule.getRequiredFeatures());
+  std::sort(
+      FeatureBitsets.begin(), FeatureBitsets.end(),
+      [&](const std::vector<Record *> &A, const std::vector<Record *> &B) {
+        if (A.size() < B.size())
+          return true;
+        if (A.size() > B.size())
+          return false;
+        for (const auto &Pair : zip(A, B)) {
+          if (std::get<0>(Pair)->getName() < std::get<1>(Pair)->getName())
+            return true;
+          if (std::get<0>(Pair)->getName() > std::get<1>(Pair)->getName())
+            return false;
+        }
+        return false;
+      });
+  FeatureBitsets.erase(
+      std::unique(FeatureBitsets.begin(), FeatureBitsets.end()),
+      FeatureBitsets.end());
+  OS << "enum {\n"
+     << "  GIFBS_Invalid,\n";
+  for (const auto &FeatureBitset : FeatureBitsets) {
+    if (FeatureBitset.empty())
+      continue;
+    OS << "  " << getNameForFeatureBitset(FeatureBitset) << ",\n";
+  }
+  OS << "};\n"
+     << "const static PredicateBitset FeatureBitsets[] {\n"
+     << "  {}, // GIFBS_Invalid\n";
+  for (const auto &FeatureBitset : FeatureBitsets) {
+    if (FeatureBitset.empty())
+      continue;
+    OS << "  {";
+    for (const auto &Feature : FeatureBitset) {
+      const auto &I = SubtargetFeatures.find(Feature);
+      assert(I != SubtargetFeatures.end() && "Didn't import predicate?");
+      OS << I->second.getEnumBitName() << ", ";
+    }
+    OS << "},\n";
+  }
+  OS << "};\n\n";
+
+  // Emit complex predicate table and an enum to reference them with.
+  OS << "enum {\n"
+     << "  GICP_Invalid,\n";
+  for (const auto &Record : ComplexPredicates)
+    OS << "  GICP_" << Record->getName() << ",\n";
+  OS << "};\n"
+     << "// See constructor for table contents\n\n";
+
   OS << "bool " << Target.getName()
      << "InstructionSelector::selectImpl(MachineInstr &I) const {\n"
      << "  MachineFunction &MF = *I.getParent()->getParent();\n"
-     << "  const MachineRegisterInfo &MRI = MF.getRegInfo();\n"
+     << "  MachineRegisterInfo &MRI = MF.getRegInfo();\n"
      << "  // FIXME: This should be computed on a per-function basis rather "
         "than per-insn.\n"
      << "  AvailableFunctionFeatures = computeAvailableFunctionFeatures(&STI, "
@@ -2027,8 +2172,11 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
      << "  const PredicateBitset AvailableFeatures = getAvailableFeatures();\n";
 
   for (auto &Rule : Rules) {
-    Rule.emit(OS, SubtargetFeatures);
+    Rule.emit(OS);
+    ++CurrentMatchTableID;
     ++NumPatternEmitted;
+    assert(CurrentMatchTableID == NumPatternEmitted &&
+           "Statistic deviates from number of emitted tables");
   }
 
   OS << "  return false;\n"
