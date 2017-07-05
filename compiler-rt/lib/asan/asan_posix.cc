@@ -59,7 +59,7 @@ void AsanOnDeadlySignal(int signo, void *siginfo, void *context) {
   //   lis r0,-10000
   //   stdux r1,r1,r0 # store sp to [sp-10000] and update sp by -10000
   // If the store faults then sp will not have been updated, so test above
-  // will not work, becase the fault address will be more than just "slightly"
+  // will not work, because the fault address will be more than just "slightly"
   // below sp.
   if (!IsStackAccess && IsAccessibleMemoryRange(sig.pc, 4)) {
     u32 inst = *(unsigned *)sig.pc;

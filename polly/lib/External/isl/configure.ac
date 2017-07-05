@@ -137,6 +137,7 @@ fi
 AC_CONFIG_FILES([bound_test.sh], [chmod +x bound_test.sh])
 AC_CONFIG_FILES([codegen_test.sh], [chmod +x codegen_test.sh])
 AC_CONFIG_FILES([pip_test.sh], [chmod +x pip_test.sh])
+AC_CONFIG_FILES([flow_test.sh], [chmod +x flow_test.sh])
 AC_CONFIG_COMMANDS_POST([
 	dnl pass on arguments to subdir configures, but don't
 	dnl add them to config.status

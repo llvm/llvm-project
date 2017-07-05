@@ -260,17 +260,19 @@ __isl_give isl_pw_multi_aff *isl_tab_basic_map_partial_lexopt_pw_multi_aff(
 	__isl_take isl_basic_map *bmap, __isl_take isl_basic_set *dom,
 	__isl_give isl_set **empty, unsigned flags);
 
-/* An isl_region represents a sequence of consecutive variables.
+/* An isl_trivial_region represents a non-triviality region.
+ * The region is trivial if applying "trivial" to a given sequence
+ * of variables results in a zero vector.
  * pos is the location (starting at 0) of the first variable in the sequence.
  */
-struct isl_region {
+struct isl_trivial_region {
 	int pos;
-	int len;
+	isl_mat *trivial;
 };
 
 __isl_give isl_vec *isl_tab_basic_set_non_trivial_lexmin(
 	__isl_take isl_basic_set *bset, int n_op, int n_region,
-	struct isl_region *region,
+	struct isl_trivial_region *region,
 	int (*conflict)(int con, void *user), void *user);
 
 struct isl_tab_lexmin;

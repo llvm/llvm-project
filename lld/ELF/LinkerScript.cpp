@@ -485,12 +485,11 @@ void LinkerScript::addOrphanSections(OutputSectionFactory &Factory) {
     if (!S->Live || S->Parent)
       continue;
     StringRef Name = getOutputSectionName(S->Name);
-    auto I = std::find_if(
-        Opt.Commands.begin(), Opt.Commands.end(), [&](BaseCommand *Base) {
-          if (auto *Cmd = dyn_cast<OutputSectionCommand>(Base))
-            return Cmd->Name == Name;
-          return false;
-        });
+    auto I = llvm::find_if(Opt.Commands, [&](BaseCommand *Base) {
+      if (auto *Cmd = dyn_cast<OutputSectionCommand>(Base))
+        return Cmd->Name == Name;
+      return false;
+    });
     if (I == Opt.Commands.end()) {
       Factory.addInputSec(S, Name);
     } else {

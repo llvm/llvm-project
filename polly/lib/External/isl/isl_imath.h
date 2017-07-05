@@ -6,3 +6,5 @@ int isl_imath_fits_ulong_p(mp_int op);
 int isl_imath_fits_slong_p(mp_int op);
 void isl_imath_addmul_ui(mp_int rop, mp_int op1, unsigned long op2);
 void isl_imath_submul_ui(mp_int rop, mp_int op1, unsigned long op2);
+void isl_imath_cdiv_q_ui(mp_int rop, mp_int op1, unsigned long op2);
+void isl_imath_fdiv_q_ui(mp_int rop, mp_int op1, unsigned long op2);

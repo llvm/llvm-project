@@ -258,6 +258,7 @@ std::string ClangdServer::dumpAST(PathRef File) {
 
   WorkScheduler.addToEnd([this, &DumpPromise, File, Version]() {
     assert(DraftMgr.getVersion(File) == Version && "Version has changed");
+    (void)Version;
 
     Units.runOnExistingUnit(File, [&DumpPromise](ClangdUnit &Unit) {
       std::string Result;
