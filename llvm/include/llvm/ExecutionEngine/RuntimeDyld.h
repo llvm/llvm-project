@@ -88,21 +88,6 @@ public:
     ObjSectionToIDMap ObjSecToIDMap;
   };
 
-  template <typename Derived> struct LoadedObjectInfoHelper : LoadedObjectInfo {
-  protected:
-    LoadedObjectInfoHelper(const LoadedObjectInfoHelper &) = default;
-    LoadedObjectInfoHelper() = default;
-
-  public:
-    LoadedObjectInfoHelper(RuntimeDyldImpl &RTDyld,
-                           LoadedObjectInfo::ObjSectionToIDMap ObjSecToIDMap)
-        : LoadedObjectInfo(RTDyld, std::move(ObjSecToIDMap)) {}
-
-    std::unique_ptr<llvm::LoadedObjectInfo> clone() const override {
-      return llvm::make_unique<Derived>(static_cast<const Derived &>(*this));
-    }
-  };
-
   /// \brief Memory Management.
   class MemoryManager {
     friend class RuntimeDyld;

@@ -481,19 +481,31 @@ void LinkerScript::fabricateDefaultCommands() {
 
 // Add sections that didn't match any sections command.
 void LinkerScript::addOrphanSections(OutputSectionFactory &Factory) {
+  unsigned NumCommands = Opt.Commands.size();
   for (InputSectionBase *S : InputSections) {
     if (!S->Live || S->Parent)
       continue;
     StringRef Name = getOutputSectionName(S->Name);
-    auto I = llvm::find_if(Opt.Commands, [&](BaseCommand *Base) {
+    auto End = Opt.Commands.begin() + NumCommands;
+    auto I = std::find_if(Opt.Commands.begin(), End, [&](BaseCommand *Base) {
       if (auto *Cmd = dyn_cast<OutputSectionCommand>(Base))
         return Cmd->Name == Name;
       return false;
     });
-    if (I == Opt.Commands.end()) {
+    OutputSectionCommand *Cmd;
+    if (I == End) {
       Factory.addInputSec(S, Name);
+      OutputSection *Sec = S->getOutputSection();
+      assert(Sec->SectionIndex == INT_MAX);
+      OutputSectionCommand *&CmdRef = SecToCommand[Sec];
+      if (!CmdRef) {
+        CmdRef = createOutputSectionCommand(Sec->Name, "<internal>");
+        CmdRef->Sec = Sec;
+        Opt.Commands.push_back(CmdRef);
+      }
+      Cmd = CmdRef;
     } else {
-      auto *Cmd = cast<OutputSectionCommand>(*I);
+      Cmd = cast<OutputSectionCommand>(*I);
       Factory.addInputSec(S, Name, Cmd->Sec);
       if (OutputSection *Sec = Cmd->Sec) {
         SecToCommand[Sec] = Cmd;
@@ -501,10 +513,10 @@ void LinkerScript::addOrphanSections(OutputSectionFactory &Factory) {
         assert(Sec->SectionIndex == INT_MAX || Sec->SectionIndex == Index);
         Sec->SectionIndex = Index;
       }
-      auto *ISD = make<InputSectionDescription>("");
-      ISD->Sections.push_back(cast<InputSection>(S));
-      Cmd->Commands.push_back(ISD);
     }
+    auto *ISD = make<InputSectionDescription>("");
+    ISD->Sections.push_back(cast<InputSection>(S));
+    Cmd->Commands.push_back(ISD);
   }
 }
 
@@ -757,21 +769,6 @@ void LinkerScript::adjustSectionsAfterSorting() {
   }
 
   removeEmptyCommands();
-}
-
-void LinkerScript::createOrphanCommands() {
-  for (OutputSection *Sec : OutputSections) {
-    if (Sec->SectionIndex != INT_MAX)
-      continue;
-    OutputSectionCommand *Cmd =
-        createOutputSectionCommand(Sec->Name, "<internal>");
-    Cmd->Sec = Sec;
-    SecToCommand[Sec] = Cmd;
-    auto *ISD = make<InputSectionDescription>("");
-    ISD->Sections = Sec->Sections;
-    Cmd->Commands.push_back(ISD);
-    Opt.Commands.push_back(Cmd);
-  }
 }
 
 void LinkerScript::processNonSectionCommands() {

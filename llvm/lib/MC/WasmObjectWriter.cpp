@@ -153,7 +153,7 @@ struct WasmRelocationEntry {
   }
 
   void print(raw_ostream &Out) const {
-    Out << "Off=" << Offset << ", Sym=" << Symbol << ", Addend=" << Addend
+    Out << "Off=" << Offset << ", Sym=" << *Symbol << ", Addend=" << Addend
         << ", Type=" << Type << ", FixupSection=" << FixupSection;
   }
 
@@ -959,6 +959,10 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
 
   // Populate the Imports set.
   for (const MCSymbol &S : Asm.symbols()) {
+    // Weak aliases don't have thier own function types.
+    if (S.isVariable())
+      continue;
+
     const auto &WS = static_cast<const MCSymbolWasm &>(S);
     int32_t Type;
 

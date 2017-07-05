@@ -13,6 +13,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUSubtarget.h"
+#include "AMDGPU.h"
+#include "AMDGPUTargetMachine.h"
+#ifdef LLVM_BUILD_GLOBAL_ISEL
+#include "AMDGPUCallLowering.h"
+#include "AMDGPUInstructionSelector.h"
+#include "AMDGPULegalizerInfo.h"
+#include "AMDGPURegisterBankInfo.h"
+#endif
 #include "SIMachineFunctionInfo.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/CodeGen/MachineScheduler.h"
@@ -71,6 +79,31 @@ AMDGPUSubtarget::initializeSubtargetDependencies(const Triple &TT,
 
   return *this;
 }
+
+#ifdef LLVM_BUILD_GLOBAL_ISEL
+namespace {
+
+struct SIGISelActualAccessor : public GISelAccessor {
+  std::unique_ptr<AMDGPUCallLowering> CallLoweringInfo;
+  std::unique_ptr<InstructionSelector> InstSelector;
+  std::unique_ptr<LegalizerInfo> Legalizer;
+  std::unique_ptr<RegisterBankInfo> RegBankInfo;
+  const AMDGPUCallLowering *getCallLowering() const override {
+    return CallLoweringInfo.get();
+  }
+  const InstructionSelector *getInstructionSelector() const override {
+    return InstSelector.get();
+  }
+  const LegalizerInfo *getLegalizerInfo() const override {
+    return Legalizer.get();
+  }
+  const RegisterBankInfo *getRegBankInfo() const override {
+    return RegBankInfo.get();
+  }
+};
+
+} // end anonymous namespace
+#endif
 
 AMDGPUSubtarget::AMDGPUSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
                                  const TargetMachine &TM)
@@ -317,11 +350,23 @@ R600Subtarget::R600Subtarget(const Triple &TT, StringRef GPU, StringRef FS,
   TLInfo(TM, *this) {}
 
 SISubtarget::SISubtarget(const Triple &TT, StringRef GPU, StringRef FS,
-                         const TargetMachine &TM) :
-  AMDGPUSubtarget(TT, GPU, FS, TM),
-  InstrInfo(*this),
-  FrameLowering(TargetFrameLowering::StackGrowsUp, getStackAlignment(), 0),
-  TLInfo(TM, *this) {}
+                         const TargetMachine &TM)
+    : AMDGPUSubtarget(TT, GPU, FS, TM), InstrInfo(*this),
+      FrameLowering(TargetFrameLowering::StackGrowsUp, getStackAlignment(), 0),
+      TLInfo(TM, *this) {
+#ifndef LLVM_BUILD_GLOBAL_ISEL
+  GISelAccessor *GISel = new GISelAccessor();
+#else
+  SIGISelActualAccessor *GISel = new SIGISelActualAccessor();
+  GISel->CallLoweringInfo.reset(new AMDGPUCallLowering(*getTargetLowering()));
+  GISel->Legalizer.reset(new AMDGPULegalizerInfo());
+
+  GISel->RegBankInfo.reset(new AMDGPURegisterBankInfo(*getRegisterInfo()));
+  GISel->InstSelector.reset(new AMDGPUInstructionSelector(
+      *this, *static_cast<AMDGPURegisterBankInfo *>(GISel->RegBankInfo.get())));
+#endif
+  setGISelAccessor(*GISel);
+}
 
 void SISubtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
                                       unsigned NumRegionInstrs) const {

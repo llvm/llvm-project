@@ -884,7 +884,7 @@ void PlatformPOSIX::CalculateTrapHandlerSymbolNames() {
 
 Status PlatformPOSIX::EvaluateLibdlExpression(
     lldb_private::Process *process, const char *expr_cstr,
-    const char *expr_prefix, lldb::ValueObjectSP &result_valobj_sp) {
+    llvm::StringRef expr_prefix, lldb::ValueObjectSP &result_valobj_sp) {
   DynamicLoader *loader = process->GetDynamicLoader();
   if (loader) {
     Status error = loader->CanLoadImage();
@@ -944,7 +944,7 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
                    the_result;
                   )",
               path);
-  const char *prefix = GetLibdlFunctionDeclarations();
+  llvm::StringRef prefix = GetLibdlFunctionDeclarations();
   lldb::ValueObjectSP result_valobj_sp;
   error = EvaluateLibdlExpression(process, expr.GetData(), prefix,
                                   result_valobj_sp);
@@ -992,7 +992,7 @@ Status PlatformPOSIX::UnloadImage(lldb_private::Process *process,
 
   StreamString expr;
   expr.Printf("dlclose((void *)0x%" PRIx64 ")", image_addr);
-  const char *prefix = GetLibdlFunctionDeclarations();
+  llvm::StringRef prefix = GetLibdlFunctionDeclarations();
   lldb::ValueObjectSP result_valobj_sp;
   Status error = EvaluateLibdlExpression(process, expr.GetData(), prefix,
                                          result_valobj_sp);
@@ -1024,7 +1024,7 @@ lldb::ProcessSP PlatformPOSIX::ConnectProcess(llvm::StringRef connect_url,
                                   error);
 }
 
-const char *PlatformPOSIX::GetLibdlFunctionDeclarations() const {
+llvm::StringRef PlatformPOSIX::GetLibdlFunctionDeclarations() {
   return R"(
               extern "C" void* dlopen(const char*, int);
               extern "C" void* dlsym(void*, const char*);

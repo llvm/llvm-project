@@ -201,7 +201,7 @@ const SocketAddress &SocketAddress::
 operator=(const struct addrinfo *addr_info) {
   Clear();
   if (addr_info && addr_info->ai_addr && addr_info->ai_addrlen > 0 &&
-      addr_info->ai_addrlen <= sizeof m_socket_addr) {
+      size_t(addr_info->ai_addrlen) <= sizeof m_socket_addr) {
     ::memcpy(&m_socket_addr, addr_info->ai_addr, addr_info->ai_addrlen);
   }
   return *this;

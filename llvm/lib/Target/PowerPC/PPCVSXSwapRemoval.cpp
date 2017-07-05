@@ -195,8 +195,10 @@ public:
       return false;
 
     // If we don't have VSX on the subtarget, don't do anything.
+    // Also, on Power 9 the load and store ops preserve element order and so
+    // the swaps are not required.
     const PPCSubtarget &STI = MF.getSubtarget<PPCSubtarget>();
-    if (!STI.hasVSX())
+    if (!STI.hasVSX() || !STI.needsSwapsForVSXMemOps())
       return false;
 
     bool Changed = false;

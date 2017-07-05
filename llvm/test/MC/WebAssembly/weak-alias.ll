@@ -10,6 +10,14 @@ entry:
   ret i32 0
 }
 
+; CHECK:        - Type:            TYPE
+; CHECK-NEXT:     Signatures:      
+; CHECK-NEXT:       - Index:           0
+; CHECK-NEXT:         ReturnType:      I32
+; CHECK-NEXT:         ParamTypes:      
+; CHECK-NEXT:   - Type:            FUNCTION
+; CHECK-NEXT:     FunctionTypes:   [ 0 ]
+
 ; CHECK:        - Type:            EXPORT
 ; CHECK-NEXT:     Exports:         
 ; CHECK-NEXT:       - Name:            foo
@@ -18,7 +26,6 @@ entry:
 ; CHECK-NEXT:       - Name:            foo_alias
 ; CHECK-NEXT:         Kind:            FUNCTION
 ; CHECK-NEXT:         Index:           0
-
 
 ; CHECK:        - Type:            CUSTOM
 ; CHECK-NEXT:     Name:            name

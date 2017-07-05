@@ -6142,7 +6142,7 @@ regex_iterator<_BidirectionalIterator, _CharT, _Traits>::operator++()
 {
     __flags_ |= regex_constants::__no_update_pos;
     _BidirectionalIterator __start = __match_[0].second;
-    if (__match_.empty())
+    if (__match_[0].first == __match_[0].second)
     {
         if (__start == __end_)
         {

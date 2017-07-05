@@ -860,7 +860,7 @@ private:
     bool tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP);
 
     /// Un-bundles a group of instructions.
-    void cancelScheduling(ArrayRef<Value *> VL);
+    void cancelScheduling(ArrayRef<Value *> VL, Value *OpValue);
 
     /// Extends the scheduling region so that V is inside the region.
     /// \returns true if the region size is within the limit.
@@ -1258,7 +1258,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
               cast<PHINode>(VL[j])->getIncomingValueForBlock(PH->getIncomingBlock(i)));
           if (Term) {
             DEBUG(dbgs() << "SLP: Need to swizzle PHINodes (TerminatorInst use).\n");
-            BS.cancelScheduling(VL);
+            BS.cancelScheduling(VL, VL0);
             newTreeEntry(VL, false, UserTreeIdx);
             return;
           }
@@ -1284,7 +1284,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
       if (Reuse) {
         DEBUG(dbgs() << "SLP: Reusing extract sequence.\n");
       } else {
-        BS.cancelScheduling(VL);
+        BS.cancelScheduling(VL, VL0);
       }
       newTreeEntry(VL, Reuse, UserTreeIdx);
       return;
@@ -1301,7 +1301,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
 
       if (DL->getTypeSizeInBits(ScalarTy) !=
           DL->getTypeAllocSizeInBits(ScalarTy)) {
-        BS.cancelScheduling(VL);
+        BS.cancelScheduling(VL, VL0);
         newTreeEntry(VL, false, UserTreeIdx);
         DEBUG(dbgs() << "SLP: Gathering loads of non-packed type.\n");
         return;
@@ -1312,7 +1312,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
       for (unsigned i = 0, e = VL.size() - 1; i < e; ++i) {
         LoadInst *L = cast<LoadInst>(VL[i]);
         if (!L->isSimple()) {
-          BS.cancelScheduling(VL);
+          BS.cancelScheduling(VL, VL0);
           newTreeEntry(VL, false, UserTreeIdx);
           DEBUG(dbgs() << "SLP: Gathering non-simple loads.\n");
           return;
@@ -1349,7 +1349,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
             break;
           }
 
-      BS.cancelScheduling(VL);
+      BS.cancelScheduling(VL, VL0);
       newTreeEntry(VL, false, UserTreeIdx);
 
       if (ReverseConsecutive) {
@@ -1376,7 +1376,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
       for (unsigned i = 0; i < VL.size(); ++i) {
         Type *Ty = cast<Instruction>(VL[i])->getOperand(0)->getType();
         if (Ty != SrcTy || !isValidElementType(Ty)) {
-          BS.cancelScheduling(VL);
+          BS.cancelScheduling(VL, VL0);
           newTreeEntry(VL, false, UserTreeIdx);
           DEBUG(dbgs() << "SLP: Gathering casts with different src types.\n");
           return;
@@ -1404,7 +1404,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
         CmpInst *Cmp = cast<CmpInst>(VL[i]);
         if (Cmp->getPredicate() != P0 ||
             Cmp->getOperand(0)->getType() != ComparedTy) {
-          BS.cancelScheduling(VL);
+          BS.cancelScheduling(VL, VL0);
           newTreeEntry(VL, false, UserTreeIdx);
           DEBUG(dbgs() << "SLP: Gathering cmp with different predicate.\n");
           return;
@@ -1471,7 +1471,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
       for (unsigned j = 0; j < VL.size(); ++j) {
         if (cast<Instruction>(VL[j])->getNumOperands() != 2) {
           DEBUG(dbgs() << "SLP: not-vectorizable GEP (nested indexes).\n");
-          BS.cancelScheduling(VL);
+          BS.cancelScheduling(VL, VL0);
           newTreeEntry(VL, false, UserTreeIdx);
           return;
         }
@@ -1484,7 +1484,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
         Type *CurTy = cast<Instruction>(VL[j])->getOperand(0)->getType();
         if (Ty0 != CurTy) {
           DEBUG(dbgs() << "SLP: not-vectorizable GEP (different types).\n");
-          BS.cancelScheduling(VL);
+          BS.cancelScheduling(VL, VL0);
           newTreeEntry(VL, false, UserTreeIdx);
           return;
         }
@@ -1496,7 +1496,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
         if (!isa<ConstantInt>(Op)) {
           DEBUG(
               dbgs() << "SLP: not-vectorizable GEP (non-constant indexes).\n");
-          BS.cancelScheduling(VL);
+          BS.cancelScheduling(VL, VL0);
           newTreeEntry(VL, false, UserTreeIdx);
           return;
         }
@@ -1518,7 +1518,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
       // Check if the stores are consecutive or of we need to swizzle them.
       for (unsigned i = 0, e = VL.size() - 1; i < e; ++i)
         if (!isConsecutiveAccess(VL[i], VL[i + 1], *DL, *SE)) {
-          BS.cancelScheduling(VL);
+          BS.cancelScheduling(VL, VL0);
           newTreeEntry(VL, false, UserTreeIdx);
           DEBUG(dbgs() << "SLP: Non-consecutive store.\n");
           return;
@@ -1541,7 +1541,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
       // represented by an intrinsic call
       Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, TLI);
       if (!isTriviallyVectorizable(ID)) {
-        BS.cancelScheduling(VL);
+        BS.cancelScheduling(VL, VL0);
         newTreeEntry(VL, false, UserTreeIdx);
         DEBUG(dbgs() << "SLP: Non-vectorizable call.\n");
         return;
@@ -1555,7 +1555,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
         if (!CI2 || CI2->getCalledFunction() != Int ||
             getVectorIntrinsicIDForCall(CI2, TLI) != ID ||
             !CI->hasIdenticalOperandBundleSchema(*CI2)) {
-          BS.cancelScheduling(VL);
+          BS.cancelScheduling(VL, VL0);
           newTreeEntry(VL, false, UserTreeIdx);
           DEBUG(dbgs() << "SLP: mismatched calls:" << *CI << "!=" << *VL[i]
                        << "\n");
@@ -1566,7 +1566,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
         if (hasVectorInstrinsicScalarOpd(ID, 1)) {
           Value *A1J = CI2->getArgOperand(1);
           if (A1I != A1J) {
-            BS.cancelScheduling(VL);
+            BS.cancelScheduling(VL, VL0);
             newTreeEntry(VL, false, UserTreeIdx);
             DEBUG(dbgs() << "SLP: mismatched arguments in call:" << *CI
                          << " argument "<< A1I<<"!=" << A1J
@@ -1579,7 +1579,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
             !std::equal(CI->op_begin() + CI->getBundleOperandsStartIndex(),
                         CI->op_begin() + CI->getBundleOperandsEndIndex(),
                         CI2->op_begin() + CI2->getBundleOperandsStartIndex())) {
-          BS.cancelScheduling(VL);
+          BS.cancelScheduling(VL, VL0);
           newTreeEntry(VL, false, UserTreeIdx);
           DEBUG(dbgs() << "SLP: mismatched bundle operands in calls:" << *CI << "!="
                        << *VL[i] << '\n');
@@ -1603,7 +1603,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
       // If this is not an alternate sequence of opcode like add-sub
       // then do not vectorize this instruction.
       if (!isAltShuffle) {
-        BS.cancelScheduling(VL);
+        BS.cancelScheduling(VL, VL0);
         newTreeEntry(VL, false, UserTreeIdx);
         DEBUG(dbgs() << "SLP: ShuffleVector are not vectorized.\n");
         return;
@@ -1631,7 +1631,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
       return;
     }
     default:
-      BS.cancelScheduling(VL);
+      BS.cancelScheduling(VL, VL0);
       newTreeEntry(VL, false, UserTreeIdx);
       DEBUG(dbgs() << "SLP: Gathering unknown instruction.\n");
       return;
@@ -3177,17 +3177,18 @@ bool BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL,
     }
   }
   if (!Bundle->isReady()) {
-    cancelScheduling(VL);
+    cancelScheduling(VL, VL[0]);
     return false;
   }
   return true;
 }
 
-void BoUpSLP::BlockScheduling::cancelScheduling(ArrayRef<Value *> VL) {
-  if (isa<PHINode>(VL[0]))
+void BoUpSLP::BlockScheduling::cancelScheduling(ArrayRef<Value *> VL,
+                                                Value *OpValue) {
+  if (isa<PHINode>(OpValue))
     return;
 
-  ScheduleData *Bundle = getScheduleData(VL[0]);
+  ScheduleData *Bundle = getScheduleData(OpValue)->FirstInBundle;
   DEBUG(dbgs() << "SLP:  cancel scheduling of " << *Bundle << "\n");
   assert(!Bundle->IsScheduled &&
          "Can't cancel bundle which is already scheduled");

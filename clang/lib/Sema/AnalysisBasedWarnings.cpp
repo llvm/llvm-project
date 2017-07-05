@@ -394,15 +394,21 @@ static bool hasThrowOutNonThrowingFunc(SourceLocation &OpLoc, CFG *BodyCFG) {
 
 static void EmitDiagForCXXThrowInNonThrowingFunc(Sema &S, SourceLocation OpLoc,
                                                  const FunctionDecl *FD) {
-  if (!S.getSourceManager().isInSystemHeader(OpLoc)) {
+  if (!S.getSourceManager().isInSystemHeader(OpLoc) &&
+      FD->getTypeSourceInfo()) {
     S.Diag(OpLoc, diag::warn_throw_in_noexcept_func) << FD;
     if (S.getLangOpts().CPlusPlus11 &&
         (isa<CXXDestructorDecl>(FD) ||
          FD->getDeclName().getCXXOverloadedOperator() == OO_Delete ||
-         FD->getDeclName().getCXXOverloadedOperator() == OO_Array_Delete))
-      S.Diag(FD->getLocation(), diag::note_throw_in_dtor);
-    else
-      S.Diag(FD->getLocation(), diag::note_throw_in_function);
+         FD->getDeclName().getCXXOverloadedOperator() == OO_Array_Delete)) {
+      if (const auto *Ty = FD->getTypeSourceInfo()->getType()->
+                                         getAs<FunctionProtoType>())
+        S.Diag(FD->getLocation(), diag::note_throw_in_dtor)
+            << !isa<CXXDestructorDecl>(FD) << !Ty->hasExceptionSpec()
+            << FD->getExceptionSpecSourceRange();
+    } else 
+      S.Diag(FD->getLocation(), diag::note_throw_in_function)
+          << FD->getExceptionSpecSourceRange();
   }
 }
 
@@ -420,8 +426,7 @@ static void checkThrowInNonThrowingFunc(Sema &S, const FunctionDecl *FD,
 
 static bool isNoexcept(const FunctionDecl *FD) {
   const auto *FPT = FD->getType()->castAs<FunctionProtoType>();
-  if (FPT->getExceptionSpecType() != EST_None &&
-      FPT->isNothrow(FD->getASTContext()))
+  if (FPT->isNothrow(FD->getASTContext()))
     return true;
   return false;
 }

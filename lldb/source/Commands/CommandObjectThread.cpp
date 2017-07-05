@@ -161,9 +161,9 @@ public:
         // List the common thread ID's
         const std::vector<uint32_t> &thread_index_ids =
             stack.GetUniqueThreadIndexIDs();
-        strm.Printf("%lu thread(s) ", thread_index_ids.size());
+        strm.Format("{0} thread(s) ", thread_index_ids.size());
         for (const uint32_t &thread_index_id : thread_index_ids) {
-          strm.Printf("#%u ", thread_index_id);
+          strm.Format("#{0} ", thread_index_id);
         }
         strm.EOL();
 
@@ -209,7 +209,7 @@ protected:
     Process *process = m_exe_ctx.GetProcessPtr();
     Thread *thread = process->GetThreadList().FindThreadByID(tid).get();
     if (thread == nullptr) {
-      result.AppendErrorWithFormat("Failed to process thread# %llu.\n", tid);
+      result.AppendErrorWithFormatv("Failed to process thread #{0}.\n", tid);
       result.SetStatus(eReturnStatusFailed);
       return false;
     }

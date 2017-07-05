@@ -88,6 +88,12 @@ public:
     HasSFINAEDiagnostic = false;
   }
 
+  /// Peek at the SFINAE diagnostic.
+  const PartialDiagnosticAt &peekSFINAEDiagnostic() const {
+    assert(HasSFINAEDiagnostic);
+    return SuppressedDiagnostics.front();
+  }
+
   /// \brief Provide a new template argument list that contains the
   /// results of template argument deduction.
   void reset(TemplateArgumentList *NewDeduced) {

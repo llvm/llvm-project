@@ -279,7 +279,6 @@ public:
   bool hasLMA(OutputSection *Sec);
   bool shouldKeep(InputSectionBase *S);
   void assignOffsets(OutputSectionCommand *Cmd);
-  void createOrphanCommands();
   void processNonSectionCommands();
   void assignAddresses();
   void allocateHeaders(std::vector<PhdrEntry> &Phdrs);
