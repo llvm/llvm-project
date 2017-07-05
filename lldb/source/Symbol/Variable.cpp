@@ -160,7 +160,7 @@ void Variable::Dump(Stream *s, bool show_context) const {
     if (m_owner_scope) {
       ModuleSP module_sp(m_owner_scope->CalculateSymbolContextModule());
       if (module_sp)
-        abi = ABI::FindPlugin(module_sp->GetArchitecture()).get();
+        abi = ABI::FindPlugin(ProcessSP(), module_sp->GetArchitecture()).get();
     }
     m_location.GetDescription(s, lldb::eDescriptionLevelBrief,
                               loclist_base_addr, abi);
@@ -471,7 +471,7 @@ bool Variable::DumpLocationForAddress(Stream *s, const Address &address) {
       if (m_owner_scope) {
         ModuleSP module_sp(m_owner_scope->CalculateSymbolContextModule());
         if (module_sp)
-          abi = ABI::FindPlugin(module_sp->GetArchitecture()).get();
+          abi = ABI::FindPlugin(ProcessSP(), module_sp->GetArchitecture()).get();
       }
 
       const addr_t file_addr = address.GetFileAddress();

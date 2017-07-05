@@ -1093,11 +1093,11 @@ size_t ABISysV_x86_64::GetRedZoneSize() const { return 128; }
 //------------------------------------------------------------------
 
 ABISP
-ABISysV_x86_64::CreateInstance(const ArchSpec &arch) {
+ABISysV_x86_64::CreateInstance(lldb::ProcessSP process_sp, const ArchSpec &arch) {
   static ABISP g_abi_sp;
   if (arch.GetTriple().getArch() == llvm::Triple::x86_64) {
     if (!g_abi_sp)
-      g_abi_sp.reset(new ABISysV_x86_64);
+      g_abi_sp.reset(new ABISysV_x86_64(process_sp));
     return g_abi_sp;
   }
   return ABISP();
