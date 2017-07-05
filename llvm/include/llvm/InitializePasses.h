@@ -318,6 +318,7 @@ void initializeResetMachineFunctionPass(PassRegistry&);
 void initializeReversePostOrderFunctionAttrsLegacyPassPass(PassRegistry&);
 void initializeRewriteStatepointsForGCPass(PassRegistry&);
 void initializeRewriteSymbolsLegacyPassPass(PassRegistry&);
+void initializeSafepointIRVerifierPass(PassRegistry&);
 void initializeSCCPLegacyPassPass(PassRegistry&);
 void initializeSCEVAAWrapperPassPass(PassRegistry&);
 void initializeSLPVectorizerPass(PassRegistry&);

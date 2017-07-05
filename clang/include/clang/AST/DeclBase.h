@@ -749,7 +749,7 @@ public:
   /// Set that this declaration is globally visible, even if it came from a
   /// module that is not visible.
   void setVisibleDespiteOwningModule() {
-    if (hasOwningModule())
+    if (getModuleOwnershipKind() == ModuleOwnershipKind::VisibleWhenImported)
       setModuleOwnershipKind(ModuleOwnershipKind::Visible);
   }
 

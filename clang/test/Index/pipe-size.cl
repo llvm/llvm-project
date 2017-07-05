@@ -11,6 +11,6 @@ __kernel void testPipe( pipe int test )
     // SPIR: store i32 4, i32* %s, align 4
     // SPIR64: store %opencl.pipe_t addrspace(1)* %test, %opencl.pipe_t addrspace(1)** %test.addr, align 8
     // SPIR64: store i32 8, i32* %s, align 4
-    // AMD: store %opencl.pipe_t addrspace(1)* %test, %opencl.pipe_t addrspace(1)* addrspace(5)* %test.addr, align 4
+    // AMD: store %opencl.pipe_t addrspace(1)* %test, %opencl.pipe_t addrspace(1)* addrspace(5)* %test.addr, align 8
     // AMD: store i32 8, i32 addrspace(5)* %s, align 4
 }
