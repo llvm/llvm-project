@@ -1676,8 +1676,9 @@ static bool SuperClassImplementsProperty(ObjCInterfaceDecl *IDecl,
 
 /// \brief Default synthesizes all properties which must be synthesized
 /// in class's \@implementation.
-void Sema::DefaultSynthesizeProperties(Scope *S, ObjCImplDecl* IMPDecl,
-                                       ObjCInterfaceDecl *IDecl) {
+void Sema::DefaultSynthesizeProperties(Scope *S, ObjCImplDecl *IMPDecl,
+                                       ObjCInterfaceDecl *IDecl,
+                                       SourceLocation AtEnd) {
   ObjCInterfaceDecl::PropertyMap PropMap;
   ObjCInterfaceDecl::PropertyDeclOrder PropertyOrder;
   IDecl->collectPropertiesToImplement(PropMap, PropertyOrder);
@@ -1725,6 +1726,10 @@ void Sema::DefaultSynthesizeProperties(Scope *S, ObjCImplDecl* IMPDecl,
              diag::warn_auto_synthesizing_protocol_property)
           << Prop << Proto;
         Diag(Prop->getLocation(), diag::note_property_declare);
+        std::string FixIt =
+            (Twine("@synthesize ") + Prop->getName() + ";\n\n").str();
+        Diag(AtEnd, diag::note_add_synthesize_directive)
+            << FixItHint::CreateInsertion(AtEnd, FixIt);
       }
       continue;
     }
@@ -1764,7 +1769,8 @@ void Sema::DefaultSynthesizeProperties(Scope *S, ObjCImplDecl* IMPDecl,
   }
 }
 
-void Sema::DefaultSynthesizeProperties(Scope *S, Decl *D) {
+void Sema::DefaultSynthesizeProperties(Scope *S, Decl *D,
+                                       SourceLocation AtEnd) {
   if (!LangOpts.ObjCDefaultSynthProperties || LangOpts.ObjCRuntime.isFragile())
     return;
   ObjCImplementationDecl *IC=dyn_cast_or_null<ObjCImplementationDecl>(D);
@@ -1772,7 +1778,7 @@ void Sema::DefaultSynthesizeProperties(Scope *S, Decl *D) {
     return;
   if (ObjCInterfaceDecl* IDecl = IC->getClassInterface())
     if (!IDecl->isObjCRequiresPropertyDefs())
-      DefaultSynthesizeProperties(S, IC, IDecl);
+      DefaultSynthesizeProperties(S, IC, IDecl, AtEnd);
 }
 
 static void DiagnoseUnimplementedAccessor(
