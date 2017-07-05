@@ -607,7 +607,10 @@ bool PPCCTRLoops::convertToCTRLoop(Loop *L) {
   // The old condition may be dead now, and may have even created a dead PHI
   // (the original induction variable).
   RecursivelyDeleteTriviallyDeadInstructions(OldCond);
-  DeleteDeadPHIs(CountedExitBlock);
+  // Run through the basic blocks of the loop and see if any of them have dead
+  // PHIs that can be removed.
+  for (auto I : L->blocks())
+    DeleteDeadPHIs(I);
 
   ++NumCTRLoops;
   return MadeChange;

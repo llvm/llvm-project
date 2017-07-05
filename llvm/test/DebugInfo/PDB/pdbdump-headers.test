@@ -99,13 +99,11 @@ ALL-NEXT:            - LF_ENUMERATE [single = 2]
 ALL-NEXT:            - LF_ENUMERATE [free = 3]
 ALL-NEXT:            - LF_ENUMERATE [neutral = 4]
 ALL-NEXT:            - LF_ENUMERATE [both = 5]
-ALL-NEXT:   0x1003 | LF_ENUM [size = 120, hash = 208239]
-ALL-NEXT:            name: `__vc_attributes::threadingAttribute::threading_e`
+ALL-NEXT:   0x1003 | LF_ENUM [size = 120, hash = 208239] `__vc_attributes::threadingAttribute::threading_e`
 ALL-NEXT:            unique name: `.?AW4threading_e@threadingAttribute@__vc_attributes@@`
 ALL-NEXT:            field list: 0x1002, underlying type: 0x0074 (int)
 ALL-NEXT:            options: has unique name | is nested
-ALL-NEXT:   0x1004 | LF_STRUCTURE [size = 100, hash = 16377]
-ALL-NEXT:            class name: `__vc_attributes::threadingAttribute`
+ALL-NEXT:   0x1004 | LF_STRUCTURE [size = 100, hash = 16377] `__vc_attributes::threadingAttribute`
 ALL-NEXT:            unique name: `.?AUthreadingAttribute@__vc_attributes@@`
 ALL-NEXT:            vtable: <no type>, base list: <no type>, field list: <no type>
 ALL-NEXT:            options: forward ref | has unique name
@@ -128,8 +126,7 @@ ALL-NEXT:   0x100A | LF_FIELDLIST [size = 68, hash = 185421]
 ALL-NEXT:            - LF_NESTTYPE [name = `threading_e`, parent = 0x1003]
 ALL-NEXT:            - LF_METHOD [name = `threadingAttribute`, # overloads = 2, overload list = 0x1009]
 ALL-NEXT:            - LF_MEMBER [name = `value`, Type = 0x1003, offset = 0, attrs = public]
-ALL-NEXT:   0x100B | LF_STRUCTURE [size = 100, hash = 119540]
-ALL-NEXT:            class name: `__vc_attributes::threadingAttribute`
+ALL-NEXT:   0x100B | LF_STRUCTURE [size = 100, hash = 119540] `__vc_attributes::threadingAttribute`
 ALL-NEXT:            unique name: `.?AUthreadingAttribute@__vc_attributes@@`
 ALL-NEXT:            vtable: <no type>, base list: <no type>, field list: 0x100A
 ALL-NEXT:            options: has ctor / dtor | contains nested class | has unique name
@@ -137,13 +134,11 @@ ALL-NEXT:   0x100C | LF_FIELDLIST [size = 48, hash = 261871]
 ALL-NEXT:            - LF_ENUMERATE [native = 0]
 ALL-NEXT:            - LF_ENUMERATE [com = 1]
 ALL-NEXT:            - LF_ENUMERATE [managed = 2]
-ALL-NEXT:   0x100D | LF_ENUM [size = 120, hash = 198119]
-ALL-NEXT:            name: `__vc_attributes::event_receiverAttribute::type_e`
+ALL-NEXT:   0x100D | LF_ENUM [size = 120, hash = 198119] `__vc_attributes::event_receiverAttribute::type_e`
 ALL-NEXT:            unique name: `.?AW4type_e@event_receiverAttribute@__vc_attributes@@`
 ALL-NEXT:            field list: 0x100C, underlying type: 0x0074 (int)
 ALL-NEXT:            options: has unique name | is nested
-ALL-NEXT:   0x100E | LF_STRUCTURE [size = 112, hash = 48056]
-ALL-NEXT:            class name: `__vc_attributes::event_receiverAttribute`
+ALL-NEXT:   0x100E | LF_STRUCTURE [size = 112, hash = 48056] `__vc_attributes::event_receiverAttribute`
 ALL-NEXT:            unique name: `.?AUevent_receiverAttribute@__vc_attributes@@`
 ALL-NEXT:            vtable: <no type>, base list: <no type>, field list: <no type>
 ALL-NEXT:            options: forward ref | has unique name
@@ -175,8 +170,7 @@ ALL-NEXT:            - LF_NESTTYPE [name = `type_e`, parent = 0x100D]
 ALL-NEXT:            - LF_METHOD [name = `event_receiverAttribute`, # overloads = 3, overload list = 0x1015]
 ALL-NEXT:            - LF_MEMBER [name = `type`, Type = 0x100D, offset = 0, attrs = public]
 ALL-NEXT:            - LF_MEMBER [name = `layout_dependent`, Type = 0x0030 (bool), offset = 4, attrs = public]
-ALL-NEXT:   0x1017 | LF_STRUCTURE [size = 112, hash = 148734]
-ALL-NEXT:            class name: `__vc_attributes::event_receiverAttribute`
+ALL-NEXT:   0x1017 | LF_STRUCTURE [size = 112, hash = 148734] `__vc_attributes::event_receiverAttribute`
 ALL-NEXT:            unique name: `.?AUevent_receiverAttribute@__vc_attributes@@`
 ALL-NEXT:            vtable: <no type>, base list: <no type>, field list: 0x1016
 ALL-NEXT:            options: has ctor / dtor | contains nested class | has unique name
@@ -184,13 +178,11 @@ ALL-NEXT:   0x1018 | LF_FIELDLIST [size = 48, hash = 81128]
 ALL-NEXT:            - LF_ENUMERATE [never = 0]
 ALL-NEXT:            - LF_ENUMERATE [allowed = 1]
 ALL-NEXT:            - LF_ENUMERATE [always = 2]
-ALL-NEXT:   0x1019 | LF_ENUM [size = 116, hash = 60158]
-ALL-NEXT:            name: `__vc_attributes::aggregatableAttribute::type_e`
+ALL-NEXT:   0x1019 | LF_ENUM [size = 116, hash = 60158] `__vc_attributes::aggregatableAttribute::type_e`
 ALL-NEXT:            unique name: `.?AW4type_e@aggregatableAttribute@__vc_attributes@@`
 ALL-NEXT:            field list: 0x1018, underlying type: 0x0074 (int)
 ALL-NEXT:            options: has unique name | is nested
-ALL-NEXT:   0x101A | LF_STRUCTURE [size = 108, hash = 217249]
-ALL-NEXT:            class name: `__vc_attributes::aggregatableAttribute`
+ALL-NEXT:   0x101A | LF_STRUCTURE [size = 108, hash = 217249] `__vc_attributes::aggregatableAttribute`
 ALL-NEXT:            unique name: `.?AUaggregatableAttribute@__vc_attributes@@`
 ALL-NEXT:            vtable: <no type>, base list: <no type>, field list: <no type>
 ALL-NEXT:            options: forward ref | has unique name
@@ -213,26 +205,22 @@ ALL-NEXT:   0x1020 | LF_FIELDLIST [size = 68, hash = 6214]
 ALL-NEXT:            - LF_NESTTYPE [name = `type_e`, parent = 0x1019]
 ALL-NEXT:            - LF_METHOD [name = `aggregatableAttribute`, # overloads = 2, overload list = 0x101F]
 ALL-NEXT:            - LF_MEMBER [name = `type`, Type = 0x1019, offset = 0, attrs = public]
-ALL-NEXT:   0x1021 | LF_STRUCTURE [size = 108, hash = 94935]
-ALL-NEXT:            class name: `__vc_attributes::aggregatableAttribute`
+ALL-NEXT:   0x1021 | LF_STRUCTURE [size = 108, hash = 94935] `__vc_attributes::aggregatableAttribute`
 ALL-NEXT:            unique name: `.?AUaggregatableAttribute@__vc_attributes@@`
 ALL-NEXT:            vtable: <no type>, base list: <no type>, field list: 0x1020
 ALL-NEXT:            options: has ctor / dtor | contains nested class | has unique name
-ALL-NEXT:   0x1022 | LF_ENUM [size = 116, hash = 151449]
-ALL-NEXT:            name: `__vc_attributes::event_sourceAttribute::type_e`
+ALL-NEXT:   0x1022 | LF_ENUM [size = 116, hash = 151449] `__vc_attributes::event_sourceAttribute::type_e`
 ALL-NEXT:            unique name: `.?AW4type_e@event_sourceAttribute@__vc_attributes@@`
 ALL-NEXT:            field list: 0x100C, underlying type: 0x0074 (int)
 ALL-NEXT:            options: has unique name | is nested
 ALL-NEXT:   0x1023 | LF_FIELDLIST [size = 28, hash = 135589]
 ALL-NEXT:            - LF_ENUMERATE [speed = 0]
 ALL-NEXT:            - LF_ENUMERATE [size = 1]
-ALL-NEXT:   0x1024 | LF_ENUM [size = 124, hash = 73373]
-ALL-NEXT:            name: `__vc_attributes::event_sourceAttribute::optimize_e`
+ALL-NEXT:   0x1024 | LF_ENUM [size = 124, hash = 73373] `__vc_attributes::event_sourceAttribute::optimize_e`
 ALL-NEXT:            unique name: `.?AW4optimize_e@event_sourceAttribute@__vc_attributes@@`
 ALL-NEXT:            field list: 0x1023, underlying type: 0x0074 (int)
 ALL-NEXT:            options: has unique name | is nested
-ALL-NEXT:   0x1025 | LF_STRUCTURE [size = 108, hash = 96512]
-ALL-NEXT:            class name: `__vc_attributes::event_sourceAttribute`
+ALL-NEXT:   0x1025 | LF_STRUCTURE [size = 108, hash = 96512] `__vc_attributes::event_sourceAttribute`
 ALL-NEXT:            unique name: `.?AUevent_sourceAttribute@__vc_attributes@@`
 ALL-NEXT:            vtable: <no type>, base list: <no type>, field list: <no type>
 ALL-NEXT:            options: forward ref | has unique name
@@ -258,8 +246,7 @@ ALL-NEXT:            - LF_METHOD [name = `event_sourceAttribute`, # overloads = 
 ALL-NEXT:            - LF_MEMBER [name = `type`, Type = 0x1022, offset = 0, attrs = public]
 ALL-NEXT:            - LF_MEMBER [name = `optimize`, Type = 0x1024, offset = 4, attrs = public]
 ALL-NEXT:            - LF_MEMBER [name = `decorate`, Type = 0x0030 (bool), offset = 8, attrs = public]
-ALL-NEXT:   0x102C | LF_STRUCTURE [size = 108, hash = 238560]
-ALL-NEXT:            class name: `__vc_attributes::event_sourceAttribute`
+ALL-NEXT:   0x102C | LF_STRUCTURE [size = 108, hash = 238560] `__vc_attributes::event_sourceAttribute`
 ALL-NEXT:            unique name: `.?AUevent_sourceAttribute@__vc_attributes@@`
 ALL-NEXT:            vtable: <no type>, base list: <no type>, field list: 0x102B
 ALL-NEXT:            options: has ctor / dtor | contains nested class | has unique name
@@ -270,13 +257,11 @@ ALL-NEXT:            - LF_ENUMERATE [service = 3]
 ALL-NEXT:            - LF_ENUMERATE [unspecified = 4]
 ALL-NEXT:            - LF_ENUMERATE [EXE = 2]
 ALL-NEXT:            - LF_ENUMERATE [SERVICE = 3]
-ALL-NEXT:   0x102E | LF_ENUM [size = 104, hash = 115151]
-ALL-NEXT:            name: `__vc_attributes::moduleAttribute::type_e`
+ALL-NEXT:   0x102E | LF_ENUM [size = 104, hash = 115151] `__vc_attributes::moduleAttribute::type_e`
 ALL-NEXT:            unique name: `.?AW4type_e@moduleAttribute@__vc_attributes@@`
 ALL-NEXT:            field list: 0x102D, underlying type: 0x0074 (int)
 ALL-NEXT:            options: has unique name | is nested
-ALL-NEXT:   0x102F | LF_STRUCTURE [size = 96, hash = 197306]
-ALL-NEXT:            class name: `__vc_attributes::moduleAttribute`
+ALL-NEXT:   0x102F | LF_STRUCTURE [size = 96, hash = 197306] `__vc_attributes::moduleAttribute`
 ALL-NEXT:            unique name: `.?AUmoduleAttribute@__vc_attributes@@`
 ALL-NEXT:            vtable: <no type>, base list: <no type>, field list: <no type>
 ALL-NEXT:            options: forward ref | has unique name
@@ -338,8 +323,7 @@ ALL-NEXT:            - LF_MEMBER [name = `hidden`, Type = 0x0030 (bool), offset 
 ALL-NEXT:            - LF_MEMBER [name = `restricted`, Type = 0x0030 (bool), offset = 45, attrs = public]
 ALL-NEXT:            - LF_MEMBER [name = `custom`, Type = 0x1032, offset = 48, attrs = public]
 ALL-NEXT:            - LF_MEMBER [name = `resource_name`, Type = 0x1032, offset = 52, attrs = public]
-ALL-NEXT:   0x103A | LF_STRUCTURE [size = 96, hash = 98548]
-ALL-NEXT:            class name: `__vc_attributes::moduleAttribute`
+ALL-NEXT:   0x103A | LF_STRUCTURE [size = 96, hash = 98548] `__vc_attributes::moduleAttribute`
 ALL-NEXT:            unique name: `.?AUmoduleAttribute@__vc_attributes@@`
 ALL-NEXT:            vtable: <no type>, base list: <no type>, field list: 0x1039
 ALL-NEXT:            options: has ctor / dtor | contains nested class | has unique name
@@ -374,13 +358,11 @@ ALL-NEXT:            - LF_ENUMERATE [eModuleUsage = 16777216]
 ALL-NEXT:            - LF_ENUMERATE [eIllegalUsage = 33554432]
 ALL-NEXT:            - LF_ENUMERATE [eAsynchronousUsage = 67108864]
 ALL-NEXT:            - LF_ENUMERATE [eAnyIDLUsage = 4161535]
-ALL-NEXT:   0x103C | LF_ENUM [size = 140, hash = 171328]
-ALL-NEXT:            name: `__vc_attributes::helper_attributes::usageAttribute::usage_e`
+ALL-NEXT:   0x103C | LF_ENUM [size = 140, hash = 171328] `__vc_attributes::helper_attributes::usageAttribute::usage_e`
 ALL-NEXT:            unique name: `.?AW4usage_e@usageAttribute@helper_attributes@__vc_attributes@@`
 ALL-NEXT:            field list: 0x103B, underlying type: 0x0074 (int)
 ALL-NEXT:            options: has unique name | is nested
-ALL-NEXT:   0x103D | LF_STRUCTURE [size = 128, hash = 203640]
-ALL-NEXT:            class name: `__vc_attributes::helper_attributes::usageAttribute`
+ALL-NEXT:   0x103D | LF_STRUCTURE [size = 128, hash = 203640] `__vc_attributes::helper_attributes::usageAttribute`
 ALL-NEXT:            unique name: `.?AUusageAttribute@helper_attributes@__vc_attributes@@`
 ALL-NEXT:            vtable: <no type>, base list: <no type>, field list: <no type>
 ALL-NEXT:            options: forward ref | has unique name
@@ -397,8 +379,7 @@ ALL-NEXT:            - LF_NESTTYPE [name = `usage_e`, parent = 0x103C]
 ALL-NEXT:            - LF_ONEMETHOD [name = `usageAttribute`]
 ALL-NEXT:              type = 0x1040, vftable offset = -1, attrs = public
 ALL-NEXT:            - LF_MEMBER [name = `value`, Type = 0x0075 (unsigned), offset = 0, attrs = public]
-ALL-NEXT:   0x1042 | LF_STRUCTURE [size = 128, hash = 165040]
-ALL-NEXT:            class name: `__vc_attributes::helper_attributes::usageAttribute`
+ALL-NEXT:   0x1042 | LF_STRUCTURE [size = 128, hash = 165040] `__vc_attributes::helper_attributes::usageAttribute`
 ALL-NEXT:            unique name: `.?AUusageAttribute@helper_attributes@__vc_attributes@@`
 ALL-NEXT:            vtable: <no type>, base list: <no type>, field list: 0x1041
 ALL-NEXT:            options: has ctor / dtor | contains nested class | has unique name
@@ -407,13 +388,11 @@ ALL-NEXT:            - LF_ENUMERATE [eBoolean = 0]
 ALL-NEXT:            - LF_ENUMERATE [eInteger = 1]
 ALL-NEXT:            - LF_ENUMERATE [eFloat = 2]
 ALL-NEXT:            - LF_ENUMERATE [eDouble = 3]
-ALL-NEXT:   0x1044 | LF_ENUM [size = 148, hash = 142625]
-ALL-NEXT:            name: `__vc_attributes::helper_attributes::v1_alttypeAttribute::type_e`
+ALL-NEXT:   0x1044 | LF_ENUM [size = 148, hash = 142625] `__vc_attributes::helper_attributes::v1_alttypeAttribute::type_e`
 ALL-NEXT:            unique name: `.?AW4type_e@v1_alttypeAttribute@helper_attributes@__vc_attributes@@`
 ALL-NEXT:            field list: 0x1043, underlying type: 0x0074 (int)
 ALL-NEXT:            options: has unique name | is nested
-ALL-NEXT:   0x1045 | LF_STRUCTURE [size = 140, hash = 52534]
-ALL-NEXT:            class name: `__vc_attributes::helper_attributes::v1_alttypeAttribute`
+ALL-NEXT:   0x1045 | LF_STRUCTURE [size = 140, hash = 52534] `__vc_attributes::helper_attributes::v1_alttypeAttribute`
 ALL-NEXT:            unique name: `.?AUv1_alttypeAttribute@helper_attributes@__vc_attributes@@`
 ALL-NEXT:            vtable: <no type>, base list: <no type>, field list: <no type>
 ALL-NEXT:            options: forward ref | has unique name
@@ -430,8 +409,7 @@ ALL-NEXT:            - LF_NESTTYPE [name = `type_e`, parent = 0x1044]
 ALL-NEXT:            - LF_ONEMETHOD [name = `v1_alttypeAttribute`]
 ALL-NEXT:              type = 0x1048, vftable offset = -1, attrs = public
 ALL-NEXT:            - LF_MEMBER [name = `type`, Type = 0x1044, offset = 0, attrs = public]
-ALL-NEXT:   0x104A | LF_STRUCTURE [size = 140, hash = 213215]
-ALL-NEXT:            class name: `__vc_attributes::helper_attributes::v1_alttypeAttribute`
+ALL-NEXT:   0x104A | LF_STRUCTURE [size = 140, hash = 213215] `__vc_attributes::helper_attributes::v1_alttypeAttribute`
 ALL-NEXT:            unique name: `.?AUv1_alttypeAttribute@helper_attributes@__vc_attributes@@`
 ALL-NEXT:            vtable: <no type>, base list: <no type>, field list: 0x1049
 ALL-NEXT:            options: has ctor / dtor | contains nested class | has unique name

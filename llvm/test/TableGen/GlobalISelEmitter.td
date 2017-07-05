@@ -80,10 +80,13 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 // CHECK-NEXT:  }
 
 // CHECK: bool MyTargetInstructionSelector::selectImpl(MachineInstr &I) const {
-// CHECK: MachineFunction &MF = *I.getParent()->getParent();
-// CHECK: MachineRegisterInfo &MRI = MF.getRegInfo();
-// CHECK: AvailableFunctionFeatures = computeAvailableFunctionFeatures(&STI, &MF);
-// CHECK: const PredicateBitset AvailableFeatures = getAvailableFeatures();
+// CHECK-NEXT: MachineFunction &MF = *I.getParent()->getParent();
+// CHECK-NEXT: MachineRegisterInfo &MRI = MF.getRegInfo();
+// CHECK:      AvailableFunctionFeatures = computeAvailableFunctionFeatures(&STI, &MF);
+// CHECK-NEXT: const PredicateBitset AvailableFeatures = getAvailableFeatures();
+// CHECK-NEXT: NewMIVector OutMIs;
+// CHECK-NEXT: State.MIs.clear();
+// CHECK-NEXT: State.MIs.push_back(&I);
 
 //===- Test a pattern with multiple ComplexPattern operands. --------------===//
 //
@@ -103,27 +106,20 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 // CHECK-NEXT:    // MIs[0] src3
 // CHECK-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/3, /*Type*/GILLT_s32,
 // CHECK-NEXT:    GIM_CheckComplexPattern, /*MI*/0, /*Op*/3, /*Renderer*/1, GICP_gi_complex,
-// CHECK-NEXT:    GIM_Accept,
+// CHECK-NEXT:    // (select:i32 GPR32:i32:$src1, complex:i32:$src2, complex:i32:$src3) => (INSN2:i32 GPR32:i32:$src1, complex:i32:$src3, complex:i32:$src2)
+// CHECK-NEXT:    GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::INSN2,
+// CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
+// CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // src1
+// CHECK-NEXT:    GIR_ComplexRenderer, /*InsnID*/0, /*RendererID*/1,
+// CHECK-NEXT:    GIR_ComplexRenderer, /*InsnID*/0, /*RendererID*/0,
+// CHECK-NEXT:    GIR_MergeMemOperands, /*InsnID*/0,
+// CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
+// CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
+// CHECK-NEXT:    GIR_Done,
 // CHECK-NEXT:  };
-// CHECK-NEXT:  MIs.clear();
-// CHECK-NEXT:  MIs.push_back(&I);
+// CHECK-NEXT:  MIs.resize(1);
 // CHECK-NEXT:  DEBUG(dbgs() << "Processing MatchTable0\n");
-// CHECK-NEXT:  if (executeMatchTable(*this, State, MatcherInfo, MatchTable0, MRI, TRI, RBI, AvailableFeatures)) {
-// CHECK-NEXT:    const static int64_t EmitTable0[] = {
-// CHECK-NEXT:      // (select:i32 GPR32:i32:$src1, complex:i32:$src2, complex:i32:$src3) => (INSN2:i32 GPR32:i32:$src1, complex:i32:$src3, complex:i32:$src2)
-// CHECK-NEXT:      GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::INSN2,
-// CHECK-NEXT:      GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
-// CHECK-NEXT:      GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // src1
-// CHECK-NEXT:      GIR_ComplexRenderer, /*InsnID*/0, /*RendererID*/1,
-// CHECK-NEXT:      GIR_ComplexRenderer, /*InsnID*/0, /*RendererID*/0,
-// CHECK-NEXT:      GIR_MergeMemOperands, /*InsnID*/0,
-// CHECK-NEXT:      GIR_EraseFromParent, /*InsnID*/0,
-// CHECK-NEXT:      GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
-// CHECK-NEXT:      GIR_Done,
-// CHECK-NEXT:    };
-// CHECK-NEXT:    NewMIVector OutMIs;
-// CHECK-NEXT:    DEBUG(dbgs() << "Processing EmitTable0\n");
-// CHECK-NEXT:    executeEmitTable(OutMIs, State, EmitTable0, TII, TRI, RBI);
+// CHECK-NEXT:  if (executeMatchTable(*this, OutMIs, State, MatcherInfo, MatchTable0, TII, MRI, TRI, RBI, AvailableFeatures)) {
 // CHECK-NEXT:    return true;
 // CHECK-NEXT:  }
 
@@ -146,21 +142,14 @@ def : Pat<(select GPR32:$src1, complex:$src2, complex:$src3),
 // CHECK-NEXT:    // MIs[0] src2
 // CHECK-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/2, /*Type*/GILLT_s32,
 // CHECK-NEXT:    GIM_CheckRegBankForClass, /*MI*/0, /*Op*/2, /*RC*/MyTarget::GPR32RegClassID,
-// CHECK-NEXT:    GIM_Accept,
+// CHECK-NEXT:    // (add:i32 GPR32:i32:$src1, GPR32:i32:$src2) => (ADD:i32 GPR32:i32:$src1, GPR32:i32:$src2)
+// CHECK-NEXT:    GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/ 0, /*Opcode*/MyTarget::ADD,
+// CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
+// CHECK-NEXT:    GIR_Done,
 // CHECK-NEXT:  };
-// CHECK-NEXT:  MIs.clear();
-// CHECK-NEXT:  MIs.push_back(&I);
+// CHECK-NEXT:  MIs.resize(1);
 // CHECK-NEXT:  DEBUG(dbgs() << "Processing MatchTable1\n");
-// CHECK-NEXT:  if (executeMatchTable(*this, State, MatcherInfo, MatchTable1, MRI, TRI, RBI, AvailableFeatures)) {
-// CHECK-NEXT:    const static int64_t EmitTable1[] = {
-// CHECK-NEXT:      // (add:i32 GPR32:i32:$src1, GPR32:i32:$src2) => (ADD:i32 GPR32:i32:$src1, GPR32:i32:$src2)
-// CHECK-NEXT:      GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/ 0, /*Opcode*/MyTarget::ADD,
-// CHECK-NEXT:      GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
-// CHECK-NEXT:      GIR_Done,
-// CHECK-NEXT:    };
-// CHECK-NEXT:    NewMIVector OutMIs;
-// CHECK-NEXT:    DEBUG(dbgs() << "Processing EmitTable1\n");
-// CHECK-NEXT:    executeEmitTable(OutMIs, State, EmitTable1, TII, TRI, RBI);
+// CHECK-NEXT:  if (executeMatchTable(*this, OutMIs, State, MatcherInfo, MatchTable1, TII, MRI, TRI, RBI, AvailableFeatures)) {
 // CHECK-NEXT:    return true;
 // CHECK-NEXT:  }
 
@@ -192,29 +181,21 @@ def ADD : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2),
 // CHECK-NEXT:    // MIs[0] src3
 // CHECK-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/2, /*Type*/GILLT_s32,
 // CHECK-NEXT:    GIM_CheckRegBankForClass, /*MI*/0, /*Op*/2, /*RC*/MyTarget::GPR32RegClassID,
-// CHECK-NEXT:    GIM_Accept,
+// CHECK-NEXT:    GIM_CheckIsSafeToFold, /*InsnID*/1,
+// CHECK-NEXT:    // (mul:i32 (add:i32 GPR32:i32:$src1, GPR32:i32:$src2), GPR32:i32:$src3)  =>  (MULADD:i32 GPR32:i32:$src1, GPR32:i32:$src2, GPR32:i32:$src3)
+// CHECK-NEXT:    GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::MULADD,
+// CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
+// CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/1, /*OpIdx*/1, // src1
+// CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/1, /*OpIdx*/2, // src2
+// CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/2, // src3
+// CHECK-NEXT:    GIR_MergeMemOperands, /*InsnID*/0,
+// CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
+// CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
+// CHECK-NEXT:    GIR_Done,
 // CHECK-NEXT:  };
-// CHECK-NEXT:  MIs.clear();
-// CHECK-NEXT:  MIs.push_back(&I);
+// CHECK-NEXT:  MIs.resize(1);
 // CHECK-NEXT:  DEBUG(dbgs() << "Processing MatchTable2\n");
-// CHECK-NEXT:  if (executeMatchTable(*this, State, MatcherInfo, MatchTable2, MRI, TRI, RBI, AvailableFeatures)) {
-// CHECK-NEXT:    if (!isObviouslySafeToFold(*State.MIs[1]))
-// CHECK-NEXT:      return false;
-// CHECK-NEXT:    const static int64_t EmitTable2[] = {
-// CHECK-NEXT:      // (mul:i32 (add:i32 GPR32:i32:$src1, GPR32:i32:$src2), GPR32:i32:$src3)  =>  (MULADD:i32 GPR32:i32:$src1, GPR32:i32:$src2, GPR32:i32:$src3)
-// CHECK-NEXT:      GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::MULADD,
-// CHECK-NEXT:      GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
-// CHECK-NEXT:      GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/1, /*OpIdx*/1, // src1
-// CHECK-NEXT:      GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/1, /*OpIdx*/2, // src2
-// CHECK-NEXT:      GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/2, // src3
-// CHECK-NEXT:      GIR_MergeMemOperands, /*InsnID*/0,
-// CHECK-NEXT:      GIR_EraseFromParent, /*InsnID*/0,
-// CHECK-NEXT:      GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
-// CHECK-NEXT:      GIR_Done,
-// CHECK-NEXT:    };
-// CHECK-NEXT:    NewMIVector OutMIs;
-// CHECK-NEXT:    DEBUG(dbgs() << "Processing EmitTable2\n");
-// CHECK-NEXT:    executeEmitTable(OutMIs, State, EmitTable2, TII, TRI, RBI);
+// CHECK-NEXT:  if (executeMatchTable(*this, OutMIs, State, MatcherInfo, MatchTable2, TII, MRI, TRI, RBI, AvailableFeatures)) {
 // CHECK-NEXT:    return true;
 // CHECK-NEXT:  }
 
@@ -242,29 +223,21 @@ def ADD : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2),
 // CHECK-NEXT:    // MIs[1] src2
 // CHECK-NEXT:    GIM_CheckType, /*MI*/1, /*Op*/2, /*Type*/GILLT_s32,
 // CHECK-NEXT:    GIM_CheckRegBankForClass, /*MI*/1, /*Op*/2, /*RC*/MyTarget::GPR32RegClassID,
-// CHECK-NEXT:    GIM_Accept,
+// CHECK-NEXT:    GIM_CheckIsSafeToFold, /*InsnID*/1,
+// CHECK-NEXT:    // (mul:i32 GPR32:i32:$src3, (add:i32 GPR32:i32:$src1, GPR32:i32:$src2))  =>  (MULADD:i32 GPR32:i32:$src1, GPR32:i32:$src2, GPR32:i32:$src3)
+// CHECK-NEXT:    GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::MULADD,
+// CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
+// CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/1, /*OpIdx*/1, // src1
+// CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/1, /*OpIdx*/2, // src2
+// CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // src3
+// CHECK-NEXT:    GIR_MergeMemOperands, /*InsnID*/0,
+// CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
+// CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
+// CHECK-NEXT:    GIR_Done,
 // CHECK-NEXT:  };
-// CHECK-NEXT:  MIs.clear();
-// CHECK-NEXT:  MIs.push_back(&I);
+// CHECK-NEXT:  MIs.resize(1);
 // CHECK-NEXT:  DEBUG(dbgs() << "Processing MatchTable3\n");
-// CHECK-NEXT:  if (executeMatchTable(*this, State, MatcherInfo, MatchTable3, MRI, TRI, RBI, AvailableFeatures)) {
-// CHECK-NEXT:    if (!isObviouslySafeToFold(*State.MIs[1]))
-// CHECK-NEXT:      return false;
-// CHECK-NEXT:    const static int64_t EmitTable3[] = {
-// CHECK-NEXT:      // (mul:i32 GPR32:i32:$src3, (add:i32 GPR32:i32:$src1, GPR32:i32:$src2))  =>  (MULADD:i32 GPR32:i32:$src1, GPR32:i32:$src2, GPR32:i32:$src3)
-// CHECK-NEXT:      GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::MULADD,
-// CHECK-NEXT:      GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
-// CHECK-NEXT:      GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/1, /*OpIdx*/1, // src1
-// CHECK-NEXT:      GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/1, /*OpIdx*/2, // src2
-// CHECK-NEXT:      GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // src3
-// CHECK-NEXT:      GIR_MergeMemOperands, /*InsnID*/0,
-// CHECK-NEXT:      GIR_EraseFromParent, /*InsnID*/0,
-// CHECK-NEXT:      GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
-// CHECK-NEXT:      GIR_Done,
-// CHECK-NEXT:    };
-// CHECK-NEXT:    NewMIVector OutMIs;
-// CHECK-NEXT:    DEBUG(dbgs() << "Processing EmitTable3\n");
-// CHECK-NEXT:    executeEmitTable(OutMIs, State, EmitTable3, TII, TRI, RBI);
+// CHECK-NEXT:  if (executeMatchTable(*this, OutMIs, State, MatcherInfo, MatchTable3, TII, MRI, TRI, RBI, AvailableFeatures)) {
 // CHECK-NEXT:    return true;
 // CHECK-NEXT:  }
 
@@ -288,26 +261,19 @@ def MULADD : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2, GPR32:$src3),
 // CHECK-NEXT:    // MIs[0] src2
 // CHECK-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/2, /*Type*/GILLT_s32,
 // CHECK-NEXT:    GIM_CheckRegBankForClass, /*MI*/0, /*Op*/2, /*RC*/MyTarget::GPR32RegClassID,
-// CHECK-NEXT:    GIM_Accept,
+// CHECK-NEXT:    // (mul:i32 GPR32:i32:$src1, GPR32:i32:$src2) => (MUL:i32 GPR32:i32:$src2, GPR32:i32:$src1)
+// CHECK-NEXT:    GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::MUL,
+// CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
+// CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/2, // src2
+// CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // src1
+// CHECK-NEXT:    GIR_MergeMemOperands, /*InsnID*/0,
+// CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
+// CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
+// CHECK-NEXT:    GIR_Done,
 // CHECK-NEXT:  };
-// CHECK-NEXT:  MIs.clear();
-// CHECK-NEXT:  MIs.push_back(&I);
+// CHECK-NEXT:  MIs.resize(1);
 // CHECK-NEXT:  DEBUG(dbgs() << "Processing MatchTable4\n");
-// CHECK-NEXT:  if (executeMatchTable(*this, State, MatcherInfo, MatchTable4, MRI, TRI, RBI, AvailableFeatures)) {
-// CHECK-NEXT:    const static int64_t EmitTable4[] = {
-// CHECK-NEXT:      // (mul:i32 GPR32:i32:$src1, GPR32:i32:$src2) => (MUL:i32 GPR32:i32:$src2, GPR32:i32:$src1)
-// CHECK-NEXT:      GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::MUL,
-// CHECK-NEXT:      GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
-// CHECK-NEXT:      GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/2, // src2
-// CHECK-NEXT:      GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // src1
-// CHECK-NEXT:      GIR_MergeMemOperands, /*InsnID*/0,
-// CHECK-NEXT:      GIR_EraseFromParent, /*InsnID*/0,
-// CHECK-NEXT:      GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
-// CHECK-NEXT:      GIR_Done,
-// CHECK-NEXT:    };
-// CHECK-NEXT:    NewMIVector OutMIs;
-// CHECK-NEXT:    DEBUG(dbgs() << "Processing EmitTable4\n");
-// CHECK-NEXT:    executeEmitTable(OutMIs, State, EmitTable4, TII, TRI, RBI);
+// CHECK-NEXT:  if (executeMatchTable(*this, OutMIs, State, MatcherInfo, MatchTable4, TII, MRI, TRI, RBI, AvailableFeatures)) {
 // CHECK-NEXT:    return true;
 // CHECK-NEXT:  }
 
@@ -350,32 +316,23 @@ def MUL : I<(outs GPR32:$dst), (ins GPR32:$src2, GPR32:$src1),
 // CHECK-NEXT:    // MIs[2] src4
 // CHECK-NEXT:    GIM_CheckType, /*MI*/2, /*Op*/2, /*Type*/GILLT_s32,
 // CHECK-NEXT:    GIM_CheckRegBankForClass, /*MI*/2, /*Op*/2, /*RC*/MyTarget::GPR32RegClassID,
-// CHECK-NEXT:    GIM_Accept,
+// CHECK-NEXT:    GIM_CheckIsSafeToFold, /*InsnID*/1,
+// CHECK-NEXT:    GIM_CheckIsSafeToFold, /*InsnID*/2,
+// CHECK-NEXT:    // (sub:i32 (sub:i32 GPR32:i32:$src1, GPR32:i32:$src2), (sub:i32 GPR32:i32:$src3, GPR32:i32:$src4)) => (INSNBOB:i32 GPR32:i32:$src1, GPR32:i32:$src2, GPR32:i32:$src3, GPR32:i32:$src4)
+// CHECK-NEXT:    GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::INSNBOB,
+// CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
+// CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/1, /*OpIdx*/1, // src1
+// CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/1, /*OpIdx*/2, // src2
+// CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/2, /*OpIdx*/1, // src3
+// CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/2, /*OpIdx*/2, // src4
+// CHECK-NEXT:    GIR_MergeMemOperands, /*InsnID*/0,
+// CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
+// CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
+// CHECK-NEXT:    GIR_Done,
 // CHECK-NEXT:  };
-// CHECK-NEXT:  MIs.clear();
-// CHECK-NEXT:  MIs.push_back(&I);
+// CHECK-NEXT:  MIs.resize(1);
 // CHECK-NEXT:  DEBUG(dbgs() << "Processing MatchTable5\n");
-// CHECK-NEXT:  if (executeMatchTable(*this, State, MatcherInfo, MatchTable5, MRI, TRI, RBI, AvailableFeatures)) {
-// CHECK-NEXT:    if (!isObviouslySafeToFold(*State.MIs[1]))
-// CHECK-NEXT:      return false;
-// CHECK-NEXT:    if (!isObviouslySafeToFold(*State.MIs[2]))
-// CHECK-NEXT:      return false;
-// CHECK-NEXT:    const static int64_t EmitTable5[] = {
-// CHECK-NEXT:      // (sub:i32 (sub:i32 GPR32:i32:$src1, GPR32:i32:$src2), (sub:i32 GPR32:i32:$src3, GPR32:i32:$src4)) => (INSNBOB:i32 GPR32:i32:$src1, GPR32:i32:$src2, GPR32:i32:$src3, GPR32:i32:$src4)
-// CHECK-NEXT:      GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::INSNBOB,
-// CHECK-NEXT:      GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
-// CHECK-NEXT:      GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/1, /*OpIdx*/1, // src1
-// CHECK-NEXT:      GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/1, /*OpIdx*/2, // src2
-// CHECK-NEXT:      GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/2, /*OpIdx*/1, // src3
-// CHECK-NEXT:      GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/2, /*OpIdx*/2, // src4
-// CHECK-NEXT:      GIR_MergeMemOperands, /*InsnID*/0,
-// CHECK-NEXT:      GIR_EraseFromParent, /*InsnID*/0,
-// CHECK-NEXT:      GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
-// CHECK-NEXT:      GIR_Done,
-// CHECK-NEXT:    };
-// CHECK-NEXT:    NewMIVector OutMIs;
-// CHECK-NEXT:    DEBUG(dbgs() << "Processing EmitTable5\n");
-// CHECK-NEXT:    executeEmitTable(OutMIs, State, EmitTable5, TII, TRI, RBI);
+// CHECK-NEXT:  if (executeMatchTable(*this, OutMIs, State, MatcherInfo, MatchTable5, TII, MRI, TRI, RBI, AvailableFeatures)) {
 // CHECK-NEXT:    return true;
 // CHECK-NEXT:  }
 
@@ -399,26 +356,19 @@ def INSNBOB : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2, GPR32:$src3, G
 // CHECK-NEXT:    // MIs[0] src2
 // CHECK-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/2, /*Type*/GILLT_s32,
 // CHECK-NEXT:    GIM_CheckComplexPattern, /*MI*/0, /*Op*/2, /*Renderer*/0, GICP_gi_complex,
-// CHECK-NEXT:    GIM_Accept,
+// CHECK-NEXT:    // (sub:i32 GPR32:i32:$src1, complex:i32:$src2) => (INSN1:i32 GPR32:i32:$src1, complex:i32:$src2)
+// CHECK-NEXT:    GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::INSN1,
+// CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
+// CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // src1
+// CHECK-NEXT:    GIR_ComplexRenderer, /*InsnID*/0, /*RendererID*/0,
+// CHECK-NEXT:    GIR_MergeMemOperands, /*InsnID*/0,
+// CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
+// CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
+// CHECK-NEXT:    GIR_Done,
 // CHECK-NEXT:  };
-// CHECK-NEXT:  MIs.clear();
-// CHECK-NEXT:  MIs.push_back(&I);
+// CHECK-NEXT:  MIs.resize(1);
 // CHECK-NEXT:  DEBUG(dbgs() << "Processing MatchTable6\n");
-// CHECK-NEXT:  if (executeMatchTable(*this, State, MatcherInfo, MatchTable6, MRI, TRI, RBI, AvailableFeatures)) {
-// CHECK-NEXT:    const static int64_t EmitTable6[] = {
-// CHECK-NEXT:      // (sub:i32 GPR32:i32:$src1, complex:i32:$src2) => (INSN1:i32 GPR32:i32:$src1, complex:i32:$src2)
-// CHECK-NEXT:      GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::INSN1,
-// CHECK-NEXT:      GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
-// CHECK-NEXT:      GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // src1
-// CHECK-NEXT:      GIR_ComplexRenderer, /*InsnID*/0, /*RendererID*/0,
-// CHECK-NEXT:      GIR_MergeMemOperands, /*InsnID*/0,
-// CHECK-NEXT:      GIR_EraseFromParent, /*InsnID*/0,
-// CHECK-NEXT:      GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
-// CHECK-NEXT:      GIR_Done,
-// CHECK-NEXT:    };
-// CHECK-NEXT:    NewMIVector OutMIs;
-// CHECK-NEXT:    DEBUG(dbgs() << "Processing EmitTable6\n");
-// CHECK-NEXT:    executeEmitTable(OutMIs, State, EmitTable6, TII, TRI, RBI);
+// CHECK-NEXT:  if (executeMatchTable(*this, OutMIs, State, MatcherInfo, MatchTable6, TII, MRI, TRI, RBI, AvailableFeatures)) {
 // CHECK-NEXT:    return true;
 // CHECK-NEXT:  }
 
@@ -440,26 +390,19 @@ def : Pat<(sub GPR32:$src1, complex:$src2), (INSN1 GPR32:$src1, complex:$src2)>;
 // CHECK-NEXT:    // MIs[0] Operand 2
 // CHECK-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/2, /*Type*/GILLT_s32,
 // CHECK-NEXT:    GIM_CheckConstantInt, /*MI*/0, /*Op*/2, -2
-// CHECK-NEXT:    GIM_Accept,
+// CHECK-NEXT:    // (xor:i32 GPR32:i32:$src1, -2:i32) => (XORI:i32 GPR32:i32:$src1)
+// CHECK-NEXT:    GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::XORI,
+// CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
+// CHECK-NEXT:    GIR_AddImm, /*InsnID*/0, /*Imm*/-1,
+// CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // src1
+// CHECK-NEXT:    GIR_MergeMemOperands, /*InsnID*/0,
+// CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
+// CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
+// CHECK-NEXT:    GIR_Done,
 // CHECK-NEXT:  };
-// CHECK-NEXT:  MIs.clear();
-// CHECK-NEXT:  MIs.push_back(&I);
+// CHECK-NEXT:  MIs.resize(1);
 // CHECK-NEXT:  DEBUG(dbgs() << "Processing MatchTable7\n");
-// CHECK-NEXT:  if (executeMatchTable(*this, State, MatcherInfo, MatchTable7, MRI, TRI, RBI, AvailableFeatures)) {
-// CHECK-NEXT:    const static int64_t EmitTable7[] = {
-// CHECK-NEXT:      // (xor:i32 GPR32:i32:$src1, -2:i32) => (XORI:i32 GPR32:i32:$src1)
-// CHECK-NEXT:      GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::XORI,
-// CHECK-NEXT:      GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
-// CHECK-NEXT:      GIR_AddImm, /*InsnID*/0, /*Imm*/-1,
-// CHECK-NEXT:      GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // src1
-// CHECK-NEXT:      GIR_MergeMemOperands, /*InsnID*/0,
-// CHECK-NEXT:      GIR_EraseFromParent, /*InsnID*/0,
-// CHECK-NEXT:      GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
-// CHECK-NEXT:      GIR_Done,
-// CHECK-NEXT:    };
-// CHECK-NEXT:    NewMIVector OutMIs;
-// CHECK-NEXT:    DEBUG(dbgs() << "Processing EmitTable7\n");
-// CHECK-NEXT:    executeEmitTable(OutMIs, State, EmitTable7, TII, TRI, RBI);
+// CHECK-NEXT:  if (executeMatchTable(*this, OutMIs, State, MatcherInfo, MatchTable7, TII, MRI, TRI, RBI, AvailableFeatures)) {
 // CHECK-NEXT:    return true;
 // CHECK-NEXT:  }
 
@@ -482,26 +425,19 @@ def XORI : I<(outs GPR32:$dst), (ins m1:$src2, GPR32:$src1),
 // CHECK-NEXT:    // MIs[0] Operand 2
 // CHECK-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/2, /*Type*/GILLT_s32,
 // CHECK-NEXT:    GIM_CheckConstantInt, /*MI*/0, /*Op*/2, -3
-// CHECK-NEXT:    GIM_Accept,
+// CHECK-NEXT:    // (xor:i32 GPR32:i32:$src1, -3:i32) => (XOR:i32 GPR32:i32:$src1)
+// CHECK-NEXT:    GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::XOR,
+// CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
+// CHECK-NEXT:    GIR_AddRegister, /*InsnID*/0, MyTarget::R0,
+// CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // src1
+// CHECK-NEXT:    GIR_MergeMemOperands, /*InsnID*/0,
+// CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
+// CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
+// CHECK-NEXT:    GIR_Done,
 // CHECK-NEXT:  };
-// CHECK-NEXT:  MIs.clear();
-// CHECK-NEXT:  MIs.push_back(&I);
+// CHECK-NEXT:  MIs.resize(1);
 // CHECK-NEXT:  DEBUG(dbgs() << "Processing MatchTable8\n");
-// CHECK-NEXT:  if (executeMatchTable(*this, State, MatcherInfo, MatchTable8, MRI, TRI, RBI, AvailableFeatures)) {
-// CHECK-NEXT:    const static int64_t EmitTable8[] = {
-// CHECK-NEXT:      // (xor:i32 GPR32:i32:$src1, -3:i32) => (XOR:i32 GPR32:i32:$src1)
-// CHECK-NEXT:      GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::XOR,
-// CHECK-NEXT:      GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
-// CHECK-NEXT:      GIR_AddRegister, /*InsnID*/0, MyTarget::R0,
-// CHECK-NEXT:      GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // src1
-// CHECK-NEXT:      GIR_MergeMemOperands, /*InsnID*/0,
-// CHECK-NEXT:      GIR_EraseFromParent, /*InsnID*/0,
-// CHECK-NEXT:      GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
-// CHECK-NEXT:      GIR_Done,
-// CHECK-NEXT:    };
-// CHECK-NEXT:    NewMIVector OutMIs;
-// CHECK-NEXT:    DEBUG(dbgs() << "Processing EmitTable8\n");
-// CHECK-NEXT:    executeEmitTable(OutMIs, State, EmitTable8, TII, TRI, RBI);
+// CHECK-NEXT:  if (executeMatchTable(*this, OutMIs, State, MatcherInfo, MatchTable8, TII, MRI, TRI, RBI, AvailableFeatures)) {
 // CHECK-NEXT:    return true;
 // CHECK-NEXT:  }
 
@@ -524,27 +460,20 @@ def XOR : I<(outs GPR32:$dst), (ins Z:$src2, GPR32:$src1),
 // CHECK-NEXT:    // MIs[0] Operand 2
 // CHECK-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/2, /*Type*/GILLT_s32,
 // CHECK-NEXT:    GIM_CheckConstantInt, /*MI*/0, /*Op*/2, -4
-// CHECK-NEXT:    GIM_Accept,
+// CHECK-NEXT:    // (xor:i32 GPR32:i32:$src1, -4:i32) => (XORlike:i32 GPR32:i32:$src1)
+// CHECK-NEXT:    GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::XORlike,
+// CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
+// CHECK-NEXT:    GIR_AddImm, /*InsnID*/0, /*Imm*/-1,
+// CHECK-NEXT:    GIR_AddRegister, /*InsnID*/0, MyTarget::R0,
+// CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // src1
+// CHECK-NEXT:    GIR_MergeMemOperands, /*InsnID*/0,
+// CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
+// CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
+// CHECK-NEXT:    GIR_Done,
 // CHECK-NEXT:  };
-// CHECK-NEXT:  MIs.clear();
-// CHECK-NEXT:  MIs.push_back(&I);
+// CHECK-NEXT:  MIs.resize(1);
 // CHECK-NEXT:  DEBUG(dbgs() << "Processing MatchTable9\n");
-// CHECK-NEXT:  if (executeMatchTable(*this, State, MatcherInfo, MatchTable9, MRI, TRI, RBI, AvailableFeatures)) {
-// CHECK-NEXT:    const static int64_t EmitTable9[] = {
-// CHECK-NEXT:      // (xor:i32 GPR32:i32:$src1, -4:i32) => (XORlike:i32 GPR32:i32:$src1)
-// CHECK-NEXT:      GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::XORlike,
-// CHECK-NEXT:      GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
-// CHECK-NEXT:      GIR_AddImm, /*InsnID*/0, /*Imm*/-1,
-// CHECK-NEXT:      GIR_AddRegister, /*InsnID*/0, MyTarget::R0,
-// CHECK-NEXT:      GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // src1
-// CHECK-NEXT:      GIR_MergeMemOperands, /*InsnID*/0,
-// CHECK-NEXT:      GIR_EraseFromParent, /*InsnID*/0,
-// CHECK-NEXT:      GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
-// CHECK-NEXT:      GIR_Done,
-// CHECK-NEXT:    };
-// CHECK-NEXT:    NewMIVector OutMIs;
-// CHECK-NEXT:    DEBUG(dbgs() << "Processing EmitTable9\n");
-// CHECK-NEXT:    executeEmitTable(OutMIs, State, EmitTable9, TII, TRI, RBI);
+// CHECK-NEXT:  if (executeMatchTable(*this, OutMIs, State, MatcherInfo, MatchTable9, TII, MRI, TRI, RBI, AvailableFeatures)) {
 // CHECK-NEXT:    return true;
 // CHECK-NEXT:  }
 
@@ -567,28 +496,21 @@ def XORlike : I<(outs GPR32:$dst), (ins m1Z:$src2, GPR32:$src1),
 // CHECK-NEXT:    // MIs[0] Operand 2
 // CHECK-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/2, /*Type*/GILLT_s32,
 // CHECK-NEXT:    GIM_CheckConstantInt, /*MI*/0, /*Op*/2, -5,
-// CHECK-NEXT:    GIM_Accept,
+// CHECK-NEXT:    // (xor:i32 GPR32:i32:$src1, -5:i32) => (XORManyDefaults:i32 GPR32:i32:$src1)
+// CHECK-NEXT:    GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::XORManyDefaults,
+// CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
+// CHECK-NEXT:    GIR_AddImm, /*InsnID*/0, /*Imm*/-1,
+// CHECK-NEXT:    GIR_AddRegister, /*InsnID*/0, MyTarget::R0,
+// CHECK-NEXT:    GIR_AddRegister, /*InsnID*/0, MyTarget::R0,
+// CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // src1
+// CHECK-NEXT:    GIR_MergeMemOperands, /*InsnID*/0,
+// CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
+// CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
+// CHECK-NEXT:    GIR_Done,
 // CHECK-NEXT:  };
-// CHECK-NEXT:  MIs.clear();
-// CHECK-NEXT:  MIs.push_back(&I);
+// CHECK-NEXT:  MIs.resize(1);
 // CHECK-NEXT:  DEBUG(dbgs() << "Processing MatchTable10\n");
-// CHECK-NEXT:  if (executeMatchTable(*this, State, MatcherInfo, MatchTable10, MRI, TRI, RBI, AvailableFeatures)) {
-// CHECK-NEXT:    const static int64_t EmitTable10[] = {
-// CHECK-NEXT:      // (xor:i32 GPR32:i32:$src1, -5:i32) => (XORManyDefaults:i32 GPR32:i32:$src1)
-// CHECK-NEXT:      GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::XORManyDefaults,
-// CHECK-NEXT:      GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
-// CHECK-NEXT:      GIR_AddImm, /*InsnID*/0, /*Imm*/-1,
-// CHECK-NEXT:      GIR_AddRegister, /*InsnID*/0, MyTarget::R0,
-// CHECK-NEXT:      GIR_AddRegister, /*InsnID*/0, MyTarget::R0,
-// CHECK-NEXT:      GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // src1
-// CHECK-NEXT:      GIR_MergeMemOperands, /*InsnID*/0,
-// CHECK-NEXT:      GIR_EraseFromParent, /*InsnID*/0,
-// CHECK-NEXT:      GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
-// CHECK-NEXT:      GIR_Done,
-// CHECK-NEXT:    };
-// CHECK-NEXT:    NewMIVector OutMIs;
-// CHECK-NEXT:    DEBUG(dbgs() << "Processing EmitTable10\n");
-// CHECK-NEXT:    executeEmitTable(OutMIs, State, EmitTable10, TII, TRI, RBI);
+// CHECK-NEXT:  if (executeMatchTable(*this, OutMIs, State, MatcherInfo, MatchTable10, TII, MRI, TRI, RBI, AvailableFeatures)) {
 // CHECK-NEXT:    return true;
 // CHECK-NEXT:  }
 
@@ -613,26 +535,19 @@ def XORManyDefaults : I<(outs GPR32:$dst), (ins m1Z:$src3, Z:$src2, GPR32:$src1)
 // CHECK-NEXT:    // MIs[0] Operand 2
 // CHECK-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/2, /*Type*/GILLT_s32,
 // CHECK-NEXT:    GIM_CheckConstantInt, /*MI*/0, /*Op*/2, -1,
-// CHECK-NEXT:    GIM_Accept,
+// CHECK-NEXT:    // (xor:i32 GPR32:i32:$Wm, -1:i32) => (ORN:i32 R0:i32, GPR32:i32:$Wm)
+// CHECK-NEXT:    GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::ORN,
+// CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
+// CHECK-NEXT:    GIR_AddRegister, /*InsnID*/0, MyTarget::R0,
+// CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // Wm
+// CHECK-NEXT:    GIR_MergeMemOperands, /*InsnID*/0,
+// CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
+// CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
+// CHECK-NEXT:    GIR_Done,
 // CHECK-NEXT:  };
-// CHECK-NEXT:  MIs.clear();
-// CHECK-NEXT:  MIs.push_back(&I);
+// CHECK-NEXT:  MIs.resize(1);
 // CHECK-NEXT:  DEBUG(dbgs() << "Processing MatchTable11\n");
-// CHECK-NEXT:  if (executeMatchTable(*this, State, MatcherInfo, MatchTable11, MRI, TRI, RBI, AvailableFeatures)) {
-// CHECK-NEXT:    const static int64_t EmitTable11[] = {
-// CHECK-NEXT:      // (xor:i32 GPR32:i32:$Wm, -1:i32) => (ORN:i32 R0:i32, GPR32:i32:$Wm)
-// CHECK-NEXT:      GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::ORN,
-// CHECK-NEXT:      GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
-// CHECK-NEXT:      GIR_AddRegister, /*InsnID*/0, MyTarget::R0,
-// CHECK-NEXT:      GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/1, // Wm
-// CHECK-NEXT:      GIR_MergeMemOperands, /*InsnID*/0,
-// CHECK-NEXT:      GIR_EraseFromParent, /*InsnID*/0,
-// CHECK-NEXT:      GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
-// CHECK-NEXT:      GIR_Done,
-// CHECK-NEXT:    };
-// CHECK-NEXT:    NewMIVector OutMIs;
-// CHECK-NEXT:    DEBUG(dbgs() << "Processing EmitTable11\n");
-// CHECK-NEXT:    executeEmitTable(OutMIs, State, EmitTable11, TII, TRI, RBI);
+// CHECK-NEXT:  if (executeMatchTable(*this, OutMIs, State, MatcherInfo, MatchTable11, TII, MRI, TRI, RBI, AvailableFeatures)) {
 // CHECK-NEXT:    return true;
 // CHECK-NEXT:  }
 
@@ -651,21 +566,14 @@ def : Pat<(not GPR32:$Wm), (ORN R0, GPR32:$Wm)>;
 // CHECK-NEXT:    // MIs[0] src1
 // CHECK-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/1, /*Type*/GILLT_s32,
 // CHECK-NEXT:    GIM_CheckRegBankForClass, /*MI*/0, /*Op*/1, /*RC*/MyTarget::FPR32RegClassID,
-// CHECK-NEXT:    GIM_Accept,
+// CHECK-NEXT:    // (bitconvert:i32 FPR32:f32:$src1) => (COPY_TO_REGCLASS:i32 FPR32:f32:$src1, GPR32:i32)
+// CHECK-NEXT:    GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/ 0, /*Opcode*/TargetOpcode::COPY,
+// CHECK-NEXT:    GIR_ConstrainOperandRC, /*InsnID*/0, /*Op*/0, /*RC GPR32*/ 1,
+// CHECK-NEXT:    GIR_Done,
 // CHECK-NEXT:  };
-// CHECK-NEXT:  MIs.clear();
-// CHECK-NEXT:  MIs.push_back(&I);
+// CHECK-NEXT:  MIs.resize(1);
 // CHECK-NEXT:  DEBUG(dbgs() << "Processing MatchTable12\n");
-// CHECK-NEXT:  if (executeMatchTable(*this, State, MatcherInfo, MatchTable12, MRI, TRI, RBI, AvailableFeatures)) {
-// CHECK-NEXT:    const static int64_t EmitTable12[] = {
-// CHECK-NEXT:      // (bitconvert:i32 FPR32:f32:$src1) => (COPY_TO_REGCLASS:i32 FPR32:f32:$src1, GPR32:i32)
-// CHECK-NEXT:      GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/ 0, /*Opcode*/TargetOpcode::COPY,
-// CHECK-NEXT:      GIR_ConstrainOperandRC, /*InsnID*/0, /*Op*/0, /*RC GPR32*/ 1,
-// CHECK-NEXT:      GIR_Done,
-// CHECK-NEXT:    };
-// CHECK-NEXT:    NewMIVector OutMIs;
-// CHECK-NEXT:    DEBUG(dbgs() << "Processing EmitTable12\n");
-// CHECK-NEXT:    executeEmitTable(OutMIs, State, EmitTable12, TII, TRI, RBI);
+// CHECK-NEXT:  if (executeMatchTable(*this, OutMIs, State, MatcherInfo, MatchTable12, TII, MRI, TRI, RBI, AvailableFeatures)) {
 // CHECK-NEXT:    return true;
 // CHECK-NEXT:  }
 
@@ -682,24 +590,17 @@ def : Pat<(i32 (bitconvert FPR32:$src1)),
 // CHECK-NEXT:    GIM_CheckRegBankForClass, /*MI*/0, /*Op*/0, /*RC*/MyTarget::GPR32RegClassID,
 // CHECK-NEXT:    // MIs[0] Operand 1
 // CHECK-NEXT:    GIM_CheckLiteralInt, /*MI*/0, /*Op*/1, 1,
-// CHECK-NEXT:    GIM_Accept,
+// CHECK-NEXT:    // 1:i32  =>  (MOV1:i32)
+// CHECK-NEXT:    GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::MOV1,
+// CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
+// CHECK-NEXT:    GIR_MergeMemOperands, /*InsnID*/0,
+// CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
+// CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
+// CHECK-NEXT:    GIR_Done,
 // CHECK-NEXT:  };
-// CHECK-NEXT:  MIs.clear();
-// CHECK-NEXT:  MIs.push_back(&I);
+// CHECK-NEXT:  MIs.resize(1);
 // CHECK-NEXT:  DEBUG(dbgs() << "Processing MatchTable13\n");
-// CHECK-NEXT:  if (executeMatchTable(*this, State, MatcherInfo, MatchTable13, MRI, TRI, RBI, AvailableFeatures)) {
-// CHECK-NEXT:    const static int64_t EmitTable13[] = {
-// CHECK-NEXT:      // 1:i32  =>  (MOV1:i32)
-// CHECK-NEXT:      GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::MOV1,
-// CHECK-NEXT:      GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
-// CHECK-NEXT:      GIR_MergeMemOperands, /*InsnID*/0,
-// CHECK-NEXT:      GIR_EraseFromParent, /*InsnID*/0,
-// CHECK-NEXT:      GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
-// CHECK-NEXT:      GIR_Done,
-// CHECK-NEXT:    };
-// CHECK-NEXT:    NewMIVector OutMIs;
-// CHECK-NEXT:    DEBUG(dbgs() << "Processing EmitTable13\n");
-// CHECK-NEXT:    executeEmitTable(OutMIs, State, EmitTable13, TII, TRI, RBI);
+// CHECK-NEXT:  if (executeMatchTable(*this, OutMIs, State, MatcherInfo, MatchTable13, TII, MRI, TRI, RBI, AvailableFeatures)) {
 // CHECK-NEXT:    return true;
 // CHECK-NEXT:  }
 
@@ -712,21 +613,14 @@ def MOV1 : I<(outs GPR32:$dst), (ins), [(set GPR32:$dst, 1)]>;
 // CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_BR,
 // CHECK-NEXT:    // MIs[0] target
 // CHECK-NEXT:    GIM_CheckIsMBB, /*MI*/0, /*Op*/0,
-// CHECK-NEXT:    GIM_Accept,
+// CHECK-NEXT:    // (br (bb:Other):$target) => (BR (bb:Other):$target)
+// CHECK-NEXT:    GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/ 0, /*Opcode*/MyTarget::BR,
+// CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
+// CHECK-NEXT:    GIR_Done,
 // CHECK-NEXT:  };
-// CHECK-NEXT:  MIs.clear();
-// CHECK-NEXT:  MIs.push_back(&I);
+// CHECK-NEXT:  MIs.resize(1);
 // CHECK-NEXT:  DEBUG(dbgs() << "Processing MatchTable14\n");
-// CHECK-NEXT:  if (executeMatchTable(*this, State, MatcherInfo, MatchTable14, MRI, TRI, RBI, AvailableFeatures)) {
-// CHECK-NEXT:    const static int64_t EmitTable14[] = {
-// CHECK-NEXT:      // (br (bb:Other):$target) => (BR (bb:Other):$target)
-// CHECK-NEXT:      GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/ 0, /*Opcode*/MyTarget::BR,
-// CHECK-NEXT:      GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
-// CHECK-NEXT:      GIR_Done,
-// CHECK-NEXT:    };
-// CHECK-NEXT:    NewMIVector OutMIs;
-// CHECK-NEXT:    DEBUG(dbgs() << "Processing EmitTable14\n");
-// CHECK-NEXT:    executeEmitTable(OutMIs, State, EmitTable14, TII, TRI, RBI);
+// CHECK-NEXT:  if (executeMatchTable(*this, OutMIs, State, MatcherInfo, MatchTable14, TII, MRI, TRI, RBI, AvailableFeatures)) {
 // CHECK-NEXT:    return true;
 // CHECK-NEXT:  }
 

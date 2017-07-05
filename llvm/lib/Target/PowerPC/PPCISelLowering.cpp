@@ -1168,6 +1168,7 @@ const char *PPCTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case PPCISD::LXSIZX:          return "PPCISD::LXSIZX";
   case PPCISD::STXSIX:          return "PPCISD::STXSIX";
   case PPCISD::VEXTS:           return "PPCISD::VEXTS";
+  case PPCISD::SExtVElems:      return "PPCISD::SExtVElems";
   case PPCISD::LXVD2X:          return "PPCISD::LXVD2X";
   case PPCISD::STXVD2X:         return "PPCISD::STXVD2X";
   case PPCISD::COND_BRANCH:     return "PPCISD::COND_BRANCH";
@@ -11311,6 +11312,132 @@ static SDValue combineBVOfConsecutiveLoads(SDNode *N, SelectionDAG &DAG) {
   return SDValue();
 }
 
+// This function adds the required vector_shuffle needed to get
+// the elements of the vector extract in the correct position
+// as specified by the CorrectElems encoding.
+static SDValue addShuffleForVecExtend(SDNode *N, SelectionDAG &DAG,
+                                      SDValue Input, uint64_t Elems,
+                                      uint64_t CorrectElems) {
+  SDLoc dl(N);
+
+  unsigned NumElems = Input.getValueType().getVectorNumElements();
+  SmallVector<int, 16> ShuffleMask(NumElems, -1);
+
+  // Knowing the element indices being extracted from the original
+  // vector and the order in which they're being inserted, just put
+  // them at element indices required for the instruction.
+  for (unsigned i = 0; i < N->getNumOperands(); i++) {
+    if (DAG.getDataLayout().isLittleEndian())
+      ShuffleMask[CorrectElems & 0xF] = Elems & 0xF;
+    else
+      ShuffleMask[(CorrectElems & 0xF0) >> 4] = (Elems & 0xF0) >> 4;
+    CorrectElems = CorrectElems >> 8;
+    Elems = Elems >> 8;
+  }
+
+  SDValue Shuffle =
+      DAG.getVectorShuffle(Input.getValueType(), dl, Input,
+                           DAG.getUNDEF(Input.getValueType()), ShuffleMask);
+
+  EVT Ty = N->getValueType(0);
+  SDValue BV = DAG.getNode(PPCISD::SExtVElems, dl, Ty, Shuffle);
+  return BV;
+}
+
+// Look for build vector patterns where input operands come from sign
+// extended vector_extract elements of specific indices. If the correct indices
+// aren't used, add a vector shuffle to fix up the indices and create a new
+// PPCISD:SExtVElems node which selects the vector sign extend instructions
+// during instruction selection.
+static SDValue combineBVOfVecSExt(SDNode *N, SelectionDAG &DAG) {
+  // This array encodes the indices that the vector sign extend instructions
+  // extract from when extending from one type to another for both BE and LE.
+  // The right nibble of each byte corresponds to the LE incides.
+  // and the left nibble of each byte corresponds to the BE incides.
+  // For example: 0x3074B8FC  byte->word
+  // For LE: the allowed indices are: 0x0,0x4,0x8,0xC
+  // For BE: the allowed indices are: 0x3,0x7,0xB,0xF
+  // For example: 0x000070F8  byte->double word
+  // For LE: the allowed indices are: 0x0,0x8
+  // For BE: the allowed indices are: 0x7,0xF
+  uint64_t TargetElems[] = {
+      0x3074B8FC, // b->w
+      0x000070F8, // b->d
+      0x10325476, // h->w
+      0x00003074, // h->d
+      0x00001032, // w->d
+  };
+
+  uint64_t Elems = 0;
+  int Index;
+  SDValue Input;
+
+  auto isSExtOfVecExtract = [&](SDValue Op) -> bool {
+    if (!Op)
+      return false;
+    if (Op.getOpcode() != ISD::SIGN_EXTEND)
+      return false;
+
+    SDValue Extract = Op.getOperand(0);
+    if (Extract.getOpcode() != ISD::EXTRACT_VECTOR_ELT)
+      return false;
+
+    ConstantSDNode *ExtOp = dyn_cast<ConstantSDNode>(Extract.getOperand(1));
+    if (!ExtOp)
+      return false;
+
+    Index = ExtOp->getZExtValue();
+    if (Input && Input != Extract.getOperand(0))
+      return false;
+
+    if (!Input)
+      Input = Extract.getOperand(0);
+
+    Elems = Elems << 8;
+    Index = DAG.getDataLayout().isLittleEndian() ? Index : Index << 4;
+    Elems |= Index;
+
+    return true;
+  };
+
+  // If the build vector operands aren't sign extended vector extracts,
+  // of the same input vector, then return.
+  for (unsigned i = 0; i < N->getNumOperands(); i++) {
+    if (!isSExtOfVecExtract(N->getOperand(i))) {
+      return SDValue();
+    }
+  }
+
+  // If the vector extract indicies are not correct, add the appropriate
+  // vector_shuffle.
+  int TgtElemArrayIdx;
+  int InputSize = Input.getValueType().getScalarSizeInBits();
+  int OutputSize = N->getValueType(0).getScalarSizeInBits();
+  if (InputSize + OutputSize == 40)
+    TgtElemArrayIdx = 0;
+  else if (InputSize + OutputSize == 72)
+    TgtElemArrayIdx = 1;
+  else if (InputSize + OutputSize == 48)
+    TgtElemArrayIdx = 2;
+  else if (InputSize + OutputSize == 80)
+    TgtElemArrayIdx = 3;
+  else if (InputSize + OutputSize == 96)
+    TgtElemArrayIdx = 4;
+  else
+    return SDValue();
+
+  uint64_t CorrectElems = TargetElems[TgtElemArrayIdx];
+  CorrectElems = DAG.getDataLayout().isLittleEndian()
+                     ? CorrectElems & 0x0F0F0F0F0F0F0F0F
+                     : CorrectElems & 0xF0F0F0F0F0F0F0F0;
+  if (Elems != CorrectElems) {
+    return addShuffleForVecExtend(N, DAG, Input, Elems, CorrectElems);
+  }
+
+  // Regular lowering will catch cases where a shuffle is not needed.
+  return SDValue();
+}
+
 SDValue PPCTargetLowering::DAGCombineBuildVector(SDNode *N,
                                                  DAGCombinerInfo &DCI) const {
   assert(N->getOpcode() == ISD::BUILD_VECTOR &&
@@ -11337,6 +11464,15 @@ SDValue PPCTargetLowering::DAGCombineBuildVector(SDNode *N,
   SDValue Reduced = combineBVOfConsecutiveLoads(N, DAG);
   if (Reduced)
     return Reduced;
+
+  // If we're building a vector out of extended elements from another vector
+  // we have P9 vector integer extend instructions.
+  if (Subtarget.hasP9Altivec()) {
+    Reduced = combineBVOfVecSExt(N, DAG);
+    if (Reduced)
+      return Reduced;
+  }
+
 
   if (N->getValueType(0) != MVT::v2f64)
     return SDValue();

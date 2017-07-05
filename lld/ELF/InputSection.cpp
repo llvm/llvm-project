@@ -276,7 +276,9 @@ template <class ELFT> std::string InputSectionBase::getSrcMsg(uint64_t Offset) {
 template <class ELFT> std::string InputSectionBase::getObjMsg(uint64_t Off) {
   // Synthetic sections don't have input files.
   elf::ObjectFile<ELFT> *File = getFile<ELFT>();
-  std::string Filename = File ? File->getName() : "(internal)";
+  if (!File)
+    return ("(internal):(" + Name + "+0x" + utohexstr(Off) + ")").str();
+  std::string Filename = File->getName();
 
   std::string Archive;
   if (!File->ArchiveName.empty())

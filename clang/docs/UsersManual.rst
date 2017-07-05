@@ -332,6 +332,19 @@ output format of the diagnostics that it generates.
    using a structured YAML format, users can parse or sort the remarks in a
    convenient way.
 
+.. _opt_foptimization-record-file:
+
+**-foptimization-record-file**
+   Control the file to which optimization reports are written.
+
+   When optimization reports are being output (see
+   :ref:`-fsave-optimization-record <opt_fsave-optimization-record>`), this
+   option controls the file to which those reports are written.
+
+   If this option is not used, optimization records are output to a file named
+   after the primary file being compiled. If that's "foo.c", for example,
+   optimization records are output to "foo.opt.yaml".
+
 .. _opt_fdiagnostics-show-hotness:
 
 **-f[no-]diagnostics-show-hotness**

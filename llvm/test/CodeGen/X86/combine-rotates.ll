@@ -35,8 +35,7 @@ define <4 x i32> @combine_vec_rot_rot(<4 x i32> %x) {
 define <4 x i32> @combine_vec_rot_rot_splat(<4 x i32> %x) {
 ; XOP-LABEL: combine_vec_rot_rot_splat:
 ; XOP:       # BB#0:
-; XOP-NEXT:    vprotd $29, %xmm0, %xmm0
-; XOP-NEXT:    vprotd $10, %xmm0, %xmm0
+; XOP-NEXT:    vprotd $7, %xmm0, %xmm0
 ; XOP-NEXT:    retq
 ;
 ; AVX512-LABEL: combine_vec_rot_rot_splat:
@@ -60,8 +59,6 @@ define <4 x i32> @combine_vec_rot_rot_splat(<4 x i32> %x) {
 define <4 x i32> @combine_vec_rot_rot_splat_zero(<4 x i32> %x) {
 ; XOP-LABEL: combine_vec_rot_rot_splat_zero:
 ; XOP:       # BB#0:
-; XOP-NEXT:    vprotd $31, %xmm0, %xmm0
-; XOP-NEXT:    vprotd $1, %xmm0, %xmm0
 ; XOP-NEXT:    retq
 ;
 ; AVX512-LABEL: combine_vec_rot_rot_splat_zero:
