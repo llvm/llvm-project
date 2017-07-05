@@ -22,8 +22,8 @@ void func2(void) {
   // CHECK: %la = alloca [100 x i32], align 4, addrspace(5)
   // CL12: %lp1 = alloca i32 addrspace(5)*, align 4, addrspace(5)
   // CL12: %lp2 = alloca i32 addrspace(5)*, align 4, addrspace(5)
-  // CL20: %lp1 = alloca i32*, align 4, addrspace(5)
-  // CL20: %lp2 = alloca i32*, align 4, addrspace(5)
+  // CL20: %lp1 = alloca i32*, align 8, addrspace(5)
+  // CL20: %lp2 = alloca i32*, align 8, addrspace(5)
   // CHECK: %lvc = alloca i32, align 4, addrspace(5)
 
   // CHECK: store i32 1, i32 addrspace(5)* %lv1
@@ -39,13 +39,13 @@ void func2(void) {
 
   // CL12: store i32 addrspace(5)* %lv1, i32 addrspace(5)* addrspace(5)* %lp1, align 4
   // CL20: %[[r0:.*]] = addrspacecast i32 addrspace(5)* %lv1 to i32*
-  // CL20: store i32* %[[r0]], i32* addrspace(5)* %lp1, align 4
+  // CL20: store i32* %[[r0]], i32* addrspace(5)* %lp1, align 8
   int *lp1 = &lv1;
 
   // CHECK: %[[arraydecay:.*]] = getelementptr inbounds [100 x i32], [100 x i32] addrspace(5)* %la, i32 0, i32 0
   // CL12: store i32 addrspace(5)* %[[arraydecay]], i32 addrspace(5)* addrspace(5)* %lp2, align 4
   // CL20: %[[r1:.*]] = addrspacecast i32 addrspace(5)* %[[arraydecay]] to i32*
-  // CL20: store i32* %[[r1]], i32* addrspace(5)* %lp2, align 4
+  // CL20: store i32* %[[r1]], i32* addrspace(5)* %lp2, align 8
   int *lp2 = la;
 
   // CL12: call void @func1(i32 addrspace(5)* %lv1)

@@ -1,7 +1,7 @@
 // RUN: rm -rf %t
 // RUN: mkdir -p %t
-// RUN: echo 'export module x; int a, b;' > %t/x.cppm
-// RUN: echo 'export module x.y; int c;' > %t/x.y.cppm
+// RUN: echo 'export module x; export int a, b;' > %t/x.cppm
+// RUN: echo 'export module x.y; export int c;' > %t/x.y.cppm
 //
 // RUN: %clang_cc1 -std=c++1z -fmodules-ts -emit-module-interface %t/x.cppm -o %t/x.pcm
 // RUN: %clang_cc1 -std=c++1z -fmodules-ts -emit-module-interface -fmodule-file=%t/x.pcm %t/x.y.cppm -o %t/x.y.pcm

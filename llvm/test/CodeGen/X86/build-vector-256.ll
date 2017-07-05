@@ -51,18 +51,10 @@ define <8 x float> @test_buildvector_v8f32(float %a0, float %a1, float %a2, floa
 }
 
 define <4 x i64> @test_buildvector_v4i64(i64 %a0, i64 %a1, i64 %a2, i64 %a3) {
-; AVX1-32-LABEL: test_buildvector_v4i64:
-; AVX1-32:       # BB#0:
-; AVX1-32-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX1-32-NEXT:    vpinsrd $1, {{[0-9]+}}(%esp), %xmm0, %xmm0
-; AVX1-32-NEXT:    vpinsrd $2, {{[0-9]+}}(%esp), %xmm0, %xmm0
-; AVX1-32-NEXT:    vpinsrd $3, {{[0-9]+}}(%esp), %xmm0, %xmm0
-; AVX1-32-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; AVX1-32-NEXT:    vpinsrd $1, {{[0-9]+}}(%esp), %xmm1, %xmm1
-; AVX1-32-NEXT:    vpinsrd $2, {{[0-9]+}}(%esp), %xmm1, %xmm1
-; AVX1-32-NEXT:    vpinsrd $3, {{[0-9]+}}(%esp), %xmm1, %xmm1
-; AVX1-32-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX1-32-NEXT:    retl
+; AVX-32-LABEL: test_buildvector_v4i64:
+; AVX-32:       # BB#0:
+; AVX-32-NEXT:    vmovups {{[0-9]+}}(%esp), %ymm0
+; AVX-32-NEXT:    retl
 ;
 ; AVX1-64-LABEL: test_buildvector_v4i64:
 ; AVX1-64:       # BB#0:
@@ -74,19 +66,6 @@ define <4 x i64> @test_buildvector_v4i64(i64 %a0, i64 %a1, i64 %a2, i64 %a3) {
 ; AVX1-64-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
 ; AVX1-64-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; AVX1-64-NEXT:    retq
-;
-; AVX2-32-LABEL: test_buildvector_v4i64:
-; AVX2-32:       # BB#0:
-; AVX2-32-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX2-32-NEXT:    vpinsrd $1, {{[0-9]+}}(%esp), %xmm0, %xmm0
-; AVX2-32-NEXT:    vpinsrd $2, {{[0-9]+}}(%esp), %xmm0, %xmm0
-; AVX2-32-NEXT:    vpinsrd $3, {{[0-9]+}}(%esp), %xmm0, %xmm0
-; AVX2-32-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; AVX2-32-NEXT:    vpinsrd $1, {{[0-9]+}}(%esp), %xmm1, %xmm1
-; AVX2-32-NEXT:    vpinsrd $2, {{[0-9]+}}(%esp), %xmm1, %xmm1
-; AVX2-32-NEXT:    vpinsrd $3, {{[0-9]+}}(%esp), %xmm1, %xmm1
-; AVX2-32-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; AVX2-32-NEXT:    retl
 ;
 ; AVX2-64-LABEL: test_buildvector_v4i64:
 ; AVX2-64:       # BB#0:

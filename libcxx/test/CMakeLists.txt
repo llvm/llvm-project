@@ -85,3 +85,36 @@ if (LIBCXX_GENERATE_COVERAGE)
   set(extract_dirs "${LIBCXX_SOURCE_DIR}/include;${LIBCXX_SOURCE_DIR}/src")
   setup_lcov_test_target_coverage("cxx" "${output_dir}" "${capture_dirs}" "${extract_dirs}")
 endif()
+
+
+if (LIBCXX_CONFIGURE_IDE)
+  # Create dummy targets for each of the tests in the test suite, this allows
+  # IDE's such as CLion to correctly highlight the tests because it knows
+  # roughly what include paths/compile flags/macro definitions are needed.
+  include_directories(support)
+  file(GLOB_RECURSE LIBCXX_TESTS ${CMAKE_CURRENT_SOURCE_DIR}/*.pass.cpp)
+  file(GLOB LIBCXX_TEST_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/support/*)
+  file(GLOB_RECURSE LIBCXX_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/../include/*)
+  add_executable(libcxx_test_objects EXCLUDE_FROM_ALL
+          ${LIBCXX_TESTS} ${LIBCXX_TEST_HEADERS} ${LIBCXX_HEADERS})
+  add_dependencies(libcxx_test_objects cxx)
+
+  set(STATIC_ROOT ${LIBCXX_SOURCE_DIR}/test/std/experimental/filesystem/Inputs/static_test_env)
+  add_definitions(-DLIBCXX_FILESYSTEM_STATIC_TEST_ROOT="${STATIC_ROOT}")
+
+  set(DYNAMIC_ROOT ${LIBCXX_BINARY_DIR}/test/filesystem/Output/dynamic_env)
+  add_definitions(-DLIBCXX_FILESYSTEM_DYNAMIC_TEST_ROOT="${DYNAMIC_ROOT}")
+
+  set(DYNAMIC_HELPER "python ${LIBCXX_SOURCE_DIR}/test/support/filesystem_dynamic_test_helper.py ")
+  add_definitions(-DLIBCXX_FILESYSTEM_DYNAMIC_TEST_HELPER="${DYNAMIC_HELPER}")
+
+  split_list(LIBCXX_COMPILE_FLAGS)
+  split_list(LIBCXX_LINK_FLAGS)
+
+  set_target_properties(libcxx_test_objects
+          PROPERTIES
+            COMPILE_FLAGS "${LIBCXX_COMPILE_FLAGS}"
+            LINK_FLAGS "${LIBCXX_LINK_FLAGS}"
+            EXCLUDE_FROM_ALL ON
+  )
+endif()

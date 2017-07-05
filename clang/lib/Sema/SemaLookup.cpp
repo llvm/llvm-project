@@ -1395,6 +1395,13 @@ bool Sema::hasVisibleMergedDefinition(NamedDecl *Def) {
   return false;
 }
 
+bool Sema::hasMergedDefinitionInCurrentModule(NamedDecl *Def) {
+  for (Module *Merged : Context.getModulesWithMergedDefinition(Def))
+    if (Merged->getTopLevelModuleName() == getLangOpts().CurrentModule)
+      return true;
+  return false;
+}
+
 template<typename ParmDecl>
 static bool
 hasVisibleDefaultArgument(Sema &S, const ParmDecl *D,
@@ -1495,16 +1502,25 @@ bool LookupResult::isVisibleSlow(Sema &SemaRef, NamedDecl *D) {
   assert(D->isHidden() && "should not call this: not in slow case");
 
   Module *DeclModule = SemaRef.getOwningModule(D);
-  assert(DeclModule && "hidden decl not from a module");
+  if (!DeclModule) {
+    // A module-private declaration with no owning module means this is in the
+    // global module in the C++ Modules TS. This is visible within the same
+    // translation unit only.
+    // FIXME: Don't assume that "same translation unit" means the same thing
+    // as "not from an AST file".
+    assert(D->isModulePrivate() && "hidden decl has no module");
+    return !D->isFromASTFile();
+  }
 
   // If the owning module is visible, and the decl is not module private,
   // then the decl is visible too. (Module private is ignored within the same
   // top-level module.)
-  // FIXME: Check the owning module for module-private declarations rather than
-  // assuming "same AST file" is the same thing as "same module".
-  if ((!D->isFromASTFile() || !D->isModulePrivate()) &&
-      (SemaRef.isModuleVisible(DeclModule) ||
-       SemaRef.hasVisibleMergedDefinition(D)))
+  if (D->isModulePrivate()
+        ? DeclModule->getTopLevelModuleName() ==
+                  SemaRef.getLangOpts().CurrentModule ||
+          SemaRef.hasMergedDefinitionInCurrentModule(D)
+        : SemaRef.isModuleVisible(DeclModule) ||
+          SemaRef.hasVisibleMergedDefinition(D))
     return true;
 
   // If this declaration is not at namespace scope nor module-private,

@@ -19,7 +19,7 @@
 # CHECK-NEXT:   Section: Absolute
 # CHECK-NEXT: }
 # CHECK-NEXT: Symbol {
-# CHECK-NEXT:   Name: foo2
+# CHECK-NEXT:   Name: foo1
 # CHECK-NEXT:   Value: 0x123
 # CHECK-NEXT:   Size:
 # CHECK-NEXT:   Binding: Global

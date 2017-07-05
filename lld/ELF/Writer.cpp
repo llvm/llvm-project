@@ -152,10 +152,6 @@ template <class ELFT> static void combineEhFrameSections() {
 }
 
 template <class ELFT> void Writer<ELFT>::clearOutputSections() {
-  if (Script->Opt.HasSections)
-    Script->createOrphanCommands();
-  else
-    Script->fabricateDefaultCommands();
   // Clear the OutputSections to make sure it is not used anymore. Any
   // code from this point on should be using the linker script
   // commands.
@@ -185,6 +181,7 @@ template <class ELFT> void Writer<ELFT>::run() {
     // Linker scripts may have left some input sections unassigned.
     // Assign such sections using the default rule.
     Script->addOrphanSections(Factory);
+    Script->createOrphanCommands();
   } else {
     // If linker script does not contain SECTIONS commands, create
     // output sections by default rules. We still need to give the
@@ -192,12 +189,12 @@ template <class ELFT> void Writer<ELFT>::run() {
     // non-SECTIONS commands such as ASSERT.
     createSections();
     Script->processCommands(Factory);
+    Script->fabricateDefaultCommands();
   }
+  clearOutputSections();
 
   if (Config->Discard != DiscardPolicy::All)
     copyLocalSymbols();
-
-  clearOutputSections();
 
   if (Config->CopyRelocs)
     addSectionSymbols();
