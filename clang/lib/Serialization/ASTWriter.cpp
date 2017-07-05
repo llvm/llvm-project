@@ -1462,7 +1462,7 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, ASTContext &Context,
   }
 
   // Module map file
-  if (WritingModule) {
+  if (WritingModule && WritingModule->Kind == Module::ModuleMapModule) {
     Record.clear();
 
     auto &Map = PP.getHeaderSearchInfo().getModuleMap();

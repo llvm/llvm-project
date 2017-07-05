@@ -535,7 +535,9 @@ void Preprocessor::EnterMainSourceFile() {
 
   // Start parsing the predefines.
   EnterSourceFile(FID, nullptr, SourceLocation());
+}
 
+void Preprocessor::replayPreambleConditionalStack() {
   // Restore the conditional stack from the preamble, if there is one.
   if (PreambleConditionalStack.isReplaying()) {
     CurPPLexer->setConditionalLevels(PreambleConditionalStack.getStack());

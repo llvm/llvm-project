@@ -1396,6 +1396,13 @@ bool Sema::hasVisibleMergedDefinition(NamedDecl *Def) {
 }
 
 bool Sema::hasMergedDefinitionInCurrentModule(NamedDecl *Def) {
+  // FIXME: When not in local visibility mode, we can't tell the difference
+  // between a declaration being visible because we merged a local copy of
+  // the same declaration into it, and it being visible because its owning
+  // module is visible.
+  if (Def->getModuleOwnershipKind() == Decl::ModuleOwnershipKind::Visible &&
+      getLangOpts().ModulesLocalVisibility)
+    return true;
   for (Module *Merged : Context.getModulesWithMergedDefinition(Def))
     if (Merged->getTopLevelModuleName() == getLangOpts().CurrentModule)
       return true;
@@ -1509,25 +1516,33 @@ bool LookupResult::isVisibleSlow(Sema &SemaRef, NamedDecl *D) {
     // FIXME: Don't assume that "same translation unit" means the same thing
     // as "not from an AST file".
     assert(D->isModulePrivate() && "hidden decl has no module");
-    return !D->isFromASTFile();
+    if (!D->isFromASTFile() || SemaRef.hasMergedDefinitionInCurrentModule(D))
+      return true;
+  } else {
+    // If the owning module is visible, and the decl is not module private,
+    // then the decl is visible too. (Module private is ignored within the same
+    // top-level module.)
+    if (D->isModulePrivate()
+          ? DeclModule->getTopLevelModuleName() ==
+                    SemaRef.getLangOpts().CurrentModule ||
+            SemaRef.hasMergedDefinitionInCurrentModule(D)
+          : SemaRef.isModuleVisible(DeclModule) ||
+            SemaRef.hasVisibleMergedDefinition(D))
+      return true;
   }
 
-  // If the owning module is visible, and the decl is not module private,
-  // then the decl is visible too. (Module private is ignored within the same
-  // top-level module.)
-  if (D->isModulePrivate()
-        ? DeclModule->getTopLevelModuleName() ==
-                  SemaRef.getLangOpts().CurrentModule ||
-          SemaRef.hasMergedDefinitionInCurrentModule(D)
-        : SemaRef.isModuleVisible(DeclModule) ||
-          SemaRef.hasVisibleMergedDefinition(D))
-    return true;
+  // Determine whether a decl context is a file context for the purpose of
+  // visibility. This looks through some (export and linkage spec) transparent
+  // contexts, but not others (enums).
+  auto IsEffectivelyFileContext = [](const DeclContext *DC) {
+    return DC->isFileContext() || isa<LinkageSpecDecl>(DC) ||
+           isa<ExportDecl>(DC);
+  };
 
-  // If this declaration is not at namespace scope nor module-private,
+  // If this declaration is not at namespace scope
   // then it is visible if its lexical parent has a visible definition.
   DeclContext *DC = D->getLexicalDeclContext();
-  if (!D->isModulePrivate() && DC && !DC->isFileContext() &&
-      !isa<LinkageSpecDecl>(DC) && !isa<ExportDecl>(DC)) {
+  if (DC && !IsEffectivelyFileContext(DC)) {
     // For a parameter, check whether our current template declaration's
     // lexical context is visible, not whether there's some other visible
     // definition of it, because parameters aren't "within" the definition.
@@ -1535,31 +1550,44 @@ bool LookupResult::isVisibleSlow(Sema &SemaRef, NamedDecl *D) {
     // In C++ we need to check for a visible definition due to ODR merging,
     // and in C we must not because each declaration of a function gets its own
     // set of declarations for tags in prototype scope.
-    if ((D->isTemplateParameter() || isa<ParmVarDecl>(D)
-         || (isa<FunctionDecl>(DC) && !SemaRef.getLangOpts().CPlusPlus))
-            ? isVisible(SemaRef, cast<NamedDecl>(DC))
-            : SemaRef.hasVisibleDefinition(cast<NamedDecl>(DC))) {
-      if (SemaRef.CodeSynthesisContexts.empty() &&
-          // FIXME: Do something better in this case.
-          !SemaRef.getLangOpts().ModulesLocalVisibility) {
-        // Cache the fact that this declaration is implicitly visible because
-        // its parent has a visible definition.
-        D->setVisibleDespiteOwningModule();
-      }
-      return true;
+    bool VisibleWithinParent;
+    if (D->isTemplateParameter() || isa<ParmVarDecl>(D) ||
+        (isa<FunctionDecl>(DC) && !SemaRef.getLangOpts().CPlusPlus))
+      VisibleWithinParent = isVisible(SemaRef, cast<NamedDecl>(DC));
+    else if (D->isModulePrivate()) {
+      // A module-private declaration is only visible if an enclosing lexical
+      // parent was merged with another definition in the current module.
+      VisibleWithinParent = false;
+      do {
+        if (SemaRef.hasMergedDefinitionInCurrentModule(cast<NamedDecl>(DC))) {
+          VisibleWithinParent = true;
+          break;
+        }
+        DC = DC->getLexicalParent();
+      } while (!IsEffectivelyFileContext(DC));
+    } else {
+      VisibleWithinParent = SemaRef.hasVisibleDefinition(cast<NamedDecl>(DC));
     }
-    return false;
+
+    if (VisibleWithinParent && SemaRef.CodeSynthesisContexts.empty() &&
+        // FIXME: Do something better in this case.
+        !SemaRef.getLangOpts().ModulesLocalVisibility) {
+      // Cache the fact that this declaration is implicitly visible because
+      // its parent has a visible definition.
+      D->setVisibleDespiteOwningModule();
+    }
+    return VisibleWithinParent;
   }
+
+  // FIXME: All uses of DeclModule below this point should also check merged
+  // modules.
+  if (!DeclModule)
+    return false;
 
   // Find the extra places where we need to look.
   llvm::DenseSet<Module*> &LookupModules = SemaRef.getLookupModules();
   if (LookupModules.empty())
     return false;
-
-  if (!DeclModule) {
-    DeclModule = SemaRef.getOwningModule(D);
-    assert(DeclModule && "hidden decl not from a module");
-  }
 
   // If our lookup set contains the decl's module, it's visible.
   if (LookupModules.count(DeclModule))
