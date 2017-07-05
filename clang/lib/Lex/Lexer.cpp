@@ -2550,7 +2550,7 @@ bool Lexer::LexEndOfFile(Token &Result, const char *CurPtr) {
     return true;
   }
   
-  if (PP->isRecordingPreamble() && !PP->isInMainFile()) {
+  if (PP->isRecordingPreamble() && PP->isInPrimaryFile()) {
     PP->setRecordedPreambleConditionalStack(ConditionalStack);
     ConditionalStack.clear();
   }

@@ -25,3 +25,21 @@ expression, and replaces it with a call to ``std::make_unique``.
   // becomes
 
   my_ptr = std::make_unique<MyPair>(1, 2);
+
+Options
+-------
+
+.. option:: MakeSmartPtrFunction
+
+   A string specifying the name of make-unique-ptr function. Default is
+   `std::make_unique`.
+
+.. option:: MakeSmartPtrFunctionHeader
+
+   A string specifying the corresponding header of make-unique-ptr function.
+   Default is `memory`.
+
+.. option:: IncludeStyle
+
+   A string specifying which include-style is used, `llvm` or `google`. Default
+   is `llvm`.

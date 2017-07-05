@@ -161,13 +161,14 @@ bool InstructionSelector::executeMatchTable(
     }
 
     case GIM_Accept:
-      DEBUG(dbgs() << "GIM_Accept");
+      DEBUG(dbgs() << "GIM_Accept\n");
       return true;
     default:
       llvm_unreachable("Unexpected command");
     }
   }
 }
+
 } // end namespace llvm
 
 #endif // LLVM_CODEGEN_GLOBALISEL_INSTRUCTIONSELECTORIMPL_H

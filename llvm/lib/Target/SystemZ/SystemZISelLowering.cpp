@@ -2224,15 +2224,12 @@ static void lowerMUL_LOHI32(SelectionDAG &DAG, const SDLoc &DL, unsigned Extend,
 
 // Lower a binary operation that produces two VT results, one in each
 // half of a GR128 pair.  Op0 and Op1 are the VT operands to the operation,
-// Extend extends Op0 to a GR128, and Opcode performs the GR128 operation
-// on the extended Op0 and (unextended) Op1.  Store the even register result
+// and Opcode performs the GR128 operation.  Store the even register result
 // in Even and the odd register result in Odd.
 static void lowerGR128Binary(SelectionDAG &DAG, const SDLoc &DL, EVT VT,
-                             unsigned Extend, unsigned Opcode, SDValue Op0,
-                             SDValue Op1, SDValue &Even, SDValue &Odd) {
-  SDNode *In128 = DAG.getMachineNode(Extend, DL, MVT::Untyped, Op0);
-  SDValue Result = DAG.getNode(Opcode, DL, MVT::Untyped,
-                               SDValue(In128, 0), Op1);
+                             unsigned Opcode, SDValue Op0, SDValue Op1,
+                             SDValue &Even, SDValue &Odd) {
+  SDValue Result = DAG.getNode(Opcode, DL, MVT::Untyped, Op0, Op1);
   bool Is32Bit = is32Bit(VT);
   Even = DAG.getTargetExtractSubreg(SystemZ::even128(Is32Bit), DL, VT, Result);
   Odd = DAG.getTargetExtractSubreg(SystemZ::odd128(Is32Bit), DL, VT, Result);
@@ -2962,7 +2959,7 @@ SDValue SystemZTargetLowering::lowerSMUL_LOHI(SDValue Op,
     lowerMUL_LOHI32(DAG, DL, ISD::SIGN_EXTEND, Op.getOperand(0),
                     Op.getOperand(1), Ops[1], Ops[0]);
   else {
-    // Do a full 128-bit multiplication based on UMUL_LOHI64:
+    // Do a full 128-bit multiplication based on SystemZISD::UMUL_LOHI:
     //
     //   (ll * rl) + ((lh * rl) << 64) + ((ll * rh) << 64)
     //
@@ -2980,10 +2977,10 @@ SDValue SystemZTargetLowering::lowerSMUL_LOHI(SDValue Op,
     SDValue RL = Op.getOperand(1);
     SDValue LH = DAG.getNode(ISD::SRA, DL, VT, LL, C63);
     SDValue RH = DAG.getNode(ISD::SRA, DL, VT, RL, C63);
-    // UMUL_LOHI64 returns the low result in the odd register and the high
-    // result in the even register.  SMUL_LOHI is defined to return the
-    // low half first, so the results are in reverse order.
-    lowerGR128Binary(DAG, DL, VT, SystemZ::AEXT128_64, SystemZISD::UMUL_LOHI64,
+    // SystemZISD::UMUL_LOHI returns the low result in the odd register and
+    // the high result in the even register.  ISD::SMUL_LOHI is defined to
+    // return the low half first, so the results are in reverse order.
+    lowerGR128Binary(DAG, DL, VT, SystemZISD::UMUL_LOHI,
                      LL, RL, Ops[1], Ops[0]);
     SDValue NegLLTimesRH = DAG.getNode(ISD::AND, DL, VT, LL, RH);
     SDValue NegLHTimesRL = DAG.getNode(ISD::AND, DL, VT, LH, RL);
@@ -3004,10 +3001,10 @@ SDValue SystemZTargetLowering::lowerUMUL_LOHI(SDValue Op,
     lowerMUL_LOHI32(DAG, DL, ISD::ZERO_EXTEND, Op.getOperand(0),
                     Op.getOperand(1), Ops[1], Ops[0]);
   else
-    // UMUL_LOHI64 returns the low result in the odd register and the high
-    // result in the even register.  UMUL_LOHI is defined to return the
-    // low half first, so the results are in reverse order.
-    lowerGR128Binary(DAG, DL, VT, SystemZ::AEXT128_64, SystemZISD::UMUL_LOHI64,
+    // SystemZISD::UMUL_LOHI returns the low result in the odd register and
+    // the high result in the even register.  ISD::UMUL_LOHI is defined to
+    // return the low half first, so the results are in reverse order.
+    lowerGR128Binary(DAG, DL, VT, SystemZISD::UMUL_LOHI,
                      Op.getOperand(0), Op.getOperand(1), Ops[1], Ops[0]);
   return DAG.getMergeValues(Ops, DL);
 }
@@ -3018,24 +3015,19 @@ SDValue SystemZTargetLowering::lowerSDIVREM(SDValue Op,
   SDValue Op1 = Op.getOperand(1);
   EVT VT = Op.getValueType();
   SDLoc DL(Op);
-  unsigned Opcode;
 
-  // We use DSGF for 32-bit division.
-  if (is32Bit(VT)) {
+  // We use DSGF for 32-bit division.  This means the first operand must
+  // always be 64-bit, and the second operand should be 32-bit whenever
+  // that is possible, to improve performance.
+  if (is32Bit(VT))
     Op0 = DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, Op0);
-    Opcode = SystemZISD::SDIVREM32;
-  } else if (DAG.ComputeNumSignBits(Op1) > 32) {
+  else if (DAG.ComputeNumSignBits(Op1) > 32)
     Op1 = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Op1);
-    Opcode = SystemZISD::SDIVREM32;
-  } else
-    Opcode = SystemZISD::SDIVREM64;
 
-  // DSG(F) takes a 64-bit dividend, so the even register in the GR128
-  // input is "don't care".  The instruction returns the remainder in
-  // the even register and the quotient in the odd register.
+  // DSG(F) returns the remainder in the even register and the
+  // quotient in the odd register.
   SDValue Ops[2];
-  lowerGR128Binary(DAG, DL, VT, SystemZ::AEXT128_64, Opcode,
-                   Op0, Op1, Ops[1], Ops[0]);
+  lowerGR128Binary(DAG, DL, VT, SystemZISD::SDIVREM, Op0, Op1, Ops[1], Ops[0]);
   return DAG.getMergeValues(Ops, DL);
 }
 
@@ -3044,16 +3036,11 @@ SDValue SystemZTargetLowering::lowerUDIVREM(SDValue Op,
   EVT VT = Op.getValueType();
   SDLoc DL(Op);
 
-  // DL(G) uses a double-width dividend, so we need to clear the even
-  // register in the GR128 input.  The instruction returns the remainder
-  // in the even register and the quotient in the odd register.
+  // DL(G) returns the remainder in the even register and the
+  // quotient in the odd register.
   SDValue Ops[2];
-  if (is32Bit(VT))
-    lowerGR128Binary(DAG, DL, VT, SystemZ::ZEXT128_32, SystemZISD::UDIVREM32,
-                     Op.getOperand(0), Op.getOperand(1), Ops[1], Ops[0]);
-  else
-    lowerGR128Binary(DAG, DL, VT, SystemZ::ZEXT128_64, SystemZISD::UDIVREM64,
-                     Op.getOperand(0), Op.getOperand(1), Ops[1], Ops[0]);
+  lowerGR128Binary(DAG, DL, VT, SystemZISD::UDIVREM,
+                   Op.getOperand(0), Op.getOperand(1), Ops[1], Ops[0]);
   return DAG.getMergeValues(Ops, DL);
 }
 
@@ -4669,11 +4656,9 @@ const char *SystemZTargetLowering::getTargetNodeName(unsigned Opcode) const {
     OPCODE(SELECT_CCMASK);
     OPCODE(ADJDYNALLOC);
     OPCODE(POPCNT);
-    OPCODE(UMUL_LOHI64);
-    OPCODE(SDIVREM32);
-    OPCODE(SDIVREM64);
-    OPCODE(UDIVREM32);
-    OPCODE(UDIVREM64);
+    OPCODE(UMUL_LOHI);
+    OPCODE(SDIVREM);
+    OPCODE(UDIVREM);
     OPCODE(MVC);
     OPCODE(MVC_LOOP);
     OPCODE(NC);
@@ -5778,14 +5763,12 @@ SystemZTargetLowering::emitAtomicCmpSwapW(MachineInstr &MI,
   return DoneMBB;
 }
 
-// Emit an extension from a GR32 or GR64 to a GR128.  ClearEven is true
+// Emit an extension from a GR64 to a GR128.  ClearEven is true
 // if the high register of the GR128 value must be cleared or false if
-// it's "don't care".  SubReg is subreg_l32 when extending a GR32
-// and subreg_l64 when extending a GR64.
+// it's "don't care".
 MachineBasicBlock *SystemZTargetLowering::emitExt128(MachineInstr &MI,
                                                      MachineBasicBlock *MBB,
-                                                     bool ClearEven,
-                                                     unsigned SubReg) const {
+                                                     bool ClearEven) const {
   MachineFunction &MF = *MBB->getParent();
   const SystemZInstrInfo *TII =
       static_cast<const SystemZInstrInfo *>(Subtarget.getInstrInfo());
@@ -5808,7 +5791,7 @@ MachineBasicBlock *SystemZTargetLowering::emitExt128(MachineInstr &MI,
     In128 = NewIn128;
   }
   BuildMI(*MBB, MI, DL, TII->get(TargetOpcode::INSERT_SUBREG), Dest)
-    .addReg(In128).addReg(Src).addImm(SubReg);
+    .addReg(In128).addReg(Src).addImm(SystemZ::subreg_l64);
 
   MI.eraseFromParent();
   return MBB;
@@ -6172,12 +6155,10 @@ MachineBasicBlock *SystemZTargetLowering::EmitInstrWithCustomInserter(
   case SystemZ::CondStoreF64Inv:
     return emitCondStore(MI, MBB, SystemZ::STD, 0, true);
 
-  case SystemZ::AEXT128_64:
-    return emitExt128(MI, MBB, false, SystemZ::subreg_l64);
-  case SystemZ::ZEXT128_32:
-    return emitExt128(MI, MBB, true, SystemZ::subreg_l32);
-  case SystemZ::ZEXT128_64:
-    return emitExt128(MI, MBB, true, SystemZ::subreg_l64);
+  case SystemZ::AEXT128:
+    return emitExt128(MI, MBB, false);
+  case SystemZ::ZEXT128:
+    return emitExt128(MI, MBB, true);
 
   case SystemZ::ATOMIC_SWAPW:
     return emitAtomicLoadBinary(MI, MBB, 0, 0);

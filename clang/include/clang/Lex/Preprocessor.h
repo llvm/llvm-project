@@ -1048,6 +1048,10 @@ public:
   /// which implicitly adds the builtin defines etc.
   void EnterMainSourceFile();
 
+  /// \brief After parser warm-up, initialize the conditional stack from
+  /// the preamble.
+  void replayPreambleConditionalStack();
+
   /// \brief Inform the preprocessor callbacks that processing is complete.
   void EndSourceFile();
 
@@ -1732,11 +1736,6 @@ public:
 
   /// \brief Return true if we're in the top-level file, not in a \#include.
   bool isInPrimaryFile() const;
-
-  /// \brief Return true if we're in the main file (specifically, if we are 0
-  /// (zero) levels deep \#include. This is used by the lexer to determine if
-  /// it needs to generate errors about unterminated \#if directives.
-  bool isInMainFile() const;
 
   /// \brief Handle cases where the \#include name is expanded
   /// from a macro as multiple tokens, which need to be glued together. 
