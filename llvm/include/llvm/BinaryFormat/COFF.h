@@ -46,12 +46,6 @@ static const char ClGlObjMagic[] = {
     '\xac', '\x9b', '\xd6', '\xb6', '\x22', '\x26', '\x53', '\xc2',
 };
 
-// The signature bytes that start a .res file.
-static const char WinResMagic[] = {
-    '\x00', '\x00', '\x00', '\x00', '\x20', '\x00', '\x00', '\x00',
-    '\xff', '\xff', '\x00', '\x00', '\xff', '\xff', '\x00', '\x00',
-};
-
 // Sizes in bytes of various things in the COFF format.
 enum {
   Header16Size = 20,

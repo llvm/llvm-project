@@ -47,7 +47,7 @@ namespace boost {
   template<bool, typename = void> struct enable_if {};
   template<typename T> struct enable_if<true, T> { typedef T type; };
 }
-template<typename T> typename boost::enable_if<sizeof(T) == 4, int>::type if_size_4(); // expected-note{{candidate template ignored: disabled by 'enable_if' [with T = char]}}
+template<typename T> typename boost::enable_if<sizeof(T) == 4, int>::type if_size_4(); // expected-note{{candidate template ignored: requirement 'sizeof(char) == 4' was not satisfied [with T = char]}}
 int k = if_size_4<char>(); // expected-error{{no matching function}}
 
 namespace llvm {
@@ -61,7 +61,7 @@ void test_if_int() {
 }
 
 template<typename T> struct NonTemplateFunction {
-  typename boost::enable_if<sizeof(T) == 4, int>::type f(); // expected-error{{no type named 'type' in 'boost::enable_if<false, int>'; 'enable_if' cannot be used to disable this declaration}}
+  typename boost::enable_if<sizeof(T) == 4, int>::type f(); // expected-error{{failed requirement 'sizeof(char) == 4'; 'enable_if' cannot be used to disable this declaration}}
 };
 NonTemplateFunction<char> NTFC; // expected-note{{here}}
 
@@ -100,7 +100,7 @@ namespace PR15673 {
 #if __cplusplus <= 199711L
   // expected-warning@-2 {{default template arguments for a function template are a C++11 extension}}
 #endif
-  // expected-note@-4 {{candidate template ignored: disabled by 'enable_if' [with T = int]}}
+  // expected-note@+1 {{candidate template ignored: requirement 'a_trait<int>::value' was not satisfied [with T = int]}}
   void foo() {}
   void bar() { foo<int>(); } // expected-error {{no matching function for call to 'foo'}}
 
@@ -128,7 +128,7 @@ namespace PR15673 {
 #if __cplusplus <= 199711L
   // expected-warning@-2 {{alias declarations are a C++11 extension}}
 #endif
-  // expected-note@-4 {{candidate template ignored: disabled by 'enable_if' [with T = int]}}
+  // expected-note@+7 {{candidate template ignored: requirement 'some_trait<int>::value' was not satisfied [with T = int]}}
 
   template<typename T,
            typename Requires = unicorns<T> >
@@ -137,4 +137,30 @@ namespace PR15673 {
 #endif
   void wibble() {}
   void wobble() { wibble<int>(); } // expected-error {{no matching function for call to 'wibble'}}
+
+  template<typename T>
+  struct some_passing_trait : std::true_type {};
+
+#if __cplusplus <= 199711L
+  // expected-warning@+4 {{default template arguments for a function template are a C++11 extension}}
+  // expected-warning@+4 {{default template arguments for a function template are a C++11 extension}}
+#endif
+  template<typename T,
+           int n = 42,
+           typename std::enable_if<n == 43 || (some_passing_trait<T>::value && some_trait<T>::value), int>::type = 0>
+  void almost_rangesv3(); // expected-note{{candidate template ignored: requirement '42 == 43 || (some_passing_trait<int>::value && some_trait<int>::value)' was not satisfied}}
+  void test_almost_rangesv3() { almost_rangesv3<int>(); } // expected-error{{no matching function for call to 'almost_rangesv3'}}
+
+  #define CONCEPT_REQUIRES_(...)                                        \
+    int x = 42,                                                         \
+    typename std::enable_if<(x == 43) || (__VA_ARGS__)>::type = 0
+
+#if __cplusplus <= 199711L
+  // expected-warning@+4 {{default template arguments for a function template are a C++11 extension}}
+  // expected-warning@+3 {{default template arguments for a function template are a C++11 extension}}
+#endif
+  template<typename T,
+           CONCEPT_REQUIRES_(some_passing_trait<T>::value && some_trait<T>::value)>
+  void rangesv3(); // expected-note{{candidate template ignored: requirement 'some_trait<int>::value' was not satisfied [with T = int, x = 42]}}
+  void test_rangesv3() { rangesv3<int>(); } // expected-error{{no matching function for call to 'rangesv3'}}
 }

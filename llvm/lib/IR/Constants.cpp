@@ -1914,8 +1914,8 @@ Constant *ConstantExpr::getGetElementPtr(Type *Ty, Constant *C,
 Constant *ConstantExpr::getICmp(unsigned short pred, Constant *LHS,
                                 Constant *RHS, bool OnlyIfReduced) {
   assert(LHS->getType() == RHS->getType());
-  assert(pred >= ICmpInst::FIRST_ICMP_PREDICATE && 
-         pred <= ICmpInst::LAST_ICMP_PREDICATE && "Invalid ICmp Predicate");
+  assert(CmpInst::isIntPredicate((CmpInst::Predicate)pred) &&
+         "Invalid ICmp Predicate");
 
   if (Constant *FC = ConstantFoldCompareInstruction(pred, LHS, RHS))
     return FC;          // Fold a few common cases...
@@ -1939,7 +1939,8 @@ Constant *ConstantExpr::getICmp(unsigned short pred, Constant *LHS,
 Constant *ConstantExpr::getFCmp(unsigned short pred, Constant *LHS,
                                 Constant *RHS, bool OnlyIfReduced) {
   assert(LHS->getType() == RHS->getType());
-  assert(pred <= FCmpInst::LAST_FCMP_PREDICATE && "Invalid FCmp Predicate");
+  assert(CmpInst::isFPPredicate((CmpInst::Predicate)pred) &&
+         "Invalid FCmp Predicate");
 
   if (Constant *FC = ConstantFoldCompareInstruction(pred, LHS, RHS))
     return FC;          // Fold a few common cases...

@@ -1073,13 +1073,12 @@ void ThunkCreator::forEachExecInputSection(
     OutputSection *OS = Cmd->Sec;
     if (!(OS->Flags & SHF_ALLOC) || !(OS->Flags & SHF_EXECINSTR))
       continue;
-    if (OutputSectionCommand *C = Script->getCmd(OS))
-      for (BaseCommand *BC : C->Commands)
-        if (auto *ISD = dyn_cast<InputSectionDescription>(BC)) {
-          CurTS = nullptr;
-          for (InputSection* IS : ISD->Sections)
-            Fn(OS, &ISD->Sections, IS);
-        }
+    for (BaseCommand *BC : Cmd->Commands)
+      if (auto *ISD = dyn_cast<InputSectionDescription>(BC)) {
+        CurTS = nullptr;
+        for (InputSection *IS : ISD->Sections)
+          Fn(OS, &ISD->Sections, IS);
+      }
   }
 }
 

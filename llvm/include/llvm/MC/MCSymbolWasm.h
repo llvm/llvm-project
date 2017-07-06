@@ -21,6 +21,8 @@ private:
   std::string ModuleName;
   SmallVector<wasm::ValType, 1> Returns;
   SmallVector<wasm::ValType, 4> Params;
+  bool ParamsSet = false;
+  bool ReturnsSet = false;
 
   /// An expression describing how to calculate the size of a symbol. If a
   /// symbol has no size this field will be NULL.
@@ -45,15 +47,23 @@ public:
 
   const StringRef getModuleName() const { return ModuleName; }
 
-  const SmallVector<wasm::ValType, 1> &getReturns() const { return Returns; }
+  const SmallVector<wasm::ValType, 1> &getReturns() const {
+    assert(ReturnsSet);
+    return Returns;
+  }
 
   void setReturns(SmallVectorImpl<wasm::ValType> &&Rets) {
+    ReturnsSet = true;
     Returns = std::move(Rets);
   }
 
-  const SmallVector<wasm::ValType, 4> &getParams() const { return Params; }
+  const SmallVector<wasm::ValType, 4> &getParams() const {
+    assert(ParamsSet);
+    return Params;
+  }
 
   void setParams(SmallVectorImpl<wasm::ValType> &&Pars) {
+    ParamsSet = true;
     Params = std::move(Pars);
   }
 };
