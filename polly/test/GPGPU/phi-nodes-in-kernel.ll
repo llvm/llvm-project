@@ -11,6 +11,24 @@
 
 ; REQUIRES: pollyacc
 
+; Approximate C source:
+; void kernel_dynprog(int c[50]) {
+;     int iter = 0;
+;     int outl = 0;
+;
+;      while(1) {
+;         for(int indvar = 1 ; indvar <= 49; indvar++) {
+;             c[indvar] = undef;
+;         }
+;         add78 = c[49] + outl;
+;         inc80 = iter + 1;
+;
+;         if (true) break;
+;
+;         outl = add78;
+;         iter = inc80;
+;      }
+;}
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
@@ -24,8 +42,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CODE-NEXT:     cudaCheckKernel();
 ; CODE-NEXT:   }
 
-; CODE:       cudaCheckReturn(cudaMemcpy(&MemRef_out_l_055, dev_MemRef_out_l_055, sizeof(i32), cudaMemcpyDeviceToHost));
-; CODE-NEXT:  cudaCheckReturn(cudaMemcpy(MemRef_c, dev_MemRef_c, (50) * sizeof(i32), cudaMemcpyDeviceToHost));
+; CODE:       cudaCheckReturn(cudaMemcpy(MemRef_c, dev_MemRef_c, (50) * sizeof(i32), cudaMemcpyDeviceToHost));
 ; CODE-NEXT: }
 
 ; CODE: # kernel0
@@ -40,8 +57,8 @@ target triple = "x86_64-unknown-linux-gnu"
 ; IR:      [[REGA:%.+]] = bitcast i32* %out_l.055.phiops to i8*
 ; IR-NEXT: call void @polly_copyFromHostToDevice(i8* [[REGA]], i8* %p_dev_array_MemRef_out_l_055__phi, i64 4)
 
-; IR: [[REGC:%.+]] = bitcast i32* %out_l.055.s2a to i8*
-; IR-NEXT: call void @polly_copyFromDeviceToHost(i8* %p_dev_array_MemRef_out_l_055, i8* [[REGC]], i64 4)
+; IR: [[REGC:%.+]] =   bitcast i32* %38 to i8*
+; IR-NEXT:  call void @polly_copyFromDeviceToHost(i8* %p_dev_array_MemRef_c, i8* [[REGC]], i64 196)
 
 ; KERNEL-IR: entry:
 ; KERNEL-IR-NEXT:   %out_l.055.s2a = alloca i32
