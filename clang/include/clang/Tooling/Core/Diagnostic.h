@@ -58,9 +58,9 @@ struct Diagnostic {
   Diagnostic(llvm::StringRef DiagnosticName, Level DiagLevel,
              StringRef BuildDirectory);
 
-  Diagnostic(llvm::StringRef DiagnosticName, DiagnosticMessage &Message,
-             llvm::StringMap<Replacements> &Fix,
-             SmallVector<DiagnosticMessage, 1> &Notes, Level DiagLevel,
+  Diagnostic(llvm::StringRef DiagnosticName, const DiagnosticMessage &Message,
+             const llvm::StringMap<Replacements> &Fix,
+             const SmallVector<DiagnosticMessage, 1> &Notes, Level DiagLevel,
              llvm::StringRef BuildDirectory);
 
   /// \brief Name identifying the Diagnostic.

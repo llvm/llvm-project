@@ -124,7 +124,8 @@ public:
 
   static DelayedDiagnostic makeAvailability(AvailabilityResult AR,
                                             SourceLocation Loc,
-                                            const NamedDecl *D,
+                                            const NamedDecl *ReferringDecl,
+                                            const NamedDecl *OffendingDecl,
                                             const ObjCInterfaceDecl *UnknownObjCClass,
                                             const ObjCPropertyDecl  *ObjCProperty,
                                             StringRef Msg,
@@ -164,9 +165,13 @@ public:
     return *reinterpret_cast<const AccessedEntity*>(AccessData);
   }
 
-  const NamedDecl *getAvailabilityDecl() const {
+  const NamedDecl *getAvailabilityReferringDecl() const {
     assert(Kind == Availability && "Not an availability diagnostic.");
-    return AvailabilityData.Decl;
+    return AvailabilityData.ReferringDecl;
+  }
+
+  const NamedDecl *getAvailabilityOffendingDecl() const {
+    return AvailabilityData.OffendingDecl;
   }
 
   StringRef getAvailabilityMessage() const {
@@ -213,7 +218,8 @@ public:
 private:
 
   struct AD {
-    const NamedDecl *Decl;
+    const NamedDecl *ReferringDecl;
+    const NamedDecl *OffendingDecl;
     const ObjCInterfaceDecl *UnknownObjCClass;
     const ObjCPropertyDecl  *ObjCProperty;
     const char *Message;

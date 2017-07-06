@@ -5,6 +5,8 @@
 #define AVAILABLE_10_11 __attribute__((availability(macos, introduced = 10.11)))
 #define AVAILABLE_10_12 __attribute__((availability(macos, introduced = 10.12)))
 
+typedef int AVAILABLE_10_12 new_int; // expected-note + {{marked partial here}}
+
 int func_10_11() AVAILABLE_10_11; // expected-note 4 {{'func_10_11' has been explicitly marked partial here}}
 
 #ifdef OBJCPP
@@ -70,9 +72,9 @@ void use_typedef() {
 }
 
 __attribute__((objc_root_class))
-AVAILABLE_10_11 @interface Class_10_11 {
+AVAILABLE_10_11 @interface Class_10_11 { // expected-note{{annotate 'Class_10_11' with an availability attribute to silence}}
   int_10_11 foo;
-  int_10_12 bar; // expected-warning {{'int_10_12' is partial: introduced in macOS 10.12}} expected-note{{redeclare}}
+  int_10_12 bar; // expected-warning {{'int_10_12' is partial: introduced in macOS 10.12}}
 }
 - (void)method1;
 - (void)method2;
@@ -125,7 +127,7 @@ void test_blocks() {
   };
 }
 
-void test_params(int_10_12 x); // expected-warning {{'int_10_12' is partial: introduced in macOS 10.12}} expected-note{{redeclare}}
+void test_params(int_10_12 x); // expected-warning {{'int_10_12' is partial: introduced in macOS 10.12}} expected-note{{annotate 'test_params' with an availability attribute to silence}}
 
 void test_params2(int_10_12 x) AVAILABLE_10_12; // no warn
 
@@ -234,3 +236,30 @@ void functionInFunction() {
 }
 
 #endif
+
+struct InStruct { // expected-note{{annotate 'InStruct' with an availability attribute to silence}}
+  new_int mem; // expected-warning{{'new_int' is partial}}
+
+  struct { new_int mem; } anon; // expected-warning{{'new_int' is partial}} expected-note{{annotate anonymous struct with an availability attribute}}
+};
+
+#ifdef OBJCPP
+static constexpr int AVAILABLE_10_12 SomeConstexprValue = 2; // expected-note{{marked partial here}}
+typedef enum { // expected-note{{annotate anonymous enum with an availability attribute}}
+  SomeValue = SomeConstexprValue // expected-warning{{'SomeConstexprValue' is partial}} 
+} SomeEnum;
+#endif
+
+@interface InInterface
+-(new_int)meth; // expected-warning{{'new_int' is partial}} expected-note{{annotate 'meth' with an availability attribute}}
+@end
+
+@interface Proper // expected-note{{annotate 'Proper' with an availability attribute}}
+@property (class) new_int x; // expected-warning{{'new_int' is partial}}
+@end
+
+void with_local_struct() {
+  struct local { // expected-note{{annotate 'local' with an availability attribute}}
+    new_int x; // expected-warning{{'new_int' is partial}}
+  };
+}

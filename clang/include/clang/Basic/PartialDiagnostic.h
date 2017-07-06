@@ -329,6 +329,15 @@ public:
 
   bool hasStorage() const { return DiagStorage != nullptr; }
 
+  /// Retrieve the string argument at the given index.
+  StringRef getStringArg(unsigned I) {
+    assert(DiagStorage && "No diagnostic storage?");
+    assert(I < DiagStorage->NumDiagArgs && "Not enough diagnostic args");
+    assert(DiagStorage->DiagArgumentsKind[I]
+             == DiagnosticsEngine::ak_std_string && "Not a string arg");
+    return DiagStorage->DiagArgumentsStr[I];
+  }
+
   friend const PartialDiagnostic &operator<<(const PartialDiagnostic &PD,
                                              unsigned I) {
     PD.AddTaggedVal(I, DiagnosticsEngine::ak_uint);

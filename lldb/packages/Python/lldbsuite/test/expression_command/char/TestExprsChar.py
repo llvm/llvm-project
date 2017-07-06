@@ -17,29 +17,14 @@ class ExprCharTestCase(TestBase):
 
         self.main_source = "main.cpp"
         self.main_source_spec = lldb.SBFileSpec(self.main_source)
-        self.exe = os.path.join(os.getcwd(), "a.out")
 
     def do_test(self, dictionary=None):
         """These basic expression commands should work as expected."""
         self.build(dictionary=dictionary)
 
-        target = self.dbg.CreateTarget(self.exe)
-        self.assertTrue(target)
-
-        breakpoint = target.BreakpointCreateBySourceRegex(
-            '// Break here', self.main_source_spec)
-        self.assertTrue(breakpoint)
-
-        # Launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple(
-            None, None, self.get_process_working_directory())
-        self.assertTrue(process)
-
-        threads = lldbutil.get_threads_stopped_at_breakpoint(
-            process, breakpoint)
-        self.assertEqual(len(threads), 1)
-
-        frame = threads[0].GetFrameAtIndex(0)
+        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(self, 
+                                          '// Break here', self.main_source_spec)
+        frame = thread.GetFrameAtIndex(0)
 
         value = frame.EvaluateExpression("foo(c)")
         self.assertTrue(value.IsValid())
