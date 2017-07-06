@@ -1991,7 +1991,8 @@ SDValue SelectionDAGLegalize::ExpandLibCall(RTLIB::Libcall LC, SDNode *Node,
                     std::move(Args))
       .setTailCall(isTailCall)
       .setSExtResult(isSigned)
-      .setZExtResult(!isSigned);
+      .setZExtResult(!isSigned)
+      .setIsPostTypeLegalization(true);
 
   std::pair<SDValue, SDValue> CallInfo = TLI.LowerCallTo(CLI);
 
@@ -2029,7 +2030,8 @@ SDValue SelectionDAGLegalize::ExpandLibCall(RTLIB::Libcall LC, EVT RetVT,
       .setLibCallee(TLI.getLibcallCallingConv(LC), RetTy, Callee,
                     std::move(Args))
       .setSExtResult(isSigned)
-      .setZExtResult(!isSigned);
+      .setZExtResult(!isSigned)
+      .setIsPostTypeLegalization(true);
 
   std::pair<SDValue,SDValue> CallInfo = TLI.LowerCallTo(CLI);
 
@@ -3565,16 +3567,10 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
         SDValue Args[] = { HiLHS, LHS, HiRHS, RHS };
         Ret = ExpandLibCall(LC, WideVT, Args, 4, isSigned, dl);
       }
-      BottomHalf = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, VT, Ret,
-                               DAG.getIntPtrConstant(0, dl));
-      TopHalf = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, VT, Ret,
-                            DAG.getIntPtrConstant(1, dl));
-      // Ret is a node with an illegal type. Because such things are not
-      // generally permitted during this phase of legalization, make sure the
-      // node has no more uses. The above EXTRACT_ELEMENT nodes should have been
-      // folded.
-      assert(Ret->use_empty() &&
-             "Unexpected uses of illegally type from expanded lib call.");
+      assert(Ret.getOpcode() == ISD::MERGE_VALUES &&
+             "Ret value is a collection of constituent nodes holding result.");
+      BottomHalf = Ret.getOperand(0);
+      TopHalf = Ret.getOperand(1);
     }
 
     if (isSigned) {

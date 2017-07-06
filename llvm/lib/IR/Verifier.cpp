@@ -2955,8 +2955,7 @@ void Verifier::visitICmpInst(ICmpInst &IC) {
   Assert(Op0Ty->isIntOrIntVectorTy() || Op0Ty->getScalarType()->isPointerTy(),
          "Invalid operand types for ICmp instruction", &IC);
   // Check that the predicate is valid.
-  Assert(IC.getPredicate() >= CmpInst::FIRST_ICMP_PREDICATE &&
-             IC.getPredicate() <= CmpInst::LAST_ICMP_PREDICATE,
+  Assert(IC.isIntPredicate(),
          "Invalid predicate in ICmp instruction!", &IC);
 
   visitInstruction(IC);
@@ -2972,8 +2971,7 @@ void Verifier::visitFCmpInst(FCmpInst &FC) {
   Assert(Op0Ty->isFPOrFPVectorTy(),
          "Invalid operand types for FCmp instruction", &FC);
   // Check that the predicate is valid.
-  Assert(FC.getPredicate() >= CmpInst::FIRST_FCMP_PREDICATE &&
-             FC.getPredicate() <= CmpInst::LAST_FCMP_PREDICATE,
+  Assert(FC.isFPPredicate(),
          "Invalid predicate in FCmp instruction!", &FC);
 
   visitInstruction(FC);

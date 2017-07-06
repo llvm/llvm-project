@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "StreamUtil.h"
+#include "FormatUtil.h"
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
@@ -18,10 +19,12 @@
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Native/TpiStream.h"
 
-namespace llvm {
-namespace pdb {
-void discoverStreamPurposes(PDBFile &File,
-                            SmallVectorImpl<std::string> &Purposes) {
+using namespace llvm;
+using namespace llvm::pdb;
+
+void llvm::pdb::discoverStreamPurposes(PDBFile &File,
+                                       SmallVectorImpl<std::string> &Purposes,
+                                       uint32_t MaxLen) {
 
   // It's OK if we fail to load some of these streams, we still attempt to print
   // what we can.
@@ -54,70 +57,67 @@ void discoverStreamPurposes(PDBFile &File,
   for (uint16_t StreamIdx = 0; StreamIdx < StreamCount; ++StreamIdx) {
     std::string Value;
     if (StreamIdx == OldMSFDirectory)
-      Value = "Old MSF Directory";
+      Value = truncateStringBack("Old MSF Directory", MaxLen);
     else if (StreamIdx == StreamPDB)
-      Value = "PDB Stream";
+      Value = truncateStringBack("PDB Stream", MaxLen);
     else if (StreamIdx == StreamDBI)
-      Value = "DBI Stream";
+      Value = truncateStringBack("DBI Stream", MaxLen);
     else if (StreamIdx == StreamTPI)
-      Value = "TPI Stream";
+      Value = truncateStringBack("TPI Stream", MaxLen);
     else if (StreamIdx == StreamIPI)
-      Value = "IPI Stream";
+      Value = truncateStringBack("IPI Stream", MaxLen);
     else if (Dbi && StreamIdx == Dbi->getGlobalSymbolStreamIndex())
-      Value = "Global Symbol Hash";
+      Value = truncateStringBack("Global Symbol Hash", MaxLen);
     else if (Dbi && StreamIdx == Dbi->getPublicSymbolStreamIndex())
-      Value = "Public Symbol Hash";
+      Value = truncateStringBack("Public Symbol Hash", MaxLen);
     else if (Dbi && StreamIdx == Dbi->getSymRecordStreamIndex())
-      Value = "Public Symbol Records";
+      Value = truncateStringBack("Public Symbol Records", MaxLen);
     else if (Tpi && StreamIdx == Tpi->getTypeHashStreamIndex())
-      Value = "TPI Hash";
+      Value = truncateStringBack("TPI Hash", MaxLen);
     else if (Tpi && StreamIdx == Tpi->getTypeHashStreamAuxIndex())
-      Value = "TPI Aux Hash";
+      Value = truncateStringBack("TPI Aux Hash", MaxLen);
     else if (Ipi && StreamIdx == Ipi->getTypeHashStreamIndex())
-      Value = "IPI Hash";
+      Value = truncateStringBack("IPI Hash", MaxLen);
     else if (Ipi && StreamIdx == Ipi->getTypeHashStreamAuxIndex())
-      Value = "IPI Aux Hash";
+      Value = truncateStringBack("IPI Aux Hash", MaxLen);
     else if (Dbi &&
              StreamIdx == Dbi->getDebugStreamIndex(DbgHeaderType::Exception))
-      Value = "Exception Data";
+      Value = truncateStringBack("Exception Data", MaxLen);
     else if (Dbi && StreamIdx == Dbi->getDebugStreamIndex(DbgHeaderType::Fixup))
-      Value = "Fixup Data";
+      Value = truncateStringBack("Fixup Data", MaxLen);
     else if (Dbi && StreamIdx == Dbi->getDebugStreamIndex(DbgHeaderType::FPO))
-      Value = "FPO Data";
+      Value = truncateStringBack("FPO Data", MaxLen);
     else if (Dbi &&
              StreamIdx == Dbi->getDebugStreamIndex(DbgHeaderType::NewFPO))
-      Value = "New FPO Data";
+      Value = truncateStringBack("New FPO Data", MaxLen);
     else if (Dbi &&
              StreamIdx == Dbi->getDebugStreamIndex(DbgHeaderType::OmapFromSrc))
-      Value = "Omap From Source Data";
+      Value = truncateStringBack("Omap From Source Data", MaxLen);
     else if (Dbi &&
              StreamIdx == Dbi->getDebugStreamIndex(DbgHeaderType::OmapToSrc))
-      Value = "Omap To Source Data";
+      Value = truncateStringBack("Omap To Source Data", MaxLen);
     else if (Dbi && StreamIdx == Dbi->getDebugStreamIndex(DbgHeaderType::Pdata))
-      Value = "Pdata";
+      Value = truncateStringBack("Pdata", MaxLen);
     else if (Dbi &&
              StreamIdx == Dbi->getDebugStreamIndex(DbgHeaderType::SectionHdr))
-      Value = "Section Header Data";
+      Value = truncateStringBack("Section Header Data", MaxLen);
     else if (Dbi &&
              StreamIdx ==
                  Dbi->getDebugStreamIndex(DbgHeaderType::SectionHdrOrig))
-      Value = "Section Header Original Data";
+      Value = truncateStringBack("Section Header Original Data", MaxLen);
     else if (Dbi &&
              StreamIdx == Dbi->getDebugStreamIndex(DbgHeaderType::TokenRidMap))
-      Value = "Token Rid Data";
+      Value = truncateStringBack("Token Rid Data", MaxLen);
     else if (Dbi && StreamIdx == Dbi->getDebugStreamIndex(DbgHeaderType::Xdata))
-      Value = "Xdata";
+      Value = truncateStringBack("Xdata", MaxLen);
     else {
       auto ModIter = ModStreams.find(StreamIdx);
       auto NSIter = NamedStreams.find(StreamIdx);
       if (ModIter != ModStreams.end()) {
-        Value = "Module \"";
-        Value += ModIter->second.getModuleName();
-        Value += "\"";
+        Value = truncateQuotedNameFront(
+            "Module", ModIter->second.getModuleName(), MaxLen);
       } else if (NSIter != NamedStreams.end()) {
-        Value = "Named Stream \"";
-        Value += NSIter->second;
-        Value += "\"";
+        Value = truncateQuotedNameBack("Named Stream", NSIter->second, MaxLen);
       } else {
         Value = "???";
       }
@@ -134,6 +134,4 @@ void discoverStreamPurposes(PDBFile &File,
     consumeError(Ipi.takeError());
   if (!Info)
     consumeError(Info.takeError());
-}
-}
 }

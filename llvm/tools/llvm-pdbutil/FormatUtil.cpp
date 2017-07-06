@@ -16,6 +16,47 @@
 using namespace llvm;
 using namespace llvm::pdb;
 
+std::string llvm::pdb::truncateStringBack(StringRef S, uint32_t MaxLen) {
+  if (MaxLen == 0 || S.size() <= MaxLen || S.size() <= 3)
+    return S;
+
+  assert(MaxLen >= 3);
+  uint32_t FinalLen = std::min<size_t>(S.size(), MaxLen - 3);
+  S = S.take_front(FinalLen);
+  return std::string(S) + std::string("...");
+}
+
+std::string llvm::pdb::truncateStringFront(StringRef S, uint32_t MaxLen) {
+  if (MaxLen == 0 || S.size() <= MaxLen || S.size() <= 3)
+    return S;
+
+  assert(MaxLen >= 3);
+  S = S.take_back(MaxLen - 3);
+  return std::string("...") + std::string(S);
+}
+
+std::string llvm::pdb::truncateQuotedNameFront(StringRef Label, StringRef Name,
+                                               uint32_t MaxLen) {
+  uint32_t RequiredExtraChars = Label.size() + 1 + 2;
+  if (MaxLen == 0 || RequiredExtraChars + Name.size() <= MaxLen)
+    return formatv("{0} \"{1}\"", Label, Name).str();
+
+  assert(MaxLen >= RequiredExtraChars);
+  std::string TN = truncateStringFront(Name, MaxLen - RequiredExtraChars);
+  return formatv("{0} \"{1}\"", Label, TN).str();
+}
+
+std::string llvm::pdb::truncateQuotedNameBack(StringRef Label, StringRef Name,
+                                              uint32_t MaxLen) {
+  uint32_t RequiredExtraChars = Label.size() + 1 + 2;
+  if (MaxLen == 0 || RequiredExtraChars + Name.size() <= MaxLen)
+    return formatv("{0} \"{1}\"", Label, Name).str();
+
+  assert(MaxLen >= RequiredExtraChars);
+  std::string TN = truncateStringBack(Name, MaxLen - RequiredExtraChars);
+  return formatv("{0} \"{1}\"", Label, TN).str();
+}
+
 std::string llvm::pdb::typesetItemList(ArrayRef<std::string> Opts,
                                        uint32_t IndentLevel, uint32_t GroupSize,
                                        StringRef Sep) {
