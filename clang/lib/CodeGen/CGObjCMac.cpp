@@ -1680,7 +1680,10 @@ struct NullReturnState {
 
   /// Complete the null-return operation.  It is valid to call this
   /// regardless of whether 'init' has been called.
-  RValue complete(CodeGenFunction &CGF, RValue result, QualType resultType,
+  RValue complete(CodeGenFunction &CGF,
+                  ReturnValueSlot returnSlot,
+                  RValue result,
+                  QualType resultType,
                   const CallArgList &CallArgs,
                   const ObjCMethodDecl *Method) {
     // If we never had to do a null-check, just use the raw result.
@@ -1747,7 +1750,8 @@ struct NullReturnState {
     // memory or (2) agg values in registers.
     if (result.isAggregate()) {
       assert(result.isAggregate() && "null init of non-aggregate result?");
-      CGF.EmitNullInitialization(result.getAggregateAddress(), resultType);
+      if (!returnSlot.isUnused())
+        CGF.EmitNullInitialization(result.getAggregateAddress(), resultType);
       if (contBB) CGF.EmitBlock(contBB);
       return result;
     }
@@ -2166,7 +2170,7 @@ CGObjCCommonMac::EmitMessageSend(CodeGen::CodeGenFunction &CGF,
     llvm::CallSite(CallSite).setDoesNotReturn();
   }
 
-  return nullReturn.complete(CGF, rvalue, ResultType, CallArgs,
+  return nullReturn.complete(CGF, Return, rvalue, ResultType, CallArgs,
                              RequiresNullCheck ? Method : nullptr);
 }
 
@@ -7089,7 +7093,7 @@ CGObjCNonFragileABIMac::EmitVTableMessageSend(CodeGenFunction &CGF,
   CGCallee callee(CGCalleeInfo(), calleePtr);
 
   RValue result = CGF.EmitCall(MSI.CallInfo, callee, returnSlot, args);
-  return nullReturn.complete(CGF, result, resultType, formalArgs,
+  return nullReturn.complete(CGF, returnSlot, result, resultType, formalArgs,
                              requiresnullCheck ? method : nullptr);
 }
 
