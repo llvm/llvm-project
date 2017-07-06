@@ -321,3 +321,5 @@ add_subdirectory(src)
 if (LIBUNWIND_INCLUDE_DOCS)
   add_subdirectory(docs)
 endif()
+
+add_subdirectory(test)

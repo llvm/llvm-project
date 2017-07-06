@@ -428,7 +428,8 @@ unsigned HexagonToolChain::getOptimizationLevel(
 }
 
 void HexagonToolChain::addClangTargetOptions(const ArgList &DriverArgs,
-                                             ArgStringList &CC1Args) const {
+                                             ArgStringList &CC1Args,
+                                             Action::OffloadKind) const {
   if (DriverArgs.hasArg(options::OPT_ffp_contract))
     return;
   unsigned OptLevel = getOptimizationLevel(DriverArgs);

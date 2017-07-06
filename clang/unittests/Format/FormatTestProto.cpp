@@ -199,11 +199,11 @@ TEST_F(FormatTestProto, FormatsOptions) {
                "};");
   verifyFormat("option (MyProto.options) = {\n"
                "  field_c: \"OK\"\n"
-               "  msg_field{field_d: 123}\n"
+               "  msg_field {field_d: 123}\n"
                "};");
   verifyFormat("option (MyProto.options) = {\n"
                "  field_a: OK\n"
-               "  field_b{field_c: OK}\n"
+               "  field_b {field_c: OK}\n"
                "  field_d: OKOKOK\n"
                "  field_e: OK\n"
                "}");
@@ -216,7 +216,7 @@ TEST_F(FormatTestProto, FormatsOptions) {
 
   verifyFormat("option (MyProto.options) = {\n"
                "  field_a: OK\n"
-               "  field_b<field_c: OK>\n"
+               "  field_b <field_c: OK>\n"
                "  field_d: OKOKOK\n"
                "  field_e: OK\n"
                "}");
@@ -255,7 +255,7 @@ TEST_F(FormatTestProto, FormatsOptions) {
 
   verifyFormat("option (MyProto.options) = <\n"
                "  field_a: \"OK\"\n"
-               "  msg_field<\n"
+               "  msg_field <\n"
                "    field_b: OK\n"
                "    field_c: OK\n"
                "    field_d: OK\n"
@@ -267,7 +267,7 @@ TEST_F(FormatTestProto, FormatsOptions) {
 
   verifyFormat("option (MyProto.options) = <\n"
                "  field_a: \"OK\"\n"
-               "  msg_field<\n"
+               "  msg_field <\n"
                "    field_b: OK,\n"
                "    field_c: OK,\n"
                "    field_d: OK,\n"
@@ -303,7 +303,7 @@ TEST_F(FormatTestProto, FormatsOptions) {
 
   verifyFormat("option (MyProto.options) = <\n"
                "  field_a: \"OK\"\n"
-               "  msg_field{\n"
+               "  msg_field {\n"
                "    field_b: OK\n"
                "    field_c: OK\n"
                "    field_d: OK\n"
@@ -315,7 +315,7 @@ TEST_F(FormatTestProto, FormatsOptions) {
 
   verifyFormat("option (MyProto.options) = {\n"
                "  field_a: \"OK\"\n"
-               "  msg_field<\n"
+               "  msg_field <\n"
                "    field_b: OK\n"
                "    field_c: OK\n"
                "    field_d: OK\n"
@@ -339,18 +339,18 @@ TEST_F(FormatTestProto, FormatsOptions) {
 
   verifyFormat("option (MyProto.options) = <\n"
                "  field_a: \"OK\"\n"
-               "  msg_field{\n"
+               "  msg_field {\n"
                "    field_b: OK\n"
                "    field_c: OK\n"
                "    field_d: OK\n"
-               "    msg_field<\n"
+               "    msg_field <\n"
                "      field_A: 1\n"
                "      field_B: 2\n"
                "      field_C: 3\n"
                "      field_D: 4\n"
                "      field_E: 5\n"
                "    >\n"
-               "    msg_field<field_A: 1 field_B: 2 field_C: 3 field_D: 4>\n"
+               "    msg_field <field_A: 1 field_B: 2 field_C: 3 field_D: 4>\n"
                "    field_e: OK\n"
                "    field_f: OK\n"
                "  }\n"

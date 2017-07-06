@@ -1,0 +1,25 @@
+@AUTO_GEN_COMMENT@
+config.cxx_under_test           = "@LIBUNWIND_COMPILER@"
+config.project_obj_root         = "@CMAKE_BINARY_DIR@"
+config.libunwind_src_root       = "@LIBUNWIND_SOURCE_DIR@"
+config.libunwind_obj_root       = "@LIBUNWIND_BINARY_DIR@"
+config.abi_library_path         = "@LIBUNWIND_LIBRARY_DIR@"
+config.libcxx_src_root          = "@LIBUNWIND_LIBCXX_PATH@"
+config.libunwind_headers        = "@LIBUNWIND_SOURCE_DIR@/include"
+config.cxx_library_root         = "@LIBUNWIND_LIBCXX_LIBRARY_PATH@"
+config.llvm_unwinder            = "@LIBUNWIND_USE_LLVM_UNWINDER@"
+config.enable_threads           = "@LIBUNWIND_ENABLE_THREADS@"
+config.use_sanitizer            = "@LLVM_USE_SANITIZER@"
+config.enable_32bit             = "@LIBUNWIND_BUILD_32_BITS@"
+config.target_info              = "@LIBUNWIND_TARGET_INFO@"
+config.executor                 = "@LIBUNWIND_EXECUTOR@"
+config.libunwind_shared         = "@LIBUNWIND_ENABLE_SHARED@"
+config.enable_shared            = "@LIBCXX_ENABLE_SHARED@"
+config.enable_exceptions        = "@LIBUNWIND_ENABLE_EXCEPTIONS@"
+config.host_triple              = "@LLVM_HOST_TRIPLE@"
+config.target_triple            = "@TARGET_TRIPLE@"
+config.use_target               = len("@LIBUNWIND_TARGET_TRIPLE@") > 0
+config.cxx_ext_threads          = "@LIBUNWIND_BUILD_EXTERNAL_THREAD_LIBRARY@"
+
+# Let the main config do the real work.
+lit_config.load_config(config, "@LIBUNWIND_SOURCE_DIR@/test/lit.cfg")

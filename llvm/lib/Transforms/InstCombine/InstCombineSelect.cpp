@@ -868,8 +868,8 @@ Instruction *InstCombiner::foldSPFofSPF(Instruction *Inner,
 /// icmp instruction with zero, and we have an 'and' with the non-constant value
 /// and a power of two we can turn the select into a shift on the result of the
 /// 'and'.
-static Value *foldSelectICmpAnd(const SelectInst &SI, ConstantInt *TrueVal,
-                                ConstantInt *FalseVal,
+static Value *foldSelectICmpAnd(const SelectInst &SI, APInt TrueVal,
+                                APInt FalseVal,
                                 InstCombiner::BuilderTy *Builder) {
   const ICmpInst *IC = dyn_cast<ICmpInst>(SI.getCondition());
   if (!IC || !IC->isEquality() || !SI.getType()->isIntegerTy())
@@ -886,38 +886,35 @@ static Value *foldSelectICmpAnd(const SelectInst &SI, ConstantInt *TrueVal,
   // If both select arms are non-zero see if we have a select of the form
   // 'x ? 2^n + C : C'. Then we can offset both arms by C, use the logic
   // for 'x ? 2^n : 0' and fix the thing up at the end.
-  ConstantInt *Offset = nullptr;
-  if (!TrueVal->isZero() && !FalseVal->isZero()) {
-    if ((TrueVal->getValue() - FalseVal->getValue()).isPowerOf2())
+  APInt Offset(TrueVal.getBitWidth(), 0);
+  if (!TrueVal.isNullValue() && !FalseVal.isNullValue()) {
+    if ((TrueVal - FalseVal).isPowerOf2())
       Offset = FalseVal;
-    else if ((FalseVal->getValue() - TrueVal->getValue()).isPowerOf2())
+    else if ((FalseVal - TrueVal).isPowerOf2())
       Offset = TrueVal;
     else
       return nullptr;
 
     // Adjust TrueVal and FalseVal to the offset.
-    TrueVal = ConstantInt::get(Builder->getContext(),
-                               TrueVal->getValue() - Offset->getValue());
-    FalseVal = ConstantInt::get(Builder->getContext(),
-                                FalseVal->getValue() - Offset->getValue());
+    TrueVal -= Offset;
+    FalseVal -= Offset;
   }
 
   // Make sure the mask in the 'and' and one of the select arms is a power of 2.
   if (!AndRHS->getValue().isPowerOf2() ||
-      (!TrueVal->getValue().isPowerOf2() &&
-       !FalseVal->getValue().isPowerOf2()))
+      (!TrueVal.isPowerOf2() && !FalseVal.isPowerOf2()))
     return nullptr;
 
   // Determine which shift is needed to transform result of the 'and' into the
   // desired result.
-  ConstantInt *ValC = !TrueVal->isZero() ? TrueVal : FalseVal;
-  unsigned ValZeros = ValC->getValue().logBase2();
+  const APInt &ValC = !TrueVal.isNullValue() ? TrueVal : FalseVal;
+  unsigned ValZeros = ValC.logBase2();
   unsigned AndZeros = AndRHS->getValue().logBase2();
 
   // If types don't match we can still convert the select by introducing a zext
   // or a trunc of the 'and'. The trunc case requires that all of the truncated
   // bits are zero, we can figure that out by looking at the 'and' mask.
-  if (AndZeros >= ValC->getBitWidth())
+  if (AndZeros >= ValC.getBitWidth())
     return nullptr;
 
   Value *V = Builder->CreateZExtOrTrunc(LHS, SI.getType());
@@ -928,14 +925,14 @@ static Value *foldSelectICmpAnd(const SelectInst &SI, ConstantInt *TrueVal,
 
   // Okay, now we know that everything is set up, we just don't know whether we
   // have a icmp_ne or icmp_eq and whether the true or false val is the zero.
-  bool ShouldNotVal = !TrueVal->isZero();
+  bool ShouldNotVal = !TrueVal.isNullValue();
   ShouldNotVal ^= IC->getPredicate() == ICmpInst::ICMP_NE;
   if (ShouldNotVal)
     V = Builder->CreateXor(V, ValC);
 
   // Apply an offset if needed.
-  if (Offset)
-    V = Builder->CreateAdd(V, Offset);
+  if (!Offset.isNullValue())
+    V = Builder->CreateAdd(V, ConstantInt::get(V->getType(), Offset));
   return V;
 }
 
@@ -1250,7 +1247,8 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
 
   if (ConstantInt *TrueValC = dyn_cast<ConstantInt>(TrueVal))
     if (ConstantInt *FalseValC = dyn_cast<ConstantInt>(FalseVal))
-      if (Value *V = foldSelectICmpAnd(SI, TrueValC, FalseValC, Builder))
+      if (Value *V = foldSelectICmpAnd(SI, TrueValC->getValue(),
+                                       FalseValC->getValue(), Builder))
         return replaceInstUsesWith(SI, V);
 
   // See if we are selecting two values based on a comparison of the two values.

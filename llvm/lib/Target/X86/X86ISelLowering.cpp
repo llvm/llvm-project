@@ -27714,6 +27714,22 @@ static bool combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
                     /*AddTo*/ true);
       return true;
     }
+
+    if (matchVectorShuffleAsINSERTQ(IntMaskVT, V1, V2, Mask, BitLen, BitIdx)) {
+      if (Depth == 1 && Root.getOpcode() == X86ISD::INSERTQI)
+        return false; // Nothing to do!
+      V1 = DAG.getBitcast(IntMaskVT, V1);
+      DCI.AddToWorklist(V1.getNode());
+      V2 = DAG.getBitcast(IntMaskVT, V2);
+      DCI.AddToWorklist(V2.getNode());
+      Res = DAG.getNode(X86ISD::INSERTQI, DL, IntMaskVT, V1, V2,
+                        DAG.getConstant(BitLen, DL, MVT::i8),
+                        DAG.getConstant(BitIdx, DL, MVT::i8));
+      DCI.AddToWorklist(Res.getNode());
+      DCI.CombineTo(Root.getNode(), DAG.getBitcast(RootVT, Res),
+                    /*AddTo*/ true);
+      return true;
+    }
   }
 
   // Don't try to re-form single instruction chains under any circumstances now

@@ -61,13 +61,13 @@ TEST_F(FormatTestTextProto, SupportsMessageFields) {
                "  field_e: 23\n"
                "}");
 
-  verifyFormat("msg_field{}");
+  verifyFormat("msg_field {}");
 
-  verifyFormat("msg_field{field_a: A}");
+  verifyFormat("msg_field {field_a: A}");
 
-  verifyFormat("msg_field{field_a: \"OK\" field_b: 123}");
+  verifyFormat("msg_field {field_a: \"OK\" field_b: 123}");
 
-  verifyFormat("msg_field{\n"
+  verifyFormat("msg_field {\n"
                "  field_a: 1\n"
                "  field_b: OK\n"
                "  field_c: \"OK\"\n"
@@ -78,12 +78,12 @@ TEST_F(FormatTestTextProto, SupportsMessageFields) {
                "  field_h: 1234.567e-89\n"
                "}");
 
-  verifyFormat("msg_field: {msg_field{field_a: 1}}");
+  verifyFormat("msg_field: {msg_field {field_a: 1}}");
 
   verifyFormat("id: \"ala.bala\"\n"
-               "item{type: ITEM_A rank: 1 score: 90.0}\n"
-               "item{type: ITEM_B rank: 2 score: 70.5}\n"
-               "item{\n"
+               "item {type: ITEM_A rank: 1 score: 90.0}\n"
+               "item {type: ITEM_B rank: 2 score: 70.5}\n"
+               "item {\n"
                "  type: ITEM_A\n"
                "  rank: 3\n"
                "  score: 20.0\n"
@@ -113,13 +113,13 @@ TEST_F(FormatTestTextProto, AvoidsTopLevelBinPacking) {
 
   verifyFormat("a: {\n"
                "  field_a: OK\n"
-               "  field_b{field_c: OK}\n"
+               "  field_b {field_c: OK}\n"
                "  field_d: OKOKOK\n"
                "  field_e: OK\n"
                "}");
 
   verifyFormat("field_a: OK,\n"
-               "field_b{field_c: OK},\n"
+               "field_b {field_c: OK},\n"
                "field_d: OKOKOK,\n"
                "field_e: OK");
 }
@@ -134,33 +134,33 @@ TEST_F(FormatTestTextProto, AddsNewlinesAfterTrailingComments) {
                "}");
 
   verifyFormat("field_a: OK\n"
-               "msg_field{\n"
+               "msg_field {\n"
                "  field_b: OK  // Comment\n"
                "}");
 }
 
 TEST_F(FormatTestTextProto, SupportsAngleBracketMessageFields) {
   // Single-line tests
-  verifyFormat("msg_field<>");
+  verifyFormat("msg_field <>");
   verifyFormat("msg_field: <>");
-  verifyFormat("msg_field<field_a: OK>");
+  verifyFormat("msg_field <field_a: OK>");
   verifyFormat("msg_field: <field_a: 123>");
-  verifyFormat("msg_field<field_a<>>");
-  verifyFormat("msg_field<field_a<field_b<>>>");
-  verifyFormat("msg_field: <field_a<field_b: <>>>");
-  verifyFormat("msg_field<field_a: OK, field_b: \"OK\">");
-  verifyFormat("msg_field<field_a: OK field_b: <>, field_c: OK>");
-  verifyFormat("msg_field<field_a{field_b: 1}, field_c: <field_d: 2>>");
+  verifyFormat("msg_field <field_a <>>");
+  verifyFormat("msg_field <field_a <field_b <>>>");
+  verifyFormat("msg_field: <field_a <field_b: <>>>");
+  verifyFormat("msg_field <field_a: OK, field_b: \"OK\">");
+  verifyFormat("msg_field <field_a: OK field_b: <>, field_c: OK>");
+  verifyFormat("msg_field <field_a {field_b: 1}, field_c: <field_d: 2>>");
   verifyFormat("msg_field: <field_a: OK, field_b: \"OK\">");
   verifyFormat("msg_field: <field_a: OK field_b: <>, field_c: OK>");
-  verifyFormat("msg_field: <field_a{field_b: 1}, field_c: <field_d: 2>>");
+  verifyFormat("msg_field: <field_a {field_b: 1}, field_c: <field_d: 2>>");
   verifyFormat("field_a: \"OK\", msg_field: <field_b: 123>, field_c: {}");
-  verifyFormat("field_a<field_b: 1>, msg_field: <field_b: 123>, field_c<>");
-  verifyFormat("field_a<field_b: 1> msg_field: <field_b: 123> field_c<>");
-  verifyFormat("field<field<field: <>>, field<>> field: <field: 1>");
+  verifyFormat("field_a <field_b: 1>, msg_field: <field_b: 123>, field_c <>");
+  verifyFormat("field_a <field_b: 1> msg_field: <field_b: 123> field_c <>");
+  verifyFormat("field <field <field: <>>, field <>> field: <field: 1>");
 
   // Multiple lines tests
-  verifyFormat("msg_field<\n"
+  verifyFormat("msg_field <\n"
                "  field_a: OK\n"
                "  field_b: \"OK\"\n"
                "  field_c: 1\n"
@@ -175,25 +175,25 @@ TEST_F(FormatTestTextProto, SupportsAngleBracketMessageFields) {
                "msg_field: <field_d: 12>");
 
   verifyFormat("field_a: OK,\n"
-               "field_b<field_c: OK>,\n"
+               "field_b <field_c: OK>,\n"
                "field_d: <12.5>,\n"
                "field_e: OK");
 
   verifyFormat("field_a: OK\n"
-               "field_b<field_c: OK>\n"
+               "field_b <field_c: OK>\n"
                "field_d: <12.5>\n"
                "field_e: OKOKOK");
 
-  verifyFormat("msg_field<\n"
+  verifyFormat("msg_field <\n"
                "  field_a: OK,\n"
-               "  field_b<field_c: OK>,\n"
+               "  field_b <field_c: OK>,\n"
                "  field_d: <12.5>,\n"
                "  field_e: OK\n"
                ">");
 
-  verifyFormat("msg_field<\n"
+  verifyFormat("msg_field <\n"
                "  field_a: <field: OK>,\n"
-               "  field_b<field_c: OK>,\n"
+               "  field_b <field_c: OK>,\n"
                "  field_d: <12.5>,\n"
                "  field_e: OK,\n"
                ">");
@@ -206,7 +206,7 @@ TEST_F(FormatTestTextProto, SupportsAngleBracketMessageFields) {
                "  field_g: OK\n"
                ">");
 
-  verifyFormat("field_a{\n"
+  verifyFormat("field_a {\n"
                "  field_d: ok\n"
                "  field_b: <field_c: 1>\n"
                "  field_d: ok\n"
@@ -221,16 +221,16 @@ TEST_F(FormatTestTextProto, SupportsAngleBracketMessageFields) {
                "}");
 
   verifyFormat("field_a: <f1: 1, f2: <>>\n"
-               "field_b<\n"
+               "field_b <\n"
                "  field_b1: <>\n"
                "  field_b2: ok,\n"
                "  field_b3: <\n"
-               "    field_x{}  // Comment\n"
+               "    field_x {}  // Comment\n"
                "    field_y: {field_z: 1}\n"
                "    field_w: ok\n"
                "  >\n"
-               "  field{\n"
-               "    field_x<>  // Comment\n"
+               "  field {\n"
+               "    field_x <>  // Comment\n"
                "    field_y: <field_z: 1>\n"
                "    field_w: ok\n"
                "    msg_field: <\n"
@@ -244,8 +244,7 @@ TEST_F(FormatTestTextProto, SupportsAngleBracketMessageFields) {
                "  }\n"
                ">\n"
                "field: OK,\n"
-               "field_c<field<field<>>>");
+               "field_c <field <field <>>>");
 }
-
 } // end namespace tooling
 } // end namespace clang
