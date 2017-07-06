@@ -27,6 +27,7 @@
 #include "sanitizer_common/sanitizer_allocator_internal.h"
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_common.h"
+#include "sanitizer_common/sanitizer_errno.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
 #include "sanitizer_common/sanitizer_libc.h"
 #include "sanitizer_common/sanitizer_linux.h"
@@ -48,14 +49,8 @@ DECLARE_REAL(SIZE_T, strnlen, const char *s, SIZE_T maxlen)
 DECLARE_REAL(void *, memcpy, void *dest, const void *src, uptr n)
 DECLARE_REAL(void *, memset, void *dest, int c, uptr n)
 
-#if SANITIZER_FREEBSD
-#define __errno_location __error
-#endif
-
 // True if this is a nested interceptor.
 static THREADLOCAL int in_interceptor_scope;
-
-extern "C" int *__errno_location(void);
 
 struct InterceptorScope {
   InterceptorScope() { ++in_interceptor_scope; }
@@ -915,7 +910,7 @@ INTERCEPTOR(void *, mmap, void *addr, SIZE_T length, int prot, int flags,
   ENSURE_MSAN_INITED();
   if (addr && !MEM_IS_APP(addr)) {
     if (flags & map_fixed) {
-      *__errno_location() = errno_EINVAL;
+      errno = errno_EINVAL;
       return (void *)-1;
     } else {
       addr = nullptr;
@@ -933,7 +928,7 @@ INTERCEPTOR(void *, mmap64, void *addr, SIZE_T length, int prot, int flags,
   ENSURE_MSAN_INITED();
   if (addr && !MEM_IS_APP(addr)) {
     if (flags & map_fixed) {
-      *__errno_location() = errno_EINVAL;
+      errno = errno_EINVAL;
       return (void *)-1;
     } else {
       addr = nullptr;

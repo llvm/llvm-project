@@ -23,7 +23,7 @@ namespace llvm {
 namespace pdb {
 
 std::string truncateStringBack(StringRef S, uint32_t MaxLen);
-static std::string truncateStringFront(StringRef S, uint32_t MaxLen);
+std::string truncateStringFront(StringRef S, uint32_t MaxLen);
 std::string truncateQuotedNameFront(StringRef Label, StringRef Name,
                                     uint32_t MaxLen);
 std::string truncateQuotedNameBack(StringRef Label, StringRef Name,
@@ -40,7 +40,7 @@ std::string truncateQuotedNameBack(StringRef Label, StringRef Name,
   case Enum::X:                                                                \
     return Ret;
 
-template <typename T> static std::string formatUnknownEnum(T Value) {
+template <typename T> std::string formatUnknownEnum(T Value) {
   return formatv("unknown ({0})",
                  static_cast<typename std::underlying_type<T>::type>(Value))
       .str();
