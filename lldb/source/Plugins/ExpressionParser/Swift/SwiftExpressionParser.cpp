@@ -969,7 +969,8 @@ static void CountLocals(
       SwiftASTManipulator::VariableInfo variable_info(
           target_type,
           ast_context.GetASTContext()->getIdentifier(overridden_name),
-          metadata_sp);
+          metadata_sp,
+          swift::VarDecl::Specifier::Var);
 
       local_variables.push_back(variable_info);
 
