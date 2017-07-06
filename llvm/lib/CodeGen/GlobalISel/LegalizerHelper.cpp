@@ -106,10 +106,12 @@ llvm::createLibcall(MachineIRBuilder &MIRBuilder, RTLIB::Libcall Libcall,
   auto &CLI = *MIRBuilder.getMF().getSubtarget().getCallLowering();
   auto &TLI = *MIRBuilder.getMF().getSubtarget().getTargetLowering();
   const char *Name = TLI.getLibcallName(Libcall);
+
   MIRBuilder.getMF().getFrameInfo().setHasCalls(true);
   if (!CLI.lowerCall(MIRBuilder, TLI.getLibcallCallingConv(Libcall),
                      MachineOperand::CreateES(Name), Result, Args))
     return LegalizerHelper::UnableToLegalize;
+
   return LegalizerHelper::Legalized;
 }
 

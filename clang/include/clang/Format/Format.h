@@ -1753,6 +1753,8 @@ inline StringRef getLanguageName(FormatStyle::LanguageKind Language) {
     return "JavaScript";
   case FormatStyle::LK_Proto:
     return "Proto";
+  case FormatStyle::LK_TextProto:
+    return "TextProto";
   default:
     return "Unknown";
   }

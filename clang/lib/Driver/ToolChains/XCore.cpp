@@ -124,7 +124,8 @@ void XCoreToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
 }
 
 void XCoreToolChain::addClangTargetOptions(const ArgList &DriverArgs,
-                                           ArgStringList &CC1Args) const {
+                                           ArgStringList &CC1Args,
+                                           Action::OffloadKind) const {
   CC1Args.push_back("-nostdsysteminc");
 }
 

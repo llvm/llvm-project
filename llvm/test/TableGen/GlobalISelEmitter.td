@@ -7,6 +7,10 @@ include "llvm/Target/Target.td"
 def MyTargetISA : InstrInfo;
 def MyTarget : Target { let InstructionSet = MyTargetISA; }
 
+let TargetPrefix = "mytarget" in {
+def int_mytarget_nop : Intrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrNoMem]>;
+}
+
 def R0 : Register<"r0"> { let Namespace = "MyTarget"; }
 def GPR32 : RegisterClass<"MyTarget", [i32], 32, (add R0)>;
 def GPR32Op : RegisterOperand<GPR32>;
@@ -156,9 +160,42 @@ def : Pat<(select GPR32:$src1, complex:$src2, complex:$src3),
 def ADD : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2),
             [(set GPR32:$dst, (add GPR32:$src1, GPR32:$src2))]>;
 
-//===- Test a nested instruction match. -----------------------------------===//
+//===- Test a simple pattern with an intrinsic. ---------------------------===//
+//
 
 // CHECK-LABEL: MatchTable2[] = {
+// CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
+// CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_INTRINSIC,
+// CHECK-NEXT:    // MIs[0] dst
+// CHECK-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/0, /*Type*/GILLT_s32,
+// CHECK-NEXT:    GIM_CheckRegBankForClass, /*MI*/0, /*Op*/0, /*RC*/MyTarget::GPR32RegClassID,
+// CHECK-NEXT:    // MIs[0] Operand 1
+// CHECK-NEXT:    GIM_CheckLiteralInt, /*MI*/0, /*Op*/1, [[ID:[0-9]+]],
+// CHECK-NEXT:    // MIs[0] src1
+// CHECK-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/2, /*Type*/GILLT_s32,
+// CHECK-NEXT:    GIM_CheckRegBankForClass, /*MI*/0, /*Op*/2, /*RC*/MyTarget::GPR32RegClassID,
+// CHECK-NEXT:    // (intrinsic_wo_chain:i32 [[ID]]:iPTR, GPR32:i32:$src1) => (MOV:i32 GPR32:i32:$src1)
+
+// CHECK-NEXT:    GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::MOV,
+// CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
+// CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/2, // src1
+// CHECK-NEXT:    GIR_MergeMemOperands, /*InsnID*/0,
+// CHECK-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
+// CHECK-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
+// CHECK-NEXT:    GIR_Done,
+// CHECK-NEXT:  };
+// CHECK-NEXT:  MIs.resize(1);
+// CHECK-NEXT:  DEBUG(dbgs() << "Processing MatchTable2\n");
+// CHECK-NEXT:  if (executeMatchTable(*this, OutMIs, State, MatcherInfo, MatchTable2, TII, MRI, TRI, RBI, AvailableFeatures)) {
+// CHECK-NEXT:    return true;
+// CHECK-NEXT:  }
+
+def MOV : I<(outs GPR32:$dst), (ins GPR32:$src1),
+            [(set GPR32:$dst, (int_mytarget_nop GPR32:$src1))]>;
+
+//===- Test a nested instruction match. -----------------------------------===//
+
+// CHECK-LABEL: MatchTable3[] = {
 // CHECK-NEXT:    GIM_CheckFeatures, GIFBS_HasA,
 // CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
 // CHECK-NEXT:    GIM_RecordInsn, /*DefineMI*/1, /*MI*/0, /*OpIdx*/1, // MIs[1]
@@ -194,13 +231,13 @@ def ADD : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2),
 // CHECK-NEXT:    GIR_Done,
 // CHECK-NEXT:  };
 // CHECK-NEXT:  MIs.resize(1);
-// CHECK-NEXT:  DEBUG(dbgs() << "Processing MatchTable2\n");
-// CHECK-NEXT:  if (executeMatchTable(*this, OutMIs, State, MatcherInfo, MatchTable2, TII, MRI, TRI, RBI, AvailableFeatures)) {
+// CHECK-NEXT:  DEBUG(dbgs() << "Processing MatchTable3\n");
+// CHECK-NEXT:  if (executeMatchTable(*this, OutMIs, State, MatcherInfo, MatchTable3, TII, MRI, TRI, RBI, AvailableFeatures)) {
 // CHECK-NEXT:    return true;
 // CHECK-NEXT:  }
 
 // We also get a second rule by commutativity.
-// CHECK-LABEL: MatchTable3[] = {
+// CHECK-LABEL: MatchTable4[] = {
 // CHECK-NEXT:    GIM_CheckFeatures, GIFBS_HasA,
 // CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
 // CHECK-NEXT:    GIM_RecordInsn, /*DefineMI*/1, /*MI*/0, /*OpIdx*/2,
@@ -236,8 +273,8 @@ def ADD : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2),
 // CHECK-NEXT:    GIR_Done,
 // CHECK-NEXT:  };
 // CHECK-NEXT:  MIs.resize(1);
-// CHECK-NEXT:  DEBUG(dbgs() << "Processing MatchTable3\n");
-// CHECK-NEXT:  if (executeMatchTable(*this, OutMIs, State, MatcherInfo, MatchTable3, TII, MRI, TRI, RBI, AvailableFeatures)) {
+// CHECK-NEXT:  DEBUG(dbgs() << "Processing MatchTable4\n");
+// CHECK-NEXT:  if (executeMatchTable(*this, OutMIs, State, MatcherInfo, MatchTable4, TII, MRI, TRI, RBI, AvailableFeatures)) {
 // CHECK-NEXT:    return true;
 // CHECK-NEXT:  }
 
@@ -248,7 +285,7 @@ def MULADD : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2, GPR32:$src3),
 
 //===- Test another simple pattern with regclass operands. ----------------===//
 
-// CHECK-LABEL: MatchTable4[] = {
+// CHECK-LABEL: MatchTable5[] = {
 // CHECK-NEXT:    GIM_CheckFeatures, GIFBS_HasA_HasB_HasC,
 // CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
 // CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_MUL,
@@ -272,8 +309,8 @@ def MULADD : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2, GPR32:$src3),
 // CHECK-NEXT:    GIR_Done,
 // CHECK-NEXT:  };
 // CHECK-NEXT:  MIs.resize(1);
-// CHECK-NEXT:  DEBUG(dbgs() << "Processing MatchTable4\n");
-// CHECK-NEXT:  if (executeMatchTable(*this, OutMIs, State, MatcherInfo, MatchTable4, TII, MRI, TRI, RBI, AvailableFeatures)) {
+// CHECK-NEXT:  DEBUG(dbgs() << "Processing MatchTable5\n");
+// CHECK-NEXT:  if (executeMatchTable(*this, OutMIs, State, MatcherInfo, MatchTable5, TII, MRI, TRI, RBI, AvailableFeatures)) {
 // CHECK-NEXT:    return true;
 // CHECK-NEXT:  }
 
@@ -283,7 +320,7 @@ def MUL : I<(outs GPR32:$dst), (ins GPR32:$src2, GPR32:$src1),
 
 //===- Test a more complex multi-instruction match. -----------------------===//
 
-// CHECK-LABEL: MatchTable5[] = {
+// CHECK-LABEL: MatchTable6[] = {
 // CHECK-NEXT:    GIM_CheckFeatures, GIFBS_HasA,
 // CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
 // CHECK-NEXT:    GIM_RecordInsn, /*DefineMI*/1, /*MI*/0, /*OpIdx*/1, // MIs[1]
@@ -331,8 +368,8 @@ def MUL : I<(outs GPR32:$dst), (ins GPR32:$src2, GPR32:$src1),
 // CHECK-NEXT:    GIR_Done,
 // CHECK-NEXT:  };
 // CHECK-NEXT:  MIs.resize(1);
-// CHECK-NEXT:  DEBUG(dbgs() << "Processing MatchTable5\n");
-// CHECK-NEXT:  if (executeMatchTable(*this, OutMIs, State, MatcherInfo, MatchTable5, TII, MRI, TRI, RBI, AvailableFeatures)) {
+// CHECK-NEXT:  DEBUG(dbgs() << "Processing MatchTable6\n");
+// CHECK-NEXT:  if (executeMatchTable(*this, OutMIs, State, MatcherInfo, MatchTable6, TII, MRI, TRI, RBI, AvailableFeatures)) {
 // CHECK-NEXT:    return true;
 // CHECK-NEXT:  }
 
@@ -344,7 +381,7 @@ def INSNBOB : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2, GPR32:$src3, G
 //===- Test a pattern with ComplexPattern operands. -----------------------===//
 //
 
-// CHECK-LABEL: MatchTable6[] = {
+// CHECK-LABEL: MatchTable7[] = {
 // CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
 // CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_SUB,
 // CHECK-NEXT:    // MIs[0] dst
@@ -367,8 +404,8 @@ def INSNBOB : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2, GPR32:$src3, G
 // CHECK-NEXT:    GIR_Done,
 // CHECK-NEXT:  };
 // CHECK-NEXT:  MIs.resize(1);
-// CHECK-NEXT:  DEBUG(dbgs() << "Processing MatchTable6\n");
-// CHECK-NEXT:  if (executeMatchTable(*this, OutMIs, State, MatcherInfo, MatchTable6, TII, MRI, TRI, RBI, AvailableFeatures)) {
+// CHECK-NEXT:  DEBUG(dbgs() << "Processing MatchTable7\n");
+// CHECK-NEXT:  if (executeMatchTable(*this, OutMIs, State, MatcherInfo, MatchTable7, TII, MRI, TRI, RBI, AvailableFeatures)) {
 // CHECK-NEXT:    return true;
 // CHECK-NEXT:  }
 
@@ -378,7 +415,7 @@ def : Pat<(sub GPR32:$src1, complex:$src2), (INSN1 GPR32:$src1, complex:$src2)>;
 //===- Test a simple pattern with a default operand. ----------------------===//
 //
 
-// CHECK-LABEL: MatchTable7[] = {
+// CHECK-LABEL: MatchTable8[] = {
 // CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
 // CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_XOR,
 // CHECK-NEXT:    // MIs[0] dst
@@ -401,8 +438,8 @@ def : Pat<(sub GPR32:$src1, complex:$src2), (INSN1 GPR32:$src1, complex:$src2)>;
 // CHECK-NEXT:    GIR_Done,
 // CHECK-NEXT:  };
 // CHECK-NEXT:  MIs.resize(1);
-// CHECK-NEXT:  DEBUG(dbgs() << "Processing MatchTable7\n");
-// CHECK-NEXT:  if (executeMatchTable(*this, OutMIs, State, MatcherInfo, MatchTable7, TII, MRI, TRI, RBI, AvailableFeatures)) {
+// CHECK-NEXT:  DEBUG(dbgs() << "Processing MatchTable8\n");
+// CHECK-NEXT:  if (executeMatchTable(*this, OutMIs, State, MatcherInfo, MatchTable8, TII, MRI, TRI, RBI, AvailableFeatures)) {
 // CHECK-NEXT:    return true;
 // CHECK-NEXT:  }
 
@@ -413,7 +450,7 @@ def XORI : I<(outs GPR32:$dst), (ins m1:$src2, GPR32:$src1),
 //===- Test a simple pattern with a default register operand. -------------===//
 //
 
-// CHECK-LABEL: MatchTable8[] = {
+// CHECK-LABEL: MatchTable9[] = {
 // CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
 // CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_XOR,
 // CHECK-NEXT:    // MIs[0] dst
@@ -436,8 +473,8 @@ def XORI : I<(outs GPR32:$dst), (ins m1:$src2, GPR32:$src1),
 // CHECK-NEXT:    GIR_Done,
 // CHECK-NEXT:  };
 // CHECK-NEXT:  MIs.resize(1);
-// CHECK-NEXT:  DEBUG(dbgs() << "Processing MatchTable8\n");
-// CHECK-NEXT:  if (executeMatchTable(*this, OutMIs, State, MatcherInfo, MatchTable8, TII, MRI, TRI, RBI, AvailableFeatures)) {
+// CHECK-NEXT:  DEBUG(dbgs() << "Processing MatchTable9\n");
+// CHECK-NEXT:  if (executeMatchTable(*this, OutMIs, State, MatcherInfo, MatchTable9, TII, MRI, TRI, RBI, AvailableFeatures)) {
 // CHECK-NEXT:    return true;
 // CHECK-NEXT:  }
 
@@ -448,7 +485,7 @@ def XOR : I<(outs GPR32:$dst), (ins Z:$src2, GPR32:$src1),
 //===- Test a simple pattern with a multiple default operands. ------------===//
 //
 
-// CHECK-LABEL: MatchTable9[] = {
+// CHECK-LABEL: MatchTable10[] = {
 // CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
 // CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_XOR,
 // CHECK-NEXT:    // MIs[0] dst
@@ -472,8 +509,8 @@ def XOR : I<(outs GPR32:$dst), (ins Z:$src2, GPR32:$src1),
 // CHECK-NEXT:    GIR_Done,
 // CHECK-NEXT:  };
 // CHECK-NEXT:  MIs.resize(1);
-// CHECK-NEXT:  DEBUG(dbgs() << "Processing MatchTable9\n");
-// CHECK-NEXT:  if (executeMatchTable(*this, OutMIs, State, MatcherInfo, MatchTable9, TII, MRI, TRI, RBI, AvailableFeatures)) {
+// CHECK-NEXT:  DEBUG(dbgs() << "Processing MatchTable10\n");
+// CHECK-NEXT:  if (executeMatchTable(*this, OutMIs, State, MatcherInfo, MatchTable10, TII, MRI, TRI, RBI, AvailableFeatures)) {
 // CHECK-NEXT:    return true;
 // CHECK-NEXT:  }
 
@@ -484,7 +521,7 @@ def XORlike : I<(outs GPR32:$dst), (ins m1Z:$src2, GPR32:$src1),
 //===- Test a simple pattern with multiple operands with defaults. --------===//
 //
 
-// CHECK-LABEL: MatchTable10[] = {
+// CHECK-LABEL: MatchTable11[] = {
 // CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
 // CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_XOR,
 // CHECK-NEXT:    // MIs[0] dst
@@ -509,8 +546,8 @@ def XORlike : I<(outs GPR32:$dst), (ins m1Z:$src2, GPR32:$src1),
 // CHECK-NEXT:    GIR_Done,
 // CHECK-NEXT:  };
 // CHECK-NEXT:  MIs.resize(1);
-// CHECK-NEXT:  DEBUG(dbgs() << "Processing MatchTable10\n");
-// CHECK-NEXT:  if (executeMatchTable(*this, OutMIs, State, MatcherInfo, MatchTable10, TII, MRI, TRI, RBI, AvailableFeatures)) {
+// CHECK-NEXT:  DEBUG(dbgs() << "Processing MatchTable11\n");
+// CHECK-NEXT:  if (executeMatchTable(*this, OutMIs, State, MatcherInfo, MatchTable11, TII, MRI, TRI, RBI, AvailableFeatures)) {
 // CHECK-NEXT:    return true;
 // CHECK-NEXT:  }
 
@@ -523,7 +560,7 @@ def XORManyDefaults : I<(outs GPR32:$dst), (ins m1Z:$src3, Z:$src2, GPR32:$src1)
 // This must precede the 3-register variants because constant immediates have
 // priority over register banks.
 
-// CHECK-LABEL: MatchTable11[] = {
+// CHECK-LABEL: MatchTable12[] = {
 // CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
 // CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_XOR,
 // CHECK-NEXT:    // MIs[0] dst
@@ -546,8 +583,8 @@ def XORManyDefaults : I<(outs GPR32:$dst), (ins m1Z:$src3, Z:$src2, GPR32:$src1)
 // CHECK-NEXT:    GIR_Done,
 // CHECK-NEXT:  };
 // CHECK-NEXT:  MIs.resize(1);
-// CHECK-NEXT:  DEBUG(dbgs() << "Processing MatchTable11\n");
-// CHECK-NEXT:  if (executeMatchTable(*this, OutMIs, State, MatcherInfo, MatchTable11, TII, MRI, TRI, RBI, AvailableFeatures)) {
+// CHECK-NEXT:  DEBUG(dbgs() << "Processing MatchTable12\n");
+// CHECK-NEXT:  if (executeMatchTable(*this, OutMIs, State, MatcherInfo, MatchTable12, TII, MRI, TRI, RBI, AvailableFeatures)) {
 // CHECK-NEXT:    return true;
 // CHECK-NEXT:  }
 
@@ -557,7 +594,7 @@ def : Pat<(not GPR32:$Wm), (ORN R0, GPR32:$Wm)>;
 //===- Test a COPY_TO_REGCLASS --------------------------------------------===//
 //
 
-// CHECK-LABEL: MatchTable12[] = {
+// CHECK-LABEL: MatchTable13[] = {
 // CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
 // CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_BITCAST,
 // CHECK-NEXT:    // MIs[0] dst
@@ -572,8 +609,8 @@ def : Pat<(not GPR32:$Wm), (ORN R0, GPR32:$Wm)>;
 // CHECK-NEXT:    GIR_Done,
 // CHECK-NEXT:  };
 // CHECK-NEXT:  MIs.resize(1);
-// CHECK-NEXT:  DEBUG(dbgs() << "Processing MatchTable12\n");
-// CHECK-NEXT:  if (executeMatchTable(*this, OutMIs, State, MatcherInfo, MatchTable12, TII, MRI, TRI, RBI, AvailableFeatures)) {
+// CHECK-NEXT:  DEBUG(dbgs() << "Processing MatchTable13\n");
+// CHECK-NEXT:  if (executeMatchTable(*this, OutMIs, State, MatcherInfo, MatchTable13, TII, MRI, TRI, RBI, AvailableFeatures)) {
 // CHECK-NEXT:    return true;
 // CHECK-NEXT:  }
 
@@ -582,7 +619,7 @@ def : Pat<(i32 (bitconvert FPR32:$src1)),
 
 //===- Test a simple pattern with just a leaf immediate. ------------------===//
 
-// CHECK-LABEL: MatchTable13[] = {
+// CHECK-LABEL: MatchTable14[] = {
 // CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
 // CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_CONSTANT,
 // CHECK-NEXT:    // MIs[0] dst
@@ -599,8 +636,8 @@ def : Pat<(i32 (bitconvert FPR32:$src1)),
 // CHECK-NEXT:    GIR_Done,
 // CHECK-NEXT:  };
 // CHECK-NEXT:  MIs.resize(1);
-// CHECK-NEXT:  DEBUG(dbgs() << "Processing MatchTable13\n");
-// CHECK-NEXT:  if (executeMatchTable(*this, OutMIs, State, MatcherInfo, MatchTable13, TII, MRI, TRI, RBI, AvailableFeatures)) {
+// CHECK-NEXT:  DEBUG(dbgs() << "Processing MatchTable14\n");
+// CHECK-NEXT:  if (executeMatchTable(*this, OutMIs, State, MatcherInfo, MatchTable14, TII, MRI, TRI, RBI, AvailableFeatures)) {
 // CHECK-NEXT:    return true;
 // CHECK-NEXT:  }
 
@@ -608,7 +645,7 @@ def MOV1 : I<(outs GPR32:$dst), (ins), [(set GPR32:$dst, 1)]>;
 
 //===- Test a pattern with an MBB operand. --------------------------------===//
 
-// CHECK-LABEL: MatchTable14[] = {
+// CHECK-LABEL: MatchTable15[] = {
 // CHECK-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/1,
 // CHECK-NEXT:    GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_BR,
 // CHECK-NEXT:    // MIs[0] target
@@ -619,8 +656,8 @@ def MOV1 : I<(outs GPR32:$dst), (ins), [(set GPR32:$dst, 1)]>;
 // CHECK-NEXT:    GIR_Done,
 // CHECK-NEXT:  };
 // CHECK-NEXT:  MIs.resize(1);
-// CHECK-NEXT:  DEBUG(dbgs() << "Processing MatchTable14\n");
-// CHECK-NEXT:  if (executeMatchTable(*this, OutMIs, State, MatcherInfo, MatchTable14, TII, MRI, TRI, RBI, AvailableFeatures)) {
+// CHECK-NEXT:  DEBUG(dbgs() << "Processing MatchTable15\n");
+// CHECK-NEXT:  if (executeMatchTable(*this, OutMIs, State, MatcherInfo, MatchTable15, TII, MRI, TRI, RBI, AvailableFeatures)) {
 // CHECK-NEXT:    return true;
 // CHECK-NEXT:  }
 

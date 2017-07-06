@@ -390,7 +390,8 @@ protected:
   bool isAlignedAllocationUnavailable() const;
 
   void addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
-                             llvm::opt::ArgStringList &CC1Args) const override;
+                             llvm::opt::ArgStringList &CC1Args,
+                             Action::OffloadKind DeviceOffloadKind) const override;
 
   StringRef getPlatformFamily() const;
   static StringRef getSDKName(StringRef isysroot);

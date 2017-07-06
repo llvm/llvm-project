@@ -5754,8 +5754,8 @@ bool SimplifyCFGOpt::SimplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder) {
   if (BasicBlock *Dom = BB->getSinglePredecessor()) {
     auto *PBI = dyn_cast_or_null<BranchInst>(Dom->getTerminator());
     if (PBI && PBI->isConditional() &&
-        PBI->getSuccessor(0) != PBI->getSuccessor(1) &&
-        (PBI->getSuccessor(0) == BB || PBI->getSuccessor(1) == BB)) {
+        PBI->getSuccessor(0) != PBI->getSuccessor(1)) {
+      assert(PBI->getSuccessor(0) == BB || PBI->getSuccessor(1) == BB);
       bool CondIsFalse = PBI->getSuccessor(1) == BB;
       Optional<bool> Implication = isImpliedCondition(
           PBI->getCondition(), BI->getCondition(), DL, CondIsFalse);
