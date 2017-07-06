@@ -714,7 +714,7 @@ AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
 
     swift::Type object_type =
         swift::Type((swift::TypeBase *)(imported_self_type.GetOpaqueQualType()))
-            ->getLValueOrInOutObjectType();
+            ->getWithoutSpecifierType();
 
     if (object_type.getPointer() &&
         (object_type.getPointer() != imported_self_type.GetOpaqueQualType()))
