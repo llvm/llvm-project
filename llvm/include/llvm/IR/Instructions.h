@@ -1101,8 +1101,7 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(GetElementPtrInst, Value)
 /// Represent an integer comparison operator.
 class ICmpInst: public CmpInst {
   void AssertOK() {
-    assert(getPredicate() >= CmpInst::FIRST_ICMP_PREDICATE &&
-           getPredicate() <= CmpInst::LAST_ICMP_PREDICATE &&
+    assert(isIntPredicate() &&
            "Invalid ICmp predicate value");
     assert(getOperand(0)->getType() == getOperand(1)->getType() &&
           "Both operands to ICmp instruction are not of the same type!");
@@ -1244,8 +1243,7 @@ public:
 /// Represents a floating point comparison operator.
 class FCmpInst: public CmpInst {
   void AssertOK() {
-    assert(getPredicate() <= FCmpInst::LAST_FCMP_PREDICATE &&
-           "Invalid FCmp predicate value");
+    assert(isFPPredicate() && "Invalid FCmp predicate value");
     assert(getOperand(0)->getType() == getOperand(1)->getType() &&
            "Both operands to FCmp instruction are not of the same type!");
     // Check that the operands are the right type

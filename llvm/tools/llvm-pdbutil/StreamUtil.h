@@ -18,7 +18,8 @@ namespace llvm {
 namespace pdb {
 class PDBFile;
 void discoverStreamPurposes(PDBFile &File,
-                            SmallVectorImpl<std::string> &Purposes);
+                            SmallVectorImpl<std::string> &Purposes,
+                            uint32_t MaxLen = 0);
 }
 }
 

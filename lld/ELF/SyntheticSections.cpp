@@ -1071,10 +1071,11 @@ template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
     return; // Already finalized.
 
   this->Link = InX::DynStrTab->getParent()->SectionIndex;
-  if (In<ELFT>::RelaDyn->getParent()->Size > 0) {
+  if (In<ELFT>::RelaDyn->getParent() && !In<ELFT>::RelaDyn->empty()) {
     bool IsRela = Config->IsRela;
     add({IsRela ? DT_RELA : DT_REL, In<ELFT>::RelaDyn});
-    add({IsRela ? DT_RELASZ : DT_RELSZ, In<ELFT>::RelaDyn->getParent()->Size});
+    add({IsRela ? DT_RELASZ : DT_RELSZ, In<ELFT>::RelaDyn->getParent(),
+         Entry::SecSize});
     add({IsRela ? DT_RELAENT : DT_RELENT,
          uint64_t(IsRela ? sizeof(Elf_Rela) : sizeof(Elf_Rel))});
 
@@ -1087,9 +1088,9 @@ template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
         add({IsRela ? DT_RELACOUNT : DT_RELCOUNT, NumRelativeRels});
     }
   }
-  if (In<ELFT>::RelaPlt->getParent()->Size > 0) {
+  if (In<ELFT>::RelaPlt->getParent() && !In<ELFT>::RelaPlt->empty()) {
     add({DT_JMPREL, In<ELFT>::RelaPlt});
-    add({DT_PLTRELSZ, In<ELFT>::RelaPlt->getParent()->Size});
+    add({DT_PLTRELSZ, In<ELFT>::RelaPlt->getParent(), Entry::SecSize});
     switch (Config->EMachine) {
     case EM_MIPS:
       add({DT_MIPS_PLTGOT, In<ELFT>::GotPlt});

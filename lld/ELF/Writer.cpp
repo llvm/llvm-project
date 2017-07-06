@@ -79,7 +79,6 @@ private:
   void addStartEndSymbols();
   void addStartStopSymbols(OutputSection *Sec);
   uint64_t getEntryAddr();
-  OutputSection *findSection(StringRef Name);
   OutputSection *findSectionInScript(StringRef Name);
   OutputSectionCommand *findSectionCommand(StringRef Name);
 
@@ -186,9 +185,8 @@ template <class ELFT> void Writer<ELFT>::run() {
     // output sections by default rules. We still need to give the
     // linker script a chance to run, because it might contain
     // non-SECTIONS commands such as ASSERT.
-    createSections();
     Script->processCommands(Factory);
-    Script->fabricateDefaultCommands();
+    createSections();
   }
   clearOutputSections();
 
@@ -870,20 +868,19 @@ template <class ELFT> void Writer<ELFT>::addReservedSymbols() {
 
 // Sort input sections by section name suffixes for
 // __attribute__((init_priority(N))).
-static void sortInitFini(OutputSection *S) {
-  if (S)
-    reinterpret_cast<OutputSection *>(S)->sortInitFini();
+static void sortInitFini(OutputSectionCommand *Cmd) {
+  if (Cmd)
+    Cmd->sortInitFini();
 }
 
 // Sort input sections by the special rule for .ctors and .dtors.
-static void sortCtorsDtors(OutputSection *S) {
-  if (S)
-    reinterpret_cast<OutputSection *>(S)->sortCtorsDtors();
+static void sortCtorsDtors(OutputSectionCommand *Cmd) {
+  if (Cmd)
+    Cmd->sortCtorsDtors();
 }
 
 // Sort input sections using the list provided by --symbol-ordering-file.
-template <class ELFT>
-static void sortBySymbolsOrder(ArrayRef<OutputSection *> OutputSections) {
+template <class ELFT> static void sortBySymbolsOrder() {
   if (Config->SymbolOrderingFile.empty())
     return;
 
@@ -908,9 +905,9 @@ static void sortBySymbolsOrder(ArrayRef<OutputSection *> OutputSections) {
   }
 
   // Sort sections by priority.
-  for (OutputSection *Base : OutputSections)
-    if (auto *Sec = dyn_cast<OutputSection>(Base))
-      Sec->sort([&](InputSectionBase *S) { return SectionOrder.lookup(S); });
+  for (BaseCommand *Base : Script->Opt.Commands)
+    if (auto *Cmd = dyn_cast<OutputSectionCommand>(Base))
+      Cmd->sort([&](InputSectionBase *S) { return SectionOrder.lookup(S); });
 }
 
 template <class ELFT>
@@ -940,11 +937,12 @@ template <class ELFT> void Writer<ELFT>::createSections() {
     if (IS)
       Factory.addInputSec(IS, getOutputSectionName(IS->Name));
 
-  sortBySymbolsOrder<ELFT>(OutputSections);
-  sortInitFini(findSection(".init_array"));
-  sortInitFini(findSection(".fini_array"));
-  sortCtorsDtors(findSection(".ctors"));
-  sortCtorsDtors(findSection(".dtors"));
+  Script->fabricateDefaultCommands();
+  sortBySymbolsOrder<ELFT>();
+  sortInitFini(findSectionCommand(".init_array"));
+  sortInitFini(findSectionCommand(".fini_array"));
+  sortCtorsDtors(findSectionCommand(".ctors"));
+  sortCtorsDtors(findSectionCommand(".dtors"));
 }
 
 // We want to find how similar two ranks are.
@@ -1286,12 +1284,6 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     Out::ProgramHeaders->Size = sizeof(Elf_Phdr) * Phdrs.size();
   }
 
-  // Compute the size of .rela.dyn and .rela.plt early since we need
-  // them to populate .dynamic.
-  for (SyntheticSection *SS : {In<ELFT>::RelaDyn, In<ELFT>::RelaPlt})
-    if (SS->getParent() && !SS->empty())
-      SS->getParent()->assignOffsets();
-
   // Dynamic section must be the last one in this list and dynamic
   // symbol table section (DynSymTab) must be the first one.
   applySynthetic({InX::DynSymTab,    InX::Bss,           InX::BssRelRo,
@@ -1405,13 +1397,6 @@ template <class ELFT> OutputSection *Writer<ELFT>::findSectionInScript(StringRef
   return nullptr;
 }
 
-template <class ELFT> OutputSection *Writer<ELFT>::findSection(StringRef Name) {
-  for (OutputSection *Sec : OutputSections)
-    if (Sec->Name == Name)
-      return Sec;
-  return nullptr;
-}
-
 static bool needsPtLoad(OutputSection *Sec) {
   if (!(Sec->Flags & SHF_ALLOC))
     return false;
@@ -1473,7 +1458,7 @@ template <class ELFT> std::vector<PhdrEntry> Writer<ELFT>::createPhdrs() {
     // different flags or is loaded at a discontiguous address using AT linker
     // script command.
     uint64_t NewFlags = computeFlags(Sec->getPhdrFlags());
-    if (Script->hasLMA(Sec) || Flags != NewFlags) {
+    if (Cmd->LMAExpr || Flags != NewFlags) {
       Load = AddHdr(PT_LOAD, NewFlags);
       Flags = NewFlags;
     }
@@ -1541,7 +1526,7 @@ template <class ELFT> std::vector<PhdrEntry> Writer<ELFT>::createPhdrs() {
   for (OutputSectionCommand *Cmd : OutputSectionCommands) {
     OutputSection *Sec = Cmd->Sec;
     if (Sec->Type == SHT_NOTE) {
-      if (!Note || Script->hasLMA(Sec))
+      if (!Note || Cmd->LMAExpr)
         Note = AddHdr(PT_NOTE, PF_R);
       Note->add(Sec);
     } else {
