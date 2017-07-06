@@ -191,7 +191,8 @@ void internal_sigfillset(__sanitizer_sigset_t *set) { sigfillset(set); }
 
 uptr internal_sigprocmask(int how, __sanitizer_sigset_t *set,
                           __sanitizer_sigset_t *oldset) {
-  return sigprocmask(how, set, oldset);
+  // Don't use sigprocmask here, because it affects all threads.
+  return pthread_sigmask(how, set, oldset);
 }
 
 // Doesn't call pthread_atfork() handlers (but not available on 10.6).

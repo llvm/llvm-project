@@ -16,12 +16,12 @@
 ;        B[i] += 42;
 ;    }
 
-; KERNEL: ; ModuleID = 'kernel_0'
-; KERNEL-NEXT: source_filename = "kernel_0"
+; KERNEL: ; ModuleID = 'FUNC_kernel_params_only_some_arrays_KERNEL_0'
+; KERNEL-NEXT: source_filename = "FUNC_kernel_params_only_some_arrays_KERNEL_0"
 ; KERNEL-NEXT: target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v32:32:32-v64:64:64-v128:128:128-n16:32:64"
 ; KERNEL-NEXT: target triple = "nvptx64-nvidia-cuda"
 
-; KERNEL: define ptx_kernel void @kernel_0(i8 addrspace(1)* %MemRef_A)
+; KERNEL: define ptx_kernel void @FUNC_kernel_params_only_some_arrays_KERNEL_0(i8 addrspace(1)* %MemRef_A)
 ; KERNEL-NEXT:   entry:
 ; KERNEL-NEXT:     %0 = call i32 @llvm.nvvm.read.ptx.sreg.ctaid.x()
 ; KERNEL-NEXT:     %b0 = zext i32 %0 to i64
@@ -31,12 +31,12 @@
 ; KERNEL:     ret void
 ; KERNEL-NEXT: }
 
-; KERNEL: ; ModuleID = 'kernel_1'
-; KERNEL-NEXT: source_filename = "kernel_1"
+; KERNEL: ; ModuleID = 'FUNC_kernel_params_only_some_arrays_KERNEL_1'
+; KERNEL-NEXT: source_filename = "FUNC_kernel_params_only_some_arrays_KERNEL_1"
 ; KERNEL-NEXT: target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v32:32:32-v64:64:64-v128:128:128-n16:32:64"
 ; KERNEL-NEXT: target triple = "nvptx64-nvidia-cuda"
 
-; KERNEL: define ptx_kernel void @kernel_1(i8 addrspace(1)* %MemRef_B)
+; KERNEL: define ptx_kernel void @FUNC_kernel_params_only_some_arrays_KERNEL_1(i8 addrspace(1)* %MemRef_B)
 ; KERNEL-NEXT:   entry:
 ; KERNEL-NEXT:     %0 = call i32 @llvm.nvvm.read.ptx.sreg.ctaid.x()
 ; KERNEL-NEXT:     %b0 = zext i32 %0 to i64

@@ -59,7 +59,7 @@ Status ProcessorTraceMonitor::StartTrace(lldb::pid_t pid, lldb::tid_t tid,
 
   uint64_t numpages = static_cast<uint64_t>(
       llvm::PowerOf2Floor((bufsize + page_size - 1) / page_size));
-  numpages = std::max(1ul, numpages);
+  numpages = std::max<uint64_t>(1, numpages);
   bufsize = page_size * numpages;
 
   numpages = static_cast<uint64_t>(
