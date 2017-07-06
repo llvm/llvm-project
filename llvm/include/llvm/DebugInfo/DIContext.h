@@ -204,7 +204,9 @@ public:
   /// need to be consistent with the addresses used to query the DIContext and
   /// the output of this function should be deterministic, i.e. repeated calls with
   /// the same Sec should give the same address.
-  virtual uint64_t getSectionLoadAddress(const object::SectionRef &Sec) const = 0;
+  virtual uint64_t getSectionLoadAddress(const object::SectionRef &Sec) const {
+    return 0;
+  }
 
   /// If conveniently available, return the content of the given Section.
   ///
@@ -221,10 +223,26 @@ public:
     return false;
   }
 
+  // FIXME: This is untested and unused anywhere in the LLVM project, it's
+  // used/needed by Julia (an external project). It should have some coverage
+  // (at least tests, but ideally example functionality).
   /// Obtain a copy of this LoadedObjectInfo.
-  ///
-  /// The caller is responsible for deallocation once the copy is no longer required.
   virtual std::unique_ptr<LoadedObjectInfo> clone() const = 0;
+};
+
+template <typename Derived, typename Base = LoadedObjectInfo>
+struct LoadedObjectInfoHelper : Base {
+protected:
+  LoadedObjectInfoHelper(const LoadedObjectInfoHelper &) = default;
+  LoadedObjectInfoHelper() = default;
+
+public:
+  template <typename... Ts>
+  LoadedObjectInfoHelper(Ts &&... Args) : Base(std::forward<Ts>(Args)...) {}
+
+  std::unique_ptr<llvm::LoadedObjectInfo> clone() const override {
+    return llvm::make_unique<Derived>(static_cast<const Derived &>(*this));
+  }
 };
 
 } // end namespace llvm

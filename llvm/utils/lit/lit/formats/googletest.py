@@ -78,7 +78,10 @@ class GoogleTest(TestFormat):
                             litConfig, localConfig):
         source_path = testSuite.getSourcePath(path_in_suite)
         for subdir in self.test_sub_dirs:
-            for fn in lit.util.listdir_files(os.path.join(source_path, subdir),
+            dir_path = os.path.join(source_path, subdir)
+            if not os.path.isdir(dir_path):
+                continue
+            for fn in lit.util.listdir_files(dir_path,
                                              suffixes={self.test_suffix}):
                 # Discover the tests in this executable.
                 execpath = os.path.join(source_path, subdir, fn)

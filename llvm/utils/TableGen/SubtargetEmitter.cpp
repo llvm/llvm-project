@@ -375,7 +375,7 @@ EmitStageAndOperandCycleData(raw_ostream &OS,
     if (FUs.empty())
       continue;
 
-    const std::string &Name = ProcModel.ItinsDef->getName();
+    StringRef Name = ProcModel.ItinsDef->getName();
     OS << "\n// Functional units for \"" << Name << "\"\n"
        << "namespace " << Name << "FU {\n";
 
@@ -429,7 +429,7 @@ EmitStageAndOperandCycleData(raw_ostream &OS,
     if (!ProcModel.hasItineraries())
       continue;
 
-    const std::string &Name = ProcModel.ItinsDef->getName();
+    StringRef Name = ProcModel.ItinsDef->getName();
 
     ItinList.resize(SchedModels.numInstrSchedClasses());
     assert(ProcModel.ItinDefList.size() == ItinList.size() && "bad Itins");
@@ -546,9 +546,6 @@ EmitItineraries(raw_ostream &OS,
     if (!ItinsDefSet.insert(ItinsDef).second)
       continue;
 
-    // Get processor itinerary name
-    const std::string &Name = ItinsDef->getName();
-
     // Get the itinerary list for the processor.
     assert(ProcItinListsIter != ProcItinLists.end() && "bad iterator");
     std::vector<InstrItinerary> &ItinList = *ProcItinListsIter;
@@ -562,7 +559,7 @@ EmitItineraries(raw_ostream &OS,
     OS << "static const llvm::InstrItinerary ";
 
     // Begin processor itinerary table
-    OS << Name << "[] = {\n";
+    OS << ItinsDef->getName() << "[] = {\n";
 
     // For each itinerary class in CodeGenSchedClass::Index order.
     for (unsigned j = 0, M = ItinList.size(); j < M; ++j) {

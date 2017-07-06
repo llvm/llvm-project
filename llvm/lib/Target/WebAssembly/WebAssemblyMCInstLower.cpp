@@ -112,8 +112,6 @@ MCOperand WebAssemblyMCInstLower::LowerSymbolOperand(MCSymbol *Sym,
   MCSymbolRefExpr::VariantKind VK =
       IsFunc ? MCSymbolRefExpr::VK_WebAssembly_FUNCTION
              : MCSymbolRefExpr::VK_None;
-  if (!isa<MCSymbolELF>(Sym))
-    cast<MCSymbolWasm>(Sym)->setIsFunction(IsFunc);
 
   const MCExpr *Expr = MCSymbolRefExpr::create(Sym, VK, Ctx);
 

@@ -188,6 +188,13 @@ PassManagerBuilder::~PassManagerBuilder() {
 static ManagedStatic<SmallVector<std::pair<PassManagerBuilder::ExtensionPointTy,
    PassManagerBuilder::ExtensionFn>, 8> > GlobalExtensions;
 
+/// Check if GlobalExtensions is constructed and not empty.
+/// Since GlobalExtensions is a managed static, calling 'empty()' will trigger
+/// the construction of the object.
+static bool GlobalExtensionsNotEmpty() {
+  return GlobalExtensions.isConstructed() && !GlobalExtensions->empty();
+}
+
 void PassManagerBuilder::addGlobalExtension(
     PassManagerBuilder::ExtensionPointTy Ty,
     PassManagerBuilder::ExtensionFn Fn) {
@@ -200,9 +207,12 @@ void PassManagerBuilder::addExtension(ExtensionPointTy Ty, ExtensionFn Fn) {
 
 void PassManagerBuilder::addExtensionsToPM(ExtensionPointTy ETy,
                                            legacy::PassManagerBase &PM) const {
-  for (unsigned i = 0, e = GlobalExtensions->size(); i != e; ++i)
-    if ((*GlobalExtensions)[i].first == ETy)
-      (*GlobalExtensions)[i].second(*this, PM);
+  if (GlobalExtensionsNotEmpty()) {
+    for (auto &Ext : *GlobalExtensions) {
+      if (Ext.first == ETy)
+        Ext.second(*this, PM);
+    }
+  }
   for (unsigned i = 0, e = Extensions.size(); i != e; ++i)
     if (Extensions[i].first == ETy)
       Extensions[i].second(*this, PM);
@@ -415,7 +425,7 @@ void PassManagerBuilder::populateModulePassManager(
     // builds. The function merging pass is
     if (MergeFunctions)
       MPM.add(createMergeFunctionsPass());
-    else if (!GlobalExtensions->empty() || !Extensions.empty())
+    else if (GlobalExtensionsNotEmpty() || !Extensions.empty())
       MPM.add(createBarrierNoopPass());
 
     addExtensionsToPM(EP_EnabledOnOptLevel0, MPM);

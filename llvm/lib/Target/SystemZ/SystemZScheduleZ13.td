@@ -15,7 +15,7 @@
 def Z13Model : SchedMachineModel {
 
     let UnsupportedFeatures = Arch11UnsupportedFeatures.List;
-    
+
     let IssueWidth = 8;
     let MicroOpBufferSize = 60;     // Issue queues
     let LoadLatency = 1;            // Optimistic load latency.
@@ -159,7 +159,7 @@ def : InstRW<[FXb], (instregex "CondReturn$")>;
 // Select instructions
 //===----------------------------------------------------------------------===//
 
-// Select pseudo 
+// Select pseudo
 def : InstRW<[FXa], (instregex "Select(32|64|32Mux)$")>;
 
 // CondStore pseudos
@@ -224,7 +224,7 @@ def : InstRW<[LSU, Lat30, GroupAlone], (instregex "MVST$")>;
 // Conditional move instructions
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[FXa, Lat2], (instregex "LOCRMux$")>;
+def : InstRW<[FXa, Lat2], (instregex "LOC(R|HI)Mux$")>;
 def : InstRW<[FXa, Lat2], (instregex "LOC(G|FH)?R(Asm.*)?$")>;
 def : InstRW<[FXa, Lat2], (instregex "LOC(G|H)?HI(Asm.*)?$")>;
 def : InstRW<[FXa, LSU, Lat6], (instregex "LOC(G|FH|Mux)?(Asm.*)?$")>;
@@ -694,8 +694,8 @@ def : InstRW<[FXa, Lat6, GroupAlone], (instregex "FLOGR$")>;
 def : InstRW<[FXa, Lat3], (instregex "POPCNT$")>;
 
 // Extend
-def : InstRW<[FXa], (instregex "AEXT128_64$")>;
-def : InstRW<[FXa], (instregex "ZEXT128_(32|64)$")>;
+def : InstRW<[FXa], (instregex "AEXT128$")>;
+def : InstRW<[FXa], (instregex "ZEXT128$")>;
 
 // String instructions
 def : InstRW<[FXa, LSU, Lat30], (instregex "SRST$")>;
@@ -1271,32 +1271,43 @@ def : InstRW<[VecStr, Lat5], (instregex "VTM$")>;
 // Vector: Floating-point arithmetic
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[VecBF2], (instregex "VCD(G|GB|LG|LGB)$")>;
-def : InstRW<[VecBF], (instregex "WCD(GB|LGB)$")>;
+// Conversion and rounding
+def : InstRW<[VecBF2], (instregex "VCD(L)?G$")>;
+def : InstRW<[VecBF2], (instregex "VCD(L)?GB$")>;
+def : InstRW<[VecBF], (instregex "WCD(L)?GB$")>;
 def : InstRW<[VecBF2], (instregex "VC(L)?GD$")>;
-def : InstRW<[VecBF2], (instregex "VFADB$")>;
-def : InstRW<[VecBF], (instregex "WFADB$")>;
-def : InstRW<[VecBF2], (instregex "VCGDB$")>;
-def : InstRW<[VecBF], (instregex "WCGDB$")>;
-def : InstRW<[VecBF2], (instregex "VF(I|M|A|S)$")>;
-def : InstRW<[VecBF2], (instregex "VF(I|M|S)DB$")>;
-def : InstRW<[VecBF], (instregex "WF(I|M|S)DB$")>;
-def : InstRW<[VecBF2], (instregex "VCLGDB$")>;
-def : InstRW<[VecBF], (instregex "WCLGDB$")>;
-def : InstRW<[VecXsPm], (instregex "VFL(C|N|P)DB$")>;
-def : InstRW<[VecXsPm], (instregex "WFL(C|N|P)DB$")>;
-def : InstRW<[VecBF2], (instregex "VFM(A|S)$")>;
-def : InstRW<[VecBF2], (instregex "VFM(A|S)DB$")>;
-def : InstRW<[VecBF], (instregex "WFM(A|S)DB$")>;
-def : InstRW<[VecXsPm], (instregex "VFPSO$")>;
-def : InstRW<[VecXsPm], (instregex "(V|W)FPSODB$")>;
-def : InstRW<[VecXsPm, Lat4], (instregex "VFTCI(DB)?$")>;
-def : InstRW<[VecXsPm, Lat4], (instregex "WFTCIDB$")>;
+def : InstRW<[VecBF2], (instregex "VC(L)?GDB$")>;
+def : InstRW<[VecBF], (instregex "WC(L)?GDB$")>;
 def : InstRW<[VecBF2], (instregex "VL(DE|ED)$")>;
 def : InstRW<[VecBF2], (instregex "VL(DE|ED)B$")>;
 def : InstRW<[VecBF], (instregex "WL(DE|ED)B$")>;
+def : InstRW<[VecBF2], (instregex "VFI$")>;
+def : InstRW<[VecBF2], (instregex "VFIDB$")>;
+def : InstRW<[VecBF], (instregex "WFIDB$")>;
 
-// divide / square root
+// Sign operations
+def : InstRW<[VecXsPm], (instregex "VFPSO$")>;
+def : InstRW<[VecXsPm], (instregex "(V|W)FPSODB$")>;
+def : InstRW<[VecXsPm], (instregex "(V|W)FL(C|N|P)DB$")>;
+
+// Test data class
+def : InstRW<[VecXsPm, Lat4], (instregex "VFTCI$")>;
+def : InstRW<[VecXsPm, Lat4], (instregex "(V|W)FTCIDB$")>;
+
+// Add / subtract
+def : InstRW<[VecBF2], (instregex "VF(A|S)$")>;
+def : InstRW<[VecBF2], (instregex "VF(A|S)DB$")>;
+def : InstRW<[VecBF], (instregex "WF(A|S)DB$")>;
+
+// Multiply / multiply-and-add/subtract
+def : InstRW<[VecBF2], (instregex "VFM$")>;
+def : InstRW<[VecBF2], (instregex "VFMDB$")>;
+def : InstRW<[VecBF], (instregex "WFMDB$")>;
+def : InstRW<[VecBF2], (instregex "VFM(A|S)$")>;
+def : InstRW<[VecBF2], (instregex "VFM(A|S)DB$")>;
+def : InstRW<[VecBF], (instregex "WFM(A|S)DB$")>;
+
+// Divide / square root
 def : InstRW<[VecFPd], (instregex "VFD$")>;
 def : InstRW<[VecFPd], (instregex "(V|W)FDDB$")>;
 def : InstRW<[VecFPd], (instregex "VFSQ$")>;
@@ -1308,10 +1319,10 @@ def : InstRW<[VecFPd], (instregex "(V|W)FSQDB$")>;
 
 def : InstRW<[VecXsPm], (instregex "VFC(E|H|HE)$")>;
 def : InstRW<[VecXsPm], (instregex "VFC(E|H|HE)DB$")>;
-def : InstRW<[VecXsPm, Lat4], (instregex "WF(C|K)$")>;
 def : InstRW<[VecXsPm], (instregex "WFC(E|H|HE)DB$")>;
 def : InstRW<[VecXsPm, Lat4], (instregex "VFC(E|H|HE)DBS$")>;
 def : InstRW<[VecXsPm, Lat4], (instregex "WFC(E|H|HE)DBS$")>;
+def : InstRW<[VecXsPm, Lat4], (instregex "WF(C|K)$")>;
 def : InstRW<[VecXsPm, Lat4], (instregex "WF(C|K)DB$")>;
 
 //===----------------------------------------------------------------------===//

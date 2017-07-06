@@ -195,8 +195,18 @@ bool X86CallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   SmallVector<ArgInfo, 8> SplitArgs;
   unsigned Idx = 0;
   for (auto &Arg : F.args()) {
+
+    // TODO: handle not simple cases.
+    if (Arg.hasAttribute(Attribute::ByVal) ||
+        Arg.hasAttribute(Attribute::InReg) ||
+        Arg.hasAttribute(Attribute::StructRet) ||
+        Arg.hasAttribute(Attribute::SwiftSelf) ||
+        Arg.hasAttribute(Attribute::SwiftError) ||
+        Arg.hasAttribute(Attribute::Nest))
+      return false;
+
     ArgInfo OrigArg(VRegs[Idx], Arg.getType());
-    setArgFlags(OrigArg, Idx + 1, DL, F);
+    setArgFlags(OrigArg, Idx + AttributeList::FirstArgIndex, DL, F);
     if (!splitToValueTypes(OrigArg, SplitArgs, DL, MRI,
                            [&](ArrayRef<unsigned> Regs) {
                              MIRBuilder.buildMerge(VRegs[Idx], Regs);

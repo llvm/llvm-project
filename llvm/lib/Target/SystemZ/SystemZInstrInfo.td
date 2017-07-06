@@ -677,6 +677,22 @@ let Predicates = [FeatureLoadAndTrap] in {
   def LLGTAT : UnaryRXY<"llgtat", 0xE39C, null_frag, GR64, 4>;
 }
 
+// Extend GR64s to GR128s.
+let usesCustomInserter = 1 in
+  def ZEXT128 : Pseudo<(outs GR128:$dst), (ins GR64:$src), []>;
+
+//===----------------------------------------------------------------------===//
+// "Any" extensions
+//===----------------------------------------------------------------------===//
+
+// Use subregs to populate the "don't care" bits in a 32-bit to 64-bit anyext.
+def : Pat<(i64 (anyext GR32:$src)),
+          (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GR32:$src, subreg_l32)>;
+
+// Extend GR64s to GR128s.
+let usesCustomInserter = 1 in
+  def AEXT128 : Pseudo<(outs GR128:$dst), (ins GR64:$src), []>;
+
 //===----------------------------------------------------------------------===//
 // Truncations
 //===----------------------------------------------------------------------===//
@@ -1216,13 +1232,17 @@ def  MSG  : BinaryRXY<"msg",  0xE30C, mul, GR64, load, 8>;
 // Multiplication of a register, producing two results.
 def MR   : BinaryRR <"mr",   0x1C,   null_frag, GR128, GR32>;
 def MLR  : BinaryRRE<"mlr",  0xB996, null_frag, GR128, GR32>;
-def MLGR : BinaryRRE<"mlgr", 0xB986, z_umul_lohi64, GR128, GR64>;
+def MLGR : BinaryRRE<"mlgr", 0xB986, null_frag, GR128, GR64>;
+def : Pat<(z_umul_lohi GR64:$src1, GR64:$src2),
+          (MLGR (AEXT128 GR64:$src1), GR64:$src2)>;
 
 // Multiplication of memory, producing two results.
 def M   : BinaryRX <"m",   0x5C,   null_frag, GR128, load, 4>;
 def MFY : BinaryRXY<"mfy", 0xE35C, null_frag, GR128, load, 4>;
 def ML  : BinaryRXY<"ml",  0xE396, null_frag, GR128, load, 4>;
-def MLG : BinaryRXY<"mlg", 0xE386, z_umul_lohi64, GR128, load, 8>;
+def MLG : BinaryRXY<"mlg", 0xE386, null_frag, GR128, load, 8>;
+def : Pat<(z_umul_lohi GR64:$src1, (i64 (load bdxaddr20only:$src2))),
+          (MLG (AEXT128 GR64:$src1), bdxaddr20only:$src2)>;
 
 //===----------------------------------------------------------------------===//
 // Division and remainder
@@ -1230,19 +1250,38 @@ def MLG : BinaryRXY<"mlg", 0xE386, z_umul_lohi64, GR128, load, 8>;
 
 let hasSideEffects = 1 in {  // Do not speculatively execute.
   // Division and remainder, from registers.
-  def DR    : BinaryRR <"dr",    0x1D,   null_frag,   GR128, GR32>;
-  def DSGFR : BinaryRRE<"dsgfr", 0xB91D, z_sdivrem32, GR128, GR32>;
-  def DSGR  : BinaryRRE<"dsgr",  0xB90D, z_sdivrem64, GR128, GR64>;
-  def DLR   : BinaryRRE<"dlr",   0xB997, z_udivrem32, GR128, GR32>;
-  def DLGR  : BinaryRRE<"dlgr",  0xB987, z_udivrem64, GR128, GR64>;
+  def DR    : BinaryRR <"dr",    0x1D,   null_frag, GR128, GR32>;
+  def DSGFR : BinaryRRE<"dsgfr", 0xB91D, null_frag, GR128, GR32>;
+  def DSGR  : BinaryRRE<"dsgr",  0xB90D, null_frag, GR128, GR64>;
+  def DLR   : BinaryRRE<"dlr",   0xB997, null_frag, GR128, GR32>;
+  def DLGR  : BinaryRRE<"dlgr",  0xB987, null_frag, GR128, GR64>;
 
   // Division and remainder, from memory.
-  def D    : BinaryRX <"d",    0x5D,   null_frag,   GR128, load, 4>;
-  def DSGF : BinaryRXY<"dsgf", 0xE31D, z_sdivrem32, GR128, load, 4>;
-  def DSG  : BinaryRXY<"dsg",  0xE30D, z_sdivrem64, GR128, load, 8>;
-  def DL   : BinaryRXY<"dl",   0xE397, z_udivrem32, GR128, load, 4>;
-  def DLG  : BinaryRXY<"dlg",  0xE387, z_udivrem64, GR128, load, 8>;
+  def D    : BinaryRX <"d",    0x5D,   null_frag, GR128, load, 4>;
+  def DSGF : BinaryRXY<"dsgf", 0xE31D, null_frag, GR128, load, 4>;
+  def DSG  : BinaryRXY<"dsg",  0xE30D, null_frag, GR128, load, 8>;
+  def DL   : BinaryRXY<"dl",   0xE397, null_frag, GR128, load, 4>;
+  def DLG  : BinaryRXY<"dlg",  0xE387, null_frag, GR128, load, 8>;
 }
+def : Pat<(z_sdivrem GR64:$src1, GR32:$src2),
+          (DSGFR (AEXT128 GR64:$src1), GR32:$src2)>;
+def : Pat<(z_sdivrem GR64:$src1, (i32 (load bdxaddr20only:$src2))),
+          (DSGF (AEXT128 GR64:$src1), bdxaddr20only:$src2)>;
+def : Pat<(z_sdivrem GR64:$src1, GR64:$src2),
+          (DSGR (AEXT128 GR64:$src1), GR64:$src2)>;
+def : Pat<(z_sdivrem GR64:$src1, (i64 (load bdxaddr20only:$src2))),
+          (DSG (AEXT128 GR64:$src1), bdxaddr20only:$src2)>;
+
+def : Pat<(z_udivrem GR32:$src1, GR32:$src2),
+          (DLR (ZEXT128 (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GR32:$src1,
+                                       subreg_l32)), GR32:$src2)>;
+def : Pat<(z_udivrem GR32:$src1, (i32 (load bdxaddr20only:$src2))),
+          (DL (ZEXT128 (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GR32:$src1,
+                                      subreg_l32)), bdxaddr20only:$src2)>;
+def : Pat<(z_udivrem GR64:$src1, GR64:$src2),
+          (DLGR (ZEXT128 GR64:$src1), GR64:$src2)>;
+def : Pat<(z_udivrem GR64:$src1, (i64 (load bdxaddr20only:$src2))),
+          (DLG (ZEXT128 GR64:$src1), bdxaddr20only:$src2)>;
 
 //===----------------------------------------------------------------------===//
 // Shifts
@@ -1893,17 +1932,6 @@ def : Pat<(ctlz GR64:$src),
 // Population count.  Counts bits set per byte.
 let Predicates = [FeaturePopulationCount], Defs = [CC] in
   def POPCNT : UnaryRRE<"popcnt", 0xB9E1, z_popcnt, GR64, GR64>;
-
-// Use subregs to populate the "don't care" bits in a 32-bit to 64-bit anyext.
-def : Pat<(i64 (anyext GR32:$src)),
-          (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GR32:$src, subreg_l32)>;
-
-// Extend GR32s and GR64s to GR128s.
-let usesCustomInserter = 1 in {
-  def AEXT128_64 : Pseudo<(outs GR128:$dst), (ins GR64:$src), []>;
-  def ZEXT128_32 : Pseudo<(outs GR128:$dst), (ins GR32:$src), []>;
-  def ZEXT128_64 : Pseudo<(outs GR128:$dst), (ins GR64:$src), []>;
-}
 
 // Search a block of memory for a character.
 let mayLoad = 1, Defs = [CC] in

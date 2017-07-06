@@ -928,7 +928,7 @@ public:
   void emitCxxRenderStmts(raw_ostream &OS, RuleMatcher &Rule) const override {
     const OperandMatcher &Operand = Matched.getOperand(SymbolicName);
     unsigned OldInsnVarID = Rule.getInsnVarID(Operand.getInstructionMatcher());
-    OS << "      GIR_Copy, /*NewInsnID*/" << NewInsnID << ", /*OldInsnID*/"
+    OS << "    GIR_Copy, /*NewInsnID*/" << NewInsnID << ", /*OldInsnID*/"
        << OldInsnVarID << ", /*OpIdx*/" << Operand.getOperandIndex() << ", // "
        << SymbolicName << "\n";
   }
@@ -964,7 +964,7 @@ public:
   void emitCxxRenderStmts(raw_ostream &OS, RuleMatcher &Rule) const override {
     const OperandMatcher &Operand = Matched.getOperand(SymbolicName);
     unsigned OldInsnVarID = Rule.getInsnVarID(Operand.getInstructionMatcher());
-    OS << "      GIR_CopySubReg, /*NewInsnID*/" << NewInsnID
+    OS << "    GIR_CopySubReg, /*NewInsnID*/" << NewInsnID
        << ", /*OldInsnID*/" << OldInsnVarID << ", /*OpIdx*/"
        << Operand.getOperandIndex() << ", /*SubRegIdx*/" << SubReg->EnumValue
        << ", // " << SymbolicName << "\n";
@@ -1043,8 +1043,8 @@ public:
   }
 
   void emitCxxRenderStmts(raw_ostream &OS, RuleMatcher &Rule) const override {
-    OS << "      GIR_ComplexRenderer, /*InsnID*/" << InsnID
-       << ", /*RendererID*/" << RendererID << ",\n";
+    OS << "    GIR_ComplexRenderer, /*InsnID*/" << InsnID << ", /*RendererID*/"
+       << RendererID << ",\n";
   }
 };
 
@@ -1076,7 +1076,7 @@ public:
 
   void emitCxxActionStmts(raw_ostream &OS, RuleMatcher &Rule,
                           unsigned RecycleInsnID) const override {
-    OS << "      // " << *P.getSrcPattern() << "  =>  " << *P.getDstPattern()
+    OS << "    // " << *P.getSrcPattern() << "  =>  " << *P.getDstPattern()
        << "\n";
   }
 };
@@ -1123,7 +1123,7 @@ public:
   void emitCxxActionStmts(raw_ostream &OS, RuleMatcher &Rule,
                           unsigned RecycleInsnID) const override {
     if (canMutate()) {
-      OS << "      GIR_MutateOpcode, /*InsnID*/" << InsnID
+      OS << "    GIR_MutateOpcode, /*InsnID*/" << InsnID
          << ", /*RecycleInsnID*/ " << RecycleInsnID << ", /*Opcode*/"
          << I->Namespace << "::" << I->TheDef->getName() << ",\n";
 
@@ -1132,14 +1132,14 @@ public:
           auto Namespace = Def->getValue("Namespace")
                                ? Def->getValueAsString("Namespace")
                                : "";
-          OS << "      GIR_AddImplicitDef, " << InsnID << ", " << Namespace
+          OS << "    GIR_AddImplicitDef, " << InsnID << ", " << Namespace
              << "::" << Def->getName() << ",\n";
         }
         for (auto Use : I->ImplicitUses) {
           auto Namespace = Use->getValue("Namespace")
                                ? Use->getValueAsString("Namespace")
                                : "";
-          OS << "      GIR_AddImplicitUse, " << InsnID << ", " << Namespace
+          OS << "    GIR_AddImplicitUse, " << InsnID << ", " << Namespace
              << "::" << Use->getName() << ",\n";
         }
       }
@@ -1149,13 +1149,13 @@ public:
     // TODO: Simple permutation looks like it could be almost as common as
     //       mutation due to commutative operations.
 
-    OS << "      GIR_BuildMI, /*InsnID*/" << InsnID << ", /*Opcode*/"
+    OS << "    GIR_BuildMI, /*InsnID*/" << InsnID << ", /*Opcode*/"
        << I->Namespace << "::" << I->TheDef->getName() << ",\n";
     for (const auto &Renderer : OperandRenderers)
       Renderer->emitCxxRenderStmts(OS, Rule);
 
-    OS << "      GIR_MergeMemOperands, /*InsnID*/" << InsnID << ",\n"
-       << "      GIR_EraseFromParent, /*InsnID*/" << RecycleInsnID << ",\n";
+    OS << "    GIR_MergeMemOperands, /*InsnID*/" << InsnID << ",\n"
+       << "    GIR_EraseFromParent, /*InsnID*/" << RecycleInsnID << ",\n";
   }
 };
 
@@ -1169,7 +1169,7 @@ public:
 
   void emitCxxActionStmts(raw_ostream &OS, RuleMatcher &Rule,
                           unsigned RecycleInsnID) const override {
-    OS << "      GIR_ConstrainSelectedInstOperands, /*InsnID*/" << InsnID << ",\n";
+    OS << "    GIR_ConstrainSelectedInstOperands, /*InsnID*/" << InsnID << ",\n";
   }
 };
 
@@ -1187,7 +1187,7 @@ public:
 
   void emitCxxActionStmts(raw_ostream &OS, RuleMatcher &Rule,
                           unsigned RecycleInsnID) const override {
-    OS << "      GIR_ConstrainOperandRC, /*InsnID*/" << InsnID << ", /*Op*/"
+    OS << "    GIR_ConstrainOperandRC, /*InsnID*/" << InsnID << ", /*Op*/"
        << OpIdx << ", /*RC " << RC.getName() << "*/ " << RC.EnumValue << ",\n";
   }
 };
@@ -1264,20 +1264,10 @@ void RuleMatcher::emit(raw_ostream &OS) {
        << ",\n";
   }
 
-
   emitCxxCaptureStmts(OS);
 
   Matchers.front()->emitCxxPredicateExpr(OS, *this,
                                          getInsnVarID(*Matchers.front()));
-
-  OS << "    GIM_Accept,\n"
-     << "  };\n"
-     << "  State.MIs.clear();\n"
-     << "  State.MIs.push_back(&I);\n"
-     << "  DEBUG(dbgs() << \"Processing MatchTable" << NumPatternEmitted
-     << "\\n\");\n"
-     << "  if (executeMatchTable(*this, State, MatcherInfo, MatchTable"
-     << CurrentMatchTableID << ", MRI, TRI, RBI, AvailableFeatures)) {\n";
 
   // We must also check if it's safe to fold the matched instructions.
   if (InsnVariableIDs.size() >= 2) {
@@ -1295,8 +1285,7 @@ void RuleMatcher::emit(raw_ostream &OS) {
 
     for (const auto &InsnID : InsnIDs) {
       // Reject the difficult cases until we have a more accurate check.
-      OS << "    if (!isObviouslySafeToFold(*State.MIs[" << InsnID << "]))\n"
-         << "      return false;\n";
+      OS << "    GIM_CheckIsSafeToFold, /*InsnID*/" << InsnID << ",\n";
 
       // FIXME: Emit checks to determine it's _actually_ safe to fold and/or
       //        account for unsafe cases.
@@ -1335,19 +1324,17 @@ void RuleMatcher::emit(raw_ostream &OS) {
     }
   }
 
-  OS << "    const static int64_t EmitTable" << NumPatternEmitted << "[] = {\n";
   for (const auto &MA : Actions)
     MA->emitCxxActionStmts(OS, *this, 0);
-  OS << "      GIR_Done,\n"
-     << "    };\n"
-     << "    NewMIVector OutMIs;\n"
-     << "    DEBUG(dbgs() << \"Processing EmitTable" << NumPatternEmitted
+  OS << "    GIR_Done,\n"
+     << "  };\n"
+     << "  State.MIs.resize(1);\n"
+     << "  DEBUG(dbgs() << \"Processing MatchTable" << CurrentMatchTableID
      << "\\n\");\n"
-     << "    executeEmitTable(OutMIs, State, EmitTable" << NumPatternEmitted
-     << ", TII, TRI, RBI);\n";
-
-  OS << "    return true;\n";
-  OS << "  }\n\n";
+     << "  if (executeMatchTable(*this, OutMIs, State, MatcherInfo, MatchTable"
+     << CurrentMatchTableID << ", TII, MRI, TRI, RBI, AvailableFeatures)) {\n"
+     << "    return true;\n"
+     << "  }\n\n";
 }
 
 bool RuleMatcher::isHigherPriorityThan(const RuleMatcher &B) const {
@@ -1467,6 +1454,8 @@ GlobalISelEmitter::importRulePredicates(RuleMatcher &M,
 
 Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
     InstructionMatcher &InsnMatcher, const TreePatternNode *Src) const {
+  const CodeGenInstruction *SrcGIOrNull = nullptr;
+
   // Start with the defined operands (i.e., the results of the root operator).
   if (Src->getExtTypes().size() > 1)
     return failedImport("Src pattern has multiple results");
@@ -1480,7 +1469,7 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
       return failedImport(
           "Unable to deduce gMIR opcode to handle Src (which is a leaf)");
   } else {
-    auto SrcGIOrNull = findNodeEquiv(Src->getOperator());
+    SrcGIOrNull = findNodeEquiv(Src->getOperator());
     if (!SrcGIOrNull)
       return failedImport("Pattern operator lacks an equivalent Instruction" +
                           explainOperator(Src->getOperator()));
@@ -1514,10 +1503,31 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
       return failedImport(
           "Unable to deduce gMIR opcode to handle Src (which is a leaf)");
   } else {
+    assert(SrcGIOrNull &&
+           "Expected to have already found an equivalent Instruction");
     // Match the used operands (i.e. the children of the operator).
     for (unsigned i = 0, e = Src->getNumChildren(); i != e; ++i) {
-      if (auto Error = importChildMatcher(InsnMatcher, Src->getChild(i),
-                                          OpIdx++, TempOpIdx))
+      TreePatternNode *SrcChild = Src->getChild(i);
+
+      // For G_INTRINSIC, the operand immediately following the defs is an
+      // intrinsic ID.
+      if (SrcGIOrNull->TheDef->getName() == "G_INTRINSIC" && i == 0) {
+        if (!SrcChild->isLeaf())
+          return failedImport("Expected IntInit containing intrinsic ID");
+
+        if (IntInit *SrcChildIntInit =
+                dyn_cast<IntInit>(SrcChild->getLeafValue())) {
+          OperandMatcher &OM =
+              InsnMatcher.addOperand(OpIdx++, SrcChild->getName(), TempOpIdx);
+          OM.addPredicate<LiteralIntOperandMatcher>(SrcChildIntInit->getValue());
+          continue;
+        }
+
+        return failedImport("Expected IntInit containing instrinsic ID)");
+      }
+
+      if (auto Error =
+              importChildMatcher(InsnMatcher, SrcChild, OpIdx++, TempOpIdx))
         return std::move(Error);
     }
   }
@@ -1553,7 +1563,7 @@ Error GlobalISelEmitter::importChildMatcher(InstructionMatcher &InsnMatcher,
 
   auto OpTyOrNone = MVTToLLT(ChildTypes.front().getConcrete());
   if (!OpTyOrNone)
-    return failedImport("Src operand has an unsupported type");
+    return failedImport("Src operand has an unsupported type (" + to_string(*SrcChild) + ")");
   OM.addPredicate<LLTOperandMatcher>(*OpTyOrNone);
 
   // Check for nested instructions.
@@ -2169,7 +2179,10 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
         "than per-insn.\n"
      << "  AvailableFunctionFeatures = computeAvailableFunctionFeatures(&STI, "
         "&MF);\n"
-     << "  const PredicateBitset AvailableFeatures = getAvailableFeatures();\n";
+     << "  const PredicateBitset AvailableFeatures = getAvailableFeatures();\n"
+     << "  NewMIVector OutMIs;\n"
+     << "  State.MIs.clear();\n"
+     << "  State.MIs.push_back(&I);\n\n";
 
   for (auto &Rule : Rules) {
     Rule.emit(OS);
