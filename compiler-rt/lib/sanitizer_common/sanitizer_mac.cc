@@ -800,6 +800,20 @@ char **GetArgv() {
   return *_NSGetArgv();
 }
 
+uptr GetMaxVirtualAddress() {
+#if SANITIZER_WORDSIZE == 64
+# if defined(__aarch64__) && SANITIZER_IOS && !SANITIZER_IOSSIM
+  // Ideally, we would derive the upper bound from MACH_VM_MAX_ADDRESS. The
+  // upper bound can change depending on the device.
+  return 0x200000000 - 1;
+# else
+  return (1ULL << 47) - 1;  // 0x00007fffffffffffUL;
+# endif
+#else  // SANITIZER_WORDSIZE == 32
+  return (1ULL << 32) - 1;  // 0xffffffff;
+#endif  // SANITIZER_WORDSIZE
+}
+
 uptr FindAvailableMemoryRange(uptr shadow_size,
                               uptr alignment,
                               uptr left_padding) {

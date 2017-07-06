@@ -6326,9 +6326,6 @@ public:
                         MacroBuilder &Builder) const {
     // Also include the ARMv8.1 defines
     getTargetDefinesARMV81A(Opts, Builder);
-
-    if (FPU == NeonMode && HasFullFP16)
-      Builder.defineMacro("__ARM_FEATURE_FP16_VECTOR_ARITHMETIC", "1");
   }
 
   void getTargetDefines(const LangOptions &Opts,

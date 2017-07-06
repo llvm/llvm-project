@@ -22,7 +22,7 @@
 # CHECK:         frontend = 19.0.24215.1, backend = 19.0.24215.1
 # CHECK:         flags = security checks | hot patchable
 # CHECK:   116 | S_GPROC32_ID [size = 44] `main`
-# CHECK:         parent = 0, end = 0, addr = 0002:0000, code size = 7
+# CHECK:         parent = 0, end = 192, addr = 0002:0000, code size = 7
 # CHECK:         debug start = 0, debug end = 6, flags = none
 # CHECK:   160 | S_FRAMEPROC [size = 32]
 # CHECK:         size = 0, padding size = 0, offset to padding = 0
