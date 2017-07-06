@@ -1464,9 +1464,6 @@ struct __sanitizer_cookie_io_functions_t {
   extern unsigned IOCTL_PIO_SCRNMAP;
 #endif
 
-  extern const int errno_EINVAL;
-  extern const int errno_EOWNERDEAD;
-
   extern const int si_SEGV_MAPERR;
   extern const int si_SEGV_ACCERR;
 }  // namespace __sanitizer

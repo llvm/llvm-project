@@ -309,8 +309,7 @@ TEST_P(CoverageMappingTest, correct_deserialize_for_more_than_two_files) {
 }
 
 TEST_P(CoverageMappingTest, load_coverage_for_more_than_two_files) {
-  InstrProfRecord Record("func", 0x1234, {0});
-  NoError(ProfileWriter.addRecord(std::move(Record)));
+  NoError(ProfileWriter.addRecord({"func", 0x1234, {0}}));
 
   const char *FileNames[] = {"bar", "baz", "foo"};
   static const unsigned N = array_lengthof(FileNames);
@@ -331,18 +330,15 @@ TEST_P(CoverageMappingTest, load_coverage_for_more_than_two_files) {
 }
 
 TEST_P(CoverageMappingTest, load_coverage_with_bogus_function_name) {
-  InstrProfRecord RecordFunc1("", 0x1234, {10});
-  NoError(ProfileWriter.addRecord(std::move(RecordFunc1)));
+  NoError(ProfileWriter.addRecord({"", 0x1234, {10}}));
   startFunction("", 0x1234);
   addCMR(Counter::getCounter(0), "foo", 1, 1, 5, 5);
   ErrorEquals(coveragemap_error::malformed, loadCoverageMapping());
 }
 
 TEST_P(CoverageMappingTest, load_coverage_for_several_functions) {
-  InstrProfRecord RecordFunc1("func1", 0x1234, {10});
-  NoError(ProfileWriter.addRecord(std::move(RecordFunc1)));
-  InstrProfRecord RecordFunc2("func2", 0x2345, {20});
-  NoError(ProfileWriter.addRecord(std::move(RecordFunc2)));
+  NoError(ProfileWriter.addRecord({"func1", 0x1234, {10}}));
+  NoError(ProfileWriter.addRecord({"func2", 0x2345, {20}}));
 
   startFunction("func1", 0x1234);
   addCMR(Counter::getCounter(0), "foo", 1, 1, 5, 5);
@@ -386,8 +382,7 @@ TEST_P(CoverageMappingTest, expansion_gets_first_counter) {
 }
 
 TEST_P(CoverageMappingTest, basic_coverage_iteration) {
-  InstrProfRecord Record("func", 0x1234, {30, 20, 10, 0});
-  NoError(ProfileWriter.addRecord(std::move(Record)));
+  NoError(ProfileWriter.addRecord({"func", 0x1234, {30, 20, 10, 0}}));
 
   startFunction("func", 0x1234);
   addCMR(Counter::getCounter(0), "file1", 1, 1, 9, 9);
@@ -435,8 +430,7 @@ TEST_P(CoverageMappingTest, uncovered_function_with_mapping) {
 }
 
 TEST_P(CoverageMappingTest, combine_regions) {
-  InstrProfRecord Record("func", 0x1234, {10, 20, 30});
-  NoError(ProfileWriter.addRecord(std::move(Record)));
+  NoError(ProfileWriter.addRecord({"func", 0x1234, {10, 20, 30}}));
 
   startFunction("func", 0x1234);
   addCMR(Counter::getCounter(0), "file1", 1, 1, 9, 9);
@@ -454,8 +448,7 @@ TEST_P(CoverageMappingTest, combine_regions) {
 }
 
 TEST_P(CoverageMappingTest, restore_combined_counter_after_nested_region) {
-  InstrProfRecord Record("func", 0x1234, {10, 20, 40});
-  NoError(ProfileWriter.addRecord(std::move(Record)));
+  NoError(ProfileWriter.addRecord({"func", 0x1234, {10, 20, 40}}));
 
   startFunction("func", 0x1234);
   addCMR(Counter::getCounter(0), "file1", 1, 1, 9, 9);
@@ -475,10 +468,8 @@ TEST_P(CoverageMappingTest, restore_combined_counter_after_nested_region) {
 // If CodeRegions and ExpansionRegions cover the same area,
 // only counts of CodeRegions should be used.
 TEST_P(CoverageMappingTest, dont_combine_expansions) {
-  InstrProfRecord Record1("func", 0x1234, {10, 20});
-  InstrProfRecord Record2("func", 0x1234, {0, 0});
-  NoError(ProfileWriter.addRecord(std::move(Record1)));
-  NoError(ProfileWriter.addRecord(std::move(Record2)));
+  NoError(ProfileWriter.addRecord({"func", 0x1234, {10, 20}}));
+  NoError(ProfileWriter.addRecord({"func", 0x1234, {0, 0}}));
 
   startFunction("func", 0x1234);
   addCMR(Counter::getCounter(0), "file1", 1, 1, 9, 9);
@@ -498,8 +489,7 @@ TEST_P(CoverageMappingTest, dont_combine_expansions) {
 
 // If an area is covered only by ExpansionRegions, they should be combinated.
 TEST_P(CoverageMappingTest, combine_expansions) {
-  InstrProfRecord Record("func", 0x1234, {2, 3, 7});
-  NoError(ProfileWriter.addRecord(std::move(Record)));
+  NoError(ProfileWriter.addRecord({"func", 0x1234, {2, 3, 7}}));
 
   startFunction("func", 0x1234);
   addCMR(Counter::getCounter(1), "include1", 1, 1, 1, 10);
@@ -520,8 +510,7 @@ TEST_P(CoverageMappingTest, combine_expansions) {
 }
 
 TEST_P(CoverageMappingTest, strip_filename_prefix) {
-  InstrProfRecord Record("file1:func", 0x1234, {0});
-  NoError(ProfileWriter.addRecord(std::move(Record)));
+  NoError(ProfileWriter.addRecord({"file1:func", 0x1234, {0}}));
 
   startFunction("file1:func", 0x1234);
   addCMR(Counter::getCounter(0), "file1", 1, 1, 9, 9);
@@ -535,8 +524,7 @@ TEST_P(CoverageMappingTest, strip_filename_prefix) {
 }
 
 TEST_P(CoverageMappingTest, strip_unknown_filename_prefix) {
-  InstrProfRecord Record("<unknown>:func", 0x1234, {0});
-  NoError(ProfileWriter.addRecord(std::move(Record)));
+  NoError(ProfileWriter.addRecord({"<unknown>:func", 0x1234, {0}}));
 
   startFunction("<unknown>:func", 0x1234);
   addCMR(Counter::getCounter(0), "", 1, 1, 9, 9);
@@ -550,10 +538,8 @@ TEST_P(CoverageMappingTest, strip_unknown_filename_prefix) {
 }
 
 TEST_P(CoverageMappingTest, dont_detect_false_instantiations) {
-  InstrProfRecord Record1("foo", 0x1234, {10});
-  InstrProfRecord Record2("bar", 0x2345, {20});
-  NoError(ProfileWriter.addRecord(std::move(Record1)));
-  NoError(ProfileWriter.addRecord(std::move(Record2)));
+  NoError(ProfileWriter.addRecord({"foo", 0x1234, {10}}));
+  NoError(ProfileWriter.addRecord({"bar", 0x2345, {20}}));
 
   startFunction("foo", 0x1234);
   addCMR(Counter::getCounter(0), "expanded", 1, 1, 1, 10);
@@ -571,8 +557,7 @@ TEST_P(CoverageMappingTest, dont_detect_false_instantiations) {
 }
 
 TEST_P(CoverageMappingTest, load_coverage_for_expanded_file) {
-  InstrProfRecord Record("func", 0x1234, {10});
-  NoError(ProfileWriter.addRecord(std::move(Record)));
+  NoError(ProfileWriter.addRecord({"func", 0x1234, {10}}));
 
   startFunction("func", 0x1234);
   addCMR(Counter::getCounter(0), "expanded", 1, 1, 1, 10);
@@ -588,8 +573,7 @@ TEST_P(CoverageMappingTest, load_coverage_for_expanded_file) {
 }
 
 TEST_P(CoverageMappingTest, skip_duplicate_function_record) {
-  InstrProfRecord Record("func", 0x1234, {1});
-  NoError(ProfileWriter.addRecord(std::move(Record)));
+  NoError(ProfileWriter.addRecord({"func", 0x1234, {1}}));
 
   startFunction("func", 0x1234);
   addCMR(Counter::getCounter(0), "file1", 1, 1, 9, 9);

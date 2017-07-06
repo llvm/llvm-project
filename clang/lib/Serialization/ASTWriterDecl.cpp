@@ -2233,8 +2233,18 @@ void ASTRecordWriter::AddFunctionDefinition(const FunctionDecl *FD) {
   Writer->ClearSwitchCaseIDs();
 
   assert(FD->doesThisDeclarationHaveABody());
-  bool ModulesCodegen = Writer->Context->getLangOpts().ModulesCodegen &&
-                        Writer->WritingModule && !FD->isDependentContext();
+  bool ModulesCodegen = false;
+  if (Writer->WritingModule && !FD->isDependentContext()) {
+    // Under -fmodules-codegen, codegen is performed for all defined functions.
+    // When building a C++ Modules TS module interface unit, a strong definition
+    // in the module interface is provided by the compilation of that module
+    // interface unit, not by its users. (Inline functions are still emitted
+    // in module users.)
+    ModulesCodegen =
+        Writer->Context->getLangOpts().ModulesCodegen ||
+        (Writer->WritingModule->Kind == Module::ModuleInterfaceUnit &&
+         Writer->Context->GetGVALinkageForFunction(FD) == GVA_StrongExternal);
+  }
   Record->push_back(ModulesCodegen);
   if (ModulesCodegen)
     Writer->ModularCodegenDecls.push_back(Writer->GetDeclRef(FD));

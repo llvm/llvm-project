@@ -140,6 +140,10 @@ struct OutputSectionCommand : BaseCommand {
   template <class ELFT> void writeTo(uint8_t *Buf);
   template <class ELFT> void maybeCompress();
   uint32_t getFiller();
+
+  void sort(std::function<int(InputSectionBase *S)> Order);
+  void sortInitFini();
+  void sortCtorsDtors();
 };
 
 // This struct represents one section match pattern in SECTIONS() command.
@@ -234,7 +238,7 @@ class LinkerScript final {
   std::vector<InputSectionBase *>
   createInputSectionList(OutputSectionCommand &Cmd);
 
-  std::vector<size_t> getPhdrIndices(OutputSection *Sec);
+  std::vector<size_t> getPhdrIndices(OutputSectionCommand *Cmd);
   size_t getPhdrIndex(const Twine &Loc, StringRef PhdrName);
 
   MemoryRegion *findMemoryRegion(OutputSectionCommand *Cmd);
@@ -276,7 +280,6 @@ public:
   std::vector<PhdrEntry> createPhdrs();
   bool ignoreInterpSection();
 
-  bool hasLMA(OutputSection *Sec);
   bool shouldKeep(InputSectionBase *S);
   void assignOffsets(OutputSectionCommand *Cmd);
   void processNonSectionCommands();

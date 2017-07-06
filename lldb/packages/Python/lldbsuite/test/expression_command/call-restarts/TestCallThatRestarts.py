@@ -48,28 +48,8 @@ class ExprCommandThatRestartsTestCase(TestBase):
             "Restored the zeroth frame correctly")
 
     def call_function(self):
-        exe_name = "a.out"
-        exe = os.path.join(os.getcwd(), exe_name)
-
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-        empty = lldb.SBFileSpec()
-        breakpoint = target.BreakpointCreateBySourceRegex(
-            'Stop here in main.', self.main_source_spec)
-        self.assertTrue(breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
-
-        # Launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple(
-            None, None, self.get_process_working_directory())
-
-        self.assertTrue(process, PROCESS_IS_VALID)
-
-        # Frame #0 should be at our breakpoint.
-        threads = lldbutil.get_threads_stopped_at_breakpoint(
-            process, breakpoint)
-
-        self.assertTrue(len(threads) == 1)
-        self.thread = threads[0]
+        (target, process, self.thread, bkpt) = lldbutil.run_to_source_breakpoint(self, 
+                                      'Stop here in main.', self.main_source_spec)
 
         # Make sure the SIGCHLD behavior is pass/no-stop/no-notify:
         return_obj = lldb.SBCommandReturnObject()

@@ -47,7 +47,6 @@
 #include <sys/resource.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <errno.h>
 #include <sched.h>
 #include <dlfcn.h>
 #if SANITIZER_LINUX

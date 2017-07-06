@@ -872,10 +872,9 @@ std::vector<PhdrEntry> LinkerScript::createPhdrs() {
 
   // Add output sections to program headers.
   for (OutputSectionCommand *Cmd : OutputSectionCommands) {
-    OutputSection *Sec = Cmd->Sec;
-
     // Assign headers specified by linker script
-    for (size_t Id : getPhdrIndices(Sec)) {
+    for (size_t Id : getPhdrIndices(Cmd)) {
+      OutputSection *Sec = Cmd->Sec;
       Ret[Id].add(Sec);
       if (Opt.PhdrsCommands[Id].Flags == UINT_MAX)
         Ret[Id].p_flags |= Sec->getPhdrFlags();
@@ -900,6 +899,92 @@ OutputSectionCommand *LinkerScript::getCmd(OutputSection *Sec) const {
   if (I == SecToCommand.end())
     return nullptr;
   return I->second;
+}
+
+void OutputSectionCommand::sort(std::function<int(InputSectionBase *S)> Order) {
+  typedef std::pair<unsigned, InputSection *> Pair;
+  auto Comp = [](const Pair &A, const Pair &B) { return A.first < B.first; };
+
+  std::vector<Pair> V;
+  assert(Commands.size() == 1);
+  auto *ISD = cast<InputSectionDescription>(Commands[0]);
+  for (InputSection *S : ISD->Sections)
+    V.push_back({Order(S), S});
+  std::stable_sort(V.begin(), V.end(), Comp);
+  ISD->Sections.clear();
+  for (Pair &P : V)
+    ISD->Sections.push_back(P.second);
+}
+
+// Returns true if S matches /Filename.?\.o$/.
+static bool isCrtBeginEnd(StringRef S, StringRef Filename) {
+  if (!S.endswith(".o"))
+    return false;
+  S = S.drop_back(2);
+  if (S.endswith(Filename))
+    return true;
+  return !S.empty() && S.drop_back().endswith(Filename);
+}
+
+static bool isCrtbegin(StringRef S) { return isCrtBeginEnd(S, "crtbegin"); }
+static bool isCrtend(StringRef S) { return isCrtBeginEnd(S, "crtend"); }
+
+// .ctors and .dtors are sorted by this priority from highest to lowest.
+//
+//  1. The section was contained in crtbegin (crtbegin contains
+//     some sentinel value in its .ctors and .dtors so that the runtime
+//     can find the beginning of the sections.)
+//
+//  2. The section has an optional priority value in the form of ".ctors.N"
+//     or ".dtors.N" where N is a number. Unlike .{init,fini}_array,
+//     they are compared as string rather than number.
+//
+//  3. The section is just ".ctors" or ".dtors".
+//
+//  4. The section was contained in crtend, which contains an end marker.
+//
+// In an ideal world, we don't need this function because .init_array and
+// .ctors are duplicate features (and .init_array is newer.) However, there
+// are too many real-world use cases of .ctors, so we had no choice to
+// support that with this rather ad-hoc semantics.
+static bool compCtors(const InputSection *A, const InputSection *B) {
+  bool BeginA = isCrtbegin(A->File->getName());
+  bool BeginB = isCrtbegin(B->File->getName());
+  if (BeginA != BeginB)
+    return BeginA;
+  bool EndA = isCrtend(A->File->getName());
+  bool EndB = isCrtend(B->File->getName());
+  if (EndA != EndB)
+    return EndB;
+  StringRef X = A->Name;
+  StringRef Y = B->Name;
+  assert(X.startswith(".ctors") || X.startswith(".dtors"));
+  assert(Y.startswith(".ctors") || Y.startswith(".dtors"));
+  X = X.substr(6);
+  Y = Y.substr(6);
+  if (X.empty() && Y.empty())
+    return false;
+  return X < Y;
+}
+
+// Sorts input sections by the special rules for .ctors and .dtors.
+// Unfortunately, the rules are different from the one for .{init,fini}_array.
+// Read the comment above.
+void OutputSectionCommand::sortCtorsDtors() {
+  assert(Commands.size() == 1);
+  auto *ISD = cast<InputSectionDescription>(Commands[0]);
+  std::stable_sort(ISD->Sections.begin(), ISD->Sections.end(), compCtors);
+}
+
+// Sorts input sections by section name suffixes, so that .foo.N comes
+// before .foo.M if N < M. Used to sort .{init,fini}_array.N sections.
+// We want to keep the original order if the priorities are the same
+// because the compiler keeps the original initialization order in a
+// translation unit and we need to respect that.
+// For more detail, read the section of the GCC's manual about init_priority.
+void OutputSectionCommand::sortInitFini() {
+  // Sort sections by priority.
+  sort([](InputSectionBase *S) { return getPriority(S->Name); });
 }
 
 uint32_t OutputSectionCommand::getFiller() {
@@ -1076,13 +1161,6 @@ template <class ELFT> void OutputSectionCommand::writeTo(uint8_t *Buf) {
       writeInt(Buf + Data->Offset, Data->Expression().getValue(), Data->Size);
 }
 
-bool LinkerScript::hasLMA(OutputSection *Sec) {
-  if (OutputSectionCommand *Cmd = getCmd(Sec))
-    if (Cmd->LMAExpr)
-      return true;
-  return false;
-}
-
 ExprValue LinkerScript::getSymbolValue(const Twine &Loc, StringRef S) {
   if (S == ".")
     return {CurOutSec, Dot - CurOutSec->Addr, Loc};
@@ -1102,17 +1180,14 @@ static const size_t NoPhdr = -1;
 
 // Returns indices of ELF headers containing specific section. Each index is a
 // zero based number of ELF header listed within PHDRS {} script block.
-std::vector<size_t> LinkerScript::getPhdrIndices(OutputSection *Sec) {
-  if (OutputSectionCommand *Cmd = getCmd(Sec)) {
-    std::vector<size_t> Ret;
-    for (StringRef PhdrName : Cmd->Phdrs) {
-      size_t Index = getPhdrIndex(Cmd->Location, PhdrName);
-      if (Index != NoPhdr)
-        Ret.push_back(Index);
-    }
-    return Ret;
+std::vector<size_t> LinkerScript::getPhdrIndices(OutputSectionCommand *Cmd) {
+  std::vector<size_t> Ret;
+  for (StringRef PhdrName : Cmd->Phdrs) {
+    size_t Index = getPhdrIndex(Cmd->Location, PhdrName);
+    if (Index != NoPhdr)
+      Ret.push_back(Index);
   }
-  return {};
+  return Ret;
 }
 
 // Returns the index of the segment named PhdrName if found otherwise

@@ -40,6 +40,7 @@
 
 #include "interception/interception.h"
 #include "sanitizer_addrhashmap.h"
+#include "sanitizer_errno.h"
 #include "sanitizer_placement_new.h"
 #include "sanitizer_platform_interceptors.h"
 #include "sanitizer_tls_get_addr.h"

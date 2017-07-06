@@ -25,6 +25,7 @@ class RenameThisSampleTestTestCase(TestBase):
     def test_sample_rename_this(self):
         """There can be many tests in a test case - describe this test here."""
         self.build()
+        self.main_source_file = lldb.SBFileSpec("main.c")
         self.sample_test()
 
     def setUp(self):
@@ -33,40 +34,15 @@ class RenameThisSampleTestTestCase(TestBase):
 
     def sample_test(self):
         """You might use the test implementation in several ways, say so here."""
-        exe = os.path.join(os.getcwd(), "a.out")
 
-        # Create a target by the debugger.
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
+        # This function starts a process, "a.out" by default, sets a source
+        # breakpoint, runs to it, and returns the thread, process & target.
+        # It optionally takes an SBLaunchOption argument if you want to pass
+        # arguments or environment variables.
+        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(self,
+                                   "Set a breakpoint here", self.main_source_file) 
 
-        # Now create a breakpoint in main.c at the source matching
-        # "Set a breakpoint here"
-        breakpoint = target.BreakpointCreateBySourceRegex(
-            "Set a breakpoint here", lldb.SBFileSpec("main.c"))
-        self.assertTrue(breakpoint and
-                        breakpoint.GetNumLocations() >= 1,
-                        VALID_BREAKPOINT)
-
-        error = lldb.SBError()
-        # This is the launch info.  If you want to launch with arguments or
-        # environment variables, add them using SetArguments or
-        # SetEnvironmentEntries
-
-        launch_info = lldb.SBLaunchInfo(None)
-        process = target.Launch(launch_info, error)
-        self.assertTrue(process, PROCESS_IS_VALID)
-
-        # Did we hit our breakpoint?
-        from lldbsuite.test.lldbutil import get_threads_stopped_at_breakpoint
-        threads = get_threads_stopped_at_breakpoint(process, breakpoint)
-        self.assertTrue(
-            len(threads) == 1,
-            "There should be a thread stopped at our breakpoint")
-
-        # The hit count for the breakpoint should be 1.
-        self.assertTrue(breakpoint.GetHitCount() == 1)
-
-        frame = threads[0].GetFrameAtIndex(0)
+        frame = thread.GetFrameAtIndex(0)
         test_var = frame.FindVariable("test_var")
         self.assertTrue(test_var.GetError().Success(), "Failed to fetch test_var")
         test_value = test_var.GetValueAsUnsigned()
