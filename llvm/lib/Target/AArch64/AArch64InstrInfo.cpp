@@ -4216,26 +4216,36 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
 /// \brief Replace csincr-branch sequence by simple conditional branch
 ///
 /// Examples:
-/// 1.
+/// 1. \code
 ///   csinc  w9, wzr, wzr, <condition code>
 ///   tbnz   w9, #0, 0x44
+///    \endcode
 /// to
+///    \code
 ///   b.<inverted condition code>
+///    \endcode
 ///
-/// 2.
+/// 2. \code
 ///   csinc w9, wzr, wzr, <condition code>
 ///   tbz   w9, #0, 0x44
+///    \endcode
 /// to
+///    \code
 ///   b.<condition code>
+///    \endcode
 ///
 /// Replace compare and branch sequence by TBZ/TBNZ instruction when the
 /// compare's constant operand is power of 2.
 ///
 /// Examples:
+///    \code
 ///   and  w8, w8, #0x400
 ///   cbnz w8, L1
+///    \endcode
 /// to
+///    \code
 ///   tbnz w8, #10, L1
+///    \endcode
 ///
 /// \param  MI Conditional Branch
 /// \return True when the simple conditional branch is generated

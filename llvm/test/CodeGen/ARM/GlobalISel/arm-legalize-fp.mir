@@ -10,6 +10,25 @@
 
   define void @test_fadd_float() { ret void }
   define void @test_fadd_double() { ret void }
+
+  define void @test_fcmp_true_s32() { ret void }
+  define void @test_fcmp_false_s32() { ret void }
+
+  define void @test_fcmp_oeq_s32() { ret void }
+  define void @test_fcmp_ogt_s32() { ret void }
+  define void @test_fcmp_oge_s32() { ret void }
+  define void @test_fcmp_olt_s32() { ret void }
+  define void @test_fcmp_ole_s32() { ret void }
+  define void @test_fcmp_ord_s32() { ret void }
+  define void @test_fcmp_ugt_s32() { ret void }
+  define void @test_fcmp_uge_s32() { ret void }
+  define void @test_fcmp_ult_s32() { ret void }
+  define void @test_fcmp_ule_s32() { ret void }
+  define void @test_fcmp_une_s32() { ret void }
+  define void @test_fcmp_uno_s32() { ret void }
+
+  define void @test_fcmp_one_s32() { ret void }
+  define void @test_fcmp_ueq_s32() { ret void }
 ...
 ---
 name:            test_frem_float
@@ -275,4 +294,639 @@ body:             |
     %r0 = COPY %7(s32)
     %r1 = COPY %8(s32)
     BX_RET 14, _, implicit %r0, implicit %r1
+...
+---
+name:            test_fcmp_true_s32
+# CHECK-LABEL: name: test_fcmp_true_s32
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(s32) = COPY %r0
+    %1(s32) = COPY %r1
+    ; CHECK-DAG: [[X:%[0-9]+]](s32) = COPY %r0
+    ; CHECK-DAG: [[Y:%[0-9]+]](s32) = COPY %r1
+    %2(s1) = G_FCMP floatpred(true), %0(s32), %1
+    ; HARD: [[R:%[0-9]+]](s1) = G_FCMP floatpred(true), [[X]](s32), [[Y]]
+    ; SOFT: [[REXT:%[0-9]+]](s32) = G_CONSTANT i32 -1
+    ; SOFT: [[R:%[0-9]+]](s1) = G_TRUNC [[REXT]](s32)
+    %3(s32) = G_ZEXT %2(s1)
+    ; CHECK: [[REXT:%[0-9]+]](s32) = G_ZEXT [[R]](s1)
+    %r0 = COPY %3(s32)
+    ; CHECK: %r0 = COPY [[REXT]]
+    BX_RET 14, _, implicit %r0
+...
+---
+name:            test_fcmp_false_s32
+# CHECK-LABEL: name: test_fcmp_false_s32
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(s32) = COPY %r0
+    %1(s32) = COPY %r1
+    ; CHECK-DAG: [[X:%[0-9]+]](s32) = COPY %r0
+    ; CHECK-DAG: [[Y:%[0-9]+]](s32) = COPY %r1
+    %2(s1) = G_FCMP floatpred(false), %0(s32), %1
+    ; HARD: [[R:%[0-9]+]](s1) = G_FCMP floatpred(false), [[X]](s32), [[Y]]
+    ; SOFT: [[REXT:%[0-9]+]](s32) = G_CONSTANT i32 0
+    ; SOFT: [[R:%[0-9]+]](s1) = G_TRUNC [[REXT]](s32)
+    %3(s32) = G_ZEXT %2(s1)
+    ; CHECK: [[REXT:%[0-9]+]](s32) = G_ZEXT [[R]](s1)
+    %r0 = COPY %3(s32)
+    ; CHECK: %r0 = COPY [[REXT]]
+    BX_RET 14, _, implicit %r0
+...
+---
+name:            test_fcmp_oeq_s32
+# CHECK-LABEL: name: test_fcmp_oeq_s32
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(s32) = COPY %r0
+    %1(s32) = COPY %r1
+    ; CHECK-DAG: [[X:%[0-9]+]](s32) = COPY %r0
+    ; CHECK-DAG: [[Y:%[0-9]+]](s32) = COPY %r1
+    %2(s1) = G_FCMP floatpred(oeq), %0(s32), %1
+    ; HARD: [[R:%[0-9]+]](s1) = G_FCMP floatpred(oeq), [[X]](s32), [[Y]]
+    ; SOFT: ADJCALLSTACKDOWN
+    ; SOFT-DAG: %r0 = COPY [[X]]
+    ; SOFT-DAG: %r1 = COPY [[Y]]
+    ; SOFT-AEABI: BLX $__aeabi_fcmpeq, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT-DEFAULT: BLX $__eqsf2, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT: [[RET:%[0-9]+]](s32) = COPY %r0
+    ; SOFT: ADJCALLSTACKUP
+    ; SOFT-AEABI: [[R:%[0-9]+]](s1) = G_TRUNC [[RET]](s32)
+    ; SOFT-DEFAULT: [[ZERO:%[0-9]+]](s32) = G_CONSTANT i32 0
+    ; SOFT-DEFAULT: [[R:%[0-9]+]](s1) = G_ICMP intpred(eq), [[RET]](s32), [[ZERO]]
+    %3(s32) = G_ZEXT %2(s1)
+    ; CHECK: [[REXT:%[0-9]+]](s32) = G_ZEXT [[R]](s1)
+    %r0 = COPY %3(s32)
+    ; CHECK: %r0 = COPY [[REXT]]
+    BX_RET 14, _, implicit %r0
+...
+---
+name:            test_fcmp_ogt_s32
+# CHECK-LABEL: name: test_fcmp_ogt_s32
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(s32) = COPY %r0
+    %1(s32) = COPY %r1
+    ; CHECK-DAG: [[X:%[0-9]+]](s32) = COPY %r0
+    ; CHECK-DAG: [[Y:%[0-9]+]](s32) = COPY %r1
+    %2(s1) = G_FCMP floatpred(ogt), %0(s32), %1
+    ; HARD: [[R:%[0-9]+]](s1) = G_FCMP floatpred(ogt), [[X]](s32), [[Y]]
+    ; SOFT: ADJCALLSTACKDOWN
+    ; SOFT-DAG: %r0 = COPY [[X]]
+    ; SOFT-DAG: %r1 = COPY [[Y]]
+    ; SOFT-AEABI: BLX $__aeabi_fcmpgt, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT-DEFAULT: BLX $__gtsf2, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT: [[RET:%[0-9]+]](s32) = COPY %r0
+    ; SOFT: ADJCALLSTACKUP
+    ; SOFT-AEABI: [[R:%[0-9]+]](s1) = G_TRUNC [[RET]](s32)
+    ; SOFT-DEFAULT: [[ZERO:%[0-9]+]](s32) = G_CONSTANT i32 0
+    ; SOFT-DEFAULT: [[R:%[0-9]+]](s1) = G_ICMP intpred(sgt), [[RET]](s32), [[ZERO]]
+    %3(s32) = G_ZEXT %2(s1)
+    ; CHECK: [[REXT:%[0-9]+]](s32) = G_ZEXT [[R]](s1)
+    %r0 = COPY %3(s32)
+    ; CHECK: %r0 = COPY [[REXT]]
+    BX_RET 14, _, implicit %r0
+...
+---
+name:            test_fcmp_oge_s32
+# CHECK-LABEL: name: test_fcmp_oge_s32
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(s32) = COPY %r0
+    %1(s32) = COPY %r1
+    ; CHECK-DAG: [[X:%[0-9]+]](s32) = COPY %r0
+    ; CHECK-DAG: [[Y:%[0-9]+]](s32) = COPY %r1
+    %2(s1) = G_FCMP floatpred(oge), %0(s32), %1
+    ; HARD: [[R:%[0-9]+]](s1) = G_FCMP floatpred(oge), [[X]](s32), [[Y]]
+    ; SOFT: ADJCALLSTACKDOWN
+    ; SOFT-DAG: %r0 = COPY [[X]]
+    ; SOFT-DAG: %r1 = COPY [[Y]]
+    ; SOFT-AEABI: BLX $__aeabi_fcmpge, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT-DEFAULT: BLX $__gesf2, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT: [[RET:%[0-9]+]](s32) = COPY %r0
+    ; SOFT: ADJCALLSTACKUP
+    ; SOFT-AEABI: [[R:%[0-9]+]](s1) = G_TRUNC [[RET]](s32)
+    ; SOFT-DEFAULT: [[ZERO:%[0-9]+]](s32) = G_CONSTANT i32 0
+    ; SOFT-DEFAULT: [[R:%[0-9]+]](s1) = G_ICMP intpred(sge), [[RET]](s32), [[ZERO]]
+    %3(s32) = G_ZEXT %2(s1)
+    ; CHECK: [[REXT:%[0-9]+]](s32) = G_ZEXT [[R]](s1)
+    %r0 = COPY %3(s32)
+    ; CHECK: %r0 = COPY [[REXT]]
+    BX_RET 14, _, implicit %r0
+...
+---
+name:            test_fcmp_olt_s32
+# CHECK-LABEL: name: test_fcmp_olt_s32
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(s32) = COPY %r0
+    %1(s32) = COPY %r1
+    ; CHECK-DAG: [[X:%[0-9]+]](s32) = COPY %r0
+    ; CHECK-DAG: [[Y:%[0-9]+]](s32) = COPY %r1
+    %2(s1) = G_FCMP floatpred(olt), %0(s32), %1
+    ; HARD: [[R:%[0-9]+]](s1) = G_FCMP floatpred(olt), [[X]](s32), [[Y]]
+    ; SOFT: ADJCALLSTACKDOWN
+    ; SOFT-DAG: %r0 = COPY [[X]]
+    ; SOFT-DAG: %r1 = COPY [[Y]]
+    ; SOFT-AEABI: BLX $__aeabi_fcmplt, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT-DEFAULT: BLX $__ltsf2, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT: [[RET:%[0-9]+]](s32) = COPY %r0
+    ; SOFT: ADJCALLSTACKUP
+    ; SOFT-AEABI: [[R:%[0-9]+]](s1) = G_TRUNC [[RET]](s32)
+    ; SOFT-DEFAULT: [[ZERO:%[0-9]+]](s32) = G_CONSTANT i32 0
+    ; SOFT-DEFAULT: [[R:%[0-9]+]](s1) = G_ICMP intpred(slt), [[RET]](s32), [[ZERO]]
+    %3(s32) = G_ZEXT %2(s1)
+    ; CHECK: [[REXT:%[0-9]+]](s32) = G_ZEXT [[R]](s1)
+    %r0 = COPY %3(s32)
+    ; CHECK: %r0 = COPY [[REXT]]
+    BX_RET 14, _, implicit %r0
+...
+---
+name:            test_fcmp_ole_s32
+# CHECK-LABEL: name: test_fcmp_ole_s32
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(s32) = COPY %r0
+    %1(s32) = COPY %r1
+    ; CHECK-DAG: [[X:%[0-9]+]](s32) = COPY %r0
+    ; CHECK-DAG: [[Y:%[0-9]+]](s32) = COPY %r1
+    %2(s1) = G_FCMP floatpred(ole), %0(s32), %1
+    ; HARD: [[R:%[0-9]+]](s1) = G_FCMP floatpred(ole), [[X]](s32), [[Y]]
+    ; SOFT: ADJCALLSTACKDOWN
+    ; SOFT-DAG: %r0 = COPY [[X]]
+    ; SOFT-DAG: %r1 = COPY [[Y]]
+    ; SOFT-AEABI: BLX $__aeabi_fcmple, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT-DEFAULT: BLX $__lesf2, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT: [[RET:%[0-9]+]](s32) = COPY %r0
+    ; SOFT: ADJCALLSTACKUP
+    ; SOFT-AEABI: [[R:%[0-9]+]](s1) = G_TRUNC [[RET]](s32)
+    ; SOFT-DEFAULT: [[ZERO:%[0-9]+]](s32) = G_CONSTANT i32 0
+    ; SOFT-DEFAULT: [[R:%[0-9]+]](s1) = G_ICMP intpred(sle), [[RET]](s32), [[ZERO]]
+    %3(s32) = G_ZEXT %2(s1)
+    ; CHECK: [[REXT:%[0-9]+]](s32) = G_ZEXT [[R]](s1)
+    %r0 = COPY %3(s32)
+    ; CHECK: %r0 = COPY [[REXT]]
+    BX_RET 14, _, implicit %r0
+...
+---
+name:            test_fcmp_ord_s32
+# CHECK-LABEL: name: test_fcmp_ord_s32
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(s32) = COPY %r0
+    %1(s32) = COPY %r1
+    ; CHECK-DAG: [[X:%[0-9]+]](s32) = COPY %r0
+    ; CHECK-DAG: [[Y:%[0-9]+]](s32) = COPY %r1
+    %2(s1) = G_FCMP floatpred(ord), %0(s32), %1
+    ; HARD: [[R:%[0-9]+]](s1) = G_FCMP floatpred(ord), [[X]](s32), [[Y]]
+    ; SOFT: ADJCALLSTACKDOWN
+    ; SOFT-DAG: %r0 = COPY [[X]]
+    ; SOFT-DAG: %r1 = COPY [[Y]]
+    ; SOFT-AEABI: BLX $__aeabi_fcmpun, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT-DEFAULT: BLX $__unordsf2, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT: [[RET:%[0-9]+]](s32) = COPY %r0
+    ; SOFT: ADJCALLSTACKUP
+    ; SOFT: [[ZERO:%[0-9]+]](s32) = G_CONSTANT i32 0
+    ; SOFT: [[R:%[0-9]+]](s1) = G_ICMP intpred(eq), [[RET]](s32), [[ZERO]]
+    %3(s32) = G_ZEXT %2(s1)
+    ; CHECK: [[REXT:%[0-9]+]](s32) = G_ZEXT [[R]](s1)
+    %r0 = COPY %3(s32)
+    ; CHECK: %r0 = COPY [[REXT]]
+    BX_RET 14, _, implicit %r0
+...
+---
+name:            test_fcmp_ugt_s32
+# CHECK-LABEL: name: test_fcmp_ugt_s32
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(s32) = COPY %r0
+    %1(s32) = COPY %r1
+    ; CHECK-DAG: [[X:%[0-9]+]](s32) = COPY %r0
+    ; CHECK-DAG: [[Y:%[0-9]+]](s32) = COPY %r1
+    %2(s1) = G_FCMP floatpred(ugt), %0(s32), %1
+    ; HARD: [[R:%[0-9]+]](s1) = G_FCMP floatpred(ugt), [[X]](s32), [[Y]]
+    ; SOFT: ADJCALLSTACKDOWN
+    ; SOFT-DAG: %r0 = COPY [[X]]
+    ; SOFT-DAG: %r1 = COPY [[Y]]
+    ; SOFT-AEABI: BLX $__aeabi_fcmple, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT-DEFAULT: BLX $__lesf2, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT: [[RET:%[0-9]+]](s32) = COPY %r0
+    ; SOFT: ADJCALLSTACKUP
+    ; SOFT: [[ZERO:%[0-9]+]](s32) = G_CONSTANT i32 0
+    ; SOFT-AEABI: [[R:%[0-9]+]](s1) = G_ICMP intpred(eq), [[RET]](s32), [[ZERO]]
+    ; SOFT-DEFAULT: [[R:%[0-9]+]](s1) = G_ICMP intpred(sgt), [[RET]](s32), [[ZERO]]
+    %3(s32) = G_ZEXT %2(s1)
+    ; CHECK: [[REXT:%[0-9]+]](s32) = G_ZEXT [[R]](s1)
+    %r0 = COPY %3(s32)
+    ; CHECK: %r0 = COPY [[REXT]]
+    BX_RET 14, _, implicit %r0
+...
+---
+name:            test_fcmp_uge_s32
+# CHECK-LABEL: name: test_fcmp_uge_s32
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(s32) = COPY %r0
+    %1(s32) = COPY %r1
+    ; CHECK-DAG: [[X:%[0-9]+]](s32) = COPY %r0
+    ; CHECK-DAG: [[Y:%[0-9]+]](s32) = COPY %r1
+    %2(s1) = G_FCMP floatpred(uge), %0(s32), %1
+    ; HARD: [[R:%[0-9]+]](s1) = G_FCMP floatpred(uge), [[X]](s32), [[Y]]
+    ; SOFT: ADJCALLSTACKDOWN
+    ; SOFT-DAG: %r0 = COPY [[X]]
+    ; SOFT-DAG: %r1 = COPY [[Y]]
+    ; SOFT-AEABI: BLX $__aeabi_fcmplt, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT-DEFAULT: BLX $__ltsf2, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT: [[RET:%[0-9]+]](s32) = COPY %r0
+    ; SOFT: ADJCALLSTACKUP
+    ; SOFT: [[ZERO:%[0-9]+]](s32) = G_CONSTANT i32 0
+    ; SOFT-AEABI: [[R:%[0-9]+]](s1) = G_ICMP intpred(eq), [[RET]](s32), [[ZERO]]
+    ; SOFT-DEFAULT: [[R:%[0-9]+]](s1) = G_ICMP intpred(sge), [[RET]](s32), [[ZERO]]
+    %3(s32) = G_ZEXT %2(s1)
+    ; CHECK: [[REXT:%[0-9]+]](s32) = G_ZEXT [[R]](s1)
+    %r0 = COPY %3(s32)
+    ; CHECK: %r0 = COPY [[REXT]]
+    BX_RET 14, _, implicit %r0
+...
+---
+name:            test_fcmp_ult_s32
+# CHECK-LABEL: name: test_fcmp_ult_s32
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(s32) = COPY %r0
+    %1(s32) = COPY %r1
+    ; CHECK-DAG: [[X:%[0-9]+]](s32) = COPY %r0
+    ; CHECK-DAG: [[Y:%[0-9]+]](s32) = COPY %r1
+    %2(s1) = G_FCMP floatpred(ult), %0(s32), %1
+    ; HARD: [[R:%[0-9]+]](s1) = G_FCMP floatpred(ult), [[X]](s32), [[Y]]
+    ; SOFT: ADJCALLSTACKDOWN
+    ; SOFT-DAG: %r0 = COPY [[X]]
+    ; SOFT-DAG: %r1 = COPY [[Y]]
+    ; SOFT-AEABI: BLX $__aeabi_fcmpge, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT-DEFAULT: BLX $__gesf2, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT: [[RET:%[0-9]+]](s32) = COPY %r0
+    ; SOFT: ADJCALLSTACKUP
+    ; SOFT: [[ZERO:%[0-9]+]](s32) = G_CONSTANT i32 0
+    ; SOFT-AEABI: [[R:%[0-9]+]](s1) = G_ICMP intpred(eq), [[RET]](s32), [[ZERO]]
+    ; SOFT-DEFAULT: [[R:%[0-9]+]](s1) = G_ICMP intpred(slt), [[RET]](s32), [[ZERO]]
+    %3(s32) = G_ZEXT %2(s1)
+    ; CHECK: [[REXT:%[0-9]+]](s32) = G_ZEXT [[R]](s1)
+    %r0 = COPY %3(s32)
+    ; CHECK: %r0 = COPY [[REXT]]
+    BX_RET 14, _, implicit %r0
+...
+---
+name:            test_fcmp_ule_s32
+# CHECK-LABEL: name: test_fcmp_ule_s32
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(s32) = COPY %r0
+    %1(s32) = COPY %r1
+    ; CHECK-DAG: [[X:%[0-9]+]](s32) = COPY %r0
+    ; CHECK-DAG: [[Y:%[0-9]+]](s32) = COPY %r1
+    %2(s1) = G_FCMP floatpred(ule), %0(s32), %1
+    ; HARD: [[R:%[0-9]+]](s1) = G_FCMP floatpred(ule), [[X]](s32), [[Y]]
+    ; SOFT: ADJCALLSTACKDOWN
+    ; SOFT-DAG: %r0 = COPY [[X]]
+    ; SOFT-DAG: %r1 = COPY [[Y]]
+    ; SOFT-AEABI: BLX $__aeabi_fcmpgt, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT-DEFAULT: BLX $__gtsf2, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT: [[RET:%[0-9]+]](s32) = COPY %r0
+    ; SOFT: ADJCALLSTACKUP
+    ; SOFT: [[ZERO:%[0-9]+]](s32) = G_CONSTANT i32 0
+    ; SOFT-AEABI: [[R:%[0-9]+]](s1) = G_ICMP intpred(eq), [[RET]](s32), [[ZERO]]
+    ; SOFT-DEFAULT: [[R:%[0-9]+]](s1) = G_ICMP intpred(sle), [[RET]](s32), [[ZERO]]
+    %3(s32) = G_ZEXT %2(s1)
+    ; CHECK: [[REXT:%[0-9]+]](s32) = G_ZEXT [[R]](s1)
+    %r0 = COPY %3(s32)
+    ; CHECK: %r0 = COPY [[REXT]]
+    BX_RET 14, _, implicit %r0
+...
+---
+name:            test_fcmp_une_s32
+# CHECK-LABEL: name: test_fcmp_une_s32
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(s32) = COPY %r0
+    %1(s32) = COPY %r1
+    ; CHECK-DAG: [[X:%[0-9]+]](s32) = COPY %r0
+    ; CHECK-DAG: [[Y:%[0-9]+]](s32) = COPY %r1
+    %2(s1) = G_FCMP floatpred(une), %0(s32), %1
+    ; HARD: [[R:%[0-9]+]](s1) = G_FCMP floatpred(une), [[X]](s32), [[Y]]
+    ; SOFT: ADJCALLSTACKDOWN
+    ; SOFT-DAG: %r0 = COPY [[X]]
+    ; SOFT-DAG: %r1 = COPY [[Y]]
+    ; SOFT-AEABI: BLX $__aeabi_fcmpeq, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT-DEFAULT: BLX $__nesf2, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT: [[RET:%[0-9]+]](s32) = COPY %r0
+    ; SOFT: ADJCALLSTACKUP
+    ; SOFT: [[ZERO:%[0-9]+]](s32) = G_CONSTANT i32 0
+    ; SOFT-AEABI: [[R:%[0-9]+]](s1) = G_ICMP intpred(eq), [[RET]](s32), [[ZERO]]
+    ; SOFT-DEFAULT: [[R:%[0-9]+]](s1) = G_ICMP intpred(ne), [[RET]](s32), [[ZERO]]
+    %3(s32) = G_ZEXT %2(s1)
+    ; CHECK: [[REXT:%[0-9]+]](s32) = G_ZEXT [[R]](s1)
+    %r0 = COPY %3(s32)
+    ; CHECK: %r0 = COPY [[REXT]]
+    BX_RET 14, _, implicit %r0
+...
+---
+name:            test_fcmp_uno_s32
+# CHECK-LABEL: name: test_fcmp_uno_s32
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(s32) = COPY %r0
+    %1(s32) = COPY %r1
+    ; CHECK-DAG: [[X:%[0-9]+]](s32) = COPY %r0
+    ; CHECK-DAG: [[Y:%[0-9]+]](s32) = COPY %r1
+    %2(s1) = G_FCMP floatpred(uno), %0(s32), %1
+    ; HARD: [[R:%[0-9]+]](s1) = G_FCMP floatpred(uno), [[X]](s32), [[Y]]
+    ; SOFT: ADJCALLSTACKDOWN
+    ; SOFT-DAG: %r0 = COPY [[X]]
+    ; SOFT-DAG: %r1 = COPY [[Y]]
+    ; SOFT-AEABI: BLX $__aeabi_fcmpun, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT-DEFAULT: BLX $__unordsf2, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT: [[RET:%[0-9]+]](s32) = COPY %r0
+    ; SOFT: ADJCALLSTACKUP
+    ; SOFT-AEABI: [[R:%[0-9]+]](s1) = G_TRUNC [[RET]](s32)
+    ; SOFT-DEFAULT: [[ZERO:%[0-9]+]](s32) = G_CONSTANT i32 0
+    ; SOFT-DEFAULT: [[R:%[0-9]+]](s1) = G_ICMP intpred(ne), [[RET]](s32), [[ZERO]]
+    %3(s32) = G_ZEXT %2(s1)
+    ; CHECK: [[REXT:%[0-9]+]](s32) = G_ZEXT [[R]](s1)
+    %r0 = COPY %3(s32)
+    ; CHECK: %r0 = COPY [[REXT]]
+    BX_RET 14, _, implicit %r0
+...
+---
+name:            test_fcmp_one_s32
+# CHECK-LABEL: name: test_fcmp_one_s32
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(s32) = COPY %r0
+    %1(s32) = COPY %r1
+    ; CHECK-DAG: [[X:%[0-9]+]](s32) = COPY %r0
+    ; CHECK-DAG: [[Y:%[0-9]+]](s32) = COPY %r1
+    %2(s1) = G_FCMP floatpred(one), %0(s32), %1
+    ; HARD: [[R:%[0-9]+]](s1) = G_FCMP floatpred(one), [[X]](s32), [[Y]]
+    ; SOFT: ADJCALLSTACKDOWN
+    ; SOFT-DAG: %r0 = COPY [[X]]
+    ; SOFT-DAG: %r1 = COPY [[Y]]
+    ; SOFT-AEABI: BLX $__aeabi_fcmpgt, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT-DEFAULT: BLX $__gtsf2, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT: [[RET1:%[0-9]+]](s32) = COPY %r0
+    ; SOFT: ADJCALLSTACKUP
+    ; SOFT-AEABI: [[R1:%[0-9]+]](s1) = G_TRUNC [[RET1]]
+    ; SOFT-DEFAULT: [[ZERO:%[0-9]+]](s32) = G_CONSTANT i32 0
+    ; SOFT-DEFAULT: [[R1:%[0-9]+]](s1) = G_ICMP intpred(sgt), [[RET1]](s32), [[ZERO]]
+    ; SOFT: ADJCALLSTACKDOWN
+    ; SOFT-DAG: %r0 = COPY [[X]]
+    ; SOFT-DAG: %r1 = COPY [[Y]]
+    ; SOFT-AEABI: BLX $__aeabi_fcmplt, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT-DEFAULT: BLX $__ltsf2, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT: [[RET2:%[0-9]+]](s32) = COPY %r0
+    ; SOFT: ADJCALLSTACKUP
+    ; SOFT-AEABI: [[R2:%[0-9]+]](s1) = G_TRUNC [[RET2]](s32)
+    ; SOFT-DEFAULT: [[ZERO:%[0-9]+]](s32) = G_CONSTANT i32 0
+    ; SOFT-DEFAULT: [[R2:%[0-9]+]](s1) = G_ICMP intpred(slt), [[RET2]](s32), [[ZERO]]
+    ; SOFT-DAG: [[R1EXT:%[0-9]+]](s32) = G_ANYEXT [[R1]]
+    ; SOFT-DAG: [[R2EXT:%[0-9]+]](s32) = G_ANYEXT [[R2]]
+    ; SOFT: [[REXT:%[0-9]+]](s32) = G_OR [[R1EXT]], [[R2EXT]]
+    ; SOFT: [[R:%[0-9]+]](s1) = G_TRUNC [[REXT]]
+    %3(s32) = G_ZEXT %2(s1)
+    ; CHECK: [[REXT:%[0-9]+]](s32) = G_ZEXT [[R]](s1)
+    %r0 = COPY %3(s32)
+    ; CHECK: %r0 = COPY [[REXT]]
+    BX_RET 14, _, implicit %r0
+...
+---
+name:            test_fcmp_ueq_s32
+# CHECK-LABEL: name: test_fcmp_ueq_s32
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+body:             |
+  bb.0:
+    liveins: %r0, %r1
+
+    %0(s32) = COPY %r0
+    %1(s32) = COPY %r1
+    ; CHECK-DAG: [[X:%[0-9]+]](s32) = COPY %r0
+    ; CHECK-DAG: [[Y:%[0-9]+]](s32) = COPY %r1
+    %2(s1) = G_FCMP floatpred(ueq), %0(s32), %1
+    ; HARD: [[R:%[0-9]+]](s1) = G_FCMP floatpred(ueq), [[X]](s32), [[Y]]
+    ; SOFT: ADJCALLSTACKDOWN
+    ; SOFT-DAG: %r0 = COPY [[X]]
+    ; SOFT-DAG: %r1 = COPY [[Y]]
+    ; SOFT-AEABI: BLX $__aeabi_fcmpeq, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT-DEFAULT: BLX $__eqsf2, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT: [[RET1:%[0-9]+]](s32) = COPY %r0
+    ; SOFT: ADJCALLSTACKUP
+    ; SOFT-AEABI: [[R1:%[0-9]+]](s1) = G_TRUNC [[RET1]]
+    ; SOFT-DEFAULT: [[ZERO:%[0-9]+]](s32) = G_CONSTANT i32 0
+    ; SOFT-DEFAULT: [[R1:%[0-9]+]](s1) = G_ICMP intpred(eq), [[RET1]](s32), [[ZERO]]
+    ; SOFT: ADJCALLSTACKDOWN
+    ; SOFT-DAG: %r0 = COPY [[X]]
+    ; SOFT-DAG: %r1 = COPY [[Y]]
+    ; SOFT-AEABI: BLX $__aeabi_fcmpun, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT-DEFAULT: BLX $__unordsf2, {{.*}}, implicit %r0, implicit %r1, implicit-def %r0
+    ; SOFT: [[RET2:%[0-9]+]](s32) = COPY %r0
+    ; SOFT: ADJCALLSTACKUP
+    ; SOFT-AEABI: [[R2:%[0-9]+]](s1) = G_TRUNC [[RET2]](s32)
+    ; SOFT-DEFAULT: [[ZERO:%[0-9]+]](s32) = G_CONSTANT i32 0
+    ; SOFT-DEFAULT: [[R2:%[0-9]+]](s1) = G_ICMP intpred(ne), [[RET2]](s32), [[ZERO]]
+    ; SOFT-DAG: [[R1EXT:%[0-9]+]](s32) = G_ANYEXT [[R1]]
+    ; SOFT-DAG: [[R2EXT:%[0-9]+]](s32) = G_ANYEXT [[R2]]
+    ; SOFT: [[REXT:%[0-9]+]](s32) = G_OR [[R1EXT]], [[R2EXT]]
+    ; SOFT: [[R:%[0-9]+]](s1) = G_TRUNC [[REXT]]
+    %3(s32) = G_ZEXT %2(s1)
+    ; CHECK: [[REXT:%[0-9]+]](s32) = G_ZEXT [[R]](s1)
+    %r0 = COPY %3(s32)
+    ; CHECK: %r0 = COPY [[REXT]]
+    BX_RET 14, _, implicit %r0
 ...

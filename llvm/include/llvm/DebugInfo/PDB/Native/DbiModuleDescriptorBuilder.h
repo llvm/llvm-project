@@ -68,6 +68,10 @@ public:
 
   uint32_t calculateSerializedLength() const;
 
+  /// Return the offset within the module symbol stream of the next symbol
+  /// record passed to addSymbol. Add four to account for the signature.
+  uint32_t getNextSymbolOffset() const { return SymbolByteSize + 4; }
+
   void finalize();
   Error finalizeMsfLayout();
 

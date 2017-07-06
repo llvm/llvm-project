@@ -118,6 +118,12 @@ struct Location {
   static std::string unparse(const Location &P);
 };
 
+struct Metadata {
+  std::vector<std::string> extraFlags;
+
+  static llvm::Optional<Metadata> parse(llvm::yaml::MappingNode *Params);
+};
+
 struct TextEdit {
   /// The range of the text document to be manipulated. To insert
   /// text into a document create a range where start === end.
@@ -151,6 +157,9 @@ struct TextDocumentItem {
 struct DidOpenTextDocumentParams {
   /// The document that was opened.
   TextDocumentItem textDocument;
+
+  /// Extension storing per-file metadata, such as compilation flags.
+  llvm::Optional<Metadata> metadata;
 
   static llvm::Optional<DidOpenTextDocumentParams>
   parse(llvm::yaml::MappingNode *Params);

@@ -338,24 +338,31 @@ CudaToolChain::CudaToolChain(const Driver &D, const llvm::Triple &Triple,
 
 void CudaToolChain::addClangTargetOptions(
     const llvm::opt::ArgList &DriverArgs,
-    llvm::opt::ArgStringList &CC1Args) const {
-  HostTC.addClangTargetOptions(DriverArgs, CC1Args);
-
-  CC1Args.push_back("-fcuda-is-device");
-
-  if (DriverArgs.hasFlag(options::OPT_fcuda_flush_denormals_to_zero,
-                         options::OPT_fno_cuda_flush_denormals_to_zero, false))
-    CC1Args.push_back("-fcuda-flush-denormals-to-zero");
-
-  if (DriverArgs.hasFlag(options::OPT_fcuda_approx_transcendentals,
-                         options::OPT_fno_cuda_approx_transcendentals, false))
-    CC1Args.push_back("-fcuda-approx-transcendentals");
-
-  if (DriverArgs.hasArg(options::OPT_nocudalib))
-    return;
+    llvm::opt::ArgStringList &CC1Args,
+    Action::OffloadKind DeviceOffloadingKind) const {
+  HostTC.addClangTargetOptions(DriverArgs, CC1Args, DeviceOffloadingKind);
 
   StringRef GpuArch = DriverArgs.getLastArgValue(options::OPT_march_EQ);
   assert(!GpuArch.empty() && "Must have an explicit GPU arch.");
+  assert((DeviceOffloadingKind == Action::OFK_OpenMP ||
+          DeviceOffloadingKind == Action::OFK_Cuda) &&
+         "Only OpenMP or CUDA offloading kinds are supported for NVIDIA GPUs.");
+
+  if (DeviceOffloadingKind == Action::OFK_Cuda) {
+    CC1Args.push_back("-fcuda-is-device");
+
+    if (DriverArgs.hasFlag(options::OPT_fcuda_flush_denormals_to_zero,
+                           options::OPT_fno_cuda_flush_denormals_to_zero, false))
+      CC1Args.push_back("-fcuda-flush-denormals-to-zero");
+
+    if (DriverArgs.hasFlag(options::OPT_fcuda_approx_transcendentals,
+                           options::OPT_fno_cuda_approx_transcendentals, false))
+      CC1Args.push_back("-fcuda-approx-transcendentals");
+
+    if (DriverArgs.hasArg(options::OPT_nocudalib))
+      return;
+  }
+
   std::string LibDeviceFile = CudaInstallation.getLibDeviceFile(GpuArch);
 
   if (LibDeviceFile.empty()) {
@@ -395,6 +402,24 @@ CudaToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
     DAL = new DerivedArgList(Args.getBaseArgs());
 
   const OptTable &Opts = getDriver().getOpts();
+
+  // For OpenMP device offloading, append derived arguments. Make sure
+  // flags are not duplicated.
+  // TODO: Append the compute capability.
+  if (DeviceOffloadKind == Action::OFK_OpenMP) {
+    for (Arg *A : Args){
+      bool IsDuplicate = false;
+      for (Arg *DALArg : *DAL){
+        if (A == DALArg) {
+          IsDuplicate = true;
+          break;
+        }
+      }
+      if (!IsDuplicate)
+        DAL->append(A);
+    }
+    return DAL;
+  }
 
   for (Arg *A : Args) {
     if (A->getOption().matches(options::OPT_Xarch__)) {

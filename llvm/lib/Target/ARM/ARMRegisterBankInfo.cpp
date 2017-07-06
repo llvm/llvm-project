@@ -277,6 +277,20 @@ ARMRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
                             &ARM::ValueMappings[ARM::GPR3OpsIdx]});
     break;
   }
+  case G_FCMP: {
+    LLT Ty1 = MRI.getType(MI.getOperand(2).getReg());
+    (void)Ty1;
+    LLT Ty2 = MRI.getType(MI.getOperand(3).getReg());
+    (void)Ty2;
+    assert(Ty.getSizeInBits() == 1 && "Unsupported size for G_FCMP");
+    assert(Ty1.getSizeInBits() == 32 && "Unsupported size for G_FCMP");
+    assert(Ty2.getSizeInBits() == 32 && "Unsupported size for G_FCMP");
+    OperandsMapping =
+        getOperandsMapping({&ARM::ValueMappings[ARM::GPR3OpsIdx], nullptr,
+                            &ARM::ValueMappings[ARM::SPR3OpsIdx],
+                            &ARM::ValueMappings[ARM::SPR3OpsIdx]});
+    break;
+  }
   case G_MERGE_VALUES: {
     // We only support G_MERGE_VALUES for creating a double precision floating
     // point value out of two GPRs.

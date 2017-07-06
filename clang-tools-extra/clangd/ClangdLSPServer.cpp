@@ -97,6 +97,9 @@ void ClangdLSPServer::LSPProtocolCallbacks::onShutdown(JSONOutput &Out) {
 
 void ClangdLSPServer::LSPProtocolCallbacks::onDocumentDidOpen(
     DidOpenTextDocumentParams Params, JSONOutput &Out) {
+  if (Params.metadata && !Params.metadata->extraFlags.empty())
+    LangServer.CDB.setExtraFlagsForFile(Params.textDocument.uri.file,
+                                        std::move(Params.metadata->extraFlags));
   LangServer.Server.addDocument(Params.textDocument.uri.file,
                                 Params.textDocument.text);
 }

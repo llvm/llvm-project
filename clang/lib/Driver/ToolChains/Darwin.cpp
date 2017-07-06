@@ -1708,7 +1708,8 @@ bool Darwin::isAlignedAllocationUnavailable() const {
 }
 
 void Darwin::addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
-                                   llvm::opt::ArgStringList &CC1Args) const {
+                                   llvm::opt::ArgStringList &CC1Args,
+                                   Action::OffloadKind DeviceOffloadKind) const {
   if (isAlignedAllocationUnavailable())
     CC1Args.push_back("-faligned-alloc-unavailable");
 }

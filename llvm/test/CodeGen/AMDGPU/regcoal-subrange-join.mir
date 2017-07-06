@@ -1,0 +1,162 @@
+# RUN: llc -march=amdgcn -run-pass simple-register-coalescing -o - %s | FileCheck --check-prefix=GCN %s
+#
+# See bug http://llvm.org/PR33524 for details of the problem being checked here
+# This test will provoke a subrange join (see annotations below) during simple register coalescing
+# Without a fix for PR33524 this causes an unreachable in SubRange Join
+#
+# GCN-DAG: undef %[[REG0:[0-9]+]].sub0 = COPY %sgpr5
+# GCN-DAG: undef %[[REG1:[0-9]+]].sub0 = COPY %sgpr2
+# GCN-DAG: %[[REG0]].sub1 = S_MOV_B32 1
+# GCN-DAG: %[[REG1]].sub1 = S_MOV_B32 1
+
+--- |
+  define amdgpu_vs void @regcoal-subrange-join(i32 inreg %arg, i32 inreg %arg1, i32 inreg %arg2, i32 inreg %arg3, i32 inreg %arg4, i32 inreg %arg5, i32 %arg6) local_unnamed_addr #0 {
+    ret void
+  }
+
+...
+---
+name:            regcoal-subrange-join
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: sreg_64 }
+  - { id: 1, class: vreg_128 }
+  - { id: 2, class: vreg_128 }
+  - { id: 3, class: vreg_128 }
+  - { id: 4, class: sreg_32_xm0 }
+  - { id: 5, class: sreg_32_xm0 }
+  - { id: 6, class: sreg_32_xm0, preferred-register: '%8' }
+  - { id: 7, class: vreg_128 }
+  - { id: 8, class: sreg_32_xm0, preferred-register: '%6' }
+  - { id: 9, class: vreg_128 }
+  - { id: 10, class: sgpr_32 }
+  - { id: 11, class: sgpr_32 }
+  - { id: 12, class: sgpr_32 }
+  - { id: 13, class: sgpr_32 }
+  - { id: 14, class: sgpr_32 }
+  - { id: 15, class: sgpr_32 }
+  - { id: 16, class: vgpr_32 }
+  - { id: 17, class: sreg_32_xm0 }
+  - { id: 18, class: sreg_64 }
+  - { id: 19, class: sreg_32_xm0 }
+  - { id: 20, class: sreg_32_xm0 }
+  - { id: 21, class: sreg_64 }
+  - { id: 22, class: sreg_32_xm0_xexec }
+  - { id: 23, class: sreg_32_xm0 }
+  - { id: 24, class: sreg_64_xexec }
+  - { id: 25, class: sreg_128 }
+  - { id: 26, class: sreg_64_xexec }
+  - { id: 27, class: sreg_32_xm0_xexec }
+  - { id: 28, class: sreg_32_xm0 }
+  - { id: 29, class: vgpr_32 }
+  - { id: 30, class: vgpr_32 }
+  - { id: 31, class: vgpr_32 }
+  - { id: 32, class: vgpr_32 }
+  - { id: 33, class: vgpr_32 }
+  - { id: 34, class: vgpr_32 }
+  - { id: 35, class: vgpr_32 }
+  - { id: 36, class: vgpr_32 }
+  - { id: 37, class: vgpr_32 }
+  - { id: 38, class: sreg_128 }
+  - { id: 39, class: sreg_64_xexec }
+  - { id: 40, class: sreg_32_xm0_xexec }
+  - { id: 41, class: sreg_32_xm0 }
+  - { id: 42, class: vgpr_32 }
+  - { id: 43, class: vgpr_32 }
+  - { id: 44, class: vgpr_32 }
+  - { id: 45, class: vgpr_32 }
+  - { id: 46, class: vgpr_32 }
+  - { id: 47, class: vgpr_32 }
+  - { id: 48, class: vgpr_32 }
+  - { id: 49, class: vgpr_32 }
+  - { id: 50, class: vgpr_32 }
+  - { id: 51, class: sreg_128 }
+  - { id: 52, class: vgpr_32 }
+  - { id: 53, class: vgpr_32 }
+  - { id: 54, class: vgpr_32 }
+  - { id: 55, class: vgpr_32 }
+  - { id: 56, class: vreg_128 }
+  - { id: 57, class: vreg_128 }
+  - { id: 58, class: vreg_128 }
+  - { id: 59, class: sreg_32_xm0 }
+  - { id: 60, class: sreg_32_xm0 }
+  - { id: 61, class: vreg_128 }
+liveins:
+  - { reg: '%sgpr2', virtual-reg: '%12' }
+  - { reg: '%sgpr5', virtual-reg: '%15' }
+body:             |
+  bb.0:
+    liveins: %sgpr2, %sgpr5
+
+    %15 = COPY killed %sgpr5
+    %12 = COPY killed %sgpr2
+    %17 = S_MOV_B32 1
+    undef %18.sub1 = COPY %17
+    %0 = COPY %18
+    %0.sub0 = COPY killed %12
+    %21 = COPY killed %18
+    %21.sub0 = COPY killed %15
+    %22 = S_LOAD_DWORD_IMM killed %21, 2, 0
+    %23 = S_MOV_B32 491436
+    undef %24.sub0 = COPY killed %22
+    %24.sub1 = COPY killed %23
+    %25 = S_LOAD_DWORDX4_IMM killed %24, 0, 0
+    %1 = COPY killed %25
+    %26 = S_LOAD_DWORDX2_IMM %0, 2, 0
+    dead %27 = S_LOAD_DWORD_IMM killed %26, 0, 0
+    S_CBRANCH_SCC0 %bb.1, implicit undef %scc
+
+  bb.5:
+    %58 = COPY killed %1
+    %59 = COPY killed %17
+    S_BRANCH %bb.2
+
+  bb.1:
+    %30 = V_MOV_B32_e32 1036831949, implicit %exec
+    %31 = V_ADD_F32_e32 %30, %1.sub3, implicit %exec
+    %33 = V_ADD_F32_e32 %30, %1.sub2, implicit %exec
+    %35 = V_ADD_F32_e32 %30, %1.sub1, implicit %exec
+    %37 = V_ADD_F32_e32 killed %30, killed %1.sub0, implicit %exec
+    undef %56.sub0 = COPY killed %37
+    %56.sub1 = COPY killed %35
+    %56.sub2 = COPY killed %33
+    %56.sub3 = COPY killed %31
+    %28 = S_MOV_B32 0
+    %2 = COPY killed %56
+    %58 = COPY killed %2
+    %59 = COPY killed %28
+
+  bb.2:
+    %4 = COPY killed %59
+    %3 = COPY killed %58
+    %39 = S_LOAD_DWORDX2_IMM killed %0, 6, 0
+    %40 = S_LOAD_DWORD_IMM killed %39, 0, 0
+    %43 = V_MOV_B32_e32 -1102263091, implicit %exec
+    %60 = COPY killed %4
+    %61 = COPY killed %3
+
+  bb.3:
+    successors: %bb.3, %bb.4
+
+    %7 = COPY killed %61
+    %6 = COPY killed %60
+    %8 = S_ADD_I32 killed %6, 1, implicit-def dead %scc
+    %44 = V_ADD_F32_e32 %43, %7.sub3, implicit %exec
+    %46 = V_ADD_F32_e32 %43, %7.sub2, implicit %exec
+    %48 = V_ADD_F32_e32 %43, %7.sub1, implicit %exec
+    %50 = V_ADD_F32_e32 %43, killed %7.sub0, implicit %exec
+    undef %57.sub0 = COPY killed %50
+    %57.sub1 = COPY killed %48
+    %57.sub2 = COPY %46
+    %57.sub3 = COPY killed %44
+    S_CMP_LT_I32 %8, %40, implicit-def %scc
+    %60 = COPY killed %8
+    %61 = COPY killed %57
+    S_CBRANCH_SCC1 %bb.3, implicit killed %scc
+    S_BRANCH %bb.4
+
+  bb.4:
+    EXP 32, undef %53, undef %54, killed %46, undef %55, 0, 0, 15, implicit %exec
+    S_ENDPGM
+
+...

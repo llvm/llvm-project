@@ -1,4 +1,4 @@
-; RUN: llc < %s -o - -mtriple=x86_64-apple-macosx | FileCheck %s
+; RUN: llc -lsr-filter-same-scaled-reg=false < %s -o - -mtriple=x86_64-apple-macosx | FileCheck %s
 ; Test case for the recoloring of broken hints.
 ; This is tricky to have something reasonably small to kick this optimization since
 ; it requires that spliting and spilling occur.

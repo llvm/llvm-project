@@ -204,7 +204,9 @@ public:
   /// need to be consistent with the addresses used to query the DIContext and
   /// the output of this function should be deterministic, i.e. repeated calls with
   /// the same Sec should give the same address.
-  virtual uint64_t getSectionLoadAddress(const object::SectionRef &Sec) const = 0;
+  virtual uint64_t getSectionLoadAddress(const object::SectionRef &Sec) const {
+    return 0;
+  }
 
   /// If conveniently available, return the content of the given Section.
   ///
