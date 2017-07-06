@@ -12,17 +12,53 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 
-using namespace clang::clangd;
-using namespace clang;
+namespace clang {
+namespace clangd {
+
+static void addExtraFlags(tooling::CompileCommand &Command,
+                          const std::vector<std::string> &ExtraFlags) {
+  if (ExtraFlags.empty())
+    return;
+  assert(Command.CommandLine.size() >= 2 &&
+         "Expected a command line containing at least 2 arguments, the "
+         "compiler binary and the output file");
+  // The last argument of CommandLine is the name of the input file.
+  // Add ExtraFlags before it.
+  auto It = Command.CommandLine.end();
+  --It;
+  Command.CommandLine.insert(It, ExtraFlags.begin(), ExtraFlags.end());
+}
+
+tooling::CompileCommand getDefaultCompileCommand(PathRef File) {
+  std::vector<std::string> CommandLine{"clang", "-fsyntax-only", File.str()};
+  return tooling::CompileCommand(llvm::sys::path::parent_path(File),
+                                 llvm::sys::path::filename(File), CommandLine,
+                                 /*Output=*/"");
+}
 
 std::vector<tooling::CompileCommand>
 DirectoryBasedGlobalCompilationDatabase::getCompileCommands(PathRef File) {
   std::vector<tooling::CompileCommand> Commands;
 
   auto CDB = getCompilationDatabase(File);
-  if (!CDB)
-    return {};
-  return CDB->getCompileCommands(File);
+  if (CDB)
+    Commands = CDB->getCompileCommands(File);
+  if (Commands.empty())
+    Commands.push_back(getDefaultCompileCommand(File));
+
+  auto It = ExtraFlagsForFile.find(File);
+  if (It != ExtraFlagsForFile.end()) {
+    // Append the user-specified flags to the compile commands.
+    for (tooling::CompileCommand &Command : Commands)
+      addExtraFlags(Command, It->second);
+  }
+
+  return Commands;
+}
+
+void DirectoryBasedGlobalCompilationDatabase::setExtraFlagsForFile(
+    PathRef File, std::vector<std::string> ExtraFlags) {
+  ExtraFlagsForFile[File] = std::move(ExtraFlags);
 }
 
 tooling::CompilationDatabase *
@@ -63,3 +99,6 @@ DirectoryBasedGlobalCompilationDatabase::getCompilationDatabase(PathRef File) {
   // "\n");
   return nullptr;
 }
+
+} // namespace clangd
+} // namespace clang

@@ -80,7 +80,10 @@ while [[ $# -gt 0 ]]; do
       fi
       if ! contains_project "$PROJ" ; then
         LLVM_PROJECTS="$LLVM_PROJECTS $PROJ"
-        CMAKE_LLVM_ENABLE_PROJECTS="$CMAKE_LLVM_ENABLED_PROJECTS;$PROJ"
+        if [ "$CMAKE_LLVM_ENABLE_PROJECTS" != "" ]; then
+          CMAKE_LLVM_ENABLE_PROJECTS="$CMAKE_LLVM_ENABLE_PROJECTS;"
+        fi
+        CMAKE_LLVM_ENABLE_PROJECTS="$CMAKE_LLVM_ENABLED_PROJECTS$PROJ"
       else
         echo "Project '$PROJ' is already enabled, ignoring extra occurences."
       fi
@@ -136,7 +139,7 @@ for LLVM_PROJECT in $LLVM_PROJECTS; do
     SVN_PROJECT="$LLVM_PROJECT"
   fi
 
-  echo "Checking out http://llvm.org/svn/llvm-project/$SVN_PROJECT to $CLANG_BUILD_DIR/src/$LLVM_PROJECT"
+  echo "Checking out https://llvm.org/svn/llvm-project/$SVN_PROJECT to $CLANG_BUILD_DIR/src/$LLVM_PROJECT"
   # FIXME: --trust-server-cert is required to workaround 'SSL issuer is not
   #        trusted' error. Using https seems preferable to http either way,
   #        albeit this is not secure.
@@ -145,11 +148,11 @@ for LLVM_PROJECT in $LLVM_PROJECTS; do
     "$CLANG_BUILD_DIR/src/$LLVM_PROJECT"
 done
 
-pushd "$CLANG_BUILD_DIR"
+mkdir "$CLANG_BUILD_DIR/build"
+pushd "$CLANG_BUILD_DIR/build"
 
 # Run the build as specified in the build arguments.
 echo "Running build"
-mkdir "$CLANG_BUILD_DIR/build"
 cmake -GNinja \
   -DCMAKE_INSTALL_PREFIX="$CLANG_INSTALL_DIR" \
   -DLLVM_ENABLE_PROJECTS="$CMAKE_LLVM_ENABLE_PROJECTS" \

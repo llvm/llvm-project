@@ -25,6 +25,9 @@ struct CompileCommand;
 
 namespace clangd {
 
+/// Returns a default compile command to use for \p File.
+tooling::CompileCommand getDefaultCompileCommand(PathRef File);
+
 /// Provides compilation arguments used for building ClangdUnit.
 class GlobalCompilationDatabase {
 public:
@@ -45,6 +48,8 @@ public:
   std::vector<tooling::CompileCommand>
   getCompileCommands(PathRef File) override;
 
+  void setExtraFlagsForFile(PathRef File, std::vector<std::string> ExtraFlags);
+
 private:
   tooling::CompilationDatabase *getCompilationDatabase(PathRef File);
 
@@ -53,6 +58,9 @@ private:
   /// directories).
   llvm::StringMap<std::unique_ptr<clang::tooling::CompilationDatabase>>
       CompilationDatabases;
+
+  /// Stores extra flags per file.
+  llvm::StringMap<std::vector<std::string>> ExtraFlagsForFile;
 };
 } // namespace clangd
 } // namespace clang

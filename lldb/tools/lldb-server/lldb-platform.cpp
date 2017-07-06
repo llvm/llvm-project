@@ -202,7 +202,7 @@ int main_platform(int argc, char *argv[]) {
         option_error = 4;
         break;
       }
-      if (port_offset<LOW_PORT | port_offset> HIGH_PORT) {
+      if (port_offset < LOW_PORT || port_offset > HIGH_PORT) {
         llvm::errs() << llvm::formatv("error: port offset {0} is not in the "
                                       "valid user port range of {1} - {2}\n",
                                       port_offset, LOW_PORT, HIGH_PORT);
@@ -219,7 +219,7 @@ int main_platform(int argc, char *argv[]) {
         option_error = 2;
         break;
       }
-      if (port_offset<LOW_PORT | port_offset> HIGH_PORT) {
+      if (portnum < LOW_PORT || portnum > HIGH_PORT) {
         llvm::errs() << llvm::formatv("error: port number {0} is not in the "
                                       "valid user port range of {1} - {2}\n",
                                       portnum, LOW_PORT, HIGH_PORT);
