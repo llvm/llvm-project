@@ -204,6 +204,33 @@ TextDocumentItem::parse(llvm::yaml::MappingNode *Params) {
   return Result;
 }
 
+llvm::Optional<Metadata> Metadata::parse(llvm::yaml::MappingNode *Params) {
+  Metadata Result;
+  for (auto &NextKeyValue : *Params) {
+    auto *KeyString = dyn_cast<llvm::yaml::ScalarNode>(NextKeyValue.getKey());
+    if (!KeyString)
+      return llvm::None;
+
+    llvm::SmallString<10> KeyStorage;
+    StringRef KeyValue = KeyString->getValue(KeyStorage);
+    auto *Value = NextKeyValue.getValue();
+
+    llvm::SmallString<10> Storage;
+    if (KeyValue == "extraFlags") {
+      auto *Seq = dyn_cast<llvm::yaml::SequenceNode>(Value);
+      if (!Seq)
+        return llvm::None;
+      for (auto &Item : *Seq) {
+        auto *Node = dyn_cast<llvm::yaml::ScalarNode>(&Item);
+        if (!Node)
+          return llvm::None;
+        Result.extraFlags.push_back(Node->getValue(Storage));
+      }
+    }
+  }
+  return Result;
+}
+
 llvm::Optional<TextEdit> TextEdit::parse(llvm::yaml::MappingNode *Params) {
   TextEdit Result;
   for (auto &NextKeyValue : *Params) {
@@ -265,6 +292,11 @@ DidOpenTextDocumentParams::parse(llvm::yaml::MappingNode *Params) {
       if (!Parsed)
         return llvm::None;
       Result.textDocument = std::move(*Parsed);
+    } else if (KeyValue == "metadata") {
+      auto Parsed = Metadata::parse(Value);
+      if (!Parsed)
+        return llvm::None;
+      Result.metadata = std::move(*Parsed);
     } else {
       return llvm::None;
     }

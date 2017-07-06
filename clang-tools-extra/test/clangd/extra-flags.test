@@ -1,0 +1,22 @@
+# RUN: clangd -run-synchronously < %s | FileCheck %s
+# It is absolutely vital that this file has CRLF line endings.
+#
+Content-Length: 125
+
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"clangd","capabilities":{},"trace":"off"}}
+#
+Content-Length: 205
+
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///foo.c","languageId":"c","version":1,"text":"int main() { int i; return i; }"},"metadata":{"extraFlags":["-Wall"]}}}
+# CHECK: {"jsonrpc":"2.0","method":"textDocument/publishDiagnostics","params":{"uri":"file:///foo.c","diagnostics":[{"range":{"start": {"line": 0, "character": 28}, "end": {"line": 0, "character": 28}},"severity":2,"message":"variable 'i' is uninitialized when used here"},{"range":{"start": {"line": 0, "character": 19}, "end": {"line": 0, "character": 19}},"severity":3,"message":"initialize the variable 'i' to silence this warning"}]}}
+#
+Content-Length: 175
+
+{"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"file:///foo.c","version":2},"contentChanges":[{"text":"int main() { int i; return i; }"}]}}
+# CHECK: {"jsonrpc":"2.0","method":"textDocument/publishDiagnostics","params":{"uri":"file:///foo.c","diagnostics":[{"range":{"start": {"line": 0, "character": 28}, "end": {"line": 0, "character": 28}},"severity":2,"message":"variable 'i' is uninitialized when used here"},{"range":{"start": {"line": 0, "character": 19}, "end": {"line": 0, "character": 19}},"severity":3,"message":"initialize the variable 'i' to silence this warning"}]}}
+#
+Content-Length: 44
+
+{"jsonrpc":"2.0","id":5,"method":"shutdown"}
+
+

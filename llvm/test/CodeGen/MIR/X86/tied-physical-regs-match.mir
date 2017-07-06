@@ -1,0 +1,22 @@
+# RUN: not llc -march=x86-64 -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+# This test ensures that the Machine Verifier detects tied physical registers
+# that doesn't match.
+
+--- |
+
+  define i32 @foo() {
+  entry:
+    ret i32 0
+  }
+
+...
+---
+name:            foo
+body: |
+  bb.0.entry:
+    liveins: %rdi
+
+    ; CHECK: Tied physical registers must match.
+    %rbx = AND64rm killed %rdx, killed %rdi, 1, _, 0, _, implicit-def dead %eflags
+    RETQ %rbx
+...
