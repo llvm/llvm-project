@@ -557,9 +557,9 @@ static RelExpr adjustExpr(SymbolBody &Body, RelExpr Expr, uint32_t Type,
   // the refered symbol can be preemepted to refer to the executable.
   if (Config->Shared || (Config->Pic && !isRelExpr(Expr))) {
     error("can't create dynamic relocation " + toString(Type) + " against " +
-          (Body.getName().empty() ? "local symbol in readonly segment"
+          (Body.getName().empty() ? "local symbol"
                                   : "symbol: " + toString(Body)) +
-          getLocation<ELFT>(S, Body, RelOff));
+          " in readonly segment" + getLocation<ELFT>(S, Body, RelOff));
     return Expr;
   }
 
@@ -1049,10 +1049,17 @@ ThunkSection *ThunkCreator::addThunkSection(OutputSection *OS,
 
 std::pair<Thunk *, bool> ThunkCreator::getThunk(SymbolBody &Body,
                                                 uint32_t Type) {
-  auto res = ThunkedSymbols.insert({&Body, nullptr});
-  if (res.second)
-    res.first->second = addThunk(Type, Body);
-  return std::make_pair(res.first->second, res.second);
+  auto Res = ThunkedSymbols.insert({&Body, std::vector<Thunk *>()});
+  if (!Res.second) {
+    // Check existing Thunks for Body to see if they can be reused
+    for (Thunk *ET : Res.first->second)
+      if (ET->isCompatibleWith(Type))
+        return std::make_pair(ET, false);
+  }
+  // No existing compatible Thunk in range, create a new one
+  Thunk *T = addThunk(Type, Body);
+  Res.first->second.push_back(T);
+  return std::make_pair(T, true);
 }
 
 // Call Fn on every executable InputSection accessed via the linker script
@@ -1066,13 +1073,12 @@ void ThunkCreator::forEachExecInputSection(
     OutputSection *OS = Cmd->Sec;
     if (!(OS->Flags & SHF_ALLOC) || !(OS->Flags & SHF_EXECINSTR))
       continue;
-    if (OutputSectionCommand *C = Script->getCmd(OS))
-      for (BaseCommand *BC : C->Commands)
-        if (auto *ISD = dyn_cast<InputSectionDescription>(BC)) {
-          CurTS = nullptr;
-          for (InputSection* IS : ISD->Sections)
-            Fn(OS, &ISD->Sections, IS);
-        }
+    for (BaseCommand *BC : Cmd->Commands)
+      if (auto *ISD = dyn_cast<InputSectionDescription>(BC)) {
+        CurTS = nullptr;
+        for (InputSection *IS : ISD->Sections)
+          Fn(OS, &ISD->Sections, IS);
+      }
   }
 }
 

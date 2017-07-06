@@ -12,12 +12,16 @@
 // CHECK-NEXT: movl $0x11010, %edx
 // CHECK-NEXT: movl $0x11000, %edx
 
+// This shows an oddity of our implementation. The symbol foo gets
+// mapped to __wrap_foo, but stays in the symbol table. This results
+// in it showing up twice in the output.
+
 // RUN: llvm-readobj -t -s %t3 | FileCheck -check-prefix=SYM %s
-// SYM:      Name: __real_foo
+// SYM:      Name: foo
 // SYM-NEXT: Value: 0x11000
 // SYM:      Name: __wrap_foo
 // SYM-NEXT: Value: 0x11010
-// SYM:      Name: foo
+// SYM:      Name: __wrap_foo
 // SYM-NEXT: Value: 0x11010
 
 .global _start

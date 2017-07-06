@@ -768,6 +768,8 @@ The following binary operations are available on C<isl_val>s.
 		unsigned long v2);
 	__isl_give isl_val *isl_val_div(__isl_take isl_val *v1,
 		__isl_take isl_val *v2);
+	__isl_give isl_val *isl_val_div_ui(__isl_take isl_val *v1,
+		unsigned long v2);
 
 On integer values, we additionally have the following operations.
 
@@ -4661,12 +4663,17 @@ Intersect the set, relation or function domain
 with the hyperplane where the given
 dimension has the fixed given value.
 
-	__isl_give isl_basic_map *isl_basic_map_lower_bound_si(
-		__isl_take isl_basic_map *bmap,
-		enum isl_dim_type type, unsigned pos, int value);
-	__isl_give isl_basic_map *isl_basic_map_upper_bound_si(
-		__isl_take isl_basic_map *bmap,
-		enum isl_dim_type type, unsigned pos, int value);
+	#include <isl/set.h>
+	__isl_give isl_basic_set *
+	isl_basic_set_lower_bound_val(
+		__isl_take isl_basic_set *bset,
+		enum isl_dim_type type, unsigned pos,
+		__isl_take isl_val *value);
+	__isl_give isl_basic_set *
+	isl_basic_set_upper_bound_val(
+		__isl_take isl_basic_set *bset,
+		enum isl_dim_type type, unsigned pos,
+		__isl_take isl_val *value);
 	__isl_give isl_set *isl_set_lower_bound_si(
 		__isl_take isl_set *set,
 		enum isl_dim_type type, unsigned pos, int value);
@@ -4674,9 +4681,6 @@ dimension has the fixed given value.
 		__isl_take isl_set *set,
 		enum isl_dim_type type, unsigned pos,
 		__isl_take isl_val *value);
-	__isl_give isl_map *isl_map_lower_bound_si(
-		__isl_take isl_map *map,
-		enum isl_dim_type type, unsigned pos, int value);
 	__isl_give isl_set *isl_set_upper_bound_si(
 		__isl_take isl_set *set,
 		enum isl_dim_type type, unsigned pos, int value);
@@ -4684,6 +4688,17 @@ dimension has the fixed given value.
 		__isl_take isl_set *set,
 		enum isl_dim_type type, unsigned pos,
 		__isl_take isl_val *value);
+
+	#include <isl/map.h>
+	__isl_give isl_basic_map *isl_basic_map_lower_bound_si(
+		__isl_take isl_basic_map *bmap,
+		enum isl_dim_type type, unsigned pos, int value);
+	__isl_give isl_basic_map *isl_basic_map_upper_bound_si(
+		__isl_take isl_basic_map *bmap,
+		enum isl_dim_type type, unsigned pos, int value);
+	__isl_give isl_map *isl_map_lower_bound_si(
+		__isl_take isl_map *map,
+		enum isl_dim_type type, unsigned pos, int value);
 	__isl_give isl_map *isl_map_upper_bound_si(
 		__isl_take isl_map *map,
 		enum isl_dim_type type, unsigned pos, int value);
@@ -5831,6 +5846,14 @@ the same (number of) parameters.
 	__isl_give isl_map *isl_map_intersect(
 		__isl_take isl_map *map1,
 		__isl_take isl_map *map2);
+	__isl_give isl_map *
+	isl_map_intersect_domain_factor_range(
+		__isl_take isl_map *map,
+		__isl_take isl_map *factor);
+	__isl_give isl_map *
+	isl_map_intersect_range_factor_range(
+		__isl_take isl_map *map,
+		__isl_take isl_map *factor);
 
 	#include <isl/union_set.h>
 	__isl_give isl_union_set *isl_union_set_intersect_params(
@@ -5853,6 +5876,10 @@ the same (number of) parameters.
 	__isl_give isl_union_map *isl_union_map_intersect(
 		__isl_take isl_union_map *umap1,
 		__isl_take isl_union_map *umap2);
+	__isl_give isl_union_map *
+	isl_union_map_intersect_range_factor_range(
+		__isl_take isl_union_map *umap,
+		__isl_take isl_union_map *factor);
 
 	#include <isl/aff.h>
 	__isl_give isl_pw_aff *isl_pw_aff_intersect_domain(
@@ -8747,29 +8774,31 @@ C<isl_schedule_node_to_str> prints the schedule node in block format.
 =head2 Dependence Analysis
 
 C<isl> contains specialized functionality for performing
-array dataflow analysis.  That is, given a I<sink> access relation
-and a collection of possible I<source> access relations,
+array dataflow analysis.  That is, given a I<sink> access relation,
+a collection of possible I<source> accesses and
+a collection of I<kill> accesses,
 C<isl> can compute relations that describe
-for each iteration of the sink access, which iteration
-of which of the source access relations was the last
-to access the same data element before the given iteration
-of the sink access.
+for each iteration of the sink access, which iterations
+of which of the source access relations may have
+accessed the same data element before the given iteration
+of the sink access without any intermediate kill of that data element.
 The resulting dependence relations map source iterations
 to either the corresponding sink iterations or
 pairs of corresponding sink iterations and accessed data elements.
 To compute standard flow dependences, the sink should be
 a read, while the sources should be writes.
-If any of the source accesses are marked as being I<may>
-accesses, then there will be a (may) dependence from the last
-I<must> access B<and> from any I<may> access that follows
-this last I<must> access, but still precedes the sink access.
-Only dependences originating in a must access and without
+If no kills are specified,
+then memory based dependence analysis is performed.
+If, on the other hand, all sources are also kills,
+then value based dependence analysis is performed.
+If any of the source accesses are marked as being I<must>
+accesses, then they are also treated as kills.
+Furthermore, the specification of must-sources results
+in the computation of must-dependences.
+Only dependences originating in a must access not coscheduled
+with any other access to the same element and without
 any may accesses between the must access and the sink access
 are considered to be must dependences.
-In particular, if I<all> sources are I<may> accesses,
-then memory based dependence analysis is performed.
-If, on the other hand, all sources are I<must> accesses,
-then value based dependence analysis is performed.
 
 =head3 High-level Interface
 
@@ -8795,13 +8824,17 @@ the following functions.
 	isl_union_access_info_from_sink(
 		__isl_take isl_union_map *sink);
 	__isl_give isl_union_access_info *
-	isl_union_access_info_set_must_source(
+	isl_union_access_info_set_kill(
 		__isl_take isl_union_access_info *access,
-		__isl_take isl_union_map *must_source);
+		__isl_take isl_union_map *kill);
 	__isl_give isl_union_access_info *
 	isl_union_access_info_set_may_source(
 		__isl_take isl_union_access_info *access,
 		__isl_take isl_union_map *may_source);
+	__isl_give isl_union_access_info *
+	isl_union_access_info_set_must_source(
+		__isl_take isl_union_access_info *access,
+		__isl_take isl_union_map *must_source);
 	__isl_give isl_union_access_info *
 	isl_union_access_info_set_schedule(
 		__isl_take isl_union_access_info *access,
@@ -8820,7 +8853,9 @@ the following functions.
 The may sources set by C<isl_union_access_info_set_may_source>
 do not need to include the must sources set by
 C<isl_union_access_info_set_must_source> as a subset.
-The user is free not to call one (or both) of these functions,
+The kills set by C<isl_union_access_info_set_kill> may overlap
+with the may-sources and/or must-sources.
+The user is free not to call one (or more) of these functions,
 in which case the corresponding set is kept to its empty default.
 Similarly, the default schedule initialized by
 C<isl_union_access_info_from_sink> is empty.
@@ -8831,6 +8866,14 @@ The domain of the schedule corresponds to the domains of
 the access relations.  In particular, the domains of the access
 relations are effectively intersected with the domain of the schedule
 and only the resulting accesses are considered by the dependence analysis.
+
+An C<isl_union_access_info> object can be read from input
+using the following function.
+
+	#include <isl/flow.h>
+	__isl_give isl_union_access_info *
+	isl_union_access_info_read_from_file(isl_ctx *ctx,
+		FILE *input);
 
 A representation of the information contained in an object
 of type C<isl_union_access_info> can be obtained using
@@ -8941,6 +8984,7 @@ C<sink>, a token C<sink_user> used to identify the sink
 access to the user, a callback function for specifying the
 relative order of source and sink accesses, and the number
 of source access relations that will be added.
+
 The callback function has type C<int (*)(void *first, void *second)>.
 The function is called with two user supplied tokens identifying
 either a source or the sink and it should return the shared nesting
@@ -8949,7 +8993,12 @@ In particular, let I<n> be the number of loops shared by
 the two accesses.  If C<first> precedes C<second> textually,
 then the function should return I<2 * n + 1>; otherwise,
 it should return I<2 * n>.
-The sources can be added to the C<isl_access_info> by performing
+The low-level interface assumes that no sources are coscheduled.
+If the information returned by the callback does not allow
+the relative order to be determined, then one of the sources
+is arbitrarily taken to be executed after the other(s).
+
+The sources can be added to the C<isl_access_info> object by performing
 (at most) C<max_source> calls to C<isl_access_info_add_source>.
 C<must> indicates whether the source is a I<must> access
 or a I<may> access.  Note that a multi-valued access relation
@@ -8960,7 +9009,7 @@ the source access.  The range of the source access relation
 C<source> should have the same dimension as the range
 of the sink access relation.
 The C<isl_access_info_free> function should usually not be
-called explicitly, because it is called implicitly by
+called explicitly, because it is already called implicitly by
 C<isl_access_info_compute_flow>.
 
 The result of the dependence analysis is collected in an
@@ -9297,6 +9346,10 @@ L</"Schedule Trees">.
 		isl_ctx *ctx, int val);
 	int isl_options_get_schedule_algorithm(
 		isl_ctx *ctx);
+	isl_stat isl_options_set_schedule_carry_self_first(
+		isl_ctx *ctx, int val);
+	int isl_options_get_schedule_carry_self_first(
+		isl_ctx *ctx);
 	isl_stat isl_options_set_schedule_separate_components(
 		isl_ctx *ctx, int val);
 	int isl_options_get_schedule_separate_components(
@@ -9378,7 +9431,7 @@ If this option is set, then we try to construct schedules in which the
 constant term is split off from the linear part if the linear parts of
 the scheduling rows for all nodes in the graph have a common non-trivial
 divisor.
-The constant term is then placed in a separate band and the linear
+The constant term is then dropped and the linear
 part is reduced.
 This option is only effective when the Feautrier style scheduler is
 being used, either as the main scheduler or as a fallback for the
@@ -9393,6 +9446,12 @@ bounds on the schedule coefficients based on the sizes of the instance sets.
 For the Feautrier style scheduler, this option detects potentially
 coalescing schedules and then tries to adjust the schedule to avoid
 the coalescing.
+
+=item * schedule_carry_self_first
+
+If this option is set, then the Feautrier style scheduler
+(when used as a fallback for the Pluto-like scheduler) will
+first try to only carry self-dependences.
 
 =item * schedule_separate_components
 
@@ -10762,6 +10821,12 @@ is given, then the constant should appear in the last column.
 
 Given a polytope, C<isl_polytope_scan> prints
 all integer points in the polytope.
+
+=head2 C<isl_flow>
+
+Given an C<isl_union_access_info> object as input,
+C<isl_flow> prints out the corresponding dependences,
+as computed by C<isl_union_access_info_compute_flow>.
 
 =head2 C<isl_codegen>
 

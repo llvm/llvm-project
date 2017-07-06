@@ -112,6 +112,111 @@ static cl::opt<int>
                cl::desc("Minimal number of compute statements to run on GPU."),
                cl::Hidden, cl::init(10 * 512 * 512));
 
+/// Used to store information PPCG wants for kills. This information is
+/// used by live range reordering.
+///
+/// @see computeLiveRangeReordering
+/// @see GPUNodeBuilder::createPPCGScop
+/// @see GPUNodeBuilder::createPPCGProg
+struct MustKillsInfo {
+  /// Collection of all kill statements that will be sequenced at the end of
+  /// PPCGScop->schedule.
+  ///
+  /// The nodes in `KillsSchedule` will be merged using `isl_schedule_set`
+  /// which merges schedules in *arbitrary* order.
+  /// (we don't care about the order of the kills anyway).
+  isl::schedule KillsSchedule;
+  /// Map from kill statement instances to scalars that need to be
+  /// killed.
+  ///
+  /// We currently only derive kill information for phi nodes, as phi nodes
+  /// allow us to easily derive kill information. PHI nodes are not alive
+  /// outside the scop and can consequently all be "killed". [params] -> {
+  /// [Stmt_phantom[] -> ref_phantom[]] -> phi_ref[] }
+  isl::union_map TaggedMustKills;
+
+  MustKillsInfo() : KillsSchedule(nullptr), TaggedMustKills(nullptr){};
+};
+
+/// Compute must-kills needed to enable live range reordering with PPCG.
+///
+/// @params S The Scop to compute live range reordering information
+/// @returns live range reordering information that can be used to setup
+/// PPCG.
+static MustKillsInfo computeMustKillsInfo(const Scop &S) {
+  const isl::space ParamSpace(isl::manage(S.getParamSpace()));
+  MustKillsInfo Info;
+
+  // 1. Collect phi nodes in scop.
+  SmallVector<isl::id, 4> KillMemIds;
+  for (ScopArrayInfo *SAI : S.arrays()) {
+    if (!SAI->isPHIKind())
+      continue;
+
+    KillMemIds.push_back(isl::manage(SAI->getBasePtrId()));
+  }
+
+  Info.TaggedMustKills = isl::union_map::empty(isl::space(ParamSpace));
+
+  // Initialising KillsSchedule to `isl_set_empty` creates an empty node in the
+  // schedule:
+  //     - filter: "[control] -> { }"
+  // So, we choose to not create this to keep the output a little nicer,
+  // at the cost of some code complexity.
+  Info.KillsSchedule = nullptr;
+
+  for (isl::id &phiId : KillMemIds) {
+    isl::id KillStmtId = isl::id::alloc(
+        S.getIslCtx(), std::string("SKill_phantom_").append(phiId.get_name()),
+        nullptr);
+
+    // NOTE: construction of tagged_must_kill:
+    // 2. We need to construct a map:
+    //     [param] -> { [Stmt_phantom[] -> ref_phantom[]] -> phi_ref }
+    // To construct this, we use `isl_map_domain_product` on 2 maps`:
+    // 2a. StmtToPhi:
+    //         [param] -> { Stmt_phantom[] -> phi_ref[] }
+    // 2b. PhantomRefToPhi:
+    //         [param] -> { ref_phantom[] -> phi_ref[] }
+    //
+    // Combining these with `isl_map_domain_product` gives us
+    // TaggedMustKill:
+    //     [param] -> { [Stmt[] -> phantom_ref[]] -> memref[] }
+
+    // 2a. [param] -> { S_2[] -> phi_ref[] }
+    isl::map StmtToPhi = isl::map::universe(isl::space(ParamSpace));
+    StmtToPhi = StmtToPhi.set_tuple_id(isl::dim::in, isl::id(KillStmtId));
+    StmtToPhi = StmtToPhi.set_tuple_id(isl::dim::out, isl::id(phiId));
+
+    isl::id PhantomRefId = isl::id::alloc(
+        S.getIslCtx(), std::string("ref_phantom") + phiId.get_name(), nullptr);
+
+    // 2b. [param] -> { phantom_ref[] -> memref[] }
+    isl::map PhantomRefToPhi = isl::map::universe(isl::space(ParamSpace));
+    PhantomRefToPhi = PhantomRefToPhi.set_tuple_id(isl::dim::in, PhantomRefId);
+    PhantomRefToPhi = PhantomRefToPhi.set_tuple_id(isl::dim::out, phiId);
+
+    // 2. [param] -> { [Stmt[] -> phantom_ref[]] -> memref[] }
+    isl::map TaggedMustKill = StmtToPhi.domain_product(PhantomRefToPhi);
+    Info.TaggedMustKills = Info.TaggedMustKills.unite(TaggedMustKill);
+
+    // 3. Create the kill schedule of the form:
+    //     "[param] -> { Stmt_phantom[] }"
+    // Then add this to Info.KillsSchedule.
+    isl::space KillStmtSpace = ParamSpace;
+    KillStmtSpace = KillStmtSpace.set_tuple_id(isl::dim::set, KillStmtId);
+    isl::union_set KillStmtDomain = isl::set::universe(KillStmtSpace);
+
+    isl::schedule KillSchedule = isl::schedule::from_domain(KillStmtDomain);
+    if (Info.KillsSchedule)
+      Info.KillsSchedule = Info.KillsSchedule.set(KillSchedule);
+    else
+      Info.KillsSchedule = KillSchedule;
+  }
+
+  return Info;
+}
+
 /// Create the ast expressions for a ScopStmt.
 ///
 /// This function is a callback for to generate the ast expressions for each
@@ -193,6 +298,9 @@ public:
 
   /// The maximal number of loops surrounding a parallel kernel.
   unsigned DeepestParallel = 0;
+
+  /// Return the name to set for the ptx_kernel.
+  std::string getKernelFuncName(int Kernel_id);
 
 private:
   /// A vector of array base pointers for which a new ScopArrayInfo was created.
@@ -556,6 +664,11 @@ private:
                               Value *BlockDimY, Value *BlockDimZ,
                               Value *Parameters);
 };
+
+std::string GPUNodeBuilder::getKernelFuncName(int Kernel_id) {
+  return "FUNC_" + S.getFunction().getName().str() + "_KERNEL_" +
+         std::to_string(Kernel_id);
+}
 
 void GPUNodeBuilder::initializeAfterRTH() {
   BasicBlock *NewBB = SplitBlock(Builder.GetInsertBlock(),
@@ -1516,7 +1629,7 @@ void GPUNodeBuilder::createKernel(__isl_take isl_ast_node *KernelStmt) {
   Builder.SetInsertPoint(&HostInsertPoint);
   Value *Parameters = createLaunchParameters(Kernel, F, SubtreeValues);
 
-  std::string Name = "kernel_" + std::to_string(Kernel->id);
+  std::string Name = getKernelFuncName(Kernel->id);
   Value *KernelString = Builder.CreateGlobalStringPtr(ASMString, Name);
   Value *NameString = Builder.CreateGlobalStringPtr(Name, Name + "_name");
   Value *GPUKernel = createCallGetKernel(KernelString, NameString);
@@ -1557,7 +1670,7 @@ Function *
 GPUNodeBuilder::createKernelFunctionDecl(ppcg_kernel *Kernel,
                                          SetVector<Value *> &SubtreeValues) {
   std::vector<Type *> Args;
-  std::string Identifier = "kernel_" + std::to_string(Kernel->id);
+  std::string Identifier = getKernelFuncName(Kernel->id);
 
   for (long i = 0; i < Prog->n_array; i++) {
     if (!ppcg_kernel_requires_array_argument(Kernel, i))
@@ -1821,7 +1934,7 @@ void GPUNodeBuilder::createKernelVariables(ppcg_kernel *Kernel, Function *FN) {
 void GPUNodeBuilder::createKernelFunction(
     ppcg_kernel *Kernel, SetVector<Value *> &SubtreeValues,
     SetVector<Function *> &SubtreeFunctions) {
-  std::string Identifier = "kernel_" + std::to_string(Kernel->id);
+  std::string Identifier = getKernelFuncName(Kernel->id);
   GPUModule.reset(new Module(Identifier, Builder.getContext()));
 
   switch (Arch) {
@@ -2114,6 +2227,8 @@ public:
     auto PPCGScop = (ppcg_scop *)malloc(sizeof(ppcg_scop));
 
     PPCGScop->options = createPPCGOptions();
+    // enable live range reordering
+    PPCGScop->options->live_range_reordering = 1;
 
     PPCGScop->start = 0;
     PPCGScop->end = 0;
@@ -2129,10 +2244,9 @@ public:
     PPCGScop->tagged_must_writes = getTaggedMustWrites();
     PPCGScop->must_writes = S->getMustWrites();
     PPCGScop->live_out = nullptr;
-    PPCGScop->tagged_must_kills = isl_union_map_empty(S->getParamSpace());
     PPCGScop->tagger = nullptr;
-
-    PPCGScop->independence = nullptr;
+    PPCGScop->independence =
+        isl_union_map_empty(isl_set_get_space(PPCGScop->context));
     PPCGScop->dep_flow = nullptr;
     PPCGScop->tagged_dep_flow = nullptr;
     PPCGScop->dep_false = nullptr;
@@ -2141,8 +2255,15 @@ public:
     PPCGScop->tagged_dep_order = nullptr;
 
     PPCGScop->schedule = S->getScheduleTree();
-    PPCGScop->names = getNames();
 
+    MustKillsInfo KillsInfo = computeMustKillsInfo(*S);
+    // If we have something non-trivial to kill, add it to the schedule
+    if (KillsInfo.KillsSchedule.get())
+      PPCGScop->schedule = isl_schedule_sequence(
+          PPCGScop->schedule, KillsInfo.KillsSchedule.take());
+    PPCGScop->tagged_must_kills = KillsInfo.TaggedMustKills.take();
+
+    PPCGScop->names = getNames();
     PPCGScop->pet = nullptr;
 
     compute_tagger(PPCGScop);
@@ -2414,7 +2535,13 @@ public:
     PPCGProg->to_inner = getArrayIdentity();
     PPCGProg->to_outer = getArrayIdentity();
     PPCGProg->any_to_outer = nullptr;
-    PPCGProg->array_order = nullptr;
+
+    // this needs to be set when live range reordering is enabled.
+    // NOTE: I believe that is conservatively correct. I'm not sure
+    //       what the semantics of this is.
+    // Quoting PPCG/gpu.h: "Order dependences on non-scalars."
+    PPCGProg->array_order =
+        isl_union_map_empty(isl_set_get_space(PPCGScop->context));
     PPCGProg->n_stmts = std::distance(S->begin(), S->end());
     PPCGProg->stmts = getStatements();
     PPCGProg->n_array = std::distance(S->array_begin(), S->array_end());
@@ -2424,7 +2551,6 @@ public:
     createArrays(PPCGProg);
 
     PPCGProg->may_persist = compute_may_persist(PPCGProg);
-
     return PPCGProg;
   }
 

@@ -3497,8 +3497,8 @@ static Loop *getLoopSurroundingScop(Scop &S, LoopInfo &LI) {
 Scop::Scop(Region &R, ScalarEvolution &ScalarEvolution, LoopInfo &LI,
            ScopDetection::DetectionContext &DC)
     : SE(&ScalarEvolution), R(R), name(R.getNameStr()), IsOptimized(false),
-      SkipScop(false), HasSingleExitEdge(R.getExitingBlock()),
-      HasErrorBlock(false), MaxLoopDepth(0), CopyStmtsNum(0), DC(DC),
+      HasSingleExitEdge(R.getExitingBlock()), HasErrorBlock(false),
+      MaxLoopDepth(0), CopyStmtsNum(0), SkipScop(false), DC(DC),
       IslCtx(isl_ctx_alloc(), isl_ctx_free), Context(nullptr),
       Affinator(this, LI), AssumedContext(nullptr), InvalidContext(nullptr),
       Schedule(nullptr) {

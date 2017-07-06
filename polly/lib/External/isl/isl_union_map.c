@@ -23,6 +23,7 @@
 #include <isl/set.h>
 #include <isl_space_private.h>
 #include <isl/union_set.h>
+#include <isl_maybe_map.h>
 #include <isl/deprecated/union_map_int.h>
 
 #include <bset_from_bmap.c>
@@ -348,12 +349,12 @@ isl_bool isl_union_map_space_has_equal_params(__isl_keep isl_union_map *umap,
 	return isl_space_has_equal_params(umap_space, space);
 }
 
-static int has_dim(const void *entry, const void *val)
+static int has_space(const void *entry, const void *val)
 {
 	isl_map *map = (isl_map *)entry;
-	isl_space *dim = (isl_space *)val;
+	isl_space *space = (isl_space *) val;
 
-	return isl_space_is_equal(map->dim, dim);
+	return isl_space_is_equal(map->dim, space);
 }
 
 __isl_give isl_union_map *isl_union_map_add_map(__isl_take isl_union_map *umap,
@@ -386,7 +387,7 @@ __isl_give isl_union_map *isl_union_map_add_map(__isl_take isl_union_map *umap,
 
 	hash = isl_space_get_hash(map->dim);
 	entry = isl_hash_table_find(umap->dim->ctx, &umap->table, hash,
-				    &has_dim, map->dim, 1);
+				    &has_space, map->dim, 1);
 	if (!entry)
 		goto error;
 
@@ -537,7 +538,7 @@ __isl_give isl_map *isl_union_map_extract_map(__isl_keep isl_union_map *umap,
 
 	hash = isl_space_get_hash(space);
 	entry = isl_hash_table_find(umap->dim->ctx, &umap->table, hash,
-				    &has_dim, space, 0);
+				    &has_space, space, 0);
 	if (!entry)
 		return isl_map_empty(space);
 	isl_space_free(space);
@@ -566,7 +567,7 @@ isl_bool isl_union_map_contains(__isl_keep isl_union_map *umap,
 
 	hash = isl_space_get_hash(space);
 	entry = isl_hash_table_find(umap->dim->ctx, &umap->table, hash,
-				    &has_dim, space, 0);
+				    &has_space, space, 0);
 	return !!entry;
 }
 
@@ -606,45 +607,159 @@ isl_stat isl_union_set_foreach_point(__isl_keep isl_union_set *uset,
 	return isl_union_set_foreach_set(uset, &foreach_point, &data);
 }
 
+/* Data structure that specifies how gen_bin_op should
+ * construct results from the inputs.
+ *
+ * If "subtract" is set, then a map in the first input is copied to the result
+ * if there is no corresponding map in the second input.
+ * Otherwise, a map in the first input with no corresponding map
+ * in the second input is ignored.
+ * If "filter" is not NULL, then it specifies which maps in the first
+ * input may have a matching map in the second input.
+ * In particular, it makes sure that "match_space" can be called
+ * on the space of the map.
+ * "match_space" specifies how to transform the space of a map
+ * in the first input to the space of the corresponding map
+ * in the second input.
+ * "fn_map" specifies how the matching maps, one from each input,
+ * should be combined to form a map in the result.
+ */
+struct isl_bin_op_control {
+	int subtract;
+	isl_bool (*filter)(__isl_keep isl_map *map);
+	__isl_give isl_space *(*match_space)(__isl_take isl_space *space);
+	__isl_give isl_map *(*fn_map)(__isl_take isl_map *map1,
+		__isl_take isl_map *map2);
+};
+
+/* Internal data structure for gen_bin_op.
+ * "control" specifies how the maps in the result should be constructed.
+ * "umap2" is a pointer to the second argument.
+ * "res" collects the results.
+ */
 struct isl_union_map_gen_bin_data {
+	struct isl_bin_op_control *control;
 	isl_union_map *umap2;
 	isl_union_map *res;
 };
 
-static isl_stat subtract_entry(void **entry, void *user)
+/* Add a copy of "map" to "res" and return the result.
+ */
+static __isl_give isl_union_map *bin_add_map(__isl_take isl_union_map *res,
+	__isl_keep isl_map *map)
 {
-	struct isl_union_map_gen_bin_data *data = user;
+	return isl_union_map_add_map(res, isl_map_copy(map));
+}
+
+/* Combine "map1" and "map2", add the result to "res" and return the result.
+ * Check whether the result is empty before adding it to "res".
+ */
+static __isl_give isl_union_map *bin_add_pair(__isl_take isl_union_map *res,
+	__isl_keep isl_map *map1, __isl_keep isl_map *map2,
+	struct isl_union_map_gen_bin_data *data)
+{
+	isl_bool empty;
+	isl_map *map;
+
+	map = data->control->fn_map(isl_map_copy(map1), isl_map_copy(map2));
+	empty = isl_map_is_empty(map);
+	if (empty < 0 || empty) {
+		isl_map_free(map);
+		if (empty < 0)
+			return isl_union_map_free(res);
+		return res;
+	}
+	return isl_union_map_add_map(res, map);
+}
+
+/* Dummy match_space function that simply returns the input space.
+ */
+static __isl_give isl_space *identity(__isl_take isl_space *space)
+{
+	return space;
+}
+
+/* Look for the map in data->umap2 that corresponds to "map", if any.
+ * Return (isl_bool_true, matching map) if there is one,
+ * (isl_bool_false, NULL) if there is no matching map and
+ * (isl_bool_error, NULL) on error.
+ *
+ * If not NULL, then data->control->filter specifies whether "map"
+ * can have any matching map.  If so,
+ * data->control->match_space specifies which map in data->umap2
+ * corresponds to "map".
+ */
+static __isl_keep isl_maybe_isl_map bin_try_get_match(
+	struct isl_union_map_gen_bin_data *data, __isl_keep isl_map *map)
+{
 	uint32_t hash;
 	struct isl_hash_table_entry *entry2;
-	isl_map *map = *entry;
+	isl_space *space;
+	isl_maybe_isl_map res = { isl_bool_error, NULL };
 
-	hash = isl_space_get_hash(map->dim);
-	entry2 = isl_hash_table_find(data->umap2->dim->ctx, &data->umap2->table,
-				     hash, &has_dim, map->dim, 0);
-	map = isl_map_copy(map);
-	if (entry2) {
-		int empty;
-		map = isl_map_subtract(map, isl_map_copy(entry2->data));
-
-		empty = isl_map_is_empty(map);
-		if (empty < 0) {
-			isl_map_free(map);
-			return isl_stat_error;
-		}
-		if (empty) {
-			isl_map_free(map);
-			return isl_stat_ok;
-		}
+	if (data->control->filter) {
+		res.valid = data->control->filter(map);
+		if (res.valid < 0 || !res.valid)
+			return res;
+		res.valid = isl_bool_error;
 	}
-	data->res = isl_union_map_add_map(data->res, map);
+
+	space = isl_map_get_space(map);
+	if (data->control->match_space != &identity)
+		space = data->control->match_space(space);
+	if (!space)
+		return res;
+	hash = isl_space_get_hash(space);
+	entry2 = isl_hash_table_find(isl_union_map_get_ctx(data->umap2),
+				     &data->umap2->table, hash,
+				     &has_space, space, 0);
+	isl_space_free(space);
+	res.valid = entry2 != NULL;
+	if (entry2)
+		res.value = entry2->data;
+
+	return res;
+}
+
+/* isl_hash_table_foreach callback for gen_bin_op.
+ * Look for the map in data->umap2 that corresponds
+ * to the map that "entry" points to, apply the binary operation and
+ * add the result to data->res.
+ *
+ * If no corresponding map can be found, then the effect depends
+ * on data->control->subtract.  If it is set, then the current map
+ * is added directly to the result.  Otherwise, it is ignored.
+ */
+static isl_stat gen_bin_entry(void **entry, void *user)
+{
+	struct isl_union_map_gen_bin_data *data = user;
+	isl_map *map = *entry;
+	isl_maybe_isl_map m;
+
+	m = bin_try_get_match(data, map);
+	if (m.valid < 0)
+		return isl_stat_error;
+	if (!m.valid && !data->control->subtract)
+		return isl_stat_ok;
+
+	if (!m.valid)
+		data->res = bin_add_map(data->res, map);
+	else
+		data->res = bin_add_pair(data->res, map, m.value, data);
+	if (!data->res)
+		return isl_stat_error;
 
 	return isl_stat_ok;
 }
 
+/* Apply a binary operation to "umap1" and "umap2" based on "control".
+ * Run over all maps in "umap1" and look for the corresponding map in "umap2"
+ * in gen_bin_entry.
+ */
 static __isl_give isl_union_map *gen_bin_op(__isl_take isl_union_map *umap1,
-	__isl_take isl_union_map *umap2, isl_stat (*fn)(void **, void *))
+	__isl_take isl_union_map *umap2, struct isl_bin_op_control *control)
 {
-	struct isl_union_map_gen_bin_data data = { NULL, NULL };
+	struct isl_union_map_gen_bin_data data = { control, NULL, NULL };
 
 	umap1 = isl_union_map_align_params(umap1, isl_union_map_get_space(umap2));
 	umap2 = isl_union_map_align_params(umap2, isl_union_map_get_space(umap1));
@@ -656,7 +771,7 @@ static __isl_give isl_union_map *gen_bin_op(__isl_take isl_union_map *umap1,
 	data.res = isl_union_map_alloc(isl_space_copy(umap1->dim),
 				       umap1->table.n);
 	if (isl_hash_table_foreach(umap1->dim->ctx, &umap1->table,
-				   fn, &data) < 0)
+				   &gen_bin_entry, &data) < 0)
 		goto error;
 
 	isl_union_map_free(umap1);
@@ -672,7 +787,13 @@ error:
 __isl_give isl_union_map *isl_union_map_subtract(
 	__isl_take isl_union_map *umap1, __isl_take isl_union_map *umap2)
 {
-	return gen_bin_op(umap1, umap2, &subtract_entry);
+	struct isl_bin_op_control control = {
+		.subtract = 1,
+		.match_space = &identity,
+		.fn_map = &isl_map_subtract,
+	};
+
+	return gen_bin_op(umap1, umap2, &control);
 }
 
 __isl_give isl_union_set *isl_union_set_subtract(
@@ -793,7 +914,7 @@ static isl_stat match_bin_entry(void **entry, void *user)
 
 	hash = isl_space_get_hash(map->dim);
 	entry2 = isl_hash_table_find(data->umap2->dim->ctx, &data->umap2->table,
-				     hash, &has_dim, map->dim, 0);
+				     hash, &has_space, map->dim, 0);
 	if (!entry2)
 		return isl_stat_ok;
 
@@ -921,6 +1042,28 @@ __isl_give isl_union_set *isl_union_set_gist(__isl_take isl_union_set *uset,
 	return isl_union_map_gist(uset, context);
 }
 
+/* For each map in "umap", remove the constraints in the corresponding map
+ * of "context".
+ * Each map in "context" is assumed to consist of a single disjunct and
+ * to have explicit representations for all local variables.
+ */
+__isl_give isl_union_map *isl_union_map_plain_gist(
+	__isl_take isl_union_map *umap, __isl_take isl_union_map *context)
+{
+	return match_bin_op(umap, context, &isl_map_plain_gist);
+}
+
+/* For each set in "uset", remove the constraints in the corresponding set
+ * of "context".
+ * Each set in "context" is assumed to consist of a single disjunct and
+ * to have explicit representations for all local variables.
+ */
+__isl_give isl_union_set *isl_union_set_plain_gist(
+	__isl_take isl_union_set *uset, __isl_take isl_union_set *context)
+{
+	return isl_union_map_plain_gist(uset, context);
+}
+
 static __isl_give isl_map *lex_le_set(__isl_take isl_map *set1,
 	__isl_take isl_map *set2)
 {
@@ -969,40 +1112,17 @@ __isl_give isl_union_map *isl_union_map_lex_ge_union_map(
 	return isl_union_map_reverse(isl_union_map_lex_le_union_map(umap2, umap1));
 }
 
-static isl_stat intersect_domain_entry(void **entry, void *user)
+/* Intersect the domain of "umap" with "uset".
+ */
+static __isl_give isl_union_map *union_map_intersect_domain(
+	__isl_take isl_union_map *umap, __isl_take isl_union_set *uset)
 {
-	struct isl_union_map_gen_bin_data *data = user;
-	uint32_t hash;
-	struct isl_hash_table_entry *entry2;
-	isl_space *dim;
-	isl_map *map = *entry;
-	isl_bool empty;
+	struct isl_bin_op_control control = {
+		.match_space = &isl_space_domain,
+		.fn_map = &isl_map_intersect_domain,
+	};
 
-	dim = isl_map_get_space(map);
-	dim = isl_space_domain(dim);
-	hash = isl_space_get_hash(dim);
-	entry2 = isl_hash_table_find(data->umap2->dim->ctx, &data->umap2->table,
-				     hash, &has_dim, dim, 0);
-	isl_space_free(dim);
-	if (!entry2)
-		return isl_stat_ok;
-
-	map = isl_map_copy(map);
-	map = isl_map_intersect_domain(map, isl_set_copy(entry2->data));
-
-	empty = isl_map_is_empty(map);
-	if (empty < 0) {
-		isl_map_free(map);
-		return isl_stat_error;
-	}
-	if (empty) {
-		isl_map_free(map);
-		return isl_stat_ok;
-	}
-
-	data->res = isl_union_map_add_map(data->res, map);
-
-	return isl_stat_ok;
+	return gen_bin_op(umap, uset, &control);
 }
 
 /* Intersect the domain of "umap" with "uset".
@@ -1014,50 +1134,8 @@ __isl_give isl_union_map *isl_union_map_intersect_domain(
 {
 	if (isl_union_set_is_params(uset))
 		return union_map_intersect_params(umap, uset);
-	return gen_bin_op(umap, uset, &intersect_domain_entry);
-}
-
-/* Remove the elements of data->umap2 from the domain of *entry
- * and add the result to data->res.
- */
-static isl_stat subtract_domain_entry(void **entry, void *user)
-{
-	struct isl_union_map_gen_bin_data *data = user;
-	uint32_t hash;
-	struct isl_hash_table_entry *entry2;
-	isl_space *dim;
-	isl_map *map = *entry;
-	isl_bool empty;
-
-	dim = isl_map_get_space(map);
-	dim = isl_space_domain(dim);
-	hash = isl_space_get_hash(dim);
-	entry2 = isl_hash_table_find(data->umap2->dim->ctx, &data->umap2->table,
-				     hash, &has_dim, dim, 0);
-	isl_space_free(dim);
-
-	map = isl_map_copy(map);
-
-	if (!entry2) {
-		data->res = isl_union_map_add_map(data->res, map);
-		return isl_stat_ok;
-	}
-
-	map = isl_map_subtract_domain(map, isl_set_copy(entry2->data));
-
-	empty = isl_map_is_empty(map);
-	if (empty < 0) {
-		isl_map_free(map);
-		return isl_stat_error;
-	}
-	if (empty) {
-		isl_map_free(map);
-		return isl_stat_ok;
-	}
-
-	data->res = isl_union_map_add_map(data->res, map);
-
-	return isl_stat_ok;
+	else
+		return union_map_intersect_domain(umap, uset);
 }
 
 /* Remove the elements of "uset" from the domain of "umap".
@@ -1065,50 +1143,13 @@ static isl_stat subtract_domain_entry(void **entry, void *user)
 __isl_give isl_union_map *isl_union_map_subtract_domain(
 	__isl_take isl_union_map *umap, __isl_take isl_union_set *dom)
 {
-	return gen_bin_op(umap, dom, &subtract_domain_entry);
-}
+	struct isl_bin_op_control control = {
+		.subtract = 1,
+		.match_space = &isl_space_domain,
+		.fn_map = &isl_map_subtract_domain,
+	};
 
-/* Remove the elements of data->umap2 from the range of *entry
- * and add the result to data->res.
- */
-static isl_stat subtract_range_entry(void **entry, void *user)
-{
-	struct isl_union_map_gen_bin_data *data = user;
-	uint32_t hash;
-	struct isl_hash_table_entry *entry2;
-	isl_space *space;
-	isl_map *map = *entry;
-	isl_bool empty;
-
-	space = isl_map_get_space(map);
-	space = isl_space_range(space);
-	hash = isl_space_get_hash(space);
-	entry2 = isl_hash_table_find(data->umap2->dim->ctx, &data->umap2->table,
-				     hash, &has_dim, space, 0);
-	isl_space_free(space);
-
-	map = isl_map_copy(map);
-
-	if (!entry2) {
-		data->res = isl_union_map_add_map(data->res, map);
-		return isl_stat_ok;
-	}
-
-	map = isl_map_subtract_range(map, isl_set_copy(entry2->data));
-
-	empty = isl_map_is_empty(map);
-	if (empty < 0) {
-		isl_map_free(map);
-		return isl_stat_error;
-	}
-	if (empty) {
-		isl_map_free(map);
-		return isl_stat_ok;
-	}
-
-	data->res = isl_union_map_add_map(data->res, map);
-
-	return isl_stat_ok;
+	return gen_bin_op(umap, dom, &control);
 }
 
 /* Remove the elements of "uset" from the range of "umap".
@@ -1116,39 +1157,26 @@ static isl_stat subtract_range_entry(void **entry, void *user)
 __isl_give isl_union_map *isl_union_map_subtract_range(
 	__isl_take isl_union_map *umap, __isl_take isl_union_set *dom)
 {
-	return gen_bin_op(umap, dom, &subtract_range_entry);
+	struct isl_bin_op_control control = {
+		.subtract = 1,
+		.match_space = &isl_space_range,
+		.fn_map = &isl_map_subtract_range,
+	};
+
+	return gen_bin_op(umap, dom, &control);
 }
 
-static isl_stat gist_domain_entry(void **entry, void *user)
+/* Compute the gist of "umap" with respect to the domain "uset".
+ */
+static __isl_give isl_union_map *union_map_gist_domain(
+	__isl_take isl_union_map *umap, __isl_take isl_union_set *uset)
 {
-	struct isl_union_map_gen_bin_data *data = user;
-	uint32_t hash;
-	struct isl_hash_table_entry *entry2;
-	isl_space *dim;
-	isl_map *map = *entry;
-	isl_bool empty;
+	struct isl_bin_op_control control = {
+		.match_space = &isl_space_domain,
+		.fn_map = &isl_map_gist_domain,
+	};
 
-	dim = isl_map_get_space(map);
-	dim = isl_space_domain(dim);
-	hash = isl_space_get_hash(dim);
-	entry2 = isl_hash_table_find(data->umap2->dim->ctx, &data->umap2->table,
-				     hash, &has_dim, dim, 0);
-	isl_space_free(dim);
-	if (!entry2)
-		return isl_stat_ok;
-
-	map = isl_map_copy(map);
-	map = isl_map_gist_domain(map, isl_set_copy(entry2->data));
-
-	empty = isl_map_is_empty(map);
-	if (empty < 0) {
-		isl_map_free(map);
-		return isl_stat_error;
-	}
-
-	data->res = isl_union_map_add_map(data->res, map);
-
-	return isl_stat_ok;
+	return gen_bin_op(umap, uset, &control);
 }
 
 /* Compute the gist of "umap" with respect to the domain "uset".
@@ -1160,39 +1188,8 @@ __isl_give isl_union_map *isl_union_map_gist_domain(
 {
 	if (isl_union_set_is_params(uset))
 		return union_map_gist_params(umap, uset);
-	return gen_bin_op(umap, uset, &gist_domain_entry);
-}
-
-static isl_stat gist_range_entry(void **entry, void *user)
-{
-	struct isl_union_map_gen_bin_data *data = user;
-	uint32_t hash;
-	struct isl_hash_table_entry *entry2;
-	isl_space *space;
-	isl_map *map = *entry;
-	isl_bool empty;
-
-	space = isl_map_get_space(map);
-	space = isl_space_range(space);
-	hash = isl_space_get_hash(space);
-	entry2 = isl_hash_table_find(data->umap2->dim->ctx, &data->umap2->table,
-				     hash, &has_dim, space, 0);
-	isl_space_free(space);
-	if (!entry2)
-		return isl_stat_ok;
-
-	map = isl_map_copy(map);
-	map = isl_map_gist_range(map, isl_set_copy(entry2->data));
-
-	empty = isl_map_is_empty(map);
-	if (empty < 0) {
-		isl_map_free(map);
-		return isl_stat_error;
-	}
-
-	data->res = isl_union_map_add_map(data->res, map);
-
-	return isl_stat_ok;
+	else
+		return union_map_gist_domain(umap, uset);
 }
 
 /* Compute the gist of "umap" with respect to the range "uset".
@@ -1200,49 +1197,39 @@ static isl_stat gist_range_entry(void **entry, void *user)
 __isl_give isl_union_map *isl_union_map_gist_range(
 	__isl_take isl_union_map *umap, __isl_take isl_union_set *uset)
 {
-	return gen_bin_op(umap, uset, &gist_range_entry);
-}
+	struct isl_bin_op_control control = {
+		.match_space = &isl_space_range,
+		.fn_map = &isl_map_gist_range,
+	};
 
-static isl_stat intersect_range_entry(void **entry, void *user)
-{
-	struct isl_union_map_gen_bin_data *data = user;
-	uint32_t hash;
-	struct isl_hash_table_entry *entry2;
-	isl_space *dim;
-	isl_map *map = *entry;
-	isl_bool empty;
-
-	dim = isl_map_get_space(map);
-	dim = isl_space_range(dim);
-	hash = isl_space_get_hash(dim);
-	entry2 = isl_hash_table_find(data->umap2->dim->ctx, &data->umap2->table,
-				     hash, &has_dim, dim, 0);
-	isl_space_free(dim);
-	if (!entry2)
-		return isl_stat_ok;
-
-	map = isl_map_copy(map);
-	map = isl_map_intersect_range(map, isl_set_copy(entry2->data));
-
-	empty = isl_map_is_empty(map);
-	if (empty < 0) {
-		isl_map_free(map);
-		return isl_stat_error;
-	}
-	if (empty) {
-		isl_map_free(map);
-		return isl_stat_ok;
-	}
-
-	data->res = isl_union_map_add_map(data->res, map);
-
-	return isl_stat_ok;
+	return gen_bin_op(umap, uset, &control);
 }
 
 __isl_give isl_union_map *isl_union_map_intersect_range(
 	__isl_take isl_union_map *umap, __isl_take isl_union_set *uset)
 {
-	return gen_bin_op(umap, uset, &intersect_range_entry);
+	struct isl_bin_op_control control = {
+		.match_space = &isl_space_range,
+		.fn_map = &isl_map_intersect_range,
+	};
+
+	return gen_bin_op(umap, uset, &control);
+}
+
+/* Intersect each map in "umap" in a space A -> [B -> C]
+ * with the corresponding map in "factor" in the space A -> C and
+ * collect the results.
+ */
+__isl_give isl_union_map *isl_union_map_intersect_range_factor_range(
+	__isl_take isl_union_map *umap, __isl_take isl_union_map *factor)
+{
+	struct isl_bin_op_control control = {
+		.filter = &isl_map_range_is_wrapping,
+		.match_space = &isl_space_range_factor_range,
+		.fn_map = &isl_map_intersect_range_factor_range,
+	};
+
+	return gen_bin_op(umap, factor, &control);
 }
 
 struct isl_union_map_bin_data {
@@ -1682,6 +1669,28 @@ __isl_give isl_union_set *isl_union_set_affine_hull(
 	__isl_take isl_union_set *uset)
 {
 	return isl_union_map_affine_hull(uset);
+}
+
+/* Wrapper around isl_set_combined_lineality_space
+ * that returns the combined lineality space in the form of an isl_set
+ * instead of an isl_basic_set.
+ */
+static __isl_give isl_set *combined_lineality_space(__isl_take isl_set *set)
+{
+	return isl_set_from_basic_set(isl_set_combined_lineality_space(set));
+}
+
+/* For each set in "uset", compute the (linear) hull
+ * of the lineality spaces of its basic sets and
+ * collect and return the results.
+ */
+__isl_give isl_union_set *isl_union_set_combined_lineality_space(
+	__isl_take isl_union_set *uset)
+{
+	struct isl_un_op_control control = {
+		.fn_map = &combined_lineality_space,
+	};
+	return un_op(uset, &control);
 }
 
 /* Compute the polyhedral hull of "map" and return the result as an isl_map.
@@ -2132,7 +2141,7 @@ static isl_stat is_subset_entry(void **entry, void *user)
 
 	hash = isl_space_get_hash(map->dim);
 	entry2 = isl_hash_table_find(data->umap2->dim->ctx, &data->umap2->table,
-				     hash, &has_dim, map->dim, 0);
+				     hash, &has_space, map->dim, 0);
 	if (!entry2) {
 		int empty = isl_map_is_empty(map);
 		if (empty < 0)
@@ -2249,7 +2258,7 @@ static isl_stat is_disjoint_entry(void **entry, void *user)
 
 	hash = isl_space_get_hash(map->dim);
 	entry2 = isl_hash_table_find(data->umap2->dim->ctx, &data->umap2->table,
-				     hash, &has_dim, map->dim, 0);
+				     hash, &has_space, map->dim, 0);
 	if (!entry2)
 		return isl_stat_ok;
 

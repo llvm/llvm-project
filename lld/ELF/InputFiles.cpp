@@ -45,13 +45,10 @@ namespace {
 // LLVM DWARF parser will not be able to parse .debug_line correctly, unless
 // we assign each section some unique address. This callback method assigns
 // each section an address equal to its offset in ELF object file.
-class ObjectInfo : public LoadedObjectInfo {
+class ObjectInfo : public LoadedObjectInfoHelper<ObjectInfo> {
 public:
   uint64_t getSectionLoadAddress(const object::SectionRef &Sec) const override {
     return static_cast<const ELFSectionRef &>(Sec).getOffset();
-  }
-  std::unique_ptr<LoadedObjectInfo> clone() const override {
-    return std::unique_ptr<LoadedObjectInfo>();
   }
 };
 }

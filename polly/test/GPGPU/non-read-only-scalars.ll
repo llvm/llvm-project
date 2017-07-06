@@ -67,7 +67,6 @@
 
 ; CODE:   }
 ; CODE-NEXT:   cudaCheckReturn(cudaMemcpy(MemRef_A, dev_MemRef_A, (32) * sizeof(float), cudaMemcpyDeviceToHost));
-; CODE-NEXT:   cudaCheckReturn(cudaMemcpy(&MemRef_sum_0__phi, dev_MemRef_sum_0__phi, sizeof(float), cudaMemcpyDeviceToHost));
 ; CODE-NEXT:   cudaCheckReturn(cudaMemcpy(&MemRef_sum_0, dev_MemRef_sum_0, sizeof(float), cudaMemcpyDeviceToHost));
 ; CODE-NEXT: }
 
