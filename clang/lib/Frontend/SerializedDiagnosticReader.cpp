@@ -27,6 +27,9 @@ std::error_code SerializedDiagnosticReader::readDiagnostics(StringRef File) {
   llvm::BitstreamCursor Stream(**Buffer);
   Optional<llvm::BitstreamBlockInfo> BlockInfo;
 
+  if (Stream.AtEndOfStream())
+    return SDError::InvalidSignature;
+
   // Sniff for the signature.
   if (Stream.Read(8) != 'D' ||
       Stream.Read(8) != 'I' ||
