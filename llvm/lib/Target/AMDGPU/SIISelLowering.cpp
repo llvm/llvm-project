@@ -547,7 +547,7 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.align = 0;
 
     const ConstantInt *Vol = dyn_cast<ConstantInt>(CI.getOperand(4));
-    Info.vol = !Vol || !Vol->isNullValue();
+    Info.vol = !Vol || !Vol->isZero();
     Info.readMem = true;
     Info.writeMem = true;
     return true;
@@ -3736,7 +3736,9 @@ SDValue SITargetLowering::lowerFastUnsafeFDIV(SDValue Op,
   SDValue LHS = Op.getOperand(0);
   SDValue RHS = Op.getOperand(1);
   EVT VT = Op.getValueType();
-  bool Unsafe = DAG.getTarget().Options.UnsafeFPMath;
+  const SDNodeFlags Flags = Op->getFlags();
+  bool Unsafe = DAG.getTarget().Options.UnsafeFPMath ||
+                Flags.hasUnsafeAlgebra() || Flags.hasAllowReciprocal();
 
   if (!Unsafe && VT == MVT::f32 && Subtarget->hasFP32Denormals())
     return SDValue();
@@ -3771,15 +3773,11 @@ SDValue SITargetLowering::lowerFastUnsafeFDIV(SDValue Op,
     }
   }
 
-  const SDNodeFlags Flags = Op->getFlags();
-
-  if (Unsafe || Flags.hasAllowReciprocal()) {
+  if (Unsafe) {
     // Turn into multiply by the reciprocal.
     // x / y -> x * (1.0 / y)
-    SDNodeFlags NewFlags;
-    NewFlags.setUnsafeAlgebra(true);
     SDValue Recip = DAG.getNode(AMDGPUISD::RCP, SL, VT, RHS);
-    return DAG.getNode(ISD::FMUL, SL, VT, LHS, Recip, NewFlags);
+    return DAG.getNode(ISD::FMUL, SL, VT, LHS, Recip, Flags);
   }
 
   return SDValue();

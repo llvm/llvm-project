@@ -225,7 +225,7 @@ static const char callee5[] = "callee5";
 static const char callee6[] = "callee6";
 
 TEST_P(MaybeSparseInstrProfTest, get_icall_data_read_write) {
-  InstrProfRecord Record1("caller", 0x1234, {1, 2});
+  NamedInstrProfRecord Record1("caller", 0x1234, {1, 2});
 
   // 4 value sites.
   Record1.reserveSites(IPVK_IndirectCallTarget, 4);
@@ -269,7 +269,7 @@ TEST_P(MaybeSparseInstrProfTest, get_icall_data_read_write) {
 }
 
 TEST_P(MaybeSparseInstrProfTest, annotate_vp_data) {
-  InstrProfRecord Record("caller", 0x1234, {1, 2});
+  NamedInstrProfRecord Record("caller", 0x1234, {1, 2});
   Record.reserveSites(IPVK_IndirectCallTarget, 1);
   InstrProfValueData VD0[] = {{1000, 1}, {2000, 2}, {3000, 3}, {5000, 5},
                               {4000, 4}, {6000, 6}};
@@ -365,7 +365,7 @@ TEST_P(MaybeSparseInstrProfTest, annotate_vp_data) {
 }
 
 TEST_P(MaybeSparseInstrProfTest, get_icall_data_read_write_with_weight) {
-  InstrProfRecord Record1("caller", 0x1234, {1, 2});
+  NamedInstrProfRecord Record1("caller", 0x1234, {1, 2});
 
   // 4 value sites.
   Record1.reserveSites(IPVK_IndirectCallTarget, 4);
@@ -408,7 +408,7 @@ TEST_P(MaybeSparseInstrProfTest, get_icall_data_read_write_with_weight) {
 }
 
 TEST_P(MaybeSparseInstrProfTest, get_icall_data_read_write_big_endian) {
-  InstrProfRecord Record1("caller", 0x1234, {1, 2});
+  NamedInstrProfRecord Record1("caller", 0x1234, {1, 2});
 
   // 4 value sites.
   Record1.reserveSites(IPVK_IndirectCallTarget, 4);
@@ -456,8 +456,8 @@ TEST_P(MaybeSparseInstrProfTest, get_icall_data_read_write_big_endian) {
 
 TEST_P(MaybeSparseInstrProfTest, get_icall_data_merge1) {
   static const char caller[] = "caller";
-  InstrProfRecord Record11(caller, 0x1234, {1, 2});
-  InstrProfRecord Record12(caller, 0x1234, {1, 2});
+  NamedInstrProfRecord Record11(caller, 0x1234, {1, 2});
+  NamedInstrProfRecord Record12(caller, 0x1234, {1, 2});
 
   // 5 value sites.
   Record11.reserveSites(IPVK_IndirectCallTarget, 5);
@@ -577,7 +577,7 @@ TEST_P(MaybeSparseInstrProfTest, get_icall_data_merge1_saturation) {
   ASSERT_EQ(InstrProfError::take(std::move(Result3)),
             instrprof_error::success);
 
-  InstrProfRecord Record4("baz", 0x5678, {3, 4});
+  NamedInstrProfRecord Record4("baz", 0x5678, {3, 4});
   Record4.reserveSites(IPVK_IndirectCallTarget, 1);
   InstrProfValueData VD4[] = {{uint64_t(bar), 1}};
   Record4.addValueData(IPVK_IndirectCallTarget, 0, VD4, 1, nullptr);
@@ -586,7 +586,7 @@ TEST_P(MaybeSparseInstrProfTest, get_icall_data_merge1_saturation) {
             instrprof_error::success);
 
   // Verify value data counter overflow.
-  InstrProfRecord Record5("baz", 0x5678, {5, 6});
+  NamedInstrProfRecord Record5("baz", 0x5678, {5, 6});
   Record5.reserveSites(IPVK_IndirectCallTarget, 1);
   InstrProfValueData VD5[] = {{uint64_t(bar), Max}};
   Record5.addValueData(IPVK_IndirectCallTarget, 0, VD5, 1, nullptr);
@@ -619,8 +619,8 @@ TEST_P(MaybeSparseInstrProfTest, get_icall_data_merge1_saturation) {
 TEST_P(MaybeSparseInstrProfTest, get_icall_data_merge_site_trunc) {
   static const char caller[] = "caller";
 
-  InstrProfRecord Record11(caller, 0x1234, {1, 2});
-  InstrProfRecord Record12(caller, 0x1234, {1, 2});
+  NamedInstrProfRecord Record11(caller, 0x1234, {1, 2});
+  NamedInstrProfRecord Record12(caller, 0x1234, {1, 2});
 
   // 2 value sites.
   Record11.reserveSites(IPVK_IndirectCallTarget, 2);
@@ -686,12 +686,12 @@ static void addValueProfData(InstrProfRecord &Record) {
 }
 
 TEST_P(MaybeSparseInstrProfTest, value_prof_data_read_write) {
-  InstrProfRecord SrcRecord("caller", 0x1234, {1ULL << 31, 2});
+  InstrProfRecord SrcRecord({1ULL << 31, 2});
   addValueProfData(SrcRecord);
   std::unique_ptr<ValueProfData> VPData =
       ValueProfData::serializeFrom(SrcRecord);
 
-  InstrProfRecord Record("caller", 0x1234, {1ULL << 31, 2});
+  InstrProfRecord Record({1ULL << 31, 2});
   VPData->deserializeTo(Record, nullptr);
 
   // Now read data from Record and sanity check the data
@@ -752,12 +752,12 @@ TEST_P(MaybeSparseInstrProfTest, value_prof_data_read_write) {
 
 TEST_P(MaybeSparseInstrProfTest, value_prof_data_read_write_mapping) {
 
-  InstrProfRecord SrcRecord("caller", 0x1234, {1ULL << 31, 2});
+  NamedInstrProfRecord SrcRecord("caller", 0x1234, {1ULL << 31, 2});
   addValueProfData(SrcRecord);
   std::unique_ptr<ValueProfData> VPData =
       ValueProfData::serializeFrom(SrcRecord);
 
-  InstrProfRecord Record("caller", 0x1234, {1ULL << 31, 2});
+  NamedInstrProfRecord Record("caller", 0x1234, {1ULL << 31, 2});
   InstrProfSymtab Symtab;
   Symtab.mapAddress(uint64_t(callee1), 0x1000ULL);
   Symtab.mapAddress(uint64_t(callee2), 0x2000ULL);

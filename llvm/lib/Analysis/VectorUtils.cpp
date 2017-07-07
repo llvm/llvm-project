@@ -301,7 +301,7 @@ const llvm::Value *llvm::getSplatValue(const Value *V) {
   auto *InsertEltInst =
     dyn_cast<InsertElementInst>(ShuffleInst->getOperand(0));
   if (!InsertEltInst || !isa<ConstantInt>(InsertEltInst->getOperand(2)) ||
-      !cast<ConstantInt>(InsertEltInst->getOperand(2))->isNullValue())
+      !cast<ConstantInt>(InsertEltInst->getOperand(2))->isZero())
     return nullptr;
 
   return InsertEltInst->getOperand(1);

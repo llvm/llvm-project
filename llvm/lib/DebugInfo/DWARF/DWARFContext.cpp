@@ -968,7 +968,7 @@ DWARFContextInMemory::DWARFContextInMemory(
     name = name.substr(
         name.find_first_not_of("._z")); // Skip ".", "z" and "_" prefixes.
 
-    if (StringRef *SectionData = MapSectionToMember(name)) {
+    if (StringRef *SectionData = mapSectionToMember(name)) {
       *SectionData = data;
       if (name == "debug_ranges") {
         // FIXME: Use the other dwo range section when we emit it.
@@ -1012,21 +1012,8 @@ DWARFContextInMemory::DWARFContextInMemory(
 
     // TODO: Add support for relocations in other sections as needed.
     // Record relocations for the debug_info and debug_line sections.
-    RelocAddrMap *Map =
-        StringSwitch<RelocAddrMap *>(RelSecName)
-            .Case("debug_info", &InfoSection.Relocs)
-            .Case("debug_loc", &LocSection.Relocs)
-            .Case("debug_info.dwo", &InfoDWOSection.Relocs)
-            .Case("debug_line", &LineSection.Relocs)
-            .Case("debug_str_offsets", &StringOffsetSection.Relocs)
-            .Case("debug_ranges", &RangeSection.Relocs)
-            .Case("debug_addr", &AddrSection.Relocs)
-            .Case("apple_names", &AppleNamesSection.Relocs)
-            .Case("apple_types", &AppleTypesSection.Relocs)
-            .Case("apple_namespaces", &AppleNamespacesSection.Relocs)
-            .Case("apple_namespac", &AppleNamespacesSection.Relocs)
-            .Case("apple_objc", &AppleObjCSection.Relocs)
-            .Default(nullptr);
+    DWARFSection *Sec = mapNameToDWARFSection(RelSecName);
+    RelocAddrMap *Map = Sec ? &Sec->Relocs : nullptr;
     if (!Map) {
       // Find debug_types relocs by section rather than name as there are
       // multiple, comdat grouped, debug_types sections.
@@ -1079,40 +1066,47 @@ DWARFContextInMemory::DWARFContextInMemory(
     bool isLittleEndian)
     : IsLittleEndian(isLittleEndian), AddressSize(AddrSize) {
   for (const auto &SecIt : Sections) {
-    if (StringRef *SectionData = MapSectionToMember(SecIt.first()))
+    if (StringRef *SectionData = mapSectionToMember(SecIt.first()))
       *SectionData = SecIt.second->getBuffer();
   }
 }
 
-StringRef *DWARFContextInMemory::MapSectionToMember(StringRef Name) {
+DWARFSection *DWARFContextInMemory::mapNameToDWARFSection(StringRef Name) {
+  return StringSwitch<DWARFSection *>(Name)
+      .Case("debug_info", &InfoSection)
+      .Case("debug_loc", &LocSection)
+      .Case("debug_line", &LineSection)
+      .Case("debug_str_offsets", &StringOffsetSection)
+      .Case("debug_ranges", &RangeSection)
+      .Case("debug_info.dwo", &InfoDWOSection)
+      .Case("debug_loc.dwo", &LocDWOSection)
+      .Case("debug_line.dwo", &LineDWOSection)
+      .Case("debug_str_offsets.dwo", &StringOffsetDWOSection)
+      .Case("debug_addr", &AddrSection)
+      .Case("apple_names", &AppleNamesSection)
+      .Case("apple_types", &AppleTypesSection)
+      .Case("apple_namespaces", &AppleNamespacesSection)
+      .Case("apple_namespac", &AppleNamespacesSection)
+      .Case("apple_objc", &AppleObjCSection)
+      .Default(nullptr);
+}
+
+StringRef *DWARFContextInMemory::mapSectionToMember(StringRef Name) {
+  if (DWARFSection *Sec = mapNameToDWARFSection(Name))
+    return &Sec->Data;
   return StringSwitch<StringRef *>(Name)
-      .Case("debug_info", &InfoSection.Data)
       .Case("debug_abbrev", &AbbrevSection)
-      .Case("debug_loc", &LocSection.Data)
-      .Case("debug_line", &LineSection.Data)
       .Case("debug_aranges", &ARangeSection)
       .Case("debug_frame", &DebugFrameSection)
       .Case("eh_frame", &EHFrameSection)
       .Case("debug_str", &StringSection)
-      .Case("debug_str_offsets", &StringOffsetSection.Data)
-      .Case("debug_ranges", &RangeSection.Data)
       .Case("debug_macinfo", &MacinfoSection)
       .Case("debug_pubnames", &PubNamesSection)
       .Case("debug_pubtypes", &PubTypesSection)
       .Case("debug_gnu_pubnames", &GnuPubNamesSection)
       .Case("debug_gnu_pubtypes", &GnuPubTypesSection)
-      .Case("debug_info.dwo", &InfoDWOSection.Data)
       .Case("debug_abbrev.dwo", &AbbrevDWOSection)
-      .Case("debug_loc.dwo", &LocDWOSection.Data)
-      .Case("debug_line.dwo", &LineDWOSection.Data)
       .Case("debug_str.dwo", &StringDWOSection)
-      .Case("debug_str_offsets.dwo", &StringOffsetDWOSection.Data)
-      .Case("debug_addr", &AddrSection.Data)
-      .Case("apple_names", &AppleNamesSection.Data)
-      .Case("apple_types", &AppleTypesSection.Data)
-      .Case("apple_namespaces", &AppleNamespacesSection.Data)
-      .Case("apple_namespac", &AppleNamespacesSection.Data)
-      .Case("apple_objc", &AppleObjCSection.Data)
       .Case("debug_cu_index", &CUIndexSection)
       .Case("debug_tu_index", &TUIndexSection)
       .Case("gdb_index", &GdbIndexSection)

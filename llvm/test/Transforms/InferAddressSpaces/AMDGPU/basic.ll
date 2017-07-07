@@ -170,4 +170,16 @@ define { i32 addrspace(4)*, i1 } @cmpxchg_group_to_flat_wrong_operand(i32 addrsp
   ret { i32 addrspace(4)*, i1 } %ret
 }
 
+; Null pointer in local addr space
+; CHECK-LABEL: @local_nullptr
+; CHECK: icmp ne i8 addrspace(3)* %a, addrspacecast (i8* null to i8 addrspace(3)*)
+; CHECK-NOT: i8 addrspace(3)* null
+define void @local_nullptr(i32 addrspace(1)* nocapture %results, i8 addrspace(3)* %a) {
+entry:
+  %tobool = icmp ne i8 addrspace(3)* %a, addrspacecast (i8* null to i8 addrspace(3)*)
+  %conv = zext i1 %tobool to i32
+  store i32 %conv, i32 addrspace(1)* %results, align 4
+  ret void
+}
+
 attributes #0 = { nounwind }

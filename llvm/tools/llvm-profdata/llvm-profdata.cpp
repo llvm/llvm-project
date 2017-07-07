@@ -528,7 +528,8 @@ static int showInstrProfile(const std::string &Filename, bool ShowCounts,
 
     if (doTextFormatDump) {
       InstrProfSymtab &Symtab = Reader->getSymtab();
-      InstrProfWriter::writeRecordInText(Func, Symtab, OS);
+      InstrProfWriter::writeRecordInText(Func.Name, Func.Hash, Func, Symtab,
+                                         OS);
       continue;
     }
 

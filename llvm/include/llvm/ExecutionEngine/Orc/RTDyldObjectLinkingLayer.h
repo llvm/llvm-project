@@ -258,8 +258,8 @@ public:
   ///
   /// @return A handle that can be used to refer to the loaded objects (for 
   ///         symbol searching, finalization, freeing memory, etc.).
-  ObjHandleT addObject(ObjectPtr Obj,
-                       std::shared_ptr<JITSymbolResolver> Resolver) {
+  Expected<ObjHandleT> addObject(ObjectPtr Obj,
+                                 std::shared_ptr<JITSymbolResolver> Resolver) {
     auto Finalizer = [&](ObjHandleT H, RuntimeDyld &RTDyld,
                          const ObjectPtr &ObjToLoad,
                          std::function<void()> LOSHandleLoad) {
@@ -299,9 +299,10 @@ public:
   /// indirectly) will result in undefined behavior. If dependence tracking is
   /// required to detect or resolve such issues it should be added at a higher
   /// layer.
-  void removeObject(ObjHandleT H) {
+  Error removeObject(ObjHandleT H) {
     // How do we invalidate the symbols in H?
     LinkedObjList.erase(H);
+    return Error::success();
   }
 
   /// @brief Search for the given named symbol.
@@ -338,8 +339,9 @@ public:
   /// @brief Immediately emit and finalize the object set represented by the
   ///        given handle.
   /// @param H Handle for object set to emit/finalize.
-  void emitAndFinalize(ObjHandleT H) {
+  Error emitAndFinalize(ObjHandleT H) {
     (*H)->finalize();
+    return Error::success();
   }
 
 private:

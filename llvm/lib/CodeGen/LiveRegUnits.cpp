@@ -67,7 +67,7 @@ void LiveRegUnits::stepBackward(const MachineInstr &MI) {
   }
 }
 
-void LiveRegUnits::accumulateBackward(const MachineInstr &MI) {
+void LiveRegUnits::accumulate(const MachineInstr &MI) {
   // Add defs, uses and regmask clobbers to the set.
   for (ConstMIBundleOperands O(MI); O.isValid(); ++O) {
     if (O->isReg()) {

@@ -66,10 +66,11 @@ protected:
     auto *ET = CCtx->APIExecTest;
     CCtx->M = ET->createTestModule(ET->TM->getTargetTriple());
     LLVMSharedModuleRef SM = LLVMOrcMakeSharedModule(wrap(CCtx->M.release()));
-    CCtx->H = LLVMOrcAddEagerlyCompiledIR(JITStack, SM, myResolver, nullptr);
+    LLVMOrcAddEagerlyCompiledIR(JITStack, &CCtx->H, SM, myResolver, nullptr);
     LLVMOrcDisposeSharedModuleRef(SM);
     CCtx->Compiled = true;
-    LLVMOrcTargetAddress MainAddr = LLVMOrcGetSymbolAddress(JITStack, "main");
+    LLVMOrcTargetAddress MainAddr;
+    LLVMOrcGetSymbolAddress(JITStack, &MainAddr, "main");
     LLVMOrcSetIndirectStubPointer(JITStack, "foo", MainAddr);
     return MainAddr;
   }
@@ -89,10 +90,12 @@ TEST_F(OrcCAPIExecutionTest, TestEagerIRCompilation) {
   LLVMOrcGetMangledSymbol(JIT, &testFuncName, "testFunc");
 
   LLVMSharedModuleRef SM = LLVMOrcMakeSharedModule(wrap(M.release()));
-  LLVMOrcModuleHandle H =
-    LLVMOrcAddEagerlyCompiledIR(JIT, SM, myResolver, nullptr);
+  LLVMOrcModuleHandle H;
+  LLVMOrcAddEagerlyCompiledIR(JIT, &H, SM, myResolver, nullptr);
   LLVMOrcDisposeSharedModuleRef(SM);
-  MainFnTy MainFn = (MainFnTy)LLVMOrcGetSymbolAddress(JIT, "main");
+  LLVMOrcTargetAddress MainAddr;
+  LLVMOrcGetSymbolAddress(JIT, &MainAddr, "main");
+  MainFnTy MainFn = (MainFnTy)MainAddr;
   int Result = MainFn();
   EXPECT_EQ(Result, 42)
     << "Eagerly JIT'd code did not return expected result";
@@ -115,10 +118,12 @@ TEST_F(OrcCAPIExecutionTest, TestLazyIRCompilation) {
   LLVMOrcGetMangledSymbol(JIT, &testFuncName, "testFunc");
 
   LLVMSharedModuleRef SM = LLVMOrcMakeSharedModule(wrap(M.release()));
-  LLVMOrcModuleHandle H =
-    LLVMOrcAddLazilyCompiledIR(JIT, SM, myResolver, nullptr);
+  LLVMOrcModuleHandle H;
+  LLVMOrcAddLazilyCompiledIR(JIT, &H, SM, myResolver, nullptr);
   LLVMOrcDisposeSharedModuleRef(SM);
-  MainFnTy MainFn = (MainFnTy)LLVMOrcGetSymbolAddress(JIT, "main");
+  LLVMOrcTargetAddress MainAddr;
+  LLVMOrcGetSymbolAddress(JIT, &MainAddr, "main");
+  MainFnTy MainFn = (MainFnTy)MainAddr;
   int Result = MainFn();
   EXPECT_EQ(Result, 42)
     << "Lazily JIT'd code did not return expected result";
@@ -140,11 +145,12 @@ TEST_F(OrcCAPIExecutionTest, TestDirectCallbacksAPI) {
 
   CompileContext C;
   C.APIExecTest = this;
-  LLVMOrcCreateIndirectStub(JIT, "foo",
-                            LLVMOrcCreateLazyCompileCallback(JIT,
-                                                             myCompileCallback,
-                                                             &C));
-  MainFnTy FooFn = (MainFnTy)LLVMOrcGetSymbolAddress(JIT, "foo");
+  LLVMOrcTargetAddress CCAddr;
+  LLVMOrcCreateLazyCompileCallback(JIT, &CCAddr, myCompileCallback, &C);
+  LLVMOrcCreateIndirectStub(JIT, "foo", CCAddr);
+  LLVMOrcTargetAddress MainAddr;
+  LLVMOrcGetSymbolAddress(JIT, &MainAddr, "foo");
+  MainFnTy FooFn = (MainFnTy)MainAddr;
   int Result = FooFn();
   EXPECT_TRUE(C.Compiled)
     << "Function wasn't lazily compiled";

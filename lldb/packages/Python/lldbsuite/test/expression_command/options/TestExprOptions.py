@@ -37,25 +37,10 @@ class ExprOptionsTestCase(TestBase):
         # Set debugger into synchronous mode
         self.dbg.SetAsync(False)
 
-        # Create a target by the debugger.
-        target = self.dbg.CreateTarget(self.exe)
-        self.assertTrue(target, VALID_TARGET)
+        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
+            self, '// breakpoint_in_main', self.main_source_spec)
 
-        # Set breakpoints inside main.
-        breakpoint = target.BreakpointCreateBySourceRegex(
-            '// breakpoint_in_main', self.main_source_spec)
-        self.assertTrue(breakpoint)
-
-        # Now launch the process, and do not stop at entry point.
-        process = target.LaunchSimple(
-            None, None, self.get_process_working_directory())
-        self.assertTrue(process, PROCESS_IS_VALID)
-
-        threads = lldbutil.get_threads_stopped_at_breakpoint(
-            process, breakpoint)
-        self.assertEqual(len(threads), 1)
-
-        frame = threads[0].GetFrameAtIndex(0)
+        frame = thread.GetFrameAtIndex(0)
         options = lldb.SBExpressionOptions()
 
         # test --language on C++ expression using the SB API's

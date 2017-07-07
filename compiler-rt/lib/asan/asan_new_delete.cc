@@ -26,7 +26,7 @@
 // VS2015 dynamic CRT (MD) work.
 #if SANITIZER_WINDOWS
 #define CXX_OPERATOR_ATTRIBUTE
-#define COMMENT_EXPORT(sym) __pragma(comment(linker, "/export:"##sym))
+#define COMMENT_EXPORT(sym) __pragma(comment(linker, "/export:" sym))
 #ifdef _WIN64
 COMMENT_EXPORT("??2@YAPEAX_K@Z")                     // operator new
 COMMENT_EXPORT("??2@YAPEAX_KAEBUnothrow_t@std@@@Z")  // operator new nothrow

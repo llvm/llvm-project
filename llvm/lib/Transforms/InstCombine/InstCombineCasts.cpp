@@ -406,8 +406,7 @@ static bool canEvaluateTruncated(Value *V, Type *Ty, InstCombiner &IC,
 ///   trunc (lshr (bitcast <4 x i32> %X to i128), 32) to i32
 ///   --->
 ///   extractelement <4 x i32> %X, 1
-static Instruction *foldVecTruncToExtElt(TruncInst &Trunc, InstCombiner &IC,
-                                         const DataLayout &DL) {
+static Instruction *foldVecTruncToExtElt(TruncInst &Trunc, InstCombiner &IC) {
   Value *TruncOp = Trunc.getOperand(0);
   Type *DestType = Trunc.getType();
   if (!TruncOp->hasOneUse() || !isa<IntegerType>(DestType))
@@ -438,7 +437,7 @@ static Instruction *foldVecTruncToExtElt(TruncInst &Trunc, InstCombiner &IC,
   }
 
   unsigned Elt = ShiftAmount / DestWidth;
-  if (DL.isBigEndian())
+  if (IC.getDataLayout().isBigEndian())
     Elt = NumVecElts - 1 - Elt;
 
   return ExtractElementInst::Create(VecInput, IC.Builder->getInt32(Elt));
@@ -645,7 +644,7 @@ Instruction *InstCombiner::visitTrunc(TruncInst &CI) {
     }
   }
 
-  if (Instruction *I = foldVecTruncToExtElt(CI, *this, DL))
+  if (Instruction *I = foldVecTruncToExtElt(CI, *this))
     return I;
 
   return nullptr;
@@ -1845,8 +1844,7 @@ static Value *optimizeIntegerToVectorInsertions(BitCastInst &CI,
 /// vectors better than bitcasts of scalars because vector registers are
 /// usually not type-specific like scalar integer or scalar floating-point.
 static Instruction *canonicalizeBitCastExtElt(BitCastInst &BitCast,
-                                              InstCombiner &IC,
-                                              const DataLayout &DL) {
+                                              InstCombiner &IC) {
   // TODO: Create and use a pattern matcher for ExtractElementInst.
   auto *ExtElt = dyn_cast<ExtractElementInst>(BitCast.getOperand(0));
   if (!ExtElt || !ExtElt->hasOneUse())
@@ -2204,7 +2202,7 @@ Instruction *InstCombiner::visitBitCast(BitCastInst &CI) {
     if (Instruction *I = optimizeBitCastFromPhi(CI, PN))
       return I;
 
-  if (Instruction *I = canonicalizeBitCastExtElt(CI, *this, DL))
+  if (Instruction *I = canonicalizeBitCastExtElt(CI, *this))
     return I;
 
   if (Instruction *I = foldBitCastBitwiseLogic(CI, *Builder))

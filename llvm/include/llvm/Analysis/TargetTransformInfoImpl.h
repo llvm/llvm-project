@@ -444,6 +444,20 @@ public:
     return nullptr;
   }
 
+  Type *getMemcpyLoopLoweringType(LLVMContext &Context, Value *Length,
+                                  unsigned SrcAlign, unsigned DestAlign) const {
+    return Type::getInt8Ty(Context);
+  }
+
+  void getMemcpyLoopResidualLoweringType(SmallVectorImpl<Type *> &OpsOut,
+                                         LLVMContext &Context,
+                                         unsigned RemainingBytes,
+                                         unsigned SrcAlign,
+                                         unsigned DestAlign) const {
+    for (unsigned i = 0; i != RemainingBytes; ++i)
+      OpsOut.push_back(Type::getInt8Ty(Context));
+  }
+
   bool areInlineCompatible(const Function *Caller,
                            const Function *Callee) const {
     return (Caller->getFnAttribute("target-cpu") ==

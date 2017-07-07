@@ -47,6 +47,7 @@ public:
   DbiModuleDescriptorBuilder &
   operator=(const DbiModuleDescriptorBuilder &) = delete;
 
+  void setPdbFilePathNI(uint32_t NI);
   void setObjFileName(StringRef Name);
   void addSymbol(codeview::CVSymbol Symbol);
 
@@ -85,6 +86,7 @@ private:
   msf::MSFBuilder &MSF;
 
   uint32_t SymbolByteSize = 0;
+  uint32_t PdbFilePathNI = 0;
   std::string ModuleName;
   std::string ObjFileName;
   std::vector<std::string> SourceFiles;

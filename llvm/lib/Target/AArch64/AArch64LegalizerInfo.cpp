@@ -291,11 +291,10 @@ bool AArch64LegalizerInfo::legalizeVaArg(MachineInstr &MI,
   unsigned DstPtr;
   if (Align > PtrSize) {
     // Realign the list to the actual required alignment.
-    unsigned AlignMinus1 = MRI.createGenericVirtualRegister(IntPtrTy);
-    MIRBuilder.buildConstant(AlignMinus1, Align - 1);
+    auto AlignMinus1 = MIRBuilder.buildConstant(IntPtrTy, Align - 1);
 
     unsigned ListTmp = MRI.createGenericVirtualRegister(PtrTy);
-    MIRBuilder.buildGEP(ListTmp, List, AlignMinus1);
+    MIRBuilder.buildGEP(ListTmp, List, AlignMinus1->getOperand(0).getReg());
 
     DstPtr = MRI.createGenericVirtualRegister(PtrTy);
     MIRBuilder.buildPtrMask(DstPtr, ListTmp, Log2_64(Align));

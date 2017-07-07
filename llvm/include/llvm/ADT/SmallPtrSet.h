@@ -15,9 +15,9 @@
 #ifndef LLVM_ADT_SMALLPTRSET_H
 #define LLVM_ADT_SMALLPTRSET_H
 
-#include "llvm/Config/abi-breaking.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
+#include "llvm/Support/ReverseIteration.h"
 #include "llvm/Support/type_traits.h"
 #include <cassert>
 #include <cstddef>
@@ -28,15 +28,6 @@
 #include <utility>
 
 namespace llvm {
-
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
-template <class T = void> struct ReverseIterate { static bool value; };
-#if LLVM_ENABLE_REVERSE_ITERATION
-template <class T> bool ReverseIterate<T>::value = true;
-#else
-template <class T> bool ReverseIterate<T>::value = false;
-#endif
-#endif
 
 /// SmallPtrSetImplBase - This is the common code shared among all the
 /// SmallPtrSet<>'s, which is almost everything.  SmallPtrSet has two modes, one
