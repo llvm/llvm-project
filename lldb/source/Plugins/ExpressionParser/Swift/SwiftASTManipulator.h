@@ -63,7 +63,7 @@ public:
 
     VariableInfo(CompilerType &type, swift::Identifier name,
                  VariableMetadataSP metadata, 
-                 swift::VarDecl::Specifier specifier = swift::VarDecl::Specifier::Let,
+                 swift::VarDecl::Specifier specifier, 
                  bool is_capture_list = false)
         : m_type(type), m_name(name), m_var_specifier(specifier),
           m_is_capture_list(is_capture_list), m_metadata(metadata) {}
@@ -82,7 +82,7 @@ public:
     CompilerType m_type;
     swift::Identifier m_name;
     swift::VarDecl *m_decl = nullptr;
-    swift::VarDecl::Specifier m_var_specifier = swift::VarDecl::Specifier::Let;
+    swift::VarDecl::Specifier m_var_specifier = swift::VarDecl::Specifier::Var;
     bool m_is_capture_list = false;
 
   public:
