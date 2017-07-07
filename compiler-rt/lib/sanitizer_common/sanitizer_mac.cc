@@ -800,6 +800,44 @@ char **GetArgv() {
   return *_NSGetArgv();
 }
 
+#if defined(__aarch64__) && SANITIZER_IOS && !SANITIZER_IOSSIM
+// The task_vm_info struct is normally provided by the macOS SDK, but we need
+// fields only available in 10.12+. Declare the struct manually to be able to
+// build against older SDKs.
+struct __sanitizer_task_vm_info {
+  uptr _unused[(SANITIZER_WORDSIZE == 32) ? 20 : 19];
+  uptr min_address;
+  uptr max_address;
+};
+
+uptr GetTaskInfoMaxAddress() {
+  __sanitizer_task_vm_info vm_info = {{0}, 0, 0};
+  mach_msg_type_number_t count = sizeof(vm_info) / sizeof(int);
+  int err = task_info(mach_task_self(), TASK_VM_INFO, (int *)&vm_info, &count);
+  if (err == 0) {
+    return vm_info.max_address;
+  } else {
+    // xnu cannot provide vm address limit
+    return 0x200000000 - 1;
+  }
+}
+#endif
+
+uptr GetMaxVirtualAddress() {
+#if SANITIZER_WORDSIZE == 64
+# if defined(__aarch64__) && SANITIZER_IOS && !SANITIZER_IOSSIM
+  // Get the maximum VM address
+  static uptr max_vm = GetTaskInfoMaxAddress();
+  CHECK(max_vm);
+  return max_vm;
+# else
+  return (1ULL << 47) - 1;  // 0x00007fffffffffffUL;
+# endif
+#else  // SANITIZER_WORDSIZE == 32
+  return (1ULL << 32) - 1;  // 0xffffffff;
+#endif  // SANITIZER_WORDSIZE
+}
+
 uptr FindAvailableMemoryRange(uptr shadow_size,
                               uptr alignment,
                               uptr left_padding) {
