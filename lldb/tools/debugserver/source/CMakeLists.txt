@@ -65,7 +65,6 @@ add_lldb_library(lldbDebugserverCommon
   TTYState.cpp
 
   LINK_LIBS
-    lldbHost
     ${COCOA_LIBRARY}
   )
 
