@@ -190,9 +190,7 @@ names from both the *Processor* and *Alternative Processor* can be used.
      gfx810     - stoney    amdgcn       APU
      **GCN GFX9**
      --------------------------------------------------------------------
-     gfx900                 amdgcn       dGPU          - FirePro W9500
-                                                       - FirePro S9500
-                                                       - FirePro S9500x2
+     gfx900                 amdgcn       dGPU          - Radeon Vega Frontier Edition
      gfx901                 amdgcn       dGPU  ROCm    Same as gfx900
                                                        except XNACK is
                                                        enabled

@@ -10,8 +10,22 @@
 #include "llvm/Support/Host.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
+#include "llvm/Support/Program.h"
 
 #include "gtest/gtest.h"
+
+#define ASSERT_NO_ERROR(x)                                                     \
+  if (std::error_code ASSERT_NO_ERROR_ec = x) {                                \
+    SmallString<128> MessageStorage;                                           \
+    raw_svector_ostream Message(MessageStorage);                               \
+    Message << #x ": did not return errc::success.\n"                          \
+            << "error number: " << ASSERT_NO_ERROR_ec.value() << "\n"          \
+            << "error message: " << ASSERT_NO_ERROR_ec.message() << "\n";      \
+    GTEST_FATAL_FAILURE_(MessageStorage.c_str());                              \
+  } else {                                                                     \
+  }
 
 using namespace llvm;
 
@@ -114,3 +128,50 @@ Hardware        : Qualcomm Technologies, Inc MSM8992
   EXPECT_EQ(sys::detail::getHostCPUNameForARM(MSM8992ProcCpuInfo),
             "cortex-a53");
 }
+
+#if defined(__APPLE__)
+TEST_F(HostTest, getMacOSHostVersion) {
+  using namespace llvm::sys;
+  llvm::Triple HostTriple(getProcessTriple());
+  if (!HostTriple.isMacOSX())
+    return;
+
+  SmallString<128> TestDirectory;
+  ASSERT_NO_ERROR(fs::createUniqueDirectory("host_test", TestDirectory));
+  SmallString<128> OutputFile(TestDirectory);
+  path::append(OutputFile, "out");
+
+  const char *SwVersPath = "/usr/bin/sw_vers";
+  const char *argv[] = {SwVersPath, "-productVersion", nullptr};
+  StringRef OutputPath = OutputFile.str();
+  const StringRef *Redirects[] = {/*STDIN=*/nullptr, /*STDOUT=*/&OutputPath,
+                                  /*STDERR=*/nullptr};
+  int RetCode = ExecuteAndWait(SwVersPath, argv, /*env=*/nullptr, Redirects);
+  ASSERT_EQ(0, RetCode);
+
+  int FD = 0;
+  ASSERT_NO_ERROR(fs::openFileForRead(OutputPath, FD));
+  off_t Size = ::lseek(FD, 0, SEEK_END);
+  ASSERT_NE(-1, Size);
+  ::lseek(FD, 0, SEEK_SET);
+  std::unique_ptr<char[]> Buffer = llvm::make_unique<char[]>(Size);
+  ASSERT_EQ(::read(FD, Buffer.get(), Size), Size);
+  ::close(FD);
+
+  // Ensure that the two versions match.
+  StringRef SystemVersion(Buffer.get(), Size);
+  unsigned SystemMajor, SystemMinor, SystemMicro;
+  ASSERT_EQ(llvm::Triple((Twine("x86_64-apple-macos") + SystemVersion))
+                .getMacOSXVersion(SystemMajor, SystemMinor, SystemMicro),
+            true);
+  unsigned HostMajor, HostMinor, HostMicro;
+  ASSERT_EQ(HostTriple.getMacOSXVersion(HostMajor, HostMinor, HostMicro), true);
+
+  // Don't compare the 'Micro' version, as it's always '0' for the 'Darwin'
+  // triples.
+  ASSERT_EQ(std::tie(SystemMajor, SystemMinor), std::tie(HostMajor, HostMinor));
+
+  ASSERT_NO_ERROR(fs::remove(OutputPath));
+  ASSERT_NO_ERROR(fs::remove(TestDirectory.str()));
+}
+#endif

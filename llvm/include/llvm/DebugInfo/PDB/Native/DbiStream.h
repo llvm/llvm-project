@@ -83,6 +83,8 @@ public:
   FixedStreamArray<SecMapEntry> getSectionMap() const;
   void visitSectionContributions(ISectionContribVisitor &Visitor) const;
 
+  Expected<StringRef> getECName(uint32_t NI) const;
+
 private:
   Error initializeSectionContributionData();
   Error initializeSectionHeadersData();

@@ -358,7 +358,8 @@ InferAddressSpaces::collectFlatAddressExpressions(Function &F) const {
     // If the operands of the expression on the top are already explored,
     // adds that expression to the resultant postorder.
     if (PostorderStack.back().second) {
-      Postorder.push_back(TopVal);
+      if (TopVal->getType()->getPointerAddressSpace() == FlatAddrSpace)
+        Postorder.push_back(TopVal);
       PostorderStack.pop_back();
       continue;
     }

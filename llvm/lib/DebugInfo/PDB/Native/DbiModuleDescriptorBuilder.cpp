@@ -65,6 +65,10 @@ void DbiModuleDescriptorBuilder::setObjFileName(StringRef Name) {
   ObjFileName = Name;
 }
 
+void DbiModuleDescriptorBuilder::setPdbFilePathNI(uint32_t NI) {
+  PdbFilePathNI = NI;
+}
+
 void DbiModuleDescriptorBuilder::addSymbol(CVSymbol Symbol) {
   Symbols.push_back(Symbol);
   // Symbols written to a PDB file are required to be 4 byte aligned.  The same
@@ -111,7 +115,7 @@ void DbiModuleDescriptorBuilder::finalize() {
   (void)Layout.Mod;         // Set in constructor
   (void)Layout.ModDiStream; // Set in finalizeMsfLayout
   Layout.NumFiles = SourceFiles.size();
-  Layout.PdbFilePathNI = 0;
+  Layout.PdbFilePathNI = PdbFilePathNI;
   Layout.SrcFileNameNI = 0;
 
   // This value includes both the signature field as well as the record bytes

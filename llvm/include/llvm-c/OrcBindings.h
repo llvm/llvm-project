@@ -113,8 +113,9 @@ void LLVMOrcDisposeMangledSymbol(char *MangledSymbol);
 /**
  * Create a lazy compile callback.
  */
-LLVMOrcTargetAddress
+LLVMOrcErrorCode
 LLVMOrcCreateLazyCompileCallback(LLVMOrcJITStackRef JITStack,
+                                 LLVMOrcTargetAddress *RetAddr,
                                  LLVMOrcLazyCompileCallbackFn Callback,
                                  void *CallbackCtx);
 
@@ -135,8 +136,9 @@ LLVMOrcErrorCode LLVMOrcSetIndirectStubPointer(LLVMOrcJITStackRef JITStack,
 /**
  * Add module to be eagerly compiled.
  */
-LLVMOrcModuleHandle
+LLVMOrcErrorCode
 LLVMOrcAddEagerlyCompiledIR(LLVMOrcJITStackRef JITStack,
+                            LLVMOrcModuleHandle *RetHandle,
                             LLVMSharedModuleRef Mod,
                             LLVMOrcSymbolResolverFn SymbolResolver,
                             void *SymbolResolverCtx);
@@ -144,8 +146,9 @@ LLVMOrcAddEagerlyCompiledIR(LLVMOrcJITStackRef JITStack,
 /**
  * Add module to be lazily compiled one function at a time.
  */
-LLVMOrcModuleHandle
+LLVMOrcErrorCode
 LLVMOrcAddLazilyCompiledIR(LLVMOrcJITStackRef JITStack,
+                           LLVMOrcModuleHandle *RetHandle,
                            LLVMSharedModuleRef Mod,
                            LLVMOrcSymbolResolverFn SymbolResolver,
                            void *SymbolResolverCtx);
@@ -153,10 +156,11 @@ LLVMOrcAddLazilyCompiledIR(LLVMOrcJITStackRef JITStack,
 /**
  * Add an object file.
  */
-LLVMOrcModuleHandle LLVMOrcAddObjectFile(LLVMOrcJITStackRef JITStack,
-                                         LLVMSharedObjectBufferRef Obj,
-                                         LLVMOrcSymbolResolverFn SymbolResolver,
-                                         void *SymbolResolverCtx);
+LLVMOrcErrorCode LLVMOrcAddObjectFile(LLVMOrcJITStackRef JITStack,
+                                      LLVMOrcModuleHandle *RetHandle,
+                                      LLVMSharedObjectBufferRef Obj,
+                                      LLVMOrcSymbolResolverFn SymbolResolver,
+                                      void *SymbolResolverCtx);
 
 /**
  * Remove a module set from the JIT.
@@ -164,18 +168,20 @@ LLVMOrcModuleHandle LLVMOrcAddObjectFile(LLVMOrcJITStackRef JITStack,
  * This works for all modules that can be added via OrcAdd*, including object
  * files.
  */
-void LLVMOrcRemoveModule(LLVMOrcJITStackRef JITStack, LLVMOrcModuleHandle H);
+LLVMOrcErrorCode LLVMOrcRemoveModule(LLVMOrcJITStackRef JITStack,
+                                     LLVMOrcModuleHandle H);
 
 /**
  * Get symbol address from JIT instance.
  */
-LLVMOrcTargetAddress LLVMOrcGetSymbolAddress(LLVMOrcJITStackRef JITStack,
-                                             const char *SymbolName);
+LLVMOrcErrorCode LLVMOrcGetSymbolAddress(LLVMOrcJITStackRef JITStack,
+                                         LLVMOrcTargetAddress *RetAddr,
+                                         const char *SymbolName);
 
 /**
  * Dispose of an ORC JIT stack.
  */
-void LLVMOrcDisposeInstance(LLVMOrcJITStackRef JITStack);
+LLVMOrcErrorCode LLVMOrcDisposeInstance(LLVMOrcJITStackRef JITStack);
 
 #ifdef __cplusplus
 }

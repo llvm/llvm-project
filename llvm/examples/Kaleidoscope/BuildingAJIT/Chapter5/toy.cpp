@@ -1177,7 +1177,7 @@ static void HandleTopLevelExpression() {
 
       // Get the symbol's address and cast it to the right type (takes no
       // arguments, returns a double) so we can call it as a native function.
-      ExitOnErr(TheJIT->executeRemoteExpr(ExprSymbol.getAddress()));
+      ExitOnErr(TheJIT->executeRemoteExpr(cantFail(ExprSymbol.getAddress())));
 
       // Delete the anonymous expression module from the JIT.
       TheJIT->removeModule(H);

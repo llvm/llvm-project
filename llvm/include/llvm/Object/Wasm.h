@@ -61,7 +61,7 @@ public:
 
   void print(raw_ostream &Out) const {
     Out << "Name=" << Name << ", Type=" << static_cast<int>(Type)
-        << ", Flags=" << Flags;
+        << ", Flags=" << Flags << " ElemIndex=" << ElementIndex;
   }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
