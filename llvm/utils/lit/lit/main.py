@@ -258,7 +258,8 @@ def main_with_tmp(builtinParameters):
     selection_group.add_argument("--filter", metavar="REGEX",
                      help=("Only run tests with paths matching the given "
                            "regular expression"),
-                     action="store", default=None)
+                     action="store",
+                     default=os.environ.get("LIT_FILTER"))
 
     debug_group = parser.add_argument_group("Debug and Experimental Options")
     debug_group.add_argument("--debug",
