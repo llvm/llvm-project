@@ -277,7 +277,7 @@ ScopedInterceptor::~ScopedInterceptor() {
 
 void ScopedInterceptor::EnableIgnores() {
   if (ignoring_) {
-    ThreadIgnoreBegin(thr_, pc_);
+    ThreadIgnoreBegin(thr_, pc_, false);
     if (in_ignored_lib_) {
       DCHECK(!thr_->in_ignored_lib);
       thr_->in_ignored_lib = true;
