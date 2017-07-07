@@ -1160,7 +1160,7 @@ static bool detectPopcountIdiom(Loop *CurLoop, BasicBlock *PreCondBB,
     if (!Dec ||
         !((SubInst->getOpcode() == Instruction::Sub && Dec->isOne()) ||
           (SubInst->getOpcode() == Instruction::Add &&
-           Dec->isAllOnesValue()))) {
+           Dec->isMinusOne()))) {
       return false;
     }
   }

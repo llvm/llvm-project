@@ -4,13 +4,13 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ; Check when BFI is enabled for constant hoisting, constant 214748364701
 ; will not be hoisted to the func entry.
-; CHECK-LABEL: @foo(
+; CHECK-LABEL: @test1(
 ; CHECK: entry:
 ; CHECK-NOT: bitcast i64 214748364701 to i64
 ; CHECK: if.then:
 
 ; Function Attrs: norecurse nounwind uwtable
-define i64 @foo(i64* nocapture %a) {
+define i64 @test1(i64* nocapture %a) {
 entry:
   %arrayidx = getelementptr inbounds i64, i64* %a, i64 9
   %t0 = load i64, i64* %arrayidx, align 8
@@ -52,7 +52,7 @@ return:                                           ; preds = %if.else5, %if.then,
 ; in while.body will be hoisted to while.body.preheader. 214748364701 in
 ; if.then16 and if.else10 will be merged and hoisted to the beginning of
 ; if.else10 because if.else10 dominates if.then16.
-; CHECK-LABEL: @goo(
+; CHECK-LABEL: @test2(
 ; CHECK: entry:
 ; CHECK-NOT: bitcast i64 214748364701 to i64
 ; CHECK: while.body.preheader:
@@ -61,7 +61,7 @@ return:                                           ; preds = %if.else5, %if.then,
 ; CHECK: if.else10:
 ; CHECK-NEXT: bitcast i64 214748364701 to i64
 ; CHECK-NOT: bitcast i64 214748364701 to i64
-define i64 @goo(i64* nocapture %a) {
+define i64 @test2(i64* nocapture %a) {
 entry:
   %arrayidx = getelementptr inbounds i64, i64* %a, i64 9
   %t0 = load i64, i64* %arrayidx, align 8
@@ -113,3 +113,47 @@ return:                                           ; preds = %while.cond.preheade
 }
 
 !0 = !{!"branch_weights", i32 1, i32 2000}
+
+; 214748364701 will be hoisted to entry block to reduce code size.
+; CHECK-LABEL: @test3(
+; CHECK: entry:
+; CHECK-NEXT: %const = bitcast i64 214748364701 to i64
+define i64 @test3(i64 %t0) {
+entry:
+  %cmp = icmp ult i64 %t0, 56
+  br i1 %cmp, label %if.then, label %if.else
+
+; CHECK: if.then:
+; CHECK-NOT: %const = bitcast i64 214748364701 to i64
+if.then:
+  %add1 = add i64 %t0, 214748364701
+  br label %return
+
+; CHECK: if.else:
+; CHECK-NOT: %const = bitcast i64 214748364701 to i64
+if.else:
+  %add2 = add i64 %t0, 214748364701
+  br label %return
+
+return:
+  %retval = phi i64 [ %add1, %if.then ], [ %add2, %if.else ]
+  ret i64 %retval
+}
+
+; 214748364701 will not be hoisted to entry block because it will only
+; increase its live range.
+; CHECK-LABEL: @test4(
+; CHECK: nextblock:
+; CHECK-NEXT: %add1 = add i64 %t0, 214748364701
+define i64 @test4(i64 %t0) {
+entry:
+  %cmp = icmp ult i64 %t0, 56
+  br label %nextblock
+
+nextblock:
+  %add1 = add i64 %t0, 214748364701
+  br label %return
+
+return:
+  ret i64 %add1
+}

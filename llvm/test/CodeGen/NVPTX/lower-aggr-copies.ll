@@ -1,5 +1,6 @@
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_35 -O0 | FileCheck %s --check-prefix PTX
 ; RUN: opt < %s -S -nvptx-lower-aggr-copies | FileCheck %s --check-prefix IR
+; RUN: opt < %s -S -nvptx-lower-aggr-copies -use-wide-memcpy-loop-lowering=true | FileCheck %s --check-prefix WIR
 
 ; Verify that the NVPTXLowerAggrCopies pass works as expected - calls to
 ; llvm.mem* intrinsics get lowered to loops.
@@ -32,6 +33,23 @@ entry:
 ; PTX:        add.s64 %rd[[COUNTER:[0-9]+]], %rd{{[0-9]+}}, 1
 ; PTX:        setp.lt.u64 %p[[PRED:[0-9]+]], %rd[[COUNTER]], %rd
 ; PTX:        @%p[[PRED]] bra LBB[[LABEL]]
+
+; WIR-LABEL:   @memcpy_caller
+; WIR:         entry:
+; WIR:         [[LoopCount:%[0-9]+]] = udiv i64 %n, 1
+; WIR:         [[ResidualSize:%[0-9]+]] = urem i64 %n, 1
+; WIR:         [[Cond:%[0-9]+]] = icmp ne i64 [[LoopCount]], 0
+; WIR:         br i1 [[Cond]], label %loop-memcpy-expansion, label %post-loop-memcpy-expansion
+
+; WIR:         loop-memcpy-expansion:
+; WIR:         %loop-index = phi i64 [ 0, %entry ], [ [[IndexInc:%[0-9]+]], %loop-memcpy-expansion ]
+; WIR:         [[SrcGep:%[0-9]+]] = getelementptr inbounds i8, i8* %src, i64 %loop-index
+; WIR:         [[Load:%[0-9]+]] = load i8, i8* [[SrcGep]]
+; WIR:         [[DstGep:%[0-9]+]] = getelementptr inbounds i8, i8* %dst, i64 %loop-index
+; WIR:         store i8 [[Load]], i8* [[DstGep]]
+; WIR:         [[IndexInc]] = add i64 %loop-index, 1
+; WIR:         [[Cond2:%[0-9]+]] = icmp ult i64 [[IndexInc]], [[LoopCount]]
+; WIR:         br i1 [[Cond2]], label %loop-memcpy-expansion, label %post-loop-memcpy-expansion
 }
 
 define i8* @memcpy_volatile_caller(i8* %dst, i8* %src, i64 %n) #0 {
@@ -50,6 +68,23 @@ entry:
 ; PTX:        add.s64 %rd[[COUNTER:[0-9]+]], %rd{{[0-9]+}}, 1
 ; PTX:        setp.lt.u64 %p[[PRED:[0-9]+]], %rd[[COUNTER]], %rd
 ; PTX:        @%p[[PRED]] bra LBB[[LABEL]]
+
+; WIR-LABEL:   @memcpy_volatile_caller
+; WIR:         entry:
+; WIR:         [[LoopCount:%[0-9]+]] = udiv i64 %n, 1
+; WIR:         [[ResidualSize:%[0-9]+]] = urem i64 %n, 1
+; WIR:         [[Cond:%[0-9]+]] = icmp ne i64 [[LoopCount]], 0
+; WIR:         br i1 [[Cond]], label %loop-memcpy-expansion, label %post-loop-memcpy-expansion
+
+; WIR:         loop-memcpy-expansion:
+; WIR:         %loop-index = phi i64 [ 0, %entry ], [ [[IndexInc:%[0-9]+]], %loop-memcpy-expansion ]
+; WIR:         [[SrcGep:%[0-9]+]] = getelementptr inbounds i8, i8* %src, i64 %loop-index
+; WIR:         [[Load:%[0-9]+]] = load volatile i8, i8* [[SrcGep]]
+; WIR:         [[DstGep:%[0-9]+]] = getelementptr inbounds i8, i8* %dst, i64 %loop-index
+; WIR:         store volatile i8 [[Load]], i8* [[DstGep]]
+; WIR:         [[IndexInc]] = add i64 %loop-index, 1
+; WIR:         [[Cond2:%[0-9]+]] = icmp ult i64 [[IndexInc]], [[LoopCount]]
+; WIR:         br i1 [[Cond2]], label %loop-memcpy-expansion, label %post-loop-memcpy-expansion
 }
 
 define i8* @memcpy_casting_caller(i32* %dst, i32* %src, i64 %n) #0 {
@@ -65,6 +100,32 @@ entry:
 ; IR:         [[SRCCAST:%[0-9]+]] = bitcast i32* %src to i8*
 ; IR:         getelementptr inbounds i8, i8* [[SRCCAST]]
 ; IR:         getelementptr inbounds i8, i8* [[DSTCAST]]
+
+; WIR-LABEL:   @memcpy_casting_caller
+; WIR:         [[DSTCAST:%[0-9]+]] = bitcast i32* %dst to i8*
+; WIR:         [[SRCCAST:%[0-9]+]] = bitcast i32* %src to i8*
+; WIR:         getelementptr inbounds i8, i8* [[SRCCAST]]
+; WIR:         getelementptr inbounds i8, i8* [[DSTCAST]]
+}
+
+define i8* @memcpy_known_size(i8* %dst, i8* %src) {
+entry:
+  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dst, i8* %src, i64 144, i32 1, i1 false)
+  ret i8* %dst
+
+; Check that calls with compile-time constant size are handled correctly
+; WIR-LABEL:    @memcpy_known_size
+; WIR:          entry:
+; WIR:          br label %load-store-loop
+; WIR:          load-store-loop:
+; WIR:          %loop-index = phi i64 [ 0, %entry ], [ [[IndexInc:%[0-9]+]], %load-store-loop ]
+; WIR:          [[SrcGep:%[0-9]+]] = getelementptr inbounds i8, i8* %src, i64 %loop-index
+; WIR:          [[Load:%[0-9]+]] = load i8, i8* [[SrcGep]]
+; WIR:          [[DstGep:%[0-9]+]] = getelementptr inbounds i8, i8* %dst, i64 %loop-index
+; WIR:          store i8 [[Load]], i8* [[DstGep]]
+; WIR:          [[IndexInc]] = add i64 %loop-index, 1
+; WIR:          [[Cond:%[0-9]+]] = icmp ult i64 %3, 144
+; WIR:          br i1 [[Cond]], label %load-store-loop, label %memcpy-split
 }
 
 define i8* @memset_caller(i8* %dst, i32 %c, i64 %n) #0 {

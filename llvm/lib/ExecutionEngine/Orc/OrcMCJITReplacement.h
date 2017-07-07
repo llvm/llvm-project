@@ -202,20 +202,20 @@ public:
         delete Mod;
     };
     LocalModules.push_back(std::shared_ptr<Module>(MPtr, std::move(Deleter)));
-    LazyEmitLayer.addModule(LocalModules.back(), Resolver);
+    cantFail(LazyEmitLayer.addModule(LocalModules.back(), Resolver));
   }
 
   void addObjectFile(std::unique_ptr<object::ObjectFile> O) override {
     auto Obj =
       std::make_shared<object::OwningBinary<object::ObjectFile>>(std::move(O),
                                                                  nullptr);
-    ObjectLayer.addObject(std::move(Obj), Resolver);
+    cantFail(ObjectLayer.addObject(std::move(Obj), Resolver));
   }
 
   void addObjectFile(object::OwningBinary<object::ObjectFile> O) override {
     auto Obj =
       std::make_shared<object::OwningBinary<object::ObjectFile>>(std::move(O));
-    ObjectLayer.addObject(std::move(Obj), Resolver);
+    cantFail(ObjectLayer.addObject(std::move(Obj), Resolver));
   }
 
   void addArchive(object::OwningBinary<object::Archive> A) override {
@@ -234,7 +234,7 @@ public:
   }
 
   uint64_t getSymbolAddress(StringRef Name) {
-    return findSymbol(Name).getAddress();
+    return cantFail(findSymbol(Name).getAddress());
   }
 
   JITSymbol findSymbol(StringRef Name) {
@@ -323,7 +323,7 @@ private:
           auto Obj =
             std::make_shared<object::OwningBinary<object::ObjectFile>>(
               std::move(ChildObj), nullptr);
-          ObjectLayer.addObject(std::move(Obj), Resolver);
+          cantFail(ObjectLayer.addObject(std::move(Obj), Resolver));
           if (auto Sym = ObjectLayer.findSymbol(Name, true))
             return Sym;
         }

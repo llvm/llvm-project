@@ -538,7 +538,7 @@ bool BranchProbabilityInfo::calcZeroHeuristics(const BasicBlock *BB,
     // InstCombine canonicalizes X <= 0 into X < 1.
     // X <= 0   ->  Unlikely
     isProb = false;
-  } else if (CV->isAllOnesValue()) {
+  } else if (CV->isMinusOne()) {
     switch (CI->getPredicate()) {
     case CmpInst::ICMP_EQ:
       // X == -1  ->  Unlikely

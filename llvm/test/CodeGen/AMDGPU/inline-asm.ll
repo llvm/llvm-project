@@ -222,9 +222,9 @@ entry:
 ; FIXME: Should be scheduled to shrink vcc
 ; CHECK-LABEL: {{^}}i1_input_phys_vgpr_x2:
 ; CHECK: v_cmp_eq_u32_e32 vcc, 1, v0
-; CHECK: v_cmp_eq_u32_e64 s[0:1], 1, v1
 ; CHECK: v_cndmask_b32_e64 v0, 0, -1, vcc
-; CHECK: v_cndmask_b32_e64 v1, 0, -1, s[0:1]
+; CHECK: v_cmp_eq_u32_e32 vcc, 1, v1
+; CHECK: v_cndmask_b32_e64 v1, 0, -1, vcc
 define amdgpu_kernel void @i1_input_phys_vgpr_x2() {
 entry:
   %val0 = load volatile i1, i1 addrspace(1)* undef

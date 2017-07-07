@@ -1,26 +1,5 @@
 # RUN: llc -march=amdgcn -run-pass peephole-opt -verify-machineinstrs %s -o - | FileCheck -check-prefix=GCN %s
-
---- |
-  define amdgpu_kernel void @no_fold_imm_madak_mac_clamp_f32() #0 {
-    ret void
-  }
-
-  define amdgpu_kernel void @no_fold_imm_madak_mac_omod_f32() #0 {
-    ret void
-  }
-
-  define amdgpu_kernel void @no_fold_imm_madak_mad_clamp_f32() #0 {
-    ret void
-  }
-
-  define amdgpu_kernel void @no_fold_imm_madak_mad_omod_f32() #0 {
-    ret void
-  }
-
-  attributes #0 = { nounwind }
-
 ...
----
 # GCN-LABEL: name: no_fold_imm_madak_mac_clamp_f32
 # GCN: %23 = V_MOV_B32_e32 1090519040, implicit %exec
 # GCN-NEXT: %24 = V_MAC_F32_e64 0, killed %19, 0, killed %21, 0, %23, 1, 0, implicit %exec
@@ -62,14 +41,14 @@ liveins:
   - { reg: '%sgpr0_sgpr1', virtual-reg: '%0' }
   - { reg: '%vgpr0', virtual-reg: '%3' }
 body:             |
-  bb.0 (%ir-block.0):
+  bb.0:
     liveins: %sgpr0_sgpr1, %vgpr0
 
     %3 = COPY %vgpr0
     %0 = COPY %sgpr0_sgpr1
-    %4 = S_LOAD_DWORDX2_IMM %0, 9, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
-    %5 = S_LOAD_DWORDX2_IMM %0, 11, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
-    %6 = S_LOAD_DWORDX2_IMM %0, 13, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
+    %4 = S_LOAD_DWORDX2_IMM %0, 9, 0
+    %5 = S_LOAD_DWORDX2_IMM %0, 11, 0
+    %6 = S_LOAD_DWORDX2_IMM %0, 13, 0
     %27 = V_ASHRREV_I32_e32 31, %3, implicit %exec
     %28 = REG_SEQUENCE %3, 1, %27, 2
     %11 = S_MOV_B32 61440
@@ -133,14 +112,14 @@ liveins:
   - { reg: '%sgpr0_sgpr1', virtual-reg: '%0' }
   - { reg: '%vgpr0', virtual-reg: '%3' }
 body:             |
-  bb.0 (%ir-block.0):
+  bb.0:
     liveins: %sgpr0_sgpr1, %vgpr0
 
     %3 = COPY %vgpr0
     %0 = COPY %sgpr0_sgpr1
-    %4 = S_LOAD_DWORDX2_IMM %0, 9, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
-    %5 = S_LOAD_DWORDX2_IMM %0, 11, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
-    %6 = S_LOAD_DWORDX2_IMM %0, 13, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
+    %4 = S_LOAD_DWORDX2_IMM %0, 9, 0
+    %5 = S_LOAD_DWORDX2_IMM %0, 11, 0
+    %6 = S_LOAD_DWORDX2_IMM %0, 13, 0
     %27 = V_ASHRREV_I32_e32 31, %3, implicit %exec
     %28 = REG_SEQUENCE %3, 1, %27, 2
     %11 = S_MOV_B32 61440
@@ -204,14 +183,14 @@ liveins:
   - { reg: '%sgpr0_sgpr1', virtual-reg: '%0' }
   - { reg: '%vgpr0', virtual-reg: '%3' }
 body:             |
-  bb.0 (%ir-block.0):
+  bb.0:
     liveins: %sgpr0_sgpr1, %vgpr0
 
     %3 = COPY %vgpr0
     %0 = COPY %sgpr0_sgpr1
-    %4 = S_LOAD_DWORDX2_IMM %0, 9, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
-    %5 = S_LOAD_DWORDX2_IMM %0, 11, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
-    %6 = S_LOAD_DWORDX2_IMM %0, 13, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
+    %4 = S_LOAD_DWORDX2_IMM %0, 9, 0
+    %5 = S_LOAD_DWORDX2_IMM %0, 11, 0
+    %6 = S_LOAD_DWORDX2_IMM %0, 13, 0
     %27 = V_ASHRREV_I32_e32 31, %3, implicit %exec
     %28 = REG_SEQUENCE %3, 1, %27, 2
     %11 = S_MOV_B32 61440
@@ -275,14 +254,14 @@ liveins:
   - { reg: '%sgpr0_sgpr1', virtual-reg: '%0' }
   - { reg: '%vgpr0', virtual-reg: '%3' }
 body:             |
-  bb.0 (%ir-block.0):
+  bb.0:
     liveins: %sgpr0_sgpr1, %vgpr0
 
     %3 = COPY %vgpr0
     %0 = COPY %sgpr0_sgpr1
-    %4 = S_LOAD_DWORDX2_IMM %0, 9, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
-    %5 = S_LOAD_DWORDX2_IMM %0, 11, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
-    %6 = S_LOAD_DWORDX2_IMM %0, 13, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
+    %4 = S_LOAD_DWORDX2_IMM %0, 9, 0
+    %5 = S_LOAD_DWORDX2_IMM %0, 11, 0
+    %6 = S_LOAD_DWORDX2_IMM %0, 13, 0
     %27 = V_ASHRREV_I32_e32 31, %3, implicit %exec
     %28 = REG_SEQUENCE %3, 1, %27, 2
     %11 = S_MOV_B32 61440

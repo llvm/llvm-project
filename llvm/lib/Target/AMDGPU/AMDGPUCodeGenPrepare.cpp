@@ -380,7 +380,9 @@ bool AMDGPUCodeGenPrepare::visitFDiv(BinaryOperator &FDiv) {
   FastMathFlags FMF = FPOp->getFastMathFlags();
   bool UnsafeDiv = HasUnsafeFPMath || FMF.unsafeAlgebra() ||
                                       FMF.allowReciprocal();
-  if (ST->hasFP32Denormals() && !UnsafeDiv)
+
+  // With UnsafeDiv node will be optimized to just rcp and mul.
+  if (ST->hasFP32Denormals() || UnsafeDiv)
     return false;
 
   IRBuilder<> Builder(FDiv.getParent(), std::next(FDiv.getIterator()), FPMath);

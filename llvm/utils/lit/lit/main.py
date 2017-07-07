@@ -262,7 +262,8 @@ def main_with_tmp(builtinParameters):
     selection_group.add_argument("--filter", metavar="REGEX",
                      help=("Only run tests with paths matching the given "
                            "regular expression"),
-                     action="store", default=None)
+                     action="store",
+                     default=os.environ.get("LIT_FILTER"))
     selection_group.add_argument("--num-shards", dest="numShards", metavar="M",
                      help="Split testsuite into M pieces and only run one",
                      action="store", type=int,

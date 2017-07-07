@@ -1,14 +1,4 @@
 # RUN: llc -march=amdgcn -run-pass detect-dead-lanes -o - %s | FileCheck %s
---- |
-  define amdgpu_kernel void @test0() { ret void }
-  define amdgpu_kernel void @test1() { ret void }
-  define amdgpu_kernel void @test2() { ret void }
-  define amdgpu_kernel void @test3() { ret void }
-  define amdgpu_kernel void @test4() { ret void }
-  define amdgpu_kernel void @test5() { ret void }
-  define amdgpu_kernel void @loop0() { ret void }
-  define amdgpu_kernel void @loop1() { ret void }
-  define amdgpu_kernel void @loop2() { ret void }
 ...
 ---
 # Combined use/def transfer check, the basics.

@@ -936,7 +936,7 @@ Value *InstCombiner::foldAndOfICmps(ICmpInst *LHS, ICmpInst *RHS,
     case ICmpInst::ICMP_ULT:
       if (LHSC == SubOne(RHSC)) // (X != 13 & X u< 14) -> X < 13
         return Builder->CreateICmpULT(LHS0, LHSC);
-      if (LHSC->isNullValue()) // (X !=  0 & X u< 14) -> X-1 u< 13
+      if (LHSC->isZero()) // (X !=  0 & X u< 14) -> X-1 u< 13
         return insertRangeTest(LHS0, LHSC->getValue() + 1, RHSC->getValue(),
                                false, true);
       break; // (X != 13 & X u< 15) -> no change
@@ -2489,7 +2489,7 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
 
     if (BinaryOperator *Op0I = dyn_cast<BinaryOperator>(Op0)) {
       // ~(c-X) == X-c-1 == X+(-c-1)
-      if (Op0I->getOpcode() == Instruction::Sub && RHSC->isAllOnesValue())
+      if (Op0I->getOpcode() == Instruction::Sub && RHSC->isMinusOne())
         if (Constant *Op0I0C = dyn_cast<Constant>(Op0I->getOperand(0))) {
           Constant *NegOp0I0C = ConstantExpr::getNeg(Op0I0C);
           return BinaryOperator::CreateAdd(Op0I->getOperand(1),
@@ -2499,7 +2499,7 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
       if (ConstantInt *Op0CI = dyn_cast<ConstantInt>(Op0I->getOperand(1))) {
         if (Op0I->getOpcode() == Instruction::Add) {
           // ~(X-c) --> (-c-1)-X
-          if (RHSC->isAllOnesValue()) {
+          if (RHSC->isMinusOne()) {
             Constant *NegOp0CI = ConstantExpr::getNeg(Op0CI);
             return BinaryOperator::CreateSub(SubOne(NegOp0CI),
                                              Op0I->getOperand(0));

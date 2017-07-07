@@ -128,7 +128,10 @@ void RuntimeDyldImpl::resolveRelocations() {
   );
 
   // First, resolve relocations associated with external symbols.
-  resolveExternalSymbols();
+  if (auto Err = resolveExternalSymbols()) {
+    HasError = true;
+    ErrorStr = toString(std::move(Err));
+  }
 
   // Iterate over all outstanding relocations
   for (auto it = Relocations.begin(), e = Relocations.end(); it != e; ++it) {
@@ -243,9 +246,11 @@ RuntimeDyldImpl::loadObjectImpl(const object::ObjectFile &Obj) {
           continue;
         // Then check the symbol resolver to see if there's a definition
         // elsewhere in this logical dylib.
-        if (auto Sym = Resolver.findSymbolInLogicalDylib(Name))
+        if (auto Sym = Resolver.findSymbolInLogicalDylib(Name)) {
           if (Sym.getFlags().isStrongDefinition())
             continue;
+        } else if (auto Err = Sym.takeError())
+          return std::move(Err);
         // else
         JITSymFlags &= ~JITSymbolFlags::Weak;
       }
@@ -953,7 +958,7 @@ void RuntimeDyldImpl::resolveRelocationList(const RelocationList &Relocs,
   }
 }
 
-void RuntimeDyldImpl::resolveExternalSymbols() {
+Error RuntimeDyldImpl::resolveExternalSymbols() {
   while (!ExternalSymbolRelocations.empty()) {
     StringMap<RelocationList>::iterator i = ExternalSymbolRelocations.begin();
 
@@ -971,10 +976,24 @@ void RuntimeDyldImpl::resolveExternalSymbols() {
         // This is an external symbol, try to get its address from the symbol
         // resolver.
         // First search for the symbol in this logical dylib.
-        Addr = Resolver.findSymbolInLogicalDylib(Name.data()).getAddress();
+        if (auto Sym = Resolver.findSymbolInLogicalDylib(Name.data())) {
+          if (auto AddrOrErr = Sym.getAddress())
+            Addr = *AddrOrErr;
+          else
+            return AddrOrErr.takeError();
+        } else if (auto Err = Sym.takeError())
+          return Err;
+
         // If that fails, try searching for an external symbol.
-        if (!Addr)
-          Addr = Resolver.findSymbol(Name.data()).getAddress();
+        if (!Addr) {
+          if (auto Sym = Resolver.findSymbol(Name.data())) {
+            if (auto AddrOrErr = Sym.getAddress())
+              Addr = *AddrOrErr;
+            else
+              return AddrOrErr.takeError();
+          } else if (auto Err = Sym.takeError())
+            return Err;
+        }
         // The call to getSymbolAddress may have caused additional modules to
         // be loaded, which may have added new entries to the
         // ExternalSymbolRelocations map.  Consquently, we need to update our
@@ -1009,6 +1028,8 @@ void RuntimeDyldImpl::resolveExternalSymbols() {
 
     ExternalSymbolRelocations.erase(i);
   }
+
+  return Error::success();
 }
 
 //===----------------------------------------------------------------------===//

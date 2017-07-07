@@ -179,6 +179,8 @@ def warn_incompatible_analyzer_plugin_api : Warning<
 def note_incompatible_analyzer_plugin_api : Note<
     "current API version is '%0', but plugin was compiled with version '%1'">;
 
+def err_module_build_requires_fmodules : Error<
+  "module compilation requires '-fmodules'">;
 def err_module_interface_requires_modules_ts : Error<
   "module interface compilation requires '-fmodules-ts'">;
 def warn_module_config_mismatch : Warning<

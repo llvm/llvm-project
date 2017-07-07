@@ -44,13 +44,13 @@ public:
   ///
   /// @return A handle for the added objects.
   template <typename ObjectPtr>
-  ObjHandleT addObject(ObjectPtr Obj,
-                       std::shared_ptr<JITSymbolResolver> Resolver) {
+  Expected<ObjHandleT> addObject(ObjectPtr Obj,
+                                 std::shared_ptr<JITSymbolResolver> Resolver) {
     return BaseLayer.addObject(Transform(std::move(Obj)), std::move(Resolver));
   }
 
   /// @brief Remove the object set associated with the handle H.
-  void removeObject(ObjHandleT H) { BaseLayer.removeObject(H); }
+  Error removeObject(ObjHandleT H) { return BaseLayer.removeObject(H); }
 
   /// @brief Search for the given named symbol.
   /// @param Name The name of the symbol to search for.
@@ -76,7 +76,9 @@ public:
   /// @brief Immediately emit and finalize the object set represented by the
   ///        given handle.
   /// @param H Handle for object set to emit/finalize.
-  void emitAndFinalize(ObjHandleT H) { BaseLayer.emitAndFinalize(H); }
+  Error emitAndFinalize(ObjHandleT H) {
+    return BaseLayer.emitAndFinalize(H);
+  }
 
   /// @brief Map section addresses for the objects associated with the handle H.
   void mapSectionAddress(ObjHandleT H, const void *LocalAddress,

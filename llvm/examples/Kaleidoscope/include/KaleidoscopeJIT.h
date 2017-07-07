@@ -63,8 +63,8 @@ public:
           return JITSymbol(nullptr);
         },
         [](const std::string &S) { return nullptr; });
-    auto H = CompileLayer.addModule(std::move(M),
-                                    std::move(Resolver));
+    auto H = cantFail(CompileLayer.addModule(std::move(M),
+                                             std::move(Resolver)));
 
     ModuleHandles.push_back(H);
     return H;
@@ -72,7 +72,7 @@ public:
 
   void removeModule(ModuleHandleT H) {
     ModuleHandles.erase(find(ModuleHandles, H));
-    CompileLayer.removeModule(H);
+    cantFail(CompileLayer.removeModule(H));
   }
 
   JITSymbol findSymbol(const std::string Name) {

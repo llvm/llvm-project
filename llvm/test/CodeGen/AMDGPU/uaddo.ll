@@ -58,8 +58,8 @@ define amdgpu_kernel void @v_uaddo_i32(i32 addrspace(1)* %out, i1 addrspace(1)* 
 }
 
 ; FUNC-LABEL: {{^}}v_uaddo_i32_novcc:
-; GCN: v_add_i32_e64 v{{[0-9]+}}, [[COND:s\[[0-9]+:[0-9]+\]]], v{{[0-9]+}}, v{{[0-9]+}}
-; GCN: v_cndmask_b32_e64 v{{[0-9]+}}, 0, 1, [[COND]]
+; GCN: v_add_i32_e32 v{{[0-9]+}}, vcc, v{{[0-9]+}}, v{{[0-9]+}}
+; GCN: v_cndmask_b32_e64 v{{[0-9]+}}, 0, 1, vcc
 
 ; EG: ADDC_UINT
 ; EG: ADD_INT

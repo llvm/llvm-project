@@ -225,6 +225,10 @@ void DbiStream::visitSectionContributions(
   }
 }
 
+Expected<StringRef> DbiStream::getECName(uint32_t NI) const {
+  return ECNames.getStringForID(NI);
+}
+
 Error DbiStream::initializeSectionContributionData() {
   if (SecContrSubstream.empty())
     return Error::success();

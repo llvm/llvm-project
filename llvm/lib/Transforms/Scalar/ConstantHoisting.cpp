@@ -55,7 +55,7 @@ STATISTIC(NumConstantsHoisted, "Number of constants hoisted");
 STATISTIC(NumConstantsRebased, "Number of constants rebased");
 
 static cl::opt<bool> ConstHoistWithBlockFrequency(
-    "consthoist-with-block-frequency", cl::init(false), cl::Hidden,
+    "consthoist-with-block-frequency", cl::init(true), cl::Hidden,
     cl::desc("Enable the use of the block frequency analysis to reduce the "
              "chance to execute const materialization more frequently than "
              "without hoisting."));
@@ -231,7 +231,8 @@ static void findBestInsertionSet(DominatorTree &DT, BlockFrequencyInfo &BFI,
     // Return the optimal insert points in BBs.
     if (Node == Entry) {
       BBs.clear();
-      if (InsertPtsFreq > BFI.getBlockFreq(Node))
+      if (InsertPtsFreq > BFI.getBlockFreq(Node) ||
+          (InsertPtsFreq == BFI.getBlockFreq(Node) && InsertPts.size() > 1))
         BBs.insert(Entry);
       else
         BBs.insert(InsertPts.begin(), InsertPts.end());
@@ -244,7 +245,15 @@ static void findBestInsertionSet(DominatorTree &DT, BlockFrequencyInfo &BFI,
     SmallPtrSet<BasicBlock *, 16> &ParentInsertPts = InsertPtsMap[Parent].first;
     BlockFrequency &ParentPtsFreq = InsertPtsMap[Parent].second;
     // Choose to insert in Node or in subtree of Node.
-    if (InsertPtsFreq > BFI.getBlockFreq(Node) || NodeInBBs) {
+    // Don't hoist to EHPad because we may not find a proper place to insert
+    // in EHPad.
+    // If the total frequency of InsertPts is the same as the frequency of the
+    // target Node, and InsertPts contains more than one nodes, choose hoisting
+    // to reduce code size.
+    if (NodeInBBs ||
+        (!Node->isEHPad() &&
+         (InsertPtsFreq > BFI.getBlockFreq(Node) ||
+          (InsertPtsFreq == BFI.getBlockFreq(Node) && InsertPts.size() > 1)))) {
       ParentInsertPts.insert(Node);
       ParentPtsFreq += BFI.getBlockFreq(Node);
     } else {

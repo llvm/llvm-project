@@ -50,15 +50,18 @@ public:
   ///        along with the given memory manager and symbol resolver.
   ///
   /// @return A handle for the added module.
-  ModuleHandleT addModule(std::shared_ptr<Module> M,
-                          std::shared_ptr<JITSymbolResolver> Resolver) {
+  Expected<ModuleHandleT>
+  addModule(std::shared_ptr<Module> M,
+            std::shared_ptr<JITSymbolResolver> Resolver) {
     using CompileResult = decltype(Compile(*M));
     auto Obj = std::make_shared<CompileResult>(Compile(*M));
     return BaseLayer.addObject(std::move(Obj), std::move(Resolver));
   }
 
   /// @brief Remove the module associated with the handle H.
-  void removeModule(ModuleHandleT H) { BaseLayer.removeObject(H); }
+  Error removeModule(ModuleHandleT H) {
+    return BaseLayer.removeObject(H);
+  }
 
   /// @brief Search for the given named symbol.
   /// @param Name The name of the symbol to search for.
@@ -84,8 +87,8 @@ public:
   /// @brief Immediately emit and finalize the module represented by the given
   ///        handle.
   /// @param H Handle for module to emit/finalize.
-  void emitAndFinalize(ModuleHandleT H) {
-    BaseLayer.emitAndFinalize(H);
+  Error emitAndFinalize(ModuleHandleT H) {
+    return BaseLayer.emitAndFinalize(H);
   }
 
 private:

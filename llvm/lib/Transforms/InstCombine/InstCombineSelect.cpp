@@ -227,8 +227,8 @@ static bool isSelect01(Constant *C1, Constant *C2) {
     return false;
   if (!C1I->isZero() && !C2I->isZero()) // One side must be zero.
     return false;
-  return C1I->isOne() || C1I->isAllOnesValue() ||
-         C2I->isOne() || C2I->isAllOnesValue();
+  return C1I->isOne() || C1I->isMinusOne() ||
+         C2I->isOne() || C2I->isMinusOne();
 }
 
 /// Try to fold the select into one of the operands to allow further
@@ -617,10 +617,10 @@ Instruction *InstCombiner::foldSelectInstWithICmp(SelectInst &SI,
     if (TrueVal->getType() == Ty) {
       if (ConstantInt *Cmp = dyn_cast<ConstantInt>(CmpRHS)) {
         ConstantInt *C1 = nullptr, *C2 = nullptr;
-        if (Pred == ICmpInst::ICMP_SGT && Cmp->isAllOnesValue()) {
+        if (Pred == ICmpInst::ICMP_SGT && Cmp->isMinusOne()) {
           C1 = dyn_cast<ConstantInt>(TrueVal);
           C2 = dyn_cast<ConstantInt>(FalseVal);
-        } else if (Pred == ICmpInst::ICMP_SLT && Cmp->isNullValue()) {
+        } else if (Pred == ICmpInst::ICMP_SLT && Cmp->isZero()) {
           C1 = dyn_cast<ConstantInt>(FalseVal);
           C2 = dyn_cast<ConstantInt>(TrueVal);
         }
@@ -629,7 +629,7 @@ Instruction *InstCombiner::foldSelectInstWithICmp(SelectInst &SI,
           Value *AShr = Builder->CreateAShr(CmpLHS, Ty->getBitWidth()-1);
 
           // Check if we can express the operation with a single or.
-          if (C2->isAllOnesValue())
+          if (C2->isMinusOne())
             return replaceInstUsesWith(SI, Builder->CreateOr(AShr, C1));
 
           Value *And = Builder->CreateAnd(AShr, C2->getValue()-C1->getValue());
