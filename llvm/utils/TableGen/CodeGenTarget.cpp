@@ -207,7 +207,7 @@ const StringRef CodeGenTarget::getName() const {
   return TargetRec->getName();
 }
 
-std::string CodeGenTarget::getInstNamespace() const {
+StringRef CodeGenTarget::getInstNamespace() const {
   for (const CodeGenInstruction *Inst : getInstructionsByEnumValue()) {
     // Make sure not to pick up "TargetOpcode" by accidentally getting
     // the namespace off the PHI instruction or something.

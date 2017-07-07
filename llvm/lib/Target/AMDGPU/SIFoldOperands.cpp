@@ -137,6 +137,7 @@ static bool isInlineConstantIfFolded(const SIInstrInfo *TII,
         = TII->get(IsF32 ? AMDGPU::V_MAD_F32 : AMDGPU::V_MAD_F16);
       return TII->isInlineConstant(OpToFold, MadDesc.OpInfo[OpNo].OperandType);
     }
+    return false;
   }
   default:
     return false;

@@ -20,6 +20,7 @@ class TestGoASTContext(TestBase):
     @skipIfRemote  # Not remote test suit ready
     @no_debug_info_test
     @skipUnlessGoInstalled
+    @expectedFailureAll(bugnumber="llvm.org/pr33643")
     def test_with_dsym_and_python_api(self):
         """Test GoASTContext dwarf parsing."""
         self.buildGo()

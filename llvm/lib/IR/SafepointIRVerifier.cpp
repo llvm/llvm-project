@@ -26,8 +26,8 @@
 //
 // Because it is valid to reorder 'c' above the safepoint, this is legal.  In
 // practice, this is a somewhat uncommon transform, but CodeGenPrep does create
-// idioms like this.  Today, the verifier would report a spurious failure on
-// this case.
+// idioms like this.  The verifier knows about these cases and avoids reporting
+// false positives.
 //
 //===----------------------------------------------------------------------===//
 
@@ -373,6 +373,50 @@ static void Verify(const Function &F, const DominatorTree &DT) {
                 !BlockMap[InBB]->AvailableOut.count(InValue))
               ReportInvalidUse(*InValue, *PN);
           }
+      } else if (isa<CmpInst>(I) &&
+                 containsGCPtrType(I.getOperand(0)->getType())) {
+        Value *LHS = I.getOperand(0), *RHS = I.getOperand(1);
+        enum BaseType baseTyLHS = getBaseType(LHS),
+                      baseTyRHS = getBaseType(RHS);
+
+        // Returns true if LHS and RHS are unrelocated pointers and they are
+        // valid unrelocated uses.
+        auto hasValidUnrelocatedUse = [&AvailableSet, baseTyLHS, baseTyRHS, &LHS, &RHS] () {
+            // A cmp instruction has valid unrelocated pointer operands only if
+            // both operands are unrelocated pointers.
+            // In the comparison between two pointers, if one is an unrelocated
+            // use, the other *should be* an unrelocated use, for this
+            // instruction to contain valid unrelocated uses. This unrelocated
+            // use can be a null constant as well, or another unrelocated
+            // pointer.
+            if (AvailableSet.count(LHS) || AvailableSet.count(RHS))
+              return false;
+            // Constant pointers (that are not exclusively null) may have
+            // meaning in different VMs, so we cannot reorder the compare
+            // against constant pointers before the safepoint. In other words,
+            // comparison of an unrelocated use against a non-null constant
+            // maybe invalid.
+            if ((baseTyLHS == BaseType::ExclusivelySomeConstant &&
+                 baseTyRHS == BaseType::NonConstant) ||
+                (baseTyLHS == BaseType::NonConstant &&
+                 baseTyRHS == BaseType::ExclusivelySomeConstant))
+              return false;
+            // All other cases are valid cases enumerated below:
+            // 1. Comparison between an exlusively derived null pointer and a
+            // constant base pointer.
+            // 2. Comparison between an exlusively derived null pointer and a
+            // non-constant unrelocated base pointer.
+            // 3. Comparison between 2 unrelocated pointers.
+            return true;
+        };
+        if (!hasValidUnrelocatedUse()) {
+          // Print out all non-constant derived pointers that are unrelocated
+          // uses, which are invalid.
+          if (baseTyLHS == BaseType::NonConstant && !AvailableSet.count(LHS))
+            ReportInvalidUse(*LHS, I);
+          if (baseTyRHS == BaseType::NonConstant && !AvailableSet.count(RHS))
+            ReportInvalidUse(*RHS, I);
+        }
       } else {
         for (const Value *V : I.operands())
           if (containsGCPtrType(V->getType()) &&

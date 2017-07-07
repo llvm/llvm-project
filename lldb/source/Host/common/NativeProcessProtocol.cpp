@@ -29,11 +29,13 @@ using namespace lldb_private;
 // NativeProcessProtocol Members
 // -----------------------------------------------------------------------------
 
-NativeProcessProtocol::NativeProcessProtocol(lldb::pid_t pid)
-    : m_pid(pid), m_threads(), m_current_thread_id(LLDB_INVALID_THREAD_ID),
-      m_threads_mutex(), m_state(lldb::eStateInvalid), m_state_mutex(),
-      m_delegates_mutex(), m_delegates(), m_breakpoint_list(),
-      m_watchpoint_list(), m_terminal_fd(-1), m_stop_id(0) {}
+NativeProcessProtocol::NativeProcessProtocol(lldb::pid_t pid, int terminal_fd,
+                                             NativeDelegate &delegate)
+    : m_pid(pid), m_terminal_fd(terminal_fd) {
+  bool registered = RegisterNativeDelegate(delegate);
+  assert(registered);
+  (void)registered;
+}
 
 lldb_private::Status NativeProcessProtocol::Interrupt() {
   Status error;
@@ -488,23 +490,4 @@ Status NativeProcessProtocol::ResolveProcessArchitecture(lldb::pid_t pid,
         "failed to retrieve a valid architecture from the exe module");
 }
 
-#if !defined(__linux__) && !defined(__NetBSD__)
-// These need to be implemented to support lldb-gdb-server on a given platform.
-// Stubs are
-// provided to make the rest of the code link on non-supported platforms.
-
-Status NativeProcessProtocol::Launch(ProcessLaunchInfo &launch_info,
-                                     NativeDelegate &native_delegate,
-                                     MainLoop &mainloop,
-                                     NativeProcessProtocolSP &process_sp) {
-  llvm_unreachable("Platform has no NativeProcessProtocol support");
-}
-
-Status NativeProcessProtocol::Attach(lldb::pid_t pid,
-                                     NativeDelegate &native_delegate,
-                                     MainLoop &mainloop,
-                                     NativeProcessProtocolSP &process_sp) {
-  llvm_unreachable("Platform has no NativeProcessProtocol support");
-}
-
-#endif
+NativeProcessProtocol::Factory::~Factory() = default;

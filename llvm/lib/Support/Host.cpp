@@ -1494,7 +1494,8 @@ bool sys::getHostCPUFeatures(StringMap<bool> &Features) { return false; }
 #endif
 
 std::string sys::getProcessTriple() {
-  Triple PT(Triple::normalize(LLVM_HOST_TRIPLE));
+  std::string TargetTripleString = updateTripleOSVersion(LLVM_HOST_TRIPLE);
+  Triple PT(Triple::normalize(TargetTripleString));
 
   if (sizeof(void *) == 8 && PT.isArch32Bit())
     PT = PT.get64BitArchVariant();

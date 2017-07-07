@@ -442,6 +442,7 @@ public:
       case fixup_Hexagon_B7_PCREL:
         if (!(isIntN(7, sValue)))
           HandleFixupError(7, 2, (int64_t)FixupValue, "B7_PCREL");
+        LLVM_FALLTHROUGH;
       case fixup_Hexagon_B7_PCREL_X:
         InstMask = 0x00001f18;  // Word32_B7
         Reloc = (((Value >> 2) & 0x1f) << 8) |    // Value 6-2 = Target 12-8
@@ -451,6 +452,7 @@ public:
       case fixup_Hexagon_B9_PCREL:
         if (!(isIntN(9, sValue)))
           HandleFixupError(9, 2, (int64_t)FixupValue, "B9_PCREL");
+        LLVM_FALLTHROUGH;
       case fixup_Hexagon_B9_PCREL_X:
         InstMask = 0x003000fe;  // Word32_B9
         Reloc = (((Value >> 7) & 0x3) << 20) |    // Value 8-7 = Target 21-20
@@ -462,6 +464,7 @@ public:
       case fixup_Hexagon_B13_PCREL:
         if (!(isIntN(13, sValue)))
           HandleFixupError(13, 2, (int64_t)FixupValue, "B13_PCREL");
+        LLVM_FALLTHROUGH;
       case fixup_Hexagon_B13_PCREL_X:
         InstMask = 0x00202ffe;  // Word32_B13
         Reloc = (((Value >> 12) & 0x1) << 21) |    // Value 12   = Target 21
@@ -472,6 +475,7 @@ public:
       case fixup_Hexagon_B15_PCREL:
         if (!(isIntN(15, sValue)))
           HandleFixupError(15, 2, (int64_t)FixupValue, "B15_PCREL");
+        LLVM_FALLTHROUGH;
       case fixup_Hexagon_B15_PCREL_X:
         InstMask = 0x00df20fe;  // Word32_B15
         Reloc = (((Value >> 13) & 0x3) << 22) |    // Value 14-13 = Target 23-22
@@ -483,6 +487,7 @@ public:
       case fixup_Hexagon_B22_PCREL:
         if (!(isIntN(22, sValue)))
           HandleFixupError(22, 2, (int64_t)FixupValue, "B22_PCREL");
+        LLVM_FALLTHROUGH;
       case fixup_Hexagon_B22_PCREL_X:
         InstMask = 0x01ff3ffe;  // Word32_B22
         Reloc = (((Value >> 13) & 0x1ff) << 16) |  // Value 21-13 = Target 24-16
