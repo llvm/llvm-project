@@ -298,18 +298,21 @@ bool AMDGPUSubtarget::makeLIDRangeMetadata(Instruction *I) const {
       case Intrinsic::amdgcn_workitem_id_x:
       case Intrinsic::r600_read_tidig_x:
         IdQuery = true;
+        LLVM_FALLTHROUGH;
       case Intrinsic::r600_read_local_size_x:
         Dim = 0;
         break;
       case Intrinsic::amdgcn_workitem_id_y:
       case Intrinsic::r600_read_tidig_y:
         IdQuery = true;
+        LLVM_FALLTHROUGH;
       case Intrinsic::r600_read_local_size_y:
         Dim = 1;
         break;
       case Intrinsic::amdgcn_workitem_id_z:
       case Intrinsic::r600_read_tidig_z:
         IdQuery = true;
+        LLVM_FALLTHROUGH;
       case Intrinsic::r600_read_local_size_z:
         Dim = 2;
         break;

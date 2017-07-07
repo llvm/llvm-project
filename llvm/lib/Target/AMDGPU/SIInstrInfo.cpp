@@ -2022,10 +2022,12 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineFunction::iterator &MBB,
     return nullptr;
   case AMDGPU::V_MAC_F16_e64:
     IsF16 = true;
+    LLVM_FALLTHROUGH;
   case AMDGPU::V_MAC_F32_e64:
     break;
   case AMDGPU::V_MAC_F16_e32:
     IsF16 = true;
+    LLVM_FALLTHROUGH;
   case AMDGPU::V_MAC_F32_e32: {
     int Src0Idx = AMDGPU::getNamedOperandIdx(MI.getOpcode(),
                                              AMDGPU::OpName::src0);

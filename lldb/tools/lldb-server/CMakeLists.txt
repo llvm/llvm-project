@@ -59,6 +59,16 @@ if (LLVM_BUILD_STATIC)
   endif()
 endif()
 
+set(LLDB_PLUGINS)
+
+if(CMAKE_SYSTEM_NAME MATCHES "Linux|Android")
+  list(APPEND LLDB_PLUGINS lldbPluginProcessLinux)
+endif()
+
+if(CMAKE_SYSTEM_NAME MATCHES "NetBSD")
+  list(APPEND LLDB_PLUGINS lldbPluginProcessNetBSD)
+endif()
+
 add_lldb_tool(lldb-server INCLUDE_IN_FRAMEWORK
     Acceptor.cpp
     lldb-gdbserver.cpp
@@ -72,7 +82,7 @@ add_lldb_tool(lldb-server INCLUDE_IN_FRAMEWORK
       lldbHost
       lldbInitialization
       lldbInterpreter
-      ${EXTRA_LLDB_LIBS}
+      ${LLDB_PLUGINS}
       ${LLDB_SYSTEM_LIBS}
 
     LINK_COMPONENTS

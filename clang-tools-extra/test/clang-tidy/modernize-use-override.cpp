@@ -12,6 +12,10 @@
 
 struct MUST_USE_RESULT MustUseResultObject {};
 
+struct IntPair {
+  int First, Second;
+};
+
 struct Base {
   virtual ~Base() {}
   virtual void a();
@@ -41,6 +45,8 @@ struct Base {
 
   virtual void ne() noexcept(false);
   virtual void t() throw();
+
+  virtual void il(IntPair);
 };
 
 struct SimpleCases : public Base {
@@ -219,6 +225,14 @@ public:
   {}
   // CHECK-MESSAGES: :[[@LINE-2]]:16: warning: prefer using
   // CHECK-FIXES: {{^}}  void cv2() const volatile override // some comment
+};
+
+struct DefaultArguments : public Base {
+  // Tests for default arguments (with initializer lists).
+  // Make sure the override fix is placed after the argument list.
+  void il(IntPair p = {1, (2 + (3))}) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: annotate this
+  // CHECK-FIXES: {{^}}  void il(IntPair p = {1, (2 + (3))}) override {}
 };
 
 struct Macros : public Base {

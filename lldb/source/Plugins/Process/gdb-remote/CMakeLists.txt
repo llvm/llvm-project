@@ -7,14 +7,6 @@ set(LLDB_PLUGINS
   lldbPluginPlatformMacOSX
 )
 
-if(CMAKE_SYSTEM_NAME MATCHES "Linux|Android")
-  list(APPEND LLDB_PLUGINS lldbPluginProcessLinux)
-endif()
-
-if(CMAKE_SYSTEM_NAME MATCHES "NetBSD")
-  list(APPEND LLDB_PLUGINS lldbPluginProcessNetBSD)
-endif()
-
 add_lldb_library(lldbPluginProcessGDBRemote PLUGIN
   GDBRemoteClientBase.cpp
   GDBRemoteCommunication.cpp

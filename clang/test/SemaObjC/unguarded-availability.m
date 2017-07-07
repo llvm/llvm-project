@@ -263,3 +263,27 @@ void with_local_struct() {
     new_int x; // expected-warning{{'new_int' is partial}}
   };
 }
+
+// rdar://33156429:
+// Avoid the warning on protocol requirements.
+
+AVAILABLE_10_12
+@protocol NewProtocol // expected-note {{'NewProtocol' has been explicitly marked partial here}}
+@end
+
+@protocol ProtocolWithNewProtocolRequirement <NewProtocol> // expected-note {{annotate 'ProtocolWithNewProtocolRequirement' with an availability attribute to silence}}
+
+@property(copy) id<NewProtocol> prop; // expected-warning {{'NewProtocol' is partial: introduced in macOS 10.12}}
+
+@end
+
+@interface BaseClass
+@end
+
+@interface ClassWithNewProtocolRequirement : BaseClass <NewProtocol>
+
+@end
+
+@interface BaseClass (CategoryWithNewProtocolRequirement) <NewProtocol>
+
+@end

@@ -39,15 +39,18 @@ namespace process_linux {
 ///
 /// Changes in the inferior process state are broadcasted.
 class NativeProcessLinux : public NativeProcessProtocol {
-  friend Status NativeProcessProtocol::Launch(
-      ProcessLaunchInfo &launch_info, NativeDelegate &native_delegate,
-      MainLoop &mainloop, NativeProcessProtocolSP &process_sp);
-
-  friend Status NativeProcessProtocol::Attach(
-      lldb::pid_t pid, NativeProcessProtocol::NativeDelegate &native_delegate,
-      MainLoop &mainloop, NativeProcessProtocolSP &process_sp);
-
 public:
+  class Factory : public NativeProcessProtocol::Factory {
+  public:
+    llvm::Expected<NativeProcessProtocolSP>
+    Launch(ProcessLaunchInfo &launch_info, NativeDelegate &native_delegate,
+           MainLoop &mainloop) const override;
+
+    llvm::Expected<NativeProcessProtocolSP>
+    Attach(lldb::pid_t pid, NativeDelegate &native_delegate,
+           MainLoop &mainloop) const override;
+  };
+
   // ---------------------------------------------------------------------
   // NativeProcessProtocol Interface
   // ---------------------------------------------------------------------
@@ -144,10 +147,10 @@ private:
   MainLoop::SignalHandleUP m_sigchld_handle;
   ArchSpec m_arch;
 
-  LazyBool m_supports_mem_region;
+  LazyBool m_supports_mem_region = eLazyBoolCalculate;
   std::vector<std::pair<MemoryRegionInfo, FileSpec>> m_mem_region_cache;
 
-  lldb::tid_t m_pending_notification_tid;
+  lldb::tid_t m_pending_notification_tid = LLDB_INVALID_THREAD_ID;
 
   // List of thread ids stepping with a breakpoint with the address of
   // the relevan breakpoint
@@ -156,19 +159,15 @@ private:
   // ---------------------------------------------------------------------
   // Private Instance Methods
   // ---------------------------------------------------------------------
-  NativeProcessLinux();
+  NativeProcessLinux(::pid_t pid, int terminal_fd, NativeDelegate &delegate,
+                     const ArchSpec &arch, MainLoop &mainloop);
 
-  Status LaunchInferior(MainLoop &mainloop, ProcessLaunchInfo &launch_info);
-
-  /// Attaches to an existing process.  Forms the
-  /// implementation of Process::DoAttach
-  void AttachToInferior(MainLoop &mainloop, lldb::pid_t pid, Status &error);
-
-  ::pid_t Attach(lldb::pid_t pid, Status &error);
+  // Returns a list of process threads that we have attached to.
+  static llvm::Expected<std::vector<::pid_t>> Attach(::pid_t pid);
 
   static Status SetDefaultPtraceOpts(const lldb::pid_t);
 
-  static void *MonitorThread(void *baton);
+  void InitializeThreads(llvm::ArrayRef<::pid_t> tids);
 
   void MonitorCallback(lldb::pid_t pid, bool exited, WaitStatus status);
 
@@ -280,7 +279,7 @@ private:
   // same process user id.
   llvm::DenseSet<lldb::tid_t> m_pt_traced_thread_group;
 
-  lldb::user_id_t m_pt_proces_trace_id;
+  lldb::user_id_t m_pt_proces_trace_id = LLDB_INVALID_UID;
   TraceOptions m_pt_process_trace_config;
 };
 
