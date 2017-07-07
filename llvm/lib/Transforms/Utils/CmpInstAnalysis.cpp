@@ -81,7 +81,7 @@ bool llvm::decomposeBitTestICmp(const ICmpInst *I, CmpInst::Predicate &Pred,
     break;
   case ICmpInst::ICMP_SGT:
     // X > -1 is equivalent to (X & SignMask) == 0.
-    if (!C->isAllOnesValue())
+    if (!C->isMinusOne())
       return false;
     Y = ConstantInt::get(I->getContext(), APInt::getSignMask(C->getBitWidth()));
     Pred = ICmpInst::ICMP_EQ;

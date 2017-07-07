@@ -184,6 +184,36 @@ for.exit2:
   ret i32 42
 }
 
+; FIXME: Support multiple exiting blocks to the unique exit block.
+define void @unique_exit(i32 %arg) {
+; CHECK-LABEL: unique_exit
+; CHECK-NOT: .unr
+; CHECK-NOT: .epil
+entry:
+  %tmp = icmp sgt i32 undef, %arg
+  br i1 %tmp, label %preheader, label %returnblock
+
+preheader:                                 ; preds = %entry
+  br label %header
+
+LoopExit:                                ; preds = %header, %latch
+  %tmp2.ph = phi i32 [ %tmp4, %header ], [ -1, %latch ]
+  br label %returnblock
+
+returnblock:                                         ; preds = %LoopExit, %entry
+  %tmp2 = phi i32 [ -1, %entry ], [ %tmp2.ph, %LoopExit ]
+  ret void
+
+header:                                           ; preds = %preheader, %latch
+  %tmp4 = phi i32 [ %inc, %latch ], [ %arg, %preheader ]
+  %inc = add nsw i32 %tmp4, 1
+  br i1 true, label %LoopExit, label %latch
+
+latch:                                            ; preds = %header
+  %cmp = icmp slt i32 %inc, undef
+  br i1 %cmp, label %header, label %LoopExit
+}
+
 ; two exiting and two exit blocks.
 ; the non-latch exiting block has duplicate edges to the non-latch exit block.
 define i64 @test5(i64 %trip, i64 %add, i1 %cond) {

@@ -440,6 +440,9 @@ class Configuration(object):
             # C++17 aligned allocation.
             self.config.available_features.add('no-aligned-allocation')
 
+        if self.cxx.hasCompileFlag('-fdelayed-template-parsing'):
+            self.config.available_features.add('fdelayed-template-parsing')
+
         if self.get_lit_bool('has_libatomic', False):
             self.config.available_features.add('libatomic')
 

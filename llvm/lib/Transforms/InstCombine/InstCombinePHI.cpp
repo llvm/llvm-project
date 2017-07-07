@@ -639,7 +639,7 @@ static ConstantInt *GetAnyNonZeroConstInt(PHINode &PN) {
   assert(isa<IntegerType>(PN.getType()) && "Expect only intger type phi");
   for (Value *V : PN.operands())
     if (auto *ConstVA = dyn_cast<ConstantInt>(V))
-      if (!ConstVA->isZeroValue())
+      if (!ConstVA->isZero())
         return ConstVA;
   return ConstantInt::get(cast<IntegerType>(PN.getType()), 1);
 }

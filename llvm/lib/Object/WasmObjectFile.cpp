@@ -567,20 +567,16 @@ Error WasmObjectFile::parseExportSection(const uint8_t *Ptr, const uint8_t *End)
     Ex.Name = readString(Ptr);
     Ex.Kind = readUint8(Ptr);
     Ex.Index = readVaruint32(Ptr);
+    WasmSymbol::SymbolType ExportType;
+    bool MakeSymbol = false;
     switch (Ex.Kind) {
     case wasm::WASM_EXTERNAL_FUNCTION:
-      SymbolMap.try_emplace(Ex.Name, Symbols.size());
-      Symbols.emplace_back(Ex.Name, WasmSymbol::SymbolType::FUNCTION_EXPORT,
-                           Sections.size(), i);
-      DEBUG(dbgs() << "Adding export: " << Symbols.back()
-                   << " sym index:" << Symbols.size() << "\n");
+      ExportType = WasmSymbol::SymbolType::FUNCTION_EXPORT;
+      MakeSymbol = true;
       break;
     case wasm::WASM_EXTERNAL_GLOBAL:
-      SymbolMap.try_emplace(Ex.Name, Symbols.size());
-      Symbols.emplace_back(Ex.Name, WasmSymbol::SymbolType::GLOBAL_EXPORT,
-                           Sections.size(), i);
-      DEBUG(dbgs() << "Adding export: " << Symbols.back()
-                   << " sym index:" << Symbols.size() << "\n");
+      ExportType = WasmSymbol::SymbolType::GLOBAL_EXPORT;
+      MakeSymbol = true;
       break;
     case wasm::WASM_EXTERNAL_MEMORY:
     case wasm::WASM_EXTERNAL_TABLE:
@@ -588,6 +584,20 @@ Error WasmObjectFile::parseExportSection(const uint8_t *Ptr, const uint8_t *End)
     default:
       return make_error<GenericBinaryError>(
           "Unexpected export kind", object_error::parse_failed);
+    }
+    if (MakeSymbol) {
+      auto Pair = SymbolMap.try_emplace(Ex.Name, Symbols.size());
+      if (Pair.second) {
+        Symbols.emplace_back(Ex.Name, ExportType,
+                             Sections.size(), i);
+        DEBUG(dbgs() << "Adding export: " << Symbols.back()
+                     << " sym index:" << Symbols.size() << "\n");
+      } else {
+        uint32_t SymIndex = Pair.first->second;
+        Symbols[SymIndex] = WasmSymbol(Ex.Name, ExportType, Sections.size(), i);
+        DEBUG(dbgs() << "Replacing existing symbol:  " << Symbols[SymIndex]
+                     << " sym index:" << SymIndex << "\n");
+      }
     }
     Exports.push_back(Ex);
   }

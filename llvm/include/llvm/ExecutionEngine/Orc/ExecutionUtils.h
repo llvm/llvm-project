@@ -17,6 +17,8 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
+#include "llvm/ExecutionEngine/RuntimeDyld.h"
+#include "llvm/ExecutionEngine/Orc/OrcError.h"
 #include <algorithm>
 #include <cstdint>
 #include <string>
@@ -99,19 +101,24 @@ public:
 
   /// @brief Run the recorded constructors/destructors through the given JIT
   ///        layer.
-  bool runViaLayer(JITLayerT &JITLayer) const {
+  Error runViaLayer(JITLayerT &JITLayer) const {
     using CtorDtorTy = void (*)();
 
-    bool Error = false;
     for (const auto &CtorDtorName : CtorDtorNames)
       if (auto CtorDtorSym = JITLayer.findSymbolIn(H, CtorDtorName, false)) {
-        CtorDtorTy CtorDtor =
-          reinterpret_cast<CtorDtorTy>(
-            static_cast<uintptr_t>(CtorDtorSym.getAddress()));
-        CtorDtor();
-      } else
-        Error = true;
-    return !Error;
+        if (auto AddrOrErr = CtorDtorSym.getAddress()) {
+          CtorDtorTy CtorDtor =
+            reinterpret_cast<CtorDtorTy>(static_cast<uintptr_t>(*AddrOrErr));
+          CtorDtor();
+        } else
+          return AddrOrErr.takeError();
+      } else {
+        if (auto Err = CtorDtorSym.takeError())
+          return Err;
+        else
+          return make_error<JITSymbolNotFound>(CtorDtorName);
+      }
+    return Error::success();
   }
 
 private:

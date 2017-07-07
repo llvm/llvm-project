@@ -85,20 +85,11 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}fdiv_fast_denormals_f32:
-; GCN: v_div_scale_f32 [[NUM_SCALE:v[0-9]+]]
-; GCN-DAG: v_div_scale_f32 [[DEN_SCALE:v[0-9]+]]
-; GCN-DAG: v_rcp_f32_e32 [[NUM_RCP:v[0-9]+]], [[NUM_SCALE]]
-
+; GCN: v_rcp_f32_e32 [[RCP:v[0-9]+]], s{{[0-9]+}}
+; GCN: v_mul_f32_e32 [[RESULT:v[0-9]+]], s{{[0-9]+}}, [[RCP]]
+; GCN-NOT: [[RESULT]]
 ; GCN-NOT: s_setreg
-; GCN: v_fma_f32 [[A:v[0-9]+]], -[[NUM_SCALE]], [[NUM_RCP]], 1.0
-; GCN: v_fma_f32 [[B:v[0-9]+]], [[A]], [[NUM_RCP]], [[NUM_RCP]]
-; GCN: v_mul_f32_e32 [[C:v[0-9]+]], [[B]], [[DEN_SCALE]]
-; GCN: v_fma_f32 [[D:v[0-9]+]], -[[NUM_SCALE]], [[C]], [[DEN_SCALE]]
-; GCN: v_fma_f32 [[E:v[0-9]+]], [[D]], [[B]], [[C]]
-; GCN: v_fma_f32 [[F:v[0-9]+]], -[[NUM_SCALE]], [[E]], [[DEN_SCALE]]
-; GCN-NOT: s_setreg
-; GCN: v_div_fmas_f32 [[FMAS:v[0-9]+]], [[F]], [[B]], [[E]]
-; GCN: v_div_fixup_f32 v{{[0-9]+}}, [[FMAS]],
+; GCN: buffer_store_dword [[RESULT]]
 define amdgpu_kernel void @fdiv_fast_denormals_f32(float addrspace(1)* %out, float %a, float %b) #2 {
 entry:
   %fdiv = fdiv fast float %a, %b
@@ -117,6 +108,21 @@ entry:
 define amdgpu_kernel void @fdiv_f32_fast_math(float addrspace(1)* %out, float %a, float %b) #0 {
 entry:
   %fdiv = fdiv fast float %a, %b
+  store float %fdiv, float addrspace(1)* %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}fdiv_ulp25_f32_fast_math:
+; R600-DAG: RECIP_IEEE * T{{[0-9]+\.[XYZW]}}, KC0[2].W
+; R600-DAG: MUL_IEEE {{\** *}}T{{[0-9]+\.[XYZW]}}, KC0[2].Z, PS
+
+; GCN: v_rcp_f32_e32 [[RCP:v[0-9]+]], s{{[0-9]+}}
+; GCN: v_mul_f32_e32 [[RESULT:v[0-9]+]], s{{[0-9]+}}, [[RCP]]
+; GCN-NOT: [[RESULT]]
+; GCN: buffer_store_dword [[RESULT]]
+define amdgpu_kernel void @fdiv_ulp25_f32_fast_math(float addrspace(1)* %out, float %a, float %b) #0 {
+entry:
+  %fdiv = fdiv fast float %a, %b, !fpmath !0
   store float %fdiv, float addrspace(1)* %out
   ret void
 }
@@ -154,8 +160,9 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}fdiv_ulp25_v2f32:
-; GCN: v_cmp_gt_f32
-; GCN: v_cmp_gt_f32
+; GCN: v_rcp_f32
+; GCN: v_rcp_f32
+; GCN-NOT: v_cmp_gt_f32
 define amdgpu_kernel void @fdiv_ulp25_v2f32(<2 x float> addrspace(1)* %out, <2 x float> %a, <2 x float> %b) #0 {
 entry:
   %fdiv = fdiv arcp <2 x float> %a, %b, !fpmath !0

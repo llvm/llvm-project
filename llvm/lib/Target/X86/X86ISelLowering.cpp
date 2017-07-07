@@ -29218,9 +29218,9 @@ static SDValue combineBitcastvxi1(SelectionDAG &DAG, SDValue BitCast,
   // v8i16 and v16i16.
   // For these two cases, we can shuffle the upper element bytes to a
   // consecutive sequence at the start of the vector and treat the results as
-  // v16i8 or v32i8, and for v61i8 this is the prefferable solution. However,
+  // v16i8 or v32i8, and for v61i8 this is the preferable solution. However,
   // for v16i16 this is not the case, because the shuffle is expensive, so we
-  // avoid sign-exteding to this type entirely.
+  // avoid sign-extending to this type entirely.
   // For example, t0 := (v8i16 sext(v8i1 x)) needs to be shuffled as:
   // (v16i8 shuffle <0,2,4,6,8,10,12,14,u,u,...,u> (v16i8 bitcast t0), undef)
   MVT SExtVT;
@@ -29262,7 +29262,7 @@ static SDValue combineBitcastvxi1(SelectionDAG &DAG, SDValue BitCast,
     SExtVT = MVT::v16i8;
     // For the case (i16 bitcast (v16i1 setcc v16i16 v1, v2)),
     // it is not profitable to sign-extend to 256-bit because this will
-    // require an extra cross-lane shuffle which is more exprensive than
+    // require an extra cross-lane shuffle which is more expensive than
     // truncating the result of the compare to 128-bits.
     break;
   case MVT::v32i1:

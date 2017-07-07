@@ -418,6 +418,13 @@ Error DumpOutputStyle::dumpModules() {
     P.formatLine("           debug stream: {0}, # files: {1}, has ec info: {2}",
                  Modi.getModuleStreamIndex(), Modi.getNumberOfFiles(),
                  Modi.hasECInfo());
+    StringRef PdbFilePath =
+        Err(Stream.getECName(Modi.getPdbFilePathNameIndex()));
+    StringRef SrcFilePath =
+        Err(Stream.getECName(Modi.getSourceFileNameIndex()));
+    P.formatLine("           pdb file ni: {0} `{1}`, src file ni: {2} `{3}`",
+                 Modi.getPdbFilePathNameIndex(), PdbFilePath,
+                 Modi.getSourceFileNameIndex(), SrcFilePath);
   }
   return Error::success();
 }

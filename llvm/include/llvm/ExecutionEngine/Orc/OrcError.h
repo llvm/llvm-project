@@ -22,7 +22,8 @@ namespace orc {
 
 enum class OrcErrorCode : int {
   // RPC Errors
-  RemoteAllocatorDoesNotExist = 1,
+  JITSymbolNotFound = 1,
+  RemoteAllocatorDoesNotExist,
   RemoteAllocatorIdAlreadyInUse,
   RemoteMProtectAddrUnrecognized,
   RemoteIndirectStubsOwnerDoesNotExist,
@@ -36,6 +37,18 @@ enum class OrcErrorCode : int {
 };
 
 std::error_code orcError(OrcErrorCode ErrCode);
+
+class JITSymbolNotFound : public ErrorInfo<JITSymbolNotFound> {
+public:
+  static char ID;
+
+  JITSymbolNotFound(std::string SymbolName);
+  std::error_code convertToErrorCode() const override;
+  void log(raw_ostream &OS) const override;
+  const std::string &getSymbolName() const;
+private:
+  std::string SymbolName;
+};
 
 } // End namespace orc.
 } // End namespace llvm.

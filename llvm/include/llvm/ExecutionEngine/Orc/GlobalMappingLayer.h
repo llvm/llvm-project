@@ -17,9 +17,14 @@
 
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include <map>
+#include <memory>
 #include <string>
 
 namespace llvm {
+
+class Module;
+class JITSymbolResolver;
+
 namespace orc {
 
 /// @brief Global mapping layer.
@@ -32,25 +37,22 @@ namespace orc {
 template <typename BaseLayerT>
 class GlobalMappingLayer {
 public:
-  /// @brief Handle to a set of added modules.
-  using ModuleSetHandleT = typename BaseLayerT::ModuleSetHandleT;
+
+  /// @brief Handle to an added module.
+  using ModuleHandleT = typename BaseLayerT::ModuleHandleT;
 
   /// @brief Construct an GlobalMappingLayer with the given BaseLayer
   GlobalMappingLayer(BaseLayerT &BaseLayer) : BaseLayer(BaseLayer) {}
 
-  /// @brief Add the given module set to the JIT.
+  /// @brief Add the given module to the JIT.
   /// @return A handle for the added modules.
-  template <typename ModuleSetT, typename MemoryManagerPtrT,
-            typename SymbolResolverPtrT>
-  ModuleSetHandleT addModuleSet(ModuleSetT Ms,
-                                MemoryManagerPtrT MemMgr,
-                                SymbolResolverPtrT Resolver) {
-    return BaseLayer.addModuleSet(std::move(Ms), std::move(MemMgr),
-                                  std::move(Resolver));
+  ModuleHandleT addModule(std::shared_ptr<Module> M,
+                          std::shared_ptr<JITSymbolResolver> Resolver) {
+    return BaseLayer.addModule(std::move(M), std::move(Resolver));
   }
 
   /// @brief Remove the module set associated with the handle H.
-  void removeModuleSet(ModuleSetHandleT H) { BaseLayer.removeModuleSet(H); }
+  void removeModule(ModuleHandleT H) { BaseLayer.removeModule(H); }
 
   /// @brief Manually set the address to return for the given symbol.
   void setGlobalMapping(const std::string &Name, JITTargetAddress Addr) {
@@ -78,15 +80,15 @@ public:
     return BaseLayer.findSymbol(Name, ExportedSymbolsOnly);
   }
 
-  /// @brief Get the address of the given symbol in the context of the set of
-  ///        modules represented by the handle H. This call is forwarded to the
+  /// @brief Get the address of the given symbol in the context of the of the
+  ///        module represented by the handle H. This call is forwarded to the
   ///        base layer's implementation.
-  /// @param H The handle for the module set to search in.
+  /// @param H The handle for the module to search in.
   /// @param Name The name of the symbol to search for.
   /// @param ExportedSymbolsOnly If true, search only for exported symbols.
   /// @return A handle for the given named symbol, if it is found in the
-  ///         given module set.
-  JITSymbol findSymbolIn(ModuleSetHandleT H, const std::string &Name,
+  ///         given module.
+  JITSymbol findSymbolIn(ModuleHandleT H, const std::string &Name,
                          bool ExportedSymbolsOnly) {
     return BaseLayer.findSymbolIn(H, Name, ExportedSymbolsOnly);
   }
@@ -94,7 +96,7 @@ public:
   /// @brief Immediately emit and finalize the module set represented by the
   ///        given handle.
   /// @param H Handle for module set to emit/finalize.
-  void emitAndFinalize(ModuleSetHandleT H) {
+  void emitAndFinalize(ModuleHandleT H) {
     BaseLayer.emitAndFinalize(H);
   }
 

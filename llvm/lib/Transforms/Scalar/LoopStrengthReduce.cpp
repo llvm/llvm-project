@@ -2326,7 +2326,7 @@ LSRInstance::OptimizeLoopTermCond() {
                 dyn_cast_or_null<SCEVConstant>(getExactSDiv(B, A, SE))) {
             const ConstantInt *C = D->getValue();
             // Stride of one or negative one can have reuse with non-addresses.
-            if (C->isOne() || C->isAllOnesValue())
+            if (C->isOne() || C->isMinusOne())
               goto decline_post_inc;
             // Avoid weird situations.
             if (C->getValue().getMinSignedBits() >= 64 ||

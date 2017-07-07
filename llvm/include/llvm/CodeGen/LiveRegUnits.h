@@ -93,12 +93,14 @@ public:
   }
 
   /// Updates liveness when stepping backwards over the instruction \p MI.
+  /// This removes all register units defined or clobbered in \p MI and then
+  /// adds the units used (as in use operands) in \p MI.
   void stepBackward(const MachineInstr &MI);
 
-  /// Mark all register units live during instruction \p MI.
-  /// This can be used to accumulate live/unoccupied registers over a range of
-  /// instructions.
-  void accumulateBackward(const MachineInstr &MI);
+  /// Adds all register units used, defined or clobbered in \p MI.
+  /// This is useful when walking over a range of instruction to find registers
+  /// unused over the whole range.
+  void accumulate(const MachineInstr &MI);
 
   /// Adds registers living out of block \p MBB.
   /// Live out registers are the union of the live-in registers of the successor

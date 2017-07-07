@@ -17,7 +17,7 @@ namespace {
 
 struct MockBaseLayer {
 
-  typedef int ModuleSetHandleT;
+  typedef int ModuleHandleT;
 
   JITSymbol findSymbol(const std::string &Name, bool ExportedSymbolsOnly) {
     if (Name == "bar")
@@ -37,13 +37,15 @@ TEST(GlobalMappingLayerTest, Empty) {
 
   // Test fall-through for symbol in base layer.
   auto BarSym = L.findSymbol("bar", true);
-  EXPECT_EQ(BarSym.getAddress(), static_cast<JITTargetAddress>(0x4567))
+  EXPECT_EQ(cantFail(BarSym.getAddress()),
+            static_cast<JITTargetAddress>(0x4567))
     << "Symbol lookup fall-through failed.";
 
   // Test setup of a global mapping.
   L.setGlobalMapping("foo", 0x0123);
   auto FooSym2 = L.findSymbol("foo", true);
-  EXPECT_EQ(FooSym2.getAddress(), static_cast<JITTargetAddress>(0x0123))
+  EXPECT_EQ(cantFail(FooSym2.getAddress()),
+            static_cast<JITTargetAddress>(0x0123))
     << "Symbol mapping setup failed.";
 
   // Test removal of a global mapping.

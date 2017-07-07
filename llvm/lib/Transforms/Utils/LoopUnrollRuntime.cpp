@@ -504,10 +504,6 @@ bool llvm::UnrollRuntimeLoopRemainder(Loop *L, unsigned Count,
     // transformed.
     if (!PreserveLCSSA)
       return false;
-    // TODO: Support multiple exiting blocks jumping to the `LatchExit`. This
-    // will need updating the logic in connectEpilog.
-    if (!LatchExit->getSinglePredecessor())
-        return false;
     SmallVector<BasicBlock *, 4> Exits;
     L->getUniqueExitBlocks(Exits);
     for (auto *BB : Exits)
@@ -517,6 +513,11 @@ bool llvm::UnrollRuntimeLoopRemainder(Loop *L, unsigned Count,
 
   assert(LatchExit && "Latch Exit should exist!");
 
+  // TODO: Support multiple exiting blocks jumping to the `LatchExit` when
+  // UnrollRuntimeMultiExit is true. This will need updating the logic in
+  // connectEpilog.
+  if (!LatchExit->getSinglePredecessor())
+    return false;
   // Use Scalar Evolution to compute the trip count. This allows more loops to
   // be unrolled than relying on induction var simplification.
   if (!SE)

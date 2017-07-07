@@ -32,26 +32,9 @@ class Issue11581TestCase(TestBase):
         """valobj.AddressOf() should return correct values."""
         self.build()
 
-        exe = os.path.join(os.getcwd(), "a.out")
-
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        breakpoint = target.BreakpointCreateBySourceRegex(
-            'Set breakpoint here.', lldb.SBFileSpec("main.cpp", False))
-
-        process = target.LaunchSimple(
-            None, None, self.get_process_working_directory())
-        self.assertTrue(process, "Created a process.")
-        self.assertTrue(
-            process.GetState() == lldb.eStateStopped,
-            "Stopped it too.")
-
-        thread_list = lldbutil.get_threads_stopped_at_breakpoint(
-            process, breakpoint)
-        self.assertTrue(len(thread_list) == 1)
-        thread = thread_list[0]
-
+        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(self, 
+                                              'Set breakpoint here.', 
+                                              lldb.SBFileSpec("main.cpp", False))
         self.runCmd("command script import --allow-reload s11588.py")
         self.runCmd(
             "type synthetic add --python-class s11588.Issue11581SyntheticProvider StgClosure")

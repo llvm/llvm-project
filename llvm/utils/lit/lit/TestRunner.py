@@ -221,6 +221,97 @@ def updateEnv(env, cmd):
         env.env[key] = val
     cmd.args = cmd.args[arg_idx+1:]
 
+def processRedirects(cmd, stdin_source, cmd_shenv, opened_files):
+    """Return the standard fds for cmd after applying redirects
+
+    Returns the three standard file descriptors for the new child process.  Each
+    fd may be an open, writable file object or a sentinel value from the
+    subprocess module.
+    """
+
+    # Apply the redirections, we use (N,) as a sentinel to indicate stdin,
+    # stdout, stderr for N equal to 0, 1, or 2 respectively. Redirects to or
+    # from a file are represented with a list [file, mode, file-object]
+    # where file-object is initially None.
+    redirects = [(0,), (1,), (2,)]
+    for (op, filename) in cmd.redirects:
+        if op == ('>',2):
+            redirects[2] = [filename, 'w', None]
+        elif op == ('>>',2):
+            redirects[2] = [filename, 'a', None]
+        elif op == ('>&',2) and filename in '012':
+            redirects[2] = redirects[int(filename)]
+        elif op == ('>&',) or op == ('&>',):
+            redirects[1] = redirects[2] = [filename, 'w', None]
+        elif op == ('>',):
+            redirects[1] = [filename, 'w', None]
+        elif op == ('>>',):
+            redirects[1] = [filename, 'a', None]
+        elif op == ('<',):
+            redirects[0] = [filename, 'r', None]
+        else:
+            raise InternalShellError(cmd, "Unsupported redirect: %r" % (r,))
+
+    # Open file descriptors in a second pass.
+    std_fds = [None, None, None]
+    for (index, r) in enumerate(redirects):
+        # Handle the sentinel values for defaults up front.
+        if isinstance(r, tuple):
+            if r == (0,):
+                fd = stdin_source
+            elif r == (1,):
+                if index == 0:
+                    raise InternalShellError(cmd, "Unsupported redirect for stdin")
+                elif index == 1:
+                    fd = subprocess.PIPE
+                else:
+                    fd = subprocess.STDOUT
+            elif r == (2,):
+                if index != 2:
+                    raise InternalShellError(cmd, "Unsupported redirect on stdout")
+                fd = subprocess.PIPE
+            else:
+                raise InternalShellError(cmd, "Bad redirect")
+            std_fds[index] = fd
+            continue
+
+        (filename, mode, fd) = r
+
+        # Check if we already have an open fd. This can happen if stdout and
+        # stderr go to the same place.
+        if fd is not None:
+            std_fds[index] = fd
+            continue
+
+        redir_filename = None
+        name = expand_glob(filename, cmd_shenv.cwd)
+        if len(name) != 1:
+           raise InternalShellError(cmd, "Unsupported: glob in "
+                                    "redirect expanded to multiple files")
+        name = name[0]
+        if kAvoidDevNull and name == '/dev/null':
+            fd = tempfile.TemporaryFile(mode=mode)
+        elif kIsWindows and name == '/dev/tty':
+            # Simulate /dev/tty on Windows.
+            # "CON" is a special filename for the console.
+            fd = open("CON", mode)
+        else:
+            # Make sure relative paths are relative to the cwd.
+            redir_filename = os.path.join(cmd_shenv.cwd, name)
+            fd = open(redir_filename, mode)
+        # Workaround a Win32 and/or subprocess bug when appending.
+        #
+        # FIXME: Actually, this is probably an instance of PR6753.
+        if mode == 'a':
+            fd.seek(0, 2)
+        # Mutate the underlying redirect list so that we can redirect stdout
+        # and stderr to the same place without opening the file twice.
+        r[2] = fd
+        opened_files.append((filename, mode, fd) + (redir_filename,))
+        std_fds[index] = fd
+
+    return std_fds
+
 def _executeShCmd(cmd, shenv, results, timeoutHelper):
     if timeoutHelper.timeoutReached():
         # Prevent further recursion if the timeout has been hit
@@ -278,7 +369,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         return 0
 
     procs = []
-    input = subprocess.PIPE
+    default_stdin = subprocess.PIPE
     stderrTempFiles = []
     opened_files = []
     named_temp_files = []
@@ -295,72 +386,8 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
             cmd_shenv = ShellEnvironment(shenv.cwd, shenv.env)
             updateEnv(cmd_shenv, j)
 
-        # Apply the redirections, we use (N,) as a sentinel to indicate stdin,
-        # stdout, stderr for N equal to 0, 1, or 2 respectively. Redirects to or
-        # from a file are represented with a list [file, mode, file-object]
-        # where file-object is initially None.
-        redirects = [(0,), (1,), (2,)]
-        for r in j.redirects:
-            if r[0] == ('>',2):
-                redirects[2] = [r[1], 'w', None]
-            elif r[0] == ('>>',2):
-                redirects[2] = [r[1], 'a', None]
-            elif r[0] == ('>&',2) and r[1] in '012':
-                redirects[2] = redirects[int(r[1])]
-            elif r[0] == ('>&',) or r[0] == ('&>',):
-                redirects[1] = redirects[2] = [r[1], 'w', None]
-            elif r[0] == ('>',):
-                redirects[1] = [r[1], 'w', None]
-            elif r[0] == ('>>',):
-                redirects[1] = [r[1], 'a', None]
-            elif r[0] == ('<',):
-                redirects[0] = [r[1], 'r', None]
-            else:
-                raise InternalShellError(j,"Unsupported redirect: %r" % (r,))
-
-        # Map from the final redirections to something subprocess can handle.
-        final_redirects = []
-        for index,r in enumerate(redirects):
-            if r == (0,):
-                result = input
-            elif r == (1,):
-                if index == 0:
-                    raise InternalShellError(j,"Unsupported redirect for stdin")
-                elif index == 1:
-                    result = subprocess.PIPE
-                else:
-                    result = subprocess.STDOUT
-            elif r == (2,):
-                if index != 2:
-                    raise InternalShellError(j,"Unsupported redirect on stdout")
-                result = subprocess.PIPE
-            else:
-                if r[2] is None:
-                    redir_filename = None
-                    name = expand_glob(r[0], cmd_shenv.cwd)
-                    if len(name) != 1:
-                       raise InternalShellError(j,"Unsupported: glob in redirect expanded to multiple files")
-                    name = name[0]
-                    if kAvoidDevNull and name == '/dev/null':
-                        r[2] = tempfile.TemporaryFile(mode=r[1])
-                    elif kIsWindows and name == '/dev/tty':
-                        # Simulate /dev/tty on Windows.
-                        # "CON" is a special filename for the console.
-                        r[2] = open("CON", r[1])
-                    else:
-                        # Make sure relative paths are relative to the cwd.
-                        redir_filename = os.path.join(cmd_shenv.cwd, name)
-                        r[2] = open(redir_filename, r[1])
-                    # Workaround a Win32 and/or subprocess bug when appending.
-                    #
-                    # FIXME: Actually, this is probably an instance of PR6753.
-                    if r[1] == 'a':
-                        r[2].seek(0, 2)
-                    opened_files.append(tuple(r) + (redir_filename,))
-                result = r[2]
-            final_redirects.append(result)
-
-        stdin, stdout, stderr = final_redirects
+        stdin, stdout, stderr = processRedirects(j, default_stdin, cmd_shenv,
+                                                 opened_files)
 
         # If stderr wants to come from stdout, but stdout isn't a pipe, then put
         # stderr on a pipe and treat it as stdout.
@@ -428,11 +455,11 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
 
         # Update the current stdin source.
         if stdout == subprocess.PIPE:
-            input = procs[-1].stdout
+            default_stdin = procs[-1].stdout
         elif stderrIsStdout:
-            input = procs[-1].stderr
+            default_stdin = procs[-1].stderr
         else:
-            input = subprocess.PIPE
+            default_stdin = subprocess.PIPE
 
     # Explicitly close any redirected files. We need to do this now because we
     # need to release any handles we may have on the temporary files (important

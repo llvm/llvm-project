@@ -103,21 +103,21 @@ TEST(RTDyldObjectLinkingLayerTest, TestSetProcessAllSections) {
 
   {
     // Test with ProcessAllSections = false (the default).
-    auto H = ObjLayer.addObject(Obj, Resolver);
-    ObjLayer.emitAndFinalize(H);
+    auto H = cantFail(ObjLayer.addObject(Obj, Resolver));
+    cantFail(ObjLayer.emitAndFinalize(H));
     EXPECT_EQ(DebugSectionSeen, false)
       << "Unexpected debug info section";
-    ObjLayer.removeObject(H);
+    cantFail(ObjLayer.removeObject(H));
   }
 
   {
     // Test with ProcessAllSections = true.
     ObjLayer.setProcessAllSections(true);
-    auto H = ObjLayer.addObject(Obj, Resolver);
-    ObjLayer.emitAndFinalize(H);
+    auto H = cantFail(ObjLayer.addObject(Obj, Resolver));
+    cantFail(ObjLayer.emitAndFinalize(H));
     EXPECT_EQ(DebugSectionSeen, true)
       << "Expected debug info section not seen";
-    ObjLayer.removeObject(H);
+    cantFail(ObjLayer.removeObject(H));
   }
 }
 
@@ -181,11 +181,11 @@ TEST_F(RTDyldObjectLinkingLayerExecutionTest, NoDuplicateFinalization) {
         return JITSymbol(nullptr);
       });
 
-  ObjLayer.addObject(std::move(Obj1), Resolver);
-  auto H = ObjLayer.addObject(std::move(Obj2), Resolver);
-  ObjLayer.emitAndFinalize(H);
-  ObjLayer.removeObject(H);
-  
+  cantFail(ObjLayer.addObject(std::move(Obj1), Resolver));
+  auto H = cantFail(ObjLayer.addObject(std::move(Obj2), Resolver));
+  cantFail(ObjLayer.emitAndFinalize(H));
+  cantFail(ObjLayer.removeObject(H));
+
   // Finalization of module 2 should trigger finalization of module 1.
   // Verify that finalize on SMMW is only called once.
   EXPECT_EQ(MM->FinalizationCount, 1)
@@ -244,11 +244,11 @@ TEST_F(RTDyldObjectLinkingLayerExecutionTest, NoPrematureAllocation) {
       Compile(*MB2.getModule()));
 
   auto NR = std::make_shared<NullResolver>();
-  auto H = ObjLayer.addObject(std::move(Obj1), NR);
-  ObjLayer.addObject(std::move(Obj2), NR);
-  ObjLayer.emitAndFinalize(H);
-  ObjLayer.removeObject(H);
-  
+  auto H = cantFail(ObjLayer.addObject(std::move(Obj1), NR));
+  cantFail(ObjLayer.addObject(std::move(Obj2), NR));
+  cantFail(ObjLayer.emitAndFinalize(H));
+  cantFail(ObjLayer.removeObject(H));
+
   // Only one call to needsToReserveAllocationSpace should have been made.
   EXPECT_EQ(MM->NeedsToReserveAllocationSpaceCount, 1)
       << "More than one call to needsToReserveAllocationSpace "
