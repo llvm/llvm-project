@@ -49,3 +49,33 @@ define arm_aapcscc double @test_add_double(double %x, double %y) {
   %r = fadd double %x, %y
   ret double %r
 }
+
+define arm_aapcs_vfpcc i32 @test_cmp_float_ogt(float %x, float %y) {
+; CHECK-LABEL: test_cmp_float_ogt
+; HARD: vcmp.f32
+; HARD: vmrs APSR_nzcv, fpscr
+; HARD-NEXT: movgt
+; SOFT-AEABI: blx __aeabi_fcmpgt
+; SOFT-DEFAULT: blx __gtsf2
+entry:
+  %v = fcmp ogt float %x, %y
+  %r = zext i1 %v to i32
+  ret i32 %r
+}
+
+define arm_aapcs_vfpcc i32 @test_cmp_float_one(float %x, float %y) {
+; CHECK-LABEL: test_cmp_float_one
+; HARD: vcmp.f32
+; HARD: vmrs APSR_nzcv, fpscr
+; HARD: movgt
+; HARD-NOT: vcmp
+; HARD: movmi
+; SOFT-AEABI-DAG: blx __aeabi_fcmpgt
+; SOFT-AEABI-DAG: blx __aeabi_fcmplt
+; SOFT-DEFAULT-DAG: blx __gtsf2
+; SOFT-DEFAULT-DAG: blx __ltsf2
+entry:
+  %v = fcmp one float %x, %y
+  %r = zext i1 %v to i32
+  ret i32 %r
+}

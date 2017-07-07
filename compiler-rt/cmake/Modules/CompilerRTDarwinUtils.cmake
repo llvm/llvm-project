@@ -4,6 +4,11 @@ include(CMakeParseArguments)
 # set the default Xcode to use. This function finds the SDKs that are present in
 # the current Xcode.
 function(find_darwin_sdk_dir var sdk_name)
+  set(DARWIN_${sdk_name}_CACHED_SYSROOT "" CACHE STRING "Darwin SDK path for SDK ${sdk_name}.")
+  if(DARWIN_${sdk_name}_CACHED_SYSROOT)
+    set(${var} ${DARWIN_${sdk_name}_CACHED_SYSROOT} PARENT_SCOPE)
+    return()
+  endif()
   set(DARWIN_PREFER_PUBLIC_SDK OFF CACHE BOOL "Prefer Darwin public SDK, even when an internal SDK is present.")
   if(NOT DARWIN_PREFER_PUBLIC_SDK)
     # Let's first try the internal SDK, otherwise use the public SDK.
@@ -29,6 +34,7 @@ function(find_darwin_sdk_dir var sdk_name)
   if(result_process EQUAL 0)
     set(${var} ${var_internal} PARENT_SCOPE)
   endif()
+  set(DARWIN_${sdk_name}_CACHED_SYSROOT ${var_internal} CACHE STRING "Darwin SDK path for SDK ${sdk_name}." FORCE)
 endfunction()
 
 # There isn't a clear mapping of what architectures are supported with a given

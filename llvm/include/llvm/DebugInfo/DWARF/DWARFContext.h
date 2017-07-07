@@ -338,7 +338,8 @@ class DWARFContextInMemory : public DWARFContext {
 
   SmallVector<SmallString<32>, 4> UncompressedSections;
 
-  StringRef *MapSectionToMember(StringRef Name);
+  DWARFSection *mapNameToDWARFSection(StringRef Name);
+  StringRef *mapSectionToMember(StringRef Name);
 
   /// If Sec is compressed section, decompresses and updates its contents
   /// provided by Data. Otherwise leaves it unchanged.

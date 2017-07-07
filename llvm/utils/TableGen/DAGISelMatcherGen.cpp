@@ -886,7 +886,7 @@ EmitResultInstructionAsOperand(const TreePatternNode *N,
   assert((!ResultVTs.empty() || TreeHasOutGlue || NodeHasChain) &&
          "Node has no result");
 
-  AddMatcher(new EmitNodeMatcher(II.Namespace+"::"+II.TheDef->getName().str(),
+  AddMatcher(new EmitNodeMatcher(II.Namespace.str()+"::"+II.TheDef->getName().str(),
                                  ResultVTs, InstOps,
                                  NodeHasChain, TreeHasInGlue, TreeHasOutGlue,
                                  NodeHasMemRefs, NumFixedArityOperands,

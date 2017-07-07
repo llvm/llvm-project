@@ -17,6 +17,10 @@
 
 using namespace llvm;
 
+static std::string updateTripleOSVersion(std::string Triple) {
+  return Triple;
+}
+
 std::string sys::getDefaultTargetTriple() {
   const char *Triple = LLVM_DEFAULT_TARGET_TRIPLE;
 

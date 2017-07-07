@@ -157,8 +157,8 @@ public:
 
     // Add the set to the JIT with the resolver we created above and a newly
     // created SectionMemoryManager.
-    return OptimizeLayer.addModule(std::move(M),
-                                   std::move(Resolver));
+    return cantFail(OptimizeLayer.addModule(std::move(M),
+                                            std::move(Resolver)));
   }
 
   Error addFunctionAST(std::unique_ptr<FunctionAST> FnAST) {
@@ -204,7 +204,7 @@ public:
         addModule(std::move(M));
         auto Sym = findSymbol(SharedFnAST->getName() + "$impl");
         assert(Sym && "Couldn't find compiled function?");
-        JITTargetAddress SymAddr = Sym.getAddress();
+        JITTargetAddress SymAddr = cantFail(Sym.getAddress());
         if (auto Err =
               IndirectStubsMgr->updatePointer(mangle(SharedFnAST->getName()),
                                               SymAddr)) {
@@ -228,7 +228,7 @@ public:
   }
 
   void removeModule(ModuleHandle H) {
-    OptimizeLayer.removeModule(H);
+    cantFail(OptimizeLayer.removeModule(H));
   }
 
 private:

@@ -36,8 +36,7 @@
 
 using namespace llvm;
 
-#undef DEBUG_TYPE
-#define DEBUG_TYPE "reloc-info"
+#define DEBUG_TYPE "mc"
 
 namespace {
 
@@ -199,6 +198,7 @@ class WasmObjectWriter : public MCObjectWriter {
 
   DenseMap<WasmFunctionType, int32_t, WasmFunctionTypeDenseMapInfo>
       FunctionTypeIndices;
+  SmallVector<WasmFunctionType, 4> FunctionTypes;
 
   // TargetObjectWriter wrappers.
   bool is64Bit() const { return TargetObjectWriter->is64Bit(); }
@@ -224,6 +224,7 @@ private:
     SymbolIndices.clear();
     IndirectSymbolIndices.clear();
     FunctionTypeIndices.clear();
+    FunctionTypes.clear();
     MCObjectWriter::reset();
   }
 
@@ -276,6 +277,8 @@ private:
   void writeRelocations(ArrayRef<WasmRelocationEntry> Relocations,
                         uint64_t HeaderSize);
   uint32_t getRelocationIndexValue(const WasmRelocationEntry &RelEntry);
+  uint32_t getFunctionType(const MCSymbolWasm& Symbol);
+  uint32_t registerFunctionType(const MCSymbolWasm& Symbol);
 };
 
 } // end anonymous namespace
@@ -493,7 +496,7 @@ uint32_t WasmObjectWriter::getRelocationIndexValue(
   case wasm::R_WEBASSEMBLY_TABLE_INDEX_SLEB:
   case wasm::R_WEBASSEMBLY_TABLE_INDEX_I32:
     if (!IndirectSymbolIndices.count(RelEntry.Symbol))
-      report_fatal_error("symbol not found table index space:" +
+      report_fatal_error("symbol not found table index space: " +
                          RelEntry.Symbol->getName());
     return IndirectSymbolIndices[RelEntry.Symbol];
   case wasm::R_WEBASSEMBLY_FUNCTION_INDEX_LEB:
@@ -502,12 +505,12 @@ uint32_t WasmObjectWriter::getRelocationIndexValue(
   case wasm::R_WEBASSEMBLY_GLOBAL_ADDR_SLEB:
   case wasm::R_WEBASSEMBLY_GLOBAL_ADDR_I32:
     if (!SymbolIndices.count(RelEntry.Symbol))
-      report_fatal_error("symbol not found function/global index space:" +
+      report_fatal_error("symbol not found function/global index space: " +
                          RelEntry.Symbol->getName());
     return SymbolIndices[RelEntry.Symbol];
   case wasm::R_WEBASSEMBLY_TYPE_INDEX_LEB:
     if (!TypeIndices.count(RelEntry.Symbol))
-      report_fatal_error("symbol not found in type index space:" +
+      report_fatal_error("symbol not found in type index space: " +
                          RelEntry.Symbol->getName());
     return TypeIndices[RelEntry.Symbol];
   default:
@@ -913,6 +916,38 @@ void WasmObjectWriter::writeLinkingMetaDataSection(
   endSection(Section);
 }
 
+uint32_t WasmObjectWriter::getFunctionType(const MCSymbolWasm& Symbol) {
+  assert(Symbol.isFunction());
+  assert(TypeIndices.count(&Symbol));
+  return TypeIndices[&Symbol];
+}
+
+uint32_t WasmObjectWriter::registerFunctionType(const MCSymbolWasm& Symbol) {
+  assert(Symbol.isFunction());
+
+  WasmFunctionType F;
+  if (Symbol.isVariable()) {
+    const MCExpr *Expr = Symbol.getVariableValue();
+    auto *Inner = dyn_cast<MCSymbolRefExpr>(Expr);
+    const auto *ResolvedSym = cast<MCSymbolWasm>(&Inner->getSymbol());
+    F.Returns = ResolvedSym->getReturns();
+    F.Params = ResolvedSym->getParams();
+  } else {
+    F.Returns = Symbol.getReturns();
+    F.Params = Symbol.getParams();
+  }
+
+  auto Pair =
+      FunctionTypeIndices.insert(std::make_pair(F, FunctionTypes.size()));
+  if (Pair.second)
+    FunctionTypes.push_back(F);
+  TypeIndices[&Symbol] = Pair.first->second;
+
+  DEBUG(dbgs() << "registerFunctionType: " << Symbol << " new:" << Pair.second << "\n");
+  DEBUG(dbgs() << "  -> type index: " << Pair.first->second << "\n");
+  return Pair.first->second;
+}
+
 void WasmObjectWriter::writeObject(MCAssembler &Asm,
                                    const MCAsmLayout &Layout) {
   DEBUG(dbgs() << "WasmObjectWriter::writeObject\n");
@@ -920,7 +955,6 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
   wasm::ValType PtrType = is64Bit() ? wasm::ValType::I64 : wasm::ValType::I32;
 
   // Collect information from the available symbols.
-  SmallVector<WasmFunctionType, 4> FunctionTypes;
   SmallVector<WasmFunction, 4> Functions;
   SmallVector<uint32_t, 4> TableElems;
   SmallVector<WasmGlobal, 4> Globals;
@@ -959,42 +993,28 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
 
   // Populate the Imports set.
   for (const MCSymbol &S : Asm.symbols()) {
-    // Weak aliases don't have thier own function types.
-    if (S.isVariable())
+    const auto &WS = static_cast<const MCSymbolWasm &>(S);
+
+    if (WS.isTemporary())
       continue;
 
-    const auto &WS = static_cast<const MCSymbolWasm &>(S);
-    int32_t Type;
-
-    if (WS.isFunction()) {
-      // Prepare the function's type, if we haven't seen it yet.
-      WasmFunctionType F;
-      F.Returns = WS.getReturns();
-      F.Params = WS.getParams();
-      auto Pair =
-          FunctionTypeIndices.insert(std::make_pair(F, FunctionTypes.size()));
-      if (Pair.second)
-        FunctionTypes.push_back(F);
-
-      Type = Pair.first->second;
-    } else {
-      Type = int32_t(PtrType);
-    }
+    if (WS.isFunction())
+      registerFunctionType(WS);
 
     // If the symbol is not defined in this translation unit, import it.
-    if (!WS.isTemporary() && !WS.isDefined(/*SetUsed=*/false)) {
+    if (!WS.isDefined(/*SetUsed=*/false) || WS.isVariable()) {
       WasmImport Import;
       Import.ModuleName = WS.getModuleName();
       Import.FieldName = WS.getName();
 
       if (WS.isFunction()) {
         Import.Kind = wasm::WASM_EXTERNAL_FUNCTION;
-        Import.Type = Type;
+        Import.Type = getFunctionType(WS);
         SymbolIndices[&WS] = NumFuncImports;
         ++NumFuncImports;
       } else {
         Import.Kind = wasm::WASM_EXTERNAL_GLOBAL;
-        Import.Type = Type;
+        Import.Type = int32_t(PtrType);
         SymbolIndices[&WS] = NumGlobalImports;
         ++NumGlobalImports;
       }
@@ -1086,10 +1106,6 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
     if (S.isTemporary() && S.getName().empty())
       continue;
 
-    // Variable references (weak references) are handled in a second pass
-    if (S.isVariable())
-      continue;
-
     const auto &WS = static_cast<const MCSymbolWasm &>(S);
     DEBUG(dbgs() << "MCSymbol: '" << S << "'"
                  << " isDefined=" << S.isDefined() << " isExternal="
@@ -1101,20 +1117,12 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
     if (WS.isWeak())
       WeakSymbols.push_back(WS.getName());
 
+    if (WS.isVariable())
+      continue;
+
     unsigned Index;
 
     if (WS.isFunction()) {
-      // Prepare the function's type, if we haven't seen it yet.
-      WasmFunctionType F;
-      F.Returns = WS.getReturns();
-      F.Params = WS.getParams();
-      auto Pair =
-          FunctionTypeIndices.insert(std::make_pair(F, FunctionTypes.size()));
-      if (Pair.second)
-        FunctionTypes.push_back(F);
-
-      int32_t Type = Pair.first->second;
-
       if (WS.isDefined(/*SetUsed=*/false)) {
         if (WS.getOffset() != 0)
           report_fatal_error(
@@ -1129,21 +1137,21 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
 
         // Prepare the function.
         WasmFunction Func;
-        Func.Type = Type;
+        Func.Type = getFunctionType(WS);
         Func.Sym = &WS;
         SymbolIndices[&WS] = Index;
         Functions.push_back(Func);
       } else {
-        // Should be no such thing as weak undefined symbol
-        assert(!WS.isVariable());
-
         // An import; the index was assigned above.
         Index = SymbolIndices.find(&WS)->second;
       }
 
+      DEBUG(dbgs() << "  -> function index: " << Index << "\n");
+
       // If needed, prepare the function to be called indirectly.
-      if (IsAddressTaken.count(&WS)) {
+      if (IsAddressTaken.count(&WS) != 0) {
         IndirectSymbolIndices[&WS] = TableElems.size();
+        DEBUG(dbgs() << "  -> adding to table: " << TableElems.size() << "\n");
         TableElems.push_back(Index);
       }
     } else {
@@ -1209,11 +1217,12 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
       Global.InitialValue = DataSection.getSectionOffset();
       Global.ImportIndex = 0;
       SymbolIndices[&WS] = Index;
+      DEBUG(dbgs() << "  -> global index: " << Index << "\n");
       Globals.push_back(Global);
     }
 
     // If the symbol is visible outside this translation unit, export it.
-    if (WS.isExternal() && WS.isDefined(/*SetUsed=*/false)) {
+    if ((WS.isExternal() && WS.isDefined(/*SetUsed=*/false))) {
       WasmExport Export;
       Export.FieldName = WS.getName();
       Export.Index = Index;
@@ -1221,26 +1230,28 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
         Export.Kind = wasm::WASM_EXTERNAL_FUNCTION;
       else
         Export.Kind = wasm::WASM_EXTERNAL_GLOBAL;
+      DEBUG(dbgs() << "  -> export " << Exports.size() << "\n");
       Exports.push_back(Export);
     }
   }
 
-  // Handle weak aliases
+  // Handle weak aliases. We need to process these in a separate pass because
+  // we need to have processed the target of the alias before the alias itself
+  // and the symbols are not necessarily ordered in this way.
   for (const MCSymbol &S : Asm.symbols()) {
     if (!S.isVariable())
       continue;
-    assert(S.isExternal());
     assert(S.isDefined(/*SetUsed=*/false));
 
     const auto &WS = static_cast<const MCSymbolWasm &>(S);
-
-    // Find the target symbol of this weak alias
+    // Find the target symbol of this weak alias and export that index
     const MCExpr *Expr = WS.getVariableValue();
     auto *Inner = dyn_cast<MCSymbolRefExpr>(Expr);
     const auto *ResolvedSym = cast<MCSymbolWasm>(&Inner->getSymbol());
+    DEBUG(dbgs() << WS.getName() << ": weak alias of '" << *ResolvedSym << "'\n");
+    assert(SymbolIndices.count(ResolvedSym) > 0);
     uint32_t Index = SymbolIndices.find(ResolvedSym)->second;
-    DEBUG(dbgs() << "Weak alias: '" << WS << "' -> '" << ResolvedSym << "' = " << Index << "\n");
-    SymbolIndices[&WS] = Index;
+    DEBUG(dbgs() << "  -> index:" << Index << "\n");
 
     WasmExport Export;
     Export.FieldName = WS.getName();
@@ -1249,7 +1260,7 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
       Export.Kind = wasm::WASM_EXTERNAL_FUNCTION;
     else
       Export.Kind = wasm::WASM_EXTERNAL_GLOBAL;
-    WeakSymbols.push_back(Export.FieldName);
+    DEBUG(dbgs() << "  -> export " << Exports.size() << "\n");
     Exports.push_back(Export);
   }
 
@@ -1258,15 +1269,7 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
     if (Fixup.Type != wasm::R_WEBASSEMBLY_TYPE_INDEX_LEB)
       continue;
 
-    WasmFunctionType F;
-    F.Returns = Fixup.Symbol->getReturns();
-    F.Params = Fixup.Symbol->getParams();
-    auto Pair =
-        FunctionTypeIndices.insert(std::make_pair(F, FunctionTypes.size()));
-    if (Pair.second)
-      FunctionTypes.push_back(F);
-
-    TypeIndices[Fixup.Symbol] = Pair.first->second;
+    registerFunctionType(*Fixup.Symbol);
   }
 
   // Write out the Wasm header.

@@ -411,6 +411,10 @@ void coff::createPDB(StringRef Path, SymbolTable *Symtab,
   auto &InfoBuilder = Builder.getInfoBuilder();
   InfoBuilder.setAge(DI ? DI->PDB70.Age : 0);
 
+  llvm::SmallString<128> NativePath(Path.begin(), Path.end());
+  llvm::sys::fs::make_absolute(NativePath);
+  llvm::sys::path::native(NativePath);
+
   pdb::PDB_UniqueId uuid{};
   if (DI)
     memcpy(&uuid, &DI->PDB70.Signature, sizeof(uuid));
@@ -419,9 +423,12 @@ void coff::createPDB(StringRef Path, SymbolTable *Symtab,
   InfoBuilder.setSignature(0);
   InfoBuilder.setVersion(pdb::PdbRaw_ImplVer::PdbImplVC70);
 
-  // Add an empty DPI stream.
+  // Add an empty DBI stream.
   pdb::DbiStreamBuilder &DbiBuilder = Builder.getDbiBuilder();
   DbiBuilder.setVersionHeader(pdb::PdbDbiV110);
+
+  // It's not entirely clear what this is, but the * Linker * module uses it.
+  uint32_t PdbFilePathNI = DbiBuilder.addECName(NativePath);
 
   TypeTableBuilder TypeTable(BAlloc);
   TypeTableBuilder IDTable(BAlloc);
@@ -438,7 +445,8 @@ void coff::createPDB(StringRef Path, SymbolTable *Symtab,
       pdb::DbiStreamBuilder::createSectionMap(Sections);
   DbiBuilder.setSectionMap(SectionMap);
 
-  ExitOnErr(DbiBuilder.addModuleInfo("* Linker *"));
+  auto &LinkerModule = ExitOnErr(DbiBuilder.addModuleInfo("* Linker *"));
+  LinkerModule.setPdbFilePathNI(PdbFilePathNI);
 
   // Add COFF section header stream.
   ExitOnErr(

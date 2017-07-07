@@ -128,7 +128,8 @@ Sema::ShouldDiagnoseAvailabilityOfDecl(const NamedDecl *D,
 static void
 DiagnoseAvailabilityOfDecl(Sema &S, NamedDecl *D, SourceLocation Loc,
                            const ObjCInterfaceDecl *UnknownObjCClass,
-                           bool ObjCPropertyAccess) {
+                           bool ObjCPropertyAccess,
+                           bool AvoidPartialAvailabilityChecks = false) {
   std::string Message;
   AvailabilityResult Result;
   const NamedDecl* OffendingDecl;
@@ -138,6 +139,8 @@ DiagnoseAvailabilityOfDecl(Sema &S, NamedDecl *D, SourceLocation Loc,
     return;
 
   if (Result == AR_NotYetIntroduced) {
+    if (AvoidPartialAvailabilityChecks)
+      return;
     if (S.getCurFunctionOrMethodDecl()) {
       S.getEnclosingFunction()->HasPotentialAvailabilityViolations = true;
       return;
@@ -275,7 +278,8 @@ void Sema::MaybeSuggestAddingStaticToDecl(const FunctionDecl *Cur) {
 ///
 bool Sema::DiagnoseUseOfDecl(NamedDecl *D, SourceLocation Loc,
                              const ObjCInterfaceDecl *UnknownObjCClass,
-                             bool ObjCPropertyAccess) {
+                             bool ObjCPropertyAccess,
+                             bool AvoidPartialAvailabilityChecks) {
   if (getLangOpts().CPlusPlus && isa<FunctionDecl>(D)) {
     // If there were any diagnostics suppressed by template argument deduction,
     // emit them now.
@@ -360,7 +364,8 @@ bool Sema::DiagnoseUseOfDecl(NamedDecl *D, SourceLocation Loc,
   }
 
   DiagnoseAvailabilityOfDecl(*this, D, Loc, UnknownObjCClass,
-                             ObjCPropertyAccess);
+                             ObjCPropertyAccess,
+                             AvoidPartialAvailabilityChecks);
 
   DiagnoseUnusedOfDecl(*this, D, Loc);
 

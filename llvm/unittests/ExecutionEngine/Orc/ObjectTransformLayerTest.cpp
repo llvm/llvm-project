@@ -50,8 +50,9 @@ public:
   MockBaseLayer() : MockSymbol(nullptr) { resetExpectations(); }
 
   template <typename ObjPtrT>
-  ObjHandleT addObject(ObjPtrT Obj,
-                       std::shared_ptr<llvm::JITSymbolResolver> Resolver) {
+  llvm::Expected<ObjHandleT>
+  addObject(ObjPtrT Obj,
+            std::shared_ptr<llvm::JITSymbolResolver> Resolver) {
     EXPECT_EQ(MockResolver, Resolver) << "Resolver should pass through";
     EXPECT_EQ(MockObject + 1, *Obj) << "Transform should be applied";
     LastCalled = "addObject";
@@ -73,10 +74,12 @@ public:
     resetExpectations();
   }
 
-  void removeObject(ObjHandleT H) {
+  llvm::Error removeObject(ObjHandleT H) {
     EXPECT_EQ(MockObjHandle, H);
     LastCalled = "removeObject";
+    return llvm::Error::success();
   }
+
   void expectRemoveObject(ObjHandleT H) { MockObjHandle = H; }
   void verifyRemoveObject() {
     EXPECT_EQ("removeObject", LastCalled);
@@ -89,7 +92,7 @@ public:
     EXPECT_EQ(MockBool, ExportedSymbolsOnly) << "Flag should pass through";
     LastCalled = "findSymbol";
     MockSymbol = llvm::JITSymbol(122, llvm::JITSymbolFlags::None);
-    return MockSymbol;
+    return llvm::JITSymbol(122, llvm::JITSymbolFlags::None);
   }
   void expectFindSymbol(const std::string &Name, bool ExportedSymbolsOnly) {
     MockName = Name;
@@ -97,7 +100,8 @@ public:
   }
   void verifyFindSymbol(llvm::JITSymbol Returned) {
     EXPECT_EQ("findSymbol", LastCalled);
-    EXPECT_EQ(MockSymbol.getAddress(), Returned.getAddress())
+    EXPECT_EQ(cantFail(MockSymbol.getAddress()),
+              cantFail(Returned.getAddress()))
         << "Return should pass through";
     resetExpectations();
   }
@@ -109,7 +113,7 @@ public:
     EXPECT_EQ(MockBool, ExportedSymbolsOnly) << "Flag should pass through";
     LastCalled = "findSymbolIn";
     MockSymbol = llvm::JITSymbol(122, llvm::JITSymbolFlags::None);
-    return MockSymbol;
+    return llvm::JITSymbol(122, llvm::JITSymbolFlags::None);
   }
   void expectFindSymbolIn(ObjHandleT H, const std::string &Name,
                           bool ExportedSymbolsOnly) {
@@ -119,16 +123,20 @@ public:
   }
   void verifyFindSymbolIn(llvm::JITSymbol Returned) {
     EXPECT_EQ("findSymbolIn", LastCalled);
-    EXPECT_EQ(MockSymbol.getAddress(), Returned.getAddress())
+    EXPECT_EQ(cantFail(MockSymbol.getAddress()),
+              cantFail(Returned.getAddress()))
         << "Return should pass through";
     resetExpectations();
   }
 
-  void emitAndFinalize(ObjHandleT H) {
+  llvm::Error emitAndFinalize(ObjHandleT H) {
     EXPECT_EQ(MockObjHandle, H) << "Handle should pass through";
     LastCalled = "emitAndFinalize";
+    return llvm::Error::success();
   }
+
   void expectEmitAndFinalize(ObjHandleT H) { MockObjHandle = H; }
+
   void verifyEmitAndFinalize() {
     EXPECT_EQ("emitAndFinalize", LastCalled);
     resetExpectations();
@@ -201,38 +209,38 @@ TEST(ObjectTransformLayerTest, Main) {
   auto Obj1 = std::make_shared<MockObjectFile>(211);
   auto SR = std::make_shared<NullResolver>();
   M.expectAddObject(Obj1, SR);
-  auto H = T1.addObject(std::move(Obj1), SR);
+  auto H = cantFail(T1.addObject(std::move(Obj1), SR));
   M.verifyAddObject(H);
 
   // Test addObjectSet with T2 (mutating)
   auto Obj2 = std::make_shared<MockObjectFile>(222);
   M.expectAddObject(Obj2, SR);
-  H = T2.addObject(Obj2, SR);
+  H = cantFail(T2.addObject(Obj2, SR));
   M.verifyAddObject(H);
   EXPECT_EQ(223, *Obj2) << "Expected mutation";
 
   // Test removeObjectSet
   M.expectRemoveObject(H);
-  T1.removeObject(H);
+  cantFail(T1.removeObject(H));
   M.verifyRemoveObject();
 
   // Test findSymbol
   std::string Name = "foo";
   bool ExportedOnly = true;
   M.expectFindSymbol(Name, ExportedOnly);
-  llvm::JITSymbol Symbol = T2.findSymbol(Name, ExportedOnly);
-  M.verifyFindSymbol(Symbol);
+  llvm::JITSymbol Sym1 = T2.findSymbol(Name, ExportedOnly);
+  M.verifyFindSymbol(std::move(Sym1));
 
   // Test findSymbolIn
   Name = "bar";
   ExportedOnly = false;
   M.expectFindSymbolIn(H, Name, ExportedOnly);
-  Symbol = T1.findSymbolIn(H, Name, ExportedOnly);
-  M.verifyFindSymbolIn(Symbol);
+  llvm::JITSymbol Sym2 = T1.findSymbolIn(H, Name, ExportedOnly);
+  M.verifyFindSymbolIn(std::move(Sym2));
 
   // Test emitAndFinalize
   M.expectEmitAndFinalize(H);
-  T2.emitAndFinalize(H);
+  cantFail(T2.emitAndFinalize(H));
   M.verifyEmitAndFinalize();
 
   // Test mapSectionAddress
@@ -305,15 +313,15 @@ TEST(ObjectTransformLayerTest, Main) {
   // Make sure that the calls from IRCompileLayer to ObjectTransformLayer
   // compile.
   auto Resolver = std::make_shared<NullResolver>();
-  CompileLayer.addModule(std::shared_ptr<llvm::Module>(), Resolver);
+  cantFail(CompileLayer.addModule(std::shared_ptr<llvm::Module>(), Resolver));
 
   // Make sure that the calls from ObjectTransformLayer to ObjectLinkingLayer
   // compile.
   decltype(TransformLayer)::ObjHandleT H2;
-  TransformLayer.emitAndFinalize(H2);
+  cantFail(TransformLayer.emitAndFinalize(H2));
   TransformLayer.findSymbolIn(H2, Name, false);
   TransformLayer.findSymbol(Name, true);
   TransformLayer.mapSectionAddress(H2, nullptr, 0);
-  TransformLayer.removeObject(H2);
+  cantFail(TransformLayer.removeObject(H2));
 }
 }

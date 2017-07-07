@@ -2344,6 +2344,7 @@ static SDValue lowerVectorSETCC(SelectionDAG &DAG, const SDLoc &DL, EVT VT,
     // Handle tests for order using (or (ogt y x) (oge x y)).
   case ISD::SETUO:
     Invert = true;
+    LLVM_FALLTHROUGH;
   case ISD::SETO: {
     assert(IsFP && "Unexpected integer comparison");
     SDValue LT = getVectorCmp(DAG, SystemZISD::VFCMPH, DL, VT, CmpOp1, CmpOp0);
@@ -2355,6 +2356,7 @@ static SDValue lowerVectorSETCC(SelectionDAG &DAG, const SDLoc &DL, EVT VT,
     // Handle <> tests using (or (ogt y x) (ogt x y)).
   case ISD::SETUEQ:
     Invert = true;
+    LLVM_FALLTHROUGH;
   case ISD::SETONE: {
     assert(IsFP && "Unexpected integer comparison");
     SDValue LT = getVectorCmp(DAG, SystemZISD::VFCMPH, DL, VT, CmpOp1, CmpOp0);

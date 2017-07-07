@@ -214,207 +214,122 @@ static Status EnsureFDFlags(int fd, int flags) {
 // Public Static Methods
 // -----------------------------------------------------------------------------
 
-Status NativeProcessProtocol::Launch(
-    ProcessLaunchInfo &launch_info,
-    NativeProcessProtocol::NativeDelegate &native_delegate, MainLoop &mainloop,
-    NativeProcessProtocolSP &native_process_sp) {
+llvm::Expected<NativeProcessProtocolSP>
+NativeProcessLinux::Factory::Launch(ProcessLaunchInfo &launch_info,
+                                    NativeDelegate &native_delegate,
+                                    MainLoop &mainloop) const {
   Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PROCESS));
 
-  Status error;
+  MaybeLogLaunchInfo(launch_info);
 
-  // Verify the working directory is valid if one was specified.
-  FileSpec working_dir{launch_info.GetWorkingDirectory()};
-  if (working_dir && (!working_dir.ResolvePath() ||
-                      !llvm::sys::fs::is_directory(working_dir.GetPath()))) {
-    error.SetErrorStringWithFormat("No such file or directory: %s",
-                                   working_dir.GetCString());
-    return error;
+  Status status;
+  ::pid_t pid = ProcessLauncherPosixFork()
+                    .LaunchProcess(launch_info, status)
+                    .GetProcessId();
+  LLDB_LOG(log, "pid = {0:x}", pid);
+  if (status.Fail()) {
+    LLDB_LOG(log, "failed to launch process: {0}", status);
+    return status.ToError();
   }
 
-  // Create the NativeProcessLinux in launch mode.
-  native_process_sp.reset(new NativeProcessLinux());
+  // Wait for the child process to trap on its call to execve.
+  int wstatus;
+  ::pid_t wpid = llvm::sys::RetryAfterSignal(-1, ::waitpid, pid, &wstatus, 0);
+  assert(wpid == pid);
+  (void)wpid;
+  if (!WIFSTOPPED(wstatus)) {
+    LLDB_LOG(log, "Could not sync with inferior process: wstatus={1}",
+             WaitStatus::Decode(wstatus));
+    return llvm::make_error<StringError>("Could not sync with inferior process",
+                                         llvm::inconvertibleErrorCode());
+  }
+  LLDB_LOG(log, "inferior started, now in stopped state");
 
-  if (!native_process_sp->RegisterNativeDelegate(native_delegate)) {
-    native_process_sp.reset();
-    error.SetErrorStringWithFormat("failed to register the native delegate");
-    return error;
+  ArchSpec arch;
+  if ((status = ResolveProcessArchitecture(pid, arch)).Fail())
+    return status.ToError();
+
+  // Set the architecture to the exe architecture.
+  LLDB_LOG(log, "pid = {0:x}, detected architecture {1}", pid,
+           arch.GetArchitectureName());
+
+  status = SetDefaultPtraceOpts(pid);
+  if (status.Fail()) {
+    LLDB_LOG(log, "failed to set default ptrace options: {0}", status);
+    return status.ToError();
   }
 
-  error = std::static_pointer_cast<NativeProcessLinux>(native_process_sp)
-              ->LaunchInferior(mainloop, launch_info);
-
-  if (error.Fail()) {
-    native_process_sp.reset();
-    LLDB_LOG(log, "failed to launch process: {0}", error);
-    return error;
-  }
-
-  launch_info.SetProcessID(native_process_sp->GetID());
-
-  return error;
+  std::shared_ptr<NativeProcessLinux> process_sp(new NativeProcessLinux(
+      pid, launch_info.GetPTY().ReleaseMasterFileDescriptor(), native_delegate,
+      arch, mainloop));
+  process_sp->InitializeThreads({pid});
+  return process_sp;
 }
 
-Status NativeProcessProtocol::Attach(
+llvm::Expected<NativeProcessProtocolSP> NativeProcessLinux::Factory::Attach(
     lldb::pid_t pid, NativeProcessProtocol::NativeDelegate &native_delegate,
-    MainLoop &mainloop, NativeProcessProtocolSP &native_process_sp) {
+    MainLoop &mainloop) const {
   Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PROCESS));
   LLDB_LOG(log, "pid = {0:x}", pid);
 
   // Retrieve the architecture for the running process.
-  ArchSpec process_arch;
-  Status error = ResolveProcessArchitecture(pid, process_arch);
-  if (!error.Success())
-    return error;
+  ArchSpec arch;
+  Status status = ResolveProcessArchitecture(pid, arch);
+  if (!status.Success())
+    return status.ToError();
 
-  std::shared_ptr<NativeProcessLinux> native_process_linux_sp(
-      new NativeProcessLinux());
+  auto tids_or = NativeProcessLinux::Attach(pid);
+  if (!tids_or)
+    return tids_or.takeError();
 
-  if (!native_process_linux_sp->RegisterNativeDelegate(native_delegate)) {
-    error.SetErrorStringWithFormat("failed to register the native delegate");
-    return error;
-  }
-
-  native_process_linux_sp->AttachToInferior(mainloop, pid, error);
-  if (!error.Success())
-    return error;
-
-  native_process_sp = native_process_linux_sp;
-  return error;
+  std::shared_ptr<NativeProcessLinux> process_sp(
+      new NativeProcessLinux(pid, -1, native_delegate, arch, mainloop));
+  process_sp->InitializeThreads(*tids_or);
+  return process_sp;
 }
 
 // -----------------------------------------------------------------------------
 // Public Instance Methods
 // -----------------------------------------------------------------------------
 
-NativeProcessLinux::NativeProcessLinux()
-    : NativeProcessProtocol(LLDB_INVALID_PROCESS_ID), m_arch(),
-      m_supports_mem_region(eLazyBoolCalculate), m_mem_region_cache(),
-      m_pending_notification_tid(LLDB_INVALID_THREAD_ID),
-      m_pt_proces_trace_id(LLDB_INVALID_UID) {}
+NativeProcessLinux::NativeProcessLinux(::pid_t pid, int terminal_fd,
+                                       NativeDelegate &delegate,
+                                       const ArchSpec &arch, MainLoop &mainloop)
+    : NativeProcessProtocol(pid, terminal_fd, delegate), m_arch(arch) {
+  if (m_terminal_fd != -1) {
+    Status status = EnsureFDFlags(m_terminal_fd, O_NONBLOCK);
+    assert(status.Success());
+  }
 
-void NativeProcessLinux::AttachToInferior(MainLoop &mainloop, lldb::pid_t pid,
-                                          Status &error) {
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PROCESS));
-  LLDB_LOG(log, "pid = {0:x}", pid);
-
+  Status status;
   m_sigchld_handle = mainloop.RegisterSignal(
-      SIGCHLD, [this](MainLoopBase &) { SigchldHandler(); }, error);
-  if (!m_sigchld_handle)
-    return;
-
-  error = ResolveProcessArchitecture(pid, m_arch);
-  if (!error.Success())
-    return;
-
-  // Set the architecture to the exe architecture.
-  LLDB_LOG(log, "pid = {0:x}, detected architecture {1}", pid,
-           m_arch.GetArchitectureName());
-  m_pid = pid;
-  SetState(eStateAttaching);
-
-  Attach(pid, error);
+      SIGCHLD, [this](MainLoopBase &) { SigchldHandler(); }, status);
+  assert(m_sigchld_handle && status.Success());
 }
 
-Status NativeProcessLinux::LaunchInferior(MainLoop &mainloop,
-                                          ProcessLaunchInfo &launch_info) {
-  Status error;
-  m_sigchld_handle = mainloop.RegisterSignal(
-      SIGCHLD, [this](MainLoopBase &) { SigchldHandler(); }, error);
-  if (!m_sigchld_handle)
-    return error;
-
-  SetState(eStateLaunching);
-
-  MaybeLogLaunchInfo(launch_info);
-
-  ::pid_t pid =
-      ProcessLauncherPosixFork().LaunchProcess(launch_info, error).GetProcessId();
-  if (error.Fail())
-    return error;
-
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PROCESS));
-
-  // Wait for the child process to trap on its call to execve.
-  ::pid_t wpid;
-  int status;
-  if ((wpid = waitpid(pid, &status, 0)) < 0) {
-    error.SetErrorToErrno();
-    LLDB_LOG(log, "waitpid for inferior failed with %s", error);
-
-    // Mark the inferior as invalid.
-    // FIXME this could really use a new state - eStateLaunchFailure.  For now,
-    // using eStateInvalid.
-    SetState(StateType::eStateInvalid);
-
-    return error;
+void NativeProcessLinux::InitializeThreads(llvm::ArrayRef<::pid_t> tids) {
+  for (const auto &tid : tids) {
+    NativeThreadLinuxSP thread_sp = AddThread(tid);
+    assert(thread_sp && "AddThread() returned a nullptr thread");
+    thread_sp->SetStoppedBySignal(SIGSTOP);
+    ThreadWasCreated(*thread_sp);
   }
-  assert(WIFSTOPPED(status) && (wpid == static_cast<::pid_t>(pid)) &&
-         "Could not sync with inferior process.");
-
-  LLDB_LOG(log, "inferior started, now in stopped state");
-  error = SetDefaultPtraceOpts(pid);
-  if (error.Fail()) {
-    LLDB_LOG(log, "failed to set default ptrace options: {0}", error);
-
-    // Mark the inferior as invalid.
-    // FIXME this could really use a new state - eStateLaunchFailure.  For now,
-    // using eStateInvalid.
-    SetState(StateType::eStateInvalid);
-
-    return error;
-  }
-
-  // Release the master terminal descriptor and pass it off to the
-  // NativeProcessLinux instance.  Similarly stash the inferior pid.
-  m_terminal_fd = launch_info.GetPTY().ReleaseMasterFileDescriptor();
-  m_pid = pid;
-  launch_info.SetProcessID(pid);
-
-  if (m_terminal_fd != -1) {
-    error = EnsureFDFlags(m_terminal_fd, O_NONBLOCK);
-    if (error.Fail()) {
-      LLDB_LOG(log,
-               "inferior EnsureFDFlags failed for ensuring terminal "
-               "O_NONBLOCK setting: {0}",
-               error);
-
-      // Mark the inferior as invalid.
-      // FIXME this could really use a new state - eStateLaunchFailure.  For
-      // now, using eStateInvalid.
-      SetState(StateType::eStateInvalid);
-
-      return error;
-    }
-  }
-
-  LLDB_LOG(log, "adding pid = {0}", pid);
-  ResolveProcessArchitecture(m_pid, m_arch);
-  NativeThreadLinuxSP thread_sp = AddThread(pid);
-  assert(thread_sp && "AddThread() returned a nullptr thread");
-  thread_sp->SetStoppedBySignal(SIGSTOP);
-  ThreadWasCreated(*thread_sp);
 
   // Let our process instance know the thread has stopped.
-  SetCurrentThreadID(thread_sp->GetID());
-  SetState(StateType::eStateStopped);
+  SetCurrentThreadID(tids[0]);
+  SetState(StateType::eStateStopped, false);
 
-  if (error.Fail())
-    LLDB_LOG(log, "inferior launching failed {0}", error);
-  return error;
+  // Proccess any signals we received before installing our handler
+  SigchldHandler();
 }
 
-::pid_t NativeProcessLinux::Attach(lldb::pid_t pid, Status &error) {
+llvm::Expected<std::vector<::pid_t>> NativeProcessLinux::Attach(::pid_t pid) {
   Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PROCESS));
 
+  Status status;
   // Use a map to keep track of the threads which we have attached/need to
   // attach.
   Host::TidMap tids_to_attach;
-  if (pid <= 1) {
-    error.SetErrorToGenericError();
-    error.SetErrorString("Attaching to process 1 is not allowed.");
-    return -1;
-  }
-
   while (Host::FindProcessThreads(pid, tids_to_attach)) {
     for (Host::TidMap::iterator it = tids_to_attach.begin();
          it != tids_to_attach.end();) {
@@ -423,48 +338,36 @@ Status NativeProcessLinux::LaunchInferior(MainLoop &mainloop,
 
         // Attach to the requested process.
         // An attach will cause the thread to stop with a SIGSTOP.
-        error = PtraceWrapper(PTRACE_ATTACH, tid);
-        if (error.Fail()) {
+        if ((status = PtraceWrapper(PTRACE_ATTACH, tid)).Fail()) {
           // No such thread. The thread may have exited.
           // More error handling may be needed.
-          if (error.GetError() == ESRCH) {
+          if (status.GetError() == ESRCH) {
             it = tids_to_attach.erase(it);
             continue;
-          } else
-            return -1;
+          }
+          return status.ToError();
         }
 
-        int status;
+        int wpid =
+            llvm::sys::RetryAfterSignal(-1, ::waitpid, tid, nullptr, __WALL);
         // Need to use __WALL otherwise we receive an error with errno=ECHLD
         // At this point we should have a thread stopped if waitpid succeeds.
-        if ((status = waitpid(tid, NULL, __WALL)) < 0) {
+        if (wpid < 0) {
           // No such thread. The thread may have exited.
           // More error handling may be needed.
           if (errno == ESRCH) {
             it = tids_to_attach.erase(it);
             continue;
-          } else {
-            error.SetErrorToErrno();
-            return -1;
           }
+          return llvm::errorCodeToError(
+              std::error_code(errno, std::generic_category()));
         }
 
-        error = SetDefaultPtraceOpts(tid);
-        if (error.Fail())
-          return -1;
+        if ((status = SetDefaultPtraceOpts(tid)).Fail())
+          return status.ToError();
 
         LLDB_LOG(log, "adding tid = {0}", tid);
         it->second = true;
-
-        // Create the thread, mark it as stopped.
-        NativeThreadLinuxSP thread_sp(AddThread(static_cast<lldb::tid_t>(tid)));
-        assert(thread_sp && "AddThread() returned a nullptr");
-
-        // This will notify this is a new thread and tell the system it is
-        // stopped.
-        thread_sp->SetStoppedBySignal(SIGSTOP);
-        ThreadWasCreated(*thread_sp);
-        SetCurrentThreadID(thread_sp->GetID());
       }
 
       // move the loop forward
@@ -472,17 +375,16 @@ Status NativeProcessLinux::LaunchInferior(MainLoop &mainloop,
     }
   }
 
-  if (tids_to_attach.size() > 0) {
-    m_pid = pid;
-    // Let our process instance know the thread has stopped.
-    SetState(StateType::eStateStopped);
-  } else {
-    error.SetErrorToGenericError();
-    error.SetErrorString("No such process.");
-    return -1;
-  }
+  size_t tid_count = tids_to_attach.size();
+  if (tid_count == 0)
+    return llvm::make_error<StringError>("No such process",
+                                         llvm::inconvertibleErrorCode());
 
-  return pid;
+  std::vector<::pid_t> tids;
+  tids.reserve(tid_count);
+  for (const auto &p : tids_to_attach)
+    tids.push_back(p.first);
+  return std::move(tids);
 }
 
 Status NativeProcessLinux::SetDefaultPtraceOpts(lldb::pid_t pid) {

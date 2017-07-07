@@ -75,10 +75,14 @@ public:
     CXXRuntimeOverrides.runDestructors();
     // Run any IR destructors.
     for (auto &DtorRunner : IRStaticDestructorRunners)
-      DtorRunner.runViaLayer(CODLayer);
+      if (auto Err = DtorRunner.runViaLayer(CODLayer)) {
+        // FIXME: OrcLazyJIT should probably take a "shutdownError" callback to
+        //        report these errors on.
+        report_fatal_error(std::move(Err));
+      }
   }
 
-  void addModule(std::shared_ptr<Module> M) {
+  Error addModule(std::shared_ptr<Module> M) {
     if (M->getDataLayout().isDefault())
       M->setDataLayout(DL);
 
@@ -125,19 +129,27 @@ public:
         );
 
       // Add the module to the JIT.
-      ModulesHandle =
-        CODLayer.addModule(std::move(M), std::move(Resolver));
+      if (auto ModulesHandleOrErr =
+          CODLayer.addModule(std::move(M), std::move(Resolver)))
+        ModulesHandle = std::move(*ModulesHandleOrErr);
+      else
+        return ModulesHandleOrErr.takeError();
+
     } else
-      CODLayer.addExtraModule(ModulesHandle, std::move(M));
+      if (auto Err = CODLayer.addExtraModule(ModulesHandle, std::move(M)))
+        return Err;
 
     // Run the static constructors, and save the static destructor runner for
     // execution when the JIT is torn down.
     orc::CtorDtorRunner<CODLayerT> CtorRunner(std::move(CtorNames),
                                               ModulesHandle);
-    CtorRunner.runViaLayer(CODLayer);
+    if (auto Err = CtorRunner.runViaLayer(CODLayer))
+      return Err;
 
     IRStaticDestructorRunners.emplace_back(std::move(DtorNames),
                                            ModulesHandle);
+
+    return Error::success();
   }
 
   JITSymbol findSymbol(const std::string &Name) {

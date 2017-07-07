@@ -1811,7 +1811,11 @@ GdbIndexChunk GdbIndexSection::readDwarf(InputSection *Sec) {
     return {};
   }
 
-  DWARFContextInMemory Dwarf(*Obj.get());
+  DWARFContextInMemory Dwarf(*Obj.get(), nullptr, [&](Error E) {
+    error(toString(Sec->File) + ": error parsing DWARF data:\n>>> " +
+          toString(std::move(E)));
+    return ErrorPolicy::Continue;
+  });
 
   GdbIndexChunk Ret;
   Ret.CompilationUnits = readCuList(Dwarf, Sec);
