@@ -146,10 +146,8 @@ define i32 @ugt_select_neg1_or_0(i32 %x, i32 %y) nounwind {
 define i32 @uge_select_0_or_neg1(i32 %x, i32 %y) nounwind {
 ; CHECK-LABEL: uge_select_0_or_neg1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpl %esi, %edi
-; CHECK-NEXT:    setae %al
-; CHECK-NEXT:    decl %eax
+; CHECK-NEXT:    sbbl %eax, %eax
 ; CHECK-NEXT:    retq
   %cmp = icmp uge i32 %x, %y
   %ext = zext i1 %cmp to i32
@@ -180,10 +178,8 @@ define i32 @ule_select_0_or_neg1(i32 %x, i32 %y) nounwind {
 define i32 @uge_select_0_or_neg1_sub(i32 %x, i32 %y) nounwind {
 ; CHECK-LABEL: uge_select_0_or_neg1_sub:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpl %esi, %edi
-; CHECK-NEXT:    setae %al
-; CHECK-NEXT:    decl %eax
+; CHECK-NEXT:    sbbl %eax, %eax
 ; CHECK-NEXT:    retq
   %cmp = icmp uge i32 %x, %y
   %ext = zext i1 %cmp to i32

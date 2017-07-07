@@ -16,12 +16,21 @@ class VOP3PInst<string OpName, VOPProfile P, SDPatternOperator node = null_frag>
     !if(P.HasModifiers, getVOP3PModPat<P, node>.ret, getVOP3Pat<P, node>.ret)
 >;
 
-// Non-packed instructions that use the VOP3P encoding. i.e. where
-// omod/abs are used.
+// Non-packed instructions that use the VOP3P encoding.
+// VOP3 neg/abs and VOP3P opsel/opsel_hi modifiers are allowed.
 class VOP3_VOP3PInst<string OpName, VOPProfile P, SDPatternOperator node = null_frag> :
-  VOP3P_Pseudo<OpName, P,
-    !if(P.HasModifiers, getVOP3ModPat<P, node>.ret, getVOP3Pat<P, node>.ret)
->;
+  VOP3P_Pseudo<OpName, P> {
+  let InOperandList =
+    (ins
+      FP32InputMods:$src0_modifiers, VCSrc_f32:$src0,
+      FP32InputMods:$src1_modifiers, VCSrc_f32:$src1,
+      FP32InputMods:$src2_modifiers, VCSrc_f32:$src2,
+      clampmod:$clamp,
+      op_sel:$op_sel,
+      op_sel_hi:$op_sel_hi);
+  let AsmOperands =
+    " $vdst, $src0_modifiers, $src1_modifiers, $src2_modifiers$op_sel$op_sel_hi$clamp";
+}
 
 let isCommutable = 1 in {
 def V_PK_FMA_F16 : VOP3PInst<"v_pk_fma_f16", VOP3_Profile<VOP_V2F16_V2F16_V2F16_V2F16>, fma>;
@@ -46,9 +55,12 @@ def V_PK_ASHRREV_I16 : VOP3PInst<"v_pk_ashrrev_i16", VOP3_Profile<VOP_V2I16_V2I1
 def V_PK_LSHRREV_B16 : VOP3PInst<"v_pk_lshrrev_b16", VOP3_Profile<VOP_V2I16_V2I16_V2I16>, lshr_rev>;
 
 // XXX - Commutable?
-def V_MAD_MIX_F32 : VOP3_VOP3PInst<"v_mad_mix_f32", VOP3_Profile<VOP_F32_F32_F32_F32>>;
-def V_MAD_MIXLO_F16 : VOP3_VOP3PInst<"v_mad_mixlo_f16", VOP3_Profile<VOP_F16_F16_F16_F16>>;
-def V_MAD_MIXHI_F16 : VOP3_VOP3PInst<"v_mad_mixhi_f16", VOP3_Profile<VOP_F16_F16_F16_F16>>;
+// These are VOP3a-like opcodes which accept no omod.
+// Size of src arguments (16/32) is controlled by op_sel.
+// For 16-bit src arguments their location (hi/lo) are controlled by op_sel_hi.
+def V_MAD_MIX_F32 : VOP3_VOP3PInst<"v_mad_mix_f32", VOP3_Profile<VOP_F32_V2F16_V2F16_V2F16>>;
+def V_MAD_MIXLO_F16 : VOP3_VOP3PInst<"v_mad_mixlo_f16", VOP3_Profile<VOP_V2F16_V2F16_V2F16_V2F16>>;
+def V_MAD_MIXHI_F16 : VOP3_VOP3PInst<"v_mad_mixhi_f16", VOP3_Profile<VOP_V2F16_V2F16_V2F16_V2F16>>;
 
 
 multiclass VOP3P_Real_vi<bits<10> op> {

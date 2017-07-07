@@ -2651,8 +2651,11 @@ SDValue AMDGPUTargetLowering::performShlCombine(SDNode *N,
     SDValue Shl = DAG.getNode(ISD::SHL, SL, XVT, X, SDValue(RHS, 0));
     return DAG.getZExtOrTrunc(Shl, SL, VT);
   }
-  case ISD::OR:  if (!isOrEquivalentToAdd(DAG, LHS)) break;
-  case ISD::ADD: { // Fall through from above
+  case ISD::OR:
+    if (!isOrEquivalentToAdd(DAG, LHS))
+      break;
+    LLVM_FALLTHROUGH;
+  case ISD::ADD: {
     // shl (or|add x, c2), c1 => or|add (shl x, c1), (c2 << c1)
     if (ConstantSDNode *C2 = dyn_cast<ConstantSDNode>(LHS->getOperand(1))) {
       SDValue Shl = DAG.getNode(ISD::SHL, SL, VT, LHS->getOperand(0),

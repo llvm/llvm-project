@@ -266,7 +266,7 @@ computeFunctionSummary(ModuleSummaryIndex &Index, const Module &M,
   // sample PGO, to enable the same inlines as the profiled optimized binary.
   for (auto &I : F.getImportGUIDs())
     CallGraphEdges[Index.getOrInsertValueInfo(I)].updateHotness(
-        CalleeInfo::HotnessType::Hot);
+        CalleeInfo::HotnessType::Critical);
 
   bool NonRenamableLocal = isNonRenamableLocal(F);
   bool NotEligibleForImport =

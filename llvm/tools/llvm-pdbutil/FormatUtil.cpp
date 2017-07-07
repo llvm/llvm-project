@@ -26,6 +26,17 @@ std::string llvm::pdb::truncateStringBack(StringRef S, uint32_t MaxLen) {
   return std::string(S) + std::string("...");
 }
 
+std::string llvm::pdb::truncateStringMiddle(StringRef S, uint32_t MaxLen) {
+  if (MaxLen == 0 || S.size() <= MaxLen || S.size() <= 3)
+    return S;
+
+  assert(MaxLen >= 3);
+  uint32_t FinalLen = std::min<size_t>(S.size(), MaxLen - 3);
+  StringRef Front = S.take_front(FinalLen / 2);
+  StringRef Back = S.take_back(Front.size());
+  return std::string(Front) + std::string("...") + std::string(Back);
+}
+
 std::string llvm::pdb::truncateStringFront(StringRef S, uint32_t MaxLen) {
   if (MaxLen == 0 || S.size() <= MaxLen || S.size() <= 3)
     return S;

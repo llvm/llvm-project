@@ -1662,9 +1662,10 @@ void llvm::removeUnwindEdge(BasicBlock *BB) {
   TI->eraseFromParent();
 }
 
-/// removeUnreachableBlocksFromFn - Remove blocks that are not reachable, even
+/// removeUnreachableBlocks - Remove blocks that are not reachable, even
 /// if they are in a dead cycle.  Return true if a change was made, false
-/// otherwise.
+/// otherwise. If `LVI` is passed, this function preserves LazyValueInfo
+/// after modifying the CFG.
 bool llvm::removeUnreachableBlocks(Function &F, LazyValueInfo *LVI) {
   SmallPtrSet<BasicBlock*, 16> Reachable;
   bool Changed = markAliveBlocks(F, Reachable);

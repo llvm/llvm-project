@@ -315,7 +315,9 @@ static void addObjectsToPDB(BumpPtrAllocator &Alloc, SymbolTable *Symtab,
     bool InArchive = !File->ParentName.empty();
     SmallString<128> Path = InArchive ? File->ParentName : File->getName();
     sys::fs::make_absolute(Path);
+    sys::path::native(Path, llvm::sys::path::Style::windows);
     StringRef Name = InArchive ? File->getName() : StringRef(Path);
+
     File->ModuleDBI = &ExitOnErr(Builder.getDbiBuilder().addModuleInfo(Name));
     File->ModuleDBI->setObjFileName(Path);
 
@@ -413,19 +415,19 @@ void coff::createPDB(StringRef Path, SymbolTable *Symtab,
 
   llvm::SmallString<128> NativePath(Path.begin(), Path.end());
   llvm::sys::fs::make_absolute(NativePath);
-  llvm::sys::path::native(NativePath);
+  llvm::sys::path::native(NativePath, llvm::sys::path::Style::windows);
 
   pdb::PDB_UniqueId uuid{};
   if (DI)
     memcpy(&uuid, &DI->PDB70.Signature, sizeof(uuid));
   InfoBuilder.setGuid(uuid);
-  // Should be the current time, but set 0 for reproducibilty.
-  InfoBuilder.setSignature(0);
+  InfoBuilder.setSignature(time(nullptr));
   InfoBuilder.setVersion(pdb::PdbRaw_ImplVer::PdbImplVC70);
 
   // Add an empty DBI stream.
   pdb::DbiStreamBuilder &DbiBuilder = Builder.getDbiBuilder();
-  DbiBuilder.setVersionHeader(pdb::PdbDbiV110);
+  DbiBuilder.setVersionHeader(pdb::PdbDbiV70);
+  ExitOnErr(DbiBuilder.addDbgStream(pdb::DbgHeaderType::NewFPO, {}));
 
   // It's not entirely clear what this is, but the * Linker * module uses it.
   uint32_t PdbFilePathNI = DbiBuilder.addECName(NativePath);

@@ -96,8 +96,6 @@ Expected<msf::MSFLayout> PDBFileBuilder::finalizeMsfLayout() {
     return std::move(EC);
   if (auto EC = addNamedStream("/LinkInfo", 0))
     return std::move(EC);
-  if (auto EC = addNamedStream("/src/headerblock", 0))
-    return std::move(EC);
 
   if (Info) {
     if (auto EC = Info->finalizeMsfLayout())

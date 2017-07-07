@@ -854,3 +854,32 @@ define void @load_factor2_fp128(<4 x fp128>* %ptr) {
   %v1 = shufflevector <4 x fp128> %interleaved.vec, <4 x fp128> undef, <2 x i32> <i32 1, i32 3>
   ret void
 }
+
+define void @load_factor2_wide_pointer(<16 x i32*>* %ptr) {
+; NEON-LABEL:    @load_factor2_wide_pointer(
+; NEON-NEXT:       [[TMP1:%.*]] = bitcast <16 x i32*>* %ptr to i32*
+; NEON-NEXT:       [[TMP2:%.*]] = bitcast i32* [[TMP1]] to i8*
+; NEON-NEXT:       [[VLDN:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.arm.neon.vld2.v4i32.p0i8(i8* [[TMP2]], i32 4)
+; NEON-NEXT:       [[TMP3:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[VLDN]], 1
+; NEON-NEXT:       [[TMP4:%.*]] = inttoptr <4 x i32> [[TMP3]] to <4 x i32*>
+; NEON-NEXT:       [[TMP5:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[VLDN]], 0
+; NEON-NEXT:       [[TMP6:%.*]] = inttoptr <4 x i32> [[TMP5]] to <4 x i32*>
+; NEON-NEXT:       [[TMP7:%.*]] = getelementptr i32, i32* [[TMP1]], i32 8
+; NEON-NEXT:       [[TMP8:%.*]] = bitcast i32* [[TMP7]] to i8*
+; NEON-NEXT:       [[VLDN1:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.arm.neon.vld2.v4i32.p0i8(i8* [[TMP8]], i32 4)
+; NEON-NEXT:       [[TMP9:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[VLDN1]], 1
+; NEON-NEXT:       [[TMP10:%.*]] = inttoptr <4 x i32> [[TMP9]] to <4 x i32*>
+; NEON-NEXT:       [[TMP11:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[VLDN1]], 0
+; NEON-NEXT:       [[TMP12:%.*]] = inttoptr <4 x i32> [[TMP11]] to <4 x i32*>
+; NEON-NEXT:       [[TMP13:%.*]] = shufflevector <4 x i32*> [[TMP4]], <4 x i32*> [[TMP10]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; NEON-NEXT:       [[TMP14:%.*]] = shufflevector <4 x i32*> [[TMP6]], <4 x i32*> [[TMP12]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; NEON-NEXT:       ret void
+; NO_NEON-LABEL: @load_factor2_wide_pointer(
+; NO_NEON-NOT:     @llvm.arm.neon
+; NO_NEON:         ret void
+;
+  %interleaved.vec = load <16 x i32*>, <16 x i32*>* %ptr, align 4
+  %v0 = shufflevector <16 x i32*> %interleaved.vec, <16 x i32*> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
+  %v1 = shufflevector <16 x i32*> %interleaved.vec, <16 x i32*> undef, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+  ret void
+}

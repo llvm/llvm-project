@@ -937,8 +937,8 @@ DWARFContextInMemory::DWARFContextInMemory(
     : FileName(Obj.getFileName()), IsLittleEndian(Obj.isLittleEndian()),
       AddressSize(Obj.getBytesInAddress()) {
   for (const SectionRef &Section : Obj.sections()) {
-    StringRef name;
-    Section.getName(name);
+    StringRef Name;
+    Section.getName(Name);
     // Skip BSS and Virtual sections, they aren't interesting.
     bool IsBSS = Section.isBSS();
     if (IsBSS)
@@ -946,18 +946,18 @@ DWARFContextInMemory::DWARFContextInMemory(
     bool IsVirtual = Section.isVirtual();
     if (IsVirtual)
       continue;
-    StringRef data;
+    StringRef Data;
 
     section_iterator RelocatedSection = Section.getRelocatedSection();
     // Try to obtain an already relocated version of this section.
     // Else use the unrelocated section from the object file. We'll have to
     // apply relocations ourselves later.
-    if (!L || !L->getLoadedSectionContents(*RelocatedSection, data))
-      Section.getContents(data);
+    if (!L || !L->getLoadedSectionContents(*RelocatedSection, Data))
+      Section.getContents(Data);
 
-    if (auto Err = maybeDecompress(Section, name, data)) {
+    if (auto Err = maybeDecompress(Section, Name, Data)) {
       ErrorPolicy EP = HandleError(
-          createError("failed to decompress '" + name + "', ", std::move(Err)));
+          createError("failed to decompress '" + Name + "', ", std::move(Err)));
       if (EP == ErrorPolicy::Halt)
         return;
       continue;
@@ -965,26 +965,26 @@ DWARFContextInMemory::DWARFContextInMemory(
 
     // Compressed sections names in GNU style starts from ".z",
     // at this point section is decompressed and we drop compression prefix.
-    name = name.substr(
-        name.find_first_not_of("._z")); // Skip ".", "z" and "_" prefixes.
+    Name = Name.substr(
+        Name.find_first_not_of("._z")); // Skip ".", "z" and "_" prefixes.
 
-    if (StringRef *SectionData = mapSectionToMember(name)) {
-      *SectionData = data;
-      if (name == "debug_ranges") {
+    if (StringRef *SectionData = mapSectionToMember(Name)) {
+      *SectionData = Data;
+      if (Name == "debug_ranges") {
         // FIXME: Use the other dwo range section when we emit it.
-        RangeDWOSection.Data = data;
+        RangeDWOSection.Data = Data;
       }
-    } else if (name == "debug_types") {
+    } else if (Name == "debug_types") {
       // Find debug_types data by section rather than name as there are
       // multiple, comdat grouped, debug_types sections.
-      TypesSections[Section].Data = data;
-    } else if (name == "debug_types.dwo") {
-      TypesDWOSections[Section].Data = data;
+      TypesSections[Section].Data = Data;
+    } else if (Name == "debug_types.dwo") {
+      TypesDWOSections[Section].Data = Data;
     }
 
     // Map platform specific debug section names to DWARF standard section
     // names.
-    name = Obj.mapDebugSectionName(name);
+    Name = Obj.mapDebugSectionName(Name);
 
     if (RelocatedSection == Obj.section_end())
       continue;

@@ -13779,7 +13779,9 @@ bool ARMTargetLowering::lowerInterleavedLoad(
 
       // Convert the integer vector to pointer vector if the element is pointer.
       if (EltTy->isPointerTy())
-        SubVec = Builder.CreateIntToPtr(SubVec, SV->getType());
+        SubVec = Builder.CreateIntToPtr(
+            SubVec, VectorType::get(SV->getType()->getVectorElementType(),
+                                    VecTy->getVectorNumElements()));
 
       SubVecs[SV].push_back(SubVec);
     }

@@ -162,3 +162,39 @@ fpath:
 end:
   ret i32 0
 }
+
+; LHS ==> RHS by definition (true -> true)
+; CHECK-LABEL: @test6
+; CHECK: taken:
+; CHECK-NOT: select
+; CHECK: call void @foo(i32 10)
+define void @test6(i32 %a, i32 %b) {
+  %cmp1 = icmp eq i32 %a, %b
+  br i1 %cmp1, label %taken, label %end
+
+taken:
+  %c = select i1 %cmp1, i32 10, i32 0
+  call void @foo(i32 %c)
+  br label %end
+
+end:
+  ret void
+}
+
+; LHS ==> RHS by definition (false -> false)
+; CHECK-LABEL: @test7
+; CHECK: taken:
+; CHECK-NOT: select
+; CHECK: call void @foo(i32 11)
+define void @test7(i32 %a, i32 %b) {
+  %cmp1 = icmp eq i32 %a, %b
+  br i1 %cmp1, label %end, label %taken
+
+taken:
+  %c = select i1 %cmp1, i32 0, i32 11
+  call void @foo(i32 %c)
+  br label %end
+
+end:
+  ret void
+}
