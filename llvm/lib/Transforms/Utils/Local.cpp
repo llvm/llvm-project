@@ -2182,12 +2182,18 @@ bool llvm::canReplaceOperandWithVariable(const Instruction *I, unsigned OpIdx) {
   case Instruction::ShuffleVector:
     // Shufflevector masks are constant.
     return OpIdx != 2;
+  case Instruction::Switch:
   case Instruction::ExtractValue:
-  case Instruction::InsertValue:
     // All operands apart from the first are constant.
     return OpIdx == 0;
+  case Instruction::InsertValue:
+    // All operands apart from the first and the second are constant.
+    return OpIdx < 2;
   case Instruction::Alloca:
-    return false;
+    // Static allocas (constant size in the entry block) are handled by
+    // prologue/epilogue insertion so they're free anyway. We definitely don't
+    // want to make them non-constant.
+    return !dyn_cast<AllocaInst>(I)->isStaticAlloca();
   case Instruction::GetElementPtr:
     if (OpIdx == 0)
       return true;

@@ -402,7 +402,7 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst,
           Value *Ptr = PtrArg->stripPointerCasts();
           if (GlobalVariable *GV = dyn_cast<GlobalVariable>(Ptr)) {
             Type *ElemTy = GV->getValueType();
-            if (!Size->isAllOnesValue() &&
+            if (!Size->isMinusOne() &&
                 Size->getValue().getLimitedValue() >=
                     DL.getTypeStoreSize(ElemTy)) {
               Invariants.insert(GV);

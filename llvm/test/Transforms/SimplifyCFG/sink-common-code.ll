@@ -818,6 +818,30 @@ merge:
 ; CHECK: right:
 ; CHECK-NEXT:   %val1 = call i32 @call_target() [ "deopt"(i32 20) ]
 
+%T = type {i32, i32}
+
+define i32 @test_insertvalue(i1 zeroext %flag, %T %P) {
+entry:
+  br i1 %flag, label %if.then, label %if.else
+
+if.then:
+  %t1 = insertvalue %T %P, i32 0, 0
+  br label %if.end
+
+if.else:
+  %t2 = insertvalue %T %P, i32 1, 0
+  br label %if.end
+
+if.end:
+  %t = phi %T [%t1, %if.then], [%t2, %if.else]
+  ret i32 1
+}
+
+; CHECK-LABEL: @test_insertvalue
+; CHECK: select
+; CHECK: insertvalue
+; CHECK-NOT: insertvalue
+
 ; CHECK: ![[TBAA]] = !{![[TYPE:[0-9]]], ![[TYPE]], i64 0}
 ; CHECK: ![[TYPE]] = !{!"float", ![[TEXT:[0-9]]]}
 ; CHECK: ![[TEXT]] = !{!"an example type tree"}

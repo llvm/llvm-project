@@ -1230,7 +1230,7 @@ static void instrumentMaskedLoadOrStore(AddressSanitizer *Pass,
     if (auto *Vector = dyn_cast<ConstantVector>(Mask)) {
       // dyn_cast as we might get UndefValue
       if (auto *Masked = dyn_cast<ConstantInt>(Vector->getOperand(Idx))) {
-        if (Masked->isNullValue())
+        if (Masked->isZero())
           // Mask is constant false, so no instrumentation needed.
           continue;
         // If we have a true or undef value, fall through to doInstrumentAddress

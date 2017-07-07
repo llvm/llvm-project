@@ -176,20 +176,25 @@ void InstrProfWriter::setOutputSparse(bool Sparse) {
   this->Sparse = Sparse;
 }
 
-Error InstrProfWriter::addRecord(InstrProfRecord &&I, uint64_t Weight) {
-  auto &ProfileDataMap = FunctionData[I.Name];
+Error InstrProfWriter::addRecord(NamedInstrProfRecord &&I, uint64_t Weight) {
+  auto Name = I.Name;
+  auto Hash = I.Hash;
+  return addRecord(Name, Hash, std::move(I), Weight);
+}
+
+Error InstrProfWriter::addRecord(StringRef Name, uint64_t Hash,
+                                 InstrProfRecord &&I, uint64_t Weight) {
+  auto &ProfileDataMap = FunctionData[Name];
 
   bool NewFunc;
   ProfilingData::iterator Where;
   std::tie(Where, NewFunc) =
-      ProfileDataMap.insert(std::make_pair(I.Hash, InstrProfRecord()));
+      ProfileDataMap.insert(std::make_pair(Hash, InstrProfRecord()));
   InstrProfRecord &Dest = Where->second;
 
   if (NewFunc) {
     // We've never seen a function with this name and hash, add it.
     Dest = std::move(I);
-    // Fix up the name to avoid dangling reference.
-    Dest.Name = FunctionData.find(Dest.Name)->getKey();
     if (Weight > 1)
       Dest.scale(Weight);
   } else {
@@ -205,7 +210,7 @@ Error InstrProfWriter::addRecord(InstrProfRecord &&I, uint64_t Weight) {
 Error InstrProfWriter::mergeRecordsFromWriter(InstrProfWriter &&IPW) {
   for (auto &I : IPW.FunctionData)
     for (auto &Func : I.getValue())
-      if (Error E = addRecord(std::move(Func.second), 1))
+      if (Error E = addRecord(I.getKey(), Func.first, std::move(Func.second)))
         return E;
   return Error::success();
 }
@@ -323,11 +328,12 @@ static const char *ValueProfKindStr[] = {
 #include "llvm/ProfileData/InstrProfData.inc"
 };
 
-void InstrProfWriter::writeRecordInText(const InstrProfRecord &Func,
+void InstrProfWriter::writeRecordInText(StringRef Name, uint64_t Hash,
+                                        const InstrProfRecord &Func,
                                         InstrProfSymtab &Symtab,
                                         raw_fd_ostream &OS) {
-  OS << Func.Name << "\n";
-  OS << "# Func Hash:\n" << Func.Hash << "\n";
+  OS << Name << "\n";
+  OS << "# Func Hash:\n" << Hash << "\n";
   OS << "# Num Counters:\n" << Func.Counts.size() << "\n";
   OS << "# Counter Values:\n";
   for (uint64_t Count : Func.Counts)
@@ -375,6 +381,6 @@ Error InstrProfWriter::writeText(raw_fd_ostream &OS) {
   for (const auto &I : FunctionData)
     if (shouldEncodeData(I.getValue()))
       for (const auto &Func : I.getValue())
-        writeRecordInText(Func.second, Symtab, OS);
+        writeRecordInText(I.getKey(), Func.first, Func.second, Symtab, OS);
   return Error::success();
 }

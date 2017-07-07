@@ -523,8 +523,7 @@ template <typename T> class ArrayRef;
   /// (A)
   Optional<bool> isImpliedCondition(const Value *LHS, const Value *RHS,
                                     const DataLayout &DL,
-                                    bool InvertAPred = false,
-                                    unsigned Depth = 0,
+                                    bool LHSIsFalse = false, unsigned Depth = 0,
                                     AssumptionCache *AC = nullptr,
                                     const Instruction *CxtI = nullptr,
                                     const DominatorTree *DT = nullptr);

@@ -7,8 +7,8 @@ declare i32 @llvm.r600.read.tidig.x() nounwind readnone
 ; R600-DAG: SETE_INT * T{{[0-9]+\.[XYZW]}}, KC0[3].X, KC0[3].Z
 ; R600-DAG: SETE_INT * T{{[0-9]+\.[XYZW]}}, KC0[2].W, KC0[3].Y
 
-; GCN-DAG: v_cmp_eq_u32_e32
-; GCN-DAG: v_cmp_eq_u32_e64
+; GCN: v_cmp_eq_u32_e32
+; GCN: v_cmp_eq_u32_e32
 define amdgpu_kernel void @setcc_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> %a, <2 x i32> %b) #0 {
   %result = icmp eq <2 x i32> %a, %b
   %sext = sext <2 x i1> %result to <2 x i32>
@@ -23,9 +23,9 @@ define amdgpu_kernel void @setcc_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> %
 ; R600-DAG: SETE_INT * T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
 
 ; GCN: v_cmp_eq_u32_e32
-; GCN: v_cmp_eq_u32_e64
-; GCN: v_cmp_eq_u32_e64
-; GCN: v_cmp_eq_u32_e64
+; GCN: v_cmp_eq_u32_e32
+; GCN: v_cmp_eq_u32_e32
+; GCN: v_cmp_eq_u32_e32
 define amdgpu_kernel void @setcc_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32> addrspace(1)* %in) #0 {
   %b_ptr = getelementptr <4 x i32>, <4 x i32> addrspace(1)* %in, i32 1
   %a = load <4 x i32>, <4 x i32> addrspace(1)* %in

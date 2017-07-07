@@ -114,6 +114,8 @@ class ModuleBitcodeWriter : public BitcodeWriterBase {
   /// True if a module hash record should be written.
   bool GenerateHash;
 
+  SHA1 Hasher;
+
   /// If non-null, when GenerateHash is true, the resulting hash is written
   /// into ModHash. When GenerateHash is false, that specified value
   /// is used as the hash instead of computing from the generated bitcode.
@@ -175,6 +177,8 @@ public:
 
 private:
   uint64_t bitcodeStartBit() { return BitcodeStartBit; }
+
+  size_t addToStrtab(StringRef Str);
 
   void writeAttributeGroupTable();
   void writeAttributeTable();
@@ -947,11 +951,17 @@ static unsigned getEncodedUnnamedAddr(const GlobalValue &GV) {
   llvm_unreachable("Invalid unnamed_addr");
 }
 
+size_t ModuleBitcodeWriter::addToStrtab(StringRef Str) {
+  if (GenerateHash)
+    Hasher.update(Str);
+  return StrtabBuilder.add(Str);
+}
+
 void ModuleBitcodeWriter::writeComdats() {
   SmallVector<unsigned, 64> Vals;
   for (const Comdat *C : VE.getComdats()) {
     // COMDAT: [strtab offset, strtab size, selection_kind]
-    Vals.push_back(StrtabBuilder.add(C->getName()));
+    Vals.push_back(addToStrtab(C->getName()));
     Vals.push_back(C->getName().size());
     Vals.push_back(getEncodedComdatSelectionKind(*C));
     Stream.EmitRecord(bitc::MODULE_CODE_COMDAT, Vals, /*AbbrevToUse=*/0);
@@ -1122,7 +1132,7 @@ void ModuleBitcodeWriter::writeModuleInfo() {
     //             linkage, alignment, section, visibility, threadlocal,
     //             unnamed_addr, externally_initialized, dllstorageclass,
     //             comdat, attributes]
-    Vals.push_back(StrtabBuilder.add(GV.getName()));
+    Vals.push_back(addToStrtab(GV.getName()));
     Vals.push_back(GV.getName().size());
     Vals.push_back(VE.getTypeID(GV.getValueType()));
     Vals.push_back(GV.getType()->getAddressSpace() << 2 | 2 | GV.isConstant());
@@ -1161,7 +1171,7 @@ void ModuleBitcodeWriter::writeModuleInfo() {
     //             linkage, paramattrs, alignment, section, visibility, gc,
     //             unnamed_addr, prologuedata, dllstorageclass, comdat,
     //             prefixdata, personalityfn]
-    Vals.push_back(StrtabBuilder.add(F.getName()));
+    Vals.push_back(addToStrtab(F.getName()));
     Vals.push_back(F.getName().size());
     Vals.push_back(VE.getTypeID(F.getFunctionType()));
     Vals.push_back(F.getCallingConv());
@@ -1191,7 +1201,7 @@ void ModuleBitcodeWriter::writeModuleInfo() {
   for (const GlobalAlias &A : M.aliases()) {
     // ALIAS: [strtab offset, strtab size, alias type, aliasee val#, linkage,
     //         visibility, dllstorageclass, threadlocal, unnamed_addr]
-    Vals.push_back(StrtabBuilder.add(A.getName()));
+    Vals.push_back(addToStrtab(A.getName()));
     Vals.push_back(A.getName().size());
     Vals.push_back(VE.getTypeID(A.getValueType()));
     Vals.push_back(A.getType()->getAddressSpace());
@@ -1210,7 +1220,7 @@ void ModuleBitcodeWriter::writeModuleInfo() {
   for (const GlobalIFunc &I : M.ifuncs()) {
     // IFUNC: [strtab offset, strtab size, ifunc type, address space, resolver
     //         val#, linkage, visibility]
-    Vals.push_back(StrtabBuilder.add(I.getName()));
+    Vals.push_back(addToStrtab(I.getName()));
     Vals.push_back(I.getName().size());
     Vals.push_back(VE.getTypeID(I.getValueType()));
     Vals.push_back(I.getType()->getAddressSpace());
@@ -3648,7 +3658,6 @@ void ModuleBitcodeWriter::writeModuleHash(size_t BlockStartPos) {
   // Emit the module's hash.
   // MODULE_CODE_HASH: [5*i32]
   if (GenerateHash) {
-    SHA1 Hasher;
     uint32_t Vals[5];
     Hasher.update(ArrayRef<uint8_t>((const uint8_t *)&(Buffer)[BlockStartPos],
                                     Buffer.size() - BlockStartPos));

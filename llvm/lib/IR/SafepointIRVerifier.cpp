@@ -220,44 +220,75 @@ static void TransferBlock(const BasicBlock *BB,
         dbgs() << "\n";);
 }
 
-/// Return true if V is exclusively derived off a constant base, i.e. all
-/// operands of non-unary operators (phi/select) are derived off a constant
-/// base.
-static bool
-isExclusivelyConstantDerivedRecursive(const Value *V,
-                                      DenseSet<const Value *> &Visited) {
-  if (!Visited.insert(V).second)
-    return true;
+/// A given derived pointer can have multiple base pointers through phi/selects.
+/// This type indicates when the base pointer is exclusively constant
+/// (ExclusivelySomeConstant), and if that constant is proven to be exclusively
+/// null, we record that as ExclusivelyNull. In all other cases, the BaseType is
+/// NonConstant.
+enum BaseType {
+  NonConstant = 1, // Base pointers is not exclusively constant.
+  ExclusivelyNull,
+  ExclusivelySomeConstant // Base pointers for a given derived pointer is from a
+                          // set of constants, but they are not exclusively
+                          // null.
+};
 
-  if (isa<Constant>(V))
-    return true;
+/// Return the baseType for Val which states whether Val is exclusively
+/// derived from constant/null, or not exclusively derived from constant.
+/// Val is exclusively derived off a constant base when all operands of phi and
+/// selects are derived off a constant base.
+static enum BaseType getBaseType(const Value *Val) {
 
-  if (const auto *CI = dyn_cast<CastInst>(V))
-    return isExclusivelyConstantDerivedRecursive(CI->stripPointerCasts(),
-                                                 Visited);
+  SmallVector<const Value *, 32> Worklist;
+  DenseSet<const Value *> Visited;
+  bool isExclusivelyDerivedFromNull = true;
+  Worklist.push_back(Val);
+  // Strip through all the bitcasts and geps to get base pointer. Also check for
+  // the exclusive value when there can be multiple base pointers (through phis
+  // or selects).
+  while(!Worklist.empty()) {
+    const Value *V = Worklist.pop_back_val();
+    if (!Visited.insert(V).second)
+      continue;
 
-  if (const auto *GEP = dyn_cast<GetElementPtrInst>(V))
-    return isExclusivelyConstantDerivedRecursive(GEP->getPointerOperand(),
-                                                 Visited);
-
-  // All operands of the phi and select nodes should be derived off a constant
-  // base.
-  if (const auto *PN = dyn_cast<PHINode>(V)) {
-    return all_of(PN->incoming_values(), [&](const Value *InV) {
-      return isExclusivelyConstantDerivedRecursive(InV, Visited);
-    });
+    if (const auto *CI = dyn_cast<CastInst>(V)) {
+      Worklist.push_back(CI->stripPointerCasts());
+      continue;
+    }
+    if (const auto *GEP = dyn_cast<GetElementPtrInst>(V)) {
+      Worklist.push_back(GEP->getPointerOperand());
+      continue;
+    }
+    // Push all the incoming values of phi node into the worklist for
+    // processing.
+    if (const auto *PN = dyn_cast<PHINode>(V)) {
+      for (Value *InV: PN->incoming_values())
+        Worklist.push_back(InV);
+      continue;
+    }
+    if (const auto *SI = dyn_cast<SelectInst>(V)) {
+      // Push in the true and false values
+      Worklist.push_back(SI->getTrueValue());
+      Worklist.push_back(SI->getFalseValue());
+      continue;
+    }
+    if (isa<Constant>(V)) {
+      // We found at least one base pointer which is non-null, so this derived
+      // pointer is not exclusively derived from null.
+      if (V != Constant::getNullValue(V->getType()))
+        isExclusivelyDerivedFromNull = false;
+      // Continue processing the remaining values to make sure it's exclusively
+      // constant.
+      continue;
+    }
+    // At this point, we know that the base pointer is not exclusively
+    // constant.
+    return BaseType::NonConstant;
   }
-
-  if (const auto *SI = dyn_cast<SelectInst>(V))
-    return isExclusivelyConstantDerivedRecursive(SI->getTrueValue(), Visited) &&
-           isExclusivelyConstantDerivedRecursive(SI->getFalseValue(), Visited);
-
-  return false;
-}
-
-static bool isExclusivelyConstantDerived(const Value *V) {
-  DenseSet<const Value*> Visited;
-  return isExclusivelyConstantDerivedRecursive(V, Visited);
+  // Now, we know that the base pointer is exclusively constant, but we need to
+  // differentiate between exclusive null constant and non-null constant.
+  return isExclusivelyDerivedFromNull ? BaseType::ExclusivelyNull
+                                      : BaseType::ExclusivelySomeConstant;
 }
 
 static void Verify(const Function &F, const DominatorTree &DT) {
@@ -323,6 +354,10 @@ static void Verify(const Function &F, const DominatorTree &DT) {
     AnyInvalidUses = true;
   };
 
+  auto isNotExclusivelyConstantDerived = [](const Value *V) {
+    return getBaseType(V) == BaseType::NonConstant;
+  };
+
   for (const BasicBlock &BB : F) {
     // We destructively modify AvailableIn as we traverse the block instruction
     // by instruction.
@@ -334,14 +369,14 @@ static void Verify(const Function &F, const DominatorTree &DT) {
             const BasicBlock *InBB = PN->getIncomingBlock(i);
             const Value *InValue = PN->getIncomingValue(i);
 
-            if (!isExclusivelyConstantDerived(InValue) &&
+            if (isNotExclusivelyConstantDerived(InValue) &&
                 !BlockMap[InBB]->AvailableOut.count(InValue))
               ReportInvalidUse(*InValue, *PN);
           }
       } else {
         for (const Value *V : I.operands())
           if (containsGCPtrType(V->getType()) &&
-              !isExclusivelyConstantDerived(V) && !AvailableSet.count(V))
+              isNotExclusivelyConstantDerived(V) && !AvailableSet.count(V))
             ReportInvalidUse(*V, I);
       }
 

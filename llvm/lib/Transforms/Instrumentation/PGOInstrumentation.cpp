@@ -224,7 +224,7 @@ std::string getBranchCondString(Instruction *TI) {
       OS << "_Zero";
     else if (CV->isOne())
       OS << "_One";
-    else if (CV->isAllOnesValue())
+    else if (CV->isMinusOne())
       OS << "_MinusOne";
     else
       OS << "_Const";

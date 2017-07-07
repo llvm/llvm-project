@@ -169,6 +169,13 @@ SELECTION OPTIONS
  must be in the range ``1..M``. The environment variable
  ``LIT_RUN_SHARD`` can also be used in place of this option.
 
+.. option:: --filter=REGEXP
+
+  Run only those tests whose name matches the regular expression specified in
+  ``REGEXP``. The environment variable ``LIT_FILTER`` can be also used in place
+  of this option, which is especially useful in environments where the call
+  to ``lit`` is issued indirectly.
+
 ADDITIONAL OPTIONS
 ------------------
 

@@ -73,7 +73,7 @@ private:
 
   std::unique_ptr<FileOutputBuffer> Buffer;
 
-  OutputSectionFactory Factory{OutputSections};
+  OutputSectionFactory Factory;
 
   void addRelIpltSymbols();
   void addStartEndSymbols();

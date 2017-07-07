@@ -176,6 +176,70 @@ static MutableArrayRef<uint8_t> copySymbolForPdb(const CVSymbol &Sym,
   return NewData;
 }
 
+/// Return true if this symbol opens a scope. This implies that the symbol has
+/// "parent" and "end" fields, which contain the offset of the S_END or
+/// S_INLINESITE_END record.
+static bool symbolOpensScope(SymbolKind Kind) {
+  switch (Kind) {
+  case SymbolKind::S_GPROC32:
+  case SymbolKind::S_LPROC32:
+  case SymbolKind::S_LPROC32_ID:
+  case SymbolKind::S_GPROC32_ID:
+  case SymbolKind::S_BLOCK32:
+  case SymbolKind::S_SEPCODE:
+  case SymbolKind::S_THUNK32:
+  case SymbolKind::S_INLINESITE:
+  case SymbolKind::S_INLINESITE2:
+    return true;
+  default:
+    break;
+  }
+  return false;
+}
+
+static bool symbolEndsScope(SymbolKind Kind) {
+  switch (Kind) {
+  case SymbolKind::S_END:
+  case SymbolKind::S_PROC_ID_END:
+  case SymbolKind::S_INLINESITE_END:
+    return true;
+  default:
+    break;
+  }
+  return false;
+}
+
+struct ScopeRecord {
+  ulittle32_t PtrParent;
+  ulittle32_t PtrEnd;
+};
+
+struct SymbolScope {
+  ScopeRecord *OpeningRecord;
+  uint32_t ScopeOffset;
+};
+
+static void scopeStackOpen(SmallVectorImpl<SymbolScope> &Stack,
+                           uint32_t CurOffset, CVSymbol &Sym) {
+  assert(symbolOpensScope(Sym.kind()));
+  SymbolScope S;
+  S.ScopeOffset = CurOffset;
+  S.OpeningRecord = const_cast<ScopeRecord *>(
+      reinterpret_cast<const ScopeRecord *>(Sym.content().data()));
+  S.OpeningRecord->PtrParent = Stack.empty() ? 0 : Stack.back().ScopeOffset;
+  Stack.push_back(S);
+}
+
+static void scopeStackClose(SmallVectorImpl<SymbolScope> &Stack,
+                            uint32_t CurOffset, ObjectFile *File) {
+  if (Stack.empty()) {
+    warn("symbol scopes are not balanced in " + File->getName());
+    return;
+  }
+  SymbolScope S = Stack.pop_back_val();
+  S.OpeningRecord->PtrEnd = CurOffset;
+}
+
 static void mergeSymbolRecords(BumpPtrAllocator &Alloc, ObjectFile *File,
                                ArrayRef<TypeIndex> TypeIndexMap,
                                BinaryStreamRef SymData) {
@@ -184,6 +248,7 @@ static void mergeSymbolRecords(BumpPtrAllocator &Alloc, ObjectFile *File,
   CVSymbolArray Syms;
   BinaryStreamReader Reader(SymData);
   ExitOnErr(Reader.readArray(Syms, Reader.getLength()));
+  SmallVector<SymbolScope, 4> Scopes;
   for (const CVSymbol &Sym : Syms) {
     // Discover type index references in the record. Skip it if we don't know
     // where they are.
@@ -202,11 +267,15 @@ static void mergeSymbolRecords(BumpPtrAllocator &Alloc, ObjectFile *File,
     if (!remapTypesInSymbolRecord(File, Contents, TypeIndexMap, TypeRefs))
       continue;
 
-    // FIXME: Fill in "Parent" and "End" fields by maintaining a stack of
-    // scopes.
+    // Fill in "Parent" and "End" fields by maintaining a stack of scopes.
+    CVSymbol NewSym(Sym.kind(), NewData);
+    if (symbolOpensScope(Sym.kind()))
+      scopeStackOpen(Scopes, File->ModuleDBI->getNextSymbolOffset(), NewSym);
+    else if (symbolEndsScope(Sym.kind()))
+      scopeStackClose(Scopes, File->ModuleDBI->getNextSymbolOffset(), File);
 
     // Add the symbol to the module.
-    File->ModuleDBI->addSymbol(CVSymbol(Sym.kind(), NewData));
+    File->ModuleDBI->addSymbol(NewSym);
   }
 }
 

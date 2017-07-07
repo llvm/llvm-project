@@ -670,7 +670,7 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
           if (auto *KnownCond = AvailableValues.lookup(CondI)) {
             // Is the condition known to be true?
             if (isa<ConstantInt>(KnownCond) &&
-                cast<ConstantInt>(KnownCond)->isOneValue()) {
+                cast<ConstantInt>(KnownCond)->isOne()) {
               DEBUG(dbgs() << "EarlyCSE removing guard: " << *Inst << '\n');
               removeMSSA(Inst);
               Inst->eraseFromParent();

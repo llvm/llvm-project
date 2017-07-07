@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++1z %s -verify
+// RUN: %clang_cc1 -std=c++1z -fmodules %s -verify
 
 #pragma clang module build baz
   module baz {}
