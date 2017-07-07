@@ -656,7 +656,7 @@ Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilder<> &B) {
   ConstantInt *LenC = dyn_cast<ConstantInt>(CI->getArgOperand(2));
 
   // memchr(x, y, 0) -> null
-  if (LenC && LenC->isNullValue())
+  if (LenC && LenC->isZero())
     return Constant::getNullValue(CI->getType());
 
   // From now on we need at least constant length and string.
@@ -2280,7 +2280,7 @@ bool FortifiedLibCallSimplifier::isFortifiedCallFoldable(CallInst *CI,
     return true;
   if (ConstantInt *ObjSizeCI =
           dyn_cast<ConstantInt>(CI->getArgOperand(ObjSizeOp))) {
-    if (ObjSizeCI->isAllOnesValue())
+    if (ObjSizeCI->isMinusOne())
       return true;
     // If the object size wasn't -1 (unknown), bail out if we were asked to.
     if (OnlyLowerUnknownSize)

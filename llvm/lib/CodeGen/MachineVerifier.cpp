@@ -985,6 +985,14 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
         report("Operand should be tied", MO, MONum);
       else if (unsigned(TiedTo) != MI->findTiedOperandIdx(MONum))
         report("Tied def doesn't match MCInstrDesc", MO, MONum);
+      else if (TargetRegisterInfo::isPhysicalRegister(MO->getReg())) {
+        const MachineOperand &MOTied = MI->getOperand(TiedTo);
+        if (!MOTied.isReg())
+          report("Tied counterpart must be a register", &MOTied, TiedTo);
+        else if (TargetRegisterInfo::isPhysicalRegister(MOTied.getReg()) &&
+                 MO->getReg() != MOTied.getReg())
+          report("Tied physical registers must match.", &MOTied, TiedTo);
+      }
     } else if (MO->isReg() && MO->isTied())
       report("Explicit operand should not be tied", MO, MONum);
   } else {

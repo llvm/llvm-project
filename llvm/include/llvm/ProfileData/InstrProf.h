@@ -249,9 +249,8 @@ void annotateValueSite(Module &M, Instruction &Inst,
 
 /// Same as the above interface but using an ArrayRef, as well as \p Sum.
 void annotateValueSite(Module &M, Instruction &Inst,
-                       ArrayRef<InstrProfValueData> VDs,
-                       uint64_t Sum, InstrProfValueKind ValueKind,
-                       uint32_t MaxMDCount);
+                       ArrayRef<InstrProfValueData> VDs, uint64_t Sum,
+                       InstrProfValueKind ValueKind, uint32_t MaxMDCount);
 
 /// Extract the value profile data from \p Inst which is annotated with
 /// value profile meta data. Return false if there is no value data annotated,
@@ -590,26 +589,20 @@ struct InstrProfValueSiteRecord {
 
 /// Profiling information for a single function.
 struct InstrProfRecord {
-  StringRef Name;
-  uint64_t Hash;
   std::vector<uint64_t> Counts;
   SoftInstrProfErrors SIPE;
 
   InstrProfRecord() = default;
-  InstrProfRecord(StringRef Name, uint64_t Hash, std::vector<uint64_t> Counts)
-      : Name(Name), Hash(Hash), Counts(std::move(Counts)) {}
+  InstrProfRecord(std::vector<uint64_t> Counts) : Counts(std::move(Counts)) {}
   InstrProfRecord(InstrProfRecord &&) = default;
   InstrProfRecord(const InstrProfRecord &RHS)
-      : Name(RHS.Name), Hash(RHS.Hash), Counts(RHS.Counts), SIPE(RHS.SIPE),
+      : Counts(RHS.Counts),
         ValueData(RHS.ValueData
                       ? llvm::make_unique<ValueProfData>(*RHS.ValueData)
                       : nullptr) {}
   InstrProfRecord &operator=(InstrProfRecord &&) = default;
   InstrProfRecord &operator=(const InstrProfRecord &RHS) {
-    Name = RHS.Name;
-    Hash = RHS.Hash;
     Counts = RHS.Counts;
-    SIPE = RHS.SIPE;
     if (!RHS.ValueData) {
       ValueData = nullptr;
       return *this;
@@ -626,7 +619,6 @@ struct InstrProfRecord {
   /// Return the number of value profile kinds with non-zero number
   /// of profile sites.
   inline uint32_t getNumValueKinds() const;
-
   /// Return the number of instrumented sites for ValueKind.
   inline uint32_t getNumValueSites(uint32_t ValueKind) const;
 
@@ -742,6 +734,16 @@ private:
 
   // Scale up value profile data count.
   void scaleValueProfData(uint32_t ValueKind, uint64_t Weight);
+};
+
+struct NamedInstrProfRecord : InstrProfRecord {
+  StringRef Name;
+  uint64_t Hash;
+
+  NamedInstrProfRecord() = default;
+  NamedInstrProfRecord(StringRef Name, uint64_t Hash,
+                       std::vector<uint64_t> Counts)
+      : InstrProfRecord(std::move(Counts)), Name(Name), Hash(Hash) {}
 };
 
 uint32_t InstrProfRecord::getNumValueKinds() const {

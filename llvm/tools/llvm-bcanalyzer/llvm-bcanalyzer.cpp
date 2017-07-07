@@ -71,6 +71,10 @@ static cl::opt<bool>
   ShowBinaryBlobs("show-binary-blobs",
                   cl::desc("Print binary blobs using hex escapes"));
 
+static cl::opt<std::string> CheckHash(
+    "check-hash",
+    cl::desc("Check module hash using the argument as a string table"));
+
 namespace {
 
 /// CurStreamTypeType - A type for CurStreamType
@@ -652,13 +656,15 @@ static bool ParseBlock(BitstreamCursor &Stream, BitstreamBlockInfo &BlockInfo,
       }
 
       // If we found a module hash, let's verify that it matches!
-      if (BlockID == bitc::MODULE_BLOCK_ID && Code == bitc::MODULE_CODE_HASH) {
+      if (BlockID == bitc::MODULE_BLOCK_ID && Code == bitc::MODULE_CODE_HASH &&
+          !CheckHash.empty()) {
         if (Record.size() != 5)
           outs() << " (invalid)";
         else {
           // Recompute the hash and compare it to the one in the bitcode
           SHA1 Hasher;
           StringRef Hash;
+          Hasher.update(CheckHash);
           {
             int BlockSize = (CurrentRecordPos / 8) - BlockEntryPos;
             auto Ptr = Stream.getPointerToByte(BlockEntryPos, BlockSize);

@@ -75,27 +75,34 @@ static Value *getFCmpValue(unsigned Code, Value *LHS, Value *RHS,
   return Builder->CreateFCmp(Pred, LHS, RHS);
 }
 
-/// \brief Transform BITWISE_OP(BSWAP(A),BSWAP(B)) to BSWAP(BITWISE_OP(A, B))
+/// \brief Transform BITWISE_OP(BSWAP(A),BSWAP(B)) or
+/// BITWISE_OP(BSWAP(A), Constant) to BSWAP(BITWISE_OP(A, B))
 /// \param I Binary operator to transform.
 /// \return Pointer to node that must replace the original binary operator, or
 ///         null pointer if no transformation was made.
-Value *InstCombiner::SimplifyBSwap(BinaryOperator &I) {
+static Value *SimplifyBSwap(BinaryOperator &I,
+                            InstCombiner::BuilderTy *Builder) {
   assert(I.isBitwiseLogicOp() && "Unexpected opcode for bswap simplifying");
 
-  // TODO We should probably check for single use of the bswap.
+  Value *OldLHS = I.getOperand(0);
+  Value *OldRHS = I.getOperand(1);
 
   Value *NewLHS;
-  if (!match(I.getOperand(0), m_BSwap(m_Value(NewLHS))))
+  if (!match(OldLHS, m_BSwap(m_Value(NewLHS))))
     return nullptr;
 
   Value *NewRHS;
   const APInt *C;
 
-  if (match(I.getOperand(1), m_BSwap(m_Value(NewRHS)))) {
+  if (match(OldRHS, m_BSwap(m_Value(NewRHS)))) {
     // OP( BSWAP(x), BSWAP(y) ) -> BSWAP( OP(x, y) )
+    if (!OldLHS->hasOneUse() && !OldRHS->hasOneUse())
+      return nullptr;
     // NewRHS initialized by the matcher.
-  } else if (match(I.getOperand(1), m_APInt(C))) {
+  } else if (match(OldRHS, m_APInt(C))) {
     // OP( BSWAP(x), CONSTANT ) -> BSWAP( OP(x, BSWAP(CONSTANT) ) )
+    if (!OldLHS->hasOneUse())
+      return nullptr;
     NewRHS = ConstantInt::get(I.getType(), C->byteSwap());
   } else
     return nullptr;
@@ -929,7 +936,7 @@ Value *InstCombiner::foldAndOfICmps(ICmpInst *LHS, ICmpInst *RHS,
     case ICmpInst::ICMP_ULT:
       if (LHSC == SubOne(RHSC)) // (X != 13 & X u< 14) -> X < 13
         return Builder->CreateICmpULT(LHS0, LHSC);
-      if (LHSC->isNullValue()) // (X !=  0 & X u< 14) -> X-1 u< 13
+      if (LHSC->isZero()) // (X !=  0 & X u< 14) -> X-1 u< 13
         return insertRangeTest(LHS0, LHSC->getValue() + 1, RHSC->getValue(),
                                false, true);
       break; // (X != 13 & X u< 15) -> no change
@@ -1275,7 +1282,7 @@ Instruction *InstCombiner::visitAnd(BinaryOperator &I) {
   if (Value *V = SimplifyUsingDistributiveLaws(I))
     return replaceInstUsesWith(I, V);
 
-  if (Value *V = SimplifyBSwap(I))
+  if (Value *V = SimplifyBSwap(I, Builder))
     return replaceInstUsesWith(I, V);
 
   if (ConstantInt *AndRHS = dyn_cast<ConstantInt>(Op1)) {
@@ -1979,7 +1986,7 @@ Instruction *InstCombiner::visitOr(BinaryOperator &I) {
   if (Value *V = SimplifyUsingDistributiveLaws(I))
     return replaceInstUsesWith(I, V);
 
-  if (Value *V = SimplifyBSwap(I))
+  if (Value *V = SimplifyBSwap(I, Builder))
     return replaceInstUsesWith(I, V);
 
   if (isa<Constant>(Op1))
@@ -2394,7 +2401,7 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
   if (SimplifyDemandedInstructionBits(I))
     return &I;
 
-  if (Value *V = SimplifyBSwap(I))
+  if (Value *V = SimplifyBSwap(I, Builder))
     return replaceInstUsesWith(I, V);
 
   // Apply DeMorgan's Law for 'nand' / 'nor' logic with an inverted operand.
@@ -2482,7 +2489,7 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
 
     if (BinaryOperator *Op0I = dyn_cast<BinaryOperator>(Op0)) {
       // ~(c-X) == X-c-1 == X+(-c-1)
-      if (Op0I->getOpcode() == Instruction::Sub && RHSC->isAllOnesValue())
+      if (Op0I->getOpcode() == Instruction::Sub && RHSC->isMinusOne())
         if (Constant *Op0I0C = dyn_cast<Constant>(Op0I->getOperand(0))) {
           Constant *NegOp0I0C = ConstantExpr::getNeg(Op0I0C);
           return BinaryOperator::CreateAdd(Op0I->getOperand(1),
@@ -2492,7 +2499,7 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
       if (ConstantInt *Op0CI = dyn_cast<ConstantInt>(Op0I->getOperand(1))) {
         if (Op0I->getOpcode() == Instruction::Add) {
           // ~(X-c) --> (-c-1)-X
-          if (RHSC->isAllOnesValue()) {
+          if (RHSC->isMinusOne()) {
             Constant *NegOp0CI = ConstantExpr::getNeg(Op0CI);
             return BinaryOperator::CreateSub(SubOne(NegOp0CI),
                                              Op0I->getOperand(0));

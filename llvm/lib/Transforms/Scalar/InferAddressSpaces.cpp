@@ -232,7 +232,7 @@ bool InferAddressSpaces::rewriteIntrinsicOperands(IntrinsicInst *II,
   case Intrinsic::amdgcn_atomic_inc:
   case Intrinsic::amdgcn_atomic_dec:{
     const ConstantInt *IsVolatile = dyn_cast<ConstantInt>(II->getArgOperand(4));
-    if (!IsVolatile || !IsVolatile->isNullValue())
+    if (!IsVolatile || !IsVolatile->isZero())
       return false;
 
     LLVM_FALLTHROUGH;

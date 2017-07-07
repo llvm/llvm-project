@@ -235,7 +235,7 @@ class RuleMatcher {
   std::vector<std::unique_ptr<MatchAction>> Actions;
 
   /// A map of instruction matchers to the local variables created by
-  /// emitCxxCaptureStmts().
+  /// emitCaptureOpcodes().
   std::map<const InstructionMatcher *, unsigned> InsnVariableIDs;
 
   /// ID for the next instruction variable defined with defineInsnVar()
@@ -263,7 +263,7 @@ public:
                          unsigned InsnVarID, unsigned OpIdx);
   unsigned getInsnVarID(const InstructionMatcher &InsnMatcher) const;
 
-  void emitCxxCaptureStmts(raw_ostream &OS);
+  void emitCaptureOpcodes(raw_ostream &OS);
 
   void emit(raw_ostream &OS);
 
@@ -307,16 +307,16 @@ public:
     return Predicates.size();
   }
 
-  /// Emit a C++ expression that tests whether all the predicates are met.
+  /// Emit MatchTable opcodes that tests whether all the predicates are met.
   template <class... Args>
-  void emitCxxPredicateListExpr(raw_ostream &OS, Args &&... args) const {
+  void emitPredicateListOpcodes(raw_ostream &OS, Args &&... args) const {
     if (Predicates.empty()) {
       OS << "// No predicates\n";
       return;
     }
 
     for (const auto &Predicate : predicates())
-      Predicate->emitCxxPredicateExpr(OS, std::forward<Args>(args)...);
+      Predicate->emitPredicateOpcodes(OS, std::forward<Args>(args)...);
   }
 };
 
@@ -365,14 +365,15 @@ public:
     return None;
   }
 
-  /// Emit C++ statements to capture instructions into local variables.
+  /// Emit MatchTable opcodes to capture instructions into the MIs table.
   ///
-  /// Only InstructionOperandMatcher needs to do anything for this method.
-  virtual void emitCxxCaptureStmts(raw_ostream &OS, RuleMatcher &Rule,
-                                   unsigned InsnVarID, unsigned OpIdx) const {}
+  /// Only InstructionOperandMatcher needs to do anything for this method the
+  /// rest just walk the tree.
+  virtual void emitCaptureOpcodes(raw_ostream &OS, RuleMatcher &Rule,
+                                  unsigned InsnVarID, unsigned OpIdx) const {}
 
-  /// Emit a C++ expression that checks the predicate for the given operand.
-  virtual void emitCxxPredicateExpr(raw_ostream &OS, RuleMatcher &Rule,
+  /// Emit MatchTable opcodes that check the predicate for the given operand.
+  virtual void emitPredicateOpcodes(raw_ostream &OS, RuleMatcher &Rule,
                                     unsigned InsnVarID,
                                     unsigned OpIdx) const = 0;
 
@@ -401,7 +402,7 @@ public:
     return P->getKind() == OPM_LLT;
   }
 
-  void emitCxxPredicateExpr(raw_ostream &OS, RuleMatcher &Rule,
+  void emitPredicateOpcodes(raw_ostream &OS, RuleMatcher &Rule,
                             unsigned InsnVarID, unsigned OpIdx) const override {
     OS << "    GIM_CheckType, /*MI*/" << InsnVarID << ", /*Op*/" << OpIdx
        << ", /*Type*/";
@@ -428,7 +429,7 @@ public:
     return P->getKind() == OPM_ComplexPattern;
   }
 
-  void emitCxxPredicateExpr(raw_ostream &OS, RuleMatcher &Rule,
+  void emitPredicateOpcodes(raw_ostream &OS, RuleMatcher &Rule,
                             unsigned InsnVarID, unsigned OpIdx) const override {
     unsigned ID = getAllocatedTemporariesBaseID();
     OS << "    GIM_CheckComplexPattern, /*MI*/" << InsnVarID << ", /*Op*/"
@@ -454,7 +455,7 @@ public:
     return P->getKind() == OPM_RegBank;
   }
 
-  void emitCxxPredicateExpr(raw_ostream &OS, RuleMatcher &Rule,
+  void emitPredicateOpcodes(raw_ostream &OS, RuleMatcher &Rule,
                             unsigned InsnVarID, unsigned OpIdx) const override {
     OS << "    GIM_CheckRegBankForClass, /*MI*/" << InsnVarID << ", /*Op*/"
        << OpIdx << ", /*RC*/" << RC.getQualifiedName() << "RegClassID,\n";
@@ -470,7 +471,7 @@ public:
     return P->getKind() == OPM_MBB;
   }
 
-  void emitCxxPredicateExpr(raw_ostream &OS, RuleMatcher &Rule,
+  void emitPredicateOpcodes(raw_ostream &OS, RuleMatcher &Rule,
                             unsigned InsnVarID, unsigned OpIdx) const override {
     OS << "    GIM_CheckIsMBB, /*MI*/" << InsnVarID << ", /*Op*/" << OpIdx << ",\n";
   }
@@ -490,7 +491,7 @@ public:
     return P->getKind() == OPM_Int;
   }
 
-  void emitCxxPredicateExpr(raw_ostream &OS, RuleMatcher &Rule,
+  void emitPredicateOpcodes(raw_ostream &OS, RuleMatcher &Rule,
                             unsigned InsnVarID, unsigned OpIdx) const override {
     OS << "    GIM_CheckConstantInt, /*MI*/" << InsnVarID << ", /*Op*/"
        << OpIdx << ", " << Value << ",\n";
@@ -511,7 +512,7 @@ public:
     return P->getKind() == OPM_LiteralInt;
   }
 
-  void emitCxxPredicateExpr(raw_ostream &OS, RuleMatcher &Rule,
+  void emitPredicateOpcodes(raw_ostream &OS, RuleMatcher &Rule,
                             unsigned InsnVarID, unsigned OpIdx) const override {
     OS << "    GIM_CheckLiteralInt, /*MI*/" << InsnVarID << ", /*Op*/"
        << OpIdx << ", " << Value << ",\n";
@@ -566,16 +567,16 @@ public:
 
   InstructionMatcher &getInstructionMatcher() const { return Insn; }
 
-  /// Emit C++ statements to capture instructions into local variables.
-  void emitCxxCaptureStmts(raw_ostream &OS, RuleMatcher &Rule,
-                           unsigned InsnVarID) const {
+  /// Emit MatchTable opcodes to capture instructions into the MIs table.
+  void emitCaptureOpcodes(raw_ostream &OS, RuleMatcher &Rule,
+                          unsigned InsnVarID) const {
     for (const auto &Predicate : predicates())
-      Predicate->emitCxxCaptureStmts(OS, Rule, InsnVarID, OpIdx);
+      Predicate->emitCaptureOpcodes(OS, Rule, InsnVarID, OpIdx);
   }
 
-  /// Emit a C++ expression that tests whether the instruction named in
+  /// Emit MatchTable opcodes that test whether the instruction named in
   /// InsnVarID matches all the predicates and all the operands.
-  void emitCxxPredicateExpr(raw_ostream &OS, RuleMatcher &Rule,
+  void emitPredicateOpcodes(raw_ostream &OS, RuleMatcher &Rule,
                             unsigned InsnVarID) const {
     OS << "    // MIs[" << InsnVarID << "] ";
     if (SymbolicName.empty())
@@ -583,7 +584,7 @@ public:
     else
       OS << SymbolicName;
     OS << "\n";
-    emitCxxPredicateListExpr(OS, Rule, InsnVarID, OpIdx);
+    emitPredicateListOpcodes(OS, Rule, InsnVarID, OpIdx);
   }
 
   /// Compare the priority of this object and B.
@@ -649,9 +650,9 @@ public:
 
   PredicateKind getKind() const { return Kind; }
 
-  /// Emit a C++ expression that tests whether the instruction named in
+  /// Emit MatchTable opcodes that test whether the instruction named in
   /// InsnVarID matches the predicate.
-  virtual void emitCxxPredicateExpr(raw_ostream &OS, RuleMatcher &Rule,
+  virtual void emitPredicateOpcodes(raw_ostream &OS, RuleMatcher &Rule,
                                     unsigned InsnVarID) const = 0;
 
   /// Compare the priority of this object and B.
@@ -680,7 +681,7 @@ public:
     return P->getKind() == IPM_Opcode;
   }
 
-  void emitCxxPredicateExpr(raw_ostream &OS, RuleMatcher &Rule,
+  void emitPredicateOpcodes(raw_ostream &OS, RuleMatcher &Rule,
                             unsigned InsnVarID) const override {
     OS << "    GIM_CheckOpcode, /*MI*/" << InsnVarID << ", " << I->Namespace
        << "::" << I->TheDef->getName() << ",\n";
@@ -771,23 +772,23 @@ public:
     return make_range(operands_begin(), operands_end());
   }
 
-  /// Emit C++ statements to check the shape of the match and capture
-  /// instructions into local variables.
-  void emitCxxCaptureStmts(raw_ostream &OS, RuleMatcher &Rule,
-                           unsigned InsnID) {
+  /// Emit MatchTable opcodes to check the shape of the match and capture
+  /// instructions into the MIs table.
+  void emitCaptureOpcodes(raw_ostream &OS, RuleMatcher &Rule,
+                          unsigned InsnID) {
     OS << "    GIM_CheckNumOperands, /*MI*/" << InsnID << ", /*Expected*/"
        << getNumOperands() << ",\n";
     for (const auto &Operand : Operands)
-      Operand->emitCxxCaptureStmts(OS, Rule, InsnID);
+      Operand->emitCaptureOpcodes(OS, Rule, InsnID);
   }
 
-  /// Emit a C++ expression that tests whether the instruction named in
+  /// Emit MatchTable opcodes that test whether the instruction named in
   /// InsnVarName matches all the predicates and all the operands.
-  void emitCxxPredicateExpr(raw_ostream &OS, RuleMatcher &Rule,
+  void emitPredicateOpcodes(raw_ostream &OS, RuleMatcher &Rule,
                             unsigned InsnVarID) const {
-    emitCxxPredicateListExpr(OS, Rule, InsnVarID);
+    emitPredicateListOpcodes(OS, Rule, InsnVarID);
     for (const auto &Operand : Operands)
-      Operand->emitCxxPredicateExpr(OS, Rule, InsnVarID);
+      Operand->emitPredicateOpcodes(OS, Rule, InsnVarID);
   }
 
   /// Compare the priority of this object and B.
@@ -864,17 +865,17 @@ public:
     return InsnMatcher->getOptionalOperand(SymbolicName);
   }
 
-  void emitCxxCaptureStmts(raw_ostream &OS, RuleMatcher &Rule,
-                           unsigned InsnID, unsigned OpIdx) const override {
+  void emitCaptureOpcodes(raw_ostream &OS, RuleMatcher &Rule,
+                          unsigned InsnID, unsigned OpIdx) const override {
     unsigned InsnVarID = Rule.defineInsnVar(OS, *InsnMatcher, InsnID, OpIdx);
-    InsnMatcher->emitCxxCaptureStmts(OS, Rule, InsnVarID);
+    InsnMatcher->emitCaptureOpcodes(OS, Rule, InsnVarID);
   }
 
-  void emitCxxPredicateExpr(raw_ostream &OS, RuleMatcher &Rule,
+  void emitPredicateOpcodes(raw_ostream &OS, RuleMatcher &Rule,
                             unsigned InsnVarID_,
                             unsigned OpIdx_) const override {
     unsigned InsnVarID = Rule.getInsnVarID(*InsnMatcher);
-    InsnMatcher->emitCxxPredicateExpr(OS, Rule, InsnVarID);
+    InsnMatcher->emitPredicateOpcodes(OS, Rule, InsnVarID);
   }
 };
 
@@ -898,7 +899,7 @@ public:
 
   RendererKind getKind() const { return Kind; }
 
-  virtual void emitCxxRenderStmts(raw_ostream &OS, RuleMatcher &Rule) const = 0;
+  virtual void emitRenderOpcodes(raw_ostream &OS, RuleMatcher &Rule) const = 0;
 };
 
 /// A CopyRenderer emits code to copy a single operand from an existing
@@ -925,7 +926,7 @@ public:
 
   const StringRef getSymbolicName() const { return SymbolicName; }
 
-  void emitCxxRenderStmts(raw_ostream &OS, RuleMatcher &Rule) const override {
+  void emitRenderOpcodes(raw_ostream &OS, RuleMatcher &Rule) const override {
     const OperandMatcher &Operand = Matched.getOperand(SymbolicName);
     unsigned OldInsnVarID = Rule.getInsnVarID(Operand.getInstructionMatcher());
     OS << "    GIR_Copy, /*NewInsnID*/" << NewInsnID << ", /*OldInsnID*/"
@@ -961,7 +962,7 @@ public:
 
   const StringRef getSymbolicName() const { return SymbolicName; }
 
-  void emitCxxRenderStmts(raw_ostream &OS, RuleMatcher &Rule) const override {
+  void emitRenderOpcodes(raw_ostream &OS, RuleMatcher &Rule) const override {
     const OperandMatcher &Operand = Matched.getOperand(SymbolicName);
     unsigned OldInsnVarID = Rule.getInsnVarID(Operand.getInstructionMatcher());
     OS << "    GIR_CopySubReg, /*NewInsnID*/" << NewInsnID
@@ -987,7 +988,7 @@ public:
     return R->getKind() == OR_Register;
   }
 
-  void emitCxxRenderStmts(raw_ostream &OS, RuleMatcher &Rule) const override {
+  void emitRenderOpcodes(raw_ostream &OS, RuleMatcher &Rule) const override {
     OS << "      GIR_AddRegister, /*InsnID*/" << InsnID << ", "
        << (RegisterDef->getValue("Namespace")
                ? RegisterDef->getValueAsString("Namespace")
@@ -1010,7 +1011,7 @@ public:
     return R->getKind() == OR_Imm;
   }
 
-  void emitCxxRenderStmts(raw_ostream &OS, RuleMatcher &Rule) const override {
+  void emitRenderOpcodes(raw_ostream &OS, RuleMatcher &Rule) const override {
     OS << "      GIR_AddImm, /*InsnID*/" << InsnID << ", /*Imm*/" << Imm
        << ",\n";
   }
@@ -1042,7 +1043,7 @@ public:
     return R->getKind() == OR_ComplexPattern;
   }
 
-  void emitCxxRenderStmts(raw_ostream &OS, RuleMatcher &Rule) const override {
+  void emitRenderOpcodes(raw_ostream &OS, RuleMatcher &Rule) const override {
     OS << "    GIR_ComplexRenderer, /*InsnID*/" << InsnID << ", /*RendererID*/"
        << RendererID << ",\n";
   }
@@ -1152,7 +1153,7 @@ public:
     OS << "    GIR_BuildMI, /*InsnID*/" << InsnID << ", /*Opcode*/"
        << I->Namespace << "::" << I->TheDef->getName() << ",\n";
     for (const auto &Renderer : OperandRenderers)
-      Renderer->emitCxxRenderStmts(OS, Rule);
+      Renderer->emitRenderOpcodes(OS, Rule);
 
     OS << "    GIR_MergeMemOperands, /*InsnID*/" << InsnID << ",\n"
        << "    GIR_EraseFromParent, /*InsnID*/" << RecycleInsnID << ",\n";
@@ -1235,12 +1236,12 @@ unsigned RuleMatcher::getInsnVarID(const InstructionMatcher &InsnMatcher) const 
   llvm_unreachable("Matched Insn was not captured in a local variable");
 }
 
-/// Emit C++ statements to check the shape of the match and capture
+/// Emit MatchTable opcodes to check the shape of the match and capture
 /// instructions into local variables.
-void RuleMatcher::emitCxxCaptureStmts(raw_ostream &OS) {
+void RuleMatcher::emitCaptureOpcodes(raw_ostream &OS) {
   assert(Matchers.size() == 1 && "Cannot handle multi-root matchers yet");
   unsigned InsnVarID = implicitlyDefineInsnVar(*Matchers.front());
-  Matchers.front()->emitCxxCaptureStmts(OS, *this, InsnVarID);
+  Matchers.front()->emitCaptureOpcodes(OS, *this, InsnVarID);
 }
 
 void RuleMatcher::emit(raw_ostream &OS) {
@@ -1264,9 +1265,9 @@ void RuleMatcher::emit(raw_ostream &OS) {
        << ",\n";
   }
 
-  emitCxxCaptureStmts(OS);
+  emitCaptureOpcodes(OS);
 
-  Matchers.front()->emitCxxPredicateExpr(OS, *this,
+  Matchers.front()->emitPredicateOpcodes(OS, *this,
                                          getInsnVarID(*Matchers.front()));
 
   // We must also check if it's safe to fold the matched instructions.

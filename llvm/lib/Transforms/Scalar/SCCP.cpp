@@ -963,7 +963,7 @@ void SCCPSolver::visitBinaryOperator(Instruction &I) {
       } else {
         // X or -1 = -1
         if (ConstantInt *CI = NonOverdefVal->getConstantInt())
-          if (CI->isAllOnesValue())
+          if (CI->isMinusOne())
             return markConstant(IV, &I, NonOverdefVal->getConstant());
       }
     }

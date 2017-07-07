@@ -121,3 +121,44 @@ end:
 
 declare void @foo(i32)
 declare i32 @bar(i32)
+
+; CHECK-LABEL: @test_and
+; CHECK: tpath:
+; CHECK-NOT: select
+; CHECK: ret i32 313
+define i32 @test_and(i32 %a, i32 %b) {
+entry:
+  %cmp1 = icmp ne i32 %a, 0
+  %cmp2 = icmp ne i32 %b, 0
+  %and = and i1 %cmp1, %cmp2
+  br i1 %and, label %tpath, label %end
+
+tpath:
+  %cmp3 = icmp eq i32 %a, 0 ;; <-- implied false
+  %c = select i1 %cmp3, i32 0, i32 313
+  ret i32 %c
+
+end:
+  ret i32 0
+}
+
+; cmp1 and cmp2 are false on the 'fpath' path and thus cmp3 is true.
+; CHECK-LABEL: @test_or1
+; CHECK: fpath:
+; CHECK-NOT: select
+; CHECK: ret i32 37
+define i32 @test_or1(i32 %a, i32 %b) {
+entry:
+  %cmp1 = icmp eq i32 %a, 0
+  %cmp2 = icmp eq i32 %b, 0
+  %or = or i1 %cmp1, %cmp2
+  br i1 %or, label %end, label %fpath
+
+fpath:
+  %cmp3 = icmp ne i32 %a, 0  ;; <-- implied true
+  %c = select i1 %cmp3, i32 37, i32 0
+  ret i32 %c
+
+end:
+  ret i32 0
+}

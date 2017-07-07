@@ -110,10 +110,8 @@ static bool canShrink(MachineInstr &MI, const SIInstrInfo *TII,
   }
 
   const MachineOperand *Src1 = TII->getNamedOperand(MI, AMDGPU::OpName::src1);
-  const MachineOperand *Src1Mod =
-      TII->getNamedOperand(MI, AMDGPU::OpName::src1_modifiers);
-
-  if (Src1 && (!isVGPR(Src1, TRI, MRI) || (Src1Mod && Src1Mod->getImm() != 0)))
+  if (Src1 && (!isVGPR(Src1, TRI, MRI) ||
+               TII->hasModifiersSet(MI, AMDGPU::OpName::src1_modifiers)))
     return false;
 
   // We don't need to check src0, all input types are legal, so just make sure
@@ -122,10 +120,8 @@ static bool canShrink(MachineInstr &MI, const SIInstrInfo *TII,
     return false;
 
   // Check output modifiers
-  if (TII->hasModifiersSet(MI, AMDGPU::OpName::omod))
-    return false;
-
-  return !TII->hasModifiersSet(MI, AMDGPU::OpName::clamp);
+  return !TII->hasModifiersSet(MI, AMDGPU::OpName::omod) &&
+         !TII->hasModifiersSet(MI, AMDGPU::OpName::clamp);
 }
 
 /// \brief This function checks \p MI for operands defined by a move immediate

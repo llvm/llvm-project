@@ -19,6 +19,7 @@
 #include "AMDGPUCallLowering.h"
 #include "AMDGPUInstructionSelector.h"
 #include "AMDGPULegalizerInfo.h"
+#include "AMDGPUMacroFusion.h"
 #include "AMDGPUTargetObjectFile.h"
 #include "AMDGPUTargetTransformInfo.h"
 #include "GCNIterativeScheduler.h"
@@ -173,6 +174,7 @@ createGCNMaxOccupancyMachineScheduler(MachineSchedContext *C) {
     new GCNScheduleDAGMILive(C, make_unique<GCNMaxOccupancySchedStrategy>(C));
   DAG->addMutation(createLoadClusterDAGMutation(DAG->TII, DAG->TRI));
   DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
+  DAG->addMutation(createAMDGPUMacroFusionDAGMutation());
   return DAG;
 }
 

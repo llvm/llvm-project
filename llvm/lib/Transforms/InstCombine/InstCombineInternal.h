@@ -21,8 +21,6 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetFolder.h"
 #include "llvm/Analysis/ValueTracking.h"
-#include "llvm/BinaryFormat/Dwarf.h"
-#include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
@@ -598,9 +596,8 @@ private:
 
   /// This tries to simplify binary operations by factorizing out common terms
   /// (e. g. "(A*B)+(A*C)" -> "A*(B+C)").
-  Value *tryFactorization(InstCombiner::BuilderTy *, BinaryOperator &,
-                          Instruction::BinaryOps, Value *, Value *, Value *,
-                          Value *);
+  Value *tryFactorization(BinaryOperator &, Instruction::BinaryOps, Value *,
+                          Value *, Value *, Value *);
 
   /// Match a select chain which produces one of three values based on whether
   /// the LHS is less than, equal to, or greater than RHS respectively.
@@ -639,7 +636,6 @@ private:
                                     APInt &UndefElts, unsigned Depth = 0);
 
   Value *SimplifyVectorOp(BinaryOperator &Inst);
-  Value *SimplifyBSwap(BinaryOperator &Inst);
 
 
   /// Given a binary operator, cast instruction, or select which has a PHI node

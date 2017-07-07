@@ -140,6 +140,13 @@ static cl::opt<bool> LSRExpNarrow(
   cl::desc("Narrow LSR complex solution using"
            " expectation of registers number"));
 
+// Flag to narrow search space by filtering non-optimal formulae with
+// the same ScaledReg and Scale.
+static cl::opt<bool> FilterSameScaledReg(
+    "lsr-filter-same-scaled-reg", cl::Hidden, cl::init(true),
+    cl::desc("Narrow LSR search space by filtering non-optimal formulae"
+             " with the same ScaledReg and Scale"));
+
 #ifndef NDEBUG
 // Stress test IV chain generation.
 static cl::opt<bool> StressIVChain(
@@ -1902,6 +1909,7 @@ class LSRInstance {
   void NarrowSearchSpaceByDetectingSupersets();
   void NarrowSearchSpaceByCollapsingUnrolledCode();
   void NarrowSearchSpaceByRefilteringUndesirableDedicatedRegisters();
+  void NarrowSearchSpaceByFilterFormulaWithSameScaledReg();
   void NarrowSearchSpaceByDeletingCostlyFormulas();
   void NarrowSearchSpaceByPickingWinnerRegs();
   void NarrowSearchSpaceUsingHeuristics();
@@ -2318,7 +2326,7 @@ LSRInstance::OptimizeLoopTermCond() {
                 dyn_cast_or_null<SCEVConstant>(getExactSDiv(B, A, SE))) {
             const ConstantInt *C = D->getValue();
             // Stride of one or negative one can have reuse with non-addresses.
-            if (C->isOne() || C->isAllOnesValue())
+            if (C->isOne() || C->isMinusOne())
               goto decline_post_inc;
             // Avoid weird situations.
             if (C->getValue().getMinSignedBits() >= 64 ||
@@ -4306,6 +4314,104 @@ void LSRInstance::NarrowSearchSpaceByRefilteringUndesirableDedicatedRegisters(){
   }
 }
 
+/// If a LSRUse has multiple formulae with the same ScaledReg and Scale.
+/// Pick the best one and delete the others.
+/// This narrowing heuristic is to keep as many formulae with different
+/// Scale and ScaledReg pair as possible while narrowing the search space.
+/// The benefit is that it is more likely to find out a better solution
+/// from a formulae set with more Scale and ScaledReg variations than
+/// a formulae set with the same Scale and ScaledReg. The picking winner
+/// reg heurstic will often keep the formulae with the same Scale and
+/// ScaledReg and filter others, and we want to avoid that if possible.
+void LSRInstance::NarrowSearchSpaceByFilterFormulaWithSameScaledReg() {
+  if (EstimateSearchSpaceComplexity() < ComplexityLimit)
+    return;
+
+  DEBUG(dbgs() << "The search space is too complex.\n"
+                  "Narrowing the search space by choosing the best Formula "
+                  "from the Formulae with the same Scale and ScaledReg.\n");
+
+  // Map the "Scale * ScaledReg" pair to the best formula of current LSRUse.
+  typedef DenseMap<std::pair<const SCEV *, int64_t>, size_t> BestFormulaeTy;
+  BestFormulaeTy BestFormulae;
+#ifndef NDEBUG
+  bool ChangedFormulae = false;
+#endif
+  DenseSet<const SCEV *> VisitedRegs;
+  SmallPtrSet<const SCEV *, 16> Regs;
+
+  for (size_t LUIdx = 0, NumUses = Uses.size(); LUIdx != NumUses; ++LUIdx) {
+    LSRUse &LU = Uses[LUIdx];
+    DEBUG(dbgs() << "Filtering for use "; LU.print(dbgs()); dbgs() << '\n');
+
+    // Return true if Formula FA is better than Formula FB.
+    auto IsBetterThan = [&](Formula &FA, Formula &FB) {
+      // First we will try to choose the Formula with fewer new registers.
+      // For a register used by current Formula, the more the register is
+      // shared among LSRUses, the less we increase the register number
+      // counter of the formula.
+      size_t FARegNum = 0;
+      for (const SCEV *Reg : FA.BaseRegs) {
+        const SmallBitVector &UsedByIndices = RegUses.getUsedByIndices(Reg);
+        FARegNum += (NumUses - UsedByIndices.count() + 1);
+      }
+      size_t FBRegNum = 0;
+      for (const SCEV *Reg : FB.BaseRegs) {
+        const SmallBitVector &UsedByIndices = RegUses.getUsedByIndices(Reg);
+        FBRegNum += (NumUses - UsedByIndices.count() + 1);
+      }
+      if (FARegNum != FBRegNum)
+        return FARegNum < FBRegNum;
+
+      // If the new register numbers are the same, choose the Formula with
+      // less Cost.
+      Cost CostFA, CostFB;
+      Regs.clear();
+      CostFA.RateFormula(TTI, FA, Regs, VisitedRegs, L, SE, DT, LU);
+      Regs.clear();
+      CostFB.RateFormula(TTI, FB, Regs, VisitedRegs, L, SE, DT, LU);
+      return CostFA.isLess(CostFB, TTI);
+    };
+
+    bool Any = false;
+    for (size_t FIdx = 0, NumForms = LU.Formulae.size(); FIdx != NumForms;
+         ++FIdx) {
+      Formula &F = LU.Formulae[FIdx];
+      if (!F.ScaledReg)
+        continue;
+      auto P = BestFormulae.insert({{F.ScaledReg, F.Scale}, FIdx});
+      if (P.second)
+        continue;
+
+      Formula &Best = LU.Formulae[P.first->second];
+      if (IsBetterThan(F, Best))
+        std::swap(F, Best);
+      DEBUG(dbgs() << "  Filtering out formula "; F.print(dbgs());
+            dbgs() << "\n"
+                      "    in favor of formula ";
+            Best.print(dbgs()); dbgs() << '\n');
+#ifndef NDEBUG
+      ChangedFormulae = true;
+#endif
+      LU.DeleteFormula(F);
+      --FIdx;
+      --NumForms;
+      Any = true;
+    }
+    if (Any)
+      LU.RecomputeRegs(LUIdx, RegUses);
+
+    // Reset this to prepare for the next use.
+    BestFormulae.clear();
+  }
+
+  DEBUG(if (ChangedFormulae) {
+    dbgs() << "\n"
+              "After filtering out undesirable candidates:\n";
+    print_uses(dbgs());
+  });
+}
+
 /// The function delete formulas with high registers number expectation.
 /// Assuming we don't know the value of each formula (already delete
 /// all inefficient), generate probability of not selecting for each
@@ -4516,6 +4622,8 @@ void LSRInstance::NarrowSearchSpaceUsingHeuristics() {
   NarrowSearchSpaceByDetectingSupersets();
   NarrowSearchSpaceByCollapsingUnrolledCode();
   NarrowSearchSpaceByRefilteringUndesirableDedicatedRegisters();
+  if (FilterSameScaledReg)
+    NarrowSearchSpaceByFilterFormulaWithSameScaledReg();
   if (LSRExpNarrow)
     NarrowSearchSpaceByDeletingCostlyFormulas();
   else

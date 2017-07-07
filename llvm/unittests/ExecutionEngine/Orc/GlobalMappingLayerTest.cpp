@@ -17,7 +17,7 @@ namespace {
 
 struct MockBaseLayer {
 
-  typedef int ModuleSetHandleT;
+  typedef int ModuleHandleT;
 
   JITSymbol findSymbol(const std::string &Name, bool ExportedSymbolsOnly) {
     if (Name == "bar")
