@@ -30,32 +30,8 @@ class TestMacros(TestBase):
         src_file_spec = lldb.SBFileSpec(src_file)
         self.assertTrue(src_file_spec.IsValid(), "Main source file")
 
-        # Get the path of the executable
-        cwd = os.getcwd()
-        exe_file = "a.out"
-        exe_path = os.path.join(cwd, exe_file)
-
-        # Load the executable
-        target = self.dbg.CreateTarget(exe_path)
-        self.assertTrue(target.IsValid(), VALID_TARGET)
-
-        # Set breakpoints
-        bp1 = target.BreakpointCreateBySourceRegex("Break here", src_file_spec)
-        self.assertTrue(
-            bp1.IsValid() and bp1.GetNumLocations() >= 1,
-            VALID_BREAKPOINT)
-
-        # Launch the process
-        process = target.LaunchSimple(
-            None, None, self.get_process_working_directory())
-        self.assertTrue(process.IsValid(), PROCESS_IS_VALID)
-
-        # Get the thread of the process
-        self.assertTrue(
-            process.GetState() == lldb.eStateStopped,
-            PROCESS_STOPPED)
-        thread = lldbutil.get_stopped_thread(
-            process, lldb.eStopReasonBreakpoint)
+        (target, process, thread, bp1) = lldbutil.run_to_source_breakpoint(
+            self, "Break here", src_file_spec)
 
         # Get frame for current thread
         frame = thread.GetSelectedFrame()

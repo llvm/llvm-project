@@ -146,7 +146,7 @@ namespace {
     
     llvm::DenseMap<BlockExpr *, std::string> RewrittenBlockExprs;
     llvm::DenseMap<ObjCInterfaceDecl *, 
-                    llvm::SmallPtrSet<ObjCIvarDecl *, 8> > ReferencedIvars;
+                    llvm::SmallSetVector<ObjCIvarDecl *, 8> > ReferencedIvars;
     
     // ivar bitfield grouping containers
     llvm::DenseSet<const ObjCInterfaceDecl *> ObjCInterefaceHasBitfieldGroups;
@@ -1013,7 +1013,7 @@ void RewriteModernObjC::RewritePropertyImplDecl(ObjCPropertyImplDecl *PID,
     Setr = "\nextern \"C\" __declspec(dllimport) "
     "void objc_setProperty (id, SEL, long, id, bool, bool);\n";
   }
-  
+
   RewriteObjCMethodDecl(OID->getContainingInterface(), 
                         PD->getSetterMethodDecl(), Setr);
   Setr += "{ ";
@@ -3965,10 +3965,11 @@ void RewriteModernObjC::RewriteIvarOffsetSymbols(ObjCInterfaceDecl *CDecl,
                                                   std::string &Result) {
   // write out ivar offset symbols which have been referenced in an ivar
   // access expression.
-  llvm::SmallPtrSet<ObjCIvarDecl *, 8> Ivars = ReferencedIvars[CDecl];
+  llvm::SmallSetVector<ObjCIvarDecl *, 8> Ivars = ReferencedIvars[CDecl];
+
   if (Ivars.empty())
     return;
-  
+
   llvm::DenseSet<std::pair<const ObjCInterfaceDecl*, unsigned> > GroupSymbolOutput;
   for (ObjCIvarDecl *IvarDecl : Ivars) {
     const ObjCInterfaceDecl *IDecl = IvarDecl->getContainingInterface();

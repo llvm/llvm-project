@@ -2301,6 +2301,8 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     if (Right.is(tok::l_paren) &&
         Left.isOneOf(Keywords.kw_returns, Keywords.kw_option))
       return true;
+    if (Right.isOneOf(tok::l_brace, tok::less) && Left.is(TT_SelectorName))
+      return true;
   } else if (Style.Language == FormatStyle::LK_JavaScript) {
     if (Left.is(TT_JsFatArrow))
       return true;

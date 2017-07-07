@@ -138,6 +138,25 @@ struct MustKillsInfo {
   MustKillsInfo() : KillsSchedule(nullptr), TaggedMustKills(nullptr){};
 };
 
+/// Check if SAI's uses are entirely contained within Scop S.
+/// If a scalar is used only with a Scop, we are free to kill it, as no data
+/// can flow in/out of the value any more.
+/// @see computeMustKillsInfo
+static bool isScalarUsesContainedInScop(const Scop &S,
+                                        const ScopArrayInfo *SAI) {
+  assert(SAI->isValueKind() && "this function only deals with scalars."
+                               " Dealing with arrays required alias analysis");
+
+  const Region &R = S.getRegion();
+  for (User *U : SAI->getBasePtr()->users()) {
+    Instruction *I = dyn_cast<Instruction>(U);
+    assert(I && "invalid user of scop array info");
+    if (!R.contains(I))
+      return false;
+  }
+  return true;
+}
+
 /// Compute must-kills needed to enable live range reordering with PPCG.
 ///
 /// @params S The Scop to compute live range reordering information
@@ -147,13 +166,14 @@ static MustKillsInfo computeMustKillsInfo(const Scop &S) {
   const isl::space ParamSpace(isl::manage(S.getParamSpace()));
   MustKillsInfo Info;
 
-  // 1. Collect phi nodes in scop.
+  // 1. Collect all ScopArrayInfo that satisfy *any* of the criteria:
+  //      1.1 phi nodes in scop.
+  //      1.2 scalars that are only used within the scop
   SmallVector<isl::id, 4> KillMemIds;
   for (ScopArrayInfo *SAI : S.arrays()) {
-    if (!SAI->isPHIKind())
-      continue;
-
-    KillMemIds.push_back(isl::manage(SAI->getBasePtrId()));
+    if (SAI->isPHIKind() ||
+        (SAI->isValueKind() && isScalarUsesContainedInScop(S, SAI)))
+      KillMemIds.push_back(isl::manage(SAI->getBasePtrId()));
   }
 
   Info.TaggedMustKills = isl::union_map::empty(isl::space(ParamSpace));

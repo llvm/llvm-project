@@ -437,12 +437,17 @@ export this information, every DSO implements
 
 .. code-block:: none
 
-   void __cfi_check(uint64 CallSiteTypeId, void *TargetAddr)
+   void __cfi_check(uint64 CallSiteTypeId, void *TargetAddr, void *DiagData)
 
-This function provides external modules with access to CFI checks for the
-targets inside this DSO.  For each known ``CallSiteTypeId``, this function
-performs an ``llvm.type.test`` with the corresponding type identifier. It
-aborts if the type is unknown, or if the check fails.
+This function provides external modules with access to CFI checks for
+the targets inside this DSO.  For each known ``CallSiteTypeId``, this
+function performs an ``llvm.type.test`` with the corresponding type
+identifier. It reports an error if the type is unknown, or if the
+check fails. Depending on the values of compiler flags
+``-fsanitize-trap`` and ``-fsanitize-recover``, this function may
+print an error, abort and/or return to the caller. ``DiagData`` is an
+opaque pointer to the diagnostic information about the error, or
+``null`` if the caller does not provide this information.
 
 The basic implementation is a large switch statement over all values
 of CallSiteTypeId supported by this DSO, and each case is similar to
@@ -452,11 +457,10 @@ CFI Shadow
 ----------
 
 To route CFI checks to the target DSO's __cfi_check function, a
-mapping from possible virtual / indirect call targets to
-the corresponding __cfi_check functions is maintained. This mapping is
+mapping from possible virtual / indirect call targets to the
+corresponding __cfi_check functions is maintained. This mapping is
 implemented as a sparse array of 2 bytes for every possible page (4096
-bytes) of memory. The table is kept readonly (FIXME: not yet) most of
-the time.
+bytes) of memory. The table is kept readonly most of the time.
 
 There are 3 types of shadow values:
 
@@ -481,14 +485,24 @@ them.
 CFI_SlowPath
 ------------
 
-The slow path check is implemented in compiler-rt library as
+The slow path check is implemented in a runtime support library as
 
 .. code-block:: none
 
   void __cfi_slowpath(uint64 CallSiteTypeId, void *TargetAddr)
+  void __cfi_slowpath_diag(uint64 CallSiteTypeId, void *TargetAddr, void *DiagData)
 
-This functions loads a shadow value for ``TargetAddr``, finds the
-address of __cfi_check as described above and calls that.
+These functions loads a shadow value for ``TargetAddr``, finds the
+address of ``__cfi_check`` as described above and calls
+that. ``DiagData`` is an opaque pointer to diagnostic data which is
+passed verbatim to ``__cfi_check``, and ``__cfi_slowpath`` passes
+``nullptr`` instead.
+
+Compiler-RT library contains reference implementations of slowpath
+functions, but they have unresolvable issues with correctness and
+performance in the handling of dlopen(). It is recommended that
+platforms provide their own implementations, usually as part of libc
+or libdl.
 
 Position-independent executable requirement
 -------------------------------------------

@@ -155,9 +155,7 @@ static SectionKey createKey(InputSectionBase *C, StringRef OutsecName) {
   return SectionKey{OutsecName, Flags, Alignment};
 }
 
-OutputSectionFactory::OutputSectionFactory(
-    std::vector<OutputSection *> &OutputSections)
-    : OutputSections(OutputSections) {}
+OutputSectionFactory::OutputSectionFactory() {}
 
 static uint64_t getIncompatibleFlags(uint64_t Flags) {
   return Flags & (SHF_ALLOC | SHF_TLS);
