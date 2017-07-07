@@ -12097,6 +12097,8 @@ void Sema::RefersToMemberWithReducedAlignment(
     if (ME->isArrow())
       BaseType = BaseType->getPointeeType();
     RecordDecl *RD = BaseType->getAs<RecordType>()->getDecl();
+    if (RD->isInvalidDecl())
+      return;
 
     ValueDecl *MD = ME->getMemberDecl();
     auto *FD = dyn_cast<FieldDecl>(MD);

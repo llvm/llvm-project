@@ -110,7 +110,6 @@ struct MemoryRegion {
   std::string Name;
   uint64_t Origin;
   uint64_t Length;
-  uint64_t Offset;
   uint32_t Flags;
   uint32_t NegFlags;
 };
@@ -226,6 +225,17 @@ struct ScriptConfiguration {
 };
 
 class LinkerScript final {
+  // Temporary state used in processCommands() and assignAddresses()
+  // that must be reinitialized for each call to the above functions, and must
+  // not be used outside of the scope of a call to the above functions.
+  struct AddressState {
+    uint64_t ThreadBssOffset = 0;
+    OutputSection *OutSec = nullptr;
+    MemoryRegion *MemRegion = nullptr;
+    llvm::DenseMap<const MemoryRegion *, uint64_t> MemRegionOffset;
+    std::function<uint64_t()> LMAOffset;
+    AddressState(const ScriptConfiguration &Opt);
+  };
   llvm::DenseMap<OutputSection *, OutputSectionCommand *> SecToCommand;
   llvm::DenseMap<StringRef, OutputSectionCommand *> NameToOutputSectionCommand;
 
@@ -248,14 +258,10 @@ class LinkerScript final {
   void output(InputSection *Sec);
   void process(BaseCommand &Base);
 
+  AddressState *CurAddressState = nullptr;
   OutputSection *Aether;
 
   uint64_t Dot;
-  uint64_t ThreadBssOffset = 0;
-
-  std::function<uint64_t()> LMAOffset;
-  OutputSection *CurOutSec = nullptr;
-  MemoryRegion *CurMemRegion = nullptr;
 
 public:
   bool ErrorOnMissingSection = false;

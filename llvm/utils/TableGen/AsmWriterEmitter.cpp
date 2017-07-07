@@ -137,12 +137,12 @@ static void EmitInstructions(std::vector<AsmWriterInst> &Insts,
       O << "    switch (MI->getOpcode()) {\n";
       O << "    default: llvm_unreachable(\"Unexpected opcode.\");\n";
       std::vector<std::pair<std::string, AsmWriterOperand>> OpsToPrint;
-      OpsToPrint.push_back(std::make_pair(FirstInst.CGI->Namespace + "::" +
+      OpsToPrint.push_back(std::make_pair(FirstInst.CGI->Namespace.str() + "::" +
                                           FirstInst.CGI->TheDef->getName().str(),
                                           FirstInst.Operands[i]));
 
       for (const AsmWriterInst &AWI : SimilarInsts) {
-        OpsToPrint.push_back(std::make_pair(AWI.CGI->Namespace+"::" +
+        OpsToPrint.push_back(std::make_pair(AWI.CGI->Namespace.str()+"::" +
                                             AWI.CGI->TheDef->getName().str(),
                                             AWI.Operands[i]));
       }

@@ -458,7 +458,10 @@ static void diagnoseUseOfProtocols(Sema &TheSema,
   // Diagnose availability in the context of the ObjC container.
   Sema::ContextRAII SavedContext(TheSema, CD);
   for (unsigned i = 0; i < NumProtoRefs; ++i) {
-    (void)TheSema.DiagnoseUseOfDecl(ProtoRefs[i], ProtoLocs[i]);
+    (void)TheSema.DiagnoseUseOfDecl(ProtoRefs[i], ProtoLocs[i],
+                                    /*UnknownObjCClass=*/nullptr,
+                                    /*ObjCPropertyAccess=*/false,
+                                    /*AvoidPartialAvailabilityChecks=*/true);
   }
 }
 
