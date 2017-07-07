@@ -152,6 +152,13 @@ SELECTION OPTIONS
 
  Run the tests in a random order.
 
+.. option:: --filter=REGEXP
+
+  Run only those tests whose name matches the regular expression specified in
+  ``REGEXP``. The environment variable ``LIT_FILTER`` can be also used in place
+  of this option, which is especially useful in environments where the call
+  to ``lit`` is issued indirectly.
+
 ADDITIONAL OPTIONS
 ------------------
 
