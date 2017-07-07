@@ -815,7 +815,7 @@ uptr GetTaskInfoMaxAddress() {
   mach_msg_type_number_t count = sizeof(vm_info) / sizeof(int);
   int err = task_info(mach_task_self(), TASK_VM_INFO, (int *)&vm_info, &count);
   if (err == 0) {
-    return vm_info.max_address;
+    return vm_info.max_address - 1;
   } else {
     // xnu cannot provide vm address limit
     return 0x200000000 - 1;

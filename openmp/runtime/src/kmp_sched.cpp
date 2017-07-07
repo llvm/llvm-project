@@ -53,12 +53,12 @@ static void __kmp_for_static_init(ident_t *loc, kmp_int32 global_tid,
   typedef typename traits_t<T>::unsigned_t UT;
   typedef typename traits_t<T>::signed_t ST;
   /*  this all has to be changed back to TID and such.. */
-  register kmp_int32 gtid = global_tid;
-  register kmp_uint32 tid;
-  register kmp_uint32 nth;
-  register UT trip_count;
-  register kmp_team_t *team;
-  register kmp_info_t *th = __kmp_threads[gtid];
+  kmp_int32 gtid = global_tid;
+  kmp_uint32 tid;
+  kmp_uint32 nth;
+  UT trip_count;
+  kmp_team_t *team;
+  kmp_info_t *th = __kmp_threads[gtid];
 
 #if OMPT_SUPPORT && OMPT_TRACE
   ompt_team_info_t *team_info = NULL;
@@ -247,16 +247,16 @@ static void __kmp_for_static_init(ident_t *loc, kmp_int32 global_tid,
         *plastiter = (tid == trip_count - 1);
     } else {
       if (__kmp_static == kmp_sch_static_balanced) {
-        register UT small_chunk = trip_count / nth;
-        register UT extras = trip_count % nth;
+        UT small_chunk = trip_count / nth;
+        UT extras = trip_count % nth;
         *plower += incr * (tid * small_chunk + (tid < extras ? tid : extras));
         *pupper = *plower + small_chunk * incr - (tid < extras ? 0 : incr);
         if (plastiter != NULL)
           *plastiter = (tid == nth - 1);
       } else {
-        register T big_chunk_inc_count =
+        T big_chunk_inc_count =
             (trip_count / nth + ((trip_count % nth) ? 1 : 0)) * incr;
-        register T old_upper = *pupper;
+        T old_upper = *pupper;
 
         KMP_DEBUG_ASSERT(__kmp_static == kmp_sch_static_greedy);
         // Unknown static scheduling type.
@@ -284,7 +284,7 @@ static void __kmp_for_static_init(ident_t *loc, kmp_int32 global_tid,
     break;
   }
   case kmp_sch_static_chunked: {
-    register ST span;
+    ST span;
     if (chunk < 1) {
       chunk = 1;
     }
@@ -298,9 +298,9 @@ static void __kmp_for_static_init(ident_t *loc, kmp_int32 global_tid,
   }
 #if OMP_45_ENABLED
   case kmp_sch_static_balanced_chunked: {
-    register T old_upper = *pupper;
+    T old_upper = *pupper;
     // round up to make sure the chunk is enough to cover all iterations
-    register UT span = (trip_count + nth - 1) / nth;
+    UT span = (trip_count + nth - 1) / nth;
 
     // perform chunk adjustment
     chunk = (span + chunk - 1) & ~(chunk - 1);
@@ -376,12 +376,12 @@ static void __kmp_dist_for_static_init(ident_t *loc, kmp_int32 gtid,
   KMP_COUNT_BLOCK(OMP_DISTRIBUTE);
   typedef typename traits_t<T>::unsigned_t UT;
   typedef typename traits_t<T>::signed_t ST;
-  register kmp_uint32 tid;
-  register kmp_uint32 nth;
-  register kmp_uint32 team_id;
-  register kmp_uint32 nteams;
-  register UT trip_count;
-  register kmp_team_t *team;
+  kmp_uint32 tid;
+  kmp_uint32 nth;
+  kmp_uint32 team_id;
+  kmp_uint32 nteams;
+  UT trip_count;
+  kmp_team_t *team;
   kmp_info_t *th;
 
   KMP_DEBUG_ASSERT(plastiter && plower && pupper && pupperDist && pstride);
@@ -462,17 +462,17 @@ static void __kmp_dist_for_static_init(ident_t *loc, kmp_int32 gtid,
   } else {
     // Get the team's chunk first (each team gets at most one chunk)
     if (__kmp_static == kmp_sch_static_balanced) {
-      register UT chunkD = trip_count / nteams;
-      register UT extras = trip_count % nteams;
+      UT chunkD = trip_count / nteams;
+      UT extras = trip_count % nteams;
       *plower +=
           incr * (team_id * chunkD + (team_id < extras ? team_id : extras));
       *pupperDist = *plower + chunkD * incr - (team_id < extras ? 0 : incr);
       if (plastiter != NULL)
         *plastiter = (team_id == nteams - 1);
     } else {
-      register T chunk_inc_count =
+      T chunk_inc_count =
           (trip_count / nteams + ((trip_count % nteams) ? 1 : 0)) * incr;
-      register T upper = *pupper;
+      T upper = *pupper;
       KMP_DEBUG_ASSERT(__kmp_static == kmp_sch_static_greedy);
       // Unknown static scheduling type.
       *plower += team_id * chunk_inc_count;
@@ -531,17 +531,17 @@ static void __kmp_dist_for_static_init(ident_t *loc, kmp_int32 gtid,
             *plastiter = 0;
       } else {
         if (__kmp_static == kmp_sch_static_balanced) {
-          register UT chunkL = trip_count / nth;
-          register UT extras = trip_count % nth;
+          UT chunkL = trip_count / nth;
+          UT extras = trip_count % nth;
           *plower += incr * (tid * chunkL + (tid < extras ? tid : extras));
           *pupper = *plower + chunkL * incr - (tid < extras ? 0 : incr);
           if (plastiter != NULL)
             if (*plastiter != 0 && !(tid == nth - 1))
               *plastiter = 0;
         } else {
-          register T chunk_inc_count =
+          T chunk_inc_count =
               (trip_count / nth + ((trip_count % nth) ? 1 : 0)) * incr;
-          register T upper = *pupperDist;
+          T upper = *pupperDist;
           KMP_DEBUG_ASSERT(__kmp_static == kmp_sch_static_greedy);
           // Unknown static scheduling type.
           *plower += tid * chunk_inc_count;
@@ -570,7 +570,7 @@ static void __kmp_dist_for_static_init(ident_t *loc, kmp_int32 gtid,
       break;
     }
     case kmp_sch_static_chunked: {
-      register ST span;
+      ST span;
       if (chunk < 1)
         chunk = 1;
       span = chunk * incr;

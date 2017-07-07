@@ -1046,14 +1046,9 @@ GDBRemoteCommunicationServerCommon::Handle_A(StringExtractorGDBRemote &packet) {
 
   if (success) {
     m_process_launch_error = LaunchProcess();
-    if (m_process_launch_info.GetProcessID() != LLDB_INVALID_PROCESS_ID) {
+    if (m_process_launch_error.Success())
       return SendOKResponse();
-    } else {
-      Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PROCESS));
-      if (log)
-        log->Printf("LLGSPacketHandler::%s failed to launch exe: %s",
-                    __FUNCTION__, m_process_launch_error.AsCString());
-    }
+    LLDB_LOG(log, "failed to launch exe: {0}", m_process_launch_error);
   }
   return SendErrorResponse(8);
 }

@@ -73,15 +73,11 @@ enum GDBRemoteServerError {
 // GDBRemoteCommunicationServerLLGS constructor
 //----------------------------------------------------------------------
 GDBRemoteCommunicationServerLLGS::GDBRemoteCommunicationServerLLGS(
-    MainLoop &mainloop)
+    MainLoop &mainloop, const NativeProcessProtocol::Factory &process_factory)
     : GDBRemoteCommunicationServerCommon("gdb-remote.server",
                                          "gdb-remote.server.rx_packet"),
-      m_mainloop(mainloop), m_current_tid(LLDB_INVALID_THREAD_ID),
-      m_continue_tid(LLDB_INVALID_THREAD_ID), m_debugged_process_mutex(),
-      m_debugged_process_sp(), m_stdio_communication("process.stdio"),
-      m_inferior_prev_state(StateType::eStateInvalid),
-      m_saved_registers_map(), m_next_saved_registers_id(1),
-      m_handshake_completed(false) {
+      m_mainloop(mainloop), m_process_factory(process_factory),
+      m_stdio_communication("process.stdio") {
   RegisterPacketHandlers();
 }
 
@@ -241,19 +237,20 @@ Status GDBRemoteCommunicationServerLLGS::LaunchProcess() {
   const bool default_to_use_pty = true;
   m_process_launch_info.FinalizeFileActions(nullptr, default_to_use_pty);
 
-  Status error;
   {
     std::lock_guard<std::recursive_mutex> guard(m_debugged_process_mutex);
     assert(!m_debugged_process_sp && "lldb-server creating debugged "
                                      "process but one already exists");
-    error = NativeProcessProtocol::Launch(m_process_launch_info, *this,
-                                          m_mainloop, m_debugged_process_sp);
-  }
-
-  if (!error.Success()) {
-    fprintf(stderr, "%s: failed to launch executable %s", __FUNCTION__,
-            m_process_launch_info.GetArguments().GetArgumentAtIndex(0));
-    return error;
+    auto process_or =
+        m_process_factory.Launch(m_process_launch_info, *this, m_mainloop);
+    if (!process_or) {
+      Status status(process_or.takeError());
+      llvm::errs() << llvm::formatv(
+          "failed to launch executable `{0}`: {1}",
+          m_process_launch_info.GetArguments().GetArgumentAtIndex(0), status);
+      return status;
+    }
+    m_debugged_process_sp = *process_or;
   }
 
   // Handle mirroring of inferior stdout/stderr over the gdb-remote protocol
@@ -279,9 +276,9 @@ Status GDBRemoteCommunicationServerLLGS::LaunchProcess() {
         log->Printf("ProcessGDBRemoteCommunicationServerLLGS::%s setting "
                     "inferior STDIO fd to %d",
                     __FUNCTION__, terminal_fd);
-      error = SetSTDIOFileDescriptor(terminal_fd);
-      if (error.Fail())
-        return error;
+      Status status = SetSTDIOFileDescriptor(terminal_fd);
+      if (status.Fail())
+        return status;
     } else {
       if (log)
         log->Printf("ProcessGDBRemoteCommunicationServerLLGS::%s ignoring "
@@ -298,14 +295,12 @@ Status GDBRemoteCommunicationServerLLGS::LaunchProcess() {
 
   printf("Launched '%s' as process %" PRIu64 "...\n",
          m_process_launch_info.GetArguments().GetArgumentAtIndex(0),
-         m_process_launch_info.GetProcessID());
+         m_debugged_process_sp->GetID());
 
-  return error;
+  return Status();
 }
 
 Status GDBRemoteCommunicationServerLLGS::AttachToProcess(lldb::pid_t pid) {
-  Status error;
-
   Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PROCESS));
   if (log)
     log->Printf("GDBRemoteCommunicationServerLLGS::%s pid %" PRIu64,
@@ -321,13 +316,14 @@ Status GDBRemoteCommunicationServerLLGS::AttachToProcess(lldb::pid_t pid) {
                   pid, m_debugged_process_sp->GetID());
 
   // Try to attach.
-  error = NativeProcessProtocol::Attach(pid, *this, m_mainloop,
-                                        m_debugged_process_sp);
-  if (!error.Success()) {
-    fprintf(stderr, "%s: failed to attach to process %" PRIu64 ": %s",
-            __FUNCTION__, pid, error.AsCString());
-    return error;
+  auto process_or = m_process_factory.Attach(pid, *this, m_mainloop);
+  if (!process_or) {
+    Status status(process_or.takeError());
+    llvm::errs() << llvm::formatv("failed to attach to process {0}: {1}", pid,
+                                  status);
+    return status;
   }
+  m_debugged_process_sp = *process_or;
 
   // Setup stdout/stderr mapping from inferior.
   auto terminal_fd = m_debugged_process_sp->GetTerminalFileDescriptor();
@@ -336,9 +332,9 @@ Status GDBRemoteCommunicationServerLLGS::AttachToProcess(lldb::pid_t pid) {
       log->Printf("ProcessGDBRemoteCommunicationServerLLGS::%s setting "
                   "inferior STDIO fd to %d",
                   __FUNCTION__, terminal_fd);
-    error = SetSTDIOFileDescriptor(terminal_fd);
-    if (error.Fail())
-      return error;
+    Status status = SetSTDIOFileDescriptor(terminal_fd);
+    if (status.Fail())
+      return status;
   } else {
     if (log)
       log->Printf("ProcessGDBRemoteCommunicationServerLLGS::%s ignoring "
@@ -347,8 +343,7 @@ Status GDBRemoteCommunicationServerLLGS::AttachToProcess(lldb::pid_t pid) {
   }
 
   printf("Attached to process %" PRIu64 "...\n", pid);
-
-  return error;
+  return Status();
 }
 
 void GDBRemoteCommunicationServerLLGS::InitializeDelegate(
