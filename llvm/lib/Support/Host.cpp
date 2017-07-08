@@ -827,10 +827,8 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
   }
 }
 
-static void getAMDProcessorTypeAndSubtype(unsigned Family,
-                                          unsigned Model,
-                                          unsigned Features,
-                                          unsigned *Type,
+static void getAMDProcessorTypeAndSubtype(unsigned Family, unsigned Model,
+                                          unsigned Features, unsigned *Type,
                                           unsigned *Subtype) {
   // FIXME: this poorly matches the generated SubtargetFeatureKV table.  There
   // appears to be no way to generate the wide variety of AMD-specific targets
@@ -912,12 +910,7 @@ static void getAMDProcessorTypeAndSubtype(unsigned Family,
     break; // "btver1";
   case 21:
     *Type = AMDFAM15H;
-    if (!(Features &
-          (1 << FEATURE_AVX))) { // If no AVX support, provide a sane fallback.
-      *Subtype = AMD_BTVER1;
-      break; // "btver1"
-    }
-    if (Model >= 0x50 && Model <= 0x6f) {
+    if (Model >= 0x60 && Model <= 0x7f) {
       *Subtype = AMDFAM15H_BDVER4;
       break; // "bdver4"; 50h-6Fh: Excavator
     }
@@ -936,20 +929,11 @@ static void getAMDProcessorTypeAndSubtype(unsigned Family,
     break;
   case 22:
     *Type = AMDFAM16H;
-    if (!(Features &
-          (1 << FEATURE_AVX))) { // If no AVX support provide a sane fallback.
-      *Subtype = AMD_BTVER1;
-      break; // "btver1";
-    }
     *Subtype = AMD_BTVER2;
     break; // "btver2"
   case 23:
     *Type = AMDFAM17H;
-    if (Features & (1 << FEATURE_ADX)) {
-      *Subtype = AMDFAM17H_ZNVER1;
-      break; // "znver1"
-    }
-    *Subtype =  AMD_BTVER1;
+    *Subtype = AMDFAM17H_ZNVER1;
     break;
   default:
     break; // "generic"
