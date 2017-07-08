@@ -31,15 +31,18 @@ namespace process_netbsd {
 ///
 /// Changes in the inferior process state are broadcasted.
 class NativeProcessNetBSD : public NativeProcessProtocol {
-  friend Status NativeProcessProtocol::Launch(
-      ProcessLaunchInfo &launch_info, NativeDelegate &native_delegate,
-      MainLoop &mainloop, NativeProcessProtocolSP &process_sp);
-
-  friend Status NativeProcessProtocol::Attach(
-      lldb::pid_t pid, NativeProcessProtocol::NativeDelegate &native_delegate,
-      MainLoop &mainloop, NativeProcessProtocolSP &process_sp);
-
 public:
+  class Factory : public NativeProcessProtocol::Factory {
+  public:
+    llvm::Expected<NativeProcessProtocolSP>
+    Launch(ProcessLaunchInfo &launch_info, NativeDelegate &native_delegate,
+           MainLoop &mainloop) const override;
+
+    llvm::Expected<NativeProcessProtocolSP>
+    Attach(lldb::pid_t pid, NativeDelegate &native_delegate,
+           MainLoop &mainloop) const override;
+  };
+
   // ---------------------------------------------------------------------
   // NativeProcessProtocol Interface
   // ---------------------------------------------------------------------
@@ -107,20 +110,18 @@ protected:
 private:
   MainLoop::SignalHandleUP m_sigchld_handle;
   ArchSpec m_arch;
-  LazyBool m_supports_mem_region;
+  LazyBool m_supports_mem_region = eLazyBoolCalculate;
   std::vector<std::pair<MemoryRegionInfo, FileSpec>> m_mem_region_cache;
 
   // ---------------------------------------------------------------------
   // Private Instance Methods
   // ---------------------------------------------------------------------
-  NativeProcessNetBSD();
+  NativeProcessNetBSD(::pid_t pid, int terminal_fd, NativeDelegate &delegate,
+                      const ArchSpec &arch, MainLoop &mainloop);
 
   bool HasThreadNoLock(lldb::tid_t thread_id);
 
   NativeThreadNetBSDSP AddThread(lldb::tid_t thread_id);
-
-  Status LaunchInferior(MainLoop &mainloop, ProcessLaunchInfo &launch_info);
-  void AttachToInferior(MainLoop &mainloop, lldb::pid_t pid, Status &error);
 
   void MonitorCallback(lldb::pid_t pid, int signal);
   void MonitorExited(lldb::pid_t pid, WaitStatus status);
@@ -133,8 +134,7 @@ private:
   Status PopulateMemoryRegionCache();
   void SigchldHandler();
 
-  ::pid_t Attach(lldb::pid_t pid, Status &error);
-
+  Status Attach();
   Status ReinitializeThreads();
 };
 

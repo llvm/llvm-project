@@ -30,5 +30,5 @@ typedef volatile std::packaged_task<A(int, char)> VPT;
 int main()
 {
     PT p { std::allocator_arg_t{}, test_allocator<A>{}, VPT {}}; // expected-error {{no matching constructor for initialization of 'PT' (aka 'packaged_task<A (int, char)>')}}
-    // expected-note@future:* 1 {{candidate template ignored: disabled by 'enable_if'}}
+    // expected-note-re@future:* 1 {{candidate template ignored: {{(disabled by 'enable_if')|(requirement '.*' was not satisfied)}}}}
 }

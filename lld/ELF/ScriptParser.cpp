@@ -1191,8 +1191,7 @@ void ScriptParser::readMemory() {
     if (It != Script->Opt.MemoryRegions.end())
       setError("region '" + Name + "' already defined");
     else
-      Script->Opt.MemoryRegions[Name] = {Name,   Origin, Length,
-                                         Origin, Flags,  NegFlags};
+      Script->Opt.MemoryRegions[Name] = {Name, Origin, Length, Flags, NegFlags};
   }
 }
 
