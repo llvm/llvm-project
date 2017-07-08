@@ -36,3 +36,7 @@
 // MTHREADMODELALL: posix single
 // RUN: %clang --autocomplete=-mrelocation-model, | FileCheck %s -check-prefix=MRELOCMODELALL
 // MRELOCMODELALL: dynamic-no-pic pic ropi ropi-rwpi rwpi static
+// RUN: %clang --autocomplete=-mrelocation-mode | FileCheck %s -check-prefix=MRELOCMODEL_CLANG
+// MRELOCMODEL_CLANG-NOT: -mrelocation-model
+// RUN: %clang --autocomplete=#-mrelocation-mode | FileCheck %s -check-prefix=MRELOCMODEL_CC1
+// MRELOCMODEL_CC1: -mrelocation-model

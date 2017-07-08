@@ -2404,6 +2404,10 @@ public:
     return LangAS::opencl_constant;
   }
 
+  llvm::Optional<unsigned> getConstantAddressSpace() const override {
+    return LangAS::FirstTargetAddressSpace + AS.Constant;
+  }
+
   /// \returns Target specific vtbl ptr address space.
   unsigned getVtblPtrAddressSpace() const override { return AS.Constant; }
 

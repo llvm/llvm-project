@@ -1479,6 +1479,9 @@ public:
 
   const TargetInfo &getTarget() const { return Target; }
   llvm::LLVMContext &getLLVMContext() { return CGM.getLLVMContext(); }
+  const TargetCodeGenInfo &getTargetHooks() const {
+    return CGM.getTargetCodeGenInfo();
+  }
 
   //===--------------------------------------------------------------------===//
   //                                  Cleanups
@@ -3819,10 +3822,6 @@ public:
 
 private:
   QualType getVarArgType(const Expr *Arg);
-
-  const TargetCodeGenInfo &getTargetHooks() const {
-    return CGM.getTargetCodeGenInfo();
-  }
 
   void EmitDeclMetadata();
 
