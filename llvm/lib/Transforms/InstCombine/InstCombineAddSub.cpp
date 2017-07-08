@@ -164,7 +164,7 @@ namespace {
   ///
   class FAddCombine {
   public:
-    FAddCombine(InstCombiner::BuilderTy *B) : Builder(B), Instr(nullptr) {}
+    FAddCombine(InstCombiner::BuilderTy &B) : Builder(B), Instr(nullptr) {}
     Value *simplify(Instruction *FAdd);
 
   private:
@@ -187,7 +187,7 @@ namespace {
     Value *createNaryFAdd(const AddendVect& Opnds, unsigned InstrQuota);
     void createInstPostProc(Instruction *NewInst, bool NoNumber = false);
 
-    InstCombiner::BuilderTy *Builder;
+    InstCombiner::BuilderTy &Builder;
     Instruction *Instr;
 
      // Debugging stuff are clustered here.
@@ -735,7 +735,7 @@ Value *FAddCombine::createNaryFAdd
 }
 
 Value *FAddCombine::createFSub(Value *Opnd0, Value *Opnd1) {
-  Value *V = Builder->CreateFSub(Opnd0, Opnd1);
+  Value *V = Builder.CreateFSub(Opnd0, Opnd1);
   if (Instruction *I = dyn_cast<Instruction>(V))
     createInstPostProc(I);
   return V;
@@ -750,21 +750,21 @@ Value *FAddCombine::createFNeg(Value *V) {
 }
 
 Value *FAddCombine::createFAdd(Value *Opnd0, Value *Opnd1) {
-  Value *V = Builder->CreateFAdd(Opnd0, Opnd1);
+  Value *V = Builder.CreateFAdd(Opnd0, Opnd1);
   if (Instruction *I = dyn_cast<Instruction>(V))
     createInstPostProc(I);
   return V;
 }
 
 Value *FAddCombine::createFMul(Value *Opnd0, Value *Opnd1) {
-  Value *V = Builder->CreateFMul(Opnd0, Opnd1);
+  Value *V = Builder.CreateFMul(Opnd0, Opnd1);
   if (Instruction *I = dyn_cast<Instruction>(V))
     createInstPostProc(I);
   return V;
 }
 
 Value *FAddCombine::createFDiv(Value *Opnd0, Value *Opnd1) {
-  Value *V = Builder->CreateFDiv(Opnd0, Opnd1);
+  Value *V = Builder.CreateFDiv(Opnd0, Opnd1);
   if (Instruction *I = dyn_cast<Instruction>(V))
     createInstPostProc(I);
   return V;
@@ -895,7 +895,7 @@ bool InstCombiner::willNotOverflowUnsignedSub(const Value *LHS,
 //   ADD(XOR(AND(Z, C), C), 1) == NEG(OR(Z, ~C))
 //   XOR(AND(Z, C), (C + 1)) == NEG(OR(Z, ~C)) if C is even
 static Value *checkForNegativeOperand(BinaryOperator &I,
-                                      InstCombiner::BuilderTy *Builder) {
+                                      InstCombiner::BuilderTy &Builder) {
   Value *LHS = I.getOperand(0), *RHS = I.getOperand(1);
 
   // This function creates 2 instructions to replace ADD, we need at least one
@@ -919,13 +919,13 @@ static Value *checkForNegativeOperand(BinaryOperator &I,
       // X = XOR(Y, C1), Y = OR(Z, C2), C2 = NOT(C1) ==> X == NOT(AND(Z, C1))
       // ADD(ADD(X, 1), RHS) == ADD(X, ADD(RHS, 1)) == SUB(RHS, AND(Z, C1))
       if (match(Y, m_Or(m_Value(Z), m_APInt(C2))) && (*C2 == ~(*C1))) {
-        Value *NewAnd = Builder->CreateAnd(Z, *C1);
-        return Builder->CreateSub(RHS, NewAnd, "sub");
+        Value *NewAnd = Builder.CreateAnd(Z, *C1);
+        return Builder.CreateSub(RHS, NewAnd, "sub");
       } else if (match(Y, m_And(m_Value(Z), m_APInt(C2))) && (*C1 == *C2)) {
         // X = XOR(Y, C1), Y = AND(Z, C2), C2 == C1 ==> X == NOT(OR(Z, ~C1))
         // ADD(ADD(X, 1), RHS) == ADD(X, ADD(RHS, 1)) == SUB(RHS, OR(Z, ~C1))
-        Value *NewOr = Builder->CreateOr(Z, ~(*C1));
-        return Builder->CreateSub(RHS, NewOr, "sub");
+        Value *NewOr = Builder.CreateOr(Z, ~(*C1));
+        return Builder.CreateSub(RHS, NewOr, "sub");
       }
     }
   }
@@ -944,8 +944,8 @@ static Value *checkForNegativeOperand(BinaryOperator &I,
   if (match(LHS, m_Xor(m_Value(Y), m_APInt(C1))))
     if (C1->countTrailingZeros() == 0)
       if (match(Y, m_And(m_Value(Z), m_APInt(C2))) && *C1 == (*C2 + 1)) {
-        Value *NewOr = Builder->CreateOr(Z, ~(*C2));
-        return Builder->CreateSub(RHS, NewOr, "sub");
+        Value *NewOr = Builder.CreateOr(Z, ~(*C2));
+        return Builder.CreateSub(RHS, NewOr, "sub");
       }
   return nullptr;
 }
@@ -1027,7 +1027,7 @@ Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
   if (Value *V = SimplifyUsingDistributiveLaws(I))
     return replaceInstUsesWith(I, V);
 
-  if (Instruction *X = foldAddWithConstant(I, *Builder))
+  if (Instruction *X = foldAddWithConstant(I, Builder))
     return X;
 
   // FIXME: This should be moved into the above helper function to allow these
@@ -1060,7 +1060,7 @@ Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
 
       if (ExtendAmt) {
         Constant *ShAmt = ConstantInt::get(I.getType(), ExtendAmt);
-        Value *NewShl = Builder->CreateShl(XorLHS, ShAmt, "sext");
+        Value *NewShl = Builder.CreateShl(XorLHS, ShAmt, "sext");
         return BinaryOperator::CreateAShr(NewShl, ShAmt);
       }
 
@@ -1101,7 +1101,7 @@ Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
   if (Value *LHSV = dyn_castNegVal(LHS)) {
     if (!isa<Constant>(RHS))
       if (Value *RHSV = dyn_castNegVal(RHS)) {
-        Value *NewAdd = Builder->CreateAdd(LHSV, RHSV, "sum");
+        Value *NewAdd = Builder.CreateAdd(LHSV, RHSV, "sum");
         return BinaryOperator::CreateNeg(NewAdd);
       }
 
@@ -1148,7 +1148,7 @@ Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
 
       if (AddRHSHighBits == AddRHSHighBitsAnd) {
         // Okay, the xform is safe.  Insert the new add pronto.
-        Value *NewAdd = Builder->CreateAdd(X, CRHS, LHS->getName());
+        Value *NewAdd = Builder.CreateAdd(X, CRHS, LHS->getName());
         return BinaryOperator::CreateAnd(NewAdd, C2);
       }
     }
@@ -1191,7 +1191,7 @@ Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
             willNotOverflowSignedAdd(LHSConv->getOperand(0), CI, I)) {
           // Insert the new, smaller add.
           Value *NewAdd =
-              Builder->CreateNSWAdd(LHSConv->getOperand(0), CI, "addconv");
+              Builder.CreateNSWAdd(LHSConv->getOperand(0), CI, "addconv");
           return new SExtInst(NewAdd, I.getType());
         }
       }
@@ -1208,7 +1208,7 @@ Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
           willNotOverflowSignedAdd(LHSConv->getOperand(0),
                                    RHSConv->getOperand(0), I)) {
         // Insert the new integer add.
-        Value *NewAdd = Builder->CreateNSWAdd(LHSConv->getOperand(0),
+        Value *NewAdd = Builder.CreateNSWAdd(LHSConv->getOperand(0),
                                              RHSConv->getOperand(0), "addconv");
         return new SExtInst(NewAdd, I.getType());
       }
@@ -1227,7 +1227,7 @@ Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
             willNotOverflowUnsignedAdd(LHSConv->getOperand(0), CI, I)) {
           // Insert the new, smaller add.
           Value *NewAdd =
-              Builder->CreateNUWAdd(LHSConv->getOperand(0), CI, "addconv");
+              Builder.CreateNUWAdd(LHSConv->getOperand(0), CI, "addconv");
           return new ZExtInst(NewAdd, I.getType());
         }
       }
@@ -1244,7 +1244,7 @@ Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
           willNotOverflowUnsignedAdd(LHSConv->getOperand(0),
                                      RHSConv->getOperand(0), I)) {
         // Insert the new integer add.
-        Value *NewAdd = Builder->CreateNUWAdd(
+        Value *NewAdd = Builder.CreateNUWAdd(
             LHSConv->getOperand(0), RHSConv->getOperand(0), "addconv");
         return new ZExtInst(NewAdd, I.getType());
       }
@@ -1362,8 +1362,7 @@ Instruction *InstCombiner::visitFAdd(BinaryOperator &I) {
             ConstantExpr::getSIToFP(CI, I.getType()) == CFP &&
             willNotOverflowSignedAdd(LHSIntVal, CI, I)) {
           // Insert the new integer add.
-          Value *NewAdd = Builder->CreateNSWAdd(LHSIntVal,
-                                                CI, "addconv");
+          Value *NewAdd = Builder.CreateNSWAdd(LHSIntVal, CI, "addconv");
           return new SIToFPInst(NewAdd, I.getType());
         }
       }
@@ -1381,8 +1380,7 @@ Instruction *InstCombiner::visitFAdd(BinaryOperator &I) {
             (LHSConv->hasOneUse() || RHSConv->hasOneUse()) &&
             willNotOverflowSignedAdd(LHSIntVal, RHSIntVal, I)) {
           // Insert the new integer add.
-          Value *NewAdd = Builder->CreateNSWAdd(LHSIntVal,
-                                                RHSIntVal, "addconv");
+          Value *NewAdd = Builder.CreateNSWAdd(LHSIntVal, RHSIntVal, "addconv");
           return new SIToFPInst(NewAdd, I.getType());
         }
       }
@@ -1480,14 +1478,14 @@ Value *InstCombiner::OptimizePointerDifference(Value *LHS, Value *RHS,
   // pointer, subtract it from the offset we have.
   if (GEP2) {
     Value *Offset = EmitGEPOffset(GEP2);
-    Result = Builder->CreateSub(Result, Offset);
+    Result = Builder.CreateSub(Result, Offset);
   }
 
   // If we have p - gep(p, ...)  then we have to negate the result.
   if (Swapped)
-    Result = Builder->CreateNeg(Result, "diff.neg");
+    Result = Builder.CreateNeg(Result, "diff.neg");
 
-  return Builder->CreateIntCast(Result, Ty, true);
+  return Builder.CreateIntCast(Result, Ty, true);
 }
 
 Instruction *InstCombiner::visitSub(BinaryOperator &I) {
@@ -1615,7 +1613,7 @@ Instruction *InstCombiner::visitSub(BinaryOperator &I) {
     // ((X | Y) - X) --> (~X & Y)
     if (match(Op0, m_OneUse(m_c_Or(m_Value(Y), m_Specific(Op1)))))
       return BinaryOperator::CreateAnd(
-          Y, Builder->CreateNot(Op1, Op1->getName() + ".not"));
+          Y, Builder.CreateNot(Op1, Op1->getName() + ".not"));
   }
 
   if (Op1->hasOneUse()) {
@@ -1625,13 +1623,13 @@ Instruction *InstCombiner::visitSub(BinaryOperator &I) {
     // (X - (Y - Z))  -->  (X + (Z - Y)).
     if (match(Op1, m_Sub(m_Value(Y), m_Value(Z))))
       return BinaryOperator::CreateAdd(Op0,
-                                      Builder->CreateSub(Z, Y, Op1->getName()));
+                                      Builder.CreateSub(Z, Y, Op1->getName()));
 
     // (X - (X & Y))   -->   (X & ~Y)
     //
     if (match(Op1, m_c_And(m_Value(Y), m_Specific(Op0))))
       return BinaryOperator::CreateAnd(Op0,
-                                  Builder->CreateNot(Y, Y->getName() + ".not"));
+                                  Builder.CreateNot(Y, Y->getName() + ".not"));
 
     // 0 - (X sdiv C)  -> (X sdiv -C)  provided the negation doesn't overflow.
     if (match(Op1, m_SDiv(m_Value(X), m_Constant(C))) && match(Op0, m_Zero()) &&
@@ -1648,7 +1646,7 @@ Instruction *InstCombiner::visitSub(BinaryOperator &I) {
     // 'nuw' is dropped in favor of the canonical form.
     if (match(Op1, m_SExt(m_Value(Y))) &&
         Y->getType()->getScalarSizeInBits() == 1) {
-      Value *Zext = Builder->CreateZExt(Y, I.getType());
+      Value *Zext = Builder.CreateZExt(Y, I.getType());
       BinaryOperator *Add = BinaryOperator::CreateAdd(Op0, Zext);
       Add->setHasNoSignedWrap(I.hasNoSignedWrap());
       return Add;
@@ -1659,13 +1657,13 @@ Instruction *InstCombiner::visitSub(BinaryOperator &I) {
     Value *A, *B;
     Constant *CI;
     if (match(Op1, m_c_Mul(m_Value(A), m_Neg(m_Value(B)))))
-      return BinaryOperator::CreateAdd(Op0, Builder->CreateMul(A, B));
+      return BinaryOperator::CreateAdd(Op0, Builder.CreateMul(A, B));
 
     // X - A*CI -> X + A*-CI
     // No need to handle commuted multiply because multiply handling will
     // ensure constant will be move to the right hand side.
     if (match(Op1, m_Mul(m_Value(A), m_Constant(CI)))) {
-      Value *NewMul = Builder->CreateMul(A, ConstantExpr::getNeg(CI));
+      Value *NewMul = Builder.CreateMul(A, ConstantExpr::getNeg(CI));
       return BinaryOperator::CreateAdd(Op0, NewMul);
     }
   }
@@ -1729,14 +1727,14 @@ Instruction *InstCombiner::visitFSub(BinaryOperator &I) {
   }
   if (FPTruncInst *FPTI = dyn_cast<FPTruncInst>(Op1)) {
     if (Value *V = dyn_castFNegVal(FPTI->getOperand(0))) {
-      Value *NewTrunc = Builder->CreateFPTrunc(V, I.getType());
+      Value *NewTrunc = Builder.CreateFPTrunc(V, I.getType());
       Instruction *NewI = BinaryOperator::CreateFAdd(Op0, NewTrunc);
       NewI->copyFastMathFlags(&I);
       return NewI;
     }
   } else if (FPExtInst *FPEI = dyn_cast<FPExtInst>(Op1)) {
     if (Value *V = dyn_castFNegVal(FPEI->getOperand(0))) {
-      Value *NewExt = Builder->CreateFPExt(V, I.getType());
+      Value *NewExt = Builder.CreateFPExt(V, I.getType());
       Instruction *NewI = BinaryOperator::CreateFAdd(Op0, NewExt);
       NewI->copyFastMathFlags(&I);
       return NewI;

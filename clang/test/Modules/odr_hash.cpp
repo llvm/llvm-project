@@ -1339,6 +1339,84 @@ Bravo<char> golf;
 #endif
 }
 
+namespace Friend {
+#if defined(FIRST)
+struct T1 {};
+struct S1 {
+  friend class T1;
+};
+#elif defined(SECOND)
+struct T1 {};
+struct S1 {
+  friend T1;
+};
+#else
+S1 s1;
+// expected-error@second.h:* {{'Friend::S1' has different definitions in different modules; first difference is definition in module 'SecondModule' found friend 'Friend::T1'}}
+// expected-note@first.h:* {{but in 'FirstModule' found friend 'class T1'}}
+#endif
+
+#if defined(FIRST)
+struct T2 {};
+struct S2 {
+  friend class T2;
+};
+#elif defined(SECOND)
+struct T2 {};
+struct S2 {
+  friend struct T2;
+};
+#else
+S2 s2;
+// expected-error@second.h:* {{'Friend::S2' has different definitions in different modules; first difference is definition in module 'SecondModule' found friend 'struct T2'}}
+// expected-note@first.h:* {{but in 'FirstModule' found friend 'class T2'}}
+#endif
+
+#if defined(FIRST)
+struct T3 {};
+struct S3 {
+  friend const T3;
+};
+#elif defined(SECOND)
+struct T3 {};
+struct S3 {
+  friend T3;
+};
+#else
+S3 s3;
+// expected-error@second.h:* {{'Friend::S3' has different definitions in different modules; first difference is definition in module 'SecondModule' found friend 'Friend::T3'}}
+// expected-note@first.h:* {{but in 'FirstModule' found friend 'const Friend::T3'}}
+#endif
+
+#if defined(FIRST)
+struct T4 {};
+struct S4 {
+  friend T4;
+};
+#elif defined(SECOND)
+struct S4 {
+  friend void T4();
+};
+#else
+S4 s4;
+// expected-error@second.h:* {{'Friend::S4' has different definitions in different modules; first difference is definition in module 'SecondModule' found friend function}}
+// expected-note@first.h:* {{but in 'FirstModule' found friend class}}
+#endif
+
+#if defined(FIRST)
+struct S5 {
+  friend void T5a();
+};
+#elif defined(SECOND)
+struct S5 {
+  friend void T5b();
+};
+#else
+S5 s5;
+// expected-error@second.h:* {{'Friend::S5' has different definitions in different modules; first difference is definition in module 'SecondModule' found friend function 'T5b'}}
+// expected-note@first.h:* {{but in 'FirstModule' found friend function 'T5a'}}
+#endif
+}
 // Interesting cases that should not cause errors.  struct S should not error
 // while struct T should error at the access specifier mismatch at the end.
 namespace AllDecls {

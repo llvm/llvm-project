@@ -1665,6 +1665,19 @@ static bool CheckLValueConstantExpression(EvalInfo &Info, SourceLocation Loc,
   return true;
 }
 
+/// Member pointers are constant expressions unless they point to a
+/// non-virtual dllimport member function.
+static bool CheckMemberPointerConstantExpression(EvalInfo &Info,
+                                                 SourceLocation Loc,
+                                                 QualType Type,
+                                                 const APValue &Value) {
+  const ValueDecl *Member = Value.getMemberPointerDecl();
+  const auto *FD = dyn_cast_or_null<CXXMethodDecl>(Member);
+  if (!FD)
+    return true;
+  return FD->isVirtual() || !FD->hasAttr<DLLImportAttr>();
+}
+
 /// Check that this core constant expression is of literal type, and if not,
 /// produce an appropriate diagnostic.
 static bool CheckLiteralType(EvalInfo &Info, const Expr *E,
@@ -1756,6 +1769,9 @@ static bool CheckConstantExpression(EvalInfo &Info, SourceLocation DiagLoc,
     LVal.setFrom(Info.Ctx, Value);
     return CheckLValueConstantExpression(Info, DiagLoc, Type, LVal);
   }
+
+  if (Value.isMemberPointer())
+    return CheckMemberPointerConstantExpression(Info, DiagLoc, Type, Value);
 
   // Everything else is fine.
   return true;

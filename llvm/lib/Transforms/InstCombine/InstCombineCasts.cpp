@@ -84,7 +84,7 @@ Instruction *InstCombiner::PromoteCastOfAllocation(BitCastInst &CI,
                                                    AllocaInst &AI) {
   PointerType *PTy = cast<PointerType>(CI.getType());
 
-  BuilderTy AllocaBuilder(*Builder);
+  BuilderTy AllocaBuilder(Builder);
   AllocaBuilder.SetInsertPoint(&AI);
 
   // Get the type really allocated and the type casted to.
@@ -433,14 +433,14 @@ static Instruction *foldVecTruncToExtElt(TruncInst &Trunc, InstCombiner &IC) {
   unsigned NumVecElts = VecWidth / DestWidth;
   if (VecType->getElementType() != DestType) {
     VecType = VectorType::get(DestType, NumVecElts);
-    VecInput = IC.Builder->CreateBitCast(VecInput, VecType, "bc");
+    VecInput = IC.Builder.CreateBitCast(VecInput, VecType, "bc");
   }
 
   unsigned Elt = ShiftAmount / DestWidth;
   if (IC.getDataLayout().isBigEndian())
     Elt = NumVecElts - 1 - Elt;
 
-  return ExtractElementInst::Create(VecInput, IC.Builder->getInt32(Elt));
+  return ExtractElementInst::Create(VecInput, IC.Builder.getInt32(Elt));
 }
 
 /// Try to narrow the width of bitwise logic instructions with constants.
@@ -459,7 +459,7 @@ Instruction *InstCombiner::shrinkBitwiseLogic(TruncInst &Trunc) {
 
   // trunc (logic X, C) --> logic (trunc X, C')
   Constant *NarrowC = ConstantExpr::getTrunc(C, DestTy);
-  Value *NarrowOp0 = Builder->CreateTrunc(LogicOp->getOperand(0), DestTy);
+  Value *NarrowOp0 = Builder.CreateTrunc(LogicOp->getOperand(0), DestTy);
   return BinaryOperator::Create(LogicOp->getOpcode(), NarrowOp0, NarrowC);
 }
 
@@ -553,7 +553,7 @@ Instruction *InstCombiner::visitTrunc(TruncInst &CI) {
   // Canonicalize trunc x to i1 -> (icmp ne (and x, 1), 0), likewise for vector.
   if (DestTy->getScalarSizeInBits() == 1) {
     Constant *One = ConstantInt::get(SrcTy, 1);
-    Src = Builder->CreateAnd(Src, One);
+    Src = Builder.CreateAnd(Src, One);
     Value *Zero = Constant::getNullValue(Src->getType());
     return new ICmpInst(ICmpInst::ICMP_NE, Src, Zero);
   }
@@ -579,7 +579,7 @@ Instruction *InstCombiner::visitTrunc(TruncInst &CI) {
     // Since we're doing an lshr and a zero extend, and know that the shift
     // amount is smaller than ASize, it is always safe to do the shift in A's
     // type, then zero extend or truncate to the result.
-    Value *Shift = Builder->CreateLShr(A, Cst->getZExtValue());
+    Value *Shift = Builder.CreateLShr(A, Cst->getZExtValue());
     Shift->takeName(Src);
     return CastInst::CreateIntegerCast(Shift, DestTy, false);
   }
@@ -609,7 +609,7 @@ Instruction *InstCombiner::visitTrunc(TruncInst &CI) {
         return BinaryOperator::CreateAShr(A, ConstantInt::get(CI.getType(),
                                           std::min(ShiftAmt, ASize - 1)));
       if (SExt->hasOneUse()) {
-        Value *Shift = Builder->CreateAShr(A, std::min(ShiftAmt, ASize-1));
+        Value *Shift = Builder.CreateAShr(A, std::min(ShiftAmt, ASize - 1));
         Shift->takeName(Src);
         return CastInst::CreateIntegerCast(Shift, CI.getType(), true);
       }
@@ -619,10 +619,10 @@ Instruction *InstCombiner::visitTrunc(TruncInst &CI) {
   if (Instruction *I = shrinkBitwiseLogic(CI))
     return I;
 
-  if (Instruction *I = shrinkSplatShuffle(CI, *Builder))
+  if (Instruction *I = shrinkSplatShuffle(CI, Builder))
     return I;
 
-  if (Instruction *I = shrinkInsertElt(CI, *Builder))
+  if (Instruction *I = shrinkInsertElt(CI, Builder))
     return I;
 
   if (Src->hasOneUse() && isa<IntegerType>(SrcTy) &&
@@ -635,7 +635,7 @@ Instruction *InstCombiner::visitTrunc(TruncInst &CI) {
       // FoldShiftByConstant and is the extend in reg pattern.
       const unsigned DestSize = DestTy->getScalarSizeInBits();
       if (Cst->getValue().ult(DestSize)) {
-        Value *NewTrunc = Builder->CreateTrunc(A, DestTy, A->getName() + ".tr");
+        Value *NewTrunc = Builder.CreateTrunc(A, DestTy, A->getName() + ".tr");
 
         return BinaryOperator::Create(
           Instruction::Shl, NewTrunc,
@@ -667,13 +667,13 @@ Instruction *InstCombiner::transformZExtICmp(ICmpInst *ICI, ZExtInst &CI,
       Value *In = ICI->getOperand(0);
       Value *Sh = ConstantInt::get(In->getType(),
                                    In->getType()->getScalarSizeInBits() - 1);
-      In = Builder->CreateLShr(In, Sh, In->getName() + ".lobit");
+      In = Builder.CreateLShr(In, Sh, In->getName() + ".lobit");
       if (In->getType() != CI.getType())
-        In = Builder->CreateIntCast(In, CI.getType(), false/*ZExt*/);
+        In = Builder.CreateIntCast(In, CI.getType(), false /*ZExt*/);
 
       if (ICI->getPredicate() == ICmpInst::ICMP_SGT) {
         Constant *One = ConstantInt::get(In->getType(), 1);
-        In = Builder->CreateXor(In, One, In->getName() + ".not");
+        In = Builder.CreateXor(In, One, In->getName() + ".not");
       }
 
       return replaceInstUsesWith(CI, In);
@@ -712,19 +712,19 @@ Instruction *InstCombiner::transformZExtICmp(ICmpInst *ICI, ZExtInst &CI,
         if (ShAmt) {
           // Perform a logical shr by shiftamt.
           // Insert the shift to put the result in the low bit.
-          In = Builder->CreateLShr(In, ConstantInt::get(In->getType(), ShAmt),
-                                   In->getName() + ".lobit");
+          In = Builder.CreateLShr(In, ConstantInt::get(In->getType(), ShAmt),
+                                  In->getName() + ".lobit");
         }
 
         if (!Op1CV.isNullValue() == isNE) { // Toggle the low bit.
           Constant *One = ConstantInt::get(In->getType(), 1);
-          In = Builder->CreateXor(In, One);
+          In = Builder.CreateXor(In, One);
         }
 
         if (CI.getType() == In->getType())
           return replaceInstUsesWith(CI, In);
 
-        Value *IntCast = Builder->CreateIntCast(In, CI.getType(), false);
+        Value *IntCast = Builder.CreateIntCast(In, CI.getType(), false);
         return replaceInstUsesWith(CI, IntCast);
       }
     }
@@ -747,19 +747,19 @@ Instruction *InstCombiner::transformZExtICmp(ICmpInst *ICI, ZExtInst &CI,
         if (UnknownBit.countPopulation() == 1) {
           if (!DoTransform) return ICI;
 
-          Value *Result = Builder->CreateXor(LHS, RHS);
+          Value *Result = Builder.CreateXor(LHS, RHS);
 
           // Mask off any bits that are set and won't be shifted away.
           if (KnownLHS.One.uge(UnknownBit))
-            Result = Builder->CreateAnd(Result,
+            Result = Builder.CreateAnd(Result,
                                         ConstantInt::get(ITy, UnknownBit));
 
           // Shift the bit we're testing down to the lsb.
-          Result = Builder->CreateLShr(
+          Result = Builder.CreateLShr(
                Result, ConstantInt::get(ITy, UnknownBit.countTrailingZeros()));
 
           if (ICI->getPredicate() == ICmpInst::ICMP_EQ)
-            Result = Builder->CreateXor(Result, ConstantInt::get(ITy, 1));
+            Result = Builder.CreateXor(Result, ConstantInt::get(ITy, 1));
           Result->takeName(ICI);
           return replaceInstUsesWith(CI, Result);
         }
@@ -959,7 +959,7 @@ Instruction *InstCombiner::visitZExt(ZExtInst &CI) {
     if (SrcSize < DstSize) {
       APInt AndValue(APInt::getLowBitsSet(SrcSize, MidSize));
       Constant *AndConst = ConstantInt::get(A->getType(), AndValue);
-      Value *And = Builder->CreateAnd(A, AndConst, CSrc->getName()+".mask");
+      Value *And = Builder.CreateAnd(A, AndConst, CSrc->getName() + ".mask");
       return new ZExtInst(And, CI.getType());
     }
 
@@ -969,7 +969,7 @@ Instruction *InstCombiner::visitZExt(ZExtInst &CI) {
                                                            AndValue));
     }
     if (SrcSize > DstSize) {
-      Value *Trunc = Builder->CreateTrunc(A, CI.getType());
+      Value *Trunc = Builder.CreateTrunc(A, CI.getType());
       APInt AndValue(APInt::getLowBitsSet(DstSize, MidSize));
       return BinaryOperator::CreateAnd(Trunc,
                                        ConstantInt::get(Trunc->getType(),
@@ -991,8 +991,8 @@ Instruction *InstCombiner::visitZExt(ZExtInst &CI) {
         (transformZExtICmp(LHS, CI, false) ||
          transformZExtICmp(RHS, CI, false))) {
       // zext (or icmp, icmp) -> or (zext icmp), (zext icmp)
-      Value *LCast = Builder->CreateZExt(LHS, CI.getType(), LHS->getName());
-      Value *RCast = Builder->CreateZExt(RHS, CI.getType(), RHS->getName());
+      Value *LCast = Builder.CreateZExt(LHS, CI.getType(), LHS->getName());
+      Value *RCast = Builder.CreateZExt(RHS, CI.getType(), RHS->getName());
       BinaryOperator *Or = BinaryOperator::Create(Instruction::Or, LCast, RCast);
 
       // Perform the elimination.
@@ -1019,7 +1019,7 @@ Instruction *InstCombiner::visitZExt(ZExtInst &CI) {
       match(And, m_OneUse(m_And(m_Trunc(m_Value(X)), m_Specific(C)))) &&
       X->getType() == CI.getType()) {
     Constant *ZC = ConstantExpr::getZExt(C, CI.getType());
-    return BinaryOperator::CreateXor(Builder->CreateAnd(X, ZC), ZC);
+    return BinaryOperator::CreateXor(Builder.CreateAnd(X, ZC), ZC);
   }
 
   return nullptr;
@@ -1042,12 +1042,12 @@ Instruction *InstCombiner::transformSExtICmp(ICmpInst *ICI, Instruction &CI) {
 
       Value *Sh = ConstantInt::get(Op0->getType(),
                                    Op0->getType()->getScalarSizeInBits()-1);
-      Value *In = Builder->CreateAShr(Op0, Sh, Op0->getName()+".lobit");
+      Value *In = Builder.CreateAShr(Op0, Sh, Op0->getName() + ".lobit");
       if (In->getType() != CI.getType())
-        In = Builder->CreateIntCast(In, CI.getType(), true/*SExt*/);
+        In = Builder.CreateIntCast(In, CI.getType(), true /*SExt*/);
 
       if (Pred == ICmpInst::ICMP_SGT)
-        In = Builder->CreateNot(In, In->getName()+".not");
+        In = Builder.CreateNot(In, In->getName() + ".not");
       return replaceInstUsesWith(CI, In);
     }
   }
@@ -1078,26 +1078,26 @@ Instruction *InstCombiner::transformSExtICmp(ICmpInst *ICI, Instruction &CI) {
           unsigned ShiftAmt = KnownZeroMask.countTrailingZeros();
           // Perform a right shift to place the desired bit in the LSB.
           if (ShiftAmt)
-            In = Builder->CreateLShr(In,
-                                     ConstantInt::get(In->getType(), ShiftAmt));
+            In = Builder.CreateLShr(In,
+                                    ConstantInt::get(In->getType(), ShiftAmt));
 
           // At this point "In" is either 1 or 0. Subtract 1 to turn
           // {1, 0} -> {0, -1}.
-          In = Builder->CreateAdd(In,
-                                  ConstantInt::getAllOnesValue(In->getType()),
-                                  "sext");
+          In = Builder.CreateAdd(In,
+                                 ConstantInt::getAllOnesValue(In->getType()),
+                                 "sext");
         } else {
           // sext ((x & 2^n) != 0)   -> (x << bitwidth-n) a>> bitwidth-1
           // sext ((x & 2^n) == 2^n) -> (x << bitwidth-n) a>> bitwidth-1
           unsigned ShiftAmt = KnownZeroMask.countLeadingZeros();
           // Perform a left shift to place the desired bit in the MSB.
           if (ShiftAmt)
-            In = Builder->CreateShl(In,
-                                    ConstantInt::get(In->getType(), ShiftAmt));
+            In = Builder.CreateShl(In,
+                                   ConstantInt::get(In->getType(), ShiftAmt));
 
           // Distribute the bit over the whole bit width.
-          In = Builder->CreateAShr(In, ConstantInt::get(In->getType(),
-                                      KnownZeroMask.getBitWidth() - 1), "sext");
+          In = Builder.CreateAShr(In, ConstantInt::get(In->getType(),
+                                  KnownZeroMask.getBitWidth() - 1), "sext");
         }
 
         if (CI.getType() == In->getType())
@@ -1190,7 +1190,7 @@ Instruction *InstCombiner::visitSExt(SExtInst &CI) {
   // instead.
   KnownBits Known = computeKnownBits(Src, 0, &CI);
   if (Known.isNonNegative()) {
-    Value *ZExt = Builder->CreateZExt(Src, DestTy);
+    Value *ZExt = Builder.CreateZExt(Src, DestTy);
     return replaceInstUsesWith(CI, ZExt);
   }
 
@@ -1216,7 +1216,7 @@ Instruction *InstCombiner::visitSExt(SExtInst &CI) {
 
     // We need to emit a shl + ashr to do the sign extend.
     Value *ShAmt = ConstantInt::get(DestTy, DestBitSize-SrcBitSize);
-    return BinaryOperator::CreateAShr(Builder->CreateShl(Res, ShAmt, "sext"),
+    return BinaryOperator::CreateAShr(Builder.CreateShl(Res, ShAmt, "sext"),
                                       ShAmt);
   }
 
@@ -1228,7 +1228,7 @@ Instruction *InstCombiner::visitSExt(SExtInst &CI) {
     unsigned SrcBitSize = SrcTy->getScalarSizeInBits();
     unsigned DestBitSize = DestTy->getScalarSizeInBits();
     Constant *ShAmt = ConstantInt::get(DestTy, DestBitSize - SrcBitSize);
-    return BinaryOperator::CreateAShr(Builder->CreateShl(X, ShAmt), ShAmt);
+    return BinaryOperator::CreateAShr(Builder.CreateShl(X, ShAmt), ShAmt);
   }
 
   if (ICmpInst *ICI = dyn_cast<ICmpInst>(Src))
@@ -1257,7 +1257,7 @@ Instruction *InstCombiner::visitSExt(SExtInst &CI) {
     unsigned SrcDstSize = CI.getType()->getScalarSizeInBits();
     unsigned ShAmt = CA->getZExtValue()+SrcDstSize-MidSize;
     Constant *ShAmtV = ConstantInt::get(CI.getType(), ShAmt);
-    A = Builder->CreateShl(A, ShAmtV, CI.getName());
+    A = Builder.CreateShl(A, ShAmtV, CI.getName());
     return BinaryOperator::CreateAShr(A, ShAmtV);
   }
 
@@ -1346,9 +1346,9 @@ Instruction *InstCombiner::visitFPTrunc(FPTruncInst &CI) {
         // case of interest here is (float)((double)float + float)).
         if (OpWidth >= 2*DstWidth+1 && DstWidth >= SrcWidth) {
           if (LHSOrig->getType() != CI.getType())
-            LHSOrig = Builder->CreateFPExt(LHSOrig, CI.getType());
+            LHSOrig = Builder.CreateFPExt(LHSOrig, CI.getType());
           if (RHSOrig->getType() != CI.getType())
-            RHSOrig = Builder->CreateFPExt(RHSOrig, CI.getType());
+            RHSOrig = Builder.CreateFPExt(RHSOrig, CI.getType());
           Instruction *RI =
             BinaryOperator::Create(OpI->getOpcode(), LHSOrig, RHSOrig);
           RI->copyFastMathFlags(OpI);
@@ -1363,9 +1363,9 @@ Instruction *InstCombiner::visitFPTrunc(FPTruncInst &CI) {
         // in the destination format if it can represent both sources.
         if (OpWidth >= LHSWidth + RHSWidth && DstWidth >= SrcWidth) {
           if (LHSOrig->getType() != CI.getType())
-            LHSOrig = Builder->CreateFPExt(LHSOrig, CI.getType());
+            LHSOrig = Builder.CreateFPExt(LHSOrig, CI.getType());
           if (RHSOrig->getType() != CI.getType())
-            RHSOrig = Builder->CreateFPExt(RHSOrig, CI.getType());
+            RHSOrig = Builder.CreateFPExt(RHSOrig, CI.getType());
           Instruction *RI =
             BinaryOperator::CreateFMul(LHSOrig, RHSOrig);
           RI->copyFastMathFlags(OpI);
@@ -1381,9 +1381,9 @@ Instruction *InstCombiner::visitFPTrunc(FPTruncInst &CI) {
         // TODO: Tighten bound via rigorous analysis of the unbalanced case.
         if (OpWidth >= 2*DstWidth && DstWidth >= SrcWidth) {
           if (LHSOrig->getType() != CI.getType())
-            LHSOrig = Builder->CreateFPExt(LHSOrig, CI.getType());
+            LHSOrig = Builder.CreateFPExt(LHSOrig, CI.getType());
           if (RHSOrig->getType() != CI.getType())
-            RHSOrig = Builder->CreateFPExt(RHSOrig, CI.getType());
+            RHSOrig = Builder.CreateFPExt(RHSOrig, CI.getType());
           Instruction *RI =
             BinaryOperator::CreateFDiv(LHSOrig, RHSOrig);
           RI->copyFastMathFlags(OpI);
@@ -1398,11 +1398,11 @@ Instruction *InstCombiner::visitFPTrunc(FPTruncInst &CI) {
         if (SrcWidth == OpWidth)
           break;
         if (LHSWidth < SrcWidth)
-          LHSOrig = Builder->CreateFPExt(LHSOrig, RHSOrig->getType());
+          LHSOrig = Builder.CreateFPExt(LHSOrig, RHSOrig->getType());
         else if (RHSWidth <= SrcWidth)
-          RHSOrig = Builder->CreateFPExt(RHSOrig, LHSOrig->getType());
+          RHSOrig = Builder.CreateFPExt(RHSOrig, LHSOrig->getType());
         if (LHSOrig != OpI->getOperand(0) || RHSOrig != OpI->getOperand(1)) {
-          Value *ExactResult = Builder->CreateFRem(LHSOrig, RHSOrig);
+          Value *ExactResult = Builder.CreateFRem(LHSOrig, RHSOrig);
           if (Instruction *RI = dyn_cast<Instruction>(ExactResult))
             RI->copyFastMathFlags(OpI);
           return CastInst::CreateFPCast(ExactResult, CI.getType());
@@ -1411,8 +1411,8 @@ Instruction *InstCombiner::visitFPTrunc(FPTruncInst &CI) {
 
     // (fptrunc (fneg x)) -> (fneg (fptrunc x))
     if (BinaryOperator::isFNeg(OpI)) {
-      Value *InnerTrunc = Builder->CreateFPTrunc(OpI->getOperand(1),
-                                                 CI.getType());
+      Value *InnerTrunc = Builder.CreateFPTrunc(OpI->getOperand(1),
+                                                CI.getType());
       Instruction *RI = BinaryOperator::CreateFNeg(InnerTrunc);
       RI->copyFastMathFlags(OpI);
       return RI;
@@ -1431,10 +1431,8 @@ Instruction *InstCombiner::visitFPTrunc(FPTruncInst &CI) {
       (isa<ConstantFP>(SI->getOperand(1)) ||
        isa<ConstantFP>(SI->getOperand(2))) &&
       matchSelectPattern(SI, LHS, RHS).Flavor == SPF_UNKNOWN) {
-    Value *LHSTrunc = Builder->CreateFPTrunc(SI->getOperand(1),
-                                             CI.getType());
-    Value *RHSTrunc = Builder->CreateFPTrunc(SI->getOperand(2),
-                                             CI.getType());
+    Value *LHSTrunc = Builder.CreateFPTrunc(SI->getOperand(1), CI.getType());
+    Value *RHSTrunc = Builder.CreateFPTrunc(SI->getOperand(2), CI.getType());
     return SelectInst::Create(SI->getOperand(0), LHSTrunc, RHSTrunc);
   }
 
@@ -1464,7 +1462,7 @@ Instruction *InstCombiner::visitFPTrunc(FPTruncInst &CI) {
 
       // Do unary FP operation on smaller type.
       // (fptrunc (fabs x)) -> (fabs (fptrunc x))
-      Value *InnerTrunc = Builder->CreateFPTrunc(Src, CI.getType());
+      Value *InnerTrunc = Builder.CreateFPTrunc(Src, CI.getType());
       Type *IntrinsicType[] = { CI.getType() };
       Function *Overload = Intrinsic::getDeclaration(
         CI.getModule(), II->getIntrinsicID(), IntrinsicType);
@@ -1481,7 +1479,7 @@ Instruction *InstCombiner::visitFPTrunc(FPTruncInst &CI) {
     }
   }
 
-  if (Instruction *I = shrinkInsertElt(CI, *Builder))
+  if (Instruction *I = shrinkInsertElt(CI, Builder))
     return I;
 
   return nullptr;
@@ -1576,7 +1574,7 @@ Instruction *InstCombiner::visitIntToPtr(IntToPtrInst &CI) {
     if (CI.getType()->isVectorTy()) // Handle vectors of pointers.
       Ty = VectorType::get(Ty, CI.getType()->getVectorNumElements());
 
-    Value *P = Builder->CreateZExtOrTrunc(CI.getOperand(0), Ty);
+    Value *P = Builder.CreateZExtOrTrunc(CI.getOperand(0), Ty);
     return new IntToPtrInst(P, CI.getType());
   }
 
@@ -1626,7 +1624,7 @@ Instruction *InstCombiner::visitPtrToInt(PtrToIntInst &CI) {
   if (Ty->isVectorTy()) // Handle vectors of pointers.
     PtrTy = VectorType::get(PtrTy, Ty->getVectorNumElements());
 
-  Value *P = Builder->CreatePtrToInt(CI.getOperand(0), PtrTy);
+  Value *P = Builder.CreatePtrToInt(CI.getOperand(0), PtrTy);
   return CastInst::CreateIntegerCast(P, Ty, /*isSigned=*/false);
 }
 
@@ -1652,7 +1650,7 @@ static Instruction *optimizeVectorResize(Value *InVal, VectorType *DestTy,
       return nullptr;
 
     SrcTy = VectorType::get(DestTy->getElementType(), SrcTy->getNumElements());
-    InVal = IC.Builder->CreateBitCast(InVal, SrcTy);
+    InVal = IC.Builder.CreateBitCast(InVal, SrcTy);
   }
 
   // Now that the element types match, get the shuffle mask and RHS of the
@@ -1832,8 +1830,8 @@ static Value *optimizeIntegerToVectorInsertions(BitCastInst &CI,
   for (unsigned i = 0, e = Elements.size(); i != e; ++i) {
     if (!Elements[i]) continue;  // Unset element.
 
-    Result = IC.Builder->CreateInsertElement(Result, Elements[i],
-                                             IC.Builder->getInt32(i));
+    Result = IC.Builder.CreateInsertElement(Result, Elements[i],
+                                            IC.Builder.getInt32(i));
   }
 
   return Result;
@@ -1858,8 +1856,8 @@ static Instruction *canonicalizeBitCastExtElt(BitCastInst &BitCast,
 
   unsigned NumElts = ExtElt->getVectorOperandType()->getNumElements();
   auto *NewVecType = VectorType::get(DestType, NumElts);
-  auto *NewBC = IC.Builder->CreateBitCast(ExtElt->getVectorOperand(),
-                                          NewVecType, "bc");
+  auto *NewBC = IC.Builder.CreateBitCast(ExtElt->getVectorOperand(),
+                                         NewVecType, "bc");
   return ExtractElementInst::Create(NewBC, ExtElt->getIndexOperand());
 }
 
@@ -2031,8 +2029,8 @@ Instruction *InstCombiner::optimizeBitCastFromPhi(CastInst &CI, PHINode *PN) {
   // For each old PHI node, create a corresponding new PHI node with a type A.
   SmallDenseMap<PHINode *, PHINode *> NewPNodes;
   for (auto *OldPN : OldPhiNodes) {
-    Builder->SetInsertPoint(OldPN);
-    PHINode *NewPN = Builder->CreatePHI(DestTy, OldPN->getNumOperands());
+    Builder.SetInsertPoint(OldPN);
+    PHINode *NewPN = Builder.CreatePHI(DestTy, OldPN->getNumOperands());
     NewPNodes[OldPN] = NewPN;
   }
 
@@ -2045,8 +2043,8 @@ Instruction *InstCombiner::optimizeBitCastFromPhi(CastInst &CI, PHINode *PN) {
       if (auto *C = dyn_cast<Constant>(V)) {
         NewV = ConstantExpr::getBitCast(C, DestTy);
       } else if (auto *LI = dyn_cast<LoadInst>(V)) {
-        Builder->SetInsertPoint(LI->getNextNode());
-        NewV = Builder->CreateBitCast(LI, DestTy);
+        Builder.SetInsertPoint(LI->getNextNode());
+        NewV = Builder.CreateBitCast(LI, DestTy);
         Worklist.Add(LI);
       } else if (auto *BCI = dyn_cast<BitCastInst>(V)) {
         NewV = BCI->getOperand(0);
@@ -2062,9 +2060,9 @@ Instruction *InstCombiner::optimizeBitCastFromPhi(CastInst &CI, PHINode *PN) {
   for (User *U : PN->users()) {
     auto *SI = dyn_cast<StoreInst>(U);
     if (SI && SI->isSimple() && SI->getOperand(0) == PN) {
-      Builder->SetInsertPoint(SI);
+      Builder.SetInsertPoint(SI);
       auto *NewBC =
-          cast<BitCastInst>(Builder->CreateBitCast(NewPNodes[PN], SrcTy));
+          cast<BitCastInst>(Builder.CreateBitCast(NewPNodes[PN], SrcTy));
       SI->setOperand(0, NewBC);
       Worklist.Add(SI);
       assert(hasStoreUsersOnly(*NewBC));
@@ -2119,14 +2117,14 @@ Instruction *InstCombiner::visitBitCast(BitCastInst &CI) {
 
     // If we found a path from the src to dest, create the getelementptr now.
     if (SrcElTy == DstElTy) {
-      SmallVector<Value *, 8> Idxs(NumZeros + 1, Builder->getInt32(0));
+      SmallVector<Value *, 8> Idxs(NumZeros + 1, Builder.getInt32(0));
       return GetElementPtrInst::CreateInBounds(Src, Idxs);
     }
   }
 
   if (VectorType *DestVTy = dyn_cast<VectorType>(DestTy)) {
     if (DestVTy->getNumElements() == 1 && !SrcTy->isVectorTy()) {
-      Value *Elem = Builder->CreateBitCast(Src, DestVTy->getElementType());
+      Value *Elem = Builder.CreateBitCast(Src, DestVTy->getElementType());
       return InsertElementInst::Create(UndefValue::get(DestTy), Elem,
                      Constant::getNullValue(Type::getInt32Ty(CI.getContext())));
       // FIXME: Canonicalize bitcast(insertelement) -> insertelement(bitcast)
@@ -2159,7 +2157,7 @@ Instruction *InstCombiner::visitBitCast(BitCastInst &CI) {
       // scalar-scalar cast.
       if (!DestTy->isVectorTy()) {
         Value *Elem =
-          Builder->CreateExtractElement(Src,
+          Builder.CreateExtractElement(Src,
                      Constant::getNullValue(Type::getInt32Ty(CI.getContext())));
         return CastInst::Create(Instruction::BitCast, Elem, DestTy);
       }
@@ -2188,8 +2186,8 @@ Instruction *InstCombiner::visitBitCast(BitCastInst &CI) {
            Tmp->getOperand(0)->getType() == DestTy) ||
           ((Tmp = dyn_cast<BitCastInst>(SVI->getOperand(1))) &&
            Tmp->getOperand(0)->getType() == DestTy)) {
-        Value *LHS = Builder->CreateBitCast(SVI->getOperand(0), DestTy);
-        Value *RHS = Builder->CreateBitCast(SVI->getOperand(1), DestTy);
+        Value *LHS = Builder.CreateBitCast(SVI->getOperand(0), DestTy);
+        Value *RHS = Builder.CreateBitCast(SVI->getOperand(1), DestTy);
         // Return a new shuffle vector.  Use the same element ID's, as we
         // know the vector types match #elts.
         return new ShuffleVectorInst(LHS, RHS, SVI->getOperand(2));
@@ -2205,10 +2203,10 @@ Instruction *InstCombiner::visitBitCast(BitCastInst &CI) {
   if (Instruction *I = canonicalizeBitCastExtElt(CI, *this))
     return I;
 
-  if (Instruction *I = foldBitCastBitwiseLogic(CI, *Builder))
+  if (Instruction *I = foldBitCastBitwiseLogic(CI, Builder))
     return I;
 
-  if (Instruction *I = foldBitCastSelect(CI, *Builder))
+  if (Instruction *I = foldBitCastSelect(CI, Builder))
     return I;
 
   if (SrcTy->isPointerTy())
@@ -2232,7 +2230,7 @@ Instruction *InstCombiner::visitAddrSpaceCast(AddrSpaceCastInst &CI) {
       MidTy = VectorType::get(MidTy, VT->getNumElements());
     }
 
-    Value *NewBitCast = Builder->CreateBitCast(Src, MidTy);
+    Value *NewBitCast = Builder.CreateBitCast(Src, MidTy);
     return new AddrSpaceCastInst(NewBitCast, CI.getType());
   }
 
