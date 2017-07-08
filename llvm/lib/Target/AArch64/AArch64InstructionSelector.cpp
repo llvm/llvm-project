@@ -214,6 +214,7 @@ static unsigned selectBinaryOp(unsigned GenericOpc, unsigned RegBankID,
         return GenericOpc;
       }
     }
+    break;
   case AArch64::FPRRegBankID:
     switch (OpSize) {
     case 32:
@@ -245,7 +246,8 @@ static unsigned selectBinaryOp(unsigned GenericOpc, unsigned RegBankID,
         return GenericOpc;
       }
     }
-  };
+    break;
+  }
   return GenericOpc;
 }
 
@@ -269,6 +271,7 @@ static unsigned selectLoadStoreUIOp(unsigned GenericOpc, unsigned RegBankID,
     case 64:
       return isStore ? AArch64::STRXui : AArch64::LDRXui;
     }
+    break;
   case AArch64::FPRRegBankID:
     switch (OpSize) {
     case 8:
@@ -280,7 +283,8 @@ static unsigned selectLoadStoreUIOp(unsigned GenericOpc, unsigned RegBankID,
     case 64:
       return isStore ? AArch64::STRDui : AArch64::LDRDui;
     }
-  };
+    break;
+  }
   return GenericOpc;
 }
 

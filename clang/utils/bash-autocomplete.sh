@@ -27,19 +27,29 @@ _clang()
   w1="${COMP_WORDS[$cword - 1]}"
   if [[ $cword > 1 ]]; then
     w2="${COMP_WORDS[$cword - 2]}"
+  # Clang want to know if -cc1 or -Xclang option is specified or not, because we don't want to show
+  # cc1 options otherwise.
+  if [[ "${COMP_WORDS[1]}" == "-cc1" || "$w1" == "-Xclang" ]]; then
+    arg="#"
   fi
   if [[ "$cur" == -* ]]; then
     # -foo<tab>
-    arg="$cur"
+    arg="$arg$cur"
   elif [[ "$w1" == -*  && "$cur" == '=' ]]; then
     # -foo=<tab>
-    arg="$w1=,"
+    arg="$arg$w1=,"
+  elif [[ "$cur" == -*= ]]; then
+    # -foo=<tab>
+    arg="$arg$cur,"
   elif [[ "$w1" == -* ]]; then
     # -foo <tab> or -foo bar<tab>
-    arg="$w1,$cur"
+    arg="$arg$w1,$cur"
   elif [[ "$w2" == -* && "$w1" == '=' ]]; then
     # -foo=bar<tab>
-    arg="$w2=,$cur"
+    arg="$arg$w2=,$cur"
+  elif [[ ${cur: -1} != '=' && ${cur/=} != $cur ]]; then
+    # -foo=bar<tab>
+    arg="$arg${cur%=*}=,${cur#*=}"
   fi
 
   # expand ~ to $HOME

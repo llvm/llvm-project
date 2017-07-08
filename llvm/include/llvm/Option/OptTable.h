@@ -140,7 +140,8 @@ public:
   //  to start with.
   ///
   /// \return The vector of flags which start with Cur.
-  std::vector<std::string> findByPrefix(StringRef Cur) const;
+  std::vector<std::string> findByPrefix(StringRef Cur,
+                                        unsigned short DisableFlags) const;
 
   /// \brief Parse a single argument; returning the new argument and
   /// updating Index.
