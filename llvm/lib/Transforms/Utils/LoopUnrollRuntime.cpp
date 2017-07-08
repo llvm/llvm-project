@@ -65,9 +65,11 @@ static cl::opt<bool> UnrollRuntimeMultiExit(
 ///   than the unroll factor.
 ///
 static void ConnectProlog(Loop *L, Value *BECount, unsigned Count,
-                          BasicBlock *PrologExit, BasicBlock *PreHeader,
-                          BasicBlock *NewPreHeader, ValueToValueMapTy &VMap,
-                          DominatorTree *DT, LoopInfo *LI, bool PreserveLCSSA) {
+                          BasicBlock *PrologExit,
+                          BasicBlock *OriginalLoopLatchExit,
+                          BasicBlock *PreHeader, BasicBlock *NewPreHeader,
+                          ValueToValueMapTy &VMap, DominatorTree *DT,
+                          LoopInfo *LI, bool PreserveLCSSA) {
   BasicBlock *Latch = L->getLoopLatch();
   assert(Latch && "Loop must have a latch");
   BasicBlock *PrologLatch = cast<BasicBlock>(VMap[Latch]);
@@ -142,17 +144,15 @@ static void ConnectProlog(Loop *L, Value *BECount, unsigned Count,
   // then (BECount + 1) cannot unsigned-overflow.
   Value *BrLoopExit =
       B.CreateICmpULT(BECount, ConstantInt::get(BECount->getType(), Count - 1));
-  BasicBlock *Exit = L->getUniqueExitBlock();
-  assert(Exit && "Loop must have a single exit block only");
   // Split the exit to maintain loop canonicalization guarantees
-  SmallVector<BasicBlock*, 4> Preds(predecessors(Exit));
-  SplitBlockPredecessors(Exit, Preds, ".unr-lcssa", DT, LI,
+  SmallVector<BasicBlock *, 4> Preds(predecessors(OriginalLoopLatchExit));
+  SplitBlockPredecessors(OriginalLoopLatchExit, Preds, ".unr-lcssa", DT, LI,
                          PreserveLCSSA);
   // Add the branch to the exit block (around the unrolled loop)
-  B.CreateCondBr(BrLoopExit, Exit, NewPreHeader);
+  B.CreateCondBr(BrLoopExit, OriginalLoopLatchExit, NewPreHeader);
   InsertPt->eraseFromParent();
   if (DT)
-    DT->changeImmediateDominator(Exit, PrologExit);
+    DT->changeImmediateDominator(OriginalLoopLatchExit, PrologExit);
 }
 
 /// Connect the unrolling epilog code to the original loop.
@@ -497,8 +497,6 @@ bool llvm::UnrollRuntimeLoopRemainder(Loop *L, unsigned Count,
   // Support runtime unrolling for multiple exit blocks and multiple exiting
   // blocks.
   if (!LatchExit) {
-    assert(UseEpilogRemainder && "Multi exit unrolling is currently supported "
-                                 "unrolling with epilog remainder only!");
     LatchExit = LatchBR->getSuccessor(ExitIndex);
     // We rely on LCSSA form being preserved when the exit blocks are
     // transformed.
@@ -782,8 +780,8 @@ bool llvm::UnrollRuntimeLoopRemainder(Loop *L, unsigned Count,
   } else {
     // Connect the prolog code to the original loop and update the
     // PHI functions.
-    ConnectProlog(L, BECount, Count, PrologExit, PreHeader, NewPreHeader,
-                  VMap, DT, LI, PreserveLCSSA);
+    ConnectProlog(L, BECount, Count, PrologExit, LatchExit, PreHeader,
+                  NewPreHeader, VMap, DT, LI, PreserveLCSSA);
   }
 
   // If this loop is nested, then the loop unroller changes the code in the

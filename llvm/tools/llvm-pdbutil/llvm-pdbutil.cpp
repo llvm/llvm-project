@@ -284,6 +284,15 @@ cl::opt<bool> NoEnumDefs("no-enum-definitions",
 }
 
 namespace diff {
+cl::opt<bool> PrintValueColumns(
+    "values", cl::init(true),
+    cl::desc("Print one column for each PDB with the field value"),
+    cl::Optional, cl::sub(DiffSubcommand));
+cl::opt<bool>
+    PrintResultColumn("result", cl::init(false),
+                      cl::desc("Print a column with the result status"),
+                      cl::Optional, cl::sub(DiffSubcommand));
+
 cl::list<std::string> InputFilenames(cl::Positional,
                                      cl::desc("<first> <second>"),
                                      cl::OneOrMore, cl::sub(DiffSubcommand));
@@ -1078,6 +1087,11 @@ int main(int argc_, const char *argv_[]) {
 
     if (opts::pdb2yaml::DumpModules)
       opts::pdb2yaml::DbiStream = true;
+  }
+  if (opts::DiffSubcommand) {
+    if (!opts::diff::PrintResultColumn && !opts::diff::PrintValueColumns) {
+      llvm::errs() << "WARNING: No diff columns specified\n";
+    }
   }
 
   llvm::sys::InitializeCOMRAII COM(llvm::sys::COMThreadingMode::MultiThreaded);

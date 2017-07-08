@@ -312,11 +312,16 @@ protected:
     DBuilder.insertDbgValueIntrinsic(AllocaContent, 0, Variable, E, DL,
                                      Entry);
     // Also create an inlined variable.
+    // Create a distinct struct type that we should not duplicate during
+    // cloning).
+    auto *StructType = DICompositeType::getDistinct(
+        C, dwarf::DW_TAG_structure_type, "some_struct", nullptr, 0, nullptr,
+        nullptr, 32, 32, 0, DINode::FlagZero, nullptr, 0, nullptr, nullptr);
     auto *InlinedSP =
         DBuilder.createFunction(CU, "inlined", "inlined", File, 8, FuncType,
                                 true, true, 9, DINode::FlagZero, false);
     auto *InlinedVar =
-        DBuilder.createAutoVariable(InlinedSP, "inlined", File, 5, IntType, true);
+        DBuilder.createAutoVariable(InlinedSP, "inlined", File, 5, StructType, true);
     auto *Scope = DBuilder.createLexicalBlock(
         DBuilder.createLexicalBlockFile(InlinedSP, File), File, 1, 1);
     auto InlinedDL =
@@ -426,7 +431,11 @@ TEST_F(CloneFunc, DebugIntrinsics) {
       EXPECT_EQ(NewFunc, cast<AllocaInst>(NewIntrin->getAddress())->
                          getParent()->getParent());
 
-      if (!OldIntrin->getDebugLoc()->getInlinedAt()) {
+      if (OldIntrin->getDebugLoc()->getInlinedAt()) {
+        // Inlined variable should refer to the same DILocalVariable as in the
+        // Old Function
+        EXPECT_EQ(OldIntrin->getVariable(), NewIntrin->getVariable());
+      } else {
         // Old variable must belong to the old function.
         EXPECT_EQ(OldFunc->getSubprogram(),
                   cast<DISubprogram>(OldIntrin->getVariable()->getScope()));

@@ -51,12 +51,8 @@ class VOP3Common <dag outs, dag ins, string asm = "",
 
   let VOP3 = 1;
 
-  let AsmMatchConverter =
-    !if(!eq(VOP3Only,1),
-        "cvtVOP3",
-        !if(!eq(HasMods,1), "cvtVOP3_2_mod", ""));
-
   let AsmVariantName = AMDGPUAsmVariants.VOP3;
+  let AsmMatchConverter = !if(!eq(HasMods,1), "cvtVOP3", "");
 
   let isCodeGenOnly = 0;
 
@@ -106,13 +102,11 @@ class VOP3_Pseudo <string opName, VOPProfile P, list<dag> pattern = [],
 
   let AsmVariantName = AMDGPUAsmVariants.VOP3;
   let AsmMatchConverter =
-    !if(!eq(VOP3Only,1),
-        !if(!and(P.IsPacked, isVOP3P), "cvtVOP3P", "cvtVOP3"),
-        !if(!eq(P.HasModifiers, 1),
-            "cvtVOP3_2_mod",
-            !if(!eq(P.HasOMod, 1), "cvtVOP3OMod", "")
-        )
-    );
+    !if(!and(P.IsPacked, isVOP3P),
+        "cvtVOP3P",
+        !if(!or(P.HasModifiers, P.HasOMod),
+            "cvtVOP3",
+            ""));
 
   VOPProfile Pfl = P;
 }

@@ -1096,6 +1096,9 @@ namespace llvm {
                                            ISD::ArgFlagsTy &ArgFlags,
                                            CCState &State);
 
+    bool isIntS16Immediate(SDNode *N, int16_t &Imm);
+    bool isIntS16Immediate(SDValue Op, int16_t &Imm);
+
 } // end namespace llvm
 
 #endif // LLVM_TARGET_POWERPC_PPC32ISELLOWERING_H

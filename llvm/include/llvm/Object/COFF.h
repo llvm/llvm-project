@@ -698,6 +698,9 @@ struct coff_resource_dir_entry {
     uint32_t getNameOffset() const {
       return maskTrailingOnes<uint32_t>(31) & NameOffset;
     }
+    // Even though the PE/COFF spec doesn't mention this, the high bit of a name
+    // offset is set.
+    void setNameOffset(uint32_t Offset) { NameOffset = Offset | (1 << 31); }
   } Identifier;
   union {
     support::ulittle32_t DataEntryOffset;

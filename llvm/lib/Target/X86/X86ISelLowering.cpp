@@ -35015,6 +35015,21 @@ static SDValue combineAddOrSubToADCOrSBB(SDNode *N, SelectionDAG &DAG) {
     return DAG.getNode(IsSub ? ISD::SUB : ISD::ADD, DL, VT, X, SBB);
   }
 
+  auto *ConstantX = dyn_cast<ConstantSDNode>(X);
+  if (!IsSub && ConstantX && ConstantX->isAllOnesValue()) {
+    if (CC == X86::COND_AE) {
+      // This is a complicated way to get -1 or 0 from the carry flag:
+      // -1 + SETAE --> -1 + (!CF) --> CF ? -1 : 0 --> SBB %eax, %eax
+      // We don't have to match the subtract equivalent because sub X, 1 is
+      // canonicalized to add X, -1.
+      return DAG.getNode(X86ISD::SETCC_CARRY, DL, VT,
+                         DAG.getConstant(X86::COND_B, DL, MVT::i8),
+                         Y.getOperand(1));
+    }
+
+    // TODO: Handle COND_BE if it was produced by X86ISD::SUB similar to below.
+  }
+
   if (CC == X86::COND_A) {
     SDValue EFLAGS = Y->getOperand(1);
     // Try to convert COND_A into COND_B in an attempt to facilitate
@@ -35051,7 +35066,7 @@ static SDValue combineAddOrSubToADCOrSBB(SDNode *N, SelectionDAG &DAG) {
 
   // If X is -1 or 0, then we have an opportunity to avoid constants required in
   // the general case below.
-  if (auto *ConstantX = dyn_cast<ConstantSDNode>(X)) {
+  if (ConstantX) {
     // 'neg' sets the carry flag when Z != 0, so create 0 or -1 using 'sbb' with
     // fake operands:
     //  0 - (Z != 0) --> sbb %eax, %eax, (neg Z)

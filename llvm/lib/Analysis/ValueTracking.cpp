@@ -4405,8 +4405,8 @@ Optional<bool> llvm::isImpliedCondition(const Value *LHS, const Value *RHS,
   assert(OpTy->getScalarType()->isIntegerTy(1));
 
   // LHS ==> RHS by definition
-  if (!LHSIsFalse && LHS == RHS)
-    return true;
+  if (LHS == RHS)
+    return !LHSIsFalse;
 
   if (OpTy->isVectorTy())
     // TODO: extending the code below to handle vectors

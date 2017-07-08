@@ -259,6 +259,7 @@ bool HexagonShuffler::check() {
       break;
     case HexagonII::TypeCVI_VM_VP_LDU:
       ++onlyNo1;
+      LLVM_FALLTHROUGH;
     case HexagonII::TypeCVI_VM_LD:
     case HexagonII::TypeCVI_VM_TMP_LD:
     case HexagonII::TypeLD:
@@ -274,6 +275,7 @@ bool HexagonShuffler::check() {
       break;
     case HexagonII::TypeCVI_VM_STU:
       ++onlyNo1;
+      LLVM_FALLTHROUGH;
     case HexagonII::TypeCVI_VM_ST:
     case HexagonII::TypeCVI_VM_NEW_ST:
     case HexagonII::TypeST:

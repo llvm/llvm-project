@@ -1,0 +1,34 @@
+# RUN: llc -verify-machineinstrs -run-pass regallocfast -mtriple s390x-ibm-linux -o - %s | FileCheck %s
+--- |
+  
+  @g_167 = external global [5 x i64], align 8
+  define void @main() local_unnamed_addr {
+    ret void
+  }
+...
+# Make sure the usage of different subregisters on the same virtual register
+# does not result in invalid kill flags.
+# PR33677
+---
+name:            main
+alignment:       2
+tracksRegLiveness: true
+registers:       
+  - { id: 0, class: gr128bit }
+  - { id: 1, class: gr64bit }
+  - { id: 2, class: addr64bit }
+# CHECK: %r0q = L128
+# CHECK-NEXT: %r0l = COPY %r1l
+# Although R0L partially redefines R0Q, it must not mark R0Q as kill
+# because R1D is still live through that instruction.
+# CHECK-NOT: %r0q<imp-use,kill>
+# CHECK-NEXT: %r2d = COPY %r1d
+# CHECK-NEXT: LARL
+body:             |
+  bb.0:
+    %0.subreg_hl32 = COPY %0.subreg_l32
+    %1 = COPY %0.subreg_l64
+    %2 = LARL @g_167
+    STC %1.subreg_l32, %2, 8, _
+
+...

@@ -1282,6 +1282,7 @@ static UsedNZCV getUsedNZCV(AArch64CC::CondCode CC) {
     case AArch64CC::HI: // Z clear and C set
     case AArch64CC::LS: // Z set   or  C clear
       UsedFlags.Z = true;
+      LLVM_FALLTHROUGH;
     case AArch64CC::HS: // C set
     case AArch64CC::LO: // C clear
       UsedFlags.C = true;
@@ -1300,6 +1301,7 @@ static UsedNZCV getUsedNZCV(AArch64CC::CondCode CC) {
     case AArch64CC::GT: // Z clear, N and V the same
     case AArch64CC::LE: // Z set,   N and V differ
       UsedFlags.Z = true;
+      LLVM_FALLTHROUGH;
     case AArch64CC::GE: // N and V the same
     case AArch64CC::LT: // N and V differ 
       UsedFlags.N = true;

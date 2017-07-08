@@ -143,9 +143,8 @@ void DemandedBits::determineLiveOperandBits(
     break;
   case Instruction::Shl:
     if (OperandNo == 0)
-      if (ConstantInt *CI =
-            dyn_cast<ConstantInt>(UserI->getOperand(1))) {
-        uint64_t ShiftAmt = CI->getLimitedValue(BitWidth-1);
+      if (auto *ShiftAmtC = dyn_cast<ConstantInt>(UserI->getOperand(1))) {
+        uint64_t ShiftAmt = ShiftAmtC->getLimitedValue(BitWidth - 1);
         AB = AOut.lshr(ShiftAmt);
 
         // If the shift is nuw/nsw, then the high bits are not dead
@@ -159,9 +158,8 @@ void DemandedBits::determineLiveOperandBits(
     break;
   case Instruction::LShr:
     if (OperandNo == 0)
-      if (ConstantInt *CI =
-            dyn_cast<ConstantInt>(UserI->getOperand(1))) {
-        uint64_t ShiftAmt = CI->getLimitedValue(BitWidth-1);
+      if (auto *ShiftAmtC = dyn_cast<ConstantInt>(UserI->getOperand(1))) {
+        uint64_t ShiftAmt = ShiftAmtC->getLimitedValue(BitWidth - 1);
         AB = AOut.shl(ShiftAmt);
 
         // If the shift is exact, then the low bits are not dead
@@ -172,9 +170,8 @@ void DemandedBits::determineLiveOperandBits(
     break;
   case Instruction::AShr:
     if (OperandNo == 0)
-      if (ConstantInt *CI =
-            dyn_cast<ConstantInt>(UserI->getOperand(1))) {
-        uint64_t ShiftAmt = CI->getLimitedValue(BitWidth-1);
+      if (auto *ShiftAmtC = dyn_cast<ConstantInt>(UserI->getOperand(1))) {
+        uint64_t ShiftAmt = ShiftAmtC->getLimitedValue(BitWidth - 1);
         AB = AOut.shl(ShiftAmt);
         // Because the high input bit is replicated into the
         // high-order bits of the result, if we need any of those

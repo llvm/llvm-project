@@ -526,8 +526,8 @@ static void detectX86FamilyModel(unsigned EAX, unsigned *Family,
 }
 
 static void
-getIntelProcessorTypeAndSubtype(unsigned int Family, unsigned int Model,
-                                unsigned int Brand_id, unsigned int Features,
+getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
+                                unsigned Brand_id, unsigned Features,
                                 unsigned *Type, unsigned *Subtype) {
   if (Brand_id != 0)
     return;
@@ -827,10 +827,8 @@ getIntelProcessorTypeAndSubtype(unsigned int Family, unsigned int Model,
   }
 }
 
-static void getAMDProcessorTypeAndSubtype(unsigned int Family,
-                                          unsigned int Model,
-                                          unsigned int Features,
-                                          unsigned *Type,
+static void getAMDProcessorTypeAndSubtype(unsigned Family, unsigned Model,
+                                          unsigned Features, unsigned *Type,
                                           unsigned *Subtype) {
   // FIXME: this poorly matches the generated SubtargetFeatureKV table.  There
   // appears to be no way to generate the wide variety of AMD-specific targets
@@ -912,12 +910,7 @@ static void getAMDProcessorTypeAndSubtype(unsigned int Family,
     break; // "btver1";
   case 21:
     *Type = AMDFAM15H;
-    if (!(Features &
-          (1 << FEATURE_AVX))) { // If no AVX support, provide a sane fallback.
-      *Subtype = AMD_BTVER1;
-      break; // "btver1"
-    }
-    if (Model >= 0x50 && Model <= 0x6f) {
+    if (Model >= 0x60 && Model <= 0x7f) {
       *Subtype = AMDFAM15H_BDVER4;
       break; // "bdver4"; 50h-6Fh: Excavator
     }
@@ -936,30 +929,21 @@ static void getAMDProcessorTypeAndSubtype(unsigned int Family,
     break;
   case 22:
     *Type = AMDFAM16H;
-    if (!(Features &
-          (1 << FEATURE_AVX))) { // If no AVX support provide a sane fallback.
-      *Subtype = AMD_BTVER1;
-      break; // "btver1";
-    }
     *Subtype = AMD_BTVER2;
     break; // "btver2"
   case 23:
     *Type = AMDFAM17H;
-    if (Features & (1 << FEATURE_ADX)) {
-      *Subtype = AMDFAM17H_ZNVER1;
-      break; // "znver1"
-    }
-    *Subtype =  AMD_BTVER1;
+    *Subtype = AMDFAM17H_ZNVER1;
     break;
   default:
     break; // "generic"
   }
 }
 
-static unsigned getAvailableFeatures(unsigned int ECX, unsigned int EDX,
+static unsigned getAvailableFeatures(unsigned ECX, unsigned EDX,
                                      unsigned MaxLeaf) {
   unsigned Features = 0;
-  unsigned int EAX, EBX;
+  unsigned EAX, EBX;
   Features |= (((EDX >> 23) & 1) << FEATURE_MMX);
   Features |= (((EDX >> 25) & 1) << FEATURE_SSE);
   Features |= (((EDX >> 26) & 1) << FEATURE_SSE2);
@@ -987,8 +971,14 @@ static unsigned getAvailableFeatures(unsigned int ECX, unsigned int EDX,
   Features |= (HasAVX512Save << FEATURE_AVX512SAVE);
   Features |= (HasADX << FEATURE_ADX);
 
-  getX86CpuIDAndInfo(0x80000001, &EAX, &EBX, &ECX, &EDX);
-  Features |= (((EDX >> 29) & 0x1) << FEATURE_EM64T);
+  unsigned MaxExtLevel;
+  getX86CpuIDAndInfo(0x80000000, &MaxExtLevel, &EBX, &ECX, &EDX);
+
+  bool HasExtLeaf1 = MaxExtLevel >= 0x80000001 &&
+                     !getX86CpuIDAndInfo(0x80000001, &EAX, &EBX, &ECX, &EDX);
+  if (HasExtLeaf1)
+    Features |= (((EDX >> 29) & 0x1) << FEATURE_EM64T);
+
   return Features;
 }
 
@@ -1004,10 +994,9 @@ StringRef sys::getHostCPUName() {
   if(!isCpuIdSupported())
     return "generic";
 #endif
-  if (getX86CpuIDAndInfo(0, &MaxLeaf, &Vendor, &ECX, &EDX))
+  if (getX86CpuIDAndInfo(0, &MaxLeaf, &Vendor, &ECX, &EDX) || MaxLeaf < 1)
     return "generic";
-  if (getX86CpuIDAndInfo(0x1, &EAX, &EBX, &ECX, &EDX))
-    return "generic";
+  getX86CpuIDAndInfo(0x1, &EAX, &EBX, &ECX, &EDX);
 
   unsigned Brand_id = EBX & 0xff;
   unsigned Family = 0, Model = 0;

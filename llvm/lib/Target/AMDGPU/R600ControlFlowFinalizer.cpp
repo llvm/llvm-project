@@ -555,7 +555,7 @@ public:
             CFStack.pushBranch(AMDGPU::CF_PUSH_EG);
           } else
             CFStack.pushBranch(AMDGPU::CF_ALU_PUSH_BEFORE);
-
+          LLVM_FALLTHROUGH;
         case AMDGPU::CF_ALU:
           I = MI;
           AluClauses.push_back(MakeALUClause(MBB, I));

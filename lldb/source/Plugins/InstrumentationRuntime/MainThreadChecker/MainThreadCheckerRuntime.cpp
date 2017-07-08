@@ -141,7 +141,7 @@ MainThreadCheckerRuntime::RetrieveReportData(ExecutionContextRef exe_ctx_ref) {
   d->AddStringItem("class_name", className);
   d->AddStringItem("selector", selector);
   d->AddStringItem("description",
-                   apiName + " must be called from main thread only");
+                   apiName + " must be used from main thread only");
   d->AddIntegerItem("tid", thread_sp->GetIndexID());
   d->AddItem("trace", trace_sp);
   return dict_sp;
