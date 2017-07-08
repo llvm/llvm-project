@@ -8,6 +8,7 @@ import itertools
 import re
 import subprocess
 import sys
+import os
 
 # Third-party modules
 import six
@@ -138,6 +139,19 @@ def getPlatform():
 def platformIsDarwin():
     """Returns true if the OS triple for the selected platform is any valid apple OS"""
     return getPlatform() in getDarwinOSTriples()
+
+
+def findMainThreadCheckerDylib():
+    if not platformIsDarwin():
+        return ""
+
+    with os.popen('xcode-select -p') as output:
+        xcode_developer_path = output.read().strip()
+        mtc_dylib_path = '%s/usr/lib/libMainThreadChecker.dylib' % xcode_developer_path
+        if os.path.isfile(mtc_dylib_path):
+            return mtc_dylib_path
+
+    return ""
 
 
 class _PlatformContext(object):
