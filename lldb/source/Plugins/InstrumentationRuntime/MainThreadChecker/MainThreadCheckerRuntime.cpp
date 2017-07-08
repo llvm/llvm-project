@@ -109,12 +109,32 @@ static std::string TranslateObjCNameToSwiftName(std::string className,
                            swift::DeclVisibilityKind Reason) {
       if (result)
         return; // Take the first result.
-      if (swift::ClassDecl *cls = clang::dyn_cast<swift::ClassDecl>(VD)) {
-        auto funcs = cls->lookupDirect(selectorToLookup, true);
-        if (funcs.size() > 0) {
-          result = funcs.front()->getFullName();
+      swift::ClassDecl *cls = llvm::dyn_cast<swift::ClassDecl>(VD);
+      if (!cls)
+        return;
+      auto funcs = cls->lookupDirect(selectorToLookup, true);
+      if (funcs.size() == 0)
+        return;
+
+      // If the decl is actually an accessor, use the property name instead.
+      swift::AbstractFunctionDecl *decl = funcs.front();
+      if (auto func = llvm::dyn_cast<swift::FuncDecl>(decl)) {
+        swift::DeclContext *funcCtx = func->getParent();
+        // We need to loadAllMembers(), otherwise 'isAccessor' returns false.
+        if (auto extension = llvm::dyn_cast<swift::ExtensionDecl>(funcCtx)) {
+          extension->loadAllMembers();
+        } else if (auto nominal =
+                       llvm::dyn_cast<swift::NominalTypeDecl>(funcCtx)) {
+          nominal->loadAllMembers();
+        }
+
+        if (func->isAccessor()) {
+          result = func->getAccessorStorageDecl()->getFullName();
+          return;
         }
       }
+
+      result = decl->getFullName();
     }
   };
 
@@ -211,7 +231,7 @@ MainThreadCheckerRuntime::RetrieveReportData(ExecutionContextRef exe_ctx_ref) {
   d->AddStringItem("class_name", className);
   d->AddStringItem("selector", selector);
   d->AddStringItem("description",
-                   apiName + " must be called from main thread only");
+                   apiName + " must be used from main thread only");
   d->AddIntegerItem("tid", thread_sp->GetIndexID());
   d->AddItem("trace", trace_sp);
   return dict_sp;

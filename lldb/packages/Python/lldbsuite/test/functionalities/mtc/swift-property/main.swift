@@ -18,7 +18,7 @@ let g = DispatchGroup()
 g.enter()
 Thread.detachNewThread {
   autoreleasepool {
-    view.removeFromSuperview()
+    let _ = view.superview
   }
   g.leave()
 }
