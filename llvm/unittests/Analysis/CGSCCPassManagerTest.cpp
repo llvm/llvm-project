@@ -680,6 +680,7 @@ TEST_F(CGSCCPassManagerTest, TestSCCPassCanPreserveFunctionAnalysis) {
                                  LazyCallGraph &, CGSCCUpdateResult &) {
     PreservedAnalyses PA;
     PA.preserve<LazyCallGraphAnalysis>();
+    PA.preserve<FunctionAnalysisManagerCGSCCProxy>();
     PA.preserve<TestFunctionAnalysis>();
     return PA;
   }));
@@ -719,12 +720,14 @@ TEST_F(CGSCCPassManagerTest,
   CGPM1.addPass(createCGSCCToFunctionPassAdaptor(std::move(FPM1)));
   MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM1)));
 
-  // Now run a module pass that preserves the LazyCallGraph and proxy but not
+  // Now run a module pass that preserves the LazyCallGraph and proxies but not
   // the Function analysis.
   MPM.addPass(LambdaModulePass([&](Module &M, ModuleAnalysisManager &) {
     PreservedAnalyses PA;
     PA.preserve<LazyCallGraphAnalysis>();
     PA.preserve<CGSCCAnalysisManagerModuleProxy>();
+    PA.preserve<FunctionAnalysisManagerCGSCCProxy>();
+    PA.preserve<FunctionAnalysisManagerModuleProxy>();
     return PA;
   }));
 
@@ -741,7 +744,7 @@ TEST_F(CGSCCPassManagerTest,
   EXPECT_EQ(2 * 6, FunctionAnalysisRuns);
 }
 
-// Check that by marking the function pass and FAM proxy as preserved, this
+// Check that by marking the function pass and proxies as preserved, this
 // propagates all the way through.
 TEST_F(CGSCCPassManagerTest,
        TestModulePassCanPreserveFunctionAnalysisNestedInCGSCC) {
@@ -765,6 +768,7 @@ TEST_F(CGSCCPassManagerTest,
     PreservedAnalyses PA;
     PA.preserve<LazyCallGraphAnalysis>();
     PA.preserve<CGSCCAnalysisManagerModuleProxy>();
+    PA.preserve<FunctionAnalysisManagerCGSCCProxy>();
     PA.preserve<FunctionAnalysisManagerModuleProxy>();
     PA.preserve<TestFunctionAnalysis>();
     return PA;
@@ -1014,6 +1018,9 @@ TEST_F(CGSCCPassManagerTest, TestIndirectAnalysisInvalidation) {
         FunctionCount += IndirectResult.SCCDep.FunctionCount;
         return PreservedAnalyses::all();
       }));
+  CGPM.addPass(createCGSCCToFunctionPassAdaptor(
+      RequireAnalysisPass<TestIndirectFunctionAnalysis, Function>()));
+
   // Next, invalidate
   //   - both analyses for the (f) and (x) SCCs,
   //   - just the underlying (indirect) analysis for (g) SCC, and
@@ -1026,14 +1033,16 @@ TEST_F(CGSCCPassManagerTest, TestIndirectAnalysisInvalidation) {
         auto &IndirectResult = DoublyIndirectResult.IDep;
         FunctionCount += IndirectResult.SCCDep.FunctionCount;
         auto PA = PreservedAnalyses::none();
+        PA.preserve<FunctionAnalysisManagerCGSCCProxy>();
+        PA.preserveSet<AllAnalysesOn<Function>>();
         if (C.getName() == "(g)")
           PA.preserve<TestSCCAnalysis>();
         else if (C.getName() == "(h3, h1, h2)")
           PA.preserve<TestIndirectSCCAnalysis>();
         return PA;
       }));
-  // Finally, use the analysis again on each function, forcing re-computation
-  // for all of them.
+  // Finally, use the analysis again on each SCC (and function), forcing
+  // re-computation for all of them.
   CGPM.addPass(
       LambdaSCCPass([&](LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM,
                         LazyCallGraph &CG, CGSCCUpdateResult &) {
@@ -1043,6 +1052,8 @@ TEST_F(CGSCCPassManagerTest, TestIndirectAnalysisInvalidation) {
         FunctionCount += IndirectResult.SCCDep.FunctionCount;
         return PreservedAnalyses::all();
       }));
+  CGPM.addPass(createCGSCCToFunctionPassAdaptor(
+      RequireAnalysisPass<TestIndirectFunctionAnalysis, Function>()));
 
   // Create a second CGSCC pass manager. This will cause the module-level
   // invalidation to occur, which will force yet another invalidation of the
@@ -1058,13 +1069,15 @@ TEST_F(CGSCCPassManagerTest, TestIndirectAnalysisInvalidation) {
         FunctionCount += IndirectResult.SCCDep.FunctionCount;
         return PreservedAnalyses::all();
       }));
+  CGPM2.addPass(createCGSCCToFunctionPassAdaptor(
+      RequireAnalysisPass<TestIndirectFunctionAnalysis, Function>()));
 
-  // Add a requires pass to populate the module analysis and then our function
+  // Add a requires pass to populate the module analysis and then our CGSCC
   // pass pipeline.
   MPM.addPass(RequireAnalysisPass<TestModuleAnalysis, Module>());
   MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM)));
   // Now require the module analysis again (it will have been invalidated once)
-  // and then use it again from a function pass manager.
+  // and then use it again from our second CGSCC pipeline..
   MPM.addPass(RequireAnalysisPass<TestModuleAnalysis, Module>());
   MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM2)));
   MPM.run(*M, MAM);
@@ -1079,6 +1092,11 @@ TEST_F(CGSCCPassManagerTest, TestIndirectAnalysisInvalidation) {
   // times for each of four SCCs.
   EXPECT_EQ(3 * 4, IndirectSCCAnalysisRuns);
   EXPECT_EQ(3 * 4, DoublyIndirectSCCAnalysisRuns);
+
+  // We run the indirect function analysis once per function the first time.
+  // Then we re-run it for every SCC but "(g)". Then we re-run it for every
+  // function again.
+  EXPECT_EQ(6 + 5 + 6, IndirectFunctionAnalysisRuns);
 
   // Four passes count each of six functions once (via SCCs).
   EXPECT_EQ(4 * 6, FunctionCount);

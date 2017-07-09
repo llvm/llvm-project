@@ -1223,7 +1223,8 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
   // select i1 %c, <2 x i8> <1, 1>, <2 x i8> <0, 0>
   // because that may need 3 instructions to splat the condition value:
   // extend, insertelement, shufflevector.
-  if (CondVal->getType()->isVectorTy() == SelType->isVectorTy()) {
+  if (SelType->isIntOrIntVectorTy() &&
+      CondVal->getType()->isVectorTy() == SelType->isVectorTy()) {
     // select C, 1, 0 -> zext C to int
     if (match(TrueVal, m_One()) && match(FalseVal, m_Zero()))
       return new ZExtInst(CondVal, SelType);
