@@ -45,10 +45,10 @@ constexpr bool constexpr_test(InitArgs&&... args)
 void test_throwing_ctor() {
 #ifndef TEST_HAS_NO_EXCEPTIONS
     struct Z {
-      Z() : count(0) {}
-      Z(Z const& o) : count(o.count + 1)
-      { if (count == 2) throw 6; }
-      int count;
+        Z() : count(0) {}
+        Z(Z const& o) : count(o.count + 1)
+        { if (count == 2) throw 6; }
+        int count;
     };
     const Z z;
     const optional<Z> rhs(z);

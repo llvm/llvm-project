@@ -16,13 +16,13 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Stmt.h"
-#include "clang/AST/StmtVisitor.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/Path.h"
 
 using namespace clang;
+using namespace clang::clone_detection;
 
 StmtSequence::StmtSequence(const CompoundStmt *Stmt, const Decl *D,
                            unsigned StartIndex, unsigned EndIndex)
@@ -103,12 +103,8 @@ static void printMacroName(llvm::raw_string_ostream &MacroStack,
   MacroStack << " ";
 }
 
-/// Returns a string that represents all macro expansions that expanded into the
-/// given SourceLocation.
-///
-/// If 'getMacroStack(A) == getMacroStack(B)' is true, then the SourceLocations
-/// A and B are expanded from the same macros in the same order.
-static std::string getMacroStack(SourceLocation Loc, ASTContext &Context) {
+std::string clone_detection::getMacroStack(SourceLocation Loc,
+                                           ASTContext &Context) {
   std::string MacroStack;
   llvm::raw_string_ostream MacroStackStream(MacroStack);
   SourceManager &SM = Context.getSourceManager();
@@ -122,184 +118,6 @@ static std::string getMacroStack(SourceLocation Loc, ASTContext &Context) {
   MacroStackStream.flush();
   return MacroStack;
 }
-
-namespace {
-typedef unsigned DataPiece;
-
-/// Collects the data of a single Stmt.
-///
-/// This class defines what a code clone is: If it collects for two statements
-/// the same data, then those two statements are considered to be clones of each
-/// other.
-///
-/// All collected data is forwarded to the given data consumer of the type T.
-/// The data consumer class needs to provide a member method with the signature:
-///   update(StringRef Str)
-template <typename T>
-class StmtDataCollector : public ConstStmtVisitor<StmtDataCollector<T>> {
-
-  ASTContext &Context;
-  /// The data sink to which all data is forwarded.
-  T &DataConsumer;
-
-public:
-  /// Collects data of the given Stmt.
-  /// \param S The given statement.
-  /// \param Context The ASTContext of S.
-  /// \param DataConsumer The data sink to which all data is forwarded.
-  StmtDataCollector(const Stmt *S, ASTContext &Context, T &DataConsumer)
-      : Context(Context), DataConsumer(DataConsumer) {
-    this->Visit(S);
-  }
-
-  // Below are utility methods for appending different data to the vector.
-
-  void addData(DataPiece Integer) {
-    DataConsumer.update(
-        StringRef(reinterpret_cast<char *>(&Integer), sizeof(Integer)));
-  }
-
-  void addData(llvm::StringRef Str) { DataConsumer.update(Str); }
-
-  void addData(const QualType &QT) { addData(QT.getAsString()); }
-
-// The functions below collect the class specific data of each Stmt subclass.
-
-// Utility macro for defining a visit method for a given class. This method
-// calls back to the ConstStmtVisitor to visit all parent classes.
-#define DEF_ADD_DATA(CLASS, CODE)                                              \
-  void Visit##CLASS(const CLASS *S) {                                          \
-    CODE;                                                                      \
-    ConstStmtVisitor<StmtDataCollector>::Visit##CLASS(S);                      \
-  }
-
-  DEF_ADD_DATA(Stmt, {
-    addData(S->getStmtClass());
-    // This ensures that macro generated code isn't identical to macro-generated
-    // code.
-    addData(getMacroStack(S->getLocStart(), Context));
-    addData(getMacroStack(S->getLocEnd(), Context));
-  })
-  DEF_ADD_DATA(Expr, { addData(S->getType()); })
-
-  //--- Builtin functionality ----------------------------------------------//
-  DEF_ADD_DATA(ArrayTypeTraitExpr, { addData(S->getTrait()); })
-  DEF_ADD_DATA(ExpressionTraitExpr, { addData(S->getTrait()); })
-  DEF_ADD_DATA(PredefinedExpr, { addData(S->getIdentType()); })
-  DEF_ADD_DATA(TypeTraitExpr, {
-    addData(S->getTrait());
-    for (unsigned i = 0; i < S->getNumArgs(); ++i)
-      addData(S->getArg(i)->getType());
-  })
-
-  //--- Calls --------------------------------------------------------------//
-  DEF_ADD_DATA(CallExpr, {
-    // Function pointers don't have a callee and we just skip hashing it.
-    if (const FunctionDecl *D = S->getDirectCallee()) {
-      // If the function is a template specialization, we also need to handle
-      // the template arguments as they are not included in the qualified name.
-      if (auto Args = D->getTemplateSpecializationArgs()) {
-        std::string ArgString;
-
-        // Print all template arguments into ArgString
-        llvm::raw_string_ostream OS(ArgString);
-        for (unsigned i = 0; i < Args->size(); ++i) {
-          Args->get(i).print(Context.getLangOpts(), OS);
-          // Add a padding character so that 'foo<X, XX>()' != 'foo<XX, X>()'.
-          OS << '\n';
-        }
-        OS.flush();
-
-        addData(ArgString);
-      }
-      addData(D->getQualifiedNameAsString());
-    }
-  })
-
-  //--- Exceptions ---------------------------------------------------------//
-  DEF_ADD_DATA(CXXCatchStmt, { addData(S->getCaughtType()); })
-
-  //--- C++ OOP Stmts ------------------------------------------------------//
-  DEF_ADD_DATA(CXXDeleteExpr, {
-    addData(S->isArrayFormAsWritten());
-    addData(S->isGlobalDelete());
-  })
-
-  //--- Casts --------------------------------------------------------------//
-  DEF_ADD_DATA(ObjCBridgedCastExpr, { addData(S->getBridgeKind()); })
-
-  //--- Miscellaneous Exprs ------------------------------------------------//
-  DEF_ADD_DATA(BinaryOperator, { addData(S->getOpcode()); })
-  DEF_ADD_DATA(UnaryOperator, { addData(S->getOpcode()); })
-
-  //--- Control flow -------------------------------------------------------//
-  DEF_ADD_DATA(GotoStmt, { addData(S->getLabel()->getName()); })
-  DEF_ADD_DATA(IndirectGotoStmt, {
-    if (S->getConstantTarget())
-      addData(S->getConstantTarget()->getName());
-  })
-  DEF_ADD_DATA(LabelStmt, { addData(S->getDecl()->getName()); })
-  DEF_ADD_DATA(MSDependentExistsStmt, { addData(S->isIfExists()); })
-  DEF_ADD_DATA(AddrLabelExpr, { addData(S->getLabel()->getName()); })
-
-  //--- Objective-C --------------------------------------------------------//
-  DEF_ADD_DATA(ObjCIndirectCopyRestoreExpr, { addData(S->shouldCopy()); })
-  DEF_ADD_DATA(ObjCPropertyRefExpr, {
-    addData(S->isSuperReceiver());
-    addData(S->isImplicitProperty());
-  })
-  DEF_ADD_DATA(ObjCAtCatchStmt, { addData(S->hasEllipsis()); })
-
-  //--- Miscellaneous Stmts ------------------------------------------------//
-  DEF_ADD_DATA(CXXFoldExpr, {
-    addData(S->isRightFold());
-    addData(S->getOperator());
-  })
-  DEF_ADD_DATA(GenericSelectionExpr, {
-    for (unsigned i = 0; i < S->getNumAssocs(); ++i) {
-      addData(S->getAssocType(i));
-    }
-  })
-  DEF_ADD_DATA(LambdaExpr, {
-    for (const LambdaCapture &C : S->captures()) {
-      addData(C.isPackExpansion());
-      addData(C.getCaptureKind());
-      if (C.capturesVariable())
-        addData(C.getCapturedVar()->getType());
-    }
-    addData(S->isGenericLambda());
-    addData(S->isMutable());
-  })
-  DEF_ADD_DATA(DeclStmt, {
-    auto numDecls = std::distance(S->decl_begin(), S->decl_end());
-    addData(static_cast<DataPiece>(numDecls));
-    for (const Decl *D : S->decls()) {
-      if (const VarDecl *VD = dyn_cast<VarDecl>(D)) {
-        addData(VD->getType());
-      }
-    }
-  })
-  DEF_ADD_DATA(AsmStmt, {
-    addData(S->isSimple());
-    addData(S->isVolatile());
-    addData(S->generateAsmString(Context));
-    for (unsigned i = 0; i < S->getNumInputs(); ++i) {
-      addData(S->getInputConstraint(i));
-    }
-    for (unsigned i = 0; i < S->getNumOutputs(); ++i) {
-      addData(S->getOutputConstraint(i));
-    }
-    for (unsigned i = 0; i < S->getNumClobbers(); ++i) {
-      addData(S->getClobber(i));
-    }
-  })
-  DEF_ADD_DATA(AttributedStmt, {
-    for (const Attr *A : S->getAttrs()) {
-      addData(std::string(A->getSpelling()));
-    }
-  })
-};
-} // end anonymous namespace
 
 void CloneDetector::analyzeCodeBody(const Decl *D) {
   assert(D);
