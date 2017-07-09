@@ -210,6 +210,13 @@ TEST(PreservedAnalysesTest, Basic) {
     EXPECT_FALSE(PAC.preserved());
     EXPECT_FALSE(PAC.preservedSet<AllAnalysesOn<Function>>());
   }
+  auto PA5 = PreservedAnalyses::allInSet<AllAnalysesOn<Function>>();
+  {
+    auto PAC = PA5.getChecker<TestFunctionAnalysis>();
+    EXPECT_FALSE(PAC.preserved());
+    EXPECT_TRUE(PAC.preservedSet<AllAnalysesOn<Function>>());
+    EXPECT_FALSE(PAC.preservedSet<AllAnalysesOn<Module>>());
+  }
 }
 
 TEST(PreservedAnalysesTest, Preserve) {

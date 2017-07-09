@@ -577,12 +577,17 @@ public:
       // analyses will eventually occur when the module pass completes.
       PA.intersect(std::move(PassPA));
 
-      // Update the call graph based on this function pass. This may also
-      // update the current SCC to point to a smaller, more refined SCC.
-      CurrentC = &updateCGAndAnalysisManagerForFunctionPass(
-          CG, *CurrentC, *N, AM, UR, DebugLogging);
-      assert(CG.lookupSCC(*N) == CurrentC &&
-             "Current SCC not updated to the SCC containing the current node!");
+      // If the call graph hasn't been preserved, update it based on this
+      // function pass. This may also update the current SCC to point to
+      // a smaller, more refined SCC.
+      auto PAC = PA.getChecker<LazyCallGraphAnalysis>();
+      if (!PAC.preserved() && !PAC.preservedSet<AllAnalysesOn<Module>>()) {
+        CurrentC = &updateCGAndAnalysisManagerForFunctionPass(
+            CG, *CurrentC, *N, AM, UR, DebugLogging);
+        assert(
+            CG.lookupSCC(*N) == CurrentC &&
+            "Current SCC not updated to the SCC containing the current node!");
+      }
     }
 
     // By definition we preserve the proxy. And we preserve all analyses on

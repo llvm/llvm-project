@@ -4371,7 +4371,7 @@ static ICmpInst *canonicalizeCmpWithConstant(ICmpInst &I) {
 static Instruction *canonicalizeICmpBool(ICmpInst &I,
                                          InstCombiner::BuilderTy &Builder) {
   Value *A = I.getOperand(0), *B = I.getOperand(1);
-  assert(A->getType()->getScalarType()->isIntegerTy(1) && "Bools only");
+  assert(A->getType()->isIntOrIntVectorTy(1) && "Bools only");
 
   // A boolean compared to true/false can be simplified to Op0/true/false in
   // 14 out of the 20 (10 predicates * 2 constants) possible combinations.
@@ -4478,7 +4478,7 @@ Instruction *InstCombiner::visitICmpInst(ICmpInst &I) {
     }
   }
 
-  if (Op0->getType()->getScalarType()->isIntegerTy(1))
+  if (Op0->getType()->isIntOrIntVectorTy(1))
     if (Instruction *Res = canonicalizeICmpBool(I, Builder))
       return Res;
 

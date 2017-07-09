@@ -262,6 +262,51 @@ bool FunctionAnalysisManagerCGSCCProxy::Result::invalidate(
 
 } // End llvm namespace
 
+/// When a new SCC is created for the graph and there might be function
+/// analysis results cached for the functions now in that SCC two forms of
+/// updates are required.
+///
+/// First, a proxy from the SCC to the FunctionAnalysisManager needs to be
+/// created so that any subsequent invalidation events to the SCC are
+/// propagated to the function analysis results cached for functions within it.
+///
+/// Second, if any of the functions within the SCC have analysis results with
+/// outer analysis dependencies, then those dependencies would point to the
+/// *wrong* SCC's analysis result. We forcibly invalidate the necessary
+/// function analyses so that they don't retain stale handles.
+static void updateNewSCCFunctionAnalyses(LazyCallGraph::SCC &C,
+                                         LazyCallGraph &G,
+                                         CGSCCAnalysisManager &AM) {
+  // Get the relevant function analysis manager.
+  auto &FAM =
+      AM.getResult<FunctionAnalysisManagerCGSCCProxy>(C, G).getManager();
+
+  // Now walk the functions in this SCC and invalidate any function analysis
+  // results that might have outer dependencies on an SCC analysis.
+  for (LazyCallGraph::Node &N : C) {
+    Function &F = N.getFunction();
+
+    auto *OuterProxy =
+        FAM.getCachedResult<CGSCCAnalysisManagerFunctionProxy>(F);
+    if (!OuterProxy)
+      // No outer analyses were queried, nothing to do.
+      continue;
+
+    // Forcibly abandon all the inner analyses with dependencies, but
+    // invalidate nothing else.
+    auto PA = PreservedAnalyses::all();
+    for (const auto &OuterInvalidationPair :
+         OuterProxy->getOuterInvalidations()) {
+      const auto &InnerAnalysisIDs = OuterInvalidationPair.second;
+      for (AnalysisKey *InnerAnalysisID : InnerAnalysisIDs)
+        PA.abandon(InnerAnalysisID);
+    }
+
+    // Now invalidate anything we found.
+    FAM.invalidate(F, PA);
+  }
+}
+
 namespace {
 /// Helper function to update both the \c CGSCCAnalysisManager \p AM and the \c
 /// CGSCCPassManager's \c CGSCCUpdateResult \p UR based on a range of newly
@@ -314,9 +359,9 @@ incorporateNewSCCRange(const SCCRangeT &NewSCCRange, LazyCallGraph &G,
   PA.preserve<FunctionAnalysisManagerCGSCCProxy>();
   AM.invalidate(*OldC, PA);
 
-  // Ensure we have a proxy for the now-current SCC if needed.
+  // Ensure the now-current SCC's function analyses are updated.
   if (NeedFAMProxy)
-    (void)AM.getResult<FunctionAnalysisManagerCGSCCProxy>(*C, G);
+    updateNewSCCFunctionAnalyses(*C, G, AM);
 
   for (SCC &NewC :
        reverse(make_range(std::next(NewSCCRange.begin()), NewSCCRange.end()))) {
@@ -326,12 +371,12 @@ incorporateNewSCCRange(const SCCRangeT &NewSCCRange, LazyCallGraph &G,
     if (DebugLogging)
       dbgs() << "Enqueuing a newly formed SCC:" << NewC << "\n";
 
-    // Ensure new SCCs have a FAM proxy if needed.
+    // Ensure new SCCs' function analyses are updated.
     if (NeedFAMProxy)
-      (void)AM.getResult<FunctionAnalysisManagerCGSCCProxy>(*C, G);
+      updateNewSCCFunctionAnalyses(*C, G, AM);
 
-    // And propagate an invalidation to the new SCC as only the current will
-    // get one from the pass manager infrastructure.
+    // Also propagate a normal invalidation to the new SCC as only the current
+    // will get one from the pass manager infrastructure.
     AM.invalidate(NewC, PA);
   }
   return C;
@@ -525,25 +570,48 @@ LazyCallGraph::SCC &llvm::updateCGAndAnalysisManagerForFunctionPass(
     // Otherwise we are switching an internal ref edge to a call edge. This
     // may merge away some SCCs, and we add those to the UpdateResult. We also
     // need to make sure to update the worklist in the event SCCs have moved
-    // before the current one in the post-order sequence.
+    // before the current one in the post-order sequence
+    bool HasFunctionAnalysisProxy = false;
     auto InitialSCCIndex = RC->find(*C) - RC->begin();
-    auto InvalidatedSCCs = RC->switchInternalEdgeToCall(N, *CallTarget);
-    if (!InvalidatedSCCs.empty()) {
+    bool FormedCycle = RC->switchInternalEdgeToCall(
+        N, *CallTarget, [&](ArrayRef<SCC *> MergedSCCs) {
+          for (SCC *MergedC : MergedSCCs) {
+            assert(MergedC != &TargetC && "Cannot merge away the target SCC!");
+
+            HasFunctionAnalysisProxy |=
+                AM.getCachedResult<FunctionAnalysisManagerCGSCCProxy>(
+                    *MergedC) != nullptr;
+
+            // Mark that this SCC will no longer be valid.
+            UR.InvalidatedSCCs.insert(MergedC);
+
+            // FIXME: We should really do a 'clear' here to forcibly release
+            // memory, but we don't have a good way of doing that and
+            // preserving the function analyses.
+            auto PA = PreservedAnalyses::allInSet<AllAnalysesOn<Function>>();
+            PA.preserve<FunctionAnalysisManagerCGSCCProxy>();
+            AM.invalidate(*MergedC, PA);
+          }
+        });
+
+    // If we formed a cycle by creating this call, we need to update more data
+    // structures.
+    if (FormedCycle) {
       C = &TargetC;
       assert(G.lookupSCC(N) == C && "Failed to update current SCC!");
 
+      // If one of the invalidated SCCs had a cached proxy to a function
+      // analysis manager, we need to create a proxy in the new current SCC as
+      // the invaliadted SCCs had their functions moved.
+      if (HasFunctionAnalysisProxy)
+        AM.getResult<FunctionAnalysisManagerCGSCCProxy>(*C, G);
+
       // Any analyses cached for this SCC are no longer precise as the shape
-      // has changed by introducing this cycle.
-      AM.invalidate(*C, PreservedAnalyses::none());
-
-      for (SCC *InvalidatedC : InvalidatedSCCs) {
-        assert(InvalidatedC != C && "Cannot invalidate the current SCC!");
-        UR.InvalidatedSCCs.insert(InvalidatedC);
-
-        // Also clear any cached analyses for the SCCs that are dead. This
-        // isn't really necessary for correctness but can release memory.
-        AM.clear(*InvalidatedC);
-      }
+      // has changed by introducing this cycle. However, we have taken care to
+      // update the proxies so it remains valide.
+      auto PA = PreservedAnalyses::allInSet<AllAnalysesOn<Function>>();
+      PA.preserve<FunctionAnalysisManagerCGSCCProxy>();
+      AM.invalidate(*C, PA);
     }
     auto NewSCCIndex = RC->find(*C) - RC->begin();
     if (InitialSCCIndex < NewSCCIndex) {

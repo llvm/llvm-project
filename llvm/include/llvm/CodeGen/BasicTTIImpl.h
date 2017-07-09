@@ -428,7 +428,7 @@ public:
 
     std::pair<unsigned, MVT> LT = TLI->getTypeLegalizationCost(DL, Ty);
 
-    bool IsFloat = Ty->getScalarType()->isFloatingPointTy();
+    bool IsFloat = Ty->isFPOrFPVectorTy();
     // Assume that floating point arithmetic operations cost twice as much as
     // integer operations.
     unsigned OpCost = (IsFloat ? 2 : 1);

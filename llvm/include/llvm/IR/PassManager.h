@@ -162,6 +162,14 @@ public:
     return PA;
   }
 
+  /// \brief Construct a preserved analyses object with a single preserved set.
+  template <typename AnalysisSetT>
+  static PreservedAnalyses allInSet() {
+    PreservedAnalyses PA;
+    PA.preserveSet<AnalysisSetT>();
+    return PA;
+  }
+
   /// Mark an analysis as preserved.
   template <typename AnalysisT> void preserve() { preserve(AnalysisT::ID()); }
 
@@ -1062,10 +1070,27 @@ public:
 
     const AnalysisManagerT &getManager() const { return *AM; }
 
-    /// \brief Handle invalidation by ignoring it; this pass is immutable.
+    /// When invalidation occurs, remove any registered invalidation events.
     bool invalidate(
-        IRUnitT &, const PreservedAnalyses &,
-        typename AnalysisManager<IRUnitT, ExtraArgTs...>::Invalidator &) {
+        IRUnitT &IRUnit, const PreservedAnalyses &PA,
+        typename AnalysisManager<IRUnitT, ExtraArgTs...>::Invalidator &Inv) {
+      // Loop over the set of registered outer invalidation mappings and if any
+      // of them map to an analysis that is now invalid, clear it out.
+      SmallVector<AnalysisKey *, 4> DeadKeys;
+      for (auto &KeyValuePair : OuterAnalysisInvalidationMap) {
+        AnalysisKey *OuterID = KeyValuePair.first;
+        auto &InnerIDs = KeyValuePair.second;
+        InnerIDs.erase(llvm::remove_if(InnerIDs, [&](AnalysisKey *InnerID) {
+          return Inv.invalidate(InnerID, IRUnit, PA); }),
+                       InnerIDs.end());
+        if (InnerIDs.empty())
+          DeadKeys.push_back(OuterID);
+      }
+
+      for (auto OuterID : DeadKeys)
+        OuterAnalysisInvalidationMap.erase(OuterID);
+
+      // The proxy itself remains valid regardless of anything else.
       return false;
     }
 

@@ -512,7 +512,7 @@ ConstantInt *ConstantInt::getFalse(LLVMContext &Context) {
 }
 
 Constant *ConstantInt::getTrue(Type *Ty) {
-  assert(Ty->getScalarType()->isIntegerTy(1) && "Type not i1 or vector of i1.");
+  assert(Ty->isIntOrIntVectorTy(1) && "Type not i1 or vector of i1.");
   ConstantInt *TrueC = ConstantInt::getTrue(Ty->getContext());
   if (auto *VTy = dyn_cast<VectorType>(Ty))
     return ConstantVector::getSplat(VTy->getNumElements(), TrueC);
@@ -520,7 +520,7 @@ Constant *ConstantInt::getTrue(Type *Ty) {
 }
 
 Constant *ConstantInt::getFalse(Type *Ty) {
-  assert(Ty->getScalarType()->isIntegerTy(1) && "Type not i1 or vector of i1.");
+  assert(Ty->isIntOrIntVectorTy(1) && "Type not i1 or vector of i1.");
   ConstantInt *FalseC = ConstantInt::getFalse(Ty->getContext());
   if (auto *VTy = dyn_cast<VectorType>(Ty))
     return ConstantVector::getSplat(VTy->getNumElements(), FalseC);
@@ -1635,9 +1635,9 @@ Constant *ConstantExpr::getFPToSI(Constant *C, Type *Ty, bool OnlyIfReduced) {
 
 Constant *ConstantExpr::getPtrToInt(Constant *C, Type *DstTy,
                                     bool OnlyIfReduced) {
-  assert(C->getType()->getScalarType()->isPointerTy() &&
+  assert(C->getType()->isPtrOrPtrVectorTy() &&
          "PtrToInt source must be pointer or pointer vector");
-  assert(DstTy->getScalarType()->isIntegerTy() && 
+  assert(DstTy->isIntOrIntVectorTy() &&
          "PtrToInt destination must be integer or integer vector");
   assert(isa<VectorType>(C->getType()) == isa<VectorType>(DstTy));
   if (isa<VectorType>(C->getType()))
@@ -1648,9 +1648,9 @@ Constant *ConstantExpr::getPtrToInt(Constant *C, Type *DstTy,
 
 Constant *ConstantExpr::getIntToPtr(Constant *C, Type *DstTy,
                                     bool OnlyIfReduced) {
-  assert(C->getType()->getScalarType()->isIntegerTy() &&
+  assert(C->getType()->isIntOrIntVectorTy() &&
          "IntToPtr source must be integer or integer vector");
-  assert(DstTy->getScalarType()->isPointerTy() &&
+  assert(DstTy->isPtrOrPtrVectorTy() &&
          "IntToPtr destination must be a pointer or pointer vector");
   assert(isa<VectorType>(C->getType()) == isa<VectorType>(DstTy));
   if (isa<VectorType>(C->getType()))
