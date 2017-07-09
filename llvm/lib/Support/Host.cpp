@@ -681,12 +681,7 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
     // Skylake Xeon:
     case 0x55:
       *Type = INTEL_COREI7;
-      // Check that we really have AVX512
-      if (Features & (1 << FEATURE_AVX512)) {
-        *Subtype = INTEL_COREI7_SKYLAKE_AVX512; // "skylake-avx512"
-      } else {
-        *Subtype = INTEL_COREI7_SKYLAKE; // "skylake"
-      }
+      *Subtype = INTEL_COREI7_SKYLAKE_AVX512; // "skylake-avx512"
       break;
 
     case 0x1c: // Most 45 nm Intel Atom processors

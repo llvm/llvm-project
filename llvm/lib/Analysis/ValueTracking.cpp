@@ -1500,12 +1500,10 @@ void computeKnownBits(const Value *V, KnownBits &Known, unsigned Depth,
   assert(Depth <= MaxDepth && "Limit Search Depth");
   unsigned BitWidth = Known.getBitWidth();
 
-  assert((V->getType()->isIntOrIntVectorTy() ||
-          V->getType()->getScalarType()->isPointerTy()) &&
+  assert((V->getType()->isIntOrIntVectorTy(BitWidth) ||
+          V->getType()->isPtrOrPtrVectorTy()) &&
          "Not integer or pointer type!");
-  assert((Q.DL.getTypeSizeInBits(V->getType()->getScalarType()) == BitWidth) &&
-         (!V->getType()->isIntOrIntVectorTy() ||
-          V->getType()->getScalarSizeInBits() == BitWidth) &&
+  assert(Q.DL.getTypeSizeInBits(V->getType()->getScalarType()) == BitWidth &&
          "V and Known should have same BitWidth");
   (void)BitWidth;
 
@@ -4402,7 +4400,7 @@ Optional<bool> llvm::isImpliedCondition(const Value *LHS, const Value *RHS,
     return None;
 
   Type *OpTy = LHS->getType();
-  assert(OpTy->getScalarType()->isIntegerTy(1));
+  assert(OpTy->isIntOrIntVectorTy(1));
 
   // LHS ==> RHS by definition
   if (LHS == RHS)

@@ -2374,20 +2374,16 @@ void SITargetLowering::ReplaceNodeResults(SDNode *N,
   }
   case ISD::INTRINSIC_WO_CHAIN: {
     unsigned IID = cast<ConstantSDNode>(N->getOperand(0))->getZExtValue();
-    switch (IID) {
-    case Intrinsic::amdgcn_cvt_pkrtz: {
+    if (IID == Intrinsic::amdgcn_cvt_pkrtz) {
       SDValue Src0 = N->getOperand(1);
       SDValue Src1 = N->getOperand(2);
       SDLoc SL(N);
       SDValue Cvt = DAG.getNode(AMDGPUISD::CVT_PKRTZ_F16_F32, SL, MVT::i32,
                                 Src0, Src1);
-
       Results.push_back(DAG.getNode(ISD::BITCAST, SL, MVT::v2f16, Cvt));
       return;
     }
-    default:
-      break;
-    }
+    break;
   }
   case ISD::SELECT: {
     SDLoc SL(N);

@@ -790,7 +790,7 @@ Instruction *InstCombiner::FoldOpIntoSelect(Instruction &Op, SelectInst *SI) {
     return nullptr;
 
   // Bool selects with constant operands can be folded to logical ops.
-  if (SI->getType()->getScalarType()->isIntegerTy(1))
+  if (SI->getType()->isIntOrIntVectorTy(1))
     return nullptr;
 
   // If it's a bitcast involving vectors, make sure it has the same number of

@@ -19,7 +19,7 @@ entry:
 loop:
 ; CHECK: loop:
 ; CHECK:  call void (i1, ...) @llvm.experimental.guard(i1 true) [ "deopt"() ]
-; CHECK:  %iv.inc.cmp = icmp slt i32 %iv.inc, %len
+; CHECK:  %iv.inc.cmp = icmp ult i32 %iv.inc, %len
 ; CHECK:  call void (i1, ...) @llvm.experimental.guard(i1 %iv.inc.cmp) [ "deopt"() ]
 ; CHECK: leave:
 
@@ -41,7 +41,7 @@ leave:
 
 define void @test_2(i32 %n, i32* %len_buf) {
 ; CHECK-LABEL: @test_2(
-; CHECK:  [[LEN_SEXT:%[^ ]+]] = sext i32 %len to i64
+; CHECK:  [[LEN_ZEXT:%[^ ]+]] = zext i32 %len to i64
 ; CHECK:  br label %loop
 
 entry:
@@ -52,7 +52,7 @@ loop:
 ; CHECK: loop:
 ; CHECK:  %indvars.iv = phi i64 [ %indvars.iv.next, %loop ], [ 0, %entry ]
 ; CHECK:  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-; CHECK:  %iv.inc.cmp = icmp slt i64 %indvars.iv.next, [[LEN_SEXT]]
+; CHECK:  %iv.inc.cmp = icmp ult i64 %indvars.iv.next, [[LEN_ZEXT]]
 ; CHECK:  call void (i1, ...) @llvm.experimental.guard(i1 %iv.inc.cmp) [ "deopt"() ]
 ; CHECK: leave:
 

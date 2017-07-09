@@ -162,6 +162,14 @@ public:
     return PA;
   }
 
+  /// \brief Construct a preserved analyses object with a single preserved set.
+  template <typename AnalysisSetT>
+  static PreservedAnalyses allInSet() {
+    PreservedAnalyses PA;
+    PA.preserveSet<AnalysisSetT>();
+    return PA;
+  }
+
   /// Mark an analysis as preserved.
   template <typename AnalysisT> void preserve() { preserve(AnalysisT::ID()); }
 
