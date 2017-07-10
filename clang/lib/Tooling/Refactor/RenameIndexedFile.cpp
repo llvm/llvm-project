@@ -81,7 +81,9 @@ static MatchKind checkOccurrence(const IndexedOccurrence &Occurrence,
   if (BeginLoc.isInvalid())
     return MatchKind::None;
   StringRef SymbolNameStart = Symbol.Name[0];
-  SourceLocation EndLoc = BeginLoc.getLocWithOffset(SymbolNameStart.size());
+  SourceLocation EndLoc = BeginLoc.getLocWithOffset(std::max(
+      SymbolNameStart.size(),
+      size_t(1))); // Take empty Objective-C selector pieces into account.
   if (!SM.isBeforeInTranslationUnit(BeginLoc, EndLoc)) {
     // Ignore any invalid source ranges. This can occur if the indexed
     // location is invalid.
@@ -95,8 +97,16 @@ static MatchKind checkOccurrence(const IndexedOccurrence &Occurrence,
       File->getBufferStart() + DecomposedLoc.second, File->getBufferEnd());
   Token Tok;
   RawLex.LexFromRawLexer(Tok);
-  if (Tok.isNot(tok::raw_identifier) || Tok.getLocation() != BeginLoc)
+  if (Tok.isNot(tok::raw_identifier) || Tok.getLocation() != BeginLoc) {
+    if (SymbolNameStart.empty() && Tok.is(tok::colon) &&
+        Tok.getLocation() == BeginLoc) {
+      // Must be the location of an empty Objective-C selector piece.
+      SymbolRange = SourceRange(BeginLoc, BeginLoc);
+      return MatchKind::SourceMatch;
+    }
+    // FIXME: Handle empty selector piece in a macro?
     return MatchKind::None;
+  }
   SymbolRange = SourceRange(BeginLoc, Tok.getEndLoc());
   if (Tok.getRawIdentifier() == SymbolNameStart)
     return MatchKind::SourceMatch;
@@ -176,18 +186,22 @@ SelectorParser::ParseState SelectorParser::stateForToken(const Token &RawTok) {
       break;
     SelectorLocations.clear();
     return ExpectingSelectorPiece;
-  case ExpectingSelectorPiece:
+  case ExpectingSelectorPiece: {
     assert(SelectorLocations.size() < Name.size() &&
            "Expecting invalid selector piece");
-    if (RawTok.isNot(tok::raw_identifier) ||
-        RawTok.getRawIdentifier() != Name[SelectorLocations.size()])
+    StringRef NamePiece = Name[SelectorLocations.size()];
+    if ((RawTok.isNot(tok::raw_identifier) ||
+         RawTok.getRawIdentifier() != NamePiece) &&
+        !(NamePiece.empty() && RawTok.is(tok::colon))) {
       break;
+    }
     SelectorLocations.push_back(RawTok.getLocation());
     if (SelectorLocations.size() == Name.size()) {
       // We found the selector that we were looking for, now check for ')'.
-      return ExpectingRParenOrColon;
+      return NamePiece.empty() ? ExpectingRParen : ExpectingRParenOrColon;
     }
-    return ExpectingColon;
+    return NamePiece.empty() ? ExpectingSelectorPiece : ExpectingColon;
+  }
   case ExpectingColon:
     if (RawTok.is(tok::colon))
       return ExpectingSelectorPiece;
@@ -210,6 +224,15 @@ SelectorParser::ParseState SelectorParser::stateForToken(const Token &RawTok) {
 }
 
 bool SelectorParser::handleToken(const Token &RawTok) {
+  if (RawTok.is(tok::coloncolon)) {
+    // Split the '::' into two ':'.
+    Token T(RawTok);
+    T.setKind(tok::colon);
+    T.setLength(1);
+    handleToken(T);
+    T.setLocation(T.getLocation().getLocWithOffset(1));
+    return handleToken(T);
+  }
   State = stateForToken(RawTok);
   if (State != Success)
     return false;
@@ -221,14 +244,18 @@ static void collectTextualMatchesInComment(
     ArrayRef<IndexedSymbol> Symbols, SourceLocation CommentLoc,
     StringRef Comment, llvm::SmallVectorImpl<TextualMatchOccurrence> &Result) {
   for (const auto &Symbol : llvm::enumerate(Symbols)) {
+    const SymbolName &Name = Symbol.value().Name;
+    if (Name.containsEmptyPiece()) // Ignore Objective-C selectors with empty
+                                   // pieces.
+      continue;
     size_t Offset = 0;
     while (true) {
-      Offset = Comment.find(Symbol.value().Name[0], /*From=*/Offset);
+      Offset = Comment.find(Name[0], /*From=*/Offset);
       if (Offset == StringRef::npos)
         break;
       Result.push_back(
           {CommentLoc.getLocWithOffset(Offset), (unsigned)Symbol.index()});
-      Offset += Symbol.value().Name[0].size();
+      Offset += Name[0].size();
     }
   }
 }
@@ -432,12 +459,20 @@ enum class ObjCSymbolSelectorKind { MessageSend, MethodDecl };
 
 } // end anonymous namespace
 
+static bool isMatchingSelectorName(const Token &Tok, const Token &Next,
+                                   StringRef NamePiece) {
+  if (NamePiece.empty())
+    return Tok.is(tok::colon);
+  return Tok.is(tok::raw_identifier) && Next.is(tok::colon) &&
+         Tok.getRawIdentifier() == NamePiece;
+}
+
 static bool
 findObjCSymbolSelectorPieces(ArrayRef<Token> Tokens, const SymbolName &Name,
                              SmallVectorImpl<SourceLocation> &Pieces,
                              ObjCSymbolSelectorKind Kind) {
   assert(!Tokens.empty() && "no tokens");
-  assert(Tokens[0].getRawIdentifier() == Name[0]);
+  assert(Name[0].empty() || Tokens[0].getRawIdentifier() == Name[0]);
   assert(Name.size() > 1);
   assert(Pieces.empty());
 
@@ -453,13 +488,17 @@ findObjCSymbolSelectorPieces(ArrayRef<Token> Tokens, const SymbolName &Name,
   // Start looking for the next selector piece.
   unsigned Last = Tokens.size() - 1;
   // Skip the ':' or any other token after the first selector piece token.
-  for (unsigned Index = 2; Index < Last; ++Index) {
+  for (unsigned Index = Name[0].empty() ? 1 : 2; Index < Last; ++Index) {
     const auto &Tok = Tokens[Index];
 
     bool NoScoping = SquareCount == 0 && BraceCount == 0 && ParenCount == 0;
-    if (NoScoping && Tok.is(tok::raw_identifier) &&
-        Tokens[Index + 1].is(tok::colon) &&
-        Tok.getRawIdentifier() == Name[Pieces.size()]) {
+    if (NoScoping &&
+        isMatchingSelectorName(Tok, Tokens[Index + 1], Name[Pieces.size()])) {
+      if (!Name[Pieces.size()].empty()) {
+        // Skip the ':' after the name. This ensures that it won't match a
+        // follow-up selector piece with an empty name.
+        ++Index;
+      }
       Pieces.push_back(Tok.getLocation());
       // All the selector pieces have been found.
       if (Pieces.size() == Name.size())
@@ -565,10 +604,11 @@ findObjCMultiPieceSelectorOccurrences(CompilerInstance &CI,
     auto It = MappedIndexedOccurrences.find(Tok.getLocation().getRawEncoding());
     if (It == MappedIndexedOccurrences.end())
       continue;
-    if (Tok.getKind() != tok::raw_identifier)
+    unsigned SymbolIndex = It->second.second;
+    if (Tok.getKind() != tok::raw_identifier &&
+        !(Symbols[SymbolIndex].Name[0].empty() && Tok.is(tok::colon)))
       continue;
     const IndexedOccurrence &Occurrence = It->second.first;
-    unsigned SymbolIndex = It->second.second;
 
     // Scan the source for the remaining selector pieces.
     SmallVector<SourceLocation, 4> SelectorPieces;

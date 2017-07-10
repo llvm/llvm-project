@@ -52,6 +52,14 @@ public:
 
   ArrayRef<std::string> strings() const { return Strings; }
 
+  bool containsEmptyPiece() const {
+    for (const auto &String : Strings) {
+      if (String.empty())
+        return true;
+    }
+    return false;
+  }
+
   void print(raw_ostream &OS) const;
 
 private:
