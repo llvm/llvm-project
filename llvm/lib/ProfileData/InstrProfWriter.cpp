@@ -176,14 +176,16 @@ void InstrProfWriter::setOutputSparse(bool Sparse) {
   this->Sparse = Sparse;
 }
 
-Error InstrProfWriter::addRecord(NamedInstrProfRecord &&I, uint64_t Weight) {
+void InstrProfWriter::addRecord(NamedInstrProfRecord &&I, uint64_t Weight,
+                                function_ref<void(Error)> Warn) {
   auto Name = I.Name;
   auto Hash = I.Hash;
-  return addRecord(Name, Hash, std::move(I), Weight);
+  addRecord(Name, Hash, std::move(I), Weight, Warn);
 }
 
-Error InstrProfWriter::addRecord(StringRef Name, uint64_t Hash,
-                                 InstrProfRecord &&I, uint64_t Weight) {
+void InstrProfWriter::addRecord(StringRef Name, uint64_t Hash,
+                                InstrProfRecord &&I, uint64_t Weight,
+                                function_ref<void(Error)> Warn) {
   auto &ProfileDataMap = FunctionData[Name];
 
   bool NewFunc;
@@ -192,27 +194,28 @@ Error InstrProfWriter::addRecord(StringRef Name, uint64_t Hash,
       ProfileDataMap.insert(std::make_pair(Hash, InstrProfRecord()));
   InstrProfRecord &Dest = Where->second;
 
+  auto MapWarn = [&](instrprof_error E) {
+    Warn(make_error<InstrProfError>(E));
+  };
+
   if (NewFunc) {
     // We've never seen a function with this name and hash, add it.
     Dest = std::move(I);
     if (Weight > 1)
-      Dest.scale(Weight);
+      Dest.scale(Weight, MapWarn);
   } else {
     // We're updating a function we've seen before.
-    Dest.merge(I, Weight);
+    Dest.merge(I, Weight, MapWarn);
   }
 
   Dest.sortValueData();
-
-  return Dest.takeError();
 }
 
-Error InstrProfWriter::mergeRecordsFromWriter(InstrProfWriter &&IPW) {
+void InstrProfWriter::mergeRecordsFromWriter(InstrProfWriter &&IPW,
+                                             function_ref<void(Error)> Warn) {
   for (auto &I : IPW.FunctionData)
     for (auto &Func : I.getValue())
-      if (Error E = addRecord(I.getKey(), Func.first, std::move(Func.second)))
-        return E;
-  return Error::success();
+      addRecord(I.getKey(), Func.first, std::move(Func.second), 1, Warn);
 }
 
 bool InstrProfWriter::shouldEncodeData(const ProfilingData &PD) {

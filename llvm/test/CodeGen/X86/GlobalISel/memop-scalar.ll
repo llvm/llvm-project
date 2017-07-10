@@ -2,6 +2,15 @@
 ; RUN: llc -mtriple=x86_64-linux-gnu                       -global-isel -verify-machineinstrs < %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=SSE_FAST
 ; RUN: llc -mtriple=x86_64-linux-gnu -regbankselect-greedy -global-isel -verify-machineinstrs < %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=SSE_GREEDY
 
+define i1 @test_load_i1(i1 * %p1) {
+; ALL-LABEL: test_load_i1:
+; ALL:       # BB#0:
+; ALL-NEXT:    movb (%rdi), %al
+; ALL-NEXT:    retq
+  %r = load i1, i1* %p1
+  ret i1 %r
+}
+
 define i8 @test_load_i8(i8 * %p1) {
 ; ALL-LABEL: test_load_i8:
 ; ALL:       # BB#0:
@@ -68,6 +77,17 @@ define double @test_load_double(double * %p1) {
 ; ALL-NEXT:    retq
   %r = load double, double* %p1
   ret double %r
+}
+
+define i1 * @test_store_i1(i1 %val, i1 * %p1) {
+; ALL-LABEL: test_store_i1:
+; ALL:       # BB#0:
+; ALL-NEXT:    andb $1, %dil
+; ALL-NEXT:    movb %dil, (%rsi)
+; ALL-NEXT:    movq %rsi, %rax
+; ALL-NEXT:    retq
+  store i1 %val, i1* %p1
+  ret i1 * %p1;
 }
 
 define i32 * @test_store_i32(i32 %val, i32 * %p1) {

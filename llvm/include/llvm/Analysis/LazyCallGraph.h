@@ -652,17 +652,23 @@ public:
     /// Make an existing internal ref edge into a call edge.
     ///
     /// This may form a larger cycle and thus collapse SCCs into TargetN's SCC.
-    /// If that happens, the deleted SCC pointers are returned. These SCCs are
-    /// not in a valid state any longer but the pointers will remain valid
-    /// until destruction of the parent graph instance for the purpose of
-    /// clearing cached information.
+    /// If that happens, the optional callback \p MergedCB will be invoked (if
+    /// provided) on the SCCs being merged away prior to actually performing
+    /// the merge. Note that this will never include the target SCC as that
+    /// will be the SCC functions are merged into to resolve the cycle. Once
+    /// this function returns, these merged SCCs are not in a valid state but
+    /// the pointers will remain valid until destruction of the parent graph
+    /// instance for the purpose of clearing cached information. This function
+    /// also returns 'true' if a cycle was formed and some SCCs merged away as
+    /// a convenience.
     ///
     /// After this operation, both SourceN's SCC and TargetN's SCC may move
     /// position within this RefSCC's postorder list. Any SCCs merged are
     /// merged into the TargetN's SCC in order to preserve reachability analyses
     /// which took place on that SCC.
-    SmallVector<SCC *, 1> switchInternalEdgeToCall(Node &SourceN,
-                                                   Node &TargetN);
+    bool switchInternalEdgeToCall(
+        Node &SourceN, Node &TargetN,
+        function_ref<void(ArrayRef<SCC *> MergedSCCs)> MergeCB = {});
 
     /// Make an existing internal call edge between separate SCCs into a ref
     /// edge.

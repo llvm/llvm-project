@@ -2,6 +2,42 @@
 ; RUN: llc -mtriple=x86_64-linux-gnu    -global-isel -verify-machineinstrs < %s -o - | FileCheck %s --check-prefix=X64
 ; RUN: llc -mtriple=i386-linux-gnu      -global-isel -verify-machineinstrs < %s -o - | FileCheck %s --check-prefix=X32
 
+define i8 @test_zext_i1toi8(i32 %a) {
+; X64-LABEL: test_zext_i1toi8:
+; X64:       # BB#0:
+; X64-NEXT:    andb $1, %dil
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    retq
+;
+; X32-LABEL: test_zext_i1toi8:
+; X32:       # BB#0:
+; X32-NEXT:    movl 4(%esp), %eax
+; X32-NEXT:    andb $1, %al
+; X32-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; X32-NEXT:    retl
+  %val = trunc i32 %a to i1
+  %r = zext i1 %val to i8
+  ret i8 %r
+}
+
+define i16 @test_zext_i1toi16(i32 %a) {
+; X64-LABEL: test_zext_i1toi16:
+; X64:       # BB#0:
+; X64-NEXT:    andw $1, %di
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    retq
+;
+; X32-LABEL: test_zext_i1toi16:
+; X32:       # BB#0:
+; X32-NEXT:    movl 4(%esp), %eax
+; X32-NEXT:    andw $1, %ax
+; X32-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
+; X32-NEXT:    retl
+  %val = trunc i32 %a to i1
+  %r = zext i1 %val to i16
+  ret i16 %r
+}
+
 define i32 @test_zext_i1(i32 %a) {
 ; X64-LABEL: test_zext_i1:
 ; X64:       # BB#0:

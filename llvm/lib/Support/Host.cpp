@@ -406,7 +406,6 @@ static bool isCpuIdSupported() {
 /// the specified arguments.  If we can't run cpuid on the host, return true.
 static bool getX86CpuIDAndInfo(unsigned value, unsigned *rEAX, unsigned *rEBX,
                                unsigned *rECX, unsigned *rEDX) {
-#if defined(__GNUC__) || defined(__clang__) || defined(_MSC_VER)
 #if defined(__GNUC__) || defined(__clang__)
 #if defined(__x86_64__)
   // gcc doesn't know cpuid would clobber ebx/rbx. Preserve it manually.
@@ -416,14 +415,16 @@ static bool getX86CpuIDAndInfo(unsigned value, unsigned *rEAX, unsigned *rEBX,
           "xchgq\t%%rbx, %%rsi\n\t"
           : "=a"(*rEAX), "=S"(*rEBX), "=c"(*rECX), "=d"(*rEDX)
           : "a"(value));
+  return false;
 #elif defined(__i386__)
   __asm__("movl\t%%ebx, %%esi\n\t"
           "cpuid\n\t"
           "xchgl\t%%ebx, %%esi\n\t"
           : "=a"(*rEAX), "=S"(*rEBX), "=c"(*rECX), "=d"(*rEDX)
           : "a"(value));
+  return false;
 #else
-  assert(0 && "This method is defined only for x86.");
+  return true;
 #endif
 #elif defined(_MSC_VER)
   // The MSVC intrinsic is portable across x86 and x64.
@@ -433,7 +434,6 @@ static bool getX86CpuIDAndInfo(unsigned value, unsigned *rEAX, unsigned *rEBX,
   *rEBX = registers[1];
   *rECX = registers[2];
   *rEDX = registers[3];
-#endif
   return false;
 #else
   return true;
@@ -446,16 +446,16 @@ static bool getX86CpuIDAndInfo(unsigned value, unsigned *rEAX, unsigned *rEBX,
 static bool getX86CpuIDAndInfoEx(unsigned value, unsigned subleaf,
                                  unsigned *rEAX, unsigned *rEBX, unsigned *rECX,
                                  unsigned *rEDX) {
-#if defined(__GNUC__) || defined(__clang__) || defined(_MSC_VER)
 #if defined(__x86_64__) || defined(_M_X64)
 #if defined(__GNUC__) || defined(__clang__)
-  // gcc doesn't know cpuid would clobber ebx/rbx. Preseve it manually.
+  // gcc doesn't know cpuid would clobber ebx/rbx. Preserve it manually.
   // FIXME: should we save this for Clang?
   __asm__("movq\t%%rbx, %%rsi\n\t"
           "cpuid\n\t"
           "xchgq\t%%rbx, %%rsi\n\t"
           : "=a"(*rEAX), "=S"(*rEBX), "=c"(*rECX), "=d"(*rEDX)
           : "a"(value), "c"(subleaf));
+  return false;
 #elif defined(_MSC_VER)
   int registers[4];
   __cpuidex(registers, value, subleaf);
@@ -463,6 +463,9 @@ static bool getX86CpuIDAndInfoEx(unsigned value, unsigned subleaf,
   *rEBX = registers[1];
   *rECX = registers[2];
   *rEDX = registers[3];
+  return false;
+#else
+  return true;
 #endif
 #elif defined(__i386__) || defined(_M_IX86)
 #if defined(__GNUC__) || defined(__clang__)
@@ -471,6 +474,7 @@ static bool getX86CpuIDAndInfoEx(unsigned value, unsigned subleaf,
           "xchgl\t%%ebx, %%esi\n\t"
           : "=a"(*rEAX), "=S"(*rEBX), "=c"(*rECX), "=d"(*rEDX)
           : "a"(value), "c"(subleaf));
+  return false;
 #elif defined(_MSC_VER)
   __asm {
       mov   eax,value
@@ -485,11 +489,10 @@ static bool getX86CpuIDAndInfoEx(unsigned value, unsigned subleaf,
       mov   esi,rEDX
       mov   dword ptr [esi],edx
   }
-#endif
-#else
-  assert(0 && "This method is defined only for x86.");
-#endif
   return false;
+#else
+  return true;
+#endif
 #else
   return true;
 #endif

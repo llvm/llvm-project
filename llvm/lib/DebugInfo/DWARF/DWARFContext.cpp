@@ -940,14 +940,10 @@ DWARFContextInMemory::DWARFContextInMemory(
     StringRef Name;
     Section.getName(Name);
     // Skip BSS and Virtual sections, they aren't interesting.
-    bool IsBSS = Section.isBSS();
-    if (IsBSS)
+    if (Section.isBSS() || Section.isVirtual())
       continue;
-    bool IsVirtual = Section.isVirtual();
-    if (IsVirtual)
-      continue;
-    StringRef Data;
 
+    StringRef Data;
     section_iterator RelocatedSection = Section.getRelocatedSection();
     // Try to obtain an already relocated version of this section.
     // Else use the unrelocated section from the object file. We'll have to
