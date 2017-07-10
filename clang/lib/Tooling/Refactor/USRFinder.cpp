@@ -127,8 +127,10 @@ public:
   bool VisitObjCMethodDecl(const ObjCMethodDecl *Decl) {
     // Check all of the selector source ranges.
     for (unsigned I = 0, E = Decl->getNumSelectorLocs(); I != E; ++I) {
-      if (!checkOccurrence(Decl, Decl->getSelectorLoc(I),
-                           Decl->getSelector().getNameForSlot(I).size()))
+      SourceLocation Loc = Decl->getSelectorLoc(I);
+      if (!checkOccurrence(Decl, Loc,
+                           Loc.getLocWithOffset(
+                               Decl->getSelector().getNameForSlot(I).size())))
         return false;
     }
     return true;
@@ -247,8 +249,10 @@ public:
 
     // Check all of the selector source ranges.
     for (unsigned I = 0, E = Expr->getNumSelectorLocs(); I != E; ++I) {
-      if (!checkOccurrence(Decl, Expr->getSelectorLoc(I),
-                           Decl->getSelector().getNameForSlot(I).size()))
+      SourceLocation Loc = Expr->getSelectorLoc(I);
+      if (!checkOccurrence(Decl, Loc,
+                           Loc.getLocWithOffset(
+                               Decl->getSelector().getNameForSlot(I).size())))
         return false;
     }
     return true;
