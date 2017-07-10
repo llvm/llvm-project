@@ -26,11 +26,18 @@ registers:
   - { id: 6, class: _, preferred-register: '' }
   - { id: 7, class: _, preferred-register: '' }
   - { id: 8, class: _, preferred-register: '' }
+  - { id: 9, class: _, preferred-register: '' }
+  - { id: 10, class: _, preferred-register: '' }
 # ALL:          %0(p0) = IMPLICIT_DEF
+# ALL-NEXT:     %11(s8) = G_LOAD %0(p0) :: (load 1)
+# ALL-NEXT:     %9(s1) = G_TRUNC %11(s8)
 # ALL-NEXT:     %1(s8) = G_LOAD %0(p0) :: (load 1)
 # ALL-NEXT:     %2(s16) = G_LOAD %0(p0) :: (load 2)
 # ALL-NEXT:     %3(s32) = G_LOAD %0(p0) :: (load 4)
 # ALL-NEXT:     %4(p0) = G_LOAD %0(p0) :: (load 8)
+# ALL-NEXT:     %10(s1) = IMPLICIT_DEF
+# ALL-NEXT:     %12(s8) = G_ZEXT %10(s1)
+# ALL-NEXT:     G_STORE %12(s8), %0(p0) :: (store 1)
 # ALL-NEXT:     %5(s8) = IMPLICIT_DEF
 # ALL-NEXT:     G_STORE %5(s8), %0(p0) :: (store 1)
 # ALL-NEXT:     %6(s16) = IMPLICIT_DEF
@@ -44,11 +51,14 @@ body:             |
     liveins: %rdi
 
     %0(p0) = IMPLICIT_DEF
+    %9(s1) = G_LOAD %0(p0) :: (load 1)
     %1(s8) = G_LOAD %0(p0) :: (load 1)
     %2(s16) = G_LOAD %0(p0) :: (load 2)
     %3(s32) = G_LOAD %0(p0) :: (load 4)
     %4(p0) = G_LOAD %0(p0) :: (load 8)
 
+    %10(s1) = IMPLICIT_DEF
+    G_STORE %10, %0 :: (store 1)
     %5(s8) = IMPLICIT_DEF
     G_STORE %5, %0 :: (store 1)
     %6(s16) = IMPLICIT_DEF

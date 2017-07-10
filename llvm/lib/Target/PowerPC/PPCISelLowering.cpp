@@ -6426,7 +6426,7 @@ PPCTargetLowering::LowerGET_DYNAMIC_AREA_OFFSET(SDValue Op,
                                                 SelectionDAG &DAG) const {
   SDLoc dl(Op);
 
-  // Get the corect type for integers.
+  // Get the correct type for integers.
   EVT IntVT = Op.getValueType();
 
   // Get the inputs.
@@ -6443,7 +6443,7 @@ SDValue PPCTargetLowering::LowerSTACKRESTORE(SDValue Op,
   // When we pop the dynamic allocation we need to restore the SP link.
   SDLoc dl(Op);
 
-  // Get the corect type for pointers.
+  // Get the correct type for pointers.
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
 
   // Construct the stack pointer operand.
@@ -6518,7 +6518,7 @@ SDValue PPCTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
   SDValue Size  = Op.getOperand(1);
   SDLoc dl(Op);
 
-  // Get the corect type for pointers.
+  // Get the correct type for pointers.
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
   // Negate the size.
   SDValue NegSize = DAG.getNode(ISD::SUB, dl, PtrVT,
