@@ -21,7 +21,7 @@ using namespace llvm;
 using namespace llvm::support;
 using namespace llvm::pdb;
 
-uint32_t PDBStringTable::getByteSize() const { return ByteSize; }
+uint32_t PDBStringTable::getByteSize() const { return Header->ByteSize; }
 uint32_t PDBStringTable::getNameCount() const { return NameCount; }
 uint32_t PDBStringTable::getHashVersion() const { return Header->HashVersion; }
 uint32_t PDBStringTable::getSignature() const { return Header->Signature; }

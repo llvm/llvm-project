@@ -113,7 +113,7 @@ private:
   bool ret_pattern_p();
   uint32_t extract_4(uint8_t *b);
 
-  bool instruction_length(uint8_t *insn, int &length);
+  bool instruction_length(uint8_t *insn, int &length, uint32_t buffer_remaining_bytes);
 
   bool machine_regno_to_lldb_regno(int machine_regno, uint32_t &lldb_regno);
 

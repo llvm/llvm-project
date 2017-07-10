@@ -5319,8 +5319,14 @@ enum NullPointerValueKind {
 /// value of the appropriate type.
 static NullPointerValueKind
 isNullPointerValueTemplateArgument(Sema &S, NonTypeTemplateParmDecl *Param,
-                                   QualType ParamType, Expr *Arg) {
+                                   QualType ParamType, Expr *Arg,
+                                   Decl *Entity = nullptr) {
   if (Arg->isValueDependent() || Arg->isTypeDependent())
+    return NPV_NotNullPointer;
+
+  // dllimport'd entities aren't constant but are available inside of template
+  // arguments.
+  if (Entity && Entity->hasAttr<DLLImportAttr>())
     return NPV_NotNullPointer;
 
   if (!S.isCompleteType(Arg->getExprLoc(), ParamType))
@@ -5566,14 +5572,8 @@ CheckTemplateArgumentAddressOfObjectOrFunction(Sema &S,
 
   // If our parameter has pointer type, check for a null template value.
   if (ParamType->isPointerType() || ParamType->isNullPtrType()) {
-    NullPointerValueKind NPV;
-    // dllimport'd entities aren't constant but are available inside of template
-    // arguments.
-    if (Entity && Entity->hasAttr<DLLImportAttr>())
-      NPV = NPV_NotNullPointer;
-    else
-      NPV = isNullPointerValueTemplateArgument(S, Param, ParamType, ArgIn);
-    switch (NPV) {
+    switch (isNullPointerValueTemplateArgument(S, Param, ParamType, ArgIn,
+                                               Entity)) {
     case NPV_NullPointer:
       S.Diag(Arg->getExprLoc(), diag::warn_cxx98_compat_template_arg_null);
       Converted = TemplateArgument(S.Context.getCanonicalType(ParamType),
@@ -5765,39 +5765,8 @@ static bool CheckTemplateArgumentPointerToMember(Sema &S,
                                                  TemplateArgument &Converted) {
   bool Invalid = false;
 
-  // Check for a null pointer value.
   Expr *Arg = ResultArg;
-  switch (isNullPointerValueTemplateArgument(S, Param, ParamType, Arg)) {
-  case NPV_Error:
-    return true;
-  case NPV_NullPointer:
-    S.Diag(Arg->getExprLoc(), diag::warn_cxx98_compat_template_arg_null);
-    Converted = TemplateArgument(S.Context.getCanonicalType(ParamType),
-                                 /*isNullPtr*/true);
-    return false;
-  case NPV_NotNullPointer:
-    break;
-  }
-
   bool ObjCLifetimeConversion;
-  if (S.IsQualificationConversion(Arg->getType(),
-                                  ParamType.getNonReferenceType(),
-                                  false, ObjCLifetimeConversion)) {
-    Arg = S.ImpCastExprToType(Arg, ParamType, CK_NoOp,
-                              Arg->getValueKind()).get();
-    ResultArg = Arg;
-  } else if (!S.Context.hasSameUnqualifiedType(Arg->getType(),
-                ParamType.getNonReferenceType())) {
-    // We can't perform this conversion.
-    S.Diag(Arg->getLocStart(), diag::err_template_arg_not_convertible)
-      << Arg->getType() << ParamType << Arg->getSourceRange();
-    S.Diag(Param->getLocation(), diag::note_template_param_here);
-    return true;
-  }
-
-  // See through any implicit casts we added to fix the type.
-  while (ImplicitCastExpr *Cast = dyn_cast<ImplicitCastExpr>(Arg))
-    Arg = Cast->getSubExpr();
 
   // C++ [temp.arg.nontype]p1:
   //
@@ -5852,6 +5821,37 @@ static bool CheckTemplateArgumentPointerToMember(Sema &S,
     }
 
     DRE = nullptr;
+  }
+
+  ValueDecl *Entity = DRE ? DRE->getDecl() : nullptr;
+
+  // Check for a null pointer value.
+  switch (isNullPointerValueTemplateArgument(S, Param, ParamType, ResultArg,
+                                             Entity)) {
+  case NPV_Error:
+    return true;
+  case NPV_NullPointer:
+    S.Diag(ResultArg->getExprLoc(), diag::warn_cxx98_compat_template_arg_null);
+    Converted = TemplateArgument(S.Context.getCanonicalType(ParamType),
+                                 /*isNullPtr*/true);
+    return false;
+  case NPV_NotNullPointer:
+    break;
+  }
+
+  if (S.IsQualificationConversion(ResultArg->getType(),
+                                  ParamType.getNonReferenceType(), false,
+                                  ObjCLifetimeConversion)) {
+    ResultArg = S.ImpCastExprToType(ResultArg, ParamType, CK_NoOp,
+                                    ResultArg->getValueKind())
+                    .get();
+  } else if (!S.Context.hasSameUnqualifiedType(
+                 ResultArg->getType(), ParamType.getNonReferenceType())) {
+    // We can't perform this conversion.
+    S.Diag(ResultArg->getLocStart(), diag::err_template_arg_not_convertible)
+        << ResultArg->getType() << ParamType << ResultArg->getSourceRange();
+    S.Diag(Param->getLocation(), diag::note_template_param_here);
+    return true;
   }
 
   if (!DRE)

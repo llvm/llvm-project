@@ -604,9 +604,10 @@ uint32_t x86AssemblyInspectionEngine::extract_4(uint8_t *b) {
 }
 
 bool x86AssemblyInspectionEngine::instruction_length(uint8_t *insn_p,
-                                                     int &length) {
+                                                     int &length, 
+                                                     uint32_t buffer_remaining_bytes) {
 
-  const uint32_t max_op_byte_size = m_arch.GetMaximumOpcodeByteSize();
+  uint32_t max_op_byte_size = std::min(buffer_remaining_bytes, m_arch.GetMaximumOpcodeByteSize());
   llvm::SmallVector<uint8_t, 32> opcode_data;
   opcode_data.resize(max_op_byte_size);
 
@@ -698,8 +699,9 @@ bool x86AssemblyInspectionEngine::GetNonCallSiteUnwindPlanFromAssembly(
     bool row_updated = false; // The UnwindPlan::Row 'row' has been updated
 
     m_cur_insn = data + current_func_text_offset;
-    if (!instruction_length(m_cur_insn, insn_len) || insn_len == 0 ||
-        insn_len > kMaxInstructionByteSize) {
+    if (!instruction_length(m_cur_insn, insn_len, size - current_func_text_offset)
+        || insn_len == 0 
+        || insn_len > kMaxInstructionByteSize) {
       // An unrecognized/junk instruction
       break;
     }
@@ -1002,8 +1004,9 @@ bool x86AssemblyInspectionEngine::AugmentUnwindPlanFromCallSite(
   while (offset < size) {
     m_cur_insn = data + offset;
     int insn_len;
-    if (!instruction_length(m_cur_insn, insn_len) || insn_len == 0 ||
-        insn_len > kMaxInstructionByteSize) {
+    if (!instruction_length(m_cur_insn, insn_len, size - offset)
+        || insn_len == 0 
+        || insn_len > kMaxInstructionByteSize) {
       // An unrecognized/junk instruction.
       break;
     }
@@ -1214,8 +1217,9 @@ bool x86AssemblyInspectionEngine::FindFirstNonPrologueInstruction(
     int scratch;
 
     m_cur_insn = data + offset;
-    if (!instruction_length(m_cur_insn, insn_len) ||
-        insn_len > kMaxInstructionByteSize || insn_len == 0) {
+    if (!instruction_length(m_cur_insn, insn_len, size - offset) 
+        || insn_len > kMaxInstructionByteSize 
+        || insn_len == 0) {
       // An error parsing the instruction, i.e. probably data/garbage - stop
       // scanning
       break;

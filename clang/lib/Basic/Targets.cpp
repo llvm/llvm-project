@@ -3890,7 +3890,7 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
   case CK_PentiumMMX:
     Builder.defineMacro("__pentium_mmx__");
     Builder.defineMacro("__tune_pentium_mmx__");
-    // Fallthrough
+    LLVM_FALLTHROUGH;
   case CK_i586:
   case CK_Pentium:
     defineCPUMacros(Builder, "i586");
@@ -3900,15 +3900,15 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
   case CK_Pentium3M:
   case CK_PentiumM:
     Builder.defineMacro("__tune_pentium3__");
-    // Fallthrough
+    LLVM_FALLTHROUGH;
   case CK_Pentium2:
   case CK_C3_2:
     Builder.defineMacro("__tune_pentium2__");
-    // Fallthrough
+    LLVM_FALLTHROUGH;
   case CK_PentiumPro:
     Builder.defineMacro("__tune_i686__");
     Builder.defineMacro("__tune_pentiumpro__");
-    // Fallthrough
+    LLVM_FALLTHROUGH;
   case CK_i686:
     Builder.defineMacro("__i686");
     Builder.defineMacro("__i686__");
@@ -3964,7 +3964,7 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
   case CK_K6_2:
     Builder.defineMacro("__k6_2__");
     Builder.defineMacro("__tune_k6_2__");
-    // Fallthrough
+    LLVM_FALLTHROUGH;
   case CK_K6_3:
     if (CPU != CK_K6_2) {  // In case of fallthrough
       // FIXME: GCC may be enabling these in cases where some other k6
@@ -3973,7 +3973,7 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
       Builder.defineMacro("__k6_3__");
       Builder.defineMacro("__tune_k6_3__");
     }
-    // Fallthrough
+    LLVM_FALLTHROUGH;
   case CK_K6:
     defineCPUMacros(Builder, "k6");
     break;

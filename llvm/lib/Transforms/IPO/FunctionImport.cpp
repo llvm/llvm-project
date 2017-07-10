@@ -64,6 +64,12 @@ static cl::opt<float> ImportHotMultiplier(
     "import-hot-multiplier", cl::init(3.0), cl::Hidden, cl::value_desc("x"),
     cl::desc("Multiply the `import-instr-limit` threshold for hot callsites"));
 
+static cl::opt<float> ImportCriticalMultiplier(
+    "import-critical-multiplier", cl::init(100.0), cl::Hidden,
+    cl::value_desc("x"),
+    cl::desc(
+        "Multiply the `import-instr-limit` threshold for critical callsites"));
+
 // FIXME: This multiplier was not really tuned up.
 static cl::opt<float> ImportColdMultiplier(
     "import-cold-multiplier", cl::init(0), cl::Hidden, cl::value_desc("N"),
@@ -207,6 +213,8 @@ static void computeImportForFunction(
         return ImportHotMultiplier;
       if (Hotness == CalleeInfo::HotnessType::Cold)
         return ImportColdMultiplier;
+      if (Hotness == CalleeInfo::HotnessType::Critical)
+        return ImportCriticalMultiplier;
       return 1.0;
     };
 

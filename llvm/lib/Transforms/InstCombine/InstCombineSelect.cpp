@@ -61,12 +61,12 @@ static CmpInst::Predicate getCmpPredicateForMinMax(SelectPatternFlavor SPF,
   }
 }
 
-static Value *generateMinMaxSelectPattern(InstCombiner::BuilderTy *Builder,
+static Value *generateMinMaxSelectPattern(InstCombiner::BuilderTy &Builder,
                                           SelectPatternFlavor SPF, Value *A,
                                           Value *B) {
   CmpInst::Predicate Pred = getCmpPredicateForMinMax(SPF);
   assert(CmpInst::isIntPredicate(Pred));
-  return Builder->CreateSelect(Builder->CreateICmp(Pred, A, B), A, B);
+  return Builder.CreateSelect(Builder.CreateICmp(Pred, A, B), A, B);
 }
 
 /// We want to turn code that looks like this:
@@ -167,8 +167,8 @@ Instruction *InstCombiner::foldSelectOpOp(SelectInst &SI, Instruction *TI,
 
     // Fold this by inserting a select from the input values.
     Value *NewSI =
-        Builder->CreateSelect(SI.getCondition(), TI->getOperand(0),
-                              FI->getOperand(0), SI.getName() + ".v", &SI);
+        Builder.CreateSelect(SI.getCondition(), TI->getOperand(0),
+                             FI->getOperand(0), SI.getName() + ".v", &SI);
     return CastInst::Create(Instruction::CastOps(TI->getOpcode()), NewSI,
                             TI->getType());
   }
@@ -211,8 +211,8 @@ Instruction *InstCombiner::foldSelectOpOp(SelectInst &SI, Instruction *TI,
   }
 
   // If we reach here, they do have operations in common.
-  Value *NewSI = Builder->CreateSelect(SI.getCondition(), OtherOpT, OtherOpF,
-                                       SI.getName() + ".v", &SI);
+  Value *NewSI = Builder.CreateSelect(SI.getCondition(), OtherOpT, OtherOpF,
+                                      SI.getName() + ".v", &SI);
   Value *Op0 = MatchIsOpZero ? MatchOp : NewSI;
   Value *Op1 = MatchIsOpZero ? NewSI : MatchOp;
   return BinaryOperator::Create(BO->getOpcode(), Op0, Op1);
@@ -254,7 +254,7 @@ Instruction *InstCombiner::foldSelectIntoOp(SelectInst &SI, Value *TrueVal,
           // Avoid creating select between 2 constants unless it's selecting
           // between 0, 1 and -1.
           if (!isa<Constant>(OOp) || isSelect01(C, cast<Constant>(OOp))) {
-            Value *NewSel = Builder->CreateSelect(SI.getCondition(), OOp, C);
+            Value *NewSel = Builder.CreateSelect(SI.getCondition(), OOp, C);
             NewSel->takeName(TVI);
             BinaryOperator *TVI_BO = cast<BinaryOperator>(TVI);
             BinaryOperator *BO = BinaryOperator::Create(TVI_BO->getOpcode(),
@@ -284,7 +284,7 @@ Instruction *InstCombiner::foldSelectIntoOp(SelectInst &SI, Value *TrueVal,
           // Avoid creating select between 2 constants unless it's selecting
           // between 0, 1 and -1.
           if (!isa<Constant>(OOp) || isSelect01(C, cast<Constant>(OOp))) {
-            Value *NewSel = Builder->CreateSelect(SI.getCondition(), C, OOp);
+            Value *NewSel = Builder.CreateSelect(SI.getCondition(), C, OOp);
             NewSel->takeName(FVI);
             BinaryOperator *FVI_BO = cast<BinaryOperator>(FVI);
             BinaryOperator *BO = BinaryOperator::Create(FVI_BO->getOpcode(),
@@ -315,7 +315,7 @@ Instruction *InstCombiner::foldSelectIntoOp(SelectInst &SI, Value *TrueVal,
 /// 3. The magnitude of C2 and C1 are flipped
 static Value *foldSelectICmpAndOr(const SelectInst &SI, Value *TrueVal,
                                   Value *FalseVal,
-                                  InstCombiner::BuilderTy *Builder) {
+                                  InstCombiner::BuilderTy &Builder) {
   const ICmpInst *IC = dyn_cast<ICmpInst>(SI.getCondition());
   if (!IC || !SI.getType()->isIntegerTy())
     return nullptr;
@@ -383,22 +383,22 @@ static Value *foldSelectICmpAndOr(const SelectInst &SI, Value *TrueVal,
   if (NeedAnd) {
     // Insert the AND instruction on the input to the truncate.
     APInt C1 = APInt::getOneBitSet(V->getType()->getScalarSizeInBits(), C1Log);
-    V = Builder->CreateAnd(V, ConstantInt::get(V->getType(), C1));
+    V = Builder.CreateAnd(V, ConstantInt::get(V->getType(), C1));
   }
 
   if (C2Log > C1Log) {
-    V = Builder->CreateZExtOrTrunc(V, Y->getType());
-    V = Builder->CreateShl(V, C2Log - C1Log);
+    V = Builder.CreateZExtOrTrunc(V, Y->getType());
+    V = Builder.CreateShl(V, C2Log - C1Log);
   } else if (C1Log > C2Log) {
-    V = Builder->CreateLShr(V, C1Log - C2Log);
-    V = Builder->CreateZExtOrTrunc(V, Y->getType());
+    V = Builder.CreateLShr(V, C1Log - C2Log);
+    V = Builder.CreateZExtOrTrunc(V, Y->getType());
   } else
-    V = Builder->CreateZExtOrTrunc(V, Y->getType());
+    V = Builder.CreateZExtOrTrunc(V, Y->getType());
 
   if (NeedXor)
-    V = Builder->CreateXor(V, *C2);
+    V = Builder.CreateXor(V, *C2);
 
-  return Builder->CreateOr(V, Y);
+  return Builder.CreateOr(V, Y);
 }
 
 /// Attempt to fold a cttz/ctlz followed by a icmp plus select into a single
@@ -414,7 +414,7 @@ static Value *foldSelectICmpAndOr(const SelectInst &SI, Value *TrueVal,
 /// into:
 ///   %0 = tail call i32 @llvm.cttz.i32(i32 %x, i1 false)
 static Value *foldSelectCttzCtlz(ICmpInst *ICI, Value *TrueVal, Value *FalseVal,
-                                 InstCombiner::BuilderTy *Builder) {
+                                 InstCombiner::BuilderTy &Builder) {
   ICmpInst::Predicate Pred = ICI->getPredicate();
   Value *CmpLHS = ICI->getOperand(0);
   Value *CmpRHS = ICI->getOperand(1);
@@ -449,8 +449,8 @@ static Value *foldSelectCttzCtlz(ICmpInst *ICI, Value *TrueVal, Value *FalseVal,
     IntrinsicInst *NewI = cast<IntrinsicInst>(II->clone());
     Type *Ty = NewI->getArgOperand(1)->getType();
     NewI->setArgOperand(1, Constant::getNullValue(Ty));
-    Builder->Insert(NewI);
-    return Builder->CreateZExtOrTrunc(NewI, ValueOnZero->getType());
+    Builder.Insert(NewI);
+    return Builder.CreateZExtOrTrunc(NewI, ValueOnZero->getType());
   }
 
   return nullptr;
@@ -597,7 +597,7 @@ canonicalizeMinMaxWithConstant(SelectInst &Sel, ICmpInst &Cmp,
 /// Visit a SelectInst that has an ICmpInst as its first operand.
 Instruction *InstCombiner::foldSelectInstWithICmp(SelectInst &SI,
                                                   ICmpInst *ICI) {
-  if (Instruction *NewSel = canonicalizeMinMaxWithConstant(SI, *ICI, *Builder))
+  if (Instruction *NewSel = canonicalizeMinMaxWithConstant(SI, *ICI, Builder))
     return NewSel;
 
   bool Changed = adjustMinMax(SI, *ICI);
@@ -626,14 +626,14 @@ Instruction *InstCombiner::foldSelectInstWithICmp(SelectInst &SI,
         }
         if (C1 && C2) {
           // This shift results in either -1 or 0.
-          Value *AShr = Builder->CreateAShr(CmpLHS, Ty->getBitWidth()-1);
+          Value *AShr = Builder.CreateAShr(CmpLHS, Ty->getBitWidth() - 1);
 
           // Check if we can express the operation with a single or.
           if (C2->isMinusOne())
-            return replaceInstUsesWith(SI, Builder->CreateOr(AShr, C1));
+            return replaceInstUsesWith(SI, Builder.CreateOr(AShr, C1));
 
-          Value *And = Builder->CreateAnd(AShr, C2->getValue()-C1->getValue());
-          return replaceInstUsesWith(SI, Builder->CreateAdd(And, C1));
+          Value *And = Builder.CreateAnd(AShr, C2->getValue() - C1->getValue());
+          return replaceInstUsesWith(SI, Builder.CreateAdd(And, C1));
         }
       }
     }
@@ -684,19 +684,19 @@ Instruction *InstCombiner::foldSelectInstWithICmp(SelectInst &SI,
       // (X & Y) == 0 ? X : X ^ Y  --> X & ~Y
       if (TrueWhenUnset && TrueVal == X &&
           match(FalseVal, m_Xor(m_Specific(X), m_APInt(C))) && *Y == *C)
-        V = Builder->CreateAnd(X, ~(*Y));
+        V = Builder.CreateAnd(X, ~(*Y));
       // (X & Y) != 0 ? X ^ Y : X  --> X & ~Y
       else if (!TrueWhenUnset && FalseVal == X &&
                match(TrueVal, m_Xor(m_Specific(X), m_APInt(C))) && *Y == *C)
-        V = Builder->CreateAnd(X, ~(*Y));
+        V = Builder.CreateAnd(X, ~(*Y));
       // (X & Y) == 0 ? X ^ Y : X  --> X | Y
       else if (TrueWhenUnset && FalseVal == X &&
                match(TrueVal, m_Xor(m_Specific(X), m_APInt(C))) && *Y == *C)
-        V = Builder->CreateOr(X, *Y);
+        V = Builder.CreateOr(X, *Y);
       // (X & Y) != 0 ? X : X ^ Y  --> X | Y
       else if (!TrueWhenUnset && TrueVal == X &&
                match(FalseVal, m_Xor(m_Specific(X), m_APInt(C))) && *Y == *C)
-        V = Builder->CreateOr(X, *Y);
+        V = Builder.CreateOr(X, *Y);
 
       if (V)
         return replaceInstUsesWith(SI, V);
@@ -809,8 +809,8 @@ Instruction *InstCombiner::foldSPFofSPF(Instruction *Inner,
       (SPF1 == SPF_NABS && SPF2 == SPF_ABS)) {
     SelectInst *SI = cast<SelectInst>(Inner);
     Value *NewSI =
-        Builder->CreateSelect(SI->getCondition(), SI->getFalseValue(),
-                              SI->getTrueValue(), SI->getName(), SI);
+        Builder.CreateSelect(SI->getCondition(), SI->getFalseValue(),
+                             SI->getTrueValue(), SI->getName(), SI);
     return replaceInstUsesWith(Outer, NewSI);
   }
 
@@ -848,15 +848,15 @@ Instruction *InstCombiner::foldSPFofSPF(Instruction *Inner,
       IsFreeOrProfitableToInvert(B, NotB, ElidesXor) &&
       IsFreeOrProfitableToInvert(C, NotC, ElidesXor) && ElidesXor) {
     if (!NotA)
-      NotA = Builder->CreateNot(A);
+      NotA = Builder.CreateNot(A);
     if (!NotB)
-      NotB = Builder->CreateNot(B);
+      NotB = Builder.CreateNot(B);
     if (!NotC)
-      NotC = Builder->CreateNot(C);
+      NotC = Builder.CreateNot(C);
 
     Value *NewInner = generateMinMaxSelectPattern(
         Builder, getInverseMinMaxSelectPattern(SPF1), NotA, NotB);
-    Value *NewOuter = Builder->CreateNot(generateMinMaxSelectPattern(
+    Value *NewOuter = Builder.CreateNot(generateMinMaxSelectPattern(
         Builder, getInverseMinMaxSelectPattern(SPF2), NewInner, NotC));
     return replaceInstUsesWith(Outer, NewOuter);
   }
@@ -870,7 +870,7 @@ Instruction *InstCombiner::foldSPFofSPF(Instruction *Inner,
 /// 'and'.
 static Value *foldSelectICmpAnd(const SelectInst &SI, APInt TrueVal,
                                 APInt FalseVal,
-                                InstCombiner::BuilderTy *Builder) {
+                                InstCombiner::BuilderTy &Builder) {
   const ICmpInst *IC = dyn_cast<ICmpInst>(SI.getCondition());
   if (!IC || !IC->isEquality() || !SI.getType()->isIntegerTy())
     return nullptr;
@@ -917,22 +917,22 @@ static Value *foldSelectICmpAnd(const SelectInst &SI, APInt TrueVal,
   if (AndZeros >= ValC.getBitWidth())
     return nullptr;
 
-  Value *V = Builder->CreateZExtOrTrunc(LHS, SI.getType());
+  Value *V = Builder.CreateZExtOrTrunc(LHS, SI.getType());
   if (ValZeros > AndZeros)
-    V = Builder->CreateShl(V, ValZeros - AndZeros);
+    V = Builder.CreateShl(V, ValZeros - AndZeros);
   else if (ValZeros < AndZeros)
-    V = Builder->CreateLShr(V, AndZeros - ValZeros);
+    V = Builder.CreateLShr(V, AndZeros - ValZeros);
 
   // Okay, now we know that everything is set up, we just don't know whether we
   // have a icmp_ne or icmp_eq and whether the true or false val is the zero.
   bool ShouldNotVal = !TrueVal.isNullValue();
   ShouldNotVal ^= IC->getPredicate() == ICmpInst::ICMP_NE;
   if (ShouldNotVal)
-    V = Builder->CreateXor(V, ValC);
+    V = Builder.CreateXor(V, ValC);
 
   // Apply an offset if needed.
   if (!Offset.isNullValue())
-    V = Builder->CreateAdd(V, ConstantInt::get(V->getType(), Offset));
+    V = Builder.CreateAdd(V, ConstantInt::get(V->getType(), Offset));
   return V;
 }
 
@@ -1042,7 +1042,7 @@ Instruction *InstCombiner::foldSelectExtConst(SelectInst &Sel) {
 
     // select Cond, (ext X), C --> ext(select Cond, X, C')
     // select Cond, C, (ext X) --> ext(select Cond, C', X)
-    Value *NewSel = Builder->CreateSelect(Cond, X, TruncCVal, "narrow", &Sel);
+    Value *NewSel = Builder.CreateSelect(Cond, X, TruncCVal, "narrow", &Sel);
     return CastInst::Create(Instruction::CastOps(ExtOpcode), NewSel, SelType);
   }
 
@@ -1189,7 +1189,7 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
     }
     if (match(TrueVal, m_Zero())) {
       // Change: A = select B, false, C --> A = and !B, C
-      Value *NotCond = Builder->CreateNot(CondVal, "not." + CondVal->getName());
+      Value *NotCond = Builder.CreateNot(CondVal, "not." + CondVal->getName());
       return BinaryOperator::CreateAnd(NotCond, FalseVal);
     }
     if (match(FalseVal, m_Zero())) {
@@ -1198,7 +1198,7 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
     }
     if (match(FalseVal, m_One())) {
       // Change: A = select B, C, true --> A = or !B, C
-      Value *NotCond = Builder->CreateNot(CondVal, "not." + CondVal->getName());
+      Value *NotCond = Builder.CreateNot(CondVal, "not." + CondVal->getName());
       return BinaryOperator::CreateOr(NotCond, TrueVal);
     }
 
@@ -1234,13 +1234,13 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
 
     // select C, 0, 1 -> zext !C to int
     if (match(TrueVal, m_Zero()) && match(FalseVal, m_One())) {
-      Value *NotCond = Builder->CreateNot(CondVal, "not." + CondVal->getName());
+      Value *NotCond = Builder.CreateNot(CondVal, "not." + CondVal->getName());
       return new ZExtInst(NotCond, SelType);
     }
 
     // select C, 0, -1 -> sext !C to int
     if (match(TrueVal, m_Zero()) && match(FalseVal, m_AllOnes())) {
-      Value *NotCond = Builder->CreateNot(CondVal, "not." + CondVal->getName());
+      Value *NotCond = Builder.CreateNot(CondVal, "not." + CondVal->getName());
       return new SExtInst(NotCond, SelType);
     }
   }
@@ -1286,10 +1286,10 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
       // (X ugt Y) ? X : Y -> (X ole Y) ? Y : X
       if (FCI->hasOneUse() && FCmpInst::isUnordered(FCI->getPredicate())) {
         FCmpInst::Predicate InvPred = FCI->getInversePredicate();
-        IRBuilder<>::FastMathFlagGuard FMFG(*Builder);
-        Builder->setFastMathFlags(FCI->getFastMathFlags());
-        Value *NewCond = Builder->CreateFCmp(InvPred, TrueVal, FalseVal,
-                                             FCI->getName() + ".inv");
+        IRBuilder<>::FastMathFlagGuard FMFG(Builder);
+        Builder.setFastMathFlags(FCI->getFastMathFlags());
+        Value *NewCond = Builder.CreateFCmp(InvPred, TrueVal, FalseVal,
+                                            FCI->getName() + ".inv");
 
         return SelectInst::Create(NewCond, FalseVal, TrueVal,
                                   SI.getName() + ".p");
@@ -1329,10 +1329,10 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
       // (X ugt Y) ? X : Y -> (X ole Y) ? X : Y
       if (FCI->hasOneUse() && FCmpInst::isUnordered(FCI->getPredicate())) {
         FCmpInst::Predicate InvPred = FCI->getInversePredicate();
-        IRBuilder<>::FastMathFlagGuard FMFG(*Builder);
-        Builder->setFastMathFlags(FCI->getFastMathFlags());
-        Value *NewCond = Builder->CreateFCmp(InvPred, FalseVal, TrueVal,
-                                             FCI->getName() + ".inv");
+        IRBuilder<>::FastMathFlagGuard FMFG(Builder);
+        Builder.setFastMathFlags(FCI->getFastMathFlags());
+        Value *NewCond = Builder.CreateFCmp(InvPred, FalseVal, TrueVal,
+                                            FCI->getName() + ".inv");
 
         return SelectInst::Create(NewCond, FalseVal, TrueVal,
                                   SI.getName() + ".p");
@@ -1348,7 +1348,7 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
     if (Instruction *Result = foldSelectInstWithICmp(SI, ICI))
       return Result;
 
-  if (Instruction *Add = foldAddSubSelect(SI, *Builder))
+  if (Instruction *Add = foldAddSubSelect(SI, Builder))
     return Add;
 
   // Turn (select C, (op X, Y), (op X, Z)) -> (op X, (select C, Y, Z))
@@ -1379,16 +1379,16 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
 
         Value *Cmp;
         if (CmpInst::isIntPredicate(Pred)) {
-          Cmp = Builder->CreateICmp(Pred, LHS, RHS);
+          Cmp = Builder.CreateICmp(Pred, LHS, RHS);
         } else {
-          IRBuilder<>::FastMathFlagGuard FMFG(*Builder);
+          IRBuilder<>::FastMathFlagGuard FMFG(Builder);
           auto FMF = cast<FPMathOperator>(SI.getCondition())->getFastMathFlags();
-          Builder->setFastMathFlags(FMF);
-          Cmp = Builder->CreateFCmp(Pred, LHS, RHS);
+          Builder.setFastMathFlags(FMF);
+          Cmp = Builder.CreateFCmp(Pred, LHS, RHS);
         }
 
-        Value *NewSI = Builder->CreateCast(
-            CastOp, Builder->CreateSelect(Cmp, LHS, RHS, SI.getName(), &SI),
+        Value *NewSI = Builder.CreateCast(
+            CastOp, Builder.CreateSelect(Cmp, LHS, RHS, SI.getName(), &SI),
             SelType);
         return replaceInstUsesWith(SI, NewSI);
       }
@@ -1423,13 +1423,12 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
           (SI.hasOneUse() && match(*SI.user_begin(), m_Not(m_Value())));
 
       if (NumberOfNots >= 2) {
-        Value *NewLHS = Builder->CreateNot(LHS);
-        Value *NewRHS = Builder->CreateNot(RHS);
-        Value *NewCmp = SPF == SPF_SMAX
-                            ? Builder->CreateICmpSLT(NewLHS, NewRHS)
-                            : Builder->CreateICmpULT(NewLHS, NewRHS);
+        Value *NewLHS = Builder.CreateNot(LHS);
+        Value *NewRHS = Builder.CreateNot(RHS);
+        Value *NewCmp = SPF == SPF_SMAX ? Builder.CreateICmpSLT(NewLHS, NewRHS)
+                                        : Builder.CreateICmpULT(NewLHS, NewRHS);
         Value *NewSI =
-            Builder->CreateNot(Builder->CreateSelect(NewCmp, NewLHS, NewRHS));
+            Builder.CreateNot(Builder.CreateSelect(NewCmp, NewLHS, NewRHS));
         return replaceInstUsesWith(SI, NewSI);
       }
     }
@@ -1459,7 +1458,7 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
       // We choose this as normal form to enable folding on the And and shortening
       // paths for the values (this helps GetUnderlyingObjects() for example).
       if (TrueSI->getFalseValue() == FalseVal && TrueSI->hasOneUse()) {
-        Value *And = Builder->CreateAnd(CondVal, TrueSI->getCondition());
+        Value *And = Builder.CreateAnd(CondVal, TrueSI->getCondition());
         SI.setOperand(0, And);
         SI.setOperand(1, TrueSI->getTrueValue());
         return &SI;
@@ -1477,7 +1476,7 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
       }
       // select(C0, a, select(C1, a, b)) -> select(C0|C1, a, b)
       if (FalseSI->getTrueValue() == TrueVal && FalseSI->hasOneUse()) {
-        Value *Or = Builder->CreateOr(CondVal, FalseSI->getCondition());
+        Value *Or = Builder.CreateOr(CondVal, FalseSI->getCondition());
         SI.setOperand(0, Or);
         SI.setOperand(2, FalseSI->getFalseValue());
         return &SI;
@@ -1539,7 +1538,7 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
       return replaceInstUsesWith(SI, FalseVal);
   }
 
-  if (Instruction *BitCastSel = foldSelectCmpBitcasts(SI, *Builder))
+  if (Instruction *BitCastSel = foldSelectCmpBitcasts(SI, Builder))
     return BitCastSel;
 
   return nullptr;

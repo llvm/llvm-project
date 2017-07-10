@@ -71,47 +71,6 @@ v_pk_add_u16 v1, abs(v2), v3
 // GFX9: :19: error: invalid operand for instruction
 v_pk_add_u16 v1, -v2, v3
 
-
-//
-// Packed operands on the non-packed VOP3P instructions
-//
-
-// GFX9: invalid operand for instruction
-v_mad_mix_f32 v1, v2, v3, v4 op_sel:[0,0,0]
-
-// GFX9: invalid operand for instruction
-v_mad_mix_f32 v1, v2, v3, v4 op_sel_hi:[0,0,0]
-
-// GFX9: invalid operand for instruction
-v_mad_mix_f32 v1, v2, v3, v4 neg_lo:[0,0,0]
-
-// GFX9: invalid operand for instruction
-v_mad_mix_f32 v1, v2, v3, v4 neg_hi:[0,0,0]
-
-// GFX9: invalid operand for instruction
-v_mad_mixlo_f16 v1, v2, v3, v4 op_sel:[0,0,0]
-
-// GFX9: invalid operand for instruction
-v_mad_mixlo_f16 v1, v2, v3, v4 op_sel_hi:[0,0,0]
-
-// GFX9: invalid operand for instruction
-v_mad_mixlo_f16 v1, v2, v3, v4 neg_lo:[0,0,0]
-
-// GFX9: invalid operand for instruction
-v_mad_mixlo_f16 v1, v2, v3, v4 neg_hi:[0,0,0]
-
-// GFX9: invalid operand for instruction
-v_mad_mixhi_f16 v1, v2, v3, v4 op_sel:[0,0,0]
-
-// GFX9: invalid operand for instruction
-v_mad_mixhi_f16 v1, v2, v3, v4 op_sel_hi:[0,0,0]
-
-// GFX9: invalid operand for instruction
-v_mad_mixhi_f16 v1, v2, v3, v4 neg_lo:[0,0,0]
-
-// GFX9: invalid operand for instruction
-v_mad_mixhi_f16 v1, v2, v3, v4 neg_hi:[0,0,0]
-
 //
 // Constant bus restrictions
 //

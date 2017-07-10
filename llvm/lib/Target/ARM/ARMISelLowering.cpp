@@ -5356,15 +5356,15 @@ static SDValue LowerVSETCC(SDValue Op, SelectionDAG &DAG) {
     // Integer comparisons.
     switch (SetCCOpcode) {
     default: llvm_unreachable("Illegal integer comparison");
-    case ISD::SETNE:  Invert = true;
+    case ISD::SETNE:  Invert = true; LLVM_FALLTHROUGH;
     case ISD::SETEQ:  Opc = ARMISD::VCEQ; break;
-    case ISD::SETLT:  Swap = true;
+    case ISD::SETLT:  Swap = true; LLVM_FALLTHROUGH;
     case ISD::SETGT:  Opc = ARMISD::VCGT; break;
-    case ISD::SETLE:  Swap = true;
+    case ISD::SETLE:  Swap = true; LLVM_FALLTHROUGH;
     case ISD::SETGE:  Opc = ARMISD::VCGE; break;
-    case ISD::SETULT: Swap = true;
+    case ISD::SETULT: Swap = true; LLVM_FALLTHROUGH;
     case ISD::SETUGT: Opc = ARMISD::VCGTU; break;
-    case ISD::SETULE: Swap = true;
+    case ISD::SETULE: Swap = true; LLVM_FALLTHROUGH;
     case ISD::SETUGE: Opc = ARMISD::VCGEU; break;
     }
 
@@ -13779,7 +13779,9 @@ bool ARMTargetLowering::lowerInterleavedLoad(
 
       // Convert the integer vector to pointer vector if the element is pointer.
       if (EltTy->isPointerTy())
-        SubVec = Builder.CreateIntToPtr(SubVec, SV->getType());
+        SubVec = Builder.CreateIntToPtr(
+            SubVec, VectorType::get(SV->getType()->getVectorElementType(),
+                                    VecTy->getVectorNumElements()));
 
       SubVecs[SV].push_back(SubVec);
     }

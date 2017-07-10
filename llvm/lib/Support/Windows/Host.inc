@@ -17,8 +17,8 @@
 
 using namespace llvm;
 
-static void updateTripleOSVersion(std::string &) {
-  // Do nothing.
+static std::string updateTripleOSVersion(std::string Triple) {
+  return Triple;
 }
 
 std::string sys::getDefaultTargetTriple() {

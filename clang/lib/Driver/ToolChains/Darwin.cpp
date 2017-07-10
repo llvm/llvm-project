@@ -1118,6 +1118,27 @@ void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
   }
 }
 
+/// Returns the most appropriate macOS target version for the current process.
+///
+/// If the macOS SDK version is the same or earlier than the system version,
+/// then the SDK version is returned. Otherwise the system version is returned.
+static std::string getSystemOrSDKMacOSVersion(StringRef MacOSSDKVersion) {
+  unsigned Major, Minor, Micro;
+  llvm::Triple SystemTriple(llvm::sys::getProcessTriple());
+  if (!SystemTriple.isMacOSX())
+    return MacOSSDKVersion;
+  SystemTriple.getMacOSXVersion(Major, Minor, Micro);
+  VersionTuple SystemVersion(Major, Minor, Micro);
+  bool HadExtra;
+  if (!Driver::GetReleaseVersion(MacOSSDKVersion, Major, Minor, Micro,
+                                 HadExtra))
+    return MacOSSDKVersion;
+  VersionTuple SDKVersion(Major, Minor, Micro);
+  if (SDKVersion > SystemVersion)
+    return SystemVersion.getAsString();
+  return MacOSSDKVersion;
+}
+
 void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
   const OptTable &Opts = getDriver().getOpts();
 
@@ -1229,7 +1250,7 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
                 SDK.startswith("iPhoneSimulator"))
               iOSTarget = Version;
             else if (SDK.startswith("MacOSX"))
-              OSXTarget = Version;
+              OSXTarget = getSystemOrSDKMacOSVersion(Version);
             else if (SDK.startswith("WatchOS") ||
                      SDK.startswith("WatchSimulator"))
               WatchOSTarget = Version;

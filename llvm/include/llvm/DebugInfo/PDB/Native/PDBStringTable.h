@@ -56,7 +56,6 @@ private:
   const PDBStringTableHeader *Header = nullptr;
   codeview::DebugStringTableSubsectionRef Strings;
   FixedStreamArray<support::ulittle32_t> IDs;
-  uint32_t ByteSize = 0;
   uint32_t NameCount = 0;
 };
 

@@ -78,7 +78,7 @@ public:
 private:
   struct DebugStream {
     ArrayRef<uint8_t> Data;
-    uint16_t StreamNumber = 0;
+    uint16_t StreamNumber = kInvalidStreamIndex;
   };
 
   Error finalize();

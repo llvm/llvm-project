@@ -508,9 +508,9 @@ readBinary(std::unique_ptr<MemoryBuffer> &mb,
   if (dyldInfo) {
     // If any exports, extract and add to normalized exportInfo vector.
     if (dyldInfo->export_size) {
-      const uint8_t *trieStart = reinterpret_cast<const uint8_t*>(start +
-                                                          dyldInfo->export_off);
-      ArrayRef<uint8_t> trie(trieStart, dyldInfo->export_size);
+      const uint8_t *trieStart = reinterpret_cast<const uint8_t *>(
+          start + read32(&dyldInfo->export_off, isBig));
+      ArrayRef<uint8_t> trie(trieStart, read32(&dyldInfo->export_size, isBig));
       for (const ExportEntry &trieExport : MachOObjectFile::exports(trie)) {
         Export normExport;
         normExport.name = trieExport.name().copy(f->ownedAllocations);

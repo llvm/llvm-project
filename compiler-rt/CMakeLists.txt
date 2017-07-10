@@ -80,7 +80,7 @@ pythonize_bool(COMPILER_RT_DEBUG)
 
 include(config-ix)
 
-if(APPLE AND SANITIZER_MIN_OSX_VERSION VERSION_LESS "10.9")
+if(APPLE AND SANITIZER_MIN_OSX_VERSION AND SANITIZER_MIN_OSX_VERSION VERSION_LESS "10.9")
   # Mac OS X prior to 10.9 had problems with exporting symbols from
   # libc++/libc++abi.
   set(use_cxxabi_default OFF)

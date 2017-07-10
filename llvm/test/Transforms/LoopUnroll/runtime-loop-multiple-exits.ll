@@ -1,29 +1,51 @@
-; RUN: opt < %s -loop-unroll -unroll-runtime=true -unroll-runtime-epilog=true -unroll-runtime-multi-exit=true -verify-dom-info -verify-loop-info -instcombine -S| FileCheck %s
+; RUN: opt < %s -loop-unroll -unroll-runtime=true -unroll-runtime-epilog=true -unroll-runtime-multi-exit=true -verify-dom-info -verify-loop-info -instcombine -S | FileCheck %s -check-prefix=EPILOG
 ; RUN: opt < %s -loop-unroll -unroll-runtime -unroll-count=2 -unroll-runtime-epilog=true -unroll-runtime-multi-exit=true -verify-dom-info -verify-loop-info -instcombine
+; RUN: opt < %s -loop-unroll -unroll-runtime=true -unroll-runtime-epilog=false -unroll-runtime-multi-exit=true -verify-dom-info -verify-loop-info -instcombine -S | FileCheck %s -check-prefix=PROLOG
+; RUN: opt < %s -loop-unroll -unroll-runtime -unroll-runtime-epilog=false -unroll-count=2 -unroll-runtime-multi-exit=true -verify-dom-info -verify-loop-info -instcombine
 
-; the second RUN generates an epilog remainder block for all the test
+; the second and fourth RUNs generate an epilog/prolog remainder block for all the test
 ; cases below (it does not generate a loop).
 
 ; test with three exiting and three exit blocks.
 ; none of the exit blocks have successors
 define void @test1(i64 %trip, i1 %cond) {
-; CHECK-LABEL: test1
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[TRIP:%.*]], -1
-; CHECK-NEXT:    [[XTRAITER:%.*]] = and i64 [[TRIP]], 7
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[TMP0]], 7
-; CHECK-NEXT:    br i1 [[TMP1]], label %exit2.loopexit.unr-lcssa, label [[ENTRY_NEW:%.*]]
-; CHECK:       entry.new:
-; CHECK-NEXT:    [[UNROLL_ITER:%.*]] = sub i64 [[TRIP]], [[XTRAITER]]
-; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
-; CHECK-LABEL:  loop_latch.epil:
-; CHECK-NEXT:     %epil.iter.sub = add i64 %epil.iter, -1
-; CHECK-NEXT:     %epil.iter.cmp = icmp eq i64 %epil.iter.sub, 0
-; CHECK-NEXT:     br i1 %epil.iter.cmp, label %exit2.loopexit.epilog-lcssa, label %loop_header.epil
-; CHECK-LABEL:  loop_latch.7:
-; CHECK-NEXT:     %niter.nsub.7 = add i64 %niter, -8
-; CHECK-NEXT:     %niter.ncmp.7 = icmp eq i64 %niter.nsub.7, 0
-; CHECK-NEXT:     br i1 %niter.ncmp.7, label %exit2.loopexit.unr-lcssa.loopexit, label %loop_header
+; EPILOG: test1(
+; EPILOG-NEXT:  entry:
+; EPILOG-NEXT:    [[TMP0:%.*]] = add i64 [[TRIP:%.*]], -1
+; EPILOG-NEXT:    [[XTRAITER:%.*]] = and i64 [[TRIP]], 7
+; EPILOG-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[TMP0]], 7
+; EPILOG-NEXT:    br i1 [[TMP1]], label %exit2.loopexit.unr-lcssa, label [[ENTRY_NEW:%.*]]
+; EPILOG:       entry.new:
+; EPILOG-NEXT:    [[UNROLL_ITER:%.*]] = sub i64 [[TRIP]], [[XTRAITER]]
+; EPILOG-NEXT:    br label [[LOOP_HEADER:%.*]]
+; EPILOG:  loop_latch.epil:
+; EPILOG-NEXT:     %epil.iter.sub = add i64 %epil.iter, -1
+; EPILOG-NEXT:     %epil.iter.cmp = icmp eq i64 %epil.iter.sub, 0
+; EPILOG-NEXT:     br i1 %epil.iter.cmp, label %exit2.loopexit.epilog-lcssa, label %loop_header.epil
+; EPILOG:  loop_latch.7:
+; EPILOG-NEXT:     %niter.nsub.7 = add i64 %niter, -8
+; EPILOG-NEXT:     %niter.ncmp.7 = icmp eq i64 %niter.nsub.7, 0
+; EPILOG-NEXT:     br i1 %niter.ncmp.7, label %exit2.loopexit.unr-lcssa.loopexit, label %loop_header
+
+; PROLOG: test1(
+; PROLOG-NEXT:  entry:
+; PROLOG-NEXT:    [[TMP0:%.*]] = add i64 [[TRIP:%.*]], -1
+; PROLOG-NEXT:    [[XTRAITER:%.*]] = and i64 [[TRIP]], 7
+; PROLOG-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[XTRAITER]], 0
+; PROLOG-NEXT:    br i1 [[TMP1]], label %loop_header.prol.loopexit, label %loop_header.prol.preheader
+; PROLOG:       loop_header.prol:
+; PROLOG-NEXT:    %iv.prol = phi i64 [ 0, %loop_header.prol.preheader ], [ %iv_next.prol, %loop_latch.prol ]
+; PROLOG-NEXT:    %prol.iter = phi i64 [ [[XTRAITER]], %loop_header.prol.preheader ], [ %prol.iter.sub, %loop_latch.prol ]
+; PROLOG-NEXT:    br i1 %cond, label %loop_latch.prol, label %loop_exiting_bb1.prol
+; PROLOG:       loop_latch.prol:
+; PROLOG-NEXT:    %iv_next.prol = add i64 %iv.prol, 1
+; PROLOG-NEXT:    %prol.iter.sub = add i64 %prol.iter, -1
+; PROLOG-NEXT:    %prol.iter.cmp = icmp eq i64 %prol.iter.sub, 0
+; PROLOG-NEXT:    br i1 %prol.iter.cmp, label %loop_header.prol.loopexit.unr-lcssa, label %loop_header.prol
+; PROLOG:  loop_latch.7:
+; PROLOG-NEXT:     %iv_next.7 = add i64 %iv, 8
+; PROLOG-NEXT:     %cmp.7 = icmp eq i64 %iv_next.7, %trip
+; PROLOG-NEXT:     br i1 %cmp.7, label %exit2.loopexit.unr-lcssa, label %loop_header
 entry:
   br label %loop_header
 
@@ -59,17 +81,30 @@ exit2.loopexit:
 ; %sum.02 and %add. Both of these are incoming values for phi from every exiting
 ; unrolled block.
 define i32 @test2(i32* nocapture %a, i64 %n) {
-; CHECK-LABEL: test2
-; CHECK-LABEL: for.exit2.loopexit:
-; CHECK-NEXT:    %retval.ph = phi i32 [ 42, %for.exiting_block ], [ %sum.02, %header ], [ %add, %for.body ], [ 42, %for.exiting_block.1 ], [ %add.1, %for.body.1 ], [ 42, %for.exiting_block.2 ], [ %add.2, %for.body.2 ], [ 42, %for.exiting_block.3 ],
-; CHECK-NEXT:    br label %for.exit2
-; CHECK-LABEL: for.exit2.loopexit2:
-; CHECK-NEXT:    %retval.ph3 = phi i32 [ 42, %for.exiting_block.epil ], [ %sum.02.epil, %header.epil ]
-; CHECK-NEXT:    br label %for.exit2
-; CHECK-LABEL: for.exit2:
-; CHECK-NEXT:    %retval = phi i32 [ %retval.ph, %for.exit2.loopexit ], [ %retval.ph3, %for.exit2.loopexit2 ]
-; CHECK-NEXT:    ret i32 %retval
-; CHECK: %niter.nsub.7 = add i64 %niter, -8
+; EPILOG: test2(
+; EPILOG: for.exit2.loopexit:
+; EPILOG-NEXT:    %retval.ph = phi i32 [ 42, %for.exiting_block ], [ %sum.02, %header ], [ %add, %for.body ], [ 42, %for.exiting_block.1 ], [ %add.1, %for.body.1 ], [ 42, %for.exiting_block.2 ], [ %add.2, %for.body.2 ], [ 42, %for.exiting_block.3 ],
+; EPILOG-NEXT:    br label %for.exit2
+; EPILOG: for.exit2.loopexit2:
+; EPILOG-NEXT:    %retval.ph3 = phi i32 [ 42, %for.exiting_block.epil ], [ %sum.02.epil, %header.epil ]
+; EPILOG-NEXT:    br label %for.exit2
+; EPILOG: for.exit2:
+; EPILOG-NEXT:    %retval = phi i32 [ %retval.ph, %for.exit2.loopexit ], [ %retval.ph3, %for.exit2.loopexit2 ]
+; EPILOG-NEXT:    ret i32 %retval
+; EPILOG: %niter.nsub.7 = add i64 %niter, -8
+
+; PROLOG: test2(
+; PROLOG: for.exit2.loopexit:
+; PROLOG-NEXT:    %retval.ph = phi i32 [ 42, %for.exiting_block ], [ %sum.02, %header ], [ %add, %for.body ], [ 42, %for.exiting_block.1 ], [ %add.1, %for.body.1 ], [ 42, %for.exiting_block.2 ], [ %add.2, %for.body.2 ], [ 42, %for.exiting_block.3 ],
+; PROLOG-NEXT:    br label %for.exit2
+; PROLOG: for.exit2.loopexit1:
+; PROLOG-NEXT:    %retval.ph2 = phi i32 [ 42, %for.exiting_block.prol ], [ %sum.02.prol, %header.prol ]
+; PROLOG-NEXT:    br label %for.exit2
+; PROLOG: for.exit2:
+; PROLOG-NEXT:    %retval = phi i32 [ %retval.ph, %for.exit2.loopexit ], [ %retval.ph2, %for.exit2.loopexit1 ]
+; PROLOG-NEXT:    ret i32 %retval
+; PROLOG: %indvars.iv.next.7 = add i64 %indvars.iv, 8
+
 entry:
   br label %header
 
@@ -102,25 +137,42 @@ for.exit2:
 ; test with two exiting and three exit blocks.
 ; the non-latch exiting block has a switch.
 define void @test3(i64 %trip, i64 %add) {
-; CHECK-LABEL: test3
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[TRIP:%.*]], -1
-; CHECK-NEXT:    [[XTRAITER:%.*]] = and i64 [[TRIP]], 7
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[TMP0]], 7
-; CHECK-NEXT:    br i1 [[TMP1]], label %exit2.loopexit.unr-lcssa, label [[ENTRY_NEW:%.*]]
-; CHECK:       entry.new:
-; CHECK-NEXT:    %unroll_iter = sub i64 [[TRIP]], [[XTRAITER]]
-; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
-; CHECK-LABEL:  loop_header:
-; CHECK-NEXT:     %sum = phi i64 [ 0, %entry.new ], [ %sum.next.7, %loop_latch.7 ]
-; CHECK-NEXT:     %niter = phi i64 [ %unroll_iter, %entry.new ], [ %niter.nsub.7, %loop_latch.7 ]
-; CHECK-LABEL:  loop_exiting_bb1.7:
-; CHECK-NEXT:     switch i64 %sum.next.6, label %loop_latch.7
-; CHECK-LABEL:  loop_latch.7:
-; CHECK-NEXT:     %sum.next.7 = add i64 %sum.next.6, %add
-; CHECK-NEXT:     %niter.nsub.7 = add i64 %niter, -8
-; CHECK-NEXT:     %niter.ncmp.7 = icmp eq i64 %niter.nsub.7, 0
-; CHECK-NEXT:     br i1 %niter.ncmp.7, label %exit2.loopexit.unr-lcssa.loopexit, label %loop_header
+; EPILOG: test3(
+; EPILOG-NEXT:  entry:
+; EPILOG-NEXT:    [[TMP0:%.*]] = add i64 [[TRIP:%.*]], -1
+; EPILOG-NEXT:    [[XTRAITER:%.*]] = and i64 [[TRIP]], 7
+; EPILOG-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[TMP0]], 7
+; EPILOG-NEXT:    br i1 [[TMP1]], label %exit2.loopexit.unr-lcssa, label [[ENTRY_NEW:%.*]]
+; EPILOG:       entry.new:
+; EPILOG-NEXT:    %unroll_iter = sub i64 [[TRIP]], [[XTRAITER]]
+; EPILOG-NEXT:    br label [[LOOP_HEADER:%.*]]
+; EPILOG:  loop_header:
+; EPILOG-NEXT:     %sum = phi i64 [ 0, %entry.new ], [ %sum.next.7, %loop_latch.7 ]
+; EPILOG-NEXT:     %niter = phi i64 [ %unroll_iter, %entry.new ], [ %niter.nsub.7, %loop_latch.7 ]
+; EPILOG:  loop_exiting_bb1.7:
+; EPILOG-NEXT:     switch i64 %sum.next.6, label %loop_latch.7
+; EPILOG:  loop_latch.7:
+; EPILOG-NEXT:     %sum.next.7 = add i64 %sum.next.6, %add
+; EPILOG-NEXT:     %niter.nsub.7 = add i64 %niter, -8
+; EPILOG-NEXT:     %niter.ncmp.7 = icmp eq i64 %niter.nsub.7, 0
+; EPILOG-NEXT:     br i1 %niter.ncmp.7, label %exit2.loopexit.unr-lcssa.loopexit, label %loop_header
+
+; PROLOG:  test3(
+; PROLOG-NEXT:  entry:
+; PROLOG-NEXT:    [[TMP0:%.*]] = add i64 [[TRIP:%.*]], -1
+; PROLOG-NEXT:    [[XTRAITER:%.*]] = and i64 [[TRIP]], 7
+; PROLOG-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[XTRAITER]], 0
+; PROLOG-NEXT:    br i1 [[TMP1]], label %loop_header.prol.loopexit, label %loop_header.prol.preheader
+; PROLOG:  loop_header:
+; PROLOG-NEXT:     %iv = phi i64 [ %iv.unr, %entry.new ], [ %iv_next.7, %loop_latch.7 ]
+; PROLOG-NEXT:     %sum = phi i64 [ %sum.unr, %entry.new ], [ %sum.next.7, %loop_latch.7 ]
+; PROLOG:  loop_exiting_bb1.7:
+; PROLOG-NEXT:     switch i64 %sum.next.6, label %loop_latch.7
+; PROLOG:  loop_latch.7:
+; PROLOG-NEXT:     %iv_next.7 = add nsw i64 %iv, 8
+; PROLOG-NEXT:     %sum.next.7 = add i64 %sum.next.6, %add
+; PROLOG-NEXT:     %cmp.7 = icmp eq i64 %iv_next.7, %trip
+; PROLOG-NEXT:     br i1 %cmp.7, label %exit2.loopexit.unr-lcssa, label %loop_header
 entry:
   br label %loop_header
 
@@ -153,9 +205,13 @@ exit2.loopexit:
 
 ; FIXME: Support multiple exiting blocks to the same latch exit block.
 define i32 @test4(i32* nocapture %a, i64 %n, i1 %cond) {
-; CHECK-LABEL: test4
-; CHECK-NOT: .unr
-; CHECK-NOT: .epil
+; EPILOG: test4(
+; EPILOG-NOT: .unr
+; EPILOG-NOT: .epil
+
+; PROLOG: test4(
+; PROLOG-NOT: .unr
+; PROLOG-NOT: .prol
 entry:
   br label %header
 
@@ -186,9 +242,13 @@ for.exit2:
 
 ; FIXME: Support multiple exiting blocks to the unique exit block.
 define void @unique_exit(i32 %arg) {
-; CHECK-LABEL: unique_exit
-; CHECK-NOT: .unr
-; CHECK-NOT: .epil
+; EPILOG: unique_exit(
+; EPILOG-NOT: .unr
+; EPILOG-NOT: .epil
+
+; PROLOG: unique_exit(
+; PROLOG-NOT: .unr
+; PROLOG-NOT: .prol
 entry:
   %tmp = icmp sgt i32 undef, %arg
   br i1 %tmp, label %preheader, label %returnblock
@@ -217,18 +277,31 @@ latch:                                            ; preds = %header
 ; two exiting and two exit blocks.
 ; the non-latch exiting block has duplicate edges to the non-latch exit block.
 define i64 @test5(i64 %trip, i64 %add, i1 %cond) {
-; CHECK-LABEL: test5
-; CHECK-LABEL:   exit1.loopexit:
-; CHECK-NEXT:      %result.ph = phi i64 [ %ivy, %loop_exiting ], [ %ivy, %loop_exiting ], [ %ivy.1, %loop_exiting.1 ], [ %ivy.1, %loop_exiting.1 ], [ %ivy.2, %loop_exiting.2 ],
-; CHECK-NEXT:      br label %exit1
-; CHECK-LABEL:   exit1.loopexit2:
-; CHECK-NEXT:      %ivy.epil = add i64 %iv.epil, %add
-; CHECK-NEXT:      br label %exit1
-; CHECK-LABEL:   exit1:
-; CHECK-NEXT:      %result = phi i64 [ %result.ph, %exit1.loopexit ], [ %ivy.epil, %exit1.loopexit2 ]
-; CHECK-NEXT:      ret i64 %result
-; CHECK-LABEL:   loop_latch.7:
-; CHECK: %niter.nsub.7 = add i64 %niter, -8
+; EPILOG: test5(
+; EPILOG:   exit1.loopexit:
+; EPILOG-NEXT:      %result.ph = phi i64 [ %ivy, %loop_exiting ], [ %ivy, %loop_exiting ], [ %ivy.1, %loop_exiting.1 ], [ %ivy.1, %loop_exiting.1 ], [ %ivy.2, %loop_exiting.2 ],
+; EPILOG-NEXT:      br label %exit1
+; EPILOG:   exit1.loopexit2:
+; EPILOG-NEXT:      %ivy.epil = add i64 %iv.epil, %add
+; EPILOG-NEXT:      br label %exit1
+; EPILOG:   exit1:
+; EPILOG-NEXT:      %result = phi i64 [ %result.ph, %exit1.loopexit ], [ %ivy.epil, %exit1.loopexit2 ]
+; EPILOG-NEXT:      ret i64 %result
+; EPILOG:   loop_latch.7:
+; EPILOG:      %niter.nsub.7 = add i64 %niter, -8
+
+; PROLOG: test5(
+; PROLOG:   exit1.loopexit:
+; PROLOG-NEXT:      %result.ph = phi i64 [ %ivy, %loop_exiting ], [ %ivy, %loop_exiting ], [ %ivy.1, %loop_exiting.1 ], [ %ivy.1, %loop_exiting.1 ], [ %ivy.2, %loop_exiting.2 ],
+; PROLOG-NEXT:      br label %exit1
+; PROLOG:   exit1.loopexit1:
+; PROLOG-NEXT:      %ivy.prol = add i64 %iv.prol, %add
+; PROLOG-NEXT:      br label %exit1
+; PROLOG:   exit1:
+; PROLOG-NEXT:      %result = phi i64 [ %result.ph, %exit1.loopexit ], [ %ivy.prol, %exit1.loopexit1 ]
+; PROLOG-NEXT:      ret i64 %result
+; PROLOG:   loop_latch.7:
+; PROLOG:      %iv_next.7 = add nsw i64 %iv, 8
 entry:
   br label %loop_header
 
@@ -260,18 +333,31 @@ latchexit:
 
 ; test when exit blocks have successors.
 define i32 @test6(i32* nocapture %a, i64 %n, i1 %cond, i32 %x) {
-; CHECK-LABEL: test6
-; CHECK-LABEL:   for.exit2.loopexit:
-; CHECK-NEXT:      %retval.ph = phi i32 [ 42, %for.exiting_block ], [ %sum.02, %header ], [ %add, %latch ], [ 42, %for.exiting_block.1 ], [ %add.1, %latch.1 ], [ 42, %for.exiting_block.2 ], [ %add.2, %latch.2 ],
-; CHECK-NEXT:      br label %for.exit2
-; CHECK-LABEL:   for.exit2.loopexit2:
-; CHECK-NEXT:      %retval.ph3 = phi i32 [ 42, %for.exiting_block.epil ], [ %sum.02.epil, %header.epil ]
-; CHECK-NEXT:      br label %for.exit2
-; CHECK-LABEL:   for.exit2:
-; CHECK-NEXT:      %retval = phi i32 [ %retval.ph, %for.exit2.loopexit ], [ %retval.ph3, %for.exit2.loopexit2 ]
-; CHECK-NEXT:      br i1 %cond, label %exit_true, label %exit_false
-; CHECK-LABEL:   latch.7:
-; CHECK:           %niter.nsub.7 = add i64 %niter, -8
+; EPILOG: test6(
+; EPILOG:   for.exit2.loopexit:
+; EPILOG-NEXT:      %retval.ph = phi i32 [ 42, %for.exiting_block ], [ %sum.02, %header ], [ %add, %latch ], [ 42, %for.exiting_block.1 ], [ %add.1, %latch.1 ], [ 42, %for.exiting_block.2 ], [ %add.2, %latch.2 ],
+; EPILOG-NEXT:      br label %for.exit2
+; EPILOG:   for.exit2.loopexit2:
+; EPILOG-NEXT:      %retval.ph3 = phi i32 [ 42, %for.exiting_block.epil ], [ %sum.02.epil, %header.epil ]
+; EPILOG-NEXT:      br label %for.exit2
+; EPILOG:   for.exit2:
+; EPILOG-NEXT:      %retval = phi i32 [ %retval.ph, %for.exit2.loopexit ], [ %retval.ph3, %for.exit2.loopexit2 ]
+; EPILOG-NEXT:      br i1 %cond, label %exit_true, label %exit_false
+; EPILOG:   latch.7:
+; EPILOG:           %niter.nsub.7 = add i64 %niter, -8
+
+; PROLOG: test6(
+; PROLOG:   for.exit2.loopexit:
+; PROLOG-NEXT:      %retval.ph = phi i32 [ 42, %for.exiting_block ], [ %sum.02, %header ], [ %add, %latch ], [ 42, %for.exiting_block.1 ], [ %add.1, %latch.1 ], [ 42, %for.exiting_block.2 ], [ %add.2, %latch.2 ],
+; PROLOG-NEXT:      br label %for.exit2
+; PROLOG:   for.exit2.loopexit1:
+; PROLOG-NEXT:      %retval.ph2 = phi i32 [ 42, %for.exiting_block.prol ], [ %sum.02.prol, %header.prol ]
+; PROLOG-NEXT:      br label %for.exit2
+; PROLOG:   for.exit2:
+; PROLOG-NEXT:      %retval = phi i32 [ %retval.ph, %for.exit2.loopexit ], [ %retval.ph2, %for.exit2.loopexit1 ]
+; PROLOG-NEXT:      br i1 %cond, label %exit_true, label %exit_false
+; PROLOG: latch.7:
+; PROLOG:   %indvars.iv.next.7 = add i64 %indvars.iv, 8
 entry:
   br label %header
 

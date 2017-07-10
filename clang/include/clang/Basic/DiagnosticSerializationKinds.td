@@ -127,11 +127,11 @@ def err_module_odr_violation_mismatch_decl : Error<
   "%select{definition in module '%2'|defined here}1 found "
   "%select{end of class|public access specifier|private access specifier|"
   "protected access specifier|static assert|field|method|type alias|typedef|"
-  "data member}3">;
+  "data member|friend declaration}3">;
 def note_module_odr_violation_mismatch_decl : Note<"but in '%0' found "
   "%select{end of class|public access specifier|private access specifier|"
   "protected access specifier|static assert|field|method|type alias|typedef|"
-  "data member}1">;
+  "data member|friend declaration}1">;
 
 def err_module_odr_violation_mismatch_decl_diff : Error<
   "%q0 has different definitions in different modules; first difference is "
@@ -166,6 +166,9 @@ def err_module_odr_violation_mismatch_decl_diff : Error<
   "data member %4 with%select{out|}5 an initializer|"
   "data member %4 with an initializer|"
   "data member %4 %select{is constexpr|is not constexpr}5|"
+  "friend %select{class|function}4|"
+  "friend %4|"
+  "friend function %4|"
   "}3">;
 
 def note_module_odr_violation_mismatch_decl_diff : Note<"but in '%0' found "
@@ -199,18 +202,21 @@ def note_module_odr_violation_mismatch_decl_diff : Note<"but in '%0' found "
   "data member %2 with%select{out|}3 an initializer|"
   "data member %2 with a different initializer|"
   "data member %2 %select{is constexpr|is not constexpr}3|"
+  "friend %select{class|function}2|"
+  "friend %2|"
+  "friend function %2|"
   "}1">;
 
 def err_module_odr_violation_mismatch_decl_unknown : Error<
   "%q0 %select{with definition in module '%2'|defined here}1 has different "
   "definitions in different modules; first difference is this "
   "%select{||||static assert|field|method|type alias|typedef|data member|"
-  "unexpected decl}3">;
+  "friend declaration|unexpected decl}3">;
 def note_module_odr_violation_mismatch_decl_unknown : Note<
   "but in '%0' found "
   "%select{||||different static assert|different field|different method|"
   "different type alias|different typedef|different data member|"
-  "another unexpected decl}1">;
+  "different friend declaration|another unexpected decl}1">;
 
 def warn_duplicate_module_file_extension : Warning<
   "duplicate module file extension block name '%0'">,

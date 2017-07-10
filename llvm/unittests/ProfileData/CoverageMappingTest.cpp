@@ -13,6 +13,8 @@
 #include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/ProfileData/InstrProfWriter.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Testing/Support/Error.h"
+#include "llvm/Testing/Support/SupportHelpers.h"
 #include "gtest/gtest.h"
 
 #include <ostream>
@@ -21,15 +23,8 @@
 using namespace llvm;
 using namespace coverage;
 
-static ::testing::AssertionResult NoError(Error E) {
-  if (!E)
-    return ::testing::AssertionSuccess();
-  return ::testing::AssertionFailure() << "error: " << toString(std::move(E))
-                                       << "\n";
-}
-
-static ::testing::AssertionResult ErrorEquals(coveragemap_error Expected,
-                                              Error E) {
+LLVM_NODISCARD static ::testing::AssertionResult
+ErrorEquals(coveragemap_error Expected, Error E) {
   coveragemap_error Found;
   std::string FoundMsg;
   handleAllErrors(std::move(E), [&](const CoverageMapError &CME) {
@@ -209,7 +204,7 @@ struct CoverageMappingTest : ::testing::TestWithParam<std::pair<bool, bool>> {
     std::vector<CounterExpression> Expressions;
     RawCoverageMappingReader Reader(Coverage, Filenames, Data.Filenames,
                                     Expressions, Data.Regions);
-    ASSERT_TRUE(NoError(Reader.read()));
+    EXPECT_THAT_ERROR(Reader.read(), Succeeded());
   }
 
   void writeAndReadCoverageRegions(bool EmitFilenames = true) {
@@ -227,7 +222,7 @@ struct CoverageMappingTest : ::testing::TestWithParam<std::pair<bool, bool>> {
   void readProfCounts() {
     auto Profile = ProfileWriter.writeBuffer();
     auto ReaderOrErr = IndexedInstrProfReader::create(std::move(Profile));
-    ASSERT_TRUE(NoError(ReaderOrErr.takeError()));
+    EXPECT_THAT_ERROR(ReaderOrErr.takeError(), Succeeded());
     ProfileReader = std::move(ReaderOrErr.get());
   }
 
@@ -309,7 +304,8 @@ TEST_P(CoverageMappingTest, correct_deserialize_for_more_than_two_files) {
 }
 
 TEST_P(CoverageMappingTest, load_coverage_for_more_than_two_files) {
-  NoError(ProfileWriter.addRecord({"func", 0x1234, {0}}));
+  EXPECT_THAT_ERROR(ProfileWriter.addRecord({"func", 0x1234, {0}}),
+                    Succeeded());
 
   const char *FileNames[] = {"bar", "baz", "foo"};
   static const unsigned N = array_lengthof(FileNames);
@@ -320,7 +316,7 @@ TEST_P(CoverageMappingTest, load_coverage_for_more_than_two_files) {
     // in order to preserve that information during possible sorting of CMRs.
     addCMR(Counter::getCounter(0), FileNames[I], I, 1, I, 1);
 
-  NoError(loadCoverageMapping());
+  EXPECT_THAT_ERROR(loadCoverageMapping(), Succeeded());
 
   for (unsigned I = 0; I < N; ++I) {
     CoverageData Data = LoadedCoverage->getCoverageForFile(FileNames[I]);
@@ -330,15 +326,17 @@ TEST_P(CoverageMappingTest, load_coverage_for_more_than_two_files) {
 }
 
 TEST_P(CoverageMappingTest, load_coverage_with_bogus_function_name) {
-  NoError(ProfileWriter.addRecord({"", 0x1234, {10}}));
+  EXPECT_THAT_ERROR(ProfileWriter.addRecord({"", 0x1234, {10}}), Succeeded());
   startFunction("", 0x1234);
   addCMR(Counter::getCounter(0), "foo", 1, 1, 5, 5);
-  ErrorEquals(coveragemap_error::malformed, loadCoverageMapping());
+  EXPECT_TRUE(ErrorEquals(coveragemap_error::malformed, loadCoverageMapping()));
 }
 
 TEST_P(CoverageMappingTest, load_coverage_for_several_functions) {
-  NoError(ProfileWriter.addRecord({"func1", 0x1234, {10}}));
-  NoError(ProfileWriter.addRecord({"func2", 0x2345, {20}}));
+  EXPECT_THAT_ERROR(ProfileWriter.addRecord({"func1", 0x1234, {10}}),
+                    Succeeded());
+  EXPECT_THAT_ERROR(ProfileWriter.addRecord({"func2", 0x2345, {20}}),
+                    Succeeded());
 
   startFunction("func1", 0x1234);
   addCMR(Counter::getCounter(0), "foo", 1, 1, 5, 5);
@@ -346,7 +344,7 @@ TEST_P(CoverageMappingTest, load_coverage_for_several_functions) {
   startFunction("func2", 0x2345);
   addCMR(Counter::getCounter(0), "bar", 2, 2, 6, 6);
 
-  NoError(loadCoverageMapping());
+  EXPECT_THAT_ERROR(loadCoverageMapping(), Succeeded());
 
   const auto FunctionRecords = LoadedCoverage->getCoveredFunctions();
   EXPECT_EQ(2, std::distance(FunctionRecords.begin(), FunctionRecords.end()));
@@ -382,14 +380,15 @@ TEST_P(CoverageMappingTest, expansion_gets_first_counter) {
 }
 
 TEST_P(CoverageMappingTest, basic_coverage_iteration) {
-  NoError(ProfileWriter.addRecord({"func", 0x1234, {30, 20, 10, 0}}));
+  EXPECT_THAT_ERROR(ProfileWriter.addRecord({"func", 0x1234, {30, 20, 10, 0}}),
+                    Succeeded());
 
   startFunction("func", 0x1234);
   addCMR(Counter::getCounter(0), "file1", 1, 1, 9, 9);
   addCMR(Counter::getCounter(1), "file1", 1, 1, 4, 7);
   addCMR(Counter::getCounter(2), "file1", 5, 8, 9, 1);
   addCMR(Counter::getCounter(3), "file1", 10, 10, 11, 11);
-  NoError(loadCoverageMapping());
+  EXPECT_THAT_ERROR(loadCoverageMapping(), Succeeded());
 
   CoverageData Data = LoadedCoverage->getCoverageForFile("file1");
   std::vector<CoverageSegment> Segments(Data.begin(), Data.end());
@@ -406,7 +405,7 @@ TEST_P(CoverageMappingTest, basic_coverage_iteration) {
 TEST_P(CoverageMappingTest, uncovered_function) {
   startFunction("func", 0x1234);
   addCMR(Counter::getZero(), "file1", 1, 2, 3, 4);
-  NoError(loadCoverageMapping());
+  EXPECT_THAT_ERROR(loadCoverageMapping(), Succeeded());
 
   CoverageData Data = LoadedCoverage->getCoverageForFile("file1");
   std::vector<CoverageSegment> Segments(Data.begin(), Data.end());
@@ -419,7 +418,7 @@ TEST_P(CoverageMappingTest, uncovered_function_with_mapping) {
   startFunction("func", 0x1234);
   addCMR(Counter::getCounter(0), "file1", 1, 1, 9, 9);
   addCMR(Counter::getCounter(1), "file1", 1, 1, 4, 7);
-  NoError(loadCoverageMapping());
+  EXPECT_THAT_ERROR(loadCoverageMapping(), Succeeded());
 
   CoverageData Data = LoadedCoverage->getCoverageForFile("file1");
   std::vector<CoverageSegment> Segments(Data.begin(), Data.end());
@@ -430,13 +429,14 @@ TEST_P(CoverageMappingTest, uncovered_function_with_mapping) {
 }
 
 TEST_P(CoverageMappingTest, combine_regions) {
-  NoError(ProfileWriter.addRecord({"func", 0x1234, {10, 20, 30}}));
+  EXPECT_THAT_ERROR(ProfileWriter.addRecord({"func", 0x1234, {10, 20, 30}}),
+                    Succeeded());
 
   startFunction("func", 0x1234);
   addCMR(Counter::getCounter(0), "file1", 1, 1, 9, 9);
   addCMR(Counter::getCounter(1), "file1", 3, 3, 4, 4);
   addCMR(Counter::getCounter(2), "file1", 3, 3, 4, 4);
-  NoError(loadCoverageMapping());
+  EXPECT_THAT_ERROR(loadCoverageMapping(), Succeeded());
 
   CoverageData Data = LoadedCoverage->getCoverageForFile("file1");
   std::vector<CoverageSegment> Segments(Data.begin(), Data.end());
@@ -448,13 +448,14 @@ TEST_P(CoverageMappingTest, combine_regions) {
 }
 
 TEST_P(CoverageMappingTest, restore_combined_counter_after_nested_region) {
-  NoError(ProfileWriter.addRecord({"func", 0x1234, {10, 20, 40}}));
+  EXPECT_THAT_ERROR(ProfileWriter.addRecord({"func", 0x1234, {10, 20, 40}}),
+                    Succeeded());
 
   startFunction("func", 0x1234);
   addCMR(Counter::getCounter(0), "file1", 1, 1, 9, 9);
   addCMR(Counter::getCounter(1), "file1", 1, 1, 9, 9);
   addCMR(Counter::getCounter(2), "file1", 3, 3, 5, 5);
-  NoError(loadCoverageMapping());
+  EXPECT_THAT_ERROR(loadCoverageMapping(), Succeeded());
 
   CoverageData Data = LoadedCoverage->getCoverageForFile("file1");
   std::vector<CoverageSegment> Segments(Data.begin(), Data.end());
@@ -468,15 +469,17 @@ TEST_P(CoverageMappingTest, restore_combined_counter_after_nested_region) {
 // If CodeRegions and ExpansionRegions cover the same area,
 // only counts of CodeRegions should be used.
 TEST_P(CoverageMappingTest, dont_combine_expansions) {
-  NoError(ProfileWriter.addRecord({"func", 0x1234, {10, 20}}));
-  NoError(ProfileWriter.addRecord({"func", 0x1234, {0, 0}}));
+  EXPECT_THAT_ERROR(ProfileWriter.addRecord({"func", 0x1234, {10, 20}}),
+                    Succeeded());
+  EXPECT_THAT_ERROR(ProfileWriter.addRecord({"func", 0x1234, {0, 0}}),
+                    Succeeded());
 
   startFunction("func", 0x1234);
   addCMR(Counter::getCounter(0), "file1", 1, 1, 9, 9);
   addCMR(Counter::getCounter(1), "file1", 3, 3, 4, 4);
   addCMR(Counter::getCounter(1), "include1", 6, 6, 7, 7);
   addExpansionCMR("file1", "include1", 3, 3, 4, 4);
-  NoError(loadCoverageMapping());
+  EXPECT_THAT_ERROR(loadCoverageMapping(), Succeeded());
 
   CoverageData Data = LoadedCoverage->getCoverageForFile("file1");
   std::vector<CoverageSegment> Segments(Data.begin(), Data.end());
@@ -489,7 +492,8 @@ TEST_P(CoverageMappingTest, dont_combine_expansions) {
 
 // If an area is covered only by ExpansionRegions, they should be combinated.
 TEST_P(CoverageMappingTest, combine_expansions) {
-  NoError(ProfileWriter.addRecord({"func", 0x1234, {2, 3, 7}}));
+  EXPECT_THAT_ERROR(ProfileWriter.addRecord({"func", 0x1234, {2, 3, 7}}),
+                    Succeeded());
 
   startFunction("func", 0x1234);
   addCMR(Counter::getCounter(1), "include1", 1, 1, 1, 10);
@@ -498,7 +502,7 @@ TEST_P(CoverageMappingTest, combine_expansions) {
   addExpansionCMR("file", "include1", 3, 1, 3, 5);
   addExpansionCMR("file", "include2", 3, 1, 3, 5);
 
-  NoError(loadCoverageMapping());
+  EXPECT_THAT_ERROR(loadCoverageMapping(), Succeeded());
 
   CoverageData Data = LoadedCoverage->getCoverageForFile("file");
   std::vector<CoverageSegment> Segments(Data.begin(), Data.end());
@@ -510,11 +514,12 @@ TEST_P(CoverageMappingTest, combine_expansions) {
 }
 
 TEST_P(CoverageMappingTest, strip_filename_prefix) {
-  NoError(ProfileWriter.addRecord({"file1:func", 0x1234, {0}}));
+  EXPECT_THAT_ERROR(ProfileWriter.addRecord({"file1:func", 0x1234, {0}}),
+                    Succeeded());
 
   startFunction("file1:func", 0x1234);
   addCMR(Counter::getCounter(0), "file1", 1, 1, 9, 9);
-  NoError(loadCoverageMapping());
+  EXPECT_THAT_ERROR(loadCoverageMapping(), Succeeded());
 
   std::vector<std::string> Names;
   for (const auto &Func : LoadedCoverage->getCoveredFunctions())
@@ -524,11 +529,12 @@ TEST_P(CoverageMappingTest, strip_filename_prefix) {
 }
 
 TEST_P(CoverageMappingTest, strip_unknown_filename_prefix) {
-  NoError(ProfileWriter.addRecord({"<unknown>:func", 0x1234, {0}}));
+  EXPECT_THAT_ERROR(ProfileWriter.addRecord({"<unknown>:func", 0x1234, {0}}),
+                    Succeeded());
 
   startFunction("<unknown>:func", 0x1234);
   addCMR(Counter::getCounter(0), "", 1, 1, 9, 9);
-  NoError(loadCoverageMapping(/*EmitFilenames=*/false));
+  EXPECT_THAT_ERROR(loadCoverageMapping(/*EmitFilenames=*/false), Succeeded());
 
   std::vector<std::string> Names;
   for (const auto &Func : LoadedCoverage->getCoveredFunctions())
@@ -538,8 +544,10 @@ TEST_P(CoverageMappingTest, strip_unknown_filename_prefix) {
 }
 
 TEST_P(CoverageMappingTest, dont_detect_false_instantiations) {
-  NoError(ProfileWriter.addRecord({"foo", 0x1234, {10}}));
-  NoError(ProfileWriter.addRecord({"bar", 0x2345, {20}}));
+  EXPECT_THAT_ERROR(ProfileWriter.addRecord({"foo", 0x1234, {10}}),
+                    Succeeded());
+  EXPECT_THAT_ERROR(ProfileWriter.addRecord({"bar", 0x2345, {20}}),
+                    Succeeded());
 
   startFunction("foo", 0x1234);
   addCMR(Counter::getCounter(0), "expanded", 1, 1, 1, 10);
@@ -549,7 +557,7 @@ TEST_P(CoverageMappingTest, dont_detect_false_instantiations) {
   addCMR(Counter::getCounter(0), "expanded", 1, 1, 1, 10);
   addExpansionCMR("main", "expanded", 9, 1, 9, 5);
 
-  NoError(loadCoverageMapping());
+  EXPECT_THAT_ERROR(loadCoverageMapping(), Succeeded());
 
   std::vector<const FunctionRecord *> Instantiations =
       LoadedCoverage->getInstantiations("expanded");
@@ -557,13 +565,14 @@ TEST_P(CoverageMappingTest, dont_detect_false_instantiations) {
 }
 
 TEST_P(CoverageMappingTest, load_coverage_for_expanded_file) {
-  NoError(ProfileWriter.addRecord({"func", 0x1234, {10}}));
+  EXPECT_THAT_ERROR(ProfileWriter.addRecord({"func", 0x1234, {10}}),
+                    Succeeded());
 
   startFunction("func", 0x1234);
   addCMR(Counter::getCounter(0), "expanded", 1, 1, 1, 10);
   addExpansionCMR("main", "expanded", 4, 1, 4, 5);
 
-  NoError(loadCoverageMapping());
+  EXPECT_THAT_ERROR(loadCoverageMapping(), Succeeded());
 
   CoverageData Data = LoadedCoverage->getCoverageForFile("expanded");
   std::vector<CoverageSegment> Segments(Data.begin(), Data.end());
@@ -573,7 +582,8 @@ TEST_P(CoverageMappingTest, load_coverage_for_expanded_file) {
 }
 
 TEST_P(CoverageMappingTest, skip_duplicate_function_record) {
-  NoError(ProfileWriter.addRecord({"func", 0x1234, {1}}));
+  EXPECT_THAT_ERROR(ProfileWriter.addRecord({"func", 0x1234, {1}}),
+                    Succeeded());
 
   startFunction("func", 0x1234);
   addCMR(Counter::getCounter(0), "file1", 1, 1, 9, 9);
@@ -581,7 +591,7 @@ TEST_P(CoverageMappingTest, skip_duplicate_function_record) {
   startFunction("func", 0x1234);
   addCMR(Counter::getCounter(0), "file1", 1, 1, 9, 9);
 
-  NoError(loadCoverageMapping());
+  EXPECT_THAT_ERROR(loadCoverageMapping(), Succeeded());
 
   auto Funcs = LoadedCoverage->getCoveredFunctions();
   unsigned NumFuncs = std::distance(Funcs.begin(), Funcs.end());

@@ -151,7 +151,7 @@ public:
   /// user can materialize the definition at any time by calling the getAddress
   /// method.
   JITSymbol(GetAddressFtor GetAddress, JITSymbolFlags Flags)
-      : GetAddress(std::move(GetAddress)), Flags(Flags) {}
+      : GetAddress(std::move(GetAddress)), CachedAddr(0), Flags(Flags) {}
 
   JITSymbol(const JITSymbol&) = delete;
   JITSymbol& operator=(const JITSymbol&) = delete;
