@@ -54,6 +54,7 @@ syn keyword llvmKeyword
       \ atomic
       \ available_externally
       \ blockaddress
+      \ builtin
       \ byval
       \ c
       \ catch
@@ -105,10 +106,12 @@ syn keyword llvmKeyword
       \ naked
       \ nest
       \ noalias
+      \ nobuiltin
       \ nocapture
       \ noimplicitfloat
       \ noinline
       \ nonlazybind
+      \ nonnull
       \ norecurse
       \ noredzone
       \ noreturn
@@ -134,6 +137,7 @@ syn keyword llvmKeyword
       \ signext
       \ singlethread
       \ source_filename
+      \ speculatable
       \ spir_func
       \ spir_kernel
       \ sret

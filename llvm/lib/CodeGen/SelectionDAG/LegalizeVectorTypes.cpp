@@ -2977,7 +2977,11 @@ SDValue DAGTypeLegalizer::convertMask(SDValue InMask, EVT MaskVT,
 
   // Currently a SETCC or a AND/OR/XOR with two SETCCs are handled.
   unsigned InMaskOpc = InMask->getOpcode();
+
+  // FIXME: This code seems to be too restrictive, we might consider
+  // generalizing it or dropping it.
   assert((InMaskOpc == ISD::SETCC ||
+          ISD::isBuildVectorOfConstantSDNodes(InMask.getNode()) ||
           (isLogicalMaskOp(InMaskOpc) &&
            isSETCCorConvertedSETCC(InMask->getOperand(0)) &&
            isSETCCorConvertedSETCC(InMask->getOperand(1)))) &&

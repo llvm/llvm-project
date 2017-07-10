@@ -47,7 +47,13 @@ template <typename T> struct MappingTraits;
 
 /// \brief Class to accumulate and hold information about a callee.
 struct CalleeInfo {
-  enum class HotnessType : uint8_t { Unknown = 0, Cold = 1, None = 2, Hot = 3 };
+  enum class HotnessType : uint8_t {
+    Unknown = 0,
+    Cold = 1,
+    None = 2,
+    Hot = 3,
+    Critical = 4
+  };
   HotnessType Hotness = HotnessType::Unknown;
 
   CalleeInfo() = default;

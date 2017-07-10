@@ -51,10 +51,15 @@ public:
   /// Add function counts for the given function. If there are already counts
   /// for this function and the hash and number of counts match, each counter is
   /// summed. Optionally scale counts by \p Weight.
-  Error addRecord(NamedInstrProfRecord &&I, uint64_t Weight = 1);
+  void addRecord(NamedInstrProfRecord &&I, uint64_t Weight,
+                 function_ref<void(Error)> Warn);
+  void addRecord(NamedInstrProfRecord &&I, function_ref<void(Error)> Warn) {
+    addRecord(std::move(I), 1, Warn);
+  }
 
   /// Merge existing function counts from the given writer.
-  Error mergeRecordsFromWriter(InstrProfWriter &&IPW);
+  void mergeRecordsFromWriter(InstrProfWriter &&IPW,
+                              function_ref<void(Error)> Warn);
 
   /// Write the profile to \c OS
   void write(raw_fd_ostream &OS);
@@ -87,8 +92,8 @@ public:
   void setOutputSparse(bool Sparse);
 
 private:
-  Error addRecord(StringRef Name, uint64_t Hash, InstrProfRecord &&I,
-                  uint64_t Weight = 1);
+  void addRecord(StringRef Name, uint64_t Hash, InstrProfRecord &&I,
+                 uint64_t Weight, function_ref<void(Error)> Warn);
   bool shouldEncodeData(const ProfilingData &PD);
   void writeImpl(ProfOStream &OS);
 };

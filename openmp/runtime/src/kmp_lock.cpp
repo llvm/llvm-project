@@ -1130,7 +1130,7 @@ template <bool takeTime>
 __forceinline static int
 __kmp_acquire_queuing_lock_timed_template(kmp_queuing_lock_t *lck,
                                           kmp_int32 gtid) {
-  register kmp_info_t *this_thr = __kmp_thread_from_gtid(gtid);
+  kmp_info_t *this_thr = __kmp_thread_from_gtid(gtid);
   volatile kmp_int32 *head_id_p = &lck->lk.head_id;
   volatile kmp_int32 *tail_id_p = &lck->lk.tail_id;
   volatile kmp_uint32 *spin_here_p;
@@ -1401,7 +1401,7 @@ static int __kmp_test_queuing_lock_with_checks(kmp_queuing_lock_t *lck,
 }
 
 int __kmp_release_queuing_lock(kmp_queuing_lock_t *lck, kmp_int32 gtid) {
-  register kmp_info_t *this_thr;
+  kmp_info_t *this_thr;
   volatile kmp_int32 *head_id_p = &lck->lk.head_id;
   volatile kmp_int32 *tail_id_p = &lck->lk.tail_id;
 

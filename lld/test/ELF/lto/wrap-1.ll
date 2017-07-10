@@ -1,5 +1,12 @@
 ; REQUIRES: x86
+; LTO
 ; RUN: llvm-as %s -o %t.o
+; RUN: ld.lld %t.o -o %t.out -wrap=bar -save-temps
+; RUN: llvm-readobj -t %t.out | FileCheck %s
+; RUN: cat %t.out.resolution.txt | FileCheck -check-prefix=RESOLS %s
+
+; ThinLTO
+; RUN: opt -module-summary %s -o %t.o
 ; RUN: ld.lld %t.o -o %t.out -wrap=bar -save-temps
 ; RUN: llvm-readobj -t %t.out | FileCheck %s
 ; RUN: cat %t.out.resolution.txt | FileCheck -check-prefix=RESOLS %s

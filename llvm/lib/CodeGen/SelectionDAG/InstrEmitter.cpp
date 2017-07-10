@@ -589,7 +589,7 @@ void InstrEmitter::EmitSubregNode(SDNode *Node,
     } else
       AddOperand(MIB, N0, 0, nullptr, VRBaseMap, /*IsDebug=*/false,
                  IsClone, IsCloned);
-    // Add the subregster being inserted
+    // Add the subregister being inserted
     AddOperand(MIB, N1, 0, nullptr, VRBaseMap, /*IsDebug=*/false,
                IsClone, IsCloned);
     MIB.addImm(SubIdx);

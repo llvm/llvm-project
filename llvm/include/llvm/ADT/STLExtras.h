@@ -100,6 +100,8 @@ class function_ref<Ret(Params...)> {
   }
 
 public:
+  function_ref() : callback(nullptr) {}
+
   template <typename Callable>
   function_ref(Callable &&callable,
                typename std::enable_if<
@@ -110,6 +112,8 @@ public:
   Ret operator()(Params ...params) const {
     return callback(callable, std::forward<Params>(params)...);
   }
+
+  operator bool() const { return callback; }
 };
 
 // deleter - Very very very simple method that is used to invoke operator

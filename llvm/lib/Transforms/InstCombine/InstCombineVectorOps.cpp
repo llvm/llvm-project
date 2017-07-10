@@ -204,11 +204,11 @@ Instruction *InstCombiner::visitExtractElementInst(ExtractElementInst &EI) {
       if (I->hasOneUse() &&
           cheapToScalarize(BO, isa<ConstantInt>(EI.getOperand(1)))) {
         Value *newEI0 =
-          Builder->CreateExtractElement(BO->getOperand(0), EI.getOperand(1),
-                                        EI.getName()+".lhs");
+          Builder.CreateExtractElement(BO->getOperand(0), EI.getOperand(1),
+                                       EI.getName()+".lhs");
         Value *newEI1 =
-          Builder->CreateExtractElement(BO->getOperand(1), EI.getOperand(1),
-                                        EI.getName()+".rhs");
+          Builder.CreateExtractElement(BO->getOperand(1), EI.getOperand(1),
+                                       EI.getName()+".rhs");
         return BinaryOperator::CreateWithCopiedFlags(BO->getOpcode(),
                                                      newEI0, newEI1, BO);
       }
@@ -250,8 +250,8 @@ Instruction *InstCombiner::visitExtractElementInst(ExtractElementInst &EI) {
       // Bitcasts can change the number of vector elements, and they cost
       // nothing.
       if (CI->hasOneUse() && (CI->getOpcode() != Instruction::BitCast)) {
-        Value *EE = Builder->CreateExtractElement(CI->getOperand(0),
-                                                  EI.getIndexOperand());
+        Value *EE = Builder.CreateExtractElement(CI->getOperand(0),
+                                                 EI.getIndexOperand());
         Worklist.AddValue(EE);
         return CastInst::Create(CI->getOpcode(), EE, EI.getType());
       }
@@ -269,20 +269,20 @@ Instruction *InstCombiner::visitExtractElementInst(ExtractElementInst &EI) {
 
         Value *Cond = SI->getCondition();
         if (Cond->getType()->isVectorTy()) {
-          Cond = Builder->CreateExtractElement(Cond,
-                                               EI.getIndexOperand(),
-                                               Cond->getName() + ".elt");
+          Cond = Builder.CreateExtractElement(Cond,
+                                              EI.getIndexOperand(),
+                                              Cond->getName() + ".elt");
         }
 
         Value *V1Elem
-          = Builder->CreateExtractElement(TrueVal,
-                                          EI.getIndexOperand(),
-                                          TrueVal->getName() + ".elt");
+          = Builder.CreateExtractElement(TrueVal,
+                                         EI.getIndexOperand(),
+                                         TrueVal->getName() + ".elt");
 
         Value *V2Elem
-          = Builder->CreateExtractElement(FalseVal,
-                                          EI.getIndexOperand(),
-                                          FalseVal->getName() + ".elt");
+          = Builder.CreateExtractElement(FalseVal,
+                                         EI.getIndexOperand(),
+                                         FalseVal->getName() + ".elt");
         return SelectInst::Create(Cond,
                                   V1Elem,
                                   V2Elem,
@@ -837,7 +837,7 @@ Instruction *InstCombiner::visitInsertElementInst(InsertElementInst &IE) {
   if (Instruction *Shuf = foldConstantInsEltIntoShuffle(IE))
     return Shuf;
 
-  if (Instruction *NewInsElt = hoistInsEltConst(IE, *Builder))
+  if (Instruction *NewInsElt = hoistInsEltConst(IE, Builder))
     return NewInsElt;
 
   // Turn a sequence of inserts that broadcasts a scalar into a single
@@ -1020,9 +1020,9 @@ InstCombiner::EvaluateInDifferentElementOrder(Value *V, ArrayRef<int> Mask) {
     SmallVector<Constant *, 16> MaskValues;
     for (int i = 0, e = Mask.size(); i != e; ++i) {
       if (Mask[i] == -1)
-        MaskValues.push_back(UndefValue::get(Builder->getInt32Ty()));
+        MaskValues.push_back(UndefValue::get(Builder.getInt32Ty()));
       else
-        MaskValues.push_back(Builder->getInt32(Mask[i]));
+        MaskValues.push_back(Builder.getInt32(Mask[i]));
     }
     return ConstantExpr::getShuffleVector(C, UndefValue::get(C->getType()),
                                           ConstantVector::get(MaskValues));
@@ -1095,7 +1095,7 @@ InstCombiner::EvaluateInDifferentElementOrder(Value *V, ArrayRef<int> Mask) {
 
       Value *V = EvaluateInDifferentElementOrder(I->getOperand(0), Mask);
       return InsertElementInst::Create(V, I->getOperand(1),
-                                       Builder->getInt32(Index), "", I);
+                                       Builder.getInt32(Index), "", I);
     }
   }
   llvm_unreachable("failed to reorder elements of vector instruction!");
@@ -1275,9 +1275,9 @@ Instruction *InstCombiner::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
                                                 UndefValue::get(Int32Ty));
         for (unsigned I = 0, E = MaskElems, Idx = BegIdx; I != E; ++Idx, ++I)
           ShuffleMask[I] = ConstantInt::get(Int32Ty, Idx);
-        V = Builder->CreateShuffleVector(V, UndefValue::get(V->getType()),
-                                         ConstantVector::get(ShuffleMask),
-                                         SVI.getName() + ".extract");
+        V = Builder.CreateShuffleVector(V, UndefValue::get(V->getType()),
+                                        ConstantVector::get(ShuffleMask),
+                                        SVI.getName() + ".extract");
         BegIdx = 0;
       }
       unsigned SrcElemsPerTgtElem = TgtElemBitWidth / SrcElemBitWidth;
@@ -1287,10 +1287,10 @@ Instruction *InstCombiner::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
       auto *NewBC =
           BCAlreadyExists
               ? NewBCs[CastSrcTy]
-              : Builder->CreateBitCast(V, CastSrcTy, SVI.getName() + ".bc");
+              : Builder.CreateBitCast(V, CastSrcTy, SVI.getName() + ".bc");
       if (!BCAlreadyExists)
         NewBCs[CastSrcTy] = NewBC;
-      auto *Ext = Builder->CreateExtractElement(
+      auto *Ext = Builder.CreateExtractElement(
           NewBC, ConstantInt::get(Int32Ty, BegIdx), SVI.getName() + ".extract");
       // The shufflevector isn't being replaced: the bitcast that used it
       // is. InstCombine will visit the newly-created instructions.

@@ -159,14 +159,20 @@ static void loadInput(const WeightedFile &Input, WriterContext *WC) {
 
   for (auto &I : *Reader) {
     const StringRef FuncName = I.Name;
-    if (Error E = WC->Writer.addRecord(std::move(I), Input.Weight)) {
+    bool Reported = false;
+    WC->Writer.addRecord(std::move(I), Input.Weight, [&](Error E) {
+      if (Reported) {
+        consumeError(std::move(E));
+        return;
+      }
+      Reported = true;
       // Only show hint the first time an error occurs.
       instrprof_error IPE = InstrProfError::take(std::move(E));
       std::unique_lock<std::mutex> ErrGuard{WC->ErrLock};
       bool firstTime = WC->WriterErrorCodes.insert(IPE).second;
       handleMergeWriterError(make_error<InstrProfError>(IPE), Input.Filename,
                              FuncName, firstTime);
-    }
+    });
   }
   if (Reader->hasError())
     WC->Err = Reader->getError();
@@ -174,8 +180,15 @@ static void loadInput(const WeightedFile &Input, WriterContext *WC) {
 
 /// Merge the \p Src writer context into \p Dst.
 static void mergeWriterContexts(WriterContext *Dst, WriterContext *Src) {
-  if (Error E = Dst->Writer.mergeRecordsFromWriter(std::move(Src->Writer)))
+  bool Reported = false;
+  Dst->Writer.mergeRecordsFromWriter(std::move(Src->Writer), [&](Error E) {
+    if (Reported) {
+      consumeError(std::move(E));
+      return;
+    }
+    Reported = true;
     Dst->Err = std::move(E);
+  });
 }
 
 static void mergeInstrProfile(const WeightedFileVector &Inputs,

@@ -41,7 +41,7 @@ The point of going into user-defined operators in a tutorial like this
 is to show the power and flexibility of using a hand-written parser.
 Thus far, the parser we have been implementing uses recursive descent
 for most parts of the grammar and operator precedence parsing for the
-expressions. See `Chapter 2 <LangImpl2.html>`_ for details. By
+expressions. See `Chapter 2 <LangImpl02.html>`_ for details. By
 using operator precedence parsing, it is very easy to allow
 the programmer to introduce new operators into the grammar: the grammar
 is dynamically extensible as the JIT runs.
@@ -734,7 +734,7 @@ side-effects, but it can't actually define and mutate a variable itself.
 
 Strikingly, variable mutation is an important feature of some languages,
 and it is not at all obvious how to `add support for mutable
-variables <LangImpl7.html>`_ without having to add an "SSA construction"
+variables <LangImpl07.html>`_ without having to add an "SSA construction"
 phase to your front-end. In the next chapter, we will describe how you
 can add variable mutation without building SSA in your front-end.
 

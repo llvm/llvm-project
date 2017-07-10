@@ -228,6 +228,13 @@ public:
     Hash.AddQualType(T);
   }
 
+  void AddDecl(const Decl *D) {
+    Hash.AddBoolean(D);
+    if (D) {
+      Hash.AddDecl(D);
+    }
+  }
+
   void Visit(const Decl *D) {
     ID.AddInteger(D->getKind());
     Inherited::Visit(D);
@@ -321,6 +328,16 @@ public:
   void VisitTypeAliasDecl(const TypeAliasDecl *D) {
     Inherited::VisitTypeAliasDecl(D);
   }
+
+  void VisitFriendDecl(const FriendDecl *D) {
+    TypeSourceInfo *TSI = D->getFriendType();
+    Hash.AddBoolean(TSI);
+    if (TSI) {
+      AddQualType(TSI->getType());
+    } else {
+      AddDecl(D->getFriendDecl());
+    }
+  }
 };
 
 // Only allow a small portion of Decl's to be processed.  Remove this once
@@ -335,6 +352,7 @@ bool ODRHash::isWhitelistedDecl(const Decl *D, const CXXRecordDecl *Parent) {
     case Decl::AccessSpec:
     case Decl::CXXMethod:
     case Decl::Field:
+    case Decl::Friend:
     case Decl::StaticAssert:
     case Decl::TypeAlias:
     case Decl::Typedef:

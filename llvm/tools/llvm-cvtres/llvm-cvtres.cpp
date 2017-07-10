@@ -207,6 +207,7 @@ int main(int argc_, const char *argv_[]) {
   std::copy(OutputBuffer->getBufferStart(), OutputBuffer->getBufferEnd(),
             FileBuffer->getBufferStart());
   error(FileBuffer->commit());
+
   if (Verbose) {
     Expected<OwningBinary<Binary>> BinaryOrErr = createBinary(OutputFile);
     if (!BinaryOrErr)

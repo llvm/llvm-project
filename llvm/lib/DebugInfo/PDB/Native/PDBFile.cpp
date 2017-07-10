@@ -385,8 +385,11 @@ bool PDBFile::hasPDBDbiStream() const { return StreamDBI < getNumStreams(); }
 
 bool PDBFile::hasPDBGlobalsStream() {
   auto DbiS = getPDBDbiStream();
-  if (!DbiS)
+  if (!DbiS) {
+    consumeError(DbiS.takeError());
     return false;
+  }
+
   return DbiS->getGlobalSymbolStreamIndex() < getNumStreams();
 }
 
@@ -396,8 +399,10 @@ bool PDBFile::hasPDBIpiStream() const { return StreamIPI < getNumStreams(); }
 
 bool PDBFile::hasPDBPublicsStream() {
   auto DbiS = getPDBDbiStream();
-  if (!DbiS)
+  if (!DbiS) {
+    consumeError(DbiS.takeError());
     return false;
+  }
   return DbiS->getPublicSymbolStreamIndex() < getNumStreams();
 }
 

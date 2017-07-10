@@ -38,7 +38,6 @@ class BranchInst;
 class CallInst;
 class DbgValueInst;
 class ExtractElementInst;
-class ExtractValueInst;
 class FCmpInst;
 class FPExtInst;
 class FPToSIInst;
@@ -53,7 +52,6 @@ class IntToPtrInst;
 class IndirectBrInst;
 class InvokeInst;
 class InsertElementInst;
-class InsertValueInst;
 class Instruction;
 class LoadInst;
 class MachineBasicBlock;
@@ -859,8 +857,8 @@ private:
   void visitInsertElement(const User &I);
   void visitShuffleVector(const User &I);
 
-  void visitExtractValue(const ExtractValueInst &I);
-  void visitInsertValue(const InsertValueInst &I);
+  void visitExtractValue(const User &I);
+  void visitInsertValue(const User &I);
   void visitLandingPad(const LandingPadInst &I);
 
   void visitGetElementPtr(const User &I);

@@ -53,10 +53,10 @@ InsertPointAnalysis::computeLastInsertPoint(const LiveInterval &CurLI,
   std::pair<SlotIndex, SlotIndex> &LIP = LastInsertPoint[Num];
   SlotIndex MBBEnd = LIS.getMBBEndIdx(&MBB);
 
-  SmallVector<const MachineBasicBlock *, 1> EHPadSucessors;
+  SmallVector<const MachineBasicBlock *, 1> EHPadSuccessors;
   for (const MachineBasicBlock *SMBB : MBB.successors())
     if (SMBB->isEHPad())
-      EHPadSucessors.push_back(SMBB);
+      EHPadSuccessors.push_back(SMBB);
 
   // Compute insert points on the first call. The pair is independent of the
   // current live interval.
@@ -68,7 +68,7 @@ InsertPointAnalysis::computeLastInsertPoint(const LiveInterval &CurLI,
       LIP.first = LIS.getInstructionIndex(*FirstTerm);
 
     // If there is a landing pad successor, also find the call instruction.
-    if (EHPadSucessors.empty())
+    if (EHPadSuccessors.empty())
       return LIP.first;
     // There may not be a call instruction (?) in which case we ignore LPad.
     LIP.second = LIP.first;
@@ -87,7 +87,7 @@ InsertPointAnalysis::computeLastInsertPoint(const LiveInterval &CurLI,
   if (!LIP.second)
     return LIP.first;
 
-  if (none_of(EHPadSucessors, [&](const MachineBasicBlock *EHPad) {
+  if (none_of(EHPadSuccessors, [&](const MachineBasicBlock *EHPad) {
         return LIS.isLiveInToMBB(CurLI, EHPad);
       }))
     return LIP.first;

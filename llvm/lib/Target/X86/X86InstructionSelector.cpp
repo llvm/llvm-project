@@ -637,37 +637,40 @@ bool X86InstructionSelector::selectZext(MachineInstr &I,
   const LLT DstTy = MRI.getType(DstReg);
   const LLT SrcTy = MRI.getType(SrcReg);
 
-  if (SrcTy == LLT::scalar(1)) {
+  if (SrcTy != LLT::scalar(1))
+    return false;
 
-    unsigned AndOpc;
-    if (DstTy == LLT::scalar(32))
-      AndOpc = X86::AND32ri8;
-    else if (DstTy == LLT::scalar(64))
-      AndOpc = X86::AND64ri8;
-    else
-      return false;
+  unsigned AndOpc;
+  if (DstTy == LLT::scalar(8))
+    AndOpc = X86::AND8ri8;
+  else if (DstTy == LLT::scalar(16))
+    AndOpc = X86::AND16ri8;
+  else if (DstTy == LLT::scalar(32))
+    AndOpc = X86::AND32ri8;
+  else if (DstTy == LLT::scalar(64))
+    AndOpc = X86::AND64ri8;
+  else
+    return false;
 
-    unsigned DefReg =
-        MRI.createVirtualRegister(getRegClass(DstTy, DstReg, MRI));
-
+  unsigned DefReg = SrcReg;
+  if (DstTy != LLT::scalar(8)) {
+    DefReg = MRI.createVirtualRegister(getRegClass(DstTy, DstReg, MRI));
     BuildMI(*I.getParent(), I, I.getDebugLoc(),
             TII.get(TargetOpcode::SUBREG_TO_REG), DefReg)
         .addImm(0)
         .addReg(SrcReg)
         .addImm(X86::sub_8bit);
-
-    MachineInstr &AndInst =
-        *BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(AndOpc), DstReg)
-             .addReg(DefReg)
-             .addImm(1);
-
-    constrainSelectedInstRegOperands(AndInst, TII, TRI, RBI);
-
-    I.eraseFromParent();
-    return true;
   }
 
-  return false;
+  MachineInstr &AndInst =
+      *BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(AndOpc), DstReg)
+           .addReg(DefReg)
+           .addImm(1);
+
+  constrainSelectedInstRegOperands(AndInst, TII, TRI, RBI);
+
+  I.eraseFromParent();
+  return true;
 }
 
 bool X86InstructionSelector::selectCmp(MachineInstr &I,

@@ -1,24 +1,24 @@
 // RUN: %clang_cc1 -triple amdgcn -emit-llvm < %s | FileCheck -check-prefixes=PIZ,COM %s
 // RUN: %clang_cc1 -triple amdgcn---amdgiz -emit-llvm < %s | FileCheck -check-prefixes=CHECK,COM %s
 
-// PIZ-DAG: @foo = common addrspace(4) global i32 0
-// CHECK-DAG: @foo = common global i32 0
+// PIZ-DAG: @foo = common addrspace(1) global i32 0
+// CHECK-DAG: @foo = common addrspace(1) global i32 0
 int foo;
 
-// PIZ-DAG: @ban = common addrspace(4) global [10 x i32] zeroinitializer
-// CHECK-DAG: @ban = common global [10 x i32] zeroinitializer
+// PIZ-DAG: @ban = common addrspace(1) global [10 x i32] zeroinitializer
+// CHECK-DAG: @ban = common addrspace(1) global [10 x i32] zeroinitializer
 int ban[10];
 
-// PIZ-DAG: @A = common addrspace(4) global i32 addrspace(4)* null
-// PIZ-DAG: @B = common addrspace(4) global i32 addrspace(4)* null
-// CHECK-DAG: @A = common global i32* null
-// CHECK-DAG: @B = common global i32* null
+// PIZ-DAG: @A = common addrspace(1) global i32 addrspace(4)* null
+// PIZ-DAG: @B = common addrspace(1) global i32 addrspace(4)* null
+// CHECK-DAG: @A = common addrspace(1) global i32* null
+// CHECK-DAG: @B = common addrspace(1) global i32* null
 int *A;
 int *B;
 
 // COM-LABEL: define i32 @test1()
-// PIZ: load i32, i32 addrspace(4)* @foo
-// CHECK: load i32, i32* @foo
+// PIZ: load i32, i32 addrspace(4)* addrspacecast{{[^@]+}} @foo
+// CHECK: load i32, i32* addrspacecast{{[^@]+}} @foo
 int test1() { return foo; }
 
 // COM-LABEL: define i32 @test2(i32 %i)
@@ -30,13 +30,13 @@ int test1() { return foo; }
 int test2(int i) { return ban[i]; }
 
 // COM-LABEL: define void @test3()
-// PIZ: load i32 addrspace(4)*, i32 addrspace(4)* addrspace(4)* @B
+// PIZ: load i32 addrspace(4)*, i32 addrspace(4)* addrspace(4)* addrspacecast{{[^@]+}} @B
 // PIZ: load i32, i32 addrspace(4)*
-// PIZ: load i32 addrspace(4)*, i32 addrspace(4)* addrspace(4)* @A
+// PIZ: load i32 addrspace(4)*, i32 addrspace(4)* addrspace(4)* addrspacecast{{[^@]+}} @A
 // PIZ: store i32 {{.*}}, i32 addrspace(4)*
-// CHECK: load i32*, i32** @B
+// CHECK: load i32*, i32** addrspacecast{{.*}} @B
 // CHECK: load i32, i32*
-// CHECK: load i32*, i32** @A
+// CHECK: load i32*, i32** addrspacecast{{.*}} @A
 // CHECK: store i32 {{.*}}, i32*
 void test3() {
   *A = *B;

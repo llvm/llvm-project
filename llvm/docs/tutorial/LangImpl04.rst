@@ -622,7 +622,7 @@ This completes the JIT and optimizer chapter of the Kaleidoscope
 tutorial. At this point, we can compile a non-Turing-complete
 programming language, optimize and JIT compile it in a user-driven way.
 Next up we'll look into `extending the language with control flow
-constructs <LangImpl5.html>`_, tackling some interesting LLVM IR issues
+constructs <LangImpl05.html>`_, tackling some interesting LLVM IR issues
 along the way.
 
 Full Code Listing

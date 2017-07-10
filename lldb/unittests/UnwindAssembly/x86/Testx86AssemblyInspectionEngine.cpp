@@ -2415,3 +2415,28 @@ TEST_F(Testx86AssemblyInspectionEngine, TestStackRealign32BitDisp_x86_64) {
   EXPECT_EQ(rsp_plus_8,
             plan.GetRowForFunctionOffset(sizeof(data) - 1)->GetCFAValue());
 }
+
+// Give the disassembler random bytes to test that it doesn't exceed
+// the bounds of the array when run under clang's address sanitizer.
+TEST_F(Testx86AssemblyInspectionEngine, TestDisassemblyJunkBytes) {
+  AddressRange sample_range;
+  UnwindPlan unwind_plan(eRegisterKindLLDB);
+  std::unique_ptr<x86AssemblyInspectionEngine> engine32 = Geti386Inspector();
+  std::unique_ptr<x86AssemblyInspectionEngine> engine64 = Getx86_64Inspector();
+
+  uint8_t data[] = {
+      0x10, 0x10, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+      0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0 };
+
+  sample_range = AddressRange(0x1000, sizeof(data));
+
+  EXPECT_TRUE(engine32->GetNonCallSiteUnwindPlanFromAssembly(
+      data, sizeof(data), sample_range, unwind_plan));
+
+  unwind_plan.Clear();
+
+  EXPECT_TRUE(engine64->GetNonCallSiteUnwindPlanFromAssembly(
+      data, sizeof(data), sample_range, unwind_plan));
+
+}
+

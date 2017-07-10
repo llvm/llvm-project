@@ -94,8 +94,8 @@ namespace {
         // guarantee that 'I' never reaches 'BeforeHere' through a back-edge or
         // by its successors, i.e, prune if:
         //
-        //  (1) BB is an entry block or have no sucessors.
-        //  (2) There's no path coming back through BB sucessors.
+        //  (1) BB is an entry block or have no successors.
+        //  (2) There's no path coming back through BB successors.
         if (BB == &BB->getParent()->getEntryBlock() ||
             !BB->getTerminator()->getNumSuccessors())
           return true;

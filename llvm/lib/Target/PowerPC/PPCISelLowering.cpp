@@ -136,6 +136,9 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     addRegisterClass(MVT::f64, &PPC::F8RCRegClass);
   }
 
+  // Match BITREVERSE to customized fast code sequence in the td file.
+  setOperationAction(ISD::BITREVERSE, MVT::i32, Legal);
+
   // PowerPC has an i16 but no i8 (or i1) SEXTLOAD.
   for (MVT VT : MVT::integer_valuetypes()) {
     setLoadExtAction(ISD::SEXTLOAD, VT, MVT::i1, Promote);
@@ -2029,17 +2032,17 @@ int PPC::isQVALIGNIShuffleMask(SDNode *N) {
 /// or 64-bit immediate, and if the value can be accurately represented as a
 /// sign extension from a 16-bit value.  If so, this returns true and the
 /// immediate.
-static bool isIntS16Immediate(SDNode *N, short &Imm) {
+bool llvm::isIntS16Immediate(SDNode *N, int16_t &Imm) {
   if (!isa<ConstantSDNode>(N))
     return false;
 
-  Imm = (short)cast<ConstantSDNode>(N)->getZExtValue();
+  Imm = (int16_t)cast<ConstantSDNode>(N)->getZExtValue();
   if (N->getValueType(0) == MVT::i32)
     return Imm == (int32_t)cast<ConstantSDNode>(N)->getZExtValue();
   else
     return Imm == (int64_t)cast<ConstantSDNode>(N)->getZExtValue();
 }
-static bool isIntS16Immediate(SDValue Op, short &Imm) {
+bool llvm::isIntS16Immediate(SDValue Op, int16_t &Imm) {
   return isIntS16Immediate(Op.getNode(), Imm);
 }
 
@@ -2049,7 +2052,7 @@ static bool isIntS16Immediate(SDValue Op, short &Imm) {
 bool PPCTargetLowering::SelectAddressRegReg(SDValue N, SDValue &Base,
                                             SDValue &Index,
                                             SelectionDAG &DAG) const {
-  short imm = 0;
+  int16_t imm = 0;
   if (N.getOpcode() == ISD::ADD) {
     if (isIntS16Immediate(N.getOperand(1), imm))
       return false;    // r+i
@@ -2139,7 +2142,7 @@ bool PPCTargetLowering::SelectAddressRegImm(SDValue N, SDValue &Disp,
     return false;
 
   if (N.getOpcode() == ISD::ADD) {
-    short imm = 0;
+    int16_t imm = 0;
     if (isIntS16Immediate(N.getOperand(1), imm) &&
         (!Aligned || (imm & 3) == 0)) {
       Disp = DAG.getTargetConstant(imm, dl, N.getValueType());
@@ -2163,7 +2166,7 @@ bool PPCTargetLowering::SelectAddressRegImm(SDValue N, SDValue &Disp,
       return true;  // [&g+r]
     }
   } else if (N.getOpcode() == ISD::OR) {
-    short imm = 0;
+    int16_t imm = 0;
     if (isIntS16Immediate(N.getOperand(1), imm) &&
         (!Aligned || (imm & 3) == 0)) {
       // If this is an or of disjoint bitfields, we can codegen this as an add
@@ -2191,7 +2194,7 @@ bool PPCTargetLowering::SelectAddressRegImm(SDValue N, SDValue &Disp,
 
     // If this address fits entirely in a 16-bit sext immediate field, codegen
     // this as "d, 0"
-    short Imm;
+    int16_t Imm;
     if (isIntS16Immediate(CN, Imm) && (!Aligned || (Imm & 3) == 0)) {
       Disp = DAG.getTargetConstant(Imm, dl, CN->getValueType(0));
       Base = DAG.getRegister(Subtarget.isPPC64() ? PPC::ZERO8 : PPC::ZERO,
@@ -6423,7 +6426,7 @@ PPCTargetLowering::LowerGET_DYNAMIC_AREA_OFFSET(SDValue Op,
                                                 SelectionDAG &DAG) const {
   SDLoc dl(Op);
 
-  // Get the corect type for integers.
+  // Get the correct type for integers.
   EVT IntVT = Op.getValueType();
 
   // Get the inputs.
@@ -6440,7 +6443,7 @@ SDValue PPCTargetLowering::LowerSTACKRESTORE(SDValue Op,
   // When we pop the dynamic allocation we need to restore the SP link.
   SDLoc dl(Op);
 
-  // Get the corect type for pointers.
+  // Get the correct type for pointers.
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
 
   // Construct the stack pointer operand.
@@ -6515,7 +6518,7 @@ SDValue PPCTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
   SDValue Size  = Op.getOperand(1);
   SDLoc dl(Op);
 
-  // Get the corect type for pointers.
+  // Get the correct type for pointers.
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
   // Negate the size.
   SDValue NegSize = DAG.getNode(ISD::SUB, dl, PtrVT,

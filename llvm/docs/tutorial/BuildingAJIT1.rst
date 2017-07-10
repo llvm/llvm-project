@@ -12,7 +12,7 @@ Welcome to Chapter 1 of the "Building an ORC-based JIT in LLVM" tutorial. This
 tutorial runs through the implementation of a JIT compiler using LLVM's
 On-Request-Compilation (ORC) APIs. It begins with a simplified version of the
 KaleidoscopeJIT class used in the
-`Implementing a language with LLVM <LangImpl1.html>`_ tutorials and then
+`Implementing a language with LLVM <LangImpl01.html>`_ tutorials and then
 introduces new features like optimization, lazy compilation and remote
 execution.
 
@@ -41,7 +41,7 @@ The structure of the tutorial is:
   a remote process with reduced privileges using the JIT Remote APIs.
 
 To provide input for our JIT we will use the Kaleidoscope REPL from
-`Chapter 7 <LangImpl7.html>`_ of the "Implementing a language in LLVM tutorial",
+`Chapter 7 <LangImpl07.html>`_ of the "Implementing a language in LLVM tutorial",
 with one minor modification: We will remove the FunctionPassManager from the
 code for that chapter and replace it with optimization support in our JIT class
 in Chapter #2.
@@ -91,8 +91,8 @@ KaleidoscopeJIT
 
 In the previous section we described our API, now we examine a simple
 implementation of it: The KaleidoscopeJIT class [1]_ that was used in the
-`Implementing a language with LLVM <LangImpl1.html>`_ tutorials. We will use
-the REPL code from `Chapter 7 <LangImpl7.html>`_ of that tutorial to supply the
+`Implementing a language with LLVM <LangImpl01.html>`_ tutorials. We will use
+the REPL code from `Chapter 7 <LangImpl07.html>`_ of that tutorial to supply the
 input for our JIT: Each time the user enters an expression the REPL will add a
 new IR module containing the code for that expression to the JIT. If the
 expression is a top-level expression like '1+1' or 'sin(x)', the REPL will also

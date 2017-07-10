@@ -23,6 +23,7 @@ namespace llvm {
 namespace pdb {
 
 std::string truncateStringBack(StringRef S, uint32_t MaxLen);
+std::string truncateStringMiddle(StringRef S, uint32_t MaxLen);
 std::string truncateStringFront(StringRef S, uint32_t MaxLen);
 std::string truncateQuotedNameFront(StringRef Label, StringRef Name,
                                     uint32_t MaxLen);

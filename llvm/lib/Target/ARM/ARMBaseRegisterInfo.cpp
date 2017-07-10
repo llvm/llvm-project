@@ -193,10 +193,11 @@ getReservedRegs(const MachineFunction &MF) const {
     for (unsigned R = 0; R < 16; ++R)
       markSuperRegs(Reserved, ARM::D16 + R);
   }
-  const TargetRegisterClass *RC  = &ARM::GPRPairRegClass;
-  for(TargetRegisterClass::iterator I = RC->begin(), E = RC->end(); I!=E; ++I)
-    for (MCSubRegIterator SI(*I, this); SI.isValid(); ++SI)
-      if (Reserved.test(*SI)) markSuperRegs(Reserved, *I);
+  const TargetRegisterClass &RC = ARM::GPRPairRegClass;
+  for (unsigned Reg : RC)
+    for (MCSubRegIterator SI(Reg, this); SI.isValid(); ++SI)
+      if (Reserved.test(*SI))
+        markSuperRegs(Reserved, Reg);
 
   assert(checkAllSuperRegsMarked(Reserved));
   return Reserved;
@@ -315,8 +316,7 @@ ARMBaseRegisterInfo::getRegAllocationHints(unsigned VirtReg,
     Hints.push_back(PairedPhys);
 
   // Then prefer even or odd registers.
-  for (unsigned I = 0, E = Order.size(); I != E; ++I) {
-    unsigned Reg = Order[I];
+  for (unsigned Reg : Order) {
     if (Reg == PairedPhys || (getEncodingValue(Reg) & 1) != Odd)
       continue;
     // Don't provide hints that are paired to a reserved register.
@@ -659,11 +659,8 @@ bool ARMBaseRegisterInfo::isFrameOffsetLegal(const MachineInstr *MI, unsigned Ba
   const MCInstrDesc &Desc = MI->getDesc();
   unsigned AddrMode = (Desc.TSFlags & ARMII::AddrModeMask);
   unsigned i = 0;
-
-  while (!MI->getOperand(i).isFI()) {
-    ++i;
-    assert(i < MI->getNumOperands() &&"Instr doesn't have FrameIndex operand!");
-  }
+  for (; !MI->getOperand(i).isFI(); ++i)
+    assert(i+1 < MI->getNumOperands() && "Instr doesn't have FrameIndex operand!");
 
   // AddrMode4 and AddrMode6 cannot handle any offset.
   if (AddrMode == ARMII::AddrMode4 || AddrMode == ARMII::AddrMode6)

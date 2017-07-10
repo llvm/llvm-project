@@ -460,7 +460,7 @@ protected:
 void UnloopUpdater::updateBlockParents() {
   if (Unloop.getNumBlocks()) {
     // Perform a post order CFG traversal of all blocks within this loop,
-    // propagating the nearest loop from sucessors to predecessors.
+    // propagating the nearest loop from successors to predecessors.
     LoopBlocksTraversal Traversal(DFS, LI);
     for (BasicBlock *POI : Traversal) {
 

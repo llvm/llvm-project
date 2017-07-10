@@ -2458,7 +2458,7 @@ void RAGreedy::tryHintRecoloring(LiveInterval &VirtReg) {
   do {
     Reg = RecoloringCandidates.pop_back_val();
 
-    // We cannot recolor physcal register.
+    // We cannot recolor physical register.
     if (TargetRegisterInfo::isPhysicalRegister(Reg))
       continue;
 

@@ -36,23 +36,19 @@ const uint32_t MIN_HEADER_SIZE = 7 * sizeof(uint32_t) + 2 * sizeof(uint16_t);
 // 8-byte because it makes everyone happy.
 const uint32_t SECTION_ALIGNMENT = sizeof(uint64_t);
 
-static const size_t ResourceMagicSize = 16;
-
-static const size_t NullEntrySize = 16;
-
 uint32_t WindowsResourceParser::TreeNode::StringCount = 0;
 uint32_t WindowsResourceParser::TreeNode::DataCount = 0;
 
 WindowsResource::WindowsResource(MemoryBufferRef Source)
     : Binary(Binary::ID_WinRes, Source) {
-  size_t LeadingSize = ResourceMagicSize + NullEntrySize;
+  size_t LeadingSize = WIN_RES_MAGIC_SIZE + WIN_RES_NULL_ENTRY_SIZE;
   BBS = BinaryByteStream(Data.getBuffer().drop_front(LeadingSize),
                          support::little);
 }
 
 Expected<std::unique_ptr<WindowsResource>>
 WindowsResource::createWindowsResource(MemoryBufferRef Source) {
-  if (Source.getBufferSize() < ResourceMagicSize + NullEntrySize)
+  if (Source.getBufferSize() < WIN_RES_MAGIC_SIZE + WIN_RES_NULL_ENTRY_SIZE)
     return make_error<GenericBinaryError>(
         "File too small to be a resource file",
         object_error::invalid_file_type);
@@ -105,12 +101,10 @@ static Error readStringOrId(BinaryStreamReader &Reader, uint16_t &ID,
 }
 
 Error ResourceEntryRef::loadNext() {
-  uint32_t DataSize;
-  RETURN_IF_ERROR(Reader.readInteger(DataSize));
-  uint32_t HeaderSize;
-  RETURN_IF_ERROR(Reader.readInteger(HeaderSize));
+  const WinResHeaderPrefix *Prefix;
+  RETURN_IF_ERROR(Reader.readObject(Prefix));
 
-  if (HeaderSize < MIN_HEADER_SIZE)
+  if (Prefix->HeaderSize < MIN_HEADER_SIZE)
     return make_error<GenericBinaryError>("Header size is too small.",
                                           object_error::parse_failed);
 
@@ -118,13 +112,13 @@ Error ResourceEntryRef::loadNext() {
 
   RETURN_IF_ERROR(readStringOrId(Reader, NameID, Name, IsStringName));
 
-  RETURN_IF_ERROR(Reader.padToAlignment(sizeof(uint32_t)));
+  RETURN_IF_ERROR(Reader.padToAlignment(WIN_RES_HEADER_ALIGNMENT));
 
   RETURN_IF_ERROR(Reader.readObject(Suffix));
 
-  RETURN_IF_ERROR(Reader.readArray(Data, DataSize));
+  RETURN_IF_ERROR(Reader.readArray(Data, Prefix->DataSize));
 
-  RETURN_IF_ERROR(Reader.padToAlignment(sizeof(uint32_t)));
+  RETURN_IF_ERROR(Reader.padToAlignment(WIN_RES_DATA_ALIGNMENT));
 
   return Error::success();
 }
@@ -350,6 +344,7 @@ WindowsResourceCOFFWriter::WindowsResourceCOFFWriter(
     : MachineType(MachineType), Resources(Parser.getTree()),
       Data(Parser.getData()), StringTable(Parser.getStringTable()) {
   performFileLayout();
+
   OutputBuffer = MemoryBuffer::getNewMemBuffer(FileSize);
 }
 
@@ -467,8 +462,6 @@ void WindowsResourceCOFFWriter::writeFirstSectionHeader() {
   SectionOneHeader->PointerToLinenumbers = 0;
   SectionOneHeader->NumberOfRelocations = Data.size();
   SectionOneHeader->NumberOfLinenumbers = 0;
-  SectionOneHeader->Characteristics = COFF::IMAGE_SCN_ALIGN_1BYTES;
-  SectionOneHeader->Characteristics += COFF::IMAGE_SCN_CNT_INITIALIZED_DATA;
   SectionOneHeader->Characteristics += COFF::IMAGE_SCN_CNT_INITIALIZED_DATA;
   SectionOneHeader->Characteristics += COFF::IMAGE_SCN_MEM_READ;
 }
@@ -616,8 +609,8 @@ void WindowsResourceCOFFWriter::writeDirectoryTree() {
     for (auto const &Child : StringChildren) {
       auto *Entry = reinterpret_cast<coff_resource_dir_entry *>(BufferStart +
                                                                 CurrentOffset);
-      Entry->Identifier.NameOffset =
-          StringTableOffsets[Child.second->getStringIndex()];
+      Entry->Identifier.setNameOffset(
+          StringTableOffsets[Child.second->getStringIndex()]);
       if (Child.second->checkIsDataNode()) {
         Entry->Offset.DataEntryOffset = NextLevelOffset;
         NextLevelOffset += sizeof(coff_resource_data_entry);

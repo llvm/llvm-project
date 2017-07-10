@@ -4454,3 +4454,71 @@ def MSGSYNC : XForm_0<31, 886, (outs), (ins), "msgsync", IIC_SprMSGSYNC, []>;
 def STOP : XForm_0<19, 370, (outs), (ins), "stop", IIC_SprSTOP, []>;
 
 } // IsISA3_0
+
+// Fast 32-bit reverse bits algorithm:
+// Step 1: 1-bit swap (swap odd 1-bit and even 1-bit):
+// n = ((n >> 1) & 0x55555555) | ((n << 1) & 0xAAAAAAAA);
+// Step 2: 2-bit swap (swap odd 2-bit and even 2-bit):
+// n = ((n >> 2) & 0x33333333) | ((n << 2) & 0xCCCCCCCC);
+// Step 3: 4-bit swap (swap odd 4-bit and even 4-bit):
+// n = ((n >> 4) & 0x0F0F0F0F) | ((n << 4) & 0xF0F0F0F0);
+// Step 4: byte reverse (Suppose n = [B1,B2,B3,B4]):
+// Step 4.1: Put B4,B2 in the right position (rotate left 3 bytes):
+// n' = (n rotl 24);  After which n' = [B4, B1, B2, B3]
+// Step 4.2: Insert B3 to the right position:
+// n' = rlwimi n', n, 8, 8, 15;  After which n' = [B4, B3, B2, B3]
+// Step 4.3: Insert B1 to the right position:
+// n' = rlwimi n', n, 8, 24, 31;  After which n' = [B4, B3, B2, B1]
+def MaskValues {
+  dag Lo1 = (ORI (LIS 0x5555), 0x5555);
+  dag Hi1 = (ORI (LIS 0xAAAA), 0xAAAA);
+  dag Lo2 = (ORI (LIS 0x3333), 0x3333);
+  dag Hi2 = (ORI (LIS 0xCCCC), 0xCCCC);
+  dag Lo4 = (ORI (LIS 0x0F0F), 0x0F0F);
+  dag Hi4 = (ORI (LIS 0xF0F0), 0xF0F0);
+}
+
+def Shift1 {
+  dag Right = (RLWINM $A, 31, 1, 31);
+  dag Left = (RLWINM $A, 1, 0, 30);
+}
+
+def Swap1 {
+  dag Bit = (OR (AND Shift1.Right, MaskValues.Lo1),
+   (AND Shift1.Left, MaskValues.Hi1));
+}
+
+def Shift2 {
+  dag Right = (RLWINM Swap1.Bit, 30, 2, 31);
+  dag Left = (RLWINM Swap1.Bit, 2, 0, 29);
+}
+
+def Swap2 {
+  dag Bits = (OR (AND Shift2.Right, MaskValues.Lo2),
+                 (AND Shift2.Left, MaskValues.Hi2));
+}
+
+def Shift4 {
+  dag Right = (RLWINM Swap2.Bits, 28, 4, 31);
+  dag Left = (RLWINM Swap2.Bits, 4, 0, 27);
+}
+
+def Swap4 {
+  dag Bits = (OR (AND Shift4.Right, MaskValues.Lo4),
+                 (AND Shift4.Left, MaskValues.Hi4));
+}
+
+def Rotate {
+  dag Left3Bytes = (RLWINM Swap4.Bits, 24, 0, 31);
+}
+
+def RotateInsertByte3 {
+  dag Left = (RLWIMI Rotate.Left3Bytes, Swap4.Bits, 8, 8, 15);
+}
+
+def RotateInsertByte1 {
+  dag Left = (RLWIMI RotateInsertByte3.Left, Swap4.Bits, 8, 24, 31);
+}
+
+def : Pat<(i32 (bitreverse i32:$A)),
+  (RLDICL_32 RotateInsertByte1.Left, 0, 32)>;

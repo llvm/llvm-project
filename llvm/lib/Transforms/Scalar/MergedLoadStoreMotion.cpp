@@ -238,7 +238,7 @@ PHINode *MergedLoadStoreMotion::getPHIOperand(BasicBlock *BB, StoreInst *S0,
                                 &BB->front());
   NewPN->addIncoming(Opd1, S0->getParent());
   NewPN->addIncoming(Opd2, S1->getParent());
-  if (MD && NewPN->getType()->getScalarType()->isPointerTy())
+  if (MD && NewPN->getType()->isPtrOrPtrVectorTy())
     MD->invalidateCachedPointerInfo(NewPN);
   return NewPN;
 }
