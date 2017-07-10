@@ -100,7 +100,7 @@ set(TSAN_RUNTIME_LIBRARIES)
 add_compiler_rt_component(tsan)
 
 if(APPLE)
-  set(TSAN_ASM_SOURCES rtl/tsan_rtl_amd64.S)
+  set(TSAN_ASM_SOURCES rtl/tsan_rtl_amd64.S rtl/tsan_rtl_aarch64.S)
   # Xcode will try to compile this file as C ('clang -x c'), and that will fail.
   if (${CMAKE_GENERATOR} STREQUAL "Xcode")
     enable_language(ASM)

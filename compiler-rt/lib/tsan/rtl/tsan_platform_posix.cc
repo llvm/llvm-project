@@ -46,6 +46,9 @@ void InitializeShadowMemory() {
 #elif defined(__mips64)
   const uptr kMadviseRangeBeg  = 0xff00000000ull;
   const uptr kMadviseRangeSize = 0x0100000000ull;
+#elif defined(__aarch64__) && defined(__APPLE__)
+  uptr kMadviseRangeBeg = LoAppMemBeg();
+  uptr kMadviseRangeSize = LoAppMemEnd() - LoAppMemBeg();
 #elif defined(__aarch64__)
   uptr kMadviseRangeBeg = 0;
   uptr kMadviseRangeSize = 0;
@@ -130,6 +133,11 @@ void CheckAndProtect() {
     Die();
   }
 
+#if defined(__aarch64__) && defined(__APPLE__)
+  ProtectRange(HeapMemEnd(), ShadowBeg());
+  ProtectRange(ShadowEnd(), MetaShadowBeg());
+  ProtectRange(MetaShadowEnd(), TraceMemBeg());
+#else
   ProtectRange(LoAppMemEnd(), ShadowBeg());
   ProtectRange(ShadowEnd(), MetaShadowBeg());
 #ifdef TSAN_MID_APP_RANGE
@@ -143,6 +151,7 @@ void CheckAndProtect() {
   ProtectRange(TraceMemBeg(), TraceMemEnd());
   ProtectRange(TraceMemEnd(), HeapMemBeg());
   ProtectRange(HeapEnd(), HiAppMemBeg());
+#endif
 }
 #endif
 
