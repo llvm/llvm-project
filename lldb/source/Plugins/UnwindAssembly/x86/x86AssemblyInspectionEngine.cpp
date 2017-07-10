@@ -452,6 +452,33 @@ bool x86AssemblyInspectionEngine::lea_rsp_pattern_p(int &amount) {
   return false;
 }
 
+// lea -0x28(%ebp), %esp
+// (32-bit and 64-bit variants, 8-bit and 32-bit displacement)
+bool x86AssemblyInspectionEngine::lea_rbp_rsp_pattern_p(int &amount) {
+  uint8_t *p = m_cur_insn;
+  if (m_wordsize == 8 && *p == 0x48)
+    p++;
+
+  // Check opcode
+  if (*p != 0x8d)
+    return false;
+  ++p;
+
+  // 8 bit displacement
+  if (*p == 0x65) {
+    amount = (int8_t)p[1];
+    return true;
+  }
+
+  // 32 bit displacement
+  if (*p == 0xa5) {
+    amount = (int32_t)extract_4(p + 1);
+    return true;
+  }
+
+  return false;
+}
+
 // popq %rbx
 // popl %ebx
 bool x86AssemblyInspectionEngine::pop_reg_p(int &regno) {
@@ -841,6 +868,12 @@ bool x86AssemblyInspectionEngine::GetNonCallSiteUnwindPlanFromAssembly(
       }
       if (stack_offset > 0)
         in_epilogue = true;
+    }
+
+    else if (lea_rbp_rsp_pattern_p(stack_offset) &&
+             row->GetCFAValue().GetRegisterNumber() == m_lldb_fp_regnum) {
+      current_sp_bytes_offset_from_cfa =
+          row->GetCFAValue().GetOffset() - stack_offset;
     }
 
     else if (ret_pattern_p() && prologue_completed_row.get()) {

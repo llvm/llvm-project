@@ -175,3 +175,7 @@ template <typename T>
 int CD<T, int>::f() { // OK: partial template specialization.
   return 0;
 }
+
+constexpr int k = 1; // OK: constexpr variable has internal linkage.
+
+constexpr int f10() { return 0; } // OK: constexpr function definition.

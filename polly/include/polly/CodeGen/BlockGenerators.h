@@ -180,7 +180,7 @@ protected:
   /// MemoryType::PHI (and MemoryType::ExitPHI) objects are used to model PHI
   /// nodes. For each PHI nodes we introduce, besides the Array of type
   /// MemoryType::Value, a second chunk of memory into which we write at the end
-  /// of each basic block preceeding the PHI instruction the value passed
+  /// of each basic block preceding the PHI instruction the value passed
   /// through this basic block. At the place where the PHI node is executed, we
   /// replace the PHI node with a load from the corresponding MemoryType::PHI
   /// memory location. The memory allocations for MemoryType::PHI end with
@@ -684,7 +684,7 @@ private:
   /// Load a vector initialized from a single scalar in memory
   ///
   /// In case all elements of a vector are initialized to the same
-  /// scalar value, this value is loaded and shuffeled into all elements
+  /// scalar value, this value is loaded and shuffled into all elements
   /// of the vector.
   ///
   /// %splat_one = load <1 x double>* %p
@@ -795,10 +795,17 @@ public:
                 __isl_keep isl_id_to_ast_expr *IdToAstExp);
 
 private:
-  /// A map from old to new blocks in the region.
-  DenseMap<BasicBlock *, BasicBlock *> BlockMap;
+  /// A map from old to the first new block in the region, that was created to
+  /// model the old basic block.
+  DenseMap<BasicBlock *, BasicBlock *> StartBlockMap;
 
-  /// The "BBMaps" for the whole region (one for each block).
+  /// A map from old to the last new block in the region, that was created to
+  /// model the old basic block.
+  DenseMap<BasicBlock *, BasicBlock *> EndBlockMap;
+
+  /// The "BBMaps" for the whole region (one for each block). In case a basic
+  /// block is code generated to multiple basic blocks (e.g., for partial
+  /// writes), the StartBasic is used as index for the RegionMap.
   DenseMap<BasicBlock *, ValueMapT> RegionMaps;
 
   /// Mapping to remember PHI nodes that still need incoming values.

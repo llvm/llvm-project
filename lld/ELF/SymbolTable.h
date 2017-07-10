@@ -18,7 +18,7 @@
 
 namespace lld {
 namespace elf {
-class Lazy;
+
 struct Symbol;
 
 // SymbolTable is a bucket of all known symbols, including defined,
@@ -39,6 +39,9 @@ template <class ELFT> class SymbolTable {
 public:
   void addFile(InputFile *File);
   void addCombinedLTOObject();
+  void addSymbolAlias(StringRef Alias, StringRef Name);
+  void addSymbolWrap(StringRef Name);
+  void applySymbolRenames();
 
   ArrayRef<Symbol *> getSymbols() const { return SymVector; }
   ArrayRef<ObjectFile<ELFT> *> getObjectFiles() const { return ObjectFiles; }
@@ -63,7 +66,7 @@ public:
   void addShared(SharedFile<ELFT> *F, StringRef Name, const Elf_Sym &Sym,
                  const typename ELFT::Verdef *Verdef);
 
-  void addLazyArchive(ArchiveFile *F, const llvm::object::Archive::Symbol S);
+  Symbol *addLazyArchive(ArchiveFile *F, const llvm::object::Archive::Symbol S);
   void addLazyObject(StringRef Name, LazyObjectFile &Obj);
   Symbol *addBitcode(StringRef Name, uint8_t Binding, uint8_t StOther,
                      uint8_t Type, bool CanOmitFromDynSym, BitcodeFile *File);
@@ -85,8 +88,6 @@ public:
   SymbolBody *findInCurrentDSO(StringRef Name);
 
   void trace(StringRef Name);
-  void wrap(StringRef Name);
-  void alias(StringRef Alias, StringRef Name);
 
 private:
   std::vector<SymbolBody *> findByVersion(SymbolVersion Ver);

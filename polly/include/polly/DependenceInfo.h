@@ -131,7 +131,7 @@ struct Dependences {
   /// @param S             The current SCoP.
   /// @param NewSchedules  The new schedules
   ///
-  /// @return True if the new schedule is valid, false it it reverses
+  /// @return True if the new schedule is valid, false if it reverses
   ///         dependences.
   bool isValidSchedule(Scop &S, StatementToIslMapTy *NewSchedules) const;
 

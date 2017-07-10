@@ -13,10 +13,21 @@
 # CHECK-NEXT:    ]
 # CHECK-NEXT:    Section: .text (0x1)
 
+# CHECK:    Name: __executable_start
+# CHECK-NEXT:    Value: 0x200000
+# CHECK-NEXT:    Size: 0
+# CHECK-NEXT:    Binding: Local
+# CHECK-NEXT:    Type: None
+# CHECK-NEXT:    Other [
+# CHECK-NEXT:      STV_HIDDEN
+# CHECK-NEXT:    ]
+# CHECK-NEXT:    Section: .text
+
 .text
 .global _start, __ehdr_start
 _start:
   .quad __ehdr_start
+  .quad __executable_start
 
 # RUN: ld.lld -r %t.o -o %t.r
 # RUN: llvm-readobj -symbols %t.r | FileCheck %s --check-prefix=RELOCATABLE

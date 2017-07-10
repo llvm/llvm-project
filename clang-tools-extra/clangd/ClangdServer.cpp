@@ -33,6 +33,11 @@ std::vector<tooling::Replacement> formatCode(StringRef Code, StringRef Filename,
   return std::vector<tooling::Replacement>(Result.begin(), Result.end());
 }
 
+std::string getStandardResourceDir() {
+  static int Dummy; // Just an address in this process.
+  return CompilerInvocation::GetResourcesPath("clangd", (void *)&Dummy);
+}
+
 } // namespace
 
 size_t clangd::positionToOffset(StringRef Code, Position P) {
@@ -59,7 +64,7 @@ Position clangd::offsetToPosition(StringRef Code, size_t Offset) {
 }
 
 Tagged<IntrusiveRefCntPtr<vfs::FileSystem>>
-RealFileSystemProvider::getTaggedFileSystem() {
+RealFileSystemProvider::getTaggedFileSystem(PathRef File) {
   return make_tagged(vfs::getRealFileSystem(), VFSTag());
 }
 
@@ -138,12 +143,13 @@ void ClangdScheduler::addToEnd(std::function<void()> Request) {
   RequestCV.notify_one();
 }
 
-ClangdServer::ClangdServer(std::unique_ptr<GlobalCompilationDatabase> CDB,
-                           std::unique_ptr<DiagnosticsConsumer> DiagConsumer,
-                           std::unique_ptr<FileSystemProvider> FSProvider,
-                           bool RunSynchronously)
-    : CDB(std::move(CDB)), DiagConsumer(std::move(DiagConsumer)),
-      FSProvider(std::move(FSProvider)),
+ClangdServer::ClangdServer(GlobalCompilationDatabase &CDB,
+                           DiagnosticsConsumer &DiagConsumer,
+                           FileSystemProvider &FSProvider,
+                           bool RunSynchronously,
+                           llvm::Optional<StringRef> ResourceDir)
+    : CDB(CDB), DiagConsumer(DiagConsumer), FSProvider(FSProvider),
+      ResourceDir(ResourceDir ? ResourceDir->str() : getStandardResourceDir()),
       PCHs(std::make_shared<PCHContainerOperations>()),
       WorkScheduler(RunSynchronously) {}
 
@@ -157,11 +163,11 @@ void ClangdServer::addDocument(PathRef File, StringRef Contents) {
 
     assert(FileContents.Draft &&
            "No contents inside a file that was scheduled for reparse");
-    auto TaggedFS = FSProvider->getTaggedFileSystem();
+    auto TaggedFS = FSProvider.getTaggedFileSystem(FileStr);
     Units.runOnUnit(
-        FileStr, *FileContents.Draft, *CDB, PCHs, TaggedFS.Value,
+        FileStr, *FileContents.Draft, ResourceDir, CDB, PCHs, TaggedFS.Value,
         [&](ClangdUnit const &Unit) {
-          DiagConsumer->onDiagnosticsReady(
+          DiagConsumer.onDiagnosticsReady(
               FileStr, make_tagged(Unit.getLocalDiagnostics(), TaggedFS.Tag));
         });
   });
@@ -184,17 +190,29 @@ void ClangdServer::forceReparse(PathRef File) {
   addDocument(File, getDocument(File));
 }
 
-Tagged<std::vector<CompletionItem>> ClangdServer::codeComplete(PathRef File,
-                                                               Position Pos) {
-  auto FileContents = DraftMgr.getDraft(File);
-  assert(FileContents.Draft && "codeComplete is called for non-added document");
+Tagged<std::vector<CompletionItem>>
+ClangdServer::codeComplete(PathRef File, Position Pos,
+                           llvm::Optional<StringRef> OverridenContents) {
+  std::string DraftStorage;
+  if (!OverridenContents) {
+    auto FileContents = DraftMgr.getDraft(File);
+    assert(FileContents.Draft &&
+           "codeComplete is called for non-added document");
+
+    DraftStorage = std::move(*FileContents.Draft);
+    OverridenContents = DraftStorage;
+  }
 
   std::vector<CompletionItem> Result;
-  auto TaggedFS = FSProvider->getTaggedFileSystem();
-  Units.runOnUnitWithoutReparse(
-      File, *FileContents.Draft, *CDB, PCHs, TaggedFS.Value, [&](ClangdUnit &Unit) {
-        Result = Unit.codeComplete(*FileContents.Draft, Pos, TaggedFS.Value);
-      });
+  auto TaggedFS = FSProvider.getTaggedFileSystem(File);
+  // It would be nice to use runOnUnitWithoutReparse here, but we can't
+  // guarantee the correctness of code completion cache here if we don't do the
+  // reparse.
+  Units.runOnUnit(File, *OverridenContents, ResourceDir, CDB, PCHs,
+                  TaggedFS.Value, [&](ClangdUnit &Unit) {
+                    Result = Unit.codeComplete(*OverridenContents, Pos,
+                                               TaggedFS.Value);
+                  });
   return make_tagged(std::move(Result), TaggedFS.Tag);
 }
 
@@ -240,6 +258,7 @@ std::string ClangdServer::dumpAST(PathRef File) {
 
   WorkScheduler.addToEnd([this, &DumpPromise, File, Version]() {
     assert(DraftMgr.getVersion(File) == Version && "Version has changed");
+    (void)Version;
 
     Units.runOnExistingUnit(File, [&DumpPromise](ClangdUnit &Unit) {
       std::string Result;
@@ -252,4 +271,18 @@ std::string ClangdServer::dumpAST(PathRef File) {
     });
   });
   return DumpFuture.get();
+}
+
+Tagged<std::vector<Location>>
+ClangdServer::findDefinitions(PathRef File, Position Pos) {
+  auto FileContents = DraftMgr.getDraft(File);
+  assert(FileContents.Draft && "findDefinitions is called for non-added document");
+
+  std::vector<Location> Result;
+  auto TaggedFS = FSProvider.getTaggedFileSystem(File);
+  Units.runOnUnit(File, *FileContents.Draft, ResourceDir, CDB, PCHs,
+      TaggedFS.Value, [&](ClangdUnit &Unit) {
+        Result = Unit.findDefinitions(Pos);
+      });
+  return make_tagged(std::move(Result), TaggedFS.Tag);
 }

@@ -3805,6 +3805,64 @@ error:
 
 #undef NO_DOMAIN
 
+/* Construct an isl_multi_aff living in "space" that corresponds
+ * to the affine transformation matrix "mat".
+ */
+__isl_give isl_multi_aff *isl_multi_aff_from_aff_mat(
+	__isl_take isl_space *space, __isl_take isl_mat *mat)
+{
+	isl_ctx *ctx;
+	isl_local_space *ls = NULL;
+	isl_multi_aff *ma = NULL;
+	int n_row, n_col, n_out, total;
+	int i;
+
+	if (!space || !mat)
+		goto error;
+
+	ctx = isl_mat_get_ctx(mat);
+
+	n_row = isl_mat_rows(mat);
+	n_col = isl_mat_cols(mat);
+	if (n_row < 1)
+		isl_die(ctx, isl_error_invalid,
+			"insufficient number of rows", goto error);
+	if (n_col < 1)
+		isl_die(ctx, isl_error_invalid,
+			"insufficient number of columns", goto error);
+	n_out = isl_space_dim(space, isl_dim_out);
+	total = isl_space_dim(space, isl_dim_all);
+	if (1 + n_out != n_row || 2 + total != n_row + n_col)
+		isl_die(ctx, isl_error_invalid,
+			"dimension mismatch", goto error);
+
+	ma = isl_multi_aff_zero(isl_space_copy(space));
+	ls = isl_local_space_from_space(isl_space_domain(space));
+
+	for (i = 0; i < n_row - 1; ++i) {
+		isl_vec *v;
+		isl_aff *aff;
+
+		v = isl_vec_alloc(ctx, 1 + n_col);
+		if (!v)
+			goto error;
+		isl_int_set(v->el[0], mat->row[0][0]);
+		isl_seq_cpy(v->el + 1, mat->row[1 + i], n_col);
+		v = isl_vec_normalize(v);
+		aff = isl_aff_alloc_vec(isl_local_space_copy(ls), v);
+		ma = isl_multi_aff_set_aff(ma, i, aff);
+	}
+
+	isl_local_space_free(ls);
+	isl_mat_free(mat);
+	return ma;
+error:
+	isl_local_space_free(ls);
+	isl_mat_free(mat);
+	isl_multi_aff_free(ma);
+	return NULL;
+}
+
 /* Remove any internal structure of the domain of "ma".
  * If there is any such internal structure in the input,
  * then the name of the corresponding space is also removed.

@@ -27,7 +27,7 @@
 #include "lldb/Utility/DataBufferLLVM.h"
 #include "lldb/Utility/Log.h"
 
-#include "llvm/Support/ELF.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Support/Threading.h"
 
 #include "Plugins/DynamicLoader/POSIX-DYLD/DynamicLoaderPOSIXDYLD.h"

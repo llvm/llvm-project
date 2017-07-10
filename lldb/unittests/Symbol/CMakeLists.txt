@@ -1,8 +1,17 @@
 add_lldb_unittest(SymbolTests
   TestClangASTContext.cpp
+  TestDWARFCallFrameInfo.cpp
   TestType.cpp
 
   LINK_LIBS
     lldbHost
     lldbSymbol
+    lldbUtilityHelpers
   )
+
+add_dependencies(SymbolTests yaml2obj)
+add_definitions(-DYAML2OBJ="$<TARGET_FILE:yaml2obj>")
+set(test_inputs
+  basic-call-frame-info.yaml
+  )
+add_unittest_inputs(SymbolTests "${test_inputs}")

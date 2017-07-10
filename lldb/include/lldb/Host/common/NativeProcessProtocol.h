@@ -10,14 +10,16 @@
 #ifndef liblldb_NativeProcessProtocol_h_
 #define liblldb_NativeProcessProtocol_h_
 
-#include "lldb/Core/TraceOptions.h"
+#include "lldb/Host/Host.h"
 #include "lldb/Host/MainLoop.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/Utility/TraceOptions.h"
 #include "lldb/lldb-private-forward.h"
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <vector>
 
@@ -158,12 +160,9 @@ public:
   //----------------------------------------------------------------------
   // Exit Status
   //----------------------------------------------------------------------
-  virtual bool GetExitStatus(lldb_private::ExitType *exit_type, int *status,
-                             std::string &exit_description);
+  virtual llvm::Optional<WaitStatus> GetExitStatus();
 
-  virtual bool SetExitStatus(lldb_private::ExitType exit_type, int status,
-                             const char *exit_description,
-                             bool bNotifyStateChange);
+  virtual bool SetExitStatus(WaitStatus status, bool bNotifyStateChange);
 
   //----------------------------------------------------------------------
   // Access to threads
@@ -246,68 +245,57 @@ public:
   virtual Status GetFileLoadAddress(const llvm::StringRef &file_name,
                                     lldb::addr_t &load_addr) = 0;
 
-  //------------------------------------------------------------------
-  /// Launch a process for debugging. This method will create an concrete
-  /// instance of NativeProcessProtocol, based on the host platform.
-  /// (e.g. NativeProcessLinux on linux, etc.)
-  ///
-  /// @param[in] launch_info
-  ///     Information required to launch the process.
-  ///
-  /// @param[in] native_delegate
-  ///     The delegate that will receive messages regarding the
-  ///     inferior.  Must outlive the NativeProcessProtocol
-  ///     instance.
-  ///
-  /// @param[in] mainloop
-  ///     The mainloop instance with which the process can register
-  ///     callbacks. Must outlive the NativeProcessProtocol
-  ///     instance.
-  ///
-  /// @param[out] process_sp
-  ///     On successful return from the method, this parameter
-  ///     contains the shared pointer to the
-  ///     NativeProcessProtocol that can be used to manipulate
-  ///     the native process.
-  ///
-  /// @return
-  ///     An error object indicating if the operation succeeded,
-  ///     and if not, what error occurred.
-  //------------------------------------------------------------------
-  static Status Launch(ProcessLaunchInfo &launch_info,
-                       NativeDelegate &native_delegate, MainLoop &mainloop,
-                       NativeProcessProtocolSP &process_sp);
+  class Factory {
+  public:
+    virtual ~Factory();
+    //------------------------------------------------------------------
+    /// Launch a process for debugging.
+    ///
+    /// @param[in] launch_info
+    ///     Information required to launch the process.
+    ///
+    /// @param[in] native_delegate
+    ///     The delegate that will receive messages regarding the
+    ///     inferior.  Must outlive the NativeProcessProtocol
+    ///     instance.
+    ///
+    /// @param[in] mainloop
+    ///     The mainloop instance with which the process can register
+    ///     callbacks. Must outlive the NativeProcessProtocol
+    ///     instance.
+    ///
+    /// @return
+    ///     A NativeProcessProtocol shared pointer if the operation succeeded or
+    ///     an error object if it failed.
+    //------------------------------------------------------------------
+    virtual llvm::Expected<NativeProcessProtocolSP>
+    Launch(ProcessLaunchInfo &launch_info, NativeDelegate &native_delegate,
+           MainLoop &mainloop) const = 0;
 
-  //------------------------------------------------------------------
-  /// Attach to an existing process. This method will create an concrete
-  /// instance of NativeProcessProtocol, based on the host platform.
-  /// (e.g. NativeProcessLinux on linux, etc.)
-  ///
-  /// @param[in] pid
-  ///     pid of the process locatable
-  ///
-  /// @param[in] native_delegate
-  ///     The delegate that will receive messages regarding the
-  ///     inferior.  Must outlive the NativeProcessProtocol
-  ///     instance.
-  ///
-  /// @param[in] mainloop
-  ///     The mainloop instance with which the process can register
-  ///     callbacks. Must outlive the NativeProcessProtocol
-  ///     instance.
-  ///
-  /// @param[out] process_sp
-  ///     On successful return from the method, this parameter
-  ///     contains the shared pointer to the
-  ///     NativeProcessProtocol that can be used to manipulate
-  ///     the native process.
-  ///
-  /// @return
-  ///     An error object indicating if the operation succeeded,
-  ///     and if not, what error occurred.
-  //------------------------------------------------------------------
-  static Status Attach(lldb::pid_t pid, NativeDelegate &native_delegate,
-                       MainLoop &mainloop, NativeProcessProtocolSP &process_sp);
+    //------------------------------------------------------------------
+    /// Attach to an existing process.
+    ///
+    /// @param[in] pid
+    ///     pid of the process locatable
+    ///
+    /// @param[in] native_delegate
+    ///     The delegate that will receive messages regarding the
+    ///     inferior.  Must outlive the NativeProcessProtocol
+    ///     instance.
+    ///
+    /// @param[in] mainloop
+    ///     The mainloop instance with which the process can register
+    ///     callbacks. Must outlive the NativeProcessProtocol
+    ///     instance.
+    ///
+    /// @return
+    ///     A NativeProcessProtocol shared pointer if the operation succeeded or
+    ///     an error object if it failed.
+    //------------------------------------------------------------------
+    virtual llvm::Expected<NativeProcessProtocolSP>
+    Attach(lldb::pid_t pid, NativeDelegate &native_delegate,
+           MainLoop &mainloop) const = 0;
+  };
 
   //------------------------------------------------------------------
   /// StartTracing API for starting a tracing instance with the
@@ -335,7 +323,7 @@ public:
   //------------------------------------------------------------------
   /// StopTracing API as the name suggests stops a tracing instance.
   ///
-  /// @param[in] uid
+  /// @param[in] traceid
   ///     The user id of the trace intended to be stopped. Now a
   ///     user_id may map to multiple threads in which case this API
   ///     could be used to stop the tracing for a specific thread by
@@ -348,7 +336,7 @@ public:
   /// @return
   ///     Status indicating what went wrong.
   //------------------------------------------------------------------
-  virtual Status StopTrace(lldb::user_id_t uid,
+  virtual Status StopTrace(lldb::user_id_t traceid,
                            lldb::tid_t thread = LLDB_INVALID_THREAD_ID) {
     return Status("Not implemented");
   }
@@ -357,8 +345,8 @@ public:
   /// This API provides the trace data collected in the form of raw
   /// data.
   ///
-  /// @param[in] uid thread
-  ///     The uid and thread provide the context for the trace
+  /// @param[in] traceid thread
+  ///     The traceid and thread provide the context for the trace
   ///     instance.
   ///
   /// @param[in] buffer
@@ -374,7 +362,7 @@ public:
   /// @return
   ///     The size of the data actually read.
   //------------------------------------------------------------------
-  virtual Status GetData(lldb::user_id_t uid, lldb::tid_t thread,
+  virtual Status GetData(lldb::user_id_t traceid, lldb::tid_t thread,
                          llvm::MutableArrayRef<uint8_t> &buffer,
                          size_t offset = 0) {
     return Status("Not implemented");
@@ -384,7 +372,7 @@ public:
   /// Similar API as above except it aims to provide any extra data
   /// useful for decoding the actual trace data.
   //------------------------------------------------------------------
-  virtual Status GetMetaData(lldb::user_id_t uid, lldb::tid_t thread,
+  virtual Status GetMetaData(lldb::user_id_t traceid, lldb::tid_t thread,
                              llvm::MutableArrayRef<uint8_t> &buffer,
                              size_t offset = 0) {
     return Status("Not implemented");
@@ -393,7 +381,7 @@ public:
   //------------------------------------------------------------------
   /// API to query the TraceOptions for a given user id
   ///
-  /// @param[in] uid
+  /// @param[in] traceid
   ///     The user id of the tracing instance.
   ///
   /// @param[in] config
@@ -407,7 +395,7 @@ public:
   /// @param[out] config
   ///     The actual configuration being used for tracing.
   //------------------------------------------------------------------
-  virtual Status GetTraceConfig(lldb::user_id_t uid, TraceOptions &config) {
+  virtual Status GetTraceConfig(lldb::user_id_t traceid, TraceOptions &config) {
     return Status("Not implemented");
   }
 
@@ -415,22 +403,21 @@ protected:
   lldb::pid_t m_pid;
 
   std::vector<NativeThreadProtocolSP> m_threads;
-  lldb::tid_t m_current_thread_id;
+  lldb::tid_t m_current_thread_id = LLDB_INVALID_THREAD_ID;
   mutable std::recursive_mutex m_threads_mutex;
 
-  lldb::StateType m_state;
+  lldb::StateType m_state = lldb::eStateInvalid;
   mutable std::recursive_mutex m_state_mutex;
 
-  lldb_private::ExitType m_exit_type;
-  int m_exit_status;
-  std::string m_exit_description;
+  llvm::Optional<WaitStatus> m_exit_status;
+
   std::recursive_mutex m_delegates_mutex;
   std::vector<NativeDelegate *> m_delegates;
   NativeBreakpointList m_breakpoint_list;
   NativeWatchpointList m_watchpoint_list;
   HardwareBreakpointMap m_hw_breakpoints_map;
   int m_terminal_fd;
-  uint32_t m_stop_id;
+  uint32_t m_stop_id = 0;
 
   // Set of signal numbers that LLDB directly injects back to inferior
   // without stopping it.
@@ -441,7 +428,8 @@ protected:
   // then the process should be attached to. When attaching to a process
   // lldb_private::Host calls should be used to locate the process to attach to,
   // and then this function should be called.
-  NativeProcessProtocol(lldb::pid_t pid);
+  NativeProcessProtocol(lldb::pid_t pid, int terminal_fd,
+                        NativeDelegate &delegate);
 
   // -----------------------------------------------------------
   // Internal interface for state handling

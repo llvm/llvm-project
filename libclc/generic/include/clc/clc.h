@@ -31,6 +31,7 @@
 #include <clc/workitem/get_num_groups.h>
 #include <clc/workitem/get_group_id.h>
 #include <clc/workitem/get_global_offset.h>
+#include <clc/workitem/get_work_dim.h>
 
 /* 6.11.2 Math Functions */
 #include <clc/math/acos.h>

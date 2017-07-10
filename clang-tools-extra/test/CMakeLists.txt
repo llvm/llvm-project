@@ -36,6 +36,8 @@ set(CLANG_TOOLS_TEST_DEPS
 
   # For the clang-tidy libclang integration test.
   c-index-test
+  # For the clang-apply-replacements test that uses clang-rename.
+  clang-rename
 
   # Individual tools we test.
   clang-apply-replacements
@@ -44,7 +46,6 @@ set(CLANG_TOOLS_TEST_DEPS
   clang-include-fixer
   clang-move
   clang-query
-  clang-rename
   clang-reorder-fields
   clang-tidy
   find-all-symbols
@@ -70,5 +71,5 @@ add_lit_testsuite(check-clang-tools "Running the Clang extra tools' regression t
   DEPENDS ${CLANG_TOOLS_TEST_DEPS}
   ARGS ${CLANG_TOOLS_TEST_EXTRA_ARGS}
   )
-set_target_properties(check-clang-tools PROPERTIES FOLDER "Clang extra tools' tests")
 
+set_target_properties(check-clang-tools PROPERTIES FOLDER "Clang extra tools' tests")

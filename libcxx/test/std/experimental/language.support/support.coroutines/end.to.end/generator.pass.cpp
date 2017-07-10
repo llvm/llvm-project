@@ -10,8 +10,8 @@
 
 // UNSUPPORTED: c++98, c++03, c++11
 
-// FIXME: When run under UBSAN this test hits an assertion inside Clang
-// XFAIL: ubsan
+// See https://bugs.llvm.org/show_bug.cgi?id=33271
+// UNSUPPORTED: ubsan
 
 #include <experimental/coroutine>
 #include <vector>

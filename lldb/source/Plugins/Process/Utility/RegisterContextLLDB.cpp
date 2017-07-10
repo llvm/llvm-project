@@ -297,6 +297,14 @@ void RegisterContextLLDB::InitializeNonZerothFrame() {
     return;
   }
 
+  ExecutionContext exe_ctx(m_thread.shared_from_this());
+  Process *process = exe_ctx.GetProcessPtr();
+  // Let ABIs fixup code addresses to make sure they are valid. In ARM ABIs
+  // this will strip bit zero in case we read a PC from memory or from the LR.
+  ABI *abi = process->GetABI().get();
+  if (abi)
+    pc = abi->FixCodeAddress(pc);
+
   if (log) {
     UnwindLogMsg("pc = 0x%" PRIx64, pc);
     addr_t reg_val;
@@ -321,15 +329,8 @@ void RegisterContextLLDB::InitializeNonZerothFrame() {
     }
   }
 
-  ExecutionContext exe_ctx(m_thread.shared_from_this());
-  Process *process = exe_ctx.GetProcessPtr();
-  // Let ABIs fixup code addresses to make sure they are valid. In ARM ABIs
-  // this will strip bit zero in case we read a PC from memory or from the LR.
-  ABI *abi = process->GetABI().get();
-  if (abi)
-    pc = abi->FixCodeAddress(pc);
-
-  m_current_pc.SetLoadAddress(pc, &process->GetTarget());
+  const bool allow_section_end = true;
+  m_current_pc.SetLoadAddress(pc, &process->GetTarget(), allow_section_end);
 
   // If we don't have a Module for some reason, we're not going to find
   // symbol/function information - just
@@ -477,11 +478,12 @@ void RegisterContextLLDB::InitializeNonZerothFrame() {
   // Or if we're in the middle of the stack (and not "above" an asynchronous
   // event like sigtramp),
   // and our "current" pc is the start of a function...
-  if (m_sym_ctx_valid && GetNextFrame()->m_frame_type != eTrapHandlerFrame &&
+  if (GetNextFrame()->m_frame_type != eTrapHandlerFrame &&
       GetNextFrame()->m_frame_type != eDebuggerFrame &&
-      addr_range.GetBaseAddress().IsValid() &&
-      addr_range.GetBaseAddress().GetSection() == m_current_pc.GetSection() &&
-      addr_range.GetBaseAddress().GetOffset() == m_current_pc.GetOffset()) {
+      (!m_sym_ctx_valid ||
+       (addr_range.GetBaseAddress().IsValid() &&
+        addr_range.GetBaseAddress().GetSection() == m_current_pc.GetSection() &&
+        addr_range.GetBaseAddress().GetOffset() == m_current_pc.GetOffset()))) {
     decr_pc_and_recompute_addr_range = true;
   }
 
@@ -2052,11 +2054,6 @@ bool RegisterContextLLDB::ReadPC(addr_t &pc) {
     // unwind past that frame to help
     // find the bug.
 
-    if (m_all_registers_available == false && above_trap_handler == false &&
-        (pc == 0 || pc == 1)) {
-      return false;
-    }
-    
     ProcessSP process_sp (m_thread.GetProcess());
     if (process_sp)
     {
@@ -2064,6 +2061,12 @@ bool RegisterContextLLDB::ReadPC(addr_t &pc) {
         if (abi)
             pc = abi->FixCodeAddress(pc);
     }
+
+    if (m_all_registers_available == false && above_trap_handler == false &&
+        (pc == 0 || pc == 1)) {
+      return false;
+    }
+
     return true;
   } else {
     return false;

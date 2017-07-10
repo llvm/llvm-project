@@ -169,7 +169,7 @@ void __kmp_i18n_do_catopen() {
                   KMP_MSG(WrongMessageCatalog, name, version.str, expected),
                   KMP_HNT(CheckEnvVar, name, nlspath), __kmp_msg_null);
         KMP_INFORM(WillUseDefaultMessages);
-        KMP_INTERNAL_FREE((void *)nlspath);
+        KMP_INTERNAL_FREE(CCAST(char *, nlspath));
       } // __kmp_generate_warnings
     }; // if
     __kmp_str_buf_free(&version);

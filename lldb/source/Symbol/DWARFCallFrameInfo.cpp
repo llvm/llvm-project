@@ -14,7 +14,6 @@
 #include "lldb/Core/ArchSpec.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Section.h"
-#include "lldb/Core/Timer.h"
 #include "lldb/Core/dwarf.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Symbol/DWARFCallFrameInfo.h"
@@ -23,6 +22,7 @@
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Timer.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -151,17 +151,8 @@ GetGNUEHPointer(const DataExtractor &DE, offset_t *offset_ptr,
 }
 
 DWARFCallFrameInfo::DWARFCallFrameInfo(ObjectFile &objfile,
-                                       SectionSP &section_sp,
-                                       lldb::RegisterKind reg_kind,
-                                       bool is_eh_frame)
-    : m_objfile(objfile), m_section_sp(section_sp),
-      m_reg_kind(reg_kind), // The flavor of registers that the CFI data uses
-                            // (enum RegisterKind)
-      m_flags(), m_cie_map(), m_cfi_data(), m_cfi_data_initialized(false),
-      m_fde_index(), m_fde_index_initialized(false),
-      m_is_eh_frame(is_eh_frame) {}
-
-DWARFCallFrameInfo::~DWARFCallFrameInfo() {}
+                                       SectionSP &section_sp, Type type)
+    : m_objfile(objfile), m_section_sp(section_sp), m_type(type) {}
 
 bool DWARFCallFrameInfo::GetUnwindPlan(Address addr, UnwindPlan &unwind_plan) {
   FDEEntryMap::Entry fde_entry;
@@ -268,14 +259,20 @@ DWARFCallFrameInfo::ParseCIE(const dw_offset_t cie_offset) {
     cie_id = m_cfi_data.GetU32(&offset);
     end_offset = cie_offset + length + 4;
   }
-  if (length > 0 && ((!m_is_eh_frame && cie_id == UINT32_MAX) ||
-                     (m_is_eh_frame && cie_id == 0ul))) {
+  if (length > 0 && ((m_type == DWARF && cie_id == UINT32_MAX) ||
+                     (m_type == EH && cie_id == 0ul))) {
     size_t i;
     //    cie.offset = cie_offset;
     //    cie.length = length;
     //    cie.cieID = cieID;
     cie_sp->ptr_encoding = DW_EH_PE_absptr; // default
     cie_sp->version = m_cfi_data.GetU8(&offset);
+    if (cie_sp->version > CFI_VERSION4) {
+      Host::SystemLog(Host::eSystemLogError,
+                      "CIE parse error: CFI version %d is not supported\n",
+                      cie_sp->version);
+      return nullptr;
+    }
 
     for (i = 0; i < CFI_AUG_MAX_SIZE; ++i) {
       cie_sp->augmentation[i] = m_cfi_data.GetU8(&offset);
@@ -294,11 +291,23 @@ DWARFCallFrameInfo::ParseCIE(const dw_offset_t cie_offset) {
                       "CIE parse error: CIE augmentation string was too large "
                       "for the fixed sized buffer of %d bytes.\n",
                       CFI_AUG_MAX_SIZE);
-      return cie_sp;
+      return nullptr;
     }
+
+    // m_cfi_data uses address size from target architecture of the process
+    // may ignore these fields?
+    if (m_type == DWARF && cie_sp->version >= CFI_VERSION4) {
+      cie_sp->address_size = m_cfi_data.GetU8(&offset);
+      cie_sp->segment_size = m_cfi_data.GetU8(&offset);
+    }
+
     cie_sp->code_align = (uint32_t)m_cfi_data.GetULEB128(&offset);
     cie_sp->data_align = (int32_t)m_cfi_data.GetSLEB128(&offset);
-    cie_sp->return_addr_reg_num = m_cfi_data.GetU8(&offset);
+
+    cie_sp->return_addr_reg_num =
+        m_type == DWARF && cie_sp->version >= CFI_VERSION3
+            ? static_cast<uint32_t>(m_cfi_data.GetULEB128(&offset))
+            : m_cfi_data.GetU8(&offset);
 
     if (cie_sp->augmentation[0]) {
       // Get the length of the eh_frame augmentation data
@@ -461,22 +470,38 @@ void DWARFCallFrameInfo::GetFDEIndex() {
       m_fde_index_initialized = true;
       return;
     }
+
+    // An FDE entry contains CIE_pointer in debug_frame in same place as cie_id
+    // in eh_frame. CIE_pointer is an offset into the .debug_frame section.
+    // So, variable cie_offset should be equal to cie_id for debug_frame.
+    // FDE entries with cie_id == 0 shouldn't be ignored for it.
+    if ((cie_id == 0 && m_type == EH) || cie_id == UINT32_MAX || len == 0) {
+      auto cie_sp = ParseCIE(current_entry);
+      if (!cie_sp) {
+        // Cannot parse, the reason is already logged
+        m_fde_index.Clear();
+        m_fde_index_initialized = true;
+        return;
+      }
+
+      m_cie_map[current_entry] = std::move(cie_sp);
+      offset = next_entry;
+      continue;
+    }
+
+    if (m_type == DWARF)
+      cie_offset = cie_id;
+
     if (cie_offset > m_cfi_data.GetByteSize()) {
-      Host::SystemLog(
-          Host::eSystemLogError,
-          "error: Invalid cie offset of 0x%x found in cie/fde at 0x%x\n",
-          cie_offset, current_entry);
+      Host::SystemLog(Host::eSystemLogError,
+                      "error: Invalid cie offset of 0x%x "
+                      "found in cie/fde at 0x%x\n",
+                      cie_offset, current_entry);
       // Don't trust anything in this eh_frame section if we find blatantly
       // invalid data.
       m_fde_index.Clear();
       m_fde_index_initialized = true;
       return;
-    }
-
-    if (cie_id == 0 || cie_id == UINT32_MAX || len == 0) {
-      m_cie_map[current_entry] = ParseCIE(current_entry);
-      offset = next_entry;
-      continue;
     }
 
     const CIE *cie = GetCIE(cie_offset);
@@ -531,12 +556,13 @@ bool DWARFCallFrameInfo::FDEToUnwindPlan(dw_offset_t dwarf_offset,
     cie_offset = m_cfi_data.GetU32(&offset);
   }
 
-  assert(cie_offset != 0 && cie_offset != UINT32_MAX);
+  // FDE entries with zeroth cie_offset may occur for debug_frame.
+  assert(!(m_type == EH && 0 == cie_offset) && cie_offset != UINT32_MAX);
 
   // Translate the CIE_id from the eh_frame format, which
   // is relative to the FDE offset, into a __eh_frame section
   // offset
-  if (m_is_eh_frame) {
+  if (m_type == EH) {
     unwind_plan.SetSourceName("eh_frame CFI");
     cie_offset = current_entry + (is_64bit ? 12 : 4) - cie_offset;
     unwind_plan.SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
@@ -611,7 +637,7 @@ bool DWARFCallFrameInfo::FDEToUnwindPlan(dw_offset_t dwarf_offset,
   *cie_initial_row = cie->initial_row;
   UnwindPlan::RowSP row(cie_initial_row);
 
-  unwind_plan.SetRegisterKind(m_reg_kind);
+  unwind_plan.SetRegisterKind(GetRegisterKind());
   unwind_plan.SetReturnAddressRegister(cie->return_addr_reg_num);
 
   std::vector<UnwindPlan::RowSP> stack;

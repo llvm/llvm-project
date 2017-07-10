@@ -34,7 +34,6 @@ extern LinkerDriver *Driver;
 using llvm::COFF::MachineTypes;
 using llvm::COFF::WindowsSubsystem;
 using llvm::Optional;
-class InputFile;
 
 // Implemented in MarkLive.cpp.
 void markLive(const std::vector<Chunk *> &Chunks);
@@ -178,7 +177,7 @@ void runMSVCLinker(std::string Rsp, ArrayRef<StringRef> Objects);
 // Create enum with OPT_xxx values for each option in Options.td
 enum {
   OPT_INVALID = 0,
-#define OPTION(_1, _2, ID, _4, _5, _6, _7, _8, _9, _10, _11) OPT_##ID,
+#define OPTION(_1, _2, ID, _4, _5, _6, _7, _8, _9, _10, _11, _12) OPT_##ID,
 #include "Options.inc"
 #undef OPTION
 };

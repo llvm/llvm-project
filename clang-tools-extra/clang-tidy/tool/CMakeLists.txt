@@ -13,6 +13,7 @@ target_link_libraries(clang-tidy
   clangASTMatchers
   clangBasic
   clangTidy
+  clangTidyAndroidModule
   clangTidyBoostModule
   clangTidyCERTModule
   clangTidyCppCoreGuidelinesModule

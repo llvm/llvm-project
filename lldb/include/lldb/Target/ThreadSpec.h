@@ -10,13 +10,9 @@
 #ifndef liblldb_ThreadSpec_h_
 #define liblldb_ThreadSpec_h_
 
-// C Includes
-// C++ Includes
-#include <string>
-
-// Other libraries and framework includes
-// Project includes
+#include "lldb/Utility/StructuredData.h"
 #include "lldb/lldb-private.h"
+#include <string>
 
 namespace lldb_private {
 

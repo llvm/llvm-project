@@ -23,16 +23,15 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/MachO.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 #include <system_error>
-
 
 using llvm::StringRef;
 using namespace llvm::yaml;
@@ -45,7 +44,6 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(DependentDylib)
 LLVM_YAML_IS_SEQUENCE_VECTOR(RebaseLocation)
 LLVM_YAML_IS_SEQUENCE_VECTOR(BindLocation)
 LLVM_YAML_IS_SEQUENCE_VECTOR(Export)
-LLVM_YAML_IS_SEQUENCE_VECTOR(StringRef)
 LLVM_YAML_IS_SEQUENCE_VECTOR(DataInCode)
 
 

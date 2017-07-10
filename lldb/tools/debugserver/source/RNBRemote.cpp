@@ -6058,7 +6058,7 @@ rnb_err_t RNBRemote::HandlePacket_qProcessInfo(const char *p) {
         // need to override the host cpusubtype (which is in the
         // CPU_SUBTYPE_ARM64 subtype namespace)
         // with a reasonable CPU_SUBTYPE_ARMV7 subtype.
-        cpusubtype = 11; // CPU_SUBTYPE_ARM_V7S
+        cpusubtype = 12; // CPU_SUBTYPE_ARM_V7K
       }
     }
     rep << "cpusubtype:" << std::hex << cpusubtype << ';';

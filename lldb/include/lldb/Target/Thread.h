@@ -21,11 +21,11 @@
 // Project includes
 #include "lldb/Core/Broadcaster.h"
 #include "lldb/Core/Event.h"
-#include "lldb/Core/StructuredData.h"
 #include "lldb/Core/UserSettingsController.h"
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Target/RegisterCheckpoint.h"
 #include "lldb/Target/StackFrameList.h"
+#include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/UserID.h"
 #include "lldb/lldb-private.h"
 
@@ -1167,8 +1167,8 @@ public:
   GetStackFrameSPForStackFramePtr(StackFrame *stack_frame_ptr);
 
   size_t GetStatus(Stream &strm, uint32_t start_frame, uint32_t num_frames,
-                   uint32_t num_frames_with_source,
-                   bool stop_format);
+                   uint32_t num_frames_with_source, bool stop_format,
+                   bool only_stacks = false);
 
   size_t GetStackFrameStatus(Stream &strm, uint32_t first_frame,
                              uint32_t num_frames, bool show_frame_info,

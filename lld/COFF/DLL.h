@@ -36,6 +36,7 @@ private:
 
   std::vector<DefinedImportData *> Imports;
   std::vector<Chunk *> Dirs;
+  std::vector<Chunk *> Lookups;
   std::vector<Chunk *> Addresses;
   std::vector<Chunk *> Hints;
   std::vector<Chunk *> DLLNames;

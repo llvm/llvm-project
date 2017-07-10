@@ -23,12 +23,12 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Utility/DataBufferLLVM.h"
 #include "lldb/Utility/RegularExpression.h"
+#include "lldb/Utility/Timer.h"
 
 //#define DEBUG_OSO_DMAP // DO NOT CHECKIN WITH THIS NOT COMMENTED OUT
 #if defined(DEBUG_OSO_DMAP)
 #include "lldb/Core/StreamFile.h"
 #endif
-#include "lldb/Core/Timer.h"
 
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/LineTable.h"

@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s readability-function-size %t -- -config='{CheckOptions: [{key: readability-function-size.LineThreshold, value: 0}, {key: readability-function-size.StatementThreshold, value: 0}, {key: readability-function-size.BranchThreshold, value: 0}, {key: readability-function-size.ParameterThreshold, value: 5}]}' -- -std=c++11
+// RUN: %check_clang_tidy %s readability-function-size %t -- -config='{CheckOptions: [{key: readability-function-size.LineThreshold, value: 0}, {key: readability-function-size.StatementThreshold, value: 0}, {key: readability-function-size.BranchThreshold, value: 0}, {key: readability-function-size.ParameterThreshold, value: 5}, {key: readability-function-size.NestingThreshold, value: 2}]}' -- -std=c++11
 
 // Bad formatting is intentional, don't run clang-format over the whole file!
 
@@ -59,3 +59,84 @@ void bar2() { class A { void barx() {;;} }; }
 //
 // CHECK-MESSAGES: :[[@LINE-4]]:30: warning: function 'barx' exceeds recommended size/complexity
 // CHECK-MESSAGES: :[[@LINE-5]]:30: note: 2 statements (threshold 0)
+
+#define macro() {int x; {int y; {int z;}}}
+
+void baz0() { // 1
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: function 'baz0' exceeds recommended size/complexity
+  // CHECK-MESSAGES: :[[@LINE-2]]:6: note: 27 lines including whitespace and comments (threshold 0)
+  // CHECK-MESSAGES: :[[@LINE-3]]:6: note: 9 statements (threshold 0)
+  int a;
+  { // 2
+    int b;
+    { // 3
+// CHECK-MESSAGES: :[[@LINE-1]]:5: note: nesting level 3 starts here (threshold 2)
+      int c;
+      { // 4
+        int d;
+      }
+    }
+  }
+  { // 2
+    int e;
+  }
+  { // 2
+    { // 3
+// CHECK-MESSAGES: :[[@LINE-1]]:5: note: nesting level 3 starts here (threshold 2)
+      int j;
+    }
+  }
+  macro()
+// CHECK-MESSAGES: :[[@LINE-1]]:3: note: nesting level 3 starts here (threshold 2)
+// CHECK-MESSAGES: :[[@LINE-28]]:25: note: expanded from macro 'macro'
+}
+
+// check that nested if's are not reported. this was broken initially
+void nesting_if() { // 1
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: function 'nesting_if' exceeds recommended size/complexity
+  // CHECK-MESSAGES: :[[@LINE-2]]:6: note: 22 lines including whitespace and comments (threshold 0)
+  // CHECK-MESSAGES: :[[@LINE-3]]:6: note: 18 statements (threshold 0)
+  // CHECK-MESSAGES: :[[@LINE-4]]:6: note: 6 branches (threshold 0)
+  if (true) { // 2
+     int j;
+  } else if (true) { // 2
+     int j;
+     if (true) { // 3
+       // CHECK-MESSAGES: :[[@LINE-1]]:16: note: nesting level 3 starts here (threshold 2)
+       int j;
+     }
+  } else if (true) { // 2
+     int j;
+     if (true) { // 3
+       // CHECK-MESSAGES: :[[@LINE-1]]:16: note: nesting level 3 starts here (threshold 2)
+       int j;
+     }
+  } else if (true) { // 2
+     int j;
+  }
+}
+
+// however this should warn
+void bad_if_nesting() { // 1
+// CHECK-MESSAGES: :[[@LINE-1]]:6: warning: function 'bad_if_nesting' exceeds recommended size/complexity
+// CHECK-MESSAGES: :[[@LINE-2]]:6: note: 22 lines including whitespace and comments (threshold 0)
+// CHECK-MESSAGES: :[[@LINE-3]]:6: note: 12 statements (threshold 0)
+// CHECK-MESSAGES: :[[@LINE-4]]:6: note: 4 branches (threshold 0)
+  if (true) {    // 2
+    int j;
+  } else { // 2
+    if (true) { // 3
+      // CHECK-MESSAGES: :[[@LINE-1]]:15: note: nesting level 3 starts here (threshold 2)
+      int j;
+    } else { // 3
+      // CHECK-MESSAGES: :[[@LINE-1]]:12: note: nesting level 3 starts here (threshold 2)
+      if (true) { // 4
+        int j;
+      } else { // 4
+        if (true) { // 5
+          int j;
+        }
+      }
+    }
+  }
+}

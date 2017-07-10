@@ -33,6 +33,9 @@ TEST(StatusTest, ErrorConstructor) {
   EXPECT_TRUE(foo.Fail());
   EXPECT_EQ(eErrorTypeGeneric, foo.GetType());
   EXPECT_STREQ("foo", foo.AsCString());
+
+  foo = llvm::Error::success();
+  EXPECT_TRUE(foo.Success());
 }
 
 TEST(StatusTest, ErrorConversion) {

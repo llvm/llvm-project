@@ -38,18 +38,14 @@ replacementsToEdits(StringRef Code,
 
 } // namespace
 
-class ClangdLSPServer::LSPDiagnosticsConsumer : public DiagnosticsConsumer {
-public:
-  LSPDiagnosticsConsumer(ClangdLSPServer &Server) : Server(Server) {}
+ClangdLSPServer::LSPDiagnosticsConsumer::LSPDiagnosticsConsumer(
+    ClangdLSPServer &Server)
+    : Server(Server) {}
 
-  virtual void onDiagnosticsReady(PathRef File,
-                                  Tagged<std::vector<DiagWithFixIts>> Diagnostics) {
-    Server.consumeDiagnostics(File, Diagnostics.Value);
-  }
-
-private:
-  ClangdLSPServer &Server;
-};
+void ClangdLSPServer::LSPDiagnosticsConsumer::onDiagnosticsReady(
+    PathRef File, Tagged<std::vector<DiagWithFixIts>> Diagnostics) {
+  Server.consumeDiagnostics(File, Diagnostics.Value);
+}
 
 class ClangdLSPServer::LSPProtocolCallbacks : public ProtocolCallbacks {
 public:
@@ -73,6 +69,8 @@ public:
                     JSONOutput &Out) override;
   void onCompletion(TextDocumentPositionParams Params, StringRef ID,
                     JSONOutput &Out) override;
+  void onGoToDefinition(TextDocumentPositionParams Params, StringRef ID,
+                            JSONOutput &Out) override;
 
 private:
   ClangdLSPServer &LangServer;
@@ -88,7 +86,8 @@ void ClangdLSPServer::LSPProtocolCallbacks::onInitialize(StringRef ID,
           "documentRangeFormattingProvider": true,
           "documentOnTypeFormattingProvider": {"firstTriggerCharacter":"}","moreTriggerCharacter":[]},
           "codeActionProvider": true,
-          "completionProvider": {"resolveProvider": false, "triggerCharacters": [".",">"]}
+          "completionProvider": {"resolveProvider": false, "triggerCharacters": [".",">"]},
+          "definitionProvider": true
         }}})");
 }
 
@@ -98,6 +97,9 @@ void ClangdLSPServer::LSPProtocolCallbacks::onShutdown(JSONOutput &Out) {
 
 void ClangdLSPServer::LSPProtocolCallbacks::onDocumentDidOpen(
     DidOpenTextDocumentParams Params, JSONOutput &Out) {
+  if (Params.metadata && !Params.metadata->extraFlags.empty())
+    LangServer.CDB.setExtraFlagsForFile(Params.textDocument.uri.file,
+                                        std::move(Params.metadata->extraFlags));
   LangServer.Server.addDocument(Params.textDocument.uri.file,
                                 Params.textDocument.text);
 }
@@ -195,12 +197,28 @@ void ClangdLSPServer::LSPProtocolCallbacks::onCompletion(
       R"(,"result":[)" + Completions + R"(]})");
 }
 
+void ClangdLSPServer::LSPProtocolCallbacks::onGoToDefinition(
+    TextDocumentPositionParams Params, StringRef ID, JSONOutput &Out) {
+
+  auto Items = LangServer.Server.findDefinitions(
+      Params.textDocument.uri.file,
+      Position{Params.position.line, Params.position.character}).Value;
+
+  std::string Locations;
+  for (const auto &Item : Items) {
+    Locations += Location::unparse(Item);
+    Locations += ",";
+  }
+  if (!Locations.empty())
+    Locations.pop_back();
+  Out.writeMessage(
+      R"({"jsonrpc":"2.0","id":)" + ID.str() +
+      R"(,"result":[)" + Locations + R"(]})");
+}
+
 ClangdLSPServer::ClangdLSPServer(JSONOutput &Out, bool RunSynchronously)
-    : Out(Out),
-      Server(llvm::make_unique<DirectoryBasedGlobalCompilationDatabase>(),
-             llvm::make_unique<LSPDiagnosticsConsumer>(*this),
-             llvm::make_unique<RealFileSystemProvider>(),
-             RunSynchronously) {}
+    : Out(Out), DiagConsumer(*this),
+      Server(CDB, DiagConsumer, FSProvider, RunSynchronously) {}
 
 void ClangdLSPServer::run(std::istream &In) {
   assert(!IsDone && "Run was called before");

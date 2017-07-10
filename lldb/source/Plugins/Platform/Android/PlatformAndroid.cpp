@@ -366,13 +366,17 @@ bool PlatformAndroid::GetRemoteOSVersion() {
   return m_major_os_version != 0;
 }
 
-const char *PlatformAndroid::GetLibdlFunctionDeclarations() const {
-  return R"(
+llvm::StringRef PlatformAndroid::GetLibdlFunctionDeclarations() {
+  // Older platform versions have the dl function symbols mangled
+  if (GetSdkVersion() < 26)
+    return R"(
               extern "C" void* dlopen(const char*, int) asm("__dl_dlopen");
               extern "C" void* dlsym(void*, const char*) asm("__dl_dlsym");
               extern "C" int   dlclose(void*) asm("__dl_dlclose");
               extern "C" char* dlerror(void) asm("__dl_dlerror");
              )";
+
+  return PlatformPOSIX::GetLibdlFunctionDeclarations();
 }
 
 AdbClient::SyncService *PlatformAndroid::GetSyncService(Status &error) {

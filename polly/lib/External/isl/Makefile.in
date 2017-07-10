@@ -96,9 +96,10 @@ noinst_PROGRAMS = isl_test$(EXEEXT) isl_polyhedron_sample$(EXEEXT) \
 	isl_polytope_scan$(EXEEXT) \
 	isl_polyhedron_detect_equalities$(EXEEXT) isl_cat$(EXEEXT) \
 	isl_closure$(EXEEXT) isl_bound$(EXEEXT) isl_schedule$(EXEEXT) \
-	isl_codegen$(EXEEXT) isl_test_int$(EXEEXT) $(am__EXEEXT_1)
+	isl_codegen$(EXEEXT) isl_test_int$(EXEEXT) isl_flow$(EXEEXT) \
+	isl_flow_cmp$(EXEEXT) $(am__EXEEXT_1)
 TESTS = isl_test$(EXEEXT) codegen_test.sh pip_test.sh bound_test.sh \
-	isl_test_int$(EXEEXT) $(am__EXEEXT_1)
+	isl_test_int$(EXEEXT) flow_test.sh $(am__EXEEXT_1)
 @IMATH_FOR_MP_TRUE@am__append_1 = isl_test_imath
 @IMATH_FOR_MP_TRUE@am__append_2 = isl_test_imath
 @IMATH_FOR_MP_TRUE@@SMALL_INT_OPT_TRUE@am__append_3 = isl_int_sioimath.h \
@@ -138,7 +139,7 @@ am__CONFIG_DISTCLEAN_FILES = config.status config.cache config.log \
 mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = isl_config.h
 CONFIG_CLEAN_FILES = isl_srcdir.c bound_test.sh codegen_test.sh \
-	pip_test.sh
+	pip_test.sh flow_test.sh
 CONFIG_CLEAN_VPATH_FILES =
 am__vpath_adj_setup = srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`;
 am__vpath_adj = case $$p in \
@@ -211,8 +212,8 @@ am__libisl_la_SOURCES_DIST = mp_get_memory_functions.c isl_int_gmp.h \
 	isl_stream_private.h isl_seq.c isl_seq.h isl_tab.c isl_tab.h \
 	isl_tab_pip.c isl_tarjan.c isl_tarjan.h \
 	isl_transitive_closure.c isl_union_map.c \
-	isl_union_map_private.h isl_val.c isl_val_private.h \
-	isl_vec_private.h isl_vec.c isl_version.c \
+	isl_union_map_private.h isl_union_set_private.h isl_val.c \
+	isl_val_private.h isl_vec_private.h isl_vec.c isl_version.c \
 	isl_vertices_private.h isl_vertices.c isl_yaml.h
 @GMP_FOR_MP_TRUE@@NEED_GET_MEMORY_FUNCTIONS_TRUE@am__objects_1 = mp_get_memory_functions.lo
 am__dirstamp = $(am__leading_dot)dirstamp
@@ -280,6 +281,18 @@ isl_codegen_DEPENDENCIES = libisl.la
 isl_codegen_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
 	$(isl_codegen_LDFLAGS) $(LDFLAGS) -o $@
+am_isl_flow_OBJECTS = flow.$(OBJEXT)
+isl_flow_OBJECTS = $(am_isl_flow_OBJECTS)
+isl_flow_DEPENDENCIES = libisl.la
+isl_flow_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
+	$(isl_flow_LDFLAGS) $(LDFLAGS) -o $@
+am_isl_flow_cmp_OBJECTS = flow_cmp.$(OBJEXT)
+isl_flow_cmp_OBJECTS = $(am_isl_flow_cmp_OBJECTS)
+isl_flow_cmp_DEPENDENCIES = libisl.la
+isl_flow_cmp_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
+	$(isl_flow_cmp_LDFLAGS) $(LDFLAGS) -o $@
 am_isl_pip_OBJECTS = pip.$(OBJEXT)
 isl_pip_OBJECTS = $(am_isl_pip_OBJECTS)
 isl_pip_DEPENDENCIES = libisl.la
@@ -366,14 +379,16 @@ am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
 SOURCES = $(libisl_la_SOURCES) $(isl_bound_SOURCES) $(isl_cat_SOURCES) \
 	$(isl_closure_SOURCES) $(isl_codegen_SOURCES) \
-	$(isl_pip_SOURCES) $(isl_polyhedron_detect_equalities_SOURCES) \
+	$(isl_flow_SOURCES) $(isl_flow_cmp_SOURCES) $(isl_pip_SOURCES) \
+	$(isl_polyhedron_detect_equalities_SOURCES) \
 	$(isl_polyhedron_minimize_SOURCES) \
 	$(isl_polyhedron_sample_SOURCES) $(isl_polytope_scan_SOURCES) \
 	$(isl_schedule_SOURCES) isl_test.c isl_test_imath.c \
 	isl_test_int.c
 DIST_SOURCES = $(am__libisl_la_SOURCES_DIST) $(isl_bound_SOURCES) \
 	$(isl_cat_SOURCES) $(isl_closure_SOURCES) \
-	$(isl_codegen_SOURCES) $(isl_pip_SOURCES) \
+	$(isl_codegen_SOURCES) $(isl_flow_SOURCES) \
+	$(isl_flow_cmp_SOURCES) $(isl_pip_SOURCES) \
 	$(isl_polyhedron_detect_equalities_SOURCES) \
 	$(isl_polyhedron_minimize_SOURCES) \
 	$(isl_polyhedron_sample_SOURCES) $(isl_polytope_scan_SOURCES) \
@@ -625,10 +640,11 @@ TEST_LOG_DRIVER = $(SHELL) $(top_srcdir)/test-driver
 TEST_LOG_COMPILE = $(TEST_LOG_COMPILER) $(AM_TEST_LOG_FLAGS) \
 	$(TEST_LOG_FLAGS)
 am__DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/bound_test.sh.in \
-	$(srcdir)/codegen_test.sh.in $(srcdir)/isl_config.h.in \
-	$(srcdir)/isl_srcdir.c.in $(srcdir)/pip_test.sh.in AUTHORS \
-	ChangeLog README compile config.guess config.sub depcomp \
-	install-sh ltmain.sh missing test-driver
+	$(srcdir)/codegen_test.sh.in $(srcdir)/flow_test.sh.in \
+	$(srcdir)/isl_config.h.in $(srcdir)/isl_srcdir.c.in \
+	$(srcdir)/pip_test.sh.in AUTHORS ChangeLog README compile \
+	config.guess config.sub depcomp install-sh ltmain.sh missing \
+	test-driver
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 distdir = $(PACKAGE)-$(VERSION)
 top_distdir = $(distdir)
@@ -958,6 +974,7 @@ libisl_la_SOURCES = \
 	isl_transitive_closure.c \
 	isl_union_map.c \
 	isl_union_map_private.h \
+	isl_union_set_private.h \
 	isl_val.c \
 	isl_val_private.h \
 	isl_vec_private.h \
@@ -990,6 +1007,16 @@ isl_schedule_LDFLAGS = @MP_LDFLAGS@
 isl_schedule_LDADD = libisl.la @MP_LIBS@
 isl_schedule_SOURCES = \
 	schedule.c
+
+isl_flow_LDFLAGS = @MP_LDFLAGS@
+isl_flow_LDADD = libisl.la @MP_LIBS@
+isl_flow_SOURCES = \
+	flow.c
+
+isl_flow_cmp_LDFLAGS = @MP_LDFLAGS@
+isl_flow_cmp_LDADD = libisl.la @MP_LIBS@
+isl_flow_cmp_SOURCES = \
+	flow_cmp.c
 
 isl_codegen_LDFLAGS = @MP_LDFLAGS@
 isl_codegen_LDADD = libisl.la @MP_LIBS@
@@ -1115,9 +1142,11 @@ EXTRA_DIST = \
 	basis_reduction_templ.c \
 	bset_to_bmap.c \
 	bset_from_bmap.c \
+	extract_key.c \
 	isl_list_templ.c \
 	isl_list_templ.h \
 	isl_map_lexopt_templ.c \
+	isl_maybe_map.h \
 	isl_multi_macro.h \
 	isl_multi_templ.c \
 	isl_multi_templ.h \
@@ -1230,6 +1259,8 @@ codegen_test.sh: $(top_builddir)/config.status $(srcdir)/codegen_test.sh.in
 	cd $(top_builddir) && $(SHELL) ./config.status $@
 pip_test.sh: $(top_builddir)/config.status $(srcdir)/pip_test.sh.in
 	cd $(top_builddir) && $(SHELL) ./config.status $@
+flow_test.sh: $(top_builddir)/config.status $(srcdir)/flow_test.sh.in
+	cd $(top_builddir) && $(SHELL) ./config.status $@
 
 install-libLTLIBRARIES: $(lib_LTLIBRARIES)
 	@$(NORMAL_INSTALL)
@@ -1306,6 +1337,14 @@ isl_codegen$(EXEEXT): $(isl_codegen_OBJECTS) $(isl_codegen_DEPENDENCIES) $(EXTRA
 	@rm -f isl_codegen$(EXEEXT)
 	$(AM_V_CCLD)$(isl_codegen_LINK) $(isl_codegen_OBJECTS) $(isl_codegen_LDADD) $(LIBS)
 
+isl_flow$(EXEEXT): $(isl_flow_OBJECTS) $(isl_flow_DEPENDENCIES) $(EXTRA_isl_flow_DEPENDENCIES) 
+	@rm -f isl_flow$(EXEEXT)
+	$(AM_V_CCLD)$(isl_flow_LINK) $(isl_flow_OBJECTS) $(isl_flow_LDADD) $(LIBS)
+
+isl_flow_cmp$(EXEEXT): $(isl_flow_cmp_OBJECTS) $(isl_flow_cmp_DEPENDENCIES) $(EXTRA_isl_flow_cmp_DEPENDENCIES) 
+	@rm -f isl_flow_cmp$(EXEEXT)
+	$(AM_V_CCLD)$(isl_flow_cmp_LINK) $(isl_flow_cmp_OBJECTS) $(isl_flow_cmp_LDADD) $(LIBS)
+
 isl_pip$(EXEEXT): $(isl_pip_OBJECTS) $(isl_pip_DEPENDENCIES) $(EXTRA_isl_pip_DEPENDENCIES) 
 	@rm -f isl_pip$(EXEEXT)
 	$(AM_V_CCLD)$(isl_pip_LINK) $(isl_pip_OBJECTS) $(isl_pip_LDADD) $(LIBS)
@@ -1355,6 +1394,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cat.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/closure.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/codegen.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/flow.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/flow_cmp.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/isl_aff.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/isl_affine_hull.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/isl_arg.Plo@am__quote@
@@ -1845,6 +1886,13 @@ bound_test.sh.log: bound_test.sh
 isl_test_int.log: isl_test_int$(EXEEXT)
 	@p='isl_test_int$(EXEEXT)'; \
 	b='isl_test_int'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+flow_test.sh.log: flow_test.sh
+	@p='flow_test.sh'; \
+	b='flow_test.sh'; \
 	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \

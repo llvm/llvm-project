@@ -22,7 +22,6 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Threading.h"
 
-#include "lldb/Core/StructuredData.h"
 #include "lldb/Host/Config.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/Host.h"
@@ -35,6 +34,7 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamGDBRemote.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/UriParser.h"
 
 // Project includes

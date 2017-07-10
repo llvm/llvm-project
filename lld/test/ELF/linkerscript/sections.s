@@ -67,12 +67,6 @@
 # SEC-SWAP-NAMES: 7 .shstrtab     0000003b {{[0-9a-f]*}}
 # SEC-SWAP-NAMES: 8 .strtab       00000008 {{[0-9a-f]*}}
 
-# Attemp to discard .shstrtab section.
-# RUN: echo "SECTIONS { /DISCARD/ : { *(.shstrtab) } }" > %t.script
-# RUN: not ld.lld -o %t5 --script %t.script %t 2>&1 | \
-# RUN:   FileCheck -check-prefix=SEC-DISCARD %s
-# SEC-DISCARD: discarding .shstrtab section is not allowed
-
 # Multiple SECTIONS command specifying additional input section descriptions
 # for the same output section description - input sections are merged into
 # one output section.

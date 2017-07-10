@@ -21,13 +21,13 @@
 #include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
 #include "Plugins/ObjectFile/PECOFF/ObjectFilePECOFF.h"
 #include "Plugins/Process/gdb-remote/ProcessGDBRemoteLog.h"
-#include "lldb/Core/Timer.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/GoASTContext.h"
 #include "lldb/Symbol/SwiftASTContext.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Timer.h"
 
 #if defined(__APPLE__)
 #include "Plugins/ObjectFile/Mach-O/ObjectFileMachO.h"

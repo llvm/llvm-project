@@ -73,15 +73,11 @@ enum GDBRemoteServerError {
 // GDBRemoteCommunicationServerLLGS constructor
 //----------------------------------------------------------------------
 GDBRemoteCommunicationServerLLGS::GDBRemoteCommunicationServerLLGS(
-    MainLoop &mainloop)
+    MainLoop &mainloop, const NativeProcessProtocol::Factory &process_factory)
     : GDBRemoteCommunicationServerCommon("gdb-remote.server",
                                          "gdb-remote.server.rx_packet"),
-      m_mainloop(mainloop), m_current_tid(LLDB_INVALID_THREAD_ID),
-      m_continue_tid(LLDB_INVALID_THREAD_ID), m_debugged_process_mutex(),
-      m_debugged_process_sp(), m_stdio_communication("process.stdio"),
-      m_inferior_prev_state(StateType::eStateInvalid),
-      m_saved_registers_map(), m_next_saved_registers_id(1),
-      m_handshake_completed(false) {
+      m_mainloop(mainloop), m_process_factory(process_factory),
+      m_stdio_communication("process.stdio") {
   RegisterPacketHandlers();
 }
 
@@ -241,19 +237,20 @@ Status GDBRemoteCommunicationServerLLGS::LaunchProcess() {
   const bool default_to_use_pty = true;
   m_process_launch_info.FinalizeFileActions(nullptr, default_to_use_pty);
 
-  Status error;
   {
     std::lock_guard<std::recursive_mutex> guard(m_debugged_process_mutex);
     assert(!m_debugged_process_sp && "lldb-server creating debugged "
                                      "process but one already exists");
-    error = NativeProcessProtocol::Launch(m_process_launch_info, *this,
-                                          m_mainloop, m_debugged_process_sp);
-  }
-
-  if (!error.Success()) {
-    fprintf(stderr, "%s: failed to launch executable %s", __FUNCTION__,
-            m_process_launch_info.GetArguments().GetArgumentAtIndex(0));
-    return error;
+    auto process_or =
+        m_process_factory.Launch(m_process_launch_info, *this, m_mainloop);
+    if (!process_or) {
+      Status status(process_or.takeError());
+      llvm::errs() << llvm::formatv(
+          "failed to launch executable `{0}`: {1}",
+          m_process_launch_info.GetArguments().GetArgumentAtIndex(0), status);
+      return status;
+    }
+    m_debugged_process_sp = *process_or;
   }
 
   // Handle mirroring of inferior stdout/stderr over the gdb-remote protocol
@@ -279,9 +276,9 @@ Status GDBRemoteCommunicationServerLLGS::LaunchProcess() {
         log->Printf("ProcessGDBRemoteCommunicationServerLLGS::%s setting "
                     "inferior STDIO fd to %d",
                     __FUNCTION__, terminal_fd);
-      error = SetSTDIOFileDescriptor(terminal_fd);
-      if (error.Fail())
-        return error;
+      Status status = SetSTDIOFileDescriptor(terminal_fd);
+      if (status.Fail())
+        return status;
     } else {
       if (log)
         log->Printf("ProcessGDBRemoteCommunicationServerLLGS::%s ignoring "
@@ -298,14 +295,12 @@ Status GDBRemoteCommunicationServerLLGS::LaunchProcess() {
 
   printf("Launched '%s' as process %" PRIu64 "...\n",
          m_process_launch_info.GetArguments().GetArgumentAtIndex(0),
-         m_process_launch_info.GetProcessID());
+         m_debugged_process_sp->GetID());
 
-  return error;
+  return Status();
 }
 
 Status GDBRemoteCommunicationServerLLGS::AttachToProcess(lldb::pid_t pid) {
-  Status error;
-
   Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PROCESS));
   if (log)
     log->Printf("GDBRemoteCommunicationServerLLGS::%s pid %" PRIu64,
@@ -321,13 +316,14 @@ Status GDBRemoteCommunicationServerLLGS::AttachToProcess(lldb::pid_t pid) {
                   pid, m_debugged_process_sp->GetID());
 
   // Try to attach.
-  error = NativeProcessProtocol::Attach(pid, *this, m_mainloop,
-                                        m_debugged_process_sp);
-  if (!error.Success()) {
-    fprintf(stderr, "%s: failed to attach to process %" PRIu64 ": %s",
-            __FUNCTION__, pid, error.AsCString());
-    return error;
+  auto process_or = m_process_factory.Attach(pid, *this, m_mainloop);
+  if (!process_or) {
+    Status status(process_or.takeError());
+    llvm::errs() << llvm::formatv("failed to attach to process {0}: {1}", pid,
+                                  status);
+    return status;
   }
+  m_debugged_process_sp = *process_or;
 
   // Setup stdout/stderr mapping from inferior.
   auto terminal_fd = m_debugged_process_sp->GetTerminalFileDescriptor();
@@ -336,9 +332,9 @@ Status GDBRemoteCommunicationServerLLGS::AttachToProcess(lldb::pid_t pid) {
       log->Printf("ProcessGDBRemoteCommunicationServerLLGS::%s setting "
                   "inferior STDIO fd to %d",
                   __FUNCTION__, terminal_fd);
-    error = SetSTDIOFileDescriptor(terminal_fd);
-    if (error.Fail())
-      return error;
+    Status status = SetSTDIOFileDescriptor(terminal_fd);
+    if (status.Fail())
+      return status;
   } else {
     if (log)
       log->Printf("ProcessGDBRemoteCommunicationServerLLGS::%s ignoring "
@@ -347,8 +343,7 @@ Status GDBRemoteCommunicationServerLLGS::AttachToProcess(lldb::pid_t pid) {
   }
 
   printf("Attached to process %" PRIu64 "...\n", pid);
-
-  return error;
+  return Status();
 }
 
 void GDBRemoteCommunicationServerLLGS::InitializeDelegate(
@@ -370,53 +365,23 @@ GDBRemoteCommunicationServerLLGS::SendWResponse(
   Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PROCESS));
 
   // send W notification
-  ExitType exit_type = ExitType::eExitTypeInvalid;
-  int return_code = 0;
-  std::string exit_description;
-
-  const bool got_exit_info =
-      process->GetExitStatus(&exit_type, &return_code, exit_description);
-  if (!got_exit_info) {
-    if (log)
-      log->Printf("GDBRemoteCommunicationServerLLGS::%s pid %" PRIu64
-                  ", failed to retrieve process exit status",
-                  __FUNCTION__, process->GetID());
+  auto wait_status = process->GetExitStatus();
+  if (!wait_status) {
+    LLDB_LOG(log, "pid = {0}, failed to retrieve process exit status",
+             process->GetID());
 
     StreamGDBRemote response;
     response.PutChar('E');
     response.PutHex8(GDBRemoteServerError::eErrorExitStatus);
     return SendPacketNoLock(response.GetString());
-  } else {
-    if (log)
-      log->Printf("GDBRemoteCommunicationServerLLGS::%s pid %" PRIu64
-                  ", returning exit type %d, return code %d [%s]",
-                  __FUNCTION__, process->GetID(), exit_type, return_code,
-                  exit_description.c_str());
-
-    StreamGDBRemote response;
-
-    char return_type_code;
-    switch (exit_type) {
-    case ExitType::eExitTypeExit:
-      return_type_code = 'W';
-      break;
-    case ExitType::eExitTypeSignal:
-      return_type_code = 'X';
-      break;
-    case ExitType::eExitTypeStop:
-      return_type_code = 'S';
-      break;
-    case ExitType::eExitTypeInvalid:
-      return_type_code = 'E';
-      break;
-    }
-    response.PutChar(return_type_code);
-
-    // POSIX exit status limited to unsigned 8 bits.
-    response.PutHex8(return_code);
-
-    return SendPacketNoLock(response.GetString());
   }
+
+  LLDB_LOG(log, "pid = {0}, returning exit type {1}", process->GetID(),
+           *wait_status);
+
+  StreamGDBRemote response;
+  response.Format("{0:g}", *wait_status);
+  return SendPacketNoLock(response.GetString());
 }
 
 static void AppendHexValue(StreamString &response, const uint8_t *buf,
@@ -1280,9 +1245,9 @@ GDBRemoteCommunicationServerLLGS::Handle_jTraceRead(
 
   lldb::user_id_t uid = LLDB_INVALID_UID;
 
-  size_t byte_count = std::numeric_limits<size_t>::max();
+  uint64_t byte_count = std::numeric_limits<uint64_t>::max();
   lldb::tid_t tid = LLDB_INVALID_THREAD_ID;
-  size_t offset = std::numeric_limits<size_t>::max();
+  uint64_t offset = std::numeric_limits<uint64_t>::max();
 
   auto json_object = StructuredData::ParseJSON(packet.Peek());
 
@@ -1316,8 +1281,8 @@ GDBRemoteCommunicationServerLLGS::Handle_jTraceRead(
   if (error.Fail())
     return SendErrorResponse(error.GetError());
 
-  for (size_t i = 0; i < buf.size(); ++i)
-    response.PutHex8(buf[i]);
+  for (auto i : buf)
+    response.PutHex8(i);
 
   StreamGDBRemote escaped_response;
   escaped_response.PutEscapedBytes(response.GetData(), response.GetSize());

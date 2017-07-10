@@ -50,13 +50,13 @@ public:
     DefinedImportThunkKind,
     DefinedImportDataKind,
     DefinedAbsoluteKind,
-    DefinedRelativeKind,
+    DefinedSyntheticKind,
 
     UndefinedKind,
     LazyKind,
 
     LastDefinedCOFFKind = DefinedCommonKind,
-    LastDefinedKind = DefinedRelativeKind,
+    LastDefinedKind = DefinedSyntheticKind,
   };
 
   Kind kind() const { return static_cast<Kind>(SymbolKind); }
@@ -110,17 +110,9 @@ public:
   // writer sets and uses RVAs.
   uint64_t getRVA();
 
-  // Returns the RVA relative to the beginning of the output section.
-  // Used to implement SECREL relocation type.
-  uint64_t getSecrel();
-
-  // Returns the output section index.
-  // Used to implement SECTION relocation type.
-  uint64_t getSectionIndex();
-
-  // Returns true if this symbol points to an executable (e.g. .text) section.
-  // Used to implement ARM relocations.
-  bool isExecutable();
+  // Returns the chunk containing this symbol. Absolute symbols and __ImageBase
+  // do not have chunks, so this may return null.
+  Chunk *getChunk();
 };
 
 // Symbols defined via a COFF object file or bitcode file.  For COFF files, this
@@ -186,6 +178,7 @@ public:
   }
 
   uint64_t getRVA() { return Data->getRVA(); }
+  Chunk *getChunk() { return Data; }
 
 private:
   friend SymbolTable;
@@ -212,28 +205,34 @@ public:
   uint64_t getRVA() { return VA - Config->ImageBase; }
   void setVA(uint64_t V) { VA = V; }
 
+  // The sentinel absolute symbol section index. Section index relocations
+  // against absolute symbols resolve to this 16 bit number, and it is the
+  // largest valid section index plus one. This is written by the Writer.
+  static uint16_t OutputSectionIndex;
+  uint16_t getSecIdx() { return OutputSectionIndex; }
+
 private:
   uint64_t VA;
 };
 
-// This is a kind of absolute symbol but relative to the image base.
-// Unlike absolute symbols, relocations referring this kind of symbols
-// are subject of the base relocation. This type is used rarely --
-// mainly for __ImageBase.
-class DefinedRelative : public Defined {
+// This symbol is used for linker-synthesized symbols like __ImageBase and
+// __safe_se_handler_table.
+class DefinedSynthetic : public Defined {
 public:
-  explicit DefinedRelative(StringRef Name, uint64_t V = 0)
-      : Defined(DefinedRelativeKind, Name), RVA(V) {}
+  explicit DefinedSynthetic(StringRef Name, Chunk *C)
+      : Defined(DefinedSyntheticKind, Name), C(C) {}
 
   static bool classof(const SymbolBody *S) {
-    return S->kind() == DefinedRelativeKind;
+    return S->kind() == DefinedSyntheticKind;
   }
 
-  uint64_t getRVA() { return RVA; }
-  void setRVA(uint64_t V) { RVA = V; }
+  // A null chunk indicates that this is __ImageBase. Otherwise, this is some
+  // other synthesized chunk, like SEHTableChunk.
+  uint32_t getRVA() { return C ? C->getRVA() : 0; }
+  Chunk *getChunk() { return C; }
 
 private:
-  uint64_t RVA;
+  Chunk *C;
 };
 
 // This class represents a symbol defined in an archive file. It is
@@ -295,9 +294,11 @@ public:
   }
 
   uint64_t getRVA() { return File->Location->getRVA(); }
+  Chunk *getChunk() { return File->Location; }
+  void setLocation(Chunk *AddressTable) { File->Location = AddressTable; }
+
   StringRef getDLLName() { return File->DLLName; }
   StringRef getExternalName() { return File->ExternalName; }
-  void setLocation(Chunk *AddressTable) { File->Location = AddressTable; }
   uint16_t getOrdinal() { return File->Hdr->OrdinalHint; }
 
   ImportFile *File;
@@ -350,8 +351,8 @@ inline uint64_t Defined::getRVA() {
   switch (kind()) {
   case DefinedAbsoluteKind:
     return cast<DefinedAbsolute>(this)->getRVA();
-  case DefinedRelativeKind:
-    return cast<DefinedRelative>(this)->getRVA();
+  case DefinedSyntheticKind:
+    return cast<DefinedSynthetic>(this)->getRVA();
   case DefinedImportDataKind:
     return cast<DefinedImportData>(this)->getRVA();
   case DefinedImportThunkKind:
@@ -365,6 +366,29 @@ inline uint64_t Defined::getRVA() {
   case LazyKind:
   case UndefinedKind:
     llvm_unreachable("Cannot get the address for an undefined symbol.");
+  }
+  llvm_unreachable("unknown symbol kind");
+}
+
+inline Chunk *Defined::getChunk() {
+  switch (kind()) {
+  case DefinedRegularKind:
+    return cast<DefinedRegular>(this)->getChunk();
+  case DefinedAbsoluteKind:
+    return nullptr;
+  case DefinedSyntheticKind:
+    return cast<DefinedSynthetic>(this)->getChunk();
+  case DefinedImportDataKind:
+    return cast<DefinedImportData>(this)->getChunk();
+  case DefinedImportThunkKind:
+    return cast<DefinedImportThunk>(this)->getChunk();
+  case DefinedLocalImportKind:
+    return cast<DefinedLocalImport>(this)->getChunk();
+  case DefinedCommonKind:
+    return cast<DefinedCommon>(this)->getChunk();
+  case LazyKind:
+  case UndefinedKind:
+    llvm_unreachable("Cannot get the chunk of an undefined symbol.");
   }
   llvm_unreachable("unknown symbol kind");
 }
@@ -386,7 +410,7 @@ struct Symbol {
   // AlignedCharArrayUnion gives us a struct with a char array field that is
   // large and aligned enough to store any derived class of SymbolBody.
   llvm::AlignedCharArrayUnion<
-      DefinedRegular, DefinedCommon, DefinedAbsolute, DefinedRelative, Lazy,
+      DefinedRegular, DefinedCommon, DefinedAbsolute, DefinedSynthetic, Lazy,
       Undefined, DefinedImportData, DefinedImportThunk, DefinedLocalImport>
       Body;
 

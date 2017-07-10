@@ -11,10 +11,11 @@
 #include "lldb/Utility/Status.h"
 
 #include "lldb/Utility/VASPrintf.h"
-#include "lldb/lldb-defines.h"            // for LLDB_GENERIC_ERROR
-#include "lldb/lldb-enumerations.h"       // for ErrorType, ErrorType::eErr...
-#include "llvm/ADT/SmallString.h"         // for SmallString
-#include "llvm/ADT/StringRef.h"           // for StringRef
+#include "lldb/lldb-defines.h"      // for LLDB_GENERIC_ERROR
+#include "lldb/lldb-enumerations.h" // for ErrorType, ErrorType::eErr...
+#include "llvm/ADT/SmallString.h"   // for SmallString
+#include "llvm/ADT/StringRef.h"     // for StringRef
+#include "llvm/Support/Errno.h"
 #include "llvm/Support/FormatProviders.h" // for format_provider
 
 #include <cerrno>
@@ -27,7 +28,6 @@
 #endif
 
 #include <stdint.h> // for uint32_t
-#include <string.h> // for strerror
 
 namespace llvm {
 class raw_ostream;
@@ -56,10 +56,11 @@ Status::Status(const char *format, ...)
   va_end(args);
 }
 
-Status::Status(llvm::Error error)
-    : m_code(0), m_type(ErrorType::eErrorTypeGeneric) {
-  if (!error)
-    return;
+const Status &Status::operator=(llvm::Error error) {
+  if (!error) {
+    Clear();
+    return *this;
+  }
 
   // if the error happens to be a errno error, preserve the error code
   error = llvm::handleErrors(
@@ -74,8 +75,12 @@ Status::Status(llvm::Error error)
       });
 
   // Otherwise, just preserve the message
-  if (error)
+  if (error) {
+    SetErrorToGenericError();
     SetErrorString(llvm::toString(std::move(error)));
+  }
+
+  return *this;
 }
 
 llvm::Error Status::ToError() const {
@@ -121,23 +126,21 @@ const char *Status::AsCString(const char *default_error_str) const {
     return nullptr;
 
   if (m_string.empty()) {
-    const char *s = nullptr;
     switch (m_type) {
     case eErrorTypeMachKernel:
 #if defined(__APPLE__)
-      s = ::mach_error_string(m_code);
+      if (const char *s = ::mach_error_string(m_code))
+        m_string.assign(s);
 #endif
       break;
 
     case eErrorTypePOSIX:
-      s = ::strerror(m_code);
+      m_string = llvm::sys::StrError(m_code);
       break;
 
     default:
       break;
     }
-    if (s != nullptr)
-      m_string.assign(s);
   }
   if (m_string.empty()) {
     if (default_error_str)

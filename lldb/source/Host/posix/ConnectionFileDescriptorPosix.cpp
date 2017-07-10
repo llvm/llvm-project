@@ -16,10 +16,10 @@
 
 #include "lldb/Host/posix/ConnectionFileDescriptorPosix.h"
 #include "lldb/Host/Config.h"
-#include "lldb/Host/IOObject.h"
 #include "lldb/Host/Socket.h"
 #include "lldb/Host/SocketAddress.h"
 #include "lldb/Utility/SelectHelper.h"
+#include "lldb/Utility/Timeout.h"
 
 // C Includes
 #include <errno.h>
@@ -36,18 +36,18 @@
 #include <sstream>
 
 // Other libraries and framework includes
+#include "llvm/Support/Errno.h"
 #include "llvm/Support/ErrorHandling.h"
 #if defined(__APPLE__)
 #include "llvm/ADT/SmallVector.h"
 #endif
 // Project includes
-#include "lldb/Core/Communication.h"
-#include "lldb/Core/Timer.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/Socket.h"
 #include "lldb/Host/common/TCPSocket.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/Utility/Timer.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -245,11 +245,7 @@ ConnectionStatus ConnectionFileDescriptor::Connect(llvm::StringRef path,
     } else if ((addr = GetURLAddress(path, FILE_SCHEME))) {
       std::string addr_str = addr->str();
       // file:///PATH
-      int fd = -1;
-      do {
-        fd = ::open(addr_str.c_str(), O_RDWR);
-      } while (fd == -1 && errno == EINTR);
-
+      int fd = llvm::sys::RetryAfterSignal(-1, ::open, addr_str.c_str(), O_RDWR);
       if (fd == -1) {
         if (error_ptr)
           error_ptr->SetErrorToErrno();
@@ -461,10 +457,8 @@ size_t ConnectionFileDescriptor::Read(void *dst, size_t dst_len,
       return 0;
 
     default:
-      if (log)
-        log->Printf(
-            "%p ConnectionFileDescriptor::Read (), unexpected error: %s",
-            static_cast<void *>(this), strerror(error_value));
+      LLDB_LOG(log, "this = {0}, unexpected error: {1}", this,
+               llvm::sys::StrError(error_value));
       status = eConnectionStatusError;
       break; // Break to close....
     }
@@ -622,20 +616,17 @@ ConnectionFileDescriptor::BytesAvailable(const Timeout<std::micro> &timeout,
         if (select_helper.FDIsSetRead(pipe_fd)) {
           // There is an interrupt or exit command in the command pipe
           // Read the data from that pipe:
-          char buffer[1];
+          char c;
 
-          ssize_t bytes_read;
-
-          do {
-            bytes_read = ::read(pipe_fd, buffer, sizeof(buffer));
-          } while (bytes_read < 0 && errno == EINTR);
-
-          switch (buffer[0]) {
+          ssize_t bytes_read = llvm::sys::RetryAfterSignal(-1, ::read, pipe_fd, &c, 1);
+          assert(bytes_read == 1);
+          (void)bytes_read;
+          switch (c) {
           case 'q':
             if (log)
               log->Printf("%p ConnectionFileDescriptor::BytesAvailable() "
                           "got data: %c from the command channel.",
-                          static_cast<void *>(this), buffer[0]);
+                          static_cast<void *>(this), c);
             return eConnectionStatusEndOfFile;
           case 'i':
             // Interrupt the current read

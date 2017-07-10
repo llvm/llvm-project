@@ -15,6 +15,7 @@
 #define _LIBCPP_BSD_LOCALE_FALLBACKS_DEFAULTS_H
 
 #include <stdlib.h>
+#include <stdarg.h>
 #include <memory>
 
 _LIBCPP_BEGIN_NAMESPACE_STD

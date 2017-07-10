@@ -58,7 +58,7 @@
 #include "llvm/ADT/StringRef.h" // for StringRef
 
 #ifdef _MSC_VER
-#include <windows.h>
+#include "lldb/Host/windows/windows.h"
 #endif
 
 #include <memory> // for shared_ptr

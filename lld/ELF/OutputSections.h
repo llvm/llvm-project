@@ -59,10 +59,6 @@ public:
       Alignment = Val;
   }
 
-  // If true, this section will be page aligned on disk.
-  // Typically the first section of each PT_LOAD segment has this flag.
-  bool PageAlign = false;
-
   // Pointer to the first section in PT_LOAD segment, which this section
   // also resides in. This field is used to correctly compute file offset
   // of a section. When two sections share the same load segment, difference
@@ -70,6 +66,11 @@ public:
   // virtual addresses. To compute some section offset we use the following
   // formula: Off = Off_first + VA - VA_first.
   OutputSection *FirstInPtLoad = nullptr;
+
+  // Pointer to a relocation section for this section. Usually nullptr because
+  // we consume relocations, but if --emit-relocs is specified (which is rare),
+  // it may have a non-null value.
+  OutputSection *RelocationSection = nullptr;
 
   // The following fields correspond to Elf_Shdr members.
   uint64_t Size = 0;
@@ -79,12 +80,6 @@ public:
   uint32_t ShName = 0;
 
   void addSection(InputSection *S);
-  void sort(std::function<int(InputSectionBase *S)> Order);
-  void sortInitFini();
-  void sortCtorsDtors();
-  template <class ELFT> void finalize();
-  template <class ELFT> void maybeCompress();
-  void assignOffsets();
   std::vector<InputSection *> Sections;
 
   // Used for implementation of --compress-debug-sections option.
@@ -136,7 +131,7 @@ namespace elf {
 // linker scripts.
 class OutputSectionFactory {
 public:
-  OutputSectionFactory(std::vector<OutputSection *> &OutputSections);
+  OutputSectionFactory();
   ~OutputSectionFactory();
 
   void addInputSec(InputSectionBase *IS, StringRef OutsecName);
@@ -145,12 +140,13 @@ public:
 
 private:
   llvm::SmallDenseMap<SectionKey, OutputSection *> Map;
-  std::vector<OutputSection *> &OutputSections;
 };
 
 uint64_t getHeaderSize();
 void reportDiscarded(InputSectionBase *IS);
 
+extern std::vector<OutputSection *> OutputSections;
+extern std::vector<OutputSectionCommand *> OutputSectionCommands;
 } // namespace elf
 } // namespace lld
 

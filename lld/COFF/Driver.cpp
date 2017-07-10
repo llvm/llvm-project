@@ -18,6 +18,7 @@
 #include "lld/Driver/Driver.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Object/ArchiveWriter.h"
 #include "llvm/Object/COFFImportFile.h"
 #include "llvm/Object/COFFModuleDefinition.h"
@@ -40,8 +41,6 @@ using namespace llvm;
 using namespace llvm::object;
 using namespace llvm::COFF;
 using llvm::sys::Process;
-using llvm::sys::fs::file_magic;
-using llvm::sys::fs::identify_magic;
 
 namespace lld {
 namespace coff {
@@ -430,11 +429,12 @@ static std::string getImplibPath() {
   return Out.str();
 }
 
-std::vector<COFFShortExport> createCOFFShortExportFromConfig() {
+static void createImportLibrary() {
   std::vector<COFFShortExport> Exports;
   for (Export &E1 : Config->Exports) {
     COFFShortExport E2;
-    E2.Name = E1.Name;
+    // Use SymbolName, which will have any stdcall or fastcall qualifiers.
+    E2.Name = E1.SymbolName;
     E2.ExtName = E1.ExtName;
     E2.Ordinal = E1.Ordinal;
     E2.Noname = E1.Noname;
@@ -443,11 +443,7 @@ std::vector<COFFShortExport> createCOFFShortExportFromConfig() {
     E2.Constant = E1.Constant;
     Exports.push_back(E2);
   }
-  return Exports;
-}
 
-static void createImportLibrary() {
-  std::vector<COFFShortExport> Exports = createCOFFShortExportFromConfig();
   std::string DLLName = sys::path::filename(Config->OutputFile);
   std::string Path = getImplibPath();
   writeImportLibrary(DLLName, Path, Exports, Config->Machine);
@@ -456,17 +452,11 @@ static void createImportLibrary() {
 static void parseModuleDefs(StringRef Path) {
   std::unique_ptr<MemoryBuffer> MB = check(
     MemoryBuffer::getFile(Path, -1, false, true), "could not open " + Path);
-  MemoryBufferRef MBRef = MB->getMemBufferRef();
+  COFFModuleDefinition M =
+      check(parseCOFFModuleDefinition(MB->getMemBufferRef(), Config->Machine));
 
-  Expected<COFFModuleDefinition> Def =
-      parseCOFFModuleDefinition(MBRef, Config->Machine);
-  if (!Def)
-    fatal(errorToErrorCode(Def.takeError()).message());
-
-  COFFModuleDefinition &M = *Def;
   if (Config->OutputFile.empty())
     Config->OutputFile = Saver.save(M.OutputFile);
-
   if (M.ImageBase)
     Config->ImageBase = M.ImageBase;
   if (M.StackReserve)
@@ -713,8 +703,12 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     }
   }
 
-  if (!Args.hasArgNoClaim(OPT_INPUT))
-    fatal("no input files");
+  if (!Args.hasArgNoClaim(OPT_INPUT)) {
+    if (Args.hasArgNoClaim(OPT_deffile))
+      Config->NoEntry = true;
+    else
+      fatal("no input files");
+  }
 
   // Construct search path list.
   SearchPaths.push_back("");
@@ -911,7 +905,6 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     Config->TerminalServerAware = false;
   if (Args.hasArg(OPT_nosymtab))
     Config->WriteSymtab = false;
-  Config->DumpPdb = Args.hasArg(OPT_dumppdb);
 
   Config->MapFile = getMapFile(Args);
 
@@ -942,9 +935,9 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     Config->Machine = AMD64;
   }
 
-  // Windows specific -- Input files can be Windows resource files (.res files).
-  // We invoke cvtres.exe to convert resource files to a regular COFF file
-  // then link the result file normally.
+  // Input files can be Windows resource files (.res files). We use
+  // WindowsResource to convert resource files to a regular COFF file,
+  // then link the resulting file normally.
   if (!Resources.empty())
     addBuffer(convertResToCOFF(Resources));
 
@@ -996,6 +989,13 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     parseModuleDefs(Arg->getValue());
   }
 
+  // Handle generation of import library from a def file.
+  if (!Args.hasArgNoClaim(OPT_INPUT)) {
+    fixupExports();
+    createImportLibrary();
+    exit(0);
+  }
+
   // Handle /delayload
   for (auto *Arg : Args.filtered(OPT_delayload)) {
     Config->DelayLoads.insert(StringRef(Arg->getValue()).lower());
@@ -1026,17 +1026,21 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   if (Config->ImageBase == uint64_t(-1))
     Config->ImageBase = getDefaultImageBase();
 
-  Symtab.addRelative(mangle("__ImageBase"), 0);
+  Symtab.addSynthetic(mangle("__ImageBase"), nullptr);
   if (Config->Machine == I386) {
-    Config->SEHTable = Symtab.addRelative("___safe_se_handler_table", 0);
-    Config->SEHCount = Symtab.addAbsolute("___safe_se_handler_count", 0);
+    Symtab.addAbsolute("___safe_se_handler_table", 0);
+    Symtab.addAbsolute("___safe_se_handler_count", 0);
   }
 
   // We do not support /guard:cf (control flow protection) yet.
   // Define CFG symbols anyway so that we can link MSVC 2015 CRT.
-  Symtab.addAbsolute(mangle("__guard_fids_table"), 0);
   Symtab.addAbsolute(mangle("__guard_fids_count"), 0);
+  Symtab.addAbsolute(mangle("__guard_fids_table"), 0);
   Symtab.addAbsolute(mangle("__guard_flags"), 0x100);
+  Symtab.addAbsolute(mangle("__guard_iat_count"), 0);
+  Symtab.addAbsolute(mangle("__guard_iat_table"), 0);
+  Symtab.addAbsolute(mangle("__guard_longjmp_count"), 0);
+  Symtab.addAbsolute(mangle("__guard_longjmp_table"), 0);
 
   // This code may add new undefined symbols to the link, which may enqueue more
   // symbol resolution tasks, so we need to continue executing tasks until we

@@ -13,6 +13,7 @@
 #include "lldb/Core/StructuredData.h"
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/InstrumentationRuntime.h"
+#include "lldb/Utility/StructuredData.h"
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {

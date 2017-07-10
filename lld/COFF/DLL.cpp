@@ -100,17 +100,13 @@ public:
 
   void writeTo(uint8_t *Buf) const override {
     auto *E = (coff_import_directory_table_entry *)(Buf + OutputSectionOff);
+    E->ImportLookupTableRVA = LookupTab->getRVA();
     E->NameRVA = DLLName->getRVA();
-
-    // The import descriptor table contains two pointers to
-    // the tables describing dllimported symbols. But the
-    // Windows loader actually uses only one. So we create
-    // only one table and set both fields to its address.
-    E->ImportLookupTableRVA = AddressTab->getRVA();
     E->ImportAddressTableRVA = AddressTab->getRVA();
   }
 
   Chunk *DLLName;
+  Chunk *LookupTab;
   Chunk *AddressTab;
 };
 
@@ -392,6 +388,7 @@ std::vector<Chunk *> IdataContents::getChunks() {
   // Add each type in the correct order.
   std::vector<Chunk *> V;
   V.insert(V.end(), Dirs.begin(), Dirs.end());
+  V.insert(V.end(), Lookups.begin(), Lookups.end());
   V.insert(V.end(), Addresses.begin(), Addresses.end());
   V.insert(V.end(), Hints.begin(), Hints.end());
   V.insert(V.end(), DLLNames.begin(), DLLNames.end());
@@ -407,18 +404,21 @@ void IdataContents::create() {
     // we need to create HintName chunks to store the names.
     // If they don't (if they are import-by-ordinals), we store only
     // ordinal values to the table.
-    size_t Base = Addresses.size();
+    size_t Base = Lookups.size();
     for (DefinedImportData *S : Syms) {
       uint16_t Ord = S->getOrdinal();
       if (S->getExternalName().empty()) {
+        Lookups.push_back(make<OrdinalOnlyChunk>(Ord));
         Addresses.push_back(make<OrdinalOnlyChunk>(Ord));
         continue;
       }
       auto *C = make<HintNameChunk>(S->getExternalName(), Ord);
+      Lookups.push_back(make<LookupChunk>(C));
       Addresses.push_back(make<LookupChunk>(C));
       Hints.push_back(C);
     }
     // Terminate with null values.
+    Lookups.push_back(make<NullChunk>(ptrSize()));
     Addresses.push_back(make<NullChunk>(ptrSize()));
 
     for (int I = 0, E = Syms.size(); I < E; ++I)
@@ -427,6 +427,7 @@ void IdataContents::create() {
     // Create the import table header.
     DLLNames.push_back(make<StringChunk>(Syms[0]->getDLLName()));
     auto *Dir = make<ImportDirectoryChunk>(DLLNames.back());
+    Dir->LookupTab = Lookups[Base];
     Dir->AddressTab = Addresses[Base];
     Dirs.push_back(Dir);
   }

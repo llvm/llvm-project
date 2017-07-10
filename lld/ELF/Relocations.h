@@ -21,6 +21,7 @@ class SymbolBody;
 class InputSection;
 class InputSectionBase;
 class OutputSection;
+struct OutputSectionCommand;
 
 // List of target-independent relocation types. Relocations read
 // from files are converted to these types so that the main code
@@ -123,22 +124,48 @@ class Thunk;
 class ThunkCreator {
 public:
   // Return true if Thunks have been added to OutputSections
-  bool createThunks(ArrayRef<OutputSection *> OutputSections);
+  bool createThunks(ArrayRef<OutputSectionCommand *> OutputSections);
+
+  // The number of completed passes of createThunks this permits us
+  // to do one time initialization on Pass 0 and put a limit on the
+  // number of times it can be called to prevent infinite loops.
+  uint32_t Pass = 0;
 
 private:
-  void mergeThunks(OutputSection *OS, std::vector<ThunkSection *> &Thunks);
-  ThunkSection *getOSThunkSec(ThunkSection *&TS, OutputSection *OS);
+  void mergeThunks();
+  ThunkSection *getOSThunkSec(OutputSection *OS,
+                              std::vector<InputSection *> *ISR);
   ThunkSection *getISThunkSec(InputSection *IS, OutputSection *OS);
+  void forEachExecInputSection(
+      ArrayRef<OutputSectionCommand *> OutputSections,
+      std::function<void(OutputSection *, std::vector<InputSection *> *,
+                         InputSection *)>
+          Fn);
   std::pair<Thunk *, bool> getThunk(SymbolBody &Body, uint32_t Type);
+  ThunkSection *addThunkSection(OutputSection *OS,
+                                std::vector<InputSection *> *, uint64_t Off);
+  // Record all the available Thunks for a Symbol
+  llvm::DenseMap<SymbolBody *, std::vector<Thunk *>> ThunkedSymbols;
 
-  // Track Symbols that already have a Thunk
-  llvm::DenseMap<SymbolBody *, Thunk *> ThunkedSymbols;
+  // Find a Thunk from the Thunks symbol definition, we can use this to find
+  // the Thunk from a relocation to the Thunks symbol definition.
+  llvm::DenseMap<SymbolBody *, Thunk *> Thunks;
 
-  // Track InputSections that have a ThunkSection placed in front
+  // Track InputSections that have an inline ThunkSection placed in front
+  // an inline ThunkSection may have control fall through to the section below
+  // so we need to make sure that there is only one of them.
+  // The Mips LA25 Thunk is an example of an inline ThunkSection.
   llvm::DenseMap<InputSection *, ThunkSection *> ThunkedSections;
 
-  // Track the ThunksSections that need to be inserted into an OutputSection
-  std::map<OutputSection *, std::vector<ThunkSection *>> ThunkSections;
+  // All the ThunkSections that we have created, organised by OutputSection
+  // will contain a mix of ThunkSections that have been created this pass, and
+  // ThunkSections that have been merged into the OutputSection on previous
+  // passes
+  std::map<std::vector<InputSection *> *, std::vector<ThunkSection *>>
+      ThunkSections;
+
+  // The ThunkSection for this vector of InputSections
+  ThunkSection *CurTS;
 };
 
 // Return a int64_t to make sure we get the sign extension out of the way as

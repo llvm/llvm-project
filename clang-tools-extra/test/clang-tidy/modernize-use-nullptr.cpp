@@ -261,3 +261,45 @@ class TemplateClass {
 void IgnoreSubstTemplateType() {
   TemplateClass<int*> a(1);
 }
+
+// Test on casting nullptr.
+struct G {
+  explicit G(bool, const char * = NULL) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:35: warning: use nullptr
+  // CHECK-FIXES: explicit G(bool, const char * = nullptr) {}
+};
+bool g(const char*);
+void test_cast_nullptr() {
+  G(g(nullptr));
+  G(g((nullptr)));
+  G(g(static_cast<char*>(nullptr)));
+  G(g(static_cast<const char*>(nullptr)));
+}
+
+// Test on recognizing multiple NULLs.
+class H {
+public:
+  H(bool);
+};
+
+#define T(expression) H(expression);
+bool h(int *, int *, int * = nullptr);
+void test_multiple_nulls() {
+  T(h(NULL, NULL));
+// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use nullptr
+// CHECK-MESSAGES: :[[@LINE-2]]:13: warning: use nullptr
+// CHECK-FIXES: T(h(nullptr, nullptr));
+  T(h(NULL, nullptr));
+// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use nullptr
+// CHECK-FIXES: T(h(nullptr, nullptr));
+  T(h(nullptr, NULL));
+// CHECK-MESSAGES: :[[@LINE-1]]:16: warning: use nullptr
+// CHECK-FIXES: T(h(nullptr, nullptr));
+  T(h(nullptr, nullptr));
+  T(h(NULL, NULL, NULL));
+// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use nullptr
+// CHECK-MESSAGES: :[[@LINE-2]]:13: warning: use nullptr
+// CHECK-MESSAGES: :[[@LINE-3]]:19: warning: use nullptr
+// CHECK-FIXES: T(h(nullptr, nullptr, nullptr));
+}
+#undef T

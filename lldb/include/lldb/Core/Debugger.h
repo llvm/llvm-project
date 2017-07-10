@@ -252,6 +252,8 @@ public:
 
   const FormatEntity::Entry *GetFrameFormat() const;
 
+  const FormatEntity::Entry *GetFrameFormatUnique() const;
+
   const FormatEntity::Entry *GetThreadFormat() const;
 
   const FormatEntity::Entry *GetThreadStopFormat() const;

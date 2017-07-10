@@ -219,13 +219,13 @@ Symbol *SymbolTable::addAbsolute(StringRef N, uint64_t VA) {
   return S;
 }
 
-Symbol *SymbolTable::addRelative(StringRef N, uint64_t VA) {
+Symbol *SymbolTable::addSynthetic(StringRef N, Chunk *C) {
   Symbol *S;
   bool WasInserted;
   std::tie(S, WasInserted) = insert(N);
   S->IsUsedInRegularObj = true;
   if (WasInserted || isa<Undefined>(S->body()) || isa<Lazy>(S->body()))
-    replaceBody<DefinedRelative>(S, N, VA);
+    replaceBody<DefinedSynthetic>(S, N, C);
   else if (!isa<DefinedCOFF>(S->body()))
     reportDuplicate(S, nullptr);
   return S;
@@ -244,6 +244,12 @@ Symbol *SymbolTable::addRegular(InputFile *F, StringRef N, bool IsCOMDAT,
     reportDuplicate(S, F);
   } else if (SP == SP_NEW) {
     replaceBody<DefinedRegular>(S, F, N, IsCOMDAT, /*IsExternal*/ true, Sym, C);
+  } else if (SP == SP_EXISTING && IsCOMDAT && C) {
+    C->markDiscarded();
+    // Discard associative chunks that we've parsed so far. No need to recurse
+    // because an associative section cannot have children.
+    for (SectionChunk *Child : C->children())
+      Child->markDiscarded();
   }
   return S;
 }

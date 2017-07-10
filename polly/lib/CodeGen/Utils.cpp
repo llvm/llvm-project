@@ -76,9 +76,9 @@ static BasicBlock *splitEdge(BasicBlock *Prev, BasicBlock *Succ,
   return MiddleBlock;
 }
 
-BasicBlock *polly::executeScopConditionally(Scop &S, Value *RTC,
-                                            DominatorTree &DT, RegionInfo &RI,
-                                            LoopInfo &LI) {
+polly::BBPair polly::executeScopConditionally(Scop &S, Value *RTC,
+                                              DominatorTree &DT, RegionInfo &RI,
+                                              LoopInfo &LI) {
   Region &R = S.getRegion();
   PollyIRBuilder Builder(S.getEntry());
 
@@ -216,5 +216,5 @@ BasicBlock *polly::executeScopConditionally(Scop &S, Value *RTC,
   //      ExitBB                   //
   //      /    \                   //
 
-  return StartBlock;
+  return std::make_pair(StartBlock, ExitingBlock);
 }

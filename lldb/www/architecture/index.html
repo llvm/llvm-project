@@ -119,30 +119,26 @@
 			</div>
 			<a name="core"></a>
 			<div class="post">
-				<h1 class ="postheader">Core</h1>
-				<div class="postcontent">
-
-				   <p>The Core source files contain basic functionality that
-				       is required in the debugger. A wide variety of classes
-				       are implemented:</p>
-				       
-                       <ul>
-         					<li>Address (section offset addressing)</li>
-          					<li>AddressRange</li>
-           					<li>Architecture specification</li>
-           					<li>Broadcaster / Event / Listener </li>
-           					<li>Communication classes that use Connection objects</li>
-           					<li>Uniqued C strings</li>
-           					<li>Data extraction</li>
-           					<li>File specifications</li>
-           					<li>Mangled names</li>
-           					<li>Regular expressions</li>
-           					<li>Source manager</li>
-           					<li>Streams</li>
-           					<li>Value objects</li>
-       				    </ul>
-				</div>
-				<div class="postfooter"></div>
+			  <h1 class ="postheader">Core</h1>
+			  <div class="postcontent">
+			    <p>
+			    The Core source files contain basic functionality
+			    that is required in the debugger as well as the
+			    class represeting the debugger it self (Debugger). A
+			    wide variety of classes are implemented:
+			    </p>
+			    <ul>
+			      <li>Address (section offset addressing)</li>
+			      <li>AddressRange</li>
+			      <li>Architecture specification</li>
+			      <li>Broadcaster / Event / Listener </li>
+			      <li>Communication classes that use Connection objects</li>
+			      <li>Mangled names</li>
+			      <li>Source manager</li>
+			      <li>Value objects</li>
+			    </ul>
+			  </div>
+			  <div class="postfooter"></div>
 			</div>
 			<a name="dataformatters"></a>
 			<div class="post">
@@ -193,26 +189,27 @@
 			</div>
 			<a name="host"></a>
 			<div class="post">
-				<h1 class ="postheader">Host</h1>
-				<div class="postcontent">
-
-				   <p>LLDB tries to abstract itself from the host upon which
-				       it is currently running by providing a host abstraction
-				       layer.  This layer involves everything from spawning, detaching,
-				       joining and killing native in-process threads, to getting
-				       current information about the current host.</p>
-    				   <p>Host functionality includes abstraction layers for:</p>
-                           <ul>
-             					<li>Mutexes</li>
-              					<li>Conditions</li>
-               					<li>Timing functions</li>
-               					<li>Thread functions</li>
-               					<li>Host target triple</li>
-               					<li>Host child process notifications</li>
-               					<li>Host specific types</li>
-           				    </ul>
-				</div>
-				<div class="postfooter"></div>
+			  <h1 class ="postheader">Host</h1>
+			  <div class="postcontent">
+			    <p>
+			    LLDB tries to abstract itself from the host upon which
+			    it is currently running by providing a host abstraction
+			    layer. This layer includes functionality, whose
+			    implementation varies wildly from host to host.
+			    </p>
+			    <p>Host functionality includes abstraction layers for:</p>
+			    <ul>
+			      <li>Information about the host system (triple, list of running processes, etc.)</li>
+			      <li>Launching processes</li>
+			      <li>Various OS primitives like pipes and sockets</li>
+			    </ul>
+			    <p>
+			    It also includes the base classes of the
+			    NativeProcess/Thread hierarchy, which is used by
+			    lldb-server.
+			    </p>
+			  </div>
+			  <div class="postfooter"></div>
 			</div>
 			<a name="interpreter"></a>
 			<div class="post">
@@ -259,20 +256,40 @@
 			</div>
 			<a name="utility"></a>
 			<div class="post">
-				<h1 class ="postheader">Utility</h1>
-				<div class="postcontent">
-
-				   <p>Utility files should be as stand alone as possible and
-				       available for LLDB, plug-ins or related 
-				       applications to use.</p>
-    				   <p>Files found in the Utility section include:</p>
-                           <ul>
-           					   <li>Pseudo-terminal support</li>
-            					<li>Register numbering for specific architectures.</li>
-             					<li>String data extractors</li>
-           				    </ul>
-				</div>
-				<div class="postfooter"></div>
+			  <h1 class ="postheader">Utility</h1>
+			  <div class="postcontent">
+			    <p>
+			    This module contains the lowest layers of LLDB. A
+			    lot of these classes don't really have anything to
+			    do with debugging -- they are just there because the
+			    higher layers of the debugger use these clasess
+			    to implement their functionality. Others are data
+			    structures used in many other parts of the debugger
+			    (TraceOptions). Most of the functionality in this
+			    module could be useful in an application that is
+			    <strong>not</strong> a debugger; however, providing
+			    a general purpose C++ library is an explicit
+			    non-goal of this module.
+			    </p>
+			    <p>
+			    This module provides following functionality:
+			    </p>
+			    <ul>
+			      <li>Abstract path manipulation (FileSpec)</li>
+			      <li>Data buffers (DataBuffer, DataEncoder, DataExtractor)</li>
+			      <li>Logging</li>
+			      <li>Structured data manipulation (JSON)</li>
+			      <li>Streams</li>
+			      <li>Timers</li>
+			      <li>etc.</li>
+			    </ul>
+			    <p>
+			    For historic reasons, some of this functionality
+			    overlaps that which is provided by the LLVM support
+			    library.
+			    </p>
+			  </div>
+			  <div class="postfooter"></div>
 			</div>
 		</div>
 	</div>

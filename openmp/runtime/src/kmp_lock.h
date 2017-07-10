@@ -122,7 +122,8 @@ extern void __kmp_validate_locks(void);
 // ----------------------------------------------------------------------------
 
 struct kmp_base_tas_lock {
-  volatile kmp_int32 poll; // 0 => unlocked; locked: (gtid+1) of owning thread
+  // KMP_LOCK_FREE(tas) => unlocked; locked: (gtid+1) of owning thread
+  volatile kmp_int32 poll;
   kmp_int32 depth_locked; // depth locked, for nested locks only
 };
 
@@ -140,7 +141,7 @@ typedef union kmp_tas_lock kmp_tas_lock_t;
 //    kmp_tas_lock_t xlock = KMP_TAS_LOCK_INITIALIZER( xlock );
 #define KMP_TAS_LOCK_INITIALIZER(lock)                                         \
   {                                                                            \
-    { 0, 0 }                                                                   \
+    { KMP_LOCK_FREE(tas), 0 }                                                  \
   }
 
 extern int __kmp_acquire_tas_lock(kmp_tas_lock_t *lck, kmp_int32 gtid);
@@ -178,7 +179,7 @@ extern void __kmp_destroy_nested_tas_lock(kmp_tas_lock_t *lck);
 // ----------------------------------------------------------------------------
 
 struct kmp_base_futex_lock {
-  volatile kmp_int32 poll; // 0 => unlocked
+  volatile kmp_int32 poll; // KMP_LOCK_FREE(futex) => unlocked
   // 2*(gtid+1) of owning thread, 0 if unlocked
   // locked: (gtid+1) of owning thread
   kmp_int32 depth_locked; // depth locked, for nested locks only
@@ -199,7 +200,7 @@ typedef union kmp_futex_lock kmp_futex_lock_t;
 //    kmp_futex_lock_t xlock = KMP_FUTEX_LOCK_INITIALIZER( xlock );
 #define KMP_FUTEX_LOCK_INITIALIZER(lock)                                       \
   {                                                                            \
-    { 0, 0 }                                                                   \
+    { KMP_LOCK_FREE(futex), 0 }                                                \
   }
 
 extern int __kmp_acquire_futex_lock(kmp_futex_lock_t *lck, kmp_int32 gtid);

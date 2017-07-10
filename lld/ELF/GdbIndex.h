@@ -24,7 +24,30 @@ struct AddressEntry {
   InputSection *Section;
   uint64_t LowAddress;
   uint64_t HighAddress;
-  size_t CuIndex;
+  uint32_t CuIndex;
+};
+
+// Struct represents single entry of compilation units list area of gdb index.
+// It consist of CU offset in .debug_info section and it's size.
+struct CompilationUnitEntry {
+  uint64_t CuOffset;
+  uint64_t CuLength;
+};
+
+// Represents data about symbol and type names which are used
+// to build symbol table and constant pool area of gdb index.
+struct NameTypeEntry {
+  StringRef Name;
+  uint8_t Type;
+};
+
+// We fill one GdbIndexDataChunk for each object where scan of
+// debug information performed. That information futher used
+// for filling gdb index section areas.
+struct GdbIndexChunk {
+  std::vector<AddressEntry> AddressArea;
+  std::vector<CompilationUnitEntry> CompilationUnits;
+  std::vector<NameTypeEntry> NamesAndTypes;
 };
 
 // Element of GdbHashTab hash table.

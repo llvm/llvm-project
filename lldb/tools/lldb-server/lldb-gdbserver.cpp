@@ -21,8 +21,6 @@
 
 // C++ Includes
 
-// Other libraries and framework includes
-#include "llvm/ADT/StringRef.h"
 
 #include "Acceptor.h"
 #include "LLDBServerUtilities.h"
@@ -35,7 +33,16 @@
 #include "lldb/Host/Pipe.h"
 #include "lldb/Host/Socket.h"
 #include "lldb/Host/StringConvert.h"
+#include "lldb/Host/common/NativeProcessProtocol.h"
 #include "lldb/Utility/Status.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Errno.h"
+
+#if defined(__linux__)
+#include "Plugins/Process/Linux/NativeProcessLinux.h"
+#elif defined(__NetBSD__)
+#include "Plugins/Process/NetBSD/NativeProcessNetBSD.h"
+#endif
 
 #ifndef LLGS_PROGRAM_NAME
 #define LLGS_PROGRAM_NAME "lldb-server"
@@ -50,6 +57,30 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::lldb_server;
 using namespace lldb_private::process_gdb_remote;
+
+namespace {
+#if defined(__linux__)
+typedef process_linux::NativeProcessLinux::Factory NativeProcessFactory;
+#elif defined(__NetBSD__)
+typedef process_netbsd::NativeProcessNetBSD::Factory NativeProcessFactory;
+#else
+// Dummy implementation to make sure the code compiles
+class NativeProcessFactory : public NativeProcessProtocol::Factory {
+public:
+  llvm::Expected<NativeProcessProtocolSP>
+  Launch(ProcessLaunchInfo &launch_info,
+         NativeProcessProtocol::NativeDelegate &delegate,
+         MainLoop &mainloop) const override {
+    llvm_unreachable("Not implemented");
+  }
+  llvm::Expected<NativeProcessProtocolSP>
+  Attach(lldb::pid_t pid, NativeProcessProtocol::NativeDelegate &delegate,
+         MainLoop &mainloop) const override {
+    llvm_unreachable("Not implemented");
+  }
+};
+#endif
+}
 
 //----------------------------------------------------------------------
 // option descriptors for getopt_long_only()
@@ -398,10 +429,9 @@ int main_gdbserver(int argc, char *argv[]) {
       {
         const ::pid_t new_sid = setsid();
         if (new_sid == -1) {
-          const char *errno_str = strerror(errno);
-          fprintf(stderr, "failed to set new session id for %s (%s)\n",
-                  LLGS_PROGRAM_NAME,
-                  errno_str ? errno_str : "<no error string>");
+          llvm::errs() << llvm::formatv(
+              "failed to set new session id for {0} ({1})\n", LLGS_PROGRAM_NAME,
+              llvm::sys::StrError());
         }
       }
       break;
@@ -447,7 +477,8 @@ int main_gdbserver(int argc, char *argv[]) {
     exit(255);
   }
 
-  GDBRemoteCommunicationServerLLGS gdb_server(mainloop);
+  NativeProcessFactory factory;
+  GDBRemoteCommunicationServerLLGS gdb_server(mainloop, factory);
 
   const char *const host_and_port = argv[0];
   argc -= 1;

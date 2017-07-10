@@ -25,8 +25,8 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/ELF.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -76,6 +76,7 @@ private:
   BytesDataCommand *readBytesDataCommand(StringRef Tok);
   uint32_t readFill();
   uint32_t parseFill(StringRef Tok);
+  void readSectionAddressType(OutputSectionCommand *Cmd);
   OutputSectionCommand *readOutputSectionDescription(StringRef OutSec);
   std::vector<StringRef> readOutputSectionPhdrs();
   InputSectionDescription *readInputSectionDescription(StringRef Tok);
@@ -127,16 +128,16 @@ static void moveAbsRight(ExprValue &A, ExprValue &B) {
   if (A.isAbsolute())
     std::swap(A, B);
   if (!B.isAbsolute())
-    error("At least one side of the expression must be absolute");
+    error(A.Loc + ": at least one side of the expression must be absolute");
 }
 
 static ExprValue add(ExprValue A, ExprValue B) {
   moveAbsRight(A, B);
-  return {A.Sec, A.ForceAbsolute, A.Val + B.getValue()};
+  return {A.Sec, A.ForceAbsolute, A.Val + B.getValue(), A.Loc};
 }
 
 static ExprValue sub(ExprValue A, ExprValue B) {
-  return {A.Sec, A.Val - B.getValue()};
+  return {A.Sec, A.Val - B.getValue(), A.Loc};
 }
 
 static ExprValue mul(ExprValue A, ExprValue B) {
@@ -153,13 +154,13 @@ static ExprValue div(ExprValue A, ExprValue B) {
 static ExprValue bitAnd(ExprValue A, ExprValue B) {
   moveAbsRight(A, B);
   return {A.Sec, A.ForceAbsolute,
-          (A.getValue() & B.getValue()) - A.getSecAddr()};
+          (A.getValue() & B.getValue()) - A.getSecAddr(), A.Loc};
 }
 
 static ExprValue bitOr(ExprValue A, ExprValue B) {
   moveAbsRight(A, B);
   return {A.Sec, A.ForceAbsolute,
-          (A.getValue() | B.getValue()) - A.getSecAddr()};
+          (A.getValue() | B.getValue()) - A.getSecAddr(), A.Loc};
 }
 
 void ScriptParser::readDynamicList() {
@@ -563,16 +564,42 @@ uint32_t ScriptParser::readFill() {
   return V;
 }
 
+// Reads an expression and/or the special directive "(NOLOAD)" for an
+// output section definition.
+//
+// An output section name can be followed by an address expression
+// and/or by "(NOLOAD)". This grammar is not LL(1) because "(" can be
+// interpreted as either the beginning of some expression or "(NOLOAD)".
+//
+// https://sourceware.org/binutils/docs/ld/Output-Section-Address.html
+// https://sourceware.org/binutils/docs/ld/Output-Section-Type.html
+void ScriptParser::readSectionAddressType(OutputSectionCommand *Cmd) {
+  if (consume("(")) {
+    if (consume("NOLOAD")) {
+      expect(")");
+      Cmd->Noload = true;
+      return;
+    }
+    Cmd->AddrExpr = readExpr();
+    expect(")");
+  } else {
+    Cmd->AddrExpr = readExpr();
+  }
+
+  if (consume("(")) {
+    expect("NOLOAD");
+    expect(")");
+    Cmd->Noload = true;
+  }
+}
+
 OutputSectionCommand *
 ScriptParser::readOutputSectionDescription(StringRef OutSec) {
   OutputSectionCommand *Cmd =
       Script->createOutputSectionCommand(OutSec, getCurrentLocation());
 
-  // Read an address expression.
-  // https://sourceware.org/binutils/docs/ld/Output-Section-Address.html
   if (peek() != ":")
-    Cmd->AddrExpr = readExpr();
-
+    readSectionAddressType(Cmd);
   expect(":");
 
   if (consume("AT"))
@@ -859,7 +886,9 @@ Expr ScriptParser::readPrimary() {
   if (Tok == "ADDR") {
     StringRef Name = readParenLiteral();
     OutputSectionCommand *Cmd = Script->getOrCreateOutputSectionCommand(Name);
-    return [=]() -> ExprValue { return {checkSection(Cmd, Location), 0}; };
+    return [=]() -> ExprValue {
+      return {checkSection(Cmd, Location), 0, Location};
+    };
   }
   if (Tok == "ALIGN") {
     expect("(");
@@ -1162,8 +1191,7 @@ void ScriptParser::readMemory() {
     if (It != Script->Opt.MemoryRegions.end())
       setError("region '" + Name + "' already defined");
     else
-      Script->Opt.MemoryRegions[Name] = {Name,   Origin, Length,
-                                         Origin, Flags,  NegFlags};
+      Script->Opt.MemoryRegions[Name] = {Name, Origin, Length, Flags, NegFlags};
   }
 }
 

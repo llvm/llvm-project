@@ -37,28 +37,8 @@ class ExprCommandWithFixits(TestBase):
 
     def try_expressions(self):
         """Test calling expressions with errors that can be fixed by the FixIts."""
-        exe_name = "a.out"
-        exe = os.path.join(os.getcwd(), exe_name)
-
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        breakpoint = target.BreakpointCreateBySourceRegex(
-            'Stop here to evaluate expressions', self.main_source_spec)
-        self.assertTrue(breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
-
-        # Launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple(
-            None, None, self.get_process_working_directory())
-
-        self.assertTrue(process, PROCESS_IS_VALID)
-
-        # Frame #0 should be at our breakpoint.
-        threads = lldbutil.get_threads_stopped_at_breakpoint(
-            process, breakpoint)
-
-        self.assertTrue(len(threads) == 1)
-        self.thread = threads[0]
+        (target, process, self.thread, bkpt) = lldbutil.run_to_source_breakpoint(self, 
+                                        'Stop here to evaluate expressions', self.main_source_spec)
 
         options = lldb.SBExpressionOptions()
         options.SetAutoApplyFixIts(True)

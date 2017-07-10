@@ -11,14 +11,14 @@
 #include "GDBRemoteTestUtils.h"
 
 #include "Plugins/Process/gdb-remote/GDBRemoteCommunicationClient.h"
-#include "lldb/lldb-enumerations.h"
 #include "lldb/Core/ModuleSpec.h"
-#include "lldb/Core/StructuredData.h"
-#include "lldb/Core/TraceOptions.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Utility/DataBuffer.h"
-
+#include "lldb/Utility/StructuredData.h"
+#include "lldb/Utility/TraceOptions.h"
+#include "lldb/lldb-enumerations.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Testing/Support/Error.h"
 
 using namespace lldb_private::process_gdb_remote;
 using namespace lldb_private;
@@ -58,15 +58,18 @@ std::string one_register_hex = "41424344";
 
 } // end anonymous namespace
 
-class GDBRemoteCommunicationClientTest : public GDBRemoteTest {};
+class GDBRemoteCommunicationClientTest : public GDBRemoteTest {
+public:
+  void SetUp() override {
+    ASSERT_THAT_ERROR(Connect(client, server), llvm::Succeeded());
+  }
 
-TEST_F(GDBRemoteCommunicationClientTest, WriteRegister) {
+protected:
   TestClient client;
   MockServer server;
-  Connect(client, server);
-  if (HasFailure())
-    return;
+};
 
+TEST_F(GDBRemoteCommunicationClientTest, WriteRegister) {
   const lldb::tid_t tid = 0x47;
   const uint32_t reg_num = 4;
   std::future<bool> write_result = std::async(std::launch::async, [&] {
@@ -87,12 +90,6 @@ TEST_F(GDBRemoteCommunicationClientTest, WriteRegister) {
 }
 
 TEST_F(GDBRemoteCommunicationClientTest, WriteRegisterNoSuffix) {
-  TestClient client;
-  MockServer server;
-  Connect(client, server);
-  if (HasFailure())
-    return;
-
   const lldb::tid_t tid = 0x47;
   const uint32_t reg_num = 4;
   std::future<bool> write_result = std::async(std::launch::async, [&] {
@@ -113,12 +110,6 @@ TEST_F(GDBRemoteCommunicationClientTest, WriteRegisterNoSuffix) {
 }
 
 TEST_F(GDBRemoteCommunicationClientTest, ReadRegister) {
-  TestClient client;
-  MockServer server;
-  Connect(client, server);
-  if (HasFailure())
-    return;
-
   const lldb::tid_t tid = 0x47;
   const uint32_t reg_num = 4;
   std::future<bool> async_result = std::async(
@@ -145,12 +136,6 @@ TEST_F(GDBRemoteCommunicationClientTest, ReadRegister) {
 }
 
 TEST_F(GDBRemoteCommunicationClientTest, SaveRestoreRegistersNoSuffix) {
-  TestClient client;
-  MockServer server;
-  Connect(client, server);
-  if (HasFailure())
-    return;
-
   const lldb::tid_t tid = 0x47;
   uint32_t save_id;
   std::future<bool> async_result = std::async(std::launch::async, [&] {
@@ -170,12 +155,6 @@ TEST_F(GDBRemoteCommunicationClientTest, SaveRestoreRegistersNoSuffix) {
 }
 
 TEST_F(GDBRemoteCommunicationClientTest, SyncThreadState) {
-  TestClient client;
-  MockServer server;
-  Connect(client, server);
-  if (HasFailure())
-    return;
-
   const lldb::tid_t tid = 0x47;
   std::future<bool> async_result = std::async(
       std::launch::async, [&] { return client.SyncThreadState(tid); });
@@ -185,12 +164,6 @@ TEST_F(GDBRemoteCommunicationClientTest, SyncThreadState) {
 }
 
 TEST_F(GDBRemoteCommunicationClientTest, GetModulesInfo) {
-  TestClient client;
-  MockServer server;
-  Connect(client, server);
-  if (HasFailure())
-    return;
-
   llvm::Triple triple("i386-pc-linux");
 
   FileSpec file_specs[] = {
@@ -225,12 +198,6 @@ TEST_F(GDBRemoteCommunicationClientTest, GetModulesInfo) {
 }
 
 TEST_F(GDBRemoteCommunicationClientTest, GetModulesInfoInvalidResponse) {
-  TestClient client;
-  MockServer server;
-  Connect(client, server);
-  if (HasFailure())
-    return;
-
   llvm::Triple triple("i386-pc-linux");
   FileSpec file_spec("/foo/bar.so", false, FileSpec::ePathSyntaxPosix);
 
@@ -267,13 +234,7 @@ TEST_F(GDBRemoteCommunicationClientTest, GetModulesInfoInvalidResponse) {
 }
 
 TEST_F(GDBRemoteCommunicationClientTest, TestPacketSpeedJSON) {
-  TestClient client;
-  MockServer server;
-  Connect(client, server);
-  if (HasFailure())
-    return;
-
-  std::thread server_thread([&server] {
+  std::thread server_thread([this] {
     for (;;) {
       StringExtractorGDBRemote request;
       PacketResult result = server.GetPacket(request);
@@ -312,14 +273,6 @@ TEST_F(GDBRemoteCommunicationClientTest, TestPacketSpeedJSON) {
 }
 
 TEST_F(GDBRemoteCommunicationClientTest, SendSignalsToIgnore) {
-  TestClient client;
-  MockServer server;
-  Connect(client, server);
-  if (HasFailure())
-    return;
-
-  const lldb::tid_t tid = 0x47;
-  const uint32_t reg_num = 4;
   std::future<Status> result = std::async(std::launch::async, [&] {
     return client.SendSignalsToIgnore({2, 3, 5, 7, 0xB, 0xD, 0x11});
   });
@@ -336,12 +289,6 @@ TEST_F(GDBRemoteCommunicationClientTest, SendSignalsToIgnore) {
 }
 
 TEST_F(GDBRemoteCommunicationClientTest, GetMemoryRegionInfo) {
-  TestClient client;
-  MockServer server;
-  Connect(client, server);
-  if (HasFailure())
-    return;
-
   const lldb::addr_t addr = 0xa000;
   MemoryRegionInfo region_info;
   std::future<Status> result = std::async(std::launch::async, [&] {
@@ -357,12 +304,6 @@ TEST_F(GDBRemoteCommunicationClientTest, GetMemoryRegionInfo) {
 }
 
 TEST_F(GDBRemoteCommunicationClientTest, GetMemoryRegionInfoInvalidResponse) {
-  TestClient client;
-  MockServer server;
-  Connect(client, server);
-  if (HasFailure())
-    return;
-
   const lldb::addr_t addr = 0x4000;
   MemoryRegionInfo region_info;
   std::future<Status> result = std::async(std::launch::async, [&] {
@@ -374,12 +315,6 @@ TEST_F(GDBRemoteCommunicationClientTest, GetMemoryRegionInfoInvalidResponse) {
 }
 
 TEST_F(GDBRemoteCommunicationClientTest, SendStartTracePacket) {
-  TestClient client;
-  MockServer server;
-  Connect(client, server);
-  if (HasFailure())
-    return;
-
   TraceOptions options;
   Status error;
 
@@ -406,7 +341,7 @@ TEST_F(GDBRemoteCommunicationClientTest, SendStartTracePacket) {
       R"( {"psb" : 1,"tracetech" : "intel-pt"},"threadid" : 35,"type" : 1})";
   HandlePacket(server, (expected_packet1 + expected_packet2), "1");
   ASSERT_TRUE(error.Success());
-  ASSERT_EQ(result.get(), 1);
+  ASSERT_EQ(result.get(), 1u);
 
   error.Clear();
   result = std::async(std::launch::async, [&] {
@@ -419,12 +354,6 @@ TEST_F(GDBRemoteCommunicationClientTest, SendStartTracePacket) {
 }
 
 TEST_F(GDBRemoteCommunicationClientTest, SendStopTracePacket) {
-  TestClient client;
-  MockServer server;
-  Connect(client, server);
-  if (HasFailure())
-    return;
-
   lldb::tid_t thread_id = 0x23;
   lldb::user_id_t trace_id = 3;
 
@@ -446,12 +375,6 @@ TEST_F(GDBRemoteCommunicationClientTest, SendStopTracePacket) {
 }
 
 TEST_F(GDBRemoteCommunicationClientTest, SendGetDataPacket) {
-  TestClient client;
-  MockServer server;
-  Connect(client, server);
-  if (HasFailure())
-    return;
-
   lldb::tid_t thread_id = 0x23;
   lldb::user_id_t trace_id = 3;
 
@@ -468,7 +391,7 @@ TEST_F(GDBRemoteCommunicationClientTest, SendGetDataPacket) {
   std::string expected_packet2 = R"("traceid" : 3})";
   HandlePacket(server, expected_packet1+expected_packet2, "123456");
   ASSERT_TRUE(result.get().Success());
-  ASSERT_EQ(buffer.size(), 3);
+  ASSERT_EQ(buffer.size(), 3u);
   ASSERT_EQ(buf[0], 0x12);
   ASSERT_EQ(buf[1], 0x34);
   ASSERT_EQ(buf[2], 0x56);
@@ -480,16 +403,10 @@ TEST_F(GDBRemoteCommunicationClientTest, SendGetDataPacket) {
 
   HandlePacket(server, expected_packet1+expected_packet2, "E23");
   ASSERT_FALSE(result.get().Success());
-  ASSERT_EQ(buffer2.size(), 0);
+  ASSERT_EQ(buffer2.size(), 0u);
 }
 
 TEST_F(GDBRemoteCommunicationClientTest, SendGetMetaDataPacket) {
-  TestClient client;
-  MockServer server;
-  Connect(client, server);
-  if (HasFailure())
-    return;
-
   lldb::tid_t thread_id = 0x23;
   lldb::user_id_t trace_id = 3;
 
@@ -506,7 +423,7 @@ TEST_F(GDBRemoteCommunicationClientTest, SendGetMetaDataPacket) {
   std::string expected_packet2 = R"("traceid" : 3})";
   HandlePacket(server, expected_packet1+expected_packet2, "123456");
   ASSERT_TRUE(result.get().Success());
-  ASSERT_EQ(buffer.size(), 3);
+  ASSERT_EQ(buffer.size(), 3u);
   ASSERT_EQ(buf[0], 0x12);
   ASSERT_EQ(buf[1], 0x34);
   ASSERT_EQ(buf[2], 0x56);
@@ -518,16 +435,10 @@ TEST_F(GDBRemoteCommunicationClientTest, SendGetMetaDataPacket) {
 
   HandlePacket(server, expected_packet1+expected_packet2, "E23");
   ASSERT_FALSE(result.get().Success());
-  ASSERT_EQ(buffer2.size(), 0);
+  ASSERT_EQ(buffer2.size(), 0u);
 }
 
 TEST_F(GDBRemoteCommunicationClientTest, SendGetTraceConfigPacket) {
-  TestClient client;
-  MockServer server;
-  Connect(client, server);
-  if (HasFailure())
-    return;
-
   lldb::tid_t thread_id = 0x23;
   lldb::user_id_t trace_id = 3;
   TraceOptions options;
@@ -545,8 +456,8 @@ TEST_F(GDBRemoteCommunicationClientTest, SendGetTraceConfigPacket) {
       R"(],"metabuffersize" : 8192,"threadid" : 35,"type" : 1}])";
   HandlePacket(server, expected_packet, response1+response2);
   ASSERT_TRUE(result.get().Success());
-  ASSERT_EQ(options.getTraceBufferSize(), 8192);
-  ASSERT_EQ(options.getMetaDataBufferSize(), 8192);
+  ASSERT_EQ(options.getTraceBufferSize(), 8192u);
+  ASSERT_EQ(options.getMetaDataBufferSize(), 8192u);
   ASSERT_EQ(options.getType(), 1);
 
   auto custom_params = options.getTraceParams();
@@ -556,9 +467,8 @@ TEST_F(GDBRemoteCommunicationClientTest, SendGetTraceConfigPacket) {
 
   ASSERT_TRUE(custom_params);
   ASSERT_EQ(custom_params->GetType(), eStructuredDataTypeDictionary);
-  ASSERT_TRUE(
-      custom_params->GetValueForKeyAsInteger<uint64_t>("psb", psb_value));
-  ASSERT_EQ(psb_value, 1);
+  ASSERT_TRUE(custom_params->GetValueForKeyAsInteger("psb", psb_value));
+  ASSERT_EQ(psb_value, 1u);
   ASSERT_TRUE(
       custom_params->GetValueForKeyAsString("tracetech", trace_tech_value));
   ASSERT_STREQ(trace_tech_value.data(), "intel-pt");

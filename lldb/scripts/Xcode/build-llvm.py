@@ -53,6 +53,9 @@ def fallback_repo(name):
     }
 
 def XCODE_REPOSITORIES():
+    override = repo.get_override()
+    if override:
+        return [process_repo(r) for r in override]
     identifier = repo.identifier()
     if identifier == None:
         return [fallback_repo(n) for n in ["llvm", "clang", "swift", "cmark", "ninja"]]

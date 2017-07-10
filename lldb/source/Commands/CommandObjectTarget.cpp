@@ -16,7 +16,6 @@
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Core/State.h"
-#include "lldb/Core/Timer.h"
 #include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/DataFormatters/ValueObjectPrinter.h"
 #include "lldb/Host/OptionParser.h"
@@ -50,6 +49,7 @@
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadSpec.h"
+#include "lldb/Utility/Timer.h"
 
 #include "llvm/Support/FileSystem.h"
 
@@ -3438,6 +3438,23 @@ protected:
         result.GetOutputStream().Printf("eh_frame augmented UnwindPlan:\n");
         ehframe_augmented_sp->Dump(result.GetOutputStream(), thread.get(),
                                    LLDB_INVALID_ADDRESS);
+        result.GetOutputStream().Printf("\n");
+      }
+
+      if (UnwindPlanSP plan_sp =
+              func_unwinders_sp->GetDebugFrameUnwindPlan(*target, 0)) {
+        result.GetOutputStream().Printf("debug_frame UnwindPlan:\n");
+        plan_sp->Dump(result.GetOutputStream(), thread.get(),
+                      LLDB_INVALID_ADDRESS);
+        result.GetOutputStream().Printf("\n");
+      }
+
+      if (UnwindPlanSP plan_sp =
+              func_unwinders_sp->GetDebugFrameAugmentedUnwindPlan(*target,
+                                                                  *thread, 0)) {
+        result.GetOutputStream().Printf("debug_frame augmented UnwindPlan:\n");
+        plan_sp->Dump(result.GetOutputStream(), thread.get(),
+                      LLDB_INVALID_ADDRESS);
         result.GetOutputStream().Printf("\n");
       }
 

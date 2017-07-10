@@ -17,13 +17,13 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/LTO/Caching.h"
 #include "llvm/LTO/Config.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Object/SymbolicFile.h"
 #include "llvm/Support/CodeGen.h"
-#include "llvm/Support/ELF.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -136,6 +136,7 @@ void BitcodeCompiler::add(BitcodeFile &F) {
         Sym->IsUsedInRegularObj || (R.Prevailing && Sym->includeInDynsym());
     if (R.Prevailing)
       undefine(Sym);
+    R.LinkerRedefined = Config->RenamedSymbols.count(Sym);
   }
   checkError(LTOObj->add(std::move(F.Obj), Resols));
 }

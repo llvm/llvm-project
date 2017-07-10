@@ -929,6 +929,16 @@ public:
     void swap(tuple&) _NOEXCEPT {}
 };
 
+#ifdef __cpp_deduction_guides
+// NOTE: These are not yet standardized, but are required to simulate the
+// implicit deduction guide that should be generated had libc++ declared the
+// tuple-like constructors "correctly"
+template <class _Alloc, class ..._Args>
+tuple(allocator_arg_t, const _Alloc&, tuple<_Args...> const&) -> tuple<_Args...>;
+template <class _Alloc, class ..._Args>
+tuple(allocator_arg_t, const _Alloc&, tuple<_Args...>&&) -> tuple<_Args...>;
+#endif
+
 template <class ..._Tp>
 inline _LIBCPP_INLINE_VISIBILITY
 typename enable_if

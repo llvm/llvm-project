@@ -13,15 +13,17 @@
 #include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
 #include "Plugins/Language/ObjC/ObjCLanguage.h"
 #include "lldb/Core/Module.h"
-#include "lldb/Core/Section.h"
 #include "lldb/Core/STLUtils.h"
-#include "lldb/Core/Timer.h"
+#include "lldb/Core/Section.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/Symtab.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/Utility/Timer.h"
+
+
 #include "lldb/Target/SwiftLanguageRuntime.h"
 
 using namespace lldb;

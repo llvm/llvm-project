@@ -9,19 +9,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
+#include "Plugins/SymbolVendor/ELF/SymbolVendorELF.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Host/HostInfo.h"
+#include "unittests/Utility/Helpers/TestUtilities.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
-
-#include "Plugins/SymbolVendor/ELF/SymbolVendorELF.h"
-
-extern const char *TestMainArgv0;
 
 using namespace lldb_private;
 using namespace lldb;
@@ -32,10 +30,6 @@ public:
     HostInfo::Initialize();
     ObjectFileELF::Initialize();
     SymbolVendorELF::Initialize();
-
-    m_inputs_folder = llvm::sys::path::parent_path(TestMainArgv0);
-    llvm::sys::path::append(m_inputs_folder, "Inputs");
-    llvm::sys::fs::make_absolute(m_inputs_folder);
   }
 
   void TearDown() override {
@@ -45,7 +39,6 @@ public:
   }
 
 protected:
-  llvm::SmallString<128> m_inputs_folder;
 };
 
 #define ASSERT_NO_ERROR(x)                                                     \
@@ -60,9 +53,8 @@ protected:
   }
 
 TEST_F(ObjectFileELFTest, SectionsResolveConsistently) {
-  llvm::SmallString<128> yaml = m_inputs_folder;
-  llvm::sys::path::append(yaml, "sections-resolve-consistently.yaml");
-  llvm::SmallString<128> obj = m_inputs_folder;
+  std::string yaml = GetInputFilePath("sections-resolve-consistently.yaml");
+  llvm::SmallString<128> obj;
   ASSERT_NO_ERROR(llvm::sys::fs::createTemporaryFile(
       "sections-resolve-consistently-%%%%%%", "obj", obj));
 

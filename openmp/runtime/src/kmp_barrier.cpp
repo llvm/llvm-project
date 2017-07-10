@@ -883,9 +883,9 @@ static void __kmp_hierarchical_barrier_gather(
           ANNOTATE_REDUCE_BEFORE(reduce);
           ANNOTATE_REDUCE_BEFORE(&team->t.t_bar);
         }
-        (void)KMP_TEST_THEN_AND64(
-            (volatile kmp_int64 *)&thr_bar->b_arrived,
-            ~(thr_bar->leaf_state)); // clear leaf_state bits
+        // clear leaf_state bits
+        KMP_TEST_THEN_AND64(CCAST(kmp_uint64 *, &thr_bar->b_arrived),
+                            ~(thr_bar->leaf_state));
       }
       // Next, wait for higher level children on each child's b_arrived flag
       for (kmp_uint32 d = 1; d < thr_bar->my_level;
@@ -1035,7 +1035,8 @@ static void __kmp_hierarchical_barrier_release(
         TCW_8(thr_bar->b_go,
               KMP_INIT_BARRIER_STATE); // Reset my b_go flag for next time
       } else { // Reset my bits on parent's b_go flag
-        ((char *)&(thr_bar->parent_bar->b_go))[thr_bar->offset] = 0;
+        (RCAST(volatile char *,
+               &(thr_bar->parent_bar->b_go)))[thr_bar->offset] = 0;
       }
     }
     thr_bar->wait_flag = KMP_BARRIER_NOT_WAITING;
@@ -1210,7 +1211,6 @@ static void __kmp_hierarchical_barrier_release(
                 gtid, team->t.t_id, tid, bt));
 }
 
-
 // End of Barrier Algorithms
 
 // Internal function to do a barrier.
@@ -1347,7 +1347,7 @@ int __kmp_barrier(enum barrier_type bt, int gtid, int is_split,
     if (KMP_MASTER_TID(tid)) {
       status = 0;
       if (__kmp_tasking_mode != tskm_immediate_exec) {
-          __kmp_task_team_wait(this_thr, team USE_ITT_BUILD_ARG(itt_sync_obj));
+        __kmp_task_team_wait(this_thr, team USE_ITT_BUILD_ARG(itt_sync_obj));
       }
 #if USE_DEBUGGER
       // Let the debugger know: All threads are arrived and starting leaving the
@@ -1828,9 +1828,8 @@ void __kmp_fork_barrier(int gtid, int tid) {
 #endif
 
     if (__kmp_tasking_mode != tskm_immediate_exec) {
-      __kmp_task_team_setup(
-          this_thr, team,
-          0); // 0 indicates setup current task team if nthreads > 1
+      // 0 indicates setup current task team if nthreads > 1
+      __kmp_task_team_setup(this_thr, team, 0);
     }
 
     /* The master thread may have changed its blocktime between the join barrier

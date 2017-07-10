@@ -39,7 +39,9 @@ public:
   //------------------------------------------------------------------
   // Constructors and Destructors
   //------------------------------------------------------------------
-  GDBRemoteCommunicationServerLLGS(MainLoop &mainloop);
+  GDBRemoteCommunicationServerLLGS(
+      MainLoop &mainloop,
+      const NativeProcessProtocol::Factory &process_factory);
 
   //------------------------------------------------------------------
   /// Specify the program to launch and its arguments.
@@ -108,20 +110,21 @@ public:
 protected:
   MainLoop &m_mainloop;
   MainLoop::ReadHandleUP m_network_handle_up;
-  lldb::tid_t m_current_tid;
-  lldb::tid_t m_continue_tid;
+  const NativeProcessProtocol::Factory &m_process_factory;
+  lldb::tid_t m_current_tid = LLDB_INVALID_THREAD_ID;
+  lldb::tid_t m_continue_tid = LLDB_INVALID_THREAD_ID;
   std::recursive_mutex m_debugged_process_mutex;
   NativeProcessProtocolSP m_debugged_process_sp;
 
   Communication m_stdio_communication;
   MainLoop::ReadHandleUP m_stdio_handle_up;
 
-  lldb::StateType m_inferior_prev_state;
+  lldb::StateType m_inferior_prev_state = lldb::StateType::eStateInvalid;
   std::unique_ptr<llvm::MemoryBuffer> m_active_auxv_buffer_up;
   std::mutex m_saved_registers_mutex;
   std::unordered_map<uint32_t, lldb::DataBufferSP> m_saved_registers_map;
-  uint32_t m_next_saved_registers_id;
-  bool m_handshake_completed : 1;
+  uint32_t m_next_saved_registers_id = 1;
+  bool m_handshake_completed = false;
 
   PacketResult SendONotification(const char *buffer, uint32_t len);
 

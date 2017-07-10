@@ -65,5 +65,5 @@ for.end13:                                        ; preds = %for.cond
 ; OUTER-NEXT: for (int c0 = 0; c0 < m + n - 3; c0 += 1)
 ; OUTER-NEXT:   #pragma simd
 ; OUTER-NEXT:   #pragma known-parallel
-; OUTER-NEXT:   for (int c1 = max(0, -m + c0 + 2); c1 <= min(n - 2, c0); c1 += 1)
-; OUTER-NEXT:     Stmt_for_body3(c0 - c1, c1);
+; OUTER-NEXT:   for (int c1 = max(0, -n + c0 + 2); c1 <= min(m - 2, c0); c1 += 1)
+; OUTER-NEXT:     Stmt_for_body3(c1, c0 - c1);

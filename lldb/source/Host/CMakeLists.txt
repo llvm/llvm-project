@@ -13,7 +13,6 @@ add_host_subdirectory(common
   common/HostNativeThreadBase.cpp
   common/HostProcess.cpp
   common/HostThread.cpp
-  common/IOObject.cpp
   common/LockFileBase.cpp
   common/MainLoop.cpp
   common/MonitoringProcessLauncher.cpp
@@ -89,12 +88,6 @@ else()
     posix/PipePosix.cpp
     posix/ProcessLauncherPosixFork.cpp
     )
-
-  if (NOT (CMAKE_SYSTEM_NAME MATCHES "Android"))
-    add_host_subdirectory(posix
-      posix/ProcessLauncherPosix.cpp
-      )
-  endif()
 
   if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
     include_directories(SYSTEM ${LIBXML2_INCLUDE_DIR})

@@ -164,17 +164,42 @@ private:
 
 class MockCompilationDatabase : public GlobalCompilationDatabase {
 public:
+  MockCompilationDatabase(bool AddFreestandingFlag) {
+    // We have to add -ffreestanding to VFS-specific tests to avoid errors on
+    // implicit includes of stdc-predef.h.
+    if (AddFreestandingFlag)
+      ExtraClangFlags.push_back("-ffreestanding");
+  }
+
   std::vector<tooling::CompileCommand>
   getCompileCommands(PathRef File) override {
-    return {};
+    if (ExtraClangFlags.empty())
+      return {};
+
+    std::vector<std::string> CommandLine;
+    CommandLine.reserve(3 + ExtraClangFlags.size());
+    CommandLine.insert(CommandLine.end(), {"clang", "-fsyntax-only"});
+    CommandLine.insert(CommandLine.end(), ExtraClangFlags.begin(),
+                       ExtraClangFlags.end());
+    CommandLine.push_back(File.str());
+
+    return {tooling::CompileCommand(llvm::sys::path::parent_path(File),
+                                    llvm::sys::path::filename(File),
+                                    CommandLine, "")};
   }
+
+  std::vector<std::string> ExtraClangFlags;
 };
 
 class MockFSProvider : public FileSystemProvider {
 public:
-  Tagged<IntrusiveRefCntPtr<vfs::FileSystem>> getTaggedFileSystem() override {
+  Tagged<IntrusiveRefCntPtr<vfs::FileSystem>>
+  getTaggedFileSystem(PathRef File) override {
     IntrusiveRefCntPtr<vfs::InMemoryFileSystem> MemFS(
         new vfs::InMemoryFileSystem);
+    if (ExpectedFile)
+      EXPECT_EQ(*ExpectedFile, File);
+
     for (auto &FileAndContents : Files)
       MemFS->addFile(FileAndContents.first(), time_t(),
                      llvm::MemoryBuffer::getMemBuffer(FileAndContents.second,
@@ -186,6 +211,7 @@ public:
     return make_tagged(OverlayFS, Tag);
   }
 
+  llvm::Optional<SmallString<32>> ExpectedFile;
   llvm::StringMap<std::string> Files;
   VFSTag Tag = VFSTag();
 };
@@ -214,11 +240,6 @@ std::string dumpASTWithoutMemoryLocs(ClangdServer &Server, PathRef File) {
   return replacePtrsInDump(DumpWithMemLocs);
 }
 
-template <class T>
-std::unique_ptr<T> getAndMove(std::unique_ptr<T> Ptr, T *&Output) {
-  Output = Ptr.get();
-  return Ptr;
-}
 } // namespace
 
 class ClangdVFSTest : public ::testing::Test {
@@ -243,22 +264,22 @@ protected:
       PathRef SourceFileRelPath, StringRef SourceContents,
       std::vector<std::pair<PathRef, StringRef>> ExtraFiles = {},
       bool ExpectErrors = false) {
-    MockFSProvider *FS;
-    ErrorCheckingDiagConsumer *DiagConsumer;
-    ClangdServer Server(
-        llvm::make_unique<MockCompilationDatabase>(),
-        getAndMove(llvm::make_unique<ErrorCheckingDiagConsumer>(),
-                   DiagConsumer),
-        getAndMove(llvm::make_unique<MockFSProvider>(), FS),
-        /*RunSynchronously=*/false);
+    MockFSProvider FS;
+    ErrorCheckingDiagConsumer DiagConsumer;
+    MockCompilationDatabase CDB(/*AddFreestandingFlag=*/true);
+    ClangdServer Server(CDB, DiagConsumer, FS,
+                        /*RunSynchronously=*/false);
     for (const auto &FileWithContents : ExtraFiles)
-      FS->Files[getVirtualTestFilePath(FileWithContents.first)] =
+      FS.Files[getVirtualTestFilePath(FileWithContents.first)] =
           FileWithContents.second;
 
     auto SourceFilename = getVirtualTestFilePath(SourceFileRelPath);
+
+    FS.ExpectedFile = SourceFilename;
     Server.addDocument(SourceFilename, SourceContents);
+
     auto Result = dumpASTWithoutMemoryLocs(Server, SourceFilename);
-    EXPECT_EQ(ExpectErrors, DiagConsumer->hadErrorInLastDiags());
+    EXPECT_EQ(ExpectErrors, DiagConsumer.hadErrorInLastDiags());
     return Result;
   }
 };
@@ -299,13 +320,11 @@ int b = a;
 }
 
 TEST_F(ClangdVFSTest, Reparse) {
-  MockFSProvider *FS;
-  ErrorCheckingDiagConsumer *DiagConsumer;
-  ClangdServer Server(
-      llvm::make_unique<MockCompilationDatabase>(),
-      getAndMove(llvm::make_unique<ErrorCheckingDiagConsumer>(), DiagConsumer),
-      getAndMove(llvm::make_unique<MockFSProvider>(), FS),
-      /*RunSynchronously=*/false);
+  MockFSProvider FS;
+  ErrorCheckingDiagConsumer DiagConsumer;
+  MockCompilationDatabase CDB(/*AddFreestandingFlag=*/true);
+  ClangdServer Server(CDB, DiagConsumer, FS,
+                      /*RunSynchronously=*/false);
 
   const auto SourceContents = R"cpp(
 #include "foo.h"
@@ -315,34 +334,33 @@ int b = a;
   auto FooCpp = getVirtualTestFilePath("foo.cpp");
   auto FooH = getVirtualTestFilePath("foo.h");
 
-  FS->Files[FooH] = "int a;";
-  FS->Files[FooCpp] = SourceContents;
+  FS.Files[FooH] = "int a;";
+  FS.Files[FooCpp] = SourceContents;
+  FS.ExpectedFile = FooCpp;
 
   Server.addDocument(FooCpp, SourceContents);
   auto DumpParse1 = dumpASTWithoutMemoryLocs(Server, FooCpp);
-  EXPECT_FALSE(DiagConsumer->hadErrorInLastDiags());
+  EXPECT_FALSE(DiagConsumer.hadErrorInLastDiags());
 
   Server.addDocument(FooCpp, "");
   auto DumpParseEmpty = dumpASTWithoutMemoryLocs(Server, FooCpp);
-  EXPECT_FALSE(DiagConsumer->hadErrorInLastDiags());
+  EXPECT_FALSE(DiagConsumer.hadErrorInLastDiags());
 
   Server.addDocument(FooCpp, SourceContents);
   auto DumpParse2 = dumpASTWithoutMemoryLocs(Server, FooCpp);
-  EXPECT_FALSE(DiagConsumer->hadErrorInLastDiags());
+  EXPECT_FALSE(DiagConsumer.hadErrorInLastDiags());
 
   EXPECT_EQ(DumpParse1, DumpParse2);
   EXPECT_NE(DumpParse1, DumpParseEmpty);
 }
 
 TEST_F(ClangdVFSTest, ReparseOnHeaderChange) {
-  MockFSProvider *FS;
-  ErrorCheckingDiagConsumer *DiagConsumer;
+  MockFSProvider FS;
+  ErrorCheckingDiagConsumer DiagConsumer;
+  MockCompilationDatabase CDB(/*AddFreestandingFlag=*/true);
 
-  ClangdServer Server(
-      llvm::make_unique<MockCompilationDatabase>(),
-      getAndMove(llvm::make_unique<ErrorCheckingDiagConsumer>(), DiagConsumer),
-      getAndMove(llvm::make_unique<MockFSProvider>(), FS),
-      /*RunSynchronously=*/false);
+  ClangdServer Server(CDB, DiagConsumer, FS,
+                      /*RunSynchronously=*/false);
 
   const auto SourceContents = R"cpp(
 #include "foo.h"
@@ -352,50 +370,166 @@ int b = a;
   auto FooCpp = getVirtualTestFilePath("foo.cpp");
   auto FooH = getVirtualTestFilePath("foo.h");
 
-  FS->Files[FooH] = "int a;";
-  FS->Files[FooCpp] = SourceContents;
+  FS.Files[FooH] = "int a;";
+  FS.Files[FooCpp] = SourceContents;
+  FS.ExpectedFile = FooCpp;
 
   Server.addDocument(FooCpp, SourceContents);
   auto DumpParse1 = dumpASTWithoutMemoryLocs(Server, FooCpp);
-  EXPECT_FALSE(DiagConsumer->hadErrorInLastDiags());
+  EXPECT_FALSE(DiagConsumer.hadErrorInLastDiags());
 
-  FS->Files[FooH] = "";
+  FS.Files[FooH] = "";
   Server.forceReparse(FooCpp);
   auto DumpParseDifferent = dumpASTWithoutMemoryLocs(Server, FooCpp);
-  EXPECT_TRUE(DiagConsumer->hadErrorInLastDiags());
+  EXPECT_TRUE(DiagConsumer.hadErrorInLastDiags());
 
-  FS->Files[FooH] = "int a;";
+  FS.Files[FooH] = "int a;";
   Server.forceReparse(FooCpp);
   auto DumpParse2 = dumpASTWithoutMemoryLocs(Server, FooCpp);
-  EXPECT_FALSE(DiagConsumer->hadErrorInLastDiags());
+  EXPECT_FALSE(DiagConsumer.hadErrorInLastDiags());
 
   EXPECT_EQ(DumpParse1, DumpParse2);
   EXPECT_NE(DumpParse1, DumpParseDifferent);
 }
 
 TEST_F(ClangdVFSTest, CheckVersions) {
-  MockFSProvider *FS;
-  ErrorCheckingDiagConsumer *DiagConsumer;
-
-  ClangdServer Server(
-      llvm::make_unique<MockCompilationDatabase>(),
-      getAndMove(llvm::make_unique<ErrorCheckingDiagConsumer>(), DiagConsumer),
-      getAndMove(llvm::make_unique<MockFSProvider>(), FS),
-      /*RunSynchronously=*/true);
+  MockFSProvider FS;
+  ErrorCheckingDiagConsumer DiagConsumer;
+  MockCompilationDatabase CDB(/*AddFreestandingFlag=*/true);
+  ClangdServer Server(CDB, DiagConsumer, FS,
+                      /*RunSynchronously=*/true);
 
   auto FooCpp = getVirtualTestFilePath("foo.cpp");
   const auto SourceContents = "int a;";
-  FS->Files[FooCpp] = SourceContents;
-  FS->Tag = 123;
+  FS.Files[FooCpp] = SourceContents;
+  FS.ExpectedFile = FooCpp;
+
+  FS.Tag = "123";
+  Server.addDocument(FooCpp, SourceContents);
+  EXPECT_EQ(DiagConsumer.lastVFSTag(), FS.Tag);
+  EXPECT_EQ(Server.codeComplete(FooCpp, Position{0, 0}).Tag, FS.Tag);
+
+  FS.Tag = "321";
+  Server.addDocument(FooCpp, SourceContents);
+  EXPECT_EQ(DiagConsumer.lastVFSTag(), FS.Tag);
+  EXPECT_EQ(Server.codeComplete(FooCpp, Position{0, 0}).Tag, FS.Tag);
+}
+
+// Only enable this test on Unix
+#ifdef LLVM_ON_UNIX
+TEST_F(ClangdVFSTest, SearchLibDir) {
+  // Checks that searches for GCC installation is done through vfs.
+  MockFSProvider FS;
+  ErrorCheckingDiagConsumer DiagConsumer;
+  MockCompilationDatabase CDB(/*AddFreestandingFlag=*/true);
+  CDB.ExtraClangFlags.insert(
+      CDB.ExtraClangFlags.end(),
+      {"-xc++", "-target", "x86_64-linux-unknown", "-m64"});
+  ClangdServer Server(CDB, DiagConsumer, FS,
+                      /*RunSynchronously=*/true);
+
+  // Just a random gcc version string
+  SmallString<8> Version("4.9.3");
+
+  // A lib dir for gcc installation
+  SmallString<64> LibDir("/usr/lib/gcc/x86_64-linux-gnu");
+  llvm::sys::path::append(LibDir, Version);
+
+  // Put crtbegin.o into LibDir/64 to trick clang into thinking there's a gcc
+  // installation there.
+  SmallString<64> DummyLibFile;
+  llvm::sys::path::append(DummyLibFile, LibDir, "64", "crtbegin.o");
+  FS.Files[DummyLibFile] = "";
+
+  SmallString<64> IncludeDir("/usr/include/c++");
+  llvm::sys::path::append(IncludeDir, Version);
+
+  SmallString<64> StringPath;
+  llvm::sys::path::append(StringPath, IncludeDir, "string");
+  FS.Files[StringPath] = "class mock_string {};";
+
+  auto FooCpp = getVirtualTestFilePath("foo.cpp");
+  const auto SourceContents = R"cpp(
+#include <string>
+mock_string x;
+)cpp";
+  FS.Files[FooCpp] = SourceContents;
 
   Server.addDocument(FooCpp, SourceContents);
-  EXPECT_EQ(DiagConsumer->lastVFSTag(), FS->Tag);
-  EXPECT_EQ(Server.codeComplete(FooCpp, Position{0, 0}).Tag, FS->Tag);
+  EXPECT_FALSE(DiagConsumer.hadErrorInLastDiags());
 
-  FS->Tag = 321;
+  const auto SourceContentsWithError = R"cpp(
+#include <string>
+std::string x;
+)cpp";
+  Server.addDocument(FooCpp, SourceContentsWithError);
+  EXPECT_TRUE(DiagConsumer.hadErrorInLastDiags());
+}
+#endif // LLVM_ON_UNIX
+
+class ClangdCompletionTest : public ClangdVFSTest {
+protected:
+  bool ContainsItem(std::vector<CompletionItem> const &Items, StringRef Name) {
+    for (const auto &Item : Items) {
+      if (Item.insertText == Name)
+        return true;
+    }
+    return false;
+  }
+};
+
+TEST_F(ClangdCompletionTest, CheckContentsOverride) {
+  MockFSProvider FS;
+  ErrorCheckingDiagConsumer DiagConsumer;
+  MockCompilationDatabase CDB(/*AddFreestandingFlag=*/true);
+
+  ClangdServer Server(CDB, DiagConsumer, FS,
+                      /*RunSynchronously=*/false);
+
+  auto FooCpp = getVirtualTestFilePath("foo.cpp");
+  const auto SourceContents = R"cpp(
+int aba;
+int b =   ;
+)cpp";
+
+  const auto OverridenSourceContents = R"cpp(
+int cbc;
+int b =   ;
+)cpp";
+  // Complete after '=' sign. We need to be careful to keep the SourceContents'
+  // size the same.
+  // We complete on the 3rd line (2nd in zero-based numbering), because raw
+  // string literal of the SourceContents starts with a newline(it's easy to
+  // miss).
+  Position CompletePos = {2, 8};
+  FS.Files[FooCpp] = SourceContents;
+  FS.ExpectedFile = FooCpp;
+
   Server.addDocument(FooCpp, SourceContents);
-  EXPECT_EQ(DiagConsumer->lastVFSTag(), FS->Tag);
-  EXPECT_EQ(Server.codeComplete(FooCpp, Position{0, 0}).Tag, FS->Tag);
+
+  {
+    auto CodeCompletionResults1 =
+        Server.codeComplete(FooCpp, CompletePos, None).Value;
+    EXPECT_TRUE(ContainsItem(CodeCompletionResults1, "aba"));
+    EXPECT_FALSE(ContainsItem(CodeCompletionResults1, "cbc"));
+  }
+
+  {
+    auto CodeCompletionResultsOverriden =
+        Server
+            .codeComplete(FooCpp, CompletePos,
+                          StringRef(OverridenSourceContents))
+            .Value;
+    EXPECT_TRUE(ContainsItem(CodeCompletionResultsOverriden, "cbc"));
+    EXPECT_FALSE(ContainsItem(CodeCompletionResultsOverriden, "aba"));
+  }
+
+  {
+    auto CodeCompletionResults2 =
+        Server.codeComplete(FooCpp, CompletePos, None).Value;
+    EXPECT_TRUE(ContainsItem(CodeCompletionResults2, "aba"));
+    EXPECT_FALSE(ContainsItem(CodeCompletionResults2, "cbc"));
+  }
 }
 
 } // namespace clangd

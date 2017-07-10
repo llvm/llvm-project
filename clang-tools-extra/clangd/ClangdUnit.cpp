@@ -8,16 +8,26 @@
 //===---------------------------------------------------------------------===//
 
 #include "ClangdUnit.h"
+
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/Utils.h"
+#include "clang/Index/IndexingAction.h"
+#include "clang/Index/IndexDataConsumer.h"
+#include "clang/Lex/Lexer.h"
+#include "clang/Lex/MacroInfo.h"
+#include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/CompilationDatabase.h"
+#include "llvm/Support/Format.h"
+
+#include <algorithm>
 
 using namespace clang::clangd;
 using namespace clang;
 
 ClangdUnit::ClangdUnit(PathRef FileName, StringRef Contents,
+                       StringRef ResourceDir,
                        std::shared_ptr<PCHContainerOperations> PCHs,
                        std::vector<tooling::CompileCommand> Commands,
                        IntrusiveRefCntPtr<vfs::FileSystem> VFS)
@@ -26,10 +36,8 @@ ClangdUnit::ClangdUnit(PathRef FileName, StringRef Contents,
 
   // Inject the resource dir.
   // FIXME: Don't overwrite it if it's already there.
-  static int Dummy; // Just an address in this process.
-  std::string ResourceDir =
-      CompilerInvocation::GetResourcesPath("clangd", (void *)&Dummy);
-  Commands.front().CommandLine.push_back("-resource-dir=" + ResourceDir);
+  Commands.front().CommandLine.push_back("-resource-dir=" +
+                                         std::string(ResourceDir));
 
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
       CompilerInstance::createDiagnostics(new DiagnosticOptions);
@@ -52,6 +60,7 @@ ClangdUnit::ClangdUnit(PathRef FileName, StringRef Contents,
       /*IncludeBriefCommentsInCodeCompletion=*/true,
       /*AllowPCHWithCompilerErrors=*/true,
       /*SkipFunctionBodies=*/false,
+      /*SingleFileParse=*/false,
       /*UserFilesAreVolatile=*/false, /*ForSerialization=*/false,
       /*ModuleFormat=*/llvm::None,
       /*ErrAST=*/nullptr, VFS));
@@ -138,9 +147,31 @@ public:
           CodeCompleteOpts.IncludeBriefComments);
       if (CCS) {
         CompletionItem Item;
+        for (CodeCompletionString::Chunk C : *CCS) {
+          switch (C.Kind) {
+          case CodeCompletionString::CK_ResultType:
+            Item.detail = C.Text;
+            break;
+          case CodeCompletionString::CK_Optional:
+            break;
+          default:
+            Item.label += C.Text;
+            break;
+          }
+        }
         assert(CCS->getTypedText());
-        Item.label = CCS->getTypedText();
         Item.kind = getKind(Result.CursorKind);
+        // Priority is a 16-bit integer, hence at most 5 digits.
+        // Since identifiers with higher priority need to come first,
+        // we subtract the priority from 99999.
+        // For example, the sort text of the identifier 'a' with priority 35
+        // is 99964a.
+        assert(CCS->getPriority() < 99999 && "Expecting code completion result "
+                                             "priority to have at most "
+                                             "5-digits");
+        llvm::raw_string_ostream(Item.sortText) << llvm::format(
+            "%05d%s", 99999 - CCS->getPriority(), CCS->getTypedText());
+        Item.insertText = Item.filterText = CCS->getTypedText();
         if (CCS->getBriefComment())
           Item.documentation = CCS->getBriefComment();
         Items->push_back(std::move(Item));
@@ -236,4 +267,149 @@ std::vector<DiagWithFixIts> ClangdUnit::getLocalDiagnostics() const {
 
 void ClangdUnit::dumpAST(llvm::raw_ostream &OS) const {
   Unit->getASTContext().getTranslationUnitDecl()->dump(OS, true);
+}
+
+namespace {
+/// Finds declarations locations that a given source location refers to.
+class DeclarationLocationsFinder : public index::IndexDataConsumer {
+  std::vector<Location> DeclarationLocations;
+  const SourceLocation &SearchedLocation;
+  ASTUnit &Unit;
+public:
+  DeclarationLocationsFinder(raw_ostream &OS,
+      const SourceLocation &SearchedLocation, ASTUnit &Unit) :
+      SearchedLocation(SearchedLocation), Unit(Unit) {}
+
+  std::vector<Location> takeLocations() {
+    // Don't keep the same location multiple times.
+    // This can happen when nodes in the AST are visited twice.
+    std::sort(DeclarationLocations.begin(), DeclarationLocations.end());
+    auto last =
+        std::unique(DeclarationLocations.begin(), DeclarationLocations.end());
+    DeclarationLocations.erase(last, DeclarationLocations.end());
+    return std::move(DeclarationLocations);
+  }
+
+  bool handleDeclOccurence(const Decl* D, index::SymbolRoleSet Roles,
+      ArrayRef<index::SymbolRelation> Relations, FileID FID, unsigned Offset,
+      index::IndexDataConsumer::ASTNodeInfo ASTNode) override
+      {
+    if (isSearchedLocation(FID, Offset)) {
+      addDeclarationLocation(D->getSourceRange());
+    }
+    return true;
+  }
+
+private:
+  bool isSearchedLocation(FileID FID, unsigned Offset) const {
+    const SourceManager &SourceMgr = Unit.getSourceManager();
+    return SourceMgr.getFileOffset(SearchedLocation) == Offset
+        && SourceMgr.getFileID(SearchedLocation) == FID;
+  }
+
+  void addDeclarationLocation(const SourceRange& ValSourceRange) {
+    const SourceManager& SourceMgr = Unit.getSourceManager();
+    const LangOptions& LangOpts = Unit.getLangOpts();
+    SourceLocation LocStart = ValSourceRange.getBegin();
+    SourceLocation LocEnd = Lexer::getLocForEndOfToken(ValSourceRange.getEnd(),
+        0, SourceMgr, LangOpts);
+    Position Begin;
+    Begin.line = SourceMgr.getSpellingLineNumber(LocStart) - 1;
+    Begin.character = SourceMgr.getSpellingColumnNumber(LocStart) - 1;
+    Position End;
+    End.line = SourceMgr.getSpellingLineNumber(LocEnd) - 1;
+    End.character = SourceMgr.getSpellingColumnNumber(LocEnd) - 1;
+    Range R = {Begin, End};
+    Location L;
+    L.uri = URI::fromFile(
+        SourceMgr.getFilename(SourceMgr.getSpellingLoc(LocStart)));
+    L.range = R;
+    DeclarationLocations.push_back(L);
+  }
+
+  void finish() override {
+    // Also handle possible macro at the searched location.
+    Token Result;
+    if (!Lexer::getRawToken(SearchedLocation, Result, Unit.getSourceManager(),
+        Unit.getASTContext().getLangOpts(), false)) {
+      if (Result.is(tok::raw_identifier)) {
+        Unit.getPreprocessor().LookUpIdentifierInfo(Result);
+      }
+      IdentifierInfo* IdentifierInfo = Result.getIdentifierInfo();
+      if (IdentifierInfo && IdentifierInfo->hadMacroDefinition()) {
+        std::pair<FileID, unsigned int> DecLoc =
+            Unit.getSourceManager().getDecomposedExpansionLoc(SearchedLocation);
+        // Get the definition just before the searched location so that a macro
+        // referenced in a '#undef MACRO' can still be found.
+        SourceLocation BeforeSearchedLocation = Unit.getLocation(
+            Unit.getSourceManager().getFileEntryForID(DecLoc.first),
+            DecLoc.second - 1);
+        MacroDefinition MacroDef =
+            Unit.getPreprocessor().getMacroDefinitionAtLoc(IdentifierInfo,
+                BeforeSearchedLocation);
+        MacroInfo* MacroInf = MacroDef.getMacroInfo();
+        if (MacroInf) {
+          addDeclarationLocation(
+              SourceRange(MacroInf->getDefinitionLoc(),
+                  MacroInf->getDefinitionEndLoc()));
+        }
+      }
+    }
+  }
+};
+} // namespace
+
+std::vector<Location> ClangdUnit::findDefinitions(Position Pos) {
+  const FileEntry *FE = Unit->getFileManager().getFile(Unit->getMainFileName());
+  if (!FE)
+    return {};
+
+  SourceLocation SourceLocationBeg = getBeginningOfIdentifier(Pos, FE);
+
+  auto DeclLocationsFinder = std::make_shared<DeclarationLocationsFinder>(
+      llvm::errs(), SourceLocationBeg, *Unit);
+  index::IndexingOptions IndexOpts;
+  IndexOpts.SystemSymbolFilter =
+      index::IndexingOptions::SystemSymbolFilterKind::All;
+  IndexOpts.IndexFunctionLocals = true;
+  index::indexASTUnit(*Unit, DeclLocationsFinder, IndexOpts);
+
+  return DeclLocationsFinder->takeLocations();
+}
+
+SourceLocation ClangdUnit::getBeginningOfIdentifier(const Position &Pos,
+    const FileEntry *FE) const {
+  // The language server protocol uses zero-based line and column numbers.
+  // Clang uses one-based numbers.
+  SourceLocation InputLocation = Unit->getLocation(FE, Pos.line + 1,
+      Pos.character + 1);
+
+  if (Pos.character == 0) {
+    return InputLocation;
+  }
+
+  // This handle cases where the position is in the middle of a token or right
+  // after the end of a token. In theory we could just use GetBeginningOfToken
+  // to find the start of the token at the input position, but this doesn't
+  // work when right after the end, i.e. foo|.
+  // So try to go back by one and see if we're still inside the an identifier
+  // token. If so, Take the beginning of this token.
+  // (It should be the same identifier because you can't have two adjacent
+  // identifiers without another token in between.)
+  SourceLocation PeekBeforeLocation = Unit->getLocation(FE, Pos.line + 1,
+      Pos.character);
+  const SourceManager &SourceMgr = Unit->getSourceManager();
+  Token Result;
+  if (Lexer::getRawToken(PeekBeforeLocation, Result, SourceMgr,
+                         Unit->getASTContext().getLangOpts(), false)) {
+    // getRawToken failed, just use InputLocation.
+    return InputLocation;
+  }
+
+  if (Result.is(tok::raw_identifier)) {
+    return Lexer::GetBeginningOfToken(PeekBeforeLocation, SourceMgr,
+        Unit->getASTContext().getLangOpts());
+  }
+
+  return InputLocation;
 }

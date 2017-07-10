@@ -95,7 +95,7 @@ bool ObjCLanguage::MethodName::SetName(llvm::StringRef name, bool strict) {
   // or '-' can be omitted
   bool valid_prefix = false;
 
-  if (name[0] == '+' || name[0] == '-') {
+  if (name.size() > 1 && (name[0] == '+' || name[0] == '-')) {
     valid_prefix = name[1] == '[';
     if (name[0] == '+')
       m_type = eTypeClassMethod;
@@ -1032,6 +1032,7 @@ bool ObjCLanguage::GetFormatterPrefixSuffix(ValueObject &valobj,
   static ConstString g_NSNumberShort("NSNumber:short");
   static ConstString g_NSNumberInt("NSNumber:int");
   static ConstString g_NSNumberLong("NSNumber:long");
+  static ConstString g_NSNumberInt128("NSNumber:int128_t");
   static ConstString g_NSNumberFloat("NSNumber:float");
   static ConstString g_NSNumberDouble("NSNumber:double");
 
@@ -1065,6 +1066,10 @@ bool ObjCLanguage::GetFormatterPrefixSuffix(ValueObject &valobj,
   }
   if (type_hint == g_NSNumberLong) {
     prefix = "(long)";
+    return true;
+  }
+  if (type_hint == g_NSNumberInt128) {
+    prefix = "(int128_t)";
     return true;
   }
   if (type_hint == g_NSNumberFloat) {

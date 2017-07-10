@@ -24,10 +24,12 @@
 #endif
 
 #include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/Errno.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Process.h" // for llvm::sys::Process::FileDescriptorHasColors()
 
 #include "lldb/Host/Config.h"
+#include "lldb/Host/Host.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Log.h"
@@ -133,9 +135,8 @@ FILE *File::GetStream() {
           m_should_close_fd = true;
         }
 
-        do {
-          m_stream = ::fdopen(m_descriptor, mode);
-        } while (m_stream == NULL && errno == EINTR);
+        m_stream =
+            llvm::sys::RetryAfterSignal(nullptr, ::fdopen, m_descriptor, mode);
 
         // If we got a stream, then we own the stream and should no
         // longer own the descriptor because fclose() will close it for us
@@ -155,6 +156,19 @@ void File::SetStream(FILE *fh, bool transfer_ownership) {
     Close();
   m_stream = fh;
   m_own_stream = transfer_ownership;
+}
+
+static int DoOpen(const char *path, int flags, int mode) {
+#ifdef _MSC_VER
+  std::wstring wpath;
+  if (!llvm::ConvertUTF8toWide(path, wpath))
+    return -1;
+  int result;
+  ::_wsopen_s(&result, wpath.c_str(), flags, _SH_DENYNO, mode);
+  return result;
+#else
+  return ::open(path, flags, mode);
+#endif
 }
 
 Status File::Open(const char *path, uint32_t options, uint32_t permissions) {
@@ -222,20 +236,7 @@ Status File::Open(const char *path, uint32_t options, uint32_t permissions) {
       mode |= S_IXOTH;
   }
 
-  do {
-#ifdef _MSC_VER
-    std::wstring wpath;
-    if (!llvm::ConvertUTF8toWide(path, wpath)) {
-      m_descriptor = -1;
-      error.SetErrorString("Error converting path to UTF-16");
-      return error;
-    }
-    ::_wsopen_s(&m_descriptor, wpath.c_str(), oflag, _SH_DENYNO, mode);
-#else
-    m_descriptor = ::open(path, oflag, mode);
-#endif
-  } while (m_descriptor < 0 && errno == EINTR);
-
+  m_descriptor = llvm::sys::RetryAfterSignal(-1, DoOpen, path, oflag, mode);
   if (!DescriptorIsValid())
     error.SetErrorToErrno();
   else {
@@ -421,12 +422,7 @@ off_t File::SeekFromEnd(off_t offset, Status *error_ptr) {
 Status File::Flush() {
   Status error;
   if (StreamIsValid()) {
-    int err = 0;
-    do {
-      err = ::fflush(m_stream);
-    } while (err == EOF && errno == EINTR);
-
-    if (err == EOF)
+    if (llvm::sys::RetryAfterSignal(EOF, ::fflush, m_stream) == EOF)
       error.SetErrorToErrno();
   } else if (!DescriptorIsValid()) {
     error.SetErrorString("invalid file handle");
@@ -442,12 +438,7 @@ Status File::Sync() {
     if (err == 0)
       error.SetErrorToGenericError();
 #else
-    int err = 0;
-    do {
-      err = ::fsync(m_descriptor);
-    } while (err == -1 && errno == EINTR);
-
-    if (err == -1)
+    if (llvm::sys::RetryAfterSignal(-1, ::fsync, m_descriptor) == -1)
       error.SetErrorToErrno();
 #endif
   } else {
@@ -497,10 +488,7 @@ Status File::Read(void *buf, size_t &num_bytes) {
 
   ssize_t bytes_read = -1;
   if (DescriptorIsValid()) {
-    do {
-      bytes_read = ::read(m_descriptor, buf, num_bytes);
-    } while (bytes_read < 0 && errno == EINTR);
-
+    bytes_read = llvm::sys::RetryAfterSignal(-1, ::read, m_descriptor, buf, num_bytes);
     if (bytes_read == -1) {
       error.SetErrorToErrno();
       num_bytes = 0;
@@ -559,10 +547,8 @@ Status File::Write(const void *buf, size_t &num_bytes) {
 
   ssize_t bytes_written = -1;
   if (DescriptorIsValid()) {
-    do {
-      bytes_written = ::write(m_descriptor, buf, num_bytes);
-    } while (bytes_written < 0 && errno == EINTR);
-
+    bytes_written =
+        llvm::sys::RetryAfterSignal(-1, ::write, m_descriptor, buf, num_bytes);
     if (bytes_written == -1) {
       error.SetErrorToErrno();
       num_bytes = 0;
@@ -624,11 +610,8 @@ Status File::Read(void *buf, size_t &num_bytes, off_t &offset) {
 #ifndef _WIN32
   int fd = GetDescriptor();
   if (fd != kInvalidDescriptor) {
-    ssize_t bytes_read = -1;
-    do {
-      bytes_read = ::pread(fd, buf, num_bytes, offset);
-    } while (bytes_read < 0 && errno == EINTR);
-
+    ssize_t bytes_read =
+        llvm::sys::RetryAfterSignal(-1, ::pread, fd, buf, num_bytes, offset);
     if (bytes_read < 0) {
       num_bytes = 0;
       error.SetErrorToErrno();
@@ -730,11 +713,8 @@ Status File::Write(const void *buf, size_t &num_bytes, off_t &offset) {
   int fd = GetDescriptor();
   if (fd != kInvalidDescriptor) {
 #ifndef _WIN32
-    ssize_t bytes_written = -1;
-    do {
-      bytes_written = ::pwrite(m_descriptor, buf, num_bytes, offset);
-    } while (bytes_written < 0 && errno == EINTR);
-
+    ssize_t bytes_written =
+        llvm::sys::RetryAfterSignal(-1, ::pwrite, m_descriptor, buf, num_bytes, offset);
     if (bytes_written < 0) {
       num_bytes = 0;
       error.SetErrorToErrno();

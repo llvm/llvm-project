@@ -34,10 +34,11 @@ namespace lldb_private {
 
 class DWARFCallFrameInfo {
 public:
-  DWARFCallFrameInfo(ObjectFile &objfile, lldb::SectionSP &section,
-                     lldb::RegisterKind reg_kind, bool is_eh_frame);
+  enum Type { EH, DWARF };
 
-  ~DWARFCallFrameInfo();
+  DWARFCallFrameInfo(ObjectFile &objfile, lldb::SectionSP &section, Type type);
+
+  ~DWARFCallFrameInfo() = default;
 
   // Locate an AddressRange that includes the provided Address in this
   // object's eh_frame/debug_info
@@ -74,12 +75,20 @@ public:
 
 private:
   enum { CFI_AUG_MAX_SIZE = 8, CFI_HEADER_SIZE = 8 };
+  enum CFIVersion {
+    CFI_VERSION1 = 1, // DWARF v.2
+    CFI_VERSION3 = 3, // DWARF v.3
+    CFI_VERSION4 = 4  // DWARF v.4, v.5
+  };
 
   struct CIE {
     dw_offset_t cie_offset;
     uint8_t version;
     char augmentation[CFI_AUG_MAX_SIZE]; // This is typically empty or very
                                          // short.
+    uint8_t address_size = sizeof(uint32_t); // The size of a target address.
+    uint8_t segment_size = 0;                // The size of a segment selector.
+
     uint32_t code_align;
     int32_t data_align;
     uint32_t return_addr_reg_num;
@@ -134,21 +143,24 @@ private:
 
   ObjectFile &m_objfile;
   lldb::SectionSP m_section_sp;
-  lldb::RegisterKind m_reg_kind;
-  Flags m_flags;
+  Flags m_flags = 0;
   cie_map_t m_cie_map;
 
   DataExtractor m_cfi_data;
-  bool m_cfi_data_initialized; // only copy the section into the DE once
+  bool m_cfi_data_initialized = false; // only copy the section into the DE once
 
   FDEEntryMap m_fde_index;
-  bool m_fde_index_initialized; // only scan the section for FDEs once
+  bool m_fde_index_initialized = false; // only scan the section for FDEs once
   std::mutex m_fde_index_mutex; // and isolate the thread that does it
 
-  bool m_is_eh_frame;
+  Type m_type;
 
   CIESP
   ParseCIE(const uint32_t cie_offset);
+
+  lldb::RegisterKind GetRegisterKind() const {
+    return m_type == EH ? lldb::eRegisterKindEHFrame : lldb::eRegisterKindDWARF;
+  }
 };
 
 } // namespace lldb_private

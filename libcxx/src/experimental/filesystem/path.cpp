@@ -261,7 +261,8 @@ private:
 string_view_pair separate_filename(string_view_t const & s) {
     if (s == "." || s == ".." || s.empty()) return string_view_pair{s, ""};
     auto pos = s.find_last_of('.');
-    if (pos == string_view_t::npos) return string_view_pair{s, string_view{}};
+    if (pos == string_view_t::npos)
+        return string_view_pair{s, string_view_t{}};
     return string_view_pair{s.substr(0, pos), s.substr(pos)};
 }
 
@@ -396,7 +397,7 @@ int path::__compare(string_view_t __s) const {
 size_t hash_value(const path& __p) noexcept {
   auto PP = PathParser::CreateBegin(__p.native());
   size_t hash_value = 0;
-  std::hash<string_view> hasher;
+  std::hash<string_view_t> hasher;
   while (PP) {
     hash_value = __hash_combine(hash_value, hasher(*PP));
     ++PP;

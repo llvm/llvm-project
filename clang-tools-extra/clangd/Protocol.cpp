@@ -54,7 +54,7 @@ URI URI::parse(llvm::yaml::ScalarNode *Param) {
 }
 
 std::string URI::unparse(const URI &U) {
-  return U.uri;
+  return "\"" + U.uri + "\"";
 }
 
 llvm::Optional<TextDocumentIdentifier>
@@ -162,6 +162,14 @@ std::string Range::unparse(const Range &P) {
   return Result;
 }
 
+std::string Location::unparse(const Location &P) {
+  std::string Result;
+  llvm::raw_string_ostream(Result) << llvm::format(
+      R"({"uri": %s, "range": %s})", URI::unparse(P.uri).c_str(),
+      Range::unparse(P.range).c_str());
+  return Result;
+}
+
 llvm::Optional<TextDocumentItem>
 TextDocumentItem::parse(llvm::yaml::MappingNode *Params) {
   TextDocumentItem Result;
@@ -191,6 +199,33 @@ TextDocumentItem::parse(llvm::yaml::MappingNode *Params) {
       Result.text = Value->getValue(Storage);
     } else {
       return llvm::None;
+    }
+  }
+  return Result;
+}
+
+llvm::Optional<Metadata> Metadata::parse(llvm::yaml::MappingNode *Params) {
+  Metadata Result;
+  for (auto &NextKeyValue : *Params) {
+    auto *KeyString = dyn_cast<llvm::yaml::ScalarNode>(NextKeyValue.getKey());
+    if (!KeyString)
+      return llvm::None;
+
+    llvm::SmallString<10> KeyStorage;
+    StringRef KeyValue = KeyString->getValue(KeyStorage);
+    auto *Value = NextKeyValue.getValue();
+
+    llvm::SmallString<10> Storage;
+    if (KeyValue == "extraFlags") {
+      auto *Seq = dyn_cast<llvm::yaml::SequenceNode>(Value);
+      if (!Seq)
+        return llvm::None;
+      for (auto &Item : *Seq) {
+        auto *Node = dyn_cast<llvm::yaml::ScalarNode>(&Item);
+        if (!Node)
+          return llvm::None;
+        Result.extraFlags.push_back(Node->getValue(Storage));
+      }
     }
   }
   return Result;
@@ -257,6 +292,11 @@ DidOpenTextDocumentParams::parse(llvm::yaml::MappingNode *Params) {
       if (!Parsed)
         return llvm::None;
       Result.textDocument = std::move(*Parsed);
+    } else if (KeyValue == "metadata") {
+      auto Parsed = Metadata::parse(Value);
+      if (!Parsed)
+        return llvm::None;
+      Result.metadata = std::move(*Parsed);
     } else {
       return llvm::None;
     }

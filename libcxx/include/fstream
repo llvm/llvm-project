@@ -617,7 +617,7 @@ basic_filebuf<_CharT, _Traits>::underflow()
                                  static_cast<size_t>(__extbufend_ - __extbufnext_));
             codecvt_base::result __r;
             __st_last_ = __st_;
-            size_t __nr = fread((void*)__extbufnext_, 1, __nmemb, __file_);
+            size_t __nr = fread((void*) const_cast<char *>(__extbufnext_), 1, __nmemb, __file_);
             if (__nr != 0)
             {
                 if (!__cv_)
@@ -630,7 +630,8 @@ basic_filebuf<_CharT, _Traits>::underflow()
                                        this->eback() + __ibs_, __inext);
                 if (__r == codecvt_base::noconv)
                 {
-                    this->setg((char_type*)__extbuf_, (char_type*)__extbuf_, (char_type*)__extbufend_);
+                    this->setg((char_type*)__extbuf_, (char_type*)__extbuf_, 
+                                          (char_type*)const_cast<char *>(__extbufend_));
                     __c = traits_type::to_int_type(*this->gptr());
                 }
                 else if (__inext != this->eback() + __unget_sz)
@@ -722,7 +723,7 @@ basic_filebuf<_CharT, _Traits>::overflow(int_type __c)
                         return traits_type::eof();
                     if (__r == codecvt_base::partial)
                     {
-                        this->setp((char_type*)__e, this->pptr());
+                        this->setp(const_cast<char_type*>(__e), this->pptr());
                         this->pbump(this->epptr() - this->pbase());
                     }
                 }

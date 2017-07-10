@@ -194,14 +194,17 @@ private:
   void initializeSymbols();
   void initializeDwarfLine();
   InputSectionBase *getRelocTarget(const Elf_Shdr &Sec);
-  InputSectionBase *createInputSection(const Elf_Shdr &Sec,
-                                       StringRef SectionStringTable);
+  InputSectionBase *createInputSection(const Elf_Shdr &Sec);
+  StringRef getSectionName(const Elf_Shdr &Sec);
 
   bool shouldMerge(const Elf_Shdr &Sec);
   SymbolBody *createSymbolBody(const Elf_Sym *Sym);
 
   // List of all symbols referenced or defined by this file.
   std::vector<SymbolBody *> SymbolBodies;
+
+  // .shstrtab contents.
+  StringRef SectionStringTable;
 
   // Debugging information to retrieve source file and line for error
   // reporting. Linker may find reasonable number of errors in a
@@ -248,6 +251,7 @@ public:
   explicit ArchiveFile(std::unique_ptr<Archive> &&File);
   static bool classof(const InputFile *F) { return F->kind() == ArchiveKind; }
   template <class ELFT> void parse();
+  ArrayRef<Symbol *> getSymbols() { return Symbols; }
 
   // Returns a memory buffer for a given symbol and the offset in the archive
   // for the member. An empty memory buffer and an offset of zero
@@ -258,6 +262,7 @@ public:
 private:
   std::unique_ptr<Archive> File;
   llvm::DenseSet<uint64_t> Seen;
+  std::vector<Symbol *> Symbols;
 };
 
 class BitcodeFile : public InputFile {

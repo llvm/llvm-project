@@ -156,7 +156,7 @@ template <class ELFT> void SymbolTable<ELFT>::trace(StringRef Name) {
 
 // Rename SYM as __wrap_SYM. The original symbol is preserved as __real_SYM.
 // Used to implement --wrap.
-template <class ELFT> void SymbolTable<ELFT>::wrap(StringRef Name) {
+template <class ELFT> void SymbolTable<ELFT>::addSymbolWrap(StringRef Name) {
   SymbolBody *B = find(Name);
   if (!B)
     return;
@@ -164,16 +164,16 @@ template <class ELFT> void SymbolTable<ELFT>::wrap(StringRef Name) {
   Symbol *Real = addUndefined(Saver.save("__real_" + Name));
   Symbol *Wrap = addUndefined(Saver.save("__wrap_" + Name));
 
-  // We rename symbols by replacing the old symbol's SymbolBody with the new
-  // symbol's SymbolBody. This causes all SymbolBody pointers referring to the
-  // old symbol to instead refer to the new symbol.
-  memcpy(Real->Body.buffer, Sym->Body.buffer, sizeof(Sym->Body));
-  memcpy(Sym->Body.buffer, Wrap->Body.buffer, sizeof(Wrap->Body));
+  // Tell LTO not to eliminate this symbol
+  Wrap->IsUsedInRegularObj = true;
+
+  Config->RenamedSymbols[Real] = {Sym, Real->Binding};
+  Config->RenamedSymbols[Sym] = {Wrap, Sym->Binding};
 }
 
 // Creates alias for symbol. Used to implement --defsym=ALIAS=SYM.
-template <class ELFT>
-void SymbolTable<ELFT>::alias(StringRef Alias, StringRef Name) {
+template <class ELFT> void SymbolTable<ELFT>::addSymbolAlias(StringRef Alias,
+                                                             StringRef Name) {
   SymbolBody *B = find(Name);
   if (!B) {
     error("-defsym: undefined symbol: " + Name);
@@ -181,7 +181,23 @@ void SymbolTable<ELFT>::alias(StringRef Alias, StringRef Name) {
   }
   Symbol *Sym = B->symbol();
   Symbol *AliasSym = addUndefined(Alias);
-  memcpy(AliasSym->Body.buffer, Sym->Body.buffer, sizeof(AliasSym->Body));
+
+  // Tell LTO not to eliminate this symbol
+  Sym->IsUsedInRegularObj = true;
+  Config->RenamedSymbols[AliasSym] = {Sym, AliasSym->Binding};
+}
+
+// Apply symbol renames created by -wrap and -defsym. The renames are created
+// before LTO in addSymbolWrap() and addSymbolAlias() to have a chance to inform
+// LTO (if LTO is running) not to include these symbols in IPO. Now that the
+// symbols are finalized, we can perform the replacement.
+template <class ELFT> void SymbolTable<ELFT>::applySymbolRenames() {
+  for (auto &KV : Config->RenamedSymbols) {
+    Symbol *Dst = KV.first;
+    Symbol *Src = KV.second.Target;
+    Dst->body()->copy(Src->body());
+    Dst->Binding = KV.second.OriginalBinding;
+  }
 }
 
 static uint8_t getMinVisibility(uint8_t VA, uint8_t VB) {
@@ -195,6 +211,13 @@ static uint8_t getMinVisibility(uint8_t VA, uint8_t VB) {
 // Find an existing symbol or create and insert a new one.
 template <class ELFT>
 std::pair<Symbol *, bool> SymbolTable<ELFT>::insert(StringRef Name) {
+  // <name>@@<version> means the symbol is the default version. In that
+  // case symbol <name> must exist and <name>@@<version> will be used to
+  // resolve references to <name>.
+  size_t Pos = Name.find("@@");
+  if (Pos != StringRef::npos)
+    Name = Name.take_front(Pos);
+
   auto P = Symtab.insert(
       {CachedHashStringRef(Name), SymIndex((int)SymVector.size(), false)});
   SymIndex &V = P.first->second;
@@ -498,18 +521,18 @@ SymbolBody *SymbolTable<ELFT>::findInCurrentDSO(StringRef Name) {
 }
 
 template <class ELFT>
-void SymbolTable<ELFT>::addLazyArchive(ArchiveFile *F,
-                                       const object::Archive::Symbol Sym) {
+Symbol *SymbolTable<ELFT>::addLazyArchive(ArchiveFile *F,
+                                          const object::Archive::Symbol Sym) {
   Symbol *S;
   bool WasInserted;
   StringRef Name = Sym.getName();
   std::tie(S, WasInserted) = insert(Name);
   if (WasInserted) {
     replaceBody<LazyArchive>(S, *F, Sym, SymbolBody::UnknownType);
-    return;
+    return S;
   }
   if (!S->body()->isUndefined())
-    return;
+    return S;
 
   // Weak undefined symbols should not fetch members from archives. If we were
   // to keep old symbol we would not know that an archive member was available
@@ -520,11 +543,12 @@ void SymbolTable<ELFT>::addLazyArchive(ArchiveFile *F,
   // to preserve its type. FIXME: Move the Type field to Symbol.
   if (S->isWeak()) {
     replaceBody<LazyArchive>(S, *F, Sym, S->body()->Type);
-    return;
+    return S;
   }
   std::pair<MemoryBufferRef, uint64_t> MBInfo = F->getMember(&Sym);
   if (!MBInfo.first.getBuffer().empty())
     addFile(createObjectFile(MBInfo.first, F->getName(), MBInfo.second));
+  return S;
 }
 
 template <class ELFT>
@@ -700,10 +724,9 @@ void SymbolTable<ELFT>::assignWildcardVersion(SymbolVersion Ver,
 template <class ELFT> void SymbolTable<ELFT>::scanVersionScript() {
   // Symbol themselves might know their versions because symbols
   // can contain versions in the form of <name>@<version>.
-  // Let them parse their names.
-  if (!Config->VersionDefinitions.empty())
-    for (Symbol *Sym : SymVector)
-      Sym->body()->parseSymbolVersion();
+  // Let them parse and update their names to exclude version suffix.
+  for (Symbol *Sym : SymVector)
+    Sym->body()->parseSymbolVersion();
 
   // Handle edge cases first.
   handleAnonymousVersion();

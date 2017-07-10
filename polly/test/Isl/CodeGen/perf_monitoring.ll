@@ -49,7 +49,6 @@ return:
 ; CHECK-NEXT:   %8 = load volatile i64, i64* @__polly_perf_cycles_in_scops
 ; CHECK-NEXT:   %9 = add i64 %8, %7
 ; CHECK-NEXT:   store volatile i64 %9, i64* @__polly_perf_cycles_in_scops
-; CHECK-NEXT:   br label %return
 
 
 ; CHECK:      define weak_odr void @__polly_perf_final() {
@@ -66,8 +65,6 @@ return:
 ; CHECK-NEXT:   %9 = call i32 @fflush(i8* null)
 ; CHECK-NEXT:   %10 = call i32 (...) @printf(i8* getelementptr inbounds ([8 x i8], [8 x i8]* @9, i32 0, i32 0), i8 addrspace(4)* getelementptr inbounds ([8 x i8], [8 x i8] addrspace(4)* @7, i32 0, i32 0), i64 %3, i8 addrspace(4)* getelementptr inbounds ([2 x i8], [2 x i8] addrspace(4)* @8, i32 0, i32 0))
 ; CHECK-NEXT:   %11 = call i32 @fflush(i8* null)
-; CHECK-NEXT:   ret void
-; CHECK-NEXT: }
 
 
 ; CHECK:      define weak_odr void @__polly_perf_init() {

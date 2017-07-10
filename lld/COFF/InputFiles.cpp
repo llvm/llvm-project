@@ -19,9 +19,9 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/BinaryFormat/COFF.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/COFF.h"
-#include "llvm/Support/COFF.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
@@ -132,17 +132,17 @@ void ObjectFile::initializeChunks() {
     if (!Config->Debug && Name.startswith(".debug"))
       continue;
 
-    // CodeView sections are stored to a different vector because they are
-    // not linked in the regular manner.
-    if (Name == ".debug" || Name.startswith(".debug$")) {
-      DebugChunks.push_back(make<SectionChunk>(this, Sec));
-      continue;
-    }
-
     if (Sec->Characteristics & llvm::COFF::IMAGE_SCN_LNK_REMOVE)
       continue;
     auto *C = make<SectionChunk>(this, Sec);
-    Chunks.push_back(C);
+
+    // CodeView sections are stored to a different vector because they are not
+    // linked in the regular manner.
+    if (C->isCodeView())
+      DebugChunks.push_back(C);
+    else
+      Chunks.push_back(C);
+
     SparseChunks[I] = C;
   }
 }
@@ -249,8 +249,12 @@ SymbolBody *ObjectFile::createDefined(COFFSymbolRef Sym, const void *AuxP,
     auto *Aux = reinterpret_cast<const coff_aux_section_definition *>(AuxP);
     if (Aux->Selection == IMAGE_COMDAT_SELECT_ASSOCIATIVE)
       if (auto *ParentSC = cast_or_null<SectionChunk>(
-              SparseChunks[Aux->getNumber(Sym.isBigObj())]))
+              SparseChunks[Aux->getNumber(Sym.isBigObj())])) {
         ParentSC->addAssociative(SC);
+        // If we already discarded the parent, discard the child.
+        if (ParentSC->isDiscarded())
+          SC->markDiscarded();
+      }
     SC->Checksum = Aux->CheckSum;
   }
 
@@ -376,6 +380,8 @@ MachineTypes BitcodeFile::getMachineType() {
     return I386;
   case Triple::arm:
     return ARMNT;
+  case Triple::aarch64:
+    return ARM64;
   default:
     return IMAGE_FILE_MACHINE_UNKNOWN;
   }

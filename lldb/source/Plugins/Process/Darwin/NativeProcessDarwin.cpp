@@ -1085,8 +1085,7 @@ Status NativeProcessDarwin::HandleWaitpidResult() {
                   "waitpid exiting pid from the pipe.  Will notify "
                   "as if parent process died with exit status -1.",
                   __FUNCTION__);
-    SetExitStatus(eExitTypeInvalid, -1, "failed to receive waitpid result",
-                  notify_status);
+    SetExitStatus(WaitStatus(WaitStatus::Exit, -1), notify_status);
     return error;
   }
 
@@ -1099,8 +1098,7 @@ Status NativeProcessDarwin::HandleWaitpidResult() {
                   "waitpid exit status from the pipe.  Will notify "
                   "as if parent process died with exit status -1.",
                   __FUNCTION__);
-    SetExitStatus(eExitTypeInvalid, -1, "failed to receive waitpid result",
-                  notify_status);
+    SetExitStatus(WaitStatus(WaitStatus::Exit, -1), notify_status);
     return error;
   }
 
@@ -1111,18 +1109,7 @@ Status NativeProcessDarwin::HandleWaitpidResult() {
                 __FUNCTION__, pid,
                 (pid == m_pid) ? "the inferior" : "not the inferior", status);
 
-  ExitType exit_type = eExitTypeInvalid;
-  int exit_status = -1;
-
-  if (WIFEXITED(status)) {
-    exit_type = eExitTypeExit;
-    exit_status = WEXITSTATUS(status);
-  } else if (WIFSIGNALED(status)) {
-    exit_type = eExitTypeSignal;
-    exit_status = WTERMSIG(status);
-  }
-
-  SetExitStatus(exit_type, exit_status, nullptr, notify_status);
+  SetExitStatus(WaitStatus::Decode(status), notify_status);
   return error;
 }
 

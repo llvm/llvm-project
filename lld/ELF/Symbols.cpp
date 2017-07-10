@@ -35,6 +35,7 @@ DefinedRegular *ElfSym::Edata1;
 DefinedRegular *ElfSym::Edata2;
 DefinedRegular *ElfSym::End1;
 DefinedRegular *ElfSym::End2;
+DefinedRegular *ElfSym::GlobalOffsetTable;
 DefinedRegular *ElfSym::MipsGp;
 DefinedRegular *ElfSym::MipsGpDisp;
 DefinedRegular *ElfSym::MipsLocalGp;
@@ -158,6 +159,14 @@ bool SymbolBody::isPreemptible() const {
   return true;
 }
 
+// Overwrites all attributes with Other's so that this symbol becomes
+// an alias to Other. This is useful for handling some options such as
+// --wrap.
+void SymbolBody::copy(SymbolBody *Other) {
+  memcpy(symbol()->Body.buffer, Other->symbol()->Body.buffer,
+         sizeof(Symbol::Body));
+}
+
 uint64_t SymbolBody::getVA(int64_t Addend) const {
   uint64_t OutVA = getSymVA(*this, Addend);
   return OutVA + Addend;
@@ -256,7 +265,12 @@ void SymbolBody::parseSymbolVersion() {
   }
 
   // It is an error if the specified version is not defined.
-  error(toString(File) + ": symbol " + S + " has undefined version " + Verstr);
+  // Usually version script is not provided when linking executable,
+  // but we may still want to override a versioned symbol from DSO,
+  // so we do not report error in this case.
+  if (Config->Shared)
+    error(toString(File) + ": symbol " + S + " has undefined version " +
+          Verstr);
 }
 
 Defined::Defined(Kind K, StringRefZ Name, bool IsLocal, uint8_t StOther,
@@ -264,15 +278,14 @@ Defined::Defined(Kind K, StringRefZ Name, bool IsLocal, uint8_t StOther,
     : SymbolBody(K, Name, IsLocal, StOther, Type) {}
 
 template <class ELFT> bool DefinedRegular::isMipsPIC() const {
+  typedef typename ELFT::Ehdr Elf_Ehdr;
   if (!Section || !isFunc())
     return false;
+
+  auto *Sec = cast<InputSectionBase>(Section);
+  const Elf_Ehdr *Hdr = Sec->template getFile<ELFT>()->getObj().getHeader();
   return (this->StOther & STO_MIPS_MIPS16) == STO_MIPS_PIC ||
-         (cast<InputSectionBase>(Section)
-              ->template getFile<ELFT>()
-              ->getObj()
-              .getHeader()
-              ->e_flags &
-          EF_MIPS_PIC);
+         (Hdr->e_flags & EF_MIPS_PIC);
 }
 
 Undefined::Undefined(StringRefZ Name, bool IsLocal, uint8_t StOther,

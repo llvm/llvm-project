@@ -40,7 +40,7 @@ function(add_lldb_unittest test_name)
     POST_BUILD
     COMMAND "${CMAKE_COMMAND}" -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/Inputs)
 
-  target_link_libraries(${test_name} ${ARG_LINK_LIBS} ${SWIFT_ALL_LIBS} ${CLANG_USED_LIBS} ${LLDB_SYSTEM_LIBS})
+  target_link_libraries(${test_name} ${ARG_LINK_LIBS} ${LLDB_SYSTEM_LIBS})
 endfunction()
 
 function(add_unittest_inputs test_name inputs)
@@ -68,6 +68,7 @@ add_subdirectory(Signals)
 add_subdirectory(Symbol)
 add_subdirectory(SymbolFile)
 add_subdirectory(Target)
+add_subdirectory(tools)
 add_subdirectory(UnwindAssembly)
 add_subdirectory(Utility)
 

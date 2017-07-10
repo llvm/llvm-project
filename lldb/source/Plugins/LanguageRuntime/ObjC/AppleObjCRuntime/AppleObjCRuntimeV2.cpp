@@ -30,7 +30,6 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Scalar.h"
 #include "lldb/Core/Section.h"
-#include "lldb/Core/Timer.h"
 #include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/FunctionCaller.h"
@@ -55,6 +54,7 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/Utility/Timer.h"
 
 #include "AppleObjCClassDescriptorV2.h"
 #include "AppleObjCDeclVendor.h"

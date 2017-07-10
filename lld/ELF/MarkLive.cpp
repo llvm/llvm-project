@@ -78,7 +78,7 @@ static void resolveReloc(InputSectionBase &Sec, RelT &Rel,
     typename ELFT::uint Offset = D->Value;
     if (D->isSection())
       Offset += getAddend<ELFT>(Sec, Rel);
-    Fn({cast<InputSectionBase>(D->Section)->Repl, Offset});
+    Fn({cast<InputSectionBase>(D->Section), Offset});
   } else if (auto *U = dyn_cast<Undefined>(&B)) {
     for (InputSectionBase *Sec : CNamedSections.lookup(U->getName()))
       Fn({Sec, 0});
@@ -229,6 +229,8 @@ template <class ELFT> void elf::markLive() {
   MarkSymbol(Symtab<ELFT>::X->find(Config->Init));
   MarkSymbol(Symtab<ELFT>::X->find(Config->Fini));
   for (StringRef S : Config->Undefined)
+    MarkSymbol(Symtab<ELFT>::X->find(S));
+  for (StringRef S : Script->Opt.ReferencedSymbols)
     MarkSymbol(Symtab<ELFT>::X->find(S));
 
   // Preserve externally-visible symbols if the symbols defined by this

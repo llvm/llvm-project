@@ -7,12 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-#include "llvm/ADT/STLExtras.h"
-
-// Project includes
 #include "CommandObjectRegister.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/RegisterValue.h"
@@ -32,6 +26,7 @@
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/DataExtractor.h"
+#include "llvm/Support/Errno.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -178,8 +173,8 @@ protected:
           if (set_idx < reg_ctx->GetRegisterSetCount()) {
             if (!DumpRegisterSet(m_exe_ctx, strm, reg_ctx, set_idx)) {
               if (errno)
-                result.AppendErrorWithFormat("register read failed: %s\n",
-                                             strerror(errno));
+                result.AppendErrorWithFormatv("register read failed: {0}\n",
+                                              llvm::sys::StrError());
               else
                 result.AppendError("unknown error while reading registers.\n");
               result.SetStatus(eReturnStatusFailed);

@@ -25,34 +25,13 @@ using namespace lldb_private;
 bool VMRange::ContainsValue(const VMRange::collection &coll,
                             lldb::addr_t value) {
   ValueInRangeUnaryPredicate in_range_predicate(value);
-  VMRange::const_iterator pos;
-  VMRange::const_iterator end = coll.end();
-  pos = std::find_if(coll.begin(), end, in_range_predicate);
-  if (pos != end)
-    return true;
-  return false;
+  return llvm::find_if(coll, in_range_predicate) != coll.end();
 }
 
 bool VMRange::ContainsRange(const VMRange::collection &coll,
                             const VMRange &range) {
   RangeInRangeUnaryPredicate in_range_predicate(range);
-  VMRange::const_iterator pos;
-  VMRange::const_iterator end = coll.end();
-  pos = std::find_if(coll.begin(), end, in_range_predicate);
-  if (pos != end)
-    return true;
-  return false;
-}
-
-size_t VMRange::FindRangeIndexThatContainsValue(const VMRange::collection &coll,
-                                                lldb::addr_t value) {
-  ValueInRangeUnaryPredicate in_range_predicate(value);
-  VMRange::const_iterator begin = coll.begin();
-  VMRange::const_iterator end = coll.end();
-  VMRange::const_iterator pos = std::find_if(begin, end, in_range_predicate);
-  if (pos != end)
-    return std::distance(begin, pos);
-  return UINT32_MAX;
+  return llvm::find_if(coll, in_range_predicate) != coll.end();
 }
 
 void VMRange::Dump(Stream *s, lldb::addr_t offset, uint32_t addr_width) const {
@@ -66,8 +45,7 @@ bool lldb_private::operator==(const VMRange &lhs, const VMRange &rhs) {
 }
 
 bool lldb_private::operator!=(const VMRange &lhs, const VMRange &rhs) {
-  return lhs.GetBaseAddress() != rhs.GetBaseAddress() ||
-         lhs.GetEndAddress() != rhs.GetEndAddress();
+  return !(lhs == rhs);
 }
 
 bool lldb_private::operator<(const VMRange &lhs, const VMRange &rhs) {
@@ -79,25 +57,13 @@ bool lldb_private::operator<(const VMRange &lhs, const VMRange &rhs) {
 }
 
 bool lldb_private::operator<=(const VMRange &lhs, const VMRange &rhs) {
-  if (lhs.GetBaseAddress() < rhs.GetBaseAddress())
-    return true;
-  else if (lhs.GetBaseAddress() > rhs.GetBaseAddress())
-    return false;
-  return lhs.GetEndAddress() <= rhs.GetEndAddress();
+  return !(lhs > rhs);
 }
 
 bool lldb_private::operator>(const VMRange &lhs, const VMRange &rhs) {
-  if (lhs.GetBaseAddress() > rhs.GetBaseAddress())
-    return true;
-  else if (lhs.GetBaseAddress() < rhs.GetBaseAddress())
-    return false;
-  return lhs.GetEndAddress() > rhs.GetEndAddress();
+  return rhs < lhs;
 }
 
 bool lldb_private::operator>=(const VMRange &lhs, const VMRange &rhs) {
-  if (lhs.GetBaseAddress() > rhs.GetBaseAddress())
-    return true;
-  else if (lhs.GetBaseAddress() < rhs.GetBaseAddress())
-    return false;
-  return lhs.GetEndAddress() >= rhs.GetEndAddress();
+  return !(lhs < rhs);
 }

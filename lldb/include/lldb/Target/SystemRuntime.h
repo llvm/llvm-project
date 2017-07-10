@@ -18,10 +18,10 @@
 
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/PluginInterface.h"
-#include "lldb/Core/StructuredData.h"
 #include "lldb/Target/QueueItem.h"
 #include "lldb/Target/QueueList.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/StructuredData.h"
 #include "lldb/lldb-private.h"
 #include "lldb/lldb-public.h"
 

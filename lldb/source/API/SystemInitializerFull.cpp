@@ -20,7 +20,6 @@
 #endif
 
 #include "lldb/Core/Debugger.h"
-#include "lldb/Core/Timer.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Initialization/SystemInitializerCommon.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
@@ -29,6 +28,7 @@
 #include "lldb/Symbol/JavaASTContext.h"
 #include "lldb/Symbol/OCamlASTContext.h"
 #include "lldb/Symbol/SwiftASTContext.h"
+#include "lldb/Utility/Timer.h"
 
 #include "Plugins/ABI/MacOSX-arm/ABIMacOSX_arm.h"
 #include "Plugins/ABI/MacOSX-arm64/ABIMacOSX_arm64.h"
@@ -50,9 +50,9 @@
 #include "Plugins/DynamicLoader/Static/DynamicLoaderStatic.h"
 #include "Plugins/DynamicLoader/Windows-DYLD/DynamicLoaderWindowsDYLD.h"
 #include "Plugins/Instruction/ARM64/EmulateInstructionARM64.h"
-#include "Plugins/InstrumentationRuntime/AddressSanitizer/AddressSanitizerRuntime.h"
-#include "Plugins/InstrumentationRuntime/ThreadSanitizer/ThreadSanitizerRuntime.h"
-#include "Plugins/InstrumentationRuntime/UndefinedBehaviorSanitizer/UndefinedBehaviorSanitizerRuntime.h"
+#include "Plugins/InstrumentationRuntime/ASan/ASanRuntime.h"
+#include "Plugins/InstrumentationRuntime/TSan/TSanRuntime.h"
+#include "Plugins/InstrumentationRuntime/UBSan/UBSanRuntime.h"
 #include "Plugins/InstrumentationRuntime/MainThreadChecker/MainThreadCheckerRuntime.h"
 #include "Plugins/InstrumentationRuntime/SwiftRuntimeReporting/SwiftRuntimeReporting.h"
 #include "Plugins/JITLoader/GDB/JITLoaderGDB.h"

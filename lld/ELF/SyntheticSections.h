@@ -509,20 +509,23 @@ public:
   size_t getSize() const override;
   bool empty() const override;
 
-  // Pairs of [CU Offset, CU length].
-  std::vector<std::pair<uint64_t, uint64_t>> CompilationUnits;
-
-  llvm::StringTableBuilder StringPool;
-
+  // Symbol table is a hash table for types and names.
+  // It is the area of gdb index.
   GdbHashTab SymbolTable;
 
-  // The CU vector portion of the constant pool.
+  // CU vector is a part of constant pool area of section.
   std::vector<std::set<uint32_t>> CuVectors;
 
-  std::vector<AddressEntry> AddressArea;
+  // String pool is also a part of constant pool, it follows CU vectors.
+  llvm::StringTableBuilder StringPool;
+
+  // Each chunk contains information gathered from a debug sections of single
+  // object and used to build different areas of gdb index.
+  std::vector<GdbIndexChunk> Chunks;
 
 private:
-  void readDwarf(InputSection *Sec);
+  GdbIndexChunk readDwarf(InputSection *Sec);
+  void buildIndex();
 
   uint32_t CuTypesOffset;
   uint32_t SymTabOffset;
@@ -648,7 +651,6 @@ private:
   void finalizeTailMerge();
   void finalizeNoTailMerge();
 
-  bool Finalized = false;
   llvm::StringTableBuilder Builder;
   std::vector<MergeInputSection *> Sections;
 };
@@ -745,6 +747,7 @@ private:
 template <class ELFT> InputSection *createCommonSection();
 InputSection *createInterpSection();
 template <class ELFT> MergeInputSection *createCommentSection();
+void decompressAndMergeSections();
 
 SymbolBody *addSyntheticLocal(StringRef Name, uint8_t Type, uint64_t Value,
                               uint64_t Size, InputSectionBase *Section);

@@ -7,7 +7,6 @@ add_lldb_library(lldbCore
   ArchSpec.cpp
   Broadcaster.cpp
   Communication.cpp
-  Connection.cpp
   Debugger.cpp
   Disassembler.cpp
   DumpDataExtractor.cpp
@@ -33,8 +32,6 @@ add_lldb_library(lldbCore
   State.cpp
   StreamAsynchronousIO.cpp
   StreamFile.cpp
-  StructuredData.cpp
-  Timer.cpp
   UserSettingsController.cpp
   Value.cpp
   ValueObject.cpp
@@ -70,6 +67,7 @@ add_lldb_library(lldbCore
     lldbPluginObjectFileJIT
 
   LINK_COMPONENTS
+    BinaryFormat
     Support
     Demangle
   )

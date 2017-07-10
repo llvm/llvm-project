@@ -197,46 +197,41 @@ int main_platform(int argc, char *argv[]) {
       break;
 
     case 'p': {
-      char *end = NULL;
-      long tmp_port_offset = strtoul(optarg, &end, 0);
-      if (end && *end == '\0') {
-        if (LOW_PORT <= tmp_port_offset && tmp_port_offset <= HIGH_PORT) {
-          port_offset = (uint16_t)tmp_port_offset;
-        } else {
-          fprintf(stderr, "error: port offset %li is not in the valid user "
-                          "port range of %u - %u\n",
-                  tmp_port_offset, LOW_PORT, HIGH_PORT);
-          option_error = 5;
-        }
-      } else {
-        fprintf(stderr, "error: invalid port offset string %s\n", optarg);
+      if (!llvm::to_integer(optarg, port_offset)) {
+        llvm::errs() << "error: invalid port offset string " << optarg << "\n";
         option_error = 4;
+        break;
+      }
+      if (port_offset < LOW_PORT || port_offset > HIGH_PORT) {
+        llvm::errs() << llvm::formatv("error: port offset {0} is not in the "
+                                      "valid user port range of {1} - {2}\n",
+                                      port_offset, LOW_PORT, HIGH_PORT);
+        option_error = 5;
       }
     } break;
 
     case 'P':
     case 'm':
     case 'M': {
-      char *end = NULL;
-      long portnum = strtoul(optarg, &end, 0);
-      if (end && *end == '\0') {
-        if (LOW_PORT <= portnum && portnum <= HIGH_PORT) {
-          if (ch == 'P')
-            gdbserver_portmap[(uint16_t)portnum] = LLDB_INVALID_PROCESS_ID;
-          else if (ch == 'm')
-            min_gdbserver_port = portnum;
-          else
-            max_gdbserver_port = portnum;
-        } else {
-          fprintf(stderr, "error: port number %li is not in the valid user "
-                          "port range of %u - %u\n",
-                  portnum, LOW_PORT, HIGH_PORT);
-          option_error = 1;
-        }
-      } else {
-        fprintf(stderr, "error: invalid port number string %s\n", optarg);
+      uint16_t portnum;
+      if (!llvm::to_integer(optarg, portnum)) {
+        llvm::errs() << "error: invalid port number string " << optarg << "\n";
         option_error = 2;
+        break;
       }
+      if (portnum < LOW_PORT || portnum > HIGH_PORT) {
+        llvm::errs() << llvm::formatv("error: port number {0} is not in the "
+                                      "valid user port range of {1} - {2}\n",
+                                      portnum, LOW_PORT, HIGH_PORT);
+        option_error = 1;
+        break;
+      }
+      if (ch == 'P')
+        gdbserver_portmap[portnum] = LLDB_INVALID_PROCESS_ID;
+      else if (ch == 'm')
+        min_gdbserver_port = portnum;
+      else
+        max_gdbserver_port = portnum;
     } break;
 
     case 'h': /* fall-through is intentional */

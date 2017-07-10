@@ -145,7 +145,7 @@ public:
 
 typedef std::shared_ptr<RejectReason> RejectReasonPtr;
 
-/// Stores all errors that ocurred during the detection.
+/// Stores all errors that occurred during the detection.
 class RejectLog {
   Region *R;
   llvm::SmallVector<RejectReasonPtr, 1> ErrorReports;

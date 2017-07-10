@@ -152,10 +152,16 @@ __isl_give isl_set *isl_set_fix_si(__isl_take isl_set *set,
 		enum isl_dim_type type, unsigned pos, int value);
 __isl_give isl_set *isl_set_lower_bound_si(__isl_take isl_set *set,
 		enum isl_dim_type type, unsigned pos, int value);
+__isl_give isl_basic_set *isl_basic_set_lower_bound_val(
+	__isl_take isl_basic_set *bset, enum isl_dim_type type, unsigned pos,
+	__isl_take isl_val *value);
 __isl_give isl_set *isl_set_lower_bound_val(__isl_take isl_set *set,
 	enum isl_dim_type type, unsigned pos, __isl_take isl_val *value);
 __isl_give isl_set *isl_set_upper_bound_si(__isl_take isl_set *set,
 	enum isl_dim_type type, unsigned pos, int value);
+__isl_give isl_basic_set *isl_basic_set_upper_bound_val(
+	__isl_take isl_basic_set *bset, enum isl_dim_type type, unsigned pos,
+	__isl_take isl_val *value);
 __isl_give isl_set *isl_set_upper_bound_val(__isl_take isl_set *set,
 	enum isl_dim_type type, unsigned pos, __isl_take isl_val *value);
 
@@ -489,6 +495,8 @@ __isl_give isl_mat *isl_basic_set_reduced_basis(__isl_keep isl_basic_set *bset);
 
 __isl_give isl_basic_set *isl_basic_set_coefficients(
 	__isl_take isl_basic_set *bset);
+__isl_give isl_basic_set_list *isl_basic_set_list_coefficients(
+	__isl_take isl_basic_set_list *list);
 __isl_give isl_basic_set *isl_set_coefficients(__isl_take isl_set *set);
 __isl_give isl_basic_set *isl_basic_set_solutions(
 	__isl_take isl_basic_set *bset);

@@ -361,8 +361,9 @@ addr_t Address::GetOpcodeLoadAddress(Target *target,
 }
 
 bool Address::SetOpcodeLoadAddress(lldb::addr_t load_addr, Target *target,
-                                   AddressClass addr_class) {
-  if (SetLoadAddress(load_addr, target)) {
+                                   AddressClass addr_class,
+                                   bool allow_section_end) {
+  if (SetLoadAddress(load_addr, target, allow_section_end)) {
     if (target) {
       if (addr_class == eAddressClassInvalid)
         addr_class = GetAddressClass();
@@ -1001,9 +1002,10 @@ AddressClass Address::GetAddressClass() const {
   return eAddressClassUnknown;
 }
 
-bool Address::SetLoadAddress(lldb::addr_t load_addr, Target *target) {
-  if (target &&
-      target->GetSectionLoadList().ResolveLoadAddress(load_addr, *this))
+bool Address::SetLoadAddress(lldb::addr_t load_addr, Target *target,
+                             bool allow_section_end) {
+  if (target && target->GetSectionLoadList().ResolveLoadAddress(
+                    load_addr, *this, allow_section_end))
     return true;
   m_section_wp.reset();
   m_offset = load_addr;

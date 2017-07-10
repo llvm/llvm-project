@@ -599,39 +599,39 @@ operator*(const complex<_Tp>& __z, const complex<_Tp>& __w)
     _Tp __bc = __b * __c;
     _Tp __x = __ac - __bd;
     _Tp __y = __ad + __bc;
-    if (__libcpp_isnan(__x) && __libcpp_isnan(__y))
+    if (__libcpp_isnan_or_builtin(__x) && __libcpp_isnan_or_builtin(__y))
     {
         bool __recalc = false;
-        if (__libcpp_isinf(__a) || __libcpp_isinf(__b))
+        if (__libcpp_isinf_or_builtin(__a) || __libcpp_isinf_or_builtin(__b))
         {
-            __a = copysign(__libcpp_isinf(__a) ? _Tp(1) : _Tp(0), __a);
-            __b = copysign(__libcpp_isinf(__b) ? _Tp(1) : _Tp(0), __b);
-            if (__libcpp_isnan(__c))
+            __a = copysign(__libcpp_isinf_or_builtin(__a) ? _Tp(1) : _Tp(0), __a);
+            __b = copysign(__libcpp_isinf_or_builtin(__b) ? _Tp(1) : _Tp(0), __b);
+            if (__libcpp_isnan_or_builtin(__c))
                 __c = copysign(_Tp(0), __c);
-            if (__libcpp_isnan(__d))
+            if (__libcpp_isnan_or_builtin(__d))
                 __d = copysign(_Tp(0), __d);
             __recalc = true;
         }
-        if (__libcpp_isinf(__c) || __libcpp_isinf(__d))
+        if (__libcpp_isinf_or_builtin(__c) || __libcpp_isinf_or_builtin(__d))
         {
-            __c = copysign(__libcpp_isinf(__c) ? _Tp(1) : _Tp(0), __c);
-            __d = copysign(__libcpp_isinf(__d) ? _Tp(1) : _Tp(0), __d);
-            if (__libcpp_isnan(__a))
+            __c = copysign(__libcpp_isinf_or_builtin(__c) ? _Tp(1) : _Tp(0), __c);
+            __d = copysign(__libcpp_isinf_or_builtin(__d) ? _Tp(1) : _Tp(0), __d);
+            if (__libcpp_isnan_or_builtin(__a))
                 __a = copysign(_Tp(0), __a);
-            if (__libcpp_isnan(__b))
+            if (__libcpp_isnan_or_builtin(__b))
                 __b = copysign(_Tp(0), __b);
             __recalc = true;
         }
-        if (!__recalc && (__libcpp_isinf(__ac) || __libcpp_isinf(__bd) ||
-                          __libcpp_isinf(__ad) || __libcpp_isinf(__bc)))
+        if (!__recalc && (__libcpp_isinf_or_builtin(__ac) || __libcpp_isinf_or_builtin(__bd) ||
+                          __libcpp_isinf_or_builtin(__ad) || __libcpp_isinf_or_builtin(__bc)))
         {
-            if (__libcpp_isnan(__a))
+            if (__libcpp_isnan_or_builtin(__a))
                 __a = copysign(_Tp(0), __a);
-            if (__libcpp_isnan(__b))
+            if (__libcpp_isnan_or_builtin(__b))
                 __b = copysign(_Tp(0), __b);
-            if (__libcpp_isnan(__c))
+            if (__libcpp_isnan_or_builtin(__c))
                 __c = copysign(_Tp(0), __c);
-            if (__libcpp_isnan(__d))
+            if (__libcpp_isnan_or_builtin(__d))
                 __d = copysign(_Tp(0), __d);
             __recalc = true;
         }
@@ -674,7 +674,7 @@ operator/(const complex<_Tp>& __z, const complex<_Tp>& __w)
     _Tp __c = __w.real();
     _Tp __d = __w.imag();
     _Tp __logbw = logb(fmax(fabs(__c), fabs(__d)));
-    if (__libcpp_isfinite(__logbw))
+    if (__libcpp_isfinite_or_builtin(__logbw))
     {
         __ilogbw = static_cast<int>(__logbw);
         __c = scalbn(__c, -__ilogbw);
@@ -683,24 +683,24 @@ operator/(const complex<_Tp>& __z, const complex<_Tp>& __w)
     _Tp __denom = __c * __c + __d * __d;
     _Tp __x = scalbn((__a * __c + __b * __d) / __denom, -__ilogbw);
     _Tp __y = scalbn((__b * __c - __a * __d) / __denom, -__ilogbw);
-    if (__libcpp_isnan(__x) && __libcpp_isnan(__y))
+    if (__libcpp_isnan_or_builtin(__x) && __libcpp_isnan_or_builtin(__y))
     {
-        if ((__denom == _Tp(0)) && (!__libcpp_isnan(__a) || !__libcpp_isnan(__b)))
+        if ((__denom == _Tp(0)) && (!__libcpp_isnan_or_builtin(__a) || !__libcpp_isnan_or_builtin(__b)))
         {
             __x = copysign(_Tp(INFINITY), __c) * __a;
             __y = copysign(_Tp(INFINITY), __c) * __b;
         }
-        else if ((__libcpp_isinf(__a) || __libcpp_isinf(__b)) && __libcpp_isfinite(__c) && __libcpp_isfinite(__d))
+        else if ((__libcpp_isinf_or_builtin(__a) || __libcpp_isinf_or_builtin(__b)) && __libcpp_isfinite_or_builtin(__c) && __libcpp_isfinite_or_builtin(__d))
         {
-            __a = copysign(__libcpp_isinf(__a) ? _Tp(1) : _Tp(0), __a);
-            __b = copysign(__libcpp_isinf(__b) ? _Tp(1) : _Tp(0), __b);
+            __a = copysign(__libcpp_isinf_or_builtin(__a) ? _Tp(1) : _Tp(0), __a);
+            __b = copysign(__libcpp_isinf_or_builtin(__b) ? _Tp(1) : _Tp(0), __b);
             __x = _Tp(INFINITY) * (__a * __c + __b * __d);
             __y = _Tp(INFINITY) * (__b * __c - __a * __d);
         }
-        else if (__libcpp_isinf(__logbw) && __logbw > _Tp(0) && __libcpp_isfinite(__a) && __libcpp_isfinite(__b))
+        else if (__libcpp_isinf_or_builtin(__logbw) && __logbw > _Tp(0) && __libcpp_isfinite_or_builtin(__a) && __libcpp_isfinite_or_builtin(__b))
         {
-            __c = copysign(__libcpp_isinf(__c) ? _Tp(1) : _Tp(0), __c);
-            __d = copysign(__libcpp_isinf(__d) ? _Tp(1) : _Tp(0), __d);
+            __c = copysign(__libcpp_isinf_or_builtin(__c) ? _Tp(1) : _Tp(0), __c);
+            __d = copysign(__libcpp_isinf_or_builtin(__d) ? _Tp(1) : _Tp(0), __d);
             __x = _Tp(0) * (__a * __c + __b * __d);
             __y = _Tp(0) * (__b * __c - __a * __d);
         }
@@ -910,9 +910,9 @@ inline _LIBCPP_INLINE_VISIBILITY
 _Tp
 norm(const complex<_Tp>& __c)
 {
-    if (__libcpp_isinf(__c.real()))
+    if (__libcpp_isinf_or_builtin(__c.real()))
         return abs(__c.real());
-    if (__libcpp_isinf(__c.imag()))
+    if (__libcpp_isinf_or_builtin(__c.imag()))
         return abs(__c.imag());
     return __c.real() * __c.real() + __c.imag() * __c.imag();
 }
@@ -955,7 +955,7 @@ complex<_Tp>
 proj(const complex<_Tp>& __c)
 {
     std::complex<_Tp> __r = __c;
-    if (__libcpp_isinf(__c.real()) || __libcpp_isinf(__c.imag()))
+    if (__libcpp_isinf_or_builtin(__c.real()) || __libcpp_isinf_or_builtin(__c.imag()))
         __r = complex<_Tp>(INFINITY, copysign(_Tp(0), __c.imag()));
     return __r;
 }
@@ -969,7 +969,7 @@ typename enable_if
 >::type
 proj(_Tp __re)
 {
-    if (__libcpp_isinf(__re))
+    if (__libcpp_isinf_or_builtin(__re))
         __re = abs(__re);
     return complex<_Tp>(__re);
 }
@@ -993,25 +993,25 @@ template<class _Tp>
 complex<_Tp>
 polar(const _Tp& __rho, const _Tp& __theta = _Tp(0))
 {
-    if (__libcpp_isnan(__rho) || signbit(__rho))
+    if (__libcpp_isnan_or_builtin(__rho) || signbit(__rho))
         return complex<_Tp>(_Tp(NAN), _Tp(NAN));
-    if (__libcpp_isnan(__theta))
+    if (__libcpp_isnan_or_builtin(__theta))
     {
-        if (__libcpp_isinf(__rho))
+        if (__libcpp_isinf_or_builtin(__rho))
             return complex<_Tp>(__rho, __theta);
         return complex<_Tp>(__theta, __theta);
     }
-    if (__libcpp_isinf(__theta))
+    if (__libcpp_isinf_or_builtin(__theta))
     {
-        if (__libcpp_isinf(__rho))
+        if (__libcpp_isinf_or_builtin(__rho))
             return complex<_Tp>(__rho, _Tp(NAN));
         return complex<_Tp>(_Tp(NAN), _Tp(NAN));
     }
     _Tp __x = __rho * cos(__theta);
-    if (__libcpp_isnan(__x))
+    if (__libcpp_isnan_or_builtin(__x))
         __x = 0;
     _Tp __y = __rho * sin(__theta);
-    if (__libcpp_isnan(__y))
+    if (__libcpp_isnan_or_builtin(__y))
         __y = 0;
     return complex<_Tp>(__x, __y);
 }
@@ -1042,13 +1042,13 @@ template<class _Tp>
 complex<_Tp>
 sqrt(const complex<_Tp>& __x)
 {
-    if (__libcpp_isinf(__x.imag()))
+    if (__libcpp_isinf_or_builtin(__x.imag()))
         return complex<_Tp>(_Tp(INFINITY), __x.imag());
-    if (__libcpp_isinf(__x.real()))
+    if (__libcpp_isinf_or_builtin(__x.real()))
     {
         if (__x.real() > _Tp(0))
-            return complex<_Tp>(__x.real(), __libcpp_isnan(__x.imag()) ? __x.imag() : copysign(_Tp(0), __x.imag()));
-        return complex<_Tp>(__libcpp_isnan(__x.imag()) ? __x.imag() : _Tp(0), copysign(__x.real(), __x.imag()));
+            return complex<_Tp>(__x.real(), __libcpp_isnan_or_builtin(__x.imag()) ? __x.imag() : copysign(_Tp(0), __x.imag()));
+        return complex<_Tp>(__libcpp_isnan_or_builtin(__x.imag()) ? __x.imag() : _Tp(0), copysign(__x.real(), __x.imag()));
     }
     return polar(sqrt(abs(__x)), arg(__x) / _Tp(2));
 }
@@ -1060,21 +1060,21 @@ complex<_Tp>
 exp(const complex<_Tp>& __x)
 {
     _Tp __i = __x.imag();
-    if (__libcpp_isinf(__x.real()))
+    if (__libcpp_isinf_or_builtin(__x.real()))
     {
         if (__x.real() < _Tp(0))
         {
-            if (!__libcpp_isfinite(__i))
+            if (!__libcpp_isfinite_or_builtin(__i))
                 __i = _Tp(1);
         }
-        else if (__i == 0 || !__libcpp_isfinite(__i))
+        else if (__i == 0 || !__libcpp_isfinite_or_builtin(__i))
         {
-            if (__libcpp_isinf(__i))
+            if (__libcpp_isinf_or_builtin(__i))
                 __i = _Tp(NAN);
             return complex<_Tp>(__x.real(), __i);
         }
     }
-    else if (__libcpp_isnan(__x.real()) && __x.imag() == 0)
+    else if (__libcpp_isnan_or_builtin(__x.real()) && __x.imag() == 0)
         return __x;
     _Tp __e = exp(__x.real());
     return complex<_Tp>(__e * cos(__i), __e * sin(__i));
@@ -1132,23 +1132,23 @@ complex<_Tp>
 asinh(const complex<_Tp>& __x)
 {
     const _Tp __pi(atan2(+0., -0.));
-    if (__libcpp_isinf(__x.real()))
+    if (__libcpp_isinf_or_builtin(__x.real()))
     {
-        if (__libcpp_isnan(__x.imag()))
+        if (__libcpp_isnan_or_builtin(__x.imag()))
             return __x;
-        if (__libcpp_isinf(__x.imag()))
+        if (__libcpp_isinf_or_builtin(__x.imag()))
             return complex<_Tp>(__x.real(), copysign(__pi * _Tp(0.25), __x.imag()));
         return complex<_Tp>(__x.real(), copysign(_Tp(0), __x.imag()));
     }
-    if (__libcpp_isnan(__x.real()))
+    if (__libcpp_isnan_or_builtin(__x.real()))
     {
-        if (__libcpp_isinf(__x.imag()))
+        if (__libcpp_isinf_or_builtin(__x.imag()))
             return complex<_Tp>(__x.imag(), __x.real());
         if (__x.imag() == 0)
             return __x;
         return complex<_Tp>(__x.real(), __x.real());
     }
-    if (__libcpp_isinf(__x.imag()))
+    if (__libcpp_isinf_or_builtin(__x.imag()))
         return complex<_Tp>(copysign(__x.imag(), __x.real()), copysign(__pi/_Tp(2), __x.imag()));
     complex<_Tp> __z = log(__x + sqrt(pow(__x, _Tp(2)) + _Tp(1)));
     return complex<_Tp>(copysign(__z.real(), __x.real()), copysign(__z.imag(), __x.imag()));
@@ -1161,11 +1161,11 @@ complex<_Tp>
 acosh(const complex<_Tp>& __x)
 {
     const _Tp __pi(atan2(+0., -0.));
-    if (__libcpp_isinf(__x.real()))
+    if (__libcpp_isinf_or_builtin(__x.real()))
     {
-        if (__libcpp_isnan(__x.imag()))
+        if (__libcpp_isnan_or_builtin(__x.imag()))
             return complex<_Tp>(abs(__x.real()), __x.imag());
-        if (__libcpp_isinf(__x.imag()))
+        if (__libcpp_isinf_or_builtin(__x.imag()))
         {
             if (__x.real() > 0)
                 return complex<_Tp>(__x.real(), copysign(__pi * _Tp(0.25), __x.imag()));
@@ -1176,13 +1176,13 @@ acosh(const complex<_Tp>& __x)
             return complex<_Tp>(-__x.real(), copysign(__pi, __x.imag()));
         return complex<_Tp>(__x.real(), copysign(_Tp(0), __x.imag()));
     }
-    if (__libcpp_isnan(__x.real()))
+    if (__libcpp_isnan_or_builtin(__x.real()))
     {
-        if (__libcpp_isinf(__x.imag()))
+        if (__libcpp_isinf_or_builtin(__x.imag()))
             return complex<_Tp>(abs(__x.imag()), __x.real());
         return complex<_Tp>(__x.real(), __x.real());
     }
-    if (__libcpp_isinf(__x.imag()))
+    if (__libcpp_isinf_or_builtin(__x.imag()))
         return complex<_Tp>(abs(__x.imag()), copysign(__pi/_Tp(2), __x.imag()));
     complex<_Tp> __z = log(__x + sqrt(pow(__x, _Tp(2)) - _Tp(1)));
     return complex<_Tp>(copysign(__z.real(), _Tp(0)), copysign(__z.imag(), __x.imag()));
@@ -1195,21 +1195,21 @@ complex<_Tp>
 atanh(const complex<_Tp>& __x)
 {
     const _Tp __pi(atan2(+0., -0.));
-    if (__libcpp_isinf(__x.imag()))
+    if (__libcpp_isinf_or_builtin(__x.imag()))
     {
         return complex<_Tp>(copysign(_Tp(0), __x.real()), copysign(__pi/_Tp(2), __x.imag()));
     }
-    if (__libcpp_isnan(__x.imag()))
+    if (__libcpp_isnan_or_builtin(__x.imag()))
     {
-        if (__libcpp_isinf(__x.real()) || __x.real() == 0)
+        if (__libcpp_isinf_or_builtin(__x.real()) || __x.real() == 0)
             return complex<_Tp>(copysign(_Tp(0), __x.real()), __x.imag());
         return complex<_Tp>(__x.imag(), __x.imag());
     }
-    if (__libcpp_isnan(__x.real()))
+    if (__libcpp_isnan_or_builtin(__x.real()))
     {
         return complex<_Tp>(__x.real(), __x.real());
     }
-    if (__libcpp_isinf(__x.real()))
+    if (__libcpp_isinf_or_builtin(__x.real()))
     {
         return complex<_Tp>(copysign(_Tp(0), __x.real()), copysign(__pi/_Tp(2), __x.imag()));
     }
@@ -1227,11 +1227,11 @@ template<class _Tp>
 complex<_Tp>
 sinh(const complex<_Tp>& __x)
 {
-    if (__libcpp_isinf(__x.real()) && !__libcpp_isfinite(__x.imag()))
+    if (__libcpp_isinf_or_builtin(__x.real()) && !__libcpp_isfinite_or_builtin(__x.imag()))
         return complex<_Tp>(__x.real(), _Tp(NAN));
-    if (__x.real() == 0 && !__libcpp_isfinite(__x.imag()))
+    if (__x.real() == 0 && !__libcpp_isfinite_or_builtin(__x.imag()))
         return complex<_Tp>(__x.real(), _Tp(NAN));
-    if (__x.imag() == 0 && !__libcpp_isfinite(__x.real()))
+    if (__x.imag() == 0 && !__libcpp_isfinite_or_builtin(__x.real()))
         return __x;
     return complex<_Tp>(sinh(__x.real()) * cos(__x.imag()), cosh(__x.real()) * sin(__x.imag()));
 }
@@ -1242,13 +1242,13 @@ template<class _Tp>
 complex<_Tp>
 cosh(const complex<_Tp>& __x)
 {
-    if (__libcpp_isinf(__x.real()) && !__libcpp_isfinite(__x.imag()))
+    if (__libcpp_isinf_or_builtin(__x.real()) && !__libcpp_isfinite_or_builtin(__x.imag()))
         return complex<_Tp>(abs(__x.real()), _Tp(NAN));
-    if (__x.real() == 0 && !__libcpp_isfinite(__x.imag()))
+    if (__x.real() == 0 && !__libcpp_isfinite_or_builtin(__x.imag()))
         return complex<_Tp>(_Tp(NAN), __x.real());
     if (__x.real() == 0 && __x.imag() == 0)
         return complex<_Tp>(_Tp(1), __x.imag());
-    if (__x.imag() == 0 && !__libcpp_isfinite(__x.real()))
+    if (__x.imag() == 0 && !__libcpp_isfinite_or_builtin(__x.real()))
         return complex<_Tp>(abs(__x.real()), __x.imag());
     return complex<_Tp>(cosh(__x.real()) * cos(__x.imag()), sinh(__x.real()) * sin(__x.imag()));
 }
@@ -1259,19 +1259,19 @@ template<class _Tp>
 complex<_Tp>
 tanh(const complex<_Tp>& __x)
 {
-    if (__libcpp_isinf(__x.real()))
+    if (__libcpp_isinf_or_builtin(__x.real()))
     {
-        if (!__libcpp_isfinite(__x.imag()))
+        if (!__libcpp_isfinite_or_builtin(__x.imag()))
             return complex<_Tp>(_Tp(1), _Tp(0));
         return complex<_Tp>(_Tp(1), copysign(_Tp(0), sin(_Tp(2) * __x.imag())));
     }
-    if (__libcpp_isnan(__x.real()) && __x.imag() == 0)
+    if (__libcpp_isnan_or_builtin(__x.real()) && __x.imag() == 0)
         return __x;
     _Tp __2r(_Tp(2) * __x.real());
     _Tp __2i(_Tp(2) * __x.imag());
     _Tp __d(cosh(__2r) + cos(__2i));
     _Tp __2rsh(sinh(__2r));
-    if (__libcpp_isinf(__2rsh) && __libcpp_isinf(__d))
+    if (__libcpp_isinf_or_builtin(__2rsh) && __libcpp_isinf_or_builtin(__d))
         return complex<_Tp>(__2rsh > _Tp(0) ? _Tp(1) : _Tp(-1),
                             __2i > _Tp(0) ? _Tp(0) : _Tp(-0.));
     return  complex<_Tp>(__2rsh/__d, sin(__2i)/__d);
@@ -1294,11 +1294,11 @@ complex<_Tp>
 acos(const complex<_Tp>& __x)
 {
     const _Tp __pi(atan2(+0., -0.));
-    if (__libcpp_isinf(__x.real()))
+    if (__libcpp_isinf_or_builtin(__x.real()))
     {
-        if (__libcpp_isnan(__x.imag()))
+        if (__libcpp_isnan_or_builtin(__x.imag()))
             return complex<_Tp>(__x.imag(), __x.real());
-        if (__libcpp_isinf(__x.imag()))
+        if (__libcpp_isinf_or_builtin(__x.imag()))
         {
             if (__x.real() < _Tp(0))
                 return complex<_Tp>(_Tp(0.75) * __pi, -__x.imag());
@@ -1308,13 +1308,13 @@ acos(const complex<_Tp>& __x)
             return complex<_Tp>(__pi, signbit(__x.imag()) ? -__x.real() : __x.real());
         return complex<_Tp>(_Tp(0), signbit(__x.imag()) ? __x.real() : -__x.real());
     }
-    if (__libcpp_isnan(__x.real()))
+    if (__libcpp_isnan_or_builtin(__x.real()))
     {
-        if (__libcpp_isinf(__x.imag()))
+        if (__libcpp_isinf_or_builtin(__x.imag()))
             return complex<_Tp>(__x.real(), -__x.imag());
         return complex<_Tp>(__x.real(), __x.real());
     }
-    if (__libcpp_isinf(__x.imag()))
+    if (__libcpp_isinf_or_builtin(__x.imag()))
         return complex<_Tp>(__pi/_Tp(2), -__x.imag());
     if (__x.real() == 0 && (__x.imag() == 0 || isnan(__x.imag())))
         return complex<_Tp>(__pi/_Tp(2), -__x.imag());

@@ -137,7 +137,7 @@ inline _LIBCPP_INLINE_VISIBILITY
 size_t
 __next_hash_pow2(size_t __n)
 {
-    return size_t(1) << (std::numeric_limits<size_t>::digits - __clz(__n-1));
+    return __n < 2 ? __n : (size_t(1) << (std::numeric_limits<size_t>::digits - __clz(__n-1)));
 }
 
 

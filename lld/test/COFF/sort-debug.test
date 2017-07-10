@@ -35,7 +35,46 @@ sections:
   - Name:            '.debug$S'
     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
     Alignment:       1
-    SectionData:     04000000F1000000300000002A00471100000000000000000000000010000000000000000000000000000000000000000000006D61696E0002004F11F200000024000000000000000000010010000000000000000100000018000000000000000100000000000000F4000000080000000100000000000000F30000003C000000005C7573725C6C6F63616C5C676F6F676C655C686F6D655C6D616A6E656D65725C6C6C766D5C7372635C746F6F6C735C6C6C645C3C737464696E3E00
+    Subsections:
+      - !Symbols
+        Records:
+          - Kind:            S_GPROC32_ID
+            ProcSym:
+              PtrParent:       0
+              PtrEnd:          0
+              PtrNext:         0
+              CodeSize:        16
+              DbgStart:        0
+              DbgEnd:          0
+              FunctionType:    0
+              Segment:         0
+              Flags:           [  ]
+              DisplayName:     main
+          - Kind:            S_PROC_ID_END
+            ScopeEndSym:
+      - !Lines
+        CodeSize:        16
+        Flags:           [ HasColumnInfo ]
+        RelocOffset:     0
+        RelocSegment:    0
+        Blocks:
+          - FileName:        '\usr\local\google\home\majnemer\llvm\src\tools\lld\<stdin>'
+            Lines:
+              - Offset:          0
+                LineStart:       1
+                IsStatement:     false
+                EndDelta:        0
+            Columns:
+              - StartColumn:     0
+                EndColumn:       0
+      - !FileChecksums
+        Checksums:
+          - FileName:        '\usr\local\google\home\majnemer\llvm\src\tools\lld\<stdin>'
+            Kind:            None
+            Checksum:        ''
+      - !StringTable
+        Strings:
+          - '\usr\local\google\home\majnemer\llvm\src\tools\lld\<stdin>'
     Relocations:
       - VirtualAddress:  44
         SymbolName:      _main

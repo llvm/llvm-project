@@ -50,6 +50,11 @@ __isl_give struct isl_##EL##_list *isl_##EL##_list_set_##EL(		\
 isl_stat isl_##EL##_list_foreach(__isl_keep isl_##EL##_list *list,	\
 	isl_stat (*fn)(__isl_take struct isl_##EL *el, void *user),	\
 	void *user);							\
+__isl_give isl_##EL##_list *isl_##EL##_list_map(			\
+	__isl_take isl_##EL##_list *list,				\
+	__isl_give isl_##EL * (*fn)(__isl_take isl_##EL *el,		\
+		void *user),						\
+	void *user);							\
 __isl_give isl_##EL##_list *isl_##EL##_list_sort(			\
 	__isl_take isl_##EL##_list *list,				\
 	int (*cmp)(__isl_keep struct isl_##EL *a,			\

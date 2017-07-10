@@ -109,7 +109,7 @@ struct JSONImporter : public ScopPass {
   ///
   /// @param S The scop to update.
   /// @param JScop The JScop file describing the new schedule.
-  /// @param DL The datalayout to assume.
+  /// @param DL The data layout to assume.
   ///
   /// @returns True if the import succeeded, otherwise False.
   bool importAccesses(Scop &S, Json::Value &JScop, const DataLayout &DL);
@@ -682,23 +682,44 @@ bool JSONImporter::importArrays(Scop &S, Json::Value &JScop) {
   for (auto &SAI : S.arrays()) {
     if (!SAI->isArrayKind())
       continue;
-    if (ArrayIdx + 1 > Arrays.size())
+    if (ArrayIdx + 1 > Arrays.size()) {
+      errs() << "Not enough array entries in JScop file.\n";
       return false;
-    if (!areArraysEqual(SAI, Arrays[ArrayIdx]))
+    }
+    if (!areArraysEqual(SAI, Arrays[ArrayIdx])) {
+      errs() << "No match for array '" << SAI->getName() << "' in JScop.\n";
       return false;
+    }
     ArrayIdx++;
   }
 
   for (; ArrayIdx < Arrays.size(); ArrayIdx++) {
-    auto *ElementType = parseTextType(Arrays[ArrayIdx]["type"].asCString(),
-                                      S.getSE()->getContext());
-    if (!ElementType)
+    auto &Array = Arrays[ArrayIdx];
+    auto *ElementType =
+        parseTextType(Array["type"].asCString(), S.getSE()->getContext());
+    if (!ElementType) {
+      errs() << "Error while parsing element type for new array.\n";
       return false;
+    }
     std::vector<unsigned> DimSizes;
-    for (unsigned i = 0; i < Arrays[ArrayIdx]["sizes"].size(); i++)
-      DimSizes.push_back(std::stoi(Arrays[ArrayIdx]["sizes"][i].asCString()));
-    S.createScopArrayInfo(ElementType, Arrays[ArrayIdx]["name"].asCString(),
-                          DimSizes);
+    for (unsigned i = 0; i < Array["sizes"].size(); i++) {
+      auto Size = std::stoi(Array["sizes"][i].asCString());
+
+      // Check if the size if positive.
+      if (Size <= 0) {
+        errs() << "The size at index " << i << " is =< 0.\n";
+        return false;
+      }
+
+      DimSizes.push_back(Size);
+    }
+
+    auto NewSAI =
+        S.createScopArrayInfo(ElementType, Array["name"].asCString(), DimSizes);
+
+    if (Array.isMember("allocation")) {
+      NewSAI->setIsOnHeap(Array["allocation"].asString() == "heap");
+    }
   }
 
   return true;

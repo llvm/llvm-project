@@ -3,10 +3,7 @@
 LLFILE=`echo $1 | sed -e 's/\.c/.ll/g'`
 LLFILE_TMP=${LLFILE}.tmp
 
-# The number of lines to cut of the LLVM-IR file clang produces.
-CUT_N_LINES=6
-
-clang -c -S -emit-llvm -O0 $1 -o ${LLFILE}
+clang -c -S -emit-llvm -O3 -mllvm -disable-llvm-optzns $1 -o ${LLFILE}
 
 opt -correlated-propagation -mem2reg -instcombine -loop-simplify -indvars \
 -instnamer ${LLFILE} -S -o ${LLFILE_TMP}
@@ -23,11 +20,11 @@ echo ';' >> ${LLFILE}
 clang-format $1 | sed -e 's/^[^$]/;    &/' -e 's/^$/;/' >> ${LLFILE}
 echo ';' >> ${LLFILE}
 
-cat ${LLFILE_TMP} | sed -e 's/ \#0//' >> ${LLFILE}
+cat ${LLFILE_TMP} >> ${LLFILE}
+sed -i".tmp" '/attributes .* =/d' ${LLFILE}
+sed -i".tmp" -e 's/) \#[0-9]*/)/' ${LLFILE}
 sed -i".tmp" '/; Function Attrs:/d' ${LLFILE}
 sed -i".tmp" '/; ModuleID =/d' ${LLFILE}
 sed -i".tmp" '/target triple/d' ${LLFILE}
-
-head --lines=-${CUT_N_LINES} ${LLFILE} > ${LLFILE_TMP}
 
 mv ${LLFILE_TMP} ${LLFILE}

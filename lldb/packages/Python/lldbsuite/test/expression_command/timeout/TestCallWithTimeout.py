@@ -25,36 +25,14 @@ class ExprCommandWithTimeoutsTestCase(TestBase):
     @expectedFlakeyFreeBSD("llvm.org/pr19605")
     @expectedFailureAll(
         oslist=[
-            "windows",
-            "macosx"],
+            "windows"],
         bugnumber="llvm.org/pr21765")
     def test(self):
         """Test calling std::String member function."""
         self.build()
 
-        exe_name = "a.out"
-        exe = os.path.join(os.getcwd(), exe_name)
-
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        breakpoint = target.BreakpointCreateBySourceRegex(
-            'stop here in main.', self.main_source_spec)
-        self.assertTrue(breakpoint, VALID_BREAKPOINT)
-        self.runCmd("breakpoint list")
-
-        # Launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple(
-            None, None, self.get_process_working_directory())
-
-        self.assertTrue(process, PROCESS_IS_VALID)
-
-        # Frame #0 should be on self.step_out_of_malloc.
-        threads = lldbutil.get_threads_stopped_at_breakpoint(
-            process, breakpoint)
-
-        self.assertTrue(len(threads) == 1)
-        thread = threads[0]
+        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
+            self, 'stop here in main.', self.main_source_spec)
 
         # First set the timeout too short, and make sure we fail.
         options = lldb.SBExpressionOptions()

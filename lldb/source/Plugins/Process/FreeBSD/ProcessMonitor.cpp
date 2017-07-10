@@ -30,6 +30,7 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/UnixSignals.h"
 #include "lldb/Utility/Status.h"
+#include "llvm/Support/Errno.h"
 
 #include "FreeBSDThread.h"
 #include "Plugins/Process/POSIX/CrashReason.h"
@@ -529,10 +530,8 @@ void ResumeOperation::Execute(ProcessMonitor *monitor) {
 
   if (PTRACE(PT_CONTINUE, pid, (caddr_t)1, data)) {
     Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PROCESS));
-
-    if (log)
-      log->Printf("ResumeOperation (%" PRIu64 ") failed: %s", pid,
-                  strerror(errno));
+    LLDB_LOG(log, "ResumeOperation ({0}) failed: {1}", pid,
+             llvm::sys::StrError(errno));
     m_result = false;
   } else
     m_result = true;
@@ -747,15 +746,9 @@ ProcessMonitor::ProcessMonitor(
   if (!error.Success())
     return;
 
-WAIT_AGAIN:
-  // Wait for the operation thread to initialize.
-  if (sem_wait(&args->m_semaphore)) {
-    if (errno == EINTR)
-      goto WAIT_AGAIN;
-    else {
-      error.SetErrorToErrno();
-      return;
-    }
+  if (llvm::sys::RetryAfterSignal(-1, sem_wait, &args->m_semaphore) == -1) {
+    error.SetErrorToErrno();
+    return;
   }
 
   // Check that the launch was a success.
@@ -791,15 +784,9 @@ ProcessMonitor::ProcessMonitor(ProcessFreeBSD *process, lldb::pid_t pid,
   if (!error.Success())
     return;
 
-WAIT_AGAIN:
-  // Wait for the operation thread to initialize.
-  if (sem_wait(&args->m_semaphore)) {
-    if (errno == EINTR)
-      goto WAIT_AGAIN;
-    else {
-      error.SetErrorToErrno();
-      return;
-    }
+  if (llvm::sys::RetryAfterSignal(-1, sem_wait, &args->m_semaphore) == -1) {
+    error.SetErrorToErrno();
+    return;
   }
 
   // Check that the attach was a success.

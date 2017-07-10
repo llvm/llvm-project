@@ -10,8 +10,8 @@
 #ifndef liblldb_File_h_
 #define liblldb_File_h_
 
-#include "lldb/Host/IOObject.h"
 #include "lldb/Host/PosixApi.h"
+#include "lldb/Utility/IOObject.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-private.h"
 

@@ -18,43 +18,50 @@ namespace clang {
 namespace tidy {
 namespace misc {
 
+namespace {
+AST_MATCHER(Decl, isInStdNamespace) { return Node.isInStdNamespace(); }
+}
+
 void InaccurateEraseCheck::registerMatchers(MatchFinder *Finder) {
   // Only register the matchers for C++; the functionality currently does not
   // provide any benefit to other languages, despite being benign.
   if (!getLangOpts().CPlusPlus)
     return;
 
-  const auto CheckForEndCall = hasArgument(
-      1, anyOf(cxxConstructExpr(has(ignoringParenImpCasts(
-                   cxxMemberCallExpr(callee(cxxMethodDecl(hasName("end"))))
-                       .bind("InaccEndCall")))),
-               anything()));
+  const auto EndCall =
+      callExpr(
+          callee(functionDecl(hasAnyName("remove", "remove_if", "unique"))),
+          hasArgument(
+              1,
+              anyOf(cxxConstructExpr(has(ignoringImplicit(
+                        cxxMemberCallExpr(callee(cxxMethodDecl(hasName("end"))))
+                            .bind("end")))),
+                    anything())))
+          .bind("alg");
 
+  const auto DeclInStd = decl(isInStdNamespace());
   Finder->addMatcher(
       cxxMemberCallExpr(
-          on(hasType(namedDecl(matchesName("^::std::")))),
+          on(anyOf(hasType(DeclInStd), hasType(pointsTo(DeclInStd)))),
           callee(cxxMethodDecl(hasName("erase"))), argumentCountIs(1),
-          hasArgument(0, has(ignoringParenImpCasts(
-                             callExpr(callee(functionDecl(matchesName(
-                                          "^::std::(remove(_if)?|unique)$"))),
-                                      CheckForEndCall)
-                                 .bind("InaccAlgCall")))),
+          hasArgument(0, has(ignoringImplicit(
+                             anyOf(EndCall, has(ignoringImplicit(EndCall)))))),
           unless(isInTemplateInstantiation()))
-          .bind("InaccErase"),
+          .bind("erase"),
       this);
 }
 
 void InaccurateEraseCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *MemberCall =
-      Result.Nodes.getNodeAs<CXXMemberCallExpr>("InaccErase");
+      Result.Nodes.getNodeAs<CXXMemberCallExpr>("erase");
   const auto *EndExpr =
-      Result.Nodes.getNodeAs<CXXMemberCallExpr>("InaccEndCall");
+      Result.Nodes.getNodeAs<CXXMemberCallExpr>("end");
   const SourceLocation Loc = MemberCall->getLocStart();
 
   FixItHint Hint;
 
   if (!Loc.isMacroID() && EndExpr) {
-    const auto *AlgCall = Result.Nodes.getNodeAs<CallExpr>("InaccAlgCall");
+    const auto *AlgCall = Result.Nodes.getNodeAs<CallExpr>("alg");
     std::string ReplacementText = Lexer::getSourceText(
         CharSourceRange::getTokenRange(EndExpr->getSourceRange()),
         *Result.SourceManager, getLangOpts());

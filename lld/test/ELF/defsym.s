@@ -9,8 +9,6 @@
 # RUN: llvm-readobj -t -s %t2 | FileCheck %s
 # RUN: llvm-objdump -d -print-imm-hex %t2 | FileCheck %s --check-prefix=USE
 
-## In compare with GNU linkers, symbol defined with --defsym does
-## not get aliased name in symbol table:
 # CHECK:      Symbol {
 # CHECK:        Name: foo1
 # CHECK-NEXT:   Value: 0x123

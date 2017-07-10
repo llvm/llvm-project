@@ -79,6 +79,7 @@ MachineTypes getMachineType(StringRef S) {
                         .Cases("x64", "amd64", AMD64)
                         .Cases("x86", "i386", I386)
                         .Case("arm", ARMNT)
+                        .Case("arm64", ARM64)
                         .Default(IMAGE_FILE_MACHINE_UNKNOWN);
   if (MT != IMAGE_FILE_MACHINE_UNKNOWN)
     return MT;
@@ -89,6 +90,8 @@ StringRef machineToStr(MachineTypes MT) {
   switch (MT) {
   case ARMNT:
     return "arm";
+  case ARM64:
+    return "arm64";
   case AMD64:
     return "x64";
   case I386:
@@ -522,7 +525,7 @@ void fixupExports() {
 
   for (Export &E : Config->Exports) {
     SymbolBody *Sym = E.Sym;
-    if (!E.ForwardTo.empty()) {
+    if (!E.ForwardTo.empty() || !Sym) {
       E.SymbolName = E.Name;
     } else {
       if (auto *U = dyn_cast<Undefined>(Sym))
@@ -657,11 +660,9 @@ void runMSVCLinker(std::string Rsp, ArrayRef<StringRef> Objects) {
 
 // Create table mapping all options defined in Options.td
 static const llvm::opt::OptTable::Info infoTable[] = {
-#define OPTION(X1, X2, ID, KIND, GROUP, ALIAS, X6, X7, X8, X9, X10)    \
-  {                                                                    \
-    X1, X2, X9, X10, OPT_##ID, llvm::opt::Option::KIND##Class, X8, X7, \
-    OPT_##GROUP, OPT_##ALIAS, X6                                       \
-  },
+#define OPTION(X1, X2, ID, KIND, GROUP, ALIAS, X7, X8, X9, X10, X11, X12)      \
+  {X1, X2, X10,         X11,         OPT_##ID, llvm::opt::Option::KIND##Class, \
+   X9, X8, OPT_##GROUP, OPT_##ALIAS, X7,       X12},
 #include "Options.inc"
 #undef OPTION
 };

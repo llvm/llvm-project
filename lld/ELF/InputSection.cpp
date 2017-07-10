@@ -20,6 +20,7 @@
 #include "Target.h"
 #include "Thunks.h"
 #include "llvm/Object/Decompressor.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Path.h"
@@ -72,6 +73,16 @@ InputSectionBase::InputSectionBase(InputFile *File, uint64_t Flags,
   this->Alignment = V;
 }
 
+// Drop SHF_GROUP bit unless we are producing a re-linkable object file.
+// SHF_GROUP is a marker that a section belongs to some comdat group.
+// That flag doesn't make sense in an executable.
+static uint64_t getFlags(uint64_t Flags) {
+  Flags &= ~(uint64_t)SHF_INFO_LINK;
+  if (!Config->Relocatable)
+    Flags &= ~(uint64_t)SHF_GROUP;
+  return Flags;
+}
+
 // GNU assembler 2.24 and LLVM 4.0.0's MC (the newest release as of
 // March 2017) fail to infer section types for sections starting with
 // ".init_array." or ".fini_array.". They set SHT_PROGBITS instead of
@@ -94,7 +105,7 @@ template <class ELFT>
 InputSectionBase::InputSectionBase(elf::ObjectFile<ELFT> *File,
                                    const typename ELFT::Shdr *Hdr,
                                    StringRef Name, Kind SectionKind)
-    : InputSectionBase(File, Hdr->sh_flags & ~SHF_INFO_LINK,
+    : InputSectionBase(File, getFlags(Hdr->sh_flags),
                        getType(Hdr->sh_type, Name), Hdr->sh_entsize,
                        Hdr->sh_link, Hdr->sh_info, Hdr->sh_addralign,
                        getSectionContents(File, Hdr), Name, SectionKind) {
@@ -265,7 +276,9 @@ template <class ELFT> std::string InputSectionBase::getSrcMsg(uint64_t Offset) {
 template <class ELFT> std::string InputSectionBase::getObjMsg(uint64_t Off) {
   // Synthetic sections don't have input files.
   elf::ObjectFile<ELFT> *File = getFile<ELFT>();
-  std::string Filename = File ? File->getName() : "(internal)";
+  if (!File)
+    return ("(internal):(" + Name + "+0x" + utohexstr(Off) + ")").str();
+  std::string Filename = File->getName();
 
   std::string Archive;
   if (!File->ArchiveName.empty())
@@ -308,23 +321,21 @@ OutputSection *InputSection::getParent() const {
   return cast_or_null<OutputSection>(Parent);
 }
 
-void InputSection::copyShtGroup(uint8_t *Buf) {
-  assert(this->Type == SHT_GROUP);
+// Copy SHT_GROUP section contents. Used only for the -r option.
+template <class ELFT> void InputSection::copyShtGroup(uint8_t *Buf) {
+  // ELFT::Word is the 32-bit integral type in the target endianness.
+  typedef typename ELFT::Word u32;
+  ArrayRef<u32> From = getDataAs<u32>();
+  auto *To = reinterpret_cast<u32 *>(Buf);
 
-  ArrayRef<uint32_t> From = getDataAs<uint32_t>();
-  uint32_t *To = reinterpret_cast<uint32_t *>(Buf);
-
-  // First entry is a flag word, we leave it unchanged.
+  // The first entry is not a section number but a flag.
   *To++ = From[0];
 
-  // Here we adjust indices of sections that belong to group as it
-  // might change during linking.
+  // Adjust section numbers because section numbers in an input object
+  // files are different in the output.
   ArrayRef<InputSectionBase *> Sections = this->File->getSections();
-  for (uint32_t Val : From.slice(1)) {
-    uint32_t Index = read32(&Val, Config->Endianness);
-    write32(To++, Sections[Index]->getOutputSection()->SectionIndex,
-            Config->Endianness);
-  }
+  for (uint32_t Idx : From.slice(1))
+    *To++ = Sections[Idx]->getOutputSection()->SectionIndex;
 }
 
 InputSectionBase *InputSection::getRelocatedSection() {
@@ -390,11 +401,18 @@ void InputSection::copyRelocations(uint8_t *Buf, ArrayRef<RelTy> Rels) {
   }
 }
 
+// The ARM and AArch64 ABI handle pc-relative relocations to undefined weak
+// references specially. The general rule is that the value of the symbol in
+// this context is the address of the place P. A further special case is that
+// branch relocations to an undefined weak reference resolve to the next
+// instruction.
 static uint32_t getARMUndefinedRelativeWeakVA(uint32_t Type, uint32_t A,
                                               uint32_t P) {
   switch (Type) {
+  // Unresolved branch relocations to weak references resolve to next
+  // instruction, this will be either 2 or 4 bytes on from P.
   case R_ARM_THM_JUMP11:
-    return P + 2;
+    return P + 2 + A;
   case R_ARM_CALL:
   case R_ARM_JUMP24:
   case R_ARM_PC24:
@@ -402,26 +420,42 @@ static uint32_t getARMUndefinedRelativeWeakVA(uint32_t Type, uint32_t A,
   case R_ARM_PREL31:
   case R_ARM_THM_JUMP19:
   case R_ARM_THM_JUMP24:
-    return P + 4;
+    return P + 4 + A;
   case R_ARM_THM_CALL:
     // We don't want an interworking BLX to ARM
-    return P + 5;
-  default:
-    return A;
+    return P + 5 + A;
+  // Unresolved non branch pc-relative relocations
+  // R_ARM_TARGET2 which can be resolved relatively is not present as it never
+  // targets a weak-reference.
+  case R_ARM_MOVW_PREL_NC:
+  case R_ARM_MOVT_PREL:
+  case R_ARM_REL32:
+  case R_ARM_THM_MOVW_PREL_NC:
+  case R_ARM_THM_MOVT_PREL:
+    return P + A;
   }
+  llvm_unreachable("ARM pc-relative relocation expected\n");
 }
 
+// The comment above getARMUndefinedRelativeWeakVA applies to this function.
 static uint64_t getAArch64UndefinedRelativeWeakVA(uint64_t Type, uint64_t A,
                                                   uint64_t P) {
   switch (Type) {
+  // Unresolved branch relocations to weak references resolve to next
+  // instruction, this is 4 bytes on from P.
   case R_AARCH64_CALL26:
   case R_AARCH64_CONDBR19:
   case R_AARCH64_JUMP26:
   case R_AARCH64_TSTBR14:
-    return P + 4;
-  default:
-    return A;
+    return P + 4 + A;
+  // Unresolved non branch pc-relative relocations
+  case R_AARCH64_PREL16:
+  case R_AARCH64_PREL32:
+  case R_AARCH64_PREL64:
+  case R_AARCH64_ADR_PREL_LO21:
+    return P + A;
   }
+  llvm_unreachable("AArch64 pc-relative relocation expected\n");
 }
 
 // ARM SBREL relocations are of the form S + A - B where B is the static base
@@ -506,20 +540,30 @@ static uint64_t getRelocTargetVA(uint32_t Type, int64_t A, uint64_t P,
     return InX::MipsGot->getVA() + InX::MipsGot->getTlsOffset() +
            InX::MipsGot->getTlsIndexOff() - InX::MipsGot->getGp();
   case R_PAGE_PC:
-  case R_PLT_PAGE_PC:
+  case R_PLT_PAGE_PC: {
+    uint64_t Dest;
     if (Body.isUndefined() && !Body.isLocal() && Body.symbol()->isWeak())
-      return getAArch64Page(A);
-    return getAArch64Page(Body.getVA(A)) - getAArch64Page(P);
-  case R_PC:
+      Dest = getAArch64Page(A);
+    else
+      Dest = getAArch64Page(Body.getVA(A));
+    return Dest - getAArch64Page(P);
+  }
+  case R_PC: {
+    uint64_t Dest;
     if (Body.isUndefined() && !Body.isLocal() && Body.symbol()->isWeak()) {
       // On ARM and AArch64 a branch to an undefined weak resolves to the
       // next instruction, otherwise the place.
       if (Config->EMachine == EM_ARM)
-        return getARMUndefinedRelativeWeakVA(Type, A, P);
-      if (Config->EMachine == EM_AARCH64)
-        return getAArch64UndefinedRelativeWeakVA(Type, A, P);
+        Dest = getARMUndefinedRelativeWeakVA(Type, A, P);
+      else if (Config->EMachine == EM_AARCH64)
+        Dest = getAArch64UndefinedRelativeWeakVA(Type, A, P);
+      else
+        Dest = Body.getVA(A);
+    } else {
+      Dest = Body.getVA(A);
     }
-    return Body.getVA(A) - P;
+    return Dest - P;
+  }
   case R_PLT:
     return Body.getPltVA() + A;
   case R_PLT_PC:
@@ -682,7 +726,7 @@ void InputSectionBase::relocateAlloc(uint8_t *Buf, uint8_t *BufEnd) {
       // Patch a nop (0x60000000) to a ld.
       if (BufLoc + 8 <= BufEnd && read32be(BufLoc + 4) == 0x60000000)
         write32be(BufLoc + 4, 0xe8410028); // ld %r2, 40(%r1)
-    // fallthrough
+      LLVM_FALLTHROUGH;
     default:
       Target->relocateOne(BufLoc, Type, TargetVA);
       break;
@@ -712,10 +756,9 @@ template <class ELFT> void InputSection::writeTo(uint8_t *Buf) {
     return;
   }
 
-  // If -r is given, linker should keep SHT_GROUP sections. We should fixup
-  // them, see copyShtGroup().
+  // If -r is given, we may have a SHT_GROUP section.
   if (this->Type == SHT_GROUP) {
-    copyShtGroup(Buf + OutSecOff);
+    copyShtGroup<ELFT>(Buf + OutSecOff);
     return;
   }
 

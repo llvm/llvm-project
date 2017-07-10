@@ -22,13 +22,12 @@ void ClangdUnitStore::removeUnitIfPresent(PathRef File) {
   OpenedFiles.erase(It);
 }
 
-std::vector<tooling::CompileCommand> ClangdUnitStore::getCompileCommands(GlobalCompilationDatabase &CDB, PathRef File) {
+std::vector<tooling::CompileCommand>
+ClangdUnitStore::getCompileCommands(GlobalCompilationDatabase &CDB,
+                                    PathRef File) {
   std::vector<tooling::CompileCommand> Commands = CDB.getCompileCommands(File);
-  if (Commands.empty()) {
+  if (Commands.empty())
     // Add a fake command line if we know nothing.
-    Commands.push_back(tooling::CompileCommand(
-        llvm::sys::path::parent_path(File), llvm::sys::path::filename(File),
-        {"clang", "-fsyntax-only", File.str()}, ""));
-  }
+    Commands.push_back(getDefaultCompileCommand(File));
   return Commands;
 }

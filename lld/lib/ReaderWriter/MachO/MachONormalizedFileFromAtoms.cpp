@@ -20,19 +20,19 @@
 ///                    | Atoms |
 ///                    +-------+
 
-#include "MachONormalizedFile.h"
 #include "ArchHandler.h"
 #include "DebugInfo.h"
+#include "MachONormalizedFile.h"
 #include "MachONormalizedFileBinaryUtils.h"
 #include "lld/Core/Error.h"
 #include "lld/Core/LLVM.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/MachO.h"
 #include <map>
 #include <system_error>
 #include <unordered_set>
@@ -515,6 +515,7 @@ void Util::organizeSections() {
       // Main executables, need a zero-page segment
       segmentForName("__PAGEZERO");
       // Fall into next case.
+      LLVM_FALLTHROUGH;
     case llvm::MachO::MH_DYLIB:
     case llvm::MachO::MH_BUNDLE:
       // All dynamic code needs TEXT segment to hold the load commands.
