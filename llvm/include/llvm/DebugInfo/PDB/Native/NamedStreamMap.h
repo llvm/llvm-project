@@ -44,7 +44,7 @@ public:
   bool get(StringRef Stream, uint32_t &StreamNo) const;
   void set(StringRef Stream, uint32_t StreamNo);
   void remove(StringRef Stream);
-
+  const StringMap<uint32_t> &getStringMap() const { return Mapping; }
   iterator_range<StringMapConstIterator<uint32_t>> entries() const;
 
 private:

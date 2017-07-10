@@ -307,7 +307,8 @@ void PassBuilder::registerLoopAnalyses(LoopAnalysisManager &LAM) {
 
 FunctionPassManager
 PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
-                                                 bool DebugLogging) {
+                                                 bool DebugLogging,
+                                                 bool PrepareForThinLTO) {
   assert(Level != O0 && "Must request optimizations!");
   FunctionPassManager FPM(DebugLogging);
 
@@ -364,10 +365,11 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   LPM2.addPass(IndVarSimplifyPass());
   LPM2.addPass(LoopIdiomRecognizePass());
   LPM2.addPass(LoopDeletionPass());
-  // FIXME: The old pass manager has a hack to disable loop unrolling during
-  // ThinLTO when using sample PGO. Need to either fix it or port some
-  // workaround.
-  LPM2.addPass(LoopUnrollPass::createFull(Level));
+  // Do not enable unrolling in PrepareForThinLTO phase during sample PGO
+  // because it changes IR to makes profile annotation in back compile
+  // inaccurate.
+  if (!PrepareForThinLTO || !PGOOpt || PGOOpt->SampleProfileFile.empty())
+    LPM2.addPass(LoopUnrollPass::createFull(Level));
 
   // We provide the opt remark emitter pass for LICM to use. We only need to do
   // this once as it is immutable.
@@ -490,7 +492,8 @@ getInlineParamsFromOptLevel(PassBuilder::OptimizationLevel Level) {
 
 ModulePassManager
 PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
-                                               bool DebugLogging) {
+                                               bool DebugLogging,
+                                               bool PrepareForThinLTO) {
   ModulePassManager MPM(DebugLogging);
 
   // Do basic inference of function attributes from known properties of system
@@ -544,8 +547,11 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
       MPM.addPass(SampleProfileLoaderPass(PGOOpt->SampleProfileFile));
 
     // Indirect call promotion that promotes intra-module targes only.
-    MPM.addPass(PGOIndirectCallPromotion(
-        false, PGOOpt && !PGOOpt->SampleProfileFile.empty()));
+    // Do not enable it in PrepareForThinLTO phase during sample PGO because
+    // it changes IR to makes profile annotation in back compile inaccurate.
+    if (!PrepareForThinLTO || PGOOpt->SampleProfileFile.empty())
+      MPM.addPass(PGOIndirectCallPromotion(
+          false, PGOOpt && !PGOOpt->SampleProfileFile.empty()));
   }
 
   // Require the GlobalsAA analysis for the module so we can query it within
@@ -570,7 +576,12 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   // Run the inliner first. The theory is that we are walking bottom-up and so
   // the callees have already been fully optimized, and we want to inline them
   // into the callers so that our optimizations can reflect that.
-  MainCGPipeline.addPass(InlinerPass(getInlineParamsFromOptLevel(Level)));
+  // For PrepareForThinLTO pass, we disable hot-caller heuristic for sample PGO
+  // because it makes profile annotation in the backend inaccurate.
+  InlineParams IP = getInlineParamsFromOptLevel(Level);
+  if (PrepareForThinLTO && PGOOpt && !PGOOpt->SampleProfileFile.empty())
+    IP.HotCallSiteThreshold = 0;
+  MainCGPipeline.addPass(InlinerPass(IP));
 
   // Now deduce any function attributes based in the current code.
   MainCGPipeline.addPass(PostOrderFunctionAttrsPass());
@@ -583,7 +594,8 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   // Lastly, add the core function simplification pipeline nested inside the
   // CGSCC walk.
   MainCGPipeline.addPass(createCGSCCToFunctionPassAdaptor(
-      buildFunctionSimplificationPipeline(Level, DebugLogging)));
+      buildFunctionSimplificationPipeline(Level, DebugLogging,
+                                          PrepareForThinLTO)));
 
   // We wrap the CGSCC pipeline in a devirtualization repeater. This will try
   // to detect when we devirtualize indirect calls and iterate the SCC passes
@@ -726,7 +738,8 @@ PassBuilder::buildPerModuleDefaultPipeline(OptimizationLevel Level,
   MPM.addPass(ForceFunctionAttrsPass());
 
   // Add the core simplification pipeline.
-  MPM.addPass(buildModuleSimplificationPipeline(Level, DebugLogging));
+  MPM.addPass(buildModuleSimplificationPipeline(Level, DebugLogging,
+                                                /*PrepareForThinLTO=*/false));
 
   // Now add the optimization pipeline.
   MPM.addPass(buildModuleOptimizationPipeline(Level, DebugLogging));
@@ -747,7 +760,8 @@ PassBuilder::buildThinLTOPreLinkDefaultPipeline(OptimizationLevel Level,
   // If we are planning to perform ThinLTO later, we don't bloat the code with
   // unrolling/vectorization/... now. Just simplify the module as much as we
   // can.
-  MPM.addPass(buildModuleSimplificationPipeline(Level, DebugLogging));
+  MPM.addPass(buildModuleSimplificationPipeline(Level, DebugLogging,
+                                                /*PrepareForThinLTO=*/true));
 
   // Run partial inlining pass to partially inline functions that have
   // large bodies.
@@ -785,7 +799,8 @@ PassBuilder::buildThinLTODefaultPipeline(OptimizationLevel Level,
                             !PGOOpt->ProfileUseFile.empty()));
 
   // Add the core simplification pipeline.
-  MPM.addPass(buildModuleSimplificationPipeline(Level, DebugLogging));
+  MPM.addPass(buildModuleSimplificationPipeline(Level, DebugLogging,
+                                                /*PrepareForThinLTO=*/false));
 
   // Now add the optimization pipeline.
   MPM.addPass(buildModuleOptimizationPipeline(Level, DebugLogging));

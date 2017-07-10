@@ -210,7 +210,7 @@ public:
   /// \brief An IRBuilder that automatically inserts new instructions into the
   /// worklist.
   typedef IRBuilder<TargetFolder, IRBuilderCallbackInserter> BuilderTy;
-  BuilderTy *Builder;
+  BuilderTy &Builder;
 
 private:
   // Mode in which we are running the combiner.
@@ -233,7 +233,7 @@ private:
   bool MadeIRChange;
 
 public:
-  InstCombiner(InstCombineWorklist &Worklist, BuilderTy *Builder,
+  InstCombiner(InstCombineWorklist &Worklist, BuilderTy &Builder,
                bool MinimizeSize, bool ExpensiveCombines, AliasAnalysis *AA,
                AssumptionCache &AC, TargetLibraryInfo &TLI, DominatorTree &DT,
                const DataLayout &DL, LoopInfo *LI)

@@ -189,7 +189,7 @@ static Instruction *simplifyAllocaArraySize(InstCombiner &IC, AllocaInst &AI) {
       return nullptr;
 
     // Canonicalize it.
-    Value *V = IC.Builder->getInt32(1);
+    Value *V = IC.Builder.getInt32(1);
     AI.setOperand(0, V);
     return &AI;
   }
@@ -197,7 +197,7 @@ static Instruction *simplifyAllocaArraySize(InstCombiner &IC, AllocaInst &AI) {
   // Convert: alloca Ty, C - where C is a constant != 1 into: alloca [C x Ty], 1
   if (const ConstantInt *C = dyn_cast<ConstantInt>(AI.getArraySize())) {
     Type *NewTy = ArrayType::get(AI.getAllocatedType(), C->getZExtValue());
-    AllocaInst *New = IC.Builder->CreateAlloca(NewTy, nullptr, AI.getName());
+    AllocaInst *New = IC.Builder.CreateAlloca(NewTy, nullptr, AI.getName());
     New->setAlignment(AI.getAlignment());
 
     // Scan to the end of the allocation instructions, to skip over a block of
@@ -229,7 +229,7 @@ static Instruction *simplifyAllocaArraySize(InstCombiner &IC, AllocaInst &AI) {
   // any casting is exposed early.
   Type *IntPtrTy = IC.getDataLayout().getIntPtrType(AI.getType());
   if (AI.getArraySize()->getType() != IntPtrTy) {
-    Value *V = IC.Builder->CreateIntCast(AI.getArraySize(), IntPtrTy, false);
+    Value *V = IC.Builder.CreateIntCast(AI.getArraySize(), IntPtrTy, false);
     AI.setOperand(0, V);
     return &AI;
   }
@@ -458,8 +458,8 @@ static LoadInst *combineLoadToNewType(InstCombiner &IC, LoadInst &LI, Type *NewT
   SmallVector<std::pair<unsigned, MDNode *>, 8> MD;
   LI.getAllMetadata(MD);
 
-  LoadInst *NewLoad = IC.Builder->CreateAlignedLoad(
-      IC.Builder->CreateBitCast(Ptr, NewTy->getPointerTo(AS)),
+  LoadInst *NewLoad = IC.Builder.CreateAlignedLoad(
+      IC.Builder.CreateBitCast(Ptr, NewTy->getPointerTo(AS)),
       LI.getAlignment(), LI.isVolatile(), LI.getName() + Suffix);
   NewLoad->setAtomic(LI.getOrdering(), LI.getSynchScope());
   MDBuilder MDB(NewLoad->getContext());
@@ -518,8 +518,8 @@ static StoreInst *combineStoreToNewValue(InstCombiner &IC, StoreInst &SI, Value 
   SmallVector<std::pair<unsigned, MDNode *>, 8> MD;
   SI.getAllMetadata(MD);
 
-  StoreInst *NewStore = IC.Builder->CreateAlignedStore(
-      V, IC.Builder->CreateBitCast(Ptr, V->getType()->getPointerTo(AS)),
+  StoreInst *NewStore = IC.Builder.CreateAlignedStore(
+      V, IC.Builder.CreateBitCast(Ptr, V->getType()->getPointerTo(AS)),
       SI.getAlignment(), SI.isVolatile());
   NewStore->setAtomic(SI.getOrdering(), SI.getSynchScope());
   for (const auto &MDPair : MD) {
@@ -613,7 +613,7 @@ static Instruction *combineLoadToOperationType(InstCombiner &IC, LoadInst &LI) {
       // Replace all the stores with stores of the newly loaded value.
       for (auto UI = LI.user_begin(), UE = LI.user_end(); UI != UE;) {
         auto *SI = cast<StoreInst>(*UI++);
-        IC.Builder->SetInsertPoint(SI);
+        IC.Builder.SetInsertPoint(SI);
         combineStoreToNewValue(IC, *SI, NewLoad);
         IC.eraseInstFromFunction(*SI);
       }
@@ -664,7 +664,7 @@ static Instruction *unpackLoadToAggregate(InstCombiner &IC, LoadInst &LI) {
       AAMDNodes AAMD;
       LI.getAAMetadata(AAMD);
       NewLoad->setAAMetadata(AAMD);
-      return IC.replaceInstUsesWith(LI, IC.Builder->CreateInsertValue(
+      return IC.replaceInstUsesWith(LI, IC.Builder.CreateInsertValue(
         UndefValue::get(T), NewLoad, 0, Name));
     }
 
@@ -689,15 +689,15 @@ static Instruction *unpackLoadToAggregate(InstCombiner &IC, LoadInst &LI) {
         Zero,
         ConstantInt::get(IdxType, i),
       };
-      auto *Ptr = IC.Builder->CreateInBoundsGEP(ST, Addr, makeArrayRef(Indices),
-                                                Name + ".elt");
+      auto *Ptr = IC.Builder.CreateInBoundsGEP(ST, Addr, makeArrayRef(Indices),
+                                               Name + ".elt");
       auto EltAlign = MinAlign(Align, SL->getElementOffset(i));
-      auto *L = IC.Builder->CreateAlignedLoad(Ptr, EltAlign, Name + ".unpack");
+      auto *L = IC.Builder.CreateAlignedLoad(Ptr, EltAlign, Name + ".unpack");
       // Propagate AA metadata. It'll still be valid on the narrowed load.
       AAMDNodes AAMD;
       LI.getAAMetadata(AAMD);
       L->setAAMetadata(AAMD);
-      V = IC.Builder->CreateInsertValue(V, L, i);
+      V = IC.Builder.CreateInsertValue(V, L, i);
     }
 
     V->setName(Name);
@@ -712,7 +712,7 @@ static Instruction *unpackLoadToAggregate(InstCombiner &IC, LoadInst &LI) {
       AAMDNodes AAMD;
       LI.getAAMetadata(AAMD);
       NewLoad->setAAMetadata(AAMD);
-      return IC.replaceInstUsesWith(LI, IC.Builder->CreateInsertValue(
+      return IC.replaceInstUsesWith(LI, IC.Builder.CreateInsertValue(
         UndefValue::get(T), NewLoad, 0, Name));
     }
 
@@ -740,14 +740,14 @@ static Instruction *unpackLoadToAggregate(InstCombiner &IC, LoadInst &LI) {
         Zero,
         ConstantInt::get(IdxType, i),
       };
-      auto *Ptr = IC.Builder->CreateInBoundsGEP(AT, Addr, makeArrayRef(Indices),
-                                                Name + ".elt");
-      auto *L = IC.Builder->CreateAlignedLoad(Ptr, MinAlign(Align, Offset),
-                                              Name + ".unpack");
+      auto *Ptr = IC.Builder.CreateInBoundsGEP(AT, Addr, makeArrayRef(Indices),
+                                               Name + ".elt");
+      auto *L = IC.Builder.CreateAlignedLoad(Ptr, MinAlign(Align, Offset),
+                                             Name + ".unpack");
       AAMDNodes AAMD;
       LI.getAAMetadata(AAMD);
       L->setAAMetadata(AAMD);
-      V = IC.Builder->CreateInsertValue(V, L, i);
+      V = IC.Builder.CreateInsertValue(V, L, i);
       Offset += EltSize;
     }
 
@@ -982,8 +982,8 @@ Instruction *InstCombiner::visitLoadInst(LoadInst &LI) {
       combineMetadataForCSE(cast<LoadInst>(AvailableVal), &LI);
 
     return replaceInstUsesWith(
-        LI, Builder->CreateBitOrPointerCast(AvailableVal, LI.getType(),
-                                            LI.getName() + ".cast"));
+        LI, Builder.CreateBitOrPointerCast(AvailableVal, LI.getType(),
+                                           LI.getName() + ".cast"));
   }
 
   // None of the following transforms are legal for volatile/ordered atomic
@@ -1019,10 +1019,10 @@ Instruction *InstCombiner::visitLoadInst(LoadInst &LI) {
       unsigned Align = LI.getAlignment();
       if (isSafeToLoadUnconditionally(SI->getOperand(1), Align, DL, SI) &&
           isSafeToLoadUnconditionally(SI->getOperand(2), Align, DL, SI)) {
-        LoadInst *V1 = Builder->CreateLoad(SI->getOperand(1),
-                                           SI->getOperand(1)->getName()+".val");
-        LoadInst *V2 = Builder->CreateLoad(SI->getOperand(2),
-                                           SI->getOperand(2)->getName()+".val");
+        LoadInst *V1 = Builder.CreateLoad(SI->getOperand(1),
+                                          SI->getOperand(1)->getName()+".val");
+        LoadInst *V2 = Builder.CreateLoad(SI->getOperand(2),
+                                          SI->getOperand(2)->getName()+".val");
         assert(LI.isUnordered() && "implied by above");
         V1->setAlignment(Align);
         V1->setAtomic(LI.getOrdering(), LI.getSynchScope());
@@ -1172,7 +1172,7 @@ static bool unpackStoreToAggregate(InstCombiner &IC, StoreInst &SI) {
     // If the struct only have one element, we unpack.
     unsigned Count = ST->getNumElements();
     if (Count == 1) {
-      V = IC.Builder->CreateExtractValue(V, 0);
+      V = IC.Builder.CreateExtractValue(V, 0);
       combineStoreToNewValue(IC, SI, V);
       return true;
     }
@@ -1201,12 +1201,11 @@ static bool unpackStoreToAggregate(InstCombiner &IC, StoreInst &SI) {
         Zero,
         ConstantInt::get(IdxType, i),
       };
-      auto *Ptr = IC.Builder->CreateInBoundsGEP(ST, Addr, makeArrayRef(Indices),
-                                                AddrName);
-      auto *Val = IC.Builder->CreateExtractValue(V, i, EltName);
+      auto *Ptr = IC.Builder.CreateInBoundsGEP(ST, Addr, makeArrayRef(Indices),
+                                               AddrName);
+      auto *Val = IC.Builder.CreateExtractValue(V, i, EltName);
       auto EltAlign = MinAlign(Align, SL->getElementOffset(i));
-      llvm::Instruction *NS =
-          IC.Builder->CreateAlignedStore(Val, Ptr, EltAlign);
+      llvm::Instruction *NS = IC.Builder.CreateAlignedStore(Val, Ptr, EltAlign);
       AAMDNodes AAMD;
       SI.getAAMetadata(AAMD);
       NS->setAAMetadata(AAMD);
@@ -1219,7 +1218,7 @@ static bool unpackStoreToAggregate(InstCombiner &IC, StoreInst &SI) {
     // If the array only have one element, we unpack.
     auto NumElements = AT->getNumElements();
     if (NumElements == 1) {
-      V = IC.Builder->CreateExtractValue(V, 0);
+      V = IC.Builder.CreateExtractValue(V, 0);
       combineStoreToNewValue(IC, SI, V);
       return true;
     }
@@ -1252,11 +1251,11 @@ static bool unpackStoreToAggregate(InstCombiner &IC, StoreInst &SI) {
         Zero,
         ConstantInt::get(IdxType, i),
       };
-      auto *Ptr = IC.Builder->CreateInBoundsGEP(AT, Addr, makeArrayRef(Indices),
-                                                AddrName);
-      auto *Val = IC.Builder->CreateExtractValue(V, i, EltName);
+      auto *Ptr = IC.Builder.CreateInBoundsGEP(AT, Addr, makeArrayRef(Indices),
+                                               AddrName);
+      auto *Val = IC.Builder.CreateExtractValue(V, i, EltName);
       auto EltAlign = MinAlign(Align, Offset);
-      Instruction *NS = IC.Builder->CreateAlignedStore(Val, Ptr, EltAlign);
+      Instruction *NS = IC.Builder.CreateAlignedStore(Val, Ptr, EltAlign);
       AAMDNodes AAMD;
       SI.getAAMetadata(AAMD);
       NS->setAAMetadata(AAMD);

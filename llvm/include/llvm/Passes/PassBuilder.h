@@ -188,9 +188,14 @@ public:
   /// only intended for use when attempting to optimize code. If frontends
   /// require some transformations for semantic reasons, they should explicitly
   /// build them.
+  ///
+  /// \p PrepareForThinLTO indicates whether this is invoked in
+  /// PrepareForThinLTO phase. Special handling is needed for sample PGO to
+  /// ensure profile accurate in the backend profile annotation phase.
   FunctionPassManager
   buildFunctionSimplificationPipeline(OptimizationLevel Level,
-                                      bool DebugLogging = false);
+                                      bool DebugLogging = false,
+                                      bool PrepareForThinLTO = false);
 
   /// Construct the core LLVM module canonicalization and simplification
   /// pipeline.
@@ -205,9 +210,14 @@ public:
   /// only intended for use when attempting to optimize code. If frontends
   /// require some transformations for semantic reasons, they should explicitly
   /// build them.
+  ///
+  /// \p PrepareForThinLTO indicates whether this is invoked in
+  /// PrepareForThinLTO phase. Special handling is needed for sample PGO to
+  /// ensure profile accurate in the backend profile annotation phase.
   ModulePassManager
   buildModuleSimplificationPipeline(OptimizationLevel Level,
-                                    bool DebugLogging = false);
+                                    bool DebugLogging = false,
+                                    bool PrepareForThinLTO = false);
 
   /// Construct the core LLVM module optimization pipeline.
   ///

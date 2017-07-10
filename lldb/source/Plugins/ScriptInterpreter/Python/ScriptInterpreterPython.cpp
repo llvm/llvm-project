@@ -1857,14 +1857,12 @@ StructuredData::DictionarySP ScriptInterpreterPython::GetDynamicSettings(
     return StructuredData::DictionarySP();
 
   PythonObject reply_pyobj;
-  {
-    Locker py_lock(this,
-                   Locker::AcquireLock | Locker::InitSession | Locker::NoSTDIN);
-    TargetSP target_sp(target->shared_from_this());
-    reply_pyobj.Reset(PyRefType::Owned,
-                      (PyObject *)g_swig_plugin_get(generic->GetValue(),
-                                                    setting_name, target_sp));
-  }
+  Locker py_lock(this,
+                 Locker::AcquireLock | Locker::InitSession | Locker::NoSTDIN);
+  TargetSP target_sp(target->shared_from_this());
+  reply_pyobj.Reset(PyRefType::Owned,
+                    (PyObject *)g_swig_plugin_get(generic->GetValue(),
+                                                  setting_name, target_sp));
 
   PythonDictionary py_dict(PyRefType::Borrowed, reply_pyobj.get());
   return py_dict.CreateStructuredDictionary();

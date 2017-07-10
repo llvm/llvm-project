@@ -581,16 +581,15 @@ struct InstrProfValueSiteRecord {
 
   /// Merge data from another InstrProfValueSiteRecord
   /// Optionally scale merged counts by \p Weight.
-  void merge(SoftInstrProfErrors &SIPE, InstrProfValueSiteRecord &Input,
-             uint64_t Weight = 1);
+  void merge(InstrProfValueSiteRecord &Input, uint64_t Weight,
+             function_ref<void(instrprof_error)> Warn);
   /// Scale up value profile data counts.
-  void scale(SoftInstrProfErrors &SIPE, uint64_t Weight);
+  void scale(uint64_t Weight, function_ref<void(instrprof_error)> Warn);
 };
 
 /// Profiling information for a single function.
 struct InstrProfRecord {
   std::vector<uint64_t> Counts;
-  SoftInstrProfErrors SIPE;
 
   InstrProfRecord() = default;
   InstrProfRecord(std::vector<uint64_t> Counts) : Counts(std::move(Counts)) {}
@@ -653,11 +652,12 @@ struct InstrProfRecord {
 
   /// Merge the counts in \p Other into this one.
   /// Optionally scale merged counts by \p Weight.
-  void merge(InstrProfRecord &Other, uint64_t Weight = 1);
+  void merge(InstrProfRecord &Other, uint64_t Weight,
+             function_ref<void(instrprof_error)> Warn);
 
   /// Scale up profile counts (including value profile data) by
   /// \p Weight.
-  void scale(uint64_t Weight);
+  void scale(uint64_t Weight, function_ref<void(instrprof_error)> Warn);
 
   /// Sort value profile data (per site) by count.
   void sortValueData() {
@@ -674,9 +674,6 @@ struct InstrProfRecord {
 
   /// Clear value data entries
   void clearValueData() { ValueData = nullptr; }
-
-  /// Get the error contained within the record's soft error counter.
-  Error takeError() { return SIPE.takeError(); }
 
 private:
   struct ValueProfData {
@@ -729,11 +726,13 @@ private:
 
   // Merge Value Profile data from Src record to this record for ValueKind.
   // Scale merged value counts by \p Weight.
-  void mergeValueProfData(uint32_t ValueKind, InstrProfRecord &Src,
-                          uint64_t Weight);
+  void mergeValueProfData(uint32_t ValkeKind, InstrProfRecord &Src,
+                          uint64_t Weight,
+                          function_ref<void(instrprof_error)> Warn);
 
   // Scale up value profile data count.
-  void scaleValueProfData(uint32_t ValueKind, uint64_t Weight);
+  void scaleValueProfData(uint32_t ValueKind, uint64_t Weight,
+                          function_ref<void(instrprof_error)> Warn);
 };
 
 struct NamedInstrProfRecord : InstrProfRecord {

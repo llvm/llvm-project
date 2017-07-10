@@ -236,7 +236,7 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
     case ARM::R12:
       if (STI.splitFramePushPop(MF))
         break;
-      // fallthough
+      LLVM_FALLTHROUGH;
     case ARM::R0:
     case ARM::R1:
     case ARM::R2:

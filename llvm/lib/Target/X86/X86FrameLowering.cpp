@@ -972,7 +972,6 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
     X86FI->setCalleeSavedFrameSize(
       X86FI->getCalleeSavedFrameSize() - TailCallReturnAddrDelta);
 
-  bool UseRedZone = false;
   bool UseStackProbe = !STI.getTargetLowering()->getStackProbeSymbolName(MF).empty();
 
   // The default stack probe size is 4096 if the function has no stackprobesize
@@ -1011,7 +1010,6 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
     X86FI->setUsesRedZone(MinSize > 0 || StackSize > 0);
     StackSize = std::max(MinSize, StackSize > 128 ? StackSize - 128 : 0);
     MFI.setStackSize(StackSize);
-    UseRedZone = true;
   }
 
   // Insert stack pointer adjustment for later moving of return addr.  Only
@@ -1189,7 +1187,8 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
   if (IsWin64Prologue && !IsFunclet && TRI->needsStackRealignment(MF))
     AlignedNumBytes = alignTo(AlignedNumBytes, MaxAlign);
   if (AlignedNumBytes >= StackProbeSize && UseStackProbe) {
-    assert(!UseRedZone && "The Red Zone is not accounted for in stack probes");
+    assert(!X86FI->getUsesRedZone() &&
+           "The Red Zone is not accounted for in stack probes");
 
     // Check whether EAX is livein for this block.
     bool isEAXAlive = isEAXLiveIn(MBB);

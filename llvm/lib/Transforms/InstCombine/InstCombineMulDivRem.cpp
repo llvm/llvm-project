@@ -39,8 +39,8 @@ static Value *simplifyValueKnownNonZero(Value *V, InstCombiner &IC,
   Value *A = nullptr, *B = nullptr, *One = nullptr;
   if (match(V, m_LShr(m_OneUse(m_Shl(m_Value(One), m_Value(A))), m_Value(B))) &&
       match(One, m_One())) {
-    A = IC.Builder->CreateSub(A, B);
-    return IC.Builder->CreateShl(One, A);
+    A = IC.Builder.CreateSub(A, B);
+    return IC.Builder.CreateShl(One, A);
   }
 
   // (PowerOfTwo >>u B) --> isExact since shifting out the result would make it
@@ -250,9 +250,9 @@ Instruction *InstCombiner::visitMul(BinaryOperator &I) {
           ConstantInt *C1;
           Value *Sub = nullptr;
           if (match(Op0, m_Sub(m_Value(Y), m_Value(X))))
-            Sub = Builder->CreateSub(X, Y, "suba");
+            Sub = Builder.CreateSub(X, Y, "suba");
           else if (match(Op0, m_Add(m_Value(Y), m_ConstantInt(C1))))
-            Sub = Builder->CreateSub(Builder->CreateNeg(C1), Y, "subc");
+            Sub = Builder.CreateSub(Builder.CreateNeg(C1), Y, "subc");
           if (Sub)
             return
               BinaryOperator::CreateMul(Sub,
@@ -272,11 +272,11 @@ Instruction *InstCombiner::visitMul(BinaryOperator &I) {
       Value *X;
       Constant *C1;
       if (match(Op0, m_OneUse(m_Add(m_Value(X), m_Constant(C1))))) {
-        Value *Mul = Builder->CreateMul(C1, Op1);
+        Value *Mul = Builder.CreateMul(C1, Op1);
         // Only go forward with the transform if C1*CI simplifies to a tidier
         // constant.
         if (!match(Mul, m_Mul(m_Value(), m_Value())))
-          return BinaryOperator::CreateAdd(Builder->CreateMul(X, Op1), Mul);
+          return BinaryOperator::CreateAdd(Builder.CreateMul(X, Op1), Mul);
       }
     }
   }
@@ -318,7 +318,7 @@ Instruction *InstCombiner::visitMul(BinaryOperator &I) {
 
       auto RemOpc = Div->getOpcode() == Instruction::UDiv ? Instruction::URem
                                                           : Instruction::SRem;
-      Value *Rem = Builder->CreateBinOp(RemOpc, X, DivOp1);
+      Value *Rem = Builder.CreateBinOp(RemOpc, X, DivOp1);
       if (DivOp1 == Y)
         return BinaryOperator::CreateSub(X, Rem);
       return BinaryOperator::CreateSub(Rem, X);
@@ -326,7 +326,7 @@ Instruction *InstCombiner::visitMul(BinaryOperator &I) {
   }
 
   /// i1 mul -> i1 and.
-  if (I.getType()->getScalarType()->isIntegerTy(1))
+  if (I.getType()->isIntOrIntVectorTy(1))
     return BinaryOperator::CreateAnd(Op0, Op1);
 
   // X*(1 << Y) --> X << Y
@@ -368,7 +368,7 @@ Instruction *InstCombiner::visitMul(BinaryOperator &I) {
     }
 
     if (BoolCast) {
-      Value *V = Builder->CreateSub(Constant::getNullValue(I.getType()),
+      Value *V = Builder.CreateSub(Constant::getNullValue(I.getType()),
                                     BoolCast);
       return BinaryOperator::CreateAnd(V, OtherOp);
     }
@@ -386,7 +386,7 @@ Instruction *InstCombiner::visitMul(BinaryOperator &I) {
             willNotOverflowSignedMul(Op0Conv->getOperand(0), CI, I)) {
           // Insert the new, smaller mul.
           Value *NewMul =
-              Builder->CreateNSWMul(Op0Conv->getOperand(0), CI, "mulconv");
+              Builder.CreateNSWMul(Op0Conv->getOperand(0), CI, "mulconv");
           return new SExtInst(NewMul, I.getType());
         }
       }
@@ -403,7 +403,7 @@ Instruction *InstCombiner::visitMul(BinaryOperator &I) {
           willNotOverflowSignedMul(Op0Conv->getOperand(0),
                                    Op1Conv->getOperand(0), I)) {
         // Insert the new integer mul.
-        Value *NewMul = Builder->CreateNSWMul(
+        Value *NewMul = Builder.CreateNSWMul(
             Op0Conv->getOperand(0), Op1Conv->getOperand(0), "mulconv");
         return new SExtInst(NewMul, I.getType());
       }
@@ -422,7 +422,7 @@ Instruction *InstCombiner::visitMul(BinaryOperator &I) {
             willNotOverflowUnsignedMul(Op0Conv->getOperand(0), CI, I)) {
           // Insert the new, smaller mul.
           Value *NewMul =
-              Builder->CreateNUWMul(Op0Conv->getOperand(0), CI, "mulconv");
+              Builder.CreateNUWMul(Op0Conv->getOperand(0), CI, "mulconv");
           return new ZExtInst(NewMul, I.getType());
         }
       }
@@ -439,7 +439,7 @@ Instruction *InstCombiner::visitMul(BinaryOperator &I) {
           willNotOverflowUnsignedMul(Op0Conv->getOperand(0),
                                      Op1Conv->getOperand(0), I)) {
         // Insert the new integer mul.
-        Value *NewMul = Builder->CreateNUWMul(
+        Value *NewMul = Builder.CreateNUWMul(
             Op0Conv->getOperand(0), Op1Conv->getOperand(0), "mulconv");
         return new ZExtInst(NewMul, I.getType());
       }
@@ -698,11 +698,11 @@ Instruction *InstCombiner::visitFMul(BinaryOperator &I) {
     }
     // if pattern detected emit alternate sequence
     if (OpX && OpY) {
-      BuilderTy::FastMathFlagGuard Guard(*Builder);
-      Builder->setFastMathFlags(Log2->getFastMathFlags());
+      BuilderTy::FastMathFlagGuard Guard(Builder);
+      Builder.setFastMathFlags(Log2->getFastMathFlags());
       Log2->setArgOperand(0, OpY);
-      Value *FMulVal = Builder->CreateFMul(OpX, Log2);
-      Value *FSub = Builder->CreateFSub(FMulVal, OpX);
+      Value *FMulVal = Builder.CreateFMul(OpX, Log2);
+      Value *FSub = Builder.CreateFSub(FMulVal, OpX);
       FSub->takeName(&I);
       return replaceInstUsesWith(I, FSub);
     }
@@ -714,23 +714,23 @@ Instruction *InstCombiner::visitFMul(BinaryOperator &I) {
   for (int i = 0; i < 2; i++) {
     bool IgnoreZeroSign = I.hasNoSignedZeros();
     if (BinaryOperator::isFNeg(Opnd0, IgnoreZeroSign)) {
-      BuilderTy::FastMathFlagGuard Guard(*Builder);
-      Builder->setFastMathFlags(I.getFastMathFlags());
+      BuilderTy::FastMathFlagGuard Guard(Builder);
+      Builder.setFastMathFlags(I.getFastMathFlags());
 
       Value *N0 = dyn_castFNegVal(Opnd0, IgnoreZeroSign);
       Value *N1 = dyn_castFNegVal(Opnd1, IgnoreZeroSign);
 
       // -X * -Y => X*Y
       if (N1) {
-        Value *FMul = Builder->CreateFMul(N0, N1);
+        Value *FMul = Builder.CreateFMul(N0, N1);
         FMul->takeName(&I);
         return replaceInstUsesWith(I, FMul);
       }
 
       if (Opnd0->hasOneUse()) {
         // -X * Y => -(X*Y) (Promote negation as high as possible)
-        Value *T = Builder->CreateFMul(N0, Opnd1);
-        Value *Neg = Builder->CreateFNeg(T);
+        Value *T = Builder.CreateFMul(N0, Opnd1);
+        Value *Neg = Builder.CreateFNeg(T);
         Neg->takeName(&I);
         return replaceInstUsesWith(I, Neg);
       }
@@ -755,10 +755,10 @@ Instruction *InstCombiner::visitFMul(BinaryOperator &I) {
           Y = Opnd0_0;
 
         if (Y) {
-          BuilderTy::FastMathFlagGuard Guard(*Builder);
-          Builder->setFastMathFlags(I.getFastMathFlags());
-          Value *T = Builder->CreateFMul(Opnd1, Opnd1);
-          Value *R = Builder->CreateFMul(T, Y);
+          BuilderTy::FastMathFlagGuard Guard(Builder);
+          Builder.setFastMathFlags(I.getFastMathFlags());
+          Value *T = Builder.CreateFMul(Opnd1, Opnd1);
+          Value *R = Builder.CreateFMul(T, Y);
           R->takeName(&I);
           return replaceInstUsesWith(I, R);
         }
@@ -824,7 +824,7 @@ bool InstCombiner::SimplifyDivRemOfSelect(BinaryOperator &I) {
         *I = SI->getOperand(NonNullOperand);
         Worklist.Add(&*BBI);
       } else if (*I == SelectCond) {
-        *I = Builder->getInt1(NonNullOperand == 1);
+        *I = Builder.getInt1(NonNullOperand == 1);
         Worklist.Add(&*BBI);
       }
     }
@@ -938,20 +938,18 @@ Instruction *InstCombiner::commonIDivTransforms(BinaryOperator &I) {
   }
 
   if (match(Op0, m_One())) {
-    assert(!I.getType()->getScalarType()->isIntegerTy(1) &&
-           "i1 divide not removed?");
+    assert(!I.getType()->isIntOrIntVectorTy(1) && "i1 divide not removed?");
     if (I.getOpcode() == Instruction::SDiv) {
       // If Op1 is 0 then it's undefined behaviour, if Op1 is 1 then the
       // result is one, if Op1 is -1 then the result is minus one, otherwise
       // it's zero.
-      Value *Inc = Builder->CreateAdd(Op1, Op0);
-      Value *Cmp = Builder->CreateICmpULT(
-                       Inc, ConstantInt::get(I.getType(), 3));
+      Value *Inc = Builder.CreateAdd(Op1, Op0);
+      Value *Cmp = Builder.CreateICmpULT(Inc, ConstantInt::get(I.getType(), 3));
       return SelectInst::Create(Cmp, Op1, ConstantInt::get(I.getType(), 0));
     } else {
       // If Op1 is 0 then it's undefined behaviour. If Op1 is 1 then the
       // result is one, otherwise it's zero.
-      return new ZExtInst(Builder->CreateICmpEQ(Op1, Op0), I.getType());
+      return new ZExtInst(Builder.CreateICmpEQ(Op1, Op0), I.getType());
     }
   }
 
@@ -1026,7 +1024,7 @@ static Instruction *foldUDivPow2Cst(Value *Op0, Value *Op1,
 // X udiv C, where C >= signbit
 static Instruction *foldUDivNegCst(Value *Op0, Value *Op1,
                                    const BinaryOperator &I, InstCombiner &IC) {
-  Value *ICI = IC.Builder->CreateICmpULT(Op0, cast<ConstantInt>(Op1));
+  Value *ICI = IC.Builder.CreateICmpULT(Op0, cast<ConstantInt>(Op1));
 
   return SelectInst::Create(ICI, Constant::getNullValue(I.getType()),
                             ConstantInt::get(I.getType(), 1));
@@ -1045,10 +1043,9 @@ static Instruction *foldUDivShl(Value *Op0, Value *Op1, const BinaryOperator &I,
   if (!match(ShiftLeft, m_Shl(m_APInt(CI), m_Value(N))))
     llvm_unreachable("match should never fail here!");
   if (*CI != 1)
-    N = IC.Builder->CreateAdd(N,
-                              ConstantInt::get(N->getType(), CI->logBase2()));
+    N = IC.Builder.CreateAdd(N, ConstantInt::get(N->getType(), CI->logBase2()));
   if (Op1 != ShiftLeft)
-    N = IC.Builder->CreateZExt(N, Op1->getType());
+    N = IC.Builder.CreateZExt(N, Op1->getType());
   BinaryOperator *LShr = BinaryOperator::CreateLShr(Op0, N);
   if (I.isExact())
     LShr->setIsExact();
@@ -1134,7 +1131,7 @@ Instruction *InstCombiner::visitUDiv(BinaryOperator &I) {
   if (ZExtInst *ZOp0 = dyn_cast<ZExtInst>(Op0))
     if (Value *ZOp1 = dyn_castZExtVal(Op1, ZOp0->getSrcTy()))
       return new ZExtInst(
-          Builder->CreateUDiv(ZOp0->getOperand(0), ZOp1, "div", I.isExact()),
+          Builder.CreateUDiv(ZOp0->getOperand(0), ZOp1, "div", I.isExact()),
           I.getType());
 
   // (LHS udiv (select (select (...)))) -> (LHS >> (select (select (...))))
@@ -1209,7 +1206,7 @@ Instruction *InstCombiner::visitSDiv(BinaryOperator &I) {
 
       Constant *NarrowDivisor =
           ConstantExpr::getTrunc(cast<Constant>(Op1), Op0Src->getType());
-      Value *NarrowOp = Builder->CreateSDiv(Op0Src, NarrowDivisor);
+      Value *NarrowOp = Builder.CreateSDiv(Op0Src, NarrowDivisor);
       return new SExtInst(NarrowOp, Op0->getType());
     }
   }
@@ -1217,7 +1214,7 @@ Instruction *InstCombiner::visitSDiv(BinaryOperator &I) {
   if (Constant *RHS = dyn_cast<Constant>(Op1)) {
     // X/INT_MIN -> X == INT_MIN
     if (RHS->isMinSignedValue())
-      return new ZExtInst(Builder->CreateICmpEQ(Op0, Op1), I.getType());
+      return new ZExtInst(Builder.CreateICmpEQ(Op0, Op1), I.getType());
 
     // -X/C  -->  X/-C  provided the negation doesn't overflow.
     Value *X;
@@ -1380,7 +1377,7 @@ Instruction *InstCombiner::visitFDiv(BinaryOperator &I) {
       // (X/Y) / Z => X / (Y*Z)
       //
       if (!isa<Constant>(Y) || !isa<Constant>(Op1)) {
-        NewInst = Builder->CreateFMul(Y, Op1);
+        NewInst = Builder.CreateFMul(Y, Op1);
         if (Instruction *RI = dyn_cast<Instruction>(NewInst)) {
           FastMathFlags Flags = I.getFastMathFlags();
           Flags &= cast<Instruction>(Op0)->getFastMathFlags();
@@ -1392,7 +1389,7 @@ Instruction *InstCombiner::visitFDiv(BinaryOperator &I) {
       // Z / (X/Y) => Z*Y / X
       //
       if (!isa<Constant>(Y) || !isa<Constant>(Op0)) {
-        NewInst = Builder->CreateFMul(Op0, Y);
+        NewInst = Builder.CreateFMul(Op0, Y);
         if (Instruction *RI = dyn_cast<Instruction>(NewInst)) {
           FastMathFlags Flags = I.getFastMathFlags();
           Flags &= cast<Instruction>(Op1)->getFastMathFlags();
@@ -1483,28 +1480,28 @@ Instruction *InstCombiner::visitURem(BinaryOperator &I) {
   // (zext A) urem (zext B) --> zext (A urem B)
   if (ZExtInst *ZOp0 = dyn_cast<ZExtInst>(Op0))
     if (Value *ZOp1 = dyn_castZExtVal(Op1, ZOp0->getSrcTy()))
-      return new ZExtInst(Builder->CreateURem(ZOp0->getOperand(0), ZOp1),
+      return new ZExtInst(Builder.CreateURem(ZOp0->getOperand(0), ZOp1),
                           I.getType());
 
   // X urem Y -> X and Y-1, where Y is a power of 2,
   if (isKnownToBeAPowerOfTwo(Op1, /*OrZero*/ true, 0, &I)) {
     Constant *N1 = Constant::getAllOnesValue(I.getType());
-    Value *Add = Builder->CreateAdd(Op1, N1);
+    Value *Add = Builder.CreateAdd(Op1, N1);
     return BinaryOperator::CreateAnd(Op0, Add);
   }
 
   // 1 urem X -> zext(X != 1)
   if (match(Op0, m_One())) {
-    Value *Cmp = Builder->CreateICmpNE(Op1, Op0);
-    Value *Ext = Builder->CreateZExt(Cmp, I.getType());
+    Value *Cmp = Builder.CreateICmpNE(Op1, Op0);
+    Value *Ext = Builder.CreateZExt(Cmp, I.getType());
     return replaceInstUsesWith(I, Ext);
   }
 
   // X urem C -> X < C ? X : X - C, where C >= signbit.
   const APInt *DivisorC;
   if (match(Op1, m_APInt(DivisorC)) && DivisorC->isNegative()) {
-    Value *Cmp = Builder->CreateICmpULT(Op0, Op1);
-    Value *Sub = Builder->CreateSub(Op0, Op1);
+    Value *Cmp = Builder.CreateICmpULT(Op0, Op1);
+    Value *Sub = Builder.CreateSub(Op0, Op1);
     return SelectInst::Create(Cmp, Op0, Sub);
   }
 

@@ -279,8 +279,8 @@ void ento::registerSimpleStreamChecker(CheckerManager &amp;mgr) {
 }
 </pre>
 <li>A package was selected for the checker and the checker was defined in the
-table of checkers at <tt>lib/StaticAnalyzer/Checkers/Checkers.td</tt>. Since all
-checkers should first be developed as "alpha", and the SimpleStreamChecker
+table of checkers at <tt>include/clang/StaticAnalyzer/Checkers/Checkers.td</tt>.
+Since all checkers should first be developed as "alpha", and the SimpleStreamChecker
 performs UNIX API checks, the correct package is "alpha.unix", and the following
 was added to the corresponding <tt>UnixAlpha</tt> section of <tt>Checkers.td</tt>:
 <pre class="code_example">

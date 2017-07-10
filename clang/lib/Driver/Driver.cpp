@@ -1261,11 +1261,20 @@ bool Driver::HandleImmediateArgs(const Compilation &C) {
     StringRef PassedFlags = A->getValue();
     std::vector<std::string> SuggestedCompletions;
 
+    unsigned short DisableFlags = options::NoDriverOption | options::Unsupported | options::Ignored;
+    // We want to show cc1-only options only when clang is invoked as "clang -cc1".
+    // When clang is invoked as "clang -cc1", we add "#" to the beginning of an --autocomplete
+    // option so that the clang driver can distinguish whether it is requested to show cc1-only options or not.
+    if (PassedFlags[0] == '#') {
+      DisableFlags &= ~options::NoDriverOption;
+      PassedFlags = PassedFlags.substr(1);
+    }
+
     if (PassedFlags.find(',') == StringRef::npos) {
       // If the flag is in the form of "--autocomplete=-foo",
       // we were requested to print out all option names that start with "-foo".
       // For example, "--autocomplete=-fsyn" is expanded to "-fsyntax-only".
-      SuggestedCompletions = Opts->findByPrefix(PassedFlags);
+      SuggestedCompletions = Opts->findByPrefix(PassedFlags, DisableFlags);
     } else {
       // If the flag is in the form of "--autocomplete=foo,bar", we were
       // requested to print out all option values for "-foo" that start with

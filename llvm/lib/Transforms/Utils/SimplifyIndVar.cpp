@@ -156,6 +156,7 @@ Value *SimplifyIndvar::foldIVUser(Instruction *UseInst, Instruction *IVOperand) 
 void SimplifyIndvar::eliminateIVComparison(ICmpInst *ICmp, Value *IVOperand) {
   unsigned IVOperIdx = 0;
   ICmpInst::Predicate Pred = ICmp->getPredicate();
+  ICmpInst::Predicate OriginalPred = Pred;
   if (IVOperand != ICmp->getOperand(0)) {
     // Swapped
     assert(IVOperand == ICmp->getOperand(1) && "Can't find IVOperand");
@@ -264,6 +265,16 @@ void SimplifyIndvar::eliminateIVComparison(ICmpInst *ICmp, Value *IVOperand) {
     ICmp->setPredicate(InvariantPredicate);
     ICmp->setOperand(0, NewLHS);
     ICmp->setOperand(1, NewRHS);
+  } else if (ICmpInst::isSigned(OriginalPred) &&
+             SE->isKnownNonNegative(S) && SE->isKnownNonNegative(X)) {
+    // If we were unable to make anything above, all we can is to canonicalize
+    // the comparison hoping that it will open the doors for other
+    // optimizations. If we find out that we compare two non-negative values,
+    // we turn the instruction's predicate to its unsigned version. Note that
+    // we cannot rely on Pred here unless we check if we have swapped it.
+    assert(ICmp->getPredicate() == OriginalPred && "Predicate changed?");
+    DEBUG(dbgs() << "INDVARS: Turn to unsigned comparison: " << *ICmp << '\n');
+    ICmp->setPredicate(ICmpInst::getUnsignedPredicate(OriginalPred));
   } else
     return;
 

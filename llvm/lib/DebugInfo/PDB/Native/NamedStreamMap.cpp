@@ -86,7 +86,8 @@ Error NamedStreamMap::commit(BinaryStreamWriter &Writer) const {
 
   for (const auto &Name : OrderedStreamNames) {
     auto Item = Mapping.find(Name);
-    assert(Item != Mapping.end());
+    if (Item == Mapping.end())
+      continue;
     if (auto EC = Writer.writeCString(Item->getKey()))
       return EC;
   }
@@ -108,7 +109,8 @@ uint32_t NamedStreamMap::finalize() {
 
   for (const auto &Name : OrderedStreamNames) {
     auto Item = Mapping.find(Name);
-    assert(Item != Mapping.end());
+    if (Item == Mapping.end())
+      continue;
     FinalizedHashTable.set(FinalizedInfo->StringDataBytes, Item->getValue());
     FinalizedInfo->StringDataBytes += Item->getKeyLength() + 1;
   }

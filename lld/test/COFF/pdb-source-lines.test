@@ -23,7 +23,7 @@ RUN: lld-link -debug -entry:main -nodefaultlib -out:%t.exe -pdb:%t.pdb %t.pdb_li
 RUN: llvm-pdbutil pdb2yaml -modules -module-files -subsections=lines,fc %t.pdb | FileCheck %s
 
 CHECK-LABEL: DbiStream:       
-CHECK-NEXT:   VerHeader:       V110
+CHECK-NEXT:   VerHeader:       V70
 CHECK-NEXT:   Age:             1
 CHECK-NEXT:   BuildNumber:     0
 CHECK-NEXT:   PdbDllVersion:   0

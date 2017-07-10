@@ -419,25 +419,6 @@ SDNode *PPCDAGToDAGISel::getGlobalBaseReg() {
       .getNode();
 }
 
-/// isIntS16Immediate - This method tests to see if the node is either a 32-bit
-/// or 64-bit immediate, and if the value can be accurately represented as a
-/// sign extension from a 16-bit value.  If so, this returns true and the
-/// immediate.
-static bool isIntS16Immediate(SDNode *N, short &Imm) {
-  if (N->getOpcode() != ISD::Constant)
-    return false;
-
-  Imm = (short)cast<ConstantSDNode>(N)->getZExtValue();
-  if (N->getValueType(0) == MVT::i32)
-    return Imm == (int32_t)cast<ConstantSDNode>(N)->getZExtValue();
-  else
-    return Imm == (int64_t)cast<ConstantSDNode>(N)->getZExtValue();
-}
-
-static bool isIntS16Immediate(SDValue Op, short &Imm) {
-  return isIntS16Immediate(Op.getNode(), Imm);
-}
-
 /// isInt32Immediate - This method tests to see if the node is a 32-bit constant
 /// operand. If so Imm will receive the 32-bit value.
 static bool isInt32Immediate(SDNode *N, unsigned &Imm) {
@@ -2126,7 +2107,7 @@ SDValue PPCDAGToDAGISel::SelectCC(SDValue LHS, SDValue RHS, ISD::CondCode CC,
                                               getI32Imm(Imm & 0xFFFF, dl)), 0);
       Opc = PPC::CMPLW;
     } else {
-      short SImm;
+      int16_t SImm;
       if (isIntS16Immediate(RHS, SImm))
         return SDValue(CurDAG->getMachineNode(PPC::CMPWI, dl, MVT::i32, LHS,
                                               getI32Imm((int)SImm & 0xFFFF,
@@ -2173,7 +2154,7 @@ SDValue PPCDAGToDAGISel::SelectCC(SDValue LHS, SDValue RHS, ISD::CondCode CC,
                                               getI64Imm(Imm & 0xFFFF, dl)), 0);
       Opc = PPC::CMPLD;
     } else {
-      short SImm;
+      int16_t SImm;
       if (isIntS16Immediate(RHS, SImm))
         return SDValue(CurDAG->getMachineNode(PPC::CMPDI, dl, MVT::i64, LHS,
                                               getI64Imm(SImm & 0xFFFF, dl)),
@@ -3323,7 +3304,7 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
     if (tryLogicOpOfCompares(N))
       return;
 
-    short Imm;
+    int16_t Imm;
     if (N->getOperand(0)->getOpcode() == ISD::FrameIndex &&
         isIntS16Immediate(N->getOperand(1), Imm)) {
       KnownBits LHSKnown;
@@ -3346,7 +3327,7 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
     break;
   }
   case ISD::ADD: {
-    short Imm;
+    int16_t Imm;
     if (N->getOperand(0)->getOpcode() == ISD::FrameIndex &&
         isIntS16Immediate(N->getOperand(1), Imm)) {
       selectFrameIndex(N, N->getOperand(0).getNode(), (int)Imm);
