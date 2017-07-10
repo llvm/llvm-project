@@ -1028,7 +1028,7 @@ entry:
 ; P9LE: vperm
 ; P9LE: blr
 ; P8BE: sldi {{r[0-9]+}}, r4, 2
-; P8BE-DAG: lxvw4x {{v[0-9]+}}, r3,
+; P8BE-DAG: lxvw4x {{v[0-9]+}}, 0, r3
 ; P8BE-DAG: lxvw4x
 ; P8BE: vperm
 ; P8BE: blr
@@ -2187,7 +2187,7 @@ entry:
 ; P9LE: vperm
 ; P9LE: blr
 ; P8BE-DAG: sldi {{r[0-9]+}}, r4, 2
-; P8BE-DAG: lxvw4x {{v[0-9]+}}, r3
+; P8BE-DAG: lxvw4x {{v[0-9]+}}, 0, r3
 ; P8BE-DAG: lxvw4x
 ; P8BE: vperm
 ; P8BE: blr

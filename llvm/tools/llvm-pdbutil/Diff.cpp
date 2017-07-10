@@ -23,12 +23,147 @@
 #include "llvm/DebugInfo/PDB/Native/PDBStringTable.h"
 #include "llvm/DebugInfo/PDB/Native/RawConstants.h"
 
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatProviders.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/Path.h"
 
 using namespace llvm;
 using namespace llvm::pdb;
+
+namespace {
+// Compare and format two stream numbers.  Stream numbers are considered
+// identical if they contain the same value, equivalent if they are both
+// the invalid stream or neither is the invalid stream, and different if
+// one is the invalid stream and another isn't.
+struct StreamNumberProvider {
+  static DiffResult compare(uint16_t L, uint16_t R) {
+    if (L == R)
+      return DiffResult::IDENTICAL;
+    bool LP = L != kInvalidStreamIndex;
+    bool RP = R != kInvalidStreamIndex;
+    if (LP != RP)
+      return DiffResult::DIFFERENT;
+    return DiffResult::EQUIVALENT;
+  }
+
+  static std::string format(uint16_t SN, bool Right) {
+    if (SN == kInvalidStreamIndex)
+      return "(not present)";
+    return formatv("{0}", SN).str();
+  }
+};
+
+// Compares and formats two module indices.  Modis are considered identical
+// if they are identical, equivalent if they either both contain a value or
+// both don't contain a value, and different if one contains a value and the
+// other doesn't.
+struct ModiProvider {
+  DiffResult compare(Optional<uint32_t> L, Optional<uint32_t> R) {
+    if (L == R)
+      return DiffResult::IDENTICAL;
+    if (L.hasValue() != R.hasValue())
+      return DiffResult::DIFFERENT;
+    return DiffResult::EQUIVALENT;
+  }
+
+  std::string format(Optional<uint32_t> Modi, bool Right) {
+    if (!Modi.hasValue())
+      return "(not present)";
+    return formatv("{0}", *Modi).str();
+  }
+};
+
+// Compares and formats two paths embedded in the PDB, ignoring the beginning
+// of the path if the user specified it as a "root path" on the command line.
+struct BinaryPathProvider {
+  explicit BinaryPathProvider(uint32_t MaxLen) : MaxLen(MaxLen) {}
+
+  DiffResult compare(StringRef L, StringRef R) {
+    if (L == R)
+      return DiffResult::IDENTICAL;
+
+    SmallString<64> LN = removeRoot(L, false);
+    SmallString<64> RN = removeRoot(R, true);
+
+    return (LN.equals_lower(RN)) ? DiffResult::EQUIVALENT
+                                 : DiffResult::DIFFERENT;
+  }
+
+  std::string format(StringRef S, bool Right) {
+    if (S.empty())
+      return "(empty)";
+
+    SmallString<64> Native = removeRoot(S, Right);
+    return truncateStringFront(Native.str(), MaxLen);
+  }
+
+  SmallString<64> removeRoot(StringRef Path, bool IsRight) const {
+    SmallString<64> Native(Path);
+    auto &RootOpt = IsRight ? opts::diff::RightRoot : opts::diff::LeftRoot;
+    SmallString<64> Root(static_cast<std::string>(RootOpt));
+    // pdb paths always use windows syntax, convert slashes to backslashes.
+    sys::path::native(Root, sys::path::Style::windows);
+    if (sys::path::has_stem(Root, sys::path::Style::windows))
+      sys::path::append(Root, sys::path::Style::windows,
+                        sys::path::get_separator(sys::path::Style::windows));
+
+    sys::path::replace_path_prefix(Native, Root, "", sys::path::Style::windows);
+    return Native;
+  }
+  uint32_t MaxLen;
+};
+
+// Compare and format two stream purposes.  For general streams, this just
+// compares the description.  For module streams it uses the path comparison
+// algorithm taking into consideration the binary root, described above.
+// Formatting stream purposes just prints the stream purpose, except for
+// module streams and named streams, where it prefixes the name / module
+// with an identifier.  Example:
+//
+//   Named Stream "\names"
+//   Module Stream "foo.obj"
+//
+// If a named stream is too long to fit in a column, it is truncated at the
+// end, and if a module is too long to fit in a column, it is truncated at the
+// beginning.  Example:
+//
+//  Named Stream "\Really Long Str..."
+//  Module Stream "...puts\foo.obj"
+//
+struct StreamPurposeProvider {
+  explicit StreamPurposeProvider(uint32_t MaxLen) : MaxLen(MaxLen) {}
+
+  DiffResult compare(const std::pair<StreamPurpose, std::string> &L,
+                     const std::pair<StreamPurpose, std::string> &R) {
+    if (L.first != R.first)
+      return DiffResult::DIFFERENT;
+    if (L.first == StreamPurpose::ModuleStream) {
+      BinaryPathProvider PathProvider(MaxLen);
+      return PathProvider.compare(L.second, R.second);
+    }
+    return (L.second == R.second) ? DiffResult::IDENTICAL
+                                  : DiffResult::DIFFERENT;
+  }
+
+  std::string format(const std::pair<StreamPurpose, std::string> &P,
+                     bool Right) {
+    if (P.first == StreamPurpose::Other)
+      return truncateStringBack(P.second, MaxLen);
+    if (P.first == StreamPurpose::NamedStream)
+      return truncateQuotedNameBack("Named Stream", P.second, MaxLen);
+
+    assert(P.first == StreamPurpose::ModuleStream);
+    uint32_t ExtraChars = strlen("Module \"\"");
+    BinaryPathProvider PathProvider(MaxLen - ExtraChars);
+    std::string Result = PathProvider.format(P.second, Right);
+    return formatv("Module \"{0}\"", Result);
+  }
+
+  uint32_t MaxLen;
+};
+} // namespace
 
 namespace llvm {
 template <> struct format_provider<PdbRaw_FeatureSig> {
@@ -100,19 +235,12 @@ Error DiffStyle::dump() {
   return Error::success();
 }
 
-static std::string shortFilePath(StringRef Path, uint32_t Width) {
-  if (Path.size() <= Width)
-    return Path;
-  Path = Path.take_back(Width - 3);
-  return std::string("...") + Path.str();
-}
-
 Error DiffStyle::diffSuperBlock() {
   DiffPrinter D(2, "MSF Super Block", 16, 20, opts::diff::PrintResultColumn,
                 opts::diff::PrintValueColumns, outs());
   D.printExplicit("File", DiffResult::UNSPECIFIED,
-                  shortFilePath(File1.getFilePath(), 18),
-                  shortFilePath(File2.getFilePath(), 18));
+                  truncateStringFront(File1.getFilePath(), 18),
+                  truncateStringFront(File2.getFilePath(), 18));
   D.print("Block Size", File1.getBlockSize(), File2.getBlockSize());
   D.print("Block Count", File1.getBlockCount(), File2.getBlockCount());
   D.print("Unknown 1", File1.getUnknown1(), File2.getUnknown1());
@@ -125,13 +253,13 @@ Error DiffStyle::diffStreamDirectory() {
   DiffPrinter D(2, "Stream Directory", 30, 20, opts::diff::PrintResultColumn,
                 opts::diff::PrintValueColumns, outs());
   D.printExplicit("File", DiffResult::UNSPECIFIED,
-                  shortFilePath(File1.getFilePath(), 18),
-                  shortFilePath(File2.getFilePath(), 18));
+                  truncateStringFront(File1.getFilePath(), 18),
+                  truncateStringFront(File2.getFilePath(), 18));
 
-  SmallVector<std::string, 32> P;
-  SmallVector<std::string, 32> Q;
-  discoverStreamPurposes(File1, P, 28);
-  discoverStreamPurposes(File2, Q, 28);
+  SmallVector<std::pair<StreamPurpose, std::string>, 32> P;
+  SmallVector<std::pair<StreamPurpose, std::string>, 32> Q;
+  discoverStreamPurposes(File1, P);
+  discoverStreamPurposes(File2, Q);
   D.print("Stream Count", File1.getNumStreams(), File2.getNumStreams());
   auto PI = to_vector<32>(enumerate(P));
   auto QI = to_vector<32>(enumerate(Q));
@@ -139,26 +267,31 @@ Error DiffStyle::diffStreamDirectory() {
   // Scan all streams in the left hand side, looking for ones that are also
   // in the right.  Each time we find one, remove it.  When we're done, Q
   // should contain all the streams that are in the right but not in the left.
+  StreamPurposeProvider StreamProvider(28);
   for (const auto &P : PI) {
     typedef decltype(PI) ContainerType;
     typedef typename ContainerType::value_type value_type;
 
-    auto Iter = llvm::find_if(
-        QI, [P](const value_type &V) { return V.value() == P.value(); });
+    auto Iter = llvm::find_if(QI, [P, &StreamProvider](const value_type &V) {
+      DiffResult Result = StreamProvider.compare(P.value(), V.value());
+      return Result == DiffResult::EQUIVALENT ||
+             Result == DiffResult::IDENTICAL;
+    });
 
     if (Iter == QI.end()) {
-      D.printExplicit(P.value(), DiffResult::DIFFERENT, P.index(),
-                      "(not present)");
+      D.printExplicit(StreamProvider.format(P.value(), false),
+                      DiffResult::DIFFERENT, P.index(), "(not present)");
       continue;
     }
 
-    D.print<EquivalentDiffProvider>(P.value(), P.index(), Iter->index());
+    D.print<EquivalentDiffProvider>(StreamProvider.format(P.value(), false),
+                                    P.index(), Iter->index());
     QI.erase(Iter);
   }
 
   for (const auto &Q : QI) {
-    D.printExplicit(Q.value(), DiffResult::DIFFERENT, "(not present)",
-                    Q.index());
+    D.printExplicit(StreamProvider.format(Q.value(), true),
+                    DiffResult::DIFFERENT, "(not present)", Q.index());
   }
 
   return Error::success();
@@ -168,8 +301,8 @@ Error DiffStyle::diffStringTable() {
   DiffPrinter D(2, "String Table", 30, 20, opts::diff::PrintResultColumn,
                 opts::diff::PrintValueColumns, outs());
   D.printExplicit("File", DiffResult::UNSPECIFIED,
-                  shortFilePath(File1.getFilePath(), 18),
-                  shortFilePath(File2.getFilePath(), 18));
+                  truncateStringFront(File1.getFilePath(), 18),
+                  truncateStringFront(File2.getFilePath(), 18));
 
   auto ExpectedST1 = File1.getStringTable();
   auto ExpectedST2 = File2.getStringTable();
@@ -257,8 +390,8 @@ Error DiffStyle::diffInfoStream() {
   DiffPrinter D(2, "PDB Stream", 22, 40, opts::diff::PrintResultColumn,
                 opts::diff::PrintValueColumns, outs());
   D.printExplicit("File", DiffResult::UNSPECIFIED,
-                  shortFilePath(File1.getFilePath(), 38),
-                  shortFilePath(File2.getFilePath(), 38));
+                  truncateStringFront(File1.getFilePath(), 38),
+                  truncateStringFront(File2.getFilePath(), 38));
 
   auto ExpectedInfo1 = File1.getPDBInfoStream();
   auto ExpectedInfo2 = File2.getPDBInfoStream();
@@ -292,53 +425,6 @@ Error DiffStyle::diffInfoStream() {
   return Error::success();
 }
 
-struct StreamNumberProvider {
-  static DiffResult compare(uint16_t L, uint16_t R) {
-    if (L == R)
-      return DiffResult::IDENTICAL;
-    bool LP = L != kInvalidStreamIndex;
-    bool RP = R != kInvalidStreamIndex;
-    if (LP != RP)
-      return DiffResult::DIFFERENT;
-    return DiffResult::EQUIVALENT;
-  }
-
-  static std::string format(uint16_t SN) {
-    if (SN == kInvalidStreamIndex)
-      return "(not present)";
-    return formatv("{0}", SN).str();
-  }
-};
-
-struct ModiProvider {
-  DiffResult compare(Optional<uint32_t> L, Optional<uint32_t> R) {
-    if (L == R)
-      return DiffResult::IDENTICAL;
-    if (L.hasValue() != R.hasValue())
-      return DiffResult::DIFFERENT;
-    return DiffResult::EQUIVALENT;
-  }
-
-  std::string format(Optional<uint32_t> Modi) {
-    if (!Modi.hasValue())
-      return "(not present)";
-    return formatv("{0}", *Modi).str();
-  }
-};
-
-struct StringProvider {
-  DiffResult compare(StringRef L, StringRef R) {
-    IdenticalDiffProvider I;
-    return I.compare(L, R);
-  }
-
-  std::string format(StringRef S) {
-    if (S.empty())
-      return "(empty)";
-    return S;
-  }
-};
-
 static std::vector<std::pair<uint32_t, DbiModuleDescriptor>>
 getModuleDescriptors(const DbiModuleList &ML) {
   std::vector<std::pair<uint32_t, DbiModuleDescriptor>> List;
@@ -348,16 +434,31 @@ getModuleDescriptors(const DbiModuleList &ML) {
   return List;
 }
 
-static void diffOneModule(
-    DiffPrinter &D, const std::pair<uint32_t, DbiModuleDescriptor> Item,
-    std::vector<std::pair<uint32_t, DbiModuleDescriptor>> &Other, bool Invert) {
-  D.printFullRow(
-      truncateQuotedNameFront("Module", Item.second.getModuleName(), 70));
+static void
+diffOneModule(DiffPrinter &D,
+              const std::pair<uint32_t, DbiModuleDescriptor> Item,
+              std::vector<std::pair<uint32_t, DbiModuleDescriptor>> &Other,
+              bool ItemIsRight) {
+  StreamPurposeProvider HeaderProvider(70);
+  std::pair<StreamPurpose, std::string> Header;
+  Header.first = StreamPurpose::ModuleStream;
+  Header.second = Item.second.getModuleName();
+  D.printFullRow(HeaderProvider.format(Header, ItemIsRight));
 
+  const auto *L = &Item;
+
+  BinaryPathProvider PathProvider(28);
   auto Iter = llvm::find_if(
-      Other, [&Item](const std::pair<uint32_t, DbiModuleDescriptor> &Other) {
-        return Other.second.getModuleName().equals_lower(
-            Item.second.getModuleName());
+      Other, [&PathProvider, ItemIsRight,
+              L](const std::pair<uint32_t, DbiModuleDescriptor> &Other) {
+        const auto *Left = L;
+        const auto *Right = &Other;
+        if (ItemIsRight)
+          std::swap(Left, Right);
+        DiffResult Result = PathProvider.compare(Left->second.getModuleName(),
+                                                 Right->second.getModuleName());
+        return Result == DiffResult::EQUIVALENT ||
+               Result == DiffResult::IDENTICAL;
       });
   if (Iter == Other.end()) {
     // We didn't find this module at all on the other side.  Just print one row
@@ -367,15 +468,13 @@ static void diffOneModule(
   }
 
   // We did find this module.  Go through and compare each field.
-  const auto *L = &Item;
   const auto *R = &*Iter;
-  if (Invert)
+  if (ItemIsRight)
     std::swap(L, R);
 
   D.print<ModiProvider>("- Modi", L->first, R->first);
-  D.print<StringProvider>("- Obj File Name",
-                          shortFilePath(L->second.getObjFileName(), 28),
-                          shortFilePath(R->second.getObjFileName(), 28));
+  D.print<BinaryPathProvider>("- Obj File Name", L->second.getObjFileName(),
+                              R->second.getObjFileName(), PathProvider);
   D.print<StreamNumberProvider>("- Debug Stream",
                                 L->second.getModuleStreamIndex(),
                                 R->second.getModuleStreamIndex());
@@ -398,8 +497,8 @@ Error DiffStyle::diffDbiStream() {
   DiffPrinter D(2, "DBI Stream", 40, 30, opts::diff::PrintResultColumn,
                 opts::diff::PrintValueColumns, outs());
   D.printExplicit("File", DiffResult::UNSPECIFIED,
-                  shortFilePath(File1.getFilePath(), 28),
-                  shortFilePath(File2.getFilePath(), 28));
+                  truncateStringFront(File1.getFilePath(), 28),
+                  truncateStringFront(File2.getFilePath(), 28));
 
   auto ExpectedDbi1 = File1.getPDBDbiStream();
   auto ExpectedDbi2 = File2.getPDBDbiStream();

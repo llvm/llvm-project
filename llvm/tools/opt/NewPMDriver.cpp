@@ -91,39 +91,39 @@ static void registerEPCallbacks(PassBuilder &PB, bool VerifyEachPass,
     PB.registerPeepholeEPCallback([&PB, VerifyEachPass, DebugLogging](
         FunctionPassManager &PM, PassBuilder::OptimizationLevel Level) {
       return PB.parsePassPipeline(PM, PeepholeEPPipeline, VerifyEachPass,
-                                  DebugPM);
+                                  DebugLogging);
     });
   if (!LateLoopOptimizationsEPPipeline.empty())
     PB.registerLateLoopOptimizationsEPCallback(
         [&PB, VerifyEachPass, DebugLogging](
             LoopPassManager &PM, PassBuilder::OptimizationLevel Level) {
           return PB.parsePassPipeline(PM, LateLoopOptimizationsEPPipeline,
-                                      VerifyEachPass, DebugPM);
+                                      VerifyEachPass, DebugLogging);
         });
   if (!LoopOptimizerEndEPPipeline.empty())
     PB.registerLoopOptimizerEndEPCallback([&PB, VerifyEachPass, DebugLogging](
         LoopPassManager &PM, PassBuilder::OptimizationLevel Level) {
       return PB.parsePassPipeline(PM, LoopOptimizerEndEPPipeline,
-                                  VerifyEachPass, DebugPM);
+                                  VerifyEachPass, DebugLogging);
     });
   if (!ScalarOptimizerLateEPPipeline.empty())
     PB.registerScalarOptimizerLateEPCallback(
         [&PB, VerifyEachPass, DebugLogging](
             FunctionPassManager &PM, PassBuilder::OptimizationLevel Level) {
           return PB.parsePassPipeline(PM, ScalarOptimizerLateEPPipeline,
-                                      VerifyEachPass, DebugPM);
+                                      VerifyEachPass, DebugLogging);
         });
   if (!CGSCCOptimizerLateEPPipeline.empty())
     PB.registerCGSCCOptimizerLateEPCallback([&PB, VerifyEachPass, DebugLogging](
         CGSCCPassManager &PM, PassBuilder::OptimizationLevel Level) {
       return PB.parsePassPipeline(PM, CGSCCOptimizerLateEPPipeline,
-                                  VerifyEachPass, DebugPM);
+                                  VerifyEachPass, DebugLogging);
     });
   if (!VectorizerStartEPPipeline.empty())
     PB.registerVectorizerStartEPCallback([&PB, VerifyEachPass, DebugLogging](
         FunctionPassManager &PM, PassBuilder::OptimizationLevel Level) {
       return PB.parsePassPipeline(PM, VectorizerStartEPPipeline, VerifyEachPass,
-                                  DebugPM);
+                                  DebugLogging);
     });
 }
 

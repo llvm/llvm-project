@@ -98,7 +98,7 @@ define amdgpu_kernel void @v_uextract_bit_127_i128(i128 addrspace(1)* %out, i128
 ; GCN-DAG: v_lshrrev_b32_e32 v[[ELT1PART:[0-9]+]], 2, v{{[[0-9]+}}
 ; GCN-DAG: v_bfe_u32 v[[ELT2PART:[0-9]+]], v[[VAL3]], 2, 2{{$}}
 ; GCN-DAG: v_mov_b32_e32 v[[ZERO:[0-9]+]], 0{{$}}
-; GCN-DAG: v_or_b32_e32 v[[OR0:[0-9]+]], v[[SHLLO]], v[[ELT1PART]]
+; GCN-DAG: v_or_b32_e32 v[[OR0:[0-9]+]], v[[ELT1PART]], v[[SHLLO]]
 ; GCN-DAG: v_mov_b32_e32 v[[ZERO1:[0-9]+]], v[[ZERO]]{{$}}
 
 ; GCN-DAG: buffer_store_dwordx4 v{{\[}}[[OR0]]:[[ZERO1]]{{\]}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}

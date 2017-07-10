@@ -79,7 +79,7 @@ define amdgpu_kernel void @fmuladd_a_2.0_b_f16(half addrspace(1)* %out, half add
 ; VI-DENORM-CONTRACT: v_fma_f16 [[RESULT:v[0-9]+]], [[R1]], 2.0, [[R2]]
 
 ; VI-DENORM-STRICT: v_add_f16_e32 [[TMP:v[0-9]+]], [[R1]], [[R1]]
-; VI-DENORM-STRICT: v_add_f16_e32 [[RESULT:v[0-9]+]], [[R2]], [[TMP]]
+; VI-DENORM-STRICT: v_add_f16_e32 [[RESULT:v[0-9]+]], [[TMP]], [[R2]]
 
 ; VI-DENORM: flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
 define amdgpu_kernel void @fadd_a_a_b_f16(half addrspace(1)* %out,
@@ -108,7 +108,7 @@ define amdgpu_kernel void @fadd_a_a_b_f16(half addrspace(1)* %out,
 ; VI-DENORM-CONTRACT: v_fma_f16 [[RESULT:v[0-9]+]], [[R1]], 2.0, [[R2]]
 
 ; VI-DENORM-STRICT: v_add_f16_e32 [[TMP:v[0-9]+]], [[R1]], [[R1]]
-; VI-DENORM-STRICT: v_add_f16_e32 [[RESULT:v[0-9]+]], [[TMP]], [[R2]]
+; VI-DENORM-STRICT: v_add_f16_e32 [[RESULT:v[0-9]+]],  [[R2]], [[TMP]]
 
 ; VI-DENORM: flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
 define amdgpu_kernel void @fadd_b_a_a_f16(half addrspace(1)* %out,
@@ -227,8 +227,8 @@ define amdgpu_kernel void @fmuladd_2.0_a_neg_b_f16(half addrspace(1)* %out, half
 
 ; VI-DENORM-CONTRACT: v_fma_f16 [[RESULT:v[0-9]+]], [[REGA]], [[REGB]], -[[REGC]]
 
-; VI-DENORM-STRICT: v_mul_f16_e32 [[TMP:v[0-9]+]], [[REGB]], [[REGA]]
-; VI-DENORM-STRICT: v_subrev_f16_e32 [[RESULT:v[0-9]+]], [[REGC]], [[TMP]]
+; VI-DENORM-STRICT: v_mul_f16_e32 [[TMP:v[0-9]+]], [[REGA]], [[REGB]]
+; VI-DENORM-STRICT: v_sub_f16_e32 [[RESULT:v[0-9]+]], [[TMP]], [[REGC]]
 
 ; VI: flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
 define amdgpu_kernel void @mad_sub_f16(half addrspace(1)* noalias nocapture %out, half addrspace(1)* noalias nocapture readonly %ptr) #1 {
@@ -257,8 +257,8 @@ define amdgpu_kernel void @mad_sub_f16(half addrspace(1)* noalias nocapture %out
 
 ; VI-DENORM-CONTRACT: v_fma_f16 [[RESULT:v[0-9]+]], -[[REGA]], [[REGB]], [[REGC]]
 
-; VI-DENORM-STRICT: v_mul_f16_e32 [[TMP:v[0-9]+]], [[REGB]], [[REGA]]
-; VI-DENORM-STRICT: v_subrev_f16_e32 [[RESULT:v[0-9]+]], [[TMP]], [[REGC]]
+; VI-DENORM-STRICT: v_mul_f16_e32 [[TMP:v[0-9]+]], [[REGA]], [[REGB]]
+; VI-DENORM-STRICT: v_sub_f16_e32 [[RESULT:v[0-9]+]], [[REGC]], [[TMP]]
 
 ; VI: flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
 define amdgpu_kernel void @mad_sub_inv_f16(half addrspace(1)* noalias nocapture %out, half addrspace(1)* noalias nocapture readonly %ptr) #1 {
@@ -287,7 +287,7 @@ define amdgpu_kernel void @mad_sub_inv_f16(half addrspace(1)* noalias nocapture 
 
 ; VI-DENORM-CONTRACT: v_fma_f16 [[RESULT:v[0-9]+]], [[REGA]], [[REGB]], -|[[REGC]]|
 
-; VI-DENORM-STRICT: v_mul_f16_e32 [[TMP:v[0-9]+]], [[REGB]], [[REGA]]
+; VI-DENORM-STRICT: v_mul_f16_e32 [[TMP:v[0-9]+]], [[REGA]], [[REGB]]
 ; VI-DENORM-STRICT: v_sub_f16_e64 [[RESULT:v[0-9]+]], [[TMP]], |[[REGC]]|
 
 ; VI: flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
@@ -319,7 +319,7 @@ define amdgpu_kernel void @mad_sub_fabs_f16(half addrspace(1)* noalias nocapture
 
 ; VI-DENORM-CONTRACT: v_fma_f16 [[RESULT:v[0-9]+]], -[[REGA]], [[REGB]], |[[REGC]]|
 
-; VI-DENORM-STRICT: v_mul_f16_e32 [[TMP:v[0-9]+]], [[REGB]], [[REGA]]
+; VI-DENORM-STRICT: v_mul_f16_e32 [[TMP:v[0-9]+]], [[REGA]], [[REGB]]
 ; VI-DENORM-STRICT: v_sub_f16_e64 [[RESULT:v[0-9]+]], |[[REGC]]|, [[TMP]]
 
 ; VI: flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
@@ -347,13 +347,13 @@ define amdgpu_kernel void @mad_sub_fabs_inv_f16(half addrspace(1)* noalias nocap
 ; GCN: {{buffer|flat}}_load_ushort [[REGB:v[0-9]+]]
 ; GCN: {{buffer|flat}}_load_ushort [[REGC:v[0-9]+]]
 
-; VI-FLUSH: v_mac_f16_e32 [[REGC]], [[REGB]], [[REGA]]
+; VI-FLUSH: v_mac_f16_e32 [[REGC]], [[REGA]], [[REGB]]
 ; VI-FLUSH: flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[REGC]]
 
 ; VI-DENORM-CONTRACT: v_fma_f16 [[RESULT:v[0-9]+]], [[REGA]], [[REGB]], [[REGC]]
 
-; VI-DENORM-STRICT: v_mul_f16_e32 [[TMP:v[0-9]+]], [[REGB]], [[REGA]]
-; VI-DENORM-STRICT: v_add_f16_e32 [[RESULT:v[0-9]+]], [[TMP]], [[REGC]]
+; VI-DENORM-STRICT: v_mul_f16_e32 [[TMP:v[0-9]+]], [[REGA]], [[REGB]]
+; VI-DENORM-STRICT: v_add_f16_e32 [[RESULT:v[0-9]+]], [[REGC]], [[TMP]]
 ; VI-DENORM: flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
 define amdgpu_kernel void @neg_neg_mad_f16(half addrspace(1)* noalias nocapture %out, half addrspace(1)* noalias nocapture readonly %ptr) #1 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
@@ -385,7 +385,7 @@ define amdgpu_kernel void @neg_neg_mad_f16(half addrspace(1)* noalias nocapture 
 ; VI-DENORM-CONTRACT: v_fma_f16 [[RESULT:v[0-9]+]], [[REGA]], |[[REGB]]|, -[[REGC]]
 
 ; VI-DENORM-STRICT: v_mul_f16_e64 [[TMP:v[0-9]+]], [[REGA]], |[[REGB]]|
-; VI-DENORM-STRICT: v_subrev_f16_e32 [[RESULT:v[0-9]+]], [[REGC]], [[TMP]]
+; VI-DENORM-STRICT: v_sub_f16_e32 [[RESULT:v[0-9]+]], [[TMP]], [[REGC]]
 
 ; VI: flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
 define amdgpu_kernel void @mad_fabs_sub_f16(half addrspace(1)* noalias nocapture %out, half addrspace(1)* noalias nocapture readonly %ptr) #1 {
@@ -416,7 +416,7 @@ define amdgpu_kernel void @mad_fabs_sub_f16(half addrspace(1)* noalias nocapture
 ; VI-DENORM-CONTRACT: v_fma_f16 [[RESULT:v[0-9]+]], [[R1]], -2.0, [[R2]]
 
 ; VI-DENORM-STRICT: v_add_f16_e32 [[TMP:v[0-9]+]], [[R1]], [[R1]]
-; VI-DENORM-STRICT: v_subrev_f16_e32 [[RESULT:v[0-9]+]], [[TMP]], [[R2]]
+; VI-DENORM-STRICT: v_sub_f16_e32 [[RESULT:v[0-9]+]], [[R2]], [[TMP]]
 
 ; VI-DENORM: flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
 define amdgpu_kernel void @fsub_c_fadd_a_a_f16(half addrspace(1)* %out, half addrspace(1)* %in) {
@@ -444,7 +444,7 @@ define amdgpu_kernel void @fsub_c_fadd_a_a_f16(half addrspace(1)* %out, half add
 ; VI-DENORM-CONTRACT: v_fma_f16 [[R2]], [[R1]], 2.0, -[[R2]]
 
 ; VI-DENORM-STRICT: v_add_f16_e32 [[TMP:v[0-9]+]], [[R1]], [[R1]]
-; VI-DENORM-STRICT: v_subrev_f16_e32 [[RESULT:v[0-9]+]], [[R2]], [[TMP]]
+; VI-DENORM-STRICT: v_sub_f16_e32 [[RESULT:v[0-9]+]], [[TMP]], [[R2]]
 
 ; VI: flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
 define amdgpu_kernel void @fsub_fadd_a_a_c_f16(half addrspace(1)* %out, half addrspace(1)* %in) {

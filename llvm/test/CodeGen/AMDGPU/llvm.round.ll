@@ -12,7 +12,7 @@
 ; GCN: v_bfi_b32 [[COPYSIGN:v[0-9]+]], [[K]], 1.0, [[VX]]
 ; GCN: v_cmp_ge_f32_e64 vcc, |[[SUB]]|, 0.5
 ; GCN: v_cndmask_b32_e32 [[SEL:v[0-9]+]], 0, [[VX]]
-; GCN: v_add_f32_e32 [[RESULT:v[0-9]+]], [[SEL]], [[TRUNC]]
+; GCN: v_add_f32_e32 [[RESULT:v[0-9]+]], [[TRUNC]], [[SEL]]
 ; GCN: buffer_store_dword [[RESULT]]
 
 ; R600: TRUNC {{.*}}, [[ARG:KC[0-9]\[[0-9]+\]\.[XYZW]]]
@@ -70,7 +70,7 @@ define amdgpu_kernel void @round_v8f32(<8 x float> addrspace(1)* %out, <8 x floa
 ; GFX89: v_sub_f16_e32 [[SUB:v[0-9]+]], [[SX]], [[TRUNC]]
 ; GFX89: v_cmp_ge_f16_e64 vcc, |[[SUB]]|, 0.5
 ; GFX89: v_cndmask_b32_e32 [[SEL:v[0-9]+]], 0, [[COPYSIGN]]
-; GFX89: v_add_f16_e32 [[RESULT:v[0-9]+]], [[SEL]], [[TRUNC]]
+; GFX89: v_add_f16_e32 [[RESULT:v[0-9]+]], [[TRUNC]], [[SEL]]
 ; GFX89: buffer_store_short [[RESULT]]
 define amdgpu_kernel void @round_f16(half addrspace(1)* %out, i32 %x.arg) #0 {
   %x.arg.trunc = trunc i32 %x.arg to i16

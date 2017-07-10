@@ -43,6 +43,8 @@
 #include "isl/set.h"
 #include "isl/union_map.h"
 
+#include <utility>
+
 #define DEBUG_TYPE "polly-ast"
 
 using namespace llvm;
@@ -54,6 +56,11 @@ static cl::opt<bool>
     PollyParallel("polly-parallel",
                   cl::desc("Generate thread parallel code (isl codegen only)"),
                   cl::init(false), cl::ZeroOrMore, cl::cat(PollyCategory));
+
+static cl::opt<bool> PrintAccesses("polly-ast-print-accesses",
+                                   cl::desc("Print memory access functions"),
+                                   cl::init(false), cl::ZeroOrMore,
+                                   cl::cat(PollyCategory));
 
 static cl::opt<bool> PollyParallelForce(
     "polly-parallel-force",
@@ -559,6 +566,55 @@ IslAstInfo IslAstAnalysis::run(Scop &S, ScopAnalysisManager &SAM,
                  Dependences::AL_Statement)};
 }
 
+static __isl_give isl_printer *cbPrintUser(__isl_take isl_printer *P,
+                                           __isl_take isl_ast_print_options *O,
+                                           __isl_keep isl_ast_node *Node,
+                                           void *User) {
+  isl::ast_node AstNode = isl::manage(isl_ast_node_copy(Node));
+  isl::ast_expr NodeExpr = AstNode.user_get_expr();
+  isl::ast_expr CallExpr = NodeExpr.get_op_arg(0);
+  isl::id CallExprId = CallExpr.get_id();
+  ScopStmt *AccessStmt = (ScopStmt *)CallExprId.get_user();
+
+  P = isl_printer_start_line(P);
+  P = isl_printer_print_str(P, AccessStmt->getBaseName());
+  P = isl_printer_print_str(P, "(");
+  P = isl_printer_end_line(P);
+  P = isl_printer_indent(P, 2);
+
+  for (MemoryAccess *MemAcc : *AccessStmt) {
+    P = isl_printer_start_line(P);
+
+    if (MemAcc->isRead())
+      P = isl_printer_print_str(P, "/* read  */ &");
+    else
+      P = isl_printer_print_str(P, "/* write */  ");
+
+    isl::ast_build Build =
+        isl::manage(isl_ast_build_copy(IslAstInfo::getBuild(Node)));
+    if (MemAcc->isAffine()) {
+      isl_pw_multi_aff *PwmaPtr =
+          MemAcc->applyScheduleToAccessRelation(Build.get_schedule().release());
+      isl::pw_multi_aff Pwma = isl::manage(PwmaPtr);
+      isl::ast_expr AccessExpr = Build.access_from(Pwma);
+      P = isl_printer_print_ast_expr(P, AccessExpr.get());
+    } else {
+      P = isl_printer_print_str(
+          P, MemAcc->getLatestScopArrayInfo()->getName().c_str());
+      P = isl_printer_print_str(P, "[*]");
+    }
+    P = isl_printer_end_line(P);
+  }
+
+  P = isl_printer_indent(P, -2);
+  P = isl_printer_start_line(P);
+  P = isl_printer_print_str(P, ");");
+  P = isl_printer_end_line(P);
+
+  isl_ast_print_options_free(O);
+  return P;
+}
+
 void IslAstInfo::print(raw_ostream &OS) {
   isl_ast_print_options *Options;
   isl_ast_node *RootNode = Ast.getAst();
@@ -580,6 +636,10 @@ void IslAstInfo::print(raw_ostream &OS) {
   char *RtCStr, *AstStr;
 
   Options = isl_ast_print_options_alloc(S.getIslCtx());
+
+  if (PrintAccesses)
+    Options =
+        isl_ast_print_options_set_print_user(Options, cbPrintUser, nullptr);
   Options = isl_ast_print_options_set_print_for(Options, cbPrintFor, nullptr);
 
   isl_printer *P = isl_printer_to_str(S.getIslCtx());

@@ -1159,11 +1159,6 @@ function(add_lit_target target comment)
     list(APPEND LIT_ARGS --param build_mode=${CMAKE_CFG_INTDIR})
   endif ()
   if (EXISTS ${LLVM_MAIN_SRC_DIR}/utils/lit/lit.py)
-    # reset cache after erraneous r283029
-    # TODO: remove this once all buildbots run
-    if (LIT_COMMAND STREQUAL "${PYTHON_EXECUTABLE} ${LLVM_MAIN_SRC_DIR}/utils/lit/lit.py")
-      unset(LIT_COMMAND CACHE)
-    endif()
     set (LIT_COMMAND "${PYTHON_EXECUTABLE};${LLVM_MAIN_SRC_DIR}/utils/lit/lit.py"
          CACHE STRING "Command used to spawn llvm-lit")
   else()

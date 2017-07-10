@@ -18,7 +18,7 @@ define amdgpu_kernel void @s_abs_i32(i32 addrspace(1)* %out, i32 %val) nounwind 
 
 ; FUNC-LABEL: {{^}}v_abs_i32:
 ; GCN: v_sub_i32_e32 [[NEG:v[0-9]+]], vcc, 0, [[SRC:v[0-9]+]]
-; GCN: v_max_i32_e32 {{v[0-9]+}}, [[NEG]], [[SRC]]
+; GCN: v_max_i32_e32 {{v[0-9]+}}, [[SRC]], [[NEG]]
 ; GCN: v_add_i32
 
 ; EG: MAX_INT
@@ -34,7 +34,7 @@ define amdgpu_kernel void @v_abs_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %
 
 ; GCN-LABEL: {{^}}v_abs_i32_repeat_user:
 ; GCN: v_sub_i32_e32 [[NEG:v[0-9]+]], vcc, 0, [[SRC:v[0-9]+]]
-; GCN: v_max_i32_e32 [[MAX:v[0-9]+]], [[NEG]], [[SRC]]
+; GCN: v_max_i32_e32 [[MAX:v[0-9]+]], [[SRC]], [[NEG]]
 ; GCN: v_mul_lo_i32 v{{[0-9]+}}, [[MAX]], [[MAX]]
 define amdgpu_kernel void @v_abs_i32_repeat_user(i32 addrspace(1)* %out, i32 addrspace(1)* %src) nounwind {
   %val = load i32, i32 addrspace(1)* %src, align 4
@@ -71,8 +71,8 @@ define amdgpu_kernel void @s_abs_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> %
 ; GCN-DAG: v_sub_i32_e32 [[NEG0:v[0-9]+]], vcc, 0, [[SRC0:v[0-9]+]]
 ; GCN-DAG: v_sub_i32_e32 [[NEG1:v[0-9]+]], vcc, 0, [[SRC1:v[0-9]+]]
 
-; GCN-DAG: v_max_i32_e32 {{v[0-9]+}}, [[NEG0]], [[SRC0]]
-; GCN-DAG: v_max_i32_e32 {{v[0-9]+}}, [[NEG1]], [[SRC1]]
+; GCN-DAG: v_max_i32_e32 {{v[0-9]+}}, [[SRC0]], [[NEG0]]
+; GCN-DAG: v_max_i32_e32 {{v[0-9]+}}, [[SRC1]], [[NEG1]]
 
 ; GCN: v_add_i32
 ; GCN: v_add_i32
@@ -132,10 +132,10 @@ define amdgpu_kernel void @s_abs_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32> %
 ; GCN-DAG: v_sub_i32_e32 [[NEG2:v[0-9]+]], vcc, 0, [[SRC2:v[0-9]+]]
 ; GCN-DAG: v_sub_i32_e32 [[NEG3:v[0-9]+]], vcc, 0, [[SRC3:v[0-9]+]]
 
-; GCN-DAG: v_max_i32_e32 {{v[0-9]+}}, [[NEG0]], [[SRC0]]
-; GCN-DAG: v_max_i32_e32 {{v[0-9]+}}, [[NEG1]], [[SRC1]]
-; GCN-DAG: v_max_i32_e32 {{v[0-9]+}}, [[NEG2]], [[SRC2]]
-; GCN-DAG: v_max_i32_e32 {{v[0-9]+}}, [[NEG3]], [[SRC3]]
+; GCN-DAG: v_max_i32_e32 {{v[0-9]+}}, [[SRC0]], [[NEG0]]
+; GCN-DAG: v_max_i32_e32 {{v[0-9]+}}, [[SRC1]], [[NEG1]]
+; GCN-DAG: v_max_i32_e32 {{v[0-9]+}}, [[SRC2]], [[NEG2]]
+; GCN-DAG: v_max_i32_e32 {{v[0-9]+}}, [[SRC3]], [[NEG3]]
 
 ; GCN: v_add_i32
 ; GCN: v_add_i32
@@ -184,8 +184,8 @@ define amdgpu_kernel void @s_min_max_i32(i32 addrspace(1)* %out0, i32 addrspace(
 ; GCN: {{buffer|flat}}_load_dword [[VAL0:v[0-9]+]]
 ; GCN: {{buffer|flat}}_load_dword [[VAL1:v[0-9]+]]
 
-; GCN-DAG: v_min_i32_e32 v{{[0-9]+}}, [[VAL1]], [[VAL0]]
-; GCN-DAG: v_max_i32_e32 v{{[0-9]+}}, [[VAL1]], [[VAL0]]
+; GCN-DAG: v_min_i32_e32 v{{[0-9]+}}, [[VAL0]], [[VAL1]]
+; GCN-DAG: v_max_i32_e32 v{{[0-9]+}}, [[VAL0]], [[VAL1]]
 define amdgpu_kernel void @v_min_max_i32(i32 addrspace(1)* %out0, i32 addrspace(1)* %out1, i32 addrspace(1)* %ptr0, i32 addrspace(1)* %ptr1) nounwind {
   %val0 = load volatile i32, i32 addrspace(1)* %ptr0
   %val1 = load volatile i32, i32 addrspace(1)* %ptr1

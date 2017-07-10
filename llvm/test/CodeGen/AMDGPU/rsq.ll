@@ -48,8 +48,8 @@ define amdgpu_kernel void @rsq_f32_sgpr(float addrspace(1)* noalias %out, float 
 
 ; SI-UNSAFE-DAG: v_rsq_f32_e32 [[RSQA:v[0-9]+]], [[A]]
 ; SI-UNSAFE-DAG: v_rcp_f32_e32 [[RCPB:v[0-9]+]], [[B]]
-; SI-UNSAFE-DAG: v_mul_f32_e32 [[TMP:v[0-9]+]], [[RCPB]], [[RSQA]]
-; SI-UNSAFE: v_mul_f32_e32 [[RESULT:v[0-9]+]], [[TMP]], [[C]]
+; SI-UNSAFE-DAG: v_mul_f32_e32 [[TMP:v[0-9]+]], [[RSQA]], [[RCPB]]
+; SI-UNSAFE: v_mul_f32_e32 [[RESULT:v[0-9]+]], [[C]], [[TMP]]
 ; SI-UNSAFE: buffer_store_dword [[RESULT]]
 
 ; SI-SAFE-NOT: v_rsq_f32

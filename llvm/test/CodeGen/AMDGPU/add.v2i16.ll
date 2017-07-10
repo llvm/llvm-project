@@ -168,10 +168,10 @@ define amdgpu_kernel void @v_test_add_v2i16_inline_fp_split(<2 x i16> addrspace(
 ; VI: flat_load_ushort v[[B_HI:[0-9]+]]
 ; VI: flat_load_ushort v[[B_LO:[0-9]+]]
 
-; VI: v_add_u16_e32 v[[ADD_HI:[0-9]+]], v[[B_HI]], v[[A_HI]]
+; VI: v_add_u16_e32 v[[ADD_HI:[0-9]+]], v[[A_HI]], v[[B_HI]]
 ; VI-NOT: and
 ; VI-NOT: shl
-; VI: v_add_u16_e32 v[[ADD_LO:[0-9]+]], v[[B_LO]], v[[A_LO]]
+; VI: v_add_u16_e32 v[[ADD_LO:[0-9]+]], v[[A_LO]], v[[B_LO]]
 ; VI-NOT: and
 ; VI-NOT: shl
 ; VI: buffer_store_dwordx2 v{{\[}}[[ADD_LO]]:[[ADD_HI]]{{\]}}

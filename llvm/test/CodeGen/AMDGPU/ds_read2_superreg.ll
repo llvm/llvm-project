@@ -38,9 +38,9 @@ define amdgpu_kernel void @simple_read2_v2f32_superreg(<2 x float> addrspace(1)*
 ; CI-LABEL: {{^}}simple_read2_v4f32_superreg_align4:
 ; CI-DAG: ds_read2_b32 v{{\[}}[[REG_X:[0-9]+]]:[[REG_Y:[0-9]+]]{{\]}}, v{{[0-9]+}} offset1:1{{$}}
 ; CI-DAG: ds_read2_b32 v{{\[}}[[REG_Z:[0-9]+]]:[[REG_W:[0-9]+]]{{\]}}, v{{[0-9]+}} offset0:2 offset1:3{{$}}
-; CI-DAG: v_add_f32_e32 v[[ADD0:[0-9]+]], v[[REG_Z]], v[[REG_X]]
-; CI-DAG: v_add_f32_e32 v[[ADD1:[0-9]+]], v[[REG_W]], v[[REG_Y]]
-; CI: v_add_f32_e32 v[[ADD2:[0-9]+]], v[[ADD1]], v[[ADD0]]
+; CI-DAG: v_add_f32_e32 v[[ADD0:[0-9]+]], v[[REG_X]], v[[REG_Z]]
+; CI-DAG: v_add_f32_e32 v[[ADD1:[0-9]+]], v[[REG_Y]], v[[REG_W]]
+; CI: v_add_f32_e32 v[[ADD2:[0-9]+]], v[[ADD0]], v[[ADD1]]
 ; CI: buffer_store_dword v[[ADD2]]
 ; CI: s_endpgm
 define amdgpu_kernel void @simple_read2_v4f32_superreg_align4(float addrspace(1)* %out) #0 {
@@ -64,8 +64,8 @@ define amdgpu_kernel void @simple_read2_v4f32_superreg_align4(float addrspace(1)
 ; CI-LABEL: {{^}}simple_read2_v3f32_superreg_align4:
 ; CI-DAG: ds_read2_b32 v{{\[}}[[REG_X:[0-9]+]]:[[REG_Y:[0-9]+]]{{\]}}, v{{[0-9]+}} offset1:1{{$}}
 ; CI-DAG: ds_read_b32 v[[REG_Z:[0-9]+]], v{{[0-9]+}} offset:8{{$}}
-; CI-DAG: v_add_f32_e32 v[[ADD0:[0-9]+]], v[[REG_Z]], v[[REG_X]]
-; CI-DAG: v_add_f32_e32 v[[ADD1:[0-9]+]], v[[REG_Y]], v[[ADD0]]
+; CI-DAG: v_add_f32_e32 v[[ADD0:[0-9]+]], v[[REG_X]], v[[REG_Z]]
+; CI-DAG: v_add_f32_e32 v[[ADD1:[0-9]+]], v[[ADD0]], v[[REG_Y]]
 ; CI: buffer_store_dword v[[ADD1]]
 ; CI: s_endpgm
 define amdgpu_kernel void @simple_read2_v3f32_superreg_align4(float addrspace(1)* %out) #0 {

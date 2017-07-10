@@ -97,6 +97,7 @@ struct Configuration {
   llvm::StringRef ThinLTOCacheDir;
   std::string Rpath;
   std::vector<VersionDefinition> VersionDefinitions;
+  std::vector<llvm::StringRef> Argv;
   std::vector<llvm::StringRef> AuxiliaryList;
   std::vector<llvm::StringRef> SearchPaths;
   std::vector<llvm::StringRef> SymbolOrderingFile;

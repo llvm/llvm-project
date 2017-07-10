@@ -8,8 +8,9 @@ if not "SANITIZER_IOSSIM_TEST_DEVICE_IDENTIFIER" in os.environ:
 
 device_id = os.environ["SANITIZER_IOSSIM_TEST_DEVICE_IDENTIFIER"]
 
-if "ASAN_OPTIONS" in os.environ:
-    os.environ["SIMCTL_CHILD_ASAN_OPTIONS"] = os.environ["ASAN_OPTIONS"]
+for e in ["ASAN_OPTIONS", "TSAN_OPTIONS"]:
+  if e in os.environ:
+    os.environ["SIMCTL_CHILD_" + e] = os.environ[e]
 
 exitcode = subprocess.call(["xcrun", "simctl", "spawn", device_id] + sys.argv[1:])
 if exitcode > 125:

@@ -142,7 +142,7 @@ IsaVersion getIsaVersion(const FeatureBitset &Features) {
   if (Features.test(FeatureISAVersion9_0_3))
     return {9, 0, 3};
 
-  if (!Features.test(FeatureGCN) || Features.test(FeatureSouthernIslands))
+  if (!Features.test(FeatureGCN))
     return {0, 0, 0};
   return {7, 0, 0};
 }

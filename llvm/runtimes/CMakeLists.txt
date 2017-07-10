@@ -251,12 +251,14 @@ else() # if this is included from LLVM's CMake
     foreach(runtime_name ${runtime_names})
       list(APPEND extra_targets
         ${runtime_name}
-        install-${runtime_name}
-        check-${runtime_name})
+        install-${runtime_name})
+      if(LLVM_INCLUDE_TESTS)
+        list(APPEND test_targets check-${runtime_name})
+      endif()
     endforeach()
 
     if(LLVM_INCLUDE_TESTS)
-      set(test_targets runtimes-test-depends check-runtimes)
+      list(APPEND test_targets runtimes-test-depends check-runtimes)
       foreach(component ${SUB_COMPONENTS})
         list(APPEND SUB_COMPONENT_CHECK_TARGETS check-${component})
       endforeach()
@@ -292,6 +294,22 @@ else() # if this is included from LLVM's CMake
     if(LLVM_INCLUDE_TESTS)
       set_property(GLOBAL APPEND PROPERTY LLVM_ADDITIONAL_TEST_DEPENDS runtimes-test-depends)
       set_property(GLOBAL APPEND PROPERTY LLVM_ADDITIONAL_TEST_TARGETS check-runtimes)
+
+      set(RUNTIMES_TEST_DEPENDS
+          FileCheck
+          count
+          llvm-nm
+          llvm-objdump
+          llvm-xray
+          not
+          obj2yaml
+          sancov
+          sanstats
+          asan
+        )
+      foreach(target ${test_targets} ${SUB_COMPONENT_CHECK_TARGETS})
+        add_dependencies(${target} ${RUNTIMES_TEST_DEPENDS})
+      endforeach()
     endif()
   endif()
 endif()

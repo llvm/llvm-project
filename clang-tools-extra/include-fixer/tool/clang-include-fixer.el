@@ -88,6 +88,8 @@ The current file name is passed after ARGS as last argument.  If
 the call was successful the returned result is stored in a
 temporary buffer, and CALLBACK is called with the temporary
 buffer as only argument."
+  (unless buffer-file-name
+    (user-error "clang-include-fixer works only in buffers that visit a file"))
   (let ((process (if (fboundp 'make-process)
                      ;; Prefer using ‘make-process’ if available, because
                      ;; ‘start-process’ doesn’t allow us to separate the

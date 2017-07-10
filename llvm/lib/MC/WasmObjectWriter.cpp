@@ -1197,7 +1197,7 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
                                                  Align->getMaxBytesToEmit());
           DataBytes.resize(Size, Value);
         } else if (auto *Fill = dyn_cast<MCFillFragment>(&Frag)) {
-          DataBytes.insert(DataBytes.end(), Size, Fill->getValue());
+          DataBytes.insert(DataBytes.end(), Fill->getSize(), Fill->getValue());
         } else {
           const auto &DataFrag = cast<MCDataFragment>(Frag);
           const SmallVectorImpl<char> &Contents = DataFrag.getContents();

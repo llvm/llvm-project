@@ -710,11 +710,10 @@ bool llvm::UnrollRuntimeLoopRemainder(Loop *L, unsigned Count,
      // node.
      for (unsigned i =0; i < oldNumOperands; i++){
        Value *newVal = VMap[Phi->getIncomingValue(i)];
-       if (!newVal) {
-         assert(isa<Constant>(Phi->getIncomingValue(i)) &&
-                "VMap should exist for all values except constants!");
+       // newVal can be a constant or derived from values outside the loop, and
+       // hence need not have a VMap value.
+       if (!newVal)
          newVal = Phi->getIncomingValue(i);
-       }
        Phi->addIncoming(newVal,
                            cast<BasicBlock>(VMap[Phi->getIncomingBlock(i)]));
      }

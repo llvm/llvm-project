@@ -293,9 +293,23 @@ cl::opt<bool>
                       cl::desc("Print a column with the result status"),
                       cl::Optional, cl::sub(DiffSubcommand));
 
-cl::list<std::string> InputFilenames(cl::Positional,
-                                     cl::desc("<first> <second>"),
-                                     cl::OneOrMore, cl::sub(DiffSubcommand));
+cl::opt<std::string> LeftRoot(
+    "left-bin-root", cl::Optional,
+    cl::desc("Treats the specified path as the root of the tree containing "
+             "binaries referenced by the left PDB.  The root is stripped from "
+             "embedded paths when doing equality comparisons."),
+    cl::sub(DiffSubcommand));
+cl::opt<std::string> RightRoot(
+    "right-bin-root", cl::Optional,
+    cl::desc("Treats the specified path as the root of the tree containing "
+             "binaries referenced by the right PDB.  The root is stripped from "
+             "embedded paths when doing equality comparisons"),
+    cl::sub(DiffSubcommand));
+
+cl::opt<std::string> Left(cl::Positional, cl::desc("<left>"),
+                          cl::sub(DiffSubcommand));
+cl::opt<std::string> Right(cl::Positional, cl::desc("<right>"),
+                           cl::sub(DiffSubcommand));
 }
 
 cl::OptionCategory FileOptions("Module & File Options");
@@ -1151,11 +1165,7 @@ int main(int argc_, const char *argv_[]) {
     std::for_each(opts::bytes::InputFilenames.begin(),
                   opts::bytes::InputFilenames.end(), dumpBytes);
   } else if (opts::DiffSubcommand) {
-    if (opts::diff::InputFilenames.size() != 2) {
-      errs() << "diff subcommand expects exactly 2 arguments.\n";
-      exit(1);
-    }
-    diff(opts::diff::InputFilenames[0], opts::diff::InputFilenames[1]);
+    diff(opts::diff::Left, opts::diff::Right);
   } else if (opts::MergeSubcommand) {
     if (opts::merge::InputFilenames.size() < 2) {
       errs() << "merge subcommand requires at least 2 input files.\n";

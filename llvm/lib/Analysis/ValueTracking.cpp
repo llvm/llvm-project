@@ -1873,7 +1873,7 @@ bool isKnownNonZero(const Value *V, unsigned Depth, const Query &Q) {
       if (Known.countMaxLeadingZeros() < BitWidth - ShiftVal)
         return true;
       // Are all the bits to be shifted out known zero?
-      if (Known.countMinTrailingZeros() >= ShiftVal)
+      if (Known.isUnknown() || Known.countMinTrailingZeros() >= ShiftVal)
         return isKnownNonZero(X, Depth, Q);
     }
   }

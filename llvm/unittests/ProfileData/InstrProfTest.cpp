@@ -996,10 +996,7 @@ TEST_P(MaybeSparseInstrProfTest, instr_prof_symtab_compression_test) {
 TEST_F(SparseInstrProfTest, preserve_no_records) {
   Writer.addRecord({"foo", 0x1234, {0}}, Err);
   Writer.addRecord({"bar", 0x4321, {0, 0}}, Err);
-  // FIXME: I'm guessing this data should be different, but the original author
-  // should check/update this test so it doesn't produce errors.
-  Writer.addRecord({"bar", 0x4321, {0, 0, 0}},
-                   [](Error E) { consumeError(std::move(E)); });
+  Writer.addRecord({"baz", 0x4321, {0, 0, 0}}, Err);
 
   auto Profile = Writer.writeBuffer();
   readProfile(std::move(Profile));

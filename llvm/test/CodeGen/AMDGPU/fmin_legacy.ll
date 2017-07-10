@@ -45,7 +45,7 @@ define amdgpu_kernel void @s_test_fmin_legacy_ule_f32(float addrspace(1)* %out, 
 ; SI: buffer_load_dword [[A:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
 ; SI: buffer_load_dword [[B:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
 ; SI-SAFE: v_min_legacy_f32_e32 {{v[0-9]+}}, [[B]], [[A]]
-; SI-NONAN: v_min_f32_e32 {{v[0-9]+}}, [[B]], [[A]]
+; SI-NONAN: v_min_f32_e32 {{v[0-9]+}}, [[A]], [[B]]
 define amdgpu_kernel void @test_fmin_legacy_ule_f32(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.r600.read.tidig.x() #1
   %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
@@ -64,7 +64,7 @@ define amdgpu_kernel void @test_fmin_legacy_ule_f32(float addrspace(1)* %out, fl
 ; SI: buffer_load_dword [[A:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
 ; SI: buffer_load_dword [[B:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
 ; SI-SAFE: v_min_legacy_f32_e32 {{v[0-9]+}}, [[A]], [[B]]
-; SI-NONAN: v_min_f32_e32 {{v[0-9]+}}, [[B]], [[A]]
+; SI-NONAN: v_min_f32_e32 {{v[0-9]+}}, [[A]], [[B]]
 define amdgpu_kernel void @test_fmin_legacy_ole_f32(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.r600.read.tidig.x() #1
   %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
@@ -83,7 +83,7 @@ define amdgpu_kernel void @test_fmin_legacy_ole_f32(float addrspace(1)* %out, fl
 ; SI: buffer_load_dword [[A:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
 ; SI: buffer_load_dword [[B:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
 ; SI-SAFE: v_min_legacy_f32_e32 {{v[0-9]+}}, [[A]], [[B]]
-; SI-NONAN: v_min_f32_e32 {{v[0-9]+}}, [[B]], [[A]]
+; SI-NONAN: v_min_f32_e32 {{v[0-9]+}}, [[A]], [[B]]
 define amdgpu_kernel void @test_fmin_legacy_olt_f32(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.r600.read.tidig.x() #1
   %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
@@ -102,7 +102,7 @@ define amdgpu_kernel void @test_fmin_legacy_olt_f32(float addrspace(1)* %out, fl
 ; SI: buffer_load_dword [[A:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
 ; SI: buffer_load_dword [[B:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
 ; SI-SAFE: v_min_legacy_f32_e32 {{v[0-9]+}}, [[B]], [[A]]
-; SI-NONAN: v_min_f32_e32 {{v[0-9]+}}, [[B]], [[A]]
+; SI-NONAN: v_min_f32_e32 {{v[0-9]+}}, [[A]], [[B]]
 define amdgpu_kernel void @test_fmin_legacy_ult_f32(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.r600.read.tidig.x() #1
   %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
@@ -121,7 +121,7 @@ define amdgpu_kernel void @test_fmin_legacy_ult_f32(float addrspace(1)* %out, fl
 ; SI: buffer_load_dword [[A:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
 ; SI: buffer_load_dword [[B:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
 ; SI-SAFE: v_min_legacy_f32_e32 {{v[0-9]+}}, [[B]], [[A]]
-; SI-NONAN: v_min_f32_e32 {{v[0-9]+}}, [[B]], [[A]]
+; SI-NONAN: v_min_f32_e32 {{v[0-9]+}}, [[A]], [[B]]
 define amdgpu_kernel void @test_fmin_legacy_ult_v1f32(<1 x float> addrspace(1)* %out, <1 x float> addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.r600.read.tidig.x() #1
   %gep.0 = getelementptr <1 x float>, <1 x float> addrspace(1)* %in, i32 %tid

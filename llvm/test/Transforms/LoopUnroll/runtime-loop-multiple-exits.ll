@@ -1,9 +1,10 @@
+; RUN: opt < %s -loop-unroll -unroll-runtime=true -unroll-runtime-epilog=true -unroll-runtime-multi-exit=true -verify-dom-info -verify-loop-info -S | FileCheck %s -check-prefix=EPILOG-NO-IC
 ; RUN: opt < %s -loop-unroll -unroll-runtime=true -unroll-runtime-epilog=true -unroll-runtime-multi-exit=true -verify-dom-info -verify-loop-info -instcombine -S | FileCheck %s -check-prefix=EPILOG
 ; RUN: opt < %s -loop-unroll -unroll-runtime -unroll-count=2 -unroll-runtime-epilog=true -unroll-runtime-multi-exit=true -verify-dom-info -verify-loop-info -instcombine
 ; RUN: opt < %s -loop-unroll -unroll-runtime=true -unroll-runtime-epilog=false -unroll-runtime-multi-exit=true -verify-dom-info -verify-loop-info -instcombine -S | FileCheck %s -check-prefix=PROLOG
 ; RUN: opt < %s -loop-unroll -unroll-runtime -unroll-runtime-epilog=false -unroll-count=2 -unroll-runtime-multi-exit=true -verify-dom-info -verify-loop-info -instcombine
 
-; the second and fourth RUNs generate an epilog/prolog remainder block for all the test
+; the third and fifth RUNs generate an epilog/prolog remainder block for all the test
 ; cases below (it does not generate a loop).
 
 ; test with three exiting and three exit blocks.
@@ -392,4 +393,44 @@ exit_true:
 
 exit_false:
   ret i32 %addx
+}
+
+; test when value in exit block does not have VMap.
+define i32 @test7(i32 %arg, i32 %arg1, i32 %arg2) {
+; EPILOG-NO-IC: test7(
+; EPILOG-NO-IC: loopexit1.loopexit:
+; EPILOG-NO-IC-NEXT:  %sext3.ph = phi i32 [ %shft, %header ], [ %shft, %latch ], [ %shft, %latch.1 ], [ %shft, %latch.2 ], [ %shft, %latch.3 ], [ %shft, %latch.4 ], [ %shft, %latch.5 ], [ %shft, %latch.6 ]
+; EPILOG-NO-IC-NEXT:  br label %loopexit1
+; EPILOG-NO-IC: loopexit1.loopexit1:
+; EPILOG-NO-IC-NEXT:  %sext3.ph2 = phi i32 [ %shft, %header.epil ]
+; EPILOG-NO-IC-NEXT:  br label %loopexit1
+; EPILOG-NO-IC: loopexit1:
+; EPILOG-NO-IC-NEXT:   %sext3 = phi i32 [ %sext3.ph, %loopexit1.loopexit ], [ %sext3.ph2, %loopexit1.loopexit1 ]
+bb:
+  %tmp = icmp slt i32 undef, 2
+  %sext = sext i32 undef to i64
+  %shft = ashr exact i32 %arg, 16
+  br i1 %tmp, label %loopexit2, label %preheader
+
+preheader:                                              ; preds = %bb2
+  br label %header
+
+header:                                              ; preds = %latch, %preheader
+  %tmp6 = phi i64 [ 1, %preheader ], [ %add, %latch ]
+  br i1 false, label %loopexit1, label %latch
+
+latch:                                              ; preds = %header
+  %add = add nuw nsw i64 %tmp6, 1
+  %tmp9 = icmp slt i64 %add, %sext
+  br i1 %tmp9, label %header, label %latchexit
+
+latchexit:                                             ; preds = %latch
+  unreachable
+
+loopexit2:                                             ; preds = %bb2
+ ret i32 %shft
+
+loopexit1:                                             ; preds = %header
+  %sext3 = phi i32 [ %shft, %header ]
+  ret i32 %sext3
 }

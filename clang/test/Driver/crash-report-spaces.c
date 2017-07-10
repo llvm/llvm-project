@@ -1,6 +1,7 @@
 // RUN: rm -rf "%t"
 // RUN: mkdir "%t"
-// RUN: not env TMPDIR="%t" TEMP="%t" TMP="%t" RC_DEBUG_OPTIONS=1 %clang -fsyntax-only "%s" 2>&1 | FileCheck "%s"
+// RUN: cp "%s" "%t/crash report spaces.c"
+// RUN: not env TMPDIR="%t" TEMP="%t" TMP="%t" RC_DEBUG_OPTIONS=1 %clang -fsyntax-only "%t/crash report spaces.c" 2>&1 | FileCheck "%s"
 // RUN: cat "%t/crash report spaces"-*.c | FileCheck --check-prefix=CHECKSRC "%s"
 // RUN: cat "%t/crash report spaces"-*.sh | FileCheck --check-prefix=CHECKSH "%s"
 // REQUIRES: crash-recovery

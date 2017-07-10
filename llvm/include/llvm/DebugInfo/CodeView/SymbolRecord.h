@@ -735,6 +735,10 @@ public:
   uint16_t VersionBackendQFE;
   StringRef Version;
 
+  void setLanguage(SourceLanguage Lang) {
+    Flags = CompileSym3Flags((uint32_t(Flags) & 0xFFFFFF00) | uint32_t(Lang));
+  }
+
   uint8_t getLanguage() const { return static_cast<uint32_t>(Flags) & 0xFF; }
   uint32_t getFlags() const { return static_cast<uint32_t>(Flags) & ~0xFF; }
 
