@@ -303,9 +303,10 @@ TEST_P(CoverageMappingTest, correct_deserialize_for_more_than_two_files) {
   }
 }
 
+static const auto Err = [](Error E) { FAIL(); };
+
 TEST_P(CoverageMappingTest, load_coverage_for_more_than_two_files) {
-  EXPECT_THAT_ERROR(ProfileWriter.addRecord({"func", 0x1234, {0}}),
-                    Succeeded());
+  ProfileWriter.addRecord({"func", 0x1234, {0}}, Err);
 
   const char *FileNames[] = {"bar", "baz", "foo"};
   static const unsigned N = array_lengthof(FileNames);
@@ -326,17 +327,15 @@ TEST_P(CoverageMappingTest, load_coverage_for_more_than_two_files) {
 }
 
 TEST_P(CoverageMappingTest, load_coverage_with_bogus_function_name) {
-  EXPECT_THAT_ERROR(ProfileWriter.addRecord({"", 0x1234, {10}}), Succeeded());
+  ProfileWriter.addRecord({"", 0x1234, {10}}, Err);
   startFunction("", 0x1234);
   addCMR(Counter::getCounter(0), "foo", 1, 1, 5, 5);
   EXPECT_TRUE(ErrorEquals(coveragemap_error::malformed, loadCoverageMapping()));
 }
 
 TEST_P(CoverageMappingTest, load_coverage_for_several_functions) {
-  EXPECT_THAT_ERROR(ProfileWriter.addRecord({"func1", 0x1234, {10}}),
-                    Succeeded());
-  EXPECT_THAT_ERROR(ProfileWriter.addRecord({"func2", 0x2345, {20}}),
-                    Succeeded());
+  ProfileWriter.addRecord({"func1", 0x1234, {10}}, Err);
+  ProfileWriter.addRecord({"func2", 0x2345, {20}}, Err);
 
   startFunction("func1", 0x1234);
   addCMR(Counter::getCounter(0), "foo", 1, 1, 5, 5);
@@ -380,8 +379,7 @@ TEST_P(CoverageMappingTest, expansion_gets_first_counter) {
 }
 
 TEST_P(CoverageMappingTest, basic_coverage_iteration) {
-  EXPECT_THAT_ERROR(ProfileWriter.addRecord({"func", 0x1234, {30, 20, 10, 0}}),
-                    Succeeded());
+  ProfileWriter.addRecord({"func", 0x1234, {30, 20, 10, 0}}, Err);
 
   startFunction("func", 0x1234);
   addCMR(Counter::getCounter(0), "file1", 1, 1, 9, 9);
@@ -429,8 +427,7 @@ TEST_P(CoverageMappingTest, uncovered_function_with_mapping) {
 }
 
 TEST_P(CoverageMappingTest, combine_regions) {
-  EXPECT_THAT_ERROR(ProfileWriter.addRecord({"func", 0x1234, {10, 20, 30}}),
-                    Succeeded());
+  ProfileWriter.addRecord({"func", 0x1234, {10, 20, 30}}, Err);
 
   startFunction("func", 0x1234);
   addCMR(Counter::getCounter(0), "file1", 1, 1, 9, 9);
@@ -448,8 +445,7 @@ TEST_P(CoverageMappingTest, combine_regions) {
 }
 
 TEST_P(CoverageMappingTest, restore_combined_counter_after_nested_region) {
-  EXPECT_THAT_ERROR(ProfileWriter.addRecord({"func", 0x1234, {10, 20, 40}}),
-                    Succeeded());
+  ProfileWriter.addRecord({"func", 0x1234, {10, 20, 40}}, Err);
 
   startFunction("func", 0x1234);
   addCMR(Counter::getCounter(0), "file1", 1, 1, 9, 9);
@@ -469,10 +465,8 @@ TEST_P(CoverageMappingTest, restore_combined_counter_after_nested_region) {
 // If CodeRegions and ExpansionRegions cover the same area,
 // only counts of CodeRegions should be used.
 TEST_P(CoverageMappingTest, dont_combine_expansions) {
-  EXPECT_THAT_ERROR(ProfileWriter.addRecord({"func", 0x1234, {10, 20}}),
-                    Succeeded());
-  EXPECT_THAT_ERROR(ProfileWriter.addRecord({"func", 0x1234, {0, 0}}),
-                    Succeeded());
+  ProfileWriter.addRecord({"func", 0x1234, {10, 20}}, Err);
+  ProfileWriter.addRecord({"func", 0x1234, {0, 0}}, Err);
 
   startFunction("func", 0x1234);
   addCMR(Counter::getCounter(0), "file1", 1, 1, 9, 9);
@@ -492,8 +486,7 @@ TEST_P(CoverageMappingTest, dont_combine_expansions) {
 
 // If an area is covered only by ExpansionRegions, they should be combinated.
 TEST_P(CoverageMappingTest, combine_expansions) {
-  EXPECT_THAT_ERROR(ProfileWriter.addRecord({"func", 0x1234, {2, 3, 7}}),
-                    Succeeded());
+  ProfileWriter.addRecord({"func", 0x1234, {2, 3, 7}}, Err);
 
   startFunction("func", 0x1234);
   addCMR(Counter::getCounter(1), "include1", 1, 1, 1, 10);
@@ -514,8 +507,7 @@ TEST_P(CoverageMappingTest, combine_expansions) {
 }
 
 TEST_P(CoverageMappingTest, strip_filename_prefix) {
-  EXPECT_THAT_ERROR(ProfileWriter.addRecord({"file1:func", 0x1234, {0}}),
-                    Succeeded());
+  ProfileWriter.addRecord({"file1:func", 0x1234, {0}}, Err);
 
   startFunction("file1:func", 0x1234);
   addCMR(Counter::getCounter(0), "file1", 1, 1, 9, 9);
@@ -529,8 +521,7 @@ TEST_P(CoverageMappingTest, strip_filename_prefix) {
 }
 
 TEST_P(CoverageMappingTest, strip_unknown_filename_prefix) {
-  EXPECT_THAT_ERROR(ProfileWriter.addRecord({"<unknown>:func", 0x1234, {0}}),
-                    Succeeded());
+  ProfileWriter.addRecord({"<unknown>:func", 0x1234, {0}}, Err);
 
   startFunction("<unknown>:func", 0x1234);
   addCMR(Counter::getCounter(0), "", 1, 1, 9, 9);
@@ -544,10 +535,8 @@ TEST_P(CoverageMappingTest, strip_unknown_filename_prefix) {
 }
 
 TEST_P(CoverageMappingTest, dont_detect_false_instantiations) {
-  EXPECT_THAT_ERROR(ProfileWriter.addRecord({"foo", 0x1234, {10}}),
-                    Succeeded());
-  EXPECT_THAT_ERROR(ProfileWriter.addRecord({"bar", 0x2345, {20}}),
-                    Succeeded());
+  ProfileWriter.addRecord({"foo", 0x1234, {10}}, Err);
+  ProfileWriter.addRecord({"bar", 0x2345, {20}}, Err);
 
   startFunction("foo", 0x1234);
   addCMR(Counter::getCounter(0), "expanded", 1, 1, 1, 10);
@@ -565,8 +554,7 @@ TEST_P(CoverageMappingTest, dont_detect_false_instantiations) {
 }
 
 TEST_P(CoverageMappingTest, load_coverage_for_expanded_file) {
-  EXPECT_THAT_ERROR(ProfileWriter.addRecord({"func", 0x1234, {10}}),
-                    Succeeded());
+  ProfileWriter.addRecord({"func", 0x1234, {10}}, Err);
 
   startFunction("func", 0x1234);
   addCMR(Counter::getCounter(0), "expanded", 1, 1, 1, 10);
@@ -582,8 +570,7 @@ TEST_P(CoverageMappingTest, load_coverage_for_expanded_file) {
 }
 
 TEST_P(CoverageMappingTest, skip_duplicate_function_record) {
-  EXPECT_THAT_ERROR(ProfileWriter.addRecord({"func", 0x1234, {1}}),
-                    Succeeded());
+  ProfileWriter.addRecord({"func", 0x1234, {1}}, Err);
 
   startFunction("func", 0x1234);
   addCMR(Counter::getCounter(0), "file1", 1, 1, 9, 9);

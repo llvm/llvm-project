@@ -239,16 +239,27 @@ size_t RecursiveCloneTypeIIConstraint::saveHash(
   }
 
   if (CS) {
-    for (unsigned Length = 2; Length <= CS->size(); ++Length) {
-      for (unsigned Pos = 0; Pos <= CS->size() - Length; ++Pos) {
-        llvm::MD5 Hash;
-        for (unsigned i = Pos; i < Pos + Length; ++i) {
-          size_t ChildHash = ChildHashes[i];
-          Hash.update(StringRef(reinterpret_cast<char *>(&ChildHash),
-                                sizeof(ChildHash)));
+    // If we're in a CompoundStmt, we hash all possible combinations of child
+    // statements to find clones in those subsequences.
+    // We first go through every possible starting position of a subsequence.
+    for (unsigned Pos = 0; Pos < CS->size(); ++Pos) {
+      // Then we try all possible lengths this subsequence could have and
+      // reuse the same hash object to make sure we only hash every child
+      // hash exactly once.
+      llvm::MD5 Hash;
+      for (unsigned Length = 1; Length <= CS->size() - Pos; ++Length) {
+        // Grab the current child hash and put it into our hash. We do
+        // -1 on the index because we start counting the length at 1.
+        size_t ChildHash = ChildHashes[Pos + Length - 1];
+        Hash.update(
+            StringRef(reinterpret_cast<char *>(&ChildHash), sizeof(ChildHash)));
+        // If we have at least two elements in our subsequence, we can start
+        // saving it.
+        if (Length > 1) {
+          llvm::MD5 SubHash = Hash;
+          StmtsByHash.push_back(std::make_pair(
+              createHash(SubHash), StmtSequence(CS, D, Pos, Pos + Length)));
         }
-        StmtsByHash.push_back(std::make_pair(
-            createHash(Hash), StmtSequence(CS, D, Pos, Pos + Length)));
       }
     }
   }

@@ -1169,6 +1169,7 @@ TEST_F(CGSCCPassManagerTest, TestAnalysisInvalidationCGSCCUpdate) {
         auto &NewC = updateCGAndAnalysisManagerForFunctionPass(
             CG, C, H2N, AM, UR, /*DebugLogging*/ true);
         assert(&NewC != &C && "Should get a new SCC due to update!");
+        (void)&NewC;
 
         return PA;
       }));
@@ -1214,6 +1215,7 @@ TEST_F(CGSCCPassManagerTest, TestAnalysisInvalidationCGSCCUpdate) {
         auto &NewC = updateCGAndAnalysisManagerForFunctionPass(
             CG, C, H2N, AM, UR, /*DebugLogging*/ true);
         assert(&NewC != &C && "Should get a new SCC due to update!");
+        (void)&NewC;
 
         return PA;
       }));

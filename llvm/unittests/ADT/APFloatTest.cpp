@@ -552,7 +552,7 @@ TEST(APFloatTest, MaxNum) {
   EXPECT_EQ(2.0, maxnum(f1, f2).convertToDouble());
   EXPECT_EQ(2.0, maxnum(f2, f1).convertToDouble());
   EXPECT_EQ(1.0, maxnum(f1, nan).convertToDouble());
-  EXPECT_EQ(1.0, minnum(nan, f1).convertToDouble());
+  EXPECT_EQ(1.0, maxnum(nan, f1).convertToDouble());
 }
 
 TEST(APFloatTest, Denormal) {

@@ -25,6 +25,40 @@ template <typename T> void checkAlwaysLockFree() {
     assert(std::atomic<T>().is_lock_free());
 }
 
+// FIXME: This separate test is needed to work around llvm.org/PR31864
+// which causes ATOMIC_LLONG_LOCK_FREE to be defined as '1' in 32-bit builds
+// even though __atomic_always_lock_free returns true for the same type.
+constexpr bool NeedWorkaroundForPR31864 =
+#if defined(__clang__)
+(sizeof(void*) == 4); // Needed on 32 bit builds
+#else
+false;
+#endif
+
+template <bool Disable = NeedWorkaroundForPR31864,
+  std::enable_if_t<!Disable>* = nullptr,
+  class LLong = long long,
+  class ULLong = unsigned long long>
+void checkLongLongTypes() {
+  static_assert(std::atomic<LLong>::is_always_lock_free == (2 == ATOMIC_LLONG_LOCK_FREE));
+  static_assert(std::atomic<ULLong>::is_always_lock_free == (2 == ATOMIC_LLONG_LOCK_FREE));
+}
+
+// Used to make the calls to __atomic_always_lock_free dependent on a template
+// parameter.
+template <class T> constexpr size_t getSizeOf() { return sizeof(T); }
+
+template <bool Enable = NeedWorkaroundForPR31864,
+  std::enable_if_t<Enable>* = nullptr,
+  class LLong = long long,
+  class ULLong = unsigned long long>
+void checkLongLongTypes() {
+  constexpr bool ExpectLockFree = __atomic_always_lock_free(getSizeOf<LLong>(), 0);
+  static_assert(std::atomic<LLong>::is_always_lock_free == ExpectLockFree, "");
+  static_assert(std::atomic<ULLong>::is_always_lock_free == ExpectLockFree, "");
+  static_assert((0 != ATOMIC_LLONG_LOCK_FREE) == ExpectLockFree, "");
+}
+
 int main()
 {
 // structs and unions can't be defined in the template invocation.
@@ -94,8 +128,7 @@ int main()
     static_assert(std::atomic<unsigned int>::is_always_lock_free == (2 == ATOMIC_INT_LOCK_FREE));
     static_assert(std::atomic<long>::is_always_lock_free == (2 == ATOMIC_LONG_LOCK_FREE));
     static_assert(std::atomic<unsigned long>::is_always_lock_free == (2 == ATOMIC_LONG_LOCK_FREE));
-    static_assert(std::atomic<long long>::is_always_lock_free == (2 == ATOMIC_LLONG_LOCK_FREE));
-    static_assert(std::atomic<unsigned long long>::is_always_lock_free == (2 == ATOMIC_LLONG_LOCK_FREE));
+    checkLongLongTypes();
     static_assert(std::atomic<void*>::is_always_lock_free == (2 == ATOMIC_POINTER_LOCK_FREE));
     static_assert(std::atomic<std::nullptr_t>::is_always_lock_free == (2 == ATOMIC_POINTER_LOCK_FREE));
 }
