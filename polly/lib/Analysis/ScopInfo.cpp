@@ -2825,6 +2825,7 @@ bool Scop::propagateInvalidStmtDomains(
         continue;
 
       isl_set_free(InvalidDomain);
+      InvalidDomainMap.erase(BB);
       invalidate(COMPLEXITY, TI->getDebugLoc());
       return false;
     }

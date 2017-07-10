@@ -16,7 +16,7 @@
 // UNSUPPORTED: c++98, c++03, c++11
 
 // The sanitizers replace new/delete with versions that do not throw bad_alloc.
-// UNSUPPORTED: sanitizer-new-delete, ubsan
+// UNSUPPORTED: sanitizer-new-delete
 
 
 #include <experimental/dynarray>

@@ -212,6 +212,15 @@ _rdrand32_step(unsigned int *__p)
   return __builtin_ia32_rdrand32_step(__p);
 }
 
+#ifdef __x86_64__
+static __inline__ int __attribute__((__always_inline__, __nodebug__, __target__("rdrnd")))
+_rdrand64_step(unsigned long long *__p)
+{
+  return __builtin_ia32_rdrand64_step(__p);
+}
+#endif
+#endif /* __RDRND__ */
+
 /* __bit_scan_forward */
 static __inline__ int __attribute__((__always_inline__, __nodebug__))
 _bit_scan_forward(int __A) {
@@ -223,15 +232,6 @@ static __inline__ int __attribute__((__always_inline__, __nodebug__))
 _bit_scan_reverse(int __A) {
   return 31 - __builtin_clz(__A);
 }
-
-#ifdef __x86_64__
-static __inline__ int __attribute__((__always_inline__, __nodebug__, __target__("rdrnd")))
-_rdrand64_step(unsigned long long *__p)
-{
-  return __builtin_ia32_rdrand64_step(__p);
-}
-#endif
-#endif /* __RDRND__ */
 
 #if !defined(_MSC_VER) || __has_feature(modules) || defined(__FSGSBASE__)
 #ifdef __x86_64__

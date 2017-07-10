@@ -22,8 +22,24 @@ void no_coroutine_traits() {
 
 namespace std {
 namespace experimental {
-template <typename... T>
-struct coroutine_traits; // expected-note {{declared here}}
+
+template <class... Args>
+struct void_t_imp {
+  using type = void;
+};
+template <class... Args>
+using void_t = typename void_t_imp<Args...>::type;
+
+template <class T, class = void>
+struct traits_sfinae_base {};
+
+template <class T>
+struct traits_sfinae_base<T, void_t<typename T::promise_type>> {
+  using promise_type = typename T::promise_type;
+};
+
+template <class Ret, class... Args>
+struct coroutine_traits : public traits_sfinae_base<Ret> {};
 }}  // namespace std::experimental
 
 template<typename Promise> struct coro {};
@@ -50,8 +66,9 @@ struct suspend_never {
   void await_resume() {}
 };
 
-void no_specialization() {
-  co_await a; // expected-error {{implicit instantiation of undefined template 'std::experimental::coroutine_traits<void>'}}
+struct DummyVoidTag {};
+DummyVoidTag no_specialization() { // expected-error {{this function cannot be a coroutine: 'std::experimental::coroutine_traits<DummyVoidTag>' has no member named 'promise_type'}}
+  co_await a;
 }
 
 template <typename... T>
@@ -905,3 +922,243 @@ void test_dependent_param(T t, U) {
   co_return 42;
 }
 template void test_dependent_param(NoCopy<0>, NoCopy<1>); // expected-note {{requested here}}
+
+namespace CoroHandleMemberFunctionTest {
+struct CoroMemberTag {};
+struct BadCoroMemberTag {};
+
+template <class T, class U>
+constexpr bool IsSameV = false;
+template <class T>
+constexpr bool IsSameV<T, T> = true;
+
+template <class T>
+struct TypeTest {
+  template <class U>
+  static constexpr bool IsSame = IsSameV<T, U>;
+
+  template <class... Args>
+  static constexpr bool MatchesArgs = IsSameV<T,
+                                              std::experimental::coroutine_traits<CoroMemberTag, Args...>>;
+};
+
+template <class T>
+struct AwaitReturnsType {
+  bool await_ready() const;
+  void await_suspend(...) const;
+  T await_resume() const;
+};
+
+template <class... CoroTraitsArgs>
+struct CoroMemberPromise {
+  using TraitsT = std::experimental::coroutine_traits<CoroTraitsArgs...>;
+  using TypeTestT = TypeTest<TraitsT>;
+  using AwaitTestT = AwaitReturnsType<TypeTestT>;
+
+  CoroMemberTag get_return_object();
+  suspend_always initial_suspend();
+  suspend_always final_suspend();
+
+  AwaitTestT yield_value(int);
+
+  void return_void();
+  void unhandled_exception();
+};
+
+} // namespace CoroHandleMemberFunctionTest
+
+template <class... Args>
+struct ::std::experimental::coroutine_traits<CoroHandleMemberFunctionTest::CoroMemberTag, Args...> {
+  using promise_type = CoroHandleMemberFunctionTest::CoroMemberPromise<CoroHandleMemberFunctionTest::CoroMemberTag, Args...>;
+};
+
+namespace CoroHandleMemberFunctionTest {
+struct TestType {
+
+  CoroMemberTag test_qual() {
+    auto TC = co_yield 0;
+    static_assert(TC.MatchesArgs<TestType &>, "");
+    static_assert(!TC.MatchesArgs<TestType>, "");
+    static_assert(!TC.MatchesArgs<TestType *>, "");
+  }
+
+  CoroMemberTag test_sanity(int *) const {
+    auto TC = co_yield 0;
+    static_assert(TC.MatchesArgs<const TestType &>, ""); // expected-error {{static_assert failed}}
+    static_assert(TC.MatchesArgs<const TestType &>, ""); // expected-error {{static_assert failed}}
+    static_assert(TC.MatchesArgs<const TestType &, int *>, "");
+  }
+
+  CoroMemberTag test_qual(int *, const float &&, volatile void *volatile) const {
+    auto TC = co_yield 0;
+    static_assert(TC.MatchesArgs<const TestType &, int *, const float &&, volatile void *volatile>, "");
+  }
+
+  CoroMemberTag test_qual() const volatile {
+    auto TC = co_yield 0;
+    static_assert(TC.MatchesArgs<const volatile TestType &>, "");
+  }
+
+  CoroMemberTag test_ref_qual() & {
+    auto TC = co_yield 0;
+    static_assert(TC.MatchesArgs<TestType &>, "");
+  }
+  CoroMemberTag test_ref_qual() const & {
+    auto TC = co_yield 0;
+    static_assert(TC.MatchesArgs<TestType const &>, "");
+  }
+  CoroMemberTag test_ref_qual() && {
+    auto TC = co_yield 0;
+    static_assert(TC.MatchesArgs<TestType &&>, "");
+  }
+  CoroMemberTag test_ref_qual(const char *&) const volatile && {
+    auto TC = co_yield 0;
+    static_assert(TC.MatchesArgs<TestType const volatile &&, const char *&>, "");
+  }
+
+  CoroMemberTag test_args(int) {
+    auto TC = co_yield 0;
+    static_assert(TC.MatchesArgs<TestType &, int>, "");
+  }
+  CoroMemberTag test_args(int, long &, void *) const {
+    auto TC = co_yield 0;
+    static_assert(TC.MatchesArgs<TestType const &, int, long &, void *>, "");
+  }
+
+  template <class... Args>
+  CoroMemberTag test_member_template(Args...) const && {
+    auto TC = co_yield 0;
+    static_assert(TC.template MatchesArgs<TestType const &&, Args...>, "");
+  }
+
+  static CoroMemberTag test_static() {
+    auto TC = co_yield 0;
+    static_assert(TC.MatchesArgs<>, "");
+    static_assert(!TC.MatchesArgs<TestType>, "");
+    static_assert(!TC.MatchesArgs<TestType &>, "");
+    static_assert(!TC.MatchesArgs<TestType *>, "");
+  }
+
+  static CoroMemberTag test_static(volatile void *const, char &&) {
+    auto TC = co_yield 0;
+    static_assert(TC.MatchesArgs<volatile void *const, char &&>, "");
+  }
+
+  template <class Dummy>
+  static CoroMemberTag test_static_template(const char *volatile &, unsigned) {
+    auto TC = co_yield 0;
+    using TCT = decltype(TC);
+    static_assert(TCT::MatchesArgs<const char *volatile &, unsigned>, "");
+    static_assert(!TCT::MatchesArgs<TestType &, const char *volatile &, unsigned>, "");
+  }
+
+  BadCoroMemberTag test_diagnostics() {
+    // expected-error@-1 {{this function cannot be a coroutine: 'std::experimental::coroutine_traits<CoroHandleMemberFunctionTest::BadCoroMemberTag, CoroHandleMemberFunctionTest::TestType &>' has no member named 'promise_type'}}
+    co_return;
+  }
+  BadCoroMemberTag test_diagnostics(int) const && {
+    // expected-error@-1 {{this function cannot be a coroutine: 'std::experimental::coroutine_traits<CoroHandleMemberFunctionTest::BadCoroMemberTag, const CoroHandleMemberFunctionTest::TestType &&, int>' has no member named 'promise_type'}}
+    co_return;
+  }
+
+  static BadCoroMemberTag test_static_diagnostics(long *) {
+    // expected-error@-1 {{this function cannot be a coroutine: 'std::experimental::coroutine_traits<CoroHandleMemberFunctionTest::BadCoroMemberTag, long *>' has no member named 'promise_type'}}
+    co_return;
+  }
+};
+
+template CoroMemberTag TestType::test_member_template(long, const char *) const &&;
+template CoroMemberTag TestType::test_static_template<void>(const char *volatile &, unsigned);
+
+template <class... Args>
+struct DepTestType {
+
+  CoroMemberTag test_sanity(int *) const {
+    auto TC = co_yield 0;
+    static_assert(TC.template MatchesArgs<const DepTestType &>, ""); // expected-error {{static_assert failed}}
+    static_assert(TC.template MatchesArgs<>, ""); // expected-error {{static_assert failed}}
+    static_assert(TC.template MatchesArgs<const DepTestType &, int *>, "");
+  }
+
+  CoroMemberTag test_qual() {
+    auto TC = co_yield 0;
+    static_assert(TC.template MatchesArgs<DepTestType &>, "");
+    static_assert(!TC.template MatchesArgs<DepTestType>, "");
+    static_assert(!TC.template MatchesArgs<DepTestType *>, "");
+  }
+
+  CoroMemberTag test_qual(int *, const float &&, volatile void *volatile) const {
+    auto TC = co_yield 0;
+    static_assert(TC.template MatchesArgs<const DepTestType &, int *, const float &&, volatile void *volatile>, "");
+  }
+
+  CoroMemberTag test_qual() const volatile {
+    auto TC = co_yield 0;
+    static_assert(TC.template MatchesArgs<const volatile DepTestType &>, "");
+  }
+
+  CoroMemberTag test_ref_qual() & {
+    auto TC = co_yield 0;
+    static_assert(TC.template MatchesArgs<DepTestType &>, "");
+  }
+  CoroMemberTag test_ref_qual() const & {
+    auto TC = co_yield 0;
+    static_assert(TC.template MatchesArgs<DepTestType const &>, "");
+  }
+  CoroMemberTag test_ref_qual() && {
+    auto TC = co_yield 0;
+    static_assert(TC.template MatchesArgs<DepTestType &&>, "");
+  }
+  CoroMemberTag test_ref_qual(const char *&) const volatile && {
+    auto TC = co_yield 0;
+    static_assert(TC.template MatchesArgs<DepTestType const volatile &&, const char *&>, "");
+  }
+
+  CoroMemberTag test_args(int) {
+    auto TC = co_yield 0;
+    static_assert(TC.template MatchesArgs<DepTestType &, int>, "");
+  }
+  CoroMemberTag test_args(int, long &, void *) const {
+    auto TC = co_yield 0;
+    static_assert(TC.template MatchesArgs<DepTestType const &, int, long &, void *>, "");
+  }
+
+  template <class... UArgs>
+  CoroMemberTag test_member_template(UArgs...) const && {
+    auto TC = co_yield 0;
+    static_assert(TC.template MatchesArgs<DepTestType const &&, UArgs...>, "");
+  }
+
+  static CoroMemberTag test_static() {
+    auto TC = co_yield 0;
+    using TCT = decltype(TC);
+    static_assert(TCT::MatchesArgs<>, "");
+    static_assert(!TCT::MatchesArgs<DepTestType>, "");
+    static_assert(!TCT::MatchesArgs<DepTestType &>, "");
+    static_assert(!TCT::MatchesArgs<DepTestType *>, "");
+
+    // Ensure diagnostics are actually being generated here
+    static_assert(TCT::MatchesArgs<int>, ""); // expected-error {{static_assert failed}}
+  }
+
+  static CoroMemberTag test_static(volatile void *const, char &&) {
+    auto TC = co_yield 0;
+    using TCT = decltype(TC);
+    static_assert(TCT::MatchesArgs<volatile void *const, char &&>, "");
+  }
+
+  template <class Dummy>
+  static CoroMemberTag test_static_template(const char *volatile &, unsigned) {
+    auto TC = co_yield 0;
+    using TCT = decltype(TC);
+    static_assert(TCT::MatchesArgs<const char *volatile &, unsigned>, "");
+    static_assert(!TCT::MatchesArgs<DepTestType &, const char *volatile &, unsigned>, "");
+  }
+};
+
+template struct DepTestType<int>; // expected-note {{requested here}}
+template CoroMemberTag DepTestType<int>::test_member_template(long, const char *) const &&;
+
+template CoroMemberTag DepTestType<int>::test_static_template<void>(const char *volatile &, unsigned);
+
+} // namespace CoroHandleMemberFunctionTest
