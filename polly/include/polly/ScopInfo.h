@@ -843,6 +843,9 @@ public:
   /// Get an isl string representing a new access function, if available.
   std::string getNewAccessRelationStr() const;
 
+  /// Get an isl string representing the latest access relation.
+  std::string getAccessRelationStr() const;
+
   /// Get the original base address of this access (e.g. A for A[i+j]) when
   /// detected.
   ///

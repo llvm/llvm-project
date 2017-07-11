@@ -159,6 +159,8 @@ public:
       ASESet |= Mips::AFL_ASE_MICROMIPS;
     if (P.inMips16Mode())
       ASESet |= Mips::AFL_ASE_MIPS16;
+    if (P.hasMT())
+      ASESet |= Mips::AFL_ASE_MT;
   }
 
   template <class PredicateLibrary>

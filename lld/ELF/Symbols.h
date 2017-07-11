@@ -218,7 +218,7 @@ public:
         Verdef(Verdef), ElfSym(ElfSym) {
     // IFuncs defined in DSOs are treated as functions by the static linker.
     if (isGnuIFunc())
-      Type = llvm::ELF::STT_FUNC;
+      this->Type = llvm::ELF::STT_FUNC;
     this->File = File;
   }
 
@@ -362,9 +362,6 @@ struct Symbol {
 
   // True if this symbol is specified by --trace-symbol option.
   unsigned Traced : 1;
-
-  // This symbol version was found in a version script.
-  unsigned InVersionScript : 1;
 
   bool includeInDynsym() const;
   uint8_t computeBinding() const;

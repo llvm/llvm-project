@@ -182,14 +182,6 @@ BuildCompilerInstance(ArrayRef<const char *> ClangArgv) {
   return Ins;
 }
 
-std::unique_ptr<CompilerInstance>
-BuildCompilerInstance(ArrayRef<std::string> ClangArgs) {
-  std::vector<const char *> ClangArgv(ClangArgs.size());
-  std::transform(ClangArgs.begin(), ClangArgs.end(), ClangArgv.begin(),
-                 [](const std::string &s) -> const char * { return s.data(); });
-  return init_convenience::BuildCompilerInstance(ClangArgv);
-}
-
 std::unique_ptr<ASTContext>
 BuildASTContext(CompilerInstance &CI, SelectorTable &ST, Builtin::Context &BC) {
   auto AST = llvm::make_unique<ASTContext>(
@@ -313,14 +305,8 @@ int main(int argc, const char **argv) {
   std::vector<std::unique_ptr<CompilerInstance>> IndirectCIs;
   if (!Direct) {
     for (auto &ImportCI : ImportCIs) {
-      llvm::Expected<std::unique_ptr<CompilerInstance>> IndirectCI =
-          BuildIndirect(ImportCI);
-      if (auto E = IndirectCI.takeError()) {
-        llvm::errs() << llvm::toString(std::move(E));
-        exit(-1);
-      } else {
-        IndirectCIs.push_back(std::move(*IndirectCI));
-      }
+      std::unique_ptr<CompilerInstance> IndirectCI = BuildIndirect(ImportCI);
+      IndirectCIs.push_back(std::move(IndirectCI));
     }
   }
   llvm::Expected<std::unique_ptr<CompilerInstance>> ExpressionCI =

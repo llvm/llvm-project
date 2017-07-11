@@ -126,50 +126,58 @@ static bool canShrink(MachineInstr &MI, const SIInstrInfo *TII,
 
 /// \brief This function checks \p MI for operands defined by a move immediate
 /// instruction and then folds the literal constant into the instruction if it
-/// can.  This function assumes that \p MI is a VOP1, VOP2, or VOPC instruction
-/// and will only fold literal constants if we are still in SSA.
-static void foldImmediates(MachineInstr &MI, const SIInstrInfo *TII,
+/// can. This function assumes that \p MI is a VOP1, VOP2, or VOPC instructions.
+static bool foldImmediates(MachineInstr &MI, const SIInstrInfo *TII,
                            MachineRegisterInfo &MRI, bool TryToCommute = true) {
-
-  if (!MRI.isSSA())
-    return;
-
   assert(TII->isVOP1(MI) || TII->isVOP2(MI) || TII->isVOPC(MI));
 
   int Src0Idx = AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::src0);
 
-  // Only one literal constant is allowed per instruction, so if src0 is a
-  // literal constant then we can't do any folding.
-  if (TII->isLiteralConstant(MI, Src0Idx))
-    return;
-
   // Try to fold Src0
   MachineOperand &Src0 = MI.getOperand(Src0Idx);
-  if (Src0.isReg() && MRI.hasOneUse(Src0.getReg())) {
+  if (Src0.isReg()) {
     unsigned Reg = Src0.getReg();
-    MachineInstr *Def = MRI.getUniqueVRegDef(Reg);
-    if (Def && Def->isMoveImmediate()) {
-      MachineOperand &MovSrc = Def->getOperand(1);
-      bool ConstantFolded = false;
+    if (TargetRegisterInfo::isVirtualRegister(Reg) && MRI.hasOneUse(Reg)) {
+      MachineInstr *Def = MRI.getUniqueVRegDef(Reg);
+      if (Def && Def->isMoveImmediate()) {
+        MachineOperand &MovSrc = Def->getOperand(1);
+        bool ConstantFolded = false;
 
-      if (MovSrc.isImm() && (isInt<32>(MovSrc.getImm()) ||
-                             isUInt<32>(MovSrc.getImm()))) {
-        Src0.ChangeToImmediate(MovSrc.getImm());
-        ConstantFolded = true;
-      }
-      if (ConstantFolded) {
-        if (MRI.use_empty(Reg))
+        if (MovSrc.isImm() && (isInt<32>(MovSrc.getImm()) ||
+                               isUInt<32>(MovSrc.getImm()))) {
+          // It's possible to have only one component of a super-reg defined by
+          // a single mov, so we need to clear any subregister flag.
+          Src0.setSubReg(0);
+          Src0.ChangeToImmediate(MovSrc.getImm());
+          ConstantFolded = true;
+        } else if (MovSrc.isFI()) {
+          Src0.setSubReg(0);
+          Src0.ChangeToFrameIndex(MovSrc.getIndex());
+          ConstantFolded = true;
+        }
+
+        if (ConstantFolded) {
+          assert(MRI.use_empty(Reg));
           Def->eraseFromParent();
-        ++NumLiteralConstantsFolded;
-        return;
+          ++NumLiteralConstantsFolded;
+          return true;
+        }
       }
     }
   }
 
   // We have failed to fold src0, so commute the instruction and try again.
-  if (TryToCommute && MI.isCommutable() && TII->commuteInstruction(MI))
-    foldImmediates(MI, TII, MRI, false);
+  if (TryToCommute && MI.isCommutable()) {
+    if (TII->commuteInstruction(MI)) {
+      if (foldImmediates(MI, TII, MRI, false))
+        return true;
 
+      // Commute back.
+      TII->commuteInstruction(MI);
+    }
+  }
+
+  return false;
 }
 
 // Copy MachineOperand with all flags except setting it as implicit.

@@ -483,8 +483,8 @@ void __tsan_mutex_pre_lock(void *m, unsigned flagz) {
     else
       MutexPreLock(thr, pc, (uptr)m);
   }
-  ThreadIgnoreBegin(thr, pc, false);
-  ThreadIgnoreSyncBegin(thr, pc, false);
+  ThreadIgnoreBegin(thr, pc, /*save_stack=*/false);
+  ThreadIgnoreSyncBegin(thr, pc, /*save_stack=*/false);
 }
 
 INTERFACE_ATTRIBUTE
@@ -510,8 +510,8 @@ int __tsan_mutex_pre_unlock(void *m, unsigned flagz) {
   } else {
     ret = MutexUnlock(thr, pc, (uptr)m, flagz);
   }
-  ThreadIgnoreBegin(thr, pc, false);
-  ThreadIgnoreSyncBegin(thr, pc, false);
+  ThreadIgnoreBegin(thr, pc, /*save_stack=*/false);
+  ThreadIgnoreSyncBegin(thr, pc, /*save_stack=*/false);
   return ret;
 }
 
@@ -525,8 +525,8 @@ void __tsan_mutex_post_unlock(void *m, unsigned flagz) {
 INTERFACE_ATTRIBUTE
 void __tsan_mutex_pre_signal(void *addr, unsigned flagz) {
   SCOPED_ANNOTATION(__tsan_mutex_pre_signal);
-  ThreadIgnoreBegin(thr, pc, false);
-  ThreadIgnoreSyncBegin(thr, pc, false);
+  ThreadIgnoreBegin(thr, pc, /*save_stack=*/false);
+  ThreadIgnoreSyncBegin(thr, pc, /*save_stack=*/false);
 }
 
 INTERFACE_ATTRIBUTE
@@ -547,7 +547,7 @@ void __tsan_mutex_pre_divert(void *addr, unsigned flagz) {
 INTERFACE_ATTRIBUTE
 void __tsan_mutex_post_divert(void *addr, unsigned flagz) {
   SCOPED_ANNOTATION(__tsan_mutex_post_divert);
-  ThreadIgnoreBegin(thr, pc, false);
-  ThreadIgnoreSyncBegin(thr, pc, false);
+  ThreadIgnoreBegin(thr, pc, /*save_stack=*/false);
+  ThreadIgnoreSyncBegin(thr, pc, /*save_stack=*/false);
 }
 }  // extern "C"

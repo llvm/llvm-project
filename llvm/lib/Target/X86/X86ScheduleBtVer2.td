@@ -369,5 +369,82 @@ def : WriteRes<WriteSystem,     [JAny]> { let Latency = 100; }
 def : WriteRes<WriteMicrocoded, [JAny]> { let Latency = 100; }
 def : WriteRes<WriteFence,  [JSAGU]>;
 def : WriteRes<WriteNop, []>;
+
+////////////////////////////////////////////////////////////////////////////////
+// AVX instructions.
+////////////////////////////////////////////////////////////////////////////////
+
+def WriteFAddY: SchedWriteRes<[JFPU0]> {
+  let Latency = 3;
+  let ResourceCycles = [2];
+}
+def : InstRW<[WriteFAddY], (instregex "VADD(SUB)?P(S|D)Yrr", "VSUBP(S|D)Yrr")>;
+
+def WriteFAddYLd: SchedWriteRes<[JLAGU, JFPU0]> {
+  let Latency = 8;
+  let ResourceCycles = [1, 2];
+}
+def : InstRW<[WriteFAddYLd, ReadAfterLd], (instregex "VADD(SUB)?P(S|D)Yrm", "VSUBP(S|D)Yrm")>;
+
+def WriteFDivY: SchedWriteRes<[JFPU1]> {
+  let Latency = 38;
+  let ResourceCycles = [38];
+}
+def : InstRW<[WriteFDivY], (instregex "VDIVP(D|S)Yrr")>;
+
+def WriteFDivYLd: SchedWriteRes<[JLAGU, JFPU1]> {
+  let Latency = 43;
+  let ResourceCycles = [1, 38];
+}
+def : InstRW<[WriteFDivYLd, ReadAfterLd], (instregex "VDIVP(S|D)Yrm")>;
+
+def WriteVMULYPD: SchedWriteRes<[JFPU1]> {
+  let Latency = 4;
+  let ResourceCycles = [4];
+}
+def : InstRW<[WriteVMULYPD], (instregex "VMULPDYrr")>;
+
+def WriteVMULYPDLd: SchedWriteRes<[JLAGU, JFPU1]> {
+  let Latency = 9;
+  let ResourceCycles = [1, 4];
+}
+def : InstRW<[WriteVMULYPDLd, ReadAfterLd], (instregex "VMULPDYrm")>;
+
+def WriteVMULYPS: SchedWriteRes<[JFPU1]> {
+  let Latency = 2;
+  let ResourceCycles = [2];
+}
+def : InstRW<[WriteVMULYPS], (instregex "VMULPSYrr", "VRCPPSYr", "VRSQRTPSYr")>;
+
+def WriteVMULYPSLd: SchedWriteRes<[JLAGU, JFPU1]> {
+  let Latency = 7;
+  let ResourceCycles = [1, 2];
+}
+def : InstRW<[WriteVMULYPSLd, ReadAfterLd], (instregex "VMULPSYrm", "VRCPPSYm", "VRSQRTPSYm")>;
+
+def WriteVSQRTYPD: SchedWriteRes<[JFPU1]> {
+  let Latency = 54;
+  let ResourceCycles = [54];
+}
+def : InstRW<[WriteVSQRTYPD], (instregex "VSQRTPDYr")>;
+
+def WriteVSQRTYPDLd: SchedWriteRes<[JLAGU, JFPU1]> {
+  let Latency = 59;
+  let ResourceCycles = [1, 54];
+}
+def : InstRW<[WriteVSQRTYPDLd], (instregex "VSQRTPDYm")>;
+
+def WriteVSQRTYPS: SchedWriteRes<[JFPU1]> {
+  let Latency = 42;
+  let ResourceCycles = [42];
+}
+def : InstRW<[WriteVSQRTYPS], (instregex "VSQRTPSYr")>;
+
+def WriteVSQRTYPSLd: SchedWriteRes<[JLAGU, JFPU1]> {
+  let Latency = 47;
+  let ResourceCycles = [1, 42];
+}
+def : InstRW<[WriteVSQRTYPSLd], (instregex "VSQRTPSYm")>;
+
 } // SchedModel
 

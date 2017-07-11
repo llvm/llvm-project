@@ -866,9 +866,7 @@ PHIExpression *NewGVN::createPHIExpression(Instruction *I, bool &HasBackedge,
     // Things in TOPClass are equivalent to everything.
     if (ValueToClass.lookup(*U) == TOPClass)
       return false;
-    if (lookupOperandLeader(*U) == PN)
-      return false;
-    return true;
+    return lookupOperandLeader(*U) != PN;
   });
   std::transform(Filtered.begin(), Filtered.end(), op_inserter(E),
                  [&](const Use *U) -> Value * {
@@ -2063,9 +2061,10 @@ Value *NewGVN::getNextValueLeader(CongruenceClass *CC) const {
 //
 // The invariants of this function are:
 //
-// I must be moving to NewClass from OldClass The StoreCount of OldClass and
-// NewClass is expected to have been updated for I already if it is is a store.
-// The OldClass memory leader has not been updated yet if I was the leader.
+// - I must be moving to NewClass from OldClass
+// - The StoreCount of OldClass and NewClass is expected to have been updated
+//   for I already if it is is a store.
+// - The OldClass memory leader has not been updated yet if I was the leader.
 void NewGVN::moveMemoryToNewCongruenceClass(Instruction *I,
                                             MemoryAccess *InstMA,
                                             CongruenceClass *OldClass,
@@ -2074,7 +2073,8 @@ void NewGVN::moveMemoryToNewCongruenceClass(Instruction *I,
   // be the MemoryAccess of OldClass.
   assert((!InstMA || !OldClass->getMemoryLeader() ||
           OldClass->getLeader() != I ||
-          OldClass->getMemoryLeader() == InstMA) &&
+          MemoryAccessToClass.lookup(OldClass->getMemoryLeader()) ==
+              MemoryAccessToClass.lookup(InstMA)) &&
          "Representative MemoryAccess mismatch");
   // First, see what happens to the new class
   if (!NewClass->getMemoryLeader()) {
@@ -2136,7 +2136,7 @@ void NewGVN::moveValueToNewCongruenceClass(Instruction *I, const Expression *E,
                      << NewClass->getID() << " from " << *NewClass->getLeader()
                      << " to  " << *SI << " because store joined class\n");
         // If we changed the leader, we have to mark it changed because we don't
-        // know what it will do to symbolic evlauation.
+        // know what it will do to symbolic evaluation.
         NewClass->setLeader(SI);
       }
       // We rely on the code below handling the MemoryAccess change.

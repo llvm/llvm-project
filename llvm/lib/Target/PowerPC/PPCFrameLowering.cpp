@@ -435,22 +435,19 @@ unsigned PPCFrameLowering::determineFrameLayout(MachineFunction &MF,
 
   const PPCRegisterInfo *RegInfo = Subtarget.getRegisterInfo();
 
-  // If we are a leaf function, and use up to 224 bytes of stack space,
-  // don't have a frame pointer, calls, or dynamic alloca then we do not need
-  // to adjust the stack pointer (we fit in the Red Zone).
-  // The 32-bit SVR4 ABI has no Red Zone. However, it can still generate
-  // stackless code if all local vars are reg-allocated.
-  bool DisableRedZone = MF.getFunction()->hasFnAttribute(Attribute::NoRedZone);
   unsigned LR = RegInfo->getRARegister();
-  if (!DisableRedZone &&
-      (Subtarget.isPPC64() ||                      // 32-bit SVR4, no stack-
-       !Subtarget.isSVR4ABI() ||                   //   allocated locals.
-        FrameSize == 0) &&
-      FrameSize <= 224 &&                          // Fits in red zone.
-      !MFI.hasVarSizedObjects() &&                 // No dynamic alloca.
-      !MFI.adjustsStack() &&                       // No calls.
-      !MustSaveLR(MF, LR) &&
-      !RegInfo->hasBasePointer(MF)) { // No special alignment.
+  bool DisableRedZone = MF.getFunction()->hasFnAttribute(Attribute::NoRedZone);
+  bool CanUseRedZone = !MFI.hasVarSizedObjects() && // No dynamic alloca.
+                       !MFI.adjustsStack() &&       // No calls.
+                       !MustSaveLR(MF, LR) &&       // No need to save LR.
+                       !RegInfo->hasBasePointer(MF); // No special alignment.
+
+  // Note: for PPC32 SVR4ABI (Non-DarwinABI), we can still generate stackless
+  // code if all local vars are reg-allocated.
+  bool FitsInRedZone = FrameSize <= Subtarget.getRedZoneSize();
+
+  // Check whether we can skip adjusting the stack pointer (by using red zone)
+  if (!DisableRedZone && CanUseRedZone && FitsInRedZone) {
     // No need for frame
     if (UpdateMF)
       MFI.setStackSize(0);
@@ -1869,8 +1866,13 @@ void PPCFrameLowering::processFunctionBeforeFrameFinalized(MachineFunction &MF,
   }
 
   if (HasVRSaveArea) {
-    // Insert alignment padding, we need 16-byte alignment.
-    LowerBound = (LowerBound - 15) & ~(15);
+    // Insert alignment padding, we need 16-byte alignment. Note: for postive
+    // number the alignment formula is : y = (x + (n-1)) & (~(n-1)). But since
+    // we are using negative number here (the stack grows downward). We should
+    // use formula : y = x & (~(n-1)). Where x is the size before aligning, n
+    // is the alignment size ( n = 16 here) and y is the size after aligning.
+    assert(LowerBound <= 0 && "Expect LowerBound have a non-positive value!");
+    LowerBound &= ~(15);
 
     for (unsigned i = 0, e = VRegs.size(); i != e; ++i) {
       int FI = VRegs[i].getFrameIdx();

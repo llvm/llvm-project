@@ -29,7 +29,7 @@ define amdgpu_kernel void @frem_f32(float addrspace(1)* %out, float addrspace(1)
 ; GCN: buffer_load_dword [[Y:v[0-9]+]], {{.*}} offset:16
 ; GCN: buffer_load_dword [[X:v[0-9]+]], {{.*}}
 ; GCN: v_rcp_f32_e32 [[INVY:v[0-9]+]], [[Y]]
-; GCN: v_mul_f32_e32 [[DIV:v[0-9]+]], [[INVY]], [[X]]
+; GCN: v_mul_f32_e32 [[DIV:v[0-9]+]], [[X]], [[INVY]]
 ; GCN: v_trunc_f32_e32 [[TRUNC:v[0-9]+]], [[DIV]]
 ; GCN: v_mad_f32 [[RESULT:v[0-9]+]], -[[TRUNC]], [[Y]], [[X]]
 ; GCN: buffer_store_dword [[RESULT]]

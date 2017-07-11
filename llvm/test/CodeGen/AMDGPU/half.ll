@@ -17,7 +17,7 @@ define amdgpu_kernel void @load_f16_arg(half addrspace(1)* %out, half %arg) #0 {
 ; GCN-DAG: buffer_load_ushort [[V0:v[0-9]+]], off, s{{\[[0-9]+:[0-9]+\]}}, 0 offset:44
 ; GCN-DAG: buffer_load_ushort [[V1:v[0-9]+]], off, s{{\[[0-9]+:[0-9]+\]}}, 0 offset:46
 ; GCN: v_lshlrev_b32_e32 [[HI:v[0-9]+]], 16, [[V1]]
-; GCN: v_or_b32_e32 [[PACKED:v[0-9]+]], [[HI]], [[V0]]
+; GCN: v_or_b32_e32 [[PACKED:v[0-9]+]],  [[V0]], [[HI]]
 ; GCN: buffer_store_dword [[PACKED]], off, s{{\[[0-9]+:[0-9]+\]}}, 0{{$}}
 ; GCN: s_endpgm
 define amdgpu_kernel void @load_v2f16_arg(<2 x half> addrspace(1)* %out, <2 x half> %arg) #0 {
@@ -471,10 +471,10 @@ define amdgpu_kernel void @global_truncstore_f32_to_f16(half addrspace(1)* %out,
 
 ; SI-DAG: v_cvt_f16_f32_e32 [[CVT1:v[0-9]+]], v[[HI]]
 ; SI-DAG: v_lshlrev_b32_e32 [[SHL:v[0-9]+]], 16, [[CVT1]]
-; SI:     v_or_b32_e32 [[PACKED:v[0-9]+]], [[SHL]], [[CVT0]]
+; SI:     v_or_b32_e32 [[PACKED:v[0-9]+]], [[CVT0]], [[SHL]]
 
 ; VI-DAG: v_cvt_f16_f32_sdwa [[CVT1:v[0-9]+]], v[[HI]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD
-; VI:     v_or_b32_e32 [[PACKED:v[0-9]+]], [[CVT1]], [[CVT0]]
+; VI:     v_or_b32_e32 [[PACKED:v[0-9]+]], [[CVT0]], [[CVT1]]
 
 ; GCN-DAG: buffer_store_dword [[PACKED]]
 ; GCN: s_endpgm

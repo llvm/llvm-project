@@ -10,6 +10,7 @@ config.target_triple = "@TARGET_TRIPLE@"
 config.enable_gpgpu_codegen = "@GPU_CODEGEN@"
 config.link_polly_into_tools = "@LINK_POLLY_INTO_TOOLS@"
 config.targets_to_build = "@TARGETS_TO_BUILD@"
+config.extra_paths = "@POLLY_TEST_EXTRA_PATHS@".split(";")
 
 ## Check the current platform with regex
 import re
@@ -43,12 +44,14 @@ if config.link_polly_into_tools == '' or \
                                  + ' -polly-process-unprofitable '
                                  + ' -polly-remarks-minimal '
                                  + ' -polly-use-llvm-names '
+                                 + ' -polly-import-jscop-dir=%S '
                                  ))
 else:
     config.substitutions.append(('%loadPolly', ''
                                  + ' -polly-process-unprofitable '
                                  + ' -polly-remarks-minimal '
                                  + ' -polly-use-llvm-names '
+                                 + ' -polly-import-jscop-dir=%S '
                                  ))
 
 if config.enable_gpgpu_codegen == 'TRUE' :

@@ -28,6 +28,7 @@
 #define _CTYPE_DISABLE_MACROS
 #endif
 #include "cwctype"
+#include "__atomic_support"
 #include "__sso_allocator"
 #if defined(_LIBCPP_MSVCRT) || defined(__MINGW32__)
 #include "support/win32/locale_win32.h"
@@ -667,7 +668,7 @@ locale::id::__get()
 void
 locale::id::__init()
 {
-    __id_ = __sync_add_and_fetch(&__next_id, 1);
+    __id_ = __libcpp_sync_add_and_fetch(&__next_id, 1);
 }
 
 // template <> class collate_byname<char>

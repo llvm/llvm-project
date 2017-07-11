@@ -74,13 +74,13 @@ bool elf::link(ArrayRef<const char *> Args, bool CanExitEarly,
                raw_ostream &Error) {
   ErrorCount = 0;
   ErrorOS = &Error;
-  Argv0 = Args[0];
   InputSections.clear();
   Tar = nullptr;
 
   Config = make<Configuration>();
   Driver = make<LinkerDriver>();
   Script = make<LinkerScript>();
+  Config->Argv = {Args.begin(), Args.end()};
 
   Driver->main(Args, CanExitEarly);
   freeArena();

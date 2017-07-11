@@ -628,6 +628,9 @@ public:
   bool useSoftFloat() const {
     return getSTI().getFeatureBits()[Mips::FeatureSoftFloat];
   }
+  bool hasMT() const {
+    return getSTI().getFeatureBits()[Mips::FeatureMT];
+  }
 
   /// Warn if RegIndex is the same as the current AT.
   void warnIfRegIndexIsAT(unsigned RegIndex, SMLoc Loc);

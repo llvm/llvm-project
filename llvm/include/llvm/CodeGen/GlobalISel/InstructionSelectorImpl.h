@@ -30,13 +30,14 @@ bool InstructionSelector::executeMatchTable(
   while (true) {
     switch (*Command++) {
     case GIM_RecordInsn: {
-      int64_t NewInsnID LLVM_ATTRIBUTE_UNUSED = *Command++;
+      int64_t NewInsnID = *Command++;
       int64_t InsnID = *Command++;
       int64_t OpIdx = *Command++;
 
       // As an optimisation we require that MIs[0] is always the root. Refuse
       // any attempt to modify it.
       assert(NewInsnID != 0 && "Refusing to modify MIs[0]");
+      (void)NewInsnID;
 
       MachineOperand &MO = State.MIs[InsnID]->getOperand(OpIdx);
       if (!MO.isReg()) {
@@ -156,6 +157,18 @@ bool InstructionSelector::executeMatchTable(
         return false;
       break;
     }
+    case GIM_CheckIntrinsicID: {
+      int64_t InsnID = *Command++;
+      int64_t OpIdx = *Command++;
+      int64_t Value = *Command++;
+      DEBUG(dbgs() << "GIM_CheckIntrinsicID(MIs[" << InsnID << "]->getOperand(" << OpIdx
+                   << "), Value=" << Value << ")\n");
+      assert(State.MIs[InsnID] != nullptr && "Used insn before defined");
+      MachineOperand &OM = State.MIs[InsnID]->getOperand(OpIdx);
+      if (!OM.isIntrinsicID() || OM.getIntrinsicID() != Value)
+        return false;
+      break;
+    }
     case GIM_CheckIsMBB: {
       int64_t InsnID = *Command++;
       int64_t OpIdx = *Command++;
@@ -191,10 +204,11 @@ bool InstructionSelector::executeMatchTable(
       break;
     }
     case GIR_BuildMI: {
-      int64_t InsnID LLVM_ATTRIBUTE_UNUSED = *Command++;
+      int64_t InsnID = *Command++;
       int64_t Opcode = *Command++;
       assert((size_t)InsnID == OutMIs.size() &&
              "Expected to store MIs in order");
+      (void)InsnID;
       OutMIs.push_back(BuildMI(*State.MIs[0]->getParent(), State.MIs[0],
                                State.MIs[0]->getDebugLoc(), TII.get(Opcode)));
       DEBUG(dbgs() << "GIR_BuildMI(OutMIs[" << InsnID << "], " << Opcode

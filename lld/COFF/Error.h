@@ -18,7 +18,6 @@ namespace coff {
 
 extern uint64_t ErrorCount;
 extern llvm::raw_ostream *ErrorOS;
-extern llvm::StringRef Argv0;
 
 void log(const Twine &Msg);
 void message(const Twine &Msg);

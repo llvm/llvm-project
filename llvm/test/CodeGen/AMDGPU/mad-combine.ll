@@ -19,15 +19,15 @@ declare float @llvm.fmuladd.f32(float, float, float) #0
 ; SI-DAG: buffer_load_dword [[B:v[0-9]+]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4{{$}}
 ; SI-DAG: buffer_load_dword [[C:v[0-9]+]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8{{$}}
 
-; SI-STD: v_mac_f32_e32 [[C]], [[B]], [[A]]
+; SI-STD: v_mac_f32_e32 [[C]], [[A]], [[B]]
 
 ; SI-DENORM-FASTFMAF: v_fma_f32 [[RESULT:v[0-9]+]], [[A]], [[B]], [[C]]
 
 ; SI-DENORM-SLOWFMAF-NOT: v_fma
 ; SI-DENORM-SLOWFMAF-NOT: v_mad
 
-; SI-DENORM-SLOWFMAF: v_mul_f32_e32 [[TMP:v[0-9]+]], [[B]], [[A]]
-; SI-DENORM-SLOWFMAF: v_add_f32_e32 [[RESULT:v[0-9]+]], [[C]], [[TMP]]
+; SI-DENORM-SLOWFMAF: v_mul_f32_e32 [[TMP:v[0-9]+]], [[A]], [[B]]
+; SI-DENORM-SLOWFMAF: v_add_f32_e32 [[RESULT:v[0-9]+]],  [[TMP]], [[C]]
 
 ; SI-DENORM: buffer_store_dword [[RESULT]]
 ; SI-STD: buffer_store_dword [[C]]
@@ -55,15 +55,15 @@ define amdgpu_kernel void @combine_to_mad_f32_0(float addrspace(1)* noalias %out
 ; SI-DAG: buffer_load_dword [[C:v[0-9]+]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8{{$}}
 ; SI-DAG: buffer_load_dword [[D:v[0-9]+]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:12{{$}}
 
-; SI-STD-DAG: v_mac_f32_e32 [[C]], [[B]], [[A]]
-; SI-STD-DAG: v_mac_f32_e32 [[D]], [[B]], [[A]]
+; SI-STD-DAG: v_mac_f32_e32 [[C]], [[A]], [[B]]
+; SI-STD-DAG: v_mac_f32_e32 [[D]], [[A]], [[B]]
 
 ; SI-DENORM-FASTFMAF-DAG: v_fma_f32 [[RESULT0:v[0-9]+]], [[A]], [[B]], [[C]]
 ; SI-DENORM-FASTFMAF-DAG: v_fma_f32 [[RESULT1:v[0-9]+]], [[A]], [[B]], [[D]]
 
-; SI-DENORM-SLOWFMAF: v_mul_f32_e32 [[TMP:v[0-9]+]], [[B]], [[A]]
-; SI-DENORM-SLOWFMAF-DAG: v_add_f32_e32 [[RESULT0:v[0-9]+]], [[C]], [[TMP]]
-; SI-DENORM-SLOWFMAF-DAG: v_add_f32_e32 [[RESULT1:v[0-9]+]], [[D]], [[TMP]]
+; SI-DENORM-SLOWFMAF: v_mul_f32_e32 [[TMP:v[0-9]+]], [[A]], [[B]]
+; SI-DENORM-SLOWFMAF-DAG: v_add_f32_e32 [[RESULT0:v[0-9]+]], [[TMP]], [[C]]
+; SI-DENORM-SLOWFMAF-DAG: v_add_f32_e32 [[RESULT1:v[0-9]+]], [[TMP]], [[D]]
 
 ; SI-DENORM-DAG: buffer_store_dword [[RESULT0]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
 ; SI-DENORM-DAG: buffer_store_dword [[RESULT1]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4{{$}}
@@ -99,11 +99,11 @@ define amdgpu_kernel void @combine_to_mad_f32_0_2use(float addrspace(1)* noalias
 ; SI-DAG: buffer_load_dword [[B:v[0-9]+]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4{{$}}
 ; SI-DAG: buffer_load_dword [[C:v[0-9]+]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8{{$}}
 
-; SI-STD: v_mac_f32_e32 [[C]], [[B]], [[A]]
+; SI-STD: v_mac_f32_e32 [[C]], [[A]], [[B]]
 ; SI-DENORM-FASTFMAF: v_fma_f32 [[RESULT:v[0-9]+]], [[A]], [[B]], [[C]]
 
-; SI-DENORM-SLOWFMAF: v_mul_f32_e32 [[TMP:v[0-9]+]], [[B]], [[A]]
-; SI-DENORM-SLOWFMAF: v_add_f32_e32 [[RESULT:v[0-9]+]], [[TMP]], [[C]]
+; SI-DENORM-SLOWFMAF: v_mul_f32_e32 [[TMP:v[0-9]+]], [[A]], [[B]]
+; SI-DENORM-SLOWFMAF: v_add_f32_e32 [[RESULT:v[0-9]+]], [[C]], [[TMP]]
 
 ; SI-DENORM: buffer_store_dword [[RESULT]]
 ; SI-STD: buffer_store_dword [[C]]
@@ -133,8 +133,8 @@ define amdgpu_kernel void @combine_to_mad_f32_1(float addrspace(1)* noalias %out
 ; SI-STD: v_mad_f32 [[RESULT:v[0-9]+]], [[A]], [[B]], -[[C]]
 ; SI-DENORM-FASTFMAF: v_fma_f32 [[RESULT:v[0-9]+]], [[A]], [[B]], -[[C]]
 
-; SI-DENORM-SLOWFMAF: v_mul_f32_e32 [[TMP:v[0-9]+]], [[B]], [[A]]
-; SI-DENORM-SLOWFMAF: v_subrev_f32_e32 [[RESULT:v[0-9]+]], [[C]], [[TMP]]
+; SI-DENORM-SLOWFMAF: v_mul_f32_e32 [[TMP:v[0-9]+]], [[A]], [[B]]
+; SI-DENORM-SLOWFMAF: v_sub_f32_e32 [[RESULT:v[0-9]+]], [[TMP]], [[C]]
 
 ; SI: buffer_store_dword [[RESULT]]
 define amdgpu_kernel void @combine_to_mad_fsub_0_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in) #1 {
@@ -167,9 +167,9 @@ define amdgpu_kernel void @combine_to_mad_fsub_0_f32(float addrspace(1)* noalias
 ; SI-DENORM-FASTFMAF-DAG: v_fma_f32 [[RESULT0:v[0-9]+]], [[A]], [[B]], -[[C]]
 ; SI-DENORM-FASTFMAF-DAG: v_fma_f32 [[RESULT1:v[0-9]+]], [[A]], [[B]], -[[D]]
 
-; SI-DENORM-SLOWFMAF: v_mul_f32_e32 [[TMP:v[0-9]+]], [[B]], [[A]]
-; SI-DENORM-SLOWFMAF-DAG: v_subrev_f32_e32 [[RESULT0:v[0-9]+]], [[C]], [[TMP]]
-; SI-DENORM-SLOWFMAF-DAG: v_subrev_f32_e32 [[RESULT1:v[0-9]+]], [[D]], [[TMP]]
+; SI-DENORM-SLOWFMAF: v_mul_f32_e32 [[TMP:v[0-9]+]], [[A]], [[B]]
+; SI-DENORM-SLOWFMAF-DAG: v_sub_f32_e32 [[RESULT0:v[0-9]+]], [[TMP]], [[C]]
+; SI-DENORM-SLOWFMAF-DAG: v_sub_f32_e32 [[RESULT1:v[0-9]+]], [[TMP]], [[D]]
 
 ; SI-DAG: buffer_store_dword [[RESULT0]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
 ; SI-DAG: buffer_store_dword [[RESULT1]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4{{$}}
@@ -205,8 +205,8 @@ define amdgpu_kernel void @combine_to_mad_fsub_0_f32_2use(float addrspace(1)* no
 ; SI-STD: v_mad_f32 [[RESULT:v[0-9]+]], -[[A]], [[B]], [[C]]
 ; SI-DENORM-FASTFMAF: v_fma_f32 [[RESULT:v[0-9]+]], -[[A]], [[B]], [[C]]
 
-; SI-DENORM-SLOWFMAF: v_mul_f32_e32 [[TMP:v[0-9]+]], [[B]], [[A]]
-; SI-DENORM-SLOWFMAF: v_subrev_f32_e32 [[RESULT:v[0-9]+]], [[TMP]], [[C]]
+; SI-DENORM-SLOWFMAF: v_mul_f32_e32 [[TMP:v[0-9]+]], [[A]], [[B]]
+; SI-DENORM-SLOWFMAF: v_sub_f32_e32 [[RESULT:v[0-9]+]], [[C]], [[TMP]]
 
 ; SI: buffer_store_dword [[RESULT]]
 define amdgpu_kernel void @combine_to_mad_fsub_1_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in) #1 {
@@ -238,9 +238,9 @@ define amdgpu_kernel void @combine_to_mad_fsub_1_f32(float addrspace(1)* noalias
 ; SI-DENORM-FASTFMAF-DAG: v_fma_f32 [[RESULT0:v[0-9]+]], -[[A]], [[B]], [[C]]
 ; SI-DENORM-FASTFMAF-DAG: v_fma_f32 [[RESULT1:v[0-9]+]], -[[A]], [[B]], [[D]]
 
-; SI-DENORM-SLOWFMAF: v_mul_f32_e32 [[TMP:v[0-9]+]], [[B]], [[A]]
-; SI-DENORM-SLOWFMAF-DAG: v_subrev_f32_e32 [[RESULT0:v[0-9]+]], [[TMP]], [[C]]
-; SI-DENORM-SLOWFMAF-DAG: v_subrev_f32_e32 [[RESULT1:v[0-9]+]], [[TMP]], [[D]]
+; SI-DENORM-SLOWFMAF: v_mul_f32_e32 [[TMP:v[0-9]+]], [[A]], [[B]]
+; SI-DENORM-SLOWFMAF-DAG: v_sub_f32_e32 [[RESULT0:v[0-9]+]], [[C]], [[TMP]]
+; SI-DENORM-SLOWFMAF-DAG: v_sub_f32_e32 [[RESULT1:v[0-9]+]],  [[D]], [[TMP]]
 
 ; SI-DAG: buffer_store_dword [[RESULT0]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
 ; SI-DAG: buffer_store_dword [[RESULT1]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4{{$}}
@@ -278,7 +278,7 @@ define amdgpu_kernel void @combine_to_mad_fsub_1_f32_2use(float addrspace(1)* no
 ; SI-DENORM-FASTFMAF: v_fma_f32 [[RESULT:v[0-9]+]], -[[A]], [[B]], -[[C]]
 
 ; SI-DENORM-SLOWFMAF: v_mul_f32_e64 [[TMP:v[0-9]+]], [[A]], -[[B]]
-; SI-DENORM-SLOWFMAF: v_subrev_f32_e32 [[RESULT:v[0-9]+]], [[C]], [[TMP]]
+; SI-DENORM-SLOWFMAF: v_sub_f32_e32 [[RESULT:v[0-9]+]], [[TMP]], [[C]]
 
 ; SI: buffer_store_dword [[RESULT]]
 define amdgpu_kernel void @combine_to_mad_fsub_2_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in) #1 {
@@ -313,8 +313,8 @@ define amdgpu_kernel void @combine_to_mad_fsub_2_f32(float addrspace(1)* noalias
 ; SI-DENORM-FASTFMAF-DAG: v_fma_f32 [[RESULT1:v[0-9]+]], -[[A]], [[B]], -[[D]]
 
 ; SI-DENORM-SLOWFMAF: v_mul_f32_e64 [[TMP:v[0-9]+]], [[A]], -[[B]]
-; SI-DENORM-SLOWFMAF-DAG: v_subrev_f32_e32 [[RESULT0:v[0-9]+]], [[C]], [[TMP]]
-; SI-DENORM-SLOWFMAF-DAG: v_subrev_f32_e32 [[RESULT1:v[0-9]+]], [[D]], [[TMP]]
+; SI-DENORM-SLOWFMAF-DAG: v_sub_f32_e32 [[RESULT0:v[0-9]+]], [[TMP]], [[C]]
+; SI-DENORM-SLOWFMAF-DAG: v_sub_f32_e32 [[RESULT1:v[0-9]+]],  [[TMP]], [[D]]
 
 ; SI-DAG: buffer_store_dword [[RESULT0]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
 ; SI-DAG: buffer_store_dword [[RESULT1]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4{{$}}
@@ -355,9 +355,9 @@ define amdgpu_kernel void @combine_to_mad_fsub_2_f32_2uses_neg(float addrspace(1
 ; SI-DENORM-FASTFMAF-DAG: v_fma_f32 [[RESULT0:v[0-9]+]], -[[A]], [[B]], -[[C]]
 ; SI-DENORM-FASTFMAF-DAG: v_fma_f32 [[RESULT1:v[0-9]+]], [[A]], [[B]], -[[D]]
 
-; SI-DENORM-SLOWFMAF: v_mul_f32_e32 [[TMP:v[0-9]+]], [[B]], [[A]]
+; SI-DENORM-SLOWFMAF: v_mul_f32_e32 [[TMP:v[0-9]+]], [[A]], [[B]]
 ; SI-DENORM-SLOWFMAF-DAG: v_sub_f32_e64 [[RESULT0:v[0-9]+]], -[[TMP]], [[C]]
-; SI-DENORM-SLOWFMAF-DAG: v_subrev_f32_e32 [[RESULT1:v[0-9]+]], [[D]], [[TMP]]
+; SI-DENORM-SLOWFMAF-DAG: v_sub_f32_e32 [[RESULT1:v[0-9]+]], [[TMP]], [[D]]
 
 ; SI-DAG: buffer_store_dword [[RESULT0]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
 ; SI-DAG: buffer_store_dword [[RESULT1]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4{{$}}
@@ -395,13 +395,13 @@ define amdgpu_kernel void @combine_to_mad_fsub_2_f32_2uses_mul(float addrspace(1
 ; SI-DAG: buffer_load_dword [[D:v[0-9]+]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:12{{$}}
 ; SI-DAG: buffer_load_dword [[E:v[0-9]+]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:16{{$}}
 
-; SI-STD: v_mul_f32_e32 [[TMP0:v[0-9]+]], [[E]], [[D]]
+; SI-STD: v_mul_f32_e32 [[TMP0:v[0-9]+]], [[D]], [[E]]
 ; SI-STD: v_fma_f32 [[TMP1:v[0-9]+]], [[A]], [[B]], [[TMP0]]
-; SI-STD: v_subrev_f32_e32 [[RESULT:v[0-9]+]], [[C]], [[TMP1]]
+; SI-STD: v_sub_f32_e32 [[RESULT:v[0-9]+]], [[TMP1]], [[C]]
 
-; SI-DENORM: v_mul_f32_e32 [[TMP0:v[0-9]+]], [[E]], [[D]]
+; SI-DENORM: v_mul_f32_e32 [[TMP0:v[0-9]+]], [[D]], [[E]]
 ; SI-DENORM: v_fma_f32 [[TMP1:v[0-9]+]], [[A]], [[B]], [[TMP0]]
-; SI-DENORM: v_subrev_f32_e32 [[RESULT1:v[0-9]+]], [[C]], [[TMP1]]
+; SI-DENORM: v_sub_f32_e32 [[RESULT1:v[0-9]+]], [[TMP1]], [[C]]
 
 ; SI: buffer_store_dword [[RESULT]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
 define amdgpu_kernel void @aggressive_combine_to_mad_fsub_0_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in) #1 {
@@ -437,13 +437,13 @@ define amdgpu_kernel void @aggressive_combine_to_mad_fsub_0_f32(float addrspace(
 ; SI-DAG: buffer_load_dword [[D:v[0-9]+]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:12{{$}}
 ; SI-DAG: buffer_load_dword [[E:v[0-9]+]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:16{{$}}
 
-; SI-STD: v_mul_f32_e32 [[TMP0:v[0-9]+]], [[E]], [[D]]
+; SI-STD: v_mul_f32_e32 [[TMP0:v[0-9]+]], [[D]], [[E]]
 ; SI-STD: v_fma_f32 [[TMP1:v[0-9]+]], [[B]], [[C]], [[TMP0]]
-; SI-STD: v_subrev_f32_e32 [[RESULT:v[0-9]+]], [[TMP1]], [[A]]
+; SI-STD: v_sub_f32_e32 [[RESULT:v[0-9]+]], [[A]], [[TMP1]]
 
-; SI-DENORM: v_mul_f32_e32 [[TMP0:v[0-9]+]], [[E]], [[D]]
+; SI-DENORM: v_mul_f32_e32 [[TMP0:v[0-9]+]], [[D]], [[E]]
 ; SI-DENORM: v_fma_f32 [[TMP1:v[0-9]+]], [[B]], [[C]], [[TMP0]]
-; SI-DENORM: v_subrev_f32_e32 [[RESULT:v[0-9]+]], [[TMP1]], [[A]]
+; SI-DENORM: v_sub_f32_e32 [[RESULT:v[0-9]+]], [[A]], [[TMP1]]
 
 ; SI: buffer_store_dword [[RESULT]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
 ; SI: s_endpgm
@@ -479,21 +479,21 @@ define amdgpu_kernel void @aggressive_combine_to_mad_fsub_1_f32(float addrspace(
 ; SI-DAG: buffer_load_dword [[D:v[0-9]+]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:12{{$}}
 ; SI-DAG: buffer_load_dword [[E:v[0-9]+]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:16{{$}}
 
-; SI-STD-SAFE: v_mul_f32_e32 [[TMP0:v[0-9]+]], [[E]], [[D]]
-; SI-STD-SAFE: v_mac_f32_e32 [[TMP0]], [[B]], [[A]]
-; SI-STD-SAFE: v_subrev_f32_e32 [[RESULT:v[0-9]+]], [[C]], [[TMP0]]
+; SI-STD-SAFE: v_mul_f32_e32 [[TMP0:v[0-9]+]], [[D]], [[E]]
+; SI-STD-SAFE: v_mac_f32_e32 [[TMP0]], [[A]], [[B]]
+; SI-STD-SAFE: v_sub_f32_e32 [[RESULT:v[0-9]+]], [[TMP0]], [[C]]
 
 ; SI-STD-UNSAFE: v_mad_f32 [[RESULT:v[0-9]+]], [[D]], [[E]], -[[C]]
-; SI-STD-UNSAFE: v_mac_f32_e32 [[RESULT]], [[B]], [[A]]
+; SI-STD-UNSAFE: v_mac_f32_e32 [[RESULT]], [[A]], [[B]]
 
-; SI-DENORM-FASTFMAF: v_mul_f32_e32 [[TMP0:v[0-9]+]], [[E]], [[D]]
+; SI-DENORM-FASTFMAF: v_mul_f32_e32 [[TMP0:v[0-9]+]], [[D]], [[E]]
 ; SI-DENORM-FASTFMAF: v_fma_f32 [[TMP1:v[0-9]+]], [[A]], [[B]], [[TMP0]]
-; SI-DENORM-FASTFMAF: v_subrev_f32_e32 [[RESULT:v[0-9]+]], [[C]], [[TMP1]]
+; SI-DENORM-FASTFMAF: v_sub_f32_e32 [[RESULT:v[0-9]+]],  [[TMP1]], [[C]]
 
-; SI-DENORM-SLOWFMAF-DAG: v_mul_f32_e32 [[TMP0:v[0-9]+]], [[E]], [[D]]
-; SI-DENORM-SLOWFMAF-DAG: v_mul_f32_e32 [[TMP1:v[0-9]+]], [[B]], [[A]]
-; SI-DENORM-SLOWFMAF: v_add_f32_e32 [[TMP2:v[0-9]+]], [[TMP0]], [[TMP1]]
-; SI-DENORM-SLOWFMAF: v_subrev_f32_e32 [[RESULT:v[0-9]+]], [[C]], [[TMP2]]
+; SI-DENORM-SLOWFMAF-DAG: v_mul_f32_e32 [[TMP0:v[0-9]+]], [[D]], [[E]]
+; SI-DENORM-SLOWFMAF-DAG: v_mul_f32_e32 [[TMP1:v[0-9]+]], [[A]], [[B]]
+; SI-DENORM-SLOWFMAF: v_add_f32_e32 [[TMP2:v[0-9]+]], [[TMP1]], [[TMP0]]
+; SI-DENORM-SLOWFMAF: v_sub_f32_e32 [[RESULT:v[0-9]+]], [[TMP2]], [[C]]
 
 ; SI: buffer_store_dword [[RESULT]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
 ; SI: s_endpgm
@@ -530,21 +530,21 @@ define amdgpu_kernel void @aggressive_combine_to_mad_fsub_2_f32(float addrspace(
 ; SI-DAG: buffer_load_dword [[D:v[0-9]+]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:12{{$}}
 ; SI-DAG: buffer_load_dword [[E:v[0-9]+]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:16{{$}}
 
-; SI-STD-SAFE: v_mul_f32_e32 [[TMP0:v[0-9]+]], [[E]], [[D]]
-; SI-STD-SAFE: v_mac_f32_e32 [[TMP0]], [[C]], [[B]]
-; SI-STD-SAFE: v_subrev_f32_e32 [[RESULT:v[0-9]+]], [[TMP0]], [[A]]
+; SI-STD-SAFE: v_mul_f32_e32 [[TMP0:v[0-9]+]], [[D]], [[E]]
+; SI-STD-SAFE: v_mac_f32_e32 [[TMP0]], [[B]], [[C]]
+; SI-STD-SAFE: v_sub_f32_e32 [[RESULT:v[0-9]+]], [[A]], [[TMP0]]
 
 ; SI-STD-UNSAFE: v_mad_f32 [[TMP:v[0-9]+]], -[[D]], [[E]], [[A]]
 ; SI-STD-UNSAFE: v_mad_f32 [[RESULT:v[0-9]+]], -[[B]], [[C]], [[TMP]]
 
-; SI-DENORM-FASTFMAF: v_mul_f32_e32 [[TMP0:v[0-9]+]], [[E]], [[D]]
+; SI-DENORM-FASTFMAF: v_mul_f32_e32 [[TMP0:v[0-9]+]], [[D]], [[E]]
 ; SI-DENORM-FASTFMAF: v_fma_f32 [[TMP1:v[0-9]+]], [[B]], [[C]], [[TMP0]]
-; SI-DENORM-FASTFMAF: v_subrev_f32_e32 [[RESULT:v[0-9]+]], [[TMP1]], [[A]]
+; SI-DENORM-FASTFMAF: v_sub_f32_e32 [[RESULT:v[0-9]+]], [[A]], [[TMP1]]
 
-; SI-DENORM-SLOWFMAF-DAG: v_mul_f32_e32 [[TMP0:v[0-9]+]], [[E]], [[D]]
-; SI-DENORM-SLOWFMAF-DAG: v_mul_f32_e32 [[TMP1:v[0-9]+]], [[C]], [[B]]
-; SI-DENORM-SLOWFMAF: v_add_f32_e32 [[TMP2:v[0-9]+]], [[TMP0]], [[TMP1]]
-; SI-DENORM-SLOWFMAF: v_subrev_f32_e32 [[RESULT:v[0-9]+]], [[TMP2]], [[A]]
+; SI-DENORM-SLOWFMAF-DAG: v_mul_f32_e32 [[TMP0:v[0-9]+]], [[D]], [[E]]
+; SI-DENORM-SLOWFMAF-DAG: v_mul_f32_e32 [[TMP1:v[0-9]+]], [[B]], [[C]]
+; SI-DENORM-SLOWFMAF: v_add_f32_e32 [[TMP2:v[0-9]+]], [[TMP1]], [[TMP0]]
+; SI-DENORM-SLOWFMAF: v_sub_f32_e32 [[RESULT:v[0-9]+]], [[A]], [[TMP2]]
 
 ; SI: buffer_store_dword [[RESULT]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
 ; SI: s_endpgm

@@ -51,7 +51,7 @@ registers:
   - { id: 0, class: gpr, preferred-register: '' }
   - { id: 1, class: gpr, preferred-register: '' }
 # ALL:          %0 = COPY %dil
-# ALL-NEXT:     %1 = AND8ri8 %0, 1, implicit-def %eflags
+# ALL-NEXT:     %1 = AND8ri %0, 1, implicit-def %eflags
 # ALL-NEXT:     %al = COPY %1
 # ALL-NEXT:     RET 0, implicit %al
 body:             |

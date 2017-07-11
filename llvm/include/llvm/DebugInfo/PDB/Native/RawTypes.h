@@ -255,6 +255,19 @@ struct ModuleInfoHeader {
   /// char ObjFileName[];
 };
 
+// This is PSGSIHDR struct defined in
+// https://github.com/Microsoft/microsoft-pdb/blob/master/PDB/dbi/gsi.h
+struct PublicsStreamHeader {
+  support::ulittle32_t SymHash;
+  support::ulittle32_t AddrMap;
+  support::ulittle32_t NumThunks;
+  support::ulittle32_t SizeOfThunk;
+  support::ulittle16_t ISectThunkTable;
+  char Padding[2];
+  support::ulittle32_t OffThunkTable;
+  support::ulittle32_t NumSections;
+};
+
 /// Defines a 128-bit unique identifier.  This maps to a GUID on Windows, but
 /// is abstracted here for the purposes of non-Windows platforms that don't have
 /// the GUID structure defined.

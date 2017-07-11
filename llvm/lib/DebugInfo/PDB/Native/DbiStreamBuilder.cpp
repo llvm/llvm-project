@@ -49,6 +49,14 @@ void DbiStreamBuilder::setSectionMap(ArrayRef<SecMapEntry> SecMap) {
   SectionMap = SecMap;
 }
 
+void DbiStreamBuilder::setSymbolRecordStreamIndex(uint32_t Index) {
+  SymRecordStreamIndex = Index;
+}
+
+void DbiStreamBuilder::setPublicsStreamIndex(uint32_t Index) {
+  PublicsStreamIndex = Index;
+}
+
 Error DbiStreamBuilder::addDbgStream(pdb::DbgHeaderType Type,
                                      ArrayRef<uint8_t> Data) {
   if (DbgStreams[(int)Type].StreamNumber != kInvalidStreamIndex)
@@ -259,8 +267,8 @@ Error DbiStreamBuilder::finalize() {
   H->SecContrSubstreamSize = calculateSectionContribsStreamSize();
   H->SectionMapSize = calculateSectionMapStreamSize();
   H->TypeServerSize = 0;
-  H->SymRecordStreamIndex = kInvalidStreamIndex;
-  H->PublicSymbolStreamIndex = kInvalidStreamIndex;
+  H->SymRecordStreamIndex = SymRecordStreamIndex;
+  H->PublicSymbolStreamIndex = PublicsStreamIndex;
   H->MFCTypeServerIndex = kInvalidStreamIndex;
   H->GlobalSymbolStreamIndex = kInvalidStreamIndex;
 

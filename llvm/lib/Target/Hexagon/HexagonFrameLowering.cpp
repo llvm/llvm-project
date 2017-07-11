@@ -979,18 +979,6 @@ bool HexagonFrameLowering::hasFP(const MachineFunction &MF) const {
   if (MFI.hasCalls() || HMFI.hasClobberLR())
     return true;
 
-  // Frame pointer elimination is a possiblility at this point, but
-  // to know if FP is necessary we need to know if spill/restore
-  // functions will be used (they require FP to be valid).
-  // This means that hasFP shouldn't really be called before CSI is
-  // calculated, and some measures are taken to make sure of that
-  // (e.g. default implementations of virtual functions that call it
-  // are overridden apropriately).
-  assert(MFI.isCalleeSavedInfoValid() && "Need to know CSI");
-  const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
-  if (useSpillFunction(MF, CSI) || useRestoreFunction(MF, CSI))
-    return true;
-
   return false;
 }
 
@@ -2436,6 +2424,8 @@ void HexagonFrameLowering::addCalleeSaveRegistersAsImpOperand(MachineInstr *MI,
 bool HexagonFrameLowering::shouldInlineCSR(const MachineFunction &MF,
       const CSIVect &CSI) const {
   if (MF.getInfo<HexagonMachineFunctionInfo>()->hasEHReturn())
+    return true;
+  if (!hasFP(MF))
     return true;
   if (!isOptSize(MF) && !isMinSize(MF))
     if (MF.getTarget().getOptLevel() > CodeGenOpt::Default)

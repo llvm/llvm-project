@@ -646,7 +646,7 @@ int main(int argc, char **argv, char * const *envp) {
     // else == "if (RemoteMCJIT)"
 
     // Remote target MCJIT doesn't (yet) support static constructors. No reason
-    // it couldn't. This is a limitation of the LLI implemantation, not the
+    // it couldn't. This is a limitation of the LLI implementation, not the
     // MCJIT itself. FIXME.
 
     // Lanch the remote process and get a channel to it.

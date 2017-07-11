@@ -46,7 +46,7 @@ define amdgpu_kernel void @fneg_free_f16(half addrspace(1)* %out, i16 %in) #0 {
 
 ; CI-DAG: v_cvt_f32_f16_e32 [[CVT_VAL:v[0-9]+]], [[NEG_VALUE]]
 ; CI-DAG: v_cvt_f32_f16_e64 [[NEG_CVT0:v[0-9]+]], -[[NEG_VALUE]]
-; CI: v_mul_f32_e32 [[MUL:v[0-9]+]], [[CVT_VAL]], [[NEG_CVT0]]
+; CI: v_mul_f32_e32 [[MUL:v[0-9]+]], [[NEG_CVT0]], [[CVT_VAL]]
 ; CI: v_cvt_f16_f32_e32 [[CVT1:v[0-9]+]], [[MUL]]
 ; CI: flat_store_short v{{\[[0-9]+:[0-9]+\]}}, [[CVT1]]
 

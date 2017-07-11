@@ -9,7 +9,7 @@ declare float @llvm.floor.f32(float) #0
 
 ; GCN-LABEL: {{^}}fract_f32:
 ; GCN-SAFE: v_floor_f32_e32 [[FLR:v[0-9]+]], [[INPUT:v[0-9]+]]
-; GCN-SAFE: v_subrev_f32_e32 [[RESULT:v[0-9]+]], [[FLR]], [[INPUT]]
+; GCN-SAFE: v_sub_f32_e32 [[RESULT:v[0-9]+]], [[INPUT]], [[FLR]]
 
 ; GCN-UNSAFE: v_fract_f32_e32 [[RESULT:v[0-9]+]], [[INPUT:v[0-9]+]]
 
