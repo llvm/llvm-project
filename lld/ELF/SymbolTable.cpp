@@ -707,12 +707,11 @@ void SymbolTable<ELFT>::assignWildcardVersion(SymbolVersion Ver,
                                               uint16_t VersionId) {
   if (!Ver.HasWildcard)
     return;
-  std::vector<SymbolBody *> Syms = findAllByVersion(Ver);
 
   // Exact matching takes precendence over fuzzy matching,
   // so we set a version to a symbol only if no version has been assigned
   // to the symbol. This behavior is compatible with GNU.
-  for (SymbolBody *B : Syms)
+  for (SymbolBody *B : findAllByVersion(Ver))
     if (B->symbol()->VersionId == Config->DefaultSymbolVersion)
       B->symbol()->VersionId = VersionId;
 }
