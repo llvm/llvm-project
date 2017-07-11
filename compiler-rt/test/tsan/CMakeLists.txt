@@ -1,3 +1,5 @@
+set(TSAN_LIT_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+
 set(TSAN_TEST_DEPS ${SANITIZER_COMMON_LIT_TEST_DEPS})
 if(${COMPILER_RT_DEFAULT_TARGET_ARCH} MATCHES "x86_64")
   list(APPEND TSAN_TEST_DEPS GotsanRuntimeCheck)
@@ -22,6 +24,11 @@ if(APPLE)
 endif()
 
 foreach(arch ${TSAN_TEST_ARCH})
+  set(TSAN_TEST_IOS "0")
+  pythonize_bool(TSAN_TEST_IOS)
+  set(TSAN_TEST_IOSSIM "0")
+  pythonize_bool(TSAN_TEST_IOSSIM)
+
   set(TSAN_TEST_TARGET_ARCH ${arch})
   string(TOLOWER "-${arch}" TSAN_TEST_CONFIG_SUFFIX)
   get_test_cc_for_arch(${arch} TSAN_TEST_TARGET_CC TSAN_TEST_TARGET_CFLAGS)
@@ -34,6 +41,44 @@ foreach(arch ${TSAN_TEST_ARCH})
     ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME}/lit.site.cfg)
   list(APPEND TSAN_TESTSUITES ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME})
 endforeach()
+
+# iOS and iOS simulator test suites
+# These are not added into "check-all", in order to run these tests, you have to
+# manually call (from the build directory).  They also require that an extra env
+# variable to select which iOS device or simulator to use, e.g.:
+# $ SANITIZER_IOSSIM_TEST_DEVICE_IDENTIFIER=BBE44C1C-8AAA-4000-8D06-91C89ED58172
+# $ ./bin/llvm-lit ./projects/compiler-rt/test/tsan/IOSSimX86_64Config
+if(APPLE)
+  set(TSAN_TEST_TARGET_CC ${COMPILER_RT_TEST_COMPILER})
+  set(TSAN_TEST_IOS "1")
+  pythonize_bool(TSAN_TEST_IOS)
+
+  set(arch "x86_64")
+  set(TSAN_TEST_IOSSIM "1")
+  pythonize_bool(TSAN_TEST_IOSSIM)
+  set(TSAN_TEST_TARGET_ARCH ${arch})
+  set(TSAN_TEST_TARGET_CFLAGS "-arch ${arch} -isysroot ${DARWIN_iossim_SYSROOT} ${COMPILER_RT_TEST_COMPILER_CFLAGS}")
+  set(TSAN_TEST_CONFIG_SUFFIX "-${arch}-iossim")
+  string(TOUPPER ${arch} ARCH_UPPER_CASE)
+  set(CONFIG_NAME "IOSSim${ARCH_UPPER_CASE}Config")
+  configure_lit_site_cfg(
+    ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.in
+    ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME}/lit.site.cfg
+    )
+
+  set(arch "arm64")
+  set(TSAN_TEST_IOSSIM "0")
+  pythonize_bool(TSAN_TEST_IOSSIM)
+  set(TSAN_TEST_TARGET_ARCH ${arch})
+  set(TSAN_TEST_TARGET_CFLAGS "-arch ${arch} -isysroot ${DARWIN_ios_SYSROOT} ${COMPILER_RT_TEST_COMPILER_CFLAGS}")
+  set(TSAN_TEST_CONFIG_SUFFIX "-${arch}-ios")
+  string(TOUPPER ${arch} ARCH_UPPER_CASE)
+  set(CONFIG_NAME "IOS${ARCH_UPPER_CASE}Config")
+  configure_lit_site_cfg(
+    ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.in
+    ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME}/lit.site.cfg
+    )
+endif()
 
 if(COMPILER_RT_INCLUDE_TESTS)
   configure_lit_site_cfg(

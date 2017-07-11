@@ -3372,7 +3372,7 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
 
   if (Delinearize && CommonLevels > 1) {
     if (tryDelinearize(Src, Dst, Pair)) {
-      DEBUG(dbgs() << "    delinerized GEP\n");
+      DEBUG(dbgs() << "    delinearized GEP\n");
       Pairs = Pair.size();
     }
   }
@@ -3797,7 +3797,7 @@ const SCEV *DependenceInfo::getSplitIteration(const Dependence &Dep,
 
   if (Delinearize && CommonLevels > 1) {
     if (tryDelinearize(Src, Dst, Pair)) {
-      DEBUG(dbgs() << "    delinerized GEP\n");
+      DEBUG(dbgs() << "    delinearized GEP\n");
       Pairs = Pair.size();
     }
   }

@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-import-jscop -polly-import-jscop-dir=%S \
+; RUN: opt %loadPolly -polly-import-jscop \
 ; RUN:                -polly-import-jscop-postfix=transformed -polly-codegen \
 ; RUN:                 < %s -S | FileCheck %s
 

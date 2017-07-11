@@ -354,6 +354,7 @@ define void @unnatural_cfg2() {
 ; single-source GCC.
 ; CHECK-LABEL: unnatural_cfg2
 ; CHECK: %entry
+; CHECK: %loop.header
 ; CHECK: %loop.body1
 ; CHECK: %loop.body2
 ; CHECK: %loop.body4
@@ -361,7 +362,6 @@ define void @unnatural_cfg2() {
 ; CHECK: %loop.inner2.begin
 ; CHECK: %loop.body3
 ; CHECK: %loop.inner1.begin
-; CHECK: %loop.header
 ; CHECK: %bail
 
 entry:
@@ -1491,6 +1491,102 @@ ret:                                              ; preds = %endif, %then
   ret void
 }
 
+define i32 @not_rotate_if_extra_branch(i32 %count) {
+; Test checks that there is no loop rotation
+; if it introduces extra branch.
+; Specifically in this case because best exit is .header
+; but it has fallthrough to .middle block and last block in
+; loop chain .slow does not have afallthrough to .header.
+; CHECK-LABEL: not_rotate_if_extra_branch
+; CHECK: %.entry
+; CHECK: %.header
+; CHECK: %.middle
+; CHECK: %.backedge
+; CHECK: %.slow
+; CHECK: %.bailout
+; CHECK: %.stop
+.entry:
+  %sum.0 = shl nsw i32 %count, 1
+  br label %.header
+
+.header:
+  %i = phi i32 [ %i.1, %.backedge ], [ 0, %.entry ]
+  %sum = phi i32 [ %sum.1, %.backedge ], [ %sum.0, %.entry ]
+  %is_exc = icmp sgt i32 %i, 9000000
+  br i1 %is_exc, label %.bailout, label %.middle, !prof !13
+
+.bailout:
+  %sum.2 = add nsw i32 %count, 1
+  br label %.stop
+
+.middle:
+  %pr.1 = and i32 %i, 1023
+  %pr.2 = icmp eq i32 %pr.1, 0
+  br i1 %pr.2, label %.slow, label %.backedge, !prof !14
+
+.slow:
+  tail call void @effect(i32 %sum)
+  br label %.backedge
+
+.backedge:
+  %sum.1 = add nsw i32 %i, %sum
+  %i.1 = add nsw i32 %i, 1
+  %end = icmp slt i32 %i.1, %count
+  br i1 %end, label %.header, label %.stop, !prof !15
+
+.stop:
+  %sum.phi = phi i32 [ %sum.1, %.backedge ], [ %sum.2, %.bailout ]
+  ret i32 %sum.phi
+}
+
+define i32 @not_rotate_if_extra_branch_regression(i32 %count, i32 %init) {
+; This is a regression test against patch avoid loop rotation if
+; it introduce an extra btanch.
+; CHECK-LABEL: not_rotate_if_extra_branch_regression
+; CHECK: %.entry
+; CHECK: %.first_backedge
+; CHECK: %.slow
+; CHECK: %.second_header
+.entry:
+  %sum.0 = shl nsw i32 %count, 1
+  br label %.first_header
+
+.first_header:
+  %i = phi i32 [ %i.1, %.first_backedge ], [ 0, %.entry ]
+  %is_bo1 = icmp sgt i32 %i, 9000000
+  br i1 %is_bo1, label %.bailout, label %.first_backedge, !prof !14
+
+.first_backedge:
+  %i.1 = add nsw i32 %i, 1
+  %end = icmp slt i32 %i.1, %count
+  br i1 %end, label %.first_header, label %.second_header, !prof !13
+
+.second_header:
+  %j = phi i32 [ %j.1, %.second_backedge ], [ %init, %.first_backedge ]
+  %end.2 = icmp sgt i32 %j, %count
+  br i1 %end.2, label %.stop, label %.second_middle, !prof !14
+
+.second_middle:
+  %is_slow = icmp sgt i32 %j, 9000000
+  br i1 %is_slow, label %.slow, label %.second_backedge, !prof !14
+
+.slow:
+  tail call void @effect(i32 %j)
+  br label %.second_backedge
+
+.second_backedge:
+  %j.1 = add nsw i32 %j, 1
+  %end.3 = icmp slt i32 %j, 10000000
+  br i1 %end.3, label %.second_header, label %.stop, !prof !13
+
+.stop:
+  %res = add nsw i32 %j, %i.1
+  ret i32 %res
+
+.bailout:
+  ret i32 0
+}
+
 declare void @effect(i32)
 
 !5 = !{!"branch_weights", i32 84, i32 16}
@@ -1501,3 +1597,6 @@ declare void @effect(i32)
 !10 = !{!"branch_weights", i32 90, i32 10}
 !11 = !{!"branch_weights", i32 1, i32 1}
 !12 = !{!"branch_weights", i32 5, i32 3}
+!13 = !{!"branch_weights", i32 1, i32 1}
+!14 = !{!"branch_weights", i32 1, i32 1023}
+!15 = !{!"branch_weights", i32 4095, i32 1}

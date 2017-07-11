@@ -360,7 +360,7 @@ TEST(Error, CheckJoinErrors) {
         [&](const CustomError &CE) {
           Sum += CE.getInfo();
         });
-    EXPECT_EQ(Sum, 28) << "Failed to correctly concatenate erorr lists.";
+    EXPECT_EQ(Sum, 28) << "Failed to correctly concatenate error lists.";
   }
 }
 

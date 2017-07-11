@@ -52,7 +52,7 @@ function adb_remount {
     local STORAGE=`$ADB shell mount | grep /system | cut -d ' ' -f1`
     if [ "$STORAGE" != "" ]; then
       echo Remounting $STORAGE at /system
-      $ADB shell su -c "mount -o remount,rw $STORAGE /system"
+      $ADB shell su -c "mount -o rw,remount $STORAGE /system"
     else
       echo Failed to get storage device name for "/system" mount point
     fi

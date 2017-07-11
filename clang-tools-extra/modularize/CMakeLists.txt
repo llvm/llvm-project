@@ -3,7 +3,7 @@ set(LLVM_LINK_COMPONENTS
   Support
   )
 
-add_clang_executable(modularize
+add_clang_tool(modularize
   Modularize.cpp
   ModuleAssistant.cpp
   ModularizeUtilities.cpp

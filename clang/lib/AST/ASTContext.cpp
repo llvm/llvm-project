@@ -8524,7 +8524,10 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
   RequiresICE = false;
   
   // Read the prefixed modifiers first.
-  bool Done = false, IsSpecialLong = false;
+  bool Done = false;
+  #ifndef NDEBUG
+  bool IsSpecialLong = false;
+  #endif
   while (!Done) {
     switch (*Str++) {
     default: Done = true; --Str; break;
@@ -8550,7 +8553,9 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
       // 'N' behaves like 'L' for all non LP64 targets and 'int' otherwise.
       assert(!IsSpecialLong && "Can't use two 'N' or 'W' modifiers!");
       assert(HowLong == 0 && "Can't use both 'L' and 'N' modifiers!");
+      #ifndef NDEBUG
       IsSpecialLong = true;
+      #endif
       if (Context.getTargetInfo().getLongWidth() == 32)
         ++HowLong;
       break;
@@ -8559,7 +8564,9 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
       // This modifier represents int64 type.
       assert(!IsSpecialLong && "Can't use two 'N' or 'W' modifiers!");
       assert(HowLong == 0 && "Can't use both 'L' and 'W' modifiers!");
+      #ifndef NDEBUG
       IsSpecialLong = true;
+      #endif
       switch (Context.getTargetInfo().getInt64Type()) {
       default:
         llvm_unreachable("Unexpected integer type");

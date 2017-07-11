@@ -44,6 +44,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include <tuple>
 
 using namespace llvm;
@@ -401,42 +402,15 @@ void ConstantHoistingPass::collectConstantCandidates(
   if (Inst->isCast())
     return;
 
-  // Can't handle inline asm. Skip it.
-  if (auto Call = dyn_cast<CallInst>(Inst))
-    if (isa<InlineAsm>(Call->getCalledValue()))
-      return;
-
-  // Switch cases must remain constant, and if the value being tested is
-  // constant the entire thing should disappear.
-  if (isa<SwitchInst>(Inst))
-    return;
-
-  // Static allocas (constant size in the entry block) are handled by
-  // prologue/epilogue insertion so they're free anyway. We definitely don't
-  // want to make them non-constant.
-  auto AI = dyn_cast<AllocaInst>(Inst);
-  if (AI && AI->isStaticAlloca())
-    return;
-
-  // Constants in GEPs that index into a struct type should not be hoisted.
-  if (isa<GetElementPtrInst>(Inst)) {
-    gep_type_iterator GTI = gep_type_begin(Inst);
-
-    // Collect constant for first operand.
-    collectConstantCandidates(ConstCandMap, Inst, 0);
-    // Scan rest operands.
-    for (unsigned Idx = 1, E = Inst->getNumOperands(); Idx != E; ++Idx, ++GTI) {
-      // Only collect constants that index into a non struct type.
-      if (!GTI.isStruct()) {
-        collectConstantCandidates(ConstCandMap, Inst, Idx);
-      }
-    }
-    return;
-  }
-
   // Scan all operands.
   for (unsigned Idx = 0, E = Inst->getNumOperands(); Idx != E; ++Idx) {
-    collectConstantCandidates(ConstCandMap, Inst, Idx);
+    // The cost of materializing the constants (defined in
+    // `TargetTransformInfo::getIntImmCost`) for instructions which only take
+    // constant variables is lower than `TargetTransformInfo::TCC_Basic`. So
+    // it's safe for us to collect constant candidates from all IntrinsicInsts.
+    if (canReplaceOperandWithVariable(Inst, Idx) || isa<IntrinsicInst>(Inst)) {
+      collectConstantCandidates(ConstCandMap, Inst, Idx);
+    }
   } // end of for all operands
 }
 

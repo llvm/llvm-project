@@ -16,8 +16,7 @@ id oldObject = array[10]; // expected-warning {{instance method '-objectAtIndexe
 array[10] = 0; // expected-warning {{instance method '-setObject:atIndexedSubscript:' not found (return type defaults to 'id')}}
 
 id<P> p_array;
-oldObject = p_array[10]; // expected-warning {{instance method '-objectAtIndexedSubscript:' not found (return type defaults to 'id')}}
+oldObject = p_array[10]; // expected-error {{expected method to read array element not found on object of type 'id<P>'}}
 
-p_array[10] = 0; // expected-warning {{instance method '-setObject:atIndexedSubscript:' not found (return type defaults to 'id')}}
+p_array[10] = 0; // expected-error {{expected method to write array element not found on object of type 'id<P>'}}
 }
-

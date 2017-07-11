@@ -216,6 +216,11 @@ libc++ specific options
   Extra suffix to append to the directory where libraries are to be installed.
   This option overrides `LLVM_LIBDIR_SUFFIX`.
 
+.. option:: LIBCXX_INSTALL_PREFIX:STRING
+
+  **Default**: ``""``
+
+  Define libc++ destination prefix.
 
 .. _libc++experimental options:
 

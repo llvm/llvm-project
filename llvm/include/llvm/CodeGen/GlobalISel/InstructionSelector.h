@@ -107,6 +107,11 @@ enum {
   /// - OpIdx - Operand index
   /// - Expected integer
   GIM_CheckLiteralInt,
+  /// Check the operand is a specific intrinsic ID
+  /// - InsnID - Instruction ID
+  /// - OpIdx - Operand index
+  /// - Expected Intrinsic ID
+  GIM_CheckIntrinsicID,
   /// Check the specified operand is an MBB
   /// - InsnID - Instruction ID
   /// - OpIdx - Operand index

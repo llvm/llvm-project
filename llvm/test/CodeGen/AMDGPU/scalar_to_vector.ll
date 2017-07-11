@@ -6,7 +6,7 @@
 ; GCN: buffer_load_dword [[VAL:v[0-9]+]],
 ; GCN: v_lshrrev_b32_e32 [[SHR:v[0-9]+]], 16, [[VAL]]
 ; GCN: v_lshlrev_b32_e32 [[SHL:v[0-9]+]], 16, [[SHR]]
-; GCN: v_or_b32_e32 v[[OR:[0-9]+]], [[SHL]], [[SHR]]
+; GCN: v_or_b32_e32 v[[OR:[0-9]+]], [[SHR]], [[SHL]]
 ; GCN: v_mov_b32_e32 v[[COPY:[0-9]+]], v[[OR]]
 ; GCN: buffer_store_dwordx2 v{{\[}}[[OR]]:[[COPY]]{{\]}}
 define amdgpu_kernel void @scalar_to_vector_v2i32(<4 x i16> addrspace(1)* %out, i32 addrspace(1)* %in) nounwind {

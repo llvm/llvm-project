@@ -7,7 +7,7 @@ declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 ; Test that the -enable-no-signed-zeros-fp-math flag works
 
 ; GCN-LABEL: {{^}}fneg_fsub_f32:
-; GCN: v_subrev_f32_e32 [[SUB:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}
+; GCN: v_sub_f32_e32 [[SUB:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}
 ; GCN-SAFE: v_xor_b32_e32 v{{[0-9]+}}, 0x80000000, [[SUB]]
 
 ; GCN-UNSAFE-NOT: xor

@@ -140,9 +140,9 @@ void AsanCheckIncompatibleRT() {
       // system libraries, causing crashes later in ASan initialization.
       MemoryMappingLayout proc_maps(/*cache_enabled*/true);
       char filename[128];
-      while (proc_maps.Next(nullptr, nullptr, nullptr, filename,
-                            sizeof(filename), nullptr)) {
-        if (IsDynamicRTName(filename)) {
+      MemoryMappedSegment segment(filename, sizeof(filename));
+      while (proc_maps.Next(&segment)) {
+        if (IsDynamicRTName(segment.filename)) {
           Report("Your application is linked against "
                  "incompatible ASan runtimes.\n");
           Die();

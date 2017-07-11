@@ -713,7 +713,8 @@ bool SITargetLowering::isLegalAddressingMode(const DataLayout &DL,
   }
 }
 
-bool SITargetLowering::canMergeStoresTo(unsigned AS, EVT MemVT) const {
+bool SITargetLowering::canMergeStoresTo(unsigned AS, EVT MemVT,
+                                        const SelectionDAG &DAG) const {
   if (AS == AMDGPUASI.GLOBAL_ADDRESS || AS == AMDGPUASI.FLAT_ADDRESS) {
     return (MemVT.getSizeInBits() <= 4 * 32);
   } else if (AS == AMDGPUASI.PRIVATE_ADDRESS) {

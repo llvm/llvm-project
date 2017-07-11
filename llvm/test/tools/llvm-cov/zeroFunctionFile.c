@@ -13,7 +13,7 @@ int main() {
 // REPORT: 0                 0         -           0                 0         -               0               0         -           0                 0         -
 // REPORT-NO: 0%
 
-// RUN: llvm-cov show %S/Inputs/zeroFunctionFile.covmapping -format html -instr-profile %t.profdata -o %t.dir
+// RUN: llvm-cov show -j 1 %S/Inputs/zeroFunctionFile.covmapping -format html -instr-profile %t.profdata -o %t.dir
 // RUN: FileCheck %s -input-file=%t.dir/index.html -check-prefix=HTML
 // HTML: <td class='column-entry-green'><pre>- (0/0)
 // HTML-NO: 0.00% (0/0)

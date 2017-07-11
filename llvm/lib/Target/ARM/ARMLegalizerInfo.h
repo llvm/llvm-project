@@ -55,8 +55,11 @@ private:
   using FCmpLibcallsMapTy = IndexedMap<FCmpLibcallsList>;
 
   FCmpLibcallsMapTy FCmp32Libcalls;
+  FCmpLibcallsMapTy FCmp64Libcalls;
 
-  FCmpLibcallsList getFCmpLibcalls(CmpInst::Predicate) const;
+  // Get the libcall(s) corresponding to \p Predicate for operands of \p Size
+  // bits.
+  FCmpLibcallsList getFCmpLibcalls(CmpInst::Predicate, unsigned Size) const;
 };
 } // End llvm namespace.
 #endif

@@ -34,8 +34,8 @@ define amdgpu_kernel void @madak_f32(float addrspace(1)* noalias %out, float add
 ; GCN-DAG: buffer_load_dword [[VB:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
 ; GCN-DAG: buffer_load_dword [[VC:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8
 ; GCN-DAG: v_mov_b32_e32 [[VK:v[0-9]+]], 0x41200000
-; GCN-DAG: v_mad_f32 {{v[0-9]+}}, [[VB]], [[VA]], [[VK]]
-; GCN-DAG: v_mac_f32_e32 [[VK]], [[VC]], [[VA]]
+; GCN-DAG: v_mad_f32 {{v[0-9]+}}, [[VA]], [[VB]], [[VK]]
+; GCN-DAG: v_mac_f32_e32 [[VK]], [[VA]], [[VC]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @madak_2_use_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in) nounwind {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
@@ -199,7 +199,7 @@ define amdgpu_kernel void @no_madak_src1_modifier_f32(float addrspace(1)* noalia
 ; GCN: v_mov_b32_e32 [[SGPR0_VCOPY:v[0-9]+]], [[SGPR0]]
 ; GCN: buffer_load_dword [[VGPR:v[0-9]+]]
 ; GCN: v_madak_f32 [[MADAK:v[0-9]+]], 0.5, [[SGPR0_VCOPY]], 0x42280000
-; GCN: v_mul_f32_e32 [[MUL:v[0-9]+]], [[VGPR]], [[MADAK]]
+; GCN: v_mul_f32_e32 [[MUL:v[0-9]+]], [[MADAK]], [[VGPR]]
 ; GCN: buffer_store_dword [[MUL]]
 define amdgpu_kernel void @madak_constant_bus_violation(i32 %arg1, float %sgpr0, float %sgpr1) #0 {
 bb:

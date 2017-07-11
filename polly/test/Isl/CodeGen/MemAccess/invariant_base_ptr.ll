@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-import-jscop -polly-import-jscop-dir=%S \
+; RUN: opt %loadPolly -polly-import-jscop \
 ; RUN:   -polly-codegen -polly-invariant-load-hoisting -S \
 ; RUN:   2>&1 < %s | FileCheck %s
 

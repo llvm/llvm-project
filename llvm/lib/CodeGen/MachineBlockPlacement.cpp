@@ -1917,6 +1917,12 @@ void MachineBlockPlacement::rotateLoop(BlockChain &LoopChain,
     return;
 
   MachineBasicBlock *Top = *LoopChain.begin();
+  MachineBasicBlock *Bottom = *std::prev(LoopChain.end());
+
+  // If ExitingBB is already the last one in a chain then nothing to do.
+  if (Bottom == ExitingBB)
+    return;
+
   bool ViableTopFallthrough = false;
   for (MachineBasicBlock *Pred : Top->predecessors()) {
     BlockChain *PredChain = BlockToChain[Pred];
@@ -1931,7 +1937,6 @@ void MachineBlockPlacement::rotateLoop(BlockChain &LoopChain,
   // bottom is a viable exiting block. If so, bail out as rotating will
   // introduce an unnecessary branch.
   if (ViableTopFallthrough) {
-    MachineBasicBlock *Bottom = *std::prev(LoopChain.end());
     for (MachineBasicBlock *Succ : Bottom->successors()) {
       BlockChain *SuccChain = BlockToChain[Succ];
       if (!LoopBlockSet.count(Succ) &&
@@ -1944,6 +1949,36 @@ void MachineBlockPlacement::rotateLoop(BlockChain &LoopChain,
   if (ExitIt == LoopChain.end())
     return;
 
+  // Rotating a loop exit to the bottom when there is a fallthrough to top
+  // trades the entry fallthrough for an exit fallthrough.
+  // If there is no bottom->top edge, but the chosen exit block does have
+  // a fallthrough, we break that fallthrough for nothing in return.
+
+  // Let's consider an example. We have a built chain of basic blocks
+  // B1, B2, ..., Bn, where Bk is a ExitingBB - chosen exit block.
+  // By doing a rotation we get
+  // Bk+1, ..., Bn, B1, ..., Bk
+  // Break of fallthrough to B1 is compensated by a fallthrough from Bk.
+  // If we had a fallthrough Bk -> Bk+1 it is broken now.
+  // It might be compensated by fallthrough Bn -> B1.
+  // So we have a condition to avoid creation of extra branch by loop rotation.
+  // All below must be true to avoid loop rotation:
+  //   If there is a fallthrough to top (B1)
+  //   There was fallthrough from chosen exit block (Bk) to next one (Bk+1)
+  //   There is no fallthrough from bottom (Bn) to top (B1).
+  // Please note that there is no exit fallthrough from Bn because we checked it
+  // above.
+  if (ViableTopFallthrough) {
+    assert(std::next(ExitIt) != LoopChain.end() &&
+           "Exit should not be last BB");
+    MachineBasicBlock *NextBlockInChain = *std::next(ExitIt);
+    if (ExitingBB->isSuccessor(NextBlockInChain))
+      if (!Bottom->isSuccessor(Top))
+        return;
+  }
+
+  DEBUG(dbgs() << "Rotating loop to put exit " << getBlockName(ExitingBB)
+               << " at bottom\n");
   std::rotate(LoopChain.begin(), std::next(ExitIt), LoopChain.end());
 }
 

@@ -1006,7 +1006,7 @@ static AliasResult aliasSameBasePointerGEPs(const GEPOperator *GEP1,
     // Because they cannot partially overlap and because fields in an array
     // cannot overlap, if we can prove the final indices are different between
     // GEP1 and GEP2, we can conclude GEP1 and GEP2 don't alias.
-    
+
     // If the last indices are constants, we've already checked they don't
     // equal each other so we can exit early.
     if (C1 && C2)

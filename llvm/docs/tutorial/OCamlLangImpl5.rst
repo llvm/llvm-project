@@ -258,7 +258,7 @@ a truth value as a 1-bit (bool) value.
           let then_bb = append_block context "then" the_function in
           position_at_end then_bb builder;
 
-As opposed to the `C++ tutorial <LangImpl5.html>`_, we have to build our
+As opposed to the `C++ tutorial <LangImpl05.html>`_, we have to build our
 basic blocks bottom up since we can't have dangling BasicBlocks. We
 start off by saving a pointer to the first block (which might not be the
 entry block), which we'll need to build a conditional branch later. We

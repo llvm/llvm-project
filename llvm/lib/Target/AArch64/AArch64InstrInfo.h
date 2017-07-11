@@ -263,8 +263,8 @@ public:
   /// \param Pattern - combiner pattern
   bool isThroughputPattern(MachineCombinerPattern Pattern) const override;
   /// Return true when there is potentially a faster code sequence
-  /// for an instruction chain ending in <Root>. All potential patterns are
-  /// listed in the <Patterns> array.
+  /// for an instruction chain ending in ``Root``. All potential patterns are
+  /// listed in the ``Patterns`` array.
   bool getMachineCombinerPatterns(MachineInstr &Root,
                   SmallVectorImpl<MachineCombinerPattern> &Patterns)
       const override;

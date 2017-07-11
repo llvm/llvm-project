@@ -271,7 +271,8 @@ void splitAndWriteThinLTOBitcode(
           if (!ArgT || ArgT->getBitWidth() > 64)
             return;
         }
-        if (computeFunctionBodyMemoryAccess(*F, AARGetter(*F)) == MAK_ReadNone)
+        if (!F->isDeclaration() &&
+            computeFunctionBodyMemoryAccess(*F, AARGetter(*F)) == MAK_ReadNone)
           EligibleVirtualFns.insert(F);
       });
     }

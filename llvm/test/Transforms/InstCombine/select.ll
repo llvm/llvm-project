@@ -1370,3 +1370,10 @@ define i8 @assume_cond_false(i1 %cond, i8 %x, i8 %y) {
   ret i8 %sel
 }
 
+; Test case to make sure we don't consider an all ones float values for converting the select into a sext.
+define <4 x float> @PR33721(<4 x float> %w) {
+entry:
+  %0 = fcmp ole <4 x float> %w, zeroinitializer
+  %1 = select <4 x i1> %0, <4 x float> <float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000>, <4 x float> zeroinitializer
+  ret <4 x float> %1
+}

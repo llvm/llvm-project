@@ -2,6 +2,16 @@
 # RUN: llc -mtriple=x86_64-linux-gnu -global-isel -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=X64
 
 --- |
+  define i8 @test_zext_i1toi8(i1 %a) {
+    %r = zext i1 %a to i8
+    ret i8 %r
+  }
+
+  define i16 @test_zext_i1toi16(i1 %a) {
+    %r = zext i1 %a to i16
+    ret i16 %r
+  }
+
   define i32 @test_zext_i1(i1 %a) {
     %r = zext i1 %a to i32
     ret i32 %r
@@ -26,6 +36,60 @@
     %r = sext i16 %val to i32
     ret i32 %r
   }
+
+...
+---
+name:            test_zext_i1toi8
+# ALL-LABEL: name:  test_zext_i1toi8
+alignment:       4
+legalized:       true
+regBankSelected: true
+# ALL:      registers:
+# ALL-NEXT:   - { id: 0, class: gr8, preferred-register: '' }
+# ALL-NEXT:   - { id: 1, class: gr8, preferred-register: '' }
+registers:
+  - { id: 0, class: gpr, preferred-register: '' }
+  - { id: 1, class: gpr, preferred-register: '' }
+# ALL:          %0 = COPY %dil
+# ALL-NEXT:     %1 = AND8ri %0, 1, implicit-def %eflags
+# ALL-NEXT:     %al = COPY %1
+# ALL-NEXT:     RET 0, implicit %al
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %edi
+
+    %0(s1) = COPY %edi
+    %1(s8) = G_ZEXT %0(s1)
+    %al = COPY %1(s8)
+    RET 0, implicit %al
+
+...
+---
+name:            test_zext_i1toi16
+# ALL-LABEL: name:  test_zext_i1toi16
+alignment:       4
+legalized:       true
+regBankSelected: true
+# ALL:      registers:
+# ALL-NEXT:   - { id: 0, class: gr8, preferred-register: '' }
+# ALL-NEXT:   - { id: 1, class: gr16, preferred-register: '' }
+# ALL-NEXT:   - { id: 2, class: gr16, preferred-register: '' }
+registers:
+  - { id: 0, class: gpr, preferred-register: '' }
+  - { id: 1, class: gpr, preferred-register: '' }
+# ALL:          %0 = COPY %dil
+# ALL-NEXT:     %2 = SUBREG_TO_REG 0, %0, 1
+# ALL-NEXT:     %1 = AND16ri8 %2, 1, implicit-def %eflags
+# ALL-NEXT:     %ax = COPY %1
+# ALL-NEXT:     RET 0, implicit %ax
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: %edi
+
+    %0(s1) = COPY %edi
+    %1(s16) = G_ZEXT %0(s1)
+    %ax = COPY %1(s16)
+    RET 0, implicit %ax
 
 ...
 ---

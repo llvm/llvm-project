@@ -4799,7 +4799,7 @@ def : t2InstAlias<"add${p} $Rd, pc, $imm",
 // Pseudo instruction ldr Rt, =immediate
 def t2LDRConstPool
   : t2AsmPseudo<"ldr${p} $Rt, $immediate",
-                (ins GPRnopc:$Rt, const_pool_asm_imm:$immediate, pred:$p)>;
+                (ins GPR:$Rt, const_pool_asm_imm:$immediate, pred:$p)>;
 // Version w/ the .w suffix.
 def : t2InstAlias<"ldr${p}.w $Rt, $immediate",
                   (t2LDRConstPool GPRnopc:$Rt,

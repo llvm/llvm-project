@@ -9,7 +9,7 @@
 ; SI-LABEL: @simple_read2_f32
 ; SI: ds_read2_b32 v{{\[}}[[LO_VREG:[0-9]+]]:[[HI_VREG:[0-9]+]]{{\]}}, v{{[0-9]+}} offset1:8
 ; SI: s_waitcnt lgkmcnt(0)
-; SI: v_add_f32_e32 [[RESULT:v[0-9]+]], v[[HI_VREG]], v[[LO_VREG]]
+; SI: v_add_f32_e32 [[RESULT:v[0-9]+]], v[[LO_VREG]], v[[HI_VREG]]
 ; SI: buffer_store_dword [[RESULT]]
 ; SI: s_endpgm
 define amdgpu_kernel void @simple_read2_f32(float addrspace(1)* %out) #0 {
@@ -28,7 +28,7 @@ define amdgpu_kernel void @simple_read2_f32(float addrspace(1)* %out) #0 {
 ; SI-LABEL: @simple_read2_f32_max_offset
 ; SI: ds_read2_b32 v{{\[}}[[LO_VREG:[0-9]+]]:[[HI_VREG:[0-9]+]]{{\]}}, v{{[0-9]+}} offset1:255
 ; SI: s_waitcnt lgkmcnt(0)
-; SI: v_add_f32_e32 [[RESULT:v[0-9]+]], v[[HI_VREG]], v[[LO_VREG]]
+; SI: v_add_f32_e32 [[RESULT:v[0-9]+]], v[[LO_VREG]], v[[HI_VREG]]
 ; SI: buffer_store_dword [[RESULT]]
 ; SI: s_endpgm
 define amdgpu_kernel void @simple_read2_f32_max_offset(float addrspace(1)* %out) #0 {

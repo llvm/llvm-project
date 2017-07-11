@@ -940,14 +940,10 @@ DWARFContextInMemory::DWARFContextInMemory(
     StringRef Name;
     Section.getName(Name);
     // Skip BSS and Virtual sections, they aren't interesting.
-    bool IsBSS = Section.isBSS();
-    if (IsBSS)
+    if (Section.isBSS() || Section.isVirtual())
       continue;
-    bool IsVirtual = Section.isVirtual();
-    if (IsVirtual)
-      continue;
-    StringRef Data;
 
+    StringRef Data;
     section_iterator RelocatedSection = Section.getRelocatedSection();
     // Try to obtain an already relocated version of this section.
     // Else use the unrelocated section from the object file. We'll have to
@@ -1046,10 +1042,10 @@ DWARFContextInMemory::DWARFContextInMemory(
       object::RelocVisitor V(Obj);
       uint64_t Val = V.visit(Reloc.getType(), Reloc, SymInfoOrErr->Address);
       if (V.error()) {
-        SmallString<32> Name;
-        Reloc.getTypeName(Name);
+        SmallString<32> Type;
+        Reloc.getTypeName(Type);
         ErrorPolicy EP = HandleError(
-            createError("failed to compute relocation: " + Name + ", ",
+            createError("failed to compute relocation: " + Type + ", ",
                         errorCodeToError(object_error::parse_failed)));
         if (EP == ErrorPolicy::Halt)
           return;

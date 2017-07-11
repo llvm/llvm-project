@@ -154,7 +154,7 @@ entry:
 ; GCN: {{buffer|flat}}_load_ushort [[A:v[0-9]+]]
 ; GCN-DAG: v_cvt_f32_f16_e64 [[CVTA_NEG:v[0-9]+]], -[[A]]
 ; SI-DAG: v_cvt_f32_f16_e32 [[CVTA:v[0-9]+]], [[A]]
-; SI: v_mul_f32_e32 [[MUL_F32:v[0-9]+]], [[CVTA]], [[CVTA_NEG]]
+; SI: v_mul_f32_e32 [[MUL_F32:v[0-9]+]], [[CVTA_NEG]], [[CVTA]]
 ; SI: v_cvt_f16_f32_e32 [[MUL:v[0-9]+]], [[MUL_F32]]
 
 ; GFX89-DAG: v_cvt_f32_f16_e64 [[CVT_NEGA:v[0-9]+]], -[[A]]
