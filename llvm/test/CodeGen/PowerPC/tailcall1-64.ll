@@ -11,5 +11,4 @@ entry:
 	ret i32 %tmp11
 ; CHECK-LABEL: tailcaller
 ; CHECK-NOT: stdu
-; CHECK: b tailcallee
 }

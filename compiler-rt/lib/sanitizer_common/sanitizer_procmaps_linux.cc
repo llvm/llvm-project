@@ -62,13 +62,12 @@ bool MemoryMappingLayout::Next(MemoryMappedSegment *segment) {
   while (current_ < next_line && *current_ == ' ')
     current_++;
   // Fill in the filename.
-  uptr i = 0;
-  while (current_ < next_line) {
-    if (segment->filename && i < segment->filename_size - 1)
-      segment->filename[i++] = *current_;
-    current_++;
+  if (segment->filename) {
+    uptr len = Min((uptr)(next_line - current_), segment->filename_size - 1);
+    internal_strncpy(segment->filename, current_, len);
+    segment->filename[len] = 0;
   }
-  if (segment->filename && i < segment->filename_size) segment->filename[i] = 0;
+
   current_ = next_line + 1;
   return true;
 }

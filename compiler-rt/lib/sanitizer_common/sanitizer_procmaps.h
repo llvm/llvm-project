@@ -86,8 +86,6 @@ class MemoryMappingLayout {
 # elif SANITIZER_MAC
   template <u32 kLCSegment, typename SegmentCommand>
   bool NextSegmentLoad(MemoryMappedSegment *segment);
-  void GetSegmentAddrRange(MemoryMappedSegment *segment, uptr vmaddr,
-                           uptr vmsize);
   int current_image_;
   u32 current_magic_;
   u32 current_filetype_;
