@@ -1,5 +1,8 @@
 ; RUN: opt %loadPolly -basicaa -polly-ast -analyze < %s | FileCheck %s
-; RUN: opt %loadPolly -polly-import-jscop-dir=%S -basicaa -polly-import-jscop -polly-ast -polly-ast-detect-parallel -analyze < %s | FileCheck %s -check-prefix=CHECK-VECTOR
+; RUN: opt %loadPolly -polly-import-jscop-dir=%S -basicaa -polly-import-jscop \
+; RUN:   -polly-ast-print-accesses \
+; RUN:   -polly-ast -polly-ast-detect-parallel -analyze < %s | FileCheck %s \
+; RUN:   -check-prefix=CHECK-VECTOR
 
 ; for (i = 0; i < 1024; i++)
 ;   A[i] = B[i];
@@ -35,6 +38,8 @@ for.end:                                          ; preds = %for.cond
 ; CHECK-VECTOR: for (int c0 = 0; c0 <= 1023; c0 += 4)
 ; CHECK-VECTOR:     #pragma simd
 ; CHECK-VECTOR:     for (int c1 = c0; c1 <= c0 + 3; c1 += 1)
-; CHECK-VECTOR:           Stmt_for_body(c1);
-
+; CHECK-VECTOR:       Stmt_for_body(
+; CHECK-VECTOR:         /* read  */ &MemRef_B[0]
+; CHECK-VECTOR:         /* write */  MemRef_A[c1]
+; CHECK-VECTOR:       );
 

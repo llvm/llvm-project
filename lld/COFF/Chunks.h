@@ -151,6 +151,8 @@ public:
                    uint64_t P) const;
   void applyRelARM(uint8_t *Off, uint16_t Type, OutputSection *OS, uint64_t S,
                    uint64_t P) const;
+  void applyRelARM64(uint8_t *Off, uint16_t Type, OutputSection *OS, uint64_t S,
+                     uint64_t P) const;
 
   // Called if the garbage collector decides to not include this chunk
   // in a final output. It's supposed to print out a log message to stdout.
@@ -264,6 +266,12 @@ static const uint8_t ImportThunkARM[] = {
     0xdc, 0xf8, 0x00, 0xf0, // ldr.w pc, [ip]
 };
 
+static const uint8_t ImportThunkARM64[] = {
+    0x10, 0x00, 0x00, 0x90, // adrp x16, #0
+    0x10, 0x02, 0x40, 0xf9, // ldr  x16, [x16]
+    0x00, 0x02, 0x1f, 0xd6, // br   x16
+};
+
 // Windows-specific.
 // A chunk for DLL import jump table entry. In a final output, it's
 // contents will be a JMP instruction to some __imp_ symbol.
@@ -293,6 +301,16 @@ public:
   explicit ImportThunkChunkARM(Defined *S) : ImpSymbol(S) {}
   size_t getSize() const override { return sizeof(ImportThunkARM); }
   void getBaserels(std::vector<Baserel> *Res) override;
+  void writeTo(uint8_t *Buf) const override;
+
+private:
+  Defined *ImpSymbol;
+};
+
+class ImportThunkChunkARM64 : public Chunk {
+public:
+  explicit ImportThunkChunkARM64(Defined *S) : ImpSymbol(S) {}
+  size_t getSize() const override { return sizeof(ImportThunkARM64); }
   void writeTo(uint8_t *Buf) const override;
 
 private:

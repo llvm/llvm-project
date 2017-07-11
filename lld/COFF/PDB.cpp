@@ -18,19 +18,20 @@
 #include "llvm/DebugInfo/CodeView/DebugSubsectionRecord.h"
 #include "llvm/DebugInfo/CodeView/DebugSubsectionVisitor.h"
 #include "llvm/DebugInfo/CodeView/LazyRandomTypeCollection.h"
+#include "llvm/DebugInfo/CodeView/SymbolSerializer.h"
 #include "llvm/DebugInfo/CodeView/TypeDumpVisitor.h"
 #include "llvm/DebugInfo/CodeView/TypeIndexDiscovery.h"
 #include "llvm/DebugInfo/CodeView/TypeStreamMerger.h"
 #include "llvm/DebugInfo/CodeView/TypeTableBuilder.h"
 #include "llvm/DebugInfo/MSF/MSFBuilder.h"
 #include "llvm/DebugInfo/MSF/MSFCommon.h"
+#include "llvm/DebugInfo/PDB/Native/DbiModuleDescriptorBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/DbiStream.h"
 #include "llvm/DebugInfo/PDB/Native/DbiStreamBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/InfoStream.h"
 #include "llvm/DebugInfo/PDB/Native/InfoStreamBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFileBuilder.h"
-#include "llvm/DebugInfo/PDB/Native/DbiModuleDescriptorBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/PDBStringTableBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/PDBTypeServerHandler.h"
 #include "llvm/DebugInfo/PDB/Native/TpiStream.h"
@@ -396,9 +397,52 @@ static void addObjectsToPDB(BumpPtrAllocator &Alloc, SymbolTable *Symtab,
   addTypeInfo(Builder.getIpiBuilder(), IDTable);
 }
 
+static void addLinkerModuleSymbols(StringRef Path,
+                                   pdb::DbiModuleDescriptorBuilder &Mod,
+                                   BumpPtrAllocator &Allocator) {
+  codeview::SymbolSerializer Serializer(Allocator, CodeViewContainer::Pdb);
+  codeview::ObjNameSym ONS(SymbolRecordKind::ObjNameSym);
+  codeview::Compile3Sym CS(SymbolRecordKind::Compile3Sym);
+  codeview::EnvBlockSym EBS(SymbolRecordKind::EnvBlockSym);
+
+  ONS.Name = "* Linker *";
+  ONS.Signature = 0;
+
+  CS.Machine = Config->is64() ? CPUType::X64 : CPUType::Intel80386;
+  CS.Flags = CompileSym3Flags::None;
+  CS.VersionBackendBuild = 0;
+  CS.VersionBackendMajor = 0;
+  CS.VersionBackendMinor = 0;
+  CS.VersionBackendQFE = 0;
+  CS.VersionFrontendBuild = 0;
+  CS.VersionFrontendMajor = 0;
+  CS.VersionFrontendMinor = 0;
+  CS.VersionFrontendQFE = 0;
+  CS.Version = "LLVM Linker";
+  CS.setLanguage(SourceLanguage::Link);
+
+  ArrayRef<StringRef> Args = makeArrayRef(Config->Argv).drop_front();
+  std::string ArgStr = llvm::join(Args, " ");
+  EBS.Fields.push_back("cwd");
+  SmallString<64> cwd;
+  llvm::sys::fs::current_path(cwd);
+  EBS.Fields.push_back(cwd);
+  EBS.Fields.push_back("exe");
+  EBS.Fields.push_back(Config->Argv[0]);
+  EBS.Fields.push_back("pdb");
+  EBS.Fields.push_back(Path);
+  EBS.Fields.push_back("cmd");
+  EBS.Fields.push_back(ArgStr);
+  Mod.addSymbol(codeview::SymbolSerializer::writeOneSymbol(
+      ONS, Allocator, CodeViewContainer::Pdb));
+  Mod.addSymbol(codeview::SymbolSerializer::writeOneSymbol(
+      CS, Allocator, CodeViewContainer::Pdb));
+  Mod.addSymbol(codeview::SymbolSerializer::writeOneSymbol(
+      EBS, Allocator, CodeViewContainer::Pdb));
+}
+
 // Creates a PDB file.
-void coff::createPDB(StringRef Path, SymbolTable *Symtab,
-                     ArrayRef<uint8_t> SectionTable,
+void coff::createPDB(SymbolTable *Symtab, ArrayRef<uint8_t> SectionTable,
                      const llvm::codeview::DebugInfo *DI) {
   BumpPtrAllocator Alloc;
   pdb::PDBFileBuilder Builder(Alloc);
@@ -413,7 +457,8 @@ void coff::createPDB(StringRef Path, SymbolTable *Symtab,
   auto &InfoBuilder = Builder.getInfoBuilder();
   InfoBuilder.setAge(DI ? DI->PDB70.Age : 0);
 
-  llvm::SmallString<128> NativePath(Path.begin(), Path.end());
+  llvm::SmallString<128> NativePath(Config->PDBPath.begin(),
+                                    Config->PDBPath.end());
   llvm::sys::fs::make_absolute(NativePath);
   llvm::sys::path::native(NativePath, llvm::sys::path::Style::windows);
 
@@ -436,6 +481,13 @@ void coff::createPDB(StringRef Path, SymbolTable *Symtab,
   TypeTableBuilder IDTable(BAlloc);
   addObjectsToPDB(Alloc, Symtab, Builder, TypeTable, IDTable);
 
+  // Add public and symbol records stream.
+
+  // For now we don't actually write any thing useful to the publics stream, but
+  // the act of "getting" it also creates it lazily so that we write an empty
+  // stream.
+  (void)Builder.getPublicsBuilder();
+
   // Add Section Contributions.
   addSectionContribs(Symtab, DbiBuilder);
 
@@ -449,11 +501,12 @@ void coff::createPDB(StringRef Path, SymbolTable *Symtab,
 
   auto &LinkerModule = ExitOnErr(DbiBuilder.addModuleInfo("* Linker *"));
   LinkerModule.setPdbFilePathNI(PdbFilePathNI);
+  addLinkerModuleSymbols(NativePath, LinkerModule, Alloc);
 
   // Add COFF section header stream.
   ExitOnErr(
       DbiBuilder.addDbgStream(pdb::DbgHeaderType::SectionHdr, SectionTable));
 
   // Write to a file.
-  ExitOnErr(Builder.commit(Path));
+  ExitOnErr(Builder.commit(Config->PDBPath));
 }
