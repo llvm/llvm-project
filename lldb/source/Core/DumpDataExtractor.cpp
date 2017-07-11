@@ -154,7 +154,8 @@ lldb::offset_t lldb_private::DumpDataExtractor(
       target_sp = exe_scope->CalculateTarget();
     if (target_sp) {
       DisassemblerSP disassembler_sp(Disassembler::FindPlugin(
-          target_sp->GetArchitecture(), nullptr, nullptr));
+          target_sp->GetArchitecture(),
+          target_sp->GetDisassemblyFlavor(), nullptr));
       if (disassembler_sp) {
         lldb::addr_t addr = base_addr + start_offset;
         lldb_private::Address so_addr;

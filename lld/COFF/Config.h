@@ -92,6 +92,7 @@ struct Configuration {
   bool WriteSymtab = true;
   unsigned DebugTypes = static_cast<unsigned>(DebugType::None);
   llvm::SmallString<128> PDBPath;
+  std::vector<llvm::StringRef> Argv;
 
   // Symbols in this set are considered as live by the garbage collector.
   std::set<SymbolBody *> GCRoot;

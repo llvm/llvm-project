@@ -169,10 +169,6 @@ class DarwinLocalTI(DefaultTargetInfo):
         # should be available in libc++ directly.
         return False
 
-    def add_sanitizer_features(self, sanitizer_type, features):
-        if sanitizer_type == 'Undefined':
-            features.add('sanitizer-new-delete')
-
 
 class FreeBSDLocalTI(DefaultTargetInfo):
     def __init__(self, full_config):

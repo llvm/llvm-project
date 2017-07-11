@@ -680,7 +680,7 @@ Status NativeRegisterContextLinux_arm64::ClearAllHardwareWatchpoints() {
     return error;
 
   lldb::addr_t tempAddr = 0;
-  uint32_t tempControl = 0, tempRefCount = 0;
+  uint32_t tempControl = 0;
 
   for (uint32_t i = 0; i < m_max_hwp_supported; i++) {
     if (m_hwp_regs[i].control & 0x01) {
@@ -858,7 +858,7 @@ Status NativeRegisterContextLinux_arm64::DoReadRegisterValue(
     RegisterValue &value) {
   Status error;
   if (offset > sizeof(struct user_pt_regs)) {
-    uintptr_t offset = offset - sizeof(struct user_pt_regs);
+    offset -= sizeof(struct user_pt_regs);
     if (offset > sizeof(struct user_fpsimd_state)) {
       error.SetErrorString("invalid offset value");
       return error;
@@ -905,7 +905,7 @@ Status NativeRegisterContextLinux_arm64::DoWriteRegisterValue(
   Status error;
   ::pid_t tid = m_thread.GetID();
   if (offset > sizeof(struct user_pt_regs)) {
-    uintptr_t offset = offset - sizeof(struct user_pt_regs);
+    offset -= sizeof(struct user_pt_regs);
     if (offset > sizeof(struct user_fpsimd_state)) {
       error.SetErrorString("invalid offset value");
       return error;
