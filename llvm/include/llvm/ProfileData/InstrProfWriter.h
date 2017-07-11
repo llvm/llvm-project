@@ -33,8 +33,7 @@ class raw_fd_ostream;
 
 class InstrProfWriter {
 public:
-  using ProfilingData =
-      SmallDenseMap<uint64_t, InstrProfRecord, 1>;
+  using ProfilingData = SmallDenseMap<uint64_t, InstrProfRecord>;
   enum ProfKind { PF_Unknown = 0, PF_FE, PF_IRLevel };
 
 private:

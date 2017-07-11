@@ -153,6 +153,12 @@ void WasmDumper::printSections() {
     switch (WasmSec.Type) {
     case wasm::WASM_SEC_CUSTOM:
       W.printString("Name", WasmSec.Name);
+      if (WasmSec.Name == "linking") {
+        const wasm::WasmLinkingData &LinkingData = Obj->linkingData();
+        W.printNumber("DataSize", LinkingData.DataSize);
+        if (LinkingData.DataAlignment)
+          W.printNumber("DataAlignment", LinkingData.DataAlignment);
+      }
       break;
     case wasm::WASM_SEC_MEMORY:
       ListScope Group(W, "Memories");

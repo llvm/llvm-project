@@ -541,7 +541,7 @@ define <8 x float> @v8f32_no_estimate(<8 x float> %x) #0 {
 ; BTVER2-LABEL: v8f32_no_estimate:
 ; BTVER2:       # BB#0:
 ; BTVER2-NEXT:    vmovaps {{.*#+}} ymm1 = [1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00] sched: [5:1.00]
-; BTVER2-NEXT:    vdivps %ymm0, %ymm1, %ymm0 # sched: [19:19.00]
+; BTVER2-NEXT:    vdivps %ymm0, %ymm1, %ymm0 # sched: [38:38.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; SANDY-LABEL: v8f32_no_estimate:
@@ -610,11 +610,11 @@ define <8 x float> @v8f32_one_step(<8 x float> %x) #1 {
 ; BTVER2-LABEL: v8f32_one_step:
 ; BTVER2:       # BB#0:
 ; BTVER2-NEXT:    vmovaps {{.*#+}} ymm2 = [1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00] sched: [5:1.00]
-; BTVER2-NEXT:    vrcpps %ymm0, %ymm1 # sched: [2:1.00]
-; BTVER2-NEXT:    vmulps %ymm1, %ymm0, %ymm0 # sched: [2:1.00]
-; BTVER2-NEXT:    vsubps %ymm0, %ymm2, %ymm0 # sched: [3:1.00]
-; BTVER2-NEXT:    vmulps %ymm0, %ymm1, %ymm0 # sched: [2:1.00]
-; BTVER2-NEXT:    vaddps %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
+; BTVER2-NEXT:    vrcpps %ymm0, %ymm1 # sched: [2:2.00]
+; BTVER2-NEXT:    vmulps %ymm1, %ymm0, %ymm0 # sched: [2:2.00]
+; BTVER2-NEXT:    vsubps %ymm0, %ymm2, %ymm0 # sched: [3:2.00]
+; BTVER2-NEXT:    vmulps %ymm0, %ymm1, %ymm0 # sched: [2:2.00]
+; BTVER2-NEXT:    vaddps %ymm0, %ymm1, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; SANDY-LABEL: v8f32_one_step:
@@ -722,15 +722,15 @@ define <8 x float> @v8f32_two_step(<8 x float> %x) #2 {
 ; BTVER2-LABEL: v8f32_two_step:
 ; BTVER2:       # BB#0:
 ; BTVER2-NEXT:    vmovaps {{.*#+}} ymm3 = [1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00] sched: [5:1.00]
-; BTVER2-NEXT:    vrcpps %ymm0, %ymm1 # sched: [2:1.00]
-; BTVER2-NEXT:    vmulps %ymm1, %ymm0, %ymm2 # sched: [2:1.00]
-; BTVER2-NEXT:    vsubps %ymm2, %ymm3, %ymm2 # sched: [3:1.00]
-; BTVER2-NEXT:    vmulps %ymm2, %ymm1, %ymm2 # sched: [2:1.00]
-; BTVER2-NEXT:    vaddps %ymm2, %ymm1, %ymm1 # sched: [3:1.00]
-; BTVER2-NEXT:    vmulps %ymm1, %ymm0, %ymm0 # sched: [2:1.00]
-; BTVER2-NEXT:    vsubps %ymm0, %ymm3, %ymm0 # sched: [3:1.00]
-; BTVER2-NEXT:    vmulps %ymm0, %ymm1, %ymm0 # sched: [2:1.00]
-; BTVER2-NEXT:    vaddps %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
+; BTVER2-NEXT:    vrcpps %ymm0, %ymm1 # sched: [2:2.00]
+; BTVER2-NEXT:    vmulps %ymm1, %ymm0, %ymm2 # sched: [2:2.00]
+; BTVER2-NEXT:    vsubps %ymm2, %ymm3, %ymm2 # sched: [3:2.00]
+; BTVER2-NEXT:    vmulps %ymm2, %ymm1, %ymm2 # sched: [2:2.00]
+; BTVER2-NEXT:    vaddps %ymm2, %ymm1, %ymm1 # sched: [3:2.00]
+; BTVER2-NEXT:    vmulps %ymm1, %ymm0, %ymm0 # sched: [2:2.00]
+; BTVER2-NEXT:    vsubps %ymm0, %ymm3, %ymm0 # sched: [3:2.00]
+; BTVER2-NEXT:    vmulps %ymm0, %ymm1, %ymm0 # sched: [2:2.00]
+; BTVER2-NEXT:    vaddps %ymm0, %ymm1, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; SANDY-LABEL: v8f32_two_step:

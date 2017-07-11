@@ -120,7 +120,7 @@ define amdgpu_kernel void @v_usubo_i64(i64 addrspace(1)* %out, i1 addrspace(1)* 
 }
 
 ; FUNC-LABEL: {{^}}v_usubo_i16:
-; VI: v_subrev_u16_e32
+; VI: v_sub_u16_e32
 ; VI: v_cmp_gt_u16_e32
 define amdgpu_kernel void @v_usubo_i16(i16 addrspace(1)* %out, i1 addrspace(1)* %carryout, i16 addrspace(1)* %a.ptr, i16 addrspace(1)* %b.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()

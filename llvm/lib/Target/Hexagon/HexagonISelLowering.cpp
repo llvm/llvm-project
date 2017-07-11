@@ -1284,11 +1284,9 @@ HexagonTargetLowering::LowerVASTART(SDValue Op, SelectionDAG &DAG) const {
 // Creates a SPLAT instruction for a constant value VAL.
 static SDValue createSplat(SelectionDAG &DAG, const SDLoc &dl, EVT VT,
                            SDValue Val) {
-  if (VT.getSimpleVT() == MVT::v4i8)
-    return DAG.getNode(HexagonISD::VSPLATB, dl, VT, Val);
-
-  if (VT.getSimpleVT() == MVT::v4i16)
-    return DAG.getNode(HexagonISD::VSPLATH, dl, VT, Val);
+  EVT T = VT.getVectorElementType();
+  if (T == MVT::i8 || T == MVT::i16)
+    return DAG.getNode(HexagonISD::VSPLAT, dl, VT, Val);
 
   return SDValue();
 }
@@ -2296,32 +2294,13 @@ const char* HexagonTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case HexagonISD::JT:            return "HexagonISD::JT";
   case HexagonISD::PACKHL:        return "HexagonISD::PACKHL";
   case HexagonISD::RET_FLAG:      return "HexagonISD::RET_FLAG";
-  case HexagonISD::SHUFFEB:       return "HexagonISD::SHUFFEB";
-  case HexagonISD::SHUFFEH:       return "HexagonISD::SHUFFEH";
-  case HexagonISD::SHUFFOB:       return "HexagonISD::SHUFFOB";
-  case HexagonISD::SHUFFOH:       return "HexagonISD::SHUFFOH";
   case HexagonISD::TC_RETURN:     return "HexagonISD::TC_RETURN";
-  case HexagonISD::VCMPBEQ:       return "HexagonISD::VCMPBEQ";
-  case HexagonISD::VCMPBGT:       return "HexagonISD::VCMPBGT";
-  case HexagonISD::VCMPBGTU:      return "HexagonISD::VCMPBGTU";
-  case HexagonISD::VCMPHEQ:       return "HexagonISD::VCMPHEQ";
-  case HexagonISD::VCMPHGT:       return "HexagonISD::VCMPHGT";
-  case HexagonISD::VCMPHGTU:      return "HexagonISD::VCMPHGTU";
-  case HexagonISD::VCMPWEQ:       return "HexagonISD::VCMPWEQ";
-  case HexagonISD::VCMPWGT:       return "HexagonISD::VCMPWGT";
-  case HexagonISD::VCMPWGTU:      return "HexagonISD::VCMPWGTU";
   case HexagonISD::VCOMBINE:      return "HexagonISD::VCOMBINE";
   case HexagonISD::VPACK:         return "HexagonISD::VPACK";
-  case HexagonISD::VSHLH:         return "HexagonISD::VSHLH";
-  case HexagonISD::VSHLW:         return "HexagonISD::VSHLW";
-  case HexagonISD::VSPLATB:       return "HexagonISD::VSPLTB";
-  case HexagonISD::VSPLATH:       return "HexagonISD::VSPLATH";
-  case HexagonISD::VSRAH:         return "HexagonISD::VSRAH";
-  case HexagonISD::VSRAW:         return "HexagonISD::VSRAW";
-  case HexagonISD::VSRLH:         return "HexagonISD::VSRLH";
-  case HexagonISD::VSRLW:         return "HexagonISD::VSRLW";
-  case HexagonISD::VSXTBH:        return "HexagonISD::VSXTBH";
-  case HexagonISD::VSXTBW:        return "HexagonISD::VSXTBW";
+  case HexagonISD::VASL:          return "HexagonISD::VASL";
+  case HexagonISD::VASR:          return "HexagonISD::VASR";
+  case HexagonISD::VLSR:          return "HexagonISD::VLSR";
+  case HexagonISD::VSPLAT:        return "HexagonISD::VSPLAT";
   case HexagonISD::READCYCLE:     return "HexagonISD::READCYCLE";
   case HexagonISD::OP_END:        break;
   }
@@ -2503,13 +2482,13 @@ HexagonTargetLowering::LowerVECTOR_SHIFT(SDValue Op, SelectionDAG &DAG) const {
   if (VT.getSimpleVT() == MVT::v4i16) {
     switch (Op.getOpcode()) {
     case ISD::SRA:
-      Result = DAG.getNode(HexagonISD::VSRAH, dl, VT, V3, CommonSplat);
+      Result = DAG.getNode(HexagonISD::VASR, dl, VT, V3, CommonSplat);
       break;
     case ISD::SHL:
-      Result = DAG.getNode(HexagonISD::VSHLH, dl, VT, V3, CommonSplat);
+      Result = DAG.getNode(HexagonISD::VASL, dl, VT, V3, CommonSplat);
       break;
     case ISD::SRL:
-      Result = DAG.getNode(HexagonISD::VSRLH, dl, VT, V3, CommonSplat);
+      Result = DAG.getNode(HexagonISD::VLSR, dl, VT, V3, CommonSplat);
       break;
     default:
       return SDValue();
@@ -2517,13 +2496,13 @@ HexagonTargetLowering::LowerVECTOR_SHIFT(SDValue Op, SelectionDAG &DAG) const {
   } else if (VT.getSimpleVT() == MVT::v2i32) {
     switch (Op.getOpcode()) {
     case ISD::SRA:
-      Result = DAG.getNode(HexagonISD::VSRAW, dl, VT, V3, CommonSplat);
+      Result = DAG.getNode(HexagonISD::VASR, dl, VT, V3, CommonSplat);
       break;
     case ISD::SHL:
-      Result = DAG.getNode(HexagonISD::VSHLW, dl, VT, V3, CommonSplat);
+      Result = DAG.getNode(HexagonISD::VASL, dl, VT, V3, CommonSplat);
       break;
     case ISD::SRL:
-      Result = DAG.getNode(HexagonISD::VSRLW, dl, VT, V3, CommonSplat);
+      Result = DAG.getNode(HexagonISD::VLSR, dl, VT, V3, CommonSplat);
       break;
     default:
       return SDValue();

@@ -107,12 +107,14 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
 
     setAction({G_FCMP, s1}, Legal);
     setAction({G_FCMP, 1, s32}, Legal);
+    setAction({G_FCMP, 1, s64}, Legal);
   } else {
     for (auto Ty : {s32, s64})
       setAction({G_FADD, Ty}, Libcall);
 
     setAction({G_FCMP, s1}, Legal);
     setAction({G_FCMP, 1, s32}, Custom);
+    setAction({G_FCMP, 1, s64}, Custom);
 
     if (AEABI(ST))
       setFCmpLibcallsAEABI();
@@ -155,6 +157,32 @@ void ARMLegalizerInfo::setFCmpLibcallsAEABI() {
   FCmp32Libcalls[CmpInst::FCMP_UEQ] = {
       {RTLIB::OEQ_F32, CmpInst::BAD_ICMP_PREDICATE},
       {RTLIB::UO_F32, CmpInst::BAD_ICMP_PREDICATE}};
+
+  FCmp64Libcalls.resize(CmpInst::LAST_FCMP_PREDICATE + 1);
+  FCmp64Libcalls[CmpInst::FCMP_OEQ] = {
+      {RTLIB::OEQ_F64, CmpInst::BAD_ICMP_PREDICATE}};
+  FCmp64Libcalls[CmpInst::FCMP_OGE] = {
+      {RTLIB::OGE_F64, CmpInst::BAD_ICMP_PREDICATE}};
+  FCmp64Libcalls[CmpInst::FCMP_OGT] = {
+      {RTLIB::OGT_F64, CmpInst::BAD_ICMP_PREDICATE}};
+  FCmp64Libcalls[CmpInst::FCMP_OLE] = {
+      {RTLIB::OLE_F64, CmpInst::BAD_ICMP_PREDICATE}};
+  FCmp64Libcalls[CmpInst::FCMP_OLT] = {
+      {RTLIB::OLT_F64, CmpInst::BAD_ICMP_PREDICATE}};
+  FCmp64Libcalls[CmpInst::FCMP_ORD] = {{RTLIB::O_F64, CmpInst::ICMP_EQ}};
+  FCmp64Libcalls[CmpInst::FCMP_UGE] = {{RTLIB::OLT_F64, CmpInst::ICMP_EQ}};
+  FCmp64Libcalls[CmpInst::FCMP_UGT] = {{RTLIB::OLE_F64, CmpInst::ICMP_EQ}};
+  FCmp64Libcalls[CmpInst::FCMP_ULE] = {{RTLIB::OGT_F64, CmpInst::ICMP_EQ}};
+  FCmp64Libcalls[CmpInst::FCMP_ULT] = {{RTLIB::OGE_F64, CmpInst::ICMP_EQ}};
+  FCmp64Libcalls[CmpInst::FCMP_UNE] = {{RTLIB::UNE_F64, CmpInst::ICMP_EQ}};
+  FCmp64Libcalls[CmpInst::FCMP_UNO] = {
+      {RTLIB::UO_F64, CmpInst::BAD_ICMP_PREDICATE}};
+  FCmp64Libcalls[CmpInst::FCMP_ONE] = {
+      {RTLIB::OGT_F64, CmpInst::BAD_ICMP_PREDICATE},
+      {RTLIB::OLT_F64, CmpInst::BAD_ICMP_PREDICATE}};
+  FCmp64Libcalls[CmpInst::FCMP_UEQ] = {
+      {RTLIB::OEQ_F64, CmpInst::BAD_ICMP_PREDICATE},
+      {RTLIB::UO_F64, CmpInst::BAD_ICMP_PREDICATE}};
 }
 
 void ARMLegalizerInfo::setFCmpLibcallsGNU() {
@@ -177,12 +205,35 @@ void ARMLegalizerInfo::setFCmpLibcallsGNU() {
                                        {RTLIB::OLT_F32, CmpInst::ICMP_SLT}};
   FCmp32Libcalls[CmpInst::FCMP_UEQ] = {{RTLIB::OEQ_F32, CmpInst::ICMP_EQ},
                                        {RTLIB::UO_F32, CmpInst::ICMP_NE}};
+
+  FCmp64Libcalls.resize(CmpInst::LAST_FCMP_PREDICATE + 1);
+  FCmp64Libcalls[CmpInst::FCMP_OEQ] = {{RTLIB::OEQ_F64, CmpInst::ICMP_EQ}};
+  FCmp64Libcalls[CmpInst::FCMP_OGE] = {{RTLIB::OGE_F64, CmpInst::ICMP_SGE}};
+  FCmp64Libcalls[CmpInst::FCMP_OGT] = {{RTLIB::OGT_F64, CmpInst::ICMP_SGT}};
+  FCmp64Libcalls[CmpInst::FCMP_OLE] = {{RTLIB::OLE_F64, CmpInst::ICMP_SLE}};
+  FCmp64Libcalls[CmpInst::FCMP_OLT] = {{RTLIB::OLT_F64, CmpInst::ICMP_SLT}};
+  FCmp64Libcalls[CmpInst::FCMP_ORD] = {{RTLIB::O_F64, CmpInst::ICMP_EQ}};
+  FCmp64Libcalls[CmpInst::FCMP_UGE] = {{RTLIB::OLT_F64, CmpInst::ICMP_SGE}};
+  FCmp64Libcalls[CmpInst::FCMP_UGT] = {{RTLIB::OLE_F64, CmpInst::ICMP_SGT}};
+  FCmp64Libcalls[CmpInst::FCMP_ULE] = {{RTLIB::OGT_F64, CmpInst::ICMP_SLE}};
+  FCmp64Libcalls[CmpInst::FCMP_ULT] = {{RTLIB::OGE_F64, CmpInst::ICMP_SLT}};
+  FCmp64Libcalls[CmpInst::FCMP_UNE] = {{RTLIB::UNE_F64, CmpInst::ICMP_NE}};
+  FCmp64Libcalls[CmpInst::FCMP_UNO] = {{RTLIB::UO_F64, CmpInst::ICMP_NE}};
+  FCmp64Libcalls[CmpInst::FCMP_ONE] = {{RTLIB::OGT_F64, CmpInst::ICMP_SGT},
+                                       {RTLIB::OLT_F64, CmpInst::ICMP_SLT}};
+  FCmp64Libcalls[CmpInst::FCMP_UEQ] = {{RTLIB::OEQ_F64, CmpInst::ICMP_EQ},
+                                       {RTLIB::UO_F64, CmpInst::ICMP_NE}};
 }
 
 ARMLegalizerInfo::FCmpLibcallsList
-ARMLegalizerInfo::getFCmpLibcalls(CmpInst::Predicate Predicate) const {
+ARMLegalizerInfo::getFCmpLibcalls(CmpInst::Predicate Predicate,
+                                  unsigned Size) const {
   assert(CmpInst::isFPPredicate(Predicate) && "Unsupported FCmp predicate");
-  return FCmp32Libcalls[Predicate];
+  if (Size == 32)
+    return FCmp32Libcalls[Predicate];
+  if (Size == 64)
+    return FCmp64Libcalls[Predicate];
+  llvm_unreachable("Unsupported size for FCmp predicate");
 }
 
 bool ARMLegalizerInfo::legalizeCustom(MachineInstr &MI,
@@ -228,15 +279,15 @@ bool ARMLegalizerInfo::legalizeCustom(MachineInstr &MI,
     break;
   }
   case G_FCMP: {
-    assert(MRI.getType(MI.getOperand(2).getReg()).getSizeInBits() == 32 &&
-           "Unsupported size for FCMP");
-    assert(MRI.getType(MI.getOperand(3).getReg()).getSizeInBits() == 32 &&
-           "Unsupported size for FCMP");
+    assert(MRI.getType(MI.getOperand(2).getReg()) ==
+               MRI.getType(MI.getOperand(3).getReg()) &&
+           "Mismatched operands for G_FCMP");
+    auto OpSize = MRI.getType(MI.getOperand(2).getReg()).getSizeInBits();
 
     auto OriginalResult = MI.getOperand(0).getReg();
     auto Predicate =
         static_cast<CmpInst::Predicate>(MI.getOperand(1).getPredicate());
-    auto Libcalls = getFCmpLibcalls(Predicate);
+    auto Libcalls = getFCmpLibcalls(Predicate, OpSize);
 
     if (Libcalls.empty()) {
       assert((Predicate == CmpInst::FCMP_TRUE ||
@@ -244,11 +295,13 @@ bool ARMLegalizerInfo::legalizeCustom(MachineInstr &MI,
              "Predicate needs libcalls, but none specified");
       MIRBuilder.buildConstant(OriginalResult,
                                Predicate == CmpInst::FCMP_TRUE ? 1 : 0);
+      MI.eraseFromParent();
       return true;
     }
 
     auto &Ctx = MIRBuilder.getMF().getFunction()->getContext();
-    auto *ArgTy = Type::getFloatTy(Ctx);
+    assert((OpSize == 32 || OpSize == 64) && "Unsupported operand size");
+    auto *ArgTy = OpSize == 32 ? Type::getFloatTy(Ctx) : Type::getDoubleTy(Ctx);
     auto *RetTy = Type::getInt32Ty(Ctx);
 
     SmallVector<unsigned, 2> Results;

@@ -128,7 +128,7 @@ define amdgpu_kernel void @fma_f16_imm_c(
 
 ; GCN-DAG: v_lshlrev_b32_e32 v[[R_F16_HI:[0-9]+]], 16, v[[R_F16_1]]
 ; GCN-NOT: and
-; GCN: v_or_b32_e32 v[[R_V2_F16:[0-9]+]], v[[R_F16_HI]], v[[R_F16_0]]
+; GCN: v_or_b32_e32 v[[R_V2_F16:[0-9]+]], v[[R_F16_0]], v[[R_F16_HI]]
 ; GCN: buffer_store_dword v[[R_V2_F16]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @fma_v2f16(
@@ -167,7 +167,7 @@ define amdgpu_kernel void @fma_v2f16(
 
 ; GCN-DAG: v_lshlrev_b32_e32 v[[R_F16_HI:[0-9]+]], 16, v[[R_F16_1]]
 ; GCN-NOT: and
-; GCN: v_or_b32_e32 v[[R_V2_F16:[0-9]+]], v[[R_F16_HI]], v[[R_F16_0]]
+; GCN: v_or_b32_e32 v[[R_V2_F16:[0-9]+]], v[[R_F16_0]], v[[R_F16_HI]]
 ; GCN: buffer_store_dword v[[R_V2_F16]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @fma_v2f16_imm_a(
@@ -210,7 +210,7 @@ define amdgpu_kernel void @fma_v2f16_imm_a(
 
 ; GCN-DAG: v_lshlrev_b32_e32 v[[R_F16_HI:[0-9]+]], 16, v[[R_F16_1]]
 ; GCN-NOT: and
-; GCN: v_or_b32_e32 v[[R_V2_F16:[0-9]+]], v[[R_F16_HI]], v[[R_F16_0]]
+; GCN: v_or_b32_e32 v[[R_V2_F16:[0-9]+]], v[[R_F16_0]], v[[R_F16_HI]]
 ; GCN: buffer_store_dword v[[R_V2_F16]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @fma_v2f16_imm_b(
@@ -253,7 +253,7 @@ define amdgpu_kernel void @fma_v2f16_imm_b(
 ; VI-DAG:  v_fma_f16 v[[R_F16_1:[0-9]+]], v[[A_F16_1]], v[[B_F16_1]], v[[C_F16]]
 
 ; GCN-NOT: and
-; GCN: v_or_b32_e32 v[[R_V2_F16:[0-9]+]], v[[R_F16_HI]], v[[R_F16_0]]
+; GCN: v_or_b32_e32 v[[R_V2_F16:[0-9]+]], v[[R_F16_0]], v[[R_F16_HI]]
 ; GCN: buffer_store_dword v[[R_V2_F16]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @fma_v2f16_imm_c(

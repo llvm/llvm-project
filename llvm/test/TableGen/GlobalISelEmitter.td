@@ -170,11 +170,11 @@ def ADD : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2),
 // CHECK-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/0, /*Type*/GILLT_s32,
 // CHECK-NEXT:    GIM_CheckRegBankForClass, /*MI*/0, /*Op*/0, /*RC*/MyTarget::GPR32RegClassID,
 // CHECK-NEXT:    // MIs[0] Operand 1
-// CHECK-NEXT:    GIM_CheckLiteralInt, /*MI*/0, /*Op*/1, [[ID:[0-9]+]],
+// CHECK-NEXT:    GIM_CheckIntrinsicID, /*MI*/0, /*Op*/1, Intrinsic::mytarget_nop,
 // CHECK-NEXT:    // MIs[0] src1
 // CHECK-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/2, /*Type*/GILLT_s32,
 // CHECK-NEXT:    GIM_CheckRegBankForClass, /*MI*/0, /*Op*/2, /*RC*/MyTarget::GPR32RegClassID,
-// CHECK-NEXT:    // (intrinsic_wo_chain:i32 [[ID]]:iPTR, GPR32:i32:$src1) => (MOV:i32 GPR32:i32:$src1)
+// CHECK-NEXT:    // (intrinsic_wo_chain:i32 [[ID:[0-9]+]]:iPTR, GPR32:i32:$src1) => (MOV:i32 GPR32:i32:$src1)
 
 // CHECK-NEXT:    GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::MOV,
 // CHECK-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst

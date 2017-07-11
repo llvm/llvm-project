@@ -153,7 +153,8 @@ public:
   bool isLegalAddressingMode(const DataLayout &DL, const AddrMode &AM, Type *Ty,
                              unsigned AS) const override;
 
-  bool canMergeStoresTo(unsigned AS, EVT MemVT) const override;
+  bool canMergeStoresTo(unsigned AS, EVT MemVT,
+                        const SelectionDAG &DAG) const override;
 
   bool allowsMisalignedMemoryAccesses(EVT VT, unsigned AS,
                                       unsigned Align,

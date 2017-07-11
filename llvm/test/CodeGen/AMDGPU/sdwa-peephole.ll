@@ -35,7 +35,7 @@ define amdgpu_kernel void @sub_shr_i32(i32 addrspace(1)* %out, i32 addrspace(1)*
 ; GCN-LABEL: {{^}}mul_shr_i32:
 ; NOSDWA: v_lshrrev_b32_e32 v[[DST0:[0-9]+]], 16, v{{[0-9]+}}
 ; NOSDWA: v_lshrrev_b32_e32 v[[DST1:[0-9]+]], 16, v{{[0-9]+}}
-; NOSDWA: v_mul_u32_u24_e32 v{{[0-9]+}}, v[[DST1]], v[[DST0]]
+; NOSDWA: v_mul_u32_u24_e32 v{{[0-9]+}}, v[[DST0]], v[[DST1]]
 ; NOSDWA-NOT: v_mul_u32_u24_sdwa
 
 ; SDWA: v_mul_u32_u24_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
@@ -68,9 +68,9 @@ entry:
 ; GCN-LABEL: {{^}}mul_v2i16:
 ; NOSDWA: v_lshrrev_b32_e32 v[[DST0:[0-9]+]], 16, v{{[0-9]+}}
 ; NOSDWA: v_lshrrev_b32_e32 v[[DST1:[0-9]+]], 16, v{{[0-9]+}}
-; NOSDWA: v_mul_u32_u24_e32 v[[DST_MUL:[0-9]+]], v[[DST1]], v[[DST0]]
+; NOSDWA: v_mul_u32_u24_e32 v[[DST_MUL:[0-9]+]], v[[DST0]], v[[DST1]]
 ; NOSDWA: v_lshlrev_b32_e32 v[[DST_SHL:[0-9]+]], 16, v[[DST_MUL]]
-; NOSDWA: v_or_b32_e32 v{{[0-9]+}}, v[[DST_SHL]], v{{[0-9]+}}
+; NOSDWA: v_or_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v[[DST_SHL]]
 ; NOSDWA-NOT: v_mul_u32_u24_sdwa
 
 ; VI-DAG: v_mul_u32_u24_sdwa v[[DST_MUL_LO:[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:WORD_0
@@ -168,14 +168,14 @@ entry:
 ; GCN-LABEL: {{^}}mul_v2half:
 ; NOSDWA: v_lshrrev_b32_e32 v[[DST0:[0-9]+]], 16, v{{[0-9]+}}
 ; NOSDWA: v_lshrrev_b32_e32 v[[DST1:[0-9]+]], 16, v{{[0-9]+}}
-; NOSDWA: v_mul_f16_e32 v[[DST_MUL:[0-9]+]], v[[DST1]], v[[DST0]]
+; NOSDWA: v_mul_f16_e32 v[[DST_MUL:[0-9]+]], v[[DST0]], v[[DST1]]
 ; NOSDWA: v_lshlrev_b32_e32 v[[DST_SHL:[0-9]+]], 16, v[[DST_MUL]]
-; NOSDWA: v_or_b32_e32 v{{[0-9]+}}, v[[DST_SHL]], v{{[0-9]+}}
+; NOSDWA: v_or_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v[[DST_SHL]]
 ; NOSDWA-NOT: v_mul_f16_sdwa
 
 ; VI-DAG: v_mul_f16_sdwa v[[DST_MUL_HI:[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
 ; VI-DAG: v_mul_f16_e32 v[[DST_MUL_LO:[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}}
-; VI: v_or_b32_e32 v{{[0-9]+}}, v[[DST_MUL_HI]], v[[DST_MUL_LO]]
+; VI: v_or_b32_e32 v{{[0-9]+}}, v[[DST_MUL_LO]], v[[DST_MUL_HI]]
 
 ; GFX9: v_pk_mul_f16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 
@@ -362,9 +362,9 @@ entry:
 ; GCN-LABEL: {{^}}mac_v2half:
 ; NOSDWA: v_lshrrev_b32_e32 v[[DST0:[0-9]+]], 16, v{{[0-9]+}}
 ; NOSDWA: v_lshrrev_b32_e32 v[[DST1:[0-9]+]], 16, v{{[0-9]+}}
-; NOSDWA: v_mac_f16_e32 v[[DST_MAC:[0-9]+]], v[[DST1]], v[[DST0]]
+; NOSDWA: v_mac_f16_e32 v[[DST_MAC:[0-9]+]], v[[DST0]], v[[DST1]]
 ; NOSDWA: v_lshlrev_b32_e32 v[[DST_SHL:[0-9]+]], 16, v[[DST_MAC]]
-; NOSDWA: v_or_b32_e32 v{{[0-9]+}}, v[[DST_SHL]], v{{[0-9]+}}
+; NOSDWA: v_or_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v[[DST_SHL]]
 ; NOSDWA-NOT: v_mac_f16_sdwa
 
 ; VI: v_mac_f16_sdwa v[[DST_MAC:[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
@@ -491,7 +491,7 @@ entry:
   %tmp17 = shufflevector <2 x i8> %tmp10, <2 x i8> %tmp12, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %tmp18 = shufflevector <2 x i8> %tmp14, <2 x i8> %tmp16, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %tmp19 = shufflevector <4 x i8> %tmp17, <4 x i8> %tmp18, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  
+
   %arrayidx5 = getelementptr inbounds <8 x i8>, <8 x i8> addrspace(1)* %destValues, i64 %idxprom
   store <8 x i8> %tmp19, <8 x i8> addrspace(1)* %arrayidx5, align 8
   ret void

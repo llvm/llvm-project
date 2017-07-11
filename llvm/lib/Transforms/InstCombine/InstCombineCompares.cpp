@@ -3856,17 +3856,18 @@ static Instruction *processUMulZExtIdiom(ICmpInst &I, Value *MulVal,
       } else if (BinaryOperator *BO = dyn_cast<BinaryOperator>(U)) {
         assert(BO->getOpcode() == Instruction::And);
         // Replace (mul & mask) --> zext (mul.with.overflow & short_mask)
-        ConstantInt *CI = cast<ConstantInt>(BO->getOperand(1));
-        APInt ShortMask = CI->getValue().trunc(MulWidth);
+        Value *ShortMask =
+            Builder.CreateTrunc(BO->getOperand(1), Builder.getIntNTy(MulWidth));
         Value *ShortAnd = Builder.CreateAnd(Mul, ShortMask);
-        Instruction *Zext =
-            cast<Instruction>(Builder.CreateZExt(ShortAnd, BO->getType()));
-        IC.Worklist.Add(Zext);
+        Value *Zext = Builder.CreateZExt(ShortAnd, BO->getType());
+        if (auto *ZextI = dyn_cast<Instruction>(Zext))
+          IC.Worklist.Add(ZextI);
         IC.replaceInstUsesWith(*BO, Zext);
       } else {
         llvm_unreachable("Unexpected Binary operation");
       }
-      IC.Worklist.Add(cast<Instruction>(U));
+      if (auto *UI = dyn_cast<Instruction>(U))
+        IC.Worklist.Add(UI);
     }
   }
   if (isa<Instruction>(OtherVal))

@@ -7,7 +7,7 @@
 ; GCN: buffer_load_dword [[B:v[0-9]+]]
 ; GCN: buffer_load_dword [[C:v[0-9]+]]
 
-; GCN: v_mul_f32_e32 [[MUL:v[0-9]+]], [[B]], [[A]]
+; GCN: v_mul_f32_e32 [[MUL:v[0-9]+]], [[A]], [[B]]
 ; GCN: v_cmp_eq_f32_e32 vcc, -4.0, [[MUL]]
 ; GCN: buffer_store_dword [[MUL]]
 define amdgpu_kernel void @multi_use_fneg_src() #0 {
@@ -30,7 +30,7 @@ define amdgpu_kernel void @multi_use_fneg_src() #0 {
 ; GCN: buffer_load_dword [[B:v[0-9]+]]
 ; GCN: buffer_load_dword [[C:v[0-9]+]]
 
-; GCN: v_mul_f32_e32 [[MUL:v[0-9]+]], [[B]], [[A]]
+; GCN: v_mul_f32_e32 [[MUL:v[0-9]+]], [[A]], [[B]]
 ; GCN: v_cmp_eq_f32_e32 vcc, -4.0, [[A]]
 ; GCN: v_mul_f32_e64 [[USE1:v[0-9]+]], [[MUL]], -[[MUL]]
 define amdgpu_kernel void @multi_foldable_use_fneg_src() #0 {
@@ -78,7 +78,7 @@ define amdgpu_kernel void @multi_use_fneg() #0 {
 ; GCN: buffer_load_dword [[A:v[0-9]+]]
 ; GCN: buffer_load_dword [[B:v[0-9]+]]
 
-; GCN: v_mul_f32_e32 [[MUL0:v[0-9]+]], [[B]], [[A]]
+; GCN: v_mul_f32_e32 [[MUL0:v[0-9]+]], [[A]], [[B]]
 ; GCN: v_cmp_eq_f32_e32 vcc, -4.0, [[MUL0]]
 ; GCN: v_mul_f32_e64 [[MUL1:v[0-9]+]], -[[MUL0]], [[MUL0]]
 ; GCN: buffer_store_dword [[MUL1]]

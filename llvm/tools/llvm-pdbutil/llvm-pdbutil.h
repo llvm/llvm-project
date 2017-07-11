@@ -172,6 +172,8 @@ extern llvm::cl::opt<bool> DumpModuleSyms;
 namespace diff {
 extern llvm::cl::opt<bool> PrintValueColumns;
 extern llvm::cl::opt<bool> PrintResultColumn;
+extern llvm::cl::opt<std::string> LeftRoot;
+extern llvm::cl::opt<std::string> RightRoot;
 } // namespace diff
 }
 

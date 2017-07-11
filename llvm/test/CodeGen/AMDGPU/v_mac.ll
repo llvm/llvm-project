@@ -6,7 +6,7 @@
 ; GCN: buffer_load_dword [[A:v[0-9]+]], off, s[{{[0-9]+:[0-9]+}}], 0{{$}}
 ; GCN: buffer_load_dword [[B:v[0-9]+]], off, s[{{[0-9]+:[0-9]+}}], 0 offset:4
 ; GCN: buffer_load_dword [[C:v[0-9]+]], off, s[{{[0-9]+:[0-9]+}}], 0 offset:8
-; GCN: v_mac_f32_e32 [[C]], [[B]], [[A]]
+; GCN: v_mac_f32_e32 [[C]], [[A]], [[B]]
 ; GCN: buffer_store_dword [[C]]
 define amdgpu_kernel void @mac_vvv(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
 entry:
@@ -135,7 +135,7 @@ entry:
 
 ; GCN-LABEL: {{^}}safe_mad_sub0_src0:
 ; GCN: v_sub_f32_e32 [[SUB0:v[0-9]+]], 0,
-; GCN: v_mac_f32_e32 v{{[0-9]+}}, v{{[0-9]+}}, [[SUB0]]
+; GCN: v_mac_f32_e32 v{{[0-9]+}}, [[SUB0]], v{{[0-9]+}}
 define amdgpu_kernel void @safe_mad_sub0_src0(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
 entry:
   %b_ptr = getelementptr float, float addrspace(1)* %in, i32 1

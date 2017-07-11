@@ -9,7 +9,7 @@
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
 ; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]
 
-; GCN-SAFE: v_add_f32_e32 [[ADD:v[0-9]+]], [[B]], [[A]]
+; GCN-SAFE: v_add_f32_e32 [[ADD:v[0-9]+]], [[A]], [[B]]
 ; GCN-SAFE: v_xor_b32_e32 v{{[0-9]+}}, 0x80000000, [[ADD]]
 
 ; GCN-NSZ: v_sub_f32_e64 [[RESULT:v[0-9]+]], -[[A]], [[B]]
@@ -31,7 +31,7 @@ define amdgpu_kernel void @v_fneg_add_f32(float addrspace(1)* %out, float addrsp
 ; GCN-LABEL: {{^}}v_fneg_add_store_use_add_f32:
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
 ; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]
-; GCN-DAG: v_add_f32_e32 [[ADD:v[0-9]+]], [[B]], [[A]]
+; GCN-DAG: v_add_f32_e32 [[ADD:v[0-9]+]], [[A]], [[B]]
 ; GCN-DAG: v_xor_b32_e32 [[NEG_ADD:v[0-9]+]], 0x80000000, [[ADD]]
 ; GCN-NEXT: buffer_store_dword [[NEG_ADD]]
 ; GCN-NEXT: buffer_store_dword [[ADD]]
@@ -54,7 +54,7 @@ define amdgpu_kernel void @v_fneg_add_store_use_add_f32(float addrspace(1)* %out
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
 ; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]
 
-; GCN-SAFE: v_add_f32_e32 [[ADD:v[0-9]+]], [[B]], [[A]]
+; GCN-SAFE: v_add_f32_e32 [[ADD:v[0-9]+]], [[A]], [[B]]
 ; GCN-SAFE: v_xor_b32_e32 [[NEG_ADD:v[0-9]+]], 0x80000000, [[ADD]]
 ; GCN-SAFE: v_mul_f32_e32 [[MUL:v[0-9]+]], 4.0, [[ADD]]
 
@@ -82,10 +82,10 @@ define amdgpu_kernel void @v_fneg_add_multi_use_add_f32(float addrspace(1)* %out
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
 ; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]
 
-; GCN-SAFE: v_subrev_f32_e32
+; GCN-SAFE: v_sub_f32_e32
 ; GCN-SAFE: v_xor_b32_e32 v{{[0-9]+}}, 0x80000000,
 
-; GCN-NSZ: v_subrev_f32_e32 [[ADD:v[0-9]+]], [[B]], [[A]]
+; GCN-NSZ: v_sub_f32_e32 [[ADD:v[0-9]+]], [[A]], [[B]]
 ; GCN-NSZ-NEXT: buffer_store_dword [[ADD]]
 define amdgpu_kernel void @v_fneg_add_fneg_x_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -106,10 +106,10 @@ define amdgpu_kernel void @v_fneg_add_fneg_x_f32(float addrspace(1)* %out, float
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
 ; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]
 
-; GCN-SAFE: v_subrev_f32_e32 [[ADD:v[0-9]+]], [[B]], [[A]]
+; GCN-SAFE: v_sub_f32_e32 [[ADD:v[0-9]+]], [[A]], [[B]]
 ; GCN-SAFE: v_xor_b32_e32 v{{[0-9]+}}, 0x80000000, [[ADD]]
 
-; GCN-NSZ: v_subrev_f32_e32 [[ADD:v[0-9]+]], [[A]], [[B]]
+; GCN-NSZ: v_sub_f32_e32 [[ADD:v[0-9]+]], [[B]], [[A]]
 ; GCN-NSZ-NEXT: buffer_store_dword [[ADD]]
 define amdgpu_kernel void @v_fneg_add_x_fneg_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -133,7 +133,7 @@ define amdgpu_kernel void @v_fneg_add_x_fneg_f32(float addrspace(1)* %out, float
 ; GCN-SAFE: v_sub_f32_e64 [[ADD:v[0-9]+]], -[[A]], [[B]]
 ; GCN-SAFE: v_xor_b32_e32 v{{[0-9]+}}, 0x80000000, [[ADD]]
 
-; GCN-NSZ: v_add_f32_e32 [[ADD:v[0-9]+]], [[B]], [[A]]
+; GCN-NSZ: v_add_f32_e32 [[ADD:v[0-9]+]], [[A]], [[B]]
 ; GCN-NSZ-NEXT: buffer_store_dword [[ADD]]
 define amdgpu_kernel void @v_fneg_add_fneg_fneg_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -157,11 +157,11 @@ define amdgpu_kernel void @v_fneg_add_fneg_fneg_f32(float addrspace(1)* %out, fl
 
 ; GCN-SAFE: v_bfrev_b32_e32 [[SIGNBIT:v[0-9]+]], 1{{$}}
 ; GCN-SAFE: v_xor_b32_e32 [[NEG_A:v[0-9]+]], [[A]], [[SIGNBIT]]
-; GCN-SAFE: v_subrev_f32_e32 [[ADD:v[0-9]+]], [[A]], [[B]]
+; GCN-SAFE: v_sub_f32_e32 [[ADD:v[0-9]+]], [[B]], [[A]]
 ; GCN-SAFE: v_xor_b32_e32 [[NEG_ADD:v[0-9]+]], [[ADD]], [[SIGNBIT]]
 
 ; GCN-NSZ-DAG: v_xor_b32_e32 [[NEG_A:v[0-9]+]], 0x80000000, [[A]]
-; GCN-NSZ-DAG: v_subrev_f32_e32 [[NEG_ADD:v[0-9]+]], [[B]], [[A]]
+; GCN-NSZ-DAG: v_sub_f32_e32 [[NEG_ADD:v[0-9]+]], [[A]], [[B]]
 ; GCN-NSZ-NEXT: buffer_store_dword [[NEG_ADD]]
 ; GCN-NSZ-NEXT: buffer_store_dword [[NEG_A]]
 define amdgpu_kernel void @v_fneg_add_store_use_fneg_x_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
@@ -185,10 +185,10 @@ define amdgpu_kernel void @v_fneg_add_store_use_fneg_x_f32(float addrspace(1)* %
 ; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]
 
 ; GCN-SAFE-DAG: v_mul_f32_e64 [[MUL:v[0-9]+]], -[[A]], s{{[0-9]+}}
-; GCN-SAFE-DAG: v_subrev_f32_e32 [[ADD:v[0-9]+]], [[A]], [[B]]
+; GCN-SAFE-DAG: v_sub_f32_e32 [[ADD:v[0-9]+]], [[B]], [[A]]
 ; GCN-SAFE: v_xor_b32_e32 v{{[0-9]+}}, 0x80000000, [[ADD]]
 
-; GCN-NSZ-DAG: v_subrev_f32_e32 [[NEG_ADD:v[0-9]+]], [[B]], [[A]]
+; GCN-NSZ-DAG: v_sub_f32_e32 [[NEG_ADD:v[0-9]+]], [[A]], [[B]]
 ; GCN-NSZ-DAG: v_mul_f32_e64 [[MUL:v[0-9]+]], -[[A]], s{{[0-9]+}}
 ; GCN-NSZ-NEXT: buffer_store_dword [[NEG_ADD]]
 ; GCN-NSZ-NEXT: buffer_store_dword [[MUL]]
@@ -235,7 +235,7 @@ define amdgpu_kernel void @v_fneg_mul_f32(float addrspace(1)* %out, float addrsp
 ; GCN-LABEL: {{^}}v_fneg_mul_store_use_mul_f32:
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
 ; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]
-; GCN-DAG: v_mul_f32_e32 [[ADD:v[0-9]+]], [[B]], [[A]]
+; GCN-DAG: v_mul_f32_e32 [[ADD:v[0-9]+]], [[A]], [[B]]
 ; GCN-DAG: v_xor_b32_e32 [[NEG_MUL:v[0-9]+]], 0x80000000, [[ADD]]
 ; GCN-NEXT: buffer_store_dword [[NEG_MUL]]
 ; GCN: buffer_store_dword [[ADD]]
@@ -280,7 +280,7 @@ define amdgpu_kernel void @v_fneg_mul_multi_use_mul_f32(float addrspace(1)* %out
 ; GCN-LABEL: {{^}}v_fneg_mul_fneg_x_f32:
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
 ; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]
-; GCN: v_mul_f32_e32 [[ADD:v[0-9]+]], [[B]], [[A]]
+; GCN: v_mul_f32_e32 [[ADD:v[0-9]+]], [[A]], [[B]]
 ; GCN-NEXT: buffer_store_dword [[ADD]]
 define amdgpu_kernel void @v_fneg_mul_fneg_x_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -300,7 +300,7 @@ define amdgpu_kernel void @v_fneg_mul_fneg_x_f32(float addrspace(1)* %out, float
 ; GCN-LABEL: {{^}}v_fneg_mul_x_fneg_f32:
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
 ; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]
-; GCN: v_mul_f32_e32 [[ADD:v[0-9]+]], [[B]], [[A]]
+; GCN: v_mul_f32_e32 [[ADD:v[0-9]+]], [[A]], [[B]]
 ; GCN-NEXT: buffer_store_dword [[ADD]]
 define amdgpu_kernel void @v_fneg_mul_x_fneg_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -342,7 +342,7 @@ define amdgpu_kernel void @v_fneg_mul_fneg_fneg_f32(float addrspace(1)* %out, fl
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
 ; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]
 ; GCN-DAG: v_xor_b32_e32 [[NEG_A:v[0-9]+]], 0x80000000, [[A]]
-; GCN-DAG: v_mul_f32_e32 [[NEG_MUL:v[0-9]+]], [[B]], [[A]]
+; GCN-DAG: v_mul_f32_e32 [[NEG_MUL:v[0-9]+]], [[A]], [[B]]
 ; GCN-NEXT: buffer_store_dword [[NEG_MUL]]
 ; GCN: buffer_store_dword [[NEG_A]]
 define amdgpu_kernel void @v_fneg_mul_store_use_fneg_x_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
@@ -364,7 +364,7 @@ define amdgpu_kernel void @v_fneg_mul_store_use_fneg_x_f32(float addrspace(1)* %
 ; GCN-LABEL: {{^}}v_fneg_mul_multi_use_fneg_x_f32:
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
 ; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]
-; GCN-DAG: v_mul_f32_e32 [[NEG_MUL:v[0-9]+]], [[B]], [[A]]
+; GCN-DAG: v_mul_f32_e32 [[NEG_MUL:v[0-9]+]], [[A]], [[B]]
 ; GCN-DAG: v_mul_f32_e64 [[MUL:v[0-9]+]], -[[A]], s{{[0-9]+}}
 ; GCN-NEXT: buffer_store_dword [[NEG_MUL]]
 ; GCN: buffer_store_dword [[MUL]]
@@ -974,7 +974,7 @@ define amdgpu_kernel void @v_fneg_fma_multi_use_fneg_x_y_f32(float addrspace(1)*
 ; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]
 ; GCN: {{buffer|flat}}_load_dword [[C:v[0-9]+]]
 
-; GCN-SAFE: v_mac_f32_e32 [[C]], [[B]], [[A]]
+; GCN-SAFE: v_mac_f32_e32 [[C]], [[A]], [[B]]
 ; GCN-SAFE: v_xor_b32_e32 v{{[0-9]+}}, 0x80000000, [[C]]
 
 ; GCN-NSZ: v_mad_f32 [[RESULT:v[0-9]+]], [[A]], -[[B]], -[[C]]
@@ -1000,7 +1000,7 @@ define amdgpu_kernel void @v_fneg_fmad_f32(float addrspace(1)* %out, float addrs
 ; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]
 ; GCN: {{buffer|flat}}_load_dword [[C:v[0-9]+]]
 
-; GCN-SAFE: v_mac_f32_e32 [[C]], [[B]], [[A]]
+; GCN-SAFE: v_mac_f32_e32 [[C]], [[A]], [[B]]
 ; GCN-SAFE: v_xor_b32_e32 [[NEG_MAD:v[0-9]+]], 0x80000000, [[C]]
 ; GCN-SAFE-NEXT: v_mul_f32_e32 [[MUL:v[0-9]+]], 4.0, [[C]]
 
@@ -1449,7 +1449,7 @@ define amdgpu_kernel void @v_fneg_mul_legacy_f32(float addrspace(1)* %out, float
 ; GCN-LABEL: {{^}}v_fneg_mul_legacy_store_use_mul_legacy_f32:
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
 ; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]
-; GCN-DAG: v_mul_legacy_f32_e32 [[ADD:v[0-9]+]], [[B]], [[A]]
+; GCN-DAG: v_mul_legacy_f32_e32 [[ADD:v[0-9]+]], [[A]], [[B]]
 ; GCN-DAG: v_xor_b32_e32 [[NEG_MUL_LEGACY:v[0-9]+]], 0x80000000, [[ADD]]
 ; GCN-NEXT: buffer_store_dword [[NEG_MUL_LEGACY]]
 ; GCN: buffer_store_dword [[ADD]]
@@ -1494,7 +1494,7 @@ define amdgpu_kernel void @v_fneg_mul_legacy_multi_use_mul_legacy_f32(float addr
 ; GCN-LABEL: {{^}}v_fneg_mul_legacy_fneg_x_f32:
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
 ; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]
-; GCN: v_mul_legacy_f32_e32 [[ADD:v[0-9]+]], [[B]], [[A]]
+; GCN: v_mul_legacy_f32_e32 [[ADD:v[0-9]+]], [[A]], [[B]]
 ; GCN-NEXT: buffer_store_dword [[ADD]]
 define amdgpu_kernel void @v_fneg_mul_legacy_fneg_x_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -1514,7 +1514,7 @@ define amdgpu_kernel void @v_fneg_mul_legacy_fneg_x_f32(float addrspace(1)* %out
 ; GCN-LABEL: {{^}}v_fneg_mul_legacy_x_fneg_f32:
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
 ; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]
-; GCN: v_mul_legacy_f32_e32 [[ADD:v[0-9]+]], [[B]], [[A]]
+; GCN: v_mul_legacy_f32_e32 [[ADD:v[0-9]+]], [[A]], [[B]]
 ; GCN-NEXT: buffer_store_dword [[ADD]]
 define amdgpu_kernel void @v_fneg_mul_legacy_x_fneg_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -1556,7 +1556,7 @@ define amdgpu_kernel void @v_fneg_mul_legacy_fneg_fneg_f32(float addrspace(1)* %
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
 ; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]
 ; GCN-DAG: v_xor_b32_e32 [[NEG_A:v[0-9]+]], 0x80000000, [[A]]
-; GCN-DAG: v_mul_legacy_f32_e32 [[NEG_MUL_LEGACY:v[0-9]+]], [[B]], [[A]]
+; GCN-DAG: v_mul_legacy_f32_e32 [[NEG_MUL_LEGACY:v[0-9]+]], [[A]], [[B]]
 ; GCN-NEXT: buffer_store_dword [[NEG_MUL_LEGACY]]
 ; GCN: buffer_store_dword [[NEG_A]]
 define amdgpu_kernel void @v_fneg_mul_legacy_store_use_fneg_x_f32(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr) #0 {
@@ -1578,7 +1578,7 @@ define amdgpu_kernel void @v_fneg_mul_legacy_store_use_fneg_x_f32(float addrspac
 ; GCN-LABEL: {{^}}v_fneg_mul_legacy_multi_use_fneg_x_f32:
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
 ; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]
-; GCN-DAG: v_mul_legacy_f32_e32 [[NEG_MUL_LEGACY:v[0-9]+]], [[B]], [[A]]
+; GCN-DAG: v_mul_legacy_f32_e32 [[NEG_MUL_LEGACY:v[0-9]+]], [[A]], [[B]]
 ; GCN-DAG: v_mul_legacy_f32_e64 [[MUL:v[0-9]+]], -[[A]], s{{[0-9]+}}
 ; GCN-NEXT: buffer_store_dword [[NEG_MUL_LEGACY]]
 ; GCN: buffer_store_dword [[MUL]]
@@ -1664,7 +1664,7 @@ define amdgpu_kernel void @v_fneg_trunc_f32(float addrspace(1)* %out, float addr
 ; GCN-LABEL: {{^}}v_fneg_round_f32:
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
 ; GCN: v_trunc_f32_e32
-; GCN: v_subrev_f32_e32
+; GCN: v_sub_f32_e32
 ; GCN: v_cndmask_b32
 
 ; GCN-SAFE: v_add_f32_e32 [[ADD:v[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}}
@@ -1782,11 +1782,11 @@ define amdgpu_kernel void @v_fneg_interp_p2_f32(float addrspace(1)* %out, float 
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
 ; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]
 ; GCN: {{buffer|flat}}_load_dword [[C:v[0-9]+]]
-; GCN: v_mul_f32_e32 [[MUL0:v[0-9]+]], [[B]], [[A]]
+; GCN: v_mul_f32_e32 [[MUL0:v[0-9]+]], [[A]], [[B]]
 ; GCN: s_cbranch_scc1
 
 ; GCN: v_xor_b32_e32 [[XOR:v[0-9]+]], 0x80000000, [[MUL0]]
-; GCN: v_mul_f32_e32 [[MUL1:v[0-9]+]], [[C]], [[XOR]]
+; GCN: v_mul_f32_e32 [[MUL1:v[0-9]+]], [[XOR]], [[C]]
 ; GCN: buffer_store_dword [[MUL1]]
 
 ; GCN: buffer_store_dword [[MUL0]]
@@ -1851,7 +1851,7 @@ define amdgpu_kernel void @v_fneg_inlineasm_f32(float addrspace(1)* %out, float 
 ; GCN-LABEL: {{^}}v_fneg_inlineasm_multi_use_src_f32:
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
 ; GCN: {{buffer|flat}}_load_dword [[B:v[0-9]+]]
-; GCN: v_mul_f32_e32 [[MUL:v[0-9]+]], [[B]], [[A]]
+; GCN: v_mul_f32_e32 [[MUL:v[0-9]+]], [[A]], [[B]]
 ; GCN: v_xor_b32_e32 [[NEG:v[0-9]+]], 0x80000000, [[MUL]]
 ; GCN: ; use [[NEG]]
 ; GCN: buffer_store_dword [[MUL]]
@@ -1984,8 +1984,8 @@ define amdgpu_kernel void @multiuse_fneg_vop2_vop3_users_f32(float addrspace(1)*
 ; GCN-SAFE-DAG: v_mul_f32_e64 [[MUL2:v[0-9]+]], -[[FMA0]], [[D]]
 
 ; GCN-NSZ: v_fma_f32 [[FMA0:v[0-9]+]], [[A]], -[[B]], -2.0
-; GCN-NSZ-DAG: v_mul_f32_e32 [[MUL1:v[0-9]+]], [[C]], [[FMA0]]
-; GCN-NSZ-DAG: v_mul_f32_e32 [[MUL2:v[0-9]+]], [[D]], [[FMA0]]
+; GCN-NSZ-DAG: v_mul_f32_e32 [[MUL1:v[0-9]+]], [[FMA0]], [[C]]
+; GCN-NSZ-DAG: v_mul_f32_e32 [[MUL2:v[0-9]+]], [[FMA0]], [[D]]
 
 ; GCN: buffer_store_dword [[MUL1]]
 ; GCN-NEXT:	buffer_store_dword [[MUL2]]
@@ -2084,7 +2084,7 @@ define amdgpu_kernel void @one_use_cost_to_fold_into_src_f32(float addrspace(1)*
 ; GCN: {{buffer|flat}}_load_dword [[D:v[0-9]+]]
 ; GCN: v_trunc_f32_e32 [[TRUNC_A:v[0-9]+]], [[A]]
 ; GCN-DAG: v_fma_f32 [[FMA0:v[0-9]+]], -[[TRUNC_A]], [[B]], [[C]]
-; GCN-DAG: v_mul_f32_e32 [[MUL1:v[0-9]+]], [[D]], [[TRUNC_A]]
+; GCN-DAG: v_mul_f32_e32 [[MUL1:v[0-9]+]], [[TRUNC_A]], [[D]]
 ; GCN: buffer_store_dword [[FMA0]]
 ; GCN: buffer_store_dword [[MUL1]]
 define amdgpu_kernel void @multi_use_cost_to_fold_into_src(float addrspace(1)* %out, float addrspace(1)* %a.ptr, float addrspace(1)* %b.ptr, float addrspace(1)* %c.ptr, float addrspace(1)* %d.ptr) #0 {

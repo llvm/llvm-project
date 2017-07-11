@@ -415,7 +415,8 @@ public:
   virtual bool mergeStoresAfterLegalization() const { return false; }
 
   /// Returns if it's reasonable to merge stores to MemVT size.
-  virtual bool canMergeStoresTo(unsigned AddressSpace, EVT MemVT) const {
+  virtual bool canMergeStoresTo(unsigned AS, EVT MemVT,
+                                const SelectionDAG &DAG) const {
     return true;
   }
 

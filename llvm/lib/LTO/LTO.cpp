@@ -1030,7 +1030,7 @@ Error LTO::runThinLTO(AddStreamFn AddStream, NativeObjectCache Cache,
 
   // Collect for each module the list of function it defines (GUID ->
   // Summary).
-  StringMap<std::map<GlobalValue::GUID, GlobalValueSummary *>>
+  StringMap<GVSummaryMapTy>
       ModuleToDefinedGVSummaries(ThinLTO.ModuleMap.size());
   ThinLTO.CombinedIndex.collectDefinedGVSummariesPerModule(
       ModuleToDefinedGVSummaries);

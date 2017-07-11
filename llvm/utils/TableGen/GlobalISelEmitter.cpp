@@ -338,6 +338,7 @@ public:
   enum PredicateKind {
     OPM_ComplexPattern,
     OPM_Instruction,
+    OPM_IntrinsicID,
     OPM_Int,
     OPM_LiteralInt,
     OPM_LLT,
@@ -516,6 +517,26 @@ public:
                             unsigned InsnVarID, unsigned OpIdx) const override {
     OS << "    GIM_CheckLiteralInt, /*MI*/" << InsnVarID << ", /*Op*/"
        << OpIdx << ", " << Value << ",\n";
+  }
+};
+
+/// Generates code to check that an operand is an intrinsic ID.
+class IntrinsicIDOperandMatcher : public OperandPredicateMatcher {
+protected:
+  const CodeGenIntrinsic *II;
+
+public:
+  IntrinsicIDOperandMatcher(const CodeGenIntrinsic *II)
+      : OperandPredicateMatcher(OPM_IntrinsicID), II(II) {}
+
+  static bool classof(const OperandPredicateMatcher *P) {
+    return P->getKind() == OPM_IntrinsicID;
+  }
+
+  void emitPredicateOpcodes(raw_ostream &OS, RuleMatcher &Rule,
+                            unsigned InsnVarID, unsigned OpIdx) const override {
+    OS << "    GIM_CheckIntrinsicID, /*MI*/" << InsnVarID << ", /*Op*/"
+       << OpIdx << ", Intrinsic::" << II->EnumName << ",\n";
   }
 };
 
@@ -1513,14 +1534,10 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
       // For G_INTRINSIC, the operand immediately following the defs is an
       // intrinsic ID.
       if (SrcGIOrNull->TheDef->getName() == "G_INTRINSIC" && i == 0) {
-        if (!SrcChild->isLeaf())
-          return failedImport("Expected IntInit containing intrinsic ID");
-
-        if (IntInit *SrcChildIntInit =
-                dyn_cast<IntInit>(SrcChild->getLeafValue())) {
+        if (const CodeGenIntrinsic *II = Src->getIntrinsicInfo(CGP)) {
           OperandMatcher &OM =
               InsnMatcher.addOperand(OpIdx++, SrcChild->getName(), TempOpIdx);
-          OM.addPredicate<LiteralIntOperandMatcher>(SrcChildIntInit->getValue());
+          OM.addPredicate<IntrinsicIDOperandMatcher>(II);
           continue;
         }
 

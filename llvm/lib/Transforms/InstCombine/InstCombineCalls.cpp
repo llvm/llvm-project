@@ -1762,7 +1762,7 @@ static Instruction *SimplifyNVVMIntrinsic(IntrinsicInst *II, InstCombiner &IC) {
     // The remainder of cases are NVVM intrinsics that map to LLVM idioms, but
     // need special handling.
     //
-    // We seem to be mising intrinsics for rcp.approx.{ftz.}f32, which is just
+    // We seem to be missing intrinsics for rcp.approx.{ftz.}f32, which is just
     // as well.
     case Intrinsic::nvvm_rcp_rn_d:
       return {SPC_Reciprocal, FTZ_Any};

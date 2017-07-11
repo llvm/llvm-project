@@ -3,6 +3,7 @@ set(LLVM_LINK_COMPONENTS
   AsmParser
   Core
   Support
+  Passes
   )
 
 set(IRSources
@@ -15,6 +16,7 @@ set(IRSources
   DebugTypeODRUniquingTest.cpp
   DominatorTreeTest.cpp
   FunctionTest.cpp
+  PassBuilderCallbacksTest.cpp
   IRBuilderTest.cpp
   InstructionsTest.cpp
   IntrinsicsTest.cpp

@@ -5,7 +5,7 @@
 ; GCN-LABEL: {{^}}fneg_fabs_fadd_f16:
 ; CI: v_cvt_f32_f16_e32
 ; CI: v_cvt_f32_f16_e64 [[CVT_ABS_X:v[0-9]+]], |v{{[0-9]+}}|
-; CI: v_subrev_f32_e32 v{{[0-9]+}}, [[CVT_ABS_X]], v{{[0-9]+}}
+; CI: v_sub_f32_e32 v{{[0-9]+}}, v{{[0-9]+}}, [[CVT_ABS_X]]
 
 ; GFX89-NOT: _and
 ; GFX89: v_sub_f16_e64 {{v[0-9]+}}, {{v[0-9]+}}, |{{v[0-9]+}}|
@@ -20,7 +20,7 @@ define amdgpu_kernel void @fneg_fabs_fadd_f16(half addrspace(1)* %out, half %x, 
 ; GCN-LABEL: {{^}}fneg_fabs_fmul_f16:
 ; CI-DAG: v_cvt_f32_f16_e32
 ; CI-DAG: v_cvt_f32_f16_e64 [[CVT_NEG_ABS_X:v[0-9]+]], -|{{v[0-9]+}}|
-; CI: v_mul_f32_e32 {{v[0-9]+}}, [[CVT_NEG_ABS_X]], {{v[0-9]+}}
+; CI: v_mul_f32_e32 {{v[0-9]+}},  {{v[0-9]+}}, [[CVT_NEG_ABS_X]]
 ; CI: v_cvt_f16_f32_e32
 
 ; GFX89-NOT: _and

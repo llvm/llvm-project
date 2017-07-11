@@ -709,7 +709,10 @@ static uint64_t Rot64(uint64_t Imm, unsigned R) {
 
 static unsigned getInt64Count(int64_t Imm) {
   unsigned Count = getInt64CountDirect(Imm);
-  if (Count == 1)
+
+  // If the instruction count is 1 or 2, we do not need further analysis
+  // since rotate + load constant requires at least 2 instructions.
+  if (Count <= 2)
     return Count;
 
   for (unsigned r = 1; r < 63; ++r) {
@@ -819,7 +822,10 @@ static SDNode *getInt64Direct(SelectionDAG *CurDAG, const SDLoc &dl,
 
 static SDNode *getInt64(SelectionDAG *CurDAG, const SDLoc &dl, int64_t Imm) {
   unsigned Count = getInt64CountDirect(Imm);
-  if (Count == 1)
+
+  // If the instruction count is 1 or 2, we do not need further analysis
+  // since rotate + load constant requires at least 2 instructions.
+  if (Count <= 2)
     return getInt64Direct(CurDAG, dl, Imm);
 
   unsigned RMin = 0;

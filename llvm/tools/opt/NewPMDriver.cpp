@@ -48,6 +48,85 @@ static cl::opt<std::string>
                         "pipeline for handling managed aliasing queries"),
                cl::Hidden);
 
+/// {{@ These options accept textual pipeline descriptions which will be
+/// inserted into default pipelines at the respective extension points
+static cl::opt<std::string> PeepholeEPPipeline(
+    "passes-ep-peephole",
+    cl::desc("A textual description of the function pass pipeline inserted at "
+             "the Peephole extension points into default pipelines"),
+    cl::Hidden);
+static cl::opt<std::string> LateLoopOptimizationsEPPipeline(
+    "passes-ep-late-loop-optimizations",
+    cl::desc(
+        "A textual description of the loop pass pipeline inserted at "
+        "the LateLoopOptimizations extension point into default pipelines"),
+    cl::Hidden);
+static cl::opt<std::string> LoopOptimizerEndEPPipeline(
+    "passes-ep-loop-optimizer-end",
+    cl::desc("A textual description of the loop pass pipeline inserted at "
+             "the LoopOptimizerEnd extension point into default pipelines"),
+    cl::Hidden);
+static cl::opt<std::string> ScalarOptimizerLateEPPipeline(
+    "passes-ep-scalar-optimizer-late",
+    cl::desc("A textual description of the function pass pipeline inserted at "
+             "the ScalarOptimizerLate extension point into default pipelines"),
+    cl::Hidden);
+static cl::opt<std::string> CGSCCOptimizerLateEPPipeline(
+    "passes-ep-cgscc-optimizer-late",
+    cl::desc("A textual description of the cgscc pass pipeline inserted at "
+             "the CGSCCOptimizerLate extension point into default pipelines"),
+    cl::Hidden);
+static cl::opt<std::string> VectorizerStartEPPipeline(
+    "passes-ep-vectorizer-start",
+    cl::desc("A textual description of the function pass pipeline inserted at "
+             "the VectorizerStart extension point into default pipelines"),
+    cl::Hidden);
+/// @}}
+
+/// If one of the EPPipeline command line options was given, register callbacks
+/// for parsing and inserting the given pipeline
+static void registerEPCallbacks(PassBuilder &PB, bool VerifyEachPass,
+                                bool DebugLogging) {
+  if (!PeepholeEPPipeline.empty())
+    PB.registerPeepholeEPCallback([&PB, VerifyEachPass, DebugLogging](
+        FunctionPassManager &PM, PassBuilder::OptimizationLevel Level) {
+      return PB.parsePassPipeline(PM, PeepholeEPPipeline, VerifyEachPass,
+                                  DebugLogging);
+    });
+  if (!LateLoopOptimizationsEPPipeline.empty())
+    PB.registerLateLoopOptimizationsEPCallback(
+        [&PB, VerifyEachPass, DebugLogging](
+            LoopPassManager &PM, PassBuilder::OptimizationLevel Level) {
+          return PB.parsePassPipeline(PM, LateLoopOptimizationsEPPipeline,
+                                      VerifyEachPass, DebugLogging);
+        });
+  if (!LoopOptimizerEndEPPipeline.empty())
+    PB.registerLoopOptimizerEndEPCallback([&PB, VerifyEachPass, DebugLogging](
+        LoopPassManager &PM, PassBuilder::OptimizationLevel Level) {
+      return PB.parsePassPipeline(PM, LoopOptimizerEndEPPipeline,
+                                  VerifyEachPass, DebugLogging);
+    });
+  if (!ScalarOptimizerLateEPPipeline.empty())
+    PB.registerScalarOptimizerLateEPCallback(
+        [&PB, VerifyEachPass, DebugLogging](
+            FunctionPassManager &PM, PassBuilder::OptimizationLevel Level) {
+          return PB.parsePassPipeline(PM, ScalarOptimizerLateEPPipeline,
+                                      VerifyEachPass, DebugLogging);
+        });
+  if (!CGSCCOptimizerLateEPPipeline.empty())
+    PB.registerCGSCCOptimizerLateEPCallback([&PB, VerifyEachPass, DebugLogging](
+        CGSCCPassManager &PM, PassBuilder::OptimizationLevel Level) {
+      return PB.parsePassPipeline(PM, CGSCCOptimizerLateEPPipeline,
+                                  VerifyEachPass, DebugLogging);
+    });
+  if (!VectorizerStartEPPipeline.empty())
+    PB.registerVectorizerStartEPCallback([&PB, VerifyEachPass, DebugLogging](
+        FunctionPassManager &PM, PassBuilder::OptimizationLevel Level) {
+      return PB.parsePassPipeline(PM, VectorizerStartEPPipeline, VerifyEachPass,
+                                  DebugLogging);
+    });
+}
+
 bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
                            tool_output_file *Out,
                            tool_output_file *ThinLTOLinkOut,
@@ -56,7 +135,9 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
                            bool ShouldPreserveAssemblyUseListOrder,
                            bool ShouldPreserveBitcodeUseListOrder,
                            bool EmitSummaryIndex, bool EmitModuleHash) {
+  bool VerifyEachPass = VK == VK_VerifyEachPass;
   PassBuilder PB(TM);
+  registerEPCallbacks(PB, VerifyEachPass, DebugPM);
 
   // Specially handle the alias analysis manager so that we can register
   // a custom pipeline of AA passes with it.
@@ -85,8 +166,7 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
   if (VK > VK_NoVerifier)
     MPM.addPass(VerifierPass());
 
-  if (!PB.parsePassPipeline(MPM, PassPipeline, VK == VK_VerifyEachPass,
-                            DebugPM)) {
+  if (!PB.parsePassPipeline(MPM, PassPipeline, VerifyEachPass, DebugPM)) {
     errs() << Arg0 << ": unable to parse pass pipeline description.\n";
     return false;
   }

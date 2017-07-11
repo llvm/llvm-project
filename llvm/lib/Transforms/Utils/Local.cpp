@@ -2169,6 +2169,9 @@ bool llvm::canReplaceOperandWithVariable(const Instruction *I, unsigned OpIdx) {
     return true;
   case Instruction::Call:
   case Instruction::Invoke:
+    // Can't handle inline asm. Skip it.
+    if (isa<InlineAsm>(ImmutableCallSite(I).getCalledValue()))
+      return false;
     // Many arithmetic intrinsics have no issue taking a
     // variable, however it's hard to distingish these from
     // specials such as @llvm.frameaddress that require a constant.

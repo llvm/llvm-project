@@ -1042,10 +1042,10 @@ DWARFContextInMemory::DWARFContextInMemory(
       object::RelocVisitor V(Obj);
       uint64_t Val = V.visit(Reloc.getType(), Reloc, SymInfoOrErr->Address);
       if (V.error()) {
-        SmallString<32> Name;
-        Reloc.getTypeName(Name);
+        SmallString<32> Type;
+        Reloc.getTypeName(Type);
         ErrorPolicy EP = HandleError(
-            createError("failed to compute relocation: " + Name + ", ",
+            createError("failed to compute relocation: " + Type + ", ",
                         errorCodeToError(object_error::parse_failed)));
         if (EP == ErrorPolicy::Halt)
           return;

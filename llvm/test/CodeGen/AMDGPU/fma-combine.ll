@@ -387,7 +387,7 @@ define amdgpu_kernel void @aggressive_combine_to_fma_fsub_1_f64(double addrspace
 
 ; FUNC-LABEL: {{^}}test_f32_mul_add_x_one_y:
 ; SI-NOFMA: v_add_f32_e32 [[VS:v[0-9]]], 1.0, [[VX:v[0-9]]]
-; SI-NOFMA: v_mul_f32_e32 {{v[0-9]}}, [[VY:v[0-9]]], [[VS]]
+; SI-NOFMA: v_mul_f32_e32 {{v[0-9]}}, [[VS]], [[VY:v[0-9]]]
 ;
 ; SI-FMA: v_fma_f32 {{v[0-9]}}, [[VX:v[0-9]]], [[VY:v[0-9]]], [[VY:v[0-9]]]
 define amdgpu_kernel void @test_f32_mul_add_x_one_y(float addrspace(1)* %out,
@@ -403,7 +403,7 @@ define amdgpu_kernel void @test_f32_mul_add_x_one_y(float addrspace(1)* %out,
 
 ; FUNC-LABEL: {{^}}test_f32_mul_y_add_x_one:
 ; SI-NOFMA: v_add_f32_e32 [[VS:v[0-9]]], 1.0, [[VX:v[0-9]]]
-; SI-NOFMA: v_mul_f32_e32 {{v[0-9]}}, [[VS]], [[VY:v[0-9]]]
+; SI-NOFMA: v_mul_f32_e32 {{v[0-9]}}, [[VY:v[0-9]]], [[VS]]
 ;
 ; SI-FMA: v_fma_f32 {{v[0-9]}}, [[VX:v[0-9]]], [[VY:v[0-9]]], [[VY:v[0-9]]]
 define amdgpu_kernel void @test_f32_mul_y_add_x_one(float addrspace(1)* %out,
@@ -419,7 +419,7 @@ define amdgpu_kernel void @test_f32_mul_y_add_x_one(float addrspace(1)* %out,
 
 ; FUNC-LABEL: {{^}}test_f32_mul_add_x_negone_y:
 ; SI-NOFMA: v_add_f32_e32 [[VS:v[0-9]]], -1.0, [[VX:v[0-9]]]
-; SI-NOFMA: v_mul_f32_e32 {{v[0-9]}}, [[VY:v[0-9]]], [[VS]]
+; SI-NOFMA: v_mul_f32_e32 {{v[0-9]}}, [[VS]], [[VY:v[0-9]]]
 ;
 ; SI-FMA: v_fma_f32 {{v[0-9]}}, [[VX:v[0-9]]], [[VY:v[0-9]]], -[[VY:v[0-9]]]
 define amdgpu_kernel void @test_f32_mul_add_x_negone_y(float addrspace(1)* %out,
@@ -435,7 +435,7 @@ define amdgpu_kernel void @test_f32_mul_add_x_negone_y(float addrspace(1)* %out,
 
 ; FUNC-LABEL: {{^}}test_f32_mul_y_add_x_negone:
 ; SI-NOFMA: v_add_f32_e32 [[VS:v[0-9]]], -1.0, [[VX:v[0-9]]]
-; SI-NOFMA: v_mul_f32_e32 {{v[0-9]}}, [[VS]], [[VY:v[0-9]]]
+; SI-NOFMA: v_mul_f32_e32 {{v[0-9]}}, [[VY:v[0-9]]], [[VS]]
 ;
 ; SI-FMA: v_fma_f32 {{v[0-9]}}, [[VX:v[0-9]]], [[VY:v[0-9]]], -[[VY:v[0-9]]]
 define amdgpu_kernel void @test_f32_mul_y_add_x_negone(float addrspace(1)* %out,
@@ -451,7 +451,7 @@ define amdgpu_kernel void @test_f32_mul_y_add_x_negone(float addrspace(1)* %out,
 
 ; FUNC-LABEL: {{^}}test_f32_mul_sub_one_x_y:
 ; SI-NOFMA: v_sub_f32_e32 [[VS:v[0-9]]], 1.0, [[VX:v[0-9]]]
-; SI-NOFMA: v_mul_f32_e32 {{v[0-9]}}, [[VY:v[0-9]]], [[VS]]
+; SI-NOFMA: v_mul_f32_e32 {{v[0-9]}}, [[VS]], [[VY:v[0-9]]]
 ;
 ; SI-FMA: v_fma_f32 {{v[0-9]}}, -[[VX:v[0-9]]], [[VY:v[0-9]]], [[VY:v[0-9]]]
 define amdgpu_kernel void @test_f32_mul_sub_one_x_y(float addrspace(1)* %out,
@@ -467,7 +467,7 @@ define amdgpu_kernel void @test_f32_mul_sub_one_x_y(float addrspace(1)* %out,
 
 ; FUNC-LABEL: {{^}}test_f32_mul_y_sub_one_x:
 ; SI-NOFMA: v_sub_f32_e32 [[VS:v[0-9]]], 1.0, [[VX:v[0-9]]]
-; SI-NOFMA: v_mul_f32_e32 {{v[0-9]}}, [[VS]], [[VY:v[0-9]]]
+; SI-NOFMA: v_mul_f32_e32 {{v[0-9]}}, [[VY:v[0-9]]], [[VS]]
 ;
 ; SI-FMA: v_fma_f32 {{v[0-9]}}, -[[VX:v[0-9]]], [[VY:v[0-9]]], [[VY:v[0-9]]]
 define amdgpu_kernel void @test_f32_mul_y_sub_one_x(float addrspace(1)* %out,
@@ -483,7 +483,7 @@ define amdgpu_kernel void @test_f32_mul_y_sub_one_x(float addrspace(1)* %out,
 
 ; FUNC-LABEL: {{^}}test_f32_mul_sub_negone_x_y:
 ; SI-NOFMA: v_sub_f32_e32 [[VS:v[0-9]]], -1.0, [[VX:v[0-9]]]
-; SI-NOFMA: v_mul_f32_e32 {{v[0-9]}}, [[VY:v[0-9]]], [[VS]]
+; SI-NOFMA: v_mul_f32_e32 {{v[0-9]}}, [[VS]], [[VY:v[0-9]]]
 ;
 ; SI-FMA: v_fma_f32 {{v[0-9]}}, -[[VX:v[0-9]]], [[VY:v[0-9]]], -[[VY:v[0-9]]]
 define amdgpu_kernel void @test_f32_mul_sub_negone_x_y(float addrspace(1)* %out,
@@ -499,7 +499,7 @@ define amdgpu_kernel void @test_f32_mul_sub_negone_x_y(float addrspace(1)* %out,
 
 ; FUNC-LABEL: {{^}}test_f32_mul_y_sub_negone_x:
 ; SI-NOFMA: v_sub_f32_e32 [[VS:v[0-9]]], -1.0, [[VX:v[0-9]]]
-; SI-NOFMA: v_mul_f32_e32 {{v[0-9]}}, [[VS]], [[VY:v[0-9]]]
+; SI-NOFMA: v_mul_f32_e32 {{v[0-9]}}, [[VY:v[0-9]]], [[VS]]
 ;
 ; SI-FMA: v_fma_f32 {{v[0-9]}}, -[[VX:v[0-9]]], [[VY:v[0-9]]], -[[VY:v[0-9]]]
 define amdgpu_kernel void @test_f32_mul_y_sub_negone_x(float addrspace(1)* %out,
@@ -515,7 +515,7 @@ define amdgpu_kernel void @test_f32_mul_y_sub_negone_x(float addrspace(1)* %out,
 
 ; FUNC-LABEL: {{^}}test_f32_mul_sub_x_one_y:
 ; SI-NOFMA: v_add_f32_e32 [[VS:v[0-9]]], -1.0, [[VX:v[0-9]]]
-; SI-NOFMA: v_mul_f32_e32 {{v[0-9]}}, [[VY:v[0-9]]], [[VS]]
+; SI-NOFMA: v_mul_f32_e32 {{v[0-9]}}, [[VS]], [[VY:v[0-9]]]
 ;
 ; SI-FMA: v_fma_f32 {{v[0-9]}}, [[VX:v[0-9]]], [[VY:v[0-9]]], -[[VY:v[0-9]]]
 define amdgpu_kernel void @test_f32_mul_sub_x_one_y(float addrspace(1)* %out,
@@ -531,7 +531,7 @@ define amdgpu_kernel void @test_f32_mul_sub_x_one_y(float addrspace(1)* %out,
 
 ; FUNC-LABEL: {{^}}test_f32_mul_y_sub_x_one:
 ; SI-NOFMA: v_add_f32_e32 [[VS:v[0-9]]], -1.0, [[VX:v[0-9]]]
-; SI-NOFMA: v_mul_f32_e32 {{v[0-9]}}, [[VS]], [[VY:v[0-9]]]
+; SI-NOFMA: v_mul_f32_e32 {{v[0-9]}}, [[VY:v[0-9]]], [[VS]]
 ;
 ; SI-FMA: v_fma_f32 {{v[0-9]}}, [[VX:v[0-9]]], [[VY:v[0-9]]], -[[VY:v[0-9]]]
 define amdgpu_kernel void @test_f32_mul_y_sub_x_one(float addrspace(1)* %out,
@@ -547,7 +547,7 @@ define amdgpu_kernel void @test_f32_mul_y_sub_x_one(float addrspace(1)* %out,
 
 ; FUNC-LABEL: {{^}}test_f32_mul_sub_x_negone_y:
 ; SI-NOFMA: v_add_f32_e32 [[VS:v[0-9]]], 1.0, [[VX:v[0-9]]]
-; SI-NOFMA: v_mul_f32_e32 {{v[0-9]}}, [[VY:v[0-9]]], [[VS]]
+; SI-NOFMA: v_mul_f32_e32 {{v[0-9]}}, [[VS]], [[VY:v[0-9]]]
 ;
 ; SI-FMA: v_fma_f32 {{v[0-9]}}, [[VX:v[0-9]]], [[VY:v[0-9]]], [[VY:v[0-9]]]
 define amdgpu_kernel void @test_f32_mul_sub_x_negone_y(float addrspace(1)* %out,
@@ -563,7 +563,7 @@ define amdgpu_kernel void @test_f32_mul_sub_x_negone_y(float addrspace(1)* %out,
 
 ; FUNC-LABEL: {{^}}test_f32_mul_y_sub_x_negone:
 ; SI-NOFMA: v_add_f32_e32 [[VS:v[0-9]]], 1.0, [[VX:v[0-9]]]
-; SI-NOFMA: v_mul_f32_e32 {{v[0-9]}}, [[VS]], [[VY:v[0-9]]]
+; SI-NOFMA: v_mul_f32_e32 {{v[0-9]}}, [[VY:v[0-9]]], [[VS]]
 ;
 ; SI-FMA: v_fma_f32 {{v[0-9]}}, [[VX:v[0-9]]], [[VY:v[0-9]]], [[VY:v[0-9]]]
 define amdgpu_kernel void @test_f32_mul_y_sub_x_negone(float addrspace(1)* %out,
@@ -583,8 +583,8 @@ define amdgpu_kernel void @test_f32_mul_y_sub_x_negone(float addrspace(1)* %out,
 
 ; FUNC-LABEL: {{^}}test_f32_interp:
 ; SI-NOFMA: v_sub_f32_e32 [[VT1:v[0-9]]], 1.0, [[VT:v[0-9]]]
-; SI-NOFMA: v_mul_f32_e32 [[VTY:v[0-9]]], [[VT1]], [[VY:v[0-9]]]
-; SI-NOFMA: v_mac_f32_e32 [[VTY]], [[VT]], [[VX:v[0-9]]]
+; SI-NOFMA: v_mul_f32_e32 [[VTY:v[0-9]]], [[VY:v[0-9]]], [[VT1]]
+; SI-NOFMA: v_mac_f32_e32 [[VTY]], [[VX:v[0-9]]], [[VT]]
 ;
 ; SI-FMA: v_fma_f32 [[VR:v[0-9]]], -[[VT:v[0-9]]], [[VY:v[0-9]]], [[VY]]
 ; SI-FMA: v_fma_f32 {{v[0-9]}}, [[VX:v[0-9]]], [[VT]], [[VR]]

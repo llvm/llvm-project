@@ -536,6 +536,11 @@ LLVM-specific variables
   during the build. Enabling this option can significantly speed up build times
   especially when building LLVM in Debug configurations.
 
+**LLVM_REVERSE_ITERATION**:BOOL
+  If enabled, all supported unordered llvm containers would be iterated in
+  reverse order. This is useful for uncovering non-determinism caused by
+  iteration of unordered containers.
+
 CMake Caches
 ============
 

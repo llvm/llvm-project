@@ -41,19 +41,6 @@ using namespace llvm::msf;
 using namespace llvm::support;
 using namespace llvm::pdb;
 
-// This is PSGSIHDR struct defined in
-// https://github.com/Microsoft/microsoft-pdb/blob/master/PDB/dbi/gsi.h
-struct PublicsStream::HeaderInfo {
-  ulittle32_t SymHash;
-  ulittle32_t AddrMap;
-  ulittle32_t NumThunks;
-  ulittle32_t SizeOfThunk;
-  ulittle16_t ISectThunkTable;
-  char Padding[2];
-  ulittle32_t OffThunkTable;
-  ulittle32_t NumSections;
-};
-
 PublicsStream::PublicsStream(PDBFile &File,
                              std::unique_ptr<MappedBlockStream> Stream)
     : Pdb(File), Stream(std::move(Stream)) {}
@@ -72,7 +59,8 @@ Error PublicsStream::reload() {
   BinaryStreamReader Reader(*Stream);
 
   // Check stream size.
-  if (Reader.bytesRemaining() < sizeof(HeaderInfo) + sizeof(GSIHashHeader))
+  if (Reader.bytesRemaining() <
+      sizeof(PublicsStreamHeader) + sizeof(GSIHashHeader))
     return make_error<RawError>(raw_error_code::corrupt_file,
                                 "Publics Stream does not contain a header.");
 

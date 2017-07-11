@@ -169,8 +169,11 @@ namespace HexagonII {
 
   // Hexagon specific MO operand flag mask.
   enum HexagonMOTargetFlagVal {
-    //===------------------------------------------------------------------===//
-    // Hexagon Specific MachineOperand flags.
+    // Hexagon-specific MachineOperand target flags.
+    //
+    // When chaning these, make sure to update
+    // getSerializableDirectMachineOperandTargetFlags and
+    // getSerializableBitmaskMachineOperandTargetFlags if needed.
     MO_NO_FLAG,
 
     /// MO_PCREL - On a symbol operand, indicates a PC-relative relocation
@@ -207,10 +210,12 @@ namespace HexagonII {
     MO_TPREL,
 
     // HMOTF_ConstExtended
-    // Addendum to abovem, indicates a const extended op
+    // Addendum to above, indicates a const extended op
     // Can be used as a mask.
-    HMOTF_ConstExtended = 0x80
+    HMOTF_ConstExtended = 0x80,
 
+    // Union of all bitmasks (currently only HMOTF_ConstExtended).
+    MO_Bitmasks = HMOTF_ConstExtended
   };
 
   // Hexagon Sub-instruction classes.

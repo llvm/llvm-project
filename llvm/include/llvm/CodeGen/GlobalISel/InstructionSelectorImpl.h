@@ -156,6 +156,18 @@ bool InstructionSelector::executeMatchTable(
         return false;
       break;
     }
+    case GIM_CheckIntrinsicID: {
+      int64_t InsnID = *Command++;
+      int64_t OpIdx = *Command++;
+      int64_t Value = *Command++;
+      DEBUG(dbgs() << "GIM_CheckIntrinsicID(MIs[" << InsnID << "]->getOperand(" << OpIdx
+                   << "), Value=" << Value << ")\n");
+      assert(State.MIs[InsnID] != nullptr && "Used insn before defined");
+      MachineOperand &OM = State.MIs[InsnID]->getOperand(OpIdx);
+      if (!OM.isIntrinsicID() || OM.getIntrinsicID() != Value)
+        return false;
+      break;
+    }
     case GIM_CheckIsMBB: {
       int64_t InsnID = *Command++;
       int64_t OpIdx = *Command++;
