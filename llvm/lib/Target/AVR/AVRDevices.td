@@ -6,7 +6,6 @@
 // :TODO: We define all devices with SRAM to have all variants of LD/ST/LDD/STD.
 //        In reality, avr1 (no SRAM) has one variant each of `LD` and `ST`.
 //        avr2 (with SRAM) adds the rest of the variants.
-// :TODO: s/AVRTiny/Tiny
 
 
 // A feature set aggregates features, grouping them. We don't want to create a
@@ -136,7 +135,7 @@ def ELFArchAVR4    : ELFArch<"EF_AVR_ARCH_AVR4">;
 def ELFArchAVR5    : ELFArch<"EF_AVR_ARCH_AVR5">;
 def ELFArchAVR51   : ELFArch<"EF_AVR_ARCH_AVR51">;
 def ELFArchAVR6    : ELFArch<"EF_AVR_ARCH_AVR6">;
-def ELFArchAVRTiny : ELFArch<"EF_AVR_ARCH_AVRTINY">;
+def ELFArchTiny    : ELFArch<"EF_AVR_ARCH_AVRTINY">;
 def ELFArchXMEGA1  : ELFArch<"EF_AVR_ARCH_XMEGA1">;
 def ELFArchXMEGA2  : ELFArch<"EF_AVR_ARCH_XMEGA2">;
 def ELFArchXMEGA3  : ELFArch<"EF_AVR_ARCH_XMEGA3">;
@@ -189,7 +188,7 @@ def FamilyAVR51          : Family<"avr51",
 def FamilyAVR6           : Family<"avr6",
                                  [FamilyAVR51]>;
 
-def FamilyAVRTiny        : Family<"avrtiny",
+def FamilyTiny           : Family<"avrtiny",
                                  [FamilyAVR0, FeatureBREAK, FeatureSRAM,
                                   FeatureTinyEncoding]>;
 
@@ -240,7 +239,7 @@ def : Device<"avrxmega4", FamilyXMEGA,   ELFArchXMEGA4>;
 def : Device<"avrxmega5", FamilyXMEGA,   ELFArchXMEGA5>;
 def : Device<"avrxmega6", FamilyXMEGA,   ELFArchXMEGA6>;
 def : Device<"avrxmega7", FamilyXMEGA,   ELFArchXMEGA7>;
-def : Device<"avrtiny",   FamilyAVRTiny, ELFArchAVRTiny>;
+def : Device<"avrtiny",   FamilyTiny,    ELFArchTiny>;
 
 // Specific MCUs
 def : Device<"at90s1200",          FamilyAVR0, ELFArchAVR1>;
@@ -480,12 +479,12 @@ def : Device<"atxmega384d3",       FamilyXMEGA, ELFArchXMEGA6>;
 def : Device<"atxmega128a1",       FamilyXMEGA, ELFArchXMEGA7>;
 def : Device<"atxmega128a1u",      FamilyXMEGAU, ELFArchXMEGA7>;
 def : Device<"atxmega128a4u",      FamilyXMEGAU, ELFArchXMEGA7>;
-def : Device<"attiny4",            FamilyAVRTiny, ELFArchAVRTiny>;
-def : Device<"attiny5",            FamilyAVRTiny, ELFArchAVRTiny>;
-def : Device<"attiny9",            FamilyAVRTiny, ELFArchAVRTiny>;
-def : Device<"attiny10",           FamilyAVRTiny, ELFArchAVRTiny>;
-def : Device<"attiny20",           FamilyAVRTiny, ELFArchAVRTiny>;
-def : Device<"attiny40",           FamilyAVRTiny, ELFArchAVRTiny>;
-def : Device<"attiny102",          FamilyAVRTiny, ELFArchAVRTiny>;
-def : Device<"attiny104",          FamilyAVRTiny, ELFArchAVRTiny>;
+def : Device<"attiny4",            FamilyTiny, ELFArchTiny>;
+def : Device<"attiny5",            FamilyTiny, ELFArchTiny>;
+def : Device<"attiny9",            FamilyTiny, ELFArchTiny>;
+def : Device<"attiny10",           FamilyTiny, ELFArchTiny>;
+def : Device<"attiny20",           FamilyTiny, ELFArchTiny>;
+def : Device<"attiny40",           FamilyTiny, ELFArchTiny>;
+def : Device<"attiny102",          FamilyTiny, ELFArchTiny>;
+def : Device<"attiny104",          FamilyTiny, ELFArchTiny>;
 

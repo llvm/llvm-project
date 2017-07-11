@@ -18,6 +18,7 @@
 #include "llvm/DebugInfo/PDB/Native/InfoStream.h"
 #include "llvm/DebugInfo/PDB/Native/InfoStreamBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/PDBStringTableBuilder.h"
+#include "llvm/DebugInfo/PDB/Native/PublicsStreamBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/RawError.h"
 #include "llvm/DebugInfo/PDB/Native/TpiStream.h"
 #include "llvm/DebugInfo/PDB/Native/TpiStreamBuilder.h"
@@ -32,6 +33,8 @@ using namespace llvm::support;
 
 PDBFileBuilder::PDBFileBuilder(BumpPtrAllocator &Allocator)
     : Allocator(Allocator) {}
+
+PDBFileBuilder::~PDBFileBuilder() {}
 
 Error PDBFileBuilder::initialize(uint32_t BlockSize) {
   auto ExpectedMsf = MSFBuilder::create(Allocator, BlockSize);
@@ -69,6 +72,12 @@ TpiStreamBuilder &PDBFileBuilder::getIpiBuilder() {
 
 PDBStringTableBuilder &PDBFileBuilder::getStringTableBuilder() {
   return Strings;
+}
+
+PublicsStreamBuilder &PDBFileBuilder::getPublicsBuilder() {
+  if (!Publics)
+    Publics = llvm::make_unique<PublicsStreamBuilder>(*Msf);
+  return *Publics;
 }
 
 Error PDBFileBuilder::addNamedStream(StringRef Name, uint32_t Size) {
@@ -112,6 +121,14 @@ Expected<msf::MSFLayout> PDBFileBuilder::finalizeMsfLayout() {
   if (Ipi) {
     if (auto EC = Ipi->finalizeMsfLayout())
       return std::move(EC);
+  }
+  if (Publics) {
+    if (auto EC = Publics->finalizeMsfLayout())
+      return std::move(EC);
+    if (Dbi) {
+      Dbi->setPublicsStreamIndex(Publics->getStreamIndex());
+      Dbi->setSymbolRecordStreamIndex(Publics->getRecordStreamIdx());
+    }
   }
 
   return Msf->build();
@@ -189,6 +206,14 @@ Error PDBFileBuilder::commit(StringRef Filename) {
 
   if (Ipi) {
     if (auto EC = Ipi->commit(Layout, Buffer))
+      return EC;
+  }
+
+  if (Publics) {
+    auto PS = WritableMappedBlockStream::createIndexedStream(
+        Layout, Buffer, Publics->getStreamIndex(), Allocator);
+    BinaryStreamWriter PSWriter(*PS);
+    if (auto EC = Publics->commit(PSWriter))
       return EC;
   }
 

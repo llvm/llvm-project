@@ -25,8 +25,6 @@ struct GSIHashHeader;
 class PDBFile;
 
 class PublicsStream {
-  struct HeaderInfo;
-
 public:
   PublicsStream(PDBFile &File, std::unique_ptr<msf::MappedBlockStream> Stream);
   ~PublicsStream();
@@ -65,7 +63,7 @@ private:
   FixedStreamArray<support::ulittle32_t> ThunkMap;
   FixedStreamArray<SectionOffset> SectionOffsets;
 
-  const HeaderInfo *Header;
+  const PublicsStreamHeader *Header;
   const GSIHashHeader *HashHdr;
 };
 }

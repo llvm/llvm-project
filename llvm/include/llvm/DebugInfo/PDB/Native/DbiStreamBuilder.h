@@ -59,6 +59,9 @@ public:
 
   uint32_t calculateSerializedLength() const;
 
+  void setPublicsStreamIndex(uint32_t Index);
+  void setSymbolRecordStreamIndex(uint32_t Index);
+
   Expected<DbiModuleDescriptorBuilder &> addModuleInfo(StringRef ModuleName);
   Error addModuleSourceFile(StringRef Module, StringRef File);
   Error addModuleSourceFile(DbiModuleDescriptorBuilder &Module, StringRef File);
@@ -90,7 +93,6 @@ private:
   uint32_t calculateNamesBufferSize() const;
   uint32_t calculateDbgStreamsSize() const;
 
-  Error generateModiSubstream();
   Error generateFileInfoSubstream();
 
   msf::MSFBuilder &Msf;
@@ -103,6 +105,8 @@ private:
   uint16_t PdbDllRbld;
   uint16_t Flags;
   PDB_Machine MachineType;
+  uint32_t PublicsStreamIndex = kInvalidStreamIndex;
+  uint32_t SymRecordStreamIndex = kInvalidStreamIndex;
 
   const DbiStreamHeader *Header;
 

@@ -8364,9 +8364,9 @@ static bool findEXTRHalf(SDValue N, SDValue &Src, uint32_t &ShiftAmount,
 
 /// EXTR instruction extracts a contiguous chunk of bits from two existing
 /// registers viewed as a high/low pair. This function looks for the pattern:
-/// (or (shl VAL1, #N), (srl VAL2, #RegWidth-N)) and replaces it with an
-/// EXTR. Can't quite be done in TableGen because the two immediates aren't
-/// independent.
+/// <tt>(or (shl VAL1, \#N), (srl VAL2, \#RegWidth-N))</tt> and replaces it
+/// with an EXTR. Can't quite be done in TableGen because the two immediates
+/// aren't independent.
 static SDValue tryCombineToEXTR(SDNode *N,
                                 TargetLowering::DAGCombinerInfo &DCI) {
   SelectionDAG &DAG = DCI.DAG;
@@ -9531,7 +9531,7 @@ static SDValue performPostLD1Combine(SDNode *N,
   return SDValue();
 }
 
-/// Simplify \Addr given that the top byte of it is ignored by HW during
+/// Simplify ``Addr`` given that the top byte of it is ignored by HW during
 /// address translation.
 static bool performTBISimplification(SDValue Addr,
                                      TargetLowering::DAGCombinerInfo &DCI,

@@ -922,11 +922,11 @@ ModRefInfo BasicAAResult::getModRefInfo(ImmutableCallSite CS1,
 
 /// Provide ad-hoc rules to disambiguate accesses through two GEP operators,
 /// both having the exact same pointer operand.
-AliasResult BasicAAResult::aliasSameBasePointerGEPs(const GEPOperator *GEP1,
-                                                    uint64_t V1Size,
-                                                    const GEPOperator *GEP2,
-                                                    uint64_t V2Size,
-                                                    const DataLayout &DL) {
+static AliasResult aliasSameBasePointerGEPs(const GEPOperator *GEP1,
+                                            uint64_t V1Size,
+                                            const GEPOperator *GEP2,
+                                            uint64_t V2Size,
+                                            const DataLayout &DL) {
 
   assert(GEP1->getPointerOperand()->stripPointerCastsAndBarriers() ==
              GEP2->getPointerOperand()->stripPointerCastsAndBarriers() &&
@@ -1014,15 +1014,11 @@ AliasResult BasicAAResult::aliasSameBasePointerGEPs(const GEPOperator *GEP1,
     {
       Value *GEP1LastIdx = GEP1->getOperand(GEP1->getNumOperands() - 1);
       Value *GEP2LastIdx = GEP2->getOperand(GEP2->getNumOperands() - 1);
-      if ((isa<PHINode>(GEP1LastIdx) || isa<PHINode>(GEP2LastIdx)) &&
-          !VisitedPhiBBs.empty()) {
+      if (isa<PHINode>(GEP1LastIdx) || isa<PHINode>(GEP2LastIdx)) {
         // If one of the indices is a PHI node, be safe and only use
         // computeKnownBits so we don't make any assumptions about the
         // relationships between the two indices. This is important if we're
         // asking about values from different loop iterations. See PR32314.
-        // But, with empty visitedPhiBBs we can guarantee that the values are
-        // from the same iteration. Therefore, we can avoid doing this
-        // conservative check.
         // TODO: We may be able to change the check so we only do this when
         // we definitely looked through a PHINode.
         if (GEP1LastIdx != GEP2LastIdx &&

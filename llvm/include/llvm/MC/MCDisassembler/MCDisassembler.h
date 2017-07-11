@@ -68,6 +68,7 @@ public:
   ///                   an invalid instruction.
   /// \param Address  - The address, in the memory space of region, of the first
   ///                   byte of the instruction.
+  /// \param Bytes    - A reference to the actual bytes of the instruction.
   /// \param VStream  - The stream to print warnings and diagnostic messages on.
   /// \param CStream  - The stream to print comments and annotations on.
   /// \return         - MCDisassembler::Success if the instruction is valid,

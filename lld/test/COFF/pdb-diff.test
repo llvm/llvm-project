@@ -53,11 +53,11 @@ CHECK-NEXT:   |                     TPI Hash | {{[EI]}} |
 CHECK-NEXT:   |------------------------------+---|
 CHECK-NEXT:   |                     IPI Hash | {{[EI]}} |
 CHECK-NEXT:   |------------------------------+---|
+CHECK-NEXT:   |           Public Symbol Hash | {{[EI]}} |
+CHECK-NEXT:   |------------------------------+---|
+CHECK-NEXT:   |        Public Symbol Records | {{[EI]}} |
+CHECK-NEXT:   |------------------------------+---|
 CHECK-NEXT:   |           Global Symbol Hash | D |
-CHECK-NEXT:   |------------------------------+---|
-CHECK-NEXT:   |           Public Symbol Hash | D |
-CHECK-NEXT:   |------------------------------+---|
-CHECK-NEXT:   |        Public Symbol Records | D |
 CHECK-NEXT:   |------------------------------+---|
 CHECK-NEXT:   ------------------------------------
 CHECK-NEXT:   |           String Table           |
@@ -154,9 +154,9 @@ CHECK-NEXT:   |                   DBG (SectionHdrOrig) | I |
 CHECK-NEXT:   |----------------------------------------+---|
 CHECK-NEXT:   |                         Globals Stream | D |
 CHECK-NEXT:   |----------------------------------------+---|
-CHECK-NEXT:   |                         Publics Stream | D |
+CHECK-NEXT:   |                         Publics Stream | {{[EI]}} |
 CHECK-NEXT:   |----------------------------------------+---|
-CHECK-NEXT:   |                         Symbol Records | D |
+CHECK-NEXT:   |                         Symbol Records | {{[EI]}} |
 CHECK-NEXT:   |----------------------------------------+---|
 CHECK-NEXT:   |                             Has CTypes | I |
 CHECK-NEXT:   |----------------------------------------+---|

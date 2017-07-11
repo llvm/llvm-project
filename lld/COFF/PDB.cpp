@@ -481,6 +481,13 @@ void coff::createPDB(SymbolTable *Symtab, ArrayRef<uint8_t> SectionTable,
   TypeTableBuilder IDTable(BAlloc);
   addObjectsToPDB(Alloc, Symtab, Builder, TypeTable, IDTable);
 
+  // Add public and symbol records stream.
+
+  // For now we don't actually write any thing useful to the publics stream, but
+  // the act of "getting" it also creates it lazily so that we write an empty
+  // stream.
+  (void)Builder.getPublicsBuilder();
+
   // Add Section Contributions.
   addSectionContribs(Symtab, DbiBuilder);
 

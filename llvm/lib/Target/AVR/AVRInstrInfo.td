@@ -1411,7 +1411,7 @@ hasSideEffects = 0 in
   def LPMRdZ : FLPMX<0,
                      0,
                      (outs GPR8:$dst),
-                     (ins ZREGS:$z),
+                     (ins ZREG:$z),
                      "lpm\t$dst, $z",
                      []>,
                Requires<[HasLPMX]>;
@@ -1423,19 +1423,19 @@ hasSideEffects = 0 in
     def LPMRdZPi : FLPMX<0,
                          1,
                          (outs GPR8:$dst),
-                         (ins ZREGS:$z),
+                         (ins ZREG:$z),
                          "lpm\t$dst, $z+",
                          []>,
                    Requires<[HasLPMX]>;
 
     def LPMWRdZ : Pseudo<(outs DREGS:$dst),
-                         (ins ZREGS:$z),
+                         (ins ZREG:$z),
                          "lpmw\t$dst, $z",
                          []>,
                   Requires<[HasLPMX]>;
 
     def LPMWRdZPi : Pseudo<(outs DREGS:$dst),
-                           (ins ZREGS:$z),
+                           (ins ZREG:$z),
                            "lpmw\t$dst, $z+",
                            []>,
                     Requires<[HasLPMX]>;
@@ -1458,7 +1458,7 @@ hasSideEffects = 0 in
   def ELPMRdZ : FLPMX<1,
                       0,
                       (outs GPR8:$dst),
-                      (ins ZREGS:$z),
+                      (ins ZREG:$z),
                       "elpm\t$dst, $z",
                       []>,
                 Requires<[HasELPMX]>;
@@ -1467,7 +1467,7 @@ hasSideEffects = 0 in
   def ELPMRdZPi : FLPMX<1,
                         1,
                         (outs GPR8:$dst),
-                        (ins ZREGS: $z),
+                        (ins ZREG: $z),
                         "elpm\t$dst, $z+",
                         []>,
                   Requires<[HasELPMX]>;
@@ -1487,7 +1487,7 @@ let Uses = [R1, R0] in
   let Defs = [R31R30] in
   def SPMZPi : F16<0b1001010111111000,
                    (outs),
-                   (ins ZREGS:$z),
+                   (ins ZREG:$z),
                    "spm $z+",
                    []>,
                Requires<[HasSPMX]>;
@@ -1564,28 +1564,28 @@ hasSideEffects = 0 in
 // Read-Write-Modify (RMW) instructions.
 def XCHZRd : FZRd<0b100,
                   (outs GPR8:$rd),
-                  (ins ZREGS:$z),
+                  (ins ZREG:$z),
                   "xch\t$z, $rd",
                   []>,
              Requires<[SupportsRMW]>;
 
 def LASZRd : FZRd<0b101,
                   (outs GPR8:$rd),
-                  (ins ZREGS:$z),
+                  (ins ZREG:$z),
                   "las\t$z, $rd",
                   []>,
              Requires<[SupportsRMW]>;
 
 def LACZRd : FZRd<0b110,
                   (outs GPR8:$rd),
-                  (ins ZREGS:$z),
+                  (ins ZREG:$z),
                   "lac\t$z, $rd",
                   []>,
              Requires<[SupportsRMW]>;
 
 def LATZRd : FZRd<0b111,
                   (outs GPR8:$rd),
-                  (ins ZREGS:$z),
+                  (ins ZREG:$z),
                   "lat\t$z, $rd",
                   []>,
              Requires<[SupportsRMW]>;

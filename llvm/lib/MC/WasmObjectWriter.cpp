@@ -404,15 +404,11 @@ void WasmObjectWriter::recordRelocation(MCAssembler &Asm,
   const MCSymbolRefExpr *RefA = Target.getSymA();
   const auto *SymA = RefA ? cast<MCSymbolWasm>(&RefA->getSymbol()) : nullptr;
 
-  bool ViaWeakRef = false;
   if (SymA && SymA->isVariable()) {
     const MCExpr *Expr = SymA->getVariableValue();
-    if (const auto *Inner = dyn_cast<MCSymbolRefExpr>(Expr)) {
-      if (Inner->getKind() == MCSymbolRefExpr::VK_WEAKREF) {
-        SymA = cast<MCSymbolWasm>(&Inner->getSymbol());
-        ViaWeakRef = true;
-      }
-    }
+    const auto *Inner = cast<MCSymbolRefExpr>(Expr);
+    if (Inner->getKind() == MCSymbolRefExpr::VK_WEAKREF)
+      llvm_unreachable("weakref used in reloc not yet implemented");
   }
 
   // Put any constant offset in an addend. Offsets can be negative, and
@@ -420,12 +416,8 @@ void WasmObjectWriter::recordRelocation(MCAssembler &Asm,
   // be negative and don't wrap.
   FixedValue = 0;
 
-  if (SymA) {
-    if (ViaWeakRef)
-      llvm_unreachable("weakref used in reloc not yet implemented");
-    else
-      SymA->setUsedInReloc();
-  }
+  if (SymA)
+    SymA->setUsedInReloc();
 
   assert(!IsPCRel);
   assert(SymA);
@@ -928,7 +920,7 @@ uint32_t WasmObjectWriter::registerFunctionType(const MCSymbolWasm& Symbol) {
   WasmFunctionType F;
   if (Symbol.isVariable()) {
     const MCExpr *Expr = Symbol.getVariableValue();
-    auto *Inner = dyn_cast<MCSymbolRefExpr>(Expr);
+    auto *Inner = cast<MCSymbolRefExpr>(Expr);
     const auto *ResolvedSym = cast<MCSymbolWasm>(&Inner->getSymbol());
     F.Returns = ResolvedSym->getReturns();
     F.Params = ResolvedSym->getParams();
@@ -1246,7 +1238,7 @@ void WasmObjectWriter::writeObject(MCAssembler &Asm,
     const auto &WS = static_cast<const MCSymbolWasm &>(S);
     // Find the target symbol of this weak alias and export that index
     const MCExpr *Expr = WS.getVariableValue();
-    auto *Inner = dyn_cast<MCSymbolRefExpr>(Expr);
+    auto *Inner = cast<MCSymbolRefExpr>(Expr);
     const auto *ResolvedSym = cast<MCSymbolWasm>(&Inner->getSymbol());
     DEBUG(dbgs() << WS.getName() << ": weak alias of '" << *ResolvedSym << "'\n");
     assert(SymbolIndices.count(ResolvedSym) > 0);

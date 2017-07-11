@@ -66,6 +66,7 @@ public:
 
   bool addInstSelector() override;
   void addPreSched2() override;
+  void addPreEmitPass() override;
   void addPreRegAlloc() override;
 };
 } // namespace
@@ -113,6 +114,11 @@ void AVRPassConfig::addPreRegAlloc() {
 void AVRPassConfig::addPreSched2() {
   addPass(createAVRRelaxMemPass());
   addPass(createAVRExpandPseudoPass());
+}
+
+void AVRPassConfig::addPreEmitPass() {
+  // Must run branch selection immediately preceding the asm printer.
+  addPass(&BranchRelaxationPassID);
 }
 
 } // end of namespace llvm
