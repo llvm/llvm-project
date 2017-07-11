@@ -642,7 +642,7 @@ bool X86InstructionSelector::selectZext(MachineInstr &I,
 
   unsigned AndOpc;
   if (DstTy == LLT::scalar(8))
-    AndOpc = X86::AND8ri8;
+    AndOpc = X86::AND8ri;
   else if (DstTy == LLT::scalar(16))
     AndOpc = X86::AND16ri8;
   else if (DstTy == LLT::scalar(32))

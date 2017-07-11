@@ -218,7 +218,7 @@ public:
         Verdef(Verdef), ElfSym(ElfSym) {
     // IFuncs defined in DSOs are treated as functions by the static linker.
     if (isGnuIFunc())
-      Type = llvm::ELF::STT_FUNC;
+      this->Type = llvm::ELF::STT_FUNC;
     this->File = File;
   }
 

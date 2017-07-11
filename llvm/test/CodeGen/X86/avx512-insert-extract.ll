@@ -1313,7 +1313,7 @@ define i8 @test_iinsertelement_v4i1(i32 %a, i32 %b, <4 x i32> %x , <4 x i32> %y)
 ; KNL:       ## BB#0:
 ; KNL-NEXT:    cmpl %esi, %edi
 ; KNL-NEXT:    setb %al
-; KNL-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm2
+; KNL-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
 ; KNL-NEXT:    vpxor %xmm2, %xmm0, %xmm0
 ; KNL-NEXT:    vpxor %xmm2, %xmm1, %xmm1
 ; KNL-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
@@ -1477,7 +1477,7 @@ define zeroext i8 @extractelement_v2i1_alt(<2 x i64> %a, <2 x i64> %b) {
 define zeroext i8 @test_extractelement_v4i1(<4 x i32> %a, <4 x i32> %b) {
 ; KNL-LABEL: test_extractelement_v4i1:
 ; KNL:       ## BB#0:
-; KNL-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm2
+; KNL-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
 ; KNL-NEXT:    vpxor %xmm2, %xmm1, %xmm1
 ; KNL-NEXT:    vpxor %xmm2, %xmm0, %xmm0
 ; KNL-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
@@ -2346,7 +2346,7 @@ define zeroext i8 @test_extractelement_varible_v4i1(<4 x i32> %a, <4 x i32> %b, 
 ; KNL-LABEL: test_extractelement_varible_v4i1:
 ; KNL:       ## BB#0:
 ; KNL-NEXT:    ## kill: %EDI<def> %EDI<kill> %RDI<def>
-; KNL-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm2
+; KNL-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
 ; KNL-NEXT:    vpxor %xmm2, %xmm1, %xmm1
 ; KNL-NEXT:    vpxor %xmm2, %xmm0, %xmm0
 ; KNL-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
