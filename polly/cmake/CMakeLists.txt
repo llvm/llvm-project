@@ -1,9 +1,4 @@
 # Keep this in sync with llvm/cmake/CMakeLists.txt!
-if (LLVM_INSTALL_ROOT)
-  # this simplifies things down the road, by not requiring to distinguish
-  # between in-tree and out of tree builds
-  set(LLVM_BINARY_DIR ${LLVM_INSTALL_ROOT})
-endif()
 
 set(LLVM_INSTALL_PACKAGE_DIR "lib${LLVM_LIBDIR_SUFFIX}/cmake/llvm")
 set(POLLY_INSTALL_PACKAGE_DIR "lib${LLVM_LIBDIR_SUFFIX}/cmake/polly")

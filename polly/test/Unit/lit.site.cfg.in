@@ -14,6 +14,7 @@ config.shlibdir = "@SHLIBDIR@"
 config.target_triple = "@TARGET_TRIPLE@"
 config.enable_gpgpu_codegen = "@GPU_CODEGEN@"
 config.link_polly_into_tools = "@LINK_POLLY_INTO_TOOLS@"
+config.has_unittests = @POLLY_GTEST_AVAIL@
 
 # Support substitution of the tools_dir, libs_dirs, and build_mode with user
 # parameters. This is used when we can't determine the tool dir at

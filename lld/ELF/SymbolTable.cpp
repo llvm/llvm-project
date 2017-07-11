@@ -231,7 +231,6 @@ std::pair<Symbol *, bool> SymbolTable<ELFT>::insert(StringRef Name) {
   Symbol *Sym;
   if (IsNew) {
     Sym = make<Symbol>();
-    Sym->InVersionScript = false;
     Sym->Binding = STB_WEAK;
     Sym->Visibility = STV_DEFAULT;
     Sym->IsUsedInRegularObj = false;
@@ -697,10 +696,9 @@ void SymbolTable<ELFT>::assignExactVersion(SymbolVersion Ver, uint16_t VersionId
   // Assign the version.
   for (SymbolBody *B : Syms) {
     Symbol *Sym = B->symbol();
-    if (Sym->InVersionScript)
+    if (Sym->VersionId != Config->DefaultSymbolVersion)
       warn("duplicate symbol '" + Ver.Name + "' in version script");
     Sym->VersionId = VersionId;
-    Sym->InVersionScript = true;
   }
 }
 
@@ -709,12 +707,11 @@ void SymbolTable<ELFT>::assignWildcardVersion(SymbolVersion Ver,
                                               uint16_t VersionId) {
   if (!Ver.HasWildcard)
     return;
-  std::vector<SymbolBody *> Syms = findAllByVersion(Ver);
 
   // Exact matching takes precendence over fuzzy matching,
   // so we set a version to a symbol only if no version has been assigned
   // to the symbol. This behavior is compatible with GNU.
-  for (SymbolBody *B : Syms)
+  for (SymbolBody *B : findAllByVersion(Ver))
     if (B->symbol()->VersionId == Config->DefaultSymbolVersion)
       B->symbol()->VersionId = VersionId;
 }

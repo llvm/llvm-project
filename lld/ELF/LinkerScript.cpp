@@ -374,6 +374,10 @@ void LinkerScript::processCommands(OutputSectionFactory &Factory) {
   Aether = make<OutputSection>("", 0, SHF_ALLOC);
   Aether->SectionIndex = 1;
   auto State = make_unique<AddressState>(Opt);
+  // CurAddressState captures the local AddressState and makes it accessible
+  // deliberately. This is needed as there are some cases where we cannot just
+  // thread the current state through to a lambda function created by the
+  // script parser.
   CurAddressState = State.get();
   CurAddressState->OutSec = Aether;
   Dot = 0;
@@ -437,6 +441,7 @@ void LinkerScript::processCommands(OutputSectionFactory &Factory) {
       }
     }
   }
+  CurAddressState = nullptr;
 }
 
 void LinkerScript::fabricateDefaultCommands() {
@@ -843,6 +848,10 @@ void LinkerScript::assignAddresses() {
   // Assign addresses as instructed by linker script SECTIONS sub-commands.
   Dot = 0;
   auto State = make_unique<AddressState>(Opt);
+  // CurAddressState captures the local AddressState and makes it accessible
+  // deliberately. This is needed as there are some cases where we cannot just
+  // thread the current state through to a lambda function created by the
+  // script parser.
   CurAddressState = State.get();
   ErrorOnMissingSection = true;
   switchTo(Aether);
@@ -861,6 +870,7 @@ void LinkerScript::assignAddresses() {
     auto *Cmd = cast<OutputSectionCommand>(Base);
     assignOffsets(Cmd);
   }
+  CurAddressState = nullptr;
 }
 
 // Creates program headers as instructed by PHDRS linker script command.

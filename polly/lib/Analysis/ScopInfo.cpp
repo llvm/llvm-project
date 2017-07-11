@@ -710,6 +710,10 @@ std::string MemoryAccess::getNewAccessRelationStr() const {
   return stringFromIslObj(NewAccessRelation);
 }
 
+std::string MemoryAccess::getAccessRelationStr() const {
+  return isl::manage(getAccessRelation()).to_str();
+}
+
 __isl_give isl_basic_map *
 MemoryAccess::createBasicAccessMap(ScopStmt *Statement) {
   isl_space *Space = isl_space_set_alloc(Statement->getIslCtx(), 0, 1);
