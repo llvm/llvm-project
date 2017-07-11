@@ -716,6 +716,7 @@ HexagonTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   bool IsStructRet    = (Outs.empty()) ? false : Outs[0].Flags.isSRet();
   MachineFunction &MF = DAG.getMachineFunction();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
   auto PtrVT = getPointerTy(MF.getDataLayout());
 
   // Check for varargs.
@@ -832,7 +833,6 @@ HexagonTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   if (NeedsArgAlign && Subtarget.hasV60TOps()) {
     DEBUG(dbgs() << "Function needs byte stack align due to call args\n");
-    MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
     // V6 vectors passed by value have 64 or 128 byte alignment depending
     // on whether we are 64 byte vector mode or 128 byte.
     bool UseHVXDbl = Subtarget.useHVXDblOps();
@@ -916,9 +916,14 @@ HexagonTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     Ops.push_back(Glue);
 
   if (IsTailCall) {
-    MF.getFrameInfo().setHasTailCall();
+    MFI.setHasTailCall();
     return DAG.getNode(HexagonISD::TC_RETURN, dl, NodeTys, Ops);
   }
+
+  // Set this here because we need to know this for "hasFP" in frame lowering.
+  // The target-independent code calls getFrameRegister before setting it, and
+  // getFrameRegister uses hasFP to determine whether the function has FP.
+  MFI.setHasCalls(true);
 
   unsigned OpCode = DoesNotReturn ? HexagonISD::CALLnr : HexagonISD::CALL;
   Chain = DAG.getNode(OpCode, dl, NodeTys, Ops);

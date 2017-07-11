@@ -181,17 +181,15 @@ static void MapRodata() {
   }
   // Map the file into shadow of .rodata sections.
   MemoryMappingLayout proc_maps(/*cache_enabled*/true);
-  uptr start, end, offset, prot;
   // Reusing the buffer 'name'.
-  while (proc_maps.Next(&start, &end, &offset, name, ARRAY_SIZE(name), &prot)) {
-    if (name[0] != 0 && name[0] != '['
-        && (prot & MemoryMappingLayout::kProtectionRead)
-        && (prot & MemoryMappingLayout::kProtectionExecute)
-        && !(prot & MemoryMappingLayout::kProtectionWrite)
-        && IsAppMem(start)) {
+  MemoryMappedSegment segment(name, ARRAY_SIZE(name));
+  while (proc_maps.Next(&segment)) {
+    if (segment.filename[0] != 0 && segment.filename[0] != '[' &&
+        segment.IsReadable() && segment.IsExecutable() &&
+        !segment.IsWritable() && IsAppMem(segment.start)) {
       // Assume it's .rodata
-      char *shadow_start = (char*)MemToShadow(start);
-      char *shadow_end = (char*)MemToShadow(end);
+      char *shadow_start = (char *)MemToShadow(segment.start);
+      char *shadow_end = (char *)MemToShadow(segment.end);
       for (char *p = shadow_start; p < shadow_end; p += marker.size()) {
         internal_mmap(p, Min<uptr>(marker.size(), shadow_end - p),
                       PROT_READ, MAP_PRIVATE | MAP_FIXED, fd, 0);

@@ -118,18 +118,16 @@ static void ProtectRange(uptr beg, uptr end) {
 void CheckAndProtect() {
   // Ensure that the binary is indeed compiled with -pie.
   MemoryMappingLayout proc_maps(true);
-  uptr p, end, prot;
-  while (proc_maps.Next(&p, &end, 0, 0, 0, &prot)) {
-    if (IsAppMem(p))
+  MemoryMappedSegment segment;
+  while (proc_maps.Next(&segment)) {
+    if (IsAppMem(segment.start)) continue;
+    if (segment.start >= HeapMemEnd() && segment.start < HeapEnd()) continue;
+    if (segment.protection == 0)  // Zero page or mprotected.
       continue;
-    if (p >= HeapMemEnd() &&
-        p < HeapEnd())
-      continue;
-    if (prot == 0)  // Zero page or mprotected.
-      continue;
-    if (p >= VdsoBeg())  // vdso
+    if (segment.start >= VdsoBeg())  // vdso
       break;
-    Printf("FATAL: ThreadSanitizer: unexpected memory mapping %p-%p\n", p, end);
+    Printf("FATAL: ThreadSanitizer: unexpected memory mapping %p-%p\n",
+           segment.start, segment.end);
     Die();
   }
 

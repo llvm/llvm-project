@@ -127,7 +127,7 @@ struct RootRegion {
 
 InternalMmapVector<RootRegion> const *GetRootRegions();
 void ScanRootRegion(Frontier *frontier, RootRegion const &region,
-                    uptr region_begin, uptr region_end, uptr prot);
+                    uptr region_begin, uptr region_end, bool is_readable);
 // Run stoptheworld while holding any platform-specific locks.
 void DoStopTheWorld(StopTheWorldCallback callback, void* argument);
 

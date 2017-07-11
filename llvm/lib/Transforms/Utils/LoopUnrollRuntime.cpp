@@ -470,8 +470,9 @@ bool llvm::UnrollRuntimeLoopRemainder(Loop *L, unsigned Count,
                                       bool UseEpilogRemainder,
                                       LoopInfo *LI, ScalarEvolution *SE,
                                       DominatorTree *DT, bool PreserveLCSSA) {
-  // for now, only unroll loops that contain a single exit
-  if (!UnrollRuntimeMultiExit && !L->getExitingBlock())
+  bool hasMultipleExitingBlocks = !L->getExitingBlock();
+  // Support only single exiting block unless UnrollRuntimeMultiExit is true.
+  if (!UnrollRuntimeMultiExit && hasMultipleExitingBlocks)
     return false;
 
   // Make sure the loop is in canonical form.
@@ -515,6 +516,13 @@ bool llvm::UnrollRuntimeLoopRemainder(Loop *L, unsigned Count,
   // UnrollRuntimeMultiExit is true. This will need updating the logic in
   // connectEpilog.
   if (!LatchExit->getSinglePredecessor())
+    return false;
+  // FIXME: We bail out of multi-exit unrolling when epilog loop is generated
+  // and L is an inner loop. This is because in presence of multiple exits, the
+  // outer loop is incorrect: we do not add the EpilogPreheader and exit to the
+  // outer loop. This is automatically handled in the prolog case, so we do not
+  // have that bug in prolog generation.
+  if (hasMultipleExitingBlocks && UseEpilogRemainder && L->getParentLoop())
     return false;
   // Use Scalar Evolution to compute the trip count. This allows more loops to
   // be unrolled than relying on induction var simplification.

@@ -250,15 +250,19 @@ unsigned HexagonInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
   case Hexagon::L2_loadri_io:
   case Hexagon::L2_loadrd_io:
   case Hexagon::V6_vL32b_ai:
+  case Hexagon::V6_vL32b_nt_ai:
   case Hexagon::V6_vL32b_ai_128B:
+  case Hexagon::V6_vL32b_nt_ai_128B:
   case Hexagon::V6_vL32Ub_ai:
   case Hexagon::V6_vL32Ub_ai_128B:
   case Hexagon::LDriw_pred:
   case Hexagon::LDriw_mod:
   case Hexagon::PS_vloadrq_ai:
   case Hexagon::PS_vloadrw_ai:
+  case Hexagon::PS_vloadrw_nt_ai:
   case Hexagon::PS_vloadrq_ai_128B:
-  case Hexagon::PS_vloadrw_ai_128B: {
+  case Hexagon::PS_vloadrw_ai_128B:
+  case Hexagon::PS_vloadrw_nt_ai_128B: {
     const MachineOperand OpFI = MI.getOperand(1);
     if (!OpFI.isFI())
       return 0;
@@ -2473,20 +2477,28 @@ bool HexagonInstrInfo::isValidOffset(unsigned Opcode, int Offset,
   switch (Opcode) {
   case Hexagon::PS_vstorerq_ai:
   case Hexagon::PS_vstorerw_ai:
+  case Hexagon::PS_vstorerw_nt_ai:
   case Hexagon::PS_vloadrq_ai:
   case Hexagon::PS_vloadrw_ai:
+  case Hexagon::PS_vloadrw_nt_ai:
   case Hexagon::V6_vL32b_ai:
   case Hexagon::V6_vS32b_ai:
+  case Hexagon::V6_vL32b_nt_ai:
+  case Hexagon::V6_vS32b_nt_ai:
   case Hexagon::V6_vL32Ub_ai:
   case Hexagon::V6_vS32Ub_ai:
     return isShiftedInt<4,6>(Offset);
 
   case Hexagon::PS_vstorerq_ai_128B:
   case Hexagon::PS_vstorerw_ai_128B:
+  case Hexagon::PS_vstorerw_nt_ai_128B:
   case Hexagon::PS_vloadrq_ai_128B:
   case Hexagon::PS_vloadrw_ai_128B:
+  case Hexagon::PS_vloadrw_nt_ai_128B:
   case Hexagon::V6_vL32b_ai_128B:
   case Hexagon::V6_vS32b_ai_128B:
+  case Hexagon::V6_vL32b_nt_ai_128B:
+  case Hexagon::V6_vS32b_nt_ai_128B:
   case Hexagon::V6_vL32Ub_ai_128B:
   case Hexagon::V6_vS32Ub_ai_128B:
     return isShiftedInt<4,7>(Offset);
@@ -3198,11 +3210,19 @@ int HexagonInstrInfo::getDotCurOp(const MachineInstr &MI) const {
     return Hexagon::V6_vL32b_cur_pi;
   case Hexagon::V6_vL32b_ai:
     return Hexagon::V6_vL32b_cur_ai;
+  case Hexagon::V6_vL32b_nt_pi:
+    return Hexagon::V6_vL32b_nt_cur_pi;
+  case Hexagon::V6_vL32b_nt_ai:
+    return Hexagon::V6_vL32b_nt_cur_ai;
   //128B
   case Hexagon::V6_vL32b_pi_128B:
     return Hexagon::V6_vL32b_cur_pi_128B;
   case Hexagon::V6_vL32b_ai_128B:
     return Hexagon::V6_vL32b_cur_ai_128B;
+  case Hexagon::V6_vL32b_nt_pi_128B:
+    return Hexagon::V6_vL32b_nt_cur_pi_128B;
+  case Hexagon::V6_vL32b_nt_ai_128B:
+    return Hexagon::V6_vL32b_nt_cur_ai_128B;
   }
   return 0;
 }
@@ -3215,11 +3235,19 @@ int HexagonInstrInfo::getNonDotCurOp(const MachineInstr &MI) const {
     return Hexagon::V6_vL32b_pi;
   case Hexagon::V6_vL32b_cur_ai:
     return Hexagon::V6_vL32b_ai;
+  case Hexagon::V6_vL32b_nt_cur_pi:
+    return Hexagon::V6_vL32b_nt_pi;
+  case Hexagon::V6_vL32b_nt_cur_ai:
+    return Hexagon::V6_vL32b_nt_ai;
   //128B
   case Hexagon::V6_vL32b_cur_pi_128B:
     return Hexagon::V6_vL32b_pi_128B;
   case Hexagon::V6_vL32b_cur_ai_128B:
     return Hexagon::V6_vL32b_ai_128B;
+  case Hexagon::V6_vL32b_nt_cur_pi_128B:
+    return Hexagon::V6_vL32b_nt_pi_128B;
+  case Hexagon::V6_vL32b_nt_cur_ai_128B:
+    return Hexagon::V6_vL32b_nt_ai_128B;
   }
   return 0;
 }

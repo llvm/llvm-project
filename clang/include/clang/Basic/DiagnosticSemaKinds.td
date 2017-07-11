@@ -8860,6 +8860,10 @@ def warn_omp_nesting_simd : Warning<
 def err_omp_orphaned_device_directive : Error<
   "orphaned 'omp %0' directives are prohibited"
   "; perhaps you forget to enclose the directive into a %select{|||target |teams }1region?">;
+def err_omp_reduction_non_addressable_expression : Error<
+  "expected addressable reduction item for the task-based directives">;
+def err_omp_reduction_with_nogroup : Error<
+  "'reduction' clause cannot be used with 'nogroup' clause">;
 } // end of OpenMP category
 
 let CategoryName = "Related Result Type Issue" in {

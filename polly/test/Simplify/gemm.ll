@@ -13,12 +13,6 @@
 ;    }
 
 ; CHECK:      After accesses {
-; CHECK-NEXT:     Stmt_bb8
-; CHECK-NEXT:             ReadAccess :=	[Reduction Type: NONE] [Scalar: 0]
-; CHECK-NEXT:                 { Stmt_bb8[i0, i1] -> MemRef_C[i0, i1] };
-; CHECK-NEXT:             MustWriteAccess :=	[Reduction Type: NONE] [Scalar: 1]
-; CHECK-NEXT:                 { Stmt_bb8[i0, i1] -> MemRef_tmp_0__phi[] };
-; CHECK-NEXT:            new: { Stmt_bb8[i0, i1] -> MemRef_C[i0, i1] };
 ; CHECK-NEXT:     Stmt_bb10
 ; CHECK-NEXT:             ReadAccess :=	[Reduction Type: NONE] [Scalar: 1]
 ; CHECK-NEXT:                 { Stmt_bb10[i0, i1, i2] -> MemRef_tmp_0__phi[] };

@@ -29,6 +29,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdlib>
+#include <new>
 
 #if defined(HAVE_UNISTD_H)
 # include <unistd.h>
@@ -42,8 +43,11 @@ using namespace llvm;
 
 static fatal_error_handler_t ErrorHandler = nullptr;
 static void *ErrorHandlerUserData = nullptr;
-
 static ManagedStatic<sys::Mutex> ErrorHandlerMutex;
+
+static fatal_error_handler_t BadAllocErrorHandler = nullptr;
+static void *BadAllocErrorHandlerUserData = nullptr;
+static ManagedStatic<sys::Mutex> BadAllocErrorHandlerMutex;
 
 void llvm::install_fatal_error_handler(fatal_error_handler_t handler,
                                        void *user_data) {
@@ -102,6 +106,45 @@ void llvm::report_fatal_error(const Twine &Reason, bool GenCrashDiag) {
   sys::RunInterruptHandlers();
 
   exit(1);
+}
+
+void llvm::install_bad_alloc_error_handler(fatal_error_handler_t handler,
+                                           void *user_data) {
+  MutexGuard Lock(*BadAllocErrorHandlerMutex);
+  assert(!ErrorHandler && "Bad alloc error handler already registered!\n");
+  BadAllocErrorHandler = handler;
+  BadAllocErrorHandlerUserData = user_data;
+}
+
+void llvm::remove_bad_alloc_error_handler() {
+  MutexGuard Lock(*BadAllocErrorHandlerMutex);
+  BadAllocErrorHandler = nullptr;
+  BadAllocErrorHandlerUserData = nullptr;
+}
+
+void llvm::report_bad_alloc_error(const char *Reason, bool GenCrashDiag) {
+  fatal_error_handler_t Handler = nullptr;
+  void *HandlerData = nullptr;
+  {
+    // Only acquire the mutex while reading the handler, so as not to invoke a
+    // user-supplied callback under a lock.
+    MutexGuard Lock(*BadAllocErrorHandlerMutex);
+    Handler = BadAllocErrorHandler;
+    HandlerData = BadAllocErrorHandlerUserData;
+  }
+
+  if (Handler) {
+    Handler(HandlerData, Reason, GenCrashDiag);
+    llvm_unreachable("bad alloc handler should not return");
+  }
+
+#ifdef LLVM_ENABLE_EXCEPTIONS
+  // If exceptions are enabled, make OOM in malloc look like OOM in new.
+  throw std::bad_alloc();
+#else
+  // Otherwise, fall back to the normal fatal error handler.
+  report_fatal_error("out of memory: " + Twine(Reason));
+#endif
 }
 
 void llvm::llvm_unreachable_internal(const char *msg, const char *file,

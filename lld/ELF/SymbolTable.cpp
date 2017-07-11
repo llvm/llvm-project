@@ -231,7 +231,6 @@ std::pair<Symbol *, bool> SymbolTable<ELFT>::insert(StringRef Name) {
   Symbol *Sym;
   if (IsNew) {
     Sym = make<Symbol>();
-    Sym->InVersionScript = false;
     Sym->Binding = STB_WEAK;
     Sym->Visibility = STV_DEFAULT;
     Sym->IsUsedInRegularObj = false;
@@ -697,10 +696,9 @@ void SymbolTable<ELFT>::assignExactVersion(SymbolVersion Ver, uint16_t VersionId
   // Assign the version.
   for (SymbolBody *B : Syms) {
     Symbol *Sym = B->symbol();
-    if (Sym->InVersionScript)
+    if (Sym->VersionId != Config->DefaultSymbolVersion)
       warn("duplicate symbol '" + Ver.Name + "' in version script");
     Sym->VersionId = VersionId;
-    Sym->InVersionScript = true;
   }
 }
 

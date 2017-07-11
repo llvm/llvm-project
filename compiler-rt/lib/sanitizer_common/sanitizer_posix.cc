@@ -231,13 +231,12 @@ static inline bool IntervalsAreSeparate(uptr start1, uptr end1,
 // memory).
 bool MemoryRangeIsAvailable(uptr range_start, uptr range_end) {
   MemoryMappingLayout proc_maps(/*cache_enabled*/true);
-  uptr start, end;
-  while (proc_maps.Next(&start, &end,
-                        /*offset*/nullptr, /*filename*/nullptr,
-                        /*filename_size*/0, /*protection*/nullptr)) {
-    if (start == end) continue;  // Empty range.
-    CHECK_NE(0, end);
-    if (!IntervalsAreSeparate(start, end - 1, range_start, range_end))
+  MemoryMappedSegment segment;
+  while (proc_maps.Next(&segment)) {
+    if (segment.start == segment.end) continue;  // Empty range.
+    CHECK_NE(0, segment.end);
+    if (!IntervalsAreSeparate(segment.start, segment.end - 1, range_start,
+                              range_end))
       return false;
   }
   return true;
@@ -245,13 +244,13 @@ bool MemoryRangeIsAvailable(uptr range_start, uptr range_end) {
 
 void DumpProcessMap() {
   MemoryMappingLayout proc_maps(/*cache_enabled*/true);
-  uptr start, end;
   const sptr kBufSize = 4095;
   char *filename = (char*)MmapOrDie(kBufSize, __func__);
+  MemoryMappedSegment segment(filename, kBufSize);
   Report("Process memory map follows:\n");
-  while (proc_maps.Next(&start, &end, /* file_offset */nullptr,
-                        filename, kBufSize, /* protection */nullptr)) {
-    Printf("\t%p-%p\t%s\n", (void*)start, (void*)end, filename);
+  while (proc_maps.Next(&segment)) {
+    Printf("\t%p-%p\t%s\n", (void *)segment.start, (void *)segment.end,
+           segment.filename);
   }
   Report("End of process memory map.\n");
   UnmapOrDie(filename, kBufSize);
@@ -281,14 +280,14 @@ void ReportFile::Write(const char *buffer, uptr length) {
 }
 
 bool GetCodeRangeForFile(const char *module, uptr *start, uptr *end) {
-  uptr s, e, off, prot;
-  InternalScopedString buff(kMaxPathLength);
   MemoryMappingLayout proc_maps(/*cache_enabled*/false);
-  while (proc_maps.Next(&s, &e, &off, buff.data(), buff.size(), &prot)) {
-    if ((prot & MemoryMappingLayout::kProtectionExecute) != 0
-        && internal_strcmp(module, buff.data()) == 0) {
-      *start = s;
-      *end = e;
+  InternalScopedString buff(kMaxPathLength);
+  MemoryMappedSegment segment(buff.data(), kMaxPathLength);
+  while (proc_maps.Next(&segment)) {
+    if (segment.IsExecutable() &&
+        internal_strcmp(module, segment.filename) == 0) {
+      *start = segment.start;
+      *end = segment.end;
       return true;
     }
   }

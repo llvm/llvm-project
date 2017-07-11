@@ -272,6 +272,13 @@ public:
 
     return 16;
   }
+
+  // DarwinABI has a 224-byte red zone. PPC32 SVR4ABI(Non-DarwinABI) has no
+  // red zone and PPC64 SVR4ABI has a 288-byte red zone.
+  unsigned  getRedZoneSize() const {
+    return isDarwinABI() ? 224 : (isPPC64() ? 288 : 0);
+  }
+
   bool hasHTM() const { return HasHTM; }
   bool hasFusion() const { return HasFusion; }
   bool hasFloat128() const { return HasFloat128; }

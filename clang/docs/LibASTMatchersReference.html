@@ -1872,6 +1872,14 @@ floatLiteral(equals(3.14)) and floatLiteral(equals(314e-2))
 integerLiteral(equals(42))
   matches 42
 
+Note that you cannot directly match a negative numeric literal because the
+minus sign is not part of the literal: It is a unary operator whose operand
+is the positive numeric literal. Instead, you must use a unaryOperator()
+matcher to match the minus sign:
+
+unaryOperator(hasOperatorName("-"),
+              hasUnaryOperand(integerLiteral(equals(13))))
+
 Usable as: Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CharacterLiteral.html">CharacterLiteral</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXBoolLiteralExpr.html">CXXBoolLiteralExpr</a>&gt;,
            Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1FloatingLiteral.html">FloatingLiteral</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1IntegerLiteral.html">IntegerLiteral</a>&gt;
 </pre></td></tr>
@@ -2327,6 +2335,14 @@ floatLiteral(equals(3.14)) and floatLiteral(equals(314e-2))
 integerLiteral(equals(42))
   matches 42
 
+Note that you cannot directly match a negative numeric literal because the
+minus sign is not part of the literal: It is a unary operator whose operand
+is the positive numeric literal. Instead, you must use a unaryOperator()
+matcher to match the minus sign:
+
+unaryOperator(hasOperatorName("-"),
+              hasUnaryOperand(integerLiteral(equals(13))))
+
 Usable as: Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CharacterLiteral.html">CharacterLiteral</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXBoolLiteralExpr.html">CXXBoolLiteralExpr</a>&gt;,
            Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1FloatingLiteral.html">FloatingLiteral</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1IntegerLiteral.html">IntegerLiteral</a>&gt;
 </pre></td></tr>
@@ -2582,6 +2598,14 @@ floatLiteral(equals(3.14)) and floatLiteral(equals(314e-2))
   match 3.14
 integerLiteral(equals(42))
   matches 42
+
+Note that you cannot directly match a negative numeric literal because the
+minus sign is not part of the literal: It is a unary operator whose operand
+is the positive numeric literal. Instead, you must use a unaryOperator()
+matcher to match the minus sign:
+
+unaryOperator(hasOperatorName("-"),
+              hasUnaryOperand(integerLiteral(equals(13))))
 
 Usable as: Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CharacterLiteral.html">CharacterLiteral</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXBoolLiteralExpr.html">CXXBoolLiteralExpr</a>&gt;,
            Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1FloatingLiteral.html">FloatingLiteral</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1IntegerLiteral.html">IntegerLiteral</a>&gt;
@@ -2865,6 +2889,14 @@ floatLiteral(equals(3.14)) and floatLiteral(equals(314e-2))
   match 3.14
 integerLiteral(equals(42))
   matches 42
+
+Note that you cannot directly match a negative numeric literal because the
+minus sign is not part of the literal: It is a unary operator whose operand
+is the positive numeric literal. Instead, you must use a unaryOperator()
+matcher to match the minus sign:
+
+unaryOperator(hasOperatorName("-"),
+              hasUnaryOperand(integerLiteral(equals(13))))
 
 Usable as: Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CharacterLiteral.html">CharacterLiteral</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXBoolLiteralExpr.html">CXXBoolLiteralExpr</a>&gt;,
            Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1FloatingLiteral.html">FloatingLiteral</a>&gt;, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1IntegerLiteral.html">IntegerLiteral</a>&gt;
