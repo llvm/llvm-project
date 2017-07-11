@@ -512,7 +512,7 @@ ConstantInt *ConstantInt::getFalse(LLVMContext &Context) {
 }
 
 Constant *ConstantInt::getTrue(Type *Ty) {
-  assert(Ty->getScalarType()->isIntegerTy(1) && "Type not i1 or vector of i1.");
+  assert(Ty->isIntOrIntVectorTy(1) && "Type not i1 or vector of i1.");
   ConstantInt *TrueC = ConstantInt::getTrue(Ty->getContext());
   if (auto *VTy = dyn_cast<VectorType>(Ty))
     return ConstantVector::getSplat(VTy->getNumElements(), TrueC);
@@ -520,7 +520,7 @@ Constant *ConstantInt::getTrue(Type *Ty) {
 }
 
 Constant *ConstantInt::getFalse(Type *Ty) {
-  assert(Ty->getScalarType()->isIntegerTy(1) && "Type not i1 or vector of i1.");
+  assert(Ty->isIntOrIntVectorTy(1) && "Type not i1 or vector of i1.");
   ConstantInt *FalseC = ConstantInt::getFalse(Ty->getContext());
   if (auto *VTy = dyn_cast<VectorType>(Ty))
     return ConstantVector::getSplat(VTy->getNumElements(), FalseC);
@@ -1635,9 +1635,9 @@ Constant *ConstantExpr::getFPToSI(Constant *C, Type *Ty, bool OnlyIfReduced) {
 
 Constant *ConstantExpr::getPtrToInt(Constant *C, Type *DstTy,
                                     bool OnlyIfReduced) {
-  assert(C->getType()->getScalarType()->isPointerTy() &&
+  assert(C->getType()->isPtrOrPtrVectorTy() &&
          "PtrToInt source must be pointer or pointer vector");
-  assert(DstTy->getScalarType()->isIntegerTy() && 
+  assert(DstTy->isIntOrIntVectorTy() &&
          "PtrToInt destination must be integer or integer vector");
   assert(isa<VectorType>(C->getType()) == isa<VectorType>(DstTy));
   if (isa<VectorType>(C->getType()))
@@ -1648,9 +1648,9 @@ Constant *ConstantExpr::getPtrToInt(Constant *C, Type *DstTy,
 
 Constant *ConstantExpr::getIntToPtr(Constant *C, Type *DstTy,
                                     bool OnlyIfReduced) {
-  assert(C->getType()->getScalarType()->isIntegerTy() &&
+  assert(C->getType()->isIntOrIntVectorTy() &&
          "IntToPtr source must be integer or integer vector");
-  assert(DstTy->getScalarType()->isPointerTy() &&
+  assert(DstTy->isPtrOrPtrVectorTy() &&
          "IntToPtr destination must be a pointer or pointer vector");
   assert(isa<VectorType>(C->getType()) == isa<VectorType>(DstTy));
   if (isa<VectorType>(C->getType()))
@@ -2380,32 +2380,32 @@ void ConstantDataSequential::destroyConstantImpl() {
 Constant *ConstantDataArray::get(LLVMContext &Context, ArrayRef<uint8_t> Elts) {
   Type *Ty = ArrayType::get(Type::getInt8Ty(Context), Elts.size());
   const char *Data = reinterpret_cast<const char *>(Elts.data());
-  return getImpl(StringRef(const_cast<char *>(Data), Elts.size()*1), Ty);
+  return getImpl(StringRef(Data, Elts.size() * 1), Ty);
 }
 Constant *ConstantDataArray::get(LLVMContext &Context, ArrayRef<uint16_t> Elts){
   Type *Ty = ArrayType::get(Type::getInt16Ty(Context), Elts.size());
   const char *Data = reinterpret_cast<const char *>(Elts.data());
-  return getImpl(StringRef(const_cast<char *>(Data), Elts.size()*2), Ty);
+  return getImpl(StringRef(Data, Elts.size() * 2), Ty);
 }
 Constant *ConstantDataArray::get(LLVMContext &Context, ArrayRef<uint32_t> Elts){
   Type *Ty = ArrayType::get(Type::getInt32Ty(Context), Elts.size());
   const char *Data = reinterpret_cast<const char *>(Elts.data());
-  return getImpl(StringRef(const_cast<char *>(Data), Elts.size()*4), Ty);
+  return getImpl(StringRef(Data, Elts.size() * 4), Ty);
 }
 Constant *ConstantDataArray::get(LLVMContext &Context, ArrayRef<uint64_t> Elts){
   Type *Ty = ArrayType::get(Type::getInt64Ty(Context), Elts.size());
   const char *Data = reinterpret_cast<const char *>(Elts.data());
-  return getImpl(StringRef(const_cast<char *>(Data), Elts.size()*8), Ty);
+  return getImpl(StringRef(Data, Elts.size() * 8), Ty);
 }
 Constant *ConstantDataArray::get(LLVMContext &Context, ArrayRef<float> Elts) {
   Type *Ty = ArrayType::get(Type::getFloatTy(Context), Elts.size());
   const char *Data = reinterpret_cast<const char *>(Elts.data());
-  return getImpl(StringRef(const_cast<char *>(Data), Elts.size()*4), Ty);
+  return getImpl(StringRef(Data, Elts.size() * 4), Ty);
 }
 Constant *ConstantDataArray::get(LLVMContext &Context, ArrayRef<double> Elts) {
   Type *Ty = ArrayType::get(Type::getDoubleTy(Context), Elts.size());
   const char *Data = reinterpret_cast<const char *>(Elts.data());
-  return getImpl(StringRef(const_cast<char *>(Data), Elts.size() * 8), Ty);
+  return getImpl(StringRef(Data, Elts.size() * 8), Ty);
 }
 
 /// getFP() constructors - Return a constant with array type with an element
@@ -2417,27 +2417,26 @@ Constant *ConstantDataArray::getFP(LLVMContext &Context,
                                    ArrayRef<uint16_t> Elts) {
   Type *Ty = ArrayType::get(Type::getHalfTy(Context), Elts.size());
   const char *Data = reinterpret_cast<const char *>(Elts.data());
-  return getImpl(StringRef(const_cast<char *>(Data), Elts.size() * 2), Ty);
+  return getImpl(StringRef(Data, Elts.size() * 2), Ty);
 }
 Constant *ConstantDataArray::getFP(LLVMContext &Context,
                                    ArrayRef<uint32_t> Elts) {
   Type *Ty = ArrayType::get(Type::getFloatTy(Context), Elts.size());
   const char *Data = reinterpret_cast<const char *>(Elts.data());
-  return getImpl(StringRef(const_cast<char *>(Data), Elts.size() * 4), Ty);
+  return getImpl(StringRef(Data, Elts.size() * 4), Ty);
 }
 Constant *ConstantDataArray::getFP(LLVMContext &Context,
                                    ArrayRef<uint64_t> Elts) {
   Type *Ty = ArrayType::get(Type::getDoubleTy(Context), Elts.size());
   const char *Data = reinterpret_cast<const char *>(Elts.data());
-  return getImpl(StringRef(const_cast<char *>(Data), Elts.size() * 8), Ty);
+  return getImpl(StringRef(Data, Elts.size() * 8), Ty);
 }
 
 Constant *ConstantDataArray::getString(LLVMContext &Context,
                                        StringRef Str, bool AddNull) {
   if (!AddNull) {
     const uint8_t *Data = reinterpret_cast<const uint8_t *>(Str.data());
-    return get(Context, makeArrayRef(const_cast<uint8_t *>(Data),
-               Str.size()));
+    return get(Context, makeArrayRef(Data, Str.size()));
   }
 
   SmallVector<uint8_t, 64> ElementVals;
@@ -2452,32 +2451,32 @@ Constant *ConstantDataArray::getString(LLVMContext &Context,
 Constant *ConstantDataVector::get(LLVMContext &Context, ArrayRef<uint8_t> Elts){
   Type *Ty = VectorType::get(Type::getInt8Ty(Context), Elts.size());
   const char *Data = reinterpret_cast<const char *>(Elts.data());
-  return getImpl(StringRef(const_cast<char *>(Data), Elts.size()*1), Ty);
+  return getImpl(StringRef(Data, Elts.size() * 1), Ty);
 }
 Constant *ConstantDataVector::get(LLVMContext &Context, ArrayRef<uint16_t> Elts){
   Type *Ty = VectorType::get(Type::getInt16Ty(Context), Elts.size());
   const char *Data = reinterpret_cast<const char *>(Elts.data());
-  return getImpl(StringRef(const_cast<char *>(Data), Elts.size()*2), Ty);
+  return getImpl(StringRef(Data, Elts.size() * 2), Ty);
 }
 Constant *ConstantDataVector::get(LLVMContext &Context, ArrayRef<uint32_t> Elts){
   Type *Ty = VectorType::get(Type::getInt32Ty(Context), Elts.size());
   const char *Data = reinterpret_cast<const char *>(Elts.data());
-  return getImpl(StringRef(const_cast<char *>(Data), Elts.size()*4), Ty);
+  return getImpl(StringRef(Data, Elts.size() * 4), Ty);
 }
 Constant *ConstantDataVector::get(LLVMContext &Context, ArrayRef<uint64_t> Elts){
   Type *Ty = VectorType::get(Type::getInt64Ty(Context), Elts.size());
   const char *Data = reinterpret_cast<const char *>(Elts.data());
-  return getImpl(StringRef(const_cast<char *>(Data), Elts.size()*8), Ty);
+  return getImpl(StringRef(Data, Elts.size() * 8), Ty);
 }
 Constant *ConstantDataVector::get(LLVMContext &Context, ArrayRef<float> Elts) {
   Type *Ty = VectorType::get(Type::getFloatTy(Context), Elts.size());
   const char *Data = reinterpret_cast<const char *>(Elts.data());
-  return getImpl(StringRef(const_cast<char *>(Data), Elts.size()*4), Ty);
+  return getImpl(StringRef(Data, Elts.size() * 4), Ty);
 }
 Constant *ConstantDataVector::get(LLVMContext &Context, ArrayRef<double> Elts) {
   Type *Ty = VectorType::get(Type::getDoubleTy(Context), Elts.size());
   const char *Data = reinterpret_cast<const char *>(Elts.data());
-  return getImpl(StringRef(const_cast<char *>(Data), Elts.size() * 8), Ty);
+  return getImpl(StringRef(Data, Elts.size() * 8), Ty);
 }
 
 /// getFP() constructors - Return a constant with vector type with an element
@@ -2489,19 +2488,19 @@ Constant *ConstantDataVector::getFP(LLVMContext &Context,
                                     ArrayRef<uint16_t> Elts) {
   Type *Ty = VectorType::get(Type::getHalfTy(Context), Elts.size());
   const char *Data = reinterpret_cast<const char *>(Elts.data());
-  return getImpl(StringRef(const_cast<char *>(Data), Elts.size() * 2), Ty);
+  return getImpl(StringRef(Data, Elts.size() * 2), Ty);
 }
 Constant *ConstantDataVector::getFP(LLVMContext &Context,
                                     ArrayRef<uint32_t> Elts) {
   Type *Ty = VectorType::get(Type::getFloatTy(Context), Elts.size());
   const char *Data = reinterpret_cast<const char *>(Elts.data());
-  return getImpl(StringRef(const_cast<char *>(Data), Elts.size() * 4), Ty);
+  return getImpl(StringRef(Data, Elts.size() * 4), Ty);
 }
 Constant *ConstantDataVector::getFP(LLVMContext &Context,
                                     ArrayRef<uint64_t> Elts) {
   Type *Ty = VectorType::get(Type::getDoubleTy(Context), Elts.size());
   const char *Data = reinterpret_cast<const char *>(Elts.data());
-  return getImpl(StringRef(const_cast<char *>(Data), Elts.size() * 8), Ty);
+  return getImpl(StringRef(Data, Elts.size() * 8), Ty);
 }
 
 Constant *ConstantDataVector::getSplat(unsigned NumElts, Constant *V) {
@@ -2556,13 +2555,13 @@ uint64_t ConstantDataSequential::getElementAsInteger(unsigned Elt) const {
   switch (getElementType()->getIntegerBitWidth()) {
   default: llvm_unreachable("Invalid bitwidth for CDS");
   case 8:
-    return *const_cast<uint8_t *>(reinterpret_cast<const uint8_t *>(EltPtr));
+    return *reinterpret_cast<const uint8_t *>(EltPtr);
   case 16:
-    return *const_cast<uint16_t *>(reinterpret_cast<const uint16_t *>(EltPtr));
+    return *reinterpret_cast<const uint16_t *>(EltPtr);
   case 32:
-    return *const_cast<uint32_t *>(reinterpret_cast<const uint32_t *>(EltPtr));
+    return *reinterpret_cast<const uint32_t *>(EltPtr);
   case 64:
-    return *const_cast<uint64_t *>(reinterpret_cast<const uint64_t *>(EltPtr));
+    return *reinterpret_cast<const uint64_t *>(EltPtr);
   }
 }
 
@@ -2590,16 +2589,13 @@ APFloat ConstantDataSequential::getElementAsAPFloat(unsigned Elt) const {
 float ConstantDataSequential::getElementAsFloat(unsigned Elt) const {
   assert(getElementType()->isFloatTy() &&
          "Accessor can only be used when element is a 'float'");
-  const float *EltPtr = reinterpret_cast<const float *>(getElementPointer(Elt));
-  return *const_cast<float *>(EltPtr);
+  return *reinterpret_cast<const float *>(getElementPointer(Elt));
 }
 
 double ConstantDataSequential::getElementAsDouble(unsigned Elt) const {
   assert(getElementType()->isDoubleTy() &&
          "Accessor can only be used when element is a 'float'");
-  const double *EltPtr =
-      reinterpret_cast<const double *>(getElementPointer(Elt));
-  return *const_cast<double *>(EltPtr);
+  return *reinterpret_cast<const double *>(getElementPointer(Elt));
 }
 
 Constant *ConstantDataSequential::getElementAsConstant(unsigned Elt) const {

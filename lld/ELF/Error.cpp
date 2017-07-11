@@ -27,7 +27,6 @@ using namespace lld::elf;
 
 uint64_t elf::ErrorCount;
 raw_ostream *elf::ErrorOS;
-StringRef elf::Argv0;
 
 // The functions defined in this file can be called from multiple threads,
 // but outs() or errs() are not thread-safe. We protect them using a mutex.
@@ -46,7 +45,7 @@ static void newline(const Twine &Msg) {
 }
 
 static void print(StringRef S, raw_ostream::Colors C) {
-  *ErrorOS << Argv0 + ": ";
+  *ErrorOS << Config->Argv[0] << ": ";
   if (Config->ColorDiagnostics) {
     ErrorOS->changeColor(C, true);
     *ErrorOS << S;
@@ -59,7 +58,7 @@ static void print(StringRef S, raw_ostream::Colors C) {
 void elf::log(const Twine &Msg) {
   if (Config->Verbose) {
     std::lock_guard<std::mutex> Lock(Mu);
-    outs() << Argv0 << ": " << Msg << "\n";
+    outs() << Config->Argv[0] << ": " << Msg << "\n";
     outs().flush();
   }
 }

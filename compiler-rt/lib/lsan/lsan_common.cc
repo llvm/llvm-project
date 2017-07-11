@@ -74,6 +74,10 @@ static const char kStdSuppressions[] =
   // definition.
   "leak:*pthread_exit*\n"
 #endif  // SANITIZER_SUPPRESS_LEAK_ON_PTHREAD_EXIT
+#if SANITIZER_MAC
+  // For Darwin and os_log/os_trace: https://reviews.llvm.org/D35173
+  "leak:*_os_trace*\n"
+#endif
   // TLS leak in some glibc versions, described in
   // https://sourceware.org/bugzilla/show_bug.cgi?id=12650.
   "leak:*tls_get_addr*\n";
@@ -301,11 +305,10 @@ static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
 }
 
 void ScanRootRegion(Frontier *frontier, const RootRegion &root_region,
-                    uptr region_begin, uptr region_end, uptr prot) {
+                    uptr region_begin, uptr region_end, bool is_readable) {
   uptr intersection_begin = Max(root_region.begin, region_begin);
   uptr intersection_end = Min(region_end, root_region.begin + root_region.size);
   if (intersection_begin >= intersection_end) return;
-  bool is_readable = prot & MemoryMappingLayout::kProtectionRead;
   LOG_POINTERS("Root region %p-%p intersects with mapped region %p-%p (%s)\n",
                root_region.begin, root_region.begin + root_region.size,
                region_begin, region_end,
@@ -318,11 +321,10 @@ void ScanRootRegion(Frontier *frontier, const RootRegion &root_region,
 static void ProcessRootRegion(Frontier *frontier,
                               const RootRegion &root_region) {
   MemoryMappingLayout proc_maps(/*cache_enabled*/ true);
-  uptr begin, end, prot;
-  while (proc_maps.Next(&begin, &end,
-                        /*offset*/ nullptr, /*filename*/ nullptr,
-                        /*filename_size*/ 0, &prot)) {
-    ScanRootRegion(frontier, root_region, begin, end, prot);
+  MemoryMappedSegment segment;
+  while (proc_maps.Next(&segment)) {
+    ScanRootRegion(frontier, root_region, segment.start, segment.end,
+                   segment.IsReadable());
   }
 }
 

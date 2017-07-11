@@ -269,7 +269,7 @@ Phi nodes:
 #. Values that are implicit in the structure of your AST, such as the
    Phi node in this case.
 
-In `Chapter 7 <LangImpl7.html>`_ of this tutorial ("mutable variables"),
+In `Chapter 7 <LangImpl07.html>`_ of this tutorial ("mutable variables"),
 we'll talk about #1 in depth. For now, just believe me that you don't
 need SSA construction to handle this case. For #2, you have the choice
 of using the techniques that we will describe for #1, or you can insert
@@ -790,7 +790,7 @@ of the tutorial. In this chapter we added two control flow constructs,
 and used them to motivate a couple of aspects of the LLVM IR that are
 important for front-end implementors to know. In the next chapter of our
 saga, we will get a bit crazier and add `user-defined
-operators <LangImpl6.html>`_ to our poor innocent language.
+operators <LangImpl06.html>`_ to our poor innocent language.
 
 Full Code Listing
 =================

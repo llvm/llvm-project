@@ -666,6 +666,12 @@ TEST(Matcher, IntegerLiterals) {
   EXPECT_TRUE(notMatches("int i = 'a';", HasIntLiteral));
   EXPECT_TRUE(notMatches("int i = 1e10;", HasIntLiteral));
   EXPECT_TRUE(notMatches("int i = 10.0;", HasIntLiteral));
+
+  // Negative integers.
+  EXPECT_TRUE(
+      matches("int i = -10;",
+              unaryOperator(hasOperatorName("-"),
+                            hasUnaryOperand(integerLiteral(equals(10))))));
 }
 
 TEST(Matcher, FloatLiterals) {

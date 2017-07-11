@@ -713,7 +713,8 @@ bool SITargetLowering::isLegalAddressingMode(const DataLayout &DL,
   }
 }
 
-bool SITargetLowering::canMergeStoresTo(unsigned AS, EVT MemVT) const {
+bool SITargetLowering::canMergeStoresTo(unsigned AS, EVT MemVT,
+                                        const SelectionDAG &DAG) const {
   if (AS == AMDGPUASI.GLOBAL_ADDRESS || AS == AMDGPUASI.FLAT_ADDRESS) {
     return (MemVT.getSizeInBits() <= 4 * 32);
   } else if (AS == AMDGPUASI.PRIVATE_ADDRESS) {
@@ -2374,20 +2375,16 @@ void SITargetLowering::ReplaceNodeResults(SDNode *N,
   }
   case ISD::INTRINSIC_WO_CHAIN: {
     unsigned IID = cast<ConstantSDNode>(N->getOperand(0))->getZExtValue();
-    switch (IID) {
-    case Intrinsic::amdgcn_cvt_pkrtz: {
+    if (IID == Intrinsic::amdgcn_cvt_pkrtz) {
       SDValue Src0 = N->getOperand(1);
       SDValue Src1 = N->getOperand(2);
       SDLoc SL(N);
       SDValue Cvt = DAG.getNode(AMDGPUISD::CVT_PKRTZ_F16_F32, SL, MVT::i32,
                                 Src0, Src1);
-
       Results.push_back(DAG.getNode(ISD::BITCAST, SL, MVT::v2f16, Cvt));
       return;
     }
-    default:
-      break;
-    }
+    break;
   }
   case ISD::SELECT: {
     SDLoc SL(N);

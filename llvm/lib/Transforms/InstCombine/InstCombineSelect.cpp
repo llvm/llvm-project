@@ -1021,7 +1021,7 @@ Instruction *InstCombiner::foldSelectExtConst(SelectInst &Sel) {
   // TODO: Handle larger types? That requires adjusting FoldOpIntoSelect too.
   Value *X = ExtInst->getOperand(0);
   Type *SmallType = X->getType();
-  if (!SmallType->getScalarType()->isIntegerTy(1))
+  if (!SmallType->isIntOrIntVectorTy(1))
     return nullptr;
 
   Constant *C;
@@ -1181,7 +1181,7 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
     return &SI;
   }
 
-  if (SelType->getScalarType()->isIntegerTy(1) &&
+  if (SelType->isIntOrIntVectorTy(1) &&
       TrueVal->getType() == CondVal->getType()) {
     if (match(TrueVal, m_One())) {
       // Change: A = select B, true, C --> A = or B, C
@@ -1223,7 +1223,8 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
   // select i1 %c, <2 x i8> <1, 1>, <2 x i8> <0, 0>
   // because that may need 3 instructions to splat the condition value:
   // extend, insertelement, shufflevector.
-  if (CondVal->getType()->isVectorTy() == SelType->isVectorTy()) {
+  if (SelType->isIntOrIntVectorTy() &&
+      CondVal->getType()->isVectorTy() == SelType->isVectorTy()) {
     // select C, 1, 0 -> zext C to int
     if (match(TrueVal, m_One()) && match(FalseVal, m_Zero()))
       return new ZExtInst(CondVal, SelType);

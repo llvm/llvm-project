@@ -456,8 +456,10 @@ updatePostorderSequenceForEdgeInsertion(
   return make_range(SCCs.begin() + SourceIdx, SCCs.begin() + TargetIdx);
 }
 
-SmallVector<LazyCallGraph::SCC *, 1>
-LazyCallGraph::RefSCC::switchInternalEdgeToCall(Node &SourceN, Node &TargetN) {
+bool
+LazyCallGraph::RefSCC::switchInternalEdgeToCall(
+    Node &SourceN, Node &TargetN,
+    function_ref<void(ArrayRef<SCC *> MergeSCCs)> MergeCB) {
   assert(!(*SourceN)[TargetN].isCall() && "Must start with a ref edge!");
   SmallVector<SCC *, 1> DeletedSCCs;
 
@@ -475,7 +477,7 @@ LazyCallGraph::RefSCC::switchInternalEdgeToCall(Node &SourceN, Node &TargetN) {
   // we've just added more connectivity.
   if (&SourceSCC == &TargetSCC) {
     SourceN->setEdgeKind(TargetN, Edge::Call);
-    return DeletedSCCs;
+    return false; // No new cycle.
   }
 
   // At this point we leverage the postorder list of SCCs to detect when the
@@ -488,7 +490,7 @@ LazyCallGraph::RefSCC::switchInternalEdgeToCall(Node &SourceN, Node &TargetN) {
   int TargetIdx = SCCIndices[&TargetSCC];
   if (TargetIdx < SourceIdx) {
     SourceN->setEdgeKind(TargetN, Edge::Call);
-    return DeletedSCCs;
+    return false; // No new cycle.
   }
 
   // Compute the SCCs which (transitively) reach the source.
@@ -555,12 +557,16 @@ LazyCallGraph::RefSCC::switchInternalEdgeToCall(Node &SourceN, Node &TargetN) {
       SourceSCC, TargetSCC, SCCs, SCCIndices, ComputeSourceConnectedSet,
       ComputeTargetConnectedSet);
 
+  // Run the user's callback on the merged SCCs before we actually merge them.
+  if (MergeCB)
+    MergeCB(makeArrayRef(MergeRange.begin(), MergeRange.end()));
+
   // If the merge range is empty, then adding the edge didn't actually form any
   // new cycles. We're done.
   if (MergeRange.begin() == MergeRange.end()) {
     // Now that the SCC structure is finalized, flip the kind to call.
     SourceN->setEdgeKind(TargetN, Edge::Call);
-    return DeletedSCCs;
+    return false; // No new cycle.
   }
 
 #ifndef NDEBUG
@@ -596,8 +602,8 @@ LazyCallGraph::RefSCC::switchInternalEdgeToCall(Node &SourceN, Node &TargetN) {
   // Now that the SCC structure is finalized, flip the kind to call.
   SourceN->setEdgeKind(TargetN, Edge::Call);
 
-  // And we're done!
-  return DeletedSCCs;
+  // And we're done, but we did form a new cycle.
+  return true;
 }
 
 void LazyCallGraph::RefSCC::switchTrivialInternalEdgeToRef(Node &SourceN,

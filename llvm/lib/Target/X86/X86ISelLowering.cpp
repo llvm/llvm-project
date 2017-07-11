@@ -35027,7 +35027,19 @@ static SDValue combineAddOrSubToADCOrSBB(SDNode *N, SelectionDAG &DAG) {
                          Y.getOperand(1));
     }
 
-    // TODO: Handle COND_BE if it was produced by X86ISD::SUB similar to below.
+    SDValue EFLAGS = Y->getOperand(1);
+    if (CC == X86::COND_BE && EFLAGS.getOpcode() == X86ISD::SUB &&
+        EFLAGS.hasOneUse() && EFLAGS.getValueType().isInteger() &&
+        !isa<ConstantSDNode>(EFLAGS.getOperand(1))) {
+      // Swap the operands of a SUB, and we have the same pattern as above.
+      // -1 + SETBE (SUB A, B) --> -1 + SETAE (SUB B, A) --> SBB %eax, %eax
+      SDValue NewSub =
+          DAG.getNode(X86ISD::SUB, SDLoc(EFLAGS), EFLAGS.getNode()->getVTList(),
+                      EFLAGS.getOperand(1), EFLAGS.getOperand(0));
+      SDValue NewEFLAGS = SDValue(NewSub.getNode(), EFLAGS.getResNo());
+      return DAG.getNode(X86ISD::SETCC_CARRY, DL, VT,
+                         DAG.getConstant(X86::COND_B, DL, MVT::i8), NewEFLAGS);
+    }
   }
 
   if (CC == X86::COND_A) {

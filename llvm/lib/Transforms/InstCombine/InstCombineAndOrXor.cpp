@@ -1188,15 +1188,14 @@ static Instruction *foldBoolSextMaskToSelect(BinaryOperator &I) {
 
   // Fold (and (sext bool to A), B) --> (select bool, B, 0)
   Value *X = nullptr;
-  if (match(Op0, m_SExt(m_Value(X))) &&
-      X->getType()->getScalarType()->isIntegerTy(1)) {
+  if (match(Op0, m_SExt(m_Value(X))) && X->getType()->isIntOrIntVectorTy(1)) {
     Value *Zero = Constant::getNullValue(Op1->getType());
     return SelectInst::Create(X, Op1, Zero);
   }
 
   // Fold (and ~(sext bool to A), B) --> (select bool, 0, B)
   if (match(Op0, m_Not(m_SExt(m_Value(X)))) &&
-      X->getType()->getScalarType()->isIntegerTy(1)) {
+      X->getType()->isIntOrIntVectorTy(1)) {
     Value *Zero = Constant::getNullValue(Op0->getType());
     return SelectInst::Create(X, Zero, Op1);
   }
@@ -1559,14 +1558,14 @@ static Value *getSelectCondition(Value *A, Value *B,
                                  InstCombiner::BuilderTy &Builder) {
   // If these are scalars or vectors of i1, A can be used directly.
   Type *Ty = A->getType();
-  if (match(A, m_Not(m_Specific(B))) && Ty->getScalarType()->isIntegerTy(1))
+  if (match(A, m_Not(m_Specific(B))) && Ty->isIntOrIntVectorTy(1))
     return A;
 
   // If A and B are sign-extended, look through the sexts to find the booleans.
   Value *Cond;
   Value *NotB;
   if (match(A, m_SExt(m_Value(Cond))) &&
-      Cond->getType()->getScalarType()->isIntegerTy(1) &&
+      Cond->getType()->isIntOrIntVectorTy(1) &&
       match(B, m_OneUse(m_Not(m_Value(NotB))))) {
     NotB = peekThroughBitcast(NotB, true);
     if (match(NotB, m_SExt(m_Specific(Cond))))
@@ -1588,7 +1587,7 @@ static Value *getSelectCondition(Value *A, Value *B,
   // operand, see if the constants are inverse bitmasks.
   if (match(A, (m_Xor(m_SExt(m_Value(Cond)), m_Constant(AC)))) &&
       match(B, (m_Xor(m_SExt(m_Specific(Cond)), m_Constant(BC)))) &&
-      Cond->getType()->getScalarType()->isIntegerTy(1) &&
+      Cond->getType()->isIntOrIntVectorTy(1) &&
       areInverseVectorBitmasks(AC, BC)) {
     AC = ConstantExpr::getTrunc(AC, CmpInst::makeCmpResultType(Ty));
     return Builder.CreateXor(Cond, AC);
@@ -2230,10 +2229,10 @@ Instruction *InstCombiner::visitOr(BinaryOperator &I) {
 
   // or(sext(A), B) / or(B, sext(A)) --> A ? -1 : B, where A is i1 or <N x i1>.
   if (match(Op0, m_OneUse(m_SExt(m_Value(A)))) &&
-      A->getType()->getScalarType()->isIntegerTy(1))
+      A->getType()->isIntOrIntVectorTy(1))
     return SelectInst::Create(A, ConstantInt::getSigned(I.getType(), -1), Op1);
   if (match(Op1, m_OneUse(m_SExt(m_Value(A)))) &&
-      A->getType()->getScalarType()->isIntegerTy(1))
+      A->getType()->isIntOrIntVectorTy(1))
     return SelectInst::Create(A, ConstantInt::getSigned(I.getType(), -1), Op0);
 
   // Note: If we've gotten to the point of visiting the outer OR, then the

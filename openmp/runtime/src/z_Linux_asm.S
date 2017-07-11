@@ -1,4 +1,4 @@
-//  z_Linux_asm.s:  - microtasking routines specifically
+//  z_Linux_asm.S:  - microtasking routines specifically
 //                    written for Intel platforms running Linux* OS
 
 //
@@ -681,7 +681,7 @@ KMP_LABEL(invoke_3):
 // -- Machine type P
 // mark_description "Intel Corporation";
 	.ident "Intel Corporation"
-// --	.file "z_Linux_asm.s"
+// --	.file "z_Linux_asm.S"
 	.data
 	ALIGN 4
 

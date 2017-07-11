@@ -385,10 +385,10 @@ struct ConstModifier: public Modifier {
 
     if (Ty->isVectorTy()) {
       switch (getRandom() % 2) {
-      case 0: if (Ty->getScalarType()->isIntegerTy())
+      case 0: if (Ty->isIntOrIntVectorTy())
                 return PT->push_back(ConstantVector::getAllOnesValue(Ty));
               break;
-      case 1: if (Ty->getScalarType()->isIntegerTy())
+      case 1: if (Ty->isIntOrIntVectorTy())
                 return PT->push_back(ConstantVector::getNullValue(Ty));
       }
     }
@@ -531,8 +531,7 @@ struct CastModifier: public Modifier {
     }
 
     // Both types are integers:
-    if (VTy->getScalarType()->isIntegerTy() &&
-        DestTy->getScalarType()->isIntegerTy()) {
+    if (VTy->isIntOrIntVectorTy() && DestTy->isIntOrIntVectorTy()) {
       if (VSize > DestSize) {
         return PT->push_back(
           new TruncInst(V, DestTy, "Tr", BB->getTerminator()));
@@ -546,8 +545,7 @@ struct CastModifier: public Modifier {
     }
 
     // Fp to int.
-    if (VTy->getScalarType()->isFloatingPointTy() &&
-        DestTy->getScalarType()->isIntegerTy()) {
+    if (VTy->isFPOrFPVectorTy() && DestTy->isIntOrIntVectorTy()) {
       if (getRandom() & 1)
         return PT->push_back(
           new FPToSIInst(V, DestTy, "FC", BB->getTerminator()));
@@ -555,8 +553,7 @@ struct CastModifier: public Modifier {
     }
 
     // Int to fp.
-    if (VTy->getScalarType()->isIntegerTy() &&
-        DestTy->getScalarType()->isFloatingPointTy()) {
+    if (VTy->isIntOrIntVectorTy() && DestTy->isFPOrFPVectorTy()) {
       if (getRandom() & 1)
         return PT->push_back(
           new SIToFPInst(V, DestTy, "FC", BB->getTerminator()));
@@ -565,8 +562,7 @@ struct CastModifier: public Modifier {
     }
 
     // Both floats.
-    if (VTy->getScalarType()->isFloatingPointTy() &&
-        DestTy->getScalarType()->isFloatingPointTy()) {
+    if (VTy->isFPOrFPVectorTy() && DestTy->isFPOrFPVectorTy()) {
       if (VSize > DestSize) {
         return PT->push_back(
           new FPTruncInst(V, DestTy, "Tr", BB->getTerminator()));

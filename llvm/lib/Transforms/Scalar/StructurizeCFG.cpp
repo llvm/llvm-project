@@ -329,7 +329,7 @@ void StructurizeCFG::analyzeLoops(RegionNode *N) {
       Loops[Exit] = N->getEntry();
 
   } else {
-    // Test for sucessors as back edge
+    // Test for successors as back edge
     BasicBlock *BB = N->getNodeAs<BasicBlock>();
     BranchInst *Term = cast<BranchInst>(BB->getTerminator());
 

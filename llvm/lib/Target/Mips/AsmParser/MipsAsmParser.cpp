@@ -628,6 +628,9 @@ public:
   bool useSoftFloat() const {
     return getSTI().getFeatureBits()[Mips::FeatureSoftFloat];
   }
+  bool hasMT() const {
+    return getSTI().getFeatureBits()[Mips::FeatureMT];
+  }
 
   /// Warn if RegIndex is the same as the current AT.
   void warnIfRegIndexIsAT(unsigned RegIndex, SMLoc Loc);
@@ -1966,6 +1969,7 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
   case Mips::SDIV_MM:
     FirstOp = 0;
     SecondOp = 1;
+    LLVM_FALLTHROUGH;
   case Mips::SDivMacro:
   case Mips::DSDivMacro:
   case Mips::UDivMacro:

@@ -1176,8 +1176,6 @@ bool ObjCSubscriptOpBuilder::findAtIndexGetter() {
   
   AtIndexGetter = S.LookupMethodInObjectType(AtIndexGetterSelector, ResultType, 
                                              true /*instance*/);
-  bool receiverIdType = (BaseT->isObjCIdType() ||
-                         BaseT->isObjCQualifiedIdType());
   
   if (!AtIndexGetter && S.getLangOpts().DebuggerObjCLiteral) {
     AtIndexGetter = ObjCMethodDecl::Create(S.Context, SourceLocation(), 
@@ -1203,7 +1201,7 @@ bool ObjCSubscriptOpBuilder::findAtIndexGetter() {
   }
 
   if (!AtIndexGetter) {
-    if (!receiverIdType) {
+    if (!BaseT->isObjCIdType()) {
       S.Diag(BaseExpr->getExprLoc(), diag::err_objc_subscript_method_not_found)
       << BaseExpr->getType() << 0 << arrayRef;
       return false;
@@ -1284,9 +1282,6 @@ bool ObjCSubscriptOpBuilder::findAtIndexSetter() {
   }
   AtIndexSetter = S.LookupMethodInObjectType(AtIndexSetterSelector, ResultType, 
                                              true /*instance*/);
-  
-  bool receiverIdType = (BaseT->isObjCIdType() ||
-                         BaseT->isObjCQualifiedIdType());
 
   if (!AtIndexSetter && S.getLangOpts().DebuggerObjCLiteral) {
     TypeSourceInfo *ReturnTInfo = nullptr;
@@ -1321,7 +1316,7 @@ bool ObjCSubscriptOpBuilder::findAtIndexSetter() {
   }
   
   if (!AtIndexSetter) {
-    if (!receiverIdType) {
+    if (!BaseT->isObjCIdType()) {
       S.Diag(BaseExpr->getExprLoc(), 
              diag::err_objc_subscript_method_not_found)
       << BaseExpr->getType() << 1 << arrayRef;

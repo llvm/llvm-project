@@ -3671,12 +3671,17 @@ enum class FMAInstKind { Default, Indexed, Accumulator };
 ///  F|MUL I=A,B,0
 ///  F|ADD R,I,C
 ///  ==> F|MADD R,A,B,C
+/// \param MF Containing MachineFunction
+/// \param MRI Register information
+/// \param TII Target information
 /// \param Root is the F|ADD instruction
 /// \param [out] InsInstrs is a vector of machine instructions and will
 /// contain the generated madd instruction
 /// \param IdxMulOpd is index of operand in Root that is the result of
 /// the F|MUL. In the example above IdxMulOpd is 1.
 /// \param MaddOpc the opcode fo the f|madd instruction
+/// \param RC Register class of operands
+/// \param kind of fma instruction (addressing mode) to be generated
 static MachineInstr *
 genFusedMultiply(MachineFunction &MF, MachineRegisterInfo &MRI,
                  const TargetInstrInfo *TII, MachineInstr &Root,
@@ -3735,6 +3740,9 @@ genFusedMultiply(MachineFunction &MF, MachineRegisterInfo &MRI,
 ///   ADD R,I,Imm
 ///   ==> ORR  V, ZR, Imm
 ///   ==> MADD R,A,B,V
+/// \param MF Containing MachineFunction
+/// \param MRI Register information
+/// \param TII Target information
 /// \param Root is the ADD instruction
 /// \param [out] InsInstrs is a vector of machine instructions and will
 /// contain the generated madd instruction
@@ -3743,6 +3751,7 @@ genFusedMultiply(MachineFunction &MF, MachineRegisterInfo &MRI,
 /// \param MaddOpc the opcode fo the madd instruction
 /// \param VR is a virtual register that holds the value of an ADD operand
 /// (V in the example above).
+/// \param RC Register class of operands
 static MachineInstr *genMaddR(MachineFunction &MF, MachineRegisterInfo &MRI,
                               const TargetInstrInfo *TII, MachineInstr &Root,
                               SmallVectorImpl<MachineInstr *> &InsInstrs,

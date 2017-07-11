@@ -45,9 +45,9 @@ define float @f32_no_estimate(float %x) #0 {
 ;
 ; SANDY-LABEL: f32_no_estimate:
 ; SANDY:       # BB#0:
-; SANDY-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero sched: [4:0.50]
-; SANDY-NEXT:    vdivss %xmm0, %xmm1, %xmm0 # sched: [12:1.00]
-; SANDY-NEXT:    retq # sched: [5:1.00]
+; SANDY-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero sched: [6:0.50]
+; SANDY-NEXT:    vdivss %xmm0, %xmm1, %xmm0 # sched: [14:1.00]
+; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: f32_no_estimate:
 ; HASWELL:       # BB#0:
@@ -113,11 +113,11 @@ define float @f32_one_step(float %x) #1 {
 ; SANDY:       # BB#0:
 ; SANDY-NEXT:    vrcpss %xmm0, %xmm0, %xmm1 # sched: [5:1.00]
 ; SANDY-NEXT:    vmulss %xmm1, %xmm0, %xmm0 # sched: [5:1.00]
-; SANDY-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero sched: [4:0.50]
+; SANDY-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero sched: [6:0.50]
 ; SANDY-NEXT:    vsubss %xmm0, %xmm2, %xmm0 # sched: [3:1.00]
 ; SANDY-NEXT:    vmulss %xmm0, %xmm1, %xmm0 # sched: [5:1.00]
 ; SANDY-NEXT:    vaddss %xmm0, %xmm1, %xmm0 # sched: [3:1.00]
-; SANDY-NEXT:    retq # sched: [5:1.00]
+; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: f32_one_step:
 ; HASWELL:       # BB#0:
@@ -207,7 +207,7 @@ define float @f32_two_step(float %x) #2 {
 ; SANDY:       # BB#0:
 ; SANDY-NEXT:    vrcpss %xmm0, %xmm0, %xmm1 # sched: [5:1.00]
 ; SANDY-NEXT:    vmulss %xmm1, %xmm0, %xmm2 # sched: [5:1.00]
-; SANDY-NEXT:    vmovss {{.*#+}} xmm3 = mem[0],zero,zero,zero sched: [4:0.50]
+; SANDY-NEXT:    vmovss {{.*#+}} xmm3 = mem[0],zero,zero,zero sched: [6:0.50]
 ; SANDY-NEXT:    vsubss %xmm2, %xmm3, %xmm2 # sched: [3:1.00]
 ; SANDY-NEXT:    vmulss %xmm2, %xmm1, %xmm2 # sched: [5:1.00]
 ; SANDY-NEXT:    vaddss %xmm2, %xmm1, %xmm1 # sched: [3:1.00]
@@ -215,7 +215,7 @@ define float @f32_two_step(float %x) #2 {
 ; SANDY-NEXT:    vsubss %xmm0, %xmm3, %xmm0 # sched: [3:1.00]
 ; SANDY-NEXT:    vmulss %xmm0, %xmm1, %xmm0 # sched: [5:1.00]
 ; SANDY-NEXT:    vaddss %xmm0, %xmm1, %xmm0 # sched: [3:1.00]
-; SANDY-NEXT:    retq # sched: [5:1.00]
+; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: f32_two_step:
 ; HASWELL:       # BB#0:
@@ -284,9 +284,9 @@ define <4 x float> @v4f32_no_estimate(<4 x float> %x) #0 {
 ;
 ; SANDY-LABEL: v4f32_no_estimate:
 ; SANDY:       # BB#0:
-; SANDY-NEXT:    vmovaps {{.*#+}} xmm1 = [1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00] sched: [4:0.50]
-; SANDY-NEXT:    vdivps %xmm0, %xmm1, %xmm0 # sched: [12:1.00]
-; SANDY-NEXT:    retq # sched: [5:1.00]
+; SANDY-NEXT:    vmovaps {{.*#+}} xmm1 = [1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00] sched: [6:0.50]
+; SANDY-NEXT:    vdivps %xmm0, %xmm1, %xmm0 # sched: [14:1.00]
+; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: v4f32_no_estimate:
 ; HASWELL:       # BB#0:
@@ -350,13 +350,13 @@ define <4 x float> @v4f32_one_step(<4 x float> %x) #1 {
 ;
 ; SANDY-LABEL: v4f32_one_step:
 ; SANDY:       # BB#0:
-; SANDY-NEXT:    vrcpps %xmm0, %xmm1 # sched: [5:1.00]
+; SANDY-NEXT:    vrcpps %xmm0, %xmm1 # sched: [7:3.00]
 ; SANDY-NEXT:    vmulps %xmm1, %xmm0, %xmm0 # sched: [5:1.00]
-; SANDY-NEXT:    vmovaps {{.*#+}} xmm2 = [1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00] sched: [4:0.50]
+; SANDY-NEXT:    vmovaps {{.*#+}} xmm2 = [1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00] sched: [6:0.50]
 ; SANDY-NEXT:    vsubps %xmm0, %xmm2, %xmm0 # sched: [3:1.00]
 ; SANDY-NEXT:    vmulps %xmm0, %xmm1, %xmm0 # sched: [5:1.00]
 ; SANDY-NEXT:    vaddps %xmm0, %xmm1, %xmm0 # sched: [3:1.00]
-; SANDY-NEXT:    retq # sched: [5:1.00]
+; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: v4f32_one_step:
 ; HASWELL:       # BB#0:
@@ -453,9 +453,9 @@ define <4 x float> @v4f32_two_step(<4 x float> %x) #2 {
 ;
 ; SANDY-LABEL: v4f32_two_step:
 ; SANDY:       # BB#0:
-; SANDY-NEXT:    vrcpps %xmm0, %xmm1 # sched: [5:1.00]
+; SANDY-NEXT:    vrcpps %xmm0, %xmm1 # sched: [7:3.00]
 ; SANDY-NEXT:    vmulps %xmm1, %xmm0, %xmm2 # sched: [5:1.00]
-; SANDY-NEXT:    vmovaps {{.*#+}} xmm3 = [1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00] sched: [4:0.50]
+; SANDY-NEXT:    vmovaps {{.*#+}} xmm3 = [1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00] sched: [6:0.50]
 ; SANDY-NEXT:    vsubps %xmm2, %xmm3, %xmm2 # sched: [3:1.00]
 ; SANDY-NEXT:    vmulps %xmm2, %xmm1, %xmm2 # sched: [5:1.00]
 ; SANDY-NEXT:    vaddps %xmm2, %xmm1, %xmm1 # sched: [3:1.00]
@@ -463,7 +463,7 @@ define <4 x float> @v4f32_two_step(<4 x float> %x) #2 {
 ; SANDY-NEXT:    vsubps %xmm0, %xmm3, %xmm0 # sched: [3:1.00]
 ; SANDY-NEXT:    vmulps %xmm0, %xmm1, %xmm0 # sched: [5:1.00]
 ; SANDY-NEXT:    vaddps %xmm0, %xmm1, %xmm0 # sched: [3:1.00]
-; SANDY-NEXT:    retq # sched: [5:1.00]
+; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: v4f32_two_step:
 ; HASWELL:       # BB#0:
@@ -541,14 +541,14 @@ define <8 x float> @v8f32_no_estimate(<8 x float> %x) #0 {
 ; BTVER2-LABEL: v8f32_no_estimate:
 ; BTVER2:       # BB#0:
 ; BTVER2-NEXT:    vmovaps {{.*#+}} ymm1 = [1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00] sched: [5:1.00]
-; BTVER2-NEXT:    vdivps %ymm0, %ymm1, %ymm0 # sched: [19:19.00]
+; BTVER2-NEXT:    vdivps %ymm0, %ymm1, %ymm0 # sched: [38:38.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; SANDY-LABEL: v8f32_no_estimate:
 ; SANDY:       # BB#0:
-; SANDY-NEXT:    vmovaps {{.*#+}} ymm1 = [1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00] sched: [4:0.50]
-; SANDY-NEXT:    vdivps %ymm0, %ymm1, %ymm0 # sched: [12:1.00]
-; SANDY-NEXT:    retq # sched: [5:1.00]
+; SANDY-NEXT:    vmovaps {{.*#+}} ymm1 = [1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00] sched: [7:0.50]
+; SANDY-NEXT:    vdivps %ymm0, %ymm1, %ymm0 # sched: [29:3.00]
+; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: v8f32_no_estimate:
 ; HASWELL:       # BB#0:
@@ -610,22 +610,22 @@ define <8 x float> @v8f32_one_step(<8 x float> %x) #1 {
 ; BTVER2-LABEL: v8f32_one_step:
 ; BTVER2:       # BB#0:
 ; BTVER2-NEXT:    vmovaps {{.*#+}} ymm2 = [1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00] sched: [5:1.00]
-; BTVER2-NEXT:    vrcpps %ymm0, %ymm1 # sched: [2:1.00]
-; BTVER2-NEXT:    vmulps %ymm1, %ymm0, %ymm0 # sched: [2:1.00]
-; BTVER2-NEXT:    vsubps %ymm0, %ymm2, %ymm0 # sched: [3:1.00]
-; BTVER2-NEXT:    vmulps %ymm0, %ymm1, %ymm0 # sched: [2:1.00]
-; BTVER2-NEXT:    vaddps %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
+; BTVER2-NEXT:    vrcpps %ymm0, %ymm1 # sched: [2:2.00]
+; BTVER2-NEXT:    vmulps %ymm1, %ymm0, %ymm0 # sched: [2:2.00]
+; BTVER2-NEXT:    vsubps %ymm0, %ymm2, %ymm0 # sched: [3:2.00]
+; BTVER2-NEXT:    vmulps %ymm0, %ymm1, %ymm0 # sched: [2:2.00]
+; BTVER2-NEXT:    vaddps %ymm0, %ymm1, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; SANDY-LABEL: v8f32_one_step:
 ; SANDY:       # BB#0:
 ; SANDY-NEXT:    vrcpps %ymm0, %ymm1 # sched: [5:1.00]
 ; SANDY-NEXT:    vmulps %ymm1, %ymm0, %ymm0 # sched: [5:1.00]
-; SANDY-NEXT:    vmovaps {{.*#+}} ymm2 = [1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00] sched: [4:0.50]
+; SANDY-NEXT:    vmovaps {{.*#+}} ymm2 = [1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00] sched: [7:0.50]
 ; SANDY-NEXT:    vsubps %ymm0, %ymm2, %ymm0 # sched: [3:1.00]
 ; SANDY-NEXT:    vmulps %ymm0, %ymm1, %ymm0 # sched: [5:1.00]
 ; SANDY-NEXT:    vaddps %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
-; SANDY-NEXT:    retq # sched: [5:1.00]
+; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: v8f32_one_step:
 ; HASWELL:       # BB#0:
@@ -722,22 +722,22 @@ define <8 x float> @v8f32_two_step(<8 x float> %x) #2 {
 ; BTVER2-LABEL: v8f32_two_step:
 ; BTVER2:       # BB#0:
 ; BTVER2-NEXT:    vmovaps {{.*#+}} ymm3 = [1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00] sched: [5:1.00]
-; BTVER2-NEXT:    vrcpps %ymm0, %ymm1 # sched: [2:1.00]
-; BTVER2-NEXT:    vmulps %ymm1, %ymm0, %ymm2 # sched: [2:1.00]
-; BTVER2-NEXT:    vsubps %ymm2, %ymm3, %ymm2 # sched: [3:1.00]
-; BTVER2-NEXT:    vmulps %ymm2, %ymm1, %ymm2 # sched: [2:1.00]
-; BTVER2-NEXT:    vaddps %ymm2, %ymm1, %ymm1 # sched: [3:1.00]
-; BTVER2-NEXT:    vmulps %ymm1, %ymm0, %ymm0 # sched: [2:1.00]
-; BTVER2-NEXT:    vsubps %ymm0, %ymm3, %ymm0 # sched: [3:1.00]
-; BTVER2-NEXT:    vmulps %ymm0, %ymm1, %ymm0 # sched: [2:1.00]
-; BTVER2-NEXT:    vaddps %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
+; BTVER2-NEXT:    vrcpps %ymm0, %ymm1 # sched: [2:2.00]
+; BTVER2-NEXT:    vmulps %ymm1, %ymm0, %ymm2 # sched: [2:2.00]
+; BTVER2-NEXT:    vsubps %ymm2, %ymm3, %ymm2 # sched: [3:2.00]
+; BTVER2-NEXT:    vmulps %ymm2, %ymm1, %ymm2 # sched: [2:2.00]
+; BTVER2-NEXT:    vaddps %ymm2, %ymm1, %ymm1 # sched: [3:2.00]
+; BTVER2-NEXT:    vmulps %ymm1, %ymm0, %ymm0 # sched: [2:2.00]
+; BTVER2-NEXT:    vsubps %ymm0, %ymm3, %ymm0 # sched: [3:2.00]
+; BTVER2-NEXT:    vmulps %ymm0, %ymm1, %ymm0 # sched: [2:2.00]
+; BTVER2-NEXT:    vaddps %ymm0, %ymm1, %ymm0 # sched: [3:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
 ;
 ; SANDY-LABEL: v8f32_two_step:
 ; SANDY:       # BB#0:
 ; SANDY-NEXT:    vrcpps %ymm0, %ymm1 # sched: [5:1.00]
 ; SANDY-NEXT:    vmulps %ymm1, %ymm0, %ymm2 # sched: [5:1.00]
-; SANDY-NEXT:    vmovaps {{.*#+}} ymm3 = [1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00] sched: [4:0.50]
+; SANDY-NEXT:    vmovaps {{.*#+}} ymm3 = [1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00,1.000000e+00] sched: [7:0.50]
 ; SANDY-NEXT:    vsubps %ymm2, %ymm3, %ymm2 # sched: [3:1.00]
 ; SANDY-NEXT:    vmulps %ymm2, %ymm1, %ymm2 # sched: [5:1.00]
 ; SANDY-NEXT:    vaddps %ymm2, %ymm1, %ymm1 # sched: [3:1.00]
@@ -745,7 +745,7 @@ define <8 x float> @v8f32_two_step(<8 x float> %x) #2 {
 ; SANDY-NEXT:    vsubps %ymm0, %ymm3, %ymm0 # sched: [3:1.00]
 ; SANDY-NEXT:    vmulps %ymm0, %ymm1, %ymm0 # sched: [5:1.00]
 ; SANDY-NEXT:    vaddps %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
-; SANDY-NEXT:    retq # sched: [5:1.00]
+; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: v8f32_two_step:
 ; HASWELL:       # BB#0:

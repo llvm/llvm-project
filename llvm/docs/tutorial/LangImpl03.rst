@@ -10,7 +10,7 @@ Chapter 3 Introduction
 
 Welcome to Chapter 3 of the "`Implementing a language with
 LLVM <index.html>`_" tutorial. This chapter shows you how to transform
-the `Abstract Syntax Tree <LangImpl2.html>`_, built in Chapter 2, into
+the `Abstract Syntax Tree <LangImpl02.html>`_, built in Chapter 2, into
 LLVM IR. This will teach you a little bit about how LLVM does things, as
 well as demonstrate how easy it is to use. It's much more work to build
 a lexer and parser than it is to generate LLVM IR code. :)
@@ -362,7 +362,7 @@ end of the new basic block. Basic blocks in LLVM are an important part
 of functions that define the `Control Flow
 Graph <http://en.wikipedia.org/wiki/Control_flow_graph>`_. Since we
 don't have any control flow, our functions will only contain one block
-at this point. We'll fix this in `Chapter 5 <LangImpl5.html>`_ :).
+at this point. We'll fix this in `Chapter 5 <LangImpl05.html>`_ :).
 
 Next we add the function arguments to the NamedValues map (after first clearing
 it out) so that they're accessible to ``VariableExprAST`` nodes.
@@ -540,7 +540,7 @@ functions referencing each other.
 
 This wraps up the third chapter of the Kaleidoscope tutorial. Up next,
 we'll describe how to `add JIT codegen and optimizer
-support <LangImpl4.html>`_ to this so we can actually start running
+support <LangImpl04.html>`_ to this so we can actually start running
 code!
 
 Full Code Listing

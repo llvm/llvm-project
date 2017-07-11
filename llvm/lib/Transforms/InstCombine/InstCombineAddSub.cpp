@@ -1084,7 +1084,7 @@ Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
     if (Instruction *NV = foldOpWithConstantIntoOperand(I))
       return NV;
 
-  if (I.getType()->getScalarType()->isIntegerTy(1))
+  if (I.getType()->isIntOrIntVectorTy(1))
     return BinaryOperator::CreateXor(LHS, RHS);
 
   // X + X --> X << 1
@@ -1520,7 +1520,7 @@ Instruction *InstCombiner::visitSub(BinaryOperator &I) {
     return Res;
   }
 
-  if (I.getType()->getScalarType()->isIntegerTy(1))
+  if (I.getType()->isIntOrIntVectorTy(1))
     return BinaryOperator::CreateXor(Op0, Op1);
 
   // Replace (-1 - A) with (~A).
@@ -1550,12 +1550,12 @@ Instruction *InstCombiner::visitSub(BinaryOperator &I) {
 
     // Fold (sub 0, (zext bool to B)) --> (sext bool to B)
     if (C->isNullValue() && match(Op1, m_ZExt(m_Value(X))))
-      if (X->getType()->getScalarType()->isIntegerTy(1))
+      if (X->getType()->isIntOrIntVectorTy(1))
         return CastInst::CreateSExtOrBitCast(X, Op1->getType());
 
     // Fold (sub 0, (sext bool to B)) --> (zext bool to B)
     if (C->isNullValue() && match(Op1, m_SExt(m_Value(X))))
-      if (X->getType()->getScalarType()->isIntegerTy(1))
+      if (X->getType()->isIntOrIntVectorTy(1))
         return CastInst::CreateZExtOrBitCast(X, Op1->getType());
   }
 

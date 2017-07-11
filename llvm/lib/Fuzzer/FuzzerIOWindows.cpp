@@ -182,7 +182,7 @@ static size_t ParseFileName(const std::string &FileName, const size_t Offset) {
   return Pos - Offset;
 }
 
-// Parse a directory ending in separator, like: SomeDir\
+// Parse a directory ending in separator, like: `SomeDir\`
 // Returns number of characters considered if successful.
 static size_t ParseDir(const std::string &FileName, const size_t Offset) {
   size_t Pos = Offset;
@@ -197,7 +197,7 @@ static size_t ParseDir(const std::string &FileName, const size_t Offset) {
   return Pos - Offset;
 }
 
-// Parse a servername and share, like: SomeServer\SomeShare\
+// Parse a servername and share, like: `SomeServer\SomeShare\`
 // Returns number of characters considered if successful.
 static size_t ParseServerAndShare(const std::string &FileName,
                                   const size_t Offset) {

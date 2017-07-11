@@ -43,9 +43,10 @@ static bool lookupMember(Sema &S, const char *Name, CXXRecordDecl *RD,
 
 /// Look up the std::coroutine_traits<...>::promise_type for the given
 /// function type.
-static QualType lookupPromiseType(Sema &S, const FunctionProtoType *FnType,
-                                  SourceLocation KwLoc,
-                                  SourceLocation FuncLoc) {
+static QualType lookupPromiseType(Sema &S, const FunctionDecl *FD,
+                                  SourceLocation KwLoc) {
+  const FunctionProtoType *FnType = FD->getType()->castAs<FunctionProtoType>();
+  const SourceLocation FuncLoc = FD->getLocation();
   // FIXME: Cache std::coroutine_traits once we've found it.
   NamespaceDecl *StdExp = S.lookupStdExperimentalNamespace();
   if (!StdExp) {
@@ -71,16 +72,35 @@ static QualType lookupPromiseType(Sema &S, const FunctionProtoType *FnType,
     return QualType();
   }
 
-  // Form template argument list for coroutine_traits<R, P1, P2, ...>.
+  // Form template argument list for coroutine_traits<R, P1, P2, ...> according
+  // to [dcl.fct.def.coroutine]3
   TemplateArgumentListInfo Args(KwLoc, KwLoc);
-  Args.addArgument(TemplateArgumentLoc(
-      TemplateArgument(FnType->getReturnType()),
-      S.Context.getTrivialTypeSourceInfo(FnType->getReturnType(), KwLoc)));
-  // FIXME: If the function is a non-static member function, add the type
-  // of the implicit object parameter before the formal parameters.
-  for (QualType T : FnType->getParamTypes())
+  auto AddArg = [&](QualType T) {
     Args.addArgument(TemplateArgumentLoc(
         TemplateArgument(T), S.Context.getTrivialTypeSourceInfo(T, KwLoc)));
+  };
+  AddArg(FnType->getReturnType());
+  // If the function is a non-static member function, add the type
+  // of the implicit object parameter before the formal parameters.
+  if (auto *MD = dyn_cast<CXXMethodDecl>(FD)) {
+    if (MD->isInstance()) {
+      // [over.match.funcs]4
+      // For non-static member functions, the type of the implicit object
+      // parameter is
+      //  -- "lvalue reference to cv X" for functions declared without a
+      //      ref-qualifier or with the & ref-qualifier
+      //  -- "rvalue reference to cv X" for functions declared with the &&
+      //      ref-qualifier
+      QualType T =
+          MD->getThisType(S.Context)->getAs<PointerType>()->getPointeeType();
+      T = FnType->getRefQualifier() == RQ_RValue
+              ? S.Context.getRValueReferenceType(T)
+              : S.Context.getLValueReferenceType(T, /*SpelledAsLValue*/ true);
+      AddArg(T);
+    }
+  }
+  for (QualType T : FnType->getParamTypes())
+    AddArg(T);
 
   // Build the template-id.
   QualType CoroTrait =
@@ -424,12 +444,16 @@ static ExprResult buildPromiseCall(Sema &S, VarDecl *Promise,
 VarDecl *Sema::buildCoroutinePromise(SourceLocation Loc) {
   assert(isa<FunctionDecl>(CurContext) && "not in a function scope");
   auto *FD = cast<FunctionDecl>(CurContext);
+  bool IsThisDependentType = [&] {
+    if (auto *MD = dyn_cast_or_null<CXXMethodDecl>(FD))
+      return MD->isInstance() && MD->getThisType(Context)->isDependentType();
+    else
+      return false;
+  }();
 
-  QualType T =
-      FD->getType()->isDependentType()
-          ? Context.DependentTy
-          : lookupPromiseType(*this, FD->getType()->castAs<FunctionProtoType>(),
-                              Loc, FD->getLocation());
+  QualType T = FD->getType()->isDependentType() || IsThisDependentType
+                   ? Context.DependentTy
+                   : lookupPromiseType(*this, FD, Loc);
   if (T.isNull())
     return nullptr;
 
@@ -721,8 +745,6 @@ static Expr *buildStdNoThrowDeclRef(Sema &S, SourceLocation Loc) {
     return nullptr;
   }
 
-  // FIXME: Mark the variable as ODR used. This currently does not work
-  // likely due to the scope at in which this function is called.
   auto *VD = Result.getAsSingle<VarDecl>();
   if (!VD) {
     Result.suppressDiagnostics();

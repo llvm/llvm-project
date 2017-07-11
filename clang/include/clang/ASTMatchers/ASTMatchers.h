@@ -3821,6 +3821,14 @@ AST_MATCHER_P(CompoundStmt, statementCountIs, unsigned, N) {
 /// integerLiteral(equals(42))
 ///   matches 42
 ///
+/// Note that you cannot directly match a negative numeric literal because the
+/// minus sign is not part of the literal: It is a unary operator whose operand
+/// is the positive numeric literal. Instead, you must use a unaryOperator()
+/// matcher to match the minus sign:
+///
+/// unaryOperator(hasOperatorName("-"),
+///               hasUnaryOperand(integerLiteral(equals(13))))
+///
 /// Usable as: Matcher<CharacterLiteral>, Matcher<CXXBoolLiteralExpr>,
 ///            Matcher<FloatingLiteral>, Matcher<IntegerLiteral>
 template <typename ValueT>

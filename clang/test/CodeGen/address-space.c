@@ -24,11 +24,13 @@ int test2(int i) { return ban[i]; }
 __attribute__((address_space(2))) int *A, *B;
 
 // CHECK-LABEL: define void @test3()
-// GIZ: load i32 addrspace(2)*, i32 addrspace(2)** @B
-// PIZ: load i32 addrspace(2)*, i32 addrspace(2)* addrspace(4)* @B
+// X86: load i32 addrspace(2)*, i32 addrspace(2)** @B
+// AMDGIZ: load i32 addrspace(2)*, i32 addrspace(2)** addrspacecast (i32 addrspace(2)* addrspace(1)* @B to i32 addrspace(2)**)
+// PIZ: load i32 addrspace(2)*, i32 addrspace(2)* addrspace(4)* addrspacecast (i32 addrspace(2)* addrspace(1)* @B to i32 addrspace(2)* addrspace(4)*)
 // CHECK: load i32, i32 addrspace(2)*
-// GIZ: load i32 addrspace(2)*, i32 addrspace(2)** @A
-// PIZ: load i32 addrspace(2)*, i32 addrspace(2)* addrspace(4)* @A
+// X86: load i32 addrspace(2)*, i32 addrspace(2)** @A
+// AMDGIZ: load i32 addrspace(2)*, i32 addrspace(2)** addrspacecast (i32 addrspace(2)* addrspace(1)* @A to i32 addrspace(2)**)
+// PIZ: load i32 addrspace(2)*, i32 addrspace(2)* addrspace(4)* addrspacecast (i32 addrspace(2)* addrspace(1)* @A to i32 addrspace(2)* addrspace(4)*)
 // CHECK: store i32 {{.*}}, i32 addrspace(2)*
 void test3() {
   *A = *B;

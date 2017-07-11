@@ -499,6 +499,10 @@ public:
     switch (Triple.getArch()) {
     default:
       break;
+    case llvm::Triple::mips:
+    case llvm::Triple::mipsel:
+    case llvm::Triple::mips64:
+    case llvm::Triple::mips64el:
     case llvm::Triple::ppc:
     case llvm::Triple::ppc64:
     case llvm::Triple::ppc64le:
@@ -2402,6 +2406,10 @@ public:
 
   LangAS::ID getOpenCLImageAddrSpace() const override {
     return LangAS::opencl_constant;
+  }
+
+  llvm::Optional<unsigned> getConstantAddressSpace() const override {
+    return LangAS::FirstTargetAddressSpace + AS.Constant;
   }
 
   /// \returns Target specific vtbl ptr address space.

@@ -32,6 +32,7 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/ScopedPrinter.h"
+#include "llvm/Support/Threading.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include <functional>
@@ -705,6 +706,12 @@ int CodeCoverageTool::show(int argc, const char **argv,
       "project-title", cl::Optional,
       cl::desc("Set project title for the coverage report"));
 
+  cl::opt<unsigned> NumThreads(
+      "num-threads", cl::init(0),
+      cl::desc("Number of merge threads to use (default: autodetect)"));
+  cl::alias NumThreadsA("j", cl::desc("Alias for --num-threads"),
+                        cl::aliasopt(NumThreads));
+
   auto Err = commandLineParser(argc, argv);
   if (Err)
     return Err;
@@ -790,15 +797,19 @@ int CodeCoverageTool::show(int argc, const char **argv,
     }
   }
 
-  // FIXME: Sink the hardware_concurrency() == 1 check into ThreadPool.
-  if (!ViewOpts.hasOutputDirectory() ||
-      std::thread::hardware_concurrency() == 1) {
+  // If NumThreads is not specified, auto-detect a good default.
+  if (NumThreads == 0)
+    NumThreads =
+        std::max(1U, std::min(llvm::heavyweight_hardware_concurrency(),
+                              unsigned(SourceFiles.size())));
+
+  if (!ViewOpts.hasOutputDirectory() || NumThreads == 1) {
     for (const std::string &SourceFile : SourceFiles)
       writeSourceFileView(SourceFile, Coverage.get(), Printer.get(),
                           ShowFilenames);
   } else {
     // In -output-dir mode, it's safe to use multiple threads to print files.
-    ThreadPool Pool;
+    ThreadPool Pool(NumThreads);
     for (const std::string &SourceFile : SourceFiles)
       Pool.async(&CodeCoverageTool::writeSourceFileView, this, SourceFile,
                  Coverage.get(), Printer.get(), ShowFilenames);

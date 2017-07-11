@@ -230,6 +230,14 @@ static void my_pthread_introspection_hook(unsigned int event, pthread_t thread,
 #endif
 
 void InitializePlatformEarly() {
+#if defined(__aarch64__)
+  uptr max_vm = GetMaxVirtualAddress() + 1;
+  if (max_vm != Mapping::kHiAppMemEnd) {
+    Printf("ThreadSanitizer: unsupported vm address limit %p, expected %p.\n",
+           max_vm, Mapping::kHiAppMemEnd);
+    Die();
+  }
+#endif
 }
 
 void InitializePlatform() {

@@ -156,7 +156,7 @@ void ProcessPlatformSpecificAllocations(Frontier *frontier) {
     if (flags()->use_root_regions) {
       for (uptr i = 0; i < root_regions->size(); i++) {
         ScanRootRegion(frontier, (*root_regions)[i], address, end_address,
-                       info.protection);
+                       info.protection & kProtectionRead);
       }
     }
 

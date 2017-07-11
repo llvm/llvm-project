@@ -552,7 +552,7 @@ TEST(APFloatTest, MaxNum) {
   EXPECT_EQ(2.0, maxnum(f1, f2).convertToDouble());
   EXPECT_EQ(2.0, maxnum(f2, f1).convertToDouble());
   EXPECT_EQ(1.0, maxnum(f1, nan).convertToDouble());
-  EXPECT_EQ(1.0, minnum(nan, f1).convertToDouble());
+  EXPECT_EQ(1.0, maxnum(nan, f1).convertToDouble());
 }
 
 TEST(APFloatTest, Denormal) {
@@ -745,7 +745,7 @@ TEST(APFloatTest, fromZeroDecimalLargeExponentString) {
   EXPECT_EQ(0.0,  APFloat(APFloat::IEEEdouble(), "000.0000e1234").convertToDouble());
   EXPECT_EQ(0.0,  APFloat(APFloat::IEEEdouble(), "000.0000e-1234").convertToDouble());
 
-  EXPECT_EQ(0.0,  APFloat(APFloat::IEEEdouble(), StringRef("0e1234\02", 6)).convertToDouble());
+  EXPECT_EQ(0.0,  APFloat(APFloat::IEEEdouble(), StringRef("0e1234" "\0" "2", 6)).convertToDouble());
 }
 
 TEST(APFloatTest, fromZeroHexadecimalString) {
@@ -1059,11 +1059,11 @@ TEST(APFloatTest, StringDecimalDeath) {
 
   EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), StringRef("\0", 1)), "Invalid character in significand");
   EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), StringRef("1\0", 2)), "Invalid character in significand");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), StringRef("1\02", 3)), "Invalid character in significand");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), StringRef("1\02e1", 5)), "Invalid character in significand");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), StringRef("1" "\0" "2", 3)), "Invalid character in significand");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), StringRef("1" "\0" "2e1", 5)), "Invalid character in significand");
   EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), StringRef("1e\0", 3)), "Invalid character in exponent");
   EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), StringRef("1e1\0", 4)), "Invalid character in exponent");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), StringRef("1e1\02", 5)), "Invalid character in exponent");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), StringRef("1e1" "\0" "2", 5)), "Invalid character in exponent");
 
   EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "1.0f"), "Invalid character in significand");
 
@@ -1149,11 +1149,11 @@ TEST(APFloatTest, StringHexadecimalDeath) {
 
   EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), StringRef("0x\0", 3)), "Invalid character in significand");
   EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), StringRef("0x1\0", 4)), "Invalid character in significand");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), StringRef("0x1\02", 5)), "Invalid character in significand");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), StringRef("0x1\02p1", 7)), "Invalid character in significand");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), StringRef("0x1" "\0" "2", 5)), "Invalid character in significand");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), StringRef("0x1" "\0" "2p1", 7)), "Invalid character in significand");
   EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), StringRef("0x1p\0", 5)), "Invalid character in exponent");
   EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), StringRef("0x1p1\0", 6)), "Invalid character in exponent");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), StringRef("0x1p1\02", 7)), "Invalid character in exponent");
+  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), StringRef("0x1p1" "\0" "2", 7)), "Invalid character in exponent");
 
   EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "0x1p0f"), "Invalid character in exponent");
 

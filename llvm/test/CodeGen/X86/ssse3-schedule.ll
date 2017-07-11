@@ -35,9 +35,9 @@ define <16 x i8> @test_pabsb(<16 x i8> %a0, <16 x i8> *%a1) {
 ; SANDY-LABEL: test_pabsb:
 ; SANDY:       # BB#0:
 ; SANDY-NEXT:    vpabsb %xmm0, %xmm0 # sched: [1:0.50]
-; SANDY-NEXT:    vpabsb (%rdi), %xmm1 # sched: [5:0.50]
+; SANDY-NEXT:    vpabsb (%rdi), %xmm1 # sched: [7:0.50]
 ; SANDY-NEXT:    vpor %xmm1, %xmm0, %xmm0 # sched: [1:0.33]
-; SANDY-NEXT:    retq # sched: [5:1.00]
+; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pabsb:
 ; HASWELL:       # BB#0:
@@ -86,9 +86,9 @@ define <4 x i32> @test_pabsd(<4 x i32> %a0, <4 x i32> *%a1) {
 ; SANDY-LABEL: test_pabsd:
 ; SANDY:       # BB#0:
 ; SANDY-NEXT:    vpabsd %xmm0, %xmm0 # sched: [1:0.50]
-; SANDY-NEXT:    vpabsd (%rdi), %xmm1 # sched: [5:0.50]
+; SANDY-NEXT:    vpabsd (%rdi), %xmm1 # sched: [7:0.50]
 ; SANDY-NEXT:    vpor %xmm1, %xmm0, %xmm0 # sched: [1:0.33]
-; SANDY-NEXT:    retq # sched: [5:1.00]
+; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pabsd:
 ; HASWELL:       # BB#0:
@@ -136,7 +136,7 @@ define <8 x i16> @test_pabsw(<8 x i16> %a0, <8 x i16> *%a1) {
 ; SANDY-LABEL: test_pabsw:
 ; SANDY:       # BB#0:
 ; SANDY-NEXT:    vpabsw %xmm0, %xmm0 # sched: [1:0.50]
-; SANDY-NEXT:    retq # sched: [5:1.00]
+; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pabsw:
 ; HASWELL:       # BB#0:
@@ -182,8 +182,8 @@ define <8 x i16> @test_palignr(<8 x i16> %a0, <8 x i16> %a1, <8 x i16> *%a2) {
 ; SANDY-LABEL: test_palignr:
 ; SANDY:       # BB#0:
 ; SANDY-NEXT:    vpalignr {{.*#+}} xmm0 = xmm0[6,7,8,9,10,11,12,13,14,15],xmm1[0,1,2,3,4,5] sched: [1:0.50]
-; SANDY-NEXT:    vpalignr {{.*#+}} xmm0 = mem[14,15],xmm0[0,1,2,3,4,5,6,7,8,9,10,11,12,13] sched: [5:0.50]
-; SANDY-NEXT:    retq # sched: [5:1.00]
+; SANDY-NEXT:    vpalignr {{.*#+}} xmm0 = mem[14,15],xmm0[0,1,2,3,4,5,6,7,8,9,10,11,12,13] sched: [7:0.50]
+; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_palignr:
 ; HASWELL:       # BB#0:
@@ -223,9 +223,9 @@ define <4 x i32> @test_phaddd(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> *%a2) {
 ;
 ; SANDY-LABEL: test_phaddd:
 ; SANDY:       # BB#0:
-; SANDY-NEXT:    vphaddd %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
-; SANDY-NEXT:    vphaddd (%rdi), %xmm0, %xmm0 # sched: [5:0.50]
-; SANDY-NEXT:    retq # sched: [5:1.00]
+; SANDY-NEXT:    vphaddd %xmm1, %xmm0, %xmm0 # sched: [3:1.50]
+; SANDY-NEXT:    vphaddd (%rdi), %xmm0, %xmm0 # sched: [9:1.50]
+; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_phaddd:
 ; HASWELL:       # BB#0:
@@ -274,9 +274,9 @@ define <8 x i16> @test_phaddsw(<8 x i16> %a0, <8 x i16> %a1, <8 x i16> *%a2) {
 ;
 ; SANDY-LABEL: test_phaddsw:
 ; SANDY:       # BB#0:
-; SANDY-NEXT:    vphaddsw %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
-; SANDY-NEXT:    vphaddsw (%rdi), %xmm0, %xmm0 # sched: [5:0.50]
-; SANDY-NEXT:    retq # sched: [5:1.00]
+; SANDY-NEXT:    vphaddsw %xmm1, %xmm0, %xmm0 # sched: [3:1.50]
+; SANDY-NEXT:    vphaddsw (%rdi), %xmm0, %xmm0 # sched: [9:1.50]
+; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_phaddsw:
 ; HASWELL:       # BB#0:
@@ -317,9 +317,9 @@ define <8 x i16> @test_phaddw(<8 x i16> %a0, <8 x i16> %a1, <8 x i16> *%a2) {
 ;
 ; SANDY-LABEL: test_phaddw:
 ; SANDY:       # BB#0:
-; SANDY-NEXT:    vphaddw %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
-; SANDY-NEXT:    vphaddw (%rdi), %xmm0, %xmm0 # sched: [5:0.50]
-; SANDY-NEXT:    retq # sched: [5:1.00]
+; SANDY-NEXT:    vphaddw %xmm1, %xmm0, %xmm0 # sched: [3:1.50]
+; SANDY-NEXT:    vphaddw (%rdi), %xmm0, %xmm0 # sched: [9:1.50]
+; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_phaddw:
 ; HASWELL:       # BB#0:
@@ -360,9 +360,9 @@ define <4 x i32> @test_phsubd(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> *%a2) {
 ;
 ; SANDY-LABEL: test_phsubd:
 ; SANDY:       # BB#0:
-; SANDY-NEXT:    vphsubd %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
-; SANDY-NEXT:    vphsubd (%rdi), %xmm0, %xmm0 # sched: [5:0.50]
-; SANDY-NEXT:    retq # sched: [5:1.00]
+; SANDY-NEXT:    vphsubd %xmm1, %xmm0, %xmm0 # sched: [3:1.50]
+; SANDY-NEXT:    vphsubd (%rdi), %xmm0, %xmm0 # sched: [9:1.50]
+; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_phsubd:
 ; HASWELL:       # BB#0:
@@ -411,9 +411,9 @@ define <8 x i16> @test_phsubsw(<8 x i16> %a0, <8 x i16> %a1, <8 x i16> *%a2) {
 ;
 ; SANDY-LABEL: test_phsubsw:
 ; SANDY:       # BB#0:
-; SANDY-NEXT:    vphsubsw %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
-; SANDY-NEXT:    vphsubsw (%rdi), %xmm0, %xmm0 # sched: [5:0.50]
-; SANDY-NEXT:    retq # sched: [5:1.00]
+; SANDY-NEXT:    vphsubsw %xmm1, %xmm0, %xmm0 # sched: [3:1.50]
+; SANDY-NEXT:    vphsubsw (%rdi), %xmm0, %xmm0 # sched: [9:1.50]
+; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_phsubsw:
 ; HASWELL:       # BB#0:
@@ -454,9 +454,9 @@ define <8 x i16> @test_phsubw(<8 x i16> %a0, <8 x i16> %a1, <8 x i16> *%a2) {
 ;
 ; SANDY-LABEL: test_phsubw:
 ; SANDY:       # BB#0:
-; SANDY-NEXT:    vphsubw %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
-; SANDY-NEXT:    vphsubw (%rdi), %xmm0, %xmm0 # sched: [5:0.50]
-; SANDY-NEXT:    retq # sched: [5:1.00]
+; SANDY-NEXT:    vphsubw %xmm1, %xmm0, %xmm0 # sched: [3:1.50]
+; SANDY-NEXT:    vphsubw (%rdi), %xmm0, %xmm0 # sched: [9:1.50]
+; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_phsubw:
 ; HASWELL:       # BB#0:
@@ -497,9 +497,9 @@ define <8 x i16> @test_pmaddubsw(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ;
 ; SANDY-LABEL: test_pmaddubsw:
 ; SANDY:       # BB#0:
-; SANDY-NEXT:    vpmaddubsw %xmm1, %xmm0, %xmm0 # sched: [5:1.00]
+; SANDY-NEXT:    vpmaddubsw %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
 ; SANDY-NEXT:    vpmaddubsw (%rdi), %xmm0, %xmm0 # sched: [9:1.00]
-; SANDY-NEXT:    retq # sched: [5:1.00]
+; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pmaddubsw:
 ; HASWELL:       # BB#0:
@@ -538,8 +538,8 @@ define <8 x i16> @test_pmulhrsw(<8 x i16> %a0, <8 x i16> %a1, <8 x i16> *%a2) {
 ;
 ; SANDY-LABEL: test_pmulhrsw:
 ; SANDY:       # BB#0:
-; SANDY-NEXT:    vpmulhrsw %xmm1, %xmm0, %xmm0 # sched: [5:1.00]
-; SANDY-NEXT:    retq # sched: [5:1.00]
+; SANDY-NEXT:    vpmulhrsw %xmm1, %xmm0, %xmm0 # sched: [3:1.00]
+; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pmulhrsw:
 ; HASWELL:       # BB#0:
@@ -579,8 +579,8 @@ define <16 x i8> @test_pshufb(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; SANDY-LABEL: test_pshufb:
 ; SANDY:       # BB#0:
 ; SANDY-NEXT:    vpshufb %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
-; SANDY-NEXT:    vpshufb (%rdi), %xmm0, %xmm0 # sched: [5:0.50]
-; SANDY-NEXT:    retq # sched: [5:1.00]
+; SANDY-NEXT:    vpshufb (%rdi), %xmm0, %xmm0 # sched: [7:0.50]
+; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_pshufb:
 ; HASWELL:       # BB#0:
@@ -630,8 +630,8 @@ define <16 x i8> @test_psignb(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ; SANDY-LABEL: test_psignb:
 ; SANDY:       # BB#0:
 ; SANDY-NEXT:    vpsignb %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
-; SANDY-NEXT:    vpsignb (%rdi), %xmm0, %xmm0 # sched: [5:0.50]
-; SANDY-NEXT:    retq # sched: [5:1.00]
+; SANDY-NEXT:    vpsignb (%rdi), %xmm0, %xmm0 # sched: [7:0.50]
+; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_psignb:
 ; HASWELL:       # BB#0:
@@ -681,8 +681,8 @@ define <4 x i32> @test_psignd(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> *%a2) {
 ; SANDY-LABEL: test_psignd:
 ; SANDY:       # BB#0:
 ; SANDY-NEXT:    vpsignd %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
-; SANDY-NEXT:    vpsignd (%rdi), %xmm0, %xmm0 # sched: [5:0.50]
-; SANDY-NEXT:    retq # sched: [5:1.00]
+; SANDY-NEXT:    vpsignd (%rdi), %xmm0, %xmm0 # sched: [7:0.50]
+; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_psignd:
 ; HASWELL:       # BB#0:
@@ -732,8 +732,8 @@ define <8 x i16> @test_psignw(<8 x i16> %a0, <8 x i16> %a1, <8 x i16> *%a2) {
 ; SANDY-LABEL: test_psignw:
 ; SANDY:       # BB#0:
 ; SANDY-NEXT:    vpsignw %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
-; SANDY-NEXT:    vpsignw (%rdi), %xmm0, %xmm0 # sched: [5:0.50]
-; SANDY-NEXT:    retq # sched: [5:1.00]
+; SANDY-NEXT:    vpsignw (%rdi), %xmm0, %xmm0 # sched: [7:0.50]
+; SANDY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_psignw:
 ; HASWELL:       # BB#0:

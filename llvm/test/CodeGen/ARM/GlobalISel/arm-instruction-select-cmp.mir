@@ -56,8 +56,8 @@ body:             |
 
     %2(s1) = G_ICMP intpred(eq),  %0(s32), %1
     ; CHECK: [[ZERO:%[0-9]+]] = MOVi 0, 14, _, _
-    ; CHECK: CMPrr [[VREGX]], [[VREGY]], 14, _, implicit-def %cpsr
-    ; CHECK: [[RES:%[0-9]+]] = MOVCCi [[ZERO]], 1, 0, %cpsr
+    ; CHECK-NEXT: CMPrr [[VREGX]], [[VREGY]], 14, _, implicit-def %cpsr
+    ; CHECK-NEXT: [[RES:%[0-9]+]] = MOVCCi [[ZERO]], 1, 0, %cpsr
 
     %3(s32) = G_ZEXT %2(s1)
     ; CHECK: [[RET:%[0-9]+]] = ANDri [[RES]], 1, 14, _, _
@@ -92,8 +92,8 @@ body:             |
 
     %2(s1) = G_ICMP intpred(ne),  %0(s32), %1
     ; CHECK: [[ZERO:%[0-9]+]] = MOVi 0, 14, _, _
-    ; CHECK: CMPrr [[VREGX]], [[VREGY]], 14, _, implicit-def %cpsr
-    ; CHECK: [[RES:%[0-9]+]] = MOVCCi [[ZERO]], 1, 1, %cpsr
+    ; CHECK-NEXT: CMPrr [[VREGX]], [[VREGY]], 14, _, implicit-def %cpsr
+    ; CHECK-NEXT: [[RES:%[0-9]+]] = MOVCCi [[ZERO]], 1, 1, %cpsr
 
     %3(s32) = G_ZEXT %2(s1)
     ; CHECK: [[RET:%[0-9]+]] = ANDri [[RES]], 1, 14, _, _
@@ -128,8 +128,8 @@ body:             |
 
     %2(s1) = G_ICMP intpred(ugt),  %0(s32), %1
     ; CHECK: [[ZERO:%[0-9]+]] = MOVi 0, 14, _, _
-    ; CHECK: CMPrr [[VREGX]], [[VREGY]], 14, _, implicit-def %cpsr
-    ; CHECK: [[RES:%[0-9]+]] = MOVCCi [[ZERO]], 1, 8, %cpsr
+    ; CHECK-NEXT: CMPrr [[VREGX]], [[VREGY]], 14, _, implicit-def %cpsr
+    ; CHECK-NEXT: [[RES:%[0-9]+]] = MOVCCi [[ZERO]], 1, 8, %cpsr
 
     %3(s32) = G_ZEXT %2(s1)
     ; CHECK: [[RET:%[0-9]+]] = ANDri [[RES]], 1, 14, _, _
@@ -164,8 +164,8 @@ body:             |
 
     %2(s1) = G_ICMP intpred(uge),  %0(s32), %1
     ; CHECK: [[ZERO:%[0-9]+]] = MOVi 0, 14, _, _
-    ; CHECK: CMPrr [[VREGX]], [[VREGY]], 14, _, implicit-def %cpsr
-    ; CHECK: [[RES:%[0-9]+]] = MOVCCi [[ZERO]], 1, 2, %cpsr
+    ; CHECK-NEXT: CMPrr [[VREGX]], [[VREGY]], 14, _, implicit-def %cpsr
+    ; CHECK-NEXT: [[RES:%[0-9]+]] = MOVCCi [[ZERO]], 1, 2, %cpsr
 
     %3(s32) = G_ZEXT %2(s1)
     ; CHECK: [[RET:%[0-9]+]] = ANDri [[RES]], 1, 14, _, _
@@ -200,8 +200,8 @@ body:             |
 
     %2(s1) = G_ICMP intpred(ult),  %0(s32), %1
     ; CHECK: [[ZERO:%[0-9]+]] = MOVi 0, 14, _, _
-    ; CHECK: CMPrr [[VREGX]], [[VREGY]], 14, _, implicit-def %cpsr
-    ; CHECK: [[RES:%[0-9]+]] = MOVCCi [[ZERO]], 1, 3, %cpsr
+    ; CHECK-NEXT: CMPrr [[VREGX]], [[VREGY]], 14, _, implicit-def %cpsr
+    ; CHECK-NEXT: [[RES:%[0-9]+]] = MOVCCi [[ZERO]], 1, 3, %cpsr
 
     %3(s32) = G_ZEXT %2(s1)
     ; CHECK: [[RET:%[0-9]+]] = ANDri [[RES]], 1, 14, _, _
@@ -236,8 +236,8 @@ body:             |
 
     %2(s1) = G_ICMP intpred(ule),  %0(s32), %1
     ; CHECK: [[ZERO:%[0-9]+]] = MOVi 0, 14, _, _
-    ; CHECK: CMPrr [[VREGX]], [[VREGY]], 14, _, implicit-def %cpsr
-    ; CHECK: [[RES:%[0-9]+]] = MOVCCi [[ZERO]], 1, 9, %cpsr
+    ; CHECK-NEXT: CMPrr [[VREGX]], [[VREGY]], 14, _, implicit-def %cpsr
+    ; CHECK-NEXT: [[RES:%[0-9]+]] = MOVCCi [[ZERO]], 1, 9, %cpsr
 
     %3(s32) = G_ZEXT %2(s1)
     ; CHECK: [[RET:%[0-9]+]] = ANDri [[RES]], 1, 14, _, _
@@ -272,8 +272,8 @@ body:             |
 
     %2(s1) = G_ICMP intpred(sgt),  %0(s32), %1
     ; CHECK: [[ZERO:%[0-9]+]] = MOVi 0, 14, _, _
-    ; CHECK: CMPrr [[VREGX]], [[VREGY]], 14, _, implicit-def %cpsr
-    ; CHECK: [[RES:%[0-9]+]] = MOVCCi [[ZERO]], 1, 12, %cpsr
+    ; CHECK-NEXT: CMPrr [[VREGX]], [[VREGY]], 14, _, implicit-def %cpsr
+    ; CHECK-NEXT: [[RES:%[0-9]+]] = MOVCCi [[ZERO]], 1, 12, %cpsr
 
     %3(s32) = G_ZEXT %2(s1)
     ; CHECK: [[RET:%[0-9]+]] = ANDri [[RES]], 1, 14, _, _
@@ -308,8 +308,8 @@ body:             |
 
     %2(s1) = G_ICMP intpred(sge),  %0(s32), %1
     ; CHECK: [[ZERO:%[0-9]+]] = MOVi 0, 14, _, _
-    ; CHECK: CMPrr [[VREGX]], [[VREGY]], 14, _, implicit-def %cpsr
-    ; CHECK: [[RES:%[0-9]+]] = MOVCCi [[ZERO]], 1, 10, %cpsr
+    ; CHECK-NEXT: CMPrr [[VREGX]], [[VREGY]], 14, _, implicit-def %cpsr
+    ; CHECK-NEXT: [[RES:%[0-9]+]] = MOVCCi [[ZERO]], 1, 10, %cpsr
 
     %3(s32) = G_ZEXT %2(s1)
     ; CHECK: [[RET:%[0-9]+]] = ANDri [[RES]], 1, 14, _, _
@@ -344,8 +344,8 @@ body:             |
 
     %2(s1) = G_ICMP intpred(slt),  %0(s32), %1
     ; CHECK: [[ZERO:%[0-9]+]] = MOVi 0, 14, _, _
-    ; CHECK: CMPrr [[VREGX]], [[VREGY]], 14, _, implicit-def %cpsr
-    ; CHECK: [[RES:%[0-9]+]] = MOVCCi [[ZERO]], 1, 11, %cpsr
+    ; CHECK-NEXT: CMPrr [[VREGX]], [[VREGY]], 14, _, implicit-def %cpsr
+    ; CHECK-NEXT: [[RES:%[0-9]+]] = MOVCCi [[ZERO]], 1, 11, %cpsr
 
     %3(s32) = G_ZEXT %2(s1)
     ; CHECK: [[RET:%[0-9]+]] = ANDri [[RES]], 1, 14, _, _
@@ -380,8 +380,8 @@ body:             |
 
     %2(s1) = G_ICMP intpred(sle),  %0(s32), %1
     ; CHECK: [[ZERO:%[0-9]+]] = MOVi 0, 14, _, _
-    ; CHECK: CMPrr [[VREGX]], [[VREGY]], 14, _, implicit-def %cpsr
-    ; CHECK: [[RES:%[0-9]+]] = MOVCCi [[ZERO]], 1, 13, %cpsr
+    ; CHECK-NEXT: CMPrr [[VREGX]], [[VREGY]], 14, _, implicit-def %cpsr
+    ; CHECK-NEXT: [[RES:%[0-9]+]] = MOVCCi [[ZERO]], 1, 13, %cpsr
 
     %3(s32) = G_ZEXT %2(s1)
     ; CHECK: [[RET:%[0-9]+]] = ANDri [[RES]], 1, 14, _, _
@@ -478,9 +478,9 @@ body:             |
 
     %2(s1) = G_FCMP floatpred(oeq),  %0(s32), %1
     ; CHECK: [[ZERO:%[0-9]+]] = MOVi 0, 14, _, _
-    ; CHECK: VCMPS [[VREGX]], [[VREGY]], 14, _, implicit-def %fpscr_nzcv
-    ; CHECK: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
-    ; CHECK: [[RES:%[0-9]+]] = MOVCCi [[ZERO]], 1, 0, %cpsr
+    ; CHECK-NEXT: VCMPS [[VREGX]], [[VREGY]], 14, _, implicit-def %fpscr_nzcv
+    ; CHECK-NEXT: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
+    ; CHECK-NEXT: [[RES:%[0-9]+]] = MOVCCi [[ZERO]], 1, 0, %cpsr
 
     %3(s32) = G_ZEXT %2(s1)
     ; CHECK: [[RET:%[0-9]+]] = ANDri [[RES]], 1, 14, _, _
@@ -515,9 +515,9 @@ body:             |
 
     %2(s1) = G_FCMP floatpred(ogt),  %0(s32), %1
     ; CHECK: [[ZERO:%[0-9]+]] = MOVi 0, 14, _, _
-    ; CHECK: VCMPS [[VREGX]], [[VREGY]], 14, _, implicit-def %fpscr_nzcv
-    ; CHECK: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
-    ; CHECK: [[RES:%[0-9]+]] = MOVCCi [[ZERO]], 1, 12, %cpsr
+    ; CHECK-NEXT: VCMPS [[VREGX]], [[VREGY]], 14, _, implicit-def %fpscr_nzcv
+    ; CHECK-NEXT: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
+    ; CHECK-NEXT: [[RES:%[0-9]+]] = MOVCCi [[ZERO]], 1, 12, %cpsr
 
     %3(s32) = G_ZEXT %2(s1)
     ; CHECK: [[RET:%[0-9]+]] = ANDri [[RES]], 1, 14, _, _
@@ -552,9 +552,9 @@ body:             |
 
     %2(s1) = G_FCMP floatpred(oge),  %0(s32), %1
     ; CHECK: [[ZERO:%[0-9]+]] = MOVi 0, 14, _, _
-    ; CHECK: VCMPS [[VREGX]], [[VREGY]], 14, _, implicit-def %fpscr_nzcv
-    ; CHECK: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
-    ; CHECK: [[RES:%[0-9]+]] = MOVCCi [[ZERO]], 1, 10, %cpsr
+    ; CHECK-NEXT: VCMPS [[VREGX]], [[VREGY]], 14, _, implicit-def %fpscr_nzcv
+    ; CHECK-NEXT: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
+    ; CHECK-NEXT: [[RES:%[0-9]+]] = MOVCCi [[ZERO]], 1, 10, %cpsr
 
     %3(s32) = G_ZEXT %2(s1)
     ; CHECK: [[RET:%[0-9]+]] = ANDri [[RES]], 1, 14, _, _
@@ -589,9 +589,9 @@ body:             |
 
     %2(s1) = G_FCMP floatpred(olt),  %0(s32), %1
     ; CHECK: [[ZERO:%[0-9]+]] = MOVi 0, 14, _, _
-    ; CHECK: VCMPS [[VREGX]], [[VREGY]], 14, _, implicit-def %fpscr_nzcv
-    ; CHECK: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
-    ; CHECK: [[RES:%[0-9]+]] = MOVCCi [[ZERO]], 1, 4, %cpsr
+    ; CHECK-NEXT: VCMPS [[VREGX]], [[VREGY]], 14, _, implicit-def %fpscr_nzcv
+    ; CHECK-NEXT: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
+    ; CHECK-NEXT: [[RES:%[0-9]+]] = MOVCCi [[ZERO]], 1, 4, %cpsr
 
     %3(s32) = G_ZEXT %2(s1)
     ; CHECK: [[RET:%[0-9]+]] = ANDri [[RES]], 1, 14, _, _
@@ -626,9 +626,9 @@ body:             |
 
     %2(s1) = G_FCMP floatpred(ole),  %0(s32), %1
     ; CHECK: [[ZERO:%[0-9]+]] = MOVi 0, 14, _, _
-    ; CHECK: VCMPS [[VREGX]], [[VREGY]], 14, _, implicit-def %fpscr_nzcv
-    ; CHECK: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
-    ; CHECK: [[RES:%[0-9]+]] = MOVCCi [[ZERO]], 1, 9, %cpsr
+    ; CHECK-NEXT: VCMPS [[VREGX]], [[VREGY]], 14, _, implicit-def %fpscr_nzcv
+    ; CHECK-NEXT: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
+    ; CHECK-NEXT: [[RES:%[0-9]+]] = MOVCCi [[ZERO]], 1, 9, %cpsr
 
     %3(s32) = G_ZEXT %2(s1)
     ; CHECK: [[RET:%[0-9]+]] = ANDri [[RES]], 1, 14, _, _
@@ -663,9 +663,9 @@ body:             |
 
     %2(s1) = G_FCMP floatpred(ord),  %0(s32), %1
     ; CHECK: [[ZERO:%[0-9]+]] = MOVi 0, 14, _, _
-    ; CHECK: VCMPS [[VREGX]], [[VREGY]], 14, _, implicit-def %fpscr_nzcv
-    ; CHECK: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
-    ; CHECK: [[RES:%[0-9]+]] = MOVCCi [[ZERO]], 1, 7, %cpsr
+    ; CHECK-NEXT: VCMPS [[VREGX]], [[VREGY]], 14, _, implicit-def %fpscr_nzcv
+    ; CHECK-NEXT: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
+    ; CHECK-NEXT: [[RES:%[0-9]+]] = MOVCCi [[ZERO]], 1, 7, %cpsr
 
     %3(s32) = G_ZEXT %2(s1)
     ; CHECK: [[RET:%[0-9]+]] = ANDri [[RES]], 1, 14, _, _
@@ -700,9 +700,9 @@ body:             |
 
     %2(s1) = G_FCMP floatpred(ugt),  %0(s32), %1
     ; CHECK: [[ZERO:%[0-9]+]] = MOVi 0, 14, _, _
-    ; CHECK: VCMPS [[VREGX]], [[VREGY]], 14, _, implicit-def %fpscr_nzcv
-    ; CHECK: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
-    ; CHECK: [[RES:%[0-9]+]] = MOVCCi [[ZERO]], 1, 8, %cpsr
+    ; CHECK-NEXT: VCMPS [[VREGX]], [[VREGY]], 14, _, implicit-def %fpscr_nzcv
+    ; CHECK-NEXT: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
+    ; CHECK-NEXT: [[RES:%[0-9]+]] = MOVCCi [[ZERO]], 1, 8, %cpsr
 
     %3(s32) = G_ZEXT %2(s1)
     ; CHECK: [[RET:%[0-9]+]] = ANDri [[RES]], 1, 14, _, _
@@ -737,9 +737,9 @@ body:             |
 
     %2(s1) = G_FCMP floatpred(uge),  %0(s32), %1
     ; CHECK: [[ZERO:%[0-9]+]] = MOVi 0, 14, _, _
-    ; CHECK: VCMPS [[VREGX]], [[VREGY]], 14, _, implicit-def %fpscr_nzcv
-    ; CHECK: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
-    ; CHECK: [[RES:%[0-9]+]] = MOVCCi [[ZERO]], 1, 5, %cpsr
+    ; CHECK-NEXT: VCMPS [[VREGX]], [[VREGY]], 14, _, implicit-def %fpscr_nzcv
+    ; CHECK-NEXT: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
+    ; CHECK-NEXT: [[RES:%[0-9]+]] = MOVCCi [[ZERO]], 1, 5, %cpsr
 
     %3(s32) = G_ZEXT %2(s1)
     ; CHECK: [[RET:%[0-9]+]] = ANDri [[RES]], 1, 14, _, _
@@ -774,9 +774,9 @@ body:             |
 
     %2(s1) = G_FCMP floatpred(ult),  %0(s32), %1
     ; CHECK: [[ZERO:%[0-9]+]] = MOVi 0, 14, _, _
-    ; CHECK: VCMPS [[VREGX]], [[VREGY]], 14, _, implicit-def %fpscr_nzcv
-    ; CHECK: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
-    ; CHECK: [[RES:%[0-9]+]] = MOVCCi [[ZERO]], 1, 11, %cpsr
+    ; CHECK-NEXT: VCMPS [[VREGX]], [[VREGY]], 14, _, implicit-def %fpscr_nzcv
+    ; CHECK-NEXT: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
+    ; CHECK-NEXT: [[RES:%[0-9]+]] = MOVCCi [[ZERO]], 1, 11, %cpsr
 
     %3(s32) = G_ZEXT %2(s1)
     ; CHECK: [[RET:%[0-9]+]] = ANDri [[RES]], 1, 14, _, _
@@ -811,9 +811,9 @@ body:             |
 
     %2(s1) = G_FCMP floatpred(ule),  %0(s32), %1
     ; CHECK: [[ZERO:%[0-9]+]] = MOVi 0, 14, _, _
-    ; CHECK: VCMPS [[VREGX]], [[VREGY]], 14, _, implicit-def %fpscr_nzcv
-    ; CHECK: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
-    ; CHECK: [[RES:%[0-9]+]] = MOVCCi [[ZERO]], 1, 13, %cpsr
+    ; CHECK-NEXT: VCMPS [[VREGX]], [[VREGY]], 14, _, implicit-def %fpscr_nzcv
+    ; CHECK-NEXT: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
+    ; CHECK-NEXT: [[RES:%[0-9]+]] = MOVCCi [[ZERO]], 1, 13, %cpsr
 
     %3(s32) = G_ZEXT %2(s1)
     ; CHECK: [[RET:%[0-9]+]] = ANDri [[RES]], 1, 14, _, _
@@ -848,9 +848,9 @@ body:             |
 
     %2(s1) = G_FCMP floatpred(une),  %0(s32), %1
     ; CHECK: [[ZERO:%[0-9]+]] = MOVi 0, 14, _, _
-    ; CHECK: VCMPS [[VREGX]], [[VREGY]], 14, _, implicit-def %fpscr_nzcv
-    ; CHECK: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
-    ; CHECK: [[RES:%[0-9]+]] = MOVCCi [[ZERO]], 1, 1, %cpsr
+    ; CHECK-NEXT: VCMPS [[VREGX]], [[VREGY]], 14, _, implicit-def %fpscr_nzcv
+    ; CHECK-NEXT: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
+    ; CHECK-NEXT: [[RES:%[0-9]+]] = MOVCCi [[ZERO]], 1, 1, %cpsr
 
     %3(s32) = G_ZEXT %2(s1)
     ; CHECK: [[RET:%[0-9]+]] = ANDri [[RES]], 1, 14, _, _
@@ -885,9 +885,9 @@ body:             |
 
     %2(s1) = G_FCMP floatpred(uno),  %0(s32), %1
     ; CHECK: [[ZERO:%[0-9]+]] = MOVi 0, 14, _, _
-    ; CHECK: VCMPS [[VREGX]], [[VREGY]], 14, _, implicit-def %fpscr_nzcv
-    ; CHECK: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
-    ; CHECK: [[RES:%[0-9]+]] = MOVCCi [[ZERO]], 1, 6, %cpsr
+    ; CHECK-NEXT: VCMPS [[VREGX]], [[VREGY]], 14, _, implicit-def %fpscr_nzcv
+    ; CHECK-NEXT: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
+    ; CHECK-NEXT: [[RES:%[0-9]+]] = MOVCCi [[ZERO]], 1, 6, %cpsr
 
     %3(s32) = G_ZEXT %2(s1)
     ; CHECK: [[RET:%[0-9]+]] = ANDri [[RES]], 1, 14, _, _
@@ -922,12 +922,12 @@ body:             |
 
     %2(s1) = G_FCMP floatpred(one),  %0(s32), %1
     ; CHECK: [[ZERO:%[0-9]+]] = MOVi 0, 14, _, _
-    ; CHECK: VCMPS [[VREGX]], [[VREGY]], 14, _, implicit-def %fpscr_nzcv
-    ; CHECK: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
-    ; CHECK: [[RES1:%[0-9]+]] = MOVCCi [[ZERO]], 1, 12, %cpsr
-    ; CHECK: VCMPS [[VREGX]], [[VREGY]], 14, _, implicit-def %fpscr_nzcv
-    ; CHECK: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
-    ; CHECK: [[RES:%[0-9]+]] = MOVCCi [[RES1]], 1, 4, %cpsr
+    ; CHECK-NEXT: VCMPS [[VREGX]], [[VREGY]], 14, _, implicit-def %fpscr_nzcv
+    ; CHECK-NEXT: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
+    ; CHECK-NEXT: [[RES1:%[0-9]+]] = MOVCCi [[ZERO]], 1, 12, %cpsr
+    ; CHECK-NEXT: VCMPS [[VREGX]], [[VREGY]], 14, _, implicit-def %fpscr_nzcv
+    ; CHECK-NEXT: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
+    ; CHECK-NEXT: [[RES:%[0-9]+]] = MOVCCi [[RES1]], 1, 4, %cpsr
 
     %3(s32) = G_ZEXT %2(s1)
     ; CHECK: [[RET:%[0-9]+]] = ANDri [[RES]], 1, 14, _, _
@@ -962,12 +962,12 @@ body:             |
 
     %2(s1) = G_FCMP floatpred(ueq),  %0(s32), %1
     ; CHECK: [[ZERO:%[0-9]+]] = MOVi 0, 14, _, _
-    ; CHECK: VCMPS [[VREGX]], [[VREGY]], 14, _, implicit-def %fpscr_nzcv
-    ; CHECK: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
-    ; CHECK: [[RES1:%[0-9]+]] = MOVCCi [[ZERO]], 1, 0, %cpsr
-    ; CHECK: VCMPS [[VREGX]], [[VREGY]], 14, _, implicit-def %fpscr_nzcv
-    ; CHECK: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
-    ; CHECK: [[RES:%[0-9]+]] = MOVCCi [[RES1]], 1, 6, %cpsr
+    ; CHECK-NEXT: VCMPS [[VREGX]], [[VREGY]], 14, _, implicit-def %fpscr_nzcv
+    ; CHECK-NEXT: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
+    ; CHECK-NEXT: [[RES1:%[0-9]+]] = MOVCCi [[ZERO]], 1, 0, %cpsr
+    ; CHECK-NEXT: VCMPS [[VREGX]], [[VREGY]], 14, _, implicit-def %fpscr_nzcv
+    ; CHECK-NEXT: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
+    ; CHECK-NEXT: [[RES:%[0-9]+]] = MOVCCi [[RES1]], 1, 6, %cpsr
 
     %3(s32) = G_ZEXT %2(s1)
     ; CHECK: [[RET:%[0-9]+]] = ANDri [[RES]], 1, 14, _, _

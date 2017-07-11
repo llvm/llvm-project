@@ -3220,7 +3220,13 @@ void SelectionDAGBuilder::visitShuffleVector(const User &I) {
   setValue(&I, DAG.getBuildVector(VT, DL, Ops));
 }
 
-void SelectionDAGBuilder::visitInsertValue(const InsertValueInst &I) {
+void SelectionDAGBuilder::visitInsertValue(const User &I) {
+  ArrayRef<unsigned> Indices;
+  if (const InsertValueInst *IV = dyn_cast<InsertValueInst>(&I))
+    Indices = IV->getIndices();
+  else
+    Indices = cast<ConstantExpr>(&I)->getIndices();
+
   const Value *Op0 = I.getOperand(0);
   const Value *Op1 = I.getOperand(1);
   Type *AggTy = I.getType();
@@ -3228,7 +3234,7 @@ void SelectionDAGBuilder::visitInsertValue(const InsertValueInst &I) {
   bool IntoUndef = isa<UndefValue>(Op0);
   bool FromUndef = isa<UndefValue>(Op1);
 
-  unsigned LinearIndex = ComputeLinearIndex(AggTy, I.getIndices());
+  unsigned LinearIndex = ComputeLinearIndex(AggTy, Indices);
 
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   SmallVector<EVT, 4> AggValueVTs;
@@ -3268,13 +3274,19 @@ void SelectionDAGBuilder::visitInsertValue(const InsertValueInst &I) {
                            DAG.getVTList(AggValueVTs), Values));
 }
 
-void SelectionDAGBuilder::visitExtractValue(const ExtractValueInst &I) {
+void SelectionDAGBuilder::visitExtractValue(const User &I) {
+  ArrayRef<unsigned> Indices;
+  if (const ExtractValueInst *EV = dyn_cast<ExtractValueInst>(&I))
+    Indices = EV->getIndices();
+  else
+    Indices = cast<ConstantExpr>(&I)->getIndices();
+
   const Value *Op0 = I.getOperand(0);
   Type *AggTy = Op0->getType();
   Type *ValTy = I.getType();
   bool OutOfUndef = isa<UndefValue>(Op0);
 
-  unsigned LinearIndex = ComputeLinearIndex(AggTy, I.getIndices());
+  unsigned LinearIndex = ComputeLinearIndex(AggTy, Indices);
 
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   SmallVector<EVT, 4> ValValueVTs;

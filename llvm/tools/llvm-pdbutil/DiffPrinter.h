@@ -43,7 +43,7 @@ struct IdenticalDiffProvider {
     return (Left == Right) ? DiffResult::IDENTICAL : DiffResult::DIFFERENT;
   }
 
-  template <typename T> std::string format(const T &Item) {
+  template <typename T> std::string format(const T &Item, bool Right) {
     return formatv("{0}", Item).str();
   }
 };
@@ -54,7 +54,7 @@ struct EquivalentDiffProvider {
     return (Left == Right) ? DiffResult::IDENTICAL : DiffResult::EQUIVALENT;
   }
 
-  template <typename T> std::string format(const T &Item) {
+  template <typename T> std::string format(const T &Item, bool Right) {
     return formatv("{0}", Item).str();
   }
 };
@@ -71,8 +71,8 @@ public:
   template <typename Provider = IdenticalDiffProvider, typename T, typename U>
   void print(StringRef Property, const T &Left, const U &Right,
              Provider P = Provider()) {
-    std::string L = P.format(Left);
-    std::string R = P.format(Right);
+    std::string L = P.format(Left, false);
+    std::string R = P.format(Right, true);
 
     DiffResult Result = P.compare(Left, Right);
     printExplicit(Property, Result, L, R);

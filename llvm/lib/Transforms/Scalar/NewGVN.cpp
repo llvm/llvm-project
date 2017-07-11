@@ -866,9 +866,7 @@ PHIExpression *NewGVN::createPHIExpression(Instruction *I, bool &HasBackedge,
     // Things in TOPClass are equivalent to everything.
     if (ValueToClass.lookup(*U) == TOPClass)
       return false;
-    if (lookupOperandLeader(*U) == PN)
-      return false;
-    return true;
+    return lookupOperandLeader(*U) != PN;
   });
   std::transform(Filtered.begin(), Filtered.end(), op_inserter(E),
                  [&](const Use *U) -> Value * {

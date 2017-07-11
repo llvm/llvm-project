@@ -96,40 +96,24 @@ void MemoryMappingLayout::LoadFromCache() {
 // segment.
 // Note that the segment addresses are not necessarily sorted.
 template <u32 kLCSegment, typename SegmentCommand>
-bool MemoryMappingLayout::NextSegmentLoad(uptr *start, uptr *end, uptr *offset,
-                                          char filename[], uptr filename_size,
-                                          ModuleArch *arch, u8 *uuid,
-                                          uptr *protection) {
+bool MemoryMappingLayout::NextSegmentLoad(MemoryMappedSegment *segment) {
   const char *lc = current_load_cmd_addr_;
   current_load_cmd_addr_ += ((const load_command *)lc)->cmdsize;
   if (((const load_command *)lc)->cmd == kLCSegment) {
     const SegmentCommand* sc = (const SegmentCommand *)lc;
-    GetSegmentAddrRange(start, end, sc->vmaddr, sc->vmsize);
-    if (protection) {
-      // Return the initial protection.
-      *protection = sc->initprot;
+    GetSegmentAddrRange(segment, sc->vmaddr, sc->vmsize);
+    // Return the initial protection.
+    segment->protection = sc->initprot;
+    segment->offset =
+        (current_filetype_ == /*MH_EXECUTE*/ 0x2) ? sc->vmaddr : sc->fileoff;
+    if (segment->filename) {
+      const char *src = (current_image_ == kDyldImageIdx)
+                            ? kDyldPath
+                            : _dyld_get_image_name(current_image_);
+      internal_strncpy(segment->filename, src, segment->filename_size);
     }
-    if (offset) {
-      if (current_filetype_ == /*MH_EXECUTE*/ 0x2) {
-        *offset = sc->vmaddr;
-      } else {
-        *offset = sc->fileoff;
-      }
-    }
-    if (filename) {
-      if (current_image_ == kDyldImageIdx) {
-        internal_strncpy(filename, kDyldPath, filename_size);
-      } else {
-        internal_strncpy(filename, _dyld_get_image_name(current_image_),
-                         filename_size);
-      }
-    }
-    if (arch) {
-      *arch = current_arch_;
-    }
-    if (uuid) {
-      internal_memcpy(uuid, current_uuid_, kModuleUUIDSize);
-    }
+    segment->arch = current_arch_;
+    internal_memcpy(segment->uuid, current_uuid_, kModuleUUIDSize);
     return true;
   }
   return false;
@@ -215,8 +199,7 @@ static mach_header *get_dyld_image_header() {
                                (vm_region_info_t)&info, &count);
     if (err != KERN_SUCCESS) return nullptr;
 
-    if (size >= sizeof(mach_header) &&
-        info.protection & MemoryMappingLayout::kProtectionRead) {
+    if (size >= sizeof(mach_header) && info.protection & kProtectionRead) {
       mach_header *hdr = (mach_header *)address;
       if ((hdr->magic == MH_MAGIC || hdr->magic == MH_MAGIC_64) &&
           hdr->filetype == MH_DYLINKER) {
@@ -233,7 +216,7 @@ const mach_header *get_dyld_hdr() {
   return dyld_hdr;
 }
 
-void MemoryMappingLayout::GetSegmentAddrRange(uptr *start, uptr *end,
+void MemoryMappingLayout::GetSegmentAddrRange(MemoryMappedSegment *segment,
                                               uptr vmaddr, uptr vmsize) {
   if (current_image_ == kDyldImageIdx) {
     // vmaddr is masked with 0xfffff because on macOS versions < 10.12,
@@ -242,18 +225,16 @@ void MemoryMappingLayout::GetSegmentAddrRange(uptr *start, uptr *end,
     // isn't actually the absolute segment address, but the offset portion
     // of the address is accurate when combined with the dyld base address,
     // and the mask will give just this offset.
-    if (start) *start = (vmaddr & 0xfffff) + (uptr)get_dyld_hdr();
-    if (end) *end = (vmaddr & 0xfffff) + vmsize + (uptr)get_dyld_hdr();
+    segment->start = (vmaddr & 0xfffff) + (uptr)get_dyld_hdr();
+    segment->end = (vmaddr & 0xfffff) + vmsize + (uptr)get_dyld_hdr();
   } else {
     const sptr dlloff = _dyld_get_image_vmaddr_slide(current_image_);
-    if (start) *start = vmaddr + dlloff;
-    if (end) *end = vmaddr + vmsize + dlloff;
+    segment->start = vmaddr + dlloff;
+    segment->end = vmaddr + vmsize + dlloff;
   }
 }
 
-bool MemoryMappingLayout::Next(uptr *start, uptr *end, uptr *offset,
-                               char filename[], uptr filename_size,
-                               uptr *protection, ModuleArch *arch, u8 *uuid) {
+bool MemoryMappingLayout::Next(MemoryMappedSegment *segment) {
   for (; current_image_ >= kDyldImageIdx; current_image_--) {
     const mach_header *hdr = (current_image_ == kDyldImageIdx)
                                  ? get_dyld_hdr()
@@ -291,16 +272,13 @@ bool MemoryMappingLayout::Next(uptr *start, uptr *end, uptr *offset,
 #ifdef MH_MAGIC_64
         case MH_MAGIC_64: {
           if (NextSegmentLoad<LC_SEGMENT_64, struct segment_command_64>(
-                  start, end, offset, filename, filename_size, arch, uuid,
-                  protection))
+                  segment))
             return true;
           break;
         }
 #endif
         case MH_MAGIC: {
-          if (NextSegmentLoad<LC_SEGMENT, struct segment_command>(
-                  start, end, offset, filename, filename_size, arch, uuid,
-                  protection))
+          if (NextSegmentLoad<LC_SEGMENT, struct segment_command>(segment))
             return true;
           break;
         }
@@ -315,28 +293,22 @@ bool MemoryMappingLayout::Next(uptr *start, uptr *end, uptr *offset,
 void MemoryMappingLayout::DumpListOfModules(
     InternalMmapVector<LoadedModule> *modules) {
   Reset();
-  uptr cur_beg, cur_end, prot;
-  ModuleArch cur_arch;
-  u8 cur_uuid[kModuleUUIDSize];
   InternalScopedString module_name(kMaxPathLength);
-  for (uptr i = 0; Next(&cur_beg, &cur_end, 0, module_name.data(),
-                        module_name.size(), &prot, &cur_arch, &cur_uuid[0]);
-       i++) {
-    const char *cur_name = module_name.data();
-    if (cur_name[0] == '\0')
-      continue;
+  MemoryMappedSegment segment(module_name.data(), kMaxPathLength);
+  for (uptr i = 0; Next(&segment); i++) {
+    if (segment.filename[0] == '\0') continue;
     LoadedModule *cur_module = nullptr;
     if (!modules->empty() &&
-        0 == internal_strcmp(cur_name, modules->back().full_name())) {
+        0 == internal_strcmp(segment.filename, modules->back().full_name())) {
       cur_module = &modules->back();
     } else {
       modules->push_back(LoadedModule());
       cur_module = &modules->back();
-      cur_module->set(cur_name, cur_beg, cur_arch, cur_uuid,
-                      current_instrumented_);
+      cur_module->set(segment.filename, segment.start, segment.arch,
+                      segment.uuid, current_instrumented_);
     }
-    cur_module->addAddressRange(cur_beg, cur_end, prot & kProtectionExecute,
-                                prot & kProtectionWrite);
+    cur_module->addAddressRange(segment.start, segment.end,
+                                segment.IsExecutable(), segment.IsWritable());
   }
 }
 

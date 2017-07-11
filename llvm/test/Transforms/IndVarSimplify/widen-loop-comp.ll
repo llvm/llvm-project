@@ -64,7 +64,7 @@ for.end:
 ; CHECK-LABEL: @test2
 ; CHECK: for.body4.us
 ; CHECK: %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-; CHECK: %cmp2.us = icmp slt i64
+; CHECK: %cmp2.us = icmp ult i64
 ; CHECK-NOT: %2 = trunc i64 %indvars.iv.next to i32
 ; CHECK-NOT: %cmp2.us = icmp slt i32
 

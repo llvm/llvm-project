@@ -11401,7 +11401,7 @@ namespace {
 /// Shift = srl Ty1 Origin, CstTy Amount
 /// Inst = trunc Shift to Ty2
 ///
-/// Then, it will be rewriten into:
+/// Then, it will be rewritten into:
 /// Slice = load SliceTy, Base + SliceOffset
 /// [Inst = zext Slice to Ty2], only if SliceTy <> Ty2
 ///
@@ -12716,7 +12716,7 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
         EVT StoreTy = EVT::getIntegerVT(Context, SizeInBits);
         bool IsFast = false;
         if (TLI.isTypeLegal(StoreTy) &&
-            TLI.canMergeStoresTo(FirstStoreAS, StoreTy) &&
+            TLI.canMergeStoresTo(FirstStoreAS, StoreTy, DAG) &&
             TLI.allowsMemoryAccess(Context, DL, StoreTy, FirstStoreAS,
                                    FirstStoreAlign, &IsFast) &&
             IsFast) {
@@ -12728,7 +12728,7 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
           EVT LegalizedStoredValueTy =
               TLI.getTypeToTransformTo(Context, StoredVal.getValueType());
           if (TLI.isTruncStoreLegal(LegalizedStoredValueTy, StoreTy) &&
-              TLI.canMergeStoresTo(FirstStoreAS, LegalizedStoredValueTy) &&
+              TLI.canMergeStoresTo(FirstStoreAS, LegalizedStoredValueTy, DAG) &&
               TLI.allowsMemoryAccess(Context, DL, LegalizedStoredValueTy,
                                      FirstStoreAS, FirstStoreAlign, &IsFast) &&
               IsFast) {
@@ -12745,7 +12745,8 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
             !NoVectors) {
           // Find a legal type for the vector store.
           EVT Ty = EVT::getVectorVT(Context, MemVT, i + 1);
-          if (TLI.isTypeLegal(Ty) && TLI.canMergeStoresTo(FirstStoreAS, Ty) &&
+          if (TLI.isTypeLegal(Ty) &&
+              TLI.canMergeStoresTo(FirstStoreAS, Ty, DAG) &&
               TLI.allowsMemoryAccess(Context, DL, Ty, FirstStoreAS,
                                      FirstStoreAlign, &IsFast) &&
               IsFast)
@@ -12803,7 +12804,8 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
         EVT Ty =
             EVT::getVectorVT(*DAG.getContext(), MemVT.getScalarType(), Elts);
         bool IsFast;
-        if (TLI.isTypeLegal(Ty) && TLI.canMergeStoresTo(FirstStoreAS, Ty) &&
+        if (TLI.isTypeLegal(Ty) &&
+            TLI.canMergeStoresTo(FirstStoreAS, Ty, DAG) &&
             TLI.allowsMemoryAccess(Context, DL, Ty, FirstStoreAS,
                                    FirstStoreAlign, &IsFast) &&
             IsFast)
@@ -12920,7 +12922,7 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
       EVT StoreTy = EVT::getVectorVT(Context, MemVT, i + 1);
       bool IsFastSt, IsFastLd;
       if (TLI.isTypeLegal(StoreTy) &&
-          TLI.canMergeStoresTo(FirstStoreAS, StoreTy) &&
+          TLI.canMergeStoresTo(FirstStoreAS, StoreTy, DAG) &&
           TLI.allowsMemoryAccess(Context, DL, StoreTy, FirstStoreAS,
                                  FirstStoreAlign, &IsFastSt) &&
           IsFastSt &&
@@ -12934,7 +12936,7 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
       unsigned SizeInBits = (i + 1) * ElementSizeBytes * 8;
       StoreTy = EVT::getIntegerVT(Context, SizeInBits);
       if (TLI.isTypeLegal(StoreTy) &&
-          TLI.canMergeStoresTo(FirstStoreAS, StoreTy) &&
+          TLI.canMergeStoresTo(FirstStoreAS, StoreTy, DAG) &&
           TLI.allowsMemoryAccess(Context, DL, StoreTy, FirstStoreAS,
                                  FirstStoreAlign, &IsFastSt) &&
           IsFastSt &&
@@ -12948,7 +12950,7 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
                  TargetLowering::TypePromoteInteger) {
         EVT LegalizedStoredValueTy = TLI.getTypeToTransformTo(Context, StoreTy);
         if (TLI.isTruncStoreLegal(LegalizedStoredValueTy, StoreTy) &&
-            TLI.canMergeStoresTo(FirstStoreAS, LegalizedStoredValueTy) &&
+            TLI.canMergeStoresTo(FirstStoreAS, LegalizedStoredValueTy, DAG) &&
             TLI.isLoadExtLegal(ISD::ZEXTLOAD, LegalizedStoredValueTy,
                                StoreTy) &&
             TLI.isLoadExtLegal(ISD::SEXTLOAD, LegalizedStoredValueTy,

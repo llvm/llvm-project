@@ -229,6 +229,13 @@ public:
   virtual llvm::Constant *getNullPointer(const CodeGen::CodeGenModule &CGM,
       llvm::PointerType *T, QualType QT) const;
 
+  /// Get target favored AST address space of a global variable for languages
+  /// other than OpenCL and CUDA.
+  /// If \p D is nullptr, returns the default target favored address space
+  /// for global variable.
+  virtual unsigned getGlobalVarAddressSpace(CodeGenModule &CGM,
+                                            const VarDecl *D) const;
+
   /// Get the AST address space for alloca.
   virtual unsigned getASTAllocaAddressSpace() const { return LangAS::Default; }
 
@@ -243,6 +250,15 @@ public:
                                             unsigned DestAddr,
                                             llvm::Type *DestTy,
                                             bool IsNonNull = false) const;
+
+  /// Perform address space cast of a constant expression of pointer type.
+  /// \param V is the LLVM constant to be casted to another address space.
+  /// \param SrcAddr is the language address space of \p V.
+  /// \param DestAddr is the targeted language address space.
+  /// \param DestTy is the destination LLVM pointer type.
+  virtual llvm::Constant *
+  performAddrSpaceCast(CodeGenModule &CGM, llvm::Constant *V, unsigned SrcAddr,
+                       unsigned DestAddr, llvm::Type *DestTy) const;
 };
 
 } // namespace CodeGen

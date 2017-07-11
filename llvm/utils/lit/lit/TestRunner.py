@@ -5,6 +5,11 @@ import platform
 import tempfile
 import threading
 
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
+
 from lit.ShCommands import GlobItem
 import lit.ShUtil as ShUtil
 import lit.Test as Test
@@ -221,6 +226,64 @@ def updateEnv(env, cmd):
         env.env[key] = val
     cmd.args = cmd.args[arg_idx+1:]
 
+def executeBuiltinEcho(cmd, shenv):
+    """Interpret a redirected echo command"""
+    opened_files = []
+    stdin, stdout, stderr = processRedirects(cmd, subprocess.PIPE, shenv,
+                                             opened_files)
+    if stdin != subprocess.PIPE or stderr != subprocess.PIPE:
+        raise InternalShellError(
+                cmd, "stdin and stderr redirects not supported for echo")
+
+    # Some tests have un-redirected echo commands to help debug test failures.
+    # Buffer our output and return it to the caller.
+    is_redirected = True
+    if stdout == subprocess.PIPE:
+        is_redirected = False
+        stdout = StringIO()
+    elif kIsWindows:
+        # Reopen stdout in binary mode to avoid CRLF translation. The versions
+        # of echo we are replacing on Windows all emit plain LF, and the LLVM
+        # tests now depend on this.
+        stdout = open(stdout.name, stdout.mode + 'b')
+        opened_files.append((None, None, stdout, None))
+
+    # Implement echo flags. We only support -e and -n, and not yet in
+    # combination. We have to ignore unknown flags, because `echo "-D FOO"`
+    # prints the dash.
+    args = cmd.args[1:]
+    interpret_escapes = False
+    write_newline = True
+    while len(args) >= 1 and args[0] in ('-e', '-n'):
+        flag = args[0]
+        args = args[1:]
+        if flag == '-e':
+            interpret_escapes = True
+        elif flag == '-n':
+            write_newline = False
+
+    def maybeUnescape(arg):
+        if not interpret_escapes:
+            return arg
+        # Python string escapes and "echo" escapes are obviously different, but
+        # this should be enough for the LLVM test suite.
+        return arg.decode('string_escape')
+
+    if args:
+        for arg in args[:-1]:
+            stdout.write(maybeUnescape(arg))
+            stdout.write(' ')
+        stdout.write(maybeUnescape(args[-1]))
+    if write_newline:
+        stdout.write('\n')
+
+    for (name, mode, f, path) in opened_files:
+        f.close()
+
+    if not is_redirected:
+        return stdout.getvalue()
+    return ""
+
 def processRedirects(cmd, stdin_source, cmd_shenv, opened_files):
     """Return the standard fds for cmd after applying redirects
 
@@ -358,6 +421,17 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
             shenv.cwd = os.path.realpath(os.path.join(shenv.cwd, newdir))
         # The cd builtin always succeeds. If the directory does not exist, the
         # following Popen calls will fail instead.
+        return 0
+
+    # Handle "echo" as a builtin if it is not part of a pipeline. This greatly
+    # speeds up tests that construct input files by repeatedly echo-appending to
+    # a file.
+    # FIXME: Standardize on the builtin echo implementation. We can use a
+    # temporary file to sidestep blocking pipe write issues.
+    if cmd.commands[0].args[0] == 'echo' and len(cmd.commands) == 1:
+        output = executeBuiltinEcho(cmd.commands[0], shenv)
+        results.append(ShellCommandResult(cmd.commands[0], output, "", 0,
+                                          False))
         return 0
 
     if cmd.commands[0].args[0] == 'export':

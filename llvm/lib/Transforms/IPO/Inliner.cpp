@@ -989,5 +989,13 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
     // And delete the actual function from the module.
     M.getFunctionList().erase(DeadF);
   }
-  return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
+
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  // Even if we change the IR, we update the core CGSCC data structures and so
+  // can preserve the proxy to the function analysis manager.
+  PreservedAnalyses PA;
+  PA.preserve<FunctionAnalysisManagerCGSCCProxy>();
+  return PA;
 }

@@ -10,9 +10,10 @@ RUN: echo "%p/Inputs/dwarfdump-inl-test.elf-x86-64 0x8dc" >> %t.input
 RUN: echo "%p/Inputs/dwarfdump-inl-test.elf-x86-64 0xa05" >> %t.input
 RUN: echo "%p/Inputs/dwarfdump-inl-test.elf-x86-64 0x987" >> %t.input
 RUN: echo "%p/Inputs/dwarfdump-inl-test.high_pc.elf-x86-64 0x568" >> %t.input
-RUN: echo "\"%p/Inputs/dwarfdump-test3.elf-x86-64 space\" 0x640" >> %t.input
-RUN: echo "\"%p/Inputs/dwarfdump-test3.elf-x86-64 space\" 0x633" >> %t.input
-RUN: echo "\"%p/Inputs/dwarfdump-test3.elf-x86-64 space\" 0x62d" >> %t.input
+RUN: cp "%p/Inputs/dwarfdump-test3.elf-x86-64-space" "%T/dwarfdump-test3.elf-x86-64 space"
+RUN: echo "\"%T/dwarfdump-test3.elf-x86-64 space\" 0x640" >> %t.input
+RUN: echo "\"%T/dwarfdump-test3.elf-x86-64 space\" 0x633" >> %t.input
+RUN: echo "\"%T/dwarfdump-test3.elf-x86-64 space\" 0x62d" >> %t.input
 RUN: echo "%p/Inputs/macho-universal 0x1f84" >> %t.input
 RUN: echo "%p/Inputs/macho-universal:i386 0x1f67" >> %t.input
 RUN: echo "%p/Inputs/macho-universal:x86_64 0x100000f05" >> %t.input

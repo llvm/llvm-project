@@ -1,3 +1,6 @@
+; Input used for generating checked-in binaries (trivial-object-test.*)
+; llc -mtriple=wasm32-unknown-unknown-wasm trivial.ll -filetype=obj -o trivial-object-test.wasm
+
 @.str = private unnamed_addr constant [13 x i8] c"Hello World\0A\00", align 1
 
 define i32 @main() nounwind {

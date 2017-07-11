@@ -55,8 +55,8 @@ std::vector<SpecificAllocBase *> SpecificAllocBase::Instances;
 bool link(ArrayRef<const char *> Args, raw_ostream &Diag) {
   ErrorCount = 0;
   ErrorOS = &Diag;
-  Argv0 = Args[0];
   Config = make<Configuration>();
+  Config->Argv = {Args.begin(), Args.end()};
   Config->ColorDiagnostics =
       (ErrorOS == &llvm::errs() && Process::StandardErrHasColors());
   Driver = make<LinkerDriver>();

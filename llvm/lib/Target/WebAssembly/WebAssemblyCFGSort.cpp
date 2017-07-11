@@ -132,7 +132,7 @@ static void SortBlocks(MachineFunction &MF, const MachineLoopInfo &MLI,
   //    no blocks not dominated by the loop header.
   //  - It's desirable to preserve the original block order when possible.
   // We use two ready lists; Preferred and Ready. Preferred has recently
-  // processed sucessors, to help preserve block sequences from the original
+  // processed successors, to help preserve block sequences from the original
   // order. Ready has the remaining ready blocks.
   PriorityQueue<MachineBasicBlock *, std::vector<MachineBasicBlock *>,
                 CompareBlockNumbers>

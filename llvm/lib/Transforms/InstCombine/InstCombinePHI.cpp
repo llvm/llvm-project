@@ -636,7 +636,7 @@ static bool PHIsEqualValue(PHINode *PN, Value *NonPhiInVal,
 /// Return an existing non-zero constant if this phi node has one, otherwise
 /// return constant 1.
 static ConstantInt *GetAnyNonZeroConstInt(PHINode &PN) {
-  assert(isa<IntegerType>(PN.getType()) && "Expect only intger type phi");
+  assert(isa<IntegerType>(PN.getType()) && "Expect only integer type phi");
   for (Value *V : PN.operands())
     if (auto *ConstVA = dyn_cast<ConstantInt>(V))
       if (!ConstVA->isZero())

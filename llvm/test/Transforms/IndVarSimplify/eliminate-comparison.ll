@@ -111,7 +111,7 @@ return:
 ; Indvars should not turn the second loop into an infinite one.
 
 ; CHECK-LABEL: @func_11(
-; CHECK: %tmp5 = icmp slt i32 %__key6.0, 10
+; CHECK: %tmp5 = icmp ult i32 %__key6.0, 10
 ; CHECK-NOT: br i1 true, label %noassert68, label %unrolledend
 
 define i32 @func_11() nounwind uwtable {
@@ -163,7 +163,7 @@ declare void @llvm.trap() noreturn nounwind
 
 ; In this case the second loop only has a single iteration, fold the header away
 ; CHECK-LABEL: @func_12(
-; CHECK: %tmp5 = icmp slt i32 %__key6.0, 10
+; CHECK: %tmp5 = icmp ult i32 %__key6.0, 10
 ; CHECK: br i1 true, label %noassert68, label %unrolledend
 define i32 @func_12() nounwind uwtable {
 entry:

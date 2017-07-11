@@ -326,7 +326,7 @@ Instruction *InstCombiner::visitMul(BinaryOperator &I) {
   }
 
   /// i1 mul -> i1 and.
-  if (I.getType()->getScalarType()->isIntegerTy(1))
+  if (I.getType()->isIntOrIntVectorTy(1))
     return BinaryOperator::CreateAnd(Op0, Op1);
 
   // X*(1 << Y) --> X << Y
@@ -938,8 +938,7 @@ Instruction *InstCombiner::commonIDivTransforms(BinaryOperator &I) {
   }
 
   if (match(Op0, m_One())) {
-    assert(!I.getType()->getScalarType()->isIntegerTy(1) &&
-           "i1 divide not removed?");
+    assert(!I.getType()->isIntOrIntVectorTy(1) && "i1 divide not removed?");
     if (I.getOpcode() == Instruction::SDiv) {
       // If Op1 is 0 then it's undefined behaviour, if Op1 is 1 then the
       // result is one, if Op1 is -1 then the result is minus one, otherwise

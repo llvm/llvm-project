@@ -646,13 +646,6 @@ Status NativeRegisterContextLinux_x86_64::ReadAllRegisterValues(
   Status error;
 
   data_sp.reset(new DataBufferHeap(REG_CONTEXT_SIZE, 0));
-  if (!data_sp) {
-    error.SetErrorStringWithFormat(
-        "failed to allocate DataBufferHeap instance of size %" PRIu64,
-        REG_CONTEXT_SIZE);
-    return error;
-  }
-
   error = ReadGPR();
   if (error.Fail())
     return error;
@@ -662,13 +655,6 @@ Status NativeRegisterContextLinux_x86_64::ReadAllRegisterValues(
     return error;
 
   uint8_t *dst = data_sp->GetBytes();
-  if (dst == nullptr) {
-    error.SetErrorStringWithFormat("DataBufferHeap instance of size %" PRIu64
-                                   " returned a null pointer",
-                                   REG_CONTEXT_SIZE);
-    return error;
-  }
-
   ::memcpy(dst, &m_gpr_x86_64, GetRegisterInfoInterface().GetGPRSize());
   dst += GetRegisterInfoInterface().GetGPRSize();
   if (m_xstate_type == XStateType::FXSAVE)
@@ -741,10 +727,9 @@ Status NativeRegisterContextLinux_x86_64::WriteAllRegisterValues(
   }
 
   if (data_sp->GetByteSize() != REG_CONTEXT_SIZE) {
-    error.SetErrorStringWithFormat(
-        "NativeRegisterContextLinux_x86_64::%s data_sp contained mismatched "
-        "data size, expected %" PRIu64 ", actual %" PRIu64,
-        __FUNCTION__, REG_CONTEXT_SIZE, data_sp->GetByteSize());
+    error.SetErrorStringWithFormatv(
+        "data_sp contained mismatched data size, expected {0}, actual {1}",
+        REG_CONTEXT_SIZE, data_sp->GetByteSize());
     return error;
   }
 

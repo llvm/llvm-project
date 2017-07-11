@@ -1618,7 +1618,8 @@ EVT R600TargetLowering::getSetCCResultType(const DataLayout &DL, LLVMContext &,
    return VT.changeVectorElementTypeToInteger();
 }
 
-bool R600TargetLowering::canMergeStoresTo(unsigned AS, EVT MemVT) const {
+bool R600TargetLowering::canMergeStoresTo(unsigned AS, EVT MemVT,
+                                          const SelectionDAG &DAG) const {
   // Local and Private addresses do not handle vectors. Limit to i32
   if ((AS == AMDGPUASI.LOCAL_ADDRESS || AS == AMDGPUASI.PRIVATE_ADDRESS)) {
     return (MemVT.getSizeInBits() <= 32);

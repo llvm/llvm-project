@@ -439,46 +439,122 @@ struct __optional_storage_base<_Tp, true>
     }
 };
 
-template <class _Tp, bool = is_trivially_copyable<_Tp>::value>
-struct __optional_storage;
-
-template <class _Tp>
-struct __optional_storage<_Tp, true> : __optional_storage_base<_Tp>
+template <class _Tp, bool = is_trivially_copy_constructible<_Tp>::value>
+struct __optional_copy_base : __optional_storage_base<_Tp>
 {
     using __optional_storage_base<_Tp>::__optional_storage_base;
 };
 
 template <class _Tp>
-struct __optional_storage<_Tp, false> : __optional_storage_base<_Tp>
+struct __optional_copy_base<_Tp, false> : __optional_storage_base<_Tp>
 {
-    using value_type = _Tp;
     using __optional_storage_base<_Tp>::__optional_storage_base;
 
     _LIBCPP_INLINE_VISIBILITY
-    __optional_storage() = default;
+    __optional_copy_base() = default;
 
     _LIBCPP_INLINE_VISIBILITY
-    __optional_storage(const __optional_storage& __opt)
+    __optional_copy_base(const __optional_copy_base& __opt)
     {
         this->__construct_from(__opt);
     }
 
     _LIBCPP_INLINE_VISIBILITY
-    __optional_storage(__optional_storage&& __opt)
+    __optional_copy_base(__optional_copy_base&&) = default;
+    _LIBCPP_INLINE_VISIBILITY
+    __optional_copy_base& operator=(const __optional_copy_base&) = default;
+    _LIBCPP_INLINE_VISIBILITY
+    __optional_copy_base& operator=(__optional_copy_base&&) = default;
+};
+
+template <class _Tp, bool = is_trivially_move_constructible<_Tp>::value>
+struct __optional_move_base : __optional_copy_base<_Tp>
+{
+    using __optional_copy_base<_Tp>::__optional_copy_base;
+};
+
+template <class _Tp>
+struct __optional_move_base<_Tp, false> : __optional_copy_base<_Tp>
+{
+    using value_type = _Tp;
+    using __optional_copy_base<_Tp>::__optional_copy_base;
+
+    _LIBCPP_INLINE_VISIBILITY
+    __optional_move_base() = default;
+    _LIBCPP_INLINE_VISIBILITY
+    __optional_move_base(const __optional_move_base&) = default;
+
+    _LIBCPP_INLINE_VISIBILITY
+    __optional_move_base(__optional_move_base&& __opt)
         noexcept(is_nothrow_move_constructible_v<value_type>)
     {
         this->__construct_from(_VSTD::move(__opt));
     }
 
     _LIBCPP_INLINE_VISIBILITY
-    __optional_storage& operator=(const __optional_storage& __opt)
+    __optional_move_base& operator=(const __optional_move_base&) = default;
+    _LIBCPP_INLINE_VISIBILITY
+    __optional_move_base& operator=(__optional_move_base&&) = default;
+};
+
+template <class _Tp, bool =
+    is_trivially_destructible<_Tp>::value &&
+    is_trivially_copy_constructible<_Tp>::value &&
+    is_trivially_copy_assignable<_Tp>::value>
+struct __optional_copy_assign_base : __optional_move_base<_Tp>
+{
+    using __optional_move_base<_Tp>::__optional_move_base;
+};
+
+template <class _Tp>
+struct __optional_copy_assign_base<_Tp, false> : __optional_move_base<_Tp>
+{
+    using __optional_move_base<_Tp>::__optional_move_base;
+
+    _LIBCPP_INLINE_VISIBILITY
+    __optional_copy_assign_base() = default;
+    _LIBCPP_INLINE_VISIBILITY
+    __optional_copy_assign_base(const __optional_copy_assign_base&) = default;
+    _LIBCPP_INLINE_VISIBILITY
+    __optional_copy_assign_base(__optional_copy_assign_base&&) = default;
+
+    _LIBCPP_INLINE_VISIBILITY
+    __optional_copy_assign_base& operator=(const __optional_copy_assign_base& __opt)
     {
         this->__assign_from(__opt);
         return *this;
     }
 
     _LIBCPP_INLINE_VISIBILITY
-    __optional_storage& operator=(__optional_storage&& __opt)
+    __optional_copy_assign_base& operator=(__optional_copy_assign_base&&) = default;
+};
+
+template <class _Tp, bool =
+    is_trivially_destructible<_Tp>::value &&
+    is_trivially_move_constructible<_Tp>::value &&
+    is_trivially_move_assignable<_Tp>::value>
+struct __optional_move_assign_base : __optional_copy_assign_base<_Tp>
+{
+    using __optional_copy_assign_base<_Tp>::__optional_copy_assign_base;
+};
+
+template <class _Tp>
+struct __optional_move_assign_base<_Tp, false> : __optional_copy_assign_base<_Tp>
+{
+    using value_type = _Tp;
+    using __optional_copy_assign_base<_Tp>::__optional_copy_assign_base;
+
+    _LIBCPP_INLINE_VISIBILITY
+    __optional_move_assign_base() = default;
+    _LIBCPP_INLINE_VISIBILITY
+    __optional_move_assign_base(const __optional_move_assign_base& __opt) = default;
+    _LIBCPP_INLINE_VISIBILITY
+    __optional_move_assign_base(__optional_move_assign_base&&) = default;
+    _LIBCPP_INLINE_VISIBILITY
+    __optional_move_assign_base& operator=(const __optional_move_assign_base&) = default;
+
+    _LIBCPP_INLINE_VISIBILITY
+    __optional_move_assign_base& operator=(__optional_move_assign_base&& __opt)
         noexcept(is_nothrow_move_assignable_v<value_type> &&
                  is_nothrow_move_constructible_v<value_type>)
     {
@@ -501,11 +577,11 @@ using __optional_sfinae_assign_base_t = __sfinae_assign_base<
 
 template <class _Tp>
 class optional
-    : private __optional_storage<_Tp>
+    : private __optional_move_assign_base<_Tp>
     , private __optional_sfinae_ctor_base_t<_Tp>
     , private __optional_sfinae_assign_base_t<_Tp>
 {
-    using __base = __optional_storage<_Tp>;
+    using __base = __optional_move_assign_base<_Tp>;
 public:
     using value_type = _Tp;
 

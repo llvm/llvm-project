@@ -68,6 +68,8 @@ static Chunk *makeImportThunk(DefinedImportData *S, uint16_t Machine) {
     return make<ImportThunkChunkX64>(S);
   if (Machine == I386)
     return make<ImportThunkChunkX86>(S);
+  if (Machine == ARM64)
+    return make<ImportThunkChunkARM64>(S);
   assert(Machine == ARMNT);
   return make<ImportThunkChunkARM>(S);
 }

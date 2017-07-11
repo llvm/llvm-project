@@ -6,7 +6,7 @@
 ; GCN-NOT: _or_
 ; GCN-NOT: v[[HI]]
 ; GCN-NOT: v_mov_b32_e32 v{{[0-9]+}}, 0
-; GCN: v_or_b32_e32 v[[LO]], v[[LD32]], v[[LO]]
+; GCN: v_or_b32_e32 v[[LO]], v[[LO]], v[[LD32]]
 ; GCN-NOT: _or_
 ; GCN-NOT: v[[HI]]
 ; GCN-NOT: v_mov_b32_e32 v{{[0-9]+}}, 0
@@ -26,7 +26,7 @@ define amdgpu_kernel void @zext_or_operand_i64(i64 addrspace(1)* %out, i64 addrs
 ; GCN-NOT: _or_
 ; GCN-NOT: v[[HI]]
 ; GCN-NOT: v_mov_b32_e32 v{{[0-9]+}}, 0
-; GCN: v_or_b32_e32 v[[LO]], v[[LD32]], v[[LO]]
+; GCN: v_or_b32_e32 v[[LO]], v[[LO]], v[[LD32]]
 ; GCN-NOT: v[[HI]]
 ; GCN-NOT: _or_
 ; GCN-NOT: v_mov_b32_e32 v{{[0-9]+}}, 0

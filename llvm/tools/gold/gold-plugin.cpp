@@ -477,7 +477,7 @@ static ld_plugin_status claim_file_hook(const ld_plugin_input_file *file,
 
   std::unique_ptr<InputFile> Obj = std::move(*ObjOrErr);
 
-  Modules.resize(Modules.size() + 1);
+  Modules.emplace_back();
   claimed_file &cf = Modules.back();
 
   cf.handle = file->handle;

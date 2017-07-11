@@ -53,6 +53,7 @@ add_pdb_impl_folder(Native
   Native/PDBStringTableBuilder.cpp
   Native/PDBTypeServerHandler.cpp
   Native/PublicsStream.cpp
+  Native/PublicsStreamBuilder.cpp
   Native/RawError.cpp
   Native/SymbolStream.cpp
   Native/TpiHashing.cpp

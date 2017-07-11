@@ -2918,8 +2918,11 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     if (ClDumpStrictInstructions)
       dumpInst(I);
     DEBUG(dbgs() << "DEFAULT: " << I << "\n");
-    for (size_t i = 0, n = I.getNumOperands(); i < n; i++)
-      insertShadowCheck(I.getOperand(i), &I);
+    for (size_t i = 0, n = I.getNumOperands(); i < n; i++) {
+      Value *Operand = I.getOperand(i);
+      if (Operand->getType()->isSized())
+        insertShadowCheck(Operand, &I);
+    }
     setShadow(&I, getCleanShadow(&I));
     setOrigin(&I, getCleanOrigin());
   }

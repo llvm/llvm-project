@@ -407,6 +407,11 @@ def PS_vstorerw_ai: STrivv_template<VecDblRegs, V6_vS32b_ai>,
 def PS_vstorerw_ai_128B: STrivv_template<VecDblRegs128B, V6_vS32b_ai_128B>,
       Requires<[HasV60T,UseHVXDbl]>;
 
+def PS_vstorerw_nt_ai: STrivv_template<VecDblRegs, V6_vS32b_nt_ai>,
+      Requires<[HasV60T,UseHVXSgl]>;
+def PS_vstorerw_nt_ai_128B: STrivv_template<VecDblRegs128B, V6_vS32b_nt_ai_128B>,
+      Requires<[HasV60T,UseHVXDbl]>;
+
 def PS_vstorerwu_ai: STrivv_template<VecDblRegs, V6_vS32Ub_ai>,
       Requires<[HasV60T,UseHVXSgl]>;
 def PS_vstorerwu_ai_128B: STrivv_template<VecDblRegs128B, V6_vS32Ub_ai_128B>,
@@ -431,6 +436,11 @@ class LDrivv_template<RegisterClass RC, InstHexagon rootInst>
 def PS_vloadrw_ai: LDrivv_template<VecDblRegs, V6_vL32b_ai>,
       Requires<[HasV60T,UseHVXSgl]>;
 def PS_vloadrw_ai_128B: LDrivv_template<VecDblRegs128B, V6_vL32b_ai_128B>,
+      Requires<[HasV60T,UseHVXDbl]>;
+
+def PS_vloadrw_nt_ai: LDrivv_template<VecDblRegs, V6_vL32b_nt_ai>,
+      Requires<[HasV60T,UseHVXSgl]>;
+def PS_vloadrw_nt_ai_128B: LDrivv_template<VecDblRegs128B, V6_vL32b_nt_ai_128B>,
       Requires<[HasV60T,UseHVXDbl]>;
 
 def PS_vloadrwu_ai: LDrivv_template<VecDblRegs, V6_vL32Ub_ai>,

@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-import-jscop-dir=%S -polly-import-jscop -polly-ast -polly-ast-detect-parallel -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-import-jscop -polly-ast -polly-ast-detect-parallel -analyze < %s | FileCheck %s
 ;
 ; Verify that only the outer dimension needs privatization
 ;
