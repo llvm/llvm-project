@@ -229,6 +229,7 @@ public:
   bool parseMemoryOperandFlag(MachineMemOperand::Flags &Flags);
   bool parseMemoryPseudoSourceValue(const PseudoSourceValue *&PSV);
   bool parseMachinePointerInfo(MachinePointerInfo &Dest);
+  bool parseOptionalScope(LLVMContext &Context, SyncScope::ID &SSID);
   bool parseOptionalAtomicOrdering(AtomicOrdering &Order);
   bool parseMachineMemoryOperand(MachineMemOperand *&Dest);
 
@@ -318,6 +319,10 @@ private:
   ///
   /// Return true if the name isn't a name of a bitmask target flag.
   bool getBitmaskTargetFlag(StringRef Name, unsigned &Flag);
+
+  /// parseStringConstant
+  ///   ::= StringConstant
+  bool parseStringConstant(std::string &Result);
 };
 
 } // end anonymous namespace
@@ -2135,6 +2140,26 @@ bool MIParser::parseMachinePointerInfo(MachinePointerInfo &Dest) {
   return false;
 }
 
+bool MIParser::parseOptionalScope(LLVMContext &Context,
+                                  SyncScope::ID &SSID) {
+  SSID = SyncScope::System;
+  if (Token.is(MIToken::Identifier) && Token.stringValue() == "syncscope") {
+    lex();
+    if (expectAndConsume(MIToken::lparen))
+      return error("expected '(' in syncscope");
+
+    std::string SSN;
+    if (parseStringConstant(SSN))
+      return true;
+
+    SSID = Context.getOrInsertSyncScopeID(SSN);
+    if (expectAndConsume(MIToken::rparen))
+      return error("expected ')' in syncscope");
+  }
+
+  return false;
+}
+
 bool MIParser::parseOptionalAtomicOrdering(AtomicOrdering &Order) {
   Order = AtomicOrdering::NotAtomic;
   if (Token.isNot(MIToken::Identifier))
@@ -2174,12 +2199,10 @@ bool MIParser::parseMachineMemoryOperand(MachineMemOperand *&Dest) {
     Flags |= MachineMemOperand::MOStore;
   lex();
 
-  // Optional "singlethread" scope.
-  SynchronizationScope Scope = SynchronizationScope::CrossThread;
-  if (Token.is(MIToken::Identifier) && Token.stringValue() == "singlethread") {
-    Scope = SynchronizationScope::SingleThread;
-    lex();
-  }
+  // Optional synchronization scope.
+  SyncScope::ID SSID;
+  if (parseOptionalScope(MF.getFunction()->getContext(), SSID))
+    return true;
 
   // Up to two atomic orderings (cmpxchg provides guarantees on failure).
   AtomicOrdering Order, FailureOrder;
@@ -2244,7 +2267,7 @@ bool MIParser::parseMachineMemoryOperand(MachineMemOperand *&Dest) {
   if (expectAndConsume(MIToken::rparen))
     return true;
   Dest = MF.getMachineMemOperand(Ptr, Flags, Size, BaseAlignment, AAInfo, Range,
-                                 Scope, Order, FailureOrder);
+                                 SSID, Order, FailureOrder);
   return false;
 }
 
@@ -2454,6 +2477,14 @@ bool MIParser::getBitmaskTargetFlag(StringRef Name, unsigned &Flag) {
   if (FlagInfo == Names2BitmaskTargetFlags.end())
     return true;
   Flag = FlagInfo->second;
+  return false;
+}
+
+bool MIParser::parseStringConstant(std::string &Result) {
+  if (Token.isNot(MIToken::StringConstant))
+    return error("expected string constant");
+  Result = Token.stringValue();
+  lex();
   return false;
 }
 

@@ -81,17 +81,17 @@
 
 ; OBJ: Subsection [
 ; OBJ:   SubSectionType: Symbols (0xF1)
-; OBJ:   ProcStart {
+; OBJ:   {{.*}}Proc{{.*}}Sym {
 ; OBJ:     DisplayName: f
 ; OBJ:   }
-; OBJ:   Local {
+; OBJ:   LocalSym {
 ; OBJ:     Type: int (0x74)
 ; OBJ:     Flags [ (0x1)
 ; OBJ:       IsParameter (0x1)
 ; OBJ:     ]
 ; OBJ:     VarName: p
 ; OBJ:   }
-; OBJ:   DefRangeRegister {
+; OBJ:   DefRangeRegisterSym {
 ; OBJ:     Register: 18
 ; OBJ:     LocalVariableAddrRange {
 ; OBJ:       OffsetStart: .text+0x0
@@ -99,7 +99,7 @@
 ; OBJ:       Range: 0x7
 ; OBJ:     }
 ; OBJ:   }
-; OBJ:   DefRangeRegister {
+; OBJ:   DefRangeRegisterSym {
 ; OBJ:     Register: 23
 ; OBJ:     LocalVariableAddrRange {
 ; OBJ:       OffsetStart: .text+0x7
@@ -107,13 +107,13 @@
 ; OBJ:       Range: 0x18
 ; OBJ:     }
 ; OBJ:   }
-; OBJ:   Local {
+; OBJ:   LocalSym {
 ; OBJ:     Type: int (0x74)
 ; OBJ:     Flags [ (0x0)
 ; OBJ:     ]
 ; OBJ:     VarName: a
 ; OBJ:   }
-; OBJ:   DefRangeRegister {
+; OBJ:   DefRangeRegisterSym {
 ; OBJ:     Register: 17
 ; OBJ:     LocalVariableAddrRange {
 ; OBJ:       OffsetStart: .text+0xC
@@ -121,13 +121,13 @@
 ; OBJ:       Range: 0x6
 ; OBJ:     }
 ; OBJ:   }
-; OBJ:   Local {
+; OBJ:   LocalSym {
 ; OBJ:     Type: int (0x74)
 ; OBJ:     Flags [ (0x0)
 ; OBJ:     ]
 ; OBJ:     VarName: c
 ; OBJ:   }
-; OBJ:   DefRangeRegister {
+; OBJ:   DefRangeRegisterSym {
 ; OBJ:     Register: 17
 ; OBJ:     LocalVariableAddrRange {
 ; OBJ:       OffsetStart: .text+0xC
@@ -135,13 +135,13 @@
 ; OBJ:       Range: 0x4
 ; OBJ:     }
 ; OBJ:   }
-; OBJ:   Local {
+; OBJ:   LocalSym {
 ; OBJ:     Type: int (0x74)
 ; OBJ:     Flags [ (0x0)
 ; OBJ:     ]
 ; OBJ:     VarName: b
 ; OBJ:   }
-; OBJ:   DefRangeRegister {
+; OBJ:   DefRangeRegisterSym {
 ; OBJ:     Register: 17
 ; OBJ:     MayHaveNoName: 0
 ; OBJ:       OffsetStart: .text+0x12
@@ -149,19 +149,19 @@
 ; OBJ:       Range: 0x6
 ; OBJ:     }
 ; OBJ:   }
-; OBJ:   InlineSite {
+; OBJ:   InlineSiteSym {
 ; OBJ:     PtrParent: 0x0
 ; OBJ:     PtrEnd: 0x0
 ; OBJ:     Inlinee: inlineinc (0x1002)
 ; OBJ:   }
-; OBJ:   Local {
+; OBJ:   LocalSym {
 ; OBJ:     Type: int (0x74)
 ; OBJ:     Flags [ (0x1)
 ; OBJ:       IsParameter (0x1)
 ; OBJ:     ]
 ; OBJ:     VarName: a
 ; OBJ:   }
-; OBJ:   DefRangeRegister {
+; OBJ:   DefRangeRegisterSym {
 ; OBJ:     Register: 17
 ; OBJ:     LocalVariableAddrRange {
 ; OBJ:       OffsetStart: .text+0xC
@@ -169,13 +169,13 @@
 ; OBJ:       Range: 0x6
 ; OBJ:     }
 ; OBJ:   }
-; OBJ:   Local {
+; OBJ:   LocalSym {
 ; OBJ:     Type: int (0x74)
 ; OBJ:     Flags [ (0x0)
 ; OBJ:     ]
 ; OBJ:     VarName: b
 ; OBJ:   }
-; OBJ:   DefRangeRegister {
+; OBJ:   DefRangeRegisterSym {
 ; OBJ:     Register: 17
 ; OBJ:     LocalVariableAddrRange {
 ; OBJ:       OffsetStart: .text+0x12

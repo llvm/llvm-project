@@ -20,7 +20,7 @@
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/Support/MathExtras.h"
 
-#define DEBUG_TYPE "misched"
+#define DEBUG_TYPE "machine-scheduler"
 
 using namespace llvm;
 

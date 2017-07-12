@@ -675,15 +675,17 @@ Error WasmObjectFile::parseElemSection(const uint8_t *Ptr, const uint8_t *End) {
 }
 
 Error WasmObjectFile::parseDataSection(const uint8_t *Ptr, const uint8_t *End) {
+  const uint8_t *Start = Ptr;
   uint32_t Count = readVaruint32(Ptr);
   DataSegments.reserve(Count);
   while (Count--) {
-    wasm::WasmDataSegment Segment;
-    Segment.Index = readVaruint32(Ptr);
-    if (Error Err = readInitExpr(Segment.Offset, Ptr))
+    WasmSegment Segment;
+    Segment.Data.MemoryIndex = readVaruint32(Ptr);
+    if (Error Err = readInitExpr(Segment.Data.Offset, Ptr))
       return Err;
     uint32_t Size = readVaruint32(Ptr);
-    Segment.Content = ArrayRef<uint8_t>(Ptr, Size);
+    Segment.Data.Content = ArrayRef<uint8_t>(Ptr, Size);
+    Segment.SectionOffset = Ptr - Start;
     Ptr += Size;
     DataSegments.push_back(Segment);
   }

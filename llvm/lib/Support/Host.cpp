@@ -281,11 +281,17 @@ enum ProcessorVendors {
 };
 
 enum ProcessorTypes {
-  INTEL_ATOM = 1,
+  INTEL_BONNELL = 1,
   INTEL_CORE2,
   INTEL_COREI7,
   AMDFAM10H,
   AMDFAM15H,
+  INTEL_SILVERMONT,
+  INTEL_KNL,
+  AMD_BTVER1,
+  AMD_BTVER2,
+  AMDFAM17H,
+  // Entries below this are not in libgcc/compiler-rt.
   INTEL_i386,
   INTEL_i486,
   INTEL_PENTIUM,
@@ -295,16 +301,13 @@ enum ProcessorTypes {
   INTEL_PENTIUM_IV,
   INTEL_PENTIUM_M,
   INTEL_CORE_DUO,
-  INTEL_XEONPHI,
   INTEL_X86_64,
   INTEL_NOCONA,
   INTEL_PRESCOTT,
   AMD_i486,
   AMDPENTIUM,
   AMDATHLON,
-  AMDFAM14H,
-  AMDFAM16H,
-  AMDFAM17H,
+  INTEL_GOLDMONT,
   CPU_TYPE_MAX
 };
 
@@ -317,18 +320,18 @@ enum ProcessorSubtypes {
   AMDFAM10H_ISTANBUL,
   AMDFAM15H_BDVER1,
   AMDFAM15H_BDVER2,
-  INTEL_PENTIUM_MMX,
-  INTEL_CORE2_65,
-  INTEL_CORE2_45,
+  AMDFAM15H_BDVER3,
+  AMDFAM15H_BDVER4,
+  AMDFAM17H_ZNVER1,
   INTEL_COREI7_IVYBRIDGE,
   INTEL_COREI7_HASWELL,
   INTEL_COREI7_BROADWELL,
   INTEL_COREI7_SKYLAKE,
   INTEL_COREI7_SKYLAKE_AVX512,
-  INTEL_ATOM_BONNELL,
-  INTEL_ATOM_SILVERMONT,
-  INTEL_ATOM_GOLDMONT,
-  INTEL_KNIGHTS_LANDING,
+  // Entries below this are not in libgcc/compiler-rt.
+  INTEL_PENTIUM_MMX,
+  INTEL_CORE2_65,
+  INTEL_CORE2_45,
   AMDPENTIUM_K6,
   AMDPENTIUM_K62,
   AMDPENTIUM_K63,
@@ -340,11 +343,6 @@ enum ProcessorSubtypes {
   AMDATHLON_OPTERON,
   AMDATHLON_FX,
   AMDATHLON_64,
-  AMD_BTVER1,
-  AMD_BTVER2,
-  AMDFAM15H_BDVER3,
-  AMDFAM15H_BDVER4,
-  AMDFAM17H_ZNVER1,
   CPU_SUBTYPE_MAX
 };
 
@@ -360,9 +358,28 @@ enum ProcessorFeatures {
   FEATURE_SSE4_2,
   FEATURE_AVX,
   FEATURE_AVX2,
-  FEATURE_AVX512,
-  FEATURE_AVX512SAVE,
-  FEATURE_MOVBE,
+  FEATURE_SSE4_A,
+  FEATURE_FMA4,
+  FEATURE_XOP,
+  FEATURE_FMA,
+  FEATURE_AVX512F,
+  FEATURE_BMI,
+  FEATURE_BMI2,
+  FEATURE_AES,
+  FEATURE_PCLMUL,
+  FEATURE_AVX512VL,
+  FEATURE_AVX512BW,
+  FEATURE_AVX512DQ,
+  FEATURE_AVX512CD,
+  FEATURE_AVX512ER,
+  FEATURE_AVX512PF,
+  FEATURE_AVX512VBMI,
+  FEATURE_AVX512IFMA,
+  FEATURE_AVX5124VNNIW,
+  FEATURE_AVX5124FMAPS,
+  FEATURE_AVX512VPOPCNTDQ,
+  // Only one bit free left in the first 32 features.
+  FEATURE_MOVBE = 32,
   FEATURE_ADX,
   FEATURE_EM64T
 };
@@ -498,6 +515,7 @@ static bool getX86CpuIDAndInfoEx(unsigned value, unsigned subleaf,
 #endif
 }
 
+// Read control register 0 (XCR0). Used to detect features such as AVX.
 static bool getX86XCR0(unsigned *rEAX, unsigned *rEDX) {
 #if defined(__GNUC__) || defined(__clang__)
   // Check xgetbv; this uses a .byte sequence instead of the instruction
@@ -531,7 +549,8 @@ static void detectX86FamilyModel(unsigned EAX, unsigned *Family,
 static void
 getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
                                 unsigned Brand_id, unsigned Features,
-                                unsigned *Type, unsigned *Subtype) {
+                                unsigned Features2, unsigned *Type,
+                                unsigned *Subtype) {
   if (Brand_id != 0)
     return;
   switch (Family) {
@@ -692,8 +711,7 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
     case 0x27: // 32 nm Atom Medfield
     case 0x35: // 32 nm Atom Midview
     case 0x36: // 32 nm Atom Midview
-      *Type = INTEL_ATOM;
-      *Subtype = INTEL_ATOM_BONNELL;
+      *Type = INTEL_BONNELL;
       break; // "bonnell"
 
     // Atom Silvermont codes from the Intel software optimization guide.
@@ -703,27 +721,23 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
     case 0x5a:
     case 0x5d:
     case 0x4c: // really airmont
-      *Type = INTEL_ATOM;
-      *Subtype = INTEL_ATOM_SILVERMONT;
+      *Type = INTEL_SILVERMONT;
       break; // "silvermont"
     // Goldmont:
     case 0x5c:
     case 0x5f:
-      *Type = INTEL_ATOM;
-      *Subtype = INTEL_ATOM_GOLDMONT;
+      *Type = INTEL_GOLDMONT;
       break; // "goldmont"
     case 0x57:
-      *Type = INTEL_XEONPHI; // knl
-      *Subtype = INTEL_KNIGHTS_LANDING;
+      *Type = INTEL_KNL; // knl
       break;
 
     default: // Unknown family 6 CPU, try to guess.
-      if (Features & (1 << FEATURE_AVX512)) {
-        *Type = INTEL_XEONPHI; // knl
-        *Subtype = INTEL_KNIGHTS_LANDING;
+      if (Features & (1 << FEATURE_AVX512F)) {
+        *Type = INTEL_KNL; // knl
         break;
       }
-      if (Features & (1 << FEATURE_ADX)) {
+      if (Features2 & (1 << (FEATURE_ADX - 32))) {
         *Type = INTEL_COREI7;
         *Subtype = INTEL_COREI7_BROADWELL;
         break;
@@ -739,9 +753,8 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
         break;
       }
       if (Features & (1 << FEATURE_SSE4_2)) {
-        if (Features & (1 << FEATURE_MOVBE)) {
-          *Type = INTEL_ATOM;
-          *Subtype = INTEL_ATOM_SILVERMONT;
+        if (Features2 & (1 << (FEATURE_MOVBE - 32))) {
+          *Type = INTEL_SILVERMONT;
         } else {
           *Type = INTEL_COREI7;
           *Subtype = INTEL_COREI7_NEHALEM;
@@ -754,16 +767,15 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
         break;
       }
       if (Features & (1 << FEATURE_SSSE3)) {
-        if (Features & (1 << FEATURE_MOVBE)) {
-          *Type = INTEL_ATOM;
-          *Subtype = INTEL_ATOM_BONNELL; // "bonnell"
+        if (Features2 & (1 << (FEATURE_MOVBE - 32))) {
+          *Type = INTEL_BONNELL; // "bonnell"
         } else {
           *Type = INTEL_CORE2; // "core2"
           *Subtype = INTEL_CORE2_65;
         }
         break;
       }
-      if (Features & (1 << FEATURE_EM64T)) {
+      if (Features2 & (1 << (FEATURE_EM64T - 32))) {
         *Type = INTEL_X86_64;
         break; // x86-64
       }
@@ -794,8 +806,8 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
             // Intel Xeon processor, Intel Xeon processor MP, Intel Celeron
             // processor, and Mobile Intel Celeron processor. All processors
             // are model 02h and manufactured using the 0.13 micron process.
-      *Type =
-          ((Features & (1 << FEATURE_EM64T)) ? INTEL_X86_64 : INTEL_PENTIUM_IV);
+      *Type = ((Features2 & (1 << (FEATURE_EM64T - 32))) ? INTEL_X86_64
+                                                         : INTEL_PENTIUM_IV);
       break;
 
     case 3: // Pentium 4 processor, Intel Xeon processor, Intel Celeron D
@@ -809,13 +821,13 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
             // Extreme Edition, Intel Xeon processor, Intel Xeon processor
             // MP, Intel Celeron D processor. All processors are model 06h
             // and manufactured using the 65 nm process.
-      *Type =
-          ((Features & (1 << FEATURE_EM64T)) ? INTEL_NOCONA : INTEL_PRESCOTT);
+      *Type = ((Features2 & (1 << (FEATURE_EM64T - 32))) ? INTEL_NOCONA
+                                                         : INTEL_PRESCOTT);
       break;
 
     default:
-      *Type =
-          ((Features & (1 << FEATURE_EM64T)) ? INTEL_X86_64 : INTEL_PENTIUM_IV);
+      *Type = ((Features2 & (1 << (FEATURE_EM64T - 32))) ? INTEL_X86_64
+                                                         : INTEL_PENTIUM_IV);
       break;
     }
     break;
@@ -903,14 +915,13 @@ static void getAMDProcessorTypeAndSubtype(unsigned Family, unsigned Model,
     }
     break;
   case 20:
-    *Type = AMDFAM14H;
-    *Subtype = AMD_BTVER1;
+    *Type = AMD_BTVER1;
     break; // "btver1";
   case 21:
     *Type = AMDFAM15H;
     if (Model >= 0x60 && Model <= 0x7f) {
       *Subtype = AMDFAM15H_BDVER4;
-      break; // "bdver4"; 50h-6Fh: Excavator
+      break; // "bdver4"; 60h-7Fh: Excavator
     }
     if (Model >= 0x30 && Model <= 0x3f) {
       *Subtype = AMDFAM15H_BDVER3;
@@ -926,8 +937,7 @@ static void getAMDProcessorTypeAndSubtype(unsigned Family, unsigned Model,
     }
     break;
   case 22:
-    *Type = AMDFAM16H;
-    *Subtype = AMD_BTVER2;
+    *Type = AMD_BTVER2;
     break; // "btver2"
   case 23:
     *Type = AMDFAM17H;
@@ -938,18 +948,41 @@ static void getAMDProcessorTypeAndSubtype(unsigned Family, unsigned Model,
   }
 }
 
-static unsigned getAvailableFeatures(unsigned ECX, unsigned EDX,
-                                     unsigned MaxLeaf) {
+static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
+                                 unsigned *FeaturesOut,
+                                 unsigned *Features2Out) {
   unsigned Features = 0;
+  unsigned Features2 = 0;
   unsigned EAX, EBX;
-  Features |= (((EDX >> 23) & 1) << FEATURE_MMX);
-  Features |= (((EDX >> 25) & 1) << FEATURE_SSE);
-  Features |= (((EDX >> 26) & 1) << FEATURE_SSE2);
-  Features |= (((ECX >> 0) & 1) << FEATURE_SSE3);
-  Features |= (((ECX >> 9) & 1) << FEATURE_SSSE3);
-  Features |= (((ECX >> 19) & 1) << FEATURE_SSE4_1);
-  Features |= (((ECX >> 20) & 1) << FEATURE_SSE4_2);
-  Features |= (((ECX >> 22) & 1) << FEATURE_MOVBE);
+
+  if ((EDX >> 15) & 1)
+    Features |= 1 << FEATURE_CMOV;
+  if ((EDX >> 23) & 1)
+    Features |= 1 << FEATURE_MMX;
+  if ((EDX >> 25) & 1)
+    Features |= 1 << FEATURE_SSE;
+  if ((EDX >> 26) & 1)
+    Features |= 1 << FEATURE_SSE2;
+
+  if ((ECX >> 0) & 1)
+    Features |= 1 << FEATURE_SSE3;
+  if ((ECX >> 1) & 1)
+    Features |= 1 << FEATURE_PCLMUL;
+  if ((ECX >> 9) & 1)
+    Features |= 1 << FEATURE_SSSE3;
+  if ((ECX >> 12) & 1)
+    Features |= 1 << FEATURE_FMA;
+  if ((ECX >> 19) & 1)
+    Features |= 1 << FEATURE_SSE4_1;
+  if ((ECX >> 20) & 1)
+    Features |= 1 << FEATURE_SSE4_2;
+  if ((ECX >> 23) & 1)
+    Features |= 1 << FEATURE_POPCNT;
+  if ((ECX >> 25) & 1)
+    Features |= 1 << FEATURE_AES;
+
+  if ((ECX >> 22) & 1)
+    Features2 |= 1 << (FEATURE_MOVBE - 32);
 
   // If CPUID indicates support for XSAVE, XRESTORE and AVX, and XGETBV
   // indicates that the AVX registers will be saved and restored on context
@@ -958,26 +991,65 @@ static unsigned getAvailableFeatures(unsigned ECX, unsigned EDX,
   bool HasAVX = ((ECX & AVXBits) == AVXBits) && !getX86XCR0(&EAX, &EDX) &&
                 ((EAX & 0x6) == 0x6);
   bool HasAVX512Save = HasAVX && ((EAX & 0xe0) == 0xe0);
+
+  if (HasAVX)
+    Features |= 1 << FEATURE_AVX;
+
   bool HasLeaf7 =
       MaxLeaf >= 0x7 && !getX86CpuIDAndInfoEx(0x7, 0x0, &EAX, &EBX, &ECX, &EDX);
-  bool HasADX = HasLeaf7 && ((EBX >> 19) & 1);
-  bool HasAVX2 = HasAVX && HasLeaf7 && (EBX & 0x20);
-  bool HasAVX512 = HasLeaf7 && HasAVX512Save && ((EBX >> 16) & 1);
-  Features |= (HasAVX << FEATURE_AVX);
-  Features |= (HasAVX2 << FEATURE_AVX2);
-  Features |= (HasAVX512 << FEATURE_AVX512);
-  Features |= (HasAVX512Save << FEATURE_AVX512SAVE);
-  Features |= (HasADX << FEATURE_ADX);
+
+  if (HasLeaf7 && ((EBX >> 3) & 1))
+    Features |= 1 << FEATURE_BMI;
+  if (HasLeaf7 && ((EBX >> 5) & 1) && HasAVX)
+    Features |= 1 << FEATURE_AVX2;
+  if (HasLeaf7 && ((EBX >> 9) & 1))
+    Features |= 1 << FEATURE_BMI2;
+  if (HasLeaf7 && ((EBX >> 16) & 1) && HasAVX512Save)
+    Features |= 1 << FEATURE_AVX512F;
+  if (HasLeaf7 && ((EBX >> 17) & 1) && HasAVX512Save)
+    Features |= 1 << FEATURE_AVX512DQ;
+  if (HasLeaf7 && ((EBX >> 19) & 1))
+    Features2 |= 1 << (FEATURE_ADX - 32);
+  if (HasLeaf7 && ((EBX >> 21) & 1) && HasAVX512Save)
+    Features |= 1 << FEATURE_AVX512IFMA;
+  if (HasLeaf7 && ((EBX >> 26) & 1) && HasAVX512Save)
+    Features |= 1 << FEATURE_AVX512PF;
+  if (HasLeaf7 && ((EBX >> 27) & 1) && HasAVX512Save)
+    Features |= 1 << FEATURE_AVX512ER;
+  if (HasLeaf7 && ((EBX >> 28) & 1) && HasAVX512Save)
+    Features |= 1 << FEATURE_AVX512CD;
+  if (HasLeaf7 && ((EBX >> 30) & 1) && HasAVX512Save)
+    Features |= 1 << FEATURE_AVX512BW;
+  if (HasLeaf7 && ((EBX >> 31) & 1) && HasAVX512Save)
+    Features |= 1 << FEATURE_AVX512VL;
+
+  if (HasLeaf7 && ((ECX >> 1) & 1) && HasAVX512Save)
+    Features |= 1 << FEATURE_AVX512VBMI;
+  if (HasLeaf7 && ((ECX >> 14) & 1) && HasAVX512Save)
+    Features |= 1 << FEATURE_AVX512VPOPCNTDQ;
+
+  if (HasLeaf7 && ((EDX >> 2) & 1) && HasAVX512Save)
+    Features |= 1 << FEATURE_AVX5124VNNIW;
+  if (HasLeaf7 && ((EDX >> 3) & 1) && HasAVX512Save)
+    Features |= 1 << FEATURE_AVX5124FMAPS;
 
   unsigned MaxExtLevel;
   getX86CpuIDAndInfo(0x80000000, &MaxExtLevel, &EBX, &ECX, &EDX);
 
   bool HasExtLeaf1 = MaxExtLevel >= 0x80000001 &&
                      !getX86CpuIDAndInfo(0x80000001, &EAX, &EBX, &ECX, &EDX);
-  if (HasExtLeaf1)
-    Features |= (((EDX >> 29) & 0x1) << FEATURE_EM64T);
+  if (HasExtLeaf1 && ((ECX >> 6) & 1))
+    Features |= 1 << FEATURE_SSE4_A;
+  if (HasExtLeaf1 && ((ECX >> 11) & 1))
+    Features |= 1 << FEATURE_XOP;
+  if (HasExtLeaf1 && ((ECX >> 16) & 1))
+    Features |= 1 << FEATURE_FMA4;
 
-  return Features;
+  if (HasExtLeaf1 && ((EDX >> 29) & 1))
+    Features2 |= 1 << (FEATURE_EM64T - 32);
+
+  *FeaturesOut  = Features;
+  *Features2Out = Features2;
 }
 
 StringRef sys::getHostCPUName() {
@@ -998,16 +1070,16 @@ StringRef sys::getHostCPUName() {
 
   unsigned Brand_id = EBX & 0xff;
   unsigned Family = 0, Model = 0;
-  unsigned Features = 0;
+  unsigned Features = 0, Features2 = 0;
   detectX86FamilyModel(EAX, &Family, &Model);
-  Features = getAvailableFeatures(ECX, EDX, MaxLeaf);
+  getAvailableFeatures(ECX, EDX, MaxLeaf, &Features, &Features2);
 
   unsigned Type;
   unsigned Subtype;
 
   if (Vendor == SIG_INTEL) {
-    getIntelProcessorTypeAndSubtype(Family, Model, Brand_id, Features, &Type,
-                                    &Subtype);
+    getIntelProcessorTypeAndSubtype(Family, Model, Brand_id, Features,
+                                    Features2, &Type, &Subtype);
     switch (Type) {
     case INTEL_i386:
       return "i386";
@@ -1036,7 +1108,7 @@ StringRef sys::getHostCPUName() {
       case INTEL_CORE2_45:
         return "penryn";
       default:
-        return "core2";
+        llvm_unreachable("Unexpected subtype!");
       }
     case INTEL_COREI7:
       switch (Subtype) {
@@ -1057,21 +1129,16 @@ StringRef sys::getHostCPUName() {
       case INTEL_COREI7_SKYLAKE_AVX512:
         return "skylake-avx512";
       default:
-        return "corei7";
+        llvm_unreachable("Unexpected subtype!");
       }
-    case INTEL_ATOM:
-      switch (Subtype) {
-      case INTEL_ATOM_BONNELL:
-        return "bonnell";
-      case INTEL_ATOM_GOLDMONT:
-        return "goldmont";
-      case INTEL_ATOM_SILVERMONT:
-        return "silvermont";
-      default:
-        return "atom";
-      }
-    case INTEL_XEONPHI:
-      return "knl"; /*update for more variants added*/
+    case INTEL_BONNELL:
+      return "bonnell";
+    case INTEL_SILVERMONT:
+      return "silvermont";
+    case INTEL_GOLDMONT:
+      return "goldmont";
+    case INTEL_KNL:
+      return "knl";
     case INTEL_X86_64:
       return "x86-64";
     case INTEL_NOCONA:
@@ -1079,7 +1146,7 @@ StringRef sys::getHostCPUName() {
     case INTEL_PRESCOTT:
       return "prescott";
     default:
-      return "generic";
+      break;
     }
   } else if (Vendor == SIG_AMD) {
     getAMDProcessorTypeAndSubtype(Family, Model, Features, &Type, &Subtype);
@@ -1116,16 +1183,15 @@ StringRef sys::getHostCPUName() {
       case AMDATHLON_64:
         return "athlon64";
       default:
-        return "athlon";
+        llvm_unreachable("Unexpected subtype!");
       }
     case AMDFAM10H:
-      if(Subtype == AMDFAM10H_BARCELONA)
-        return "barcelona";
       return "amdfam10";
-    case AMDFAM14H:
+    case AMD_BTVER1:
       return "btver1";
     case AMDFAM15H:
       switch (Subtype) {
+      default: // There are gaps in the subtype detection.
       case AMDFAM15H_BDVER1:
         return "bdver1";
       case AMDFAM15H_BDVER2:
@@ -1134,31 +1200,13 @@ StringRef sys::getHostCPUName() {
         return "bdver3";
       case AMDFAM15H_BDVER4:
         return "bdver4";
-      case AMD_BTVER1:
-        return "btver1";
-      default:
-        return "amdfam15";
       }
-    case AMDFAM16H:
-      switch (Subtype) {
-      case AMD_BTVER1:
-        return "btver1";
-      case AMD_BTVER2:
-        return "btver2";
-      default:
-        return "amdfam16";
-      }
+    case AMD_BTVER2:
+      return "btver2";
     case AMDFAM17H:
-      switch (Subtype) {
-      case AMD_BTVER1:
-        return "btver1";
-      case AMDFAM17H_ZNVER1:
-        return "znver1";
-      default:
-        return "amdfam17";
-      }
+      return "znver1";
     default:
-      return "generic";
+      break;
     }
   }
   return "generic";

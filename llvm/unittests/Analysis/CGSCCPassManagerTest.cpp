@@ -1261,12 +1261,12 @@ TEST_F(CGSCCPassManagerTest, TestAnalysisInvalidationCGSCCUpdate) {
   // split their SCCs. Then we re-run over the whole module. Then we re-run
   // over three functions merged back into a single SCC, and then over the
   // whole module again.
-  EXPECT_EQ(6 + 2 + 6 + 3 + 6, FunctionAnalysisRuns);
+  EXPECT_EQ(6 + 3 + 6 + 3 + 6, FunctionAnalysisRuns);
 
-  // Re run the function analysis twice over the entire module, and then re-run
-  // it over the `(h3, h1, h2)` SCC due to invalidation. Then we re-un over
-  // three functions merged back into a single SCC, and then over the whole
-  // module.
-  EXPECT_EQ(6 + 2 + 6 + 3 + 6, IndirectFunctionAnalysisRuns);
+  // Re run the function analysis over the entire module, and then re-run it
+  // over the `(h3, h1, h2)` SCC due to invalidation. Then we re-run it over
+  // the entire module, then the three functions merged back into a single SCC,
+  // and then over the whole module.
+  EXPECT_EQ(6 + 3 + 6 + 3 + 6, IndirectFunctionAnalysisRuns);
 }
 }

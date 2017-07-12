@@ -83,47 +83,64 @@ static cl::opt<std::string> VectorizerStartEPPipeline(
     cl::Hidden);
 /// @}}
 
+template <typename PassManagerT>
+bool tryParsePipelineText(PassBuilder &PB, StringRef PipelineText) {
+  if (PipelineText.empty())
+    return false;
+
+  // Verify the pipeline is parseable:
+  PassManagerT PM;
+  if (PB.parsePassPipeline(PM, PipelineText))
+    return true;
+
+  errs() << "Could not parse pipeline '" << PipelineText
+         << "'. I'm going to igore it.\n";
+  return false;
+}
+
 /// If one of the EPPipeline command line options was given, register callbacks
 /// for parsing and inserting the given pipeline
 static void registerEPCallbacks(PassBuilder &PB, bool VerifyEachPass,
                                 bool DebugLogging) {
-  if (!PeepholeEPPipeline.empty())
+  if (tryParsePipelineText<FunctionPassManager>(PB, PeepholeEPPipeline))
     PB.registerPeepholeEPCallback([&PB, VerifyEachPass, DebugLogging](
         FunctionPassManager &PM, PassBuilder::OptimizationLevel Level) {
-      return PB.parsePassPipeline(PM, PeepholeEPPipeline, VerifyEachPass,
-                                  DebugLogging);
+      PB.parsePassPipeline(PM, PeepholeEPPipeline, VerifyEachPass,
+                           DebugLogging);
     });
-  if (!LateLoopOptimizationsEPPipeline.empty())
+  if (tryParsePipelineText<LoopPassManager>(PB,
+                                            LateLoopOptimizationsEPPipeline))
     PB.registerLateLoopOptimizationsEPCallback(
         [&PB, VerifyEachPass, DebugLogging](
             LoopPassManager &PM, PassBuilder::OptimizationLevel Level) {
-          return PB.parsePassPipeline(PM, LateLoopOptimizationsEPPipeline,
-                                      VerifyEachPass, DebugLogging);
+          PB.parsePassPipeline(PM, LateLoopOptimizationsEPPipeline,
+                               VerifyEachPass, DebugLogging);
         });
-  if (!LoopOptimizerEndEPPipeline.empty())
+  if (tryParsePipelineText<LoopPassManager>(PB, LoopOptimizerEndEPPipeline))
     PB.registerLoopOptimizerEndEPCallback([&PB, VerifyEachPass, DebugLogging](
         LoopPassManager &PM, PassBuilder::OptimizationLevel Level) {
-      return PB.parsePassPipeline(PM, LoopOptimizerEndEPPipeline,
-                                  VerifyEachPass, DebugLogging);
+      PB.parsePassPipeline(PM, LoopOptimizerEndEPPipeline, VerifyEachPass,
+                           DebugLogging);
     });
-  if (!ScalarOptimizerLateEPPipeline.empty())
+  if (tryParsePipelineText<FunctionPassManager>(PB,
+                                                ScalarOptimizerLateEPPipeline))
     PB.registerScalarOptimizerLateEPCallback(
         [&PB, VerifyEachPass, DebugLogging](
             FunctionPassManager &PM, PassBuilder::OptimizationLevel Level) {
-          return PB.parsePassPipeline(PM, ScalarOptimizerLateEPPipeline,
-                                      VerifyEachPass, DebugLogging);
+          PB.parsePassPipeline(PM, ScalarOptimizerLateEPPipeline,
+                               VerifyEachPass, DebugLogging);
         });
-  if (!CGSCCOptimizerLateEPPipeline.empty())
+  if (tryParsePipelineText<CGSCCPassManager>(PB, CGSCCOptimizerLateEPPipeline))
     PB.registerCGSCCOptimizerLateEPCallback([&PB, VerifyEachPass, DebugLogging](
         CGSCCPassManager &PM, PassBuilder::OptimizationLevel Level) {
-      return PB.parsePassPipeline(PM, CGSCCOptimizerLateEPPipeline,
-                                  VerifyEachPass, DebugLogging);
+      PB.parsePassPipeline(PM, CGSCCOptimizerLateEPPipeline, VerifyEachPass,
+                           DebugLogging);
     });
-  if (!VectorizerStartEPPipeline.empty())
+  if (tryParsePipelineText<FunctionPassManager>(PB, VectorizerStartEPPipeline))
     PB.registerVectorizerStartEPCallback([&PB, VerifyEachPass, DebugLogging](
         FunctionPassManager &PM, PassBuilder::OptimizationLevel Level) {
-      return PB.parsePassPipeline(PM, VectorizerStartEPPipeline, VerifyEachPass,
-                                  DebugLogging);
+      PB.parsePassPipeline(PM, VectorizerStartEPPipeline, VerifyEachPass,
+                           DebugLogging);
     });
 }
 

@@ -1297,6 +1297,20 @@ public:
   void getOperandBundleTags(SmallVectorImpl<StringRef> &Tags) const;
   uint32_t getOperandBundleTagID(StringRef Tag) const;
 
+  /// A set of interned synchronization scopes.  The StringMap maps
+  /// synchronization scope names to their respective synchronization scope IDs.
+  StringMap<SyncScope::ID> SSC;
+
+  /// getOrInsertSyncScopeID - Maps synchronization scope name to
+  /// synchronization scope ID.  Every synchronization scope registered with
+  /// LLVMContext has unique ID except pre-defined ones.
+  SyncScope::ID getOrInsertSyncScopeID(StringRef SSN);
+
+  /// getSyncScopeNames - Populates client supplied SmallVector with
+  /// synchronization scope names registered with LLVMContext.  Synchronization
+  /// scope names are ordered by increasing synchronization scope IDs.
+  void getSyncScopeNames(SmallVectorImpl<StringRef> &SSNs) const;
+
   /// Maintain the GC name for each function.
   ///
   /// This saves allocating an additional word in Function for programs which

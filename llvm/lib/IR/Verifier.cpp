@@ -3108,7 +3108,7 @@ void Verifier::visitLoadInst(LoadInst &LI) {
            ElTy, &LI);
     checkAtomicMemAccessSize(ElTy, &LI);
   } else {
-    Assert(LI.getSynchScope() == CrossThread,
+    Assert(LI.getSyncScopeID() == SyncScope::System,
            "Non-atomic load cannot have SynchronizationScope specified", &LI);
   }
 
@@ -3137,7 +3137,7 @@ void Verifier::visitStoreInst(StoreInst &SI) {
            ElTy, &SI);
     checkAtomicMemAccessSize(ElTy, &SI);
   } else {
-    Assert(SI.getSynchScope() == CrossThread,
+    Assert(SI.getSyncScopeID() == SyncScope::System,
            "Non-atomic store cannot have SynchronizationScope specified", &SI);
   }
   visitInstruction(SI);

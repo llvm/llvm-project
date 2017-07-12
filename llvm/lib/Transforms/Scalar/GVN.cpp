@@ -1166,7 +1166,7 @@ bool GVN::PerformLoadPRE(LoadInst *LI, AvailValInBlkVect &ValuesPerBlock,
 
     auto *NewLoad = new LoadInst(LoadPtr, LI->getName()+".pre",
                                  LI->isVolatile(), LI->getAlignment(),
-                                 LI->getOrdering(), LI->getSynchScope(),
+                                 LI->getOrdering(), LI->getSyncScopeID(),
                                  UnavailablePred->getTerminator());
 
     // Transfer the old load's AA tags to the new load.

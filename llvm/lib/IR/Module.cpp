@@ -88,7 +88,7 @@ Module::~Module() {
   delete static_cast<StringMap<NamedMDNode *> *>(NamedMDSymTab);
 }
 
-RandomNumberGenerator *Module::createRNG(const Pass* P) const {
+std::unique_ptr<RandomNumberGenerator> Module::createRNG(const Pass* P) const {
   SmallString<32> Salt(P->getPassName());
 
   // This RNG is guaranteed to produce the same random stream only
@@ -103,7 +103,7 @@ RandomNumberGenerator *Module::createRNG(const Pass* P) const {
   // store salt metadata from the Module constructor.
   Salt += sys::path::filename(getModuleIdentifier());
 
-  return new RandomNumberGenerator(Salt);
+  return std::unique_ptr<RandomNumberGenerator>{new RandomNumberGenerator(Salt)};
 }
 
 /// getNamedValue - Return the first global value in the module with

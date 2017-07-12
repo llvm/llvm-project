@@ -124,8 +124,8 @@ public:
 private:
   /// Atomic information for this memory operation.
   struct MachineAtomicInfo {
-    /// Synchronization scope for this memory operation.
-    unsigned SynchScope : 1;      // enum SynchronizationScope
+    /// Synchronization scope ID for this memory operation.
+    unsigned SSID : 8;            // SyncScope::ID
     /// Atomic ordering requirements for this memory operation. For cmpxchg
     /// atomic operations, atomic ordering requirements when store occurs.
     unsigned Ordering : 4;        // enum AtomicOrdering
@@ -152,7 +152,7 @@ public:
                     unsigned base_alignment,
                     const AAMDNodes &AAInfo = AAMDNodes(),
                     const MDNode *Ranges = nullptr,
-                    SynchronizationScope SynchScope = CrossThread,
+                    SyncScope::ID SSID = SyncScope::System,
                     AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
                     AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic);
 
@@ -202,9 +202,9 @@ public:
   /// Return the range tag for the memory reference.
   const MDNode *getRanges() const { return Ranges; }
 
-  /// Return the synchronization scope for this memory operation.
-  SynchronizationScope getSynchScope() const {
-    return static_cast<SynchronizationScope>(AtomicInfo.SynchScope);
+  /// Returns the synchronization scope ID for this memory operation.
+  SyncScope::ID getSyncScopeID() const {
+    return static_cast<SyncScope::ID>(AtomicInfo.SSID);
   }
 
   /// Return the atomic ordering requirements for this memory operation. For

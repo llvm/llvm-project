@@ -470,21 +470,32 @@ bool llvm::UnrollRuntimeLoopRemainder(Loop *L, unsigned Count,
                                       bool UseEpilogRemainder,
                                       LoopInfo *LI, ScalarEvolution *SE,
                                       DominatorTree *DT, bool PreserveLCSSA) {
-  // for now, only unroll loops that contain a single exit
-  if (!UnrollRuntimeMultiExit && !L->getExitingBlock())
+  bool hasMultipleExitingBlocks = !L->getExitingBlock();
+  DEBUG(dbgs() << "Trying runtime unrolling on Loop: \n");
+  DEBUG(L->dump());
+  // Support only single exiting block unless UnrollRuntimeMultiExit is true.
+  if (!UnrollRuntimeMultiExit && hasMultipleExitingBlocks) {
+    DEBUG(
+        dbgs()
+        << "Multiple exiting blocks and UnrollRuntimeMultiExit not enabled!\n");
     return false;
+  }
 
   // Make sure the loop is in canonical form.
-  if (!L->isLoopSimplifyForm())
+  if (!L->isLoopSimplifyForm()) {
+    DEBUG(dbgs() << "Not in simplify form!\n");
     return false;
+  }
 
   // Guaranteed by LoopSimplifyForm.
   BasicBlock *Latch = L->getLoopLatch();
   BasicBlock *Header = L->getHeader();
 
   BasicBlock *LatchExit = L->getUniqueExitBlock(); // successor out of loop
-  if (!LatchExit && !UnrollRuntimeMultiExit)
+  if (!LatchExit && !UnrollRuntimeMultiExit) {
+    DEBUG(dbgs() << "No unique exit block and UnrollRuntimeMultiExit not enabled\n");
     return false;
+  }
   // These are exit blocks other than the target of the latch exiting block.
   SmallVector<BasicBlock *, 4> OtherExits;
   BranchInst *LatchBR = cast<BranchInst>(Latch->getTerminator());
@@ -514,7 +525,17 @@ bool llvm::UnrollRuntimeLoopRemainder(Loop *L, unsigned Count,
   // TODO: Support multiple exiting blocks jumping to the `LatchExit` when
   // UnrollRuntimeMultiExit is true. This will need updating the logic in
   // connectEpilog.
-  if (!LatchExit->getSinglePredecessor())
+  if (!LatchExit->getSinglePredecessor()) {
+    DEBUG(dbgs() << "Bailout for multi-exit handling when latch exit has >1 "
+                    "predecessor.\n");
+    return false;
+  }
+  // FIXME: We bail out of multi-exit unrolling when epilog loop is generated
+  // and L is an inner loop. This is because in presence of multiple exits, the
+  // outer loop is incorrect: we do not add the EpilogPreheader and exit to the
+  // outer loop. This is automatically handled in the prolog case, so we do not
+  // have that bug in prolog generation.
+  if (hasMultipleExitingBlocks && UseEpilogRemainder && L->getParentLoop())
     return false;
   // Use Scalar Evolution to compute the trip count. This allows more loops to
   // be unrolled than relying on induction var simplification.
@@ -529,29 +550,38 @@ bool llvm::UnrollRuntimeLoopRemainder(Loop *L, unsigned Count,
   // exiting blocks).
   const SCEV *BECountSC = SE->getExitCount(L, Latch);
   if (isa<SCEVCouldNotCompute>(BECountSC) ||
-      !BECountSC->getType()->isIntegerTy())
+      !BECountSC->getType()->isIntegerTy()) {
+    DEBUG(dbgs() << "Could not compute exit block SCEV\n");
     return false;
+  }
 
   unsigned BEWidth = cast<IntegerType>(BECountSC->getType())->getBitWidth();
 
   // Add 1 since the backedge count doesn't include the first loop iteration.
   const SCEV *TripCountSC =
       SE->getAddExpr(BECountSC, SE->getConstant(BECountSC->getType(), 1));
-  if (isa<SCEVCouldNotCompute>(TripCountSC))
+  if (isa<SCEVCouldNotCompute>(TripCountSC)) {
+    DEBUG(dbgs() << "Could not compute trip count SCEV.\n");
     return false;
+  }
 
   BasicBlock *PreHeader = L->getLoopPreheader();
   BranchInst *PreHeaderBR = cast<BranchInst>(PreHeader->getTerminator());
   const DataLayout &DL = Header->getModule()->getDataLayout();
   SCEVExpander Expander(*SE, DL, "loop-unroll");
   if (!AllowExpensiveTripCount &&
-      Expander.isHighCostExpansion(TripCountSC, L, PreHeaderBR))
+      Expander.isHighCostExpansion(TripCountSC, L, PreHeaderBR)) {
+    DEBUG(dbgs() << "High cost for expanding trip count scev!\n");
     return false;
+  }
 
   // This constraint lets us deal with an overflowing trip count easily; see the
   // comment on ModVal below.
-  if (Log2_32(Count) > BEWidth)
+  if (Log2_32(Count) > BEWidth) {
+    DEBUG(dbgs()
+          << "Count failed constraint on overflow trip count calculation.\n");
     return false;
+  }
 
   // Loop structure is the following:
   //

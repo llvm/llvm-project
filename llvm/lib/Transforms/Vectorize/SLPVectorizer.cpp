@@ -3188,7 +3188,7 @@ void BoUpSLP::BlockScheduling::cancelScheduling(ArrayRef<Value *> VL,
   if (isa<PHINode>(OpValue))
     return;
 
-  ScheduleData *Bundle = getScheduleData(OpValue)->FirstInBundle;
+  ScheduleData *Bundle = getScheduleData(OpValue);
   DEBUG(dbgs() << "SLP:  cancel scheduling of " << *Bundle << "\n");
   assert(!Bundle->IsScheduled &&
          "Can't cancel bundle which is already scheduled");

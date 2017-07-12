@@ -8,7 +8,7 @@ Sections:
       - Initial:         0x00000003
   - Type:            DATA
     Segments:
-      - Index:           0
+      - MemoryIndex:      0
         Offset:
           Opcode:          I32_CONST
           Value:           4
@@ -38,7 +38,8 @@ Sections:
 # CHECK-NEXT:        Offset:          0x00000006
 # CHECK-NEXT:        Addend:          -6
 # CHECK-NEXT:     Segments:
-# CHECK-NEXT:       - Index:           0
+# CHECK-NEXT:       - SectionOffset:   6
+# CHECK-NEXT:         MemoryIndex:     0
 # CHECK-NEXT:         Offset:
 # CHECK-NEXT:           Opcode:          I32_CONST
 # CHECK-NEXT:           Value:           4

@@ -434,3 +434,47 @@ loopexit1:                                             ; preds = %header
   %sext3 = phi i32 [ %shft, %header ]
   ret i32 %sext3
 }
+
+; Nested loop and inner loop is unrolled
+; FIXME: we cannot unroll with epilog remainder currently, because 
+; the outer loop does not contain the epilog preheader and epilog exit (while
+; infact it should). This causes us to choke up on LCSSA form being incorrect in
+; outer loop. However, the exit block where LCSSA fails, is infact still within
+; the outer loop. For now, we just bail out in presence of outer loop and epilog
+; loop is generated.
+; The outer loop header is the preheader for the inner loop and the inner header
+; branches back to the outer loop.
+define void @test8() {
+; EPILOG: test8(
+; EPILOG-NOT: niter
+
+; PROLOG: test8(
+; PROLOG: outerloop:
+; PROLOG-NEXT: phi i64 [ 3, %bb ], [ 0, %outerloop.loopexit ]
+; PROLOG:      %lcmp.mod = icmp eq i64
+; PROLOG-NEXT: br i1 %lcmp.mod, label %innerH.prol.loopexit, label %innerH.prol.preheader
+; PROLOG: latch.6:
+; PROLOG-NEXT: %tmp4.7 = add nsw i64 %tmp3, 8
+; PROLOG-NEXT: br i1 false, label %outerloop.loopexit.loopexit, label %latch.7
+; PROLOG: latch.7
+; PROLOG-NEXT: %tmp6.7 = icmp ult i64 %tmp4.7, 100
+; PROLOG-NEXT: br i1 %tmp6.7, label %innerH, label %exit.unr-lcssa
+bb:
+  br label %outerloop
+
+outerloop:                                              ; preds = %innerH, %bb
+  %tmp = phi i64 [ 3, %bb ], [ 0, %innerH ]
+  br label %innerH
+
+innerH:                                              ; preds = %latch, %outerloop
+  %tmp3 = phi i64 [ %tmp4, %latch ], [ %tmp, %outerloop ]
+  %tmp4 = add nuw nsw i64 %tmp3, 1
+  br i1 false, label %outerloop, label %latch
+
+latch:                                              ; preds = %innerH
+  %tmp6 = icmp ult i64 %tmp4, 100
+  br i1 %tmp6, label %innerH, label %exit
+
+exit:                                              ; preds = %latch
+  ret void
+}

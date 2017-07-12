@@ -16,6 +16,6 @@ define void @fence_singlethread() {
 ; IOS: ; COMPILER BARRIER
 ; IOS-NOT: dmb
 
-  fence singlethread seq_cst
+  fence syncscope("singlethread") seq_cst
   ret void
 }

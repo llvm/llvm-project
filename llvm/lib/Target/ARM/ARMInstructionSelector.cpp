@@ -348,6 +348,9 @@ template <typename T> struct ARMInstructionSelector::CmpHelper {
   // The assumed register bank ID for the operands.
   static const unsigned OperandRegBankID;
 
+  // The assumed size in bits for the operands.
+  static const unsigned OperandSize;
+
   // The assumed register bank ID for the result.
   static const unsigned ResultRegBankID = ARM::GPRRegBankID;
 
@@ -420,7 +423,7 @@ private:
   bool validateOpReg(unsigned OpReg, MachineRegisterInfo &MRI,
                      const TargetRegisterInfo &TRI,
                      const RegisterBankInfo &RBI) {
-    if (MRI.getType(OpReg).getSizeInBits() != 32) {
+    if (MRI.getType(OpReg).getSizeInBits() != OperandSize) {
       DEBUG(dbgs() << "Unsupported size for comparison operand");
       return false;
     }
@@ -452,6 +455,9 @@ const unsigned ARMInstructionSelector::CmpHelper<int>::ComparisonOpcode =
 template <>
 const unsigned ARMInstructionSelector::CmpHelper<float>::ComparisonOpcode =
     ARM::VCMPS;
+template <>
+const unsigned ARMInstructionSelector::CmpHelper<double>::ComparisonOpcode =
+    ARM::VCMPD;
 
 // Specialize the opcode to be used for reading the comparison flags for
 // different types of operands.
@@ -460,6 +466,9 @@ const unsigned ARMInstructionSelector::CmpHelper<int>::ReadFlagsOpcode =
     ARM::INSTRUCTION_LIST_END;
 template <>
 const unsigned ARMInstructionSelector::CmpHelper<float>::ReadFlagsOpcode =
+    ARM::FMSTAT;
+template <>
+const unsigned ARMInstructionSelector::CmpHelper<double>::ReadFlagsOpcode =
     ARM::FMSTAT;
 
 // Specialize the register bank where the operands of the comparison are assumed
@@ -470,6 +479,17 @@ const unsigned ARMInstructionSelector::CmpHelper<int>::OperandRegBankID =
 template <>
 const unsigned ARMInstructionSelector::CmpHelper<float>::OperandRegBankID =
     ARM::FPRRegBankID;
+template <>
+const unsigned ARMInstructionSelector::CmpHelper<double>::OperandRegBankID =
+    ARM::FPRRegBankID;
+
+// Specialize the size that the operands of the comparison are assumed to have.
+template <>
+const unsigned ARMInstructionSelector::CmpHelper<int>::OperandSize = 32;
+template <>
+const unsigned ARMInstructionSelector::CmpHelper<float>::OperandSize = 32;
+template <>
+const unsigned ARMInstructionSelector::CmpHelper<double>::OperandSize = 64;
 
 template <typename T>
 bool ARMInstructionSelector::selectCmp(MachineInstrBuilder &MIB,
@@ -667,9 +687,24 @@ bool ARMInstructionSelector::select(MachineInstr &I) const {
     return selectSelect(MIB, TII, MRI, TRI, RBI);
   case G_ICMP:
     return selectCmp<int>(MIB, TII, MRI, TRI, RBI);
-  case G_FCMP:
+  case G_FCMP: {
     assert(TII.getSubtarget().hasVFP2() && "Can't select fcmp without VFP");
-    return selectCmp<float>(MIB, TII, MRI, TRI, RBI);
+
+    unsigned OpReg = I.getOperand(2).getReg();
+    unsigned Size = MRI.getType(OpReg).getSizeInBits();
+    if (Size == 32)
+      return selectCmp<float>(MIB, TII, MRI, TRI, RBI);
+    if (Size == 64) {
+      if (TII.getSubtarget().isFPOnlySP()) {
+        DEBUG(dbgs() << "Subtarget only supports single precision");
+        return false;
+      }
+      return selectCmp<double>(MIB, TII, MRI, TRI, RBI);
+    }
+
+    DEBUG(dbgs() << "Unsupported size for G_FCMP operand");
+    return false;
+  }
   case G_GEP:
     I.setDesc(TII.get(ARM::ADDrr));
     MIB.add(predOps(ARMCC::AL)).add(condCodeOp());

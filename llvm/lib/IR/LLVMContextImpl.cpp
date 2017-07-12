@@ -205,6 +205,20 @@ uint32_t LLVMContextImpl::getOperandBundleTagID(StringRef Tag) const {
   return I->second;
 }
 
+SyncScope::ID LLVMContextImpl::getOrInsertSyncScopeID(StringRef SSN) {
+  auto NewSSID = SSC.size();
+  assert(NewSSID < std::numeric_limits<SyncScope::ID>::max() &&
+         "Hit the maximum number of synchronization scopes allowed!");
+  return SSC.insert(std::make_pair(SSN, SyncScope::ID(NewSSID))).first->second;
+}
+
+void LLVMContextImpl::getSyncScopeNames(
+    SmallVectorImpl<StringRef> &SSNs) const {
+  SSNs.resize(SSC.size());
+  for (const auto &SSE : SSC)
+    SSNs[SSE.second] = SSE.first();
+}
+
 /// Singleton instance of the OptBisect class.
 ///
 /// This singleton is accessed via the LLVMContext::getOptBisect() function.  It

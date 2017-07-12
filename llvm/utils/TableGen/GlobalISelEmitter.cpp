@@ -1415,7 +1415,8 @@ private:
   Error importRulePredicates(RuleMatcher &M, ArrayRef<Init *> Predicates);
   Expected<InstructionMatcher &>
   createAndImportSelDAGMatcher(InstructionMatcher &InsnMatcher,
-                               const TreePatternNode *Src) const;
+                               const TreePatternNode *Src,
+                               unsigned &TempOpIdx) const;
   Error importChildMatcher(InstructionMatcher &InsnMatcher,
                            const TreePatternNode *SrcChild, unsigned OpIdx,
                            unsigned &TempOpIdx) const;
@@ -1474,8 +1475,10 @@ GlobalISelEmitter::importRulePredicates(RuleMatcher &M,
   return Error::success();
 }
 
-Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
-    InstructionMatcher &InsnMatcher, const TreePatternNode *Src) const {
+Expected<InstructionMatcher &>
+GlobalISelEmitter::createAndImportSelDAGMatcher(InstructionMatcher &InsnMatcher,
+                                                const TreePatternNode *Src,
+                                                unsigned &TempOpIdx) const {
   const CodeGenInstruction *SrcGIOrNull = nullptr;
 
   // Start with the defined operands (i.e., the results of the root operator).
@@ -1502,7 +1505,6 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
   }
 
   unsigned OpIdx = 0;
-  unsigned TempOpIdx = 0;
   for (const EEVT::TypeSet &Ty : Src->getExtTypes()) {
     auto OpTyOrNone = MVTToLLT(Ty.getConcrete());
 
@@ -1589,8 +1591,8 @@ Error GlobalISelEmitter::importChildMatcher(InstructionMatcher &InsnMatcher,
     // Map the node to a gMIR instruction.
     InstructionOperandMatcher &InsnOperand =
         OM.addPredicate<InstructionOperandMatcher>();
-    auto InsnMatcherOrError =
-        createAndImportSelDAGMatcher(InsnOperand.getInsnMatcher(), SrcChild);
+    auto InsnMatcherOrError = createAndImportSelDAGMatcher(
+        InsnOperand.getInsnMatcher(), SrcChild, TempOpIdx);
     if (auto Error = InsnMatcherOrError.takeError())
       return Error;
 
@@ -1878,7 +1880,9 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
                         to_string(DstI.Operands.NumDefs) + " def(s))");
 
   InstructionMatcher &InsnMatcherTemp = M.addInstructionMatcher();
-  auto InsnMatcherOrError = createAndImportSelDAGMatcher(InsnMatcherTemp, Src);
+  unsigned TempOpIdx = 0;
+  auto InsnMatcherOrError =
+      createAndImportSelDAGMatcher(InsnMatcherTemp, Src, TempOpIdx);
   if (auto Error = InsnMatcherOrError.takeError())
     return std::move(Error);
   InstructionMatcher &InsnMatcher = InsnMatcherOrError.get();

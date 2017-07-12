@@ -493,4 +493,14 @@ void AnnotateIgnoreWritesEnd(const char *file, int line);
 #define LLVM_THREAD_LOCAL
 #endif
 
+/// \macro LLVM_ENABLE_EXCEPTIONS
+/// \brief Whether LLVM is built with exception support.
+#if __has_feature(cxx_exceptions)
+#define LLVM_ENABLE_EXCEPTIONS 1
+#elif defined(__GNUC__) && defined(__EXCEPTIONS)
+#define LLVM_ENABLE_EXCEPTIONS 1
+#elif defined(_MSC_VER) && defined(_CPPUNWIND)
+#define LLVM_ENABLE_EXCEPTIONS 1
+#endif
+
 #endif

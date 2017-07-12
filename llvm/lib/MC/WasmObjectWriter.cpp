@@ -232,8 +232,7 @@ private:
 
   void recordRelocation(MCAssembler &Asm, const MCAsmLayout &Layout,
                         const MCFragment *Fragment, const MCFixup &Fixup,
-                        MCValue Target, bool &IsPCRel,
-                        uint64_t &FixedValue) override;
+                        MCValue Target, uint64_t &FixedValue) override;
 
   void executePostLayoutBinding(MCAssembler &Asm,
                                 const MCAsmLayout &Layout) override;
@@ -353,7 +352,10 @@ void WasmObjectWriter::recordRelocation(MCAssembler &Asm,
                                         const MCAsmLayout &Layout,
                                         const MCFragment *Fragment,
                                         const MCFixup &Fixup, MCValue Target,
-                                        bool &IsPCRel, uint64_t &FixedValue) {
+                                        uint64_t &FixedValue) {
+  MCAsmBackend &Backend = Asm.getBackend();
+  bool IsPCRel = Backend.getFixupKindInfo(Fixup.getKind()).Flags &
+                 MCFixupKindInfo::FKF_IsPCRel;
   const auto &FixupSection = cast<MCSectionWasm>(*Fragment->getParent());
   uint64_t C = Target.getConstant();
   uint64_t FixupOffset = Layout.getFragmentOffset(Fragment) + Fixup.getOffset();
