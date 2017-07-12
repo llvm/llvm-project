@@ -1512,6 +1512,7 @@ bool SwiftLanguage::GetFormatterPrefixSuffix(ValueObject &valobj,
   static ConstString g_NSNumberShort("NSNumber:short");
   static ConstString g_NSNumberInt("NSNumber:int");
   static ConstString g_NSNumberLong("NSNumber:long");
+  static ConstString g_NSNumberInt128("NSNumber:int128_t");
   static ConstString g_NSNumberFloat("NSNumber:float");
   static ConstString g_NSNumberDouble("NSNumber:double");
 
@@ -1538,6 +1539,11 @@ bool SwiftLanguage::GetFormatterPrefixSuffix(ValueObject &valobj,
   }
   if (type_hint == g_NSNumberLong) {
     prefix = "Int64(";
+    suffix = ")";
+    return true;
+  }
+  if (type_hint == g_NSNumberInt128) {
+    prefix = "Int128(";
     suffix = ")";
     return true;
   }

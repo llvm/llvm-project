@@ -36,6 +36,7 @@
 
 // FIXME: we should not need this
 #include "Plugins/Language/Swift/SwiftDictionary.h"
+#include "Plugins/LanguageRuntime/ObjC/AppleObjCRuntime/AppleObjCRuntime.h"
 #include <mutex>
 
 using namespace lldb;

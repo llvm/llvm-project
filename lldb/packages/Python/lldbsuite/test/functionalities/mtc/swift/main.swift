@@ -11,12 +11,15 @@
 // -----------------------------------------------------------------------------
 
 import Foundation
+import AppKit
 
-class MyClass : NSObject {
-  func memberfunc() { }  // method line
-  func memberfunc2() { }  // method2 line
+let view = NSView()
+let g = DispatchGroup()
+g.enter()
+Thread.detachNewThread {
+  autoreleasepool {
+    view.removeFromSuperview()
+  }
+  g.leave()
 }
-
-let mc = MyClass()
-mc.perform(Selector(String("memberfunc")))
-mc.perform(Selector(String("memberfunc2")))
+g.wait()

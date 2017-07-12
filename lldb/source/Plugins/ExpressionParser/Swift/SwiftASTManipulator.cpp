@@ -91,11 +91,12 @@ static void DumpPlaceholdersIntoCall(
   }
 }
 
-bool SwiftASTManipulator::VariableInfo::GetIsLet() const {
+swift::VarDecl::Specifier
+SwiftASTManipulator::VariableInfo::GetVarSpecifier() const {
   if (m_decl)
-    return m_decl->isLet();
+    return m_decl->getSpecifier();
   else
-    return m_is_let;
+    return m_var_specifier;
 }
 
 bool SwiftASTManipulator::VariableInfo::GetIsCaptureList() const {
@@ -575,10 +576,10 @@ swift::Stmt *SwiftASTManipulator::ConvertExpressionToTmpReturnVarAccess(
   llvm::SmallVector<swift::ASTNode, 3> body;
   llvm::SmallVector<swift::Expr *, 3> false_body;
   const bool is_static = false;
-  const bool is_let = false;
+  const auto specifier = swift::VarDecl::Specifier::Var;
   const bool is_capture_list = false;
   result_loc_info.tmp_var_decl = new (ast_context) swift::VarDecl(
-      is_static, is_let, is_capture_list, source_loc, name, swift::Type(),
+      is_static, specifier, is_capture_list, source_loc, name, swift::Type(),
       new_decl_context);
   result_loc_info.tmp_var_decl->setImplicit();
   result_loc_info.tmp_var_decl->setAccessibility(
@@ -1248,7 +1249,7 @@ bool SwiftASTManipulator::AddExternalVariables(
     SwiftASTManipulator::VariableInfo &variable = variables[0];
 
     const bool is_static = false;
-    bool is_let = variable.GetIsLet();
+    auto specifier = variable.GetVarSpecifier();
     bool is_capture_list = variable.GetIsCaptureList();
     swift::SourceLoc loc;
     swift::Identifier name = variable.m_name;
@@ -1258,7 +1259,7 @@ bool SwiftASTManipulator::AddExternalVariables(
     // strip that part off:
 
     swift::VarDecl *redirected_var_decl = new (ast_context)
-        swift::VarDecl(is_static, is_let, is_capture_list, loc, name, var_type,
+        swift::VarDecl(is_static, specifier, is_capture_list, loc, name, var_type,
                        &m_source_file);
     redirected_var_decl->setInterfaceType(var_type);
 
@@ -1309,7 +1310,7 @@ bool SwiftASTManipulator::AddExternalVariables(
       swift::SourceLoc loc = m_function_decl->getBody()->getLBraceLoc();
       swift::FuncDecl *containing_function = m_function_decl;
       swift::Identifier name = variable.m_name;
-      bool is_let = variable.GetIsLet();
+      auto specifier = variable.GetVarSpecifier();
       bool is_capture_list = variable.GetIsCaptureList();
 
       bool is_self = !variable.m_name.str().compare("$__lldb_injected_self");
@@ -1347,7 +1348,7 @@ bool SwiftASTManipulator::AddExternalVariables(
       // it is inout or not, so we don't have to do anything more to get this to
       // work.
       swift::Type var_type =
-          GetSwiftType(referent_type)->getLValueOrInOutObjectType();
+          GetSwiftType(referent_type)->getWithoutSpecifierType();
       if (is_self) {
         // Another tricky bit is that the Metatype types we get have the
         // "Representation" already attached (i.e.
@@ -1364,7 +1365,7 @@ bool SwiftASTManipulator::AddExternalVariables(
       }
 
       swift::VarDecl *redirected_var_decl = new (ast_context) swift::VarDecl(
-          is_static, is_let, is_capture_list, loc, name, var_type,
+          is_static, specifier, is_capture_list, loc, name, var_type,
           containing_function);
       redirected_var_decl->setInterfaceType(
           containing_function->mapTypeOutOfContext(var_type));

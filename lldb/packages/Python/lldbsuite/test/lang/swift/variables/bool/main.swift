@@ -10,13 +10,20 @@
 //
 // -----------------------------------------------------------------------------
 
-import Foundation
+func main() -> Int {
+    let short_five : Int8 = 5
+    let short_four : Int8 = 4
 
-class MyClass : NSObject {
-  func memberfunc() { }  // method line
-  func memberfunc2() { }  // method2 line
+    var reg_true : Bool   = true
+    var reg_false : Bool  = false
+    var odd_true : Bool   = unsafeBitCast(short_five, to: Bool.self)
+    var odd_false : Bool  = unsafeBitCast(short_four, to: Bool.self)
+
+    var odd_true_works = reg_true == odd_true
+    var odd_false_works = reg_false == odd_false
+
+    print("stop here") // Set breakpoint here
+    return 0
 }
 
-let mc = MyClass()
-mc.perform(Selector(String("memberfunc")))
-mc.perform(Selector(String("memberfunc2")))
+main()

@@ -164,6 +164,9 @@ public:
   virtual bool GetIRPasses(LLVMUserExpression::IRPasses &custom_passes) {
     return false;
   }
+  
+  static bool
+  IsSymbolAnyRuntimeThunk(lldb::ProcessSP process, Symbol &symbol);
 
 protected:
   //------------------------------------------------------------------

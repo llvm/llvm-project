@@ -1,4 +1,4 @@
-# TestSwiftLetInt.py
+# TestSwiftBool.py
 #
 # This source file is part of the Swift.org open source project
 #
@@ -10,23 +10,23 @@
 #
 # ------------------------------------------------------------------------------
 """
-Test that a 'let' Int is formatted properly
+Test that we can inspect Swift Bools - they are 8 bit entities with only the
+LSB significant.  Make sure that works.
 """
 import lldb
 from lldbsuite.test.lldbtest import *
 import lldbsuite.test.decorators as decorators
 import lldbsuite.test.lldbutil as lldbutil
-import os
 import unittest2
 
 
-class TestSwiftLetIntSupport(TestBase):
+class TestSwiftBool(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
     @decorators.swiftTest
-    def test_swift_let_int(self):
-        """Test that a 'let' Int is formatted properly"""
+    def test_swift_bool(self):
+        """Test that we can inspect various Swift bools"""
         self.build()
         self.do_test()
 
@@ -36,7 +36,7 @@ class TestSwiftLetIntSupport(TestBase):
         self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
     def do_test(self):
-        """Test that a 'let' Int is formatted properly"""
+        """Tests that we can break and display simple types"""
         exe_name = "a.out"
         exe = os.path.join(os.getcwd(), exe_name)
 
@@ -59,24 +59,23 @@ class TestSwiftLetIntSupport(TestBase):
             process, breakpoint)
 
         self.assertTrue(len(threads) == 1)
-        self.thread = threads[0]
-        self.frame = self.thread.frames[0]
-        self.assertTrue(self.frame, "Frame 0 is valid.")
+        thread = threads[0]
+        
+        frame = thread.frames[0]
+        self.assertTrue(frame.IsValid(), "Couldn't get a frame.")
+        
+        true_vars = ["reg_true", "odd_true", "odd_true_works", "odd_false_works"]
+        for name in true_vars:
+            var = frame.FindVariable(name)
+            summary = var.GetSummary()
+            self.assertTrue(summary == "true", "%s should be true, was: %s"%(name, summary))
 
-        let = self.frame.FindVariable("x")
-        var = self.frame.FindVariable("y")
-        lldbutil.check_variable(self, let, False, value="10")
-        lldbutil.check_variable(self, var, False, value="10")
+        false_vars = ["reg_false", "odd_false"]
+        for name in false_vars:
+            var = frame.FindVariable(name)
+            summary = var.GetSummary()
+            self.assertTrue(summary == "false", "%s should be false, was: %s"%(name, summary))
 
-        get_arguments = False
-        get_locals = True
-        get_statics = False
-        get_in_scope_only = True
-        local_vars = self.frame.GetVariables(get_arguments, get_locals,
-                                             get_statics, get_in_scope_only)
-        self.assertTrue(local_vars.GetFirstValueByName("x").IsValid())
-        self.assertTrue(local_vars.GetFirstValueByName("y").IsValid())
-        self.assertTrue(not local_vars.GetFirstValueByName("z").IsValid())
 
 if __name__ == '__main__':
     import atexit

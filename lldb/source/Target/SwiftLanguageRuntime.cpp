@@ -2781,13 +2781,12 @@ GetThunkKind(llvm::StringRef symbol_name)
   if (num_global_children == 0)
     return ThunkKind::Unknown;
 
-  swift::Demangle::NodePointer global_node_ptr = nodes->getFirstChild();
-  if (global_node_ptr->getKind() != swift::Demangle::Node::Kind::Global)
+  if (nodes->getKind() != swift::Demangle::Node::Kind::Global)
     return ThunkKind::Unknown;
-  if (global_node_ptr->getNumChildren() == 0)
+  if (nodes->getNumChildren() == 0)
     return ThunkKind::Unknown;
 
-  swift::Demangle::NodePointer node_ptr = global_node_ptr->getFirstChild();
+  swift::Demangle::NodePointer node_ptr = nodes->getFirstChild();
   kind = node_ptr->getKind();
   switch (kind)
   {
@@ -2803,6 +2802,8 @@ GetThunkKind(llvm::StringRef symbol_name)
     break;
   case swift::Demangle::Node::Kind::ReabstractionThunkHelper:
     return ThunkKind::Reabstraction;
+  case swift::Demangle::Node::Kind::PartialApplyForwarder:
+    return ThunkKind::PartialApply;
   case swift::Demangle::Node::Kind::Allocator:
     if (node_ptr->getNumChildren() == 0)
       return ThunkKind::Unknown;
@@ -2848,7 +2849,7 @@ GetThunkAction (ThunkKind kind)
       case ThunkKind::ObjCAttribute:
         return ThunkAction::GetThunkTarget;
       case ThunkKind::Reabstraction:
-        return ThunkAction::GetThunkTarget;
+        return ThunkAction::StepThrough;
       case ThunkKind::ProtocolConformance:
         return ThunkAction::StepIntoConformance;
     }
@@ -2900,7 +2901,9 @@ bool SwiftLanguageRuntime::GetTargetOfPartialApply(SymbolContext &curr_sc,
 bool SwiftLanguageRuntime::IsSymbolARuntimeThunk(const Symbol &symbol) {
 
   llvm::StringRef symbol_name = symbol.GetMangled().GetMangledName().GetStringRef();
-  
+  if (symbol_name.empty())
+    return false;
+
   swift::Demangle::Context demangle_ctx;
   return demangle_ctx.isThunkSymbol(symbol_name);
 }
@@ -3367,11 +3370,11 @@ void SwiftLanguageRuntime::RegisterGlobalError(Target &target, ConstString name,
 
     if (module_creation_error.Success() && module_decl) {
       const bool is_static = false;
-      const bool is_let = true;
+      const auto specifier = swift::VarDecl::Specifier::Let;
       const bool is_capture_list = false;
 
       swift::VarDecl *var_decl = new (*ast_context->GetASTContext())
-          swift::VarDecl(is_static, is_let, is_capture_list, swift::SourceLoc(),
+          swift::VarDecl(is_static, specifier, is_capture_list, swift::SourceLoc(),
                          ast_context->GetIdentifier(name.GetCString()),
                          GetSwiftType(ast_context->GetErrorType()),
                          module_decl);

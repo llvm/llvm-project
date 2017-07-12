@@ -778,6 +778,13 @@ public:
       LazyBool step_in_avoids_code_without_debug_info = eLazyBoolCalculate,
       LazyBool step_out_avoids_code_without_debug_info = eLazyBoolCalculate);
 
+  virtual lldb::ThreadPlanSP QueueThreadPlanForStepInRangeNoShouldStop(
+      bool abort_other_plans, const AddressRange &range,
+      const SymbolContext &addr_context, const char *step_in_target,
+      lldb::RunMode stop_other_threads,
+      LazyBool step_in_avoids_code_without_debug_info = eLazyBoolCalculate,
+      LazyBool step_out_avoids_code_without_debug_info = eLazyBoolCalculate);
+
   // Helper function that takes a LineEntry to step, insted of an AddressRange.
   // This may combine multiple
   // LineEntries of the same source line number to step over a longer address

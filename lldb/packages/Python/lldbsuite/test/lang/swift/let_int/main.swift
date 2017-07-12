@@ -9,10 +9,13 @@
 // See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 // -----------------------------------------------------------------------------
+
+let z = 10
+
 func main() {
   let x = 10
   var y = 10
-  print(x+y) // Set breakpoint here
+  print(x+y+z) // Set breakpoint here
 }
 
 main()

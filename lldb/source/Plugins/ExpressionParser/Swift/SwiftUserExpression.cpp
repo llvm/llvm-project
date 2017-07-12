@@ -227,7 +227,7 @@ void SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
 
           swift::Type object_type =
               swift::Type((swift::TypeBase *)(self_type.GetOpaqueQualType()))
-                  ->getLValueOrInOutObjectType();
+                  ->getWithoutSpecifierType();
 
           if (object_type.getPointer() &&
               (object_type.getPointer() != self_type.GetOpaqueQualType()))

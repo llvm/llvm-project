@@ -343,3 +343,25 @@ LanguageRuntime::GuessLanguageForSymbolByName(Target &target,
   else
     return eLanguageTypeUnknown;
 }
+
+bool
+LanguageRuntime::IsSymbolAnyRuntimeThunk(ProcessSP process_sp, Symbol &symbol)
+{
+  if (!process_sp)
+    return false;
+    
+  enum LanguageType languages_to_try[] = {
+      eLanguageTypeSwift, eLanguageTypeObjC, eLanguageTypeC_plus_plus};
+
+  LanguageRuntime *language_runtime;
+  for (enum LanguageType language : languages_to_try) {
+    language_runtime = process_sp->GetLanguageRuntime(language);
+    if (language_runtime) {
+        if (language_runtime->IsSymbolARuntimeThunk(symbol))
+          return true;
+    }
+  }
+  return false;
+}
+
+

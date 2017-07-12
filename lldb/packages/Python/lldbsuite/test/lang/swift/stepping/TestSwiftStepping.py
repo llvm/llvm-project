@@ -26,7 +26,6 @@ class TestSwiftStepping(lldbtest.TestBase):
     mydir = lldbtest.TestBase.compute_mydir(__file__)
 
     @decorators.swiftTest
-    @decorators.expectedFailureAll(bugnumber="rdar://31515444")
     def test_swift_stepping(self):
         """Tests that we can step reliably in swift code."""
         self.build()
@@ -289,11 +288,12 @@ class TestSwiftStepping(lldbtest.TestBase):
         # Step out of the protocol function, one step out should also
         # get us past any dispatch thunk.
         thread.StepOut()
-        self.hit_correct_line(thread, "indirect.protocol_func(20)")
-
+        stop_on_caller = self.hit_correct_line(thread, "indirect.protocol_func(20)", False)
+        
         # And one step over is necessary because step out doesn't
         # finish off the line.
-        thread.StepOver()
+        if stop_on_caller:
+            thread.StepOver()
         self.hit_correct_line(thread, "doSomethingWithFunction(cd_maker, 10)")
 
         thread.StepInto()

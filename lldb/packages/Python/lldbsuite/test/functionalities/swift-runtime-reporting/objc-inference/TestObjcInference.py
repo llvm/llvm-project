@@ -36,6 +36,9 @@ class SwiftRuntimeReportingObjcInferenceTestCase(lldbtest.TestBase):
         self.main_source = "main.swift"
         self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
+        self.line_method = lldbtest.line_number(self.main_source, '// method line')
+        self.line_method2 = lldbtest.line_number(self.main_source, '// method2 line')
+
     def do_test(self):
         exe_name = "a.out"
         exe = os.path.join(os.getcwd(), exe_name)
@@ -64,6 +67,47 @@ class SwiftRuntimeReportingObjcInferenceTestCase(lldbtest.TestBase):
         self.assertEqual(data["issue_type"], "implicit-objc-entrypoint")
         self.assertEqual(data["description"],
             "implicit Objective-C entrypoint -[a.MyClass memberfunc] is deprecated and will be removed in Swift 4")
+        self.assertEqual(len(data["notes"]), 1)
+        self.assertEqual(data["notes"][0]["description"], "add '@objc' to expose this Swift declaration to Objective-C")
+        self.assertEqual(len(data["notes"][0]["fixits"]), 1)
+        self.assertTrue(data["notes"][0]["fixits"][0]["filename"].endswith(self.main_source))
+        self.assertEqual(data["notes"][0]["fixits"][0]["start_line"], self.line_method)
+        self.assertEqual(data["notes"][0]["fixits"][0]["end_line"], self.line_method)
+        self.assertEqual(data["notes"][0]["fixits"][0]["start_col"], 3)
+        self.assertEqual(data["notes"][0]["fixits"][0]["end_col"], 3)
+        self.assertEqual(data["notes"][0]["fixits"][0]["replacement"], "@objc ")
+
+        historical_threads = thread.GetStopReasonExtendedBacktraces(lldb.eInstrumentationRuntimeTypeSwiftRuntimeReporting)
+        self.assertEqual(historical_threads.GetSize(), 1)
+
+        self.runCmd("continue")
+
+        self.expect("thread list",
+                    substrs=['stopped', 'stop reason = implicit Objective-C entrypoint'])
+
+        self.assertEqual(
+            self.dbg.GetSelectedTarget().process.GetSelectedThread().GetStopReason(),
+            lldb.eStopReasonInstrumentation)
+
+        self.expect("thread info -s",
+            substrs=["instrumentation_class", "issue_type", "description"])
+
+        output_lines = self.res.GetOutput().split('\n')
+        json_line = '\n'.join(output_lines[2:])
+        data = json.loads(json_line)
+        self.assertEqual(data["instrumentation_class"], "SwiftRuntimeReporting")
+        self.assertEqual(data["issue_type"], "implicit-objc-entrypoint")
+        self.assertEqual(data["description"],
+            "implicit Objective-C entrypoint -[a.MyClass memberfunc2] is deprecated and will be removed in Swift 4")
+        self.assertEqual(len(data["notes"]), 1)
+        self.assertEqual(data["notes"][0]["description"], "add '@objc' to expose this Swift declaration to Objective-C")
+        self.assertEqual(len(data["notes"][0]["fixits"]), 1)
+        self.assertTrue(data["notes"][0]["fixits"][0]["filename"].endswith(self.main_source))
+        self.assertEqual(data["notes"][0]["fixits"][0]["start_line"], self.line_method2)
+        self.assertEqual(data["notes"][0]["fixits"][0]["end_line"], self.line_method2)
+        self.assertEqual(data["notes"][0]["fixits"][0]["start_col"], 3)
+        self.assertEqual(data["notes"][0]["fixits"][0]["end_col"], 3)
+        self.assertEqual(data["notes"][0]["fixits"][0]["replacement"], "@objc ")
 
         historical_threads = thread.GetStopReasonExtendedBacktraces(lldb.eInstrumentationRuntimeTypeSwiftRuntimeReporting)
         self.assertEqual(historical_threads.GetSize(), 1)

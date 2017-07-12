@@ -376,7 +376,16 @@ bool lldb_private::formatters::swift::Bool_SummaryProvider(
   ValueObjectSP value_child(valobj.GetChildMemberWithName(g_value, true));
   if (!value_child)
     return false;
-  auto value = value_child->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
+    
+  // Swift Bools are stored in a byte, but only the LSB of the byte is
+  // significant.  The swift::irgen::FixedTypeInfo structure represents
+  // this information by providing a mask of the "extra bits" for the type.
+  // But at present CompilerType has no way to represent that information.
+  // So for now we hard code it.
+  uint64_t value = value_child->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
+  const uint64_t mask = 1 << 0;
+  value &= mask;
+  
   switch (value) {
   case 0:
     stream.Printf("false");
