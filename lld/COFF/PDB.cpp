@@ -125,25 +125,26 @@ static bool remapTypeIndex(TypeIndex &TI, ArrayRef<TypeIndex> TypeIndexMap) {
   return true;
 }
 
-static void remapTypesInSymbolRecord(ObjectFile *File,
+static bool remapTypesInSymbolRecord(ObjectFile *File,
                                      MutableArrayRef<uint8_t> Contents,
                                      ArrayRef<TypeIndex> TypeIndexMap,
                                      ArrayRef<TiReference> TypeRefs) {
   for (const TiReference &Ref : TypeRefs) {
     unsigned ByteSize = Ref.Count * sizeof(TypeIndex);
-    if (Contents.size() < Ref.Offset + ByteSize)
-      fatal("symbol record too short");
+    if (Contents.size() < Ref.Offset + ByteSize) {
+      log("ignoring short symbol record");
+      return false;
+    }
     MutableArrayRef<TypeIndex> TIs(
         reinterpret_cast<TypeIndex *>(Contents.data() + Ref.Offset), Ref.Count);
-    for (TypeIndex &TI : TIs) {
+    for (TypeIndex &TI : TIs)
       if (!remapTypeIndex(TI, TypeIndexMap)) {
-        TI = TypeIndex(SimpleTypeKind::NotTranslated);
         log("ignoring symbol record in " + File->getName() +
             " with bad type index 0x" + utohexstr(TI.getIndex()));
-        continue;
+        return false;
       }
-    }
   }
+  return true;
 }
 
 /// MSVC translates S_PROC_ID_END to S_END.
@@ -264,7 +265,8 @@ static void mergeSymbolRecords(BumpPtrAllocator &Alloc, ObjectFile *File,
     // Re-map all the type index references.
     MutableArrayRef<uint8_t> Contents =
         NewData.drop_front(sizeof(RecordPrefix));
-    remapTypesInSymbolRecord(File, Contents, TypeIndexMap, TypeRefs);
+    if (!remapTypesInSymbolRecord(File, Contents, TypeIndexMap, TypeRefs))
+      continue;
 
     // Fill in "Parent" and "End" fields by maintaining a stack of scopes.
     CVSymbol NewSym(Sym.kind(), NewData);

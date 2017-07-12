@@ -325,7 +325,7 @@ static int compareDefined(Symbol *S, bool WasInserted, uint8_t Binding) {
   if (WasInserted)
     return 1;
   SymbolBody *Body = S->body();
-  if (Body->isLazy() || !Body->isInCurrentDSO())
+  if (!Body->isInCurrentDSO())
     return 1;
   if (Binding == STB_WEAK)
     return -1;

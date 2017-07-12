@@ -193,10 +193,16 @@ Status MainLoop::RunImpl::Poll() {
 
 void MainLoop::RunImpl::ProcessEvents() {
 #ifdef FORCE_PSELECT
-  for (const auto &fd : loop.m_read_fds) {
-    if (!FD_ISSET(fd.first, &read_fd_set))
-      continue;
-    IOObject::WaitableHandle handle = fd.first;
+  // Collect first all readable file descriptors into a separate vector and then
+  // iterate over it to invoke callbacks. Iterating directly over
+  // loop.m_read_fds is not possible because the callbacks can modify the
+  // container which could invalidate the iterator.
+  std::vector<IOObject::WaitableHandle> fds;
+  for (const auto &fd : loop.m_read_fds)
+    if (FD_ISSET(fd.first, &read_fd_set))
+      fds.push_back(fd.first);
+
+  for (const auto &handle : fds) {
 #else
   for (const auto &fd : read_fds) {
     if ((fd.revents & POLLIN) == 0)
@@ -209,13 +215,16 @@ void MainLoop::RunImpl::ProcessEvents() {
     loop.ProcessReadObject(handle);
   }
 
-  for (const auto &entry : loop.m_signals) {
+  std::vector<int> signals;
+  for (const auto &entry : loop.m_signals)
+    if (g_signal_flags[entry.first] != 0)
+      signals.push_back(entry.first);
+
+  for (const auto &signal : signals) {
     if (loop.m_terminate_request)
       return;
-    if (g_signal_flags[entry.first] == 0)
-      continue; // No signal
-    g_signal_flags[entry.first] = 0;
-    loop.ProcessSignal(entry.first);
+    g_signal_flags[signal] = 0;
+    loop.ProcessSignal(signal);
   }
 }
 #endif

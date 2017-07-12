@@ -20,6 +20,7 @@
 // Project includes
 #include "ProcessGDBRemoteLog.h"
 #include "Utility/StringExtractorGDBRemote.h"
+#include "lldb/Utility/StreamString.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -27,7 +28,12 @@ using namespace lldb_private::process_gdb_remote;
 
 GDBRemoteCommunicationServer::GDBRemoteCommunicationServer(
     const char *comm_name, const char *listener_name)
-    : GDBRemoteCommunication(comm_name, listener_name), m_exit_now(false) {}
+    : GDBRemoteCommunication(comm_name, listener_name), m_exit_now(false) {
+  RegisterPacketHandler(
+      StringExtractorGDBRemote::eServerPacketType_QEnableErrorStrings,
+      [this](StringExtractorGDBRemote packet, Status &error, bool &interrupt,
+             bool &quit) { return this->Handle_QErrorStringEnable(packet); });
+}
 
 GDBRemoteCommunicationServer::~GDBRemoteCommunicationServer() {}
 
@@ -97,6 +103,24 @@ GDBRemoteCommunicationServer::SendErrorResponse(uint8_t err) {
   int packet_len = ::snprintf(packet, sizeof(packet), "E%2.2x", err);
   assert(packet_len < (int)sizeof(packet));
   return SendPacketNoLock(llvm::StringRef(packet, packet_len));
+}
+
+GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationServer::SendErrorResponse(const Status &error) {
+  if (m_send_error_strings) {
+    lldb_private::StreamString packet;
+    packet.Printf("E%2.2x;", static_cast<uint8_t>(error.GetError()));
+    packet.PutCStringAsRawHex8(error.AsCString());
+    return SendPacketNoLock(packet.GetString());
+  } else
+    return SendErrorResponse(error.GetError());
+}
+
+GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationServer::Handle_QErrorStringEnable(
+    StringExtractorGDBRemote &packet) {
+  m_send_error_strings = true;
+  return SendOKResponse();
 }
 
 GDBRemoteCommunication::PacketResult

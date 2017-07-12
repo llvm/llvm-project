@@ -587,7 +587,7 @@ The simplest way is to have a statically initialized global object inside
 
 Alternatively, you may define an optional init function and it will receive
 the program arguments that you can read and modify. Do this **only** if you
-realy need to access ``argv``/``argc``.
+really need to access ``argv``/``argc``.
 
 .. code-block:: c++
 

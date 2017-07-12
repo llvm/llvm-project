@@ -84,6 +84,7 @@ def II_DIVU             : InstrItinClass;
 def II_DIV_D            : InstrItinClass;
 def II_DIV_S            : InstrItinClass;
 def II_DMFC0            : InstrItinClass;
+def II_DMT              : InstrItinClass;
 def II_DMTC0            : InstrItinClass;
 def II_DMFC1            : InstrItinClass;
 def II_DMTC1            : InstrItinClass;
@@ -113,6 +114,7 @@ def II_DSBH             : InstrItinClass;
 def II_DSHD             : InstrItinClass;
 def II_DSUBU            : InstrItinClass;
 def II_DSUB             : InstrItinClass;
+def II_EMT              : InstrItinClass;
 def II_EXT              : InstrItinClass; // Any EXT instruction
 def II_FLOOR            : InstrItinClass;
 def II_INS              : InstrItinClass; // Any INS instruction
@@ -386,6 +388,7 @@ def MipsGenericItineraries : ProcessorItineraries<[ALU, IMULDIV], [], [
   InstrItinData<II_DCLZ            , [InstrStage<1,  [ALU]>]>,
   InstrItinData<II_DMOD            , [InstrStage<17, [IMULDIV]>]>,
   InstrItinData<II_DMODU           , [InstrStage<17, [IMULDIV]>]>,
+  InstrItinData<II_DMT             , [InstrStage<2,  [ALU]>]>,
   InstrItinData<II_DSLL            , [InstrStage<1,  [ALU]>]>,
   InstrItinData<II_DSLL32          , [InstrStage<1,  [ALU]>]>,
   InstrItinData<II_DSRL            , [InstrStage<1,  [ALU]>]>,
@@ -404,6 +407,7 @@ def MipsGenericItineraries : ProcessorItineraries<[ALU, IMULDIV], [], [
   InstrItinData<II_DSHD            , [InstrStage<1,  [ALU]>]>,
   InstrItinData<II_DCLO            , [InstrStage<1,  [ALU]>]>,
   InstrItinData<II_DCLZ            , [InstrStage<1,  [ALU]>]>,
+  InstrItinData<II_EMT             , [InstrStage<2,  [ALU]>]>,
   InstrItinData<II_EXT             , [InstrStage<1,  [ALU]>]>,
   InstrItinData<II_INS             , [InstrStage<1,  [ALU]>]>,
   InstrItinData<II_LUI             , [InstrStage<1,  [ALU]>]>,
