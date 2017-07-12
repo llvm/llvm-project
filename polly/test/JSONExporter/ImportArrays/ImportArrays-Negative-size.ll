@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -analyze -polly-import-jscop-dir=%S -polly-import-jscop -polly-import-jscop-postfix=transformed < %s 2>&1 | FileCheck %s
+; RUN: opt %loadPolly -polly-scops -analyze -polly-import-jscop -polly-import-jscop-postfix=transformed < %s 2>&1 | FileCheck %s
 ;
 ; #define Ni 1056
 ; #define Nj 1056

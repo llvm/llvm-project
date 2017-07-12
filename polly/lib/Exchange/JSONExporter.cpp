@@ -202,7 +202,7 @@ Json::Value JSONExporter::getJSON(Scop &S) const {
       Json::Value access;
 
       access["kind"] = MA->isRead() ? "read" : "write";
-      access["relation"] = MA->getOriginalAccessRelationStr();
+      access["relation"] = MA->getAccessRelationStr();
 
       statement["accesses"].append(access);
     }

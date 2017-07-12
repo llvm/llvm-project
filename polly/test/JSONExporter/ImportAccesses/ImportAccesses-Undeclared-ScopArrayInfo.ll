@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-import-jscop-dir=%S -polly-import-jscop -polly-ast -polly-ast-detect-parallel  < %s 2>&1 >/dev/null | FileCheck %s
+; RUN: opt %loadPolly -polly-import-jscop -polly-ast -polly-ast-detect-parallel  < %s 2>&1 >/dev/null | FileCheck %s
 ;
 ; CHECK: JScop file contains access function with undeclared ScopArrayInfo
 ;
