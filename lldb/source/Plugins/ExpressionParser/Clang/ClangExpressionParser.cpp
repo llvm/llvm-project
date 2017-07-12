@@ -834,9 +834,7 @@ lldb_private::Status ClangExpressionParser::PrepareForExecution(
 
     function.setAttributes(attributes.removeAttributes(
         function.getContext(), llvm::AttributeList::FunctionIndex,
-        llvm::AttributeList::get(function.getContext(),
-                                llvm::AttributeList::FunctionIndex,
-                                attributes_to_remove)));
+        attributes_to_remove));
   }
 
   ConstString function_name;

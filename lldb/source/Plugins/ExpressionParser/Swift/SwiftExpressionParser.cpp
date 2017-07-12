@@ -188,7 +188,8 @@ static void GetNameFromModule(swift::ModuleDecl *module, std::string &result) {
 // Largely lifted from swift::performAutoImport, but serves our own nefarious
 // purposes.
 bool SwiftExpressionParser::PerformAutoImport(swift::SourceFile &source_file,
-                                              bool user_imports, Error &error) {
+                                              bool user_imports,
+                                              Status &error) {
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
   const std::vector<ConstString> *cu_modules = nullptr;
@@ -354,7 +355,7 @@ static CompilerType ImportType(SwiftASTContext &target_context,
   if (swift_ast_ctx == &target_context)
     return source_type;
 
-  Error error, mangled_error;
+  Status error, mangled_error;
   CompilerType target_type;
 
   // First try to get the type by using the mangled name,
@@ -714,7 +715,7 @@ AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
 
     swift::Type object_type =
         swift::Type((swift::TypeBase *)(imported_self_type.GetOpaqueQualType()))
-            ->getLValueOrInOutObjectType();
+            ->getWithoutSpecifierType();
 
     if (object_type.getPointer() &&
         (object_type.getPointer() != imported_self_type.GetOpaqueQualType()))
@@ -916,7 +917,7 @@ static void CountLocals(
       if (!llvm::isa<SwiftASTContext>(var_type.GetTypeSystem()))
         continue;
 
-      Error error;
+      Status error;
       CompilerType target_type = ast_context.ImportType(var_type, error);
 
       // If the import failed, give up
@@ -1030,7 +1031,7 @@ static void ResolveSpecialNames(
       continue;
 
     CompilerType target_type;
-    Error error;
+    Status error;
 
     target_type = ast_context.ImportType(var_type, error);
 
@@ -1150,7 +1151,7 @@ unsigned SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
     if (this_frame_sp) {
       lldb::ProcessSP process_sp(this_frame_sp->CalculateProcess());
       if (process_sp) {
-        Error error;
+        Status error;
         if (!process_sp->GetObjCLanguageRuntime()) {
           m_swift_ast_context->GetLanguageOptions().EnableObjCInterop = false;
         }
@@ -1296,7 +1297,7 @@ unsigned SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
     code_manipulator->RewriteResult();
   }
 
-  Error auto_import_error;
+  Status auto_import_error;
   if (!PerformAutoImport(*source_file, false, auto_import_error)) {
     diagnostic_manager.Printf(eDiagnosticSeverityError, "in auto-import:\n%s",
                               auto_import_error.AsCString());
@@ -1317,7 +1318,7 @@ unsigned SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
     if (this_frame_sp) {
       lldb::ProcessSP process_sp(this_frame_sp->CalculateProcess());
       if (process_sp) {
-        Error error;
+        Status error;
         m_swift_ast_context->LoadExtraDylibs(*process_sp.get(), error);
       }
     }
@@ -1391,7 +1392,7 @@ unsigned SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
     std::lock_guard<std::recursive_mutex> global_context_locker(
         IRExecutionUnit::GetLLVMGlobalContextMutex());
 
-    Error auto_import_error;
+    Status auto_import_error;
     if (!PerformAutoImport(*source_file, true, auto_import_error)) {
       diagnostic_manager.Printf(eDiagnosticSeverityError, "in auto-import:\n%s",
                                 auto_import_error.AsCString());
@@ -1427,7 +1428,7 @@ unsigned SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
     code_manipulator->MakeDeclarationsPublic();
   }
 
-  Error error;
+  Status error;
   if (!playground) {
     code_manipulator->FixupResultAfterTypeChecking(error);
 
@@ -1465,7 +1466,7 @@ unsigned SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
       return 1;
     }
 
-    Error error;
+    Status error;
     SwiftASTContext *scratch_ast_context =
         m_sc.target_sp->GetScratchSwiftASTContext(error);
 
@@ -1585,7 +1586,7 @@ unsigned SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
       if (is_result || is_error) {
         needs_init = true;
 
-        Error error;
+        Status error;
 
         if (repl) {
           if (swift::TypeBase *swift_type =
@@ -1659,7 +1660,7 @@ unsigned SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
                       is_result ? "result" : "error",
                       (unsigned long long)offset);
       } else if (variable.MetadataIs<VariableMetadataVariable>()) {
-        Error error;
+        Status error;
 
         VariableMetadataVariable *variable_metadata =
             static_cast<VariableMetadataVariable *>(variable.m_metadata.get());
@@ -1688,7 +1689,7 @@ unsigned SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
                          ->m_swift_flags &
                      SwiftExpressionVariable::EVSNeedsInit;
 
-        Error error;
+        Status error;
 
         offset = materializer->AddPersistentVariable(
             variable_metadata->m_persistent_variable_sp,
@@ -1884,11 +1885,11 @@ static bool FindFunctionInModule(ConstString &mangled_name,
   return false;
 }
 
-Error SwiftExpressionParser::PrepareForExecution(
+Status SwiftExpressionParser::PrepareForExecution(
     lldb::addr_t &func_addr, lldb::addr_t &func_end,
     lldb::IRExecutionUnitSP &execution_unit_sp, ExecutionContext &exe_ctx,
     bool &can_interpret, ExecutionPolicy execution_policy) {
-  Error err;
+  Status err;
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
   if (!m_module) {

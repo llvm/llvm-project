@@ -466,7 +466,7 @@ protected:
   lldb_private::ClangASTImporter &GetClangASTImporter();
 
   lldb_private::SwiftASTContext *
-  GetSwiftASTContextForCU(lldb_private::Error *error, DWARFCompileUnit &cu);
+  GetSwiftASTContextForCU(lldb_private::Status *error, DWARFCompileUnit &cu);
 
   lldb::user_id_t GetTypeUIDFromTypeAttribute(const DWARFFormValue &type_attr);
 

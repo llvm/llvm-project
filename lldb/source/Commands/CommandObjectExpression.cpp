@@ -404,7 +404,7 @@ bool CommandObjectExpression::EvaluateExpression(const char *expr,
     if (result_valobj_sp) {
       Format format = m_format_options.GetFormat();
 
-      const Error &expr_error = result_valobj_sp->GetError();
+      const Status &expr_error = result_valobj_sp->GetError();
       if (expr_error.Success()) {
         bool treat_as_void = (format == eFormatVoid);
         // if we are asked to suppress void, check if this is the empty tuple

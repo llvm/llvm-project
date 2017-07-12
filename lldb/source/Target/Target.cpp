@@ -1428,7 +1428,7 @@ void Target::ModulesDidLoad(ModuleList &module_list) {
     }
     // if there's no SwiftASTContext, clearing it doesn't really matter
     const bool create_on_demand = false;
-    Error error;
+    Status error;
     auto swift_ast_ctx = GetScratchSwiftASTContext(error, create_on_demand);
     if (swift_ast_ctx)
       swift_ast_ctx->ModulesDidLoad(module_list);
@@ -2180,10 +2180,10 @@ ClangASTImporterSP Target::GetClangASTImporter() {
 #ifdef __clang_analyzer__
 // See GetScratchTypeSystemForLanguage() in Target.h
 SwiftASTContext *
-Target::GetScratchSwiftASTContextImpl(Error &error, bool create_on_demand,
+Target::GetScratchSwiftASTContextImpl(Status &error, bool create_on_demand,
                                       const char *extra_options)
 #else
-SwiftASTContext *Target::GetScratchSwiftASTContext(Error &error,
+SwiftASTContext *Target::GetScratchSwiftASTContext(Status &error,
                                                    bool create_on_demand,
                                                    const char *extra_options)
 #endif

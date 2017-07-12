@@ -340,7 +340,7 @@ bool LLVMUserExpression::PrepareToExecuteJITExpression(
   }
 
   if (m_options.GetREPLEnabled()) {
-    Error materialize_error;
+    Status materialize_error;
 
     m_dematerializer_sp = m_materializer_ap->Materialize(
         frame, *m_execution_unit_sp, LLDB_INVALID_ADDRESS, materialize_error);

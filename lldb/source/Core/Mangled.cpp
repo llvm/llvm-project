@@ -40,12 +40,12 @@
 
 #include "lldb/Core/Mangled.h"
 
-#include "lldb/Core/Timer.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Logging.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/Utility/Timer.h"
 #include "lldb/Target/SwiftLanguageRuntime.h"
 #include <ctype.h>
 #include <functional>

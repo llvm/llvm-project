@@ -16,7 +16,7 @@
 #include "Plugins/ExpressionParser/Clang/IRForTarget.h"
 #include "lldb/Core/ArchSpec.h"
 #include "lldb/Core/ClangForward.h"
-#include "lldb/Utility/Error.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/Expression/ExpressionParser.h"
 #include "lldb/Expression/Materializer.h"
 #include "lldb/Symbol/SymbolContext.h"
@@ -114,7 +114,7 @@ public:
   ///     An error code indicating the success or failure of the operation.
   ///     Test with Success().
   //------------------------------------------------------------------
-  Error
+  Status
   PrepareForExecution(lldb::addr_t &func_addr, lldb::addr_t &func_end,
                       lldb::IRExecutionUnitSP &execution_unit_ap,
                       ExecutionContext &exe_ctx, bool &can_interpret,
@@ -147,7 +147,7 @@ public:
 
 private:
   bool PerformAutoImport(swift::SourceFile &source_file, bool user_imports,
-                         Error &error);
+                         Status &error);
 
   Expression &m_expr;   ///< The expression to be parsed
   std::string m_triple; ///< The triple to use when compiling

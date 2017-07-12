@@ -12,6 +12,7 @@
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/Variable.h"
@@ -22,7 +23,7 @@
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
-#include "lldb/Core/RegularExpression.h"
+#include "lldb/Utility/RegularExpression.h"
 #include "Plugins/Process/Utility/HistoryThread.h"
 #include "swift/AST/ASTContext.h"
 #include "swift/AST/NameLookup.h"
@@ -114,7 +115,7 @@ SwiftRuntimeReporting::RetrieveReportData(ExecutionContextRef exe_ctx_ref) {
 
   StructuredData::ArraySP extra_threads(new StructuredData::Array());
 
-  Error read_error;
+  Status read_error;
   int ptr_size = process_sp->GetAddressByteSize();
   uint64_t version = process_sp->ReadUnsignedIntegerFromMemory(
       details_ptr, ptr_size, 0, read_error);
@@ -348,7 +349,7 @@ SwiftRuntimeReporting::GetBacktracesFromExtendedStopInfo(
     StructuredData::ObjectSP description =
         thread->GetObjectForDotSeparatedPath("description");
     if (description)
-      history_thread->SetName(description->GetStringValue().c_str());
+      history_thread->SetName(description->GetStringValue().data());
 
     // Save this in the Process' ExtendedThreadList so a strong pointer
     // retains the object

@@ -63,11 +63,11 @@ public:
   }
 
   void Materialize(lldb::StackFrameSP &frame_sp, IRMemoryMap &map,
-                   lldb::addr_t process_address, Error &err) {
+                   lldb::addr_t process_address, Status &err) {
     // no action required
   }
 
-  void MakeREPLResult(IRExecutionUnit &execution_unit, Error &err,
+  void MakeREPLResult(IRExecutionUnit &execution_unit, Status &err,
                       const IRExecutionUnit::JittedGlobalVariable *variable) {
     err.Clear();
 
@@ -133,7 +133,7 @@ public:
       const size_t pvar_byte_size = ret->GetByteSize();
       uint8_t *pvar_data = ret->GetValueBytes();
 
-      Error read_error;
+      Status read_error;
 
       execution_unit.ReadMemory(pvar_data, variable->m_remote_addr,
                                 pvar_byte_size, read_error);
@@ -162,7 +162,7 @@ public:
 
   void Dematerialize(lldb::StackFrameSP &frame_sp, IRMemoryMap &map,
                      lldb::addr_t process_address, lldb::addr_t frame_top,
-                     lldb::addr_t frame_bottom, Error &err) {
+                     lldb::addr_t frame_bottom, Status &err) {
     IRExecutionUnit *execution_unit =
         llvm::cast<SwiftREPLMaterializer>(m_parent)->GetExecutionUnit();
 
@@ -204,7 +204,7 @@ public:
 
     dump_stream.Printf("0x%" PRIx64 ": EntityResultVariable\n", load_addr);
 
-    Error err;
+    Status err;
 
     lldb::addr_t ptr = LLDB_INVALID_ADDRESS;
 
@@ -278,7 +278,7 @@ private:
 
 uint32_t SwiftREPLMaterializer::AddREPLResultVariable(
     const CompilerType &type, swift::ValueDecl *decl,
-    PersistentVariableDelegate *delegate, Error &err) {
+    PersistentVariableDelegate *delegate, Status &err) {
   EntityVector::iterator iter = m_entities.insert(m_entities.end(), EntityUP());
 
   iter->reset(new EntityREPLResultVariable(type, decl, this, delegate));
@@ -303,13 +303,13 @@ public:
   }
 
   void Materialize(lldb::StackFrameSP &frame_sp, IRMemoryMap &map,
-                   lldb::addr_t process_address, Error &err) {
+                   lldb::addr_t process_address, Status &err) {
     // no action required
   }
 
   void Dematerialize(lldb::StackFrameSP &frame_sp, IRMemoryMap &map,
                      lldb::addr_t process_address, lldb::addr_t frame_top,
-                     lldb::addr_t frame_bottom, Error &err) {
+                     lldb::addr_t frame_bottom, Status &err) {
     if (llvm::cast<SwiftExpressionVariable>(m_persistent_variable_sp.get())
             ->GetIsComputed())
       return;
@@ -358,7 +358,7 @@ public:
 
         m_persistent_variable_sp->ValueUpdated();
 
-        Error read_error;
+        Status read_error;
 
         execution_unit->ReadMemory(
             m_persistent_variable_sp->GetValueBytes(), variable.m_remote_addr,
@@ -389,7 +389,7 @@ public:
   void DumpToLog(IRMemoryMap &map, lldb::addr_t process_address, Log *log) {
     StreamString dump_stream;
 
-    Error err;
+    Status err;
 
     const lldb::addr_t load_addr = process_address + m_offset;
 
@@ -453,7 +453,7 @@ private:
 
 uint32_t SwiftREPLMaterializer::AddPersistentVariable(
     lldb::ExpressionVariableSP &persistent_variable_sp,
-    PersistentVariableDelegate *delegate, Error &err) {
+    PersistentVariableDelegate *delegate, Status &err) {
   EntityVector::iterator iter = m_entities.insert(m_entities.end(), EntityUP());
   iter->reset(
       new EntityREPLPersistentVariable(persistent_variable_sp, this, delegate));

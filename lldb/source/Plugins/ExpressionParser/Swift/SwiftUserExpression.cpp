@@ -74,7 +74,7 @@ void SwiftUserExpression::DidFinishExecuting() {
   }
 }
 
-void SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Error &err) {
+void SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
   if (log)
@@ -350,7 +350,7 @@ void SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Error &err) {
       if (log)
         log->Printf("  [SUE::SC] Function name: %s", function_name.AsCString());
 
-      Error get_type_error;
+      Status get_type_error;
       SwiftASTContext *ast_context = llvm::dyn_cast_or_null<SwiftASTContext>(
           sym_ctx.module_sp->GetTypeSystemForLanguage(
               lldb::eLanguageTypeSwift));
@@ -425,7 +425,7 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
                                 uint32_t line_offset) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
-  Error err;
+  Status err;
 
   InstallContext(exe_ctx);
 
@@ -558,7 +558,7 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
   // possible
   //
 
-  Error jit_error = parser->PrepareForExecution(
+  Status jit_error = parser->PrepareForExecution(
       m_jit_start_addr, m_jit_end_addr, m_execution_unit_sp, exe_ctx,
       m_can_interpret, execution_policy);
 
@@ -641,7 +641,7 @@ bool SwiftUserExpression::AddArguments(ExecutionContext &exe_ctx,
 
     ConstString object_name("self");
 
-    Error object_ptr_error;
+    Status object_ptr_error;
 
     object_ptr = GetObjectPointer(frame_sp, object_name, object_ptr_error);
 

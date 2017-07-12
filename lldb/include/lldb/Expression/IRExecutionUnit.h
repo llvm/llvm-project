@@ -346,8 +346,7 @@ private:
     void registerEHFrames(uint8_t *Addr, uint64_t LoadAddr,
                           size_t Size) override {}
 
-    virtual void deregisterEHFrames(uint8_t *Addr, uint64_t LoadAddr,
-                                    size_t Size) override {
+    virtual void deregisterEHFrames() override {
       return;
     }
 

@@ -547,7 +547,7 @@ bool ThreadPlanCallFunction::BreakpointsExplainStop() {
                 frame_sp, persistent_variable_name);
 
         DataExtractor data;
-        Error data_error;
+        Status data_error;
         size_t data_size =
             m_return_valobj_sp->GetStaticValue()->GetData(data, data_error);
 

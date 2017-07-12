@@ -157,10 +157,10 @@ public:
     llvm::Optional<CompilerType> m_compiler_type;
 
   public:
-    CompilerType FulfillTypePromise(Error *error = nullptr);
+    CompilerType FulfillTypePromise(Status *error = nullptr);
 
     llvm::Optional<swift::MetadataKind>
-    FulfillKindPromise(Error *error = nullptr);
+    FulfillKindPromise(Status *error = nullptr);
 
     bool IsStaticallyDetermined();
   };
@@ -180,7 +180,7 @@ public:
   public:
     llvm::Optional<uint64_t> ResolveOffset(ValueObject *valobj,
                                            ConstString ivar_name,
-                                           Error * = nullptr);
+                                           Status * = nullptr);
   };
 
   class SwiftExceptionPrecondition : public Breakpoint::BreakpointPrecondition {
@@ -191,7 +191,7 @@ public:
 
     bool EvaluatePrecondition(StoppointCallbackContext &context) override;
     void GetDescription(Stream &stream, lldb::DescriptionLevel level) override;
-    Error ConfigurePrecondition(Args &args) override;
+    Status ConfigurePrecondition(Args &args) override;
 
   protected:
     void AddTypeName(const char *type_name);

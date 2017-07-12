@@ -454,14 +454,14 @@ const char *ValueObject::GetLocationAsCStringImpl(const Value &value,
   return m_location_str.c_str();
 }
 
-lldb_private::Error
+lldb_private::Status
 ValueObject::GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
                             uint32_t data_offset, Module *module,
                             bool mask_error_on_zerosize_type) {
-  Error err = m_value.GetValueAsData(exe_ctx, data, data_offset, module);
+  Status err = m_value.GetValueAsData(exe_ctx, data, data_offset, module);
   if (err.Fail() && mask_error_on_zerosize_type &&
       SwiftASTContext::IsPossibleZeroSizeType(GetCompilerType()))
-    return Error();
+    return Status();
   return err;
 }
 
@@ -1743,7 +1743,7 @@ SwiftASTContext *ValueObject::GetSwiftASTContext() {
 
   lldb::TargetSP target_sp(GetTargetSP());
   if (target_sp) {
-    Error error;
+    Status error;
     return target_sp->GetScratchSwiftASTContext(error);
   }
   return nullptr;

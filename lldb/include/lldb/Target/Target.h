@@ -1110,7 +1110,7 @@ public:
 #ifdef __clang_analyzer__
   // See GetScratchTypeSystemForLanguage()
   SwiftASTContext *
-  GetScratchSwiftASTContext(Error &error, bool create_on_demand = true,
+  GetScratchSwiftASTContext(Status &error, bool create_on_demand = true,
                             const char *extra_options = nullptr)
       __attribute__((always_inline)) {
     SwiftASTContext *ret =
@@ -1120,11 +1120,11 @@ public:
   }
 
   SwiftASTContext *
-  GetScratchSwiftASTContextImpl(Error &error, bool create_on_demand = true,
+  GetScratchSwiftASTContextImpl(Status &error, bool create_on_demand = true,
                                 const char *extra_options = nullptr);
 #else
   SwiftASTContext *
-  GetScratchSwiftASTContext(Error &error, bool create_on_demand = true,
+  GetScratchSwiftASTContext(Status &error, bool create_on_demand = true,
                             const char *extra_options = nullptr);
 #endif
 

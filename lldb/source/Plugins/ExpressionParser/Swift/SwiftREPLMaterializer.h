@@ -24,12 +24,12 @@ public:
   uint32_t AddREPLResultVariable(const CompilerType &type,
                                  swift::ValueDecl *decl,
                                  PersistentVariableDelegate *delegate,
-                                 Error &err);
+                                 Status &err);
 
   uint32_t
   AddPersistentVariable(lldb::ExpressionVariableSP &persistent_variable_sp,
                         PersistentVariableDelegate *delegate,
-                        Error &err) override;
+                        Status &err) override;
 
   void RegisterExecutionUnit(IRExecutionUnit *execution_unit) {
     m_execution_unit = execution_unit;

@@ -96,7 +96,7 @@
 #include "lldb/Target/SwiftLanguageRuntime.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/CleanUp.h"
-#include "lldb/Utility/Error.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Log.h"
@@ -1551,7 +1551,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
         handled_sdk_path = true;
       }
 
-      Error module_error;
+      Status module_error;
       for (size_t mi = 0; mi != num_images; ++mi) {
         ModuleSP module_sp = target->GetImages().GetModuleAtIndex(mi);
 
@@ -1689,7 +1689,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
         if (!set_triple) {
           ModuleSP exe_module_sp(target->GetExecutableModule());
           if (exe_module_sp) {
-            Error exe_error;
+            Status exe_error;
             SwiftASTContext *exe_swift_ctx =
                 llvm::dyn_cast_or_null<SwiftASTContext>(
                     exe_module_sp->GetTypeSystemForLanguage(
@@ -1774,7 +1774,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
 
               SymbolFile *sym_file = sym_vendor->GetSymbolFile();
               if (sym_file) {
-                Error sym_file_error;
+                Status sym_file_error;
                 SwiftASTContext *ast_context =
                     llvm::dyn_cast_or_null<SwiftASTContext>(
                         sym_file->GetTypeSystemForLanguage(
@@ -1918,10 +1918,10 @@ bool SwiftASTContext::SupportsLanguage(lldb::LanguageType language) {
   return SwiftASTContextSupportsLanguage(language);
 }
 
-Error SwiftASTContext::IsCompatible() { return GetFatalErrors(); }
+Status SwiftASTContext::IsCompatible() { return GetFatalErrors(); }
 
-Error SwiftASTContext::GetFatalErrors() {
-  Error error;
+Status SwiftASTContext::GetFatalErrors() {
+  Status error;
   if (HasFatalErrors()) {
     error = m_fatal_errors;
     if (error.Success())
@@ -2050,7 +2050,7 @@ static std::string GetXcodeContentsPath() {
     int signo = 0;
     std::string output;
     const char *command = "xcrun -sdk macosx --show-sdk-path";
-    lldb_private::Error error = Host::RunShellCommand(
+    lldb_private::Status error = Host::RunShellCommand(
         command, // shell command to run
         NULL,    // current working directory
         &status, // Put the exit status of the process in here
@@ -3292,7 +3292,7 @@ SwiftASTContext::GetCachedModule(const ConstString &module_name) {
 
 swift::ModuleDecl *
 SwiftASTContext::CreateModule(const ConstString &module_basename,
-                              Error &error) {
+                              Status &error) {
   VALID_OR_RETURN(nullptr);
 
   if (module_basename) {
@@ -3337,7 +3337,7 @@ void SwiftASTContext::CacheModule(swift::ModuleDecl *module) {
 }
 
 swift::ModuleDecl *
-SwiftASTContext::GetModule(const ConstString &module_basename, Error &error) {
+SwiftASTContext::GetModule(const ConstString &module_basename, Status &error) {
   VALID_OR_RETURN(nullptr);
 
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
@@ -3424,7 +3424,7 @@ SwiftASTContext::GetModule(const ConstString &module_basename, Error &error) {
 }
 
 swift::ModuleDecl *SwiftASTContext::GetModule(const FileSpec &module_spec,
-                                              Error &error) {
+                                              Status &error) {
   VALID_OR_RETURN(nullptr);
 
   ConstString module_basename(module_spec.GetFileNameStrippingExtension());
@@ -3513,7 +3513,7 @@ swift::ModuleDecl *SwiftASTContext::GetModule(const FileSpec &module_spec,
 
 swift::ModuleDecl *
 SwiftASTContext::FindAndLoadModule(const ConstString &module_basename,
-                                   Process &process, Error &error) {
+                                   Process &process, Status &error) {
   VALID_OR_RETURN(nullptr);
 
   swift::ModuleDecl *swift_module = GetModule(module_basename, error);
@@ -3525,7 +3525,7 @@ SwiftASTContext::FindAndLoadModule(const ConstString &module_basename,
 
 swift::ModuleDecl *
 SwiftASTContext::FindAndLoadModule(const FileSpec &module_spec,
-                                   Process &process, Error &error) {
+                                   Process &process, Status &error) {
   VALID_OR_RETURN(nullptr);
 
   swift::ModuleDecl *swift_module = GetModule(module_spec, error);
@@ -3536,7 +3536,7 @@ SwiftASTContext::FindAndLoadModule(const FileSpec &module_spec,
 }
 
 bool SwiftASTContext::LoadOneImage(Process &process, FileSpec &link_lib_spec,
-                                   Error &error) {
+                                   Status &error) {
   VALID_OR_RETURN(false);
 
   error.Clear();
@@ -3560,12 +3560,12 @@ GetLibrarySearchPaths(std::vector<std::string> &paths,
 }
 
 void SwiftASTContext::LoadModule(swift::ModuleDecl *swift_module,
-                                 Process &process, Error &error) {
+                                 Process &process, Status &error) {
   VALID_OR_RETURN_VOID();
 
-  Error current_error;
+  Status current_error;
   auto addLinkLibrary = [&](swift::LinkLibrary link_lib) {
-    Error load_image_error;
+    Status load_image_error;
     StreamString all_dlopen_errors;
     const char *library_name = link_lib.getName().data();
 
@@ -3802,7 +3802,7 @@ bool SwiftASTContext::LoadLibraryUsingPaths(
   FileSpec library_spec;
   std::string library_path;
   std::unordered_set<std::string> seen_paths;
-  Error load_image_error;
+  Status load_image_error;
 
   for (const std::string &library_search_dir : search_paths) {
     // The library search dir as it comes from the AST context often has
@@ -3846,7 +3846,7 @@ bool SwiftASTContext::LoadLibraryUsingPaths(
   return false;
 }
 
-void SwiftASTContext::LoadExtraDylibs(Process &process, Error &error) {
+void SwiftASTContext::LoadExtraDylibs(Process &process, Status &error) {
   VALID_OR_RETURN_VOID();
 
   error.Clear();
@@ -3963,7 +3963,7 @@ void SwiftASTContext::ValidateSectionModules(
     Module &module, const std::vector<std::string> &module_names) {
   VALID_OR_RETURN_VOID();
 
-  Error error;
+  Status error;
 
   for (const std::string &module_name : module_names)
     if (!GetModule(ConstString(module_name.c_str()), error))
@@ -4025,7 +4025,7 @@ void SwiftASTContext::CacheDemangledTypeFailure(const char *name) {
 
 CompilerType
 SwiftASTContext::GetTypeFromMangledTypename(const char *mangled_typename,
-                                            Error &error) {
+                                            Status &error) {
   VALID_OR_RETURN(CompilerType());
 
   if (mangled_typename 
@@ -4454,7 +4454,7 @@ CompilerType SwiftASTContext::FindFirstType(const char *name,
   return CompilerType();
 }
 
-CompilerType SwiftASTContext::ImportType(CompilerType &type, Error &error) {
+CompilerType SwiftASTContext::ImportType(CompilerType &type, Status &error) {
   VALID_OR_RETURN(CompilerType());
 
   if (m_ast_context_ap.get() == NULL)
@@ -4483,7 +4483,7 @@ CompilerType SwiftASTContext::ImportType(CompilerType &type, Error &error) {
     if (our_type_base)
       return CompilerType(m_ast_context_ap.get(), our_type_base);
     else {
-      Error error;
+      Status error;
 
       CompilerType our_type(
           GetTypeFromMangledTypename(mangled_name.GetCString(), error));
@@ -4606,7 +4606,7 @@ CompilerType
 SwiftASTContext::CreateTupleType(const std::vector<CompilerType> &elements) {
   VALID_OR_RETURN(CompilerType());
 
-  Error error;
+  Status error;
   if (elements.size() == 0)
     return CompilerType(GetASTContext(), GetASTContext()->TheEmptyTupleType);
   else {
@@ -4628,7 +4628,7 @@ CompilerType
 SwiftASTContext::CreateTupleType(const std::vector<TupleElement> &elements) {
   VALID_OR_RETURN(CompilerType());
 
-  Error error;
+  Status error;
   if (elements.size() == 0)
     return CompilerType(GetASTContext(), GetASTContext()->TheEmptyTupleType);
   else {
@@ -4685,7 +4685,7 @@ CompilerType SwiftASTContext::GetErrorType() {
   return CompilerType();
 }
 
-CompilerType SwiftASTContext::GetNSErrorType(Error &error) {
+CompilerType SwiftASTContext::GetNSErrorType(Status &error) {
   VALID_OR_RETURN(CompilerType());
 
   return GetTypeFromMangledTypename(SwiftLanguageRuntime::GetCurrentMangledName("_TtC10Foundation7NSError").c_str(), error);
@@ -6895,7 +6895,7 @@ static int64_t GetInstanceVariableOffset_Symbol(ExecutionContext *exe_ctx,
                       ivar_const_str.AsCString(), ivar_offset_ptr);
 
         if (ivar_offset_ptr != LLDB_INVALID_ADDRESS) {
-          Error error;
+          Status error;
           return target->ReadUnsignedIntegerFromMemory(
               ivar_offset_ptr,
               false,                     // prefer_file_cache
@@ -6924,7 +6924,7 @@ static int64_t GetInstanceVariableOffset_Metadata(
     SwiftLanguageRuntime *runtime = process->GetSwiftLanguageRuntime();
     if (runtime) {
       if (auto resolver_sp = runtime->GetMemberVariableOffsetResolver(type)) {
-        Error error;
+        Status error;
         if (auto result = resolver_sp->ResolveOffset(valobj, ivar_name, &error))
           return result.getValue();
         else if (log)

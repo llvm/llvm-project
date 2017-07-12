@@ -20,7 +20,7 @@
 
 #include "swift/AST/ASTContext.h"
 
-#include "lldb/Utility/Error.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Function.h"
@@ -43,7 +43,7 @@ lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
                                                      bool *type_is_new_ptr) {
   lldb::TypeSP type_sp;
   CompilerType compiler_type;
-  Error error;
+  Status error;
 
   Declaration decl;
   ConstString mangled_name;

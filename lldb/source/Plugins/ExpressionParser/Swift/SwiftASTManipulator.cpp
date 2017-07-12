@@ -16,8 +16,8 @@
 #include "lldb/Expression/ExpressionSourceCode.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ConstString.h"
-#include "lldb/Utility/Error.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Status.h"
 #include "swift/AST/ASTContext.h"
 #include "swift/AST/ASTWalker.h"
 #include "swift/AST/Decl.h"
@@ -1068,7 +1068,7 @@ void SwiftASTManipulator::InsertError(swift::VarDecl *error_var,
   m_catch_stmt->setBody(body_stmt);
 }
 
-bool SwiftASTManipulator::FixupResultAfterTypeChecking(Error &error) {
+bool SwiftASTManipulator::FixupResultAfterTypeChecking(Status &error) {
   if (!IsValid()) {
     error.SetErrorString("Operating on invalid SwiftASTManipulator");
     return false;

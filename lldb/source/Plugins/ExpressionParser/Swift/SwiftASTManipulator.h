@@ -164,7 +164,7 @@ public:
   swift::Type FixupResultType(swift::Type &result_type,
                               uint32_t language_flags);
 
-  bool FixupResultAfterTypeChecking(Error &error);
+  bool FixupResultAfterTypeChecking(Status &error);
 
   static const char *GetArgumentName() { return "$__lldb_arg"; }
   static const char *GetResultName() { return "$__lldb_result"; }

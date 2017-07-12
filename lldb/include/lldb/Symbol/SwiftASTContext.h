@@ -15,7 +15,6 @@
 
 #include "Plugins/ExpressionParser/Swift/SwiftPersistentExpressionState.h"
 #include "lldb/Core/ClangForward.h"
-#include "lldb/Utility/Error.h"
 #include "lldb/Core/ThreadSafeDenseMap.h"
 #include "lldb/Core/ThreadSafeDenseSet.h"
 #include "lldb/Symbol/CompilerType.h"
@@ -25,6 +24,7 @@
 #include "lldb/lldb-private.h"
 
 #include "lldb/Utility/Either.h"
+#include "lldb/Utility/Status.h"
 
 #include "llvm/ADT/Optional.h"
 
@@ -136,7 +136,7 @@ public:
 
   bool SupportsLanguage(lldb::LanguageType language) override;
 
-  Error IsCompatible() override;
+  Status IsCompatible() override;
 
   swift::SourceManager &GetSourceManager();
 
@@ -212,15 +212,15 @@ public:
   const char *GetClangArgumentAtIndex(size_t idx);
 
   swift::ModuleDecl *CreateModule(const ConstString &module_basename,
-                                  Error &error);
+                                  Status &error);
 
   // This function should only be called when all search paths
   // for all items in a swift::ASTContext have been setup to
   // allow for imports to happen correctly. Use with caution,
   // or use the GetModule() call that takes a FileSpec.
-  swift::ModuleDecl *GetModule(const ConstString &module_name, Error &error);
+  swift::ModuleDecl *GetModule(const ConstString &module_name, Status &error);
 
-  swift::ModuleDecl *GetModule(const FileSpec &module_spec, Error &error);
+  swift::ModuleDecl *GetModule(const FileSpec &module_spec, Status &error);
 
   void CacheModule(swift::ModuleDecl *module);
 
@@ -229,13 +229,13 @@ public:
   // "LinkLibraries" that the module requires.
 
   swift::ModuleDecl *FindAndLoadModule(const ConstString &module_basename,
-                                       Process &process, Error &error);
+                                       Process &process, Status &error);
 
   swift::ModuleDecl *FindAndLoadModule(const FileSpec &module_spec,
-                                       Process &process, Error &error);
+                                       Process &process, Status &error);
 
   void LoadModule(swift::ModuleDecl *swift_module, Process &process,
-                  Error &error);
+                  Status &error);
 
   bool RegisterSectionModules(Module &module,
                               std::vector<std::string> &module_names);
@@ -250,7 +250,7 @@ public:
   // It doesn't do frameworks since frameworks don't need it and this is kind of
   // a hack anyway.
 
-  void LoadExtraDylibs(Process &process, Error &error);
+  void LoadExtraDylibs(Process &process, Status &error);
 
   swift::Identifier GetIdentifier(const char *name);
 
@@ -284,7 +284,7 @@ public:
   CompilerType FindFirstType(const char *name, const ConstString &module_name);
 
   CompilerType GetTypeFromMangledTypename(const char *mangled_typename,
-                                          Error &error);
+                                          Status &error);
 
   // Get a function type that returns nothing and take no parameters
   CompilerType GetVoidFunctionType();
@@ -307,7 +307,7 @@ public:
   // CompilerType for the imported type.
   // If it cannot be, returns an invalid CompilerType, and sets the error to
   // indicate what went wrong.
-  CompilerType ImportType(CompilerType &type, Error &error);
+  CompilerType ImportType(CompilerType &type, Status &error);
 
   swift::ClangImporter *GetClangImporter();
 
@@ -330,7 +330,7 @@ public:
 
   CompilerType GetErrorType();
 
-  CompilerType GetNSErrorType(Error &error);
+  CompilerType GetNSErrorType(Status &error);
 
   CompilerType CreateMetatypeType(CompilerType instance_type);
 
@@ -376,7 +376,7 @@ public:
     return m_fatal_errors.Fail() || HasFatalErrors(m_ast_context_ap.get());
   }
 
-  Error GetFatalErrors();
+  Status GetFatalErrors();
 
   union ExtraTypeInformation {
     uint64_t m_intValue;
@@ -788,7 +788,7 @@ protected:
 
   void CacheDemangledTypeFailure(const char *);
 
-  bool LoadOneImage(Process &process, FileSpec &link_lib_spec, Error &error);
+  bool LoadOneImage(Process &process, FileSpec &link_lib_spec, Status &error);
 
   bool LoadLibraryUsingPaths(Process &process, llvm::StringRef library_name,
                              std::vector<std::string> &search_paths,
@@ -807,7 +807,7 @@ protected:
   std::unique_ptr<swift::DiagnosticConsumer> m_diagnostic_consumer_ap;
   std::unique_ptr<swift::CompilerInvocation> m_compiler_invocation_ap;
   std::unique_ptr<DWARFASTParser> m_dwarf_ast_parser_ap;
-  Error m_error; // Any errors that were found while creating or using the AST
+  Status m_error; // Any errors that were found while creating or using the AST
                  // context
   swift::ModuleDecl *m_scratch_module;
   std::unique_ptr<swift::SILModule> m_sil_module_ap;
@@ -839,7 +839,7 @@ protected:
   bool m_initialized_search_path_options;
   bool m_initialized_clang_importer_options;
   bool m_reported_fatal_error;
-  Error m_fatal_errors;
+  Status m_fatal_errors;
 
   typedef ThreadSafeDenseSet<const char *> SwiftMangledNameSet;
   SwiftMangledNameSet m_negative_type_cache;

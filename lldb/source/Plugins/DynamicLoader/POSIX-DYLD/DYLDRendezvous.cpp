@@ -534,7 +534,7 @@ bool DYLDRendezvous::ReadSOEntryFromMemory(lldb::addr_t addr, SOEntry &entry) {
   if (entry.base_addr == 0) {
     lldb::addr_t load_addr = LLDB_INVALID_ADDRESS;
     bool is_loaded = false;
-    Error error =
+    Status error =
         m_process->GetFileLoadAddress(entry.file_spec, is_loaded, load_addr);
     if (error.Success() && is_loaded)
       entry.base_addr = load_addr;
@@ -546,7 +546,7 @@ bool DYLDRendezvous::ReadSOEntryFromMemory(lldb::addr_t addr, SOEntry &entry) {
   if (entry.base_addr == 0) {
     lldb::addr_t load_addr = LLDB_INVALID_ADDRESS;
     bool is_loaded = false;
-    Error error =
+    Status error =
         m_process->GetFileLoadAddress(entry.file_spec, is_loaded, load_addr);
     if (error.Success() && is_loaded)
       entry.base_addr = load_addr;

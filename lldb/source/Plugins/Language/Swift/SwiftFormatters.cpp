@@ -16,7 +16,7 @@
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/DataBufferHeap.h"
-#include "lldb/Utility/Error.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/Target/SwiftLanguageRuntime.h"
 
 // FIXME: we should not need this
@@ -64,7 +64,7 @@ bool lldb_private::formatters::swift::Character_SummaryProvider(
       return false;
 
     buffer_ptr += 2 * process_sp->GetAddressByteSize();
-    Error error;
+    Status error;
     buffer_ptr = process_sp->ReadPointerFromMemory(buffer_ptr, error);
     if (LLDB_INVALID_ADDRESS == buffer_ptr || 0 == buffer_ptr)
       return false;
@@ -334,7 +334,7 @@ bool lldb_private::formatters::swift::NSContiguousString_SummaryProvider(
   size_t ptr_size = process_sp->GetAddressByteSize();
   core_location += 2 * ptr_size;
 
-  Error error;
+  Status error;
 
   InferiorSizedWord isw_1(
       process_sp->ReadPointerFromMemory(core_location, error), *process_sp);
@@ -736,7 +736,7 @@ bool lldb_private::formatters::swift::TypePreservingNSNumber_SummaryProvider(
   lldb::addr_t addr_of_payload = ptr_value + ptr_size;
   lldb::addr_t addr_of_tag = addr_of_payload + size_of_payload;
 
-  Error read_error;
+  Status read_error;
   uint64_t tag = process_sp->ReadUnsignedIntegerFromMemory(
       addr_of_tag, size_of_tag, 0, read_error);
   if (read_error.Fail())

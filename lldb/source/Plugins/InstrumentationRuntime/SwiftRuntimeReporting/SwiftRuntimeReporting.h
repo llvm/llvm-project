@@ -10,7 +10,7 @@
 #ifndef liblldb_SwiftRuntimeReporting_h_
 #define liblldb_SwiftRuntimeReporting_h_
 
-#include "lldb/Core/StructuredData.h"
+#include "lldb/Utility/StructuredData.h"
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/InstrumentationRuntime.h"
 #include "lldb/lldb-private.h"

@@ -40,7 +40,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-lldb::REPLSP SwiftREPL::CreateInstance(Error &err, lldb::LanguageType language,
+lldb::REPLSP SwiftREPL::CreateInstance(Status &err, lldb::LanguageType language,
                                        Debugger *debugger, Target *target,
                                        const char *repl_options) {
   if (language != eLanguageTypeSwift) {
@@ -67,7 +67,7 @@ lldb::REPLSP SwiftREPL::CreateInstance(Error &err, lldb::LanguageType language,
     // Check that we can get a type system, or we aren't going anywhere:
     TypeSystem *type_system =
       target->GetScratchTypeSystemForLanguage(nullptr, eLanguageTypeSwift, 
-                                              true, repl_options);
+                                              true);
     if (!type_system) {
       err.SetErrorString("Could not construct an expression "
                          "context for the REPL.\n");
@@ -172,8 +172,7 @@ lldb::REPLSP SwiftREPL::CreateInstance(Error &err, lldb::LanguageType language,
                         TypeSystem *type_system =
                         target_sp->GetScratchTypeSystemForLanguage(nullptr, 
                                                               eLanguageTypeSwift, 
-                                                              true,
-                                                              repl_options);
+                                                              true);
                         if (!type_system) {
                           err.SetErrorString("Could not construct an expression"
                                              " context for the REPL.\n");
@@ -256,8 +255,8 @@ SwiftREPL::SwiftREPL(Target &target)
 
 SwiftREPL::~SwiftREPL() {}
 
-Error SwiftREPL::DoInitialization() {
-  Error error;
+Status SwiftREPL::DoInitialization() {
+  Status error;
 
   if (!m_compiler_options.empty()) {
     (void)m_target.GetScratchSwiftASTContext(error, true,
@@ -511,7 +510,7 @@ int SwiftREPL::CompleteCode(const std::string &current_code,
   // to fix this issue currently, so we need to work around it by making
   // our own copy of the AST and using this separate AST for completion.
   //----------------------------------------------------------------------
-  Error error;
+  Status error;
 #define USE_SEPARATE_AST_FOR_COMPLETION
 #if defined(USE_SEPARATE_AST_FOR_COMPLETION)
   if (!m_swift_ast_sp) {
