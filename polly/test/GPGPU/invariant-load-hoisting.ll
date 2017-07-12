@@ -21,7 +21,7 @@
 ; HOST-IR:      call void @polly_launchKernel(i8* %215, i32 %221, i32 1, i32 32, i32 1, i32 1, i8* %polly_launch_0_params_i8ptr)
 ; HOST-IR-NEXT: call void @polly_freeKernel(i8* %215)
 ;
-; KERNEL-IR: define ptx_kernel void @FUNC_f_KERNEL_0(i8 addrspace(1)* %MemRef_B, i8 addrspace(1)* %MemRef_A, i32 %n, i32 %tmp12) #0 {
+; KERNEL-IR: define ptx_kernel void @FUNC_f_SCOP_0_KERNEL_0(i8 addrspace(1)* %MemRef_B, i8 addrspace(1)* %MemRef_A, i32 %n, i32 %tmp12) #0 {
 ;
 ; Check that we generate correct GPU code in case of invariant load hoisting.
 ;

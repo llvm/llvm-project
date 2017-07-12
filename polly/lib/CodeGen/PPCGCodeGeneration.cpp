@@ -686,8 +686,8 @@ private:
 };
 
 std::string GPUNodeBuilder::getKernelFuncName(int Kernel_id) {
-  return "FUNC_" + S.getFunction().getName().str() + "_KERNEL_" +
-         std::to_string(Kernel_id);
+  return "FUNC_" + S.getFunction().getName().str() + "_SCOP_" +
+         std::to_string(S.getID()) + "_KERNEL_" + std::to_string(Kernel_id);
 }
 
 void GPUNodeBuilder::initializeAfterRTH() {

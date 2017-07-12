@@ -4157,9 +4157,15 @@ void CGOpenMPRuntime::emitTaskLoopCall(CodeGenFunction &CGF, SourceLocation Loc,
                        /*IsInitializer=*/true);
   enum { NoSchedule = 0, Grainsize = 1, NumTasks = 2 };
   llvm::Value *TaskArgs[] = {
-      UpLoc, ThreadID, Result.NewTask, IfVal, LBLVal.getPointer(),
-      UBLVal.getPointer(), CGF.EmitLoadOfScalar(StLVal, SourceLocation()),
-      llvm::ConstantInt::getSigned(CGF.IntTy, Data.Nogroup ? 1 : 0),
+      UpLoc,
+      ThreadID,
+      Result.NewTask,
+      IfVal,
+      LBLVal.getPointer(),
+      UBLVal.getPointer(),
+      CGF.EmitLoadOfScalar(StLVal, SourceLocation()),
+      llvm::ConstantInt::getNullValue(
+          CGF.IntTy), // Always 0 because taskgroup emitted by the compiler
       llvm::ConstantInt::getSigned(
           CGF.IntTy, Data.Schedule.getPointer()
                          ? Data.Schedule.getInt() ? NumTasks : Grainsize
@@ -4168,10 +4174,9 @@ void CGOpenMPRuntime::emitTaskLoopCall(CodeGenFunction &CGF, SourceLocation Loc,
           ? CGF.Builder.CreateIntCast(Data.Schedule.getPointer(), CGF.Int64Ty,
                                       /*isSigned=*/false)
           : llvm::ConstantInt::get(CGF.Int64Ty, /*V=*/0),
-      Result.TaskDupFn
-          ? CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(Result.TaskDupFn,
-                                                            CGF.VoidPtrTy)
-          : llvm::ConstantPointerNull::get(CGF.VoidPtrTy)};
+      Result.TaskDupFn ? CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
+                             Result.TaskDupFn, CGF.VoidPtrTy)
+                       : llvm::ConstantPointerNull::get(CGF.VoidPtrTy)};
   CGF.EmitRuntimeCall(createRuntimeFunction(OMPRTL__kmpc_taskloop), TaskArgs);
 }
 

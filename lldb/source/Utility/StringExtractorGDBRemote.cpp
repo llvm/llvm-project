@@ -19,8 +19,18 @@ StringExtractorGDBRemote::GetResponseType() const {
 
   switch (m_packet[0]) {
   case 'E':
-    if (m_packet.size() == 3 && isxdigit(m_packet[1]) && isxdigit(m_packet[2]))
-      return eError;
+    if (isxdigit(m_packet[1]) && isxdigit(m_packet[2])) {
+      if (m_packet.size() == 3)
+        return eError;
+      llvm::StringRef packet_ref(m_packet);
+      if (packet_ref[3] == ';') {
+        auto err_string = packet_ref.substr(4);
+        for (auto e : err_string)
+          if (!isxdigit(e))
+            return eResponse;
+        return eError;
+      }
+    }
     break;
 
   case 'O':
@@ -86,6 +96,8 @@ StringExtractorGDBRemote::GetServerPacketType() const {
         return eServerPacketType_QEnvironment;
       if (PACKET_STARTS_WITH("QEnvironmentHexEncoded:"))
         return eServerPacketType_QEnvironmentHexEncoded;
+      if (PACKET_STARTS_WITH("QEnableErrorStrings"))
+        return eServerPacketType_QEnableErrorStrings;
       break;
 
     case 'P':
@@ -438,8 +450,8 @@ bool StringExtractorGDBRemote::IsNormalResponse() const {
 }
 
 bool StringExtractorGDBRemote::IsErrorResponse() const {
-  return GetResponseType() == eError && m_packet.size() == 3 &&
-         isxdigit(m_packet[1]) && isxdigit(m_packet[2]);
+  return GetResponseType() == eError && isxdigit(m_packet[1]) &&
+         isxdigit(m_packet[2]);
 }
 
 uint8_t StringExtractorGDBRemote::GetError() {
@@ -448,6 +460,23 @@ uint8_t StringExtractorGDBRemote::GetError() {
     return GetHexU8(255);
   }
   return 0;
+}
+
+lldb_private::Status StringExtractorGDBRemote::GetStatus() {
+  lldb_private::Status error;
+  if (GetResponseType() == eError) {
+    SetFilePos(1);
+    uint8_t errc = GetHexU8(255);
+    error.SetError(errc, lldb::eErrorTypeGeneric);
+
+    error.SetErrorStringWithFormat("Error %u", errc);
+    std::string error_messg;
+    if (GetChar() == ';') {
+      GetHexByteString(error_messg);
+      error.SetErrorString(error_messg);
+    }
+  }
+  return error;
 }
 
 size_t StringExtractorGDBRemote::GetEscapedBinaryData(std::string &str) {
