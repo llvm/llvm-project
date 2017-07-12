@@ -81,14 +81,6 @@ static MatchKind checkOccurrence(const IndexedOccurrence &Occurrence,
   if (BeginLoc.isInvalid())
     return MatchKind::None;
   StringRef SymbolNameStart = Symbol.Name[0];
-  SourceLocation EndLoc = BeginLoc.getLocWithOffset(std::max(
-      SymbolNameStart.size(),
-      size_t(1))); // Take empty Objective-C selector pieces into account.
-  if (!SM.isBeforeInTranslationUnit(BeginLoc, EndLoc)) {
-    // Ignore any invalid source ranges. This can occur if the indexed
-    // location is invalid.
-    return MatchKind::None;
-  }
   // Extract the token at the location.
   auto DecomposedLoc = SM.getDecomposedLoc(BeginLoc);
   const llvm::MemoryBuffer *File = SM.getBuffer(DecomposedLoc.first);
