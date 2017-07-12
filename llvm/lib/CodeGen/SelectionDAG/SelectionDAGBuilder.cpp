@@ -4994,6 +4994,44 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
     DAG.setRoot(CallResult.second);
     return nullptr;
   }
+  case Intrinsic::memmove_element_unordered_atomic: {
+    auto &MI = cast<ElementUnorderedAtomicMemMoveInst>(I);
+    SDValue Dst = getValue(MI.getRawDest());
+    SDValue Src = getValue(MI.getRawSource());
+    SDValue Length = getValue(MI.getLength());
+
+    // Emit a library call.
+    TargetLowering::ArgListTy Args;
+    TargetLowering::ArgListEntry Entry;
+    Entry.Ty = DAG.getDataLayout().getIntPtrType(*DAG.getContext());
+    Entry.Node = Dst;
+    Args.push_back(Entry);
+
+    Entry.Node = Src;
+    Args.push_back(Entry);
+
+    Entry.Ty = MI.getLength()->getType();
+    Entry.Node = Length;
+    Args.push_back(Entry);
+
+    uint64_t ElementSizeConstant = MI.getElementSizeInBytes();
+    RTLIB::Libcall LibraryCall =
+        RTLIB::getMEMMOVE_ELEMENT_UNORDERED_ATOMIC(ElementSizeConstant);
+    if (LibraryCall == RTLIB::UNKNOWN_LIBCALL)
+      report_fatal_error("Unsupported element size");
+
+    TargetLowering::CallLoweringInfo CLI(DAG);
+    CLI.setDebugLoc(sdl).setChain(getRoot()).setLibCallee(
+        TLI.getLibcallCallingConv(LibraryCall),
+        Type::getVoidTy(*DAG.getContext()),
+        DAG.getExternalSymbol(TLI.getLibcallName(LibraryCall),
+                              TLI.getPointerTy(DAG.getDataLayout())),
+        std::move(Args));
+
+    std::pair<SDValue, SDValue> CallResult = TLI.LowerCallTo(CLI);
+    DAG.setRoot(CallResult.second);
+    return nullptr;
+  }
   case Intrinsic::dbg_declare: {
     const DbgDeclareInst &DI = cast<DbgDeclareInst>(I);
     DILocalVariable *Variable = DI.getVariable();

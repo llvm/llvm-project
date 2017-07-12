@@ -5,6 +5,9 @@
 // with ASan) involving C++ standard library types when using libcxx.
 #define _LIBCPP_HAS_NO_ASAN
 
+// Do not attempt to use LLVM ostream from gtest.
+#define GTEST_NO_LLVM_RAW_OSTREAM 1
+
 #include "FuzzerCorpus.h"
 #include "FuzzerDictionary.h"
 #include "FuzzerInternal.h"

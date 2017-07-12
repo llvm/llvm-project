@@ -100,7 +100,7 @@ SValBuilder::getRegionValueSymbolVal(const TypedValueRegion* region) {
 
   if (T->isNullPtrType())
     return makeZeroVal(T);
-  
+
   if (!SymbolManager::canSymbolicate(T))
     return UnknownVal();
 
@@ -354,9 +354,6 @@ SVal SValBuilder::makeSymExprValNN(ProgramStateRef State,
                                    BinaryOperator::Opcode Op,
                                    NonLoc LHS, NonLoc RHS,
                                    QualType ResultTy) {
-  if (!State->isTainted(RHS) && !State->isTainted(LHS))
-    return UnknownVal();
-
   const SymExpr *symLHS = LHS.getAsSymExpr();
   const SymExpr *symRHS = RHS.getAsSymExpr();
   // TODO: When the Max Complexity is reached, we should conjure a symbol
@@ -364,7 +361,7 @@ SVal SValBuilder::makeSymExprValNN(ProgramStateRef State,
   const unsigned MaxComp = 10000; // 100000 28X
 
   if (symLHS && symRHS &&
-      (symLHS->computeComplexity() + symRHS->computeComplexity()) <  MaxComp)
+      (symLHS->computeComplexity() + symRHS->computeComplexity()) < MaxComp)
     return makeNonLoc(symLHS, Op, symRHS, ResultTy);
 
   if (symLHS && symLHS->computeComplexity() < MaxComp)

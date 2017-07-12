@@ -591,10 +591,10 @@ void DWARFContext::parseCompileUnits() {
 void DWARFContext::parseTypeUnits() {
   if (!TUs.empty())
     return;
-  for (const auto &I : getTypesSections()) {
+  forEachTypesSections([&](const DWARFSection &S) {
     TUs.emplace_back();
-    TUs.back().parse(*this, I.second);
-  }
+    TUs.back().parse(*this, S);
+  });
 }
 
 void DWARFContext::parseDWOCompileUnits() {
@@ -604,10 +604,10 @@ void DWARFContext::parseDWOCompileUnits() {
 void DWARFContext::parseDWOTypeUnits() {
   if (!DWOTUs.empty())
     return;
-  for (const auto &I : getTypesDWOSections()) {
+  forEachTypesDWOSections([&](const DWARFSection &S) {
     DWOTUs.emplace_back();
-    DWOTUs.back().parseDWO(*this, I.second);
-  }
+    DWOTUs.back().parseDWO(*this, S);
+  });
 }
 
 DWARFCompileUnit *DWARFContext::getCompileUnitForOffset(uint32_t Offset) {

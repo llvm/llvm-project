@@ -21,7 +21,10 @@
 #include "tsan_interface_ann.h"
 
 #include <libkern/OSAtomic.h>
+
+#if defined(__has_include) && __has_include(<xpc/xpc.h>)
 #include <xpc/xpc.h>
+#endif  // #if defined(__has_include) && __has_include(<xpc/xpc.h>)
 
 typedef long long_t;  // NOLINT
 
@@ -235,6 +238,8 @@ TSAN_INTERCEPTOR(void, os_lock_unlock, void *lock) {
   REAL(os_lock_unlock)(lock);
 }
 
+#if defined(__has_include) && __has_include(<xpc/xpc.h>)
+
 TSAN_INTERCEPTOR(void, xpc_connection_set_event_handler,
                  xpc_connection_t connection, xpc_handler_t handler) {
   SCOPED_TSAN_INTERCEPTOR(xpc_connection_set_event_handler, connection,
@@ -286,6 +291,8 @@ TSAN_INTERCEPTOR(void, xpc_connection_cancel, xpc_connection_t connection) {
   Release(thr, pc, (uptr)connection);
   REAL(xpc_connection_cancel)(connection);
 }
+
+#endif  // #if defined(__has_include) && __has_include(<xpc/xpc.h>)
 
 // On macOS, libc++ is always linked dynamically, so intercepting works the
 // usual way.

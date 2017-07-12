@@ -218,6 +218,13 @@ public:
   bool hasArithmeticCbzFusion() const { return HasArithmeticCbzFusion; }
   bool hasFuseAES() const { return HasFuseAES; }
   bool hasFuseLiterals() const { return HasFuseLiterals; }
+
+  /// \brief Return true if the CPU supports any kind of instruction fusion.
+  bool hasFusion() const {
+    return hasArithmeticBccFusion() || hasArithmeticCbzFusion() ||
+           hasFuseAES() || hasFuseLiterals();
+  }
+
   bool useRSqrt() const { return UseRSqrt; }
   unsigned getMaxInterleaveFactor() const { return MaxInterleaveFactor; }
   unsigned getVectorInsertExtractBaseCost() const {

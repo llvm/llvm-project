@@ -67,6 +67,41 @@ const MCInstrDesc *ScheduleDAG::getNodeDesc(const SDNode *Node) const {
   return &TII->get(Node->getMachineOpcode());
 }
 
+LLVM_DUMP_METHOD
+raw_ostream &SDep::print(raw_ostream &OS, const TargetRegisterInfo *TRI) const {
+  switch (getKind()) {
+  case Data:   OS << "Data"; break;
+  case Anti:   OS << "Anti"; break;
+  case Output: OS << "Out "; break;
+  case Order:  OS << "Ord "; break;
+  }
+
+  switch (getKind()) {
+  case Data:
+    OS << " Latency=" << getLatency();
+    if (TRI && isAssignedRegDep())
+      OS << " Reg=" << PrintReg(getReg(), TRI);
+    break;
+  case Anti:
+  case Output:
+    OS << " Latency=" << getLatency();
+    break;
+  case Order:
+    OS << " Latency=" << getLatency();
+    switch(Contents.OrdKind) {
+    case Barrier:      OS << " Barrier"; break;
+    case MayAliasMem:
+    case MustAliasMem: OS << " Memory"; break;
+    case Artificial:   OS << " Artificial"; break;
+    case Weak:         OS << " Weak"; break;
+    case Cluster:      OS << " Cluster"; break;
+    }
+    break;
+  }
+
+  return OS;
+}
+
 bool SUnit::addPred(const SDep &D, bool Required) {
   // If this node already has this dependence, don't add a redundant one.
   for (SDep &PredDep : Preds) {
@@ -302,16 +337,24 @@ void SUnit::biasCriticalPath() {
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD
-void SUnit::print(raw_ostream &OS, const ScheduleDAG *DAG) const {
-  if (this == &DAG->ExitSU)
-    OS << "ExitSU";
-  else if (this == &DAG->EntrySU)
+raw_ostream &SUnit::print(raw_ostream &OS,
+                          const SUnit *Entry, const SUnit *Exit) const {
+  if (this == Entry)
     OS << "EntrySU";
+  else if (this == Exit)
+    OS << "ExitSU";
   else
     OS << "SU(" << NodeNum << ")";
+  return OS;
 }
 
-LLVM_DUMP_METHOD void SUnit::dump(const ScheduleDAG *G) const {
+LLVM_DUMP_METHOD
+raw_ostream &SUnit::print(raw_ostream &OS, const ScheduleDAG *G) const {
+  return print(OS, &G->EntrySU, &G->ExitSU);
+}
+
+LLVM_DUMP_METHOD
+void SUnit::dump(const ScheduleDAG *G) const {
   print(dbgs(), G);
   dbgs() << ": ";
   G->dumpNode(this);
@@ -333,40 +376,18 @@ LLVM_DUMP_METHOD void SUnit::dumpAll(const ScheduleDAG *G) const {
 
   if (Preds.size() != 0) {
     dbgs() << "  Predecessors:\n";
-    for (const SDep &SuccDep : Preds) {
-      dbgs() << "   ";
-      switch (SuccDep.getKind()) {
-      case SDep::Data:   dbgs() << "data "; break;
-      case SDep::Anti:   dbgs() << "anti "; break;
-      case SDep::Output: dbgs() << "out  "; break;
-      case SDep::Order:  dbgs() << "ord  "; break;
-      }
-      SuccDep.getSUnit()->print(dbgs(), G);
-      if (SuccDep.isArtificial())
-        dbgs() << " *";
-      dbgs() << ": Latency=" << SuccDep.getLatency();
-      if (SuccDep.isAssignedRegDep())
-        dbgs() << " Reg=" << PrintReg(SuccDep.getReg(), G->TRI);
-      dbgs() << "\n";
+    for (const SDep &Dep : Preds) {
+      dbgs() << "    ";
+      Dep.getSUnit()->print(dbgs(), G); dbgs() << ": ";
+      Dep.print(dbgs(), G->TRI); dbgs() << '\n';
     }
   }
   if (Succs.size() != 0) {
     dbgs() << "  Successors:\n";
-    for (const SDep &SuccDep : Succs) {
-      dbgs() << "   ";
-      switch (SuccDep.getKind()) {
-      case SDep::Data:   dbgs() << "data "; break;
-      case SDep::Anti:   dbgs() << "anti "; break;
-      case SDep::Output: dbgs() << "out  "; break;
-      case SDep::Order:  dbgs() << "ord  "; break;
-      }
-      SuccDep.getSUnit()->print(dbgs(), G);
-      if (SuccDep.isArtificial())
-        dbgs() << " *";
-      dbgs() << ": Latency=" << SuccDep.getLatency();
-      if (SuccDep.isAssignedRegDep())
-        dbgs() << " Reg=" << PrintReg(SuccDep.getReg(), G->TRI);
-      dbgs() << "\n";
+    for (const SDep &Dep : Succs) {
+      dbgs() << "    ";
+      Dep.getSUnit()->print(dbgs(), G); dbgs() << ": ";
+      Dep.print(dbgs(), G->TRI); dbgs() << '\n';
     }
   }
 }

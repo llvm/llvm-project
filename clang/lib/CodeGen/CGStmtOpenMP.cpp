@@ -4363,7 +4363,18 @@ void CodeGenFunction::EmitOMPTaskLoopBasedDirective(const OMPLoopDirective &S) {
     CGF.CGM.getOpenMPRuntime().emitInlinedDirective(CGF, OMPD_taskloop,
                                                     CodeGen);
   };
-  EmitOMPTaskBasedDirective(S, BodyGen, TaskGen, Data);
+  if (Data.Nogroup)
+    EmitOMPTaskBasedDirective(S, BodyGen, TaskGen, Data);
+  else {
+    CGM.getOpenMPRuntime().emitTaskgroupRegion(
+        *this,
+        [&S, &BodyGen, &TaskGen, &Data](CodeGenFunction &CGF,
+                                        PrePostActionTy &Action) {
+          Action.Enter(CGF);
+          CGF.EmitOMPTaskBasedDirective(S, BodyGen, TaskGen, Data);
+        },
+        S.getLocStart());
+  }
 }
 
 void CodeGenFunction::EmitOMPTaskLoopDirective(const OMPTaskLoopDirective &S) {

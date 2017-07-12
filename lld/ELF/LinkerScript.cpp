@@ -111,13 +111,9 @@ LinkerScript::getOrCreateOutputSectionCommand(StringRef Name) {
 
 void LinkerScript::setDot(Expr E, const Twine &Loc, bool InSec) {
   uint64_t Val = E().getValue();
-  if (Val < Dot) {
-    if (InSec)
-      error(Loc + ": unable to move location counter backward for: " +
-            CurAddressState->OutSec->Name);
-    else
-      error(Loc + ": unable to move location counter backward");
-  }
+  if (Val < Dot && InSec)
+    error(Loc + ": unable to move location counter backward for: " +
+          CurAddressState->OutSec->Name);
   Dot = Val;
   // Update to location counter means update to section size.
   if (InSec)

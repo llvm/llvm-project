@@ -1289,7 +1289,7 @@ _mm_cmpgt_pi32(__m64 __m1, __m64 __m2)
 ///
 /// \headerfile <x86intrin.h>
 ///
-/// This intrinsic corresponds to the the <c> VXORPS / XORPS </c> instruction.
+/// This intrinsic corresponds to the <c> VXORPS / XORPS </c> instruction.
 ///
 /// \returns An initialized 64-bit integer vector with all elements set to zero.
 static __inline__ __m64 __DEFAULT_FN_ATTRS

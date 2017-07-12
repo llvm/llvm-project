@@ -1034,16 +1034,19 @@ ProgramStateRef Z3ConstraintManager::assumeSym(ProgramStateRef State,
 ProgramStateRef Z3ConstraintManager::assumeSymInclusiveRange(
     ProgramStateRef State, SymbolRef Sym, const llvm::APSInt &From,
     const llvm::APSInt &To, bool InRange) {
+  ASTContext &Ctx = getBasicVals().getContext();
+  // FIXME: This should be a cast from a 1-bit integer type to a boolean type,
+  // but the former is not available in Clang. Instead, extend the APSInt
+  // directly.
+  bool isBoolTy = From.getBitWidth() == 1 && getAPSIntType(From).isNull();
+
   QualType RetTy;
   // The expression may be casted, so we cannot call getZ3DataExpr() directly
   Z3Expr Exp = getZ3Expr(Sym, &RetTy);
-
-  assert((getAPSIntType(From) == getAPSIntType(To)) &&
-         "Range values have different types!");
-  QualType RTy = getAPSIntType(From);
-  bool isSignedTy = RetTy->isSignedIntegerOrEnumerationType();
-  Z3Expr FromExp = Z3Expr::fromAPSInt(From);
-  Z3Expr ToExp = Z3Expr::fromAPSInt(To);
+  QualType RTy = isBoolTy ? Ctx.BoolTy : getAPSIntType(From);
+  Z3Expr FromExp =
+      isBoolTy ? Z3Expr::fromAPSInt(From.extend(Ctx.getTypeSize(Ctx.BoolTy)))
+               : Z3Expr::fromAPSInt(From);
 
   // Construct single (in)equality
   if (From == To)
@@ -1051,6 +1054,10 @@ ProgramStateRef Z3ConstraintManager::assumeSymInclusiveRange(
                         getZ3BinExpr(Exp, RetTy, InRange ? BO_EQ : BO_NE,
                                      FromExp, RTy, nullptr));
 
+  assert((getAPSIntType(From) == getAPSIntType(To)) &&
+         "Range values have different types!");
+
+  Z3Expr ToExp = Z3Expr::fromAPSInt(To);
   // Construct two (in)equalities, and a logical and/or
   Z3Expr LHS =
       getZ3BinExpr(Exp, RetTy, InRange ? BO_GE : BO_LT, FromExp, RTy, nullptr);
@@ -1058,7 +1065,8 @@ ProgramStateRef Z3ConstraintManager::assumeSymInclusiveRange(
       getZ3BinExpr(Exp, RetTy, InRange ? BO_LE : BO_GT, ToExp, RTy, nullptr);
   return assumeZ3Expr(
       State, Sym,
-      Z3Expr::fromBinOp(LHS, InRange ? BO_LAnd : BO_LOr, RHS, isSignedTy));
+      Z3Expr::fromBinOp(LHS, InRange ? BO_LAnd : BO_LOr, RHS,
+                        RetTy->isSignedIntegerOrEnumerationType()));
 }
 
 ProgramStateRef Z3ConstraintManager::assumeSymUnsupported(ProgramStateRef State,
@@ -1406,6 +1414,7 @@ void Z3ConstraintManager::doTypeConversion(Z3Expr &LHS, Z3Expr &RHS,
                                            QualType &LTy, QualType &RTy) const {
   ASTContext &Ctx = getBasicVals().getContext();
 
+  assert(!LTy.isNull() && !RTy.isNull() && "Input type is null!");
   // Perform type conversion
   if (LTy->isIntegralOrEnumerationType() &&
       RTy->isIntegralOrEnumerationType()) {
@@ -1468,10 +1477,10 @@ template <typename T,
 void Z3ConstraintManager::doIntTypeConversion(T &LHS, QualType &LTy, T &RHS,
                                               QualType &RTy) const {
   ASTContext &Ctx = getBasicVals().getContext();
-
   uint64_t LBitWidth = Ctx.getTypeSize(LTy);
   uint64_t RBitWidth = Ctx.getTypeSize(RTy);
 
+  assert(!LTy.isNull() && !RTy.isNull() && "Input type is null!");
   // Always perform integer promotion before checking type equality.
   // Otherwise, e.g. (bool) a + (bool) b could trigger a backend assertion
   if (LTy->isPromotableIntegerType()) {

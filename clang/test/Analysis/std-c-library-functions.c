@@ -57,8 +57,7 @@ void test_fread_fwrite(FILE *fp, int *buf) {
   size_t y = fread(buf, sizeof(int), 10, fp);
   clang_analyzer_eval(y <= 10); // expected-warning{{TRUE}}
   size_t z = fwrite(buf, sizeof(int), y, fp);
-  // FIXME: should be TRUE once symbol-symbol constraint support is improved.
-  clang_analyzer_eval(z <= y); // expected-warning{{UNKNOWN}}
+  clang_analyzer_eval(z <= y); // expected-warning{{TRUE}}
 }
 
 ssize_t getline(char **, size_t *, FILE *);

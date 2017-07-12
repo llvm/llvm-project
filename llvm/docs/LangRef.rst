@@ -10282,6 +10282,8 @@ overlap. It copies "len" bytes of memory over. If the argument is known
 to be aligned to some boundary, this can be specified as the fourth
 argument, otherwise it should be set to 0 or 1 (both meaning no alignment).
 
+.. _int_memmove:
+
 '``llvm.memmove``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -14177,5 +14179,82 @@ Lowering:
 In the most general case call to the '``llvm.memcpy.element.unordered.atomic.*``' is
 lowered to a call to the symbol ``__llvm_memcpy_element_unordered_atomic_*``. Where '*'
 is replaced with an actual element size.
+
+Optimizer is allowed to inline memory copy when it's profitable to do so.
+
+'``llvm.memmove.element.unordered.atomic``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use
+``llvm.memmove.element.unordered.atomic`` on any integer bit width and for
+different address spaces. Not all targets support all bit widths however.
+
+::
+
+      declare void @llvm.memmove.element.unordered.atomic.p0i8.p0i8.i32(i8* <dest>,
+                                                                        i8* <src>,
+                                                                        i32 <len>,
+                                                                        i32 <element_size>)
+      declare void @llvm.memmove.element.unordered.atomic.p0i8.p0i8.i64(i8* <dest>,
+                                                                        i8* <src>,
+                                                                        i64 <len>,
+                                                                        i32 <element_size>)
+
+Overview:
+"""""""""
+
+The '``llvm.memmove.element.unordered.atomic.*``' intrinsic is a specialization
+of the '``llvm.memmove.*``' intrinsic. It differs in that the ``dest`` and
+``src`` are treated as arrays with elements that are exactly ``element_size``
+bytes, and the copy between buffers uses a sequence of
+:ref:`unordered atomic <ordering>` load/store operations that are a positive
+integer multiple of the ``element_size`` in size.
+
+Arguments:
+""""""""""
+
+The first three arguments are the same as they are in the
+:ref:`@llvm.memmove <int_memmove>` intrinsic, with the added constraint that
+``len`` is required to be a positive integer multiple of the ``element_size``.
+If ``len`` is not a positive integer multiple of ``element_size``, then the
+behaviour of the intrinsic is undefined.
+
+``element_size`` must be a compile-time constant positive power of two no
+greater than a target-specific atomic access size limit.
+
+For each of the input pointers the ``align`` parameter attribute must be
+specified. It must be a power of two no less than the ``element_size``. Caller
+guarantees that both the source and destination pointers are aligned to that
+boundary.
+
+Semantics:
+""""""""""
+
+The '``llvm.memmove.element.unordered.atomic.*``' intrinsic copies ``len`` bytes
+of memory from the source location to the destination location. These locations
+are allowed to overlap. The memory copy is performed as a sequence of load/store
+operations where each access is guaranteed to be a multiple of ``element_size``
+bytes wide and aligned at an ``element_size`` boundary. 
+
+The order of the copy is unspecified. The same value may be read from the source
+buffer many times, but only one write is issued to the destination buffer per
+element. It is well defined to have concurrent reads and writes to both source
+and destination provided those reads and writes are unordered atomic when
+specified.
+
+This intrinsic does not provide any additional ordering guarantees over those
+provided by a set of unordered loads from the source location and stores to the
+destination.
+
+Lowering:
+"""""""""
+
+In the most general case call to the
+'``llvm.memmove.element.unordered.atomic.*``' is lowered to a call to the symbol
+``__llvm_memmove_element_unordered_atomic_*``. Where '*' is replaced with an
+actual element size.
 
 The optimizer is allowed to inline the memory copy when it's profitable to do so.

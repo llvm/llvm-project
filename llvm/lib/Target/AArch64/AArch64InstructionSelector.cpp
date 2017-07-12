@@ -1325,6 +1325,9 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
   case TargetOpcode::G_VASTART:
     return STI.isTargetDarwin() ? selectVaStartDarwin(I, MF, MRI)
                                 : selectVaStartAAPCS(I, MF, MRI);
+  case TargetOpcode::G_IMPLICIT_DEF:
+    I.setDesc(TII.get(TargetOpcode::IMPLICIT_DEF));
+    return true;
   }
 
   return false;

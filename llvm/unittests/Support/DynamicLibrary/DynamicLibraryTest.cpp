@@ -77,6 +77,7 @@ TEST(DynamicLibrary, Overload) {
     EXPECT_TRUE(DL.isValid());
     EXPECT_TRUE(Err.empty());
 
+    // Test overloading local symbols does not occur by default
     GS = FuncPtr<GetString>(DynamicLibrary::SearchForAddressOfSymbol("TestA"));
     EXPECT_TRUE(GS != nullptr && GS == &TestA);
     EXPECT_EQ(StdString(GS()), "ProcessCall");
@@ -84,6 +85,12 @@ TEST(DynamicLibrary, Overload) {
     GS = FuncPtr<GetString>(DL.getAddressOfSymbol("TestA"));
     EXPECT_TRUE(GS != nullptr && GS == &TestA);
     EXPECT_EQ(StdString(GS()), "ProcessCall");
+
+    // Test overloading by forcing library priority when searching for a symbol
+    DynamicLibrary::SearchOrder = DynamicLibrary::SO_LoadedFirst;
+    GS = FuncPtr<GetString>(DynamicLibrary::SearchForAddressOfSymbol("TestA"));
+    EXPECT_TRUE(GS != nullptr && GS != &TestA);
+    EXPECT_EQ(StdString(GS()), "LibCall");
 
     DynamicLibrary::AddSymbol("TestA", PtrFunc(&OverloadTestA));
     GS = FuncPtr<GetString>(DL.getAddressOfSymbol("TestA"));
@@ -95,6 +102,9 @@ TEST(DynamicLibrary, Overload) {
   }
   EXPECT_TRUE(FuncPtr<GetString>(DynamicLibrary::SearchForAddressOfSymbol(
                   "TestA")) == nullptr);
+
+  // Check serach ordering is reset to default after call to llvm_shutdown
+  EXPECT_TRUE(DynamicLibrary::SearchOrder == DynamicLibrary::SO_Linker);
 }
 
 TEST(DynamicLibrary, Shutdown) {

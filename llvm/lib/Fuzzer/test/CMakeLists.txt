@@ -271,5 +271,5 @@ add_lit_testsuite(check-fuzzer "Running Fuzzer tests"
 # Don't add dependencies on Windows. The linker step would fail on Windows,
 # since cmake will use link.exe for linking and won't include compiler-rt libs.
 if(NOT MSVC)
-  add_dependencies(check-fuzzer FileCheck sancov not)
+  add_dependencies(check-fuzzer FileCheck sancov not llvm-symbolizer)
 endif()

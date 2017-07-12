@@ -34,9 +34,9 @@
 #include <type_traits>
 #include <vector>
 
-namespace llvm {
-
 #define DEBUG_TYPE "region"
+
+namespace llvm {
 
 //===----------------------------------------------------------------------===//
 /// RegionBase Implementation
@@ -901,8 +901,8 @@ void RegionInfoBase<Tr>::calculate(FuncT &F) {
   buildRegionsTree(DT->getNode(BB), TopLevelRegion);
 }
 
-#undef DEBUG_TYPE
-
 } // end namespace llvm
+
+#undef DEBUG_TYPE
 
 #endif // LLVM_ANALYSIS_REGIONINFOIMPL_H

@@ -35005,6 +35005,40 @@ static SDValue combineAddOrSubToADCOrSBB(SDNode *N, SelectionDAG &DAG) {
   EVT VT = N->getValueType(0);
   X86::CondCode CC = (X86::CondCode)Y.getConstantOperandVal(0);
 
+  // If X is -1 or 0, then we have an opportunity to avoid constants required in
+  // the general case below.
+  auto *ConstantX = dyn_cast<ConstantSDNode>(X);
+  if (ConstantX) {
+    if ((!IsSub && CC == X86::COND_AE && ConstantX->isAllOnesValue()) ||
+        (IsSub && CC == X86::COND_B && ConstantX->isNullValue())) {
+      // This is a complicated way to get -1 or 0 from the carry flag:
+      // -1 + SETAE --> -1 + (!CF) --> CF ? -1 : 0 --> SBB %eax, %eax
+      //  0 - SETB  -->  0 -  (CF) --> CF ? -1 : 0 --> SBB %eax, %eax
+      return DAG.getNode(X86ISD::SETCC_CARRY, DL, VT,
+                         DAG.getConstant(X86::COND_B, DL, MVT::i8),
+                         Y.getOperand(1));
+    }
+
+    if ((!IsSub && CC == X86::COND_BE && ConstantX->isAllOnesValue()) ||
+        (IsSub && CC == X86::COND_A && ConstantX->isNullValue())) {
+      SDValue EFLAGS = Y->getOperand(1);
+      if (EFLAGS.getOpcode() == X86ISD::SUB && EFLAGS.hasOneUse() &&
+          EFLAGS.getValueType().isInteger() &&
+          !isa<ConstantSDNode>(EFLAGS.getOperand(1))) {
+        // Swap the operands of a SUB, and we have the same pattern as above.
+        // -1 + SETBE (SUB A, B) --> -1 + SETAE (SUB B, A) --> SUB + SBB
+        //  0 - SETA  (SUB A, B) -->  0 - SETB  (SUB B, A) --> SUB + SBB
+        SDValue NewSub = DAG.getNode(
+            X86ISD::SUB, SDLoc(EFLAGS), EFLAGS.getNode()->getVTList(),
+            EFLAGS.getOperand(1), EFLAGS.getOperand(0));
+        SDValue NewEFLAGS = SDValue(NewSub.getNode(), EFLAGS.getResNo());
+        return DAG.getNode(X86ISD::SETCC_CARRY, DL, VT,
+                           DAG.getConstant(X86::COND_B, DL, MVT::i8),
+                           NewEFLAGS);
+      }
+    }
+  }
+
   if (CC == X86::COND_B) {
     // X + SETB Z --> X + (mask SBB Z, Z)
     // X - SETB Z --> X - (mask SBB Z, Z)
@@ -35013,33 +35047,6 @@ static SDValue combineAddOrSubToADCOrSBB(SDNode *N, SelectionDAG &DAG) {
     if (SBB.getValueSizeInBits() != VT.getSizeInBits())
       SBB = DAG.getZExtOrTrunc(SBB, DL, VT);
     return DAG.getNode(IsSub ? ISD::SUB : ISD::ADD, DL, VT, X, SBB);
-  }
-
-  auto *ConstantX = dyn_cast<ConstantSDNode>(X);
-  if (!IsSub && ConstantX && ConstantX->isAllOnesValue()) {
-    if (CC == X86::COND_AE) {
-      // This is a complicated way to get -1 or 0 from the carry flag:
-      // -1 + SETAE --> -1 + (!CF) --> CF ? -1 : 0 --> SBB %eax, %eax
-      // We don't have to match the subtract equivalent because sub X, 1 is
-      // canonicalized to add X, -1.
-      return DAG.getNode(X86ISD::SETCC_CARRY, DL, VT,
-                         DAG.getConstant(X86::COND_B, DL, MVT::i8),
-                         Y.getOperand(1));
-    }
-
-    SDValue EFLAGS = Y->getOperand(1);
-    if (CC == X86::COND_BE && EFLAGS.getOpcode() == X86ISD::SUB &&
-        EFLAGS.hasOneUse() && EFLAGS.getValueType().isInteger() &&
-        !isa<ConstantSDNode>(EFLAGS.getOperand(1))) {
-      // Swap the operands of a SUB, and we have the same pattern as above.
-      // -1 + SETBE (SUB A, B) --> -1 + SETAE (SUB B, A) --> SBB %eax, %eax
-      SDValue NewSub =
-          DAG.getNode(X86ISD::SUB, SDLoc(EFLAGS), EFLAGS.getNode()->getVTList(),
-                      EFLAGS.getOperand(1), EFLAGS.getOperand(0));
-      SDValue NewEFLAGS = SDValue(NewSub.getNode(), EFLAGS.getResNo());
-      return DAG.getNode(X86ISD::SETCC_CARRY, DL, VT,
-                         DAG.getConstant(X86::COND_B, DL, MVT::i8), NewEFLAGS);
-    }
   }
 
   if (CC == X86::COND_A) {

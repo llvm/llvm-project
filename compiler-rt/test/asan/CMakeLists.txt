@@ -84,12 +84,13 @@ foreach(arch ${ASAN_TEST_ARCH})
 endforeach()
 
 # iOS and iOS simulator test suites
-# These are not added into "check-all", in order to run these tests, you have to
-# manually call (from the build directory).  They also require that an extra env
+# These are not added into "check-all", in order to run these tests, use
+# "check-asan-iossim-x86_64" and similar. They also require that an extra env
 # variable to select which iOS device or simulator to use, e.g.:
-# $ SANITIZER_IOSSIM_TEST_DEVICE_IDENTIFIER=BBE44C1C-8AAA-4000-8D06-91C89ED58172
-# $ ./bin/llvm-lit ./projects/compiler-rt/test/asan/IOSSimI386Config
+# SANITIZER_IOSSIM_TEST_DEVICE_IDENTIFIER="iPhone 6"
 if(APPLE)
+  set(EXCLUDE_FROM_ALL ON)
+
   set(ASAN_TEST_TARGET_CC ${COMPILER_RT_TEST_COMPILER})
   set(ASAN_TEST_IOS "1")
   pythonize_bool(ASAN_TEST_IOS)
@@ -108,6 +109,9 @@ if(APPLE)
       ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.in
       ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME}/lit.site.cfg
       )
+    add_lit_testsuite(check-asan-iossim-${arch} "AddressSanitizer iOS Simulator ${arch} tests"
+      ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME}/
+      DEPENDS ${ASAN_TEST_DEPS})
   endforeach()
 
   foreach (arch ${DARWIN_ios_ARCHS})
@@ -123,7 +127,12 @@ if(APPLE)
       ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.in
       ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME}/lit.site.cfg
       )
+    add_lit_testsuite(check-asan-ios-${arch} "AddressSanitizer iOS ${arch} tests"
+      ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME}/
+      DEPENDS ${ASAN_TEST_DEPS})
   endforeach()
+
+  set(EXCLUDE_FROM_ALL OFF)
 endif()
 
 # Add unit tests.
