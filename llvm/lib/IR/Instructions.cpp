@@ -1304,34 +1304,34 @@ LoadInst::LoadInst(Value *Ptr, const Twine &Name, bool isVolatile,
 LoadInst::LoadInst(Type *Ty, Value *Ptr, const Twine &Name, bool isVolatile,
                    unsigned Align, Instruction *InsertBef)
     : LoadInst(Ty, Ptr, Name, isVolatile, Align, AtomicOrdering::NotAtomic,
-               CrossThread, InsertBef) {}
+               SyncScope::System, InsertBef) {}
 
 LoadInst::LoadInst(Value *Ptr, const Twine &Name, bool isVolatile,
                    unsigned Align, BasicBlock *InsertAE)
     : LoadInst(Ptr, Name, isVolatile, Align, AtomicOrdering::NotAtomic,
-               CrossThread, InsertAE) {}
+               SyncScope::System, InsertAE) {}
 
 LoadInst::LoadInst(Type *Ty, Value *Ptr, const Twine &Name, bool isVolatile,
                    unsigned Align, AtomicOrdering Order,
-                   SynchronizationScope SynchScope, Instruction *InsertBef)
+                   SyncScope::ID SSID, Instruction *InsertBef)
     : UnaryInstruction(Ty, Load, Ptr, InsertBef) {
   assert(Ty == cast<PointerType>(Ptr->getType())->getElementType());
   setVolatile(isVolatile);
   setAlignment(Align);
-  setAtomic(Order, SynchScope);
+  setAtomic(Order, SSID);
   AssertOK();
   setName(Name);
 }
 
 LoadInst::LoadInst(Value *Ptr, const Twine &Name, bool isVolatile, 
                    unsigned Align, AtomicOrdering Order,
-                   SynchronizationScope SynchScope,
+                   SyncScope::ID SSID,
                    BasicBlock *InsertAE)
   : UnaryInstruction(cast<PointerType>(Ptr->getType())->getElementType(),
                      Load, Ptr, InsertAE) {
   setVolatile(isVolatile);
   setAlignment(Align);
-  setAtomic(Order, SynchScope);
+  setAtomic(Order, SSID);
   AssertOK();
   setName(Name);
 }
@@ -1419,16 +1419,16 @@ StoreInst::StoreInst(Value *val, Value *addr, bool isVolatile,
 StoreInst::StoreInst(Value *val, Value *addr, bool isVolatile, unsigned Align,
                      Instruction *InsertBefore)
     : StoreInst(val, addr, isVolatile, Align, AtomicOrdering::NotAtomic,
-                CrossThread, InsertBefore) {}
+                SyncScope::System, InsertBefore) {}
 
 StoreInst::StoreInst(Value *val, Value *addr, bool isVolatile, unsigned Align,
                      BasicBlock *InsertAtEnd)
     : StoreInst(val, addr, isVolatile, Align, AtomicOrdering::NotAtomic,
-                CrossThread, InsertAtEnd) {}
+                SyncScope::System, InsertAtEnd) {}
 
 StoreInst::StoreInst(Value *val, Value *addr, bool isVolatile,
                      unsigned Align, AtomicOrdering Order,
-                     SynchronizationScope SynchScope,
+                     SyncScope::ID SSID,
                      Instruction *InsertBefore)
   : Instruction(Type::getVoidTy(val->getContext()), Store,
                 OperandTraits<StoreInst>::op_begin(this),
@@ -1438,13 +1438,13 @@ StoreInst::StoreInst(Value *val, Value *addr, bool isVolatile,
   Op<1>() = addr;
   setVolatile(isVolatile);
   setAlignment(Align);
-  setAtomic(Order, SynchScope);
+  setAtomic(Order, SSID);
   AssertOK();
 }
 
 StoreInst::StoreInst(Value *val, Value *addr, bool isVolatile,
                      unsigned Align, AtomicOrdering Order,
-                     SynchronizationScope SynchScope,
+                     SyncScope::ID SSID,
                      BasicBlock *InsertAtEnd)
   : Instruction(Type::getVoidTy(val->getContext()), Store,
                 OperandTraits<StoreInst>::op_begin(this),
@@ -1454,7 +1454,7 @@ StoreInst::StoreInst(Value *val, Value *addr, bool isVolatile,
   Op<1>() = addr;
   setVolatile(isVolatile);
   setAlignment(Align);
-  setAtomic(Order, SynchScope);
+  setAtomic(Order, SSID);
   AssertOK();
 }
 
@@ -1474,13 +1474,13 @@ void StoreInst::setAlignment(unsigned Align) {
 void AtomicCmpXchgInst::Init(Value *Ptr, Value *Cmp, Value *NewVal,
                              AtomicOrdering SuccessOrdering,
                              AtomicOrdering FailureOrdering,
-                             SynchronizationScope SynchScope) {
+                             SyncScope::ID SSID) {
   Op<0>() = Ptr;
   Op<1>() = Cmp;
   Op<2>() = NewVal;
   setSuccessOrdering(SuccessOrdering);
   setFailureOrdering(FailureOrdering);
-  setSynchScope(SynchScope);
+  setSyncScopeID(SSID);
 
   assert(getOperand(0) && getOperand(1) && getOperand(2) &&
          "All operands must be non-null!");
@@ -1507,25 +1507,25 @@ void AtomicCmpXchgInst::Init(Value *Ptr, Value *Cmp, Value *NewVal,
 AtomicCmpXchgInst::AtomicCmpXchgInst(Value *Ptr, Value *Cmp, Value *NewVal,
                                      AtomicOrdering SuccessOrdering,
                                      AtomicOrdering FailureOrdering,
-                                     SynchronizationScope SynchScope,
+                                     SyncScope::ID SSID,
                                      Instruction *InsertBefore)
     : Instruction(
           StructType::get(Cmp->getType(), Type::getInt1Ty(Cmp->getContext())),
           AtomicCmpXchg, OperandTraits<AtomicCmpXchgInst>::op_begin(this),
           OperandTraits<AtomicCmpXchgInst>::operands(this), InsertBefore) {
-  Init(Ptr, Cmp, NewVal, SuccessOrdering, FailureOrdering, SynchScope);
+  Init(Ptr, Cmp, NewVal, SuccessOrdering, FailureOrdering, SSID);
 }
 
 AtomicCmpXchgInst::AtomicCmpXchgInst(Value *Ptr, Value *Cmp, Value *NewVal,
                                      AtomicOrdering SuccessOrdering,
                                      AtomicOrdering FailureOrdering,
-                                     SynchronizationScope SynchScope,
+                                     SyncScope::ID SSID,
                                      BasicBlock *InsertAtEnd)
     : Instruction(
           StructType::get(Cmp->getType(), Type::getInt1Ty(Cmp->getContext())),
           AtomicCmpXchg, OperandTraits<AtomicCmpXchgInst>::op_begin(this),
           OperandTraits<AtomicCmpXchgInst>::operands(this), InsertAtEnd) {
-  Init(Ptr, Cmp, NewVal, SuccessOrdering, FailureOrdering, SynchScope);
+  Init(Ptr, Cmp, NewVal, SuccessOrdering, FailureOrdering, SSID);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1534,12 +1534,12 @@ AtomicCmpXchgInst::AtomicCmpXchgInst(Value *Ptr, Value *Cmp, Value *NewVal,
 
 void AtomicRMWInst::Init(BinOp Operation, Value *Ptr, Value *Val,
                          AtomicOrdering Ordering,
-                         SynchronizationScope SynchScope) {
+                         SyncScope::ID SSID) {
   Op<0>() = Ptr;
   Op<1>() = Val;
   setOperation(Operation);
   setOrdering(Ordering);
-  setSynchScope(SynchScope);
+  setSyncScopeID(SSID);
 
   assert(getOperand(0) && getOperand(1) &&
          "All operands must be non-null!");
@@ -1554,24 +1554,24 @@ void AtomicRMWInst::Init(BinOp Operation, Value *Ptr, Value *Val,
 
 AtomicRMWInst::AtomicRMWInst(BinOp Operation, Value *Ptr, Value *Val,
                              AtomicOrdering Ordering,
-                             SynchronizationScope SynchScope,
+                             SyncScope::ID SSID,
                              Instruction *InsertBefore)
   : Instruction(Val->getType(), AtomicRMW,
                 OperandTraits<AtomicRMWInst>::op_begin(this),
                 OperandTraits<AtomicRMWInst>::operands(this),
                 InsertBefore) {
-  Init(Operation, Ptr, Val, Ordering, SynchScope);
+  Init(Operation, Ptr, Val, Ordering, SSID);
 }
 
 AtomicRMWInst::AtomicRMWInst(BinOp Operation, Value *Ptr, Value *Val,
                              AtomicOrdering Ordering,
-                             SynchronizationScope SynchScope,
+                             SyncScope::ID SSID,
                              BasicBlock *InsertAtEnd)
   : Instruction(Val->getType(), AtomicRMW,
                 OperandTraits<AtomicRMWInst>::op_begin(this),
                 OperandTraits<AtomicRMWInst>::operands(this),
                 InsertAtEnd) {
-  Init(Operation, Ptr, Val, Ordering, SynchScope);
+  Init(Operation, Ptr, Val, Ordering, SSID);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1579,19 +1579,19 @@ AtomicRMWInst::AtomicRMWInst(BinOp Operation, Value *Ptr, Value *Val,
 //===----------------------------------------------------------------------===//
 
 FenceInst::FenceInst(LLVMContext &C, AtomicOrdering Ordering, 
-                     SynchronizationScope SynchScope,
+                     SyncScope::ID SSID,
                      Instruction *InsertBefore)
   : Instruction(Type::getVoidTy(C), Fence, nullptr, 0, InsertBefore) {
   setOrdering(Ordering);
-  setSynchScope(SynchScope);
+  setSyncScopeID(SSID);
 }
 
 FenceInst::FenceInst(LLVMContext &C, AtomicOrdering Ordering, 
-                     SynchronizationScope SynchScope,
+                     SyncScope::ID SSID,
                      BasicBlock *InsertAtEnd)
   : Instruction(Type::getVoidTy(C), Fence, nullptr, 0, InsertAtEnd) {
   setOrdering(Ordering);
-  setSynchScope(SynchScope);
+  setSyncScopeID(SSID);
 }
 
 //===----------------------------------------------------------------------===//
@@ -3795,12 +3795,12 @@ AllocaInst *AllocaInst::cloneImpl() const {
 
 LoadInst *LoadInst::cloneImpl() const {
   return new LoadInst(getOperand(0), Twine(), isVolatile(),
-                      getAlignment(), getOrdering(), getSynchScope());
+                      getAlignment(), getOrdering(), getSyncScopeID());
 }
 
 StoreInst *StoreInst::cloneImpl() const {
   return new StoreInst(getOperand(0), getOperand(1), isVolatile(),
-                       getAlignment(), getOrdering(), getSynchScope());
+                       getAlignment(), getOrdering(), getSyncScopeID());
   
 }
 
@@ -3808,7 +3808,7 @@ AtomicCmpXchgInst *AtomicCmpXchgInst::cloneImpl() const {
   AtomicCmpXchgInst *Result =
     new AtomicCmpXchgInst(getOperand(0), getOperand(1), getOperand(2),
                           getSuccessOrdering(), getFailureOrdering(),
-                          getSynchScope());
+                          getSyncScopeID());
   Result->setVolatile(isVolatile());
   Result->setWeak(isWeak());
   return Result;
@@ -3816,14 +3816,14 @@ AtomicCmpXchgInst *AtomicCmpXchgInst::cloneImpl() const {
 
 AtomicRMWInst *AtomicRMWInst::cloneImpl() const {
   AtomicRMWInst *Result =
-    new AtomicRMWInst(getOperation(),getOperand(0), getOperand(1),
-                      getOrdering(), getSynchScope());
+    new AtomicRMWInst(getOperation(), getOperand(0), getOperand(1),
+                      getOrdering(), getSyncScopeID());
   Result->setVolatile(isVolatile());
   return Result;
 }
 
 FenceInst *FenceInst::cloneImpl() const {
-  return new FenceInst(getContext(), getOrdering(), getSynchScope());
+  return new FenceInst(getContext(), getOrdering(), getSyncScopeID());
 }
 
 TruncInst *TruncInst::cloneImpl() const {

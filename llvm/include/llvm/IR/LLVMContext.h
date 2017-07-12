@@ -42,6 +42,24 @@ class Output;
 
 } // end namespace yaml
 
+namespace SyncScope {
+
+typedef uint8_t ID;
+
+/// Known synchronization scope IDs, which always have the same value.  All
+/// synchronization scope IDs that LLVM has special knowledge of are listed
+/// here.  Additionally, this scheme allows LLVM to efficiently check for
+/// specific synchronization scope ID without comparing strings.
+enum {
+  /// Synchronized with respect to signal handlers executing in the same thread.
+  SingleThread = 0,
+
+  /// Synchronized with respect to all concurrently executing threads.
+  System = 1
+};
+
+} // end namespace SyncScope
+
 /// This is an important class for using LLVM in a threaded context.  It
 /// (opaquely) owns and manages the core "global" data of LLVM's core
 /// infrastructure, including the type and constant uniquing tables.
@@ -110,6 +128,16 @@ public:
   /// getOperandBundleTagID - Maps a bundle tag to an integer ID.  Every bundle
   /// tag registered with an LLVMContext has an unique ID.
   uint32_t getOperandBundleTagID(StringRef Tag) const;
+
+  /// getOrInsertSyncScopeID - Maps synchronization scope name to
+  /// synchronization scope ID.  Every synchronization scope registered with
+  /// LLVMContext has unique ID except pre-defined ones.
+  SyncScope::ID getOrInsertSyncScopeID(StringRef SSN);
+
+  /// getSyncScopeNames - Populates client supplied SmallVector with
+  /// synchronization scope names registered with LLVMContext.  Synchronization
+  /// scope names are ordered by increasing synchronization scope IDs.
+  void getSyncScopeNames(SmallVectorImpl<StringRef> &SSNs) const;
 
   /// Define the GC for a function
   void setGC(const Function &Fn, std::string GCName);

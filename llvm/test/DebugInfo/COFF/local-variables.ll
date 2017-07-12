@@ -99,18 +99,18 @@
 
 ; OBJ:  Subsection [
 ; OBJ:    SubSectionType: Symbols (0xF1)
-; OBJ:    ProcStart {
+; OBJ:    {{.*}}Proc{{.*}}Sym {
 ; OBJ:      DisplayName: f
 ; OBJ:      LinkageName: f
 ; OBJ:    }
-; OBJ:    Local {
+; OBJ:    LocalSym {
 ; OBJ:      Type: int (0x74)
 ; OBJ:      Flags [ (0x1)
 ; OBJ:        IsParameter (0x1)
 ; OBJ:      ]
 ; OBJ:      VarName: param
 ; OBJ:    }
-; OBJ:    DefRangeRegisterRel {
+; OBJ:    DefRangeRegisterRelSym {
 ; OBJ:      BaseRegister: 335
 ; OBJ:      HasSpilledUDTMember: No
 ; OBJ:      OffsetInParent: 0
@@ -121,13 +121,13 @@
 ; OBJ:        Range: 0x4F
 ; OBJ:      }
 ; OBJ:    }
-; OBJ:    Local {
+; OBJ:    LocalSym {
 ; OBJ:      Type: int (0x74)
 ; OBJ:      Flags [ (0x0)
 ; OBJ:      ]
 ; OBJ:      VarName: a
 ; OBJ:    }
-; OBJ:    DefRangeRegisterRel {
+; OBJ:    DefRangeRegisterRelSym {
 ; OBJ:      BaseRegister: 335
 ; OBJ:      HasSpilledUDTMember: No
 ; OBJ:      OffsetInParent: 0
@@ -138,13 +138,13 @@
 ; OBJ:        Range: 0x21
 ; OBJ:      }
 ; OBJ:    }
-; OBJ:    Local {
+; OBJ:    LocalSym {
 ; OBJ:      Type: int (0x74)
 ; OBJ:      Flags [ (0x0)
 ; OBJ:      ]
 ; OBJ:      VarName: b
 ; OBJ:    }
-; OBJ:    DefRangeRegisterRel {
+; OBJ:    DefRangeRegisterRelSym {
 ; OBJ:      BaseRegister: 335
 ; OBJ:      HasSpilledUDTMember: No
 ; OBJ:      OffsetInParent: 0
@@ -155,7 +155,7 @@
 ; OBJ:        Range: 0x1F
 ; OBJ:      }
 ; OBJ:    }
-; OBJ:    InlineSite {
+; OBJ:    InlineSiteSym {
 ; OBJ:      PtrParent: 0x0
 ; OBJ:      PtrEnd: 0x0
 ; OBJ:      Inlinee: will_be_inlined (0x1002)
@@ -166,13 +166,13 @@
 ; OBJ:        ChangeCodeLength: 0xC
 ; OBJ:      ]
 ; OBJ:    }
-; OBJ:    Local {
+; OBJ:    LocalSym {
 ; OBJ:      Type: int (0x74)
 ; OBJ:      Flags [ (0x0)
 ; OBJ:      ]
 ; OBJ:      VarName: v
 ; OBJ:    }
-; OBJ:    DefRangeRegisterRel {
+; OBJ:    DefRangeRegisterRelSym {
 ; OBJ:      BaseRegister: 335
 ; OBJ:      HasSpilledUDTMember: No
 ; OBJ:      OffsetInParent: 0
@@ -185,7 +185,7 @@
 ; OBJ:    }
 ; OBJ:    InlineSiteEnd {
 ; OBJ:    }
-; OBJ:    InlineSite {
+; OBJ:    InlineSiteSym {
 ; OBJ:      PtrParent: 0x0
 ; OBJ:      PtrEnd: 0x0
 ; OBJ:      Inlinee: will_be_inlined (0x1002)
@@ -196,13 +196,13 @@
 ; OBJ:        ChangeCodeLength: 0xA
 ; OBJ:      ]
 ; OBJ:    }
-; OBJ:    Local {
+; OBJ:    LocalSym {
 ; OBJ:      Type: int (0x74)
 ; OBJ:      Flags [ (0x0)
 ; OBJ:      ]
 ; OBJ:      VarName: v
 ; OBJ:    }
-; OBJ:    DefRangeRegisterRel {
+; OBJ:    DefRangeRegisterRelSym {
 ; OBJ:      BaseRegister: 335
 ; OBJ:      HasSpilledUDTMember: No
 ; OBJ:      OffsetInParent: 0

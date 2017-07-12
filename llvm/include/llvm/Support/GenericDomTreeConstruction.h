@@ -32,6 +32,20 @@
 namespace llvm {
 namespace DomTreeBuilder {
 
+template <typename NodePtr, bool Inverse>
+struct ChildrenGetter {
+  static auto Get(NodePtr N) -> decltype(reverse(children<NodePtr>(N))) {
+    return reverse(children<NodePtr>(N));
+  }
+};
+
+template <typename NodePtr>
+struct ChildrenGetter<NodePtr, true> {
+  static auto Get(NodePtr N) -> decltype(inverse_children<NodePtr>(N)) {
+    return inverse_children<NodePtr>(N);
+  }
+};
+
 // Information record used by Semi-NCA during tree construction.
 template <typename NodeT>
 struct SemiNCAInfo {
@@ -45,6 +59,7 @@ struct SemiNCAInfo {
     unsigned Semi = 0;
     NodePtr Label = nullptr;
     NodePtr IDom = nullptr;
+    SmallVector<NodePtr, 2> ReverseChildren;
   };
 
   std::vector<NodePtr> NumToNode;
@@ -79,66 +94,49 @@ struct SemiNCAInfo {
         .get();
   }
 
-  // External storage for depth first iterator that reuses the info lookup map
-  // SemiNCAInfo already has. We don't have a set, but a map instead, so we are
-  // converting the one argument insert calls.
-  struct df_iterator_dom_storage {
-   public:
-    using BaseSet = decltype(NodeToInfo);
-    df_iterator_dom_storage(BaseSet &Storage) : Storage(Storage) {}
+  static bool AlwaysDescend(NodePtr, NodePtr) { return true; }
 
-    using iterator = typename BaseSet::iterator;
-    std::pair<iterator, bool> insert(NodePtr N) {
-      return Storage.insert({N, InfoRec()});
-    }
-    void completed(NodePtr) {}
+  // Custom DFS implementation which can skip nodes based on a provided
+  // predicate. It also collects ReverseChildren so that we don't have to spend
+  // time getting predecessors in SemiNCA.
+  template <bool Inverse, typename DescendCondition>
+  unsigned runDFS(NodePtr V, unsigned LastNum, DescendCondition Condition,
+                  unsigned AttachToNum) {
+    assert(V);
+    SmallVector<NodePtr, 64> WorkList = {V};
+    if (NodeToInfo.count(V) != 0) NodeToInfo[V].Parent = AttachToNum;
 
-   private:
-    BaseSet &Storage;
-  };
-
-  df_iterator_dom_storage getStorage() { return {NodeToInfo}; }
-
-  unsigned runReverseDFS(NodePtr V, unsigned N) {
-    auto DFStorage = getStorage();
-
-    bool IsChildOfArtificialExit = (N != 0);
-    for (auto I = idf_ext_begin(V, DFStorage), E = idf_ext_end(V, DFStorage);
-         I != E; ++I) {
-      NodePtr BB = *I;
+    while (!WorkList.empty()) {
+      const NodePtr BB = WorkList.pop_back_val();
       auto &BBInfo = NodeToInfo[BB];
-      BBInfo.DFSNum = BBInfo.Semi = ++N;
+
+      // Visited nodes always have positive DFS numbers.
+      if (BBInfo.DFSNum != 0) continue;
+      BBInfo.DFSNum = BBInfo.Semi = ++LastNum;
       BBInfo.Label = BB;
-      // Set the parent to the top of the visited stack.  The stack includes us,
-      // and is 1 based, so we subtract to account for both of these.
-      if (I.getPathLength() > 1)
-        BBInfo.Parent = NodeToInfo[I.getPath(I.getPathLength() - 2)].DFSNum;
-      NumToNode.push_back(BB);  // NumToNode[n] = V;
+      NumToNode.push_back(BB);
 
-      if (IsChildOfArtificialExit)
-        BBInfo.Parent = 1;
+      for (const NodePtr Succ : ChildrenGetter<NodePtr, Inverse>::Get(BB)) {
+        const auto SIT = NodeToInfo.find(Succ);
+        // Don't visit nodes more than once but remember to collect
+        // RerverseChildren.
+        if (SIT != NodeToInfo.end() && SIT->second.DFSNum != 0) {
+          if (Succ != BB) SIT->second.ReverseChildren.push_back(BB);
+          continue;
+        }
 
-      IsChildOfArtificialExit = false;
+        if (!Condition(BB, Succ)) continue;
+
+        // It's fine to add Succ to the map, because we know that it will be
+        // visited later.
+        auto &SuccInfo = NodeToInfo[Succ];
+        WorkList.push_back(Succ);
+        SuccInfo.Parent = LastNum;
+        SuccInfo.ReverseChildren.push_back(BB);
+      }
     }
-    return N;
-  }
 
-  unsigned runForwardDFS(NodePtr V, unsigned N) {
-    auto DFStorage = getStorage();
-
-    for (auto I = df_ext_begin(V, DFStorage), E = df_ext_end(V, DFStorage);
-         I != E; ++I) {
-      NodePtr BB = *I;
-      auto &BBInfo = NodeToInfo[BB];
-      BBInfo.DFSNum = BBInfo.Semi = ++N;
-      BBInfo.Label = BB;
-      // Set the parent to the top of the visited stack.  The stack includes us,
-      // and is 1 based, so we subtract to account for both of these.
-      if (I.getPathLength() > 1)
-        BBInfo.Parent = NodeToInfo[I.getPath(I.getPathLength() - 2)].DFSNum;
-      NumToNode.push_back(BB);  // NumToNode[n] = V;
-    }
-    return N;
+    return LastNum;
   }
 
   NodePtr eval(NodePtr VIn, unsigned LastLinked) {
@@ -181,31 +179,14 @@ struct SemiNCAInfo {
 
   template <typename NodeType>
   void runSemiNCA(DomTreeT &DT, unsigned NumBlocks) {
-    unsigned N = 0;
-    NumToNode.push_back(nullptr);
-
-    bool MultipleRoots = (DT.Roots.size() > 1);
-    if (MultipleRoots) {
-      auto &BBInfo = NodeToInfo[nullptr];
-      BBInfo.DFSNum = BBInfo.Semi = ++N;
-      BBInfo.Label = nullptr;
-
-      NumToNode.push_back(nullptr); // NumToNode[n] = V;
-    }
-
     // Step #1: Number blocks in depth-first order and initialize variables used
     // in later stages of the algorithm.
-    if (DT.isPostDominator()){
-      for (unsigned i = 0, e = static_cast<unsigned>(DT.Roots.size());
-           i != e; ++i)
-        N = runReverseDFS(DT.Roots[i], N);
-    } else {
-      N = runForwardDFS(DT.Roots[0], N);
-    }
+    const unsigned N = doFullDFSWalk(DT, AlwaysDescend);
 
     // It might be that some blocks did not get a DFS number (e.g., blocks of
     // infinite loops). In these cases an artificial exit node is required.
-    MultipleRoots |= (DT.isPostDominator() && N != NumBlocks);
+    const bool MultipleRoots =
+        DT.Roots.size() > 1 || (DT.isPostDominator() && N != NumBlocks);
 
     // Initialize IDoms to spanning tree parents.
     for (unsigned i = 1; i <= N; ++i) {
@@ -221,7 +202,7 @@ struct SemiNCAInfo {
 
       // Initialize the semi dominator to point to the parent node.
       WInfo.Semi = WInfo.Parent;
-      for (const auto &N : inverse_children<NodeType>(W))
+      for (const auto &N : WInfo.ReverseChildren)
         if (NodeToInfo.count(N)) {  // Only if this predecessor is reachable!
           unsigned SemiU = NodeToInfo[eval(N, i + 1)].Semi;
           if (SemiU < WInfo.Semi)
@@ -279,14 +260,27 @@ struct SemiNCAInfo {
     }
   }
 
-  void doFullDFSWalk(const DomTreeT &DT) {
-    NumToNode.push_back(nullptr);
+  template <typename DescendCondition>
+  unsigned doFullDFSWalk(const DomTreeT &DT, DescendCondition DC) {
     unsigned Num = 0;
-    for (auto *Root : DT.Roots)
-      if (!DT.isPostDominator())
-        Num = runForwardDFS(Root, Num);
-      else
-        Num = runReverseDFS(Root, Num);
+    NumToNode.push_back(nullptr);
+
+    if (DT.Roots.size() > 1) {
+      auto &BBInfo = NodeToInfo[nullptr];
+      BBInfo.DFSNum = BBInfo.Semi = ++Num;
+      BBInfo.Label = nullptr;
+
+      NumToNode.push_back(nullptr);  // NumToNode[n] = V;
+    }
+
+    if (DT.isPostDominator()) {
+      for (auto *Root : DT.Roots) Num = runDFS<true>(Root, Num, DC, 1);
+    } else {
+      assert(DT.Roots.size() == 1);
+      Num = runDFS<false>(DT.Roots[0], Num, DC, Num);
+    }
+
+    return Num;
   }
 
   static void PrintBlockOrNullptr(raw_ostream &O, NodePtr Obj) {
@@ -299,7 +293,7 @@ struct SemiNCAInfo {
   // Checks if the tree contains all reachable nodes in the input graph.
   bool verifyReachability(const DomTreeT &DT) {
     clear();
-    doFullDFSWalk(DT);
+    doFullDFSWalk(DT, AlwaysDescend);
 
     for (auto &NodeToTN : DT.DomTreeNodes) {
       const TreeNodePtr TN = NodeToTN.second.get();
@@ -356,7 +350,7 @@ struct SemiNCAInfo {
   //     NCD(From, To) == IDom(To) or To.
   bool verifyNCD(const DomTreeT &DT) {
     clear();
-    doFullDFSWalk(DT);
+    doFullDFSWalk(DT, AlwaysDescend);
 
     for (auto &BlockToInfo : NodeToInfo) {
       auto &Info = BlockToInfo.second;
@@ -440,8 +434,9 @@ struct SemiNCAInfo {
       if (!BB || TN->getChildren().empty()) continue;
 
       clear();
-      NodeToInfo.insert({BB, {}});
-      doFullDFSWalk(DT);
+      doFullDFSWalk(DT, [BB](NodePtr From, NodePtr To) {
+        return From != BB && To != BB;
+      });
 
       for (TreeNodePtr Child : TN->getChildren())
         if (NodeToInfo.count(Child->getBlock()) != 0) {
@@ -473,8 +468,10 @@ struct SemiNCAInfo {
       const auto &Siblings = TN->getChildren();
       for (const TreeNodePtr N : Siblings) {
         clear();
-        NodeToInfo.insert({N->getBlock(), {}});
-        doFullDFSWalk(DT);
+        NodePtr BBN = N->getBlock();
+        doFullDFSWalk(DT, [BBN](NodePtr From, NodePtr To) {
+          return From != BBN && To != BBN;
+        });
 
         for (const TreeNodePtr S : Siblings) {
           if (S == N) continue;

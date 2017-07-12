@@ -73,7 +73,7 @@ public:
   /// reported via \p Ctx.
   virtual void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                           const MCValue &Target, MutableArrayRef<char> Data,
-                          uint64_t Value, bool IsPCRel) const = 0;
+                          uint64_t Value, bool IsResolved) const = 0;
 
   /// @}
 

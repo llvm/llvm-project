@@ -1212,7 +1212,7 @@ bool JumpThreadingPass::SimplifyPartiallyRedundantLoad(LoadInst *LI) {
     LoadInst *NewVal = new LoadInst(
         LoadedPtr->DoPHITranslation(LoadBB, UnavailablePred),
         LI->getName() + ".pr", false, LI->getAlignment(), LI->getOrdering(),
-        LI->getSynchScope(), UnavailablePred->getTerminator());
+        LI->getSyncScopeID(), UnavailablePred->getTerminator());
     NewVal->setDebugLoc(LI->getDebugLoc());
     if (AATags)
       NewVal->setAAMetadata(AATags);

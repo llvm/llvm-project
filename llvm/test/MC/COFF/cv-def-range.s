@@ -77,18 +77,18 @@ Ltmp3:
 	.short	4431                    # Record kind: S_PROC_ID_END
 	.cv_def_range	Lvar_begin0 Lvar_end0, "\102\021\374\377\377\377"
 
-# CHECK:    DefRangeFramePointerRel {
+# CHECK:    DefRangeFramePointerRelSym {
 # CHECK:      Offset: -4
 # CHECK:      LocalVariableAddrRange {
 # CHECK:        OffsetStart: .text+0x9
 # CHECK:        ISectStart: 0x0
 # CHECK:        Range: 0xF
 # CHECK:      }
+# CHECK:      BlockRelocations [
+# CHECK:        0x4 IMAGE_REL_I386_SECREL .text
+# CHECK:        0x8 IMAGE_REL_I386_SECTION .text
+# CHECK:      ]
 # CHECK:    }
-# CHECK:    BlockRelocations [
-# CHECK:      0x4 IMAGE_REL_I386_SECREL .text
-# CHECK:      0x8 IMAGE_REL_I386_SECTION .text
-# CHECK:    ]
 
 Ltmp1:
 	.p2align	2

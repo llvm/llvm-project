@@ -1,5 +1,5 @@
-; RUN: llc -relocation-model=static -verify-machineinstrs < %s -march=ppc64 -tailcallopt | grep TC_RETURNd8
-; RUN: llc -relocation-model=static -verify-machineinstrs -march=ppc64 < %s | FileCheck %s
+; RUN: llc -relocation-model=static -verify-machineinstrs < %s -mtriple=ppc64-- -tailcallopt | grep TC_RETURNd8
+; RUN: llc -relocation-model=static -verify-machineinstrs -mtriple=ppc64-- < %s | FileCheck %s
 define fastcc i32 @tailcallee(i32 %a1, i32 %a2, i32 %a3, i32 %a4) {
 entry:
 	ret i32 %a3

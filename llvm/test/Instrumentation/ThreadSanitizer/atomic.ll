@@ -1959,7 +1959,7 @@ entry:
 
 define void @atomic_signal_fence_acquire() nounwind uwtable {
 entry:
-  fence singlethread acquire, !dbg !7
+  fence syncscope("singlethread") acquire, !dbg !7
   ret void, !dbg !7
 }
 ; CHECK-LABEL: atomic_signal_fence_acquire
@@ -1975,7 +1975,7 @@ entry:
 
 define void @atomic_signal_fence_release() nounwind uwtable {
 entry:
-  fence singlethread release, !dbg !7
+  fence syncscope("singlethread") release, !dbg !7
   ret void, !dbg !7
 }
 ; CHECK-LABEL: atomic_signal_fence_release
@@ -1991,7 +1991,7 @@ entry:
 
 define void @atomic_signal_fence_acq_rel() nounwind uwtable {
 entry:
-  fence singlethread acq_rel, !dbg !7
+  fence syncscope("singlethread") acq_rel, !dbg !7
   ret void, !dbg !7
 }
 ; CHECK-LABEL: atomic_signal_fence_acq_rel
@@ -2007,7 +2007,7 @@ entry:
 
 define void @atomic_signal_fence_seq_cst() nounwind uwtable {
 entry:
-  fence singlethread seq_cst, !dbg !7
+  fence syncscope("singlethread") seq_cst, !dbg !7
   ret void, !dbg !7
 }
 ; CHECK-LABEL: atomic_signal_fence_seq_cst

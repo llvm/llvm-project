@@ -43,13 +43,13 @@
 ; OBJ32:      ]
 ; OBJ32:      Subsection [
 ; OBJ32-NEXT:   SubSectionType: Symbols (0xF1)
-; OBJ32:        ProcStart {
+; OBJ32:        {{.*}}Proc{{.*}}Sym {
 ; OBJ32:          CodeSize: 0x10
 ; OBJ32:          DisplayName: f
 ; OBJ32:          LinkageName: _f
 ; OBJ32:        }
 ; OBJ32-NEXT:   ProcEnd {
-; OBJ32-NEXT:   }
+; OBJ32:        }
 ; OBJ32-NEXT: ]
 ; OBJ32:      FunctionLineTable [
 ; OBJ32-NEXT:   Name: _f
@@ -115,13 +115,13 @@
 ; OBJ64:      ]
 ; OBJ64:      Subsection [
 ; OBJ64-NEXT:   SubSectionType: Symbols (0xF1)
-; OBJ64:        ProcStart {
+; OBJ64:        {{.*}}Proc{{.*}}Sym {
 ; OBJ64:          CodeSize: 0x18
 ; OBJ64:          DisplayName: f
 ; OBJ64:          LinkageName: f
 ; OBJ64:        }
 ; OBJ64-NEXT:   ProcEnd {
-; OBJ64-NEXT:   }
+; OBJ64:        }
 ; OBJ64-NEXT: ]
 ; OBJ64:      FunctionLineTable [
 ; OBJ64-NEXT:   Name: f

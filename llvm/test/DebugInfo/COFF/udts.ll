@@ -18,37 +18,39 @@ target triple = "i686-pc-windows-msvc18.0.0"
 ; typedef struct { int x; } U;
 ; U u;
 
-; CHECK:      ProcStart {
+; CHECK:      {{.*}}Proc{{.*}}Sym {
 ; CHECK:        DisplayName: f
 ; CHECK:        LinkageName: ?f@@YAXXZ
 ; CHECK:      }
-; CHECK:      UDT {
+; CHECK:      UDTSym {
+; CHECK-NEXT:   Kind: S_UDT (0x1108)
 ; CHECK-NEXT:   Type: int (0x74)
 ; CHECK-NEXT:   UDTName: f::FOO
 ; CHECK-NEXT: }
 ; CHECK-NEXT: ProcEnd {
-; CHECK-NEXT: }
 
-; CHECK:      ProcStart {
+; CHECK:      {{.*}}Proc{{.*}}Sym {
 ; CHECK:        DisplayName: g
 ; CHECK:        LinkageName: ?g@@YAMPEAUS@@@Z
 ; CHECK:      }
-; CHECK:      UDT {
+; CHECK:      UDTSym {
+; CHECK-NEXT:   Kind: S_UDT (0x1108)
 ; CHECK-NEXT:   Type: g::pun (0x{{[0-9A-F]+}})
 ; CHECK-NEXT:   UDTName: g::pun
 ; CHECK-NEXT: }
 ; CHECK-NEXT: ProcEnd {
-; CHECK-NEXT: }
 
 ; CHECK:      Subsection
-; CHECK-NOT:  ProcStart
-; CHECK:      UDT {
+; CHECK-NOT:  {{.*}}Proc{{.*}}Sym
+; CHECK:      UDTSym {
+; CHECK-NEXT:   Kind: S_UDT (0x1108)
 ; CHECK-NEXT: Type: S (0x{{[0-9A-F]+}})
 ; CHECK-NEXT: UDTName: S
-; CHECK:      UDT {
+; CHECK:      UDTSym {
+; CHECK-NEXT:   Kind: S_UDT (0x1108)
 ; CHECK-NEXT: Type: <unnamed-tag> (0x{{[0-9A-F]+}})
 ; CHECK-NEXT: UDTName: U
-; CHECK-NOT: UDT {
+; CHECK-NOT: UDTSym {
 
 %struct.U = type { i32 }
 %struct.S = type { i32 }
