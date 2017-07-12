@@ -4905,11 +4905,11 @@ void SwiftASTContext::AddDebuggerClient(
 }
 
 SwiftASTContext::ExtraTypeInformation::ExtraTypeInformation()
-    : m_is_trivial_option_set(false), m_is_zero_size(false) {}
+    : m_flags.m_is_trivial_option_set(false), m_flags.m_is_zero_size(false) {}
 
 SwiftASTContext::ExtraTypeInformation::ExtraTypeInformation(
     swift::CanType swift_can_type)
-    : m_is_trivial_option_set(false), m_is_zero_size(false) {
+    : m_flags.m_is_trivial_option_set(false), m_flags.m_is_zero_size(false) {
   static ConstString g_rawValue("rawValue");
 
   swift::ASTContext &ast_ctx = swift_can_type->getASTContext();
@@ -4927,7 +4927,7 @@ SwiftASTContext::ExtraTypeInformation::ExtraTypeInformation(
                  nominal_decl->getStoredProperties()) {
               swift::Identifier name = stored_property->getName();
               if (name.str() == g_rawValue.GetStringRef()) {
-                m_is_trivial_option_set = true;
+                m_flags.m_is_trivial_option_set = true;
                 break;
               }
             }
@@ -4942,7 +4942,7 @@ SwiftASTContext::ExtraTypeInformation::ExtraTypeInformation(
     if (!metatype_type->hasRepresentation() ||
         (swift::MetatypeRepresentation::Thin ==
          metatype_type->getRepresentation()))
-      m_is_zero_size = true;
+      m_flags.m_is_zero_size = true;
   } else if (auto enum_decl = swift_can_type->getEnumOrBoundGenericEnum()) {
     size_t num_nopayload = 0, num_payload = 0;
     for (auto the_case : enum_decl->getAllElements()) {
@@ -4955,7 +4955,7 @@ SwiftASTContext::ExtraTypeInformation::ExtraTypeInformation(
       }
     }
     if (num_nopayload == 1 && num_payload == 0)
-      m_is_zero_size = true;
+      m_flags.m_is_zero_size = true;
   } else if (auto struct_decl =
                  swift_can_type->getStructOrBoundGenericStruct()) {
     bool has_storage = false;
@@ -4969,10 +4969,10 @@ SwiftASTContext::ExtraTypeInformation::ExtraTypeInformation(
         }
       }
     }
-    m_is_zero_size = !has_storage;
+    m_flags.m_is_zero_size = !has_storage;
   } else if (auto tuple_type = swift::dyn_cast_or_null<swift::TupleType>(
                  swift_can_type)) {
-    m_is_zero_size = (tuple_type->getNumElements() == 0);
+    m_flags.m_is_zero_size = (tuple_type->getNumElements() == 0);
   }
 }
 
@@ -5357,7 +5357,7 @@ bool SwiftASTContext::IsPossibleZeroSizeType(
     return ast
         ->GetExtraTypeInformation(
             GetCanonicalSwiftType(compiler_type).getPointer())
-        .m_is_zero_size;
+        .m_flags.m_is_zero_size;
   return false;
 }
 
@@ -5392,7 +5392,7 @@ bool SwiftASTContext::IsTrivialOptionSetType(
   if (compiler_type.IsValid() &&
       llvm::dyn_cast_or_null<SwiftASTContext>(compiler_type.GetTypeSystem()))
     return GetExtraTypeInformation(compiler_type.GetOpaqueQualType())
-        .m_is_trivial_option_set;
+        .m_flags.m_is_trivial_option_set;
   return false;
 }
 

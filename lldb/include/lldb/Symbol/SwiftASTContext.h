@@ -383,7 +383,7 @@ public:
     struct {
       bool m_is_trivial_option_set : 1;
       bool m_is_zero_size : 1;
-    };
+    } m_flags;
 
     ExtraTypeInformation();
 
