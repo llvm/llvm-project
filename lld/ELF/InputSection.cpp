@@ -468,7 +468,7 @@ static uint64_t getAArch64UndefinedRelativeWeakVA(uint64_t Type, uint64_t A,
 static uint64_t getARMStaticBase(const SymbolBody &Body) {
   OutputSection *OS = Body.getOutputSection();
   if (!OS || !OS->FirstInPtLoad)
-    fatal("SBREL relocation to " + Body.getName() + " without static base\n");
+    fatal("SBREL relocation to " + Body.getName() + " without static base");
   return OS->FirstInPtLoad->Addr;
 }
 

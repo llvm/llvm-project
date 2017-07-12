@@ -23,6 +23,8 @@ public:
 // CHECK-NEXT: c++-stdlib-inlining = true
 // CHECK-NEXT: c++-template-inlining = true
 // CHECK-NEXT: cfg-conditional-static-initializers = true
+// CHECK-NEXT: cfg-implicit-dtors = true
+// CHECK-NEXT: cfg-lifetime = false
 // CHECK-NEXT: cfg-temporary-dtors = false
 // CHECK-NEXT: faux-bodies = true
 // CHECK-NEXT: graph-trim-interval = 1000
@@ -38,4 +40,4 @@ public:
 // CHECK-NEXT: region-store-small-struct-limit = 2
 // CHECK-NEXT: widen-loops = false
 // CHECK-NEXT: [stats]
-// CHECK-NEXT: num-entries = 20
+// CHECK-NEXT: num-entries = 22
