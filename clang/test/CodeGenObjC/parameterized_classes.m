@@ -96,3 +96,31 @@ void blockTest(NSMutableArray<void (^)(void)> *array, NSString *name) {
   _destination = a;
 }
 @end
+
+// CHECK-LABEL: define internal void @"\01-[C0 foo1]"(
+// CHECK: {{.*}} = alloca
+// CHECK: {{.*}} = alloca
+// CHECK: %[[D:.*]] = alloca %[[TY:.*]]*
+// CHECK: %[[TEMP:.*]] = alloca %[[TY]]*
+// CHECK: %[[V4:.*]] = load %[[TY]]*, %[[TY]]** %[[D]]
+// CHECK: store %[[TY]]* %[[V4]], %[[TY]]** %[[TEMP]]
+// CHECK: %[[V7:.*]] = bitcast %[[TY]]** %[[TEMP]] to i8**
+// CHECK: call void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*, i8**)*)(i8* %{{.*}}, i8* %{{.*}}, i8** %[[V7]])
+
+@interface P0<ObjectType> : NSObject
+- (void)m0:(ObjectType *)first;
+@end
+
+@interface C0 : NSObject
+-(void)foo1;
+@end
+
+@implementation C0 {
+  P0<NSString *> *x;
+}
+
+-(void)foo1 {
+  NSString *d;
+  [x m0:&d];
+}
+@end
