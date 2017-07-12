@@ -116,13 +116,15 @@ IndexerQuery::loadResultsFromYAML(StringRef Source,
       for (const auto &PredicateResult : Result.PredicateResults) {
         if (PredicateResult.Name != ActualPredicate.Name)
           continue;
-        std::vector<PersistentDeclRef<Decl>> Output;
+        std::vector<Indexed<PersistentDeclRef<Decl>>> Output;
         for (const auto &ResultTuple :
              zip(DQ->getInputs(), PredicateResult.IntegerValues)) {
           const Decl *D = std::get<0>(ResultTuple);
           int Result = std::get<1>(ResultTuple);
-          Output.push_back(PersistentDeclRef<Decl>::create(
-              (IsNot ? !Result : !!Result) ? D : nullptr));
+          bool Value = (IsNot ? !Result : !!Result);
+          Output.push_back(Indexed<PersistentDeclRef<Decl>>(
+              PersistentDeclRef<Decl>::create(Value ? D : nullptr),
+              Value ? QueryBoolResult::Yes : QueryBoolResult::No));
         }
         DQ->setOutput(std::move(Output));
         break;

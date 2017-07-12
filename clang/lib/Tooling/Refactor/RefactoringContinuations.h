@@ -61,8 +61,13 @@ struct StateTraits<ArrayRef<const T *>>
 template <typename T>
 struct StateTraits<std::unique_ptr<indexer::ManyToManyDeclarationsQuery<T>>>
     : std::enable_if<std::is_base_of<Decl, T>::value, ValidBase>::type {
-  using StoredResultType = std::vector<const T *>;
-  using PersistentType = std::vector<PersistentDeclRef<T>>;
+  using StoredResultType = std::vector<indexer::Indexed<const T *>>;
+  using PersistentType = std::vector<indexer::Indexed<PersistentDeclRef<T>>>;
+};
+
+template <> struct StateTraits<std::vector<std::string>> {
+  using StoredResultType = std::vector<std::string>;
+  using PersistentType = std::vector<std::string>;
 };
 
 /// Conversion functions convert the TU-specific state to a TU independent
@@ -88,12 +93,18 @@ std::vector<PersistentDeclRef<T>> convertToPersistentRepresentation(
 }
 
 template <typename T>
-std::vector<PersistentDeclRef<T>> convertToPersistentRepresentation(
+std::vector<indexer::Indexed<PersistentDeclRef<T>>>
+convertToPersistentRepresentation(
     std::unique_ptr<indexer::ManyToManyDeclarationsQuery<T>> &Query,
     typename std::enable_if<std::is_base_of<Decl, T>::value>::type * =
         nullptr) {
   Query->invalidateTUSpecificState();
   return Query->getOutput();
+}
+
+inline std::vector<std::string>
+convertToPersistentRepresentation(const std::vector<std::string> &Values) {
+  return Values;
 }
 
 /// Converts the TU-independent state to the TU-specific state.
@@ -154,12 +165,45 @@ public:
     return Results;
   }
 
+  template <typename T>
+  bool addConvertible(
+      const std::vector<indexer::Indexed<PersistentDeclRef<T>>> &Refs,
+      typename std::enable_if<std::is_base_of<Decl, T>::value>::type * =
+          nullptr) {
+    for (const auto &Ref : Refs) {
+      if (!Ref.Decl.USR.empty())
+        ConvertedDeclRefs[Ref.Decl.USR] = nullptr;
+    }
+    return true;
+  }
+
+  template <typename T>
+  std::vector<indexer::Indexed<const T *>>
+  convert(const std::vector<indexer::Indexed<PersistentDeclRef<T>>> &Refs,
+          typename std::enable_if<std::is_base_of<Decl, T>::value>::type * =
+              nullptr) {
+    std::vector<indexer::Indexed<const T *>> Results;
+    Results.reserve(Refs.size());
+    // Allow nulls in the produced array, the continuation will have to deal
+    // with them by itself.
+    for (const auto &Ref : Refs)
+      Results.push_back(indexer::Indexed<const T *>(
+          dyn_cast_or_null<T>(lookupDecl(Ref.Decl.USR)), Ref.IsNotDefined));
+    return Results;
+  }
+
   bool addConvertible(const PersistentFileID &) {
     // Do nothing since FileIDs are converted one-by-one.
     return true;
   }
 
   FileID convert(const PersistentFileID &Ref);
+
+  bool addConvertible(const std::vector<std::string> &) { return true; }
+
+  std::vector<std::string> convert(const std::vector<std::string> &Values) {
+    return Values;
+  }
 
   /// Converts the added persistent state into TU-specific state using one
   /// efficient operation.

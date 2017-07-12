@@ -76,10 +76,9 @@ public:
   static void addInlineBody(const CXXMethodDecl *MD, const ASTContext &Context,
                             std::vector<RefactoringReplacement> &Replacements);
 
-  static llvm::Expected<RefactoringResult>
-  runInImplementationAST(ASTContext &Context, const FileID &File,
-                         const CXXRecordDecl *Class,
-                         ArrayRef<const CXXMethodDecl *> SelectedMethods);
+  static llvm::Expected<RefactoringResult> runInImplementationAST(
+      ASTContext &Context, const FileID &File, const CXXRecordDecl *Class,
+      ArrayRef<indexer::Indexed<const CXXMethodDecl *>> SelectedMethods);
 };
 
 class ImplementDeclaredObjCMethodsOperation
@@ -104,11 +103,11 @@ public:
           const RefactoringOptionSet &Options,
           unsigned SelectedCandidateIndex) override;
 
-  static llvm::Expected<RefactoringResult>
-  runInImplementationAST(ASTContext &Context, const FileID &File,
-                         const ObjCContainerDecl *Container,
-                         const ObjCInterfaceDecl *Interface,
-                         ArrayRef<const ObjCMethodDecl *> SelectedMethods);
+  static llvm::Expected<RefactoringResult> runInImplementationAST(
+      ASTContext &Context, const FileID &File,
+      const ObjCContainerDecl *Container, const ObjCInterfaceDecl *Interface,
+      ArrayRef<std::string> MethodDeclarations,
+      ArrayRef<indexer::Indexed<const ObjCMethodDecl *>> SelectedMethods);
 };
 
 /// Returns true if the given Objective-C method has an implementation.
@@ -224,7 +223,7 @@ static bool containsUsingOf(const NamespaceDecl *ND,
 llvm::Expected<RefactoringResult>
 ImplementDeclaredCXXMethodsOperation::runInImplementationAST(
     ASTContext &Context, const FileID &File, const CXXRecordDecl *Class,
-    ArrayRef<const CXXMethodDecl *> SelectedMethods) {
+    ArrayRef<indexer::Indexed<const CXXMethodDecl *>> SelectedMethods) {
   if (!Class)
     return llvm::make_error<RefactoringOperationError>(
         "the target class is not defined in the continuation AST unit");
@@ -316,7 +315,8 @@ ImplementDeclaredCXXMethodsOperation::runInImplementationAST(
   PP.SuppressLifetimeQualifiers = true;
   PP.SuppressUnwrittenScope = true;
   OS << "\n";
-  for (const CXXMethodDecl *MD : SelectedMethods) {
+  for (const auto &I : SelectedMethods) {
+    const CXXMethodDecl *MD = I.Decl;
     // Check if the method is already defined.
     if (!MD)
       continue;
@@ -369,24 +369,41 @@ ImplementDeclaredObjCMethodsOperation::perform(
     ASTContext &Context, const Preprocessor &ThePreprocessor,
     const RefactoringOptionSet &Options, unsigned SelectedCandidateIndex) {
   using namespace indexer;
+
+  // Print the methods before running the continuation because the continuation
+  // TU might not have these method declarations (e.g. category implemented in
+  // the class implementation).
+  PrintingPolicy PP = Context.getPrintingPolicy();
+  PP.PolishForDeclaration = true;
+  PP.SuppressStrongLifetime = true;
+  PP.SuppressLifetimeQualifiers = true;
+  PP.SuppressUnwrittenScope = true;
+  std::vector<std::string> MethodDeclarations;
+  for (const ObjCMethodDecl *MD : SelectedMethods) {
+    std::string MethodDeclStr;
+    llvm::raw_string_ostream MethodOS(MethodDeclStr);
+    MD->print(MethodOS, PP);
+    MethodDeclarations.push_back(std::move(MethodOS.str()));
+  }
+
   return continueInExternalASTUnit(
       fileThatShouldContainImplementationOf(Container), runInImplementationAST,
-      Container, Interface,
+      Container, Interface, MethodDeclarations,
       filter(llvm::makeArrayRef(SelectedMethods),
              [](const DeclEntity &D) { return !D.isDefined(); }));
 }
 
 static const ObjCImplDecl *
 getImplementationContainer(const ObjCContainerDecl *Container,
-                           const ObjCInterfaceDecl *Interface) {
+                           const ObjCInterfaceDecl *Interface = nullptr) {
   if (!Container)
-    return nullptr;
+    return Interface ? getImplementationContainer(Interface) : nullptr;
   if (const auto *ID = dyn_cast<ObjCInterfaceDecl>(Container))
     return ID->getImplementation();
   if (const auto *CD = dyn_cast<ObjCCategoryDecl>(Container)) {
     if (const auto *Impl = CD->getImplementation())
       return Impl;
-    return getImplementationContainer(Interface, /*Interface=*/nullptr);
+    return getImplementationContainer(Interface);
   }
   return nullptr;
 }
@@ -395,7 +412,8 @@ llvm::Expected<RefactoringResult>
 ImplementDeclaredObjCMethodsOperation::runInImplementationAST(
     ASTContext &Context, const FileID &File, const ObjCContainerDecl *Container,
     const ObjCInterfaceDecl *Interface,
-    ArrayRef<const ObjCMethodDecl *> SelectedMethods) {
+    ArrayRef<std::string> MethodDeclarations,
+    ArrayRef<indexer::Indexed<const ObjCMethodDecl *>> SelectedMethods) {
   const ObjCImplDecl *ImplementationContainer =
       getImplementationContainer(Container, Interface);
   if (!ImplementationContainer)
@@ -408,21 +426,15 @@ ImplementDeclaredObjCMethodsOperation::runInImplementationAST(
   std::string MethodString;
   llvm::raw_string_ostream OS(MethodString);
 
-  PrintingPolicy PP = Context.getPrintingPolicy();
-  PP.PolishForDeclaration = true;
-  PP.SuppressStrongLifetime = true;
-  PP.SuppressLifetimeQualifiers = true;
-  PP.SuppressUnwrittenScope = true;
-  for (const ObjCMethodDecl *MD : SelectedMethods) {
+  assert(MethodDeclarations.size() >= SelectedMethods.size() &&
+         "fewer declarations than selected methods?");
+  for (const auto &I : llvm::enumerate(SelectedMethods)) {
+    indexer::Indexed<const ObjCMethodDecl *> Decl = I.value();
     // Skip methods that are already defined.
-    if (!MD)
+    if (!Decl.isNotDefined())
       continue;
 
-    std::string MethodDeclStr;
-    llvm::raw_string_ostream MethodOS(MethodDeclStr);
-    MD->print(MethodOS, PP);
-
-    OS << StringRef(MethodOS.str()).drop_back(); // Drop the ';'
+    OS << StringRef(MethodDeclarations[I.index()]).drop_back(); // Drop the ';'
     OS << " { \n  <#code#>;\n}\n\n";
   }
   SourceLocation InsertionLoc = ImplementationContainer->getLocEnd();

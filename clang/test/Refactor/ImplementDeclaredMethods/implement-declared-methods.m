@@ -77,3 +77,5 @@
 @end
 
 // RUN: clang-refactor-test perform -action implement-declared-methods -selected=category-no-impl -continuation-file=%s -query-results=query-all-impl %s | FileCheck --check-prefix=CHECK-CAT-NO-IMPL %s
+// It should work even in another TU!
+// RUN: clang-refactor-test perform -action implement-declared-methods -selected=category-no-impl -continuation-file=%S/Inputs/objcClass.m -query-results=query-all-impl %s | FileCheck --check-prefix=CHECK-CAT-NO-IMPL %S/Inputs/objcClass.m

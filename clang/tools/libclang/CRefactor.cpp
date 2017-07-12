@@ -1024,7 +1024,7 @@ public:
   struct QueryWrapper {
     indexer::IndexerQuery *Query;
     CXTranslationUnit TU;
-    std::vector<PersistentDeclRef<Decl>> DeclResults;
+    std::vector<indexer::Indexed<PersistentDeclRef<Decl>>> DeclResults;
     unsigned ConsumedResults = 0;
 
     QueryWrapper(indexer::IndexerQuery *Query, CXTranslationUnit TU)
@@ -1884,13 +1884,17 @@ clang_IndexerQuery_consumeIntResult(CXIndexerQuery Query, unsigned CursorIndex,
     return CXIndexerQueryAction_None;
   if (Wrapper->DeclResults.empty())
     Wrapper->DeclResults.resize(DQ->getInputs().size(),
-                                PersistentDeclRef<Decl>::create(nullptr));
+                                indexer::Indexed<PersistentDeclRef<Decl>>(
+                                    PersistentDeclRef<Decl>::create(nullptr)));
   // Filter the declarations!
   bool IsNot = false;
   if (isa<indexer::detail::DeclPredicateNotPredicate>(DQ->getPredicateNode()))
     IsNot = true;
-  Wrapper->DeclResults[CursorIndex] = PersistentDeclRef<Decl>::create(
-      (IsNot ? !Value : !!Value) ? DQ->getInputs()[CursorIndex] : nullptr);
+  bool Result = IsNot ? !Value : !!Value;
+  Wrapper->DeclResults[CursorIndex] = indexer::Indexed<PersistentDeclRef<Decl>>(
+      PersistentDeclRef<Decl>::create(Result ? DQ->getInputs()[CursorIndex]
+                                             : nullptr),
+      Result ? indexer::QueryBoolResult::Yes : indexer::QueryBoolResult::No);
   Wrapper->ConsumedResults++;
   if (Wrapper->ConsumedResults == Wrapper->DeclResults.size()) {
     // We've received all the results, pass them back to the query.
