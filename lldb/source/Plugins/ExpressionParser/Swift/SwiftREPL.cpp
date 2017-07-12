@@ -67,7 +67,7 @@ lldb::REPLSP SwiftREPL::CreateInstance(Status &err, lldb::LanguageType language,
     // Check that we can get a type system, or we aren't going anywhere:
     TypeSystem *type_system =
       target->GetScratchTypeSystemForLanguage(nullptr, eLanguageTypeSwift, 
-                                              true);
+                                              true, repl_options);
     if (!type_system) {
       err.SetErrorString("Could not construct an expression "
                          "context for the REPL.\n");
@@ -170,9 +170,9 @@ lldb::REPLSP SwiftREPL::CreateInstance(Status &err, lldb::LanguageType language,
                         // going anywhere.  Remember to pass in the repl_options
                         // in case they set up framework paths we need, etc.
                         TypeSystem *type_system =
-                        target_sp->GetScratchTypeSystemForLanguage(nullptr, 
-                                                              eLanguageTypeSwift, 
-                                                              true);
+                            target_sp->GetScratchTypeSystemForLanguage(
+                                nullptr, eLanguageTypeSwift, true,
+                                repl_options);
                         if (!type_system) {
                           err.SetErrorString("Could not construct an expression"
                                              " context for the REPL.\n");

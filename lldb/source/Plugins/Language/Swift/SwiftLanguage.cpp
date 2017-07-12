@@ -1323,14 +1323,14 @@ std::unique_ptr<Language::TypeScavenger> SwiftLanguage::GetTypeScavenger() {
             Target *target = exe_scope->CalculateTarget().get();
             if (target) {
               const bool create_on_demand = false;
-              Error error;
+              Status error;
               SwiftASTContext *ast_ctx(
                   target->GetScratchSwiftASTContext(error, create_on_demand));
               if (ast_ctx) {
                 const bool is_mangled = true;
                 Mangled mangled(ConstString(input), is_mangled);
                 if (mangled.GuessLanguage() == eLanguageTypeSwift) {
-                  Error error;
+                  Status error;
                   auto candidate =
                       ast_ctx->GetTypeFromMangledTypename(input, error);
                   if (candidate.IsValid() && error.Success())
@@ -1382,7 +1382,7 @@ std::unique_ptr<Language::TypeScavenger> SwiftLanguage::GetTypeScavenger() {
           if (exe_scope) {
             Target *target = exe_scope->CalculateTarget().get();
             const bool create_on_demand = false;
-            Error error;
+            Status error;
             SwiftASTContext *ast_ctx(
                 target->GetScratchSwiftASTContext(error, create_on_demand));
             if (ast_ctx) {
@@ -1589,7 +1589,7 @@ SwiftLanguage::GetDeclPrintingHelper() {
   };
 }
 
-LazyBool SwiftLanguage::IsLogicalTrue(ValueObject &valobj, Error &error) {
+LazyBool SwiftLanguage::IsLogicalTrue(ValueObject &valobj, Status &error) {
   static ConstString g_SwiftBool("Swift.Bool");
   static ConstString g_value("_value");
 

@@ -113,7 +113,7 @@ bool SwiftHashedContainerNativeBufferHandler::ReadBitmaskAtIndex(Index i) {
     return false;
   const size_t word = i / (8 * m_ptr_size);
   const size_t offset = i % (8 * m_ptr_size);
-  Error error;
+  Status error;
   const lldb::addr_t effective_ptr = m_bitmask_ptr + (word * m_ptr_size);
 #ifdef DICTIONARY_IS_BROKEN_AGAIN
   printf("for idx = %" PRIu64
@@ -164,7 +164,7 @@ bool SwiftHashedContainerNativeBufferHandler::GetDataForKeyAtCell(
     return false;
 
   lldb::addr_t addr = GetLocationOfKeyAtCell(i);
-  Error error;
+  Status error;
   m_process->ReadMemory(addr, data_ptr, m_key_stride, error);
   if (error.Fail())
     return false;
@@ -178,7 +178,7 @@ bool SwiftHashedContainerNativeBufferHandler::GetDataForValueAtCell(
     return false;
 
   lldb::addr_t addr = GetLocationOfValueAtCell(i);
-  Error error;
+  Status error;
   m_process->ReadMemory(addr, data_ptr, m_value_stride, error);
   if (error.Fail())
     return false;
@@ -240,7 +240,7 @@ SwiftHashedContainerNativeBufferHandler::
     if (buffer_ptr == 0 || buffer_ptr == LLDB_INVALID_ADDRESS)
       return;
 
-    Error error;
+    Status error;
     m_capacity =
         m_process->ReadPointerFromMemory(buffer_ptr + 2 * m_ptr_size, error);
     if (error.Fail())
@@ -297,7 +297,7 @@ SwiftHashedContainerBufferHandler::CreateBufferHandlerForNativeStorageOwner(
     static ConstString g_nativeStorage("nativeStorage");
     static ConstString g_buffer("buffer");
     
-    Error error;
+    Status error;
     
     ProcessSP process_sp(valobj.GetProcessSP());
     if (!process_sp)
@@ -359,7 +359,7 @@ SwiftHashedContainerBufferHandler::CreateBufferHandler(
   static ConstString g__storage("_storage");
   static ConstString g_Some("some");
 
-  Error error;
+  Status error;
 
   ProcessSP process_sp(valobj.GetProcessSP());
   if (!process_sp)

@@ -81,7 +81,7 @@ static StructuredData::ArraySP ReadThreads(ProcessSP process_sp, addr_t addr) {
   int ptr_size = process_sp->GetAddressByteSize();
   Target &target = process_sp->GetTarget();
 
-  Error read_error;
+  Status read_error;
 
   uint64_t num_extra_threads = process_sp->ReadUnsignedIntegerFromMemory(addr, ptr_size, 0, read_error);
   if (num_extra_threads > 16) num_extra_threads = 16;
@@ -127,7 +127,7 @@ static StructuredData::ArraySP ReadFixits(ProcessSP process_sp, addr_t addr) {
   int ptr_size = process_sp->GetAddressByteSize();
   Target &target = process_sp->GetTarget();
 
-  Error read_error;
+  Status read_error;
   uint64_t num_fixits = process_sp->ReadUnsignedIntegerFromMemory(addr, ptr_size, 0, read_error);
   if (num_fixits > 16) num_fixits = 16;
   addr_t fixits_ptr = process_sp->ReadUnsignedIntegerFromMemory(addr + ptr_size, ptr_size, 0, read_error);
@@ -177,7 +177,7 @@ static StructuredData::ArraySP ReadNotes(ProcessSP process_sp, addr_t addr) {
   int ptr_size = process_sp->GetAddressByteSize();
   Target &target = process_sp->GetTarget();
 
-  Error read_error;
+  Status read_error;
   uint64_t num_notes = process_sp->ReadUnsignedIntegerFromMemory(addr, ptr_size, 0, read_error);
   if (num_notes > 16) num_notes = 16;
   addr_t fixits_ptr = process_sp->ReadUnsignedIntegerFromMemory(addr + ptr_size, ptr_size, 0, read_error);

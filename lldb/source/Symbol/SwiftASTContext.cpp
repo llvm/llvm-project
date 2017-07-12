@@ -4905,11 +4905,11 @@ void SwiftASTContext::AddDebuggerClient(
 }
 
 SwiftASTContext::ExtraTypeInformation::ExtraTypeInformation()
-    : m_flags.m_is_trivial_option_set(false), m_flags.m_is_zero_size(false) {}
+    : m_flags(false, false) {}
 
 SwiftASTContext::ExtraTypeInformation::ExtraTypeInformation(
     swift::CanType swift_can_type)
-    : m_flags.m_is_trivial_option_set(false), m_flags.m_is_zero_size(false) {
+    : m_flags(false, false) {
   static ConstString g_rawValue("rawValue");
 
   swift::ASTContext &ast_ctx = swift_can_type->getASTContext();

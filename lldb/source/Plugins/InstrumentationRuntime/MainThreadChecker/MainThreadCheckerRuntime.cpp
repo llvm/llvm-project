@@ -94,7 +94,7 @@ static std::string TranslateObjCNameToSwiftName(std::string className,
       /*KeepEmpty*/ false);
 
   llvm::SmallVector<swift::Identifier, 2> selectorIdentifiers;
-  for (auto i = 0; i < parts.size(); i++) {
+  for (size_t i = 0; i < parts.size(); i++) {
     selectorIdentifiers.push_back(ctx->GetIdentifier(parts[i]));
   }
 

@@ -1947,10 +1947,12 @@ void Target::ImageSearchPathsChanged(const PathMappingList &path_list,
 #ifdef __clang_analyzer__
 // See GetScratchTypeSystemForLanguage() in Target.h
 TypeSystem *Target::GetScratchTypeSystemForLanguageImpl(
-    Status *error, lldb::LanguageType language, bool create_on_demand)
+    Status *error, lldb::LanguageType language, bool create_on_demand,
+    const char *compiler_options)
 #else
 TypeSystem *Target::GetScratchTypeSystemForLanguage(
-    Status *error, lldb::LanguageType language, bool create_on_demand)
+    Status *error, lldb::LanguageType language, bool create_on_demand,
+    const char *compiler_options)
 #endif
 {
   if (!m_valid)

@@ -60,7 +60,7 @@ public:
 
   DumpValueObjectOptions::DeclPrintingHelper GetDeclPrintingHelper() override;
 
-  LazyBool IsLogicalTrue(ValueObject &valobj, Error &error) override;
+  LazyBool IsLogicalTrue(ValueObject &valobj, Status &error) override;
 
   bool IsUninitializedReference(ValueObject &valobj) override;
 

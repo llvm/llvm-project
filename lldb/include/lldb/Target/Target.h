@@ -1021,20 +1021,21 @@ public:
   // The analyzer will then assume that it must be null-checked at every use,
   // which is what we want.
   TypeSystem *GetScratchTypeSystemForLanguage(
-      Status *error, lldb::LanguageType language, bool create_on_demand = true)
-      __attribute__((always_inline)) {
-    TypeSystem *ret = GetScratchTypeSystemForLanguageImpl(
-        error, language, create_on_demand);
+      Status *error, lldb::LanguageType language, bool create_on_demand = true,
+      const char *compiler_options = nullptr) __attribute__((always_inline)) {
+    TypeSystem *ret =
+        GetScratchTypeSystemForLanguageImpl(error, language, create_on_demand);
     return ret ? ret : nullptr;
   }
 
-  TypeSystem *
-  GetScratchTypeSystemForLanguageImpl(Status *error, lldb::LanguageType language,
-                                      bool create_on_demand = true);
+  TypeSystem *GetScratchTypeSystemForLanguageImpl(
+      Status *error, lldb::LanguageType language, bool create_on_demand = true,
+      const char *compiler_options = nullptr);
 #else
   TypeSystem *
   GetScratchTypeSystemForLanguage(Status *error, lldb::LanguageType language,
-                                  bool create_on_demand = true);
+                                  bool create_on_demand = true,
+                                  const char *compiler_options = nullptr);
 #endif
 
 #ifdef __clang_analyzer__

@@ -100,7 +100,6 @@
 		23059A101958B319007B8189 /* SBUnixSignals.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23059A0F1958B319007B8189 /* SBUnixSignals.cpp */; };
 		23059A121958B3B2007B8189 /* SBUnixSignals.h in Headers */ = {isa = PBXBuildFile; fileRef = 23059A111958B37B007B8189 /* SBUnixSignals.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		230EC45B1D63C3BA008DF59F /* ThreadPlanCallOnFunctionExit.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 230EC4581D63C3A7008DF59F /* ThreadPlanCallOnFunctionExit.cpp */; };
-		23150FC01DB939F800EA5AB6 /* CMakeLists.txt in Copy Files */ = {isa = PBXBuildFile; fileRef = 23150FBD1DB939F800EA5AB6 /* CMakeLists.txt */; };
 		23150FD21DB93C1600EA5AB6 /* x86AssemblyInspectionEngine.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23150FBE1DB939F800EA5AB6 /* x86AssemblyInspectionEngine.cpp */; };
 		2326CF441BDD643700A5CEAC /* liblldb-core.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 2689FFCA13353D7A00698AC0 /* liblldb-core.a */; };
 		2326CF491BDD67D800A5CEAC /* libncurses.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 2326CF471BDD67C100A5CEAC /* libncurses.dylib */; };
@@ -128,20 +127,14 @@
 		238F2BA91D2C85FA001FF92A /* StructuredDataDarwinLog.h in Headers */ = {isa = PBXBuildFile; fileRef = 238F2BA71D2C85FA001FF92A /* StructuredDataDarwinLog.h */; };
 		239481861C59EBDD00DF7168 /* libncurses.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 239481851C59EBDD00DF7168 /* libncurses.dylib */; };
 		239D380B1D70FBAC00D8E937 /* FileSpec.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 239D38091D70FB9900D8E937 /* FileSpec.cpp */; };
-		23A452021DBFF67000E44395 /* CMakeLists.txt in Copy Files */ = {isa = PBXBuildFile; fileRef = 23A452001DBFF67000E44395 /* CMakeLists.txt */; };
 		23A452031DBFF67700E44395 /* BreakpointIDTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23A451FF1DBFF67000E44395 /* BreakpointIDTest.cpp */; };
 		23A452081DBFF6A500E44395 /* ArchSpecTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23A452041DBFF69800E44395 /* ArchSpecTest.cpp */; };
 		23A452091DBFF6AB00E44395 /* StructuredDataTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23A452051DBFF69800E44395 /* StructuredDataTest.cpp */; };
-		23A4520D1DBFF77400E44395 /* CMakeLists.txt in Copy Files */ = {isa = PBXBuildFile; fileRef = 23A4520B1DBFF77400E44395 /* CMakeLists.txt */; };
 		23A4520F1DBFF77700E44395 /* MinidumpParserTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23A4520C1DBFF77400E44395 /* MinidumpParserTest.cpp */; };
 		23A4522E1DC00D5D00E44395 /* MinidumpParser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23A452211DC00D2F00E44395 /* MinidumpParser.cpp */; };
 		23A4522F1DC00D5D00E44395 /* MinidumpTypes.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23A452231DC00D2F00E44395 /* MinidumpTypes.cpp */; };
 		23A452301DC00D5D00E44395 /* RegisterContextMinidump_x86_64.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23A452251DC00D2F00E44395 /* RegisterContextMinidump_x86_64.cpp */; };
 		23CB14E41D66CA2200EDDDE1 /* libxml2.2.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 23CB14E31D66CA2200EDDDE1 /* libxml2.2.dylib */; };
-		23CB14F21D66CC9000EDDDE1 /* CMakeLists.txt in Copy Files */ = {isa = PBXBuildFile; fileRef = 23CB14F11D66CC9000EDDDE1 /* CMakeLists.txt */; };
-		23CB14F41D66CC9B00EDDDE1 /* CMakeLists.txt in Copy Files */ = {isa = PBXBuildFile; fileRef = 23CB14F31D66CC9B00EDDDE1 /* CMakeLists.txt */; };
-		23CB14F71D66CCD600EDDDE1 /* CMakeLists.txt in Copy Files */ = {isa = PBXBuildFile; fileRef = 23CB14F61D66CCD600EDDDE1 /* CMakeLists.txt */; };
-		23CB14FB1D66CCF100EDDDE1 /* CMakeLists.txt in Copy Files */ = {isa = PBXBuildFile; fileRef = 23CB14F91D66CCF100EDDDE1 /* CMakeLists.txt */; };
 		23CB15331D66DA9300EDDDE1 /* GoParserTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AEC6FF9F1BE970A2007882C1 /* GoParserTest.cpp */; };
 		23CB15341D66DA9300EDDDE1 /* CPlusPlusLanguageTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23CB14FA1D66CCF100EDDDE1 /* CPlusPlusLanguageTest.cpp */; };
 		23CB15351D66DA9300EDDDE1 /* UriParserTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2321F9461BDD346100BA9A93 /* UriParserTest.cpp */; };
@@ -743,9 +736,9 @@
 		490A966B1628C3BF00F0002E /* SBDeclaration.h in Headers */ = {isa = PBXBuildFile; fileRef = 9452573816262CEF00325455 /* SBDeclaration.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		49224F8A1BB9E4D20041AB62 /* SwiftUserExpression.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 49224F881BB9DA370041AB62 /* SwiftUserExpression.cpp */; };
 		49242C0F1A3B9A3D00DE9D6A /* AppleObjCDeclVendor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4997E6831A3B74D100733D2F /* AppleObjCDeclVendor.cpp */; };
-		492E8B021BA37DC80034B4D7 /* SwiftExpressionVariable.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 492E8B001BA37DC80034B4D7 /* SwiftExpressionVariable.cpp */; };
-		492DB7E71EC662B100B9E9AF /* Status.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 492DB7E61EC662B100B9E9AF /* Status.h */; };
+		492DB7E71EC662B100B9E9AF /* Status.h in Copy Files */ = {isa = PBXBuildFile; fileRef = 492DB7E61EC662B100B9E9AF /* Status.h */; };
 		492DB7EB1EC662E200B9E9AF /* Status.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 492DB7E81EC662D100B9E9AF /* Status.cpp */; };
+		492E8B021BA37DC80034B4D7 /* SwiftExpressionVariable.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 492E8B001BA37DC80034B4D7 /* SwiftExpressionVariable.cpp */; };
 		4939EA8D1BD56B6D00084382 /* REPL.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4939EA8C1BD56B6D00084382 /* REPL.cpp */; };
 		494260DA14579144003C1C78 /* VerifyDecl.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 494260D914579144003C1C78 /* VerifyDecl.cpp */; };
 		4947DE4A1E3C0B20008D6ED0 /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = 4947DE491E3C0B20008D6ED0 /* main.c */; };
@@ -1025,8 +1018,8 @@
 		AF33B4BE1C1FA441001B28D9 /* NetBSDSignals.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF33B4BC1C1FA441001B28D9 /* NetBSDSignals.cpp */; };
 		AF33B4BF1C1FA441001B28D9 /* NetBSDSignals.h in Headers */ = {isa = PBXBuildFile; fileRef = AF33B4BD1C1FA441001B28D9 /* NetBSDSignals.h */; };
 		AF37E10A17C861F20061E18E /* ProcessRunLock.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF37E10917C861F20061E18E /* ProcessRunLock.cpp */; };
-		AF3B27AA1AFC1E1100524996 /* ConnectionFileDescriptorPosix.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFDFDFD019E34D3400EAE509 /* ConnectionFileDescriptorPosix.cpp */; };
 		AF3A4AD21EA05C4700B5DEB4 /* PlatformRemoteDarwinDevice.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF41B78F1EA5D52C009E2985 /* PlatformRemoteDarwinDevice.cpp */; };
+		AF3B27AA1AFC1E1100524996 /* ConnectionFileDescriptorPosix.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFDFDFD019E34D3400EAE509 /* ConnectionFileDescriptorPosix.cpp */; };
 		AF41B7921EA5D52C009E2985 /* PlatformRemoteDarwinDevice.h in Headers */ = {isa = PBXBuildFile; fileRef = AF41B7901EA5D52C009E2985 /* PlatformRemoteDarwinDevice.h */; };
 		AF45FDE518A1F3AC0007051C /* AppleGetThreadItemInfoHandler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF45FDE318A1F3AC0007051C /* AppleGetThreadItemInfoHandler.cpp */; };
 		AF46419D1BEC2D98002FC614 /* PlatformAppleSimulator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF46419C1BEC2D98002FC614 /* PlatformAppleSimulator.cpp */; };
@@ -1352,8 +1345,7 @@
 			dstPath = "/$(DT_VARIANT)/$(DEVELOPER_INSTALL_DIR)/usr/share/man/man1";
 			dstSubfolderSpec = 0;
 			files = (
-				492DB7E71EC662B100B9E9AF /* Status.h in CopyFiles */,
-				AF90106515AB7D3600FF120D /* lldb.1 in CopyFiles */,
+				492DB7E71EC662B100B9E9AF /* Status.h in Copy Files */,
 			);
 			name = "Copy Files";
 			runOnlyForDeploymentPostprocessing = 1;
@@ -2574,10 +2566,10 @@
 		491193501226386000578B7F /* ASTStructExtractor.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ASTStructExtractor.cpp; path = ExpressionParser/Clang/ASTStructExtractor.cpp; sourceTree = "<group>"; };
 		49224F871BB9DA050041AB62 /* SwiftUserExpression.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = SwiftUserExpression.h; path = ExpressionParser/Swift/SwiftUserExpression.h; sourceTree = "<group>"; };
 		49224F881BB9DA370041AB62 /* SwiftUserExpression.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SwiftUserExpression.cpp; path = ExpressionParser/Swift/SwiftUserExpression.cpp; sourceTree = "<group>"; };
-		492E8B001BA37DC80034B4D7 /* SwiftExpressionVariable.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SwiftExpressionVariable.cpp; path = ExpressionParser/Swift/SwiftExpressionVariable.cpp; sourceTree = "<group>"; };
-		492E8B011BA37DC80034B4D7 /* SwiftExpressionVariable.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SwiftExpressionVariable.h; path = ExpressionParser/Swift/SwiftExpressionVariable.h; sourceTree = "<group>"; };
 		492DB7E61EC662B100B9E9AF /* Status.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Status.h; path = include/lldb/Utility/Status.h; sourceTree = "<group>"; };
 		492DB7E81EC662D100B9E9AF /* Status.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Status.cpp; path = source/Utility/Status.cpp; sourceTree = "<group>"; };
+		492E8B001BA37DC80034B4D7 /* SwiftExpressionVariable.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SwiftExpressionVariable.cpp; path = ExpressionParser/Swift/SwiftExpressionVariable.cpp; sourceTree = "<group>"; };
+		492E8B011BA37DC80034B4D7 /* SwiftExpressionVariable.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SwiftExpressionVariable.h; path = ExpressionParser/Swift/SwiftExpressionVariable.h; sourceTree = "<group>"; };
 		49307AAD11DEA4D90081F992 /* IRForTarget.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = IRForTarget.cpp; path = ExpressionParser/Clang/IRForTarget.cpp; sourceTree = "<group>"; };
 		49307AB111DEA4F20081F992 /* IRForTarget.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = IRForTarget.h; path = ExpressionParser/Clang/IRForTarget.h; sourceTree = "<group>"; };
 		4939EA8B1BD56B3700084382 /* REPL.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = REPL.h; path = include/lldb/Expression/REPL.h; sourceTree = "<group>"; };
@@ -3178,7 +3170,6 @@
 		AF33B4BC1C1FA441001B28D9 /* NetBSDSignals.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = NetBSDSignals.cpp; path = Utility/NetBSDSignals.cpp; sourceTree = "<group>"; };
 		AF33B4BD1C1FA441001B28D9 /* NetBSDSignals.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = NetBSDSignals.h; path = Utility/NetBSDSignals.h; sourceTree = "<group>"; };
 		AF37E10917C861F20061E18E /* ProcessRunLock.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ProcessRunLock.cpp; sourceTree = "<group>"; };
-		AFDFDFD019E34D3400EAE509 /* ConnectionFileDescriptorPosix.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ConnectionFileDescriptorPosix.cpp; sourceTree = "<group>"; };
 		AF3F54AE1B3BA59C00186E73 /* CrashReason.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CrashReason.cpp; sourceTree = "<group>"; };
 		AF3F54AF1B3BA59C00186E73 /* CrashReason.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CrashReason.h; sourceTree = "<group>"; };
 		AF3F54B21B3BA5D500186E73 /* POSIXStopInfo.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = POSIXStopInfo.cpp; sourceTree = "<group>"; };
@@ -3202,7 +3193,6 @@
 		AF46419C1BEC2D98002FC614 /* PlatformAppleSimulator.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PlatformAppleSimulator.cpp; sourceTree = "<group>"; };
 		AF46AE6819A708EC008BD829 /* AppleObjCClassDescriptorV2.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AppleObjCClassDescriptorV2.cpp; sourceTree = "<group>"; };
 		AF46AE6919A708EC008BD829 /* AppleObjCClassDescriptorV2.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AppleObjCClassDescriptorV2.h; sourceTree = "<group>"; };
-		AF507D3A1A846296007249DC /* NativeWatchpointList.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = NativeWatchpointList.cpp; sourceTree = "<group>"; };
 		AF62AAE51BEC2DE100A829B2 /* PlatformAppleTVSimulator.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PlatformAppleTVSimulator.cpp; sourceTree = "<group>"; };
 		AF6335E01C87B21E00F7D554 /* SymbolFilePDB.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SymbolFilePDB.cpp; path = PDB/SymbolFilePDB.cpp; sourceTree = "<group>"; };
 		AF6335E11C87B21E00F7D554 /* SymbolFilePDB.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SymbolFilePDB.h; path = PDB/SymbolFilePDB.h; sourceTree = "<group>"; };
@@ -3258,11 +3248,8 @@
 		AFCFF8221BEC2DBE008C2CCA /* PlatformAppleWatchSimulator.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PlatformAppleWatchSimulator.cpp; sourceTree = "<group>"; };
 		AFDD168719A6FDE40075888E /* AppleObjCTypeEncodingParser.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AppleObjCTypeEncodingParser.cpp; sourceTree = "<group>"; };
 		AFDD168819A6FDE40075888E /* AppleObjCTypeEncodingParser.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AppleObjCTypeEncodingParser.h; sourceTree = "<group>"; };
-		AFD65C7F1D9B5B2E00D93120 /* RegisterContextMinidump_x86_64.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RegisterContextMinidump_x86_64.cpp; sourceTree = "<group>"; };
-		AFD65C801D9B5B2E00D93120 /* RegisterContextMinidump_x86_64.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RegisterContextMinidump_x86_64.h; sourceTree = "<group>"; };
 		AFDFDFD019E34D3400EAE509 /* ConnectionFileDescriptorPosix.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ConnectionFileDescriptorPosix.cpp; sourceTree = "<group>"; };
-		AFEC3361194A8ABA00FF05C6 /* StructuredData.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = StructuredData.cpp; path = source/Core/StructuredData.cpp; sourceTree = "<group>"; };
-		AFEC5FD51D94F9380076A480 /* Testx86AssemblyInspectionEngine.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Testx86AssemblyInspectionEngine.cpp; path = UnwindAssembly/x86/Testx86AssemblyInspectionEngine.cpp; sourceTree = "<group>"; };
+		AFEC3361194A8ABA00FF05C6 /* StructuredData.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = StructuredData.cpp; path = source/Utility/StructuredData.cpp; sourceTree = "<group>"; };
 		AFF87C86150FF669000E1742 /* com.apple.debugserver.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = com.apple.debugserver.plist; path = tools/debugserver/source/com.apple.debugserver.plist; sourceTree = "<group>"; };
 		AFF87C8A150FF677000E1742 /* com.apple.debugserver.applist.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = com.apple.debugserver.applist.plist; path = tools/debugserver/source/com.apple.debugserver.applist.plist; sourceTree = "<group>"; };
 		AFF87C8C150FF680000E1742 /* com.apple.debugserver.applist.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = com.apple.debugserver.applist.plist; path = tools/debugserver/source/com.apple.debugserver.applist.plist; sourceTree = "<group>"; };
@@ -7939,7 +7926,6 @@
 				268900B413353E5000698AC0 /* RegisterContextMacOSXFrameBackchain.cpp in Sources */,
 				AE44FB321BB07EBC0033EB62 /* GoParser.cpp in Sources */,
 				3F8169311ABB7A6D001DA9DF /* SystemInitializer.cpp in Sources */,
-				949EEDB21BA76731008C63CF /* NSIndexPath.cpp in Sources */,
 				3FDFED2D19C257A0009756A7 /* HostProcess.cpp in Sources */,
 				268900B513353E5000698AC0 /* StopInfoMachException.cpp in Sources */,
 				268900B613353E5000698AC0 /* UnwindMacOSXFrameBackchain.cpp in Sources */,
@@ -8186,7 +8172,6 @@
 				2642FBB013D003B400ED6808 /* ProcessKDP.cpp in Sources */,
 				23D4007E1C210201000C3885 /* DebugMacros.cpp in Sources */,
 				8C26C4261C3EA5F90031DF7C /* TSanRuntime.cpp in Sources */,
-				947CF7711DC7B1EE00EF980B /* ProcessMinidump.cpp in Sources */,
 				2642FBB213D003B400ED6808 /* ProcessKDPLog.cpp in Sources */,
 				AF0639AB1BEC2D2500EA1B29 /* PlatformDarwinKernel.cpp in Sources */,
 				263641191B34AEE200145B2F /* ABISysV_mips64.cpp in Sources */,
@@ -8898,7 +8883,7 @@
 			};
 			name = BuildAndIntegration;
 		};
-		237965E71C12369B008D490F /* CustomSwift-RelWithDebInfo */ = {
+		237965E71C12369B008D490F /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -8918,6 +8903,11 @@
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks\"",
+					"$(SYSTEM_LIBRARY_DIR)/Frameworks/CoreServices.framework/Frameworks",
+				);
 				GCC_C_LANGUAGE_STANDARD = c99;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					__STDC_CONSTANT_MACROS,
@@ -8930,11 +8920,6 @@
 					LLDB_CONFIGURATION_RELEASE,
 					LLDB_DISABLE_PYTHON,
 					NO_XPC_SERVICES,
-				);
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(inherited)",
-					"\"$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks\"",
-					"$(SYSTEM_LIBRARY_DIR)/Frameworks/CoreServices.framework/Frameworks",
 				);
 				HEADER_SEARCH_PATHS = (
 					"$(LLVM_SOURCE_DIR)/tools/clang/include",
@@ -8969,110 +8954,6 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Debug;
-		};
-		239504D91BDD451400963CEA /* DebugClang */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(inherited)",
-					"\"$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks\"",
-					"$(SYSTEM_LIBRARY_DIR)/Frameworks/CoreServices.framework/Frameworks",
-				);
-				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				"GCC_WARN_64_TO_32_BIT_CONVERSION[arch=*64]" = NO;
-				GCC_WARN_ABOUT_MISSING_FIELD_INITIALIZERS = YES;
-				GCC_WARN_ABOUT_MISSING_NEWLINE = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES;
-				GCC_WARN_EFFECTIVE_CPLUSPLUS_VIOLATIONS = NO;
-				GCC_WARN_HIDDEN_VIRTUAL_FUNCTIONS = YES;
-				GCC_WARN_INITIALIZER_NOT_FULLY_BRACKETED = YES;
-				GCC_WARN_MISSING_PARENTHESES = YES;
-				GCC_WARN_NON_VIRTUAL_DESTRUCTOR = YES;
-				GCC_WARN_UNDECLARED_SELECTOR = YES;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES;
-				GCC_WARN_UNUSED_FUNCTION = YES;
-				GCC_WARN_UNUSED_LABEL = YES;
-				GCC_WARN_UNUSED_VALUE = YES;
-				GCC_WARN_UNUSED_VARIABLE = YES;
-				LLDB_BUILDBOT_BUILD_CFLAGS = "$(LLDB_BUILDBOT_BUILD_CFLAGS_$(LLDB_IS_BUILDBOT_BUILD))";
-				LLDB_BUILDBOT_BUILD_CFLAGS_0 = "-DLLDB_IS_BUILDBOT_BUILD=0";
-				LLDB_BUILDBOT_BUILD_CFLAGS_1 = "-DLLDB_IS_BUILDBOT_BUILD=1";
-				LLDB_COMPRESSION_CFLAGS = "-DHAVE_LIBCOMPRESSION=1";
-				LLDB_COMPRESSION_LDFLAGS = "-weak-lcompression";
-				LLDB_DEFINES_FOR_USE_OSS_VERSION_SCHEME_0 = "";
-				LLDB_DEFINES_FOR_USE_OSS_VERSION_SCHEME_1 = "-DLLDB_USE_OSS_VERSION_SCHEME";
-				LLDB_DISABLE_PYTHON = 0;
-				"LLDB_DISABLE_PYTHON[sdk=iphoneos*]" = 1;
-				LLDB_FRAMEWORK_INSTALL_DIR = "$(LLDB_TOOLCHAIN_PREFIX)/System/Library/PrivateFrameworks";
-				LLDB_GUI_CFLAGS = "";
-				"LLDB_GUI_CFLAGS[sdk=appletvos*]" = "-DLLDB_DISABLE_CURSES=1";
-				"LLDB_GUI_CFLAGS[sdk=iphoneos*]" = "-DLLDB_DISABLE_CURSES=1";
-				"LLDB_GUI_CFLAGS[sdk=watchos*]" = "-DLLDB_DISABLE_CURSES=1";
-				LLDB_GUI_LDFLAGS = "-lpanel";
-				"LLDB_GUI_LDFLAGS[sdk=appletvos*]" = "";
-				"LLDB_GUI_LDFLAGS[sdk=iphoneos*]" = "";
-				"LLDB_GUI_LDFLAGS[sdk=watchos*]" = "";
-				LLDB_IS_BUILDBOT_BUILD = 0;
-				LLDB_PATH_TO_CLANG_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/llvm-macosx-$(CURRENT_ARCH)";
-				LLDB_PATH_TO_CLANG_SOURCE = "$(PROJECT_DIR)/../clang";
-				LLDB_PATH_TO_CMARK_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/cmark-macosx-$(CURRENT_ARCH)";
-				LLDB_PATH_TO_LLVM_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/llvm-macosx-$(CURRENT_ARCH)";
-				LLDB_PATH_TO_LLVM_SOURCE = "$(PROJECT_DIR)/../llvm";
-				LLDB_PATH_TO_SWIFT_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/swift-macosx-$(CURRENT_ARCH)";
-				LLDB_PATH_TO_SWIFT_SOURCE = "$(PROJECT_DIR)/../swift";
-				LLDB_TOOLS_INSTALL_DIR = "$(LLDB_TOOLCHAIN_PREFIX)/usr/bin";
-				LLDB_USE_OSS_VERSION_SCHEME = 1;
-				LLDB_VERSION_SCHEME_CFLAGS = "$(LLDB_DEFINES_FOR_USE_OSS_VERSION_SCHEME_$(LLDB_USE_OSS_VERSION_SCHEME))";
-				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
-				LLDB_ZLIB_LDFLAGS = "-lz";
-				LLVM_BUILD_DIR = "$(LLDB_PATH_TO_LLVM_BUILD)";
-				LLVM_BUILD_DIRTREE = "$(PREBUILT_SWIFTLANG)/..";
-				LLVM_BUILD_DIR_ARCH = "llvm-macosx-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=appletvos*]" = "llvm-appletvos-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=watchos*]" = "llvm-watchos-$(CURRENT_ARCH)/";
-				LLVM_CONFIGURATION = RelWithDebInfoAssert;
-				LLVM_SOURCE_DIR = "$(SRCROOT)/llvm";
-				MACOSX_DEPLOYMENT_TARGET = 10.9;
-				OBJROOT = "$(SYMROOT)";
-				ONLY_ACTIVE_ARCH = YES;
-				LLDB_GTESTS_CFLAGS = "-I ${SOURCE_ROOT} -I $(LLVM_SOURCE_DIR)/utils/unittest/googlemock/include -I $(LLVM_SOURCE_DIR)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLVM_BUILD_DIR)/x86_64/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
-				LLDB_GTESTS_LDFLAGS = "$(LLVM_BUILD_DIR)/x86_64/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
-				OTHER_CFLAGS = (
-					"-fno-rtti",
-					"-Wparentheses",
-					"$(LLDB_ZLIB_CFLAGS)",
-					"$(LLDB_COMPRESSION_CFLAGS)",
-					"$(LLDB_GUI_CFLAGS)",
-					"$(LLDB_BUILDBOT_BUILD_CFLAGS)",
-					"-DLLDB_BUILD_DATE=\"$(LLDB_BUILD_DATE)\"",
-					"$(LLDB_VERSION_SCHEME_CFLAGS)",
-					"$(LLDB_GTESTS_CFLAGS)",
-					"-DGTEST_HAS_RTTI=0",
-				);
-				OTHER_LDFLAGS = (
-					"$(LLDB_ZLIB_LDFLAGS)",
-					"$(LLDB_COMPRESSION_LDFLAGS)",
-				);
-				PYTHON_FRAMEWORK_PATH = /System/Library/Frameworks/Python.framework;
-				PYTHON_VERSION_MAJOR = 2;
-				PYTHON_VERSION_MINOR = 7;
-				SDKROOT = macosx.internal;
-				"SDKROOT[arch=i386]" = macosx;
-				"SDKROOT[arch=x86_64]" = macosx;
-				"SDKROOT[arch=x86_64h]" = macosx;
-				STRIP_INSTALLED_PRODUCT = NO;
-				STRIP_STYLE = debugging;
-				SWIFT_FORCE_DYNAMIC_LINK_STDLIB = "";
-				SYMROOT = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/lldb-macosx-x86_64";
-				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(LLDB_PATH_TO_LLVM_SOURCE)/include $(LLDB_PATH_TO_CLANG_SOURCE)/include $(LLDB_PATH_TO_SWIFT_SOURCE)/include $(LLDB_PATH_TO_LLVM_BUILD)/include $(LLDB_PATH_TO_LLVM_BUILD)/tools/clang/include $(LLDB_PATH_TO_SWIFT_BUILD)/include $(SRCROOT)/source $(CONFIGURATION_BUILD_DIR)";
-				WARNING_CFLAGS = (
-					"-Wreorder",
-					"-Wno-newline-eof",
-				);
-			};
-			name = "CustomSwift-RelWithDebInfo";
 		};
 		237965E81C12369B008D490F /* CustomSwift-RelWithDebInfo */ = {
 			isa = XCBuildConfiguration;
@@ -9125,10 +9006,15 @@
 					"\"$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks\"",
 					"$(SYSTEM_LIBRARY_DIR)/Frameworks/CoreServices.framework/Frameworks",
 				);
+				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
 				HEADER_SEARCH_PATHS = (
 					"$(LLVM_SOURCE_DIR)/tools/clang/include",
 					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
 				);
+				INFOPLIST_FILE = "tools/driver/lldb-Info.plist";
+				INSTALL_PATH = "$(LLDB_TOOLS_INSTALL_DIR)";
+				LIBRARY_SEARCH_PATHS = "$(inherited)";
 				LLDB_GTESTS_CFLAGS = "-I ${SOURCE_ROOT} -I $(LLVM_SOURCE_DIR)/utils/unittest/googlemock/include -I $(LLVM_SOURCE_DIR)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLVM_BUILD_DIR)/x86_64/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
 				LLDB_GTESTS_LDFLAGS = "$(LLVM_BUILD_DIR)/x86_64/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
 				OTHER_CFLAGS = (
@@ -9139,11 +9025,6 @@
 					"$(LLDB_GTESTS_CFLAGS)",
 					"-DGTEST_HAS_RTTI=0",
 				);
-				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
-				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
-				INFOPLIST_FILE = "tools/driver/lldb-Info.plist";
-				INSTALL_PATH = "$(LLDB_TOOLS_INSTALL_DIR)";
-				LIBRARY_SEARCH_PATHS = "$(inherited)";
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-sectcreate",
@@ -9182,23 +9063,23 @@
 				INSTALL_PATH = "$(LLDB_FRAMEWORK_INSTALL_DIR)";
 				LD_DYLIB_INSTALL_NAME = "@rpath/LLDB.framework/LLDB";
 				LIBRARY_SEARCH_PATHS = "$(LLDB_PATH_TO_LLVM_BUILD)";
+				LLDB_GTESTS_CFLAGS = "-I ${SOURCE_ROOT} -I $(LLVM_SOURCE_DIR)/utils/unittest/googlemock/include -I $(LLVM_SOURCE_DIR)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLVM_BUILD_DIR)/x86_64/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
+				LLDB_GTESTS_LDFLAGS = "$(LLVM_BUILD_DIR)/x86_64/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
 				LLDB_TOOLS_INSTALL_DIR = "";
 				LLVM_BUILD_DIR_ARCH = "llvm-macosx-$(CURRENT_ARCH)/";
 				"LLVM_BUILD_DIR_ARCH[sdk=appletvos*]" = "llvm-appletvos-$(CURRENT_ARCH)/";
 				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-$(CURRENT_ARCH)/";
 				"LLVM_BUILD_DIR_ARCH[sdk=watchos*]" = "llvm-watchos-$(CURRENT_ARCH)/";
+				OTHER_CFLAGS = (
+					"-fno-rtti",
+					"-Wglobal-constructors",
+					"$(OTHER_CFLAGS)",
+				);
 				OTHER_CPLUSPLUSFLAGS = (
 					"-I/System/Library/Frameworks/Python.framework/Versions/2.7/include/python2.7",
 					"-fno-rtti",
 					"-Wglobal-constructors",
 					"-DDT_VARIANT_$(DT_VARIANT)",
-					"$(OTHER_CFLAGS)",
-				);
-				LLDB_GTESTS_CFLAGS = "-I ${SOURCE_ROOT} -I $(LLVM_SOURCE_DIR)/utils/unittest/googlemock/include -I $(LLVM_SOURCE_DIR)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLVM_BUILD_DIR)/x86_64/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
-				LLDB_GTESTS_LDFLAGS = "$(LLVM_BUILD_DIR)/x86_64/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
-				OTHER_CFLAGS = (
-					"-fno-rtti",
-					"-Wglobal-constructors",
 					"$(OTHER_CFLAGS)",
 				);
 				OTHER_LDFLAGS = "";
@@ -9274,9 +9155,9 @@
 				);
 				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
 				HEADER_SEARCH_PATHS = /usr/include/libxml2;
-				MACH_O_TYPE = staticlib;
 				LLDB_GTESTS_CFLAGS = "-I ${SOURCE_ROOT} -I $(LLVM_SOURCE_DIR)/utils/unittest/googlemock/include -I $(LLVM_SOURCE_DIR)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLVM_BUILD_DIR)/x86_64/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
 				LLDB_GTESTS_LDFLAGS = "$(LLVM_BUILD_DIR)/x86_64/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
+				MACH_O_TYPE = staticlib;
 				OTHER_CFLAGS = (
 					"$(inherited)",
 					"-DSWIFT_ENABLE_OBJECT_LITERALS",
@@ -9543,12 +9424,12 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				HEADER_SEARCH_PATHS = /usr/include/libxml2;
 				LIBRARY_SEARCH_PATHS = "$(LLDB_PATH_TO_LLVM_BUILD)";
+				LLDB_GTESTS_CFLAGS = "-I ${SOURCE_ROOT} -I $(LLVM_SOURCE_DIR)/utils/unittest/googlemock/include -I $(LLVM_SOURCE_DIR)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLVM_BUILD_DIR)/x86_64/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
+				LLDB_GTESTS_LDFLAGS = "$(LLVM_BUILD_DIR)/x86_64/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
 				LLVM_BUILD_DIR_ARCH = "llvm-macosx-$(CURRENT_ARCH)/";
 				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-$(CURRENT_ARCH)/";
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				MTL_ENABLE_DEBUG_INFO = NO;
-				LLDB_GTESTS_CFLAGS = "-I ${SOURCE_ROOT} -I $(LLVM_SOURCE_DIR)/utils/unittest/googlemock/include -I $(LLVM_SOURCE_DIR)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLVM_BUILD_DIR)/x86_64/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
-				LLDB_GTESTS_LDFLAGS = "$(LLVM_BUILD_DIR)/x86_64/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
 				OTHER_CFLAGS = (
 					"$(inherited)",
 					"-I/System/Library/Frameworks/Python.framework/Versions/2.7/include/python2.7",
@@ -14578,7 +14459,7 @@
 				94DF55CC1ADDBF240030B937 /* CustomSwift-Debug */,
 				1DEB91F108733DB70010E9CD /* Release */,
 				94DF55DE1ADDBF2C0030B937 /* CustomSwift-Release */,
-				237965E71C12369B008D490F /* CustomSwift-RelWithDebInfo */,
+				237965E71C12369B008D490F /* Debug */,
 				268A89B211963ECA00D953EB /* BuildAndIntegration */,
 			);
 			defaultConfigurationIsVisible = 0;
