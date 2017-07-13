@@ -1123,7 +1123,7 @@ GDBRemoteCommunicationServerLLGS::Handle_jTraceStart(
   uid = m_debugged_process_sp->StartTrace(options, error);
   LLDB_LOG(log, "uid is {0} , error is {1}", uid, error.GetError());
   if (error.Fail())
-    return SendErrorResponse(error.GetError());
+    return SendErrorResponse(error);
 
   StreamGDBRemote response;
   response.Printf("%" PRIx64, uid);
@@ -1160,7 +1160,7 @@ GDBRemoteCommunicationServerLLGS::Handle_jTraceStop(
   Status error = m_debugged_process_sp->StopTrace(uid, tid);
 
   if (error.Fail())
-    return SendErrorResponse(error.GetError());
+    return SendErrorResponse(error);
 
   return SendOKResponse();
 }
@@ -1203,7 +1203,7 @@ GDBRemoteCommunicationServerLLGS::Handle_jTraceConfigRead(
   Status error = m_debugged_process_sp->GetTraceConfig(uid, options);
 
   if (error.Fail())
-    return SendErrorResponse(error.GetError());
+    return SendErrorResponse(error);
 
   StreamGDBRemote escaped_response;
   StructuredData::Dictionary json_packet;
@@ -1279,7 +1279,7 @@ GDBRemoteCommunicationServerLLGS::Handle_jTraceRead(
     error = m_debugged_process_sp->GetMetaData(uid, tid, buf, offset);
 
   if (error.Fail())
-    return SendErrorResponse(error.GetError());
+    return SendErrorResponse(error);
 
   for (auto i : buf)
     response.PutHex8(i);

@@ -1232,7 +1232,7 @@ static void __kmp_reap_common(kmp_info_t *th) {
     // TODO: This code is very similar to KMP_WAIT_YIELD. Need to generalize
     // KMP_WAIT_YIELD to cover this usage also.
     void *obj = NULL;
-    register kmp_uint32 spins;
+    kmp_uint32 spins;
 #if USE_ITT_BUILD
     KMP_FSYNC_SPIN_INIT(obj, (void *)&th->th.th_info.ds.ds_alive);
 #endif /* USE_ITT_BUILD */

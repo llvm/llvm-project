@@ -23,32 +23,8 @@ class UnwindFromExpressionTest(TestBase):
     def build_and_run_to_bkpt(self):
         self.build()
 
-        exe = os.path.join(os.getcwd(), "a.out")
-
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        # Create the breakpoint.
-        breakpoint = target.BreakpointCreateBySourceRegex(
-            "// Set a breakpoint here to get started", self.main_spec)
-        self.assertTrue(breakpoint, VALID_BREAKPOINT)
-
-        # Launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple(
-            None, None, self.get_process_working_directory())
-
-        if not process:
-            self.fail("SBTarget.LaunchProcess() failed")
-
-        if process.GetState() != lldb.eStateStopped:
-            self.fail("Process should be in the 'stopped' state, "
-                      "instead the actual state is: '%s'" %
-                      lldbutil.state_type_to_str(process.GetState()))
-
-        self.thread = lldbutil.get_one_thread_stopped_at_breakpoint(
-            process, breakpoint)
-        self.assertIsNotNone(
-            self.thread, "Expected one thread to be stopped at the breakpoint")
+        (target, process, self.thread, bkpt) = lldbutil.run_to_source_breakpoint(self, 
+                "// Set a breakpoint here to get started", self.main_spec)
 
         # Next set a breakpoint in this function, set up Expression options to stop on
         # breakpoint hits, and call the function.

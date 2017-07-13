@@ -462,12 +462,14 @@ public:
 class SCEVInRegionDependences {
   const Region *R;
   Loop *Scope;
+  const InvariantLoadsSetTy &ILS;
   bool AllowLoops;
   bool HasInRegionDeps = false;
 
 public:
-  SCEVInRegionDependences(const Region *R, Loop *Scope, bool AllowLoops)
-      : R(R), Scope(Scope), AllowLoops(AllowLoops) {}
+  SCEVInRegionDependences(const Region *R, Loop *Scope, bool AllowLoops,
+                          const InvariantLoadsSetTy &ILS)
+      : R(R), Scope(Scope), ILS(ILS), AllowLoops(AllowLoops) {}
 
   bool follow(const SCEV *S) {
     if (auto Unknown = dyn_cast<SCEVUnknown>(S)) {
@@ -477,6 +479,20 @@ public:
 
       if (Call && isConstCall(Call))
         return false;
+
+      if (Inst) {
+        // When we invariant load hoist a load, we first make sure that there
+        // can be no dependences created by it in the Scop region. So, we should
+        // not consider scalar dependences to `LoadInst`s that are invariant
+        // load hoisted.
+        //
+        // If this check is not present, then we create data dependences which
+        // are strictly not necessary by tracking the invariant load as a
+        // scalar.
+        LoadInst *LI = dyn_cast<LoadInst>(Inst);
+        if (LI && ILS.count(LI) > 0)
+          return false;
+      }
 
       // Return true when Inst is defined inside the region R.
       if (!Inst || !R->contains(Inst))
@@ -579,8 +595,9 @@ bool hasIVParams(const SCEV *Expr) {
 }
 
 bool hasScalarDepsInsideRegion(const SCEV *Expr, const Region *R,
-                               llvm::Loop *Scope, bool AllowLoops) {
-  SCEVInRegionDependences InRegionDeps(R, Scope, AllowLoops);
+                               llvm::Loop *Scope, bool AllowLoops,
+                               const InvariantLoadsSetTy &ILS) {
+  SCEVInRegionDependences InRegionDeps(R, Scope, AllowLoops, ILS);
   SCEVTraversal<SCEVInRegionDependences> ST(InRegionDeps);
   ST.visitAll(Expr);
   return InRegionDeps.hasDependences();

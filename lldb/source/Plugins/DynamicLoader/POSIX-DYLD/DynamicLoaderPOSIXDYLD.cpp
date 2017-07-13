@@ -576,7 +576,7 @@ addr_t DynamicLoaderPOSIXDYLD::ComputeLoadOffset() {
 }
 
 void DynamicLoaderPOSIXDYLD::EvalVdsoStatus() {
-  AuxVector::iterator I = m_auxv->FindEntry(AuxVector::AT_SYSINFO_EHDR);
+  AuxVector::iterator I = m_auxv->FindEntry(AuxVector::AUXV_AT_SYSINFO_EHDR);
 
   if (I != m_auxv->end())
     m_vdso_base = I->value;
@@ -589,7 +589,7 @@ addr_t DynamicLoaderPOSIXDYLD::GetEntryPoint() {
   if (m_auxv.get() == NULL)
     return LLDB_INVALID_ADDRESS;
 
-  AuxVector::iterator I = m_auxv->FindEntry(AuxVector::AT_ENTRY);
+  AuxVector::iterator I = m_auxv->FindEntry(AuxVector::AUXV_AT_ENTRY);
 
   if (I == m_auxv->end())
     return LLDB_INVALID_ADDRESS;

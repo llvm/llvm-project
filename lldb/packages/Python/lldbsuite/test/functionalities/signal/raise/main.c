@@ -10,6 +10,11 @@ void handler(int signo)
 
 int main (int argc, char *argv[])
 {
+    if (signal(SIGTRAP, handler) == SIG_ERR)
+    {
+        perror("signal(SIGTRAP)");
+        return 1;
+    }
 #ifndef __APPLE__
     // Real time signals not supported on apple platforms.
     if (signal(SIGRTMIN, handler) == SIG_ERR)
@@ -27,6 +32,8 @@ int main (int argc, char *argv[])
 
     if (strcmp(argv[1], "SIGSTOP") == 0)
         raise(SIGSTOP);
+    else if (strcmp(argv[1], "SIGTRAP") == 0)
+        raise(SIGTRAP);
 #ifndef __APPLE__
     else if (strcmp(argv[1], "SIGRTMIN") == 0)
         raise(SIGRTMIN);

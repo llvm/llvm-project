@@ -88,6 +88,8 @@ The current file name is passed after ARGS as last argument.  If
 the call was successful the returned result is stored in a
 temporary buffer, and CALLBACK is called with the temporary
 buffer as only argument."
+  (unless buffer-file-name
+    (user-error "clang-include-fixer works only in buffers that visit a file"))
   (let ((process (if (fboundp 'make-process)
                      ;; Prefer using ‘make-process’ if available, because
                      ;; ‘start-process’ doesn’t allow us to separate the
@@ -185,9 +187,9 @@ failure, a buffer containing the error output is displayed."
   "Replace current buffer by content of STDOUT."
   (cl-check-type stdout buffer-live)
   (barf-if-buffer-read-only)
-  (unless (clang-include-fixer--insert-line stdout (current-buffer))
-    (erase-buffer)
-    (insert-buffer-substring stdout))
+  (cond ((fboundp 'replace-buffer-contents) (replace-buffer-contents stdout))
+        ((clang-include-fixer--insert-line stdout (current-buffer)))
+        (t (erase-buffer) (insert-buffer-substring stdout)))
   (message "Fix applied")
   nil)
 

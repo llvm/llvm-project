@@ -796,11 +796,9 @@ void NativeProcessLinux::MonitorSIGTRAP(const siginfo_t &info,
     break;
 
   default:
-    LLDB_LOG(
-        log,
-        "received unknown SIGTRAP stop event ({0}, pid {1} tid {2}, resuming",
-        info.si_code, GetID(), thread.GetID());
-    llvm_unreachable("Unexpected SIGTRAP code!");
+    LLDB_LOG(log, "received unknown SIGTRAP stop event ({0}, pid {1} tid {2}",
+             info.si_code, GetID(), thread.GetID());
+    MonitorSignal(info, thread, false);
     break;
   }
 }

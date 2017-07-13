@@ -79,59 +79,42 @@ if (GPU_CODEGEN)
   target_link_libraries(Polly PollyPPCG)
 endif ()
 
-# Add Polly's LLVM dependencies.
-# When built inside the LLVM source tree, these are CMake targets that will
-# depend on their dependencies and CMake ensures they are added in the right
-# order.
-# If Polly is built independently, just add all LLVM libraries. LLVM_ROOT_DIR
-# might have been configured to compile to individual libraries or a single
-# libLLVM.so (called dylib), reported by llvm-config, so there is no fixed list
-# of required libraries.
-if (DEFINED LLVM_MAIN_SRC_DIR)
 
-  # Polly-ACC requires the NVPTX backend to work. Ask LLVM about its libraries.
-  set(nvptx_libs)
-  if (GPU_CODEGEN)
-    # This call emits an error if they NVPTX backend is not enable.
-    llvm_map_components_to_libnames(nvptx_libs NVPTX)
-  endif ()
+# Polly-ACC requires the NVPTX backend to work. Ask LLVM about its libraries.
+set(nvptx_libs)
+if (GPU_CODEGEN)
+  # This call emits an error if they NVPTX backend is not enable.
+  llvm_map_components_to_libnames(nvptx_libs NVPTX)
+endif ()
 
-  if (LLVM_LINK_LLVM_DYLIB)
-    # The shlib/dylib contains all the LLVM components
-    # (including NVPTX is enabled) already. Adding them to target_link_libraries
-    # would cause them being twice in the address space
-    # (their LLVM*.a/so and their copies in libLLVM.so)
-    # which results in errors when the two instances try to register the same
-    # command-line switches.
-    target_link_libraries(Polly LLVM)
-  else ()
-    target_link_libraries(Polly
-      LLVMSupport
-      LLVMCore
-      LLVMScalarOpts
-      LLVMInstCombine
-      LLVMTransformUtils
-      LLVMAnalysis
-      LLVMipo
-      LLVMMC
-      LLVMPasses
-      ${nvptx_libs}
-# The libraries below are required for darwin: http://PR26392
-      LLVMBitReader
-      LLVMMCParser
-      LLVMObject
-      LLVMProfileData
-      LLVMTarget
-      LLVMVectorize
-    )
-  endif ()
+if (LLVM_LINK_LLVM_DYLIB)
+  # The shlib/dylib contains all the LLVM components
+  # (including NVPTX is enabled) already. Adding them to target_link_libraries
+  # would cause them being twice in the address space
+  # (their LLVM*.a/so and their copies in libLLVM.so)
+  # which results in errors when the two instances try to register the same
+  # command-line switches.
+  target_link_libraries(Polly LLVM)
 else ()
-  # When Polly-ACC is enabled, we assume that the host LLVM was also built with
-  # the NVPTX target enabled.
   target_link_libraries(Polly
-    ${LLVM_LIBS}
-    ${LLVM_SYSTEM_LIBS}
-  )
+    LLVMSupport
+    LLVMCore
+    LLVMScalarOpts
+    LLVMInstCombine
+    LLVMTransformUtils
+    LLVMAnalysis
+    LLVMipo
+    LLVMMC
+    LLVMPasses
+    ${nvptx_libs}
+    # The libraries below are required for darwin: http://PR26392
+    LLVMBitReader
+    LLVMMCParser
+    LLVMObject
+    LLVMProfileData
+    LLVMTarget
+    LLVMVectorize
+    )
 endif ()
 
 # Create a loadable module Polly.so that can be loaded using

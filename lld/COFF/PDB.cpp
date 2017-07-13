@@ -18,19 +18,20 @@
 #include "llvm/DebugInfo/CodeView/DebugSubsectionRecord.h"
 #include "llvm/DebugInfo/CodeView/DebugSubsectionVisitor.h"
 #include "llvm/DebugInfo/CodeView/LazyRandomTypeCollection.h"
+#include "llvm/DebugInfo/CodeView/SymbolSerializer.h"
 #include "llvm/DebugInfo/CodeView/TypeDumpVisitor.h"
 #include "llvm/DebugInfo/CodeView/TypeIndexDiscovery.h"
 #include "llvm/DebugInfo/CodeView/TypeStreamMerger.h"
 #include "llvm/DebugInfo/CodeView/TypeTableBuilder.h"
 #include "llvm/DebugInfo/MSF/MSFBuilder.h"
 #include "llvm/DebugInfo/MSF/MSFCommon.h"
+#include "llvm/DebugInfo/PDB/Native/DbiModuleDescriptorBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/DbiStream.h"
 #include "llvm/DebugInfo/PDB/Native/DbiStreamBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/InfoStream.h"
 #include "llvm/DebugInfo/PDB/Native/InfoStreamBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFileBuilder.h"
-#include "llvm/DebugInfo/PDB/Native/DbiModuleDescriptorBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/PDBStringTableBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/PDBTypeServerHandler.h"
 #include "llvm/DebugInfo/PDB/Native/TpiStream.h"
@@ -124,26 +125,25 @@ static bool remapTypeIndex(TypeIndex &TI, ArrayRef<TypeIndex> TypeIndexMap) {
   return true;
 }
 
-static bool remapTypesInSymbolRecord(ObjectFile *File,
+static void remapTypesInSymbolRecord(ObjectFile *File,
                                      MutableArrayRef<uint8_t> Contents,
                                      ArrayRef<TypeIndex> TypeIndexMap,
                                      ArrayRef<TiReference> TypeRefs) {
   for (const TiReference &Ref : TypeRefs) {
     unsigned ByteSize = Ref.Count * sizeof(TypeIndex);
-    if (Contents.size() < Ref.Offset + ByteSize) {
-      log("ignoring short symbol record");
-      return false;
-    }
+    if (Contents.size() < Ref.Offset + ByteSize)
+      fatal("symbol record too short");
     MutableArrayRef<TypeIndex> TIs(
         reinterpret_cast<TypeIndex *>(Contents.data() + Ref.Offset), Ref.Count);
-    for (TypeIndex &TI : TIs)
+    for (TypeIndex &TI : TIs) {
       if (!remapTypeIndex(TI, TypeIndexMap)) {
+        TI = TypeIndex(SimpleTypeKind::NotTranslated);
         log("ignoring symbol record in " + File->getName() +
             " with bad type index 0x" + utohexstr(TI.getIndex()));
-        return false;
+        continue;
       }
+    }
   }
-  return true;
 }
 
 /// MSVC translates S_PROC_ID_END to S_END.
@@ -264,8 +264,7 @@ static void mergeSymbolRecords(BumpPtrAllocator &Alloc, ObjectFile *File,
     // Re-map all the type index references.
     MutableArrayRef<uint8_t> Contents =
         NewData.drop_front(sizeof(RecordPrefix));
-    if (!remapTypesInSymbolRecord(File, Contents, TypeIndexMap, TypeRefs))
-      continue;
+    remapTypesInSymbolRecord(File, Contents, TypeIndexMap, TypeRefs);
 
     // Fill in "Parent" and "End" fields by maintaining a stack of scopes.
     CVSymbol NewSym(Sym.kind(), NewData);
@@ -315,7 +314,9 @@ static void addObjectsToPDB(BumpPtrAllocator &Alloc, SymbolTable *Symtab,
     bool InArchive = !File->ParentName.empty();
     SmallString<128> Path = InArchive ? File->ParentName : File->getName();
     sys::fs::make_absolute(Path);
+    sys::path::native(Path, llvm::sys::path::Style::windows);
     StringRef Name = InArchive ? File->getName() : StringRef(Path);
+
     File->ModuleDBI = &ExitOnErr(Builder.getDbiBuilder().addModuleInfo(Name));
     File->ModuleDBI->setObjFileName(Path);
 
@@ -394,9 +395,52 @@ static void addObjectsToPDB(BumpPtrAllocator &Alloc, SymbolTable *Symtab,
   addTypeInfo(Builder.getIpiBuilder(), IDTable);
 }
 
+static void addLinkerModuleSymbols(StringRef Path,
+                                   pdb::DbiModuleDescriptorBuilder &Mod,
+                                   BumpPtrAllocator &Allocator) {
+  codeview::SymbolSerializer Serializer(Allocator, CodeViewContainer::Pdb);
+  codeview::ObjNameSym ONS(SymbolRecordKind::ObjNameSym);
+  codeview::Compile3Sym CS(SymbolRecordKind::Compile3Sym);
+  codeview::EnvBlockSym EBS(SymbolRecordKind::EnvBlockSym);
+
+  ONS.Name = "* Linker *";
+  ONS.Signature = 0;
+
+  CS.Machine = Config->is64() ? CPUType::X64 : CPUType::Intel80386;
+  CS.Flags = CompileSym3Flags::None;
+  CS.VersionBackendBuild = 0;
+  CS.VersionBackendMajor = 0;
+  CS.VersionBackendMinor = 0;
+  CS.VersionBackendQFE = 0;
+  CS.VersionFrontendBuild = 0;
+  CS.VersionFrontendMajor = 0;
+  CS.VersionFrontendMinor = 0;
+  CS.VersionFrontendQFE = 0;
+  CS.Version = "LLVM Linker";
+  CS.setLanguage(SourceLanguage::Link);
+
+  ArrayRef<StringRef> Args = makeArrayRef(Config->Argv).drop_front();
+  std::string ArgStr = llvm::join(Args, " ");
+  EBS.Fields.push_back("cwd");
+  SmallString<64> cwd;
+  llvm::sys::fs::current_path(cwd);
+  EBS.Fields.push_back(cwd);
+  EBS.Fields.push_back("exe");
+  EBS.Fields.push_back(Config->Argv[0]);
+  EBS.Fields.push_back("pdb");
+  EBS.Fields.push_back(Path);
+  EBS.Fields.push_back("cmd");
+  EBS.Fields.push_back(ArgStr);
+  Mod.addSymbol(codeview::SymbolSerializer::writeOneSymbol(
+      ONS, Allocator, CodeViewContainer::Pdb));
+  Mod.addSymbol(codeview::SymbolSerializer::writeOneSymbol(
+      CS, Allocator, CodeViewContainer::Pdb));
+  Mod.addSymbol(codeview::SymbolSerializer::writeOneSymbol(
+      EBS, Allocator, CodeViewContainer::Pdb));
+}
+
 // Creates a PDB file.
-void coff::createPDB(StringRef Path, SymbolTable *Symtab,
-                     ArrayRef<uint8_t> SectionTable,
+void coff::createPDB(SymbolTable *Symtab, ArrayRef<uint8_t> SectionTable,
                      const llvm::codeview::DebugInfo *DI) {
   BumpPtrAllocator Alloc;
   pdb::PDBFileBuilder Builder(Alloc);
@@ -411,21 +455,22 @@ void coff::createPDB(StringRef Path, SymbolTable *Symtab,
   auto &InfoBuilder = Builder.getInfoBuilder();
   InfoBuilder.setAge(DI ? DI->PDB70.Age : 0);
 
-  llvm::SmallString<128> NativePath(Path.begin(), Path.end());
+  llvm::SmallString<128> NativePath(Config->PDBPath.begin(),
+                                    Config->PDBPath.end());
   llvm::sys::fs::make_absolute(NativePath);
-  llvm::sys::path::native(NativePath);
+  llvm::sys::path::native(NativePath, llvm::sys::path::Style::windows);
 
   pdb::PDB_UniqueId uuid{};
   if (DI)
     memcpy(&uuid, &DI->PDB70.Signature, sizeof(uuid));
   InfoBuilder.setGuid(uuid);
-  // Should be the current time, but set 0 for reproducibilty.
-  InfoBuilder.setSignature(0);
+  InfoBuilder.setSignature(time(nullptr));
   InfoBuilder.setVersion(pdb::PdbRaw_ImplVer::PdbImplVC70);
 
   // Add an empty DBI stream.
   pdb::DbiStreamBuilder &DbiBuilder = Builder.getDbiBuilder();
-  DbiBuilder.setVersionHeader(pdb::PdbDbiV110);
+  DbiBuilder.setVersionHeader(pdb::PdbDbiV70);
+  ExitOnErr(DbiBuilder.addDbgStream(pdb::DbgHeaderType::NewFPO, {}));
 
   // It's not entirely clear what this is, but the * Linker * module uses it.
   uint32_t PdbFilePathNI = DbiBuilder.addECName(NativePath);
@@ -433,6 +478,13 @@ void coff::createPDB(StringRef Path, SymbolTable *Symtab,
   TypeTableBuilder TypeTable(BAlloc);
   TypeTableBuilder IDTable(BAlloc);
   addObjectsToPDB(Alloc, Symtab, Builder, TypeTable, IDTable);
+
+  // Add public and symbol records stream.
+
+  // For now we don't actually write any thing useful to the publics stream, but
+  // the act of "getting" it also creates it lazily so that we write an empty
+  // stream.
+  (void)Builder.getPublicsBuilder();
 
   // Add Section Contributions.
   addSectionContribs(Symtab, DbiBuilder);
@@ -447,11 +499,12 @@ void coff::createPDB(StringRef Path, SymbolTable *Symtab,
 
   auto &LinkerModule = ExitOnErr(DbiBuilder.addModuleInfo("* Linker *"));
   LinkerModule.setPdbFilePathNI(PdbFilePathNI);
+  addLinkerModuleSymbols(NativePath, LinkerModule, Alloc);
 
   // Add COFF section header stream.
   ExitOnErr(
       DbiBuilder.addDbgStream(pdb::DbgHeaderType::SectionHdr, SectionTable));
 
   // Write to a file.
-  ExitOnErr(Builder.commit(Path));
+  ExitOnErr(Builder.commit(Config->PDBPath));
 }

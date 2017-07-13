@@ -65,7 +65,9 @@ public:
     return SymbolKind == LazyArchiveKind || SymbolKind == LazyObjectKind;
   }
   bool isShared() const { return SymbolKind == SharedKind; }
-  bool isInCurrentDSO() const { return !isUndefined() && !isShared(); }
+  bool isInCurrentDSO() const {
+    return !isUndefined() && !isShared() && !isLazy();
+  }
   bool isLocal() const { return IsLocal; }
   bool isPreemptible() const;
   StringRef getName() const { return Name; }
@@ -218,7 +220,7 @@ public:
         Verdef(Verdef), ElfSym(ElfSym) {
     // IFuncs defined in DSOs are treated as functions by the static linker.
     if (isGnuIFunc())
-      Type = llvm::ELF::STT_FUNC;
+      this->Type = llvm::ELF::STT_FUNC;
     this->File = File;
   }
 

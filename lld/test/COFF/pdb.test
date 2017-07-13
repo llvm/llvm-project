@@ -26,11 +26,11 @@
 # CHECK:      PdbStream:
 # CHECK-NEXT:   Age:             1
 # CHECK-NEXT:   Guid:
-# CHECK-NEXT:   Signature:       0
+# CHECK-NEXT:   Signature:
 # CHECK-NEXT:   Features:        [ VC140 ]
 # CHECK-NEXT:   Version:         VC70
 # CHECK-NEXT: DbiStream:
-# CHECK-NEXT:   VerHeader:       V110
+# CHECK-NEXT:   VerHeader:       V70
 # CHECK-NEXT:   Age:             1
 # CHECK-NEXT:   BuildNumber:     0
 # CHECK-NEXT:   PdbDllVersion:   0
@@ -186,17 +186,17 @@ RAW-NEXT:         IMAGE_SCN_MEM_READ
 RAW:                             Section Map
 RAW-NEXT: ============================================================
 RAW-NEXT:   Section 0000 | ovl = 0, group = 0, frame = 0, name = 1
-RAW-NEXT:                  class = 65535, offset = 0, size = 
+RAW-NEXT:                  class = 65535, offset = 0, size =
 RAW-NEXT:                  flags = read | 32 bit addr | selector
 RAW-NEXT:   Section 0001 | ovl = 1, group = 0, frame = 0, name = 2
-RAW-NEXT:                  class = 65535, offset = 0, size = 
+RAW-NEXT:                  class = 65535, offset = 0, size =
 RAW-NEXT:                  flags = read | execute | 32 bit addr | selector
 RAW-NEXT:   Section 0002 | ovl = 2, group = 0, frame = 0, name = 3
-RAW-NEXT:                  class = 65535, offset = 0, size = 
+RAW-NEXT:                  class = 65535, offset = 0, size =
 RAW-NEXT:                  flags = read | 32 bit addr | selector
 RAW-NEXT:   Section 0003 | ovl = 3, group = 0, frame = 0, name = 4
-RAW-NEXT:                  class = 65535, offset = 0, size = 
+RAW-NEXT:                  class = 65535, offset = 0, size =
 RAW-NEXT:                  flags = read | 32 bit addr | selector
 RAW-NEXT:   Section 0004 | ovl = 4, group = 0, frame = 0, name = 5
-RAW-NEXT:                  class = 65535, offset = 0, size = 
+RAW-NEXT:                  class = 65535, offset = 0, size =
 RAW-NEXT:                  flags = 32 bit addr | absolute addr

@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CloexecOpenCheck.h"
+#include "../utils/ASTUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
@@ -18,34 +19,7 @@ namespace clang {
 namespace tidy {
 namespace android {
 
-namespace {
 static constexpr const char *O_CLOEXEC = "O_CLOEXEC";
-
-bool hasCloseOnExecFlag(const Expr *Flags, const SourceManager &SM,
-                        const LangOptions &LangOpts) {
-  // If the Flag is an integer constant, check it.
-  if (isa<IntegerLiteral>(Flags)) {
-    if (!SM.isMacroBodyExpansion(Flags->getLocStart()) &&
-        !SM.isMacroArgExpansion(Flags->getLocStart()))
-      return false;
-
-    // Get the Marco name.
-    auto MacroName = Lexer::getSourceText(
-        CharSourceRange::getTokenRange(Flags->getSourceRange()), SM, LangOpts);
-
-    return MacroName == O_CLOEXEC;
-  }
-  // If it's a binary OR operation.
-  if (const auto *BO = dyn_cast<BinaryOperator>(Flags))
-    if (BO->getOpcode() == clang::BinaryOperatorKind::BO_Or)
-      return hasCloseOnExecFlag(BO->getLHS()->IgnoreParenCasts(), SM,
-                                LangOpts) ||
-             hasCloseOnExecFlag(BO->getRHS()->IgnoreParenCasts(), SM, LangOpts);
-
-  // Otherwise, assume it has the flag.
-  return true;
-}
-} // namespace
 
 void CloexecOpenCheck::registerMatchers(MatchFinder *Finder) {
   auto CharPointerType = hasType(pointerType(pointee(isAnyCharacter())));
@@ -82,8 +56,8 @@ void CloexecOpenCheck::check(const MatchFinder::MatchResult &Result) {
 
   // Check the required flag.
   SourceManager &SM = *Result.SourceManager;
-  if (hasCloseOnExecFlag(FlagArg->IgnoreParenCasts(), SM,
-                         Result.Context->getLangOpts()))
+  if (utils::exprHasBitFlagWithSpelling(FlagArg->IgnoreParenCasts(), SM,
+                     Result.Context->getLangOpts(), O_CLOEXEC))
     return;
 
   SourceLocation EndLoc =

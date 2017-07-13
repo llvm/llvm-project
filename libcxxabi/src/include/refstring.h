@@ -7,8 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___REFSTRING
-#define _LIBCPP___REFSTRING
+// FIXME: This file is copied from libcxx/src/include/refstring.h. Instead of
+// duplicating the file in libc++abi we should require that the libc++ sources
+// are available when building libc++abi.
+
+#ifndef _LIBCPPABI_REFSTRING_H
+#define _LIBCPPABI_REFSTRING_H
 
 #include <__config>
 #include <stdexcept>
@@ -124,4 +128,4 @@ bool __libcpp_refstring::__uses_refcount() const {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif //_LIBCPP___REFSTRING
+#endif //_LIBCPPABI_REFSTRING_H

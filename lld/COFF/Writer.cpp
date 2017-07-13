@@ -239,7 +239,7 @@ void Writer::run() {
     const llvm::codeview::DebugInfo *DI = nullptr;
     if (Config->DebugTypes & static_cast<unsigned>(coff::DebugType::CV))
       DI = BuildId->DI;
-    createPDB(Config->PDBPath, Symtab, SectionTable, DI);
+    createPDB(Symtab, SectionTable, DI);
   }
 
   writeMapFile(OutputSections);
