@@ -113,6 +113,12 @@ private:
 };
 } // namespace
 
+static StringRef unquote(StringRef S) {
+  if (S.startswith("\""))
+    return S.substr(1, S.size() - 2);
+  return S;
+}
+
 static bool isUnderSysroot(StringRef Path) {
   if (Config->Sysroot == "")
     return false;
@@ -1101,6 +1107,10 @@ void ScriptParser::readVersionDeclaration(StringRef VerStr) {
   if (peek() != ";")
     skip();
   expect(";");
+}
+
+static bool hasWildcard(StringRef S) {
+  return S.find_first_of("?*[") != StringRef::npos;
 }
 
 // Reads a list of symbols, e.g. "{ global: foo; bar; local: *; };".

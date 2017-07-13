@@ -274,6 +274,28 @@ bool CPlusPlusNameParser::ConsumeAnonymousNamespace() {
   return true;
 }
 
+bool CPlusPlusNameParser::ConsumeLambda() {
+  Bookmark start_position = SetBookmark();
+  if (!ConsumeToken(tok::l_brace)) {
+    return false;
+  }
+  constexpr llvm::StringLiteral g_lambda("lambda");
+  if (HasMoreTokens() && Peek().is(tok::raw_identifier) &&
+      Peek().getRawIdentifier() == g_lambda) {
+    // Put the matched brace back so we can use ConsumeBrackets
+    TakeBack();
+  } else {
+    return false;
+  }
+
+  if (!ConsumeBrackets(tok::l_brace, tok::r_brace)) {
+    return false;
+  }
+
+  start_position.Remove();
+  return true;
+}
+
 bool CPlusPlusNameParser::ConsumeBrackets(tok::TokenKind left,
                                           tok::TokenKind right) {
   Bookmark start_position = SetBookmark();
@@ -502,6 +524,15 @@ CPlusPlusNameParser::ParseFullNameImpl() {
       state = State::AfterTwoColons;
       break;
     }
+    case tok::l_brace:
+      if (state == State::Beginning || state == State::AfterTwoColons) {
+        if (ConsumeLambda()) {
+          state = State::AfterIdentifier;
+          break;
+        }
+      }
+      continue_parsing = false;
+      break;
     case tok::coloncolon: // Type nesting delimiter.
       if (state != State::Beginning && state != State::AfterIdentifier &&
           state != State::AfterTemplate) {

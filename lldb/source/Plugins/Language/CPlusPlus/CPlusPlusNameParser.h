@@ -143,6 +143,9 @@ private:
   // Consumes '(anonymous namespace)'
   bool ConsumeAnonymousNamespace();
 
+  // Consumes '{lambda ...}'
+  bool ConsumeLambda();
+
   // Consumes operator declaration like 'operator *' or 'operator delete []'
   bool ConsumeOperator();
 

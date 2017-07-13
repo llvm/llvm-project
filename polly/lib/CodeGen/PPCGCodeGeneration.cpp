@@ -1358,7 +1358,16 @@ GPUNodeBuilder::getReferencesInKernel(ppcg_kernel *Kernel) {
   SetVector<Function *> ValidSubtreeFunctions(
       getFunctionsFromRawSubtreeValues(SubtreeValues));
 
-  return std::make_pair(ValidSubtreeValues, ValidSubtreeFunctions);
+  // @see IslNodeBuilder::getReferencesInSubtree
+  SetVector<Value *> ReplacedValues;
+  for (Value *V : ValidSubtreeValues) {
+    auto It = ValueMap.find(V);
+    if (It == ValueMap.end())
+      ReplacedValues.insert(V);
+    else
+      ReplacedValues.insert(It->second);
+  }
+  return std::make_pair(ReplacedValues, ValidSubtreeFunctions);
 }
 
 void GPUNodeBuilder::clearDominators(Function *F) {
@@ -1524,6 +1533,8 @@ GPUNodeBuilder::createLaunchParameters(ppcg_kernel *Kernel, Function *F,
   for (long i = 0; i < NumVars; i++) {
     isl_id *Id = isl_space_get_dim_id(Kernel->space, isl_dim_param, i);
     Value *Val = IDToValue[Id];
+    if (ValueMap.count(Val))
+      Val = ValueMap[Val];
     isl_id_free(Id);
 
     ArgSizes[Index] = computeSizeInBytes(Val->getType());
