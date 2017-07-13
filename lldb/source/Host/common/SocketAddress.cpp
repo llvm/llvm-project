@@ -317,6 +317,13 @@ bool SocketAddress::IsAnyAddr() const {
              : 0 == memcmp(&m_socket_addr.sa_ipv6.sin6_addr, &in6addr_any, 16);
 }
 
+bool SocketAddress::IsLocalhost() const {
+  return (GetFamily() == AF_INET)
+             ? m_socket_addr.sa_ipv4.sin_addr.s_addr == htonl(INADDR_LOOPBACK)
+             : 0 == memcmp(&m_socket_addr.sa_ipv6.sin6_addr, &in6addr_loopback,
+                           16);
+}
+
 bool SocketAddress::operator==(const SocketAddress &rhs) const {
   if (GetFamily() != rhs.GetFamily())
     return false;

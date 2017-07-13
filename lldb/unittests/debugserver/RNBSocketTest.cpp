@@ -85,6 +85,8 @@ TEST(RNBSocket, LoopBackListenIPv4) { TestSocketListen("127.0.0.1"); }
 
 TEST(RNBSocket, LoopBackListenIPv6) { TestSocketListen("::1"); }
 
+TEST(RNBSocket, AnyListen) { TestSocketListen("*"); }
+
 void TestSocketConnect(const char *addr) {
   // Skip IPv6 tests if there isn't a valid interafce
   auto addresses = lldb_private::SocketAddress::GetAddressInfo(

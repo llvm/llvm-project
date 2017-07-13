@@ -152,6 +152,11 @@ public:
   bool IsAnyAddr() const;
 
   //------------------------------------------------------------------
+  // Returns true if the socket is INADDR_LOOPBACK
+  //------------------------------------------------------------------
+  bool IsLocalhost() const;
+
+  //------------------------------------------------------------------
   // Direct access to all of the sockaddr structures
   //------------------------------------------------------------------
   struct sockaddr &sockaddr() {
