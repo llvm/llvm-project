@@ -182,7 +182,7 @@ static StructuredData::ArraySP ReadNotes(ProcessSP process_sp, addr_t addr) {
   if (num_notes > 16) num_notes = 16;
   addr_t fixits_ptr = process_sp->ReadUnsignedIntegerFromMemory(addr + ptr_size, ptr_size, 0, read_error);
   for (int i = 0; i < num_notes; i++) {
-    int note_struct_stride = 6 * ptr_size;
+    int note_struct_stride = 3 * ptr_size;
     addr_t note_ptr = fixits_ptr + i * note_struct_stride;
 
     std::string note_description;
