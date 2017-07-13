@@ -68,6 +68,16 @@ class TestSwiftLetIntSupport(TestBase):
         lldbutil.check_variable(self, let, False, value="10")
         lldbutil.check_variable(self, var, False, value="10")
 
+        get_arguments = False
+        get_locals = True
+        get_statics = False
+        get_in_scope_only = True
+        local_vars = self.frame.GetVariables(get_arguments, get_locals,
+                                             get_statics, get_in_scope_only)
+        self.assertTrue(local_vars.GetFirstValueByName("x").IsValid())
+        self.assertTrue(local_vars.GetFirstValueByName("y").IsValid())
+        self.assertTrue(not local_vars.GetFirstValueByName("z").IsValid())
+
 if __name__ == '__main__':
     import atexit
     lldb.SBDebugger.Initialize()

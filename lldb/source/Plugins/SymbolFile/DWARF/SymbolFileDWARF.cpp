@@ -4268,7 +4268,15 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
             }
           }
         } else {
-          if (location_is_const_value_data)
+          // The heuristic for inferring static variables works for Clang's
+          // behavior on C-like languages, which generally does not emit
+          // AT_const_value for locals.
+          //
+          // However, the Swift compiler can and does emit AT_const_value for
+          // locals, and function-level statics don't exist, so we flip the
+          // heuristic here.
+          if (location_is_const_value_data &&
+              !IsSwiftLanguage(sc.comp_unit->GetLanguage()))
             scope = eValueTypeVariableStatic;
           else {
             scope = eValueTypeVariableLocal;
