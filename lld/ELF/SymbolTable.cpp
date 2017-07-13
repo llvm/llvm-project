@@ -231,6 +231,7 @@ std::pair<Symbol *, bool> SymbolTable<ELFT>::insert(StringRef Name) {
   Symbol *Sym;
   if (IsNew) {
     Sym = make<Symbol>();
+    Sym->InVersionScript = false;
     Sym->Binding = STB_WEAK;
     Sym->Visibility = STV_DEFAULT;
     Sym->IsUsedInRegularObj = false;
@@ -325,7 +326,7 @@ static int compareDefined(Symbol *S, bool WasInserted, uint8_t Binding) {
   if (WasInserted)
     return 1;
   SymbolBody *Body = S->body();
-  if (Body->isLazy() || !Body->isInCurrentDSO())
+  if (!Body->isInCurrentDSO())
     return 1;
   if (Binding == STB_WEAK)
     return -1;
@@ -695,10 +696,17 @@ void SymbolTable<ELFT>::assignExactVersion(SymbolVersion Ver, uint16_t VersionId
 
   // Assign the version.
   for (SymbolBody *B : Syms) {
+    // Skip symbols containing version info because symbol versions
+    // specified by symbol names take precedence over version scripts.
+    // See parseSymbolVersion().
+    if (B->getName().find('@') != StringRef::npos)
+      continue;
+
     Symbol *Sym = B->symbol();
-    if (Sym->VersionId != Config->DefaultSymbolVersion)
+    if (Sym->InVersionScript)
       warn("duplicate symbol '" + Ver.Name + "' in version script");
     Sym->VersionId = VersionId;
+    Sym->InVersionScript = true;
   }
 }
 
@@ -719,17 +727,9 @@ void SymbolTable<ELFT>::assignWildcardVersion(SymbolVersion Ver,
 // This function processes version scripts by updating VersionId
 // member of symbols.
 template <class ELFT> void SymbolTable<ELFT>::scanVersionScript() {
-  // Symbol themselves might know their versions because symbols
-  // can contain versions in the form of <name>@<version>.
-  // Let them parse and update their names to exclude version suffix.
-  for (Symbol *Sym : SymVector)
-    Sym->body()->parseSymbolVersion();
-
   // Handle edge cases first.
   handleAnonymousVersion();
 
-  if (Config->VersionDefinitions.empty())
-    return;
 
   // Now we have version definitions, so we need to set version ids to symbols.
   // Each version definition has a glob pattern, and all symbols that match
@@ -748,6 +748,12 @@ template <class ELFT> void SymbolTable<ELFT>::scanVersionScript() {
   for (VersionDefinition &V : llvm::reverse(Config->VersionDefinitions))
     for (SymbolVersion &Ver : V.Globals)
       assignWildcardVersion(Ver, V.Id);
+
+  // Symbol themselves might know their versions because symbols
+  // can contain versions in the form of <name>@<version>.
+  // Let them parse and update their names to exclude version suffix.
+  for (Symbol *Sym : SymVector)
+    Sym->body()->parseSymbolVersion();
 }
 
 template class elf::SymbolTable<ELF32LE>;

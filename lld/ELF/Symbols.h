@@ -65,7 +65,9 @@ public:
     return SymbolKind == LazyArchiveKind || SymbolKind == LazyObjectKind;
   }
   bool isShared() const { return SymbolKind == SharedKind; }
-  bool isInCurrentDSO() const { return !isUndefined() && !isShared(); }
+  bool isInCurrentDSO() const {
+    return !isUndefined() && !isShared() && !isLazy();
+  }
   bool isLocal() const { return IsLocal; }
   bool isPreemptible() const;
   StringRef getName() const { return Name; }
@@ -362,6 +364,9 @@ struct Symbol {
 
   // True if this symbol is specified by --trace-symbol option.
   unsigned Traced : 1;
+
+  // This symbol version was found in a version script.
+  unsigned InVersionScript : 1;
 
   bool includeInDynsym() const;
   uint8_t computeBinding() const;

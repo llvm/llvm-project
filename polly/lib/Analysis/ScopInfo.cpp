@@ -3499,6 +3499,18 @@ static Loop *getLoopSurroundingScop(Scop &S, LoopInfo &LI) {
   return L ? (S.contains(L) ? L->getParentLoop() : L) : nullptr;
 }
 
+int Scop::NextScopID = 0;
+
+std::string Scop::CurrentFunc = "";
+
+int Scop::getNextID(std::string ParentFunc) {
+  if (ParentFunc != CurrentFunc) {
+    CurrentFunc = ParentFunc;
+    NextScopID = 0;
+  }
+  return NextScopID++;
+}
+
 Scop::Scop(Region &R, ScalarEvolution &ScalarEvolution, LoopInfo &LI,
            ScopDetection::DetectionContext &DC)
     : SE(&ScalarEvolution), R(R), name(R.getNameStr()), IsOptimized(false),
@@ -3506,7 +3518,8 @@ Scop::Scop(Region &R, ScalarEvolution &ScalarEvolution, LoopInfo &LI,
       MaxLoopDepth(0), CopyStmtsNum(0), SkipScop(false), DC(DC),
       IslCtx(isl_ctx_alloc(), isl_ctx_free), Context(nullptr),
       Affinator(this, LI), AssumedContext(nullptr), InvalidContext(nullptr),
-      Schedule(nullptr) {
+      Schedule(nullptr),
+      ID(getNextID((*R.getEntry()->getParent()).getName().str())) {
   if (IslOnErrorAbort)
     isl_options_set_on_error(getIslCtx(), ISL_ON_ERROR_ABORT);
   buildContext();

@@ -206,7 +206,7 @@ CHECK-NEXT:   |                  - Pdb File Path Index | {{[EI]}} |
 CHECK-NEXT:   |----------------------------------------+---|
 CHECK-NEXT:   |               - Source File Name Index | {{[EI]}} |
 CHECK-NEXT:   |----------------------------------------+---|
-CHECK-NEXT:   |                     - Symbol Byte Size | D |
+CHECK-NEXT:   |                     - Symbol Byte Size |
 CHECK-NEXT:   |----------------------------------------+---|
 
 

@@ -676,11 +676,11 @@ private:
     };
 
 #if _LIBCPP_BIG_ENDIAN
-    enum {__short_mask = 0x01};
-    enum {__long_mask  = 0x1ul};
+    static const size_type __short_mask = 0x01;
+    static const size_type __long_mask  = 0x1ul;
 #else  // _LIBCPP_BIG_ENDIAN
-    enum {__short_mask = 0x80};
-    enum {__long_mask  = ~(size_type(~0) >> 1)};
+    static const size_type __short_mask = 0x80;
+    static const size_type __long_mask  = ~(size_type(~0) >> 1);
 #endif  // _LIBCPP_BIG_ENDIAN
 
     enum {__min_cap = (sizeof(__long) - 1)/sizeof(value_type) > 2 ?
@@ -706,11 +706,11 @@ private:
     };
 
 #if _LIBCPP_BIG_ENDIAN
-    enum {__short_mask = 0x80};
-    enum {__long_mask  = ~(size_type(~0) >> 1)};
+    static const size_type __short_mask = 0x80;
+    static const size_type __long_mask  = ~(size_type(~0) >> 1);
 #else  // _LIBCPP_BIG_ENDIAN
-    enum {__short_mask = 0x01};
-    enum {__long_mask  = 0x1ul};
+    static const size_type __short_mask = 0x01;
+    static const size_type __long_mask  = 0x1ul;
 #endif  // _LIBCPP_BIG_ENDIAN
 
     enum {__min_cap = (sizeof(__long) - 1)/sizeof(value_type) > 2 ?

@@ -7,14 +7,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___REFSTRING
-#define _LIBCPP___REFSTRING
+// FIXME: This file is copied from libcxx/src/include/refstring.h. Instead of
+// duplicating the file in libc++abi we should require that the libc++ sources
+// are available when building libc++abi.
+
+#ifndef _LIBCPPABI_REFSTRING_H
+#define _LIBCPPABI_REFSTRING_H
 
 #include <__config>
 #include <stdexcept>
 #include <cstddef>
 #include <cstring>
-#include <__atomic_support>
 #ifdef __APPLE__
 #include <dlfcn.h>
 #include <mach-o/dyld.h>
@@ -84,7 +87,7 @@ __libcpp_refstring::__libcpp_refstring(const __libcpp_refstring &s) _NOEXCEPT
     : __imp_(s.__imp_)
 {
     if (__uses_refcount())
-        __libcpp_sync_add_and_fetch(&rep_from_data(__imp_)->count, 1);
+        __sync_add_and_fetch(&rep_from_data(__imp_)->count, 1);
 }
 
 inline
@@ -93,10 +96,10 @@ __libcpp_refstring& __libcpp_refstring::operator=(__libcpp_refstring const& s) _
     struct _Rep_base *old_rep = rep_from_data(__imp_);
     __imp_ = s.__imp_;
     if (__uses_refcount())
-        __libcpp_sync_add_and_fetch(&rep_from_data(__imp_)->count, 1);
+        __sync_add_and_fetch(&rep_from_data(__imp_)->count, 1);
     if (adjust_old_count)
     {
-        if (__libcpp_sync_add_and_fetch(&old_rep->count, count_t(-1)) < 0)
+        if (__sync_add_and_fetch(&old_rep->count, count_t(-1)) < 0)
         {
             ::operator delete(old_rep);
         }
@@ -108,7 +111,7 @@ inline
 __libcpp_refstring::~__libcpp_refstring() {
     if (__uses_refcount()) {
         _Rep_base* rep = rep_from_data(__imp_);
-        if (__libcpp_sync_add_and_fetch(&rep->count, count_t(-1)) < 0) {
+        if (__sync_add_and_fetch(&rep->count, count_t(-1)) < 0) {
             ::operator delete(rep);
         }
     }
@@ -125,4 +128,4 @@ bool __libcpp_refstring::__uses_refcount() const {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif //_LIBCPP___REFSTRING
+#endif //_LIBCPPABI_REFSTRING_H

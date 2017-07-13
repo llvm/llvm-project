@@ -45,6 +45,7 @@ struct NameTypeEntry {
 // debug information performed. That information futher used
 // for filling gdb index section areas.
 struct GdbIndexChunk {
+  InputSection *DebugInfoSec;
   std::vector<AddressEntry> AddressArea;
   std::vector<CompilationUnitEntry> CompilationUnits;
   std::vector<NameTypeEntry> NamesAndTypes;

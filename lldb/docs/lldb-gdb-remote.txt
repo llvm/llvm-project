@@ -126,6 +126,32 @@ read packet: $OK#00
 This packet can be sent one or more times _prior_ to sending a "A" packet.
 
 //----------------------------------------------------------------------
+// "QEnableErrorStrings"
+//
+// BRIEF
+//  This packet enables reporting of Error strings in remote packet
+//  replies from the server to client. If the server supports this
+//  feature, it should send an OK response. The client can expect the
+//  following error replies if this feature is enabled in the server ->
+//
+//  EXX;AAAAAAAAA
+//
+//  where AAAAAAAAA will be a hex encoded ASCII string.
+//  XX is hex encoded byte number.
+//
+//  It must be noted that even if the client has enabled reporting
+//  strings in error replies, it must not expect error strings to all
+//  error replies.
+// 
+// PRIORITY TO IMPLEMENT
+//  Low. Only needed if the remote target wants to provide strings that
+//  are human readable along with an error code.
+//----------------------------------------------------------------------
+
+send packet: $QErrorStringInPacketSupported
+read packet: $OK#00
+
+//----------------------------------------------------------------------
 // "QSetSTDIN:<ascii-hex-path>"
 // "QSetSTDOUT:<ascii-hex-path>"
 // "QSetSTDERR:<ascii-hex-path>"
@@ -250,11 +276,12 @@ read packet: OK
 //
 //  Each tracing instance is identified by a trace id which is returned
 //  as the reply to this packet. In case the tracing failed to begin an
-//  error code is returned instead.
+//  error code along with a hex encoded ASCII message is returned
+//  instead.
 //----------------------------------------------------------------------
 
 send packet: jTraceStart:{"type":<type>,"buffersize":<buffersize>}]
-read packet: <trace id>/E<error code>
+read packet: <trace id>/E<error code>;AAAAAAAAA
 
 //----------------------------------------------------------------------
 // jTraceStop:
@@ -283,12 +310,12 @@ read packet: <trace id>/E<error code>
 //                  to stop tracing on that thread.
 //  ==========      ====================================================
 //
-//  An OK response is sent in case of success else an error code is
-//  returned.
+//  An OK response is sent in case of success else an error code along
+//  with a hex encoded ASCII message is returned.
 //----------------------------------------------------------------------
 
 send packet: jTraceStop:{"traceid":<trace id>}]
-read packet: <OK response>/E<error code>
+read packet: <OK response>/E<error code>;AAAAAAAAA
 
 //----------------------------------------------------------------------
 // jTraceBufferRead:
@@ -317,11 +344,11 @@ read packet: <OK response>/E<error code>
 //  ==========      ====================================================
 //
 //  The trace data is sent as raw binary data if the read was successful
-//  else an error code is sent.
+//  else an error code along with a hex encoded ASCII message is sent.
 //----------------------------------------------------------------------
 
 send packet: jTraceBufferRead:{"traceid":<trace id>,"offset":<byteoffset>,"buffersize":<byte_count>}]
-read packet: <binary trace data>/E<error code>
+read packet: <binary trace data>/E<error code>;AAAAAAAAA
 
 //----------------------------------------------------------------------
 // jTraceMetaRead:
@@ -359,11 +386,11 @@ read packet: <binary trace data>/E<error code>
 //  gdb-remote protocol has certain limitations, binary escaping
 //  convention is used.
 //  In case the trace instance with the <trace id> was not found, an
-//  error code is returned.
+//  error code along with a hex encoded ASCII message is returned.
 //----------------------------------------------------------------------
 
 send packet: jTraceConfigRead:{"traceid":<trace id>}
-read packet: {"conf1":<conf1>,"conf2":<conf2>,"params":{"paramName":paramValue}]}];/E<error code>
+read packet: {"conf1":<conf1>,"conf2":<conf2>,"params":{"paramName":paramValue}]}];/E<error code>;AAAAAAAAA
 
 //----------------------------------------------------------------------
 // "qRegisterInfo<hex-reg-id>"
