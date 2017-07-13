@@ -413,3 +413,28 @@ void classReceivers() {
   (void)ClassReceivers.implicit;
 // CHECK: [[@LINE-1]]:9 | class/ObjC | ClassReceivers | c:objc(cs)ClassReceivers | _OBJC_CLASS_$_ClassReceivers | Ref,RelCont | rel: 1
 }
+
+@interface EmptySelectors
+
+- (int):(int)_; // CHECK: [[@LINE]]:8 | instance-method/ObjC | : | c:objc(cs)EmptySelectors(im): | -[EmptySelectors :]
+- (void)test: (int)x :(int)y; // CHECK: [[@LINE]]:9 | instance-method/ObjC | test:: | c:objc(cs)EmptySelectors(im)test:: | -[EmptySelectors test::]
+- (void):(int)_ :(int)m:(int)z; // CHECK: [[@LINE]]:9 | instance-method/ObjC | ::: | c:objc(cs)EmptySelectors(im)::: | -[EmptySelectors :::]
+
+@end
+
+@implementation EmptySelectors
+
+- (int):(int)_ { // CHECK: [[@LINE]]:8 | instance-method/ObjC | : | c:objc(cs)EmptySelectors(im): | -[EmptySelectors :]
+  [self :2]; // CHECK: [[@LINE]]:9 | instance-method/ObjC | : | c:objc(cs)EmptySelectors(im): | -[EmptySelectors :]
+  return 0;
+}
+
+- (void)test: (int)x :(int)y { // CHECK: [[@LINE]]:9 | instance-method/ObjC | test:: | c:objc(cs)EmptySelectors(im)test:: | -[EmptySelectors test::]
+}
+
+- (void) :(int)_ :(int)m :(int)z { // CHECK: [[@LINE]]:10 | instance-method/ObjC | ::: | c:objc(cs)EmptySelectors(im)::: | -[EmptySelectors :::]
+  [self test:0:1]; // CHECK: [[@LINE]]:9 | instance-method/ObjC | test:: | c:objc(cs)EmptySelectors(im)test:: | -[EmptySelectors test::]
+  [self: 0: 1: 2]; // CHECK: [[@LINE]]:8 | instance-method/ObjC | ::: | c:objc(cs)EmptySelectors(im)::: | -[EmptySelectors :::]
+}
+
+@end
