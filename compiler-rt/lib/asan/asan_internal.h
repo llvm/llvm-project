@@ -75,6 +75,7 @@ void NORETURN ShowStatsAndAbort();
 void ReplaceSystemMalloc();
 
 // asan_linux.cc / asan_mac.cc / asan_win.cc
+uptr FindDynamicShadowStart();
 void *AsanDoesNotSupportStaticLinkage();
 void AsanCheckDynamicRTPrereqs();
 void AsanCheckIncompatibleRT();

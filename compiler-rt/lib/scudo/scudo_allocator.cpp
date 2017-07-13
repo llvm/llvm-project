@@ -264,7 +264,7 @@ ScudoQuarantineCache *getQuarantineCache(ScudoThreadContext *ThreadContext) {
       ScudoQuarantineCache *>(ThreadContext->QuarantineCachePlaceHolder);
 }
 
-Xorshift128Plus *getPrng(ScudoThreadContext *ThreadContext) {
+ScudoPrng *getPrng(ScudoThreadContext *ThreadContext) {
   return &ThreadContext->Prng;
 }
 
@@ -283,7 +283,7 @@ struct ScudoAllocator {
   StaticSpinMutex FallbackMutex;
   AllocatorCache FallbackAllocatorCache;
   ScudoQuarantineCache FallbackQuarantineCache;
-  Xorshift128Plus FallbackPrng;
+  ScudoPrng FallbackPrng;
 
   bool DeallocationTypeMismatch;
   bool ZeroContents;
@@ -333,8 +333,8 @@ struct ScudoAllocator {
         static_cast<uptr>(Options.QuarantineSizeMb) << 20,
         static_cast<uptr>(Options.ThreadLocalQuarantineSizeKb) << 10);
     BackendAllocator.InitCache(&FallbackAllocatorCache);
-    FallbackPrng.initFromURandom();
-    Cookie = FallbackPrng.getNext();
+    FallbackPrng.init();
+    Cookie = FallbackPrng.getU64();
   }
 
   // Helper function that checks for a valid Scudo chunk. nullptr isn't.
@@ -373,19 +373,19 @@ struct ScudoAllocator {
     bool FromPrimary = PrimaryAllocator::CanAllocate(AlignedSize, MinAlignment);
 
     void *Ptr;
-    uptr Salt;
+    u8 Salt;
     uptr AllocationSize = FromPrimary ? AlignedSize : NeededSize;
     uptr AllocationAlignment = FromPrimary ? MinAlignment : Alignment;
     ScudoThreadContext *ThreadContext = getThreadContextAndLock();
     if (LIKELY(ThreadContext)) {
-      Salt = getPrng(ThreadContext)->getNext();
+      Salt = getPrng(ThreadContext)->getU8();
       Ptr = BackendAllocator.Allocate(getAllocatorCache(ThreadContext),
                                       AllocationSize, AllocationAlignment,
                                       FromPrimary);
       ThreadContext->unlock();
     } else {
       SpinMutexLock l(&FallbackMutex);
-      Salt = FallbackPrng.getNext();
+      Salt = FallbackPrng.getU8();
       Ptr = BackendAllocator.Allocate(&FallbackAllocatorCache, AllocationSize,
                                       AllocationAlignment, FromPrimary);
     }
@@ -612,7 +612,7 @@ static void initScudoInternal(const AllocatorOptions &Options) {
 
 void ScudoThreadContext::init() {
   getBackendAllocator().InitCache(&Cache);
-  Prng.initFromURandom();
+  Prng.init();
   memset(QuarantineCachePlaceHolder, 0, sizeof(QuarantineCachePlaceHolder));
 }
 

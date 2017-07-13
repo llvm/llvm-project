@@ -1671,7 +1671,8 @@ void CheckNoDeepBind(const char *filename, int flag) {
 #endif
 }
 
-uptr FindAvailableMemoryRange(uptr size, uptr alignment, uptr left_padding) {
+uptr FindAvailableMemoryRange(uptr size, uptr alignment, uptr left_padding,
+                              uptr *largest_gap_found) {
   UNREACHABLE("FindAvailableMemoryRange is not available");
   return 0;
 }
