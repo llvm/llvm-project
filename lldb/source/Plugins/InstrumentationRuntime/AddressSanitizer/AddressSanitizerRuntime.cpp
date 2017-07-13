@@ -247,12 +247,16 @@ bool AddressSanitizerRuntime::NotifyBreakpointHit(
   AddressSanitizerRuntime *const instance =
       static_cast<AddressSanitizerRuntime *>(baton);
 
+  ProcessSP process_sp = instance->GetProcessSP();
+
+  if (process_sp->GetModIDRef().IsLastResumeForUserExpression())
+    return false;
+
   StructuredData::ObjectSP report = instance->RetrieveReportData();
   std::string description;
   if (report) {
     description = instance->FormatDescription(report);
   }
-  ProcessSP process_sp = instance->GetProcessSP();
   // Make sure this is the right process
   if (process_sp && process_sp == context->exe_ctx_ref.GetProcessSP()) {
     ThreadSP thread_sp = context->exe_ctx_ref.GetThreadSP();

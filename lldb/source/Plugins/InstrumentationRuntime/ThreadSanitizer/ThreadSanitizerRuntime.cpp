@@ -803,6 +803,11 @@ bool ThreadSanitizerRuntime::NotifyBreakpointHit(
   ThreadSanitizerRuntime *const instance =
       static_cast<ThreadSanitizerRuntime *>(baton);
 
+  ProcessSP process_sp = instance->GetProcessSP();
+
+  if (process_sp->GetModIDRef().IsLastResumeForUserExpression())
+    return false;
+
   StructuredData::ObjectSP report =
       instance->RetrieveReportData(context->exe_ctx_ref);
   std::string stop_reason_description;
@@ -851,7 +856,6 @@ bool ThreadSanitizerRuntime::NotifyBreakpointHit(
                                               all_addresses_are_same);
   }
 
-  ProcessSP process_sp = instance->GetProcessSP();
   // Make sure this is the right process
   if (process_sp && process_sp == context->exe_ctx_ref.GetProcessSP()) {
     ThreadSP thread_sp = context->exe_ctx_ref.GetThreadSP();
