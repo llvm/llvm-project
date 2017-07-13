@@ -1605,6 +1605,84 @@ CXXMethodDecl *CXXMethodDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
                                    SC_None, false, false, SourceLocation());
 }
 
+CXXMethodDecl *CXXMethodDecl::getDevirtualizedMethod(const Expr *Base,
+                                                     bool IsAppleKext) {
+  assert(isVirtual() && "this method is expected to be virtual");
+
+  // When building with -fapple-kext, all calls must go through the vtable since
+  // the kernel linker can do runtime patching of vtables.
+  if (IsAppleKext)
+    return nullptr;
+
+  // If the member function is marked 'final', we know that it can't be
+  // overridden and can therefore devirtualize it unless it's pure virtual.
+  if (hasAttr<FinalAttr>())
+    return isPure() ? nullptr : this;
+
+  // If Base is unknown, we cannot devirtualize.
+  if (!Base)
+    return nullptr;
+
+  // If the base expression (after skipping derived-to-base conversions) is a
+  // class prvalue, then we can devirtualize.
+  Base = Base->getBestDynamicClassTypeExpr();
+  if (Base->isRValue() && Base->getType()->isRecordType())
+    return this;
+
+  // If we don't even know what we would call, we can't devirtualize.
+  const CXXRecordDecl *BestDynamicDecl = Base->getBestDynamicClassType();
+  if (!BestDynamicDecl)
+    return nullptr;
+
+  // There may be a method corresponding to MD in a derived class.
+  CXXMethodDecl *DevirtualizedMethod =
+      getCorrespondingMethodInClass(BestDynamicDecl);
+
+  // If that method is pure virtual, we can't devirtualize. If this code is
+  // reached, the result would be UB, not a direct call to the derived class
+  // function, and we can't assume the derived class function is defined.
+  if (DevirtualizedMethod->isPure())
+    return nullptr;
+
+  // If that method is marked final, we can devirtualize it.
+  if (DevirtualizedMethod->hasAttr<FinalAttr>())
+    return DevirtualizedMethod;
+
+  // Similarly, if the class itself is marked 'final' it can't be overridden
+  // and we can therefore devirtualize the member function call.
+  if (BestDynamicDecl->hasAttr<FinalAttr>())
+    return DevirtualizedMethod;
+
+  if (const DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(Base)) {
+    if (const VarDecl *VD = dyn_cast<VarDecl>(DRE->getDecl()))
+      if (VD->getType()->isRecordType())
+        // This is a record decl. We know the type and can devirtualize it.
+        return DevirtualizedMethod;
+
+    return nullptr;
+  }
+
+  // We can devirtualize calls on an object accessed by a class member access
+  // expression, since by C++11 [basic.life]p6 we know that it can't refer to
+  // a derived class object constructed in the same location.
+  if (const MemberExpr *ME = dyn_cast<MemberExpr>(Base))
+    if (const ValueDecl *VD = dyn_cast<ValueDecl>(ME->getMemberDecl()))
+      return VD->getType()->isRecordType() ? DevirtualizedMethod : nullptr;
+
+  // Likewise for calls on an object accessed by a (non-reference) pointer to
+  // member access.
+  if (auto *BO = dyn_cast<BinaryOperator>(Base)) {
+    if (BO->isPtrMemOp()) {
+      auto *MPT = BO->getRHS()->getType()->castAs<MemberPointerType>();
+      if (MPT->getPointeeType()->isRecordType())
+        return DevirtualizedMethod;
+    }
+  }
+
+  // We can't devirtualize the call.
+  return nullptr;
+}
+
 bool CXXMethodDecl::isUsualDeallocationFunction() const {
   if (getOverloadedOperator() != OO_Delete &&
       getOverloadedOperator() != OO_Array_Delete)
