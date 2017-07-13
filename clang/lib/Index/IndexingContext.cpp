@@ -229,6 +229,12 @@ static bool isDeclADefinition(const Decl *D, const DeclContext *ContainerDC, AST
   return false;
 }
 
+/// Whether the given NamedDecl should be skipped because it has no name.
+static bool shouldSkipNamelessDecl(const NamedDecl *ND) {
+  return ND->getDeclName().isEmpty() && !isa<TagDecl>(ND) &&
+         !isa<ObjCCategoryDecl>(ND);
+}
+
 static const Decl *adjustParent(const Decl *Parent) {
   if (!Parent)
     return nullptr;
@@ -243,8 +249,8 @@ static const Decl *adjustParent(const Decl *Parent) {
     } else if (auto RD = dyn_cast<RecordDecl>(Parent)) {
       if (RD->isAnonymousStructOrUnion())
         continue;
-    } else if (auto FD = dyn_cast<FieldDecl>(Parent)) {
-      if (FD->getDeclName().isEmpty())
+    } else if (auto ND = dyn_cast<NamedDecl>(Parent)) {
+      if (shouldSkipNamelessDecl(ND))
         continue;
     }
     return Parent;
@@ -315,9 +321,7 @@ bool IndexingContext::handleDeclOccurrence(const Decl *D, SourceLocation Loc,
                                            const DeclContext *ContainerDC) {
   if (D->isImplicit() && !isa<ObjCMethodDecl>(D))
     return true;
-  if (!isa<NamedDecl>(D) ||
-      (cast<NamedDecl>(D)->getDeclName().isEmpty() &&
-       !isa<TagDecl>(D) && !isa<ObjCCategoryDecl>(D)))
+  if (!isa<NamedDecl>(D) || shouldSkipNamelessDecl(cast<NamedDecl>(D)))
     return true;
 
   SourceManager &SM = Ctx->getSourceManager();

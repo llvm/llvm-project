@@ -118,6 +118,7 @@ set(Tests
   SingleStrncmpTest
   SpamyTest
   ShrinkControlFlowTest
+  ShrinkControlFlowSimpleTest
   ShrinkValueProfileTest
   StrcmpTest
   StrncmpOOBTest

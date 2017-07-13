@@ -125,8 +125,11 @@ static void MarkBlocksLiveIn(BasicBlock *BB,
   if (!LiveBBs.insert(BB).second)
     return; // already been here.
 
-  for (BasicBlock *PredBB : predecessors(BB))
-    MarkBlocksLiveIn(PredBB, LiveBBs);
+  df_iterator_default_set<BasicBlock*> Visited;
+
+  for (BasicBlock *B : inverse_depth_first_ext(BB, Visited))
+    LiveBBs.insert(B);
+
 }
 
 /// substituteLPadValues - Substitute the values returned by the landingpad

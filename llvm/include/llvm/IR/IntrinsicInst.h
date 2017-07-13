@@ -385,6 +385,86 @@ namespace llvm {
     }
   };
 
+  /// This class represents atomic memset intrinsic
+  /// TODO: Integrate this class into MemIntrinsic hierarchy; for now this is
+  /// C&P of all methods from that hierarchy
+  class ElementUnorderedAtomicMemSetInst : public IntrinsicInst {
+  private:
+    enum { ARG_DEST = 0, ARG_VALUE = 1, ARG_LENGTH = 2, ARG_ELEMENTSIZE = 3 };
+
+  public:
+    Value *getRawDest() const {
+      return const_cast<Value *>(getArgOperand(ARG_DEST));
+    }
+    const Use &getRawDestUse() const { return getArgOperandUse(ARG_DEST); }
+    Use &getRawDestUse() { return getArgOperandUse(ARG_DEST); }
+
+    Value *getValue() const { return const_cast<Value*>(getArgOperand(ARG_VALUE)); }
+    const Use &getValueUse() const { return getArgOperandUse(ARG_VALUE); }
+    Use &getValueUse() { return getArgOperandUse(ARG_VALUE); }
+
+    Value *getLength() const {
+      return const_cast<Value *>(getArgOperand(ARG_LENGTH));
+    }
+    const Use &getLengthUse() const { return getArgOperandUse(ARG_LENGTH); }
+    Use &getLengthUse() { return getArgOperandUse(ARG_LENGTH); }
+
+    bool isVolatile() const { return false; }
+
+    Value *getRawElementSizeInBytes() const {
+      return const_cast<Value *>(getArgOperand(ARG_ELEMENTSIZE));
+    }
+
+    ConstantInt *getElementSizeInBytesCst() const {
+      return cast<ConstantInt>(getRawElementSizeInBytes());
+    }
+
+    uint32_t getElementSizeInBytes() const {
+      return getElementSizeInBytesCst()->getZExtValue();
+    }
+
+    /// This is just like getRawDest, but it strips off any cast
+    /// instructions that feed it, giving the original input.  The returned
+    /// value is guaranteed to be a pointer.
+    Value *getDest() const { return getRawDest()->stripPointerCasts(); }
+
+    unsigned getDestAddressSpace() const {
+      return cast<PointerType>(getRawDest()->getType())->getAddressSpace();
+    }
+
+    /// Set the specified arguments of the instruction.
+    void setDest(Value *Ptr) {
+      assert(getRawDest()->getType() == Ptr->getType() &&
+             "setDest called with pointer of wrong type!");
+      setArgOperand(ARG_DEST, Ptr);
+    }
+
+    void setValue(Value *Val) {
+      assert(getValue()->getType() == Val->getType() &&
+             "setValue called with value of wrong type!");
+      setArgOperand(ARG_VALUE, Val);
+    }
+
+    void setLength(Value *L) {
+      assert(getLength()->getType() == L->getType() &&
+             "setLength called with value of wrong type!");
+      setArgOperand(ARG_LENGTH, L);
+    }
+
+    void setElementSizeInBytes(Constant *V) {
+      assert(V->getType() == Type::getInt8Ty(getContext()) &&
+             "setElementSizeInBytes called with value of wrong type!");
+      setArgOperand(ARG_ELEMENTSIZE, V);
+    }
+
+    static inline bool classof(const IntrinsicInst *I) {
+      return I->getIntrinsicID() == Intrinsic::memset_element_unordered_atomic;
+    }
+    static inline bool classof(const Value *V) {
+      return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+    }
+  };
+
   /// This is the common base class for memset/memcpy/memmove.
   class MemIntrinsic : public IntrinsicInst {
   public:

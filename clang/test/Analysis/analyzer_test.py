@@ -1,4 +1,3 @@
-import copy
 import lit.formats
 import lit.TestRunner
 
@@ -9,21 +8,18 @@ class AnalyzerTest(lit.formats.ShTest):
         results = []
 
         # Parse any test requirements ('REQUIRES: ')
-        saved_test = copy.deepcopy(test)
+        saved_test = test
         lit.TestRunner.parseIntegratedTestScript(test)
 
-        # If the test does not require z3, drop it from the available features
-        # to satisfy tests that explicitly require !z3
         if 'z3' not in test.requires:
-            test.config.available_features.discard('z3')
             results.append(self.executeWithAnalyzeSubstitution(
-                test, litConfig, '-analyzer-constraints=range'))
+                saved_test, litConfig, '-analyzer-constraints=range'))
 
-            if results[-1].code != lit.Test.PASS:
+            if results[-1].code == lit.Test.FAIL:
                 return results[-1]
 
         # If z3 backend available, add an additional run line for it
-        if test.config.clang_staticanalyzer_z3 == '1' and '!z3' not in test.requires:
+        if test.config.clang_staticanalyzer_z3 == '1':
             results.append(self.executeWithAnalyzeSubstitution(
                 saved_test, litConfig, '-analyzer-constraints=z3 -DANALYZER_CM_Z3'))
 

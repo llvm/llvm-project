@@ -7,9 +7,10 @@ void testPersistentConstraints(int x, int y) {
   // Sanity check
   CHECK(x); // expected-warning{{TRUE}}
   CHECK(x & 1); // expected-warning{{TRUE}}
-
-  CHECK(1 - x); // expected-warning{{TRUE}}
-  CHECK(x & y); // expected-warning{{TRUE}}
+  
+  // False positives due to SValBuilder giving up on certain kinds of exprs.
+  CHECK(1 - x); // expected-warning{{UNKNOWN}}
+  CHECK(x & y); // expected-warning{{UNKNOWN}}
 }
 
 int testConstantShifts_PR18073(int which) {

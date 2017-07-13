@@ -34,6 +34,7 @@ struct InputInfo {
   size_t NumExecutedMutations = 0;
   size_t NumSuccessfullMutations = 0;
   bool MayDeleteFile = false;
+  std::vector<uint32_t> FeatureSet;
 };
 
 class InputCorpus {
@@ -68,22 +69,82 @@ class InputCorpus {
   }
   bool empty() const { return Inputs.empty(); }
   const Unit &operator[] (size_t Idx) const { return Inputs[Idx]->U; }
-  void AddToCorpus(const Unit &U, size_t NumFeatures,
-                   bool MayDeleteFile = false) {
+  void AddToCorpus(const Unit &U, size_t NumFeatures, bool MayDeleteFile,
+                   const std::vector<uint32_t> &FeatureSet) {
     assert(!U.empty());
-    uint8_t Hash[kSHA1NumBytes];
     if (FeatureDebug)
       Printf("ADD_TO_CORPUS %zd NF %zd\n", Inputs.size(), NumFeatures);
-    ComputeSHA1(U.data(), U.size(), Hash);
-    Hashes.insert(Sha1ToString(Hash));
     Inputs.push_back(new InputInfo());
     InputInfo &II = *Inputs.back();
     II.U = U;
     II.NumFeatures = NumFeatures;
     II.MayDeleteFile = MayDeleteFile;
-    memcpy(II.Sha1, Hash, kSHA1NumBytes);
+    II.FeatureSet = FeatureSet;
+    ComputeSHA1(U.data(), U.size(), II.Sha1);
+    Hashes.insert(Sha1ToString(II.Sha1));
     UpdateCorpusDistribution();
+    PrintCorpus();
     // ValidateFeatureSet();
+  }
+
+  // Debug-only
+  void PrintUnit(const Unit &U) {
+    if (!FeatureDebug) return;
+    for (uint8_t C : U) {
+      if (C != 'F' && C != 'U' && C != 'Z')
+        C = '.';
+      Printf("%c", C);
+    }
+  }
+
+  // Debug-only
+  void PrintFeatureSet(const std::vector<uint32_t> &FeatureSet) {
+    if (!FeatureDebug) return;
+    Printf("{");
+    for (uint32_t Feature: FeatureSet)
+      Printf("%u,", Feature);
+    Printf("}");
+  }
+
+  // Debug-only
+  void PrintCorpus() {
+    if (!FeatureDebug) return;
+    Printf("======= CORPUS:\n");
+    int i = 0;
+    for (auto II : Inputs) {
+      if (std::find(II->U.begin(), II->U.end(), 'F') != II->U.end()) {
+        Printf("[%2d] ", i);
+        Printf("%s sz=%zd ", Sha1ToString(II->Sha1).c_str(), II->U.size());
+        PrintUnit(II->U);
+        Printf(" ");
+        PrintFeatureSet(II->FeatureSet);
+        Printf("\n");
+      }
+      i++;
+    }
+  }
+
+  // If FeatureSet is that same as in II, replace II->U with {Data,Size}.
+  bool TryToReplace(InputInfo *II, const uint8_t *Data, size_t Size,
+                    const std::vector<uint32_t> &FeatureSet) {
+    if (II->U.size() > Size && II->FeatureSet.size() &&
+        II->FeatureSet == FeatureSet) {
+      if (FeatureDebug)
+        Printf("Replace: %zd => %zd\n", II->U.size(), Size);
+      Replace(II, {Data, Data + Size});
+      PrintCorpus();
+      return true;
+    }
+    return false;
+  }
+
+  void Replace(InputInfo *II, const Unit &U) {
+    assert(II->U.size());
+    Hashes.erase(Sha1ToString(II->Sha1));
+    DeleteFile(*II);
+    ComputeSHA1(U.data(), U.size(), II->Sha1);
+    Hashes.insert(Sha1ToString(II->Sha1));
+    II->U = U;
   }
 
   bool HasUnit(const Unit &U) { return Hashes.count(Hash(U)); }
@@ -124,10 +185,14 @@ class InputCorpus {
     Printf("\n");
   }
 
-  void DeleteInput(size_t Idx) {
-    InputInfo &II = *Inputs[Idx];
+  void DeleteFile(const InputInfo &II) {
     if (!OutputCorpus.empty() && II.MayDeleteFile)
       RemoveFile(DirPlusFile(OutputCorpus, Sha1ToString(II.Sha1)));
+  }
+
+  void DeleteInput(size_t Idx) {
+    InputInfo &II = *Inputs[Idx];
+    DeleteFile(II);
     Unit().swap(II.U);
     if (FeatureDebug)
       Printf("EVICTED %zd\n", Idx);

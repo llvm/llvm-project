@@ -1,6 +1,8 @@
-// RUN: cp %S/Inputs/performance-unnecessary-value-param/header.h %T/header.h
-// RUN: %check_clang_tidy %s performance-unnecessary-value-param %t -- -- -std=c++11 -I %T
-// RUN: diff %T/header.h %S/Inputs/performance-unnecessary-value-param/header-fixed.h
+// RUN: rm -rf %t
+// RUN: mkdir %t
+// RUN: cp %S/Inputs/performance-unnecessary-value-param/header.h %t/header.h
+// RUN: %check_clang_tidy %s performance-unnecessary-value-param %t/temp -- -- -std=c++11 -I %t
+// RUN: diff %t/header.h %S/Inputs/performance-unnecessary-value-param/header-fixed.h
 
 #include "header.h"
 

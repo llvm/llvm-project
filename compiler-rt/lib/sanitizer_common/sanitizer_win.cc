@@ -291,7 +291,8 @@ void DontDumpShadowMemory(uptr addr, uptr length) {
   // FIXME: add madvise-analog when we move to 64-bits.
 }
 
-uptr FindAvailableMemoryRange(uptr size, uptr alignment, uptr left_padding) {
+uptr FindAvailableMemoryRange(uptr size, uptr alignment, uptr left_padding,
+                              uptr *largest_gap_found) {
   uptr address = 0;
   while (true) {
     MEMORY_BASIC_INFORMATION info;

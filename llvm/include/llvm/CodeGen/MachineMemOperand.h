@@ -114,6 +114,9 @@ public:
     MOInvariant = 1u << 5,
 
     // Reserved for use by target-specific passes.
+    // Targets may override getSerializableMachineMemOperandTargetFlags() to
+    // enable MIR serialization/parsing of these flags.  If more of these flags
+    // are added, the MIR printing/parsing code will need to be updated as well.
     MOTargetFlag1 = 1u << 6,
     MOTargetFlag2 = 1u << 7,
     MOTargetFlag3 = 1u << 8,

@@ -125,14 +125,8 @@ public:
     return OS.str();
   }
 
-  std::string VisitIntSymExpr(const IntSymExpr *S) {
-    std::string Str;
-    llvm::raw_string_ostream OS(Str);
-    OS << S->getLHS()
-       << std::string(BinaryOperator::getOpcodeStr(S->getOpcode())) << " "
-       << "(" << Visit(S->getRHS()) << ") ";
-    return OS.str();
-  }
+  // TODO: IntSymExpr doesn't appear in practice.
+  // Add the relevant code once it does.
 
   std::string VisitSymSymExpr(const SymSymExpr *S) {
     return "(" + Visit(S->getLHS()) + ") " +
@@ -140,10 +134,8 @@ public:
            " (" + Visit(S->getRHS()) + ")";
   }
 
-  std::string VisitSymbolCast(const SymbolCast *S) {
-    return "cast of type '" + S->getType().getAsString() + "' of " +
-           Visit(S->getOperand());
-  }
+  // TODO: SymbolCast doesn't appear in practice.
+  // Add the relevant code once it does.
 
   std::string VisitSymbolicRegion(const SymbolicRegion *R) {
     // Explain 'this' object here.

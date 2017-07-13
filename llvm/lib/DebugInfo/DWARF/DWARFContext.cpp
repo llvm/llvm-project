@@ -964,6 +964,10 @@ DWARFContextInMemory::DWARFContextInMemory(
     Name = Name.substr(
         Name.find_first_not_of("._z")); // Skip ".", "z" and "_" prefixes.
 
+    // Map platform specific debug section names to DWARF standard section
+    // names.
+    Name = Obj.mapDebugSectionName(Name);
+
     if (StringRef *SectionData = mapSectionToMember(Name)) {
       *SectionData = Data;
       if (Name == "debug_ranges") {
@@ -977,10 +981,6 @@ DWARFContextInMemory::DWARFContextInMemory(
     } else if (Name == "debug_types.dwo") {
       TypesDWOSections[Section].Data = Data;
     }
-
-    // Map platform specific debug section names to DWARF standard section
-    // names.
-    Name = Obj.mapDebugSectionName(Name);
 
     if (RelocatedSection == Obj.section_end())
       continue;

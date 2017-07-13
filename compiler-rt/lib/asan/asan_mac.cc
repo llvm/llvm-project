@@ -55,6 +55,29 @@ void *AsanDoesNotSupportStaticLinkage() {
   return 0;
 }
 
+uptr FindDynamicShadowStart() {
+  uptr granularity = GetMmapGranularity();
+  uptr alignment = 8 * granularity;
+  uptr left_padding = granularity;
+  uptr space_size = kHighShadowEnd + left_padding;
+
+  uptr largest_gap_found = 0;
+  uptr shadow_start = FindAvailableMemoryRange(space_size, alignment,
+                                               granularity, &largest_gap_found);
+  // If the shadow doesn't fit, restrict the address space to make it fit.
+  if (shadow_start == 0) {
+    uptr new_max_vm = RoundDownTo(largest_gap_found << SHADOW_SCALE, alignment);
+    RestrictMemoryToMaxAddress(new_max_vm);
+    kHighMemEnd = new_max_vm - 1;
+    space_size = kHighShadowEnd + left_padding;
+    shadow_start =
+        FindAvailableMemoryRange(space_size, alignment, granularity, nullptr);
+  }
+  CHECK_NE((uptr)0, shadow_start);
+  CHECK(IsAligned(shadow_start, alignment));
+  return shadow_start;
+}
+
 // No-op. Mac does not support static linkage anyway.
 void AsanCheckDynamicRTPrereqs() {}
 

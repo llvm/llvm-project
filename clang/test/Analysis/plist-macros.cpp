@@ -1,7 +1,7 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,unix -analyzer-eagerly-assume -verify %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix -analyzer-eagerly-assume -analyzer-output=plist-multi-file -analyzer-config path-diagnostics-alternate=true %s -o %t.plist
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix -analyzer-eagerly-assume -analyzer-output=plist-multi-file -analyzer-config path-diagnostics-alternate=ture %s -o %t.plist
 // RUN: FileCheck --input-file=%t.plist %s
-// REQUIRES: !z3
+
 
 typedef __typeof(sizeof(int)) size_t;
 void *malloc(size_t);
@@ -11,13 +11,13 @@ void noteOnMacro(int y) {
   y++;
   y--;
   mallocmemory
-  y++;
+  y++; 
   y++;
   delete x; // expected-warning {{Memory allocated by malloc() should be deallocated by free(), not 'delete'}}
 }
 
 void macroIsFirstInFunction(int y) {
-  mallocmemory
+  mallocmemory 
   y++; // expected-warning {{Potential leak of memory pointed to by 'x'}}
 }
 
@@ -39,7 +39,7 @@ int macroInExpressionNoNote(int *p, int y) {;
   return *p; // expected-warning {{Dereference of null pointer}}
 }
 
-#define macroWithArg(mp) mp==0
+#define macroWithArg(mp) mp==0 
 int macroWithArgInExpression(int *p, int y) {;
   y++;
   if (macroWithArg(p))
@@ -85,7 +85,6 @@ void test1() {
 void test2(int *p) {
   CALL_FN(p);
 }
-
 // CHECK:  <key>diagnostics</key>
 // CHECK-NEXT:  <array>
 // CHECK-NEXT:   <dict>
@@ -631,69 +630,6 @@ void test2(int *p) {
 // CHECK-NEXT:           <dict>
 // CHECK-NEXT:            <key>line</key><integer>36</integer>
 // CHECK-NEXT:            <key>col</key><integer>4</integer>
-// CHECK-NEXT:            <key>file</key><integer>0</integer>
-// CHECK-NEXT:           </dict>
-// CHECK-NEXT:          </array>
-// CHECK-NEXT:         <key>end</key>
-// CHECK-NEXT:          <array>
-// CHECK-NEXT:           <dict>
-// CHECK-NEXT:            <key>line</key><integer>36</integer>
-// CHECK-NEXT:            <key>col</key><integer>7</integer>
-// CHECK-NEXT:            <key>file</key><integer>0</integer>
-// CHECK-NEXT:           </dict>
-// CHECK-NEXT:           <dict>
-// CHECK-NEXT:            <key>line</key><integer>36</integer>
-// CHECK-NEXT:            <key>col</key><integer>7</integer>
-// CHECK-NEXT:            <key>file</key><integer>0</integer>
-// CHECK-NEXT:           </dict>
-// CHECK-NEXT:          </array>
-// CHECK-NEXT:        </dict>
-// CHECK-NEXT:       </array>
-// CHECK-NEXT:     </dict>
-// CHECK-NEXT:     <dict>
-// CHECK-NEXT:      <key>kind</key><string>event</string>
-// CHECK-NEXT:      <key>location</key>
-// CHECK-NEXT:      <dict>
-// CHECK-NEXT:       <key>line</key><integer>36</integer>
-// CHECK-NEXT:       <key>col</key><integer>7</integer>
-// CHECK-NEXT:       <key>file</key><integer>0</integer>
-// CHECK-NEXT:      </dict>
-// CHECK-NEXT:      <key>ranges</key>
-// CHECK-NEXT:      <array>
-// CHECK-NEXT:        <array>
-// CHECK-NEXT:         <dict>
-// CHECK-NEXT:          <key>line</key><integer>36</integer>
-// CHECK-NEXT:          <key>col</key><integer>7</integer>
-// CHECK-NEXT:          <key>file</key><integer>0</integer>
-// CHECK-NEXT:         </dict>
-// CHECK-NEXT:         <dict>
-// CHECK-NEXT:          <key>line</key><integer>36</integer>
-// CHECK-NEXT:          <key>col</key><integer>25</integer>
-// CHECK-NEXT:          <key>file</key><integer>0</integer>
-// CHECK-NEXT:         </dict>
-// CHECK-NEXT:        </array>
-// CHECK-NEXT:      </array>
-// CHECK-NEXT:      <key>depth</key><integer>0</integer>
-// CHECK-NEXT:      <key>extended_message</key>
-// CHECK-NEXT:      <string>Assuming the condition is true</string>
-// CHECK-NEXT:      <key>message</key>
-// CHECK-NEXT:      <string>Assuming the condition is true</string>
-// CHECK-NEXT:     </dict>
-// CHECK-NEXT:     <dict>
-// CHECK-NEXT:      <key>kind</key><string>control</string>
-// CHECK-NEXT:      <key>edges</key>
-// CHECK-NEXT:       <array>
-// CHECK-NEXT:        <dict>
-// CHECK-NEXT:         <key>start</key>
-// CHECK-NEXT:          <array>
-// CHECK-NEXT:           <dict>
-// CHECK-NEXT:            <key>line</key><integer>36</integer>
-// CHECK-NEXT:            <key>col</key><integer>7</integer>
-// CHECK-NEXT:            <key>file</key><integer>0</integer>
-// CHECK-NEXT:           </dict>
-// CHECK-NEXT:           <dict>
-// CHECK-NEXT:            <key>line</key><integer>36</integer>
-// CHECK-NEXT:            <key>col</key><integer>7</integer>
 // CHECK-NEXT:            <key>file</key><integer>0</integer>
 // CHECK-NEXT:           </dict>
 // CHECK-NEXT:          </array>

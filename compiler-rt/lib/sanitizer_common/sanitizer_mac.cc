@@ -840,7 +840,8 @@ uptr GetMaxVirtualAddress() {
 
 uptr FindAvailableMemoryRange(uptr shadow_size,
                               uptr alignment,
-                              uptr left_padding) {
+                              uptr left_padding,
+                              uptr *largest_gap_found) {
   typedef vm_region_submap_short_info_data_64_t RegionInfo;
   enum { kRegionInfoSize = VM_REGION_SUBMAP_SHORT_INFO_COUNT_64 };
   // Start searching for available memory region past PAGEZERO, which is
@@ -851,6 +852,7 @@ uptr FindAvailableMemoryRange(uptr shadow_size,
   mach_vm_address_t address = start_address;
   mach_vm_address_t free_begin = start_address;
   kern_return_t kr = KERN_SUCCESS;
+  if (largest_gap_found) *largest_gap_found = 0;
   while (kr == KERN_SUCCESS) {
     mach_vm_size_t vmsize = 0;
     natural_t depth = 0;
@@ -860,10 +862,15 @@ uptr FindAvailableMemoryRange(uptr shadow_size,
                                 (vm_region_info_t)&vminfo, &count);
     if (free_begin != address) {
       // We found a free region [free_begin..address-1].
-      uptr shadow_address = RoundUpTo((uptr)free_begin + left_padding,
-                                      alignment);
-      if (shadow_address + shadow_size < (uptr)address) {
-        return shadow_address;
+      uptr gap_start = RoundUpTo((uptr)free_begin + left_padding, alignment);
+      uptr gap_end = RoundDownTo((uptr)address, alignment);
+      uptr gap_size = gap_end > gap_start ? gap_end - gap_start : 0;
+      if (shadow_size < gap_size) {
+        return gap_start;
+      }
+
+      if (largest_gap_found && *largest_gap_found < gap_size) {
+        *largest_gap_found = gap_size;
       }
     }
     // Move to the next region.

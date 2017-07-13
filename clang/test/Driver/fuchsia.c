@@ -12,7 +12,7 @@
 // CHECK: Scrt1.o
 // CHECK-NOT: crti.o
 // CHECK-NOT: crtbegin.o
-// CHECK: "-L[[SYSROOT]]/lib"
+// CHECK: "-L[[SYSROOT]]{{/|\\\\}}lib"
 // CHECK: "{{.*[/\\]}}libclang_rt.builtins-x86_64.a"
 // CHECK: "-lc"
 // CHECK-NOT: crtend.o

@@ -43,7 +43,11 @@ void test_BOOL_initialization(int y) {
     return;
   }
   if (y > 200 && y < 250) {
+#ifdef ANALYZER_CM_Z3
     BOOL x = y; // expected-warning {{Assignment of a non-Boolean value}}
+#else
+    BOOL x = y; // no-warning
+#endif
     return;
   }
   if (y >= 127 && y < 150) {

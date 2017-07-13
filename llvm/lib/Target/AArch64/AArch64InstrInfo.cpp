@@ -4430,6 +4430,13 @@ AArch64InstrInfo::getSerializableBitmaskMachineOperandTargetFlags() const {
   return makeArrayRef(TargetFlags);
 }
 
+ArrayRef<std::pair<MachineMemOperand::Flags, const char *>>
+AArch64InstrInfo::getSerializableMachineMemOperandTargetFlags() const {
+  static const std::pair<MachineMemOperand::Flags, const char *> TargetFlags[] =
+      {{MOSuppressPair, "aarch64-suppress-pair"}};
+  return makeArrayRef(TargetFlags);
+}
+
 unsigned AArch64InstrInfo::getOutliningBenefit(size_t SequenceSize,
                                                size_t Occurrences,
                                                bool CanBeTailCall) const {

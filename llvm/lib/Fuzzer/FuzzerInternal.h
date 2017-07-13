@@ -65,7 +65,8 @@ public:
   static void StaticFileSizeExceedCallback();
 
   void ExecuteCallback(const uint8_t *Data, size_t Size);
-  size_t RunOne(const uint8_t *Data, size_t Size);
+  bool RunOne(const uint8_t *Data, size_t Size, bool MayDeleteFile = false,
+              InputInfo *II = nullptr);
 
   // Merge Corpora[1:] into Corpora[0].
   void Merge(const std::vector<std::string> &Corpora);
@@ -95,13 +96,12 @@ private:
   void InterruptCallback();
   void MutateAndTestOne();
   void ReportNewCoverage(InputInfo *II, const Unit &U);
-  size_t RunOne(const Unit &U) { return RunOne(U.data(), U.size()); }
+  void PrintPulseAndReportSlowInput(const uint8_t *Data, size_t Size);
   void WriteToOutputCorpus(const Unit &U);
   void WriteUnitToFileWithPrefix(const Unit &U, const char *Prefix);
   void PrintStats(const char *Where, const char *End = "\n", size_t Units = 0);
   void PrintStatusForNewUnit(const Unit &U);
   void ShuffleCorpus(UnitVector *V);
-  void AddToCorpus(const Unit &U);
   void CheckExitOnSrcPosOrItem();
 
   // Trace-based fuzzing: we run a unit with some kind of tracing
@@ -141,6 +141,8 @@ private:
 
   size_t MaxInputLen = 0;
   size_t MaxMutationLen = 0;
+
+  std::vector<uint32_t> FeatureSetTmp;
 
   // Need to know our own thread.
   static thread_local bool IsMyThread;
