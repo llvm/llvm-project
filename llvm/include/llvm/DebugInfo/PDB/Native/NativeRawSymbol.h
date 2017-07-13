@@ -19,9 +19,11 @@ namespace pdb {
 
 class NativeSession;
 
+typedef uint32_t SymIndexId;
+
 class NativeRawSymbol : public IPDBRawSymbol {
 public:
-  NativeRawSymbol(NativeSession &PDBSession, uint32_t SymbolId);
+  NativeRawSymbol(NativeSession &PDBSession, SymIndexId SymbolId);
 
   virtual std::unique_ptr<NativeRawSymbol> clone() const = 0;
 
@@ -205,7 +207,7 @@ public:
 
 protected:
   NativeSession &Session;
-  uint32_t SymbolId;
+  SymIndexId SymbolId;
 };
 
 } // end namespace pdb

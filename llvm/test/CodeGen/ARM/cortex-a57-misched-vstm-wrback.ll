@@ -9,7 +9,7 @@
 ; CHECK:       rdefs left
 ; CHECK-NEXT:  Latency            : 4
 ; CHECK:       Successors:
-; CHECK:       data
+; CHECK:       Data
 ; CHECK-SAME:  Latency=1
 
 @a = global double 0.0, align 4

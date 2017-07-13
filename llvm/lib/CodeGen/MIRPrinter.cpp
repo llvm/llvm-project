@@ -165,7 +165,8 @@ public:
   void print(const MachineOperand &Op, const TargetRegisterInfo *TRI,
              unsigned I, bool ShouldPrintRegisterTies,
              LLT TypeToPrint, bool IsDef = false);
-  void print(const LLVMContext &Context, const MachineMemOperand &Op);
+  void print(const LLVMContext &Context, const TargetInstrInfo &TII,
+             const MachineMemOperand &Op);
   void printSyncScope(const LLVMContext &Context, SyncScope::ID SSID);
 
   void print(const MCCFIInstruction &CFI, const TargetRegisterInfo *TRI);
@@ -740,7 +741,7 @@ void MIPrinter::print(const MachineInstr &MI) {
     for (const auto *Op : MI.memoperands()) {
       if (NeedComma)
         OS << ", ";
-      print(Context, *Op);
+      print(Context, *TII, *Op);
       NeedComma = true;
     }
   }
@@ -1036,9 +1037,20 @@ void MIPrinter::print(const MachineOperand &Op, const TargetRegisterInfo *TRI,
   }
 }
 
-void MIPrinter::print(const LLVMContext &Context, const MachineMemOperand &Op) {
+static const char *getTargetMMOFlagName(const TargetInstrInfo &TII,
+                                        unsigned TMMOFlag) {
+  auto Flags = TII.getSerializableMachineMemOperandTargetFlags();
+  for (const auto &I : Flags) {
+    if (I.first == TMMOFlag) {
+      return I.second;
+    }
+  }
+  return nullptr;
+}
+
+void MIPrinter::print(const LLVMContext &Context, const TargetInstrInfo &TII,
+                      const MachineMemOperand &Op) {
   OS << '(';
-  // TODO: Print operand's target specific flags.
   if (Op.isVolatile())
     OS << "volatile ";
   if (Op.isNonTemporal())
@@ -1047,6 +1059,15 @@ void MIPrinter::print(const LLVMContext &Context, const MachineMemOperand &Op) {
     OS << "dereferenceable ";
   if (Op.isInvariant())
     OS << "invariant ";
+  if (Op.getFlags() & MachineMemOperand::MOTargetFlag1)
+    OS << '"' << getTargetMMOFlagName(TII, MachineMemOperand::MOTargetFlag1)
+       << "\" ";
+  if (Op.getFlags() & MachineMemOperand::MOTargetFlag2)
+    OS << '"' << getTargetMMOFlagName(TII, MachineMemOperand::MOTargetFlag2)
+       << "\" ";
+  if (Op.getFlags() & MachineMemOperand::MOTargetFlag3)
+    OS << '"' << getTargetMMOFlagName(TII, MachineMemOperand::MOTargetFlag3)
+       << "\" ";
   if (Op.isLoad())
     OS << "load ";
   else {

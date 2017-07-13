@@ -1032,7 +1032,7 @@ static std::error_code getRelocationValueString(const MachOObjectFile *Obj,
       case MachO::ARM_RELOC_HALF_SECTDIFF: {
         // Half relocations steal a bit from the length field to encode
         // whether this is an upper16 or a lower16 relocation.
-        bool isUpper = Obj->getAnyRelocationLength(RE) >> 1;
+        bool isUpper = (Obj->getAnyRelocationLength(RE) & 0x1) == 1;
 
         if (isUpper)
           fmt << ":upper16:(";

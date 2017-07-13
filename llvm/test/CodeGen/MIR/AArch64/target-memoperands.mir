@@ -1,0 +1,22 @@
+# RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass none -o - %s | FileCheck %s
+
+--- |
+
+  define void @target_memoperands() {
+    ret void
+  }
+
+...
+---
+# CHECK-LABEL: name: target_memoperands
+# CHECK: %1(s64) = G_LOAD %0(p0) :: ("aarch64-suppress-pair" load 8)
+# CHECK: G_STORE %1(s64), %0(p0) :: ("aarch64-suppress-pair" store 8)
+name:            target_memoperands
+body: |
+  bb.0:
+
+    %0:_(p0) = COPY %x0
+    %1:_(s64) = G_LOAD %0(p0) :: ("aarch64-suppress-pair" load 8)
+    G_STORE %1(s64), %0(p0) :: ("aarch64-suppress-pair" store 8)
+    RET_ReallyLR
+...

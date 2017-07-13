@@ -3039,6 +3039,9 @@ bool X86FastISel::fastLowerArguments() {
   if (!Subtarget->is64Bit())
     return false;
 
+  if (Subtarget->useSoftFloat())
+    return false;
+
   // Only handle simple cases. i.e. Up to 6 i32/i64 scalar arguments.
   unsigned GPRCnt = 0;
   unsigned FPRCnt = 0;

@@ -62,7 +62,6 @@
 #include <utility>
 #include <vector>
 
-#undef DEBUG_TYPE
 #define DEBUG_TYPE "nvptx-lower"
 
 using namespace llvm;

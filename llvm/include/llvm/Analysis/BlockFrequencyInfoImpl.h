@@ -1353,4 +1353,4 @@ struct BFIDOTGraphTraitsBase : public DefaultDOTGraphTraits {
 
 #undef DEBUG_TYPE
 
-#endif
+#endif // LLVM_ANALYSIS_BLOCKFREQUENCYINFOIMPL_H

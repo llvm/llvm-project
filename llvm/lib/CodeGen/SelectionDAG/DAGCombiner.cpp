@@ -3889,9 +3889,8 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
   // Note: the SimplifyDemandedBits fold below can make an information-losing
   // transform, and then we have no way to find this better fold.
   if (N1C && N1C->isOne() && N0.getOpcode() == ISD::SUB) {
-    ConstantSDNode *SubLHS = isConstOrConstSplat(N0.getOperand(0));
-    SDValue SubRHS = N0.getOperand(1);
-    if (SubLHS && SubLHS->isNullValue()) {
+    if (isNullConstantOrNullSplatConstant(N0.getOperand(0))) {
+      SDValue SubRHS = N0.getOperand(1);
       if (SubRHS.getOpcode() == ISD::ZERO_EXTEND &&
           SubRHS.getOperand(0).getScalarValueSizeInBits() == 1)
         return SubRHS;

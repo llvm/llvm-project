@@ -18,7 +18,7 @@ namespace pdb {
 
 class NativeExeSymbol : public NativeRawSymbol {
 public:
-  NativeExeSymbol(NativeSession &Session, uint32_t SymbolId);
+  NativeExeSymbol(NativeSession &Session, SymIndexId SymbolId);
 
   std::unique_ptr<NativeRawSymbol> clone() const override;
 

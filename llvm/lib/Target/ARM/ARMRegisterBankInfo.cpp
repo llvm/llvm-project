@@ -212,8 +212,6 @@ ARMRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
 
   const MachineFunction &MF = *MI.getParent()->getParent();
   const MachineRegisterInfo &MRI = MF.getRegInfo();
-  LLT Ty = MRI.getType(MI.getOperand(0).getReg());
-
   unsigned NumOperands = MI.getNumOperands();
   const ValueMapping *OperandsMapping = &ARM::ValueMappings[ARM::GPR3OpsIdx];
 
@@ -236,26 +234,32 @@ ARMRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     OperandsMapping = &ARM::ValueMappings[ARM::GPR3OpsIdx];
     break;
   case G_LOAD:
-  case G_STORE:
+  case G_STORE: {
+    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
     OperandsMapping =
         Ty.getSizeInBits() == 64
             ? getOperandsMapping({&ARM::ValueMappings[ARM::DPR3OpsIdx],
                                   &ARM::ValueMappings[ARM::GPR3OpsIdx]})
             : &ARM::ValueMappings[ARM::GPR3OpsIdx];
     break;
-  case G_FADD:
+  }
+  case G_FADD: {
+    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
     assert((Ty.getSizeInBits() == 32 || Ty.getSizeInBits() == 64) &&
            "Unsupported size for G_FADD");
     OperandsMapping = Ty.getSizeInBits() == 64
                           ? &ARM::ValueMappings[ARM::DPR3OpsIdx]
                           : &ARM::ValueMappings[ARM::SPR3OpsIdx];
     break;
+  }
   case G_CONSTANT:
   case G_FRAME_INDEX:
     OperandsMapping =
         getOperandsMapping({&ARM::ValueMappings[ARM::GPR3OpsIdx], nullptr});
     break;
   case G_SELECT: {
+    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+    (void)Ty;
     LLT Ty2 = MRI.getType(MI.getOperand(1).getReg());
     (void)Ty2;
     assert(Ty.getSizeInBits() == 32 && "Unsupported size for G_SELECT");
@@ -278,6 +282,8 @@ ARMRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     break;
   }
   case G_FCMP: {
+    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+    (void)Ty;
     LLT Ty1 = MRI.getType(MI.getOperand(2).getReg());
     LLT Ty2 = MRI.getType(MI.getOperand(3).getReg());
     (void)Ty2;
@@ -298,6 +304,7 @@ ARMRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case G_MERGE_VALUES: {
     // We only support G_MERGE_VALUES for creating a double precision floating
     // point value out of two GPRs.
+    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
     LLT Ty1 = MRI.getType(MI.getOperand(1).getReg());
     LLT Ty2 = MRI.getType(MI.getOperand(2).getReg());
     if (Ty.getSizeInBits() != 64 || Ty1.getSizeInBits() != 32 ||
@@ -312,6 +319,7 @@ ARMRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case G_UNMERGE_VALUES: {
     // We only support G_UNMERGE_VALUES for splitting a double precision
     // floating point value into two GPRs.
+    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
     LLT Ty1 = MRI.getType(MI.getOperand(1).getReg());
     LLT Ty2 = MRI.getType(MI.getOperand(2).getReg());
     if (Ty.getSizeInBits() != 32 || Ty1.getSizeInBits() != 32 ||
