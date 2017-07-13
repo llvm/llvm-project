@@ -1886,6 +1886,19 @@ public:
     return (CD->begin_overridden_methods() != CD->end_overridden_methods());
   }
 
+  /// If it's possible to devirtualize a call to this method, return the called
+  /// function. Otherwise, return null.
+
+  /// \param Base The object on which this virtual function is called.
+  /// \param IsAppleKext True if we are compiling for Apple kext.
+  CXXMethodDecl *getDevirtualizedMethod(const Expr *Base, bool IsAppleKext);
+
+  const CXXMethodDecl *getDevirtualizedMethod(const Expr *Base,
+                                              bool IsAppleKext) const {
+    return const_cast<CXXMethodDecl *>(this)->getDevirtualizedMethod(
+        Base, IsAppleKext);
+  }
+
   /// \brief Determine whether this is a usual deallocation function
   /// (C++ [basic.stc.dynamic.deallocation]p2), which is an overloaded
   /// delete or delete[] operator with a particular signature.

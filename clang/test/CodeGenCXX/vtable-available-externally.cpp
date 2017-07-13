@@ -275,9 +275,8 @@ struct C {
   virtual D& operator=(const D&);
 };
 
-// Cannot emit D's vtable available_externally, because we cannot create
-// a reference to the inline virtual D::operator= function.
-// CHECK-TEST11: @_ZTVN6Test111DE = external unnamed_addr constant
+// Can emit D's vtable available_externally.
+// CHECK-TEST11: @_ZTVN6Test111DE = available_externally unnamed_addr constant
 struct D : C {
   virtual void key();
 };

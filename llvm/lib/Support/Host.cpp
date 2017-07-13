@@ -336,13 +336,10 @@ enum ProcessorSubtypes {
   AMDPENTIUM_K62,
   AMDPENTIUM_K63,
   AMDPENTIUM_GEODE,
-  AMDATHLON_TBIRD,
-  AMDATHLON_MP,
+  AMDATHLON_CLASSIC,
   AMDATHLON_XP,
+  AMDATHLON_K8,
   AMDATHLON_K8SSE3,
-  AMDATHLON_OPTERON,
-  AMDATHLON_FX,
-  AMDATHLON_64,
   CPU_SUBTYPE_MAX
 };
 
@@ -868,38 +865,20 @@ static void getAMDProcessorTypeAndSubtype(unsigned Family, unsigned Model,
     break;
   case 6:
     *Type = AMDATHLON;
-    switch (Model) {
-    case 4:
-      *Subtype = AMDATHLON_TBIRD;
-      break; // "athlon-tbird"
-    case 6:
-    case 7:
-    case 8:
-      *Subtype = AMDATHLON_MP;
-      break; // "athlon-mp"
-    case 10:
+    if (Features & (1 << FEATURE_SSE)) {
       *Subtype = AMDATHLON_XP;
       break; // "athlon-xp"
     }
-    break;
+    *Subtype = AMDATHLON_CLASSIC;
+    break; // "athlon"
   case 15:
     *Type = AMDATHLON;
     if (Features & (1 << FEATURE_SSE3)) {
       *Subtype = AMDATHLON_K8SSE3;
       break; // "k8-sse3"
     }
-    switch (Model) {
-    case 1:
-      *Subtype = AMDATHLON_OPTERON;
-      break; // "opteron"
-    case 5:
-      *Subtype = AMDATHLON_FX;
-      break; // "athlon-fx"; also opteron
-    default:
-      *Subtype = AMDATHLON_64;
-      break; // "athlon64"
-    }
-    break;
+    *Subtype = AMDATHLON_K8;
+    break; // "k8"
   case 16:
     *Type = AMDFAM10H; // "amdfam10"
     switch (Model) {
@@ -1168,20 +1147,14 @@ StringRef sys::getHostCPUName() {
       }
     case AMDATHLON:
       switch (Subtype) {
-      case AMDATHLON_TBIRD:
-        return "athlon-tbird";
-      case AMDATHLON_MP:
-        return "athlon-mp";
+      case AMDATHLON_CLASSIC:
+        return "athlon";
       case AMDATHLON_XP:
         return "athlon-xp";
+      case AMDATHLON_K8:
+        return "k8";
       case AMDATHLON_K8SSE3:
         return "k8-sse3";
-      case AMDATHLON_OPTERON:
-        return "opteron";
-      case AMDATHLON_FX:
-        return "athlon-fx";
-      case AMDATHLON_64:
-        return "athlon64";
       default:
         llvm_unreachable("Unexpected subtype!");
       }

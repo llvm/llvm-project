@@ -199,7 +199,8 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
   bool CanUseVirtualCall = MD->isVirtual() && !HasQualifier;
 
   const CXXMethodDecl *DevirtualizedMethod = nullptr;
-  if (CanUseVirtualCall && CanDevirtualizeMemberFunctionCall(Base, MD)) {
+  if (CanUseVirtualCall &&
+      MD->getDevirtualizedMethod(Base, getLangOpts().AppleKext)) {
     const CXXRecordDecl *BestDynamicDecl = Base->getBestDynamicClassType();
     DevirtualizedMethod = MD->getCorrespondingMethodInClass(BestDynamicDecl);
     assert(DevirtualizedMethod);

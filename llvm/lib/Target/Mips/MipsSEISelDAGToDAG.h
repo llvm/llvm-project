@@ -41,8 +41,7 @@ private:
                                            const SDLoc &dl, EVT Ty, bool HasLo,
                                            bool HasHi);
 
-  void selectAddESubE(unsigned MOp, SDValue InFlag, SDValue CmpLHS,
-                      const SDLoc &DL, SDNode *Node) const;
+  void selectAddE(SDNode *Node, const SDLoc &DL) const;
 
   bool selectAddrFrameIndex(SDValue Addr, SDValue &Base, SDValue &Offset) const;
   bool selectAddrFrameIndexOffset(SDValue Addr, SDValue &Base, SDValue &Offset,

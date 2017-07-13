@@ -29635,8 +29635,8 @@ static SDValue combineBasicSADPattern(SDNode *Extract, SelectionDAG &DAG,
   // (extends the sign bit which is zero).
   // So it is correct to skip the sign/zero extend instruction.
   if (Root && (Root.getOpcode() == ISD::SIGN_EXTEND ||
-	  Root.getOpcode() == ISD::ZERO_EXTEND ||
-	  Root.getOpcode() == ISD::ANY_EXTEND))
+    Root.getOpcode() == ISD::ZERO_EXTEND ||
+    Root.getOpcode() == ISD::ANY_EXTEND))
     Root = Root.getOperand(0);
 
   // If there was a match, we want Root to be a select that is the root of an

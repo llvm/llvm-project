@@ -138,5 +138,4 @@ module Clang_Tooling {
   // importing the AST matchers library gives a link dependency on the AST
   // matchers (and thus the AST), which clang-format should not have.
   exclude header "Tooling/RefactoringCallbacks.h"
-  exclude header "Tooling/Refactoring/Rename/USRFinder.h"
 }

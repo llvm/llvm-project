@@ -2453,8 +2453,8 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
         break;
      }
 
-    // In MS inline asm curly braces mark the begining/end of a block, therefore
-    // they should be interepreted as end of statement
+    // In MS inline asm curly braces mark the beginning/end of a block,
+    // therefore they should be interepreted as end of statement
     CurlyAsEndOfStatement =
         isParsingIntelSyntax() && isParsingInlineAsm() &&
         (getLexer().is(AsmToken::LCurly) || getLexer().is(AsmToken::RCurly));
