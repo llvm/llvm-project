@@ -229,6 +229,19 @@ bool LinkerScript::shouldKeep(InputSectionBase *S) {
   return false;
 }
 
+// If an input string is in the form of "foo.N" where N is a number,
+// return N. Otherwise, returns 65536, which is one greater than the
+// lowest priority.
+static int getPriority(StringRef S) {
+  size_t Pos = S.rfind('.');
+  if (Pos == StringRef::npos)
+    return 65536;
+  int V;
+  if (!to_integer(S.substr(Pos + 1), V, 10))
+    return 65536;
+  return V;
+}
+
 // A helper function for the SORT() command.
 static std::function<bool(InputSectionBase *, InputSectionBase *)>
 getComparator(SortSectionPolicy K) {

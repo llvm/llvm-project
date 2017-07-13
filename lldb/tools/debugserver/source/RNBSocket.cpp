@@ -79,9 +79,17 @@ rnb_err_t RNBSocket::Listen(const char *listen_host, uint16_t port,
     return rnb_err;
   }
 
+  bool any_addr = (strcmp(listen_host, "*") == 0);
+
+  // If the user wants to allow connections from any address we should create
+  // sockets on all families that can resolve localhost. This will allow us to
+  // listen for IPv6 and IPv4 connections from all addresses if those interfaces
+  // are available.
+  const char *local_addr = any_addr ? "localhost" : listen_host;
+
   std::map<int, lldb_private::SocketAddress> sockets;
   auto addresses = lldb_private::SocketAddress::GetAddressInfo(
-      listen_host, NULL, AF_UNSPEC, SOCK_STREAM, IPPROTO_TCP);
+      local_addr, NULL, AF_UNSPEC, SOCK_STREAM, IPPROTO_TCP);
 
   for (auto address : addresses) {
     int sock_fd = ::socket(address.GetFamily(), SOCK_STREAM, IPPROTO_TCP);
@@ -90,9 +98,15 @@ rnb_err_t RNBSocket::Listen(const char *listen_host, uint16_t port,
 
     SetSocketOption(sock_fd, SOL_SOCKET, SO_REUSEADDR, 1);
 
-    address.SetPort(port);
+    lldb_private::SocketAddress bind_address = address;
 
-    int error = ::bind(sock_fd, &address.sockaddr(), address.GetLength());
+    if(any_addr || !bind_address.IsLocalhost())
+      bind_address.SetToAnyAddress(bind_address.GetFamily(), port);
+    else
+      bind_address.SetPort(port);
+
+    int error =
+        ::bind(sock_fd, &bind_address.sockaddr(), bind_address.GetLength());
     if (error == -1) {
       ClosePort(sock_fd, false);
       continue;
@@ -179,6 +193,7 @@ rnb_err_t RNBSocket::Listen(const char *listen_host, uint16_t port,
           DNBLogThreaded("error: rejecting connection from %s (expecting %s)\n",
                          accept_addr.GetIPAddress().c_str(),
                          addr_in.GetIPAddress().c_str());
+          err.Clear();
         }
       }
     }

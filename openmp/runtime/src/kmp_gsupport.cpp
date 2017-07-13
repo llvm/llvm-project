@@ -847,8 +847,8 @@ void xexpand(KMP_API_NAME_GOMP_TASK)(void (*func)(void *), void *data,
 
   KA_TRACE(20, ("GOMP_task: T#%d\n", gtid));
 
-  // The low-order bit is the "tied" flag
-  if (gomp_flags & 1) {
+  // The low-order bit is the "untied" flag
+  if (!(gomp_flags & 1)) {
     input_flags->tiedness = 1;
   }
   // The second low-order bit is the "final" flag

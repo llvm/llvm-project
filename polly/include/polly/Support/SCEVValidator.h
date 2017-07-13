@@ -71,7 +71,8 @@ void findValues(const llvm::SCEV *Expr, llvm::ScalarEvolution &SE,
 /// @param AllowLoops Whether loop recurrences outside the loop that are in the
 ///                   region count as dependence.
 bool hasScalarDepsInsideRegion(const llvm::SCEV *Expr, const llvm::Region *R,
-                               llvm::Loop *Scope, bool AllowLoops);
+                               llvm::Loop *Scope, bool AllowLoops,
+                               const InvariantLoadsSetTy &ILS);
 bool isAffineExpr(const llvm::Region *R, llvm::Loop *Scope,
                   const llvm::SCEV *Expression, llvm::ScalarEvolution &SE,
                   InvariantLoadsSetTy *ILS = nullptr);

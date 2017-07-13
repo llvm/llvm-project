@@ -105,14 +105,19 @@ static void mergeDebugT(ObjectFile *File,
   if (Data.empty())
     return;
 
+  // Look for type server PDBs next to the input file. If this file has a parent
+  // archive, look next to the archive path.
+  StringRef LocalPath =
+      !File->ParentName.empty() ? File->ParentName : File->getName();
+  Handler.addSearchPath(sys::path::parent_path(LocalPath));
+
   BinaryByteStream Stream(Data, support::little);
   CVTypeArray Types;
   BinaryStreamReader Reader(Stream);
-  Handler.addSearchPath(sys::path::parent_path(File->getName()));
   if (auto EC = Reader.readArray(Types, Reader.getLength()))
     fatal(EC, "Reader::readArray failed");
-  if (auto Err = mergeTypeAndIdRecords(IDTable, TypeTable,
-                                                 TypeIndexMap, &Handler, Types))
+  if (auto Err = mergeTypeAndIdRecords(IDTable, TypeTable, TypeIndexMap,
+                                       &Handler, Types))
     fatal(Err, "codeview::mergeTypeStreams failed");
 }
 
