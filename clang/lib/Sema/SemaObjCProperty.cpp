@@ -814,53 +814,185 @@ static void setImpliedPropertyAttributeForReadOnlyProperty(
     property->setPropertyAttributes(ObjCPropertyDecl::OBJC_PR_weak);
 }
 
-/// DiagnosePropertyMismatchDeclInProtocols - diagnose properties declared
-/// in inherited protocols with mismatched types. Since any of them can
-/// be candidate for synthesis.
-static void
-DiagnosePropertyMismatchDeclInProtocols(Sema &S, SourceLocation AtLoc,
+static bool
+isIncompatiblePropertyAttribute(unsigned Attr1, unsigned Attr2,
+                                ObjCPropertyDecl::PropertyAttributeKind Kind) {
+  return (Attr1 & Kind) != (Attr2 & Kind);
+}
+
+static bool areIncompatiblePropertyAttributes(unsigned Attr1, unsigned Attr2,
+                                              unsigned Kinds) {
+  return ((Attr1 & Kinds) != 0) != ((Attr2 & Kinds) != 0);
+}
+
+/// SelectPropertyForSynthesisFromProtocols - Finds the most appropriate
+/// property declaration that should be synthesised in all of the inherited
+/// protocols. It also diagnoses properties declared in inherited protocols with
+/// mismatched types or attributes, since any of them can be candidate for
+/// synthesis.
+static ObjCPropertyDecl *
+SelectPropertyForSynthesisFromProtocols(Sema &S, SourceLocation AtLoc,
                                         ObjCInterfaceDecl *ClassDecl,
                                         ObjCPropertyDecl *Property) {
-  ObjCInterfaceDecl::ProtocolPropertyMap PropMap;
+  assert(isa<ObjCProtocolDecl>(Property->getDeclContext()) &&
+         "Expected a property from a protocol");
+  ObjCInterfaceDecl::ProtocolPropertySet ProtocolSet;
+  ObjCInterfaceDecl::PropertyDeclOrder Properties;
   for (const auto *PI : ClassDecl->all_referenced_protocols()) {
     if (const ObjCProtocolDecl *PDecl = PI->getDefinition())
-      PDecl->collectInheritedProtocolProperties(Property, PropMap);
+      PDecl->collectInheritedProtocolProperties(Property, ProtocolSet,
+                                                Properties);
   }
-  if (ObjCInterfaceDecl *SDecl = ClassDecl->getSuperClass())
+  if (ObjCInterfaceDecl *SDecl = ClassDecl->getSuperClass()) {
     while (SDecl) {
       for (const auto *PI : SDecl->all_referenced_protocols()) {
         if (const ObjCProtocolDecl *PDecl = PI->getDefinition())
-          PDecl->collectInheritedProtocolProperties(Property, PropMap);
+          PDecl->collectInheritedProtocolProperties(Property, ProtocolSet,
+                                                    Properties);
       }
       SDecl = SDecl->getSuperClass();
     }
-  
-  if (PropMap.empty())
-    return;
-  
+  }
+
+  if (Properties.empty())
+    return Property;
+
+  ObjCPropertyDecl *OriginalProperty = Property;
+  size_t SelectedIndex = 0;
+  for (const auto &Prop : llvm::enumerate(Properties)) {
+    // Select the 'readwrite' property if such property exists.
+    if (Property->isReadOnly() && !Prop.value()->isReadOnly()) {
+      Property = Prop.value();
+      SelectedIndex = Prop.index();
+    }
+  }
+  if (Property != OriginalProperty) {
+    // Check that the old property is compatible with the new one.
+    Properties[SelectedIndex] = OriginalProperty;
+  }
+
   QualType RHSType = S.Context.getCanonicalType(Property->getType());
-  bool FirsTime = true;
-  for (ObjCInterfaceDecl::ProtocolPropertyMap::iterator
-       I = PropMap.begin(), E = PropMap.end(); I != E; I++) {
-    ObjCPropertyDecl *Prop = I->second;
+  unsigned OriginalAttributes = Property->getPropertyAttributes();
+  enum MismatchKind {
+    IncompatibleType = 0,
+    HasNoExpectedAttribute,
+    HasUnexpectedAttribute,
+    DifferentGetter,
+    DifferentSetter
+  };
+  // Represents a property from another protocol that conflicts with the
+  // selected declaration.
+  struct MismatchingProperty {
+    const ObjCPropertyDecl *Prop;
+    MismatchKind Kind;
+    StringRef AttributeName;
+  };
+  SmallVector<MismatchingProperty, 4> Mismatches;
+  for (ObjCPropertyDecl *Prop : Properties) {
+    // Verify the property attributes.
+    unsigned Attr = Prop->getPropertyAttributes();
+    if (Attr != OriginalAttributes) {
+      auto Diag = [&](bool OriginalHasAttribute, StringRef AttributeName) {
+        MismatchKind Kind = OriginalHasAttribute ? HasNoExpectedAttribute
+                                                 : HasUnexpectedAttribute;
+        Mismatches.push_back({Prop, Kind, AttributeName});
+      };
+      if (isIncompatiblePropertyAttribute(OriginalAttributes, Attr,
+                                          ObjCPropertyDecl::OBJC_PR_copy)) {
+        Diag(OriginalAttributes & ObjCPropertyDecl::OBJC_PR_copy, "copy");
+        continue;
+      }
+      if (areIncompatiblePropertyAttributes(
+              OriginalAttributes, Attr, ObjCPropertyDecl::OBJC_PR_retain |
+                                            ObjCPropertyDecl::OBJC_PR_strong)) {
+        Diag(OriginalAttributes & (ObjCPropertyDecl::OBJC_PR_retain |
+                                   ObjCPropertyDecl::OBJC_PR_strong),
+             "retain (or strong)");
+        continue;
+      }
+      if (isIncompatiblePropertyAttribute(OriginalAttributes, Attr,
+                                          ObjCPropertyDecl::OBJC_PR_atomic)) {
+        Diag(OriginalAttributes & ObjCPropertyDecl::OBJC_PR_atomic, "atomic");
+        continue;
+      }
+    }
+    if (Property->getGetterName() != Prop->getGetterName()) {
+      Mismatches.push_back({Prop, DifferentGetter, ""});
+      continue;
+    }
+    if (!Property->isReadOnly() && !Prop->isReadOnly() &&
+        Property->getSetterName() != Prop->getSetterName()) {
+      Mismatches.push_back({Prop, DifferentSetter, ""});
+      continue;
+    }
     QualType LHSType = S.Context.getCanonicalType(Prop->getType());
     if (!S.Context.propertyTypesAreCompatible(LHSType, RHSType)) {
       bool IncompatibleObjC = false;
       QualType ConvertedType;
       if (!S.isObjCPointerConversion(RHSType, LHSType, ConvertedType, IncompatibleObjC)
           || IncompatibleObjC) {
-        if (FirsTime) {
-          S.Diag(Property->getLocation(), diag::warn_protocol_property_mismatch)
-            << Property->getType();
-          FirsTime = false;
-        }
-        S.Diag(Prop->getLocation(), diag::note_protocol_property_declare)
-          << Prop->getType();
+        Mismatches.push_back({Prop, IncompatibleType, ""});
+        continue;
       }
     }
   }
-  if (!FirsTime && AtLoc.isValid())
+
+  if (Mismatches.empty())
+    return Property;
+
+  // Diagnose incompability.
+  {
+    bool HasIncompatibleAttributes = false;
+    for (const auto &Note : Mismatches)
+      HasIncompatibleAttributes =
+          Note.Kind != IncompatibleType ? true : HasIncompatibleAttributes;
+    // Promote the warning to an error if there are incompatible attributes or
+    // incompatible types together with readwrite/readonly incompatibility.
+    auto Diag = S.Diag(Property->getLocation(),
+                       Property != OriginalProperty || HasIncompatibleAttributes
+                           ? diag::err_protocol_property_mismatch
+                           : diag::warn_protocol_property_mismatch);
+    Diag << Mismatches[0].Kind;
+    switch (Mismatches[0].Kind) {
+    case IncompatibleType:
+      Diag << Property->getType();
+      break;
+    case HasNoExpectedAttribute:
+    case HasUnexpectedAttribute:
+      Diag << Mismatches[0].AttributeName;
+      break;
+    case DifferentGetter:
+      Diag << Property->getGetterName();
+      break;
+    case DifferentSetter:
+      Diag << Property->getSetterName();
+      break;
+    }
+  }
+  for (const auto &Note : Mismatches) {
+    auto Diag =
+        S.Diag(Note.Prop->getLocation(), diag::note_protocol_property_declare)
+        << Note.Kind;
+    switch (Note.Kind) {
+    case IncompatibleType:
+      Diag << Note.Prop->getType();
+      break;
+    case HasNoExpectedAttribute:
+    case HasUnexpectedAttribute:
+      Diag << Note.AttributeName;
+      break;
+    case DifferentGetter:
+      Diag << Note.Prop->getGetterName();
+      break;
+    case DifferentSetter:
+      Diag << Note.Prop->getSetterName();
+      break;
+    }
+  }
+  if (AtLoc.isValid())
     S.Diag(AtLoc, diag::note_property_synthesize);
+
+  return Property;
 }
 
 /// Determine whether any storage attributes were written on the property.
@@ -996,8 +1128,9 @@ Decl *Sema::ActOnPropertyImplDecl(Scope *S,
       }
     }
     if (Synthesize && isa<ObjCProtocolDecl>(property->getDeclContext()))
-      DiagnosePropertyMismatchDeclInProtocols(*this, AtLoc, IDecl, property);
-        
+      property = SelectPropertyForSynthesisFromProtocols(*this, AtLoc, IDecl,
+                                                         property);
+
   } else if ((CatImplClass = dyn_cast<ObjCCategoryImplDecl>(ClassImpDecl))) {
     if (Synthesize) {
       Diag(AtLoc, diag::err_synthesize_category_decl);

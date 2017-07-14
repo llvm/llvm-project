@@ -94,7 +94,7 @@ static uint64_t getSymVA(const SymbolBody &Body, int64_t &Addend) {
     if (D.isTls() && !Config->Relocatable) {
       if (!Out::TlsPhdr)
         fatal(toString(D.File) +
-              " has a STT_TLS symbol but doesn't have a PT_TLS section");
+              " has an STT_TLS symbol but doesn't have an SHF_TLS section");
       return VA - Out::TlsPhdr->p_vaddr;
     }
     return VA;

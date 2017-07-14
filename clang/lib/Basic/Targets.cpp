@@ -3401,6 +3401,7 @@ bool X86TargetInfo::initFeatureMap(
     setFeatureEnabledImpl(Features, "bmi", true);
     setFeatureEnabledImpl(Features, "f16c", true);
     setFeatureEnabledImpl(Features, "xsaveopt", true);
+    setFeatureEnabledImpl(Features, "movbe", true);
     LLVM_FALLTHROUGH;
   case CK_BTVER1:
     setFeatureEnabledImpl(Features, "ssse3", true);
@@ -6251,7 +6252,8 @@ class AArch64TargetInfo : public TargetInfo {
 
   enum FPUModeEnum {
     FPUMode,
-    NeonMode
+    NeonMode = (1 << 0),
+    SveMode = (1 << 1)
   };
 
   unsigned FPU;
@@ -6385,11 +6387,14 @@ public:
     Builder.defineMacro("__ARM_SIZEOF_MINIMAL_ENUM",
                         Opts.ShortEnums ? "1" : "4");
 
-    if (FPU == NeonMode) {
+    if (FPU & NeonMode) {
       Builder.defineMacro("__ARM_NEON", "1");
       // 64-bit NEON supports half, single and double precision operations.
       Builder.defineMacro("__ARM_NEON_FP", "0xE");
     }
+
+    if (FPU & SveMode)
+      Builder.defineMacro("__ARM_FEATURE_SVE", "1");
 
     if (CRC)
       Builder.defineMacro("__ARM_FEATURE_CRC32", "1");
@@ -6426,7 +6431,8 @@ public:
     return Feature == "aarch64" ||
       Feature == "arm64" ||
       Feature == "arm" ||
-      (Feature == "neon" && FPU == NeonMode);
+      (Feature == "neon" && (FPU & NeonMode)) ||
+      (Feature == "sve" && (FPU & SveMode));
   }
 
   bool handleTargetFeatures(std::vector<std::string> &Features,
@@ -6440,7 +6446,9 @@ public:
 
     for (const auto &Feature : Features) {
       if (Feature == "+neon")
-        FPU = NeonMode;
+        FPU |= NeonMode;
+      if (Feature == "+sve")
+        FPU |= SveMode;
       if (Feature == "+crc")
         CRC = 1;
       if (Feature == "+crypto")

@@ -4234,10 +4234,6 @@ sort(__wrap_iter<_Tp*> __first, __wrap_iter<_Tp*> __last, _Compare __comp)
     _VSTD::sort<_Tp*, _Comp_ref>(__first.base(), __last.base(), __comp);
 }
 
-#ifdef _LIBCPP_MSVC
-#pragma warning( push )
-#pragma warning( disable: 4231)
-#endif // _LIBCPP_MSVC
 _LIBCPP_EXTERN_TEMPLATE(_LIBCPP_FUNC_VIS void __sort<__less<char>&, char*>(char*, char*, __less<char>&))
 _LIBCPP_EXTERN_TEMPLATE(_LIBCPP_FUNC_VIS void __sort<__less<wchar_t>&, wchar_t*>(wchar_t*, wchar_t*, __less<wchar_t>&))
 _LIBCPP_EXTERN_TEMPLATE(_LIBCPP_FUNC_VIS void __sort<__less<signed char>&, signed char*>(signed char*, signed char*, __less<signed char>&))
@@ -4271,9 +4267,6 @@ _LIBCPP_EXTERN_TEMPLATE(_LIBCPP_FUNC_VIS bool __insertion_sort_incomplete<__less
 _LIBCPP_EXTERN_TEMPLATE(_LIBCPP_FUNC_VIS bool __insertion_sort_incomplete<__less<long double>&, long double*>(long double*, long double*, __less<long double>&))
 
 _LIBCPP_EXTERN_TEMPLATE(_LIBCPP_FUNC_VIS unsigned __sort5<__less<long double>&, long double*>(long double*, long double*, long double*, long double*, long double*, __less<long double>&))
-#ifdef _LIBCPP_MSVC
-#pragma warning( pop )
-#endif  // _LIBCPP_MSVC
 
 // lower_bound
 

@@ -131,4 +131,24 @@ void test3(Test3 *t) {
 - (void) setCopyMachine: (id) x {}
 @end
 
+// rdar://31579994
+// When synthesizing a property that's declared in multiple protocols, ensure
+// that the setter is emitted if any of these declarations is readwrite.
+@protocol ABC
+@property (copy, nonatomic,  readonly) Test3 *someId;
+@end
+@protocol ABC__Mutable <ABC>
+@property (copy, nonatomic, readwrite) Test3 *someId;
+@end
+
+@interface ABC_Class <ABC, ABC__Mutable>
+@end
+
+@implementation ABC_Class
+@synthesize someId = _someId;
+// CHECK:  define internal %{{.*}}* @"\01-[ABC_Class someId]"
+// CHECK:  define internal void @"\01-[ABC_Class setSomeId:]"(
+@end
+
+
 // CHECK: attributes [[NUW]] = { nounwind }

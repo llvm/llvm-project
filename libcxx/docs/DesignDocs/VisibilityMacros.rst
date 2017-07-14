@@ -104,7 +104,7 @@ Visibility Macros
 **_LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS**
   Mark the member functions, typeinfo, and vtable of an explicit instantiation
   of a class template as being exported by the libc++ library. This attribute
-  must be specified on all template class explicit instantiations.
+  must be specified on all class template explicit instantiations.
 
   It is only necessary to mark the explicit instantiation itself (as opposed to
   the extern template declaration) as exported on Windows, as discussed above.

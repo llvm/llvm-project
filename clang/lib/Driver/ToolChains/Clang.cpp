@@ -2070,10 +2070,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     if (D.isUsingLTO()) {
       Args.AddLastArg(CmdArgs, options::OPT_flto, options::OPT_flto_EQ);
 
-      // The Darwin linker currently uses the legacy LTO API, which does not
-      // support LTO unit features (CFI, whole program vtable opt) under
-      // ThinLTO.
-      if (!getToolChain().getTriple().isOSDarwin() ||
+      // The Darwin and PS4 linkers currently use the legacy LTO API, which
+      // does not support LTO unit features (CFI, whole program vtable opt)
+      // under ThinLTO.
+      if (!(getToolChain().getTriple().isOSDarwin() ||
+            getToolChain().getTriple().isPS4()) ||
           D.getLTOMode() == LTOK_Full)
         CmdArgs.push_back("-flto-unit");
     }

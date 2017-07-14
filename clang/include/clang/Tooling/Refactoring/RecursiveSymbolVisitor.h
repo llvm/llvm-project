@@ -20,8 +20,6 @@
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Lex/Lexer.h"
 
-using namespace llvm;
-
 namespace clang {
 namespace tooling {
 

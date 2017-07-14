@@ -1189,12 +1189,8 @@ void ASTDumper::VisitFunctionDecl(const FunctionDecl *D) {
       auto dumpOverride =
         [=](const CXXMethodDecl *D) {
           SplitQualType T_split = D->getType().split();
-          OS << D << " " << D->getParent()->getName() << "::";
-          if (isa<CXXDestructorDecl>(D))
-            OS << "~" << D->getParent()->getName();
-          else
-            OS << D->getName();
-          OS << " '" << QualType::getAsString(T_split) << "'";
+          OS << D << " " << D->getParent()->getName() << "::"
+             << D->getNameAsString() << " '" << QualType::getAsString(T_split) << "'";
         };
 
       dumpChild([=] {

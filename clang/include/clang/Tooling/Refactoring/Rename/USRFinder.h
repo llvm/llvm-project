@@ -21,8 +21,6 @@
 #include <string>
 #include <vector>
 
-using namespace llvm;
-
 namespace clang {
 
 class ASTContext;

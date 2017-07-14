@@ -10,16 +10,20 @@ void unary_arith(char *p) {
   ++p;
 
   // CHECK: ptrtoint i8* {{.*}} to i64, !nosanitize
-  // CHECK-NEXT: add i64 {{.*}}, -1, !nosanitize
-  // CHECK: select i1 false{{.*}}, !nosanitize
+  // CHECK-NEXT: [[COMPGEP:%.*]] = add i64 {{.*}}, -1, !nosanitize
+  // CHECK: [[NEGVALID:%.*]] = icmp ule i64 [[COMPGEP]], {{.*}}, !nosanitize
+  // CHECK-NOT: select
+  // CHECK: br i1 [[NEGVALID]]{{.*}}, !nosanitize
   // CHECK: call void @__ubsan_handle_pointer_overflow{{.*}}
   --p;
 
+  // CHECK: icmp uge i64
   // CHECK-NOT: select
   // CHECK: call void @__ubsan_handle_pointer_overflow{{.*}}
   p++;
 
-  // CHECK: select
+  // CHECK: icmp ule i64
+  // CHECK-NOT: select
   // CHECK: call void @__ubsan_handle_pointer_overflow{{.*}}
   p--;
 }
@@ -64,7 +68,8 @@ void binary_arith_unsigned(char *p, unsigned i) {
 
   // CHECK: [[OFFSET:%.*]] = sub i64 0, {{.*}}
   // CHECK-NEXT: getelementptr inbounds {{.*}} [[OFFSET]]
-  // CHECK: select
+  // CHECK: icmp ule i64
+  // CHECK-NOT: select
   // CHECK: call void @__ubsan_handle_pointer_overflow{{.*}}
   p - i;
 }
@@ -121,8 +126,10 @@ void pointer_array(int **arr, int k) {
 
 // CHECK-LABEL: define void @pointer_array_unsigned_indices
 void pointer_array_unsigned_indices(int **arr, unsigned k) {
+  // CHECK: icmp uge
   // CHECK-NOT: select
   // CHECK: call void @__ubsan_handle_pointer_overflow{{.*}}
+  // CHECK: icmp uge
   // CHECK-NOT: select
   // CHECK: call void @__ubsan_handle_pointer_overflow{{.*}}
   arr[k][k];

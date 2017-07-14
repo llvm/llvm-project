@@ -80,8 +80,8 @@ TEST(ParserTest, ParseBoolean) {
   Sema.parse("true");
   Sema.parse("false");
   EXPECT_EQ(2U, Sema.Values.size());
-  EXPECT_EQ(true, Sema.Values[0].getBoolean());
-  EXPECT_EQ(false, Sema.Values[1].getBoolean());
+  EXPECT_TRUE(Sema.Values[0].getBoolean());
+  EXPECT_FALSE(Sema.Values[1].getBoolean());
 }
 
 TEST(ParserTest, ParseDouble) {
