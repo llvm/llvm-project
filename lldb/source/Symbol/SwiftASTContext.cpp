@@ -2159,8 +2159,9 @@ static bool SDKSupportsSwift(const FileSpec &sdk_path, SDKType desired_type) {
         }
       }
 
+      // For non-Darwin SDKs assume Swift is supported
       if (sdk_type == SDKType::unknown)
-        return false;
+        return true;
     } else {
       if (sdk_name.startswith(sdk_strings[(int)desired_type])) {
         version_part =
