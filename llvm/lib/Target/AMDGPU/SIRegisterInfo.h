@@ -290,6 +290,8 @@ public:
   const uint32_t *getAllVGPRRegMask() const;
   const uint32_t *getAllAllocatableSRegMask() const;
 
+  int16_t calcSubRegIdx(const TargetRegisterClass *RC, unsigned SubOffset) const;
+
 private:
   void buildSpillLoadStore(MachineBasicBlock::iterator MI,
                            unsigned LoadStoreOp,

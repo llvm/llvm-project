@@ -2063,3 +2063,68 @@ MachineInstr *SIRegisterInfo::findReachingDef(unsigned Reg, unsigned SubReg,
 
   return Def;
 }
+
+int16_t SIRegisterInfo::calcSubRegIdx(const TargetRegisterClass *RC, unsigned SubOffset) const {
+  static const int16_t DwordSub[] = {
+    AMDGPU::sub0, AMDGPU::sub1, AMDGPU::sub2, AMDGPU::sub3,
+    AMDGPU::sub4, AMDGPU::sub5, AMDGPU::sub6, AMDGPU::sub7,
+    AMDGPU::sub8, AMDGPU::sub9, AMDGPU::sub10, AMDGPU::sub11,
+    AMDGPU::sub12, AMDGPU::sub13, AMDGPU::sub14, AMDGPU::sub15
+  };
+  static const int16_t Dword2Sub[] = {
+    AMDGPU::sub0_sub1, AMDGPU::sub1_sub2,
+    AMDGPU::sub2_sub3, AMDGPU::sub3_sub4,
+    AMDGPU::sub4_sub5, AMDGPU::sub5_sub6,
+    AMDGPU::sub6_sub7, AMDGPU::sub7_sub8,
+    AMDGPU::sub8_sub9, AMDGPU::sub9_sub10,
+    AMDGPU::sub10_sub11, AMDGPU::sub11_sub12,
+    AMDGPU::sub12_sub13, AMDGPU::sub13_sub14,
+    AMDGPU::sub14_sub15
+  };
+  static const int16_t Dword4Sub[] = { AMDGPU::sub0_sub1_sub2_sub3,
+    AMDGPU::sub1_sub2_sub3_sub4,
+    AMDGPU::sub2_sub3_sub4_sub5,
+    AMDGPU::sub3_sub4_sub5_sub6,
+    AMDGPU::sub4_sub5_sub6_sub7,
+    AMDGPU::sub5_sub6_sub7_sub8,
+    AMDGPU::sub6_sub7_sub8_sub9,
+    AMDGPU::sub7_sub8_sub9_sub10,
+    AMDGPU::sub8_sub9_sub10_sub11,
+    AMDGPU::sub9_sub10_sub11_sub12,
+    AMDGPU::sub10_sub11_sub12_sub13,
+    AMDGPU::sub11_sub12_sub13_sub14,
+    AMDGPU::sub12_sub13_sub14_sub15
+  };
+  static const int16_t Dword8Sub[] = {
+    AMDGPU::sub0_sub1_sub2_sub3_sub4_sub5_sub6_sub7,
+    AMDGPU::sub1_sub2_sub3_sub4_sub5_sub6_sub7_sub8,
+    AMDGPU::sub2_sub3_sub4_sub5_sub6_sub7_sub8_sub9,
+    AMDGPU::sub3_sub4_sub5_sub6_sub7_sub8_sub9_sub10,
+    AMDGPU::sub4_sub5_sub6_sub7_sub8_sub9_sub10_sub11,
+    AMDGPU::sub5_sub6_sub7_sub8_sub9_sub10_sub11_sub12,
+    AMDGPU::sub6_sub7_sub8_sub9_sub10_sub11_sub12_sub13,
+    AMDGPU::sub7_sub8_sub9_sub10_sub11_sub12_sub13_sub14,
+    AMDGPU::sub8_sub9_sub10_sub11_sub12_sub13_sub14_sub15
+  };
+  
+  // Get the size of the instruction we're replacing
+  unsigned SubSize = getRegSizeInBits(*RC) / 32;
+  switch(SubSize) {
+    default:
+      llvm_unreachable_internal();
+      break;
+    case 8:
+      return Dword8Sub[SubOffset];
+      break;
+    case 4:
+      return Dword4Sub[SubOffset];
+      break;
+    case 2:
+      return Dword2Sub[SubOffset];
+      break;
+    case 1:
+      return DwordSub[SubOffset];
+      break;
+  }
+}
+

@@ -110,6 +110,7 @@ add_llvm_target(AMDGPUCodeGen
   SILowerSGPRSpills.cpp
   SIMachineFunctionInfo.cpp
   SIMachineScheduler.cpp
+  SIBufMemMerge.cpp
   SIMemoryLegalizer.cpp
   SIOptimizeExecMasking.cpp
   SIOptimizeExecMaskingPreRA.cpp
