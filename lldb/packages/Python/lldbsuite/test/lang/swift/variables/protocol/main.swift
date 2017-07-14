@@ -46,14 +46,18 @@ class Point3D : PointUtils {
     
 }
 
-func main() -> Int {
-    
-    var loc2d : protocol<PointUtils> = Point2D(1.25, 2.5)
-    var loc3d : protocol<PointUtils> = Point3D(1.25, 2.5, 1.25)
-    var sum2d = loc2d.sumOfCoordinates()
-    var sum3d = loc3d.sumOfCoordinates()
+func takes_protocol(_ loc2d : PointUtils,_ loc3d : PointUtils) {
+    let sum2d = loc2d.sumOfCoordinates()
+    let sum3d = loc3d.sumOfCoordinates()
     print("hello \(sum2d) \(sum3d)") // Set breakpoint here
-    return 0
+}
+
+func main() {
+
+    var loc2d = Point2D(1.25, 2.5)
+    var loc3d = Point3D(1.25, 2.5, 1.25)
+
+    takes_protocol (loc2d, loc3d)
 }
 
 main()
