@@ -139,6 +139,11 @@ public:
     for (const ObjCMethodDecl *M : P->methods()) {
       if (M->isImplicit())
         continue;
+      AvailabilityResult Availability = M->getAvailability();
+      // Methods that are unavailable or not yet introduced are not considered
+      // to be required.
+      if (Availability == AR_NotYetIntroduced || Availability == AR_Unavailable)
+        continue;
       auto &Map = M->isInstanceMethod() ? InstanceMethods : ClassMethods;
       Map.insert(std::make_pair(M->getSelector(), MethodInfo(M, P, Priority)));
     }

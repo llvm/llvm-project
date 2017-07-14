@@ -2149,23 +2149,28 @@ void Sema::CheckImplementationIvars(ObjCImplementationDecl *ImpDecl,
     Diag(IVI->getLocation(), diag::err_inconsistent_ivar_count);
 }
 
-static void WarnUndefinedMethod(Sema &S, SourceLocation ImpLoc,
-                                ObjCMethodDecl *method,
-                                bool &IncompleteImpl,
-                                unsigned DiagID,
-                                NamedDecl *NeededFor = nullptr) {
+static bool shouldWarnUndefinedMethod(const ObjCMethodDecl *M) {
   // No point warning no definition of method which is 'unavailable'.
-  switch (method->getAvailability()) {
+  switch (M->getAvailability()) {
   case AR_Available:
   case AR_Deprecated:
-    break;
+    return true;
 
-      // Don't warn about unavailable or not-yet-introduced methods.
+  // Don't warn about unavailable or not-yet-introduced methods.
   case AR_NotYetIntroduced:
   case AR_Unavailable:
-    return;
+    return false;
   }
-  
+  llvm_unreachable("Invalid availability");
+}
+
+static void WarnUndefinedMethod(Sema &S, SourceLocation ImpLoc,
+                                ObjCMethodDecl *method, bool &IncompleteImpl,
+                                unsigned DiagID,
+                                NamedDecl *NeededFor = nullptr) {
+  if (!shouldWarnUndefinedMethod(method))
+    return;
+
   // FIXME: For now ignore 'IncompleteImpl'.
   // Previously we grouped all unimplemented methods under a single
   // warning, but some users strongly voiced that they would prefer
@@ -2721,11 +2726,13 @@ static void CheckProtocolMethodDefs(
                 continue;
             unsigned DIAG = diag::warn_unimplemented_protocol_method;
             if (!S.Diags.isIgnored(DIAG, ImpLoc)) {
-              if (MissingRequirements)
-                HasMissingRequirements = true;
-              else
+              if (MissingRequirements) {
+                if (!HasMissingRequirements)
+                  HasMissingRequirements = shouldWarnUndefinedMethod(method);
+              } else {
                 WarnUndefinedMethod(S, ImpLoc, method, IncompleteImpl, DIAG,
                                     PDecl);
+              }
             }
           }
     }
@@ -2747,10 +2754,12 @@ static void CheckProtocolMethodDefs(
 
       unsigned DIAG = diag::warn_unimplemented_protocol_method;
       if (!S.Diags.isIgnored(DIAG, ImpLoc)) {
-        if (MissingRequirements)
-          HasMissingRequirements = true;
-        else
+        if (MissingRequirements) {
+          if (!HasMissingRequirements)
+            HasMissingRequirements = shouldWarnUndefinedMethod(method);
+        } else {
           WarnUndefinedMethod(S, ImpLoc, method, IncompleteImpl, DIAG, PDecl);
+        }
       }
     }
   }
