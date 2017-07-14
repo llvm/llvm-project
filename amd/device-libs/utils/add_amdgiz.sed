@@ -6,7 +6,8 @@
 #######################
 
 # amdgcn--amdhsa-amd -> amdgcn--amdhsa-amdgiz
-/target triple/s/\"amdgcn--amdhsa\"/\"amdgcn--amdhsa-amdgiz\"/
+# This is now done directly by change-addr-space.sh
+# /target triple/s/\"amdgcn--amdhsa\"/\"amdgcn--amdhsa-amdgiz\"/
 
 #####################
 # change data layout

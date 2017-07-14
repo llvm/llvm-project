@@ -20,7 +20,7 @@ if (GENERIC_IS_ZERO)
   endforeach(f)
 
   # Perform transformation
-  execute_process(COMMAND "${CMAKE_SOURCE_DIR}/utils/change-addr-space.sh" "${CMAKE_SOURCE_DIR}/utils"
+  execute_process(COMMAND "${CMAKE_SOURCE_DIR}/utils/change-addr-space.sh" "${AMDGPU_TARGET_TRIPLE}" "${CMAKE_SOURCE_DIR}/utils"
                   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
   file(GLOB srcs

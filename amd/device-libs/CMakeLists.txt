@@ -33,6 +33,9 @@ if (GENERIC_IS_ZERO)
   set(AMDGPU_TARGET_TRIPLE "amdgcn--amdhsa-amdgizcl")
   # HCC will execute utils/change-addr-space.sh
   # and apply utils/add_amdgiz.sed on all .ll files in subdirectory hc/, irif/, opencl/
+  if (CUDA_TRIPLE)
+    set(AMDGPU_TARGET_TRIPLE "amdgcn--cuda")
+  endif (CUDA_TRIPLE)
 
 endif (GENERIC_IS_ZERO)
 
@@ -52,7 +55,9 @@ add_subdirectory(oclc)
 add_subdirectory(ocml)
 add_subdirectory(ockl)
 add_subdirectory(opencl)
-add_subdirectory(cuda2gcn)
+if (CUDA_TRIPLE)
+  add_subdirectory(cuda2gcn)
+endif (CUDA_TRIPLE)
 
 if(BUILD_HC_LIB)
   add_subdirectory(hc)
