@@ -372,6 +372,8 @@ occurrenceToString(const CXSymbolOccurrence &Occurrence, bool IsLocal,
     OS << '"' << Filename << "\" ";
 
   bool FirstRange = true;
+  assert(NewName.size() == Occurrence.NumNamePieces &&
+         "new name doesn't match the number of pieces");
   for (unsigned J = 0; J != Occurrence.NumNamePieces; ++J) {
     if (!FirstRange) // TODO
       OS << ", ";

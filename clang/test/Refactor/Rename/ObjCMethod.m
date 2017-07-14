@@ -145,6 +145,6 @@
 - (void) :(int)_ :(int)m :(int)z { // EMPTY-SELECTOR: rename [[@LINE]]:10 -> [[@LINE]]:10, [[@LINE]]:18 -> [[@LINE]]:18, [[@LINE]]:26 -> [[@LINE]]:26
     [self: 15:0 :3]; // EMPTY-SELECTOR: rename [[@LINE]]:10 -> [[@LINE]]:10, [[@LINE]]:14 -> [[@LINE]]:14, [[@LINE]]:17 -> [[@LINE]]:17
 }
-// RUN: clang-refactor-test rename-initiate -at=%s:139:9 -new-name=test:a: %s -Wno-objc-root-class | FileCheck --check-prefix=EMPTY-SELECTOR %s
+// RUN: clang-refactor-test rename-initiate -at=%s:139:9 -new-name=test:a:: %s -Wno-objc-root-class | FileCheck --check-prefix=EMPTY-SELECTOR %s
 
 @end
