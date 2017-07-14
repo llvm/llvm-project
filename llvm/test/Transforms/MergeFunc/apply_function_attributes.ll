@@ -1,4 +1,5 @@
 ; RUN: opt -S -mergefunc < %s | FileCheck %s
+; RUN: opt -S -mergefunc < %s | FileCheck %s --check-prefix=PARAMIDX
 
 %Opaque_type = type opaque
 %S2i = type <{ i64, i64 }>
@@ -45,3 +46,40 @@ define void @A(%Opaque_type* sret %a, %D2i* %b, i32* %xp, i32* %yp) {
 ; CHECK:  tail call void @A(%Opaque_type* sret %0, %D2i* %5, i32* %2, i32* %3)
 ; CHECK:  ret void
 
+
+; Make sure that functions with the same parameter attributes but at different argument indices don't get merged.
+
+; PARAMIDX-LABEL: define i32 @B_2(i32* {{.*}}, i32* swiftself {{.*}}) {
+; PARAMIDX: load
+; PARAMIDX: ret
+;
+; PARAMIDX: define i32 @A_2(i32* swiftself {{.*}}, i32* {{.*}}) {
+; PARAMIDX: load
+; PARAMIDX: ret
+
+define i32 @B_2(i32* %xp, i32* swiftself %yp) {
+  %x = load i32, i32* %xp
+  %y = load i32, i32* %yp
+  %sum = add i32 %x, %y
+  %sum2 = add i32 %sum, %y
+  %sum3 = add i32 %sum2, %y
+  ret i32 %sum3
+}
+
+define i32 @C_2(i32* swiftself %xp, i32* %yp) {
+  %x = load i32, i32* %xp
+  %y = load i32, i32* %yp
+  %sum = add i32 %x, %y
+  %sum2 = add i32 %sum, %y
+  %sum3 = add i32 %sum2, %y
+  ret i32 %sum3
+}
+
+define i32 @A_2(i32* swiftself %xp, i32* %yp) {
+  %x = load i32, i32* %xp
+  %y = load i32, i32* %yp
+  %sum = add i32 %x, %y
+  %sum2 = add i32 %sum, %y
+  %sum3 = add i32 %sum2, %y
+  ret i32 %sum3
+}
