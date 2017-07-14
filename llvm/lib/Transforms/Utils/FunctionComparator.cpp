@@ -82,6 +82,10 @@ int FunctionComparator::cmpAttrs(const AttributeSet L,
   for (unsigned i = 0, e = L.getNumSlots(); i != e; ++i) {
     AttributeSet::iterator LI = L.begin(i), LE = L.end(i), RI = R.begin(i),
                            RE = R.end(i);
+    if (L.getSlotIndex(i) < R.getSlotIndex(i))
+      return -1;
+    if (L.getSlotIndex(i) > R.getSlotIndex(i))
+      return 1;
     for (; LI != LE && RI != RE; ++LI, ++RI) {
       Attribute LA = *LI;
       Attribute RA = *RI;
