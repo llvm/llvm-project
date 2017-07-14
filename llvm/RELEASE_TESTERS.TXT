@@ -41,14 +41,9 @@ E: hans@chromium.org
 T: x86
 O: Windows
 
-N: Renato Golin
-E: renato.golin@linaro.org
-T: ARM
-O: Linux
-
 N: Diana Picus
 E: diana.picus@linaro.org
-T: AArch64
+T: ARM, AArch64
 O: Linux
 
 N: Simon Dardis

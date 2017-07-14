@@ -237,35 +237,32 @@ static bool EvaluateValue(PPValue &Result, Token &PeekTok, DefinedTracker &DT,
     PP.setCodeCompletionReached();
     PP.LexNonComment(PeekTok);
   }
-      
-  // If this token's spelling is a pp-identifier, check to see if it is
-  // 'defined' or if it is a macro.  Note that we check here because many
-  // keywords are pp-identifiers, so we can't check the kind.
-  if (IdentifierInfo *II = PeekTok.getIdentifierInfo()) {
-    // Handle "defined X" and "defined(X)".
-    if (II->isStr("defined"))
-      return EvaluateDefined(Result, PeekTok, DT, ValueLive, PP);
-
-    // If this identifier isn't 'defined' or one of the special
-    // preprocessor keywords and it wasn't macro expanded, it turns
-    // into a simple 0, unless it is the C++ keyword "true", in which case it
-    // turns into "1".
-    if (ValueLive &&
-        II->getTokenID() != tok::kw_true &&
-        II->getTokenID() != tok::kw_false)
-      PP.Diag(PeekTok, diag::warn_pp_undef_identifier) << II;
-    Result.Val = II->getTokenID() == tok::kw_true;
-    Result.Val.setIsUnsigned(false);  // "0" is signed intmax_t 0.
-    Result.setIdentifier(II);
-    Result.setRange(PeekTok.getLocation());
-    DT.IncludedUndefinedIds = (II->getTokenID() != tok::kw_true &&
-                               II->getTokenID() != tok::kw_false);
-    PP.LexNonComment(PeekTok);
-    return false;
-  }
 
   switch (PeekTok.getKind()) {
-  default:  // Non-value token.
+  default:
+    // If this token's spelling is a pp-identifier, check to see if it is
+    // 'defined' or if it is a macro.  Note that we check here because many
+    // keywords are pp-identifiers, so we can't check the kind.
+    if (IdentifierInfo *II = PeekTok.getIdentifierInfo()) {
+      // Handle "defined X" and "defined(X)".
+      if (II->isStr("defined"))
+        return EvaluateDefined(Result, PeekTok, DT, ValueLive, PP);
+
+      if (!II->isCPlusPlusOperatorKeyword()) {
+        // If this identifier isn't 'defined' or one of the special
+        // preprocessor keywords and it wasn't macro expanded, it turns
+        // into a simple 0
+        if (ValueLive)
+          PP.Diag(PeekTok, diag::warn_pp_undef_identifier) << II;
+        Result.Val = 0;
+        Result.Val.setIsUnsigned(false); // "0" is signed intmax_t 0.
+        Result.setIdentifier(II);
+        Result.setRange(PeekTok.getLocation());
+        DT.IncludedUndefinedIds = true;
+        PP.LexNonComment(PeekTok);
+        return false;
+      }
+    }
     PP.Diag(PeekTok, diag::err_pp_expr_bad_token_start_expr);
     return true;
   case tok::eod:
@@ -481,6 +478,14 @@ static bool EvaluateValue(PPValue &Result, Token &PeekTok, DefinedTracker &DT,
       DT.State = DefinedTracker::DefinedMacro;
     return false;
   }
+  case tok::kw_true:
+  case tok::kw_false:
+    Result.Val = PeekTok.getKind() == tok::kw_true;
+    Result.Val.setIsUnsigned(false); // "0" is signed intmax_t 0.
+    Result.setIdentifier(PeekTok.getIdentifierInfo());
+    Result.setRange(PeekTok.getLocation());
+    PP.LexNonComment(PeekTok);
+    return false;
 
   // FIXME: Handle #assert
   }
