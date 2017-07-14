@@ -2935,9 +2935,13 @@ public:
     // the SCEVExpander may introduce while code generating the parameters and
     // which may introduce scalar dependences that prevent us from correctly
     // code generating this scop.
-    BBPair StartExitBlocks =
+    BBPair StartExitBlocks;
+    BranchInst *CondBr = nullptr;
+    std::tie(StartExitBlocks, CondBr) =
         executeScopConditionally(*S, Builder.getTrue(), *DT, *RI, *LI);
     BasicBlock *StartBlock = std::get<0>(StartExitBlocks);
+
+    assert(CondBr && "CondBr not initialized by executeScopConditionally");
 
     GPUNodeBuilder NodeBuilder(Builder, Annotator, *DL, *LI, *SE, *DT, *S,
                                StartBlock, Prog, Runtime, Architecture);
@@ -2966,10 +2970,10 @@ public:
     /// kernel, the SCoP is probably mostly sequential. Hence, there is no
     /// point in running it on a GPU.
     if (NodeBuilder.DeepestSequential > NodeBuilder.DeepestParallel)
-      SplitBlock->getTerminator()->setOperand(0, Builder.getFalse());
+      CondBr->setOperand(0, Builder.getFalse());
 
     if (!NodeBuilder.BuildSuccessful)
-      SplitBlock->getTerminator()->setOperand(0, Builder.getFalse());
+      CondBr->setOperand(0, Builder.getFalse());
   }
 
   bool runOnScop(Scop &CurrentScop) override {

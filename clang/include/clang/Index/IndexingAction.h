@@ -11,13 +11,16 @@
 #define LLVM_CLANG_INDEX_INDEXINGACTION_H
 
 #include "clang/Basic/LLVM.h"
+#include "llvm/ADT/ArrayRef.h"
 #include <memory>
 #include <string>
 
 namespace clang {
+  class ASTContext;
   class ASTReader;
   class ASTUnit;
   class CompilerInstance;
+  class Decl;
   class FrontendAction;
   class FrontendOptions;
   class Module;
@@ -65,8 +68,11 @@ void indexASTUnit(ASTUnit &Unit,
                   std::shared_ptr<IndexDataConsumer> DataConsumer,
                   IndexingOptions Opts);
 
-void indexModuleFile(serialization::ModuleFile &Mod,
-                     ASTReader &Reader,
+void indexTopLevelDecls(ASTContext &Ctx, ArrayRef<const Decl *> Decls,
+                        std::shared_ptr<IndexDataConsumer> DataConsumer,
+                        IndexingOptions Opts);
+
+void indexModuleFile(serialization::ModuleFile &Mod, ASTReader &Reader,
                      std::shared_ptr<IndexDataConsumer> DataConsumer,
                      IndexingOptions Opts);
 

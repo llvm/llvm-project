@@ -57,7 +57,7 @@ public:
 };
 
 class NonLocalizedStringChecker
-    : public Checker<check::PostCall, check::PreObjCMessage,
+    : public Checker<check::PreCall, check::PostCall, check::PreObjCMessage,
                      check::PostObjCMessage,
                      check::PostStmt<ObjCStringLiteral>> {
 
@@ -79,9 +79,10 @@ class NonLocalizedStringChecker
   void setNonLocalizedState(SVal S, CheckerContext &C) const;
   void setLocalizedState(SVal S, CheckerContext &C) const;
 
-  bool isAnnotatedAsLocalized(const Decl *D) const;
-  void reportLocalizationError(SVal S, const ObjCMethodCall &M,
-                               CheckerContext &C, int argumentNumber = 0) const;
+  bool isAnnotatedAsReturningLocalized(const Decl *D) const;
+  bool isAnnotatedAsTakingLocalized(const Decl *D) const;
+  void reportLocalizationError(SVal S, const CallEvent &M, CheckerContext &C,
+                               int argumentNumber = 0) const;
 
   int getLocalizedArgumentForSelector(const IdentifierInfo *Receiver,
                                       Selector S) const;
@@ -97,6 +98,7 @@ public:
   void checkPreObjCMessage(const ObjCMethodCall &msg, CheckerContext &C) const;
   void checkPostObjCMessage(const ObjCMethodCall &msg, CheckerContext &C) const;
   void checkPostStmt(const ObjCStringLiteral *SL, CheckerContext &C) const;
+  void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
   void checkPostCall(const CallEvent &Call, CheckerContext &C) const;
 };
 
@@ -644,13 +646,27 @@ void NonLocalizedStringChecker::initLocStringsMethods(ASTContext &Ctx) const {
 
 /// Checks to see if the method / function declaration includes
 /// __attribute__((annotate("returns_localized_nsstring")))
-bool NonLocalizedStringChecker::isAnnotatedAsLocalized(const Decl *D) const {
+bool NonLocalizedStringChecker::isAnnotatedAsReturningLocalized(
+    const Decl *D) const {
   if (!D)
     return false;
   return std::any_of(
       D->specific_attr_begin<AnnotateAttr>(),
       D->specific_attr_end<AnnotateAttr>(), [](const AnnotateAttr *Ann) {
         return Ann->getAnnotation() == "returns_localized_nsstring";
+      });
+}
+
+/// Checks to see if the method / function declaration includes
+/// __attribute__((annotate("takes_localized_nsstring")))
+bool NonLocalizedStringChecker::isAnnotatedAsTakingLocalized(
+    const Decl *D) const {
+  if (!D)
+    return false;
+  return std::any_of(
+      D->specific_attr_begin<AnnotateAttr>(),
+      D->specific_attr_end<AnnotateAttr>(), [](const AnnotateAttr *Ann) {
+        return Ann->getAnnotation() == "takes_localized_nsstring";
       });
 }
 
@@ -733,8 +749,7 @@ static bool isDebuggingContext(CheckerContext &C) {
 
 /// Reports a localization error for the passed in method call and SVal
 void NonLocalizedStringChecker::reportLocalizationError(
-    SVal S, const ObjCMethodCall &M, CheckerContext &C,
-    int argumentNumber) const {
+    SVal S, const CallEvent &M, CheckerContext &C, int argumentNumber) const {
 
   // Don't warn about localization errors in classes and methods that
   // may be debug code.
@@ -832,7 +847,21 @@ void NonLocalizedStringChecker::checkPreObjCMessage(const ObjCMethodCall &msg,
     }
   }
 
-  if (argumentNumber < 0) // There was no match in UIMethods
+  if (argumentNumber < 0) { // There was no match in UIMethods
+    if (const Decl *D = msg.getDecl()) {
+      if (const ObjCMethodDecl *OMD = dyn_cast_or_null<ObjCMethodDecl>(D)) {
+        auto formals = OMD->parameters();
+        for (unsigned i = 0, ei = formals.size(); i != ei; ++i) {
+          if (isAnnotatedAsTakingLocalized(formals[i])) {
+            argumentNumber = i;
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  if (argumentNumber < 0) // Still no match
     return;
 
   SVal svTitle = msg.getArgSVal(argumentNumber);
@@ -852,6 +881,25 @@ void NonLocalizedStringChecker::checkPreObjCMessage(const ObjCMethodCall &msg,
 
   if (isNonLocalized) {
     reportLocalizationError(svTitle, msg, C, argumentNumber + 1);
+  }
+}
+
+void NonLocalizedStringChecker::checkPreCall(const CallEvent &Call,
+                                             CheckerContext &C) const {
+  const Decl *D = Call.getDecl();
+  if (D && isa<FunctionDecl>(D)) {
+    const FunctionDecl *FD = dyn_cast<FunctionDecl>(D);
+    auto formals = FD->parameters();
+    for (unsigned i = 0,
+                  ei = std::min(unsigned(formals.size()), Call.getNumArgs());
+         i != ei; ++i) {
+      if (isAnnotatedAsTakingLocalized(formals[i])) {
+        auto actual = Call.getArgSVal(i);
+        if (hasNonLocalizedState(actual, C)) {
+          reportLocalizationError(actual, Call, C, i + 1);
+        }
+      }
+    }
   }
 }
 
@@ -906,7 +954,7 @@ void NonLocalizedStringChecker::checkPostCall(const CallEvent &Call,
   const IdentifierInfo *Identifier = Call.getCalleeIdentifier();
 
   SVal sv = Call.getReturnValue();
-  if (isAnnotatedAsLocalized(D) || LSF.count(Identifier) != 0) {
+  if (isAnnotatedAsReturningLocalized(D) || LSF.count(Identifier) != 0) {
     setLocalizedState(sv, C);
   } else if (isNSStringType(RT, C.getASTContext()) &&
              !hasLocalizedState(sv, C)) {
@@ -940,7 +988,8 @@ void NonLocalizedStringChecker::checkPostObjCMessage(const ObjCMethodCall &msg,
 
   std::pair<const IdentifierInfo *, Selector> MethodDescription = {odInfo, S};
 
-  if (LSM.count(MethodDescription) || isAnnotatedAsLocalized(msg.getDecl())) {
+  if (LSM.count(MethodDescription) ||
+      isAnnotatedAsReturningLocalized(msg.getDecl())) {
     SVal sv = msg.getReturnValue();
     setLocalizedState(sv, C);
   }
