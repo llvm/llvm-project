@@ -1814,9 +1814,21 @@ Instruction *InstCombiner::foldICmpOrConstant(ICmpInst &Cmp, BinaryOperator *Or,
         Builder.CreateICmp(Pred, P, ConstantInt::getNullValue(P->getType()));
     Value *CmpQ =
         Builder.CreateICmp(Pred, Q, ConstantInt::getNullValue(Q->getType()));
-    auto LogicOpc = Pred == ICmpInst::Predicate::ICMP_EQ ? Instruction::And
-                                                         : Instruction::Or;
-    return BinaryOperator::Create(LogicOpc, CmpP, CmpQ);
+    auto BOpc = Pred == CmpInst::ICMP_EQ ? Instruction::And : Instruction::Or;
+    return BinaryOperator::Create(BOpc, CmpP, CmpQ);
+  }
+
+  // Are we using xors to bitwise check for a pair of (in)equalities? Convert to
+  // a shorter form that has more potential to be folded even further.
+  Value *X1, *X2, *X3, *X4;
+  if (match(Or->getOperand(0), m_OneUse(m_Xor(m_Value(X1), m_Value(X2)))) &&
+      match(Or->getOperand(1), m_OneUse(m_Xor(m_Value(X3), m_Value(X4))))) {
+    // ((X1 ^ X2) || (X3 ^ X4)) == 0 --> (X1 == X2) && (X3 == X4)
+    // ((X1 ^ X2) || (X3 ^ X4)) != 0 --> (X1 != X2) || (X3 != X4)
+    Value *Cmp12 = Builder.CreateICmp(Pred, X1, X2);
+    Value *Cmp34 = Builder.CreateICmp(Pred, X3, X4);
+    auto BOpc = Pred == CmpInst::ICMP_EQ ? Instruction::And : Instruction::Or;
+    return BinaryOperator::Create(BOpc, Cmp12, Cmp34);
   }
 
   return nullptr;

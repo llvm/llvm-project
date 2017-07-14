@@ -455,6 +455,8 @@ public:
   unsigned getNumInterleavedAccesses(VectorType *VecTy,
                                      const DataLayout &DL) const;
 
+  MachineMemOperand::Flags getMMOFlags(const Instruction &I) const override;
+
 private:
   bool isExtFreeImpl(const Instruction *Ext) const override;
 

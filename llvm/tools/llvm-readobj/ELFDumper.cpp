@@ -1532,6 +1532,7 @@ static const char *getTypeString(unsigned Arch, uint64_t Type) {
   LLVM_READOBJ_TYPE_CASE(TLSDESC_PLT);
   LLVM_READOBJ_TYPE_CASE(TLSDESC_GOT);
   LLVM_READOBJ_TYPE_CASE(AUXILIARY);
+  LLVM_READOBJ_TYPE_CASE(FILTER);
   default: return "unknown";
   }
 }
@@ -1624,6 +1625,10 @@ StringRef ELFDumper<ELFT>::getDynamicString(uint64_t Value) const {
   return StringRef(DynamicStringTable.data() + Value);
 }
 
+static void printLibrary(raw_ostream &OS, const Twine &Tag, const Twine &Name) {
+  OS << Tag << ": [" << Name << "]";
+}
+
 template <class ELFT>
 void ELFDumper<ELFT>::printValue(uint64_t Type, uint64_t Value) {
   raw_ostream &OS = W.getOStream();
@@ -1687,13 +1692,16 @@ void ELFDumper<ELFT>::printValue(uint64_t Type, uint64_t Value) {
     OS << Value << " (bytes)";
     break;
   case DT_NEEDED:
-    OS << "SharedLibrary (" << getDynamicString(Value) << ")";
+    printLibrary(OS, "Shared library", getDynamicString(Value));
     break;
   case DT_SONAME:
-    OS << "LibrarySoname (" << getDynamicString(Value) << ")";
+    printLibrary(OS, "Library soname", getDynamicString(Value));
     break;
   case DT_AUXILIARY:
-    OS << "Auxiliary library: [" << getDynamicString(Value) << "]";
+    printLibrary(OS, "Auxiliary library", getDynamicString(Value));
+    break;
+  case DT_FILTER:
+    printLibrary(OS, "Filter library", getDynamicString(Value));
     break;
   case DT_RPATH:
   case DT_RUNPATH:

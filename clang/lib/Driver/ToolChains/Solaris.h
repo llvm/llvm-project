@@ -50,7 +50,7 @@ public:
 
 namespace toolchains {
 
-class LLVM_LIBRARY_VISIBILITY Solaris : public Generic_GCC {
+class LLVM_LIBRARY_VISIBILITY Solaris : public Generic_ELF {
 public:
   Solaris(const Driver &D, const llvm::Triple &Triple,
           const llvm::opt::ArgList &Args);

@@ -65,15 +65,15 @@ int main(int argc, char **argv)
     // Size is not a multiple of alignment.
     p = aligned_alloc(alignment, size >> 1);
     assert(!p);
-    p = (void *)0x42UL;
+    void *p_unchanged = (void *)0x42UL;
+    p = p_unchanged;
     // Alignment is not a power of 2.
     err = posix_memalign(&p, 3, size);
-    assert(!p);
+    assert(p == p_unchanged);
     assert(err == EINVAL);
-    p = (void *)0x42UL;
     // Alignment is a power of 2, but not a multiple of size(void *).
     err = posix_memalign(&p, 2, size);
-    assert(!p);
+    assert(p == p_unchanged);
     assert(err == EINVAL);
   }
   return 0;

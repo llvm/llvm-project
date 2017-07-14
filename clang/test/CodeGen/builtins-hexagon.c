@@ -2962,4 +2962,16 @@ void foo() {
   // CHECK: @llvm.hexagon.V6.vzh.128B
   __builtin_HEXAGON_V6_vzh(v16);
   // CHECK: @llvm.hexagon.V6.vzh
+  __builtin_HEXAGON_Y2_dccleana(0);
+  // CHECK: @llvm.hexagon.Y2.dccleana
+  __builtin_HEXAGON_Y2_dccleaninva(0);
+  // CHECK: @llvm.hexagon.Y2.dccleaninva
+  __builtin_HEXAGON_Y2_dcinva(0);
+  // CHECK: @llvm.hexagon.Y2.dcinva
+  __builtin_HEXAGON_Y2_dczeroa(0);
+  // CHECK: @llvm.hexagon.Y2.dczeroa
+  __builtin_HEXAGON_Y4_l2fetch(0, 0);
+  // CHECK: @llvm.hexagon.Y4.l2fetch
+  __builtin_HEXAGON_Y5_l2fetch(0, 0);
+  // CHECK: @llvm.hexagon.Y5.l2fetch
 }

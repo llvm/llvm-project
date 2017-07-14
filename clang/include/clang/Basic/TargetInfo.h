@@ -226,6 +226,20 @@ protected:
 
 public:
   IntType getSizeType() const { return SizeType; }
+  IntType getSignedSizeType() const {
+    switch (SizeType) {
+    case UnsignedShort:
+      return SignedShort;
+    case UnsignedInt:
+      return SignedInt;
+    case UnsignedLong:
+      return SignedLong;
+    case UnsignedLongLong:
+      return SignedLongLong;
+    default:
+      llvm_unreachable("Invalid SizeType");
+    }
+  }
   IntType getIntMaxType() const { return IntMaxType; }
   IntType getUIntMaxType() const {
     return getCorrespondingUnsignedType(IntMaxType);

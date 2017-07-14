@@ -52,9 +52,6 @@ using namespace llvm;
 #define GET_INSTRINFO_CTOR_DTOR
 #include "AArch64GenInstrInfo.inc"
 
-static const MachineMemOperand::Flags MOSuppressPair =
-    MachineMemOperand::MOTargetFlag1;
-
 static cl::opt<unsigned>
 TBZDisplacementBits("aarch64-tbz-offset-bits", cl::Hidden, cl::init(14),
                     cl::desc("Restrict range of TB[N]Z instructions (DEBUG)"));
@@ -1713,6 +1710,13 @@ void AArch64InstrInfo::suppressLdStPair(MachineInstr &MI) const {
   if (MI.memoperands_empty())
     return;
   (*MI.memoperands_begin())->setFlags(MOSuppressPair);
+}
+
+/// Check all MachineMemOperands for a hint that the load/store is strided.
+bool AArch64InstrInfo::isStridedAccess(const MachineInstr &MI) const {
+  return llvm::any_of(MI.memoperands(), [](MachineMemOperand *MMO) {
+    return MMO->getFlags() & MOStridedAccess;
+  });
 }
 
 bool AArch64InstrInfo::isUnscaledLdSt(unsigned Opc) const {
@@ -4433,7 +4437,8 @@ AArch64InstrInfo::getSerializableBitmaskMachineOperandTargetFlags() const {
 ArrayRef<std::pair<MachineMemOperand::Flags, const char *>>
 AArch64InstrInfo::getSerializableMachineMemOperandTargetFlags() const {
   static const std::pair<MachineMemOperand::Flags, const char *> TargetFlags[] =
-      {{MOSuppressPair, "aarch64-suppress-pair"}};
+      {{MOSuppressPair, "aarch64-suppress-pair"},
+       {MOStridedAccess, "aarch64-strided-access"}};
   return makeArrayRef(TargetFlags);
 }
 

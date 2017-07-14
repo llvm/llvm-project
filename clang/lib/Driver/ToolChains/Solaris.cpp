@@ -126,7 +126,7 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
 Solaris::Solaris(const Driver &D, const llvm::Triple &Triple,
                  const ArgList &Args)
-    : Generic_GCC(D, Triple, Args) {
+    : Generic_ELF(D, Triple, Args) {
 
   GCCInstallation.init(Triple, Args);
 

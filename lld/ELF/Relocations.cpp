@@ -1000,16 +1000,16 @@ void ThunkCreator::mergeThunks() {
   }
 }
 
-ThunkSection *ThunkCreator::getOSThunkSec(OutputSection *OS,
+ThunkSection *ThunkCreator::getOSThunkSec(OutputSectionCommand *Cmd,
                                           std::vector<InputSection *> *ISR) {
   if (CurTS == nullptr) {
     uint32_t Off = 0;
-    for (auto *IS : OS->Sections) {
+    for (auto *IS : Cmd->Sec->Sections) {
       Off = IS->OutSecOff + IS->getSize();
       if ((IS->Flags & SHF_EXECINSTR) == 0)
         break;
     }
-    CurTS = addThunkSection(OS, ISR, Off);
+    CurTS = addThunkSection(Cmd->Sec, ISR, Off);
   }
   return CurTS;
 }
@@ -1066,7 +1066,7 @@ std::pair<Thunk *, bool> ThunkCreator::getThunk(SymbolBody &Body,
 // InputSectionDescription::Sections.
 void ThunkCreator::forEachExecInputSection(
     ArrayRef<OutputSectionCommand *> OutputSections,
-    std::function<void(OutputSection *, std::vector<InputSection *> *,
+    std::function<void(OutputSectionCommand *, std::vector<InputSection *> *,
                        InputSection *)>
         Fn) {
   for (OutputSectionCommand *Cmd : OutputSections) {
@@ -1077,7 +1077,7 @@ void ThunkCreator::forEachExecInputSection(
       if (auto *ISD = dyn_cast<InputSectionDescription>(BC)) {
         CurTS = nullptr;
         for (InputSection *IS : ISD->Sections)
-          Fn(OS, &ISD->Sections, IS);
+          Fn(Cmd, &ISD->Sections, IS);
       }
   }
 }
@@ -1104,8 +1104,8 @@ bool ThunkCreator::createThunks(
   // ThunkSections back into the OutputSection as ThunkSections are not always
   // inserted into the same OutputSection as the caller.
   forEachExecInputSection(
-      OutputSections, [&](OutputSection *OS,  std::vector<InputSection*> *ISR,
-                          InputSection *IS) {
+      OutputSections, [&](OutputSectionCommand *Cmd,
+                          std::vector<InputSection *> *ISR, InputSection *IS) {
         for (Relocation &Rel : IS->Relocations) {
           SymbolBody &Body = *Rel.Sym;
           if (Thunks.find(&Body) != Thunks.end() ||
@@ -1118,9 +1118,9 @@ bool ThunkCreator::createThunks(
             // Find or create a ThunkSection for the new Thunk
             ThunkSection *TS;
             if (auto *TIS = T->getTargetInputSection())
-              TS = getISThunkSec(TIS, OS);
+              TS = getISThunkSec(TIS, Cmd->Sec);
             else
-              TS = getOSThunkSec(OS, ISR);
+              TS = getOSThunkSec(Cmd, ISR);
             TS->addThunk(T);
             Thunks[T->ThunkSym] = T;
           }

@@ -20,11 +20,21 @@
 /// out that the theoretically slower O(n*log(n)) implementation is actually
 /// faster than the almost-linear O(n*alpha(n)) version, even for large CFGs.
 ///
+/// The file uses the Depth Based Search algorithm to perform incremental
+/// upates (insertion and deletions). The implemented algorithm is based on this
+/// publication:
+///
+///   An Experimental Study of Dynamic Dominators
+///   Loukas Georgiadis, et al., April 12 2016, pp. 5-7, 9-10:
+///   https://arxiv.org/pdf/1604.02711.pdf
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_SUPPORT_GENERICDOMTREECONSTRUCTION_H
 #define LLVM_SUPPORT_GENERICDOMTREECONSTRUCTION_H
 
+#include <queue>
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/Debug.h"
@@ -54,6 +64,7 @@ struct SemiNCAInfo {
   using NodePtr = typename DomTreeT::NodePtr;
   using NodeT = typename DomTreeT::NodeType;
   using TreeNodePtr = DomTreeNodeBase<NodeT> *;
+  static constexpr bool IsPostDom = DomTreeT::IsPostDominator;
 
   // Information record used by Semi-NCA during tree construction.
   struct InfoRec {
@@ -100,6 +111,22 @@ struct SemiNCAInfo {
   }
 
   static bool AlwaysDescend(NodePtr, NodePtr) { return true; }
+
+  struct BlockNamePrinter {
+    NodePtr N;
+
+    BlockNamePrinter(NodePtr Block) : N(Block) {}
+    BlockNamePrinter(TreeNodePtr TN) : N(TN ? TN->getBlock() : nullptr) {}
+
+    friend raw_ostream &operator<<(raw_ostream &O, const BlockNamePrinter &BP) {
+      if (!BP.N)
+        O << "nullptr";
+      else
+        BP.N->printAsOperand(O, false);
+
+      return O;
+    }
+  };
 
   // Custom DFS implementation which can skip nodes based on a provided
   // predicate. It also collects ReverseChildren so that we don't have to spend
@@ -182,6 +209,7 @@ struct SemiNCAInfo {
     return VInInfo.Label;
   }
 
+  // This function requires DFS to be run before calling it.
   void runSemiNCA(DomTreeT &DT, const unsigned MinLevel = 0) {
     const unsigned NextDFSNum(NumToNode.size());
     // Initialize IDoms to spanning tree parents.
@@ -281,9 +309,8 @@ struct SemiNCAInfo {
     // Loop over all of the discovered blocks in the function...
     for (size_t i = 1, e = NumToNode.size(); i != e; ++i) {
       NodePtr W = NumToNode[i];
-      DEBUG(dbgs() << "\tdiscovereed a new reachable node ");
-      DEBUG(PrintBlockOrNullptr(dbgs(), W));
-      DEBUG(dbgs() << "\n");
+      DEBUG(dbgs() << "\tdiscovered a new reachable node "
+                   << BlockNamePrinter(W) << "\n");
 
       // Don't replace this with 'count', the insertion side effect is important
       if (DT.DomTreeNodes[W]) continue;  // Haven't calculated this node yet?
@@ -300,11 +327,197 @@ struct SemiNCAInfo {
     }
   }
 
-  static void PrintBlockOrNullptr(raw_ostream &O, NodePtr Obj) {
-    if (!Obj)
-      O << "nullptr";
+  // Helper struct used during edge insertions.
+  struct InsertionInfo {
+    using BucketElementTy = std::pair<unsigned, TreeNodePtr>;
+    struct DecreasingLevel {
+      bool operator()(const BucketElementTy &First,
+                      const BucketElementTy &Second) const {
+        return First.first > Second.first;
+      }
+    };
+
+    std::priority_queue<BucketElementTy, SmallVector<BucketElementTy, 8>,
+                        DecreasingLevel>
+        Bucket;  // Queue of tree nodes sorted by level in descending order.
+    SmallDenseSet<TreeNodePtr, 8> Affected;
+    SmallDenseSet<TreeNodePtr, 8> Visited;
+    SmallVector<TreeNodePtr, 8> AffectedQueue;
+    SmallVector<TreeNodePtr, 8> VisitedNotAffectedQueue;
+  };
+
+  static void InsertEdge(DomTreeT &DT, const NodePtr From, const NodePtr To) {
+    assert(From && To && "Cannot connect nullptrs");
+    DEBUG(dbgs() << "Inserting edge " << BlockNamePrinter(From) << " -> "
+                 << BlockNamePrinter(To) << "\n");
+    const TreeNodePtr FromTN = DT.getNode(From);
+
+    // Ignore edges from unreachable nodes.
+    if (!FromTN) return;
+
+    DT.DFSInfoValid = false;
+
+    const TreeNodePtr ToTN = DT.getNode(To);
+    if (!ToTN)
+      InsertUnreachable(DT, FromTN, To);
     else
-      Obj->printAsOperand(O, false);
+      InsertReachable(DT, FromTN, ToTN);
+  }
+
+  // Handles insertion to a node already in the dominator tree.
+  static void InsertReachable(DomTreeT &DT, const TreeNodePtr From,
+                              const TreeNodePtr To) {
+    DEBUG(dbgs() << "\tReachable " << BlockNamePrinter(From->getBlock())
+                 << " -> " << BlockNamePrinter(To->getBlock()) << "\n");
+    const NodePtr NCDBlock =
+        DT.findNearestCommonDominator(From->getBlock(), To->getBlock());
+    assert(NCDBlock || DT.isPostDominator());
+    const TreeNodePtr NCD = DT.getNode(NCDBlock);
+    assert(NCD);
+
+    DEBUG(dbgs() << "\t\tNCA == " << BlockNamePrinter(NCD) << "\n");
+    const TreeNodePtr ToIDom = To->getIDom();
+
+    // Nothing affected -- NCA property holds.
+    // (Based on the lemma 2.5 from the second paper.)
+    if (NCD == To || NCD == ToIDom) return;
+
+    // Identify and collect affected nodes.
+    InsertionInfo II;
+    DEBUG(dbgs() << "Marking " << BlockNamePrinter(To) << " as affected\n");
+    II.Affected.insert(To);
+    const unsigned ToLevel = To->getLevel();
+    DEBUG(dbgs() << "Putting " << BlockNamePrinter(To) << " into a Bucket\n");
+    II.Bucket.push({ToLevel, To});
+
+    while (!II.Bucket.empty()) {
+      const TreeNodePtr CurrentNode = II.Bucket.top().second;
+      II.Bucket.pop();
+      DEBUG(dbgs() << "\tAdding to Visited and AffectedQueue: "
+                   << BlockNamePrinter(CurrentNode) << "\n");
+      II.Visited.insert(CurrentNode);
+      II.AffectedQueue.push_back(CurrentNode);
+
+      // Discover and collect affected successors of the current node.
+      VisitInsertion(DT, CurrentNode, ToLevel, NCD, II);
+    }
+
+    // Finish by updating immediate dominators and levels.
+    UpdateInsertion(DT, NCD, II);
+  }
+
+  // Visits an affected node and collect its affected successors.
+  static void VisitInsertion(DomTreeT &DT, const TreeNodePtr TN,
+                             const unsigned RootLevel, const TreeNodePtr NCD,
+                             InsertionInfo &II) {
+    const unsigned NCDLevel = NCD->getLevel();
+    DEBUG(dbgs() << "Visiting " << BlockNamePrinter(TN) << "\n");
+
+    assert(TN->getBlock());
+    for (const NodePtr Succ :
+         ChildrenGetter<NodePtr, IsPostDom>::Get(TN->getBlock())) {
+      const TreeNodePtr SuccTN = DT.getNode(Succ);
+      assert(SuccTN && "Unreachable successor found at reachable insertion");
+      const unsigned SuccLevel = SuccTN->getLevel();
+
+      DEBUG(dbgs() << "\tSuccessor " << BlockNamePrinter(Succ)
+                   << ", level = " << SuccLevel << "\n");
+
+      // Succ dominated by subtree From -- not affected.
+      // (Based on the lemma 2.5 from the second paper.)
+      if (SuccLevel > RootLevel) {
+        DEBUG(dbgs() << "\t\tDominated by subtree From\n");
+        if (II.Visited.count(SuccTN) != 0) continue;
+
+        DEBUG(dbgs() << "\t\tMarking visited not affected "
+                     << BlockNamePrinter(Succ) << "\n");
+        II.Visited.insert(SuccTN);
+        II.VisitedNotAffectedQueue.push_back(SuccTN);
+        VisitInsertion(DT, SuccTN, RootLevel, NCD, II);
+      } else if ((SuccLevel > NCDLevel + 1) && II.Affected.count(SuccTN) == 0) {
+        DEBUG(dbgs() << "\t\tMarking affected and adding "
+                     << BlockNamePrinter(Succ) << " to a Bucket\n");
+        II.Affected.insert(SuccTN);
+        II.Bucket.push({SuccLevel, SuccTN});
+      }
+    }
+  }
+
+  // Updates immediate dominators and levels after insertion.
+  static void UpdateInsertion(DomTreeT &DT, const TreeNodePtr NCD,
+                              InsertionInfo &II) {
+    DEBUG(dbgs() << "Updating NCD = " << BlockNamePrinter(NCD) << "\n");
+
+    for (const TreeNodePtr TN : II.AffectedQueue) {
+      DEBUG(dbgs() << "\tIDom(" << BlockNamePrinter(TN)
+                   << ") = " << BlockNamePrinter(NCD) << "\n");
+      TN->setIDom(NCD);
+    }
+
+    UpdateLevelsAfterInsertion(II);
+  }
+
+  static void UpdateLevelsAfterInsertion(InsertionInfo &II) {
+    DEBUG(dbgs() << "Updating levels for visited but not affected nodes\n");
+
+    for (const TreeNodePtr TN : II.VisitedNotAffectedQueue) {
+      DEBUG(dbgs() << "\tlevel(" << BlockNamePrinter(TN) << ") = ("
+                   << BlockNamePrinter(TN->getIDom()) << ") "
+                   << TN->getIDom()->getLevel() << " + 1\n");
+      TN->UpdateLevel();
+    }
+  }
+
+  // Handles insertion to previousely unreachable nodes.
+  static void InsertUnreachable(DomTreeT &DT, const TreeNodePtr From,
+                                const NodePtr To) {
+    DEBUG(dbgs() << "Inserting " << BlockNamePrinter(From)
+                 << " -> (unreachable) " << BlockNamePrinter(To) << "\n");
+
+    // Collect discovered edges to already reachable nodes.
+    SmallVector<std::pair<NodePtr, TreeNodePtr>, 8> DiscoveredEdgesToReachable;
+    // Discover and connect nodes that became reachable with the insertion.
+    ComputeUnreachableDominators(DT, To, From, DiscoveredEdgesToReachable);
+
+    DEBUG(dbgs() << "Inserted " << BlockNamePrinter(From)
+                 << " -> (prev unreachable) " << BlockNamePrinter(To) << "\n");
+
+    DEBUG(DT.print(dbgs()));
+
+    // Used the discovered edges and inset discovered connecting (incoming)
+    // edges.
+    for (const auto &Edge : DiscoveredEdgesToReachable) {
+      DEBUG(dbgs() << "\tInserting discovered connecting edge "
+                   << BlockNamePrinter(Edge.first) << " -> "
+                   << BlockNamePrinter(Edge.second) << "\n");
+      InsertReachable(DT, DT.getNode(Edge.first), Edge.second);
+    }
+  }
+
+  // Connects nodes that become reachable with an insertion.
+  static void ComputeUnreachableDominators(
+      DomTreeT &DT, const NodePtr Root, const TreeNodePtr Incoming,
+      SmallVectorImpl<std::pair<NodePtr, TreeNodePtr>>
+          &DiscoveredConnectingEdges) {
+    assert(!DT.getNode(Root) && "Root must not be reachable");
+
+    // Visit only previously unreachable nodes.
+    auto UnreachableDescender = [&DT, &DiscoveredConnectingEdges](NodePtr From,
+                                                                  NodePtr To) {
+      const TreeNodePtr ToTN = DT.getNode(To);
+      if (!ToTN) return true;
+
+      DiscoveredConnectingEdges.push_back({From, ToTN});
+      return false;
+    };
+
+    SemiNCAInfo SNCA;
+    SNCA.runDFS<IsPostDom>(Root, 0, UnreachableDescender, 0);
+    SNCA.runSemiNCA(DT);
+    SNCA.attachNewSubtree(DT, Incoming);
+
+    DEBUG(dbgs() << "After adding unreachable nodes\n");
+    DEBUG(DT.print(dbgs()));
   }
 
   // Checks if the tree contains all reachable nodes in the input graph.
@@ -320,9 +533,8 @@ struct SemiNCAInfo {
       if (DT.isVirtualRoot(TN)) continue;
 
       if (NodeToInfo.count(BB) == 0) {
-        errs() << "DomTree node ";
-        PrintBlockOrNullptr(errs(), BB);
-        errs() << " not found by DFS walk!\n";
+        errs() << "DomTree node " << BlockNamePrinter(BB)
+               << " not found by DFS walk!\n";
         errs().flush();
 
         return false;
@@ -331,9 +543,8 @@ struct SemiNCAInfo {
 
     for (const NodePtr N : NumToNode) {
       if (N && !DT.getNode(N)) {
-        errs() << "CFG node ";
-        PrintBlockOrNullptr(errs(), N);
-        errs() << " not found in the DomTree!\n";
+        errs() << "CFG node " << BlockNamePrinter(N)
+               << " not found in the DomTree!\n";
         errs().flush();
 
         return false;
@@ -353,20 +564,18 @@ struct SemiNCAInfo {
 
       const TreeNodePtr IDom = TN->getIDom();
       if (!IDom && TN->getLevel() != 0) {
-        errs() << "Node without an IDom ";
-        PrintBlockOrNullptr(errs(), BB);
-        errs() << " has a nonzero level " << TN->getLevel() << "!\n";
+        errs() << "Node without an IDom " << BlockNamePrinter(BB)
+               << " has a nonzero level " << TN->getLevel() << "!\n";
         errs().flush();
 
         return false;
       }
 
       if (IDom && TN->getLevel() != IDom->getLevel() + 1) {
-        errs() << "Node ";
-        PrintBlockOrNullptr(errs(), BB);
-        errs() << " has level " << TN->getLevel() << " while it's IDom ";
-        PrintBlockOrNullptr(errs(), IDom->getBlock());
-        errs() << " has level " << IDom->getLevel() << "!\n";
+        errs() << "Node " << BlockNamePrinter(BB) << " has level "
+               << TN->getLevel() << " while its IDom "
+               << BlockNamePrinter(IDom->getBlock()) << " has level "
+               << IDom->getLevel() << "!\n";
         errs().flush();
 
         return false;
@@ -396,15 +605,11 @@ struct SemiNCAInfo {
       const TreeNodePtr NCDTN = DT.getNode(NCD);
       const TreeNodePtr ToIDom = ToTN->getIDom();
       if (NCDTN != ToTN && NCDTN != ToIDom) {
-        errs() << "NearestCommonDominator verification failed:\n\tNCD(From:";
-        PrintBlockOrNullptr(errs(), From);
-        errs() << ", To:";
-        PrintBlockOrNullptr(errs(), To);
-        errs() << ") = ";
-        PrintBlockOrNullptr(errs(), NCD);
-        errs() << ",\t (should be To or IDom[To]: ";
-        PrintBlockOrNullptr(errs(), ToIDom ? ToIDom->getBlock() : nullptr);
-        errs() << ")\n";
+        errs() << "NearestCommonDominator verification failed:\n\tNCD(From:"
+               << BlockNamePrinter(From) << ", To:" << BlockNamePrinter(To)
+               << ") = " << BlockNamePrinter(NCD)
+               << ",\t (should be To or IDom[To]: " << BlockNamePrinter(ToIDom)
+               << ")\n";
         errs().flush();
 
         return false;
@@ -470,11 +675,9 @@ struct SemiNCAInfo {
 
       for (TreeNodePtr Child : TN->getChildren())
         if (NodeToInfo.count(Child->getBlock()) != 0) {
-          errs() << "Child ";
-          PrintBlockOrNullptr(errs(), Child->getBlock());
-          errs() << " reachable after its parent ";
-          PrintBlockOrNullptr(errs(), BB);
-          errs() << " is removed!\n";
+          errs() << "Child " << BlockNamePrinter(Child)
+                 << " reachable after its parent " << BlockNamePrinter(BB)
+                 << " is removed!\n";
           errs().flush();
 
           return false;
@@ -507,11 +710,9 @@ struct SemiNCAInfo {
           if (S == N) continue;
 
           if (NodeToInfo.count(S->getBlock()) == 0) {
-            errs() << "Node ";
-            PrintBlockOrNullptr(errs(), S->getBlock());
-            errs() << " not reachable when its sibling ";
-            PrintBlockOrNullptr(errs(), N->getBlock());
-            errs() << " is removed!\n";
+            errs() << "Node " << BlockNamePrinter(S)
+                   << " not reachable when its sibling " << BlockNamePrinter(N)
+                   << " is removed!\n";
             errs().flush();
 
             return false;
@@ -529,6 +730,13 @@ template <class DomTreeT, class FuncT>
 void Calculate(DomTreeT &DT, FuncT &F) {
   SemiNCAInfo<DomTreeT> SNCA;
   SNCA.calculateFromScratch(DT, GraphTraits<FuncT *>::size(&F));
+}
+
+template <class DomTreeT>
+void InsertEdge(DomTreeT &DT, typename DomTreeT::NodePtr From,
+                typename DomTreeT::NodePtr To) {
+  if (DT.isPostDominator()) std::swap(From, To);
+  SemiNCAInfo<DomTreeT>::InsertEdge(DT, From, To);
 }
 
 template <class DomTreeT>

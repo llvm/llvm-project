@@ -173,8 +173,10 @@ protected:
   void printBlockEquivalence(raw_ostream &OS, const BasicBlock *BB);
   bool computeBlockWeights(Function &F);
   void findEquivalenceClasses(Function &F);
+  template <bool IsPostDom>
   void findEquivalencesFor(BasicBlock *BB1, ArrayRef<BasicBlock *> Descendants,
-                           DominatorTreeBase<BasicBlock> *DomTree);
+                           DominatorTreeBase<BasicBlock, IsPostDom> *DomTree);
+
   void propagateWeights(Function &F);
   uint64_t visitEdge(Edge E, unsigned *NumUnknownEdges, Edge *UnknownEdge);
   void buildEdges(Function &F);
@@ -217,7 +219,7 @@ protected:
 
   /// \brief Dominance, post-dominance and loop information.
   std::unique_ptr<DominatorTree> DT;
-  std::unique_ptr<DominatorTreeBase<BasicBlock>> PDT;
+  std::unique_ptr<PostDomTreeBase<BasicBlock>> PDT;
   std::unique_ptr<LoopInfo> LI;
 
   AssumptionCacheTracker *ACT;
@@ -773,9 +775,10 @@ bool SampleProfileLoader::inlineHotFunctions(
 /// \param DomTree  Opposite dominator tree. If \p Descendants is filled
 ///                 with blocks from \p BB1's dominator tree, then
 ///                 this is the post-dominator tree, and vice versa.
+template <bool IsPostDom>
 void SampleProfileLoader::findEquivalencesFor(
     BasicBlock *BB1, ArrayRef<BasicBlock *> Descendants,
-    DominatorTreeBase<BasicBlock> *DomTree) {
+    DominatorTreeBase<BasicBlock, IsPostDom> *DomTree) {
   const BasicBlock *EC = EquivalenceClass[BB1];
   uint64_t Weight = BlockWeights[EC];
   for (const auto *BB2 : Descendants) {
@@ -1283,7 +1286,7 @@ void SampleProfileLoader::computeDominanceAndLoopInfo(Function &F) {
   DT.reset(new DominatorTree);
   DT->recalculate(F);
 
-  PDT.reset(new DominatorTreeBase<BasicBlock>(true));
+  PDT.reset(new PostDomTreeBase<BasicBlock>());
   PDT->recalculate(F);
 
   LI.reset(new LoopInfo);

@@ -1268,12 +1268,12 @@ void CodeGenRegBank::computeSubRegLaneMasks() {
   CoveringLanes = LaneBitmask::getAll();
   for (auto &Idx : SubRegIndices) {
     if (Idx.getComposites().empty()) {
-      if (Bit > 32) {
+      if (Bit > LaneBitmask::BitWidth) {
         PrintFatalError(
           Twine("Ran out of lanemask bits to represent subregister ")
           + Idx.getName());
       }
-      Idx.LaneMask = LaneBitmask(1 << Bit);
+      Idx.LaneMask = LaneBitmask::getLane(Bit);
       ++Bit;
     } else {
       Idx.LaneMask = LaneBitmask::getNone();
@@ -1298,9 +1298,9 @@ void CodeGenRegBank::computeSubRegLaneMasks() {
       static_assert(sizeof(Idx.LaneMask.getAsInteger()) == 4,
                     "Change Log2_32 to a proper one");
       unsigned DstBit = Log2_32(Idx.LaneMask.getAsInteger());
-      assert(Idx.LaneMask == LaneBitmask(1 << DstBit) &&
+      assert(Idx.LaneMask == LaneBitmask::getLane(DstBit) &&
              "Must be a leaf subregister");
-      MaskRolPair MaskRol = { LaneBitmask(1), (uint8_t)DstBit };
+      MaskRolPair MaskRol = { LaneBitmask::getLane(0), (uint8_t)DstBit };
       LaneTransforms.push_back(MaskRol);
     } else {
       // Go through all leaf subregisters and find the ones that compose with
@@ -1314,7 +1314,7 @@ void CodeGenRegBank::computeSubRegLaneMasks() {
           continue;
         // Replicate the behaviour from the lane mask generation loop above.
         unsigned SrcBit = NextBit;
-        LaneBitmask SrcMask = LaneBitmask(1 << SrcBit);
+        LaneBitmask SrcMask = LaneBitmask::getLane(SrcBit);
         if (NextBit < LaneBitmask::BitWidth-1)
           ++NextBit;
         assert(Idx2.LaneMask == SrcMask);
@@ -1386,7 +1386,7 @@ void CodeGenRegBank::computeSubRegLaneMasks() {
     // For classes without any subregisters set LaneMask to 1 instead of 0.
     // This makes it easier for client code to handle classes uniformly.
     if (LaneMask.none())
-      LaneMask = LaneBitmask(1);
+      LaneMask = LaneBitmask::getLane(0);
 
     RegClass.LaneMask = LaneMask;
   }

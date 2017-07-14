@@ -56,6 +56,10 @@ public:
   unsigned getNumberOfRegisters(bool Vector);
   unsigned getRegisterBitWidth(bool Vector) const;
 
+  unsigned getCacheLineSize() { return 256; }
+  unsigned getPrefetchDistance() { return 2000; }
+  unsigned getMinPrefetchStride() { return 2048; }
+
   bool prefersVectorizedAddressing() { return false; }
   bool supportsEfficientVectorElementLoadStore() { return true; }
   bool enableInterleavedAccessVectorization() { return true; }

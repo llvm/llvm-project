@@ -148,8 +148,7 @@ define i32 @test6() {
 ; CHECK-NEXT:    andl $-8, %esp
 ; CHECK-NEXT:    subl $16, %esp
 ; CHECK-NEXT:    movl $1, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movl $1, (%esp)
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl $1, %eax
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    shldl $32, %eax, %ecx
@@ -175,9 +174,8 @@ define i32 @test6() {
 ; CHECK-NEXT:    retl
   %x = alloca i32, align 4
   %t = alloca i64, align 8
-  store i32 1, i32* %x, align 4
-  store i64 1, i64* %t, align 8  ;; DEAD
-  %load = load i32, i32* %x, align 4
+  store volatile i32 1, i32* %x, align 4
+  %load = load volatile i32, i32* %x, align 4
   %shl = shl i32 %load, 8
   %add = add i32 %shl, -224
   %sh_prom = zext i32 %add to i64

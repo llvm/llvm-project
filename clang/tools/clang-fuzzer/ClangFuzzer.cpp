@@ -14,18 +14,25 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Tooling/Tooling.h"
-#include "clang/Frontend/FrontendActions.h"
+#include "clang/CodeGen/CodeGenAction.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "llvm/Option/Option.h"
+#include "llvm/Support/TargetSelect.h"
 
 using namespace clang;
 
 extern "C" int LLVMFuzzerTestOneInput(uint8_t *data, size_t size) {
   std::string s((const char *)data, size);
+  llvm::InitializeAllTargets();
+  llvm::InitializeAllTargetMCs();
+  llvm::InitializeAllAsmPrinters();
+  llvm::InitializeAllAsmParsers();
+
   llvm::opt::ArgStringList CC1Args;
   CC1Args.push_back("-cc1");
   CC1Args.push_back("./test.cc");
+  CC1Args.push_back("-O2");
   llvm::IntrusiveRefCntPtr<FileManager> Files(
       new FileManager(FileSystemOptions()));
   IgnoringDiagConsumer Diags;
@@ -39,7 +46,7 @@ extern "C" int LLVMFuzzerTestOneInput(uint8_t *data, size_t size) {
       llvm::MemoryBuffer::getMemBuffer(s);
   Invocation->getPreprocessorOpts().addRemappedFile("./test.cc", Input.release());
   std::unique_ptr<tooling::ToolAction> action(
-      tooling::newFrontendActionFactory<clang::SyntaxOnlyAction>());
+      tooling::newFrontendActionFactory<clang::EmitObjAction>());
   std::shared_ptr<PCHContainerOperations> PCHContainerOps =
       std::make_shared<PCHContainerOperations>();
   action->runInvocation(std::move(Invocation), Files.get(), PCHContainerOps,
