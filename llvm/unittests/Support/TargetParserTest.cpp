@@ -737,7 +737,7 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
   unsigned Extensions = AArch64::AEK_CRC | AArch64::AEK_CRYPTO |
                         AArch64::AEK_FP | AArch64::AEK_SIMD |
                         AArch64::AEK_FP16 | AArch64::AEK_PROFILE |
-                        AArch64::AEK_RAS;
+                        AArch64::AEK_RAS | AArch64::AEK_SVE;
 
   for (unsigned i = 0; i <= Extensions; i++)
     EXPECT_TRUE(i == 0 ? !AArch64::getExtensionFeatures(i, Features)
@@ -762,7 +762,8 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
                               {"simd", "nosimd", "+neon", "-neon"},
                               {"fp16", "nofp16", "+fullfp16", "-fullfp16"},
                               {"profile", "noprofile", "+spe", "-spe"},
-                              {"ras", "noras", "+ras", "-ras"}};
+                              {"ras", "noras", "+ras", "-ras"},
+                              {"sve", "nosve", "+sve", "-sve"}};
 
   for (unsigned i = 0; i < array_lengthof(ArchExt); i++) {
     EXPECT_EQ(StringRef(ArchExt[i][2]),

@@ -45,6 +45,8 @@
   define void @test_select_s32() { ret void }
   define void @test_select_ptr() { ret void }
 
+  define void @test_br() { ret void }
+
   define void @test_soft_fp_double() #0 { ret void }
 
   attributes #0 = { "target-features"="+vfp2,-neonfp" }
@@ -1171,6 +1173,43 @@ body:             |
 
     BX_RET 14, _, implicit %r0
     ; CHECK: BX_RET 14, _, implicit %r0
+...
+---
+name:            test_br
+# CHECK-LABEL: name: test_br
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+body:             |
+  bb.0:
+  ; CHECK: bb.0
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    liveins: %r0
+
+    %0(s1) = COPY %r0
+    ; CHECK: [[COND:%[0-9]+]] = COPY %r0
+
+    G_BRCOND %0(s1), %bb.1
+    ; CHECK: TSTri [[COND]], 1, 14, _, implicit-def %cpsr
+    ; CHECK: Bcc %bb.1, 0, %cpsr
+    G_BR %bb.2
+    ; CHECK: B %bb.2
+
+  bb.1:
+  ; CHECK: bb.1
+    successors: %bb.2(0x80000000)
+
+    G_BR %bb.2
+    ; CHECK: B %bb.2
+
+  bb.2:
+  ; CHECK: bb.2
+
+    BX_RET 14, _
+    ; CHECK: BX_RET 14, _
 ...
 ---
 name:            test_soft_fp_double

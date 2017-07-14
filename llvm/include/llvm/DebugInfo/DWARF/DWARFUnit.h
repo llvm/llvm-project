@@ -238,6 +238,34 @@ public:
 
   uint8_t getUnitType() const { return UnitType; }
 
+  static bool isValidUnitType(uint8_t UnitType) {
+    return UnitType == dwarf::DW_UT_compile || UnitType == dwarf::DW_UT_type ||
+           UnitType == dwarf::DW_UT_partial ||
+           UnitType == dwarf::DW_UT_skeleton ||
+           UnitType == dwarf::DW_UT_split_compile ||
+           UnitType == dwarf::DW_UT_split_type;
+  }
+
+  /// \brief Return the number of bytes for the header of a unit of
+  /// UnitType type.
+  ///
+  /// This function must be called with a valid unit type which in
+  /// DWARF5 is defined as one of the following six types.
+  static uint32_t getDWARF5HeaderSize(uint8_t UnitType) {
+    switch (UnitType) {
+    case dwarf::DW_UT_compile:
+    case dwarf::DW_UT_partial:
+      return 12;
+    case dwarf::DW_UT_skeleton:
+    case dwarf::DW_UT_split_compile:
+      return 20;
+    case dwarf::DW_UT_type:
+    case dwarf::DW_UT_split_type:
+      return 24;
+    }
+    llvm_unreachable("Invalid UnitType.");
+  }
+
   uint64_t getBaseAddress() const { return BaseAddr; }
 
   void setBaseAddress(uint64_t base_addr) {

@@ -47,6 +47,8 @@ public:
   ~ARMBaseTargetMachine() override;
 
   const ARMSubtarget *getSubtargetImpl(const Function &F) const override;
+  // The no argument getSubtargetImpl, while it exists on some targets, is
+  // deprecated and should not be used.
   const ARMSubtarget *getSubtargetImpl() const = delete;
   bool isLittleEndian() const { return isLittle; }
 

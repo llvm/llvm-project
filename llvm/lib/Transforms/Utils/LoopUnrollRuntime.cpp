@@ -22,6 +22,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Analysis/LoopPass.h"
@@ -736,7 +737,9 @@ bool llvm::UnrollRuntimeLoopRemainder(Loop *L, unsigned Count,
   // remainder are connected to the original Loop's exit blocks. The remaining
   // work is to update the phi nodes in the original loop, and take in the
   // values from the cloned region. Also update the dominator info for
-  // OtherExits, since we have new edges into OtherExits.
+  // OtherExits and their immediate successors, since we have new edges into
+  // OtherExits.
+  SmallSet<BasicBlock*, 8> ImmediateSuccessorsOfExitBlocks;
   for (auto *BB : OtherExits) {
    for (auto &II : *BB) {
 
@@ -759,12 +762,35 @@ bool llvm::UnrollRuntimeLoopRemainder(Loop *L, unsigned Count,
                            cast<BasicBlock>(VMap[Phi->getIncomingBlock(i)]));
      }
    }
+#if defined(EXPENSIVE_CHECKS) && !defined(NDEBUG)
+    for (BasicBlock *SuccBB : successors(BB)) {
+      assert(!(any_of(OtherExits,
+                      [SuccBB](BasicBlock *EB) { return EB == SuccBB; }) ||
+               SuccBB == LatchExit) &&
+             "Breaks the definition of dedicated exits!");
+    }
+#endif
    // Update the dominator info because the immediate dominator is no longer the
    // header of the original Loop. BB has edges both from L and remainder code.
    // Since the preheader determines which loop is run (L or directly jump to
    // the remainder code), we set the immediate dominator as the preheader.
-   if (DT)
+   if (DT) {
      DT->changeImmediateDominator(BB, PreHeader);
+     // Also update the IDom for immediate successors of BB.  If the current
+     // IDom is the header, update the IDom to be the preheader because that is
+     // the nearest common dominator of all predecessors of SuccBB.  We need to
+     // check for IDom being the header because successors of exit blocks can
+     // have edges from outside the loop, and we should not incorrectly update
+     // the IDom in that case.
+     for (BasicBlock *SuccBB: successors(BB))
+       if (ImmediateSuccessorsOfExitBlocks.insert(SuccBB).second) {
+         if (DT->getNode(SuccBB)->getIDom()->getBlock() == Header) {
+           assert(!SuccBB->getSinglePredecessor() &&
+                  "BB should be the IDom then!");
+           DT->changeImmediateDominator(SuccBB, PreHeader);
+         }
+       }
+    }
   }
 
   // Loop structure should be the following:

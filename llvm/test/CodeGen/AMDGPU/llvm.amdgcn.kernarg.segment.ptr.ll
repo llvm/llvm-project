@@ -49,6 +49,18 @@ define amdgpu_kernel void @test_implicit_alignment(i32 addrspace(1)* %out, <2 x 
   ret void
 }
 
+; ALL-LABEL: {{^}}test_no_kernargs:
+; HSA: enable_sgpr_kernarg_segment_ptr = 1
+; HSA: s_load_dword s{{[0-9]+}}, s[4:5]
+define amdgpu_kernel void @test_no_kernargs() #1 {
+  %kernarg.segment.ptr = call noalias i8 addrspace(2)* @llvm.amdgcn.kernarg.segment.ptr()
+  %header.ptr = bitcast i8 addrspace(2)* %kernarg.segment.ptr to i32 addrspace(2)*
+  %gep = getelementptr i32, i32 addrspace(2)* %header.ptr, i64 10
+  %value = load i32, i32 addrspace(2)* %gep
+  store volatile i32 %value, i32 addrspace(1)* undef
+  ret void
+}
+
 declare i8 addrspace(2)* @llvm.amdgcn.kernarg.segment.ptr() #0
 declare i8 addrspace(2)* @llvm.amdgcn.implicitarg.ptr() #0
 

@@ -722,6 +722,29 @@ bool ARMInstructionSelector::select(MachineInstr &I) const {
       return false;
     break;
   }
+  case G_BRCOND: {
+    if (!validReg(MRI, I.getOperand(0).getReg(), 1, ARM::GPRRegBankID)) {
+      DEBUG(dbgs() << "Unsupported condition register for G_BRCOND");
+      return false;
+    }
+
+    // Set the flags.
+    auto Test = BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(ARM::TSTri))
+                    .addReg(I.getOperand(0).getReg())
+                    .addImm(1)
+                    .add(predOps(ARMCC::AL));
+    if (!constrainSelectedInstRegOperands(*Test, TII, TRI, RBI))
+      return false;
+
+    // Branch conditionally.
+    auto Branch = BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(ARM::Bcc))
+                      .add(I.getOperand(1))
+                      .add(predOps(ARMCC::EQ, ARM::CPSR));
+    if (!constrainSelectedInstRegOperands(*Branch, TII, TRI, RBI))
+      return false;
+    I.eraseFromParent();
+    return true;
+  }
   default:
     return false;
   }

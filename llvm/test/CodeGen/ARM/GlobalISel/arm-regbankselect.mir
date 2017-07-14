@@ -40,6 +40,8 @@
 
   define void @test_select_s32() { ret void }
 
+  define void @test_br() { ret void }
+
   define void @test_fadd_s32() #0 { ret void }
   define void @test_fadd_s64() #0 { ret void }
 
@@ -827,6 +829,34 @@ body:             |
     %3(s32) = G_SELECT %2(s1), %0, %1
     %r0 = COPY %3(s32)
     BX_RET 14, _, implicit %r0
+
+...
+---
+name:            test_br
+# CHECK-LABEL: name: test_br
+legalized:       true
+regBankSelected: false
+# CHECK: regBankSelected: true
+selected:        false
+registers:
+  - { id: 0, class: _ }
+# CHECK: { id: 0, class: gprb, preferred-register: '' }
+# Check that we map the condition of the G_BRCOND into the GPR.
+# For the G_BR, there are no registers to map, but make sure we don't crash.
+body:             |
+  bb.0:
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    liveins: %r0
+
+    %0(s1) = COPY %r0
+    G_BRCOND %0(s1), %bb.1
+    G_BR %bb.2
+
+  bb.1:
+    BX_RET 14, _
+
+  bb.2:
+    BX_RET 14, _
 
 ...
 ---

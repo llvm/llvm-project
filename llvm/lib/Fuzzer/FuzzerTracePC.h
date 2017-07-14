@@ -45,6 +45,28 @@ struct TableOfRecentCompares {
   Pair Table[kSize];
 };
 
+template <size_t kSizeT>
+struct MemMemTable {
+  static const size_t kSize = kSizeT;
+  Word MemMemWords[kSize];
+  Word EmptyWord;
+
+  void Add(const uint8_t *Data, size_t Size) {
+    if (Size <= 2) return;
+    Size = std::min(Size, Word::GetMaxSize());
+    size_t Idx = SimpleFastHash(Data, Size) % kSize;
+    MemMemWords[Idx].Set(Data, Size);
+  }
+  const Word &Get(size_t Idx) {
+    for (size_t i = 0; i < kSize; i++) {
+      const Word &W = MemMemWords[(Idx + i) % kSize];
+      if (W.size()) return W;
+    }
+    EmptyWord.Set(nullptr, 0);
+    return EmptyWord;
+  }
+};
+
 class TracePC {
  public:
   static const size_t kNumPCs = 1 << 21;
@@ -81,6 +103,7 @@ class TracePC {
   TableOfRecentCompares<uint32_t, 32> TORC4;
   TableOfRecentCompares<uint64_t, 32> TORC8;
   TableOfRecentCompares<Word, 32> TORCW;
+  MemMemTable<1024> MMT;
 
   void PrintNewPCs();
   void InitializePrintNewPCs();

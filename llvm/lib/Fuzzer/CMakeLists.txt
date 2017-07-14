@@ -46,7 +46,6 @@ if ( LLVM_USE_SANITIZE_COVERAGE OR CMAKE_SYSTEM_NAME MATCHES "Darwin|Linux" )
       FuzzerShmemPosix.cpp
       FuzzerShmemWindows.cpp
       FuzzerTracePC.cpp
-      FuzzerTraceState.cpp
       FuzzerUtil.cpp
       FuzzerUtilDarwin.cpp
       FuzzerUtilLinux.cpp

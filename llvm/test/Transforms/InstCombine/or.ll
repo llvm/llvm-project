@@ -397,14 +397,74 @@ define <2 x i132> @orsext_to_sel_vec_swap(<2 x i132> %x, <2 x i1> %y) {
   ret <2 x i132> %or
 }
 
-define i32 @test39(i32 %a, i32 %b) {
-; CHECK-LABEL: @test39(
-; CHECK-NEXT:    [[OR:%.*]] = or i32 %b, %a
+; (~A & B) | A --> A | B
+
+define i32 @test39a(i32 %a, float %b) {
+; CHECK-LABEL: @test39a(
+; CHECK-NEXT:    [[A1:%.*]] = mul i32 %a, 42
+; CHECK-NEXT:    [[B1:%.*]] = bitcast float %b to i32
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[A1]], [[B1]]
 ; CHECK-NEXT:    ret i32 [[OR]]
 ;
-  %xor = xor i32 %a, -1
-  %and = and i32 %xor, %b
-  %or = or i32 %and, %a
+  %a1 = mul i32 %a, 42          ; thwart complexity-based ordering
+  %b1 = bitcast float %b to i32 ; thwart complexity-based ordering
+  %nota = xor i32 %a1, -1
+  %and = and i32 %nota, %b1
+  %or = or i32 %and, %a1
+  ret i32 %or
+}
+
+; Commute 'and' operands:
+; (B & ~A) | A --> A | B
+
+define i32 @test39b(i32 %a, float %b) {
+; CHECK-LABEL: @test39b(
+; CHECK-NEXT:    [[A1:%.*]] = mul i32 %a, 42
+; CHECK-NEXT:    [[B1:%.*]] = bitcast float %b to i32
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[A1]], [[B1]]
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+  %a1 = mul i32 %a, 42          ; thwart complexity-based ordering
+  %b1 = bitcast float %b to i32 ; thwart complexity-based ordering
+  %nota = xor i32 %a1, -1
+  %and = and i32 %b1, %nota
+  %or = or i32 %and, %a1
+  ret i32 %or
+}
+
+; Commute 'or' operands:
+; A | (~A & B) --> A | B
+
+define i32 @test39c(i32 %a, float %b) {
+; CHECK-LABEL: @test39c(
+; CHECK-NEXT:    [[A1:%.*]] = mul i32 %a, 42
+; CHECK-NEXT:    [[B1:%.*]] = bitcast float %b to i32
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[A1]], [[B1]]
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+  %a1 = mul i32 %a, 42          ; thwart complexity-based ordering
+  %b1 = bitcast float %b to i32 ; thwart complexity-based ordering
+  %nota = xor i32 %a1, -1
+  %and = and i32 %nota, %b1
+  %or = or i32 %a1, %and
+  ret i32 %or
+}
+
+; Commute 'and' operands:
+; A | (B & ~A) --> A | B
+
+define i32 @test39d(i32 %a, float %b) {
+; CHECK-LABEL: @test39d(
+; CHECK-NEXT:    [[A1:%.*]] = mul i32 %a, 42
+; CHECK-NEXT:    [[B1:%.*]] = bitcast float %b to i32
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[A1]], [[B1]]
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+  %a1 = mul i32 %a, 42          ; thwart complexity-based ordering
+  %b1 = bitcast float %b to i32 ; thwart complexity-based ordering
+  %nota = xor i32 %a1, -1
+  %and = and i32 %b1, %nota
+  %or = or i32 %a1, %and
   ret i32 %or
 }
 
@@ -648,41 +708,3 @@ final:
   ret <2 x i32> %value
 }
 
-define i8 @test51(i8 %a, i8 %b, i8 %c) {
-; CHECK-LABEL: @test51(
-; CHECK-NEXT:    [[W:%.*]] = mul i8 [[B:%.*]], [[C:%.*]]
-; CHECK-NEXT:    [[X:%.*]] = or i8 [[W]], [[A:%.*]]
-; CHECK-NEXT:    ret i8 [[X]]
-;
-  %w = mul i8 %b, %c
-  %z = xor i8 %a, -1
-  %y = and i8 %w, %z
-  %x = or i8 %y, %a
-  ret i8 %x
-}
-
-define i8 @test52(i8 %a, i8 %b, i8 %c) {
-; CHECK-LABEL: @test52(
-; CHECK-NEXT:    [[W:%.*]] = mul i8 [[B:%.*]], [[C:%.*]]
-; CHECK-NEXT:    [[X:%.*]] = or i8 [[W]], [[A:%.*]]
-; CHECK-NEXT:    ret i8 [[X]]
-;
-  %w = mul i8 %b, %c
-  %z = xor i8 %w, -1
-  %y = and i8 %z, %a
-  %x = or i8 %w, %y
-  ret i8 %x
-}
-
-define i8 @test53(i8 %a, i8 %b, i8 %c) {
-; CHECK-LABEL: @test53(
-; CHECK-NEXT:    [[W:%.*]] = mul i8 [[B:%.*]], [[C:%.*]]
-; CHECK-NEXT:    [[X:%.*]] = or i8 [[W]], [[A:%.*]]
-; CHECK-NEXT:    ret i8 [[X]]
-;
-  %w = mul i8 %b, %c
-  %z = xor i8 %w, -1
-  %y = and i8 %z, %a
-  %x = or i8 %w, %y
-  ret i8 %x
-}

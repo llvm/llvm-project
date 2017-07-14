@@ -37,6 +37,8 @@ namespace fuzzer {
 
 TracePC TPC;
 
+int ScopedDoingMyOwnMemOrStr::DoingMyOwnMemOrStr;
+
 uint8_t *TracePC::Counters() const {
   return __sancov_trace_pc_guard_8bit_counters;
 }
@@ -293,6 +295,20 @@ void TracePC::HandleCmp(uintptr_t PC, T Arg1, T Arg2) {
   ValueProfileMap.AddValue(Idx);
 }
 
+static size_t InternalStrnlen(const char *S, size_t MaxLen) {
+  size_t Len = 0;
+  for (; Len < MaxLen && S[Len]; Len++) {}
+  return Len;
+}
+
+// Finds min of (strlen(S1), strlen(S2)).
+// Needed bacause one of these strings may actually be non-zero terminated.
+static size_t InternalStrnlen2(const char *S1, const char *S2) {
+  size_t Len = 0;
+  for (; S1[Len] && S2[Len]; Len++)  {}
+  return Len;
+}
+
 } // namespace fuzzer
 
 extern "C" {
@@ -414,5 +430,72 @@ ATTRIBUTE_TARGET_POPCNT
 void __sanitizer_cov_trace_gep(uintptr_t Idx) {
   uintptr_t PC = reinterpret_cast<uintptr_t>(__builtin_return_address(0));
   fuzzer::TPC.HandleCmp(PC, Idx, (uintptr_t)0);
+}
+
+ATTRIBUTE_INTERFACE ATTRIBUTE_NO_SANITIZE_MEMORY
+void __sanitizer_weak_hook_memcmp(void *caller_pc, const void *s1,
+                                  const void *s2, size_t n, int result) {
+  if (fuzzer::ScopedDoingMyOwnMemOrStr::DoingMyOwnMemOrStr) return;
+  if (result == 0) return;  // No reason to mutate.
+  if (n <= 1) return;  // Not interesting.
+  fuzzer::TPC.AddValueForMemcmp(caller_pc, s1, s2, n, /*StopAtZero*/false);
+}
+
+ATTRIBUTE_INTERFACE ATTRIBUTE_NO_SANITIZE_MEMORY
+void __sanitizer_weak_hook_strncmp(void *caller_pc, const char *s1,
+                                   const char *s2, size_t n, int result) {
+  if (fuzzer::ScopedDoingMyOwnMemOrStr::DoingMyOwnMemOrStr) return;
+  if (result == 0) return;  // No reason to mutate.
+  size_t Len1 = fuzzer::InternalStrnlen(s1, n);
+  size_t Len2 = fuzzer::InternalStrnlen(s2, n);
+  n = std::min(n, Len1);
+  n = std::min(n, Len2);
+  if (n <= 1) return;  // Not interesting.
+  fuzzer::TPC.AddValueForMemcmp(caller_pc, s1, s2, n, /*StopAtZero*/true);
+}
+
+ATTRIBUTE_INTERFACE ATTRIBUTE_NO_SANITIZE_MEMORY
+void __sanitizer_weak_hook_strcmp(void *caller_pc, const char *s1,
+                                   const char *s2, int result) {
+  if (fuzzer::ScopedDoingMyOwnMemOrStr::DoingMyOwnMemOrStr) return;
+  if (result == 0) return;  // No reason to mutate.
+  size_t N = fuzzer::InternalStrnlen2(s1, s2);
+  if (N <= 1) return;  // Not interesting.
+  fuzzer::TPC.AddValueForMemcmp(caller_pc, s1, s2, N, /*StopAtZero*/true);
+}
+
+ATTRIBUTE_INTERFACE ATTRIBUTE_NO_SANITIZE_MEMORY
+void __sanitizer_weak_hook_strncasecmp(void *called_pc, const char *s1,
+                                       const char *s2, size_t n, int result) {
+  if (fuzzer::ScopedDoingMyOwnMemOrStr::DoingMyOwnMemOrStr) return;
+  return __sanitizer_weak_hook_strncmp(called_pc, s1, s2, n, result);
+}
+
+ATTRIBUTE_INTERFACE ATTRIBUTE_NO_SANITIZE_MEMORY
+void __sanitizer_weak_hook_strcasecmp(void *called_pc, const char *s1,
+                                      const char *s2, int result) {
+  if (fuzzer::ScopedDoingMyOwnMemOrStr::DoingMyOwnMemOrStr) return;
+  return __sanitizer_weak_hook_strcmp(called_pc, s1, s2, result);
+}
+
+ATTRIBUTE_INTERFACE ATTRIBUTE_NO_SANITIZE_MEMORY
+void __sanitizer_weak_hook_strstr(void *called_pc, const char *s1,
+                                  const char *s2, char *result) {
+  if (fuzzer::ScopedDoingMyOwnMemOrStr::DoingMyOwnMemOrStr) return;
+  fuzzer::TPC.MMT.Add(reinterpret_cast<const uint8_t *>(s2), strlen(s2));
+}
+
+ATTRIBUTE_INTERFACE ATTRIBUTE_NO_SANITIZE_MEMORY
+void __sanitizer_weak_hook_strcasestr(void *called_pc, const char *s1,
+                                      const char *s2, char *result) {
+  if (fuzzer::ScopedDoingMyOwnMemOrStr::DoingMyOwnMemOrStr) return;
+  fuzzer::TPC.MMT.Add(reinterpret_cast<const uint8_t *>(s2), strlen(s2));
+}
+
+ATTRIBUTE_INTERFACE ATTRIBUTE_NO_SANITIZE_MEMORY
+void __sanitizer_weak_hook_memmem(void *called_pc, const void *s1, size_t len1,
+                                  const void *s2, size_t len2, void *result) {
+  if (fuzzer::ScopedDoingMyOwnMemOrStr::DoingMyOwnMemOrStr) return;
+  fuzzer::TPC.MMT.Add(reinterpret_cast<const uint8_t *>(s2), len2);
 }
 }  // extern "C"
