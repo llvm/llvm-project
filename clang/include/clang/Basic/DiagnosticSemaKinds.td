@@ -4579,8 +4579,11 @@ def warn_deprecated_fwdclass_message : Warning<
     "%0 may be deprecated because the receiver type is unknown">,
     InGroup<DeprecatedDeclarations>;
 def warn_deprecated_def : Warning<
-    "Implementing deprecated %select{method|class|category}0">,
-    InGroup<DeprecatedImplementations>, DefaultIgnore;
+  "implementing deprecated %select{method|class|category}0">,
+  InGroup<DeprecatedImplementations>, DefaultIgnore;
+def warn_unavailable_def : Warning<
+  "implementing unavailable method">,
+  InGroup<DeprecatedImplementations>, DefaultIgnore;
 def err_unavailable : Error<"%0 is unavailable">;
 def err_property_method_unavailable :
     Error<"property access is using %0 method which is unavailable">;

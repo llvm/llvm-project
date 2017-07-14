@@ -7,8 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define DEBUG_TYPE "gen-pred"
-
 #include "HexagonInstrInfo.h"
 #include "HexagonSubtarget.h"
 #include "llvm/ADT/SetVector.h"
@@ -34,6 +32,8 @@
 #include <queue>
 #include <set>
 #include <utility>
+
+#define DEBUG_TYPE "gen-pred"
 
 using namespace llvm;
 

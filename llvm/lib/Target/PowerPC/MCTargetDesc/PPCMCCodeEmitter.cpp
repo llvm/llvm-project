@@ -271,7 +271,8 @@ unsigned PPCMCCodeEmitter::getMemRIX16Encoding(const MCInst &MI, unsigned OpNo,
   unsigned RegBits = getMachineOpValue(MI, MI.getOperand(OpNo+1), Fixups, STI) << 12;
 
   const MCOperand &MO = MI.getOperand(OpNo);
-  assert(MO.isImm());
+  assert(MO.isImm() && !(MO.getImm() % 16) &&
+         "Expecting an immediate that is a multiple of 16");
 
   return ((getMachineOpValue(MI, MO, Fixups, STI) >> 4) & 0xFFF) | RegBits;
 }

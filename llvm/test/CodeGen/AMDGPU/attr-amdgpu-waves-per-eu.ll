@@ -118,7 +118,7 @@ attributes #8 = {"amdgpu-waves-per-eu"="5,10"}
 ; CHECK-LABEL: {{^}}exactly_10:
 ; CHECK: SGPRBlocks: 1
 ; CHECK: VGPRBlocks: 5
-; CHECK: NumSGPRsForWavesPerEU: 13
+; CHECK: NumSGPRsForWavesPerEU: 12
 ; CHECK: NumVGPRsForWavesPerEU: 24
 define amdgpu_kernel void @exactly_10() #9 {
   %val0 = load volatile float, float addrspace(1)* @var

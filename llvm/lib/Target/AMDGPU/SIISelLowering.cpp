@@ -4624,8 +4624,8 @@ static bool isKnownNeverSNan(SelectionDAG &DAG, SDValue Op) {
   return DAG.isKnownNeverNaN(Op);
 }
 
-static bool isCanonicalized(SDValue Op, const SISubtarget *ST,
-                            unsigned MaxDepth=5) {
+static bool isCanonicalized(SelectionDAG &DAG, SDValue Op,
+                            const SISubtarget *ST, unsigned MaxDepth=5) {
   // If source is a result of another standard FP operation it is already in
   // canonical form.
 
@@ -4663,7 +4663,7 @@ static bool isCanonicalized(SDValue Op, const SISubtarget *ST,
   case ISD::FNEG:
   case ISD::FABS:
     return (MaxDepth > 0) &&
-           isCanonicalized(Op.getOperand(0), ST, MaxDepth - 1);
+           isCanonicalized(DAG, Op.getOperand(0), ST, MaxDepth - 1);
 
   case ISD::FSIN:
   case ISD::FCOS:
@@ -4672,16 +4672,19 @@ static bool isCanonicalized(SDValue Op, const SISubtarget *ST,
 
   // In pre-GFX9 targets V_MIN_F32 and others do not flush denorms.
   // For such targets need to check their input recursively.
-  // TODO: on GFX9+ we could return true without checking provided no-nan
-  // mode, since canonicalization is also used to quiet sNaNs.
   case ISD::FMINNUM:
   case ISD::FMAXNUM:
   case ISD::FMINNAN:
   case ISD::FMAXNAN:
 
+    if (ST->supportsMinMaxDenormModes() &&
+        DAG.isKnownNeverNaN(Op.getOperand(0)) &&
+        DAG.isKnownNeverNaN(Op.getOperand(1)))
+      return true;
+
     return (MaxDepth > 0) &&
-           isCanonicalized(Op.getOperand(0), ST, MaxDepth - 1) &&
-           isCanonicalized(Op.getOperand(1), ST, MaxDepth - 1);
+           isCanonicalized(DAG, Op.getOperand(0), ST, MaxDepth - 1) &&
+           isCanonicalized(DAG, Op.getOperand(1), ST, MaxDepth - 1);
 
   case ISD::ConstantFP: {
     auto F = cast<ConstantFPSDNode>(Op)->getValueAPF();
@@ -4700,11 +4703,19 @@ SDValue SITargetLowering::performFCanonicalizeCombine(
 
   if (!CFP) {
     SDValue N0 = N->getOperand(0);
+    EVT VT = N0.getValueType().getScalarType();
+    auto ST = getSubtarget();
+
+    if (((VT == MVT::f32 && ST->hasFP32Denormals()) ||
+         (VT == MVT::f64 && ST->hasFP64Denormals()) ||
+         (VT == MVT::f16 && ST->hasFP16Denormals())) &&
+        DAG.isKnownNeverNaN(N0))
+      return N0;
 
     bool IsIEEEMode = Subtarget->enableIEEEBit(DAG.getMachineFunction());
 
     if ((IsIEEEMode || isKnownNeverSNan(DAG, N0)) &&
-        isCanonicalized(N0, getSubtarget()))
+        isCanonicalized(DAG, N0, ST))
       return N0;
 
     return SDValue();

@@ -347,7 +347,9 @@ define amdgpu_kernel void @test_fold_canonicalize_qNaN_value_f32(float addrspace
 }
 
 ; GCN-LABEL: test_fold_canonicalize_minnum_value_from_load_f32:
-; GCN: v_mul_f32_e32 v{{[0-9]+}}, 1.0, v{{[0-9]+}}
+; VI: v_mul_f32_e32 v{{[0-9]+}}, 1.0, v{{[0-9]+}}
+; GFX9: v_min_f32_e32 [[V:v[0-9]+]], 0, v{{[0-9]+}}
+; GFX9: flat_store_dword v[{{[0-9:]+}}], [[V]]
 define amdgpu_kernel void @test_fold_canonicalize_minnum_value_from_load_f32(float addrspace(1)* %arg) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds float, float addrspace(1)* %arg, i32 %id
@@ -388,9 +390,11 @@ define amdgpu_kernel void @test_fold_canonicalize_sNaN_value_f32(float addrspace
 }
 
 ; GCN-LABEL: test_fold_canonicalize_denorm_value_f32:
-; GCN:  v_min_f32_e32 [[V0:v[0-9]+]], 0x7fffff, v{{[0-9]+}}
-; GCN:  v_mul_f32_e32 v{{[0-9]+}}, 1.0, [[V0]]
-; GCN:  flat_store_dword v[{{[0-9:]+}}], [[V]]
+; GFX9:  v_min_f32_e32 [[V:v[0-9]+]], 0x7fffff, v{{[0-9]+}}
+; VI:    v_min_f32_e32 [[V0:v[0-9]+]], 0x7fffff, v{{[0-9]+}}
+; VI:    v_mul_f32_e32 v{{[0-9]+}}, 1.0, [[V0]]
+; GCN:   flat_store_dword v[{{[0-9:]+}}], [[V]]
+; GFX9-NOT: 1.0
 define amdgpu_kernel void @test_fold_canonicalize_denorm_value_f32(float addrspace(1)* %arg) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds float, float addrspace(1)* %arg, i32 %id
@@ -402,9 +406,11 @@ define amdgpu_kernel void @test_fold_canonicalize_denorm_value_f32(float addrspa
 }
 
 ; GCN-LABEL: test_fold_canonicalize_maxnum_value_from_load_f32:
-; GCN:  v_max_f32_e32 [[V0:v[0-9]+]], 0, v{{[0-9]+}}
-; GCN:  v_mul_f32_e32 v{{[0-9]+}}, 1.0, [[V0]]
+; GFX9:  v_max_f32_e32 [[V:v[0-9]+]], 0, v{{[0-9]+}}
+; VI:    v_max_f32_e32 [[V0:v[0-9]+]], 0, v{{[0-9]+}}
+; VI:    v_mul_f32_e32 v{{[0-9]+}}, 1.0, [[V0]]
 ; GCN:  flat_store_dword v[{{[0-9:]+}}], [[V]]
+; GFX9-NOT: 1.0
 define amdgpu_kernel void @test_fold_canonicalize_maxnum_value_from_load_f32(float addrspace(1)* %arg) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds float, float addrspace(1)* %arg, i32 %id
@@ -465,6 +471,49 @@ entry:
   ret float %canonicalized
 }
 
+; GCN-LABEL: {{^}}test_fold_canonicalize_load_nnan_value_f32
+; GFX9-DENORM: flat_load_dword [[V:v[0-9]+]],
+; GFX9-DENORM: flat_store_dword v[{{[0-9:]+}}], [[V]]
+; GFX9-DENORM-NOT: 1.0
+; GCN-FLUSH: v_mul_f32_e32 v{{[0-9]+}}, 1.0, v{{[0-9]+}}
+define amdgpu_kernel void @test_fold_canonicalize_load_nnan_value_f32(float addrspace(1)* %arg, float addrspace(1)* %out) #1 {
+  %id = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %gep = getelementptr inbounds float, float addrspace(1)* %arg, i32 %id
+  %v = load float, float addrspace(1)* %gep, align 4
+  %canonicalized = tail call float @llvm.canonicalize.f32(float %v)
+  %gep2 = getelementptr inbounds float, float addrspace(1)* %out, i32 %id
+  store float %canonicalized, float addrspace(1)* %gep2, align 4
+  ret void
+}
+
+; GCN-LABEL: {{^}}test_fold_canonicalize_load_nnan_value_f64
+; GCN: flat_load_dwordx2 [[V:v\[[0-9:]+\]]],
+; GCN: flat_store_dwordx2 v[{{[0-9:]+}}], [[V]]
+; GCN-NOT: 1.0
+define amdgpu_kernel void @test_fold_canonicalize_load_nnan_value_f64(double addrspace(1)* %arg, double addrspace(1)* %out) #1 {
+  %id = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %gep = getelementptr inbounds double, double addrspace(1)* %arg, i32 %id
+  %v = load double, double addrspace(1)* %gep, align 8
+  %canonicalized = tail call double @llvm.canonicalize.f64(double %v)
+  %gep2 = getelementptr inbounds double, double addrspace(1)* %out, i32 %id
+  store double %canonicalized, double addrspace(1)* %gep2, align 8
+  ret void
+}
+
+; GCN-LABEL: {{^}}test_fold_canonicalize_load_nnan_value_f16
+; GCN: flat_load_ushort [[V:v[0-9]+]],
+; GCN: flat_store_short v[{{[0-9:]+}}], [[V]]
+; GCN-NOT: 1.0
+define amdgpu_kernel void @test_fold_canonicalize_load_nnan_value_f16(half addrspace(1)* %arg, half addrspace(1)* %out) #1 {
+  %id = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %gep = getelementptr inbounds half, half addrspace(1)* %arg, i32 %id
+  %v = load half, half addrspace(1)* %gep, align 2
+  %canonicalized = tail call half @llvm.canonicalize.f16(half %v)
+  %gep2 = getelementptr inbounds half, half addrspace(1)* %out, i32 %id
+  store half %canonicalized, half addrspace(1)* %gep2, align 2
+  ret void
+}
+
 declare float @llvm.canonicalize.f32(float) #0
 declare double @llvm.canonicalize.f64(double) #0
 declare half @llvm.canonicalize.f16(half) #0
@@ -485,3 +534,4 @@ declare float @llvm.maxnum.f32(float, float) #0
 declare double @llvm.maxnum.f64(double, double) #0
 
 attributes #0 = { nounwind readnone }
+attributes #1 = { "no-nans-fp-math"="true" }

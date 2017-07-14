@@ -86,7 +86,7 @@ private:
   bool parseOperand(OperandVector &Operands, bool isCondCode,
                     bool invertCondCode);
 
-  bool showMatchError(SMLoc Loc, unsigned ErrCode);
+  bool showMatchError(SMLoc Loc, unsigned ErrCode, OperandVector &Operands);
 
   bool parseDirectiveArch(SMLoc L);
   bool parseDirectiveCPU(SMLoc L);
@@ -3257,7 +3257,10 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst,
   }
 }
 
-bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode) {
+std::string AArch64MnemonicSpellCheck(StringRef S, uint64_t FBS);
+
+bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
+                                      OperandVector &Operands) {
   switch (ErrCode) {
   case Match_MissingFeature:
     return Error(Loc,
@@ -3380,8 +3383,12 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode) {
     return Error(Loc, "expected readable system register");
   case Match_MSR:
     return Error(Loc, "expected writable system register or pstate");
-  case Match_MnemonicFail:
-    return Error(Loc, "unrecognized instruction mnemonic");
+  case Match_MnemonicFail: {
+    std::string Suggestion = AArch64MnemonicSpellCheck(
+        ((AArch64Operand &)*Operands[0]).getToken(),
+        ComputeAvailableFeatures(STI->getFeatureBits()));
+    return Error(Loc, "unrecognized instruction mnemonic" + Suggestion);
+  }
   default:
     llvm_unreachable("unexpected error code!");
   }
@@ -3707,7 +3714,7 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return Error(IDLoc, Msg);
   }
   case Match_MnemonicFail:
-    return showMatchError(IDLoc, MatchResult);
+    return showMatchError(IDLoc, MatchResult, Operands);
   case Match_InvalidOperand: {
     SMLoc ErrorLoc = IDLoc;
 
@@ -3726,7 +3733,7 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
         ((AArch64Operand &)*Operands[ErrorInfo]).isTokenSuffix())
       MatchResult = Match_InvalidSuffix;
 
-    return showMatchError(ErrorLoc, MatchResult);
+    return showMatchError(ErrorLoc, MatchResult, Operands);
   }
   case Match_InvalidMemoryIndexed1:
   case Match_InvalidMemoryIndexed2:
@@ -3784,7 +3791,7 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     SMLoc ErrorLoc = ((AArch64Operand &)*Operands[ErrorInfo]).getStartLoc();
     if (ErrorLoc == SMLoc())
       ErrorLoc = IDLoc;
-    return showMatchError(ErrorLoc, MatchResult);
+    return showMatchError(ErrorLoc, MatchResult, Operands);
   }
   }
 

@@ -573,14 +573,19 @@ static void handlePointerOverflowImpl(PointerOverflowData *Data,
 
   ScopedReport R(Opts, Loc, ET);
 
-  if ((sptr(Base) >= 0) == (sptr(Result) >= 0))
-    Diag(Loc, DL_Error, "unsigned pointer index expression result is %0, "
-                        "preceding its base %1")
-        << (void *)Result << (void *)Base;
-  else
+  if ((sptr(Base) >= 0) == (sptr(Result) >= 0)) {
+    if (Base > Result)
+      Diag(Loc, DL_Error, "addition of unsigned offset to %0 overflowed to %1")
+          << (void *)Base << (void *)Result;
+    else
+      Diag(Loc, DL_Error,
+           "subtraction of unsigned offset from %0 overflowed to %1")
+          << (void *)Base << (void *)Result;
+  } else {
     Diag(Loc, DL_Error,
          "pointer index expression with base %0 overflowed to %1")
         << (void *)Base << (void *)Result;
+  }
 }
 
 void __ubsan::__ubsan_handle_pointer_overflow(PointerOverflowData *Data,

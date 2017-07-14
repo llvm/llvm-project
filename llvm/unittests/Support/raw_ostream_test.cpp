@@ -151,6 +151,11 @@ TEST(raw_ostreamTest, Justify) {
   EXPECT_EQ("   xyz", printToString(right_justify("xyz", 6), 6));
   EXPECT_EQ("abc",    printToString(right_justify("abc", 3), 3));
   EXPECT_EQ("big",    printToString(right_justify("big", 1), 3));
+  EXPECT_EQ("   on    ",    printToString(center_justify("on", 9), 9));
+  EXPECT_EQ("   off    ",    printToString(center_justify("off", 10), 10));
+  EXPECT_EQ("single ",    printToString(center_justify("single", 7), 7));
+  EXPECT_EQ("none",    printToString(center_justify("none", 1), 4));
+  EXPECT_EQ("none",    printToString(center_justify("none", 1), 1));
 }
 
 TEST(raw_ostreamTest, FormatHex) {  

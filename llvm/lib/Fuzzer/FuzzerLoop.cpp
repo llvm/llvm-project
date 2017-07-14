@@ -114,7 +114,6 @@ Fuzzer::Fuzzer(UserCallback CB, InputCorpus &Corpus, MutationDispatcher &MD,
     : CB(CB), Corpus(Corpus), MD(MD), Options(Options) {
   if (EF->__sanitizer_set_death_callback)
     EF->__sanitizer_set_death_callback(StaticDeathCallback);
-  InitializeTraceState();
   assert(!F);
   F = this;
   TPC.ResetMaps();
@@ -600,13 +599,10 @@ void Fuzzer::MutateAndTestOne() {
     assert(NewSize > 0 && "Mutator returned empty unit");
     assert(NewSize <= CurrentMaxMutationLen && "Mutator return overisized unit");
     Size = NewSize;
-    if (i == 0)
-      StartTraceRecording();
     II.NumExecutedMutations++;
     if (RunOne(CurrentUnitData, Size, /*MayDeleteFile=*/true, &II))
       ReportNewCoverage(&II, {CurrentUnitData, CurrentUnitData + Size});
 
-    StopTraceRecording();
     TryDetectingAMemoryLeak(CurrentUnitData, Size,
                             /*DuringInitialCorpusExecution*/ false);
   }

@@ -762,7 +762,7 @@ bool llvm::UnrollRuntimeLoopRemainder(Loop *L, unsigned Count,
                            cast<BasicBlock>(VMap[Phi->getIncomingBlock(i)]));
      }
    }
-#ifdef EXPENSIVE_CHECKS
+#if defined(EXPENSIVE_CHECKS) && !defined(NDEBUG)
     for (BasicBlock *SuccBB : successors(BB)) {
       assert(!(any_of(OtherExits,
                       [SuccBB](BasicBlock *EB) { return EB == SuccBB; }) ||

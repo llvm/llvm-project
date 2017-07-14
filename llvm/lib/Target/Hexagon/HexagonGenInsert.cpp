@@ -7,8 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define DEBUG_TYPE "hexinsert"
-
 #include "BitTracker.h"
 #include "HexagonBitTracker.h"
 #include "HexagonInstrInfo.h"
@@ -43,6 +41,8 @@
 #include <iterator>
 #include <utility>
 #include <vector>
+
+#define DEBUG_TYPE "hexinsert"
 
 using namespace llvm;
 

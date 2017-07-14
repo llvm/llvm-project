@@ -20,6 +20,7 @@ def _wrapped_func(func_and_args):
         with _current.get_lock():
             _current.value += 1
         sys.stdout.write('\r\t{} of {}'.format(_current.value, _total.value))
+        sys.stdout.flush()
 
     return func(argument)
 

@@ -10,8 +10,6 @@
 // load/store instructions.
 //===----------------------------------------------------------------------===//
 
-#define DEBUG_TYPE "opt-addr-mode"
-
 #include "HexagonInstrInfo.h"
 #include "HexagonSubtarget.h"
 #include "MCTargetDesc/HexagonBaseInfo.h"
@@ -35,6 +33,8 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdint>
+
+#define DEBUG_TYPE "opt-addr-mode"
 
 static cl::opt<int> CodeGrowthLimit("hexagon-amode-growth-limit",
   cl::Hidden, cl::init(0), cl::desc("Code growth limit for address mode "

@@ -1262,28 +1262,58 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
       }
     }
 
-    // If no OSX or iOS target has been specified, try to guess platform
-    // from arch name and compute the version from the triple.
+    // If no OS targets have been specified, try to guess platform from -target
+    // or arch name and compute the version from the triple.
     if (OSXTarget.empty() && iOSTarget.empty() && TvOSTarget.empty() &&
         WatchOSTarget.empty()) {
-      StringRef MachOArchName = getMachOArchName(Args);
-      unsigned Major, Minor, Micro;
-      if (MachOArchName == "armv7" || MachOArchName == "armv7s" ||
-          MachOArchName == "arm64") {
-        getTriple().getiOSVersion(Major, Minor, Micro);
-        llvm::raw_string_ostream(iOSTarget) << Major << '.' << Minor << '.'
-                                            << Micro;
-      } else if (MachOArchName == "armv7k") {
-        getTriple().getWatchOSVersion(Major, Minor, Micro);
-        llvm::raw_string_ostream(WatchOSTarget) << Major << '.' << Minor << '.'
-                                                << Micro;
-      } else if (MachOArchName != "armv6m" && MachOArchName != "armv7m" &&
-                 MachOArchName != "armv7em") {
-        if (!getTriple().getMacOSXVersion(Major, Minor, Micro)) {
-          getDriver().Diag(diag::err_drv_invalid_darwin_version)
-              << getTriple().getOSName();
+      llvm::Triple::OSType OSTy = llvm::Triple::UnknownOS;
+
+      // Set the OSTy based on -target if -arch isn't present.
+      if (Args.hasArg(options::OPT_target) && !Args.hasArg(options::OPT_arch)) {
+        OSTy = getTriple().getOS();
+      } else {
+        StringRef MachOArchName = getMachOArchName(Args);
+        if (MachOArchName == "armv7" || MachOArchName == "armv7s" ||
+            MachOArchName == "arm64")
+          OSTy = llvm::Triple::IOS;
+        else if (MachOArchName == "armv7k")
+          OSTy = llvm::Triple::WatchOS;
+        else if (MachOArchName != "armv6m" && MachOArchName != "armv7m" &&
+                 MachOArchName != "armv7em")
+          OSTy = llvm::Triple::MacOSX;
+      }
+
+
+      if (OSTy != llvm::Triple::UnknownOS) {
+        unsigned Major, Minor, Micro;
+        std::string *OSTarget;
+
+        switch (OSTy) {
+        case llvm::Triple::Darwin:
+        case llvm::Triple::MacOSX:
+          if (!getTriple().getMacOSXVersion(Major, Minor, Micro))
+            getDriver().Diag(diag::err_drv_invalid_darwin_version)
+                << getTriple().getOSName();
+          OSTarget = &OSXTarget;
+          break;
+        case llvm::Triple::IOS:
+          getTriple().getiOSVersion(Major, Minor, Micro);
+          OSTarget = &iOSTarget;
+          break;
+        case llvm::Triple::TvOS:
+          getTriple().getOSVersion(Major, Minor, Micro);
+          OSTarget = &TvOSTarget;
+          break;
+        case llvm::Triple::WatchOS:
+          getTriple().getWatchOSVersion(Major, Minor, Micro);
+          OSTarget = &WatchOSTarget;
+          break;
+        default:
+          llvm_unreachable("Unexpected OS type");
+          break;
         }
-        llvm::raw_string_ostream(OSXTarget) << Major << '.' << Minor << '.'
+
+        llvm::raw_string_ostream(*OSTarget) << Major << '.' << Minor << '.'
                                             << Micro;
       }
     }

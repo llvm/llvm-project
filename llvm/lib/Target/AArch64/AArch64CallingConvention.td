@@ -118,6 +118,13 @@ def RetCC_AArch64_AAPCS : CallingConv<[
       CCAssignToReg<[Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7]>>
 ]>;
 
+// Vararg functions on windows pass floats in integer registers
+def CC_AArch64_Win64_VarArg : CallingConv<[
+  CCIfType<[f16, f32],    CCPromoteToType<f64>>,
+  CCIfType<[f64], CCBitConvertToType<i64>>,
+  CCDelegateTo<CC_AArch64_AAPCS>
+]>;
+
 
 // Darwin uses a calling convention which differs in only two ways
 // from the standard one at this level:

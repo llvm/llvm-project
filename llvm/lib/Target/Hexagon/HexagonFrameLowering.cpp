@@ -8,8 +8,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define DEBUG_TYPE "hexagon-pei"
-
 #include "HexagonFrameLowering.h"
 #include "HexagonBlockRanges.h"
 #include "HexagonInstrInfo.h"
@@ -62,6 +60,8 @@
 #include <new>
 #include <utility>
 #include <vector>
+
+#define DEBUG_TYPE "hexagon-pei"
 
 // Hexagon stack frame layout as defined by the ABI:
 //

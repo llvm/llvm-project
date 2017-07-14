@@ -5138,6 +5138,7 @@ bool AArch64FastISel::fastSelectInstruction(const Instruction *I) {
   return selectOperator(I, I->getOpcode());
   // Silence warnings.
   (void)&CC_AArch64_DarwinPCS_VarArg;
+  (void)&CC_AArch64_Win64_VarArg;
 }
 
 namespace llvm {
