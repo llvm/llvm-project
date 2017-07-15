@@ -67,6 +67,14 @@ inline std::string CloneArgsWithoutX(const std::vector<std::string> &Args,
   return CloneArgsWithoutX(Args, X, X);
 }
 
+inline std::pair<std::string, std::string> SplitBefore(std::string X,
+                                                       std::string S) {
+  auto Pos = S.find(X);
+  if (Pos == std::string::npos)
+    return std::make_pair(S, "");
+  return std::make_pair(S.substr(0, Pos), S.substr(Pos));
+}
+
 std::string DisassembleCmd(const std::string &FileName);
 
 std::string SearchRegexCmd(const std::string &Regex);

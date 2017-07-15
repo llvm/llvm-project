@@ -51,6 +51,12 @@ extern template void InsertEdge<BBPostDomTree>(BBPostDomTree &DT,
                                                BasicBlock *From,
                                                BasicBlock *To);
 
+extern template void DeleteEdge<BBDomTree>(BBDomTree &DT, BasicBlock *From,
+                                           BasicBlock *To);
+extern template void DeleteEdge<BBPostDomTree>(BBPostDomTree &DT,
+                                               BasicBlock *From,
+                                               BasicBlock *To);
+
 extern template bool Verify<BBDomTree>(const BBDomTree &DT);
 extern template bool Verify<BBPostDomTree>(const BBPostDomTree &DT);
 }  // namespace DomTreeBuilder

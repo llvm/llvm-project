@@ -515,8 +515,10 @@ BPFTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                                                MachineBasicBlock *BB) const {
   const TargetInstrInfo &TII = *BB->getParent()->getSubtarget().getInstrInfo();
   DebugLoc DL = MI.getDebugLoc();
+  bool isSelectOp = MI.getOpcode() == BPF::Select;
+  bool isSelectRiOp = MI.getOpcode() == BPF::Select_Ri;
 
-  assert(MI.getOpcode() == BPF::Select && "Unexpected instr type to insert");
+  assert((isSelectOp || isSelectRiOp) && "Unexpected instr type to insert");
 
   // To "insert" a SELECT instruction, we actually have to insert the diamond
   // control-flow pattern.  The incoming instruction knows the destination vreg
@@ -548,48 +550,40 @@ BPFTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
 
   // Insert Branch if Flag
   unsigned LHS = MI.getOperand(1).getReg();
-  unsigned RHS = MI.getOperand(2).getReg();
   int CC = MI.getOperand(3).getImm();
+  int NewCC;
   switch (CC) {
   case ISD::SETGT:
-    BuildMI(BB, DL, TII.get(BPF::JSGT_rr))
-        .addReg(LHS)
-        .addReg(RHS)
-        .addMBB(Copy1MBB);
+    NewCC = isSelectOp ? BPF::JSGT_rr : BPF::JSGT_ri;
     break;
   case ISD::SETUGT:
-    BuildMI(BB, DL, TII.get(BPF::JUGT_rr))
-        .addReg(LHS)
-        .addReg(RHS)
-        .addMBB(Copy1MBB);
+    NewCC = isSelectOp ? BPF::JUGT_rr : BPF::JUGT_ri;
     break;
   case ISD::SETGE:
-    BuildMI(BB, DL, TII.get(BPF::JSGE_rr))
-        .addReg(LHS)
-        .addReg(RHS)
-        .addMBB(Copy1MBB);
+    NewCC = isSelectOp ? BPF::JSGE_rr : BPF::JSGE_ri;
     break;
   case ISD::SETUGE:
-    BuildMI(BB, DL, TII.get(BPF::JUGE_rr))
-        .addReg(LHS)
-        .addReg(RHS)
-        .addMBB(Copy1MBB);
+    NewCC = isSelectOp ? BPF::JUGE_rr : BPF::JUGE_ri;
     break;
   case ISD::SETEQ:
-    BuildMI(BB, DL, TII.get(BPF::JEQ_rr))
-        .addReg(LHS)
-        .addReg(RHS)
-        .addMBB(Copy1MBB);
+    NewCC = isSelectOp ? BPF::JEQ_rr : BPF::JEQ_ri;
     break;
   case ISD::SETNE:
-    BuildMI(BB, DL, TII.get(BPF::JNE_rr))
-        .addReg(LHS)
-        .addReg(RHS)
-        .addMBB(Copy1MBB);
+    NewCC = isSelectOp ? BPF::JNE_rr : BPF::JNE_ri;
     break;
   default:
     report_fatal_error("unimplemented select CondCode " + Twine(CC));
   }
+  if (isSelectOp)
+    BuildMI(BB, DL, TII.get(NewCC))
+        .addReg(LHS)
+        .addReg(MI.getOperand(2).getReg())
+        .addMBB(Copy1MBB);
+  else
+    BuildMI(BB, DL, TII.get(NewCC))
+        .addReg(LHS)
+        .addImm(MI.getOperand(2).getImm())
+        .addMBB(Copy1MBB);
 
   // Copy0MBB:
   //  %FalseValue = ...

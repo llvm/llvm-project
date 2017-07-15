@@ -106,7 +106,7 @@ struct SemiNCAInfo {
     // Add a new tree node for this NodeT, and link it as a child of
     // IDomNode
     return (DT.DomTreeNodes[BB] = IDomNode->addChild(
-                llvm::make_unique<DomTreeNodeBase<NodeT>>(BB, IDomNode)))
+        llvm::make_unique<DomTreeNodeBase<NodeT>>(BB, IDomNode)))
         .get();
   }
 
@@ -327,6 +327,17 @@ struct SemiNCAInfo {
     }
   }
 
+  void reattachExistingSubtree(DomTreeT &DT, const TreeNodePtr AttachTo) {
+    NodeToInfo[NumToNode[1]].IDom = AttachTo->getBlock();
+    for (size_t i = 1, e = NumToNode.size(); i != e; ++i) {
+      const NodePtr N = NumToNode[i];
+      const TreeNodePtr TN = DT.getNode(N);
+      assert(TN);
+      const TreeNodePtr NewIDom = DT.getNode(NodeToInfo[N].IDom);
+      TN->setIDom(NewIDom);
+    }
+  }
+
   // Helper struct used during edge insertions.
   struct InsertionInfo {
     using BucketElementTy = std::pair<unsigned, TreeNodePtr>;
@@ -338,7 +349,7 @@ struct SemiNCAInfo {
     };
 
     std::priority_queue<BucketElementTy, SmallVector<BucketElementTy, 8>,
-                        DecreasingLevel>
+        DecreasingLevel>
         Bucket;  // Queue of tree nodes sorted by level in descending order.
     SmallDenseSet<TreeNodePtr, 8> Affected;
     SmallDenseSet<TreeNodePtr, 8> Visited;
@@ -399,7 +410,7 @@ struct SemiNCAInfo {
       II.AffectedQueue.push_back(CurrentNode);
 
       // Discover and collect affected successors of the current node.
-      VisitInsertion(DT, CurrentNode, ToLevel, NCD, II);
+      VisitInsertion(DT, CurrentNode, CurrentNode->getLevel(), NCD, II);
     }
 
     // Finish by updating immediate dominators and levels.
@@ -415,7 +426,7 @@ struct SemiNCAInfo {
 
     assert(TN->getBlock());
     for (const NodePtr Succ :
-         ChildrenGetter<NodePtr, IsPostDom>::Get(TN->getBlock())) {
+        ChildrenGetter<NodePtr, IsPostDom>::Get(TN->getBlock())) {
       const TreeNodePtr SuccTN = DT.getNode(Succ);
       assert(SuccTN && "Unreachable successor found at reachable insertion");
       const unsigned SuccLevel = SuccTN->getLevel();
@@ -468,7 +479,7 @@ struct SemiNCAInfo {
     }
   }
 
-  // Handles insertion to previousely unreachable nodes.
+  // Handles insertion to previously unreachable nodes.
   static void InsertUnreachable(DomTreeT &DT, const TreeNodePtr From,
                                 const NodePtr To) {
     DEBUG(dbgs() << "Inserting " << BlockNamePrinter(From)
@@ -498,7 +509,7 @@ struct SemiNCAInfo {
   static void ComputeUnreachableDominators(
       DomTreeT &DT, const NodePtr Root, const TreeNodePtr Incoming,
       SmallVectorImpl<std::pair<NodePtr, TreeNodePtr>>
-          &DiscoveredConnectingEdges) {
+      &DiscoveredConnectingEdges) {
     assert(!DT.getNode(Root) && "Root must not be reachable");
 
     // Visit only previously unreachable nodes.
@@ -553,6 +564,201 @@ struct SemiNCAInfo {
 
     return true;
   }
+
+  static void DeleteEdge(DomTreeT &DT, const NodePtr From, const NodePtr To) {
+    assert(From && To && "Cannot disconnect nullptrs");
+    DEBUG(dbgs() << "Deleting edge " << BlockNamePrinter(From) << " -> "
+                 << BlockNamePrinter(To) << "\n");
+    const TreeNodePtr FromTN = DT.getNode(From);
+    // Deletion in an unreachable subtree -- nothing to do.
+    if (!FromTN) return;
+
+    const TreeNodePtr ToTN = DT.getNode(To);
+    const NodePtr NCDBlock = DT.findNearestCommonDominator(From, To);
+    const TreeNodePtr NCD = DT.getNode(NCDBlock);
+
+    // To dominates From -- nothing to do.
+    if (ToTN == NCD) return;
+
+    const TreeNodePtr ToIDom = ToTN->getIDom();
+    DEBUG(dbgs() << "\tNCD " << BlockNamePrinter(NCD) << ", ToIDom "
+                 << BlockNamePrinter(ToIDom) << "\n");
+
+    // To remains reachable after deletion.
+    // (Based on the caption under Figure 4. from the second paper.)
+    if (FromTN != ToIDom || HasProperSupport(DT, ToTN))
+      DeleteReachable(DT, FromTN, ToTN);
+    else
+      DeleteUnreachable(DT, ToTN);
+  }
+
+  // Handles deletions that leave destination nodes reachable.
+  static void DeleteReachable(DomTreeT &DT, const TreeNodePtr FromTN,
+                              const TreeNodePtr ToTN) {
+    DEBUG(dbgs() << "Deleting reachable " << BlockNamePrinter(FromTN) << " -> "
+                 << BlockNamePrinter(ToTN) << "\n");
+    DEBUG(dbgs() << "\tRebuilding subtree\n");
+
+    // Find the top of the subtree that needs to be rebuilt.
+    // (Based on the lemma 2.6 from the second paper.)
+    const NodePtr ToIDom =
+        DT.findNearestCommonDominator(FromTN->getBlock(), ToTN->getBlock());
+    assert(ToIDom || DT.isPostDominator());
+    const TreeNodePtr ToIDomTN = DT.getNode(ToIDom);
+    assert(ToIDomTN);
+    const TreeNodePtr PrevIDomSubTree = ToIDomTN->getIDom();
+    // Top of the subtree to rebuild is the root node. Rebuild the tree from
+    // scratch.
+    if (!PrevIDomSubTree) {
+      DEBUG(dbgs() << "The entire tree needs to be rebuilt\n");
+      DT.recalculate(*DT.Parent);
+      return;
+    }
+
+    // Only visit nodes in the subtree starting at To.
+    const unsigned Level = ToIDomTN->getLevel();
+    auto DescendBelow = [Level, &DT](NodePtr, NodePtr To) {
+      return DT.getNode(To)->getLevel() > Level;
+    };
+
+    DEBUG(dbgs() << "\tTop of subtree: " << BlockNamePrinter(ToIDomTN) << "\n");
+
+    SemiNCAInfo SNCA;
+    SNCA.runDFS<IsPostDom>(ToIDom, 0, DescendBelow, 0);
+    DEBUG(dbgs() << "\tRunning Semi-NCA\n");
+    SNCA.runSemiNCA(DT, Level);
+    SNCA.reattachExistingSubtree(DT, PrevIDomSubTree);
+  }
+
+  // Checks if a node has proper support, as defined on the page 3 and later
+  // explained on the page 7 of the second paper.
+  static bool HasProperSupport(DomTreeT &DT, const TreeNodePtr TN) {
+    DEBUG(dbgs() << "IsReachableFromIDom " << BlockNamePrinter(TN) << "\n");
+    for (const NodePtr Pred :
+        ChildrenGetter<NodePtr, !IsPostDom>::Get(TN->getBlock())) {
+      DEBUG(dbgs() << "\tPred " << BlockNamePrinter(Pred) << "\n");
+      if (!DT.getNode(Pred)) continue;
+
+      const NodePtr Support =
+          DT.findNearestCommonDominator(TN->getBlock(), Pred);
+      DEBUG(dbgs() << "\tSupport " << BlockNamePrinter(Support) << "\n");
+      if (Support != TN->getBlock()) {
+        DEBUG(dbgs() << "\t" << BlockNamePrinter(TN)
+                     << " is reachable from support "
+                     << BlockNamePrinter(Support) << "\n");
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  // Handle deletions that make destination node unreachable.
+  // (Based on the lemma 2.7 from the second paper.)
+  static void DeleteUnreachable(DomTreeT &DT, const TreeNodePtr ToTN) {
+    DEBUG(dbgs() << "Deleting unreachable subtree " << BlockNamePrinter(ToTN)
+                 << "\n");
+    assert(ToTN);
+    assert(ToTN->getBlock());
+
+    SmallVector<NodePtr, 16> AffectedQueue;
+    const unsigned Level = ToTN->getLevel();
+
+    // Traverse destination node's descendants with greater level in the tree
+    // and collect visited nodes.
+    auto DescendAndCollect = [Level, &AffectedQueue, &DT](NodePtr, NodePtr To) {
+      const TreeNodePtr TN = DT.getNode(To);
+      assert(TN);
+      if (TN->getLevel() > Level) return true;
+      if (llvm::find(AffectedQueue, To) == AffectedQueue.end())
+        AffectedQueue.push_back(To);
+
+      return false;
+    };
+
+    SemiNCAInfo SNCA;
+    unsigned LastDFSNum =
+        SNCA.runDFS<IsPostDom>(ToTN->getBlock(), 0, DescendAndCollect, 0);
+
+    TreeNodePtr MinNode = ToTN;
+
+    // Identify the top of the subtree to rebuilt by finding the NCD of all
+    // the affected nodes.
+    for (const NodePtr N : AffectedQueue) {
+      const TreeNodePtr TN = DT.getNode(N);
+      const NodePtr NCDBlock =
+          DT.findNearestCommonDominator(TN->getBlock(), ToTN->getBlock());
+      assert(NCDBlock || DT.isPostDominator());
+      const TreeNodePtr NCD = DT.getNode(NCDBlock);
+      assert(NCD);
+
+      DEBUG(dbgs() << "Processing affected node " << BlockNamePrinter(TN)
+                   << " with NCD = " << BlockNamePrinter(NCD)
+                   << ", MinNode =" << BlockNamePrinter(MinNode) << "\n");
+      if (NCD != TN && NCD->getLevel() < MinNode->getLevel()) MinNode = NCD;
+    }
+
+    // Root reached, rebuild the whole tree from scratch.
+    if (!MinNode->getIDom()) {
+      DEBUG(dbgs() << "The entire tree needs to be rebuilt\n");
+      DT.recalculate(*DT.Parent);
+      return;
+    }
+
+    // Erase the unreachable subtree in reverse preorder to process all children
+    // before deleting their parent.
+    for (unsigned i = LastDFSNum; i > 0; --i) {
+      const NodePtr N = SNCA.NumToNode[i];
+      const TreeNodePtr TN = DT.getNode(N);
+      DEBUG(dbgs() << "Erasing node " << BlockNamePrinter(TN) << "\n");
+
+      EraseNode(DT, TN);
+    }
+
+    // The affected subtree start at the To node -- there's no extra work to do.
+    if (MinNode == ToTN) return;
+
+    DEBUG(dbgs() << "DeleteUnreachable: running DFS with MinNode = "
+                 << BlockNamePrinter(MinNode) << "\n");
+    const unsigned MinLevel = MinNode->getLevel();
+    const TreeNodePtr PrevIDom = MinNode->getIDom();
+    assert(PrevIDom);
+    SNCA.clear();
+
+    // Identify nodes that remain in the affected subtree.
+    auto DescendBelow = [MinLevel, &DT](NodePtr, NodePtr To) {
+      const TreeNodePtr ToTN = DT.getNode(To);
+      return ToTN && ToTN->getLevel() > MinLevel;
+    };
+    SNCA.runDFS<IsPostDom>(MinNode->getBlock(), 0, DescendBelow, 0);
+
+    DEBUG(dbgs() << "Previous IDom(MinNode) = " << BlockNamePrinter(PrevIDom)
+                 << "\nRunning Semi-NCA\n");
+
+    // Rebuild the remaining part of affected subtree.
+    SNCA.runSemiNCA(DT, MinLevel);
+    SNCA.reattachExistingSubtree(DT, PrevIDom);
+  }
+
+  // Removes leaf tree nodes from the dominator tree.
+  static void EraseNode(DomTreeT &DT, const TreeNodePtr TN) {
+    assert(TN);
+    assert(TN->getNumChildren() == 0 && "Not a tree leaf");
+
+    const TreeNodePtr IDom = TN->getIDom();
+    assert(IDom);
+
+    auto ChIt = llvm::find(IDom->Children, TN);
+    assert(ChIt != IDom->Children.end());
+    std::swap(*ChIt, IDom->Children.back());
+    IDom->Children.pop_back();
+
+    DT.DomTreeNodes.erase(TN->getBlock());
+  }
+
+  //~~
+  //===--------------- DomTree correctness verification ---------------------===
+  //~~
 
   // Check if for every parent with a level L in the tree all of its children
   // have level L + 1.
@@ -737,6 +943,13 @@ void InsertEdge(DomTreeT &DT, typename DomTreeT::NodePtr From,
                 typename DomTreeT::NodePtr To) {
   if (DT.isPostDominator()) std::swap(From, To);
   SemiNCAInfo<DomTreeT>::InsertEdge(DT, From, To);
+}
+
+template <class DomTreeT>
+void DeleteEdge(DomTreeT &DT, typename DomTreeT::NodePtr From,
+                typename DomTreeT::NodePtr To) {
+  if (DT.isPostDominator()) std::swap(From, To);
+  SemiNCAInfo<DomTreeT>::DeleteEdge(DT, From, To);
 }
 
 template <class DomTreeT>

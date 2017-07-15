@@ -18,6 +18,7 @@
 
 using namespace llvm;
 using namespace clang::tooling;
+using clang::tooling::Diagnostic;
 
 static Diagnostic makeDiagnostic(StringRef DiagnosticName,
                                  const std::string &Message, int FileOffset,

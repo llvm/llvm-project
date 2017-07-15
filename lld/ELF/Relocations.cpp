@@ -1000,15 +1000,19 @@ void ThunkCreator::mergeThunks() {
   }
 }
 
+static uint32_t findEndOfFirstNonExec(OutputSectionCommand &Cmd) {
+  for (BaseCommand *Base : Cmd.Commands)
+    if (auto *ISD = dyn_cast<InputSectionDescription>(Base))
+      for (auto *IS : ISD->Sections)
+        if ((IS->Flags & SHF_EXECINSTR) == 0)
+          return IS->OutSecOff + IS->getSize();
+  return 0;
+}
+
 ThunkSection *ThunkCreator::getOSThunkSec(OutputSectionCommand *Cmd,
                                           std::vector<InputSection *> *ISR) {
   if (CurTS == nullptr) {
-    uint32_t Off = 0;
-    for (auto *IS : Cmd->Sec->Sections) {
-      Off = IS->OutSecOff + IS->getSize();
-      if ((IS->Flags & SHF_EXECINSTR) == 0)
-        break;
-    }
+    uint32_t Off = findEndOfFirstNonExec(*Cmd);
     CurTS = addThunkSection(Cmd->Sec, ISR, Off);
   }
   return CurTS;

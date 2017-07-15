@@ -90,6 +90,7 @@ set(Tests
   EmptyTest
   EquivalenceATest
   EquivalenceBTest
+  FlagsTest
   FourIndependentBranchesTest
   FullCoverageSetTest
   InitializeTest
