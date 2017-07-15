@@ -125,7 +125,6 @@ static const GlobalValueSummary *
 selectCallee(const ModuleSummaryIndex &Index,
              ArrayRef<std::unique_ptr<GlobalValueSummary>> CalleeSummaryList,
              unsigned Threshold, StringRef CallerModulePath) {
-  // Find the first eligible callee (e.g. legality checks).
   auto It = llvm::find_if(
       CalleeSummaryList,
       [&](const std::unique_ptr<GlobalValueSummary> &SummaryPtr) {
@@ -161,6 +160,9 @@ selectCallee(const ModuleSummaryIndex &Index,
             Summary->modulePath() != CallerModulePath)
           return false;
 
+        if (Summary->instCount() > Threshold)
+          return false;
+
         if (Summary->notEligibleToImport())
           return false;
 
@@ -169,19 +171,7 @@ selectCallee(const ModuleSummaryIndex &Index,
   if (It == CalleeSummaryList.end())
     return nullptr;
 
-  // Now check if the first eligible callee is under the instruction
-  // threshold. Checking this on the first eligible callee ensures that
-  // we don't end up selecting different callees to import when we invoke
-  // this routine with different thresholds (when there are multiple copies,
-  // i.e. with weak or linkonce linkage).
-  auto *Summary = dyn_cast<FunctionSummary>(It->get());
-  if (auto *AS = dyn_cast<AliasSummary>(It->get()))
-    Summary = cast<FunctionSummary>(&AS->getAliasee());
-  assert(Summary && "Expected FunctionSummary, or alias to one");
-  if (Summary->instCount() > Threshold)
-    return nullptr;
-
-  return Summary;
+  return cast<GlobalValueSummary>(It->get());
 }
 
 using EdgeInfo = std::tuple<const FunctionSummary *, unsigned /* Threshold */,

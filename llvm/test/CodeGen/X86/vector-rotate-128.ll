@@ -207,7 +207,7 @@ define <4 x i32> @var_rotate_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ;
 ; AVX2-LABEL: var_rotate_v4i32:
 ; AVX2:       # BB#0:
-; AVX2-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm2
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [32,32,32,32]
 ; AVX2-NEXT:    vpsubd %xmm1, %xmm2, %xmm2
 ; AVX2-NEXT:    vpsllvd %xmm1, %xmm0, %xmm1
 ; AVX2-NEXT:    vpsrlvd %xmm2, %xmm0, %xmm0
@@ -216,7 +216,7 @@ define <4 x i32> @var_rotate_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ;
 ; AVX512-LABEL: var_rotate_v4i32:
 ; AVX512:       # BB#0:
-; AVX512-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm2
+; AVX512-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [32,32,32,32]
 ; AVX512-NEXT:    vpsubd %xmm1, %xmm2, %xmm2
 ; AVX512-NEXT:    vpsllvd %xmm1, %xmm0, %xmm1
 ; AVX512-NEXT:    vpsrlvd %xmm2, %xmm0, %xmm0
