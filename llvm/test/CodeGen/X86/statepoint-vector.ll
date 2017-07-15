@@ -49,8 +49,8 @@ entry:
 ; CHECK: subq	$40, %rsp
 ; CHECK: testb	$1, %dil
 ; CHECK: movaps	(%rsi), %xmm0
-; CHECK: movaps	%xmm0, 16(%rsp)
-; CHECK: movaps	%xmm0, (%rsp)
+; CHECK-DAG: movaps	%xmm0, (%rsp)
+; CHECK-DAG: movaps	%xmm0, 16(%rsp)
 ; CHECK: callq	do_safepoint
 ; CHECK: movaps	(%rsp), %xmm0
 ; CHECK: addq	$40, %rsp

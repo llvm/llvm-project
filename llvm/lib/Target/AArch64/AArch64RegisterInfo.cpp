@@ -167,7 +167,7 @@ bool AArch64RegisterInfo::isConstantPhysReg(unsigned PhysReg) const {
 const TargetRegisterClass *
 AArch64RegisterInfo::getPointerRegClass(const MachineFunction &MF,
                                       unsigned Kind) const {
-  return &AArch64::GPR64RegClass;
+  return &AArch64::GPR64spRegClass;
 }
 
 const TargetRegisterClass *

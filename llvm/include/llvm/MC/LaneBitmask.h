@@ -75,6 +75,9 @@ namespace llvm {
 
     static LaneBitmask getNone() { return LaneBitmask(0); }
     static LaneBitmask getAll()  { return ~LaneBitmask(0); }
+    static LaneBitmask getLane(unsigned Lane) {
+      return LaneBitmask(Type(1) << Lane);
+    }
 
   private:
     Type Mask = 0;

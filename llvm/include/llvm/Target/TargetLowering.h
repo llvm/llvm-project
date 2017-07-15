@@ -2012,6 +2012,35 @@ public:
     return isExtFreeImpl(I);
   }
 
+  /// Return true if \p Load and \p Ext can form an ExtLoad.
+  /// For example, in AArch64
+  ///   %L = load i8, i8* %ptr
+  ///   %E = zext i8 %L to i32
+  /// can be lowered into one load instruction
+  ///   ldrb w0, [x0]
+  bool isExtLoad(const LoadInst *Load, const Instruction *Ext,
+                 const DataLayout &DL) const {
+    EVT VT = getValueType(DL, Ext->getType());
+    EVT LoadVT = getValueType(DL, Load->getType());
+
+    // If the load has other users and the truncate is not free, the ext
+    // probably isn't free.
+    if (!Load->hasOneUse() && (isTypeLegal(LoadVT) || !isTypeLegal(VT)) &&
+        !isTruncateFree(Ext->getType(), Load->getType()))
+      return false;
+
+    // Check whether the target supports casts folded into loads.
+    unsigned LType;
+    if (isa<ZExtInst>(Ext))
+      LType = ISD::ZEXTLOAD;
+    else {
+      assert(isa<SExtInst>(Ext) && "Unexpected ext type!");
+      LType = ISD::SEXTLOAD;
+    }
+
+    return isLoadExtLegal(LType, VT, LoadVT);
+  }
+
   /// Return true if any actual instruction that defines a value of type FromTy
   /// implicitly zero-extends the value to ToTy in the result register.
   ///

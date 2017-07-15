@@ -120,6 +120,10 @@ public:
     return SI.getNumCases();
   }
 
+  int getExtCost(const Instruction *I, const Value *Src) {
+    return TTI::TCC_Basic;
+  }
+
   unsigned getCallCost(FunctionType *FTy, int NumArgs) {
     assert(FTy && "FunctionType must be provided to this routine.");
 
@@ -728,6 +732,8 @@ public:
       // nop on most sane targets.
       if (isa<CmpInst>(CI->getOperand(0)))
         return TTI::TCC_Free;
+      if (isa<SExtInst>(CI) || isa<ZExtInst>(CI) || isa<FPExtInst>(CI))
+        return static_cast<T *>(this)->getExtCost(CI, Operands.back());
     }
 
     return static_cast<T *>(this)->getOperationCost(

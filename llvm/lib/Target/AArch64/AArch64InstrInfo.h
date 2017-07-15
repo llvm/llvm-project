@@ -27,6 +27,13 @@ namespace llvm {
 class AArch64Subtarget;
 class AArch64TargetMachine;
 
+static const MachineMemOperand::Flags MOSuppressPair =
+    MachineMemOperand::MOTargetFlag1;
+static const MachineMemOperand::Flags MOStridedAccess =
+    MachineMemOperand::MOTargetFlag2;
+
+#define FALKOR_STRIDED_ACCESS_MD "falkor.strided.access"
+
 class AArch64InstrInfo final : public AArch64GenInstrInfo {
   const AArch64RegisterInfo RI;
   const AArch64Subtarget &Subtarget;
@@ -80,6 +87,9 @@ public:
   /// Return true if pairing the given load or store is hinted to be
   /// unprofitable.
   bool isLdStPairSuppressed(const MachineInstr &MI) const;
+
+  /// Return true if the given load or store is a strided memory access.
+  bool isStridedAccess(const MachineInstr &MI) const;
 
   /// Return true if this is an unscaled load/store.
   bool isUnscaledLdSt(unsigned Opc) const;

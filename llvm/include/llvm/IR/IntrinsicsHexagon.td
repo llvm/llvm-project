@@ -32,16 +32,6 @@ class Hexagon_qi_mem_Intrinsic<string GCCIntSuffix>
   : Hexagon_Intrinsic<GCCIntSuffix,
                           [llvm_i1_ty], [llvm_ptr_ty],
                           [IntrNoMem]>;
-
-//
-// DEF_FUNCTION_TYPE_1(void_ftype_SI,BT_VOID,BT_INT) ->
-// Hexagon_void_si_Intrinsic<string GCCIntSuffix>
-//
-class Hexagon_void_si_Intrinsic<string GCCIntSuffix>
-  : Hexagon_Intrinsic<GCCIntSuffix,
-                          [], [llvm_ptr_ty],
-                          []>;
-
 //
 // DEF_FUNCTION_TYPE_1(HI_ftype_SI,BT_I16,BT_INT) ->
 // Hexagon_hi_si_Intrinsic<string GCCIntSuffix>
@@ -4959,11 +4949,25 @@ Hexagon_di_di_Intrinsic<"HEXAGON_S2_interleave">;
 //
 def int_hexagon_S2_deinterleave :
 Hexagon_di_di_Intrinsic<"HEXAGON_S2_deinterleave">;
+
 //
 // BUILTIN_INFO(HEXAGON.dcfetch_A,v_ftype_DI*,1)
 //
 def int_hexagon_prefetch :
-Hexagon_void_si_Intrinsic<"HEXAGON_prefetch">;
+Hexagon_Intrinsic<"HEXAGON_prefetch", [], [llvm_ptr_ty], []>;
+def int_hexagon_Y2_dccleana :
+Hexagon_Intrinsic<"HEXAGON_Y2_dccleana", [], [llvm_ptr_ty], []>;
+def int_hexagon_Y2_dccleaninva :
+Hexagon_Intrinsic<"HEXAGON_Y2_dccleaninva", [], [llvm_ptr_ty], []>;
+def int_hexagon_Y2_dcinva :
+Hexagon_Intrinsic<"HEXAGON_Y2_dcinva", [], [llvm_ptr_ty], []>;
+def int_hexagon_Y2_dczeroa :
+Hexagon_Intrinsic<"HEXAGON_Y2_dczeroa", [], [llvm_ptr_ty],
+      [IntrWriteMem, IntrArgMemOnly, IntrHasSideEffects]>;
+def int_hexagon_Y4_l2fetch :
+Hexagon_Intrinsic<"HEXAGON_Y4_l2fetch", [], [llvm_ptr_ty, llvm_i32_ty], []>;
+def int_hexagon_Y5_l2fetch :
+Hexagon_Intrinsic<"HEXAGON_Y5_l2fetch", [], [llvm_ptr_ty, llvm_i64_ty], []>;
 
 def llvm_ptr32_ty : LLVMPointerType<llvm_i32_ty>;
 def llvm_ptr64_ty : LLVMPointerType<llvm_i64_ty>;

@@ -309,17 +309,17 @@ define float @foo_vararg(%swift_error** swifterror %error_ptr_ref, ...) {
 ; CHECK-APPLE-LABEL: foo_vararg:
 ; CHECK-APPLE: orr w0, wzr, #0x10
 ; CHECK-APPLE: malloc
-; CHECK-APPLE: orr [[ID:w[0-9]+]], wzr, #0x1
-; CHECK-APPLE: add [[ARGS:x[0-9]+]], [[TMP:x[0-9]+]], #16
-; CHECK-APPLE: strb [[ID]], [x0, #8]
+; CHECK-APPLE-DAG: orr [[ID:w[0-9]+]], wzr, #0x1
+; CHECK-APPLE-DAG: add [[ARGS:x[0-9]+]], [[TMP:x[0-9]+]], #16
+; CHECK-APPLE-DAG: strb [[ID]], [x0, #8]
 
 ; First vararg
 ; CHECK-APPLE-DAG: orr {{x[0-9]+}}, [[ARGS]], #0x8
 ; CHECK-APPLE-DAG: ldr {{w[0-9]+}}, [{{.*}}[[TMP]], #16]
-; CHECK-APPLE: add {{x[0-9]+}}, {{x[0-9]+}}, #8
+; CHECK-APPLE-DAG: add {{x[0-9]+}}, {{x[0-9]+}}, #8
 ; Second vararg
-; CHECK-APPLE: ldr {{w[0-9]+}}, [{{x[0-9]+}}]
-; CHECK-APPLE: add {{x[0-9]+}}, {{x[0-9]+}}, #8
+; CHECK-APPLE-DAG: ldr {{w[0-9]+}}, [{{x[0-9]+}}], #8
+; CHECK-APPLE-DAG: add {{x[0-9]+}}, {{x[0-9]+}}, #16
 ; Third vararg
 ; CHECK-APPLE: ldr {{w[0-9]+}}, [{{x[0-9]+}}]
 

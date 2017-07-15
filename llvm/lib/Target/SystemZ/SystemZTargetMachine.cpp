@@ -143,8 +143,10 @@ public:
 } // end anonymous namespace
 
 void SystemZPassConfig::addIRPasses() {
-  if (getOptLevel() != CodeGenOpt::None)
+  if (getOptLevel() != CodeGenOpt::None) {
     addPass(createSystemZTDCPass());
+    addPass(createLoopDataPrefetchPass());
+  }
 
   TargetPassConfig::addIRPasses();
 }

@@ -16,22 +16,19 @@ define void @update(i64* %dst_i, i64* %src_i, i32 %n) nounwind {
 ; NARROW-NEXT:  .LBB0_2: # %forbody
 ; NARROW-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; NARROW-NEXT:    movl (%esp), %eax
-; NARROW-NEXT:    shll $3, %eax
-; NARROW-NEXT:    addl {{[0-9]+}}(%esp), %eax
-; NARROW-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; NARROW-NEXT:    movl (%esp), %eax
-; NARROW-NEXT:    shll $3, %eax
-; NARROW-NEXT:    addl {{[0-9]+}}(%esp), %eax
-; NARROW-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; NARROW-NEXT:    movl (%esp), %ecx
+; NARROW-NEXT:    leal (,%eax,8), %ecx
 ; NARROW-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; NARROW-NEXT:    addl %ecx, %edx
+; NARROW-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; NARROW-NEXT:    addl {{[0-9]+}}(%esp), %ecx
+; NARROW-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; NARROW-NEXT:    pmovzxbw {{.*#+}} xmm2 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
 ; NARROW-NEXT:    psubw %xmm0, %xmm2
 ; NARROW-NEXT:    psllw $8, %xmm2
 ; NARROW-NEXT:    psraw $8, %xmm2
 ; NARROW-NEXT:    psraw $2, %xmm2
 ; NARROW-NEXT:    pshufb %xmm1, %xmm2
-; NARROW-NEXT:    movq %xmm2, (%edx,%ecx,8)
+; NARROW-NEXT:    movq %xmm2, (%edx,%eax,8)
 ; NARROW-NEXT:    incl (%esp)
 ; NARROW-NEXT:  .LBB0_1: # %forcond
 ; NARROW-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -54,24 +51,21 @@ define void @update(i64* %dst_i, i64* %src_i, i32 %n) nounwind {
 ; WIDE-NEXT:  .LBB0_2: # %forbody
 ; WIDE-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; WIDE-NEXT:    movl (%esp), %eax
-; WIDE-NEXT:    shll $3, %eax
-; WIDE-NEXT:    addl {{[0-9]+}}(%esp), %eax
-; WIDE-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; WIDE-NEXT:    movl (%esp), %eax
-; WIDE-NEXT:    shll $3, %eax
-; WIDE-NEXT:    addl {{[0-9]+}}(%esp), %eax
-; WIDE-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; WIDE-NEXT:    movl (%esp), %ecx
+; WIDE-NEXT:    leal (,%eax,8), %ecx
 ; WIDE-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; WIDE-NEXT:    addl %ecx, %edx
+; WIDE-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; WIDE-NEXT:    addl {{[0-9]+}}(%esp), %ecx
+; WIDE-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; WIDE-NEXT:    movd {{.*#+}} xmm3 = mem[0],zero,zero,zero
-; WIDE-NEXT:    pinsrd $1, 4(%eax,%ecx,8), %xmm3
+; WIDE-NEXT:    pinsrd $1, 4(%ecx,%eax,8), %xmm3
 ; WIDE-NEXT:    psubb %xmm0, %xmm3
 ; WIDE-NEXT:    psrlw $2, %xmm3
 ; WIDE-NEXT:    pand %xmm1, %xmm3
 ; WIDE-NEXT:    pxor %xmm2, %xmm3
 ; WIDE-NEXT:    psubb %xmm2, %xmm3
-; WIDE-NEXT:    pextrd $1, %xmm3, 4(%edx,%ecx,8)
-; WIDE-NEXT:    movd %xmm3, (%edx,%ecx,8)
+; WIDE-NEXT:    pextrd $1, %xmm3, 4(%edx,%eax,8)
+; WIDE-NEXT:    movd %xmm3, (%edx,%eax,8)
 ; WIDE-NEXT:    incl (%esp)
 ; WIDE-NEXT:  .LBB0_1: # %forcond
 ; WIDE-NEXT:    # =>This Inner Loop Header: Depth=1
