@@ -34,6 +34,22 @@ define void @void_func_i1_signext(i1 signext %arg0) #0 {
   ret void
 }
 
+; GCN-LABEL: {{^}}i1_arg_i1_use:
+; GCN: v_and_b32_e32 v0, 1, v0
+; GCN: v_cmp_eq_u32_e32 vcc, 1, v0
+; GCN: s_xor_b64 s{{\[[0-9]+:[0-9]+\]}}, vcc, -1
+define void @i1_arg_i1_use(i1 %arg) #0 {
+bb:
+  br i1 %arg, label %bb2, label %bb1
+
+bb1:
+  store volatile i32 0, i32 addrspace(1)* undef
+  br label %bb2
+
+bb2:
+  ret void
+}
+
 ; GCN-LABEL: {{^}}void_func_i8:
 ; GCN-NOT: v0
 ; GCN: buffer_store_byte v0, off

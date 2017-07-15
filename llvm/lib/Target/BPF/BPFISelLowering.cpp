@@ -516,9 +516,8 @@ BPFTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   const TargetInstrInfo &TII = *BB->getParent()->getSubtarget().getInstrInfo();
   DebugLoc DL = MI.getDebugLoc();
   bool isSelectOp = MI.getOpcode() == BPF::Select;
-  bool isSelectRiOp = MI.getOpcode() == BPF::Select_Ri;
 
-  assert((isSelectOp || isSelectRiOp) && "Unexpected instr type to insert");
+  assert((isSelectOp || MI.getOpcode() == BPF::Select_Ri) && "Unexpected instr type to insert");
 
   // To "insert" a SELECT instruction, we actually have to insert the diamond
   // control-flow pattern.  The incoming instruction knows the destination vreg

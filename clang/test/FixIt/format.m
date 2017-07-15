@@ -236,8 +236,8 @@ void testSizeTypes() {
   printf("%zd", 0.f); // expected-warning-re{{format specifies type 'ssize_t' (aka '{{.+}}') but the argument has type 'float'}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:11-[[@LINE-1]]:14}:"%f"
   
-  int x;
-  printf("%zn", &x); // expected-warning-re{{format specifies type 'ssize_t *' (aka '{{.+}}') but the argument has type 'int *'}}
+  short x;
+  printf("%zn", &x); // expected-warning-re{{format specifies type 'ssize_t *' (aka '{{.+}}') but the argument has type 'short *'}}
   // PrintfSpecifier::fixType doesn't handle %n, so a fix-it is not emitted, 
   // see the comment in PrintfSpecifier::fixType in PrintfFormatString.cpp.
 }
