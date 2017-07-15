@@ -20,18 +20,21 @@ _clang()
     cur="${COMP_WORDS[$cword]}"
   fi
 
-  # bash always separates '=' as a token even if there's no space before/after '='.
-  # On the other hand, '=' is just a regular character for clang options that
-  # contain '='. For example, "-stdlib=" is defined as is, instead of "-stdlib" and "=".
-  # So, we need to partially undo bash tokenization here for integrity.
   w1="${COMP_WORDS[$cword - 1]}"
   if [[ $cword > 1 ]]; then
     w2="${COMP_WORDS[$cword - 2]}"
+  fi
+
   # Clang want to know if -cc1 or -Xclang option is specified or not, because we don't want to show
   # cc1 options otherwise.
   if [[ "${COMP_WORDS[1]}" == "-cc1" || "$w1" == "-Xclang" ]]; then
     arg="#"
   fi
+
+  # bash always separates '=' as a token even if there's no space before/after '='.
+  # On the other hand, '=' is just a regular character for clang options that
+  # contain '='. For example, "-stdlib=" is defined as is, instead of "-stdlib" and "=".
+  # So, we need to partially undo bash tokenization here for integrity.
   if [[ "$cur" == -* ]]; then
     # -foo<tab>
     arg="$arg$cur"
