@@ -392,7 +392,7 @@ define <4 x i32> @combine_vec_shl_gt_lshr0(<4 x i32> %x) {
 ;
 ; AVX-LABEL: combine_vec_shl_gt_lshr0:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm1
+; AVX-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [4294967264,4294967264,4294967264,4294967264]
 ; AVX-NEXT:    vpslld $2, %xmm0, %xmm0
 ; AVX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
@@ -437,7 +437,7 @@ define <4 x i32> @combine_vec_shl_le_lshr0(<4 x i32> %x) {
 ;
 ; AVX-LABEL: combine_vec_shl_le_lshr0:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm1
+; AVX-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [1073741816,1073741816,1073741816,1073741816]
 ; AVX-NEXT:    vpsrld $2, %xmm0, %xmm0
 ; AVX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
@@ -481,7 +481,7 @@ define <4 x i32> @combine_vec_shl_ashr0(<4 x i32> %x) {
 ;
 ; AVX-LABEL: combine_vec_shl_ashr0:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vbroadcastss {{.*}}(%rip), %xmm1
+; AVX-NEXT:    vbroadcastss {{.*#+}} xmm1 = [4294967264,4294967264,4294967264,4294967264]
 ; AVX-NEXT:    vandps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = ashr <4 x i32> %x, <i32 5, i32 5, i32 5, i32 5>
@@ -515,7 +515,7 @@ define <4 x i32> @combine_vec_shl_add0(<4 x i32> %x) {
 ; AVX-LABEL: combine_vec_shl_add0:
 ; AVX:       # BB#0:
 ; AVX-NEXT:    vpslld $2, %xmm0, %xmm0
-; AVX-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm1
+; AVX-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [20,20,20,20]
 ; AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = add <4 x i32> %x, <i32 5, i32 5, i32 5, i32 5>
@@ -550,7 +550,7 @@ define <4 x i32> @combine_vec_shl_or0(<4 x i32> %x) {
 ;
 ; AVX-LABEL: combine_vec_shl_or0:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm1
+; AVX-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [5,5,5,5]
 ; AVX-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vpslld $2, %xmm0, %xmm0
 ; AVX-NEXT:    retq
@@ -585,7 +585,7 @@ define <4 x i32> @combine_vec_shl_mul0(<4 x i32> %x) {
 ;
 ; AVX-LABEL: combine_vec_shl_mul0:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm1
+; AVX-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [20,20,20,20]
 ; AVX-NEXT:    vpmulld %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = mul <4 x i32> %x, <i32 5, i32 5, i32 5, i32 5>

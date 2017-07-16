@@ -135,7 +135,7 @@ define <4 x i32> @test_div7_4i32(<4 x i32> %a) nounwind {
 ;
 ; AVX2-LABEL: test_div7_4i32:
 ; AVX2:       # BB#0:
-; AVX2-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm1
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [2454267027,2454267027,2454267027,2454267027]
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm2 = xmm1[1,1,3,3]
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm3 = xmm0[1,1,3,3]
 ; AVX2-NEXT:    vpmuldq %xmm2, %xmm3, %xmm2
@@ -433,7 +433,7 @@ define <4 x i32> @test_rem7_4i32(<4 x i32> %a) nounwind {
 ;
 ; AVX2-LABEL: test_rem7_4i32:
 ; AVX2:       # BB#0:
-; AVX2-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm1
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [2454267027,2454267027,2454267027,2454267027]
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm2 = xmm1[1,1,3,3]
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm3 = xmm0[1,1,3,3]
 ; AVX2-NEXT:    vpmuldq %xmm2, %xmm3, %xmm2
@@ -444,7 +444,7 @@ define <4 x i32> @test_rem7_4i32(<4 x i32> %a) nounwind {
 ; AVX2-NEXT:    vpsrld $31, %xmm1, %xmm2
 ; AVX2-NEXT:    vpsrad $2, %xmm1, %xmm1
 ; AVX2-NEXT:    vpaddd %xmm2, %xmm1, %xmm1
-; AVX2-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm2
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [7,7,7,7]
 ; AVX2-NEXT:    vpmulld %xmm2, %xmm1, %xmm1
 ; AVX2-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq

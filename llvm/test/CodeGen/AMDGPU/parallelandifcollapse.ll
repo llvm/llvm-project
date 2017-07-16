@@ -8,7 +8,7 @@
 ; CHECK-NEXT: OR_INT
 
 ; FIXME: For some reason having the allocas here allowed the flatten cfg pass
-; to do its transfomation, however now that we are using local memory for
+; to do its transformation, however now that we are using local memory for
 ; allocas, the transformation isn't happening.
 
 define amdgpu_kernel void @_Z9chk1D_512v() #0 {

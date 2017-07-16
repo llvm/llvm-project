@@ -1208,7 +1208,7 @@ bool AMDGPUOperand::isInlinableImm(MVT type) const {
 }
 
 bool AMDGPUOperand::isLiteralImm(MVT type) const {
-  // Check that this imediate can be added as literal
+  // Check that this immediate can be added as literal
   if (!isImmTy(ImmTyNone)) {
     return false;
   }

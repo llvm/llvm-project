@@ -885,7 +885,7 @@ CCAssignFn *AMDGPUCallLowering::CCAssignFnForReturn(CallingConv::ID CC,
 
 /// When the SelectionDAGBuilder computes the Ins, it takes care of splitting
 /// input values across multiple registers.  Each item in the Ins array
-/// represents a single value that will be stored in regsters.  Ins[x].VT is
+/// represents a single value that will be stored in registers.  Ins[x].VT is
 /// the value type of the value that will be stored in the register, so
 /// whatever SDNode we lower the argument to needs to be this type.
 ///

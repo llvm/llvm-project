@@ -179,7 +179,7 @@ define <4 x i64> @testv4i64u(<4 x i64> %in) nounwind {
 ; AVX512CDVL-NEXT:    vpsubq %ymm0, %ymm1, %ymm1
 ; AVX512CDVL-NEXT:    vpand %ymm1, %ymm0, %ymm0
 ; AVX512CDVL-NEXT:    vplzcntq %ymm0, %ymm0
-; AVX512CDVL-NEXT:    vpbroadcastq {{.*}}(%rip), %ymm1
+; AVX512CDVL-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [63,63,63,63]
 ; AVX512CDVL-NEXT:    vpsubq %ymm0, %ymm1, %ymm0
 ; AVX512CDVL-NEXT:    retq
 ;
@@ -189,7 +189,7 @@ define <4 x i64> @testv4i64u(<4 x i64> %in) nounwind {
 ; AVX512CD-NEXT:    vpsubq %ymm0, %ymm1, %ymm1
 ; AVX512CD-NEXT:    vpand %ymm1, %ymm0, %ymm0
 ; AVX512CD-NEXT:    vplzcntq %zmm0, %zmm0
-; AVX512CD-NEXT:    vpbroadcastq {{.*}}(%rip), %ymm1
+; AVX512CD-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [63,63,63,63]
 ; AVX512CD-NEXT:    vpsubq %ymm0, %ymm1, %ymm0
 ; AVX512CD-NEXT:    retq
 ;
@@ -432,7 +432,7 @@ define <8 x i32> @testv8i32u(<8 x i32> %in) nounwind {
 ; AVX512CDVL-NEXT:    vpsubd %ymm0, %ymm1, %ymm1
 ; AVX512CDVL-NEXT:    vpand %ymm1, %ymm0, %ymm0
 ; AVX512CDVL-NEXT:    vplzcntd %ymm0, %ymm0
-; AVX512CDVL-NEXT:    vpbroadcastd {{.*}}(%rip), %ymm1
+; AVX512CDVL-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [31,31,31,31,31,31,31,31]
 ; AVX512CDVL-NEXT:    vpsubd %ymm0, %ymm1, %ymm0
 ; AVX512CDVL-NEXT:    retq
 ;
@@ -442,7 +442,7 @@ define <8 x i32> @testv8i32u(<8 x i32> %in) nounwind {
 ; AVX512CD-NEXT:    vpsubd %ymm0, %ymm1, %ymm1
 ; AVX512CD-NEXT:    vpand %ymm1, %ymm0, %ymm0
 ; AVX512CD-NEXT:    vplzcntd %zmm0, %zmm0
-; AVX512CD-NEXT:    vpbroadcastd {{.*}}(%rip), %ymm1
+; AVX512CD-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [31,31,31,31,31,31,31,31]
 ; AVX512CD-NEXT:    vpsubd %ymm0, %ymm1, %ymm0
 ; AVX512CD-NEXT:    retq
 ;
