@@ -3749,6 +3749,11 @@ static Instruction *processUMulZExtIdiom(ICmpInst &I, Value *MulVal,
           const APInt &CVal = CI->getValue();
           if (CVal.getBitWidth() - CVal.countLeadingZeros() > MulWidth)
             return nullptr;
+        } else {
+          // In this case we could have the operand of the binary operation
+          // being defined in another block, and performing the replacement
+          // could break the dominance relation.
+          return nullptr;
         }
       } else {
         // Other uses prohibit this transformation.
@@ -3868,18 +3873,17 @@ static Instruction *processUMulZExtIdiom(ICmpInst &I, Value *MulVal,
       } else if (BinaryOperator *BO = dyn_cast<BinaryOperator>(U)) {
         assert(BO->getOpcode() == Instruction::And);
         // Replace (mul & mask) --> zext (mul.with.overflow & short_mask)
-        Value *ShortMask =
-            Builder.CreateTrunc(BO->getOperand(1), Builder.getIntNTy(MulWidth));
+        ConstantInt *CI = cast<ConstantInt>(BO->getOperand(1));
+        APInt ShortMask = CI->getValue().trunc(MulWidth);
         Value *ShortAnd = Builder.CreateAnd(Mul, ShortMask);
-        Value *Zext = Builder.CreateZExt(ShortAnd, BO->getType());
-        if (auto *ZextI = dyn_cast<Instruction>(Zext))
-          IC.Worklist.Add(ZextI);
+        Instruction *Zext =
+            cast<Instruction>(Builder.CreateZExt(ShortAnd, BO->getType()));
+        IC.Worklist.Add(Zext);
         IC.replaceInstUsesWith(*BO, Zext);
       } else {
         llvm_unreachable("Unexpected Binary operation");
       }
-      if (auto *UI = dyn_cast<Instruction>(U))
-        IC.Worklist.Add(UI);
+      IC.Worklist.Add(cast<Instruction>(U));
     }
   }
   if (isa<Instruction>(OtherVal))

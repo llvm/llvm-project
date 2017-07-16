@@ -167,14 +167,24 @@ define void @fetch_and_min(i128* %p, i128 %bits) {
 ; CHECK-NEXT:    sbbq %rdx, %rcx
 ; CHECK-NEXT:    setge %cl
 ; CHECK-NEXT:    andb $1, %cl
+; CHECK-NEXT:    movq %rax, %rbx
+; CHECK-NEXT:    jne LBB5_3
+; CHECK-NEXT:  ## BB#2: ## %atomicrmw.start
+; CHECK-NEXT:    ## in Loop: Header=BB5_1 Depth=1
 ; CHECK-NEXT:    movq %rsi, %rbx
-; CHECK-NEXT:    cmovneq %rax, %rbx
+; CHECK-NEXT:  LBB5_3: ## %atomicrmw.start
+; CHECK-NEXT:    ## in Loop: Header=BB5_1 Depth=1
 ; CHECK-NEXT:    testb %cl, %cl
+; CHECK-NEXT:    movq %rdx, %rcx
+; CHECK-NEXT:    jne LBB5_5
+; CHECK-NEXT:  ## BB#4: ## %atomicrmw.start
+; CHECK-NEXT:    ## in Loop: Header=BB5_1 Depth=1
 ; CHECK-NEXT:    movq %r8, %rcx
-; CHECK-NEXT:    cmovneq %rdx, %rcx
+; CHECK-NEXT:  LBB5_5: ## %atomicrmw.start
+; CHECK-NEXT:    ## in Loop: Header=BB5_1 Depth=1
 ; CHECK-NEXT:    lock cmpxchg16b (%rdi)
 ; CHECK-NEXT:    jne LBB5_1
-; CHECK-NEXT:  ## BB#2: ## %atomicrmw.end
+; CHECK-NEXT:  ## BB#6: ## %atomicrmw.end
 ; CHECK-NEXT:    movq %rax, {{.*}}(%rip)
 ; CHECK-NEXT:    movq %rdx, _var+{{.*}}(%rip)
 ; CHECK-NEXT:    popq %rbx
@@ -203,14 +213,24 @@ define void @fetch_and_max(i128* %p, i128 %bits) {
 ; CHECK-NEXT:    sbbq %r8, %rcx
 ; CHECK-NEXT:    setge %cl
 ; CHECK-NEXT:    andb $1, %cl
+; CHECK-NEXT:    movq %rax, %rbx
+; CHECK-NEXT:    jne LBB6_3
+; CHECK-NEXT:  ## BB#2: ## %atomicrmw.start
+; CHECK-NEXT:    ## in Loop: Header=BB6_1 Depth=1
 ; CHECK-NEXT:    movq %rsi, %rbx
-; CHECK-NEXT:    cmovneq %rax, %rbx
+; CHECK-NEXT:  LBB6_3: ## %atomicrmw.start
+; CHECK-NEXT:    ## in Loop: Header=BB6_1 Depth=1
 ; CHECK-NEXT:    testb %cl, %cl
+; CHECK-NEXT:    movq %rdx, %rcx
+; CHECK-NEXT:    jne LBB6_5
+; CHECK-NEXT:  ## BB#4: ## %atomicrmw.start
+; CHECK-NEXT:    ## in Loop: Header=BB6_1 Depth=1
 ; CHECK-NEXT:    movq %r8, %rcx
-; CHECK-NEXT:    cmovneq %rdx, %rcx
+; CHECK-NEXT:  LBB6_5: ## %atomicrmw.start
+; CHECK-NEXT:    ## in Loop: Header=BB6_1 Depth=1
 ; CHECK-NEXT:    lock cmpxchg16b (%rdi)
 ; CHECK-NEXT:    jne LBB6_1
-; CHECK-NEXT:  ## BB#2: ## %atomicrmw.end
+; CHECK-NEXT:  ## BB#6: ## %atomicrmw.end
 ; CHECK-NEXT:    movq %rax, {{.*}}(%rip)
 ; CHECK-NEXT:    movq %rdx, _var+{{.*}}(%rip)
 ; CHECK-NEXT:    popq %rbx
@@ -239,14 +259,24 @@ define void @fetch_and_umin(i128* %p, i128 %bits) {
 ; CHECK-NEXT:    sbbq %rdx, %rcx
 ; CHECK-NEXT:    setae %cl
 ; CHECK-NEXT:    andb $1, %cl
+; CHECK-NEXT:    movq %rax, %rbx
+; CHECK-NEXT:    jne LBB7_3
+; CHECK-NEXT:  ## BB#2: ## %atomicrmw.start
+; CHECK-NEXT:    ## in Loop: Header=BB7_1 Depth=1
 ; CHECK-NEXT:    movq %rsi, %rbx
-; CHECK-NEXT:    cmovneq %rax, %rbx
+; CHECK-NEXT:  LBB7_3: ## %atomicrmw.start
+; CHECK-NEXT:    ## in Loop: Header=BB7_1 Depth=1
 ; CHECK-NEXT:    testb %cl, %cl
+; CHECK-NEXT:    movq %rdx, %rcx
+; CHECK-NEXT:    jne LBB7_5
+; CHECK-NEXT:  ## BB#4: ## %atomicrmw.start
+; CHECK-NEXT:    ## in Loop: Header=BB7_1 Depth=1
 ; CHECK-NEXT:    movq %r8, %rcx
-; CHECK-NEXT:    cmovneq %rdx, %rcx
+; CHECK-NEXT:  LBB7_5: ## %atomicrmw.start
+; CHECK-NEXT:    ## in Loop: Header=BB7_1 Depth=1
 ; CHECK-NEXT:    lock cmpxchg16b (%rdi)
 ; CHECK-NEXT:    jne LBB7_1
-; CHECK-NEXT:  ## BB#2: ## %atomicrmw.end
+; CHECK-NEXT:  ## BB#6: ## %atomicrmw.end
 ; CHECK-NEXT:    movq %rax, {{.*}}(%rip)
 ; CHECK-NEXT:    movq %rdx, _var+{{.*}}(%rip)
 ; CHECK-NEXT:    popq %rbx
@@ -275,14 +305,24 @@ define void @fetch_and_umax(i128* %p, i128 %bits) {
 ; CHECK-NEXT:    sbbq %rdx, %rcx
 ; CHECK-NEXT:    setb %cl
 ; CHECK-NEXT:    andb $1, %cl
+; CHECK-NEXT:    movq %rax, %rbx
+; CHECK-NEXT:    jne LBB8_3
+; CHECK-NEXT:  ## BB#2: ## %atomicrmw.start
+; CHECK-NEXT:    ## in Loop: Header=BB8_1 Depth=1
 ; CHECK-NEXT:    movq %rsi, %rbx
-; CHECK-NEXT:    cmovneq %rax, %rbx
+; CHECK-NEXT:  LBB8_3: ## %atomicrmw.start
+; CHECK-NEXT:    ## in Loop: Header=BB8_1 Depth=1
 ; CHECK-NEXT:    testb %cl, %cl
+; CHECK-NEXT:    movq %rdx, %rcx
+; CHECK-NEXT:    jne LBB8_5
+; CHECK-NEXT:  ## BB#4: ## %atomicrmw.start
+; CHECK-NEXT:    ## in Loop: Header=BB8_1 Depth=1
 ; CHECK-NEXT:    movq %r8, %rcx
-; CHECK-NEXT:    cmovneq %rdx, %rcx
+; CHECK-NEXT:  LBB8_5: ## %atomicrmw.start
+; CHECK-NEXT:    ## in Loop: Header=BB8_1 Depth=1
 ; CHECK-NEXT:    lock cmpxchg16b (%rdi)
 ; CHECK-NEXT:    jne LBB8_1
-; CHECK-NEXT:  ## BB#2: ## %atomicrmw.end
+; CHECK-NEXT:  ## BB#6: ## %atomicrmw.end
 ; CHECK-NEXT:    movq %rax, {{.*}}(%rip)
 ; CHECK-NEXT:    movq %rdx, _var+{{.*}}(%rip)
 ; CHECK-NEXT:    popq %rbx
