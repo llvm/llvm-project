@@ -2649,7 +2649,7 @@ __isl_give isl_set *Scop::getDomainConditions(const ScopStmt *Stmt) const {
 __isl_give isl_set *Scop::getDomainConditions(BasicBlock *BB) const {
   auto DIt = DomainMap.find(BB);
   if (DIt != DomainMap.end())
-    return isl_set_copy(DIt->getSecond());
+    return DIt->getSecond().copy();
 
   auto &RI = *R.getRegionInfo();
   auto *BBR = RI.getRegionFor(BB);
@@ -2673,7 +2673,7 @@ bool Scop::buildDomains(Region *R, DominatorTree &DT, LoopInfo &LI,
   }
 
   InvalidDomainMap[EntryBB] = isl::manage(isl_set_empty(isl_set_get_space(S)));
-  DomainMap[EntryBB] = S;
+  DomainMap[EntryBB] = isl::manage(S);
 
   if (IsOnlyNonAffineRegion)
     return !containsErrorBlock(R->getNode(), *R, LI, DT);
@@ -2771,27 +2771,25 @@ bool Scop::propagateInvalidStmtDomains(
 
     bool ContainsErrorBlock = containsErrorBlock(RN, getRegion(), LI, DT);
     BasicBlock *BB = getRegionNodeBasicBlock(RN);
-    isl_set *&Domain = DomainMap[BB];
+    isl::set &Domain = DomainMap[BB];
     assert(Domain && "Cannot propagate a nullptr");
 
-    auto *InvalidDomain = InvalidDomainMap[BB].copy();
+    isl::set InvalidDomain = InvalidDomainMap[BB];
 
-    bool IsInvalidBlock =
-        ContainsErrorBlock || isl_set_is_subset(Domain, InvalidDomain);
+    bool IsInvalidBlock = ContainsErrorBlock || Domain.is_subset(InvalidDomain);
 
     if (!IsInvalidBlock) {
-      InvalidDomain = isl_set_intersect(InvalidDomain, isl_set_copy(Domain));
+      InvalidDomain = InvalidDomain.intersect(Domain);
     } else {
-      isl_set_free(InvalidDomain);
       InvalidDomain = Domain;
-      isl_set *DomPar = isl_set_params(isl_set_copy(Domain));
-      recordAssumption(ERRORBLOCK, DomPar, BB->getTerminator()->getDebugLoc(),
-                       AS_RESTRICTION);
+      isl::set DomPar = Domain.params();
+      recordAssumption(ERRORBLOCK, DomPar.release(),
+                       BB->getTerminator()->getDebugLoc(), AS_RESTRICTION);
       Domain = nullptr;
     }
 
-    if (isl_set_is_empty(InvalidDomain)) {
-      InvalidDomainMap[BB] = isl::manage(InvalidDomain);
+    if (InvalidDomain.is_empty()) {
+      InvalidDomainMap[BB] = InvalidDomain;
       continue;
     }
 
@@ -2812,7 +2810,7 @@ bool Scop::propagateInvalidStmtDomains(
       Loop *SuccBBLoop = getFirstNonBoxedLoopFor(SuccBB, LI, getBoxedLoops());
 
       auto *AdjustedInvalidDomain = adjustDomainDimensions(
-          *this, isl_set_copy(InvalidDomain), BBLoop, SuccBBLoop);
+          *this, InvalidDomain.copy(), BBLoop, SuccBBLoop);
 
       auto *SuccInvalidDomain = InvalidDomainMap[SuccBB].copy();
       SuccInvalidDomain =
@@ -2827,13 +2825,12 @@ bool Scop::propagateInvalidStmtDomains(
       if (NumConjucts < MaxDisjunctsInDomain)
         continue;
 
-      isl_set_free(InvalidDomain);
       InvalidDomainMap.erase(BB);
       invalidate(COMPLEXITY, TI->getDebugLoc());
       return false;
     }
 
-    InvalidDomainMap[BB] = isl::manage(InvalidDomain);
+    InvalidDomainMap[BB] = InvalidDomain;
   }
 
   return true;
@@ -2864,25 +2861,23 @@ void Scop::propagateDomainConstraintsToRegionExit(
     L = L->getParentLoop();
   }
 
-  auto *Domain = DomainMap[BB];
+  isl::set Domain = DomainMap[BB];
   assert(Domain && "Cannot propagate a nullptr");
 
   Loop *ExitBBLoop = getFirstNonBoxedLoopFor(ExitBB, LI, getBoxedLoops());
 
   // Since the dimensions of @p BB and @p ExitBB might be different we have to
   // adjust the domain before we can propagate it.
-  auto *AdjustedDomain =
-      adjustDomainDimensions(*this, isl_set_copy(Domain), BBLoop, ExitBBLoop);
-  auto *&ExitDomain = DomainMap[ExitBB];
+  isl::set AdjustedDomain = isl::manage(
+      adjustDomainDimensions(*this, Domain.copy(), BBLoop, ExitBBLoop));
+  isl::set &ExitDomain = DomainMap[ExitBB];
 
   // If the exit domain is not yet created we set it otherwise we "add" the
   // current domain.
-  ExitDomain =
-      ExitDomain ? isl_set_union(AdjustedDomain, ExitDomain) : AdjustedDomain;
+  ExitDomain = ExitDomain ? AdjustedDomain.unite(ExitDomain) : AdjustedDomain;
 
   // Initialize the invalid domain.
-  InvalidDomainMap[ExitBB] =
-      isl::manage(isl_set_empty(isl_set_get_space(ExitDomain)));
+  InvalidDomainMap[ExitBB] = ExitDomain.empty(ExitDomain.get_space());
 
   FinishedExitBlocks.insert(ExitBB);
 }
@@ -2927,10 +2922,10 @@ bool Scop::buildDomainsWithBranchConstraints(
     if (isa<UnreachableInst>(TI))
       continue;
 
-    isl_set *Domain = DomainMap.lookup(BB);
+    isl::set Domain = DomainMap.lookup(BB);
     if (!Domain)
       continue;
-    MaxLoopDepth = std::max(MaxLoopDepth, isl_set_n_dim(Domain));
+    MaxLoopDepth = std::max(MaxLoopDepth, isl_set_n_dim(Domain.get()));
 
     auto *BBLoop = getRegionNodeLoop(RN, LI);
     // Propagate the domain from BB directly to blocks that have a superset
@@ -2955,8 +2950,8 @@ bool Scop::buildDomainsWithBranchConstraints(
     // basic blocks we use the helper function buildConditionSets.
     SmallVector<isl_set *, 8> ConditionSets;
     if (RN->isSubRegion())
-      ConditionSets.push_back(isl_set_copy(Domain));
-    else if (!buildConditionSets(*this, BB, TI, BBLoop, Domain,
+      ConditionSets.push_back(Domain.copy());
+    else if (!buildConditionSets(*this, BB, TI, BBLoop, Domain.get(),
                                  InvalidDomainMap, ConditionSets))
       return false;
 
@@ -2966,51 +2961,45 @@ bool Scop::buildDomainsWithBranchConstraints(
     // exist anymore.
     assert(RN->isSubRegion() || TI->getNumSuccessors() == ConditionSets.size());
     for (unsigned u = 0, e = ConditionSets.size(); u < e; u++) {
-      isl_set *CondSet = ConditionSets[u];
+      isl::set CondSet = isl::manage(ConditionSets[u]);
       BasicBlock *SuccBB = getRegionNodeSuccessor(RN, TI, u);
 
       // Skip blocks outside the region.
-      if (!contains(SuccBB)) {
-        isl_set_free(CondSet);
+      if (!contains(SuccBB))
         continue;
-      }
 
       // If we propagate the domain of some block to "SuccBB" we do not have to
       // adjust the domain.
-      if (FinishedExitBlocks.count(SuccBB)) {
-        isl_set_free(CondSet);
+      if (FinishedExitBlocks.count(SuccBB))
         continue;
-      }
 
       // Skip back edges.
-      if (DT.dominates(SuccBB, BB)) {
-        isl_set_free(CondSet);
+      if (DT.dominates(SuccBB, BB))
         continue;
-      }
 
       Loop *SuccBBLoop = getFirstNonBoxedLoopFor(SuccBB, LI, getBoxedLoops());
 
-      CondSet = adjustDomainDimensions(*this, CondSet, BBLoop, SuccBBLoop);
+      CondSet = isl::manage(
+          adjustDomainDimensions(*this, CondSet.copy(), BBLoop, SuccBBLoop));
 
       // Set the domain for the successor or merge it with an existing domain in
       // case there are multiple paths (without loop back edges) to the
       // successor block.
-      isl_set *&SuccDomain = DomainMap[SuccBB];
+      isl::set &SuccDomain = DomainMap[SuccBB];
 
       if (SuccDomain) {
-        SuccDomain = isl_set_coalesce(isl_set_union(SuccDomain, CondSet));
+        SuccDomain = SuccDomain.unite(CondSet).coalesce();
       } else {
         // Initialize the invalid domain.
-        InvalidDomainMap[SuccBB] =
-            isl::manage(isl_set_empty(isl_set_get_space(CondSet)));
+        InvalidDomainMap[SuccBB] = CondSet.empty(CondSet.get_space());
         SuccDomain = CondSet;
       }
 
-      SuccDomain = isl_set_detect_equalities(SuccDomain);
+      SuccDomain = SuccDomain.detect_equalities();
 
       // Check if the maximal number of domain disjunctions was reached.
       // In case this happens we will clean up and bail.
-      if (isl_set_n_basic_set(SuccDomain) < MaxDisjunctsInDomain)
+      if (isl_set_n_basic_set(SuccDomain.get()) < MaxDisjunctsInDomain)
         continue;
 
       invalidate(COMPLEXITY, DebugLoc());
@@ -3107,13 +3096,14 @@ bool Scop::propagateDomainConstraints(
     }
 
     BasicBlock *BB = getRegionNodeBasicBlock(RN);
-    isl_set *&Domain = DomainMap[BB];
+    isl::set &Domain = DomainMap[BB];
     assert(Domain);
 
     // Under the union of all predecessor conditions we can reach this block.
-    auto *PredDom = getPredecessorDomainConstraints(BB, Domain, DT, LI);
-    Domain = isl_set_coalesce(isl_set_intersect(Domain, PredDom));
-    Domain = isl_set_align_params(Domain, getParamSpace());
+    isl::set PredDom =
+        isl::manage(getPredecessorDomainConstraints(BB, Domain.get(), DT, LI));
+    Domain = Domain.intersect(PredDom).coalesce();
+    Domain = Domain.align_params(isl::manage(getParamSpace()));
 
     Loop *BBLoop = getRegionNodeLoop(RN, LI);
     if (BBLoop && BBLoop->getHeader() == BB && contains(BBLoop))
@@ -3154,13 +3144,12 @@ bool Scop::addLoopBoundsToHeaderDomain(
 
   BasicBlock *HeaderBB = L->getHeader();
   assert(DomainMap.count(HeaderBB));
-  isl_set *&HeaderBBDom = DomainMap[HeaderBB];
+  isl::set &HeaderBBDom = DomainMap[HeaderBB];
 
-  isl_map *NextIterationMap =
-      createNextIterationMap(isl_set_get_space(HeaderBBDom), LoopDepth);
+  isl::map NextIterationMap = isl::manage(
+      createNextIterationMap(HeaderBBDom.get_space().release(), LoopDepth));
 
-  isl_set *UnionBackedgeCondition =
-      isl_set_empty(isl_set_get_space(HeaderBBDom));
+  isl::set UnionBackedgeCondition = HeaderBBDom.empty(HeaderBBDom.get_space());
 
   SmallVector<llvm::BasicBlock *, 4> LatchBlocks;
   L->getLoopLatches(LatchBlocks);
@@ -3168,58 +3157,54 @@ bool Scop::addLoopBoundsToHeaderDomain(
   for (BasicBlock *LatchBB : LatchBlocks) {
 
     // If the latch is only reachable via error statements we skip it.
-    isl_set *LatchBBDom = DomainMap.lookup(LatchBB);
+    isl::set LatchBBDom = DomainMap.lookup(LatchBB);
     if (!LatchBBDom)
       continue;
 
-    isl_set *BackedgeCondition = nullptr;
+    isl::set BackedgeCondition = nullptr;
 
     TerminatorInst *TI = LatchBB->getTerminator();
     BranchInst *BI = dyn_cast<BranchInst>(TI);
     assert(BI && "Only branch instructions allowed in loop latches");
 
     if (BI->isUnconditional())
-      BackedgeCondition = isl_set_copy(LatchBBDom);
+      BackedgeCondition = LatchBBDom;
     else {
       SmallVector<isl_set *, 8> ConditionSets;
       int idx = BI->getSuccessor(0) != HeaderBB;
-      if (!buildConditionSets(*this, LatchBB, TI, L, LatchBBDom,
-                              InvalidDomainMap, ConditionSets)) {
-        isl_map_free(NextIterationMap);
-        isl_set_free(UnionBackedgeCondition);
+      if (!buildConditionSets(*this, LatchBB, TI, L, LatchBBDom.get(),
+                              InvalidDomainMap, ConditionSets))
         return false;
-      }
 
       // Free the non back edge condition set as we do not need it.
       isl_set_free(ConditionSets[1 - idx]);
 
-      BackedgeCondition = ConditionSets[idx];
+      BackedgeCondition = isl::manage(ConditionSets[idx]);
     }
 
     int LatchLoopDepth = getRelativeLoopDepth(LI.getLoopFor(LatchBB));
     assert(LatchLoopDepth >= LoopDepth);
-    BackedgeCondition =
-        isl_set_project_out(BackedgeCondition, isl_dim_set, LoopDepth + 1,
-                            LatchLoopDepth - LoopDepth);
-    UnionBackedgeCondition =
-        isl_set_union(UnionBackedgeCondition, BackedgeCondition);
+    BackedgeCondition = BackedgeCondition.project_out(
+        isl::dim::set, LoopDepth + 1, LatchLoopDepth - LoopDepth);
+    UnionBackedgeCondition = UnionBackedgeCondition.unite(BackedgeCondition);
   }
 
-  isl_map *ForwardMap = isl_map_lex_le(isl_set_get_space(HeaderBBDom));
+  isl::map ForwardMap = ForwardMap.lex_le(HeaderBBDom.get_space());
   for (int i = 0; i < LoopDepth; i++)
-    ForwardMap = isl_map_equate(ForwardMap, isl_dim_in, i, isl_dim_out, i);
+    ForwardMap = ForwardMap.equate(isl::dim::in, i, isl::dim::out, i);
 
-  isl_set *UnionBackedgeConditionComplement =
-      isl_set_complement(UnionBackedgeCondition);
-  UnionBackedgeConditionComplement = isl_set_lower_bound_si(
-      UnionBackedgeConditionComplement, isl_dim_set, LoopDepth, 0);
+  isl::set UnionBackedgeConditionComplement =
+      UnionBackedgeCondition.complement();
   UnionBackedgeConditionComplement =
-      isl_set_apply(UnionBackedgeConditionComplement, ForwardMap);
-  HeaderBBDom = isl_set_subtract(HeaderBBDom, UnionBackedgeConditionComplement);
-  HeaderBBDom = isl_set_apply(HeaderBBDom, NextIterationMap);
+      UnionBackedgeConditionComplement.lower_bound_si(isl::dim::set, LoopDepth,
+                                                      0);
+  UnionBackedgeConditionComplement =
+      UnionBackedgeConditionComplement.apply(ForwardMap);
+  HeaderBBDom = HeaderBBDom.subtract(UnionBackedgeConditionComplement);
+  HeaderBBDom = HeaderBBDom.apply(NextIterationMap);
 
-  auto Parts = partitionSetParts(HeaderBBDom, LoopDepth);
-  HeaderBBDom = Parts.second;
+  auto Parts = partitionSetParts(HeaderBBDom.copy(), LoopDepth);
+  HeaderBBDom = isl::manage(Parts.second);
 
   // Check if there is a <nsw> tagged AddRec for this loop and if so do not add
   // the bounded assumptions to the context as they are already implied by the
@@ -3678,9 +3663,6 @@ Scop::~Scop() {
 
   for (auto &It : ParameterIds)
     isl_id_free(It.second);
-
-  for (auto It : DomainMap)
-    isl_set_free(It.second);
 
   for (auto &AS : RecordedAssumptions)
     isl_set_free(AS.Set);

@@ -1671,7 +1671,7 @@ private:
   DenseMap<BasicBlock *, ScopStmt *> StmtMap;
 
   /// A map from basic blocks to their domains.
-  DenseMap<BasicBlock *, isl_set *> DomainMap;
+  DenseMap<BasicBlock *, isl::set> DomainMap;
 
   /// Constraints on parameters.
   isl_set *Context;

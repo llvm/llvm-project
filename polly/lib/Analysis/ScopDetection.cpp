@@ -1402,9 +1402,19 @@ bool ScopDetection::allBlocksValid(DetectionContext &Context) const {
 
   for (const BasicBlock *BB : CurRegion.blocks()) {
     Loop *L = LI.getLoopFor(BB);
-    if (L && L->getHeader() == BB && CurRegion.contains(L) &&
-        (!isValidLoop(L, Context) && !KeepGoing))
-      return false;
+    if (L && L->getHeader() == BB) {
+      if (CurRegion.contains(L)) {
+        if (!isValidLoop(L, Context) && !KeepGoing)
+          return false;
+      } else {
+        SmallVector<BasicBlock *, 1> Latches;
+        L->getLoopLatches(Latches);
+        for (BasicBlock *Latch : Latches)
+          if (CurRegion.contains(Latch))
+            return invalid<ReportLoopOnlySomeLatches>(Context, /*Assert=*/true,
+                                                      L);
+      }
+    }
   }
 
   for (BasicBlock *BB : CurRegion.blocks()) {
