@@ -85,6 +85,7 @@ enum class RejectReasonKind {
 
   LoopBound,
   LoopHasNoExit,
+  LoopOnlySomeLatches,
 
   FuncCall,
   NonSimpleMemoryAccess,
@@ -550,6 +551,34 @@ class ReportLoopHasNoExit : public RejectReason {
 public:
   ReportLoopHasNoExit(Loop *L)
       : RejectReason(RejectReasonKind::LoopHasNoExit), L(L),
+        Loc(L->getStartLoc()) {}
+
+  /// @name LLVM-RTTI interface
+  //@{
+  static bool classof(const RejectReason *RR);
+  //@}
+
+  /// @name RejectReason interface
+  //@{
+  virtual std::string getMessage() const override;
+  virtual const DebugLoc &getDebugLoc() const override;
+  virtual std::string getEndUserMessage() const override;
+  //@}
+};
+
+//===----------------------------------------------------------------------===//
+/// Captures errors when not all loop latches are part of the scop.
+class ReportLoopOnlySomeLatches : public RejectReason {
+  //===--------------------------------------------------------------------===//
+
+  /// The loop for which not all loop latches are part of the scop.
+  Loop *L;
+
+  const DebugLoc Loc;
+
+public:
+  ReportLoopOnlySomeLatches(Loop *L)
+      : RejectReason(RejectReasonKind::LoopOnlySomeLatches), L(L),
         Loc(L->getStartLoc()) {}
 
   /// @name LLVM-RTTI interface

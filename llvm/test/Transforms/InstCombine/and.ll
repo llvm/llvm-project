@@ -683,10 +683,8 @@ define i32 @test47(i32 %x, i32 %y) nounwind {
 define i1 @and_orn_cmp_1(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: @and_orn_cmp_1(
 ; CHECK-NEXT:    [[X:%.*]] = icmp sgt i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[X_INV:%.*]] = icmp sle i32 [[A]], [[B]]
 ; CHECK-NEXT:    [[Y:%.*]] = icmp ugt i32 [[C:%.*]], 42
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[Y]], [[X_INV]]
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[X]], [[OR]]
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[X]], [[Y]]
 ; CHECK-NEXT:    ret i1 [[AND]]
 ;
   %x = icmp sgt i32 %a, %b
@@ -697,16 +695,14 @@ define i1 @and_orn_cmp_1(i32 %a, i32 %b, i32 %c) {
   ret i1 %and
 }
 
-; Commute the 'or':
+; Commute the 'and':
 ; ((Y | ~X) & X) -> (X & Y), where 'not' is an inverted cmp
 
 define <2 x i1> @and_orn_cmp_2(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c) {
 ; CHECK-LABEL: @and_orn_cmp_2(
 ; CHECK-NEXT:    [[X:%.*]] = icmp sge <2 x i32> [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[X_INV:%.*]] = icmp slt <2 x i32> [[A]], [[B]]
 ; CHECK-NEXT:    [[Y:%.*]] = icmp ugt <2 x i32> [[C:%.*]], <i32 42, i32 47>
-; CHECK-NEXT:    [[OR:%.*]] = or <2 x i1> [[Y]], [[X_INV]]
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i1> [[OR]], [[X]]
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i1> [[Y]], [[X]]
 ; CHECK-NEXT:    ret <2 x i1> [[AND]]
 ;
   %x = icmp sge <2 x i32> %a, %b
@@ -717,16 +713,14 @@ define <2 x i1> @and_orn_cmp_2(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c) {
   ret <2 x i1> %and
 }
 
-; Commute the 'and':
+; Commute the 'or':
 ; (X & (~X | Y)) -> (X & Y), where 'not' is an inverted cmp
 
 define i1 @and_orn_cmp_3(i72 %a, i72 %b, i72 %c) {
 ; CHECK-LABEL: @and_orn_cmp_3(
 ; CHECK-NEXT:    [[X:%.*]] = icmp ugt i72 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[X_INV:%.*]] = icmp ule i72 [[A]], [[B]]
 ; CHECK-NEXT:    [[Y:%.*]] = icmp ugt i72 [[C:%.*]], 42
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[X_INV]], [[Y]]
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[X]], [[OR]]
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[X]], [[Y]]
 ; CHECK-NEXT:    ret i1 [[AND]]
 ;
   %x = icmp ugt i72 %a, %b
@@ -737,16 +731,14 @@ define i1 @and_orn_cmp_3(i72 %a, i72 %b, i72 %c) {
   ret i1 %and
 }
 
-; Commute the 'or':
+; Commute the 'and':
 ; ((~X | Y) & X) -> (X & Y), where 'not' is an inverted cmp
 
 define <3 x i1> @or_andn_cmp_4(<3 x i32> %a, <3 x i32> %b, <3 x i32> %c) {
 ; CHECK-LABEL: @or_andn_cmp_4(
 ; CHECK-NEXT:    [[X:%.*]] = icmp eq <3 x i32> [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[X_INV:%.*]] = icmp ne <3 x i32> [[A]], [[B]]
 ; CHECK-NEXT:    [[Y:%.*]] = icmp ugt <3 x i32> [[C:%.*]], <i32 42, i32 43, i32 -1>
-; CHECK-NEXT:    [[OR:%.*]] = or <3 x i1> [[X_INV]], [[Y]]
-; CHECK-NEXT:    [[AND:%.*]] = and <3 x i1> [[OR]], [[X]]
+; CHECK-NEXT:    [[AND:%.*]] = and <3 x i1> [[Y]], [[X]]
 ; CHECK-NEXT:    ret <3 x i1> [[AND]]
 ;
   %x = icmp eq <3 x i32> %a, %b
@@ -758,15 +750,13 @@ define <3 x i1> @or_andn_cmp_4(<3 x i32> %a, <3 x i32> %b, <3 x i32> %c) {
 }
 
 ; In the next 4 tests, vary the types and predicates for extra coverage.
-; (~X & (Y | X)) -> (X & Y), where 'not' is an inverted cmp
+; (~X & (Y | X)) -> (~X & Y), where 'not' is an inverted cmp
 
 define i1 @andn_or_cmp_1(i37 %a, i37 %b, i37 %c) {
 ; CHECK-LABEL: @andn_or_cmp_1(
-; CHECK-NEXT:    [[X:%.*]] = icmp sgt i37 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[X_INV:%.*]] = icmp sle i37 [[A]], [[B]]
+; CHECK-NEXT:    [[X_INV:%.*]] = icmp sle i37 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[Y:%.*]] = icmp ugt i37 [[C:%.*]], 42
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[Y]], [[X]]
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[X_INV]], [[OR]]
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[X_INV]], [[Y]]
 ; CHECK-NEXT:    ret i1 [[AND]]
 ;
   %x = icmp sgt i37 %a, %b
@@ -777,16 +767,14 @@ define i1 @andn_or_cmp_1(i37 %a, i37 %b, i37 %c) {
   ret i1 %and
 }
 
-; Commute the 'or':
-; ((Y | X) & ~X) -> (X & Y), where 'not' is an inverted cmp
+; Commute the 'and':
+; ((Y | X) & ~X) -> (~X & Y), where 'not' is an inverted cmp
 
 define i1 @andn_or_cmp_2(i16 %a, i16 %b, i16 %c) {
 ; CHECK-LABEL: @andn_or_cmp_2(
-; CHECK-NEXT:    [[X:%.*]] = icmp sge i16 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[X_INV:%.*]] = icmp slt i16 [[A]], [[B]]
+; CHECK-NEXT:    [[X_INV:%.*]] = icmp slt i16 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[Y:%.*]] = icmp ugt i16 [[C:%.*]], 42
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[Y]], [[X]]
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[OR]], [[X_INV]]
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[Y]], [[X_INV]]
 ; CHECK-NEXT:    ret i1 [[AND]]
 ;
   %x = icmp sge i16 %a, %b
@@ -797,16 +785,14 @@ define i1 @andn_or_cmp_2(i16 %a, i16 %b, i16 %c) {
   ret i1 %and
 }
 
-; Commute the 'and':
-; (~X & (X | Y)) -> (X & Y), where 'not' is an inverted cmp
+; Commute the 'or':
+; (~X & (X | Y)) -> (~X & Y), where 'not' is an inverted cmp
 
 define <4 x i1> @andn_or_cmp_3(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c) {
 ; CHECK-LABEL: @andn_or_cmp_3(
-; CHECK-NEXT:    [[X:%.*]] = icmp ugt <4 x i32> [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[X_INV:%.*]] = icmp ule <4 x i32> [[A]], [[B]]
+; CHECK-NEXT:    [[X_INV:%.*]] = icmp ule <4 x i32> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[Y:%.*]] = icmp ugt <4 x i32> [[C:%.*]], <i32 42, i32 0, i32 1, i32 -1>
-; CHECK-NEXT:    [[OR:%.*]] = or <4 x i1> [[X]], [[Y]]
-; CHECK-NEXT:    [[AND:%.*]] = and <4 x i1> [[X_INV]], [[OR]]
+; CHECK-NEXT:    [[AND:%.*]] = and <4 x i1> [[X_INV]], [[Y]]
 ; CHECK-NEXT:    ret <4 x i1> [[AND]]
 ;
   %x = icmp ugt <4 x i32> %a, %b
@@ -817,16 +803,14 @@ define <4 x i1> @andn_or_cmp_3(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c) {
   ret <4 x i1> %and
 }
 
-; Commute the 'or':
-; ((X | Y) & ~X) -> (X & Y), where 'not' is an inverted cmp
+; Commute the 'and':
+; ((X | Y) & ~X) -> (~X & Y), where 'not' is an inverted cmp
 
 define i1 @andn_or_cmp_4(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: @andn_or_cmp_4(
-; CHECK-NEXT:    [[X:%.*]] = icmp eq i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[X_INV:%.*]] = icmp ne i32 [[A]], [[B]]
+; CHECK-NEXT:    [[X_INV:%.*]] = icmp ne i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[Y:%.*]] = icmp ugt i32 [[C:%.*]], 42
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[X]], [[Y]]
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[OR]], [[X_INV]]
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[Y]], [[X_INV]]
 ; CHECK-NEXT:    ret i1 [[AND]]
 ;
   %x = icmp eq i32 %a, %b

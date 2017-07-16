@@ -26,6 +26,8 @@
 #  define __errno_location __error
 #elif SANITIZER_ANDROID
 #  define __errno_location __errno
+#elif SANITIZER_WINDOWS
+#  define __errno_location _errno
 #endif
 
 extern "C" int *__errno_location();

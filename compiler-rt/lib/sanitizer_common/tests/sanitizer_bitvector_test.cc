@@ -62,14 +62,14 @@ void Print(const BV &bv) {
   t.copyFrom(bv);
   while (!t.empty()) {
     uptr idx = t.getAndClearFirstOne();
-    fprintf(stderr, "%zd ", idx);
+    fprintf(stderr, "%lu ", idx);
   }
   fprintf(stderr, "\n");
 }
 
 void Print(const set<uptr> &s) {
   for (set<uptr>::iterator it = s.begin(); it != s.end(); ++it) {
-    fprintf(stderr, "%zd ", *it);
+    fprintf(stderr, "%lu ", *it);
   }
   fprintf(stderr, "\n");
 }

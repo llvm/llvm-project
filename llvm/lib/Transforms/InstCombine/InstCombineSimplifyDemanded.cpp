@@ -417,8 +417,10 @@ Value *InstCombiner::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
       // the highest demanded bit, we just return the other side.
       if (DemandedFromOps.isSubsetOf(RHSKnown.Zero))
         return I->getOperand(0);
-      // We can't do this with the LHS for subtraction.
-      if (I->getOpcode() == Instruction::Add &&
+      // We can't do this with the LHS for subtraction, unless we are only
+      // demanding the LSB.
+      if ((I->getOpcode() == Instruction::Add ||
+           DemandedFromOps.isOneValue()) &&
           DemandedFromOps.isSubsetOf(LHSKnown.Zero))
         return I->getOperand(1);
     }
