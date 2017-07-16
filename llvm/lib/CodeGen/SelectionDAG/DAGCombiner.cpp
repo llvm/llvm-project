@@ -13001,7 +13001,7 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
     SDValue NewStoreChain = getMergeStoreChains(StoreNodes, NumElem);
     AddToWorklist(NewStoreChain.getNode());
 
-    MachineMemOperand::Flags MMOFlags = isDereferenceable ? 
+    MachineMemOperand::Flags MMOFlags = isDereferenceable ?
                                           MachineMemOperand::MODereferenceable:
                                           MachineMemOperand::MONone;
 

@@ -88,9 +88,9 @@ private:
     // Make sure the offset is somewhere in our items array.
     if (Offset >= getLength())
       return make_error<BinaryStreamError>(stream_error_code::stream_too_short);
-    auto Iter = std::lower_bound(
-        ItemEndOffsets.begin(), ItemEndOffsets.end(), Offset,
-        [](const uint32_t &A, const uint32_t &B) { return A <= B; });
+    ++Offset;
+    auto Iter =
+        std::lower_bound(ItemEndOffsets.begin(), ItemEndOffsets.end(), Offset);
     size_t Idx = std::distance(ItemEndOffsets.begin(), Iter);
     assert(Idx < Items.size() && "binary search for offset failed");
     return Idx;

@@ -41,7 +41,7 @@ define <4 x i64> @var_rotate_v4i64(<4 x i64> %a, <4 x i64> %b) nounwind {
 ;
 ; AVX2-LABEL: var_rotate_v4i64:
 ; AVX2:       # BB#0:
-; AVX2-NEXT:    vpbroadcastq {{.*}}(%rip), %ymm2
+; AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [64,64,64,64]
 ; AVX2-NEXT:    vpsubq %ymm1, %ymm2, %ymm2
 ; AVX2-NEXT:    vpsllvq %ymm1, %ymm0, %ymm1
 ; AVX2-NEXT:    vpsrlvq %ymm2, %ymm0, %ymm0
@@ -50,7 +50,7 @@ define <4 x i64> @var_rotate_v4i64(<4 x i64> %a, <4 x i64> %b) nounwind {
 ;
 ; AVX512-LABEL: var_rotate_v4i64:
 ; AVX512:       # BB#0:
-; AVX512-NEXT:    vpbroadcastq {{.*}}(%rip), %ymm2
+; AVX512-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [64,64,64,64]
 ; AVX512-NEXT:    vpsubq %ymm1, %ymm2, %ymm2
 ; AVX512-NEXT:    vpsllvq %ymm1, %ymm0, %ymm1
 ; AVX512-NEXT:    vpsrlvq %ymm2, %ymm0, %ymm0
@@ -128,7 +128,7 @@ define <8 x i32> @var_rotate_v8i32(<8 x i32> %a, <8 x i32> %b) nounwind {
 ;
 ; AVX2-LABEL: var_rotate_v8i32:
 ; AVX2:       # BB#0:
-; AVX2-NEXT:    vpbroadcastd {{.*}}(%rip), %ymm2
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} ymm2 = [32,32,32,32,32,32,32,32]
 ; AVX2-NEXT:    vpsubd %ymm1, %ymm2, %ymm2
 ; AVX2-NEXT:    vpsllvd %ymm1, %ymm0, %ymm1
 ; AVX2-NEXT:    vpsrlvd %ymm2, %ymm0, %ymm0
@@ -137,7 +137,7 @@ define <8 x i32> @var_rotate_v8i32(<8 x i32> %a, <8 x i32> %b) nounwind {
 ;
 ; AVX512-LABEL: var_rotate_v8i32:
 ; AVX512:       # BB#0:
-; AVX512-NEXT:    vpbroadcastd {{.*}}(%rip), %ymm2
+; AVX512-NEXT:    vpbroadcastd {{.*#+}} ymm2 = [32,32,32,32,32,32,32,32]
 ; AVX512-NEXT:    vpsubd %ymm1, %ymm2, %ymm2
 ; AVX512-NEXT:    vpsllvd %ymm1, %ymm0, %ymm1
 ; AVX512-NEXT:    vpsrlvd %ymm2, %ymm0, %ymm0

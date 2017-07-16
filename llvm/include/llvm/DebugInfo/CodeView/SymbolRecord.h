@@ -848,7 +848,7 @@ public:
       : SymbolRecord(SymbolRecordKind::BuildInfoSym),
         RecordOffset(RecordOffset) {}
 
-  uint32_t BuildId;
+  TypeIndex BuildId;
 
   uint32_t RecordOffset;
 };

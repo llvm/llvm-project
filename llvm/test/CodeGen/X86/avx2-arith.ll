@@ -386,13 +386,13 @@ define <8 x i32> @mul_const9(<8 x i32> %x) {
 define <4 x i32> @mul_const10(<4 x i32> %x) {
 ; X32-LABEL: mul_const10:
 ; X32:       # BB#0:
-; X32-NEXT:    vpbroadcastd {{\.LCPI.*}}, %xmm1
+; X32-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [16843009,16843009,16843009,16843009]
 ; X32-NEXT:    vpmulld %xmm1, %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: mul_const10:
 ; X64:       # BB#0:
-; X64-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm1
+; X64-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [16843009,16843009,16843009,16843009]
 ; X64-NEXT:    vpmulld %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    retq
   %m = mul <4 x i32> %x, <i32 16843009, i32 16843009, i32 16843009, i32 16843009>
@@ -403,13 +403,13 @@ define <4 x i32> @mul_const10(<4 x i32> %x) {
 define <4 x i32> @mul_const11(<4 x i32> %x) {
 ; X32-LABEL: mul_const11:
 ; X32:       # BB#0:
-; X32-NEXT:    vpbroadcastd {{\.LCPI.*}}, %xmm1
+; X32-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [2155905152,2155905152,2155905152,2155905152]
 ; X32-NEXT:    vpmulld %xmm1, %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: mul_const11:
 ; X64:       # BB#0:
-; X64-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm1
+; X64-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [2155905152,2155905152,2155905152,2155905152]
 ; X64-NEXT:    vpmulld %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    retq
   %m = mul <4 x i32> %x, <i32 2155905152, i32 2155905152, i32 2155905152, i32 2155905152>

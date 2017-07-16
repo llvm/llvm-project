@@ -1745,14 +1745,11 @@ static Value *SimplifyAndInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
     return Constant::getNullValue(Op0->getType());
 
   // (A | ?) & A = A
-  Value *A = nullptr, *B = nullptr;
-  if (match(Op0, m_Or(m_Value(A), m_Value(B))) &&
-      (A == Op1 || B == Op1))
+  if (match(Op0, m_c_Or(m_Specific(Op1), m_Value())))
     return Op1;
 
   // A & (A | ?) = A
-  if (match(Op1, m_Or(m_Value(A), m_Value(B))) &&
-      (A == Op0 || B == Op0))
+  if (match(Op1, m_c_Or(m_Specific(Op0), m_Value())))
     return Op0;
 
   // A mask that only clears known zeros of a shifted value is a no-op.
@@ -1852,26 +1849,22 @@ static Value *SimplifyOrInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
     return Constant::getAllOnesValue(Op0->getType());
 
   // (A & ?) | A = A
-  Value *A = nullptr, *B = nullptr;
-  if (match(Op0, m_And(m_Value(A), m_Value(B))) &&
-      (A == Op1 || B == Op1))
+  if (match(Op0, m_c_And(m_Specific(Op1), m_Value())))
     return Op1;
 
   // A | (A & ?) = A
-  if (match(Op1, m_And(m_Value(A), m_Value(B))) &&
-      (A == Op0 || B == Op0))
+  if (match(Op1, m_c_And(m_Specific(Op0), m_Value())))
     return Op0;
 
   // ~(A & ?) | A = -1
-  if (match(Op0, m_Not(m_And(m_Value(A), m_Value(B)))) &&
-      (A == Op1 || B == Op1))
+  if (match(Op0, m_Not(m_c_And(m_Specific(Op1), m_Value()))))
     return Constant::getAllOnesValue(Op1->getType());
 
   // A | ~(A & ?) = -1
-  if (match(Op1, m_Not(m_And(m_Value(A), m_Value(B)))) &&
-      (A == Op0 || B == Op0))
+  if (match(Op1, m_Not(m_c_And(m_Specific(Op1), m_Value()))))
     return Constant::getAllOnesValue(Op0->getType());
 
+  Value *A, *B;
   // (A & ~B) | (A ^ B) -> (A ^ B)
   // (~B & A) | (A ^ B) -> (A ^ B)
   // (A & ~B) | (B ^ A) -> (B ^ A)

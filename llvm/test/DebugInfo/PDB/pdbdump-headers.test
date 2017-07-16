@@ -472,13 +472,13 @@ ALL-NEXT:          frontend = 18.0.31101.0, backend = 18.0.31101.0
 ALL-NEXT:          flags = security checks
 ALL-NEXT:    120 | S_GPROC32 [size = 44] `main`
 ALL-NEXT:          parent = 0, end = 196, addr = 0001:0016, code size = 10
-ALL-NEXT:          debug start = 3, debug end = 8, flags = has fp
+ALL-NEXT:          type = `0x1001 (int ())`, debug start = 3, debug end = 8, flags = has fp
 ALL-NEXT:    164 | S_FRAMEPROC [size = 32]
 ALL-NEXT:          size = 0, padding size = 0, offset to padding = 0
 ALL-NEXT:          bytes of callee saved registers = 0, exception handler addr = 0000:0000
 ALL-NEXT:          flags = has async eh | opt speed
 ALL-NEXT:    196 | S_END [size = 4]
-ALL-NEXT:    200 | S_BUILDINFO [size = 8] BuildId = `4110`
+ALL-NEXT:    200 | S_BUILDINFO [size = 8] BuildId = `0x100E`
 ALL-NEXT:   Mod 0001 | `* Linker *`:
 ALL-NEXT:      4 | S_OBJNAME [size = 20] sig=0, `* Linker *`
 ALL-NEXT:     24 | S_COMPILE3 [size = 48]

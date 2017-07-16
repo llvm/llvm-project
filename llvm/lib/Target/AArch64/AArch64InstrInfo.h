@@ -366,7 +366,7 @@ enum AArch64FrameOffsetStatus {
 /// If result == AArch64FrameOffsetCannotUpdate, @p MI cannot be updated to
 /// use an offset.eq
 /// If result & AArch64FrameOffsetIsLegal, @p Offset can completely be
-/// rewriten in @p MI.
+/// rewritten in @p MI.
 /// If result & AArch64FrameOffsetCanUpdate, @p Offset contains the
 /// amount that is off the limit of the legal offset.
 /// If set, @p OutUseUnscaledOp will contain the whether @p MI should be
