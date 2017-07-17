@@ -3205,7 +3205,7 @@ enum CXCallingConv {
   CXCallingConv_AAPCS_VFP = 7,
   CXCallingConv_X86RegCall = 8,
   CXCallingConv_IntelOclBicc = 9,
-  CXCallingConv_X86_64Win64 = 10,
+  CXCallingConv_Win64 = 10,
   CXCallingConv_X86_64SysV = 11,
   CXCallingConv_X86VectorCall = 12,
   CXCallingConv_Swift = 13,

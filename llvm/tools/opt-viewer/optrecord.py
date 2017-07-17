@@ -12,8 +12,10 @@ except ImportError:
 
 import cgi
 from collections import defaultdict
+import fnmatch
 import functools
 from multiprocessing import Lock
+import os, os.path
 import subprocess
 
 import optpmap
@@ -233,3 +235,19 @@ def gather_results(filenames, num_jobs, should_print_progress):
         all_remarks.update(all_remarks_job)
 
     return all_remarks, file_remarks, max_hotness != 0
+
+
+def find_opt_files(dirs_or_files):
+    all = []
+    for dir_or_file in dirs_or_files:
+        if os.path.isfile(dir_or_file):
+            all.append(dir_or_file)
+        else:
+            for dir, subdirs, files in os.walk(dir_or_file):
+                # Exclude mounted directories and symlinks (os.walk default).
+                subdirs[:] = [d for d in subdirs
+                              if not os.path.ismount(os.path.join(dir, d))]
+                for file in files:
+                    if fnmatch.fnmatch(file, "*.opt.yaml"):
+                        all.append(os.path.join(dir, file))
+    return all

@@ -33,7 +33,6 @@
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFileBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/PDBStringTableBuilder.h"
-#include "llvm/DebugInfo/PDB/Native/PDBTypeServerHandler.h"
 #include "llvm/DebugInfo/PDB/Native/TpiStream.h"
 #include "llvm/DebugInfo/PDB/Native/TpiStreamBuilder.h"
 #include "llvm/Object/COFF.h"
@@ -97,12 +96,6 @@ private:
   /// table.
   DebugStringTableSubsection PDBStrTab;
 
-  // Follow type servers.  If the same type server is encountered more than once
-  // for this instance of `PDBTypeServerHandler` (for example if many object
-  // files reference the same TypeServer), the types from the TypeServer will
-  // only be visited once.
-  pdb::PDBTypeServerHandler TSHandler;
-
   llvm::SmallString<128> NativePath;
 
   std::vector<pdb::SecMapEntry> SectionMap;
@@ -163,15 +156,14 @@ void PDBLinker::mergeDebugT(ObjectFile *File,
   // archive, look next to the archive path.
   StringRef LocalPath =
       !File->ParentName.empty() ? File->ParentName : File->getName();
-  TSHandler.addSearchPath(sys::path::parent_path(LocalPath));
+  (void)LocalPath; // FIXME: Implement type server handling here.
 
   BinaryByteStream Stream(Data, support::little);
   CVTypeArray Types;
   BinaryStreamReader Reader(Stream);
   if (auto EC = Reader.readArray(Types, Reader.getLength()))
     fatal(EC, "Reader::readArray failed");
-  if (auto Err = mergeTypeAndIdRecords(IDTable, TypeTable, TypeIndexMap,
-                                       &TSHandler, Types))
+  if (auto Err = mergeTypeAndIdRecords(IDTable, TypeTable, TypeIndexMap, Types))
     fatal(Err, "codeview::mergeTypeStreams failed");
 }
 

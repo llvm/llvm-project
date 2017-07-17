@@ -37,7 +37,8 @@ static const uptr kProtectionWrite = 2;
 static const uptr kProtectionExecute = 4;
 static const uptr kProtectionShared = 8;
 
-struct MemoryMappedSegment {
+class MemoryMappedSegment {
+ public:
   MemoryMappedSegment(char *buff = nullptr, uptr size = 0)
       : filename(buff), filename_size(size) {}
   ~MemoryMappedSegment() {}
@@ -55,6 +56,21 @@ struct MemoryMappedSegment {
   uptr protection;
   ModuleArch arch;
   u8 uuid[kModuleUUIDSize];
+
+#if SANITIZER_MAC
+
+ private:
+  friend class MemoryMappingLayout;
+
+  template <typename Section>
+  void NextSectionLoad(LoadedModule *module);
+  void AddAddressRanges(LoadedModule *module);
+
+  uptr nsects_;
+  char *current_load_cmd_addr_;
+  u32 lc_type_;
+  uptr base_virt_addr_;
+#endif
 };
 
 class MemoryMappingLayout {

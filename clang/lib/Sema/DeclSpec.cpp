@@ -1082,8 +1082,10 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
                !S.getLangOpts().ZVector)
         S.Diag(TSTLoc, diag::err_invalid_vector_double_decl_spec);
     } else if (TypeSpecType == TST_float) {
-      // vector float is unsupported for ZVector.
-      if (S.getLangOpts().ZVector)
+      // vector float is unsupported for ZVector unless we have the
+      // vector-enhancements facility 1 (ISA revision 12).
+      if (S.getLangOpts().ZVector &&
+          !S.Context.getTargetInfo().hasFeature("arch12"))
         S.Diag(TSTLoc, diag::err_invalid_vector_float_decl_spec);
     } else if (TypeSpecWidth == TSW_long) {
       // vector long is unsupported for ZVector and deprecated for AltiVec.

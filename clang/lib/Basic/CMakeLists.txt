@@ -15,8 +15,23 @@ function(find_first_existing_file out_var)
 endfunction()
 
 macro(find_first_existing_vc_file out_var path)
+  set(git_path "${path}/.git")
+
+  # Normally '.git' is a directory that contains a 'logs/HEAD' file that
+  # is updated as modifications are made to the repository. In case the
+  # repository is a Git submodule, '.git' is a file that contains text that
+  # indicates where the repository's Git directory exists.
+  if (EXISTS "${git_path}" AND NOT IS_DIRECTORY "${git_path}")
+    FILE(READ "${git_path}" file_contents)
+    if("${file_contents}" MATCHES "^gitdir: ([^\n]+)")
+      # '.git' is indeed a link to the submodule's Git directory.
+      # Use the path to that Git directory.
+      set(git_path "${path}/${CMAKE_MATCH_1}")
+    endif()
+  endif()
+
   find_first_existing_file(${out_var}
-    "${path}/.git/logs/HEAD" # Git
+    "${git_path}/logs/HEAD"  # Git or Git submodule
     "${path}/.svn/wc.db"     # SVN 1.7
     "${path}/.svn/entries"   # SVN 1.6
     )

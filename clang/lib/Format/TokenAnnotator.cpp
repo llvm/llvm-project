@@ -1383,7 +1383,8 @@ private:
 
     if (PrevToken->isOneOf(tok::l_paren, tok::l_square, tok::l_brace,
                            tok::comma, tok::semi, tok::kw_return, tok::colon,
-                           tok::equal, tok::kw_delete, tok::kw_sizeof) ||
+                           tok::equal, tok::kw_delete, tok::kw_sizeof,
+                           tok::kw_throw) ||
         PrevToken->isOneOf(TT_BinaryOperator, TT_ConditionalExpr,
                            TT_UnaryOperator, TT_CastRParen))
       return TT_UnaryOperator;

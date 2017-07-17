@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=CHECK %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck %s
 
 ; CHECK-LABEL: {{^}}test1:
 ; CHECK: v_cndmask_b32_e64 v0, 0, 1, exec

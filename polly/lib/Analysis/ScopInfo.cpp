@@ -1240,6 +1240,7 @@ void MemoryAccess::setNewAccessRelation(__isl_take isl_map *NewAccess) {
 #endif
 
   isl_map_free(NewAccessRelation);
+  NewAccess = isl_map_gist_domain(NewAccess, getStatement()->getDomain());
   NewAccessRelation = NewAccess;
 }
 

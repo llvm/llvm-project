@@ -13,7 +13,6 @@
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeRecordMapping.h"
 #include "llvm/DebugInfo/CodeView/TypeSerializer.h"
-#include "llvm/DebugInfo/CodeView/TypeServerHandler.h"
 #include "llvm/DebugInfo/CodeView/TypeTableBuilder.h"
 #include "llvm/DebugInfo/CodeView/TypeVisitorCallbacks.h"
 #include "llvm/DebugInfo/PDB/Native/RawTypes.h"

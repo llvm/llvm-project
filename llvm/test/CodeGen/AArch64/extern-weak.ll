@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=aarch64-none-linux-gnu -relocation-model=pic -o - %s | FileCheck %s
-; RUN: llc -mtriple=aarch64-none-linux-gnu -relocation-model=static -o - < %s | FileCheck --check-prefix=CHECK %s
+; RUN: llc -mtriple=aarch64-none-linux-gnu -relocation-model=static -o - < %s | FileCheck %s
 ; RUN: llc -mtriple=aarch64-none-linux-gnu -code-model=large -o - %s | FileCheck --check-prefix=CHECK-LARGE %s
 
 declare extern_weak i32 @var()

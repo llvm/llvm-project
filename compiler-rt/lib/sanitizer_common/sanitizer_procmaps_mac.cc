@@ -35,6 +35,32 @@
 #endif
 
 namespace __sanitizer {
+template <typename Section>
+void MemoryMappedSegment::NextSectionLoad(LoadedModule *module) {
+  const Section *sc = (const Section *)current_load_cmd_addr_;
+  current_load_cmd_addr_ += sizeof(Section);
+
+  uptr sec_start = sc->addr + base_virt_addr_;
+  uptr sec_end = sec_start + sc->size;
+  module->addAddressRange(sec_start, sec_end, IsExecutable(), IsWritable());
+}
+
+void MemoryMappedSegment::AddAddressRanges(LoadedModule *module) {
+  if (!nsects_) {
+    module->addAddressRange(start, end, IsExecutable(), IsWritable());
+    return;
+  }
+
+  do {
+    if (lc_type_ == LC_SEGMENT) {
+      NextSectionLoad<struct section>(module);
+#ifdef MH_MAGIC_64
+    } else if (lc_type_ == LC_SEGMENT_64) {
+      NextSectionLoad<struct section_64>(module);
+#endif
+    }
+  } while (--nsects_);
+}
 
 MemoryMappingLayout::MemoryMappingLayout(bool cache_enabled) {
   Reset();
@@ -143,21 +169,25 @@ bool MemoryMappingLayout::NextSegmentLoad(MemoryMappedSegment *segment) {
   current_load_cmd_addr_ += ((const load_command *)lc)->cmdsize;
   if (((const load_command *)lc)->cmd == kLCSegment) {
     const SegmentCommand* sc = (const SegmentCommand *)lc;
+    segment->current_load_cmd_addr_ = (char *)lc + sizeof(SegmentCommand);
+    segment->lc_type_ = kLCSegment;
+    segment->nsects_ = sc->nsects;
 
     if (current_image_ == kDyldImageIdx) {
+      segment->base_virt_addr_ = (uptr)get_dyld_hdr();
       // vmaddr is masked with 0xfffff because on macOS versions < 10.12,
       // it contains an absolute address rather than an offset for dyld.
       // To make matters even more complicated, this absolute address
       // isn't actually the absolute segment address, but the offset portion
       // of the address is accurate when combined with the dyld base address,
       // and the mask will give just this offset.
-      segment->start = (sc->vmaddr & 0xfffff) + (uptr)get_dyld_hdr();
-      segment->end = (sc->vmaddr & 0xfffff) + sc->vmsize + (uptr)get_dyld_hdr();
+      segment->start = (sc->vmaddr & 0xfffff) + segment->base_virt_addr_;
     } else {
-      const sptr dlloff = _dyld_get_image_vmaddr_slide(current_image_);
-      segment->start = sc->vmaddr + dlloff;
-      segment->end = sc->vmaddr + sc->vmsize + dlloff;
+      segment->base_virt_addr_ =
+          (uptr)_dyld_get_image_vmaddr_slide(current_image_);
+      segment->start = sc->vmaddr + segment->base_virt_addr_;
     }
+    segment->end = segment->start + sc->vmsize;
 
     // Return the initial protection.
     segment->protection = sc->initprot;
@@ -292,7 +322,7 @@ void MemoryMappingLayout::DumpListOfModules(
   Reset();
   InternalScopedString module_name(kMaxPathLength);
   MemoryMappedSegment segment(module_name.data(), kMaxPathLength);
-  for (uptr i = 0; Next(&segment); i++) {
+  while (Next(&segment)) {
     if (segment.filename[0] == '\0') continue;
     LoadedModule *cur_module = nullptr;
     if (!modules->empty() &&
@@ -304,8 +334,7 @@ void MemoryMappingLayout::DumpListOfModules(
       cur_module->set(segment.filename, segment.start, segment.arch,
                       segment.uuid, current_instrumented_);
     }
-    cur_module->addAddressRange(segment.start, segment.end,
-                                segment.IsExecutable(), segment.IsWritable());
+    segment.AddAddressRanges(cur_module);
   }
 }
 

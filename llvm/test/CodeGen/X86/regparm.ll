@@ -1,4 +1,4 @@
-; RUN: llc %s -mtriple=i386-pc-linux -o - | FileCheck -check-prefix=CHECK %s 
+; RUN: llc %s -mtriple=i386-pc-linux -o - | FileCheck %s 
 ; RUN: llc %s -mtriple=i386-pc-win32 -o - | FileCheck -check-prefix=WIN %s
 ; RUN: llc %s -mtriple=i386-pc-linux -fast-isel -o - | FileCheck -check-prefix=FAST %s 
 ; RUN: llc %s -mtriple=i386-pc-win32 -fast-isel -o - | FileCheck -check-prefix=FASTWIN %s

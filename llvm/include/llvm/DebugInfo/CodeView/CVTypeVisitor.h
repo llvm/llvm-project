@@ -17,7 +17,6 @@
 namespace llvm {
 namespace codeview {
 class TypeCollection;
-class TypeServerHandler;
 class TypeVisitorCallbacks;
 
 enum VisitorDataSource {
@@ -31,11 +30,9 @@ enum VisitorDataSource {
 
 Error visitTypeRecord(CVType &Record, TypeIndex Index,
                       TypeVisitorCallbacks &Callbacks,
-                      VisitorDataSource Source = VDS_BytesPresent,
-                      TypeServerHandler *TS = nullptr);
+                      VisitorDataSource Source = VDS_BytesPresent);
 Error visitTypeRecord(CVType &Record, TypeVisitorCallbacks &Callbacks,
-                      VisitorDataSource Source = VDS_BytesPresent,
-                      TypeServerHandler *TS = nullptr);
+                      VisitorDataSource Source = VDS_BytesPresent);
 
 Error visitMemberRecord(CVMemberRecord Record, TypeVisitorCallbacks &Callbacks,
                         VisitorDataSource Source = VDS_BytesPresent);
@@ -46,12 +43,9 @@ Error visitMemberRecordStream(ArrayRef<uint8_t> FieldList,
                               TypeVisitorCallbacks &Callbacks);
 
 Error visitTypeStream(const CVTypeArray &Types, TypeVisitorCallbacks &Callbacks,
-                      VisitorDataSource Source = VDS_BytesPresent,
-                      TypeServerHandler *TS = nullptr);
-Error visitTypeStream(CVTypeRange Types, TypeVisitorCallbacks &Callbacks,
-                      TypeServerHandler *TS = nullptr);
-Error visitTypeStream(TypeCollection &Types, TypeVisitorCallbacks &Callbacks,
-                      TypeServerHandler *TS = nullptr);
+                      VisitorDataSource Source = VDS_BytesPresent);
+Error visitTypeStream(CVTypeRange Types, TypeVisitorCallbacks &Callbacks);
+Error visitTypeStream(TypeCollection &Types, TypeVisitorCallbacks &Callbacks);
 
 } // end namespace codeview
 } // end namespace llvm

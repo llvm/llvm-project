@@ -1,6 +1,9 @@
 # This is an object compiled with /Zi (see the LF_TYPESERVER2 record) without an
 # adjacent type server PDB. Test that LLD fails gracefully on it.
 
+# FIXME: Type server handling was removed from LLVM.
+# XFAIL: *
+
 # FIXME: Ideally we'd do what MSVC does, which is to warn and drop all debug
 # info in the object with the missing PDB.
 

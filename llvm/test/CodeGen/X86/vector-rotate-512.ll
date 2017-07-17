@@ -11,11 +11,7 @@
 define <8 x i64> @var_rotate_v8i64(<8 x i64> %a, <8 x i64> %b) nounwind {
 ; AVX512-LABEL: var_rotate_v8i64:
 ; AVX512:       # BB#0:
-; AVX512-NEXT:    vpbroadcastq {{.*#+}} zmm2 = [64,64,64,64,64,64,64,64]
-; AVX512-NEXT:    vpsubq %zmm1, %zmm2, %zmm2
-; AVX512-NEXT:    vpsllvq %zmm1, %zmm0, %zmm1
-; AVX512-NEXT:    vpsrlvq %zmm2, %zmm0, %zmm0
-; AVX512-NEXT:    vporq %zmm0, %zmm1, %zmm0
+; AVX512-NEXT:    vprolvq %zmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    retq
   %b64 = sub <8 x i64> <i64 64, i64 64, i64 64, i64 64, i64 64, i64 64, i64 64, i64 64>, %b
   %shl = shl <8 x i64> %a, %b
@@ -27,11 +23,7 @@ define <8 x i64> @var_rotate_v8i64(<8 x i64> %a, <8 x i64> %b) nounwind {
 define <16 x i32> @var_rotate_v16i32(<16 x i32> %a, <16 x i32> %b) nounwind {
 ; AVX512-LABEL: var_rotate_v16i32:
 ; AVX512:       # BB#0:
-; AVX512-NEXT:    vpbroadcastd {{.*#+}} zmm2 = [32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32]
-; AVX512-NEXT:    vpsubd %zmm1, %zmm2, %zmm2
-; AVX512-NEXT:    vpsllvd %zmm1, %zmm0, %zmm1
-; AVX512-NEXT:    vpsrlvd %zmm2, %zmm0, %zmm0
-; AVX512-NEXT:    vpord %zmm0, %zmm1, %zmm0
+; AVX512-NEXT:    vprolvd %zmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    retq
   %b32 = sub <16 x i32> <i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32>, %b
   %shl = shl <16 x i32> %a, %b
@@ -315,9 +307,7 @@ define <64 x i8> @var_rotate_v64i8(<64 x i8> %a, <64 x i8> %b) nounwind {
 define <8 x i64> @constant_rotate_v8i64(<8 x i64> %a) nounwind {
 ; AVX512-LABEL: constant_rotate_v8i64:
 ; AVX512:       # BB#0:
-; AVX512-NEXT:    vpsllvq {{.*}}(%rip), %zmm0, %zmm1
-; AVX512-NEXT:    vpsrlvq {{.*}}(%rip), %zmm0, %zmm0
-; AVX512-NEXT:    vporq %zmm0, %zmm1, %zmm0
+; AVX512-NEXT:    vprolvq {{.*}}(%rip), %zmm0, %zmm0
 ; AVX512-NEXT:    retq
   %shl = shl <8 x i64> %a, <i64 4, i64 14, i64 50, i64 60, i64 4, i64 14, i64 50, i64 60>
   %lshr = lshr <8 x i64> %a, <i64 60, i64 50, i64 14, i64 4, i64 60, i64 50, i64 14, i64 4>
@@ -328,9 +318,7 @@ define <8 x i64> @constant_rotate_v8i64(<8 x i64> %a) nounwind {
 define <16 x i32> @constant_rotate_v16i32(<16 x i32> %a) nounwind {
 ; AVX512-LABEL: constant_rotate_v16i32:
 ; AVX512:       # BB#0:
-; AVX512-NEXT:    vpsllvd {{.*}}(%rip), %zmm0, %zmm1
-; AVX512-NEXT:    vpsrlvd {{.*}}(%rip), %zmm0, %zmm0
-; AVX512-NEXT:    vpord %zmm0, %zmm1, %zmm0
+; AVX512-NEXT:    vprolvd {{.*}}(%rip), %zmm0, %zmm0
 ; AVX512-NEXT:    retq
   %shl = shl <16 x i32> %a, <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
   %lshr = lshr <16 x i32> %a, <i32 28, i32 27, i32 26, i32 25, i32 24, i32 23, i32 22, i32 21, i32 28, i32 27, i32 26, i32 25, i32 24, i32 23, i32 22, i32 21>
@@ -571,9 +559,7 @@ define <64 x i8> @constant_rotate_v64i8(<64 x i8> %a) nounwind {
 define <8 x i64> @splatconstant_rotate_v8i64(<8 x i64> %a) nounwind {
 ; AVX512-LABEL: splatconstant_rotate_v8i64:
 ; AVX512:       # BB#0:
-; AVX512-NEXT:    vpsllq $14, %zmm0, %zmm1
-; AVX512-NEXT:    vpsrlq $50, %zmm0, %zmm0
-; AVX512-NEXT:    vporq %zmm0, %zmm1, %zmm0
+; AVX512-NEXT:    vprolq $14, %zmm0, %zmm0
 ; AVX512-NEXT:    retq
   %shl = shl <8 x i64> %a, <i64 14, i64 14, i64 14, i64 14, i64 14, i64 14, i64 14, i64 14>
   %lshr = lshr <8 x i64> %a, <i64 50, i64 50, i64 50, i64 50, i64 50, i64 50, i64 50, i64 50>
@@ -584,9 +570,7 @@ define <8 x i64> @splatconstant_rotate_v8i64(<8 x i64> %a) nounwind {
 define <16 x i32> @splatconstant_rotate_v16i32(<16 x i32> %a) nounwind {
 ; AVX512-LABEL: splatconstant_rotate_v16i32:
 ; AVX512:       # BB#0:
-; AVX512-NEXT:    vpslld $4, %zmm0, %zmm1
-; AVX512-NEXT:    vpsrld $28, %zmm0, %zmm0
-; AVX512-NEXT:    vpord %zmm0, %zmm1, %zmm0
+; AVX512-NEXT:    vprold $4, %zmm0, %zmm0
 ; AVX512-NEXT:    retq
   %shl = shl <16 x i32> %a, <i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4>
   %lshr = lshr <16 x i32> %a, <i32 28, i32 28, i32 28, i32 28, i32 28, i32 28, i32 28, i32 28, i32 28, i32 28, i32 28, i32 28, i32 28, i32 28, i32 28, i32 28>
@@ -697,7 +681,7 @@ define <64 x i8> @splatconstant_rotate_v64i8(<64 x i8> %a) nounwind {
 define <8 x i64> @splatconstant_rotate_mask_v8i64(<8 x i64> %a) nounwind {
 ; AVX512-LABEL: splatconstant_rotate_mask_v8i64:
 ; AVX512:       # BB#0:
-; AVX512-NEXT:    vpsrlq $49, %zmm0, %zmm0
+; AVX512-NEXT:    vprolq $15, %zmm0, %zmm0
 ; AVX512-NEXT:    vpandq {{.*}}(%rip), %zmm0, %zmm0
 ; AVX512-NEXT:    retq
   %shl = shl <8 x i64> %a, <i64 15, i64 15, i64 15, i64 15, i64 15, i64 15, i64 15, i64 15>
@@ -711,11 +695,8 @@ define <8 x i64> @splatconstant_rotate_mask_v8i64(<8 x i64> %a) nounwind {
 define <16 x i32> @splatconstant_rotate_mask_v16i32(<16 x i32> %a) nounwind {
 ; AVX512-LABEL: splatconstant_rotate_mask_v16i32:
 ; AVX512:       # BB#0:
-; AVX512-NEXT:    vpslld $4, %zmm0, %zmm1
-; AVX512-NEXT:    vpsrld $28, %zmm0, %zmm0
+; AVX512-NEXT:    vprold $4, %zmm0, %zmm0
 ; AVX512-NEXT:    vpandd {{.*}}(%rip), %zmm0, %zmm0
-; AVX512-NEXT:    vpandd {{.*}}(%rip), %zmm1, %zmm1
-; AVX512-NEXT:    vporq %zmm0, %zmm1, %zmm0
 ; AVX512-NEXT:    retq
   %shl = shl <16 x i32> %a, <i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4>
   %lshr = lshr <16 x i32> %a, <i32 28, i32 28, i32 28, i32 28, i32 28, i32 28, i32 28, i32 28, i32 28, i32 28, i32 28, i32 28, i32 28, i32 28, i32 28, i32 28>

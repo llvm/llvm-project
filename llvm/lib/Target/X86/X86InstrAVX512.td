@@ -5676,6 +5676,109 @@ defm : avx512_var_shift_int_lowering_mb<"VPSRAVQ", v2i64x_info, [HasVLX]>;
 defm : avx512_var_shift_int_lowering_mb<"VPSRAVQ", v4i64x_info, [HasVLX]>;
 defm : avx512_var_shift_int_lowering_mb<"VPSRAVQ", v8i64_info, [HasAVX512]>;
 
+
+// Use 512bit VPROL/VPROLI version to implement v2i64/v4i64 + v4i32/v8i32 in case NoVLX.
+let Predicates = [HasAVX512, NoVLX] in {
+  def : Pat<(v2i64 (rotl (v2i64 VR128X:$src1), (v2i64 VR128X:$src2))),
+            (EXTRACT_SUBREG (v8i64
+              (VPROLVQZrr
+                (v8i64 (INSERT_SUBREG (IMPLICIT_DEF), VR128X:$src1, sub_xmm)),
+                       (INSERT_SUBREG (IMPLICIT_DEF), VR128X:$src2, sub_xmm))),
+                       sub_xmm)>;
+  def : Pat<(v4i64 (rotl (v4i64 VR256X:$src1), (v4i64 VR256X:$src2))),
+            (EXTRACT_SUBREG (v8i64
+              (VPROLVQZrr
+                (v8i64 (INSERT_SUBREG (IMPLICIT_DEF), VR256X:$src1, sub_ymm)),
+                       (INSERT_SUBREG (IMPLICIT_DEF), VR256X:$src2, sub_ymm))),
+                       sub_ymm)>;
+
+  def : Pat<(v4i32 (rotl (v4i32 VR128X:$src1), (v4i32 VR128X:$src2))),
+            (EXTRACT_SUBREG (v16i32
+              (VPROLVDZrr
+                (v16i32 (INSERT_SUBREG (IMPLICIT_DEF), VR128X:$src1, sub_xmm)),
+                        (INSERT_SUBREG (IMPLICIT_DEF), VR128X:$src2, sub_xmm))),
+                        sub_xmm)>;
+  def : Pat<(v8i32 (rotl (v8i32 VR256X:$src1), (v8i32 VR256X:$src2))),
+            (EXTRACT_SUBREG (v16i32
+              (VPROLVDZrr
+                (v16i32 (INSERT_SUBREG (IMPLICIT_DEF), VR256X:$src1, sub_ymm)),
+                        (INSERT_SUBREG (IMPLICIT_DEF), VR256X:$src2, sub_ymm))),
+                        sub_ymm)>;
+
+  def : Pat<(v2i64 (X86vrotli (v2i64 VR128X:$src1), (i8 imm:$src2))),
+            (EXTRACT_SUBREG (v8i64
+              (VPROLQZri
+                (v8i64 (INSERT_SUBREG (IMPLICIT_DEF), VR128X:$src1, sub_xmm)),
+                        imm:$src2)), sub_xmm)>;
+  def : Pat<(v4i64 (X86vrotli (v4i64 VR256X:$src1), (i8 imm:$src2))),
+            (EXTRACT_SUBREG (v8i64
+              (VPROLQZri
+                (v8i64 (INSERT_SUBREG (IMPLICIT_DEF), VR256X:$src1, sub_ymm)),
+                       imm:$src2)), sub_ymm)>;
+
+  def : Pat<(v4i32 (X86vrotli (v4i32 VR128X:$src1), (i8 imm:$src2))),
+            (EXTRACT_SUBREG (v16i32
+              (VPROLDZri
+                (v16i32 (INSERT_SUBREG (IMPLICIT_DEF), VR128X:$src1, sub_xmm)),
+                        imm:$src2)), sub_xmm)>;
+  def : Pat<(v8i32 (X86vrotli (v8i32 VR256X:$src1), (i8 imm:$src2))),
+            (EXTRACT_SUBREG (v16i32
+              (VPROLDZri
+                (v16i32 (INSERT_SUBREG (IMPLICIT_DEF), VR256X:$src1, sub_ymm)),
+                        imm:$src2)), sub_ymm)>;
+}
+
+// Use 512bit VPROR/VPRORI version to implement v2i64/v4i64 + v4i32/v8i32 in case NoVLX.
+let Predicates = [HasAVX512, NoVLX] in {
+  def : Pat<(v2i64 (rotr (v2i64 VR128X:$src1), (v2i64 VR128X:$src2))),
+            (EXTRACT_SUBREG (v8i64
+              (VPRORVQZrr
+                (v8i64 (INSERT_SUBREG (IMPLICIT_DEF), VR128X:$src1, sub_xmm)),
+                       (INSERT_SUBREG (IMPLICIT_DEF), VR128X:$src2, sub_xmm))),
+                       sub_xmm)>;
+  def : Pat<(v4i64 (rotr (v4i64 VR256X:$src1), (v4i64 VR256X:$src2))),
+            (EXTRACT_SUBREG (v8i64
+              (VPRORVQZrr
+                (v8i64 (INSERT_SUBREG (IMPLICIT_DEF), VR256X:$src1, sub_ymm)),
+                       (INSERT_SUBREG (IMPLICIT_DEF), VR256X:$src2, sub_ymm))),
+                       sub_ymm)>;
+
+  def : Pat<(v4i32 (rotr (v4i32 VR128X:$src1), (v4i32 VR128X:$src2))),
+            (EXTRACT_SUBREG (v16i32
+              (VPRORVDZrr
+                (v16i32 (INSERT_SUBREG (IMPLICIT_DEF), VR128X:$src1, sub_xmm)),
+                        (INSERT_SUBREG (IMPLICIT_DEF), VR128X:$src2, sub_xmm))),
+                        sub_xmm)>;
+  def : Pat<(v8i32 (rotr (v8i32 VR256X:$src1), (v8i32 VR256X:$src2))),
+            (EXTRACT_SUBREG (v16i32
+              (VPRORVDZrr
+                (v16i32 (INSERT_SUBREG (IMPLICIT_DEF), VR256X:$src1, sub_ymm)),
+                        (INSERT_SUBREG (IMPLICIT_DEF), VR256X:$src2, sub_ymm))),
+                        sub_ymm)>;
+
+  def : Pat<(v2i64 (X86vrotri (v2i64 VR128X:$src1), (i8 imm:$src2))),
+            (EXTRACT_SUBREG (v8i64
+              (VPRORQZri
+                (v8i64 (INSERT_SUBREG (IMPLICIT_DEF), VR128X:$src1, sub_xmm)),
+                        imm:$src2)), sub_xmm)>;
+  def : Pat<(v4i64 (X86vrotri (v4i64 VR256X:$src1), (i8 imm:$src2))),
+            (EXTRACT_SUBREG (v8i64
+              (VPRORQZri
+                (v8i64 (INSERT_SUBREG (IMPLICIT_DEF), VR256X:$src1, sub_ymm)),
+                       imm:$src2)), sub_ymm)>;
+
+  def : Pat<(v4i32 (X86vrotri (v4i32 VR128X:$src1), (i8 imm:$src2))),
+            (EXTRACT_SUBREG (v16i32
+              (VPRORDZri
+                (v16i32 (INSERT_SUBREG (IMPLICIT_DEF), VR128X:$src1, sub_xmm)),
+                        imm:$src2)), sub_xmm)>;
+  def : Pat<(v8i32 (X86vrotri (v8i32 VR256X:$src1), (i8 imm:$src2))),
+            (EXTRACT_SUBREG (v16i32
+              (VPRORDZri
+                (v16i32 (INSERT_SUBREG (IMPLICIT_DEF), VR256X:$src1, sub_ymm)),
+                        imm:$src2)), sub_ymm)>;
+}
+
 //===-------------------------------------------------------------------===//
 // 1-src variable permutation VPERMW/D/Q
 //===-------------------------------------------------------------------===//

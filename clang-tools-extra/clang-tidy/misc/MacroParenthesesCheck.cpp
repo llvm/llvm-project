@@ -185,7 +185,7 @@ void MacroParenthesesPPCallbacks::argument(const Token &MacroNameTok,
       continue;
 
     // Only interested in macro arguments.
-    if (MI->getArgumentNum(Tok.getIdentifierInfo()) < 0)
+    if (MI->getParameterNum(Tok.getIdentifierInfo()) < 0)
       continue;
 
     // Argument is surrounded with parentheses/squares/braces/commas.

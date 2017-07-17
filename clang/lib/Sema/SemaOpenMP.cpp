@@ -1807,6 +1807,8 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
         std::make_pair(".lb.", KmpUInt64Ty),
         std::make_pair(".ub.", KmpUInt64Ty), std::make_pair(".st.", KmpInt64Ty),
         std::make_pair(".liter.", KmpInt32Ty),
+        std::make_pair(".reductions.",
+                       Context.VoidPtrTy.withConst().withRestrict()),
         std::make_pair(StringRef(), QualType()) // __context with shared vars
     };
     ActOnCapturedRegionStart(DSAStack->getConstructLoc(), CurScope, CR_OpenMP,

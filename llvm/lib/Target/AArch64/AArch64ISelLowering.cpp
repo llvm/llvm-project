@@ -2655,6 +2655,8 @@ CCAssignFn *AArch64TargetLowering::CCAssignFnForCall(CallingConv::ID CC,
     if (!Subtarget->isTargetDarwin())
       return CC_AArch64_AAPCS;
     return IsVarArg ? CC_AArch64_DarwinPCS_VarArg : CC_AArch64_DarwinPCS;
+  case CallingConv::Win64:
+    return IsVarArg ? CC_AArch64_Win64_VarArg : CC_AArch64_AAPCS;
   }
 }
 
@@ -2670,6 +2672,7 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
     SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
   MachineFunction &MF = DAG.getMachineFunction();
   MachineFrameInfo &MFI = MF.getFrameInfo();
+  bool IsWin64 = Subtarget->isCallingConvWin64(MF.getFunction()->getCallingConv());
 
   // Assign locations to all of the incoming arguments.
   SmallVector<CCValAssign, 16> ArgLocs;
@@ -2826,7 +2829,7 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
   // varargs
   AArch64FunctionInfo *FuncInfo = MF.getInfo<AArch64FunctionInfo>();
   if (isVarArg) {
-    if (!Subtarget->isTargetDarwin()) {
+    if (!Subtarget->isTargetDarwin() || IsWin64) {
       // The AAPCS variadic function ABI is identical to the non-variadic
       // one. As a result there may be more arguments in registers and we should
       // save them for future reference.
@@ -2873,6 +2876,7 @@ void AArch64TargetLowering::saveVarArgRegisters(CCState &CCInfo,
   MachineFrameInfo &MFI = MF.getFrameInfo();
   AArch64FunctionInfo *FuncInfo = MF.getInfo<AArch64FunctionInfo>();
   auto PtrVT = getPointerTy(DAG.getDataLayout());
+  bool IsWin64 = Subtarget->isCallingConvWin64(MF.getFunction()->getCallingConv());
 
   SmallVector<SDValue, 8> MemOps;
 
@@ -2885,7 +2889,7 @@ void AArch64TargetLowering::saveVarArgRegisters(CCState &CCInfo,
   unsigned GPRSaveSize = 8 * (NumGPRArgRegs - FirstVariadicGPR);
   int GPRIdx = 0;
   if (GPRSaveSize != 0) {
-    if (Subtarget->isTargetWindows())
+    if (IsWin64)
       GPRIdx = MFI.CreateFixedObject(GPRSaveSize, -(int)GPRSaveSize, false);
     else
       GPRIdx = MFI.CreateStackObject(GPRSaveSize, 8, false);
@@ -2897,7 +2901,7 @@ void AArch64TargetLowering::saveVarArgRegisters(CCState &CCInfo,
       SDValue Val = DAG.getCopyFromReg(Chain, DL, VReg, MVT::i64);
       SDValue Store = DAG.getStore(
           Val.getValue(1), DL, Val, FIN,
-          Subtarget->isTargetWindows()
+          IsWin64
               ? MachinePointerInfo::getFixedStack(DAG.getMachineFunction(),
                                                   GPRIdx,
                                                   (i - FirstVariadicGPR) * 8)
@@ -2910,7 +2914,7 @@ void AArch64TargetLowering::saveVarArgRegisters(CCState &CCInfo,
   FuncInfo->setVarArgsGPRIndex(GPRIdx);
   FuncInfo->setVarArgsGPRSize(GPRSaveSize);
 
-  if (Subtarget->hasFPARMv8() && !Subtarget->isTargetWindows()) {
+  if (Subtarget->hasFPARMv8() && !IsWin64) {
     static const MCPhysReg FPRArgRegs[] = {
         AArch64::Q0, AArch64::Q1, AArch64::Q2, AArch64::Q3,
         AArch64::Q4, AArch64::Q5, AArch64::Q6, AArch64::Q7};
@@ -4588,7 +4592,9 @@ SDValue AArch64TargetLowering::LowerAAPCS_VASTART(SDValue Op,
 
 SDValue AArch64TargetLowering::LowerVASTART(SDValue Op,
                                             SelectionDAG &DAG) const {
-  if (Subtarget->isTargetWindows())
+  MachineFunction &MF = DAG.getMachineFunction();
+
+  if (Subtarget->isCallingConvWin64(MF.getFunction()->getCallingConv()))
     return LowerWin64_VASTART(Op, DAG);
   else if (Subtarget->isTargetDarwin())
     return LowerDarwin_VASTART(Op, DAG);

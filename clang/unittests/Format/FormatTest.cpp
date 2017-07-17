@@ -5350,6 +5350,7 @@ TEST_F(FormatTest, UnderstandsUsesOfStarAndAmp) {
   verifyFormat("x = *a(x) = *a(y);", Left);
   verifyFormat("for (;; *a = b) {\n}", Left);
   verifyFormat("return *this += 1;", Left);
+  verifyFormat("throw *x;", Left);
 
   verifyIndependentOfContext("a = *(x + y);");
   verifyIndependentOfContext("a = &(x + y);");

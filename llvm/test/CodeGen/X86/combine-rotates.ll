@@ -11,12 +11,7 @@ define <4 x i32> @combine_vec_rot_rot(<4 x i32> %x) {
 ;
 ; AVX512-LABEL: combine_vec_rot_rot:
 ; AVX512:       # BB#0:
-; AVX512-NEXT:    vpsrlvd {{.*}}(%rip), %xmm0, %xmm1
-; AVX512-NEXT:    vpsllvd {{.*}}(%rip), %xmm0, %xmm0
-; AVX512-NEXT:    vpor %xmm0, %xmm1, %xmm0
-; AVX512-NEXT:    vpsrlvd {{.*}}(%rip), %xmm0, %xmm1
-; AVX512-NEXT:    vpsllvd {{.*}}(%rip), %xmm0, %xmm0
-; AVX512-NEXT:    vpor %xmm0, %xmm1, %xmm0
+; AVX512-NEXT:    vprolvd {{.*}}(%rip), %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %1 = lshr <4 x i32> %x, <i32 1, i32 2, i32 3, i32 4>
   %2 = shl <4 x i32> %x, <i32 31, i32 30, i32 29, i32 28>
@@ -35,12 +30,7 @@ define <4 x i32> @combine_vec_rot_rot_splat(<4 x i32> %x) {
 ;
 ; AVX512-LABEL: combine_vec_rot_rot_splat:
 ; AVX512:       # BB#0:
-; AVX512-NEXT:    vpsrld $3, %xmm0, %xmm1
-; AVX512-NEXT:    vpslld $29, %xmm0, %xmm0
-; AVX512-NEXT:    vpor %xmm0, %xmm1, %xmm0
-; AVX512-NEXT:    vpsrld $22, %xmm0, %xmm1
-; AVX512-NEXT:    vpslld $10, %xmm0, %xmm0
-; AVX512-NEXT:    vpor %xmm0, %xmm1, %xmm0
+; AVX512-NEXT:    vprold $7, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %1 = lshr <4 x i32> %x, <i32 3, i32 3, i32 3, i32 3>
   %2 = shl <4 x i32> %x, <i32 29, i32 29, i32 29, i32 29>
@@ -58,12 +48,6 @@ define <4 x i32> @combine_vec_rot_rot_splat_zero(<4 x i32> %x) {
 ;
 ; AVX512-LABEL: combine_vec_rot_rot_splat_zero:
 ; AVX512:       # BB#0:
-; AVX512-NEXT:    vpsrld $1, %xmm0, %xmm1
-; AVX512-NEXT:    vpslld $31, %xmm0, %xmm0
-; AVX512-NEXT:    vpor %xmm0, %xmm1, %xmm0
-; AVX512-NEXT:    vpsrld $31, %xmm0, %xmm1
-; AVX512-NEXT:    vpaddd %xmm0, %xmm0, %xmm0
-; AVX512-NEXT:    vpor %xmm0, %xmm1, %xmm0
 ; AVX512-NEXT:    retq
   %1 = lshr <4 x i32> %x, <i32 1, i32 1, i32 1, i32 1>
   %2 = shl <4 x i32> %x, <i32 31, i32 31, i32 31, i32 31>
