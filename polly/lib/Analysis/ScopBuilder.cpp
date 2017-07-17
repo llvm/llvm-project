@@ -982,6 +982,7 @@ void ScopBuilder::buildScop(Region &R, AssumptionCache &AC) {
 
   // Remove empty statements.
   // Exit early in case there are no executable statements left in this scop.
+  scop->removeStmtNotInDomainMap();
   scop->simplifySCoP(false);
   if (scop->isEmpty())
     return;

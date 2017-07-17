@@ -5703,7 +5703,7 @@ static void __kmp_reap_thread(kmp_info_t *thread, int is_root) {
     // so there are no harmful side effects.
     if (thread->th.th_active_in_pool) {
       thread->th.th_active_in_pool = FALSE;
-      KMP_TEST_THEN_DEC32(CCAST(kmp_int32 *, &__kmp_thread_pool_active_nth));
+      KMP_TEST_THEN_DEC32(&__kmp_thread_pool_active_nth);
       KMP_DEBUG_ASSERT(TCR_4(__kmp_thread_pool_active_nth) >= 0);
     }
 

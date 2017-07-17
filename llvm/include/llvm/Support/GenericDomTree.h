@@ -230,7 +230,7 @@ class DominatorTreeBase {
   using NodePtr = NodeT *;
   static constexpr bool IsPostDominator = IsPostDom;
 
-  DominatorTreeBase() = default;
+  DominatorTreeBase() {}
 
   DominatorTreeBase(DominatorTreeBase &&Arg)
       : Roots(std::move(Arg.Roots)),

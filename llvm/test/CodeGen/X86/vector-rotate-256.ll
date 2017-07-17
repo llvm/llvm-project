@@ -558,21 +558,18 @@ define <8 x i32> @constant_rotate_v8i32(<8 x i32> %a) nounwind {
 ;
 ; XOPAVX1-LABEL: constant_rotate_v8i32:
 ; XOPAVX1:       # BB#0:
-; XOPAVX1-NEXT:    vpshld {{.*}}(%rip), %xmm0, %xmm1
-; XOPAVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; XOPAVX1-NEXT:    vpshld {{.*}}(%rip), %xmm2, %xmm3
-; XOPAVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm1, %ymm1
-; XOPAVX1-NEXT:    vpshld {{.*}}(%rip), %xmm0, %xmm0
-; XOPAVX1-NEXT:    vpshld {{.*}}(%rip), %xmm2, %xmm2
-; XOPAVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
-; XOPAVX1-NEXT:    vorps %ymm0, %ymm1, %ymm0
+; XOPAVX1-NEXT:    vprotd {{.*}}(%rip), %xmm0, %xmm1
+; XOPAVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; XOPAVX1-NEXT:    vprotd {{.*}}(%rip), %xmm0, %xmm0
+; XOPAVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; XOPAVX1-NEXT:    retq
 ;
 ; XOPAVX2-LABEL: constant_rotate_v8i32:
 ; XOPAVX2:       # BB#0:
-; XOPAVX2-NEXT:    vpsllvd {{.*}}(%rip), %ymm0, %ymm1
-; XOPAVX2-NEXT:    vpsrlvd {{.*}}(%rip), %ymm0, %ymm0
-; XOPAVX2-NEXT:    vpor %ymm0, %ymm1, %ymm0
+; XOPAVX2-NEXT:    vprotd {{.*}}(%rip), %xmm0, %xmm1
+; XOPAVX2-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; XOPAVX2-NEXT:    vprotd {{.*}}(%rip), %xmm0, %xmm0
+; XOPAVX2-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
 ; XOPAVX2-NEXT:    retq
   %shl = shl <8 x i32> %a, <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
   %lshr = lshr <8 x i32> %a, <i32 28, i32 27, i32 26, i32 25, i32 24, i32 23, i32 22, i32 21>
@@ -643,30 +640,18 @@ define <16 x i16> @constant_rotate_v16i16(<16 x i16> %a) nounwind {
 ;
 ; XOPAVX1-LABEL: constant_rotate_v16i16:
 ; XOPAVX1:       # BB#0:
-; XOPAVX1-NEXT:    vpshlw {{.*}}(%rip), %xmm0, %xmm1
-; XOPAVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; XOPAVX1-NEXT:    vpshlw {{.*}}(%rip), %xmm2, %xmm3
-; XOPAVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm1, %ymm1
-; XOPAVX1-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; XOPAVX1-NEXT:    vpsubw {{.*}}(%rip), %xmm3, %xmm4
-; XOPAVX1-NEXT:    vpshlw %xmm4, %xmm2, %xmm2
-; XOPAVX1-NEXT:    vpsubw {{.*}}(%rip), %xmm3, %xmm3
-; XOPAVX1-NEXT:    vpshlw %xmm3, %xmm0, %xmm0
-; XOPAVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
-; XOPAVX1-NEXT:    vorps %ymm0, %ymm1, %ymm0
+; XOPAVX1-NEXT:    vprotw {{.*}}(%rip), %xmm0, %xmm1
+; XOPAVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; XOPAVX1-NEXT:    vprotw {{.*}}(%rip), %xmm0, %xmm0
+; XOPAVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; XOPAVX1-NEXT:    retq
 ;
 ; XOPAVX2-LABEL: constant_rotate_v16i16:
 ; XOPAVX2:       # BB#0:
-; XOPAVX2-NEXT:    vpmullw {{.*}}(%rip), %ymm0, %ymm1
-; XOPAVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; XOPAVX2-NEXT:    vpsubw {{.*}}(%rip), %xmm2, %xmm3
-; XOPAVX2-NEXT:    vextracti128 $1, %ymm0, %xmm4
-; XOPAVX2-NEXT:    vpshlw %xmm3, %xmm4, %xmm3
-; XOPAVX2-NEXT:    vpsubw {{.*}}(%rip), %xmm2, %xmm2
-; XOPAVX2-NEXT:    vpshlw %xmm2, %xmm0, %xmm0
-; XOPAVX2-NEXT:    vinserti128 $1, %xmm3, %ymm0, %ymm0
-; XOPAVX2-NEXT:    vpor %ymm0, %ymm1, %ymm0
+; XOPAVX2-NEXT:    vprotw {{.*}}(%rip), %xmm0, %xmm1
+; XOPAVX2-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; XOPAVX2-NEXT:    vprotw {{.*}}(%rip), %xmm0, %xmm0
+; XOPAVX2-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
 ; XOPAVX2-NEXT:    retq
   %shl = shl <16 x i16> %a, <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15>
   %lshr = lshr <16 x i16> %a, <i16 16, i16 15, i16 14, i16 13, i16 12, i16 11, i16 10, i16 9, i16 8, i16 7, i16 6, i16 5, i16 4, i16 3, i16 2, i16 1>
@@ -768,32 +753,20 @@ define <32 x i8> @constant_rotate_v32i8(<32 x i8> %a) nounwind {
 ;
 ; XOPAVX1-LABEL: constant_rotate_v32i8:
 ; XOPAVX1:       # BB#0:
-; XOPAVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,1,2,3,4,5,6,7,8,7,6,5,4,3,2,1]
-; XOPAVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; XOPAVX1-NEXT:    vpshlb %xmm1, %xmm2, %xmm3
-; XOPAVX1-NEXT:    vpshlb %xmm1, %xmm0, %xmm1
-; XOPAVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm1, %ymm1
-; XOPAVX1-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; XOPAVX1-NEXT:    vpsubb {{.*}}(%rip), %xmm3, %xmm3
-; XOPAVX1-NEXT:    vpshlb %xmm3, %xmm2, %xmm2
-; XOPAVX1-NEXT:    vpshlb %xmm3, %xmm0, %xmm0
-; XOPAVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
-; XOPAVX1-NEXT:    vorps %ymm0, %ymm1, %ymm0
+; XOPAVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; XOPAVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,1,2,3,4,5,6,7,8,7,6,5,4,3,2,1]
+; XOPAVX1-NEXT:    vprotb %xmm2, %xmm1, %xmm1
+; XOPAVX1-NEXT:    vprotb %xmm2, %xmm0, %xmm0
+; XOPAVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; XOPAVX1-NEXT:    retq
 ;
 ; XOPAVX2-LABEL: constant_rotate_v32i8:
 ; XOPAVX2:       # BB#0:
-; XOPAVX2-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,1,2,3,4,5,6,7,8,7,6,5,4,3,2,1]
-; XOPAVX2-NEXT:    vextracti128 $1, %ymm0, %xmm2
-; XOPAVX2-NEXT:    vpshlb %xmm1, %xmm2, %xmm3
-; XOPAVX2-NEXT:    vpshlb %xmm1, %xmm0, %xmm1
-; XOPAVX2-NEXT:    vinserti128 $1, %xmm3, %ymm1, %ymm1
-; XOPAVX2-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; XOPAVX2-NEXT:    vpsubb {{.*}}(%rip), %xmm3, %xmm3
-; XOPAVX2-NEXT:    vpshlb %xmm3, %xmm2, %xmm2
-; XOPAVX2-NEXT:    vpshlb %xmm3, %xmm0, %xmm0
-; XOPAVX2-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
-; XOPAVX2-NEXT:    vpor %ymm0, %ymm1, %ymm0
+; XOPAVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; XOPAVX2-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,1,2,3,4,5,6,7,8,7,6,5,4,3,2,1]
+; XOPAVX2-NEXT:    vprotb %xmm2, %xmm1, %xmm1
+; XOPAVX2-NEXT:    vprotb %xmm2, %xmm0, %xmm0
+; XOPAVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; XOPAVX2-NEXT:    retq
   %shl = shl <32 x i8> %a, <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1>
   %lshr = lshr <32 x i8> %a, <i8 8, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7>

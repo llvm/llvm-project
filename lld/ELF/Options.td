@@ -104,6 +104,8 @@ def export_dynamic_symbol: S<"export-dynamic-symbol">,
 def fatal_warnings: F<"fatal-warnings">,
   HelpText<"Treat warnings as errors">;
 
+def filter: J<"filter=">, HelpText<"Set DT_FILTER field to the specified name">;
+
 def fini: S<"fini">, MetaVarName<"<symbol>">,
   HelpText<"Specify a finalizer function">;
 
@@ -305,6 +307,7 @@ def alias_exclude_libs: J<"exclude-libs=">, Alias<exclude_libs>;
 def alias_export_dynamic_E: Flag<["-"], "E">, Alias<export_dynamic>;
 def alias_export_dynamic_symbol: J<"export-dynamic-symbol=">,
   Alias<export_dynamic_symbol>;
+def alias_filter: Separate<["-"], "F">, Alias<filter>;
 def alias_fini_fini: J<"fini=">, Alias<fini>;
 def alias_format_b: S<"b">, Alias<format>;
 def alias_hash_style_hash_style: J<"hash-style=">, Alias<hash_style>;

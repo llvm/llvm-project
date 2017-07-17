@@ -268,19 +268,10 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
                                  CurrentProgramInfo.ScratchSize,
                                  getFunctionCodeSize(MF));
 
-      OutStreamer->emitRawComment(" codeLenInByte = " +
-                                  Twine(getFunctionCodeSize(MF)), false);
-      OutStreamer->emitRawComment(
-        " NumSgprs: " + Twine(CurrentProgramInfo.NumSGPR), false);
-      OutStreamer->emitRawComment(
-        " NumVgprs: " + Twine(CurrentProgramInfo.NumVGPR), false);
-
       OutStreamer->emitRawComment(
         " FloatMode: " + Twine(CurrentProgramInfo.FloatMode), false);
       OutStreamer->emitRawComment(
         " IeeeMode: " + Twine(CurrentProgramInfo.IEEEMode), false);
-      OutStreamer->emitRawComment(
-        " ScratchSize: " + Twine(CurrentProgramInfo.ScratchSize), false);
       OutStreamer->emitRawComment(
         " LDSByteSize: " + Twine(CurrentProgramInfo.LDSSize) +
         " bytes/workgroup (compile time only)", false);

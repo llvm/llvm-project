@@ -43,7 +43,7 @@ protected:
   static constexpr bool IsPostDominators = IsPostDom;
 
  public:
-  DominanceFrontierBase() = default;
+  DominanceFrontierBase() {}
 
   /// getRoots - Return the root blocks of the current CFG.  This may include
   /// multiple blocks if we are computing post dominators.  For forward

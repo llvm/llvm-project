@@ -104,8 +104,9 @@ static unsigned getFixupKindNumBytes(unsigned Kind) {
   case FK_Data_1:
     return 1;
 
-  case FK_Data_2:
   case AArch64::fixup_aarch64_movw:
+  case FK_Data_2:
+  case FK_SecRel_2:
     return 2;
 
   case AArch64::fixup_aarch64_pcrel_branch14:
@@ -124,6 +125,7 @@ static unsigned getFixupKindNumBytes(unsigned Kind) {
   case AArch64::fixup_aarch64_pcrel_branch26:
   case AArch64::fixup_aarch64_pcrel_call26:
   case FK_Data_4:
+  case FK_SecRel_4:
     return 4;
 
   case FK_Data_8:
@@ -218,6 +220,8 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   case FK_Data_2:
   case FK_Data_4:
   case FK_Data_8:
+  case FK_SecRel_2:
+  case FK_SecRel_4:
     return Value;
   }
 }
