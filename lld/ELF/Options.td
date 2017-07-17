@@ -342,6 +342,7 @@ def alias_Ttext_segment: S<"Ttext-segment">, Alias<Ttext>;
 def alias_Ttext_segment_eq: J<"Ttext-segment=">, Alias<Ttext>;
 def alias_undefined_eq: J<"undefined=">, Alias<undefined>;
 def alias_undefined_u: JoinedOrSeparate<["-"], "u">, Alias<undefined>;
+def alias_version_script_eq: J<"version-script=">, Alias<version_script>;
 def alias_version_V: Flag<["-"], "V">, Alias<version>;
 def alias_wrap_wrap: J<"wrap=">, Alias<wrap>;
 
@@ -409,6 +410,3 @@ def EL : F<"EL">;
 def G: JoinedOrSeparate<["-"], "G">;
 def Qy : F<"Qy">;
 
-// Aliases for ignored options
-def alias_version_script_version_script: J<"version-script=">,
-  Alias<version_script>;

@@ -1,7 +1,7 @@
 // RUN: %check_clang_tidy %s modernize-use-bool-literals %t -- \
 // RUN:   -config="{CheckOptions: \
 // RUN:             [{key: modernize-use-bool-literals.IgnoreMacros, \
-// RUN:               value: 0}]}" \
+// RUN:               value: 1}]}" \
 // RUN:   -- -std=c++11
 
 bool IntToTrue = 1;
@@ -32,7 +32,6 @@ bool ExplicitStaticIntToFalse = static_cast<bool>(0);
 // CHECK-FIXES: {{^}}#define TRUE_MACRO 1{{$}}
 
 bool MacroIntToTrue = TRUE_MACRO;
-// CHECK-MESSAGES: :[[@LINE-1]]:23: warning: converting integer literal to bool
 // CHECK-FIXES: {{^}}bool MacroIntToTrue = TRUE_MACRO;{{$}}
 
 #define FALSE_MACRO bool(0)
@@ -41,7 +40,6 @@ bool MacroIntToTrue = TRUE_MACRO;
 bool TrueBool = true; // OK
 
 bool FalseBool = bool(FALSE_MACRO);
-// CHECK-MESSAGES: :[[@LINE-1]]:23: warning: converting integer literal to bool
 // CHECK-FIXES: {{^}}bool FalseBool = bool(FALSE_MACRO);{{$}}
 
 void boolFunction(bool bar) {
@@ -56,11 +54,9 @@ unsigned long long LongInteger = 1; // OK
 // CHECK-FIXES: {{^}}#define MACRO_DEPENDENT_CAST(x) static_cast<bool>(x){{$}}
 
 bool MacroDependentBool = MACRO_DEPENDENT_CAST(0);
-// CHECK-MESSAGES: :[[@LINE-1]]:27: warning: converting integer literal to bool
 // CHECK-FIXES: {{^}}bool MacroDependentBool = MACRO_DEPENDENT_CAST(0);{{$}}
 
 bool ManyMacrosDependent = MACRO_DEPENDENT_CAST(FALSE_MACRO);
-// CHECK-MESSAGES: :[[@LINE-1]]:49: warning: converting integer literal to bool
 // CHECK-FIXES: {{^}}bool ManyMacrosDependent = MACRO_DEPENDENT_CAST(FALSE_MACRO);{{$}}
 
 class FooClass {
