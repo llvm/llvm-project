@@ -1024,6 +1024,8 @@ DynamicSection<ELFT>::DynamicSection()
 template <class ELFT> void DynamicSection<ELFT>::addEntries() {
   // Add strings to .dynstr early so that .dynstr's size will be
   // fixed early.
+  for (StringRef S : Config->FilterList)
+    add({DT_FILTER, InX::DynStrTab->addString(S)});
   for (StringRef S : Config->AuxiliaryList)
     add({DT_AUXILIARY, InX::DynStrTab->addString(S)});
   if (!Config->Rpath.empty())

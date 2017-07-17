@@ -320,7 +320,7 @@ define <8 x i64> @constant_rotate_v8i64(<8 x i64> %a) nounwind {
 ; AVX512-NEXT:    vporq %zmm0, %zmm1, %zmm0
 ; AVX512-NEXT:    retq
   %shl = shl <8 x i64> %a, <i64 4, i64 14, i64 50, i64 60, i64 4, i64 14, i64 50, i64 60>
-  %lshr = lshr <8 x i64> %a, <i64 60, i64 50, i64 14, i64 2, i64 60, i64 50, i64 14, i64 2>
+  %lshr = lshr <8 x i64> %a, <i64 60, i64 50, i64 14, i64 4, i64 60, i64 50, i64 14, i64 4>
   %or = or <8 x i64> %shl, %lshr
   ret <8 x i64> %or
 }

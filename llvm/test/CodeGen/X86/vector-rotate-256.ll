@@ -466,7 +466,7 @@ define <4 x i64> @constant_rotate_v4i64(<4 x i64> %a) nounwind {
 ; AVX1-NEXT:    vpsllq $4, %xmm0, %xmm4
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm3 = xmm4[0,1,2,3],xmm3[4,5,6,7]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm3, %ymm2
-; AVX1-NEXT:    vpsrlq $2, %xmm1, %xmm3
+; AVX1-NEXT:    vpsrlq $4, %xmm1, %xmm3
 ; AVX1-NEXT:    vpsrlq $14, %xmm1, %xmm1
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1,2,3],xmm3[4,5,6,7]
 ; AVX1-NEXT:    vpsrlq $50, %xmm0, %xmm3
@@ -492,27 +492,21 @@ define <4 x i64> @constant_rotate_v4i64(<4 x i64> %a) nounwind {
 ;
 ; XOPAVX1-LABEL: constant_rotate_v4i64:
 ; XOPAVX1:       # BB#0:
-; XOPAVX1-NEXT:    vpshlq {{.*}}(%rip), %xmm0, %xmm1
-; XOPAVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; XOPAVX1-NEXT:    vpshlq {{.*}}(%rip), %xmm2, %xmm3
-; XOPAVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm1, %ymm1
-; XOPAVX1-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; XOPAVX1-NEXT:    vpsubq {{.*}}(%rip), %xmm3, %xmm4
-; XOPAVX1-NEXT:    vpshlq %xmm4, %xmm2, %xmm2
-; XOPAVX1-NEXT:    vpsubq {{.*}}(%rip), %xmm3, %xmm3
-; XOPAVX1-NEXT:    vpshlq %xmm3, %xmm0, %xmm0
-; XOPAVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
-; XOPAVX1-NEXT:    vorps %ymm0, %ymm1, %ymm0
+; XOPAVX1-NEXT:    vprotq {{.*}}(%rip), %xmm0, %xmm1
+; XOPAVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; XOPAVX1-NEXT:    vprotq {{.*}}(%rip), %xmm0, %xmm0
+; XOPAVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; XOPAVX1-NEXT:    retq
 ;
 ; XOPAVX2-LABEL: constant_rotate_v4i64:
 ; XOPAVX2:       # BB#0:
-; XOPAVX2-NEXT:    vpsllvq {{.*}}(%rip), %ymm0, %ymm1
-; XOPAVX2-NEXT:    vpsrlvq {{.*}}(%rip), %ymm0, %ymm0
-; XOPAVX2-NEXT:    vpor %ymm0, %ymm1, %ymm0
+; XOPAVX2-NEXT:    vprotq {{.*}}(%rip), %xmm0, %xmm1
+; XOPAVX2-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; XOPAVX2-NEXT:    vprotq {{.*}}(%rip), %xmm0, %xmm0
+; XOPAVX2-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
 ; XOPAVX2-NEXT:    retq
   %shl = shl <4 x i64> %a, <i64 4, i64 14, i64 50, i64 60>
-  %lshr = lshr <4 x i64> %a, <i64 60, i64 50, i64 14, i64 2>
+  %lshr = lshr <4 x i64> %a, <i64 60, i64 50, i64 14, i64 4>
   %or = or <4 x i64> %shl, %lshr
   ret <4 x i64> %or
 }

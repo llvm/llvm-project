@@ -4585,8 +4585,8 @@ static inline kmp_setting_t *__kmp_stg_find(char const *name) {
 } // __kmp_stg_find
 
 static int __kmp_stg_cmp(void const *_a, void const *_b) {
-  kmp_setting_t *a = RCAST(kmp_setting_t *, CCAST(void *, _a));
-  kmp_setting_t *b = RCAST(kmp_setting_t *, CCAST(void *, _b));
+  const kmp_setting_t *a = RCAST(const kmp_setting_t *, _a);
+  const kmp_setting_t *b = RCAST(const kmp_setting_t *, _b);
 
   // Process KMP_AFFINITY last.
   // It needs to come after OMP_PLACES and GOMP_CPU_AFFINITY.

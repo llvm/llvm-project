@@ -232,6 +232,22 @@ TEST(YAMLIO, TestSequenceMapWriteAndRead) {
   }
 }
 
+//
+// Test YAML filename handling.
+//
+static void testErrorFilename(const llvm::SMDiagnostic &Error, void *) {
+  EXPECT_EQ(Error.getFilename(), "foo.yaml");
+}
+
+TEST(YAMLIO, TestGivenFilename) {
+  auto Buffer = llvm::MemoryBuffer::getMemBuffer("{ x: 42 }", "foo.yaml");
+  Input yin(*Buffer, nullptr, testErrorFilename);
+  FooBar Value;
+  yin >> Value;
+
+  EXPECT_TRUE(!!yin.error());
+}
+
 
 //===----------------------------------------------------------------------===//
 //  Test built-in types

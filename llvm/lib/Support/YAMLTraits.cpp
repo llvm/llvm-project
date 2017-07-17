@@ -60,6 +60,14 @@ Input::Input(StringRef InputContent, void *Ctxt,
   DocIterator = Strm->begin();
 }
 
+Input::Input(MemoryBufferRef Input, void *Ctxt,
+             SourceMgr::DiagHandlerTy DiagHandler, void *DiagHandlerCtxt)
+    : IO(Ctxt), Strm(new Stream(Input, SrcMgr, false, &EC)) {
+  if (DiagHandler)
+    SrcMgr.setDiagHandler(DiagHandler, DiagHandlerCtxt);
+  DocIterator = Strm->begin();
+}
+
 Input::~Input() = default;
 
 std::error_code Input::error() { return EC; }
