@@ -162,10 +162,17 @@ QualType findExpressionLexicalType(const Decl *FunctionLikeParentDecl,
   // Get the correct property type.
   if (const auto *PRE = dyn_cast<ObjCPropertyRefExpr>(E)) {
     if (PRE->isMessagingGetter()) {
-      if (PRE->isExplicitProperty())
-        return PRE->getExplicitProperty()->getType();
-      if (const ObjCMethodDecl *M = PRE->getImplicitPropertyGetter())
-        return M->getReturnType();
+      if (PRE->isExplicitProperty()) {
+        QualType ReceiverType = PRE->getReceiverType(Ctx);
+        return PRE->getExplicitProperty()->getUsageType(ReceiverType);
+      }
+      if (const ObjCMethodDecl *M = PRE->getImplicitPropertyGetter()) {
+        if (!PRE->isObjectReceiver())
+          return M->getSendResultType(PRE->getReceiverType(Ctx));
+        const Expr *Base = PRE->getBase();
+        return M->getSendResultType(findExpressionLexicalType(
+            FunctionLikeParentDecl, Base, Base->getType(), Policy, Ctx));
+      }
     }
   }
 
