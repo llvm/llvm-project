@@ -2148,6 +2148,19 @@ private:
   /// all memory accesses have been modeled and canonicalized.
   void assumeNoOutOfBounds();
 
+  /// Remove statements from the list of scop statements.
+  ///
+  /// @param ShouldDelete A function that returns true if the statement passed
+  ///                     to it should be deleted.
+  void removeStmts(std::function<bool(ScopStmt &)> ShouldDelete);
+
+  /// Removes @p Stmt from the StmtMap.
+  void removeFromStmtMap(ScopStmt &Stmt);
+
+  /// Removes all statements where the entry block of the statement does not
+  /// have a corresponding domain in the domain map.
+  void removeStmtNotInDomainMap();
+
   /// Mark arrays that have memory accesses with FortranArrayDescriptor.
   void markFortranArrays();
 

@@ -920,8 +920,10 @@ template <unsigned> struct __static_assert_check {};
 #    define _LIBCPP_STD_VER 11
 #  elif __cplusplus <= 201402L
 #    define _LIBCPP_STD_VER 14
+#  elif __cplusplus <= 201703L
+#    define _LIBCPP_STD_VER 17
 #  else
-#    define _LIBCPP_STD_VER 16  // current year, or date of c++17 ratification
+#    define _LIBCPP_STD_VER 18  // current year, or date of c++2a ratification
 #  endif
 #endif  // _LIBCPP_STD_VER
 
