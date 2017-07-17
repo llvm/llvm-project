@@ -76,9 +76,9 @@ static BasicBlock *splitEdge(BasicBlock *Prev, BasicBlock *Succ,
   return MiddleBlock;
 }
 
-polly::BBPair polly::executeScopConditionally(Scop &S, Value *RTC,
-                                              DominatorTree &DT, RegionInfo &RI,
-                                              LoopInfo &LI) {
+std::pair<polly::BBPair, BranchInst *>
+polly::executeScopConditionally(Scop &S, Value *RTC, DominatorTree &DT,
+                                RegionInfo &RI, LoopInfo &LI) {
   Region &R = S.getRegion();
   PollyIRBuilder Builder(S.getEntry());
 
@@ -148,7 +148,8 @@ polly::BBPair polly::executeScopConditionally(Scop &S, Value *RTC,
       BasicBlock::Create(F->getContext(), "polly.exiting", F);
   SplitBlock->getTerminator()->eraseFromParent();
   Builder.SetInsertPoint(SplitBlock);
-  Builder.CreateCondBr(RTC, StartBlock, S.getEntry());
+  BranchInst *CondBr = Builder.CreateCondBr(RTC, StartBlock, S.getEntry());
+
   if (Loop *L = LI.getLoopFor(SplitBlock)) {
     L->addBasicBlockToLoop(StartBlock, LI);
     L->addBasicBlockToLoop(ExitingBlock, LI);
@@ -216,5 +217,5 @@ polly::BBPair polly::executeScopConditionally(Scop &S, Value *RTC,
   //      ExitBB                   //
   //      /    \                   //
 
-  return std::make_pair(StartBlock, ExitingBlock);
+  return std::make_pair(std::make_pair(StartBlock, ExitingBlock), CondBr);
 }

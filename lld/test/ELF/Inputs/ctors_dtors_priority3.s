@@ -1,5 +1,5 @@
 .section .ctors, "aw", @progbits
-  .byte 0xC1
+  .quad 0xC1
 
 .section .dtors, "aw", @progbits
-  .byte 0xC2
+  .quad 0xC2

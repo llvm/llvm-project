@@ -869,7 +869,7 @@ __kmp_init_indirect_csptr(kmp_critical_name *crit, ident_t const *loc,
 #if USE_ITT_BUILD
   __kmp_itt_critical_creating(ilk->lock, loc);
 #endif
-  int status = KMP_COMPARE_AND_STORE_PTR(lck, 0, ilk);
+  int status = KMP_COMPARE_AND_STORE_PTR(lck, nullptr, ilk);
   if (status == 0) {
 #if USE_ITT_BUILD
     __kmp_itt_critical_destroyed(ilk->lock);
@@ -3258,8 +3258,7 @@ void __kmpc_doacross_post(ident_t *loc, int gtid, long long *vec) {
   iter_number >>= 5; // divided by 32
   flag = 1 << shft;
   if ((flag & pr_buf->th_doacross_flags[iter_number]) == 0)
-    KMP_TEST_THEN_OR32(
-        CCAST(kmp_uint32 *, &pr_buf->th_doacross_flags[iter_number]), flag);
+    KMP_TEST_THEN_OR32(&pr_buf->th_doacross_flags[iter_number], flag);
   KA_TRACE(20, ("__kmpc_doacross_post() exit: T#%d iter %lld posted\n", gtid,
                 (iter_number << 5) + shft));
 }

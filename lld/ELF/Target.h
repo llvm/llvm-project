@@ -51,6 +51,9 @@ public:
   // targeting S.
   virtual bool needsThunk(RelExpr Expr, uint32_t RelocType,
                           const InputFile *File, const SymbolBody &S) const;
+  // Return true if we can reach Dst from Src with Relocation RelocType
+  virtual bool inBranchRange(uint32_t RelocType, uint64_t Src,
+                             uint64_t Dst) const;
   virtual RelExpr getRelExpr(uint32_t Type, const SymbolBody &S,
                              const uint8_t *Loc) const = 0;
   virtual void relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const = 0;

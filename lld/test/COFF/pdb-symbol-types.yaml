@@ -35,7 +35,7 @@
 # CHECK:         original type = 0x1004
 # CHECK:   240 | S_UDT [size = 12] `Foo`
 # CHECK:         original type = 0x1004
-# CHECK:   252 | S_BUILDINFO [size = 8] BuildId = `4106`
+# CHECK:   252 | S_BUILDINFO [size = 8] BuildId = `0x100A`
 # CHECK-LABEL:   Mod 0001 | `* Linker *`:
 
 --- !COFF

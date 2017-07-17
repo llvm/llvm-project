@@ -1921,8 +1921,8 @@ void __kmpc_end_taskq_task(ident_t *loc, kmp_int32 global_tid,
 
   if (in_parallel) {
 #if KMP_ARCH_X86 || KMP_ARCH_X86_64
-    KMP_TEST_THEN_OR32(CCAST(kmp_int32 *, &queue->tq_flags),
-                       (kmp_int32)TQF_ALL_TASKS_QUEUED);
+    KMP_TEST_THEN_OR32(RCAST(volatile kmp_uint32 *, &queue->tq_flags),
+                       TQF_ALL_TASKS_QUEUED);
 #else
     {
       __kmp_acquire_lock(&queue->tq_queue_lck, global_tid);
@@ -1952,8 +1952,8 @@ void __kmpc_end_taskq_task(ident_t *loc, kmp_int32 global_tid,
       queue->tq_flags |= TQF_IS_LAST_TASK;
     } else {
 #if KMP_ARCH_X86 || KMP_ARCH_X86_64
-      KMP_TEST_THEN_OR32(CCAST(kmp_int32 *, &queue->tq_flags),
-                         (kmp_int32)TQF_IS_LAST_TASK);
+      KMP_TEST_THEN_OR32(RCAST(volatile kmp_uint32 *, &queue->tq_flags),
+                         TQF_IS_LAST_TASK);
 #else
       {
         __kmp_acquire_lock(&queue->tq_queue_lck, global_tid);

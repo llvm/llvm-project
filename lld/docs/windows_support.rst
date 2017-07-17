@@ -29,8 +29,6 @@ Development status
 Driver
   :good:`Mostly done`. Some exotic command line options that are not usually
   used for application develompent, such as ``/DRIVER``, are not supported.
-  Options for Windows 8 app store are not recognized too
-  (e.g. ``/APPCONTAINER``).
 
 Linking against DLL
   :good:`Done`. LLD can read import libraries needed to link against DLL. Both
@@ -44,8 +42,7 @@ Creating DLL
   :good:`Done`. LLD creates a DLL if ``/DLL`` option is given. Exported
   functions can be specified either via command line (``/EXPORT``) or via
   module-definition file (.def). Both export-by-name and export-by-ordinal are
-  supported. LLD uses Microsoft ``lib.exe`` tool to create an import library
-  file.
+  supported.
 
 Windows resource files support
   :good:`Done`. If an ``.res`` file is given, LLD converts the file to a COFF

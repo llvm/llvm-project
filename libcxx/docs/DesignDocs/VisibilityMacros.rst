@@ -98,12 +98,13 @@ Visibility Macros
   explicit instantiations themselves are marked as exported. Note that this
   applies *only* to extern *class* templates. Extern *function* templates obey
   regular import/export semantics, and applying `dllexport` directly to the
-  extern template declaration is the correct thing to do for them.
+  extern template declaration (i.e. using `_LIBCPP_FUNC_VIS`) is the correct
+  thing to do for them.
 
 **_LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS**
   Mark the member functions, typeinfo, and vtable of an explicit instantiation
   of a class template as being exported by the libc++ library. This attribute
-  must be specified on all template class explicit instantiations.
+  must be specified on all class template explicit instantiations.
 
   It is only necessary to mark the explicit instantiation itself (as opposed to
   the extern template declaration) as exported on Windows, as discussed above.
