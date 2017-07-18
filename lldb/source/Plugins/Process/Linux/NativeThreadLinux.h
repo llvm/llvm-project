@@ -14,6 +14,7 @@
 #include "lldb/Host/common/NativeThreadProtocol.h"
 #include "lldb/lldb-private-forward.h"
 
+#include <csignal>
 #include <map>
 #include <memory>
 #include <string>

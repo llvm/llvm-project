@@ -1,3 +1,4 @@
+# REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=i686-windows-msvc %s -o %t.obj
 # RUN: echo -e "LIBRARY foo\nEXPORTS\n  stdcall" > %t.def
 # RUN: lld-link -entry:dllmain -dll -def:%t.def %t.obj -out:%t.dll -implib:%t.lib

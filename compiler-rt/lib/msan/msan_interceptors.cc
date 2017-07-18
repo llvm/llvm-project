@@ -161,58 +161,45 @@ INTERCEPTOR(void *, bcopy, const void *src, void *dest, SIZE_T n) {
 
 INTERCEPTOR(int, posix_memalign, void **memptr, SIZE_T alignment, SIZE_T size) {
   GET_MALLOC_STACK_TRACE;
-  CHECK_EQ(alignment & (alignment - 1), 0);
   CHECK_NE(memptr, 0);
-  *memptr = MsanReallocate(&stack, nullptr, size, alignment, false);
-  CHECK_NE(*memptr, 0);
-  __msan_unpoison(memptr, sizeof(*memptr));
-  return 0;
+  int res = msan_posix_memalign(memptr, alignment, size, &stack);
+  if (!res)
+    __msan_unpoison(memptr, sizeof(*memptr));
+  return res;
 }
 
 #if !SANITIZER_FREEBSD
-INTERCEPTOR(void *, memalign, SIZE_T boundary, SIZE_T size) {
+INTERCEPTOR(void *, memalign, SIZE_T alignment, SIZE_T size) {
   GET_MALLOC_STACK_TRACE;
-  CHECK_EQ(boundary & (boundary - 1), 0);
-  void *ptr = MsanReallocate(&stack, nullptr, size, boundary, false);
-  return ptr;
+  return msan_memalign(alignment, size, &stack);
 }
 #define MSAN_MAYBE_INTERCEPT_MEMALIGN INTERCEPT_FUNCTION(memalign)
 #else
 #define MSAN_MAYBE_INTERCEPT_MEMALIGN
 #endif
 
-INTERCEPTOR(void *, aligned_alloc, SIZE_T boundary, SIZE_T size) {
+INTERCEPTOR(void *, aligned_alloc, SIZE_T alignment, SIZE_T size) {
   GET_MALLOC_STACK_TRACE;
-  CHECK_EQ(boundary & (boundary - 1), 0);
-  void *ptr = MsanReallocate(&stack, nullptr, size, boundary, false);
-  return ptr;
+  return msan_aligned_alloc(alignment, size, &stack);
 }
 
-INTERCEPTOR(void *, __libc_memalign, SIZE_T boundary, SIZE_T size) {
+INTERCEPTOR(void *, __libc_memalign, SIZE_T alignment, SIZE_T size) {
   GET_MALLOC_STACK_TRACE;
-  CHECK_EQ(boundary & (boundary - 1), 0);
-  void *ptr = MsanReallocate(&stack, nullptr, size, boundary, false);
-  DTLS_on_libc_memalign(ptr, size);
+  void *ptr = msan_memalign(alignment, size, &stack);
+  if (ptr)
+    DTLS_on_libc_memalign(ptr, size);
   return ptr;
 }
 
 INTERCEPTOR(void *, valloc, SIZE_T size) {
   GET_MALLOC_STACK_TRACE;
-  void *ptr = MsanReallocate(&stack, nullptr, size, GetPageSizeCached(), false);
-  return ptr;
+  return msan_valloc(size, &stack);
 }
 
 #if !SANITIZER_FREEBSD
 INTERCEPTOR(void *, pvalloc, SIZE_T size) {
   GET_MALLOC_STACK_TRACE;
-  uptr PageSize = GetPageSizeCached();
-  size = RoundUpTo(size, PageSize);
-  if (size == 0) {
-    // pvalloc(0) should allocate one page.
-    size = PageSize;
-  }
-  void *ptr = MsanReallocate(&stack, nullptr, size, PageSize, false);
-  return ptr;
+  return msan_pvalloc(size, &stack);
 }
 #define MSAN_MAYBE_INTERCEPT_PVALLOC INTERCEPT_FUNCTION(pvalloc)
 #else
@@ -853,7 +840,7 @@ INTERCEPTOR(void *, calloc, SIZE_T nmemb, SIZE_T size) {
   if (UNLIKELY(!msan_inited))
     // Hack: dlsym calls calloc before REAL(calloc) is retrieved from dlsym.
     return AllocateFromLocalPool(nmemb * size);
-  return MsanCalloc(&stack, nmemb, size);
+  return msan_calloc(nmemb, size, &stack);
 }
 
 INTERCEPTOR(void *, realloc, void *ptr, SIZE_T size) {
@@ -866,12 +853,12 @@ INTERCEPTOR(void *, realloc, void *ptr, SIZE_T size) {
       new_ptr = AllocateFromLocalPool(copy_size);
     } else {
       copy_size = size;
-      new_ptr = MsanReallocate(&stack, nullptr, copy_size, sizeof(u64), false);
+      new_ptr = msan_malloc(copy_size, &stack);
     }
     internal_memcpy(new_ptr, ptr, copy_size);
     return new_ptr;
   }
-  return MsanReallocate(&stack, ptr, size, sizeof(u64), false);
+  return msan_realloc(ptr, size, &stack);
 }
 
 INTERCEPTOR(void *, malloc, SIZE_T size) {
@@ -879,7 +866,7 @@ INTERCEPTOR(void *, malloc, SIZE_T size) {
   if (UNLIKELY(!msan_inited))
     // Hack: dlsym calls malloc before REAL(malloc) is retrieved from dlsym.
     return AllocateFromLocalPool(size);
-  return MsanReallocate(&stack, nullptr, size, sizeof(u64), false);
+  return msan_malloc(size, &stack);
 }
 
 void __msan_allocated_memory(const void *data, uptr size) {

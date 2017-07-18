@@ -1167,6 +1167,20 @@ static void __kmp_stg_print_max_task_priority(kmp_str_buf_t *buffer,
                                               char const *name, void *data) {
   __kmp_stg_print_int(buffer, name, __kmp_max_task_priority);
 } // __kmp_stg_print_max_task_priority
+
+// KMP_TASKLOOP_MIN_TASKS
+// taskloop threashold to switch from recursive to linear tasks creation
+static void __kmp_stg_parse_taskloop_min_tasks(char const *name,
+                                              char const *value, void *data) {
+  int tmp;
+  __kmp_stg_parse_int(name, value, 0, INT_MAX, &tmp);
+  __kmp_taskloop_min_tasks = tmp;
+} // __kmp_stg_parse_taskloop_min_tasks
+
+static void __kmp_stg_print_taskloop_min_tasks(kmp_str_buf_t *buffer,
+                                              char const *name, void *data) {
+  __kmp_stg_print_int(buffer, name, __kmp_taskloop_min_tasks);
+} // __kmp_stg_print_taskloop_min_tasks
 #endif // OMP_45_ENABLED
 
 // -----------------------------------------------------------------------------
@@ -4370,6 +4384,8 @@ static kmp_setting_t __kmp_stg_table[] = {
 #if OMP_45_ENABLED
     {"OMP_MAX_TASK_PRIORITY", __kmp_stg_parse_max_task_priority,
      __kmp_stg_print_max_task_priority, NULL, 0, 0},
+    {"KMP_TASKLOOP_MIN_TASKS", __kmp_stg_parse_taskloop_min_tasks,
+     __kmp_stg_print_taskloop_min_tasks, NULL, 0, 0},
 #endif
     {"OMP_THREAD_LIMIT", __kmp_stg_parse_all_threads,
      __kmp_stg_print_all_threads, NULL, 0, 0},

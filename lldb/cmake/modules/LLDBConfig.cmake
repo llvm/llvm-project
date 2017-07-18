@@ -10,15 +10,20 @@ if (LLVM_COMPILER_IS_GCC_COMPATIBLE AND NOT "${CMAKE_SYSTEM_NAME}" MATCHES "Darw
   set(LLDB_LINKER_SUPPORTS_GROUPS ON)
 endif()
 
+set(LLDB_DEFAULT_DISABLE_PYTHON 0)
+set(LLDB_DEFAULT_DISABLE_CURSES 0)
+
 if ( CMAKE_SYSTEM_NAME MATCHES "Windows" )
-  set(LLDB_DEFAULT_DISABLE_PYTHON 0)
   set(LLDB_DEFAULT_DISABLE_CURSES 1)
 elseif (CMAKE_SYSTEM_NAME MATCHES "Android" )
   set(LLDB_DEFAULT_DISABLE_PYTHON 1)
   set(LLDB_DEFAULT_DISABLE_CURSES 1)
-else()
-  set(LLDB_DEFAULT_DISABLE_PYTHON 0)
-  set(LLDB_DEFAULT_DISABLE_CURSES 0)
+elseif(IOS)
+  set(LLDB_DEFAULT_DISABLE_PYTHON 1)
+endif()
+
+if(IOS)
+  add_definitions(-DNO_XPC_SERVICES)
 endif()
 
 set(LLDB_DISABLE_PYTHON ${LLDB_DEFAULT_DISABLE_PYTHON} CACHE BOOL
@@ -298,13 +303,15 @@ if (NOT LIBXML2_FOUND AND NOT (CMAKE_SYSTEM_NAME MATCHES "Windows"))
 endif()
 
 # Find libraries or frameworks that may be needed
-if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
-  find_library(CARBON_LIBRARY Carbon)
+if (APPLE)
+  if(NOT IOS)
+    find_library(CARBON_LIBRARY Carbon)
+    find_library(CORE_SERVICES_LIBRARY CoreServices)
+    find_library(DEBUG_SYMBOLS_LIBRARY DebugSymbols PATHS "/System/Library/PrivateFrameworks")
+  endif()
   find_library(FOUNDATION_LIBRARY Foundation)
   find_library(CORE_FOUNDATION_LIBRARY CoreFoundation)
-  find_library(CORE_SERVICES_LIBRARY CoreServices)
   find_library(SECURITY_LIBRARY Security)
-  find_library(DEBUG_SYMBOLS_LIBRARY DebugSymbols PATHS "/System/Library/PrivateFrameworks")
 
   set(LLDB_FRAMEWORK_INSTALL_DIR Library/Frameworks CACHE STRING "Output directory for LLDB.framework")
   set(LLDB_FRAMEWORK_VERSION A CACHE STRING "LLDB.framework version (default is A)")
@@ -312,10 +319,13 @@ if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
     LLDB.framework/Versions/${LLDB_FRAMEWORK_VERSION}/Resources)
 
   add_definitions( -DLIBXML2_DEFINED )
-  list(APPEND system_libs xml2 ${CURSES_LIBRARIES})
-  list(APPEND system_libs ${CARBON_LIBRARY} ${FOUNDATION_LIBRARY}
-  ${CORE_FOUNDATION_LIBRARY} ${CORE_SERVICES_LIBRARY} ${SECURITY_LIBRARY}
-  ${DEBUG_SYMBOLS_LIBRARY})
+  list(APPEND system_libs xml2
+       ${CURSES_LIBRARIES}
+       ${FOUNDATION_LIBRARY}
+       ${CORE_FOUNDATION_LIBRARY}
+       ${CORE_SERVICES_LIBRARY}
+       ${SECURITY_LIBRARY}
+       ${DEBUG_SYMBOLS_LIBRARY})
 
 else()
   if (LIBXML2_FOUND)

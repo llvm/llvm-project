@@ -21,6 +21,7 @@
 #include "asan_report.h"
 #include "asan_stack.h"
 #include "asan_thread.h"
+#include "sanitizer_common/sanitizer_allocator_checks.h"
 #include "sanitizer_common/sanitizer_allocator_interface.h"
 #include "sanitizer_common/sanitizer_errno.h"
 #include "sanitizer_common/sanitizer_flags.h"
@@ -809,23 +810,17 @@ void asan_sized_free(void *ptr, uptr size, BufferedStackTrace *stack,
   instance.Deallocate(ptr, size, stack, alloc_type);
 }
 
-inline void *check_ptr(void *ptr) {
-  if (UNLIKELY(!ptr))
-    errno = errno_ENOMEM;
-  return ptr;
-}
-
 void *asan_malloc(uptr size, BufferedStackTrace *stack) {
-  return check_ptr(instance.Allocate(size, 8, stack, FROM_MALLOC, true));
+  return SetErrnoOnNull(instance.Allocate(size, 8, stack, FROM_MALLOC, true));
 }
 
 void *asan_calloc(uptr nmemb, uptr size, BufferedStackTrace *stack) {
-  return check_ptr(instance.Calloc(nmemb, size, stack));
+  return SetErrnoOnNull(instance.Calloc(nmemb, size, stack));
 }
 
 void *asan_realloc(void *p, uptr size, BufferedStackTrace *stack) {
   if (!p)
-    return check_ptr(instance.Allocate(size, 8, stack, FROM_MALLOC, true));
+    return SetErrnoOnNull(instance.Allocate(size, 8, stack, FROM_MALLOC, true));
   if (size == 0) {
     if (flags()->allocator_frees_and_returns_null_on_realloc_zero) {
       instance.Deallocate(p, 0, stack, FROM_MALLOC);
@@ -834,11 +829,11 @@ void *asan_realloc(void *p, uptr size, BufferedStackTrace *stack) {
     // Allocate a size of 1 if we shouldn't free() on Realloc to 0
     size = 1;
   }
-  return check_ptr(instance.Reallocate(p, size, stack));
+  return SetErrnoOnNull(instance.Reallocate(p, size, stack));
 }
 
 void *asan_valloc(uptr size, BufferedStackTrace *stack) {
-  return check_ptr(
+  return SetErrnoOnNull(
       instance.Allocate(size, GetPageSizeCached(), stack, FROM_MALLOC, true));
 }
 
@@ -846,7 +841,8 @@ void *asan_pvalloc(uptr size, BufferedStackTrace *stack) {
   uptr PageSize = GetPageSizeCached();
   // pvalloc(0) should allocate one page.
   size = size ? RoundUpTo(size, PageSize) : PageSize;
-  return check_ptr(instance.Allocate(size, PageSize, stack, FROM_MALLOC, true));
+  return SetErrnoOnNull(
+      instance.Allocate(size, PageSize, stack, FROM_MALLOC, true));
 }
 
 void *asan_memalign(uptr alignment, uptr size, BufferedStackTrace *stack,
@@ -855,19 +851,18 @@ void *asan_memalign(uptr alignment, uptr size, BufferedStackTrace *stack,
     errno = errno_EINVAL;
     return AsanAllocator::FailureHandler::OnBadRequest();
   }
-  return check_ptr(
+  return SetErrnoOnNull(
       instance.Allocate(size, alignment, stack, alloc_type, true));
 }
 
 int asan_posix_memalign(void **memptr, uptr alignment, uptr size,
                         BufferedStackTrace *stack) {
-  if (UNLIKELY(!IsPowerOfTwo(alignment) ||
-               (alignment % sizeof(void *)) != 0)) {  // NOLINT
+  if (UNLIKELY(!CheckPosixMemalignAlignment(alignment))) {
     AsanAllocator::FailureHandler::OnBadRequest();
     return errno_EINVAL;
   }
   void *ptr = instance.Allocate(size, alignment, stack, FROM_MALLOC, true);
-  if (!ptr)
+  if (UNLIKELY(!ptr))
     return errno_ENOMEM;
   CHECK(IsAligned((uptr)ptr, alignment));
   *memptr = ptr;

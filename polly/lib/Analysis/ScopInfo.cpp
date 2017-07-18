@@ -4748,7 +4748,7 @@ void Scop::addScopStmt(BasicBlock *BB, Loop *SurroundingLoop,
   assert(BB && "Unexpected nullptr!");
   Stmts.emplace_back(*this, *BB, SurroundingLoop, Instructions);
   auto *Stmt = &Stmts.back();
-  StmtMap[BB] = Stmt;
+  StmtMap[BB].push_back(Stmt);
 }
 
 void Scop::addScopStmt(Region *R, Loop *SurroundingLoop) {
@@ -4756,7 +4756,7 @@ void Scop::addScopStmt(Region *R, Loop *SurroundingLoop) {
   Stmts.emplace_back(*this, *R, SurroundingLoop);
   auto *Stmt = &Stmts.back();
   for (BasicBlock *BB : R->blocks())
-    StmtMap[BB] = Stmt;
+    StmtMap[BB].push_back(Stmt);
 }
 
 ScopStmt *Scop::addScopStmt(__isl_take isl_map *SourceRel,
@@ -4908,7 +4908,8 @@ ScopStmt *Scop::getStmtFor(BasicBlock *BB) const {
   auto StmtMapIt = StmtMap.find(BB);
   if (StmtMapIt == StmtMap.end())
     return nullptr;
-  return StmtMapIt->second;
+  assert(StmtMapIt->second.size() == 1);
+  return StmtMapIt->second.front();
 }
 
 ScopStmt *Scop::getStmtFor(RegionNode *RN) const {

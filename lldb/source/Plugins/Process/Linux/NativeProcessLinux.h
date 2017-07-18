@@ -10,7 +10,7 @@
 #ifndef liblldb_NativeProcessLinux_H_
 #define liblldb_NativeProcessLinux_H_
 
-// C++ Includes
+#include <csignal>
 #include <unordered_set>
 
 // Other libraries and framework includes

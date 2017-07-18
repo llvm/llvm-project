@@ -16,6 +16,8 @@
 
 #if defined(_WIN32)
 #include "lldb/Host/windows/PosixApi.h"
+#else
+#include <unistd.h>
 #endif
 
 #endif

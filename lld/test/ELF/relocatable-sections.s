@@ -1,3 +1,4 @@
+# REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t1.o
 # RUN: ld.lld -r %t1.o -o %t
 # RUN: llvm-objdump -section-headers %t | FileCheck %s

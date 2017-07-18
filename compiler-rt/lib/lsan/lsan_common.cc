@@ -576,18 +576,16 @@ static bool CheckForLeaks() {
   return false;
 }
 
+static bool has_reported_leaks = false;
+bool HasReportedLeaks() { return has_reported_leaks; }
+
 void DoLeakCheck() {
   BlockingMutexLock l(&global_mutex);
   static bool already_done;
   if (already_done) return;
   already_done = true;
-  bool have_leaks = CheckForLeaks();
-  if (!have_leaks) {
-    return;
-  }
-  if (common_flags()->exitcode) {
-    Die();
-  }
+  has_reported_leaks = CheckForLeaks();
+  if (has_reported_leaks) HandleLeaks();
 }
 
 static int DoRecoverableLeakCheck() {

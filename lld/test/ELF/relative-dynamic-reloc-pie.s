@@ -1,3 +1,4 @@
+# REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
 # RUN: ld.lld -pie %t.o -o %t.pie
 # RUN: llvm-readobj -r -dyn-symbols %t.pie | FileCheck %s
