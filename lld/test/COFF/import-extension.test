@@ -1,0 +1,7 @@
+# RUN: mkdir -p %T && cd %T
+# RUN: lld-link /machine:x64 /def:%S/Inputs/extension.def
+# RUN: llvm-ar t library.lib | FileCheck %s
+
+CHECK: library.ext
+CHECK-NOT: library.dll
+CHECK-NOT: library.exe

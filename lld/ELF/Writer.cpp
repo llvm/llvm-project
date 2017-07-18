@@ -257,7 +257,6 @@ template <class ELFT> void Writer<ELFT>::run() {
   if (ErrorCount)
     return;
 
-
   // Handle -Map option.
   writeMapFile<ELFT>(OutputSectionCommands);
   if (ErrorCount)
@@ -1331,7 +1330,7 @@ template <class ELFT> void Writer<ELFT>::addPredefinedSections() {
   // ARM ABI requires .ARM.exidx to be terminated by some piece of data.
   // We have the terminater synthetic section class. Add that at the end.
   OutputSectionCommand *Cmd = findSectionCommand(".ARM.exidx");
-  if (!Cmd || Cmd->Commands.empty() || Config->Relocatable)
+  if (!Cmd || !Cmd->Sec || Config->Relocatable)
     return;
 
   auto *Sentinel = make<ARMExidxSentinelSection>();
@@ -1392,7 +1391,8 @@ OutputSectionCommand *Writer<ELFT>::findSectionCommand(StringRef Name) {
   return nullptr;
 }
 
-template <class ELFT> OutputSection *Writer<ELFT>::findSectionInScript(StringRef Name) {
+template <class ELFT>
+OutputSection *Writer<ELFT>::findSectionInScript(StringRef Name) {
   if (OutputSectionCommand *Cmd = findSectionCommand(Name))
     return Cmd->Sec;
   return nullptr;

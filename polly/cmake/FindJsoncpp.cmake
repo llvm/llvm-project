@@ -5,12 +5,11 @@ if (PkgConfig_FOUND)
   # Get the libraries full paths, to be consistent with find_library().
   set(fulllibs)
   foreach (libname IN LISTS JSONCPP_LIBRARIES)
-    find_library(lib NAMES ${libname}
+    find_library(jsoncpp_lib${libname} NAMES ${libname}
       HINTS ${JSONCPP_LIBDIR} ${JSONCPP_LIBRARY_DIRS}
-      NO_DEFAULT_PATH
     )
-    if (lib)
-      list(APPEND fulllibs ${lib})
+    if (jsoncpp_lib${libname})
+      list(APPEND fulllibs ${jsoncpp_lib${libname}})
     else ()
       list(APPEND fulllibs ${libname})
     endif ()
@@ -50,7 +49,7 @@ if (Jsoncpp_FOUND)
     set_property(TARGET jsoncpp APPEND PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${incl})
   endforeach ()
   foreach (libname IN LISTS JSONCPP_LIBRARIES)
-    set_property(TARGET jsoncpp APPEND PROPERTY INTERFACE_LINK_LIBRARIES ${lib})
+    set_property(TARGET jsoncpp APPEND PROPERTY INTERFACE_LINK_LIBRARIES ${libname})
   endforeach ()
   foreach (opt IN LISTS JSONCPP_DEFINITIONS)
     set_property(TARGET jsoncpp APPEND PROPERTY INTERFACE_COMPILE_OPTIONS ${opt})

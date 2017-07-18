@@ -18,6 +18,7 @@
 
 #include <linux/perf_event.h>
 #include <sys/mman.h>
+#include <unistd.h>
 
 namespace lldb_private {
 

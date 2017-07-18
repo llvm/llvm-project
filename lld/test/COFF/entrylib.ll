@@ -1,3 +1,4 @@
+; REQUIRES: x86
 ; RUN: llvm-as -o %t.obj %s
 ; RUN: rm -f %t.lib
 ; RUN: llvm-ar cru %t.lib %t.obj

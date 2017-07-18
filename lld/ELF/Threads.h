@@ -82,7 +82,7 @@ inline void parallelForEachN(size_t Begin, size_t End,
   else
     for_each_n(llvm::parallel::seq, Begin, End, Fn);
 }
-}
-}
+} // namespace elf
+} // namespace lld
 
 #endif

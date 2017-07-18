@@ -1,3 +1,4 @@
+# REQUIRES: x86
 # --allow-shlib-undefined and --no-allow-shlib-undefined are fully
 # ignored in linker implementation.
 # --allow-shlib-undefined is set by default

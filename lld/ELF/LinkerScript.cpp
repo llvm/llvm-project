@@ -462,7 +462,7 @@ void LinkerScript::fabricateDefaultCommands() {
   // The Sections with -T<section> have been sorted in order of ascending
   // address. We must lower StartAddr if the lowest -T<section address> as
   // calls to setDot() must be monotonically increasing.
-  for (auto& KV : Config->SectionStartMap)
+  for (auto &KV : Config->SectionStartMap)
     StartAddr = std::min(StartAddr, KV.second);
 
   Commands.push_back(make<SymbolAssignment>(
@@ -752,7 +752,7 @@ void LinkerScript::adjustSectionsAfterSorting() {
       Cmd->MemRegion = findMemoryRegion(Cmd);
       // Handle align (e.g. ".foo : ALIGN(16) { ... }").
       if (Cmd->AlignExpr)
-	Cmd->Sec->updateAlignment(Cmd->AlignExpr().getValue());
+        Cmd->Sec->updateAlignment(Cmd->AlignExpr().getValue());
     }
   }
 

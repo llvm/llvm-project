@@ -11,8 +11,8 @@
 #define LLD_ELF_INPUT_FILES_H
 
 #include "Config.h"
-#include "InputSection.h"
 #include "Error.h"
+#include "InputSection.h"
 #include "Symbols.h"
 
 #include "lld/Core/LLVM.h"
@@ -34,7 +34,7 @@ struct DILineInfo;
 namespace lto {
 class InputFile;
 }
-}
+} // namespace llvm
 
 namespace lld {
 namespace elf {

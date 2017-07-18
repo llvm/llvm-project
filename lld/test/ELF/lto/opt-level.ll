@@ -1,3 +1,4 @@
+; REQUIRES: x86
 ; RUN: llvm-as -o %t.o %s
 ; RUN: ld.lld -o %t0 -m elf_x86_64 -e main --lto-O0 %t.o
 ; RUN: llvm-nm %t0 | FileCheck --check-prefix=CHECK-O0 %s
