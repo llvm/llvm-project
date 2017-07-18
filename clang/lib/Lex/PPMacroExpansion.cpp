@@ -412,7 +412,7 @@ static bool isTrivialSingleTokenExpansion(const MacroInfo *MI,
 
   // If this is a function-like macro invocation, it's safe to trivially expand
   // as long as the identifier is not a macro argument.
-  return std::find(MI->arg_begin(), MI->arg_end(), II) == MI->arg_end();
+  return std::find(MI->param_begin(), MI->param_end(), II) == MI->param_end();
 }
 
 /// isNextPPTokenLParen - Determine whether the next preprocessor token to be
@@ -492,7 +492,7 @@ bool Preprocessor::HandleMacroExpandedIdentifier(Token &Identifier,
     // Preprocessor directives used inside macro arguments are not portable, and
     // this enables the warning.
     InMacroArgs = true;
-    Args = ReadFunctionLikeMacroArgs(Identifier, MI, ExpansionEnd);
+    Args = ReadMacroCallArgumentList(Identifier, MI, ExpansionEnd);
 
     // Finished parsing args.
     InMacroArgs = false;
@@ -745,11 +745,11 @@ static bool GenerateNewArgTokens(Preprocessor &PP,
 /// token is the '(' of the macro, this method is invoked to read all of the
 /// actual arguments specified for the macro invocation.  This returns null on
 /// error.
-MacroArgs *Preprocessor::ReadFunctionLikeMacroArgs(Token &MacroName,
+MacroArgs *Preprocessor::ReadMacroCallArgumentList(Token &MacroName,
                                                    MacroInfo *MI,
                                                    SourceLocation &MacroEnd) {
   // The number of fixed arguments to parse.
-  unsigned NumFixedArgsLeft = MI->getNumArgs();
+  unsigned NumFixedArgsLeft = MI->getNumParams();
   bool isVariadic = MI->isVariadic();
 
   // Outer loop, while there are more arguments, keep reading them.
@@ -889,7 +889,7 @@ MacroArgs *Preprocessor::ReadFunctionLikeMacroArgs(Token &MacroName,
 
   // Okay, we either found the r_paren.  Check to see if we parsed too few
   // arguments.
-  unsigned MinArgsExpected = MI->getNumArgs();
+  unsigned MinArgsExpected = MI->getNumParams();
 
   // If this is not a variadic macro, and too many args were specified, emit
   // an error.

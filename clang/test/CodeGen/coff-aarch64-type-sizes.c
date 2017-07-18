@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -triple aarch64_be-none-linux-gnu -emit-llvm -w -o - %s | FileCheck %s
-// char by definition has size 1
+// RUN: %clang_cc1 -triple aarch64-windows -emit-llvm -w -o - %s | FileCheck %s
 
-// CHECK: target datalayout = "E-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+// CHECK: target datalayout = "e-m:w-p:64:64-i32:32-i64:64-i128:128-n32:64-S128"
+// CHECK: target triple = "aarch64--windows-msvc"
 
 int check_short() {
   return sizeof(short);
@@ -14,9 +14,8 @@ int check_int() {
 }
 
 int check_long() {
-// Both 4 and 8 are permitted under the PCS, Linux says 8!
   return sizeof(long);
-// CHECK: ret i32 8
+// CHECK: ret i32 4
 }
 
 int check_longlong() {
@@ -46,7 +45,7 @@ int check_double() {
 
 int check_longdouble() {
   return sizeof(long double);
-// CHECK: ret i32 16
+// CHECK: ret i32 8
 }
 
 int check_floatComplex() {
@@ -61,7 +60,7 @@ int check_doubleComplex() {
 
 int check_longdoubleComplex() {
   return sizeof(long double _Complex);
-// CHECK: ret i32 32
+// CHECK: ret i32 16
 }
 
 int check_bool() {
@@ -70,9 +69,8 @@ int check_bool() {
 }
 
 int check_wchar() {
-// PCS allows either unsigned short or unsigned int. Linux again says "bigger!"
   return sizeof(__WCHAR_TYPE__);
-// CHECK: ret i32 4
+// CHECK: ret i32 2
 }
 
 int check_wchar_unsigned() {

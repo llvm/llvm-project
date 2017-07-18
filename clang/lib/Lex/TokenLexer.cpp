@@ -67,7 +67,7 @@ void TokenLexer::Init(Token &Tok, SourceLocation ELEnd, MacroInfo *MI,
 
   // If this is a function-like macro, expand the arguments and change
   // Tokens to point to the expanded tokens.
-  if (Macro->isFunctionLike() && Macro->getNumArgs())
+  if (Macro->isFunctionLike() && Macro->getNumParams())
     ExpandFunctionArguments();
 
   // Mark the macro as currently disabled, so that it is not recursively
@@ -122,7 +122,7 @@ bool TokenLexer::MaybeRemoveCommaBeforeVaArgs(
     SmallVectorImpl<Token> &ResultToks, bool HasPasteOperator, MacroInfo *Macro,
     unsigned MacroArgNo, Preprocessor &PP) {
   // Is the macro argument __VA_ARGS__?
-  if (!Macro->isVariadic() || MacroArgNo != Macro->getNumArgs()-1)
+  if (!Macro->isVariadic() || MacroArgNo != Macro->getNumParams()-1)
     return false;
 
   // In Microsoft-compatibility mode, a comma is removed in the expansion
@@ -137,7 +137,7 @@ bool TokenLexer::MaybeRemoveCommaBeforeVaArgs(
   // with GNU extensions, it is removed regardless of named arguments.
   // Microsoft also appears to support this extension, unofficially.
   if (PP.getLangOpts().C99 && !PP.getLangOpts().GNUMode
-        && Macro->getNumArgs() < 2)
+        && Macro->getNumParams() < 2)
     return false;
 
   // Is a comma available to be removed?
@@ -193,7 +193,7 @@ void TokenLexer::ExpandFunctionArguments() {
       NextTokGetsSpace = true;
 
     if (CurTok.isOneOf(tok::hash, tok::hashat)) {
-      int ArgNo = Macro->getArgumentNum(Tokens[i+1].getIdentifierInfo());
+      int ArgNo = Macro->getParameterNum(Tokens[i+1].getIdentifierInfo());
       assert(ArgNo != -1 && "Token following # is not an argument?");
 
       SourceLocation ExpansionLocStart =
@@ -237,7 +237,7 @@ void TokenLexer::ExpandFunctionArguments() {
     // Otherwise, if this is not an argument token, just add the token to the
     // output buffer.
     IdentifierInfo *II = CurTok.getIdentifierInfo();
-    int ArgNo = II ? Macro->getArgumentNum(II) : -1;
+    int ArgNo = II ? Macro->getParameterNum(II) : -1;
     if (ArgNo == -1) {
       // This isn't an argument, just add it.
       ResultToks.push_back(CurTok);
@@ -330,7 +330,7 @@ void TokenLexer::ExpandFunctionArguments() {
       // expansion.
       if (NonEmptyPasteBefore && ResultToks.size() >= 2 &&
           ResultToks[ResultToks.size()-2].is(tok::comma) &&
-          (unsigned)ArgNo == Macro->getNumArgs()-1 &&
+          (unsigned)ArgNo == Macro->getNumParams()-1 &&
           Macro->isVariadic()) {
         VaArgsPseudoPaste = true;
         // Remove the paste operator, report use of the extension.

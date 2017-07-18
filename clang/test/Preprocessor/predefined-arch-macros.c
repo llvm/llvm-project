@@ -2237,6 +2237,25 @@
 // CHECK_SYSTEMZ_ARCH11: #define __s390x__ 1
 // CHECK_SYSTEMZ_ARCH11: #define __zarch__ 1
 //
+// RUN: %clang -march=arch12 -E -dM %s -o - 2>&1 \
+// RUN:     -target s390x-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SYSTEMZ_ARCH12
+// RUN: %clang -march=z14 -E -dM %s -o - 2>&1 \
+// RUN:     -target s390x-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SYSTEMZ_ARCH12
+//
+// CHECK_SYSTEMZ_ARCH12: #define __ARCH__ 12
+// CHECK_SYSTEMZ_ARCH12: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_1 1
+// CHECK_SYSTEMZ_ARCH12: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_2 1
+// CHECK_SYSTEMZ_ARCH12: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_4 1
+// CHECK_SYSTEMZ_ARCH12: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_8 1
+// CHECK_SYSTEMZ_ARCH12: #define __HTM__ 1
+// CHECK_SYSTEMZ_ARCH12: #define __LONG_DOUBLE_128__ 1
+// CHECK_SYSTEMZ_ARCH12: #define __VX__ 1
+// CHECK_SYSTEMZ_ARCH12: #define __s390__ 1
+// CHECK_SYSTEMZ_ARCH12: #define __s390x__ 1
+// CHECK_SYSTEMZ_ARCH12: #define __zarch__ 1
+//
 // RUN: %clang -mhtm -E -dM %s -o - 2>&1 \
 // RUN:     -target s390x-unknown-linux \
 // RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SYSTEMZ_HTM
@@ -2256,7 +2275,7 @@
 // RUN:     -target s390x-unknown-linux \
 // RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SYSTEMZ_ZVECTOR
 //
-// CHECK_SYSTEMZ_ZVECTOR: #define __VEC__ 10301
+// CHECK_SYSTEMZ_ZVECTOR: #define __VEC__ 10302
 
 // Begin amdgcn tests ----------------
 //

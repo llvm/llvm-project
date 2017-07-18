@@ -52,14 +52,14 @@ MacroArgs *MacroArgs::create(const MacroInfo *MI,
                                  UnexpArgTokens.size() * sizeof(Token));
     // Construct the MacroArgs object.
     new (Result)
-        MacroArgs(UnexpArgTokens.size(), VarargsElided, MI->getNumArgs());
+        MacroArgs(UnexpArgTokens.size(), VarargsElided, MI->getNumParams());
   } else {
     Result = *ResultEnt;
     // Unlink this node from the preprocessors singly linked list.
     *ResultEnt = Result->ArgCache;
     Result->NumUnexpArgTokens = UnexpArgTokens.size();
     Result->VarargsElided = VarargsElided;
-    Result->NumMacroArgs = MI->getNumArgs();
+    Result->NumMacroArgs = MI->getNumParams();
   }
 
   // Copy the actual unexpanded tokens to immediately after the result ptr.
@@ -148,11 +148,11 @@ bool MacroArgs::ArgNeedsPreexpansion(const Token *ArgTok,
 const std::vector<Token> &
 MacroArgs::getPreExpArgument(unsigned Arg, const MacroInfo *MI, 
                              Preprocessor &PP) {
-  assert(Arg < MI->getNumArgs() && "Invalid argument number!");
+  assert(Arg < MI->getNumParams() && "Invalid argument number!");
 
   // If we have already computed this, return it.
-  if (PreExpArgTokens.size() < MI->getNumArgs())
-    PreExpArgTokens.resize(MI->getNumArgs());
+  if (PreExpArgTokens.size() < MI->getNumParams())
+    PreExpArgTokens.resize(MI->getNumParams());
   
   std::vector<Token> &Result = PreExpArgTokens[Arg];
   if (!Result.empty()) return Result;

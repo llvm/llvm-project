@@ -1413,6 +1413,11 @@ BUILTIN(__builtin_os_log_format, "v*v*cC*.", "p:0:nt")
 // Builtins for XRay
 BUILTIN(__xray_customevent, "vcC*z", "")
 
+// Win64-compatible va_list functions
+BUILTIN(__builtin_ms_va_start, "vc*&.", "nt")
+BUILTIN(__builtin_ms_va_end, "vc*&", "n")
+BUILTIN(__builtin_ms_va_copy, "vc*&c*&", "n")
+
 #undef BUILTIN
 #undef LIBBUILTIN
 #undef LANGBUILTIN
