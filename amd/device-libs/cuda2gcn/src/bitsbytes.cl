@@ -5,12 +5,8 @@
  * License. See LICENSE.TXT for details.
  *===------------------------------------------------------------------------*/
 
-extern __attribute__((const)) int __llvm_bitreverse_i32(int);
-extern __attribute__((const)) long __llvm_bitreverse_i64(long);
-extern __attribute__((const)) int __llvm_ctpop_i32(int);
-extern __attribute__((const)) long __llvm_ctpop_i64(long);
-
 #include "ockl.h"
+#include "irif.h"
 
 #define ATTR __attribute__((always_inline, const))
 
