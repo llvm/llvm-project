@@ -1,3 +1,4 @@
+; REQUIRES: x86
 ;; Make sure we re-create archive files to strip bitcode files.
 
 ;; Do not create empty archives because the MSVC linker

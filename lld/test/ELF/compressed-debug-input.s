@@ -1,4 +1,4 @@
-# REQUIRES: zlib
+# REQUIRES: zlib, x86
 
 # RUN: llvm-mc -compress-debug-sections=zlib -filetype=obj -triple=x86_64-unknown-linux %s -o %t
 # RUN: llvm-readobj -sections %t | FileCheck -check-prefix=ZLIB %s

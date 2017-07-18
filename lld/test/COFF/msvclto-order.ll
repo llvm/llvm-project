@@ -1,3 +1,4 @@
+; REQUIRES: x86
 ; RUN: opt -thinlto-bc %s -o %t.obj
 ; RUN: llc -filetype=obj %S/Inputs/msvclto-order-a.ll -o %T/msvclto-order-a.obj
 ; RUN: llvm-ar crs %T/msvclto-order-a.lib %T/msvclto-order-a.obj

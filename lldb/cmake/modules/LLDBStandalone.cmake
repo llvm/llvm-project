@@ -2,7 +2,6 @@
 # standalone project, using LLVM as an external library:
 if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   project(lldb)
-  cmake_minimum_required(VERSION 2.8.12.2)
 
   if (POLICY CMP0022)
     cmake_policy(SET CMP0022 NEW) # automatic when 2.8.12 is required

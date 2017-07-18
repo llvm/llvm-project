@@ -243,14 +243,16 @@ template <> struct traits_t<unsigned long long> {
 #define __forceinline __inline
 #endif
 
-#define PAGE_SIZE (0x4000)
+#if KMP_OS_WINDOWS
+#include <windows.h>
 
-#if KMP_OS_LINUX
-#define KMP_GET_PAGE_SIZE() getpagesize()
+static inline int KMP_GET_PAGE_SIZE(void) {
+    SYSTEM_INFO si;
+    GetSystemInfo(&si);
+    return si.dwPageSize;
+}
 #else
-// TODO: find the corresponding function to getpagesize() in Windows
-// and use it whenever possible.
-#define KMP_GET_PAGE_SIZE() PAGE_SIZE
+#define KMP_GET_PAGE_SIZE() getpagesize()
 #endif
 
 #define PAGE_ALIGNED(_addr)                                                    \
@@ -303,8 +305,6 @@ enum kmp_mem_fence_type {
 // Synchronization primitives
 
 #if KMP_ASM_INTRINS && KMP_OS_WINDOWS
-
-#include <Windows.h>
 
 #pragma intrinsic(InterlockedExchangeAdd)
 #pragma intrinsic(InterlockedCompareExchange)

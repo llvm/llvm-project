@@ -1,3 +1,4 @@
+include(CheckCXXCompilerFlag)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/..)
 include_directories(${LLDB_SOURCE_DIR}/source)
 include_directories(MacOSX/DarwinLog)
@@ -25,7 +26,6 @@ if (CXX_SUPPORTS_NO_EXTENDED_OFFSETOF)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-extended-offsetof")
 endif ()
 
-find_library(COCOA_LIBRARY Cocoa)
 add_subdirectory(MacOSX)
 
 set(generated_mach_interfaces
@@ -91,11 +91,23 @@ set(lldbDebugserverCommonSources
 
 add_library(lldbDebugserverCommon ${lldbDebugserverCommonSources})
 
+
+if (APPLE)
+  if(IOS)
+    find_library(COCOA_LIBRARY UIKit)
+    target_link_libraries(lldbDebugserverCommon INTERFACE ${COCOA_LIBRARY} ${CORE_FOUNDATION_LIBRARY} ${FOUNDATION_LIBRARY})
+  else()
+    find_library(COCOA_LIBRARY Cocoa)
+    target_link_libraries(lldbDebugserverCommon INTERFACE ${COCOA_LIBRARY})
+  endif()
+endif()
+
 target_link_libraries(lldbDebugserverCommon
                       INTERFACE ${COCOA_LIBRARY}
-                      lldbDebugserverMacOSX_I386
-                      lldbDebugserverMacOSX_X86_64
-                      lldbDebugserverMacOSX_DarwinLog)
+                      ${CORE_FOUNDATION_LIBRARY}
+                      ${FOUNDATION_LIBRARY}
+                      lldbDebugserverArchSupport
+                      lldbDebugserverDarwin_DarwinLog)
 
 set(LLVM_OPTIONAL_SOURCES ${lldbDebugserverCommonSources})
 add_lldb_tool(debugserver INCLUDE_IN_FRAMEWORK

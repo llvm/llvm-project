@@ -1,3 +1,4 @@
+; REQUIRES: x86
 ; RUN: opt -module-summary %s -o %t.o
 ; RUN: mkdir -p %t1 %t2
 ; RUN: opt -module-summary %p/Inputs/thin1.ll -o %t1/t.coll.o

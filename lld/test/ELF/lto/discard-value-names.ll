@@ -1,3 +1,4 @@
+; REQUIRES: x86
 ; RUN: llvm-as %s -o %t.o
 
 ; RUN: ld.lld -m elf_x86_64 -shared -save-temps %t.o -o %t2.o
