@@ -119,6 +119,11 @@ class SIMachineFunctionInfo final : public AMDGPUMachineFunction {
   unsigned WorkGroupInfoSystemSGPR;
   unsigned PrivateSegmentWaveByteOffsetSystemSGPR;
 
+  // VGPR inputs. These are always v0, v1 and v2 for entry functions.
+  unsigned WorkItemIDXVGPR;
+  unsigned WorkItemIDYVGPR;
+  unsigned WorkItemIDZVGPR;
+
   // Graphics info.
   unsigned PSInputAddr;
   unsigned PSInputEnable;

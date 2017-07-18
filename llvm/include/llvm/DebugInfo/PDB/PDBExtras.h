@@ -32,7 +32,6 @@ raw_ostream &operator<<(raw_ostream &OS, const PDB_Checksum &Checksum);
 raw_ostream &operator<<(raw_ostream &OS, const PDB_Lang &Lang);
 raw_ostream &operator<<(raw_ostream &OS, const PDB_SymType &Tag);
 raw_ostream &operator<<(raw_ostream &OS, const PDB_MemberAccess &Access);
-raw_ostream &operator<<(raw_ostream &OS, const PDB_UniqueId &Guid);
 raw_ostream &operator<<(raw_ostream &OS, const PDB_UdtType &Type);
 raw_ostream &operator<<(raw_ostream &OS, const PDB_Machine &Machine);
 

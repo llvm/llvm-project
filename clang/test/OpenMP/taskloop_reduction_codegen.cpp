@@ -144,43 +144,7 @@ sum = 0.0;
 // CHECK:    [[SUB12:%.*]] = sub nsw i32 [[DIV]], 1
 // CHECK:    store i32 [[SUB12]], i32* [[DOTCAPTURE_EXPR_9]],
 // CHECK:    [[TMP65:%.*]] = call i8* @__kmpc_omp_task_alloc(%ident_t* %{{.+}}, i32 [[TMP0]], i32 1, i64 888, i64 72, i32 (i32, i8*)* bitcast (i32 (i32, %struct.kmp_task_t_with_privates*)* @{{.+}} to i32 (i32, i8*)*))
-// CHECK:    [[TMP66:%.*]] = bitcast i8* [[TMP65]] to %struct.kmp_task_t_with_privates*
-// CHECK:    [[TMP67:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES:%.*]], %struct.kmp_task_t_with_privates* [[TMP66]], i32 0, i32 0
-// CHECK:    [[TMP68:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T:%.*]], %struct.kmp_task_t* [[TMP67]], i32 0, i32 0
-// CHECK:    [[TMP69:%.*]] = load i8*, i8** [[TMP68]],
-// CHECK:    [[TMP70:%.*]] = bitcast %struct.anon* [[AGG_CAPTURED]] to i8*
-// CHECK:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[TMP69]], i8* [[TMP70]], i64 72, i32 8, i1 false)
-// CHECK:    [[TMP71:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES]], %struct.kmp_task_t_with_privates* [[TMP66]], i32 0, i32 1
-// CHECK:    [[TMP72:%.*]] = bitcast i8* [[TMP69]] to %struct.anon*
-// CHECK:    [[TMP73:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T:%.*]], %struct..kmp_privates.t* [[TMP71]], i32 0, i32 0
-// CHECK:    [[TMP74:%.*]] = getelementptr inbounds [[STRUCT_ANON]], %struct.anon* [[TMP72]], i32 0, i32 1
-// CHECK:    [[REF:%.*]] = load i32*, i32** [[TMP74]],
-// CHECK:    [[TMP75:%.*]] = load i32, i32* [[REF]],
-// CHECK:    store i32 [[TMP75]], i32* [[TMP73]],
-// CHECK:    [[TMP76:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T]], %struct..kmp_privates.t* [[TMP71]], i32 0, i32 1
-// CHECK:    [[TMP77:%.*]] = getelementptr inbounds [[STRUCT_ANON]], %struct.anon* [[TMP72]], i32 0, i32 3
-// CHECK:    [[REF13:%.*]] = load [100 x float]*, [100 x float]** [[TMP77]],
-// CHECK:    [[TMP78:%.*]] = bitcast [100 x float]* [[TMP76]] to i8*
-// CHECK:    [[TMP79:%.*]] = bitcast [100 x float]* [[REF13]] to i8*
-// CHECK:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[TMP78]], i8* [[TMP79]], i64 400, i32 4, i1 false)
-// CHECK:    [[TMP80:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T]], %struct..kmp_privates.t* [[TMP71]], i32 0, i32 2
-// CHECK:    [[TMP81:%.*]] = getelementptr inbounds [[STRUCT_ANON]], %struct.anon* [[TMP72]], i32 0, i32 4
-// CHECK:    [[REF14:%.*]] = load [100 x float]*, [100 x float]** [[TMP81]],
-// CHECK:    [[TMP82:%.*]] = bitcast [100 x float]* [[TMP80]] to i8*
-// CHECK:    [[TMP83:%.*]] = bitcast [100 x float]* [[REF14]] to i8*
-// CHECK:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[TMP82]], i8* [[TMP83]], i64 400, i32 4, i1 false)
-// CHECK:    [[TMP84:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T]], %struct.kmp_task_t* [[TMP67]], i32 0, i32 5
-// CHECK:    store i64 0, i64* [[TMP84]],
-// CHECK:    [[TMP85:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T]], %struct.kmp_task_t* [[TMP67]], i32 0, i32 6
-// CHECK:    [[TMP86:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR_9]],
-// CHECK:    [[CONV15:%.*]] = sext i32 [[TMP86]] to i64
-// CHECK:    store i64 [[CONV15]], i64* [[TMP85]],
-// CHECK:    [[TMP87:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T]], %struct.kmp_task_t* [[TMP67]], i32 0, i32 7
-// CHECK:    store i64 1, i64* [[TMP87]],
-// CHECK:    [[TMP88:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T]], %struct.kmp_task_t* [[TMP67]], i32 0, i32 9
-// CHECK:    store i8* [[TMP62]], i8** [[TMP88]],
-// CHECK:    [[TMP89:%.*]] = load i64, i64* [[TMP87]],
-// CHECK:    call void @__kmpc_taskloop(%ident_t* %{{.+}}, i32 [[TMP0]], i8* [[TMP65]], i32 1, i64* [[TMP84]], i64* [[TMP85]], i64 [[TMP89]], i32 0, i32 0, i64 0, i8* null)
+// CHECK:    call void @__kmpc_taskloop(%ident_t* %{{.+}}, i32 [[TMP0]], i8* [[TMP65]], i32 1, i64* %{{.+}}, i64* %{{.+}}, i64 %{{.+}}, i32 0, i32 0, i64 0, i8* null)
 // CHECK:    call void @__kmpc_end_taskgroup(%ident_t*
 
 // CHECK:    ret i32

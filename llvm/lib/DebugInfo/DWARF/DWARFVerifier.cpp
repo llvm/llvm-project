@@ -25,10 +25,10 @@ using namespace dwarf;
 using namespace object;
 
 bool DWARFVerifier::verifyUnitHeader(const DWARFDataExtractor DebugInfoData,
-                               uint32_t *Offset, unsigned UnitIndex,
-                               bool &isUnitDWARF64) {
+                                     uint32_t *Offset, unsigned UnitIndex,
+                                     uint8_t &UnitType, bool &isUnitDWARF64) {
   uint32_t AbbrOffset, Length;
-  uint8_t AddrSize = 0, UnitType = 0;
+  uint8_t AddrSize = 0;
   uint16_t Version;
   bool Success = true;
 
@@ -55,6 +55,7 @@ bool DWARFVerifier::verifyUnitHeader(const DWARFDataExtractor DebugInfoData,
     AbbrOffset = DebugInfoData.getU32(Offset);
     ValidType = DWARFUnit::isValidUnitType(UnitType);
   } else {
+    UnitType = 0;
     AbbrOffset = DebugInfoData.getU32(Offset);
     AddrSize = DebugInfoData.getU8(Offset);
   }
@@ -86,47 +87,103 @@ bool DWARFVerifier::verifyUnitHeader(const DWARFDataExtractor DebugInfoData,
   return Success;
 }
 
-bool DWARFVerifier::handleDebugInfoUnitHeaderChain() {
+bool DWARFVerifier::verifyUnitContents(DWARFUnit Unit) {
+  uint32_t NumUnitErrors = 0;
+  unsigned NumDies = Unit.getNumDIEs();
+  for (unsigned I = 0; I < NumDies; ++I) {
+    auto Die = Unit.getDIEAtIndex(I);
+    if (Die.getTag() == DW_TAG_null)
+      continue;
+    for (auto AttrValue : Die.attributes()) {
+      NumUnitErrors += verifyDebugInfoAttribute(Die, AttrValue);
+      NumUnitErrors += verifyDebugInfoForm(Die, AttrValue);
+    }
+  }
+  return NumUnitErrors == 0;
+}
+
+bool DWARFVerifier::handleDebugInfo() {
   OS << "Verifying .debug_info Unit Header Chain...\n";
 
   DWARFDataExtractor DebugInfoData(DCtx.getInfoSection(), DCtx.isLittleEndian(),
                                    0);
-  uint32_t Offset = 0, UnitIdx = 0;
+  uint32_t NumDebugInfoErrors = 0;
+  uint32_t OffsetStart = 0, Offset = 0, UnitIdx = 0;
+  uint8_t UnitType = 0;
   bool isUnitDWARF64 = false;
-  bool Success = true;
+  bool isHeaderChainValid = true;
   bool hasDIE = DebugInfoData.isValidOffset(Offset);
   while (hasDIE) {
-    if (!verifyUnitHeader(DebugInfoData, &Offset, UnitIdx, isUnitDWARF64)) {
-      Success = false;
+    OffsetStart = Offset;
+    if (!verifyUnitHeader(DebugInfoData, &Offset, UnitIdx, UnitType,
+                          isUnitDWARF64)) {
+      isHeaderChainValid = false;
       if (isUnitDWARF64)
         break;
+    } else {
+      std::unique_ptr<DWARFUnit> Unit;
+      switch (UnitType) {
+      case dwarf::DW_UT_type:
+      case dwarf::DW_UT_split_type: {
+        DWARFUnitSection<DWARFTypeUnit> TUSection{};
+        Unit.reset(new DWARFTypeUnit(
+            DCtx, DCtx.getInfoSection(), DCtx.getDebugAbbrev(),
+            &DCtx.getRangeSection(), DCtx.getStringSection(),
+            DCtx.getStringOffsetSection(), &DCtx.getAppleObjCSection(),
+            DCtx.getLineSection(), DCtx.isLittleEndian(), false, TUSection,
+            nullptr));
+        break;
+      }
+      case dwarf::DW_UT_skeleton:
+      case dwarf::DW_UT_split_compile:
+      case dwarf::DW_UT_compile:
+      case dwarf::DW_UT_partial:
+      // UnitType = 0 means that we are
+      // verifying a compile unit in DWARF v4.
+      case 0: {
+        DWARFUnitSection<DWARFCompileUnit> CUSection{};
+        Unit.reset(new DWARFCompileUnit(
+            DCtx, DCtx.getInfoSection(), DCtx.getDebugAbbrev(),
+            &DCtx.getRangeSection(), DCtx.getStringSection(),
+            DCtx.getStringOffsetSection(), &DCtx.getAppleObjCSection(),
+            DCtx.getLineSection(), DCtx.isLittleEndian(), false, CUSection,
+            nullptr));
+        break;
+      }
+      default: { llvm_unreachable("Invalid UnitType."); }
+      }
+      Unit->extract(DebugInfoData, &OffsetStart);
+      if (!verifyUnitContents(*Unit))
+        ++NumDebugInfoErrors;
     }
     hasDIE = DebugInfoData.isValidOffset(Offset);
     ++UnitIdx;
   }
   if (UnitIdx == 0 && !hasDIE) {
     OS << "Warning: .debug_info is empty.\n";
-    Success = true;
+    isHeaderChainValid = true;
   }
-  return Success;
+  NumDebugInfoErrors += verifyDebugInfoReferences();
+  return (isHeaderChainValid && NumDebugInfoErrors == 0);
 }
 
-void DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
-                                             DWARFAttribute &AttrValue) {
+unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
+                                                 DWARFAttribute &AttrValue) {
+  unsigned NumErrors = 0;
   const auto Attr = AttrValue.Attr;
   switch (Attr) {
   case DW_AT_ranges:
     // Make sure the offset in the DW_AT_ranges attribute is valid.
     if (auto SectionOffset = AttrValue.Value.getAsSectionOffset()) {
       if (*SectionOffset >= DCtx.getRangeSection().Data.size()) {
-        ++NumDebugInfoErrors;
+        ++NumErrors;
         OS << "error: DW_AT_ranges offset is beyond .debug_ranges "
               "bounds:\n";
         Die.dump(OS, 0);
         OS << "\n";
       }
     } else {
-      ++NumDebugInfoErrors;
+      ++NumErrors;
       OS << "error: DIE has invalid DW_AT_ranges encoding:\n";
       Die.dump(OS, 0);
       OS << "\n";
@@ -136,7 +193,7 @@ void DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
     // Make sure the offset in the DW_AT_stmt_list attribute is valid.
     if (auto SectionOffset = AttrValue.Value.getAsSectionOffset()) {
       if (*SectionOffset >= DCtx.getLineSection().Data.size()) {
-        ++NumDebugInfoErrors;
+        ++NumErrors;
         OS << "error: DW_AT_stmt_list offset is beyond .debug_line "
               "bounds: "
            << format("0x%08" PRIx32, *SectionOffset) << "\n";
@@ -144,7 +201,7 @@ void DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
         OS << "\n";
       }
     } else {
-      ++NumDebugInfoErrors;
+      ++NumErrors;
       OS << "error: DIE has invalid DW_AT_stmt_list encoding:\n";
       Die.dump(OS, 0);
       OS << "\n";
@@ -154,10 +211,12 @@ void DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
   default:
     break;
   }
+  return NumErrors;
 }
 
-void DWARFVerifier::verifyDebugInfoForm(const DWARFDie &Die,
-                                        DWARFAttribute &AttrValue) {
+unsigned DWARFVerifier::verifyDebugInfoForm(const DWARFDie &Die,
+                                            DWARFAttribute &AttrValue) {
+  unsigned NumErrors = 0;
   const auto Form = AttrValue.Value.getForm();
   switch (Form) {
   case DW_FORM_ref1:
@@ -173,7 +232,7 @@ void DWARFVerifier::verifyDebugInfoForm(const DWARFDie &Die,
       auto CUSize = DieCU->getNextUnitOffset() - DieCU->getOffset();
       auto CUOffset = AttrValue.Value.getRawUValue();
       if (CUOffset >= CUSize) {
-        ++NumDebugInfoErrors;
+        ++NumErrors;
         OS << "error: " << FormEncodingString(Form) << " CU offset "
            << format("0x%08" PRIx32, CUOffset)
            << " is invalid (must be less than CU size of "
@@ -195,7 +254,7 @@ void DWARFVerifier::verifyDebugInfoForm(const DWARFDie &Die,
     assert(RefVal);
     if (RefVal) {
       if (*RefVal >= DCtx.getInfoSection().Data.size()) {
-        ++NumDebugInfoErrors;
+        ++NumErrors;
         OS << "error: DW_FORM_ref_addr offset beyond .debug_info "
               "bounds:\n";
         Die.dump(OS, 0);
@@ -212,7 +271,7 @@ void DWARFVerifier::verifyDebugInfoForm(const DWARFDie &Die,
     auto SecOffset = AttrValue.Value.getAsSectionOffset();
     assert(SecOffset); // DW_FORM_strp is a section offset.
     if (SecOffset && *SecOffset >= DCtx.getStringSection().size()) {
-      ++NumDebugInfoErrors;
+      ++NumErrors;
       OS << "error: DW_FORM_strp offset beyond .debug_str bounds:\n";
       Die.dump(OS, 0);
       OS << "\n";
@@ -222,17 +281,19 @@ void DWARFVerifier::verifyDebugInfoForm(const DWARFDie &Die,
   default:
     break;
   }
+  return NumErrors;
 }
 
-void DWARFVerifier::verifyDebugInfoReferences() {
+unsigned DWARFVerifier::verifyDebugInfoReferences() {
   // Take all references and make sure they point to an actual DIE by
   // getting the DIE by offset and emitting an error
   OS << "Verifying .debug_info references...\n";
+  unsigned NumErrors = 0;
   for (auto Pair : ReferenceToDIEOffsets) {
     auto Die = DCtx.getDIEForOffset(Pair.first);
     if (Die)
       continue;
-    ++NumDebugInfoErrors;
+    ++NumErrors;
     OS << "error: invalid DIE reference " << format("0x%08" PRIx64, Pair.first)
        << ". Offset is in between DIEs:\n";
     for (auto Offset : Pair.second) {
@@ -242,26 +303,7 @@ void DWARFVerifier::verifyDebugInfoReferences() {
     }
     OS << "\n";
   }
-}
-
-bool DWARFVerifier::handleDebugInfo() {
-  NumDebugInfoErrors = 0;
-  OS << "Verifying .debug_info...\n";
-  for (const auto &CU : DCtx.compile_units()) {
-    unsigned NumDies = CU->getNumDIEs();
-    for (unsigned I = 0; I < NumDies; ++I) {
-      auto Die = CU->getDIEAtIndex(I);
-      const auto Tag = Die.getTag();
-      if (Tag == DW_TAG_null)
-        continue;
-      for (auto AttrValue : Die.attributes()) {
-        verifyDebugInfoAttribute(Die, AttrValue);
-        verifyDebugInfoForm(Die, AttrValue);
-      }
-    }
-  }
-  verifyDebugInfoReferences();
-  return NumDebugInfoErrors == 0;
+  return NumErrors;
 }
 
 void DWARFVerifier::verifyDebugLineStmtOffsets() {

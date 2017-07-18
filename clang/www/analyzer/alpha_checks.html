@@ -24,6 +24,7 @@ keep them from being on by default. They are likely to have false positives.
 Bug reports are welcome but will likely not be investigated for some time.
 Patches welcome!
 <ul>
+<li><a href="#clone_alpha_checkers">Clone Alpha Checkers</a></li>
 <li><a href="#core_alpha_checkers">Core Alpha Checkers</a></li>
 <li><a href="#cplusplus_alpha_checkers">C++ Alpha Checkers</a></li>
 <li><a href="#valist_alpha_checkers">Variable Argument Alpha Checkers</a></li>
@@ -32,6 +33,38 @@ Patches welcome!
 <li><a href="#security_alpha_checkers">Security Alpha Checkers</a></li>
 <li><a href="#unix_alpha_checkers">Unix Alpha Checkers</a></li>
 </ul>
+
+<!-- ============================= clone alpha ============================= -->
+
+<h3 id="clone_alpha_checkers">Clone Alpha Checkers</h3>
+<table class="checkers">
+<colgroup><col class="namedescr"><col class="example"></colgroup>
+<thead><tr><td>Name, Description</td><td>Example</td></tr></thead>
+
+<tbody>
+<tr><td><div class="namedescr expandable"><span class="name">
+alpha.clone.CloneChecker</span><span class="lang">
+(C, C++, ObjC)</span><div class="descr">
+Reports similar pieces of code.</div></div></td>
+<td><div class="exampleContainer expandable">
+<div class="example"><pre>
+void log();
+
+int max(int a, int b) { // warn
+  log();
+  if (a > b)
+    return a;
+  return b;
+}
+
+int maxClone(int x, int y) { // similar code here
+  log();
+  if (x > y)
+    return x;
+  return y;
+}
+</pre></div></div></td></tr>
+</tbody></table>
 
 <!-- ============================= core alpha ============================= -->
 <h3 id="core_alpha_checkers">Core Alpha Checkers</h3>
@@ -51,6 +84,28 @@ void test() {
 }
 </pre></div></div></td></tr>
 
+
+<tr><td><div class="namedescr expandable"><span class="name">
+alpha.core.CallAndMessageUnInitRefArg</span><span class="lang">
+(C, C++)</span><div class="descr">
+Check for uninitialized arguments in function calls and Objective-C 
+message expressions.</div></div></td>
+<td><div class="exampleContainer expandable">
+<div class="example"><pre>
+void test(void) {
+  int t;
+  int &p = t;
+  int &s = p;
+  int &q = s;
+  foo(q); // warn
+}
+</pre></div><div class="separator"></div>
+<div class="example"><pre>
+void test(void) {
+  int x;
+  foo(&x); // warn
+}
+</pre></div></div></td></tr>
 
 <tr><td><div class="namedescr expandable"><span class="name">
 alpha.core.CastSize</span><span class="lang">
@@ -87,6 +142,47 @@ class c {};
 void test(int *p) {
   c *pc = (c *) p; // warn
 }
+</pre></div></div></td></tr>
+
+
+<tr><td><div class="namedescr expandable"><span class="name">
+alpha.core.Conversion</span><span class="lang">
+(C, C++, ObjC)</span><div class="descr">
+Loss of sign or precision in implicit conversions</div></div></td>
+<td><div class="exampleContainer expandable">
+<div class="example"><pre>
+void test(unsigned U, signed S) {
+  if (S > 10) {
+    if (U < S) {
+    }
+  }
+  if (S < -10) {
+    if (U < S) { // warn (loss of sign)
+    }
+  }
+}
+</pre></div><div class="separator"></div>
+<div class="example"><pre>
+void test() {
+  long long A = 1LL << 60;
+  short X = A; // warn (loss of precision)
+}
+</pre></div></div></td></tr>
+
+
+<tr><td><div class="namedescr expandable"><span class="name">
+alpha.core.DynamicTypeChecker</span><span class="lang">
+(ObjC)</span><div class="descr">
+Check for cases where the dynamic and the static type of an 
+object are unrelated.</div></div></td>
+<td><div class="exampleContainer expandable">
+<div class="example"><pre>
+id date = [NSDate date];
+
+// Warning: Object has a dynamic type 'NSDate *' which is 
+// incompatible with static type 'NSNumber *'"
+NSNumber *number = date;
+[number doubleValue];
 </pre></div></div></td></tr>
 
 
@@ -178,6 +274,21 @@ int test(struct s *p) {
 }
 </pre></div></div></td></tr>
 
+
+<tr><td><div class="namedescr expandable"><span class="name">
+alpha.core.TestAfterDivZero</span><span class="lang">
+(C, C++, ObjC)</span><div class="descr">
+Check for division by variable that is later compared against 0. 
+Either the comparison is useless or there is division by zero.
+</div></div></td>
+<td><div class="exampleContainer expandable">
+<div class="example"><pre>
+void test(int x) {
+  var = 77 / x;
+  if (x == 0) { } // warn 
+}
+</pre></div></div></td></tr>
+
 </tbody></table>
 
 <!-- =========================== cplusplus alpha =========================== -->
@@ -187,19 +298,6 @@ int test(struct s *p) {
 <thead><tr><td>Name, Description</td><td>Example</td></tr></thead>
 
 <tbody>
-<tr><td><div class="namedescr expandable"><span class="name">
-alpha.cplusplus.NewDeleteLeaks</span><span class="lang">
-(C++)</span><div class="descr">
-Check for memory leaks. Traces memory managed by <code>new</code>/<code>
-delete</code>.</div></div></td>
-<td><div class="exampleContainer expandable">
-<div class="example"><pre>
-void test() {
-  int *p = new int;
-} // warn
-</pre></div></div></td></tr>
-
-
 <tr><td><div class="namedescr expandable"><span class="name">
 alpha.cplusplus.VirtualCall</span><span class="lang">
 (C++)</span><div class="descr">
@@ -345,66 +443,6 @@ void test(id x) {
 
 <tbody>
 <tr><td><div class="namedescr expandable"><span class="name">
-alpha.osx.cocoa.Dealloc</span><span class="lang">
-(ObjC)</span><div class="descr">
-Warn about Objective-C classes that lack a correct implementation 
-of <code>-dealloc</code>.
-</div></div></td>
-<td><div class="exampleContainer expandable">
-<div class="example"><pre>
-@interface MyObject : NSObject {
-  id _myproperty;  
-}
-@end
-
-@implementation MyObject // warn: lacks 'dealloc'
-@end
-</pre></div><div class="separator"></div>
-<div class="example"><pre>
-@interface MyObject : NSObject {}
-@property(assign) id myproperty;
-@end
-
-@implementation MyObject // warn: does not send 'dealloc' to super
-- (void)dealloc {
-  self.myproperty = 0;
-}
-@end
-</pre></div><div class="separator"></div>
-<div class="example"><pre>
-@interface MyObject : NSObject {
-  id _myproperty;
-}
-@property(retain) id myproperty;
-@end
-
-@implementation MyObject
-@synthesize myproperty = _myproperty;
-  // warn: var was retained but wasn't released
-- (void)dealloc {
-  [super dealloc];
-}
-@end
-</pre></div><div class="separator"></div>
-<div class="example"><pre>
-@interface MyObject : NSObject {
-  id _myproperty;
-}
-@property(assign) id myproperty;
-@end
-
-@implementation MyObject
-@synthesize myproperty = _myproperty;
-  // warn: var wasn't retained but was released
-- (void)dealloc {
-  [_myproperty release];
-  [super dealloc];
-}
-@end
-</pre></div></div></td></tr>
-
-
-<tr><td><div class="namedescr expandable"><span class="name">
 alpha.osx.cocoa.DirectIvarAssignment</span><span class="lang">
 (ObjC)</span><div class="descr">
 Check that Objective C properties follow the following rule: the property 
@@ -499,6 +537,32 @@ invalidatable instance variables.</div></div></td>
 
 @implementation MissingInvalidationMethodDecl
 @end
+</pre></div></div></td></tr>
+
+
+<tr><td><div class="namedescr expandable"><span class="name">
+alpha.osx.cocoa.localizability.PluralMisuseChecker</span><span class="lang">
+(ObjC)</span><div class="descr">
+Warns against using one vs. many plural pattern in code 
+when generating localized strings.
+</div></div></td>
+<td><div class="exampleContainer expandable">
+<div class="example"><pre>
+NSString *reminderText = 
+  NSLocalizedString(@"None", @"Indicates no reminders");
+if (reminderCount == 1) {
+  // Warning: Plural cases are not supported accross all languages. 
+  // Use a .stringsdict file instead
+  reminderText = 
+    NSLocalizedString(@"1 Reminder", @"Indicates single reminder");
+} else if (reminderCount >= 2) {
+  // Warning: Plural cases are not supported accross all languages.
+  // Use a .stringsdict file instead
+  reminderText = 
+    [NSString stringWithFormat:
+      NSLocalizedString(@"%@ Reminders", @"Indicates multiple reminders"),
+        reminderCount];
+}
 </pre></div></div></td></tr>
 
 </tbody></table>
@@ -674,52 +738,6 @@ void test() {
   f(); // warn: no call of chdir("/") immediately after chroot
 }
 </pre></div></div></td></tr>
-
-
-<tr><td><div class="namedescr expandable"><span class="name">
-alpha.unix.MallocWithAnnotations</span><span class="lang">
-(C)</span><div class="descr">
-Check for memory leaks, double free, and use-after-free problems. Assumes that
-all user-defined functions which might free a pointer are
-annotated.</div></div></td>
-<td><div class="exampleContainer expandable">
-<div class="example"><pre>
-void __attribute((ownership_returns(malloc))) *my_malloc(size_t);
-
-void test() {
-  int *p = my_malloc(1);
-} // warn: potential leak
-</pre></div><div class="separator"></div>
-<div class="example"><pre>
-void __attribute((ownership_returns(malloc))) *my_malloc(size_t);
-void __attribute((ownership_takes(malloc, 1))) my_free(void *);
-
-void test() {
-  int *p = my_malloc(1);
-  my_free(p);
-  my_free(p); // warn: attempt to free released
-}
-</pre></div><div class="separator"></div>
-<div class="example"><pre>
-void __attribute((ownership_returns(malloc))) *my_malloc(size_t);
-void __attribute((ownership_holds(malloc, 1))) my_hold(void *);
-
-void test() {
-  int *p = my_malloc(1);
-  my_hold(p);
-  free(p); // warn: attempt to free non-owned memory
-}
-</pre></div><div class="separator"></div>
-<div class="example"><pre>
-void __attribute((ownership_takes(malloc, 1))) my_free(void *);
-
-void test() {
-  int *p = malloc(1);
-  my_free(p);
-  *p = 1; // warn: use after free
-}
-</pre></div></div></td></tr>
-
 
 <tr><td><div class="namedescr expandable"><span class="name">
 alpha.unix.PthreadLock</span><span class="lang">
@@ -910,30 +928,6 @@ void test(char *y) {
 }
 </pre></div></div></td></tr>
 
-
-<tr><td><div class="namedescr expandable"><span class="name">
-alpha.unix.cstring.BlockInCriticalSection</span><span class="lang">
-(C)</span><div class="descr">
-Check for calls to blocking functions inside a critical section; applies
-to:<div class=functions>
-lock, unlock<br>
-sleep<br>
-getc<br>
-fgets<br>
-read<br>
-recv<br>
-pthread_mutex_lock, pthread_mutex_trylock, pthread_mutex_unlock<br>
-mtx_lock, mtx_timedlock, mtx_trylock, mtx_unlock<br>
-</div></div></div></td>
-<td><div class="exampleContainer expandable">
-<div class="example"><pre>
-void testBlockInCriticalSection() {
-  std::mutex m;
-  m.lock();
-  sleep(3); // warn
-  m.unlock();
-}
-</pre></div></div></td></tr>
 </tbody></table>
 
 </div> <!-- page -->

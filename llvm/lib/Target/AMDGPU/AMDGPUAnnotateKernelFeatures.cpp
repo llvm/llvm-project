@@ -129,8 +129,16 @@ bool AMDGPUAnnotateKernelFeatures::visitConstantExprsRecursively(
 //
 // TODO: We should not add the attributes if the known compile time workgroup
 // size is 1 for y/z.
-static StringRef intrinsicToAttrName(Intrinsic::ID ID, bool &IsQueuePtr) {
+static StringRef intrinsicToAttrName(Intrinsic::ID ID,
+                                     bool &NonKernelOnly,
+                                     bool &IsQueuePtr) {
   switch (ID) {
+  case Intrinsic::amdgcn_workitem_id_x:
+    NonKernelOnly = true;
+    return "amdgpu-work-item-id-x";
+  case Intrinsic::amdgcn_workgroup_id_x:
+    NonKernelOnly = true;
+    return "amdgpu-work-group-id-x";
   case Intrinsic::amdgcn_workitem_id_y:
   case Intrinsic::r600_read_tidig_y:
     return "amdgpu-work-item-id-y";
@@ -172,12 +180,12 @@ static bool handleAttr(Function &Parent, const Function &Callee,
 
 static void copyFeaturesToFunction(Function &Parent, const Function &Callee,
                                    bool &NeedQueuePtr) {
-
+  // X ids unnecessarily propagated to kernels.
   static const StringRef AttrNames[] = {
-    // .x omitted
+    { "amdgpu-work-item-id-x" },
     { "amdgpu-work-item-id-y" },
     { "amdgpu-work-item-id-z" },
-    // .x omitted
+    { "amdgpu-work-group-id-x" },
     { "amdgpu-work-group-id-y" },
     { "amdgpu-work-group-id-z" },
     { "amdgpu-dispatch-ptr" },
@@ -198,6 +206,7 @@ bool AMDGPUAnnotateKernelFeatures::addFeatureAttributes(Function &F) {
 
   bool Changed = false;
   bool NeedQueuePtr = false;
+  bool IsFunc = !AMDGPU::isEntryFunctionCC(F.getCallingConv());
 
   for (BasicBlock &BB : F) {
     for (Instruction &I : BB) {
@@ -214,8 +223,10 @@ bool AMDGPUAnnotateKernelFeatures::addFeatureAttributes(Function &F) {
           copyFeaturesToFunction(F, *Callee, NeedQueuePtr);
           Changed = true;
         } else {
-          StringRef AttrName = intrinsicToAttrName(IID, NeedQueuePtr);
-          if (!AttrName.empty()) {
+          bool NonKernelOnly = false;
+          StringRef AttrName = intrinsicToAttrName(IID,
+                                                   NonKernelOnly, NeedQueuePtr);
+          if (!AttrName.empty() && (IsFunc || !NonKernelOnly)) {
             F.addFnAttr(AttrName);
             Changed = true;
           }

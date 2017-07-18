@@ -18,6 +18,7 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
+#include "llvm/DebugInfo/CodeView/GUID.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/Support/BinaryStreamArray.h"
 #include "llvm/Support/Endian.h"
@@ -539,15 +540,17 @@ class TypeServer2Record : public TypeRecord {
 public:
   TypeServer2Record() = default;
   explicit TypeServer2Record(TypeRecordKind Kind) : TypeRecord(Kind) {}
-  TypeServer2Record(StringRef Guid, uint32_t Age, StringRef Name)
-      : TypeRecord(TypeRecordKind::TypeServer2), Guid(Guid), Age(Age),
-        Name(Name) {}
+  TypeServer2Record(StringRef GuidStr, uint32_t Age, StringRef Name)
+      : TypeRecord(TypeRecordKind::TypeServer2), Age(Age), Name(Name) {
+    assert(GuidStr.size() == 16 && "guid isn't 16 bytes");
+    ::memcpy(Guid.Guid, GuidStr.data(), 16);
+  }
 
-  StringRef getGuid() const { return Guid; }
+  const GUID &getGuid() const { return Guid; }
   uint32_t getAge() const { return Age; }
   StringRef getName() const { return Name; }
 
-  StringRef Guid;
+  GUID Guid;
   uint32_t Age;
   StringRef Name;
 };

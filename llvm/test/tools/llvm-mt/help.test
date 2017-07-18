@@ -1,4 +1,4 @@
-RUN: llvm-mt /? | FileCheck %s -check-prefix=HELP
+RUN: llvm-mt /h | FileCheck %s -check-prefix=HELP
 
 RUN: llvm-mt /inputresource:foo.res /manifest foo.manifest | FileCheck %s -check-prefix=NOT_SUPPORTED
 

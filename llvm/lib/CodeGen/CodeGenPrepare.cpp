@@ -4267,9 +4267,7 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
   // Use a worklist to iteratively look through PHI nodes, and ensure that
   // the addressing mode obtained from the non-PHI roots of the graph
   // are equivalent.
-  Value *Consensus = nullptr;
-  unsigned NumUsesConsensus = 0;
-  bool IsNumUsesConsensusValid = false;
+  bool AddrModeFound = false;
   bool PhiSeen = false;
   SmallVector<Instruction*, 16> AddrModeInsts;
   ExtAddrMode AddrMode;
@@ -4282,7 +4280,7 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
 
     // Break use-def graph loops.
     if (!Visited.insert(V).second) {
-      Consensus = nullptr;
+      AddrModeFound = false;
       break;
     }
 
@@ -4297,47 +4295,26 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
     // For non-PHIs, determine the addressing mode being computed.  Note that
     // the result may differ depending on what other uses our candidate
     // addressing instructions might have.
-    SmallVector<Instruction*, 16> NewAddrModeInsts;
+    AddrModeInsts.clear();
     ExtAddrMode NewAddrMode = AddressingModeMatcher::Match(
-      V, AccessTy, AddrSpace, MemoryInst, NewAddrModeInsts, *TLI, *TRI,
-      InsertedInsts, PromotedInsts, TPT);
+        V, AccessTy, AddrSpace, MemoryInst, AddrModeInsts, *TLI, *TRI,
+        InsertedInsts, PromotedInsts, TPT);
 
-    // This check is broken into two cases with very similar code to avoid using
-    // getNumUses() as much as possible. Some values have a lot of uses, so
-    // calling getNumUses() unconditionally caused a significant compile-time
-    // regression.
-    if (!Consensus) {
-      Consensus = V;
+    if (!AddrModeFound) {
+      AddrModeFound = true;
       AddrMode = NewAddrMode;
-      AddrModeInsts = NewAddrModeInsts;
-      continue;
-    } else if (NewAddrMode == AddrMode) {
-      if (!IsNumUsesConsensusValid) {
-        NumUsesConsensus = Consensus->getNumUses();
-        IsNumUsesConsensusValid = true;
-      }
-
-      // Ensure that the obtained addressing mode is equivalent to that obtained
-      // for all other roots of the PHI traversal.  Also, when choosing one
-      // such root as representative, select the one with the most uses in order
-      // to keep the cost modeling heuristics in AddressingModeMatcher
-      // applicable.
-      unsigned NumUses = V->getNumUses();
-      if (NumUses > NumUsesConsensus) {
-        Consensus = V;
-        NumUsesConsensus = NumUses;
-        AddrModeInsts = NewAddrModeInsts;
-      }
       continue;
     }
+    if (NewAddrMode == AddrMode)
+      continue;
 
-    Consensus = nullptr;
+    AddrModeFound = false;
     break;
   }
 
   // If the addressing mode couldn't be determined, or if multiple different
   // ones were determined, bail out now.
-  if (!Consensus) {
+  if (!AddrModeFound) {
     TPT.rollback(LastKnownGood);
     return false;
   }

@@ -38,41 +38,6 @@ LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(llvm::pdb::PdbRaw_FeatureSig)
 namespace llvm {
 namespace yaml {
 
-template <> struct ScalarTraits<llvm::pdb::PDB_UniqueId> {
-  static void output(const llvm::pdb::PDB_UniqueId &S, void *,
-                     llvm::raw_ostream &OS) {
-    OS << S;
-  }
-
-  static StringRef input(StringRef Scalar, void *Ctx,
-                         llvm::pdb::PDB_UniqueId &S) {
-    if (Scalar.size() != 38)
-      return "GUID strings are 38 characters long";
-    if (Scalar[0] != '{' || Scalar[37] != '}')
-      return "GUID is not enclosed in {}";
-    if (Scalar[9] != '-' || Scalar[14] != '-' || Scalar[19] != '-' ||
-        Scalar[24] != '-')
-      return "GUID sections are not properly delineated with dashes";
-
-    uint8_t *OutBuffer = S.Guid;
-    for (auto Iter = Scalar.begin(); Iter != Scalar.end();) {
-      if (*Iter == '-' || *Iter == '{' || *Iter == '}') {
-        ++Iter;
-        continue;
-      }
-      uint8_t Value = (llvm::hexDigitValue(*Iter) << 4);
-      ++Iter;
-      Value |= llvm::hexDigitValue(*Iter);
-      ++Iter;
-      *OutBuffer++ = Value;
-    }
-
-    return "";
-  }
-
-  static bool mustQuote(StringRef Scalar) { return needsQuotes(Scalar); }
-};
-
 template <> struct ScalarEnumerationTraits<llvm::pdb::PDB_Machine> {
   static void enumeration(IO &io, llvm::pdb::PDB_Machine &Value) {
     io.enumCase(Value, "Invalid", PDB_Machine::Invalid);

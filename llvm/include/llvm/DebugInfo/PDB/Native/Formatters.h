@@ -23,13 +23,6 @@
     break;
 
 namespace llvm {
-template <> struct format_provider<pdb::PDB_UniqueId> {
-  static void format(const pdb::PDB_UniqueId &V, llvm::raw_ostream &Stream,
-                     StringRef Style) {
-    codeview::fmt_guid(V.Guid).format(Stream, Style);
-  }
-};
-
 template <> struct format_provider<pdb::PdbRaw_ImplVer> {
   static void format(const pdb::PdbRaw_ImplVer &V, llvm::raw_ostream &Stream,
                      StringRef Style) {

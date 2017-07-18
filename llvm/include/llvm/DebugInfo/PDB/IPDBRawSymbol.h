@@ -118,7 +118,7 @@ public:
   virtual uint32_t getVirtualTableShapeId() const = 0;
   virtual PDB_DataKind getDataKind() const = 0;
   virtual PDB_SymType getSymTag() const = 0;
-  virtual PDB_UniqueId getGuid() const = 0;
+  virtual codeview::GUID getGuid() const = 0;
   virtual int32_t getOffset() const = 0;
   virtual int32_t getThisAdjust() const = 0;
   virtual int32_t getVirtualBasePointerOffset() const = 0;
