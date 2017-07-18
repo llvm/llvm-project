@@ -42,11 +42,11 @@ class NativeProcessLinux : public NativeProcessProtocol {
 public:
   class Factory : public NativeProcessProtocol::Factory {
   public:
-    llvm::Expected<NativeProcessProtocolSP>
+    llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
     Launch(ProcessLaunchInfo &launch_info, NativeDelegate &native_delegate,
            MainLoop &mainloop) const override;
 
-    llvm::Expected<NativeProcessProtocolSP>
+    llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
     Attach(lldb::pid_t pid, NativeDelegate &native_delegate,
            MainLoop &mainloop) const override;
   };
@@ -160,14 +160,13 @@ private:
   // Private Instance Methods
   // ---------------------------------------------------------------------
   NativeProcessLinux(::pid_t pid, int terminal_fd, NativeDelegate &delegate,
-                     const ArchSpec &arch, MainLoop &mainloop);
+                     const ArchSpec &arch, MainLoop &mainloop,
+                     llvm::ArrayRef<::pid_t> tids);
 
   // Returns a list of process threads that we have attached to.
   static llvm::Expected<std::vector<::pid_t>> Attach(::pid_t pid);
 
   static Status SetDefaultPtraceOpts(const lldb::pid_t);
-
-  void InitializeThreads(llvm::ArrayRef<::pid_t> tids);
 
   void MonitorCallback(lldb::pid_t pid, bool exited, WaitStatus status);
 

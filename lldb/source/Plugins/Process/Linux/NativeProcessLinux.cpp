@@ -214,7 +214,7 @@ static Status EnsureFDFlags(int fd, int flags) {
 // Public Static Methods
 // -----------------------------------------------------------------------------
 
-llvm::Expected<NativeProcessProtocolSP>
+llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
 NativeProcessLinux::Factory::Launch(ProcessLaunchInfo &launch_info,
                                     NativeDelegate &native_delegate,
                                     MainLoop &mainloop) const {
@@ -259,14 +259,13 @@ NativeProcessLinux::Factory::Launch(ProcessLaunchInfo &launch_info,
     return status.ToError();
   }
 
-  std::shared_ptr<NativeProcessLinux> process_sp(new NativeProcessLinux(
+  return std::unique_ptr<NativeProcessLinux>(new NativeProcessLinux(
       pid, launch_info.GetPTY().ReleaseMasterFileDescriptor(), native_delegate,
-      arch, mainloop));
-  process_sp->InitializeThreads({pid});
-  return process_sp;
+      arch, mainloop, {pid}));
 }
 
-llvm::Expected<NativeProcessProtocolSP> NativeProcessLinux::Factory::Attach(
+llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
+NativeProcessLinux::Factory::Attach(
     lldb::pid_t pid, NativeProcessProtocol::NativeDelegate &native_delegate,
     MainLoop &mainloop) const {
   Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PROCESS));
@@ -282,10 +281,8 @@ llvm::Expected<NativeProcessProtocolSP> NativeProcessLinux::Factory::Attach(
   if (!tids_or)
     return tids_or.takeError();
 
-  std::shared_ptr<NativeProcessLinux> process_sp(
-      new NativeProcessLinux(pid, -1, native_delegate, arch, mainloop));
-  process_sp->InitializeThreads(*tids_or);
-  return process_sp;
+  return std::unique_ptr<NativeProcessLinux>(new NativeProcessLinux(
+      pid, -1, native_delegate, arch, mainloop, *tids_or));
 }
 
 // -----------------------------------------------------------------------------
@@ -294,7 +291,8 @@ llvm::Expected<NativeProcessProtocolSP> NativeProcessLinux::Factory::Attach(
 
 NativeProcessLinux::NativeProcessLinux(::pid_t pid, int terminal_fd,
                                        NativeDelegate &delegate,
-                                       const ArchSpec &arch, MainLoop &mainloop)
+                                       const ArchSpec &arch, MainLoop &mainloop,
+                                       llvm::ArrayRef<::pid_t> tids)
     : NativeProcessProtocol(pid, terminal_fd, delegate), m_arch(arch) {
   if (m_terminal_fd != -1) {
     Status status = EnsureFDFlags(m_terminal_fd, O_NONBLOCK);
@@ -305,9 +303,7 @@ NativeProcessLinux::NativeProcessLinux(::pid_t pid, int terminal_fd,
   m_sigchld_handle = mainloop.RegisterSignal(
       SIGCHLD, [this](MainLoopBase &) { SigchldHandler(); }, status);
   assert(m_sigchld_handle && status.Success());
-}
 
-void NativeProcessLinux::InitializeThreads(llvm::ArrayRef<::pid_t> tids) {
   for (const auto &tid : tids) {
     NativeThreadLinuxSP thread_sp = AddThread(tid);
     assert(thread_sp && "AddThread() returned a nullptr thread");
@@ -2009,7 +2005,7 @@ NativeThreadLinuxSP NativeProcessLinux::AddThread(lldb::tid_t thread_id) {
   if (m_threads.empty())
     SetCurrentThreadID(thread_id);
 
-  auto thread_sp = std::make_shared<NativeThreadLinux>(this, thread_id);
+  auto thread_sp = std::make_shared<NativeThreadLinux>(*this, thread_id);
   m_threads.push_back(thread_sp);
 
   if (m_pt_proces_trace_id != LLDB_INVALID_UID) {

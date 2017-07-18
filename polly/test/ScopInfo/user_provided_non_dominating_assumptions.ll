@@ -16,6 +16,41 @@
 ;      }
 ;    }
 ;
+
+
+; RUN: opt %loadPolly -pass-remarks-analysis="polly-scops" -polly-scops \
+; RUN:    -polly-precise-inbounds -disable-output < %s 2>&1 -pass-remarks-output=%t.yaml
+; RUN: cat %t.yaml | FileCheck -check-prefix=YAML %s
+; YAML: --- !Analysis
+; YAML: Pass:            polly-scops
+; YAML: Name:            ScopEntry
+; YAML: Function:        f
+; YAML: Args:
+; YAML:   - String:          SCoP begins here.
+; YAML: ...
+; YAML: --- !Analysis
+; YAML: Pass:            polly-scops
+; YAML: Name:            UserAssumption
+; YAML: Function:        f
+; YAML: Args:
+; YAML:   - String:          'Use user assumption: '
+; YAML:   - String:          '[i, N, M] -> {  : N <= i or (N > i and N >= 0) }'
+; YAML: ...
+; YAML: --- !Analysis
+; YAML: Pass:            polly-scops
+; YAML: Name:            AssumpRestrict
+; YAML: Function:        f
+; YAML: Args:
+; YAML:   - String:          'Inbounds assumption:      [i, N, M] -> {  : N <= i or (N > i and M <= 100) }'
+; YAML: ...
+; YAML: --- !Analysis
+; YAML: Pass:            polly-scops
+; YAML: Name:            ScopEnd
+; YAML: Function:        f
+; YAML: Args:
+; YAML:   - String:          SCoP ends here.
+; YAML: ...
+
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 define void @f(i32* noalias %A, i32* noalias %B, i32 %i, i32 %N, i32 %M, [100 x i32]* %C) {

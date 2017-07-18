@@ -14,27 +14,29 @@
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "llvm/DebugInfo/CodeView/CVDebugRecord.h"
-#include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
 #include "llvm/DebugInfo/CodeView/DebugSubsectionRecord.h"
-#include "llvm/DebugInfo/CodeView/DebugSubsectionVisitor.h"
 #include "llvm/DebugInfo/CodeView/LazyRandomTypeCollection.h"
 #include "llvm/DebugInfo/CodeView/SymbolSerializer.h"
+#include "llvm/DebugInfo/CodeView/TypeDeserializer.h"
 #include "llvm/DebugInfo/CodeView/TypeDumpVisitor.h"
 #include "llvm/DebugInfo/CodeView/TypeIndexDiscovery.h"
 #include "llvm/DebugInfo/CodeView/TypeStreamMerger.h"
 #include "llvm/DebugInfo/CodeView/TypeTableBuilder.h"
 #include "llvm/DebugInfo/MSF/MSFBuilder.h"
 #include "llvm/DebugInfo/MSF/MSFCommon.h"
+#include "llvm/DebugInfo/PDB/GenericError.h"
 #include "llvm/DebugInfo/PDB/Native/DbiModuleDescriptorBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/DbiStream.h"
 #include "llvm/DebugInfo/PDB/Native/DbiStreamBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/InfoStream.h"
 #include "llvm/DebugInfo/PDB/Native/InfoStreamBuilder.h"
+#include "llvm/DebugInfo/PDB/Native/NativeSession.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFileBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/PDBStringTableBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/TpiStream.h"
 #include "llvm/DebugInfo/PDB/Native/TpiStreamBuilder.h"
+#include "llvm/DebugInfo/PDB/PDB.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/BinaryByteStream.h"
 #include "llvm/Support/Endian.h"
@@ -53,6 +55,14 @@ using llvm::object::coff_section;
 static ExitOnError ExitOnErr;
 
 namespace {
+/// Map from type index and item index in a type server PDB to the
+/// corresponding index in the destination PDB.
+struct CVIndexMap {
+  SmallVector<TypeIndex, 0> TPIMap;
+  SmallVector<TypeIndex, 0> IPIMap;
+  bool IsTypeServerMap = false;
+};
+
 class PDBLinker {
 public:
   PDBLinker(SymbolTable *Symtab)
@@ -68,10 +78,21 @@ public:
   /// Link CodeView from a single object file into the PDB.
   void addObjectFile(ObjectFile *File);
 
-  /// Merge the type information from the .debug$T section in the given object
-  /// file. Produce a mapping from object file type indices to type or
-  /// item indices in the final PDB.
-  void mergeDebugT(ObjectFile *File, SmallVectorImpl<TypeIndex> &TypeIndexMap);
+  /// Produce a mapping from the type and item indices used in the object
+  /// file to those in the destination PDB.
+  ///
+  /// If the object file uses a type server PDB (compiled with /Zi), merge TPI
+  /// and IPI from the type server PDB and return a map for it. Each unique type
+  /// server PDB is merged at most once, so this may return an existing index
+  /// mapping.
+  ///
+  /// If the object does not use a type server PDB (compiled with /Z7), we merge
+  /// all the type and item records from the .debug$S stream and fill in the
+  /// caller-provided ObjectIndexMap.
+  const CVIndexMap &mergeDebugT(ObjectFile *File, CVIndexMap &ObjectIndexMap);
+
+  const CVIndexMap &maybeMergeTypeServerPDB(ObjectFile *File,
+                                            TypeServer2Record &TS);
 
   /// Add the section map and section contributions to the PDB.
   void addSections(ArrayRef<uint8_t> SectionTable);
@@ -99,6 +120,9 @@ private:
   llvm::SmallString<128> NativePath;
 
   std::vector<pdb::SecMapEntry> SectionMap;
+
+  /// Type index mappings of type server PDBs that we've loaded so far.
+  std::map<GUID, CVIndexMap> TypeServerIndexMappings;
 };
 }
 
@@ -146,25 +170,115 @@ static void addTypeInfo(pdb::TpiStreamBuilder &TpiBuilder,
   });
 }
 
-void PDBLinker::mergeDebugT(ObjectFile *File,
-                            SmallVectorImpl<TypeIndex> &TypeIndexMap) {
+static Optional<TypeServer2Record>
+maybeReadTypeServerRecord(CVTypeArray &Types) {
+  auto I = Types.begin();
+  if (I == Types.end())
+    return None;
+  const CVType &Type = *I;
+  if (Type.kind() != LF_TYPESERVER2)
+    return None;
+  TypeServer2Record TS;
+  if (auto EC = TypeDeserializer::deserializeAs(const_cast<CVType &>(Type), TS))
+    fatal(EC, "error reading type server record");
+  return std::move(TS);
+}
+
+const CVIndexMap &PDBLinker::mergeDebugT(ObjectFile *File,
+                                         CVIndexMap &ObjectIndexMap) {
   ArrayRef<uint8_t> Data = getDebugSection(File, ".debug$T");
   if (Data.empty())
-    return;
-
-  // Look for type server PDBs next to the input file. If this file has a parent
-  // archive, look next to the archive path.
-  StringRef LocalPath =
-      !File->ParentName.empty() ? File->ParentName : File->getName();
-  (void)LocalPath; // FIXME: Implement type server handling here.
+    return ObjectIndexMap;
 
   BinaryByteStream Stream(Data, support::little);
   CVTypeArray Types;
   BinaryStreamReader Reader(Stream);
   if (auto EC = Reader.readArray(Types, Reader.getLength()))
     fatal(EC, "Reader::readArray failed");
-  if (auto Err = mergeTypeAndIdRecords(IDTable, TypeTable, TypeIndexMap, Types))
-    fatal(Err, "codeview::mergeTypeStreams failed");
+
+  // Look through type servers. If we've already seen this type server, don't
+  // merge any type information.
+  if (Optional<TypeServer2Record> TS = maybeReadTypeServerRecord(Types))
+    return maybeMergeTypeServerPDB(File, *TS);
+
+  // This is a /Z7 object. Fill in the temporary, caller-provided
+  // ObjectIndexMap.
+  if (auto Err = mergeTypeAndIdRecords(IDTable, TypeTable,
+                                       ObjectIndexMap.TPIMap, Types))
+    fatal(Err, "codeview::mergeTypeAndIdRecords failed");
+  return ObjectIndexMap;
+}
+
+static Expected<std::unique_ptr<pdb::NativeSession>>
+tryToLoadPDB(const GUID &GuidFromObj, StringRef TSPath) {
+  std::unique_ptr<pdb::IPDBSession> ThisSession;
+  if (auto EC =
+          pdb::loadDataForPDB(pdb::PDB_ReaderType::Native, TSPath, ThisSession))
+    return std::move(EC);
+
+  std::unique_ptr<pdb::NativeSession> NS(
+      static_cast<pdb::NativeSession *>(ThisSession.release()));
+  pdb::PDBFile &File = NS->getPDBFile();
+  auto ExpectedInfo = File.getPDBInfoStream();
+  // All PDB Files should have an Info stream.
+  if (!ExpectedInfo)
+    return ExpectedInfo.takeError();
+
+  // Just because a file with a matching name was found and it was an actual
+  // PDB file doesn't mean it matches.  For it to match the InfoStream's GUID
+  // must match the GUID specified in the TypeServer2 record.
+  if (ExpectedInfo->getGuid() != GuidFromObj)
+    return make_error<pdb::GenericError>(
+        pdb::generic_error_code::type_server_not_found, TSPath);
+
+  return std::move(NS);
+}
+
+const CVIndexMap &PDBLinker::maybeMergeTypeServerPDB(ObjectFile *File,
+                                                     TypeServer2Record &TS) {
+  // First, check if we already loaded a PDB with this GUID. Return the type
+  // index mapping if we have it.
+  auto Insertion = TypeServerIndexMappings.insert({TS.getGuid(), CVIndexMap()});
+  CVIndexMap &IndexMap = Insertion.first->second;
+  if (!Insertion.second)
+    return IndexMap;
+
+  // Mark this map as a type server map.
+  IndexMap.IsTypeServerMap = true;
+
+  // Check for a PDB at:
+  // 1. The given file path
+  // 2. Next to the object file or archive file
+  auto ExpectedSession = tryToLoadPDB(TS.getGuid(), TS.getName());
+  if (!ExpectedSession) {
+    consumeError(ExpectedSession.takeError());
+    StringRef LocalPath =
+        !File->ParentName.empty() ? File->ParentName : File->getName();
+    SmallString<128> Path = sys::path::parent_path(LocalPath);
+    sys::path::append(
+        Path, sys::path::filename(TS.getName(), sys::path::Style::windows));
+    ExpectedSession = tryToLoadPDB(TS.getGuid(), Path);
+  }
+  if (auto E = ExpectedSession.takeError())
+    fatal(E, "Type server PDB was not found");
+
+  // Merge TPI first, because the IPI stream will reference type indices.
+  auto ExpectedTpi = (*ExpectedSession)->getPDBFile().getPDBTpiStream();
+  if (auto E = ExpectedTpi.takeError())
+    fatal(E, "Type server does not have TPI stream");
+  if (auto Err = mergeTypeRecords(TypeTable, IndexMap.TPIMap,
+                                  ExpectedTpi->typeArray()))
+    fatal(Err, "codeview::mergeTypeRecords failed");
+
+  // Merge IPI.
+  auto ExpectedIpi = (*ExpectedSession)->getPDBFile().getPDBIpiStream();
+  if (auto E = ExpectedIpi.takeError())
+    fatal(E, "Type server does not have TPI stream");
+  if (auto Err = mergeIdRecords(IDTable, IndexMap.TPIMap, IndexMap.IPIMap,
+                                ExpectedIpi->typeArray()))
+    fatal(Err, "codeview::mergeIdRecords failed");
+
+  return IndexMap;
 }
 
 static bool remapTypeIndex(TypeIndex &TI, ArrayRef<TypeIndex> TypeIndexMap) {
@@ -178,16 +292,22 @@ static bool remapTypeIndex(TypeIndex &TI, ArrayRef<TypeIndex> TypeIndexMap) {
 
 static void remapTypesInSymbolRecord(ObjectFile *File,
                                      MutableArrayRef<uint8_t> Contents,
-                                     ArrayRef<TypeIndex> TypeIndexMap,
+                                     const CVIndexMap &IndexMap,
                                      ArrayRef<TiReference> TypeRefs) {
   for (const TiReference &Ref : TypeRefs) {
     unsigned ByteSize = Ref.Count * sizeof(TypeIndex);
     if (Contents.size() < Ref.Offset + ByteSize)
       fatal("symbol record too short");
+
+    // This can be an item index or a type index. Choose the appropriate map.
+    ArrayRef<TypeIndex> TypeOrItemMap = IndexMap.TPIMap;
+    if (Ref.Kind == TiRefKind::IndexRef && IndexMap.IsTypeServerMap)
+      TypeOrItemMap = IndexMap.IPIMap;
+
     MutableArrayRef<TypeIndex> TIs(
         reinterpret_cast<TypeIndex *>(Contents.data() + Ref.Offset), Ref.Count);
     for (TypeIndex &TI : TIs) {
-      if (!remapTypeIndex(TI, TypeIndexMap)) {
+      if (!remapTypeIndex(TI, TypeOrItemMap)) {
         TI = TypeIndex(SimpleTypeKind::NotTranslated);
         log("ignoring symbol record in " + File->getName() +
             " with bad type index 0x" + utohexstr(TI.getIndex()));
@@ -292,7 +412,7 @@ static void scopeStackClose(SmallVectorImpl<SymbolScope> &Stack,
 }
 
 static void mergeSymbolRecords(BumpPtrAllocator &Alloc, ObjectFile *File,
-                               ArrayRef<TypeIndex> TypeIndexMap,
+                               const CVIndexMap &IndexMap,
                                BinaryStreamRef SymData) {
   // FIXME: Improve error recovery by warning and skipping records when
   // possible.
@@ -315,7 +435,7 @@ static void mergeSymbolRecords(BumpPtrAllocator &Alloc, ObjectFile *File,
     // Re-map all the type index references.
     MutableArrayRef<uint8_t> Contents =
         NewData.drop_front(sizeof(RecordPrefix));
-    remapTypesInSymbolRecord(File, Contents, TypeIndexMap, TypeRefs);
+    remapTypesInSymbolRecord(File, Contents, IndexMap, TypeRefs);
 
     // Fill in "Parent" and "End" fields by maintaining a stack of scopes.
     CVSymbol NewSym(Sym.kind(), NewData);
@@ -358,8 +478,8 @@ void PDBLinker::addObjectFile(ObjectFile *File) {
   // type information, file checksums, and the string table.  Add type info to
   // the PDB first, so that we can get the map from object file type and item
   // indices to PDB type and item indices.
-  SmallVector<TypeIndex, 128> TypeIndexMap;
-  mergeDebugT(File, TypeIndexMap);
+  CVIndexMap ObjectIndexMap;
+  const CVIndexMap &IndexMap = mergeDebugT(File, ObjectIndexMap);
 
   // Now do all live .debug$S sections.
   for (SectionChunk *DebugChunk : File->getDebugChunks()) {
@@ -391,7 +511,7 @@ void PDBLinker::addObjectFile(ObjectFile *File) {
         File->ModuleDBI->addDebugSubsection(SS);
         break;
       case DebugSubsectionKind::Symbols:
-        mergeSymbolRecords(Alloc, File, TypeIndexMap, SS.getRecordData());
+        mergeSymbolRecords(Alloc, File, IndexMap, SS.getRecordData());
         break;
       default:
         // FIXME: Process the rest of the subsections.
@@ -507,7 +627,7 @@ void PDBLinker::initialize(const llvm::codeview::DebugInfo *DI) {
   auto &InfoBuilder = Builder.getInfoBuilder();
   InfoBuilder.setAge(DI ? DI->PDB70.Age : 0);
 
-  pdb::PDB_UniqueId uuid{};
+  GUID uuid{};
   if (DI)
     memcpy(&uuid, &DI->PDB70.Signature, sizeof(uuid));
   InfoBuilder.setGuid(uuid);

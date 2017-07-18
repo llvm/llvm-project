@@ -1617,7 +1617,8 @@ buildConditionSets(Scop &S, BasicBlock *BB, Value *Condition,
   }
 
   if (TooComplex) {
-    S.invalidate(COMPLEXITY, TI ? TI->getDebugLoc() : DebugLoc());
+    S.invalidate(COMPLEXITY, TI ? TI->getDebugLoc() : DebugLoc(),
+                 TI ? TI->getParent() : nullptr /* BasicBlock */);
     isl_set_free(AlternativeCondSet);
     isl_set_free(ConsequenceCondSet);
     return false;
@@ -2163,7 +2164,6 @@ bool Scop::isDominatedBy(const DominatorTree &DT, BasicBlock *BB) const {
 void Scop::addUserAssumptions(
     AssumptionCache &AC, DominatorTree &DT, LoopInfo &LI,
     DenseMap<BasicBlock *, isl::set> &InvalidDomainMap) {
-  auto &F = getFunction();
   for (auto &Assumption : AC.assumptions()) {
     auto *CI = dyn_cast_or_null<CallInst>(Assumption);
     if (!CI || CI->getNumArgOperands() != 1)
@@ -2177,9 +2177,9 @@ void Scop::addUserAssumptions(
     auto *Val = CI->getArgOperand(0);
     ParameterSetTy DetectedParams;
     if (!isAffineConstraint(Val, &R, L, *SE, DetectedParams)) {
-      emitOptimizationRemarkAnalysis(F.getContext(), DEBUG_TYPE, F,
-                                     CI->getDebugLoc(),
-                                     "Non-affine user assumption ignored.");
+      ORE.emit(
+          OptimizationRemarkAnalysis(DEBUG_TYPE, "IgnoreUserAssumption", CI)
+          << "Non-affine user assumption ignored.");
       continue;
     }
 
@@ -2227,10 +2227,8 @@ void Scop::addUserAssumptions(
             isl_set_project_out(AssumptionCtx, isl_dim_param, u--, 1);
       }
     }
-
-    emitOptimizationRemarkAnalysis(
-        F.getContext(), DEBUG_TYPE, F, CI->getDebugLoc(),
-        "Use user assumption: " + stringFromIslObj(AssumptionCtx));
+    ORE.emit(OptimizationRemarkAnalysis(DEBUG_TYPE, "UserAssumption", CI)
+             << "Use user assumption: " << stringFromIslObj(AssumptionCtx));
     Context = isl_set_intersect(Context, AssumptionCtx);
   }
 }
@@ -2827,7 +2825,7 @@ bool Scop::propagateInvalidStmtDomains(
         continue;
 
       InvalidDomainMap.erase(BB);
-      invalidate(COMPLEXITY, TI->getDebugLoc());
+      invalidate(COMPLEXITY, TI->getDebugLoc(), TI->getParent());
       return false;
     }
 
@@ -3383,17 +3381,13 @@ bool Scop::buildAliasGroup(Scop::AliasGroupTy &AliasGroup,
   SmallPtrSet<const ScopArrayInfo *, 4> ReadWriteArrays;
   SmallPtrSet<const ScopArrayInfo *, 4> ReadOnlyArrays;
 
-  auto &F = getFunction();
-
   if (AliasGroup.size() < 2)
     return true;
 
   for (MemoryAccess *Access : AliasGroup) {
-    emitOptimizationRemarkAnalysis(
-        F.getContext(), DEBUG_TYPE, F,
-        Access->getAccessInstruction()->getDebugLoc(),
-        "Possibly aliasing pointer, use restrict keyword.");
-
+    ORE.emit(OptimizationRemarkAnalysis(DEBUG_TYPE, "PossibleAlias",
+                                        Access->getAccessInstruction())
+             << "Possibly aliasing pointer, use restrict keyword.");
     const ScopArrayInfo *Array = Access->getScopArrayInfo();
     if (HasWriteAccess.count(Array)) {
       ReadWriteArrays.insert(Array);
@@ -3417,7 +3411,8 @@ bool Scop::buildAliasGroup(Scop::AliasGroupTy &AliasGroup,
   // compute a sufficiently tight lower and upper bound: bail out.
   for (MemoryAccess *MA : AliasGroup) {
     if (!MA->isAffine()) {
-      invalidate(ALIASING, MA->getAccessInstruction()->getDebugLoc());
+      invalidate(ALIASING, MA->getAccessInstruction()->getDebugLoc(),
+                 MA->getAccessInstruction()->getParent());
       return false;
     }
   }
@@ -3492,10 +3487,10 @@ int Scop::getNextID(std::string ParentFunc) {
 }
 
 Scop::Scop(Region &R, ScalarEvolution &ScalarEvolution, LoopInfo &LI,
-           ScopDetection::DetectionContext &DC)
+           ScopDetection::DetectionContext &DC, OptimizationRemarkEmitter &ORE)
     : SE(&ScalarEvolution), R(R), name(R.getNameStr()), IsOptimized(false),
       HasSingleExitEdge(R.getExitingBlock()), HasErrorBlock(false),
-      MaxLoopDepth(0), CopyStmtsNum(0), SkipScop(false), DC(DC),
+      MaxLoopDepth(0), CopyStmtsNum(0), SkipScop(false), DC(DC), ORE(ORE),
       IslCtx(isl_ctx_alloc(), isl_ctx_free), Context(nullptr),
       Affinator(this, LI), AssumedContext(nullptr), InvalidContext(nullptr),
       Schedule(nullptr),
@@ -3850,7 +3845,7 @@ void Scop::addInvariantLoads(ScopStmt &Stmt, InvariantAccessesTy &InvMAs) {
 
   if (isl_set_n_basic_set(DomainCtx) >= MaxDisjunctsInDomain) {
     auto *AccInst = InvMAs.front().MA->getAccessInstruction();
-    invalidate(COMPLEXITY, AccInst->getDebugLoc());
+    invalidate(COMPLEXITY, AccInst->getDebugLoc(), AccInst->getParent());
     isl_set_free(DomainCtx);
     for (auto &InvMA : InvMAs)
       isl_set_free(InvMA.NonHoistableCtx);
@@ -4024,7 +4019,7 @@ isl::set Scop::getNonHoistableCtx(MemoryAccess *Access, isl::union_map Writes) {
     return nullptr;
 
   addAssumption(INVARIANTLOAD, WrittenCtx.copy(), LI->getDebugLoc(),
-                AS_RESTRICTION);
+                AS_RESTRICTION, LI->getParent());
   return WrittenCtx;
 }
 
@@ -4034,7 +4029,7 @@ void Scop::verifyInvariantLoads() {
     assert(LI && contains(LI));
     ScopStmt *Stmt = getStmtFor(LI);
     if (Stmt && Stmt->getArrayAccessOrNULLFor(LI)) {
-      invalidate(INVARIANTLOAD, LI->getDebugLoc());
+      invalidate(INVARIANTLOAD, LI->getDebugLoc(), LI->getParent());
       return;
     }
   }
@@ -4319,7 +4314,7 @@ bool Scop::isEffectiveAssumption(__isl_keep isl_set *Set, AssumptionSign Sign) {
 }
 
 bool Scop::trackAssumption(AssumptionKind Kind, __isl_keep isl_set *Set,
-                           DebugLoc Loc, AssumptionSign Sign) {
+                           DebugLoc Loc, AssumptionSign Sign, BasicBlock *BB) {
   if (PollyRemarksMinimal && !isEffectiveAssumption(Set, Sign))
     return false;
 
@@ -4370,19 +4365,24 @@ bool Scop::trackAssumption(AssumptionKind Kind, __isl_keep isl_set *Set,
     break;
   }
 
-  auto &F = getFunction();
   auto Suffix = Sign == AS_ASSUMPTION ? " assumption:\t" : " restriction:\t";
   std::string Msg = toString(Kind) + Suffix + stringFromIslObj(Set);
-  emitOptimizationRemarkAnalysis(F.getContext(), DEBUG_TYPE, F, Loc, Msg);
+  if (BB)
+    ORE.emit(OptimizationRemarkAnalysis(DEBUG_TYPE, "AssumpRestrict", Loc, BB)
+             << Msg);
+  else
+    ORE.emit(OptimizationRemarkAnalysis(DEBUG_TYPE, "AssumpRestrict", Loc,
+                                        R.getEntry())
+             << Msg);
   return true;
 }
 
 void Scop::addAssumption(AssumptionKind Kind, __isl_take isl_set *Set,
-                         DebugLoc Loc, AssumptionSign Sign) {
+                         DebugLoc Loc, AssumptionSign Sign, BasicBlock *BB) {
   // Simplify the assumptions/restrictions first.
   Set = isl_set_gist_params(Set, getContext());
 
-  if (!trackAssumption(Kind, Set, Loc, Sign)) {
+  if (!trackAssumption(Kind, Set, Loc, Sign, BB)) {
     isl_set_free(Set);
     return;
   }
@@ -4408,7 +4408,7 @@ void Scop::addRecordedAssumptions() {
     const Assumption &AS = RecordedAssumptions.pop_back_val();
 
     if (!AS.BB) {
-      addAssumption(AS.Kind, AS.Set, AS.Loc, AS.Sign);
+      addAssumption(AS.Kind, AS.Set, AS.Loc, AS.Sign, nullptr /* BasicBlock */);
       continue;
     }
 
@@ -4434,12 +4434,12 @@ void Scop::addRecordedAssumptions() {
     else /* (AS.Sign == AS_ASSUMPTION) */
       S = isl_set_params(isl_set_subtract(Dom, S));
 
-    addAssumption(AS.Kind, S, AS.Loc, AS_RESTRICTION);
+    addAssumption(AS.Kind, S, AS.Loc, AS_RESTRICTION, AS.BB);
   }
 }
 
-void Scop::invalidate(AssumptionKind Kind, DebugLoc Loc) {
-  addAssumption(Kind, isl_set_empty(getParamSpace()), Loc, AS_ASSUMPTION);
+void Scop::invalidate(AssumptionKind Kind, DebugLoc Loc, BasicBlock *BB) {
+  addAssumption(Kind, isl_set_empty(getParamSpace()), Loc, AS_ASSUMPTION, BB);
 }
 
 __isl_give isl_set *Scop::getInvalidContext() const {
@@ -4571,7 +4571,7 @@ __isl_give PWACtx Scop::getPwAff(const SCEV *E, BasicBlock *BB,
   }
 
   auto DL = BB ? BB->getTerminator()->getDebugLoc() : DebugLoc();
-  invalidate(COMPLEXITY, DL);
+  invalidate(COMPLEXITY, DL, BB);
   return Affinator.getPwAff(SE->getZero(E->getType()), BB);
 }
 

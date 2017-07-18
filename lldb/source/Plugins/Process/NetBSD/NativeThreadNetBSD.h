@@ -24,7 +24,7 @@ class NativeThreadNetBSD : public NativeThreadProtocol {
   friend class NativeProcessNetBSD;
 
 public:
-  NativeThreadNetBSD(NativeProcessNetBSD *process, lldb::tid_t tid);
+  NativeThreadNetBSD(NativeProcessNetBSD &process, lldb::tid_t tid);
 
   // ---------------------------------------------------------------------
   // NativeThreadProtocol Interface
