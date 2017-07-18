@@ -46,6 +46,7 @@
 #endif
 
 // C++ Includes
+#include <csignal>
 
 // Other libraries and framework includes
 // Project includes
