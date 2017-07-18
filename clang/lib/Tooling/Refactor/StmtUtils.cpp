@@ -68,5 +68,5 @@ bool clang::tooling::isLexicalExpression(const Stmt *S, const Stmt *Parent) {
   // of an expression.
   if (isAssignmentOperator(S) && (!Parent || !isa<Expr>(Parent)))
     return false;
-  return true;
+  return !cast<Expr>(S)->getType()->isVoidType();
 }

@@ -37,3 +37,11 @@ void dontExtractStatement(int x, int y) {
 
 // RUN: not clang-refactor-test perform -action extract-expression -selected=stmt1 -selected=stmt2 %s -std=c++11 2>&1 | FileCheck --check-prefix=CHECK-FAIL %s
 // CHECK-FAIL: Failed to initiate the refactoring action!
+
+void dontExtractVoidCall() {
+  // void-call-begin: +1:3
+  dontExtractVoidCall();
+  // void-call-end: -1:24
+}
+
+// RUN: not clang-refactor-test perform -action extract-expression -selected=void-call %s -std=c++11 2>&1 | FileCheck --check-prefix=CHECK-FAIL %s
