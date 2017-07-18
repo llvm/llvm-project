@@ -260,12 +260,6 @@ raw_ostream &llvm::pdb::operator<<(raw_ostream &OS,
   return OS;
 }
 
-raw_ostream &llvm::pdb::operator<<(raw_ostream &OS, const PDB_UniqueId &Guid) {
-  codeview::detail::GuidAdapter A(Guid.Guid);
-  A.format(OS, "");
-  return OS;
-}
-
 raw_ostream &llvm::pdb::operator<<(raw_ostream &OS, const PDB_UdtType &Type) {
   switch (Type) {
     CASE_OUTPUT_ENUM_CLASS_STR(PDB_UdtType, Class, "class", OS)

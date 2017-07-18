@@ -34,11 +34,11 @@ class NativeProcessNetBSD : public NativeProcessProtocol {
 public:
   class Factory : public NativeProcessProtocol::Factory {
   public:
-    llvm::Expected<NativeProcessProtocolSP>
+    llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
     Launch(ProcessLaunchInfo &launch_info, NativeDelegate &native_delegate,
            MainLoop &mainloop) const override;
 
-    llvm::Expected<NativeProcessProtocolSP>
+    llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
     Attach(lldb::pid_t pid, NativeDelegate &native_delegate,
            MainLoop &mainloop) const override;
   };

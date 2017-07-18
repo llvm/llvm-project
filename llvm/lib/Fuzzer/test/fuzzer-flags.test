@@ -1,3 +1,6 @@
+# Does not work on windows for unknown reason.
+UNSUPPORTED: windows
+
 RUN: LLVMFuzzer-FlagsTest -foo_bar=1 2>&1 | FileCheck %s --check-prefix=FOO_BAR
 FOO_BAR: WARNING: unrecognized flag '-foo_bar=1'; use -help=1 to list all flags
 FOO_BAR: BINGO

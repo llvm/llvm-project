@@ -3039,7 +3039,7 @@ struct VarArgAMD64Helper : public VarArgHelper {
   }
 
   void visitVAStartInst(VAStartInst &I) override {
-    if (F.getCallingConv() == CallingConv::X86_64_Win64)
+    if (F.getCallingConv() == CallingConv::Win64)
       return;
     IRBuilder<> IRB(&I);
     VAStartInstrumentationList.push_back(&I);
@@ -3053,7 +3053,7 @@ struct VarArgAMD64Helper : public VarArgHelper {
   }
 
   void visitVACopyInst(VACopyInst &I) override {
-    if (F.getCallingConv() == CallingConv::X86_64_Win64)
+    if (F.getCallingConv() == CallingConv::Win64)
       return;
     IRBuilder<> IRB(&I);
     Value *VAListTag = I.getArgOperand(0);

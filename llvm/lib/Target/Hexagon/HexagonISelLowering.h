@@ -165,7 +165,6 @@ namespace HexagonISD {
     SDValue LowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerATOMIC_FENCE(SDValue Op, SelectionDAG& DAG) const;
     SDValue LowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const;
-    SDValue LowerLOAD(SDValue Op, SelectionDAG &DAG) const;
 
     bool CanLowerReturn(CallingConv::ID CallConv,
                         MachineFunction &MF, bool isVarArg,

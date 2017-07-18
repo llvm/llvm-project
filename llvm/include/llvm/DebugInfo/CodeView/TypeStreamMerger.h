@@ -19,7 +19,6 @@ namespace llvm {
 namespace codeview {
 
 class TypeIndex;
-class TypeServerHandler;
 class TypeTableBuilder;
 
 /// \brief Merge one set of type records into another.  This method assumes
@@ -31,16 +30,13 @@ class TypeTableBuilder;
 /// type stream, that contains the index of the corresponding type record
 /// in the destination stream.
 ///
-/// \param Handler (optional) If non-null, an interface that gets invoked
-/// to handle type server records.
-///
 /// \param Types The collection of types to merge in.
 ///
 /// \returns Error::success() if the operation succeeded, otherwise an
 /// appropriate error code.
 Error mergeTypeRecords(TypeTableBuilder &Dest,
                        SmallVectorImpl<TypeIndex> &SourceToDest,
-                       TypeServerHandler *Handler, const CVTypeArray &Types);
+                       const CVTypeArray &Types);
 
 /// \brief Merge one set of id records into another.  This method assumes
 /// that all records are id records, and there are no Type records present.
@@ -65,7 +61,7 @@ Error mergeTypeRecords(TypeTableBuilder &Dest,
 /// appropriate error code.
 Error mergeIdRecords(TypeTableBuilder &Dest, ArrayRef<TypeIndex> Types,
                      SmallVectorImpl<TypeIndex> &SourceToDest,
-  const CVTypeArray &Ids);
+                     const CVTypeArray &Ids);
 
 /// \brief Merge a unified set of type and id records, splitting them into
 /// separate output streams.
@@ -78,9 +74,6 @@ Error mergeIdRecords(TypeTableBuilder &Dest, ArrayRef<TypeIndex> Types,
 /// id stream, that contains the index of the corresponding id record
 /// in the destination stream.
 ///
-/// \param Handler (optional) If non-null, an interface that gets invoked
-/// to handle type server records.
-///
 /// \param IdsAndTypes The collection of id records to merge in.
 ///
 /// \returns Error::success() if the operation succeeded, otherwise an
@@ -88,8 +81,7 @@ Error mergeIdRecords(TypeTableBuilder &Dest, ArrayRef<TypeIndex> Types,
 Error mergeTypeAndIdRecords(TypeTableBuilder &DestIds,
                             TypeTableBuilder &DestTypes,
                             SmallVectorImpl<TypeIndex> &SourceToDest,
-                            TypeServerHandler *Handler,
-  const CVTypeArray &IdsAndTypes);
+                            const CVTypeArray &IdsAndTypes);
 
 } // end namespace codeview
 } // end namespace llvm

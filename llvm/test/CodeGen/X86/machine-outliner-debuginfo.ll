@@ -17,7 +17,6 @@ define i32 @main() #0 !dbg !11 {
   call void @llvm.dbg.value(metadata i32 10, i64 0, metadata !15, metadata !16), !dbg !17
   store i32 4, i32* %5, align 4
   store i32 0, i32* @x, align 4, !dbg !24
-  call void asm sideeffect "", "~{memory},~{dirflag},~{fpsr},~{flags}"()
   ; This is the same sequence of instructions without a debug value. It should be outlined
   ; in the same way.
   ; CHECK: callq l_OUTLINED_FUNCTION_0

@@ -10,6 +10,7 @@
 #ifndef LLVM_DEBUGINFO_PDB_RAW_RAWTYPES_H
 #define LLVM_DEBUGINFO_PDB_RAW_RAWTYPES_H
 
+#include "llvm/DebugInfo/CodeView/GUID.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/Support/Endian.h"
 
@@ -268,17 +269,6 @@ struct PublicsStreamHeader {
   support::ulittle32_t NumSections;
 };
 
-/// Defines a 128-bit unique identifier.  This maps to a GUID on Windows, but
-/// is abstracted here for the purposes of non-Windows platforms that don't have
-/// the GUID structure defined.
-struct PDB_UniqueId {
-  uint8_t Guid[16];
-};
-
-inline bool operator==(const PDB_UniqueId &LHS, const PDB_UniqueId &RHS) {
-  return 0 == ::memcmp(LHS.Guid, RHS.Guid, sizeof(LHS.Guid));
-}
-
 // The header preceeding the global TPI stream.
 // This corresponds to `HDR` in PDB/dbi/tpi.h.
 struct TpiStreamHeader {
@@ -312,7 +302,7 @@ struct InfoStreamHeader {
   support::ulittle32_t Version;
   support::ulittle32_t Signature;
   support::ulittle32_t Age;
-  PDB_UniqueId Guid;
+  codeview::GUID Guid;
 };
 
 /// The header preceeding the /names stream.

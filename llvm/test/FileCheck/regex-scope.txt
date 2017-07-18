@@ -1,4 +1,4 @@
-// RUN: FileCheck -check-prefix CHECK -input-file %s %s
+// RUN: FileCheck -input-file %s %s
 // RUN: FileCheck -check-prefixes CHECK,GLOBAL -input-file %s %s
 // RUN: FileCheck -check-prefixes CHECK,LOCAL -input-file %s %s
 // RUN: FileCheck -check-prefixes CHECK,GLOBAL --enable-var-scope -input-file %s %s

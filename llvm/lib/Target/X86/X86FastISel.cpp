@@ -1187,7 +1187,7 @@ bool X86FastISel::X86SelectRet(const Instruction *I) {
       CC != CallingConv::X86_StdCall &&
       CC != CallingConv::X86_ThisCall &&
       CC != CallingConv::X86_64_SysV &&
-      CC != CallingConv::X86_64_Win64)
+      CC != CallingConv::Win64)
     return false;
 
   // Don't handle popping bytes if they don't fit the ret's immediate.
@@ -3171,7 +3171,7 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
   case CallingConv::X86_FastCall:
   case CallingConv::X86_StdCall:
   case CallingConv::X86_ThisCall:
-  case CallingConv::X86_64_Win64:
+  case CallingConv::Win64:
   case CallingConv::X86_64_SysV:
     break;
   }

@@ -654,7 +654,7 @@ static void dumpFullTypeStream(LinePrinter &Printer,
       NumDigits(TypeIndex::FirstNonSimpleIndex + Stream.getNumTypeRecords());
 
   MinimalTypeDumpVisitor V(Printer, Width + 2, Bytes, Extras, Types,
-                           Stream.getHashValues());
+                           Stream.getNumHashBuckets(), Stream.getHashValues());
 
   if (auto EC = codeview::visitTypeStream(Types, V)) {
     Printer.formatLine("An error occurred dumping type records: {0}",
@@ -670,7 +670,7 @@ static void dumpPartialTypeStream(LinePrinter &Printer,
       NumDigits(TypeIndex::FirstNonSimpleIndex + Stream.getNumTypeRecords());
 
   MinimalTypeDumpVisitor V(Printer, Width + 2, Bytes, Extras, Types,
-                           Stream.getHashValues());
+                           Stream.getNumHashBuckets(), Stream.getHashValues());
 
   if (opts::dump::DumpTypeDependents) {
     // If we need to dump all dependents, then iterate each index and find

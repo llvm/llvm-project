@@ -1335,6 +1335,13 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::CTTZ,             VT, Custom);
     }
 
+    // NonVLX sub-targets extend 128/256 vectors to use the 512 version.
+    for (auto VT : {MVT::v4i32, MVT::v8i32, MVT::v16i32, MVT::v2i64, MVT::v4i64,
+                    MVT::v8i64}) {
+      setOperationAction(ISD::ROTL,             VT, Custom);
+      setOperationAction(ISD::ROTR,             VT, Custom);
+    }
+
     // Need to promote to 64-bit even though we have 32-bit masked instructions
     // because the IR optimizers rearrange bitcasts around logic ops leaving
     // too many variations to handle if we don't promote them.
@@ -2661,7 +2668,7 @@ static bool mayTailCallThisCC(CallingConv::ID CC) {
   switch (CC) {
   // C calling conventions:
   case CallingConv::C:
-  case CallingConv::X86_64_Win64:
+  case CallingConv::Win64:
   case CallingConv::X86_64_SysV:
   // Callee pop conventions:
   case CallingConv::X86_ThisCall:
@@ -20188,7 +20195,10 @@ static SDValue getAVX2GatherNode(unsigned Opc, SDValue Op, SelectionDAG &DAG,
                                  SDValue Index, SDValue ScaleOp, SDValue Chain,
                                  const X86Subtarget &Subtarget) {
   SDLoc dl(Op);
-  auto *C = cast<ConstantSDNode>(ScaleOp);
+  auto *C = dyn_cast<ConstantSDNode>(ScaleOp);
+  // Scale must be constant.
+  if (!C)
+    return SDValue();
   SDValue Scale = DAG.getTargetConstant(C->getZExtValue(), dl, MVT::i8);
   EVT MaskVT = Mask.getValueType();
   SDVTList VTs = DAG.getVTList(Op.getValueType(), MaskVT, MVT::Other);
@@ -20210,7 +20220,10 @@ static SDValue getGatherNode(unsigned Opc, SDValue Op, SelectionDAG &DAG,
                               SDValue Index, SDValue ScaleOp, SDValue Chain,
                               const X86Subtarget &Subtarget) {
   SDLoc dl(Op);
-  auto *C = cast<ConstantSDNode>(ScaleOp);
+  auto *C = dyn_cast<ConstantSDNode>(ScaleOp);
+  // Scale must be constant.
+  if (!C)
+    return SDValue();
   SDValue Scale = DAG.getTargetConstant(C->getZExtValue(), dl, MVT::i8);
   MVT MaskVT = MVT::getVectorVT(MVT::i1,
                              Index.getSimpleValueType().getVectorNumElements());
@@ -20235,7 +20248,10 @@ static SDValue getScatterNode(unsigned Opc, SDValue Op, SelectionDAG &DAG,
                                SDValue Index, SDValue ScaleOp, SDValue Chain,
                                const X86Subtarget &Subtarget) {
   SDLoc dl(Op);
-  auto *C = cast<ConstantSDNode>(ScaleOp);
+  auto *C = dyn_cast<ConstantSDNode>(ScaleOp);
+  // Scale must be constant.
+  if (!C)
+    return SDValue();
   SDValue Scale = DAG.getTargetConstant(C->getZExtValue(), dl, MVT::i8);
   SDValue Disp = DAG.getTargetConstant(0, dl, MVT::i32);
   SDValue Segment = DAG.getRegister(0, MVT::i32);
@@ -20254,7 +20270,10 @@ static SDValue getPrefetchNode(unsigned Opc, SDValue Op, SelectionDAG &DAG,
                                SDValue ScaleOp, SDValue Chain,
                                const X86Subtarget &Subtarget) {
   SDLoc dl(Op);
-  auto *C = cast<ConstantSDNode>(ScaleOp);
+  auto *C = dyn_cast<ConstantSDNode>(ScaleOp);
+  // Scale must be constant.
+  if (!C)
+    return SDValue();
   SDValue Scale = DAG.getTargetConstant(C->getZExtValue(), dl, MVT::i8);
   SDValue Disp = DAG.getTargetConstant(0, dl, MVT::i32);
   SDValue Segment = DAG.getRegister(0, MVT::i32);
@@ -22665,10 +22684,31 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
   SDLoc DL(Op);
   SDValue R = Op.getOperand(0);
   SDValue Amt = Op.getOperand(1);
+  unsigned Opcode = Op.getOpcode();
+  unsigned EltSizeInBits = VT.getScalarSizeInBits();
+
+  if (Subtarget.hasAVX512()) {
+    // Attempt to rotate by immediate.
+    APInt UndefElts;
+    SmallVector<APInt, 16> EltBits;
+    if (getTargetConstantBitsFromNode(Amt, EltSizeInBits, UndefElts, EltBits)) {
+      if (!UndefElts && llvm::all_of(EltBits, [EltBits](APInt &V) {
+            return EltBits[0] == V;
+          })) {
+        unsigned Op = (Opcode == ISD::ROTL ? X86ISD::VROTLI : X86ISD::VROTRI);
+        uint64_t RotateAmt = EltBits[0].urem(EltSizeInBits);
+        return DAG.getNode(Op, DL, VT, R,
+                           DAG.getConstant(RotateAmt, DL, MVT::i8));
+      }
+    }
+
+    // Else, fall-back on VPROLV/VPRORV.
+    return Op;
+  }
 
   assert(VT.isVector() && "Custom lowering only for vector rotates!");
   assert(Subtarget.hasXOP() && "XOP support required for vector rotates!");
-  assert((Op.getOpcode() == ISD::ROTL) && "Only ROTL supported");
+  assert((Opcode == ISD::ROTL) && "Only ROTL supported");
 
   // XOP has 128-bit vector variable + immediate rotates.
   // +ve/-ve Amt = rotate left/right.
@@ -22683,7 +22723,7 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
   if (auto *BVAmt = dyn_cast<BuildVectorSDNode>(Amt)) {
     if (auto *RotateConst = BVAmt->getConstantSplatNode()) {
       uint64_t RotateAmt = RotateConst->getAPIntValue().getZExtValue();
-      assert(RotateAmt < VT.getScalarSizeInBits() && "Rotation out of range");
+      assert(RotateAmt < EltSizeInBits && "Rotation out of range");
       return DAG.getNode(X86ISD::VPROTI, DL, VT, R,
                          DAG.getConstant(RotateAmt, DL, MVT::i8));
     }
@@ -24030,7 +24070,8 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::MULHU:              return LowerMULH(Op, Subtarget, DAG);
   case ISD::UMUL_LOHI:
   case ISD::SMUL_LOHI:          return LowerMUL_LOHI(Op, Subtarget, DAG);
-  case ISD::ROTL:               return LowerRotate(Op, Subtarget, DAG);
+  case ISD::ROTL:
+  case ISD::ROTR:               return LowerRotate(Op, Subtarget, DAG);
   case ISD::SRA:
   case ISD::SRL:
   case ISD::SHL:                return LowerShift(Op, Subtarget, DAG);

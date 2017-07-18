@@ -301,8 +301,7 @@ public:
         if (auto Err = LMResources->StubsMgr->updatePointer(CalledFnName,
                                                             FnBodyAddr))
           return Err;
-        else
-          return Error::success();
+        return Error::success();
       }
     }
     return make_error<JITSymbolNotFound>(FuncName);

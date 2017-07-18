@@ -84,7 +84,7 @@ public:
   Error mapEncodedInteger(uint64_t &Value);
   Error mapEncodedInteger(APSInt &Value);
   Error mapStringZ(StringRef &Value);
-  Error mapGuid(StringRef &Guid);
+  Error mapGuid(GUID &Guid);
 
   Error mapStringZVectorZ(std::vector<StringRef> &Value);
 

@@ -59,9 +59,9 @@ entry:
 ; CHECK-LABEL: f123:
 ; MIPS64R2: daddiu  $[[R0:[0-9]+]], $zero, 123
 ; MIPS64R2: dins    $[[R0:[0-9]+]], $[[R1:[0-9]+]], 27, 37
+; MIPS64R2: daddiu  $[[R0:[0-9]+]], $zero, 5
 ; MIPS64R2: daddiu  $[[R0:[0-9]+]], $zero, 4
 ; MIPS64R2: dins    $[[R0:[0-9]+]], $[[R1:[0-9]+]], 28, 6
-; MIPS64R2: daddiu  $[[R0:[0-9]+]], $zero, 5
 ; MIPS64R2: dins    $[[R0:[0-9]+]], $[[R1:[0-9]+]], 50, 14
 ; MIPS64R2: dsrl    $[[R0:[0-9]+]], $[[R1:[0-9]+]], 50
 ; MIPS64R2: dins    $[[R0:[0-9]+]], $[[R1:[0-9]+]], 34, 16

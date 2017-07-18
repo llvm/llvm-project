@@ -118,7 +118,7 @@ uint32_t InfoStream::getSignature() const { return Signature; }
 
 uint32_t InfoStream::getAge() const { return Age; }
 
-PDB_UniqueId InfoStream::getGuid() const { return Guid; }
+GUID InfoStream::getGuid() const { return Guid; }
 
 uint32_t InfoStream::getNamedStreamMapByteSize() const {
   return NamedStreamMapByteSize;

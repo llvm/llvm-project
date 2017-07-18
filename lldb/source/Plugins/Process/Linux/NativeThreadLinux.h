@@ -27,7 +27,7 @@ class NativeThreadLinux : public NativeThreadProtocol {
   friend class NativeProcessLinux;
 
 public:
-  NativeThreadLinux(NativeProcessLinux *process, lldb::tid_t tid);
+  NativeThreadLinux(NativeProcessLinux &process, lldb::tid_t tid);
 
   // ---------------------------------------------------------------------
   // NativeThreadProtocol Interface
