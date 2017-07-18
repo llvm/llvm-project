@@ -1691,8 +1691,8 @@ static int __kmp_affinity_cmp_ProcCpuInfo_os_id(const void *a, const void *b) {
 static int __kmp_affinity_cmp_ProcCpuInfo_phys_id(const void *a,
                                                   const void *b) {
   unsigned i;
-  const unsigned *aa = *(RCAST(unsigned **, CCAST(void *, a)));
-  const unsigned *bb = *(RCAST(unsigned **, CCAST(void *, b)));
+  const unsigned *aa = *(unsigned *const *)a;
+  const unsigned *bb = *(unsigned *const *)b;
   for (i = maxIndex;; i--) {
     if (aa[i] < bb[i])
       return -1;
@@ -1732,7 +1732,7 @@ static int __kmp_affinity_create_cpuinfo_map(AddrUnsPair **address2os,
 
     // FIXME - this will match "node_<n> <garbage>"
     unsigned level;
-    if (KMP_SSCANF(buf, "node_%d id", &level) == 1) {
+    if (KMP_SSCANF(buf, "node_%u id", &level) == 1) {
       if (nodeIdIndex + level >= maxIndex) {
         maxIndex = nodeIdIndex + level;
       }
@@ -3786,10 +3786,8 @@ static int __kmp_aff_depth = 0;
   return;
 
 static int __kmp_affinity_cmp_Address_child_num(const void *a, const void *b) {
-  const Address *aa =
-      (const Address *)&(((AddrUnsPair *)CCAST(void *, a))->first);
-  const Address *bb =
-      (const Address *)&(((AddrUnsPair *)CCAST(void *, b))->first);
+  const Address *aa = &(((const AddrUnsPair *)a)->first);
+  const Address *bb = &(((const AddrUnsPair *)b)->first);
   unsigned depth = aa->depth;
   unsigned i;
   KMP_DEBUG_ASSERT(depth == bb->depth);

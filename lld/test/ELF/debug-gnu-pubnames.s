@@ -1,10 +1,18 @@
 # REQUIRES: x86
-# RUN: ld.lld -e main %p/Inputs/gdb-index-a.elf %p/Inputs/gdb-index-b.elf -o %t1.exe
-# RUN: llvm-readobj -sections %t1.exe | FileCheck -check-prefix=CHECK1 %s
-# CHECK1: Name: .debug_gnu_pubnames
-# CHECK1: Name: .debug_gnu_pubtypes
+# RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
 
-# RUN: ld.lld -gdb-index -e main %p/Inputs/gdb-index-a.elf %p/Inputs/gdb-index-b.elf -o %t2.exe
-# RUN: llvm-readobj -sections %t2.exe | FileCheck -check-prefix=CHECK2 %s
-# CHECK2-NOT: Name: .debug_gnu_pubnames
-# CHECK2-NOT: Name: .debug_gnu_pubtypes
+# RUN: ld.lld %t.o -o %t1.exe
+# RUN: llvm-readobj -sections %t1.exe | FileCheck %s
+# CHECK: .debug_gnu_pubnames
+# CHECK: .debug_gnu_pubtypes
+
+# RUN: ld.lld -gdb-index %t.o -o %t2.exe
+# RUN: llvm-readobj -sections %t2.exe | FileCheck %s --check-prefix=GDB
+# GDB-NOT: .debug_gnu_pubnames
+# GDB-NOT: .debug_gnu_pubtypes
+
+.section .debug_gnu_pubnames,"",@progbits
+.long 0
+
+.section .debug_gnu_pubtypes,"",@progbits
+.long 0

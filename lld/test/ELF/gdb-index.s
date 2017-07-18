@@ -1,32 +1,19 @@
-## gdb-index-a.elf and gdb-index-b.elf are a test.o and test2.o renamed,
-## were generated in this way:
-## test.cpp:
-##  int main() { return 0; }
-## test2.cpp:
-##  int main2() { return 0; }
-## Compiled with:
-## gcc -gsplit-dwarf -c test.cpp test2.cpp
-## gcc version 5.3.1 20160413
-## Info about gdb-index: https://sourceware.org/gdb/onlinedocs/gdb/Index-Section-Format.html
-
 # REQUIRES: x86
-# RUN: ld.lld --gdb-index -e main %p/Inputs/gdb-index-a.elf %p/Inputs/gdb-index-b.elf -o %t
+# RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t1.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %p/Inputs/gdb-index.s -o %t2.o
+# RUN: ld.lld --gdb-index -e main %t1.o %t2.o -o %t
 # RUN: llvm-dwarfdump -debug-dump=gdb_index %t | FileCheck %s
 # RUN: llvm-objdump -d %t | FileCheck %s --check-prefix=DISASM
 
 # DISASM:       Disassembly of section .text:
 # DISASM:       main:
-# DISASM-CHECK:     11000: 55 pushq %rbp
-# DISASM-CHECK:     11001: 48 89 e5 movq %rsp, %rbp
-# DISASM-CHECK:     11004: b8 00 00 00 00 movl $0, %eax
-# DISASM-CHECK:     11009: 5d popq %rbp
-# DISASM-CHECK:     1100a: c3 retq
-# DISASM:       _Z5main2v:
-# DISASM-CHECK:     1100b: 55 pushq %rbp
-# DISASM-CHECK:     1100c: 48 89 e5  movq %rsp, %rbp
-# DISASM-CHECK:     1100f: b8 00 00 00 00 movl $0, %eax
-# DISASM-CHECK:     11014: 5d popq %rbp
-# DISASM-CHECK:     11015: c3 retq
+# DISASM-CHECK:   201000: 90 nop
+# DISASM-CHECK:   201001: cc int3
+# DISASM-CHECK:   201002: cc int3
+# DISASM-CHECK:   201003: cc int3
+# DISASM:       main2:
+# DISASM-CHECK:   201004: 90 nop
+# DISASM-CHECK:   201005: 90 nop
 
 # CHECK:      .gnu_index contents:
 # CHECK-NEXT:    Version = 7
@@ -34,8 +21,8 @@
 # CHECK-NEXT:    0: Offset = 0x0, Length = 0x34
 # CHECK-NEXT:    1: Offset = 0x34, Length = 0x34
 # CHECK:       Address area offset = 0x38, has 2 entries:
-# CHECK-NEXT:    Low/High address = [0x201000, 0x20100b) (Size: 0xb), CU id = 0
-# CHECK-NEXT:    Low/High address = [0x20100b, 0x201016) (Size: 0xb), CU id = 1
+# CHECK-NEXT:    Low/High address = [0x201000, 0x201001) (Size: 0x1), CU id = 0
+# CHECK-NEXT:    Low/High address = [0x201004, 0x201006) (Size: 0x2), CU id = 1
 # CHECK:       Symbol table offset = 0x60, size = 1024, filled slots:
 # CHECK-NEXT:    489: Name offset = 0x1d, CU vector offset = 0x0
 # CHECK-NEXT:      String name: main, CU vector index: 0
@@ -47,3 +34,79 @@
 # CHECK-NEXT:    0(0x0): 0x30000000
 # CHECK-NEXT:    1(0x8): 0x90000000 0x90000001
 # CHECK-NEXT:    2(0x14): 0x30000001
+
+## The following section contents are created by this using gcc 7.1.0:
+## echo 'int main() { return 0; }' | gcc -gsplit-dwarf -xc++ -S -o- -
+
+.text
+.Ltext0:
+.globl main
+.type main, @function
+main:
+ nop
+.Letext0:
+
+.section .debug_info,"",@progbits
+.long 0x30
+.value 0x4
+.long 0
+.byte 0x8
+.uleb128 0x1
+.quad .Ltext0
+.quad .Letext0-.Ltext0
+.long 0
+.long 0
+.long 0
+.long 0
+.byte 0x63
+.byte 0x88
+.byte 0xb4
+.byte 0x61
+.byte 0xaa
+.byte 0xb6
+.byte 0xb0
+.byte 0x67
+
+.section .debug_abbrev,"",@progbits
+.uleb128 0x1
+.uleb128 0x11
+.byte 0
+.uleb128 0x11
+.uleb128 0x1
+.uleb128 0x12
+.uleb128 0x7
+.uleb128 0x10
+.uleb128 0x17
+.uleb128 0x2130
+.uleb128 0xe
+.uleb128 0x1b
+.uleb128 0xe
+.uleb128 0x2134
+.uleb128 0x19
+.uleb128 0x2133
+.uleb128 0x17
+.uleb128 0x2131
+.uleb128 0x7
+.byte 0
+.byte 0
+.byte 0
+
+.section .debug_gnu_pubnames,"",@progbits
+.long 0x18
+.value 0x2
+.long 0
+.long 0x33
+.long 0x18
+.byte 0x30
+.string "main"
+.long 0
+
+.section .debug_gnu_pubtypes,"",@progbits
+.long 0x17
+.value 0x2
+.long 0
+.long 0x33
+.long 0x2b
+.byte 0x90
+.string "int"
+.long 0

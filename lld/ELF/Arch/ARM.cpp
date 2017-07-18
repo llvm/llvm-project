@@ -40,6 +40,8 @@ public:
   void addPltHeaderSymbols(InputSectionBase *ISD) const override;
   bool needsThunk(RelExpr Expr, uint32_t RelocType, const InputFile *File,
                   const SymbolBody &S) const override;
+  bool inBranchRange(uint32_t RelocType, uint64_t Src,
+                     uint64_t Dst) const override;
   void relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
 };
 } // namespace
@@ -216,6 +218,49 @@ bool ARM::needsThunk(RelExpr Expr, uint32_t RelocType, const InputFile *File,
     break;
   }
   return false;
+}
+
+bool ARM::inBranchRange(uint32_t RelocType, uint64_t Src, uint64_t Dst) const {
+  uint64_t Range;
+  uint64_t InstrSize;
+
+  switch (RelocType) {
+  case R_ARM_PC24:
+  case R_ARM_PLT32:
+  case R_ARM_JUMP24:
+  case R_ARM_CALL:
+    Range = 0x2000000;
+    InstrSize = 4;
+    break;
+  case R_ARM_THM_JUMP19:
+    Range = 0x100000;
+    InstrSize = 2;
+    break;
+  case R_ARM_THM_JUMP24:
+  case R_ARM_THM_CALL:
+    Range = 0x1000000;
+    InstrSize = 2;
+    break;
+  default:
+    return true;
+  }
+  // PC at Src is 2 instructions ahead, immediate of branch is signed
+  if (Src > Dst)
+    Range -= 2 * InstrSize;
+  else
+    Range += InstrSize;
+
+  if ((Dst & 0x1) == 0)
+    // Destination is ARM, if ARM caller then Src is already 4-byte aligned.
+    // If Thumb Caller (BLX) the Src address has bottom 2 bits cleared to ensure
+    // destination will be 4 byte aligned.
+    Src &= ~0x3;
+  else
+    // Bit 0 == 1 denotes Thumb state, it is not part of the range
+    Dst &= ~0x1;
+
+  uint64_t Distance = (Src > Dst) ? Src - Dst : Dst - Src;
+  return Distance <= Range;
 }
 
 void ARM::relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const {

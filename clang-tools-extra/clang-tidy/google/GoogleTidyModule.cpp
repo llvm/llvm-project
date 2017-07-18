@@ -20,7 +20,6 @@
 #include "ExplicitMakePairCheck.h"
 #include "GlobalNamesInHeadersCheck.h"
 #include "IntegerTypesCheck.h"
-#include "MemsetZeroLengthCheck.h"
 #include "NonConstReferences.h"
 #include "OverloadedUnaryAndCheck.h"
 #include "StringReferenceMemberCheck.h"
@@ -55,8 +54,6 @@ public:
         "google-runtime-references");
     CheckFactories.registerCheck<runtime::StringReferenceMemberCheck>(
         "google-runtime-member-string-references");
-    CheckFactories.registerCheck<runtime::MemsetZeroLengthCheck>(
-        "google-runtime-memset");
     CheckFactories.registerCheck<readability::AvoidCStyleCastsCheck>(
         "google-readability-casting");
     CheckFactories.registerCheck<readability::TodoCommentCheck>(

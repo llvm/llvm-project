@@ -55,7 +55,7 @@ template <class ELFT> std::vector<DefinedRegular *> getSymbols() {
     for (SymbolBody *B : File->getSymbols())
       if (B->File == File && !B->isSection())
         if (auto *Sym = dyn_cast<DefinedRegular>(B))
-          if (Sym->Section)
+          if (Sym->Section && Sym->Section->Live)
             V.push_back(Sym);
   return V;
 }

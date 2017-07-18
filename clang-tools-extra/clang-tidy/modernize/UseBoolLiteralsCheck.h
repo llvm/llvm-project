@@ -22,10 +22,12 @@ namespace modernize {
 /// http://clang.llvm.org/extra/clang-tidy/checks/modernize-use-bool-literals.html
 class UseBoolLiteralsCheck : public ClangTidyCheck {
 public:
-  UseBoolLiteralsCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context) {}
+  UseBoolLiteralsCheck(StringRef Name, ClangTidyContext *Context);
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+
+private:
+  const bool IgnoreMacros;
 };
 
 } // namespace modernize

@@ -856,8 +856,8 @@ static void __kmp_hierarchical_barrier_gather(
         (kmp_uint64)team->t.t_bar[bt].b_arrived + KMP_BARRIER_STATE_BUMP;
     if (__kmp_dflt_blocktime == KMP_MAX_BLOCKTIME &&
         thr_bar->use_oncore_barrier) {
-      if (thr_bar->leaf_kids) { // First, wait for leaf children to check-in on
-        // my b_arrived flag
+      if (thr_bar->leaf_kids) {
+        // First, wait for leaf children to check-in on my b_arrived flag
         kmp_uint64 leaf_state =
             KMP_MASTER_TID(tid)
                 ? thr_bar->b_arrived | thr_bar->leaf_state
@@ -884,8 +884,7 @@ static void __kmp_hierarchical_barrier_gather(
           ANNOTATE_REDUCE_BEFORE(&team->t.t_bar);
         }
         // clear leaf_state bits
-        KMP_TEST_THEN_AND64(CCAST(kmp_uint64 *, &thr_bar->b_arrived),
-                            ~(thr_bar->leaf_state));
+        KMP_TEST_THEN_AND64(&thr_bar->b_arrived, ~(thr_bar->leaf_state));
       }
       // Next, wait for higher level children on each child's b_arrived flag
       for (kmp_uint32 d = 1; d < thr_bar->my_level;

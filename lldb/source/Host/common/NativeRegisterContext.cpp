@@ -345,17 +345,12 @@ Status NativeRegisterContext::ReadRegisterValueFromMemory(
     return error;
   }
 
-  NativeProcessProtocolSP process_sp(m_thread.GetProcess());
-  if (!process_sp) {
-    error.SetErrorString("invalid process");
-    return error;
-  }
-
+  NativeProcessProtocol &process = m_thread.GetProcess();
   uint8_t src[RegisterValue::kMaxRegisterByteSize];
 
   // Read the memory
   size_t bytes_read;
-  error = process_sp->ReadMemory(src_addr, src, src_len, bytes_read);
+  error = process.ReadMemory(src_addr, src, src_len, bytes_read);
   if (error.Fail())
     return error;
 
@@ -374,7 +369,7 @@ Status NativeRegisterContext::ReadRegisterValueFromMemory(
   // order of the memory data doesn't match the process. For now we are assuming
   // they are the same.
   lldb::ByteOrder byte_order;
-  if (!process_sp->GetByteOrder(byte_order)) {
+  if (process.GetByteOrder(byte_order)) {
     error.SetErrorString("NativeProcessProtocol::GetByteOrder () failed");
     return error;
   }
@@ -392,41 +387,37 @@ Status NativeRegisterContext::WriteRegisterValueToMemory(
 
   Status error;
 
-  NativeProcessProtocolSP process_sp(m_thread.GetProcess());
-  if (process_sp) {
+  NativeProcessProtocol &process = m_thread.GetProcess();
 
-    // TODO: we might need to add a parameter to this function in case the byte
-    // order of the memory data doesn't match the process. For now we are
-    // assuming
-    // they are the same.
-    lldb::ByteOrder byte_order;
-    if (!process_sp->GetByteOrder(byte_order))
-      return Status("NativeProcessProtocol::GetByteOrder () failed");
+  // TODO: we might need to add a parameter to this function in case the byte
+  // order of the memory data doesn't match the process. For now we are
+  // assuming
+  // they are the same.
+  lldb::ByteOrder byte_order;
+  if (!process.GetByteOrder(byte_order))
+    return Status("NativeProcessProtocol::GetByteOrder () failed");
 
-    const size_t bytes_copied =
-        reg_value.GetAsMemoryData(reg_info, dst, dst_len, byte_order, error);
+  const size_t bytes_copied =
+      reg_value.GetAsMemoryData(reg_info, dst, dst_len, byte_order, error);
 
-    if (error.Success()) {
-      if (bytes_copied == 0) {
-        error.SetErrorString("byte copy failed.");
-      } else {
-        size_t bytes_written;
-        error =
-            process_sp->WriteMemory(dst_addr, dst, bytes_copied, bytes_written);
-        if (error.Fail())
-          return error;
+  if (error.Success()) {
+    if (bytes_copied == 0) {
+      error.SetErrorString("byte copy failed.");
+    } else {
+      size_t bytes_written;
+      error = process.WriteMemory(dst_addr, dst, bytes_copied, bytes_written);
+      if (error.Fail())
+        return error;
 
-        if (bytes_written != bytes_copied) {
-          // This might happen if we read _some_ bytes but not all
-          error.SetErrorStringWithFormat("only wrote %" PRIu64 " of %" PRIu64
-                                         " bytes",
-                                         static_cast<uint64_t>(bytes_written),
-                                         static_cast<uint64_t>(bytes_copied));
-        }
+      if (bytes_written != bytes_copied) {
+        // This might happen if we read _some_ bytes but not all
+        error.SetErrorStringWithFormat("only wrote %" PRIu64 " of %" PRIu64
+                                       " bytes",
+                                       static_cast<uint64_t>(bytes_written),
+                                       static_cast<uint64_t>(bytes_copied));
       }
     }
-  } else
-    error.SetErrorString("invalid process");
+  }
 
   return error;
 }

@@ -172,7 +172,7 @@ template <>
 __forceinline kmp_int32 test_then_add<kmp_int32>(volatile kmp_int32 *p,
                                                  kmp_int32 d) {
   kmp_int32 r;
-  r = KMP_TEST_THEN_ADD32(CCAST(kmp_int32 *, p), d);
+  r = KMP_TEST_THEN_ADD32(p, d);
   return r;
 }
 
@@ -180,7 +180,7 @@ template <>
 __forceinline kmp_int64 test_then_add<kmp_int64>(volatile kmp_int64 *p,
                                                  kmp_int64 d) {
   kmp_int64 r;
-  r = KMP_TEST_THEN_ADD64(CCAST(kmp_int64 *, p), d);
+  r = KMP_TEST_THEN_ADD64(p, d);
   return r;
 }
 
@@ -190,14 +190,14 @@ template <typename T> static __forceinline T test_then_inc_acq(volatile T *p);
 template <>
 __forceinline kmp_int32 test_then_inc_acq<kmp_int32>(volatile kmp_int32 *p) {
   kmp_int32 r;
-  r = KMP_TEST_THEN_INC_ACQ32(CCAST(kmp_int32 *, p));
+  r = KMP_TEST_THEN_INC_ACQ32(p);
   return r;
 }
 
 template <>
 __forceinline kmp_int64 test_then_inc_acq<kmp_int64>(volatile kmp_int64 *p) {
   kmp_int64 r;
-  r = KMP_TEST_THEN_INC_ACQ64(CCAST(kmp_int64 *, p));
+  r = KMP_TEST_THEN_INC_ACQ64(p);
   return r;
 }
 
@@ -207,14 +207,14 @@ template <typename T> static __forceinline T test_then_inc(volatile T *p);
 template <>
 __forceinline kmp_int32 test_then_inc<kmp_int32>(volatile kmp_int32 *p) {
   kmp_int32 r;
-  r = KMP_TEST_THEN_INC32(CCAST(kmp_int32 *, p));
+  r = KMP_TEST_THEN_INC32(p);
   return r;
 }
 
 template <>
 __forceinline kmp_int64 test_then_inc<kmp_int64>(volatile kmp_int64 *p) {
   kmp_int64 r;
-  r = KMP_TEST_THEN_INC64(CCAST(kmp_int64 *, p));
+  r = KMP_TEST_THEN_INC64(p);
   return r;
 }
 
@@ -1163,8 +1163,7 @@ __kmp_dispatch_init(ident_t *loc, int gtid, enum sched_type schedule, T lb,
 
     th->th.th_dispatch->th_dispatch_pr_current = (dispatch_private_info_t *)pr;
     th->th.th_dispatch->th_dispatch_sh_current =
-        RCAST(dispatch_shared_info_t *,
-              CCAST(dispatch_shared_info_template<UT> *, sh));
+        CCAST(dispatch_shared_info_t *, (volatile dispatch_shared_info_t *)sh);
 #if USE_ITT_BUILD
     if (pr->ordered) {
       __kmp_itt_ordered_init(gtid);
@@ -1981,7 +1980,7 @@ static int __kmp_dispatch_next(ident_t *loc, int gtid, kmp_int32 *p_last,
             // use dynamic-style shcedule
             // atomically inrement iterations, get old value
             init = test_then_add<ST>(
-                RCAST(ST *, CCAST(UT *, &sh->u.s.iteration)), (ST)chunkspec);
+                RCAST(volatile ST *, &sh->u.s.iteration), (ST)chunkspec);
             remaining = trip - init;
             if (remaining <= 0) {
               status = 0; // all iterations got by other threads
@@ -1998,7 +1997,7 @@ static int __kmp_dispatch_next(ident_t *loc, int gtid, kmp_int32 *p_last,
           } // if
           limit = init + (UT)(remaining *
                               *(double *)&pr->u.p.parm3); // divide by K*nproc
-          if (compare_and_swap<ST>(RCAST(ST *, CCAST(UT *, &sh->u.s.iteration)),
+          if (compare_and_swap<ST>(RCAST(volatile ST *, &sh->u.s.iteration),
                                    (ST)init, (ST)limit)) {
             // CAS was successful, chunk obtained
             status = 1;
@@ -2060,7 +2059,7 @@ static int __kmp_dispatch_next(ident_t *loc, int gtid, kmp_int32 *p_last,
             // use dynamic-style shcedule
             // atomically inrement iterations, get old value
             init = test_then_add<ST>(
-                RCAST(ST *, CCAST(UT *, &sh->u.s.iteration)), (ST)chunk);
+                RCAST(volatile ST *, &sh->u.s.iteration), (ST)chunk);
             remaining = trip - init;
             if (remaining <= 0) {
               status = 0; // all iterations got by other threads
@@ -2082,7 +2081,7 @@ static int __kmp_dispatch_next(ident_t *loc, int gtid, kmp_int32 *p_last,
           if (rem) // adjust so that span%chunk == 0
             span += chunk - rem;
           limit = init + span;
-          if (compare_and_swap<ST>(RCAST(ST *, CCAST(UT *, &sh->u.s.iteration)),
+          if (compare_and_swap<ST>(RCAST(volatile ST *, &sh->u.s.iteration),
                                    (ST)init, (ST)limit)) {
             // CAS was successful, chunk obtained
             status = 1;

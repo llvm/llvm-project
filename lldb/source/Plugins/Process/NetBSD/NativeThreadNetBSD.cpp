@@ -24,7 +24,7 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::process_netbsd;
 
-NativeThreadNetBSD::NativeThreadNetBSD(NativeProcessNetBSD *process,
+NativeThreadNetBSD::NativeThreadNetBSD(NativeProcessNetBSD &process,
                                        lldb::tid_t tid)
     : NativeThreadProtocol(process, tid), m_state(StateType::eStateInvalid),
       m_stop_info(), m_reg_context_sp(), m_stop_description() {}
@@ -144,12 +144,8 @@ NativeRegisterContextSP NativeThreadNetBSD::GetRegisterContext() {
   if (m_reg_context_sp)
     return m_reg_context_sp;
 
-  NativeProcessProtocolSP m_process_sp = m_process_wp.lock();
-  if (!m_process_sp)
-    return NativeRegisterContextSP();
-
   ArchSpec target_arch;
-  if (!m_process_sp->GetArchitecture(target_arch))
+  if (!m_process.GetArchitecture(target_arch))
     return NativeRegisterContextSP();
 
   const uint32_t concrete_frame_idx = 0;

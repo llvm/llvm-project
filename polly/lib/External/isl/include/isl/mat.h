@@ -27,12 +27,12 @@ isl_ctx *isl_mat_get_ctx(__isl_keep isl_mat *mat);
 
 __isl_give isl_mat *isl_mat_alloc(isl_ctx *ctx,
 	unsigned n_row, unsigned n_col);
-struct isl_mat *isl_mat_dup(struct isl_mat *mat);
+__isl_give isl_mat *isl_mat_dup(__isl_keep isl_mat *mat);
 struct isl_mat *isl_mat_extend(struct isl_mat *mat,
 	unsigned n_row, unsigned n_col);
 struct isl_mat *isl_mat_identity(struct isl_ctx *ctx, unsigned n_row);
 __isl_give isl_mat *isl_mat_copy(__isl_keep isl_mat *mat);
-struct isl_mat *isl_mat_cow(struct isl_mat *mat);
+__isl_give isl_mat *isl_mat_cow(__isl_take isl_mat *mat);
 __isl_null isl_mat *isl_mat_free(__isl_take isl_mat *mat);
 
 int isl_mat_rows(__isl_keep isl_mat *mat);
@@ -73,9 +73,9 @@ __isl_give isl_mat *isl_mat_right_kernel(__isl_take isl_mat *mat);
 __isl_give isl_mat *isl_mat_normalize(__isl_take isl_mat *mat);
 __isl_give isl_mat *isl_mat_normalize_row(__isl_take isl_mat *mat, int row);
 
-struct isl_mat *isl_mat_drop_cols(struct isl_mat *mat,
-				unsigned col, unsigned n);
-struct isl_mat *isl_mat_drop_rows(struct isl_mat *mat,
+__isl_give isl_mat *isl_mat_drop_cols(__isl_take isl_mat *mat,
+	unsigned col, unsigned n);
+__isl_give isl_mat *isl_mat_drop_rows(__isl_take isl_mat *mat,
 				unsigned row, unsigned n);
 __isl_give isl_mat *isl_mat_insert_cols(__isl_take isl_mat *mat,
 				unsigned col, unsigned n);
