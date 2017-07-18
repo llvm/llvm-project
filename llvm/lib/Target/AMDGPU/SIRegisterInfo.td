@@ -464,7 +464,9 @@ defm SCSrc : RegInlineOperand<"SReg", "SCSrc"> ;
 
 defm VSrc : RegImmOperand<"VS", "VSrc">;
 
-def VSrc_128 : RegisterOperand<VReg_128>;
+def VSrc_128 : RegisterOperand<VReg_128> {
+  let DecoderMethod = "DecodeVS_128RegisterClass";
+}
 
 //===----------------------------------------------------------------------===//
 //  VSrc_* Operands with an VGPR

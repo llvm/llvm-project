@@ -136,8 +136,6 @@ class VOP3_Real <VOP3_Pseudo ps, int EncodingFamily> :
   let TSFlags            = ps.TSFlags;
   let UseNamedOperandTable = ps.UseNamedOperandTable;
   let Uses                 = ps.Uses;
-
-  VOPProfile Pfl = ps.Pfl;
 }
 
 // XXX - Is there any reason to distingusih this from regular VOP3

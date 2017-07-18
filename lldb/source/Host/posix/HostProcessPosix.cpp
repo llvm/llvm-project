@@ -13,7 +13,9 @@
 
 #include "llvm/ADT/STLExtras.h"
 
+#include <csignal>
 #include <limits.h>
+#include <unistd.h>
 
 using namespace lldb_private;
 

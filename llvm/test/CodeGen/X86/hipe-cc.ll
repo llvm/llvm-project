@@ -48,7 +48,11 @@ entry:
   store i32 %arg0, i32* %arg0_var
   store i32 %arg1, i32* %arg1_var
   store i32 %arg2, i32* %arg2_var
-  ; These loads are loading the values from their previous stores and are optimized away.
+
+  ; CHECK:      movl  16(%esp), %esi
+  ; CHECK-NEXT: movl  12(%esp), %ebp
+  ; CHECK-NEXT: movl   8(%esp), %eax
+  ; CHECK-NEXT: movl   4(%esp), %edx
   %0 = load i32, i32* %hp_var
   %1 = load i32, i32* %p_var
   %2 = load i32, i32* %arg0_var

@@ -129,10 +129,12 @@ struct MustKillsInfo {
   /// Map from kill statement instances to scalars that need to be
   /// killed.
   ///
-  /// We currently only derive kill information for phi nodes, as phi nodes
-  /// allow us to easily derive kill information. PHI nodes are not alive
-  /// outside the scop and can consequently all be "killed". [params] -> {
-  /// [Stmt_phantom[] -> ref_phantom[]] -> phi_ref[] }
+  /// We currently derive kill information for:
+  ///  1. phi nodes. PHI nodes are not alive outside the scop and can
+  ///     consequently all be killed.
+  ///  2. Scalar arrays that are not used outside the Scop. This is
+  ///     checked by `isScalarUsesContainedInScop`.
+  /// [params] -> { [Stmt_phantom[] -> ref_phantom[]] -> scalar_to_kill[] }
   isl::union_map TaggedMustKills;
 
   MustKillsInfo() : KillsSchedule(nullptr), TaggedMustKills(nullptr){};
@@ -185,39 +187,42 @@ static MustKillsInfo computeMustKillsInfo(const Scop &S) {
   // at the cost of some code complexity.
   Info.KillsSchedule = nullptr;
 
-  for (isl::id &phiId : KillMemIds) {
+  for (isl::id &ToKillId : KillMemIds) {
     isl::id KillStmtId = isl::id::alloc(
-        S.getIslCtx(), std::string("SKill_phantom_").append(phiId.get_name()),
-        nullptr);
+        S.getIslCtx(),
+        std::string("SKill_phantom_").append(ToKillId.get_name()), nullptr);
 
     // NOTE: construction of tagged_must_kill:
     // 2. We need to construct a map:
-    //     [param] -> { [Stmt_phantom[] -> ref_phantom[]] -> phi_ref }
+    //     [param] -> { [Stmt_phantom[] -> ref_phantom[]] -> scalar_to_kill[] }
     // To construct this, we use `isl_map_domain_product` on 2 maps`:
-    // 2a. StmtToPhi:
-    //         [param] -> { Stmt_phantom[] -> phi_ref[] }
-    // 2b. PhantomRefToPhi:
-    //         [param] -> { ref_phantom[] -> phi_ref[] }
+    // 2a. StmtToScalar:
+    //         [param] -> { Stmt_phantom[] -> scalar_to_kill[] }
+    // 2b. PhantomRefToScalar:
+    //         [param] -> { ref_phantom[] -> scalar_to_kill[] }
     //
     // Combining these with `isl_map_domain_product` gives us
     // TaggedMustKill:
-    //     [param] -> { [Stmt[] -> phantom_ref[]] -> memref[] }
+    //     [param] -> { [Stmt[] -> phantom_ref[]] -> scalar_to_kill[] }
 
-    // 2a. [param] -> { S_2[] -> phi_ref[] }
-    isl::map StmtToPhi = isl::map::universe(isl::space(ParamSpace));
-    StmtToPhi = StmtToPhi.set_tuple_id(isl::dim::in, isl::id(KillStmtId));
-    StmtToPhi = StmtToPhi.set_tuple_id(isl::dim::out, isl::id(phiId));
+    // 2a. [param] -> { Stmt[] -> scalar_to_kill[] }
+    isl::map StmtToScalar = isl::map::universe(isl::space(ParamSpace));
+    StmtToScalar = StmtToScalar.set_tuple_id(isl::dim::in, isl::id(KillStmtId));
+    StmtToScalar = StmtToScalar.set_tuple_id(isl::dim::out, isl::id(ToKillId));
 
     isl::id PhantomRefId = isl::id::alloc(
-        S.getIslCtx(), std::string("ref_phantom") + phiId.get_name(), nullptr);
+        S.getIslCtx(), std::string("ref_phantom") + ToKillId.get_name(),
+        nullptr);
 
-    // 2b. [param] -> { phantom_ref[] -> memref[] }
-    isl::map PhantomRefToPhi = isl::map::universe(isl::space(ParamSpace));
-    PhantomRefToPhi = PhantomRefToPhi.set_tuple_id(isl::dim::in, PhantomRefId);
-    PhantomRefToPhi = PhantomRefToPhi.set_tuple_id(isl::dim::out, phiId);
+    // 2b. [param] -> { phantom_ref[] -> scalar_to_kill[] }
+    isl::map PhantomRefToScalar = isl::map::universe(isl::space(ParamSpace));
+    PhantomRefToScalar =
+        PhantomRefToScalar.set_tuple_id(isl::dim::in, PhantomRefId);
+    PhantomRefToScalar =
+        PhantomRefToScalar.set_tuple_id(isl::dim::out, ToKillId);
 
-    // 2. [param] -> { [Stmt[] -> phantom_ref[]] -> memref[] }
-    isl::map TaggedMustKill = StmtToPhi.domain_product(PhantomRefToPhi);
+    // 2. [param] -> { [Stmt[] -> phantom_ref[]] -> scalar_to_kill[] }
+    isl::map TaggedMustKill = StmtToScalar.domain_product(PhantomRefToScalar);
     Info.TaggedMustKills = Info.TaggedMustKills.unite(TaggedMustKill);
 
     // 3. Create the kill schedule of the form:

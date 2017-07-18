@@ -16,6 +16,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/utsname.h>
+#include <unistd.h>
 
 #include <algorithm>
 #include <mutex> // std::once

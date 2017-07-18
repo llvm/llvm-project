@@ -116,7 +116,7 @@ define void @test_vext_p16() nounwind ssp {
 
 define void @test_vext_s32() nounwind ssp {
   ; CHECK-LABEL: test_vext_s32:
-  ; CHECK: {{rev64.2s.*}}
+  ; CHECK: {{ext.8.*#4}}
   %xS32x2 = alloca <2 x i32>, align 8
   %__a = alloca <2 x i32>, align 8
   %__b = alloca <2 x i32>, align 8
@@ -137,7 +137,7 @@ define void @test_vext_s32() nounwind ssp {
 
 define void @test_vext_u32() nounwind ssp {
   ; CHECK-LABEL: test_vext_u32:
-  ; CHECK: {{rev64.2s.*}}
+  ; CHECK: {{ext.8.*#4}}
   %xU32x2 = alloca <2 x i32>, align 8
   %__a = alloca <2 x i32>, align 8
   %__b = alloca <2 x i32>, align 8
@@ -158,7 +158,7 @@ define void @test_vext_u32() nounwind ssp {
 
 define void @test_vext_f32() nounwind ssp {
   ; CHECK-LABEL: test_vext_f32:
-  ; CHECK: {{rev64.2s.*}}
+  ; CHECK: {{ext.8.*#4}}
   %xF32x2 = alloca <2 x float>, align 8
   %__a = alloca <2 x float>, align 8
   %__b = alloca <2 x float>, align 8
@@ -179,7 +179,7 @@ define void @test_vext_f32() nounwind ssp {
 
 define void @test_vext_s64() nounwind ssp {
   ; CHECK-LABEL: test_vext_s64:
-  ; CHECK_FIXME: {{rev64.2s.*}}
+  ; CHECK_FIXME: {{ext.8.*#1}}
   ; this just turns into a load of the second element
   %xS64x1 = alloca <1 x i64>, align 8
   %__a = alloca <1 x i64>, align 8

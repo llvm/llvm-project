@@ -26,7 +26,6 @@ entry:
 	store i32 3855, i32* %xort
 	store i32 4, i32* %temp
 	%tmp = load i32, i32* %temp
-	call void asm sideeffect "", "~{memory},~{dirflag},~{fpsr},~{flags}"()
   ; CHECK: ldrex
   ; CHECK: add
   ; CHECK: strex
@@ -36,7 +35,6 @@ entry:
   ; CHECK-BAREMETAL-NOT: __sync
   %0 = atomicrmw add i32* %val1, i32 %tmp monotonic
 	store i32 %0, i32* %old
-	call void asm sideeffect "", "~{memory},~{dirflag},~{fpsr},~{flags}"()
   ; CHECK: ldrex
   ; CHECK: sub
   ; CHECK: strex
@@ -46,7 +44,6 @@ entry:
   ; CHECK-BAREMETAL-NOT: __sync
   %1 = atomicrmw sub i32* %val2, i32 30 monotonic
 	store i32 %1, i32* %old
-	call void asm sideeffect "", "~{memory},~{dirflag},~{fpsr},~{flags}"()
   ; CHECK: ldrex
   ; CHECK: add
   ; CHECK: strex
@@ -56,7 +53,6 @@ entry:
   ; CHECK-BAREMETAL-NOT: __sync
   %2 = atomicrmw add i32* %val2, i32 1 monotonic
 	store i32 %2, i32* %old
-	call void asm sideeffect "", "~{memory},~{dirflag},~{fpsr},~{flags}"()
   ; CHECK: ldrex
   ; CHECK: sub
   ; CHECK: strex
@@ -66,7 +62,6 @@ entry:
   ; CHECK-BAREMETAL-NOT: __sync
   %3 = atomicrmw sub i32* %val2, i32 1 monotonic
 	store i32 %3, i32* %old
-	call void asm sideeffect "", "~{memory},~{dirflag},~{fpsr},~{flags}"()
   ; CHECK: ldrex
   ; CHECK: and
   ; CHECK: strex
@@ -76,7 +71,6 @@ entry:
   ; CHECK-BAREMETAL-NOT: __sync
   %4 = atomicrmw and i32* %andt, i32 4080 monotonic
 	store i32 %4, i32* %old
-	call void asm sideeffect "", "~{memory},~{dirflag},~{fpsr},~{flags}"()
   ; CHECK: ldrex
   ; CHECK: or
   ; CHECK: strex
@@ -86,7 +80,6 @@ entry:
   ; CHECK-BAREMETAL-NOT: __sync
   %5 = atomicrmw or i32* %ort, i32 4080 monotonic
 	store i32 %5, i32* %old
-	call void asm sideeffect "", "~{memory},~{dirflag},~{fpsr},~{flags}"()
   ; CHECK: ldrex
   ; CHECK: eor
   ; CHECK: strex
@@ -96,7 +89,6 @@ entry:
   ; CHECK-BAREMETAL-NOT: __sync
   %6 = atomicrmw xor i32* %xort, i32 4080 monotonic
 	store i32 %6, i32* %old
-	call void asm sideeffect "", "~{memory},~{dirflag},~{fpsr},~{flags}"()
   ; CHECK: ldrex
   ; CHECK: cmp
   ; CHECK: strex
@@ -106,7 +98,6 @@ entry:
   ; CHECK-BAREMETAL-NOT: __sync
   %7 = atomicrmw min i32* %val2, i32 16 monotonic
 	store i32 %7, i32* %old
-	call void asm sideeffect "", "~{memory},~{dirflag},~{fpsr},~{flags}"()
 	%neg = sub i32 0, 1
   ; CHECK: ldrex
   ; CHECK: cmp
@@ -117,7 +108,6 @@ entry:
   ; CHECK-BAREMETAL-NOT: __sync
   %8 = atomicrmw min i32* %val2, i32 %neg monotonic
 	store i32 %8, i32* %old
-	call void asm sideeffect "", "~{memory},~{dirflag},~{fpsr},~{flags}"()
   ; CHECK: ldrex
   ; CHECK: cmp
   ; CHECK: strex
@@ -127,7 +117,6 @@ entry:
   ; CHECK-BAREMETAL-NOT: __sync
   %9 = atomicrmw max i32* %val2, i32 1 monotonic
 	store i32 %9, i32* %old
-	call void asm sideeffect "", "~{memory},~{dirflag},~{fpsr},~{flags}"()
   ; CHECK: ldrex
   ; CHECK: cmp
   ; CHECK: strex
@@ -137,7 +126,6 @@ entry:
   ; CHECK-BAREMETAL-NOT: __sync
   %10 = atomicrmw max i32* %val2, i32 0 monotonic
 	store i32 %10, i32* %old
-	call void asm sideeffect "", "~{memory},~{dirflag},~{fpsr},~{flags}"()
   ; CHECK: ldrex
   ; CHECK: cmp
   ; CHECK: strex
@@ -147,7 +135,6 @@ entry:
   ; CHECK-BAREMETAL-NOT: __sync
   %11 = atomicrmw umin i32* %val2, i32 16 monotonic
 	store i32 %11, i32* %old
-	call void asm sideeffect "", "~{memory},~{dirflag},~{fpsr},~{flags}"()
 	%uneg = sub i32 0, 1
   ; CHECK: ldrex
   ; CHECK: cmp
@@ -158,7 +145,6 @@ entry:
   ; CHECK-BAREMETAL-NOT: __sync
   %12 = atomicrmw umin i32* %val2, i32 %uneg monotonic
 	store i32 %12, i32* %old
-	call void asm sideeffect "", "~{memory},~{dirflag},~{fpsr},~{flags}"()
   ; CHECK: ldrex
   ; CHECK: cmp
   ; CHECK: strex
@@ -168,7 +154,6 @@ entry:
   ; CHECK-BAREMETAL-NOT: __sync
   %13 = atomicrmw umax i32* %val2, i32 1 monotonic
 	store i32 %13, i32* %old
-	call void asm sideeffect "", "~{memory},~{dirflag},~{fpsr},~{flags}"()
   ; CHECK: ldrex
   ; CHECK: cmp
   ; CHECK: strex

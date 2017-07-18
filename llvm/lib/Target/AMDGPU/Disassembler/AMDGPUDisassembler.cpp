@@ -87,6 +87,7 @@ DECODE_OPERAND(Decode##RegClass##RegisterClass, decodeOperand_##RegClass)
 DECODE_OPERAND_REG(VGPR_32)
 DECODE_OPERAND_REG(VS_32)
 DECODE_OPERAND_REG(VS_64)
+DECODE_OPERAND_REG(VS_128)
 
 DECODE_OPERAND_REG(VReg_64)
 DECODE_OPERAND_REG(VReg_96)
@@ -316,6 +317,10 @@ MCOperand AMDGPUDisassembler::decodeOperand_VS_32(unsigned Val) const {
 
 MCOperand AMDGPUDisassembler::decodeOperand_VS_64(unsigned Val) const {
   return decodeSrcOp(OPW64, Val);
+}
+
+MCOperand AMDGPUDisassembler::decodeOperand_VS_128(unsigned Val) const {
+  return decodeSrcOp(OPW128, Val);
 }
 
 MCOperand AMDGPUDisassembler::decodeOperand_VSrc16(unsigned Val) const {

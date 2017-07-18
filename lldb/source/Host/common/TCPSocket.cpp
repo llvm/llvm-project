@@ -34,6 +34,7 @@
 #define CLOSE_SOCKET closesocket
 typedef const char *set_socket_option_arg_type;
 #else
+#include <unistd.h>
 #define CLOSE_SOCKET ::close
 typedef const void *set_socket_option_arg_type;
 #endif

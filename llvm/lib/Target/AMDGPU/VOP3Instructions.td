@@ -12,21 +12,17 @@
 //===----------------------------------------------------------------------===//
 
 class getVOP3ModPat<VOPProfile P, SDPatternOperator node> {
-  dag src0 = !if(P.HasOMod,
-    (VOP3Mods0 P.Src0VT:$src0, i32:$src0_modifiers, i1:$clamp, i32:$omod),
-    (VOP3Mods0 P.Src0VT:$src0, i32:$src0_modifiers, i1:$clamp));
-
   list<dag> ret3 = [(set P.DstVT:$vdst,
-    (node (P.Src0VT src0),
+    (node (P.Src0VT (VOP3Mods0 P.Src0VT:$src0, i32:$src0_modifiers, i1:$clamp, i32:$omod)),
           (P.Src1VT (VOP3Mods P.Src1VT:$src1, i32:$src1_modifiers)),
           (P.Src2VT (VOP3Mods P.Src2VT:$src2, i32:$src2_modifiers))))];
 
   list<dag> ret2 = [(set P.DstVT:$vdst,
-    (node (P.Src0VT src0),
+    (node (P.Src0VT (VOP3Mods0 P.Src0VT:$src0, i32:$src0_modifiers, i1:$clamp, i32:$omod)),
           (P.Src1VT (VOP3Mods P.Src1VT:$src1, i32:$src1_modifiers))))];
 
   list<dag> ret1 = [(set P.DstVT:$vdst,
-    (node (P.Src0VT src0)))];
+    (node (P.Src0VT (VOP3Mods0 P.Src0VT:$src0, i32:$src0_modifiers, i1:$clamp, i32:$omod))))];
 
   list<dag> ret = !if(!eq(P.NumSrcArgs, 3), ret3,
                   !if(!eq(P.NumSrcArgs, 2), ret2,

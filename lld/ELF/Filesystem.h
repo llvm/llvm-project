@@ -16,7 +16,7 @@ namespace lld {
 namespace elf {
 void unlinkAsync(StringRef Path);
 std::error_code tryCreateFile(StringRef Path);
-}
-}
+} // namespace elf
+} // namespace lld
 
 #endif

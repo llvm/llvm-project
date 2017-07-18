@@ -33,8 +33,7 @@ class ResumeActionList;
 //------------------------------------------------------------------
 // NativeProcessProtocol
 //------------------------------------------------------------------
-class NativeProcessProtocol
-    : public std::enable_shared_from_this<NativeProcessProtocol> {
+class NativeProcessProtocol {
   friend class SoftwareBreakpoint;
 
 public:
@@ -268,7 +267,7 @@ public:
     ///     A NativeProcessProtocol shared pointer if the operation succeeded or
     ///     an error object if it failed.
     //------------------------------------------------------------------
-    virtual llvm::Expected<NativeProcessProtocolSP>
+    virtual llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
     Launch(ProcessLaunchInfo &launch_info, NativeDelegate &native_delegate,
            MainLoop &mainloop) const = 0;
 
@@ -292,7 +291,7 @@ public:
     ///     A NativeProcessProtocol shared pointer if the operation succeeded or
     ///     an error object if it failed.
     //------------------------------------------------------------------
-    virtual llvm::Expected<NativeProcessProtocolSP>
+    virtual llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
     Attach(lldb::pid_t pid, NativeDelegate &native_delegate,
            MainLoop &mainloop) const = 0;
   };

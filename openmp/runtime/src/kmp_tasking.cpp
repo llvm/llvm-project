@@ -2573,7 +2573,7 @@ static int __kmp_realloc_task_threads_data(kmp_info_t *thread,
             nthreads * sizeof(kmp_thread_data_t));
         // copy old data to new data
         KMP_MEMCPY_S((void *)new_data, nthreads * sizeof(kmp_thread_data_t),
-                     (void *)old_data, maxthreads * sizeof(kmp_taskdata_t *));
+                     (void *)old_data, maxthreads * sizeof(kmp_thread_data_t));
 
 #ifdef BUILD_TIED_TASK_STACK
         // GEH: Figure out if this is the right thing to do

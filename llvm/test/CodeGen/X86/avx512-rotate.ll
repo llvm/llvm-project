@@ -234,3 +234,23 @@ define <8 x i64>@test_splat_bounds_ror_v8i64(<8 x i64> %x0, <8 x i64> %x1, i8 %x
   %res4 = add <8 x i64> %res3, %res2
   ret <8 x i64> %res4
 }
+
+; Constant folding
+
+define <8 x i64> @test_fold_rol_v8i64() {
+; CHECK-LABEL: test_fold_rol_v8i64:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    vmovaps {{.*#+}} zmm0 = [1,2,4,9223372036854775808,2,4611686018427387904,9223372036854775808,9223372036854775808]
+; CHECK-NEXT:    retq
+  %res = call <8 x i64> @llvm.x86.avx512.mask.prolv.q.512(<8 x i64> <i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1>, <8 x i64> <i64 0, i64 1, i64 2, i64 63, i64 65, i64 65534, i64 65535, i64 -1>, <8 x i64> zeroinitializer, i8 -1)
+  ret <8 x i64> %res
+}
+
+define <8 x i64> @test_fold_ror_v8i64() {
+; CHECK-LABEL: test_fold_ror_v8i64:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    vmovaps {{.*#+}} zmm0 = [1,9223372036854775808,4611686018427387904,2,9223372036854775808,4,2,2]
+; CHECK-NEXT:    retq
+  %res = call <8 x i64> @llvm.x86.avx512.mask.prorv.q.512(<8 x i64> <i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1>, <8 x i64> <i64 0, i64 1, i64 2, i64 63, i64 65, i64 65534, i64 65535, i64 -1>, <8 x i64> zeroinitializer, i8 -1)
+  ret <8 x i64> %res
+}

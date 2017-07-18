@@ -281,6 +281,16 @@ bool SanitizerCoverageModule::runOnModule(Module &M) {
   SanCovTraceSwitchFunction =
       checkSanitizerInterfaceFunction(M.getOrInsertFunction(
           SanCovTraceSwitchName, VoidTy, Int64Ty, Int64PtrTy));
+  // Make sure smaller parameters are zero-extended to i64 as required by the
+  // x86_64 ABI.
+  if (TargetTriple.getArch() == Triple::x86_64) {
+    for (int i = 0; i < 3; i++) {
+      SanCovTraceCmpFunction[i]->addParamAttr(0, Attribute::ZExt);
+      SanCovTraceCmpFunction[i]->addParamAttr(1, Attribute::ZExt);
+    }
+    SanCovTraceDivFunction[0]->addParamAttr(0, Attribute::ZExt);
+  }
+
 
   // We insert an empty inline asm after cov callbacks to avoid callback merge.
   EmptyAsm = InlineAsm::get(FunctionType::get(IRB.getVoidTy(), false),

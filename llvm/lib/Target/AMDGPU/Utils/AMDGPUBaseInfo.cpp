@@ -539,23 +539,9 @@ bool isSGPR(unsigned Reg, const MCRegisterInfo* TRI) {
 }
 
 bool isRegIntersect(unsigned Reg0, unsigned Reg1, const MCRegisterInfo* TRI) {
-
-  if (Reg0 == Reg1) {
-    return true;
+  for (MCRegAliasIterator R(Reg0, TRI, true); R.isValid(); ++R) {
+    if (*R == Reg1) return true;
   }
-
-  unsigned SubReg0 = TRI->getSubReg(Reg0, 1);
-  if (SubReg0 == 0) {
-    return TRI->getSubRegIndex(Reg1, Reg0) > 0;
-  }
-
-  for (unsigned Idx = 2; SubReg0 > 0; ++Idx) {
-    if (isRegIntersect(Reg1, SubReg0, TRI)) {
-      return true;
-    }
-    SubReg0 = TRI->getSubReg(Reg0, Idx);
-  }
-
   return false;
 }
 

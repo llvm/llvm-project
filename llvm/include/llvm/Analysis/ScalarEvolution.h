@@ -237,17 +237,15 @@ struct FoldingSetTrait<SCEVPredicate> : DefaultFoldingSetTrait<SCEVPredicate> {
 };
 
 /// This class represents an assumption that two SCEV expressions are equal,
-/// and this can be checked at run-time. We assume that the left hand side is
-/// a SCEVUnknown and the right hand side a constant.
+/// and this can be checked at run-time.
 class SCEVEqualPredicate final : public SCEVPredicate {
-  /// We assume that LHS == RHS, where LHS is a SCEVUnknown and RHS a
-  /// constant.
-  const SCEVUnknown *LHS;
-  const SCEVConstant *RHS;
+  /// We assume that LHS == RHS.
+  const SCEV *LHS;
+  const SCEV *RHS;
 
 public:
-  SCEVEqualPredicate(const FoldingSetNodeIDRef ID, const SCEVUnknown *LHS,
-                     const SCEVConstant *RHS);
+  SCEVEqualPredicate(const FoldingSetNodeIDRef ID, const SCEV *LHS,
+                     const SCEV *RHS);
 
   /// Implementation of the SCEVPredicate interface
   bool implies(const SCEVPredicate *N) const override;
@@ -256,10 +254,10 @@ public:
   const SCEV *getExpr() const override;
 
   /// Returns the left hand side of the equality.
-  const SCEVUnknown *getLHS() const { return LHS; }
+  const SCEV *getLHS() const { return LHS; }
 
   /// Returns the right hand side of the equality.
-  const SCEVConstant *getRHS() const { return RHS; }
+  const SCEV *getRHS() const { return RHS; }
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const SCEVPredicate *P) {
@@ -1241,6 +1239,14 @@ public:
     SmallVector<const SCEV *, 4> NewOp(Operands.begin(), Operands.end());
     return getAddRecExpr(NewOp, L, Flags);
   }
+
+  /// Checks if \p SymbolicPHI can be rewritten as an AddRecExpr under some
+  /// Predicates. If successful return these <AddRecExpr, Predicates>;
+  /// The function is intended to be called from PSCEV (the caller will decide
+  /// whether to actually add the predicates and carry out the rewrites).
+  Optional<std::pair<const SCEV *, SmallVector<const SCEVPredicate *, 3>>>
+  createAddRecFromPHIWithCasts(const SCEVUnknown *SymbolicPHI);
+  
   /// Returns an expression for a GEP
   ///
   /// \p GEP The GEP. The indices contained in the GEP itself are ignored,
@@ -1675,8 +1681,7 @@ public:
     return F.getParent()->getDataLayout();
   }
 
-  const SCEVPredicate *getEqualPredicate(const SCEVUnknown *LHS,
-                                         const SCEVConstant *RHS);
+  const SCEVPredicate *getEqualPredicate(const SCEV *LHS, const SCEV *RHS);
 
   const SCEVPredicate *
   getWrapPredicate(const SCEVAddRecExpr *AR,
@@ -1692,6 +1697,19 @@ public:
       SmallPtrSetImpl<const SCEVPredicate *> &Preds);
 
 private:
+  /// Similar to createAddRecFromPHI, but with the additional flexibility of 
+  /// suggesting runtime overflow checks in case casts are encountered.
+  /// If successful, the analysis records that for this loop, \p SymbolicPHI,
+  /// which is the UnknownSCEV currently representing the PHI, can be rewritten
+  /// into an AddRec, assuming some predicates; The function then returns the
+  /// AddRec and the predicates as a pair, and caches this pair in
+  /// PredicatedSCEVRewrites.
+  /// If the analysis is not successful, a mapping from the \p SymbolicPHI to 
+  /// itself (with no predicates) is recorded, and a nullptr with an empty
+  /// predicates vector is returned as a pair. 
+  Optional<std::pair<const SCEV *, SmallVector<const SCEVPredicate *, 3>>>
+  createAddRecFromPHIWithCastsImpl(const SCEVUnknown *SymbolicPHI);
+
   /// Compute the backedge taken count knowing the interval difference, the
   /// stride and presence of the equality in the comparison.
   const SCEV *computeBECount(const SCEV *Delta, const SCEV *Stride,
@@ -1722,6 +1740,12 @@ private:
   FoldingSet<SCEVPredicate> UniquePreds;
   BumpPtrAllocator SCEVAllocator;
 
+  /// Cache tentative mappings from UnknownSCEVs in a Loop, to a SCEV expression
+  /// they can be rewritten into under certain predicates.
+  DenseMap<std::pair<const SCEVUnknown *, const Loop *>,
+           std::pair<const SCEV *, SmallVector<const SCEVPredicate *, 3>>>
+      PredicatedSCEVRewrites;
+   
   /// The head of a linked list of all SCEVUnknown values that have been
   /// allocated. This is used by releaseMemory to locate them all and call
   /// their destructors.
