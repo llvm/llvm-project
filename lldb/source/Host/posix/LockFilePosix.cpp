@@ -10,6 +10,7 @@
 #include "lldb/Host/posix/LockFilePosix.h"
 
 #include <fcntl.h>
+#include <unistd.h>
 
 using namespace lldb;
 using namespace lldb_private;

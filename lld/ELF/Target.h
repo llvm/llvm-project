@@ -157,6 +157,6 @@ static void checkAlignment(uint8_t *Loc, uint64_t V, uint32_t Type) {
           lld::toString(Type));
 }
 } // namespace elf
-}
+} // namespace lld
 
 #endif

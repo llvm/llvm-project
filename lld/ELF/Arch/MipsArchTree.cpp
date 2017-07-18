@@ -37,7 +37,7 @@ struct FileFlags {
   StringRef Filename;
   uint32_t Flags;
 };
-}
+} // namespace
 
 static StringRef getAbiName(uint32_t Flags) {
   switch (Flags) {
@@ -337,8 +337,8 @@ uint8_t elf::getMipsFpAbiFlag(uint8_t OldFlag, uint8_t NewFlag,
     return NewFlag;
   if (compareMipsFpAbi(OldFlag, NewFlag) < 0)
     error("target floating point ABI '" + getMipsFpAbiName(OldFlag) +
-          "' is incompatible with '" + getMipsFpAbiName(NewFlag) + "': " +
-          FileName);
+          "' is incompatible with '" + getMipsFpAbiName(NewFlag) +
+          "': " + FileName);
   return OldFlag;
 }
 

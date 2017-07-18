@@ -222,16 +222,16 @@ void OutputSectionFactory::addInputSec(InputSectionBase *IS,
 
   if (Sec) {
     if (getIncompatibleFlags(Sec->Flags) != getIncompatibleFlags(IS->Flags))
-      error("incompatible section flags for " + Sec->Name +
-            "\n>>> " + toString(IS) + ": 0x" + utohexstr(IS->Flags) +
+      error("incompatible section flags for " + Sec->Name + "\n>>> " +
+            toString(IS) + ": 0x" + utohexstr(IS->Flags) +
             "\n>>> output section " + Sec->Name + ": 0x" +
             utohexstr(Sec->Flags));
     if (Sec->Type != IS->Type) {
       if (canMergeToProgbits(Sec->Type) && canMergeToProgbits(IS->Type))
         Sec->Type = SHT_PROGBITS;
       else
-        error("section type mismatch for " + IS->Name +
-              "\n>>> " + toString(IS) + ": " +
+        error("section type mismatch for " + IS->Name + "\n>>> " +
+              toString(IS) + ": " +
               getELFSectionTypeName(Config->EMachine, IS->Type) +
               "\n>>> output section " + Sec->Name + ": " +
               getELFSectionTypeName(Config->EMachine, Sec->Type));

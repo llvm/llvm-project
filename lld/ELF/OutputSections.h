@@ -111,8 +111,8 @@ struct SectionKey {
   uint64_t Flags;
   uint32_t Alignment;
 };
-}
-}
+} // namespace elf
+} // namespace lld
 namespace llvm {
 template <> struct DenseMapInfo<lld::elf::SectionKey> {
   static lld::elf::SectionKey getEmptyKey();
@@ -121,7 +121,7 @@ template <> struct DenseMapInfo<lld::elf::SectionKey> {
   static bool isEqual(const lld::elf::SectionKey &LHS,
                       const lld::elf::SectionKey &RHS);
 };
-}
+} // namespace llvm
 namespace lld {
 namespace elf {
 
@@ -149,6 +149,5 @@ extern std::vector<OutputSection *> OutputSections;
 extern std::vector<OutputSectionCommand *> OutputSectionCommands;
 } // namespace elf
 } // namespace lld
-
 
 #endif

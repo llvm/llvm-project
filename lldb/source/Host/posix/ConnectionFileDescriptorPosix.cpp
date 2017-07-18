@@ -30,6 +30,7 @@
 
 #ifndef LLDB_DISABLE_POSIX
 #include <termios.h>
+#include <unistd.h>
 #endif
 
 // C++ Includes

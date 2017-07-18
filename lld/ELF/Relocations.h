@@ -103,7 +103,8 @@ struct RelExprMaskBuilder<Head, Tail...> {
 // RelExpr's as a constant bit mask and test for membership with a
 // couple cheap bitwise operations.
 template <RelExpr... Exprs> bool isRelExprOneOf(RelExpr Expr) {
-  assert(0 <= Expr && (int)Expr < 64 && "RelExpr is too large for 64-bit mask!");
+  assert(0 <= Expr && (int)Expr < 64 &&
+         "RelExpr is too large for 64-bit mask!");
   return (uint64_t(1) << Expr) & RelExprMaskBuilder<Exprs...>::build();
 }
 
@@ -178,7 +179,7 @@ template <class ELFT>
 static inline int64_t getAddend(const typename ELFT::Rela &Rel) {
   return Rel.r_addend;
 }
-}
-}
+} // namespace elf
+} // namespace lld
 
 #endif

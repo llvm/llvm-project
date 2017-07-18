@@ -11,8 +11,8 @@
 #define LLD_ELF_GDB_INDEX_H
 
 #include "InputFiles.h"
-#include "llvm/Object/ELF.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
+#include "llvm/Object/ELF.h"
 
 namespace lld {
 namespace elf {

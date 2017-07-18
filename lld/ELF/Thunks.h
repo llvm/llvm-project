@@ -50,7 +50,7 @@ public:
   const SymbolBody &Destination;
   SymbolBody *ThunkSym;
   uint64_t Offset;
-  uint32_t alignment = 4;
+  uint32_t Alignment = 4;
 };
 
 // For a Relocation to symbol S create a Thunk to be added to a synthetic

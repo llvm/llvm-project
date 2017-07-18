@@ -257,7 +257,6 @@ template <class ELFT> void Writer<ELFT>::run() {
   if (ErrorCount)
     return;
 
-
   // Handle -Map option.
   writeMapFile<ELFT>(OutputSectionCommands);
   if (ErrorCount)
@@ -1392,7 +1391,8 @@ OutputSectionCommand *Writer<ELFT>::findSectionCommand(StringRef Name) {
   return nullptr;
 }
 
-template <class ELFT> OutputSection *Writer<ELFT>::findSectionInScript(StringRef Name) {
+template <class ELFT>
+OutputSection *Writer<ELFT>::findSectionInScript(StringRef Name) {
   if (OutputSectionCommand *Cmd = findSectionCommand(Name))
     return Cmd->Sec;
   return nullptr;

@@ -172,8 +172,8 @@ template <class ELFT> void SymbolTable<ELFT>::addSymbolWrap(StringRef Name) {
 }
 
 // Creates alias for symbol. Used to implement --defsym=ALIAS=SYM.
-template <class ELFT> void SymbolTable<ELFT>::addSymbolAlias(StringRef Alias,
-                                                             StringRef Name) {
+template <class ELFT>
+void SymbolTable<ELFT>::addSymbolAlias(StringRef Alias, StringRef Name) {
   SymbolBody *B = find(Name);
   if (!B) {
     error("-defsym: undefined symbol: " + Name);
@@ -393,9 +393,8 @@ static void warnOrError(const Twine &Msg) {
 }
 
 static void reportDuplicate(SymbolBody *Sym, InputFile *NewFile) {
-  warnOrError("duplicate symbol: " + toString(*Sym) +
-              "\n>>> defined in " + toString(Sym->File) +
-              "\n>>> defined in " + toString(NewFile));
+  warnOrError("duplicate symbol: " + toString(*Sym) + "\n>>> defined in " +
+              toString(Sym->File) + "\n>>> defined in " + toString(NewFile));
 }
 
 template <class ELFT>
@@ -673,7 +672,8 @@ template <class ELFT> void SymbolTable<ELFT>::handleAnonymousVersion() {
 // Set symbol versions to symbols. This function handles patterns
 // containing no wildcard characters.
 template <class ELFT>
-void SymbolTable<ELFT>::assignExactVersion(SymbolVersion Ver, uint16_t VersionId,
+void SymbolTable<ELFT>::assignExactVersion(SymbolVersion Ver,
+                                           uint16_t VersionId,
                                            StringRef VersionName) {
   if (Ver.HasWildcard)
     return;
