@@ -451,16 +451,16 @@ void ClangModulesDeclVendorImpl::ForEachMacro(
 
           bool first_arg = true;
 
-          for (clang::MacroInfo::arg_iterator ai = macro_info->arg_begin(),
-                                              ae = macro_info->arg_end();
-               ai != ae; ++ai) {
+          for (auto pi = macro_info->param_begin(),
+                    pe = macro_info->param_end();
+               pi != pe; ++pi) {
             if (!first_arg) {
               macro_expansion.append(", ");
             } else {
               first_arg = false;
             }
 
-            macro_expansion.append((*ai)->getName().str());
+            macro_expansion.append((*pi)->getName().str());
           }
 
           if (macro_info->isC99Varargs()) {

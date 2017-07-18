@@ -1,13 +1,18 @@
 ; RUN: opt %loadPolly -pass-remarks-missed="polly-detect" \
 ; RUN:     -polly-detect-track-failures -polly-detect -analyze \
 ; RUN:     -polly-process-unprofitable=false < %s 2>&1| FileCheck %s
+
+; RUN: opt %loadPolly -pass-remarks-missed="polly-detect" \
+; RUN:     -polly-detect-track-failures -polly-detect -analyze \
+; RUN:     -polly-process-unprofitable=false < %s 2>&1 -pass-remarks-output=%t.yaml
+; RUN: cat %t.yaml | FileCheck -check-prefix=YAML %s
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ; void onlyWrite(float *A) {
 ;   for (long i = 0; i < 100; i++)
 ;     A[i] = 0;
 ; }
-; 
+;
 ; void onlyRead(float *A) {
 ;   for (long i = 0; i < 100; i++)
 ;     A[i];
@@ -20,6 +25,54 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ; CHECK: remark: /tmp/test.c:7:3: The following errors keep this region from being a Scop.
 ; CHECK: remark: /tmp/test.c:7:3: No profitable polyhedral optimization found
 ; CHECK: remark: /tmp/test.c:8:10: Invalid Scop candidate ends here.
+
+; YAML: --- !Missed
+; YAML: Pass:            polly-detect
+; YAML: Name:            RejectionErrors
+; YAML: DebugLoc:        { File: /tmp/test.c, Line: 2, Column: 3 }
+; YAML: Function:        onlyWrite
+; YAML: Args:
+; YAML:   - String:          The following errors keep this region from being a Scop.
+; YAML: ...
+; YAML: --- !Missed
+; YAML: Pass:            polly-detect
+; YAML: Name:            Unprofitable
+; YAML: DebugLoc:        { File: /tmp/test.c, Line: 2, Column: 3 }
+; YAML: Function:        onlyWrite
+; YAML: Args:
+; YAML:   - String:          No profitable polyhedral optimization found
+; YAML: ...
+; YAML: --- !Missed
+; YAML: Pass:            polly-detect
+; YAML: Name:            InvalidScopEnd
+; YAML: DebugLoc:        { File: /tmp/test.c, Line: 3, Column: 10 }
+; YAML: Function:        onlyWrite
+; YAML: Args:
+; YAML:   - String:          Invalid Scop candidate ends here.
+; YAML: ...
+; YAML: --- !Missed
+; YAML: Pass:            polly-detect
+; YAML: Name:            RejectionErrors
+; YAML: DebugLoc:        { File: /tmp/test.c, Line: 7, Column: 3 }
+; YAML: Function:        onlyRead
+; YAML: Args:
+; YAML:   - String:          The following errors keep this region from being a Scop.
+; YAML: ...
+; YAML: --- !Missed
+; YAML: Pass:            polly-detect
+; YAML: Name:            Unprofitable
+; YAML: DebugLoc:        { File: /tmp/test.c, Line: 7, Column: 3 }
+; YAML: Function:        onlyRead
+; YAML: Args:
+; YAML:   - String:          No profitable polyhedral optimization found
+; YAML: ...
+; YAML: --- !Missed
+; YAML: Pass:            polly-detect
+; YAML: Name:            InvalidScopEnd
+; YAML: DebugLoc:        { File: /tmp/test.c, Line: 8, Column: 10 }
+; YAML: Function:        onlyRead
+; YAML: Args:
+; YAML:   - String:          Invalid Scop candidate ends here.
 
 
 ; Function Attrs: nounwind uwtable

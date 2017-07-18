@@ -2296,11 +2296,6 @@ static void __kmp_stg_print_affinity(kmp_str_buf_t *buffer, char const *name,
       break;
 #endif /* KMP_GROUP_AFFINITY */
     }
-    if (__kmp_affinity_dups) {
-      __kmp_str_buf_print(buffer, "%s,", "duplicates");
-    } else {
-      __kmp_str_buf_print(buffer, "%s,", "noduplicates");
-    }
   }
   if (!KMP_AFFINITY_CAPABLE()) {
     __kmp_str_buf_print(buffer, "%s", "disabled");

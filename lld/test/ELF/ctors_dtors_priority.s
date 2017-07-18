@@ -14,28 +14,35 @@ _start:
   nop
 
 .section .ctors, "aw", @progbits
-  .byte 1
+  .quad 1
 .section .ctors.100, "aw", @progbits
-  .byte 2
+  .quad 2
 .section .ctors.005, "aw", @progbits
-  .byte 3
+  .quad 3
 .section .ctors, "aw", @progbits
-  .byte 4
+  .quad 4
 .section .ctors, "aw", @progbits
-  .byte 5
+  .quad 5
 
 .section .dtors, "aw", @progbits
-  .byte 0x11
+  .quad 0x11
 .section .dtors.100, "aw", @progbits
-  .byte 0x12
+  .quad 0x12
 .section .dtors.005, "aw", @progbits
-  .byte 0x13
+  .quad 0x13
 .section .dtors, "aw", @progbits
-  .byte 0x14
+  .quad 0x14
 .section .dtors, "aw", @progbits
-  .byte 0x15
+  .quad 0x15
 
 // CHECK:      Contents of section .ctors:
-// CHECK-NEXT: a1010405 b10302c1
+// CHECK-NEXT: 202000 a1000000 00000000 01000000 00000000
+// CHECK-NEXT: 202010 04000000 00000000 05000000 00000000
+// CHECK-NEXT: 202020 b1000000 00000000 03000000 00000000
+// CHECK-NEXT: 202030 02000000 00000000 c1000000 00000000
+
 // CHECK:      Contents of section .dtors:
-// CHECK-NEXT: a2111415 b21312c2
+// CHECK-NEXT: 202040 a2000000 00000000 11000000 00000000
+// CHECK-NEXT: 202050 14000000 00000000 15000000 00000000
+// CHECK-NEXT: 202060 b2000000 00000000 13000000 00000000
+// CHECK-NEXT: 202070 12000000 00000000 c2000000 00000000
