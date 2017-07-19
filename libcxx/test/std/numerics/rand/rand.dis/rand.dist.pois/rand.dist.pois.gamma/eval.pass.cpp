@@ -33,7 +33,6 @@ int main()
 {
     {
         typedef std::gamma_distribution<> D;
-        typedef D::param_type P;
         typedef std::mt19937 G;
         G g;
         D d(0.5, 2);
@@ -73,7 +72,6 @@ int main()
     }
     {
         typedef std::gamma_distribution<> D;
-        typedef D::param_type P;
         typedef std::mt19937 G;
         G g;
         D d(1, .5);
@@ -113,7 +111,6 @@ int main()
     }
     {
         typedef std::gamma_distribution<> D;
-        typedef D::param_type P;
         typedef std::mt19937 G;
         G g;
         D d(2, 3);

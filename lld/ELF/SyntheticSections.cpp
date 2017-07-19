@@ -1741,7 +1741,9 @@ static std::vector<AddressEntry> readAddressArea(DWARFContext &Dwarf,
       // Range list with zero size has no effect.
       if (R.LowPC == R.HighPC)
         continue;
-      Ret.push_back({cast<InputSection>(S), R.LowPC, R.HighPC, CurrentCu});
+      auto *IS = cast<InputSection>(S);
+      uint64_t Offset = IS->getOffsetInFile();
+      Ret.push_back({IS, R.LowPC - Offset, R.HighPC - Offset, CurrentCu});
     }
     ++CurrentCu;
   }
@@ -1750,8 +1752,8 @@ static std::vector<AddressEntry> readAddressArea(DWARFContext &Dwarf,
 
 static std::vector<NameTypeEntry> readPubNamesAndTypes(DWARFContext &Dwarf,
                                                        bool IsLE) {
-  StringRef Data[] = {Dwarf.getGnuPubNamesSection(),
-                      Dwarf.getGnuPubTypesSection()};
+  StringRef Data[] = {Dwarf.getDWARFObj().getGnuPubNamesSection(),
+                      Dwarf.getDWARFObj().getGnuPubTypesSection()};
 
   std::vector<NameTypeEntry> Ret;
   for (StringRef D : Data) {
@@ -1801,7 +1803,7 @@ void GdbIndexSection::buildIndex() {
   }
 }
 
-static GdbIndexChunk readDwarf(DWARFContextInMemory &Dwarf, InputSection *Sec) {
+static GdbIndexChunk readDwarf(DWARFContext &Dwarf, InputSection *Sec) {
   GdbIndexChunk Ret;
   Ret.DebugInfoSec = Sec;
   Ret.CompilationUnits = readCuList(Dwarf);
@@ -1813,16 +1815,8 @@ static GdbIndexChunk readDwarf(DWARFContextInMemory &Dwarf, InputSection *Sec) {
 template <class ELFT> GdbIndexSection *elf::createGdbIndex() {
   std::vector<GdbIndexChunk> Chunks;
   for (InputSection *Sec : getDebugInfoSections()) {
-    InputFile *F = Sec->File;
-    std::error_code EC;
-    ELFObjectFile<ELFT> Obj(F->MB, EC);
-    if (EC)
-      fatal(EC.message());
-    DWARFContextInMemory Dwarf(Obj, nullptr, [&](Error E) {
-      error(toString(F) + ": error parsing DWARF data:\n>>> " +
-            toString(std::move(E)));
-      return ErrorPolicy::Continue;
-    });
+    elf::ObjectFile<ELFT> *F = Sec->getFile<ELFT>();
+    DWARFContext Dwarf(make_unique<LLDDwarfObj<ELFT>>(F));
     Chunks.push_back(readDwarf(Dwarf, Sec));
   }
   return make<GdbIndexSection>(std::move(Chunks));

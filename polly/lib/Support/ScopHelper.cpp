@@ -508,7 +508,7 @@ bool polly::canSynthesize(const Value *V, const Scop &S, ScalarEvolution *SE,
   return false;
 }
 
-llvm::BasicBlock *polly::getUseBlock(llvm::Use &U) {
+llvm::BasicBlock *polly::getUseBlock(const llvm::Use &U) {
   Instruction *UI = dyn_cast<Instruction>(U.getUser());
   if (!UI)
     return nullptr;

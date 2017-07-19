@@ -325,11 +325,11 @@ Symbol *SymbolTable<ELFT>::addUndefined(StringRef Name, bool IsLocal,
 // .symver foo,foo@@@VER
 // we can delete this hack.
 static int compareVersion(Symbol *S, StringRef Name) {
-  if (Name.find("@@") != StringRef::npos &&
-      S->body()->getName().find("@@") == StringRef::npos)
+  bool A = Name.contains("@@");
+  bool B = S->body()->getName().contains("@@");
+  if (A && !B)
     return 1;
-  if (Name.find("@@") == StringRef::npos &&
-      S->body()->getName().find("@@") != StringRef::npos)
+  if (!A && B)
     return -1;
   return 0;
 }
@@ -720,7 +720,7 @@ void SymbolTable<ELFT>::assignExactVersion(SymbolVersion Ver,
     // Skip symbols containing version info because symbol versions
     // specified by symbol names take precedence over version scripts.
     // See parseSymbolVersion().
-    if (B->getName().find('@') != StringRef::npos)
+    if (B->getName().contains('@'))
       continue;
 
     Symbol *Sym = B->symbol();
