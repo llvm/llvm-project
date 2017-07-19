@@ -47,7 +47,7 @@ enum flag_type {
  */
 template <typename P> class kmp_flag {
   volatile P
-    *loc; /**< Pointer to the flag storage that is modified by another thread
+      *loc; /**< Pointer to the flag storage that is modified by another thread
              */
   flag_type t; /**< "Type" of the flag in loc */
 public:
@@ -225,11 +225,14 @@ __kmp_wait_template(kmp_info_t *this_thr, C *flag,
 
     // If we are oversubscribed, or have waited a bit (and
     // KMP_LIBRARY=throughput), then yield
-    KMP_YIELD(oversubscribed);
     // TODO: Should it be number of cores instead of thread contexts? Like:
     // KMP_YIELD(TCR_4(__kmp_nth) > __kmp_ncores);
     // Need performance improvement data to make the change...
-    KMP_YIELD_SPIN(spins);
+    if (oversubscribed) {
+      KMP_YIELD(1);
+    } else {
+      KMP_YIELD_SPIN(spins);
+    }
     // Check if this thread was transferred from a team
     // to the thread pool (or vice-versa) while spinning.
     in_pool = !!TCR_4(this_thr->th.th_in_pool);

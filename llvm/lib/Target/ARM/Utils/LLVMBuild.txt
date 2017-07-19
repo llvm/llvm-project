@@ -1,4 +1,4 @@
-;===- ./lib/Target/ARM/AsmParser/LLVMBuild.txt -----------------*- Conf -*--===;
+;===- ./lib/Target/ARM/Utils/LLVMBuild.txt ----------------*- Conf -*--===;
 ;
 ;                     The LLVM Compiler Infrastructure
 ;
@@ -17,7 +17,8 @@
 
 [component_0]
 type = Library
-name = ARMAsmParser
+name = ARMUtils
 parent = ARM
-required_libraries = ARMDesc ARMInfo MC MCParser Support ARMUtils
+required_libraries = Support
 add_to_library_groups = ARM
+

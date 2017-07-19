@@ -40,7 +40,8 @@ class TargetRegisterInfo;
 /// This is convenient because std::bitset does not have a constructor
 /// with an initializer list of set bits.
 ///
-/// Each InstructionSelector subclass should define a PredicateBitset class with:
+/// Each InstructionSelector subclass should define a PredicateBitset class
+/// with:
 ///   const unsigned MAX_SUBTARGET_PREDICATES = 192;
 ///   using PredicateBitset = PredicateBitsetImpl<MAX_SUBTARGET_PREDICATES>;
 /// and updating the constant to suit the target. Tablegen provides a suitable
@@ -102,7 +103,8 @@ enum {
   /// - OpIdx - Operand index
   /// - Expected integer
   GIM_CheckConstantInt,
-  /// Check the operand is a specific literal integer (i.e. MO.isImm() or MO.isCImm() is true).
+  /// Check the operand is a specific literal integer (i.e. MO.isImm() or
+  /// MO.isCImm() is true).
   /// - InsnID - Instruction ID
   /// - OpIdx - Operand index
   /// - Expected integer
