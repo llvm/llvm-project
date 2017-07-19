@@ -549,7 +549,7 @@ public:
       swift::ValueDecl *value_decl = results[idx];
       assert(&DC->getASTContext() ==
              &value_decl->getASTContext()); // no import required
-      RV.push_back(swift::UnqualifiedLookupResult(value_decl));
+      RV.push_back(swift::LookupResultEntry(value_decl));
     }
 
     return results.size() > 0;
