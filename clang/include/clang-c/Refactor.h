@@ -1170,6 +1170,18 @@ CXIndexerQuery clang_RefactoringContinuation_getIndexerQuery(
     CXRefactoringContinuation Continuation, unsigned Index);
 
 /**
+ * \brief Verify that the all of the indexer queries are satisfied by the
+ * continuation.
+ *
+ * \returns Null if all of the queries are satisfied an no errors have been
+ * reported, or a set of diagnostics that describes why the continuation should
+ * not be run.
+ */
+CINDEX_LINKAGE
+CXDiagnosticSet clang_RefactoringContinuation_verifyBeforeFinalizing(
+    CXRefactoringContinuation Continuation);
+
+/**
  * \brief Terminate the connection between the initiation TU and the refactoring
  * continuation.
  *

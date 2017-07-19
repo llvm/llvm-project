@@ -85,6 +85,10 @@ struct }
 // query-mix-impl-header: [ { name: ast.producer.query, filenameResult: "%S/classInHeader.h" } , { name: decl.query , predicateResults: [{name: decl.isDefined, intValues: [0, 1, 0, 1] }] }]
 // RUN: clang-refactor-test perform -action implement-declared-methods -selected=class-in-header -continuation-file=%S/Inputs/classInHeader.cpp -query-results=query-mix-impl-header %s | FileCheck %S/Inputs/classInHeader.h
 
+// query-no-impl: [ { name: ast.producer.query, filenameResult: "%s" } , { name: decl.query , predicateResults: [{name: decl.isDefined, intValues: [1, 1, 1, 1] }] }]
+// RUN: not clang-refactor-test perform -action implement-declared-methods -selected=class-in-header -continuation-file=%S/Inputs/classInHeader.cpp -query-results=query-no-impl %s 2>&1 | FileCheck --check-prefix=ALL-IMPLEMENTED-ERROR %s
+// ALL-IMPLEMENTED-ERROR: error: continuation failed: the selected methods are already implemented
+
 // Ensure that the methods which are placed right after the record are placed
 // after the outermost record:
 namespace ns {

@@ -24,4 +24,16 @@ def err_rename_external_source_symbol : Error<"%0 is declared in a %1 file; "
   "rename can be initiated in a %1 file only">;
 }
 
+let CategoryName = "Refactoring Continuation Issue" in {
+
+def err_ref_continuation_missing_implementation : Error<
+  "no %select{implementation file|@implementation declaration}0 for the "
+  "selected %select{declaration|@interface}0 %1; please add one and run the "
+  "refactoring action again">;
+
+def err_implement_declared_methods_all_implemented : Error<
+  "the selected methods are already implemented">;
+
+}
+
 } // end of Refactoring diagnostics

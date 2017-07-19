@@ -36,6 +36,10 @@ public:
 
   virtual void invalidateTUSpecificState() = 0;
 
+  /// Checks if this query was satisfied. Returns true if it wasn't and reports
+  /// appropriate errors.
+  virtual bool verify(ASTContext &) { return false; }
+
   // Mainly used for testing.
   static llvm::Error loadResultsFromYAML(StringRef Source,
                                          ArrayRef<IndexerQuery *> Queries);
@@ -81,6 +85,8 @@ public:
   void invalidateTUSpecificState() override { D = nullptr; }
 
   void setResult(PersistentFileID File) { Result = std::move(File); }
+
+  bool verify(ASTContext &Context) override;
 
   const PersistentFileID &getResult() const { return Result; }
 
@@ -229,6 +235,8 @@ public:
   ArrayRef<const Decl *> getInputs() const { return Input; }
 
   void invalidateTUSpecificState() override { Input.clear(); }
+
+  bool verify(ASTContext &Context) override;
 
   void setOutput(std::vector<Indexed<PersistentDeclRef<Decl>>> Output) {
     this->Output = Output;

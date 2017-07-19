@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Tooling/Core/RefactoringDiagnostic.h"
 #include "clang/Tooling/Refactor/IndexerQuery.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
@@ -42,6 +43,40 @@ DeclPredicateNode::create(const BoolDeclPredicate &Predicate) {
 std::unique_ptr<ASTUnitForImplementationOfDeclarationQuery>
 clang::tooling::indexer::fileThatShouldContainImplementationOf(const Decl *D) {
   return llvm::make_unique<ASTUnitForImplementationOfDeclarationQuery>(D);
+}
+
+bool ASTUnitForImplementationOfDeclarationQuery::verify(ASTContext &Context) {
+  if (!D) {
+    assert(false && "Query should be verified before persisting");
+    return false;
+  }
+  // Check if we've got the filename.
+  if (!Result.Filename.empty())
+    return false;
+  Context.getDiagnostics().Report(
+      D->getLocation(), diag::err_ref_continuation_missing_implementation)
+      << isa<ObjCContainerDecl>(D) << cast<NamedDecl>(D);
+  return true;
+}
+
+bool DeclarationsQuery::verify(ASTContext &Context) {
+  if (Input.empty()) {
+    assert(false && "Query should be verified before persisting");
+    return false;
+  }
+  if (!Output.empty()) {
+    // At least one output declaration must be valid.
+    for (const auto &Ref : Output) {
+      if (!Ref.Decl.USR.empty())
+        return false;
+    }
+  }
+  // FIXME: This is too specific, the new refactoring engine at llvm.org should
+  // generalize this.
+  Context.getDiagnostics().Report(
+      Input[0]->getLocation(),
+      diag::err_implement_declared_methods_all_implemented);
+  return true;
 }
 
 namespace {

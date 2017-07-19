@@ -1109,6 +1109,19 @@ bool performOperation(CXRefactoringAction Action, ArrayRef<const char *> Args,
       /*FileSubstitution=*/opts::initiateAndPerform::ContinuationFile);
   clang_RefactoringContinuation_loadSerializedIndexerQueryResults(
       Continuation, /*Source=*/QueryResults.c_str());
+  CXDiagnosticSet Diags =
+      clang_RefactoringContinuation_verifyBeforeFinalizing(Continuation);
+  if (Diags) {
+    llvm::errs() << "error: continuation failed: ";
+    for (unsigned I = 0, E = clang_getNumDiagnosticsInSet(Diags); I != E; ++I) {
+      CXDiagnostic Diag = clang_getDiagnosticInSet(Diags, I);
+      CXString Spelling = clang_getDiagnosticSpelling(Diag);
+      errs() << clang_getCString(Spelling) << "\n";
+      clang_disposeString(Spelling);
+    }
+    clang_RefactoringContinuation_dispose(Continuation);
+    return true;
+  }
   clang_RefactoringContinuation_finalizeEvaluationInInitationTU(Continuation);
   // Load the continuation TU.
   CXTranslationUnit ContinuationTU;

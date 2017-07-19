@@ -1051,6 +1051,7 @@ class RefactoringDiagnosticConsumer : public DiagnosticConsumer {
   DiagnosticConsumer *PreviousClient;
   std::unique_ptr<DiagnosticConsumer> PreviousClientPtr;
   llvm::SmallVector<StoredDiagnostic, 2> RenameDiagnostics;
+  llvm::SmallVector<StoredDiagnostic, 1> ContinuationDiagnostics;
 
 public:
   RefactoringDiagnosticConsumer(ASTContext &Context) : Context(Context) {
@@ -1069,17 +1070,24 @@ public:
 
   void HandleDiagnostic(DiagnosticsEngine::Level Level,
                         const Diagnostic &Info) override {
-    if (DiagnosticIDs::getCategoryNumberForDiag(Info.getID()) ==
-        diag::DiagCat_Rename_Issue)
+    unsigned Cat = DiagnosticIDs::getCategoryNumberForDiag(Info.getID());
+    if (Cat == diag::DiagCat_Rename_Issue)
       RenameDiagnostics.push_back(StoredDiagnostic(Level, Info));
+    else if (Cat == diag::DiagCat_Refactoring_Continuation_Issue)
+      ContinuationDiagnostics.push_back(StoredDiagnostic(Level, Info));
     else
       assert(false && "Unhandled refactoring category");
   }
 
   CXDiagnosticSetImpl *createDiags() const {
-    if (RenameDiagnostics.empty())
+    if (RenameDiagnostics.empty() && ContinuationDiagnostics.empty())
       return nullptr;
-    return cxdiag::createStoredDiags(RenameDiagnostics, Context.getLangOpts());
+    llvm::SmallVector<StoredDiagnostic, 2> AllDiagnostics;
+    for (const auto &D : RenameDiagnostics)
+      AllDiagnostics.push_back(D);
+    for (const auto &D : ContinuationDiagnostics)
+      AllDiagnostics.push_back(D);
+    return cxdiag::createStoredDiags(AllDiagnostics, Context.getLangOpts());
   }
 
   CXRefactoringActionSetWithDiagnostics createActionSet() const {
@@ -1769,6 +1777,24 @@ CXIndexerQuery clang_RefactoringContinuation_getIndexerQuery(
   if (Index >= Wrapper->Queries.size())
     return nullptr;
   return &Wrapper->Queries[Index];
+}
+
+CXDiagnosticSet clang_RefactoringContinuation_verifyBeforeFinalizing(
+    CXRefactoringContinuation Continuation) {
+  if (!Continuation)
+    return nullptr;
+  auto *Wrapper = static_cast<RefactoringContinuationWrapper *>(Continuation);
+  CXTranslationUnit TU = Wrapper->Queries[0].TU;
+  ASTUnit *CXXUnit = cxtu::getASTUnit(TU);
+  if (!CXXUnit)
+    return nullptr;
+  ASTContext &Context = CXXUnit->getASTContext();
+  RefactoringDiagnosticConsumer DiagConsumer(Context);
+  for (const auto &Query : Wrapper->Queries) {
+    if (Query.Query->verify(Context))
+      break;
+  }
+  return DiagConsumer.createDiags();
 }
 
 void clang_RefactoringContinuation_finalizeEvaluationInInitationTU(
