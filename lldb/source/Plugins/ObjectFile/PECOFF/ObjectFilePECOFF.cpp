@@ -537,7 +537,8 @@ Symtab *ObjectFilePECOFF::GetSymtab() {
 
           // First 4 bytes should be zeroed after strtab_size has been read,
           // because it is used as offset 0 to encode a NULL string.
-          uint32_t *strtab_data_start = (uint32_t *)strtab_data.GetDataStart();
+          uint32_t *strtab_data_start = const_cast<uint32_t *>(
+              reinterpret_cast<const uint32_t *>(strtab_data.GetDataStart()));
           strtab_data_start[0] = 0;
 
           offset = 0;
