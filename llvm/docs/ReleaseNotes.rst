@@ -71,6 +71,12 @@ Non-comprehensive list of changes in this release
 Changes to the LLVM IR
 ----------------------
 
+* The datalayout string may now indicate an address space to use for
+the pointer type of alloca rather than the default of 0.
+
+* Added speculatable attribute indicating a function which does has no
+  side-effects which could inhibit hoisting of calls.
+
 Changes to the ARM Backend
 --------------------------
 
@@ -96,7 +102,7 @@ Changes to the X86 Target
 Changes to the AMDGPU Target
 -----------------------------
 
- During this release ...
+* Initial gfx9 support
 
 Changes to the AVR Target
 -----------------------------
