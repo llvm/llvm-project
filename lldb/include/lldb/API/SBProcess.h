@@ -350,7 +350,7 @@ public:
 
   bool IsInstrumentationRuntimePresent(InstrumentationRuntimeType type);
 
-  // Save the state of the process in a core file (or mini dump on Windows).
+  /// Save the state of the process in a core file (or mini dump on Windows).
   lldb::SBError SaveCore(const char *file_name);
 
   //------------------------------------------------------------------
