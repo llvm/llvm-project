@@ -99,7 +99,7 @@ private:
   void WriteToOutputCorpus(const Unit &U);
   void WriteUnitToFileWithPrefix(const Unit &U, const char *Prefix);
   void PrintStats(const char *Where, const char *End = "\n", size_t Units = 0);
-  void PrintStatusForNewUnit(const Unit &U);
+  void PrintStatusForNewUnit(const Unit &U, const char *Text);
   void ShuffleCorpus(UnitVector *V);
   void CheckExitOnSrcPosOrItem();
 

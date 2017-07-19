@@ -760,12 +760,13 @@ DIObjCProperty *DIObjCProperty::getImpl(
 
 DIImportedEntity *DIImportedEntity::getImpl(LLVMContext &Context, unsigned Tag,
                                             Metadata *Scope, Metadata *Entity,
-                                            unsigned Line, MDString *Name,
-                                            StorageType Storage,
+                                            Metadata *File, unsigned Line,
+                                            MDString *Name, StorageType Storage,
                                             bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");
-  DEFINE_GETIMPL_LOOKUP(DIImportedEntity, (Tag, Scope, Entity, Line, Name));
-  Metadata *Ops[] = {Scope, Entity, Name};
+  DEFINE_GETIMPL_LOOKUP(DIImportedEntity,
+                        (Tag, Scope, Entity, File, Line, Name));
+  Metadata *Ops[] = {Scope, Entity, Name, File};
   DEFINE_GETIMPL_STORE(DIImportedEntity, (Tag, Line), Ops);
 }
 

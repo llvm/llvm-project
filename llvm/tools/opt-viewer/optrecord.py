@@ -49,7 +49,7 @@ def demangle(name):
 
 
 def html_file_name(filename):
-    return filename.replace('/', '_') + ".html"
+    return filename.replace('/', '_').replace('#', '_') + ".html"
 
 
 def make_link(File, Line):

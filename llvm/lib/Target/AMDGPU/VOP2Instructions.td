@@ -117,7 +117,10 @@ class VOP2_SDWA_Pseudo <string OpName, VOPProfile P, list<dag> pattern=[]> :
 class getVOP2Pat64 <SDPatternOperator node, VOPProfile P> : LetDummies {
   list<dag> ret = !if(P.HasModifiers,
     [(set P.DstVT:$vdst,
-      (node (P.Src0VT (VOP3Mods0 P.Src0VT:$src0, i32:$src0_modifiers, i1:$clamp, i32:$omod)),
+      (node (P.Src0VT
+              !if(P.HasOMod,
+                  (VOP3Mods0 P.Src0VT:$src0, i32:$src0_modifiers, i1:$clamp, i32:$omod),
+                  (VOP3Mods0 P.Src0VT:$src0, i32:$src0_modifiers, i1:$clamp))),
             (P.Src1VT (VOP3Mods P.Src1VT:$src1, i32:$src1_modifiers))))],
     [(set P.DstVT:$vdst, (node P.Src0VT:$src0, P.Src1VT:$src1))]);
 }
@@ -813,9 +816,11 @@ let SubtargetPredicate = isVI in {
 
 // Aliases to simplify matching of floating-point instructions that
 // are VOP2 on SI and VOP3 on VI.
-class SI2_VI3Alias <string name, Instruction inst> : InstAlias <
+class SI2_VI3Alias <string name, VOP3_Real inst> : InstAlias <
   name#" $dst, $src0, $src1",
-  (inst VGPR_32:$dst, 0, VCSrc_f32:$src0, 0, VCSrc_f32:$src1, 0, 0)
+  !if(inst.Pfl.HasOMod,
+      (inst VGPR_32:$dst, 0, VCSrc_f32:$src0, 0, VCSrc_f32:$src1, 0, 0),
+      (inst VGPR_32:$dst, 0, VCSrc_f32:$src0, 0, VCSrc_f32:$src1, 0))
 >, PredicateControl {
   let UseInstAsmMatchConverter = 0;
   let AsmVariantName = AMDGPUAsmVariants.VOP3;

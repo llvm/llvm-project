@@ -1630,8 +1630,9 @@ define void @f1(i32 %c) {
 ; CHECK-LABEL: f1:
 ; CHECK:       ## BB#0: ## %entry
 ; CHECK-NEXT:    movzbl {{.*}}(%rip), %edi
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    xorb $1, %al
+; CHECK-NEXT:    movb {{.*}}(%rip), %al
+; CHECK-NEXT:    notb %al
+; CHECK-NEXT:    andb $1, %al
 ; CHECK-NEXT:    movb %al, {{.*}}(%rip)
 ; CHECK-NEXT:    xorl $1, %edi
 ; CHECK-NEXT:    jmp _f2 ## TAILCALL

@@ -4173,6 +4173,319 @@ static Optional<BinaryOp> MatchBinaryOp(Value *V, DominatorTree &DT) {
   return None;
 }
 
+/// Helper function to createAddRecFromPHIWithCasts. We have a phi 
+/// node whose symbolic (unknown) SCEV is \p SymbolicPHI, which is updated via
+/// the loop backedge by a SCEVAddExpr, possibly also with a few casts on the 
+/// way. This function checks if \p Op, an operand of this SCEVAddExpr, 
+/// follows one of the following patterns:
+/// Op == (SExt ix (Trunc iy (%SymbolicPHI) to ix) to iy)
+/// Op == (ZExt ix (Trunc iy (%SymbolicPHI) to ix) to iy)
+/// If the SCEV expression of \p Op conforms with one of the expected patterns
+/// we return the type of the truncation operation, and indicate whether the
+/// truncated type should be treated as signed/unsigned by setting 
+/// \p Signed to true/false, respectively.
+static Type *isSimpleCastedPHI(const SCEV *Op, const SCEVUnknown *SymbolicPHI,
+                               bool &Signed, ScalarEvolution &SE) {
+
+  // The case where Op == SymbolicPHI (that is, with no type conversions on 
+  // the way) is handled by the regular add recurrence creating logic and 
+  // would have already been triggered in createAddRecForPHI. Reaching it here
+  // means that createAddRecFromPHI had failed for this PHI before (e.g., 
+  // because one of the other operands of the SCEVAddExpr updating this PHI is
+  // not invariant). 
+  //
+  // Here we look for the case where Op = (ext(trunc(SymbolicPHI))), and in 
+  // this case predicates that allow us to prove that Op == SymbolicPHI will
+  // be added.
+  if (Op == SymbolicPHI)
+    return nullptr;
+
+  unsigned SourceBits = SE.getTypeSizeInBits(SymbolicPHI->getType());
+  unsigned NewBits = SE.getTypeSizeInBits(Op->getType());
+  if (SourceBits != NewBits)
+    return nullptr;
+
+  const SCEVSignExtendExpr *SExt = dyn_cast<SCEVSignExtendExpr>(Op);
+  const SCEVZeroExtendExpr *ZExt = dyn_cast<SCEVZeroExtendExpr>(Op);
+  if (!SExt && !ZExt)
+    return nullptr;
+  const SCEVTruncateExpr *Trunc =
+      SExt ? dyn_cast<SCEVTruncateExpr>(SExt->getOperand())
+           : dyn_cast<SCEVTruncateExpr>(ZExt->getOperand());
+  if (!Trunc)
+    return nullptr;
+  const SCEV *X = Trunc->getOperand();
+  if (X != SymbolicPHI)
+    return nullptr;
+  Signed = SExt ? true : false; 
+  return Trunc->getType();
+}
+
+static const Loop *isIntegerLoopHeaderPHI(const PHINode *PN, LoopInfo &LI) {
+  if (!PN->getType()->isIntegerTy())
+    return nullptr;
+  const Loop *L = LI.getLoopFor(PN->getParent());
+  if (!L || L->getHeader() != PN->getParent())
+    return nullptr;
+  return L;
+}
+
+// Analyze \p SymbolicPHI, a SCEV expression of a phi node, and check if the
+// computation that updates the phi follows the following pattern:
+//   (SExt/ZExt ix (Trunc iy (%SymbolicPHI) to ix) to iy) + InvariantAccum
+// which correspond to a phi->trunc->sext/zext->add->phi update chain.
+// If so, try to see if it can be rewritten as an AddRecExpr under some
+// Predicates. If successful, return them as a pair. Also cache the results
+// of the analysis.
+//
+// Example usage scenario:
+//    Say the Rewriter is called for the following SCEV:
+//         8 * ((sext i32 (trunc i64 %X to i32) to i64) + %Step)
+//    where:
+//         %X = phi i64 (%Start, %BEValue)
+//    It will visitMul->visitAdd->visitSExt->visitTrunc->visitUnknown(%X),
+//    and call this function with %SymbolicPHI = %X.
+//
+//    The analysis will find that the value coming around the backedge has 
+//    the following SCEV:
+//         BEValue = ((sext i32 (trunc i64 %X to i32) to i64) + %Step)
+//    Upon concluding that this matches the desired pattern, the function
+//    will return the pair {NewAddRec, SmallPredsVec} where:
+//         NewAddRec = {%Start,+,%Step}
+//         SmallPredsVec = {P1, P2, P3} as follows:
+//           P1(WrapPred): AR: {trunc(%Start),+,(trunc %Step)}<nsw> Flags: <nssw>
+//           P2(EqualPred): %Start == (sext i32 (trunc i64 %Start to i32) to i64)
+//           P3(EqualPred): %Step == (sext i32 (trunc i64 %Step to i32) to i64)
+//    The returned pair means that SymbolicPHI can be rewritten into NewAddRec
+//    under the predicates {P1,P2,P3}.
+//    This predicated rewrite will be cached in PredicatedSCEVRewrites:
+//         PredicatedSCEVRewrites[{%X,L}] = {NewAddRec, {P1,P2,P3)} 
+//
+// TODO's:
+//
+// 1) Extend the Induction descriptor to also support inductions that involve
+//    casts: When needed (namely, when we are called in the context of the 
+//    vectorizer induction analysis), a Set of cast instructions will be 
+//    populated by this method, and provided back to isInductionPHI. This is
+//    needed to allow the vectorizer to properly record them to be ignored by
+//    the cost model and to avoid vectorizing them (otherwise these casts,
+//    which are redundant under the runtime overflow checks, will be 
+//    vectorized, which can be costly).  
+//
+// 2) Support additional induction/PHISCEV patterns: We also want to support
+//    inductions where the sext-trunc / zext-trunc operations (partly) occur 
+//    after the induction update operation (the induction increment):
+//
+//      (Trunc iy (SExt/ZExt ix (%SymbolicPHI + InvariantAccum) to iy) to ix)
+//    which correspond to a phi->add->trunc->sext/zext->phi update chain.
+//
+//      (Trunc iy ((SExt/ZExt ix (%SymbolicPhi) to iy) + InvariantAccum) to ix)
+//    which correspond to a phi->trunc->add->sext/zext->phi update chain.
+//
+// 3) Outline common code with createAddRecFromPHI to avoid duplication.
+//
+Optional<std::pair<const SCEV *, SmallVector<const SCEVPredicate *, 3>>>
+ScalarEvolution::createAddRecFromPHIWithCastsImpl(const SCEVUnknown *SymbolicPHI) {
+  SmallVector<const SCEVPredicate *, 3> Predicates;
+
+  // *** Part1: Analyze if we have a phi-with-cast pattern for which we can 
+  // return an AddRec expression under some predicate.
+ 
+  auto *PN = cast<PHINode>(SymbolicPHI->getValue());
+  const Loop *L = isIntegerLoopHeaderPHI(PN, LI);
+  assert (L && "Expecting an integer loop header phi");
+
+  // The loop may have multiple entrances or multiple exits; we can analyze
+  // this phi as an addrec if it has a unique entry value and a unique
+  // backedge value.
+  Value *BEValueV = nullptr, *StartValueV = nullptr;
+  for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
+    Value *V = PN->getIncomingValue(i);
+    if (L->contains(PN->getIncomingBlock(i))) {
+      if (!BEValueV) {
+        BEValueV = V;
+      } else if (BEValueV != V) {
+        BEValueV = nullptr;
+        break;
+      }
+    } else if (!StartValueV) {
+      StartValueV = V;
+    } else if (StartValueV != V) {
+      StartValueV = nullptr;
+      break;
+    }
+  }
+  if (!BEValueV || !StartValueV)
+    return None;
+
+  const SCEV *BEValue = getSCEV(BEValueV);
+
+  // If the value coming around the backedge is an add with the symbolic
+  // value we just inserted, possibly with casts that we can ignore under
+  // an appropriate runtime guard, then we found a simple induction variable!
+  const auto *Add = dyn_cast<SCEVAddExpr>(BEValue);
+  if (!Add)
+    return None;
+
+  // If there is a single occurrence of the symbolic value, possibly
+  // casted, replace it with a recurrence. 
+  unsigned FoundIndex = Add->getNumOperands();
+  Type *TruncTy = nullptr;
+  bool Signed;
+  for (unsigned i = 0, e = Add->getNumOperands(); i != e; ++i)
+    if ((TruncTy = 
+             isSimpleCastedPHI(Add->getOperand(i), SymbolicPHI, Signed, *this)))
+      if (FoundIndex == e) {
+        FoundIndex = i;
+        break;
+      }
+
+  if (FoundIndex == Add->getNumOperands())
+    return None;
+
+  // Create an add with everything but the specified operand.
+  SmallVector<const SCEV *, 8> Ops;
+  for (unsigned i = 0, e = Add->getNumOperands(); i != e; ++i)
+    if (i != FoundIndex)
+      Ops.push_back(Add->getOperand(i));
+  const SCEV *Accum = getAddExpr(Ops);
+
+  // The runtime checks will not be valid if the step amount is
+  // varying inside the loop.
+  if (!isLoopInvariant(Accum, L))
+    return None;
+
+  
+  // *** Part2: Create the predicates 
+
+  // Analysis was successful: we have a phi-with-cast pattern for which we
+  // can return an AddRec expression under the following predicates:
+  //
+  // P1: A Wrap predicate that guarantees that Trunc(Start) + i*Trunc(Accum)
+  //     fits within the truncated type (does not overflow) for i = 0 to n-1.
+  // P2: An Equal predicate that guarantees that 
+  //     Start = (Ext ix (Trunc iy (Start) to ix) to iy)
+  // P3: An Equal predicate that guarantees that 
+  //     Accum = (Ext ix (Trunc iy (Accum) to ix) to iy)
+  //
+  // As we next prove, the above predicates guarantee that: 
+  //     Start + i*Accum = (Ext ix (Trunc iy ( Start + i*Accum ) to ix) to iy)
+  //
+  //
+  // More formally, we want to prove that:
+  //     Expr(i+1) = Start + (i+1) * Accum 
+  //               = (Ext ix (Trunc iy (Expr(i)) to ix) to iy) + Accum 
+  //
+  // Given that:
+  // 1) Expr(0) = Start 
+  // 2) Expr(1) = Start + Accum 
+  //            = (Ext ix (Trunc iy (Start) to ix) to iy) + Accum :: from P2
+  // 3) Induction hypothesis (step i):
+  //    Expr(i) = (Ext ix (Trunc iy (Expr(i-1)) to ix) to iy) + Accum 
+  //
+  // Proof:
+  //  Expr(i+1) =
+  //   = Start + (i+1)*Accum
+  //   = (Start + i*Accum) + Accum
+  //   = Expr(i) + Accum  
+  //   = (Ext ix (Trunc iy (Expr(i-1)) to ix) to iy) + Accum + Accum 
+  //                                                             :: from step i
+  //
+  //   = (Ext ix (Trunc iy (Start + (i-1)*Accum) to ix) to iy) + Accum + Accum 
+  //
+  //   = (Ext ix (Trunc iy (Start + (i-1)*Accum) to ix) to iy)
+  //     + (Ext ix (Trunc iy (Accum) to ix) to iy)
+  //     + Accum                                                     :: from P3
+  //
+  //   = (Ext ix (Trunc iy ((Start + (i-1)*Accum) + Accum) to ix) to iy) 
+  //     + Accum                            :: from P1: Ext(x)+Ext(y)=>Ext(x+y)
+  //
+  //   = (Ext ix (Trunc iy (Start + i*Accum) to ix) to iy) + Accum
+  //   = (Ext ix (Trunc iy (Expr(i)) to ix) to iy) + Accum 
+  //
+  // By induction, the same applies to all iterations 1<=i<n:
+  //
+  
+  // Create a truncated addrec for which we will add a no overflow check (P1).
+  const SCEV *StartVal = getSCEV(StartValueV);
+  const SCEV *PHISCEV = 
+      getAddRecExpr(getTruncateExpr(StartVal, TruncTy),
+                    getTruncateExpr(Accum, TruncTy), L, SCEV::FlagAnyWrap); 
+  const auto *AR = cast<SCEVAddRecExpr>(PHISCEV);
+
+  SCEVWrapPredicate::IncrementWrapFlags AddedFlags =
+      Signed ? SCEVWrapPredicate::IncrementNSSW
+             : SCEVWrapPredicate::IncrementNUSW;
+  const SCEVPredicate *AddRecPred = getWrapPredicate(AR, AddedFlags);
+  Predicates.push_back(AddRecPred);
+
+  // Create the Equal Predicates P2,P3:
+  auto AppendPredicate = [&](const SCEV *Expr) -> void {
+    assert (isLoopInvariant(Expr, L) && "Expr is expected to be invariant");
+    const SCEV *TruncatedExpr = getTruncateExpr(Expr, TruncTy);
+    const SCEV *ExtendedExpr =
+        Signed ? getSignExtendExpr(TruncatedExpr, Expr->getType())
+               : getZeroExtendExpr(TruncatedExpr, Expr->getType());
+    if (Expr != ExtendedExpr &&
+        !isKnownPredicate(ICmpInst::ICMP_EQ, Expr, ExtendedExpr)) {
+      const SCEVPredicate *Pred = getEqualPredicate(Expr, ExtendedExpr);
+      DEBUG (dbgs() << "Added Predicate: " << *Pred);
+      Predicates.push_back(Pred);
+    }
+  };
+  
+  AppendPredicate(StartVal);
+  AppendPredicate(Accum);
+  
+  // *** Part3: Predicates are ready. Now go ahead and create the new addrec in
+  // which the casts had been folded away. The caller can rewrite SymbolicPHI
+  // into NewAR if it will also add the runtime overflow checks specified in
+  // Predicates.  
+  auto *NewAR = getAddRecExpr(StartVal, Accum, L, SCEV::FlagAnyWrap);
+
+  std::pair<const SCEV *, SmallVector<const SCEVPredicate *, 3>> PredRewrite =
+      std::make_pair(NewAR, Predicates);
+  // Remember the result of the analysis for this SCEV at this locayyytion.
+  PredicatedSCEVRewrites[{SymbolicPHI, L}] = PredRewrite;
+  return PredRewrite;
+}
+
+Optional<std::pair<const SCEV *, SmallVector<const SCEVPredicate *, 3>>>
+ScalarEvolution::createAddRecFromPHIWithCasts(const SCEVUnknown *SymbolicPHI) {
+
+  auto *PN = cast<PHINode>(SymbolicPHI->getValue());
+  const Loop *L = isIntegerLoopHeaderPHI(PN, LI);
+  if (!L)
+    return None;
+
+  // Check to see if we already analyzed this PHI.
+  auto I = PredicatedSCEVRewrites.find({SymbolicPHI, L});
+  if (I != PredicatedSCEVRewrites.end()) {
+    std::pair<const SCEV *, SmallVector<const SCEVPredicate *, 3>> Rewrite =
+        I->second;
+    // Analysis was done before and failed to create an AddRec:
+    if (Rewrite.first == SymbolicPHI) 
+      return None;
+    // Analysis was done before and succeeded to create an AddRec under
+    // a predicate:
+    assert(isa<SCEVAddRecExpr>(Rewrite.first) && "Expected an AddRec");
+    assert(!(Rewrite.second).empty() && "Expected to find Predicates");
+    return Rewrite;
+  }
+
+  Optional<std::pair<const SCEV *, SmallVector<const SCEVPredicate *, 3>>>
+    Rewrite = createAddRecFromPHIWithCastsImpl(SymbolicPHI);
+
+  // Record in the cache that the analysis failed
+  if (!Rewrite) {
+    SmallVector<const SCEVPredicate *, 3> Predicates;
+    PredicatedSCEVRewrites[{SymbolicPHI, L}] = {SymbolicPHI, Predicates};
+    return None;
+  }
+
+  return Rewrite;
+}
+
 /// A helper function for createAddRecFromPHI to handle simple cases.
 ///
 /// This function tries to find an AddRec expression for the simplest (yet most
@@ -5903,6 +6216,16 @@ void ScalarEvolution::forgetLoop(const Loop *L) {
 
   RemoveLoopFromBackedgeMap(BackedgeTakenCounts);
   RemoveLoopFromBackedgeMap(PredicatedBackedgeTakenCounts);
+
+  // Drop information about predicated SCEV rewrites for this loop.
+  for (auto I = PredicatedSCEVRewrites.begin();
+       I != PredicatedSCEVRewrites.end();) {
+    std::pair<const SCEV *, const Loop *> Entry = I->first;
+    if (Entry.second == L)
+      PredicatedSCEVRewrites.erase(I++);
+    else
+      ++I;
+  }
 
   // Drop information about expressions based on loop-header PHIs.
   SmallVector<Instruction *, 16> Worklist;
@@ -10062,6 +10385,7 @@ ScalarEvolution::ScalarEvolution(ScalarEvolution &&Arg)
       UniqueSCEVs(std::move(Arg.UniqueSCEVs)),
       UniquePreds(std::move(Arg.UniquePreds)),
       SCEVAllocator(std::move(Arg.SCEVAllocator)),
+      PredicatedSCEVRewrites(std::move(Arg.PredicatedSCEVRewrites)),
       FirstUnknown(Arg.FirstUnknown) {
   Arg.FirstUnknown = nullptr;
 }
@@ -10462,6 +10786,15 @@ void ScalarEvolution::forgetMemoizedResults(const SCEV *S) {
   HasRecMap.erase(S);
   MinTrailingZerosCache.erase(S);
 
+  for (auto I = PredicatedSCEVRewrites.begin(); 
+       I != PredicatedSCEVRewrites.end();) {
+    std::pair<const SCEV *, const Loop *> Entry = I->first;
+    if (Entry.first == S)
+      PredicatedSCEVRewrites.erase(I++);
+    else
+      ++I;
+  }
+
   auto RemoveSCEVFromBackedgeMap =
       [S, this](DenseMap<const Loop *, BackedgeTakenInfo> &Map) {
         for (auto I = Map.begin(), E = Map.end(); I != E;) {
@@ -10621,10 +10954,11 @@ void ScalarEvolutionWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequiredTransitive<TargetLibraryInfoWrapperPass>();
 }
 
-const SCEVPredicate *
-ScalarEvolution::getEqualPredicate(const SCEVUnknown *LHS,
-                                   const SCEVConstant *RHS) {
+const SCEVPredicate *ScalarEvolution::getEqualPredicate(const SCEV *LHS,
+                                                        const SCEV *RHS) {
   FoldingSetNodeID ID;
+  assert(LHS->getType() == RHS->getType() &&
+         "Type mismatch between LHS and RHS");
   // Unique this node based on the arguments
   ID.AddInteger(SCEVPredicate::P_Equal);
   ID.AddPointer(LHS);
@@ -10687,8 +11021,7 @@ public:
           if (IPred->getLHS() == Expr)
             return IPred->getRHS();
     }
-
-    return Expr;
+    return convertToAddRecWithPreds(Expr);
   }
 
   const SCEV *visitZeroExtendExpr(const SCEVZeroExtendExpr *Expr) {
@@ -10724,17 +11057,41 @@ public:
   }
 
 private:
-  bool addOverflowAssumption(const SCEVAddRecExpr *AR,
-                             SCEVWrapPredicate::IncrementWrapFlags AddedFlags) {
-    auto *A = SE.getWrapPredicate(AR, AddedFlags);
+  bool addOverflowAssumption(const SCEVPredicate *P) {
     if (!NewPreds) {
       // Check if we've already made this assumption.
-      return Pred && Pred->implies(A);
+      return Pred && Pred->implies(P);
     }
-    NewPreds->insert(A);
+    NewPreds->insert(P);
     return true;
   }
 
+  bool addOverflowAssumption(const SCEVAddRecExpr *AR,
+                             SCEVWrapPredicate::IncrementWrapFlags AddedFlags) {
+    auto *A = SE.getWrapPredicate(AR, AddedFlags);
+    return addOverflowAssumption(A);
+  }
+
+  // If \p Expr represents a PHINode, we try to see if it can be represented
+  // as an AddRec, possibly under a predicate (PHISCEVPred). If it is possible 
+  // to add this predicate as a runtime overflow check, we return the AddRec.
+  // If \p Expr does not meet these conditions (is not a PHI node, or we 
+  // couldn't create an AddRec for it, or couldn't add the predicate), we just 
+  // return \p Expr.
+  const SCEV *convertToAddRecWithPreds(const SCEVUnknown *Expr) {
+    if (!isa<PHINode>(Expr->getValue()))
+      return Expr;
+    Optional<std::pair<const SCEV *, SmallVector<const SCEVPredicate *, 3>>>
+    PredicatedRewrite = SE.createAddRecFromPHIWithCasts(Expr);
+    if (!PredicatedRewrite)
+      return Expr;
+    for (auto *P : PredicatedRewrite->second){
+      if (!addOverflowAssumption(P))
+        return Expr;
+    }
+    return PredicatedRewrite->first;
+  }
+  
   SmallPtrSetImpl<const SCEVPredicate *> *NewPreds;
   SCEVUnionPredicate *Pred;
   const Loop *L;
@@ -10771,9 +11128,11 @@ SCEVPredicate::SCEVPredicate(const FoldingSetNodeIDRef ID,
     : FastID(ID), Kind(Kind) {}
 
 SCEVEqualPredicate::SCEVEqualPredicate(const FoldingSetNodeIDRef ID,
-                                       const SCEVUnknown *LHS,
-                                       const SCEVConstant *RHS)
-    : SCEVPredicate(ID, P_Equal), LHS(LHS), RHS(RHS) {}
+                                       const SCEV *LHS, const SCEV *RHS)
+    : SCEVPredicate(ID, P_Equal), LHS(LHS), RHS(RHS) {
+  assert(LHS->getType() == RHS->getType() && "LHS and RHS types don't match");
+  assert(LHS != RHS && "LHS and RHS are the same SCEV");
+}
 
 bool SCEVEqualPredicate::implies(const SCEVPredicate *N) const {
   const auto *Op = dyn_cast<SCEVEqualPredicate>(N);

@@ -340,6 +340,7 @@ else() # if this is included from LLVM's CMake
                                         -DCMAKE_ASM_COMPILER_WORKS=ON
                                         -DCOMPILER_RT_DEFAULT_TARGET_ONLY=ON
                                         ${${target}_extra_args}
+                             TOOLCHAIN_TOOLS clang lld llvm-ar llvm-ranlib
                              PASSTHROUGH_PREFIXES ${prefixes}
                              EXTRA_TARGETS ${${target}_extra_targets}
                                            ${${target}_test_targets}

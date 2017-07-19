@@ -44,13 +44,13 @@ entry:
 !7 = !{null}
 !8 = distinct !DISubprogram(name: "b", linkageName: "_ZN1A1bEv", scope: !5, file: !1, line: 8, type: !6, isLocal: false, isDefinition: true, scopeLine: 8, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
 !9 = !{!10, !16}
-!10 = !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: !8, entity: !4, line: 8)
+!10 = !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: !8, entity: !4, file: !1, line: 8)
 !11 = !{i32 2, !"Dwarf Version", i32 4}
 !12 = !{i32 2, !"Debug Info Version", i32 3}
 !13 = !{!"clang version 3.8.0 (trunk 256934) (llvm/trunk 256936)"}
 !14 = !DILocation(line: 7, column: 12, scope: !4)
 !15 = !DILocation(line: 8, column: 24, scope: !8)
-!16 = !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: !17, entity: !19, line: 8)
+!16 = !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: !17, entity: !19, file: !1, line: 8)
 !17 = distinct !DILexicalBlock(scope: !18, file: !1, line: 9, column: 8)
 !18 = distinct !DISubprogram(name: "c", linkageName: "_ZN1A1cEv", scope: !5, file: !1, line: 9, type: !6, isLocal: false, isDefinition: true, scopeLine: 8, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
 !19 = distinct !DILexicalBlock(scope: !20, file: !1, line: 10, column: 8)

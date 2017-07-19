@@ -48,6 +48,7 @@ set(LLVM_TEST_DEPENDS
           llvm-cvtres
           llvm-diff
           llvm-dis
+          llvm-dlltool
           llvm-dsymutil
           llvm-dwarfdump
           llvm-dwp

@@ -232,6 +232,8 @@ public:
   ConstraintType getConstraintType(StringRef Constraint) const override;
   SDValue copyToM0(SelectionDAG &DAG, SDValue Chain, const SDLoc &DL,
                    SDValue V) const;
+
+  void finalizeLowering(MachineFunction &MF) const override;
 };
 
 } // End namespace llvm

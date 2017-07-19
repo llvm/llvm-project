@@ -22,6 +22,7 @@
 #include "llvm/Object/COFFImportFile.h"
 #include "llvm/Object/Error.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm::COFF;
@@ -55,8 +56,10 @@ struct Token {
   StringRef Value;
 };
 
-static bool isDecorated(StringRef Sym) {
-  return Sym.startswith("_") || Sym.startswith("@") || Sym.startswith("?");
+static bool isDecorated(StringRef Sym, bool MingwDef) {
+  // mingw does not prepend "_".
+  return (!MingwDef && Sym.startswith("_")) || Sym.startswith("@") ||
+         Sym.startswith("?");
 }
 
 static Error createError(const Twine &Err) {
@@ -83,6 +86,9 @@ public:
     }
     case '=':
       Buf = Buf.drop_front();
+      // GNU dlltool accepts both = and ==.
+      if (Buf.startswith("="))
+        Buf = Buf.drop_front();
       return Token(Equal, "=");
     case ',':
       Buf = Buf.drop_front();
@@ -120,7 +126,8 @@ private:
 
 class Parser {
 public:
-  explicit Parser(StringRef S, MachineTypes M) : Lex(S), Machine(M) {}
+  explicit Parser(StringRef S, MachineTypes M, bool B)
+      : Lex(S), Machine(M), MingwDef(B) {}
 
   Expected<COFFModuleDefinition> parse() {
     do {
@@ -182,9 +189,8 @@ private:
       if (Error Err = parseName(&Name, &Info.ImageBase))
         return Err;
       // Append the appropriate file extension if not already present.
-      StringRef Ext = IsDll ? ".dll" : ".exe";
-      if (!StringRef(Name).endswith_lower(Ext))
-        Name += Ext;
+      if (!sys::path::has_extension(Name))
+        Name += IsDll ? ".dll" : ".exe";
 
       // Set the output file, but don't override /out if it was already passed.
       if (Info.OutputFile.empty())
@@ -213,9 +219,9 @@ private:
     }
 
     if (Machine == IMAGE_FILE_MACHINE_I386) {
-      if (!isDecorated(E.Name))
+      if (!isDecorated(E.Name, MingwDef))
         E.Name = (std::string("_").append(E.Name));
-      if (!E.ExtName.empty() && !isDecorated(E.ExtName))
+      if (!E.ExtName.empty() && !isDecorated(E.ExtName, MingwDef))
         E.ExtName = (std::string("_").append(E.ExtName));
     }
 
@@ -308,11 +314,13 @@ private:
   std::vector<Token> Stack;
   MachineTypes Machine;
   COFFModuleDefinition Info;
+  bool MingwDef;
 };
 
 Expected<COFFModuleDefinition> parseCOFFModuleDefinition(MemoryBufferRef MB,
-                                                         MachineTypes Machine) {
-  return Parser(MB.getBuffer(), Machine).parse();
+                                                         MachineTypes Machine,
+                                                         bool MingwDef) {
+  return Parser(MB.getBuffer(), Machine, MingwDef).parse();
 }
 
 } // namespace object

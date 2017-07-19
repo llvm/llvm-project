@@ -2116,29 +2116,35 @@ TEST_F(DIImportedEntityTest, get) {
   unsigned Tag = dwarf::DW_TAG_imported_module;
   DIScope *Scope = getSubprogram();
   DINode *Entity = getCompositeType();
+  DIFile *File = getFile();
   unsigned Line = 5;
   StringRef Name = "name";
 
-  auto *N = DIImportedEntity::get(Context, Tag, Scope, Entity, Line, Name);
+  auto *N =
+      DIImportedEntity::get(Context, Tag, Scope, Entity, File, Line, Name);
 
   EXPECT_EQ(Tag, N->getTag());
   EXPECT_EQ(Scope, N->getScope());
   EXPECT_EQ(Entity, N->getEntity());
+  EXPECT_EQ(File, N->getFile());
   EXPECT_EQ(Line, N->getLine());
   EXPECT_EQ(Name, N->getName());
-  EXPECT_EQ(N, DIImportedEntity::get(Context, Tag, Scope, Entity, Line, Name));
+  EXPECT_EQ(
+      N, DIImportedEntity::get(Context, Tag, Scope, Entity, File, Line, Name));
 
   EXPECT_NE(N,
             DIImportedEntity::get(Context, dwarf::DW_TAG_imported_declaration,
-                                  Scope, Entity, Line, Name));
+                                  Scope, Entity, File, Line, Name));
   EXPECT_NE(N, DIImportedEntity::get(Context, Tag, getSubprogram(), Entity,
-                                     Line, Name));
+                                     File, Line, Name));
   EXPECT_NE(N, DIImportedEntity::get(Context, Tag, Scope, getCompositeType(),
-                                     Line, Name));
-  EXPECT_NE(N,
-            DIImportedEntity::get(Context, Tag, Scope, Entity, Line + 1, Name));
-  EXPECT_NE(N,
-            DIImportedEntity::get(Context, Tag, Scope, Entity, Line, "other"));
+                                     File, Line, Name));
+  EXPECT_NE(N, DIImportedEntity::get(Context, Tag, Scope, Entity, nullptr, Line,
+                                     Name));
+  EXPECT_NE(N, DIImportedEntity::get(Context, Tag, Scope, Entity, File,
+                                     Line + 1, Name));
+  EXPECT_NE(N, DIImportedEntity::get(Context, Tag, Scope, Entity, File, Line,
+                                     "other"));
 
   TempDIImportedEntity Temp = N->clone();
   EXPECT_EQ(N, MDNode::replaceWithUniqued(std::move(Temp)));

@@ -463,13 +463,14 @@ TEST_F(IRBuilderTest, DebugLoc) {
 TEST_F(IRBuilderTest, DIImportedEntity) {
   IRBuilder<> Builder(BB);
   DIBuilder DIB(*M);
+  auto F = DIB.createFile("F.CBL", "/");
   auto CU = DIB.createCompileUnit(dwarf::DW_LANG_Cobol74,
-                                  DIB.createFile("F.CBL", "/"), "llvm-cobol74",
+                                  F, "llvm-cobol74",
                                   true, "", 0);
-  DIB.createImportedDeclaration(CU, nullptr, 1);
-  DIB.createImportedDeclaration(CU, nullptr, 1);
-  DIB.createImportedModule(CU, (DIImportedEntity *)nullptr, 2);
-  DIB.createImportedModule(CU, (DIImportedEntity *)nullptr, 2);
+  DIB.createImportedDeclaration(CU, nullptr, F, 1);
+  DIB.createImportedDeclaration(CU, nullptr, F, 1);
+  DIB.createImportedModule(CU, (DIImportedEntity *)nullptr, F, 2);
+  DIB.createImportedModule(CU, (DIImportedEntity *)nullptr, F, 2);
   DIB.finalize();
   EXPECT_TRUE(verifyModule(*M));
   EXPECT_TRUE(CU->getImportedEntities().size() == 2);

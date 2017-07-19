@@ -507,10 +507,10 @@ void Fuzzer::WriteUnitToFileWithPrefix(const Unit &U, const char *Prefix) {
     Printf("Base64: %s\n", Base64(U).c_str());
 }
 
-void Fuzzer::PrintStatusForNewUnit(const Unit &U) {
+void Fuzzer::PrintStatusForNewUnit(const Unit &U, const char *Text) {
   if (!Options.PrintNEW)
     return;
-  PrintStats("NEW   ", "");
+  PrintStats(Text, "");
   if (Options.Verbosity) {
     Printf(" L: %zd ", U.size());
     MD.PrintMutationSequence();
@@ -521,7 +521,8 @@ void Fuzzer::PrintStatusForNewUnit(const Unit &U) {
 void Fuzzer::ReportNewCoverage(InputInfo *II, const Unit &U) {
   II->NumSuccessfullMutations++;
   MD.RecordSuccessfulMutationSequence();
-  PrintStatusForNewUnit(U);
+  PrintStatusForNewUnit(U, II->Reduced ? "REDUCE" :
+                                         "NEW   ");
   WriteToOutputCorpus(U);
   NumberOfNewUnitsAdded++;
   TPC.PrintNewPCs();
