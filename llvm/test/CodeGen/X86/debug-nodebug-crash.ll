@@ -1,4 +1,4 @@
-;RUN: llc < %s | FileCheck %s
+;RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu | FileCheck %s
 ;
 ; LexicalScope objects were not cleared when a nodebug function is handled in
 ; LiveDebugValues. This may lead to an assertion in the constructor for LexicalScope,
