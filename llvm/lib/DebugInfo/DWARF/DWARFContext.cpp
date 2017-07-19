@@ -1252,13 +1252,14 @@ public:
 std::unique_ptr<DWARFContext>
 DWARFContext::create(const object::ObjectFile &Obj, const LoadedObjectInfo *L,
                      function_ref<ErrorPolicy(Error)> HandleError) {
-  auto DObj = make_unique<DWARFObjInMemory>(Obj, L, HandleError);
+  auto DObj = llvm::make_unique<DWARFObjInMemory>(Obj, L, HandleError);
   return llvm::make_unique<DWARFContext>(std::move(DObj));
 }
 
 std::unique_ptr<DWARFContext>
 DWARFContext::create(const StringMap<std::unique_ptr<MemoryBuffer>> &Sections,
                      uint8_t AddrSize, bool isLittleEndian) {
-  auto DObj = make_unique<DWARFObjInMemory>(Sections, AddrSize, isLittleEndian);
+  auto DObj =
+      llvm::make_unique<DWARFObjInMemory>(Sections, AddrSize, isLittleEndian);
   return llvm::make_unique<DWARFContext>(std::move(DObj));
 }
