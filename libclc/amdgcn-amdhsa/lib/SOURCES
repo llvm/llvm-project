@@ -1,3 +1,0 @@
-workitem/get_global_size.ll
-workitem/get_local_size.ll
-workitem/get_num_groups.cl
