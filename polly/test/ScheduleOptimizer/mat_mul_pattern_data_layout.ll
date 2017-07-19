@@ -7,7 +7,7 @@
 ; RUN: -polly-target-2nd-cache-level-size=262144 \
 ; RUN: -polly-optimized-scops \
 ; RUN: -polly-target-vector-register-bitwidth=256 \
-; RUN: < %s 2>&1 | FileCheck %s
+; RUN: -disable-output < %s 2>&1 | FileCheck %s
 ;
 ;    /* C := alpha*A*B + beta*C */
 ;    for (i = 0; i < _PB_NI; i++)

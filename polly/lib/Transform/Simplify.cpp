@@ -238,13 +238,7 @@ private:
         if (!isa<StoreInst>(WA->getAccessInstruction()) && !WA->isPHIKind())
           continue;
 
-        auto ReadingValue = WA->getAccessValue();
-
-        if (WA->isPHIKind()) {
-          PHINode *PHI = cast<PHINode>(WA->getAccessValue());
-          BasicBlock *BB = Stmt.getBasicBlock();
-          ReadingValue = PHI->getIncomingValueForBlock(BB);
-        }
+        llvm::Value *ReadingValue = WA->tryGetValueStored();
 
         if (!ReadingValue)
           continue;
@@ -348,6 +342,7 @@ public:
   virtual bool runOnScop(Scop &S) override {
     // Reset statistics of last processed SCoP.
     releaseMemory();
+    assert(!isModified());
 
     // Prepare processing of this SCoP.
     this->S = &S;

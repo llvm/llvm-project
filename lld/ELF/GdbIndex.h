@@ -19,6 +19,51 @@ namespace elf {
 
 class InputSection;
 
+struct LLDDWARFSection final : public llvm::DWARFSection {
+  InputSectionBase *Sec = nullptr;
+};
+
+template <class ELFT> class LLDDwarfObj final : public llvm::DWARFObject {
+  elf::ObjectFile<ELFT> *Obj;
+  LLDDWARFSection InfoSection;
+  LLDDWARFSection RangeSection;
+  LLDDWARFSection LineSection;
+  StringRef AbbrevSection;
+  StringRef GnuPubNamesSection;
+  StringRef GnuPubTypesSection;
+
+  template <class RelTy>
+  llvm::Optional<llvm::RelocAddrEntry> findAux(const InputSectionBase &Sec,
+                                               uint64_t Pos,
+                                               ArrayRef<RelTy> Rels) const;
+
+public:
+  explicit LLDDwarfObj(elf::ObjectFile<ELFT> *Obj);
+  const llvm::DWARFSection &getInfoSection() const override {
+    return InfoSection;
+  }
+  const llvm::DWARFSection &getRangeSection() const override {
+    return RangeSection;
+  }
+  const llvm::DWARFSection &getLineSection() const override {
+    return LineSection;
+  }
+  StringRef getCUIndexSection() const override { return ""; }
+  StringRef getAbbrevSection() const override { return AbbrevSection; }
+  StringRef getStringSection() const override { return ""; }
+  StringRef getGnuPubNamesSection() const override {
+    return GnuPubNamesSection;
+  }
+  StringRef getGnuPubTypesSection() const override {
+    return GnuPubTypesSection;
+  }
+  bool isLittleEndian() const override {
+    return ELFT::TargetEndianness == llvm::support::little;
+  }
+  llvm::Optional<llvm::RelocAddrEntry> find(const llvm::DWARFSection &Sec,
+                                            uint64_t Pos) const override;
+};
+
 // Struct represents single entry of address area of gdb index.
 struct AddressEntry {
   InputSection *Section;

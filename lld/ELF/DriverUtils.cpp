@@ -141,7 +141,7 @@ std::string elf::createResponseFile(const opt::InputArgList &Args) {
 
   // Copy the command line to the output while rewriting paths.
   for (auto *Arg : Args) {
-    switch (Arg->getOption().getID()) {
+    switch (Arg->getOption().getUnaliasedOption().getID()) {
     case OPT_reproduce:
       break;
     case OPT_INPUT:
@@ -157,7 +157,6 @@ std::string elf::createResponseFile(const opt::InputArgList &Args) {
     case OPT_L:
     case OPT_dynamic_list:
     case OPT_rpath:
-    case OPT_alias_script_T:
     case OPT_script:
     case OPT_version_script:
       OS << Arg->getSpelling() << " " << quote(rewritePath(Arg->getValue()))

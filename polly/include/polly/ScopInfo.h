@@ -889,6 +889,21 @@ public:
   /// Return the access value of this memory access.
   Value *getAccessValue() const { return AccessValue; }
 
+  /// Return llvm::Value that is stored by this access, if available.
+  ///
+  /// PHI nodes may not have a unique value available that is stored, as in
+  /// case of region statements one out of possibly several llvm::Values
+  /// might be stored. In this case nullptr is returned.
+  Value *tryGetValueStored() {
+    assert(isWrite() && "Only write statement store values");
+    if (isAnyPHIKind()) {
+      if (Incoming.size() == 1)
+        return Incoming[0].second;
+      return nullptr;
+    }
+    return AccessValue;
+  }
+
   /// Return the access instruction of this memory access.
   Instruction *getAccessInstruction() const { return AccessInstruction; }
 
@@ -1821,6 +1836,15 @@ private:
   /// A number that uniquely represents a Scop within its function
   const int ID;
 
+  /// List of all uses (i.e. read MemoryAccesses) for a MemoryKind::Value
+  /// scalar.
+  DenseMap<const ScopArrayInfo *, SmallVector<MemoryAccess *, 4>> ValueUseAccs;
+
+  /// List of all incoming values (write MemoryAccess) of a MemoryKind::PHI or
+  /// MemoryKind::ExitPHI scalar.
+  DenseMap<const ScopArrayInfo *, SmallVector<MemoryAccess *, 4>>
+      PHIIncomingAccs;
+
   /// Return the ID for a new Scop within a function
   static int getNextID(std::string ParentFunc);
 
@@ -2284,6 +2308,12 @@ public:
   void addAccessFunction(MemoryAccess *Access) {
     AccessFunctions.emplace_back(Access);
   }
+
+  /// Add metadata for @p Access.
+  void addAccessData(MemoryAccess *Access);
+
+  /// Remove the metadata stored for @p Access.
+  void removeAccessData(MemoryAccess *Access);
 
   ScalarEvolution *getSE() const;
 
@@ -2857,6 +2887,27 @@ public:
   /// This function returns a unique index which can be used to identify a
   /// statement.
   long getNextStmtIdx() { return StmtIdx++; }
+
+  /// Return the MemoryAccess that writes an llvm::Value, represented by a
+  /// ScopArrayInfo.
+  ///
+  /// There can be at most one such MemoryAccess per llvm::Value in the SCoP.
+  /// Zero is possible for read-only values.
+  MemoryAccess *getValueDef(const ScopArrayInfo *SAI) const;
+
+  /// Return all MemoryAccesses that us an llvm::Value, represented by a
+  /// ScopArrayInfo.
+  ArrayRef<MemoryAccess *> getValueUses(const ScopArrayInfo *SAI) const;
+
+  /// Return the MemoryAccess that represents an llvm::PHINode.
+  ///
+  /// ExitPHIs's PHINode is not within the SCoPs. This function returns nullptr
+  /// for them.
+  MemoryAccess *getPHIRead(const ScopArrayInfo *SAI) const;
+
+  /// Return all MemoryAccesses for all incoming statements of a PHINode,
+  /// represented by a ScopArrayInfo.
+  ArrayRef<MemoryAccess *> getPHIIncomings(const ScopArrayInfo *SAI) const;
 };
 
 /// Print Scop scop to raw_ostream O.

@@ -201,7 +201,7 @@ void LinkerDriver::parseDirectives(StringRef S) {
   opt::InputArgList Args = Parser.parse(S);
 
   for (auto *Arg : Args) {
-    switch (Arg->getOption().getID()) {
+    switch (Arg->getOption().getUnaliasedOption().getID()) {
     case OPT_alternatename:
       parseAlternateName(Arg->getValue());
       break;
@@ -247,7 +247,7 @@ StringRef LinkerDriver::doFindFile(StringRef Filename) {
   bool HasPathSep = (Filename.find_first_of("/\\") != StringRef::npos);
   if (HasPathSep)
     return Filename;
-  bool HasExt = (Filename.find('.') != StringRef::npos);
+  bool HasExt = Filename.contains('.');
   for (StringRef Dir : SearchPaths) {
     SmallString<128> Path = Dir;
     sys::path::append(Path, Filename);
@@ -275,7 +275,7 @@ Optional<StringRef> LinkerDriver::findFile(StringRef Filename) {
 // Find library file from search path.
 StringRef LinkerDriver::doFindLib(StringRef Filename) {
   // Add ".lib" to Filename if that has no file extension.
-  bool HasExt = (Filename.find('.') != StringRef::npos);
+  bool HasExt = Filename.contains('.');
   if (!HasExt)
     Filename = Saver.save(Filename + ".lib");
   return doFindFile(Filename);

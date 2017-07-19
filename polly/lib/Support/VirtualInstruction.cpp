@@ -18,7 +18,8 @@
 using namespace polly;
 using namespace llvm;
 
-VirtualUse VirtualUse ::create(Scop *S, Use &U, LoopInfo *LI, bool Virtual) {
+VirtualUse VirtualUse ::create(Scop *S, const Use &U, LoopInfo *LI,
+                               bool Virtual) {
   auto *UserBB = getUseBlock(U);
   auto *UserStmt = S->getStmtFor(UserBB);
   auto *UserScope = LI->getLoopFor(UserBB);

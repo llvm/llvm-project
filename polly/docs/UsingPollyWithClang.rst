@@ -126,7 +126,7 @@ To run opt-viewer:
       /path/to/program/src/bar.opt.yaml \
       -o ./output
 
-Include all yaml files (use *.opt.yaml when specifying which yaml files to view)
+Include all yaml files (use \*.opt.yaml when specifying which yaml files to view)
 to view all diagnostics from your program in opt-viewer. Compile with `PGO
-<https://clang.llvm.org/docs/UsersManual.html#profiling-with-instrumentation>` to view
+<https://clang.llvm.org/docs/UsersManual.html#profiling-with-instrumentation>`_ to view
 Hotness information in opt-viewer. Resulting html files can be viewed in an internet browser.
