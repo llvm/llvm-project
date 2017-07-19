@@ -82,6 +82,7 @@ struct Configuration {
   SymbolBody *Entry = nullptr;
   bool NoEntry = false;
   std::string OutputFile;
+  std::string ImportName;
   bool ColorDiagnostics;
   bool DoGC = true;
   bool DoICF = true;

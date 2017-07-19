@@ -11,7 +11,7 @@ namespace lldb {
 
 %feature("docstring",
 "Represents the symbol possibly associated with a stack frame.
-SBModule contains SBSymbol(s). SBSymbol can also be retrived from SBFrame.
+SBModule contains SBSymbol(s). SBSymbol can also be retrieved from SBFrame.
 
 See also SBModule and SBFrame."
 ) SBSymbol;
