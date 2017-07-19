@@ -6,12 +6,12 @@ target datalayout = "e-p:64:64:64"
 ; CHECK: entry.end_crit_edge:
 ; CHECK: %[[INDEX:[a-z0-9.]+]] = sext i32 %x to i64{{$}}
 ; CHECK: %[[ADDRESS:[a-z0-9.]+]] = getelementptr [100 x i32], [100 x i32]* @G, i64 0, i64 %[[INDEX]]{{$}}
-; CHECK:   %n.pre = load i32, i32* %[[ADDRESS]]{{$}}
+; CHECK:   %n.pre = load i32, i32* %[[ADDRESS]], !dbg [[N_LOC:![0-9]+]]
 ; CHECK: br label %end
 ; CHECK: then:
 ; CHECK:   store i32 %z
 ; CHECK: end:
-; CHECK:   %n = phi i32 [ %n.pre, %entry.end_crit_edge ], [ %z, %then ], !dbg [[N_LOC:![0-9]+]]
+; CHECK:   %n = phi i32 [ %n.pre, %entry.end_crit_edge ], [ %z, %then ], !dbg [[N_LOC]]
 ; CHECK:   ret i32 %n
 
 ; CHECK: [[N_LOC]] = !DILocation(line: 47, column: 1, scope: !{{.*}})

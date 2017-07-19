@@ -1040,7 +1040,11 @@ extern void __kmp_x86_cpuid(int mode, int mode2, struct kmp_cpuid *p);
 #if KMP_ARCH_X86
 extern void __kmp_x86_pause(void);
 #elif KMP_MIC
-static void __kmp_x86_pause(void) { _mm_delay_32(100); }
+// Performance testing on KNC (C0QS-7120 P/A/X/D, 61-core, 16 GB Memory) showed
+// regression after removal of extra PAUSE from KMP_YIELD_SPIN(). Changing
+// the delay from 100 to 300 showed even better performance than double PAUSE
+// on Spec OMP2001 and LCPC tasking tests, no regressions on EPCC.
+static void __kmp_x86_pause(void) { _mm_delay_32(300); }
 #else
 static void __kmp_x86_pause(void) { _mm_pause(); }
 #endif
@@ -1076,7 +1080,7 @@ static void __kmp_x86_pause(void) { _mm_pause(); }
     KMP_CPU_PAUSE();                                                           \
     (count) -= 2;                                                              \
     if (!(count)) {                                                            \
-      KMP_YIELD(cond);                                                         \
+      __kmp_yield(cond);                                                       \
       (count) = __kmp_yield_next;                                              \
     }                                                                          \
   }
@@ -1085,7 +1089,7 @@ static void __kmp_x86_pause(void) { _mm_pause(); }
     KMP_CPU_PAUSE();                                                           \
     (count) -= 2;                                                              \
     if (!(count)) {                                                            \
-      KMP_YIELD(1);                                                            \
+      __kmp_yield(1);                                                          \
       (count) = __kmp_yield_next;                                              \
     }                                                                          \
   }

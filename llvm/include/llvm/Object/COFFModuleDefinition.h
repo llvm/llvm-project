@@ -28,6 +28,7 @@ namespace object {
 struct COFFModuleDefinition {
   std::vector<COFFShortExport> Exports;
   std::string OutputFile;
+  std::string ImportName;
   uint64_t ImageBase = 0;
   uint64_t StackReserve = 0;
   uint64_t StackCommit = 0;

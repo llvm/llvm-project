@@ -188,13 +188,17 @@ private:
       std::string Name;
       if (Error Err = parseName(&Name, &Info.ImageBase))
         return Err;
-      // Append the appropriate file extension if not already present.
-      if (!sys::path::has_extension(Name))
-        Name += IsDll ? ".dll" : ".exe";
+
+      Info.ImportName = Name;
 
       // Set the output file, but don't override /out if it was already passed.
-      if (Info.OutputFile.empty())
+      if (Info.OutputFile.empty()) {
         Info.OutputFile = Name;
+        // Append the appropriate file extension if not already present.
+        if (!sys::path::has_extension(Name))
+          Info.OutputFile += IsDll ? ".dll" : ".exe";
+      }
+
       return Error::success();
     }
     case KwVersion:

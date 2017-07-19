@@ -135,7 +135,7 @@ for.end:
 }
 
 ; CHECK-LABEL: @PR30742
-; CHECK: min.iters.checked
+; CHECK: vector.ph
 ; CHECK:   %[[N_MOD_VF:.+]] = urem i32 %[[T5:.+]], 2
 ; CHECK:   %[[N_VEC:.+]] = sub i32 %[[T5]], %[[N_MOD_VF]]
 ; CHECK: middle.block

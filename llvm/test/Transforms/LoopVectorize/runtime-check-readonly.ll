@@ -4,7 +4,6 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 
 ;CHECK-LABEL: @add_ints(
 ;CHECK: br
-;CHECK: br
 ;CHECK: getelementptr
 ;CHECK-DAG: getelementptr
 ;CHECK-DAG: icmp ugt

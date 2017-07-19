@@ -67,6 +67,7 @@ set(LLVM_TEST_DEPENDS
           llvm-profdata
           llvm-ranlib
           llvm-readobj
+          llvm-readelf
           llvm-rtdyld
           llvm-size
           llvm-split

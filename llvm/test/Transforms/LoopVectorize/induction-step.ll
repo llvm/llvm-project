@@ -15,7 +15,7 @@
 ; CHECK:       for.body.lr.ph:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* @int_inc, align 4
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <8 x i32> undef, i32 %init, i32 0
+; CHECK:         [[DOTSPLATINSERT:%.*]] = insertelement <8 x i32> undef, i32 %init, i32 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <8 x i32> [[DOTSPLATINSERT]], <8 x i32> undef, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[DOTSPLATINSERT2:%.*]] = insertelement <8 x i32> undef, i32 [[TMP0]], i32 0
 ; CHECK-NEXT:    [[DOTSPLAT3:%.*]] = shufflevector <8 x i32> [[DOTSPLATINSERT2]], <8 x i32> undef, <8 x i32> zeroinitializer
@@ -86,7 +86,7 @@ for.end:                                          ; preds = %for.end.loopexit, %
 
 ; CHECK-LABEL: @induction_with_loop_inv(
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <8 x i32> undef, i32 %x.011, i32 0
+; CHECK:         [[DOTSPLATINSERT:%.*]] = insertelement <8 x i32> undef, i32 %x.011, i32 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <8 x i32> [[DOTSPLATINSERT]], <8 x i32> undef, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[DOTSPLATINSERT2:%.*]] = insertelement <8 x i32> undef, i32 %j.012, i32 0
 ; CHECK-NEXT:    [[DOTSPLAT3:%.*]] = shufflevector <8 x i32> [[DOTSPLATINSERT2]], <8 x i32> undef, <8 x i32> zeroinitializer

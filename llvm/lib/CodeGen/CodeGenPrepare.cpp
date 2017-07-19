@@ -4278,11 +4278,17 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
     Value *V = worklist.back();
     worklist.pop_back();
 
-    // Break use-def graph loops.
-    if (!Visited.insert(V).second) {
-      AddrModeFound = false;
-      break;
-    }
+    // We allow traversing cyclic Phi nodes.
+    // In case of success after this loop we ensure that traversing through
+    // Phi nodes ends up with all cases to compute address of the form
+    //    BaseGV + Base + Scale * Index + Offset
+    // where Scale and Offset are constans and BaseGV, Base and Index
+    // are exactly the same Values in all cases.
+    // It means that BaseGV, Scale and Offset dominate our memory instruction
+    // and have the same value as they had in address computation represented
+    // as Phi. So we can safely sink address computation to memory instruction.
+    if (!Visited.insert(V).second)
+      continue;
 
     // For a PHI node, push all of its incoming values.
     if (PHINode *P = dyn_cast<PHINode>(V)) {

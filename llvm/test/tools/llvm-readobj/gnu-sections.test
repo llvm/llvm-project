@@ -8,6 +8,8 @@ RUN:   | FileCheck %s -check-prefix ELF64
 RUN: llvm-readobj -W --sections \
 RUN:   %p/Inputs/relocs.obj.elf-x86_64 --elf-output-style=GNU \
 RUN:   | FileCheck %s -check-prefix ELF64
+RUN: llvm-readelf -W -S %p/Inputs/relocs.obj.elf-x86_64 \
+RUN:   | FileCheck %s -check-prefix ELF64
 
 ELF32:    Section Headers:
 ELF32-NEXT:      [Nr] Name              Type            Address  Off    Size   ES Flg Lk Inf Al
