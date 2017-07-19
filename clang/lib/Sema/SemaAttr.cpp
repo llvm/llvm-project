@@ -202,40 +202,6 @@ void Sema::ActOnPragmaPack(SourceLocation PragmaLoc, PragmaMsStackAction Action,
   PackStack.Act(PragmaLoc, Action, SlotLabel, AlignmentVal);
 }
 
-void Sema::DiagnoseNonDefaultPragmaPack(PragmaPackDiagnoseKind Kind,
-                                        SourceLocation IncludeLoc) {
-  if (Kind == PragmaPackDiagnoseKind::NonDefaultStateAtInclude) {
-    SourceLocation PrevLocation = PackStack.CurrentPragmaLocation;
-    // Warn about non-default alignment at #includes (without redundant
-    // warnings for the same directive in nested includes).
-    if (PackStack.hasValue() &&
-        (PackIncludeStack.empty() ||
-         PackIncludeStack.back().second != PrevLocation)) {
-      Diag(IncludeLoc, diag::warn_pragma_pack_non_default_at_include);
-      Diag(PrevLocation, diag::note_pragma_pack_here);
-    }
-    PackIncludeStack.push_back(
-        {PackStack.CurrentValue,
-         PackStack.hasValue() ? PrevLocation : SourceLocation()});
-    return;
-  }
-
-  assert(Kind == PragmaPackDiagnoseKind::ChangedStateAtExit && "invalid kind");
-  unsigned PreviousValue = PackIncludeStack.pop_back_val().first;
-  // Warn about modified alignment after #includes.
-  if (PreviousValue != PackStack.CurrentValue) {
-    Diag(IncludeLoc, diag::warn_pragma_pack_modified_after_include);
-    Diag(PackStack.CurrentPragmaLocation, diag::note_pragma_pack_here);
-  }
-}
-
-void Sema::DiagnoseUnterminatedPragmaPack() {
-  if (PackStack.Stack.empty())
-    return;
-  for (const auto &StackSlot : llvm::reverse(PackStack.Stack))
-    Diag(StackSlot.PragmaPushLocation, diag::warn_pragma_pack_no_pop_eof);
-}
-
 void Sema::ActOnPragmaMSStruct(PragmaMSStructKind Kind) { 
   MSStructPragmaOn = (Kind == PMSST_ON);
 }
@@ -283,8 +249,7 @@ void Sema::PragmaStack<ValueType>::Act(SourceLocation PragmaLocation,
     return;
   }
   if (Action & PSK_Push)
-    Stack.emplace_back(StackSlotLabel, CurrentValue, CurrentPragmaLocation,
-                       PragmaLocation);
+    Stack.push_back(Slot(StackSlotLabel, CurrentValue, CurrentPragmaLocation));
   else if (Action & PSK_Pop) {
     if (!StackSlotLabel.empty()) {
       // If we've got a label, try to find it and jump there.

@@ -70,49 +70,6 @@ void Sema::ActOnTranslationUnitScope(Scope *S) {
   PushDeclContext(S, Context.getTranslationUnitDecl());
 }
 
-namespace clang {
-namespace sema {
-
-class SemaPPCallbacks : public PPCallbacks {
-  Sema *S = nullptr;
-  llvm::SmallVector<SourceLocation, 8> IncludeStack;
-
-public:
-  void set(Sema &S) { this->S = &S; }
-
-  void reset() { S = nullptr; }
-
-  virtual void FileChanged(SourceLocation Loc, FileChangeReason Reason,
-                           SrcMgr::CharacteristicKind FileType,
-                           FileID PrevFID) override {
-    if (!S)
-      return;
-    switch (Reason) {
-    case EnterFile: {
-      SourceManager &SM = S->getSourceManager();
-      SourceLocation IncludeLoc = SM.getIncludeLoc(SM.getFileID(Loc));
-      if (IncludeLoc.isValid()) {
-        IncludeStack.push_back(IncludeLoc);
-        S->DiagnoseNonDefaultPragmaPack(
-            Sema::PragmaPackDiagnoseKind::NonDefaultStateAtInclude, IncludeLoc);
-      }
-      break;
-    }
-    case ExitFile:
-      if (!IncludeStack.empty())
-        S->DiagnoseNonDefaultPragmaPack(
-            Sema::PragmaPackDiagnoseKind::ChangedStateAtExit,
-            IncludeStack.pop_back_val());
-      break;
-    default:
-      break;
-    }
-  }
-};
-
-} // end namespace sema
-} // end namespace clang
-
 Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
            TranslationUnitKind TUKind, CodeCompleteConsumer *CodeCompleter)
     : ExternalSource(nullptr), isMultiplexExternalSource(false),
@@ -165,12 +122,6 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
 
   // Initilization of data sharing attributes stack for OpenMP
   InitDataSharingAttributesStack();
-
-  std::unique_ptr<sema::SemaPPCallbacks> Callbacks =
-      llvm::make_unique<sema::SemaPPCallbacks>();
-  SemaPPCallbackHandler = Callbacks.get();
-  PP.addPPCallbacks(std::move(Callbacks));
-  SemaPPCallbackHandler->set(*this);
 }
 
 void Sema::addImplicitTypedef(StringRef Name, QualType T) {
@@ -354,10 +305,6 @@ Sema::~Sema() {
 
   // Destroys data sharing attributes stack for OpenMP
   DestroyDataSharingAttributesStack();
-
-  // Detach from the PP callback handler which outlives Sema since it's owned
-  // by the preprocessor.
-  SemaPPCallbackHandler->reset();
 
   assert(DelayedTypos.empty() && "Uncorrected typos!");
 }
@@ -819,7 +766,6 @@ void Sema::ActOnEndOfTranslationUnit() {
     CheckDelayedMemberExceptionSpecs();
   }
 
-  DiagnoseUnterminatedPragmaPack();
   DiagnoseUnterminatedPragmaAttribute();
 
   // All delayed member exception specs should be checked or we end up accepting

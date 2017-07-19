@@ -4295,7 +4295,6 @@ void ASTWriter::WritePackPragmaOptions(Sema &SemaRef) {
   for (const auto &StackEntry : SemaRef.PackStack.Stack) {
     Record.push_back(StackEntry.Value);
     AddSourceLocation(StackEntry.PragmaLocation, Record);
-    AddSourceLocation(StackEntry.PragmaPushLocation, Record);
     AddString(StackEntry.StackSlotLabel, Record);
   }
   Stream.EmitRecord(PACK_PRAGMA_OPTIONS, Record);

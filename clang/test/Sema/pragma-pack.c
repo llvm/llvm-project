@@ -25,8 +25,3 @@
 #pragma pack(pop, 16)
 /* expected-warning {{value of #pragma pack(show) == 16}} */ #pragma pack(show)
 
-
-// Warn about unbalanced pushes.
-#pragma pack (push,4) // expected-warning {{unterminated '#pragma pack (push, ...)' at end of file}}
-#pragma pack (push)   // expected-warning {{unterminated '#pragma pack (push, ...)' at end of file}}
-#pragma pack ()

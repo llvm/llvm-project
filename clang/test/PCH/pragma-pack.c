@@ -1,21 +1,21 @@
 // Test this without pch.
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 %s -include %s -verify -fsyntax-only -Wno-pragma-pack -DSET
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 %s -include %s -verify -fsyntax-only -Wno-pragma-pack -DRESET
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 %s -include %s -verify -fsyntax-only -Wno-pragma-pack -DPUSH
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 %s -include %s -verify -fsyntax-only -Wno-pragma-pack -DPUSH_POP
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 %s -include %s -verify -fsyntax-only -Wno-pragma-pack -DPUSH_POP_LABEL
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 %s -include %s -verify -fsyntax-only -DSET
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 %s -include %s -verify -fsyntax-only -DRESET
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 %s -include %s -verify -fsyntax-only -DPUSH
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 %s -include %s -verify -fsyntax-only -DPUSH_POP
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 %s -include %s -verify -fsyntax-only -DPUSH_POP_LABEL
 
 // Test with pch.
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 %s -Wno-pragma-pack -DSET -emit-pch -o %t
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 %s -Wno-pragma-pack -DSET -verify -include-pch %t
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 %s -Wno-pragma-pack -DRESET -emit-pch -o %t
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 %s -Wno-pragma-pack -DRESET -verify -include-pch %t
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 %s -Wno-pragma-pack -DPUSH -emit-pch -o %t
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 %s -Wno-pragma-pack -DPUSH -verify -include-pch %t
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 %s -Wno-pragma-pack -DPUSH_POP -emit-pch -o %t
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 %s -Wno-pragma-pack -DPUSH_POP -verify -include-pch %t
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 %s -Wno-pragma-pack -DPUSH_POP_LABEL -emit-pch -o %t
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 %s -Wno-pragma-pack -DPUSH_POP_LABEL -verify -include-pch %t
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 %s -DSET -emit-pch -o %t
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 %s -DSET -verify -include-pch %t
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 %s -DRESET -emit-pch -o %t
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 %s -DRESET -verify -include-pch %t
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 %s -DPUSH -emit-pch -o %t
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 %s -DPUSH -verify -include-pch %t
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 %s -DPUSH_POP -emit-pch -o %t
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 %s -DPUSH_POP -verify -include-pch %t
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 %s -DPUSH_POP_LABEL -emit-pch -o %t
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 %s -DPUSH_POP_LABEL -verify -include-pch %t
 
 #ifndef HEADER
 #define HEADER

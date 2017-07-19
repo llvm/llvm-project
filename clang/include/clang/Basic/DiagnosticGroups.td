@@ -469,9 +469,8 @@ def IgnoredPragmaIntrinsic : DiagGroup<"ignored-pragma-intrinsic">;
 def UnknownPragmas : DiagGroup<"unknown-pragmas">;
 def IgnoredPragmas : DiagGroup<"ignored-pragmas", [IgnoredPragmaIntrinsic]>;
 def PragmaClangAttribute : DiagGroup<"pragma-clang-attribute">;
-def PragmaPack : DiagGroup<"pragma-pack">;
 def Pragmas : DiagGroup<"pragmas", [UnknownPragmas, IgnoredPragmas,
-                                    PragmaClangAttribute, PragmaPack]>;
+                                    PragmaClangAttribute]>;
 def UnknownWarningOption : DiagGroup<"unknown-warning-option">;
 def NSobjectAttribute : DiagGroup<"NSObject-attribute">;
 def IndependentClassAttribute : DiagGroup<"IndependentClass-attribute">;

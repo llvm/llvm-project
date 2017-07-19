@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple i386-apple-darwin9 -Wno-pragma-pack -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple i386-apple-darwin9 -fsyntax-only -verify %s
 
 /* expected-warning {{expected 'align' following '#pragma options'}} */ #pragma options
 /* expected-warning {{expected '=' following '#pragma options align'}} */ #pragma options align
