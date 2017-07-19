@@ -2169,8 +2169,7 @@ TEST(DWARFDebugInfo, TestErrorReportingPolicy) {
   EXPECT_TRUE((bool)Obj);
 
   // Case 1: error handler handles all errors. That allows
-  // DWARFContextInMemory
-  //         to parse whole file and find both two errors we know about.
+  // DWARFContext to parse whole file and find both two errors we know about.
   int Errors = 0;
   std::unique_ptr<DWARFContext> Ctx1 =
       DWARFContext::create(**Obj, nullptr, [&](Error E) {
