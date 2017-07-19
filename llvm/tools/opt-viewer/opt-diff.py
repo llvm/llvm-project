@@ -60,5 +60,10 @@ if __name__ == '__main__':
         r.Added = True
     for r in removed:
         r.Added = False
+
+    result = added | removed
+    for r in result:
+        r.recover_yaml_structure()
+
     with open(args.output, 'w') as stream:
-        yaml.dump_all(added | removed, stream)
+        yaml.dump_all(result, stream)
