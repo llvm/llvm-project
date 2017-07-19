@@ -1275,7 +1275,7 @@ static void ProcessMachO(StringRef Name, MachOObjectFile *MachOOF,
     printWeakBindTable(MachOOF);
 
   if (DwarfDumpType != DIDT_Null) {
-    std::unique_ptr<DIContext> DICtx(new DWARFContextInMemory(*MachOOF));
+    std::unique_ptr<DIContext> DICtx = DWARFContext::create(*MachOOF);
     // Dump the complete DWARF structure.
     DIDumpOptions DumpOpts;
     DumpOpts.DumpType = DwarfDumpType;
@@ -6594,7 +6594,7 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
     }
 
     // Setup the DIContext
-    diContext.reset(new DWARFContextInMemory(*DbgObj));
+    diContext = DWARFContext::create(*DbgObj);
   }
 
   if (FilterSections.size() == 0)

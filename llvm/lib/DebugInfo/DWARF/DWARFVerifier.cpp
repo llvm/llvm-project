@@ -105,8 +105,9 @@ bool DWARFVerifier::verifyUnitContents(DWARFUnit Unit) {
 bool DWARFVerifier::handleDebugInfo() {
   OS << "Verifying .debug_info Unit Header Chain...\n";
 
-  DWARFDataExtractor DebugInfoData(DCtx.getInfoSection(), DCtx.isLittleEndian(),
-                                   0);
+  const DWARFObject &DObj = DCtx.getDWARFObj();
+  DWARFDataExtractor DebugInfoData(DObj, DObj.getInfoSection(),
+                                   DCtx.isLittleEndian(), 0);
   uint32_t NumDebugInfoErrors = 0;
   uint32_t OffsetStart = 0, Offset = 0, UnitIdx = 0;
   uint8_t UnitType = 0;
@@ -127,10 +128,10 @@ bool DWARFVerifier::handleDebugInfo() {
       case dwarf::DW_UT_split_type: {
         DWARFUnitSection<DWARFTypeUnit> TUSection{};
         Unit.reset(new DWARFTypeUnit(
-            DCtx, DCtx.getInfoSection(), DCtx.getDebugAbbrev(),
-            &DCtx.getRangeSection(), DCtx.getStringSection(),
-            DCtx.getStringOffsetSection(), &DCtx.getAppleObjCSection(),
-            DCtx.getLineSection(), DCtx.isLittleEndian(), false, TUSection,
+            DCtx, DObj.getInfoSection(), DCtx.getDebugAbbrev(),
+            &DObj.getRangeSection(), DObj.getStringSection(),
+            DObj.getStringOffsetSection(), &DObj.getAppleObjCSection(),
+            DObj.getLineSection(), DCtx.isLittleEndian(), false, TUSection,
             nullptr));
         break;
       }
@@ -143,10 +144,10 @@ bool DWARFVerifier::handleDebugInfo() {
       case 0: {
         DWARFUnitSection<DWARFCompileUnit> CUSection{};
         Unit.reset(new DWARFCompileUnit(
-            DCtx, DCtx.getInfoSection(), DCtx.getDebugAbbrev(),
-            &DCtx.getRangeSection(), DCtx.getStringSection(),
-            DCtx.getStringOffsetSection(), &DCtx.getAppleObjCSection(),
-            DCtx.getLineSection(), DCtx.isLittleEndian(), false, CUSection,
+            DCtx, DObj.getInfoSection(), DCtx.getDebugAbbrev(),
+            &DObj.getRangeSection(), DObj.getStringSection(),
+            DObj.getStringOffsetSection(), &DObj.getAppleObjCSection(),
+            DObj.getLineSection(), DCtx.isLittleEndian(), false, CUSection,
             nullptr));
         break;
       }
@@ -169,13 +170,14 @@ bool DWARFVerifier::handleDebugInfo() {
 
 unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
                                                  DWARFAttribute &AttrValue) {
+  const DWARFObject &DObj = DCtx.getDWARFObj();
   unsigned NumErrors = 0;
   const auto Attr = AttrValue.Attr;
   switch (Attr) {
   case DW_AT_ranges:
     // Make sure the offset in the DW_AT_ranges attribute is valid.
     if (auto SectionOffset = AttrValue.Value.getAsSectionOffset()) {
-      if (*SectionOffset >= DCtx.getRangeSection().Data.size()) {
+      if (*SectionOffset >= DObj.getRangeSection().Data.size()) {
         ++NumErrors;
         OS << "error: DW_AT_ranges offset is beyond .debug_ranges "
               "bounds:\n";
@@ -192,7 +194,7 @@ unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
   case DW_AT_stmt_list:
     // Make sure the offset in the DW_AT_stmt_list attribute is valid.
     if (auto SectionOffset = AttrValue.Value.getAsSectionOffset()) {
-      if (*SectionOffset >= DCtx.getLineSection().Data.size()) {
+      if (*SectionOffset >= DObj.getLineSection().Data.size()) {
         ++NumErrors;
         OS << "error: DW_AT_stmt_list offset is beyond .debug_line "
               "bounds: "
@@ -216,6 +218,7 @@ unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
 
 unsigned DWARFVerifier::verifyDebugInfoForm(const DWARFDie &Die,
                                             DWARFAttribute &AttrValue) {
+  const DWARFObject &DObj = DCtx.getDWARFObj();
   unsigned NumErrors = 0;
   const auto Form = AttrValue.Value.getForm();
   switch (Form) {
@@ -253,7 +256,7 @@ unsigned DWARFVerifier::verifyDebugInfoForm(const DWARFDie &Die,
     Optional<uint64_t> RefVal = AttrValue.Value.getAsReference();
     assert(RefVal);
     if (RefVal) {
-      if (*RefVal >= DCtx.getInfoSection().Data.size()) {
+      if (*RefVal >= DObj.getInfoSection().Data.size()) {
         ++NumErrors;
         OS << "error: DW_FORM_ref_addr offset beyond .debug_info "
               "bounds:\n";
@@ -270,7 +273,7 @@ unsigned DWARFVerifier::verifyDebugInfoForm(const DWARFDie &Die,
   case DW_FORM_strp: {
     auto SecOffset = AttrValue.Value.getAsSectionOffset();
     assert(SecOffset); // DW_FORM_strp is a section offset.
-    if (SecOffset && *SecOffset >= DCtx.getStringSection().size()) {
+    if (SecOffset && *SecOffset >= DObj.getStringSection().size()) {
       ++NumErrors;
       OS << "error: DW_FORM_strp offset beyond .debug_str bounds:\n";
       Die.dump(OS, 0);
@@ -318,7 +321,7 @@ void DWARFVerifier::verifyDebugLineStmtOffsets() {
       continue;
     const uint32_t LineTableOffset = *StmtSectionOffset;
     auto LineTable = DCtx.getLineTableForUnit(CU.get());
-    if (LineTableOffset < DCtx.getLineSection().Data.size()) {
+    if (LineTableOffset < DCtx.getDWARFObj().getLineSection().Data.size()) {
       if (!LineTable) {
         ++NumDebugLineErrors;
         OS << "error: .debug_line[" << format("0x%08" PRIx32, LineTableOffset)
@@ -408,10 +411,10 @@ bool DWARFVerifier::handleDebugLine() {
 
 bool DWARFVerifier::handleAppleNames() {
   NumAppleNamesErrors = 0;
-
-  DWARFDataExtractor AppleNamesSection(DCtx.getAppleNamesSection(),
+  const DWARFObject &D = DCtx.getDWARFObj();
+  DWARFDataExtractor AppleNamesSection(D, D.getAppleNamesSection(),
                                        DCtx.isLittleEndian(), 0);
-  DataExtractor StrData(DCtx.getStringSection(), DCtx.isLittleEndian(), 0);
+  DataExtractor StrData(D.getStringSection(), DCtx.isLittleEndian(), 0);
   DWARFAcceleratorTable AppleNames(AppleNamesSection, StrData);
 
   if (!AppleNames.extract()) {

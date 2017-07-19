@@ -409,7 +409,7 @@ LLVMSymbolizer::getOrCreateModuleInfo(const std::string &ModuleName) {
     }
   }
   if (!Context)
-    Context.reset(new DWARFContextInMemory(*Objects.second));
+    Context = DWARFContext::create(*Objects.second);
   assert(Context);
   auto InfoOrErr =
       SymbolizableObjectFile::create(Objects.first, std::move(Context));

@@ -43,7 +43,8 @@ void DWARFDebugAranges::generate(DWARFContext *CTX) {
     return;
 
   // Extract aranges from .debug_aranges section.
-  DataExtractor ArangesData(CTX->getARangeSection(), CTX->isLittleEndian(), 0);
+  DataExtractor ArangesData(CTX->getDWARFObj().getARangeSection(),
+                            CTX->isLittleEndian(), 0);
   extract(ArangesData);
 
   // Generate aranges from DIEs: even if .debug_aranges section is present,

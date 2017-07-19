@@ -14,8 +14,8 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/BinaryFormat/Dwarf.h"
-#include "llvm/Config/llvm-config.h"
 #include "llvm/CodeGen/AsmPrinter.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
@@ -28,8 +28,8 @@
 #include "llvm/ObjectYAML/DWARFYAML.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/TargetRegistry.h"
+#include "llvm/Support/TargetSelect.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 #include <climits>
@@ -228,10 +228,10 @@ void TestAllForms() {
   MemoryBufferRef FileBuffer(FileBytes, "dwarf");
   auto Obj = object::ObjectFile::createObjectFile(FileBuffer);
   EXPECT_TRUE((bool)Obj);
-  DWARFContextInMemory DwarfContext(*Obj.get());
-  uint32_t NumCUs = DwarfContext.getNumCompileUnits();
+  std::unique_ptr<DWARFContext> DwarfContext = DWARFContext::create(**Obj);
+  uint32_t NumCUs = DwarfContext->getNumCompileUnits();
   EXPECT_EQ(NumCUs, 1u);
-  DWARFCompileUnit *U = DwarfContext.getCompileUnitAtIndex(0);
+  DWARFCompileUnit *U = DwarfContext->getCompileUnitAtIndex(0);
   auto DieDG = U->getUnitDIE(false);
   EXPECT_TRUE(DieDG.isValid());
 
@@ -458,12 +458,12 @@ template <uint16_t Version, class AddrType> void TestChildren() {
   MemoryBufferRef FileBuffer(FileBytes, "dwarf");
   auto Obj = object::ObjectFile::createObjectFile(FileBuffer);
   EXPECT_TRUE((bool)Obj);
-  DWARFContextInMemory DwarfContext(*Obj.get());
+  std::unique_ptr<DWARFContext> DwarfContext = DWARFContext::create(**Obj);
 
   // Verify the number of compile units is correct.
-  uint32_t NumCUs = DwarfContext.getNumCompileUnits();
+  uint32_t NumCUs = DwarfContext->getNumCompileUnits();
   EXPECT_EQ(NumCUs, 1u);
-  DWARFCompileUnit *U = DwarfContext.getCompileUnitAtIndex(0);
+  DWARFCompileUnit *U = DwarfContext->getCompileUnitAtIndex(0);
 
   // Get the compile unit DIE is valid.
   auto DieDG = U->getUnitDIE(false);
@@ -629,13 +629,13 @@ template <uint16_t Version, class AddrType> void TestReferences() {
   MemoryBufferRef FileBuffer(FileBytes, "dwarf");
   auto Obj = object::ObjectFile::createObjectFile(FileBuffer);
   EXPECT_TRUE((bool)Obj);
-  DWARFContextInMemory DwarfContext(*Obj.get());
+  std::unique_ptr<DWARFContext> DwarfContext = DWARFContext::create(**Obj);
 
   // Verify the number of compile units is correct.
-  uint32_t NumCUs = DwarfContext.getNumCompileUnits();
+  uint32_t NumCUs = DwarfContext->getNumCompileUnits();
   EXPECT_EQ(NumCUs, 2u);
-  DWARFCompileUnit *U1 = DwarfContext.getCompileUnitAtIndex(0);
-  DWARFCompileUnit *U2 = DwarfContext.getCompileUnitAtIndex(1);
+  DWARFCompileUnit *U1 = DwarfContext->getCompileUnitAtIndex(0);
+  DWARFCompileUnit *U2 = DwarfContext->getCompileUnitAtIndex(1);
 
   // Get the compile unit DIE is valid.
   auto Unit1DieDG = U1->getUnitDIE(false);
@@ -837,12 +837,12 @@ template <uint16_t Version, class AddrType> void TestAddresses() {
   MemoryBufferRef FileBuffer(FileBytes, "dwarf");
   auto Obj = object::ObjectFile::createObjectFile(FileBuffer);
   EXPECT_TRUE((bool)Obj);
-  DWARFContextInMemory DwarfContext(*Obj.get());
+  std::unique_ptr<DWARFContext> DwarfContext = DWARFContext::create(**Obj);
 
   // Verify the number of compile units is correct.
-  uint32_t NumCUs = DwarfContext.getNumCompileUnits();
+  uint32_t NumCUs = DwarfContext->getNumCompileUnits();
   EXPECT_EQ(NumCUs, 1u);
-  DWARFCompileUnit *U = DwarfContext.getCompileUnitAtIndex(0);
+  DWARFCompileUnit *U = DwarfContext->getCompileUnitAtIndex(0);
 
   // Get the compile unit DIE is valid.
   auto DieDG = U->getUnitDIE(false);
@@ -1012,12 +1012,12 @@ TEST(DWARFDebugInfo, TestRelations) {
   MemoryBufferRef FileBuffer(DG->generate(), "dwarf");
   auto Obj = object::ObjectFile::createObjectFile(FileBuffer);
   EXPECT_TRUE((bool)Obj);
-  DWARFContextInMemory DwarfContext(*Obj.get());
+  std::unique_ptr<DWARFContext> DwarfContext = DWARFContext::create(**Obj);
 
   // Verify the number of compile units is correct.
-  uint32_t NumCUs = DwarfContext.getNumCompileUnits();
+  uint32_t NumCUs = DwarfContext->getNumCompileUnits();
   EXPECT_EQ(NumCUs, 1u);
-  DWARFCompileUnit *U = DwarfContext.getCompileUnitAtIndex(0);
+  DWARFCompileUnit *U = DwarfContext->getCompileUnitAtIndex(0);
 
   // Get the compile unit DIE is valid.
   auto CUDie = U->getUnitDIE(false);
@@ -1127,12 +1127,12 @@ TEST(DWARFDebugInfo, TestChildIterators) {
   MemoryBufferRef FileBuffer(DG->generate(), "dwarf");
   auto Obj = object::ObjectFile::createObjectFile(FileBuffer);
   EXPECT_TRUE((bool)Obj);
-  DWARFContextInMemory DwarfContext(*Obj.get());
+  std::unique_ptr<DWARFContext> DwarfContext = DWARFContext::create(**Obj);
 
   // Verify the number of compile units is correct.
-  uint32_t NumCUs = DwarfContext.getNumCompileUnits();
+  uint32_t NumCUs = DwarfContext->getNumCompileUnits();
   EXPECT_EQ(NumCUs, 1u);
-  DWARFCompileUnit *U = DwarfContext.getCompileUnitAtIndex(0);
+  DWARFCompileUnit *U = DwarfContext->getCompileUnitAtIndex(0);
 
   // Get the compile unit DIE is valid.
   auto CUDie = U->getUnitDIE(false);
@@ -1188,12 +1188,13 @@ TEST(DWARFDebugInfo, TestEmptyChildren) {
 
   auto ErrOrSections = DWARFYAML::EmitDebugSections(StringRef(yamldata));
   ASSERT_TRUE((bool)ErrOrSections);
-  DWARFContextInMemory DwarfContext(*ErrOrSections, 8);
+  std::unique_ptr<DWARFContext> DwarfContext =
+      DWARFContext::create(*ErrOrSections, 8);
 
   // Verify the number of compile units is correct.
-  uint32_t NumCUs = DwarfContext.getNumCompileUnits();
+  uint32_t NumCUs = DwarfContext->getNumCompileUnits();
   EXPECT_EQ(NumCUs, 1u);
-  DWARFCompileUnit *U = DwarfContext.getCompileUnitAtIndex(0);
+  DWARFCompileUnit *U = DwarfContext->getCompileUnitAtIndex(0);
 
   // Get the compile unit DIE is valid.
   auto CUDie = U->getUnitDIE(false);
@@ -1235,12 +1236,12 @@ TEST(DWARFDebugInfo, TestAttributeIterators) {
   MemoryBufferRef FileBuffer(DG->generate(), "dwarf");
   auto Obj = object::ObjectFile::createObjectFile(FileBuffer);
   EXPECT_TRUE((bool)Obj);
-  DWARFContextInMemory DwarfContext(*Obj.get());
+  std::unique_ptr<DWARFContext> DwarfContext = DWARFContext::create(**Obj);
 
   // Verify the number of compile units is correct.
-  uint32_t NumCUs = DwarfContext.getNumCompileUnits();
+  uint32_t NumCUs = DwarfContext->getNumCompileUnits();
   EXPECT_EQ(NumCUs, 1u);
-  DWARFCompileUnit *U = DwarfContext.getCompileUnitAtIndex(0);
+  DWARFCompileUnit *U = DwarfContext->getCompileUnitAtIndex(0);
 
   // Get the compile unit DIE is valid.
   auto CUDie = U->getUnitDIE(false);
@@ -1299,12 +1300,12 @@ TEST(DWARFDebugInfo, TestFindRecurse) {
   MemoryBufferRef FileBuffer(DG->generate(), "dwarf");
   auto Obj = object::ObjectFile::createObjectFile(FileBuffer);
   EXPECT_TRUE((bool)Obj);
-  DWARFContextInMemory DwarfContext(*Obj.get());
+  std::unique_ptr<DWARFContext> DwarfContext = DWARFContext::create(**Obj);
 
   // Verify the number of compile units is correct.
-  uint32_t NumCUs = DwarfContext.getNumCompileUnits();
+  uint32_t NumCUs = DwarfContext->getNumCompileUnits();
   EXPECT_EQ(NumCUs, 1u);
-  DWARFCompileUnit *U = DwarfContext.getCompileUnitAtIndex(0);
+  DWARFCompileUnit *U = DwarfContext->getCompileUnitAtIndex(0);
 
   // Get the compile unit DIE is valid.
   auto CUDie = U->getUnitDIE(false);
@@ -1505,12 +1506,12 @@ TEST(DWARFDebugInfo, TestFindAttrs) {
   MemoryBufferRef FileBuffer(DG->generate(), "dwarf");
   auto Obj = object::ObjectFile::createObjectFile(FileBuffer);
   EXPECT_TRUE((bool)Obj);
-  DWARFContextInMemory DwarfContext(*Obj.get());
+  std::unique_ptr<DWARFContext> DwarfContext = DWARFContext::create(**Obj);
 
   // Verify the number of compile units is correct.
-  uint32_t NumCUs = DwarfContext.getNumCompileUnits();
+  uint32_t NumCUs = DwarfContext->getNumCompileUnits();
   EXPECT_EQ(NumCUs, 1u);
-  DWARFCompileUnit *U = DwarfContext.getCompileUnitAtIndex(0);
+  DWARFCompileUnit *U = DwarfContext->getCompileUnitAtIndex(0);
 
   // Get the compile unit DIE is valid.
   auto CUDie = U->getUnitDIE(false);
@@ -1568,8 +1569,8 @@ TEST(DWARFDebugInfo, TestImplicitConstAbbrevs) {
   MemoryBufferRef FileBuffer(DG->generate(), "dwarf");
   auto Obj = object::ObjectFile::createObjectFile(FileBuffer);
   EXPECT_TRUE((bool)Obj);
-  DWARFContextInMemory DwarfContext(*Obj.get());
-  DWARFCompileUnit *U = DwarfContext.getCompileUnitAtIndex(0);
+  std::unique_ptr<DWARFContext> DwarfContext = DWARFContext::create(**Obj);
+  DWARFCompileUnit *U = DwarfContext->getCompileUnitAtIndex(0);
   EXPECT_TRUE((bool)U);
 
   const auto *Abbrevs = U->getAbbreviations();
@@ -1708,10 +1709,11 @@ TEST(DWARFDebugInfo, TestDwarfVerifyInvalidCURef) {
   )";
   auto ErrOrSections = DWARFYAML::EmitDebugSections(StringRef(yamldata));
   ASSERT_TRUE((bool)ErrOrSections);
-  DWARFContextInMemory DwarfContext(*ErrOrSections, 8);
-  VerifyError(DwarfContext, "error: DW_FORM_ref4 CU offset 0x00001234 is "
-                            "invalid (must be less than CU size of "
-                            "0x0000001a):");
+  std::unique_ptr<DWARFContext> DwarfContext =
+      DWARFContext::create(*ErrOrSections, 8);
+  VerifyError(*DwarfContext, "error: DW_FORM_ref4 CU offset 0x00001234 is "
+                             "invalid (must be less than CU size of "
+                             "0x0000001a):");
 }
 
 TEST(DWARFDebugInfo, TestDwarfVerifyInvalidRefAddr) {
@@ -1756,8 +1758,9 @@ TEST(DWARFDebugInfo, TestDwarfVerifyInvalidRefAddr) {
   )";
   auto ErrOrSections = DWARFYAML::EmitDebugSections(StringRef(yamldata));
   ASSERT_TRUE((bool)ErrOrSections);
-  DWARFContextInMemory DwarfContext(*ErrOrSections, 8);
-  VerifyError(DwarfContext,
+  std::unique_ptr<DWARFContext> DwarfContext =
+      DWARFContext::create(*ErrOrSections, 8);
+  VerifyError(*DwarfContext,
               "error: DW_FORM_ref_addr offset beyond .debug_info bounds:");
 }
 
@@ -1792,8 +1795,9 @@ TEST(DWARFDebugInfo, TestDwarfVerifyInvalidRanges) {
   )";
   auto ErrOrSections = DWARFYAML::EmitDebugSections(StringRef(yamldata));
   ASSERT_TRUE((bool)ErrOrSections);
-  DWARFContextInMemory DwarfContext(*ErrOrSections, 8);
-  VerifyError(DwarfContext,
+  std::unique_ptr<DWARFContext> DwarfContext =
+      DWARFContext::create(*ErrOrSections, 8);
+  VerifyError(*DwarfContext,
               "error: DW_AT_ranges offset is beyond .debug_ranges bounds:");
 }
 
@@ -1828,9 +1832,10 @@ TEST(DWARFDebugInfo, TestDwarfVerifyInvalidStmtList) {
   )";
   auto ErrOrSections = DWARFYAML::EmitDebugSections(StringRef(yamldata));
   ASSERT_TRUE((bool)ErrOrSections);
-  DWARFContextInMemory DwarfContext(*ErrOrSections, 8);
+  std::unique_ptr<DWARFContext> DwarfContext =
+      DWARFContext::create(*ErrOrSections, 8);
   VerifyError(
-      DwarfContext,
+      *DwarfContext,
       "error: DW_AT_stmt_list offset is beyond .debug_line bounds: 0x00001000");
 }
 
@@ -1860,8 +1865,9 @@ TEST(DWARFDebugInfo, TestDwarfVerifyInvalidStrp) {
   )";
   auto ErrOrSections = DWARFYAML::EmitDebugSections(StringRef(yamldata));
   ASSERT_TRUE((bool)ErrOrSections);
-  DWARFContextInMemory DwarfContext(*ErrOrSections, 8);
-  VerifyError(DwarfContext,
+  std::unique_ptr<DWARFContext> DwarfContext =
+      DWARFContext::create(*ErrOrSections, 8);
+  VerifyError(*DwarfContext,
               "error: DW_FORM_strp offset beyond .debug_str bounds:");
 }
 
@@ -1907,9 +1913,10 @@ TEST(DWARFDebugInfo, TestDwarfVerifyInvalidRefAddrBetween) {
   )";
   auto ErrOrSections = DWARFYAML::EmitDebugSections(StringRef(yamldata));
   ASSERT_TRUE((bool)ErrOrSections);
-  DWARFContextInMemory DwarfContext(*ErrOrSections, 8);
+  std::unique_ptr<DWARFContext> DwarfContext =
+      DWARFContext::create(*ErrOrSections, 8);
   VerifyError(
-      DwarfContext,
+      *DwarfContext,
       "error: invalid DIE reference 0x00000011. Offset is in between DIEs:");
 }
 
@@ -1977,9 +1984,10 @@ TEST(DWARFDebugInfo, TestDwarfVerifyInvalidLineSequence) {
   )";
   auto ErrOrSections = DWARFYAML::EmitDebugSections(yamldata);
   ASSERT_TRUE((bool)ErrOrSections);
-  DWARFContextInMemory DwarfContext(*ErrOrSections, 8);
-  VerifyError(DwarfContext, "error: .debug_line[0x00000000] row[1] decreases "
-                            "in address from previous row:");
+  std::unique_ptr<DWARFContext> DwarfContext =
+      DWARFContext::create(*ErrOrSections, 8);
+  VerifyError(*DwarfContext, "error: .debug_line[0x00000000] row[1] decreases "
+                             "in address from previous row:");
 }
 
 TEST(DWARFDebugInfo, TestDwarfVerifyInvalidLineFileIndex) {
@@ -2048,9 +2056,10 @@ TEST(DWARFDebugInfo, TestDwarfVerifyInvalidLineFileIndex) {
   )";
   auto ErrOrSections = DWARFYAML::EmitDebugSections(yamldata);
   ASSERT_TRUE((bool)ErrOrSections);
-  DWARFContextInMemory DwarfContext(*ErrOrSections, 8);
-  VerifyError(DwarfContext, "error: .debug_line[0x00000000][1] has invalid "
-                            "file index 5 (valid values are [1,1]):");
+  std::unique_ptr<DWARFContext> DwarfContext =
+      DWARFContext::create(*ErrOrSections, 8);
+  VerifyError(*DwarfContext, "error: .debug_line[0x00000000][1] has invalid "
+                             "file index 5 (valid values are [1,1]):");
 }
 
 TEST(DWARFDebugInfo, TestDwarfVerifyCUDontShareLineTable) {
@@ -2128,10 +2137,12 @@ TEST(DWARFDebugInfo, TestDwarfVerifyCUDontShareLineTable) {
   )";
   auto ErrOrSections = DWARFYAML::EmitDebugSections(yamldata);
   ASSERT_TRUE((bool)ErrOrSections);
-  DWARFContextInMemory DwarfContext(*ErrOrSections, 8);
-  VerifyError(DwarfContext, "error: two compile unit DIEs, 0x0000000b and "
-                            "0x0000001f, have the same DW_AT_stmt_list section "
-                            "offset:");
+  std::unique_ptr<DWARFContext> DwarfContext =
+      DWARFContext::create(*ErrOrSections, 8);
+  VerifyError(*DwarfContext,
+              "error: two compile unit DIEs, 0x0000000b and "
+              "0x0000001f, have the same DW_AT_stmt_list section "
+              "offset:");
 }
 
 TEST(DWARFDebugInfo, TestErrorReportingPolicy) {
@@ -2161,20 +2172,22 @@ TEST(DWARFDebugInfo, TestErrorReportingPolicy) {
   // DWARFContextInMemory
   //         to parse whole file and find both two errors we know about.
   int Errors = 0;
-  DWARFContextInMemory Ctx1(*Obj.get(), nullptr, [&](Error E) {
-    ++Errors;
-    consumeError(std::move(E));
-    return ErrorPolicy::Continue;
-  });
+  std::unique_ptr<DWARFContext> Ctx1 =
+      DWARFContext::create(**Obj, nullptr, [&](Error E) {
+        ++Errors;
+        consumeError(std::move(E));
+        return ErrorPolicy::Continue;
+      });
   EXPECT_TRUE(Errors == 2);
 
   // Case 2: error handler stops parsing of object after first error.
   Errors = 0;
-  DWARFContextInMemory Ctx2(*Obj.get(), nullptr, [&](Error E) {
-    ++Errors;
-    consumeError(std::move(E));
-    return ErrorPolicy::Halt;
-  });
+  std::unique_ptr<DWARFContext> Ctx2 =
+      DWARFContext::create(**Obj, nullptr, [&](Error E) {
+        ++Errors;
+        consumeError(std::move(E));
+        return ErrorPolicy::Halt;
+      });
   EXPECT_TRUE(Errors == 1);
 }
 
