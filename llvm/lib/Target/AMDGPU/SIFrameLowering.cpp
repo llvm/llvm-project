@@ -158,7 +158,7 @@ SIFrameLowering::getReservedPrivateSegmentWaveByteOffsetReg(
   // No replacement necessary.
   if (ScratchWaveOffsetReg == AMDGPU::NoRegister ||
       !MRI.isPhysRegUsed(ScratchWaveOffsetReg)) {
-    assert(MFI->getStackPtrOffsetReg() == AMDGPU::NoRegister);
+    assert(MFI->getStackPtrOffsetReg() == AMDGPU::SP_REG);
     return std::make_pair(AMDGPU::NoRegister, AMDGPU::NoRegister);
   }
 
@@ -246,13 +246,16 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
   // this point it appears we need the setup. This part of the prolog should be
   // emitted after frame indices are eliminated.
 
-  if (MF.getFrameInfo().hasStackObjects() && MFI->hasFlatScratchInit())
+  if (MFI->hasFlatScratchInit())
     emitFlatScratchInit(ST, MF, MBB);
 
   unsigned SPReg = MFI->getStackPtrOffsetReg();
-  if (SPReg != AMDGPU::NoRegister) {
+  if (SPReg != AMDGPU::SP_REG) {
+    assert(MRI.isReserved(SPReg) && "SPReg used but not reserved");
+
     DebugLoc DL;
-    int64_t StackSize = MF.getFrameInfo().getStackSize();
+    const MachineFrameInfo &FrameInfo = MF.getFrameInfo();
+    int64_t StackSize = FrameInfo.getStackSize();
 
     if (StackSize == 0) {
       BuildMI(MBB, MBB.begin(), DL, TII->get(AMDGPU::COPY), SPReg)

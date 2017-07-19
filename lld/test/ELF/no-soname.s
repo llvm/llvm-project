@@ -1,3 +1,4 @@
+// REQUIRES: x86
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
 // RUN: mkdir -p %T/no-soname
 // RUN: ld.lld %t.o -shared -o %T/no-soname/libfoo.so

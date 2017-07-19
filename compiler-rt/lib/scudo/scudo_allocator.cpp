@@ -19,6 +19,7 @@
 #include "scudo_tls.h"
 #include "scudo_utils.h"
 
+#include "sanitizer_common/sanitizer_allocator_checks.h"
 #include "sanitizer_common/sanitizer_allocator_interface.h"
 #include "sanitizer_common/sanitizer_errno.h"
 #include "sanitizer_common/sanitizer_quarantine.h"
@@ -638,14 +639,8 @@ void ScudoThreadContext::commitBack() {
   Instance.commitBack(this);
 }
 
-INLINE void *checkPtr(void *Ptr) {
-  if (UNLIKELY(!Ptr))
-    errno = errno_ENOMEM;
-  return Ptr;
-}
-
 void *scudoMalloc(uptr Size, AllocType Type) {
-  return checkPtr(Instance.allocate(Size, MinAlignment, Type));
+  return SetErrnoOnNull(Instance.allocate(Size, MinAlignment, Type));
 }
 
 void scudoFree(void *Ptr, AllocType Type) {
@@ -658,27 +653,28 @@ void scudoSizedFree(void *Ptr, uptr Size, AllocType Type) {
 
 void *scudoRealloc(void *Ptr, uptr Size) {
   if (!Ptr)
-    return checkPtr(Instance.allocate(Size, MinAlignment, FromMalloc));
+    return SetErrnoOnNull(Instance.allocate(Size, MinAlignment, FromMalloc));
   if (Size == 0) {
     Instance.deallocate(Ptr, 0, FromMalloc);
     return nullptr;
   }
-  return checkPtr(Instance.reallocate(Ptr, Size));
+  return SetErrnoOnNull(Instance.reallocate(Ptr, Size));
 }
 
 void *scudoCalloc(uptr NMemB, uptr Size) {
-  return checkPtr(Instance.calloc(NMemB, Size));
+  return SetErrnoOnNull(Instance.calloc(NMemB, Size));
 }
 
 void *scudoValloc(uptr Size) {
-  return checkPtr(Instance.allocate(Size, GetPageSizeCached(), FromMemalign));
+  return SetErrnoOnNull(
+      Instance.allocate(Size, GetPageSizeCached(), FromMemalign));
 }
 
 void *scudoPvalloc(uptr Size) {
   uptr PageSize = GetPageSizeCached();
   // pvalloc(0) should allocate one page.
   Size = Size ? RoundUpTo(Size, PageSize) : PageSize;
-  return checkPtr(Instance.allocate(Size, PageSize, FromMemalign));
+  return SetErrnoOnNull(Instance.allocate(Size, PageSize, FromMemalign));
 }
 
 void *scudoMemalign(uptr Alignment, uptr Size) {
@@ -686,28 +682,27 @@ void *scudoMemalign(uptr Alignment, uptr Size) {
     errno = errno_EINVAL;
     return ScudoAllocator::FailureHandler::OnBadRequest();
   }
-  return checkPtr(Instance.allocate(Size, Alignment, FromMemalign));
+  return SetErrnoOnNull(Instance.allocate(Size, Alignment, FromMemalign));
 }
 
 int scudoPosixMemalign(void **MemPtr, uptr Alignment, uptr Size) {
-  if (UNLIKELY(!IsPowerOfTwo(Alignment) || (Alignment % sizeof(void *)) != 0)) {
+  if (UNLIKELY(!CheckPosixMemalignAlignment(Alignment))) {
     ScudoAllocator::FailureHandler::OnBadRequest();
     return errno_EINVAL;
   }
   void *Ptr = Instance.allocate(Size, Alignment, FromMemalign);
-  if (!Ptr)
+  if (UNLIKELY(!Ptr))
     return errno_ENOMEM;
   *MemPtr = Ptr;
   return 0;
 }
 
 void *scudoAlignedAlloc(uptr Alignment, uptr Size) {
-  // Alignment must be a power of 2, Size must be a multiple of Alignment.
-  if (UNLIKELY(!IsPowerOfTwo(Alignment) || (Size & (Alignment - 1)) != 0)) {
+  if (UNLIKELY(!CheckAlignedAllocAlignmentAndSize(Alignment, Size))) {
     errno = errno_EINVAL;
     return ScudoAllocator::FailureHandler::OnBadRequest();
   }
-  return checkPtr(Instance.allocate(Size, Alignment, FromMalloc));
+  return SetErrnoOnNull(Instance.allocate(Size, Alignment, FromMalloc));
 }
 
 uptr scudoMallocUsableSize(void *Ptr) {

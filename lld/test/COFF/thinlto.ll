@@ -1,3 +1,4 @@
+; REQUIRES: x86
 ; RUN: rm -fr %T/thinlto
 ; RUN: mkdir %T/thinlto
 ; RUN: opt -thinlto-bc -o %T/thinlto/main.obj %s

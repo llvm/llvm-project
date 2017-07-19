@@ -1689,6 +1689,19 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::MULHS,     MVT::i32, Expand);
   setOperationAction(ISD::MUL,       MVT::i32, Expand);
 
+  if (Subtarget->useSoftMulDiv()) {
+    // .umul works for both signed and unsigned
+    setOperationAction(ISD::SMUL_LOHI, MVT::i32, Expand);
+    setOperationAction(ISD::UMUL_LOHI, MVT::i32, Expand);
+    setLibcallName(RTLIB::MUL_I32, ".umul");
+
+    setOperationAction(ISD::SDIV, MVT::i32, Expand);
+    setLibcallName(RTLIB::SDIV_I32, ".div");
+
+    setOperationAction(ISD::UDIV, MVT::i32, Expand);
+    setLibcallName(RTLIB::UDIV_I32, ".udiv");
+  }
+
   if (Subtarget->is64Bit()) {
     setOperationAction(ISD::UMUL_LOHI, MVT::i64, Expand);
     setOperationAction(ISD::SMUL_LOHI, MVT::i64, Expand);

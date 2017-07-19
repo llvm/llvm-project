@@ -814,10 +814,8 @@ def : Proc<"bdver4", [
   FeatureMWAITX
 ]>;
 
-// TODO: The scheduler model falls to BTVER2 model.
-// The znver1 model has to be put in place.
-// Zen
-def: ProcessorModel<"znver1", BtVer2Model, [
+// Znver1
+def: ProcessorModel<"znver1", Znver1Model, [
   FeatureADX,
   FeatureAES,
   FeatureAVX2,

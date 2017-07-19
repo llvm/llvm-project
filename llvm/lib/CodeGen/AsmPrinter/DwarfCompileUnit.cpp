@@ -664,8 +664,9 @@ DIE *DwarfCompileUnit::constructImportedEntityDIE(
   else
     EntityDie = getDIE(Entity);
   assert(EntityDie);
-  addSourceLine(*IMDie, Module->getLine(), Module->getScope()->getFilename(),
-                Module->getScope()->getDirectory());
+  auto *File = Module->getFile();
+  addSourceLine(*IMDie, Module->getLine(), File ? File->getFilename() : "",
+                File ? File->getDirectory() : "");
   addDIEEntry(*IMDie, dwarf::DW_AT_import, *EntityDie);
   StringRef Name = Module->getName();
   if (!Name.empty())

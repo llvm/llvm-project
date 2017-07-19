@@ -235,7 +235,7 @@ void SectionChunk::writeTo(uint8_t *Buf) const {
     // sections are not GC roots and can end up with these kinds of relocations.
     // Skip these relocations.
     if (!OS && !isa<DefinedAbsolute>(Sym) && !isa<DefinedSynthetic>(Sym)) {
-      if (isCodeView())
+      if (isCodeView() || isDWARF())
         continue;
       fatal("relocation against symbol in discarded section: " +
             Sym->getName());

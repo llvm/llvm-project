@@ -22,6 +22,7 @@
 #include <unistd.h>
 
 #include <sstream>
+#include <csignal>
 
 #ifdef __ANDROID__
 #include <android/api-level.h>

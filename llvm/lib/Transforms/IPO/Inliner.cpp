@@ -909,7 +909,7 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
         // To check this we also need to nuke any dead constant uses (perhaps
         // made dead by this operation on other functions).
         Callee.removeDeadConstantUsers();
-        if (Callee.use_empty()) {
+        if (Callee.use_empty() && !CG.isLibFunction(Callee)) {
           Calls.erase(
               std::remove_if(Calls.begin() + i + 1, Calls.end(),
                              [&Callee](const std::pair<CallSite, int> &Call) {

@@ -34,6 +34,7 @@ struct InputInfo {
   size_t NumExecutedMutations = 0;
   size_t NumSuccessfullMutations = 0;
   bool MayDeleteFile = false;
+  bool Reduced = false;
   std::vector<uint32_t> UniqFeatureSet;
 };
 
@@ -126,12 +127,13 @@ class InputCorpus {
   }
 
   void Replace(InputInfo *II, const Unit &U) {
-    assert(II->U.size());
+    assert(II->U.size() > U.size());
     Hashes.erase(Sha1ToString(II->Sha1));
     DeleteFile(*II);
     ComputeSHA1(U.data(), U.size(), II->Sha1);
     Hashes.insert(Sha1ToString(II->Sha1));
     II->U = U;
+    II->Reduced = true;
   }
 
   bool HasUnit(const Unit &U) { return Hashes.count(Hash(U)); }

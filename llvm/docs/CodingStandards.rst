@@ -34,10 +34,10 @@ There are some conventions that are not uniformly followed in the code base
 (e.g. the naming convention).  This is because they are relatively new, and a
 lot of code was written before they were put in place.  Our long term goal is
 for the entire codebase to follow the convention, but we explicitly *do not*
-want patches that do large-scale reformating of existing code.  On the other
+want patches that do large-scale reformatting of existing code.  On the other
 hand, it is reasonable to rename the methods of a class if you're about to
-change it in some other way.  Just do the reformating as a separate commit from
-the functionality change.
+change it in some other way.  Just do the reformatting as a separate commit
+from the functionality change.
   
 The ultimate goal of these guidelines is to increase the readability and
 maintainability of our common source base. If you have suggestions for topics to

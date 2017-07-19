@@ -82,7 +82,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo() {
     setAction({Op, 1, s1}, Legal);
   }
 
-  for (unsigned BinOp : {G_FADD, G_FSUB, G_FMUL, G_FDIV})
+  for (unsigned BinOp : {G_FADD, G_FSUB, G_FMA, G_FMUL, G_FDIV})
     for (auto Ty : {s32, s64})
       setAction({BinOp, Ty}, Legal);
 

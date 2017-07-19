@@ -79,3 +79,12 @@ Before::
 
       return false;
     }
+
+--------------------------
+Improved Polly Diagnostics
+--------------------------
+
+Polly now uses the LLVM OptimizationDiagnosticInfo API for emitting diagnostic remarks.
+This allows Polly remarks to appear in the yaml optimization record when compiling
+with the flag -fsave-optimization-record. This also allow Polly remarks to appear in the opt-viewer
+tool, allowing for remarks to be viewed next to the source code, and sorted by hotness.

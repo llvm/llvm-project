@@ -45,7 +45,7 @@ define <4 x i64> @var_shift_v4i64(<4 x i64> %a, <4 x i64> %b) nounwind {
 ;
 ; AVX2-LABEL: var_shift_v4i64:
 ; AVX2:       # BB#0:
-; AVX2-NEXT:    vpbroadcastq {{.*}}(%rip), %ymm2
+; AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [9223372036854775808,9223372036854775808,9223372036854775808,9223372036854775808]
 ; AVX2-NEXT:    vpsrlvq %ymm1, %ymm2, %ymm3
 ; AVX2-NEXT:    vpxor %ymm2, %ymm0, %ymm0
 ; AVX2-NEXT:    vpsrlvq %ymm1, %ymm0, %ymm0
@@ -66,7 +66,7 @@ define <4 x i64> @var_shift_v4i64(<4 x i64> %a, <4 x i64> %b) nounwind {
 ;
 ; XOPAVX2-LABEL: var_shift_v4i64:
 ; XOPAVX2:       # BB#0:
-; XOPAVX2-NEXT:    vpbroadcastq {{.*}}(%rip), %ymm2
+; XOPAVX2-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [9223372036854775808,9223372036854775808,9223372036854775808,9223372036854775808]
 ; XOPAVX2-NEXT:    vpsrlvq %ymm1, %ymm2, %ymm3
 ; XOPAVX2-NEXT:    vpxor %ymm2, %ymm0, %ymm0
 ; XOPAVX2-NEXT:    vpsrlvq %ymm1, %ymm0, %ymm0
@@ -667,7 +667,7 @@ define <4 x i64> @splatvar_shift_v4i64(<4 x i64> %a, <4 x i64> %b) nounwind {
 ;
 ; AVX2-LABEL: splatvar_shift_v4i64:
 ; AVX2:       # BB#0:
-; AVX2-NEXT:    vpbroadcastq {{.*}}(%rip), %ymm2
+; AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [9223372036854775808,9223372036854775808,9223372036854775808,9223372036854775808]
 ; AVX2-NEXT:    vpsrlq %xmm1, %ymm2, %ymm2
 ; AVX2-NEXT:    vpsrlq %xmm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpxor %ymm2, %ymm0, %ymm0
@@ -687,7 +687,7 @@ define <4 x i64> @splatvar_shift_v4i64(<4 x i64> %a, <4 x i64> %b) nounwind {
 ;
 ; XOPAVX2-LABEL: splatvar_shift_v4i64:
 ; XOPAVX2:       # BB#0:
-; XOPAVX2-NEXT:    vpbroadcastq {{.*}}(%rip), %ymm2
+; XOPAVX2-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [9223372036854775808,9223372036854775808,9223372036854775808,9223372036854775808]
 ; XOPAVX2-NEXT:    vpsrlq %xmm1, %ymm2, %ymm2
 ; XOPAVX2-NEXT:    vpsrlq %xmm1, %ymm0, %ymm0
 ; XOPAVX2-NEXT:    vpxor %ymm2, %ymm0, %ymm0
@@ -1700,7 +1700,7 @@ define <4 x i64> @splatconstant_shift_v4i64(<4 x i64> %a) nounwind {
 ; XOPAVX2-LABEL: splatconstant_shift_v4i64:
 ; XOPAVX2:       # BB#0:
 ; XOPAVX2-NEXT:    vpsrlq $7, %ymm0, %ymm0
-; XOPAVX2-NEXT:    vpbroadcastq {{.*}}(%rip), %ymm1
+; XOPAVX2-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [72057594037927936,72057594037927936,72057594037927936,72057594037927936]
 ; XOPAVX2-NEXT:    vpxor %ymm1, %ymm0, %ymm0
 ; XOPAVX2-NEXT:    vpsubq %ymm1, %ymm0, %ymm0
 ; XOPAVX2-NEXT:    retq

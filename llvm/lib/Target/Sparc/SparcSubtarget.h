@@ -32,6 +32,7 @@ class StringRef;
 class SparcSubtarget : public SparcGenSubtargetInfo {
   Triple TargetTriple;
   virtual void anchor();
+  bool UseSoftMulDiv;
   bool IsV9;
   bool IsLeon;
   bool V8DeprecatedInsts;
@@ -76,6 +77,7 @@ public:
 
   bool enableMachineScheduler() const override;
 
+  bool useSoftMulDiv() const { return UseSoftMulDiv; }
   bool isV9() const { return IsV9; }
   bool isLeon() const { return IsLeon; }
   bool isVIS() const { return IsVIS; }

@@ -653,6 +653,7 @@ void SIFoldOperands::foldInstOperand(MachineInstr &MI,
         // again. The same constant folded instruction could also have a second
         // use operand.
         NextUse = MRI->use_begin(Dst.getReg());
+        FoldList.clear();
         continue;
       }
 

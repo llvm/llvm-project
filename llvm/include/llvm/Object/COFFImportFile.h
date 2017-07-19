@@ -95,7 +95,7 @@ struct COFFShortExport {
   }
 };
 
-std::error_code writeImportLibrary(StringRef DLLName,
+std::error_code writeImportLibrary(StringRef ImportName,
                                    StringRef Path,
                                    ArrayRef<COFFShortExport> Exports,
                                    COFF::MachineTypes Machine);

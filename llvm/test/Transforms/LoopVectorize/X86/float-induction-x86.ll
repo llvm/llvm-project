@@ -86,10 +86,10 @@ for.end:                                          ; preds = %for.end.loopexit, %
 ; AUTO_VEC-NEXT:  entry:
 ; AUTO_VEC-NEXT:    [[TMP0:%.*]] = icmp sgt i64 %n, 1
 ; AUTO_VEC-NEXT:    [[SMAX:%.*]] = select i1 [[TMP0]], i64 %n, i64 1
-; AUTO_VEC:         br i1 {{.*}}, label %for.body, label %min.iters.checked
-; AUTO_VEC:       min.iters.checked:
+; AUTO_VEC:         br i1 {{.*}}, label %for.body, label %vector.ph
+; AUTO_VEC:       vector.ph:
 ; AUTO_VEC-NEXT:    [[N_VEC:%.*]] = and i64 [[SMAX]], 9223372036854775792
-; AUTO_VEC:         br i1 {{.*}}, label %for.body, label %vector.body
+; AUTO_VEC:         br label %vector.body
 ; AUTO_VEC:       middle.block:
 ; AUTO_VEC:         [[TMP11:%.*]] = add nsw i64 [[N_VEC]], -1
 ; AUTO_VEC-NEXT:    [[CAST_CMO:%.*]] = sitofp i64 [[TMP11]] to double

@@ -1171,8 +1171,7 @@ static void allocateSystemSGPRs(CCState &CCInfo,
 static void reservePrivateMemoryRegs(const TargetMachine &TM,
                                      MachineFunction &MF,
                                      const SIRegisterInfo &TRI,
-                                     SIMachineFunctionInfo &Info,
-                                     bool NeedSP) {
+                                     SIMachineFunctionInfo &Info) {
   // Now that we've figured out where the scratch register inputs are, see if
   // should reserve the arguments and use them directly.
   MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -1233,15 +1232,6 @@ static void reservePrivateMemoryRegs(const TargetMachine &TM,
         = TRI.reservedPrivateSegmentWaveByteOffsetReg(MF);
       Info.setScratchWaveOffsetReg(ReservedOffsetReg);
     }
-  }
-
-  if (NeedSP) {
-    unsigned ReservedStackPtrOffsetReg = TRI.reservedStackPtrOffsetReg(MF);
-    Info.setStackPtrOffsetReg(ReservedStackPtrOffsetReg);
-
-    assert(Info.getStackPtrOffsetReg() != Info.getFrameOffsetReg());
-    assert(!TRI.isSubRegister(Info.getScratchRSrcReg(),
-                              Info.getStackPtrOffsetReg()));
   }
 }
 
@@ -1437,25 +1427,13 @@ SDValue SITargetLowering::LowerFormalArguments(
     InVals.push_back(Val);
   }
 
-  const MachineFrameInfo &FrameInfo = MF.getFrameInfo();
-
-  // TODO: Could maybe omit SP if only tail calls?
-  bool NeedSP = FrameInfo.hasCalls() || FrameInfo.hasVarSizedObjects();
-
   // Start adding system SGPRs.
   if (IsEntryFunc) {
     allocateSystemSGPRs(CCInfo, MF, *Info, CallConv, IsShader);
-    reservePrivateMemoryRegs(getTargetMachine(), MF, *TRI, *Info, NeedSP);
   } else {
     CCInfo.AllocateReg(Info->getScratchRSrcReg());
     CCInfo.AllocateReg(Info->getScratchWaveOffsetReg());
     CCInfo.AllocateReg(Info->getFrameOffsetReg());
-
-    if (NeedSP) {
-      unsigned StackPtrReg = findFirstFreeSGPR(CCInfo);
-      CCInfo.AllocateReg(StackPtrReg);
-      Info->setStackPtrOffsetReg(StackPtrReg);
-    }
   }
 
   return Chains.empty() ? Chain :
@@ -5850,4 +5828,45 @@ SITargetLowering::getConstraintType(StringRef Constraint) const {
     }
   }
   return TargetLowering::getConstraintType(Constraint);
+}
+
+// Figure out which registers should be reserved for stack access. Only after
+// the function is legalized do we know all of the non-spill stack objects or if
+// calls are present.
+void SITargetLowering::finalizeLowering(MachineFunction &MF) const {
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
+  const SIRegisterInfo *TRI = ST.getRegisterInfo();
+
+  if (Info->isEntryFunction()) {
+    // Callable functions have fixed registers used for stack access.
+    reservePrivateMemoryRegs(getTargetMachine(), MF, *TRI, *Info);
+  }
+
+  // We have to assume the SP is needed in case there are calls in the function
+  // during lowering. Calls are only detected after the function is
+  // lowered. We're about to reserve registers, so don't bother using it if we
+  // aren't really going to use it.
+  bool NeedSP = !Info->isEntryFunction() ||
+    MFI.hasVarSizedObjects() ||
+    MFI.hasCalls();
+
+  if (NeedSP) {
+    unsigned ReservedStackPtrOffsetReg = TRI->reservedStackPtrOffsetReg(MF);
+    Info->setStackPtrOffsetReg(ReservedStackPtrOffsetReg);
+
+    assert(Info->getStackPtrOffsetReg() != Info->getFrameOffsetReg());
+    assert(!TRI->isSubRegister(Info->getScratchRSrcReg(),
+                               Info->getStackPtrOffsetReg()));
+    MRI.replaceRegWith(AMDGPU::SP_REG, Info->getStackPtrOffsetReg());
+  }
+
+  MRI.replaceRegWith(AMDGPU::PRIVATE_RSRC_REG, Info->getScratchRSrcReg());
+  MRI.replaceRegWith(AMDGPU::FP_REG, Info->getFrameOffsetReg());
+  MRI.replaceRegWith(AMDGPU::SCRATCH_WAVE_OFFSET_REG,
+                     Info->getScratchWaveOffsetReg());
+
+  TargetLoweringBase::finalizeLowering(MF);
 }

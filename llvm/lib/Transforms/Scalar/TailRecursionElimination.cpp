@@ -68,6 +68,7 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
@@ -90,16 +91,10 @@ STATISTIC(NumAccumAdded, "Number of accumulators introduced");
 /// If it contains any dynamic allocas, returns false.
 static bool canTRE(Function &F) {
   // Because of PR962, we don't TRE dynamic allocas.
-  for (auto &BB : F) {
-    for (auto &I : BB) {
-      if (AllocaInst *AI = dyn_cast<AllocaInst>(&I)) {
-        if (!AI->isStaticAlloca())
-          return false;
-      }
-    }
-  }
-
-  return true;
+  return llvm::all_of(instructions(F), [](Instruction &I) {
+    auto *AI = dyn_cast<AllocaInst>(&I);
+    return !AI || AI->isStaticAlloca();
+  });
 }
 
 namespace {

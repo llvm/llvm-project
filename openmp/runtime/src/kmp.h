@@ -2050,8 +2050,10 @@ extern kmp_int32 __kmp_default_device; // Set via OMP_DEFAULT_DEVICE if
 // specified, defaults to 0 otherwise
 #endif
 #if OMP_45_ENABLED
-extern kmp_int32 __kmp_max_task_priority; // Set via OMP_MAX_TASK_PRIORITY if
-// specified, defaults to 0 otherwise
+// Set via OMP_MAX_TASK_PRIORITY if specified, defaults to 0 otherwise
+extern kmp_int32 __kmp_max_task_priority;
+// Set via KMP_TASKLOOP_MIN_TASKS if specified, defaults to 0 otherwise
+extern kmp_uint64 __kmp_taskloop_min_tasks;
 #endif
 
 /* NOTE: kmp_taskdata_t and kmp_task_t structures allocated in single block with

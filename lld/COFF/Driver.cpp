@@ -429,7 +429,32 @@ static std::string getImplibPath() {
   return Out.str();
 }
 
-static void createImportLibrary() {
+//
+// The import name is caculated as the following:
+//
+//        | LIBRARY w/ ext |   LIBRARY w/o ext   | no LIBRARY
+//   -----+----------------+---------------------+------------------
+//   LINK | {value}        | {value}.{.dll/.exe} | {output name}
+//    LIB | {value}        | {value}.dll         | {output name}.dll
+//
+static std::string getImportName(bool AsLib) {
+  SmallString<128> Out;
+
+  if (Config->ImportName.empty()) {
+    Out.assign(sys::path::filename(Config->OutputFile));
+    if (AsLib)
+      sys::path::replace_extension(Out, ".dll");
+  } else {
+    Out.assign(Config->ImportName);
+    if (!sys::path::has_extension(Out))
+      sys::path::replace_extension(Out,
+                                   (Config->DLL || AsLib) ? ".dll" : ".exe");
+  }
+
+  return Out.str();
+}
+
+static void createImportLibrary(bool AsLib) {
   std::vector<COFFShortExport> Exports;
   for (Export &E1 : Config->Exports) {
     COFFShortExport E2;
@@ -444,9 +469,8 @@ static void createImportLibrary() {
     Exports.push_back(E2);
   }
 
-  std::string DLLName = sys::path::filename(Config->OutputFile);
-  std::string Path = getImplibPath();
-  writeImportLibrary(DLLName, Path, Exports, Config->Machine);
+  writeImportLibrary(getImportName(AsLib), getImplibPath(), Exports,
+                     Config->Machine);
 }
 
 static void parseModuleDefs(StringRef Path) {
@@ -457,6 +481,7 @@ static void parseModuleDefs(StringRef Path) {
 
   if (Config->OutputFile.empty())
     Config->OutputFile = Saver.save(M.OutputFile);
+  Config->ImportName = Saver.save(M.ImportName);
   if (M.ImageBase)
     Config->ImageBase = M.ImageBase;
   if (M.StackReserve)
@@ -992,7 +1017,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   // Handle generation of import library from a def file.
   if (!Args.hasArgNoClaim(OPT_INPUT)) {
     fixupExports();
-    createImportLibrary();
+    createImportLibrary(/*AsLib=*/true);
     exit(0);
   }
 
@@ -1117,7 +1142,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   // need to create a .lib file.
   if (!Config->Exports.empty() || Config->DLL) {
     fixupExports();
-    createImportLibrary();
+    createImportLibrary(/*AsLib=*/false);
     assignExportOrdinals();
   }
 

@@ -92,15 +92,8 @@ LoadedModule *GetLinker() { return nullptr; }
 // required on Darwin.
 void InitializePlatformSpecificModules() {}
 
-// Sections which may contain global variables
-static const char *kGlobalVarSecNames[] = {
-    "__DATA",      "__bss",         "__common",       "__data",
-    "__objc_data", "__objc_opt_rw", "__objc_opt_ptrs"};
-
 // Scans global variables for heap pointers.
 void ProcessGlobalRegions(Frontier *frontier) {
-  for (auto name : kGlobalVarSecNames) CHECK(ARRAY_SIZE(name) < kMaxSegName);
-
   MemoryMappingLayout memory_mapping(false);
   InternalMmapVector<LoadedModule> modules(/*initial_capacity*/ 128);
   memory_mapping.DumpListOfModules(&modules);
@@ -111,10 +104,10 @@ void ProcessGlobalRegions(Frontier *frontier) {
 
     for (const __sanitizer::LoadedModule::AddressRange &range :
          modules[i].ranges()) {
-      for (auto name : kGlobalVarSecNames) {
-        if (!internal_strcmp(range.name, name))
-          ScanGlobalRange(range.beg, range.end, frontier);
-      }
+      // Sections storing global variables are writable and non-executable
+      if (range.executable || !range.writable) continue;
+
+      ScanGlobalRange(range.beg, range.end, frontier);
     }
   }
 }
@@ -170,6 +163,11 @@ void ProcessPlatformSpecificAllocations(Frontier *frontier) {
     address = end_address;
   }
 }
+
+// On darwin, we can intercept _exit gracefully, and return a failing exit code
+// if required at that point. Calling Die() here is undefined behavior and
+// causes rare race conditions.
+void HandleLeaks() {}
 
 void DoStopTheWorld(StopTheWorldCallback callback, void *argument) {
   StopTheWorld(callback, argument);

@@ -1670,8 +1670,9 @@ private:
   /// delete the last object that creates isl objects with the context.
   std::shared_ptr<isl_ctx> IslCtx;
 
-  /// A map from basic blocks to SCoP statements.
-  DenseMap<BasicBlock *, ScopStmt *> StmtMap;
+  /// A map from basic blocks to vector of SCoP statements. Currently this
+  /// vector comprises only of a single statement.
+  DenseMap<BasicBlock *, std::vector<ScopStmt *>> StmtMap;
 
   /// A map from basic blocks to their domains.
   DenseMap<BasicBlock *, isl::set> DomainMap;

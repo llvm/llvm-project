@@ -24,8 +24,8 @@ define i32 @test_bzhi_i32(i32 %a0, i32 %a1, i32 *%a2) {
 ; ZNVER1:       # BB#0:
 ; ZNVER1-NEXT:    bzhil %edi, (%rdx), %ecx # sched: [?:0.000000e+00]
 ; ZNVER1-NEXT:    bzhil %edi, %esi, %eax # sched: [?:0.000000e+00]
-; ZNVER1-NEXT:    addl %ecx, %eax # sched: [1:0.50]
-; ZNVER1-NEXT:    retq # sched: [4:1.00]
+; ZNVER1-NEXT:    addl %ecx, %eax # sched: [1:0.25]
+; ZNVER1-NEXT:    retq # sched: [5:0.50]
   %1 = load i32, i32 *%a2
   %2 = tail call i32 @llvm.x86.bmi.bzhi.32(i32 %1, i32 %a0)
   %3 = tail call i32 @llvm.x86.bmi.bzhi.32(i32 %a1, i32 %a0)
@@ -53,8 +53,8 @@ define i64 @test_bzhi_i64(i64 %a0, i64 %a1, i64 *%a2) {
 ; ZNVER1:       # BB#0:
 ; ZNVER1-NEXT:    bzhiq %rdi, (%rdx), %rcx # sched: [?:0.000000e+00]
 ; ZNVER1-NEXT:    bzhiq %rdi, %rsi, %rax # sched: [?:0.000000e+00]
-; ZNVER1-NEXT:    addq %rcx, %rax # sched: [1:0.50]
-; ZNVER1-NEXT:    retq # sched: [4:1.00]
+; ZNVER1-NEXT:    addq %rcx, %rax # sched: [1:0.25]
+; ZNVER1-NEXT:    retq # sched: [5:0.50]
   %1 = load i64, i64 *%a2
   %2 = tail call i64 @llvm.x86.bmi.bzhi.64(i64 %1, i64 %a0)
   %3 = tail call i64 @llvm.x86.bmi.bzhi.64(i64 %a1, i64 %a0)
@@ -82,8 +82,8 @@ define i32 @test_pdep_i32(i32 %a0, i32 %a1, i32 *%a2) {
 ; ZNVER1:       # BB#0:
 ; ZNVER1-NEXT:    pdepl (%rdx), %edi, %ecx # sched: [?:0.000000e+00]
 ; ZNVER1-NEXT:    pdepl %esi, %edi, %eax # sched: [?:0.000000e+00]
-; ZNVER1-NEXT:    addl %ecx, %eax # sched: [1:0.50]
-; ZNVER1-NEXT:    retq # sched: [4:1.00]
+; ZNVER1-NEXT:    addl %ecx, %eax # sched: [1:0.25]
+; ZNVER1-NEXT:    retq # sched: [5:0.50]
   %1 = load i32, i32 *%a2
   %2 = tail call i32 @llvm.x86.bmi.pdep.32(i32 %a0, i32 %1)
   %3 = tail call i32 @llvm.x86.bmi.pdep.32(i32 %a0, i32 %a1)
@@ -111,8 +111,8 @@ define i64 @test_pdep_i64(i64 %a0, i64 %a1, i64 *%a2) {
 ; ZNVER1:       # BB#0:
 ; ZNVER1-NEXT:    pdepq (%rdx), %rdi, %rcx # sched: [?:0.000000e+00]
 ; ZNVER1-NEXT:    pdepq %rsi, %rdi, %rax # sched: [?:0.000000e+00]
-; ZNVER1-NEXT:    addq %rcx, %rax # sched: [1:0.50]
-; ZNVER1-NEXT:    retq # sched: [4:1.00]
+; ZNVER1-NEXT:    addq %rcx, %rax # sched: [1:0.25]
+; ZNVER1-NEXT:    retq # sched: [5:0.50]
   %1 = load i64, i64 *%a2
   %2 = tail call i64 @llvm.x86.bmi.pdep.64(i64 %a0, i64 %1)
   %3 = tail call i64 @llvm.x86.bmi.pdep.64(i64 %a0, i64 %a1)
@@ -140,8 +140,8 @@ define i32 @test_pext_i32(i32 %a0, i32 %a1, i32 *%a2) {
 ; ZNVER1:       # BB#0:
 ; ZNVER1-NEXT:    pextl (%rdx), %edi, %ecx # sched: [?:0.000000e+00]
 ; ZNVER1-NEXT:    pextl %esi, %edi, %eax # sched: [?:0.000000e+00]
-; ZNVER1-NEXT:    addl %ecx, %eax # sched: [1:0.50]
-; ZNVER1-NEXT:    retq # sched: [4:1.00]
+; ZNVER1-NEXT:    addl %ecx, %eax # sched: [1:0.25]
+; ZNVER1-NEXT:    retq # sched: [5:0.50]
   %1 = load i32, i32 *%a2
   %2 = tail call i32 @llvm.x86.bmi.pext.32(i32 %a0, i32 %1)
   %3 = tail call i32 @llvm.x86.bmi.pext.32(i32 %a0, i32 %a1)
@@ -169,8 +169,8 @@ define i64 @test_pext_i64(i64 %a0, i64 %a1, i64 *%a2) {
 ; ZNVER1:       # BB#0:
 ; ZNVER1-NEXT:    pextq (%rdx), %rdi, %rcx # sched: [?:0.000000e+00]
 ; ZNVER1-NEXT:    pextq %rsi, %rdi, %rax # sched: [?:0.000000e+00]
-; ZNVER1-NEXT:    addq %rcx, %rax # sched: [1:0.50]
-; ZNVER1-NEXT:    retq # sched: [4:1.00]
+; ZNVER1-NEXT:    addq %rcx, %rax # sched: [1:0.25]
+; ZNVER1-NEXT:    retq # sched: [5:0.50]
   %1 = load i64, i64 *%a2
   %2 = tail call i64 @llvm.x86.bmi.pext.64(i64 %a0, i64 %1)
   %3 = tail call i64 @llvm.x86.bmi.pext.64(i64 %a0, i64 %a1)

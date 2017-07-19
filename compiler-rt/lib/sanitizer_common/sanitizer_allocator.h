@@ -56,11 +56,6 @@ struct NoOpMapUnmapCallback {
 // Callback type for iterating over chunks.
 typedef void (*ForEachChunkCallback)(uptr chunk, void *arg);
 
-// Returns true if calloc(size, n) call overflows on size*n calculation.
-// The caller should "return POLICY::OnBadRequest();" where POLICY is the
-// current allocator failure handling policy.
-bool CheckForCallocOverflow(uptr size, uptr n);
-
 #include "sanitizer_allocator_size_class_map.h"
 #include "sanitizer_allocator_stats.h"
 #include "sanitizer_allocator_primary64.h"

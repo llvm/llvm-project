@@ -12,17 +12,21 @@
 //===----------------------------------------------------------------------===//
 
 class getVOP3ModPat<VOPProfile P, SDPatternOperator node> {
+  dag src0 = !if(P.HasOMod,
+    (VOP3Mods0 P.Src0VT:$src0, i32:$src0_modifiers, i1:$clamp, i32:$omod),
+    (VOP3Mods0 P.Src0VT:$src0, i32:$src0_modifiers, i1:$clamp));
+
   list<dag> ret3 = [(set P.DstVT:$vdst,
-    (node (P.Src0VT (VOP3Mods0 P.Src0VT:$src0, i32:$src0_modifiers, i1:$clamp, i32:$omod)),
+    (node (P.Src0VT src0),
           (P.Src1VT (VOP3Mods P.Src1VT:$src1, i32:$src1_modifiers)),
           (P.Src2VT (VOP3Mods P.Src2VT:$src2, i32:$src2_modifiers))))];
 
   list<dag> ret2 = [(set P.DstVT:$vdst,
-    (node (P.Src0VT (VOP3Mods0 P.Src0VT:$src0, i32:$src0_modifiers, i1:$clamp, i32:$omod)),
+    (node (P.Src0VT src0),
           (P.Src1VT (VOP3Mods P.Src1VT:$src1, i32:$src1_modifiers))))];
 
   list<dag> ret1 = [(set P.DstVT:$vdst,
-    (node (P.Src0VT (VOP3Mods0 P.Src0VT:$src0, i32:$src0_modifiers, i1:$clamp, i32:$omod))))];
+    (node (P.Src0VT src0)))];
 
   list<dag> ret = !if(!eq(P.NumSrcArgs, 3), ret3,
                   !if(!eq(P.NumSrcArgs, 2), ret2,
@@ -92,6 +96,7 @@ class VOP3_Profile<VOPProfile P> : VOPProfile<P.ArgVT> {
 class VOP3b_Profile<ValueType vt> : VOPProfile<[vt, vt, vt, vt]> {
   // v_div_scale_{f32|f64} do not support input modifiers.
   let HasModifiers = 0;
+  let HasOMod = 0;
   let Outs64 = (outs DstRC:$vdst, SReg_64:$sdst);
   let Asm64 = " $vdst, $sdst, $src0, $src1, $src2";
 }

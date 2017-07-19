@@ -1895,7 +1895,7 @@ public:
   }
 };
 
-/// \brief This represents '#pragma omp taskgroup' directive.
+/// This represents '#pragma omp taskgroup' directive.
 ///
 /// \code
 /// #pragma omp taskgroup
@@ -1903,39 +1903,45 @@ public:
 ///
 class OMPTaskgroupDirective : public OMPExecutableDirective {
   friend class ASTStmtReader;
-  /// \brief Build directive with the given start and end location.
+  /// Build directive with the given start and end location.
   ///
   /// \param StartLoc Starting location of the directive kind.
   /// \param EndLoc Ending location of the directive.
+  /// \param NumClauses Number of clauses.
   ///
-  OMPTaskgroupDirective(SourceLocation StartLoc, SourceLocation EndLoc)
+  OMPTaskgroupDirective(SourceLocation StartLoc, SourceLocation EndLoc,
+                        unsigned NumClauses)
       : OMPExecutableDirective(this, OMPTaskgroupDirectiveClass, OMPD_taskgroup,
-                               StartLoc, EndLoc, 0, 1) {}
+                               StartLoc, EndLoc, NumClauses, 1) {}
 
-  /// \brief Build an empty directive.
+  /// Build an empty directive.
+  /// \param NumClauses Number of clauses.
   ///
-  explicit OMPTaskgroupDirective()
+  explicit OMPTaskgroupDirective(unsigned NumClauses)
       : OMPExecutableDirective(this, OMPTaskgroupDirectiveClass, OMPD_taskgroup,
-                               SourceLocation(), SourceLocation(), 0, 1) {}
+                               SourceLocation(), SourceLocation(), NumClauses,
+                               1) {}
 
 public:
-  /// \brief Creates directive.
+  /// Creates directive.
   ///
   /// \param C AST context.
   /// \param StartLoc Starting location of the directive kind.
   /// \param EndLoc Ending Location of the directive.
+  /// \param Clauses List of clauses.
   /// \param AssociatedStmt Statement, associated with the directive.
   ///
-  static OMPTaskgroupDirective *Create(const ASTContext &C,
-                                       SourceLocation StartLoc,
-                                       SourceLocation EndLoc,
-                                       Stmt *AssociatedStmt);
+  static OMPTaskgroupDirective *
+  Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
+         ArrayRef<OMPClause *> Clauses, Stmt *AssociatedStmt);
 
-  /// \brief Creates an empty directive.
+  /// Creates an empty directive.
   ///
   /// \param C AST context.
+  /// \param NumClauses Number of clauses.
   ///
-  static OMPTaskgroupDirective *CreateEmpty(const ASTContext &C, EmptyShell);
+  static OMPTaskgroupDirective *CreateEmpty(const ASTContext &C,
+                                            unsigned NumClauses, EmptyShell);
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == OMPTaskgroupDirectiveClass;

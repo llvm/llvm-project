@@ -569,11 +569,25 @@ struct SemiNCAInfo {
     assert(From && To && "Cannot disconnect nullptrs");
     DEBUG(dbgs() << "Deleting edge " << BlockNamePrinter(From) << " -> "
                  << BlockNamePrinter(To) << "\n");
+
+#ifndef NDEBUG
+    // Ensure that the edge was in fact deleted from the CFG before informing
+    // the DomTree about it.
+    // The check is O(N), so run it only in debug configuration.
+    auto IsSuccessor = [](const NodePtr SuccCandidate, const NodePtr Of) {
+      auto Successors = ChildrenGetter<NodePtr, IsPostDom>::Get(Of);
+      return llvm::find(Successors, SuccCandidate) != Successors.end();
+    };
+    (void)IsSuccessor;
+    assert(!IsSuccessor(To, From) && "Deleted edge still exists in the CFG!");
+#endif
+
     const TreeNodePtr FromTN = DT.getNode(From);
     // Deletion in an unreachable subtree -- nothing to do.
     if (!FromTN) return;
 
     const TreeNodePtr ToTN = DT.getNode(To);
+    assert(ToTN && "To already unreachable -- there is no edge to delete");
     const NodePtr NCDBlock = DT.findNearestCommonDominator(From, To);
     const TreeNodePtr NCD = DT.getNode(NCDBlock);
 

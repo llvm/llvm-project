@@ -168,6 +168,9 @@
 #ifndef OPENMP_TARGET_TEAMS_DISTRIBUTE_SIMD_CLAUSE
 #define OPENMP_TARGET_TEAMS_DISTRIBUTE_SIMD_CLAUSE(Name)
 #endif
+#ifndef OPENMP_TASKGROUP_CLAUSE
+#define OPENMP_TASKGROUP_CLAUSE(Name)
+#endif
 
 // OpenMP directives.
 OPENMP_DIRECTIVE(threadprivate)
@@ -270,6 +273,7 @@ OPENMP_CLAUSE(to, OMPToClause)
 OPENMP_CLAUSE(from, OMPFromClause)
 OPENMP_CLAUSE(use_device_ptr, OMPUseDevicePtrClause)
 OPENMP_CLAUSE(is_device_ptr, OMPIsDevicePtrClause)
+OPENMP_CLAUSE(task_reduction,  OMPTaskReductionClause)
 
 // Clauses allowed for OpenMP directive 'parallel'.
 OPENMP_PARALLEL_CLAUSE(if)
@@ -848,6 +852,10 @@ OPENMP_TARGET_TEAMS_DISTRIBUTE_SIMD_CLAUSE(aligned)
 OPENMP_TARGET_TEAMS_DISTRIBUTE_SIMD_CLAUSE(safelen)
 OPENMP_TARGET_TEAMS_DISTRIBUTE_SIMD_CLAUSE(simdlen)
 
+// Clauses allowed for OpenMP directive 'taskgroup'.
+OPENMP_TASKGROUP_CLAUSE(task_reduction)
+
+#undef OPENMP_TASKGROUP_CLAUSE
 #undef OPENMP_TASKLOOP_SIMD_CLAUSE
 #undef OPENMP_TASKLOOP_CLAUSE
 #undef OPENMP_LINEAR_KIND

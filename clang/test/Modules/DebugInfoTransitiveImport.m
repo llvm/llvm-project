@@ -12,9 +12,9 @@
 
 // Definition of left:
 // CHECK: !DICompileUnit({{.*}}dwoId:
-// CHECK: !DIFile({{.*}}diamond_left
+// CHECK: ![[LEFT:[0-9]+]] = !DIFile({{.*}}diamond_left.h
 // CHECK: !DIImportedEntity(tag: DW_TAG_imported_declaration,
-// CHECK-SAME:              entity: ![[MODULE:.*]], line: 3)
+// CHECK-SAME:              entity: ![[MODULE:.*]], file: ![[LEFT]], line: 3)
 // CHECK: ![[MODULE]] = !DIModule(scope: null, name: "diamond_top"
 
 // Skeleton for top:

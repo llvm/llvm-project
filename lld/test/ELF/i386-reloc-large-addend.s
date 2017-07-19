@@ -1,3 +1,4 @@
+// REQUIRES: x86
 // RUN: llvm-mc %s -o %t.o -triple i386-pc-linux-code16 -filetype=obj
 
 // RUN: echo ".global foo; foo = 0x1" > %t1.s

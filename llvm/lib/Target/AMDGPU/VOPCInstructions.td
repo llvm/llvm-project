@@ -148,6 +148,19 @@ class VOPCInstAlias <VOP3_Pseudo ps, Instruction inst, VOPProfile p = ps.Pfl> :
   let SubtargetPredicate = AssemblerPredicate;
 }
 
+class getVOPCPat64 <PatLeaf cond, VOPProfile P> : LetDummies {
+  list<dag> ret = !if(P.HasModifiers,
+      [(set i1:$sdst,
+        (setcc (P.Src0VT
+                  !if(P.HasOMod,
+                    (VOP3Mods0 P.Src0VT:$src0, i32:$src0_modifiers, i1:$clamp, i32:$omod),
+                    (VOP3Mods0 P.Src0VT:$src0, i32:$src0_modifiers, i1:$clamp))),
+               (P.Src1VT (VOP3Mods P.Src1VT:$src1, i32:$src1_modifiers)),
+               cond))],
+      [(set i1:$sdst, (setcc P.Src0VT:$src0, P.Src1VT:$src1, cond))]);
+}
+
+
 multiclass VOPC_Pseudos <string opName,
                          VOPC_Profile P,
                          PatLeaf cond = COND_NULL,
@@ -163,14 +176,7 @@ multiclass VOPC_Pseudos <string opName,
     let isCommutable = 1;
   }
 
-  def _e64 : VOP3_Pseudo<opName, P,
-    !if(P.HasModifiers,
-      [(set i1:$sdst,
-          (setcc (P.Src0VT (VOP3Mods0 P.Src0VT:$src0, i32:$src0_modifiers,
-                                      i1:$clamp, i32:$omod)),
-                 (P.Src1VT (VOP3Mods P.Src1VT:$src1, i32:$src1_modifiers)),
-                 cond))],
-      [(set i1:$sdst, (setcc P.Src0VT:$src0, P.Src1VT:$src1, cond))])>,
+  def _e64 : VOP3_Pseudo<opName, P, getVOPCPat64<cond, P>.ret>,
     Commutable_REV<revOp#"_e64", !eq(revOp, opName)> {
     let Defs = !if(DefExec, [EXEC], []);
     let SchedRW = P.Schedule;
@@ -634,7 +640,7 @@ class FCMP_Pattern <PatLeaf cond, Instruction inst, ValueType vt> : Pat <
   (i64 (AMDGPUsetcc (vt (VOP3Mods vt:$src0, i32:$src0_modifiers)),
                    (vt (VOP3Mods vt:$src1, i32:$src1_modifiers)), cond)),
   (inst $src0_modifiers, $src0, $src1_modifiers, $src1,
-        DSTCLAMP.NONE, DSTOMOD.NONE)
+        DSTCLAMP.NONE)
 >;
 
 def : FCMP_Pattern <COND_OEQ, V_CMP_EQ_F32_e64, f32>;

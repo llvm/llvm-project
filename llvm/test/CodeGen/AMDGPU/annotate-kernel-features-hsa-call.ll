@@ -250,9 +250,48 @@ define void @func_indirect_use_implicitarg_ptr() #1 {
   ret void
 }
 
+; HSA: declare void @external.func() #15
+declare void @external.func() #3
+
+; HSA: define internal void @defined.func() #15 {
+define internal void @defined.func() #3 {
+  ret void
+}
+
+; HSA: define void @func_call_external() #15 {
+define void @func_call_external() #3 {
+  call void @external.func()
+  ret void
+}
+
+; HSA: define void @func_call_defined() #15 {
+define void @func_call_defined() #3 {
+  call void @defined.func()
+  ret void
+}
+
+; HSA: define void @func_call_asm() #15 {
+define void @func_call_asm() #3 {
+  call void asm sideeffect "", ""() #3
+  ret void
+}
+
+; HSA: define amdgpu_kernel void @kern_call_external() #16 {
+define amdgpu_kernel void @kern_call_external() #3 {
+  call void @external.func()
+  ret void
+}
+
+; HSA: define amdgpu_kernel void @func_kern_defined() #16 {
+define amdgpu_kernel void @func_kern_defined() #3 {
+  call void @defined.func()
+  ret void
+}
+
 attributes #0 = { nounwind readnone speculatable }
 attributes #1 = { nounwind "target-cpu"="fiji" }
 attributes #2 = { nounwind "target-cpu"="gfx900" }
+attributes #3 = { nounwind }
 
 ; HSA: attributes #0 = { nounwind readnone speculatable }
 ; HSA: attributes #1 = { nounwind "amdgpu-work-item-id-x" "target-cpu"="fiji" }
@@ -269,3 +308,5 @@ attributes #2 = { nounwind "target-cpu"="gfx900" }
 ; HSA: attributes #12 = { nounwind "target-cpu"="gfx900" }
 ; HSA: attributes #13 = { nounwind "amdgpu-queue-ptr" "target-cpu"="gfx900" }
 ; HSA: attributes #14 = { nounwind "amdgpu-kernarg-segment-ptr" "target-cpu"="fiji" }
+; HSA: attributes #15 = { nounwind }
+; HSA: attributes #16 = { nounwind "amdgpu-flat-scratch" }

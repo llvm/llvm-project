@@ -109,4 +109,24 @@ The flags -polly-import and -polly-export allow the export and reimport of the
 polyhedral representation. By exporting, modifying and reimporting the
 polyhedral representation externally calculated transformations can be
 applied. This enables external optimizers or the manual optimization of
-specific SCoPs. 
+specific SCoPs.
+
+Viewing Polly Diagnostics with opt-viewer
+-----------------------------------------
+
+The flag -fsave-optimization-record will generate .opt.yaml files when compiling
+your program. These yaml files contain information about each emitted remark.
+Ensure that you have Python 2.7 with PyYaml and Pygments Python Packages.
+To run opt-viewer:
+
+.. code-block:: console
+
+   llvm/tools/opt-viewer/opt-viewer.py -source-dir /path/to/program/src/ \
+      /path/to/program/src/foo.opt.yaml \
+      /path/to/program/src/bar.opt.yaml \
+      -o ./output
+
+Include all yaml files (use *.opt.yaml when specifying which yaml files to view)
+to view all diagnostics from your program in opt-viewer. Compile with `PGO
+<https://clang.llvm.org/docs/UsersManual.html#profiling-with-instrumentation>` to view
+Hotness information in opt-viewer. Resulting html files can be viewed in an internet browser.
