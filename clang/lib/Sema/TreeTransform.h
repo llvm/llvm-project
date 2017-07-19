@@ -1651,6 +1651,21 @@ public:
         ReductionId, UnresolvedReductions);
   }
 
+  /// Build a new OpenMP 'task_reduction' clause.
+  ///
+  /// By default, performs semantic analysis to build the new statement.
+  /// Subclasses may override this routine to provide different behavior.
+  OMPClause *RebuildOMPTaskReductionClause(
+      ArrayRef<Expr *> VarList, SourceLocation StartLoc,
+      SourceLocation LParenLoc, SourceLocation ColonLoc, SourceLocation EndLoc,
+      CXXScopeSpec &ReductionIdScopeSpec,
+      const DeclarationNameInfo &ReductionId,
+      ArrayRef<Expr *> UnresolvedReductions) {
+    return getSema().ActOnOpenMPTaskReductionClause(
+        VarList, StartLoc, LParenLoc, ColonLoc, EndLoc, ReductionIdScopeSpec,
+        ReductionId, UnresolvedReductions);
+  }
+
   /// \brief Build a new OpenMP 'linear' clause.
   ///
   /// By default, performs semantic analysis to build the new OpenMP clause.
@@ -8395,6 +8410,51 @@ TreeTransform<Derived>::TransformOMPReductionClause(OMPReductionClause *C) {
       UnresolvedReductions.push_back(nullptr);
   }
   return getDerived().RebuildOMPReductionClause(
+      Vars, C->getLocStart(), C->getLParenLoc(), C->getColonLoc(),
+      C->getLocEnd(), ReductionIdScopeSpec, NameInfo, UnresolvedReductions);
+}
+
+template <typename Derived>
+OMPClause *TreeTransform<Derived>::TransformOMPTaskReductionClause(
+    OMPTaskReductionClause *C) {
+  llvm::SmallVector<Expr *, 16> Vars;
+  Vars.reserve(C->varlist_size());
+  for (auto *VE : C->varlists()) {
+    ExprResult EVar = getDerived().TransformExpr(cast<Expr>(VE));
+    if (EVar.isInvalid())
+      return nullptr;
+    Vars.push_back(EVar.get());
+  }
+  CXXScopeSpec ReductionIdScopeSpec;
+  ReductionIdScopeSpec.Adopt(C->getQualifierLoc());
+
+  DeclarationNameInfo NameInfo = C->getNameInfo();
+  if (NameInfo.getName()) {
+    NameInfo = getDerived().TransformDeclarationNameInfo(NameInfo);
+    if (!NameInfo.getName())
+      return nullptr;
+  }
+  // Build a list of all UDR decls with the same names ranged by the Scopes.
+  // The Scope boundary is a duplication of the previous decl.
+  llvm::SmallVector<Expr *, 16> UnresolvedReductions;
+  for (auto *E : C->reduction_ops()) {
+    // Transform all the decls.
+    if (E) {
+      auto *ULE = cast<UnresolvedLookupExpr>(E);
+      UnresolvedSet<8> Decls;
+      for (auto *D : ULE->decls()) {
+        NamedDecl *InstD =
+            cast<NamedDecl>(getDerived().TransformDecl(E->getExprLoc(), D));
+        Decls.addDecl(InstD, InstD->getAccess());
+      }
+      UnresolvedReductions.push_back(UnresolvedLookupExpr::Create(
+          SemaRef.Context, /*NamingClass=*/nullptr,
+          ReductionIdScopeSpec.getWithLocInContext(SemaRef.Context), NameInfo,
+          /*ADL=*/true, ULE->isOverloaded(), Decls.begin(), Decls.end()));
+    } else
+      UnresolvedReductions.push_back(nullptr);
+  }
+  return getDerived().RebuildOMPTaskReductionClause(
       Vars, C->getLocStart(), C->getLParenLoc(), C->getColonLoc(),
       C->getLocEnd(), ReductionIdScopeSpec, NameInfo, UnresolvedReductions);
 }

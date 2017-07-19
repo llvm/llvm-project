@@ -3970,10 +3970,10 @@ void CGDebugInfo::EmitUsingDirective(const UsingDirectiveDecl &UD) {
   const NamespaceDecl *NSDecl = UD.getNominatedNamespace();
   if (!NSDecl->isAnonymousNamespace() ||
       CGM.getCodeGenOpts().DebugExplicitImport) {
+    auto Loc = UD.getLocation();
     DBuilder.createImportedModule(
         getCurrentContextDescriptor(cast<Decl>(UD.getDeclContext())),
-        getOrCreateNamespace(NSDecl),
-        getLineNumber(UD.getLocation()));
+        getOrCreateNamespace(NSDecl), getOrCreateFile(Loc), getLineNumber(Loc));
   }
 }
 
@@ -3996,10 +3996,12 @@ void CGDebugInfo::EmitUsingDecl(const UsingDecl &UD) {
       if (AT->getDeducedType().isNull())
         return;
   if (llvm::DINode *Target =
-          getDeclarationOrDefinition(USD.getUnderlyingDecl()))
+          getDeclarationOrDefinition(USD.getUnderlyingDecl())) {
+    auto Loc = USD.getLocation();
     DBuilder.createImportedDeclaration(
         getCurrentContextDescriptor(cast<Decl>(USD.getDeclContext())), Target,
-        getLineNumber(USD.getLocation()));
+        getOrCreateFile(Loc), getLineNumber(Loc));
+  }
 }
 
 void CGDebugInfo::EmitImportDecl(const ImportDecl &ID) {
@@ -4007,10 +4009,11 @@ void CGDebugInfo::EmitImportDecl(const ImportDecl &ID) {
     return;
   if (Module *M = ID.getImportedModule()) {
     auto Info = ExternalASTSource::ASTSourceDescriptor(*M);
+    auto Loc = ID.getLocation();
     DBuilder.createImportedDeclaration(
         getCurrentContextDescriptor(cast<Decl>(ID.getDeclContext())),
-        getOrCreateModuleRef(Info, DebugTypeExtRefs),
-        getLineNumber(ID.getLocation()));
+        getOrCreateModuleRef(Info, DebugTypeExtRefs), getOrCreateFile(Loc),
+        getLineNumber(Loc));
   }
 }
 
@@ -4022,18 +4025,19 @@ CGDebugInfo::EmitNamespaceAlias(const NamespaceAliasDecl &NA) {
   if (VH)
     return cast<llvm::DIImportedEntity>(VH);
   llvm::DIImportedEntity *R;
+  auto Loc = NA.getLocation();
   if (const auto *Underlying =
           dyn_cast<NamespaceAliasDecl>(NA.getAliasedNamespace()))
     // This could cache & dedup here rather than relying on metadata deduping.
     R = DBuilder.createImportedDeclaration(
         getCurrentContextDescriptor(cast<Decl>(NA.getDeclContext())),
-        EmitNamespaceAlias(*Underlying), getLineNumber(NA.getLocation()),
-        NA.getName());
+        EmitNamespaceAlias(*Underlying), getOrCreateFile(Loc),
+        getLineNumber(Loc), NA.getName());
   else
     R = DBuilder.createImportedDeclaration(
         getCurrentContextDescriptor(cast<Decl>(NA.getDeclContext())),
         getOrCreateNamespace(cast<NamespaceDecl>(NA.getAliasedNamespace())),
-        getLineNumber(NA.getLocation()), NA.getName());
+        getOrCreateFile(Loc), getLineNumber(Loc), NA.getName());
   VH.reset(R);
   return R;
 }

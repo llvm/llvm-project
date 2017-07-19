@@ -4499,18 +4499,19 @@ void CodeGenModule::getFunctionFeatureMap(llvm::StringMap<bool> &FeatureMap,
 
     // Make a copy of the features as passed on the command line into the
     // beginning of the additional features from the function to override.
-    ParsedAttr.first.insert(ParsedAttr.first.begin(),
+    ParsedAttr.Features.insert(ParsedAttr.Features.begin(),
                             Target.getTargetOpts().FeaturesAsWritten.begin(),
                             Target.getTargetOpts().FeaturesAsWritten.end());
 
-    if (ParsedAttr.second != "")
-      TargetCPU = ParsedAttr.second;
+    if (ParsedAttr.Architecture != "")
+      TargetCPU = ParsedAttr.Architecture ;
 
     // Now populate the feature map, first with the TargetCPU which is either
     // the default or a new one from the target attribute string. Then we'll use
     // the passed in features (FeaturesAsWritten) along with the new ones from
     // the attribute.
-    Target.initFeatureMap(FeatureMap, getDiags(), TargetCPU, ParsedAttr.first);
+    Target.initFeatureMap(FeatureMap, getDiags(), TargetCPU,
+                          ParsedAttr.Features);
   } else {
     Target.initFeatureMap(FeatureMap, getDiags(), TargetCPU,
                           Target.getTargetOpts().Features);

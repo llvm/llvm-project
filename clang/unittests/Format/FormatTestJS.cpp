@@ -1464,6 +1464,17 @@ TEST_F(FormatTestJS, ImportWrapping) {
                "  A,\n"
                "} from 'some/module.js';",
                Style);
+  Style.ColumnLimit = 40;
+  // Using this version of verifyFormat because test::messUp hides the issue.
+  verifyFormat("import {\n"
+               "  A,\n"
+               "} from\n"
+               "    'some/path/longer/than/column/limit/module.js';",
+               " import  {  \n"
+               "    A,  \n"
+               "  }    from\n"
+               "      'some/path/longer/than/column/limit/module.js'  ; ",
+               Style);
 }
 
 TEST_F(FormatTestJS, TemplateStrings) {

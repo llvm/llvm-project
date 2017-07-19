@@ -46,6 +46,8 @@ const OMPClauseWithPreInit *OMPClauseWithPreInit::get(const OMPClause *C) {
     return static_cast<const OMPLastprivateClause *>(C);
   case OMPC_reduction:
     return static_cast<const OMPReductionClause *>(C);
+  case OMPC_task_reduction:
+    return static_cast<const OMPTaskReductionClause *>(C);
   case OMPC_linear:
     return static_cast<const OMPLinearClause *>(C);
   case OMPC_if:
@@ -112,6 +114,8 @@ const OMPClauseWithPostUpdate *OMPClauseWithPostUpdate::get(const OMPClause *C) 
     return static_cast<const OMPLastprivateClause *>(C);
   case OMPC_reduction:
     return static_cast<const OMPReductionClause *>(C);
+  case OMPC_task_reduction:
+    return static_cast<const OMPTaskReductionClause *>(C);
   case OMPC_linear:
     return static_cast<const OMPLinearClause *>(C);
   case OMPC_schedule:
@@ -503,6 +507,59 @@ OMPReductionClause *OMPReductionClause::CreateEmpty(const ASTContext &C,
                                                     unsigned N) {
   void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(5 * N));
   return new (Mem) OMPReductionClause(N);
+}
+
+void OMPTaskReductionClause::setPrivates(ArrayRef<Expr *> Privates) {
+  assert(Privates.size() == varlist_size() &&
+         "Number of private copies is not the same as the preallocated buffer");
+  std::copy(Privates.begin(), Privates.end(), varlist_end());
+}
+
+void OMPTaskReductionClause::setLHSExprs(ArrayRef<Expr *> LHSExprs) {
+  assert(
+      LHSExprs.size() == varlist_size() &&
+      "Number of LHS expressions is not the same as the preallocated buffer");
+  std::copy(LHSExprs.begin(), LHSExprs.end(), getPrivates().end());
+}
+
+void OMPTaskReductionClause::setRHSExprs(ArrayRef<Expr *> RHSExprs) {
+  assert(
+      RHSExprs.size() == varlist_size() &&
+      "Number of RHS expressions is not the same as the preallocated buffer");
+  std::copy(RHSExprs.begin(), RHSExprs.end(), getLHSExprs().end());
+}
+
+void OMPTaskReductionClause::setReductionOps(ArrayRef<Expr *> ReductionOps) {
+  assert(ReductionOps.size() == varlist_size() && "Number of task reduction "
+                                                  "expressions is not the same "
+                                                  "as the preallocated buffer");
+  std::copy(ReductionOps.begin(), ReductionOps.end(), getRHSExprs().end());
+}
+
+OMPTaskReductionClause *OMPTaskReductionClause::Create(
+    const ASTContext &C, SourceLocation StartLoc, SourceLocation LParenLoc,
+    SourceLocation EndLoc, SourceLocation ColonLoc, ArrayRef<Expr *> VL,
+    NestedNameSpecifierLoc QualifierLoc, const DeclarationNameInfo &NameInfo,
+    ArrayRef<Expr *> Privates, ArrayRef<Expr *> LHSExprs,
+    ArrayRef<Expr *> RHSExprs, ArrayRef<Expr *> ReductionOps, Stmt *PreInit,
+    Expr *PostUpdate) {
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(5 * VL.size()));
+  OMPTaskReductionClause *Clause = new (Mem) OMPTaskReductionClause(
+      StartLoc, LParenLoc, EndLoc, ColonLoc, VL.size(), QualifierLoc, NameInfo);
+  Clause->setVarRefs(VL);
+  Clause->setPrivates(Privates);
+  Clause->setLHSExprs(LHSExprs);
+  Clause->setRHSExprs(RHSExprs);
+  Clause->setReductionOps(ReductionOps);
+  Clause->setPreInitStmt(PreInit);
+  Clause->setPostUpdateExpr(PostUpdate);
+  return Clause;
+}
+
+OMPTaskReductionClause *OMPTaskReductionClause::CreateEmpty(const ASTContext &C,
+                                                            unsigned N) {
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(5 * N));
+  return new (Mem) OMPTaskReductionClause(N);
 }
 
 OMPFlushClause *OMPFlushClause::Create(const ASTContext &C,

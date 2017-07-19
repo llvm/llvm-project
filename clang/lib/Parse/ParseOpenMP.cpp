@@ -1102,7 +1102,7 @@ bool Parser::ParseOpenMPSimpleVarList(
 ///       simdlen-clause | threads-clause | simd-clause | num_teams-clause |
 ///       thread_limit-clause | priority-clause | grainsize-clause |
 ///       nogroup-clause | num_tasks-clause | hint-clause | to-clause |
-///       from-clause | is_device_ptr-clause
+///       from-clause | is_device_ptr-clause | task_reduction-clause
 ///
 OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
                                      OpenMPClauseKind CKind, bool FirstClause) {
@@ -1220,6 +1220,7 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
   case OMPC_lastprivate:
   case OMPC_shared:
   case OMPC_reduction:
+  case OMPC_task_reduction:
   case OMPC_linear:
   case OMPC_aligned:
   case OMPC_copyin:
@@ -1585,7 +1586,7 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
   BalancedDelimiterTracker LinearT(*this, tok::l_paren,
                                   tok::annot_pragma_openmp_end);
   // Handle reduction-identifier for reduction clause.
-  if (Kind == OMPC_reduction) {
+  if (Kind == OMPC_reduction || Kind == OMPC_task_reduction) {
     ColonProtectionRAIIObject ColonRAII(*this);
     if (getLangOpts().CPlusPlus)
       ParseOptionalCXXScopeSpecifier(Data.ReductionIdScopeSpec,
@@ -1733,13 +1734,13 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
       Diag(Tok, diag::warn_pragma_expected_colon) << "map type";
   }
 
-  bool IsComma =
-      (Kind != OMPC_reduction && Kind != OMPC_depend && Kind != OMPC_map) ||
-      (Kind == OMPC_reduction && !InvalidReductionId) ||
-      (Kind == OMPC_map && Data.MapType != OMPC_MAP_unknown &&
-       (!MapTypeModifierSpecified ||
-        Data.MapTypeModifier == OMPC_MAP_always)) ||
-      (Kind == OMPC_depend && Data.DepKind != OMPC_DEPEND_unknown);
+  bool IsComma = (Kind != OMPC_reduction && Kind != OMPC_task_reduction &&
+                  Kind != OMPC_depend && Kind != OMPC_map) ||
+                 (Kind == OMPC_reduction && !InvalidReductionId) ||
+                 (Kind == OMPC_map && Data.MapType != OMPC_MAP_unknown &&
+                  (!MapTypeModifierSpecified ||
+                   Data.MapTypeModifier == OMPC_MAP_always)) ||
+                 (Kind == OMPC_depend && Data.DepKind != OMPC_DEPEND_unknown);
   const bool MayHaveTail = (Kind == OMPC_linear || Kind == OMPC_aligned);
   while (IsComma || (Tok.isNot(tok::r_paren) && Tok.isNot(tok::colon) &&
                      Tok.isNot(tok::annot_pragma_openmp_end))) {
@@ -1795,7 +1796,7 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
 }
 
 /// \brief Parsing of OpenMP clause 'private', 'firstprivate', 'lastprivate',
-/// 'shared', 'copyin', 'copyprivate', 'flush' or 'reduction'.
+/// 'shared', 'copyin', 'copyprivate', 'flush', 'reduction' or 'task_reduction'.
 ///
 ///    private-clause:
 ///       'private' '(' list ')'
@@ -1811,6 +1812,8 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
 ///       'aligned' '(' list [ ':' alignment ] ')'
 ///    reduction-clause:
 ///       'reduction' '(' reduction-identifier ':' list ')'
+///    task_reduction-clause:
+///       'task_reduction' '(' reduction-identifier ':' list ')'
 ///    copyprivate-clause:
 ///       'copyprivate' '(' list ')'
 ///    flush-clause:
