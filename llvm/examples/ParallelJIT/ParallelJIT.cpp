@@ -145,6 +145,7 @@ public:
     waitFor = 0;
 
     int result = pthread_cond_init( &condition, nullptr );
+    (void)result;
     assert( result == 0 );
 
     result = pthread_mutex_init( &mutex, nullptr );
