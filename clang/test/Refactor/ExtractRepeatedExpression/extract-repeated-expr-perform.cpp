@@ -45,12 +45,12 @@ void takesClass2(AWrapper &ref) {
     ref.object(x).constMethod();
   ref.object(x).method();
 }
-// CHECK3: "AClass &object = ref.object(x);\n" [[@LINE-4]]:3 -> [[@LINE-4]]:3
-// CHECK3-NEXT: "object" [[@LINE-4]]:5 -> [[@LINE-4]]:18
-// CHECK3-NEXT: "object" [[@LINE-4]]:3 -> [[@LINE-4]]:16
+// CHECK3: "AClass &object = ref.object(x);\n" [[@LINE-4]]:3 -> [[@LINE-4]]:3 [Symbol extracted-decl 0 1:9 -> 1:15]
+// CHECK3-NEXT: "object" [[@LINE-4]]:5 -> [[@LINE-4]]:18 [Symbol extracted-decl-ref 0 1:1 -> 1:7]
+// CHECK3-NEXT: "object" [[@LINE-4]]:3 -> [[@LINE-4]]:16 [Symbol extracted-decl-ref 0 1:1 -> 1:7]
 
-// RUN: clang-refactor-test perform -action extract-repeated-expr-into-var -at=%s:45:5 %s | FileCheck --check-prefix=CHECK3 %s
-// RUN: clang-refactor-test perform -action extract-repeated-expr-into-var -at=%s:46:3 %s | FileCheck --check-prefix=CHECK3 %s
+// RUN: clang-refactor-test perform -action extract-repeated-expr-into-var -at=%s:45:5 -emit-associated %s | FileCheck --check-prefix=CHECK3 %s
+// RUN: clang-refactor-test perform -action extract-repeated-expr-into-var -at=%s:46:3 -emit-associated %s | FileCheck --check-prefix=CHECK3 %s
 
 void takesClass4(AWrapper &ref) {
   int x = 0;
