@@ -6504,8 +6504,8 @@ def warn_overaligned_type : Warning<
   "guarantees %2 bytes">,
   InGroup<OveralignedType>, DefaultIgnore;
 def warn_aligned_allocation_unavailable :Warning<
-  "aligned %select{allocation|deallocation}0 function of type '%1' possibly "
-  "unavailable on %2">, InGroup<AlignedAllocationUnavailable>, DefaultError;
+  "aligned %select{allocation|deallocation}0 function of type '%1' is only "
+  "available on %2 %3 or newer">, InGroup<AlignedAllocationUnavailable>, DefaultError;
 def note_silence_unligned_allocation_unavailable : Note<
   "if you supply your own aligned allocation functions, use "
   "-Wno-aligned-allocation-unavailable to silence this diagnostic">;

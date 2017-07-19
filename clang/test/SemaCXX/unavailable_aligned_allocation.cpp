@@ -1,6 +1,12 @@
 // RUN: %clang_cc1 -triple x86_64-apple-macosx10.12.0 -fexceptions -faligned-alloc-unavailable -std=c++1z -verify %s
 // RUN: %clang_cc1 -triple x86_64-apple-macosx10.12.0 -fexceptions -std=c++1z -verify -DNO_ERRORS %s
 // RUN: %clang_cc1 -triple x86_64-apple-macosx10.12.0 -fexceptions -faligned-allocation -faligned-alloc-unavailable -std=c++14 -verify %s
+// RUN: %clang_cc1 -triple arm64-apple-ios10.0.0 -fexceptions -faligned-alloc-unavailable -std=c++1z -verify -DIOS %s
+// RUN: %clang_cc1 -triple arm64-apple-ios10.0.0 -fexceptions -std=c++1z -verify -DNO_ERRORS %s
+// RUN: %clang_cc1 -triple arm64-apple-tvos10.0.0 -fexceptions -faligned-alloc-unavailable -std=c++1z -verify -DTVOS %s
+// RUN: %clang_cc1 -triple arm64-apple-tvos10.0.0 -fexceptions -std=c++1z -verify -DNO_ERRORS %s
+// RUN: %clang_cc1 -triple armv7k-apple-watchos3.0.0 -fexceptions -faligned-alloc-unavailable -std=c++1z -verify -DWATCHOS %s
+// RUN: %clang_cc1 -triple armv7k-apple-watchos3.0.0 -fexceptions -std=c++1z -verify -DNO_ERRORS %s
 
 namespace std {
   typedef decltype(sizeof(0)) size_t;
@@ -56,42 +62,66 @@ void testOveraligned() {
 #ifdef NO_ERRORS
 // expected-no-diagnostics
 #else
-// expected-error@-16 {{aligned allocation function of type 'void *(unsigned long, enum std::align_val_t)' possibly unavailable on}}
+// expected-error@-16 {{aligned allocation function of type 'void *(unsigned long, enum std::align_val_t)' is only available on}}
 // expected-note@-17 {{if you supply your own aligned allocation functions}}
-// expected-error@-18 {{aligned deallocation function of type 'void (void *, enum std::align_val_t) noexcept' possibly unavailable on}}
+// expected-error@-18 {{aligned deallocation function of type 'void (void *, enum std::align_val_t) noexcept' is only available on}}
 // expected-note@-19 {{if you supply your own aligned allocation functions}}
 
-// expected-error@-20 {{aligned allocation function of type 'void *(unsigned long, enum std::align_val_t)' possibly unavailable on}}
+// expected-error@-20 {{aligned allocation function of type 'void *(unsigned long, enum std::align_val_t)' is only available on}}
 // expected-note@-21 {{if you supply your own aligned allocation functions}}
-// expected-error@-22 {{aligned deallocation function of type 'void (void *, enum std::align_val_t) noexcept' possibly unavailable on}}
+// expected-error@-22 {{aligned deallocation function of type 'void (void *, enum std::align_val_t) noexcept' is only available on}}
 // expected-note@-23 {{if you supply your own aligned allocation functions}}
 
-// expected-error@-24 {{aligned deallocation function of type 'void (void *, enum std::align_val_t) noexcept' possibly unavailable on}}
+// expected-error@-24 {{aligned deallocation function of type 'void (void *, enum std::align_val_t) noexcept' is only available on}}
 // expected-note@-25 {{if you supply your own aligned allocation functions}}
 
-// expected-error@-26 {{aligned allocation function of type 'void *(std::size_t, std::align_val_t, const std::nothrow_t &) noexcept' possibly unavailable on}}
+// expected-error@-26 {{aligned allocation function of type 'void *(std::size_t, std::align_val_t, const std::nothrow_t &) noexcept' is only available on}}
 // expected-note@-27 {{if you supply your own aligned allocation functions}}
-// expected-error@-28 {{aligned deallocation function of type 'void (void *, std::align_val_t, const std::nothrow_t &) noexcept' possibly unavailable on}}
+// expected-error@-28 {{aligned deallocation function of type 'void (void *, std::align_val_t, const std::nothrow_t &) noexcept' is only available on}}
 // expected-note@-29 {{if you supply your own aligned allocation functions}}
 
-// expected-error@-29 {{aligned allocation function of type 'void *(unsigned long, enum std::align_val_t)' possibly unavailable on}}
+// expected-error@-29 {{aligned allocation function of type 'void *(unsigned long, enum std::align_val_t)' is only available on}}
 // expected-note@-30 {{if you supply your own aligned allocation functions}}
-// expected-error@-31 {{aligned deallocation function of type 'void (void *, enum std::align_val_t) noexcept' possibly unavailable on}}
+// expected-error@-31 {{aligned deallocation function of type 'void (void *, enum std::align_val_t) noexcept' is only available on}}
 // expected-note@-32 {{if you supply your own aligned allocation functions}}
 
-// expected-error@-33 {{aligned allocation function of type 'void *(unsigned long, enum std::align_val_t)' possibly unavailable on}}
+// expected-error@-33 {{aligned allocation function of type 'void *(unsigned long, enum std::align_val_t)' is only available on}}
 // expected-note@-34 {{if you supply your own aligned allocation functions}}
-// expected-error@-35 {{aligned deallocation function of type 'void (void *, enum std::align_val_t) noexcept' possibly unavailable on}}
+// expected-error@-35 {{aligned deallocation function of type 'void (void *, enum std::align_val_t) noexcept' is only available on}}
 // expected-note@-36 {{if you supply your own aligned allocation functions}}
 
-// expected-error@-37 {{aligned deallocation function of type 'void (void *, enum std::align_val_t) noexcept' possibly unavailable on}}
+// expected-error@-37 {{aligned deallocation function of type 'void (void *, enum std::align_val_t) noexcept' is only available on}}
 // expected-note@-38 {{if you supply your own aligned allocation functions}}
 
-// expected-error@-39 {{aligned allocation function of type 'void *(std::size_t, std::align_val_t, const std::nothrow_t &) noexcept' possibly unavailable on}}
+// expected-error@-39 {{aligned allocation function of type 'void *(std::size_t, std::align_val_t, const std::nothrow_t &) noexcept' is only available on}}
 // expected-note@-40 {{if you supply your own aligned allocation functions}}
-// expected-error@-41 {{aligned deallocation function of type 'void (void *, std::align_val_t, const std::nothrow_t &) noexcept' possibly unavailable on}}
+// expected-error@-41 {{aligned deallocation function of type 'void (void *, std::align_val_t, const std::nothrow_t &) noexcept' is only available on}}
 // expected-note@-42 {{if you supply your own aligned allocation functions}}
 
+#endif
+
+void testOveralignedCheckOS() {
+  auto *p = new OveralignedS;
+}
+
+#ifdef NO_ERRORS
+// expected-no-diagnostics
+#else
+#if defined(IOS)
+// expected-error@-7 {{aligned allocation function of type 'void *(unsigned long, enum std::align_val_t)' is only available on iOS 11 or newer}}
+// expected-error@-8 {{aligned deallocation function of type 'void (void *, enum std::align_val_t) noexcept' is only available on iOS 11 or newer}}}
+#elif defined(TVOS)
+// expected-error@-10 {{aligned allocation function of type 'void *(unsigned long, enum std::align_val_t)' is only available on tvOS 11 or newer}}}
+// expected-error@-11 {{aligned deallocation function of type 'void (void *, enum std::align_val_t) noexcept' is only available on tvOS 11 or newer}}}
+#elif defined(WATCHOS)
+// expected-error@-13 {{aligned allocation function of type 'void *(unsigned long, enum std::align_val_t)' is only available on watchOS 4 or newer}}}
+// expected-error@-14 {{aligned deallocation function of type 'void (void *, enum std::align_val_t) noexcept' is only available on watchOS 4 or newer}}}
+#else
+// expected-error@-16 {{aligned allocation function of type 'void *(unsigned long, enum std::align_val_t)' is only available on macOS 10.13 or newer}}}
+// expected-error@-17 {{aligned deallocation function of type 'void (void *, enum std::align_val_t) noexcept' is only available on macOS 10.13 or newer}}}
+#endif
+
+// expected-note@-20 2 {{if you supply your own aligned allocation functions}}
 #endif
 
 // No errors if user-defined aligned allocation functions are available.
