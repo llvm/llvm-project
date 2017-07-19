@@ -688,9 +688,9 @@ static bool isMatMulOperandAcc(__isl_keep isl_map *AccMap, int &FirstPos,
 ///                  false, otherwise.
 static bool isMatMulNonScalarReadAccess(MemoryAccess *MemAccess,
                                         MatMulInfoTy &MMI) {
-  if (!MemAccess->isArrayKind() || !MemAccess->isRead())
+  if (!MemAccess->isLatestArrayKind() || !MemAccess->isRead())
     return false;
-  isl_map *AccMap = MemAccess->getAccessRelation();
+  isl_map *AccMap = MemAccess->getLatestAccessRelation();
   if (isMatMulOperandAcc(AccMap, MMI.i, MMI.j) && !MMI.ReadFromC &&
       isl_map_n_basic_map(AccMap) == 1) {
     MMI.ReadFromC = MemAccess;
@@ -743,7 +743,7 @@ static bool containsOnlyMatrMultAcc(__isl_keep isl_map *PartialSchedule,
                                  MMI.k, OutDimNum - 1);
   for (auto *MemA = Stmt->begin(); MemA != Stmt->end() - 1; MemA++) {
     auto *MemAccessPtr = *MemA;
-    if (MemAccessPtr->isArrayKind() && MemAccessPtr != MMI.WriteToC &&
+    if (MemAccessPtr->isLatestArrayKind() && MemAccessPtr != MMI.WriteToC &&
         !isMatMulNonScalarReadAccess(MemAccessPtr, MMI) &&
         !(MemAccessPtr->isStrideZero(isl_map_copy(MapI)) &&
           MemAccessPtr->isStrideZero(isl_map_copy(MapJ)) &&
@@ -835,11 +835,11 @@ static bool containsMatrMult(__isl_keep isl_map *PartialSchedule,
     return false;
   for (auto *MemA = Stmt->end() - 1; MemA != Stmt->begin(); MemA--) {
     auto *MemAccessPtr = *MemA;
-    if (!MemAccessPtr->isArrayKind())
+    if (!MemAccessPtr->isLatestArrayKind())
       continue;
     if (!MemAccessPtr->isWrite())
       return false;
-    auto *AccMap = MemAccessPtr->getAccessRelation();
+    auto *AccMap = MemAccessPtr->getLatestAccessRelation();
     if (isl_map_n_basic_map(AccMap) != 1 ||
         !isMatMulOperandAcc(AccMap, MMI.i, MMI.j)) {
       isl_map_free(AccMap);
@@ -1132,7 +1132,7 @@ static __isl_give isl_schedule_node *optimizeDataLayoutMatrMulPattern(
       MMI.B->getElementType(), "Packed_B",
       {FirstDimSize, SecondDimSize, ThirdDimSize});
   AccRel = isl_map_set_tuple_id(AccRel, isl_dim_out, SAI->getBasePtrId());
-  auto *OldAcc = MMI.B->getAccessRelation();
+  auto *OldAcc = MMI.B->getLatestAccessRelation();
   MMI.B->setNewAccessRelation(AccRel);
   auto *ExtMap =
       isl_map_project_out(isl_map_copy(MapOldIndVar), isl_dim_out, 2,
@@ -1145,7 +1145,7 @@ static __isl_give isl_schedule_node *optimizeDataLayoutMatrMulPattern(
   // originating statement is executed.
   auto *DomainId = isl_set_get_tuple_id(Domain);
   auto *NewStmt = Stmt->getParent()->addScopStmt(
-      OldAcc, MMI.B->getAccessRelation(), isl_set_copy(Domain));
+      OldAcc, MMI.B->getLatestAccessRelation(), isl_set_copy(Domain));
   ExtMap = isl_map_set_tuple_id(ExtMap, isl_dim_out, isl_id_copy(DomainId));
   ExtMap = isl_map_intersect_range(ExtMap, isl_set_copy(Domain));
   ExtMap = isl_map_set_tuple_id(ExtMap, isl_dim_out, NewStmt->getDomainId());
@@ -1161,14 +1161,14 @@ static __isl_give isl_schedule_node *optimizeDataLayoutMatrMulPattern(
       MMI.A->getElementType(), "Packed_A",
       {FirstDimSize, SecondDimSize, ThirdDimSize});
   AccRel = isl_map_set_tuple_id(AccRel, isl_dim_out, SAI->getBasePtrId());
-  OldAcc = MMI.A->getAccessRelation();
+  OldAcc = MMI.A->getLatestAccessRelation();
   MMI.A->setNewAccessRelation(AccRel);
   ExtMap = isl_map_project_out(MapOldIndVar, isl_dim_out, 3,
                                isl_map_dim(MapOldIndVar, isl_dim_out) - 3);
   ExtMap = isl_map_reverse(ExtMap);
   ExtMap = isl_map_fix_si(ExtMap, isl_dim_out, MMI.j, 0);
-  NewStmt = Stmt->getParent()->addScopStmt(OldAcc, MMI.A->getAccessRelation(),
-                                           isl_set_copy(Domain));
+  NewStmt = Stmt->getParent()->addScopStmt(
+      OldAcc, MMI.A->getLatestAccessRelation(), isl_set_copy(Domain));
 
   // Restrict the domains of the copy statements to only execute when also its
   // originating statement is executed.
