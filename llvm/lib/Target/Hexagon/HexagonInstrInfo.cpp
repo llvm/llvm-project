@@ -1715,8 +1715,8 @@ bool HexagonInstrInfo::areMemAccessesTriviallyDisjoint(
   if (!MIa.getOperand(OffsetPosA).isImm() ||
       !MIb.getOperand(OffsetPosB).isImm())
     return false;
-  int OffsetA = OffA.getImm();
-  int OffsetB = OffB.getImm();
+  int OffsetA = isPostIncrement(MIa) ? 0 : OffA.getImm();
+  int OffsetB = isPostIncrement(MIb) ? 0 : OffB.getImm();
 
   // This is a mem access with the same base register and known offsets from it.
   // Reason about it.
