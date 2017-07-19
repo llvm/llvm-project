@@ -2937,6 +2937,8 @@ unsigned HexagonInstrInfo::getAddrMode(const MachineInstr &MI) const {
 
 // Returns the base register in a memory access (load/store). The offset is
 // returned in Offset and the access size is returned in AccessSize.
+// If the base register has a subregister or the offset field does not contain
+// an immediate value, return 0.
 unsigned HexagonInstrInfo::getBaseAndOffset(const MachineInstr &MI,
       int &Offset, unsigned &AccessSize) const {
   // Return if it is not a base+offset type instruction or a MemOp.
@@ -2956,19 +2958,25 @@ unsigned HexagonInstrInfo::getBaseAndOffset(const MachineInstr &MI,
   // MemAccessSize is represented as 1+log2(N) where N is size in bits.
   AccessSize = (1U << (getMemAccessSize(MI) - 1));
 
-  unsigned basePos = 0, offsetPos = 0;
-  if (!getBaseAndOffsetPosition(MI, basePos, offsetPos))
+  unsigned BasePos = 0, OffsetPos = 0;
+  if (!getBaseAndOffsetPosition(MI, BasePos, OffsetPos))
     return 0;
 
   // Post increment updates its EA after the mem access,
   // so we need to treat its offset as zero.
-  if (isPostIncrement(MI))
+  if (isPostIncrement(MI)) {
     Offset = 0;
-  else {
-    Offset = MI.getOperand(offsetPos).getImm();
+  } else {
+    const MachineOperand &OffsetOp = MI.getOperand(OffsetPos);
+    if (!OffsetOp.isImm())
+      return 0;
+    Offset = OffsetOp.getImm();
   }
 
-  return MI.getOperand(basePos).getReg();
+  const MachineOperand &BaseOp = MI.getOperand(BasePos);
+  if (BaseOp.getSubReg() != 0)
+    return 0;
+  return BaseOp.getReg();
 }
 
 /// Return the position of the base and offset operands for this instruction.
