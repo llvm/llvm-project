@@ -94,7 +94,7 @@ static void error(StringRef Filename, std::error_code EC) {
 }
 
 static void DumpObjectFile(ObjectFile &Obj, Twine Filename) {
-  std::unique_ptr<DIContext> DICtx(new DWARFContextInMemory(Obj));
+  std::unique_ptr<DIContext> DICtx = DWARFContext::create(Obj);
 
   outs() << Filename.str() << ":\tfile format " << Obj.getFileFormatName()
          << "\n\n";
@@ -131,8 +131,8 @@ static void DumpInput(StringRef Filename) {
 }
 
 static bool VerifyObjectFile(ObjectFile &Obj, Twine Filename) {
-  std::unique_ptr<DIContext> DICtx(new DWARFContextInMemory(Obj));
-  
+  std::unique_ptr<DIContext> DICtx = DWARFContext::create(Obj);
+
   // Verify the DWARF and exit with non-zero exit status if verification
   // fails.
   raw_ostream &stream = Quiet ? nulls() : outs();

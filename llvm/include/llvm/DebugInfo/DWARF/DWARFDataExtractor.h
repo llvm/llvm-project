@@ -14,18 +14,21 @@
 #include "llvm/Support/DataExtractor.h"
 
 namespace llvm {
+class DWARFObject;
 
 /// A DataExtractor (typically for an in-memory copy of an object-file section)
 /// plus a relocation map for that section, if there is one.
 class DWARFDataExtractor : public DataExtractor {
-  const RelocAddrMap *RelocMap = nullptr;
+  const DWARFObject *Obj = nullptr;
+  const DWARFSection *Section = nullptr;
+
 public:
   /// Constructor for the normal case of extracting data from a DWARF section.
   /// The DWARFSection's lifetime must be at least as long as the extractor's.
-  DWARFDataExtractor(const DWARFSection &Section, bool IsLittleEndian,
-                     uint8_t AddressSize)
-    : DataExtractor(Section.Data, IsLittleEndian, AddressSize),
-      RelocMap(&Section.Relocs) {}
+  DWARFDataExtractor(const DWARFObject &Obj, const DWARFSection &Section,
+                     bool IsLittleEndian, uint8_t AddressSize)
+      : DataExtractor(Section.Data, IsLittleEndian, AddressSize), Obj(&Obj),
+        Section(&Section) {}
 
   /// Constructor for cases when there are no relocations.
   DWARFDataExtractor(StringRef Data, bool IsLittleEndian, uint8_t AddressSize)
