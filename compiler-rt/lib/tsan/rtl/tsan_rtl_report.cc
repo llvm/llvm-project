@@ -372,6 +372,10 @@ void ScopedReport::SetCount(int count) {
   rep_->count = count;
 }
 
+void ScopedReport::SetType(ReportType typ) {
+  rep_->typ = typ;
+}
+
 const ReportDesc *ScopedReport::GetReport() const {
   return rep_;
 }
@@ -585,6 +589,17 @@ static bool RaceBetweenAtomicAndFree(ThreadState *thr) {
   return false;
 }
 
+static uptr RetrieveTagFromStackTrace(VarSizeStackTrace *trace) {
+  if (!trace) return kExternalTagNone;
+  if (trace->size < 2) return kExternalTagNone;
+  uptr possible_tag_pc = trace->trace[trace->size - 2];
+  uptr tag = TagFromShadowStackFrame(possible_tag_pc);
+  if (tag == kExternalTagNone) return kExternalTagNone;
+  trace->trace_buffer[trace->size - 2] = trace->trace_buffer[trace->size - 1];
+  trace->size -= 1;
+  return tag;
+}
+
 void ReportRace(ThreadState *thr) {
   CheckNoLocks(thr);
 
@@ -625,8 +640,6 @@ void ReportRace(ThreadState *thr) {
     typ = ReportTypeVptrRace;
   else if (freed)
     typ = ReportTypeUseAfterFree;
-  else if (thr->external_tag > 0)
-    typ = ReportTypeExternalRace;
 
   if (IsFiredSuppression(ctx, typ, addr))
     return;
@@ -654,9 +667,15 @@ void ReportRace(ThreadState *thr) {
   ThreadRegistryLock l0(ctx->thread_registry);
   ScopedReport rep(typ);
   for (uptr i = 0; i < kMop; i++) {
+    uptr tag = RetrieveTagFromStackTrace(&traces[i]);
+    if (tag == kExternalTagSwiftModifyingAccess) {
+      rep.SetType(ReportTypeSwiftAccessRace);
+    } else if (tag != kExternalTagNone) {
+      rep.SetType(ReportTypeExternalRace);
+    }
+
     Shadow s(thr->racy_state[i]);
-    rep.AddMemoryAccess(addr, thr->external_tag, s, traces[i],
-                        i == 0 ? &thr->mset : mset2);
+    rep.AddMemoryAccess(addr, tag, s, traces[i], i == 0 ? &thr->mset : mset2);
   }
 
   for (uptr i = 0; i < kMop; i++) {

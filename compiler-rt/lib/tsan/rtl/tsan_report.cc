@@ -92,6 +92,8 @@ static const char *ReportTypeString(ReportType typ) {
     return "heap-use-after-free (virtual call vs free)";
   if (typ == ReportTypeExternalRace)
     return "race on a library object";
+  if (typ == ReportTypeSwiftAccessRace)
+    return "Swift access race";
   if (typ == ReportTypeThreadLeak)
     return "thread leak";
   if (typ == ReportTypeMutexDestroyLocked)
@@ -159,12 +161,20 @@ static const char *ExternalMopDesc(bool first, bool write) {
                : (write ? "Previous mutating" : "Previous read-only");
 }
 
+static const char *SwiftMopDesc(bool first) {
+  return first ? "Modifying" : "Previous modifying";
+}
+
 static void PrintMop(const ReportMop *mop, bool first) {
   Decorator d;
   char thrbuf[kThreadBufSize];
   Printf("%s", d.Access());
   const char *object_type = GetObjectTypeFromTag(mop->external_tag);
-  if (!object_type) {
+  if (mop->external_tag == kExternalTagSwiftModifyingAccess) {
+    Printf("  %s access at %p by %s",
+           SwiftMopDesc(first), (void *)mop->addr,
+           thread_name(thrbuf, mop->tid));
+  } else if (mop->external_tag == kExternalTagNone || !object_type) {
     Printf("  %s of size %d at %p by %s",
            MopDesc(first, mop->write, mop->atomic), mop->size,
            (void *)mop->addr, thread_name(thrbuf, mop->tid));

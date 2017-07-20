@@ -16,11 +16,8 @@ namespace __tsan {
 
 #define CALLERPC ((uptr)__builtin_return_address(0))
 
-const uptr kMaxTag = 128;  // Limited to 65,536, since MBlock only stores tags
-                           // as 16-bit values, see tsan_defs.h.
-
-const char *registered_tags[kMaxTag];
-static atomic_uint32_t used_tags{1};  // Tag 0 means "no tag". NOLINT
+const char *registered_tags[kExternalTagMax];
+static atomic_uint32_t used_tags{kExternalTagFirstUserAvailable};  // NOLINT.
 
 const char *GetObjectTypeFromTag(uptr tag) {
   if (tag == 0) return nullptr;
@@ -29,11 +26,36 @@ const char *GetObjectTypeFromTag(uptr tag) {
   return registered_tags[tag];
 }
 
+void InsertShadowStackFrameForTag(ThreadState *thr, uptr tag) {
+  FuncEntry(thr, (uptr)&registered_tags[tag]);
+}
+
+uptr TagFromShadowStackFrame(uptr pc) {
+  uptr tag_count = atomic_load(&used_tags, memory_order_relaxed);
+  void *pc_ptr = (void *)pc;
+  if (pc_ptr < &registered_tags[0] || pc_ptr >= &registered_tags[tag_count])
+    return 0;
+  return (const char **)pc_ptr - &registered_tags[0];
+}
+
+#if !SANITIZER_GO
+
+typedef void(*AccessFunc)(ThreadState *, uptr, uptr, int);
+void ExternalAccess(void *addr, void *caller_pc, void *tag, AccessFunc access) {
+  CHECK_LT(tag, atomic_load(&used_tags, memory_order_relaxed));
+  ThreadState *thr = cur_thread();
+  if (caller_pc) FuncEntry(thr, (uptr)caller_pc);
+  InsertShadowStackFrameForTag(thr, (uptr)tag);
+  access(thr, CALLERPC, (uptr)addr, kSizeLog8);
+  FuncExit(thr);
+  if (caller_pc) FuncExit(thr);
+}
+
 extern "C" {
 SANITIZER_INTERFACE_ATTRIBUTE
 void *__tsan_external_register_tag(const char *object_type) {
   uptr new_tag = atomic_fetch_add(&used_tags, 1, memory_order_relaxed);
-  CHECK_LT(new_tag, kMaxTag);
+  CHECK_LT(new_tag, kExternalTagMax);
   registered_tags[new_tag] = internal_strdup(object_type);
   return (void *)new_tag;
 }
@@ -54,25 +76,15 @@ void __tsan_external_assign_tag(void *addr, void *tag) {
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __tsan_external_read(void *addr, void *caller_pc, void *tag) {
-  CHECK_LT(tag, atomic_load(&used_tags, memory_order_relaxed));
-  ThreadState *thr = cur_thread();
-  thr->external_tag = (uptr)tag;
-  FuncEntry(thr, (uptr)caller_pc);
-  MemoryRead(thr, CALLERPC, (uptr)addr, kSizeLog8);
-  FuncExit(thr);
-  thr->external_tag = 0;
+  ExternalAccess(addr, caller_pc, tag, MemoryRead);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __tsan_external_write(void *addr, void *caller_pc, void *tag) {
-  CHECK_LT(tag, atomic_load(&used_tags, memory_order_relaxed));
-  ThreadState *thr = cur_thread();
-  thr->external_tag = (uptr)tag;
-  FuncEntry(thr, (uptr)caller_pc);
-  MemoryWrite(thr, CALLERPC, (uptr)addr, kSizeLog8);
-  FuncExit(thr);
-  thr->external_tag = 0;
+  ExternalAccess(addr, caller_pc, tag, MemoryWrite);
 }
 }  // extern "C"
+
+#endif
 
 }  // namespace __tsan
