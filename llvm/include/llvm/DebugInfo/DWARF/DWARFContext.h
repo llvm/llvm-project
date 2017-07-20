@@ -226,11 +226,7 @@ public:
   virtual bool isLittleEndian() const = 0;
   virtual uint8_t getAddressSize() const = 0;
   virtual const DWARFSection &getInfoSection() = 0;
-
-  using TypeSectionMap = MapVector<object::SectionRef, DWARFSection,
-                                   std::map<object::SectionRef, unsigned>>;
-
-  virtual const TypeSectionMap &getTypesSections() = 0;
+  virtual void forEachTypesSections(function_ref<void(DWARFSection &)> F) = 0;
   virtual StringRef getAbbrevSection() = 0;
   virtual const DWARFSection &getLocSection() = 0;
   virtual StringRef getARangeSection() = 0;
@@ -252,7 +248,8 @@ public:
 
   // Sections for DWARF5 split dwarf proposal.
   virtual const DWARFSection &getInfoDWOSection() = 0;
-  virtual const TypeSectionMap &getTypesDWOSections() = 0;
+  virtual void
+  forEachTypesDWOSections(function_ref<void(DWARFSection &)> F) = 0;
   virtual StringRef getAbbrevDWOSection() = 0;
   virtual const DWARFSection &getLineDWOSection() = 0;
   virtual const DWARFSection &getLocDWOSection() = 0;
@@ -293,6 +290,9 @@ enum class ErrorPolicy { Halt, Continue };
 /// pointers to it.
 class DWARFContextInMemory : public DWARFContext {
   virtual void anchor();
+
+  using TypeSectionMap = MapVector<object::SectionRef, DWARFSection,
+                                   std::map<object::SectionRef, unsigned>>;
 
   StringRef FileName;
   bool IsLittleEndian;
@@ -363,7 +363,10 @@ public:
   bool isLittleEndian() const override { return IsLittleEndian; }
   uint8_t getAddressSize() const override { return AddressSize; }
   const DWARFSection &getInfoSection() override { return InfoSection; }
-  const TypeSectionMap &getTypesSections() override { return TypesSections; }
+  void forEachTypesSections(function_ref<void(DWARFSection &)> F) override {
+    for (auto &P : TypesSections)
+      F(P.second);
+  }
   StringRef getAbbrevSection() override { return AbbrevSection; }
   const DWARFSection &getLocSection() override { return LocSection; }
   StringRef getARangeSection() override { return ARangeSection; }
@@ -390,8 +393,9 @@ public:
   // Sections for DWARF5 split dwarf proposal.
   const DWARFSection &getInfoDWOSection() override { return InfoDWOSection; }
 
-  const TypeSectionMap &getTypesDWOSections() override {
-    return TypesDWOSections;
+  void forEachTypesDWOSections(function_ref<void(DWARFSection &)> F) override {
+    for (auto &P : TypesDWOSections)
+      F(P.second);
   }
 
   StringRef getAbbrevDWOSection() override { return AbbrevDWOSection; }

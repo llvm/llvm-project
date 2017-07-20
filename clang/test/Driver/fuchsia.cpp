@@ -1,9 +1,10 @@
 // RUN: %clangxx %s -### -no-canonical-prefixes --target=x86_64-unknown-fuchsia \
 // RUN:     --sysroot=%S/platform 2>&1 -fuse-ld=ld | FileCheck %s
 // CHECK: {{.*}}clang{{.*}}" "-cc1"
+// CHECK: "-triple" "x86_64-fuchsia"
 // CHECK: "-fuse-init-array"
 // CHECK: "-isysroot" "[[SYSROOT:[^"]+]]"
-// CHECK: "-internal-isystem" "[[SYSROOT]]{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}v1"
+// CHECK: "-internal-isystem" "{{.*[/\\]}}x86_64-fuchsia{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}v1"
 // CHECK: "-internal-externc-isystem" "[[SYSROOT]]{{/|\\\\}}include"
 // CHECK: {{.*}}lld{{.*}}" "-flavor" "gnu"
 // CHECK: "--sysroot=[[SYSROOT]]"
@@ -13,7 +14,7 @@
 // CHECK: Scrt1.o
 // CHECK-NOT: crti.o
 // CHECK-NOT: crtbegin.o
-// CHECK: "-L[[SYSROOT]]/lib"
+// CHECK: "-L[[SYSROOT]]{{/|\\\\}}lib"
 // CHECK: "-lc++" "-lc++abi" "-lunwind" "-lm"
 // CHECK: "{{.*[/\\]}}libclang_rt.builtins-x86_64.a"
 // CHECK: "-lc"

@@ -10,7 +10,7 @@
 ; CHECK:       rdefs left
 ; CHECK-NEXT:  Latency            : 2
 ; CHECK:       Successors
-; CHECK:       data
+; CHECK:       Data
 ; CHECK-SAME:  Latency=1
 
 define i32 @bar(i32 %v0, i32 %v1, i32 %v2, i32* %addr) {

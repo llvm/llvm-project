@@ -22,6 +22,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Tooling/Core/Lookup.h"
+#include "clang/Tooling/Refactoring/RecursiveSymbolVisitor.h"
 #include "clang/Tooling/Refactoring/Rename/USRFinder.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
@@ -40,70 +41,27 @@ namespace {
 // \brief This visitor recursively searches for all instances of a USR in a
 // translation unit and stores them for later usage.
 class USRLocFindingASTVisitor
-    : public clang::RecursiveASTVisitor<USRLocFindingASTVisitor> {
+    : public RecursiveSymbolVisitor<USRLocFindingASTVisitor> {
 public:
   explicit USRLocFindingASTVisitor(const std::vector<std::string> &USRs,
                                    StringRef PrevName,
                                    const ASTContext &Context)
-      : USRSet(USRs.begin(), USRs.end()), PrevName(PrevName), Context(Context) {
+      : RecursiveSymbolVisitor(Context.getSourceManager(),
+                               Context.getLangOpts()),
+        USRSet(USRs.begin(), USRs.end()), PrevName(PrevName), Context(Context) {
   }
 
-  // Declaration visitors:
-
-  bool VisitCXXConstructorDecl(clang::CXXConstructorDecl *ConstructorDecl) {
-    for (const auto *Initializer : ConstructorDecl->inits()) {
-      // Ignore implicit initializers.
-      if (!Initializer->isWritten())
-        continue;
-      if (const clang::FieldDecl *FieldDecl = Initializer->getMember()) {
-        if (USRSet.find(getUSRForDecl(FieldDecl)) != USRSet.end())
-          LocationsFound.push_back(Initializer->getSourceLocation());
-      }
-    }
-    return true;
-  }
-
-  bool VisitNamedDecl(const NamedDecl *Decl) {
-    if (USRSet.find(getUSRForDecl(Decl)) != USRSet.end())
-      checkAndAddLocation(Decl->getLocation());
-    return true;
-  }
-
-  // Expression visitors:
-
-  bool VisitDeclRefExpr(const DeclRefExpr *Expr) {
-    const NamedDecl *Decl = Expr->getFoundDecl();
-
-    if (USRSet.find(getUSRForDecl(Decl)) != USRSet.end()) {
-      const SourceManager &Manager = Decl->getASTContext().getSourceManager();
-      SourceLocation Location = Manager.getSpellingLoc(Expr->getLocation());
-      checkAndAddLocation(Location);
-    }
-
-    return true;
-  }
-
-  bool VisitMemberExpr(const MemberExpr *Expr) {
-    const NamedDecl *Decl = Expr->getFoundDecl().getDecl();
-    if (USRSet.find(getUSRForDecl(Decl)) != USRSet.end()) {
-      const SourceManager &Manager = Decl->getASTContext().getSourceManager();
-      SourceLocation Location = Manager.getSpellingLoc(Expr->getMemberLoc());
-      checkAndAddLocation(Location);
-    }
-    return true;
-  }
-
-  // Other visitors:
-
-  bool VisitTypeLoc(const TypeLoc Loc) {
-    if (USRSet.find(getUSRForDecl(Loc.getType()->getAsCXXRecordDecl())) !=
-        USRSet.end())
-      checkAndAddLocation(Loc.getBeginLoc());
-    if (const auto *TemplateTypeParm =
-            dyn_cast<TemplateTypeParmType>(Loc.getType())) {
-      if (USRSet.find(getUSRForDecl(TemplateTypeParm->getDecl())) !=
-          USRSet.end())
-        checkAndAddLocation(Loc.getBeginLoc());
+  bool visitSymbolOccurrence(const NamedDecl *ND,
+                             ArrayRef<SourceRange> NameRanges) {
+    if (USRSet.find(getUSRForDecl(ND)) != USRSet.end()) {
+      assert(NameRanges.size() == 1 &&
+             "Multiple name pieces are not supported yet!");
+      SourceLocation Loc = NameRanges[0].getBegin();
+      const SourceManager &SM = Context.getSourceManager();
+      // TODO: Deal with macro occurrences correctly.
+      if (Loc.isMacroID())
+        Loc = SM.getSpellingLoc(Loc);
+      checkAndAddLocation(Loc);
     }
     return true;
   }
@@ -114,17 +72,6 @@ public:
   // locations are erroneous and should be reported!
   const std::vector<clang::SourceLocation> &getLocationsFound() const {
     return LocationsFound;
-  }
-
-  // Namespace traversal:
-  void handleNestedNameSpecifierLoc(NestedNameSpecifierLoc NameLoc) {
-    while (NameLoc) {
-      const NamespaceDecl *Decl =
-          NameLoc.getNestedNameSpecifier()->getAsNamespace();
-      if (Decl && USRSet.find(getUSRForDecl(Decl)) != USRSet.end())
-        checkAndAddLocation(NameLoc.getLocalBeginLoc());
-      NameLoc = NameLoc.getPrefix();
-    }
   }
 
 private:
@@ -449,11 +396,6 @@ getLocationsOfUSRs(const std::vector<std::string> &USRs, StringRef PrevName,
                    Decl *Decl) {
   USRLocFindingASTVisitor Visitor(USRs, PrevName, Decl->getASTContext());
   Visitor.TraverseDecl(Decl);
-  NestedNameSpecifierLocFinder Finder(Decl->getASTContext());
-
-  for (const auto &Location : Finder.getNestedNameSpecifierLocations())
-    Visitor.handleNestedNameSpecifierLoc(Location);
-
   return Visitor.getLocationsFound();
 }
 

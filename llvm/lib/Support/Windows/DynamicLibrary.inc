@@ -28,6 +28,8 @@ DynamicLibrary::HandleSet::~HandleSet() {
 
   // 'Process' should not be released on Windows.
   assert((!Process || Process==this) && "Bad Handle");
+  // llvm_shutdown called, Return to default
+  DynamicLibrary::SearchOrder = DynamicLibrary::SO_Linker;
 }
 
 void *DynamicLibrary::HandleSet::DLOpen(const char *File, std::string *Err) {

@@ -30,6 +30,25 @@
   define void @test_fcmp_one_s32() #0 { ret void }
   define void @test_fcmp_ueq_s32() #0 { ret void }
 
+  define void @test_fcmp_true_s64() #0 { ret void }
+  define void @test_fcmp_false_s64() #0 { ret void }
+
+  define void @test_fcmp_oeq_s64() #0 { ret void }
+  define void @test_fcmp_ogt_s64() #0 { ret void }
+  define void @test_fcmp_oge_s64() #0 { ret void }
+  define void @test_fcmp_olt_s64() #0 { ret void }
+  define void @test_fcmp_ole_s64() #0 { ret void }
+  define void @test_fcmp_ord_s64() #0 { ret void }
+  define void @test_fcmp_ugt_s64() #0 { ret void }
+  define void @test_fcmp_uge_s64() #0 { ret void }
+  define void @test_fcmp_ult_s64() #0 { ret void }
+  define void @test_fcmp_ule_s64() #0 { ret void }
+  define void @test_fcmp_une_s64() #0 { ret void }
+  define void @test_fcmp_uno_s64() #0 { ret void }
+
+  define void @test_fcmp_one_s64() #0 { ret void }
+  define void @test_fcmp_ueq_s64() #0 { ret void }
+
   attributes #0 = { "target-features"="+vfp2" }
 ...
 ---
@@ -966,6 +985,592 @@ body:             |
     ; CHECK-NEXT: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
     ; CHECK-NEXT: [[RES1:%[0-9]+]] = MOVCCi [[ZERO]], 1, 0, %cpsr
     ; CHECK-NEXT: VCMPS [[VREGX]], [[VREGY]], 14, _, implicit-def %fpscr_nzcv
+    ; CHECK-NEXT: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
+    ; CHECK-NEXT: [[RES:%[0-9]+]] = MOVCCi [[RES1]], 1, 6, %cpsr
+
+    %3(s32) = G_ZEXT %2(s1)
+    ; CHECK: [[RET:%[0-9]+]] = ANDri [[RES]], 1, 14, _, _
+
+    %r0 = COPY %3(s32)
+    ; CHECK: %r0 = COPY [[RET]]
+
+    BX_RET 14, _, implicit %r0
+    ; CHECK: BX_RET 14, _, implicit %r0
+...
+---
+name:            test_fcmp_true_s64
+# CHECK-LABEL: name: test_fcmp_true_s64
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: fprb }
+  - { id: 1, class: fprb }
+  - { id: 2, class: gprb }
+  - { id: 3, class: gprb }
+body:             |
+  bb.0:
+    liveins: %d0, %d1
+
+    %0(s64) = COPY %d0
+    %1(s64) = COPY %d1
+
+    %2(s1) = G_FCMP floatpred(true),  %0(s64), %1
+    ; CHECK: [[RES:%[0-9]+]] = MOVi 1, 14, _, _
+
+    %3(s32) = G_ZEXT %2(s1)
+    ; CHECK: [[RET:%[0-9]+]] = ANDri [[RES]], 1, 14, _, _
+
+    %r0 = COPY %3(s32)
+    ; CHECK: %r0 = COPY [[RET]]
+
+    BX_RET 14, _, implicit %r0
+    ; CHECK: BX_RET 14, _, implicit %r0
+...
+---
+name:            test_fcmp_false_s64
+# CHECK-LABEL: name: test_fcmp_false_s64
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: fprb }
+  - { id: 1, class: fprb }
+  - { id: 2, class: gprb }
+  - { id: 3, class: gprb }
+body:             |
+  bb.0:
+    liveins: %d0, %d1
+
+    %0(s64) = COPY %d0
+    %1(s64) = COPY %d1
+
+    %2(s1) = G_FCMP floatpred(false),  %0(s64), %1
+    ; CHECK: [[RES:%[0-9]+]] = MOVi 0, 14, _, _
+
+    %3(s32) = G_ZEXT %2(s1)
+    ; CHECK: [[RET:%[0-9]+]] = ANDri [[RES]], 1, 14, _, _
+
+    %r0 = COPY %3(s32)
+    ; CHECK: %r0 = COPY [[RET]]
+
+    BX_RET 14, _, implicit %r0
+    ; CHECK: BX_RET 14, _, implicit %r0
+...
+---
+name:            test_fcmp_oeq_s64
+# CHECK-LABEL: name: test_fcmp_oeq_s64
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: fprb }
+  - { id: 1, class: fprb }
+  - { id: 2, class: gprb }
+  - { id: 3, class: gprb }
+body:             |
+  bb.0:
+    liveins: %d0, %d1
+
+    %0(s64) = COPY %d0
+    ; CHECK: [[VREGX:%[0-9]+]] = COPY %d0
+
+    %1(s64) = COPY %d1
+    ; CHECK: [[VREGY:%[0-9]+]] = COPY %d1
+
+    %2(s1) = G_FCMP floatpred(oeq),  %0(s64), %1
+    ; CHECK: [[ZERO:%[0-9]+]] = MOVi 0, 14, _, _
+    ; CHECK-NEXT: VCMPD [[VREGX]], [[VREGY]], 14, _, implicit-def %fpscr_nzcv
+    ; CHECK-NEXT: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
+    ; CHECK-NEXT: [[RES:%[0-9]+]] = MOVCCi [[ZERO]], 1, 0, %cpsr
+
+    %3(s32) = G_ZEXT %2(s1)
+    ; CHECK: [[RET:%[0-9]+]] = ANDri [[RES]], 1, 14, _, _
+
+    %r0 = COPY %3(s32)
+    ; CHECK: %r0 = COPY [[RET]]
+
+    BX_RET 14, _, implicit %r0
+    ; CHECK: BX_RET 14, _, implicit %r0
+...
+---
+name:            test_fcmp_ogt_s64
+# CHECK-LABEL: name: test_fcmp_ogt_s64
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: fprb }
+  - { id: 1, class: fprb }
+  - { id: 2, class: gprb }
+  - { id: 3, class: gprb }
+body:             |
+  bb.0:
+    liveins: %d0, %d1
+
+    %0(s64) = COPY %d0
+    ; CHECK: [[VREGX:%[0-9]+]] = COPY %d0
+
+    %1(s64) = COPY %d1
+    ; CHECK: [[VREGY:%[0-9]+]] = COPY %d1
+
+    %2(s1) = G_FCMP floatpred(ogt),  %0(s64), %1
+    ; CHECK: [[ZERO:%[0-9]+]] = MOVi 0, 14, _, _
+    ; CHECK-NEXT: VCMPD [[VREGX]], [[VREGY]], 14, _, implicit-def %fpscr_nzcv
+    ; CHECK-NEXT: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
+    ; CHECK-NEXT: [[RES:%[0-9]+]] = MOVCCi [[ZERO]], 1, 12, %cpsr
+
+    %3(s32) = G_ZEXT %2(s1)
+    ; CHECK: [[RET:%[0-9]+]] = ANDri [[RES]], 1, 14, _, _
+
+    %r0 = COPY %3(s32)
+    ; CHECK: %r0 = COPY [[RET]]
+
+    BX_RET 14, _, implicit %r0
+    ; CHECK: BX_RET 14, _, implicit %r0
+...
+---
+name:            test_fcmp_oge_s64
+# CHECK-LABEL: name: test_fcmp_oge_s64
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: fprb }
+  - { id: 1, class: fprb }
+  - { id: 2, class: gprb }
+  - { id: 3, class: gprb }
+body:             |
+  bb.0:
+    liveins: %d0, %d1
+
+    %0(s64) = COPY %d0
+    ; CHECK: [[VREGX:%[0-9]+]] = COPY %d0
+
+    %1(s64) = COPY %d1
+    ; CHECK: [[VREGY:%[0-9]+]] = COPY %d1
+
+    %2(s1) = G_FCMP floatpred(oge),  %0(s64), %1
+    ; CHECK: [[ZERO:%[0-9]+]] = MOVi 0, 14, _, _
+    ; CHECK-NEXT: VCMPD [[VREGX]], [[VREGY]], 14, _, implicit-def %fpscr_nzcv
+    ; CHECK-NEXT: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
+    ; CHECK-NEXT: [[RES:%[0-9]+]] = MOVCCi [[ZERO]], 1, 10, %cpsr
+
+    %3(s32) = G_ZEXT %2(s1)
+    ; CHECK: [[RET:%[0-9]+]] = ANDri [[RES]], 1, 14, _, _
+
+    %r0 = COPY %3(s32)
+    ; CHECK: %r0 = COPY [[RET]]
+
+    BX_RET 14, _, implicit %r0
+    ; CHECK: BX_RET 14, _, implicit %r0
+...
+---
+name:            test_fcmp_olt_s64
+# CHECK-LABEL: name: test_fcmp_olt_s64
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: fprb }
+  - { id: 1, class: fprb }
+  - { id: 2, class: gprb }
+  - { id: 3, class: gprb }
+body:             |
+  bb.0:
+    liveins: %d0, %d1
+
+    %0(s64) = COPY %d0
+    ; CHECK: [[VREGX:%[0-9]+]] = COPY %d0
+
+    %1(s64) = COPY %d1
+    ; CHECK: [[VREGY:%[0-9]+]] = COPY %d1
+
+    %2(s1) = G_FCMP floatpred(olt),  %0(s64), %1
+    ; CHECK: [[ZERO:%[0-9]+]] = MOVi 0, 14, _, _
+    ; CHECK-NEXT: VCMPD [[VREGX]], [[VREGY]], 14, _, implicit-def %fpscr_nzcv
+    ; CHECK-NEXT: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
+    ; CHECK-NEXT: [[RES:%[0-9]+]] = MOVCCi [[ZERO]], 1, 4, %cpsr
+
+    %3(s32) = G_ZEXT %2(s1)
+    ; CHECK: [[RET:%[0-9]+]] = ANDri [[RES]], 1, 14, _, _
+
+    %r0 = COPY %3(s32)
+    ; CHECK: %r0 = COPY [[RET]]
+
+    BX_RET 14, _, implicit %r0
+    ; CHECK: BX_RET 14, _, implicit %r0
+...
+---
+name:            test_fcmp_ole_s64
+# CHECK-LABEL: name: test_fcmp_ole_s64
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: fprb }
+  - { id: 1, class: fprb }
+  - { id: 2, class: gprb }
+  - { id: 3, class: gprb }
+body:             |
+  bb.0:
+    liveins: %d0, %d1
+
+    %0(s64) = COPY %d0
+    ; CHECK: [[VREGX:%[0-9]+]] = COPY %d0
+
+    %1(s64) = COPY %d1
+    ; CHECK: [[VREGY:%[0-9]+]] = COPY %d1
+
+    %2(s1) = G_FCMP floatpred(ole),  %0(s64), %1
+    ; CHECK: [[ZERO:%[0-9]+]] = MOVi 0, 14, _, _
+    ; CHECK-NEXT: VCMPD [[VREGX]], [[VREGY]], 14, _, implicit-def %fpscr_nzcv
+    ; CHECK-NEXT: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
+    ; CHECK-NEXT: [[RES:%[0-9]+]] = MOVCCi [[ZERO]], 1, 9, %cpsr
+
+    %3(s32) = G_ZEXT %2(s1)
+    ; CHECK: [[RET:%[0-9]+]] = ANDri [[RES]], 1, 14, _, _
+
+    %r0 = COPY %3(s32)
+    ; CHECK: %r0 = COPY [[RET]]
+
+    BX_RET 14, _, implicit %r0
+    ; CHECK: BX_RET 14, _, implicit %r0
+...
+---
+name:            test_fcmp_ord_s64
+# CHECK-LABEL: name: test_fcmp_ord_s64
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: fprb }
+  - { id: 1, class: fprb }
+  - { id: 2, class: gprb }
+  - { id: 3, class: gprb }
+body:             |
+  bb.0:
+    liveins: %d0, %d1
+
+    %0(s64) = COPY %d0
+    ; CHECK: [[VREGX:%[0-9]+]] = COPY %d0
+
+    %1(s64) = COPY %d1
+    ; CHECK: [[VREGY:%[0-9]+]] = COPY %d1
+
+    %2(s1) = G_FCMP floatpred(ord),  %0(s64), %1
+    ; CHECK: [[ZERO:%[0-9]+]] = MOVi 0, 14, _, _
+    ; CHECK-NEXT: VCMPD [[VREGX]], [[VREGY]], 14, _, implicit-def %fpscr_nzcv
+    ; CHECK-NEXT: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
+    ; CHECK-NEXT: [[RES:%[0-9]+]] = MOVCCi [[ZERO]], 1, 7, %cpsr
+
+    %3(s32) = G_ZEXT %2(s1)
+    ; CHECK: [[RET:%[0-9]+]] = ANDri [[RES]], 1, 14, _, _
+
+    %r0 = COPY %3(s32)
+    ; CHECK: %r0 = COPY [[RET]]
+
+    BX_RET 14, _, implicit %r0
+    ; CHECK: BX_RET 14, _, implicit %r0
+...
+---
+name:            test_fcmp_ugt_s64
+# CHECK-LABEL: name: test_fcmp_ugt_s64
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: fprb }
+  - { id: 1, class: fprb }
+  - { id: 2, class: gprb }
+  - { id: 3, class: gprb }
+body:             |
+  bb.0:
+    liveins: %d0, %d1
+
+    %0(s64) = COPY %d0
+    ; CHECK: [[VREGX:%[0-9]+]] = COPY %d0
+
+    %1(s64) = COPY %d1
+    ; CHECK: [[VREGY:%[0-9]+]] = COPY %d1
+
+    %2(s1) = G_FCMP floatpred(ugt),  %0(s64), %1
+    ; CHECK: [[ZERO:%[0-9]+]] = MOVi 0, 14, _, _
+    ; CHECK-NEXT: VCMPD [[VREGX]], [[VREGY]], 14, _, implicit-def %fpscr_nzcv
+    ; CHECK-NEXT: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
+    ; CHECK-NEXT: [[RES:%[0-9]+]] = MOVCCi [[ZERO]], 1, 8, %cpsr
+
+    %3(s32) = G_ZEXT %2(s1)
+    ; CHECK: [[RET:%[0-9]+]] = ANDri [[RES]], 1, 14, _, _
+
+    %r0 = COPY %3(s32)
+    ; CHECK: %r0 = COPY [[RET]]
+
+    BX_RET 14, _, implicit %r0
+    ; CHECK: BX_RET 14, _, implicit %r0
+...
+---
+name:            test_fcmp_uge_s64
+# CHECK-LABEL: name: test_fcmp_uge_s64
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: fprb }
+  - { id: 1, class: fprb }
+  - { id: 2, class: gprb }
+  - { id: 3, class: gprb }
+body:             |
+  bb.0:
+    liveins: %d0, %d1
+
+    %0(s64) = COPY %d0
+    ; CHECK: [[VREGX:%[0-9]+]] = COPY %d0
+
+    %1(s64) = COPY %d1
+    ; CHECK: [[VREGY:%[0-9]+]] = COPY %d1
+
+    %2(s1) = G_FCMP floatpred(uge),  %0(s64), %1
+    ; CHECK: [[ZERO:%[0-9]+]] = MOVi 0, 14, _, _
+    ; CHECK-NEXT: VCMPD [[VREGX]], [[VREGY]], 14, _, implicit-def %fpscr_nzcv
+    ; CHECK-NEXT: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
+    ; CHECK-NEXT: [[RES:%[0-9]+]] = MOVCCi [[ZERO]], 1, 5, %cpsr
+
+    %3(s32) = G_ZEXT %2(s1)
+    ; CHECK: [[RET:%[0-9]+]] = ANDri [[RES]], 1, 14, _, _
+
+    %r0 = COPY %3(s32)
+    ; CHECK: %r0 = COPY [[RET]]
+
+    BX_RET 14, _, implicit %r0
+    ; CHECK: BX_RET 14, _, implicit %r0
+...
+---
+name:            test_fcmp_ult_s64
+# CHECK-LABEL: name: test_fcmp_ult_s64
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: fprb }
+  - { id: 1, class: fprb }
+  - { id: 2, class: gprb }
+  - { id: 3, class: gprb }
+body:             |
+  bb.0:
+    liveins: %d0, %d1
+
+    %0(s64) = COPY %d0
+    ; CHECK: [[VREGX:%[0-9]+]] = COPY %d0
+
+    %1(s64) = COPY %d1
+    ; CHECK: [[VREGY:%[0-9]+]] = COPY %d1
+
+    %2(s1) = G_FCMP floatpred(ult),  %0(s64), %1
+    ; CHECK: [[ZERO:%[0-9]+]] = MOVi 0, 14, _, _
+    ; CHECK-NEXT: VCMPD [[VREGX]], [[VREGY]], 14, _, implicit-def %fpscr_nzcv
+    ; CHECK-NEXT: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
+    ; CHECK-NEXT: [[RES:%[0-9]+]] = MOVCCi [[ZERO]], 1, 11, %cpsr
+
+    %3(s32) = G_ZEXT %2(s1)
+    ; CHECK: [[RET:%[0-9]+]] = ANDri [[RES]], 1, 14, _, _
+
+    %r0 = COPY %3(s32)
+    ; CHECK: %r0 = COPY [[RET]]
+
+    BX_RET 14, _, implicit %r0
+    ; CHECK: BX_RET 14, _, implicit %r0
+...
+---
+name:            test_fcmp_ule_s64
+# CHECK-LABEL: name: test_fcmp_ule_s64
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: fprb }
+  - { id: 1, class: fprb }
+  - { id: 2, class: gprb }
+  - { id: 3, class: gprb }
+body:             |
+  bb.0:
+    liveins: %d0, %d1
+
+    %0(s64) = COPY %d0
+    ; CHECK: [[VREGX:%[0-9]+]] = COPY %d0
+
+    %1(s64) = COPY %d1
+    ; CHECK: [[VREGY:%[0-9]+]] = COPY %d1
+
+    %2(s1) = G_FCMP floatpred(ule),  %0(s64), %1
+    ; CHECK: [[ZERO:%[0-9]+]] = MOVi 0, 14, _, _
+    ; CHECK-NEXT: VCMPD [[VREGX]], [[VREGY]], 14, _, implicit-def %fpscr_nzcv
+    ; CHECK-NEXT: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
+    ; CHECK-NEXT: [[RES:%[0-9]+]] = MOVCCi [[ZERO]], 1, 13, %cpsr
+
+    %3(s32) = G_ZEXT %2(s1)
+    ; CHECK: [[RET:%[0-9]+]] = ANDri [[RES]], 1, 14, _, _
+
+    %r0 = COPY %3(s32)
+    ; CHECK: %r0 = COPY [[RET]]
+
+    BX_RET 14, _, implicit %r0
+    ; CHECK: BX_RET 14, _, implicit %r0
+...
+---
+name:            test_fcmp_une_s64
+# CHECK-LABEL: name: test_fcmp_une_s64
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: fprb }
+  - { id: 1, class: fprb }
+  - { id: 2, class: gprb }
+  - { id: 3, class: gprb }
+body:             |
+  bb.0:
+    liveins: %d0, %d1
+
+    %0(s64) = COPY %d0
+    ; CHECK: [[VREGX:%[0-9]+]] = COPY %d0
+
+    %1(s64) = COPY %d1
+    ; CHECK: [[VREGY:%[0-9]+]] = COPY %d1
+
+    %2(s1) = G_FCMP floatpred(une),  %0(s64), %1
+    ; CHECK: [[ZERO:%[0-9]+]] = MOVi 0, 14, _, _
+    ; CHECK-NEXT: VCMPD [[VREGX]], [[VREGY]], 14, _, implicit-def %fpscr_nzcv
+    ; CHECK-NEXT: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
+    ; CHECK-NEXT: [[RES:%[0-9]+]] = MOVCCi [[ZERO]], 1, 1, %cpsr
+
+    %3(s32) = G_ZEXT %2(s1)
+    ; CHECK: [[RET:%[0-9]+]] = ANDri [[RES]], 1, 14, _, _
+
+    %r0 = COPY %3(s32)
+    ; CHECK: %r0 = COPY [[RET]]
+
+    BX_RET 14, _, implicit %r0
+    ; CHECK: BX_RET 14, _, implicit %r0
+...
+---
+name:            test_fcmp_uno_s64
+# CHECK-LABEL: name: test_fcmp_uno_s64
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: fprb }
+  - { id: 1, class: fprb }
+  - { id: 2, class: gprb }
+  - { id: 3, class: gprb }
+body:             |
+  bb.0:
+    liveins: %d0, %d1
+
+    %0(s64) = COPY %d0
+    ; CHECK: [[VREGX:%[0-9]+]] = COPY %d0
+
+    %1(s64) = COPY %d1
+    ; CHECK: [[VREGY:%[0-9]+]] = COPY %d1
+
+    %2(s1) = G_FCMP floatpred(uno),  %0(s64), %1
+    ; CHECK: [[ZERO:%[0-9]+]] = MOVi 0, 14, _, _
+    ; CHECK-NEXT: VCMPD [[VREGX]], [[VREGY]], 14, _, implicit-def %fpscr_nzcv
+    ; CHECK-NEXT: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
+    ; CHECK-NEXT: [[RES:%[0-9]+]] = MOVCCi [[ZERO]], 1, 6, %cpsr
+
+    %3(s32) = G_ZEXT %2(s1)
+    ; CHECK: [[RET:%[0-9]+]] = ANDri [[RES]], 1, 14, _, _
+
+    %r0 = COPY %3(s32)
+    ; CHECK: %r0 = COPY [[RET]]
+
+    BX_RET 14, _, implicit %r0
+    ; CHECK: BX_RET 14, _, implicit %r0
+...
+---
+name:            test_fcmp_one_s64
+# CHECK-LABEL: name: test_fcmp_one_s64
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: fprb }
+  - { id: 1, class: fprb }
+  - { id: 2, class: gprb }
+  - { id: 3, class: gprb }
+body:             |
+  bb.0:
+    liveins: %d0, %d1
+
+    %0(s64) = COPY %d0
+    ; CHECK: [[VREGX:%[0-9]+]] = COPY %d0
+
+    %1(s64) = COPY %d1
+    ; CHECK: [[VREGY:%[0-9]+]] = COPY %d1
+
+    %2(s1) = G_FCMP floatpred(one),  %0(s64), %1
+    ; CHECK: [[ZERO:%[0-9]+]] = MOVi 0, 14, _, _
+    ; CHECK-NEXT: VCMPD [[VREGX]], [[VREGY]], 14, _, implicit-def %fpscr_nzcv
+    ; CHECK-NEXT: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
+    ; CHECK-NEXT: [[RES1:%[0-9]+]] = MOVCCi [[ZERO]], 1, 12, %cpsr
+    ; CHECK-NEXT: VCMPD [[VREGX]], [[VREGY]], 14, _, implicit-def %fpscr_nzcv
+    ; CHECK-NEXT: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
+    ; CHECK-NEXT: [[RES:%[0-9]+]] = MOVCCi [[RES1]], 1, 4, %cpsr
+
+    %3(s32) = G_ZEXT %2(s1)
+    ; CHECK: [[RET:%[0-9]+]] = ANDri [[RES]], 1, 14, _, _
+
+    %r0 = COPY %3(s32)
+    ; CHECK: %r0 = COPY [[RET]]
+
+    BX_RET 14, _, implicit %r0
+    ; CHECK: BX_RET 14, _, implicit %r0
+...
+---
+name:            test_fcmp_ueq_s64
+# CHECK-LABEL: name: test_fcmp_ueq_s64
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: fprb }
+  - { id: 1, class: fprb }
+  - { id: 2, class: gprb }
+  - { id: 3, class: gprb }
+body:             |
+  bb.0:
+    liveins: %d0, %d1
+
+    %0(s64) = COPY %d0
+    ; CHECK: [[VREGX:%[0-9]+]] = COPY %d0
+
+    %1(s64) = COPY %d1
+    ; CHECK: [[VREGY:%[0-9]+]] = COPY %d1
+
+    %2(s1) = G_FCMP floatpred(ueq),  %0(s64), %1
+    ; CHECK: [[ZERO:%[0-9]+]] = MOVi 0, 14, _, _
+    ; CHECK-NEXT: VCMPD [[VREGX]], [[VREGY]], 14, _, implicit-def %fpscr_nzcv
+    ; CHECK-NEXT: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
+    ; CHECK-NEXT: [[RES1:%[0-9]+]] = MOVCCi [[ZERO]], 1, 0, %cpsr
+    ; CHECK-NEXT: VCMPD [[VREGX]], [[VREGY]], 14, _, implicit-def %fpscr_nzcv
     ; CHECK-NEXT: FMSTAT 14, _, implicit-def %cpsr, implicit %fpscr_nzcv
     ; CHECK-NEXT: [[RES:%[0-9]+]] = MOVCCi [[RES1]], 1, 6, %cpsr
 

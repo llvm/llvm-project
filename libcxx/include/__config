@@ -625,7 +625,6 @@ namespace std {
 #define _LIBCPP_HIDDEN
 #define _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS
 #define _LIBCPP_TEMPLATE_VIS
-#define _LIBCPP_FUNC_VIS_ONLY
 #define _LIBCPP_ENUM_VIS
 
 #if defined(_LIBCPP_COMPILER_MSVC)
@@ -682,10 +681,6 @@ namespace std {
 #  else
 #    define _LIBCPP_TEMPLATE_VIS
 #  endif
-#endif
-
-#ifndef _LIBCPP_FUNC_VIS_ONLY
-# define _LIBCPP_FUNC_VIS_ONLY _LIBCPP_FUNC_VIS
 #endif
 
 #ifndef _LIBCPP_EXTERN_VIS

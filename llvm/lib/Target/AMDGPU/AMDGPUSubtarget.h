@@ -359,6 +359,10 @@ public:
     return FP64FP16Denormals;
   }
 
+  bool supportsMinMaxDenormModes() const {
+    return getGeneration() >= AMDGPUSubtarget::GFX9;
+  }
+
   bool hasFPExceptions() const {
     return FPExceptions;
   }

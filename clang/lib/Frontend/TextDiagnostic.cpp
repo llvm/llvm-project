@@ -1052,7 +1052,8 @@ static void highlightRange(const CharSourceRange &R,
   std::fill(CaretLine.begin()+StartColNo,CaretLine.begin()+EndColNo,'~');
 }
 
-static std::string buildFixItInsertionLine(unsigned LineNo,
+static std::string buildFixItInsertionLine(FileID FID,
+                                           unsigned LineNo,
                                            const SourceColumnMap &map,
                                            ArrayRef<FixItHint> Hints,
                                            const SourceManager &SM,
@@ -1069,7 +1070,8 @@ static std::string buildFixItInsertionLine(unsigned LineNo,
       // code contains no newlines and is on the same line as the caret.
       std::pair<FileID, unsigned> HintLocInfo
         = SM.getDecomposedExpansionLoc(I->RemoveRange.getBegin());
-      if (LineNo == SM.getLineNumber(HintLocInfo.first, HintLocInfo.second) &&
+      if (FID == HintLocInfo.first &&
+          LineNo == SM.getLineNumber(HintLocInfo.first, HintLocInfo.second) &&
           StringRef(I->CodeToInsert).find_first_of("\n\r") == StringRef::npos) {
         // Insert the new code into the line just below the code
         // that the user wrote.
@@ -1105,9 +1107,6 @@ static std::string buildFixItInsertionLine(unsigned LineNo,
 
         PrevHintEndCol =
           HintCol + llvm::sys::locale::columnWidth(I->CodeToInsert);
-      } else {
-        FixItInsertionLine.clear();
-        break;
       }
     }
   }
@@ -1222,7 +1221,7 @@ void TextDiagnostic::emitSnippetAndCaret(
     }
 
     std::string FixItInsertionLine = buildFixItInsertionLine(
-        LineNo, sourceColMap, Hints, SM, DiagOpts.get());
+        FID, LineNo, sourceColMap, Hints, SM, DiagOpts.get());
 
     // If the source line is too long for our terminal, select only the
     // "interesting" source region within that line.

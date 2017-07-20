@@ -13,6 +13,7 @@
 #include "CloexecCreatCheck.h"
 #include "CloexecFopenCheck.h"
 #include "CloexecOpenCheck.h"
+#include "CloexecSocketCheck.h"
 
 using namespace clang::ast_matchers;
 
@@ -27,6 +28,7 @@ public:
     CheckFactories.registerCheck<CloexecCreatCheck>("android-cloexec-creat");
     CheckFactories.registerCheck<CloexecFopenCheck>("android-cloexec-fopen");
     CheckFactories.registerCheck<CloexecOpenCheck>("android-cloexec-open");
+    CheckFactories.registerCheck<CloexecSocketCheck>("android-cloexec-socket");
   }
 };
 

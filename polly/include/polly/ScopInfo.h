@@ -1616,6 +1616,12 @@ private:
   /// The name of the SCoP (identical to the regions name)
   std::string name;
 
+  /// The ID to be assigned to the next Scop in a function
+  static int NextScopID;
+
+  /// The name of the function currently under consideration
+  static std::string CurrentFunc;
+
   // Access functions of the SCoP.
   //
   // This owns all the MemoryAccess objects of the Scop created in this pass.
@@ -1807,6 +1813,12 @@ private:
 
   /// The smallest statement index not yet assigned.
   long StmtIdx = 0;
+
+  /// A number that uniquely represents a Scop within its function
+  const int ID;
+
+  /// Return the ID for a new Scop within a function
+  static int getNextID(std::string ParentFunc);
 
   /// Scop constructor; invoked from ScopBuilder::buildScop.
   Scop(Region &R, ScalarEvolution &SE, LoopInfo &LI,
@@ -2377,6 +2389,9 @@ public:
 
   /// Check if the SCoP is to be skipped by ScopPass passes.
   bool isToBeSkipped() const { return SkipScop; }
+
+  /// Return the ID of the Scop
+  int getID() const { return ID; }
 
   /// Get the name of the entry and exit blocks of this Scop.
   ///

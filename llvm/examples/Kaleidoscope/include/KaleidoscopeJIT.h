@@ -115,7 +115,7 @@ private:
       return JITSymbol(SymAddr, JITSymbolFlags::Exported);
 
 #ifdef LLVM_ON_WIN32
-    // For Windows retry without "_" at begining, as RTDyldMemoryManager uses
+    // For Windows retry without "_" at beginning, as RTDyldMemoryManager uses
     // GetProcAddress and standard libraries like msvcrt.dll use names
     // with and without "_" (for example "_itoa" but "sin").
     if (Name.length() > 2 && Name[0] == '_')

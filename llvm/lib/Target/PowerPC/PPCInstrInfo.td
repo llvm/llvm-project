@@ -405,6 +405,25 @@ def unaligned4sextloadi32 : PatFrag<(ops node:$ptr), (sextloadi32 node:$ptr), [{
   return cast<LoadSDNode>(N)->getAlignment() < 4;
 }]>;
 
+// This is a somewhat weaker condition than actually checking for 16-byte
+// alignment. It is simply checking that the displacement can be represented
+// as an immediate that is a multiple of 16 (i.e. the requirements for DQ-Form
+// instructions).
+def quadwOffsetLoad : PatFrag<(ops node:$ptr), (load node:$ptr), [{
+  return isOffsetMultipleOf(N, 16);
+}]>;
+def quadwOffsetStore : PatFrag<(ops node:$val, node:$ptr),
+                               (store node:$val, node:$ptr), [{
+  return isOffsetMultipleOf(N, 16);
+}]>;
+def nonQuadwOffsetLoad : PatFrag<(ops node:$ptr), (load node:$ptr), [{
+  return !isOffsetMultipleOf(N, 16);
+}]>;
+def nonQuadwOffsetStore : PatFrag<(ops node:$val, node:$ptr),
+                                  (store node:$val, node:$ptr), [{
+  return !isOffsetMultipleOf(N, 16);
+}]>;
+
 //===----------------------------------------------------------------------===//
 // PowerPC Flag Definitions.
 
@@ -815,7 +834,8 @@ def pred : Operand<OtherVT> {
 def iaddr  : ComplexPattern<iPTR, 2, "SelectAddrImm",    [], []>;
 def xaddr  : ComplexPattern<iPTR, 2, "SelectAddrIdx",    [], []>;
 def xoaddr : ComplexPattern<iPTR, 2, "SelectAddrIdxOnly",[], []>;
-def ixaddr : ComplexPattern<iPTR, 2, "SelectAddrImmX4",  [], []>; // "std"
+def ixaddr : ComplexPattern<iPTR, 2, "SelectAddrImmX4",  [], []>;  // "std"
+def iqaddr : ComplexPattern<iPTR, 2, "SelectAddrImmX16",  [], []>; // "stxv"
 
 // The address in a single register. This is used with the SjLj
 // pseudo-instructions.

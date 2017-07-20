@@ -71,6 +71,8 @@ std::string DisassembleCmd(const std::string &FileName);
 
 std::string SearchRegexCmd(const std::string &Regex);
 
+size_t SimpleFastHash(const uint8_t *Data, size_t Size);
+
 }  // namespace fuzzer
 
 #endif  // LLVM_FUZZER_UTIL_H

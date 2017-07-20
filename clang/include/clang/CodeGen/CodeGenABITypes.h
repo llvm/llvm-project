@@ -31,6 +31,8 @@
 namespace llvm {
   class DataLayout;
   class Module;
+  class FunctionType;
+  class Type;
 }
 
 namespace clang {
@@ -69,6 +71,12 @@ const CGFunctionInfo &arrangeFreeFunctionCall(CodeGenModule &CGM,
                                               ArrayRef<CanQualType> argTypes,
                                               FunctionType::ExtInfo info,
                                               RequiredArgs args);
+
+// Returns null if the function type is incomplete and can't be lowered.
+llvm::FunctionType *convertFreeFunctionType(CodeGenModule &CGM,
+                                            const FunctionDecl *FD);
+
+llvm::Type *convertTypeForMemory(CodeGenModule &CGM, QualType T);
 
 }  // end namespace CodeGen
 }  // end namespace clang

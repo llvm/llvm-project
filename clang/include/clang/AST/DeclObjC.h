@@ -1039,10 +1039,9 @@ public:
   typedef llvm::DenseMap<std::pair<IdentifierInfo*,
                                    unsigned/*isClassProperty*/>,
                          ObjCPropertyDecl*> PropertyMap;
-  
-  typedef llvm::DenseMap<const ObjCProtocolDecl *, ObjCPropertyDecl*>
-            ProtocolPropertyMap;
-  
+
+  typedef llvm::SmallDenseSet<const ObjCProtocolDecl *, 8> ProtocolPropertySet;
+
   typedef llvm::SmallVector<ObjCPropertyDecl*, 8> PropertyDeclOrder;
   
   /// This routine collects list of properties to be implemented in the class.
@@ -2159,7 +2158,8 @@ public:
                                     PropertyDeclOrder &PO) const override;
 
   void collectInheritedProtocolProperties(const ObjCPropertyDecl *Property,
-                                          ProtocolPropertyMap &PM) const;
+                                          ProtocolPropertySet &PS,
+                                          PropertyDeclOrder &PO) const;
 
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K == ObjCProtocol; }

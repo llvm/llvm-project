@@ -59,8 +59,6 @@
 //         J2_jump <BB#6>, %PC<imp-def,dead>
 //     Successors according to CFG: BB#6 BB#3
 
-#define DEBUG_TYPE "hexagon-eif"
-
 #include "Hexagon.h"
 #include "HexagonInstrInfo.h"
 #include "HexagonSubtarget.h"
@@ -89,6 +87,8 @@
 #include "llvm/Target/TargetRegisterInfo.h"
 #include <cassert>
 #include <iterator>
+
+#define DEBUG_TYPE "hexagon-eif"
 
 using namespace llvm;
 

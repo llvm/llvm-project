@@ -74,6 +74,7 @@ class SyncClock {
   u32 tab_idx_;
   u32 size_;
 
+  void ResetImpl();
   ClockElem &elem(unsigned tid) const;
 };
 
@@ -89,7 +90,7 @@ struct ThreadClock {
     return clk_[tid].epoch;
   }
 
-  void set(unsigned tid, u64 v);
+  void set(ClockCache *c, unsigned tid, u64 v);
 
   void set(u64 v) {
     DCHECK_GE(v, clk_[tid_].epoch);
@@ -108,6 +109,7 @@ struct ThreadClock {
   void release(ClockCache *c, SyncClock *dst) const;
   void acq_rel(ClockCache *c, SyncClock *dst);
   void ReleaseStore(ClockCache *c, SyncClock *dst) const;
+  void ResetCached(ClockCache *c);
 
   void DebugReset();
   void DebugDump(int(*printf)(const char *s, ...));

@@ -23,41 +23,47 @@ template <class PrimaryAllocator, class AllocatorCache,
     class SecondaryAllocator>
 class ScudoCombinedAllocator {
  public:
-  void Init(s32 ReleaseToOSIntervalMs) {
+  void init(s32 ReleaseToOSIntervalMs) {
     Primary.Init(ReleaseToOSIntervalMs);
     Secondary.Init();
     Stats.Init();
   }
 
-  void *Allocate(AllocatorCache *Cache, uptr Size, uptr Alignment,
-                 bool FromPrimary) {
-    if (FromPrimary)
-      return Cache->Allocate(&Primary, Primary.ClassID(Size));
+  // Primary allocations are always MinAlignment aligned, and as such do not
+  // require an Alignment parameter.
+  void *allocatePrimary(AllocatorCache *Cache, uptr Size) {
+    return Cache->Allocate(&Primary, Primary.ClassID(Size));
+  }
+
+  // Secondary allocations do not require a Cache, but do require an Alignment
+  // parameter.
+  void *allocateSecondary(uptr Size, uptr Alignment) {
     return Secondary.Allocate(&Stats, Size, Alignment);
   }
 
-  void Deallocate(AllocatorCache *Cache, void *Ptr, bool FromPrimary) {
-    if (FromPrimary)
-      Cache->Deallocate(&Primary, Primary.GetSizeClass(Ptr), Ptr);
-    else
-      Secondary.Deallocate(&Stats, Ptr);
+  void deallocatePrimary(AllocatorCache *Cache, void *Ptr) {
+    Cache->Deallocate(&Primary, Primary.GetSizeClass(Ptr), Ptr);
   }
 
-  uptr GetActuallyAllocatedSize(void *Ptr, bool FromPrimary) {
+  void deallocateSecondary(void *Ptr) {
+    Secondary.Deallocate(&Stats, Ptr);
+  }
+
+  uptr getActuallyAllocatedSize(void *Ptr, bool FromPrimary) {
     if (FromPrimary)
       return PrimaryAllocator::ClassIdToSize(Primary.GetSizeClass(Ptr));
     return Secondary.GetActuallyAllocatedSize(Ptr);
   }
 
-  void InitCache(AllocatorCache *Cache) {
+  void initCache(AllocatorCache *Cache) {
     Cache->Init(&Stats);
   }
 
-  void DestroyCache(AllocatorCache *Cache) {
+  void destroyCache(AllocatorCache *Cache) {
     Cache->Destroy(&Primary, &Stats);
   }
 
-  void GetStats(AllocatorStatCounters StatType) const {
+  void getStats(AllocatorStatCounters StatType) const {
     Stats.Get(StatType);
   }
 

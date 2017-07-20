@@ -273,16 +273,13 @@ Error TypeStreamMerger::mergeIdRecords(TypeTableBuilder &Dest,
 
 Error TypeStreamMerger::mergeTypesAndIds(TypeTableBuilder &DestIds,
                                          TypeTableBuilder &DestTypes,
-  const CVTypeArray &IdsAndTypes) {
+                                         const CVTypeArray &IdsAndTypes) {
   DestIdStream = &DestIds;
   DestTypeStream = &DestTypes;
-
   return doit(IdsAndTypes);
 }
 
 Error TypeStreamMerger::doit(const CVTypeArray &Types) {
-  LastError = Error::success();
-
   // We don't want to deserialize records.  I guess this flag is poorly named,
   // but it really means "Don't deserialize records before switching on the
   // concrete type.
@@ -301,7 +298,7 @@ Error TypeStreamMerger::doit(const CVTypeArray &Types) {
   // topologically sorted. The standard library contains MASM-produced objects,
   // so this is important to handle correctly, but we don't have to be too
   // efficient. MASM type streams are usually very small.
-  while (!*LastError && NumBadIndices > 0) {
+  while (!LastError && NumBadIndices > 0) {
     unsigned BadIndicesRemaining = NumBadIndices;
     IsSecondPass = true;
     NumBadIndices = 0;
@@ -313,15 +310,15 @@ Error TypeStreamMerger::doit(const CVTypeArray &Types) {
 
     assert(NumBadIndices <= BadIndicesRemaining &&
            "second pass found more bad indices");
-    if (!*LastError && NumBadIndices == BadIndicesRemaining) {
+    if (!LastError && NumBadIndices == BadIndicesRemaining) {
       return llvm::make_error<CodeViewError>(
           cv_error_code::corrupt_record, "input type graph contains cycles");
     }
   }
 
-  Error Ret = std::move(*LastError);
-  LastError.reset();
-  return Ret;
+  if (LastError)
+    return std::move(*LastError);
+  return Error::success();
 }
 
 Error llvm::codeview::mergeTypeRecords(TypeTableBuilder &Dest,
@@ -343,8 +340,7 @@ Error llvm::codeview::mergeIdRecords(TypeTableBuilder &Dest,
 Error llvm::codeview::mergeTypeAndIdRecords(
     TypeTableBuilder &DestIds, TypeTableBuilder &DestTypes,
     SmallVectorImpl<TypeIndex> &SourceToDest, TypeServerHandler *Handler,
-  const CVTypeArray &IdsAndTypes) {
-
+    const CVTypeArray &IdsAndTypes) {
   TypeStreamMerger M(SourceToDest, Handler);
   return M.mergeTypesAndIds(DestIds, DestTypes, IdsAndTypes);
 }

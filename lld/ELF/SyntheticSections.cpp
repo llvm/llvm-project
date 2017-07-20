@@ -1700,9 +1700,9 @@ unsigned PltSection::getPltRelocOff() const {
   return (HeaderSize == 0) ? InX::Plt->getSize() : 0;
 }
 
-GdbIndexSection::GdbIndexSection()
+GdbIndexSection::GdbIndexSection(std::vector<GdbIndexChunk> &&Chunks)
     : SyntheticSection(0, SHT_PROGBITS, 1, ".gdb_index"),
-      StringPool(llvm::StringTableBuilder::ELF) {}
+      StringPool(llvm::StringTableBuilder::ELF), Chunks(std::move(Chunks)) {}
 
 // Iterative hash function for symbol's name is described in .gdb_index format
 // specification. Note that we use one for version 5 to 7 here, it is different
@@ -1714,11 +1714,10 @@ static uint32_t hash(StringRef Str) {
   return R;
 }
 
-static std::vector<CompilationUnitEntry> readCuList(DWARFContext &Dwarf,
-                                                    InputSection *Sec) {
+static std::vector<CompilationUnitEntry> readCuList(DWARFContext &Dwarf) {
   std::vector<CompilationUnitEntry> Ret;
   for (std::unique_ptr<DWARFCompileUnit> &CU : Dwarf.compile_units())
-    Ret.push_back({Sec->OutSecOff + CU->getOffset(), CU->getLength() + 4});
+    Ret.push_back({CU->getOffset(), CU->getLength() + 4});
   return Ret;
 }
 
@@ -1765,18 +1764,14 @@ static std::vector<InputSection *> getDebugInfoSections() {
   std::vector<InputSection *> Ret;
   for (InputSectionBase *S : InputSections)
     if (InputSection *IS = dyn_cast<InputSection>(S))
-      if (IS->getParent() && IS->Name == ".debug_info")
+      if (IS->Name == ".debug_info")
         Ret.push_back(IS);
   return Ret;
 }
 
 void GdbIndexSection::buildIndex() {
-  std::vector<InputSection *> V = getDebugInfoSections();
-  if (V.empty())
+  if (Chunks.empty())
     return;
-
-  for (InputSection *Sec : V)
-    Chunks.push_back(readDwarf(Sec));
 
   uint32_t CuId = 0;
   for (GdbIndexChunk &D : Chunks) {
@@ -1803,25 +1798,31 @@ void GdbIndexSection::buildIndex() {
   }
 }
 
-GdbIndexChunk GdbIndexSection::readDwarf(InputSection *Sec) {
-  Expected<std::unique_ptr<object::ObjectFile>> Obj =
-      object::ObjectFile::createObjectFile(Sec->File->MB);
-  if (!Obj) {
-    error(toString(Sec->File) + ": error creating DWARF context");
-    return {};
-  }
-
-  DWARFContextInMemory Dwarf(*Obj.get(), nullptr, [&](Error E) {
-    error(toString(Sec->File) + ": error parsing DWARF data:\n>>> " +
-          toString(std::move(E)));
-    return ErrorPolicy::Continue;
-  });
-
+static GdbIndexChunk readDwarf(DWARFContextInMemory &Dwarf, InputSection *Sec) {
   GdbIndexChunk Ret;
-  Ret.CompilationUnits = readCuList(Dwarf, Sec);
+  Ret.DebugInfoSec = Sec;
+  Ret.CompilationUnits = readCuList(Dwarf);
   Ret.AddressArea = readAddressArea(Dwarf, Sec);
   Ret.NamesAndTypes = readPubNamesAndTypes(Dwarf, Config->IsLE);
   return Ret;
+}
+
+template <class ELFT> GdbIndexSection *elf::createGdbIndex() {
+  std::vector<GdbIndexChunk> Chunks;
+  for (InputSection *Sec : getDebugInfoSections()) {
+    InputFile *F = Sec->File;
+    std::error_code EC;
+    ELFObjectFile<ELFT> Obj(F->MB, EC);
+    if (EC)
+      fatal(EC.message());
+    DWARFContextInMemory Dwarf(Obj, nullptr, [&](Error E) {
+      error(toString(F) + ": error parsing DWARF data:\n>>> " +
+            toString(std::move(E)));
+      return ErrorPolicy::Continue;
+    });
+    Chunks.push_back(readDwarf(Dwarf, Sec));
+  }
+  return make<GdbIndexSection>(std::move(Chunks));
 }
 
 static size_t getCuSize(std::vector<GdbIndexChunk> &C) {
@@ -1881,7 +1882,7 @@ void GdbIndexSection::writeTo(uint8_t *Buf) {
   // Write the CU list.
   for (GdbIndexChunk &D : Chunks) {
     for (CompilationUnitEntry &Cu : D.CompilationUnits) {
-      write64le(Buf, Cu.CuOffset);
+      write64le(Buf, D.DebugInfoSec->OutSecOff + Cu.CuOffset);
       write64le(Buf + 8, Cu.CuLength);
       Buf += 16;
     }
@@ -2349,6 +2350,11 @@ PltSection *InX::Iplt;
 StringTableSection *InX::ShStrTab;
 StringTableSection *InX::StrTab;
 SymbolTableBaseSection *InX::SymTab;
+
+template GdbIndexSection *elf::createGdbIndex<ELF32LE>();
+template GdbIndexSection *elf::createGdbIndex<ELF32BE>();
+template GdbIndexSection *elf::createGdbIndex<ELF64LE>();
+template GdbIndexSection *elf::createGdbIndex<ELF64BE>();
 
 template void PltSection::addEntry<ELF32LE>(SymbolBody &Sym);
 template void PltSection::addEntry<ELF32BE>(SymbolBody &Sym);

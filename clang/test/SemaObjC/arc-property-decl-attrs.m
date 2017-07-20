@@ -121,3 +121,107 @@ __attribute__((objc_root_class))
 @implementation I2
 @synthesize prop;
 @end
+
+// rdar://31579994
+// Verify that the all of the property declarations in inherited protocols are
+// compatible when synthesing a property from a protocol.
+
+@protocol CopyVsAssign1
+@property (copy, nonatomic,  readonly) id prop; // expected-error {{property with attribute 'copy' was selected for synthesis}}
+@end
+@protocol CopyVsAssign2
+@property (assign, nonatomic, readonly) id prop; // expected-note {{it could also be property without attribute 'copy' declared here}}
+@end
+
+@interface CopyVsAssign: Foo <CopyVsAssign1, CopyVsAssign2>
+@end
+@implementation CopyVsAssign
+@synthesize prop; // expected-note {{property synthesized here}}
+@end
+
+@protocol RetainVsNonRetain1
+@property (readonly) id prop; // expected-error {{property without attribute 'retain (or strong)' was selected for synthesis}}
+@end
+@protocol RetainVsNonRetain2
+@property (retain, readonly) id prop; // expected-note {{it could also be property with attribute 'retain (or strong)' declared here}}
+@end
+
+@interface RetainVsNonRetain: Foo <RetainVsNonRetain1, RetainVsNonRetain2>
+@end
+@implementation RetainVsNonRetain
+@synthesize prop; // expected-note {{property synthesized here}}
+@end
+
+@protocol AtomicVsNonatomic1
+@property (copy, nonatomic, readonly) id prop; // expected-error {{property without attribute 'atomic' was selected for synthesis}}
+@end
+@protocol AtomicVsNonatomic2
+@property (copy, atomic, readonly) id prop; // expected-note {{it could also be property with attribute 'atomic' declared here}}
+@end
+
+@interface AtomicVsNonAtomic: Foo <AtomicVsNonatomic1, AtomicVsNonatomic2>
+@end
+@implementation AtomicVsNonAtomic
+@synthesize prop; // expected-note {{property synthesized here}}
+@end
+
+@protocol Getter1
+@property (copy, readonly) id prop; // expected-error {{property with getter 'prop' was selected for synthesis}}
+@end
+@protocol Getter2
+@property (copy, getter=x, readonly) id prop; // expected-note {{it could also be property with getter 'x' declared here}}
+@end
+
+@interface GetterVsGetter: Foo <Getter1, Getter2>
+@end
+@implementation GetterVsGetter
+@synthesize prop; // expected-note {{property synthesized here}}
+@end
+
+@protocol Setter1
+@property (copy, readonly) id prop;
+@end
+@protocol Setter2
+@property (copy, setter=setp:, readwrite) id prop; // expected-error {{property with setter 'setp:' was selected for synthesis}}
+@end
+@protocol Setter3
+@property (copy, readwrite) id prop; // expected-note {{it could also be property with setter 'setProp:' declared here}}
+@end
+
+@interface SetterVsSetter: Foo <Setter1, Setter2, Setter3>
+@end
+@implementation SetterVsSetter
+@synthesize prop; // expected-note {{property synthesized here}}
+@end
+
+@protocol TypeVsAttribute1
+@property (assign, atomic, readonly) int prop; // expected-error {{property of type 'int' was selected for synthesis}}
+@end
+@protocol TypeVsAttribute2
+@property (assign, atomic, readonly) id prop; // expected-note {{it could also be property of type 'id' declared here}}
+@end
+@protocol TypeVsAttribute3
+@property (copy, readonly) id prop; // expected-note {{it could also be property with attribute 'copy' declared here}}
+@end
+
+@interface TypeVsAttribute: Foo <TypeVsAttribute1, TypeVsAttribute2, TypeVsAttribute3>
+@end
+@implementation TypeVsAttribute
+@synthesize prop; // expected-note {{property synthesized here}}
+@end
+
+@protocol TypeVsSetter1
+@property (assign, nonatomic, readonly) int prop; // expected-note {{it could also be property of type 'int' declared here}}
+@end
+@protocol TypeVsSetter2
+@property (assign, nonatomic, readonly) id prop; // ok
+@end
+@protocol TypeVsSetter3
+@property (assign, nonatomic, readwrite) id prop; // expected-error {{property of type 'id' was selected for synthesis}}
+@end
+
+@interface TypeVsSetter: Foo <TypeVsSetter1, TypeVsSetter2, TypeVsSetter3>
+@end
+@implementation TypeVsSetter
+@synthesize prop; // expected-note {{property synthesized here}}
+@end

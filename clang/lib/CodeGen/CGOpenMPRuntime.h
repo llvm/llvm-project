@@ -105,6 +105,85 @@ struct OMPTaskDataTy final {
   bool Nogroup = false;
 };
 
+/// Class intended to support codegen of all kind of the reduction clauses.
+class ReductionCodeGen {
+private:
+  /// Data required for codegen of reduction clauses.
+  struct ReductionData {
+    /// Reference to the original shared item.
+    const Expr *Ref = nullptr;
+    /// Helper expression for generation of private copy.
+    const Expr *Private = nullptr;
+    /// Helper expression for generation reduction operation.
+    const Expr *ReductionOp = nullptr;
+    ReductionData(const Expr *Ref, const Expr *Private, const Expr *ReductionOp)
+        : Ref(Ref), Private(Private), ReductionOp(ReductionOp) {}
+  };
+  /// List of reduction-based clauses.
+  SmallVector<ReductionData, 4> ClausesData;
+
+  /// List of addresses of original shared variables/expressions.
+  SmallVector<std::pair<LValue, LValue>, 4> SharedAddresses;
+  /// Sizes of the reduction items in chars.
+  SmallVector<llvm::Value *, 4> Sizes;
+  /// Base declarations for the reduction items.
+  SmallVector<const VarDecl *, 4> BaseDecls;
+  /// Emits lvalue for shared expresion.
+  LValue emitSharedLValue(CodeGenFunction &CGF, const Expr *E);
+  /// Emits upper bound for shared expression (if array section).
+  LValue emitSharedLValueUB(CodeGenFunction &CGF, const Expr *E);
+  /// Performs aggregate initialization.
+  /// \param N Number of reduction item in the common list.
+  /// \param PrivateAddr Address of the corresponding private item.
+  /// \param SharedLVal Addreiss of the original shared variable.
+  void emitAggregateInitialization(CodeGenFunction &CGF, unsigned N,
+                                   Address PrivateAddr, LValue SharedLVal);
+
+public:
+  ReductionCodeGen(ArrayRef<const Expr *> Shareds,
+                   ArrayRef<const Expr *> Privates,
+                   ArrayRef<const Expr *> ReductionOps);
+  /// Emits lvalue for a reduction item.
+  /// \param N Number of the reduction item.
+  void emitSharedLValue(CodeGenFunction &CGF, unsigned N);
+  /// Emits the code for the variable-modified type, if required.
+  /// \param N Number of the reduction item.
+  void emitAggregateType(CodeGenFunction &CGF, unsigned N);
+  /// Emits the code for the variable-modified type, if required.
+  /// \param N Number of the reduction item.
+  /// \param Size Size of the type in chars.
+  void emitAggregateType(CodeGenFunction &CGF, unsigned N, llvm::Value *Size);
+  /// Performs initialization of the private copy for the reduction item.
+  /// \param N Number of the reduction item.
+  /// \param PrivateAddr Address of the corresponding private item.
+  /// \param DefaultInit Default initialization sequence that should be
+  /// performed if no reduction specific initialization is found.
+  /// \param SharedLVal Address of the original shared variable.
+  void
+  emitInitialization(CodeGenFunction &CGF, unsigned N, Address PrivateAddr,
+                     LValue SharedLVal,
+                     llvm::function_ref<bool(CodeGenFunction &)> DefaultInit);
+  /// Returns true if the private copy requires cleanups.
+  bool needCleanups(unsigned N);
+  /// Emits cleanup code for the reduction item.
+  /// \param N Number of the reduction item.
+  /// \param PrivateAddr Address of the corresponding private item.
+  void emitCleanups(CodeGenFunction &CGF, unsigned N, Address PrivateAddr);
+  /// Adjusts \p PrivatedAddr for using instead of the original variable
+  /// address in normal operations.
+  /// \param N Number of the reduction item.
+  /// \param PrivateAddr Address of the corresponding private item.
+  Address adjustPrivateAddress(CodeGenFunction &CGF, unsigned N,
+                               Address PrivateAddr);
+  /// Returns LValue for the reduction item.
+  LValue getSharedLValue(unsigned N) const { return SharedAddresses[N].first; }
+  /// Returns the size of the reduction item in chars, or nullptr, if the size
+  /// is a constant.
+  llvm::Value *getSizeInChars(unsigned N) const { return Sizes[N]; }
+  /// Returns the base declaration of the reduction item.
+  const VarDecl *getBaseDecl(unsigned N) const { return BaseDecls[N]; }
+};
+
 class CGOpenMPRuntime {
 protected:
   CodeGenModule &CGM;
@@ -121,7 +200,7 @@ protected:
   /// \param OutlinedFnID Outlined function ID value to be defined by this call.
   /// \param IsOffloadEntry True if the outlined function is an offload entry.
   /// \param CodeGen Lambda codegen specific to an accelerator device.
-  /// An oulined function may not be an entry if, e.g. the if clause always
+  /// An outlined function may not be an entry if, e.g. the if clause always
   /// evaluates to false.
   virtual void emitTargetOutlinedFunctionHelper(const OMPExecutableDirective &D,
                                                 StringRef ParentName,
@@ -699,7 +778,7 @@ public:
   /// \param Loc Clang source location.
   /// \param ScheduleKind Schedule kind, specified by the 'schedule' clause.
   /// \param IVSize Size of the iteration variable in bits.
-  /// \param IVSigned Sign of the interation variable.
+  /// \param IVSigned Sign of the iteration variable.
   /// \param Ordered true if loop is ordered, false otherwise.
   /// \param DispatchValues struct containing llvm values for lower bound, upper
   /// bound, and chunk expression.
@@ -723,7 +802,7 @@ public:
   /// \param Loc Clang source location.
   /// \param ScheduleKind Schedule kind, specified by the 'schedule' clause.
   /// \param IVSize Size of the iteration variable in bits.
-  /// \param IVSigned Sign of the interation variable.
+  /// \param IVSigned Sign of the iteration variable.
   /// \param Ordered true if loop is ordered, false otherwise.
   /// \param IL Address of the output variable in which the flag of the
   /// last iteration is returned.
@@ -732,7 +811,7 @@ public:
   /// \param UB Address of the output variable in which the upper iteration
   /// number is returned.
   /// \param ST Address of the output variable in which the stride value is
-  /// returned nesessary to generated the static_chunked scheduled loop.
+  /// returned necessary to generated the static_chunked scheduled loop.
   /// \param Chunk Value of the chunk for the static_chunked scheduled loop.
   /// For the default (nullptr) value, the chunk 1 will be used.
   ///
@@ -747,7 +826,7 @@ public:
   /// \param Loc Clang source location.
   /// \param SchedKind Schedule kind, specified by the 'dist_schedule' clause.
   /// \param IVSize Size of the iteration variable in bits.
-  /// \param IVSigned Sign of the interation variable.
+  /// \param IVSigned Sign of the iteration variable.
   /// \param Ordered true if loop is ordered, false otherwise.
   /// \param IL Address of the output variable in which the flag of the
   /// last iteration is returned.
@@ -756,7 +835,7 @@ public:
   /// \param UB Address of the output variable in which the upper iteration
   /// number is returned.
   /// \param ST Address of the output variable in which the stride value is
-  /// returned nesessary to generated the static_chunked scheduled loop.
+  /// returned necessary to generated the static_chunked scheduled loop.
   /// \param Chunk Value of the chunk for the static_chunked scheduled loop.
   /// For the default (nullptr) value, the chunk 1 will be used.
   ///
@@ -773,7 +852,7 @@ public:
   /// \param CGF Reference to current CodeGenFunction.
   /// \param Loc Clang source location.
   /// \param IVSize Size of the iteration variable in bits.
-  /// \param IVSigned Sign of the interation variable.
+  /// \param IVSigned Sign of the iteration variable.
   ///
   virtual void emitForOrderedIterationEnd(CodeGenFunction &CGF,
                                           SourceLocation Loc, unsigned IVSize,
@@ -792,7 +871,7 @@ public:
   ///          kmp_int[32|64] *p_lower, kmp_int[32|64] *p_upper,
   ///          kmp_int[32|64] *p_stride);
   /// \param IVSize Size of the iteration variable in bits.
-  /// \param IVSigned Sign of the interation variable.
+  /// \param IVSigned Sign of the iteration variable.
   /// \param IL Address of the output variable in which the flag of the
   /// last iteration is returned.
   /// \param LB Address of the output variable in which the lower iteration
@@ -1029,7 +1108,7 @@ public:
   /// \param OutlinedFnID Outlined function ID value to be defined by this call.
   /// \param IsOffloadEntry True if the outlined function is an offload entry.
   /// \param CodeGen Code generation sequence for the \a D directive.
-  /// An oulined function may not be an entry if, e.g. the if clause always
+  /// An outlined function may not be an entry if, e.g. the if clause always
   /// evaluates to false.
   virtual void emitTargetOutlinedFunction(const OMPExecutableDirective &D,
                                           StringRef ParentName,

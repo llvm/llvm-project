@@ -41,6 +41,7 @@ add_pdb_impl_folder(Native
   Native/InfoStream.cpp
   Native/InfoStreamBuilder.cpp
   Native/ModuleDebugStream.cpp
+  Native/NativeBuiltinSymbol.cpp
   Native/NativeCompilandSymbol.cpp
   Native/NativeEnumModules.cpp
   Native/NativeExeSymbol.cpp

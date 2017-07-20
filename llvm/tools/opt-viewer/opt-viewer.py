@@ -178,7 +178,10 @@ def map_remarks(all_remarks):
             for arg in remark.Args:
                 caller = arg.get('Caller')
                 if caller:
-                    context.caller_loc[caller] = arg['DebugLoc']
+                    try:
+                        context.caller_loc[caller] = arg['DebugLoc']
+                    except KeyError:
+                        pass
 
 
 def generate_report(all_remarks,

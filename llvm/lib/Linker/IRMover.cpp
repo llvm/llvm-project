@@ -1256,6 +1256,18 @@ Error IRLinker::linkModuleFlagsMetadata() {
   return Error::success();
 }
 
+/// Return InlineAsm adjusted with target-specific directives if required.
+/// For ARM and Thumb, we have to add directives to select the appropriate ISA
+/// to support mixing module-level inline assembly from ARM and Thumb modules.
+static std::string adjustInlineAsm(const std::string &InlineAsm,
+                                   const Triple &Triple) {
+  if (Triple.getArch() == Triple::thumb || Triple.getArch() == Triple::thumbeb)
+    return ".text\n.balign 2\n.thumb\n" + InlineAsm;
+  if (Triple.getArch() == Triple::arm || Triple.getArch() == Triple::armeb)
+    return ".text\n.balign 4\n.arm\n" + InlineAsm;
+  return InlineAsm;
+}
+
 Error IRLinker::run() {
   // Ensure metadata materialized before value mapping.
   if (SrcM->getMaterializer())
@@ -1293,11 +1305,13 @@ Error IRLinker::run() {
 
   // Append the module inline asm string.
   if (!IsPerformingImport && !SrcM->getModuleInlineAsm().empty()) {
+    std::string SrcModuleInlineAsm = adjustInlineAsm(SrcM->getModuleInlineAsm(),
+                                                     SrcTriple);
     if (DstM.getModuleInlineAsm().empty())
-      DstM.setModuleInlineAsm(SrcM->getModuleInlineAsm());
+      DstM.setModuleInlineAsm(SrcModuleInlineAsm);
     else
       DstM.setModuleInlineAsm(DstM.getModuleInlineAsm() + "\n" +
-                              SrcM->getModuleInlineAsm());
+                              SrcModuleInlineAsm);
   }
 
   // Loop over all of the linked values to compute type mappings.

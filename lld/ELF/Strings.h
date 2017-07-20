@@ -21,11 +21,8 @@
 namespace lld {
 namespace elf {
 
-int getPriority(StringRef S);
-bool hasWildcard(StringRef S);
 std::vector<uint8_t> parseHex(StringRef S);
 bool isValidCIdentifier(StringRef S);
-StringRef unquote(StringRef S);
 
 // This is a lazy version of StringRef. String size is computed lazily
 // when it is needed. It is more efficient than StringRef to instantiate

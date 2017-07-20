@@ -414,6 +414,8 @@ DWARFDie DWARFContext::getDIEForOffset(uint32_t Offset) {
 bool DWARFContext::verify(raw_ostream &OS, DIDumpType DumpType) {
   bool Success = true;
   DWARFVerifier verifier(OS, *this);
+  if (!verifier.handleDebugInfoUnitHeaderChain())
+    Success = false;
   if (DumpType == DIDT_All || DumpType == DIDT_Info) {
     if (!verifier.handleDebugInfo())
       Success = false;
@@ -591,10 +593,10 @@ void DWARFContext::parseCompileUnits() {
 void DWARFContext::parseTypeUnits() {
   if (!TUs.empty())
     return;
-  for (const auto &I : getTypesSections()) {
+  forEachTypesSections([&](const DWARFSection &S) {
     TUs.emplace_back();
-    TUs.back().parse(*this, I.second);
-  }
+    TUs.back().parse(*this, S);
+  });
 }
 
 void DWARFContext::parseDWOCompileUnits() {
@@ -604,10 +606,10 @@ void DWARFContext::parseDWOCompileUnits() {
 void DWARFContext::parseDWOTypeUnits() {
   if (!DWOTUs.empty())
     return;
-  for (const auto &I : getTypesDWOSections()) {
+  forEachTypesDWOSections([&](const DWARFSection &S) {
     DWOTUs.emplace_back();
-    DWOTUs.back().parseDWO(*this, I.second);
-  }
+    DWOTUs.back().parseDWO(*this, S);
+  });
 }
 
 DWARFCompileUnit *DWARFContext::getCompileUnitForOffset(uint32_t Offset) {
@@ -964,6 +966,10 @@ DWARFContextInMemory::DWARFContextInMemory(
     Name = Name.substr(
         Name.find_first_not_of("._z")); // Skip ".", "z" and "_" prefixes.
 
+    // Map platform specific debug section names to DWARF standard section
+    // names.
+    Name = Obj.mapDebugSectionName(Name);
+
     if (StringRef *SectionData = mapSectionToMember(Name)) {
       *SectionData = Data;
       if (Name == "debug_ranges") {
@@ -977,10 +983,6 @@ DWARFContextInMemory::DWARFContextInMemory(
     } else if (Name == "debug_types.dwo") {
       TypesDWOSections[Section].Data = Data;
     }
-
-    // Map platform specific debug section names to DWARF standard section
-    // names.
-    Name = Obj.mapDebugSectionName(Name);
 
     if (RelocatedSection == Obj.section_end())
       continue;

@@ -246,7 +246,9 @@ public:
   }
 
   void VisitValueDecl(const ValueDecl *D) {
-    AddQualType(D->getType());
+    if (!isa<FunctionDecl>(D)) {
+      AddQualType(D->getType());
+    }
     Inherited::VisitValueDecl(D);
   }
 
@@ -304,6 +306,8 @@ public:
     for (auto *Param : D->parameters()) {
       Hash.AddSubDecl(Param);
     }
+
+    AddQualType(D->getReturnType());
 
     Inherited::VisitFunctionDecl(D);
   }

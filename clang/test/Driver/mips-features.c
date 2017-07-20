@@ -70,6 +70,18 @@
 // RUN:   | FileCheck --check-prefix=CHECK-NOMMSA %s
 // CHECK-NOMMSA: "-target-feature" "-msa"
 //
+// -mmt
+// RUN: %clang -target mips-linux-gnu -### -c %s \
+// RUN:     -mno-mt -mmt 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-MMT %s
+// CHECK-MMT: "-target-feature" "+mt"
+//
+// -mno-mt
+// RUN: %clang -target mips-linux-gnu -### -c %s \
+// RUN:     -mmt -mno-mt 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-NOMMT %s
+// CHECK-NOMMT: "-target-feature" "-mt"
+//
 // -modd-spreg
 // RUN: %clang -target mips-linux-gnu -### -c %s -mno-odd-spreg -modd-spreg 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-MODDSPREG %s

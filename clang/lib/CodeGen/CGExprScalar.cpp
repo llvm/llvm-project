@@ -1851,7 +1851,7 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
   llvm::Value *input;
 
   int amount = (isInc ? 1 : -1);
-  bool signedIndex = !isInc;
+  bool isSubtraction = !isInc;
 
   if (const AtomicType *atomicTy = type->getAs<AtomicType>()) {
     type = atomicTy->getValueType();
@@ -1941,8 +1941,9 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
       if (CGF.getLangOpts().isSignedOverflowDefined())
         value = Builder.CreateGEP(value, numElts, "vla.inc");
       else
-        value = CGF.EmitCheckedInBoundsGEP(value, numElts, signedIndex,
-                                           E->getExprLoc(), "vla.inc");
+        value = CGF.EmitCheckedInBoundsGEP(
+            value, numElts, /*SignedIndices=*/false, isSubtraction,
+            E->getExprLoc(), "vla.inc");
 
     // Arithmetic on function pointers (!) is just +-1.
     } else if (type->isFunctionType()) {
@@ -1952,8 +1953,9 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
       if (CGF.getLangOpts().isSignedOverflowDefined())
         value = Builder.CreateGEP(value, amt, "incdec.funcptr");
       else
-        value = CGF.EmitCheckedInBoundsGEP(value, amt, signedIndex,
-                                           E->getExprLoc(), "incdec.funcptr");
+        value = CGF.EmitCheckedInBoundsGEP(value, amt, /*SignedIndices=*/false,
+                                           isSubtraction, E->getExprLoc(),
+                                           "incdec.funcptr");
       value = Builder.CreateBitCast(value, input->getType());
 
     // For everything else, we can just do a simple increment.
@@ -1962,8 +1964,9 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
       if (CGF.getLangOpts().isSignedOverflowDefined())
         value = Builder.CreateGEP(value, amt, "incdec.ptr");
       else
-        value = CGF.EmitCheckedInBoundsGEP(value, amt, signedIndex,
-                                           E->getExprLoc(), "incdec.ptr");
+        value = CGF.EmitCheckedInBoundsGEP(value, amt, /*SignedIndices=*/false,
+                                           isSubtraction, E->getExprLoc(),
+                                           "incdec.ptr");
     }
 
   // Vector increment/decrement.
@@ -2044,7 +2047,8 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
     if (CGF.getLangOpts().isSignedOverflowDefined())
       value = Builder.CreateGEP(value, sizeValue, "incdec.objptr");
     else
-      value = CGF.EmitCheckedInBoundsGEP(value, sizeValue, signedIndex,
+      value = CGF.EmitCheckedInBoundsGEP(value, sizeValue,
+                                         /*SignedIndices=*/false, isSubtraction,
                                          E->getExprLoc(), "incdec.objptr");
     value = Builder.CreateBitCast(value, input->getType());
   }
@@ -2663,7 +2667,6 @@ static Value *emitPointerArithmetic(CodeGenFunction &CGF,
   }
 
   bool isSigned = indexOperand->getType()->isSignedIntegerOrEnumerationType();
-  bool mayHaveNegativeGEPIndex = isSigned || isSubtraction;
 
   unsigned width = cast<llvm::IntegerType>(index->getType())->getBitWidth();
   auto &DL = CGF.CGM.getDataLayout();
@@ -2715,7 +2718,7 @@ static Value *emitPointerArithmetic(CodeGenFunction &CGF,
     } else {
       index = CGF.Builder.CreateNSWMul(index, numElements, "vla.index");
       pointer =
-          CGF.EmitCheckedInBoundsGEP(pointer, index, mayHaveNegativeGEPIndex,
+          CGF.EmitCheckedInBoundsGEP(pointer, index, isSigned, isSubtraction,
                                      op.E->getExprLoc(), "add.ptr");
     }
     return pointer;
@@ -2733,7 +2736,7 @@ static Value *emitPointerArithmetic(CodeGenFunction &CGF,
   if (CGF.getLangOpts().isSignedOverflowDefined())
     return CGF.Builder.CreateGEP(pointer, index, "add.ptr");
 
-  return CGF.EmitCheckedInBoundsGEP(pointer, index, mayHaveNegativeGEPIndex,
+  return CGF.EmitCheckedInBoundsGEP(pointer, index, isSigned, isSubtraction,
                                     op.E->getExprLoc(), "add.ptr");
 }
 
@@ -2807,7 +2810,7 @@ static Value* tryEmitFMulAdd(const BinOpInfo &op,
 Value *ScalarExprEmitter::EmitAdd(const BinOpInfo &op) {
   if (op.LHS->getType()->isPointerTy() ||
       op.RHS->getType()->isPointerTy())
-    return emitPointerArithmetic(CGF, op, /*subtraction*/ false);
+    return emitPointerArithmetic(CGF, op, CodeGenFunction::NotSubtraction);
 
   if (op.Ty->isSignedIntegerOrEnumerationType()) {
     switch (CGF.getLangOpts().getSignedOverflowBehavior()) {
@@ -2878,7 +2881,7 @@ Value *ScalarExprEmitter::EmitSub(const BinOpInfo &op) {
   // If the RHS is not a pointer, then we have normal pointer
   // arithmetic.
   if (!op.RHS->getType()->isPointerTy())
-    return emitPointerArithmetic(CGF, op, /*subtraction*/ true);
+    return emitPointerArithmetic(CGF, op, CodeGenFunction::IsSubtraction);
 
   // Otherwise, this is a pointer subtraction.
 
@@ -3853,6 +3856,7 @@ LValue CodeGenFunction::EmitCompoundAssignmentLValue(
 Value *CodeGenFunction::EmitCheckedInBoundsGEP(Value *Ptr,
                                                ArrayRef<Value *> IdxList,
                                                bool SignedIndices,
+                                               bool IsSubtraction,
                                                SourceLocation Loc,
                                                const Twine &Name) {
   Value *GEPVal = Builder.CreateInBoundsGEP(Ptr, IdxList, Name);
@@ -3958,15 +3962,19 @@ Value *CodeGenFunction::EmitCheckedInBoundsGEP(Value *Ptr,
   // pointer matches the sign of the total offset.
   llvm::Value *ValidGEP;
   auto *NoOffsetOverflow = Builder.CreateNot(OffsetOverflows);
-  auto *PosOrZeroValid = Builder.CreateICmpUGE(ComputedGEP, IntPtr);
   if (SignedIndices) {
+    auto *PosOrZeroValid = Builder.CreateICmpUGE(ComputedGEP, IntPtr);
     auto *PosOrZeroOffset = Builder.CreateICmpSGE(TotalOffset, Zero);
     llvm::Value *NegValid = Builder.CreateICmpULT(ComputedGEP, IntPtr);
     ValidGEP = Builder.CreateAnd(
         Builder.CreateSelect(PosOrZeroOffset, PosOrZeroValid, NegValid),
         NoOffsetOverflow);
-  } else {
+  } else if (!SignedIndices && !IsSubtraction) {
+    auto *PosOrZeroValid = Builder.CreateICmpUGE(ComputedGEP, IntPtr);
     ValidGEP = Builder.CreateAnd(PosOrZeroValid, NoOffsetOverflow);
+  } else {
+    auto *NegOrZeroValid = Builder.CreateICmpULE(ComputedGEP, IntPtr);
+    ValidGEP = Builder.CreateAnd(NegOrZeroValid, NoOffsetOverflow);
   }
 
   llvm::Constant *StaticArgs[] = {EmitCheckSourceLocation(Loc)};

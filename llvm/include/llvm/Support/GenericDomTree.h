@@ -43,25 +43,10 @@ namespace llvm {
 
 template <class NodeT> class DominatorTreeBase;
 
-namespace detail {
-
-template <typename GT> struct DominatorTreeBaseTraits {
-  static_assert(std::is_pointer<typename GT::NodeRef>::value,
-                "Currently NodeRef must be a pointer type.");
-  using type = DominatorTreeBase<
-      typename std::remove_pointer<typename GT::NodeRef>::type>;
-};
-
-} // end namespace detail
-
-template <typename GT>
-using DominatorTreeBaseByGraphTraits =
-    typename detail::DominatorTreeBaseTraits<GT>::type;
-
 /// \brief Base class for the actual dominator tree node.
 template <class NodeT> class DomTreeNodeBase {
   friend struct PostDominatorTree;
-  template <class N> friend class DominatorTreeBase;
+  friend class DominatorTreeBase<NodeT>;
 
   NodeT *TheBB;
   DomTreeNodeBase *IDom;
@@ -192,16 +177,16 @@ void PrintDomTree(const DomTreeNodeBase<NodeT> *N, raw_ostream &O,
 }
 
 namespace DomTreeBuilder {
-template <class NodeT>
+template <typename DomTreeT>
 struct SemiNCAInfo;
 
 // The calculate routine is provided in a separate header but referenced here.
-template <class FuncT, class N>
-void Calculate(DominatorTreeBaseByGraphTraits<GraphTraits<N>> &DT, FuncT &F);
+template <typename DomTreeT, typename FuncT>
+void Calculate(DomTreeT &DT, FuncT &F);
 
 // The verify function is provided in a separate header but referenced here.
-template <class N>
-bool Verify(const DominatorTreeBaseByGraphTraits<GraphTraits<N>> &DT);
+template <class DomTreeT>
+bool Verify(const DomTreeT &DT);
 }  // namespace DomTreeBuilder
 
 /// \brief Core dominator tree base class.
@@ -221,10 +206,13 @@ template <class NodeT> class DominatorTreeBase {
   mutable bool DFSInfoValid = false;
   mutable unsigned int SlowQueries = 0;
 
-  friend struct DomTreeBuilder::SemiNCAInfo<NodeT>;
-  using SNCAInfoTy = DomTreeBuilder::SemiNCAInfo<NodeT>;
+  friend struct DomTreeBuilder::SemiNCAInfo<DominatorTreeBase>;
 
  public:
+  static_assert(std::is_pointer<typename GraphTraits<NodeT *>::NodeRef>::value,
+                "Currently DominatorTreeBase supports only pointer nodes");
+  using NodeType = NodeT;
+  using NodePtr = NodeT *;
   explicit DominatorTreeBase(bool isPostDom) : IsPostDominators(isPostDom) {}
 
   DominatorTreeBase(DominatorTreeBase &&Arg)
@@ -443,6 +431,10 @@ template <class NodeT> class DominatorTreeBase {
                                       const_cast<NodeT *>(B));
   }
 
+  bool isVirtualRoot(const DomTreeNodeBase<NodeT> *A) const {
+    return isPostDominator() && !A->getBlock();
+  }
+
   //===--------------------------------------------------------------------===//
   // API to update (Post)DominatorTree information based on modifications to
   // the CFG...
@@ -608,35 +600,29 @@ public:
     using TraitsTy = GraphTraits<FT *>;
     reset();
 
-    if (!this->IsPostDominators) {
+    if (!IsPostDominators) {
       // Initialize root
       NodeT *entry = TraitsTy::getEntryNode(&F);
       addRoot(entry);
-
-      DomTreeBuilder::Calculate<FT, NodeT *>(*this, F);
     } else {
       // Initialize the roots list
       for (auto *Node : nodes(&F))
         if (TraitsTy::child_begin(Node) == TraitsTy::child_end(Node))
           addRoot(Node);
-
-      DomTreeBuilder::Calculate<FT, Inverse<NodeT *>>(*this, F);
     }
+
+    DomTreeBuilder::Calculate(*this, F);
   }
 
   /// verify - check parent and sibling property
-  bool verify() const {
-    return this->isPostDominator()
-           ? DomTreeBuilder::Verify<Inverse<NodeT *>>(*this)
-           : DomTreeBuilder::Verify<NodeT *>(*this);
-  }
+  bool verify() const { return DomTreeBuilder::Verify(*this); }
 
  protected:
   void addRoot(NodeT *BB) { this->Roots.push_back(BB); }
 
   void reset() {
     DomTreeNodes.clear();
-    this->Roots.clear();
+    Roots.clear();
     RootNode = nullptr;
     DFSInfoValid = false;
     SlowQueries = 0;

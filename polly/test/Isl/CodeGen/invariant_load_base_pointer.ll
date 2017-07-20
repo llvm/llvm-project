@@ -5,7 +5,7 @@
 ; CHECK-NEXT:    %polly.access.BPLoc.load = load i32*, i32** %polly.access.BPLoc
 ;
 ; CHECK-LABEL: polly.stmt.bb2:
-; CHECK-NEXT:    %p_tmp3 = getelementptr inbounds i32, i32* %polly.access.BPLoc.load, i64 %polly.indvar
+; CHECK-NEXT:    %scevgep = getelementptr i32, i32* %polly.access.BPLoc.load, i64 %polly.indvar
 ;
 ;    void f(int **BPLoc) {
 ;      for (int i = 0; i < 1024; i++)
