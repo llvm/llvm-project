@@ -927,7 +927,7 @@ public:
                            SDValue Cmp, SDValue Swp, MachinePointerInfo PtrInfo,
                            unsigned Alignment, AtomicOrdering SuccessOrdering,
                            AtomicOrdering FailureOrdering,
-                           SynchronizationScope SynchScope);
+                           SyncScope::ID SSID);
   SDValue getAtomicCmpSwap(unsigned Opcode, const SDLoc &dl, EVT MemVT,
                            SDVTList VTs, SDValue Chain, SDValue Ptr,
                            SDValue Cmp, SDValue Swp, MachineMemOperand *MMO);
@@ -937,7 +937,7 @@ public:
   SDValue getAtomic(unsigned Opcode, const SDLoc &dl, EVT MemVT, SDValue Chain,
                     SDValue Ptr, SDValue Val, const Value *PtrVal,
                     unsigned Alignment, AtomicOrdering Ordering,
-                    SynchronizationScope SynchScope);
+                    SyncScope::ID SSID);
   SDValue getAtomic(unsigned Opcode, const SDLoc &dl, EVT MemVT, SDValue Chain,
                     SDValue Ptr, SDValue Val, MachineMemOperand *MMO);
 

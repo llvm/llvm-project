@@ -3990,7 +3990,7 @@ void SelectionDAGBuilder::visitAtomicCmpXchg(const AtomicCmpXchgInst &I) {
   SDLoc dl = getCurSDLoc();
   AtomicOrdering SuccessOrder = I.getSuccessOrdering();
   AtomicOrdering FailureOrder = I.getFailureOrdering();
-  SynchronizationScope Scope = I.getSynchScope();
+  SyncScope::ID SSID = I.getSyncScopeID();
 
   SDValue InChain = getRoot();
 
@@ -4000,7 +4000,7 @@ void SelectionDAGBuilder::visitAtomicCmpXchg(const AtomicCmpXchgInst &I) {
       ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS, dl, MemVT, VTs, InChain,
       getValue(I.getPointerOperand()), getValue(I.getCompareOperand()),
       getValue(I.getNewValOperand()), MachinePointerInfo(I.getPointerOperand()),
-      /*Alignment=*/ 0, SuccessOrder, FailureOrder, Scope);
+      /*Alignment=*/ 0, SuccessOrder, FailureOrder, SSID);
 
   SDValue OutChain = L.getValue(2);
 
@@ -4026,7 +4026,7 @@ void SelectionDAGBuilder::visitAtomicRMW(const AtomicRMWInst &I) {
   case AtomicRMWInst::UMin: NT = ISD::ATOMIC_LOAD_UMIN; break;
   }
   AtomicOrdering Order = I.getOrdering();
-  SynchronizationScope Scope = I.getSynchScope();
+  SyncScope::ID SSID = I.getSyncScopeID();
 
   SDValue InChain = getRoot();
 
@@ -4037,7 +4037,7 @@ void SelectionDAGBuilder::visitAtomicRMW(const AtomicRMWInst &I) {
                   getValue(I.getPointerOperand()),
                   getValue(I.getValOperand()),
                   I.getPointerOperand(),
-                  /* Alignment=*/ 0, Order, Scope);
+                  /* Alignment=*/ 0, Order, SSID);
 
   SDValue OutChain = L.getValue(1);
 
@@ -4052,7 +4052,7 @@ void SelectionDAGBuilder::visitFence(const FenceInst &I) {
   Ops[0] = getRoot();
   Ops[1] = DAG.getConstant((unsigned)I.getOrdering(), dl,
                            TLI.getFenceOperandTy(DAG.getDataLayout()));
-  Ops[2] = DAG.getConstant(I.getSynchScope(), dl,
+  Ops[2] = DAG.getConstant(I.getSyncScopeID(), dl,
                            TLI.getFenceOperandTy(DAG.getDataLayout()));
   DAG.setRoot(DAG.getNode(ISD::ATOMIC_FENCE, dl, MVT::Other, Ops));
 }
@@ -4060,7 +4060,7 @@ void SelectionDAGBuilder::visitFence(const FenceInst &I) {
 void SelectionDAGBuilder::visitAtomicLoad(const LoadInst &I) {
   SDLoc dl = getCurSDLoc();
   AtomicOrdering Order = I.getOrdering();
-  SynchronizationScope Scope = I.getSynchScope();
+  SyncScope::ID SSID = I.getSyncScopeID();
 
   SDValue InChain = getRoot();
 
@@ -4078,7 +4078,7 @@ void SelectionDAGBuilder::visitAtomicLoad(const LoadInst &I) {
                            VT.getStoreSize(),
                            I.getAlignment() ? I.getAlignment() :
                                               DAG.getEVTAlignment(VT),
-                           AAMDNodes(), nullptr, Scope, Order);
+                           AAMDNodes(), nullptr, SSID, Order);
 
   InChain = TLI.prepareVolatileOrAtomicLoad(InChain, dl, DAG);
   SDValue L =
@@ -4095,7 +4095,7 @@ void SelectionDAGBuilder::visitAtomicStore(const StoreInst &I) {
   SDLoc dl = getCurSDLoc();
 
   AtomicOrdering Order = I.getOrdering();
-  SynchronizationScope Scope = I.getSynchScope();
+  SyncScope::ID SSID = I.getSyncScopeID();
 
   SDValue InChain = getRoot();
 
@@ -4112,7 +4112,7 @@ void SelectionDAGBuilder::visitAtomicStore(const StoreInst &I) {
                   getValue(I.getPointerOperand()),
                   getValue(I.getValueOperand()),
                   I.getPointerOperand(), I.getAlignment(),
-                  Order, Scope);
+                  Order, SSID);
 
   DAG.setRoot(OutChain);
 }

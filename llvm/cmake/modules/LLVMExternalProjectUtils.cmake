@@ -195,8 +195,16 @@ function(llvm_ExternalProject_Add name source_dir)
 
   # Add top-level targets
   foreach(target ${ARG_EXTRA_TARGETS})
+    string(REPLACE ":" ";" target_list ${target})
+    list(GET target_list 0 target)
+    list(LENGTH target_list target_list_len)
+    if(${target_list_len} GREATER 1)
+      list(GET target_list 1 target_name)
+    else()
+      set(target_name "${target}")
+    endif()
     llvm_ExternalProject_BuildCmd(build_runtime_cmd ${target} ${BINARY_DIR})
-    add_custom_target(${target}
+    add_custom_target(${target_name}
       COMMAND ${build_runtime_cmd}
       DEPENDS ${name}-configure
       WORKING_DIRECTORY ${BINARY_DIR}

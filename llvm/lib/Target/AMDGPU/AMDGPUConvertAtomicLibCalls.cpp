@@ -59,12 +59,6 @@ llvm::cl::opt<unsigned> OCL1XAtomicOrder(
     llvm::cl::init(unsigned(AtomicOrdering::Monotonic)), llvm::cl::Hidden,
     llvm::cl::desc("AMD OCL 1.x atomic ordering for x86/x86-64"));
 
-llvm::cl::opt<AMDGPUSynchronizationScope>
-    OCL1XAtomicScope("amd-ocl1x-atomic-scope",
-                     llvm::cl::init(AMDGPUSynchronizationScope::Agent),
-                     llvm::cl::Hidden,
-                     llvm::cl::desc("AMD OCL 1.x atomic scope for x86/x86-64"));
-
 Value *LowerOCL1XAtomic(IRBuilder<> &llvmBuilder, const CallSite &CS,
                         const Function &Callee, StringRef DemangledName,
                         bool Unsigned);
@@ -176,8 +170,8 @@ static AtomicOrdering MemoryOrderSpir2LLVM(Value *SpirMemOrd) {
   }
 }
 
-static AMDGPUSynchronizationScope
-MemoryScopeOpenCL2LLVM(Value *OpenclMemScope) {
+static SyncScope::ID MemoryScopeOpenCL2LLVM(LLVMContext *CTX,
+                                            Value *OpenclMemScope) {
   enum memory_scope {
     memory_scope_work_item = 0,
     memory_scope_work_group,
@@ -185,29 +179,30 @@ MemoryScopeOpenCL2LLVM(Value *OpenclMemScope) {
     memory_scope_all_svm_devices,
     memory_scope_sub_group
   };
+
   unsigned MemScope = dyn_cast<ConstantInt>(OpenclMemScope)->getZExtValue();
   switch (MemScope) {
   case memory_scope_work_item:
     llvm_unreachable("memory_scope_work_item not Valid for atomic builtins");
   case memory_scope_work_group:
-    return AMDGPUSynchronizationScope::WorkGroup;
+    return CTX->getOrInsertSyncScopeID("workgroup");
   case memory_scope_device:
-    return AMDGPUSynchronizationScope::Agent;
+    return CTX->getOrInsertSyncScopeID("agent");
   case memory_scope_all_svm_devices:
-    return AMDGPUSynchronizationScope::System;
+    return SyncScope::System;
   case memory_scope_sub_group:
-    return AMDGPUSynchronizationScope::Wavefront;
+    return CTX->getOrInsertSyncScopeID("wavefront");
   default:
     llvm_unreachable("unknown memory scope");
   }
 }
 
-static AMDGPUSynchronizationScope getDefaultMemScope(Value *Ptr) {
+static SyncScope::ID getDefaultMemScope(LLVMContext *CTX, Value *Ptr) {
   unsigned AddrSpace = dyn_cast<PointerType>(Ptr->getType())->getAddressSpace();
   // for atomics on local pointers, memory scope is wg
   if (AddrSpace == 3)
-    return AMDGPUSynchronizationScope::WorkGroup;
-  return AMDGPUSynchronizationScope::Agent;
+    return CTX->getOrInsertSyncScopeID("workgroup");
+  return CTX->getOrInsertSyncScopeID("agent");
 }
 
 static AtomicOrdering getMemoryOrder(const CallSite &CS, unsigned MemOrderPos) {
@@ -216,11 +211,11 @@ static AtomicOrdering getMemoryOrder(const CallSite &CS, unsigned MemOrderPos) {
              : AtomicOrdering::SequentiallyConsistent;
 }
 
-static AMDGPUSynchronizationScope getMemoryScope(const CallSite &CS,
-                                                 unsigned MemScopePos) {
+static SyncScope::ID getMemoryScope(const CallSite &CS, unsigned MemScopePos) {
+  LLVMContext *CTX = &CS.getParent()->getContext();
   return CS.getNumArgOperands() > MemScopePos
-             ? MemoryScopeOpenCL2LLVM(CS.getArgOperand(MemScopePos))
-             : getDefaultMemScope(CS.getInstruction()->getOperand(0));
+             ? MemoryScopeOpenCL2LLVM(CTX, CS.getArgOperand(MemScopePos))
+             : getDefaultMemScope(CTX, CS.getInstruction()->getOperand(0));
 }
 
 static const Function *getCallee(const CallSite &CS) {
@@ -270,7 +265,7 @@ Value *AMDGPUConvertAtomicLibCalls::lowerAtomicLoad(IRBuilder<> &LlvmBuilder,
                                                     const CallSite &Inst) {
   Value *Ptr = Inst.getArgOperand(0);
   AtomicOrdering MemOrd = getMemoryOrder(Inst, 1);
-  AMDGPUSynchronizationScope memScope = getMemoryScope(Inst, 2);
+  SyncScope::ID memScope = getMemoryScope(Inst, 2);
   Type *PtrType = Ptr->getType();
   Type *ValType = Ptr->getType()->getPointerElementType();
   if (ValType->isFloatTy() || ValType->isDoubleTy()) {
@@ -282,7 +277,7 @@ Value *AMDGPUConvertAtomicLibCalls::lowerAtomicLoad(IRBuilder<> &LlvmBuilder,
   }
   Value *LdInst = LlvmBuilder.CreateLoad(Ptr, true);
   dyn_cast<LoadInst>(LdInst)->setOrdering(MemOrd);
-  dyn_cast<LoadInst>(LdInst)->setSynchScope((SynchronizationScope)memScope);
+  dyn_cast<LoadInst>(LdInst)->setSyncScopeID(memScope);
   dyn_cast<LoadInst>(LdInst)->setAlignment(ValType->getPrimitiveSizeInBits() /
                                            8);
   if (ValType->isFloatTy() || ValType->isDoubleTy()) {
@@ -301,7 +296,7 @@ Value *AMDGPUConvertAtomicLibCalls::lowerAtomicStore(IRBuilder<> &LlvmBuilder,
                    : Inst.getArgOperand(1);
   AtomicOrdering MemOrd =
       isAtomicClear ? getMemoryOrder(Inst, 1) : getMemoryOrder(Inst, 2);
-  AMDGPUSynchronizationScope memScope =
+  SyncScope::ID memScope =
       isAtomicClear ? getMemoryScope(Inst, 2) : getMemoryScope(Inst, 3);
   Type *ValType = Val->getType();
   if (ValType->isFloatTy() || ValType->isDoubleTy()) {
@@ -315,7 +310,7 @@ Value *AMDGPUConvertAtomicLibCalls::lowerAtomicStore(IRBuilder<> &LlvmBuilder,
   }
   Value *StInst = LlvmBuilder.CreateStore(Val, Ptr, true);
   dyn_cast<StoreInst>(StInst)->setOrdering(MemOrd);
-  dyn_cast<StoreInst>(StInst)->setSynchScope((SynchronizationScope)memScope);
+  dyn_cast<StoreInst>(StInst)->setSyncScopeID(memScope);
   dyn_cast<StoreInst>(StInst)->setAlignment(ValType->getPrimitiveSizeInBits() /
                                             8);
   return StInst;
@@ -329,13 +324,12 @@ Value *AMDGPUConvertAtomicLibCalls::lowerAtomicCmpXchg(IRBuilder<> &llvmBuilder,
   Value *Desired = Inst.getArgOperand(2);
   AtomicOrdering MemOrdSuccess = getMemoryOrder(Inst, 3);
   AtomicOrdering MemOrdFailure = getMemoryOrder(Inst, 4);
-  AMDGPUSynchronizationScope memScope = getMemoryScope(Inst, 5);
+  SyncScope::ID memScope = getMemoryScope(Inst, 5);
   Value *OrigExpected = llvmBuilder.CreateLoad(Expected, true);
   Value *Cas = llvmBuilder.CreateAtomicCmpXchg(
       Ptr, OrigExpected, Desired, MemOrdSuccess, MemOrdFailure,
-      (SynchronizationScope)AMDGPUSynchronizationScope::System);
-  dyn_cast<AtomicCmpXchgInst>(Cas)->setSynchScope(
-      (SynchronizationScope)memScope);
+      SyncScope::System);
+  dyn_cast<AtomicCmpXchgInst>(Cas)->setSyncScopeID(memScope);
   dyn_cast<AtomicCmpXchgInst>(Cas)->setVolatile(true);
   dyn_cast<AtomicCmpXchgInst>(Cas)->setWeak(isWeak);
 
@@ -378,7 +372,7 @@ Value *AMDGPUConvertAtomicLibCalls::lowerAtomicRMW(IRBuilder<> &LlvmBuilder,
                           : Inst.getArgOperand(1);
   AtomicOrdering MemOrd =
       TestAndSet ? getMemoryOrder(Inst, 1) : getMemoryOrder(Inst, 2);
-  AMDGPUSynchronizationScope memScope =
+  SyncScope::ID memScope =
       TestAndSet ? getMemoryScope(Inst, 2) : getMemoryScope(Inst, 3);
   Type *PtrType = Ptr->getType();
   Type *ValType = Val->getType();
@@ -394,10 +388,8 @@ Value *AMDGPUConvertAtomicLibCalls::lowerAtomicRMW(IRBuilder<> &LlvmBuilder,
       DemangledName, !containsUnsignedAtomicType(FuncName), TestAndSet);
   assert(AtomicRMWInst::BAD_BINOP != BinOp);
   Value *AtomicRMW = LlvmBuilder.CreateAtomicRMW(
-      BinOp, Ptr, Val, MemOrd,
-      (SynchronizationScope)AMDGPUSynchronizationScope::System);
-  dyn_cast<AtomicRMWInst>(AtomicRMW)->setSynchScope(
-      (SynchronizationScope)memScope);
+      BinOp, Ptr, Val, MemOrd, SyncScope::System);
+  dyn_cast<AtomicRMWInst>(AtomicRMW)->setSyncScopeID(memScope);
   if (ValType->isFloatTy() || ValType->isDoubleTy()) {
     AtomicRMW =
         LlvmBuilder.CreateCast(Instruction::BitCast, AtomicRMW, ValType);
@@ -513,6 +505,9 @@ Value *LowerOCL1XAtomic(IRBuilder<> &Builder, const CallSite &CS,
   Value *P = CS.getArgument(0);
   Value *NI = nullptr;
   AtomicOrdering Order = AtomicOrdering(OCL1XAtomicOrder.getValue());
+
+  LLVMContext *CTX = &CS.getParent()->getContext();
+
   if (Type == RMW) {
     Value *V = NumOp == 2
                    ? CS.getArgument(1)
@@ -526,22 +521,18 @@ Value *LowerOCL1XAtomic(IRBuilder<> &Builder, const CallSite &CS,
           P,
           Type::getInt32PtrTy(context, P->getType()->getPointerAddressSpace()));
     }
-    NI = Builder.CreateAtomicRMW(
-        Op, P, V, Order,
-        (SynchronizationScope)AMDGPUSynchronizationScope::System);
-    dyn_cast<AtomicRMWInst>(NI)->setSynchScope(
-        (SynchronizationScope)OCL1XAtomicScope.getValue());
+    NI = Builder.CreateAtomicRMW(Op, P, V, Order, SyncScope::System);
+    dyn_cast<AtomicRMWInst>(NI)->setSyncScopeID(
+        CTX->getOrInsertSyncScopeID("agent"));
     if (NeedCast) {
       NI = Builder.CreateBitCast(NI, Callee.getReturnType());
     }
   } else if (Type == CMPXCHG) {
     NI = Builder.CreateAtomicCmpXchg(
         P, CS.getArgument(1), CS.getArgument(2), Order, Order,
-        (SynchronizationScope)
-            AMDGPUSynchronizationScope::System); // TBD Valery - what is
-                                                 // FailureOrdering?
-    dyn_cast<AtomicCmpXchgInst>(NI)->setSynchScope(
-        (SynchronizationScope)OCL1XAtomicScope.getValue());
+        SyncScope::System); // TBD Valery - what is FailureOrdering?
+    dyn_cast<AtomicCmpXchgInst>(NI)->setSyncScopeID(
+        CTX->getOrInsertSyncScopeID("agent"));
     NI = Builder.CreateExtractValue(NI, 0);
   } else {
     llvm_unreachable("InValid atomic builtin");

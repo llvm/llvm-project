@@ -412,7 +412,7 @@ public:
   /// fixup kind as appropriate.
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,
-                  uint64_t FixupValue, bool IsPCRel) const override {
+                  uint64_t FixupValue, bool IsResolved) const override {
 
     // When FixupValue is 0 the relocation is external and there
     // is nothing for us to do.

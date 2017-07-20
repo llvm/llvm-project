@@ -146,7 +146,6 @@ private:
   unsigned ScratchOffsetReg;
   unsigned NumUserSGPRs;
   unsigned NumSystemSGPRs;
-  bool HasFlatLocalCasts;
 
   bool HasSpilledSGPRs;
   bool HasSpilledVGPRs;
@@ -399,14 +398,6 @@ public:
 
   unsigned getImplicitBufferPtrUserSGPR() const {
     return ImplicitBufferPtrUserSGPR;
-  }
-
-  bool hasFlatLocalCasts() const {
-    return HasFlatLocalCasts;
-  }
-
-  void setHasFlatLocalCasts(bool FlatLocalCasts) {
-    HasFlatLocalCasts = FlatLocalCasts;
   }
 
   bool hasSpilledSGPRs() const {

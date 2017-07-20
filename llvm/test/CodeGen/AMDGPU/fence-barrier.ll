@@ -28,9 +28,9 @@ define amdgpu_kernel void @test_local(i32 addrspace(1)*) {
   br label %7
 
 ; <label>:7:                                      ; preds = %6, %1
-  fence syncscope(3) release
+  fence syncscope("workgroup") release
   call void @llvm.amdgcn.s.barrier()
-  fence syncscope(3) acquire
+  fence syncscope("workgroup") acquire
   %8 = load i32, i32 addrspace(3)* getelementptr inbounds ([1 x i32], [1 x i32] addrspace(3)* @test_local.temp, i64 0, i64 0), align 4
   %9 = load i32 addrspace(1)*, i32 addrspace(1)** %2, align 4
   %10 = call i8 addrspace(2)* @llvm.amdgcn.dispatch.ptr()
@@ -121,9 +121,9 @@ define amdgpu_kernel void @test_global(i32 addrspace(1)*) {
   %56 = add i64 %41, %55
   %57 = getelementptr inbounds i32, i32 addrspace(1)* %39, i64 %56
   store i32 %38, i32 addrspace(1)* %57, align 4
-  fence syncscope(3) release
+  fence syncscope("workgroup") release
   call void @llvm.amdgcn.s.barrier()
-  fence syncscope(3) acquire
+  fence syncscope("workgroup") acquire
   br label %58
 
 ; <label>:58:                                     ; preds = %22
@@ -172,9 +172,9 @@ define amdgpu_kernel void @test_global_local(i32 addrspace(1)*) {
   br label %23
 
 ; <label>:23:                                     ; preds = %22, %1
-  fence syncscope(3) release
+  fence syncscope("workgroup") release
   call void @llvm.amdgcn.s.barrier()
-  fence syncscope(3) acquire
+  fence syncscope("workgroup") acquire
   %24 = load i32, i32 addrspace(3)* getelementptr inbounds ([1 x i32], [1 x i32] addrspace(3)* @test_global_local.temp, i64 0, i64 0), align 4
   %25 = load i32 addrspace(1)*, i32 addrspace(1)** %2, align 4
   %26 = call i8 addrspace(2)* @llvm.amdgcn.dispatch.ptr()

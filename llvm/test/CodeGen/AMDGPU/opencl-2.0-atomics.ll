@@ -1,22 +1,22 @@
 ; RUN: opt -mtriple=amdgcn-- -amdgpu-lower-opencl-atomic-builtins -mcpu=fiji -S < %s | FileCheck %s
-; CHECK: %[[CMPXCHG1:[0-9]+]] = cmpxchg weak volatile i32 addrspace(4)* null, i32 %[[EXPECTED1:[0-9]+]], i32 0 syncscope(2) seq_cst seq_cst
+; CHECK: %[[CMPXCHG1:[0-9]+]] = cmpxchg weak volatile i32 addrspace(4)* null, i32 %[[EXPECTED1:[0-9]+]], i32 0 syncscope("agent") seq_cst seq_cst
 ; CHECK: %[[CMPXCHG1_RES_TY:[0-9]+]] = extractvalue { i32, i1 } %[[CMPXCHG1]], 0
 ; CHECK: %[[CMPXCHG1_RES_BOOL:[0-9]+]] = extractvalue { i32, i1 } %[[CMPXCHG1]], 1
 ; CHECK: %[[CMPXCHG1_FAIL_OR_NOT:[0-9]+]] = select i1 %[[CMPXCHG1_RES_BOOL]], i32 %[[EXPECTED1]], i32 %[[CMPXCHG1_RES_TY]]
 ; CHECK: store i32 %[[CMPXCHG1_FAIL_OR_NOT]], i32 addrspace(4)* null
 
-; CHECK: %[[CMPXCHG2:[0-9]+]] = cmpxchg volatile i32 addrspace(4)* null, i32 %[[EXPECTED2:[0-9]+]], i32 0 syncscope(4) release acquire
+; CHECK: %[[CMPXCHG2:[0-9]+]] = cmpxchg volatile i32 addrspace(4)* null, i32 %[[EXPECTED2:[0-9]+]], i32 0 syncscope("wavefront") release acquire
 ; CHECK: %[[CMPXCHG2_RES_TY:[0-9]+]] = extractvalue { i32, i1 } %[[CMPXCHG2]], 0
 ; CHECK: %[[CMPXCHG2_RES_BOOL:[0-9]+]] = extractvalue { i32, i1 } %[[CMPXCHG2]], 1
 ; CHECK: %[[CMPXCHG2_FAIL_OR_NOT:[0-9]+]] = select i1 %[[CMPXCHG2_RES_BOOL]], i32 %[[EXPECTED2]], i32 %[[CMPXCHG2_RES_TY]]
 ; CHECK: store i32 %[[CMPXCHG2_FAIL_OR_NOT]], i32 addrspace(4)* null
 
-; CHECK: atomicrmw add i32 addrspace(4)* null, i32 1 syncscope(3) release
+; CHECK: atomicrmw add i32 addrspace(4)* null, i32 1 syncscope("workgroup") release
 ; CHECK: store volatile i32 42, i32 addrspace(4)* addrspacecast (i32 addrspace(3)* @test.guide to i32 addrspace(4)*)
-; CHECK: load atomic volatile i32, i32 addrspace(4)* null syncscope(2) monotonic, align 4
-; CHECK: store atomic volatile i32 0, i32 addrspace(4)* null syncscope(2) release, align 4
+; CHECK: load atomic volatile i32, i32 addrspace(4)* null syncscope("agent") monotonic, align 4
+; CHECK: store atomic volatile i32 0, i32 addrspace(4)* null syncscope("agent") release, align 4
 ; CHECK: call void @my_atomic_compare_exchange_strong_explicit(i32 addrspace(4)* null, i32 addrspace(4)* null, i32 0)
-; CHECK: store atomic volatile i32 0, i32 addrspace(4)* null syncscope(2) seq_cst, align 4
+; CHECK: store atomic volatile i32 0, i32 addrspace(4)* null syncscope("agent") seq_cst, align 4
 
 @test.guide = internal addrspace(3) global i32 undef, align 4
 

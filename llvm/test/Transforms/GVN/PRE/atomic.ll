@@ -208,14 +208,14 @@ define void @fence_seq_cst(i32* %P1, i32* %P2) {
   ret void
 }
 
-; Can't DSE across a full singlethread fence
+; Can't DSE across a full syncscope("singlethread") fence
 define void @fence_seq_cst_st(i32* %P1, i32* %P2) {
 ; CHECK-LABEL: @fence_seq_cst_st(
 ; CHECK: store
-; CHECK: fence singlethread seq_cst
+; CHECK: fence syncscope("singlethread") seq_cst
 ; CHECK: store
   store i32 0, i32* %P1, align 4
-  fence singlethread seq_cst
+  fence syncscope("singlethread") seq_cst
   store i32 0, i32* %P1, align 4
   ret void
 }

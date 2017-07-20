@@ -52,7 +52,6 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
     LDSWaveSpillSize(0),
     NumUserSGPRs(0),
     NumSystemSGPRs(0),
-    HasFlatLocalCasts(false),
     HasSpilledSGPRs(false),
     HasSpilledVGPRs(false),
     HasNonSpillStackObjects(false),

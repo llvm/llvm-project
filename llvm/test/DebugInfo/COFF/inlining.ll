@@ -166,7 +166,7 @@
 ; OBJ: ]
 ; OBJ: Subsection [
 ; OBJ:   SubSectionType: Symbols (0xF1)
-; OBJ:   ProcStart {
+; OBJ:   {{.*}}Proc{{.*}}Sym {
 ; OBJ:     PtrParent: 0x0
 ; OBJ:     PtrEnd: 0x0
 ; OBJ:     PtrNext: 0x0
@@ -181,7 +181,7 @@
 ; OBJ:     DisplayName: baz
 ; OBJ:     LinkageName: ?baz@@YAXXZ
 ; OBJ:   }
-; OBJ:   InlineSite {
+; OBJ:   InlineSiteSym {
 ; OBJ:     PtrParent: 0x0
 ; OBJ:     PtrEnd: 0x0
 ; OBJ:     Inlinee: bar (0x1002)
@@ -193,7 +193,7 @@
 ; OBJ-NEXT:   ChangeCodeLength: 0x7
 ; OBJ:      ]
 ; OBJ:   }
-; OBJ:   InlineSite {
+; OBJ:   InlineSiteSym {
 ; OBJ:     PtrParent: 0x0
 ; OBJ:     PtrEnd: 0x0
 ; OBJ:     Inlinee: foo (0x1003)

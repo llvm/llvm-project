@@ -449,7 +449,7 @@ void MachObjectWriter::recordRelocation(MCAssembler &Asm,
                                         const MCAsmLayout &Layout,
                                         const MCFragment *Fragment,
                                         const MCFixup &Fixup, MCValue Target,
-                                        bool &IsPCRel, uint64_t &FixedValue) {
+                                        uint64_t &FixedValue) {
   TargetObjectWriter->recordRelocation(this, Asm, Layout, Fragment, Fixup,
                                        Target, FixedValue);
 }

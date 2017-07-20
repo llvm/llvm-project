@@ -12,7 +12,6 @@
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPU_H
 
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
-#include "llvm/IR/Instructions.h"
 #include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
@@ -233,39 +232,5 @@ AMDGPUAS getAMDGPUAS(const TargetMachine &TM);
 AMDGPUAS getAMDGPUAS(Triple T);
 } // namespace AMDGPU
 } // namespace llvm
-
-/// AMDGPU-specific synchronization scopes.
-enum class AMDGPUSynchronizationScope : uint8_t {
-  /// Synchronized with respect to the entire system, which includes all
-  /// work-items on all agents executing kernel dispatches for the same
-  /// application process, together with all agents executing the same
-  /// application process as the executing work-item. Only supported for the
-  /// global segment.
-  System = llvm::CrossThread,
-
-  /// Synchronized with respect to signal handlers executing in the same
-  /// work-item.
-  SignalHandler = llvm::SingleThread,
-
-  /// Synchronized with respect to the agent, which includes all work-items on
-  /// the same agent executing kernel dispatches for the same application
-  /// process as the executing work-item. Only supported for the global segment.
-  Agent = llvm::SynchronizationScopeFirstTargetSpecific,
-
-  /// Synchronized with respect to the work-group, which includes all work-items
-  /// in the same work-group as the executing work-item.
-  WorkGroup,
-
-  /// Synchronized with respect to the wavefront, which includes all work-items
-  /// in the same wavefront as the executing work-item.
-  Wavefront,
-
-  /// Synchronized with respect to image fence instruction executing in the same
-  /// work-item.
-  Image,
-
-  /// Unknown synchronization scope.
-  Unknown
-};
 
 #endif

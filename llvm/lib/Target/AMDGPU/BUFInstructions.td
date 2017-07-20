@@ -437,6 +437,7 @@ class MUBUF_Load_Pseudo <string opName,
   let PseudoInstr = opName # "_" # getAddrName<addrKindCopy>.ret;
   let mayLoad = 1;
   let mayStore = 0;
+  let maybeAtomic = 1;
 }
 
 // FIXME: tfe can't be an operand because it requires a separate
@@ -483,6 +484,7 @@ class MUBUF_Store_Pseudo <string opName,
   let PseudoInstr = opName # "_" # getAddrName<addrKindCopy>.ret;
   let mayLoad = 0;
   let mayStore = 1;
+  let maybeAtomic = 1;
 }
 
 multiclass MUBUF_Pseudo_Stores<string opName, RegisterClass vdataClass,
@@ -566,6 +568,7 @@ class MUBUF_Atomic_Pseudo<string opName,
   let DisableWQM = 1;
   let has_glc = 0;
   let has_tfe = 0;
+  let maybeAtomic = 1;
 }
 
 class MUBUF_AtomicNoRet_Pseudo<string opName, int addrKind,

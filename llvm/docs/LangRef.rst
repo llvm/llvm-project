@@ -2209,25 +2209,21 @@ For a simpler introduction to the ordering constraints, see the
     same address in this global order. This corresponds to the C++0x/C1x
     ``memory_order_seq_cst`` and Java volatile.
 
-.. _singlethread:
-
-If an atomic operation is marked ``singlethread``, it only *synchronizes with*,
-and only participates in the seq\_cst total orderings of, other operations
-running in the same thread (for example, in signal handlers).
-
 .. _syncscope:
 
-If an atomic operation is marked ``syncscope(<n>)``, then it
-*synchronizes with*, and participates in the seq\_cst total orderings of, other
-atomic operations marked ``syncscope(<n>)``. It is target defined how it
-interacts with atomic operations marked ``singlethread``, marked
-``syncscope(<m>)`` where ``m != n``, or not marked ``singlethread`` or
-``syncscope(<n>)``.
+If an atomic operation is marked ``syncscope("singlethread")``, it only
+*synchronizes with* and only participates in the seq\_cst total orderings of
+other operations running in the same thread (for example, in signal handlers).
 
-Otherwise, an atomic operation that is not marked ``singlethread`` or
-``syncscope(<n>)`` *synchronizes with*, and participates in the global seq\_cst
-total orderings of, other operations that are not marked ``singlethread`` or
-``syncscope(<n>)``.
+If an atomic operation is marked ``syncscope("<target-scope>")``, where
+``<target-scope>`` is a target specific synchronization scope, then it is target
+dependent if it *synchronizes with* and participates in the seq\_cst total
+orderings of other operations.
+
+Otherwise, an atomic operation that is not marked ``syncscope("singlethread")``
+or ``syncscope("<target-scope>")`` *synchronizes with* and participates in the
+seq\_cst total orderings of other operations that are not marked
+``syncscope("singlethread")`` or ``syncscope("<target-scope>")``.
 
 .. _fastmath:
 
@@ -7393,7 +7389,7 @@ Syntax:
 ::
 
       <result> = load [volatile] <ty>, <ty>* <pointer>[, align <alignment>][, !nontemporal !<index>][, !invariant.load !<index>][, !invariant.group !<index>][, !nonnull !<index>][, !dereferenceable !<deref_bytes_node>][, !dereferenceable_or_null !<deref_bytes_node>][, !align !<align_node>]
-      <result> = load atomic [volatile] <ty>, <ty>* <pointer> [singlethread|syncscope(<n>)] <ordering>, align <alignment> [, !invariant.group !<index>]
+      <result> = load atomic [volatile] <ty>, <ty>* <pointer> [syncscope("<target-scope>")] <ordering>, align <alignment> [, !invariant.group !<index>]
       !<index> = !{ i32 1 }
       !<deref_bytes_node> = !{i64 <dereferenceable_bytes>}
       !<align_node> = !{ i64 <value_alignment> }
@@ -7414,7 +7410,7 @@ modify the number or order of execution of this ``load`` with other
 :ref:`volatile operations <volatile>`.
 
 If the ``load`` is marked as ``atomic``, it takes an extra :ref:`ordering
-<ordering>` and optional ``singlethread`` or ``syncscope(<n>)`` argument. The
+<ordering>` and optional ``syncscope("<target-scope>")`` argument. The
 ``release`` and ``acq_rel`` orderings are not valid on ``load`` instructions.
 Atomic loads produce :ref:`defined <memmodel>` results when they may see
 multiple atomic stores. The type of the pointee must be an integer, pointer, or
@@ -7522,7 +7518,7 @@ Syntax:
 ::
 
       store [volatile] <ty> <value>, <ty>* <pointer>[, align <alignment>][, !nontemporal !<index>][, !invariant.group !<index>]        ; yields void
-      store atomic [volatile] <ty> <value>, <ty>* <pointer> [singlethread|syncscope(<n>)] <ordering>, align <alignment> [, !invariant.group !<index>] ; yields void
+      store atomic [volatile] <ty> <value>, <ty>* <pointer> [syncscope("<target-scope>")] <ordering>, align <alignment> [, !invariant.group !<index>] ; yields void
 
 Overview:
 """""""""
@@ -7542,7 +7538,7 @@ allowed to modify the number or order of execution of this ``store`` with other
 structural type <t_opaque>`) can be stored.
 
 If the ``store`` is marked as ``atomic``, it takes an extra :ref:`ordering
-<ordering>` and optional ``singlethread`` or ``syncscope(<n>)`` argument. The
+<ordering>` and optional ``syncscope("<target-scope>")`` argument. The
 ``acquire`` and ``acq_rel`` orderings aren't valid on ``store`` instructions.
 Atomic loads produce :ref:`defined <memmodel>` results when they may see
 multiple atomic stores. The type of the pointee must be an integer, pointer, or
@@ -7610,7 +7606,7 @@ Syntax:
 
 ::
 
-      fence [singlethread|syncscope(<n>)] <ordering>            ; yields void
+      fence [syncscope("<target-scope>")] <ordering>  ; yields void
 
 Overview:
 """""""""
@@ -7645,16 +7641,16 @@ A ``fence`` which has ``seq_cst`` ordering, in addition to having both
 the global program order of other ``seq_cst`` operations and/or fences.
 
 A ``fence`` instruction can also take an optional
-":ref:`singlethread <singlethread>`" or ":ref:`syncscope <syncscope>`" argument.
+":ref:`syncscope <syncscope>`" argument.
 
 Example:
 """"""""
 
 .. code-block:: llvm
 
-      fence acquire                          ; yields void
-      fence singlethread seq_cst             ; yields void
-      fence syncscope(2) seq_cst             ; yields void
+      fence acquire                                        ; yields void
+      fence syncscope("singlethread") seq_cst              ; yields void
+      fence syncscope("agent") seq_cst                     ; yields void
 
 .. _i_cmpxchg:
 
@@ -7666,7 +7662,7 @@ Syntax:
 
 ::
 
-      cmpxchg [weak] [volatile] <ty>* <pointer>, <ty> <cmp>, <ty> <new> [singlethread|syncscope(<n>)] <success ordering> <failure ordering> ; yields  { ty, i1 }
+      cmpxchg [weak] [volatile] <ty>* <pointer>, <ty> <cmp>, <ty> <new> [syncscope("<target-scope>")] <success ordering> <failure ordering> ; yields  { ty, i1 }
 
 Overview:
 """""""""
@@ -7696,7 +7692,7 @@ stronger than that on success, and the failure ordering cannot be either
 ``release`` or ``acq_rel``.
 
 A ``cmpxchg`` instruction can also take an optional
-":ref:`singlethread <singlethread>`" or ":ref:`syncscope <syncscope>`" argument.
+":ref:`syncscope <syncscope>`" argument.
 
 The pointer passed into cmpxchg must have alignment greater than or
 equal to the size in memory of the operand.
@@ -7750,7 +7746,7 @@ Syntax:
 
 ::
 
-      atomicrmw [volatile] <operation> <ty>* <pointer>, <ty> <value> [singlethread|syncscope(<n>)] <ordering>                   ; yields ty
+      atomicrmw [volatile] <operation> <ty>* <pointer>, <ty> <value> [syncscope("<target-scope>")] <ordering>                   ; yields ty
 
 Overview:
 """""""""
@@ -7785,7 +7781,7 @@ order of execution of this ``atomicrmw`` with other :ref:`volatile
 operations <volatile>`.
 
 A ``atomicrmw`` instruction can also take an optional
-":ref:`singlethread <singlethread>`" or ":ref:`syncscope <syncscope>`" argument.
+":ref:`syncscope <syncscope>`" argument.
 
 Semantics:
 """"""""""

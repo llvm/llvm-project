@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=fiji -run-pass si-memory-legalizer  %s -o - | FileCheck %s
+# RUN: llc -march=amdgcn -mcpu=gfx803 -run-pass si-memory-legalizer  %s -o - | FileCheck %s
 
 --- |
   ; ModuleID = '<stdin>'
@@ -9,7 +9,11 @@
   declare i32 @llvm.amdgcn.workitem.id.x() #0
 
   ; Function Attrs: nounwind
-  define void @atomic_max_i32_noret(i32 addrspace(1)* %out, i32 addrspace(1)* addrspace(1)* %in, i32 addrspace(1)* %x, i32 %y) #1 {
+  define amdgpu_kernel void @atomic_max_i32_noret(
+      i32 addrspace(1)* %out,
+      i32 addrspace(1)* addrspace(1)* %in,
+      i32 addrspace(1)* %x,
+      i32 %y) #1 {
     %tid = call i32 @llvm.amdgcn.workitem.id.x()
     %idxprom = sext i32 %tid to i64
     %tid.gep = getelementptr i32 addrspace(1)*, i32 addrspace(1)* addrspace(1)* %in, i64 %idxprom
@@ -49,9 +53,9 @@
 # CHECK-LABEL: name: atomic_max_i32_noret
 
 # CHECK-LABEL: bb.1.atomic:
-# CHECK: BUFFER_ATOMIC_SMAX_ADDR64
-# CHECK-NEXT: S_WAITCNT 3952
-# CHECK-NEXT: BUFFER_WBINVL1_VOL
+# CHECK:       BUFFER_ATOMIC_SMAX_ADDR64
+# CHECK-NEXT:  S_WAITCNT 3952
+# CHECK-NEXT:  BUFFER_WBINVL1_VOL
 
 name:            atomic_max_i32_noret
 alignment:       0

@@ -1,9 +1,9 @@
 ; RUN:   opt -mtriple=amdgcn--amdhsa -amdgpu-lower-opencl-atomic-builtins -mcpu=fiji -S < %s | FileCheck %s
-; CHECK: atomicrmw add i32 addrspace(1)* null, i32 1 syncscope(2) monotonic
-; CHECK: atomicrmw add i32 addrspace(1)* null, i32 0 syncscope(2) monotonic
-; CHECK: cmpxchg i32 addrspace(1)* null, i32 0, i32 0 syncscope(2) monotonic monotonic
-; CHECK: atomicrmw xchg i32 addrspace(1)* null, i32 0 syncscope(2) monotonic
-; CHECK: [[A:%[0-9]*]] = atomicrmw xchg i32 addrspace(3)* null, i32 0 syncscope(2) monotonic
+; CHECK: atomicrmw add i32 addrspace(1)* null, i32 1 syncscope("agent") monotonic
+; CHECK: atomicrmw add i32 addrspace(1)* null, i32 0 syncscope("agent") monotonic
+; CHECK: cmpxchg i32 addrspace(1)* null, i32 0, i32 0 syncscope("agent") monotonic monotonic
+; CHECK: atomicrmw xchg i32 addrspace(1)* null, i32 0 syncscope("agent") monotonic
+; CHECK: [[A:%[0-9]*]] = atomicrmw xchg i32 addrspace(3)* null, i32 0 syncscope("agent") monotonic
 ; CHECK: bitcast i32 [[A]] to float
 ; CHECK: call void @_ZN9__gnu_cxxL21__atomic_add_dispatchEPii(i32 0, i32 1)
 ; CHECK: declare void @_ZN9__gnu_cxxL21__atomic_add_dispatchEPii(i32, i32)

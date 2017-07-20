@@ -98,7 +98,8 @@ struct Relocation {
 };
 
 struct DataSegment {
-  uint32_t Index;
+  uint32_t MemoryIndex;
+  uint32_t SectionOffset;
   wasm::WasmInitExpr Offset;
   yaml::BinaryRef Content;
 };

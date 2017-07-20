@@ -345,7 +345,8 @@ void MappingTraits<wasm::WasmInitExpr>::mapping(IO &IO,
 
 void MappingTraits<WasmYAML::DataSegment>::mapping(
     IO &IO, WasmYAML::DataSegment &Segment) {
-  IO.mapRequired("Index", Segment.Index);
+  IO.mapOptional("SectionOffset", Segment.SectionOffset);
+  IO.mapRequired("MemoryIndex", Segment.MemoryIndex);
   IO.mapRequired("Offset", Segment.Offset);
   IO.mapRequired("Content", Segment.Content);
 }

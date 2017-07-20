@@ -81,13 +81,13 @@
 ; OBJ:       DisplayName: first
 ; OBJ:       LinkageName: ?first@@3HA
 ; OBJ:     }
-; OBJ:     ThreadLocalDataSym {
+; OBJ:     GlobalTLS {
 ; OBJ:       DataOffset: ?middle@@3PEBHEB+0x0
 ; OBJ:       Type: const int* (0x1001)
 ; OBJ:       DisplayName: middle
 ; OBJ:       LinkageName: ?middle@@3PEBHEB
 ; OBJ:     }
-; OBJ:     DataSym {
+; OBJ:     GlobalData {
 ; OBJ:       Kind: S_GDATA32 (0x110D)
 ; OBJ:       DataOffset: ?last@@3HA+0x0
 ; OBJ:       Type: int (0x74)
@@ -101,7 +101,7 @@
 ; OBJ:   Magic: 0x4
 ; OBJ:   Subsection [
 ; OBJ:     SubSectionType: Symbols (0xF1)
-; OBJ:     DataSym {
+; OBJ:     GlobalData {
 ; OBJ:       DataOffset: ?comdat@?$A@X@@2HB+0x0
 ; OBJ:       Type: const int (0x1000)
 ; OBJ:       DisplayName: comdat

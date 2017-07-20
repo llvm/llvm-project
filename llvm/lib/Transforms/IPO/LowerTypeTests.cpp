@@ -855,15 +855,20 @@ void LowerTypeTestsModule::importFunction(Function *F, bool isDefinition) {
     FDecl = Function::Create(F->getFunctionType(), GlobalValue::ExternalLinkage,
                              Name + ".cfi_jt", &M);
     FDecl->setVisibility(GlobalValue::HiddenVisibility);
-  } else {
-    // Definition.
-    assert(isDefinition);
+  } else if (isDefinition) {
     F->setName(Name + ".cfi");
     F->setLinkage(GlobalValue::ExternalLinkage);
     F->setVisibility(GlobalValue::HiddenVisibility);
     FDecl = Function::Create(F->getFunctionType(), GlobalValue::ExternalLinkage,
                              Name, &M);
     FDecl->setVisibility(Visibility);
+  } else {
+    // Function definition without type metadata, where some other translation
+    // unit contained a declaration with type metadata. This normally happens
+    // during mixed CFI + non-CFI compilation. We do nothing with the function
+    // so that it is treated the same way as a function defined outside of the
+    // LTO unit.
+    return;
   }
 
   if (F->isWeakForLinker())

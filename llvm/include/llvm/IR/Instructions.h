@@ -52,18 +52,6 @@ class ConstantInt;
 class DataLayout;
 class LLVMContext;
 
-/// Predefined synchronization scopes.
-enum SynchronizationScope : uint8_t {
-  /// Synchronized with respect to signal handlers executing in the same thread.
-  SingleThread = 0,
-
-  /// Synchronized with respect to all concurrently executing threads.
-  CrossThread = 1,
-
-  /// First target specific synchronization scope.
-  SynchronizationScopeFirstTargetSpecific = 2
-};
-
 //===----------------------------------------------------------------------===//
 //                                AllocaInst Class
 //===----------------------------------------------------------------------===//
@@ -202,17 +190,16 @@ public:
   LoadInst(Value *Ptr, const Twine &NameStr, bool isVolatile,
            unsigned Align, BasicBlock *InsertAtEnd);
   LoadInst(Value *Ptr, const Twine &NameStr, bool isVolatile, unsigned Align,
-           AtomicOrdering Order, SynchronizationScope SynchScope = CrossThread,
+           AtomicOrdering Order, SyncScope::ID SSID = SyncScope::System,
            Instruction *InsertBefore = nullptr)
       : LoadInst(cast<PointerType>(Ptr->getType())->getElementType(), Ptr,
-                 NameStr, isVolatile, Align, Order, SynchScope, InsertBefore) {}
+                 NameStr, isVolatile, Align, Order, SSID, InsertBefore) {}
   LoadInst(Type *Ty, Value *Ptr, const Twine &NameStr, bool isVolatile,
            unsigned Align, AtomicOrdering Order,
-           SynchronizationScope SynchScope = CrossThread,
+           SyncScope::ID SSID = SyncScope::System,
            Instruction *InsertBefore = nullptr);
   LoadInst(Value *Ptr, const Twine &NameStr, bool isVolatile,
-           unsigned Align, AtomicOrdering Order,
-           SynchronizationScope SynchScope,
+           unsigned Align, AtomicOrdering Order, SyncScope::ID SSID,
            BasicBlock *InsertAtEnd);
   LoadInst(Value *Ptr, const char *NameStr, Instruction *InsertBefore);
   LoadInst(Value *Ptr, const char *NameStr, BasicBlock *InsertAtEnd);
@@ -247,29 +234,29 @@ public:
     return AtomicOrdering((getSubclassDataFromInstruction() >> 7) & 7);
   }
 
-  /// Sets the ordering constraint on this load instruction. May not be Release
+  /// Sets the ordering constraint of this load instruction.  May not be Release
   /// or AcquireRelease.
   void setOrdering(AtomicOrdering Ordering) {
     setInstructionSubclassData((getSubclassDataFromInstruction() & ~(7 << 7)) |
                                ((unsigned)Ordering << 7));
   }
 
-  /// Returns the synchronization scope of this load instruction.
-  SynchronizationScope getSynchScope() const {
-    return SynchScope;
+  /// Returns the synchronization scope ID of this load instruction.
+  SyncScope::ID getSyncScopeID() const {
+    return SSID;
   }
 
-  /// Sets the synchronization scope on this load instruction.
-  void setSynchScope(SynchronizationScope SynchScope) {
-    this->SynchScope = SynchScope;
+  /// Sets the synchronization scope ID of this load instruction.
+  void setSyncScopeID(SyncScope::ID SSID) {
+    this->SSID = SSID;
   }
 
-  /// Sets the ordering constraint and synchronization scope on this load
+  /// Sets the ordering constraint and the synchronization scope ID of this load
   /// instruction.
   void setAtomic(AtomicOrdering Ordering,
-                 SynchronizationScope SynchScope = CrossThread) {
+                 SyncScope::ID SSID = SyncScope::System) {
     setOrdering(Ordering);
-    setSynchScope(SynchScope);
+    setSyncScopeID(SSID);
   }
 
   bool isSimple() const { return !isAtomic() && !isVolatile(); }
@@ -305,10 +292,10 @@ private:
     Instruction::setInstructionSubclassData(D);
   }
 
-  /// The synchronization scope of this load instruction. Not quite enough room
-  /// in SubClassData for everything, so synchronization scope gets its own
-  /// field.
-  SynchronizationScope SynchScope;
+  /// The synchronization scope ID of this load instruction.  Not quite enough
+  /// room in SubClassData for everything, so synchronization scope ID gets its
+  /// own field.
+  SyncScope::ID SSID;
 };
 
 //===----------------------------------------------------------------------===//
@@ -337,11 +324,10 @@ public:
             unsigned Align, BasicBlock *InsertAtEnd);
   StoreInst(Value *Val, Value *Ptr, bool isVolatile,
             unsigned Align, AtomicOrdering Order,
-            SynchronizationScope SynchScope = CrossThread,
+            SyncScope::ID SSID = SyncScope::System,
             Instruction *InsertBefore = nullptr);
   StoreInst(Value *Val, Value *Ptr, bool isVolatile,
-            unsigned Align, AtomicOrdering Order,
-            SynchronizationScope SynchScope,
+            unsigned Align, AtomicOrdering Order, SyncScope::ID SSID,
             BasicBlock *InsertAtEnd);
 
   // allocate space for exactly two operands
@@ -373,29 +359,29 @@ public:
     return AtomicOrdering((getSubclassDataFromInstruction() >> 7) & 7);
   }
 
-  /// Sets the ordering constraint on this store instruction. May not be Acquire
-  /// or AcquireRelease.
+  /// Sets the ordering constraint of this store instruction.  May not be
+  /// Acquire or AcquireRelease.
   void setOrdering(AtomicOrdering Ordering) {
     setInstructionSubclassData((getSubclassDataFromInstruction() & ~(7 << 7)) |
                                ((unsigned)Ordering << 7));
   }
 
-  /// Returns the synchronization scope of this store instruction.
-  SynchronizationScope getSynchScope() const {
-    return SynchScope;
+  /// Returns the synchronization scope ID of this store instruction.
+  SyncScope::ID getSyncScopeID() const {
+    return SSID;
   }
 
-  /// Sets the synchronization scope on this store instruction.
-  void setSynchScope(SynchronizationScope SynchScope) {
-    this->SynchScope = SynchScope;
+  /// Sets the synchronization scope ID of this store instruction.
+  void setSyncScopeID(SyncScope::ID SSID) {
+    this->SSID = SSID;
   }
 
-  /// Sets the ordering constraint and synchronization scope on this store
-  /// instruction.
+  /// Sets the ordering constraint and the synchronization scope ID of this
+  /// store instruction.
   void setAtomic(AtomicOrdering Ordering,
-                 SynchronizationScope SynchScope = CrossThread) {
+                 SyncScope::ID SSID = SyncScope::System) {
     setOrdering(Ordering);
-    setSynchScope(SynchScope);
+    setSyncScopeID(SSID);
   }
 
   bool isSimple() const { return !isAtomic() && !isVolatile(); }
@@ -434,10 +420,10 @@ private:
     Instruction::setInstructionSubclassData(D);
   }
 
-  /// The synchronization scope of this store instruction. Not quite enough room
-  /// in SubClassData for everything, so synchronization scope gets its own
-  /// field.
-  SynchronizationScope SynchScope;
+  /// The synchronization scope ID of this store instruction.  Not quite enough
+  /// room in SubClassData for everything, so synchronization scope ID gets its
+  /// own field.
+  SyncScope::ID SSID;
 };
 
 template <>
@@ -452,7 +438,7 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(StoreInst, Value)
 
 /// An instruction for ordering other memory operations.
 class FenceInst : public Instruction {
-  void Init(AtomicOrdering Ordering, SynchronizationScope SynchScope);
+  void Init(AtomicOrdering Ordering, SyncScope::ID SSID);
 
 protected:
   // Note: Instruction needs to be a friend here to call cloneImpl.
@@ -464,10 +450,9 @@ public:
   // Ordering may only be Acquire, Release, AcquireRelease, or
   // SequentiallyConsistent.
   FenceInst(LLVMContext &C, AtomicOrdering Ordering,
-            SynchronizationScope SynchScope = CrossThread,
+            SyncScope::ID SSID = SyncScope::System,
             Instruction *InsertBefore = nullptr);
-  FenceInst(LLVMContext &C, AtomicOrdering Ordering,
-            SynchronizationScope SynchScope,
+  FenceInst(LLVMContext &C, AtomicOrdering Ordering, SyncScope::ID SSID,
             BasicBlock *InsertAtEnd);
 
   // allocate space for exactly zero operands
@@ -480,21 +465,21 @@ public:
     return AtomicOrdering(getSubclassDataFromInstruction() >> 1);
   }
 
-  /// Sets the ordering constraint on this fence instruction. May only be
+  /// Sets the ordering constraint of this fence instruction.  May only be
   /// Acquire, Release, AcquireRelease, or SequentiallyConsistent.
   void setOrdering(AtomicOrdering Ordering) {
     setInstructionSubclassData((getSubclassDataFromInstruction() & 1) |
                                ((unsigned)Ordering << 1));
   }
 
-  /// Returns the synchronization scope of this fence instruction.
-  SynchronizationScope getSynchScope() const {
-    return SynchScope;
+  /// Returns the synchronization scope ID of this fence instruction.
+  SyncScope::ID getSyncScopeID() const {
+    return SSID;
   }
 
-  /// Sets the synchronization scope on this fence instruction.
-  void setSynchScope(SynchronizationScope SynchScope) {
-    this->SynchScope = SynchScope;
+  /// Sets the synchronization scope ID of this fence instruction.
+  void setSyncScopeID(SyncScope::ID SSID) {
+    this->SSID = SSID;
   }
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
@@ -512,10 +497,10 @@ private:
     Instruction::setInstructionSubclassData(D);
   }
 
-  /// The synchronization scope of this fence instruction. Not quite enough room
-  /// in SubClassData for everything, so synchronization scope gets its own
-  /// field.
-  SynchronizationScope SynchScope;
+  /// The synchronization scope ID of this fence instruction.  Not quite enough
+  /// room in SubClassData for everything, so synchronization scope ID gets its
+  /// own field.
+  SyncScope::ID SSID;
 };
 
 //===----------------------------------------------------------------------===//
@@ -529,7 +514,7 @@ private:
 class AtomicCmpXchgInst : public Instruction {
   void Init(Value *Ptr, Value *Cmp, Value *NewVal,
             AtomicOrdering SuccessOrdering, AtomicOrdering FailureOrdering,
-            SynchronizationScope SynchScope);
+            SyncScope::ID SSID);
 
 protected:
   // Note: Instruction needs to be a friend here to call cloneImpl.
@@ -541,13 +526,11 @@ public:
   AtomicCmpXchgInst(Value *Ptr, Value *Cmp, Value *NewVal,
                     AtomicOrdering SuccessOrdering,
                     AtomicOrdering FailureOrdering,
-                    SynchronizationScope SynchScope,
-                    Instruction *InsertBefore = nullptr);
+                    SyncScope::ID SSID, Instruction *InsertBefore = nullptr);
   AtomicCmpXchgInst(Value *Ptr, Value *Cmp, Value *NewVal,
                     AtomicOrdering SuccessOrdering,
                     AtomicOrdering FailureOrdering,
-                    SynchronizationScope SynchScope,
-                    BasicBlock *InsertAtEnd);
+                    SyncScope::ID SSID, BasicBlock *InsertAtEnd);
 
   // allocate space for exactly three operands
   void *operator new(size_t s) {
@@ -581,14 +564,12 @@ public:
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 
-  /// Returns the ordering constraint of this cmpxchg instruction when store
-  /// occurs.
+  /// Returns the success ordering constraint of this cmpxchg instruction.
   AtomicOrdering getSuccessOrdering() const {
     return AtomicOrdering((getSubclassDataFromInstruction() >> 2) & 7);
   }
 
-  /// Sets the ordering constraint on this cmpxchg instruction when store
-  /// occurs.
+  /// Sets the success ordering constraint of this cmpxchg instruction.
   void setSuccessOrdering(AtomicOrdering Ordering) {
     assert(Ordering != AtomicOrdering::NotAtomic &&
            "CmpXchg instructions can only be atomic.");
@@ -596,14 +577,12 @@ public:
                                ((unsigned)Ordering << 2));
   }
 
-  /// Returns the ordering constraint of this cmpxchg instruction when store
-  /// does not occur.
+  /// Returns the failure ordering constraint of this cmpxchg instruction.
   AtomicOrdering getFailureOrdering() const {
     return AtomicOrdering((getSubclassDataFromInstruction() >> 5) & 7);
   }
 
-  /// Sets the ordering constraint on this cmpxchg instruction when store
-  /// does not occur.
+  /// Sets the failure ordering constraint of this cmpxchg instruction.
   void setFailureOrdering(AtomicOrdering Ordering) {
     assert(Ordering != AtomicOrdering::NotAtomic &&
            "CmpXchg instructions can only be atomic.");
@@ -611,14 +590,14 @@ public:
                                ((unsigned)Ordering << 5));
   }
 
-  /// Returns the synchronization scope of this cmpxchg instruction.
-  SynchronizationScope getSynchScope() const {
-    return SynchScope;
+  /// Returns the synchronization scope ID of this cmpxchg instruction.
+  SyncScope::ID getSyncScopeID() const {
+    return SSID;
   }
 
-  /// Sets the synchronization scope on this cmpxchg instruction.
-  void setSynchScope(SynchronizationScope SynchScope) {
-    this->SynchScope = SynchScope;
+  /// Sets the synchronization scope ID of this cmpxchg instruction.
+  void setSyncScopeID(SyncScope::ID SSID) {
+    this->SSID = SSID;
   }
 
   Value *getPointerOperand() { return getOperand(0); }
@@ -674,10 +653,10 @@ private:
     Instruction::setInstructionSubclassData(D);
   }
 
-  /// The synchronization scope of this cmpxchg instruction. Not quite enough
-  /// room in SubClassData for everything, so synchronization scope gets its own
-  /// field.
-  SynchronizationScope SynchScope;
+  /// The synchronization scope ID of this cmpxchg instruction.  Not quite
+  /// enough room in SubClassData for everything, so synchronization scope ID
+  /// gets its own field.
+  SyncScope::ID SSID;
 };
 
 template <>
@@ -737,10 +716,10 @@ public:
   };
 
   AtomicRMWInst(BinOp Operation, Value *Ptr, Value *Val,
-                AtomicOrdering Ordering, SynchronizationScope SynchScope,
+                AtomicOrdering Ordering, SyncScope::ID SSID,
                 Instruction *InsertBefore = nullptr);
   AtomicRMWInst(BinOp Operation, Value *Ptr, Value *Val,
-                AtomicOrdering Ordering, SynchronizationScope SynchScope,
+                AtomicOrdering Ordering, SyncScope::ID SSID,
                 BasicBlock *InsertAtEnd);
 
   // allocate space for exactly two operands
@@ -774,12 +753,12 @@ public:
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 
-  /// Returns the ordering constraint of this RMW instruction.
+  /// Returns the ordering constraint of this rmw instruction.
   AtomicOrdering getOrdering() const {
     return AtomicOrdering((getSubclassDataFromInstruction() >> 2) & 7);
   }
 
-  /// Sets the ordering constraint on this RMW instruction.
+  /// Sets the ordering constraint of this rmw instruction.
   void setOrdering(AtomicOrdering Ordering) {
     assert(Ordering != AtomicOrdering::NotAtomic &&
            "atomicrmw instructions can only be atomic.");
@@ -787,15 +766,15 @@ public:
                                ((unsigned)Ordering << 2));
   }
 
-  /// Returns the synchronization scope of this RMW instruction.
-  SynchronizationScope getSynchScope() const {
-    return SynchScope;
+  /// Returns the synchronization scope ID of this rmw instruction.
+  SyncScope::ID getSyncScopeID() const {
+    return SSID;
   }
 
-  /// Sets the synchronization scope on this RMW instruction.
-  void setSynchScope(SynchronizationScope SynchScope) {
-    this->SynchScope = SynchScope;
-   }
+  /// Sets the synchronization scope ID of this rmw instruction.
+  void setSyncScopeID(SyncScope::ID SSID) {
+    this->SSID = SSID;
+  }
 
   Value *getPointerOperand() { return getOperand(0); }
   const Value *getPointerOperand() const { return getOperand(0); }
@@ -819,7 +798,7 @@ public:
 
 private:
   void Init(BinOp Operation, Value *Ptr, Value *Val,
-            AtomicOrdering Ordering, SynchronizationScope SynchScope);
+            AtomicOrdering Ordering, SyncScope::ID SSID);
 
   // Shadow Instruction::setInstructionSubclassData with a private forwarding
   // method so that subclasses cannot accidentally use it.
@@ -827,10 +806,10 @@ private:
     Instruction::setInstructionSubclassData(D);
   }
 
-  /// The synchronization scope of this RMW instruction. Not quite enough room
-  /// in SubClassData for everything, so synchronization scope gets its own
-  /// field.
-  SynchronizationScope SynchScope;
+  /// The synchronization scope ID of this rmw instruction.  Not quite enough
+  /// room in SubClassData for everything, so synchronization scope ID gets its
+  /// own field.
+  SyncScope::ID SSID;
 };
 
 template <>

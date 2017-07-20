@@ -111,6 +111,7 @@ class FLAT_Load_Pseudo <string opName, RegisterClass regClass,
   " $vdst, $vaddr$offset$glc$slc"> {
   let has_data = 0;
   let mayLoad = 1;
+  let maybeAtomic = 1;
 }
 
 class FLAT_Global_Load_Pseudo<string opName, RegisterClass regClass> :
@@ -134,6 +135,7 @@ class FLAT_Store_Pseudo <string opName, RegisterClass vdataClass,
   let mayLoad  = 0;
   let mayStore = 1;
   let has_vdst = 0;
+  let maybeAtomic = 1;
 }
 
 class FLAT_Global_Store_Pseudo<string opName, RegisterClass regClass> :
@@ -169,6 +171,7 @@ multiclass FLAT_Atomic_Pseudo<
     let glcValue = 0;
     let has_vdst = 0;
     let PseudoInstr = NAME;
+    let maybeAtomic = 1;
   }
 
   def _RTN : FLAT_Pseudo <opName,
@@ -186,6 +189,7 @@ multiclass FLAT_Atomic_Pseudo<
     let has_glc  = 0;
     let glcValue = 1;
     let PseudoInstr = NAME # "_RTN";
+    let maybeAtomic = 1;
   }
 }
 

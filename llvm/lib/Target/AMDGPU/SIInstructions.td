@@ -99,6 +99,7 @@ def ATOMIC_FENCE : SPseudoInstSI<
   [(atomic_fence (i32 imm:$ordering), (i32 imm:$scope))],
   "ATOMIC_FENCE $ordering, $scope"> {
   let hasSideEffects = 1;
+  let maybeAtomic = 1;
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Uses = [EXEC] in {

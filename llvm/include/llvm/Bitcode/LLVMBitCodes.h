@@ -59,6 +59,8 @@ enum BlockIDs {
   FULL_LTO_GLOBALVAL_SUMMARY_BLOCK_ID,
 
   SYMTAB_BLOCK_ID,
+
+  SYNC_SCOPE_NAMES_BLOCK_ID,
 };
 
 /// Identification block contains a string that describes the producer details,
@@ -170,6 +172,10 @@ enum TypeCodes {
 
 enum OperandBundleTagCode {
   OPERAND_BUNDLE_TAG = 1, // TAG: [strchr x N]
+};
+
+enum SyncScopeNameCode {
+  SYNC_SCOPE_NAME = 1,
 };
 
 // Value symbol table codes.
@@ -402,18 +408,6 @@ enum AtomicOrderingCodes {
   ORDERING_RELEASE = 4,
   ORDERING_ACQREL = 5,
   ORDERING_SEQCST = 6
-};
-
-/// Encoded SynchronizationScope values.
-enum AtomicSynchScopeCodes : uint8_t {
-  /// Encoded value for SingleThread synchronization scope.
-  SYNCHSCOPE_SINGLETHREAD = 0,
-
-  /// Encoded value for CrossThread synchronization scope.
-  SYNCHSCOPE_CROSSTHREAD = 1,
-
-  /// First encoded value for target specific synchronization scope.
-  SYNCHSCOPE_FIRSTTARGETSPECIFIC = 2
 };
 
 /// Markers and flags for call instruction.

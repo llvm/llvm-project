@@ -964,7 +964,7 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}atomic_load_i32:
-; GCN: flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}] glc{{$}}
+; GCN: flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}] glc
 ; GCN: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
 define amdgpu_kernel void @atomic_load_i32(i32 addrspace(4)* %in, i32 addrspace(4)* %out) {
 entry:

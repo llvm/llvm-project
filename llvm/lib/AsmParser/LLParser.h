@@ -215,11 +215,6 @@ namespace llvm {
       return false;
     }
     bool ParseStringConstant(std::string &Result);
-    bool ParseUInt8(uint8_t &Val);
-    bool ParseUInt8(uint8_t &Val, LocTy &Loc) {
-      Loc = Lex.getLoc();
-      return ParseUInt8(Val);
-    }
     bool ParseUInt32(unsigned &Val);
     bool ParseUInt32(unsigned &Val, LocTy &Loc) {
       Loc = Lex.getLoc();
@@ -246,9 +241,9 @@ namespace llvm {
     bool ParseOptionalCallingConv(unsigned &CC);
     bool ParseOptionalAlignment(unsigned &Alignment);
     bool ParseOptionalDerefAttrBytes(lltok::Kind AttrKind, uint64_t &Bytes);
-    bool ParseScopeAndOrdering(bool isAtomic, SynchronizationScope &Scope,
+    bool ParseScopeAndOrdering(bool isAtomic, SyncScope::ID &SSID,
                                AtomicOrdering &Ordering);
-    bool ParseScope(SynchronizationScope &Scope);
+    bool ParseScope(SyncScope::ID &SSID);
     bool ParseOrdering(AtomicOrdering &Ordering);
     bool ParseOptionalStackAlignment(unsigned &Alignment);
     bool ParseOptionalCommaAlign(unsigned &Alignment, bool &AteExtraComma);

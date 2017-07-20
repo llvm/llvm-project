@@ -16,10 +16,17 @@ barf:                                   @ @barf
 .LPC0_2:
 	movw	r0, :lower16:extern_symbol+1234
 	movt	r0, :upper16:extern_symbol+1234
+
+	movw	r0, :lower16:(foo - bar + 1234)
+	movt	r0, :upper16:(foo - bar + 1234)
+foo:
+bar:
+
 @ ASM:          movw    r0, :lower16:(GOT-(.LPC0_2+8))
 @ ASM-NEXT:     movt    r0, :upper16:(GOT-(.LPC0_2+8))
 @ ASM:          movw    r0, :lower16:(extern_symbol+1234)
-@ ASM-NEXT:     movt    r0, :upper16:(extern_symbol+1234)
+@ ASM:          movw    r0, :lower16:((foo-bar)+1234)
+@ ASM-NEXT:     movt    r0, :upper16:((foo-bar)+1234)
 
 @OBJ:      Disassembly of section .text:
 @OBJ-NEXT: barf:
@@ -31,6 +38,8 @@ barf:                                   @ @barf
 @OBJ-NEXT: 00000008:         R_ARM_MOVW_ABS_NC    extern_symbol
 @OBJ-NEXT: c:             d2 04 40 e3     movt    r0, #1234
 @OBJ-NEXT: 0000000c:         R_ARM_MOVT_ABS       extern_symbol
+@OBJ-NEXT: 10:            d2 04 00 e3     movw    r0, #1234
+@OBJ-NEXT: 14:            00 00 40 e3     movt    r0, #0
 
 @THUMB:      Disassembly of section .text:
 @THUMB-NEXT: barf:
@@ -42,3 +51,5 @@ barf:                                   @ @barf
 @THUMB-NEXT: 00000008:         R_ARM_THM_MOVW_ABS_NC  extern_symbol
 @THUMB-NEXT: c:             c0 f2 d2 40     movt    r0, #1234
 @THUMB-NEXT: 0000000c:         R_ARM_THM_MOVT_ABS     extern_symbol
+@THUMB-NEXT: 10:            40 f2 d2 40     movw    r0, #1234
+@THUMB-NEXT: 14:            c0 f2 00 00     movt    r0, #0

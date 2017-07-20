@@ -67,7 +67,9 @@ enum : uint64_t {
   SCALAR_STORE = UINT64_C(1) << 39,
   FIXED_SIZE = UINT64_C(1) << 40,
   VOPAsmPrefer32Bit = UINT64_C(1) << 41,
-  HasFPClamp = UINT64_C(1) << 42
+  HasFPClamp = UINT64_C(1) << 42,
+
+  maybeAtomic = UINT64_C(1) << 43
 };
 
 // v_cmp_class_* etc. use a 10-bit mask for what operation is checked.

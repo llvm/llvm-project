@@ -961,8 +961,8 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}atomic_load_i64:
-; CI: buffer_load_dwordx2 [[RET:v\[[0-9]+:[0-9]\]]], off, s[{{[0-9]+}}:{{[0-9]+}}], 0 glc{{$}}
-; VI: flat_load_dwordx2 [[RET:v\[[0-9]+:[0-9]\]]], v[{{[0-9]+}}:{{[0-9]+}}] glc{{$}}
+; CI: buffer_load_dwordx2 [[RET:v\[[0-9]+:[0-9]\]]], off, s[{{[0-9]+}}:{{[0-9]+}}], 0 glc
+; VI: flat_load_dwordx2 [[RET:v\[[0-9]+:[0-9]\]]], v[{{[0-9]+}}:{{[0-9]+}}] glc
 ; GCN: buffer_store_dwordx2 [[RET]]
 define amdgpu_kernel void @atomic_load_i64(i64 addrspace(1)* %in, i64 addrspace(1)* %out) {
 entry:

@@ -5,7 +5,7 @@
 ; DW_ATE_[un]signed encoding for all integer types if they don't have distinct
 ; integer types for characters types. This was PR30552.
 
-; CHECK-LABEL: DataSym {
+; CHECK-LABEL: GlobalData {
 ; CHECK-NEXT:    Kind: S_GDATA32 (0x110D)
 ; CHECK-NEXT:    DataOffset:
 ; CHECK-NEXT:    Type: signed char (0x10)
@@ -13,7 +13,7 @@
 ; CHECK-NEXT:    LinkageName: x
 ; CHECK-NEXT:  }
 
-; CHECK-LABEL: DataSym {
+; CHECK-LABEL: GlobalData {
 ; CHECK-NEXT:    Kind: S_GDATA32 (0x110D)
 ; CHECK-NEXT:    DataOffset:
 ; CHECK-NEXT:    Type: unsigned char (0x20)

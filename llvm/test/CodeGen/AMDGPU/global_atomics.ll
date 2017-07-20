@@ -968,8 +968,8 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}atomic_load_i32:
-; SI: buffer_load_dword [[RET:v[0-9]+]], off, s[{{[0-9]+}}:{{[0-9]+}}], 0 glc{{$}}
-; VI: flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}] glc{{$}}
+; SI: buffer_load_dword [[RET:v[0-9]+]], off, s[{{[0-9]+}}:{{[0-9]+}}], 0 glc
+; VI: flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}] glc
 ; GCN: buffer_store_dword [[RET]]
 define amdgpu_kernel void @atomic_load_i32(i32 addrspace(1)* %in, i32 addrspace(1)* %out) {
 entry:
