@@ -102,6 +102,37 @@ bool DWARFVerifier::verifyUnitContents(DWARFUnit Unit) {
   return NumUnitErrors == 0;
 }
 
+bool DWARFVerifier::handleDebugAbbrev() {
+  OS << "Verifying .debug_abbrev...\n";
+
+  const DWARFObject &DObj = DCtx.getDWARFObj();
+  if (DObj.getAbbrevSection().empty()) {
+    OS << "Warning: .debug_abbrev is empty.\n";
+    return true;
+  }
+
+  unsigned NumErrors = 0;
+  const DWARFDebugAbbrev *Abbrev = DCtx.getDebugAbbrev();
+  if (Abbrev) {
+    const DWARFAbbreviationDeclarationSet *AbbrDecls =
+        Abbrev->getAbbreviationDeclarationSet(0);
+    for (auto AbbrDecl : *AbbrDecls) {
+      SmallDenseSet<uint16_t> AttributeSet;
+      for (auto Attribute : AbbrDecl.attributes()) {
+        auto Result = AttributeSet.insert(Attribute.Attr);
+        if (!Result.second) {
+          OS << format("Error: Abbreviation declaration with code %d ",
+                       AbbrDecl.getCode());
+          OS << "contains multiple " << AttributeString(Attribute.Attr)
+             << " attributes.\n";
+          ++NumErrors;
+        }
+      }
+    }
+  }
+  return NumErrors == 0;
+}
+
 bool DWARFVerifier::handleDebugInfo() {
   OS << "Verifying .debug_info Unit Header Chain...\n";
 
