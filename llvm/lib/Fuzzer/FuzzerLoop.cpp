@@ -456,6 +456,7 @@ static bool LooseMemeq(const uint8_t *A, const uint8_t *B, size_t Size) {
 }
 
 void Fuzzer::ExecuteCallback(const uint8_t *Data, size_t Size) {
+  TPC.RecordInitialStack();
   TotalNumberOfRuns++;
   assert(InFuzzingThread());
   if (SMR.IsClient())

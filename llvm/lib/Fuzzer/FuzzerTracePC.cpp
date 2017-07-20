@@ -319,6 +319,8 @@ void __sanitizer_cov_trace_pc_guard(uint32_t *Guard) {
   uint32_t Idx = *Guard;
   __sancov_trace_pc_pcs[Idx] = PC;
   __sancov_trace_pc_guard_8bit_counters[Idx]++;
+  // Uncomment the following line to get stack-depth profiling.
+  // fuzzer::TPC.RecordCurrentStack();
 }
 
 // Best-effort support for -fsanitize-coverage=trace-pc, which is available

@@ -52,6 +52,8 @@ struct ValueBitMap {
     return Map[WordIdx] & (1UL << BitIdx);
   }
 
+  size_t SizeInBits() const { return kMapSizeInBits; }
+
   size_t GetNumBitsSinceLastMerge() const { return NumBits; }
 
   // Merges 'Other' into 'this', clears 'Other', updates NumBits,
