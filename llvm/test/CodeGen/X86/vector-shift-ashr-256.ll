@@ -1699,10 +1699,9 @@ define <4 x i64> @splatconstant_shift_v4i64(<4 x i64> %a) nounwind {
 ;
 ; XOPAVX2-LABEL: splatconstant_shift_v4i64:
 ; XOPAVX2:       # BB#0:
+; XOPAVX2-NEXT:    vpsrad $7, %ymm0, %ymm1
 ; XOPAVX2-NEXT:    vpsrlq $7, %ymm0, %ymm0
-; XOPAVX2-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [72057594037927936,72057594037927936,72057594037927936,72057594037927936]
-; XOPAVX2-NEXT:    vpxor %ymm1, %ymm0, %ymm0
-; XOPAVX2-NEXT:    vpsubq %ymm1, %ymm0, %ymm0
+; XOPAVX2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0],ymm1[1],ymm0[2],ymm1[3],ymm0[4],ymm1[5],ymm0[6],ymm1[7]
 ; XOPAVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: splatconstant_shift_v4i64:

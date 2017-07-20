@@ -238,13 +238,7 @@ private:
         if (!isa<StoreInst>(WA->getAccessInstruction()) && !WA->isPHIKind())
           continue;
 
-        auto ReadingValue = WA->getAccessValue();
-
-        if (WA->isPHIKind()) {
-          PHINode *PHI = cast<PHINode>(WA->getAccessValue());
-          BasicBlock *BB = Stmt.getBasicBlock();
-          ReadingValue = PHI->getIncomingValueForBlock(BB);
-        }
+        llvm::Value *ReadingValue = WA->tryGetValueStored();
 
         if (!ReadingValue)
           continue;

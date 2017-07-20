@@ -889,6 +889,21 @@ public:
   /// Return the access value of this memory access.
   Value *getAccessValue() const { return AccessValue; }
 
+  /// Return llvm::Value that is stored by this access, if available.
+  ///
+  /// PHI nodes may not have a unique value available that is stored, as in
+  /// case of region statements one out of possibly several llvm::Values
+  /// might be stored. In this case nullptr is returned.
+  Value *tryGetValueStored() {
+    assert(isWrite() && "Only write statement store values");
+    if (isPHIKind()) {
+      if (Incoming.size() == 1)
+        return Incoming[0].second;
+      return nullptr;
+    }
+    return AccessValue;
+  }
+
   /// Return the access instruction of this memory access.
   Instruction *getAccessInstruction() const { return AccessInstruction; }
 
