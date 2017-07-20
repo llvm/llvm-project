@@ -150,7 +150,6 @@ entry:
   %x = load i32, i32* %p
   %shl = ashr i32 %x, %shamt
 ; BMI2: ashr32p
-; Source order scheduling prevents folding, rdar:14208996.
 ; BMI2: sarxl %{{.+}}, ({{.+}}), %{{.+}}
 ; BMI2: ret
 ; BMI264: ashr32p
