@@ -213,16 +213,13 @@ define i64 @ashr64p(i64* %p, i64 %shamt) nounwind uwtable readnone {
 define i32 @shl32and(i32 %t, i32 %val) nounwind {
 ; BMI2-LABEL: shl32and:
 ; BMI2:       # BB#0:
-; BMI2-NEXT:    movb {{[0-9]+}}(%esp), %cl
-; BMI2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; BMI2-NEXT:    shll %cl, %eax
+; BMI2-NEXT:    movb {{[0-9]+}}(%esp), %al
+; BMI2-NEXT:    shlxl %eax, {{[0-9]+}}(%esp), %eax
 ; BMI2-NEXT:    retl
 ;
 ; BMI264-LABEL: shl32and:
 ; BMI264:       # BB#0:
-; BMI264-NEXT:    movl %edi, %ecx
-; BMI264-NEXT:    shll %cl, %esi
-; BMI264-NEXT:    movl %esi, %eax
+; BMI264-NEXT:    shlxl %edi, %esi, %eax
 ; BMI264-NEXT:    retq
   %shamt = and i32 %t, 31
   %res = shl i32 %val, %shamt
@@ -232,9 +229,7 @@ define i32 @shl32and(i32 %t, i32 %val) nounwind {
 define i64 @shl64and(i64 %t, i64 %val) nounwind {
 ; BMI264-LABEL: shl64and:
 ; BMI264:       # BB#0:
-; BMI264-NEXT:    movl %edi, %ecx
-; BMI264-NEXT:    shlq %cl, %rsi
-; BMI264-NEXT:    movq %rsi, %rax
+; BMI264-NEXT:    shlxq %rdi, %rsi, %rax
 ; BMI264-NEXT:    retq
   %shamt = and i64 %t, 63
   %res = shl i64 %val, %shamt
@@ -244,16 +239,13 @@ define i64 @shl64and(i64 %t, i64 %val) nounwind {
 define i32 @lshr32and(i32 %t, i32 %val) nounwind {
 ; BMI2-LABEL: lshr32and:
 ; BMI2:       # BB#0:
-; BMI2-NEXT:    movb {{[0-9]+}}(%esp), %cl
-; BMI2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; BMI2-NEXT:    shrl %cl, %eax
+; BMI2-NEXT:    movb {{[0-9]+}}(%esp), %al
+; BMI2-NEXT:    shrxl %eax, {{[0-9]+}}(%esp), %eax
 ; BMI2-NEXT:    retl
 ;
 ; BMI264-LABEL: lshr32and:
 ; BMI264:       # BB#0:
-; BMI264-NEXT:    movl %edi, %ecx
-; BMI264-NEXT:    shrl %cl, %esi
-; BMI264-NEXT:    movl %esi, %eax
+; BMI264-NEXT:    shrxl %edi, %esi, %eax
 ; BMI264-NEXT:    retq
   %shamt = and i32 %t, 31
   %res = lshr i32 %val, %shamt
@@ -263,9 +255,7 @@ define i32 @lshr32and(i32 %t, i32 %val) nounwind {
 define i64 @lshr64and(i64 %t, i64 %val) nounwind {
 ; BMI264-LABEL: lshr64and:
 ; BMI264:       # BB#0:
-; BMI264-NEXT:    movl %edi, %ecx
-; BMI264-NEXT:    shrq %cl, %rsi
-; BMI264-NEXT:    movq %rsi, %rax
+; BMI264-NEXT:    shrxq %rdi, %rsi, %rax
 ; BMI264-NEXT:    retq
   %shamt = and i64 %t, 63
   %res = lshr i64 %val, %shamt
@@ -275,16 +265,13 @@ define i64 @lshr64and(i64 %t, i64 %val) nounwind {
 define i32 @ashr32and(i32 %t, i32 %val) nounwind {
 ; BMI2-LABEL: ashr32and:
 ; BMI2:       # BB#0:
-; BMI2-NEXT:    movb {{[0-9]+}}(%esp), %cl
-; BMI2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; BMI2-NEXT:    sarl %cl, %eax
+; BMI2-NEXT:    movb {{[0-9]+}}(%esp), %al
+; BMI2-NEXT:    sarxl %eax, {{[0-9]+}}(%esp), %eax
 ; BMI2-NEXT:    retl
 ;
 ; BMI264-LABEL: ashr32and:
 ; BMI264:       # BB#0:
-; BMI264-NEXT:    movl %edi, %ecx
-; BMI264-NEXT:    sarl %cl, %esi
-; BMI264-NEXT:    movl %esi, %eax
+; BMI264-NEXT:    sarxl %edi, %esi, %eax
 ; BMI264-NEXT:    retq
   %shamt = and i32 %t, 31
   %res = ashr i32 %val, %shamt
@@ -294,9 +281,7 @@ define i32 @ashr32and(i32 %t, i32 %val) nounwind {
 define i64 @ashr64and(i64 %t, i64 %val) nounwind {
 ; BMI264-LABEL: ashr64and:
 ; BMI264:       # BB#0:
-; BMI264-NEXT:    movl %edi, %ecx
-; BMI264-NEXT:    sarq %cl, %rsi
-; BMI264-NEXT:    movq %rsi, %rax
+; BMI264-NEXT:    sarxq %rdi, %rsi, %rax
 ; BMI264-NEXT:    retq
   %shamt = and i64 %t, 63
   %res = ashr i64 %val, %shamt
