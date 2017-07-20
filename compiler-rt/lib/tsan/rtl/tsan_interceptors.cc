@@ -219,7 +219,7 @@ struct ThreadSignalContext {
 // The object is 64-byte aligned, because we want hot data to be located in
 // a single cache line if possible (it's accessed in every interceptor).
 static ALIGNED(64) char libignore_placeholder[sizeof(LibIgnore)];
-static LibIgnore *libignore() {
+LibIgnore *libignore() {
   return reinterpret_cast<LibIgnore*>(&libignore_placeholder[0]);
 }
 

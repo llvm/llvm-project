@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "tsan_rtl.h"
+#include "tsan_interceptors.h"
 
 namespace __tsan {
 
@@ -46,7 +47,10 @@ void ExternalAccess(void *addr, void *caller_pc, void *tag, AccessFunc access) {
   ThreadState *thr = cur_thread();
   if (caller_pc) FuncEntry(thr, (uptr)caller_pc);
   InsertShadowStackFrameForTag(thr, (uptr)tag);
-  access(thr, CALLERPC, (uptr)addr, kSizeLog8);
+  bool in_ignored_lib;
+  if (!caller_pc || !libignore()->IsIgnored((uptr)caller_pc, &in_ignored_lib)) {
+    access(thr, CALLERPC, (uptr)addr, kSizeLog8);
+  }
   FuncExit(thr);
   if (caller_pc) FuncExit(thr);
 }
