@@ -61,7 +61,6 @@ set(LLVM_TEST_DEPENDS
           llvm-modextract
           llvm-mt
           llvm-nm
-          llvm-objcopy
           llvm-objdump
           llvm-opt-report
           llvm-pdbutil
