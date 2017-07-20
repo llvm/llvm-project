@@ -41,6 +41,7 @@ enum ReportType {
 struct ReportStack {
   SymbolizedStack *frames;
   bool suppressable;
+  SymbolizedStack *responsible_frame;
   static ReportStack *New();
 
  private:
@@ -128,7 +129,7 @@ class ReportDesc {
 
 // Format and output the report to the console/log. No additional logic.
 void PrintReport(const ReportDesc *rep);
-void PrintStack(const ReportStack *stack);
+void PrintStack(const ReportStack *ent, bool mark_frames = false);
 
 }  // namespace __tsan
 

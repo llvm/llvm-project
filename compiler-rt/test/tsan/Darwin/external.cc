@@ -36,13 +36,25 @@ extern "C" {
   void ObjectWriteAnother(MyObject *, long);
 }
 
+void UserCodeRead(MyObjectRef ref) {
+  ObjectRead(ref);
+}
+
+void UserCodeWrite(MyObjectRef ref, long val) {
+  ObjectWrite(ref, val);
+}
+
+void UserCodeWriteAnother(MyObjectRef ref, long val) {
+  ObjectWriteAnother(ref, val);
+}
+
 int main(int argc, char *argv[]) {
   InitializeLibrary();
   
   {
     MyObjectRef ref = ObjectCreate();
-    std::thread t1([ref]{ ObjectRead(ref); });
-    std::thread t2([ref]{ ObjectRead(ref); });
+    std::thread t1([ref]{ UserCodeRead(ref); });
+    std::thread t2([ref]{ UserCodeRead(ref); });
     t1.join();
     t2.join();
   }
@@ -51,11 +63,11 @@ int main(int argc, char *argv[]) {
   
   fprintf(stderr, "RR test done\n");
   // CHECK: RR test done
-
+  
   {
     MyObjectRef ref = ObjectCreate();
-    std::thread t1([ref]{ ObjectRead(ref); });
-    std::thread t2([ref]{ ObjectWrite(ref, 66); });
+    std::thread t1([ref]{ UserCodeRead(ref); });
+    std::thread t2([ref]{ UserCodeWrite(ref, 66); });
     t1.join();
     t2.join();
   }
@@ -69,19 +81,20 @@ int main(int argc, char *argv[]) {
   
   // TEST3: WARNING: ThreadSanitizer: race on a library object
   // TEST3: {{Mutating|read-only}} access of object MyLibrary::MyObject at
-  // TEST3: {{ObjectWrite|ObjectRead}}
+  // TEST3: * #1 {{UserCodeWrite|UserCodeRead}}
   // TEST3: Previous {{mutating|read-only}} access of object MyLibrary::MyObject at
-  // TEST3: {{ObjectWrite|ObjectRead}}
+  // TEST3: * #1 {{UserCodeWrite|UserCodeRead}}
+  // TEST3: Issue is caused by frames marked with "*".
   // TEST3: Location is MyLibrary::MyObject object of size 16 at
   // TEST3: {{ObjectCreate}}
-
+  
   fprintf(stderr, "RW test done\n");
   // CHECK: RW test done
-
+  
   {
     MyObjectRef ref = ObjectCreate();
-    std::thread t1([ref]{ ObjectWrite(ref, 76); });
-    std::thread t2([ref]{ ObjectWriteAnother(ref, 77); });
+    std::thread t1([ref]{ UserCodeWrite(ref, 76); });
+    std::thread t2([ref]{ UserCodeWriteAnother(ref, 77); });
     t1.join();
     t2.join();
   }
@@ -92,12 +105,13 @@ int main(int argc, char *argv[]) {
   
   // TEST3: WARNING: ThreadSanitizer: race on a library object
   // TEST3: Mutating access of object MyLibrary::MyObject at
-  // TEST3: {{ObjectWrite|ObjectWriteAnother}}
+  // TEST3: * #1 {{UserCodeWrite|UserCodeWriteAnother}}
   // TEST3: Previous mutating access of object MyLibrary::MyObject at
-  // TEST3: {{ObjectWrite|ObjectWriteAnother}}
+  // TEST3: * #1 {{UserCodeWrite|UserCodeWriteAnother}}
+  // TEST3: Issue is caused by frames marked with "*".
   // TEST3: Location is MyLibrary::MyObject object of size 16 at
   // TEST3: {{ObjectCreate}}
-
+  
   fprintf(stderr, "WW test done\n");
   // CHECK: WW test done
 }
