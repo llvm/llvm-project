@@ -49,6 +49,12 @@ using namespace llvm;
 #define DEBUG_TYPE "prologepilog"
 
 typedef SmallVector<MachineBasicBlock *, 4> MBBVector;
+static void doSpillCalleeSavedRegs(MachineFunction &MF, RegScavenger *RS,
+                                   unsigned &MinCSFrameIndex,
+                                   unsigned &MaxCXFrameIndex,
+                                   const MBBVector &SaveBlocks,
+                                   const MBBVector &RestoreBlocks);
+
 namespace {
 class PEI : public MachineFunctionPass {
 public:
@@ -72,7 +78,11 @@ public:
   bool runOnMachineFunction(MachineFunction &Fn) override;
 
 private:
-  std::function<void(MachineFunction &MF)> SpillCalleeSavedRegisters;
+  std::function<void(MachineFunction &MF, RegScavenger *RS,
+                     unsigned &MinCSFrameIndex, unsigned &MaxCSFrameIndex,
+                     const MBBVector &SaveBlocks,
+                     const MBBVector &RestoreBlocks)>
+      SpillCalleeSavedRegisters;
   std::function<void(MachineFunction &MF, RegScavenger &RS)>
       ScavengeFrameVirtualRegs;
 
@@ -104,7 +114,7 @@ private:
 
   void calculateCallFrameInfo(MachineFunction &Fn);
   void calculateSaveRestoreBlocks(MachineFunction &Fn);
-  void doSpillCalleeSavedRegs(MachineFunction &MF);
+
   void calculateFrameObjectOffsets(MachineFunction &Fn);
   void replaceFrameIndices(MachineFunction &Fn);
   void replaceFrameIndices(MachineBasicBlock *BB, MachineFunction &Fn,
@@ -158,12 +168,12 @@ bool PEI::runOnMachineFunction(MachineFunction &Fn) {
   if (!SpillCalleeSavedRegisters) {
     const TargetMachine &TM = Fn.getTarget();
     if (!TM.usesPhysRegsForPEI()) {
-      SpillCalleeSavedRegisters = [](MachineFunction &) {};
+      SpillCalleeSavedRegisters = [](MachineFunction &, RegScavenger *,
+                                     unsigned &, unsigned &, const MBBVector &,
+                                     const MBBVector &) {};
       ScavengeFrameVirtualRegs = [](MachineFunction &, RegScavenger &) {};
     } else {
-      SpillCalleeSavedRegisters = [this](MachineFunction &Fn) {
-        this->doSpillCalleeSavedRegs(Fn);
-      };
+      SpillCalleeSavedRegisters = doSpillCalleeSavedRegs;
       ScavengeFrameVirtualRegs = scavengeFrameVirtualRegs;
       UsesCalleeSaves = true;
     }
@@ -189,7 +199,8 @@ bool PEI::runOnMachineFunction(MachineFunction &Fn) {
   calculateSaveRestoreBlocks(Fn);
 
   // Handle CSR spilling and restoring, for targets that need it.
-  SpillCalleeSavedRegisters(Fn);
+  SpillCalleeSavedRegisters(Fn, RS, MinCSFrameIndex, MaxCSFrameIndex,
+                            SaveBlocks, RestoreBlocks);
 
   // Allow the target machine to make final modifications to the function
   // before the frame layout is finalized.
@@ -529,7 +540,11 @@ static void insertCSRSpillsAndRestores(MachineFunction &Fn,
   }
 }
 
-void PEI::doSpillCalleeSavedRegs(MachineFunction &Fn) {
+static void doSpillCalleeSavedRegs(MachineFunction &Fn, RegScavenger *RS,
+                                   unsigned &MinCSFrameIndex,
+                                   unsigned &MaxCSFrameIndex,
+                                   const MBBVector &SaveBlocks,
+                                   const MBBVector &RestoreBlocks) {
   const Function *F = Fn.getFunction();
   const TargetFrameLowering *TFI = Fn.getSubtarget().getFrameLowering();
   MinCSFrameIndex = std::numeric_limits<unsigned>::max();
