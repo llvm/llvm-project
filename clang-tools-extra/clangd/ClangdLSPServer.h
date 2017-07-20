@@ -15,6 +15,7 @@
 #include "Path.h"
 #include "Protocol.h"
 #include "clang/Tooling/Core/Replacement.h"
+#include "llvm/ADT/Optional.h"
 
 namespace clang {
 namespace clangd {
@@ -25,7 +26,8 @@ class JSONOutput;
 /// dispatch and ClangdServer together.
 class ClangdLSPServer {
 public:
-  ClangdLSPServer(JSONOutput &Out, bool RunSynchronously);
+ ClangdLSPServer(JSONOutput &Out, bool RunSynchronously,
+                 llvm::Optional<StringRef> ResourceDir);
 
   /// Run LSP server loop, receiving input for it from \p In. \p In must be
   /// opened in binary mode. Output will be written using Out variable passed to

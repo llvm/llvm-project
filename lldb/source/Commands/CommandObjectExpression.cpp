@@ -228,6 +228,16 @@ CommandObjectExpression::CommandObjectExpression(
       m_command_options(), m_expr_line_count(0), m_expr_lines() {
   SetHelpLong(
       R"(
+Single and multi-line expressions:
+
+)"
+      "    The expression provided on the command line must be a complete expression \
+with no newlines.  To evaluate a multi-line expression, \
+hit a return after an empty expression, and lldb will enter the multi-line expression editor. \
+Hit return on an empty line to end the multi-line expression."
+      
+      R"(
+
 Timeouts:
 
 )"
@@ -256,6 +266,7 @@ from the stack with \"thread return -x\" or if you are still interested in the e
 you can issue the \"continue\" command and the expression evaluation will complete and the \
 expression result will be available using the \"thread.completed-expression\" key in the thread \
 format."
+
       R"(
 
 Examples:

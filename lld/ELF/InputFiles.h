@@ -126,6 +126,7 @@ public:
   uint32_t getSectionIndex(const Elf_Sym &Sym) const;
 
   Elf_Sym_Range getGlobalSymbols();
+  Elf_Sym_Range getELFSymbols() const { return Symbols; }
 
 protected:
   ArrayRef<Elf_Sym> Symbols;
