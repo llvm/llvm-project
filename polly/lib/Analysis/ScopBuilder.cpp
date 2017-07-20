@@ -880,11 +880,11 @@ static void verifyUse(Scop *S, Use &Op, LoopInfo &LI) {
 /// happened yet, such that virtual and physical uses are equivalent.
 static void verifyUses(Scop *S, LoopInfo &LI, DominatorTree &DT) {
   for (auto *BB : S->getRegion().blocks()) {
-    auto *Stmt = S->getStmtFor(BB);
-    if (!Stmt)
-      continue;
-
     for (auto &Inst : *BB) {
+      auto *Stmt = S->getStmtFor(&Inst);
+      if (!Stmt)
+        continue;
+
       if (isIgnoredIntrinsic(&Inst))
         continue;
 

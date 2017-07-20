@@ -13,6 +13,24 @@
 
 include "Mips32r6InstrFormats.td"
 
+//===----------------------------------------------------------------------===//
+//
+// Mips profiles and nodes
+//
+//===----------------------------------------------------------------------===//
+
+def SDT_MipsFSelect : SDTypeProfile<1, 3, [SDTCisFP<1>,
+                                           SDTCisSameAs<0,2>,
+                                           SDTCisSameAs<2,3>]>;
+
+def MipsFSelect : SDNode<"MipsISD::FSELECT", SDT_MipsFSelect>;
+
+//===----------------------------------------------------------------------===//
+//
+// Mips Operands
+//
+//===----------------------------------------------------------------------===//
+
 // Notes about removals/changes from MIPS32r6:
 // Reencoded: jr -> jalr
 // Reencoded: jr.hb -> jalr.hb
@@ -578,11 +596,20 @@ class COP1_SEL_DESC_BASE<string instr_asm, RegisterOperand FGROpnd,
   InstrItinClass Itinerary = itin;
 }
 
-class SEL_D_DESC : COP1_SEL_DESC_BASE<"sel.d", FGR64Opnd, II_SEL_D>,
-                   MipsR6Arch<"sel.d"> {
-  // We must insert a SUBREG_TO_REG around $fd_in
-  bit usesCustomInserter = 1;
+class COP1_SEL_D_DESC_BASE<string instr_asm, RegisterOperand FGROpnd,
+                           InstrItinClass itin> {
+  dag OutOperandList = (outs FGROpnd:$fd);
+  dag InOperandList = (ins FGROpnd:$fd_in, FGROpnd:$fs, FGROpnd:$ft);
+  string AsmString = !strconcat(instr_asm, "\t$fd, $fs, $ft");
+  list<dag> Pattern = [(set FGROpnd:$fd, (MipsFSelect FGROpnd:$fd_in,
+                                                      FGROpnd:$ft,
+                                                      FGROpnd:$fs))];
+  string Constraints = "$fd_in = $fd";
+  InstrItinClass Itinerary = itin;
 }
+
+class SEL_D_DESC : COP1_SEL_D_DESC_BASE<"sel.d", FGR64Opnd, II_SEL_D>,
+                   MipsR6Arch<"sel.d">;
 class SEL_S_DESC : COP1_SEL_DESC_BASE<"sel.s", FGR32Opnd, II_SEL_S>,
                    MipsR6Arch<"sel.s">;
 

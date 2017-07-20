@@ -6,7 +6,56 @@ _test:
 	xor	EAX, EAX
 	ret
 
-_main:
+.set  number, 8
+.global _foo
+
+.text
+  .global main
+main:
+
+// CHECK: leaq    _foo(%rbx,%rax,0), %rdx
+  lea RDX, [number * RAX + RBX + _foo]
+// CHECK: leaq    _foo(%rbx,%rax,8), %rdx
+  lea RDX, [8 * RAX + RBX      + _foo]
+
+// CHECK: leaq    8(%rbx,%rax,0), %rdx
+  lea RDX, [_foo + number * RAX + RBX]
+// CHECK: leaq _foo(%rbx,%rax,8), %rdx
+  lea RDX, [_foo + 8 * RAX + RBX]
+
+// CHECK: leaq 8(%rcx,%rax,8), %rdx
+  lea RDX, [8 + RAX * 8 + RCX]
+
+// CHECK:  leaq 8+8(%rcx,%rax,0), %rdx
+  lea RDX, [8 + number * RAX + RCX]
+// CHECK: leaq 8(%rcx,%rax,8), %rdx
+  lea RDX, [number + 8 * RAX + RCX]
+
+// CHECK: leaq _foo(,%rax,8), %rdx
+  lea RDX, [_foo + RAX * 8]
+
+// CHECK:  leaq _foo(%rbx,%rax,8), %rdx
+  lea RDX, [_foo + RAX * 8 + RBX]
+
+// CHECK: leaq 8(%rax), %rdx
+  lea RDX, [RAX - number]
+// CHECK: leaq -8(%rax), %rdx
+  lea RDX, [RAX - 8]
+
+// CHECK: leaq    _foo(%rax), %rdx
+  lea RDX, [RAX + _foo]
+// CHECK: leaq    8(%rax), %rdx
+  lea RDX, [RAX + number]
+// CHECK: leaq    8(%rax), %rdx
+  lea RDX, [RAX + 8]
+
+// CHECK: leaq    _foo(%rax), %rdx
+  lea RDX, [_foo + RAX]
+// CHECK: leaq    8(%rax), %rdx
+  lea RDX, [number + RAX]
+// CHECK: leaq    8(%rax), %rdx
+  lea RDX, [8 + RAX]
+
 // CHECK:	movl	$257, -4(%rsp)
 	mov	DWORD PTR [RSP - 4], 257
 // CHECK:	movl	$258, 4(%rsp)

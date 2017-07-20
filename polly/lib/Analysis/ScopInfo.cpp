@@ -1536,6 +1536,47 @@ buildConditionSets(Scop &S, BasicBlock *BB, SwitchInst *SI, Loop *L,
   return true;
 }
 
+/// Build condition sets for unsigned ICmpInst(s).
+/// Special handling is required for unsigned operands to ensure that if
+/// MSB (aka the Sign bit) is set for an operands in an unsigned ICmpInst
+/// it should wrap around.
+///
+/// @param IsStrictUpperBound holds information on the predicate relation
+/// between TestVal and UpperBound, i.e,
+/// TestVal < UpperBound  OR  TestVal <= UpperBound
+static __isl_give isl_set *
+buildUnsignedConditionSets(Scop &S, BasicBlock *BB, Value *Condition,
+                           __isl_keep isl_set *Domain, const SCEV *SCEV_TestVal,
+                           const SCEV *SCEV_UpperBound,
+                           DenseMap<BasicBlock *, isl::set> &InvalidDomainMap,
+                           bool IsStrictUpperBound) {
+
+  // Do not take NonNeg assumption on TestVal
+  // as it might have MSB (Sign bit) set.
+  isl_pw_aff *TestVal = getPwAff(S, BB, InvalidDomainMap, SCEV_TestVal, false);
+  // Take NonNeg assumption on UpperBound.
+  isl_pw_aff *UpperBound =
+      getPwAff(S, BB, InvalidDomainMap, SCEV_UpperBound, true);
+
+  // 0 <= TestVal
+  isl_set *First =
+      isl_pw_aff_le_set(isl_pw_aff_zero_on_domain(isl_local_space_from_space(
+                            isl_pw_aff_get_domain_space(TestVal))),
+                        isl_pw_aff_copy(TestVal));
+
+  isl_set *Second;
+  if (IsStrictUpperBound)
+    // TestVal < UpperBound
+    Second = isl_pw_aff_lt_set(TestVal, UpperBound);
+  else
+    // TestVal <= UpperBound
+    Second = isl_pw_aff_le_set(TestVal, UpperBound);
+
+  isl_set *ConsequenceCondSet = isl_set_intersect(First, Second);
+  ConsequenceCondSet = setDimensionIds(Domain, ConsequenceCondSet);
+  return ConsequenceCondSet;
+}
+
 /// Build the conditions sets for the branch condition @p Condition in
 /// the @p Domain.
 ///
@@ -1590,12 +1631,37 @@ buildConditionSets(Scop &S, BasicBlock *BB, Value *Condition,
     // to be set. The comparison is equal to a signed comparison under this
     // assumption.
     bool NonNeg = ICond->isUnsigned();
-    LHS = getPwAff(S, BB, InvalidDomainMap,
-                   SE.getSCEVAtScope(ICond->getOperand(0), L), NonNeg);
-    RHS = getPwAff(S, BB, InvalidDomainMap,
-                   SE.getSCEVAtScope(ICond->getOperand(1), L), NonNeg);
-    ConsequenceCondSet =
-        buildConditionSet(ICond->getPredicate(), LHS, RHS, Domain);
+    const SCEV *LeftOperand = SE.getSCEVAtScope(ICond->getOperand(0), L),
+               *RightOperand = SE.getSCEVAtScope(ICond->getOperand(1), L);
+
+    switch (ICond->getPredicate()) {
+    case ICmpInst::ICMP_ULT:
+      ConsequenceCondSet =
+          buildUnsignedConditionSets(S, BB, Condition, Domain, LeftOperand,
+                                     RightOperand, InvalidDomainMap, true);
+      break;
+    case ICmpInst::ICMP_ULE:
+      ConsequenceCondSet =
+          buildUnsignedConditionSets(S, BB, Condition, Domain, LeftOperand,
+                                     RightOperand, InvalidDomainMap, false);
+      break;
+    case ICmpInst::ICMP_UGT:
+      ConsequenceCondSet =
+          buildUnsignedConditionSets(S, BB, Condition, Domain, RightOperand,
+                                     LeftOperand, InvalidDomainMap, true);
+      break;
+    case ICmpInst::ICMP_UGE:
+      ConsequenceCondSet =
+          buildUnsignedConditionSets(S, BB, Condition, Domain, RightOperand,
+                                     LeftOperand, InvalidDomainMap, false);
+      break;
+    default:
+      LHS = getPwAff(S, BB, InvalidDomainMap, LeftOperand, NonNeg);
+      RHS = getPwAff(S, BB, InvalidDomainMap, RightOperand, NonNeg);
+      ConsequenceCondSet =
+          buildConditionSet(ICond->getPredicate(), LHS, RHS, Domain);
+      break;
+    }
   }
 
   // If no terminator was given we are only looking for parameter constraints
