@@ -1462,6 +1462,30 @@ void Clang::AddMIPSTargetArgs(const ArgList &Args,
     A->claim();
   }
 
+  Arg *GPOpt = Args.getLastArg(options::OPT_mgpopt, options::OPT_mno_gpopt);
+  Arg *ABICalls =
+      Args.getLastArg(options::OPT_mabicalls, options::OPT_mno_abicalls);
+
+  // -mabicalls is the default for many MIPS environments, even with -fno-pic.
+  // -mgpopt is the default for static, -fno-pic environments but these two
+  // options conflict. We want to be certain that -mno-abicalls -mgpopt is
+  // the only case where -mllvm -mgpopt is passed.
+  // NOTE: We need a warning here or in the backend to warn when -mgpopt is
+  //       passed explicitly when compiling something with -mabicalls
+  //       (implictly) in affect. Currently the warning is in the backend.
+  bool NoABICalls =
+      ABICalls && ABICalls->getOption().matches(options::OPT_mno_abicalls);
+  bool WantGPOpt = GPOpt && GPOpt->getOption().matches(options::OPT_mgpopt);
+  // We quietly ignore -mno-gpopt as the backend defaults to -mno-gpopt.
+  if (NoABICalls && (!GPOpt || WantGPOpt)) {
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back("-mgpopt");
+  } else if ((!ABICalls || (!NoABICalls && ABICalls)) && WantGPOpt)
+    D.Diag(diag::warn_drv_unsupported_gpopt) << (ABICalls ? 0 : 1);
+
+  if (GPOpt)
+    GPOpt->claim();
+
   if (Arg *A = Args.getLastArg(options::OPT_mcompact_branches_EQ)) {
     StringRef Val = StringRef(A->getValue());
     if (mips::hasCompactBranches(CPUName)) {

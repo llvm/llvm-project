@@ -55,7 +55,7 @@ public:
     Expr *RefExpr = nullptr;
     DeclRefExpr *PrivateCopy = nullptr;
     SourceLocation ImplicitDSALoc;
-    DSAVarData() {}
+    DSAVarData() = default;
   };
   typedef llvm::SmallVector<std::pair<Expr *, OverloadedOperatorKind>, 4>
       OperatorOffsetTy;
@@ -112,7 +112,7 @@ private:
                  Scope *CurScope, SourceLocation Loc)
         : Directive(DKind), DirectiveName(Name), CurScope(CurScope),
           ConstructLoc(Loc) {}
-    SharingMapTy() {}
+    SharingMapTy() = default;
   };
 
   typedef SmallVector<SharingMapTy, 4> StackTy;
@@ -479,7 +479,25 @@ bool isParallelOrTaskRegion(OpenMPDirectiveKind DKind) {
 }
 } // namespace
 
+static Expr *getExprAsWritten(Expr *E) {
+  if (auto *ExprTemp = dyn_cast<ExprWithCleanups>(E))
+    E = ExprTemp->getSubExpr();
+
+  if (auto *MTE = dyn_cast<MaterializeTemporaryExpr>(E))
+    E = MTE->GetTemporaryExpr();
+
+  while (auto *Binder = dyn_cast<CXXBindTemporaryExpr>(E))
+    E = Binder->getSubExpr();
+
+  if (auto *ICE = dyn_cast<ImplicitCastExpr>(E))
+    E = ICE->getSubExprAsWritten();
+  return E->IgnoreParens();
+}
+
 static ValueDecl *getCanonicalDecl(ValueDecl *D) {
+  if (auto *CED = dyn_cast<OMPCapturedExprDecl>(D))
+    if (auto *ME = dyn_cast<MemberExpr>(getExprAsWritten(CED->getInit())))
+      D = ME->getMemberDecl();
   auto *VD = dyn_cast<VarDecl>(D);
   auto *FD = dyn_cast<FieldDecl>(D);
   if (VD != nullptr) {
@@ -821,6 +839,7 @@ DSAStackTy::DSAVarData DSAStackTy::getTopDSA(ValueDecl *D, bool FromParent) {
     DVar.PrivateCopy = I->SharingMap[D].PrivateCopy;
     DVar.CKind = I->SharingMap[D].Attributes;
     DVar.ImplicitDSALoc = I->DefaultAttrLoc;
+    DVar.DKind = I->Directive;
   }
 
   return DVar;
@@ -3053,21 +3072,6 @@ bool OpenMPIterationSpaceChecker::Dependent() const {
          (Step && Step->isValueDependent());
 }
 
-static Expr *getExprAsWritten(Expr *E) {
-  if (auto *ExprTemp = dyn_cast<ExprWithCleanups>(E))
-    E = ExprTemp->getSubExpr();
-
-  if (auto *MTE = dyn_cast<MaterializeTemporaryExpr>(E))
-    E = MTE->GetTemporaryExpr();
-
-  while (auto *Binder = dyn_cast<CXXBindTemporaryExpr>(E))
-    E = Binder->getSubExpr();
-
-  if (auto *ICE = dyn_cast<ImplicitCastExpr>(E))
-    E = ICE->getSubExprAsWritten();
-  return E->IgnoreParens();
-}
-
 bool OpenMPIterationSpaceChecker::SetLCDeclAndLB(ValueDecl *NewLCDecl,
                                                  Expr *NewLCRefExpr,
                                                  Expr *NewLB) {
@@ -3249,12 +3253,8 @@ static const ValueDecl *GetInitLCDecl(Expr *E) {
           CE->getNumArgs() > 0 && CE->getArg(0) != nullptr)
         E = CE->getArg(0)->IgnoreParenImpCasts();
   if (auto *DRE = dyn_cast_or_null<DeclRefExpr>(E)) {
-    if (auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
-      if (auto *CED = dyn_cast<OMPCapturedExprDecl>(VD))
-        if (auto *ME = dyn_cast<MemberExpr>(getExprAsWritten(CED->getInit())))
-          return getCanonicalDecl(ME->getMemberDecl());
+    if (auto *VD = dyn_cast<VarDecl>(DRE->getDecl()))
       return getCanonicalDecl(VD);
-    }
   }
   if (auto *ME = dyn_cast_or_null<MemberExpr>(E))
     if (ME->isArrow() && isa<CXXThisExpr>(ME->getBase()->IgnoreParenImpCasts()))
@@ -8097,7 +8097,8 @@ getPrivateItem(Sema &S, Expr *&RefExpr, SourceLocation &ELoc,
     }
     return std::make_pair(nullptr, false);
   }
-  return std::make_pair(DE ? DE->getDecl() : ME->getMemberDecl(), false);
+  return std::make_pair(
+      getCanonicalDecl(DE ? DE->getDecl() : ME->getMemberDecl()), false);
 }
 
 OMPClause *Sema::ActOnOpenMPPrivateClause(ArrayRef<Expr *> VarList,
@@ -8981,7 +8982,6 @@ static bool ActOnOMPReductionKindClause(
   // C++
   // reduction-identifier is either an id-expression or one of the following
   // operators: +, -, *, &, |, ^, && and ||
-  // FIXME: Only 'min' and 'max' identifiers are supported for now.
   switch (OOK) {
   case OO_Plus:
   case OO_Minus:
@@ -9044,7 +9044,7 @@ static bool ActOnOMPReductionKindClause(
   case NUM_OVERLOADED_OPERATORS:
     llvm_unreachable("Unexpected reduction identifier");
   case OO_None:
-    if (auto II = DN.getAsIdentifierInfo()) {
+    if (auto *II = DN.getAsIdentifierInfo()) {
       if (II->isStr("max"))
         BOK = BO_GT;
       else if (II->isStr("min"))
@@ -9055,6 +9055,8 @@ static bool ActOnOMPReductionKindClause(
   SourceRange ReductionIdRange;
   if (ReductionIdScopeSpec.isValid())
     ReductionIdRange.setBegin(ReductionIdScopeSpec.getBeginLoc());
+  else
+    ReductionIdRange.setBegin(ReductionId.getBeginLoc());
   ReductionIdRange.setEnd(ReductionId.getEndLoc());
 
   auto IR = UnresolvedReductions.begin(), ER = UnresolvedReductions.end();
@@ -9166,6 +9168,7 @@ static bool ActOnOMPReductionKindClause(
           << getOpenMPClauseName(ClauseKind);
       if (DVar.RefExpr)
         S.Diag(DVar.RefExpr->getExprLoc(), diag::note_omp_referenced);
+      continue;
     } else if (DVar.CKind != OMPC_unknown) {
       S.Diag(ELoc, diag::err_omp_wrong_dsa)
           << getOpenMPClauseName(DVar.CKind)
@@ -9453,9 +9456,10 @@ static bool ActOnOMPReductionKindClause(
               S.BuildBinOp(Stack->getCurScope(), ReductionId.getLocStart(),
                            BO_Assign, LHSDRE, ConditionalOp);
         }
-        ReductionOp = S.ActOnFinishFullExpr(ReductionOp.get());
+        if (ReductionOp.isUsable())
+          ReductionOp = S.ActOnFinishFullExpr(ReductionOp.get());
       }
-      if (ReductionOp.isInvalid())
+      if (!ReductionOp.isUsable())
         continue;
     }
 
@@ -9766,10 +9770,6 @@ static bool FinishOpenMPLinearClause(OMPLinearClause &Clause, DeclRefExpr *IV,
       Finals.push_back(nullptr);
       HasErrors = true;
       continue;
-    }
-    if (auto *CED = dyn_cast<OMPCapturedExprDecl>(D)) {
-      D = cast<MemberExpr>(CED->getInit()->IgnoreParenImpCasts())
-              ->getMemberDecl();
     }
     auto &&Info = Stack->isLoopControlVariable(D);
     Expr *InitExpr = *CurInit;

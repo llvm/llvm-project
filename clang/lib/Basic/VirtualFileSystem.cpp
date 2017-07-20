@@ -59,6 +59,7 @@ Status Status::copyWithNewName(const file_status &In, StringRef NewName) {
 }
 
 bool Status::equivalent(const Status &Other) const {
+  assert(isStatusKnown() && Other.isStatusKnown());
   return getUniqueID() == Other.getUniqueID();
 }
 bool Status::isDirectory() const {
