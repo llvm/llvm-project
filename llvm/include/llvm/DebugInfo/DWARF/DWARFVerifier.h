@@ -114,6 +114,13 @@ class DWARFVerifier {
 public:
   DWARFVerifier(raw_ostream &S, DWARFContext &D)
       : OS(S), DCtx(D) {}
+  /// Verify the information in the .debug_abbrev section.
+  ///
+  /// Currently, we check that no Abbreviation Declaration has more than one
+  /// attributes with the same name.
+  ///
+  /// \returns true if the .debug_abbrev verifies successfully, false otherwise.
+  bool handleDebugAbbrev();
   /// Verify the information in the .debug_info section.
   ///
   /// Any errors are reported to the stream that was this object was

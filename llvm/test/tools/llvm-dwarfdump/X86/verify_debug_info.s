@@ -2,7 +2,9 @@
 # RUN: | not llvm-dwarfdump -verify - \
 # RUN: | FileCheck %s
 
-# CHECK: Verifying .debug_info Unit Header Chain...
+# CHECK: Verifying .debug_abbrev...
+# CHECK-NEXT: Error: Abbreviation declaration with code 2 contains multiple DW_AT_low_pc attributes.
+# CHECK-NEXT: Verifying .debug_info Unit Header Chain...
 # CHECK-NEXT: error: DIE has invalid DW_AT_stmt_list encoding:{{[[:space:]]}}
 # CHECK-NEXT: 0x0000000c: DW_TAG_compile_unit [1] *
 # CHECK-NEXT: DW_AT_producer [DW_FORM_strp]	( .debug_str[0x00000000] = "clang version 5.0.0 (trunk 308185) (llvm/trunk 308186)")
@@ -80,7 +82,7 @@ Lsection_abbrev:
 	.byte	1                       ## DW_CHILDREN_yes
 	.byte	17                      ## DW_AT_low_pc
 	.byte	1                       ## DW_FORM_addr
-	.byte	18                      ## DW_AT_high_pc
+	.byte	17                      ## DW_AT_low_pc -- Error: Die at offset 0x0000002b contains multiple DW_AT_low_pc attributes.
 	.byte	6                       ## DW_FORM_data4
 	.byte	64                      ## DW_AT_frame_base
 	.byte	24                      ## DW_FORM_exprloc
