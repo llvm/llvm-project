@@ -63,6 +63,18 @@ public:
 };
 
 enum {
+  /// Begin a try-block to attempt a match and jump to OnFail if it is
+  /// unsuccessful.
+  /// - OnFail - The MatchTable entry at which to resume if the match fails.
+  ///
+  /// FIXME: This ought to take an argument indicating the number of try-blocks
+  ///        to exit on failure. It's usually one but the last match attempt of
+  ///        a block will need more. The (implemented) alternative is to tack a
+  ///        GIM_Reject on the end of each try-block which is simpler but
+  ///        requires an extra opcode and iteration in the interpreter on each
+  ///        failed match.
+  GIM_Try,
+
   /// Record the specified instruction
   /// - NewInsnID - Instruction ID to define
   /// - InsnID - Instruction ID
@@ -123,6 +135,10 @@ enum {
   /// instruction.
   /// - InsnID - Instruction ID
   GIM_CheckIsSafeToFold,
+
+  /// Fail the current try-block, or completely fail to match if there is no
+  /// current try-block.
+  GIM_Reject,
 
   //=== Renderers ===
 
