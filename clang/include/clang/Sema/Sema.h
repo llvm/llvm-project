@@ -210,6 +210,7 @@ namespace sema {
   class FunctionScopeInfo;
   class LambdaScopeInfo;
   class PossiblyUnreachableDiag;
+  class SemaPPCallbacks;
   class TemplateDeductionInfo;
 }
 
@@ -384,11 +385,12 @@ public:
       llvm::StringRef StackSlotLabel;
       ValueType Value;
       SourceLocation PragmaLocation;
-      Slot(llvm::StringRef StackSlotLabel,
-           ValueType Value,
-           SourceLocation PragmaLocation)
-        : StackSlotLabel(StackSlotLabel), Value(Value),
-          PragmaLocation(PragmaLocation) {}
+      SourceLocation PragmaPushLocation;
+      Slot(llvm::StringRef StackSlotLabel, ValueType Value,
+           SourceLocation PragmaLocation, SourceLocation PragmaPushLocation)
+          : StackSlotLabel(StackSlotLabel), Value(Value),
+            PragmaLocation(PragmaLocation),
+            PragmaPushLocation(PragmaPushLocation) {}
     };
     void Act(SourceLocation PragmaLocation,
              PragmaMsStackAction Action,
@@ -419,6 +421,8 @@ public:
     explicit PragmaStack(const ValueType &Default)
         : DefaultValue(Default), CurrentValue(Default) {}
 
+    bool hasValue() const { return CurrentValue != DefaultValue; }
+
     SmallVector<Slot, 2> Stack;
     ValueType DefaultValue; // Value used for PSK_Reset action.
     ValueType CurrentValue;
@@ -440,6 +444,8 @@ public:
   // Sentinel to represent when the stack is set to mac68k alignment.
   static const unsigned kMac68kAlignmentSentinel = ~0U;
   PragmaStack<unsigned> PackStack;
+  // The current #pragma pack values and locations at each #include.
+  SmallVector<std::pair<unsigned, SourceLocation>, 8> PackIncludeStack;
   // Segment #pragmas.
   PragmaStack<StringLiteral *> DataSegStack;
   PragmaStack<StringLiteral *> BSSSegStack;
@@ -8229,6 +8235,15 @@ public:
   void ActOnPragmaPack(SourceLocation PragmaLoc, PragmaMsStackAction Action,
                        StringRef SlotLabel, Expr *Alignment);
 
+  enum class PragmaPackDiagnoseKind {
+    NonDefaultStateAtInclude,
+    ChangedStateAtExit
+  };
+
+  void DiagnoseNonDefaultPragmaPack(PragmaPackDiagnoseKind Kind,
+                                    SourceLocation IncludeLoc);
+  void DiagnoseUnterminatedPragmaPack();
+
   /// ActOnPragmaMSStruct - Called on well formed \#pragma ms_struct [on|off].
   void ActOnPragmaMSStruct(PragmaMSStructKind Kind);
 
@@ -10429,6 +10444,12 @@ private:
   IdentifierInfo *Ident__Null_unspecified = nullptr;
 
   IdentifierInfo *Ident_NSError = nullptr;
+
+  /// \brief The handler for the FileChanged preprocessor events.
+  ///
+  /// Used for diagnostics that implement custom semantic analysis for #include
+  /// directives, like -Wpragma-pack.
+  sema::SemaPPCallbacks *SemaPPCallbackHandler;
 
 protected:
   friend class Parser;

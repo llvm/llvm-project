@@ -896,7 +896,7 @@ public:
   /// might be stored. In this case nullptr is returned.
   Value *tryGetValueStored() {
     assert(isWrite() && "Only write statement store values");
-    if (isPHIKind()) {
+    if (isAnyPHIKind()) {
       if (Incoming.size() == 1)
         return Incoming[0].second;
       return nullptr;
