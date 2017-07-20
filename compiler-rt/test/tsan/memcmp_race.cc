@@ -36,7 +36,8 @@ int main() {
 // CHECK: WARNING: ThreadSanitizer: data race
 // CHECK:   Write of size 1 at [[ADDR]] by thread T2:
 // CHECK:     #0 {{(memcpy|memmove)}}
-// CHECK:     #1 Thread2
+// CHECK:   * #1 Thread2
 // CHECK:   Previous read of size 1 at [[ADDR]] by thread T1:
 // CHECK:     #0 memcmp
-// CHECK:     #1 Thread1
+// CHECK:   * #1 Thread1
+// CHECK:   Issue is caused by frames marked with "*".

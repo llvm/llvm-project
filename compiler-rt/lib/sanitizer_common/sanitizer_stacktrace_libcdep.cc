@@ -39,7 +39,7 @@ void StackTrace::Print() const {
       RenderFrame(&frame_desc, common_flags()->stack_trace_format, frame_num++,
                   cur->info, common_flags()->symbolize_vs_style,
                   common_flags()->strip_path_prefix);
-      Printf("%s\n", frame_desc.data());
+      Printf("    %s\n", frame_desc.data());
       if (dedup_frames-- > 0) {
         if (dedup_token.length())
           dedup_token.append("--");
