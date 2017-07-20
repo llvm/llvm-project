@@ -73,10 +73,12 @@
 
 using namespace llvm;
 
-static cl::opt<bool> PrintWholeRegMask(
-    "print-whole-regmask",
-    cl::desc("Print the full contents of regmask operands in IR dumps"),
-    cl::init(true), cl::Hidden);
+static cl::opt<int> PrintRegMaskNumRegs(
+    "print-regmask-num-regs",
+    cl::desc("Number of registers to limit to when "
+             "printing regmask operands in IR dumps. "
+             "unlimited = -1"),
+    cl::init(32), cl::Hidden);
 
 //===----------------------------------------------------------------------===//
 // MachineOperand Implementation
@@ -503,7 +505,8 @@ void MachineOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
       unsigned MaskWord = i / 32;
       unsigned MaskBit = i % 32;
       if (getRegMask()[MaskWord] & (1 << MaskBit)) {
-        if (PrintWholeRegMask || NumRegsEmitted <= 10) {
+        if (PrintRegMaskNumRegs < 0 ||
+            NumRegsEmitted <= static_cast<unsigned>(PrintRegMaskNumRegs)) {
           OS << " " << PrintReg(i, TRI);
           NumRegsEmitted++;
         }
