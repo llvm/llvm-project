@@ -87,6 +87,7 @@ int main(int argc, char *argv[]) {
   // TEST3: Issue is caused by frames marked with "*".
   // TEST3: Location is MyLibrary::MyObject object of size 16 at
   // TEST3: {{ObjectCreate}}
+  // TEST3: SUMMARY: ThreadSanitizer: race on a library object {{.*}}external.cc{{.*}}{{UserCodeWrite|UserCodeRead}}
   
   fprintf(stderr, "RW test done\n");
   // CHECK: RW test done
@@ -111,6 +112,7 @@ int main(int argc, char *argv[]) {
   // TEST3: Issue is caused by frames marked with "*".
   // TEST3: Location is MyLibrary::MyObject object of size 16 at
   // TEST3: {{ObjectCreate}}
+  // TEST3: SUMMARY: ThreadSanitizer: race on a library object {{.*}}external.cc{{.*}}{{UserCodeWrite|UserCodeWriteAnother}}
   
   fprintf(stderr, "WW test done\n");
   // CHECK: WW test done
