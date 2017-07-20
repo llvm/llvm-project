@@ -667,7 +667,9 @@ void ReportRace(ThreadState *thr) {
   ThreadRegistryLock l0(ctx->thread_registry);
   ScopedReport rep(typ);
   for (uptr i = 0; i < kMop; i++) {
-    uptr tag = RetrieveTagFromStackTrace(&traces[i]);
+    VarSizeStackTrace new_trace;
+    new_trace.Init(traces[i].trace, traces[i].size);
+    uptr tag = RetrieveTagFromStackTrace(&new_trace);
     if (tag == kExternalTagSwiftModifyingAccess) {
       rep.SetType(ReportTypeSwiftAccessRace);
     } else if (tag != kExternalTagNone) {
@@ -675,7 +677,7 @@ void ReportRace(ThreadState *thr) {
     }
 
     Shadow s(thr->racy_state[i]);
-    rep.AddMemoryAccess(addr, tag, s, traces[i], i == 0 ? &thr->mset : mset2);
+    rep.AddMemoryAccess(addr, tag, s, new_trace, i == 0 ? &thr->mset : mset2);
   }
 
   for (uptr i = 0; i < kMop; i++) {
