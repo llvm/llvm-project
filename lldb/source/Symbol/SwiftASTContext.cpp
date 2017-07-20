@@ -4197,6 +4197,7 @@ static SwiftASTContext::TypeOrDecl DeclToTypeOrDecl(swift::ASTContext *ast,
     case swift::DeclKind::IfConfig:
     case swift::DeclKind::Param:
     case swift::DeclKind::Module:
+    case swift::DeclKind::MissingMember:
       break;
 
     case swift::DeclKind::InfixOperator:
