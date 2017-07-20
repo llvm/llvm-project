@@ -66,12 +66,6 @@ namespace llvm {
       // Floating Point Compare
       FPCmp,
 
-      // Floating point select
-      FSELECT,
-
-      // Node used to generate an MTC1 i32 to f64 instruction
-      MTC1_D64,
-
       // Floating Point Conditional Moves
       CMovFP_T,
       CMovFP_F,
