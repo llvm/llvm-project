@@ -29,7 +29,7 @@ export function activate(context: vscode.ExtensionContext) {
             //        the "workaround" below disables temporarily the encoding until decoding
             //        is implemented properly in clangd
             code2Protocol: (uri: vscode.Uri) : string => uri.toString(true),
-            protocol2Code: (uri: string) : vscode.Uri => undefined
+            protocol2Code: (uri: string) : vscode.Uri => vscode.Uri.parse(uri)
         }
     };
 

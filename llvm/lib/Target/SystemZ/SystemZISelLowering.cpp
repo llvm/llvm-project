@@ -3182,13 +3182,13 @@ SDValue SystemZTargetLowering::lowerATOMIC_FENCE(SDValue Op,
   SDLoc DL(Op);
   AtomicOrdering FenceOrdering = static_cast<AtomicOrdering>(
     cast<ConstantSDNode>(Op.getOperand(1))->getZExtValue());
-  SynchronizationScope FenceScope = static_cast<SynchronizationScope>(
+  SyncScope::ID FenceSSID = static_cast<SyncScope::ID>(
     cast<ConstantSDNode>(Op.getOperand(2))->getZExtValue());
 
   // The only fence that needs an instruction is a sequentially-consistent
   // cross-thread fence.
   if (FenceOrdering == AtomicOrdering::SequentiallyConsistent &&
-      FenceScope == CrossThread) {
+      FenceSSID == SyncScope::System) {
     return SDValue(DAG.getMachineNode(SystemZ::Serialize, DL, MVT::Other,
                                       Op.getOperand(0)),
                    0);

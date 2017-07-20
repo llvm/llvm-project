@@ -46,7 +46,8 @@
 ; CHECK-NEXT:         Index:           1
 ; CHECK-NEXT:         Offset:          0x0000001E
 ; CHECK-NEXT:     Segments:        
-; CHECK-NEXT:       - Index:           0
+; CHECK-NEXT:       - SectionOffset:   6
+; CHECK-NEXT:         MemoryIndex:     0
 ; CHECK-NEXT:         Offset:          
 ; CHECK-NEXT:           Opcode:          I32_CONST
 ; CHECK-NEXT:           Value:           0

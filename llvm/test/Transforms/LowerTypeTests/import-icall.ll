@@ -19,6 +19,10 @@ define i8 @use_b() {
   ret i8 %x
 }
 
+define void @local_decl() {
+  call void @local_decl()
+  ret void
+}
 
 declare void @external()
 declare extern_weak void @external_weak()
@@ -32,6 +36,9 @@ declare extern_weak void @external_weak()
 ; internal @local_b is not the same function as "local_b" in the summary.
 ; CHECK:      define internal i8 @local_b() {
 ; CHECK-NEXT:   call i8 @local_a()
+
+; CHECK:      define void @local_decl()
+; CHECK-NEXT:   call void @local_decl()
 
 ; CHECK: declare void @external()
 ; CHECK: declare extern_weak void @external_weak()

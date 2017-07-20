@@ -16,7 +16,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "misched"
+#define DEBUG_TYPE "machine-scheduler"
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD

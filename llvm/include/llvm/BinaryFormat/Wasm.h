@@ -94,7 +94,7 @@ struct WasmFunction {
 };
 
 struct WasmDataSegment {
-  uint32_t Index;
+  uint32_t MemoryIndex;
   WasmInitExpr Offset;
   ArrayRef<uint8_t> Content;
 };

@@ -361,7 +361,7 @@ LoadInst *AtomicExpand::convertAtomicLoadToIntegerType(LoadInst *LI) {
   auto *NewLI = Builder.CreateLoad(NewAddr);
   NewLI->setAlignment(LI->getAlignment());
   NewLI->setVolatile(LI->isVolatile());
-  NewLI->setAtomic(LI->getOrdering(), LI->getSynchScope());
+  NewLI->setAtomic(LI->getOrdering(), LI->getSyncScopeID());
   DEBUG(dbgs() << "Replaced " << *LI << " with " << *NewLI << "\n");
   
   Value *NewVal = Builder.CreateBitCast(NewLI, LI->getType());
@@ -444,7 +444,7 @@ StoreInst *AtomicExpand::convertAtomicStoreToIntegerType(StoreInst *SI) {
   StoreInst *NewSI = Builder.CreateStore(NewVal, NewAddr);
   NewSI->setAlignment(SI->getAlignment());
   NewSI->setVolatile(SI->isVolatile());
-  NewSI->setAtomic(SI->getOrdering(), SI->getSynchScope());
+  NewSI->setAtomic(SI->getOrdering(), SI->getSyncScopeID());
   DEBUG(dbgs() << "Replaced " << *SI << " with " << *NewSI << "\n");
   SI->eraseFromParent();
   return NewSI;
@@ -801,7 +801,7 @@ void AtomicExpand::expandPartwordCmpXchg(AtomicCmpXchgInst *CI) {
   Value *FullWord_Cmp = Builder.CreateOr(Loaded_MaskOut, Cmp_Shifted);
   AtomicCmpXchgInst *NewCI = Builder.CreateAtomicCmpXchg(
       PMV.AlignedAddr, FullWord_Cmp, FullWord_NewVal, CI->getSuccessOrdering(),
-      CI->getFailureOrdering(), CI->getSynchScope());
+      CI->getFailureOrdering(), CI->getSyncScopeID());
   NewCI->setVolatile(CI->isVolatile());
   // When we're building a strong cmpxchg, we need a loop, so you
   // might think we could use a weak cmpxchg inside. But, using strong
@@ -924,7 +924,7 @@ AtomicCmpXchgInst *AtomicExpand::convertCmpXchgToIntegerType(AtomicCmpXchgInst *
   auto *NewCI = Builder.CreateAtomicCmpXchg(NewAddr, NewCmp, NewNewVal,
                                             CI->getSuccessOrdering(),
                                             CI->getFailureOrdering(),
-                                            CI->getSynchScope());
+                                            CI->getSyncScopeID());
   NewCI->setVolatile(CI->isVolatile());
   NewCI->setWeak(CI->isWeak());
   DEBUG(dbgs() << "Replaced " << *CI << " with " << *NewCI << "\n");

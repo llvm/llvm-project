@@ -5443,7 +5443,7 @@ SDValue SelectionDAG::getAtomicCmpSwap(
     unsigned Opcode, const SDLoc &dl, EVT MemVT, SDVTList VTs, SDValue Chain,
     SDValue Ptr, SDValue Cmp, SDValue Swp, MachinePointerInfo PtrInfo,
     unsigned Alignment, AtomicOrdering SuccessOrdering,
-    AtomicOrdering FailureOrdering, SynchronizationScope SynchScope) {
+    AtomicOrdering FailureOrdering, SyncScope::ID SSID) {
   assert(Opcode == ISD::ATOMIC_CMP_SWAP ||
          Opcode == ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS);
   assert(Cmp.getValueType() == Swp.getValueType() && "Invalid Atomic Op Types");
@@ -5459,7 +5459,7 @@ SDValue SelectionDAG::getAtomicCmpSwap(
                MachineMemOperand::MOStore;
   MachineMemOperand *MMO =
     MF.getMachineMemOperand(PtrInfo, Flags, MemVT.getStoreSize(), Alignment,
-                            AAMDNodes(), nullptr, SynchScope, SuccessOrdering,
+                            AAMDNodes(), nullptr, SSID, SuccessOrdering,
                             FailureOrdering);
 
   return getAtomicCmpSwap(Opcode, dl, MemVT, VTs, Chain, Ptr, Cmp, Swp, MMO);
@@ -5481,7 +5481,7 @@ SDValue SelectionDAG::getAtomic(unsigned Opcode, const SDLoc &dl, EVT MemVT,
                                 SDValue Chain, SDValue Ptr, SDValue Val,
                                 const Value *PtrVal, unsigned Alignment,
                                 AtomicOrdering Ordering,
-                                SynchronizationScope SynchScope) {
+                                SyncScope::ID SSID) {
   if (Alignment == 0)  // Ensure that codegen never sees alignment 0
     Alignment = getEVTAlignment(MemVT);
 
@@ -5501,7 +5501,7 @@ SDValue SelectionDAG::getAtomic(unsigned Opcode, const SDLoc &dl, EVT MemVT,
   MachineMemOperand *MMO =
     MF.getMachineMemOperand(MachinePointerInfo(PtrVal), Flags,
                             MemVT.getStoreSize(), Alignment, AAMDNodes(),
-                            nullptr, SynchScope, Ordering);
+                            nullptr, SSID, Ordering);
 
   return getAtomic(Opcode, dl, MemVT, Chain, Ptr, Val, MMO);
 }

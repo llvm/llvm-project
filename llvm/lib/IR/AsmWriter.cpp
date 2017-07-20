@@ -2119,6 +2119,8 @@ class AssemblyWriter {
   bool ShouldPreserveUseListOrder;
   UseListOrderStack UseListOrders;
   SmallVector<StringRef, 8> MDNames;
+  /// Synchronization scope names registered with LLVMContext.
+  SmallVector<StringRef, 8> SSNs;
 
 public:
   /// Construct an AssemblyWriter with an external SlotTracker
@@ -2134,10 +2136,15 @@ public:
   void writeOperand(const Value *Op, bool PrintType);
   void writeParamOperand(const Value *Operand, AttributeSet Attrs);
   void writeOperandBundles(ImmutableCallSite CS);
-  void writeAtomic(AtomicOrdering Ordering, SynchronizationScope SynchScope);
-  void writeAtomicCmpXchg(AtomicOrdering SuccessOrdering,
+  void writeSyncScope(const LLVMContext &Context,
+                      SyncScope::ID SSID);
+  void writeAtomic(const LLVMContext &Context,
+                   AtomicOrdering Ordering,
+                   SyncScope::ID SSID);
+  void writeAtomicCmpXchg(const LLVMContext &Context,
+                          AtomicOrdering SuccessOrdering,
                           AtomicOrdering FailureOrdering,
-                          SynchronizationScope SynchScope);
+                          SyncScope::ID SSID);
 
   void writeAllMDNodes();
   void writeMDNode(unsigned Slot, const MDNode *Node);
@@ -2199,30 +2206,42 @@ void AssemblyWriter::writeOperand(const Value *Operand, bool PrintType) {
   WriteAsOperandInternal(Out, Operand, &TypePrinter, &Machine, TheModule);
 }
 
-void AssemblyWriter::writeAtomic(AtomicOrdering Ordering,
-                                 SynchronizationScope SynchScope) {
+void AssemblyWriter::writeSyncScope(const LLVMContext &Context,
+                                    SyncScope::ID SSID) {
+  switch (SSID) {
+  case SyncScope::System: {
+    break;
+  }
+  default: {
+    if (SSNs.empty())
+      Context.getSyncScopeNames(SSNs);
+
+    Out << " syncscope(\"";
+    PrintEscapedString(SSNs[SSID], Out);
+    Out << "\")";
+    break;
+  }
+  }
+}
+
+void AssemblyWriter::writeAtomic(const LLVMContext &Context,
+                                 AtomicOrdering Ordering,
+                                 SyncScope::ID SSID) {
   if (Ordering == AtomicOrdering::NotAtomic)
     return;
 
-  switch (SynchScope) {
-  case SingleThread: Out << " singlethread"; break;
-  case CrossThread: break;
-  }
-
+  writeSyncScope(Context, SSID);
   Out << " " << toIRString(Ordering);
 }
 
-void AssemblyWriter::writeAtomicCmpXchg(AtomicOrdering SuccessOrdering,
+void AssemblyWriter::writeAtomicCmpXchg(const LLVMContext &Context,
+                                        AtomicOrdering SuccessOrdering,
                                         AtomicOrdering FailureOrdering,
-                                        SynchronizationScope SynchScope) {
+                                        SyncScope::ID SSID) {
   assert(SuccessOrdering != AtomicOrdering::NotAtomic &&
          FailureOrdering != AtomicOrdering::NotAtomic);
 
-  switch (SynchScope) {
-  case SingleThread: Out << " singlethread"; break;
-  case CrossThread: break;
-  }
-
+  writeSyncScope(Context, SSID);
   Out << " " << toIRString(SuccessOrdering);
   Out << " " << toIRString(FailureOrdering);
 }
@@ -3215,21 +3234,22 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
   // Print atomic ordering/alignment for memory operations
   if (const LoadInst *LI = dyn_cast<LoadInst>(&I)) {
     if (LI->isAtomic())
-      writeAtomic(LI->getOrdering(), LI->getSynchScope());
+      writeAtomic(LI->getContext(), LI->getOrdering(), LI->getSyncScopeID());
     if (LI->getAlignment())
       Out << ", align " << LI->getAlignment();
   } else if (const StoreInst *SI = dyn_cast<StoreInst>(&I)) {
     if (SI->isAtomic())
-      writeAtomic(SI->getOrdering(), SI->getSynchScope());
+      writeAtomic(SI->getContext(), SI->getOrdering(), SI->getSyncScopeID());
     if (SI->getAlignment())
       Out << ", align " << SI->getAlignment();
   } else if (const AtomicCmpXchgInst *CXI = dyn_cast<AtomicCmpXchgInst>(&I)) {
-    writeAtomicCmpXchg(CXI->getSuccessOrdering(), CXI->getFailureOrdering(),
-                       CXI->getSynchScope());
+    writeAtomicCmpXchg(CXI->getContext(), CXI->getSuccessOrdering(),
+                       CXI->getFailureOrdering(), CXI->getSyncScopeID());
   } else if (const AtomicRMWInst *RMWI = dyn_cast<AtomicRMWInst>(&I)) {
-    writeAtomic(RMWI->getOrdering(), RMWI->getSynchScope());
+    writeAtomic(RMWI->getContext(), RMWI->getOrdering(),
+                RMWI->getSyncScopeID());
   } else if (const FenceInst *FI = dyn_cast<FenceInst>(&I)) {
-    writeAtomic(FI->getOrdering(), FI->getSynchScope());
+    writeAtomic(FI->getContext(), FI->getOrdering(), FI->getSyncScopeID());
   }
 
   // Print Metadata info.

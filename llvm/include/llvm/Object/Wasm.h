@@ -69,8 +69,7 @@ public:
 #endif
 };
 
-class WasmSection {
-public:
+struct WasmSection {
   WasmSection() = default;
 
   uint32_t Type = 0; // Section type (See below)
@@ -78,6 +77,11 @@ public:
   StringRef Name; // Section name (User-defined sections only)
   ArrayRef<uint8_t> Content; // Section content
   std::vector<wasm::WasmRelocation> Relocations; // Relocations for this section
+};
+
+struct WasmSegment {
+  uint32_t SectionOffset;
+  wasm::WasmDataSegment Data;
 };
 
 class WasmObjectFile : public ObjectFile {
@@ -110,7 +114,7 @@ public:
     return ElemSegments;
   }
 
-  const std::vector<wasm::WasmDataSegment>& dataSegments() const {
+  const std::vector<WasmSegment>& dataSegments() const {
     return DataSegments;
   }
 
@@ -210,7 +214,7 @@ private:
   std::vector<wasm::WasmImport> Imports;
   std::vector<wasm::WasmExport> Exports;
   std::vector<wasm::WasmElemSegment> ElemSegments;
-  std::vector<wasm::WasmDataSegment> DataSegments;
+  std::vector<WasmSegment> DataSegments;
   std::vector<wasm::WasmFunction> Functions;
   std::vector<WasmSymbol> Symbols;
   ArrayRef<uint8_t> CodeSection;

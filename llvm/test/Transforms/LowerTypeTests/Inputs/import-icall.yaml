@@ -16,4 +16,5 @@ CfiFunctionDefs:
 CfiFunctionDecls:
   - external
   - external_weak
+  - local_decl
 ...

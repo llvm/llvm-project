@@ -11,7 +11,7 @@ entry:
 }
 
 ; ASM:         .cv_def_range    Lfunc_begin0 Lfunc_end0, "A\021\200\000\000\000"
-; OBJ:    DefRangeRegister {
+; OBJ:    DefRangeRegisterSym {
 ; OBJ:      Register: 128
 ; OBJ:      MayHaveNoName: 0
 ; OBJ:      LocalVariableAddrRange {

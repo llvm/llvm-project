@@ -81,6 +81,18 @@ LLVMContext::LLVMContext() : pImpl(new LLVMContextImpl(*this)) {
   assert(GCTransitionEntry->second == LLVMContext::OB_gc_transition &&
          "gc-transition operand bundle id drifted!");
   (void)GCTransitionEntry;
+
+  SyncScope::ID SingleThreadSSID =
+      pImpl->getOrInsertSyncScopeID("singlethread");
+  assert(SingleThreadSSID == SyncScope::SingleThread &&
+         "singlethread synchronization scope ID drifted!");
+  (void)SingleThreadSSID;
+
+  SyncScope::ID SystemSSID =
+      pImpl->getOrInsertSyncScopeID("");
+  assert(SystemSSID == SyncScope::System &&
+         "system synchronization scope ID drifted!");
+  (void)SystemSSID;
 }
 
 LLVMContext::~LLVMContext() { delete pImpl; }
@@ -253,6 +265,14 @@ void LLVMContext::getOperandBundleTags(SmallVectorImpl<StringRef> &Tags) const {
 
 uint32_t LLVMContext::getOperandBundleTagID(StringRef Tag) const {
   return pImpl->getOperandBundleTagID(Tag);
+}
+
+SyncScope::ID LLVMContext::getOrInsertSyncScopeID(StringRef SSN) {
+  return pImpl->getOrInsertSyncScopeID(SSN);
+}
+
+void LLVMContext::getSyncScopeNames(SmallVectorImpl<StringRef> &SSNs) const {
+  pImpl->getSyncScopeNames(SSNs);
 }
 
 void LLVMContext::setGC(const Function &Fn, std::string GCName) {

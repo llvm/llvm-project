@@ -18,7 +18,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "misched"
+#define DEBUG_TYPE "machine-scheduler"
 
 #ifndef NDEBUG
 // Print the set of SUs

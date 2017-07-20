@@ -236,9 +236,10 @@ ErrorOr<WasmYAML::Object *> WasmDumper::dump() {
       auto DataSec = make_unique<WasmYAML::DataSection>();
       for (auto &Segment : Obj.dataSegments()) {
         WasmYAML::DataSegment Seg;
-        Seg.Index = Segment.Index;
-        Seg.Offset = Segment.Offset;
-        Seg.Content = yaml::BinaryRef(Segment.Content);
+        Seg.SectionOffset = Segment.SectionOffset;
+        Seg.MemoryIndex = Segment.Data.MemoryIndex;
+        Seg.Offset = Segment.Data.Offset;
+        Seg.Content = yaml::BinaryRef(Segment.Data.Content);
         DataSec->Segments.push_back(Seg);
       }
       S = std::move(DataSec);

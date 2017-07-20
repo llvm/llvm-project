@@ -18,10 +18,10 @@
 
 ; OBJ:  Subsection [
 ; OBJ:    SubSectionType: Symbols (0xF1)
-; OBJ:    ProcStart {
+; OBJ:    {{.*}}Proc{{.*}}Sym {
 ; OBJ:      DisplayName: f
 ; OBJ:    }
-; OBJ:    InlineSite {
+; OBJ:    InlineSiteSym {
 ; OBJ:      PtrParent: 0x0
 ; OBJ:      PtrEnd: 0x0
 ; OBJ:      Inlinee: file_change (0x1002)

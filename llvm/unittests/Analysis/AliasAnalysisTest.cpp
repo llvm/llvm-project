@@ -180,10 +180,11 @@ TEST_F(AliasAnalysisTest, getModRefInfo) {
   auto *VAArg1 = new VAArgInst(Addr, PtrType, "vaarg", BB);
   auto *CmpXChg1 = new AtomicCmpXchgInst(
       Addr, ConstantInt::get(IntType, 0), ConstantInt::get(IntType, 1),
-      AtomicOrdering::Monotonic, AtomicOrdering::Monotonic, CrossThread, BB);
+      AtomicOrdering::Monotonic, AtomicOrdering::Monotonic,
+      SyncScope::System, BB);
   auto *AtomicRMW =
       new AtomicRMWInst(AtomicRMWInst::Xchg, Addr, ConstantInt::get(IntType, 1),
-                        AtomicOrdering::Monotonic, CrossThread, BB);
+                        AtomicOrdering::Monotonic, SyncScope::System, BB);
 
   ReturnInst::Create(C, nullptr, BB);
 

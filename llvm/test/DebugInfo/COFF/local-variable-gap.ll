@@ -66,12 +66,13 @@
 ; ASM:         .short  2                       # Record length
 ; ASM:         .short  4431                    # Record kind: S_PROC_ID_END
 
-; OBJ:         Local {
+; OBJ:         LocalSym {
 ; OBJ:           Type: int (0x74)
 ; OBJ:           VarName: p
 ; OBJ:         }
-; OBJ-NOT:     Local {
-; OBJ:         DefRangeRegister {
+; OBJ-NOT:     LocalSym {
+; OBJ:         DefRangeRegisterSym {
+; OBJ-NEXT:      Kind:
 ; OBJ-NEXT:      Register: 23
 ; OBJ-NEXT:      MayHaveNoName: 0
 ; OBJ-NEXT:      LocalVariableAddrRange {
