@@ -4785,7 +4785,8 @@ class AArch64ABIInfo : public SwiftABIInfo {
 public:
   enum ABIKind {
     AAPCS = 0,
-    DarwinPCS
+    DarwinPCS,
+    Win64
   };
 
 private:
@@ -4823,9 +4824,13 @@ private:
 
   Address EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
                     QualType Ty) const override {
-    return isDarwinPCS() ? EmitDarwinVAArg(VAListAddr, Ty, CGF)
-                         : EmitAAPCSVAArg(VAListAddr, Ty, CGF);
+    return Kind == Win64 ? EmitMSVAArg(CGF, VAListAddr, Ty)
+                         : isDarwinPCS() ? EmitDarwinVAArg(VAListAddr, Ty, CGF)
+                                         : EmitAAPCSVAArg(VAListAddr, Ty, CGF);
   }
+
+  Address EmitMSVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                      QualType Ty) const override;
 
   bool shouldPassIndirectlyForSwift(CharUnits totalSize,
                                     ArrayRef<llvm::Type*> scalars,
@@ -5330,6 +5335,14 @@ Address AArch64ABIInfo::EmitDarwinVAArg(Address VAListAddr, QualType Ty,
 
   return emitVoidPtrVAArg(CGF, VAListAddr, Ty, IsIndirect,
                           TyInfo, SlotSize, /*AllowHigherAlign*/ true);
+}
+
+Address AArch64ABIInfo::EmitMSVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                                    QualType Ty) const {
+  return emitVoidPtrVAArg(CGF, VAListAddr, Ty, /*indirect*/ false,
+                          CGF.getContext().getTypeInfoInChars(Ty),
+                          CharUnits::fromQuantity(8),
+                          /*allowHigherAlign*/ false);
 }
 
 //===----------------------------------------------------------------------===//
@@ -8494,6 +8507,8 @@ const TargetCodeGenInfo &CodeGenModule::getTargetCodeGenInfo() {
     AArch64ABIInfo::ABIKind Kind = AArch64ABIInfo::AAPCS;
     if (getTarget().getABI() == "darwinpcs")
       Kind = AArch64ABIInfo::DarwinPCS;
+    else if (Triple.isOSWindows())
+      Kind = AArch64ABIInfo::Win64;
 
     return SetCGInfo(new AArch64TargetCodeGenInfo(Types, Kind));
   }

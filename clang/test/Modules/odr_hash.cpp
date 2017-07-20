@@ -517,6 +517,20 @@ S14 s14;
 // expected-error@second.h:* {{'Method::S14' has different definitions in different modules; first difference is definition in module 'SecondModule' found method 'A' with 1st parameter of type 'int *' decayed from 'int [3]'}}
 // expected-note@first.h:* {{but in 'FirstModule' found method 'A' with 1st parameter of type 'int *' decayed from 'int [2]'}}
 #endif
+
+#if defined(FIRST)
+struct S15 {
+  int A() { return 0; }
+};
+#elif defined(SECOND)
+struct S15 {
+  long A() { return 0; }
+};
+#else
+S15 s15;
+// expected-error@first.h:* {{'Method::S15::A' from module 'FirstModule' is not present in definition of 'Method::S15' in module 'SecondModule'}}
+// expected-note@second.h:* {{declaration of 'A' does not match}}
+#endif
 }  // namespace Method
 
 // Naive parsing of AST can lead to cycles in processing.  Ensure

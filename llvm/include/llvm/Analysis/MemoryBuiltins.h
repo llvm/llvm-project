@@ -224,6 +224,9 @@ public:
   SizeOffsetType visitSelectInst(SelectInst &I);
   SizeOffsetType visitUndefValue(UndefValue&);
   SizeOffsetType visitInstruction(Instruction &I);
+
+private:
+  bool CheckedZextOrTrunc(APInt &I);
 };
 
 typedef std::pair<Value*, Value*> SizeOffsetEvalType;

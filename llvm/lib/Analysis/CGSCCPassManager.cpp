@@ -373,7 +373,7 @@ incorporateNewSCCRange(const SCCRangeT &NewSCCRange, LazyCallGraph &G,
 
     // Ensure new SCCs' function analyses are updated.
     if (NeedFAMProxy)
-      updateNewSCCFunctionAnalyses(*C, G, AM);
+      updateNewSCCFunctionAnalyses(NewC, G, AM);
 
     // Also propagate a normal invalidation to the new SCC as only the current
     // will get one from the pass manager infrastructure.

@@ -185,6 +185,38 @@ define i32 @uge_select_0_or_neg1_sub(i32 %x, i32 %y) nounwind {
   ret i32 %sub
 }
 
+; Check more sub-from-zero patterns.
+; (X >u Y) ? -1 : 0  --> cmp, sbb
+
+define i64 @ugt_select_neg1_or_0_sub(i64 %x, i64 %y) nounwind {
+; CHECK-LABEL: ugt_select_neg1_or_0_sub:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    cmpq %rdi, %rsi
+; CHECK-NEXT:    sbbq %rax, %rax
+; CHECK-NEXT:    retq
+  %cmp = icmp ugt i64 %x, %y
+  %zext = zext i1 %cmp to i64
+  %sub = sub i64 0, %zext
+  ret i64 %sub
+}
+
+; Swap the predicate and compare operands:
+; (Y <u X) ? -1 : 0  --> cmp, sbb
+
+define i16 @ult_select_neg1_or_0_sub(i16 %x, i16 %y) nounwind {
+; CHECK-LABEL: ult_select_neg1_or_0_sub:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    cmpw %di, %si
+; CHECK-NEXT:    sbbw %ax, %ax
+; CHECK-NEXT:    retq
+  %cmp = icmp ult i16 %y, %x
+  %zext = zext i1 %cmp to i16
+  %sub = sub i16 0, %zext
+  ret i16 %sub
+}
+
+
+
 ; Make sure we're creating nodes with the right value types. This would crash.
 ; https://bugs.llvm.org/show_bug.cgi?id=33560
 

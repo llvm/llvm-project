@@ -1545,6 +1545,16 @@ public:
     return None;
   }
 
+  /// Return an array that contains the MMO target flag values and their
+  /// names.
+  ///
+  /// MIR Serialization is able to serialize only the MMO target flags that are
+  /// defined by this method.
+  virtual ArrayRef<std::pair<MachineMemOperand::Flags, const char *>>
+  getSerializableMachineMemOperandTargetFlags() const {
+    return None;
+  }
+
   /// Determines whether \p Inst is a tail call instruction. Override this
   /// method on targets that do not properly set MCID::Return and MCID::Call on
   /// tail call instructions."

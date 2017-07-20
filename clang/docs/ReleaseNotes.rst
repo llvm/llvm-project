@@ -82,7 +82,9 @@ Clang now supports the ...
 Attribute Changes in Clang
 --------------------------
 
--  ...
+-  The ``overloadable`` attribute now allows at most one function with a given
+   name to lack the ``overloadable`` attribute. This unmarked function will not
+   have its name mangled.
 
 Windows Support
 ---------------

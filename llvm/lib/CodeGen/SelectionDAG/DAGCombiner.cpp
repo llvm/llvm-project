@@ -3889,9 +3889,8 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
   // Note: the SimplifyDemandedBits fold below can make an information-losing
   // transform, and then we have no way to find this better fold.
   if (N1C && N1C->isOne() && N0.getOpcode() == ISD::SUB) {
-    ConstantSDNode *SubLHS = isConstOrConstSplat(N0.getOperand(0));
-    SDValue SubRHS = N0.getOperand(1);
-    if (SubLHS && SubLHS->isNullValue()) {
+    if (isNullConstantOrNullSplatConstant(N0.getOperand(0))) {
+      SDValue SubRHS = N0.getOperand(1);
       if (SubRHS.getOpcode() == ISD::ZERO_EXTEND &&
           SubRHS.getOperand(0).getScalarValueSizeInBits() == 1)
         return SubRHS;
@@ -5286,22 +5285,25 @@ SDValue DAGCombiner::visitRotate(SDNode *N) {
 
   unsigned NextOp = N0.getOpcode();
   // fold (rot* (rot* x, c2), c1) -> (rot* x, c1 +- c2 % bitsize)
-  if (NextOp == ISD::ROTL || NextOp == ISD::ROTR)
-    if (SDNode *C1 = DAG.isConstantIntBuildVectorOrConstantInt(N1))
-      if (SDNode *C2 =
-          DAG.isConstantIntBuildVectorOrConstantInt(N0.getOperand(1))) {
-        bool SameSide = (N->getOpcode() == NextOp);
-        unsigned CombineOp = SameSide ? ISD::ADD : ISD::SUB;
-        if (SDValue CombinedShift =
-            DAG.FoldConstantArithmetic(CombineOp, dl, VT, C1, C2)) {
-          unsigned Bitsize = VT.getScalarSizeInBits();
-          SDValue BitsizeC = DAG.getConstant(Bitsize, dl, VT);
-          SDValue CombinedShiftNorm = DAG.FoldConstantArithmetic(
-            ISD::SREM, dl, VT, CombinedShift.getNode(), BitsizeC.getNode());
-          return DAG.getNode(
-            N->getOpcode(), dl, VT, N0->getOperand(0), CombinedShiftNorm);
-        }
+  if (NextOp == ISD::ROTL || NextOp == ISD::ROTR) {
+    SDNode *C1 = DAG.isConstantIntBuildVectorOrConstantInt(N1);
+    SDNode *C2 = DAG.isConstantIntBuildVectorOrConstantInt(N0.getOperand(1));
+    if (C1 && C2 && C1->getValueType(0) == C2->getValueType(0)) {
+      EVT ShiftVT = C1->getValueType(0);
+      bool SameSide = (N->getOpcode() == NextOp);
+      unsigned CombineOp = SameSide ? ISD::ADD : ISD::SUB;
+      if (SDValue CombinedShift =
+              DAG.FoldConstantArithmetic(CombineOp, dl, ShiftVT, C1, C2)) {
+        unsigned Bitsize = VT.getScalarSizeInBits();
+        SDValue BitsizeC = DAG.getConstant(Bitsize, dl, ShiftVT);
+        SDValue CombinedShiftNorm = DAG.FoldConstantArithmetic(
+            ISD::SREM, dl, ShiftVT, CombinedShift.getNode(),
+            BitsizeC.getNode());
+        return DAG.getNode(N->getOpcode(), dl, VT, N0->getOperand(0),
+                           CombinedShiftNorm);
       }
+    }
+  }
   return SDValue();
 }
 

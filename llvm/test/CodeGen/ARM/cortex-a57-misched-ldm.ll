@@ -8,9 +8,9 @@
 ; CHECK:       rdefs left
 ; CHECK-NEXT:  Latency            : 3
 ; CHECK:       Successors:
-; CHECK:       data
+; CHECK:       Data
 ; CHECK-SAME:  Latency=3
-; CHECK-NEXT:  data 
+; CHECK-NEXT:  Data
 ; CHECK-SAME:  Latency=3
 
 define i32 @foo(i32* %a) nounwind optsize {

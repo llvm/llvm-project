@@ -54,7 +54,7 @@
 ; CHECK-NEXT:  %22 = getelementptr [4 x i8*], [4 x i8*]* %polly_launch_0_params, i64 0, i64 3
 ; CHECK-NEXT:  %23 = bitcast i32* %polly_launch_0_param_size_1 to i8*
 ; CHECK-NEXT:  store i8* %23, i8** %22
-; CHECK-NEXT:  %24 = call i8* @polly_getKernel(i8* getelementptr inbounds ([810 x i8], [810 x i8]* @FUNC_copy_KERNEL_0, i32 0, i32 0), i8* getelementptr inbounds ([19 x i8], [19 x i8]* @FUNC_copy_KERNEL_0_name, i32 0, i32 0))
+; CHECK-NEXT:  %24 = call i8* @polly_getKernel(i8* getelementptr inbounds ([852 x i8], [852 x i8]* @FUNC_copy_SCOP_0_KERNEL_0, i32 0, i32 0), i8* getelementptr inbounds ([26 x i8], [26 x i8]* @FUNC_copy_SCOP_0_KERNEL_0_name, i32 0, i32 0))
 ; CHECK-NEXT:  call void @polly_launchKernel(i8* %24, i32 2, i32 1, i32 32, i32 1, i32 1, i8* %polly_launch_0_params_i8ptr)
 ; CHECK-NEXT:  call void @polly_freeKernel(i8* %24)
 ; CHECK-NEXT:  call void @polly_synchronizeDevice()

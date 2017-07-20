@@ -5,18 +5,11 @@
 ; instead use directly the preloaded value stored in GlobalMap.
 ;
 ; CHECK-NOT: alloca
-; CHECK:     %dec3.s2a = alloca i32
-; CHECK-NOT: alloca
-; CHECK:     %dec3.in.phiops = alloca i32
-; CHECK-NOT: alloca
 ; CHECK:     %tmp0.preload.s2a = alloca i32
 ; CHECK-NOT: alloca
 ;
 ; CHECK:       %ncol.load = load i32, i32* @ncol
 ; CHECK-NEXT:  store i32 %ncol.load, i32* %tmp0.preload.s2a
-;
-; CHECK:      polly.stmt.while.body.lr.ph:
-; CHECK-NEXT:   store i32 %ncol.load, i32* %dec3.in.phiops
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

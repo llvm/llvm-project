@@ -22,9 +22,9 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Debug.h"
 
-namespace llvm {
-
 #define DEBUG_TYPE "ssaupdater"
+
+namespace llvm {
 
 class CastInst;
 class PHINode;
@@ -453,8 +453,8 @@ public:
   }
 };
 
+} // end llvm namespace
+
 #undef DEBUG_TYPE // "ssaupdater"
 
-} // End llvm namespace
-
-#endif
+#endif // LLVM_TRANSFORMS_UTILS_SSAUPDATERIMPL_H

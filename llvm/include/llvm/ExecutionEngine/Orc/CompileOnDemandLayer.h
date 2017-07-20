@@ -22,6 +22,7 @@
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/IndirectionUtils.h"
 #include "llvm/ExecutionEngine/Orc/LambdaResolver.h"
+#include "llvm/ExecutionEngine/Orc/OrcError.h"
 #include "llvm/ExecutionEngine/RuntimeDyld.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constant.h"
@@ -289,21 +290,22 @@ public:
   // FIXME: We should track and free associated resources (unused compile
   //        callbacks, uncompiled IR, and no-longer-needed/reachable function
   //        implementations).
-  // FIXME: Return Error once the JIT APIs are Errorized.
-  bool updatePointer(std::string FuncName, JITTargetAddress FnBodyAddr) {
+  Error updatePointer(std::string FuncName, JITTargetAddress FnBodyAddr) {
     //Find out which logical dylib contains our symbol
     auto LDI = LogicalDylibs.begin();
     for (auto LDE = LogicalDylibs.end(); LDI != LDE; ++LDI) {
-      if (auto LMResources = LDI->getLogicalModuleResourcesForSymbol(FuncName, false)) {
+      if (auto LMResources =
+            LDI->getLogicalModuleResourcesForSymbol(FuncName, false)) {
         Module &SrcM = LMResources->SourceModule->getResource();
         std::string CalledFnName = mangle(FuncName, SrcM.getDataLayout());
-        if (auto EC = LMResources->StubsMgr->updatePointer(CalledFnName, FnBodyAddr))
-          return false;
+        if (auto Err = LMResources->StubsMgr->updatePointer(CalledFnName,
+                                                            FnBodyAddr))
+          return Err;
         else
-          return true;
+          return Error::success();
       }
     }
-    return false;
+    return make_error<JITSymbolNotFound>(FuncName);
   }
 
 private:
@@ -363,11 +365,8 @@ private:
           });
       }
 
-      auto EC = LD.StubsMgr->createStubs(StubInits);
-      (void)EC;
-      // FIXME: This should be propagated back to the user. Stub creation may
-      //        fail for remote JITs.
-      assert(!EC && "Error generating stubs");
+      if (auto Err = LD.StubsMgr->createStubs(StubInits))
+        return Err;
     }
 
     // If this module doesn't contain any globals, aliases, or module flags then

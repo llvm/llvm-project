@@ -43,12 +43,13 @@ foreach(arch ${TSAN_TEST_ARCH})
 endforeach()
 
 # iOS and iOS simulator test suites
-# These are not added into "check-all", in order to run these tests, you have to
-# manually call (from the build directory).  They also require that an extra env
+# These are not added into "check-all", in order to run these tests, use
+# "check-tsan-iossim-x86_64" and similar. They also require an extra environment
 # variable to select which iOS device or simulator to use, e.g.:
-# $ SANITIZER_IOSSIM_TEST_DEVICE_IDENTIFIER=BBE44C1C-8AAA-4000-8D06-91C89ED58172
-# $ ./bin/llvm-lit ./projects/compiler-rt/test/tsan/IOSSimX86_64Config
+# SANITIZER_IOSSIM_TEST_DEVICE_IDENTIFIER="iPhone 6"
 if(APPLE)
+  set(EXCLUDE_FROM_ALL ON)
+
   set(TSAN_TEST_TARGET_CC ${COMPILER_RT_TEST_COMPILER})
   set(TSAN_TEST_IOS "1")
   pythonize_bool(TSAN_TEST_IOS)
@@ -65,6 +66,9 @@ if(APPLE)
     ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.in
     ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME}/lit.site.cfg
     )
+  add_lit_testsuite(check-tsan-iossim-${arch} "ThreadSanitizer iOS Simulator ${arch} tests"
+    ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME}/
+    DEPENDS ${TSAN_TEST_DEPS})
 
   set(arch "arm64")
   set(TSAN_TEST_IOSSIM "0")
@@ -78,6 +82,11 @@ if(APPLE)
     ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.in
     ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME}/lit.site.cfg
     )
+  add_lit_testsuite(check-tsan-ios-${arch} "ThreadSanitizer iOS Simulator ${arch} tests"
+    ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME}/
+    DEPENDS ${TSAN_TEST_DEPS})
+
+  set(EXCLUDE_FROM_ALL OFF)
 endif()
 
 if(COMPILER_RT_INCLUDE_TESTS)

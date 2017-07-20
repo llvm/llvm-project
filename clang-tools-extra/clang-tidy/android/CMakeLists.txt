@@ -5,6 +5,7 @@ add_clang_library(clangTidyAndroidModule
   CloexecCreatCheck.cpp
   CloexecFopenCheck.cpp
   CloexecOpenCheck.cpp
+  CloexecSocketCheck.cpp
 
   LINK_LIBS
   clangAST

@@ -91,7 +91,7 @@ function(add_llvm_symbol_exports target_name export_file)
       DEPENDS ${export_file}
       VERBATIM
       COMMENT "Creating export file for ${target_name}")
-    if (${CMAKE_SYSTEM_NAME} MATCHES "SunOS")
+    if (${LLVM_LINKER_IS_SOLARISLD})
       set_property(TARGET ${target_name} APPEND_STRING PROPERTY
                    LINK_FLAGS "  -Wl,-M,${CMAKE_CURRENT_BINARY_DIR}/${native_export_file}")
     else()
@@ -148,13 +148,28 @@ function(add_llvm_symbol_exports target_name export_file)
 endfunction(add_llvm_symbol_exports)
 
 if(NOT WIN32 AND NOT APPLE)
+  # Detect what linker we have here
   execute_process(
     COMMAND ${CMAKE_C_COMPILER} -Wl,--version
     OUTPUT_VARIABLE stdout
-    ERROR_QUIET
+    ERROR_VARIABLE stderr
     )
+  set(LLVM_LINKER_DETECTED ON)
   if("${stdout}" MATCHES "GNU gold")
     set(LLVM_LINKER_IS_GOLD ON)
+    message(STATUS "Linker detection: GNU Gold")
+  elseif("${stdout}" MATCHES "^LLD")
+    set(LLVM_LINKER_IS_LLD ON)
+    message(STATUS "Linker detection: LLD")
+  elseif("${stdout}" MATCHES "GNU ld")
+    set(LLVM_LINKER_IS_GNULD ON)
+    message(STATUS "Linker detection: GNU ld")
+  elseif("${stderr}" MATCHES "Solaris Link Editors")
+    set(LLVM_LINKER_IS_SOLARISLD ON)
+    message(STATUS "Linker detection: Solaris ld")
+  else()
+    set(LLVM_LINKER_DETECTED OFF)
+    message(STATUS "Linker detection: unknown")
   endif()
 endif()
 

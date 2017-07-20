@@ -485,10 +485,22 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
           DomTreeNode *Node = HeaderChildren[I];
           BasicBlock *BB = Node->getBlock();
 
-          pred_iterator PI = pred_begin(BB);
-          BasicBlock *NearestDom = *PI;
-          for (pred_iterator PE = pred_end(BB); PI != PE; ++PI)
-            NearestDom = DT->findNearestCommonDominator(NearestDom, *PI);
+          BasicBlock *NearestDom = nullptr;
+          for (BasicBlock *Pred : predecessors(BB)) {
+            // Consider only reachable basic blocks.
+            if (!DT->getNode(Pred))
+              continue;
+
+            if (!NearestDom) {
+              NearestDom = Pred;
+              continue;
+            }
+
+            NearestDom = DT->findNearestCommonDominator(NearestDom, Pred);
+            assert(NearestDom && "No NearestCommonDominator found");
+          }
+
+          assert(NearestDom && "Nearest dominator not found");
 
           // Remember if this changes the DomTree.
           if (Node->getIDom()->getBlock() != NearestDom) {

@@ -5,6 +5,9 @@
 // with ASan) involving C++ standard library types when using libcxx.
 #define _LIBCPP_HAS_NO_ASAN
 
+// Do not attempt to use LLVM ostream from gtest.
+#define GTEST_NO_LLVM_RAW_OSTREAM 1
+
 #include "FuzzerCorpus.h"
 #include "FuzzerDictionary.h"
 #include "FuzzerInternal.h"
@@ -421,35 +424,6 @@ TEST(FuzzerMutate, AddWordFromDictionary2) {
   TestAddWordFromDictionary(&MutationDispatcher::Mutate, 1 << 15);
 }
 
-void TestAddWordFromDictionaryWithHint(Mutator M, int NumIter) {
-  std::unique_ptr<ExternalFunctions> t(new ExternalFunctions());
-  fuzzer::EF = t.get();
-  Random Rand(0);
-  MutationDispatcher MD(Rand, {});
-  uint8_t W[] = {0xAA, 0xBB, 0xCC, 0xDD, 0xFF, 0xEE, 0xEF};
-  size_t PosHint = 7777;
-  MD.AddWordToAutoDictionary({Word(W, sizeof(W)), PosHint});
-  int FoundMask = 0;
-  for (int i = 0; i < NumIter; i++) {
-    uint8_t T[10000];
-    memset(T, 0, sizeof(T));
-    size_t NewSize = (MD.*M)(T, 9000, 10000);
-    if (NewSize >= PosHint + sizeof(W) &&
-        !memcmp(W, T + PosHint, sizeof(W)))
-      FoundMask = 1;
-  }
-  EXPECT_EQ(FoundMask, 1);
-}
-
-TEST(FuzzerMutate, AddWordFromDictionaryWithHint1) {
-  TestAddWordFromDictionaryWithHint(
-      &MutationDispatcher::Mutate_AddWordFromTemporaryAutoDictionary, 1 << 5);
-}
-
-TEST(FuzzerMutate, AddWordFromDictionaryWithHint2) {
-  TestAddWordFromDictionaryWithHint(&MutationDispatcher::Mutate, 1 << 10);
-}
-
 void TestChangeASCIIInteger(Mutator M, int NumIter) {
   std::unique_ptr<ExternalFunctions> t(new ExternalFunctions());
   fuzzer::EF = t.get();
@@ -590,7 +564,7 @@ TEST(Corpus, Distribution) {
   size_t N = 10;
   size_t TriesPerUnit = 1<<16;
   for (size_t i = 0; i < N; i++)
-    C->AddToCorpus(Unit{ static_cast<uint8_t>(i) }, 0);
+    C->AddToCorpus(Unit{ static_cast<uint8_t>(i) }, 0, false, {});
 
   std::vector<size_t> Hist(N);
   for (size_t i = 0; i < N * TriesPerUnit; i++) {

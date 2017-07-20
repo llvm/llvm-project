@@ -80,6 +80,13 @@ OUTPUT OPTIONS
  Show more information on test failures, for example the entire test output
  instead of just the test result.
 
+.. option:: -vv, --echo-all-commands
+
+ Echo all commands to stdout, as they are being executed.
+ This can be valuable for debugging test failures, as the last echoed command
+ will be the one which has failed.
+ This option implies ``--verbose``.
+
 .. option:: -a, --show-all
 
  Show more information about all tests, for example the entire test

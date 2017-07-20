@@ -889,7 +889,7 @@ bool Parser::ConsumeAndStoreFunctionPrologue(CachedTokens &Toks) {
         // If the opening brace is not preceded by one of these tokens, we are
         // missing the mem-initializer-id. In order to recover better, we need
         // to use heuristics to determine if this '{' is most likely the
-        // begining of a brace-init-list or the function body.
+        // beginning of a brace-init-list or the function body.
         // Check the token after the corresponding '}'.
         TentativeParsingAction PA(*this);
         if (SkipUntil(tok::r_brace) &&

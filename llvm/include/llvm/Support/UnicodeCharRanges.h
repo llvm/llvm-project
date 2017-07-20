@@ -18,10 +18,10 @@
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 
+#define DEBUG_TYPE "unicode"
+
 namespace llvm {
 namespace sys {
-
-#define DEBUG_TYPE "unicode"
 
 /// \brief Represents a closed range of Unicode code points [Lower, Upper].
 struct UnicodeCharRange {
@@ -99,10 +99,9 @@ private:
   const CharRanges Ranges;
 };
 
-#undef DEBUG_TYPE // "unicode"
-
 } // namespace sys
 } // namespace llvm
 
+#undef DEBUG_TYPE // "unicode"
 
 #endif // LLVM_SUPPORT_UNICODECHARRANGES_H

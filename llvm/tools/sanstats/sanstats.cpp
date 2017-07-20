@@ -76,8 +76,11 @@ const char *ReadModule(char SizeofPtr, const char *Begin, const char *End) {
     if (Begin == End)
       return nullptr;
 
+    // As the instrumentation tracks the return address and not
+    // the address of the call to `__sanitizer_stats_report` we
+    // remove one from the address to get the correct DI.
     if (Expected<DILineInfo> LineInfo =
-            Symbolizer.symbolizeCode(Filename, Addr)) {
+            Symbolizer.symbolizeCode(Filename, Addr - 1)) {
       llvm::outs() << LineInfo->FileName << ':' << LineInfo->Line << ' '
                    << LineInfo->FunctionName << ' ';
     } else {

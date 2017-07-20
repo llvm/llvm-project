@@ -131,16 +131,44 @@ void fuchsia::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
 /// Fuchsia - Fuchsia tool chain which can call as(1) and ld(1) directly.
 
-Fuchsia::Fuchsia(const Driver &D, const llvm::Triple &Triple,
-                 const ArgList &Args)
-    : Generic_ELF(D, Triple, Args) {
-
-  getFilePaths().push_back(D.SysRoot + "/lib");
-  getFilePaths().push_back(D.ResourceDir + "/lib/fuchsia");
+static std::string normalizeTriple(llvm::Triple Triple) {
+  SmallString<64> T;
+  T += Triple.getArchName();
+  T += "-";
+  T += Triple.getOSName();
+  return T.str();
 }
 
-Tool *Fuchsia::buildAssembler() const {
-  return new tools::gnutools::Assembler(*this);
+static std::string getTargetDir(const Driver &D,
+                                llvm::Triple Triple) {
+  SmallString<128> P(llvm::sys::path::parent_path(D.Dir));
+  llvm::sys::path::append(P, "lib", normalizeTriple(Triple));
+  return P.str();
+}
+
+Fuchsia::Fuchsia(const Driver &D, const llvm::Triple &Triple,
+                 const ArgList &Args)
+    : ToolChain(D, Triple, Args) {
+  getProgramPaths().push_back(getDriver().getInstalledDir());
+  if (getDriver().getInstalledDir() != D.Dir)
+    getProgramPaths().push_back(D.Dir);
+
+  SmallString<128> P(getTargetDir(D, getTriple()));
+  llvm::sys::path::append(P, "lib");
+  getFilePaths().push_back(P.str());
+
+  if (!D.SysRoot.empty()) {
+    SmallString<128> P(D.SysRoot);
+    llvm::sys::path::append(P, "lib");
+    getFilePaths().push_back(P.str());
+  }
+}
+
+std::string Fuchsia::ComputeEffectiveClangTriple(const ArgList &Args,
+                                                 types::ID InputType) const {
+  llvm::Triple Triple(ComputeLLVMTriple(Args, InputType));
+  Triple.setTriple(normalizeTriple(Triple));
+  return Triple.getTriple();
 }
 
 Tool *Fuchsia::buildLinker() const {
@@ -208,19 +236,44 @@ void Fuchsia::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
     return;
   }
 
-  addExternCSystemInclude(DriverArgs, CC1Args, D.SysRoot + "/include");
+  if (!D.SysRoot.empty()) {
+    SmallString<128> P(D.SysRoot);
+    llvm::sys::path::append(P, "include");
+    addExternCSystemInclude(DriverArgs, CC1Args, P.str());
+  }
 }
 
-std::string Fuchsia::findLibCxxIncludePath() const {
-  return getDriver().SysRoot + "/include/c++/v1";
+void Fuchsia::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
+                                           ArgStringList &CC1Args) const {
+  if (DriverArgs.hasArg(options::OPT_nostdlibinc) ||
+      DriverArgs.hasArg(options::OPT_nostdincxx))
+    return;
+
+  switch (GetCXXStdlibType(DriverArgs)) {
+  case ToolChain::CST_Libcxx: {
+    SmallString<128> P(getTargetDir(getDriver(), getTriple()));
+    llvm::sys::path::append(P, "include", "c++", "v1");
+    addSystemInclude(DriverArgs, CC1Args, P.str());
+    break;
+  }
+
+  default:
+    llvm_unreachable("invalid stdlib name");
+  }
 }
 
 void Fuchsia::AddCXXStdlibLibArgs(const ArgList &Args,
                                   ArgStringList &CmdArgs) const {
-  (void) GetCXXStdlibType(Args);
-  CmdArgs.push_back("-lc++");
-  CmdArgs.push_back("-lc++abi");
-  CmdArgs.push_back("-lunwind");
+  switch (GetCXXStdlibType(Args)) {
+  case ToolChain::CST_Libcxx:
+    CmdArgs.push_back("-lc++");
+    CmdArgs.push_back("-lc++abi");
+    CmdArgs.push_back("-lunwind");
+    break;
+
+  case ToolChain::CST_Libstdcxx:
+    llvm_unreachable("invalid stdlib name");
+  }
 }
 
 SanitizerMask Fuchsia::getSupportedSanitizers() const {

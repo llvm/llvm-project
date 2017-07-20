@@ -58,10 +58,9 @@ static bool pointedUnqualifiedTypesAreEqual(QualType T1, QualType T2) {
 
 void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *CastExpr = Result.Nodes.getNodeAs<CStyleCastExpr>("cast");
-  auto ParenRange = CharSourceRange::getTokenRange(CastExpr->getLParenLoc(),
-                                                   CastExpr->getRParenLoc());
+
   // Ignore casts in macros.
-  if (ParenRange.getBegin().isMacroID() || ParenRange.getEnd().isMacroID())
+  if (CastExpr->getExprLoc().isMacroID())
     return;
 
   // Casting to void is an idiomatic way to mute "unused variable" and similar
@@ -82,6 +81,9 @@ void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
   const QualType SourceType = SourceTypeAsWritten.getCanonicalType();
   const QualType DestType = DestTypeAsWritten.getCanonicalType();
 
+  auto ReplaceRange = CharSourceRange::getCharRange(
+      CastExpr->getLParenLoc(), CastExpr->getSubExprAsWritten()->getLocStart());
+
   bool FnToFnCast =
       isFunction(SourceTypeAsWritten) && isFunction(DestTypeAsWritten);
 
@@ -92,7 +94,7 @@ void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
     // pointer/reference types.
     if (SourceTypeAsWritten == DestTypeAsWritten) {
       diag(CastExpr->getLocStart(), "redundant cast to the same type")
-          << FixItHint::CreateRemoval(ParenRange);
+          << FixItHint::CreateRemoval(ReplaceRange);
       return;
     }
   }
@@ -136,7 +138,7 @@ void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
                                      getLangOpts()),
           ")");
     }
-    Diag << FixItHint::CreateReplacement(ParenRange, CastText);
+    Diag << FixItHint::CreateReplacement(ReplaceRange, CastText);
   };
   auto ReplaceWithNamedCast = [&](StringRef CastType) {
     Diag << CastType;

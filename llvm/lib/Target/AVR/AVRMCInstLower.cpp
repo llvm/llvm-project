@@ -37,10 +37,22 @@ MCOperand AVRMCInstLower::lowerSymbolOperand(const MachineOperand &MO,
         Expr, MCConstantExpr::create(MO.getOffset(), Ctx), Ctx);
   }
 
+  bool IsFunction = MO.isGlobal() && isa<Function>(MO.getGlobal());
+
   if (TF & AVRII::MO_LO) {
-    Expr = AVRMCExpr::create(AVRMCExpr::VK_AVR_LO8, Expr, IsNegated, Ctx);
+    if (IsFunction) {
+      // N.B. Should we use _GS fixups here to cope with >128k progmem?
+      Expr = AVRMCExpr::create(AVRMCExpr::VK_AVR_PM_LO8, Expr, IsNegated, Ctx);
+    } else {
+      Expr = AVRMCExpr::create(AVRMCExpr::VK_AVR_LO8, Expr, IsNegated, Ctx);
+    }
   } else if (TF & AVRII::MO_HI) {
-    Expr = AVRMCExpr::create(AVRMCExpr::VK_AVR_HI8, Expr, IsNegated, Ctx);
+    if (IsFunction) {
+      // N.B. Should we use _GS fixups here to cope with >128k progmem?
+      Expr = AVRMCExpr::create(AVRMCExpr::VK_AVR_PM_HI8, Expr, IsNegated, Ctx);
+    } else {
+      Expr = AVRMCExpr::create(AVRMCExpr::VK_AVR_HI8, Expr, IsNegated, Ctx);
+    }
   } else if (TF != 0) {
     llvm_unreachable("Unknown target flag on symbol operand");
   }

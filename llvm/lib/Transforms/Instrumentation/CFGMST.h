@@ -12,6 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_LIB_TRANSFORMS_INSTRUMENTATION_CFGMST_H
+#define LLVM_LIB_TRANSFORMS_INSTRUMENTATION_CFGMST_H
+
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
@@ -24,9 +27,9 @@
 #include <utility>
 #include <vector>
 
-namespace llvm {
-
 #define DEBUG_TYPE "cfgmst"
+
+namespace llvm {
 
 /// \brief An union-find based Minimum Spanning Tree for CFG
 ///
@@ -220,5 +223,8 @@ public:
   }
 };
 
-#undef DEBUG_TYPE // "cfgmst"
 } // end namespace llvm
+
+#undef DEBUG_TYPE // "cfgmst"
+
+#endif // LLVM_LIB_TRANSFORMS_INSTRUMENTATION_CFGMST_H

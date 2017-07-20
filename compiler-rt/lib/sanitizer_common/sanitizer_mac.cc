@@ -805,14 +805,35 @@ char **GetArgv() {
 // fields only available in 10.12+. Declare the struct manually to be able to
 // build against older SDKs.
 struct __sanitizer_task_vm_info {
-  uptr _unused[(SANITIZER_WORDSIZE == 32) ? 20 : 19];
-  uptr min_address;
-  uptr max_address;
+  mach_vm_size_t virtual_size;
+  integer_t region_count;
+  integer_t page_size;
+  mach_vm_size_t resident_size;
+  mach_vm_size_t resident_size_peak;
+  mach_vm_size_t device;
+  mach_vm_size_t device_peak;
+  mach_vm_size_t internal;
+  mach_vm_size_t internal_peak;
+  mach_vm_size_t external;
+  mach_vm_size_t external_peak;
+  mach_vm_size_t reusable;
+  mach_vm_size_t reusable_peak;
+  mach_vm_size_t purgeable_volatile_pmap;
+  mach_vm_size_t purgeable_volatile_resident;
+  mach_vm_size_t purgeable_volatile_virtual;
+  mach_vm_size_t compressed;
+  mach_vm_size_t compressed_peak;
+  mach_vm_size_t compressed_lifetime;
+  mach_vm_size_t phys_footprint;
+  mach_vm_address_t min_address;
+  mach_vm_address_t max_address;
 };
+#define __SANITIZER_TASK_VM_INFO_COUNT ((mach_msg_type_number_t) \
+    (sizeof(__sanitizer_task_vm_info) / sizeof(natural_t)))
 
 uptr GetTaskInfoMaxAddress() {
-  __sanitizer_task_vm_info vm_info = {{0}, 0, 0};
-  mach_msg_type_number_t count = sizeof(vm_info) / sizeof(int);
+  __sanitizer_task_vm_info vm_info = {};
+  mach_msg_type_number_t count = __SANITIZER_TASK_VM_INFO_COUNT;
   int err = task_info(mach_task_self(), TASK_VM_INFO, (int *)&vm_info, &count);
   if (err == 0) {
     return vm_info.max_address - 1;
@@ -840,7 +861,8 @@ uptr GetMaxVirtualAddress() {
 
 uptr FindAvailableMemoryRange(uptr shadow_size,
                               uptr alignment,
-                              uptr left_padding) {
+                              uptr left_padding,
+                              uptr *largest_gap_found) {
   typedef vm_region_submap_short_info_data_64_t RegionInfo;
   enum { kRegionInfoSize = VM_REGION_SUBMAP_SHORT_INFO_COUNT_64 };
   // Start searching for available memory region past PAGEZERO, which is
@@ -851,6 +873,7 @@ uptr FindAvailableMemoryRange(uptr shadow_size,
   mach_vm_address_t address = start_address;
   mach_vm_address_t free_begin = start_address;
   kern_return_t kr = KERN_SUCCESS;
+  if (largest_gap_found) *largest_gap_found = 0;
   while (kr == KERN_SUCCESS) {
     mach_vm_size_t vmsize = 0;
     natural_t depth = 0;
@@ -860,10 +883,15 @@ uptr FindAvailableMemoryRange(uptr shadow_size,
                                 (vm_region_info_t)&vminfo, &count);
     if (free_begin != address) {
       // We found a free region [free_begin..address-1].
-      uptr shadow_address = RoundUpTo((uptr)free_begin + left_padding,
-                                      alignment);
-      if (shadow_address + shadow_size < (uptr)address) {
-        return shadow_address;
+      uptr gap_start = RoundUpTo((uptr)free_begin + left_padding, alignment);
+      uptr gap_end = RoundDownTo((uptr)address, alignment);
+      uptr gap_size = gap_end > gap_start ? gap_end - gap_start : 0;
+      if (shadow_size < gap_size) {
+        return gap_start;
+      }
+
+      if (largest_gap_found && *largest_gap_found < gap_size) {
+        *largest_gap_found = gap_size;
       }
     }
     // Move to the next region.

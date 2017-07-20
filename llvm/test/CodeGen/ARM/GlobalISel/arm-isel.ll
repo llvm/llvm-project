@@ -420,3 +420,14 @@ entry:
   %r = select i1 %cond, i32* %a, i32* %b
   ret i32* %r
 }
+
+define arm_aapcscc void @test_br() {
+; CHECK-LABEL: test_br
+; CHECK: [[LABEL:.L[[:alnum:]_]+]]:
+; CHECK: b [[LABEL]]
+entry:
+  br label %infinite
+
+infinite:
+  br label %infinite
+}

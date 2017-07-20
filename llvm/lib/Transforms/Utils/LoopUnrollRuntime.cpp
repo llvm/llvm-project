@@ -22,6 +22,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Analysis/LoopPass.h"
@@ -427,6 +428,50 @@ CloneLoopBlocks(Loop *L, Value *NewIter, const bool CreateRemainderLoop,
     return nullptr;
 }
 
+/// Returns true if we can safely unroll a multi-exit/exiting loop. OtherExits
+/// is populated with all the loop exit blocks other than the LatchExit block.
+static bool
+canSafelyUnrollMultiExitLoop(Loop *L, SmallVectorImpl<BasicBlock *> &OtherExits,
+                             BasicBlock *LatchExit, bool PreserveLCSSA,
+                             bool UseEpilogRemainder) {
+
+  // Support runtime unrolling for multiple exit blocks and multiple exiting
+  // blocks.
+  if (!UnrollRuntimeMultiExit)
+    return false;
+  // Even if runtime multi exit is enabled, we currently have some correctness
+  // constrains in unrolling a multi-exit loop.
+  // We rely on LCSSA form being preserved when the exit blocks are transformed.
+  if (!PreserveLCSSA)
+    return false;
+  SmallVector<BasicBlock *, 4> Exits;
+  L->getUniqueExitBlocks(Exits);
+  for (auto *BB : Exits)
+    if (BB != LatchExit)
+      OtherExits.push_back(BB);
+
+  // TODO: Support multiple exiting blocks jumping to the `LatchExit` when
+  // UnrollRuntimeMultiExit is true. This will need updating the logic in
+  // connectEpilog/connectProlog.
+  if (!LatchExit->getSinglePredecessor()) {
+    DEBUG(dbgs() << "Bailout for multi-exit handling when latch exit has >1 "
+                    "predecessor.\n");
+    return false;
+  }
+  // FIXME: We bail out of multi-exit unrolling when epilog loop is generated
+  // and L is an inner loop. This is because in presence of multiple exits, the
+  // outer loop is incorrect: we do not add the EpilogPreheader and exit to the
+  // outer loop. This is automatically handled in the prolog case, so we do not
+  // have that bug in prolog generation.
+  if (UseEpilogRemainder && L->getParentLoop())
+    return false;
+
+  // All constraints have been satisfied.
+  return true;
+}
+
+
+
 /// Insert code in the prolog/epilog code when unrolling a loop with a
 /// run-time trip-count.
 ///
@@ -470,16 +515,8 @@ bool llvm::UnrollRuntimeLoopRemainder(Loop *L, unsigned Count,
                                       bool UseEpilogRemainder,
                                       LoopInfo *LI, ScalarEvolution *SE,
                                       DominatorTree *DT, bool PreserveLCSSA) {
-  bool hasMultipleExitingBlocks = !L->getExitingBlock();
   DEBUG(dbgs() << "Trying runtime unrolling on Loop: \n");
   DEBUG(L->dump());
-  // Support only single exiting block unless UnrollRuntimeMultiExit is true.
-  if (!UnrollRuntimeMultiExit && hasMultipleExitingBlocks) {
-    DEBUG(
-        dbgs()
-        << "Multiple exiting blocks and UnrollRuntimeMultiExit not enabled!\n");
-    return false;
-  }
 
   // Make sure the loop is in canonical form.
   if (!L->isLoopSimplifyForm()) {
@@ -491,52 +528,27 @@ bool llvm::UnrollRuntimeLoopRemainder(Loop *L, unsigned Count,
   BasicBlock *Latch = L->getLoopLatch();
   BasicBlock *Header = L->getHeader();
 
-  BasicBlock *LatchExit = L->getUniqueExitBlock(); // successor out of loop
-  if (!LatchExit && !UnrollRuntimeMultiExit) {
-    DEBUG(dbgs() << "No unique exit block and UnrollRuntimeMultiExit not enabled\n");
-    return false;
-  }
-  // These are exit blocks other than the target of the latch exiting block.
-  SmallVector<BasicBlock *, 4> OtherExits;
   BranchInst *LatchBR = cast<BranchInst>(Latch->getTerminator());
-  unsigned int ExitIndex = LatchBR->getSuccessor(0) == Header ? 1 : 0;
+  unsigned ExitIndex = LatchBR->getSuccessor(0) == Header ? 1 : 0;
+  BasicBlock *LatchExit = LatchBR->getSuccessor(ExitIndex);
   // Cloning the loop basic blocks (`CloneLoopBlocks`) requires that one of the
   // targets of the Latch be an exit block out of the loop. This needs
   // to be guaranteed by the callers of UnrollRuntimeLoopRemainder.
-  assert(!L->contains(LatchBR->getSuccessor(ExitIndex)) &&
+  assert(!L->contains(LatchExit) &&
          "one of the loop latch successors should be the exit block!");
-  // Support runtime unrolling for multiple exit blocks and multiple exiting
-  // blocks.
-  if (!LatchExit) {
-    LatchExit = LatchBR->getSuccessor(ExitIndex);
-    // We rely on LCSSA form being preserved when the exit blocks are
-    // transformed.
-    if (!PreserveLCSSA)
-      return false;
-    SmallVector<BasicBlock *, 4> Exits;
-    L->getUniqueExitBlocks(Exits);
-    for (auto *BB : Exits)
-      if (BB != LatchExit)
-        OtherExits.push_back(BB);
-  }
-
-  assert(LatchExit && "Latch Exit should exist!");
-
-  // TODO: Support multiple exiting blocks jumping to the `LatchExit` when
-  // UnrollRuntimeMultiExit is true. This will need updating the logic in
-  // connectEpilog.
-  if (!LatchExit->getSinglePredecessor()) {
-    DEBUG(dbgs() << "Bailout for multi-exit handling when latch exit has >1 "
-                    "predecessor.\n");
+  // These are exit blocks other than the target of the latch exiting block.
+  SmallVector<BasicBlock *, 4> OtherExits;
+  bool isMultiExitUnrollingEnabled = canSafelyUnrollMultiExitLoop(
+      L, OtherExits, LatchExit, PreserveLCSSA, UseEpilogRemainder);
+  // Support only single exit and exiting block unless multi-exit loop unrolling is enabled.
+  if (!isMultiExitUnrollingEnabled &&
+      (!L->getExitingBlock() || OtherExits.size())) {
+    DEBUG(
+        dbgs()
+        << "Multiple exit/exiting blocks in loop and multi-exit unrolling not "
+           "enabled!\n");
     return false;
   }
-  // FIXME: We bail out of multi-exit unrolling when epilog loop is generated
-  // and L is an inner loop. This is because in presence of multiple exits, the
-  // outer loop is incorrect: we do not add the EpilogPreheader and exit to the
-  // outer loop. This is automatically handled in the prolog case, so we do not
-  // have that bug in prolog generation.
-  if (hasMultipleExitingBlocks && UseEpilogRemainder && L->getParentLoop())
-    return false;
   // Use Scalar Evolution to compute the trip count. This allows more loops to
   // be unrolled than relying on induction var simplification.
   if (!SE)
@@ -725,7 +737,9 @@ bool llvm::UnrollRuntimeLoopRemainder(Loop *L, unsigned Count,
   // remainder are connected to the original Loop's exit blocks. The remaining
   // work is to update the phi nodes in the original loop, and take in the
   // values from the cloned region. Also update the dominator info for
-  // OtherExits, since we have new edges into OtherExits.
+  // OtherExits and their immediate successors, since we have new edges into
+  // OtherExits.
+  SmallSet<BasicBlock*, 8> ImmediateSuccessorsOfExitBlocks;
   for (auto *BB : OtherExits) {
    for (auto &II : *BB) {
 
@@ -748,12 +762,35 @@ bool llvm::UnrollRuntimeLoopRemainder(Loop *L, unsigned Count,
                            cast<BasicBlock>(VMap[Phi->getIncomingBlock(i)]));
      }
    }
+#if defined(EXPENSIVE_CHECKS) && !defined(NDEBUG)
+    for (BasicBlock *SuccBB : successors(BB)) {
+      assert(!(any_of(OtherExits,
+                      [SuccBB](BasicBlock *EB) { return EB == SuccBB; }) ||
+               SuccBB == LatchExit) &&
+             "Breaks the definition of dedicated exits!");
+    }
+#endif
    // Update the dominator info because the immediate dominator is no longer the
    // header of the original Loop. BB has edges both from L and remainder code.
    // Since the preheader determines which loop is run (L or directly jump to
    // the remainder code), we set the immediate dominator as the preheader.
-   if (DT)
+   if (DT) {
      DT->changeImmediateDominator(BB, PreHeader);
+     // Also update the IDom for immediate successors of BB.  If the current
+     // IDom is the header, update the IDom to be the preheader because that is
+     // the nearest common dominator of all predecessors of SuccBB.  We need to
+     // check for IDom being the header because successors of exit blocks can
+     // have edges from outside the loop, and we should not incorrectly update
+     // the IDom in that case.
+     for (BasicBlock *SuccBB: successors(BB))
+       if (ImmediateSuccessorsOfExitBlocks.insert(SuccBB).second) {
+         if (DT->getNode(SuccBB)->getIDom()->getBlock() == Header) {
+           assert(!SuccBB->getSinglePredecessor() &&
+                  "BB should be the IDom then!");
+           DT->changeImmediateDominator(SuccBB, PreHeader);
+         }
+       }
+    }
   }
 
   // Loop structure should be the following:

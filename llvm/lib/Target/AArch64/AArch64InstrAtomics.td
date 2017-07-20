@@ -451,3 +451,13 @@ def : Pat<(atomic_swap_8 GPR64:$Rn, GPR32:$Rs), (SWPALb GPR32:$Rs, GPR64sp:$Rn)>
 def : Pat<(atomic_swap_16 GPR64:$Rn, GPR32:$Rs), (SWPALh GPR32:$Rs, GPR64sp:$Rn)>;
 def : Pat<(atomic_swap_32 GPR64:$Rn, GPR32:$Rs), (SWPALs GPR32:$Rs, GPR64sp:$Rn)>;
 def : Pat<(atomic_swap_64 GPR64:$Rn, GPR64:$Rs), (SWPALd GPR64:$Rs, GPR64sp:$Rn)>;
+
+def : Pat<(atomic_load_sub_8 GPR64:$Rn, GPR32:$Rs), (LDADDALb (SUBWrr WZR, GPR32:$Rs), GPR64sp:$Rn)>;
+def : Pat<(atomic_load_sub_16 GPR64:$Rn, GPR32:$Rs), (LDADDALh (SUBWrr WZR, GPR32:$Rs), GPR64sp:$Rn)>;
+def : Pat<(atomic_load_sub_32 GPR64:$Rn, GPR32:$Rs), (LDADDALs (SUBWrr WZR, GPR32:$Rs), GPR64sp:$Rn)>;
+def : Pat<(atomic_load_sub_64 GPR64:$Rn, GPR64:$Rs), (LDADDALd (SUBXrr XZR, GPR64:$Rs), GPR64sp:$Rn)>;
+
+def : Pat<(atomic_load_and_8 GPR64:$Rn, GPR32:$Rs), (LDCLRALb (ORNWrr WZR, GPR32:$Rs), GPR64sp:$Rn)>;
+def : Pat<(atomic_load_and_16 GPR64:$Rn, GPR32:$Rs), (LDCLRALh (ORNWrr WZR, GPR32:$Rs), GPR64sp:$Rn)>;
+def : Pat<(atomic_load_and_32 GPR64:$Rn, GPR32:$Rs), (LDCLRALs (ORNWrr WZR, GPR32:$Rs), GPR64sp:$Rn)>;
+def : Pat<(atomic_load_and_64 GPR64:$Rn, GPR64:$Rs), (LDCLRALd (ORNXrr XZR, GPR64:$Rs), GPR64sp:$Rn)>;

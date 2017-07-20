@@ -220,8 +220,7 @@ static a128 NoTsanAtomicLoad(const volatile a128 *a, morder mo) {
 #endif
 
 template<typename T>
-static T AtomicLoad(ThreadState *thr, uptr pc, const volatile T *a,
-    morder mo) {
+static T AtomicLoad(ThreadState *thr, uptr pc, const volatile T *a, morder mo) {
   CHECK(IsLoadOrder(mo));
   // This fast-path is critical for performance.
   // Assume the access is atomic.
@@ -229,10 +228,17 @@ static T AtomicLoad(ThreadState *thr, uptr pc, const volatile T *a,
     MemoryReadAtomic(thr, pc, (uptr)a, SizeLog<T>());
     return NoTsanAtomicLoad(a, mo);
   }
-  SyncVar *s = ctx->metamap.GetOrCreateAndLock(thr, pc, (uptr)a, false);
-  AcquireImpl(thr, pc, &s->clock);
+  // Don't create sync object if it does not exist yet. For example, an atomic
+  // pointer is initialized to nullptr and then periodically acquire-loaded.
   T v = NoTsanAtomicLoad(a, mo);
-  s->mtx.ReadUnlock();
+  SyncVar *s = ctx->metamap.GetIfExistsAndLock((uptr)a, false);
+  if (s) {
+    AcquireImpl(thr, pc, &s->clock);
+    // Re-read under sync mutex because we need a consistent snapshot
+    // of the value and the clock we acquire.
+    v = NoTsanAtomicLoad(a, mo);
+    s->mtx.ReadUnlock();
+  }
   MemoryReadAtomic(thr, pc, (uptr)a, SizeLog<T>());
   return v;
 }

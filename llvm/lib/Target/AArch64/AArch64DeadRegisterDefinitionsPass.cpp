@@ -102,6 +102,10 @@ void AArch64DeadRegisterDefinitions::processMachineBasicBlock(
       case AArch64::LDADDALh:
       case AArch64::LDADDALs:
       case AArch64::LDADDALd:
+      case AArch64::LDCLRALb:
+      case AArch64::LDCLRALh:
+      case AArch64::LDCLRALs:
+      case AArch64::LDCLRALd:
       case AArch64::LDEORALb:
       case AArch64::LDEORALh:
       case AArch64::LDEORALs:

@@ -413,10 +413,10 @@ void Acquire(ThreadState *thr, uptr pc, uptr addr) {
 static void UpdateClockCallback(ThreadContextBase *tctx_base, void *arg) {
   ThreadState *thr = reinterpret_cast<ThreadState*>(arg);
   ThreadContext *tctx = static_cast<ThreadContext*>(tctx_base);
+  u64 epoch = tctx->epoch1;
   if (tctx->status == ThreadStatusRunning)
-    thr->clock.set(tctx->tid, tctx->thr->fast_state.epoch());
-  else
-    thr->clock.set(tctx->tid, tctx->epoch1);
+    epoch = tctx->thr->fast_state.epoch();
+  thr->clock.set(&thr->proc()->clock_cache, tctx->tid, epoch);
 }
 
 void AcquireGlobal(ThreadState *thr, uptr pc) {
@@ -456,10 +456,10 @@ void ReleaseStore(ThreadState *thr, uptr pc, uptr addr) {
 static void UpdateSleepClockCallback(ThreadContextBase *tctx_base, void *arg) {
   ThreadState *thr = reinterpret_cast<ThreadState*>(arg);
   ThreadContext *tctx = static_cast<ThreadContext*>(tctx_base);
+  u64 epoch = tctx->epoch1;
   if (tctx->status == ThreadStatusRunning)
-    thr->last_sleep_clock.set(tctx->tid, tctx->thr->fast_state.epoch());
-  else
-    thr->last_sleep_clock.set(tctx->tid, tctx->epoch1);
+    epoch = tctx->thr->fast_state.epoch();
+  thr->last_sleep_clock.set(&thr->proc()->clock_cache, tctx->tid, epoch);
 }
 
 void AfterSleep(ThreadState *thr, uptr pc) {

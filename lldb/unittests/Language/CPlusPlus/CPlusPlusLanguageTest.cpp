@@ -62,6 +62,11 @@ TEST(CPlusPlusLanguage, MethodNameParsing) {
        "XX::(anonymous namespace)::anon_class", "anon_func", "()", "const",
        "XX::(anonymous namespace)::anon_class::anon_func"},
 
+      // Lambda
+      {"main::{lambda()#1}::operator()() const::{lambda()#1}::operator()() const",
+       "main::{lambda()#1}::operator()() const::{lambda()#1}", "operator()", "()", "const",
+       "main::{lambda()#1}::operator()() const::{lambda()#1}::operator()"},
+
       // Function pointers
       {"string (*f(vector<int>&&))(float)", "", "f", "(vector<int>&&)", "",
        "f"},

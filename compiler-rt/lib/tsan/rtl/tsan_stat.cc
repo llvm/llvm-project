@@ -75,14 +75,11 @@ void StatOutput(u64 *stat) {
   name[StatClockAcquire]                 = "Clock acquire                     ";
   name[StatClockAcquireEmpty]            = "  empty clock                     ";
   name[StatClockAcquireFastRelease]      = "  fast from release-store         ";
-  name[StatClockAcquireLarge]            = "  contains my tid                 ";
-  name[StatClockAcquireRepeat]           = "  repeated (fast)                 ";
   name[StatClockAcquireFull]             = "  full (slow)                     ";
   name[StatClockAcquiredSomething]       = "  acquired something              ";
   name[StatClockRelease]                 = "Clock release                     ";
   name[StatClockReleaseResize]           = "  resize                          ";
-  name[StatClockReleaseFast1]            = "  fast1                           ";
-  name[StatClockReleaseFast2]            = "  fast2                           ";
+  name[StatClockReleaseFast]             = "  fast                            ";
   name[StatClockReleaseSlow]             = "  dirty overflow (slow)           ";
   name[StatClockReleaseFull]             = "  full (slow)                     ";
   name[StatClockReleaseAcquired]         = "  was acquired                    ";

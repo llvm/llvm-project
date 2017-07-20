@@ -58,10 +58,8 @@ PDBTypeServerHandler::handleInternal(PDBFile &File,
     return ExpectedTpi.takeError();
 
   // For handling a type server, we should be using whatever the callback array
-  // was
-  // that is being used for the original file.  We shouldn't allow the visitor
-  // to
-  // arbitrarily stick a deserializer in there.
+  // was that is being used for the original file.  We shouldn't allow the
+  // visitor to arbitrarily stick a deserializer in there.
   if (auto EC = codeview::visitTypeStream(ExpectedTpi->typeArray(), Callbacks,
                                           VDS_BytesExternal))
     return std::move(EC);
@@ -122,5 +120,6 @@ Expected<bool> PDBTypeServerHandler::handle(TypeServer2Record &TS,
   }
 
   // We couldn't find a matching PDB, so let it be handled by someone else.
-  return false;
+  return make_error<GenericError>(generic_error_code::type_server_not_found,
+                                  File);
 }

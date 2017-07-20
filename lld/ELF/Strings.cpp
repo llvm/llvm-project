@@ -38,29 +38,6 @@ bool StringMatcher::match(StringRef S) const {
   return false;
 }
 
-// If an input string is in the form of "foo.N" where N is a number,
-// return N. Otherwise, returns 65536, which is one greater than the
-// lowest priority.
-int elf::getPriority(StringRef S) {
-  size_t Pos = S.rfind('.');
-  if (Pos == StringRef::npos)
-    return 65536;
-  int V;
-  if (!to_integer(S.substr(Pos + 1), V, 10))
-    return 65536;
-  return V;
-}
-
-bool elf::hasWildcard(StringRef S) {
-  return S.find_first_of("?*[") != StringRef::npos;
-}
-
-StringRef elf::unquote(StringRef S) {
-  if (!S.startswith("\""))
-    return S;
-  return S.substr(1, S.size() - 2);
-}
-
 // Converts a hex string (e.g. "deadbeef") to a vector.
 std::vector<uint8_t> elf::parseHex(StringRef S) {
   std::vector<uint8_t> Hex;

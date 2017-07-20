@@ -13,6 +13,7 @@ if( APPLE )
   endif()
 endif()
 
+set(LIBFUZZER_FLAGS_BASE "${CMAKE_CXX_FLAGS}")
 if( LLVM_USE_SANITIZE_COVERAGE )
   if(NOT "${LLVM_USE_SANITIZER}" STREQUAL "Address")
     message(FATAL_ERROR
@@ -20,7 +21,6 @@ if( LLVM_USE_SANITIZE_COVERAGE )
       "LLVM_USE_SANITIZE_COVERAGE=YES to be set."
       )
   endif()
-  set(LIBFUZZER_FLAGS_BASE "${CMAKE_CXX_FLAGS}")
 
   # Disable the coverage and sanitizer instrumentation for the fuzzer itself.
   set(CMAKE_CXX_FLAGS "${LIBFUZZER_FLAGS_BASE} -fno-sanitize-coverage=trace-pc-guard,edge,trace-cmp,indirect-calls,8bit-counters -Werror")
@@ -46,7 +46,6 @@ if ( LLVM_USE_SANITIZE_COVERAGE OR CMAKE_SYSTEM_NAME MATCHES "Darwin|Linux" )
       FuzzerShmemPosix.cpp
       FuzzerShmemWindows.cpp
       FuzzerTracePC.cpp
-      FuzzerTraceState.cpp
       FuzzerUtil.cpp
       FuzzerUtilDarwin.cpp
       FuzzerUtilLinux.cpp

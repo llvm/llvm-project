@@ -2364,17 +2364,20 @@ parse_type(const char* first, const char* last, Db& db)
                                 first = t;
                                 // Parsed a substitution.  If the substitution is a
                                 //  <template-param> it might be followed by <template-args>.
-                                t = parse_template_args(first, last, db);
-                                if (t != first)
+                                if (db.try_to_parse_template_args)
                                 {
-                                    if (db.names.size() < 2)
-                                        return first;
-                                    auto template_args = db.names.back().move_full();
-                                    db.names.pop_back();
-                                    db.names.back().first += template_args;
-                                    // Need to create substitution for <template-template-param> <template-args>
-                                    db.subs.push_back(Db::sub_type(1, db.names.back(), db.names.get_allocator()));
-                                    first = t;
+                                    t = parse_template_args(first, last, db);
+                                    if (t != first)
+                                    {
+                                        if (db.names.size() < 2)
+                                            return first;
+                                        auto template_args = db.names.back().move_full();
+                                        db.names.pop_back();
+                                        db.names.back().first += template_args;
+                                        // Need to create substitution for <template-template-param> <template-args>
+                                        db.subs.push_back(Db::sub_type(1, db.names.back(), db.names.get_allocator()));
+                                        first = t;
+                                    }
                                 }
                             }
                         }

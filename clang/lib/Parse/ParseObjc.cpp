@@ -1007,6 +1007,10 @@ IdentifierInfo *Parser::ParseObjCSelectorPiece(SourceLocation &SelectorLoc) {
   switch (Tok.getKind()) {
   default:
     return nullptr;
+  case tok::colon:
+    // Empty selector piece uses the location of the ':'.
+    SelectorLoc = Tok.getLocation();
+    return nullptr;
   case tok::ampamp:
   case tok::ampequal:
   case tok::amp:

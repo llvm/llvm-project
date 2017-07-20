@@ -2475,7 +2475,7 @@ void CommandInterpreter::HandleCommandsFromFile(
 }
 
 ScriptInterpreter *CommandInterpreter::GetScriptInterpreter(bool can_create) {
-  std::lock_guard<std::mutex> locker(m_script_interpreter_mutex);
+  std::lock_guard<std::recursive_mutex> locker(m_script_interpreter_mutex);
   if (!m_script_interpreter_sp) {
     if (!can_create)
       return nullptr;

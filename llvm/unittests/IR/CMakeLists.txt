@@ -10,6 +10,7 @@ set(IRSources
   AsmWriterTest.cpp
   AttributesTest.cpp
   BasicBlockTest.cpp
+  CFGBuilder.cpp
   ConstantRangeTest.cpp
   ConstantsTest.cpp
   DebugInfoTest.cpp

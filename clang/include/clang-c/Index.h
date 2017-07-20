@@ -4417,6 +4417,11 @@ CINDEX_LINKAGE unsigned clang_CXXMethod_isStatic(CXCursor C);
 CINDEX_LINKAGE unsigned clang_CXXMethod_isVirtual(CXCursor C);
 
 /**
+ * \brief Determine if an enum declaration refers to a scoped enum.
+ */
+CINDEX_LINKAGE unsigned clang_EnumDecl_isScoped(CXCursor C);
+
+/**
  * \brief Determine if a C++ member function or member function template is
  * declared 'const'.
  */

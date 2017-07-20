@@ -142,6 +142,10 @@ void ThreadContext::OnFinished() {
 
   if (common_flags()->detect_deadlocks)
     ctx->dd->DestroyLogicalThread(thr->dd_lt);
+  thr->clock.ResetCached(&thr->proc()->clock_cache);
+#if !SANITIZER_GO
+  thr->last_sleep_clock.ResetCached(&thr->proc()->clock_cache);
+#endif
   thr->~ThreadState();
 #if TSAN_COLLECT_STATS
   StatAggregate(ctx->stat, thr->stat);

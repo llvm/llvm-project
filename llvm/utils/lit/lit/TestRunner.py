@@ -715,6 +715,8 @@ def executeScript(test, litConfig, tmpBase, commands, cwd):
     else:
         if test.config.pipefail:
             f.write('set -o pipefail;')
+        if litConfig.echo_all_commands:
+            f.write('set -x;')
         f.write('{ ' + '; } &&\n{ '.join(commands) + '; }')
     f.write('\n')
     f.close()

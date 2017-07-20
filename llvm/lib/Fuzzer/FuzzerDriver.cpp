@@ -265,7 +265,7 @@ int RunOneTest(Fuzzer *F, const char *InputFilePath, size_t MaxLen) {
   Unit U = FileToVector(InputFilePath);
   if (MaxLen && MaxLen < U.size())
     U.resize(MaxLen);
-  F->RunOne(U.data(), U.size());
+  F->ExecuteCallback(U.data(), U.size());
   F->TryDetectingAMemoryLeak(U.data(), U.size(), true);
   return 0;
 }
@@ -441,7 +441,6 @@ int MinimizeCrashInputInternalStep(Fuzzer *F, InputCorpus *Corpus) {
     Printf("INFO: The input is small enough, exiting\n");
     exit(0);
   }
-  Corpus->AddToCorpus(U, 0);
   F->SetMaxInputLen(U.size());
   F->SetMaxMutationLen(U.size() - 1);
   F->MinimizeCrashLoop(U);
@@ -572,6 +571,7 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   Options.UseCmp = Flags.use_cmp;
   Options.UseValueProfile = Flags.use_value_profile;
   Options.Shrink = Flags.shrink;
+  Options.ReduceInputs = Flags.reduce_inputs;
   Options.ShuffleAtStartUp = Flags.shuffle;
   Options.PreferSmall = Flags.prefer_small;
   Options.ReloadIntervalSec = Flags.reload;
@@ -657,7 +657,7 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
       size_t Size = SMR.ReadByteArraySize();
       SMR.WriteByteArray(nullptr, 0);
       const Unit tmp(SMR.GetByteArray(), SMR.GetByteArray() + Size);
-      F->RunOne(tmp.data(), tmp.size());
+      F->ExecuteCallback(tmp.data(), tmp.size());
       SMR.PostServer();
     }
     return 0;

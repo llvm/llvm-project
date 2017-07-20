@@ -1880,6 +1880,9 @@ isProfitableToIfCvt(MachineBasicBlock &TBB,
       // Diamond: TBB is the block that is branched to, FBB is the fallthrough
       TUnpredCycles = TCycles + TakenBranchCost;
       FUnpredCycles = FCycles + NotTakenBranchCost;
+      // The branch at the end of FBB will disappear when it's predicated, so
+      // discount it from PredCost.
+      PredCost -= 1 * ScalingUpFactor;
     }
     // The total cost is the cost of each path scaled by their probabilites
     unsigned TUnpredCost = Probability.scale(TUnpredCycles * ScalingUpFactor);

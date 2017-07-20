@@ -318,7 +318,7 @@ __blsi_u64(unsigned long long __X)
 ///
 /// \param __X
 ///    An unsigned 64-bit integer used to create the mask.
-/// \returns A unsigned 64-bit integer containing the newly created mask.
+/// \returns An unsigned 64-bit integer containing the newly created mask.
 static __inline__ unsigned long long __DEFAULT_FN_ATTRS
 __blsmsk_u64(unsigned long long __X)
 {
