@@ -15,15 +15,15 @@ int main(int argc, const char *argv[]) {
   pthread_mutex_init(&m1, NULL);
   pthread_mutex_init(&m2, NULL);
   
-  [NSThread detachNewThreadWithBlock:^{
+  dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
     pthread_mutex_lock(&m1);
     pthread_mutex_lock(&m2);
     pthread_mutex_unlock(&m2);
     pthread_mutex_unlock(&m1);
 
     barrier_wait(&barrier);
-  }];
-  [NSThread detachNewThreadWithBlock:^{
+  });
+  dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
     barrier_wait(&barrier);
 
     pthread_mutex_lock(&m2);
@@ -34,7 +34,7 @@ int main(int argc, const char *argv[]) {
     dispatch_sync(dispatch_get_main_queue(), ^{
       CFRunLoopStop(CFRunLoopGetCurrent());
     });
-  }];
+  });
 
   CFRunLoopRun();
   
