@@ -381,6 +381,7 @@ struct ThreadState {
   // for better performance.
   int ignore_reads_and_writes;
   int ignore_sync;
+  int suppress_reports;
   // Go does not support ignores.
 #if !SANITIZER_GO
   IgnoreSet mop_ignore_set;
