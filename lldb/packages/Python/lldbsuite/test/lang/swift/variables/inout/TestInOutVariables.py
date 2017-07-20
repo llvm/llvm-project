@@ -100,6 +100,8 @@ class TestInOutVariables(TestBase):
                 lldb.eDynamicCanRunTarget)
             message_end = "from FindVariable"
 
+            _ = self.frame.FindVariable("x").description
+
         self.assertTrue(x.IsValid(), "did not find x %s" % (message_end))
         self.assertTrue(
             x.GetNumChildren() == 1,
