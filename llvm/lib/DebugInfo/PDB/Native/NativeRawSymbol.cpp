@@ -13,7 +13,7 @@
 using namespace llvm;
 using namespace llvm::pdb;
 
-NativeRawSymbol::NativeRawSymbol(NativeSession &PDBSession, uint32_t SymbolId)
+NativeRawSymbol::NativeRawSymbol(NativeSession &PDBSession, SymIndexId SymbolId)
     : Session(PDBSession), SymbolId(SymbolId) {}
 
 void NativeRawSymbol::dump(raw_ostream &OS, int Indent) const {}

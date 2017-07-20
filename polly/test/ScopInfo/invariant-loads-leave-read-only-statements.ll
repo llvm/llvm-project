@@ -2,28 +2,19 @@
 ; RUN: opt %loadPolly -polly-codegen -polly-invariant-load-hoisting=true -analyze < %s
 
 ; CHECK:      Statements {
-; CHECK-NEXT:     Stmt_top_split
-; CHECK-NEXT:         Domain :=
-; CHECK-NEXT:             [tmp8, tmp22, tmp15] -> { Stmt_top_split[] };
-; CHECK-NEXT:         Schedule :=
-; CHECK-NEXT:             [tmp8, tmp22, tmp15] -> { Stmt_top_split[] -> [0, 0, 0, 0] };
-; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 1]
-; CHECK-NEXT:             [tmp8, tmp22, tmp15] -> { Stmt_top_split[] -> MemRef_tmp25[] };
-; CHECK-NEXT:     Stmt_L_4
+; CHECK-NEXT: 	Stmt_L_4
 ; CHECK-NEXT:         Domain :=
 ; CHECK-NEXT:             [tmp8, tmp22, tmp15] -> { Stmt_L_4[i0, i1, i2] : 0 <= i0 < tmp8 and 0 <= i1 < tmp8 and 0 <= i2 < tmp8 };
 ; CHECK-NEXT:         Schedule :=
-; CHECK-NEXT:             [tmp8, tmp22, tmp15] -> { Stmt_L_4[i0, i1, i2] -> [1, i0, i1, i2] };
-; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:             [tmp8, tmp22, tmp15] -> { Stmt_L_4[i0, i1, i2] -> [i0, i1, i2] };
+; CHECK-NEXT:         ReadAccess :=	[Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:             [tmp8, tmp22, tmp15] -> { Stmt_L_4[i0, i1, i2] -> MemRef_tmp19[i1, i0] };
-; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:         ReadAccess :=	[Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:             [tmp8, tmp22, tmp15] -> { Stmt_L_4[i0, i1, i2] -> MemRef_tmp5[i2, i0] };
-; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:         ReadAccess :=	[Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:             [tmp8, tmp22, tmp15] -> { Stmt_L_4[i0, i1, i2] -> MemRef_tmp12[i2, i1] };
-; CHECK-NEXT:         MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:         MustWriteAccess :=	[Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:             [tmp8, tmp22, tmp15] -> { Stmt_L_4[i0, i1, i2] -> MemRef_tmp19[i1, i0] };
-; CHECK-NEXT:         ReadAccess :=    [Reduction Type: NONE] [Scalar: 1]
-; CHECK-NEXT:             [tmp8, tmp22, tmp15] -> { Stmt_L_4[i0, i1, i2] -> MemRef_tmp25[] };
 ; CHECK-NEXT: }
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

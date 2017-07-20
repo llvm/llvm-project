@@ -765,7 +765,7 @@ static void declare_symbols(LLVMModuleRef Src, LLVMModuleRef M) {
   LLVMValueRef Next = nullptr;
   if (!Begin) {
     if (End != nullptr)
-      report_fatal_error("Range has an end but no begining");
+      report_fatal_error("Range has an end but no beginning");
     goto FunDecl;
   }
 
@@ -794,7 +794,7 @@ FunDecl:
   End = LLVMGetLastFunction(Src);
   if (!Begin) {
     if (End != nullptr)
-      report_fatal_error("Range has an end but no begining");
+      report_fatal_error("Range has an end but no beginning");
     return;
   }
 
@@ -844,7 +844,7 @@ static void clone_symbols(LLVMModuleRef Src, LLVMModuleRef M) {
   LLVMValueRef Next = nullptr;
   if (!Begin) {
     if (End != nullptr)
-      report_fatal_error("Range has an end but no begining");
+      report_fatal_error("Range has an end but no beginning");
     goto FunClone;
   }
 
@@ -885,7 +885,7 @@ FunClone:
   End = LLVMGetLastFunction(Src);
   if (!Begin) {
     if (End != nullptr)
-      report_fatal_error("Range has an end but no begining");
+      report_fatal_error("Range has an end but no beginning");
     return;
   }
 

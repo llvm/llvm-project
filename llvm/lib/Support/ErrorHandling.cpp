@@ -20,15 +20,13 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/ManagedStatic.h"
-#include "llvm/Support/Mutex.h"
-#include "llvm/Support/MutexGuard.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/WindowsError.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdlib>
+#include <mutex>
 #include <new>
 
 #if defined(HAVE_UNISTD_H)
@@ -43,22 +41,40 @@ using namespace llvm;
 
 static fatal_error_handler_t ErrorHandler = nullptr;
 static void *ErrorHandlerUserData = nullptr;
-static ManagedStatic<sys::Mutex> ErrorHandlerMutex;
 
 static fatal_error_handler_t BadAllocErrorHandler = nullptr;
 static void *BadAllocErrorHandlerUserData = nullptr;
-static ManagedStatic<sys::Mutex> BadAllocErrorHandlerMutex;
+
+#if LLVM_ENABLE_THREADS == 1
+// Mutexes to synchronize installing error handlers and calling error handlers.
+// Do not use ManagedStatic, or that may allocate memory while attempting to
+// report an OOM.
+//
+// This usage of std::mutex has to be conditionalized behind ifdefs because
+// of this script:
+//   compiler-rt/lib/sanitizer_common/symbolizer/scripts/build_symbolizer.sh
+// That script attempts to statically link the LLVM symbolizer library with the
+// STL and hide all of its symbols with 'opt -internalize'. To reduce size, it
+// cuts out the threading portions of the hermetic copy of libc++ that it
+// builds. We can remove these ifdefs if that script goes away.
+static std::mutex ErrorHandlerMutex;
+static std::mutex BadAllocErrorHandlerMutex;
+#endif
 
 void llvm::install_fatal_error_handler(fatal_error_handler_t handler,
                                        void *user_data) {
-  llvm::MutexGuard Lock(*ErrorHandlerMutex);
+#if LLVM_ENABLE_THREADS == 1
+  std::lock_guard<std::mutex> Lock(ErrorHandlerMutex);
+#endif
   assert(!ErrorHandler && "Error handler already registered!\n");
   ErrorHandler = handler;
   ErrorHandlerUserData = user_data;
 }
 
 void llvm::remove_fatal_error_handler() {
-  llvm::MutexGuard Lock(*ErrorHandlerMutex);
+#if LLVM_ENABLE_THREADS == 1
+  std::lock_guard<std::mutex> Lock(ErrorHandlerMutex);
+#endif
   ErrorHandler = nullptr;
   ErrorHandlerUserData = nullptr;
 }
@@ -81,7 +97,9 @@ void llvm::report_fatal_error(const Twine &Reason, bool GenCrashDiag) {
   {
     // Only acquire the mutex while reading the handler, so as not to invoke a
     // user-supplied callback under a lock.
-    llvm::MutexGuard Lock(*ErrorHandlerMutex);
+#if LLVM_ENABLE_THREADS == 1
+    std::lock_guard<std::mutex> Lock(ErrorHandlerMutex);
+#endif
     handler = ErrorHandler;
     handlerData = ErrorHandlerUserData;
   }
@@ -110,14 +128,18 @@ void llvm::report_fatal_error(const Twine &Reason, bool GenCrashDiag) {
 
 void llvm::install_bad_alloc_error_handler(fatal_error_handler_t handler,
                                            void *user_data) {
-  MutexGuard Lock(*BadAllocErrorHandlerMutex);
+#if LLVM_ENABLE_THREADS == 1
+  std::lock_guard<std::mutex> Lock(BadAllocErrorHandlerMutex);
+#endif
   assert(!ErrorHandler && "Bad alloc error handler already registered!\n");
   BadAllocErrorHandler = handler;
   BadAllocErrorHandlerUserData = user_data;
 }
 
 void llvm::remove_bad_alloc_error_handler() {
-  MutexGuard Lock(*BadAllocErrorHandlerMutex);
+#if LLVM_ENABLE_THREADS == 1
+  std::lock_guard<std::mutex> Lock(BadAllocErrorHandlerMutex);
+#endif
   BadAllocErrorHandler = nullptr;
   BadAllocErrorHandlerUserData = nullptr;
 }
@@ -128,7 +150,9 @@ void llvm::report_bad_alloc_error(const char *Reason, bool GenCrashDiag) {
   {
     // Only acquire the mutex while reading the handler, so as not to invoke a
     // user-supplied callback under a lock.
-    MutexGuard Lock(*BadAllocErrorHandlerMutex);
+#if LLVM_ENABLE_THREADS == 1
+    std::lock_guard<std::mutex> Lock(BadAllocErrorHandlerMutex);
+#endif
     Handler = BadAllocErrorHandler;
     HandlerData = BadAllocErrorHandlerUserData;
   }
@@ -142,8 +166,11 @@ void llvm::report_bad_alloc_error(const char *Reason, bool GenCrashDiag) {
   // If exceptions are enabled, make OOM in malloc look like OOM in new.
   throw std::bad_alloc();
 #else
-  // Otherwise, fall back to the normal fatal error handler.
-  report_fatal_error("out of memory: " + Twine(Reason));
+  // Don't call the normal error handler. It may allocate memory. Directly write
+  // an OOM to stderr and abort.
+  char OOMMessage[] = "LLVM ERROR: out of memory\n";
+  (void)::write(2, OOMMessage, strlen(OOMMessage));
+  abort();
 #endif
 }
 

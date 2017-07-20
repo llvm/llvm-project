@@ -873,6 +873,22 @@ def int_memcpy_element_unordered_atomic
                   ReadOnly<1>
                 ]>;
 
+// @llvm.memmove.element.unordered.atomic.*(dest, src, length, elementsize)
+def int_memmove_element_unordered_atomic
+    : Intrinsic<[],
+                [
+                  llvm_anyptr_ty, llvm_anyptr_ty, llvm_anyint_ty, llvm_i32_ty
+                ],
+                [
+                  IntrArgMemOnly, NoCapture<0>, NoCapture<1>, WriteOnly<0>,
+                  ReadOnly<1>
+                ]>;
+
+// @llvm.memset.element.unordered.atomic.*(dest, value, length, elementsize)
+def int_memset_element_unordered_atomic
+    : Intrinsic<[], [ llvm_anyptr_ty, llvm_i8_ty, llvm_anyint_ty, llvm_i32_ty ],
+                [ IntrArgMemOnly, NoCapture<0>, WriteOnly<0> ]>;
+
 //===------------------------ Reduction Intrinsics ------------------------===//
 //
 def int_experimental_vector_reduce_fadd : Intrinsic<[llvm_anyfloat_ty],

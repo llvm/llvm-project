@@ -86,8 +86,6 @@
 // however, is that finding the locations where the implicit uses need
 // to be added, and updating the live ranges will be more involved.
 
-#define DEBUG_TYPE "expand-condsets"
-
 #include "HexagonInstrInfo.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
@@ -115,6 +113,8 @@
 #include <iterator>
 #include <set>
 #include <utility>
+
+#define DEBUG_TYPE "expand-condsets"
 
 using namespace llvm;
 

@@ -314,7 +314,7 @@ void ScopedReport::AddLocation(uptr addr, uptr size) {
     return;
 #if !SANITIZER_GO
   int fd = -1;
-  int creat_tid = -1;
+  int creat_tid = kInvalidTid;
   u32 creat_stack = 0;
   if (FdLocation(addr, &fd, &creat_tid, &creat_stack)) {
     ReportLocation *loc = ReportLocation::New(ReportLocationFD);

@@ -73,6 +73,12 @@ Improvements to clang-tidy
 
   Checks if the required mode ``e`` exists in the mode argument of ``fopen()``.
 
+- New `android-cloexec-socket
+  <http://clang.llvm.org/extra/clang-tidy/checks/android-cloexec-socket.html>`_ check
+
+  Checks if the required file flag ``SOCK_CLOEXEC`` is present in the argument of
+  ``socket()``.
+
 - New `cert-dcl21-cpp
   <http://clang.llvm.org/extra/clang-tidy/checks/cert-dcl21-cpp.html>`_ check
 
@@ -107,6 +113,12 @@ Improvements to clang-tidy
 
   Finds and replaces explicit calls to the constructor in a return statement by
   a braced initializer list so that the return type is not needlessly repeated.
+
+- New `modernize-unary-static-assert-check
+  <http://clang.llvm.org/extra/clang-tidy/checks/modernize-unary-static-assert.html>`_ check
+
+  The check diagnoses any ``static_assert`` declaration with an empty string literal
+  and provides a fix-it to replace the declaration with a single-argument ``static_assert`` declaration.
 
 - Improved `modernize-use-emplace
   <http://clang.llvm.org/extra/clang-tidy/checks/modernize-use-emplace.html>`_ check

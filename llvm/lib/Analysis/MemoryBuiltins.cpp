@@ -505,6 +505,22 @@ SizeOffsetType ObjectSizeOffsetVisitor::compute(Value *V) {
   return unknown();
 }
 
+/// When we're compiling N-bit code, and the user uses parameters that are
+/// greater than N bits (e.g. uint64_t on a 32-bit build), we can run into
+/// trouble with APInt size issues. This function handles resizing + overflow
+/// checks for us. Check and zext or trunc \p I depending on IntTyBits and
+/// I's value.
+bool ObjectSizeOffsetVisitor::CheckedZextOrTrunc(APInt &I) {
+  // More bits than we can handle. Checking the bit width isn't necessary, but
+  // it's faster than checking active bits, and should give `false` in the
+  // vast majority of cases.
+  if (I.getBitWidth() > IntTyBits && I.getActiveBits() > IntTyBits)
+    return false;
+  if (I.getBitWidth() != IntTyBits)
+    I = I.zextOrTrunc(IntTyBits);
+  return true;
+}
+
 SizeOffsetType ObjectSizeOffsetVisitor::visitAllocaInst(AllocaInst &I) {
   if (!I.getAllocatedType()->isSized())
     return unknown();
@@ -515,8 +531,14 @@ SizeOffsetType ObjectSizeOffsetVisitor::visitAllocaInst(AllocaInst &I) {
 
   Value *ArraySize = I.getArraySize();
   if (const ConstantInt *C = dyn_cast<ConstantInt>(ArraySize)) {
-    Size *= C->getValue().zextOrSelf(IntTyBits);
-    return std::make_pair(align(Size, I.getAlignment()), Zero);
+    APInt NumElems = C->getValue();
+    if (!CheckedZextOrTrunc(NumElems))
+      return unknown();
+
+    bool Overflow;
+    Size = Size.umul_ov(NumElems, Overflow);
+    return Overflow ? unknown() : std::make_pair(align(Size, I.getAlignment()),
+                                                 Zero);
   }
   return unknown();
 }
@@ -560,21 +582,6 @@ SizeOffsetType ObjectSizeOffsetVisitor::visitCallSite(CallSite CS) {
   ConstantInt *Arg = dyn_cast<ConstantInt>(CS.getArgument(FnData->FstParam));
   if (!Arg)
     return unknown();
-
-  // When we're compiling N-bit code, and the user uses parameters that are
-  // greater than N bits (e.g. uint64_t on a 32-bit build), we can run into
-  // trouble with APInt size issues. This function handles resizing + overflow
-  // checks for us.
-  auto CheckedZextOrTrunc = [&](APInt &I) {
-    // More bits than we can handle. Checking the bit width isn't necessary, but
-    // it's faster than checking active bits, and should give `false` in the
-    // vast majority of cases.
-    if (I.getBitWidth() > IntTyBits && I.getActiveBits() > IntTyBits)
-      return false;
-    if (I.getBitWidth() != IntTyBits)
-      I = I.zextOrTrunc(IntTyBits);
-    return true;
-  };
 
   APInt Size = Arg->getValue();
   if (!CheckedZextOrTrunc(Size))

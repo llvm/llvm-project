@@ -24,6 +24,98 @@ using namespace llvm;
 using namespace dwarf;
 using namespace object;
 
+bool DWARFVerifier::verifyUnitHeader(const DWARFDataExtractor DebugInfoData,
+                               uint32_t *Offset, unsigned UnitIndex,
+                               bool &isUnitDWARF64) {
+  uint32_t AbbrOffset, Length;
+  uint8_t AddrSize = 0, UnitType = 0;
+  uint16_t Version;
+  bool Success = true;
+  uint32_t HeaderSize =
+      11; // means that we have only compile units in .debug_info
+
+  bool ValidLength = false;
+  bool ValidVersion = false;
+  bool ValidAddrSize = false;
+  bool ValidType = true;
+  bool ValidAbbrevOffset = true;
+
+  uint32_t OffsetStart = *Offset;
+  Length = DebugInfoData.getU32(Offset);
+  if (Length == UINT32_MAX) {
+    isUnitDWARF64 = true;
+    OS << format(
+        "Unit[%d] is in 64-bit DWARF format; cannot verify from this point.\n",
+        UnitIndex);
+    return false;
+  }
+  Version = DebugInfoData.getU16(Offset);
+
+  if (Version >= 5) {
+    UnitType = DebugInfoData.getU8(Offset);
+    AddrSize = DebugInfoData.getU8(Offset);
+    AbbrOffset = DebugInfoData.getU32(Offset);
+    ValidType = DWARFUnit::isValidUnitType(UnitType);
+    if (ValidType)
+      HeaderSize = DWARFUnit::getDWARF5HeaderSize(UnitType);
+  } else {
+    AbbrOffset = DebugInfoData.getU32(Offset);
+    AddrSize = DebugInfoData.getU8(Offset);
+  }
+
+  if (!DCtx.getDebugAbbrev()->getAbbreviationDeclarationSet(AbbrOffset))
+    ValidAbbrevOffset = false;
+
+  ValidLength = DebugInfoData.isValidOffset(OffsetStart + Length + 3);
+  ValidVersion = DWARFContext::isSupportedVersion(Version);
+  ValidAddrSize = AddrSize == 4 || AddrSize == 8;
+  if (!ValidLength || !ValidVersion || !ValidAddrSize || !ValidAbbrevOffset ||
+      !ValidType) {
+    Success = false;
+    OS << format("Units[%d] - start offset: 0x%08x \n", UnitIndex, OffsetStart);
+    if (!ValidLength)
+      OS << "\tError: The length for this unit is too "
+            "large for the .debug_info provided.\n";
+    if (!ValidVersion)
+      OS << "\tError: The 16 bit unit header version is not valid.\n";
+    if (!ValidType)
+      OS << "\tError: The unit type encoding is not valid.\n";
+    if (!ValidAbbrevOffset)
+      OS << "\tError: The offset into the .debug_abbrev section is "
+            "not valid.\n";
+    if (!ValidAddrSize)
+      OS << "\tError: The address size is unsupported.\n";
+  }
+  *Offset = OffsetStart + Length + 4;
+  return Success;
+}
+
+bool DWARFVerifier::handleDebugInfoUnitHeaderChain() {
+  OS << "Verifying .debug_info Unit Header Chain...\n";
+
+  DWARFDataExtractor DebugInfoData(DCtx.getInfoSection(), DCtx.isLittleEndian(),
+                                   0);
+  uint32_t OffsetStart, Offset = 0, UnitIdx = 0;
+  bool isUnitDWARF64 = false;
+  bool Success = true;
+  bool hasDIE = DebugInfoData.isValidOffset(Offset);
+  while (hasDIE) {
+    OffsetStart = Offset;
+    if (!verifyUnitHeader(DebugInfoData, &Offset, UnitIdx, isUnitDWARF64)) {
+      Success = false;
+      if (isUnitDWARF64)
+        break;
+    }
+    hasDIE = DebugInfoData.isValidOffset(Offset);
+    ++UnitIdx;
+  }
+  if (UnitIdx == 0 && !hasDIE) {
+    OS << "Warning: .debug_info is empty.\n";
+    Success = true;
+  }
+  return Success;
+}
+
 void DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
                                              DWARFAttribute &AttrValue) {
   const auto Attr = AttrValue.Attr;

@@ -123,40 +123,4 @@ bool testCPUFeature(CPUFeature Feature) {
 }
 #endif  // defined(__x86_64__) || defined(__i386__)
 
-// readRetry will attempt to read Count bytes from the Fd specified, and if
-// interrupted will retry to read additional bytes to reach Count.
-static ssize_t readRetry(int Fd, u8 *Buffer, size_t Count) {
-  ssize_t AmountRead = 0;
-  while (static_cast<size_t>(AmountRead) < Count) {
-    ssize_t Result = read(Fd, Buffer + AmountRead, Count - AmountRead);
-    if (Result > 0)
-      AmountRead += Result;
-    else if (!Result)
-      break;
-    else if (errno != EINTR) {
-      AmountRead = -1;
-      break;
-    }
-  }
-  return AmountRead;
-}
-
-static void fillRandom(u8 *Data, ssize_t Size) {
-  int Fd = open("/dev/urandom", O_RDONLY);
-  if (Fd < 0) {
-    dieWithMessage("ERROR: failed to open /dev/urandom.\n");
-  }
-  bool Success = readRetry(Fd, Data, Size) == Size;
-  close(Fd);
-  if (!Success) {
-    dieWithMessage("ERROR: failed to read enough data from /dev/urandom.\n");
-  }
-}
-
-// Seeds the xorshift state with /dev/urandom.
-// TODO(kostyak): investigate using getrandom() if available.
-void Xorshift128Plus::initFromURandom() {
-  fillRandom(reinterpret_cast<u8 *>(State), sizeof(State));
-}
-
 }  // namespace __scudo

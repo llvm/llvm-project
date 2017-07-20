@@ -217,6 +217,9 @@ bool UndefinedBehaviorSanitizerRuntime::NotifyBreakpointHit(
       process_sp != context->exe_ctx_ref.GetProcessSP())
     return false;
 
+  if (process_sp->GetModIDRef().IsLastResumeForUserExpression())
+    return false;
+
   StructuredData::ObjectSP report =
       instance->RetrieveReportData(context->exe_ctx_ref);
 

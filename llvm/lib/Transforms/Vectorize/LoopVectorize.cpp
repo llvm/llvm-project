@@ -5315,8 +5315,13 @@ void LoopVectorizationLegality::addInductionPhi(
 
   // Both the PHI node itself, and the "post-increment" value feeding
   // back into the PHI node may have external users.
-  AllowedExit.insert(Phi);
-  AllowedExit.insert(Phi->getIncomingValueForBlock(TheLoop->getLoopLatch()));
+  // We can allow those uses, except if the SCEVs we have for them rely
+  // on predicates that only hold within the loop, since allowing the exit
+  // currently means re-using this SCEV outside the loop.
+  if (PSE.getUnionPredicate().isAlwaysTrue()) {
+    AllowedExit.insert(Phi);
+    AllowedExit.insert(Phi->getIncomingValueForBlock(TheLoop->getLoopLatch()));
+  }
 
   DEBUG(dbgs() << "LV: Found an induction variable.\n");
   return;

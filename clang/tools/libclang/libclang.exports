@@ -12,6 +12,7 @@ clang_CXXMethod_isConst
 clang_CXXMethod_isPureVirtual
 clang_CXXMethod_isStatic
 clang_CXXMethod_isVirtual
+clang_EnumDecl_isScoped
 clang_Cursor_getArgument
 clang_Cursor_getNumTemplateArguments
 clang_Cursor_getTemplateArgumentKind

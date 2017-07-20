@@ -3073,6 +3073,10 @@ def: Pat<(v4i8 (HexagonVSPLAT I32:$Rs)), (S2_vsplatrb I32:$Rs)>;
 // four halfwords of 64-bits destination register.
 def: Pat<(v4i16 (HexagonVSPLAT I32:$Rs)), (S2_vsplatrh I32:$Rs)>;
 
+def: Pat<(v2i32 (HexagonVSPLAT s8_0ImmPred:$s8)),
+         (A2_combineii imm:$s8, imm:$s8)>;
+def: Pat<(v2i32 (HexagonVSPLAT I32:$Rs)), (A2_combinew I32:$Rs, I32:$Rs)>;
+
 
 class VArith_pat <InstHexagon MI, SDNode Op, PatFrag Type>
   : Pat <(Op Type:$Rss, Type:$Rtt),
@@ -3099,14 +3103,11 @@ def: VArith_pat <A2_xorp,   xor, V8I8>;
 def: VArith_pat <A2_xorp,   xor, V4I16>;
 def: VArith_pat <A2_xorp,   xor, V2I32>;
 
-def: Pat<(v2i32 (sra V2I32:$b, (i64 (HexagonCOMBINE (i32 u5_0ImmPred:$c),
-                                                    (i32 u5_0ImmPred:$c))))),
+def: Pat<(v2i32 (sra V2I32:$b, (v2i32 (HexagonVSPLAT u5_0ImmPred:$c)))),
          (S2_asr_i_vw V2I32:$b, imm:$c)>;
-def: Pat<(v2i32 (srl V2I32:$b, (i64 (HexagonCOMBINE (i32 u5_0ImmPred:$c),
-                                                    (i32 u5_0ImmPred:$c))))),
+def: Pat<(v2i32 (srl V2I32:$b, (v2i32 (HexagonVSPLAT u5_0ImmPred:$c)))),
          (S2_lsr_i_vw V2I32:$b, imm:$c)>;
-def: Pat<(v2i32 (shl V2I32:$b, (i64 (HexagonCOMBINE (i32 u5_0ImmPred:$c),
-                                                    (i32 u5_0ImmPred:$c))))),
+def: Pat<(v2i32 (shl V2I32:$b, (v2i32 (HexagonVSPLAT u5_0ImmPred:$c)))),
          (S2_asl_i_vw V2I32:$b, imm:$c)>;
 
 def: Pat<(v4i16 (sra V4I16:$b, (v4i16 (HexagonVSPLAT u4_0ImmPred:$c)))),

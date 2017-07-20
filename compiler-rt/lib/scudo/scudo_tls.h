@@ -30,7 +30,7 @@ namespace __scudo {
 
 struct ALIGNED(64) ScudoThreadContext : public ScudoThreadContextPlatform {
   AllocatorCache Cache;
-  Xorshift128Plus Prng;
+  ScudoPrng Prng;
   uptr QuarantineCachePlaceHolder[4];
   void init();
   void commitBack();

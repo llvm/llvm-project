@@ -70,6 +70,7 @@ protected:
   bool HasFullFP16 = false;
   bool HasSPE = false;
   bool HasLSLFast = false;
+  bool HasSVE = false;
 
   // HasZeroCycleRegMove - Has zero-cycle register mov instructions.
   bool HasZeroCycleRegMove = false;
@@ -218,6 +219,13 @@ public:
   bool hasArithmeticCbzFusion() const { return HasArithmeticCbzFusion; }
   bool hasFuseAES() const { return HasFuseAES; }
   bool hasFuseLiterals() const { return HasFuseLiterals; }
+
+  /// \brief Return true if the CPU supports any kind of instruction fusion.
+  bool hasFusion() const {
+    return hasArithmeticBccFusion() || hasArithmeticCbzFusion() ||
+           hasFuseAES() || hasFuseLiterals();
+  }
+
   bool useRSqrt() const { return UseRSqrt; }
   unsigned getMaxInterleaveFactor() const { return MaxInterleaveFactor; }
   unsigned getVectorInsertExtractBaseCost() const {
@@ -244,6 +252,7 @@ public:
   bool hasFullFP16() const { return HasFullFP16; }
   bool hasSPE() const { return HasSPE; }
   bool hasLSLFast() const { return HasLSLFast; }
+  bool hasSVE() const { return HasSVE; }
 
   bool isLittleEndian() const { return IsLittle; }
 

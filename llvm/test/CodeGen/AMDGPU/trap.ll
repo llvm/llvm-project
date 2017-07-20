@@ -19,11 +19,11 @@ declare void @llvm.debugtrap() #0
 
 ; MESA-TRAP: .section .AMDGPU.config
 ; MESA-TRAP:  .long   47180
-; MESA-TRAP-NEXT: .long   208
+; MESA-TRAP-NEXT: .long   204
 
 ; NOMESA-TRAP: .section .AMDGPU.config
 ; NOMESA-TRAP:  .long   47180
-; NOMESA-TRAP-NEXT: .long   144
+; NOMESA-TRAP-NEXT: .long   140
 
 ; GCN-LABEL: {{^}}hsa_trap:
 ; HSA-TRAP: enable_trap_handler = 1
@@ -45,11 +45,11 @@ define amdgpu_kernel void @hsa_trap() {
 
 ; MESA-TRAP: .section .AMDGPU.config
 ; MESA-TRAP:  .long   47180
-; MESA-TRAP-NEXT: .long   208
+; MESA-TRAP-NEXT: .long   204
 
 ; NOMESA-TRAP: .section .AMDGPU.config
 ; NOMESA-TRAP:  .long   47180
-; NOMESA-TRAP-NEXT: .long   144
+; NOMESA-TRAP-NEXT: .long   140
 
 ; GCN-WARNING: warning: <unknown>:0:0: in function hsa_debugtrap void (): debugtrap handler not supported
 ; GCN-LABEL: {{^}}hsa_debugtrap:

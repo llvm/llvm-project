@@ -7,8 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define DEBUG_TYPE "hexbit"
-
 #include "HexagonBitTracker.h"
 #include "HexagonTargetMachine.h"
 #include "llvm/ADT/BitVector.h"
@@ -41,6 +39,8 @@
 #include <limits>
 #include <utility>
 #include <vector>
+
+#define DEBUG_TYPE "hexbit"
 
 using namespace llvm;
 

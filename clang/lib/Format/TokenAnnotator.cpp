@@ -1694,17 +1694,26 @@ void TokenAnnotator::setCommentLineLevels(
   for (SmallVectorImpl<AnnotatedLine *>::reverse_iterator I = Lines.rbegin(),
                                                           E = Lines.rend();
        I != E; ++I) {
-    bool CommentLine = (*I)->First;
+    bool CommentLine = true;
     for (const FormatToken *Tok = (*I)->First; Tok; Tok = Tok->Next) {
       if (!Tok->is(tok::comment)) {
         CommentLine = false;
         break;
       }
     }
-    if (NextNonCommentLine && CommentLine)
-      (*I)->Level = NextNonCommentLine->Level;
-    else
+
+    if (NextNonCommentLine && CommentLine) {
+      // If the comment is currently aligned with the line immediately following
+      // it, that's probably intentional and we should keep it.
+      bool AlignedWithNextLine =
+          NextNonCommentLine->First->NewlinesBefore <= 1 &&
+          NextNonCommentLine->First->OriginalColumn ==
+              (*I)->First->OriginalColumn;
+      if (AlignedWithNextLine)
+        (*I)->Level = NextNonCommentLine->Level;
+    } else {
       NextNonCommentLine = (*I)->First->isNot(tok::r_brace) ? (*I) : nullptr;
+    }
 
     setCommentLineLevels((*I)->Children);
   }

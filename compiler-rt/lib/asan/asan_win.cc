@@ -217,6 +217,18 @@ void *AsanDoesNotSupportStaticLinkage() {
   return 0;
 }
 
+uptr FindDynamicShadowStart() {
+  uptr granularity = GetMmapGranularity();
+  uptr alignment = 8 * granularity;
+  uptr left_padding = granularity;
+  uptr space_size = kHighShadowEnd + left_padding;
+  uptr shadow_start =
+      FindAvailableMemoryRange(space_size, alignment, granularity, nullptr);
+  CHECK_NE((uptr)0, shadow_start);
+  CHECK(IsAligned(shadow_start, alignment));
+  return shadow_start;
+}
+
 void AsanCheckDynamicRTPrereqs() {}
 
 void AsanCheckIncompatibleRT() {}

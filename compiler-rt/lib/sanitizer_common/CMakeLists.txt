@@ -58,6 +58,7 @@ set(SANITIZER_LIBCDEP_SOURCES
   sanitizer_coverage_libcdep_new.cc
   sanitizer_coverage_win_sections.cc
   sanitizer_linux_libcdep.cc
+  sanitizer_mac_libcdep.cc
   sanitizer_posix_libcdep.cc
   sanitizer_stacktrace_libcdep.cc
   sanitizer_stoptheworld_linux_libcdep.cc

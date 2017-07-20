@@ -10,9 +10,11 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_TYPEINDEX_H
 #define LLVM_DEBUGINFO_CODEVIEW_TYPEINDEX_H
 
+#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/Support/Endian.h"
 #include <cassert>
 #include <cinttypes>
+#include <functional>
 
 namespace llvm {
 
@@ -265,6 +267,23 @@ struct TypeIndexOffset {
 void printTypeIndex(ScopedPrinter &Printer, StringRef FieldName, TypeIndex TI,
                     TypeCollection &Types);
 }
-}
+
+template <> struct DenseMapInfo<codeview::TypeIndex> {
+  static inline codeview::TypeIndex getEmptyKey() {
+    return codeview::TypeIndex{DenseMapInfo<uint32_t>::getEmptyKey()};
+  }
+  static inline codeview::TypeIndex getTombstoneKey() {
+    return codeview::TypeIndex{DenseMapInfo<uint32_t>::getTombstoneKey()};
+  }
+  static unsigned getHashValue(const codeview::TypeIndex &TI) {
+    return DenseMapInfo<uint32_t>::getHashValue(TI.getIndex());
+  }
+  static bool isEqual(const codeview::TypeIndex &LHS,
+                      const codeview::TypeIndex &RHS) {
+    return LHS == RHS;
+  }
+};
+
+} // namespace llvm
 
 #endif

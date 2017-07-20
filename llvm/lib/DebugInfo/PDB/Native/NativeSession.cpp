@@ -10,9 +10,11 @@
 #include "llvm/DebugInfo/PDB/Native/NativeSession.h"
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/PDB/GenericError.h"
 #include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
 #include "llvm/DebugInfo/PDB/IPDBSourceFile.h"
+#include "llvm/DebugInfo/PDB/Native/NativeBuiltinSymbol.h"
 #include "llvm/DebugInfo/PDB/Native/NativeCompilandSymbol.h"
 #include "llvm/DebugInfo/PDB/Native/NativeExeSymbol.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
@@ -32,6 +34,28 @@
 using namespace llvm;
 using namespace llvm::msf;
 using namespace llvm::pdb;
+
+namespace {
+// Maps codeview::SimpleTypeKind of a built-in type to the parameters necessary
+// to instantiate a NativeBuiltinSymbol for that type.
+static const struct BuiltinTypeEntry {
+  codeview::SimpleTypeKind Kind;
+  PDB_BuiltinType Type;
+  uint32_t Size;
+} BuiltinTypes[] = {
+    {codeview::SimpleTypeKind::Int32, PDB_BuiltinType::Int, 4},
+    {codeview::SimpleTypeKind::UInt32, PDB_BuiltinType::UInt, 4},
+    {codeview::SimpleTypeKind::UInt32Long, PDB_BuiltinType::UInt, 4},
+    {codeview::SimpleTypeKind::UInt64Quad, PDB_BuiltinType::UInt, 8},
+    {codeview::SimpleTypeKind::NarrowCharacter, PDB_BuiltinType::Char, 1},
+    {codeview::SimpleTypeKind::SignedCharacter, PDB_BuiltinType::Char, 1},
+    {codeview::SimpleTypeKind::UnsignedCharacter, PDB_BuiltinType::UInt, 1},
+    {codeview::SimpleTypeKind::UInt16Short, PDB_BuiltinType::UInt, 2},
+    {codeview::SimpleTypeKind::Boolean8, PDB_BuiltinType::Bool, 1}
+    // This table can be grown as necessary, but these are the only types we've
+    // needed so far.
+};
+} // namespace
 
 NativeSession::NativeSession(std::unique_ptr<PDBFile> PdbFile,
                              std::unique_ptr<BumpPtrAllocator> Allocator)
@@ -71,11 +95,43 @@ Error NativeSession::createFromExe(StringRef Path,
 
 std::unique_ptr<PDBSymbolCompiland>
 NativeSession::createCompilandSymbol(DbiModuleDescriptor MI) {
-  const auto Id = static_cast<uint32_t>(SymbolCache.size());
+  const auto Id = static_cast<SymIndexId>(SymbolCache.size());
   SymbolCache.push_back(
       llvm::make_unique<NativeCompilandSymbol>(*this, Id, MI));
   return llvm::make_unique<PDBSymbolCompiland>(
       *this, std::unique_ptr<IPDBRawSymbol>(SymbolCache[Id]->clone()));
+}
+
+SymIndexId NativeSession::findSymbolByTypeIndex(codeview::TypeIndex Index) {
+  // First see if it's already in our cache.
+  const auto Entry = TypeIndexToSymbolId.find(Index);
+  if (Entry != TypeIndexToSymbolId.end())
+    return Entry->second;
+
+  // Symbols for built-in types are created on the fly.
+  if (Index.isSimple()) {
+    // FIXME:  We will eventually need to handle pointers to other simple types,
+    // which are still simple types in the world of CodeView TypeIndexes.
+    if (Index.getSimpleMode() != codeview::SimpleTypeMode::Direct)
+      return 0;
+    const auto Kind = Index.getSimpleKind();
+    const auto It =
+        std::find_if(std::begin(BuiltinTypes), std::end(BuiltinTypes),
+                     [Kind](const BuiltinTypeEntry &Builtin) {
+                       return Builtin.Kind == Kind;
+                     });
+    if (It == std::end(BuiltinTypes))
+      return 0;
+    SymIndexId Id = SymbolCache.size();
+    SymbolCache.emplace_back(
+        llvm::make_unique<NativeBuiltinSymbol>(*this, Id, It->Type, It->Size));
+    TypeIndexToSymbolId[Index] = Id;
+    return Id;
+  }
+
+  // TODO:  Look up PDB type by type index
+
+  return 0;
 }
 
 uint64_t NativeSession::getLoadAddress() const { return 0; }
@@ -83,7 +139,7 @@ uint64_t NativeSession::getLoadAddress() const { return 0; }
 void NativeSession::setLoadAddress(uint64_t Address) {}
 
 std::unique_ptr<PDBSymbolExe> NativeSession::getGlobalScope() {
-  const auto Id = static_cast<uint32_t>(SymbolCache.size());
+  const auto Id = static_cast<SymIndexId>(SymbolCache.size());
   SymbolCache.push_back(llvm::make_unique<NativeExeSymbol>(*this, Id));
   auto RawSymbol = SymbolCache[Id]->clone();
   auto PdbSymbol(PDBSymbol::create(*this, std::move(RawSymbol)));

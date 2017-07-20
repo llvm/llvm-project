@@ -18,7 +18,7 @@ namespace pdb {
 
 class NativeCompilandSymbol : public NativeRawSymbol {
 public:
-  NativeCompilandSymbol(NativeSession &Session, uint32_t SymbolId,
+  NativeCompilandSymbol(NativeSession &Session, SymIndexId SymbolId,
                         DbiModuleDescriptor MI);
 
   std::unique_ptr<NativeRawSymbol> clone() const override;

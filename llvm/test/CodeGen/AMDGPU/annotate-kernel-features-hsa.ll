@@ -10,6 +10,7 @@ declare i32 @llvm.amdgcn.workitem.id.z() #0
 
 declare i8 addrspace(2)* @llvm.amdgcn.dispatch.ptr() #0
 declare i8 addrspace(2)* @llvm.amdgcn.queue.ptr() #0
+declare i8 addrspace(2)* @llvm.amdgcn.kernarg.segment.ptr() #0
 
 ; HSA: define amdgpu_kernel void @use_tgid_x(i32 addrspace(1)* %ptr) #1 {
 define amdgpu_kernel void @use_tgid_x(i32 addrspace(1)* %ptr) #1 {
@@ -164,6 +165,15 @@ define amdgpu_kernel void @use_queue_ptr(i32 addrspace(1)* %ptr) #1 {
   ret void
 }
 
+; HSA: define amdgpu_kernel void @use_kernarg_segment_ptr(i32 addrspace(1)* %ptr) #12 {
+define amdgpu_kernel void @use_kernarg_segment_ptr(i32 addrspace(1)* %ptr) #1 {
+  %dispatch.ptr = call i8 addrspace(2)* @llvm.amdgcn.kernarg.segment.ptr()
+  %bc = bitcast i8 addrspace(2)* %dispatch.ptr to i32 addrspace(2)*
+  %val = load i32, i32 addrspace(2)* %bc
+  store i32 %val, i32 addrspace(1)* %ptr
+  ret void
+}
+
 ; HSA: define amdgpu_kernel void @use_group_to_flat_addrspacecast(i32 addrspace(3)* %ptr) #11 {
 define amdgpu_kernel void @use_group_to_flat_addrspacecast(i32 addrspace(3)* %ptr) #1 {
   %stof = addrspacecast i32 addrspace(3)* %ptr to i32 addrspace(4)*
@@ -236,3 +246,4 @@ attributes #1 = { nounwind }
 ; HSA: attributes #9 = { nounwind "amdgpu-work-group-id-y" "amdgpu-work-group-id-z" "amdgpu-work-item-id-y" "amdgpu-work-item-id-z" }
 ; HSA: attributes #10 = { nounwind "amdgpu-dispatch-ptr" }
 ; HSA: attributes #11 = { nounwind "amdgpu-queue-ptr" }
+; HSA: attributes #12 = { nounwind "amdgpu-kernarg-segment-ptr" }

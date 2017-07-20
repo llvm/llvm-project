@@ -21,6 +21,7 @@ class DWARFContext;
 class DWARFDie;
 class DWARFUnit;
 class DWARFAcceleratorTable;
+class DWARFDataExtractor;
 
 /// A class that verifies DWARF debug information given a DWARF Context.
 class DWARFVerifier {
@@ -33,6 +34,29 @@ class DWARFVerifier {
   uint32_t NumDebugInfoErrors = 0;
   uint32_t NumDebugLineErrors = 0;
   uint32_t NumAppleNamesErrors = 0;
+
+  /// Verifies the header of a unit in the .debug_info section.
+  ///
+  /// This function currently checks for:
+  /// - Unit is in 32-bit DWARF format. The function can be modified to
+  /// support 64-bit format.
+  /// - The DWARF version is valid
+  /// - The unit type is valid (if unit is in version >=5)
+  /// - The unit doesn't extend beyond .debug_info section
+  /// - The address size is valid
+  /// - The offset in the .debug_abbrev section is valid
+  ///
+  /// \param DebugInfoData The .debug_info section data
+  /// \param Offset A reference to the offset start of the unit. The offset will
+  /// be updated to point to the next unit in .debug_info
+  /// \param UnitIndex The index of the unit to be verified
+  /// \param isUnitDWARF64 A reference to a flag that shows whether the unit is
+  /// in 64-bit format.
+  ///
+  /// \returns true if the header is verified successfully, false otherwise.
+  bool verifyUnitHeader(const DWARFDataExtractor DebugInfoData,
+                        uint32_t *Offset, unsigned UnitIndex,
+                        bool &isUnitDWARF64);
 
   /// Verifies the attribute's DWARF attribute and its value.
   ///
@@ -78,6 +102,14 @@ class DWARFVerifier {
 public:
   DWARFVerifier(raw_ostream &S, DWARFContext &D)
       : OS(S), DCtx(D) {}
+  /// Verify the unit header chain in the .debug_info section.
+  ///
+  /// Any errors are reported to the stream that this object was
+  /// constructed with.
+  ///
+  /// \returns true if the unit header chain verifies successfully, false
+  /// otherwise.
+  bool handleDebugInfoUnitHeaderChain();
   /// Verify the information in the .debug_info section.
   ///
   /// Any errors are reported to the stream that was this object was

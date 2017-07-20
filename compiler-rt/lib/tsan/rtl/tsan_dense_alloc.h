@@ -39,7 +39,7 @@ class DenseSlabAlloc {
   typedef DenseSlabAllocCache Cache;
   typedef typename Cache::IndexT IndexT;
 
-  DenseSlabAlloc() {
+  explicit DenseSlabAlloc(const char *name) {
     // Check that kL1Size and kL2Size are sane.
     CHECK_EQ(kL1Size & (kL1Size - 1), 0);
     CHECK_EQ(kL2Size & (kL2Size - 1), 0);
@@ -49,6 +49,7 @@ class DenseSlabAlloc {
     internal_memset(map_, 0, sizeof(map_));
     freelist_ = 0;
     fillpos_ = 0;
+    name_ = name;
   }
 
   ~DenseSlabAlloc() {
@@ -96,15 +97,19 @@ class DenseSlabAlloc {
   SpinMutex mtx_;
   IndexT freelist_;
   uptr fillpos_;
+  const char *name_;
 
   void Refill(Cache *c) {
     SpinMutexLock lock(&mtx_);
     if (freelist_ == 0) {
       if (fillpos_ == kL1Size) {
-        Printf("ThreadSanitizer: DenseSlabAllocator overflow. Dying.\n");
+        Printf("ThreadSanitizer: %s overflow (%zu*%zu). Dying.\n",
+            name_, kL1Size, kL2Size);
         Die();
       }
-      T *batch = (T*)MmapOrDie(kL2Size * sizeof(T), "DenseSlabAllocator");
+      VPrintf(2, "ThreadSanitizer: growing %s: %zu out of %zu*%zu\n",
+          name_, fillpos_, kL1Size, kL2Size);
+      T *batch = (T*)MmapOrDie(kL2Size * sizeof(T), name_);
       // Reserve 0 as invalid index.
       IndexT start = fillpos_ == 0 ? 1 : 0;
       for (IndexT i = start; i < kL2Size; i++) {

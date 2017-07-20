@@ -21,7 +21,7 @@ public:
 struct Wrapper {
   TmplWithArray<bool, 10> data;
   bool indexIt(int a) {
-    if (a > 6) return data[a] ;      // Should not devirtualize
+    if (a > 6) return data[a] ;      // Should devirtualize
     if (a > 4) return data.func1(a); // Should devirtualize
     return data.func2(a);            // Should devirtualize
   }
@@ -53,7 +53,7 @@ bool stuff(int p)
 }
 #endif
 
-// CHECK-NOT: call {{.*}} @_ZN13TmplWithArrayIbLi10EEixEi
+// CHECK-DAG: call {{.*}} @_ZN13TmplWithArrayIbLi10EEixEi
 // CHECK-DAG: call {{.*}} @_ZN13TmplWithArrayIbLi10EE5func1Ei
 // CHECK-DAG: call {{.*}} @_ZN13TmplWithArrayIbLi10EE5func2Ei
 

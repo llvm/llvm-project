@@ -85,6 +85,22 @@ void f(int a, double b, const char *cpc, const void *cpv, X *pX) {
   // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: {{.*}}; use static_cast/const_cast/reinterpret_cast [
   // CHECK-FIXES: b1 = (const int&)b;
 
+  b1 = (int) b;
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: {{.*}}; use static_cast {{.*}}
+  // CHECK-FIXES: b1 = static_cast<int>(b);
+
+  b1 = (int)         b;
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: {{.*}}; use static_cast {{.*}}
+  // CHECK-FIXES: b1 = static_cast<int>(b);
+
+  b1 = (int) (b);
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: {{.*}}; use static_cast {{.*}}
+  // CHECK-FIXES: b1 = static_cast<int>(b);
+
+  b1 = (int)         (b);
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: {{.*}}; use static_cast {{.*}}
+  // CHECK-FIXES: b1 = static_cast<int>(b);
+
   Y *pB = (Y*)pX;
   // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: {{.*}}; use static_cast/const_cast/reinterpret_cast [
   Y &rB = (Y&)*pX;
@@ -113,6 +129,14 @@ void f(int a, double b, const char *cpc, const void *cpv, X *pX) {
   e = (Enum)e;
   // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant cast to the same type
   // CHECK-FIXES: {{^}}  e = e;
+
+  e = (Enum)           e;
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant cast to the same type
+  // CHECK-FIXES: {{^}}  e = e;
+
+  e = (Enum)           (e);
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant cast to the same type
+  // CHECK-FIXES: {{^}}  e = (e);
 
   static const int kZero = 0;
   (int)kZero;

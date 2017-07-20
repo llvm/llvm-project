@@ -438,3 +438,28 @@ void testImplicitProperties(ImplicitProperties *c) {
 // CHECK: [[@LINE-1]]:22 | class-method/ObjC | classImplicit | c:objc(cs)ImplicitProperties(cm)classImplicit | +[ImplicitProperties classImplicit] | Ref,Call,RelCall,RelCont | rel: 1
 // CHECK-NEXT: RelCall,RelCont | testImplicitProperties | c:@F@testImplicitProperties
 }
+
+@interface EmptySelectors
+
+- (int):(int)_; // CHECK: [[@LINE]]:8 | instance-method/ObjC | : | c:objc(cs)EmptySelectors(im): | -[EmptySelectors :]
+- (void)test: (int)x :(int)y; // CHECK: [[@LINE]]:9 | instance-method/ObjC | test:: | c:objc(cs)EmptySelectors(im)test:: | -[EmptySelectors test::]
+- (void):(int)_ :(int)m:(int)z; // CHECK: [[@LINE]]:9 | instance-method/ObjC | ::: | c:objc(cs)EmptySelectors(im)::: | -[EmptySelectors :::]
+
+@end
+
+@implementation EmptySelectors
+
+- (int):(int)_ { // CHECK: [[@LINE]]:8 | instance-method/ObjC | : | c:objc(cs)EmptySelectors(im): | -[EmptySelectors :]
+  [self :2]; // CHECK: [[@LINE]]:9 | instance-method/ObjC | : | c:objc(cs)EmptySelectors(im): | -[EmptySelectors :]
+  return 0;
+}
+
+- (void)test: (int)x :(int)y { // CHECK: [[@LINE]]:9 | instance-method/ObjC | test:: | c:objc(cs)EmptySelectors(im)test:: | -[EmptySelectors test::]
+}
+
+- (void) :(int)_ :(int)m :(int)z { // CHECK: [[@LINE]]:10 | instance-method/ObjC | ::: | c:objc(cs)EmptySelectors(im)::: | -[EmptySelectors :::]
+  [self test:0:1]; // CHECK: [[@LINE]]:9 | instance-method/ObjC | test:: | c:objc(cs)EmptySelectors(im)test:: | -[EmptySelectors test::]
+  [self: 0: 1: 2]; // CHECK: [[@LINE]]:8 | instance-method/ObjC | ::: | c:objc(cs)EmptySelectors(im)::: | -[EmptySelectors :::]
+}
+
+@end

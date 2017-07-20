@@ -40,7 +40,7 @@
 ; HSA-CI: .hsa_code_object_isa 7,0,0,"AMD","AMDGPU"
 ; HSA-VI: .hsa_code_object_isa 8,0,1,"AMD","AMDGPU"
 
-; HSA: .amdgpu_hsa_kernel simple
+; HSA-LABEL: .amdgpu_hsa_kernel simple
 ; HSA: {{^}}simple:
 ; HSA: .amd_kernel_code_t
 ; HSA: enable_sgpr_private_segment_buffer = 1
@@ -63,5 +63,13 @@
 define amdgpu_kernel void @simple(i32 addrspace(1)* %out) {
 entry:
   store i32 0, i32 addrspace(1)* %out
+  ret void
+}
+
+; HSA-LABEL: .amdgpu_hsa_kernel simple_no_kernargs
+; HSA: enable_sgpr_kernarg_segment_ptr = 0
+define amdgpu_kernel void @simple_no_kernargs() {
+entry:
+  store volatile i32 0, i32 addrspace(1)* undef
   ret void
 }

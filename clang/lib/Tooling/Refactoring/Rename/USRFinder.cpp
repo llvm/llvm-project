@@ -18,6 +18,7 @@
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Index/USRGeneration.h"
 #include "clang/Lex/Lexer.h"
+#include "clang/Tooling/Refactoring/RecursiveSymbolVisitor.h"
 #include "llvm/ADT/SmallVector.h"
 
 using namespace llvm;
@@ -25,132 +26,38 @@ using namespace llvm;
 namespace clang {
 namespace tooling {
 
-// NamedDeclFindingASTVisitor recursively visits each AST node to find the
-// symbol underneath the cursor.
-// FIXME: move to separate .h/.cc file if this gets too large.
 namespace {
-class NamedDeclFindingASTVisitor
-    : public clang::RecursiveASTVisitor<NamedDeclFindingASTVisitor> {
+
+/// Recursively visits each AST node to find the symbol underneath the cursor.
+class NamedDeclOccurrenceFindingVisitor
+    : public RecursiveSymbolVisitor<NamedDeclOccurrenceFindingVisitor> {
 public:
   // \brief Finds the NamedDecl at a point in the source.
   // \param Point the location in the source to search for the NamedDecl.
-  explicit NamedDeclFindingASTVisitor(const SourceLocation Point,
-                                      const ASTContext &Context)
-      : Result(nullptr), Point(Point), Context(Context) {}
+  explicit NamedDeclOccurrenceFindingVisitor(const SourceLocation Point,
+                                             const ASTContext &Context)
+      : RecursiveSymbolVisitor(Context.getSourceManager(),
+                               Context.getLangOpts()),
+        Point(Point), Context(Context) {}
 
-  // \brief Finds the NamedDecl for a name in the source.
-  // \param Name the fully qualified name.
-  explicit NamedDeclFindingASTVisitor(const std::string &Name,
-                                      const ASTContext &Context)
-      : Result(nullptr), Name(Name), Context(Context) {}
-
-  // Declaration visitors:
-
-  // \brief Checks if the point falls within the NameDecl. This covers every
-  // declaration of a named entity that we may come across. Usually, just
-  // checking if the point lies within the length of the name of the declaration
-  // and the start location is sufficient.
-  bool VisitNamedDecl(const NamedDecl *Decl) {
-    return dyn_cast<CXXConversionDecl>(Decl)
-               ? true
-               : setResult(Decl, Decl->getLocation(),
-                           Decl->getNameAsString().length());
-  }
-
-  // Expression visitors:
-
-  bool VisitDeclRefExpr(const DeclRefExpr *Expr) {
-    const NamedDecl *Decl = Expr->getFoundDecl();
-    return setResult(Decl, Expr->getLocation(),
-                     Decl->getNameAsString().length());
-  }
-
-  bool VisitMemberExpr(const MemberExpr *Expr) {
-    const NamedDecl *Decl = Expr->getFoundDecl().getDecl();
-    return setResult(Decl, Expr->getMemberLoc(),
-                     Decl->getNameAsString().length());
-  }
-
-  // Other visitors:
-
-  bool VisitTypeLoc(const TypeLoc Loc) {
-    const SourceLocation TypeBeginLoc = Loc.getBeginLoc();
-    const SourceLocation TypeEndLoc = Lexer::getLocForEndOfToken(
-        TypeBeginLoc, 0, Context.getSourceManager(), Context.getLangOpts());
-    if (const auto *TemplateTypeParm =
-            dyn_cast<TemplateTypeParmType>(Loc.getType()))
-      return setResult(TemplateTypeParm->getDecl(), TypeBeginLoc, TypeEndLoc);
-    if (const auto *TemplateSpecType =
-            dyn_cast<TemplateSpecializationType>(Loc.getType())) {
-      return setResult(TemplateSpecType->getTemplateName().getAsTemplateDecl(),
-                       TypeBeginLoc, TypeEndLoc);
-    }
-    return setResult(Loc.getType()->getAsCXXRecordDecl(), TypeBeginLoc,
-                     TypeEndLoc);
-  }
-
-  bool VisitCXXConstructorDecl(clang::CXXConstructorDecl *ConstructorDecl) {
-    for (const auto *Initializer : ConstructorDecl->inits()) {
-      // Ignore implicit initializers.
-      if (!Initializer->isWritten())
-        continue;
-      if (const clang::FieldDecl *FieldDecl = Initializer->getMember()) {
-        const SourceLocation InitBeginLoc = Initializer->getSourceLocation(),
-                             InitEndLoc = Lexer::getLocForEndOfToken(
-                                 InitBeginLoc, 0, Context.getSourceManager(),
-                                 Context.getLangOpts());
-        if (!setResult(FieldDecl, InitBeginLoc, InitEndLoc))
-          return false;
-      }
-    }
-    return true;
-  }
-
-  // Other:
-
-  const NamedDecl *getNamedDecl() { return Result; }
-
-  // \brief Determines if a namespace qualifier contains the point.
-  // \returns false on success and sets Result.
-  void handleNestedNameSpecifierLoc(NestedNameSpecifierLoc NameLoc) {
-    while (NameLoc) {
-      const NamespaceDecl *Decl =
-          NameLoc.getNestedNameSpecifier()->getAsNamespace();
-      setResult(Decl, NameLoc.getLocalBeginLoc(), NameLoc.getLocalEndLoc());
-      NameLoc = NameLoc.getPrefix();
-    }
-  }
-
-private:
-  // \brief Sets Result to Decl if the Point is within Start and End.
-  // \returns false on success.
-  bool setResult(const NamedDecl *Decl, SourceLocation Start,
-                 SourceLocation End) {
-    if (!Decl)
+  bool visitSymbolOccurrence(const NamedDecl *ND,
+                             ArrayRef<SourceRange> NameRanges) {
+    if (!ND)
       return true;
-    if (Name.empty()) {
-      // Offset is used to find the declaration.
+    for (const auto &Range : NameRanges) {
+      SourceLocation Start = Range.getBegin();
+      SourceLocation End = Range.getEnd();
       if (!Start.isValid() || !Start.isFileID() || !End.isValid() ||
           !End.isFileID() || !isPointWithin(Start, End))
         return true;
-    } else {
-      // Fully qualified name is used to find the declaration.
-      if (Name != Decl->getQualifiedNameAsString() &&
-          Name != "::" + Decl->getQualifiedNameAsString())
-        return true;
     }
-    Result = Decl;
+    Result = ND;
     return false;
   }
 
-  // \brief Sets Result to Decl if Point is within Loc and Loc + Offset.
-  // \returns false on success.
-  bool setResult(const NamedDecl *Decl, SourceLocation Loc, unsigned Offset) {
-    // FIXME: Add test for Offset == 0. Add test for Offset - 1 (vs -2 etc).
-    return Offset == 0 ||
-           setResult(Decl, Loc, Loc.getLocWithOffset(Offset - 1));
-  }
+  const NamedDecl *getNamedDecl() const { return Result; }
 
+private:
   // \brief Determines if the Point is within Start and End.
   bool isPointWithin(const SourceLocation Start, const SourceLocation End) {
     // FIXME: Add tests for Point == End.
@@ -160,17 +67,17 @@ private:
             Context.getSourceManager().isBeforeInTranslationUnit(Point, End));
   }
 
-  const NamedDecl *Result;
+  const NamedDecl *Result = nullptr;
   const SourceLocation Point; // The location to find the NamedDecl.
-  const std::string Name;
   const ASTContext &Context;
 };
-} // namespace
+
+} // end anonymous namespace
 
 const NamedDecl *getNamedDeclAt(const ASTContext &Context,
                                 const SourceLocation Point) {
   const SourceManager &SM = Context.getSourceManager();
-  NamedDeclFindingASTVisitor Visitor(Point, Context);
+  NamedDeclOccurrenceFindingVisitor Visitor(Point, Context);
 
   // Try to be clever about pruning down the number of top-level declarations we
   // see. If both start and end is either before or after the point we're
@@ -184,18 +91,44 @@ const NamedDecl *getNamedDeclAt(const ASTContext &Context,
       Visitor.TraverseDecl(CurrDecl);
   }
 
-  NestedNameSpecifierLocFinder Finder(const_cast<ASTContext &>(Context));
-  for (const auto &Location : Finder.getNestedNameSpecifierLocations())
-    Visitor.handleNestedNameSpecifierLoc(Location);
-
   return Visitor.getNamedDecl();
 }
 
+namespace {
+
+/// Recursively visits each NamedDecl node to find the declaration with a
+/// specific name.
+class NamedDeclFindingVisitor
+    : public RecursiveASTVisitor<NamedDeclFindingVisitor> {
+public:
+  explicit NamedDeclFindingVisitor(StringRef Name) : Name(Name) {}
+
+  // We don't have to traverse the uses to find some declaration with a
+  // specific name, so just visit the named declarations.
+  bool VisitNamedDecl(const NamedDecl *ND) {
+    if (!ND)
+      return true;
+    // Fully qualified name is used to find the declaration.
+    if (Name != ND->getQualifiedNameAsString() &&
+        Name != "::" + ND->getQualifiedNameAsString())
+      return true;
+    Result = ND;
+    return false;
+  }
+
+  const NamedDecl *getNamedDecl() const { return Result; }
+
+private:
+  const NamedDecl *Result = nullptr;
+  StringRef Name;
+};
+
+} // end anonymous namespace
+
 const NamedDecl *getNamedDeclFor(const ASTContext &Context,
                                  const std::string &Name) {
-  NamedDeclFindingASTVisitor Visitor(Name, Context);
+  NamedDeclFindingVisitor Visitor(Name);
   Visitor.TraverseDecl(Context.getTranslationUnitDecl());
-
   return Visitor.getNamedDecl();
 }
 

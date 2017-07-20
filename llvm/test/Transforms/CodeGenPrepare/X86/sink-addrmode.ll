@@ -4,6 +4,8 @@ target datalayout =
 "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128"
 target triple = "x86_64-unknown-linux-gnu"
 
+@x = external global [1 x [2 x <4 x float>]]
+
 ; Can we sink single addressing mode computation to use?
 define void @test1(i1 %cond, i64* %base) {
 ; CHECK-LABEL: @test1
@@ -194,3 +196,25 @@ rare.2:
 
 
 declare void @slowpath(i32, i32*)
+
+; Make sure we don't end up in an infinite loop after we fail to sink.
+; CHECK-LABEL: define void @test8
+; CHECK: %ptr = getelementptr i8, i8* %aFOO_load_ptr2int_2void, i32 undef
+define void @test8() {
+allocas:
+  %aFOO_load = load float*, float** undef
+  %aFOO_load_ptr2int = ptrtoint float* %aFOO_load to i64
+  %aFOO_load_ptr2int_broadcast_init = insertelement <4 x i64> undef, i64 %aFOO_load_ptr2int, i32 0
+  %aFOO_load_ptr2int_2void = inttoptr i64 %aFOO_load_ptr2int to i8*
+  %ptr = getelementptr i8, i8* %aFOO_load_ptr2int_2void, i32 undef
+  br label %load.i145
+
+load.i145:
+  %ptr.i143 = bitcast i8* %ptr to <4 x float>*
+  %valall.i144 = load <4 x float>, <4 x float>* %ptr.i143, align 4
+  %x_offset = getelementptr [1 x [2 x <4 x float>]], [1 x [2 x <4 x float>]]* @x, i32 0, i64 0
+  br label %pl_loop.i.i122
+
+pl_loop.i.i122:
+  br label %pl_loop.i.i122
+}

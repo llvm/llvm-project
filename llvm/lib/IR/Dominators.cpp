@@ -63,22 +63,12 @@ bool BasicBlockEdge::isSingleEdge() const {
 template class llvm::DomTreeNodeBase<BasicBlock>;
 template class llvm::DominatorTreeBase<BasicBlock>;
 
-template void llvm::DomTreeBuilder::Calculate<Function, BasicBlock *>(
-    DominatorTreeBase<
-        typename std::remove_pointer<GraphTraits<BasicBlock *>::NodeRef>::type>
-        &DT,
-    Function &F);
-template void llvm::DomTreeBuilder::Calculate<Function, Inverse<BasicBlock *>>(
-    DominatorTreeBase<typename std::remove_pointer<
-        GraphTraits<Inverse<BasicBlock *>>::NodeRef>::type> &DT,
-    Function &F);
-template bool llvm::DomTreeBuilder::Verify<BasicBlock *>(
-    const DominatorTreeBase<
-        typename std::remove_pointer<GraphTraits<BasicBlock *>::NodeRef>::type>
-        &DT);
-template bool llvm::DomTreeBuilder::Verify<Inverse<BasicBlock *>>(
-    const DominatorTreeBase<typename std::remove_pointer<
-        GraphTraits<Inverse<BasicBlock *>>::NodeRef>::type> &DT);
+template void
+llvm::DomTreeBuilder::Calculate<DomTreeBuilder::BBDomTree, Function>(
+    DomTreeBuilder::BBDomTree &DT, Function &F);
+
+template bool llvm::DomTreeBuilder::Verify<DomTreeBuilder::BBDomTree>(
+    const DomTreeBuilder::BBDomTree &DT);
 
 bool DominatorTree::invalidate(Function &F, const PreservedAnalyses &PA,
                                FunctionAnalysisManager::Invalidator &) {

@@ -4,11 +4,11 @@
 
 ; REQUIRES: pollyacc
 
-; KERNEL: define ptx_kernel void @FUNC_foo_KERNEL_0(i8 addrspace(1)* %MemRef_A, i64 %n) #0 {
+; KERNEL: define ptx_kernel void @FUNC_foo_SCOP_0_KERNEL_0(i8 addrspace(1)* %MemRef_A, i64 %n) #0 {
 
 ; KERNEL: !nvvm.annotations = !{!0}
 
-; KERNEL: !0 = !{void (i8 addrspace(1)*, i64)* @FUNC_foo_KERNEL_0, !"maxntidx", i32 32, !"maxntidy", i32 1, !"maxntidz", i32 1}
+; KERNEL: !0 = !{void (i8 addrspace(1)*, i64)* @FUNC_foo_SCOP_0_KERNEL_0, !"maxntidx", i32 32, !"maxntidy", i32 1, !"maxntidz", i32 1}
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

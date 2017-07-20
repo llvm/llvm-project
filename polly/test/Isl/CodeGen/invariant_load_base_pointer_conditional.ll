@@ -12,7 +12,7 @@
 ; CHECK-NEXT:    %polly.preload.tmp6.merge = phi i32* [ %polly.access.BPLoc.load, %polly.preload.exec ], [ null, %polly.preload.cond ]
 ;
 ; CHECK-LABEL: polly.stmt.bb5:
-; CHECK-NEXT:    %p_tmp7 = getelementptr inbounds i32, i32* %polly.preload.tmp6.merge, i64 %polly.indvar6
+; CHECK-NEXT:    %scevgep9 = getelementptr i32, i32* %polly.preload.tmp6.merge, i64 %polly.indvar6
 ;
 ;    void f(int **BPLoc, int *A, int N) {
 ;      for (int i = 0; i < N; i++)

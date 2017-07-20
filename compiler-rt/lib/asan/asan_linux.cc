@@ -77,6 +77,11 @@ void *AsanDoesNotSupportStaticLinkage() {
   return &_DYNAMIC;  // defined in link.h
 }
 
+uptr FindDynamicShadowStart() {
+  UNREACHABLE("FindDynamicShadowStart is not available");
+  return 0;
+}
+
 void AsanApplyToGlobals(globals_op_fptr op, const void *needle) {
   UNIMPLEMENTED();
 }

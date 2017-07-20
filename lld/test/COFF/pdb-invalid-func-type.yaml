@@ -8,7 +8,7 @@
 
 # CHECK: Mod 0000 | `{{.*}}pdb-invalid-func-type.yaml.tmp.obj`:
 # CHECK:      4 | S_GPROC32_ID [size = 44] `main`
-# CHECK:          parent = 0, end = 80, addr = 0000:0000, code size = 3
+# CHECK:          parent = 0, end = 80, addr = 0001:0000, code size = 3
 # CHECK:     48 | S_FRAMEPROC [size = 32]
 # CHECK:     80 | S_END [size = 4]
 
@@ -65,16 +65,16 @@ sections:
         Strings:
           - 'c:\src\llvm-project\build\t.c'
     Relocations:
-      - VirtualAddress:  152
+      - VirtualAddress:  44
         SymbolName:      main
         Type:            IMAGE_REL_AMD64_SECREL
-      - VirtualAddress:  156
+      - VirtualAddress:  48
         SymbolName:      main
         Type:            IMAGE_REL_AMD64_SECTION
-      - VirtualAddress:  208
+      - VirtualAddress:  100
         SymbolName:      main
         Type:            IMAGE_REL_AMD64_SECREL
-      - VirtualAddress:  212
+      - VirtualAddress:  104
         SymbolName:      main
         Type:            IMAGE_REL_AMD64_SECTION
   - Name:            '.debug$T'

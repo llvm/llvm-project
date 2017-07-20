@@ -18,29 +18,9 @@ class ConsecutiveBreakpointsTestCase(TestBase):
 
     def prepare_test(self):
         self.build()
-        exe = os.path.join(os.getcwd(), "a.out")
 
-        # Create a target by the debugger.
-        self.target = self.dbg.CreateTarget(exe)
-        self.assertTrue(self.target, VALID_TARGET)
-
-        breakpoint1 = self.target.BreakpointCreateBySourceRegex(
-            "Set breakpoint here", lldb.SBFileSpec("main.cpp"))
-        self.assertTrue(
-            breakpoint1 and breakpoint1.GetNumLocations() == 1,
-            VALID_BREAKPOINT)
-
-        # Now launch the process, and do not stop at entry point.
-        self.process = self.target.LaunchSimple(
-            None, None, self.get_process_working_directory())
-        self.assertIsNotNone(self.process, PROCESS_IS_VALID)
-
-        # We should be stopped at the first breakpoint
-        self.thread = lldbutil.get_one_thread_stopped_at_breakpoint(
-            self.process, breakpoint1)
-        self.assertIsNotNone(
-            self.thread,
-            "Expected one thread to be stopped at breakpoint 1")
+        (self.target, self.process, self.thread, bkpt) = lldbutil.run_to_source_breakpoint(
+                self, "Set breakpoint here", lldb.SBFileSpec("main.cpp"))
 
         # Set breakpoint to the next instruction
         frame = self.thread.GetFrameAtIndex(0)

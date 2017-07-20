@@ -92,7 +92,7 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
 
   CallingConv::ID CC = F->getCallingConv();
   if (CC == CallingConv::AMDGPU_KERNEL || CC == CallingConv::SPIR_KERNEL) {
-    KernargSegmentPtr = true;
+    KernargSegmentPtr = !F->arg_empty();
     WorkGroupIDX = true;
     WorkItemIDX = true;
   } else if (CC == CallingConv::AMDGPU_PS) {
@@ -153,6 +153,9 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
     if (HasStackObjects || MaySpill)
       ImplicitBufferPtr = true;
   }
+
+  if (F->hasFnAttribute("amdgpu-kernarg-segment-ptr"))
+    KernargSegmentPtr = true;
 
   // We don't need to worry about accessing spills with flat instructions.
   // TODO: On VI where we must use flat for global, we should be able to omit
