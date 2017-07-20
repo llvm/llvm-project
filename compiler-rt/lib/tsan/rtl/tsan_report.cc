@@ -19,7 +19,8 @@
 
 namespace __tsan {
 
-ReportStack::ReportStack() : frames(nullptr), suppressable(false) {}
+ReportStack::ReportStack()
+    : frames(nullptr), suppressable(false), responsible_frame(0) {}
 
 ReportStack *ReportStack::New() {
   void *mem = internal_alloc(MBlockReportStack, sizeof(ReportStack));
@@ -92,6 +93,8 @@ static const char *ReportTypeString(ReportType typ) {
     return "heap-use-after-free (virtual call vs free)";
   if (typ == ReportTypeExternalRace)
     return "race on a library object";
+  if (typ == ReportTypeSwiftAccessRace)
+    return "Swift access race";
   if (typ == ReportTypeThreadLeak)
     return "thread leak";
   if (typ == ReportTypeMutexDestroyLocked)
@@ -121,7 +124,7 @@ static const char *const kInterposedFunctionPrefix = "wrap_";
 static const char *const kInterposedFunctionPrefix = "__interceptor_";
 #endif
 
-void PrintStack(const ReportStack *ent) {
+void PrintStack(const ReportStack *ent, bool mark_frames) {
   if (ent == 0 || ent->frames == 0) {
     Printf("    [failed to restore the stack]\n\n");
     return;
@@ -132,7 +135,9 @@ void PrintStack(const ReportStack *ent) {
     RenderFrame(&res, common_flags()->stack_trace_format, i, frame->info,
                 common_flags()->symbolize_vs_style,
                 common_flags()->strip_path_prefix, kInterposedFunctionPrefix);
-    Printf("%s\n", res.data());
+    const char *star_or_space =
+        (mark_frames && frame == ent->responsible_frame) ? "*" : " ";
+    Printf("  %s %s\n", star_or_space, res.data());
   }
   Printf("\n");
 }
@@ -159,12 +164,20 @@ static const char *ExternalMopDesc(bool first, bool write) {
                : (write ? "Previous mutating" : "Previous read-only");
 }
 
-static void PrintMop(const ReportMop *mop, bool first) {
+static const char *SwiftMopDesc(bool first) {
+  return first ? "Modifying" : "Previous modifying";
+}
+
+static void PrintMop(const ReportMop *mop, bool mark_frames, bool first) {
   Decorator d;
   char thrbuf[kThreadBufSize];
   Printf("%s", d.Access());
   const char *object_type = GetObjectTypeFromTag(mop->external_tag);
-  if (!object_type) {
+  if (mop->external_tag == kExternalTagSwiftModifyingAccess) {
+    Printf("  %s access at %p by %s",
+           SwiftMopDesc(first), (void *)mop->addr,
+           thread_name(thrbuf, mop->tid));
+  } else if (mop->external_tag == kExternalTagNone || !object_type) {
     Printf("  %s of size %d at %p by %s",
            MopDesc(first, mop->write, mop->atomic), mop->size,
            (void *)mop->addr, thread_name(thrbuf, mop->tid));
@@ -176,7 +189,7 @@ static void PrintMop(const ReportMop *mop, bool first) {
   PrintMutexSet(mop->mset);
   Printf(":\n");
   Printf("%s", d.EndAccess());
-  PrintStack(mop->stack);
+  PrintStack(mop->stack, mark_frames);
 }
 
 static void PrintLocation(const ReportLocation *loc) {
@@ -306,10 +319,17 @@ static bool FrameIsInternal(const SymbolizedStack *frame) {
   return false;
 }
 
-static SymbolizedStack *SkipTsanInternalFrames(SymbolizedStack *frames) {
-  while (FrameIsInternal(frames) && frames->next)
-    frames = frames->next;
-  return frames;
+static bool FillResponsibleFrame(ReportStack *stack, ReportType typ) {
+  if (stack) {
+    SymbolizedStack *frame = stack->frames;
+    while (FrameIsInternal(frame) && frame->next) frame = frame->next;
+    if (typ == ReportTypeExternalRace && frame->next) frame = frame->next;
+    if (stack) {
+      stack->responsible_frame = frame;
+      return stack->responsible_frame != stack->frames;
+    }
+  }
+  return false;
 }
 
 void PrintReport(const ReportDesc *rep) {
@@ -320,6 +340,16 @@ void PrintReport(const ReportDesc *rep) {
   Printf("WARNING: ThreadSanitizer: %s (pid=%d)\n", rep_typ_str,
          (int)internal_getpid());
   Printf("%s", d.EndWarning());
+
+  bool should_mark_frame = false;
+  for (uptr i = 0; i < rep->mops.Size(); i++)
+    should_mark_frame |= FillResponsibleFrame(rep->mops[i]->stack, rep->typ);
+  for (uptr i = 0; i < rep->stacks.Size(); i++)
+    should_mark_frame |= FillResponsibleFrame(rep->stacks[i], rep->typ);
+  for (uptr i = 0; i < rep->threads.Size(); i++)
+    should_mark_frame |= FillResponsibleFrame(rep->threads[i]->stack, rep->typ);
+  for (uptr i = 0; i < rep->locs.Size(); i++)
+    should_mark_frame |= FillResponsibleFrame(rep->locs[i]->stack, rep->typ);
 
   if (rep->typ == ReportTypeDeadlock) {
     char thrbuf[kThreadBufSize];
@@ -355,12 +385,16 @@ void PrintReport(const ReportDesc *rep) {
     for (uptr i = 0; i < rep->stacks.Size(); i++) {
       if (i)
         Printf("  and:\n");
-      PrintStack(rep->stacks[i]);
+      PrintStack(rep->stacks[i], should_mark_frame);
     }
   }
 
   for (uptr i = 0; i < rep->mops.Size(); i++)
-    PrintMop(rep->mops[i], i == 0);
+    PrintMop(rep->mops[i], should_mark_frame, i == 0);
+
+  if (should_mark_frame) {
+    Printf("  Issue is caused by frames marked with \"*\".\n\n");
+  }
 
   if (rep->sleep)
     PrintSleep(rep->sleep);
@@ -380,7 +414,8 @@ void PrintReport(const ReportDesc *rep) {
     Printf("  And %d more similar thread leaks.\n\n", rep->count - 1);
 
   if (ReportStack *stack = ChooseSummaryStack(rep)) {
-    if (SymbolizedStack *frame = SkipTsanInternalFrames(stack->frames))
+    SymbolizedStack *frame = stack->responsible_frame ?: stack->frames;
+    if (frame)
       ReportErrorSummary(rep_typ_str, frame->info);
   }
 
@@ -393,7 +428,7 @@ void PrintReport(const ReportDesc *rep) {
 
 const int kMainThreadId = 1;
 
-void PrintStack(const ReportStack *ent) {
+void PrintStack(const ReportStack *ent, bool mark_frames) {
   if (ent == 0 || ent->frames == 0) {
     Printf("  [failed to restore the stack]\n");
     return;

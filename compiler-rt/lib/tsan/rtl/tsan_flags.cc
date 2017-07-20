@@ -69,7 +69,7 @@ void InitializeFlags(Flags *f, const char *env) {
       cf.detect_deadlocks = true;
     }
     cf.print_suppressions = false;
-    cf.stack_trace_format = "    #%n %f %S %M";
+    cf.stack_trace_format = "#%n %f %S %M";
     cf.exitcode = 66;
     cf.intercept_tls_get_addr = true;
     OverrideCommonFlags(cf);

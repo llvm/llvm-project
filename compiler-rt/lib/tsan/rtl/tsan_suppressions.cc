@@ -76,6 +76,8 @@ static const char *conv(ReportType typ) {
     return kSuppressionRace;
   else if (typ == ReportTypeExternalRace)
     return kSuppressionRace;
+  else if (typ == ReportTypeSwiftAccessRace)
+    return kSuppressionRace;
   else if (typ == ReportTypeThreadLeak)
     return kSuppressionThread;
   else if (typ == ReportTypeMutexDestroyLocked)

@@ -24,7 +24,7 @@ static const char *StripFunctionName(const char *function, const char *prefix) {
   return function;
 }
 
-static const char kDefaultFormat[] = "    #%n %p %F %L";
+static const char kDefaultFormat[] = "#%n %p %F %L";
 
 void RenderFrame(InternalScopedString *buffer, const char *format, int frame_no,
                  const AddressInfo &info, bool vs_style,

@@ -1,12 +1,12 @@
-// RUN: %clangxx_tsan %s -shared -DSHARED_LIB \
+// RUN: %clangxx_tsan %p/external-lib.cc -shared \
 // RUN:                               -o %t-lib-instrumented.dylib \
 // RUN:   -install_name @rpath/`basename %t-lib-instrumented.dylib`
 
-// RUN: %clangxx_tsan %s -shared -DSHARED_LIB -fno-sanitize=thread \
+// RUN: %clangxx_tsan %p/external-lib.cc -shared -fno-sanitize=thread \
 // RUN:                               -o %t-lib-noninstrumented.dylib \
 // RUN:   -install_name @rpath/`basename %t-lib-noninstrumented.dylib`
 
-// RUN: %clangxx_tsan %s -shared -DSHARED_LIB -fno-sanitize=thread -DUSE_TSAN_CALLBACKS \
+// RUN: %clangxx_tsan %p/external-lib.cc -shared -fno-sanitize=thread -DUSE_TSAN_CALLBACKS \
 // RUN:                               -o %t-lib-noninstrumented-callbacks.dylib \
 // RUN:   -install_name @rpath/`basename %t-lib-noninstrumented-callbacks.dylib`
 
@@ -23,8 +23,6 @@
 
 #include <thread>
 
-#include <dlfcn.h>
-#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -38,69 +36,25 @@ extern "C" {
   void ObjectWriteAnother(MyObject *, long);
 }
 
-#if defined(SHARED_LIB)
-
-struct MyObject {
-  long _val;
-  long _another;
-};
-
-#if defined(USE_TSAN_CALLBACKS)
-static void *tag;
-void *(*callback_register_tag)(const char *object_type);
-void *(*callback_assign_tag)(void *addr, void *tag);
-void (*callback_read)(void *addr, void *caller_pc, void *tag);
-void (*callback_write)(void *addr, void *caller_pc, void *tag);
-#endif
-
-void InitializeLibrary() {
-#if defined(USE_TSAN_CALLBACKS)
-  callback_register_tag = (decltype(callback_register_tag))dlsym(RTLD_DEFAULT, "__tsan_external_register_tag");
-  callback_assign_tag = (decltype(callback_assign_tag))dlsym(RTLD_DEFAULT, "__tsan_external_assign_tag");
-  callback_read = (decltype(callback_read))dlsym(RTLD_DEFAULT, "__tsan_external_read");
-  callback_write = (decltype(callback_write))dlsym(RTLD_DEFAULT, "__tsan_external_write");
-  tag = callback_register_tag("MyLibrary::MyObject");
-#endif
+void UserCodeRead(MyObjectRef ref) {
+  ObjectRead(ref);
 }
 
-MyObject *ObjectCreate() {
-  MyObject *ref = (MyObject *)malloc(sizeof(MyObject));
-#if defined(USE_TSAN_CALLBACKS)
-  callback_assign_tag(ref, tag);
-#endif
-  return ref;
+void UserCodeWrite(MyObjectRef ref, long val) {
+  ObjectWrite(ref, val);
 }
 
-long ObjectRead(MyObject *ref) {
-#if defined(USE_TSAN_CALLBACKS)
-  callback_read(ref, __builtin_return_address(0), tag);
-#endif
-  return ref->_val;
+void UserCodeWriteAnother(MyObjectRef ref, long val) {
+  ObjectWriteAnother(ref, val);
 }
-
-void ObjectWrite(MyObject *ref, long val) {
-#if defined(USE_TSAN_CALLBACKS)
-  callback_write(ref, __builtin_return_address(0), tag);
-#endif
-  ref->_val = val;
-}
-
-void ObjectWriteAnother(MyObject *ref, long val) {
-#if defined(USE_TSAN_CALLBACKS)
-  callback_write(ref, __builtin_return_address(0), tag);
-#endif
-  ref->_another = val;
-}
-
-#else  // defined(SHARED_LIB)
 
 int main(int argc, char *argv[]) {
   InitializeLibrary();
   
   {
     MyObjectRef ref = ObjectCreate();
-    std::thread t1([ref]{ ObjectRead(ref); });
-    std::thread t2([ref]{ ObjectRead(ref); });
+    std::thread t1([ref]{ UserCodeRead(ref); });
+    std::thread t2([ref]{ UserCodeRead(ref); });
     t1.join();
     t2.join();
   }
@@ -109,11 +63,11 @@ int main(int argc, char *argv[]) {
   
   fprintf(stderr, "RR test done\n");
   // CHECK: RR test done
-
+  
   {
     MyObjectRef ref = ObjectCreate();
-    std::thread t1([ref]{ ObjectRead(ref); });
-    std::thread t2([ref]{ ObjectWrite(ref, 66); });
+    std::thread t1([ref]{ UserCodeRead(ref); });
+    std::thread t2([ref]{ UserCodeWrite(ref, 66); });
     t1.join();
     t2.join();
   }
@@ -127,19 +81,21 @@ int main(int argc, char *argv[]) {
   
   // TEST3: WARNING: ThreadSanitizer: race on a library object
   // TEST3: {{Mutating|read-only}} access of object MyLibrary::MyObject at
-  // TEST3: {{ObjectWrite|ObjectRead}}
+  // TEST3: * #1 {{UserCodeWrite|UserCodeRead}}
   // TEST3: Previous {{mutating|read-only}} access of object MyLibrary::MyObject at
-  // TEST3: {{ObjectWrite|ObjectRead}}
+  // TEST3: * #1 {{UserCodeWrite|UserCodeRead}}
+  // TEST3: Issue is caused by frames marked with "*".
   // TEST3: Location is MyLibrary::MyObject object of size 16 at
   // TEST3: {{ObjectCreate}}
-
+  // TEST3: SUMMARY: ThreadSanitizer: race on a library object {{.*}}external.cc{{.*}}{{UserCodeWrite|UserCodeRead}}
+  
   fprintf(stderr, "RW test done\n");
   // CHECK: RW test done
-
+  
   {
     MyObjectRef ref = ObjectCreate();
-    std::thread t1([ref]{ ObjectWrite(ref, 76); });
-    std::thread t2([ref]{ ObjectWriteAnother(ref, 77); });
+    std::thread t1([ref]{ UserCodeWrite(ref, 76); });
+    std::thread t2([ref]{ UserCodeWriteAnother(ref, 77); });
     t1.join();
     t2.join();
   }
@@ -150,14 +106,14 @@ int main(int argc, char *argv[]) {
   
   // TEST3: WARNING: ThreadSanitizer: race on a library object
   // TEST3: Mutating access of object MyLibrary::MyObject at
-  // TEST3: {{ObjectWrite|ObjectWriteAnother}}
+  // TEST3: * #1 {{UserCodeWrite|UserCodeWriteAnother}}
   // TEST3: Previous mutating access of object MyLibrary::MyObject at
-  // TEST3: {{ObjectWrite|ObjectWriteAnother}}
+  // TEST3: * #1 {{UserCodeWrite|UserCodeWriteAnother}}
+  // TEST3: Issue is caused by frames marked with "*".
   // TEST3: Location is MyLibrary::MyObject object of size 16 at
   // TEST3: {{ObjectCreate}}
-
+  // TEST3: SUMMARY: ThreadSanitizer: race on a library object {{.*}}external.cc{{.*}}{{UserCodeWrite|UserCodeWriteAnother}}
+  
   fprintf(stderr, "WW test done\n");
   // CHECK: WW test done
 }
-
-#endif  // defined(SHARED_LIB)
