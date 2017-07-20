@@ -86,6 +86,7 @@ set(Tests
   CustomCrossOverTest
   CustomMutatorTest
   CxxStringEqTest
+  DeepRecursionTest
   DivTest
   EmptyTest
   EquivalenceATest
