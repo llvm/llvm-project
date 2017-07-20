@@ -279,6 +279,10 @@ def warn_target_unsupported_nanlegacy : Warning<
 def warn_target_unsupported_compact_branches : Warning<
   "ignoring '-mcompact-branches=' option because the '%0' architecture does not"
   " support it">, InGroup<UnsupportedCB>;
+def warn_drv_unsupported_gpopt : Warning<
+  "ignoring '-mgpopt' option as it cannot be used with %select{|the implicit"
+  " usage of}0-mabicalls">,
+  InGroup<UnsupportedGPOpt>;
 
 def warn_drv_unable_to_find_directory_expected : Warning<
   "unable to find %0 directory, expected to be in '%1'">,

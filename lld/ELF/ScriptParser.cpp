@@ -256,7 +256,7 @@ void ScriptParser::addFile(StringRef S) {
     }
   }
 
-  if (sys::path::is_absolute(S)) {
+  if (S.startswith("/")) {
     Driver->addFile(S, /*WithLOption=*/false);
   } else if (S.startswith("=")) {
     if (Config->Sysroot.empty())

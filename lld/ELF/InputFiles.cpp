@@ -40,7 +40,13 @@ TarWriter *elf::Tar;
 InputFile::InputFile(Kind K, MemoryBufferRef M) : MB(M), FileKind(K) {}
 
 Optional<MemoryBufferRef> elf::readFile(StringRef Path) {
+  // The --chroot option changes our virtual root directory.
+  // This is useful when you are dealing with files created by --reproduce.
+  if (!Config->Chroot.empty() && Path.startswith("/"))
+    Path = Saver.save(Config->Chroot + Path);
+
   log(Path);
+
   auto MBOrErr = MemoryBuffer::getFile(Path);
   if (auto EC = MBOrErr.getError()) {
     error("cannot open " + Path + ": " + EC.message());

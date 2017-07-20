@@ -44,6 +44,9 @@ def allow_multiple_definition: F<"allow-multiple-definition">,
 def as_needed: F<"as-needed">,
   HelpText<"Only set DT_NEEDED for shared libraries if used">;
 
+// -chroot doesn't have a help text because it is an internal option.
+def chroot: S<"chroot">;
+
 def color_diagnostics: F<"color-diagnostics">,
   HelpText<"Use colors in diagnostics">;
 

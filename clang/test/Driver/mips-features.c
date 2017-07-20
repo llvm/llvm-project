@@ -10,6 +10,31 @@
 // RUN:   | FileCheck --check-prefix=CHECK-MNOABICALLS %s
 // CHECK-MNOABICALLS: "-target-feature" "+noabicalls"
 //
+// -mgpopt
+// RUN: %clang -target mips-linux-gnu -### -c %s -mno-gpopt -mgpopt -Wno-unsupported-gpopt 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-MGPOPT-DEF-ABICALLS %s
+// CHECK-MGPOPT-DEF-ABICALLS-NOT: "-mllvm" "-mgpopt"
+//
+// -mabicalls -mgpopt
+// RUN: %clang -target mips-linux-gnu -### -c %s -mabicalls -mno-gpopt -mgpopt -Wno-unsupported-gpopt 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-MGPOPT-EXPLICIT-ABICALLS %s
+// CHECK-MGPOPT-EXPLICIT-ABICALLS-NOT: "-mllvm" "-mgpopt"
+//
+// -mno-abicalls -mgpopt
+// RUN: %clang -target mips-linux-gnu -### -c %s -mno-abicalls -mno-gpopt -mgpopt 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-MGPOPT %s
+// CHECK-MGPOPT: "-mllvm" "-mgpopt"
+//
+// -mno-abicalls -mno-gpopt
+// RUN: %clang -target mips-linux-gnu -### -c %s -mno-abicalls -mgpopt -mno-gpopt 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-MNOGPOPT %s
+// CHECK-MNOGPOPT-NOT: "-mllvm" "-mgpopt"
+//
+// -mno-abicalls
+// RUN: %clang -target mips-linux-gnu -### -c %s -mno-abicalls 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-MGPOPTDEF %s
+// CHECK-MGPOPTDEF: "-mllvm" "-mgpopt"
+//
 // -mips16
 // RUN: %clang -target mips-linux-gnu -### -c %s \
 // RUN:     -mno-mips16 -mips16 2>&1 \

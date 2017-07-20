@@ -2,9 +2,6 @@
 ; RUN: -disable-output < %s | \
 ; RUN: FileCheck -check-prefix=CODE %s
 
-; RUN: opt %loadPolly -polly-codegen-ppcg -S < %s | \
-; RUN: FileCheck %s -check-prefix=IR
-
 ; REQUIRES: pollyacc
 
 ;    void foo(float A[]) {
@@ -16,11 +13,7 @@
 ;          A[42] += i + j;
 ;    }
 
-; CODE: Code
-; CODE-NEXT: ====
-; CODE-NEXT: # host
-; CODE-NEXT: {
-; CODE-NEXT:   cudaCheckReturn(cudaMemcpy(dev_MemRef_A, MemRef_A, (128) * sizeof(float), cudaMemcpyHostToDevice));
+; CODE:        cudaCheckReturn(cudaMemcpy(dev_MemRef_A, MemRef_A, (128) * sizeof(float), cudaMemcpyHostToDevice));
 ; CODE-NEXT:   {
 ; CODE-NEXT:     dim3 k0_dimBlock(32);
 ; CODE-NEXT:     dim3 k0_dimGrid(4);
@@ -28,26 +21,25 @@
 ; CODE-NEXT:     cudaCheckKernel();
 ; CODE-NEXT:   }
 
-; CODE:   for (int c0 = 0; c0 <= 127; c0 += 1)
-; CODE-NEXT:     for (int c1 = 0; c1 <= 127; c1 += 1)
-; CODE-NEXT:       {
+; CODE:            {
 ; CODE-NEXT:         dim3 k1_dimBlock;
 ; CODE-NEXT:         dim3 k1_dimGrid;
-; CODE-NEXT:         kernel1 <<<k1_dimGrid, k1_dimBlock>>> (dev_MemRef_A, c0, c1);
+; CODE-NEXT:         kernel1 <<<k1_dimGrid, k1_dimBlock>>> (dev_MemRef_A);
 ; CODE-NEXT:         cudaCheckKernel();
 ; CODE-NEXT:       }
 
 ; CODE:   cudaCheckReturn(cudaMemcpy(MemRef_A, dev_MemRef_A, (128) * sizeof(float), cudaMemcpyDeviceToHost));
+; CODE-NEXT: cudaCheckReturn(cudaFree(dev_MemRef_A));
 ; CODE-NEXT: }
 
 ; CODE: # kernel0
 ; CODE-NEXT: Stmt_bb4(32 * b0 + t0);
 
 ; CODE: # kernel1
-; CODE-NEXT: Stmt_bb14(c0, c1);
+; CODE-NEXT: for (int c0 = 0; c0 <= 127; c0 += 1)
+; CODE-NEXT:   for (int c1 = 0; c1 <= 127; c1 += 1)
+; CODE-NEXT:     Stmt_bb14(c0, c1);
 
-; Verify that we identified this kernel as non-profitable.
-; IR: br i1 false, label %polly.start, label %bb3
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

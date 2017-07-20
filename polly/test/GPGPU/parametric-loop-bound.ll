@@ -14,15 +14,16 @@
 ;    }
 
 ; CODE: if (n >= 1) {
-; CODE-NEXT:   cudaCheckReturn(cudaMemcpy(dev_MemRef_A, MemRef_A, (n) * sizeof(i64), cudaMemcpyHostToDevice));
+; CODE:        cudaCheckReturn(cudaMemcpy(dev_MemRef_A, MemRef_A, (n) * sizeof(i64), cudaMemcpyHostToDevice));
 ; CODE-NEXT:   {
 ; CODE-NEXT:     dim3 k0_dimBlock(32);
-; CODE-NEXT:     dim3 k0_dimGrid(n >= 1048546 ? 32768 : floord(n + 31, 32));
+; CODE-NEXT:     dim3 k0_dimGrid(n >= 1048546 ? 32768 : (n + 31) / 32);
 ; CODE-NEXT:     kernel0 <<<k0_dimGrid, k0_dimBlock>>> (dev_MemRef_A, n);
 ; CODE-NEXT:     cudaCheckKernel();
 ; CODE-NEXT:   }
 
-; CODE:   cudaCheckReturn(cudaMemcpy(MemRef_A, dev_MemRef_A, (n) * sizeof(i64), cudaMemcpyDeviceToHost));
+; CODE:        cudaCheckReturn(cudaMemcpy(MemRef_A, dev_MemRef_A, (n) * sizeof(i64), cudaMemcpyDeviceToHost));
+; CODE-NEXT:   cudaCheckReturn(cudaFree(dev_MemRef_A));
 ; CODE-NEXT: }
 
 ; CODE: # kernel0

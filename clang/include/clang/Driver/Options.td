@@ -2059,6 +2059,12 @@ def mfp64 : Flag<["-"], "mfp64">, Group<m_Group>,
   HelpText<"Use 64-bit floating point registers (MIPS only)">;
 def mfp32 : Flag<["-"], "mfp32">, Group<m_Group>,
   HelpText<"Use 32-bit floating point registers (MIPS only)">;
+def mgpopt : Flag<["-"], "mgpopt">, Group<m_Group>,
+  HelpText<"Use GP relative accesses for symbols known to be in a small"
+           " data section (MIPS)">;
+def mno_gpopt : Flag<["-"], "mno-gpopt">, Group<m_Group>,
+  HelpText<"Do not use GP relative accesses for symbols known to be in a small"
+           " data section (MIPS)">;
 def mnan_EQ : Joined<["-"], "mnan=">, Group<m_Group>;
 def mabicalls : Flag<["-"], "mabicalls">, Group<m_Group>,
   HelpText<"Enable SVR4-style position-independent code (Mips only)">;
