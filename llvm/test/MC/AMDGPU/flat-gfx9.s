@@ -38,3 +38,27 @@ flat_atomic_swap v[3:4], v5 offset:16
 flat_store_dword v[3:4], v1 offset:16
 // GFX9: flat_store_dword v[3:4], v1 offset:16 ; encoding: [0x10,0x00,0x70,0xdc,0x03,0x01,0x00,0x00]
 // VIERR: :1: error: invalid operand for instruction
+
+flat_store_dword v[3:4], v1, off
+// GCNERR: :30: error: invalid operand for instruction
+
+flat_store_dword v[3:4], v1, s[0:1]
+// GCNERR: :30: error: invalid operand for instruction
+
+flat_store_dword v[3:4], v1, s0
+// GCNERR: :30: error: invalid operand for instruction
+
+flat_load_dword v1, v[3:4], off
+// GCNERR: :29: error: invalid operand for instruction
+
+flat_load_dword v1, v[3:4], s[0:1]
+// GCNERR: :29: error: invalid operand for instruction
+
+flat_load_dword v1, v[3:4], s0
+// GCNERR: :29: error: invalid operand for instruction
+
+flat_load_dword v1, v[3:4], exec_hi
+// GCNERR: :29: error: invalid operand for instruction
+
+flat_store_dword v[3:4], v1, exec_hi
+// GCNERR: :30: error: invalid operand for instruction

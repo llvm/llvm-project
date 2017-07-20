@@ -1680,6 +1680,37 @@ multiclass MaskedDoubleShiftAmountPats<SDNode frag, string name> {
 defm : MaskedDoubleShiftAmountPats<X86shld, "SHLD">;
 defm : MaskedDoubleShiftAmountPats<X86shrd, "SHRD">;
 
+let Predicates = [HasBMI2] in {
+  let AddedComplexity = 1 in {
+    def : Pat<(sra GR32:$src1, (and GR8:$src2, immShift32)),
+              (SARX32rr GR32:$src1,
+                        (INSERT_SUBREG
+                          (i32 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
+    def : Pat<(sra GR64:$src1, (and GR8:$src2, immShift64)),
+              (SARX64rr GR64:$src1,
+                        (INSERT_SUBREG
+                          (i64 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
+
+    def : Pat<(srl GR32:$src1, (and GR8:$src2, immShift32)),
+              (SHRX32rr GR32:$src1,
+                        (INSERT_SUBREG
+                          (i32 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
+    def : Pat<(srl GR64:$src1, (and GR8:$src2, immShift64)),
+              (SHRX64rr GR64:$src1,
+                        (INSERT_SUBREG
+                          (i64 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
+
+    def : Pat<(shl GR32:$src1, (and GR8:$src2, immShift32)),
+              (SHLX32rr GR32:$src1,
+                        (INSERT_SUBREG
+                          (i32 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
+    def : Pat<(shl GR64:$src1, (and GR8:$src2, immShift64)),
+              (SHLX64rr GR64:$src1,
+                        (INSERT_SUBREG
+                          (i64 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
+  }
+}
+
 // (anyext (setcc_carry)) -> (setcc_carry)
 def : Pat<(i16 (anyext (i8 (X86setcc_c X86_COND_B, EFLAGS)))),
           (SETB_C16r)>;

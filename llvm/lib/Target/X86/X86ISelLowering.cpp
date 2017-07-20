@@ -22022,8 +22022,9 @@ static SDValue LowerScalarImmediateShift(SDValue Op, SelectionDAG &DAG,
         return getTargetVShiftByConstNode(X86Opc, dl, VT, R, ShiftAmt, DAG);
 
       // i64 SRA needs to be performed as partial shifts.
-      if ((VT == MVT::v2i64 || (Subtarget.hasInt256() && VT == MVT::v4i64)) &&
-          Op.getOpcode() == ISD::SRA && !Subtarget.hasXOP())
+      if (((!Subtarget.hasXOP() && VT == MVT::v2i64) ||
+           (Subtarget.hasInt256() && VT == MVT::v4i64)) &&
+          Op.getOpcode() == ISD::SRA)
         return ArithmeticShiftRight64(ShiftAmt);
 
       if (VT == MVT::v16i8 ||

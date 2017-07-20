@@ -26,14 +26,17 @@ void SmallVectorBase::grow_pod(void *FirstEl, size_t MinSizeInBytes,
   void *NewElts;
   if (BeginX == FirstEl) {
     NewElts = malloc(NewCapacityInBytes);
+    if (NewElts == nullptr)
+      report_bad_alloc_error("Allocation of SmallVector element failed.");
 
     // Copy the elements over.  No need to run dtors on PODs.
     memcpy(NewElts, this->BeginX, CurSizeBytes);
   } else {
     // If this wasn't grown from the inline copy, grow the allocated space.
     NewElts = realloc(this->BeginX, NewCapacityInBytes);
+    if (NewElts == nullptr)
+      report_bad_alloc_error("Reallocation of SmallVector element failed.");
   }
-  assert(NewElts && "Out of memory");
 
   this->EndX = (char*)NewElts+CurSizeBytes;
   this->BeginX = NewElts;

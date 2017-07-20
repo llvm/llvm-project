@@ -11,7 +11,6 @@
 static volatile int Sink;
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
-  if (Size > 64) return 0;
   int8_t Ids[256];
   memset(Ids, -1, sizeof(Ids));
   for (size_t i = 0; i < Size; i++)

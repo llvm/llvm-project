@@ -7854,7 +7854,7 @@ SDValue DAGCombiner::GetDemandedBits(SDValue V, const APInt &Mask) {
   case ISD::AND: {
     // X & -1 -> X (ignoring bits which aren't demanded).
     ConstantSDNode *AndVal = isConstOrConstSplat(V.getOperand(1));
-    if (AndVal && (AndVal->getAPIntValue() & Mask) == Mask)
+    if (AndVal && Mask.isSubsetOf(AndVal->getAPIntValue()))
       return V.getOperand(0);
     break;
   }
