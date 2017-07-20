@@ -55,41 +55,41 @@
 ; CHECK:         .asciz  "c"
 ; CHECK:         .cv_def_range    [[start]] [[end]]
 
-; OBJ-LABEL: ProcStart {
+; OBJ-LABEL: {{.*}}Proc{{.*}}Sym {
 ; OBJ:   Kind: S_GPROC32_ID (0x1147)
 ; OBJ:   DisplayName: f
 ; OBJ: }
-; OBJ: Local {
+; OBJ: LocalSym {
 ; OBJ:   Type: NonTrivial (0x1007)
 ; OBJ:   Flags [ (0x1)
 ; OBJ:     IsParameter (0x1)
 ; OBJ:   ]
 ; OBJ:   VarName: a
 ; OBJ: }
-; OBJ: DefRangeRegisterRel {
+; OBJ: DefRangeRegisterRelSym {
 ; OBJ:   BaseRegister: 21
 ; OBJ:   BasePointerOffset: 12
 ; OBJ: }
-; OBJ: Local {
+; OBJ: LocalSym {
 ; OBJ:   Type: int (0x74)
 ; OBJ:   Flags [ (0x1)
 ; OBJ:     IsParameter (0x1)
 ; OBJ:   ]
 ; OBJ:   VarName: b
 ; OBJ: }
-; OBJ: DefRangeRegisterRel {
+; OBJ: DefRangeRegisterRelSym {
 ; OBJ:   BaseRegister: 21
 ; OBJ:   BasePointerOffset: 16
 ; OBJ: }
 ; FIXME: Retain unused.
-; OBJ: Local {
+; OBJ: LocalSym {
 ; OBJ:   Type: int (0x74)
 ; OBJ:   Flags [ (0x1)
 ; OBJ:     IsParameter (0x1)
 ; OBJ:   ]
 ; OBJ:   VarName: c
 ; OBJ: }
-; OBJ: DefRangeRegisterRel {
+; OBJ: DefRangeRegisterRelSym {
 ; OBJ:   BaseRegister: 21
 ; OBJ:   BasePointerOffset: 24
 ; OBJ: }

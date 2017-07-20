@@ -2073,7 +2073,8 @@ void NewGVN::moveMemoryToNewCongruenceClass(Instruction *I,
   // be the MemoryAccess of OldClass.
   assert((!InstMA || !OldClass->getMemoryLeader() ||
           OldClass->getLeader() != I ||
-          OldClass->getMemoryLeader() == InstMA) &&
+          MemoryAccessToClass.lookup(OldClass->getMemoryLeader()) ==
+              MemoryAccessToClass.lookup(InstMA)) &&
          "Representative MemoryAccess mismatch");
   // First, see what happens to the new class
   if (!NewClass->getMemoryLeader()) {

@@ -461,7 +461,7 @@ static LoadInst *combineLoadToNewType(InstCombiner &IC, LoadInst &LI, Type *NewT
   LoadInst *NewLoad = IC.Builder.CreateAlignedLoad(
       IC.Builder.CreateBitCast(Ptr, NewTy->getPointerTo(AS)),
       LI.getAlignment(), LI.isVolatile(), LI.getName() + Suffix);
-  NewLoad->setAtomic(LI.getOrdering(), LI.getSynchScope());
+  NewLoad->setAtomic(LI.getOrdering(), LI.getSyncScopeID());
   MDBuilder MDB(NewLoad->getContext());
   for (const auto &MDPair : MD) {
     unsigned ID = MDPair.first;
@@ -521,7 +521,7 @@ static StoreInst *combineStoreToNewValue(InstCombiner &IC, StoreInst &SI, Value 
   StoreInst *NewStore = IC.Builder.CreateAlignedStore(
       V, IC.Builder.CreateBitCast(Ptr, V->getType()->getPointerTo(AS)),
       SI.getAlignment(), SI.isVolatile());
-  NewStore->setAtomic(SI.getOrdering(), SI.getSynchScope());
+  NewStore->setAtomic(SI.getOrdering(), SI.getSyncScopeID());
   for (const auto &MDPair : MD) {
     unsigned ID = MDPair.first;
     MDNode *N = MDPair.second;
@@ -1025,9 +1025,9 @@ Instruction *InstCombiner::visitLoadInst(LoadInst &LI) {
                                           SI->getOperand(2)->getName()+".val");
         assert(LI.isUnordered() && "implied by above");
         V1->setAlignment(Align);
-        V1->setAtomic(LI.getOrdering(), LI.getSynchScope());
+        V1->setAtomic(LI.getOrdering(), LI.getSyncScopeID());
         V2->setAlignment(Align);
-        V2->setAtomic(LI.getOrdering(), LI.getSynchScope());
+        V2->setAtomic(LI.getOrdering(), LI.getSyncScopeID());
         return SelectInst::Create(SI->getCondition(), V1, V2);
       }
 
@@ -1540,7 +1540,7 @@ bool InstCombiner::SimplifyStoreAtEndOfBlock(StoreInst &SI) {
                                    SI.isVolatile(),
                                    SI.getAlignment(),
                                    SI.getOrdering(),
-                                   SI.getSynchScope());
+                                   SI.getSyncScopeID());
   InsertNewInstBefore(NewSI, *BBI);
   // The debug locations of the original instructions might differ; merge them.
   NewSI->setDebugLoc(DILocation::getMergedLocation(SI.getDebugLoc(),

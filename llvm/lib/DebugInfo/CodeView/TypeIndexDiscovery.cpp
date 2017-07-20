@@ -382,6 +382,13 @@ static bool discoverTypeIndices(ArrayRef<uint8_t> Content, SymbolKind Kind,
   case SymbolKind::S_BUILDINFO:
     Refs.push_back({TiRefKind::IndexRef, 0, 1}); // Compile flags
     break;
+  case SymbolKind::S_LTHREAD32:
+  case SymbolKind::S_GTHREAD32:
+    Refs.push_back({TiRefKind::TypeRef, 0, 1}); // Type
+    break;
+  case SymbolKind::S_FILESTATIC:
+    Refs.push_back({TiRefKind::TypeRef, 0, 1}); // Type
+    break;
   case SymbolKind::S_LOCAL:
     Refs.push_back({TiRefKind::TypeRef, 0, 1}); // Type
     break;
@@ -403,6 +410,10 @@ static bool discoverTypeIndices(ArrayRef<uint8_t> Content, SymbolKind Kind,
   case SymbolKind::S_INLINESITE:
     Refs.push_back({TiRefKind::IndexRef, 8, 1}); // ID of inlinee
     break;
+  case SymbolKind::S_HEAPALLOCSITE:
+    // FIXME: It's not clear if this is a type or item reference.
+    Refs.push_back({TiRefKind::IndexRef, 8, 1}); // signature
+    break;
 
   // Defranges don't have types, just registers and code offsets.
   case SymbolKind::S_DEFRANGE_REGISTER:
@@ -419,6 +430,7 @@ static bool discoverTypeIndices(ArrayRef<uint8_t> Content, SymbolKind Kind,
   case SymbolKind::S_COMPILE:
   case SymbolKind::S_COMPILE2:
   case SymbolKind::S_COMPILE3:
+  case SymbolKind::S_ENVBLOCK:
   case SymbolKind::S_BLOCK32:
   case SymbolKind::S_FRAMEPROC:
     break;

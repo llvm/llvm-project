@@ -40,6 +40,8 @@ public:
   virtual void emitDirectiveSetNoMacro();
   virtual void emitDirectiveSetMsa();
   virtual void emitDirectiveSetNoMsa();
+  virtual void emitDirectiveSetMt();
+  virtual void emitDirectiveSetNoMt();
   virtual void emitDirectiveSetAt();
   virtual void emitDirectiveSetAtWithArg(unsigned RegNo);
   virtual void emitDirectiveSetNoAt();
@@ -96,6 +98,7 @@ public:
   virtual void emitDirectiveModuleOddSPReg();
   virtual void emitDirectiveModuleSoftFloat();
   virtual void emitDirectiveModuleHardFloat();
+  virtual void emitDirectiveModuleMT();
   virtual void emitDirectiveSetFp(MipsABIFlagsSection::FpABIKind Value);
   virtual void emitDirectiveSetOddSPReg();
   virtual void emitDirectiveSetNoOddSPReg();
@@ -204,6 +207,8 @@ public:
   void emitDirectiveSetNoMacro() override;
   void emitDirectiveSetMsa() override;
   void emitDirectiveSetNoMsa() override;
+  void emitDirectiveSetMt() override;
+  void emitDirectiveSetNoMt() override;
   void emitDirectiveSetAt() override;
   void emitDirectiveSetAtWithArg(unsigned RegNo) override;
   void emitDirectiveSetNoAt() override;
@@ -267,6 +272,7 @@ public:
   void emitDirectiveModuleOddSPReg() override;
   void emitDirectiveModuleSoftFloat() override;
   void emitDirectiveModuleHardFloat() override;
+  void emitDirectiveModuleMT() override;
   void emitDirectiveSetFp(MipsABIFlagsSection::FpABIKind Value) override;
   void emitDirectiveSetOddSPReg() override;
   void emitDirectiveSetNoOddSPReg() override;

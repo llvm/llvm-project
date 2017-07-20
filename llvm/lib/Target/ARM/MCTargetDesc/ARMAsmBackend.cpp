@@ -361,9 +361,8 @@ static uint32_t joinHalfWords(uint32_t FirstHalf, uint32_t SecondHalf,
 unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
                                          const MCFixup &Fixup,
                                          const MCValue &Target, uint64_t Value,
-                                         bool IsPCRel, MCContext &Ctx,
-                                         bool IsLittleEndian,
-                                         bool IsResolved) const {
+                                         bool IsResolved, MCContext &Ctx,
+                                         bool IsLittleEndian) const {
   unsigned Kind = Fixup.getKind();
 
   // MachO tries to make .o files that look vaguely pre-linked, so for MOVW/MOVT
@@ -392,7 +391,7 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
   case FK_SecRel_4:
     return Value;
   case ARM::fixup_arm_movt_hi16:
-    if (!IsPCRel)
+    if (IsResolved || !STI->getTargetTriple().isOSBinFormatELF())
       Value >>= 16;
     LLVM_FALLTHROUGH;
   case ARM::fixup_arm_movw_lo16: {
@@ -404,7 +403,7 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
     return Value;
   }
   case ARM::fixup_t2_movt_hi16:
-    if (!IsPCRel)
+    if (IsResolved || !STI->getTargetTriple().isOSBinFormatELF())
       Value >>= 16;
     LLVM_FALLTHROUGH;
   case ARM::fixup_t2_movw_lo16: {
@@ -885,11 +884,11 @@ static unsigned getFixupKindContainerSizeBytes(unsigned Kind) {
 void ARMAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                                const MCValue &Target,
                                MutableArrayRef<char> Data, uint64_t Value,
-                               bool IsPCRel) const {
+                               bool IsResolved) const {
   unsigned NumBytes = getFixupKindNumBytes(Fixup.getKind());
   MCContext &Ctx = Asm.getContext();
-  Value = adjustFixupValue(Asm, Fixup, Target, Value, IsPCRel, Ctx,
-                           IsLittleEndian, true);
+  Value = adjustFixupValue(Asm, Fixup, Target, Value, IsResolved, Ctx,
+                           IsLittleEndian);
   if (!Value)
     return; // Doesn't change encoding.
 

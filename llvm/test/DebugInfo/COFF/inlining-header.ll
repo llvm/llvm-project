@@ -63,7 +63,7 @@
 
 ; OBJ: Subsection [
 ; OBJ:   SubSectionType: Symbols (0xF1)
-; OBJ:   ProcStart {
+; OBJ:   {{.*}}Proc{{.*}}Sym {
 ; OBJ:     Kind: S_GPROC32_ID (0x1147)
 ; OBJ:     FunctionType: main (0x1005)
 ; OBJ:     CodeOffset: _main+0x0
@@ -74,8 +74,8 @@
 ; OBJ:     LinkageName: _main
 ; OBJ:   }
 
-; Previously, g's InlineSite referenced t.h, which was wasteful.
-; OBJ:        InlineSite {
+; Previously, g's InlineSiteSym referenced t.h, which was wasteful.
+; OBJ:        InlineSiteSym {
 ; OBJ:          Inlinee: g (0x1002)
 ; OBJ:          BinaryAnnotations [
 ; OBJ-NEXT:       ChangeCodeOffsetAndLineOffset: {CodeOffset: 0x6, LineOffset: 1}
@@ -85,7 +85,7 @@
 ; OBJ-NEXT:     ]
 ; OBJ:        }
 
-; OBJ:   InlineSite {
+; OBJ:   InlineSiteSym {
 ; OBJ:     Inlinee: f (0x1003)
 ; OBJ:     BinaryAnnotations [
 ; OBJ-NEXT:  ChangeCodeOffsetAndLineOffset: {CodeOffset: 0xD, LineOffset: 1}

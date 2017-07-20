@@ -26,7 +26,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "misched"
+#define DEBUG_TYPE "machine-scheduler"
 
 // This is the limit of processor resource usage at which the
 // scheduler should try to look for other instructions (not using the

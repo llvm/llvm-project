@@ -38,7 +38,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "misched"
+#define DEBUG_TYPE "machine-scheduler"
 
 // This scheduler implements a different scheduling algorithm than
 // GenericScheduler.

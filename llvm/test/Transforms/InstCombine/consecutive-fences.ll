@@ -4,7 +4,7 @@
 
 ; CHECK-LABEL: define void @tinkywinky
 ; CHECK-NEXT:   fence seq_cst
-; CHECK-NEXT:   fence singlethread acquire
+; CHECK-NEXT:   fence syncscope("singlethread") acquire
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: }
 
@@ -12,21 +12,21 @@ define void @tinkywinky() {
   fence seq_cst
   fence seq_cst
   fence seq_cst
-  fence singlethread acquire
-  fence singlethread acquire
-  fence singlethread acquire
+  fence syncscope("singlethread") acquire
+  fence syncscope("singlethread") acquire
+  fence syncscope("singlethread") acquire
   ret void
 }
 
 ; CHECK-LABEL: define void @dipsy
 ; CHECK-NEXT:   fence seq_cst
-; CHECK-NEXT:   fence singlethread seq_cst
+; CHECK-NEXT:   fence syncscope("singlethread") seq_cst
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: }
 
 define void @dipsy() {
   fence seq_cst
-  fence singlethread seq_cst
+  fence syncscope("singlethread") seq_cst
   ret void
 }
 

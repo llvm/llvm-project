@@ -11,10 +11,11 @@
 
 ; FIXME: Find a way to describe variables optimized to constants.
 
-; OBJ:        ProcStart {
+; OBJ:        {{.*}}Proc{{.*}}Sym {
 ; OBJ:           DisplayName: constant_var
 ; OBJ:         }
-; OBJ:         Local {
+; OBJ:         LocalSym {
+; OBJ-NEXT:      Kind:
 ; OBJ-NEXT:      Type: int (0x74)
 ; OBJ-NEXT:      Flags [ (0x100)
 ; OBJ-NEXT:        IsOptimizedOut (0x100)

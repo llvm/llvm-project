@@ -127,7 +127,8 @@ struct MIToken {
     NamedIRValue,
     IRValue,
     QuotedIRValue, // `<constant value>`
-    SubRegisterIndex
+    SubRegisterIndex,
+    StringConstant
   };
 
 private:

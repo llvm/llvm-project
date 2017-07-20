@@ -345,7 +345,7 @@ bool IRTranslator::translateLoad(const User &U, MachineIRBuilder &MIRBuilder) {
       *MF->getMachineMemOperand(MachinePointerInfo(LI.getPointerOperand()),
                                 Flags, DL->getTypeStoreSize(LI.getType()),
                                 getMemOpAlignment(LI), AAMDNodes(), nullptr,
-                                LI.getSynchScope(), LI.getOrdering()));
+                                LI.getSyncScopeID(), LI.getOrdering()));
   return true;
 }
 
@@ -363,7 +363,7 @@ bool IRTranslator::translateStore(const User &U, MachineIRBuilder &MIRBuilder) {
       *MF->getMachineMemOperand(
           MachinePointerInfo(SI.getPointerOperand()), Flags,
           DL->getTypeStoreSize(SI.getValueOperand()->getType()),
-          getMemOpAlignment(SI), AAMDNodes(), nullptr, SI.getSynchScope(),
+          getMemOpAlignment(SI), AAMDNodes(), nullptr, SI.getSyncScopeID(),
           SI.getOrdering()));
   return true;
 }

@@ -513,6 +513,7 @@ class BitcodeReader : public BitcodeReaderBase, public GVMaterializer {
   TBAAVerifier TBAAVerifyHelper;
 
   std::vector<std::string> BundleTags;
+  SmallVector<SyncScope::ID, 8> SSIDs;
 
 public:
   BitcodeReader(BitstreamCursor Stream, StringRef Strtab,
@@ -648,6 +649,7 @@ private:
   Error parseTypeTable();
   Error parseTypeTableBody();
   Error parseOperandBundleTags();
+  Error parseSyncScopeNames();
 
   Expected<Value *> recordValue(SmallVectorImpl<uint64_t> &Record,
                                 unsigned NameIndex, Triple &TT);
@@ -668,6 +670,8 @@ private:
   Error findFunctionInStream(
       Function *F,
       DenseMap<Function *, uint64_t>::iterator DeferredFunctionInfoIterator);
+
+  SyncScope::ID getDecodedSyncScopeID(unsigned Val);
 };
 
 /// Class to manage reading and parsing function summary index bitcode
@@ -995,14 +999,6 @@ static AtomicOrdering getDecodedOrdering(unsigned Val) {
   case bitc::ORDERING_ACQREL: return AtomicOrdering::AcquireRelease;
   default: // Map unknown orderings to sequentially-consistent.
   case bitc::ORDERING_SEQCST: return AtomicOrdering::SequentiallyConsistent;
-  }
-}
-
-static SynchronizationScope getDecodedSynchScope(unsigned Val) {
-  switch (Val) {
-  case bitc::SYNCHSCOPE_SINGLETHREAD: return SingleThread;
-  default: // Map unknown scopes to cross-thread.
-  case bitc::SYNCHSCOPE_CROSSTHREAD: return CrossThread;
   }
 }
 
@@ -1741,6 +1737,44 @@ Error BitcodeReader::parseOperandBundleTags() {
     BundleTags.emplace_back();
     if (convertToString(Record, 0, BundleTags.back()))
       return error("Invalid record");
+    Record.clear();
+  }
+}
+
+Error BitcodeReader::parseSyncScopeNames() {
+  if (Stream.EnterSubBlock(bitc::SYNC_SCOPE_NAMES_BLOCK_ID))
+    return error("Invalid record");
+
+  if (!SSIDs.empty())
+    return error("Invalid multiple synchronization scope names blocks");
+
+  SmallVector<uint64_t, 64> Record;
+  while (true) {
+    BitstreamEntry Entry = Stream.advanceSkippingSubblocks();
+    switch (Entry.Kind) {
+    case BitstreamEntry::SubBlock: // Handled for us already.
+    case BitstreamEntry::Error:
+      return error("Malformed block");
+    case BitstreamEntry::EndBlock:
+      if (SSIDs.empty())
+        return error("Invalid empty synchronization scope names block");
+      return Error::success();
+    case BitstreamEntry::Record:
+      // The interesting case.
+      break;
+    }
+
+    // Synchronization scope names are implicitly mapped to synchronization
+    // scope IDs by their order.
+
+    if (Stream.readRecord(Entry.ID, Record) != bitc::SYNC_SCOPE_NAME)
+      return error("Invalid record");
+
+    SmallString<16> SSN;
+    if (convertToString(Record, 0, SSN))
+      return error("Invalid record");
+
+    SSIDs.push_back(Context.getOrInsertSyncScopeID(SSN));
     Record.clear();
   }
 }
@@ -3132,6 +3166,10 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
         if (Error Err = parseOperandBundleTags())
           return Err;
         break;
+      case bitc::SYNC_SCOPE_NAMES_BLOCK_ID:
+        if (Error Err = parseSyncScopeNames())
+          return Err;
+        break;
       }
       continue;
 
@@ -4204,7 +4242,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       break;
     }
     case bitc::FUNC_CODE_INST_LOADATOMIC: {
-       // LOADATOMIC: [opty, op, align, vol, ordering, synchscope]
+       // LOADATOMIC: [opty, op, align, vol, ordering, ssid]
       unsigned OpNum = 0;
       Value *Op;
       if (getValueTypePair(Record, OpNum, NextValueNo, Op) ||
@@ -4226,12 +4264,12 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
         return error("Invalid record");
       if (Ordering != AtomicOrdering::NotAtomic && Record[OpNum] == 0)
         return error("Invalid record");
-      SynchronizationScope SynchScope = getDecodedSynchScope(Record[OpNum + 3]);
+      SyncScope::ID SSID = getDecodedSyncScopeID(Record[OpNum + 3]);
 
       unsigned Align;
       if (Error Err = parseAlignmentValue(Record[OpNum], Align))
         return Err;
-      I = new LoadInst(Op, "", Record[OpNum+1], Align, Ordering, SynchScope);
+      I = new LoadInst(Op, "", Record[OpNum+1], Align, Ordering, SSID);
 
       InstructionList.push_back(I);
       break;
@@ -4260,7 +4298,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
     }
     case bitc::FUNC_CODE_INST_STOREATOMIC:
     case bitc::FUNC_CODE_INST_STOREATOMIC_OLD: {
-      // STOREATOMIC: [ptrty, ptr, val, align, vol, ordering, synchscope]
+      // STOREATOMIC: [ptrty, ptr, val, align, vol, ordering, ssid]
       unsigned OpNum = 0;
       Value *Val, *Ptr;
       if (getValueTypePair(Record, OpNum, NextValueNo, Ptr) ||
@@ -4280,20 +4318,20 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
           Ordering == AtomicOrdering::Acquire ||
           Ordering == AtomicOrdering::AcquireRelease)
         return error("Invalid record");
-      SynchronizationScope SynchScope = getDecodedSynchScope(Record[OpNum + 3]);
+      SyncScope::ID SSID = getDecodedSyncScopeID(Record[OpNum + 3]);
       if (Ordering != AtomicOrdering::NotAtomic && Record[OpNum] == 0)
         return error("Invalid record");
 
       unsigned Align;
       if (Error Err = parseAlignmentValue(Record[OpNum], Align))
         return Err;
-      I = new StoreInst(Val, Ptr, Record[OpNum+1], Align, Ordering, SynchScope);
+      I = new StoreInst(Val, Ptr, Record[OpNum+1], Align, Ordering, SSID);
       InstructionList.push_back(I);
       break;
     }
     case bitc::FUNC_CODE_INST_CMPXCHG_OLD:
     case bitc::FUNC_CODE_INST_CMPXCHG: {
-      // CMPXCHG:[ptrty, ptr, cmp, new, vol, successordering, synchscope,
+      // CMPXCHG:[ptrty, ptr, cmp, new, vol, successordering, ssid,
       //          failureordering?, isweak?]
       unsigned OpNum = 0;
       Value *Ptr, *Cmp, *New;
@@ -4310,7 +4348,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       if (SuccessOrdering == AtomicOrdering::NotAtomic ||
           SuccessOrdering == AtomicOrdering::Unordered)
         return error("Invalid record");
-      SynchronizationScope SynchScope = getDecodedSynchScope(Record[OpNum + 2]);
+      SyncScope::ID SSID = getDecodedSyncScopeID(Record[OpNum + 2]);
 
       if (Error Err = typeCheckLoadStoreInst(Cmp->getType(), Ptr->getType()))
         return Err;
@@ -4322,7 +4360,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
         FailureOrdering = getDecodedOrdering(Record[OpNum + 3]);
 
       I = new AtomicCmpXchgInst(Ptr, Cmp, New, SuccessOrdering, FailureOrdering,
-                                SynchScope);
+                                SSID);
       cast<AtomicCmpXchgInst>(I)->setVolatile(Record[OpNum]);
 
       if (Record.size() < 8) {
@@ -4339,7 +4377,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       break;
     }
     case bitc::FUNC_CODE_INST_ATOMICRMW: {
-      // ATOMICRMW:[ptrty, ptr, val, op, vol, ordering, synchscope]
+      // ATOMICRMW:[ptrty, ptr, val, op, vol, ordering, ssid]
       unsigned OpNum = 0;
       Value *Ptr, *Val;
       if (getValueTypePair(Record, OpNum, NextValueNo, Ptr) ||
@@ -4356,13 +4394,13 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       if (Ordering == AtomicOrdering::NotAtomic ||
           Ordering == AtomicOrdering::Unordered)
         return error("Invalid record");
-      SynchronizationScope SynchScope = getDecodedSynchScope(Record[OpNum + 3]);
-      I = new AtomicRMWInst(Operation, Ptr, Val, Ordering, SynchScope);
+      SyncScope::ID SSID = getDecodedSyncScopeID(Record[OpNum + 3]);
+      I = new AtomicRMWInst(Operation, Ptr, Val, Ordering, SSID);
       cast<AtomicRMWInst>(I)->setVolatile(Record[OpNum+1]);
       InstructionList.push_back(I);
       break;
     }
-    case bitc::FUNC_CODE_INST_FENCE: { // FENCE:[ordering, synchscope]
+    case bitc::FUNC_CODE_INST_FENCE: { // FENCE:[ordering, ssid]
       if (2 != Record.size())
         return error("Invalid record");
       AtomicOrdering Ordering = getDecodedOrdering(Record[0]);
@@ -4370,8 +4408,8 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
           Ordering == AtomicOrdering::Unordered ||
           Ordering == AtomicOrdering::Monotonic)
         return error("Invalid record");
-      SynchronizationScope SynchScope = getDecodedSynchScope(Record[1]);
-      I = new FenceInst(Context, Ordering, SynchScope);
+      SyncScope::ID SSID = getDecodedSyncScopeID(Record[1]);
+      I = new FenceInst(Context, Ordering, SSID);
       InstructionList.push_back(I);
       break;
     }
@@ -4565,6 +4603,14 @@ Error BitcodeReader::findFunctionInStream(
       return Err;
   }
   return Error::success();
+}
+
+SyncScope::ID BitcodeReader::getDecodedSyncScopeID(unsigned Val) {
+  if (Val == SyncScope::SingleThread || Val == SyncScope::System)
+    return SyncScope::ID(Val);
+  if (Val >= SSIDs.size())
+    return SyncScope::System; // Map unknown synchronization scopes to system.
+  return SSIDs[Val];
 }
 
 //===----------------------------------------------------------------------===//

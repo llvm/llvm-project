@@ -543,6 +543,7 @@ bool lldb_private::formatters::NSNumberSummaryProvider(
       }
       
       uint64_t value = 0;
+      bool success = false;
       switch (type_code) {
         case TypeCodes::sint8:
         value = process_sp->ReadUnsignedIntegerFromMemory(data_location, 1, 0,
@@ -550,6 +551,7 @@ bool lldb_private::formatters::NSNumberSummaryProvider(
         if (error.Fail())
           return false;
         NSNumber_FormatChar(valobj, stream, (char)value, options.GetLanguage());
+        success = true;
         break;
         case TypeCodes::sint16:
         value = process_sp->ReadUnsignedIntegerFromMemory(data_location, 2, 0,
@@ -558,6 +560,7 @@ bool lldb_private::formatters::NSNumberSummaryProvider(
           return false;
         NSNumber_FormatShort(valobj, stream, (short)value,
                              options.GetLanguage());
+        success = true;
         break;
       case TypeCodes::sint32:
         value = process_sp->ReadUnsignedIntegerFromMemory(data_location, 4, 0,
@@ -565,6 +568,7 @@ bool lldb_private::formatters::NSNumberSummaryProvider(
         if (error.Fail())
           return false;
         NSNumber_FormatInt(valobj, stream, (int)value, options.GetLanguage());
+        success = true;
         break;
       case TypeCodes::sint64:
         value = process_sp->ReadUnsignedIntegerFromMemory(data_location, 8, 0,
@@ -572,6 +576,7 @@ bool lldb_private::formatters::NSNumberSummaryProvider(
         if (error.Fail())
           return false;
         NSNumber_FormatLong(valobj, stream, value, options.GetLanguage());
+        success = true;
         break;
       case TypeCodes::f32:
       {
@@ -582,6 +587,7 @@ bool lldb_private::formatters::NSNumberSummaryProvider(
         float flt_value = 0.0f;
         memcpy(&flt_value, &flt_as_int, sizeof(flt_as_int));
         NSNumber_FormatFloat(valobj, stream, flt_value, options.GetLanguage());
+        success = true;
         break;
       }
       case TypeCodes::f64:
@@ -593,6 +599,7 @@ bool lldb_private::formatters::NSNumberSummaryProvider(
         double dbl_value = 0.0;
         memcpy(&dbl_value, &dbl_as_lng, sizeof(dbl_as_lng));
         NSNumber_FormatDouble(valobj, stream, dbl_value, options.GetLanguage());
+        success = true;
         break;
       }
       case TypeCodes::sint128: // internally, this is the same
@@ -608,12 +615,11 @@ bool lldb_private::formatters::NSNumberSummaryProvider(
           return false;
         llvm::APInt i128_value(128, words);
         NSNumber_FormatInt128(valobj, stream, i128_value, options.GetLanguage());
+        success = true;
         break;
       }
-      default:
-        return false;
       }
-      return true;
+      return success;
     }
   }
 

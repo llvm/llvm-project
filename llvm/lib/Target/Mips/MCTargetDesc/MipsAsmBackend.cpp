@@ -238,7 +238,7 @@ static unsigned calculateMMLEIndex(unsigned i) {
 void MipsAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                                 const MCValue &Target,
                                 MutableArrayRef<char> Data, uint64_t Value,
-                                bool IsPCRel) const {
+                                bool IsResolved) const {
   MCFixupKind Kind = Fixup.getKind();
   MCContext &Ctx = Asm.getContext();
   Value = adjustFixupValue(Fixup, Value, Ctx);

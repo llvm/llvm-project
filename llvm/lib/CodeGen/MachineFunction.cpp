@@ -305,11 +305,11 @@ MachineFunction::DeleteMachineBasicBlock(MachineBasicBlock *MBB) {
 MachineMemOperand *MachineFunction::getMachineMemOperand(
     MachinePointerInfo PtrInfo, MachineMemOperand::Flags f, uint64_t s,
     unsigned base_alignment, const AAMDNodes &AAInfo, const MDNode *Ranges,
-    SynchronizationScope SynchScope, AtomicOrdering Ordering,
+    SyncScope::ID SSID, AtomicOrdering Ordering,
     AtomicOrdering FailureOrdering) {
   return new (Allocator)
       MachineMemOperand(PtrInfo, f, s, base_alignment, AAInfo, Ranges,
-                        SynchScope, Ordering, FailureOrdering);
+                        SSID, Ordering, FailureOrdering);
 }
 
 MachineMemOperand *
@@ -320,13 +320,13 @@ MachineFunction::getMachineMemOperand(const MachineMemOperand *MMO,
                MachineMemOperand(MachinePointerInfo(MMO->getValue(),
                                                     MMO->getOffset()+Offset),
                                  MMO->getFlags(), Size, MMO->getBaseAlignment(),
-                                 AAMDNodes(), nullptr, MMO->getSynchScope(),
+                                 AAMDNodes(), nullptr, MMO->getSyncScopeID(),
                                  MMO->getOrdering(), MMO->getFailureOrdering());
   return new (Allocator)
              MachineMemOperand(MachinePointerInfo(MMO->getPseudoValue(),
                                                   MMO->getOffset()+Offset),
                                MMO->getFlags(), Size, MMO->getBaseAlignment(),
-                               AAMDNodes(), nullptr, MMO->getSynchScope(),
+                               AAMDNodes(), nullptr, MMO->getSyncScopeID(),
                                MMO->getOrdering(), MMO->getFailureOrdering());
 }
 
@@ -359,7 +359,7 @@ MachineFunction::extractLoadMemRefs(MachineInstr::mmo_iterator Begin,
                                (*I)->getFlags() & ~MachineMemOperand::MOStore,
                                (*I)->getSize(), (*I)->getBaseAlignment(),
                                (*I)->getAAInfo(), nullptr,
-                               (*I)->getSynchScope(), (*I)->getOrdering(),
+                               (*I)->getSyncScopeID(), (*I)->getOrdering(),
                                (*I)->getFailureOrdering());
         Result[Index] = JustLoad;
       }
@@ -393,7 +393,7 @@ MachineFunction::extractStoreMemRefs(MachineInstr::mmo_iterator Begin,
                                (*I)->getFlags() & ~MachineMemOperand::MOLoad,
                                (*I)->getSize(), (*I)->getBaseAlignment(),
                                (*I)->getAAInfo(), nullptr,
-                               (*I)->getSynchScope(), (*I)->getOrdering(),
+                               (*I)->getSyncScopeID(), (*I)->getOrdering(),
                                (*I)->getFailureOrdering());
         Result[Index] = JustStore;
       }
