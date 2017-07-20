@@ -25,6 +25,7 @@ enum ReportType {
   ReportTypeUseAfterFree,
   ReportTypeVptrUseAfterFree,
   ReportTypeExternalRace,
+  ReportTypeSwiftAccessRace,
   ReportTypeThreadLeak,
   ReportTypeMutexDestroyLocked,
   ReportTypeMutexDoubleLock,

@@ -411,7 +411,6 @@ struct ThreadState {
   bool is_dead;
   bool is_freeing;
   bool is_vptr_access;
-  uptr external_tag;
   const uptr stk_addr;
   const uptr stk_size;
   const uptr tls_addr;
@@ -577,6 +576,7 @@ class ScopedReport {
   void AddLocation(uptr addr, uptr size);
   void AddSleep(u32 stack_id);
   void SetCount(int count);
+  void SetType(ReportType typ);
 
   const ReportDesc *GetReport() const;
 
@@ -642,7 +642,16 @@ bool IsFiredSuppression(Context *ctx, ReportType type, StackTrace trace);
 bool IsExpectedReport(uptr addr, uptr size);
 void PrintMatchedBenignRaces();
 
+enum ExternalTag : uptr {
+  kExternalTagNone = 0,
+  kExternalTagSwiftModifyingAccess = 1,
+  kExternalTagFirstUserAvailable = 128,
+  kExternalTagMax = 1024,
+  // Don't set kExternalTagMax over 65,536, since MBlock only stores tags
+  // as 16-bit values, see tsan_defs.h.
+};
 const char *GetObjectTypeFromTag(uptr tag);
+uptr TagFromShadowStackFrame(uptr pc);
 
 #if defined(TSAN_DEBUG_OUTPUT) && TSAN_DEBUG_OUTPUT >= 1
 # define DPrintf Printf
