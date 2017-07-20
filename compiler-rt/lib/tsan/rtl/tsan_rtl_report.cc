@@ -500,7 +500,7 @@ static void AddRacyStacks(ThreadState *thr, VarSizeStackTrace traces[2],
 }
 
 bool OutputReport(ThreadState *thr, const ScopedReport &srep) {
-  if (!flags()->report_bugs)
+  if (!flags()->report_bugs || thr->suppress_reports)
     return false;
   atomic_store_relaxed(&ctx->last_symbolize_time_ns, NanoTime());
   const ReportDesc *rep = srep.GetReport();
