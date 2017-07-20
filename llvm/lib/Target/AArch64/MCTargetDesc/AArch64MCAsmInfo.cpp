@@ -105,4 +105,5 @@ AArch64MCAsmInfoCOFF::AArch64MCAsmInfoCOFF() {
   CommentString = ";";
   PrivateGlobalPrefix = ".L";
   PrivateLabelPrefix = ".L";
+  AlignmentIsInBytes = false;
 }

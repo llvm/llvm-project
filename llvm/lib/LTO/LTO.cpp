@@ -1072,6 +1072,12 @@ Error LTO::runThinLTO(AddStreamFn AddStream, NativeObjectCache Cache,
         ExportedGUIDs.insert(GUID);
     }
 
+    // Any functions referenced by the jump table in the regular LTO object must
+    // be exported.
+    for (auto &Def : ThinLTO.CombinedIndex.cfiFunctionDefs())
+      ExportedGUIDs.insert(
+          GlobalValue::getGUID(GlobalValue::dropLLVMManglingEscape(Def)));
+
     auto isExported = [&](StringRef ModuleIdentifier, GlobalValue::GUID GUID) {
       const auto &ExportList = ExportLists.find(ModuleIdentifier);
       return (ExportList != ExportLists.end() &&

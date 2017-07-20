@@ -42,6 +42,16 @@ class FLAT_Pseudo<string opName, dag outs, dag ins,
   bits<1> is_flat_scratch = 0;
 
   bits<1> has_vdst = 1;
+
+  // We need to distinguish having saddr and enabling saddr because
+  // saddr is only valid for scratch and global instructions. Pre-gfx9
+  // these bits were reserved, so we also don't necessarily want to
+  // set these bits to the disabled value for the original flat
+  // segment instructions.
+  bits<1> has_saddr = 0;
+  bits<1> enabled_saddr = 0;
+  bits<7> saddr_value = 0;
+
   bits<1> has_data = 1;
   bits<1> has_glc  = 1;
   bits<1> glcValue = 0;
@@ -66,7 +76,9 @@ class FLAT_Real <bits<7> op, FLAT_Pseudo ps> :
   // encoding fields
   bits<8> vaddr;
   bits<8> vdata;
+  bits<7> saddr;
   bits<8> vdst;
+
   bits<1> slc;
   bits<1> glc;
 
@@ -96,26 +108,40 @@ class FLAT_Real <bits<7> op, FLAT_Pseudo ps> :
   let Inst{31-26} = 0x37; // Encoding.
   let Inst{39-32} = vaddr;
   let Inst{47-40} = !if(ps.has_data, vdata, ?);
+  let Inst{54-48} = !if(ps.has_saddr, !if(ps.enabled_saddr, saddr, 0x7f), 0);
+
   // 54-48 is reserved.
   let Inst{55}    = nv; // nv on GFX9+, TFE before.
   let Inst{63-56} = !if(ps.has_vdst, vdst, ?);
 }
 
+// TODO: Is exec allowed for saddr? The disabled value 0x7f is the
+// same encoding value as exec_hi, so it isn't possible to use that if
+// saddr is 32-bit (which isn't handled here yet).
 class FLAT_Load_Pseudo <string opName, RegisterClass regClass,
-  bit HasSignedOffset = 0> : FLAT_Pseudo<
+  bit HasSignedOffset = 0, bit HasSaddr = 0, bit EnableSaddr = 0> : FLAT_Pseudo<
   opName,
   (outs regClass:$vdst),
-  !if(HasSignedOffset,
-    (ins VReg_64:$vaddr, offset_s13:$offset, GLC:$glc, slc:$slc),
-    (ins VReg_64:$vaddr, offset_u12:$offset, GLC:$glc, slc:$slc)),
-  " $vdst, $vaddr$offset$glc$slc"> {
+  !if(EnableSaddr,
+    !if(HasSignedOffset,
+      (ins VReg_64:$vaddr, SReg_64:$saddr, offset_s13:$offset, GLC:$glc, slc:$slc),
+      (ins VReg_64:$vaddr, SReg_64:$saddr, offset_u12:$offset, GLC:$glc, slc:$slc)),
+    !if(HasSignedOffset,
+      (ins VReg_64:$vaddr, offset_s13:$offset, GLC:$glc, slc:$slc),
+      (ins VReg_64:$vaddr, offset_u12:$offset, GLC:$glc, slc:$slc))),
+  " $vdst, $vaddr"#!if(HasSaddr, !if(EnableSaddr, ", $saddr", ", off"), "")#"$offset$glc$slc"> {
   let has_data = 0;
   let mayLoad = 1;
+  let has_saddr = HasSaddr;
+  let enabled_saddr = EnableSaddr;
+  let PseudoInstr = opName#!if(!and(HasSaddr, EnableSaddr), "_SADDR", "");
 }
 
-class FLAT_Global_Load_Pseudo<string opName, RegisterClass regClass> :
-  FLAT_Load_Pseudo<opName, regClass, 1> {
-  let is_flat_global = 1;
+multiclass FLAT_Global_Load_Pseudo<string opName, RegisterClass regClass> {
+  let is_flat_global = 1 in {
+    def "" : FLAT_Load_Pseudo<opName, regClass, 1, 1>;
+    def _SADDR : FLAT_Load_Pseudo<opName, regClass, 1, 1, 1>;
+  }
 }
 
 class FLAT_Scratch_Load_Pseudo<string opName, RegisterClass regClass> :
@@ -124,21 +150,30 @@ class FLAT_Scratch_Load_Pseudo<string opName, RegisterClass regClass> :
 }
 
 class FLAT_Store_Pseudo <string opName, RegisterClass vdataClass,
-  bit HasSignedOffset = 0> : FLAT_Pseudo<
+  bit HasSignedOffset = 0, bit HasSaddr = 0, bit EnableSaddr = 0> : FLAT_Pseudo<
   opName,
   (outs),
-  !if(HasSignedOffset,
-    (ins VReg_64:$vaddr, vdataClass:$vdata, offset_s13:$offset, GLC:$glc, slc:$slc),
-    (ins VReg_64:$vaddr, vdataClass:$vdata, offset_u12:$offset, GLC:$glc, slc:$slc)),
-  " $vaddr, $vdata$offset$glc$slc"> {
+  !if(EnableSaddr,
+      !if(HasSignedOffset,
+        (ins VReg_64:$vaddr, vdataClass:$vdata, SReg_64:$saddr, offset_s13:$offset, GLC:$glc, slc:$slc),
+        (ins VReg_64:$vaddr, vdataClass:$vdata, SReg_64:$saddr, offset_u12:$offset, GLC:$glc, slc:$slc)),
+    !if(HasSignedOffset,
+      (ins VReg_64:$vaddr, vdataClass:$vdata, offset_s13:$offset, GLC:$glc, slc:$slc),
+      (ins VReg_64:$vaddr, vdataClass:$vdata, offset_u12:$offset, GLC:$glc, slc:$slc))),
+  " $vaddr, $vdata"#!if(HasSaddr, !if(EnableSaddr, ", $saddr", ", off"), "")#"$offset$glc$slc"> {
   let mayLoad  = 0;
   let mayStore = 1;
   let has_vdst = 0;
+  let has_saddr = HasSaddr;
+  let enabled_saddr = EnableSaddr;
+  let PseudoInstr = opName#!if(!and(HasSaddr, EnableSaddr), "_SADDR", "");
 }
 
-class FLAT_Global_Store_Pseudo<string opName, RegisterClass regClass> :
-  FLAT_Store_Pseudo<opName, regClass, 1> {
-  let is_flat_global = 1;
+multiclass FLAT_Global_Store_Pseudo<string opName, RegisterClass regClass> {
+  let is_flat_global = 1 in {
+    def "" : FLAT_Store_Pseudo<opName, regClass, 1, 1>;
+    def _SADDR : FLAT_Store_Pseudo<opName, regClass, 1, 1, 1>;
+  }
 }
 
 class FLAT_Scratch_Store_Pseudo<string opName, RegisterClass regClass> :
@@ -334,21 +369,21 @@ defm FLAT_ATOMIC_FMAX_X2     : FLAT_Atomic_Pseudo <"flat_atomic_fmax_x2",
 } // End SubtargetPredicate = isCI
 
 let SubtargetPredicate = HasFlatGlobalInsts in {
-def GLOBAL_LOAD_UBYTE    : FLAT_Global_Load_Pseudo <"global_load_ubyte", VGPR_32>;
-def GLOBAL_LOAD_SBYTE    : FLAT_Global_Load_Pseudo <"global_load_sbyte", VGPR_32>;
-def GLOBAL_LOAD_USHORT   : FLAT_Global_Load_Pseudo <"global_load_ushort", VGPR_32>;
-def GLOBAL_LOAD_SSHORT   : FLAT_Global_Load_Pseudo <"global_load_sshort", VGPR_32>;
-def GLOBAL_LOAD_DWORD    : FLAT_Global_Load_Pseudo <"global_load_dword", VGPR_32>;
-def GLOBAL_LOAD_DWORDX2  : FLAT_Global_Load_Pseudo <"global_load_dwordx2", VReg_64>;
-def GLOBAL_LOAD_DWORDX3  : FLAT_Global_Load_Pseudo <"global_load_dwordx3", VReg_96>;
-def GLOBAL_LOAD_DWORDX4  : FLAT_Global_Load_Pseudo <"global_load_dwordx4", VReg_128>;
+defm GLOBAL_LOAD_UBYTE    : FLAT_Global_Load_Pseudo <"global_load_ubyte", VGPR_32>;
+defm GLOBAL_LOAD_SBYTE    : FLAT_Global_Load_Pseudo <"global_load_sbyte", VGPR_32>;
+defm GLOBAL_LOAD_USHORT   : FLAT_Global_Load_Pseudo <"global_load_ushort", VGPR_32>;
+defm GLOBAL_LOAD_SSHORT   : FLAT_Global_Load_Pseudo <"global_load_sshort", VGPR_32>;
+defm GLOBAL_LOAD_DWORD    : FLAT_Global_Load_Pseudo <"global_load_dword", VGPR_32>;
+defm GLOBAL_LOAD_DWORDX2  : FLAT_Global_Load_Pseudo <"global_load_dwordx2", VReg_64>;
+defm GLOBAL_LOAD_DWORDX3  : FLAT_Global_Load_Pseudo <"global_load_dwordx3", VReg_96>;
+defm GLOBAL_LOAD_DWORDX4  : FLAT_Global_Load_Pseudo <"global_load_dwordx4", VReg_128>;
 
-def GLOBAL_STORE_BYTE    : FLAT_Global_Store_Pseudo <"global_store_byte", VGPR_32>;
-def GLOBAL_STORE_SHORT   : FLAT_Global_Store_Pseudo <"global_store_short", VGPR_32>;
-def GLOBAL_STORE_DWORD   : FLAT_Global_Store_Pseudo <"global_store_dword", VGPR_32>;
-def GLOBAL_STORE_DWORDX2 : FLAT_Global_Store_Pseudo <"global_store_dwordx2", VReg_64>;
-def GLOBAL_STORE_DWORDX3 : FLAT_Global_Store_Pseudo <"global_store_dwordx3", VReg_96>;
-def GLOBAL_STORE_DWORDX4 : FLAT_Global_Store_Pseudo <"global_store_dwordx4", VReg_128>;
+defm GLOBAL_STORE_BYTE    : FLAT_Global_Store_Pseudo <"global_store_byte", VGPR_32>;
+defm GLOBAL_STORE_SHORT   : FLAT_Global_Store_Pseudo <"global_store_short", VGPR_32>;
+defm GLOBAL_STORE_DWORD   : FLAT_Global_Store_Pseudo <"global_store_dword", VGPR_32>;
+defm GLOBAL_STORE_DWORDX2 : FLAT_Global_Store_Pseudo <"global_store_dwordx2", VReg_64>;
+defm GLOBAL_STORE_DWORDX3 : FLAT_Global_Store_Pseudo <"global_store_dwordx3", VReg_96>;
+defm GLOBAL_STORE_DWORDX4 : FLAT_Global_Store_Pseudo <"global_store_dwordx4", VReg_128>;
 
 } // End SubtargetPredicate = HasFlatGlobalInsts
 
@@ -556,6 +591,11 @@ class FLAT_Real_vi <bits<7> op, FLAT_Pseudo ps> :
   let DecoderNamespace="VI";
 }
 
+multiclass FLAT_Real_AllAddr_vi<bits<7> op> {
+  def _vi : FLAT_Real_vi<op, !cast<FLAT_Pseudo>(NAME)>;
+  def _SADDR_vi : FLAT_Real_vi<op, !cast<FLAT_Pseudo>(NAME#"_SADDR")>;
+}
+
 def FLAT_LOAD_UBYTE_vi         : FLAT_Real_vi <0x10, FLAT_LOAD_UBYTE>;
 def FLAT_LOAD_SBYTE_vi         : FLAT_Real_vi <0x11, FLAT_LOAD_SBYTE>;
 def FLAT_LOAD_USHORT_vi        : FLAT_Real_vi <0x12, FLAT_LOAD_USHORT>;
@@ -604,18 +644,18 @@ defm FLAT_ATOMIC_XOR_X2     : FLAT_Real_Atomics_vi <0x6a, FLAT_ATOMIC_XOR_X2>;
 defm FLAT_ATOMIC_INC_X2     : FLAT_Real_Atomics_vi <0x6b, FLAT_ATOMIC_INC_X2>;
 defm FLAT_ATOMIC_DEC_X2     : FLAT_Real_Atomics_vi <0x6c, FLAT_ATOMIC_DEC_X2>;
 
-def GLOBAL_LOAD_UBYTE_vi : FLAT_Real_vi <0x10, GLOBAL_LOAD_UBYTE>;
-def GLOBAL_LOAD_SBYTE_vi : FLAT_Real_vi <0x11, GLOBAL_LOAD_SBYTE>;
-def GLOBAL_LOAD_USHORT_vi : FLAT_Real_vi <0x12, GLOBAL_LOAD_USHORT>;
-def GLOBAL_LOAD_SSHORT_vi : FLAT_Real_vi <0x13, GLOBAL_LOAD_SSHORT>;
-def GLOBAL_LOAD_DWORD_vi : FLAT_Real_vi <0x14, GLOBAL_LOAD_DWORD>;
-def GLOBAL_LOAD_DWORDX2_vi : FLAT_Real_vi <0x15, GLOBAL_LOAD_DWORDX2>;
-def GLOBAL_LOAD_DWORDX4_vi : FLAT_Real_vi <0x17, GLOBAL_LOAD_DWORDX4>;
-def GLOBAL_LOAD_DWORDX3_vi : FLAT_Real_vi <0x16, GLOBAL_LOAD_DWORDX3>;
+defm GLOBAL_LOAD_UBYTE : FLAT_Real_AllAddr_vi <0x10>;
+defm GLOBAL_LOAD_SBYTE : FLAT_Real_AllAddr_vi <0x11>;
+defm GLOBAL_LOAD_USHORT : FLAT_Real_AllAddr_vi <0x12>;
+defm GLOBAL_LOAD_SSHORT : FLAT_Real_AllAddr_vi <0x13>;
+defm GLOBAL_LOAD_DWORD : FLAT_Real_AllAddr_vi <0x14>;
+defm GLOBAL_LOAD_DWORDX2 : FLAT_Real_AllAddr_vi <0x15>;
+defm GLOBAL_LOAD_DWORDX4 : FLAT_Real_AllAddr_vi <0x17>;
+defm GLOBAL_LOAD_DWORDX3 : FLAT_Real_AllAddr_vi <0x16>;
 
-def GLOBAL_STORE_BYTE_vi : FLAT_Real_vi <0x18, GLOBAL_STORE_BYTE>;
-def GLOBAL_STORE_SHORT_vi : FLAT_Real_vi <0x1a, GLOBAL_STORE_SHORT>;
-def GLOBAL_STORE_DWORD_vi : FLAT_Real_vi <0x1c, GLOBAL_STORE_DWORD>;
-def GLOBAL_STORE_DWORDX2_vi : FLAT_Real_vi <0x1d, GLOBAL_STORE_DWORDX2>;
-def GLOBAL_STORE_DWORDX4_vi : FLAT_Real_vi <0x1f, GLOBAL_STORE_DWORDX4>;
-def GLOBAL_STORE_DWORDX3_vi : FLAT_Real_vi <0x1e, GLOBAL_STORE_DWORDX3>;
+defm GLOBAL_STORE_BYTE : FLAT_Real_AllAddr_vi <0x18>;
+defm GLOBAL_STORE_SHORT : FLAT_Real_AllAddr_vi <0x1a>;
+defm GLOBAL_STORE_DWORD : FLAT_Real_AllAddr_vi <0x1c>;
+defm GLOBAL_STORE_DWORDX2 : FLAT_Real_AllAddr_vi <0x1d>;
+defm GLOBAL_STORE_DWORDX4 : FLAT_Real_AllAddr_vi <0x1f>;
+defm GLOBAL_STORE_DWORDX3 : FLAT_Real_AllAddr_vi <0x1e>;

@@ -115,6 +115,20 @@ class TracePC {
     return PCs()[Idx];
   }
 
+  void RecordCurrentStack() {
+    uintptr_t Stack = GetCurrentStack();
+    if (Stack < LowestStack)
+      LowestStack = Stack;
+  }
+  void RecordInitialStack() {
+    InitialStack = GetCurrentStack();
+    LowestStack = InitialStack;
+  }
+  uintptr_t GetCurrentStack() const {
+    return reinterpret_cast<uintptr_t>(__builtin_frame_address(0));
+  }
+  uintptr_t GetMaxStackOffset() const { return InitialStack - LowestStack; }
+
 private:
   bool UseCounters = false;
   bool UseValueProfile = false;
@@ -138,6 +152,7 @@ private:
   std::set<uintptr_t> *PrintedPCs;
 
   ValueBitMap ValueProfileMap;
+  uintptr_t InitialStack, LowestStack;  // Assume stack grows down.
 };
 
 template <class Callback> // void Callback(size_t Idx, uint8_t Value);
@@ -196,11 +211,17 @@ void TracePC::CollectFeatures(Callback HandleFeature) const {
 
   ForEachNonZeroByte(ExtraCountersBegin(), ExtraCountersEnd(), FirstFeature,
                      Handle8bitCounter);
+  FirstFeature += (ExtraCountersEnd() - ExtraCountersBegin()) * 8;
 
-  if (UseValueProfile)
+  if (UseValueProfile) {
     ValueProfileMap.ForEach([&](size_t Idx) {
-      HandleFeature(N * 8 + Idx);
+      HandleFeature(FirstFeature + Idx);
     });
+    FirstFeature += ValueProfileMap.SizeInBits();
+  }
+
+  if (auto MaxStackOffset = GetMaxStackOffset())
+    HandleFeature(FirstFeature + MaxStackOffset);
 }
 
 extern TracePC TPC;

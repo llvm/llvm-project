@@ -1305,6 +1305,7 @@ void ScopStmt::buildAccessRelations() {
     auto *SAI = S.getOrCreateScopArrayInfo(Access->getOriginalBaseAddr(),
                                            ElementType, Access->Sizes, Ty);
     Access->buildAccessRelation(SAI);
+    S.addAccessData(Access);
   }
 }
 
@@ -1963,8 +1964,10 @@ void ScopStmt::removeMemoryAccess(MemoryAccess *MA) {
     return Acc->getAccessInstruction() == MA->getAccessInstruction();
   };
   for (auto *MA : MemAccs) {
-    if (Predicate(MA))
+    if (Predicate(MA)) {
       removeAccessData(MA);
+      Parent.removeAccessData(MA);
+    }
   }
   MemAccs.erase(std::remove_if(MemAccs.begin(), MemAccs.end(), Predicate),
                 MemAccs.end());
@@ -1977,6 +1980,7 @@ void ScopStmt::removeSingleMemoryAccess(MemoryAccess *MA) {
   MemAccs.erase(MAIt);
 
   removeAccessData(MA);
+  Parent.removeAccessData(MA);
 
   auto It = InstructionToAccess.find(MA->getAccessInstruction());
   if (It != InstructionToAccess.end()) {
@@ -3746,7 +3750,7 @@ void Scop::removeStmts(std::function<bool(ScopStmt &)> ShouldDelete) {
 
 void Scop::removeStmtNotInDomainMap() {
   auto ShouldDelete = [this](ScopStmt &Stmt) -> bool {
-    return !this->DomainMap[Stmt.getEntryBlock()];
+    return !this->DomainMap.lookup(Stmt.getEntryBlock());
   };
   removeStmts(ShouldDelete);
 }
@@ -4944,6 +4948,69 @@ ScopArrayInfo *Scop::getArrayInfoByName(const std::string BaseName) {
       return SAI;
   }
   return nullptr;
+}
+
+void Scop::addAccessData(MemoryAccess *Access) {
+  const ScopArrayInfo *SAI = Access->getOriginalScopArrayInfo();
+  assert(SAI && "can only use after access relations have been constructed");
+
+  if (Access->isOriginalValueKind() && Access->isRead())
+    ValueUseAccs[SAI].push_back(Access);
+  else if (Access->isOriginalAnyPHIKind() && Access->isWrite())
+    PHIIncomingAccs[SAI].push_back(Access);
+}
+
+void Scop::removeAccessData(MemoryAccess *Access) {
+  if (Access->isOriginalValueKind() && Access->isRead()) {
+    auto &Uses = ValueUseAccs[Access->getScopArrayInfo()];
+    std::remove(Uses.begin(), Uses.end(), Access);
+  } else if (Access->isOriginalAnyPHIKind() && Access->isWrite()) {
+    auto &Incomings = PHIIncomingAccs[Access->getScopArrayInfo()];
+    std::remove(Incomings.begin(), Incomings.end(), Access);
+  }
+}
+
+MemoryAccess *Scop::getValueDef(const ScopArrayInfo *SAI) const {
+  assert(SAI->isValueKind());
+
+  Instruction *Val = dyn_cast<Instruction>(SAI->getBasePtr());
+  if (!Val)
+    return nullptr;
+
+  ScopStmt *Stmt = getStmtFor(Val);
+  if (!Stmt)
+    return nullptr;
+
+  return Stmt->lookupValueWriteOf(Val);
+}
+
+ArrayRef<MemoryAccess *> Scop::getValueUses(const ScopArrayInfo *SAI) const {
+  assert(SAI->isValueKind());
+  auto It = ValueUseAccs.find(SAI);
+  if (It == ValueUseAccs.end())
+    return {};
+  return It->second;
+}
+
+MemoryAccess *Scop::getPHIRead(const ScopArrayInfo *SAI) const {
+  assert(SAI->isPHIKind() || SAI->isExitPHIKind());
+
+  if (SAI->isExitPHIKind())
+    return nullptr;
+
+  PHINode *PHI = cast<PHINode>(SAI->getBasePtr());
+  ScopStmt *Stmt = getStmtFor(PHI);
+  assert(Stmt && "PHINode must be within the SCoP");
+
+  return Stmt->lookupPHIReadOf(PHI);
+}
+
+ArrayRef<MemoryAccess *> Scop::getPHIIncomings(const ScopArrayInfo *SAI) const {
+  assert(SAI->isPHIKind() || SAI->isExitPHIKind());
+  auto It = PHIIncomingAccs.find(SAI);
+  if (It == PHIIncomingAccs.end())
+    return {};
+  return It->second;
 }
 
 //===----------------------------------------------------------------------===//

@@ -8,8 +8,7 @@
 #include <cstring>
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
-  if (Size > 64) return 0;
-  char *S = (char*)Data;
+  const char *S = (const char*)Data;
   volatile auto Strncmp = &(strncmp);   // Make sure strncmp is not inlined.
   if (Size >= 6 && !Strncmp(S, "qwerty", 6)) {
     fprintf(stderr, "BINGO\n");

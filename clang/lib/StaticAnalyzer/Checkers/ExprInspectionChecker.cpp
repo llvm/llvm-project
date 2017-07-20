@@ -272,6 +272,7 @@ void ExprInspectionChecker::checkEndAnalysis(ExplodedGraph &G, BugReporter &BR,
 
     reportBug(llvm::to_string(NumTimesReached), BR, N);
   }
+  ReachedStats.clear();
 }
 
 void ExprInspectionChecker::analyzerCrash(const CallExpr *CE,

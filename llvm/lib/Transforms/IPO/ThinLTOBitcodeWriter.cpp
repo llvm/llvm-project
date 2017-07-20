@@ -141,7 +141,9 @@ void simplifyExternals(Module &M) {
       continue;
     }
 
-    if (!F.isDeclaration() || F.getFunctionType() == EmptyFT)
+    if (!F.isDeclaration() || F.getFunctionType() == EmptyFT ||
+        // Changing the type of an intrinsic may invalidate the IR.
+        F.getName().startswith("llvm."))
       continue;
 
     Function *NewF =

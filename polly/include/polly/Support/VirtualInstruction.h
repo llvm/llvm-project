@@ -97,7 +97,7 @@ public:
   /// @param Virtual Whether to ignore existing MemoryAcccess.
   ///
   /// @return The VirtualUse representing the same use as @p U.
-  static VirtualUse create(Scop *S, Use &U, LoopInfo *LI, bool Virtual);
+  static VirtualUse create(Scop *S, const Use &U, LoopInfo *LI, bool Virtual);
 
   /// Get a VirtualUse for any kind of use of a value within a statement.
   ///

@@ -1,4 +1,4 @@
-//===------ LiveDebugValues.cpp - Tracking Debug Value MIs ----------------===//
+//===------ LiveDebugValues.cpp - Tracking Debug Value MIs ----------------===//G
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -700,6 +700,11 @@ bool LiveDebugValues::ExtendRanges(MachineFunction &MF) {
 bool LiveDebugValues::runOnMachineFunction(MachineFunction &MF) {
   if (!MF.getFunction()->getSubprogram())
     // LiveDebugValues will already have removed all DBG_VALUEs.
+    return false;
+
+  // Skip functions from NoDebug compilation units.
+  if (MF.getFunction()->getSubprogram()->getUnit()->getEmissionKind() ==
+      DICompileUnit::NoDebug)
     return false;
 
   TRI = MF.getSubtarget().getRegisterInfo();

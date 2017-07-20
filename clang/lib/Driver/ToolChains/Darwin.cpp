@@ -10,6 +10,7 @@
 #include "Darwin.h"
 #include "Arch/ARM.h"
 #include "CommonArgs.h"
+#include "clang/Basic/AlignedAllocation.h"
 #include "clang/Basic/ObjCRuntime.h"
 #include "clang/Basic/VirtualFileSystem.h"
 #include "clang/Driver/Compilation.h"
@@ -1743,19 +1744,27 @@ void MachO::AddLinkRuntimeLibArgs(const ArgList &Args,
 }
 
 bool Darwin::isAlignedAllocationUnavailable() const {
+  llvm::Triple::OSType OS;
+
   switch (TargetPlatform) {
   case MacOS: // Earlier than 10.13.
-    return TargetVersion < VersionTuple(10U, 13U, 0U);
+    OS = llvm::Triple::MacOSX;
+    break;
   case IPhoneOS:
   case IPhoneOSSimulator:
+    OS = llvm::Triple::IOS;
+    break;
   case TvOS:
   case TvOSSimulator: // Earlier than 11.0.
-    return TargetVersion < VersionTuple(11U, 0U, 0U);
+    OS = llvm::Triple::TvOS;
+    break;
   case WatchOS:
   case WatchOSSimulator: // Earlier than 4.0.
-    return TargetVersion < VersionTuple(4U, 0U, 0U);
+    OS = llvm::Triple::WatchOS;
+    break;
   }
-  llvm_unreachable("Unsupported platform");
+
+  return TargetVersion < alignedAllocMinVersion(OS);
 }
 
 void Darwin::addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,

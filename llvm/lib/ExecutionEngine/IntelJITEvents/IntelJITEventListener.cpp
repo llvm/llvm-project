@@ -104,7 +104,7 @@ void IntelJITEventListener::NotifyObjectEmitted(
 
   // Get the address of the object image for use as a unique identifier
   const void* ObjData = DebugObj.getData().data();
-  DIContext* Context = new DWARFContextInMemory(DebugObj);
+  std::unique_ptr<DIContext> Context = DWARFContext::create(DebugObj);
   MethodAddressVector Functions;
 
   // Use symbol info to iterate functions in the object.

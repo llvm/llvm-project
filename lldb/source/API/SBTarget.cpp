@@ -414,16 +414,6 @@ lldb::SBProcess SBTarget::Attach(SBAttachInfo &sb_attach_info, SBError &error) {
   return sb_process;
 }
 
-#if defined(__APPLE__)
-
-lldb::SBProcess SBTarget::AttachToProcessWithID(SBListener &listener,
-                                                ::pid_t pid,
-                                                lldb::SBError &error) {
-  return AttachToProcessWithID(listener, (lldb::pid_t)pid, error);
-}
-
-#endif // #if defined(__APPLE__)
-
 lldb::SBProcess SBTarget::AttachToProcessWithID(
     SBListener &listener,
     lldb::pid_t pid, // The process ID to attach to

@@ -342,6 +342,7 @@ public:
   virtual bool runOnScop(Scop &S) override {
     // Reset statistics of last processed SCoP.
     releaseMemory();
+    assert(!isModified());
 
     // Prepare processing of this SCoP.
     this->S = &S;
