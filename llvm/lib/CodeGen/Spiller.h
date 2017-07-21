@@ -1,4 +1,4 @@
-//===-- llvm/CodeGen/Spiller.h - Spiller -*- C++ -*------------------------===//
+//===--- llvm/CodeGen/Spiller.h - Spiller -*- C++ -*-----------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //

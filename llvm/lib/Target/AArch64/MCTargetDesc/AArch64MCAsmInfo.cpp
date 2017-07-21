@@ -106,4 +106,6 @@ AArch64MCAsmInfoCOFF::AArch64MCAsmInfoCOFF() {
   PrivateGlobalPrefix = ".L";
   PrivateLabelPrefix = ".L";
   AlignmentIsInBytes = false;
+  SupportsDebugInformation = true;
+  ExceptionsType = ExceptionHandling::WinEH;
 }

@@ -137,7 +137,11 @@ struct MustKillsInfo {
   /// [params] -> { [Stmt_phantom[] -> ref_phantom[]] -> scalar_to_kill[] }
   isl::union_map TaggedMustKills;
 
-  MustKillsInfo() : KillsSchedule(nullptr), TaggedMustKills(nullptr){};
+  /// Tagged must kills stripped of the tags.
+  /// [params] -> { Stmt_phantom[]  -> scalar_to_kill[] }
+  isl::union_map MustKills;
+
+  MustKillsInfo() : KillsSchedule(nullptr) {}
 };
 
 /// Check if SAI's uses are entirely contained within Scop S.
@@ -179,6 +183,7 @@ static MustKillsInfo computeMustKillsInfo(const Scop &S) {
   }
 
   Info.TaggedMustKills = isl::union_map::empty(isl::space(ParamSpace));
+  Info.MustKills = isl::union_map::empty(isl::space(ParamSpace));
 
   // Initialising KillsSchedule to `isl_set_empty` creates an empty node in the
   // schedule:
@@ -224,6 +229,9 @@ static MustKillsInfo computeMustKillsInfo(const Scop &S) {
     // 2. [param] -> { [Stmt[] -> phantom_ref[]] -> scalar_to_kill[] }
     isl::map TaggedMustKill = StmtToScalar.domain_product(PhantomRefToScalar);
     Info.TaggedMustKills = Info.TaggedMustKills.unite(TaggedMustKill);
+
+    // 2. [param] -> { Stmt[] -> scalar_to_kill[] }
+    Info.MustKills = Info.TaggedMustKills.domain_factor_domain();
 
     // 3. Create the kill schedule of the form:
     //     "[param] -> { Stmt_phantom[] }"
@@ -1004,11 +1012,11 @@ Value *GPUNodeBuilder::getArraySize(gpu_array_info *Array) {
   Value *ArraySize = ConstantInt::get(Builder.getInt64Ty(), Array->size);
 
   if (!gpu_array_is_scalar(Array)) {
-    auto OffsetDimZero = isl_pw_aff_copy(Array->bound[0]);
+    auto OffsetDimZero = isl_multi_pw_aff_get_pw_aff(Array->bound, 0);
     isl_ast_expr *Res = isl_ast_build_expr_from_pw_aff(Build, OffsetDimZero);
 
     for (unsigned int i = 1; i < Array->n_index; i++) {
-      isl_pw_aff *Bound_I = isl_pw_aff_copy(Array->bound[i]);
+      isl_pw_aff *Bound_I = isl_multi_pw_aff_get_pw_aff(Array->bound, i);
       isl_ast_expr *Expr = isl_ast_build_expr_from_pw_aff(Build, Bound_I);
       Res = isl_ast_expr_mul(Res, Expr);
     }
@@ -1048,7 +1056,7 @@ Value *GPUNodeBuilder::getArrayOffset(gpu_array_info *Array) {
 
   for (long i = 0; i < isl_set_dim(Min, isl_dim_set); i++) {
     if (i > 0) {
-      isl_pw_aff *Bound_I = isl_pw_aff_copy(Array->bound[i - 1]);
+      isl_pw_aff *Bound_I = isl_multi_pw_aff_get_pw_aff(Array->bound, i - 1);
       isl_ast_expr *BExpr = isl_ast_build_expr_from_pw_aff(Build, Bound_I);
       Result = isl_ast_expr_mul(Result, BExpr);
     }
@@ -1152,7 +1160,18 @@ void GPUNodeBuilder::createUser(__isl_take isl_ast_node *UserStmt) {
     isl_ast_expr_free(Expr);
     return;
   }
-
+  if (!strcmp(Str, "init_device")) {
+    initializeAfterRTH();
+    isl_ast_node_free(UserStmt);
+    isl_ast_expr_free(Expr);
+    return;
+  }
+  if (!strcmp(Str, "clear_device")) {
+    finalize();
+    isl_ast_node_free(UserStmt);
+    isl_ast_expr_free(Expr);
+    return;
+  }
   if (isPrefix(Str, "to_device")) {
     if (!ManagedMemory)
       createDataTransfer(UserStmt, HOST_TO_DEVICE);
@@ -1285,8 +1304,12 @@ isl_bool collectReferencesInGPUStmt(__isl_keep isl_ast_node *Node, void *User) {
 static bool isValidFunctionInKernel(llvm::Function *F) {
   assert(F && "F is an invalid pointer");
   // We string compare against the name of the function to allow
-  // all variants of the intrinsic "llvm.sqrt.*"
-  return F->isIntrinsic() && F->getName().startswith("llvm.sqrt");
+  // all variants of the intrinsic "llvm.sqrt.*", "llvm.fabs", and
+  // "llvm.copysign".
+  const StringRef Name = F->getName();
+  return F->isIntrinsic() &&
+         (Name.startswith("llvm.sqrt") || Name.startswith("llvm.fabs") ||
+          Name.startswith("llvm.copysign"));
 }
 
 /// Do not take `Function` as a subtree value.
@@ -1766,7 +1789,7 @@ GPUNodeBuilder::createKernelFunctionDecl(ppcg_kernel *Kernel,
     Sizes.push_back(nullptr);
     for (long j = 1; j < Kernel->array[i].array->n_index; j++) {
       isl_ast_expr *DimSize = isl_ast_build_expr_from_pw_aff(
-          Build, isl_pw_aff_copy(Kernel->array[i].array->bound[j]));
+          Build, isl_multi_pw_aff_get_pw_aff(Kernel->array[i].array->bound, j));
       auto V = ExprBuilder.create(DimSize);
       Sizes.push_back(SE.getSCEV(V));
     }
@@ -2127,6 +2150,7 @@ public:
 
     Options->debug = DebugOptions;
 
+    Options->group_chains = false;
     Options->reschedule = true;
     Options->scale_tile_loops = false;
     Options->wrap = false;
@@ -2135,7 +2159,10 @@ public:
     Options->ctx = nullptr;
     Options->sizes = nullptr;
 
+    Options->tile = true;
     Options->tile_size = 32;
+
+    Options->isolate_full_tiles = false;
 
     Options->use_private_memory = PrivateMemory;
     Options->use_shared_memory = SharedMemory;
@@ -2144,8 +2171,14 @@ public:
     Options->target = PPCG_TARGET_CUDA;
     Options->openmp = false;
     Options->linearize_device_arrays = true;
-    Options->live_range_reordering = false;
+    Options->allow_gnu_extensions = false;
 
+    Options->unroll_copy_shared = false;
+    Options->unroll_gpu_tile = false;
+    Options->live_range_reordering = true;
+
+    Options->live_range_reordering = true;
+    Options->hybrid = false;
     Options->opencl_compiler_options = nullptr;
     Options->opencl_use_gpu = false;
     Options->opencl_n_include_file = 0;
@@ -2260,6 +2293,8 @@ public:
   ///
   /// @returns A new ppcg scop.
   ppcg_scop *createPPCGScop() {
+    MustKillsInfo KillsInfo = computeMustKillsInfo(*S);
+
     auto PPCGScop = (ppcg_scop *)malloc(sizeof(ppcg_scop));
 
     PPCGScop->options = createPPCGOptions();
@@ -2271,7 +2306,8 @@ public:
 
     PPCGScop->context = S->getContext();
     PPCGScop->domain = S->getDomains();
-    PPCGScop->call = nullptr;
+    // TODO: investigate this further. PPCG calls collect_call_domains.
+    PPCGScop->call = isl_union_set_from_set(S->getContext());
     PPCGScop->tagged_reads = getTaggedReads();
     PPCGScop->reads = S->getReads();
     PPCGScop->live_in = nullptr;
@@ -2280,6 +2316,9 @@ public:
     PPCGScop->tagged_must_writes = getTaggedMustWrites();
     PPCGScop->must_writes = S->getMustWrites();
     PPCGScop->live_out = nullptr;
+    PPCGScop->tagged_must_kills = KillsInfo.TaggedMustKills.take();
+    PPCGScop->must_kills = KillsInfo.MustKills.take();
+
     PPCGScop->tagger = nullptr;
     PPCGScop->independence =
         isl_union_map_empty(isl_set_get_space(PPCGScop->context));
@@ -2291,19 +2330,17 @@ public:
     PPCGScop->tagged_dep_order = nullptr;
 
     PPCGScop->schedule = S->getScheduleTree();
-
-    MustKillsInfo KillsInfo = computeMustKillsInfo(*S);
     // If we have something non-trivial to kill, add it to the schedule
     if (KillsInfo.KillsSchedule.get())
       PPCGScop->schedule = isl_schedule_sequence(
           PPCGScop->schedule, KillsInfo.KillsSchedule.take());
-    PPCGScop->tagged_must_kills = KillsInfo.TaggedMustKills.take();
 
     PPCGScop->names = getNames();
     PPCGScop->pet = nullptr;
 
     compute_tagger(PPCGScop);
     compute_dependences(PPCGScop);
+    eliminate_dead_code(PPCGScop);
 
     return PPCGScop;
   }
@@ -2458,14 +2495,23 @@ public:
   /// @param PPCGArray The array to compute bounds for.
   /// @param Array The polly array from which to take the information.
   void setArrayBounds(gpu_array_info &PPCGArray, ScopArrayInfo *Array) {
+    isl_pw_aff_list *BoundsList =
+        isl_pw_aff_list_alloc(S->getIslCtx(), PPCGArray.n_index);
+    std::vector<isl::pw_aff> PwAffs;
+
+    isl_space *AlignSpace = S->getParamSpace();
+    AlignSpace = isl_space_add_dims(AlignSpace, isl_dim_set, 1);
+
     if (PPCGArray.n_index > 0) {
       if (isl_set_is_empty(PPCGArray.extent)) {
         isl_set *Dom = isl_set_copy(PPCGArray.extent);
         isl_local_space *LS = isl_local_space_from_space(
             isl_space_params(isl_set_get_space(Dom)));
         isl_set_free(Dom);
-        isl_aff *Zero = isl_aff_zero_on_domain(LS);
-        PPCGArray.bound[0] = isl_pw_aff_from_aff(Zero);
+        isl_pw_aff *Zero = isl_pw_aff_from_aff(isl_aff_zero_on_domain(LS));
+        Zero = isl_pw_aff_align_params(Zero, isl_space_copy(AlignSpace));
+        PwAffs.push_back(isl::manage(isl_pw_aff_copy(Zero)));
+        BoundsList = isl_pw_aff_list_insert(BoundsList, 0, Zero);
       } else {
         isl_set *Dom = isl_set_copy(PPCGArray.extent);
         Dom = isl_set_project_out(Dom, isl_dim_set, 1, PPCGArray.n_index - 1);
@@ -2478,7 +2524,9 @@ public:
         One = isl_aff_add_constant_si(One, 1);
         Bound = isl_pw_aff_add(Bound, isl_pw_aff_alloc(Dom, One));
         Bound = isl_pw_aff_gist(Bound, S->getContext());
-        PPCGArray.bound[0] = Bound;
+        Bound = isl_pw_aff_align_params(Bound, isl_space_copy(AlignSpace));
+        PwAffs.push_back(isl::manage(isl_pw_aff_copy(Bound)));
+        BoundsList = isl_pw_aff_list_insert(BoundsList, 0, Bound);
       }
     }
 
@@ -2487,8 +2535,20 @@ public:
       auto LS = isl_pw_aff_get_domain_space(Bound);
       auto Aff = isl_multi_aff_zero(LS);
       Bound = isl_pw_aff_pullback_multi_aff(Bound, Aff);
-      PPCGArray.bound[i] = Bound;
+      Bound = isl_pw_aff_align_params(Bound, isl_space_copy(AlignSpace));
+      PwAffs.push_back(isl::manage(isl_pw_aff_copy(Bound)));
+      BoundsList = isl_pw_aff_list_insert(BoundsList, i, Bound);
     }
+
+    isl_space_free(AlignSpace);
+    isl_space *BoundsSpace = isl_set_get_space(PPCGArray.extent);
+
+    assert(BoundsSpace && "Unable to access space of array.");
+    assert(BoundsList && "Unable to access list of bounds.");
+
+    PPCGArray.bound =
+        isl_multi_pw_aff_from_pw_aff_list(BoundsSpace, BoundsList);
+    assert(PPCGArray.bound && "PPCGArray.bound was not constructed correctly.");
   }
 
   /// Create the arrays for @p PPCGProg.
@@ -2511,8 +2571,6 @@ public:
       PPCGArray.name = strdup(Array->getName().c_str());
       PPCGArray.extent = nullptr;
       PPCGArray.n_index = Array->getNumberOfDimensions();
-      PPCGArray.bound =
-          isl_alloc_array(S->getIslCtx(), isl_pw_aff *, PPCGArray.n_index);
       PPCGArray.extent = getExtent(Array);
       PPCGArray.n_ref = 0;
       PPCGArray.refs = nullptr;
@@ -2527,6 +2585,7 @@ public:
       PPCGArray.dep_order = nullptr;
       PPCGArray.user = Array;
 
+      PPCGArray.bound = nullptr;
       setArrayBounds(PPCGArray, Array);
       i++;
 
@@ -2570,6 +2629,7 @@ public:
         isl_union_map_copy(PPCGScop->tagged_must_kills);
     PPCGProg->to_inner = getArrayIdentity();
     PPCGProg->to_outer = getArrayIdentity();
+    // TODO: verify that this assignment is correct.
     PPCGProg->any_to_outer = nullptr;
 
     // this needs to be set when live range reordering is enabled.
@@ -2962,15 +3022,16 @@ public:
     Condition = isl_ast_expr_and(Condition, SufficientCompute);
     isl_ast_build_free(Build);
 
+    // preload invariant loads. Note: This should happen before the RTC
+    // because the RTC may depend on values that are invariant load hoisted.
+    NodeBuilder.preloadInvariantLoads();
+
     Value *RTC = NodeBuilder.createRTC(Condition);
     Builder.GetInsertBlock()->getTerminator()->setOperand(0, RTC);
 
     Builder.SetInsertPoint(&*StartBlock->begin());
 
-    NodeBuilder.initializeAfterRTH();
-    NodeBuilder.preloadInvariantLoads();
     NodeBuilder.create(Root);
-    NodeBuilder.finalize();
 
     /// In case a sequential kernel has more surrounding loops as any parallel
     /// kernel, the SCoP is probably mostly sequential. Hence, there is no

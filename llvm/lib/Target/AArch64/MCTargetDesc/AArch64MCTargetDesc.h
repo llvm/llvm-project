@@ -70,6 +70,10 @@ MCTargetStreamer *createAArch64AsmTargetStreamer(MCStreamer &S,
 MCTargetStreamer *createAArch64ObjectTargetStreamer(MCStreamer &S,
                                                     const MCSubtargetInfo &STI);
 
+namespace AArch64_MC {
+void initLLVMToCVRegMapping(MCRegisterInfo *MRI);
+}
+
 } // End llvm namespace
 
 // Defines symbolic names for AArch64 registers.  This defines a mapping from

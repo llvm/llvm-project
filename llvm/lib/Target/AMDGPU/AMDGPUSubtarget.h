@@ -159,6 +159,7 @@ protected:
   bool FlatInstOffsets;
   bool FlatGlobalInsts;
   bool FlatScratchInsts;
+  bool AddNoCarryInsts;
   bool R600ALUInst;
   bool CaymanISA;
   bool CFALUBug;
@@ -417,6 +418,10 @@ public:
 
   bool hasFlatScratchInsts() const {
     return FlatScratchInsts;
+  }
+
+  bool hasAddNoCarry() const {
+    return AddNoCarryInsts;
   }
 
   bool isMesaKernel(const MachineFunction &MF) const {

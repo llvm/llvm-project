@@ -525,6 +525,15 @@ TEST_F(FormatTestJava, AlignsBlockComments) {
                    "  void f() {}"));
 }
 
+TEST_F(FormatTestJava, KeepsDelimitersOnOwnLineInJavaDocComments) {
+  EXPECT_EQ("/**\n"
+            " * javadoc line 1\n"
+            " * javadoc line 2\n"
+            " */",
+            format("/** javadoc line 1\n"
+                   " * javadoc line 2 */"));
+}
+
 TEST_F(FormatTestJava, RetainsLogicalShifts) {
     verifyFormat("void f() {\n"
                  "  int a = 1;\n"

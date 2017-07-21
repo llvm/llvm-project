@@ -9,7 +9,7 @@
  * if shift != NULL.
  * If so, they express that current index is such that if you add shift,
  * then the result is always a multiple of stride.
- * Let D represent the initial group->depth dimensions of the computed schedule.
+ * Let D represent the initial tile->depth dimensions of the computed schedule.
  * The spaces of "lb" and "shift" are of the form
  *
  *	D -> [b]
@@ -22,10 +22,13 @@ struct gpu_array_bound {
 	isl_aff *shift;
 };
 
-/* A tile of an array.
+/* A tile of an outer array.
  *
  * requires_unroll is set if the schedule dimensions that are mapped
  * to threads need to be unrolled for this (private) tile to be used.
+ *
+ * "depth" reflects the number of schedule dimensions that affect the tile.
+ * The copying into and/or out of the tile is performed at that depth.
  *
  * n is the dimension of the array.
  * bound is an array of size "n" representing the lower bound
@@ -36,12 +39,13 @@ struct gpu_array_bound {
  *
  *	{ [D[i] -> A[a]] -> T[(a + shift(i))/stride - lb(i)] }
  *
- * where D represents the initial group->depth dimensions
+ * where D represents the initial "depth" dimensions
  * of the computed schedule.
  */
 struct gpu_array_tile {
 	isl_ctx *ctx;
 	int requires_unroll;
+	int depth;
 	int n;
 	struct gpu_array_bound *bound;
 	isl_multi_aff *tiling;

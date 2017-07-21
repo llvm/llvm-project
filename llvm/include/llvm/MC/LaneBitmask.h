@@ -73,6 +73,13 @@ namespace llvm {
 
     constexpr Type getAsInteger() const { return Mask; }
 
+    unsigned getNumLanes() const {
+      return countPopulation(Mask);
+    }
+    unsigned getHighestLane() const {
+      return Log2_32(Mask);
+    }
+
     static LaneBitmask getNone() { return LaneBitmask(0); }
     static LaneBitmask getAll()  { return ~LaneBitmask(0); }
     static LaneBitmask getLane(unsigned Lane) {

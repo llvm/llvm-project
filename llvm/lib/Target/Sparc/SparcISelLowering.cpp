@@ -1828,9 +1828,7 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FSQRT, MVT::f32, Promote);
   }
 
-  if (Subtarget->replaceFMULS()) {
-    // Promote FMULS to FMULD instructions instead as
-    // the former instructions generate errata on LEON processors.
+  if (Subtarget->hasNoFMULS()) {
     setOperationAction(ISD::FMUL, MVT::f32, Promote);
   }
 

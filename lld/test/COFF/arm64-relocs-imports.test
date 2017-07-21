@@ -14,29 +14,59 @@
 # BEFORE:       14:       00 01 40 79     ldrh    w0, [x8]
 # BEFORE:       18:       00 01 40 b9     ldr     w0, [x8]
 # BEFORE:       1c:       00 01 40 f9     ldr     x0, [x8]
-# BEFORE:       20:       e0 03 1f 2a     mov      w0, wzr
-# BEFORE:       24:       fe 07 41 f8     ldr     x30, [sp], #16
-# BEFORE:       28:       c0 03 5f d6     ret
-# BEFORE:       2c:       08 00 00 00     <unknown>
-# BEFORE:       30:       00 00 00 00     <unknown>
+# BEFORE:       20:       00 01 00 39     strb    w0, [x8]
+# BEFORE:       24:       00 01 00 79     strh    w0, [x8]
+# BEFORE:       28:       00 01 00 b9     str     w0, [x8]
+# BEFORE:       2c:       00 01 00 f9     str     x0, [x8]
+# BEFORE:       30:       00 01 40 3d     ldr     b0, [x8]
+# BEFORE:       34:       00 01 40 7d     ldr     h0, [x8]
+# BEFORE:       38:       00 01 40 bd     ldr     s0, [x8]
+# BEFORE:       3c:       00 01 40 fd     ldr     d0, [x8]
+# BEFORE:       40:       00 01 c0 3d     ldr     q0, [x8]
+# BEFORE:       44:       00 01 00 3d     str     b0, [x8]
+# BEFORE:       48:       00 01 00 7d     str     h0, [x8]
+# BEFORE:       4c:       00 01 00 bd     str     s0, [x8]
+# BEFORE:       50:       00 01 00 fd     str     d0, [x8]
+# BEFORE:       54:       00 01 80 3d     str     q0, [x8]
+# BEFORE:       58:       00 05 40 f9     ldr     x0, [x8, #8]
+# BEFORE:       5c:       e0 03 1f 2a     mov      w0, wzr
+# BEFORE:       60:       fe 07 41 f8     ldr     x30, [sp], #16
+# BEFORE:       64:       c0 03 5f d6     ret
+# BEFORE:       68:       08 00 00 00     <unknown>
+# BEFORE:       6c:       00 00 00 00     <unknown>
 
 # AFTER: Disassembly of section .text:
 # AFTER:  140002000:      fe 0f 1f f8     str     x30, [sp, #-16]!
 # AFTER:  140002004:      e0 ff ff f0     adrp    x0, #-4096
 # AFTER:  140002008:      00 18 00 91     add     x0, x0, #6
-# AFTER:  14000200c:      0a 00 00 94     bl      #40
+# AFTER:  14000200c:      19 00 00 94     bl      #100
 # AFTER:  140002010:      00 21 40 39     ldrb    w0, [x8, #8]
 # AFTER:  140002014:      00 11 40 79     ldrh    w0, [x8, #8]
 # AFTER:  140002018:      00 09 40 b9     ldr     w0, [x8, #8]
 # AFTER:  14000201c:      00 05 40 f9     ldr     x0, [x8, #8]
-# AFTER:  140002020:      e0 03 1f 2a     mov      w0, wzr
-# AFTER:  140002024:      fe 07 41 f8     ldr     x30, [sp], #16
-# AFTER:  140002028:      c0 03 5f d6     ret
-# AFTER:  14000202c:      10 10 00 40     <unknown>
-# AFTER:  140002030:      01 00 00 00     <unknown>
-# AFTER:  140002034:      10 00 00 b0     adrp    x16, #4096
-# AFTER:  140002038:      10 1e 40 f9     ldr     x16, [x16, #56]
-# AFTER:  14000203c:      00 02 1f d6     br      x16
+# AFTER:  140002020:      00 21 00 39     strb    w0, [x8, #8]
+# AFTER:  140002024:      00 11 00 79     strh    w0, [x8, #8]
+# AFTER:  140002028:      00 09 00 b9     str     w0, [x8, #8]
+# AFTER:  14000202c:      00 05 00 f9     str     x0, [x8, #8]
+# AFTER:  140002030:      00 41 40 3d     ldr     b0, [x8, #16]
+# AFTER:  140002034:      00 21 40 7d     ldr     h0, [x8, #16]
+# AFTER:  140002038:      00 11 40 bd     ldr     s0, [x8, #16]
+# AFTER:  14000203c:      00 09 40 fd     ldr     d0, [x8, #16]
+# AFTER:  140002040:      00 05 c0 3d     ldr     q0, [x8, #16]
+# AFTER:  140002044:      00 41 00 3d     str     b0, [x8, #16]
+# AFTER:  140002048:      00 21 00 7d     str     h0, [x8, #16]
+# AFTER:  14000204c:      00 11 00 bd     str     s0, [x8, #16]
+# AFTER:  140002050:      00 09 00 fd     str     d0, [x8, #16]
+# AFTER:  140002054:      00 05 80 3d     str     q0, [x8, #16]
+# AFTER:  140002058:      00 09 40 f9     ldr     x0, [x8, #16]
+# AFTER:  14000205c:      e0 03 1f 2a     mov      w0, wzr
+# AFTER:  140002060:      fe 07 41 f8     ldr     x30, [sp], #16
+# AFTER:  140002064:      c0 03 5f d6     ret
+# AFTER:  140002068:      10 10 00 40     <unknown>
+# AFTER:  14000206c:      01 00 00 00     <unknown>
+# AFTER:  140002070:      10 00 00 b0     adrp    x16, #4096
+# AFTER:  140002074:      10 1e 40 f9     ldr     x16, [x16, #56]
+# AFTER:  140002078:      00 02 1f d6     br      x16
 
 --- !COFF
 header:
@@ -46,7 +76,7 @@ sections:
   - Name:            .text
     Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
     Alignment:       4
-    SectionData:     FE0F1FF80000009000080091000000940001403900014079000140B9000140F9E0031F2AFE0741F8C0035FD60800000000000000
+    SectionData:     FE0F1FF80000009000080091000000940001403900014079000140B9000140F90001003900010079000100B9000100F90001403D0001407D000140BD000140FD0001C03D0001003D0001007D000100BD000100FD0001803D000540F9E0031F2AFE0741F8C0035FD60800000000000000
     Relocations:
       - VirtualAddress:  4
         SymbolName:      .Lstr
@@ -69,7 +99,52 @@ sections:
       - VirtualAddress:  28
         SymbolName:      .Lglobal
         Type:            7
+      - VirtualAddress:  32
+        SymbolName:      .Lglobal
+        Type:            7
+      - VirtualAddress:  36
+        SymbolName:      .Lglobal
+        Type:            7
+      - VirtualAddress:  40
+        SymbolName:      .Lglobal
+        Type:            7
       - VirtualAddress:  44
+        SymbolName:      .Lglobal
+        Type:            7
+      - VirtualAddress:  48
+        SymbolName:      .Lglobal16
+        Type:            7
+      - VirtualAddress:  52
+        SymbolName:      .Lglobal16
+        Type:            7
+      - VirtualAddress:  56
+        SymbolName:      .Lglobal16
+        Type:            7
+      - VirtualAddress:  60
+        SymbolName:      .Lglobal16
+        Type:            7
+      - VirtualAddress:  64
+        SymbolName:      .Lglobal16
+        Type:            7
+      - VirtualAddress:  68
+        SymbolName:      .Lglobal16
+        Type:            7
+      - VirtualAddress:  72
+        SymbolName:      .Lglobal16
+        Type:            7
+      - VirtualAddress:  76
+        SymbolName:      .Lglobal16
+        Type:            7
+      - VirtualAddress:  80
+        SymbolName:      .Lglobal16
+        Type:            7
+      - VirtualAddress:  84
+        SymbolName:      .Lglobal16
+        Type:            7
+      - VirtualAddress:  88
+        SymbolName:      .Lglobal
+        Type:            7
+      - VirtualAddress:  104
         SymbolName:      .Lglobal
         Type:            14
   - Name:            .data
@@ -123,6 +198,12 @@ symbols:
     StorageClass:    IMAGE_SYM_CLASS_STATIC
   - Name:            .Lglobal
     Value:           8
+    SectionNumber:   4
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+  - Name:            .Lglobal16
+    Value:           16
     SectionNumber:   4
     SimpleType:      IMAGE_SYM_TYPE_NULL
     ComplexType:     IMAGE_SYM_DTYPE_NULL

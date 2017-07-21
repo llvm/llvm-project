@@ -708,8 +708,6 @@ define <4 x i64> @splatvar_shift_v4i64(<4 x i64> %a, <4 x i64> %b) nounwind {
 ;
 ; X32-AVX1-LABEL: splatvar_shift_v4i64:
 ; X32-AVX1:       # BB#0:
-; X32-AVX1-NEXT:    vpextrd $1, %xmm1, %eax
-; X32-AVX1-NEXT:    vpinsrd $1, %eax, %xmm1, %xmm1
 ; X32-AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,2147483648,0,2147483648]
 ; X32-AVX1-NEXT:    vpsrlq %xmm1, %xmm2, %xmm2
 ; X32-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
@@ -724,8 +722,6 @@ define <4 x i64> @splatvar_shift_v4i64(<4 x i64> %a, <4 x i64> %b) nounwind {
 ;
 ; X32-AVX2-LABEL: splatvar_shift_v4i64:
 ; X32-AVX2:       # BB#0:
-; X32-AVX2-NEXT:    vpextrd $1, %xmm1, %eax
-; X32-AVX2-NEXT:    vpinsrd $1, %eax, %xmm1, %xmm1
 ; X32-AVX2-NEXT:    vmovdqa {{.*#+}} ymm2 = [0,2147483648,0,2147483648,0,2147483648,0,2147483648]
 ; X32-AVX2-NEXT:    vpsrlq %xmm1, %ymm2, %ymm2
 ; X32-AVX2-NEXT:    vpsrlq %xmm1, %ymm0, %ymm0

@@ -209,6 +209,8 @@ def M1WriteNEONJ   : SchedWriteRes<[M1UnitNMISC,
                                     M1UnitFMAC]>   { let Latency = 6; }
 def M1WriteNEONK   : SchedWriteRes<[M1UnitNMISC,
                                     M1UnitFMAC]>   { let Latency = 7; }
+def M1WriteNEONL   : SchedWriteRes<[M1UnitNALU]>   { let Latency = 2;
+                                                     let ResourceCycles = [2]; }
 def M1WriteFADD3   : SchedWriteRes<[M1UnitFADD]>   { let Latency = 3; }
 def M1WriteFCVT3   : SchedWriteRes<[M1UnitFCVT]>   { let Latency = 3; }
 def M1WriteFCVT4   : SchedWriteRes<[M1UnitFCVT]>   { let Latency = 4; }
@@ -375,12 +377,13 @@ def : InstRW<[M1WriteFVAR15], (instrs FSQRTSr)>;
 def : InstRW<[M1WriteFVAR23], (instrs FSQRTDr)>;
 
 // FP miscellaneous instructions.
-def : InstRW<[M1WriteFCVT3], (instregex "^FCVT[DS][DS]r")>;
-def : InstRW<[M1WriteNEONF], (instregex "^[FSU]CVT[AMNPZ][SU](_Int)?[SU]?[XW]?[DS]?[rds]i?")>;
-def : InstRW<[M1WriteNEONE], (instregex "^[SU]CVTF[SU]")>;
-def : InstRW<[M1WriteNALU1], (instregex "^FMOV[DS][ir]")>;
-def : InstRW<[M1WriteS4],    (instregex "^FMOV[WX][DS](High)?r")>;
-def : InstRW<[M1WriteNEONI], (instregex "^FMOV[DS][WX](High)?r")>;
+def : InstRW<[M1WriteFCVT3],  (instregex "^FCVT[DS][DS]r")>;
+def : InstRW<[M1WriteNEONF],  (instregex "^[FSU]CVT[AMNPZ][SU](_Int)?[SU]?[XW]?[DS]?[rds]i?")>;
+def : InstRW<[M1WriteNEONE],  (instregex "^[SU]CVTF[SU]")>;
+def : InstRW<[M1WriteNALU1],  (instregex "^FMOV[DS][ir]")>;
+def : InstRW<[M1WriteNMISC1], (instregex "^FRECPXv")>;
+def : InstRW<[M1WriteS4],     (instregex "^FMOV[WX][DS](High)?r")>;
+def : InstRW<[M1WriteNEONI],  (instregex "^FMOV[DS][WX](High)?r")>;
 
 // FP load instructions.
 
@@ -435,13 +438,16 @@ def : InstRW<[M1WriteFCVT3],  (instregex "^FRINT[AIMNPXZ]v")>;
 // ASIMD miscellaneous instructions.
 def : InstRW<[M1WriteNALU1],  (instregex "^RBITv")>;
 def : InstRW<[M1WriteNAL11],  (instregex "^(BIF|BIT|BSL)v")>;
-def : InstRW<[M1WriteNALU1],  (instregex "^CPY")>;
 def : InstRW<[M1WriteNEONB],  (instregex "^DUPv.+gpr")>;
 def : InstRW<[M1WriteNALU1],  (instregex "^DUPv.+lane")>;
+def : InstRW<[M1WriteNALU1],  (instregex "^EXTv8")>;
+def : InstRW<[M1WriteNEONL],  (instregex "^EXTv16")>;
 def : InstRW<[M1WriteNAL13],  (instregex "^[SU]?Q?XTU?Nv")>;
-def : InstRW<[M1WriteNEONC],  (instregex "^INSv.+gpr")>;
+def : InstRW<[M1WriteNALU1],  (instregex "^CPY")>;
+def : InstRW<[M1WriteNALU1],  (instregex "^INSv.+lane")>;
+def : InstRW<[M1WriteNALU1],  (instregex "^MOVI[Dv]")>;
+def : InstRW<[M1WriteNALU1],  (instregex "^FMOVv")>;
 def : InstRW<[M1WriteFCVT4],  (instregex "^[FU](RECP|RSQRT)Ev")>;
-def : InstRW<[M1WriteNMISC1], (instregex "^[FU](RECP|RSQRT)Xv")>;
 def : InstRW<[M1WriteFMAC5],  (instregex "^F(RECP|RSQRT)Sv")>;
 def : InstRW<[M1WriteNALU1],  (instregex "^REV(16|32|64)v")>;
 def : InstRW<[M1WriteNAL11],  (instregex "^TB[LX]v8i8One")>;
@@ -459,7 +465,7 @@ def : InstRW<[WriteSequence<[M1WriteNAL12], 3>],
 def : InstRW<[WriteSequence<[M1WriteNAL12], 4>],
                               (instregex "^TB[LX]v16i8Four")>;
 def : InstRW<[M1WriteNEOND],  (instregex "^[SU]MOVv")>;
-def : InstRW<[M1WriteNALU1],  (instregex "^INSv.+lane")>;
+def : InstRW<[M1WriteNEONC],  (instregex "^INSv.+gpr")>;
 def : InstRW<[M1WriteNALU1],  (instregex "^(TRN|UZP)[12](v8i8|v4i16|v2i32)")>;
 def : InstRW<[M1WriteNALU2],  (instregex "^(TRN|UZP)[12](v16i8|v8i16|v4i32|v2i64)")>;
 def : InstRW<[M1WriteNALU1],  (instregex "^ZIP[12]v")>;

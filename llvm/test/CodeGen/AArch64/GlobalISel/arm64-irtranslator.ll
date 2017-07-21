@@ -11,7 +11,7 @@ target triple = "aarch64--"
 ; CHECK-NEXT: [[ARG2:%[0-9]+]](s64) = COPY %x1
 ; CHECK-NEXT: [[RES:%[0-9]+]](s64) = G_ADD [[ARG1]], [[ARG2]]
 ; CHECK-NEXT: %x0 = COPY [[RES]]
-; CHECK-NEXT: RET_ReallyLR implicit %x0 
+; CHECK-NEXT: RET_ReallyLR implicit %x0
 define i64 @addi64(i64 %arg1, i64 %arg2) {
   %res = add i64 %arg1, %arg2
   ret i64 %res
@@ -32,11 +32,14 @@ define i64 @muli64(i64 %arg1, i64 %arg2) {
 ; CHECK-LABEL: name: allocai64
 ; CHECK: stack:
 ; CHECK-NEXT:   - { id: 0, name: ptr1, type: default, offset: 0, size: 8, alignment: 8,
-; CHECK-NEXT:       callee-saved-register: '', di-variable: '', di-expression: '', di-location: '' }
+; CHECK-NEXT:       stack-id: 0, callee-saved-register: '', di-variable: '', di-expression: '',
+; CHECK-NEXT:       di-location: '' }
 ; CHECK-NEXT:   - { id: 1, name: ptr2, type: default, offset: 0, size: 8, alignment: 1,
-; CHECK-NEXT:       callee-saved-register: '', di-variable: '', di-expression: '', di-location: '' }
+; CHECK-NEXT:       stack-id: 0, callee-saved-register: '', di-variable: '', di-expression: '',
+; CHECK-NEXT:       di-location: '' }
 ; CHECK-NEXT:   - { id: 2, name: ptr3, type: default, offset: 0, size: 128, alignment: 8,
-; CHECK-NEXT:       callee-saved-register: '', di-variable: '', di-expression: '', di-location: '' }
+; CHECK-NEXT:       stack-id: 0, callee-saved-register: '', di-variable: '', di-expression: '',
+; CHECK-NEXT:       di-location: '' }
 ; CHECK-NEXT:   - { id: 3, name: ptr4, type: default, offset: 0, size: 1, alignment: 8,
 ; CHECK: %{{[0-9]+}}(p0) = G_FRAME_INDEX %stack.0.ptr1
 ; CHECK: %{{[0-9]+}}(p0) = G_FRAME_INDEX %stack.1.ptr2

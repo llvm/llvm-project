@@ -1,10 +1,10 @@
 CHECK: BINGO
 Done1000000: Done 1000000 runs in
 
-RUN: LLVMFuzzer-SimpleTest 2>&1 | FileCheck %s
+RUN: not LLVMFuzzer-SimpleTest 2>&1 | FileCheck %s
 
 # only_ascii mode. Will perform some minimal self-validation.
-RUN: LLVMFuzzer-SimpleTest -only_ascii=1 2>&1
+RUN: not LLVMFuzzer-SimpleTest -only_ascii=1 2>&1
 
 RUN: LLVMFuzzer-SimpleCmpTest -max_total_time=1 -use_cmp=0 2>&1 | FileCheck %s --check-prefix=MaxTotalTime
 MaxTotalTime: Done {{.*}} runs in {{.}} second(s)
@@ -47,7 +47,7 @@ RUN: not LLVMFuzzer-DSOTest 2>&1 | FileCheck %s --check-prefix=DSO
 DSO: INFO: Loaded 3 modules
 DSO: BINGO
 
-RUN: LLVMFuzzer-SimpleTest  -exit_on_src_pos=SimpleTest.cpp:17                 2>&1 | FileCheck %s --check-prefix=EXIT_ON_SRC_POS
+RUN: LLVMFuzzer-SimpleTest  -exit_on_src_pos=SimpleTest.cpp:18                 2>&1 | FileCheck %s --check-prefix=EXIT_ON_SRC_POS
 RUN: LLVMFuzzer-ShrinkControlFlowTest  -exit_on_src_pos=ShrinkControlFlowTest.cpp:23 2>&1 | FileCheck %s --check-prefix=EXIT_ON_SRC_POS
 EXIT_ON_SRC_POS: INFO: found line matching '{{.*}}', exiting.
 

@@ -609,8 +609,9 @@ MachinePointerInfo MachinePointerInfo::getGOT(MachineFunction &MF) {
 }
 
 MachinePointerInfo MachinePointerInfo::getStack(MachineFunction &MF,
-                                                int64_t Offset) {
-  return MachinePointerInfo(MF.getPSVManager().getStack(), Offset);
+                                                int64_t Offset,
+                                                uint8_t ID) {
+  return MachinePointerInfo(MF.getPSVManager().getStack(), Offset,ID);
 }
 
 MachineMemOperand::MachineMemOperand(MachinePointerInfo ptrinfo, Flags f,

@@ -138,6 +138,7 @@ void elf::printHelp(const char *Argv0) {
 std::string elf::createResponseFile(const opt::InputArgList &Args) {
   SmallString<0> Data;
   raw_svector_ostream OS(Data);
+  OS << "--chroot .\n";
 
   // Copy the command line to the output while rewriting paths.
   for (auto *Arg : Args) {

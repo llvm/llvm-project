@@ -59,6 +59,7 @@
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/IndirectCallSiteVisitor.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/OptimizationDiagnosticInfo.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Dominators.h"
@@ -1483,10 +1484,9 @@ void setProfMetadata(Module *M, Instruction *TI, ArrayRef<uint64_t> EdgeCounts,
     OS << " (total count : " << TotalCount << ")";
     OS.flush();
     Function *F = TI->getParent()->getParent();
-    emitOptimizationRemarkAnalysis(
-        F->getContext(), "pgo-use-annot", *F, TI->getDebugLoc(),
-        Twine(BrCondStr) +
-            " is true with probability : " + Twine(BranchProbStr));
+    OptimizationRemarkEmitter ORE(F);
+    ORE.emit(OptimizationRemark(DEBUG_TYPE, "pgo-instrumentation", TI)
+             << BrCondStr << " is true with probability : " << BranchProbStr);
   }
 }
 
