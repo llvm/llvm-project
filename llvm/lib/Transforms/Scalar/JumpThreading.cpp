@@ -2168,11 +2168,19 @@ bool JumpThreadingPass::TryToUnfoldSelect(CmpInst *CondCmp, BasicBlock *BB) {
   return false;
 }
 
-/// TryToUnfoldSelectInCurrBB - Look for PHI/Select in the same BB of the form
+/// TryToUnfoldSelectInCurrBB - Look for PHI/Select or PHI/CMP/Select in the
+/// same BB in the form
 /// bb:
 ///   %p = phi [false, %bb1], [true, %bb2], [false, %bb3], [true, %bb4], ...
-///   %s = select p, trueval, falseval
+///   %s = select %p, trueval, falseval
 ///
+/// or
+///
+/// bb:
+///   %p = phi [0, %bb1], [1, %bb2], [0, %bb3], [1, %bb4], ...
+///   %c = cmp %p, 0
+///   %s = select %c, trueval, falseval
+//
 /// And expand the select into a branch structure. This later enables
 /// jump-threading over bb in this pass.
 ///
@@ -2186,44 +2194,54 @@ bool JumpThreadingPass::TryToUnfoldSelectInCurrBB(BasicBlock *BB) {
   if (LoopHeaders.count(BB))
     return false;
 
-  // Look for a Phi/Select pair in the same basic block.  The Phi feeds the
-  // condition of the Select and at least one of the incoming values is a
-  // constant.
   for (BasicBlock::iterator BI = BB->begin();
        PHINode *PN = dyn_cast<PHINode>(BI); ++BI) {
-    unsigned NumPHIValues = PN->getNumIncomingValues();
-    if (NumPHIValues == 0 || !PN->hasOneUse())
+    // Look for a Phi having at least one constant incoming value.
+    if (llvm::all_of(PN->incoming_values(),
+                     [](Value *V) { return !isa<ConstantInt>(V); }))
       continue;
 
-    SelectInst *SI = dyn_cast<SelectInst>(PN->user_back());
-    if (!SI || SI->getParent() != BB)
-      continue;
-
-    Value *Cond = SI->getCondition();
-    if (!Cond || Cond != PN || !Cond->getType()->isIntegerTy(1))
-      continue;
-
-    bool HasConst = false;
-    for (unsigned i = 0; i != NumPHIValues; ++i) {
-      if (PN->getIncomingBlock(i) == BB)
+    auto isUnfoldCandidate = [BB](SelectInst *SI, Value *V) {
+      // Check if SI is in BB and use V as condition.
+      if (SI->getParent() != BB)
         return false;
-      if (isa<ConstantInt>(PN->getIncomingValue(i)))
-        HasConst = true;
+      Value *Cond = SI->getCondition();
+      return (Cond && Cond == V && Cond->getType()->isIntegerTy(1));
+    };
+
+    SelectInst *SI = nullptr;
+    for (Use &U : PN->uses()) {
+      if (ICmpInst *Cmp = dyn_cast<ICmpInst>(U.getUser())) {
+        // Look for a ICmp in BB that compares PN with a constant and is the
+        // condition of a Select.
+        if (Cmp->getParent() == BB && Cmp->hasOneUse() &&
+            isa<ConstantInt>(Cmp->getOperand(1 - U.getOperandNo())))
+          if (SelectInst *SelectI = dyn_cast<SelectInst>(Cmp->user_back()))
+            if (isUnfoldCandidate(SelectI, Cmp->use_begin()->get())) {
+              SI = SelectI;
+              break;
+            }
+      } else if (SelectInst *SelectI = dyn_cast<SelectInst>(U.getUser())) {
+        // Look for a Select in BB that uses PN as condtion.
+        if (isUnfoldCandidate(SelectI, U.get())) {
+          SI = SelectI;
+          break;
+        }
+      }
     }
 
-    if (HasConst) {
-      // Expand the select.
-      TerminatorInst *Term =
-          SplitBlockAndInsertIfThen(SI->getCondition(), SI, false);
-      PHINode *NewPN = PHINode::Create(SI->getType(), 2, "", SI);
-      NewPN->addIncoming(SI->getTrueValue(), Term->getParent());
-      NewPN->addIncoming(SI->getFalseValue(), BB);
-      SI->replaceAllUsesWith(NewPN);
-      SI->eraseFromParent();
-      return true;
-    }
+    if (!SI)
+      continue;
+    // Expand the select.
+    TerminatorInst *Term =
+        SplitBlockAndInsertIfThen(SI->getCondition(), SI, false);
+    PHINode *NewPN = PHINode::Create(SI->getType(), 2, "", SI);
+    NewPN->addIncoming(SI->getTrueValue(), Term->getParent());
+    NewPN->addIncoming(SI->getFalseValue(), BB);
+    SI->replaceAllUsesWith(NewPN);
+    SI->eraseFromParent();
+    return true;
   }
-  
   return false;
 }
 

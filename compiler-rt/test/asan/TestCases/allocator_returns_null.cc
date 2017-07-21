@@ -37,9 +37,10 @@
 // RUN:   | FileCheck %s --check-prefix=CHECK-nnNULL
 
 #include <assert.h>
-#include <string.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <limits>
 #include <new>
 
@@ -84,6 +85,8 @@ int main(int argc, char **argv) {
     assert(0);
   }
 
+  fprintf(stderr, "errno: %d\n", errno);
+
   // The NULL pointer is printed differently on different systems, while (long)0
   // is always the same.
   fprintf(stderr, "x: %lx\n", (long)x);
@@ -108,14 +111,19 @@ int main(int argc, char **argv) {
 // CHECK-nnCRASH: AddressSanitizer's allocator is terminating the process
 
 // CHECK-mNULL: malloc:
+// CHECK-mNULL: errno: 12
 // CHECK-mNULL: x: 0
 // CHECK-cNULL: calloc:
+// CHECK-cNULL: errno: 12
 // CHECK-cNULL: x: 0
 // CHECK-coNULL: calloc-overflow:
+// CHECK-coNULL: errno: 12
 // CHECK-coNULL: x: 0
 // CHECK-rNULL: realloc:
+// CHECK-rNULL: errno: 12
 // CHECK-rNULL: x: 0
 // CHECK-mrNULL: realloc-after-malloc:
+// CHECK-mrNULL: errno: 12
 // CHECK-mrNULL: x: 0
 // CHECK-nnNULL: new-nothrow:
 // CHECK-nnNULL: x: 0

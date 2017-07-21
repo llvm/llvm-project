@@ -9341,6 +9341,8 @@ void ASTReader::diagnoseOdrViolations() {
         case Decl::Field:
           return Field;
         case Decl::CXXMethod:
+        case Decl::CXXConstructor:
+        case Decl::CXXDestructor:
           return CXXMethod;
         case Decl::TypeAlias:
           return TypeAlias;
@@ -9669,17 +9671,30 @@ void ASTReader::diagnoseOdrViolations() {
         break;
       }
       case CXXMethod: {
+        enum {
+          DiagMethod,
+          DiagConstructor,
+          DiagDestructor,
+        } FirstMethodType,
+            SecondMethodType;
+        auto GetMethodTypeForDiagnostics = [](const CXXMethodDecl* D) {
+          if (isa<CXXConstructorDecl>(D)) return DiagConstructor;
+          if (isa<CXXDestructorDecl>(D)) return DiagDestructor;
+          return DiagMethod;
+        };
         const CXXMethodDecl *FirstMethod = cast<CXXMethodDecl>(FirstDecl);
         const CXXMethodDecl *SecondMethod = cast<CXXMethodDecl>(SecondDecl);
+        FirstMethodType = GetMethodTypeForDiagnostics(FirstMethod);
+        SecondMethodType = GetMethodTypeForDiagnostics(SecondMethod);
         auto FirstName = FirstMethod->getDeclName();
         auto SecondName = SecondMethod->getDeclName();
-        if (FirstName != SecondName) {
+        if (FirstMethodType != SecondMethodType || FirstName != SecondName) {
           ODRDiagError(FirstMethod->getLocation(),
                        FirstMethod->getSourceRange(), MethodName)
-              << FirstName;
+              << FirstMethodType << FirstName;
           ODRDiagNote(SecondMethod->getLocation(),
                       SecondMethod->getSourceRange(), MethodName)
-              << SecondName;
+              << SecondMethodType << SecondName;
 
           Diagnosed = true;
           break;
@@ -9690,11 +9705,11 @@ void ASTReader::diagnoseOdrViolations() {
         if (FirstDeleted != SecondDeleted) {
           ODRDiagError(FirstMethod->getLocation(),
                        FirstMethod->getSourceRange(), MethodDeleted)
-              << FirstName << FirstDeleted;
+              << FirstMethodType << FirstName << FirstDeleted;
 
           ODRDiagNote(SecondMethod->getLocation(),
                       SecondMethod->getSourceRange(), MethodDeleted)
-              << SecondName << SecondDeleted;
+              << SecondMethodType << SecondName << SecondDeleted;
           Diagnosed = true;
           break;
         }
@@ -9707,10 +9722,10 @@ void ASTReader::diagnoseOdrViolations() {
             (FirstVirtual != SecondVirtual || FirstPure != SecondPure)) {
           ODRDiagError(FirstMethod->getLocation(),
                        FirstMethod->getSourceRange(), MethodVirtual)
-              << FirstName << FirstPure << FirstVirtual;
+              << FirstMethodType << FirstName << FirstPure << FirstVirtual;
           ODRDiagNote(SecondMethod->getLocation(),
                       SecondMethod->getSourceRange(), MethodVirtual)
-              << SecondName << SecondPure << SecondVirtual;
+              << SecondMethodType << SecondName << SecondPure << SecondVirtual;
           Diagnosed = true;
           break;
         }
@@ -9725,10 +9740,10 @@ void ASTReader::diagnoseOdrViolations() {
         if (FirstStatic != SecondStatic) {
           ODRDiagError(FirstMethod->getLocation(),
                        FirstMethod->getSourceRange(), MethodStatic)
-              << FirstName << FirstStatic;
+              << FirstMethodType << FirstName << FirstStatic;
           ODRDiagNote(SecondMethod->getLocation(),
                       SecondMethod->getSourceRange(), MethodStatic)
-              << SecondName << SecondStatic;
+              << SecondMethodType << SecondName << SecondStatic;
           Diagnosed = true;
           break;
         }
@@ -9738,10 +9753,10 @@ void ASTReader::diagnoseOdrViolations() {
         if (FirstVolatile != SecondVolatile) {
           ODRDiagError(FirstMethod->getLocation(),
                        FirstMethod->getSourceRange(), MethodVolatile)
-              << FirstName << FirstVolatile;
+              << FirstMethodType << FirstName << FirstVolatile;
           ODRDiagNote(SecondMethod->getLocation(),
                       SecondMethod->getSourceRange(), MethodVolatile)
-              << SecondName << SecondVolatile;
+              << SecondMethodType << SecondName << SecondVolatile;
           Diagnosed = true;
           break;
         }
@@ -9751,10 +9766,10 @@ void ASTReader::diagnoseOdrViolations() {
         if (FirstConst != SecondConst) {
           ODRDiagError(FirstMethod->getLocation(),
                        FirstMethod->getSourceRange(), MethodConst)
-              << FirstName << FirstConst;
+              << FirstMethodType << FirstName << FirstConst;
           ODRDiagNote(SecondMethod->getLocation(),
                       SecondMethod->getSourceRange(), MethodConst)
-              << SecondName << SecondConst;
+              << SecondMethodType << SecondName << SecondConst;
           Diagnosed = true;
           break;
         }
@@ -9764,10 +9779,10 @@ void ASTReader::diagnoseOdrViolations() {
         if (FirstInline != SecondInline) {
           ODRDiagError(FirstMethod->getLocation(),
                        FirstMethod->getSourceRange(), MethodInline)
-              << FirstName << FirstInline;
+              << FirstMethodType << FirstName << FirstInline;
           ODRDiagNote(SecondMethod->getLocation(),
                       SecondMethod->getSourceRange(), MethodInline)
-              << SecondName << SecondInline;
+              << SecondMethodType << SecondName << SecondInline;
           Diagnosed = true;
           break;
         }
@@ -9777,10 +9792,10 @@ void ASTReader::diagnoseOdrViolations() {
         if (FirstNumParameters != SecondNumParameters) {
           ODRDiagError(FirstMethod->getLocation(),
                        FirstMethod->getSourceRange(), MethodNumberParameters)
-              << FirstName << FirstNumParameters;
+              << FirstMethodType << FirstName << FirstNumParameters;
           ODRDiagNote(SecondMethod->getLocation(),
                       SecondMethod->getSourceRange(), MethodNumberParameters)
-              << SecondName << SecondNumParameters;
+              << SecondMethodType << SecondName << SecondNumParameters;
           Diagnosed = true;
           break;
         }
@@ -9800,24 +9815,27 @@ void ASTReader::diagnoseOdrViolations() {
                     FirstParamType->getAs<DecayedType>()) {
               ODRDiagError(FirstMethod->getLocation(),
                            FirstMethod->getSourceRange(), MethodParameterType)
-                  << FirstName << (I + 1) << FirstParamType << true
-                  << ParamDecayedType->getOriginalType();
+                  << FirstMethodType << FirstName << (I + 1) << FirstParamType
+                  << true << ParamDecayedType->getOriginalType();
             } else {
               ODRDiagError(FirstMethod->getLocation(),
                            FirstMethod->getSourceRange(), MethodParameterType)
-                  << FirstName << (I + 1) << FirstParamType << false;
+                  << FirstMethodType << FirstName << (I + 1) << FirstParamType
+                  << false;
             }
 
             if (const DecayedType *ParamDecayedType =
                     SecondParamType->getAs<DecayedType>()) {
               ODRDiagNote(SecondMethod->getLocation(),
                           SecondMethod->getSourceRange(), MethodParameterType)
-                  << SecondName << (I + 1) << SecondParamType << true
+                  << SecondMethodType << SecondName << (I + 1)
+                  << SecondParamType << true
                   << ParamDecayedType->getOriginalType();
             } else {
               ODRDiagNote(SecondMethod->getLocation(),
                           SecondMethod->getSourceRange(), MethodParameterType)
-                  << SecondName << (I + 1) << SecondParamType << false;
+                  << SecondMethodType << SecondName << (I + 1)
+                  << SecondParamType << false;
             }
             ParameterMismatch = true;
             break;
@@ -9828,10 +9846,10 @@ void ASTReader::diagnoseOdrViolations() {
           if (FirstParamName != SecondParamName) {
             ODRDiagError(FirstMethod->getLocation(),
                          FirstMethod->getSourceRange(), MethodParameterName)
-                << FirstName << (I + 1) << FirstParamName;
+                << FirstMethodType << FirstName << (I + 1) << FirstParamName;
             ODRDiagNote(SecondMethod->getLocation(),
                         SecondMethod->getSourceRange(), MethodParameterName)
-                << SecondName << (I + 1) << SecondParamName;
+                << SecondMethodType << SecondName << (I + 1) << SecondParamName;
             ParameterMismatch = true;
             break;
           }
@@ -9842,12 +9860,14 @@ void ASTReader::diagnoseOdrViolations() {
             ODRDiagError(FirstMethod->getLocation(),
                          FirstMethod->getSourceRange(),
                          MethodParameterSingleDefaultArgument)
-                << FirstName << (I + 1) << (FirstInit == nullptr)
+                << FirstMethodType << FirstName << (I + 1)
+                << (FirstInit == nullptr)
                 << (FirstInit ? FirstInit->getSourceRange() : SourceRange());
             ODRDiagNote(SecondMethod->getLocation(),
                         SecondMethod->getSourceRange(),
                         MethodParameterSingleDefaultArgument)
-                << SecondName << (I + 1) << (SecondInit == nullptr)
+                << SecondMethodType << SecondName << (I + 1)
+                << (SecondInit == nullptr)
                 << (SecondInit ? SecondInit->getSourceRange() : SourceRange());
             ParameterMismatch = true;
             break;
@@ -9858,11 +9878,13 @@ void ASTReader::diagnoseOdrViolations() {
             ODRDiagError(FirstMethod->getLocation(),
                          FirstMethod->getSourceRange(),
                          MethodParameterDifferentDefaultArgument)
-                << FirstName << (I + 1) << FirstInit->getSourceRange();
+                << FirstMethodType << FirstName << (I + 1)
+                << FirstInit->getSourceRange();
             ODRDiagNote(SecondMethod->getLocation(),
                         SecondMethod->getSourceRange(),
                         MethodParameterDifferentDefaultArgument)
-                << SecondName << (I + 1) << SecondInit->getSourceRange();
+                << SecondMethodType << SecondName << (I + 1)
+                << SecondInit->getSourceRange();
             ParameterMismatch = true;
             break;
 

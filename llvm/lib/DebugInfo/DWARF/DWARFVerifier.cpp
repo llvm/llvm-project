@@ -31,8 +31,6 @@ bool DWARFVerifier::verifyUnitHeader(const DWARFDataExtractor DebugInfoData,
   uint8_t AddrSize = 0, UnitType = 0;
   uint16_t Version;
   bool Success = true;
-  uint32_t HeaderSize =
-      11; // means that we have only compile units in .debug_info
 
   bool ValidLength = false;
   bool ValidVersion = false;
@@ -56,8 +54,6 @@ bool DWARFVerifier::verifyUnitHeader(const DWARFDataExtractor DebugInfoData,
     AddrSize = DebugInfoData.getU8(Offset);
     AbbrOffset = DebugInfoData.getU32(Offset);
     ValidType = DWARFUnit::isValidUnitType(UnitType);
-    if (ValidType)
-      HeaderSize = DWARFUnit::getDWARF5HeaderSize(UnitType);
   } else {
     AbbrOffset = DebugInfoData.getU32(Offset);
     AddrSize = DebugInfoData.getU8(Offset);
@@ -95,12 +91,11 @@ bool DWARFVerifier::handleDebugInfoUnitHeaderChain() {
 
   DWARFDataExtractor DebugInfoData(DCtx.getInfoSection(), DCtx.isLittleEndian(),
                                    0);
-  uint32_t OffsetStart, Offset = 0, UnitIdx = 0;
+  uint32_t Offset = 0, UnitIdx = 0;
   bool isUnitDWARF64 = false;
   bool Success = true;
   bool hasDIE = DebugInfoData.isValidOffset(Offset);
   while (hasDIE) {
-    OffsetStart = Offset;
     if (!verifyUnitHeader(DebugInfoData, &Offset, UnitIdx, isUnitDWARF64)) {
       Success = false;
       if (isUnitDWARF64)

@@ -56,7 +56,8 @@ class Loop;
 class MDNode;
 class PHINode;
 class raw_ostream;
-template<class N> class DominatorTreeBase;
+template <class N, bool IsPostDom>
+class DominatorTreeBase;
 template<class N, class M> class LoopInfoBase;
 template<class N, class M> class LoopBase;
 
@@ -663,12 +664,12 @@ public:
   }
 
   /// Create the loop forest using a stable algorithm.
-  void analyze(const DominatorTreeBase<BlockT> &DomTree);
+  void analyze(const DominatorTreeBase<BlockT, false> &DomTree);
 
   // Debugging
   void print(raw_ostream &OS) const;
 
-  void verify(const DominatorTreeBase<BlockT> &DomTree) const;
+  void verify(const DominatorTreeBase<BlockT, false> &DomTree) const;
 };
 
 // Implementation in LoopInfoImpl.h
@@ -683,7 +684,7 @@ class LoopInfo : public LoopInfoBase<BasicBlock, Loop> {
   LoopInfo(const LoopInfo &) = delete;
 public:
   LoopInfo() {}
-  explicit LoopInfo(const DominatorTreeBase<BasicBlock> &DomTree);
+  explicit LoopInfo(const DominatorTreeBase<BasicBlock, false> &DomTree);
 
   LoopInfo(LoopInfo &&Arg) : BaseT(std::move(static_cast<BaseT &>(Arg))) {}
   LoopInfo &operator=(LoopInfo &&RHS) {

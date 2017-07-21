@@ -3023,6 +3023,7 @@ bool AttributedType::isQualifier() const {
   case AttributedType::attr_sptr:
   case AttributedType::attr_uptr:
   case AttributedType::attr_objc_kindof:
+  case AttributedType::attr_ns_returns_retained:
     return false;
   }
   llvm_unreachable("bad attributed type kind");
@@ -3056,6 +3057,7 @@ bool AttributedType::isCallingConv() const {
   case attr_objc_inert_unsafe_unretained:
   case attr_noreturn:
   case attr_nonnull:
+  case attr_ns_returns_retained:
   case attr_nullable:
   case attr_null_unspecified:
   case attr_objc_kindof:

@@ -2,6 +2,9 @@
 MainSourceFile:     source2.cpp
 Diagnostics:
   - DiagnosticName: test-basic
+    Message: Fix
+    FilePath: $(path)/basic.h
+    FileOffset: 148
     Replacements:
       - FilePath:        $(path)/basic.h
         Offset:          148

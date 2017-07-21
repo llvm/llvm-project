@@ -956,7 +956,7 @@ void CodeGenFunction::EmitOMPReductionClauseInit(
 
     auto *LHSVD = cast<VarDecl>(cast<DeclRefExpr>(*ILHS)->getDecl());
     auto *RHSVD = cast<VarDecl>(cast<DeclRefExpr>(*IRHS)->getDecl());
-    if (auto *OASE = dyn_cast<OMPArraySectionExpr>(IRef)) {
+    if (isa<OMPArraySectionExpr>(IRef)) {
       // Store the address of the original variable associated with the LHS
       // implicit variable.
       PrivateScope.addPrivate(LHSVD, [&RedCG, Count]() -> Address {
@@ -965,7 +965,7 @@ void CodeGenFunction::EmitOMPReductionClauseInit(
       PrivateScope.addPrivate(RHSVD, [this, PrivateVD]() -> Address {
         return GetAddrOfLocalVar(PrivateVD);
       });
-    } else if (auto *ASE = dyn_cast<ArraySubscriptExpr>(IRef)) {
+    } else if (isa<ArraySubscriptExpr>(IRef)) {
       // Store the address of the original variable associated with the LHS
       // implicit variable.
       PrivateScope.addPrivate(LHSVD, [&RedCG, Count]() -> Address {

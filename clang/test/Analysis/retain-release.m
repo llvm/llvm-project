@@ -1447,7 +1447,7 @@ typedef NSString* MyStringTy;
 + (void) consume2:(id) CF_CONSUMED x;
 @end
 
-static int ownership_attribute_doesnt_go_here NS_RETURNS_RETAINED; // expected-warning{{'ns_returns_retained' attribute only applies to functions and methods}}
+static int ownership_attribute_doesnt_go_here NS_RETURNS_RETAINED; // expected-warning{{'ns_returns_retained' only applies to function types; type here is 'int'}}
 
 void test_attr_1(TestOwnershipAttr *X) {
   NSString *str = [X returnsAnOwnedString]; // expected-warning{{leak}}

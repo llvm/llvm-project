@@ -333,6 +333,16 @@ TEST_F(FormatTest, RecognizesBinaryOperatorKeywords) {
   verifyFormat("x = (a) xor (b);");
 }
 
+TEST_F(FormatTest, RecognizesUnaryOperatorKeywords) {
+  verifyFormat("x = compl(a);");
+  verifyFormat("x = not(a);");
+  verifyFormat("x = bitand(a);");
+  // Unary operator must not be merged with the next identifier
+  verifyFormat("x = compl a;");
+  verifyFormat("x = not a;");
+  verifyFormat("x = bitand a;");
+}
+
 //===----------------------------------------------------------------------===//
 // Tests for control statements.
 //===----------------------------------------------------------------------===//

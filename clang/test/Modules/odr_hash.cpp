@@ -517,7 +517,90 @@ S14 s14;
 // expected-error@second.h:* {{'Method::S14' has different definitions in different modules; first difference is definition in module 'SecondModule' found method 'A' with 1st parameter of type 'int *' decayed from 'int [3]'}}
 // expected-note@first.h:* {{but in 'FirstModule' found method 'A' with 1st parameter of type 'int *' decayed from 'int [2]'}}
 #endif
+
+#if defined(FIRST)
+struct S15 {
+  int A() { return 0; }
+};
+#elif defined(SECOND)
+struct S15 {
+  long A() { return 0; }
+};
+#else
+S15 s15;
+// expected-error@first.h:* {{'Method::S15::A' from module 'FirstModule' is not present in definition of 'Method::S15' in module 'SecondModule'}}
+// expected-note@second.h:* {{declaration of 'A' does not match}}
+#endif
 }  // namespace Method
+
+namespace Constructor {
+#if defined(FIRST)
+struct S1 {
+  S1() {}
+  void foo() {}
+};
+#elif defined(SECOND)
+struct S1 {
+  void foo() {}
+  S1() {}
+};
+#else
+S1 s1;
+// expected-error@second.h:* {{'Constructor::S1' has different definitions in different modules; first difference is definition in module 'SecondModule' found method 'foo'}}
+// expected-note@first.h:* {{but in 'FirstModule' found constructor}}
+#endif
+
+#if defined(FIRST)
+struct S2 {
+  S2(int) {}
+  S2(int, int) {}
+};
+#elif defined(SECOND)
+struct S2 {
+  S2(int, int) {}
+  S2(int) {}
+};
+#else
+S2* s2;
+// expected-error@second.h:* {{'Constructor::S2' has different definitions in different modules; first difference is definition in module 'SecondModule' found constructor that has 2 parameters}}
+// expected-note@first.h:* {{but in 'FirstModule' found constructor that has 1 parameter}}
+#endif
+}  // namespace Constructor
+
+namespace Destructor {
+#if defined(FIRST)
+struct S1 {
+  ~S1() {}
+  S1() {}
+};
+#elif defined(SECOND)
+struct S1 {
+  S1() {}
+  ~S1() {}
+};
+#else
+S1 s1;
+// expected-error@second.h:* {{'Destructor::S1' has different definitions in different modules; first difference is definition in module 'SecondModule' found constructor}}
+// expected-note@first.h:* {{but in 'FirstModule' found destructor}}
+#endif
+
+#if defined(FIRST)
+struct S2 {
+  virtual ~S2() {}
+  void foo() {}
+};
+#elif defined(SECOND)
+struct S2 {
+  ~S2() {}
+  virtual void foo() {}
+};
+#else
+S2 s2;
+// expected-error@second.h:* {{'Destructor::S2' has different definitions in different modules; first difference is definition in module 'SecondModule' found destructor is not virtual}}
+// expected-note@first.h:* {{but in 'FirstModule' found destructor is virtual}}
+#endif
+
+}  // namespace Destructor
 
 // Naive parsing of AST can lead to cycles in processing.  Ensure
 // self-references don't trigger an endless cycles of AST node processing.

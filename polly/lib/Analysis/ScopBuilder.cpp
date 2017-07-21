@@ -964,28 +964,21 @@ void ScopBuilder::buildScop(Region &R, AssumptionCache &AC) {
   scop->buildInvariantEquivalenceClasses();
 
   /// A map from basic blocks to their invalid domains.
-  DenseMap<BasicBlock *, isl_set *> InvalidDomainMap;
+  DenseMap<BasicBlock *, isl::set> InvalidDomainMap;
 
-  if (!scop->buildDomains(&R, DT, LI, InvalidDomainMap)) {
-    for (auto It : InvalidDomainMap)
-      isl_set_free(It.second);
+  if (!scop->buildDomains(&R, DT, LI, InvalidDomainMap))
     return;
-  }
 
   scop->addUserAssumptions(AC, DT, LI, InvalidDomainMap);
 
   // Initialize the invalid domain.
   for (ScopStmt &Stmt : scop->Stmts)
     if (Stmt.isBlockStmt())
-      Stmt.setInvalidDomain(
-          isl_set_copy(InvalidDomainMap[Stmt.getEntryBlock()]));
+      Stmt.setInvalidDomain(InvalidDomainMap[Stmt.getEntryBlock()].copy());
     else
       Stmt.setInvalidDomain(
-          isl_set_copy(InvalidDomainMap[getRegionNodeBasicBlock(
-              Stmt.getRegion()->getNode())]));
-
-  for (auto It : InvalidDomainMap)
-    isl_set_free(It.second);
+          InvalidDomainMap[getRegionNodeBasicBlock(Stmt.getRegion()->getNode())]
+              .copy());
 
   // Remove empty statements.
   // Exit early in case there are no executable statements left in this scop.

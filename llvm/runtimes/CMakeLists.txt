@@ -30,7 +30,7 @@ if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
   list(INSERT CMAKE_MODULE_PATH 0
     "${CMAKE_CURRENT_SOURCE_DIR}/../cmake"
     "${CMAKE_CURRENT_SOURCE_DIR}/../cmake/modules"
-    "${LLVM_BINARY_DIR}/lib/cmake/llvm"
+    "${LLVM_LIBRARY_DIR}/cmake/llvm"
   )
 
   # Some of the runtimes will conditionally use the compiler-rt sanitizers
@@ -123,7 +123,7 @@ if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
         set(LLVM_RUNTIME_OUTPUT_INTDIR "${LLVM_TOOLS_BINARY_DIR}/${LLVM_RUNTIMES_TARGET}")
       endif()
     endif()
-    
+
     # Between each sub-project we want to cache and clear the LIT properties
     set_property(GLOBAL PROPERTY LLVM_LIT_TESTSUITES)
     set_property(GLOBAL PROPERTY LLVM_LIT_PARAMS)
@@ -154,7 +154,7 @@ if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
   if(LLVM_INCLUDE_TESTS)
     # Add a global check rule now that all subdirectories have been traversed
     # and we know the total set of lit testsuites.
-    
+
     add_lit_target(check-runtimes
       "Running all regression tests"
       ${RUNTIMES_LIT_TESTSUITES}
@@ -331,6 +331,7 @@ else() # if this is included from LLVM's CMake
                              # Builtins were built separately above
                              CMAKE_ARGS -DCOMPILER_RT_BUILD_BUILTINS=Off
                                         -DLLVM_INCLUDE_TESTS=${LLVM_INCLUDE_TESTS}
+                                        -DLLVM_LIBRARY_DIR=${LLVM_LIBRARY_DIR}
                                         -DCMAKE_C_COMPILER_TARGET=${target}
                                         -DCMAKE_CXX_COMPILER_TARGET=${target}
                                         -DCMAKE_ASM_COMPILER_TARGET=${target}
@@ -376,6 +377,7 @@ else() # if this is included from LLVM's CMake
                                # Builtins were built separately above
                                CMAKE_ARGS -DCOMPILER_RT_BUILD_BUILTINS=Off
                                           -DLLVM_INCLUDE_TESTS=${LLVM_INCLUDE_TESTS}
+                                          -DLLVM_LIBRARY_DIR=${LLVM_LIBRARY_DIR}
                                PASSTHROUGH_PREFIXES ${prefixes}
                                EXTRA_TARGETS ${extra_targets}
                                               ${test_targets}

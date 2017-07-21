@@ -30,7 +30,7 @@ uint32_t isl_vec_get_hash(__isl_keep isl_vec *vec)
 	return isl_seq_get_hash(vec->el, vec->size);
 }
 
-struct isl_vec *isl_vec_alloc(struct isl_ctx *ctx, unsigned size)
+__isl_give isl_vec *isl_vec_alloc(struct isl_ctx *ctx, unsigned size)
 {
 	struct isl_vec *vec;
 
@@ -439,7 +439,7 @@ void isl_vec_lcm(struct isl_vec *vec, isl_int *lcm)
 /* Given a rational vector, with the denominator in the first element
  * of the vector, round up all coordinates.
  */
-struct isl_vec *isl_vec_ceil(struct isl_vec *vec)
+__isl_give isl_vec *isl_vec_ceil(__isl_take isl_vec *vec)
 {
 	vec = isl_vec_cow(vec);
 	if (!vec)

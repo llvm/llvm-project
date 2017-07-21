@@ -39,11 +39,11 @@ entry:
 ; CHECK-LABEL: va_copy:
   %vl.addr = alloca i8*, align 2
   %vl2 = alloca i8*, align 2
-; CHECK: mov.w r12, 2(r1)
+; CHECK-DAG: mov.w r12, 2(r1)
   store i8* %vl, i8** %vl.addr, align 2
   %0 = bitcast i8** %vl2 to i8*
   %1 = bitcast i8** %vl.addr to i8*
-; CHECK-NEXT: mov.w r12, 0(r1)
+; CHECK-DAG: mov.w r12, 0(r1)
   call void @llvm.va_copy(i8* %0, i8* %1)
   ret void
 }

@@ -3149,6 +3149,20 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   EVT Ty = Callee.getValueType();
   bool GlobalOrExternal = false, IsCallReloc = false;
 
+  // The long-calls feature is ignored in case of PIC.
+  // While we do not support -mshared / -mno-shared properly,
+  // ignore long-calls in case of -mabicalls too.
+  if (Subtarget.useLongCalls() && !Subtarget.isABICalls() && !IsPIC) {
+    // Get the address of the callee into a register to prevent
+    // using of the `jal` instruction for the direct call.
+    if (auto *N = dyn_cast<GlobalAddressSDNode>(Callee))
+      Callee = Subtarget.hasSym32() ? getAddrNonPIC(N, SDLoc(N), Ty, DAG)
+                                    : getAddrNonPICSym64(N, SDLoc(N), Ty, DAG);
+    else if (auto *N = dyn_cast<ExternalSymbolSDNode>(Callee))
+      Callee = Subtarget.hasSym32() ? getAddrNonPIC(N, SDLoc(N), Ty, DAG)
+                                    : getAddrNonPICSym64(N, SDLoc(N), Ty, DAG);
+  }
+
   if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee)) {
     if (IsPIC) {
       const GlobalValue *Val = G->getGlobal();

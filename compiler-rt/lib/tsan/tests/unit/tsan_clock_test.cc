@@ -53,6 +53,31 @@ TEST(Clock, ChunkedBasic) {
   chunked.Reset(&cache);
 }
 
+static const uptr interesting_sizes[] = {0, 1, 2, 30, 61, 62, 63, 64, 65, 66,
+    100, 124, 125, 126, 127, 128, 129, 130, 188, 189, 190, 191, 192, 193, 254,
+    255};
+
+TEST(Clock, Iter) {
+  const uptr n = ARRAY_SIZE(interesting_sizes);
+  for (uptr fi = 0; fi < n; fi++) {
+    const uptr size = interesting_sizes[fi];
+    SyncClock sync;
+    ThreadClock vector(0);
+    for (uptr i = 0; i < size; i++)
+      vector.set(&cache, i, i + 1);
+    if (size != 0)
+      vector.release(&cache, &sync);
+    uptr i = 0;
+    for (ClockElem &ce : sync) {
+      ASSERT_LT(i, size);
+      ASSERT_EQ(sync.get_clean(i), ce.epoch);
+      i++;
+    }
+    ASSERT_EQ(i, size);
+    sync.Reset(&cache);
+  }
+}
+
 TEST(Clock, AcquireRelease) {
   ThreadClock vector1(100);
   vector1.tick();
@@ -216,13 +241,11 @@ TEST(Clock, Growth) {
 
 TEST(Clock, Growth2) {
   // Test clock growth for every pair of sizes:
-  const uptr sizes[] = {0, 1, 2, 30, 61, 62, 63, 64, 65, 66, 100, 124, 125, 126,
-      127, 128, 129, 130, 188, 189, 190, 191, 192, 193, 254, 255};
-  const uptr n = sizeof(sizes) / sizeof(sizes[0]);
+  const uptr n = ARRAY_SIZE(interesting_sizes);
   for (uptr fi = 0; fi < n; fi++) {
     for (uptr ti = fi + 1; ti < n; ti++) {
-      const uptr from = sizes[fi];
-      const uptr to = sizes[ti];
+      const uptr from = interesting_sizes[fi];
+      const uptr to = interesting_sizes[ti];
       SyncClock sync;
       ThreadClock vector(0);
       for (uptr i = 0; i < from; i++)

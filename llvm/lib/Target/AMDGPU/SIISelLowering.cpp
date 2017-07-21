@@ -1380,9 +1380,36 @@ SDValue SITargetLowering::LowerFormalArguments(
 
     unsigned Reg = VA.getLocReg();
     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg, VT);
+    EVT ValVT = VA.getValVT();
 
     Reg = MF.addLiveIn(Reg, RC);
     SDValue Val = DAG.getCopyFromReg(Chain, DL, Reg, VT);
+
+    // If this is an 8 or 16-bit value, it is really passed promoted
+    // to 32 bits. Insert an assert[sz]ext to capture this, then
+    // truncate to the right size.
+    switch (VA.getLocInfo()) {
+    case CCValAssign::Full:
+      break;
+    case CCValAssign::BCvt:
+      Val = DAG.getNode(ISD::BITCAST, DL, ValVT, Val);
+      break;
+    case CCValAssign::SExt:
+      Val = DAG.getNode(ISD::AssertSext, DL, VT, Val,
+                        DAG.getValueType(ValVT));
+      Val = DAG.getNode(ISD::TRUNCATE, DL, ValVT, Val);
+      break;
+    case CCValAssign::ZExt:
+      Val = DAG.getNode(ISD::AssertZext, DL, VT, Val,
+                        DAG.getValueType(ValVT));
+      Val = DAG.getNode(ISD::TRUNCATE, DL, ValVT, Val);
+      break;
+    case CCValAssign::AExt:
+      Val = DAG.getNode(ISD::TRUNCATE, DL, ValVT, Val);
+      break;
+    default:
+      llvm_unreachable("Unknown loc info!");
+    }
 
     if (IsShader && Arg.VT.isVector()) {
       // Build a vector from the registers

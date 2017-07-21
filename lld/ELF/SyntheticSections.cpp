@@ -662,7 +662,12 @@ bool GotSection::empty() const {
   return NumEntries == 0 && !HasGotOffRel;
 }
 
-void GotSection::writeTo(uint8_t *Buf) { relocateAlloc(Buf, Buf + Size); }
+void GotSection::writeTo(uint8_t *Buf) {
+  // Buf points to the start of this section's buffer,
+  // whereas InputSectionBase::relocateAlloc() expects its argument
+  // to point to the start of the output section.
+  relocateAlloc(Buf - OutSecOff, Buf - OutSecOff + Size);
+}
 
 MipsGotSection::MipsGotSection()
     : SyntheticSection(SHF_ALLOC | SHF_WRITE | SHF_MIPS_GPREL, SHT_PROGBITS, 16,

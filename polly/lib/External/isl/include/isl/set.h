@@ -266,8 +266,8 @@ __isl_give isl_basic_set *isl_set_unshifted_simple_hull_from_set_list(
 	__isl_take isl_set *set, __isl_take isl_set_list *list);
 __isl_give isl_basic_set *isl_set_bounded_simple_hull(__isl_take isl_set *set);
 
-struct isl_set *isl_set_union_disjoint(
-			struct isl_set *set1, struct isl_set *set2);
+__isl_give isl_set *isl_set_union_disjoint(
+	__isl_take isl_set *set1, __isl_take isl_set *set2);
 __isl_export
 __isl_give isl_set *isl_set_union(
 		__isl_take isl_set *set1,
@@ -337,7 +337,7 @@ __isl_give isl_basic_set *isl_basic_set_eliminate(
 	enum isl_dim_type type, unsigned first, unsigned n);
 __isl_give isl_set *isl_set_eliminate(__isl_take isl_set *set,
 	enum isl_dim_type type, unsigned first, unsigned n);
-struct isl_set *isl_set_eliminate_dims(struct isl_set *set,
+__isl_give isl_set *isl_set_eliminate_dims(__isl_take isl_set *set,
 		unsigned first, unsigned n);
 __isl_give isl_set *isl_set_remove_dims(__isl_take isl_set *bset,
 	enum isl_dim_type type, unsigned first, unsigned n);
@@ -399,7 +399,7 @@ __isl_give isl_basic_set *isl_basic_set_neg(__isl_take isl_basic_set *bset);
 __isl_give isl_set *isl_set_neg(__isl_take isl_set *set);
 
 __isl_give isl_set *isl_set_make_disjoint(__isl_take isl_set *set);
-struct isl_set *isl_basic_set_compute_divs(struct isl_basic_set *bset);
+__isl_give isl_set *isl_basic_set_compute_divs(__isl_take isl_basic_set *bset);
 __isl_give isl_set *isl_set_compute_divs(__isl_take isl_set *set);
 ISL_DEPRECATED
 __isl_give isl_set *isl_set_align_divs(__isl_take isl_set *set);

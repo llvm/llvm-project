@@ -4847,25 +4847,7 @@ bool CodeGenPrepare::canFormExtLd(
   if (!HasPromoted && LI->getParent() == Inst->getParent())
     return false;
 
-  EVT VT = TLI->getValueType(*DL, Inst->getType());
-  EVT LoadVT = TLI->getValueType(*DL, LI->getType());
-
-  // If the load has other users and the truncate is not free, this probably
-  // isn't worthwhile.
-  if (!LI->hasOneUse() && (TLI->isTypeLegal(LoadVT) || !TLI->isTypeLegal(VT)) &&
-      !TLI->isTruncateFree(Inst->getType(), LI->getType()))
-    return false;
-
-  // Check whether the target supports casts folded into loads.
-  unsigned LType;
-  if (isa<ZExtInst>(Inst))
-    LType = ISD::ZEXTLOAD;
-  else {
-    assert(isa<SExtInst>(Inst) && "Unexpected ext type!");
-    LType = ISD::SEXTLOAD;
-  }
-
-  return TLI->isLoadExtLegal(LType, VT, LoadVT);
+  return TLI->isExtLoad(LI, Inst, *DL);
 }
 
 /// Move a zext or sext fed by a load into the same basic block as the load,

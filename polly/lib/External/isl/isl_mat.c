@@ -203,7 +203,7 @@ __isl_give isl_mat *isl_mat_copy(__isl_keep isl_mat *mat)
 	return mat;
 }
 
-struct isl_mat *isl_mat_dup(struct isl_mat *mat)
+__isl_give isl_mat *isl_mat_dup(__isl_keep isl_mat *mat)
 {
 	int i;
 	struct isl_mat *mat2;
@@ -218,7 +218,7 @@ struct isl_mat *isl_mat_dup(struct isl_mat *mat)
 	return mat2;
 }
 
-struct isl_mat *isl_mat_cow(struct isl_mat *mat)
+__isl_give isl_mat *isl_mat_cow(__isl_take isl_mat *mat)
 {
 	struct isl_mat *mat2;
 	if (!mat)
@@ -1284,8 +1284,8 @@ static int preimage(struct isl_ctx *ctx, isl_int **q, unsigned n,
  * the div array too as the number of rows in this array is assumed
  * to be equal to extra.
  */
-struct isl_basic_set *isl_basic_set_preimage(struct isl_basic_set *bset,
-	struct isl_mat *mat)
+__isl_give isl_basic_set *isl_basic_set_preimage(
+	__isl_take isl_basic_set *bset, __isl_take isl_mat *mat)
 {
 	struct isl_ctx *ctx;
 
@@ -1340,7 +1340,8 @@ error2:
 	return NULL;
 }
 
-struct isl_set *isl_set_preimage(struct isl_set *set, struct isl_mat *mat)
+__isl_give isl_set *isl_set_preimage(
+	__isl_take isl_set *set, __isl_take isl_mat *mat)
 {
 	int i;
 
@@ -1428,7 +1429,8 @@ void isl_mat_dump(__isl_keep isl_mat *mat)
 	isl_mat_print_internal(mat, stderr, 0);
 }
 
-struct isl_mat *isl_mat_drop_cols(struct isl_mat *mat, unsigned col, unsigned n)
+__isl_give isl_mat *isl_mat_drop_cols(__isl_take isl_mat *mat,
+	unsigned col, unsigned n)
 {
 	int r;
 
@@ -1448,7 +1450,8 @@ struct isl_mat *isl_mat_drop_cols(struct isl_mat *mat, unsigned col, unsigned n)
 	return mat;
 }
 
-struct isl_mat *isl_mat_drop_rows(struct isl_mat *mat, unsigned row, unsigned n)
+__isl_give isl_mat *isl_mat_drop_rows(__isl_take isl_mat *mat,
+	unsigned row, unsigned n)
 {
 	int r;
 

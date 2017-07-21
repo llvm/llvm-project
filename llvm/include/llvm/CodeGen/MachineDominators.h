@@ -28,13 +28,15 @@
 
 namespace llvm {
 
-template<>
-inline void DominatorTreeBase<MachineBasicBlock>::addRoot(MachineBasicBlock* MBB) {
+template <>
+inline void DominatorTreeBase<MachineBasicBlock, false>::addRoot(
+    MachineBasicBlock *MBB) {
   this->Roots.push_back(MBB);
 }
 
 extern template class DomTreeNodeBase<MachineBasicBlock>;
-extern template class DominatorTreeBase<MachineBasicBlock>;
+extern template class DominatorTreeBase<MachineBasicBlock, false>; // DomTree
+extern template class DominatorTreeBase<MachineBasicBlock, true>; // PostDomTree
 
 using MachineDomTreeNode = DomTreeNodeBase<MachineBasicBlock>;
 
@@ -65,7 +67,7 @@ class MachineDominatorTree : public MachineFunctionPass {
   mutable SmallSet<MachineBasicBlock *, 32> NewBBs;
 
   /// The DominatorTreeBase that is used to compute a normal dominator tree
-  std::unique_ptr<DominatorTreeBase<MachineBasicBlock>> DT;
+  std::unique_ptr<DomTreeBase<MachineBasicBlock>> DT;
 
   /// \brief Apply all the recorded critical edges to the DT.
   /// This updates the underlying DT information in a way that uses
@@ -79,9 +81,8 @@ public:
 
   MachineDominatorTree();
 
-  DominatorTreeBase<MachineBasicBlock> &getBase() {
-    if (!DT)
-      DT.reset(new DominatorTreeBase<MachineBasicBlock>(false));
+  DomTreeBase<MachineBasicBlock> &getBase() {
+    if (!DT) DT.reset(new DomTreeBase<MachineBasicBlock>());
     applySplitCriticalEdges();
     return *DT;
   }

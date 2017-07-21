@@ -56,7 +56,7 @@ CHECK:         flags = has async eh | opt speed
 CHECK:   196 | S_END [size = 4]
 CHECK:   200 | S_GDATA32 [size = 24] `global`
 CHECK:         type = 0x0074 (int), addr = 0000:0000
-CHECK:   224 | S_BUILDINFO [size = 8] BuildId = `4106`
+CHECK:   224 | S_BUILDINFO [size = 8] BuildId = `0x100A`
 CHECK:   232 | S_GPROC32_ID [size = 44] `foo`
 CHECK:         parent = 0, end = 308, addr = 0002:0032, code size = 15
 CHECK:         debug start = 0, debug end = 14, flags = none
@@ -81,7 +81,7 @@ CHECK:       flags = has async eh | opt speed
 CHECK:   196 | S_END [size = 4]
 CHECK:   200 | S_GDATA32 [size = 24] `global`
 CHECK:       type = 0x0074 (int), addr = 0000:0000
-CHECK:   224 | S_BUILDINFO [size = 8] BuildId = `4109`
+CHECK:   224 | S_BUILDINFO [size = 8] BuildId = `0x100D`
 CHECK-NOT:   S_GPROC32_ID {{.*}} `foo`
 CHECK-LABEL:   Mod 0002 | `* Linker *`:
 

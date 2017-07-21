@@ -176,7 +176,7 @@ static bool CodeGen(Scop &S, IslAstInfo &AI, LoopInfo &LI, DominatorTree &DT,
   // which may introduce scalar dependences that prevent us from correctly
   // code generating this scop.
   BBPair StartExitBlocks =
-      executeScopConditionally(S, Builder.getTrue(), DT, RI, LI);
+      std::get<0>(executeScopConditionally(S, Builder.getTrue(), DT, RI, LI));
   BasicBlock *StartBlock = std::get<0>(StartExitBlocks);
   BasicBlock *ExitBlock = std::get<1>(StartExitBlocks);
 

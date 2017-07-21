@@ -255,7 +255,7 @@ static void DiagnoseObjCImplementedDeprecations(Sema &S, const NamedDecl *ND,
   bool IsCategory = false;
   AvailabilityResult Availability = ND->getAvailability();
   if (Availability != AR_Deprecated) {
-    if (const auto *MD = dyn_cast<ObjCMethodDecl>(ND)) {
+    if (isa<ObjCMethodDecl>(ND)) {
       if (Availability != AR_Unavailable)
         return;
       // Warn about implementing unavailable methods.

@@ -340,10 +340,10 @@ void LoopBase<BlockT, LoopT>::print(raw_ostream &OS, unsigned Depth,
 /// Discover a subloop with the specified backedges such that: All blocks within
 /// this loop are mapped to this loop or a subloop. And all subloops within this
 /// loop have their parent loop set to this loop or a subloop.
-template<class BlockT, class LoopT>
-static void discoverAndMapSubloop(LoopT *L, ArrayRef<BlockT*> Backedges,
-                                  LoopInfoBase<BlockT, LoopT> *LI,
-                                  const DominatorTreeBase<BlockT> &DomTree) {
+template <class BlockT, class LoopT>
+static void discoverAndMapSubloop(
+    LoopT *L, ArrayRef<BlockT *> Backedges, LoopInfoBase<BlockT, LoopT> *LI,
+    const DomTreeBase<BlockT> &DomTree) {
   typedef GraphTraits<Inverse<BlockT*> > InvBlockTraits;
 
   unsigned NumBlocks = 0;
@@ -462,10 +462,9 @@ void PopulateLoopsDFS<BlockT, LoopT>::insertIntoLoop(BlockT *Block) {
 ///
 /// The Block vectors are inclusive, so step 3 requires loop-depth number of
 /// insertions per block.
-template<class BlockT, class LoopT>
-void LoopInfoBase<BlockT, LoopT>::
-analyze(const DominatorTreeBase<BlockT> &DomTree) {
-
+template <class BlockT, class LoopT>
+void LoopInfoBase<BlockT, LoopT>::analyze(
+    const DomTreeBase<BlockT> &DomTree) {
   // Postorder traversal of the dominator tree.
   const DomTreeNodeBase<BlockT> *DomRoot = DomTree.getRootNode();
   for (auto DomNode : post_order(DomRoot)) {
@@ -607,7 +606,7 @@ static void compareLoops(const LoopT *L, const LoopT *OtherL,
 
 template <class BlockT, class LoopT>
 void LoopInfoBase<BlockT, LoopT>::verify(
-    const DominatorTreeBase<BlockT> &DomTree) const {
+    const DomTreeBase<BlockT> &DomTree) const {
   DenseSet<const LoopT*> Loops;
   for (iterator I = begin(), E = end(); I != E; ++I) {
     assert(!(*I)->getParentLoop() && "Top-level loop has a parent!");

@@ -218,7 +218,6 @@ class InputCorpus {
         Printf("ADD FEATURE %zd sz %d\n", Idx, NewSize);
       SmallestElementPerFeature[Idx] = Inputs.size();
       InputSizesPerFeature[Idx] = NewSize;
-      CountingFeatures = true;
     }
   }
 
@@ -238,7 +237,6 @@ private:
   size_t GetFeature(size_t Idx) const { return InputSizesPerFeature[Idx]; }
 
   void ValidateFeatureSet() {
-    if (!CountingFeatures) return;
     if (FeatureDebug)
       PrintFeatureSet();
     for (size_t Idx = 0; Idx < kFeatureSetSize; Idx++)
@@ -256,14 +254,12 @@ private:
   // Must be called whenever the corpus or unit weights are changed.
   void UpdateCorpusDistribution() {
     size_t N = Inputs.size();
+    assert(N);
     Intervals.resize(N + 1);
     Weights.resize(N);
     std::iota(Intervals.begin(), Intervals.end(), 0);
-    if (CountingFeatures)
-      for (size_t i = 0; i < N; i++)
-        Weights[i] = Inputs[i]->NumFeatures * (i + 1);
-    else
-      std::iota(Weights.begin(), Weights.end(), 1);
+    for (size_t i = 0; i < N; i++)
+      Weights[i] = Inputs[i]->NumFeatures * (i + 1);
     CorpusDistribution = std::piecewise_constant_distribution<double>(
         Intervals.begin(), Intervals.end(), Weights.begin());
   }
@@ -275,7 +271,6 @@ private:
   std::unordered_set<std::string> Hashes;
   std::vector<InputInfo*> Inputs;
 
-  bool CountingFeatures = false;
   size_t NumAddedFeatures = 0;
   size_t NumUpdatedFeatures = 0;
   uint32_t InputSizesPerFeature[kFeatureSetSize];
