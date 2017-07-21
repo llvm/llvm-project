@@ -1982,6 +1982,25 @@ void OMPClauseWriter::VisitOMPTaskReductionClause(OMPTaskReductionClause *C) {
     Record.AddStmt(E);
 }
 
+void OMPClauseWriter::VisitOMPInReductionClause(OMPInReductionClause *C) {
+  Record.push_back(C->varlist_size());
+  VisitOMPClauseWithPostUpdate(C);
+  Record.AddSourceLocation(C->getLParenLoc());
+  Record.AddSourceLocation(C->getColonLoc());
+  Record.AddNestedNameSpecifierLoc(C->getQualifierLoc());
+  Record.AddDeclarationNameInfo(C->getNameInfo());
+  for (auto *VE : C->varlists())
+    Record.AddStmt(VE);
+  for (auto *VE : C->privates())
+    Record.AddStmt(VE);
+  for (auto *E : C->lhs_exprs())
+    Record.AddStmt(E);
+  for (auto *E : C->rhs_exprs())
+    Record.AddStmt(E);
+  for (auto *E : C->reduction_ops())
+    Record.AddStmt(E);
+}
+
 void OMPClauseWriter::VisitOMPLinearClause(OMPLinearClause *C) {
   Record.push_back(C->varlist_size());
   VisitOMPClauseWithPostUpdate(C);

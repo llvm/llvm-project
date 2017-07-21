@@ -859,6 +859,28 @@ void OMPClausePrinter::VisitOMPTaskReductionClause(
   }
 }
 
+void OMPClausePrinter::VisitOMPInReductionClause(OMPInReductionClause *Node) {
+  if (!Node->varlist_empty()) {
+    OS << "in_reduction(";
+    NestedNameSpecifier *QualifierLoc =
+        Node->getQualifierLoc().getNestedNameSpecifier();
+    OverloadedOperatorKind OOK =
+        Node->getNameInfo().getName().getCXXOverloadedOperator();
+    if (QualifierLoc == nullptr && OOK != OO_None) {
+      // Print reduction identifier in C format
+      OS << getOperatorSpelling(OOK);
+    } else {
+      // Use C++ format
+      if (QualifierLoc != nullptr)
+        QualifierLoc->print(OS, Policy);
+      OS << Node->getNameInfo();
+    }
+    OS << ":";
+    VisitOMPClauseList(Node, ' ');
+    OS << ")";
+  }
+}
+
 void OMPClausePrinter::VisitOMPLinearClause(OMPLinearClause *Node) {
   if (!Node->varlist_empty()) {
     OS << "linear";

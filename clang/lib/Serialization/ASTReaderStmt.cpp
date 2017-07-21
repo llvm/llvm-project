@@ -1837,6 +1837,9 @@ OMPClause *OMPClauseReader::readClause() {
   case OMPC_task_reduction:
     C = OMPTaskReductionClause::CreateEmpty(Context, Reader->Record.readInt());
     break;
+  case OMPC_in_reduction:
+    C = OMPInReductionClause::CreateEmpty(Context, Reader->Record.readInt());
+    break;
   case OMPC_linear:
     C = OMPLinearClause::CreateEmpty(Context, Reader->Record.readInt());
     break;
@@ -2142,6 +2145,40 @@ void OMPClauseReader::VisitOMPReductionClause(OMPReductionClause *C) {
 }
 
 void OMPClauseReader::VisitOMPTaskReductionClause(OMPTaskReductionClause *C) {
+  VisitOMPClauseWithPostUpdate(C);
+  C->setLParenLoc(Reader->ReadSourceLocation());
+  C->setColonLoc(Reader->ReadSourceLocation());
+  NestedNameSpecifierLoc NNSL = Reader->Record.readNestedNameSpecifierLoc();
+  DeclarationNameInfo DNI;
+  Reader->ReadDeclarationNameInfo(DNI);
+  C->setQualifierLoc(NNSL);
+  C->setNameInfo(DNI);
+
+  unsigned NumVars = C->varlist_size();
+  SmallVector<Expr *, 16> Vars;
+  Vars.reserve(NumVars);
+  for (unsigned I = 0; I != NumVars; ++I)
+    Vars.push_back(Reader->Record.readSubExpr());
+  C->setVarRefs(Vars);
+  Vars.clear();
+  for (unsigned I = 0; I != NumVars; ++I)
+    Vars.push_back(Reader->Record.readSubExpr());
+  C->setPrivates(Vars);
+  Vars.clear();
+  for (unsigned I = 0; I != NumVars; ++I)
+    Vars.push_back(Reader->Record.readSubExpr());
+  C->setLHSExprs(Vars);
+  Vars.clear();
+  for (unsigned I = 0; I != NumVars; ++I)
+    Vars.push_back(Reader->Record.readSubExpr());
+  C->setRHSExprs(Vars);
+  Vars.clear();
+  for (unsigned I = 0; I != NumVars; ++I)
+    Vars.push_back(Reader->Record.readSubExpr());
+  C->setReductionOps(Vars);
+}
+
+void OMPClauseReader::VisitOMPInReductionClause(OMPInReductionClause *C) {
   VisitOMPClauseWithPostUpdate(C);
   C->setLParenLoc(Reader->ReadSourceLocation());
   C->setColonLoc(Reader->ReadSourceLocation());
