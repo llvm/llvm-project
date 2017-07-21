@@ -61,7 +61,7 @@ private:
 // A chunk for the import descriptor table.
 class LookupChunk : public Chunk {
 public:
-  explicit LookupChunk(Chunk *C) : HintName(C) {}
+  explicit LookupChunk(Chunk *C) : HintName(C) { Align = ptrSize(); }
   size_t getSize() const override { return ptrSize(); }
 
   void writeTo(uint8_t *Buf) const override {
@@ -76,7 +76,7 @@ public:
 // See Microsoft PE/COFF spec 7.1. Import Header for details.
 class OrdinalOnlyChunk : public Chunk {
 public:
-  explicit OrdinalOnlyChunk(uint16_t V) : Ordinal(V) {}
+  explicit OrdinalOnlyChunk(uint16_t V) : Ordinal(V) { Align = ptrSize(); }
   size_t getSize() const override { return ptrSize(); }
 
   void writeTo(uint8_t *Buf) const override {
@@ -262,7 +262,7 @@ public:
 // A chunk for the import descriptor table.
 class DelayAddressChunk : public Chunk {
 public:
-  explicit DelayAddressChunk(Chunk *C) : Thunk(C) {}
+  explicit DelayAddressChunk(Chunk *C) : Thunk(C) { Align = ptrSize(); }
   size_t getSize() const override { return ptrSize(); }
 
   void writeTo(uint8_t *Buf) const override {

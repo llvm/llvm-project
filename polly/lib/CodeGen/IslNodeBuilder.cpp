@@ -53,12 +53,6 @@ using namespace llvm;
 
 STATISTIC(VersionedScops, "Number of SCoPs that required versioning.");
 
-// The maximal number of dimensions we allow during invariant load construction.
-// More complex access ranges will result in very high compile time and are also
-// unlikely to result in good code. This value is very high and should only
-// trigger for corner cases (e.g., the "dct_luma" function in h264, SPEC2006).
-static int const MaxDimensionsInAccessRange = 9;
-
 static cl::opt<bool> PollyGenerateRTCPrint(
     "polly-codegen-emit-rtc-print",
     cl::desc("Emit code that prints the runtime check result dynamically."),
@@ -1134,26 +1128,9 @@ bool IslNodeBuilder::materializeFortranArrayOutermostDimension() {
   return true;
 }
 
-/// Add the number of dimensions in @p BS to @p U.
-static isl_stat countTotalDims(__isl_take isl_basic_set *BS, void *U) {
-  unsigned *NumTotalDim = static_cast<unsigned *>(U);
-  *NumTotalDim += isl_basic_set_total_dim(BS);
-  isl_basic_set_free(BS);
-  return isl_stat_ok;
-}
-
 Value *IslNodeBuilder::preloadUnconditionally(isl_set *AccessRange,
                                               isl_ast_build *Build,
                                               Instruction *AccInst) {
-
-  // TODO: This check could be performed in the ScopInfo already.
-  unsigned NumTotalDim = 0;
-  isl_set_foreach_basic_set(AccessRange, countTotalDims, &NumTotalDim);
-  if (NumTotalDim > MaxDimensionsInAccessRange) {
-    isl_set_free(AccessRange);
-    return nullptr;
-  }
-
   isl_pw_multi_aff *PWAccRel = isl_pw_multi_aff_from_set(AccessRange);
   isl_ast_expr *Access =
       isl_ast_build_access_from_pw_multi_aff(Build, PWAccRel);

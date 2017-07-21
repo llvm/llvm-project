@@ -14,9 +14,7 @@
 
 ; REQUIRES: pollyacc
 
-; CODE: # host
-; CODE-NEXT: {
-; CODE-NEXT:   cudaCheckReturn(cudaMemcpy(dev_MemRef_A, MemRef_A, (2) * (100) * sizeof(float), cudaMemcpyHostToDevice));
+; CODE:        cudaCheckReturn(cudaMemcpy(dev_MemRef_A, MemRef_A, (2) * (100) * sizeof(float), cudaMemcpyHostToDevice));
 ; CODE-NEXT:   for (int c0 = 0; c0 <= 99; c0 += 1)
 ; CODE-NEXT:     {
 ; CODE-NEXT:       dim3 k0_dimBlock(32);
@@ -26,6 +24,7 @@
 ; CODE-NEXT:     }
 
 ; CODE:   cudaCheckReturn(cudaMemcpy(MemRef_A, dev_MemRef_A, (2) * (100) * sizeof(float), cudaMemcpyDeviceToHost));
+; CODE-NEXT: cudaCheckReturn(cudaFree(dev_MemRef_A));
 ; CODE-NEXT: }
 
 ; IR-LABEL: polly.loop_header:                                ; preds = %polly.loop_header, %polly.loop_preheader
