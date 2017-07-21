@@ -2084,6 +2084,8 @@ std::string GPUNodeBuilder::finalizeKernelFunction() {
   if (verifyModule(*GPUModule)) {
     DEBUG(dbgs() << "verifyModule failed on module:\n";
           GPUModule->print(dbgs(), nullptr); dbgs() << "\n";);
+    DEBUG(dbgs() << "verifyModule Error:\n";
+          verifyModule(*GPUModule, &dbgs()););
 
     if (FailOnVerifyModuleFailure)
       llvm_unreachable("VerifyModule failed.");
