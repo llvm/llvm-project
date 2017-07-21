@@ -1346,6 +1346,7 @@ as ``-mlong-calls`` and ``-mno-long-calls``.
 
 def MipsShortCallStyleDocs : Documentation {
   let Category = DocCatFunction;
+  let Heading = "short_call (gnu::short_call, gnu::near)";
   let Content = [{
 Clang supports the ``__attribute__((long_call))``, ``__attribute__((far))``,
 ``__attribute__((short__call))``, and ``__attribute__((near))`` attributes

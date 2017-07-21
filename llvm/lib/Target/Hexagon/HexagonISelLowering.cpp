@@ -2923,7 +2923,11 @@ HexagonTargetLowering::getConstraintType(StringRef Constraint) const {
       case 'q':
       case 'v':
         if (Subtarget.useHVXOps())
-          return C_Register;
+          return C_RegisterClass;
+        break;
+      case 'a':
+        return C_RegisterClass;
+      default:
         break;
     }
   }
@@ -2951,6 +2955,9 @@ HexagonTargetLowering::getRegForInlineAsmConstraint(
       case MVT::f64:
         return std::make_pair(0U, &Hexagon::DoubleRegsRegClass);
       }
+      break;
+    case 'a': // M0-M1
+      return std::make_pair(0U, &Hexagon::ModRegsRegClass);
     case 'q': // q0-q3
       switch (VT.getSizeInBits()) {
       default:
@@ -2960,6 +2967,7 @@ HexagonTargetLowering::getRegForInlineAsmConstraint(
       case 1024:
         return std::make_pair(0U, &Hexagon::VecPredRegs128BRegClass);
       }
+      break;
     case 'v': // V0-V31
       switch (VT.getSizeInBits()) {
       default:
@@ -2973,7 +2981,7 @@ HexagonTargetLowering::getRegForInlineAsmConstraint(
       case 2048:
         return std::make_pair(0U, &Hexagon::VecDblRegs128BRegClass);
       }
-
+      break;
     default:
       llvm_unreachable("Unknown asm register class");
     }

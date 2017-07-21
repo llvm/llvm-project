@@ -98,18 +98,22 @@ public:
 
 bool X86InterleavedAccessGroup::isSupported() const {
   VectorType *ShuffleVecTy = Shuffles[0]->getType();
-  uint64_t ShuffleVecSize = DL.getTypeSizeInBits(ShuffleVecTy);
   Type *ShuffleEltTy = ShuffleVecTy->getVectorElementType();
+  unsigned ShuffleElemSize = DL.getTypeSizeInBits(ShuffleEltTy);
+  unsigned SupportedNumElem = 4;
+  unsigned WideInstSize;
 
   // Currently, lowering is supported for 4-element vectors of 64 bits on AVX.
-  uint64_t ExpectedShuffleVecSize;
-  if (isa<LoadInst>(Inst))
-    ExpectedShuffleVecSize = 256;
-  else
-    ExpectedShuffleVecSize = 1024;
+  if (isa<LoadInst>(Inst)) {
+    if (DL.getTypeSizeInBits(ShuffleVecTy) != SupportedNumElem * ShuffleElemSize)
+      return false;
 
-  if (!Subtarget.hasAVX() || ShuffleVecSize != ExpectedShuffleVecSize ||
-      DL.getTypeSizeInBits(ShuffleEltTy) != 64 || Factor != 4)
+    WideInstSize = DL.getTypeSizeInBits(Inst->getType());
+  } else
+    WideInstSize = DL.getTypeSizeInBits(Shuffles[0]->getType());
+
+  if (!Subtarget.hasAVX() || Factor != 4 || ShuffleElemSize != 64 ||
+      WideInstSize != (Factor * ShuffleElemSize * SupportedNumElem))
     return false;
 
   return true;
@@ -137,8 +141,9 @@ void X86InterleavedAccessGroup::decompose(
     for (unsigned i = 0; i < NumSubVectors; ++i)
       DecomposedVectors.push_back(
           cast<ShuffleVectorInst>(Builder.CreateShuffleVector(
-              Op0, Op1, createSequentialMask(Builder, Indices[i],
-                                             SubVecTy->getVectorNumElements(), 0))));
+              Op0, Op1,
+              createSequentialMask(Builder, Indices[i],
+                                   SubVecTy->getVectorNumElements(), 0))));
     return;
   }
 
@@ -219,8 +224,8 @@ bool X86InterleavedAccessGroup::lowerIntoOptimizedSequence() {
   // Lower the interleaved stores:
   //   1. Decompose the interleaved wide shuffle into individual shuffle
   //   vectors.
-  decompose(Shuffles[0], Factor,
-            VectorType::get(ShuffleEltTy, NumSubVecElems), DecomposedVectors);
+  decompose(Shuffles[0], Factor, VectorType::get(ShuffleEltTy, NumSubVecElems),
+            DecomposedVectors);
 
   //   2. Transpose the interleaved-vectors into vectors of contiguous
   //      elements.

@@ -546,6 +546,12 @@ void FuncPGOInstrumentation<Edge, BBInfo>::computeCFGHash() {
   FunctionHash = (uint64_t)SIVisitor.getNumOfSelectInsts() << 56 |
                  (uint64_t)ValueSites[IPVK_IndirectCallTarget].size() << 48 |
                  (uint64_t)MST.AllEdges.size() << 32 | JC.getCRC();
+  DEBUG(dbgs() << "Function Hash Computation for " << F.getName() << ":\n"
+               << " CRC = " << JC.getCRC()
+               << ", Selects = " << SIVisitor.getNumOfSelectInsts()
+               << ", Edges = " << MST.AllEdges.size()
+               << ", ICSites = " << ValueSites[IPVK_IndirectCallTarget].size()
+               << ", Hash = " << FunctionHash << "\n";);
 }
 
 // Check if we can safely rename this Comdat function.

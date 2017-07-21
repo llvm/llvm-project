@@ -379,6 +379,7 @@ public:
     KillWaitBrackets.push_back(make_unique<BlockWaitcntBrackets>(*Bracket));
   }
 
+  bool mayAccessLDSThroughFlat(const MachineInstr &MI) const;
   MachineInstr *generateSWaitCntInstBefore(MachineInstr &MI,
                                            BlockWaitcntBrackets *ScoreBrackets);
   void updateEventWaitCntAfter(MachineInstr &Inst,
@@ -934,6 +935,7 @@ MachineInstr *SIInsertWaitcnts::generateSWaitCntInstBefore(
     }
 #endif
 
+    // FIXME: Should not be relying on memoperands.
     // Look at the source operands of every instruction to see if
     // any of them results from a previous memory operation that affects
     // its current usage. If so, an s_waitcnt instruction needs to be
@@ -949,6 +951,7 @@ MachineInstr *SIInsertWaitcnts::generateSWaitCntInstBefore(
       EmitSwaitcnt |= ScoreBrackets->updateByWait(
           VM_CNT, ScoreBrackets->getRegScore(RegNo, VM_CNT));
     }
+
     for (unsigned I = 0, E = MI.getNumOperands(); I != E; ++I) {
       const MachineOperand &Op = MI.getOperand(I);
       const MachineRegisterInfo &MRIA = *MRI;
@@ -973,6 +976,7 @@ MachineInstr *SIInsertWaitcnts::generateSWaitCntInstBefore(
     // 2) If a destination operand that was used by a recent export/store ins,
     // add s_waitcnt on exp_cnt to guarantee the WAR order.
     if (MI.mayStore()) {
+      // FIXME: Should not be relying on memoperands.
       for (const MachineMemOperand *Memop : MI.memoperands()) {
         unsigned AS = Memop->getAddrSpace();
         if (AS != AMDGPUASI.LOCAL_ADDRESS)
@@ -1145,16 +1149,29 @@ void SIInsertWaitcnts::insertWaitcntBeforeCF(MachineBasicBlock &MBB,
   return;
 }
 
+// This is a flat memory operation. Check to see if it has memory
+// tokens for both LDS and Memory, and if so mark it as a flat.
+bool SIInsertWaitcnts::mayAccessLDSThroughFlat(const MachineInstr &MI) const {
+  if (MI.memoperands_empty())
+    return true;
+
+  for (const MachineMemOperand *Memop : MI.memoperands()) {
+    unsigned AS = Memop->getAddrSpace();
+    if (AS == AMDGPUASI.LOCAL_ADDRESS || AS == AMDGPUASI.FLAT_ADDRESS)
+      return true;
+  }
+
+  return false;
+}
+
 void SIInsertWaitcnts::updateEventWaitCntAfter(
     MachineInstr &Inst, BlockWaitcntBrackets *ScoreBrackets) {
   // Now look at the instruction opcode. If it is a memory access
   // instruction, update the upper-bound of the appropriate counter's
   // bracket and the destination operand scores.
   // TODO: Use the (TSFlags & SIInstrFlags::LGKM_CNT) property everywhere.
-  uint64_t TSFlags = Inst.getDesc().TSFlags;
-  if (TII->isDS(Inst) && (TSFlags & SIInstrFlags::LGKM_CNT)) {
-    if (TII->getNamedOperand(Inst, AMDGPU::OpName::gds) &&
-	TII->getNamedOperand(Inst, AMDGPU::OpName::gds)->getImm() != 0) {
+  if (TII->isDS(Inst) && TII->usesLGKM_CNT(Inst)) {
+    if (TII->hasModifiersSet(Inst, AMDGPU::OpName::gds)) {
       ScoreBrackets->updateByEvent(TII, TRI, MRI, GDS_ACCESS, Inst);
       ScoreBrackets->updateByEvent(TII, TRI, MRI, GDS_GPR_LOCK, Inst);
     } else {
@@ -1162,23 +1179,18 @@ void SIInsertWaitcnts::updateEventWaitCntAfter(
     }
   } else if (TII->isFLAT(Inst)) {
     assert(Inst.mayLoad() || Inst.mayStore());
-    ScoreBrackets->updateByEvent(TII, TRI, MRI, VMEM_ACCESS, Inst);
-    ScoreBrackets->updateByEvent(TII, TRI, MRI, LDS_ACCESS, Inst);
 
-    // This is a flat memory operation. Check to see if it has memory
-    // tokens for both LDS and Memory, and if so mark it as a flat.
-    bool FoundLDSMem = false;
-    for (const MachineMemOperand *Memop : Inst.memoperands()) {
-      unsigned AS = Memop->getAddrSpace();
-      if (AS == AMDGPUASI.LOCAL_ADDRESS || AS == AMDGPUASI.FLAT_ADDRESS)
-        FoundLDSMem = true;
-    }
+    if (TII->usesVM_CNT(Inst))
+      ScoreBrackets->updateByEvent(TII, TRI, MRI, VMEM_ACCESS, Inst);
 
-    // This is a flat memory operation, so note it - it will require
-    // that both the VM and LGKM be flushed to zero if it is pending when
-    // a VM or LGKM dependency occurs.
-    if (FoundLDSMem) {
-      ScoreBrackets->setPendingFlat();
+    if (TII->usesLGKM_CNT(Inst)) {
+      ScoreBrackets->updateByEvent(TII, TRI, MRI, LDS_ACCESS, Inst);
+
+      // This is a flat memory operation, so note it - it will require
+      // that both the VM and LGKM be flushed to zero if it is pending when
+      // a VM or LGKM dependency occurs.
+      if (mayAccessLDSThroughFlat(Inst))
+        ScoreBrackets->setPendingFlat();
     }
   } else if (SIInstrInfo::isVMEM(Inst) &&
              // TODO: get a better carve out.

@@ -6887,6 +6887,9 @@ public:
           return true;
         }
         break;
+      case 'a': // Modifier register m0-m1.
+        Info.setAllowsRegister();
+        return true;
       case 's':
         // Relocatable constant.
         return true;

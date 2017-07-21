@@ -687,6 +687,8 @@ def HasFlatAddressSpace : Predicate<"Subtarget->hasFlatAddressSpace()">,
 
 def HasFlatGlobalInsts : Predicate<"Subtarget->hasFlatGlobalInsts()">,
   AssemblerPredicate<"FeatureFlatGlobalInsts">;
+def HasFlatScratchInsts : Predicate<"Subtarget->hasFlatScratchInsts()">,
+  AssemblerPredicate<"FeatureFlatScratchInsts">;
 
 def HasAddNoCarryInsts : Predicate<"Subtarget->hasAddNoCarryInsts()">,
   AssemblerPredicate<"FeatureAddNoCarryInsts">;

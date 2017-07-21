@@ -2155,7 +2155,7 @@ private:
     Impl->greedyCollapse();
 
     DEBUG(dbgs() << "\nFinal Scop:\n");
-    DEBUG(S.print(dbgs()));
+    DEBUG(dbgs() << S);
   }
 
 public:

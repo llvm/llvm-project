@@ -452,6 +452,9 @@ cl::opt<bool> DumpTypeDependents(
 // SYMBOL OPTIONS
 cl::opt<bool> DumpPublics("publics", cl::desc("dump Publics stream data"),
                           cl::cat(SymbolOptions), cl::sub(DumpSubcommand));
+cl::opt<bool> DumpPublicExtras("public-extras",
+                               cl::desc("dump Publics hashes and address maps"),
+                               cl::cat(SymbolOptions), cl::sub(DumpSubcommand));
 cl::opt<bool> DumpSymbols("symbols", cl::desc("dump module symbols"),
                           cl::cat(SymbolOptions), cl::sub(DumpSubcommand));
 
