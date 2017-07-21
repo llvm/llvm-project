@@ -13,6 +13,9 @@
 #include "Path.h"
 #include "Protocol.h"
 #include "clang/Frontend/ASTUnit.h"
+#include "clang/Frontend/PrecompiledPreamble.h"
+#include "clang/Serialization/ASTBitCodes.h"
+#include "clang/Tooling/CompilationDatabase.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include <memory>
 
@@ -70,11 +73,82 @@ public:
   void dumpAST(llvm::raw_ostream &OS) const;
 
 private:
-  Path FileName;
-  std::unique_ptr<ASTUnit> Unit;
-  std::shared_ptr<PCHContainerOperations> PCHs;
+  /// Stores and provides access to parsed AST.
+  class ParsedAST {
+  public:
+    /// Attempts to run Clang and store parsed AST. If \p Preamble is non-null
+    /// it is reused during parsing.
+    static llvm::Optional<ParsedAST>
+    Build(std::unique_ptr<clang::CompilerInvocation> CI,
+          const PrecompiledPreamble *Preamble,
+          ArrayRef<serialization::DeclID> PreambleDeclIDs,
+          std::unique_ptr<llvm::MemoryBuffer> Buffer,
+          std::shared_ptr<PCHContainerOperations> PCHs,
+          IntrusiveRefCntPtr<vfs::FileSystem> VFS);
 
-  SourceLocation getBeginningOfIdentifier(const Position& Pos, const FileEntry* FE) const;
+    ParsedAST(ParsedAST &&Other);
+    ParsedAST &operator=(ParsedAST &&Other);
+
+    ~ParsedAST();
+
+    ASTContext &getASTContext();
+    const ASTContext &getASTContext() const;
+
+    Preprocessor &getPreprocessor();
+    const Preprocessor &getPreprocessor() const;
+
+    /// This function returns all top-level decls, including those that come
+    /// from Preamble. Decls, coming from Preamble, have to be deserialized, so
+    /// this call might be expensive.
+    ArrayRef<const Decl *> getTopLevelDecls();
+
+    const std::vector<DiagWithFixIts> &getDiagnostics() const;
+
+  private:
+    ParsedAST(std::unique_ptr<CompilerInstance> Clang,
+              std::unique_ptr<FrontendAction> Action,
+              std::vector<const Decl *> TopLevelDecls,
+              std::vector<serialization::DeclID> PendingTopLevelDecls,
+              std::vector<DiagWithFixIts> Diags);
+
+  private:
+    void ensurePreambleDeclsDeserialized();
+
+    // We store an "incomplete" FrontendAction (i.e. no EndSourceFile was called
+    // on it) and CompilerInstance used to run it. That way we don't have to do
+    // complex memory management of all Clang structures on our own. (They are
+    // stored in CompilerInstance and cleaned up by
+    // FrontendAction.EndSourceFile).
+    std::unique_ptr<CompilerInstance> Clang;
+    std::unique_ptr<FrontendAction> Action;
+
+    // Data, stored after parsing.
+    std::vector<DiagWithFixIts> Diags;
+    std::vector<const Decl *> TopLevelDecls;
+    std::vector<serialization::DeclID> PendingTopLevelDecls;
+  };
+
+  // Store Preamble and all associated data
+  struct PreambleData {
+    PreambleData(PrecompiledPreamble Preamble,
+                 std::vector<serialization::DeclID> TopLevelDeclIDs,
+                 std::vector<DiagWithFixIts> Diags);
+
+    PrecompiledPreamble Preamble;
+    std::vector<serialization::DeclID> TopLevelDeclIDs;
+    std::vector<DiagWithFixIts> Diags;
+  };
+
+  SourceLocation getBeginningOfIdentifier(const Position &Pos,
+                                          const FileEntry *FE) const;
+
+  Path FileName;
+  tooling::CompileCommand Command;
+
+  llvm::Optional<PreambleData> Preamble;
+  llvm::Optional<ParsedAST> Unit;
+
+  std::shared_ptr<PCHContainerOperations> PCHs;
 };
 
 } // namespace clangd

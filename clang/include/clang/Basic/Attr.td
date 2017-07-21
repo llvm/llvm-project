@@ -1191,13 +1191,13 @@ def MicroMips : InheritableAttr, TargetSpecificAttr<TargetMips> {
 def MipsLongCall : InheritableAttr, TargetSpecificAttr<TargetMips> {
   let Spellings = [GCC<"long_call">, GCC<"far">];
   let Subjects = SubjectList<[Function]>;
-  let Documentation = [MipsCallStyleDocs];
+  let Documentation = [MipsLongCallStyleDocs];
 }
 
 def MipsShortCall : InheritableAttr, TargetSpecificAttr<TargetMips> {
-  let Spellings = [GCC<"near">];
+  let Spellings = [GCC<"short_call">, GCC<"near">];
   let Subjects = SubjectList<[Function]>;
-  let Documentation = [MipsCallStyleDocs];
+  let Documentation = [MipsShortCallStyleDocs];
 }
 
 def Mode : Attr {

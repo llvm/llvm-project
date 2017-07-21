@@ -3805,7 +3805,7 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
 /// (CodeGenPrepare.cpp)
 bool NVPTXTargetLowering::isLegalAddressingMode(const DataLayout &DL,
                                                 const AddrMode &AM, Type *Ty,
-                                                unsigned AS) const {
+                                                unsigned AS, Instruction *I) const {
   // AddrMode - This represents an addressing mode of:
   //    BaseGV + BaseOffs + BaseReg + Scale*ScaleReg
   //
