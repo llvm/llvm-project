@@ -2235,9 +2235,9 @@ void DwarfLinker::keepDIEAndDependencies(RelocationManager &RelocMgr,
 
     Val.extractValue(Data, &Offset, &Unit);
     CompileUnit *ReferencedCU;
-    if (auto RefDIE =
+    if (auto RefDie =
             resolveDIEReference(*this, Units, Val, Unit, Die, ReferencedCU)) {
-      uint32_t RefIdx = ReferencedCU->getOrigUnit().getDIEIndex(RefDIE);
+      uint32_t RefIdx = ReferencedCU->getOrigUnit().getDIEIndex(RefDie);
       CompileUnit::DIEInfo &Info = ReferencedCU->getInfo(RefIdx);
       bool IsModuleRef = Info.Ctxt && Info.Ctxt->getCanonicalDIEOffset() &&
                          Info.Ctxt->isDefinedInClangModule();
@@ -2261,7 +2261,7 @@ void DwarfLinker::keepDIEAndDependencies(RelocationManager &RelocMgr,
         Info.Prune = false;
 
       unsigned ODRFlag = UseODR ? TF_ODR : 0;
-      lookForDIEsToKeep(RelocMgr, RefDIE, DMO, *ReferencedCU,
+      lookForDIEsToKeep(RelocMgr, RefDie, DMO, *ReferencedCU,
                         TF_Keep | TF_DependencyWalk | ODRFlag);
     }
   }
