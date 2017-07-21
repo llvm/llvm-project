@@ -91,8 +91,7 @@ template <class ELFT> void elf::ObjectFile<ELFT>::initializeDwarfLine() {
 template <class ELFT>
 Optional<DILineInfo> elf::ObjectFile<ELFT>::getDILineInfo(InputSectionBase *S,
                                                           uint64_t Offset) {
-  if (!DwarfLine)
-    initializeDwarfLine();
+  llvm::call_once(InitDwarfLine, [this]() { initializeDwarfLine(); });
 
   // The offset to CU is 0.
   const DWARFDebugLine::LineTable *Tbl = DwarfLine->getLineTable(0);
