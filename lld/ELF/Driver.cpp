@@ -660,7 +660,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->Rpath = getRpath(Args);
   Config->Relocatable = Args.hasArg(OPT_relocatable);
   Config->SaveTemps = Args.hasArg(OPT_save_temps);
-  Config->SearchPaths = getArgs(Args, OPT_L);
+  Config->SearchPaths = getArgs(Args, OPT_library_path);
   Config->SectionStartMap = getSectionStartMap(Args);
   Config->Shared = Args.hasArg(OPT_shared);
   Config->SingleRoRx = Args.hasArg(OPT_no_rosegment);
@@ -806,7 +806,7 @@ static bool getBinaryOption(StringRef S) {
 void LinkerDriver::createFiles(opt::InputArgList &Args) {
   for (auto *Arg : Args) {
     switch (Arg->getOption().getUnaliasedOption().getID()) {
-    case OPT_l:
+    case OPT_library:
       addLibrary(Arg->getValue());
       break;
     case OPT_INPUT:

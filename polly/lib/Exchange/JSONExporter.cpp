@@ -134,7 +134,7 @@ std::string JSONExporter::getFileName(Scop &S) const {
   return FileName;
 }
 
-void JSONExporter::printScop(raw_ostream &OS, Scop &S) const { S.print(OS); }
+void JSONExporter::printScop(raw_ostream &OS, Scop &S) const { OS << S; }
 
 /// Export all arrays from the Scop.
 ///
@@ -263,7 +263,7 @@ std::string JSONImporter::getFileName(Scop &S) const {
 }
 
 void JSONImporter::printScop(raw_ostream &OS, Scop &S) const {
-  S.print(OS);
+  OS << S;
   for (std::vector<std::string>::const_iterator I = NewAccessStrings.begin(),
                                                 E = NewAccessStrings.end();
        I != E; I++)

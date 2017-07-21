@@ -49,6 +49,6 @@ for.end:                                          ; preds = %for.cond
 ;
 ; CHECK: Statements {
 ; CHECK:      Stmt_for_body
-; CHECK-DAG:     MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 0]
+; CHECK:     MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:        [n, j] -> { Stmt_for_body[i0] -> MemRef_A[i0] };
 ; CHECK:     }

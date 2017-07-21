@@ -121,7 +121,7 @@ void VirtualUse::print(raw_ostream &OS, bool Reproducible) const {
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void VirtualUse::dump() const {
+LLVM_DUMP_METHOD void VirtualUse::dump() const {
   print(errs(), false);
   errs() << '\n';
 }
@@ -138,7 +138,7 @@ void VirtualInstruction::print(raw_ostream &OS, bool Reproducible) const {
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void VirtualInstruction::dump() const {
+LLVM_DUMP_METHOD void VirtualInstruction::dump() const {
   print(errs(), false);
   errs() << '\n';
 }

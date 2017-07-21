@@ -1596,7 +1596,7 @@ bool IslScheduleOptimizer::runOnScop(Scop &S) {
   S.markAsOptimized();
 
   if (OptimizedScops)
-    S.dump();
+    errs() << S;
 
   return false;
 }

@@ -41,16 +41,16 @@
 # RUN: FileCheck %s --check-prefix=RSP2 < repro2/response.txt
 # RSP2:      --chroot .
 # RSP2:      "{{.*}}foo bar"
-# RSP2-NEXT: -L "{{.*}}foo bar"
-# RSP2-NEXT: -L {{.+}}file
+# RSP2-NEXT: --library-path "{{.*}}foo bar"
+# RSP2-NEXT: --library-path {{.+}}file
 # RSP2-NEXT: --script {{.+}}file2
 # RSP2-NEXT: --dynamic-list {{.+}}dyn
 # RSP2-NEXT: -rpath {{.+}}file
 # RSP2-NEXT: --script {{.+}}file
 # RSP2-NEXT: --version-script [[PATH:.*]]ver
 # RSP2-NEXT: --dynamic-linker "some unusual/path"
-# RSP2-NEXT: -soname="foo bar"
-# RSP2-NEXT: -soname="foo bar"
+# RSP2-NEXT: -soname "foo bar"
+# RSP2-NEXT: -soname "foo bar"
 
 # RUN: tar tf repro2.tar | FileCheck %s
 # CHECK:      repro2/response.txt
