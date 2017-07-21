@@ -1507,7 +1507,7 @@ define <4 x float> @uitofp_4i1_float(<4 x i32> %a) {
 ; NOVL:       # BB#0:
 ; NOVL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; NOVL-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
-; NOVL-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm1
+; NOVL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [1,1,1,1]
 ; NOVL-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; NOVL-NEXT:    retq
 ;

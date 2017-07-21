@@ -261,3 +261,13 @@ define void @test_inline_modifier_a(i8* %ptr) nounwind {
   ; CHECK: prfm pldl1keep, [x0]
   ret void
 }
+
+; PR33134
+define void @test_zero_address() {
+entry:
+; CHECK-LABEL: test_zero_address
+; CHECK: mov {{x[0-9]+}}, xzr
+; CHECK: ldr {{x[0-9]+}}, {{[x[0-9]+]}}
+  tail call i32 asm sideeffect "ldr $0, $1 \0A", "=r,*Q"(i32* null)
+  ret void
+}

@@ -4525,6 +4525,12 @@ CanQualType ASTContext::getSizeType() const {
   return getFromTargetType(Target->getSizeType());
 }
 
+/// Return the unique signed counterpart of the integer type 
+/// corresponding to size_t.
+CanQualType ASTContext::getSignedSizeType() const {
+  return getFromTargetType(Target->getSignedSizeType());
+}
+
 /// getIntMaxType - Return the unique type for "intmax_t" (C99 7.18.1.5).
 CanQualType ASTContext::getIntMaxType() const {
   return getFromTargetType(Target->getIntMaxType());

@@ -1814,9 +1814,21 @@ Instruction *InstCombiner::foldICmpOrConstant(ICmpInst &Cmp, BinaryOperator *Or,
         Builder.CreateICmp(Pred, P, ConstantInt::getNullValue(P->getType()));
     Value *CmpQ =
         Builder.CreateICmp(Pred, Q, ConstantInt::getNullValue(Q->getType()));
-    auto LogicOpc = Pred == ICmpInst::Predicate::ICMP_EQ ? Instruction::And
-                                                         : Instruction::Or;
-    return BinaryOperator::Create(LogicOpc, CmpP, CmpQ);
+    auto BOpc = Pred == CmpInst::ICMP_EQ ? Instruction::And : Instruction::Or;
+    return BinaryOperator::Create(BOpc, CmpP, CmpQ);
+  }
+
+  // Are we using xors to bitwise check for a pair of (in)equalities? Convert to
+  // a shorter form that has more potential to be folded even further.
+  Value *X1, *X2, *X3, *X4;
+  if (match(Or->getOperand(0), m_OneUse(m_Xor(m_Value(X1), m_Value(X2)))) &&
+      match(Or->getOperand(1), m_OneUse(m_Xor(m_Value(X3), m_Value(X4))))) {
+    // ((X1 ^ X2) || (X3 ^ X4)) == 0 --> (X1 == X2) && (X3 == X4)
+    // ((X1 ^ X2) || (X3 ^ X4)) != 0 --> (X1 != X2) || (X3 != X4)
+    Value *Cmp12 = Builder.CreateICmp(Pred, X1, X2);
+    Value *Cmp34 = Builder.CreateICmp(Pred, X3, X4);
+    auto BOpc = Pred == CmpInst::ICMP_EQ ? Instruction::And : Instruction::Or;
+    return BinaryOperator::Create(BOpc, Cmp12, Cmp34);
   }
 
   return nullptr;
@@ -3737,6 +3749,11 @@ static Instruction *processUMulZExtIdiom(ICmpInst &I, Value *MulVal,
           const APInt &CVal = CI->getValue();
           if (CVal.getBitWidth() - CVal.countLeadingZeros() > MulWidth)
             return nullptr;
+        } else {
+          // In this case we could have the operand of the binary operation
+          // being defined in another block, and performing the replacement
+          // could break the dominance relation.
+          return nullptr;
         }
       } else {
         // Other uses prohibit this transformation.
@@ -3856,18 +3873,17 @@ static Instruction *processUMulZExtIdiom(ICmpInst &I, Value *MulVal,
       } else if (BinaryOperator *BO = dyn_cast<BinaryOperator>(U)) {
         assert(BO->getOpcode() == Instruction::And);
         // Replace (mul & mask) --> zext (mul.with.overflow & short_mask)
-        Value *ShortMask =
-            Builder.CreateTrunc(BO->getOperand(1), Builder.getIntNTy(MulWidth));
+        ConstantInt *CI = cast<ConstantInt>(BO->getOperand(1));
+        APInt ShortMask = CI->getValue().trunc(MulWidth);
         Value *ShortAnd = Builder.CreateAnd(Mul, ShortMask);
-        Value *Zext = Builder.CreateZExt(ShortAnd, BO->getType());
-        if (auto *ZextI = dyn_cast<Instruction>(Zext))
-          IC.Worklist.Add(ZextI);
+        Instruction *Zext =
+            cast<Instruction>(Builder.CreateZExt(ShortAnd, BO->getType()));
+        IC.Worklist.Add(Zext);
         IC.replaceInstUsesWith(*BO, Zext);
       } else {
         llvm_unreachable("Unexpected Binary operation");
       }
-      if (auto *UI = dyn_cast<Instruction>(U))
-        IC.Worklist.Add(UI);
+      IC.Worklist.Add(cast<Instruction>(U));
     }
   }
   if (isa<Instruction>(OtherVal))

@@ -2291,7 +2291,8 @@ const char* HexagonTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case HexagonISD::RET_FLAG:      return "HexagonISD::RET_FLAG";
   case HexagonISD::TC_RETURN:     return "HexagonISD::TC_RETURN";
   case HexagonISD::VCOMBINE:      return "HexagonISD::VCOMBINE";
-  case HexagonISD::VPACK:         return "HexagonISD::VPACK";
+  case HexagonISD::VPACKE:        return "HexagonISD::VPACKE";
+  case HexagonISD::VPACKO:        return "HexagonISD::VPACKO";
   case HexagonISD::VASL:          return "HexagonISD::VASL";
   case HexagonISD::VASR:          return "HexagonISD::VASR";
   case HexagonISD::VLSR:          return "HexagonISD::VLSR";
@@ -2408,20 +2409,17 @@ HexagonTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG)
   if (UseHVX) {
     ArrayRef<int> Mask = SVN->getMask();
     size_t MaskLen = Mask.size();
-    int ElemSizeInBits = VT.getScalarSizeInBits();
-    if ((Subtarget.useHVXSglOps() && (ElemSizeInBits * MaskLen) == 64 * 8) ||
-        (Subtarget.useHVXDblOps() && (ElemSizeInBits * MaskLen) == 128 * 8)) {
-      // Return 1 for odd and 2 of even
-      StridedLoadKind Pattern = isStridedLoad(Mask);
+    unsigned SizeInBits = VT.getScalarSizeInBits() * MaskLen;
 
+    if ((Subtarget.useHVXSglOps() && SizeInBits == 64 * 8) ||
+        (Subtarget.useHVXDblOps() && SizeInBits == 128 * 8)) {
+      StridedLoadKind Pattern = isStridedLoad(Mask);
       if (Pattern == StridedLoadKind::NoPattern)
         return SDValue();
 
-      SDValue Vec0 = Op.getOperand(0);
-      SDValue Vec1 = Op.getOperand(1);
-      SDValue StridePattern = DAG.getConstant(Pattern, dl, MVT::i32);
-      SDValue Ops[] = { Vec1, Vec0, StridePattern };
-      return DAG.getNode(HexagonISD::VPACK, dl, VT, Ops);
+      unsigned Opc = Pattern == StridedLoadKind::Even ? HexagonISD::VPACKE
+                                                      : HexagonISD::VPACKO;
+      return DAG.getNode(Opc, dl, VT, {Op.getOperand(1), Op.getOperand(0)});
     }
     // We used to assert in the "else" part here, but that is bad for Halide
     // Halide creates intermediate double registers by interleaving two

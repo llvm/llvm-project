@@ -239,10 +239,17 @@ bool AArch64DAGToDAGISel::SelectInlineAsmMemoryOperand(
   case InlineAsm::Constraint_i:
   case InlineAsm::Constraint_m:
   case InlineAsm::Constraint_Q:
-    // Require the address to be in a register.  That is safe for all AArch64
-    // variants and it is hard to do anything much smarter without knowing
-    // how the operand is used.
-    OutOps.push_back(Op);
+    // We need to make sure that this one operand does not end up in XZR, thus
+    // require the address to be in a PointerRegClass register.
+    const TargetRegisterInfo *TRI = Subtarget->getRegisterInfo();
+    const TargetRegisterClass *TRC = TRI->getPointerRegClass(*MF);
+    SDLoc dl(Op);
+    SDValue RC = CurDAG->getTargetConstant(TRC->getID(), dl, MVT::i64);
+    SDValue NewOp =
+        SDValue(CurDAG->getMachineNode(TargetOpcode::COPY_TO_REGCLASS,
+                                       dl, Op.getValueType(),
+                                       Op, RC), 0);
+    OutOps.push_back(NewOp);
     return false;
   }
   return true;

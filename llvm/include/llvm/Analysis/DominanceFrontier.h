@@ -29,9 +29,9 @@ namespace llvm {
 /// DominanceFrontierBase - Common base class for computing forward and inverse
 /// dominance frontiers for a function.
 ///
-template <class BlockT>
+template <class BlockT, bool IsPostDom>
 class DominanceFrontierBase {
-public:
+ public:
   typedef std::set<BlockT *> DomSetType;                // Dom set for a bb
   typedef std::map<BlockT *, DomSetType> DomSetMapType; // Dom set map
 
@@ -40,10 +40,10 @@ protected:
 
   DomSetMapType Frontiers;
   std::vector<BlockT *> Roots;
-  const bool IsPostDominators;
+  static constexpr bool IsPostDominators = IsPostDom;
 
-public:
-  DominanceFrontierBase(bool isPostDom) : IsPostDominators(isPostDom) {}
+ public:
+  DominanceFrontierBase() {}
 
   /// getRoots - Return the root blocks of the current CFG.  This may include
   /// multiple blocks if we are computing post dominators.  For forward
@@ -96,7 +96,7 @@ public:
 
   /// compare - Return true if the other dominance frontier base matches
   /// this dominance frontier base. Otherwise return false.
-  bool compare(DominanceFrontierBase<BlockT> &Other) const;
+  bool compare(DominanceFrontierBase &Other) const;
 
   /// print - Convert to human readable form
   ///
@@ -113,22 +113,21 @@ public:
 /// used to compute a forward dominator frontiers.
 ///
 template <class BlockT>
-class ForwardDominanceFrontierBase : public DominanceFrontierBase<BlockT> {
-private:
+class ForwardDominanceFrontierBase
+    : public DominanceFrontierBase<BlockT, false> {
+ private:
   typedef GraphTraits<BlockT *> BlockTraits;
 
 public:
-  typedef DominatorTreeBase<BlockT> DomTreeT;
-  typedef DomTreeNodeBase<BlockT> DomTreeNodeT;
-  typedef typename DominanceFrontierBase<BlockT>::DomSetType DomSetType;
+ typedef DomTreeBase<BlockT> DomTreeT;
+ typedef DomTreeNodeBase<BlockT> DomTreeNodeT;
+ typedef typename DominanceFrontierBase<BlockT, false>::DomSetType DomSetType;
 
-  ForwardDominanceFrontierBase() : DominanceFrontierBase<BlockT>(false) {}
-
-  void analyze(DomTreeT &DT) {
-    this->Roots = DT.getRoots();
-    assert(this->Roots.size() == 1 &&
-           "Only one entry block for forward domfronts!");
-    calculate(DT, DT[this->Roots[0]]);
+ void analyze(DomTreeT &DT) {
+   this->Roots = DT.getRoots();
+   assert(this->Roots.size() == 1 &&
+          "Only one entry block for forward domfronts!");
+   calculate(DT, DT[this->Roots[0]]);
   }
 
   const DomSetType &calculate(const DomTreeT &DT, const DomTreeNodeT *Node);
@@ -136,15 +135,16 @@ public:
 
 class DominanceFrontier : public ForwardDominanceFrontierBase<BasicBlock> {
 public:
-  typedef DominatorTreeBase<BasicBlock> DomTreeT;
-  typedef DomTreeNodeBase<BasicBlock> DomTreeNodeT;
-  typedef DominanceFrontierBase<BasicBlock>::DomSetType DomSetType;
-  typedef DominanceFrontierBase<BasicBlock>::iterator iterator;
-  typedef DominanceFrontierBase<BasicBlock>::const_iterator const_iterator;
+ typedef DomTreeBase<BasicBlock> DomTreeT;
+ typedef DomTreeNodeBase<BasicBlock> DomTreeNodeT;
+ typedef DominanceFrontierBase<BasicBlock, false>::DomSetType DomSetType;
+ typedef DominanceFrontierBase<BasicBlock, false>::iterator iterator;
+ typedef DominanceFrontierBase<BasicBlock, false>::const_iterator
+     const_iterator;
 
-  /// Handle invalidation explicitly.
-  bool invalidate(Function &F, const PreservedAnalyses &PA,
-                  FunctionAnalysisManager::Invalidator &);
+ /// Handle invalidation explicitly.
+ bool invalidate(Function &F, const PreservedAnalyses &PA,
+                 FunctionAnalysisManager::Invalidator &);
 };
 
 class DominanceFrontierWrapperPass : public FunctionPass {
@@ -168,7 +168,8 @@ public:
   void dump() const;
 };
 
-extern template class DominanceFrontierBase<BasicBlock>;
+extern template class DominanceFrontierBase<BasicBlock, false>;
+extern template class DominanceFrontierBase<BasicBlock, true>;
 extern template class ForwardDominanceFrontierBase<BasicBlock>;
 
 /// \brief Analysis pass which computes a \c DominanceFrontier.

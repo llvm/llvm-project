@@ -16,6 +16,10 @@
 
 using namespace llvm;
 
+namespace llvm {
+template class DominatorTreeBase<MachineBasicBlock, true>; // PostDomTreeBase
+}
+
 char MachinePostDominatorTree::ID = 0;
 
 //declare initializeMachinePostDominatorTreePass
@@ -24,8 +28,7 @@ INITIALIZE_PASS(MachinePostDominatorTree, "machinepostdomtree",
 
 MachinePostDominatorTree::MachinePostDominatorTree() : MachineFunctionPass(ID) {
   initializeMachinePostDominatorTreePass(*PassRegistry::getPassRegistry());
-  DT = new DominatorTreeBase<MachineBasicBlock>(true); //true indicate
-                                                       // postdominator
+  DT = new PostDomTreeBase<MachineBasicBlock>();
 }
 
 FunctionPass *

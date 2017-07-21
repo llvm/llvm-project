@@ -133,12 +133,12 @@ public:
 
 private:
   void mergeThunks();
-  ThunkSection *getOSThunkSec(OutputSection *OS,
+  ThunkSection *getOSThunkSec(OutputSectionCommand *Cmd,
                               std::vector<InputSection *> *ISR);
   ThunkSection *getISThunkSec(InputSection *IS, OutputSection *OS);
   void forEachExecInputSection(
       ArrayRef<OutputSectionCommand *> OutputSections,
-      std::function<void(OutputSection *, std::vector<InputSection *> *,
+      std::function<void(OutputSectionCommand *, std::vector<InputSection *> *,
                          InputSection *)>
           Fn);
   std::pair<Thunk *, bool> getThunk(SymbolBody &Body, uint32_t Type);

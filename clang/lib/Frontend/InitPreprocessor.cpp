@@ -374,10 +374,13 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
     else if (!LangOpts.GNUMode && LangOpts.Digraphs)
       Builder.defineMacro("__STDC_VERSION__", "199409L");
   } else {
+    // FIXME: Use correct value for C++20.
+    if (LangOpts.CPlusPlus2a)
+      Builder.defineMacro("__cplusplus", "201707L");
     // C++17 [cpp.predefined]p1:
     //   The name __cplusplus is defined to the value 201703L when compiling a
     //   C++ translation unit.
-    if (LangOpts.CPlusPlus1z)
+    else if (LangOpts.CPlusPlus1z)
       Builder.defineMacro("__cplusplus", "201703L");
     // C++1y [cpp.predefined]p1:
     //   The name __cplusplus is defined to the value 201402L when compiling a

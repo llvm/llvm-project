@@ -91,7 +91,7 @@ define <4 x i32> @combine_vec_lshr_known_zero1(<4 x i32> %x) {
 ;
 ; AVX-LABEL: combine_vec_lshr_known_zero1:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm1
+; AVX-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [15,15,15,15]
 ; AVX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vpsrlvd {{.*}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    retq
@@ -326,7 +326,7 @@ define <4 x i32> @combine_vec_lshr_shl_mask0(<4 x i32> %x) {
 ;
 ; AVX-LABEL: combine_vec_lshr_shl_mask0:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vbroadcastss {{.*}}(%rip), %xmm1
+; AVX-NEXT:    vbroadcastss {{.*#+}} xmm1 = [1073741823,1073741823,1073741823,1073741823]
 ; AVX-NEXT:    vandps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 =  shl <4 x i32> %x, <i32 2, i32 2, i32 2, i32 2>
@@ -376,10 +376,10 @@ define <4 x i32> @combine_vec_lshr_lzcnt_bit0(<4 x i32> %x) {
 ;
 ; AVX-LABEL: combine_vec_lshr_lzcnt_bit0:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm1
+; AVX-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [16,16,16,16]
 ; AVX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vpsrld $4, %xmm0, %xmm0
-; AVX-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm1
+; AVX-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [1,1,1,1]
 ; AVX-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = and <4 x i32> %x, <i32 16, i32 16, i32 16, i32 16>

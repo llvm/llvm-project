@@ -57,6 +57,7 @@ Name prefix            Description
 ====================== =========================================================
 ``android-``           Checks related to Android.
 ``boost-``             Checks related to Boost library.
+``bugprone-``          Checks that target bugprone code constructs.
 ``cert-``              Checks related to CERT Secure Coding Guidelines.
 ``cppcoreguidelines-`` Checks related to C++ Core Guidelines.
 ``clang-analyzer-``    Clang Static Analyzer checks.

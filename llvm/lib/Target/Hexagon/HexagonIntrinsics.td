@@ -1366,6 +1366,18 @@ defm : MaskedStore <V6_vS32b_nqpred_ai, int_hexagon_V6_vmaskedstorenq>;
 defm : MaskedStore <V6_vS32b_nt_qpred_ai, int_hexagon_V6_vmaskedstorentq>;
 defm : MaskedStore <V6_vS32b_nt_nqpred_ai, int_hexagon_V6_vmaskedstorentnq>;
 
+//*******************************************************************
+//           SYSTEM
+//*******************************************************************
+
+def: T_R_pat<Y2_dccleana,    int_hexagon_Y2_dccleana>;
+def: T_R_pat<Y2_dccleaninva, int_hexagon_Y2_dccleaninva>;
+def: T_R_pat<Y2_dcinva,      int_hexagon_Y2_dcinva>;
+def: T_R_pat<Y2_dczeroa,     int_hexagon_Y2_dczeroa>;
+
+def: T_RR_pat<Y4_l2fetch,    int_hexagon_Y4_l2fetch>;
+def: T_RP_pat<Y5_l2fetch,    int_hexagon_Y5_l2fetch>;
+
 include "HexagonIntrinsicsV3.td"
 include "HexagonIntrinsicsV4.td"
 include "HexagonIntrinsicsV5.td"

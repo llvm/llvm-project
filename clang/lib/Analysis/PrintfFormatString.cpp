@@ -466,8 +466,7 @@ ArgType PrintfSpecifier::getArgType(ASTContext &Ctx,
       case LengthModifier::AsIntMax:
         return ArgType(Ctx.getIntMaxType(), "intmax_t");
       case LengthModifier::AsSizeT:
-        // FIXME: How to get the corresponding signed version of size_t?
-        return ArgType();
+        return ArgType(Ctx.getSignedSizeType(), "ssize_t");
       case LengthModifier::AsInt3264:
         return Ctx.getTargetInfo().getTriple().isArch64Bit()
                    ? ArgType(Ctx.LongLongTy, "__int64")
@@ -537,7 +536,7 @@ ArgType PrintfSpecifier::getArgType(ASTContext &Ctx,
       case LengthModifier::AsIntMax:
         return ArgType::PtrTo(ArgType(Ctx.getIntMaxType(), "intmax_t"));
       case LengthModifier::AsSizeT:
-        return ArgType(); // FIXME: ssize_t
+        return ArgType::PtrTo(ArgType(Ctx.getSignedSizeType(), "ssize_t"));
       case LengthModifier::AsPtrDiff:
         return ArgType::PtrTo(ArgType(Ctx.getPointerDiffType(), "ptrdiff_t"));
       case LengthModifier::AsLongDouble:

@@ -725,8 +725,9 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR, ProcSym &Proc) {
                Proc.Parent, Proc.End,
                formatSegmentOffset(Proc.Segment, Proc.CodeOffset),
                Proc.CodeSize);
-  P.formatLine("debug start = {0}, debug end = {1}, flags = {2}", Proc.DbgStart,
-               Proc.DbgEnd,
+  // FIXME: It seems FunctionType is sometimes an id and sometimes a type.
+  P.formatLine("type = `{0}`, debug start = {1}, debug end = {2}, flags = {3}",
+               typeIndex(Proc.FunctionType), Proc.DbgStart, Proc.DbgEnd,
                formatProcSymFlags(P.getIndentLevel() + 9, Proc.Flags));
   return Error::success();
 }

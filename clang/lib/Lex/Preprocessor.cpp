@@ -712,14 +712,6 @@ bool Preprocessor::HandleIdentifier(Token &Identifier) {
     II.setIsFutureCompatKeyword(false);
   }
 
-  // C++ 2.11p2: If this is an alternative representation of a C++ operator,
-  // then we act as if it is the actual operator and not the textual
-  // representation of it.
-  if (II.isCPlusPlusOperatorKeyword() &&
-      !(getLangOpts().MSVCCompat &&
-        getSourceManager().isInSystemHeader(Identifier.getLocation())))
-    Identifier.setIdentifierInfo(nullptr);
-
   // If this is an extension token, diagnose its use.
   // We avoid diagnosing tokens that originate from macro definitions.
   // FIXME: This warning is disabled in cases where it shouldn't be,

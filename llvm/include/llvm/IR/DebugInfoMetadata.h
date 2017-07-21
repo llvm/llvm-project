@@ -435,10 +435,10 @@ public:
 
   /// Return the raw underlying file.
   ///
-  /// A \a DIFile is a \a DIScope, but it doesn't point at a separate file
-  /// (it\em is the file).  If \c this is an \a DIFile, we need to return \c
-  /// this.  Otherwise, return the first operand, which is where all other
-  /// subclasses store their file pointer.
+  /// A \a DIFile is a \a DIScope, but it doesn't point at a separate file (it
+  /// \em is the file).  If \c this is an \a DIFile, we need to return \c this.
+  /// Otherwise, return the first operand, which is where all other subclasses
+  /// store their file pointer.
   Metadata *getRawFile() const {
     return isa<DIFile>(this) ? const_cast<DIScope *>(this)
                              : static_cast<Metadata *>(getOperand(0));

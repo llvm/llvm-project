@@ -5,7 +5,7 @@
 ; then merge if-regions with the same bodies.
 
 ; FIXME: For some reason having the allocas here allowed the flatten cfg pass
-; to do its transfomation, however now that we are using local memory for
+; to do its transformation, however now that we are using local memory for
 ; allocas, the transformation isn't happening.
 ; XFAIL: *
 ;

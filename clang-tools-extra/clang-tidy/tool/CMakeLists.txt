@@ -15,6 +15,7 @@ target_link_libraries(clang-tidy
   clangTidy
   clangTidyAndroidModule
   clangTidyBoostModule
+  clangTidyBugproneModule
   clangTidyCERTModule
   clangTidyCppCoreGuidelinesModule
   clangTidyGoogleModule

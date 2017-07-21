@@ -431,3 +431,31 @@ entry:
 infinite:
   br label %infinite
 }
+
+declare arm_aapcscc void @brcond1()
+declare arm_aapcscc void @brcond2()
+
+define arm_aapcscc void @test_brcond(i32 %n) {
+; CHECK-LABEL: test_brcond
+; CHECK: cmp r0
+; CHECK-NEXT: movgt [[RCMP:r[0-9]+]], #1
+; CHECK: tst [[RCMP]], #1
+; CHECK-NEXT: bne [[FALSE:.L[[:alnum:]_]+]]
+; CHECK: blx brcond1
+; CHECK: [[FALSE]]:
+; CHECK: blx brcond2
+entry:
+  %cmp = icmp sgt i32 %n, 0
+  br i1 %cmp, label %if.true, label %if.false
+
+if.true:
+  call arm_aapcscc void @brcond1()
+  br label %if.end
+
+if.false:
+  call arm_aapcscc void @brcond2()
+  br label %if.end
+
+if.end:
+  ret void
+}

@@ -188,3 +188,15 @@ define amdgpu_kernel void @exactly_10() #9 {
   ret void
 }
 attributes #9 = {"amdgpu-waves-per-eu"="10,10"}
+
+; Exactly 256 workitems and exactly 2 waves.
+; CHECK-LABEL: {{^}}empty_workitems_exactly_256_waves_exactly_2:
+; CHECK: SGPRBlocks: 12
+; CHECK: VGPRBlocks: 21
+; CHECK: NumSGPRsForWavesPerEU: 102
+; CHECK: NumVGPRsForWavesPerEU: 85
+define amdgpu_kernel void @empty_workitems_exactly_256_waves_exactly_2() #10 {
+entry:
+  ret void
+}
+attributes #10 = {"amdgpu-flat-work-group-size"="256,256" "amdgpu-waves-per-eu"="2,2"}

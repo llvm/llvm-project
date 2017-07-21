@@ -375,6 +375,7 @@ bool X86PassConfig::addILPOpts() {
   addPass(&EarlyIfConverterID);
   if (EnableMachineCombinerPass)
     addPass(&MachineCombinerID);
+  addPass(createX86CmovConverterPass());
   return true;
 }
 

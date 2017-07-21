@@ -628,3 +628,195 @@ define i32 @test43(i32 %a, i32 %c, i32 %d) {
   %and = and i32 %or, %xor
   ret i32 %and
 }
+
+; (~y | x) & y -> x & y
+define i32 @test44(i32 %x, i32 %y) nounwind {
+; CHECK-LABEL: @test44(
+; CHECK-NEXT:    [[A:%.*]] = and i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[A]]
+;
+  %n = xor i32 %y, -1
+  %o = or i32 %n, %x
+  %a = and i32 %o, %y
+  ret i32 %a
+}
+
+; (x | ~y) & y -> x & y
+define i32 @test45(i32 %x, i32 %y) nounwind {
+; CHECK-LABEL: @test45(
+; CHECK-NEXT:    [[A:%.*]] = and i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[A]]
+;
+  %n = xor i32 %y, -1
+  %o = or i32 %x, %n
+  %a = and i32 %o, %y
+  ret i32 %a
+}
+
+; y & (~y | x) -> y | x
+define i32 @test46(i32 %x, i32 %y) nounwind {
+; CHECK-LABEL: @test46(
+; CHECK-NEXT:    [[A:%.*]] = and i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[A]]
+;
+  %n = xor i32 %y, -1
+  %o = or i32 %n, %x
+  %a = and i32 %y, %o
+  ret i32 %a
+}
+
+; y & (x | ~y) -> y | x
+define i32 @test47(i32 %x, i32 %y) nounwind {
+; CHECK-LABEL: @test47(
+; CHECK-NEXT:    [[A:%.*]] = and i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[A]]
+;
+  %n = xor i32 %y, -1
+  %o = or i32 %x, %n
+  %a = and i32 %y, %o
+  ret i32 %a
+}
+
+; In the next 4 tests, vary the types and predicates for extra coverage.
+; (X & (Y | ~X)) -> (X & Y), where 'not' is an inverted cmp
+
+define i1 @and_orn_cmp_1(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: @and_orn_cmp_1(
+; CHECK-NEXT:    [[X:%.*]] = icmp sgt i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = icmp ugt i32 [[C:%.*]], 42
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[X]], [[Y]]
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %x = icmp sgt i32 %a, %b
+  %x_inv = icmp sle i32 %a, %b
+  %y = icmp ugt i32 %c, 42      ; thwart complexity-based ordering
+  %or = or i1 %y, %x_inv
+  %and = and i1 %x, %or
+  ret i1 %and
+}
+
+; Commute the 'and':
+; ((Y | ~X) & X) -> (X & Y), where 'not' is an inverted cmp
+
+define <2 x i1> @and_orn_cmp_2(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c) {
+; CHECK-LABEL: @and_orn_cmp_2(
+; CHECK-NEXT:    [[X:%.*]] = icmp sge <2 x i32> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = icmp ugt <2 x i32> [[C:%.*]], <i32 42, i32 47>
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i1> [[Y]], [[X]]
+; CHECK-NEXT:    ret <2 x i1> [[AND]]
+;
+  %x = icmp sge <2 x i32> %a, %b
+  %x_inv = icmp slt <2 x i32> %a, %b
+  %y = icmp ugt <2 x i32> %c, <i32 42, i32 47>      ; thwart complexity-based ordering
+  %or = or <2 x i1> %y, %x_inv
+  %and = and <2 x i1> %or, %x
+  ret <2 x i1> %and
+}
+
+; Commute the 'or':
+; (X & (~X | Y)) -> (X & Y), where 'not' is an inverted cmp
+
+define i1 @and_orn_cmp_3(i72 %a, i72 %b, i72 %c) {
+; CHECK-LABEL: @and_orn_cmp_3(
+; CHECK-NEXT:    [[X:%.*]] = icmp ugt i72 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = icmp ugt i72 [[C:%.*]], 42
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[X]], [[Y]]
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %x = icmp ugt i72 %a, %b
+  %x_inv = icmp ule i72 %a, %b
+  %y = icmp ugt i72 %c, 42      ; thwart complexity-based ordering
+  %or = or i1 %x_inv, %y
+  %and = and i1 %x, %or
+  ret i1 %and
+}
+
+; Commute the 'and':
+; ((~X | Y) & X) -> (X & Y), where 'not' is an inverted cmp
+
+define <3 x i1> @or_andn_cmp_4(<3 x i32> %a, <3 x i32> %b, <3 x i32> %c) {
+; CHECK-LABEL: @or_andn_cmp_4(
+; CHECK-NEXT:    [[X:%.*]] = icmp eq <3 x i32> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = icmp ugt <3 x i32> [[C:%.*]], <i32 42, i32 43, i32 -1>
+; CHECK-NEXT:    [[AND:%.*]] = and <3 x i1> [[Y]], [[X]]
+; CHECK-NEXT:    ret <3 x i1> [[AND]]
+;
+  %x = icmp eq <3 x i32> %a, %b
+  %x_inv = icmp ne <3 x i32> %a, %b
+  %y = icmp ugt <3 x i32> %c, <i32 42, i32 43, i32 -1>      ; thwart complexity-based ordering
+  %or = or <3 x i1> %x_inv, %y
+  %and = and <3 x i1> %or, %x
+  ret <3 x i1> %and
+}
+
+; In the next 4 tests, vary the types and predicates for extra coverage.
+; (~X & (Y | X)) -> (~X & Y), where 'not' is an inverted cmp
+
+define i1 @andn_or_cmp_1(i37 %a, i37 %b, i37 %c) {
+; CHECK-LABEL: @andn_or_cmp_1(
+; CHECK-NEXT:    [[X_INV:%.*]] = icmp sle i37 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = icmp ugt i37 [[C:%.*]], 42
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[X_INV]], [[Y]]
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %x = icmp sgt i37 %a, %b
+  %x_inv = icmp sle i37 %a, %b
+  %y = icmp ugt i37 %c, 42      ; thwart complexity-based ordering
+  %or = or i1 %y, %x
+  %and = and i1 %x_inv, %or
+  ret i1 %and
+}
+
+; Commute the 'and':
+; ((Y | X) & ~X) -> (~X & Y), where 'not' is an inverted cmp
+
+define i1 @andn_or_cmp_2(i16 %a, i16 %b, i16 %c) {
+; CHECK-LABEL: @andn_or_cmp_2(
+; CHECK-NEXT:    [[X_INV:%.*]] = icmp slt i16 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = icmp ugt i16 [[C:%.*]], 42
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[Y]], [[X_INV]]
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %x = icmp sge i16 %a, %b
+  %x_inv = icmp slt i16 %a, %b
+  %y = icmp ugt i16 %c, 42      ; thwart complexity-based ordering
+  %or = or i1 %y, %x
+  %and = and i1 %or, %x_inv
+  ret i1 %and
+}
+
+; Commute the 'or':
+; (~X & (X | Y)) -> (~X & Y), where 'not' is an inverted cmp
+
+define <4 x i1> @andn_or_cmp_3(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c) {
+; CHECK-LABEL: @andn_or_cmp_3(
+; CHECK-NEXT:    [[X_INV:%.*]] = icmp ule <4 x i32> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = icmp ugt <4 x i32> [[C:%.*]], <i32 42, i32 0, i32 1, i32 -1>
+; CHECK-NEXT:    [[AND:%.*]] = and <4 x i1> [[X_INV]], [[Y]]
+; CHECK-NEXT:    ret <4 x i1> [[AND]]
+;
+  %x = icmp ugt <4 x i32> %a, %b
+  %x_inv = icmp ule <4 x i32> %a, %b
+  %y = icmp ugt <4 x i32> %c, <i32 42, i32 0, i32 1, i32 -1>      ; thwart complexity-based ordering
+  %or = or <4 x i1> %x, %y
+  %and = and <4 x i1> %x_inv, %or
+  ret <4 x i1> %and
+}
+
+; Commute the 'and':
+; ((X | Y) & ~X) -> (~X & Y), where 'not' is an inverted cmp
+
+define i1 @andn_or_cmp_4(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: @andn_or_cmp_4(
+; CHECK-NEXT:    [[X_INV:%.*]] = icmp ne i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = icmp ugt i32 [[C:%.*]], 42
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[Y]], [[X_INV]]
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %x = icmp eq i32 %a, %b
+  %x_inv = icmp ne i32 %a, %b
+  %y = icmp ugt i32 %c, 42      ; thwart complexity-based ordering
+  %or = or i1 %x, %y
+  %and = and i1 %or, %x_inv
+  ret i1 %and
+}

@@ -304,7 +304,7 @@ private:
   }
 
   /// Remove statements without side effects.
-  void removeUnnecessayStmts() {
+  void removeUnnecessaryStmts() {
     auto NumStmtsBefore = S->getSize();
     S->simplifySCoP(true);
     assert(NumStmtsBefore >= S->getSize());
@@ -360,7 +360,7 @@ public:
     removeRedundantWrites();
 
     DEBUG(dbgs() << "Removing statements without side effects...\n");
-    removeUnnecessayStmts();
+    removeUnnecessaryStmts();
 
     if (isModified())
       ScopsModified++;
