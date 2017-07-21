@@ -63,11 +63,89 @@ int gpu_tree_node_is_kernel(__isl_keep isl_schedule_node *node)
 	return is_marked(node, "kernel");
 }
 
+/* Is "node" a mark node with an identifier called "shared"?
+ */
+static int node_is_shared(__isl_keep isl_schedule_node *node)
+{
+	return is_marked(node, "shared");
+}
+
 /* Is "node" a mark node with an identifier called "thread"?
  */
 static int node_is_thread(__isl_keep isl_schedule_node *node)
 {
 	return is_marked(node, "thread");
+}
+
+/* Insert a mark node with identifier "shared" in front of "node".
+ */
+static __isl_give isl_schedule_node *insert_shared(
+	__isl_take isl_schedule_node *node)
+{
+	isl_ctx *ctx;
+	isl_id *id;
+
+	ctx = isl_schedule_node_get_ctx(node);
+	id = isl_id_alloc(ctx, "shared", NULL);
+	node = isl_schedule_node_insert_mark(node, id);
+
+	return node;
+}
+
+/* Insert a "shared" mark in front of the "thread" mark
+ * provided the linear branch between "node" and the "thread" mark
+ * does not contain such a "shared" mark already.
+ *
+ * As a side effect, this function checks that the subtree at "node"
+ * actually contains a "thread" mark and that there is no branching
+ * in between "node" and this "thread" mark.
+ */
+__isl_give isl_schedule_node *gpu_tree_insert_shared_before_thread(
+	__isl_take isl_schedule_node *node)
+{
+	int depth0, depth;
+	int any_shared = 0;
+
+	if (!node)
+		return NULL;
+
+	depth0 = isl_schedule_node_get_tree_depth(node);
+
+	for (;;) {
+		int is_thread;
+		int n;
+
+		if (!any_shared) {
+			any_shared = node_is_shared(node);
+			if (any_shared < 0)
+				return isl_schedule_node_free(node);
+		}
+		is_thread = node_is_thread(node);
+		if (is_thread < 0)
+			return isl_schedule_node_free(node);
+		if (is_thread)
+			break;
+		n = isl_schedule_node_n_children(node);
+		if (n == 0)
+			isl_die(isl_schedule_node_get_ctx(node),
+				isl_error_invalid,
+				"no thread marker found",
+				return isl_schedule_node_free(node));
+		if (n > 1)
+			isl_die(isl_schedule_node_get_ctx(node),
+				isl_error_invalid,
+				"expecting single thread marker",
+				return isl_schedule_node_free(node));
+
+		node = isl_schedule_node_child(node, 0);
+	}
+
+	if (!any_shared)
+		node = insert_shared(node);
+	depth = isl_schedule_node_get_tree_depth(node);
+	node = isl_schedule_node_ancestor(node, depth - depth0);
+
+	return node;
 }
 
 /* Assuming "node" is a filter node, does it correspond to the branch
@@ -124,6 +202,23 @@ static __isl_give isl_schedule_node *core_child(
 
 	isl_die(isl_schedule_node_get_ctx(node), isl_error_internal,
 		"core child not found", return isl_schedule_node_free(node));
+}
+
+/* Move down the branch between "kernel" and "thread" until
+ * the "shared" mark is reached, where the branch containing the "shared"
+ * mark is identified by the domain elements in "core".
+ */
+__isl_give isl_schedule_node *gpu_tree_move_down_to_shared(
+	__isl_take isl_schedule_node *node, __isl_keep isl_union_set *core)
+{
+	int is_shared;
+
+	while ((is_shared = node_is_shared(node)) == 0)
+		node = core_child(node, core);
+	if (is_shared < 0)
+		node = isl_schedule_node_free(node);
+
+	return node;
 }
 
 /* Move down the branch between "kernel" and "thread" until
@@ -189,7 +284,8 @@ __isl_give isl_schedule_node *gpu_tree_move_down_to_depth(
 	__isl_take isl_schedule_node *node, int depth,
 	__isl_keep isl_union_set *core)
 {
-	int is_thread;
+	int is_shared;
+	int is_thread = 0;
 
 	while (node && isl_schedule_node_get_schedule_depth(node) < depth) {
 		if (isl_schedule_node_get_type(node) ==
@@ -203,10 +299,11 @@ __isl_give isl_schedule_node *gpu_tree_move_down_to_depth(
 		}
 		node = core_child(node, core);
 	}
-	while ((is_thread = node_is_thread(node)) == 0 &&
+	while ((is_shared = node_is_shared(node)) == 0 &&
+	    (is_thread = node_is_thread(node)) == 0 &&
 	    isl_schedule_node_get_type(node) != isl_schedule_node_band)
 		node = core_child(node, core);
-	if (is_thread < 0)
+	if (is_shared < 0 || is_thread < 0)
 		node = isl_schedule_node_free(node);
 
 	return node;

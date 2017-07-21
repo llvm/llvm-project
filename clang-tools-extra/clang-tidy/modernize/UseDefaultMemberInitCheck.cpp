@@ -140,7 +140,7 @@ UseDefaultMemberInitCheck::UseDefaultMemberInitCheck(StringRef Name,
                                                      ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       UseAssignment(Options.get("UseAssignment", 0) != 0),
-      IgnoreMacros(Options.getLocalOrGlobal("IgnoreMacros", 1) != 0) {}
+      IgnoreMacros(Options.getLocalOrGlobal("IgnoreMacros", true) != 0) {}
 
 void UseDefaultMemberInitCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {

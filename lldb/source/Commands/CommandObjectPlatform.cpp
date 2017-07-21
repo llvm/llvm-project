@@ -302,7 +302,7 @@ protected:
       platform_sp->GetStatus(ostrm);
       result.SetStatus(eReturnStatusSuccessFinishResult);
     } else {
-      result.AppendError("no platform us currently selected\n");
+      result.AppendError("no platform is currently selected\n");
       result.SetStatus(eReturnStatusFailed);
     }
     return result.Succeeded();

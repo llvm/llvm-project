@@ -790,15 +790,6 @@ void LinkerScript::adjustSectionsAfterSorting() {
   removeEmptyCommands();
 }
 
-void LinkerScript::processNonSectionCommands() {
-  for (BaseCommand *Base : Opt.Commands) {
-    if (auto *Cmd = dyn_cast<SymbolAssignment>(Base))
-      assignSymbol(Cmd, false);
-    else if (auto *Cmd = dyn_cast<AssertCommand>(Base))
-      Cmd->Expression();
-  }
-}
-
 void LinkerScript::allocateHeaders(std::vector<PhdrEntry> &Phdrs) {
   uint64_t Min = std::numeric_limits<uint64_t>::max();
   for (OutputSectionCommand *Cmd : OutputSectionCommands) {

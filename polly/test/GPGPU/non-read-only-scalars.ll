@@ -31,12 +31,7 @@
 ;   printf("%f\n", sum);
 ; }
 
-; CODE: Code
-; CODE-NEXT: ====
-; CODE-NEXT: # host
-; CODE-NEXT: {
-; CODE-NEXT:   {
-; CODE-NEXT:     dim3 k0_dimBlock(32);
+; CODE:          dim3 k0_dimBlock(32);
 ; CODE-NEXT:     dim3 k0_dimGrid(1);
 ; CODE-NEXT:     kernel0 <<<k0_dimGrid, k0_dimBlock>>> (dev_MemRef_A);
 ; CODE-NEXT:     cudaCheckKernel();
@@ -49,25 +44,18 @@
 ; CODE-NEXT:     cudaCheckKernel();
 ; CODE-NEXT:   }
 
-; CODE:   for (int c0 = 0; c0 <= 32; c0 += 1) {
-; CODE-NEXT:     {
+; CODE:          {
 ; CODE-NEXT:       dim3 k2_dimBlock;
 ; CODE-NEXT:       dim3 k2_dimGrid;
-; CODE-NEXT:       kernel2 <<<k2_dimGrid, k2_dimBlock>>> (dev_MemRef_sum_0__phi, dev_MemRef_sum_0, c0);
+; CODE-NEXT:       kernel2 <<<k2_dimGrid, k2_dimBlock>>> (dev_MemRef_A, dev_MemRef_sum_0__phi, dev_MemRef_sum_0);
 ; CODE-NEXT:       cudaCheckKernel();
 ; CODE-NEXT:     }
 
-; CODE:     if (c0 <= 31)
-; CODE-NEXT:       {
-; CODE-NEXT:         dim3 k3_dimBlock;
-; CODE-NEXT:         dim3 k3_dimGrid;
-; CODE-NEXT:         kernel3 <<<k3_dimGrid, k3_dimBlock>>> (dev_MemRef_A, dev_MemRef_sum_0__phi, dev_MemRef_sum_0, c0);
-; CODE-NEXT:         cudaCheckKernel();
-; CODE-NEXT:       }
-
-; CODE:   }
-; CODE-NEXT:   cudaCheckReturn(cudaMemcpy(MemRef_A, dev_MemRef_A, (32) * sizeof(float), cudaMemcpyDeviceToHost));
+; CODE:        cudaCheckReturn(cudaMemcpy(MemRef_A, dev_MemRef_A, (32) * sizeof(float), cudaMemcpyDeviceToHost));
 ; CODE-NEXT:   cudaCheckReturn(cudaMemcpy(&MemRef_sum_0, dev_MemRef_sum_0, sizeof(float), cudaMemcpyDeviceToHost));
+; CODE-NEXT:   cudaCheckReturn(cudaFree(dev_MemRef_A));
+; CODE-NEXT:   cudaCheckReturn(cudaFree(dev_MemRef_sum_0__phi));
+; CODE-NEXT:   cudaCheckReturn(cudaFree(dev_MemRef_sum_0));
 ; CODE-NEXT: }
 
 ; CODE: # kernel0
@@ -80,19 +68,20 @@
 ; CODE-NEXT: Stmt_bb17();
 
 ; CODE: # kernel2
-; CODE-NEXT: Stmt_bb18(c0);
+; CODE-NEXT: for (int c0 = 0; c0 <= 32; c0 += 1) {
+; CODE-NEXT:   Stmt_bb18(c0);
+; CODE-NEXT:   if (c0 <= 31)
+; CODE-NEXT:     Stmt_bb20(c0);
+; CODE-NEXT: }
 
-; CODE: # kernel3
-; CODE-NEXT: Stmt_bb20(c0);
+; KERNEL-IR: define ptx_kernel void @FUNC_foo_SCOP_0_KERNEL_1(i8 addrspace(1)* %MemRef_sum_0__phi)
+; KERNEL-IR:  store float 0.000000e+00, float* %sum.0.phiops
+; KERNEL-IR:  [[REGA:%.+]] = addrspacecast i8 addrspace(1)* %MemRef_sum_0__phi to float*
+; KERNEL-IR:  [[REGB:%.+]] = load float, float* %sum.0.phiops
+; KERNEL-IR:  store float [[REGB]], float* [[REGA]]
 
-; KERNEL-IR:       store float %p_tmp23, float* %sum.0.phiops
-; KERNEL-IR-NEXT:  [[REGA:%.+]] = addrspacecast i8 addrspace(1)* %MemRef_sum_0__phi to float*
-; KERNEL-IR-NEXT:  [[REGB:%.+]] = load float, float* %sum.0.phiops
-; KERNEL-IR-NEXT:  store float [[REGB]], float* [[REGA]]
-; KERNEL-IR-NEXT:  [[REGC:%.+]] = addrspacecast i8 addrspace(1)* %MemRef_sum_0 to float*
-; KERNEL-IR-NEXT:  [[REGD:%.+]] = load float, float* %sum.0.s2a
-; KERNEL-IR-NEXT:  store float [[REGD]], float* [[REGC]]
-; KERNEL-IR-NEXT:  ret void
+; KERNEL-IR: define ptx_kernel void @FUNC_foo_SCOP_0_KERNEL_2(i8 addrspace(1)* %MemRef_A, i8 addrspace(1)* %MemRef_sum_0__phi, i8 addrspace(1)* %MemRef_sum_0)
+
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
