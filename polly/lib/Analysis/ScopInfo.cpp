@@ -407,7 +407,9 @@ __isl_give isl_id *ScopArrayInfo::getBasePtrId() const {
   return isl_id_copy(Id);
 }
 
-void ScopArrayInfo::dump() const { print(errs()); }
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD void ScopArrayInfo::dump() const { print(errs()); }
+#endif
 
 void ScopArrayInfo::print(raw_ostream &OS, bool SizeAsPwAff) const {
   OS.indent(8) << *getElementType() << " " << getName();
@@ -1099,7 +1101,9 @@ void MemoryAccess::print(raw_ostream &OS) const {
     OS.indent(11) << "new: " << getNewAccessRelationStr() << ";\n";
 }
 
-void MemoryAccess::dump() const { print(errs()); }
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD void MemoryAccess::dump() const { print(errs()); }
+#endif
 
 __isl_give isl_pw_aff *MemoryAccess::getPwAff(const SCEV *E) {
   auto *Stmt = getStatement();
@@ -1974,7 +1978,7 @@ void ScopStmt::printInstructions(raw_ostream &OS) const {
   OS.indent(16) << "}\n";
 }
 
-void ScopStmt::print(raw_ostream &OS) const {
+void ScopStmt::print(raw_ostream &OS, bool PrintInstructions) const {
   OS << "\t" << getBaseName() << "\n";
   OS.indent(12) << "Domain :=\n";
 
@@ -1993,11 +1997,13 @@ void ScopStmt::print(raw_ostream &OS) const {
   for (MemoryAccess *Access : MemAccs)
     Access->print(OS);
 
-  if (PollyPrintInstructions)
+  if (PrintInstructions)
     printInstructions(OS.indent(12));
 }
 
-void ScopStmt::dump() const { print(dbgs()); }
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD void ScopStmt::dump() const { print(dbgs(), true); }
+#endif
 
 void ScopStmt::removeAccessData(MemoryAccess *MA) {
   if (MA->isRead() && MA->isOriginalValueKind()) {
@@ -2057,6 +2063,11 @@ void ScopStmt::removeSingleMemoryAccess(MemoryAccess *MA) {
     if (It->second.empty())
       InstructionToAccess.erase(MA->getAccessInstruction());
   }
+}
+
+raw_ostream &polly::operator<<(raw_ostream &O, const ScopStmt &S) {
+  S.print(O, PollyPrintInstructions);
+  return O;
 }
 
 //===----------------------------------------------------------------------===//
@@ -4605,11 +4616,13 @@ void Scop::printAliasAssumptions(raw_ostream &OS) const {
   }
 }
 
-void Scop::printStatements(raw_ostream &OS) const {
+void Scop::printStatements(raw_ostream &OS, bool PrintInstructions) const {
   OS << "Statements {\n";
 
-  for (const ScopStmt &Stmt : *this)
-    OS.indent(4) << Stmt;
+  for (const ScopStmt &Stmt : *this) {
+    OS.indent(4);
+    Stmt.print(OS, PrintInstructions);
+  }
 
   OS.indent(4) << "}\n";
 }
@@ -4630,7 +4643,7 @@ void Scop::printArrayInfo(raw_ostream &OS) const {
   OS.indent(4) << "}\n";
 }
 
-void Scop::print(raw_ostream &OS) const {
+void Scop::print(raw_ostream &OS, bool PrintInstructions) const {
   OS.indent(4) << "Function: " << getFunction().getName() << "\n";
   OS.indent(4) << "Region: " << getNameStr() << "\n";
   OS.indent(4) << "Max Loop Depth:  " << getMaxLoopDepth() << "\n";
@@ -4649,10 +4662,12 @@ void Scop::print(raw_ostream &OS) const {
   printContext(OS.indent(4));
   printArrayInfo(OS.indent(4));
   printAliasAssumptions(OS);
-  printStatements(OS.indent(4));
+  printStatements(OS.indent(4), PrintInstructions);
 }
 
-void Scop::dump() const { print(dbgs()); }
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD void Scop::dump() const { print(dbgs(), true); }
+#endif
 
 isl_ctx *Scop::getIslCtx() const { return IslCtx.get(); }
 
@@ -5128,6 +5143,11 @@ ArrayRef<MemoryAccess *> Scop::getPHIIncomings(const ScopArrayInfo *SAI) const {
   return It->second;
 }
 
+raw_ostream &polly::operator<<(raw_ostream &O, const Scop &scop) {
+  scop.print(O, PollyPrintInstructions);
+  return O;
+}
+
 //===----------------------------------------------------------------------===//
 void ScopInfoRegionPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<LoopInfoWrapperPass>();
@@ -5187,7 +5207,7 @@ bool ScopInfoRegionPass::runOnRegion(Region *R, RGPassManager &RGM) {
 
 void ScopInfoRegionPass::print(raw_ostream &OS, const Module *) const {
   if (S)
-    S->print(OS);
+    S->print(OS, PollyPrintInstructions);
   else
     OS << "Invalid Scop!\n";
 }
@@ -5250,7 +5270,7 @@ PreservedAnalyses ScopInfoPrinterPass::run(Function &F,
   auto &SI = FAM.getResult<ScopInfoAnalysis>(F);
   for (auto &It : SI) {
     if (It.second)
-      It.second->print(Stream);
+      It.second->print(Stream, PollyPrintInstructions);
     else
       Stream << "Invalid Scop!\n";
   }
@@ -5284,7 +5304,7 @@ bool ScopInfoWrapperPass::runOnFunction(Function &F) {
 void ScopInfoWrapperPass::print(raw_ostream &OS, const Module *) const {
   for (auto &It : *Result) {
     if (It.second)
-      It.second->print(OS);
+      It.second->print(OS, PollyPrintInstructions);
     else
       OS << "Invalid Scop!\n";
   }

@@ -434,7 +434,7 @@ public:
     if (isModified())
       ScopsModified++;
     DEBUG(dbgs() << "\nFinal Scop:\n");
-    DEBUG(S.print(dbgs()));
+    DEBUG(dbgs() << S);
 
     return false;
   }

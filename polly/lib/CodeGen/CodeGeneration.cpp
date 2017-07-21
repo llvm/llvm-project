@@ -63,7 +63,7 @@ static void verifyGeneratedFunction(Scop &S, Function &F, IslAstInfo &AI) {
   DEBUG({
     errs() << "== ISL Codegen created an invalid function ==\n\n== The "
               "SCoP ==\n";
-    S.print(errs());
+    errs() << S;
     errs() << "\n== The isl AST ==\n";
     AI.print(errs());
     errs() << "\n== The invalid function ==\n";
