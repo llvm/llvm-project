@@ -2,6 +2,7 @@ create_subdirectory_options(CLANG TOOL)
 
 add_clang_subdirectory(diagtool)
 add_clang_subdirectory(driver)
+add_clang_subdirectory(clang-diff)
 add_clang_subdirectory(clang-format)
 add_clang_subdirectory(clang-format-vs)
 add_clang_subdirectory(clang-fuzzer)

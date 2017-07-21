@@ -2353,10 +2353,7 @@ formatBlockPlaceholder(const PrintingPolicy &Policy, const NamedDecl *BlockDecl,
 static std::string GetDefaultValueString(const ParmVarDecl *Param,
                                          const SourceManager &SM,
                                          const LangOptions &LangOpts) {
-  const Expr *defaultArg = Param->getDefaultArg();
-  if (!defaultArg)
-    return "";
-  const SourceRange SrcRange = defaultArg->getSourceRange();
+  const SourceRange SrcRange = Param->getDefaultArgRange();
   CharSourceRange CharSrcRange = CharSourceRange::getTokenRange(SrcRange);
   bool Invalid = CharSrcRange.isInvalid();
   if (Invalid)

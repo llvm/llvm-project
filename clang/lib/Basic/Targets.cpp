@@ -1833,9 +1833,9 @@ public:
     GPU = CudaArch::SM_20;
 
     if (TargetPointerWidth == 32)
-      resetDataLayout("e-p:32:32-i64:64-v16:16-v32:32-n16:32:64");
+      resetDataLayout("e-p:32:32-i64:64-i128:128-v16:16-v32:32-n16:32:64");
     else
-      resetDataLayout("e-i64:64-v16:16-v32:32-n16:32:64");
+      resetDataLayout("e-i64:64-i128:128-v16:16-v32:32-n16:32:64");
 
     // If possible, get a TargetInfo for our host triple, so we can match its
     // types.
@@ -6887,6 +6887,9 @@ public:
           return true;
         }
         break;
+      case 'a': // Modifier register m0-m1.
+        Info.setAllowsRegister();
+        return true;
       case 's':
         // Relocatable constant.
         return true;

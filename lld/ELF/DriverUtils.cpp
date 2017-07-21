@@ -155,8 +155,8 @@ std::string elf::createResponseFile(const opt::InputArgList &Args) {
       // Strip directories to prevent the issue.
       OS << "-o " << quote(sys::path::filename(Arg->getValue())) << "\n";
       break;
-    case OPT_L:
     case OPT_dynamic_list:
+    case OPT_library_path:
     case OPT_rpath:
     case OPT_script:
     case OPT_version_script:

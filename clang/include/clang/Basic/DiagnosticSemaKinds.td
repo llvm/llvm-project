@@ -8912,12 +8912,6 @@ def note_omp_critical_hint_here : Note<
   "%select{|previous }0'hint' clause with value '%1'">;
 def note_omp_critical_no_hint : Note<
   "%select{|previous }0directive with no 'hint' clause specified">;
-def err_omp_firstprivate_distribute_private_teams : Error<
-  "private variable in '#pragma omp teams' cannot be firstprivate in '#pragma omp distribute'">;
-def err_omp_firstprivate_and_lastprivate_in_distribute : Error<
-  "lastprivate variable cannot be firstprivate in '#pragma omp distribute'">;
-def err_omp_firstprivate_distribute_in_teams_reduction : Error<
-  "reduction variable in '#pragma omp teams' cannot be firstprivate in '#pragma omp distribute'">;
 def err_omp_depend_clause_thread_simd : Error<
   "'depend' clauses cannot be mixed with '%0' clause">;
 def err_omp_depend_sink_expected_loop_iteration : Error<

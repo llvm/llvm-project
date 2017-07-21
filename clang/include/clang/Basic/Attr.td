@@ -1195,6 +1195,18 @@ def MicroMips : InheritableAttr, TargetSpecificAttr<TargetMips> {
   let Documentation = [MicroMipsDocs];
 }
 
+def MipsLongCall : InheritableAttr, TargetSpecificAttr<TargetMips> {
+  let Spellings = [GCC<"long_call">, GCC<"far">];
+  let Subjects = SubjectList<[Function]>;
+  let Documentation = [MipsLongCallStyleDocs];
+}
+
+def MipsShortCall : InheritableAttr, TargetSpecificAttr<TargetMips> {
+  let Spellings = [GCC<"short_call">, GCC<"near">];
+  let Subjects = SubjectList<[Function]>;
+  let Documentation = [MipsShortCallStyleDocs];
+}
+
 def Mode : Attr {
   let Spellings = [GCC<"mode">];
   let Subjects = SubjectList<[Var, Enum, TypedefName, Field], ErrorDiag,

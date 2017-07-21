@@ -540,7 +540,6 @@ DSAStackTy::DSAVarData DSAStackTy::getDSA(StackTy::reverse_iterator &Iter,
     return DVar;
   }
 
-  DVar.DKind = Iter->Directive;
   // OpenMP [2.9.1.1, Data-sharing Attribute Rules for Variables Referenced
   // in a Construct, C/C++, predetermined, p.1]
   // Variables with automatic storage duration that are declared in a scope
@@ -551,6 +550,7 @@ DSAStackTy::DSAVarData DSAStackTy::getDSA(StackTy::reverse_iterator &Iter,
     return DVar;
   }
 
+  DVar.DKind = Iter->Directive;
   // Explicitly specified attributes and local variables with predetermined
   // attributes.
   if (Iter->SharingMap.count(D)) {
@@ -829,11 +829,10 @@ DSAStackTy::DSAVarData DSAStackTy::getTopDSA(ValueDecl *D, bool FromParent) {
 
   // Explicitly specified attributes and local variables with predetermined
   // attributes.
-  auto StartI = std::next(Stack.back().first.rbegin());
+  auto I = Stack.back().first.rbegin();
   auto EndI = Stack.back().first.rend();
-  if (FromParent && StartI != EndI)
-    StartI = std::next(StartI);
-  auto I = std::prev(StartI);
+  if (FromParent && I != EndI)
+    std::advance(I, 1);
   if (I->SharingMap.count(D)) {
     DVar.RefExpr = I->SharingMap[D].RefExpr.getPointer();
     DVar.PrivateCopy = I->SharingMap[D].PrivateCopy;
@@ -855,7 +854,7 @@ DSAStackTy::DSAVarData DSAStackTy::getImplicitDSA(ValueDecl *D,
   auto StartI = Stack.back().first.rbegin();
   auto EndI = Stack.back().first.rend();
   if (FromParent && StartI != EndI)
-    StartI = std::next(StartI);
+    std::advance(StartI, 1);
   return getDSA(StartI, D);
 }
 
@@ -867,16 +866,16 @@ DSAStackTy::hasDSA(ValueDecl *D,
   if (isStackEmpty())
     return {};
   D = getCanonicalDecl(D);
-  auto I = (FromParent && Stack.back().first.size() > 1)
-               ? std::next(Stack.back().first.rbegin())
-               : Stack.back().first.rbegin();
+  auto I = Stack.back().first.rbegin();
   auto EndI = Stack.back().first.rend();
-  while (std::distance(I, EndI) > 1) {
+  if (FromParent && I != EndI)
     std::advance(I, 1);
+  for (; I != EndI; std::advance(I, 1)) {
     if (!DPred(I->Directive) && !isParallelOrTaskRegion(I->Directive))
       continue;
-    DSAVarData DVar = getDSA(I, D);
-    if (CPred(DVar.CKind))
+    auto NewI = I;
+    DSAVarData DVar = getDSA(NewI, D);
+    if (I == NewI && CPred(DVar.CKind))
       return DVar;
   }
   return {};
@@ -889,14 +888,15 @@ DSAStackTy::DSAVarData DSAStackTy::hasInnermostDSA(
   if (isStackEmpty())
     return {};
   D = getCanonicalDecl(D);
-  auto StartI = std::next(Stack.back().first.rbegin());
+  auto StartI = Stack.back().first.rbegin();
   auto EndI = Stack.back().first.rend();
   if (FromParent && StartI != EndI)
-    StartI = std::next(StartI);
+    std::advance(StartI, 1);
   if (StartI == EndI || !DPred(StartI->Directive))
     return {};
-  DSAVarData DVar = getDSA(StartI, D);
-  return CPred(DVar.CKind) ? DVar : DSAVarData();
+  auto NewI = StartI;
+  DSAVarData DVar = getDSA(NewI, D);
+  return (NewI == StartI && CPred(DVar.CKind)) ? DVar : DSAVarData();
 }
 
 bool DSAStackTy::hasExplicitDSA(
@@ -1627,7 +1627,7 @@ public:
             return isOpenMPParallelDirective(K) ||
                    isOpenMPWorksharingDirective(K) || isOpenMPTeamsDirective(K);
           },
-          false);
+          /*FromParent=*/true);
       if (isOpenMPTaskingDirective(DKind) && DVar.CKind == OMPC_reduction) {
         ErrorFound = true;
         SemaRef.Diag(ELoc, diag::err_omp_reduction_in_task);
@@ -1667,7 +1667,7 @@ public:
                      isOpenMPWorksharingDirective(K) ||
                      isOpenMPTeamsDirective(K);
             },
-            false);
+            /*FromParent=*/true);
         if (isOpenMPTaskingDirective(DKind) && DVar.CKind == OMPC_reduction) {
           ErrorFound = true;
           SemaRef.Diag(ELoc, diag::err_omp_reduction_in_task);
@@ -8300,13 +8300,18 @@ OMPClause *Sema::ActOnOpenMPFirstprivateClause(ArrayRef<Expr *> VarList,
     if (!IsImplicitClause) {
       DSAStackTy::DSAVarData DVar = DSAStack->getTopDSA(D, false);
       TopDVar = DVar;
+      OpenMPDirectiveKind CurrDir = DSAStack->getCurrentDirective();
       bool IsConstant = ElemType.isConstant(Context);
       // OpenMP [2.4.13, Data-sharing Attribute Clauses]
       //  A list item that specifies a given variable may not appear in more
       // than one clause on the same directive, except that a variable may be
       //  specified in both firstprivate and lastprivate clauses.
+      // OpenMP 4.5 [2.10.8, Distribute Construct, p.3]
+      // A list item may appear in a firstprivate or lastprivate clause but not
+      // both.
       if (DVar.CKind != OMPC_unknown && DVar.CKind != OMPC_firstprivate &&
-          DVar.CKind != OMPC_lastprivate && DVar.RefExpr) {
+          (CurrDir == OMPD_distribute || DVar.CKind != OMPC_lastprivate) &&
+          DVar.RefExpr) {
         Diag(ELoc, diag::err_omp_wrong_dsa)
             << getOpenMPClauseName(DVar.CKind)
             << getOpenMPClauseName(OMPC_firstprivate);
@@ -8334,18 +8339,29 @@ OMPClause *Sema::ActOnOpenMPFirstprivateClause(ArrayRef<Expr *> VarList,
         continue;
       }
 
-      OpenMPDirectiveKind CurrDir = DSAStack->getCurrentDirective();
       // OpenMP [2.9.3.4, Restrictions, p.2]
       //  A list item that is private within a parallel region must not appear
       //  in a firstprivate clause on a worksharing construct if any of the
       //  worksharing regions arising from the worksharing construct ever bind
       //  to any of the parallel regions arising from the parallel construct.
-      if (isOpenMPWorksharingDirective(CurrDir) &&
+      // OpenMP 4.5 [2.15.3.4, Restrictions, p.3]
+      // A list item that is private within a teams region must not appear in a
+      // firstprivate clause on a distribute construct if any of the distribute
+      // regions arising from the distribute construct ever bind to any of the
+      // teams regions arising from the teams construct.
+      // OpenMP 4.5 [2.15.3.4, Restrictions, p.3]
+      // A list item that appears in a reduction clause of a teams construct
+      // must not appear in a firstprivate clause on a distribute construct if
+      // any of the distribute regions arising from the distribute construct
+      // ever bind to any of the teams regions arising from the teams construct.
+      if ((isOpenMPWorksharingDirective(CurrDir) ||
+           isOpenMPDistributeDirective(CurrDir)) &&
           !isOpenMPParallelDirective(CurrDir) &&
           !isOpenMPTeamsDirective(CurrDir)) {
         DVar = DSAStack->getImplicitDSA(D, true);
         if (DVar.CKind != OMPC_shared &&
             (isOpenMPParallelDirective(DVar.DKind) ||
+             isOpenMPTeamsDirective(DVar.DKind) ||
              DVar.DKind == OMPD_unknown)) {
           Diag(ELoc, diag::err_omp_required_access)
               << getOpenMPClauseName(OMPC_firstprivate)
@@ -8370,12 +8386,14 @@ OMPClause *Sema::ActOnOpenMPFirstprivateClause(ArrayRef<Expr *> VarList,
             D, [](OpenMPClauseKind C) -> bool { return C == OMPC_reduction; },
             [](OpenMPDirectiveKind K) -> bool {
               return isOpenMPParallelDirective(K) ||
-                     isOpenMPWorksharingDirective(K);
+                     isOpenMPWorksharingDirective(K) ||
+                     isOpenMPTeamsDirective(K);
             },
-            false);
+            /*FromParent=*/true);
         if (DVar.CKind == OMPC_reduction &&
             (isOpenMPParallelDirective(DVar.DKind) ||
-             isOpenMPWorksharingDirective(DVar.DKind))) {
+             isOpenMPWorksharingDirective(DVar.DKind) ||
+             isOpenMPTeamsDirective(DVar.DKind))) {
           Diag(ELoc, diag::err_omp_parallel_reduction_in_task_firstprivate)
               << getOpenMPDirectiveName(DVar.DKind);
           ReportOriginalDSA(*this, DSAStack, D, DVar);
@@ -8383,50 +8401,6 @@ OMPClause *Sema::ActOnOpenMPFirstprivateClause(ArrayRef<Expr *> VarList,
         }
       }
 
-      // OpenMP 4.5 [2.15.3.4, Restrictions, p.3]
-      // A list item that is private within a teams region must not appear in a
-      // firstprivate clause on a distribute construct if any of the distribute
-      // regions arising from the distribute construct ever bind to any of the
-      // teams regions arising from the teams construct.
-      // OpenMP 4.5 [2.15.3.4, Restrictions, p.3]
-      // A list item that appears in a reduction clause of a teams construct
-      // must not appear in a firstprivate clause on a distribute construct if
-      // any of the distribute regions arising from the distribute construct
-      // ever bind to any of the teams regions arising from the teams construct.
-      // OpenMP 4.5 [2.10.8, Distribute Construct, p.3]
-      // A list item may appear in a firstprivate or lastprivate clause but not
-      // both.
-      if (CurrDir == OMPD_distribute) {
-        DVar = DSAStack->hasInnermostDSA(
-            D, [](OpenMPClauseKind C) -> bool { return C == OMPC_private; },
-            [](OpenMPDirectiveKind K) -> bool {
-              return isOpenMPTeamsDirective(K);
-            },
-            false);
-        if (DVar.CKind == OMPC_private && isOpenMPTeamsDirective(DVar.DKind)) {
-          Diag(ELoc, diag::err_omp_firstprivate_distribute_private_teams);
-          ReportOriginalDSA(*this, DSAStack, D, DVar);
-          continue;
-        }
-        DVar = DSAStack->hasInnermostDSA(
-            D, [](OpenMPClauseKind C) -> bool { return C == OMPC_reduction; },
-            [](OpenMPDirectiveKind K) -> bool {
-              return isOpenMPTeamsDirective(K);
-            },
-            false);
-        if (DVar.CKind == OMPC_reduction &&
-            isOpenMPTeamsDirective(DVar.DKind)) {
-          Diag(ELoc, diag::err_omp_firstprivate_distribute_in_teams_reduction);
-          ReportOriginalDSA(*this, DSAStack, D, DVar);
-          continue;
-        }
-        DVar = DSAStack->getTopDSA(D, false);
-        if (DVar.CKind == OMPC_lastprivate) {
-          Diag(ELoc, diag::err_omp_firstprivate_and_lastprivate_in_distribute);
-          ReportOriginalDSA(*this, DSAStack, D, DVar);
-          continue;
-        }
-      }
       // OpenMP 4.5 [2.15.5.1, Restrictions, p.3]
       // A list item cannot appear in both a map clause and a data-sharing
       // attribute clause on the same construct
@@ -8586,14 +8560,18 @@ OMPClause *Sema::ActOnOpenMPLastprivateClause(ArrayRef<Expr *> VarList,
       continue;
     Type = Type.getNonReferenceType();
 
+    OpenMPDirectiveKind CurrDir = DSAStack->getCurrentDirective();
     // OpenMP [2.14.1.1, Data-sharing Attribute Rules for Variables Referenced
     // in a Construct]
     //  Variables with the predetermined data-sharing attributes may not be
     //  listed in data-sharing attributes clauses, except for the cases
     //  listed below.
+    // OpenMP 4.5 [2.10.8, Distribute Construct, p.3]
+    // A list item may appear in a firstprivate or lastprivate clause but not
+    // both.
     DSAStackTy::DSAVarData DVar = DSAStack->getTopDSA(D, false);
     if (DVar.CKind != OMPC_unknown && DVar.CKind != OMPC_lastprivate &&
-        DVar.CKind != OMPC_firstprivate &&
+        (CurrDir == OMPD_distribute || DVar.CKind != OMPC_firstprivate) &&
         (DVar.CKind != OMPC_private || DVar.RefExpr != nullptr)) {
       Diag(ELoc, diag::err_omp_wrong_dsa)
           << getOpenMPClauseName(DVar.CKind)
@@ -8602,7 +8580,6 @@ OMPClause *Sema::ActOnOpenMPLastprivateClause(ArrayRef<Expr *> VarList,
       continue;
     }
 
-    OpenMPDirectiveKind CurrDir = DSAStack->getCurrentDirective();
     // OpenMP [2.14.3.5, Restrictions, p.2]
     // A list item that is private within a parallel region, or that appears in
     // the reduction clause of a parallel construct, must not appear in a
@@ -8618,18 +8595,6 @@ OMPClause *Sema::ActOnOpenMPLastprivateClause(ArrayRef<Expr *> VarList,
         Diag(ELoc, diag::err_omp_required_access)
             << getOpenMPClauseName(OMPC_lastprivate)
             << getOpenMPClauseName(OMPC_shared);
-        ReportOriginalDSA(*this, DSAStack, D, DVar);
-        continue;
-      }
-    }
-
-    // OpenMP 4.5 [2.10.8, Distribute Construct, p.3]
-    // A list item may appear in a firstprivate or lastprivate clause but not
-    // both.
-    if (CurrDir == OMPD_distribute) {
-      DSAStackTy::DSAVarData DVar = DSAStack->getTopDSA(D, false);
-      if (DVar.CKind == OMPC_firstprivate) {
-        Diag(ELoc, diag::err_omp_firstprivate_and_lastprivate_in_distribute);
         ReportOriginalDSA(*this, DSAStack, D, DVar);
         continue;
       }
@@ -8771,7 +8736,7 @@ public:
         return true;
       DSAStackTy::DSAVarData DVarPrivate = Stack->hasDSA(
           VD, isOpenMPPrivate, [](OpenMPDirectiveKind) -> bool { return true; },
-          false);
+          /*FromParent=*/true);
       if (DVarPrivate.CKind != OMPC_unknown)
         return true;
       return false;

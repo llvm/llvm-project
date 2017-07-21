@@ -87,7 +87,7 @@ int main(int argc, char **argv) {
   #pragma omp teams
   {
     int i; // expected-note {{predetermined as private}}
-    #pragma omp distribute firstprivate(i), private(i) // expected-error {{private variable in '#pragma omp teams' cannot be firstprivate in '#pragma omp distribute'}}
+    #pragma omp distribute firstprivate(i) // expected-error {{firstprivate variable must be shared}}
     for (int k = 0; k < argc; ++k) ++k;
   }
   #pragma omp target

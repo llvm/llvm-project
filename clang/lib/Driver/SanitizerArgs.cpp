@@ -504,7 +504,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
 
       // Disable coverage and not claim the flags if there is at least one
       // non-supporting sanitizer.
-      if (!(AllAddedKinds & ~setGroupBits(SupportsCoverage))) {
+      if (!(AllAddedKinds & ~AllRemove & ~setGroupBits(SupportsCoverage))) {
         Arg->claim();
       } else {
         CoverageFeatures = 0;
