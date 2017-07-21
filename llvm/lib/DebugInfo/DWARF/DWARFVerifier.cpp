@@ -102,17 +102,8 @@ bool DWARFVerifier::verifyUnitContents(DWARFUnit Unit) {
   return NumUnitErrors == 0;
 }
 
-bool DWARFVerifier::handleDebugAbbrev() {
-  OS << "Verifying .debug_abbrev...\n";
-
-  const DWARFObject &DObj = DCtx.getDWARFObj();
-  if (DObj.getAbbrevSection().empty()) {
-    OS << "Warning: .debug_abbrev is empty.\n";
-    return true;
-  }
-
+unsigned DWARFVerifier::verifyAbbrevSection(const DWARFDebugAbbrev *Abbrev) {
   unsigned NumErrors = 0;
-  const DWARFDebugAbbrev *Abbrev = DCtx.getDebugAbbrev();
   if (Abbrev) {
     const DWARFAbbreviationDeclarationSet *AbbrDecls =
         Abbrev->getAbbreviationDeclarationSet(0);
@@ -121,15 +112,34 @@ bool DWARFVerifier::handleDebugAbbrev() {
       for (auto Attribute : AbbrDecl.attributes()) {
         auto Result = AttributeSet.insert(Attribute.Attr);
         if (!Result.second) {
-          OS << format("Error: Abbreviation declaration with code %d ",
-                       AbbrDecl.getCode());
-          OS << "contains multiple " << AttributeString(Attribute.Attr)
-             << " attributes.\n";
+          OS << "Error: Abbreviation declaration contains multiple "
+             << AttributeString(Attribute.Attr) << " attributes.\n";
+          AbbrDecl.dump(OS);
           ++NumErrors;
         }
       }
     }
   }
+  return NumErrors;
+}
+
+bool DWARFVerifier::handleDebugAbbrev() {
+  OS << "Verifying .debug_abbrev...\n";
+
+  const DWARFObject &DObj = DCtx.getDWARFObj();
+  bool noDebugAbbrev = DObj.getAbbrevSection().empty();
+  bool noDebugAbbrevDWO = DObj.getAbbrevDWOSection().empty();
+
+  if (noDebugAbbrev && noDebugAbbrevDWO) {
+    return true;
+  }
+
+  unsigned NumErrors = 0;
+  if (!noDebugAbbrev)
+    NumErrors += verifyAbbrevSection(DCtx.getDebugAbbrev());
+
+  if (!noDebugAbbrevDWO)
+    NumErrors += verifyAbbrevSection(DCtx.getDebugAbbrevDWO());
   return NumErrors == 0;
 }
 

@@ -9,8 +9,14 @@ define void @h(i8 %x) !type !2 {
 }
 
 declare !type !8 void @f(i32 %x)
+define available_externally void @f2(i32 %x) !type !8 {
+  ret void
+}
+define void @f3(i32 %x) !type !8 {
+  ret void
+}
 
-!cfi.functions = !{!0, !1, !3, !4, !5, !6}
+!cfi.functions = !{!0, !1, !3, !9, !10, !4, !5, !6}
 
 ; declaration of @h with a different type is ignored
 !0 = !{!"h", i8 1, !7}
@@ -19,8 +25,10 @@ declare !type !8 void @f(i32 %x)
 !1 = !{!"h", i8 2, !8}
 !2 = !{i64 0, !"typeid1"}
 
-; definition of @f replaces types on the IR declaration above
+; definitions of @f and @f2 replace types on the IR declarations above
 !3 = !{!"f", i8 0, !2}
+!9 = !{!"f2", i8 0, !2}
+!10 = !{!"f3", i8 0, !2}
 !4 = !{!"external", i8 1, !2}
 !5 = !{!"external_weak", i8 2, !2}
 !6 = !{!"g", i8 0, !7}
@@ -30,10 +38,11 @@ declare !type !8 void @f(i32 %x)
 
 ; CHECK-DAG: @__typeid_typeid1_global_addr = hidden alias i8, bitcast (void ()* [[JT1:.*]] to i8*)
 ; CHECK-DAG: @__typeid_typeid1_align = hidden alias i8, inttoptr (i8 3 to i8*)
-; CHECK-DAG: @__typeid_typeid1_size_m1 = hidden alias i8, inttoptr (i64 3 to i8*)
+; CHECK-DAG: @__typeid_typeid1_size_m1 = hidden alias i8, inttoptr (i64 4 to i8*)
 
 ; CHECK-DAG: @h                    = alias void (i8), bitcast (void ()* [[JT1]] to void (i8)*)
 ; CHECK-DAG: @f                    = alias void (i32), {{.*}}getelementptr {{.*}}void ()* [[JT1]]
+; CHECK-DAG: @f2                   = alias void (i32), {{.*}}getelementptr {{.*}}void ()* [[JT1]]
 ; CHECK-DAG: @external.cfi_jt      = hidden alias void (), {{.*}}getelementptr {{.*}}void ()* [[JT1]]
 ; CHECK-DAG: @external_weak.cfi_jt = hidden alias void (), {{.*}}getelementptr {{.*}}void ()* [[JT1]]
 
@@ -45,6 +54,9 @@ declare !type !8 void @f(i32 %x)
 ; CHECK-DAG: declare !type !{{.*}} void @external()
 ; CHECK-DAG: declare !type !{{.*}} void @external_weak()
 ; CHECK-DAG: declare !type !{{.*}} void @f.cfi(i32)
+; CHECK-DAG: declare !type !{{.*}} void @f2.cfi(i32)
+; CHECK-DAG: define void @f3(i32 {{.*}}) !type !3
+; CHECK-DAG: !3 = !{i64 0, !"typeid3"}
 ; CHECK-DAG: declare !type !{{.*}} void @g.cfi()
 
 
@@ -62,6 +74,7 @@ declare !type !8 void @f(i32 %x)
 
 ; SUMMARY:      CfiFunctionDefs:
 ; SUMMARY-NEXT:   - f
+; SUMMARY-NEXT:   - f2
 ; SUMMARY-NEXT:   - g
 ; SUMMARY-NEXT:   - h
 ; SUMMARY-NEXT: CfiFunctionDecls:

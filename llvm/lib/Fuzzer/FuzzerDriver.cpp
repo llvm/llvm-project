@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <cstdlib>
 #include <cstring>
 #include <mutex>
 #include <string>
@@ -641,6 +642,8 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   Options.HandleTerm = Flags.handle_term;
   Options.HandleXfsz = Flags.handle_xfsz;
   SetSignalHandler(Options);
+
+  std::atexit(Fuzzer::StaticExitCallback);
 
   if (Flags.minimize_crash)
     return MinimizeCrashInput(Args, Options);

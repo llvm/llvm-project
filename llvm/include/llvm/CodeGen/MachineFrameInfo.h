@@ -99,8 +99,16 @@ class MachineFrameInfo {
     /// and/or GC related) over a statepoint. We know that the address of the
     /// slot can't alias any LLVM IR value.  This is very similar to a Spill
     /// Slot, but is created by statepoint lowering is SelectionDAG, not the
-    /// register allocator. 
+    /// register allocator.
     bool isStatepointSpillSlot;
+
+    /// Identifier for stack memory type analagous to address space. If this is
+    /// non-0, the meaning is target defined. Offsets cannot be directly
+    /// compared between objects with different stack IDs. The object may not
+    /// necessarily reside in the same contiguous memory block as other stack
+    /// objects. Objects with differing stack IDs should not be merged or
+    /// replaced substituted for each other.
+    uint8_t StackID;
 
     /// If this stack object is originated from an Alloca instruction
     /// this value saves the original IR allocation. Can be NULL.
@@ -123,10 +131,11 @@ class MachineFrameInfo {
     bool isSExt;
 
     StackObject(uint64_t Sz, unsigned Al, int64_t SP, bool IM,
-                bool isSS, const AllocaInst *Val, bool A)
+                bool isSS, const AllocaInst *Val, bool Aliased, uint8_t ID = 0)
       : SPOffset(SP), Size(Sz), Alignment(Al), isImmutable(IM),
-        isSpillSlot(isSS), isStatepointSpillSlot(false), Alloca(Val),
-        PreAllocated(false), isAliased(A), isZExt(false), isSExt(false) {}
+        isSpillSlot(isSS), isStatepointSpillSlot(false), StackID(ID),
+        Alloca(Val),
+        PreAllocated(false), isAliased(Aliased), isZExt(false), isSExt(false) {}
   };
 
   /// The alignment of the stack.
@@ -600,6 +609,18 @@ public:
     return Objects[ObjectIdx+NumFixedObjects].isStatepointSpillSlot;
   }
 
+  /// \see StackID
+  uint8_t getStackID(int ObjectIdx) const {
+    return Objects[ObjectIdx+NumFixedObjects].StackID;
+  }
+
+  /// \see StackID
+  void setStackID(int ObjectIdx, uint8_t ID) {
+    assert(unsigned(ObjectIdx+NumFixedObjects) < Objects.size() &&
+           "Invalid Object Idx!");
+    Objects[ObjectIdx+NumFixedObjects].StackID = ID;
+  }
+
   /// Returns true if the specified index corresponds to a dead object.
   bool isDeadObjectIndex(int ObjectIdx) const {
     assert(unsigned(ObjectIdx+NumFixedObjects) < Objects.size() &&
@@ -625,7 +646,7 @@ public:
   /// Create a new statically sized stack object, returning
   /// a nonnegative identifier to represent it.
   int CreateStackObject(uint64_t Size, unsigned Alignment, bool isSS,
-                        const AllocaInst *Alloca = nullptr);
+                        const AllocaInst *Alloca = nullptr, uint8_t ID = 0);
 
   /// Create a new statically sized stack object that represents a spill slot,
   /// returning a nonnegative identifier to represent it.

@@ -60,6 +60,7 @@ public:
 
   static void StaticAlarmCallback();
   static void StaticCrashSignalCallback();
+  static void StaticExitCallback();
   static void StaticInterruptCallback();
   static void StaticFileSizeExceedCallback();
 
@@ -91,6 +92,7 @@ public:
 private:
   void AlarmCallback();
   void CrashCallback();
+  void ExitCallback();
   void CrashOnOverwrittenData();
   void InterruptCallback();
   void MutateAndTestOne();

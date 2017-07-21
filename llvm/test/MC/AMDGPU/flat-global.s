@@ -33,6 +33,7 @@ global_load_dwordx3 v[1:3], v[3:4], off
 global_load_dwordx4 v[1:4], v[3:4], off
 // GFX9: global_load_dwordx4 v[1:4], v[3:4], off   ; encoding: [0x00,0x80,0x5c,0xdc,0x03,0x00,0x7f,0x01]
 // VI-ERR: instruction not supported on this GPU
+
 // FIXME: VI error should be instruction nto supported
 global_load_dword v1, v[3:4], off offset:0
 // GFX9: global_load_dword v1, v[3:4], off    ; encoding: [0x00,0x80,0x50,0xdc,0x03,0x00,0x7f,0x01]
@@ -122,3 +123,211 @@ global_load_dword v1, v[3:4], s2
 global_load_dword v1, v[3:4], exec_hi
 // GFX9-ERR: :31: error: invalid operand for instruction
 // VI-ERR: :31: error: invalid operand for instruction
+
+global_atomic_cmpswap v[3:4], v[5:6], off
+// GFX9: global_atomic_cmpswap v[3:4], v[5:6], off ; encoding: [0x00,0x80,0x04,0xdd,0x03,0x05,0x7f,0x00]
+// VI-ERR: error: instruction not supported on this GPU
+
+global_atomic_cmpswap_x2 v[3:4], v[5:8], off
+// GFX9: global_atomic_cmpswap_x2 v[3:4], v[5:8], off ; encoding: [0x00,0x80,0x84,0xdd,0x03,0x05,0x7f,0x00]
+// VI-ERR: error: instruction not supported on this GPU
+
+global_atomic_swap v[3:4], v5, off
+// GFX9: global_atomic_swap v[3:4], v5, off   ; encoding: [0x00,0x80,0x00,0xdd,0x03,0x05,0x7f,0x00]
+// VI-ERR: error: instruction not supported on this GPU
+
+global_atomic_swap_x2 v[3:4], v[5:6], off
+// GFX9: global_atomic_swap_x2 v[3:4], v[5:6], off ; encoding: [0x00,0x80,0x80,0xdd,0x03,0x05,0x7f,0x00]
+// VI-ERR: error: instruction not supported on this GPU
+
+global_atomic_add v[3:4], v5, off
+// GFX9: global_atomic_add v[3:4], v5, off   ; encoding: [0x00,0x80,0x08,0xdd,0x03,0x05,0x7f,0x00]
+// VI-ERR: instruction not supported on this GPU
+
+global_atomic_sub v[3:4], v5, off
+// GFX9: global_atomic_sub v[3:4], v5, off    ; encoding: [0x00,0x80,0x0c,0xdd,0x03,0x05,0x7f,0x00]
+// VI-ERR: instruction not supported on this GPU
+
+global_atomic_smin v[3:4], v5, off
+// GFX9: global_atomic_smin v[3:4], v5, off   ; encoding: [0x00,0x80,0x10,0xdd,0x03,0x05,0x7f,0x00]
+// VI-ERR: instruction not supported on this GPU
+
+global_atomic_umin v[3:4], v5, off
+// GFX9: global_atomic_umin v[3:4], v5, off   ; encoding: [0x00,0x80,0x14,0xdd,0x03,0x05,0x7f,0x00]
+// VI-ERR: instruction not supported on this GPU
+
+global_atomic_smax v[3:4], v5, off
+// GFX9: global_atomic_smax v[3:4], v5, off   ; encoding: [0x00,0x80,0x18,0xdd,0x03,0x05,0x7f,0x00]
+// VI-ERR: instruction not supported on this GPU
+
+global_atomic_umax v[3:4], v5, off
+// GFX9: global_atomic_umax v[3:4], v5, off   ; encoding: [0x00,0x80,0x1c,0xdd,0x03,0x05,0x7f,0x00]
+// VI-ERR: instruction not supported on this GPU
+
+global_atomic_and v[3:4], v5, off
+// GFX9: global_atomic_and v[3:4], v5, off    ; encoding: [0x00,0x80,0x20,0xdd,0x03,0x05,0x7f,0x00]
+// VI-ERR: instruction not supported on this GPU
+
+global_atomic_or v[3:4], v5, off
+// GFX9: global_atomic_or v[3:4], v5, off     ; encoding: [0x00,0x80,0x24,0xdd,0x03,0x05,0x7f,0x00]
+// VI-ERR: instruction not supported on this GPU
+
+global_atomic_xor v[3:4], v5, off
+// GFX9: global_atomic_xor v[3:4], v5, off    ; encoding: [0x00,0x80,0x28,0xdd,0x03,0x05,0x7f,0x00]
+// VI-ERR: instruction not supported on this GPU
+
+global_atomic_inc v[3:4], v5, off
+// GFX9: global_atomic_inc v[3:4], v5, off    ; encoding: [0x00,0x80,0x2c,0xdd,0x03,0x05,0x7f,0x00]
+// VI-ERR: instruction not supported on this GPU
+
+global_atomic_dec v[3:4], v5, off
+// GFX9: global_atomic_dec v[3:4], v5, off    ; encoding: [0x00,0x80,0x30,0xdd,0x03,0x05,0x7f,0x00]
+// VI-ERR: instruction not supported on this GPU
+
+global_atomic_add_x2 v[3:4], v[5:6], off
+// GFX9: global_atomic_add_x2 v[3:4], v[5:6], off ; encoding: [0x00,0x80,0x88,0xdd,0x03,0x05,0x7f,0x00]
+// VI-ERR: instruction not supported on this GPU
+
+global_atomic_sub_x2 v[3:4], v[5:6], off
+// GFX9: global_atomic_sub_x2 v[3:4], v[5:6], off ; encoding: [0x00,0x80,0x8c,0xdd,0x03,0x05,0x7f,0x00]
+// VI-ERR: instruction not supported on this GPU
+
+global_atomic_smin_x2 v[3:4], v[5:6], off
+// GFX9: global_atomic_smin_x2 v[3:4], v[5:6], off ; encoding: [0x00,0x80,0x90,0xdd,0x03,0x05,0x7f,0x00]
+// VI-ERR: instruction not supported on this GPU
+
+global_atomic_umin_x2 v[3:4], v[5:6], off
+// GFX9: global_atomic_umin_x2 v[3:4], v[5:6], off ; encoding: [0x00,0x80,0x94,0xdd,0x03,0x05,0x7f,0x00]
+// VI-ERR: instruction not supported on this GPU
+
+global_atomic_smax_x2 v[3:4], v[5:6], off
+// GFX9: global_atomic_smax_x2 v[3:4], v[5:6], off ; encoding: [0x00,0x80,0x98,0xdd,0x03,0x05,0x7f,0x00]
+// VI-ERR: instruction not supported on this GPU
+
+global_atomic_umax_x2 v[3:4], v[5:6], off
+// GFX9: global_atomic_umax_x2 v[3:4], v[5:6], off ; encoding: [0x00,0x80,0x9c,0xdd,0x03,0x05,0x7f,0x00]
+// VI-ERR: instruction not supported on this GPU
+
+global_atomic_and_x2 v[3:4], v[5:6], off
+// GFX9: global_atomic_and_x2 v[3:4], v[5:6], off ; encoding: [0x00,0x80,0xa0,0xdd,0x03,0x05,0x7f,0x00]
+// VI-ERR: instruction not supported on this GPU
+
+global_atomic_or_x2 v[3:4], v[5:6], off
+// GFX9: global_atomic_or_x2 v[3:4], v[5:6], off ; encoding: [0x00,0x80,0xa4,0xdd,0x03,0x05,0x7f,0x00]
+// VI-ERR: instruction not supported on this GPU
+
+global_atomic_xor_x2 v[3:4], v[5:6], off
+// GFX9: global_atomic_xor_x2 v[3:4], v[5:6], off ; encoding: [0x00,0x80,0xa8,0xdd,0x03,0x05,0x7f,0x00]
+// VI-ERR: instruction not supported on this GPU
+
+global_atomic_inc_x2 v[3:4], v[5:6], off
+// GFX9: global_atomic_inc_x2 v[3:4], v[5:6], off ; encoding: [0x00,0x80,0xac,0xdd,0x03,0x05,0x7f,0x00]
+// VI-ERR: instruction not supported on this GPU
+
+global_atomic_dec_x2 v[3:4], v[5:6], off
+// GFX9: global_atomic_dec_x2 v[3:4], v[5:6], off ; encoding: [0x00,0x80,0xb0,0xdd,0x03,0x05,0x7f,0x00]
+// VI-ERR: error: instruction not supported on this GPU
+
+global_atomic_cmpswap v[3:4], v[5:6], off offset:-16
+// GFX9: global_atomic_cmpswap v[3:4], v[5:6], off offset:-16 ; encoding: [0xf0,0x9f,0x04,0xdd,0x03,0x05,0x7f,0x00]
+// VI-ERR: :49: error: not a valid operand.
+
+global_atomic_cmpswap_x2 v[3:4], v[5:8], off offset:-16
+// GFX9: global_atomic_cmpswap_x2 v[3:4], v[5:8], off offset:-16 ; encoding: [0xf0,0x9f,0x84,0xdd,0x03,0x05,0x7f,0x00]
+// VI-ERR: :52: error: not a valid operand.
+
+global_atomic_swap v[3:4], v5, off offset:-16
+// GFX9: global_atomic_swap v[3:4], v5, off   offset:-16 ; encoding: [0xf0,0x9f,0x00,0xdd,0x03,0x05,0x7f,0x00]
+// VI-ERR: :42: error: not a valid operand
+
+global_atomic_swap_x2 v[3:4], v[5:6], off offset:-16
+// GFX9: global_atomic_swap_x2 v[3:4], v[5:6], off offset:-16 ; encoding: [0xf0,0x9f,0x80,0xdd,0x03,0x05,0x7f,0x00]
+// VI-ERR: :49: error: not a valid operand
+
+global_atomic_add v[3:4], v5, off offset:-16
+// GFX9: global_atomic_add v[3:4], v5, off offset:-16 ; encoding: [0xf0,0x9f,0x08,0xdd,0x03,0x05,0x7f,0x00]
+// VI-ERR: :41: error: not a valid operand
+
+global_atomic_sub v[3:4], v5, off offset:-16
+// GFX9: global_atomic_sub v[3:4], v5, off offset:-16 ; encoding: [0xf0,0x9f,0x0c,0xdd,0x03,0x05,0x7f,0x00]
+// VI-ERR: :41: error: not a valid operand
+
+global_atomic_smin v[3:4], v5, off offset:-16
+// GFX9: global_atomic_smin v[3:4], v5, off offset:-16 ; encoding: [0xf0,0x9f,0x10,0xdd,0x03,0x05,0x7f,0x00]
+// VI-ERR: :42: error: not a valid operand
+
+global_atomic_umin v[3:4], v5, off offset:-16
+// GFX9: global_atomic_umin v[3:4], v5, off offset:-16 ; encoding: [0xf0,0x9f,0x14,0xdd,0x03,0x05,0x7f,0x00]
+// VI-ERR: :42: error: not a valid operand
+
+global_atomic_smax v[3:4], v5, off offset:-16
+// GFX9: global_atomic_smax v[3:4], v5, off offset:-16 ; encoding: [0xf0,0x9f,0x18,0xdd,0x03,0x05,0x7f,0x00]
+// VI-ERR: :42: error: not a valid operand
+
+global_atomic_umax v[3:4], v5, off offset:-16
+// GFX9: global_atomic_umax v[3:4], v5, off offset:-16 ; encoding: [0xf0,0x9f,0x1c,0xdd,0x03,0x05,0x7f,0x00]
+// VI-ERR: :42: error: not a valid operand
+
+global_atomic_and v[3:4], v5, off offset:-16
+// GFX9: global_atomic_and v[3:4], v5, off offset:-16 ; encoding: [0xf0,0x9f,0x20,0xdd,0x03,0x05,0x7f,0x00]
+// VI-ERR: :41: error: not a valid operand
+
+global_atomic_or v[3:4], v5, off offset:-16
+// GFX9: global_atomic_or v[3:4], v5, off offset:-16 ; encoding: [0xf0,0x9f,0x24,0xdd,0x03,0x05,0x7f,0x00]
+// VI-ERR: :40: error: not a valid operand
+
+global_atomic_xor v[3:4], v5, off offset:-16
+// GFX9: global_atomic_xor v[3:4], v5, off  offset:-16 ; encoding: [0xf0,0x9f,0x28,0xdd,0x03,0x05,0x7f,0x00]
+// VI-ERR: :41: error: not a valid operand
+
+global_atomic_inc v[3:4], v5, off offset:-16
+// GFX9: global_atomic_inc v[3:4], v5, off offset:-16 ; encoding: [0xf0,0x9f,0x2c,0xdd,0x03,0x05,0x7f,0x00]
+// VI-ERR: :41: error: not a valid operand
+
+global_atomic_dec v[3:4], v5, off offset:-16
+// GFX9: global_atomic_dec v[3:4], v5, off offset:-16 ; encoding: [0xf0,0x9f,0x30,0xdd,0x03,0x05,0x7f,0x00]
+// VI-ERR: :41: error: not a valid operand
+
+global_atomic_add_x2 v[3:4], v[5:6], off offset:-16
+// GFX9: global_atomic_add_x2 v[3:4], v[5:6], off offset:-16 ; encoding: [0xf0,0x9f,0x88,0xdd,0x03,0x05,0x7f,0x00]
+// VI-ERR: :48: error: not a valid operand
+
+global_atomic_sub_x2 v[3:4], v[5:6], off offset:-16
+// GFX9: global_atomic_sub_x2 v[3:4], v[5:6], off offset:-16 ; encoding: [0xf0,0x9f,0x8c,0xdd,0x03,0x05,0x7f,0x00]
+// VI-ERR: :48: error: not a valid operand
+
+global_atomic_smin_x2 v[3:4], v[5:6], off offset:-16
+// GFX9: global_atomic_smin_x2 v[3:4], v[5:6], off offset:-16 ; encoding: [0xf0,0x9f,0x90,0xdd,0x03,0x05,0x7f,0x00]
+// VI-ERR: :49: error: not a valid operand
+
+global_atomic_umin_x2 v[3:4], v[5:6], off offset:-16
+// GFX9: global_atomic_umin_x2 v[3:4], v[5:6], off offset:-16 ; encoding: [0xf0,0x9f,0x94,0xdd,0x03,0x05,0x7f,0x00]
+// VI-ERR: :49: error: not a valid operand
+
+global_atomic_smax_x2 v[3:4], v[5:6], off offset:-16
+// GFX9: global_atomic_smax_x2 v[3:4], v[5:6], off offset:-16 ; encoding: [0xf0,0x9f,0x98,0xdd,0x03,0x05,0x7f,0x00]
+// VI-ERR: :49: error: not a valid operand
+
+global_atomic_umax_x2 v[3:4], v[5:6], off offset:-16
+// GFX9: global_atomic_umax_x2 v[3:4], v[5:6], off offset:-16 ; encoding: [0xf0,0x9f,0x9c,0xdd,0x03,0x05,0x7f,0x00]
+// VI-ERR: :49: error: not a valid operand
+
+global_atomic_and_x2 v[3:4], v[5:6], off offset:-16
+// GFX9: global_atomic_and_x2 v[3:4], v[5:6], off offset:-16 ; encoding: [0xf0,0x9f,0xa0,0xdd,0x03,0x05,0x7f,0x00]
+// VI-ERR: :48: error: not a valid operand
+
+global_atomic_or_x2 v[3:4], v[5:6], off offset:-16
+// GFX9: global_atomic_or_x2 v[3:4], v[5:6], off offset:-16 ; encoding: [0xf0,0x9f,0xa4,0xdd,0x03,0x05,0x7f,0x00]
+// VI-ERR: :47: error: not a valid operand
+
+global_atomic_xor_x2 v[3:4], v[5:6], off offset:-16
+// GFX9: global_atomic_xor_x2 v[3:4], v[5:6], off offset:-16 ; encoding: [0xf0,0x9f,0xa8,0xdd,0x03,0x05,0x7f,0x00]
+// VI-ERR: :48: error: not a valid operand
+
+global_atomic_inc_x2 v[3:4], v[5:6], off offset:-16
+// GFX9: global_atomic_inc_x2 v[3:4], v[5:6], off offset:-16 ; encoding: [0xf0,0x9f,0xac,0xdd,0x03,0x05,0x7f,0x00]
+// VI-ERR: :48: error: not a valid operand
+
+global_atomic_dec_x2 v[3:4], v[5:6], off offset:-16
+// GFX9: global_atomic_dec_x2 v[3:4], v[5:6], off offset:-16 ; encoding: [0xf0,0x9f,0xb0,0xdd,0x03,0x05,0x7f,0x00]
+// VI-ERR: :48: error: not a valid operand

@@ -220,7 +220,7 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
 
     assert(Subtarget.isFP64bit() && "FR=1 is required for MIPS32r6");
     setOperationAction(ISD::SETCC, MVT::f64, Legal);
-    setOperationAction(ISD::SELECT, MVT::f64, Legal);
+    setOperationAction(ISD::SELECT, MVT::f64, Custom);
     setOperationAction(ISD::SELECT_CC, MVT::f64, Expand);
 
     setOperationAction(ISD::BRCOND, MVT::Other, Legal);
@@ -367,6 +367,22 @@ addMSAFloatType(MVT::SimpleValueType Ty, const TargetRegisterClass *RC) {
   }
 }
 
+SDValue MipsSETargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
+
+  if(!Subtarget.hasMips32r6())
+    return MipsTargetLowering::LowerOperation(Op, DAG);
+
+  EVT ResTy = Op->getValueType(0);
+  SDLoc DL(Op);
+
+  // Although MTC1_D64 takes an i32 and writes an f64, the upper 32 bits of the
+  // floating point register are undefined. Not really an issue as sel.d, which
+  // is produced from an FSELECT node, only looks at bit 0.
+  SDValue Tmp = DAG.getNode(MipsISD::MTC1_D64, DL, MVT::f64, Op->getOperand(0));
+  return DAG.getNode(MipsISD::FSELECT, DL, ResTy, Tmp, Op->getOperand(1),
+                     Op->getOperand(2));
+}
+
 bool
 MipsSETargetLowering::allowsMisalignedMemoryAccesses(EVT VT,
                                                      unsigned,
@@ -414,6 +430,7 @@ SDValue MipsSETargetLowering::LowerOperation(SDValue Op,
   case ISD::EXTRACT_VECTOR_ELT: return lowerEXTRACT_VECTOR_ELT(Op, DAG);
   case ISD::BUILD_VECTOR:       return lowerBUILD_VECTOR(Op, DAG);
   case ISD::VECTOR_SHUFFLE:     return lowerVECTOR_SHUFFLE(Op, DAG);
+  case ISD::SELECT:             return lowerSELECT(Op, DAG);
   }
 
   return MipsTargetLowering::LowerOperation(Op, DAG);

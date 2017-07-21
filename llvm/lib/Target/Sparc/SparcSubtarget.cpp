@@ -36,14 +36,14 @@ SparcSubtarget &SparcSubtarget::initializeSubtargetDependencies(StringRef CPU,
   HasHardQuad = false;
   UsePopc = false;
   UseSoftFloat = false;
+  HasNoFSMULD = false;
+  HasNoFMULS = false;
 
   // Leon features
   HasLeonCasa = false;
   HasUmacSmac = false;
   PerformSDIVReplace = false;
   InsertNOPLoad = false;
-  FixFSMULD = false;
-  ReplaceFMULS = false;
   FixAllFDIVSQRT = false;
   DetectRoundChange = false;
 

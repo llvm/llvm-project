@@ -38,6 +38,7 @@ subdirectories =
  llvm-mc
  llvm-mcmarkup
  llvm-modextract
+ llvm-mt
  llvm-nm
  llvm-objdump
  llvm-pdbutil

@@ -96,6 +96,20 @@ define i64 @t5(i64 %t, i64 %val) nounwind {
        ret i64 %res
 }
 
+define void @t5ptr(i64 %t, i64* %ptr) nounwind {
+; X64-LABEL: t5ptr:
+; X64:       ## BB#0:
+; X64-NEXT:    movl %edi, %ecx
+; X64-NEXT:    shrq %cl, (%rsi)
+; X64-NEXT:    retq
+; X64-NEXT:    ## -- End function
+       %shamt = and i64 %t, 191
+       %tmp = load i64, i64* %ptr
+       %tmp1 = lshr i64 %tmp, %shamt
+       store i64 %tmp1, i64* %ptr
+       ret void
+}
+
 
 ; rdar://11866926
 define i64 @t6(i64 %key, i64* nocapture %val) nounwind {

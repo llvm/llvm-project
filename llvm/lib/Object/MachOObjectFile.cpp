@@ -2607,10 +2607,14 @@ dice_iterator MachOObjectFile::end_dices() const {
   return dice_iterator(DiceRef(DRI, this));
 }
 
-ExportEntry::ExportEntry(ArrayRef<uint8_t> T) : Trie(T) {}
+ExportEntry::ExportEntry(Error *E, const MachOObjectFile *O,
+                         ArrayRef<uint8_t> T) : E(E), O(O), Trie(T) {}
 
 void ExportEntry::moveToFirst() {
+  ErrorAsOutParameter ErrAsOutParam(E);
   pushNode(0);
+  if (*E)
+    return;
   pushDownUntilBottom();
 }
 
@@ -2637,14 +2641,12 @@ bool ExportEntry::operator==(const ExportEntry &Other) const {
   return true;
 }
 
-uint64_t ExportEntry::readULEB128(const uint8_t *&Ptr) {
+uint64_t ExportEntry::readULEB128(const uint8_t *&Ptr, const char **error) {
   unsigned Count;
-  uint64_t Result = decodeULEB128(Ptr, &Count);
+  uint64_t Result = decodeULEB128(Ptr, &Count, Trie.end(), error);
   Ptr += Count;
-  if (Ptr > Trie.end()) {
+  if (Ptr > Trie.end())
     Ptr = Trie.end();
-    Malformed = true;
-  }
   return Result;
 }
 
@@ -2679,22 +2681,119 @@ ExportEntry::NodeState::NodeState(const uint8_t *Ptr)
     : Start(Ptr), Current(Ptr) {}
 
 void ExportEntry::pushNode(uint64_t offset) {
+  ErrorAsOutParameter ErrAsOutParam(E);
   const uint8_t *Ptr = Trie.begin() + offset;
   NodeState State(Ptr);
-  uint64_t ExportInfoSize = readULEB128(State.Current);
+  const char *error;
+  uint64_t ExportInfoSize = readULEB128(State.Current, &error);
+  if (error) {
+    *E = malformedError("export info size " + Twine(error) + " in export trie "
+           "data at node: 0x" + utohexstr(offset));
+    moveToEnd();
+    return;
+  }
   State.IsExportNode = (ExportInfoSize != 0);
   const uint8_t* Children = State.Current + ExportInfoSize;
+  if (Children > Trie.end()) {
+    *E = malformedError("export info size: 0x" + utohexstr(ExportInfoSize) +
+           " in export trie data at node: 0x" + utohexstr(offset) +
+           " too big and extends past end of trie data");
+    moveToEnd();
+    return;
+  }
   if (State.IsExportNode) {
-    State.Flags = readULEB128(State.Current);
+    const uint8_t *ExportStart = State.Current;
+    State.Flags = readULEB128(State.Current, &error);
+    if (error) {
+      *E = malformedError("flags " + Twine(error) + " in export trie data at "
+             "node: 0x" + utohexstr(offset));
+      moveToEnd();
+      return;
+    }
+    uint64_t Kind = State.Flags & MachO::EXPORT_SYMBOL_FLAGS_KIND_MASK;
+    if (State.Flags != 0 &&
+        (Kind != MachO::EXPORT_SYMBOL_FLAGS_KIND_REGULAR &&
+         Kind != MachO::EXPORT_SYMBOL_FLAGS_KIND_ABSOLUTE &&
+         Kind != MachO::EXPORT_SYMBOL_FLAGS_KIND_THREAD_LOCAL)) {
+      *E = malformedError("unsupported exported symbol kind: "
+             + Twine((int)Kind) + " in flags: 0x" + utohexstr(State.Flags) +
+             " in export trie data at node: 0x" + utohexstr(offset));
+      moveToEnd();
+      return;
+    }
     if (State.Flags & MachO::EXPORT_SYMBOL_FLAGS_REEXPORT) {
       State.Address = 0;
-      State.Other = readULEB128(State.Current); // dylib ordinal
+      State.Other = readULEB128(State.Current, &error); // dylib ordinal
+      if (error) {
+        *E = malformedError("dylib ordinal of re-export " + Twine(error) +
+               " in export trie data at node: 0x" + utohexstr(offset));
+        moveToEnd();
+        return;
+      }
+      if (O != nullptr) {
+        if (State.Other > O->getLibraryCount()) {
+          *E = malformedError("bad library ordinal: " + Twine((int)State.Other)
+               + " (max " + Twine((int)O->getLibraryCount()) + ") in export "
+               "trie data at node: 0x" + utohexstr(offset));
+          moveToEnd();
+          return;
+        }
+      }
       State.ImportName = reinterpret_cast<const char*>(State.Current);
+      if (*State.ImportName == '\0') {
+        State.Current++;
+      } else {
+        const uint8_t *End = State.Current + 1;
+        if (End >= Trie.end()) {
+          *E = malformedError("import name of re-export in export trie data at "
+                 "node: 0x" + utohexstr(offset) + " starts past end of trie "
+                 "data");
+          moveToEnd();
+          return;
+        }
+        while(*End != '\0' && End < Trie.end())
+          End++;
+        if (*End != '\0') {
+          *E = malformedError("import name of re-export in export trie data at "
+                 "node: 0x" + utohexstr(offset) + " extends past end of trie "
+                 "data");
+          moveToEnd();
+          return;
+        }
+        State.Current = End + 1;
+      }
     } else {
-      State.Address = readULEB128(State.Current);
-      if (State.Flags & MachO::EXPORT_SYMBOL_FLAGS_STUB_AND_RESOLVER)
-        State.Other = readULEB128(State.Current);
+      State.Address = readULEB128(State.Current, &error);
+      if (error) {
+        *E = malformedError("address " + Twine(error) + " in export trie data "
+               "at node: 0x" + utohexstr(offset));
+        moveToEnd();
+        return;
+      }
+      if (State.Flags & MachO::EXPORT_SYMBOL_FLAGS_STUB_AND_RESOLVER) {
+        State.Other = readULEB128(State.Current, &error);
+        if (error) {
+          *E = malformedError("resolver of stub and resolver " + Twine(error) +
+                 " in export trie data at node: 0x" + utohexstr(offset));
+          moveToEnd();
+          return;
+        }
+      }
     }
+    if(ExportStart + ExportInfoSize != State.Current) {
+      *E = malformedError("inconsistant export info size: 0x" +
+             utohexstr(ExportInfoSize) + " where actual size was: 0x" +
+             utohexstr(State.Current - ExportStart) + " in export trie data "
+             "at node: 0x" + utohexstr(offset));
+      moveToEnd();
+      return;
+    }
+  }
+  if (Children + 1 >= Trie.end()) {
+    *E = malformedError("byte for count of childern in export trie data at "
+           "node: 0x" + utohexstr(offset) + " extends past end of trie data");
+    moveToEnd();
+    return;
   }
   State.ChildCount = *Children;
   State.Current = Children + 1;
@@ -2704,21 +2803,50 @@ void ExportEntry::pushNode(uint64_t offset) {
 }
 
 void ExportEntry::pushDownUntilBottom() {
+  ErrorAsOutParameter ErrAsOutParam(E);
+  const char *error;
   while (Stack.back().NextChildIndex < Stack.back().ChildCount) {
     NodeState &Top = Stack.back();
     CumulativeString.resize(Top.ParentStringLength);
-    for (;*Top.Current != 0; Top.Current++) {
+    for (;*Top.Current != 0 && Top.Current < Trie.end(); Top.Current++) {
       char C = *Top.Current;
       CumulativeString.push_back(C);
     }
+    if (Top.Current >= Trie.end()) {
+      *E = malformedError("edge sub-string in export trie data at node: 0x" +
+             utohexstr(Top.Start - Trie.begin()) + " for child #" + 
+             Twine((int)Top.NextChildIndex) + " extends past end of trie data");
+      moveToEnd();
+      return;
+    }
     Top.Current += 1;
-    uint64_t childNodeIndex = readULEB128(Top.Current);
+    uint64_t childNodeIndex = readULEB128(Top.Current, &error);
+    if (error) {
+      *E = malformedError("child node offset " + Twine(error) +
+             " in export trie data at node: 0x" +
+             utohexstr(Top.Start - Trie.begin()));
+      moveToEnd();
+      return;
+    }
+    for (const NodeState &node : nodes()) {
+      if (node.Start == Trie.begin() + childNodeIndex){
+        *E = malformedError("loop in childern in export trie data at node: 0x" +
+               utohexstr(Top.Start - Trie.begin()) + " back to node: 0x" +
+               utohexstr(childNodeIndex));
+        moveToEnd();
+        return;
+      }
+    }
     Top.NextChildIndex += 1;
     pushNode(childNodeIndex);
+    if (*E)
+      return;
   }
   if (!Stack.back().IsExportNode) {
-    Malformed = true;
+    *E = malformedError("node is not an export node in export trie data at "
+           "node: 0x" + utohexstr(Stack.back().Start - Trie.begin()));
     moveToEnd();
+    return;
   }
 }
 
@@ -2738,8 +2866,10 @@ void ExportEntry::pushDownUntilBottom() {
 // stack ivar.  If there is no more ways down, it pops up one and tries to go
 // down a sibling path until a childless node is reached.
 void ExportEntry::moveNext() {
-  if (Stack.empty() || !Stack.back().IsExportNode) {
-    Malformed = true;
+  assert(!Stack.empty() && "ExportEntry::moveNext() with empty node stack");
+  if (!Stack.back().IsExportNode) {
+    *E = malformedError("node is not an export node in export trie data at "
+           "node: 0x" + utohexstr(Stack.back().Start - Trie.begin()));
     moveToEnd();
     return;
   }
@@ -2764,21 +2894,23 @@ void ExportEntry::moveNext() {
 }
 
 iterator_range<export_iterator>
-MachOObjectFile::exports(ArrayRef<uint8_t> Trie) {
-  ExportEntry Start(Trie);
+MachOObjectFile::exports(Error &E, ArrayRef<uint8_t> Trie,
+                         const MachOObjectFile *O) {
+  ExportEntry Start(&E, O, Trie);
   if (Trie.empty())
     Start.moveToEnd();
   else
     Start.moveToFirst();
 
-  ExportEntry Finish(Trie);
+  ExportEntry Finish(&E, O, Trie);
   Finish.moveToEnd();
 
   return make_range(export_iterator(Start), export_iterator(Finish));
 }
 
-iterator_range<export_iterator> MachOObjectFile::exports() const {
-  return exports(getDyldInfoExportsTrie());
+iterator_range<export_iterator> MachOObjectFile::exports(Error &Err,
+                                  const MachOObjectFile *O) const {
+  return exports(Err, getDyldInfoExportsTrie(), O);
 }
 
 MachORebaseEntry::MachORebaseEntry(Error *E, const MachOObjectFile *O,

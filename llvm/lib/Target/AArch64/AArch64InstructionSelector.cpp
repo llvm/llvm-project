@@ -780,6 +780,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
 
     return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
   }
+
   case TargetOpcode::G_INSERT: {
     LLT SrcTy = MRI.getType(I.getOperand(2).getReg());
     // Larger inserts are vectors, same-size ones should be something else by

@@ -611,6 +611,8 @@ static CPUType mapArchToCVCPUType(Triple::ArchType Type) {
       return CPUType::X64;
     case Triple::ArchType::thumb:
       return CPUType::Thumb;
+    case Triple::ArchType::aarch64:
+      return CPUType::ARM64;
     default:
       report_fatal_error("target architecture doesn't map to a CodeView "
                          "CPUType");

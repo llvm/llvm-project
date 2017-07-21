@@ -13,6 +13,7 @@
   define void @non_local_phi_use_followed_by_use_fi() { ret void }
   define void @float_non_local_phi_use_followed_by_use_fi() { ret void }
   define void @non_local_phi() { ret void }
+  define void @non_local_label() { ret void }
 ...
 
 ---
@@ -357,5 +358,52 @@ body:             |
 
     %3(s32) = PHI %1(s32), %bb.0, %0(s32), %bb.1
     %2(s32) = G_FADD %3, %1
+    G_BR %bb.1
+...
+
+---
+# Make sure we don't insert a constant before EH_LABELs.
+# CHECK-LABEL: name: non_local_label
+name:            non_local_label
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+
+# CHECK:      registers:
+# Existing registers should be left untouched
+# CHECK:  - { id: 0, class: fpr, preferred-register: '' }
+#CHECK-NEXT:  - { id: 1, class: fpr, preferred-register: '' }
+#CHECK-NEXT:  - { id: 2, class: fpr, preferred-register: '' }
+#CHECK-NEXT:  - { id: 3, class: fpr, preferred-register: '' }
+# The newly created reg should be on the same regbank/regclass as its origin.
+#CHECK-NEXT:  - { id: 4, class: fpr, preferred-register: '' }
+
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: fpr }
+  - { id: 2, class: fpr }
+  - { id: 3, class: fpr }
+
+# CHECK:  body:
+# CHECK:    %1(s32) = G_FCONSTANT float 1.0
+
+# CHECK: bb.1:
+# CHECK: EH_LABEL
+# CHECK: %4(s32) = G_FCONSTANT float 1.0
+
+# CHECK-NEXT: %2(s32) = G_FADD %0, %4
+body:             |
+  bb.0:
+    liveins: %s0
+    successors: %bb.1
+
+    %0(s32) = COPY %s0
+    %1(s32) = G_FCONSTANT float 1.0
+
+  bb.1:
+    successors: %bb.1
+
+    EH_LABEL 1
+    %2(s32) = G_FADD %0, %1
     G_BR %bb.1
 ...
