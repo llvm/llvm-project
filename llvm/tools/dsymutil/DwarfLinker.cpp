@@ -98,6 +98,7 @@ class DeclContext {
   uint32_t Line;
   uint32_t ByteSize;
   uint16_t Tag;
+  unsigned DefinedInClangModule : 1;
   StringRef Name;
   StringRef File;
   const DeclContext &Parent;
@@ -112,15 +113,17 @@ public:
 
   DeclContext()
       : QualifiedNameHash(0), Line(0), ByteSize(0),
-        Tag(dwarf::DW_TAG_compile_unit), Name(), File(), Parent(*this),
-        LastSeenDIE(), LastSeenCompileUnitID(0), CanonicalDIEOffset(0) {}
+        Tag(dwarf::DW_TAG_compile_unit), DefinedInClangModule(0), Name(),
+        File(), Parent(*this), LastSeenDIE(), LastSeenCompileUnitID(0),
+        CanonicalDIEOffset(0) {}
 
   DeclContext(unsigned Hash, uint32_t Line, uint32_t ByteSize, uint16_t Tag,
               StringRef Name, StringRef File, const DeclContext &Parent,
               DWARFDie LastSeenDIE = DWARFDie(), unsigned CUId = 0)
       : QualifiedNameHash(Hash), Line(Line), ByteSize(ByteSize), Tag(Tag),
-        Name(Name), File(File), Parent(Parent), LastSeenDIE(LastSeenDIE),
-        LastSeenCompileUnitID(CUId), CanonicalDIEOffset(0) {}
+        DefinedInClangModule(0), Name(Name), File(File), Parent(Parent),
+        LastSeenDIE(LastSeenDIE), LastSeenCompileUnitID(CUId),
+        CanonicalDIEOffset(0) {}
 
   uint32_t getQualifiedNameHash() const { return QualifiedNameHash; }
 
@@ -128,6 +131,9 @@ public:
 
   uint32_t getCanonicalDIEOffset() const { return CanonicalDIEOffset; }
   void setCanonicalDIEOffset(uint32_t Offset) { CanonicalDIEOffset = Offset; }
+
+  bool isDefinedInClangModule() const { return DefinedInClangModule; }
+  void setDefinedInClangModule(bool Val) { DefinedInClangModule = Val; }
 
   uint16_t getTag() const { return Tag; }
   StringRef getName() const { return Name; }
@@ -1801,6 +1807,8 @@ static bool analyzeContextInfo(const DWARFDie &DIE,
       CurrentDeclContext = PtrInvalidPair.getPointer();
       Info.Ctxt =
           PtrInvalidPair.getInt() ? nullptr : PtrInvalidPair.getPointer();
+      if (Info.Ctxt)
+        Info.Ctxt->setDefinedInClangModule(InClangModule);
     } else
       Info.Ctxt = CurrentDeclContext = nullptr;
   }
@@ -2172,7 +2180,6 @@ unsigned DwarfLinker::shouldKeepDIE(RelocationManager &RelocMgr,
     return shouldKeepVariableDIE(RelocMgr, DIE, Unit, MyInfo, Flags);
   case dwarf::DW_TAG_subprogram:
     return shouldKeepSubprogramDIE(RelocMgr, DIE, Unit, MyInfo, Flags);
-  case dwarf::DW_TAG_module:
   case dwarf::DW_TAG_imported_module:
   case dwarf::DW_TAG_imported_declaration:
   case dwarf::DW_TAG_imported_unit:
@@ -2232,6 +2239,8 @@ void DwarfLinker::keepDIEAndDependencies(RelocationManager &RelocMgr,
             resolveDIEReference(*this, Units, Val, Unit, Die, ReferencedCU)) {
       uint32_t RefIdx = ReferencedCU->getOrigUnit().getDIEIndex(RefDIE);
       CompileUnit::DIEInfo &Info = ReferencedCU->getInfo(RefIdx);
+      bool IsModuleRef = Info.Ctxt && Info.Ctxt->getCanonicalDIEOffset() &&
+                         Info.Ctxt->isDefinedInClangModule();
       // If the referenced DIE has a DeclContext that has already been
       // emitted, then do not keep the one in this CU. We'll link to
       // the canonical DIE in cloneDieReferenceAttribute.
@@ -2240,7 +2249,8 @@ void DwarfLinker::keepDIEAndDependencies(RelocationManager &RelocMgr,
       // ReferencedCU->hasODR() && CU.hasODR().
       // FIXME: compatibility with dsymutil-classic. There is no
       // reason not to unique ref_addr references.
-      if (AttrSpec.Form != dwarf::DW_FORM_ref_addr && UseODR && Info.Ctxt &&
+      if (AttrSpec.Form != dwarf::DW_FORM_ref_addr && (UseODR || IsModuleRef) &&
+          Info.Ctxt &&
           Info.Ctxt != ReferencedCU->getInfo(Info.ParentIdx).Ctxt &&
           Info.Ctxt->getCanonicalDIEOffset() && isODRAttribute(AttrSpec.Attr))
         continue;
