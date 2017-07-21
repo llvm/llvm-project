@@ -6,12 +6,7 @@
 define <4 x i32> @combine_vec_rot_rot(<4 x i32> %x) {
 ; XOP-LABEL: combine_vec_rot_rot:
 ; XOP:       # BB#0:
-; XOP-NEXT:    vpshld {{.*}}(%rip), %xmm0, %xmm1
-; XOP-NEXT:    vpshld {{.*}}(%rip), %xmm0, %xmm0
-; XOP-NEXT:    vpor %xmm0, %xmm1, %xmm0
-; XOP-NEXT:    vpshld {{.*}}(%rip), %xmm0, %xmm1
-; XOP-NEXT:    vpshld {{.*}}(%rip), %xmm0, %xmm0
-; XOP-NEXT:    vpor %xmm0, %xmm1, %xmm0
+; XOP-NEXT:    vprotd {{.*}}(%rip), %xmm0, %xmm0
 ; XOP-NEXT:    retq
 ;
 ; AVX512-LABEL: combine_vec_rot_rot:

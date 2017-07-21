@@ -17,8 +17,8 @@
 #include <queue>
 
 namespace llvm {
-template <class NodeTy>
-void IDFCalculator<NodeTy>::calculate(
+template <class NodeTy, bool IsPostDom>
+void IDFCalculator<NodeTy, IsPostDom>::calculate(
     SmallVectorImpl<BasicBlock *> &PHIBlocks) {
   // Use a priority queue keyed on dominator tree level so that inserted nodes
   // are handled from the bottom of the dominator tree upwards.
@@ -88,6 +88,6 @@ void IDFCalculator<NodeTy>::calculate(
   }
 }
 
-template class IDFCalculator<BasicBlock *>;
-template class IDFCalculator<Inverse<BasicBlock *>>;
+template class IDFCalculator<BasicBlock *, false>;
+template class IDFCalculator<Inverse<BasicBlock *>, true>;
 }

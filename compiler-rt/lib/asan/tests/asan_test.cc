@@ -12,6 +12,8 @@
 //===----------------------------------------------------------------------===//
 #include "asan_test_utils.h"
 
+#include <errno.h>
+
 NOINLINE void *malloc_fff(size_t size) {
   void *res = malloc/**/(size); break_optimization(0); return res;}
 NOINLINE void *malloc_eee(size_t size) {
@@ -74,10 +76,19 @@ TEST(AddressSanitizer, VariousMallocsTest) {
   delete c;
 
 #if SANITIZER_TEST_HAS_POSIX_MEMALIGN
-  int *pm;
-  int pm_res = posix_memalign((void**)&pm, kPageSize, kPageSize);
+  void *pm = 0;
+  // Valid allocation.
+  int pm_res = posix_memalign(&pm, kPageSize, kPageSize);
   EXPECT_EQ(0, pm_res);
+  EXPECT_NE(nullptr, pm);
   free(pm);
+
+  // Alignment is not a power of 2.
+  EXPECT_DEATH(posix_memalign(&pm, 3, kPageSize),
+               "allocator is terminating the process instead of returning 0");
+  // Alignment is a power of 2, but not a multiple of size(void *).
+  EXPECT_DEATH(posix_memalign(&pm, 2, kPageSize),
+               "allocator is terminating the process instead of returning 0");
 #endif  // SANITIZER_TEST_HAS_POSIX_MEMALIGN
 
 #if SANITIZER_TEST_HAS_MEMALIGN
@@ -85,6 +96,9 @@ TEST(AddressSanitizer, VariousMallocsTest) {
   EXPECT_EQ(0U, (uintptr_t)ma % kPageSize);
   ma[123] = 0;
   free(ma);
+
+  EXPECT_DEATH(memalign(3, kPageSize),
+               "allocator is terminating the process instead of returning 0");
 #endif  // SANITIZER_TEST_HAS_MEMALIGN
 }
 

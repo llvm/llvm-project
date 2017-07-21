@@ -186,7 +186,7 @@ Error CVSymbolDumperImpl::visitKnownRecord(CVSymbol &CVR,
 
 Error CVSymbolDumperImpl::visitKnownRecord(CVSymbol &CVR,
                                            BuildInfoSym &BuildInfo) {
-  W.printNumber("BuildId", BuildInfo.BuildId);
+  printTypeIndex("BuildId", BuildInfo.BuildId);
   return Error::success();
 }
 

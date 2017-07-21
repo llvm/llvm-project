@@ -745,7 +745,7 @@ define <4 x i32> @testv4i32u(<4 x i32> %in) nounwind {
 ; AVX512CDVL-NEXT:    vpsubd %xmm0, %xmm1, %xmm1
 ; AVX512CDVL-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX512CDVL-NEXT:    vplzcntd %xmm0, %xmm0
-; AVX512CDVL-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm1
+; AVX512CDVL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [31,31,31,31]
 ; AVX512CDVL-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
 ; AVX512CDVL-NEXT:    retq
 ;
@@ -755,7 +755,7 @@ define <4 x i32> @testv4i32u(<4 x i32> %in) nounwind {
 ; AVX512CD-NEXT:    vpsubd %xmm0, %xmm1, %xmm1
 ; AVX512CD-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX512CD-NEXT:    vplzcntd %zmm0, %zmm0
-; AVX512CD-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm1
+; AVX512CD-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [31,31,31,31]
 ; AVX512CD-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
 ; AVX512CD-NEXT:    vzeroupper
 ; AVX512CD-NEXT:    retq

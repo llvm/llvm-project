@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
-  <title>Clang - C++1z, C++14, C++11 and C++98 Status</title>
+  <title>Clang - C++17, C++14, C++11 and C++98 Status</title>
   <link type="text/css" rel="stylesheet" href="menu.css">
   <link type="text/css" rel="stylesheet" href="content.css">
   <style type="text/css">
@@ -32,7 +32,7 @@
 href="#cxx98">C++98 / C++03</a>, <a
 href="#cxx11">C++11</a>, and <a
 href="#cxx14">C++14</a>), and most of the upcoming <a
-href="#cxx17">C++1z</a> standard.
+href="#cxx17">C++17</a> standard.
 
 <p>The Clang community is continually striving to improve C++ standards
 compliance between releases by submitting and tracking <a
@@ -519,14 +519,12 @@ version 3.7.
 </p>
 </details>
 
-<h2 id="cxx17">C++1z implementation status</h2>
+<h2 id="cxx17">C++17 implementation status</h2>
 
-<p>Clang has <b>experimental</b> support for some proposed features of
-the C++ standard following C++14, provisionally named C++1z.
-Note that support for these features may change or be removed without notice,
-as the draft C++1z standard evolves.
+<p>Clang SVN implements all the features
+of the C++ 2017 Draft International Standard.
 
-<p>You can use Clang in C++1z mode with the <code>-std=c++1z</code> option.</p>
+<p>You can use Clang in C++17 mode with the <code>-std=c++1z</code> option.</p>
 
 <details open>
 <summary>List of features and minimum Clang version with support</summary>
@@ -534,7 +532,7 @@ as the draft C++1z standard evolves.
 <table width="689" border="1" cellspacing="0">
  <tr>
     <th>Language Feature</th>
-    <th>C++1z Proposal</th>
+    <th>C++17 Proposal</th>
     <th>Available in Clang?</th>
  </tr>
     <!-- Issaquah 2014 papers -->
@@ -551,7 +549,7 @@ as the draft C++1z standard evolves.
     </tr>
     <!--
     <tr>
-      <td rowspan="2">Terse range-based for loops (removed from C++1z)</td>
+      <td rowspan="2">Terse range-based for loops (removed from C++17)</td>
       <td rowspan="2"><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n3994.htm">N3994</a></td>
       <td class="none" align="center">Clang 3.5: Yes</td>
     </tr>
@@ -775,6 +773,69 @@ ordering, resulting in ambiguity errors for reasonable and previously-valid
 code. This issue is expected to be rectified soon.
 </span>
 </p>
+</details>
+
+<h2 id="cxx20">C++2a implementation status</h2>
+
+<p>Clang does not yet support any of the proposed features of
+<!--<p>Clang has <b>experimental</b> support for some proposed features of-->
+the C++ standard following C++17, provisionally named C++2a.
+Note that support for these features may change or be removed without notice,
+as the draft C++2a standard evolves.
+
+<!--<p>You can use Clang in C++2a mode with the <code>-std=c++2a</code> option.</p>-->
+
+<details open>
+<summary>List of features and minimum Clang version with support</summary>
+
+<table width="689" border="1" cellspacing="0">
+ <tr>
+    <th>Language Feature</th>
+    <th>C++2a Proposal</th>
+    <th>Available in Clang?</th>
+ </tr>
+    <!-- Toronto 2017 papers -->
+    <tr>
+      <td>Default member initializers for bit-fields</td>
+      <td><a href="http://wg21.link/p0683r1">P0683R1</a></td>
+      <td class="none" align="center">No</td>
+    </tr>
+    <tr>
+      <td><tt>const&amp;</tt>-qualified pointers to members</td>
+      <td><a href="http://wg21.link/p0704r1">P0704R1</a></td>
+      <td class="none" align="center">No</td>
+    </tr>
+    <tr>
+      <td>Allow <i>lambda-capture</i> <tt>[=, this]</tt></td>
+      <td><a href="http://wg21.link/p0409r2">P0409R2</a></td>
+      <td class="none" align="center">No</td>
+    </tr>
+    <tr>
+      <td><tt>__VA_OPT__</tt> for preprocessor comma elision</td>
+      <td><a href="http://wg21.link/p0306r4">P0306R4</a></td>
+      <td class="none" align="center">No</td>
+    </tr>
+    <tr>
+      <td>Designated initializers</td>
+      <td><a href="http://wg21.link/p0329r4">P0329R4</a></td>
+      <td class="partial" align="center">Partial (extension)</td>
+    </tr>
+    <tr>
+      <td><i>template-parameter-list</i> for generic lambdas</td>
+      <td><a href="http://wg21.link/p0428r2">P0428R2</a></td>
+      <td class="none" align="center">No</td>
+    </tr>
+    <tr>
+      <td>Initializer list constructors in class template argument deduction</td>
+      <td><a href="http://wg21.link/p0702r1">P0702R1</a></td>
+      <td class="none" align="center">No</td>
+    </tr>
+    <tr>
+      <td>Concepts</td>
+      <td><a href="http://wg21.link/p0734r0">P0734R0</a></td>
+      <td class="none" align="center">No</td>
+    </tr>
+</table>
 </details>
 
 <h2 id="ts">Technical specifications and standing documents</h2>

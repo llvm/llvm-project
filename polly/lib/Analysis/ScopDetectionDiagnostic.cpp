@@ -60,6 +60,7 @@ llvm::Statistic RejectStatistics[] = {
     SCOP_STAT(LastAffFunc, ""),
     SCOP_STAT(LoopBound, "Uncomputable loop bounds"),
     SCOP_STAT(LoopHasNoExit, "Loop without exit"),
+    SCOP_STAT(LoopOnlySomeLatches, "Not all loop latches in scop"),
     SCOP_STAT(FuncCall, "Function call with side effects"),
     SCOP_STAT(NonSimpleMemoryAccess,
               "Compilated access semantics (volatile or atomic)"),
@@ -390,6 +391,25 @@ const DebugLoc &ReportLoopHasNoExit::getDebugLoc() const { return Loc; }
 
 std::string ReportLoopHasNoExit::getEndUserMessage() const {
   return "Loop cannot be handled because it has no exit.";
+}
+
+//===----------------------------------------------------------------------===//
+// ReportLoopOnlySomeLatches
+
+std::string ReportLoopOnlySomeLatches::getMessage() const {
+  return "Not all latches of loop " + L->getHeader()->getName() +
+         " part of scop.";
+}
+
+bool ReportLoopOnlySomeLatches::classof(const RejectReason *RR) {
+  return RR->getKind() == RejectReasonKind::LoopHasNoExit;
+}
+
+const DebugLoc &ReportLoopOnlySomeLatches::getDebugLoc() const { return Loc; }
+
+std::string ReportLoopOnlySomeLatches::getEndUserMessage() const {
+  return "Loop cannot be handled because not all latches are part of loop "
+         "region.";
 }
 
 //===----------------------------------------------------------------------===//

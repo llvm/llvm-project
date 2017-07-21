@@ -354,6 +354,8 @@ bool ODRHash::isWhitelistedDecl(const Decl *D, const CXXRecordDecl *Parent) {
     default:
       return false;
     case Decl::AccessSpec:
+    case Decl::CXXConstructor:
+    case Decl::CXXDestructor:
     case Decl::CXXMethod:
     case Decl::Field:
     case Decl::Friend:

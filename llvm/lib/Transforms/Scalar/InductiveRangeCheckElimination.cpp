@@ -922,14 +922,18 @@ LoopConstrainer::calculateSubRanges() const {
 
   bool Increasing = MainLoopStructure.IndVarIncreasing;
 
-  // We compute `Smallest` and `Greatest` such that [Smallest, Greatest) is the
-  // range of values the induction variable takes.
+  // We compute `Smallest` and `Greatest` such that [Smallest, Greatest), or
+  // [Smallest, GreatestSeen] is the range of values the induction variable
+  // takes.
 
-  const SCEV *Smallest = nullptr, *Greatest = nullptr;
+  const SCEV *Smallest = nullptr, *Greatest = nullptr, *GreatestSeen = nullptr;
 
+  const SCEV *One = SE.getOne(Ty);
   if (Increasing) {
     Smallest = Start;
     Greatest = End;
+    // No overflow, because the range [Smallest, GreatestSeen] is not empty.
+    GreatestSeen = SE.getMinusSCEV(End, One);
   } else {
     // These two computations may sign-overflow.  Here is why that is okay:
     //
@@ -947,9 +951,9 @@ LoopConstrainer::calculateSubRanges() const {
     //    will be an empty range.  Returning an empty range is always safe.
     //
 
-    const SCEV *One = SE.getOne(Ty);
     Smallest = SE.getAddExpr(End, One);
     Greatest = SE.getAddExpr(Start, One);
+    GreatestSeen = Start;
   }
 
   auto Clamp = [this, Smallest, Greatest](const SCEV *S) {
@@ -964,7 +968,7 @@ LoopConstrainer::calculateSubRanges() const {
     Result.LowLimit = Clamp(Range.getBegin());
 
   bool ProvablyNoPostLoop =
-      SE.isKnownPredicate(ICmpInst::ICMP_SLE, Greatest, Range.getEnd());
+      SE.isKnownPredicate(ICmpInst::ICMP_SLT, GreatestSeen, Range.getEnd());
   if (!ProvablyNoPostLoop)
     Result.HighLimit = Clamp(Range.getEnd());
 

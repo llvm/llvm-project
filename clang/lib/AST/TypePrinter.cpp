@@ -104,6 +104,7 @@ namespace {
     void printAfter(QualType T, raw_ostream &OS);
     void AppendScope(DeclContext *DC, raw_ostream &OS);
     void printTag(TagDecl *T, raw_ostream &OS);
+    void printFunctionAfter(const FunctionType::ExtInfo &Info, raw_ostream &OS);
 #define ABSTRACT_TYPE(CLASS, PARENT)
 #define TYPE(CLASS, PARENT) \
     void print##CLASS##Before(const CLASS##Type *T, raw_ostream &OS); \
@@ -685,6 +686,36 @@ void TypePrinter::printFunctionProtoAfter(const FunctionProtoType *T,
 
   FunctionType::ExtInfo Info = T->getExtInfo();
 
+  printFunctionAfter(Info, OS);
+
+  if (unsigned quals = T->getTypeQuals()) {
+    OS << ' ';
+    AppendTypeQualList(OS, quals, Policy.Restrict);
+  }
+
+  switch (T->getRefQualifier()) {
+  case RQ_None:
+    break;
+
+  case RQ_LValue:
+    OS << " &";
+    break;
+
+  case RQ_RValue:
+    OS << " &&";
+    break;
+  }
+  T->printExceptionSpecification(OS, Policy);
+
+  if (T->hasTrailingReturn()) {
+    OS << " -> ";
+    print(T->getReturnType(), OS, StringRef());
+  } else
+    printAfter(T->getReturnType(), OS);
+}
+
+void TypePrinter::printFunctionAfter(const FunctionType::ExtInfo &Info,
+                                     raw_ostream &OS) {
   if (!InsideCCAttribute) {
     switch (Info.getCC()) {
     case CC_C:
@@ -747,36 +778,13 @@ void TypePrinter::printFunctionProtoAfter(const FunctionProtoType *T,
 
   if (Info.getNoReturn())
     OS << " __attribute__((noreturn))";
+  if (Info.getProducesResult())
+    OS << " __attribute__((ns_returns_retained))";
   if (Info.getRegParm())
     OS << " __attribute__((regparm ("
        << Info.getRegParm() << ")))";
   if (Info.getNoCallerSavedRegs())
-    OS << "__attribute__((no_caller_saved_registers))";
-
-  if (unsigned quals = T->getTypeQuals()) {
-    OS << ' ';
-    AppendTypeQualList(OS, quals, Policy.Restrict);
-  }
-
-  switch (T->getRefQualifier()) {
-  case RQ_None:
-    break;
-    
-  case RQ_LValue:
-    OS << " &";
-    break;
-    
-  case RQ_RValue:
-    OS << " &&";
-    break;
-  }
-  T->printExceptionSpecification(OS, Policy);
-
-  if (T->hasTrailingReturn()) {
-    OS << " -> ";
-    print(T->getReturnType(), OS, StringRef());
-  } else
-    printAfter(T->getReturnType(), OS);
+    OS << " __attribute__((no_caller_saved_registers))";
 }
 
 void TypePrinter::printFunctionNoProtoBefore(const FunctionNoProtoType *T, 
@@ -795,8 +803,7 @@ void TypePrinter::printFunctionNoProtoAfter(const FunctionNoProtoType *T,
   SaveAndRestore<bool> NonEmptyPH(HasEmptyPlaceHolder, false);
   
   OS << "()";
-  if (T->getNoReturnAttr())
-    OS << " __attribute__((noreturn))";
+  printFunctionAfter(T->getExtInfo(), OS);
   printAfter(T->getReturnType(), OS);
 }
 
@@ -1270,6 +1277,12 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   if (T->getAttrKind() == AttributedType::attr_objc_inert_unsafe_unretained)
     return;
 
+  // Don't print ns_returns_retained unless it had an effect.
+  if (T->getAttrKind() == AttributedType::attr_ns_returns_retained &&
+      !T->getEquivalentType()->castAs<FunctionType>()
+                             ->getExtInfo().getProducesResult())
+    return;
+
   // Print nullability type specifiers that occur after
   if (T->getAttrKind() == AttributedType::attr_nonnull ||
       T->getAttrKind() == AttributedType::attr_nullable ||
@@ -1359,6 +1372,10 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
     case Qualifiers::OCL_Autoreleasing: OS << "autoreleasing"; break;
     }
     OS << ')';
+    break;
+
+  case AttributedType::attr_ns_returns_retained:
+    OS << "ns_returns_retained";
     break;
 
   // FIXME: When Sema learns to form this AttributedType, avoid printing the

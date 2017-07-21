@@ -152,6 +152,9 @@ class MipsSubtarget : public MipsGenSubtargetInfo {
   // HasMT -- support MT ASE.
   bool HasMT;
 
+  // Disable use of the `jal` instruction.
+  bool UseLongCalls = false;
+
   InstrItineraryData InstrItins;
 
   // We can override the determination of whether we are in mips16 mode
@@ -268,6 +271,8 @@ public:
   bool hasStandardEncoding() const { return !inMips16Mode(); }
 
   bool useSoftFloat() const { return IsSoftFloat; }
+
+  bool useLongCalls() const { return UseLongCalls; }
 
   bool enableLongBranchPass() const {
     return hasStandardEncoding() || allowMixed16_32();

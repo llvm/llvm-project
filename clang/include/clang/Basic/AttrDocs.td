@@ -910,13 +910,13 @@ the function declaration for a hypothetical function ``f``:
 
   void f(void) __attribute__((availability(macos,introduced=10.4,deprecated=10.6,obsoleted=10.7)));
 
-The availability attribute states that ``f`` was introduced in Mac OS X 10.4,
-deprecated in Mac OS X 10.6, and obsoleted in Mac OS X 10.7.  This information
+The availability attribute states that ``f`` was introduced in macOS 10.4,
+deprecated in macOS 10.6, and obsoleted in macOS 10.7.  This information
 is used by Clang to determine when it is safe to use ``f``: for example, if
-Clang is instructed to compile code for Mac OS X 10.5, a call to ``f()``
-succeeds.  If Clang is instructed to compile code for Mac OS X 10.6, the call
+Clang is instructed to compile code for macOS 10.5, a call to ``f()``
+succeeds.  If Clang is instructed to compile code for macOS 10.6, the call
 succeeds but Clang emits a warning specifying that the function is deprecated.
-Finally, if Clang is instructed to compile code for Mac OS X 10.7, the call
+Finally, if Clang is instructed to compile code for macOS 10.7, the call
 fails because ``f()`` is no longer available.
 
 The availability attribute is a comma-separated list starting with the
@@ -961,7 +961,7 @@ are:
   command-line arguments.
 
 ``macos``
-  Apple's Mac OS X operating system.  The minimum deployment target is
+  Apple's macOS operating system.  The minimum deployment target is
   specified by the ``-mmacosx-version-min=*version*`` command-line argument.
   ``macosx`` is supported for backward-compatibility reasons, but it is
   deprecated.
@@ -1015,6 +1015,19 @@ When one method overrides another, the overriding method can be more widely avai
   - (id)method __attribute__((availability(macos,introduced=10.3))); // okay: method moved into base class later
   - (id)method __attribute__((availability(macos,introduced=10.5))); // error: this method was available via the base class in 10.4
   @end
+
+Starting with the macOS 10.12 SDK, the ``API_AVAILABLE`` macro from
+``<os/availability.h>`` can simplify the spelling:
+
+.. code-block:: objc
+
+  @interface A
+  - (id)method API_AVAILABLE(macos(10.11)));
+  - (id)otherMethod API_AVAILABLE(macos(10.11), ios(11.0));
+  @end
+
+Also see the documentation for `@available
+<http://clang.llvm.org/docs/LanguageExtensions.html#objective-c-available>`_
   }];
 }
 

@@ -117,7 +117,7 @@ ARMBaseRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
                                           CallingConv::ID CC) const {
   const ARMSubtarget &STI = MF.getSubtarget<ARMSubtarget>();
   if (CC == CallingConv::GHC)
-    // This is academic becase all GHC calls are (supposed to be) tail calls
+    // This is academic because all GHC calls are (supposed to be) tail calls
     return CSR_NoRegs_RegMask;
 
   if (STI.isTargetDarwin() && STI.getTargetLowering()->supportSwiftError() &&
@@ -163,7 +163,7 @@ ARMBaseRegisterInfo::getThisReturnPreservedMask(const MachineFunction &MF,
   // both or otherwise does not want to enable this optimization, the function
   // should return NULL
   if (CC == CallingConv::GHC)
-    // This is academic becase all GHC calls are (supposed to be) tail calls
+    // This is academic because all GHC calls are (supposed to be) tail calls
     return nullptr;
   return STI.isTargetDarwin() ? CSR_iOS_ThisReturn_RegMask
                               : CSR_AAPCS_ThisReturn_RegMask;

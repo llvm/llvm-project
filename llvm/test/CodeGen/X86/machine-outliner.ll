@@ -85,6 +85,7 @@ define i32 @main() #0 {
   store i32 3, i32* %4, align 4
   store i32 4, i32* %5, align 4
   store i32 1, i32* @x, align 4
+  call void asm sideeffect "", "~{memory},~{dirflag},~{fpsr},~{flags}"()
   ; CHECK: callq [[OFUNC2]]
   store i32 1, i32* %2, align 4
   store i32 2, i32* %3, align 4

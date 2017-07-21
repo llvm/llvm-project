@@ -433,7 +433,7 @@ LazyCallGraph::SCC &llvm::updateCGAndAnalysisManagerForFunctionPass(
         if (Visited.insert(C).second)
           Worklist.push_back(C);
 
-  LazyCallGraph::visitReferences(Worklist, Visited, [&](Function &Referee) {
+  auto VisitRef = [&](Function &Referee) {
     Node &RefereeN = *G.lookup(Referee);
     Edge *E = N->lookup(RefereeN);
     // FIXME: Similarly to new calls, we also currently preclude
@@ -444,7 +444,12 @@ LazyCallGraph::SCC &llvm::updateCGAndAnalysisManagerForFunctionPass(
     RetainedEdges.insert(&RefereeN);
     if (E->isCall())
       DemotedCallTargets.insert(&RefereeN);
-  });
+  };
+  LazyCallGraph::visitReferences(Worklist, Visited, VisitRef);
+
+  // Include synthetic reference edges to known, defined lib functions.
+  for (auto *F : G.getLibFunctions())
+    VisitRef(*F);
 
   // First remove all of the edges that are no longer present in this function.
   // We have to build a list of dead targets first and then remove them as the

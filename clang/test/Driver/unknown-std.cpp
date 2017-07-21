@@ -15,6 +15,8 @@
 // CHECK-NEXT: note: use 'gnu++14' for 'ISO C++ 2014 with amendments and GNU extensions' standard
 // CHECK-NEXT: note: use 'c++1z' for 'Working draft for ISO C++ 2017' standard
 // CHECK-NEXT: note: use 'gnu++1z' for 'Working draft for ISO C++ 2017 with GNU extensions' standard
+// CHECK-NEXT: note: use 'c++2a' for 'Working draft for ISO C++ 2020' standard
+// CHECK-NEXT: note: use 'gnu++2a' for 'Working draft for ISO C++ 2020 with GNU extensions' standard
 // CUDA-NEXT: note: use 'cuda' for 'NVIDIA CUDA(tm)' standard
 
 // Make sure that no other output is present.

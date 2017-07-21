@@ -7482,6 +7482,14 @@ AArch64TargetLowering::getNumInterleavedAccesses(VectorType *VecTy,
   return (DL.getTypeSizeInBits(VecTy) + 127) / 128;
 }
 
+MachineMemOperand::Flags
+AArch64TargetLowering::getMMOFlags(const Instruction &I) const {
+  if (Subtarget->getProcFamily() == AArch64Subtarget::Falkor &&
+      I.getMetadata(FALKOR_STRIDED_ACCESS_MD) != nullptr)
+    return MOStridedAccess;
+  return MachineMemOperand::MONone;
+}
+
 bool AArch64TargetLowering::isLegalInterleavedAccessType(
     VectorType *VecTy, const DataLayout &DL) const {
 

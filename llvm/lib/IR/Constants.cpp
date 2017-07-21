@@ -44,8 +44,8 @@ bool Constant::isNegativeZeroValue() const {
 
   // Equivalent for a vector of -0.0's.
   if (const ConstantDataVector *CV = dyn_cast<ConstantDataVector>(this))
-    if (ConstantFP *SplatCFP = dyn_cast_or_null<ConstantFP>(CV->getSplatValue()))
-      if (SplatCFP && SplatCFP->isZero() && SplatCFP->isNegative())
+    if (CV->getElementType()->isFloatingPointTy() && CV->isSplat())
+      if (CV->getElementAsAPFloat(0).isNegZero())
         return true;
 
   if (const ConstantVector *CV = dyn_cast<ConstantVector>(this))
@@ -70,8 +70,8 @@ bool Constant::isZeroValue() const {
 
   // Equivalent for a vector of -0.0's.
   if (const ConstantDataVector *CV = dyn_cast<ConstantDataVector>(this))
-    if (ConstantFP *SplatCFP = dyn_cast_or_null<ConstantFP>(CV->getSplatValue()))
-      if (SplatCFP && SplatCFP->isZero())
+    if (CV->getElementType()->isFloatingPointTy() && CV->isSplat())
+      if (CV->getElementAsAPFloat(0).isZero())
         return true;
 
   if (const ConstantVector *CV = dyn_cast<ConstantVector>(this))
@@ -113,9 +113,13 @@ bool Constant::isAllOnesValue() const {
       return Splat->isAllOnesValue();
 
   // Check for constant vectors which are splats of -1 values.
-  if (const ConstantDataVector *CV = dyn_cast<ConstantDataVector>(this))
-    if (Constant *Splat = CV->getSplatValue())
-      return Splat->isAllOnesValue();
+  if (const ConstantDataVector *CV = dyn_cast<ConstantDataVector>(this)) {
+    if (CV->isSplat()) {
+      if (CV->getElementType()->isFloatingPointTy())
+        return CV->getElementAsAPFloat(0).bitcastToAPInt().isAllOnesValue();
+      return CV->getElementAsAPInt(0).isAllOnesValue();
+    }
+  }
 
   return false;
 }
@@ -135,9 +139,13 @@ bool Constant::isOneValue() const {
       return Splat->isOneValue();
 
   // Check for constant vectors which are splats of 1 values.
-  if (const ConstantDataVector *CV = dyn_cast<ConstantDataVector>(this))
-    if (Constant *Splat = CV->getSplatValue())
-      return Splat->isOneValue();
+  if (const ConstantDataVector *CV = dyn_cast<ConstantDataVector>(this)) {
+    if (CV->isSplat()) {
+      if (CV->getElementType()->isFloatingPointTy())
+        return CV->getElementAsAPFloat(0).bitcastToAPInt().isOneValue();
+      return CV->getElementAsAPInt(0).isOneValue();
+    }
+  }
 
   return false;
 }
@@ -157,9 +165,13 @@ bool Constant::isMinSignedValue() const {
       return Splat->isMinSignedValue();
 
   // Check for constant vectors which are splats of INT_MIN values.
-  if (const ConstantDataVector *CV = dyn_cast<ConstantDataVector>(this))
-    if (Constant *Splat = CV->getSplatValue())
-      return Splat->isMinSignedValue();
+  if (const ConstantDataVector *CV = dyn_cast<ConstantDataVector>(this)) {
+    if (CV->isSplat()) {
+      if (CV->getElementType()->isFloatingPointTy())
+        return CV->getElementAsAPFloat(0).bitcastToAPInt().isMinSignedValue();
+      return CV->getElementAsAPInt(0).isMinSignedValue();
+    }
+  }
 
   return false;
 }
@@ -179,9 +191,13 @@ bool Constant::isNotMinSignedValue() const {
       return Splat->isNotMinSignedValue();
 
   // Check for constant vectors which are splats of INT_MIN values.
-  if (const ConstantDataVector *CV = dyn_cast<ConstantDataVector>(this))
-    if (Constant *Splat = CV->getSplatValue())
-      return Splat->isNotMinSignedValue();
+  if (const ConstantDataVector *CV = dyn_cast<ConstantDataVector>(this)) {
+    if (CV->isSplat()) {
+      if (CV->getElementType()->isFloatingPointTy())
+        return !CV->getElementAsAPFloat(0).bitcastToAPInt().isMinSignedValue();
+      return !CV->getElementAsAPInt(0).isMinSignedValue();
+    }
+  }
 
   // It *may* contain INT_MIN, we can't tell.
   return false;
@@ -2565,6 +2581,34 @@ uint64_t ConstantDataSequential::getElementAsInteger(unsigned Elt) const {
   }
 }
 
+APInt ConstantDataSequential::getElementAsAPInt(unsigned Elt) const {
+  assert(isa<IntegerType>(getElementType()) &&
+         "Accessor can only be used when element is an integer");
+  const char *EltPtr = getElementPointer(Elt);
+
+  // The data is stored in host byte order, make sure to cast back to the right
+  // type to load with the right endianness.
+  switch (getElementType()->getIntegerBitWidth()) {
+  default: llvm_unreachable("Invalid bitwidth for CDS");
+  case 8: {
+    auto EltVal = *reinterpret_cast<const uint8_t *>(EltPtr);
+    return APInt(8, EltVal);
+  }
+  case 16: {
+    auto EltVal = *reinterpret_cast<const uint16_t *>(EltPtr);
+    return APInt(16, EltVal);
+  }
+  case 32: {
+    auto EltVal = *reinterpret_cast<const uint32_t *>(EltPtr);
+    return APInt(32, EltVal);
+  }
+  case 64: {
+    auto EltVal = *reinterpret_cast<const uint64_t *>(EltPtr);
+    return APInt(64, EltVal);
+  }
+  }
+}
+
 APFloat ConstantDataSequential::getElementAsAPFloat(unsigned Elt) const {
   const char *EltPtr = getElementPointer(Elt);
 
@@ -2623,17 +2667,21 @@ bool ConstantDataSequential::isCString() const {
   return Str.drop_back().find(0) == StringRef::npos;
 }
 
-Constant *ConstantDataVector::getSplatValue() const {
+bool ConstantDataVector::isSplat() const {
   const char *Base = getRawDataValues().data();
 
   // Compare elements 1+ to the 0'th element.
   unsigned EltSize = getElementByteSize();
   for (unsigned i = 1, e = getNumElements(); i != e; ++i)
     if (memcmp(Base, Base+i*EltSize, EltSize))
-      return nullptr;
+      return false;
 
+  return true;
+}
+
+Constant *ConstantDataVector::getSplatValue() const {
   // If they're all the same, return the 0th one as a representative.
-  return getElementAsConstant(0);
+  return isSplat() ? getElementAsConstant(0) : nullptr;
 }
 
 //===----------------------------------------------------------------------===//

@@ -636,17 +636,35 @@ Value *InstCombiner::SimplifyUsingDistributiveLaws(BinaryOperator &I) {
     Value *A = Op0->getOperand(0), *B = Op0->getOperand(1), *C = RHS;
     Instruction::BinaryOps InnerOpcode = Op0->getOpcode(); // op'
 
+    Value *L = SimplifyBinOp(TopLevelOpcode, A, C, SQ.getWithInstruction(&I));
+    Value *R = SimplifyBinOp(TopLevelOpcode, B, C, SQ.getWithInstruction(&I));
+
     // Do "A op C" and "B op C" both simplify?
-    if (Value *L =
-            SimplifyBinOp(TopLevelOpcode, A, C, SQ.getWithInstruction(&I)))
-      if (Value *R =
-              SimplifyBinOp(TopLevelOpcode, B, C, SQ.getWithInstruction(&I))) {
-        // They do! Return "L op' R".
-        ++NumExpand;
-        C = Builder.CreateBinOp(InnerOpcode, L, R);
-        C->takeName(&I);
-        return C;
-      }
+    if (L && R) {
+      // They do! Return "L op' R".
+      ++NumExpand;
+      C = Builder.CreateBinOp(InnerOpcode, L, R);
+      C->takeName(&I);
+      return C;
+    }
+
+    // Does "A op C" simplify to the identity value for the inner opcode?
+    if (L && L == ConstantExpr::getBinOpIdentity(InnerOpcode, L->getType())) {
+      // They do! Return "B op C".
+      ++NumExpand;
+      C = Builder.CreateBinOp(TopLevelOpcode, B, C);
+      C->takeName(&I);
+      return C;
+    }
+
+    // Does "B op C" simplify to the identity value for the inner opcode?
+    if (R && R == ConstantExpr::getBinOpIdentity(InnerOpcode, R->getType())) {
+      // They do! Return "A op C".
+      ++NumExpand;
+      C = Builder.CreateBinOp(TopLevelOpcode, A, C);
+      C->takeName(&I);
+      return C;
+    }
   }
 
   if (Op1 && LeftDistributesOverRight(TopLevelOpcode, Op1->getOpcode())) {
@@ -655,17 +673,35 @@ Value *InstCombiner::SimplifyUsingDistributiveLaws(BinaryOperator &I) {
     Value *A = LHS, *B = Op1->getOperand(0), *C = Op1->getOperand(1);
     Instruction::BinaryOps InnerOpcode = Op1->getOpcode(); // op'
 
+    Value *L = SimplifyBinOp(TopLevelOpcode, A, B, SQ.getWithInstruction(&I));
+    Value *R = SimplifyBinOp(TopLevelOpcode, A, C, SQ.getWithInstruction(&I));
+
     // Do "A op B" and "A op C" both simplify?
-    if (Value *L =
-            SimplifyBinOp(TopLevelOpcode, A, B, SQ.getWithInstruction(&I)))
-      if (Value *R =
-              SimplifyBinOp(TopLevelOpcode, A, C, SQ.getWithInstruction(&I))) {
-        // They do! Return "L op' R".
-        ++NumExpand;
-        A = Builder.CreateBinOp(InnerOpcode, L, R);
-        A->takeName(&I);
-        return A;
-      }
+    if (L && R) {
+      // They do! Return "L op' R".
+      ++NumExpand;
+      A = Builder.CreateBinOp(InnerOpcode, L, R);
+      A->takeName(&I);
+      return A;
+    }
+
+    // Does "A op B" simplify to the identity value for the inner opcode?
+    if (L && L == ConstantExpr::getBinOpIdentity(InnerOpcode, L->getType())) {
+      // They do! Return "A op C".
+      ++NumExpand;
+      A = Builder.CreateBinOp(TopLevelOpcode, A, C);
+      A->takeName(&I);
+      return A;
+    }
+
+    // Does "A op C" simplify to the identity value for the inner opcode?
+    if (R && R == ConstantExpr::getBinOpIdentity(InnerOpcode, R->getType())) {
+      // They do! Return "A op B".
+      ++NumExpand;
+      A = Builder.CreateBinOp(TopLevelOpcode, A, B);
+      A->takeName(&I);
+      return A;
+    }
   }
 
   // (op (select (a, c, b)), (select (a, d, b))) -> (select (a, (op c, d), 0))

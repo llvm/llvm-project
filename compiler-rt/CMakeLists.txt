@@ -172,10 +172,16 @@ endif()
 
 append_list_if(COMPILER_RT_DEBUG -DSANITIZER_DEBUG=1 SANITIZER_COMMON_CFLAGS)
 
-# Build with optimization, unless we're in debug mode. If we're using MSVC,
+# If we're using MSVC,
 # always respect the optimization flags set by CMAKE_BUILD_TYPE instead.
-if(NOT COMPILER_RT_DEBUG AND NOT MSVC)
-  list(APPEND SANITIZER_COMMON_CFLAGS -O3)
+if (NOT MSVC)
+
+  # Build with optimization, unless we're in debug mode. 
+  if(COMPILER_RT_DEBUG)
+    list(APPEND SANITIZER_COMMON_CFLAGS -O0)
+  else()
+    list(APPEND SANITIZER_COMMON_CFLAGS -O3)
+  endif()
 endif()
 
 # Determine if we should restrict stack frame sizes.

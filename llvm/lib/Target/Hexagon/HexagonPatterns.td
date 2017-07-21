@@ -2971,45 +2971,40 @@ def: Pat<(v64i32 (HexagonVCOMBINE (v32i32 VecDblRegs:$Vs),
          (V6_vcombine_128B VecDblRegs:$Vs, VecDblRegs:$Vt)>,
          Requires<[UseHVXDbl]>;
 
-def SDTHexagonVPACK: SDTypeProfile<1, 3, [SDTCisSameAs<1, 2>,
-                                          SDTCisInt<3>]>;
+def SDTHexagonVPACK: SDTypeProfile<1, 2, [SDTCisSameAs<1, 2>, SDTCisVec<1>]>;
 
-def HexagonVPACK: SDNode<"HexagonISD::VPACK", SDTHexagonVPACK>;
+def HexagonVPACKE: SDNode<"HexagonISD::VPACKE", SDTHexagonVPACK>;
+def HexagonVPACKO: SDNode<"HexagonISD::VPACKO", SDTHexagonVPACK>;
 
-// 0 as the last argument denotes vpacke. 1 denotes vpacko
-def: Pat<(v64i8 (HexagonVPACK (v64i8 VectorRegs:$Vs),
-                              (v64i8 VectorRegs:$Vt), (i32 0))),
-         (V6_vpackeb VectorRegs:$Vs, VectorRegs:$Vt)>,
-         Requires<[UseHVXSgl]>;
-def: Pat<(v64i8 (HexagonVPACK (v64i8 VectorRegs:$Vs),
-                              (v64i8 VectorRegs:$Vt), (i32 1))),
-         (V6_vpackob VectorRegs:$Vs, VectorRegs:$Vt)>,
-         Requires<[UseHVXSgl]>;
-def: Pat<(v32i16 (HexagonVPACK (v32i16 VectorRegs:$Vs),
-                               (v32i16 VectorRegs:$Vt), (i32 0))),
-         (V6_vpackeh VectorRegs:$Vs, VectorRegs:$Vt)>,
-         Requires<[UseHVXSgl]>;
-def: Pat<(v32i16 (HexagonVPACK (v32i16 VectorRegs:$Vs),
-                             (v32i16 VectorRegs:$Vt), (i32 1))),
-         (V6_vpackoh VectorRegs:$Vs, VectorRegs:$Vt)>,
-         Requires<[UseHVXSgl]>;
+let Predicates = [UseHVXSgl] in {
+  def: Pat<(v64i8 (HexagonVPACKE (v64i8 VectorRegs:$Vs),
+                                 (v64i8 VectorRegs:$Vt))),
+           (V6_vpackeb VectorRegs:$Vs, VectorRegs:$Vt)>;
+  def: Pat<(v64i8 (HexagonVPACKO (v64i8 VectorRegs:$Vs),
+                                 (v64i8 VectorRegs:$Vt))),
+           (V6_vpackob VectorRegs:$Vs, VectorRegs:$Vt)>;
+  def: Pat<(v32i16 (HexagonVPACKE (v32i16 VectorRegs:$Vs),
+                                  (v32i16 VectorRegs:$Vt))),
+           (V6_vpackeh VectorRegs:$Vs, VectorRegs:$Vt)>;
+  def: Pat<(v32i16 (HexagonVPACKO (v32i16 VectorRegs:$Vs),
+                                  (v32i16 VectorRegs:$Vt))),
+           (V6_vpackoh VectorRegs:$Vs, VectorRegs:$Vt)>;
+}
 
-def: Pat<(v128i8 (HexagonVPACK (v128i8 VecDblRegs:$Vs),
-                             (v128i8 VecDblRegs:$Vt), (i32 0))),
-         (V6_vpackeb_128B VecDblRegs:$Vs, VecDblRegs:$Vt)>,
-         Requires<[UseHVXDbl]>;
-def: Pat<(v128i8 (HexagonVPACK (v128i8 VecDblRegs:$Vs),
-                             (v128i8 VecDblRegs:$Vt), (i32 1))),
-         (V6_vpackob_128B VecDblRegs:$Vs, VecDblRegs:$Vt)>,
-         Requires<[UseHVXDbl]>;
-def: Pat<(v64i16 (HexagonVPACK (v64i16 VecDblRegs:$Vs),
-                             (v64i16 VecDblRegs:$Vt), (i32 0))),
-         (V6_vpackeh_128B VecDblRegs:$Vs, VecDblRegs:$Vt)>,
-         Requires<[UseHVXDbl]>;
-def: Pat<(v64i16 (HexagonVPACK (v64i16 VecDblRegs:$Vs),
-                            (v64i16 VecDblRegs:$Vt), (i32 1))),
-        (V6_vpackoh_128B VecDblRegs:$Vs, VecDblRegs:$Vt)>,
-        Requires<[UseHVXDbl]>;
+let Predicates = [UseHVXDbl] in {
+  def: Pat<(v128i8 (HexagonVPACKE (v128i8 VecDblRegs:$Vs),
+                                  (v128i8 VecDblRegs:$Vt))),
+           (V6_vpackeb_128B VecDblRegs:$Vs, VecDblRegs:$Vt)>;
+  def: Pat<(v128i8 (HexagonVPACKO (v128i8 VecDblRegs:$Vs),
+                                  (v128i8 VecDblRegs:$Vt))),
+           (V6_vpackob_128B VecDblRegs:$Vs, VecDblRegs:$Vt)>;
+  def: Pat<(v64i16 (HexagonVPACKE (v64i16 VecDblRegs:$Vs),
+                                  (v64i16 VecDblRegs:$Vt))),
+           (V6_vpackeh_128B VecDblRegs:$Vs, VecDblRegs:$Vt)>;
+  def: Pat<(v64i16 (HexagonVPACKO (v64i16 VecDblRegs:$Vs),
+                                  (v64i16 VecDblRegs:$Vt))),
+          (V6_vpackoh_128B VecDblRegs:$Vs, VecDblRegs:$Vt)>;
+}
 
 def V2I1:  PatLeaf<(v2i1  PredRegs:$R)>;
 def V4I1:  PatLeaf<(v4i1  PredRegs:$R)>;

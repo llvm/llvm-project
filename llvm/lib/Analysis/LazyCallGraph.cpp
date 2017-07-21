@@ -106,6 +106,13 @@ LazyCallGraph::EdgeSequence &LazyCallGraph::Node::populateSlow() {
             LazyCallGraph::Edge::Ref);
   });
 
+  // Add implicit reference edges to any defined libcall functions (if we
+  // haven't found an explicit edge).
+  for (auto *F : G->LibFunctions)
+    if (!Visited.count(F))
+      addEdge(Edges->Edges, Edges->EdgeIndexMap, G->get(*F),
+              LazyCallGraph::Edge::Ref);
+
   return *Edges;
 }
 
@@ -120,15 +127,34 @@ LLVM_DUMP_METHOD void LazyCallGraph::Node::dump() const {
 }
 #endif
 
-LazyCallGraph::LazyCallGraph(Module &M) {
+static bool isKnownLibFunction(Function &F, TargetLibraryInfo &TLI) {
+  LibFunc LF;
+
+  // Either this is a normal library function or a "vectorizable" function.
+  return TLI.getLibFunc(F, LF) || TLI.isFunctionVectorizable(F.getName());
+}
+
+LazyCallGraph::LazyCallGraph(Module &M, TargetLibraryInfo &TLI) {
   DEBUG(dbgs() << "Building CG for module: " << M.getModuleIdentifier()
                << "\n");
-  for (Function &F : M)
-    if (!F.isDeclaration() && !F.hasLocalLinkage()) {
-      DEBUG(dbgs() << "  Adding '" << F.getName()
-                   << "' to entry set of the graph.\n");
-      addEdge(EntryEdges.Edges, EntryEdges.EdgeIndexMap, get(F), Edge::Ref);
-    }
+  for (Function &F : M) {
+    if (F.isDeclaration())
+      continue;
+    // If this function is a known lib function to LLVM then we want to
+    // synthesize reference edges to it to model the fact that LLVM can turn
+    // arbitrary code into a library function call.
+    if (isKnownLibFunction(F, TLI))
+      LibFunctions.push_back(&F);
+
+    if (F.hasLocalLinkage())
+      continue;
+
+    // External linkage defined functions have edges to them from other
+    // modules.
+    DEBUG(dbgs() << "  Adding '" << F.getName()
+                 << "' to entry set of the graph.\n");
+    addEdge(EntryEdges.Edges, EntryEdges.EdgeIndexMap, get(F), Edge::Ref);
+  }
 
   // Now add entry nodes for functions reachable via initializers to globals.
   SmallVector<Constant *, 16> Worklist;
@@ -149,7 +175,8 @@ LazyCallGraph::LazyCallGraph(Module &M) {
 LazyCallGraph::LazyCallGraph(LazyCallGraph &&G)
     : BPA(std::move(G.BPA)), NodeMap(std::move(G.NodeMap)),
       EntryEdges(std::move(G.EntryEdges)), SCCBPA(std::move(G.SCCBPA)),
-      SCCMap(std::move(G.SCCMap)), LeafRefSCCs(std::move(G.LeafRefSCCs)) {
+      SCCMap(std::move(G.SCCMap)), LeafRefSCCs(std::move(G.LeafRefSCCs)),
+      LibFunctions(std::move(G.LibFunctions)) {
   updateGraphPtrs();
 }
 
@@ -160,6 +187,7 @@ LazyCallGraph &LazyCallGraph::operator=(LazyCallGraph &&G) {
   SCCBPA = std::move(G.SCCBPA);
   SCCMap = std::move(G.SCCMap);
   LeafRefSCCs = std::move(G.LeafRefSCCs);
+  LibFunctions = std::move(G.LibFunctions);
   updateGraphPtrs();
   return *this;
 }

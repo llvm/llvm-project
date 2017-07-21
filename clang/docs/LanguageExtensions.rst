@@ -1271,6 +1271,87 @@ Further examples of these attributes are available in the static analyzer's `lis
 Query for these features with ``__has_attribute(ns_consumed)``,
 ``__has_attribute(ns_returns_retained)``, etc.
 
+Objective-C @available
+----------------------
+
+It is possible to use the newest SDK but still build a program that can run on
+older versions of macOS and iOS by passing ``-mmacosx-version-min=`` /
+``-miphoneos-version-min=``.
+
+Before LLVM 5.0, when calling a function that exists only in the OS that's
+newer than the target OS (as determined by the minimum deployment version),
+programmers had to carefully check if the function exists at runtime, using
+null checks for weakly-linked C functions, ``+class`` for Objective-C classes,
+and ``-respondsToSelector:`` or ``+instancesRespondToSelector:`` for
+Objective-C methods.  If such a check was missed, the program would compile
+fine, run fine on newer systems, but crash on older systems.
+
+As of LLVM 5.0, ``-Wunguarded-availability`` uses the `availability attributes
+<http://clang.llvm.org/docs/AttributeReference.html#availability>`_ together
+with the new ``@available()`` keyword to assist with this issue.
+When a method that's introduced in the OS newer than the target OS is called, a
+-Wunguarded-availability warning is emitted if that call is not guarded:
+
+.. code-block:: objc
+
+  void my_fun(NSSomeClass* var) {
+    // If fancyNewMethod was added in e.g. macOS 10.12, but the code is
+    // built with -mmacosx-version-min=10.11, then this unconditional call
+    // will emit a -Wunguarded-availability warning:
+    [var fancyNewMethod];
+  }
+
+To fix the warning and to avoid the crash on macOS 10.11, wrap it in
+``if(@available())``:
+
+.. code-block:: objc
+
+  void my_fun(NSSomeClass* var) {
+    if (@available(macOS 10.12, *)) {
+      [var fancyNewMethod];
+    } else {
+      // Put fallback behavior for old macOS versions (and for non-mac
+      // platforms) here.
+    }
+  }
+
+The ``*`` is required and means that platforms not explicitly listed will take
+the true branch, and the compiler will emit ``-Wunguarded-availability``
+warnings for unlisted platforms based on those platform's deployment target.
+More than one platform can be listed in ``@available()``:
+
+.. code-block:: objc
+
+  void my_fun(NSSomeClass* var) {
+    if (@available(macOS 10.12, iOS 10, *)) {
+      [var fancyNewMethod];
+    }
+  }
+
+If the caller of ``my_fun()`` already checks that ``my_fun()`` is only called
+on 10.12, then add an `availability attribute
+<http://clang.llvm.org/docs/AttributeReference.html#availability>`_ to it,
+which will also suppress the warning and require that calls to my_fun() are
+checked:
+
+.. code-block:: objc
+
+  API_AVAILABLE(macos(10.12)) void my_fun(NSSomeClass* var) {
+    [var fancyNewMethod];  // Now ok.
+  }
+
+``@available()`` is only available in Objective-C code.  To use the feature
+in C and C++ code, use the ``__builtin_available()`` spelling instead.
+
+If existing code uses null checks or ``-respondsToSelector:``, it should
+be changed to use ``@available()`` (or ``__builtin_available``) instead.
+
+``-Wunguarded-availability`` is disabled by default, but
+``-Wunguarded-availability-new``, which only emits this warning for APIs
+that have been introduced in macOS >= 10.13, iOS >= 11, watchOS >= 4 and
+tvOS >= 11, is enabled by default.
+
+.. _langext-overloading:
 
 Objective-C++ ABI: protocol-qualifier mangling of parameters
 ------------------------------------------------------------
@@ -1286,8 +1367,6 @@ parameters of protocol-qualified type.
 
 Query the presence of this new mangling with
 ``__has_feature(objc_protocol_qualifier_mangling)``.
-
-.. _langext-overloading:
 
 Initializer lists for complex numbers in C
 ==========================================

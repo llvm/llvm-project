@@ -35,9 +35,6 @@ private:
 
   bool addFeatureAttributes(Function &F);
 
-  void addAttrToCallers(Function &Intrin, StringRef AttrName);
-  bool addAttrsForIntrinsics(Module &M, ArrayRef<StringRef[2]>);
-
 public:
   static char ID;
 
@@ -251,35 +248,6 @@ bool AMDGPUAnnotateKernelFeatures::addFeatureAttributes(Function &F) {
   if (NeedQueuePtr) {
     F.addFnAttr("amdgpu-queue-ptr");
     Changed = true;
-  }
-
-  return Changed;
-}
-
-void AMDGPUAnnotateKernelFeatures::addAttrToCallers(Function &Intrin,
-                                                    StringRef AttrName) {
-  SmallPtrSet<Function *, 4> SeenFuncs;
-
-  for (User *U : Intrin.users()) {
-    // CallInst is the only valid user for an intrinsic.
-    CallInst *CI = cast<CallInst>(U);
-
-    Function *CallingFunction = CI->getParent()->getParent();
-    if (SeenFuncs.insert(CallingFunction).second)
-      CallingFunction->addFnAttr(AttrName);
-  }
-}
-
-bool AMDGPUAnnotateKernelFeatures::addAttrsForIntrinsics(
-  Module &M,
-  ArrayRef<StringRef[2]> IntrinsicToAttr) {
-  bool Changed = false;
-
-  for (const StringRef *Arr  : IntrinsicToAttr) {
-    if (Function *Fn = M.getFunction(Arr[0])) {
-      addAttrToCallers(*Fn, Arr[1]);
-      Changed = true;
-    }
   }
 
   return Changed;

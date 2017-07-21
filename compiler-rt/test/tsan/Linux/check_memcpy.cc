@@ -5,6 +5,8 @@
 // RUN: %clangxx_tsan -O1 %s -o %t
 // RUN: llvm-objdump -d %t | FileCheck %s
 
+// REQUIRES: compiler-rt-optimized
+
 int main() {
   return 0;
 }

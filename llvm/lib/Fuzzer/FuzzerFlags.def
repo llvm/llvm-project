@@ -121,6 +121,9 @@ FUZZER_FLAG_STRING(exit_on_src_pos, "Exit if a newly found PC originates"
 FUZZER_FLAG_STRING(exit_on_item, "Exit if an item with a given sha1 sum"
     " was added to the corpus. "
     "Used primarily for testing libFuzzer itself.")
+FUZZER_FLAG_INT(ignore_remaining_args, 0, "If 1, ignore all arguments passed "
+                "after this one. Useful for fuzzers that need to do their own "
+                "argument parsing.")
 
 FUZZER_FLAG_STRING(run_equivalence_server, "Experimental")
 FUZZER_FLAG_STRING(use_equivalence_server, "Experimental")

@@ -22,6 +22,7 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Analysis/LoopPass.h"
+#include "llvm/Analysis/OptimizationDiagnosticInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpander.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
@@ -323,9 +324,10 @@ static PHINode *getInductionVariable(Loop *L, ScalarEvolution *SE) {
 class LoopInterchangeLegality {
 public:
   LoopInterchangeLegality(Loop *Outer, Loop *Inner, ScalarEvolution *SE,
-                          LoopInfo *LI, DominatorTree *DT, bool PreserveLCSSA)
+                          LoopInfo *LI, DominatorTree *DT, bool PreserveLCSSA,
+                          OptimizationRemarkEmitter *ORE)
       : OuterLoop(Outer), InnerLoop(Inner), SE(SE), LI(LI), DT(DT),
-        PreserveLCSSA(PreserveLCSSA), InnerLoopHasReduction(false) {}
+        PreserveLCSSA(PreserveLCSSA), ORE(ORE), InnerLoopHasReduction(false) {}
 
   /// Check if the loops can be interchanged.
   bool canInterchangeLoops(unsigned InnerLoopId, unsigned OuterLoopId,
@@ -353,6 +355,8 @@ private:
   LoopInfo *LI;
   DominatorTree *DT;
   bool PreserveLCSSA;
+  /// Interface to emit optimization remarks.
+  OptimizationRemarkEmitter *ORE;
 
   bool InnerLoopHasReduction;
 };
@@ -361,8 +365,9 @@ private:
 /// loop.
 class LoopInterchangeProfitability {
 public:
-  LoopInterchangeProfitability(Loop *Outer, Loop *Inner, ScalarEvolution *SE)
-      : OuterLoop(Outer), InnerLoop(Inner), SE(SE) {}
+  LoopInterchangeProfitability(Loop *Outer, Loop *Inner, ScalarEvolution *SE,
+                               OptimizationRemarkEmitter *ORE)
+      : OuterLoop(Outer), InnerLoop(Inner), SE(SE), ORE(ORE) {}
 
   /// Check if the loop interchange is profitable.
   bool isProfitable(unsigned InnerLoopId, unsigned OuterLoopId,
@@ -376,6 +381,8 @@ private:
 
   /// Scev analysis.
   ScalarEvolution *SE;
+  /// Interface to emit optimization remarks.
+  OptimizationRemarkEmitter *ORE;
 };
 
 /// LoopInterchangeTransform interchanges the loop.
@@ -422,6 +429,9 @@ struct LoopInterchange : public FunctionPass {
   DependenceInfo *DI;
   DominatorTree *DT;
   bool PreserveLCSSA;
+  /// Interface to emit optimization remarks.
+  OptimizationRemarkEmitter *ORE;
+
   LoopInterchange()
       : FunctionPass(ID), SE(nullptr), LI(nullptr), DI(nullptr), DT(nullptr) {
     initializeLoopInterchangePass(*PassRegistry::getPassRegistry());
@@ -435,6 +445,7 @@ struct LoopInterchange : public FunctionPass {
     AU.addRequired<DependenceAnalysisWrapperPass>();
     AU.addRequiredID(LoopSimplifyID);
     AU.addRequiredID(LCSSAID);
+    AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
   }
 
   bool runOnFunction(Function &F) override {
@@ -446,6 +457,7 @@ struct LoopInterchange : public FunctionPass {
     DI = &getAnalysis<DependenceAnalysisWrapperPass>().getDI();
     auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>();
     DT = DTWP ? &DTWP->getDomTree() : nullptr;
+    ORE = &getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
     PreserveLCSSA = mustPreserveAnalysisID(LCSSAID);
 
     // Build up a worklist of loop pairs to analyze.
@@ -575,17 +587,22 @@ struct LoopInterchange : public FunctionPass {
     Loop *OuterLoop = LoopList[OuterLoopId];
 
     LoopInterchangeLegality LIL(OuterLoop, InnerLoop, SE, LI, DT,
-                                PreserveLCSSA);
+                                PreserveLCSSA, ORE);
     if (!LIL.canInterchangeLoops(InnerLoopId, OuterLoopId, DependencyMatrix)) {
       DEBUG(dbgs() << "Not interchanging Loops. Cannot prove legality\n");
       return false;
     }
     DEBUG(dbgs() << "Loops are legal to interchange\n");
-    LoopInterchangeProfitability LIP(OuterLoop, InnerLoop, SE);
+    LoopInterchangeProfitability LIP(OuterLoop, InnerLoop, SE, ORE);
     if (!LIP.isProfitable(InnerLoopId, OuterLoopId, DependencyMatrix)) {
       DEBUG(dbgs() << "Interchanging loops not profitable\n");
       return false;
     }
+
+    ORE->emit(OptimizationRemark(DEBUG_TYPE, "Interchanged",
+                                 InnerLoop->getStartLoc(),
+                                 InnerLoop->getHeader())
+              << "Loop interchanged with enclosing loop.");
 
     LoopInterchangeTransform LIT(OuterLoop, InnerLoop, SE, LI, DT,
                                  LoopNestExit, LIL.hasInnerLoopReduction());
@@ -760,6 +777,12 @@ bool LoopInterchangeLegality::currentLimitations() {
   if (!findInductionAndReductions(InnerLoop, Inductions, Reductions)) {
     DEBUG(dbgs() << "Only inner loops with induction or reduction PHI nodes "
                  << "are supported currently.\n");
+    ORE->emit(OptimizationRemarkMissed(DEBUG_TYPE,
+                                       "UnsupportedPHIInner",
+                                       InnerLoop->getStartLoc(),
+                                       InnerLoop->getHeader())
+              << "Only inner loops with induction or reduction PHI nodes can be"
+                 " interchange currently.");
     return true;
   }
 
@@ -767,6 +790,12 @@ bool LoopInterchangeLegality::currentLimitations() {
   if (Inductions.size() != 1) {
     DEBUG(dbgs() << "We currently only support loops with 1 induction variable."
                  << "Failed to interchange due to current limitation\n");
+    ORE->emit(OptimizationRemarkMissed(DEBUG_TYPE,
+                                       "MultiInductionInner",
+                                       InnerLoop->getStartLoc(),
+                                       InnerLoop->getHeader())
+              << "Only inner loops with 1 induction variable can be "
+                 "interchanged currently.");
     return true;
   }
   if (Reductions.size() > 0)
@@ -777,6 +806,12 @@ bool LoopInterchangeLegality::currentLimitations() {
   if (!findInductionAndReductions(OuterLoop, Inductions, Reductions)) {
     DEBUG(dbgs() << "Only outer loops with induction or reduction PHI nodes "
                  << "are supported currently.\n");
+    ORE->emit(OptimizationRemarkMissed(DEBUG_TYPE,
+                                       "UnsupportedPHIOuter",
+                                       OuterLoop->getStartLoc(),
+                                       OuterLoop->getHeader())
+              << "Only outer loops with induction or reduction PHI nodes can be"
+                 " interchanged currently.");
     return true;
   }
 
@@ -785,18 +820,35 @@ bool LoopInterchangeLegality::currentLimitations() {
   if (!Reductions.empty()) {
     DEBUG(dbgs() << "Outer loops with reductions are not supported "
                  << "currently.\n");
+    ORE->emit(OptimizationRemarkMissed(DEBUG_TYPE,
+                                       "ReductionsOuter",
+                                       OuterLoop->getStartLoc(),
+                                       OuterLoop->getHeader())
+              << "Outer loops with reductions cannot be interchangeed "
+                 "currently.");
     return true;
   }
   // TODO: Currently we handle only loops with 1 induction variable.
   if (Inductions.size() != 1) {
     DEBUG(dbgs() << "Loops with more than 1 induction variables are not "
                  << "supported currently.\n");
+    ORE->emit(OptimizationRemarkMissed(DEBUG_TYPE,
+                                       "MultiIndutionOuter",
+                                       OuterLoop->getStartLoc(),
+                                       OuterLoop->getHeader())
+              << "Only outer loops with 1 induction variable can be "
+                 "interchanged currently.");
     return true;
   }
 
   // TODO: Triangular loops are not handled for now.
   if (!isLoopStructureUnderstood(InnerInductionVar)) {
     DEBUG(dbgs() << "Loop structure not understood by pass\n");
+    ORE->emit(OptimizationRemarkMissed(DEBUG_TYPE,
+                                       "UnsupportedStructureInner",
+                                       InnerLoop->getStartLoc(),
+                                       InnerLoop->getHeader())
+              << "Inner loop structure not understood currently.");
     return true;
   }
 
@@ -805,12 +857,24 @@ bool LoopInterchangeLegality::currentLimitations() {
       getLoopLatchExitBlock(OuterLoopLatch, OuterLoopHeader);
   if (!LoopExitBlock || !containsSafePHI(LoopExitBlock, true)) {
     DEBUG(dbgs() << "Can only handle LCSSA PHIs in outer loops currently.\n");
+    ORE->emit(OptimizationRemarkMissed(DEBUG_TYPE,
+                                       "NoLCSSAPHIOuter",
+                                       OuterLoop->getStartLoc(),
+                                       OuterLoop->getHeader())
+              << "Only outer loops with LCSSA PHIs can be interchange "
+                 "currently.");
     return true;
   }
 
   LoopExitBlock = getLoopLatchExitBlock(InnerLoopLatch, InnerLoopHeader);
   if (!LoopExitBlock || !containsSafePHI(LoopExitBlock, false)) {
     DEBUG(dbgs() << "Can only handle LCSSA PHIs in inner loops currently.\n");
+    ORE->emit(OptimizationRemarkMissed(DEBUG_TYPE,
+                                       "NoLCSSAPHIOuterInner",
+                                       InnerLoop->getStartLoc(),
+                                       InnerLoop->getHeader())
+              << "Only inner loops with LCSSA PHIs can be interchange "
+                 "currently.");
     return true;
   }
 
@@ -835,6 +899,11 @@ bool LoopInterchangeLegality::currentLimitations() {
   if (!InnerIndexVarInc) {
     DEBUG(dbgs() << "Did not find an instruction to increment the induction "
                  << "variable.\n");
+    ORE->emit(OptimizationRemarkMissed(DEBUG_TYPE,
+                                       "NoIncrementInInner",
+                                       InnerLoop->getStartLoc(),
+                                       InnerLoop->getHeader())
+              << "The inner loop does not increment the induction variable.");
     return true;
   }
 
@@ -852,6 +921,12 @@ bool LoopInterchangeLegality::currentLimitations() {
     if (!I.isIdenticalTo(InnerIndexVarInc)) {
       DEBUG(dbgs() << "Found unsupported instructions between induction "
                    << "variable increment and branch.\n");
+    ORE->emit(OptimizationRemarkMissed(DEBUG_TYPE,
+                                       "UnsupportedInsBetweenInduction",
+                                       InnerLoop->getStartLoc(),
+                                       InnerLoop->getHeader())
+              << "Found unsupported instruction between induction variable "
+                 "increment and branch.");
       return true;
     }
 
@@ -862,6 +937,11 @@ bool LoopInterchangeLegality::currentLimitations() {
   // current limitation.
   if (!FoundInduction) {
     DEBUG(dbgs() << "Did not find the induction variable.\n");
+    ORE->emit(OptimizationRemarkMissed(DEBUG_TYPE,
+                                       "NoIndutionVariable",
+                                       InnerLoop->getStartLoc(),
+                                       InnerLoop->getHeader())
+              << "Did not find the induction variable.");
     return true;
   }
   return false;
@@ -875,6 +955,11 @@ bool LoopInterchangeLegality::canInterchangeLoops(unsigned InnerLoopId,
     DEBUG(dbgs() << "Failed interchange InnerLoopId = " << InnerLoopId
                  << " and OuterLoopId = " << OuterLoopId
                  << " due to dependence\n");
+    ORE->emit(OptimizationRemarkMissed(DEBUG_TYPE,
+                                       "Dependence",
+                                       InnerLoop->getStartLoc(),
+                                       InnerLoop->getHeader())
+              << "Cannot interchange loops due to dependences.");
     return false;
   }
 
@@ -910,6 +995,12 @@ bool LoopInterchangeLegality::canInterchangeLoops(unsigned InnerLoopId,
   // Check if the loops are tightly nested.
   if (!tightlyNested(OuterLoop, InnerLoop)) {
     DEBUG(dbgs() << "Loops not tightly nested\n");
+    ORE->emit(OptimizationRemarkMissed(DEBUG_TYPE,
+                                       "NotTightlyNested",
+                                       InnerLoop->getStartLoc(),
+                                       InnerLoop->getHeader())
+              << "Cannot interchange loops because they are not tightly "
+                 "nested.");
     return false;
   }
 
@@ -1005,9 +1096,18 @@ bool LoopInterchangeProfitability::isProfitable(unsigned InnerLoopId,
 
   // It is not profitable as per current cache profitability model. But check if
   // we can move this loop outside to improve parallelism.
-  bool ImprovesPar =
-      isProfitableForVectorization(InnerLoopId, OuterLoopId, DepMatrix);
-  return ImprovesPar;
+  if (isProfitableForVectorization(InnerLoopId, OuterLoopId, DepMatrix))
+    return true;
+
+  ORE->emit(OptimizationRemarkMissed(DEBUG_TYPE,
+                                     "InterchangeNotProfitable",
+                                     InnerLoop->getStartLoc(),
+                                     InnerLoop->getHeader())
+            << "Interchanging loops is too costly (cost="
+            << ore::NV("Cost", Cost) << ", threshold="
+            << ore::NV("Threshold", LoopInterchangeCostThreshold) <<
+            ") and it does not improve parallelism.");
+  return false;
 }
 
 void LoopInterchangeTransform::removeChildLoop(Loop *OuterLoop,
@@ -1291,6 +1391,7 @@ INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopSimplify)
 INITIALIZE_PASS_DEPENDENCY(LCSSAWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(OptimizationRemarkEmitterWrapperPass)
 
 INITIALIZE_PASS_END(LoopInterchange, "loop-interchange",
                     "Interchanges loops for cache reuse", false, false)

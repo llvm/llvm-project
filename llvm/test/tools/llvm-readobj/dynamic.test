@@ -8,7 +8,7 @@ ELF-MIPS: AddressSize: 32bit
 ELF-MIPS: LoadName:
 ELF-MIPS: DynamicSection [ (23 entries)
 ELF-MIPS:   Tag        Type                 Name/Value
-ELF-MIPS:   0x00000001 NEEDED               SharedLibrary (libc.so.6)
+ELF-MIPS:   0x00000001 NEEDED               Shared library: [libc.so.6]
 ELF-MIPS:   0x0000000C INIT                 0x528
 ELF-MIPS:   0x0000000D FINI                 0x860
 ELF-MIPS:   0x00000004 HASH                 0x210
@@ -43,7 +43,7 @@ ELF-MIPS-EXE: AddressSize: 32bit
 ELF-MIPS-EXE: LoadName:
 ELF-MIPS-EXE: DynamicSection [ (26 entries)
 ELF-MIPS-EXE:   Tag        Type                 Name/Value
-ELF-MIPS-EXE:   0x00000001 NEEDED               SharedLibrary (libc.so.6)
+ELF-MIPS-EXE:   0x00000001 NEEDED               Shared library: [libc.so.6]
 ELF-MIPS-EXE:   0x0000000C INIT                 0x400418
 ELF-MIPS-EXE:   0x0000000D FINI                 0x4007B0
 ELF-MIPS-EXE:   0x00000004 HASH                 0x4002B8
@@ -80,9 +80,9 @@ ELF-X86-EXE: AddressSize: 32bit
 ELF-X86-EXE: LoadName:
 ELF-X86-EXE: DynamicSection [ (30 entries)
 ELF-X86-EXE:   Tag        Type                 Name/Value
-ELF-X86-EXE:   0x00000001 NEEDED               SharedLibrary (libstdc++.so.6)
-ELF-X86-EXE:   0x00000001 NEEDED               SharedLibrary (libgcc_s.so.1)
-ELF-X86-EXE:   0x00000001 NEEDED               SharedLibrary (libc.so.6)
+ELF-X86-EXE:   0x00000001 NEEDED               Shared library: [libstdc++.so.6]
+ELF-X86-EXE:   0x00000001 NEEDED               Shared library: [libgcc_s.so.1]
+ELF-X86-EXE:   0x00000001 NEEDED               Shared library: [libc.so.6]
 ELF-X86-EXE:   0x0000000C INIT                 0x62C
 ELF-X86-EXE:   0x0000000D FINI                 0x920
 ELF-X86-EXE:   0x00000019 INIT_ARRAY           0x19FC
@@ -119,32 +119,33 @@ ELF-X86-SO: Format: ELF64-x86-64
 ELF-X86-SO: Arch: x86_64
 ELF-X86-SO: AddressSize: 64bit
 ELF-X86-SO: LoadName: 
-ELF-X86-SO: DynamicSection [ (26 entries)
+ELF-X86-SO: DynamicSection [ ({{[0-9]+}} entries)
 ELF-X86-SO:   Tag                Type                 Name/Value
-ELF-X86-SO:   0x0000000000000001 NEEDED               SharedLibrary (libc.so.6)
-ELF-X86-SO:   0x0000000000000001 NEEDED               SharedLibrary (ld-linux-x86-64.so.2)
-ELF-X86-SO:   0x000000007FFFFFFD AUXILIARY            Auxiliary library: [aux_val]
-ELF-X86-SO:   0x000000000000000C INIT                 0x610
-ELF-X86-SO:   0x000000000000000D FINI                 0x7AC
-ELF-X86-SO:   0x0000000000000019 INIT_ARRAY           0x200DD0
+ELF-X86-SO:   0x0000000000000001 NEEDED               Shared library: [libc.so.6]
+ELF-X86-SO:   0x0000000000000001 NEEDED               Shared library: [ld-linux-x86-64.so.2]
+ELF-X86-SO:   0x000000007FFFFFFF FILTER               Filter library: [filter.so]
+ELF-X86-SO:   0x000000007FFFFFFD AUXILIARY            Auxiliary library: [aux.so]
+ELF-X86-SO:   0x000000000000000C INIT                 0x{{[0-9A-F]+}}
+ELF-X86-SO:   0x000000000000000D FINI                 0x{{[0-9A-F]+}}
+ELF-X86-SO:   0x0000000000000019 INIT_ARRAY           0x{{[0-9A-F]+}}
 ELF-X86-SO:   0x000000000000001B INIT_ARRAYSZ         8 (bytes)
-ELF-X86-SO:   0x000000000000001A FINI_ARRAY           0x200DD8
+ELF-X86-SO:   0x000000000000001A FINI_ARRAY           0x{{[0-9A-F]+}}
 ELF-X86-SO:   0x000000000000001C FINI_ARRAYSZ         8 (bytes)
 ELF-X86-SO:   0x000000006FFFFEF5 GNU_HASH             0x1C8
 ELF-X86-SO:   0x0000000000000005 STRTAB               0x3A0
 ELF-X86-SO:   0x0000000000000006 SYMTAB               0x208
-ELF-X86-SO:   0x000000000000000A STRSZ                231 (bytes)
+ELF-X86-SO:   0x000000000000000A STRSZ                {{[0-9]+}} (bytes)
 ELF-X86-SO:   0x000000000000000B SYMENT               24 (bytes)
 ELF-X86-SO:   0x0000000000000003 PLTGOT               0x201000
 ELF-X86-SO:   0x0000000000000002 PLTRELSZ             48 (bytes)
 ELF-X86-SO:   0x0000000000000014 PLTREL               RELA
-ELF-X86-SO:   0x0000000000000017 JMPREL               0x5E0
-ELF-X86-SO:   0x0000000000000007 RELA                 0x4F0
+ELF-X86-SO:   0x0000000000000017 JMPREL               0x{{[0-9A-F]+}}
+ELF-X86-SO:   0x0000000000000007 RELA                 0x{{[0-9A-F]+}}
 ELF-X86-SO:   0x0000000000000008 RELASZ               240 (bytes)
 ELF-X86-SO:   0x0000000000000009 RELAENT              24 (bytes)
-ELF-X86-SO:   0x000000006FFFFFFE VERNEED              0x4B0
+ELF-X86-SO:   0x000000006FFFFFFE VERNEED              0x{{[0-9A-F]+}}
 ELF-X86-SO:   0x000000006FFFFFFF VERNEEDNUM           2
-ELF-X86-SO:   0x000000006FFFFFF0 VERSYM               0x488
+ELF-X86-SO:   0x000000006FFFFFF0 VERSYM               0x{{[0-9A-F]+}}
 ELF-X86-SO:   0x000000006FFFFFF9 RELACOUNT            3
 ELF-X86-SO:   0x0000000000000000 NULL                 0x0
 
@@ -157,7 +158,7 @@ ELF-AARCH64-SO: AddressSize: 64bit
 ELF-AARCH64-SO: LoadName: 
 ELF-AARCH64-SO: DynamicSection [ (26 entries)
 ELF-AARCH64-SO:   Tag                Type                 Name/Value
-ELF-AARCH64-SO:   0x0000000000000001 NEEDED               SharedLibrary (libc.so.6)
+ELF-AARCH64-SO:   0x0000000000000001 NEEDED               Shared library: [libc.so.6]
 ELF-AARCH64-SO:   0x000000000000000C INIT                 0x660
 ELF-AARCH64-SO:   0x000000000000000D FINI                 0x83C
 ELF-AARCH64-SO:   0x0000000000000019 INIT_ARRAY           0x10DB8

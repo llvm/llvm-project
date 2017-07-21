@@ -44,6 +44,7 @@ ModulePass *createAArch64PromoteConstantPass();
 FunctionPass *createAArch64ConditionOptimizerPass();
 FunctionPass *createAArch64A57FPLoadBalancing();
 FunctionPass *createAArch64A53Fix835769();
+FunctionPass *createFalkorMarkStridedAccessesPass();
 
 FunctionPass *createAArch64CleanupLocalDynamicTLSPass();
 
@@ -66,6 +67,7 @@ void initializeAArch64VectorByElementOptPass(PassRegistry&);
 void initializeAArch64PromoteConstantPass(PassRegistry&);
 void initializeAArch64RedundantCopyEliminationPass(PassRegistry&);
 void initializeAArch64StorePairSuppressPass(PassRegistry&);
+void initializeFalkorMarkStridedAccessesLegacyPass(PassRegistry&);
 void initializeLDTLSCleanupPass(PassRegistry&);
 } // end namespace llvm
 
