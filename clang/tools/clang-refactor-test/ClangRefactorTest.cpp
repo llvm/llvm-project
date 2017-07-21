@@ -1118,8 +1118,10 @@ bool performOperation(CXRefactoringAction Action, ArrayRef<const char *> Args,
       CXString Spelling = clang_getDiagnosticSpelling(Diag);
       errs() << clang_getCString(Spelling) << "\n";
       clang_disposeString(Spelling);
+      clang_disposeDiagnostic(Diag);
     }
     clang_RefactoringContinuation_dispose(Continuation);
+    clang_disposeDiagnosticSet(Diags);
     return true;
   }
   clang_RefactoringContinuation_finalizeEvaluationInInitationTU(Continuation);
