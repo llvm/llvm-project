@@ -31,7 +31,7 @@ int main(int argc, char *argv[]) {
   t2.join();
   __xray_log_finalize();
   __xray_log_flushLog();
-  // CHECK: =={{[0-9]+}}==XRay: Log file in '{{.*}}'
+  // CHECK: {{.*}}XRay: Log file in '{{.*}}'
 }
 
 // We want to make sure that the order of the function log doesn't matter.
