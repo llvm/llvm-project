@@ -389,6 +389,15 @@ struct Separate separateE;
 @interface ClassReceivers
 
 @property(class) int p1;
+// CHECK: [[@LINE-1]]:22 | class-method/acc-get/ObjC | p1 | c:objc(cs)ClassReceivers(cm)p1 | +[ClassReceivers p1] | Decl,Dyn,Impl,RelChild,RelAcc | rel: 2
+// CHECK-NEXT: RelChild | ClassReceivers | c:objc(cs)ClassReceivers
+// CHECK-NEXT: RelAcc | p1 | c:objc(cs)ClassReceivers(cpy)p1
+// CHECK: [[@LINE-4]]:22 | class-method/acc-set/ObjC | setP1: | c:objc(cs)ClassReceivers(cm)setP1: | +[ClassReceivers setP1:] | Decl,Dyn,Impl,RelChild,RelAcc | rel: 2
+// CHECK-NEXT: RelChild | ClassReceivers | c:objc(cs)ClassReceivers
+// CHECK-NEXT: RelAcc | p1 | c:objc(cs)ClassReceivers(cpy)p1
+// CHECK: [[@LINE-7]]:22 | instance-property/ObjC | p1 | c:objc(cs)ClassReceivers(cpy)p1 | <no-cgname> | Decl,RelChild | rel: 1
+// CHECK-NEXT: RelChild | ClassReceivers | c:objc(cs)ClassReceivers
+
 + (int)implicit;
 + (void)setImplicit:(int)x;
 
@@ -399,13 +408,13 @@ void classReceivers() {
 // CHECK: [[@LINE-1]]:3 | class/ObjC | ClassReceivers | c:objc(cs)ClassReceivers | _OBJC_CLASS_$_ClassReceivers | Ref,RelCont | rel: 1
 // CHECK: [[@LINE-2]]:18 | instance-property/ObjC | p1 | c:objc(cs)ClassReceivers(cpy)p1 | <no-cgname> | Ref,Writ,RelCont | rel: 1
 // CHECK-NEXT: RelCont | classReceivers | c:@F@classReceivers
-// CHECK: [[@LINE-4]]:18 | class-method/ObjC | setP1: | c:objc(cs)ClassReceivers(cm)setP1: | +[ClassReceivers setP1:] | Ref,Call,Impl,RelCall,RelCont | rel: 1
+// CHECK: [[@LINE-4]]:18 | class-method/acc-set/ObjC | setP1: | c:objc(cs)ClassReceivers(cm)setP1: | +[ClassReceivers setP1:] | Ref,Call,Impl,RelCall,RelCont | rel: 1
 // CHECK-NEXT: RelCall,RelCont | classReceivers | c:@F@classReceivers
   (void)ClassReceivers.p1;
 // CHECK: [[@LINE-1]]:9 | class/ObjC | ClassReceivers | c:objc(cs)ClassReceivers | _OBJC_CLASS_$_ClassReceivers | Ref,RelCont | rel: 1
 // CHECK: [[@LINE-2]]:24 | instance-property/ObjC | p1 | c:objc(cs)ClassReceivers(cpy)p1 | <no-cgname> | Ref,RelCont | rel: 1
 // CHECK-NEXT: RelCont | classReceivers | c:@F@classReceivers
-// CHECK: [[@LINE-4]]:24 | class-method/ObjC | p1 | c:objc(cs)ClassReceivers(cm)p1 | +[ClassReceivers p1] | Ref,Call,Impl,RelCall,RelCont | rel: 1
+// CHECK: [[@LINE-4]]:24 | class-method/acc-get/ObjC | p1 | c:objc(cs)ClassReceivers(cm)p1 | +[ClassReceivers p1] | Ref,Call,Impl,RelCall,RelCont | rel: 1
 // CHECK-NEXT: RelCall,RelCont | classReceivers | c:@F@classReceivers
 
   ClassReceivers.implicit = 0;
