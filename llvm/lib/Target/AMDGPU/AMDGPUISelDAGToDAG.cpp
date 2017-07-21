@@ -1655,8 +1655,8 @@ void AMDGPUDAGToDAGISel::SelectATOMIC_CMP_SWAP(SDNode *N) {
     SDValue SRsrc, VAddr, SOffset, Offset, GLC, SLC;
 
     if (SelectMUBUFAddr64(Mem->getBasePtr(), SRsrc, VAddr, SOffset, Offset, SLC)) {
-      unsigned Opcode = Is32 ? AMDGPU::BUFFER_ATOMIC_CMPSWAP_RTN_ADDR64 :
-        AMDGPU::BUFFER_ATOMIC_CMPSWAP_X2_RTN_ADDR64;
+      unsigned Opcode = Is32 ? AMDGPU::BUFFER_ATOMIC_CMPSWAP_ADDR64_RTN :
+        AMDGPU::BUFFER_ATOMIC_CMPSWAP_X2_ADDR64_RTN;
       SDValue CmpVal = Mem->getOperand(2);
 
       // XXX - Do we care about glue operands?
@@ -1672,8 +1672,8 @@ void AMDGPUDAGToDAGISel::SelectATOMIC_CMP_SWAP(SDNode *N) {
   if (!CmpSwap) {
     SDValue SRsrc, SOffset, Offset, SLC;
     if (SelectMUBUFOffset(Mem->getBasePtr(), SRsrc, SOffset, Offset, SLC)) {
-      unsigned Opcode = Is32 ? AMDGPU::BUFFER_ATOMIC_CMPSWAP_RTN_OFFSET :
-        AMDGPU::BUFFER_ATOMIC_CMPSWAP_X2_RTN_OFFSET;
+      unsigned Opcode = Is32 ? AMDGPU::BUFFER_ATOMIC_CMPSWAP_OFFSET_RTN :
+        AMDGPU::BUFFER_ATOMIC_CMPSWAP_X2_OFFSET_RTN;
 
       SDValue CmpVal = Mem->getOperand(2);
       SDValue Ops[] = {

@@ -587,6 +587,7 @@ bool MIRParserImpl::initializeFrameInfo(PerFunctionMIParsingState &PFS,
     else
       ObjectIdx = MFI.CreateFixedSpillStackObject(Object.Size, Object.Offset);
     MFI.setObjectAlignment(ObjectIdx, Object.Alignment);
+    MFI.setStackID(ObjectIdx, Object.StackID);
     if (!PFS.FixedStackObjectSlots.insert(std::make_pair(Object.ID.Value,
                                                          ObjectIdx))
              .second)
@@ -619,6 +620,8 @@ bool MIRParserImpl::initializeFrameInfo(PerFunctionMIParsingState &PFS,
           Object.Size, Object.Alignment,
           Object.Type == yaml::MachineStackObject::SpillSlot, Alloca);
     MFI.setObjectOffset(ObjectIdx, Object.Offset);
+    MFI.setStackID(ObjectIdx, Object.StackID);
+
     if (!PFS.StackObjectSlots.insert(std::make_pair(Object.ID.Value, ObjectIdx))
              .second)
       return error(Object.ID.SourceRange.Start,

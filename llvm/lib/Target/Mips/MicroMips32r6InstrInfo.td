@@ -1124,10 +1124,7 @@ class ROUND_W_D_MMR6_DESC : ABSS_FT_MMR6_DESC_BASE<"round.w.d", FGR64Opnd,
                                                    FGR64Opnd, II_ROUND>;
 
 class SEL_S_MMR6_DESC : COP1_SEL_DESC_BASE<"sel.s", FGR32Opnd, II_SEL_S>;
-class SEL_D_MMR6_DESC : COP1_SEL_DESC_BASE<"sel.d", FGR64Opnd, II_SEL_D> {
-  // We must insert a SUBREG_TO_REG around $fd_in
-  bit usesCustomInserter = 1;
-}
+class SEL_D_MMR6_DESC : COP1_SEL_D_DESC_BASE<"sel.d", FGR64Opnd, II_SEL_D>;
 
 class SELEQZ_S_MMR6_DESC : SELEQNEZ_DESC_BASE<"seleqz.s", FGR32Opnd,
                                               II_SELCCZ_S>;

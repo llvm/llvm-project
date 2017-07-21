@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <iostream>
+#include <ostream>
 #include <random>
 #include <string.h>
 
@@ -26,7 +27,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   if (Size && Data[0] == 'a') sink--;
 
   if (Str.find(Target) != std::string::npos) {
-    std::cout << "BINGO; Found the target, exiting\n";
+    std::cout << "BINGO; Found the target, exiting\n" << std::flush;
     exit(1);
   }
   return 0;

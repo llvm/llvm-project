@@ -548,7 +548,8 @@ void DwarfDebug::beginModule() {
   for (DICompileUnit *CUNode : M->debug_compile_units()) {
     if (CUNode->getEnumTypes().empty() && CUNode->getRetainedTypes().empty() &&
         CUNode->getGlobalVariables().empty() &&
-        CUNode->getImportedEntities().empty() && CUNode->getMacros().empty())
+        CUNode->getImportedEntities().empty() && CUNode->getMacros().empty() &&
+        !CUNode->getDWOId())
       continue;
 
     DwarfCompileUnit &CU = getOrCreateDwarfCompileUnit(CUNode);

@@ -49,9 +49,18 @@ createAArch64MCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef FS) {
   return createAArch64MCSubtargetInfoImpl(TT, CPU, FS);
 }
 
+void AArch64_MC::initLLVMToCVRegMapping(MCRegisterInfo *MRI) {
+  for (unsigned Reg = AArch64::NoRegister + 1;
+       Reg < AArch64::NUM_TARGET_REGS; ++Reg) {
+    unsigned CV = MRI->getEncodingValue(Reg);
+    MRI->mapLLVMRegToCVReg(Reg, CV);
+  }
+}
+
 static MCRegisterInfo *createAArch64MCRegisterInfo(const Triple &Triple) {
   MCRegisterInfo *X = new MCRegisterInfo();
   InitAArch64MCRegisterInfo(X, AArch64::LR);
+  AArch64_MC::initLLVMToCVRegMapping(X);
   return X;
 }
 

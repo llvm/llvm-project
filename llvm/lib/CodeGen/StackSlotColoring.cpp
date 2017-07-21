@@ -233,6 +233,8 @@ StackSlotColoring::OverlapWithAssignments(LiveInterval *li, int Color) const {
 int StackSlotColoring::ColorSlot(LiveInterval *li) {
   int Color = -1;
   bool Share = false;
+  int FI = TargetRegisterInfo::stackSlot2Index(li->reg);
+
   if (!DisableSharing) {
     // Check if it's possible to reuse any of the used colors.
     Color = UsedColors.find_first();
@@ -246,6 +248,11 @@ int StackSlotColoring::ColorSlot(LiveInterval *li) {
     }
   }
 
+  if (Color != -1 && MFI->getStackID(Color) != MFI->getStackID(FI)) {
+    DEBUG(dbgs() << "cannot share FIs with different stack IDs\n");
+    Share = false;
+  }
+
   // Assign it to the first available color (assumed to be the best) if it's
   // not possible to share a used color with other objects.
   if (!Share) {
@@ -257,7 +264,6 @@ int StackSlotColoring::ColorSlot(LiveInterval *li) {
 
   // Record the assignment.
   Assignments[Color].push_back(li);
-  int FI = TargetRegisterInfo::stackSlot2Index(li->reg);
   DEBUG(dbgs() << "Assigning fi#" << FI << " to fi#" << Color << "\n");
 
   // Change size and alignment of the allocated slot. If there are multiple

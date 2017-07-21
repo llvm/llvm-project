@@ -41,13 +41,13 @@ class SparcSubtarget : public SparcGenSubtargetInfo {
   bool HasHardQuad;
   bool UsePopc;
   bool UseSoftFloat;
+  bool HasNoFSMULD;
+  bool HasNoFMULS;
 
   // LEON features
   bool HasUmacSmac;
   bool HasLeonCasa;
   bool InsertNOPLoad;
-  bool FixFSMULD;
-  bool ReplaceFMULS;
   bool FixAllFDIVSQRT;
   bool DetectRoundChange;
   bool PerformSDIVReplace;
@@ -87,14 +87,14 @@ public:
   bool hasHardQuad() const { return HasHardQuad; }
   bool usePopc() const { return UsePopc; }
   bool useSoftFloat() const { return UseSoftFloat; }
+  bool hasNoFSMULD() const { return HasNoFSMULD; }
+  bool hasNoFMULS() const { return HasNoFMULS; }
 
   // Leon options
   bool hasUmacSmac() const { return HasUmacSmac; }
   bool performSDIVReplace() const { return PerformSDIVReplace; }
   bool hasLeonCasa() const { return HasLeonCasa; }
   bool insertNOPLoad() const { return InsertNOPLoad; }
-  bool fixFSMULD() const { return FixFSMULD; }
-  bool replaceFMULS() const { return ReplaceFMULS; }
   bool fixAllFDIVSQRT() const { return FixAllFDIVSQRT; }
   bool detectRoundChange() const { return DetectRoundChange; }
 

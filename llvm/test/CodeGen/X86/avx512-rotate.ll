@@ -7,6 +7,9 @@ declare <16 x i32> @llvm.x86.avx512.mask.prorv.d.512(<16 x i32>, <16 x i32>, <16
 declare <8 x i64> @llvm.x86.avx512.mask.prolv.q.512(<8 x i64>, <8 x i64>, <8 x i64>, i8)
 declare <8 x i64> @llvm.x86.avx512.mask.prorv.q.512(<8 x i64>, <8 x i64>, <8 x i64>, i8)
 
+declare <8 x i64> @llvm.x86.avx512.maskz.vpermt2var.q.512(<8 x i64>, <8 x i64>, <8 x i64>, i8)
+declare <16 x i32> @llvm.x86.avx512.maskz.vpermt2var.d.512(<16 x i32>, <16 x i32>, <16 x i32>, i16)
+
 ; Tests showing replacement of variable rotates with immediate splat versions.
 
 define <16 x i32> @test_splat_rol_v16i32(<16 x i32> %x0, <16 x i32> %x1, i16 %x2) {
@@ -236,6 +239,8 @@ define <8 x i64>@test_splat_bounds_ror_v8i64(<8 x i64> %x0, <8 x i64> %x1, i8 %x
 }
 
 ; Constant folding
+; We also test with a target shuffle so that this can't be constant folded upon creation, it must
+; wait until the target shuffle has been constant folded in combineX86ShufflesRecursively.
 
 define <8 x i64> @test_fold_rol_v8i64() {
 ; CHECK-LABEL: test_fold_rol_v8i64:
@@ -246,11 +251,35 @@ define <8 x i64> @test_fold_rol_v8i64() {
   ret <8 x i64> %res
 }
 
+define <16 x i32> @test_fold_rol_v16i32(<16 x i32> %x0, <16 x i32> %x1) {
+; CHECK-LABEL: test_fold_rol_v16i32:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    vpbroadcastd {{.*#+}} zmm0 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+; CHECK-NEXT:    vprolvd {{.*}}(%rip), %zmm0, %zmm0
+; CHECK-NEXT:    retq
+  %res0 = call <16 x i32> @llvm.x86.avx512.maskz.vpermt2var.d.512(<16 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0, i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8>, <16 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>, <16 x i32> zeroinitializer, i16 -1)
+  %res1 = call <16 x i32> @llvm.x86.avx512.mask.prolv.d.512(<16 x i32> %res0, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>, <16 x i32> zeroinitializer, i16 -1)
+  ret <16 x i32> %res1
+}
+
 define <8 x i64> @test_fold_ror_v8i64() {
 ; CHECK-LABEL: test_fold_ror_v8i64:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vmovaps {{.*#+}} zmm0 = [1,9223372036854775808,4611686018427387904,2,9223372036854775808,4,2,2]
+; CHECK-NEXT:    vpbroadcastq {{.*#+}} zmm0 = [1,1,1,1,1,1,1,1]
+; CHECK-NEXT:    vprorvq {{.*}}(%rip), %zmm0, %zmm0
 ; CHECK-NEXT:    retq
-  %res = call <8 x i64> @llvm.x86.avx512.mask.prorv.q.512(<8 x i64> <i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1>, <8 x i64> <i64 0, i64 1, i64 2, i64 63, i64 65, i64 65534, i64 65535, i64 -1>, <8 x i64> zeroinitializer, i8 -1)
-  ret <8 x i64> %res
+  %res0 = call <8 x i64> @llvm.x86.avx512.maskz.vpermt2var.q.512(<8 x i64> <i64 undef, i64 6, i64 5, i64 4, i64 3, i64 2, i64 1, i64 0>, <8 x i64> <i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1>, <8 x i64> zeroinitializer, i8 -1)
+  %res1 = call <8 x i64> @llvm.x86.avx512.mask.prorv.q.512(<8 x i64> %res0, <8 x i64> <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>, <8 x i64> zeroinitializer, i8 -1)
+  ret <8 x i64> %res1
+}
+
+define <16 x i32> @test_fold_ror_v16i32(<16 x i32> %x0, <16 x i32> %x1) {
+; CHECK-LABEL: test_fold_ror_v16i32:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    vpbroadcastd {{.*#+}} zmm0 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+; CHECK-NEXT:    vprorvd {{.*}}(%rip), %zmm0, %zmm0
+; CHECK-NEXT:    retq
+  %res0 = call <16 x i32> @llvm.x86.avx512.maskz.vpermt2var.d.512(<16 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0, i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8>, <16 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>, <16 x i32> zeroinitializer, i16 -1)
+  %res1 = call <16 x i32> @llvm.x86.avx512.mask.prorv.d.512(<16 x i32> %res0, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>, <16 x i32> zeroinitializer, i16 -1)
+  ret <16 x i32> %res1
 }

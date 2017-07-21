@@ -29,8 +29,8 @@ bool InstructionSelector::executeMatchTable(
   uint64_t CurrentIdx = 0;
   SmallVector<uint64_t, 8> OnFailResumeAt;
 
-  enum RejectAction { RejectAndGiveUp, RejectAndResume };
-  auto handleReject = [&]() -> enum RejectAction {
+  typedef enum { RejectAndGiveUp, RejectAndResume } RejectAction;
+  auto handleReject = [&]() -> RejectAction {
     DEBUG(dbgs() << CurrentIdx << ": Rejected\n");
     if (OnFailResumeAt.empty())
       return RejectAndGiveUp;
@@ -243,6 +243,7 @@ bool InstructionSelector::executeMatchTable(
       DEBUG(dbgs() << CurrentIdx << ": GIM_Reject");
       if (handleReject() == RejectAndGiveUp)
         return false;
+      break;
 
     case GIR_MutateOpcode: {
       int64_t OldInsnID = MatchTable[CurrentIdx++];

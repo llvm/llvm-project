@@ -1,0 +1,5 @@
+REQUIRES: libxml2
+UNSUPPORTED: windows
+
+RUN: llvm-mt /manifest %p/Inputs/test_manifest.manifest /out:%t
+RUN: diff %p/Inputs/test_manifest.manifest %t

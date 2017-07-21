@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <iostream>
+#include <ostream>
 
 static volatile bool SeedLargeBuffer;
 
@@ -15,7 +16,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   if (Size >= 4)
     SeedLargeBuffer = true;
   if (Size == 3 && SeedLargeBuffer && Data[3]) {
-    std::cout << "Woops, reading Data[3] w/o crashing\n";
+    std::cout << "Woops, reading Data[3] w/o crashing\n" << std::flush;
     exit(1);
   }
   return 0;
