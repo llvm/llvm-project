@@ -22,6 +22,7 @@ class DWARFDie;
 class DWARFUnit;
 class DWARFAcceleratorTable;
 class DWARFDataExtractor;
+class DWARFDebugAbbrev;
 
 /// A class that verifies DWARF debug information given a DWARF Context.
 class DWARFVerifier {
@@ -33,6 +34,18 @@ class DWARFVerifier {
   std::map<uint64_t, std::set<uint32_t>> ReferenceToDIEOffsets;
   uint32_t NumDebugLineErrors = 0;
   uint32_t NumAppleNamesErrors = 0;
+
+  /// Verifies the abbreviations section.
+  ///
+  /// This function currently checks that:
+  /// --No abbreviation declaration has more than one attributes with the same
+  /// name.
+  ///
+  /// \param Abbrev Pointer to the abbreviations section we are verifying
+  /// Abbrev can be a pointer to either .debug_abbrev or debug_abbrev.dwo.
+  ///
+  /// \returns The number of errors that occured during verification.
+  unsigned verifyAbbrevSection(const DWARFDebugAbbrev *Abbrev);
 
   /// Verifies the header of a unit in the .debug_info section.
   ///
@@ -114,13 +127,16 @@ class DWARFVerifier {
 public:
   DWARFVerifier(raw_ostream &S, DWARFContext &D)
       : OS(S), DCtx(D) {}
-  /// Verify the information in the .debug_abbrev section.
+  /// Verify the information in any of the following sections, if available:
+  /// .debug_abbrev, debug_abbrev.dwo
   ///
-  /// Currently, we check that no Abbreviation Declaration has more than one
-  /// attributes with the same name.
+  /// Any errors are reported to the stream that was this object was
+  /// constructed with.
   ///
-  /// \returns true if the .debug_abbrev verifies successfully, false otherwise.
+  /// \returns true if .debug_abbrev and .debug_abbrev.dwo verify successfully,
+  /// false otherwise.
   bool handleDebugAbbrev();
+
   /// Verify the information in the .debug_info section.
   ///
   /// Any errors are reported to the stream that was this object was
