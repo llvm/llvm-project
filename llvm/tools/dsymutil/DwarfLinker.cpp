@@ -94,36 +94,31 @@ struct DeclMapInfo;
 /// specific DeclContext using a separate DenseMap keyed on the hash
 /// of the fully qualified name of the context.
 class DeclContext {
-  unsigned QualifiedNameHash;
-  uint32_t Line;
-  uint32_t ByteSize;
-  uint16_t Tag;
+  unsigned QualifiedNameHash = 0;
+  uint32_t Line = 0;
+  uint32_t ByteSize = 0;
+  uint16_t Tag = dwarf::DW_TAG_compile_unit;
   unsigned DefinedInClangModule : 1;
   StringRef Name;
   StringRef File;
   const DeclContext &Parent;
   DWARFDie LastSeenDIE;
-  uint32_t LastSeenCompileUnitID;
-  uint32_t CanonicalDIEOffset;
+  uint32_t LastSeenCompileUnitID = 0;
+  uint32_t CanonicalDIEOffset = 0;
 
   friend DeclMapInfo;
 
 public:
   typedef DenseSet<DeclContext *, DeclMapInfo> Map;
 
-  DeclContext()
-      : QualifiedNameHash(0), Line(0), ByteSize(0),
-        Tag(dwarf::DW_TAG_compile_unit), DefinedInClangModule(0), Name(),
-        File(), Parent(*this), LastSeenDIE(), LastSeenCompileUnitID(0),
-        CanonicalDIEOffset(0) {}
+  DeclContext() : DefinedInClangModule(0), Parent(*this) {}
 
   DeclContext(unsigned Hash, uint32_t Line, uint32_t ByteSize, uint16_t Tag,
               StringRef Name, StringRef File, const DeclContext &Parent,
               DWARFDie LastSeenDIE = DWARFDie(), unsigned CUId = 0)
       : QualifiedNameHash(Hash), Line(Line), ByteSize(ByteSize), Tag(Tag),
         DefinedInClangModule(0), Name(Name), File(File), Parent(Parent),
-        LastSeenDIE(LastSeenDIE), LastSeenCompileUnitID(CUId),
-        CanonicalDIEOffset(0) {}
+        LastSeenDIE(LastSeenDIE), LastSeenCompileUnitID(CUId) {}
 
   uint32_t getQualifiedNameHash() const { return QualifiedNameHash; }
 
@@ -1122,7 +1117,7 @@ class DwarfLinker {
 public:
   DwarfLinker(StringRef OutputFilename, const LinkOptions &Options)
       : OutputFilename(OutputFilename), Options(Options),
-        BinHolder(Options.Verbose), LastCIEOffset(0) {}
+        BinHolder(Options.Verbose) {}
 
   /// \brief Link the contents of the DebugMap.
   bool link(const DebugMap &);
@@ -1472,7 +1467,7 @@ private:
 
   /// Offset of the last CIE that has been emitted in the output
   /// debug_frame section.
-  uint32_t LastCIEOffset;
+  uint32_t LastCIEOffset = 0;
 
   /// Mapping the PCM filename to the DwoId.
   StringMap<uint64_t> ClangModules;
