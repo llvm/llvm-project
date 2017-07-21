@@ -274,6 +274,7 @@ OPENMP_CLAUSE(from, OMPFromClause)
 OPENMP_CLAUSE(use_device_ptr, OMPUseDevicePtrClause)
 OPENMP_CLAUSE(is_device_ptr, OMPIsDevicePtrClause)
 OPENMP_CLAUSE(task_reduction,  OMPTaskReductionClause)
+OPENMP_CLAUSE(in_reduction,  OMPInReductionClause)
 
 // Clauses allowed for OpenMP directive 'parallel'.
 OPENMP_PARALLEL_CLAUSE(if)
@@ -434,6 +435,7 @@ OPENMP_TASK_CLAUSE(untied)
 OPENMP_TASK_CLAUSE(mergeable)
 OPENMP_TASK_CLAUSE(depend)
 OPENMP_TASK_CLAUSE(priority)
+OPENMP_TASK_CLAUSE(in_reduction)
 
 // Clauses allowed for OpenMP directive 'atomic'.
 OPENMP_ATOMIC_CLAUSE(read)
@@ -557,6 +559,7 @@ OPENMP_TASKLOOP_CLAUSE(grainsize)
 OPENMP_TASKLOOP_CLAUSE(nogroup)
 OPENMP_TASKLOOP_CLAUSE(num_tasks)
 OPENMP_TASKLOOP_CLAUSE(reduction)
+OPENMP_TASKLOOP_CLAUSE(in_reduction)
 
 // Clauses allowed for OpenMP directive 'taskloop simd'.
 OPENMP_TASKLOOP_SIMD_CLAUSE(if)
@@ -578,6 +581,7 @@ OPENMP_TASKLOOP_SIMD_CLAUSE(grainsize)
 OPENMP_TASKLOOP_SIMD_CLAUSE(nogroup)
 OPENMP_TASKLOOP_SIMD_CLAUSE(num_tasks)
 OPENMP_TASKLOOP_SIMD_CLAUSE(reduction)
+OPENMP_TASKLOOP_SIMD_CLAUSE(in_reduction)
 
 // Clauses allowed for OpenMP directive 'critical'.
 OPENMP_CRITICAL_CLAUSE(hint)

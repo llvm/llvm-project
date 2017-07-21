@@ -139,6 +139,7 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind,
   case OMPC_shared:
   case OMPC_reduction:
   case OMPC_task_reduction:
+  case OMPC_in_reduction:
   case OMPC_aligned:
   case OMPC_copyin:
   case OMPC_copyprivate:
@@ -279,6 +280,7 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
   case OMPC_shared:
   case OMPC_reduction:
   case OMPC_task_reduction:
+  case OMPC_in_reduction:
   case OMPC_aligned:
   case OMPC_copyin:
   case OMPC_copyprivate:
@@ -851,8 +853,8 @@ bool clang::isOpenMPDistributeDirective(OpenMPDirectiveKind Kind) {
 bool clang::isOpenMPPrivate(OpenMPClauseKind Kind) {
   return Kind == OMPC_private || Kind == OMPC_firstprivate ||
          Kind == OMPC_lastprivate || Kind == OMPC_linear ||
-         Kind == OMPC_reduction ||
-         Kind == OMPC_task_reduction; // TODO add next clauses like 'reduction'.
+         Kind == OMPC_reduction || Kind == OMPC_task_reduction ||
+         Kind == OMPC_in_reduction; // TODO add next clauses like 'reduction'.
 }
 
 bool clang::isOpenMPThreadPrivate(OpenMPClauseKind Kind) {

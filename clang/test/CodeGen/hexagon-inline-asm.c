@@ -18,6 +18,6 @@ void foo(v64 v0, v64 v1, v64 *p) {
 
 void fred(unsigned *p, unsigned m, unsigned v) {
   asm ("memw(%0++%1) = %2" : : "r"(p),"a"(m),"r"(v) : "memory");
-// CHECK: call void asm sideeffect "memw($0++$1) = $2", "r,a,r,~{memory}"(i32* %0, i32 %1, i32 %2)
+// CHECK: call void asm sideeffect "memw($0++$1) = $2", "r,a,r,~{memory}"(i32* %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
 }
 

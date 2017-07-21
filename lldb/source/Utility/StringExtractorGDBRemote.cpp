@@ -103,6 +103,7 @@ StringExtractorGDBRemote::GetServerPacketType() const {
     case 'P':
       if (PACKET_STARTS_WITH("QPassSignals:"))
         return eServerPacketType_QPassSignals;
+      break;
 
     case 'S':
       if (PACKET_MATCHES("QStartNoAckMode"))

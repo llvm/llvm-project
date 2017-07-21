@@ -201,25 +201,22 @@ SymbolInfo index::getSymbolInfo(const Decl *D) {
         Info.Properties |= (unsigned)SymbolProperty::UnitTest;
       break;
     }
-    case Decl::ObjCMethod:
-      if (cast<ObjCMethodDecl>(D)->isInstanceMethod()) {
-        const ObjCMethodDecl *MD = cast<ObjCMethodDecl>(D);
-        Info.Kind = SymbolKind::InstanceMethod;
-        if (MD->isPropertyAccessor()) {
-          if (MD->param_size())
-            Info.SubKind = SymbolSubKind::AccessorSetter;
-          else
-            Info.SubKind = SymbolSubKind::AccessorGetter;
-        }
-      } else {
-        Info.Kind = SymbolKind::ClassMethod;
+    case Decl::ObjCMethod: {
+      const ObjCMethodDecl *MD = cast<ObjCMethodDecl>(D);
+      Info.Kind = MD->isInstanceMethod() ? SymbolKind::InstanceMethod : SymbolKind::ClassMethod;
+      if (MD->isPropertyAccessor()) {
+        if (MD->param_size())
+          Info.SubKind = SymbolSubKind::AccessorSetter;
+        else
+          Info.SubKind = SymbolSubKind::AccessorGetter;
       }
       Info.Lang = SymbolLanguage::ObjC;
-      if (isUnitTest(cast<ObjCMethodDecl>(D)))
+      if (isUnitTest(MD))
         Info.Properties |= (unsigned)SymbolProperty::UnitTest;
       if (D->hasAttr<IBActionAttr>())
         Info.Properties |= (unsigned)SymbolProperty::IBAnnotated;
       break;
+    }
     case Decl::ObjCProperty:
       Info.Kind = SymbolKind::InstanceProperty;
       Info.Lang = SymbolLanguage::ObjC;

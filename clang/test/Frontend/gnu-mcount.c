@@ -28,10 +28,6 @@
 // RUN: %clang -target armv7-apple-ios -pg -meabi gnu -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK -check-prefix CHECK-ARM-IOS
 // RUN: %clang -target arm64-apple-ios -pg -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK -check-prefix CHECK-ARM-IOS
 // RUN: %clang -target arm64-apple-ios -pg -meabi gnu -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK -check-prefix CHECK-ARM-IOS
-// RUN: %clang -target armv7-unknown-bitrig-gnueabihf -pg -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK -check-prefix CHECK-ARM-EABI-BIGRIG
-// RUN: %clang -target armv7-unknown-bitrig-gnueabihf -meabi gnu -pg -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK -check-prefix CHECK-ARM-EABI-BIGRIG
-// RUN: %clang -target aarch64-unknown-bitrig-gnueabihf -pg -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK -check-prefix CHECK-ARM64-EABI-BITRIG
-// RUN: %clang -target aarch64-unknown-bitrig-gnueabihf -meabi gnu -pg -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK -check-prefix CHECK-ARM64-EABI-BITRIG
 // RUN: %clang -target armv7-unknown-rtems-gnueabihf -pg -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK -check-prefix CHECK-ARM-EABI-RTEMS
 // RUN: %clang -target armv7-unknown-rtems-gnueabihf -meabi gnu -pg -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK -check-prefix CHECK-ARM-EABI-RTEMS
 // RUN: %clang -target aarch64-unknown-rtems-gnueabihf -pg -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK -check-prefix CHECK-ARM64-EABI-RTEMS
@@ -71,10 +67,6 @@ int f() {
 // CHECK-ARM64-EABI-OPENBSD-NOT: attributes #{{[0-9]+}} = { {{.*}}"counting-function"="\01__gnu_mcount_nc"{{.*}} }
 // CHECK-ARM-EABI-MEABI-GNU-NOT: attributes #{{[0-9]+}} = { {{.*}}"counting-function"="mcount"{{.*}} }
 // CHECK-ARM-EABI-MEABI-GNU: attributes #{{[0-9]+}} = { {{.*}}"counting-function"="\01__gnu_mcount_nc"{{.*}} }
-// CHECK-ARM-EABI-BITRIG: attributes #{{[0-9]+}} = { {{.*}}"counting-function"="__mcount"{{.*}} }
-// CHECK-ARM-EABI-BITRIG-NOT: attributes #{{[0-9]+}} = { {{.*}}"counting-function"="\01__gnu_mcount_nc"{{.*}} }
-// CHECK-ARM54-EABI-BITRIG: attributes #{{[0-9]+}} = { {{.*}}"counting-function"="mcount"{{.*}} }
-// CHECK-ARM54-EABI-BITRIG-NOT: attributes #{{[0-9]+}} = { {{.*}}"counting-function"="\01__gnu_mcount_nc"{{.*}} }
 // CHECK-ARM-EABI-RTEMS: attributes #{{[0-9]+}} = { {{.*}}"counting-function"="mcount"{{.*}} }
 // CHECK-ARM-EABI-RTEMS-NOT: attributes #{{[0-9]+}} = { {{.*}}"counting-function"="\01__gnu_mcount_nc"{{.*}} }
 // CHECK-ARM64-EABI-RTEMS: attributes #{{[0-9]+}} = { {{.*}}"counting-function"="mcount"{{.*}} }
