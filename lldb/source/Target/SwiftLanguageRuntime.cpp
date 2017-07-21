@@ -365,7 +365,9 @@ static bool GetObjectDescription_ObjectCopy(Process *process, Stream &str,
 
   ValueObjectSP static_sp(object.GetStaticValue());
 
-  CompilerType static_type(static_sp->GetCompilerType().GetNonReferenceType());
+  CompilerType static_type(static_sp->GetCompilerType());
+  if (auto non_reference_type = static_type.GetNonReferenceType())
+    static_type = non_reference_type;
 
   Error error;
 
