@@ -35,6 +35,21 @@
 // RUN:   | FileCheck --check-prefix=CHECK-MGPOPTDEF %s
 // CHECK-MGPOPTDEF: "-mllvm" "-mgpopt"
 //
+// -mgpopt -mno-abicalls -mlocal-sdata
+// RUN: %clang -target mips-linux-gnu -### -c %s -mno-abicalls -mno-gpopt -mgpopt -mno-local-sdata -mlocal-sdata 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-MLOCALSDATA %s
+// CHECK-MLOCALSDATA: "-mllvm" "-mlocal-sdata=1"
+//
+// -mgpopt -mno-abicalls -mno-local-sdata
+// RUN: %clang -target mips-linux-gnu -### -c %s -mno-abicalls -mno-gpopt -mgpopt -mlocal-sdata -mno-local-sdata 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-MNOLOCALSDATA %s
+// CHECK-MNOLOCALSDATA: "-mllvm" "-mlocal-sdata=0"
+//
+// -mgpopt -mno-abicalls
+// RUN: %clang -target mips-linux-gnu -### -c %s -mno-abicalls -mgpopt 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-MLOCALSDATADEF %s
+// CHECK-MLOCALSDATADEF-NOT: "-mllvm" "-mlocal-sdata"
+//
 // -mips16
 // RUN: %clang -target mips-linux-gnu -### -c %s \
 // RUN:     -mno-mips16 -mips16 2>&1 \

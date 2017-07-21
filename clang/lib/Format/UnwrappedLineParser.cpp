@@ -486,6 +486,8 @@ void UnwrappedLineParser::parseBlock(bool MustBeDeclaration, bool AddLevel,
     return;
   }
 
+  flushComments(isOnNewLine(*FormatTok));
+  Line->Level = InitialLevel;
   nextToken(); // Munch the closing brace.
 
   if (MacroBlock && FormatTok->is(tok::l_paren))
@@ -493,7 +495,6 @@ void UnwrappedLineParser::parseBlock(bool MustBeDeclaration, bool AddLevel,
 
   if (MunchSemi && FormatTok->Tok.is(tok::semi))
     nextToken();
-  Line->Level = InitialLevel;
   Line->MatchingOpeningBlockLineIndex = OpeningLineIndex;
   if (OpeningLineIndex != UnwrappedLine::kInvalidIndex) {
     // Update the opening line to add the forward reference as well

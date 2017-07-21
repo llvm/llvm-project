@@ -67,6 +67,99 @@ TEST_F(FormatTestJS, BlockComments) {
                "    aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa);");
 }
 
+TEST_F(FormatTestJS, JSDocComments) {
+  // Break the first line of a multiline jsdoc comment.
+  EXPECT_EQ("/**\n"
+            " * jsdoc line 1\n"
+            " * jsdoc line 2\n"
+            " */",
+            format("/** jsdoc line 1\n"
+                   " * jsdoc line 2\n"
+                   " */",
+                   getGoogleJSStyleWithColumns(20)));
+  // Both break after '/**' and break the line itself.
+  EXPECT_EQ("/**\n"
+            " * jsdoc line long\n"
+            " * long jsdoc line 2\n"
+            " */",
+            format("/** jsdoc line long long\n"
+                   " * jsdoc line 2\n"
+                   " */",
+                   getGoogleJSStyleWithColumns(20)));
+  // Break a short first line if the ending '*/' is on a newline.
+  EXPECT_EQ("/**\n"
+            " * jsdoc line 1\n"
+            " */",
+            format("/** jsdoc line 1\n"
+                   " */", getGoogleJSStyleWithColumns(20)));
+  // Don't break the first line of a short single line jsdoc comment.
+  EXPECT_EQ("/** jsdoc line 1 */",
+            format("/** jsdoc line 1 */", getGoogleJSStyleWithColumns(20)));
+  // Don't break the first line of a single line jsdoc comment if it just fits
+  // the column limit.
+  EXPECT_EQ("/** jsdoc line 12 */",
+            format("/** jsdoc line 12 */", getGoogleJSStyleWithColumns(20)));
+  // Don't break after '/**' and before '*/' if there is no space between
+  // '/**' and the content.
+  EXPECT_EQ(
+      "/*** nonjsdoc long\n"
+      " * line */",
+      format("/*** nonjsdoc long line */", getGoogleJSStyleWithColumns(20)));
+  EXPECT_EQ(
+      "/**strange long long\n"
+      " * line */",
+      format("/**strange long long line */", getGoogleJSStyleWithColumns(20)));
+  // Break the first line of a single line jsdoc comment if it just exceeds the
+  // column limit.
+  EXPECT_EQ("/**\n"
+            " * jsdoc line 123\n"
+            " */",
+            format("/** jsdoc line 123 */", getGoogleJSStyleWithColumns(20)));
+  // Break also if the leading indent of the first line is more than 1 column.
+  EXPECT_EQ("/**\n"
+            " * jsdoc line 123\n"
+            " */",
+            format("/**  jsdoc line 123 */", getGoogleJSStyleWithColumns(20)));
+  // Break also if the leading indent of the first line is more than 1 column.
+  EXPECT_EQ("/**\n"
+            " * jsdoc line 123\n"
+            " */",
+            format("/**   jsdoc line 123 */", getGoogleJSStyleWithColumns(20)));
+  // Break after the content of the last line.
+  EXPECT_EQ("/**\n"
+            " * line 1\n"
+            " * line 2\n"
+            " */",
+            format("/**\n"
+                   " * line 1\n"
+                   " * line 2 */",
+                   getGoogleJSStyleWithColumns(20)));
+  // Break both the content and after the content of the last line.
+  EXPECT_EQ("/**\n"
+            " * line 1\n"
+            " * line long long\n"
+            " * long\n"
+            " */",
+            format("/**\n"
+                   " * line 1\n"
+                   " * line long long long */",
+                   getGoogleJSStyleWithColumns(20)));
+
+  // The comment block gets indented.
+  EXPECT_EQ("function f() {\n"
+            "  /**\n"
+            "   * comment about\n"
+            "   * x\n"
+            "   */\n"
+            "  var x = 1;\n"
+            "}",
+            format("function f() {\n"
+                   "/** comment about x */\n"
+                   "var x = 1;\n"
+                   "}",
+                   getGoogleJSStyleWithColumns(20)));
+}
+
 TEST_F(FormatTestJS, UnderstandsJavaScriptOperators) {
   verifyFormat("a == = b;");
   verifyFormat("a != = b;");

@@ -49,6 +49,7 @@ list(APPEND CLANG_TEST_DEPS
   clang-refactor-test
   clang-import-test
   clang-rename
+  clang-diff
   )
 
 if(CLANG_ENABLE_STATIC_ANALYZER)

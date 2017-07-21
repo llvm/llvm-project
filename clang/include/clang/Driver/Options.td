@@ -2065,6 +2065,10 @@ def mgpopt : Flag<["-"], "mgpopt">, Group<m_Group>,
 def mno_gpopt : Flag<["-"], "mno-gpopt">, Group<m_Group>,
   HelpText<"Do not use GP relative accesses for symbols known to be in a small"
            " data section (MIPS)">;
+def mlocal_sdata : Flag<["-"], "mlocal-sdata">, Group<m_Group>,
+  HelpText<"Extend the -G behaviour to object local data (MIPS)">;
+def mno_local_sdata : Flag<["-"], "mno-local-sdata">, Group<m_Group>,
+  HelpText<"Do not extend the -G behaviour to object local data (MIPS)">;
 def mnan_EQ : Joined<["-"], "mnan=">, Group<m_Group>;
 def mabicalls : Flag<["-"], "mabicalls">, Group<m_Group>,
   HelpText<"Enable SVR4-style position-independent code (Mips only)">;
