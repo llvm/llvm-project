@@ -229,19 +229,16 @@ static void CallPrintfAndReportCallback(const char *str) {
     PrintfAndReportCallback(str);
 }
 
-static void SharedPrintfCode(bool append_pid, const char *format,
-                             va_list args) {
+static void NOINLINE SharedPrintfCodeNoBuffer(bool append_pid,
+                                              char *local_buffer,
+                                              int buffer_size,
+                                              const char *format,
+                                              va_list args) {
   va_list args2;
   va_copy(args2, args);
   const int kLen = 16 * 1024;
-  // |local_buffer| is small enough not to overflow the stack and/or violate
-  // the stack limit enforced by TSan (-Wframe-larger-than=512). On the other
-  // hand, the bigger the buffer is, the more the chance the error report will
-  // fit into it.
-  char local_buffer[400];
   int needed_length;
   char *buffer = local_buffer;
-  int buffer_size = ARRAY_SIZE(local_buffer);
   // First try to print a message using a local buffer, and then fall back to
   // mmaped buffer.
   for (int use_mmap = 0; use_mmap < 2; use_mmap++) {
@@ -260,16 +257,15 @@ static void SharedPrintfCode(bool append_pid, const char *format,
                       "Buffer in Report is too short!\n"); \
       }
     if (append_pid) {
-      int pid = internal_getpid();
       const char *exe_name = GetProcessName();
       if (common_flags()->log_exe_name && exe_name) {
         needed_length += internal_snprintf(buffer, buffer_size,
                                            "==%s", exe_name);
         CHECK_NEEDED_LENGTH
       }
-      needed_length += internal_snprintf(buffer + needed_length,
-                                         buffer_size - needed_length,
-                                         "==%d==", pid);
+      needed_length +=
+          internal_snprintf(buffer + needed_length, buffer_size - needed_length,
+                            "==%d:%d==", internal_getpid(), GetTid());
       CHECK_NEEDED_LENGTH
     }
     needed_length += VSNPrintf(buffer + needed_length,
@@ -292,6 +288,17 @@ static void SharedPrintfCode(bool append_pid, const char *format,
   va_end(args2);
 }
 
+static void NOINLINE SharedPrintfCode(bool append_pid, const char *format,
+                                      va_list args) {
+  // |local_buffer| is small enough not to overflow the stack and/or violate
+  // the stack limit enforced by TSan (-Wframe-larger-than=512). On the other
+  // hand, the bigger the buffer is, the more the chance the error report will
+  // fit into it.
+  char local_buffer[400];
+  SharedPrintfCodeNoBuffer(append_pid, local_buffer, ARRAY_SIZE(local_buffer),
+                           format, args);
+}
+
 FORMAT(1, 2)
 void Printf(const char *format, ...) {
   va_list args;
@@ -300,7 +307,7 @@ void Printf(const char *format, ...) {
   va_end(args);
 }
 
-// Like Printf, but prints the current PID before the output string.
+// Like Printf, but prints the current PID:TID before the output string.
 FORMAT(1, 2)
 void Report(const char *format, ...) {
   va_list args;

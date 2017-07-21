@@ -139,11 +139,13 @@ static void moveAbsRight(ExprValue &A, ExprValue &B) {
 
 static ExprValue add(ExprValue A, ExprValue B) {
   moveAbsRight(A, B);
-  return {A.Sec, A.ForceAbsolute, A.Val + B.getValue(), A.Loc};
+  uint64_t Val = alignTo(A.Val, A.Alignment) + B.getValue();
+  return {A.Sec, A.ForceAbsolute, Val, A.Loc};
 }
 
 static ExprValue sub(ExprValue A, ExprValue B) {
-  return {A.Sec, A.Val - B.getValue(), A.Loc};
+  uint64_t Val = alignTo(A.Val, A.Alignment) - B.getValue();
+  return {A.Sec, Val, A.Loc};
 }
 
 static ExprValue mul(ExprValue A, ExprValue B) {
