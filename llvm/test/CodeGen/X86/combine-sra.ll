@@ -125,6 +125,36 @@ define <4 x i32> @combine_vec_ashr_ashr2(<4 x i32> %x) {
   ret <4 x i32> %2
 }
 
+define <4 x i32> @combine_vec_ashr_ashr3(<4 x i32> %x) {
+; SSE-LABEL: combine_vec_ashr_ashr3:
+; SSE:       # BB#0:
+; SSE-NEXT:    movdqa %xmm0, %xmm1
+; SSE-NEXT:    psrad $27, %xmm1
+; SSE-NEXT:    movdqa %xmm0, %xmm2
+; SSE-NEXT:    psrad $5, %xmm2
+; SSE-NEXT:    pblendw {{.*#+}} xmm2 = xmm2[0,1,2,3],xmm1[4,5,6,7]
+; SSE-NEXT:    movdqa %xmm0, %xmm1
+; SSE-NEXT:    psrad $31, %xmm1
+; SSE-NEXT:    psrad $1, %xmm0
+; SSE-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm1[4,5,6,7]
+; SSE-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1],xmm2[2,3],xmm0[4,5],xmm2[6,7]
+; SSE-NEXT:    movdqa %xmm0, %xmm1
+; SSE-NEXT:    psrad $10, %xmm1
+; SSE-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1,2,3],xmm0[4,5,6,7]
+; SSE-NEXT:    psrad $31, %xmm0
+; SSE-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3],xmm0[4,5],xmm1[6,7]
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_vec_ashr_ashr3:
+; AVX:       # BB#0:
+; AVX-NEXT:    vpsravd {{.*}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpsravd {{.*}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %1 = ashr <4 x i32> %x, <i32  1, i32  5, i32 50, i32 27>
+  %2 = ashr <4 x i32> %1, <i32 33, i32 10, i32 33, i32  0>
+  ret <4 x i32> %2
+}
+
 ; fold (sra x, (trunc (and y, c))) -> (sra x, (and (trunc y), (trunc c))).
 define <4 x i32> @combine_vec_ashr_trunc_and(<4 x i32> %x, <4 x i64> %y) {
 ; SSE-LABEL: combine_vec_ashr_trunc_and:

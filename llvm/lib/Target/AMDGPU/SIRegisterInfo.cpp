@@ -472,17 +472,16 @@ static bool buildMUBUFOffsetLoadStore(const SIInstrInfo *TII,
   if (LoadStoreOp == -1)
     return false;
 
-  unsigned Reg = TII->getNamedOperand(*MI, AMDGPU::OpName::vdata)->getReg();
-
+  const MachineOperand *Reg = TII->getNamedOperand(*MI, AMDGPU::OpName::vdata);
   BuildMI(*MBB, MI, DL, TII->get(LoadStoreOp))
-      .addReg(Reg, getDefRegState(!IsStore))
-      .add(*TII->getNamedOperand(*MI, AMDGPU::OpName::srsrc))
-      .add(*TII->getNamedOperand(*MI, AMDGPU::OpName::soffset))
-      .addImm(Offset)
-      .addImm(0) // glc
-      .addImm(0) // slc
-      .addImm(0) // tfe
-      .setMemRefs(MI->memoperands_begin(), MI->memoperands_end());
+    .add(*Reg)
+    .add(*TII->getNamedOperand(*MI, AMDGPU::OpName::srsrc))
+    .add(*TII->getNamedOperand(*MI, AMDGPU::OpName::soffset))
+    .addImm(Offset)
+    .addImm(0) // glc
+    .addImm(0) // slc
+    .addImm(0) // tfe
+    .setMemRefs(MI->memoperands_begin(), MI->memoperands_end());
   return true;
 }
 

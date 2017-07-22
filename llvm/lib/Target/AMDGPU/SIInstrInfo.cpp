@@ -305,9 +305,19 @@ bool SIInstrInfo::getMemOpBaseRegImmOfs(MachineInstr &LdSt, unsigned &BaseReg,
   }
 
   if (isFLAT(LdSt)) {
-    const MachineOperand *AddrReg = getNamedOperand(LdSt, AMDGPU::OpName::vaddr);
-    BaseReg = AddrReg->getReg();
-    Offset = 0;
+    const MachineOperand *VAddr = getNamedOperand(LdSt, AMDGPU::OpName::vaddr);
+    if (VAddr) {
+      // Can't analyze 2 offsets.
+      if (getNamedOperand(LdSt, AMDGPU::OpName::saddr))
+        return false;
+
+      BaseReg = VAddr->getReg();
+    } else {
+      // scratch instructions have either vaddr or saddr.
+      BaseReg = getNamedOperand(LdSt, AMDGPU::OpName::saddr)->getReg();
+    }
+
+    Offset = getNamedOperand(LdSt, AMDGPU::OpName::offset)->getImm();
     return true;
   }
 

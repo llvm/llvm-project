@@ -167,7 +167,6 @@ public:
     RTEMS,
     NaCl,       // Native Client
     CNK,        // BG/P Compute-Node Kernel
-    Bitrig,
     AIX,
     CUDA,       // NVIDIA CUDA
     NVCL,       // NVIDIA OpenCL
@@ -487,10 +486,6 @@ public:
 
   bool isOSSolaris() const {
     return getOS() == Triple::Solaris;
-  }
-
-  bool isOSBitrig() const {
-    return getOS() == Triple::Bitrig;
   }
 
   bool isOSIAMCU() const {
