@@ -1102,7 +1102,7 @@ bool IslNodeBuilder::materializeFortranArrayOutermostDimension() {
       if (!FAD)
         continue;
 
-      isl_pw_aff *ParametricPwAff = Array->getDimensionSizePw(0);
+      isl_pw_aff *ParametricPwAff = Array->getDimensionSizePw(0).release();
       assert(ParametricPwAff && "parametric pw_aff corresponding "
                                 "to outermost dimension does not "
                                 "exist");

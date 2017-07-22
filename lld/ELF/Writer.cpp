@@ -1600,7 +1600,8 @@ static uint64_t getFileAlignment(uint64_t Off, OutputSection *Sec) {
   // The first section in a PT_LOAD has to have congruent offset and address
   // module the page size.
   if (Sec == First)
-    return alignTo(Off, Config->MaxPageSize, Sec->Addr);
+    return alignTo(Off, std::max<uint64_t>(Sec->Alignment, Config->MaxPageSize),
+                   Sec->Addr);
 
   // If two sections share the same PT_LOAD the file offset is calculated
   // using this formula: Off2 = Off1 + (VA2 - VA1).
