@@ -490,7 +490,7 @@ bool JSONImporter::importAccesses(Scop &S, Json::Value &JScop,
           return false;
         }
         isl_id_free(NewOutId);
-        NewOutId = SAI->getBasePtrId();
+        NewOutId = SAI->getBasePtrId().release();
       } else {
         NewOutId = isl_map_get_tuple_id(CurrentAccessMap, isl_dim_out);
       }

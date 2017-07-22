@@ -129,6 +129,7 @@ Fuzzer::Fuzzer(UserCallback CB, InputCorpus &Corpus, MutationDispatcher &MD,
   if (!Options.OutputCorpus.empty() && Options.ReloadIntervalSec)
     EpochOfLastReadOfOutputCorpus = GetEpoch(Options.OutputCorpus);
   MaxInputLen = MaxMutationLen = Options.MaxLen;
+  TmpMaxMutationLen = Max(size_t(4), Corpus.MaxInputSize());
   AllocateCurrentUnitData();
   CurrentUnitSize = 0;
   memset(BaseSha1, 0, sizeof(BaseSha1));
@@ -511,7 +512,7 @@ void Fuzzer::WriteToOutputCorpus(const Unit &U) {
   std::string Path = DirPlusFile(Options.OutputCorpus, Hash(U));
   WriteToFile(U, Path);
   if (Options.Verbosity >= 2)
-    Printf("Written to %s\n", Path.c_str());
+    Printf("Written %zd bytes to %s\n", U.size(), Path.c_str());
 }
 
 void Fuzzer::WriteUnitToFileWithPrefix(const Unit &U, const char *Prefix) {
@@ -532,7 +533,7 @@ void Fuzzer::PrintStatusForNewUnit(const Unit &U, const char *Text) {
     return;
   PrintStats(Text, "");
   if (Options.Verbosity) {
-    Printf(" L: %zd ", U.size());
+    Printf(" L: %zd/%zd ", U.size(), Corpus.MaxInputSize());
     MD.PrintMutationSequence();
     Printf("\n");
   }
@@ -547,6 +548,8 @@ void Fuzzer::ReportNewCoverage(InputInfo *II, const Unit &U) {
   NumberOfNewUnitsAdded++;
   TPC.PrintNewPCs();
   CheckExitOnSrcPosOrItem();  // Check only after the unit is saved to corpus.
+  LastCorpusUpdateRun = TotalNumberOfRuns;
+  LastCorpusUpdateTime = system_clock::now();
 }
 
 // Tries detecting a memory leak on the particular input that we have just
@@ -588,19 +591,6 @@ void Fuzzer::TryDetectingAMemoryLeak(const uint8_t *Data, size_t Size,
   }
 }
 
-static size_t ComputeMutationLen(size_t MaxInputSize, size_t MaxMutationLen,
-                                 Random &Rand) {
-  assert(MaxInputSize <= MaxMutationLen);
-  if (MaxInputSize == MaxMutationLen) return MaxMutationLen;
-  size_t Result = MaxInputSize;
-  size_t R = Rand.Rand();
-  if ((R % (1U << 7)) == 0)
-    Result++;
-  if ((R % (1U << 15)) == 0)
-    Result += 10 + Result / 2;
-  return Min(Result, MaxMutationLen);
-}
-
 void Fuzzer::MutateAndTestOne() {
   MD.StartMutationSequence();
 
@@ -615,10 +605,8 @@ void Fuzzer::MutateAndTestOne() {
   assert(MaxMutationLen > 0);
 
   size_t CurrentMaxMutationLen =
-      Options.ExperimentalLenControl
-          ? ComputeMutationLen(Corpus.MaxInputSize(), MaxMutationLen,
-                               MD.GetRand())
-          : MaxMutationLen;
+      Min(MaxMutationLen, Max(U.size(), TmpMaxMutationLen));
+  assert(CurrentMaxMutationLen > 0);
 
   for (int i = 0; i < Options.MutateDepth; i++) {
     if (TotalNumberOfRuns >= Options.MaxNumberOfRuns)
@@ -652,6 +640,25 @@ void Fuzzer::Loop() {
     if (TotalNumberOfRuns >= Options.MaxNumberOfRuns)
       break;
     if (TimedOut()) break;
+
+    // Update TmpMaxMutationLen
+    if (Options.ExperimentalLenControl) {
+      if (TmpMaxMutationLen < MaxMutationLen &&
+        (TotalNumberOfRuns - LastCorpusUpdateRun > 1000 &&
+        duration_cast<seconds>(Now - LastCorpusUpdateTime).count() >= 1)) {
+        LastCorpusUpdateRun = TotalNumberOfRuns;
+        LastCorpusUpdateTime = Now;
+        TmpMaxMutationLen =
+            Min(MaxMutationLen,
+                TmpMaxMutationLen + Max(size_t(4), TmpMaxMutationLen / 8));
+        if (TmpMaxMutationLen <= MaxMutationLen)
+          Printf("#%zd\tTEMP_MAX_LEN: %zd\n", TotalNumberOfRuns,
+                 TmpMaxMutationLen);
+      }
+    } else {
+      TmpMaxMutationLen = MaxMutationLen;
+    }
+
     // Perform several mutations and runs.
     MutateAndTestOne();
   }

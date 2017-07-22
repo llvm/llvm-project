@@ -22,6 +22,7 @@
 #include "polly/Options.h"
 #include "polly/ScopBuilder.h"
 #include "polly/Support/GICHelper.h"
+#include "polly/Support/ISLOStream.h"
 #include "polly/Support/SCEVValidator.h"
 #include "polly/Support/ScopHelper.h"
 #include "llvm/ADT/DepthFirstIterator.h"
@@ -268,7 +269,7 @@ ScopArrayInfo::ScopArrayInfo(Value *BasePtr, Type *ElementType, isl_ctx *Ctx,
                : getIslCompatibleName("MemRef", BasePtr, S->getNextArrayIdx(),
                                       Kind == MemoryKind::PHI ? "__phi" : "",
                                       UseInstructionNames);
-  Id = isl_id_alloc(Ctx, BasePtrName.c_str(), this);
+  Id = isl::id::alloc(Ctx, BasePtrName.c_str(), this);
 
   updateSizes(Sizes);
 
@@ -282,16 +283,15 @@ ScopArrayInfo::ScopArrayInfo(Value *BasePtr, Type *ElementType, isl_ctx *Ctx,
     const_cast<ScopArrayInfo *>(BasePtrOriginSAI)->addDerivedSAI(this);
 }
 
-__isl_give isl_space *ScopArrayInfo::getSpace() const {
-  auto *Space =
-      isl_space_set_alloc(isl_id_get_ctx(Id), 0, getNumberOfDimensions());
-  Space = isl_space_set_tuple_id(Space, isl_dim_set, isl_id_copy(Id));
+isl::space ScopArrayInfo::getSpace() const {
+  auto Space = isl::space(Id.get_ctx(), 0, getNumberOfDimensions());
+  Space = Space.set_tuple_id(isl::dim::set, Id);
   return Space;
 }
 
 bool ScopArrayInfo::isReadOnly() {
   isl::union_set WriteSet = give(S.getWrites()).range();
-  isl::space Space = give(getSpace());
+  isl::space Space = getSpace();
   WriteSet = WriteSet.extract_set(Space);
 
   return bool(WriteSet.is_empty());
@@ -353,7 +353,7 @@ void ScopArrayInfo::applyAndSetFAD(Value *FAD) {
   isl::pw_aff PwAff =
       isl::aff::var_on_domain(isl::local_space(Space), isl::dim::param, 0);
 
-  DimensionSizesPw[0] = PwAff.release();
+  DimensionSizesPw[0] = PwAff;
 }
 
 bool ScopArrayInfo::updateSizes(ArrayRef<const SCEV *> NewSizes,
@@ -377,35 +377,27 @@ bool ScopArrayInfo::updateSizes(ArrayRef<const SCEV *> NewSizes,
   DimensionSizes.clear();
   DimensionSizes.insert(DimensionSizes.begin(), NewSizes.begin(),
                         NewSizes.end());
-  for (isl_pw_aff *Size : DimensionSizesPw)
-    isl_pw_aff_free(Size);
   DimensionSizesPw.clear();
   for (const SCEV *Expr : DimensionSizes) {
     if (!Expr) {
       DimensionSizesPw.push_back(nullptr);
       continue;
     }
-    isl_pw_aff *Size = S.getPwAffOnly(Expr);
+    isl::pw_aff Size = isl::manage(S.getPwAffOnly(Expr));
     DimensionSizesPw.push_back(Size);
   }
   return true;
 }
 
-ScopArrayInfo::~ScopArrayInfo() {
-  isl_id_free(Id);
-  for (isl_pw_aff *Size : DimensionSizesPw)
-    isl_pw_aff_free(Size);
-}
+ScopArrayInfo::~ScopArrayInfo() {}
 
-std::string ScopArrayInfo::getName() const { return isl_id_get_name(Id); }
+std::string ScopArrayInfo::getName() const { return Id.get_name(); }
 
 int ScopArrayInfo::getElemSizeInBytes() const {
   return DL.getTypeAllocSize(ElementType);
 }
 
-__isl_give isl_id *ScopArrayInfo::getBasePtrId() const {
-  return isl_id_copy(Id);
-}
+isl::id ScopArrayInfo::getBasePtrId() const { return Id; }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void ScopArrayInfo::dump() const { print(errs()); }
@@ -427,9 +419,8 @@ void ScopArrayInfo::print(raw_ostream &OS, bool SizeAsPwAff) const {
     OS << "[";
 
     if (SizeAsPwAff) {
-      auto *Size = getDimensionSizePw(u);
+      isl::pw_aff Size = getDimensionSizePw(u);
       OS << " " << Size << " ";
-      isl_pw_aff_free(Size);
     } else {
       OS << *getDimensionSize(u);
     }
@@ -461,7 +452,7 @@ const ScopArrayInfo *ScopArrayInfo::getFromId(__isl_take isl_id *Id) {
 
 void MemoryAccess::wrapConstantDimensions() {
   auto *SAI = getScopArrayInfo();
-  isl::space ArraySpace = give(SAI->getSpace());
+  isl::space ArraySpace = SAI->getSpace();
   isl::ctx Ctx = ArraySpace.get_ctx();
   unsigned DimsArray = SAI->getNumberOfDimensions();
 
@@ -513,7 +504,7 @@ void MemoryAccess::wrapConstantDimensions() {
 
 void MemoryAccess::updateDimensionality() {
   auto *SAI = getScopArrayInfo();
-  isl::space ArraySpace = give(SAI->getSpace());
+  isl::space ArraySpace = SAI->getSpace();
   isl::space AccessSpace = give(isl_map_get_space(AccessRelation)).range();
   isl::ctx Ctx = ArraySpace.get_ctx();
 
@@ -765,7 +756,7 @@ void MemoryAccess::assumeNoOutOfBound() {
     isl::pw_aff Zero = isl::pw_aff(LS);
 
     isl::set DimOutside = Var.lt_set(Zero);
-    isl::pw_aff SizeE = give(SAI->getDimensionSizePw(i));
+    isl::pw_aff SizeE = SAI->getDimensionSizePw(i);
     SizeE = SizeE.add_dims(isl::dim::in, Space.dim(isl::dim::set));
     SizeE = SizeE.set_tuple_id(isl::dim::in, Space.get_tuple_id(isl::dim::set));
     DimOutside = DimOutside.unite(SizeE.le_set(Var));
@@ -913,7 +904,7 @@ void MemoryAccess::foldAccessRelation() {
     NewAccessRelation = NewAccessRelation.apply_range(MapOne);
   }
 
-  isl::id BaseAddrId = give(getScopArrayInfo()->getBasePtrId());
+  isl::id BaseAddrId = getScopArrayInfo()->getBasePtrId();
   isl::space Space = give(Statement->getDomainSpace());
   NewAccessRelation = NewAccessRelation.set_tuple_id(
       isl::dim::in, Space.get_tuple_id(isl::dim::set));
@@ -972,7 +963,7 @@ void MemoryAccess::buildAccessRelation(const ScopArrayInfo *SAI) {
   isl_set_free(StmtInvalidDomain);
 
   isl_ctx *Ctx = isl_id_get_ctx(Id);
-  isl_id *BaseAddrId = SAI->getBasePtrId();
+  isl_id *BaseAddrId = SAI->getBasePtrId().release();
 
   if (getAccessInstruction() && isa<MemIntrinsic>(getAccessInstruction())) {
     buildMemIntrinsicAccessRelation();
@@ -2418,7 +2409,7 @@ static isl_set *addFortranArrayOutermostDimParams(__isl_give isl_set *Context,
     // outermost dimension size can be picked up from their runtime description.
     // TODO: actually need to check if it has a FAD, but for now this works.
     if (Array->getNumberOfDimensions() > 0) {
-      isl_pw_aff *PwAff = Array->getDimensionSizePw(0);
+      isl_pw_aff *PwAff = Array->getDimensionSizePw(0).release();
       if (!PwAff)
         continue;
 
@@ -3591,7 +3582,7 @@ void Scop::foldSizeConstantsToRight() {
     if (Array->getNumberOfDimensions() <= 1)
       continue;
 
-    isl_space *Space = Array->getSpace();
+    isl_space *Space = Array->getSpace().release();
 
     Space = isl_space_align_params(Space, isl_union_set_get_space(Accessed));
 
@@ -3603,7 +3594,7 @@ void Scop::foldSizeConstantsToRight() {
     isl_set *Elements = isl_union_set_extract_set(Accessed, Space);
 
     isl_map *Transform =
-        isl_map_universe(isl_space_map_from_set(Array->getSpace()));
+        isl_map_universe(isl_space_map_from_set(Array->getSpace().release()));
 
     std::vector<int> Int;
 
@@ -4203,7 +4194,7 @@ static void replaceBasePtrArrays(Scop *S, const ScopArrayInfo *Old,
       if (Access->getLatestScopArrayInfo() != Old)
         continue;
 
-      isl_id *Id = New->getBasePtrId();
+      isl_id *Id = New->getBasePtrId().release();
       isl_map *Map = Access->getAccessRelation();
       Map = isl_map_set_tuple_id(Map, isl_dim_out, Id);
       Access->setAccessRelation(Map);

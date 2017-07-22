@@ -315,9 +315,9 @@ public:
   //  Scalars do not have array dimensions and the first dimension of
   //  a (possibly multi-dimensional) array also does not carry any size
   //  information, in case the array is not newly created.
-  __isl_give isl_pw_aff *getDimensionSizePw(unsigned Dim) const {
+  isl::pw_aff getDimensionSizePw(unsigned Dim) const {
     assert(Dim < getNumberOfDimensions() && "Invalid dimension");
-    return isl_pw_aff_copy(DimensionSizesPw[Dim]);
+    return DimensionSizesPw[Dim];
   }
 
   /// Get the canonical element type of this array.
@@ -332,7 +332,7 @@ public:
   std::string getName() const;
 
   /// Return the isl id for the base pointer.
-  __isl_give isl_id *getBasePtrId() const;
+  isl::id getBasePtrId() const;
 
   /// Return what kind of memory this represents.
   MemoryKind getKind() const { return Kind; }
@@ -382,7 +382,7 @@ public:
   static const ScopArrayInfo *getFromId(__isl_take isl_id *Id);
 
   /// Get the space of this array access.
-  __isl_give isl_space *getSpace() const;
+  isl::space getSpace() const;
 
   /// If the array is read only
   bool isReadOnly();
@@ -421,7 +421,7 @@ private:
   Type *ElementType;
 
   /// The isl id for the base pointer.
-  isl_id *Id;
+  isl::id Id;
 
   /// True if the newly allocated array is on heap.
   bool IsOnHeap;
@@ -430,7 +430,7 @@ private:
   SmallVector<const SCEV *, 4> DimensionSizes;
 
   /// The sizes of each dimension as isl_pw_aff.
-  SmallVector<isl_pw_aff *, 4> DimensionSizesPw;
+  SmallVector<isl::pw_aff, 4> DimensionSizesPw;
 
   /// The type of this scop array info object.
   ///

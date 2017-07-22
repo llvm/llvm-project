@@ -185,6 +185,7 @@ typedef void (*LowLevelAllocateCallback)(uptr ptr, uptr size);
 void SetLowLevelAllocateCallback(LowLevelAllocateCallback callback);
 
 // IO
+void CatastrophicErrorWrite(const char *buffer, uptr length);
 void RawWrite(const char *buffer);
 bool ColorizeReports();
 void RemoveANSIEscapeSequencesFromString(char *buffer);
@@ -203,63 +204,8 @@ void SetPrintfAndReportCallback(void (*callback)(const char *));
 // Can be used to prevent mixing error reports from different sanitizers.
 extern StaticSpinMutex CommonSanitizerReportMutex;
 
-struct ReportFile {
-  void Write(const char *buffer, uptr length);
-  bool SupportsColors();
-  void SetReportPath(const char *path);
-
-  // Don't use fields directly. They are only declared public to allow
-  // aggregate initialization.
-
-  // Protects fields below.
-  StaticSpinMutex *mu;
-  // Opened file descriptor. Defaults to stderr. It may be equal to
-  // kInvalidFd, in which case new file will be opened when necessary.
-  fd_t fd;
-  // Path prefix of report file, set via __sanitizer_set_report_path.
-  char path_prefix[kMaxPathLength];
-  // Full path to report, obtained as <path_prefix>.PID
-  char full_path[kMaxPathLength];
-  // PID of the process that opened fd. If a fork() occurs,
-  // the PID of child will be different from fd_pid.
-  uptr fd_pid;
-
- private:
-  void ReopenIfNecessary();
-};
-extern ReportFile report_file;
-
 extern uptr stoptheworld_tracer_pid;
 extern uptr stoptheworld_tracer_ppid;
-
-enum FileAccessMode {
-  RdOnly,
-  WrOnly,
-  RdWr
-};
-
-// Returns kInvalidFd on error.
-fd_t OpenFile(const char *filename, FileAccessMode mode,
-              error_t *errno_p = nullptr);
-void CloseFile(fd_t);
-
-// Return true on success, false on error.
-bool ReadFromFile(fd_t fd, void *buff, uptr buff_size,
-                  uptr *bytes_read = nullptr, error_t *error_p = nullptr);
-bool WriteToFile(fd_t fd, const void *buff, uptr buff_size,
-                 uptr *bytes_written = nullptr, error_t *error_p = nullptr);
-
-bool RenameFile(const char *oldpath, const char *newpath,
-                error_t *error_p = nullptr);
-
-// Scoped file handle closer.
-struct FileCloser {
-  explicit FileCloser(fd_t fd) : fd(fd) {}
-  ~FileCloser() { CloseFile(fd); }
-  fd_t fd;
-};
-
-bool SupportsColoredOutput(fd_t fd);
 
 // Opens the file 'file_name" and reads up to 'max_len' bytes.
 // The resulting buffer is mmaped and stored in '*buff'.
@@ -269,11 +215,6 @@ bool SupportsColoredOutput(fd_t fd);
 bool ReadFileToBuffer(const char *file_name, char **buff, uptr *buff_size,
                       uptr *read_len, uptr max_len = 1 << 26,
                       error_t *errno_p = nullptr);
-// Maps given file to virtual memory, and returns pointer to it
-// (or NULL if mapping fails). Stores the size of mmaped region
-// in '*buff_size'.
-void *MapFileToMemory(const char *file_name, uptr *buff_size);
-void *MapWritableFileToMemory(void *addr, uptr size, fd_t fd, OFF_T offset);
 
 bool IsAccessibleMemoryRange(uptr beg, uptr size);
 
@@ -293,27 +234,8 @@ void CacheBinaryName();
 void DisableCoreDumperIfNecessary();
 void DumpProcessMap();
 void PrintModuleMap();
-bool FileExists(const char *filename);
 const char *GetEnv(const char *name);
 bool SetEnv(const char *name, const char *value);
-const char *GetPwd();
-char *FindPathToBinary(const char *name);
-bool IsPathSeparator(const char c);
-bool IsAbsolutePath(const char *path);
-// Starts a subprocess and returs its pid.
-// If *_fd parameters are not kInvalidFd their corresponding input/output
-// streams will be redirect to the file. The files will always be closed
-// in parent process even in case of an error.
-// The child process will close all fds after STDERR_FILENO
-// before passing control to a program.
-pid_t StartSubprocess(const char *filename, const char *const argv[],
-                      fd_t stdin_fd = kInvalidFd, fd_t stdout_fd = kInvalidFd,
-                      fd_t stderr_fd = kInvalidFd);
-// Checks if specified process is still running
-bool IsProcessRunning(pid_t pid);
-// Waits for the process to finish and returns its exit code.
-// Returns -1 in case of an error.
-int WaitForProcess(pid_t pid);
 
 u32 GetUid();
 void ReExec();

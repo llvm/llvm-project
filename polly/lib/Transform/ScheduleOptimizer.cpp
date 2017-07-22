@@ -1131,7 +1131,8 @@ static __isl_give isl_schedule_node *optimizeDataLayoutMatrMulPattern(
   auto *SAI = Stmt->getParent()->createScopArrayInfo(
       MMI.B->getElementType(), "Packed_B",
       {FirstDimSize, SecondDimSize, ThirdDimSize});
-  AccRel = isl_map_set_tuple_id(AccRel, isl_dim_out, SAI->getBasePtrId());
+  AccRel =
+      isl_map_set_tuple_id(AccRel, isl_dim_out, SAI->getBasePtrId().release());
   auto *OldAcc = MMI.B->getLatestAccessRelation();
   MMI.B->setNewAccessRelation(AccRel);
   auto *ExtMap =
@@ -1160,7 +1161,8 @@ static __isl_give isl_schedule_node *optimizeDataLayoutMatrMulPattern(
   SAI = Stmt->getParent()->createScopArrayInfo(
       MMI.A->getElementType(), "Packed_A",
       {FirstDimSize, SecondDimSize, ThirdDimSize});
-  AccRel = isl_map_set_tuple_id(AccRel, isl_dim_out, SAI->getBasePtrId());
+  AccRel =
+      isl_map_set_tuple_id(AccRel, isl_dim_out, SAI->getBasePtrId().release());
   OldAcc = MMI.A->getLatestAccessRelation();
   MMI.A->setNewAccessRelation(AccRel);
   ExtMap = isl_map_project_out(MapOldIndVar, isl_dim_out, 3,
