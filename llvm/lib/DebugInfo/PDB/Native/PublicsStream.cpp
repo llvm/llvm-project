@@ -75,7 +75,7 @@ Error PublicsStream::reload() {
   if (auto EC = readGSIHashRecords(HashRecords, HashHdr, Reader))
     return EC;
 
-  if (auto EC = readGSIHashBuckets(HashBuckets, HashHdr, Reader))
+  if (auto EC = readGSIHashBuckets(HashBuckets, HashBitmap, HashHdr, Reader))
     return EC;
   NumBuckets = HashBuckets.size();
 

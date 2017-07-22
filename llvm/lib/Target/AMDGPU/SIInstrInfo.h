@@ -496,6 +496,10 @@ public:
     return MI.getDesc().TSFlags & SIInstrFlags::VM_CNT;
   }
 
+  static bool usesLGKM_CNT(const MachineInstr &MI) {
+    return MI.getDesc().TSFlags & SIInstrFlags::LGKM_CNT;
+  }
+
   static bool sopkIsZext(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & SIInstrFlags::SOPK_ZEXT;
   }

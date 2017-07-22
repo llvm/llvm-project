@@ -127,6 +127,8 @@ private:
                         const MCSubtargetInfo &STI, raw_ostream &O);
   void printSDWADstUnused(const MCInst *MI, unsigned OpNo,
                           const MCSubtargetInfo &STI, raw_ostream &O);
+  void printPackedModifier(const MCInst *MI, StringRef Name, unsigned Mod,
+                           raw_ostream &O);
   void printOpSel(const MCInst *MI, unsigned OpNo,
                   const MCSubtargetInfo &STI, raw_ostream &O);
   void printOpSelHi(const MCInst *MI, unsigned OpNo,

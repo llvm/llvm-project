@@ -803,7 +803,8 @@ void AMDGPUInstPrinter::printExpTgt(const MCInst *MI, unsigned OpNo,
   }
 }
 
-static bool allOpsDefaultValue(const int* Ops, int NumOps, int Mod) {
+static bool allOpsDefaultValue(const int* Ops, int NumOps, int Mod,
+                               bool HasDstSel) {
   int DefaultValue = (Mod == SISrcMods::OP_SEL_1);
 
   for (int I = 0; I < NumOps; ++I) {
@@ -811,11 +812,16 @@ static bool allOpsDefaultValue(const int* Ops, int NumOps, int Mod) {
       return false;
   }
 
+  if (HasDstSel && (Ops[0] & SISrcMods::DST_OP_SEL) != 0)
+    return false;
+
   return true;
 }
 
-static void printPackedModifier(const MCInst *MI, StringRef Name, unsigned Mod,
-                                raw_ostream &O) {
+void AMDGPUInstPrinter::printPackedModifier(const MCInst *MI,
+                                            StringRef Name,
+                                            unsigned Mod,
+                                            raw_ostream &O) {
   unsigned Opc = MI->getOpcode();
   int NumOps = 0;
   int Ops[3];
@@ -830,7 +836,12 @@ static void printPackedModifier(const MCInst *MI, StringRef Name, unsigned Mod,
     Ops[NumOps++] = MI->getOperand(Idx).getImm();
   }
 
-  if (allOpsDefaultValue(Ops, NumOps, Mod))
+  const bool HasDstSel =
+    NumOps > 0 &&
+    Mod == SISrcMods::OP_SEL_0 &&
+    MII.get(MI->getOpcode()).TSFlags & SIInstrFlags::VOP3_OPSEL;
+
+  if (allOpsDefaultValue(Ops, NumOps, Mod, HasDstSel))
     return;
 
   O << Name;
@@ -839,6 +850,10 @@ static void printPackedModifier(const MCInst *MI, StringRef Name, unsigned Mod,
       O << ',';
 
     O << !!(Ops[I] & Mod);
+  }
+
+  if (HasDstSel) {
+    O << ',' << !!(Ops[0] & SISrcMods::DST_OP_SEL);
   }
 
   O << ']';

@@ -41,7 +41,7 @@ namespace pdb {
 static const unsigned IPHR_HASH = 4096;
 
 /// Header of the hash tables found in the globals and publics sections.
-/// Based on GSIHashHeader in
+/// Based on GSIHashHdr in
 /// https://github.com/Microsoft/microsoft-pdb/blob/master/PDB/dbi/gsi.h
 struct GSIHashHeader {
   enum : unsigned {
@@ -55,6 +55,7 @@ struct GSIHashHeader {
 };
 
 Error readGSIHashBuckets(FixedStreamArray<support::ulittle32_t> &HashBuckets,
+                         ArrayRef<uint8_t> &HashBitmap,
                          const GSIHashHeader *HashHdr,
                          BinaryStreamReader &Reader);
 Error readGSIHashHeader(const GSIHashHeader *&HashHdr,

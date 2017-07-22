@@ -144,9 +144,10 @@ bool TargetTransformInfo::isLegalAddressingMode(Type *Ty, GlobalValue *BaseGV,
                                                 int64_t BaseOffset,
                                                 bool HasBaseReg,
                                                 int64_t Scale,
-                                                unsigned AddrSpace) const {
+                                                unsigned AddrSpace,
+                                                Instruction *I) const {
   return TTIImpl->isLegalAddressingMode(Ty, BaseGV, BaseOffset, HasBaseReg,
-                                        Scale, AddrSpace);
+                                        Scale, AddrSpace, I);
 }
 
 bool TargetTransformInfo::isLSRCostLess(LSRCost &C1, LSRCost &C2) const {
@@ -182,6 +183,10 @@ int TargetTransformInfo::getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
                                            Scale, AddrSpace);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
+}
+
+bool TargetTransformInfo::LSRWithInstrQueries() const {
+  return TTIImpl->LSRWithInstrQueries();
 }
 
 bool TargetTransformInfo::isFoldableMemAccessOffset(Instruction *I,

@@ -1108,6 +1108,15 @@ let hasSideEffects = 0, SchedRW = [WriteZero] in {
                 "nop{w}\t$zero", [], IIC_NOP>, TB, OpSize16;
   def NOOPL : I<0x1f, MRMXm, (outs), (ins i32mem:$zero),
                 "nop{l}\t$zero", [], IIC_NOP>, TB, OpSize32;
+  def NOOPQ : RI<0x1f, MRMXm, (outs), (ins i64mem:$zero),
+                "nop{q}\t$zero", [], IIC_NOP>, TB;
+  // Also allow register so we can assemble/disassemble
+  def NOOPWr : I<0x1f, MRMXr, (outs), (ins GR16:$zero),
+                 "nop{w}\t$zero", [], IIC_NOP>, TB, OpSize16;
+  def NOOPLr : I<0x1f, MRMXr, (outs), (ins GR32:$zero),
+                 "nop{l}\t$zero", [], IIC_NOP>, TB, OpSize32;
+  def NOOPQr : RI<0x1f, MRMXr, (outs), (ins GR64:$zero),
+                  "nop{q}\t$zero", [], IIC_NOP>, TB;
 }
 
 
