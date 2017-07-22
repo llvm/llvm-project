@@ -16,6 +16,7 @@
 #if SANITIZER_POSIX
 #include "sanitizer_allocator_internal.h"
 #include "sanitizer_common.h"
+#include "sanitizer_file.h"
 #include "sanitizer_flags.h"
 #include "sanitizer_internal_defs.h"
 #include "sanitizer_linux.h"

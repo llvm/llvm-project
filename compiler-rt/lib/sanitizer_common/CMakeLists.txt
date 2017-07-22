@@ -7,6 +7,7 @@ set(SANITIZER_SOURCES_NOTERMINATION
   sanitizer_deadlock_detector1.cc
   sanitizer_deadlock_detector2.cc
   sanitizer_errno.cc
+  sanitizer_file.cc
   sanitizer_flags.cc
   sanitizer_flag_parser.cc
   sanitizer_libc.cc
@@ -96,6 +97,7 @@ set(SANITIZER_HEADERS
   sanitizer_deadlock_detector_interface.h
   sanitizer_errno.h
   sanitizer_errno_codes.h
+  sanitizer_file.h
   sanitizer_flag_parser.h
   sanitizer_flags.h
   sanitizer_flags.inc
