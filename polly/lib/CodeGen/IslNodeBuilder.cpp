@@ -806,7 +806,7 @@ IslNodeBuilder::createNewAccesses(ScopStmt *Stmt,
       auto Dom = Stmt->getDomain();
       auto SchedDom = isl_set_from_union_set(
           isl_union_map_domain(isl_union_map_copy(Schedule)));
-      auto AccDom = isl_map_domain(MA->getAccessRelation());
+      auto AccDom = isl_map_domain(MA->getAccessRelation().release());
       Dom = isl_set_intersect_params(Dom, Stmt->getParent()->getContext());
       SchedDom =
           isl_set_intersect_params(SchedDom, Stmt->getParent()->getContext());
@@ -820,7 +820,8 @@ IslNodeBuilder::createNewAccesses(ScopStmt *Stmt,
     }
 #endif
 
-    auto PWAccRel = MA->applyScheduleToAccessRelation(Schedule);
+    auto PWAccRel =
+        MA->applyScheduleToAccessRelation(isl::manage(Schedule)).release();
 
     // isl cannot generate an index expression for access-nothing accesses.
     isl::set AccDomain =
@@ -831,7 +832,8 @@ IslNodeBuilder::createNewAccesses(ScopStmt *Stmt,
     }
 
     auto AccessExpr = isl_ast_build_access_from_pw_multi_aff(Build, PWAccRel);
-    NewAccesses = isl_id_to_ast_expr_set(NewAccesses, MA->getId(), AccessExpr);
+    NewAccesses =
+        isl_id_to_ast_expr_set(NewAccesses, MA->getId().release(), AccessExpr);
   }
 
   return NewAccesses;
@@ -884,9 +886,10 @@ void IslNodeBuilder::generateCopyStmt(
          "Accesses use the same data type");
   assert((*ReadAccess)->isArrayKind() && (*WriteAccess)->isArrayKind());
   auto *AccessExpr =
-      isl_id_to_ast_expr_get(NewAccesses, (*ReadAccess)->getId());
+      isl_id_to_ast_expr_get(NewAccesses, (*ReadAccess)->getId().release());
   auto *LoadValue = ExprBuilder.create(AccessExpr);
-  AccessExpr = isl_id_to_ast_expr_get(NewAccesses, (*WriteAccess)->getId());
+  AccessExpr =
+      isl_id_to_ast_expr_get(NewAccesses, (*WriteAccess)->getId().release());
   auto *StoreAddr = ExprBuilder.createAccessAddress(AccessExpr);
   Builder.CreateStore(LoadValue, StoreAddr);
 }
@@ -1161,7 +1164,7 @@ Value *IslNodeBuilder::preloadUnconditionally(isl_set *AccessRange,
 Value *IslNodeBuilder::preloadInvariantLoad(const MemoryAccess &MA,
                                             isl_set *Domain) {
 
-  isl_set *AccessRange = isl_map_range(MA.getAddressFunction());
+  isl_set *AccessRange = isl_map_range(MA.getAddressFunction().release());
   AccessRange = isl_set_gist_params(AccessRange, S.getContext());
 
   if (!materializeParameters(AccessRange)) {

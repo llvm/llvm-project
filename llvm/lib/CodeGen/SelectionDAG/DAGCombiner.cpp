@@ -12866,8 +12866,8 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
               TLI.getTypeToTransformTo(Context, StoredVal.getValueType());
           if (TLI.isTruncStoreLegal(LegalizedStoredValueTy, StoreTy) &&
               TLI.canMergeStoresTo(FirstStoreAS, LegalizedStoredValueTy, DAG) &&
-              TLI.allowsMemoryAccess(Context, DL, LegalizedStoredValueTy,
-                                     FirstStoreAS, FirstStoreAlign, &IsFast) &&
+              TLI.allowsMemoryAccess(Context, DL, StoreTy, FirstStoreAS,
+                                     FirstStoreAlign, &IsFast) &&
               IsFast) {
             LastIntegerTrunc = true;
             LastLegalType = i + 1;
@@ -13098,8 +13098,8 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
             TLI.isLoadExtLegal(ISD::SEXTLOAD, LegalizedStoredValueTy,
                                StoreTy) &&
             TLI.isLoadExtLegal(ISD::EXTLOAD, LegalizedStoredValueTy, StoreTy) &&
-            TLI.allowsMemoryAccess(Context, DL, LegalizedStoredValueTy,
-                                   FirstStoreAS, FirstStoreAlign, &IsFastSt) &&
+            TLI.allowsMemoryAccess(Context, DL, StoreTy, FirstStoreAS,
+                                   FirstStoreAlign, &IsFastSt) &&
             IsFastSt &&
             TLI.allowsMemoryAccess(Context, DL, StoreTy, FirstLoadAS,
                                    FirstLoadAlign, &IsFastLd) &&

@@ -27,6 +27,7 @@
 #include "polly/DeLICM.h"
 #include "polly/DependenceInfo.h"
 #include "polly/FlattenSchedule.h"
+#include "polly/ForwardOpTree.h"
 #include "polly/LinkAllPasses.h"
 #include "polly/Options.h"
 #include "polly/PolyhedralInfo.h"
@@ -188,6 +189,11 @@ static cl::opt<bool>
                          cl::Hidden, cl::init(false), cl::cat(PollyCategory));
 
 static cl::opt<bool>
+    EnableForwardOpTree("polly-enable-optree",
+                        cl::desc("Enable operand tree forwarding"), cl::Hidden,
+                        cl::init(false), cl::cat(PollyCategory));
+
+static cl::opt<bool>
     DumpBefore("polly-dump-before",
                cl::desc("Dump module before Polly transformations into a file "
                         "suffixed with \"-before\""),
@@ -250,6 +256,7 @@ void initializePollyPasses(PassRegistry &Registry) {
   initializeScopInfoWrapperPassPass(Registry);
   initializeCodegenCleanupPass(Registry);
   initializeFlattenSchedulePass(Registry);
+  initializeForwardOpTreePass(Registry);
   initializeDeLICMPass(Registry);
   initializeSimplifyPass(Registry);
   initializeDumpModulePass(Registry);
@@ -306,6 +313,8 @@ void registerPollyPasses(llvm::legacy::PassManagerBase &PM) {
   if (EnablePolyhedralInfo)
     PM.add(polly::createPolyhedralInfoPass());
 
+  if (EnableForwardOpTree)
+    PM.add(polly::createForwardOpTreePass());
   if (EnableDeLICM)
     PM.add(polly::createDeLICMPass());
   if (EnableSimplify)

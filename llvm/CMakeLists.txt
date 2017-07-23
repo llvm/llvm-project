@@ -845,15 +845,6 @@ add_subdirectory(lib/TableGen)
 
 add_subdirectory(utils/TableGen)
 
-# Force target to be built as soon as possible. Clang modules builds depend
-# header-wise on it as they ship all headers from the umbrella folders. Building
-# an entire module might include header, which depends on intrinsics_gen. This
-# should be right after LLVMSupport and LLVMTableGen otherwise we introduce a
-# circular dependence.
-if (LLVM_ENABLE_MODULES)
-  list(APPEND LLVM_COMMON_DEPENDS intrinsics_gen)
-endif(LLVM_ENABLE_MODULES)
-
 add_subdirectory(include/llvm)
 
 add_subdirectory(lib)
