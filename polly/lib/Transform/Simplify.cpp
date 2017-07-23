@@ -334,7 +334,7 @@ private:
         if (!MA->isWrite())
           continue;
 
-        isl::map AccRel = give(MA->getAccessRelation());
+        isl::map AccRel = MA->getAccessRelation();
         if (!AccRel.is_empty().is_true())
           continue;
 
