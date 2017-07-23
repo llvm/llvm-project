@@ -61,12 +61,6 @@ SymbolFileDWARFDwo::ParseCompileUnit(DWARFCompileUnit *dwarf_cu,
 }
 
 DWARFCompileUnit *SymbolFileDWARFDwo::GetCompileUnit() {
-  // A clang module is found via a skeleton CU, but is not a proper DWO.
-  // Clang modules have a .debug_info section instead of the *_dwo variant.
-  if (auto *section_list = m_obj_file->GetSectionList(false))
-    if (section_list->FindSectionByType(eSectionTypeDWARFDebugInfo, true))
-      return nullptr;
-
   // Only dwo files with 1 compile unit is supported
   if (GetNumCompileUnits() == 1)
     return DebugInfo()->GetCompileUnitAtIndex(0);
