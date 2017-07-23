@@ -22,6 +22,7 @@
 #include "polly/Options.h"
 #include "polly/ScopBuilder.h"
 #include "polly/Support/GICHelper.h"
+#include "polly/Support/ISLOStream.h"
 #include "polly/Support/SCEVValidator.h"
 #include "polly/Support/ScopHelper.h"
 #include "llvm/ADT/DepthFirstIterator.h"
@@ -268,7 +269,7 @@ ScopArrayInfo::ScopArrayInfo(Value *BasePtr, Type *ElementType, isl_ctx *Ctx,
                : getIslCompatibleName("MemRef", BasePtr, S->getNextArrayIdx(),
                                       Kind == MemoryKind::PHI ? "__phi" : "",
                                       UseInstructionNames);
-  Id = isl_id_alloc(Ctx, BasePtrName.c_str(), this);
+  Id = isl::id::alloc(Ctx, BasePtrName.c_str(), this);
 
   updateSizes(Sizes);
 
@@ -282,16 +283,15 @@ ScopArrayInfo::ScopArrayInfo(Value *BasePtr, Type *ElementType, isl_ctx *Ctx,
     const_cast<ScopArrayInfo *>(BasePtrOriginSAI)->addDerivedSAI(this);
 }
 
-__isl_give isl_space *ScopArrayInfo::getSpace() const {
-  auto *Space =
-      isl_space_set_alloc(isl_id_get_ctx(Id), 0, getNumberOfDimensions());
-  Space = isl_space_set_tuple_id(Space, isl_dim_set, isl_id_copy(Id));
+isl::space ScopArrayInfo::getSpace() const {
+  auto Space = isl::space(Id.get_ctx(), 0, getNumberOfDimensions());
+  Space = Space.set_tuple_id(isl::dim::set, Id);
   return Space;
 }
 
 bool ScopArrayInfo::isReadOnly() {
   isl::union_set WriteSet = give(S.getWrites()).range();
-  isl::space Space = give(getSpace());
+  isl::space Space = getSpace();
   WriteSet = WriteSet.extract_set(Space);
 
   return bool(WriteSet.is_empty());
@@ -353,7 +353,7 @@ void ScopArrayInfo::applyAndSetFAD(Value *FAD) {
   isl::pw_aff PwAff =
       isl::aff::var_on_domain(isl::local_space(Space), isl::dim::param, 0);
 
-  DimensionSizesPw[0] = PwAff.release();
+  DimensionSizesPw[0] = PwAff;
 }
 
 bool ScopArrayInfo::updateSizes(ArrayRef<const SCEV *> NewSizes,
@@ -377,35 +377,27 @@ bool ScopArrayInfo::updateSizes(ArrayRef<const SCEV *> NewSizes,
   DimensionSizes.clear();
   DimensionSizes.insert(DimensionSizes.begin(), NewSizes.begin(),
                         NewSizes.end());
-  for (isl_pw_aff *Size : DimensionSizesPw)
-    isl_pw_aff_free(Size);
   DimensionSizesPw.clear();
   for (const SCEV *Expr : DimensionSizes) {
     if (!Expr) {
       DimensionSizesPw.push_back(nullptr);
       continue;
     }
-    isl_pw_aff *Size = S.getPwAffOnly(Expr);
+    isl::pw_aff Size = isl::manage(S.getPwAffOnly(Expr));
     DimensionSizesPw.push_back(Size);
   }
   return true;
 }
 
-ScopArrayInfo::~ScopArrayInfo() {
-  isl_id_free(Id);
-  for (isl_pw_aff *Size : DimensionSizesPw)
-    isl_pw_aff_free(Size);
-}
+ScopArrayInfo::~ScopArrayInfo() {}
 
-std::string ScopArrayInfo::getName() const { return isl_id_get_name(Id); }
+std::string ScopArrayInfo::getName() const { return Id.get_name(); }
 
 int ScopArrayInfo::getElemSizeInBytes() const {
   return DL.getTypeAllocSize(ElementType);
 }
 
-__isl_give isl_id *ScopArrayInfo::getBasePtrId() const {
-  return isl_id_copy(Id);
-}
+isl::id ScopArrayInfo::getBasePtrId() const { return Id; }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void ScopArrayInfo::dump() const { print(errs()); }
@@ -427,9 +419,8 @@ void ScopArrayInfo::print(raw_ostream &OS, bool SizeAsPwAff) const {
     OS << "[";
 
     if (SizeAsPwAff) {
-      auto *Size = getDimensionSizePw(u);
+      isl::pw_aff Size = getDimensionSizePw(u);
       OS << " " << Size << " ";
-      isl_pw_aff_free(Size);
     } else {
       OS << *getDimensionSize(u);
     }
@@ -461,7 +452,7 @@ const ScopArrayInfo *ScopArrayInfo::getFromId(__isl_take isl_id *Id) {
 
 void MemoryAccess::wrapConstantDimensions() {
   auto *SAI = getScopArrayInfo();
-  isl::space ArraySpace = give(SAI->getSpace());
+  isl::space ArraySpace = SAI->getSpace();
   isl::ctx Ctx = ArraySpace.get_ctx();
   unsigned DimsArray = SAI->getNumberOfDimensions();
 
@@ -505,16 +496,16 @@ void MemoryAccess::wrapConstantDimensions() {
   }
 
   // Apply all modulo/divides on the accesses.
-  isl::map Relation = give(AccessRelation);
+  isl::map Relation = AccessRelation;
   Relation = Relation.apply_range(isl::map::from_multi_aff(DivModAff));
   Relation = Relation.detect_equalities();
-  AccessRelation = Relation.release();
+  AccessRelation = Relation;
 }
 
 void MemoryAccess::updateDimensionality() {
   auto *SAI = getScopArrayInfo();
-  isl::space ArraySpace = give(SAI->getSpace());
-  isl::space AccessSpace = give(isl_map_get_space(AccessRelation)).range();
+  isl::space ArraySpace = SAI->getSpace();
+  isl::space AccessSpace = AccessRelation.get_space().range();
   isl::ctx Ctx = ArraySpace.get_ctx();
 
   auto DimsArray = ArraySpace.dim(isl::dim::set);
@@ -535,7 +526,7 @@ void MemoryAccess::updateDimensionality() {
   for (unsigned i = DimsMissing; i < DimsArray; i++)
     Map = Map.equate(isl::dim::in, i - DimsMissing, isl::dim::out, i);
 
-  AccessRelation = isl_map_apply_range(AccessRelation, Map.release());
+  AccessRelation = AccessRelation.apply_range(Map);
 
   // For the non delinearized arrays, divide the access function of the last
   // subscript by the size of the elements in the array.
@@ -549,7 +540,7 @@ void MemoryAccess::updateDimensionality() {
   // that divides the offsets of all accesses to this base pointer.
   if (DimsAccess == 1) {
     isl::val V = isl::val(Ctx, ArrayElemSize);
-    AccessRelation = isl_map_floordiv_val(AccessRelation, V.release());
+    AccessRelation = AccessRelation.floordiv_val(V);
   }
 
   // We currently do this only if we added at least one dimension, which means
@@ -593,7 +584,7 @@ void MemoryAccess::updateDimensionality() {
     C = C.set_coefficient_si(isl::dim::out, DimsArray - 1, 1);
     C = C.set_constant_val(isl::val(Ctx, 0));
     Map = Map.add_constraint(C);
-    AccessRelation = isl_map_apply_range(AccessRelation, Map.release());
+    AccessRelation = AccessRelation.apply_range(Map);
   }
 }
 
@@ -649,87 +640,79 @@ static MemoryAccess::ReductionType getReductionType(const BinaryOperator *BinOp,
   }
 }
 
-MemoryAccess::~MemoryAccess() {
-  isl_id_free(Id);
-  isl_set_free(InvalidDomain);
-  isl_map_free(AccessRelation);
-  isl_map_free(NewAccessRelation);
-}
+MemoryAccess::~MemoryAccess() { isl_set_free(InvalidDomain); }
 
 const ScopArrayInfo *MemoryAccess::getOriginalScopArrayInfo() const {
-  isl_id *ArrayId = getArrayId();
-  void *User = isl_id_get_user(ArrayId);
+  isl::id ArrayId = getArrayId();
+  void *User = ArrayId.get_user();
   const ScopArrayInfo *SAI = static_cast<ScopArrayInfo *>(User);
-  isl_id_free(ArrayId);
   return SAI;
 }
 
 const ScopArrayInfo *MemoryAccess::getLatestScopArrayInfo() const {
-  isl_id *ArrayId = getLatestArrayId();
-  void *User = isl_id_get_user(ArrayId);
+  isl::id ArrayId = getLatestArrayId();
+  void *User = ArrayId.get_user();
   const ScopArrayInfo *SAI = static_cast<ScopArrayInfo *>(User);
-  isl_id_free(ArrayId);
   return SAI;
 }
 
-__isl_give isl_id *MemoryAccess::getOriginalArrayId() const {
-  return isl_map_get_tuple_id(AccessRelation, isl_dim_out);
+isl::id MemoryAccess::getOriginalArrayId() const {
+  return AccessRelation.get_tuple_id(isl::dim::out);
 }
 
-__isl_give isl_id *MemoryAccess::getLatestArrayId() const {
+isl::id MemoryAccess::getLatestArrayId() const {
   if (!hasNewAccessRelation())
     return getOriginalArrayId();
-  return isl_map_get_tuple_id(NewAccessRelation, isl_dim_out);
+  return NewAccessRelation.get_tuple_id(isl::dim::out);
 }
 
-__isl_give isl_map *MemoryAccess::getAddressFunction() const {
-  return isl_map_lexmin(getAccessRelation());
+isl::map MemoryAccess::getAddressFunction() const {
+  return getAccessRelation().lexmin();
 }
 
-__isl_give isl_pw_multi_aff *MemoryAccess::applyScheduleToAccessRelation(
-    __isl_take isl_union_map *USchedule) const {
-  isl_map *Schedule, *ScheduledAccRel;
-  isl_union_set *UDomain;
+isl::pw_multi_aff
+MemoryAccess::applyScheduleToAccessRelation(isl::union_map USchedule) const {
+  isl::map Schedule, ScheduledAccRel;
+  isl::union_set UDomain;
 
-  UDomain = isl_union_set_from_set(getStatement()->getDomain());
-  USchedule = isl_union_map_intersect_domain(USchedule, UDomain);
-  Schedule = isl_map_from_union_map(USchedule);
-  ScheduledAccRel = isl_map_apply_domain(getAddressFunction(), Schedule);
-  return isl_pw_multi_aff_from_map(ScheduledAccRel);
+  UDomain = isl::manage(getStatement()->getDomain());
+  USchedule = USchedule.intersect_domain(UDomain);
+  Schedule = isl::map::from_union_map(USchedule);
+  ScheduledAccRel = getAddressFunction().apply_domain(Schedule);
+  return isl::pw_multi_aff::from_map(ScheduledAccRel);
 }
 
-__isl_give isl_map *MemoryAccess::getOriginalAccessRelation() const {
-  return isl_map_copy(AccessRelation);
+isl::map MemoryAccess::getOriginalAccessRelation() const {
+  return AccessRelation;
 }
 
 std::string MemoryAccess::getOriginalAccessRelationStr() const {
-  return stringFromIslObj(AccessRelation);
+  return stringFromIslObj(AccessRelation.get());
 }
 
-__isl_give isl_space *MemoryAccess::getOriginalAccessRelationSpace() const {
-  return isl_map_get_space(AccessRelation);
+isl::space MemoryAccess::getOriginalAccessRelationSpace() const {
+  return AccessRelation.get_space();
 }
 
-__isl_give isl_map *MemoryAccess::getNewAccessRelation() const {
-  return isl_map_copy(NewAccessRelation);
+isl::map MemoryAccess::getNewAccessRelation() const {
+  return NewAccessRelation;
 }
 
 std::string MemoryAccess::getNewAccessRelationStr() const {
-  return stringFromIslObj(NewAccessRelation);
+  return stringFromIslObj(NewAccessRelation.get());
 }
 
 std::string MemoryAccess::getAccessRelationStr() const {
-  return isl::manage(getAccessRelation()).to_str();
+  return isl::manage(getAccessRelation().get()).to_str();
 }
 
-__isl_give isl_basic_map *
-MemoryAccess::createBasicAccessMap(ScopStmt *Statement) {
-  isl_space *Space = isl_space_set_alloc(Statement->getIslCtx(), 0, 1);
-  Space = isl_space_align_params(Space, Statement->getDomainSpace());
+isl::basic_map MemoryAccess::createBasicAccessMap(ScopStmt *Statement) {
+  isl::space Space = isl::space(Statement->getIslCtx(), 0, 1);
+  Space = Space.align_params(isl::manage(Statement->getDomainSpace()));
 
-  return isl_basic_map_from_domain_and_range(
-      isl_basic_set_universe(Statement->getDomainSpace()),
-      isl_basic_set_universe(Space));
+  return isl::basic_map::from_domain_and_range(
+      isl::basic_set::universe(isl::manage(Statement->getDomainSpace())),
+      isl::basic_set::universe(Space));
 }
 
 // Formalize no out-of-bound access assumption
@@ -757,7 +740,7 @@ void MemoryAccess::assumeNoOutOfBound() {
   if (PollyIgnoreInbounds)
     return;
   auto *SAI = getScopArrayInfo();
-  isl::space Space = give(getOriginalAccessRelationSpace()).range();
+  isl::space Space = getOriginalAccessRelationSpace().range();
   isl::set Outside = isl::set::empty(Space);
   for (int i = 1, Size = Space.dim(isl::dim::set); i < Size; ++i) {
     isl::local_space LS(Space);
@@ -765,7 +748,7 @@ void MemoryAccess::assumeNoOutOfBound() {
     isl::pw_aff Zero = isl::pw_aff(LS);
 
     isl::set DimOutside = Var.lt_set(Zero);
-    isl::pw_aff SizeE = give(SAI->getDimensionSizePw(i));
+    isl::pw_aff SizeE = SAI->getDimensionSizePw(i);
     SizeE = SizeE.add_dims(isl::dim::in, Space.dim(isl::dim::set));
     SizeE = SizeE.set_tuple_id(isl::dim::in, Space.get_tuple_id(isl::dim::set));
     DimOutside = DimOutside.unite(SizeE.le_set(Var));
@@ -773,7 +756,7 @@ void MemoryAccess::assumeNoOutOfBound() {
     Outside = Outside.unite(DimOutside);
   }
 
-  Outside = Outside.apply(give(getAccessRelation()).reverse());
+  Outside = Outside.apply(getAccessRelation().reverse());
   Outside = Outside.intersect(give(Statement->getDomain()));
   Outside = Outside.params();
 
@@ -813,8 +796,7 @@ void MemoryAccess::buildMemIntrinsicAccessRelation() {
   SubscriptMap = SubscriptMap.align_params(LengthMap.get_space());
   LengthMap = LengthMap.sum(SubscriptMap);
   AccessRelation =
-      LengthMap.set_tuple_id(isl::dim::in, give(getStatement()->getDomainId()))
-          .release();
+      LengthMap.set_tuple_id(isl::dim::in, give(getStatement()->getDomainId()));
 }
 
 void MemoryAccess::computeBoundsOnAccessRelation(unsigned ElementSize) {
@@ -855,11 +837,11 @@ void MemoryAccess::computeBoundsOnAccessRelation(unsigned ElementSize) {
 
   assert(Min.sle(Max) && "Minimum expected to be less or equal than max");
 
-  isl::map Relation = give(AccessRelation);
+  isl::map Relation = AccessRelation;
   isl::set AccessRange = Relation.range();
   AccessRange = addRangeBoundsToSet(AccessRange, ConstantRange(Min, Max), 0,
                                     isl::dim::set);
-  AccessRelation = Relation.intersect_range(AccessRange).release();
+  AccessRelation = Relation.intersect_range(AccessRange);
 }
 
 void MemoryAccess::foldAccessRelation() {
@@ -868,7 +850,7 @@ void MemoryAccess::foldAccessRelation() {
 
   int Size = Subscripts.size();
 
-  isl::map NewAccessRelation = give(isl_map_copy(AccessRelation));
+  isl::map NewAccessRelation = AccessRelation;
 
   for (int i = Size - 2; i >= 0; --i) {
     isl::space Space;
@@ -879,7 +861,7 @@ void MemoryAccess::foldAccessRelation() {
     isl::id ParamId =
         give(isl_space_get_dim_id(SpaceSize.get(), isl_dim_param, 0));
 
-    Space = give(isl_map_copy(AccessRelation)).get_space();
+    Space = AccessRelation.get_space();
     Space = Space.range().map_from_set();
     Space = Space.align_params(SpaceSize);
 
@@ -913,7 +895,7 @@ void MemoryAccess::foldAccessRelation() {
     NewAccessRelation = NewAccessRelation.apply_range(MapOne);
   }
 
-  isl::id BaseAddrId = give(getScopArrayInfo()->getBasePtrId());
+  isl::id BaseAddrId = getScopArrayInfo()->getBasePtrId();
   isl::space Space = give(Statement->getDomainSpace());
   NewAccessRelation = NewAccessRelation.set_tuple_id(
       isl::dim::in, Space.get_tuple_id(isl::dim::set));
@@ -926,10 +908,9 @@ void MemoryAccess::foldAccessRelation() {
   // run-time checks and can lead to costly compilation.
   if (!PollyPreciseFoldAccesses &&
       isl_map_n_basic_map(NewAccessRelation.get()) >
-          isl_map_n_basic_map(AccessRelation)) {
+          isl_map_n_basic_map(AccessRelation.get())) {
   } else {
-    isl_map_free(AccessRelation);
-    AccessRelation = NewAccessRelation.release();
+    AccessRelation = NewAccessRelation;
   }
 }
 
@@ -963,7 +944,7 @@ static bool isDivisible(const SCEV *Expr, unsigned Size, ScalarEvolution &SE) {
 }
 
 void MemoryAccess::buildAccessRelation(const ScopArrayInfo *SAI) {
-  assert(!AccessRelation && "AccessRelation already built");
+  assert(AccessRelation.is_null() && "AccessRelation already built");
 
   // Initialize the invalid domain which describes all iterations for which the
   // access relation is not modeled correctly.
@@ -971,13 +952,12 @@ void MemoryAccess::buildAccessRelation(const ScopArrayInfo *SAI) {
   InvalidDomain = isl_set_empty(isl_set_get_space(StmtInvalidDomain));
   isl_set_free(StmtInvalidDomain);
 
-  isl_ctx *Ctx = isl_id_get_ctx(Id);
-  isl_id *BaseAddrId = SAI->getBasePtrId();
+  isl_ctx *Ctx = Id.get_ctx().release();
+  isl::id BaseAddrId = SAI->getBasePtrId();
 
   if (getAccessInstruction() && isa<MemIntrinsic>(getAccessInstruction())) {
     buildMemIntrinsicAccessRelation();
-    AccessRelation =
-        isl_map_set_tuple_id(AccessRelation, isl_dim_out, BaseAddrId);
+    AccessRelation = AccessRelation.set_tuple_id(isl::dim::out, BaseAddrId);
     return;
   }
 
@@ -986,31 +966,30 @@ void MemoryAccess::buildAccessRelation(const ScopArrayInfo *SAI) {
     // whole array. For read accesses it does not make a difference, if an
     // access must or may happen. However, for write accesses it is important to
     // differentiate between writes that must happen and writes that may happen.
-    if (!AccessRelation)
-      AccessRelation = isl_map_from_basic_map(createBasicAccessMap(Statement));
+    if (AccessRelation.is_null())
+      AccessRelation = createBasicAccessMap(Statement);
 
-    AccessRelation =
-        isl_map_set_tuple_id(AccessRelation, isl_dim_out, BaseAddrId);
+    AccessRelation = AccessRelation.set_tuple_id(isl::dim::out, BaseAddrId);
     return;
   }
 
-  isl_space *Space = isl_space_alloc(Ctx, 0, Statement->getNumIterators(), 0);
-  AccessRelation = isl_map_universe(Space);
+  isl::space Space = isl::space(Ctx, 0, Statement->getNumIterators(), 0);
+  AccessRelation = isl::map::universe(Space);
 
   for (int i = 0, Size = Subscripts.size(); i < Size; ++i) {
     isl_pw_aff *Affine = getPwAff(Subscripts[i]);
     isl_map *SubscriptMap = isl_map_from_pw_aff(Affine);
-    AccessRelation = isl_map_flat_range_product(AccessRelation, SubscriptMap);
+    AccessRelation =
+        AccessRelation.flat_range_product(isl::manage(SubscriptMap));
   }
 
-  Space = Statement->getDomainSpace();
-  AccessRelation = isl_map_set_tuple_id(
-      AccessRelation, isl_dim_in, isl_space_get_tuple_id(Space, isl_dim_set));
-  AccessRelation =
-      isl_map_set_tuple_id(AccessRelation, isl_dim_out, BaseAddrId);
+  Space = isl::manage(Statement->getDomainSpace());
+  AccessRelation = AccessRelation.set_tuple_id(
+      isl::dim::in, Space.get_tuple_id(isl::dim::set));
+  AccessRelation = AccessRelation.set_tuple_id(isl::dim::out, BaseAddrId);
 
-  AccessRelation = isl_map_gist_domain(AccessRelation, Statement->getDomain());
-  isl_space_free(Space);
+  AccessRelation =
+      AccessRelation.gist_domain(isl::manage(Statement->getDomain()));
 }
 
 MemoryAccess::MemoryAccess(ScopStmt *Stmt, Instruction *AccessInst,
@@ -1029,16 +1008,16 @@ MemoryAccess::MemoryAccess(ScopStmt *Stmt, Instruction *AccessInst,
   const std::string Access = TypeStrings[AccType] + utostr(Stmt->size());
 
   std::string IdName = Stmt->getBaseName() + Access;
-  Id = isl_id_alloc(Stmt->getParent()->getIslCtx(), IdName.c_str(), this);
+  Id = isl::id::alloc(Stmt->getParent()->getIslCtx(), IdName.c_str(), this);
 }
 
 MemoryAccess::MemoryAccess(ScopStmt *Stmt, AccessType AccType,
                            __isl_take isl_map *AccRel)
     : Kind(MemoryKind::Array), AccType(AccType), RedType(RT_NONE),
       Statement(Stmt), InvalidDomain(nullptr), AccessInstruction(nullptr),
-      IsAffine(true), AccessRelation(nullptr), NewAccessRelation(AccRel),
-      FAD(nullptr) {
-  auto *ArrayInfoId = isl_map_get_tuple_id(NewAccessRelation, isl_dim_out);
+      IsAffine(true), AccessRelation(nullptr),
+      NewAccessRelation(isl::manage(AccRel)), FAD(nullptr) {
+  auto *ArrayInfoId = NewAccessRelation.get_tuple_id(isl::dim::out).release();
   auto *SAI = ScopArrayInfo::getFromId(ArrayInfoId);
   Sizes.push_back(nullptr);
   for (unsigned i = 1; i < SAI->getNumberOfDimensions(); i++)
@@ -1049,20 +1028,20 @@ MemoryAccess::MemoryAccess(ScopStmt *Stmt, AccessType AccType,
   const std::string Access = TypeStrings[AccType] + utostr(Stmt->size());
 
   std::string IdName = Stmt->getBaseName() + Access;
-  Id = isl_id_alloc(Stmt->getParent()->getIslCtx(), IdName.c_str(), this);
+  Id = isl::id::alloc(Stmt->getParent()->getIslCtx(), IdName.c_str(), this);
 }
 
 void MemoryAccess::realignParams() {
   auto *Ctx = Statement->getParent()->getContext();
   InvalidDomain = isl_set_gist_params(InvalidDomain, isl_set_copy(Ctx));
-  AccessRelation = isl_map_gist_params(AccessRelation, Ctx);
+  AccessRelation = AccessRelation.gist_params(isl::manage(Ctx));
 }
 
 const std::string MemoryAccess::getReductionOperatorStr() const {
   return MemoryAccess::getReductionOperatorStr(getReductionType());
 }
 
-__isl_give isl_id *MemoryAccess::getId() const { return isl_id_copy(Id); }
+isl::id MemoryAccess::getId() const { return Id; }
 
 raw_ostream &polly::operator<<(raw_ostream &OS,
                                MemoryAccess::ReductionType RT) {
@@ -1150,7 +1129,7 @@ static isl_map *getEqualAndLarger(__isl_take isl_space *setDomain) {
 __isl_give isl_set *
 MemoryAccess::getStride(__isl_take const isl_map *Schedule) const {
   isl_map *S = const_cast<isl_map *>(Schedule);
-  isl_map *AccessRelation = getAccessRelation();
+  isl_map *AccessRelation = getAccessRelation().release();
   isl_space *Space = isl_space_range(isl_map_get_space(S));
   isl_map *NextScatt = getEqualAndLarger(Space);
 
@@ -1194,8 +1173,7 @@ bool MemoryAccess::isStrideOne(__isl_take const isl_map *Schedule) const {
 }
 
 void MemoryAccess::setAccessRelation(__isl_take isl_map *NewAccess) {
-  isl_map_free(AccessRelation);
-  AccessRelation = NewAccess;
+  AccessRelation = isl::manage(NewAccess);
 }
 
 void MemoryAccess::setNewAccessRelation(__isl_take isl_map *NewAccess) {
@@ -1249,14 +1227,13 @@ void MemoryAccess::setNewAccessRelation(__isl_take isl_map *NewAccess) {
   isl_id_free(NewArrayId);
 #endif
 
-  isl_map_free(NewAccessRelation);
   NewAccess = isl_map_gist_domain(NewAccess, getStatement()->getDomain());
-  NewAccessRelation = NewAccess;
+  NewAccessRelation = isl::manage(NewAccess);
 }
 
 bool MemoryAccess::isLatestPartialAccess() const {
   isl::set StmtDom = give(getStatement()->getDomain());
-  isl::set AccDom = give(isl_map_domain(getLatestAccessRelation()));
+  isl::set AccDom = getLatestAccessRelation().domain();
 
   return isl_set_is_subset(StmtDom.keep(), AccDom.keep()) == isl_bool_false;
 }
@@ -1874,8 +1851,8 @@ void ScopStmt::checkForReductions() {
   // Then check each possible candidate pair.
   for (const auto &CandidatePair : Candidates) {
     bool Valid = true;
-    isl_map *LoadAccs = CandidatePair.first->getAccessRelation();
-    isl_map *StoreAccs = CandidatePair.second->getAccessRelation();
+    isl_map *LoadAccs = CandidatePair.first->getAccessRelation().release();
+    isl_map *StoreAccs = CandidatePair.second->getAccessRelation().release();
 
     // Skip those with obviously unequal base addresses.
     if (!isl_map_has_equal_space(LoadAccs, StoreAccs)) {
@@ -1893,8 +1870,8 @@ void ScopStmt::checkForReductions() {
       if (MA == CandidatePair.first || MA == CandidatePair.second)
         continue;
 
-      isl_map *AccRel =
-          isl_map_intersect_domain(MA->getAccessRelation(), getDomain());
+      isl_map *AccRel = isl_map_intersect_domain(
+          MA->getAccessRelation().release(), getDomain());
       isl_set *Accs = isl_map_range(AccRel);
 
       if (isl_set_has_equal_space(AllAccs, Accs)) {
@@ -1975,7 +1952,7 @@ void ScopStmt::printInstructions(raw_ostream &OS) const {
   for (Instruction *Inst : Instructions)
     OS.indent(16) << *Inst << "\n";
 
-  OS.indent(16) << "}\n";
+  OS.indent(12) << "}\n";
 }
 
 void ScopStmt::print(raw_ostream &OS, bool PrintInstructions) const {
@@ -2418,7 +2395,7 @@ static isl_set *addFortranArrayOutermostDimParams(__isl_give isl_set *Context,
     // outermost dimension size can be picked up from their runtime description.
     // TODO: actually need to check if it has a FAD, but for now this works.
     if (Array->getNumberOfDimensions() > 0) {
-      isl_pw_aff *PwAff = Array->getDimensionSizePw(0);
+      isl_pw_aff *PwAff = Array->getDimensionSizePw(0).release();
       if (!PwAff)
         continue;
 
@@ -2606,7 +2583,7 @@ static bool calculateMinMaxAccess(Scop::AliasGroupTy AliasGroup, Scop &S,
   isl::union_map Accesses = isl::union_map::empty(give(S.getParamSpace()));
 
   for (MemoryAccess *MA : AliasGroup)
-    Accesses = Accesses.add_map(give(MA->getAccessRelation()));
+    Accesses = Accesses.add_map(give(MA->getAccessRelation().release()));
 
   Accesses = Accesses.intersect_domain(Domains);
   isl::union_set Locations = Accesses.range();
@@ -3591,7 +3568,7 @@ void Scop::foldSizeConstantsToRight() {
     if (Array->getNumberOfDimensions() <= 1)
       continue;
 
-    isl_space *Space = Array->getSpace();
+    isl_space *Space = Array->getSpace().release();
 
     Space = isl_space_align_params(Space, isl_union_set_get_space(Accessed));
 
@@ -3603,7 +3580,7 @@ void Scop::foldSizeConstantsToRight() {
     isl_set *Elements = isl_union_set_extract_set(Accessed, Space);
 
     isl_map *Transform =
-        isl_map_universe(isl_space_map_from_set(Array->getSpace()));
+        isl_map_universe(isl_space_map_from_set(Array->getSpace().release()));
 
     std::vector<int> Int;
 
@@ -3689,7 +3666,7 @@ void Scop::foldSizeConstantsToRight() {
     for (auto &Access : AccessFunctions)
       if (Access->getScopArrayInfo() == Array)
         Access->setAccessRelation(isl_map_apply_range(
-            Access->getAccessRelation(), isl_map_copy(Transform)));
+            Access->getAccessRelation().release(), isl_map_copy(Transform)));
 
     isl_map_free(Transform);
 
@@ -4004,8 +3981,8 @@ void Scop::addInvariantLoads(ScopStmt &Stmt, InvariantAccessesTy &InvMAs) {
       if (!MAs.empty()) {
         auto *LastMA = MAs.front();
 
-        auto *AR = isl_map_range(MA->getAccessRelation());
-        auto *LastAR = isl_map_range(LastMA->getAccessRelation());
+        auto *AR = isl_map_range(MA->getAccessRelation().release());
+        auto *LastAR = isl_map_range(LastMA->getAccessRelation().release());
         bool SameAR = isl_set_is_equal(AR, LastAR);
         isl_set_free(AR);
         isl_set_free(LastAR);
@@ -4097,7 +4074,7 @@ isl::set Scop::getNonHoistableCtx(MemoryAccess *Access, isl::union_map Writes) {
   if (hasNonHoistableBasePtrInScop(Access, Writes))
     return nullptr;
 
-  isl::map AccessRelation = give(Access->getAccessRelation());
+  isl::map AccessRelation = give(Access->getAccessRelation().release());
   assert(!AccessRelation.is_empty());
 
   if (AccessRelation.involves_dims(isl::dim::in, 0, Stmt.getNumIterators()))
@@ -4203,8 +4180,8 @@ static void replaceBasePtrArrays(Scop *S, const ScopArrayInfo *Old,
       if (Access->getLatestScopArrayInfo() != Old)
         continue;
 
-      isl_id *Id = New->getBasePtrId();
-      isl_map *Map = Access->getAccessRelation();
+      isl_id *Id = New->getBasePtrId().release();
+      isl_map *Map = Access->getAccessRelation().release();
       Map = isl_map_set_tuple_id(Map, isl_dim_out, Id);
       Access->setAccessRelation(Map);
     }
@@ -4721,7 +4698,7 @@ Scop::getAccessesOfType(std::function<bool(MemoryAccess &)> Predicate) {
         continue;
 
       isl_set *Domain = Stmt.getDomain();
-      isl_map *AccessDomain = MA->getAccessRelation();
+      isl_map *AccessDomain = MA->getAccessRelation().release();
       AccessDomain = isl_map_intersect_domain(AccessDomain, Domain);
       Accesses = isl_union_map_add_map(Accesses, AccessDomain);
     }

@@ -179,7 +179,7 @@ static MustKillsInfo computeMustKillsInfo(const Scop &S) {
   for (ScopArrayInfo *SAI : S.arrays()) {
     if (SAI->isPHIKind() ||
         (SAI->isValueKind() && isScalarUsesContainedInScop(S, SAI)))
-      KillMemIds.push_back(isl::manage(SAI->getBasePtrId()));
+      KillMemIds.push_back(isl::manage(SAI->getBasePtrId().release()));
   }
 
   Info.TaggedMustKills = isl::union_map::empty(isl::space(ParamSpace));
@@ -273,9 +273,9 @@ static __isl_give isl_id_to_ast_expr *pollyBuildAstExprForStmt(
   isl_id_to_ast_expr *RefToExpr = isl_id_to_ast_expr_alloc(Ctx, 0);
 
   for (MemoryAccess *Acc : *Stmt) {
-    isl_map *AddrFunc = Acc->getAddressFunction();
+    isl_map *AddrFunc = Acc->getAddressFunction().release();
     AddrFunc = isl_map_intersect_domain(AddrFunc, Stmt->getDomain());
-    isl_id *RefId = Acc->getId();
+    isl_id *RefId = Acc->getId().release();
     isl_pw_multi_aff *PMA = isl_pw_multi_aff_from_map(AddrFunc);
     isl_multi_pw_aff *MPA = isl_multi_pw_aff_from_pw_multi_aff(PMA);
     MPA = isl_multi_pw_aff_coalesce(MPA);
@@ -2363,13 +2363,14 @@ public:
     for (auto &Stmt : *S)
       for (auto &Acc : Stmt)
         if (Acc->getType() == AccessTy) {
-          isl_map *Relation = Acc->getAccessRelation();
+          isl_map *Relation = Acc->getAccessRelation().release();
           Relation = isl_map_intersect_domain(Relation, Stmt.getDomain());
 
           isl_space *Space = isl_map_get_space(Relation);
           Space = isl_space_range(Space);
           Space = isl_space_from_range(Space);
-          Space = isl_space_set_tuple_id(Space, isl_dim_in, Acc->getId());
+          Space =
+              isl_space_set_tuple_id(Space, isl_dim_in, Acc->getId().release());
           isl_map *Universe = isl_map_universe(Space);
           Relation = isl_map_domain_product(Relation, Universe);
           Accesses = isl_union_map_add_map(Accesses, Relation);
@@ -2423,7 +2424,7 @@ public:
     }
 
     for (auto &Array : S->arrays()) {
-      auto Id = Array->getBasePtrId();
+      auto Id = Array->getBasePtrId().release();
       Names = isl_id_to_ast_expr_set(Names, Id, isl_ast_expr_copy(Zero));
     }
 
@@ -2506,16 +2507,16 @@ public:
       auto Access = isl_alloc_type(S->getIslCtx(), struct gpu_stmt_access);
       Access->read = Acc->isRead();
       Access->write = Acc->isWrite();
-      Access->access = Acc->getAccessRelation();
+      Access->access = Acc->getAccessRelation().release();
       isl_space *Space = isl_map_get_space(Access->access);
       Space = isl_space_range(Space);
       Space = isl_space_from_range(Space);
-      Space = isl_space_set_tuple_id(Space, isl_dim_in, Acc->getId());
+      Space = isl_space_set_tuple_id(Space, isl_dim_in, Acc->getId().release());
       isl_map *Universe = isl_map_universe(Space);
       Access->tagged_access =
-          isl_map_domain_product(Acc->getAccessRelation(), Universe);
+          isl_map_domain_product(Acc->getAccessRelation().release(), Universe);
       Access->exact_write = !Acc->isMayWrite();
-      Access->ref_id = Acc->getId();
+      Access->ref_id = Acc->getId().release();
       Access->next = Accesses;
       Access->n_index = Acc->getScopArrayInfo()->getNumberOfDimensions();
       Accesses = Access;
@@ -2574,19 +2575,20 @@ public:
 
     if (isl_union_set_is_empty(AccessUSet)) {
       isl_union_set_free(AccessUSet);
-      return isl_set_empty(Array->getSpace());
+      return isl_set_empty(Array->getSpace().release());
     }
 
     if (Array->getNumberOfDimensions() == 0) {
       isl_union_set_free(AccessUSet);
-      return isl_set_universe(Array->getSpace());
+      return isl_set_universe(Array->getSpace().release());
     }
 
     isl_set *AccessSet =
-        isl_union_set_extract_set(AccessUSet, Array->getSpace());
+        isl_union_set_extract_set(AccessUSet, Array->getSpace().release());
 
     isl_union_set_free(AccessUSet);
-    isl_local_space *LS = isl_local_space_from_space(Array->getSpace());
+    isl_local_space *LS =
+        isl_local_space_from_space(Array->getSpace().release());
 
     isl_pw_aff *Val =
         isl_pw_aff_from_aff(isl_aff_var_on_domain(LS, isl_dim_set, 0));
@@ -2597,12 +2599,12 @@ public:
                                    isl_pw_aff_dim(Val, isl_dim_in));
     OuterMax = isl_pw_aff_add_dims(OuterMax, isl_dim_in,
                                    isl_pw_aff_dim(Val, isl_dim_in));
-    OuterMin =
-        isl_pw_aff_set_tuple_id(OuterMin, isl_dim_in, Array->getBasePtrId());
-    OuterMax =
-        isl_pw_aff_set_tuple_id(OuterMax, isl_dim_in, Array->getBasePtrId());
+    OuterMin = isl_pw_aff_set_tuple_id(OuterMin, isl_dim_in,
+                                       Array->getBasePtrId().release());
+    OuterMax = isl_pw_aff_set_tuple_id(OuterMax, isl_dim_in,
+                                       Array->getBasePtrId().release());
 
-    isl_set *Extent = isl_set_universe(Array->getSpace());
+    isl_set *Extent = isl_set_universe(Array->getSpace().release());
 
     Extent = isl_set_intersect(
         Extent, isl_pw_aff_le_set(OuterMin, isl_pw_aff_copy(Val)));
@@ -2613,7 +2615,7 @@ public:
 
     for (unsigned i = 0; i < NumDims; ++i) {
       isl_pw_aff *PwAff =
-          const_cast<isl_pw_aff *>(Array->getDimensionSizePw(i));
+          const_cast<isl_pw_aff *>(Array->getDimensionSizePw(i).release());
 
       // isl_pw_aff can be NULL for zero dimension. Only in the case of a
       // Fortran array will we have a legitimate dimension.
@@ -2623,7 +2625,8 @@ public:
       }
 
       isl_pw_aff *Val = isl_pw_aff_from_aff(isl_aff_var_on_domain(
-          isl_local_space_from_space(Array->getSpace()), isl_dim_set, i));
+          isl_local_space_from_space(Array->getSpace().release()), isl_dim_set,
+          i));
       PwAff = isl_pw_aff_add_dims(PwAff, isl_dim_in,
                                   isl_pw_aff_dim(Val, isl_dim_in));
       PwAff = isl_pw_aff_set_tuple_id(PwAff, isl_dim_in,
@@ -2680,7 +2683,7 @@ public:
     }
 
     for (unsigned i = 1; i < PPCGArray.n_index; ++i) {
-      isl_pw_aff *Bound = Array->getDimensionSizePw(i);
+      isl_pw_aff *Bound = Array->getDimensionSizePw(i).release();
       auto LS = isl_pw_aff_get_domain_space(Bound);
       auto Aff = isl_multi_aff_zero(LS);
       Bound = isl_pw_aff_pullback_multi_aff(Bound, Aff);
@@ -2714,7 +2717,7 @@ public:
 
       gpu_array_info &PPCGArray = PPCGProg->array[i];
 
-      PPCGArray.space = Array->getSpace();
+      PPCGArray.space = Array->getSpace().release();
       PPCGArray.type = strdup(TypeName.c_str());
       PPCGArray.size = Array->getElementType()->getPrimitiveSizeInBits() / 8;
       PPCGArray.name = strdup(Array->getName().c_str());
@@ -2749,7 +2752,7 @@ public:
     isl_union_map *Maps = isl_union_map_empty(S->getParamSpace());
 
     for (auto &Array : S->arrays()) {
-      isl_space *Space = Array->getSpace();
+      isl_space *Space = Array->getSpace().release();
       Space = isl_space_map_from_set(Space);
       isl_map *Identity = isl_map_identity(Space);
       Maps = isl_union_map_add_map(Maps, Identity);
