@@ -21,6 +21,7 @@ add_clang_library(clangDaemon
   clangIndex
   clangLex
   clangSema
+  clangSerialization
   clangTooling
   clangToolingCore
   ${LLVM_PTHREAD_LIB}
