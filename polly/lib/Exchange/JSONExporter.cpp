@@ -459,7 +459,7 @@ bool JSONImporter::importAccesses(Scop &S, Json::Value &JScop,
         errs() << "The access was not parsed successfully by ISL.\n";
         return false;
       }
-      isl_map *CurrentAccessMap = MA->getAccessRelation();
+      isl_map *CurrentAccessMap = MA->getAccessRelation().release();
 
       // Check if the number of parameter change
       if (isl_map_dim(NewAccessMap, isl_dim_param) !=

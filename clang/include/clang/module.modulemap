@@ -139,3 +139,8 @@ module Clang_Tooling {
   // matchers (and thus the AST), which clang-format should not have.
   exclude header "Tooling/RefactoringCallbacks.h"
 }
+
+module Clang_ToolingCore {
+  requires cplusplus
+  umbrella "Tooling/Core" module * { export * }
+}

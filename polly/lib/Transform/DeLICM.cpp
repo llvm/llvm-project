@@ -1034,7 +1034,7 @@ protected:
   /// The domain of the result is as narrow as possible.
   isl::map getAccessRelationFor(MemoryAccess *MA) const {
     auto Domain = getDomainFor(MA);
-    auto AccRel = give(MA->getLatestAccessRelation());
+    auto AccRel = MA->getLatestAccessRelation();
     return give(isl_map_intersect_domain(AccRel.take(), Domain.take()));
   }
 
