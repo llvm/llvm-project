@@ -142,3 +142,8 @@ module Clang_Tooling {
 
   textual header "Tooling/Refactor/RefactoringActions.def"
 }
+
+module Clang_ToolingCore {
+  requires cplusplus
+  umbrella "Tooling/Core" module * { export * }
+}

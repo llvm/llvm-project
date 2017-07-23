@@ -413,6 +413,13 @@ add_subdirectory(include)
 get_property(CLANG_TABLEGEN_TARGETS GLOBAL PROPERTY CLANG_TABLEGEN_TARGETS)
 list(APPEND LLVM_COMMON_DEPENDS ${CLANG_TABLEGEN_TARGETS})
 
+# Force target to be built as soon as possible. Clang modules builds depend
+# header-wise on it as they ship all headers from the umbrella folders. Building
+# an entire module might include header, which depends on intrinsics_gen.
+if(LLVM_ENABLE_MODULES AND NOT CLANG_BUILT_STANDALONE)
+  list(APPEND LLVM_COMMON_DEPENDS intrinsics_gen)
+endif()
+
 add_subdirectory(lib)
 add_subdirectory(tools)
 add_subdirectory(runtime)
