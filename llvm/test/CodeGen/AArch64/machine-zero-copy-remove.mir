@@ -1,0 +1,565 @@
+# RUN: llc -mtriple=aarch64--linux-gnu -run-pass=aarch64-copyelim %s -verify-machineinstrs -o - | FileCheck %s
+---
+# CHECK-LABEL: name: test1
+# CHECK: ANDSWri %w0, 1, implicit-def %nzcv
+# CHECK: bb.1:
+# CHECK-NOT: COPY %wzr
+name:            test1
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: %w0, %x1, %x2
+
+    %w0 = ANDSWri %w0, 1, implicit-def %nzcv
+    STRWui killed %w0, killed %x1, 0
+    Bcc 1, %bb.2, implicit killed %nzcv
+    B %bb.1
+
+  bb.1:
+    liveins: %x2
+
+    %w0 = COPY %wzr
+    STRWui killed %w0, killed %x2, 0
+
+  bb.2:
+    RET_ReallyLR
+...
+# CHECK-LABEL: name: test2
+# CHECK: ANDSXri %x0, 1, implicit-def %nzcv
+# CHECK: bb.1:
+# CHECK-NOT: COPY %xzr
+name:            test2
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: %x0, %x1, %x2
+
+    %x0 = ANDSXri %x0, 1, implicit-def %nzcv
+    STRXui killed %x0, killed %x1, 0
+    Bcc 1, %bb.2, implicit killed %nzcv
+    B %bb.1
+
+  bb.1:
+    liveins: %x2
+
+    %x0 = COPY %xzr
+    STRXui killed %x0, killed %x2, 0
+
+  bb.2:
+    RET_ReallyLR
+...
+# CHECK-LABEL: name: test3
+# CHECK: ADDSWri %w0, 1, 0, implicit-def %nzcv
+# CHECK: bb.1:
+# CHECK-NOT: COPY %wzr
+name:            test3
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: %w0, %x1, %x2
+
+    %w0 = ADDSWri %w0, 1, 0, implicit-def %nzcv
+    STRWui killed %w0, killed %x1, 0
+    Bcc 1, %bb.2, implicit killed %nzcv
+    B %bb.1
+
+  bb.1:
+    liveins: %x2
+
+    %w0 = COPY %wzr
+    STRWui killed %w0, killed %x2, 0
+
+  bb.2:
+    RET_ReallyLR
+...
+# CHECK-LABEL: name: test4
+# CHECK: ADDSXri %x0, 1, 0, implicit-def %nzcv
+# CHECK: bb.1:
+# CHECK-NOT: COPY %xzr
+name:            test4
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: %x0, %x1, %x2
+
+    %x0 = ADDSXri %x0, 1, 0, implicit-def %nzcv
+    STRXui killed %x0, killed %x1, 0
+    Bcc 1, %bb.2, implicit killed %nzcv
+    B %bb.1
+
+  bb.1:
+    liveins: %x2
+
+    %x0 = COPY %xzr
+    STRXui killed %x0, killed %x2, 0
+
+  bb.2:
+    RET_ReallyLR
+...
+# CHECK-LABEL: name: test5
+# CHECK: SUBSWri %w0, 1, 0, implicit-def %nzcv
+# CHECK: bb.1:
+# CHECK-NOT: COPY %wzr
+name:            test5
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: %w0, %x1, %x2
+
+    %w0 = SUBSWri %w0, 1, 0, implicit-def %nzcv
+    STRWui killed %w0, killed %x1, 0
+    Bcc 1, %bb.2, implicit killed %nzcv
+    B %bb.1
+
+  bb.1:
+    liveins: %x2
+
+    %w0 = COPY %wzr
+    STRWui killed %w0, killed %x2, 0
+
+  bb.2:
+    RET_ReallyLR
+...
+# CHECK-LABEL: name: test6
+# CHECK: SUBSXri %x0, 1, 0, implicit-def %nzcv
+# CHECK: bb.1:
+# CHECK-NOT: COPY %xzr
+name:            test6
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: %x0, %x1, %x2
+
+    %x0 = SUBSXri %x0, 1, 0, implicit-def %nzcv
+    STRXui killed %x0, killed %x1, 0
+    Bcc 1, %bb.2, implicit killed %nzcv
+    B %bb.1
+
+  bb.1:
+    liveins: %x2
+
+    %x0 = COPY %xzr
+    STRXui killed %x0, killed %x2, 0
+
+  bb.2:
+    RET_ReallyLR
+...
+# CHECK-LABEL: name: test7
+# CHECK: ADDSWrr %w0, %w1, implicit-def %nzcv
+# CHECK: bb.1:
+# CHECK-NOT: COPY %wzr
+name:            test7
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: %w0, %w1, %x2, %x3
+
+    %w0 = ADDSWrr %w0, %w1, implicit-def %nzcv
+    STRWui killed %w0, killed %x2, 0
+    Bcc 1, %bb.2, implicit killed %nzcv
+    B %bb.1
+
+  bb.1:
+    liveins: %x3
+
+    %w0 = COPY %wzr
+    STRWui killed %w0, killed %x3, 0
+
+  bb.2:
+    RET_ReallyLR
+...
+# CHECK-LABEL: name: test8
+# CHECK: ADDSXrr %x0, %x1, implicit-def %nzcv
+# CHECK: bb.1:
+# CHECK-NOT: COPY %xzr
+name:            test8
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: %x0, %x1, %x2, %x3
+
+    %x0 = ADDSXrr %x0, %x1, implicit-def %nzcv
+    STRXui killed %x0, killed %x2, 0
+    Bcc 1, %bb.2, implicit killed %nzcv
+    B %bb.1
+
+  bb.1:
+    liveins: %x3
+
+    %x0 = COPY %xzr
+    STRXui killed %x0, killed %x3, 0
+
+  bb.2:
+    RET_ReallyLR
+...
+# CHECK-LABEL: name: test9
+# CHECK: ANDSWrr %w0, %w1, implicit-def %nzcv
+# CHECK: bb.1:
+# CHECK-NOT: COPY %wzr
+name:            test9
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: %w0, %w1, %x2, %x3
+
+    %w0 = ANDSWrr %w0, %w1, implicit-def %nzcv
+    STRWui killed %w0, killed %x2, 0
+    Bcc 1, %bb.2, implicit killed %nzcv
+    B %bb.1
+
+  bb.1:
+    liveins: %x3
+
+    %w0 = COPY %wzr
+    STRWui killed %w0, killed %x3, 0
+
+  bb.2:
+    RET_ReallyLR
+...
+# CHECK-LABEL: name: test10
+# CHECK: ANDSXrr %x0, %x1, implicit-def %nzcv
+# CHECK: bb.1:
+# CHECK-NOT: COPY %xzr
+name:            test10
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: %x0, %x1, %x2, %x3
+
+    %x0 = ANDSXrr %x0, %x1, implicit-def %nzcv
+    STRXui killed %x0, killed %x2, 0
+    Bcc 1, %bb.2, implicit killed %nzcv
+    B %bb.1
+
+  bb.1:
+    liveins: %x3
+
+    %x0 = COPY %xzr
+    STRXui killed %x0, killed %x3, 0
+
+  bb.2:
+    RET_ReallyLR
+...
+# CHECK-LABEL: name: test11
+# CHECK: BICSWrr %w0, %w1, implicit-def %nzcv
+# CHECK: bb.1:
+# CHECK-NOT: COPY %wzr
+name:            test11
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: %w0, %w1, %x2, %x3
+
+    %w0 = BICSWrr %w0, %w1, implicit-def %nzcv
+    STRWui killed %w0, killed %x2, 0
+    Bcc 1, %bb.2, implicit killed %nzcv
+    B %bb.1
+
+  bb.1:
+    liveins: %x3
+
+    %w0 = COPY %wzr
+    STRWui killed %w0, killed %x3, 0
+
+  bb.2:
+    RET_ReallyLR
+...
+# CHECK-LABEL: name: test12
+# CHECK: BICSXrr %x0, %x1, implicit-def %nzcv
+# CHECK: bb.1:
+# CHECK-NOT: COPY %xzr
+name:            test12
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: %x0, %x1, %x2, %x3
+
+    %x0 = BICSXrr %x0, %x1, implicit-def %nzcv
+    STRXui killed %x0, killed %x2, 0
+    Bcc 1, %bb.2, implicit killed %nzcv
+    B %bb.1
+
+  bb.1:
+    liveins: %x3
+
+    %x0 = COPY %xzr
+    STRXui killed %x0, killed %x3, 0
+
+  bb.2:
+    RET_ReallyLR
+...
+# CHECK-LABEL: name: test13
+# CHECK: SUBSWrr %w0, %w1, implicit-def %nzcv
+# CHECK: bb.1:
+# CHECK-NOT: COPY %wzr
+name:            test13
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: %w0, %w1, %x2, %x3
+
+    %w0 = SUBSWrr %w0, %w1, implicit-def %nzcv
+    STRWui killed %w0, killed %x2, 0
+    Bcc 1, %bb.2, implicit killed %nzcv
+    B %bb.1
+
+  bb.1:
+    liveins: %x3
+
+    %w0 = COPY %wzr
+    STRWui killed %w0, killed %x3, 0
+
+  bb.2:
+    RET_ReallyLR
+...
+# CHECK-LABEL: name: test14
+# CHECK: SUBSXrr %x0, %x1, implicit-def %nzcv
+# CHECK: bb.1:
+# CHECK-NOT: COPY %xzr
+name:            test14
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: %x0, %x1, %x2, %x3
+
+    %x0 = SUBSXrr %x0, %x1, implicit-def %nzcv
+    STRXui killed %x0, killed %x2, 0
+    Bcc 1, %bb.2, implicit killed %nzcv
+    B %bb.1
+
+  bb.1:
+    liveins: %x3
+
+    %x0 = COPY %xzr
+    STRXui killed %x0, killed %x3, 0
+
+  bb.2:
+    RET_ReallyLR
+...
+# CHECK-LABEL: name: test15
+# CHECK: ADDSWrs %w0, %w1, 0, implicit-def %nzcv
+# CHECK: bb.1:
+# CHECK-NOT: COPY %wzr
+name:            test15
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: %w0, %w1, %x2, %x3
+
+    %w0 = ADDSWrs %w0, %w1, 0, implicit-def %nzcv
+    STRWui killed %w0, killed %x2, 0
+    Bcc 1, %bb.2, implicit killed %nzcv
+    B %bb.1
+
+  bb.1:
+    liveins: %x3
+
+    %w0 = COPY %wzr
+    STRWui killed %w0, killed %x3, 0
+
+  bb.2:
+    RET_ReallyLR
+...
+# CHECK-LABEL: name: test16
+# CHECK: ADDSXrs %x0, %x1, 0, implicit-def %nzcv
+# CHECK: bb.1:
+# CHECK-NOT: COPY %xzr
+name:            test16
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: %x0, %x1, %x2, %x3
+
+    %x0 = ADDSXrs %x0, %x1, 0, implicit-def %nzcv
+    STRXui killed %x0, killed %x2, 0
+    Bcc 1, %bb.2, implicit killed %nzcv
+    B %bb.1
+
+  bb.1:
+    liveins: %x3
+
+    %x0 = COPY %xzr
+    STRXui killed %x0, killed %x3, 0
+
+  bb.2:
+    RET_ReallyLR
+...
+# CHECK-LABEL: name: test17
+# CHECK: ANDSWrs %w0, %w1, 0, implicit-def %nzcv
+# CHECK: bb.1:
+# CHECK-NOT: COPY %wzr
+name:            test17
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: %w0, %w1, %x2, %x3
+
+    %w0 = ANDSWrs %w0, %w1, 0, implicit-def %nzcv
+    STRWui killed %w0, killed %x2, 0
+    Bcc 1, %bb.2, implicit killed %nzcv
+    B %bb.1
+
+  bb.1:
+    liveins: %x3
+
+    %w0 = COPY %wzr
+    STRWui killed %w0, killed %x3, 0
+
+  bb.2:
+    RET_ReallyLR
+...
+# CHECK-LABEL: name: test18
+# CHECK: ANDSXrs %x0, %x1, 0, implicit-def %nzcv
+# CHECK: bb.1:
+# CHECK-NOT: COPY %xzr
+name:            test18
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: %x0, %x1, %x2, %x3
+
+    %x0 = ANDSXrs %x0, %x1, 0, implicit-def %nzcv
+    STRXui killed %x0, killed %x2, 0
+    Bcc 1, %bb.2, implicit killed %nzcv
+    B %bb.1
+
+  bb.1:
+    liveins: %x3
+
+    %x0 = COPY %xzr
+    STRXui killed %x0, killed %x3, 0
+
+  bb.2:
+    RET_ReallyLR
+...
+# CHECK-LABEL: name: test19
+# CHECK: BICSWrs %w0, %w1, 0, implicit-def %nzcv
+# CHECK: bb.1:
+# CHECK-NOT: COPY %wzr
+name:            test19
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: %w0, %w1, %x2, %x3
+
+    %w0 = BICSWrs %w0, %w1, 0, implicit-def %nzcv
+    STRWui killed %w0, killed %x2, 0
+    Bcc 1, %bb.2, implicit killed %nzcv
+    B %bb.1
+
+  bb.1:
+    liveins: %x3
+
+    %w0 = COPY %wzr
+    STRWui killed %w0, killed %x3, 0
+
+  bb.2:
+    RET_ReallyLR
+...
+# Unicorn test - we can remove a redundant copy and a redundant mov
+# CHECK-LABEL: name: test20
+# CHECK: SUBSWri %w1, 1, 0, implicit-def %nzcv
+# CHECK: bb.1:
+# CHECK-NOT: %w0 = COPY %wzr
+# CHECK-NOT: %w1 = MOVi32imm 1
+name:            test20
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: %w1, %x2
+
+    %w0 = SUBSWri %w1, 1, 0, implicit-def %nzcv
+    Bcc 1, %bb.2, implicit killed %nzcv
+    B %bb.1
+
+  bb.1:
+    liveins: %x2
+
+    %w0 = COPY %wzr
+    %w1 = MOVi32imm 1
+    STRWui killed %w0, %x2, 0
+    STRWui killed %w1, killed %x2, 1
+
+  bb.2:
+    RET_ReallyLR
+
+...
+# Negative test - MOVi32imm clobbers %w0
+# CHECK-LABEL: name: test21
+# CHECK: ANDSWri %w0, 1, implicit-def %nzcv
+# CHECK: bb.1:
+# CHECK: %w0 = COPY %wzr
+name:            test21
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: %w0, %x1, %x2
+
+    %w0 = ANDSWri %w0, 1, implicit-def %nzcv
+    STRWui killed %w0, %x1, 0
+    %w0 = MOVi32imm -1
+    STRWui killed %w0, killed %x1, 1
+    Bcc 1, %bb.2, implicit killed %nzcv
+    B %bb.1
+
+  bb.1:
+    liveins: %x2
+
+    %w0 = COPY %wzr
+    STRWui killed %w0, killed %x2, 0
+
+  bb.2:
+    RET_ReallyLR
+...
+# Negative test - SUBSXri self-clobbers x0, so MOVi64imm can't be removed
+# CHECK-LABEL: name: test22
+# CHECK: SUBSXri %x0, 1, 0, implicit-def %nzcv
+# CHECK: bb.1:
+# CHECK: %x0 = MOVi64imm 1
+name:            test22
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: %x0, %x1, %x2
+
+    %x0 = SUBSXri %x0, 1, 0, implicit-def %nzcv
+    STRXui killed %x0, killed %x1, 0
+    Bcc 1, %bb.2, implicit killed %nzcv
+    B %bb.1
+
+  bb.1:
+    liveins: %x2
+
+    %x0 = MOVi64imm 1
+    STRXui killed %x0, killed %x2, 0
+
+  bb.2:
+    RET_ReallyLR
+...
+# Negative test - bb.1 has multiple preds
+# CHECK-LABEL: name: test23
+# CHECK: ADDSWri %w0, 1, 0, implicit-def %nzcv
+# CHECK: bb.1:
+# CHECK: COPY %wzr
+name:            test23
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: %w0, %x1, %x2
+
+    %w0 = ADDSWri %w0, 1, 0, implicit-def %nzcv
+    STRWui killed %w0, killed %x1, 0
+    Bcc 1, %bb.2, implicit killed %nzcv
+    B %bb.1
+
+  bb.3:
+    B %bb.1
+
+  bb.1:
+    liveins: %x2
+
+    %w0 = COPY %wzr
+    STRWui killed %w0, killed %x2, 0
+
+  bb.2:
+    RET_ReallyLR

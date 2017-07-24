@@ -24,7 +24,6 @@
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/TargetRegistry.h"
 
 using namespace llvm;
 using namespace llvm::object;
