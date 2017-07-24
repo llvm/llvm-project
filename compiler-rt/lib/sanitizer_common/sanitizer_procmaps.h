@@ -42,10 +42,10 @@ struct MemoryMappedSegment {
       : filename(buff), filename_size(size) {}
   ~MemoryMappedSegment() {}
 
-  bool IsReadable() { return protection & kProtectionRead; }
-  bool IsWritable() { return protection & kProtectionWrite; }
-  bool IsExecutable() { return protection & kProtectionExecute; }
-  bool IsShared() { return protection & kProtectionShared; }
+  bool IsReadable() const { return protection & kProtectionRead; }
+  bool IsWritable() const { return protection & kProtectionWrite; }
+  bool IsExecutable() const { return protection & kProtectionExecute; }
+  bool IsShared() const { return protection & kProtectionShared; }
 
   uptr start;
   uptr end;

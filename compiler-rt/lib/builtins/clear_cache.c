@@ -41,7 +41,7 @@ uintptr_t GetCurrentProcess(void);
      * clear_mips_cache - Invalidates instruction cache for Mips.
      */
     static void clear_mips_cache(const void* Addr, size_t Size) {
-      asm volatile (
+      __asm__ volatile (
         ".set push\n"
         ".set noreorder\n"
         ".set noat\n"
