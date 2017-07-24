@@ -30,19 +30,19 @@ Non-comprehensive list of changes in this release
 ELF Improvements
 ----------------
 
-* First and foremost, a lot of compatibility issues and bugs has been fixed.
+* First and foremost, a lot of compatibility issues and bugs have been fixed.
   Linker script support has significantly improved. As a result, we believe you
   are very likely to be able to link your programs with lld without experiencing
   any problem now.
 
 * Error message format has changed in order to improve readability.
-  Traditionally, linker's error messages are concise and arguably too tarse.
+  Traditionally, linker's error messages are concise and arguably too terse.
   This is an example of lld 4.0's error message (they are actually in one line)::
 
     /ssd/clang/bin/ld.lld: error: /ssd/llvm-project/lld/ELF/Writer.cpp:207:
       undefined symbol 'lld::elf::EhFrameSection::addSection()'
 
-  It is not easy to read because too many information is packed into single line
+  It is not easy to read because too much information is packed into a single line
   and the embedded text, particularly a symbol name, is sometimes too long.
   In lld 5.0, we use more vertical space to print out error messages in a more
   structured manner like this::
@@ -80,8 +80,8 @@ ELF Improvements
   structure is different from them but contains the same amount of information
   and should be more readable than their outputs.
 
-  As with other lld features, the ``-Map`` option is desigend with speed in mind.
-  The option would generate a hundred megabyte of text file if you link a large
+  As with other lld features, the ``-Map`` option is designed with speed in mind.
+  The option would generate a hundred megabyte text file if you link a large
   program with it. lld can usually do that in a few seconds, and it is generally
   a few times faster than the GNU gold's ``-Map`` option.
 
