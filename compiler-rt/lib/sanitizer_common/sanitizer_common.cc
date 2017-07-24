@@ -285,9 +285,10 @@ void LoadedModule::clear() {
 }
 
 void LoadedModule::addAddressRange(uptr beg, uptr end, bool executable,
-                                   bool writable) {
+                                   bool writable, const char *name) {
   void *mem = InternalAlloc(sizeof(AddressRange));
-  AddressRange *r = new(mem) AddressRange(beg, end, executable, writable);
+  AddressRange *r =
+      new(mem) AddressRange(beg, end, executable, writable, name);
   ranges_.push_back(r);
   if (executable && end > max_executable_address_)
     max_executable_address_ = end;

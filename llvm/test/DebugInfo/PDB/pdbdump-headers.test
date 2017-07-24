@@ -91,189 +91,189 @@ ALL-NEXT:   Mod 0001 | `* Linker *`:
 ALL:                           Types (TPI Stream)
 ALL-NEXT: ============================================================
 ALL-NEXT:   Showing 75 records
-ALL-NEXT:   0x1000 | LF_ARGLIST [size = 8, hash = 205956]
-ALL-NEXT:   0x1001 | LF_PROCEDURE [size = 16, hash = 163561]
+ALL-NEXT:   0x1000 | LF_ARGLIST [size = 8, hash = 0x32484]
+ALL-NEXT:   0x1001 | LF_PROCEDURE [size = 16, hash = 0x27EE9]
 ALL-NEXT:            return type = 0x0074 (int), # args = 0, param list = 0x1000
 ALL-NEXT:            calling conv = cdecl, options = None
-ALL-NEXT:   0x1002 | LF_FIELDLIST [size = 76, hash = 59811]
+ALL-NEXT:   0x1002 | LF_FIELDLIST [size = 76, hash = 0xE9A3]
 ALL-NEXT:            - LF_ENUMERATE [apartment = 1]
 ALL-NEXT:            - LF_ENUMERATE [single = 2]
 ALL-NEXT:            - LF_ENUMERATE [free = 3]
 ALL-NEXT:            - LF_ENUMERATE [neutral = 4]
 ALL-NEXT:            - LF_ENUMERATE [both = 5]
-ALL-NEXT:   0x1003 | LF_ENUM [size = 120, hash = 208239] `__vc_attributes::threadingAttribute::threading_e`
+ALL-NEXT:   0x1003 | LF_ENUM [size = 120, hash = 0x32D6F] `__vc_attributes::threadingAttribute::threading_e`
 ALL-NEXT:            unique name: `.?AW4threading_e@threadingAttribute@__vc_attributes@@`
 ALL-NEXT:            field list: 0x1002, underlying type: 0x0074 (int)
 ALL-NEXT:            options: has unique name | is nested
-ALL-NEXT:   0x1004 | LF_STRUCTURE [size = 100, hash = 16377] `__vc_attributes::threadingAttribute`
+ALL-NEXT:   0x1004 | LF_STRUCTURE [size = 100, hash = 0x3FF9] `__vc_attributes::threadingAttribute`
 ALL-NEXT:            unique name: `.?AUthreadingAttribute@__vc_attributes@@`
 ALL-NEXT:            vtable: <no type>, base list: <no type>, field list: <no type>
 ALL-NEXT:            options: forward ref | has unique name
-ALL-NEXT:   0x1005 | LF_POINTER [size = 12, hash = 247078]
+ALL-NEXT:   0x1005 | LF_POINTER [size = 12, hash = 0x3C526]
 ALL-NEXT:            referent = 0x1004, mode = pointer, opts = const, kind = ptr32
-ALL-NEXT:   0x1006 | LF_ARGLIST [size = 12, hash = 194342]
+ALL-NEXT:   0x1006 | LF_ARGLIST [size = 12, hash = 0x2F726]
 ALL-NEXT:            0x1003: `__vc_attributes::threadingAttribute::threading_e`
-ALL-NEXT:   0x1007 | LF_MFUNCTION [size = 28, hash = 254156]
+ALL-NEXT:   0x1007 | LF_MFUNCTION [size = 28, hash = 0x3E0CC]
 ALL-NEXT:            return type = 0x0003 (void), # args = 1, param list = 0x1006
 ALL-NEXT:            class type = 0x1004, this type = 0x1005, this adjust = 0
 ALL-NEXT:            calling conv = thiscall, options = constructor
-ALL-NEXT:   0x1008 | LF_MFUNCTION [size = 28, hash = 194536]
+ALL-NEXT:   0x1008 | LF_MFUNCTION [size = 28, hash = 0x2F7E8]
 ALL-NEXT:            return type = 0x0003 (void), # args = 0, param list = 0x1000
 ALL-NEXT:            class type = 0x1004, this type = 0x1005, this adjust = 0
 ALL-NEXT:            calling conv = thiscall, options = constructor
-ALL-NEXT:   0x1009 | LF_METHODLIST [size = 20, hash = 167492]
+ALL-NEXT:   0x1009 | LF_METHODLIST [size = 20, hash = 0x28E44]
 ALL-NEXT:            - Method [type = 0x1007, vftable offset = -1, attrs = public]
 ALL-NEXT:            - Method [type = 0x1008, vftable offset = -1, attrs = public]
-ALL-NEXT:   0x100A | LF_FIELDLIST [size = 68, hash = 185421]
+ALL-NEXT:   0x100A | LF_FIELDLIST [size = 68, hash = 0x2D44D]
 ALL-NEXT:            - LF_NESTTYPE [name = `threading_e`, parent = 0x1003]
 ALL-NEXT:            - LF_METHOD [name = `threadingAttribute`, # overloads = 2, overload list = 0x1009]
 ALL-NEXT:            - LF_MEMBER [name = `value`, Type = 0x1003, offset = 0, attrs = public]
-ALL-NEXT:   0x100B | LF_STRUCTURE [size = 100, hash = 119540] `__vc_attributes::threadingAttribute`
+ALL-NEXT:   0x100B | LF_STRUCTURE [size = 100, hash = 0x1D2F4] `__vc_attributes::threadingAttribute`
 ALL-NEXT:            unique name: `.?AUthreadingAttribute@__vc_attributes@@`
 ALL-NEXT:            vtable: <no type>, base list: <no type>, field list: 0x100A
 ALL-NEXT:            options: has ctor / dtor | contains nested class | has unique name
-ALL-NEXT:   0x100C | LF_FIELDLIST [size = 48, hash = 261871]
+ALL-NEXT:   0x100C | LF_FIELDLIST [size = 48, hash = 0x3FEEF]
 ALL-NEXT:            - LF_ENUMERATE [native = 0]
 ALL-NEXT:            - LF_ENUMERATE [com = 1]
 ALL-NEXT:            - LF_ENUMERATE [managed = 2]
-ALL-NEXT:   0x100D | LF_ENUM [size = 120, hash = 198119] `__vc_attributes::event_receiverAttribute::type_e`
+ALL-NEXT:   0x100D | LF_ENUM [size = 120, hash = 0x305E7] `__vc_attributes::event_receiverAttribute::type_e`
 ALL-NEXT:            unique name: `.?AW4type_e@event_receiverAttribute@__vc_attributes@@`
 ALL-NEXT:            field list: 0x100C, underlying type: 0x0074 (int)
 ALL-NEXT:            options: has unique name | is nested
-ALL-NEXT:   0x100E | LF_STRUCTURE [size = 112, hash = 48056] `__vc_attributes::event_receiverAttribute`
+ALL-NEXT:   0x100E | LF_STRUCTURE [size = 112, hash = 0xBBB8] `__vc_attributes::event_receiverAttribute`
 ALL-NEXT:            unique name: `.?AUevent_receiverAttribute@__vc_attributes@@`
 ALL-NEXT:            vtable: <no type>, base list: <no type>, field list: <no type>
 ALL-NEXT:            options: forward ref | has unique name
-ALL-NEXT:   0x100F | LF_POINTER [size = 12, hash = 251486]
+ALL-NEXT:   0x100F | LF_POINTER [size = 12, hash = 0x3D65E]
 ALL-NEXT:            referent = 0x100E, mode = pointer, opts = const, kind = ptr32
-ALL-NEXT:   0x1010 | LF_ARGLIST [size = 16, hash = 134580]
+ALL-NEXT:   0x1010 | LF_ARGLIST [size = 16, hash = 0x20DB4]
 ALL-NEXT:            0x100D: `__vc_attributes::event_receiverAttribute::type_e`
 ALL-NEXT:            0x0030 (bool): `bool`
-ALL-NEXT:   0x1011 | LF_MFUNCTION [size = 28, hash = 148190]
+ALL-NEXT:   0x1011 | LF_MFUNCTION [size = 28, hash = 0x242DE]
 ALL-NEXT:            return type = 0x0003 (void), # args = 2, param list = 0x1010
 ALL-NEXT:            class type = 0x100E, this type = 0x100F, this adjust = 0
 ALL-NEXT:            calling conv = thiscall, options = constructor
-ALL-NEXT:   0x1012 | LF_ARGLIST [size = 12, hash = 113636]
+ALL-NEXT:   0x1012 | LF_ARGLIST [size = 12, hash = 0x1BBE4]
 ALL-NEXT:            0x100D: `__vc_attributes::event_receiverAttribute::type_e`
-ALL-NEXT:   0x1013 | LF_MFUNCTION [size = 28, hash = 53336]
+ALL-NEXT:   0x1013 | LF_MFUNCTION [size = 28, hash = 0xD058]
 ALL-NEXT:            return type = 0x0003 (void), # args = 1, param list = 0x1012
 ALL-NEXT:            class type = 0x100E, this type = 0x100F, this adjust = 0
 ALL-NEXT:            calling conv = thiscall, options = constructor
-ALL-NEXT:   0x1014 | LF_MFUNCTION [size = 28, hash = 55779]
+ALL-NEXT:   0x1014 | LF_MFUNCTION [size = 28, hash = 0xD9E3]
 ALL-NEXT:            return type = 0x0003 (void), # args = 0, param list = 0x1000
 ALL-NEXT:            class type = 0x100E, this type = 0x100F, this adjust = 0
 ALL-NEXT:            calling conv = thiscall, options = constructor
-ALL-NEXT:   0x1015 | LF_METHODLIST [size = 28, hash = 220695]
+ALL-NEXT:   0x1015 | LF_METHODLIST [size = 28, hash = 0x35E17]
 ALL-NEXT:            - Method [type = 0x1011, vftable offset = -1, attrs = public]
 ALL-NEXT:            - Method [type = 0x1013, vftable offset = -1, attrs = public]
 ALL-NEXT:            - Method [type = 0x1014, vftable offset = -1, attrs = public]
-ALL-NEXT:   0x1016 | LF_FIELDLIST [size = 96, hash = 198114]
+ALL-NEXT:   0x1016 | LF_FIELDLIST [size = 96, hash = 0x305E2]
 ALL-NEXT:            - LF_NESTTYPE [name = `type_e`, parent = 0x100D]
 ALL-NEXT:            - LF_METHOD [name = `event_receiverAttribute`, # overloads = 3, overload list = 0x1015]
 ALL-NEXT:            - LF_MEMBER [name = `type`, Type = 0x100D, offset = 0, attrs = public]
 ALL-NEXT:            - LF_MEMBER [name = `layout_dependent`, Type = 0x0030 (bool), offset = 4, attrs = public]
-ALL-NEXT:   0x1017 | LF_STRUCTURE [size = 112, hash = 148734] `__vc_attributes::event_receiverAttribute`
+ALL-NEXT:   0x1017 | LF_STRUCTURE [size = 112, hash = 0x244FE] `__vc_attributes::event_receiverAttribute`
 ALL-NEXT:            unique name: `.?AUevent_receiverAttribute@__vc_attributes@@`
 ALL-NEXT:            vtable: <no type>, base list: <no type>, field list: 0x1016
 ALL-NEXT:            options: has ctor / dtor | contains nested class | has unique name
-ALL-NEXT:   0x1018 | LF_FIELDLIST [size = 48, hash = 81128]
+ALL-NEXT:   0x1018 | LF_FIELDLIST [size = 48, hash = 0x13CE8]
 ALL-NEXT:            - LF_ENUMERATE [never = 0]
 ALL-NEXT:            - LF_ENUMERATE [allowed = 1]
 ALL-NEXT:            - LF_ENUMERATE [always = 2]
-ALL-NEXT:   0x1019 | LF_ENUM [size = 116, hash = 60158] `__vc_attributes::aggregatableAttribute::type_e`
+ALL-NEXT:   0x1019 | LF_ENUM [size = 116, hash = 0xEAFE] `__vc_attributes::aggregatableAttribute::type_e`
 ALL-NEXT:            unique name: `.?AW4type_e@aggregatableAttribute@__vc_attributes@@`
 ALL-NEXT:            field list: 0x1018, underlying type: 0x0074 (int)
 ALL-NEXT:            options: has unique name | is nested
-ALL-NEXT:   0x101A | LF_STRUCTURE [size = 108, hash = 217249] `__vc_attributes::aggregatableAttribute`
+ALL-NEXT:   0x101A | LF_STRUCTURE [size = 108, hash = 0x350A1] `__vc_attributes::aggregatableAttribute`
 ALL-NEXT:            unique name: `.?AUaggregatableAttribute@__vc_attributes@@`
 ALL-NEXT:            vtable: <no type>, base list: <no type>, field list: <no type>
 ALL-NEXT:            options: forward ref | has unique name
-ALL-NEXT:   0x101B | LF_POINTER [size = 12, hash = 174209]
+ALL-NEXT:   0x101B | LF_POINTER [size = 12, hash = 0x2A881]
 ALL-NEXT:            referent = 0x101A, mode = pointer, opts = const, kind = ptr32
-ALL-NEXT:   0x101C | LF_ARGLIST [size = 12, hash = 159978]
+ALL-NEXT:   0x101C | LF_ARGLIST [size = 12, hash = 0x270EA]
 ALL-NEXT:            0x1019: `__vc_attributes::aggregatableAttribute::type_e`
-ALL-NEXT:   0x101D | LF_MFUNCTION [size = 28, hash = 249504]
+ALL-NEXT:   0x101D | LF_MFUNCTION [size = 28, hash = 0x3CEA0]
 ALL-NEXT:            return type = 0x0003 (void), # args = 1, param list = 0x101C
 ALL-NEXT:            class type = 0x101A, this type = 0x101B, this adjust = 0
 ALL-NEXT:            calling conv = thiscall, options = constructor
-ALL-NEXT:   0x101E | LF_MFUNCTION [size = 28, hash = 141941]
+ALL-NEXT:   0x101E | LF_MFUNCTION [size = 28, hash = 0x22A75]
 ALL-NEXT:            return type = 0x0003 (void), # args = 0, param list = 0x1000
 ALL-NEXT:            class type = 0x101A, this type = 0x101B, this adjust = 0
 ALL-NEXT:            calling conv = thiscall, options = constructor
-ALL-NEXT:   0x101F | LF_METHODLIST [size = 20, hash = 238785]
+ALL-NEXT:   0x101F | LF_METHODLIST [size = 20, hash = 0x3A4C1]
 ALL-NEXT:            - Method [type = 0x101D, vftable offset = -1, attrs = public]
 ALL-NEXT:            - Method [type = 0x101E, vftable offset = -1, attrs = public]
-ALL-NEXT:   0x1020 | LF_FIELDLIST [size = 68, hash = 6214]
+ALL-NEXT:   0x1020 | LF_FIELDLIST [size = 68, hash = 0x1846]
 ALL-NEXT:            - LF_NESTTYPE [name = `type_e`, parent = 0x1019]
 ALL-NEXT:            - LF_METHOD [name = `aggregatableAttribute`, # overloads = 2, overload list = 0x101F]
 ALL-NEXT:            - LF_MEMBER [name = `type`, Type = 0x1019, offset = 0, attrs = public]
-ALL-NEXT:   0x1021 | LF_STRUCTURE [size = 108, hash = 94935] `__vc_attributes::aggregatableAttribute`
+ALL-NEXT:   0x1021 | LF_STRUCTURE [size = 108, hash = 0x172D7] `__vc_attributes::aggregatableAttribute`
 ALL-NEXT:            unique name: `.?AUaggregatableAttribute@__vc_attributes@@`
 ALL-NEXT:            vtable: <no type>, base list: <no type>, field list: 0x1020
 ALL-NEXT:            options: has ctor / dtor | contains nested class | has unique name
-ALL-NEXT:   0x1022 | LF_ENUM [size = 116, hash = 151449] `__vc_attributes::event_sourceAttribute::type_e`
+ALL-NEXT:   0x1022 | LF_ENUM [size = 116, hash = 0x24F99] `__vc_attributes::event_sourceAttribute::type_e`
 ALL-NEXT:            unique name: `.?AW4type_e@event_sourceAttribute@__vc_attributes@@`
 ALL-NEXT:            field list: 0x100C, underlying type: 0x0074 (int)
 ALL-NEXT:            options: has unique name | is nested
-ALL-NEXT:   0x1023 | LF_FIELDLIST [size = 28, hash = 135589]
+ALL-NEXT:   0x1023 | LF_FIELDLIST [size = 28, hash = 0x211A5]
 ALL-NEXT:            - LF_ENUMERATE [speed = 0]
 ALL-NEXT:            - LF_ENUMERATE [size = 1]
-ALL-NEXT:   0x1024 | LF_ENUM [size = 124, hash = 73373] `__vc_attributes::event_sourceAttribute::optimize_e`
+ALL-NEXT:   0x1024 | LF_ENUM [size = 124, hash = 0x11E9D] `__vc_attributes::event_sourceAttribute::optimize_e`
 ALL-NEXT:            unique name: `.?AW4optimize_e@event_sourceAttribute@__vc_attributes@@`
 ALL-NEXT:            field list: 0x1023, underlying type: 0x0074 (int)
 ALL-NEXT:            options: has unique name | is nested
-ALL-NEXT:   0x1025 | LF_STRUCTURE [size = 108, hash = 96512] `__vc_attributes::event_sourceAttribute`
+ALL-NEXT:   0x1025 | LF_STRUCTURE [size = 108, hash = 0x17900] `__vc_attributes::event_sourceAttribute`
 ALL-NEXT:            unique name: `.?AUevent_sourceAttribute@__vc_attributes@@`
 ALL-NEXT:            vtable: <no type>, base list: <no type>, field list: <no type>
 ALL-NEXT:            options: forward ref | has unique name
-ALL-NEXT:   0x1026 | LF_POINTER [size = 12, hash = 254299]
+ALL-NEXT:   0x1026 | LF_POINTER [size = 12, hash = 0x3E15B]
 ALL-NEXT:            referent = 0x1025, mode = pointer, opts = const, kind = ptr32
-ALL-NEXT:   0x1027 | LF_ARGLIST [size = 12, hash = 17744]
+ALL-NEXT:   0x1027 | LF_ARGLIST [size = 12, hash = 0x4550]
 ALL-NEXT:            0x1022: `__vc_attributes::event_sourceAttribute::type_e`
-ALL-NEXT:   0x1028 | LF_MFUNCTION [size = 28, hash = 239514]
+ALL-NEXT:   0x1028 | LF_MFUNCTION [size = 28, hash = 0x3A79A]
 ALL-NEXT:            return type = 0x0003 (void), # args = 1, param list = 0x1027
 ALL-NEXT:            class type = 0x1025, this type = 0x1026, this adjust = 0
 ALL-NEXT:            calling conv = thiscall, options = constructor
-ALL-NEXT:   0x1029 | LF_MFUNCTION [size = 28, hash = 173189]
+ALL-NEXT:   0x1029 | LF_MFUNCTION [size = 28, hash = 0x2A485]
 ALL-NEXT:            return type = 0x0003 (void), # args = 0, param list = 0x1000
 ALL-NEXT:            class type = 0x1025, this type = 0x1026, this adjust = 0
 ALL-NEXT:            calling conv = thiscall, options = constructor
-ALL-NEXT:   0x102A | LF_METHODLIST [size = 20, hash = 130544]
+ALL-NEXT:   0x102A | LF_METHODLIST [size = 20, hash = 0x1FDF0]
 ALL-NEXT:            - Method [type = 0x1028, vftable offset = -1, attrs = public]
 ALL-NEXT:            - Method [type = 0x1029, vftable offset = -1, attrs = public]
-ALL-NEXT:   0x102B | LF_FIELDLIST [size = 128, hash = 204437]
+ALL-NEXT:   0x102B | LF_FIELDLIST [size = 128, hash = 0x31E95]
 ALL-NEXT:            - LF_NESTTYPE [name = `type_e`, parent = 0x1022]
 ALL-NEXT:            - LF_NESTTYPE [name = `optimize_e`, parent = 0x1024]
 ALL-NEXT:            - LF_METHOD [name = `event_sourceAttribute`, # overloads = 2, overload list = 0x102A]
 ALL-NEXT:            - LF_MEMBER [name = `type`, Type = 0x1022, offset = 0, attrs = public]
 ALL-NEXT:            - LF_MEMBER [name = `optimize`, Type = 0x1024, offset = 4, attrs = public]
 ALL-NEXT:            - LF_MEMBER [name = `decorate`, Type = 0x0030 (bool), offset = 8, attrs = public]
-ALL-NEXT:   0x102C | LF_STRUCTURE [size = 108, hash = 238560] `__vc_attributes::event_sourceAttribute`
+ALL-NEXT:   0x102C | LF_STRUCTURE [size = 108, hash = 0x3A3E0] `__vc_attributes::event_sourceAttribute`
 ALL-NEXT:            unique name: `.?AUevent_sourceAttribute@__vc_attributes@@`
 ALL-NEXT:            vtable: <no type>, base list: <no type>, field list: 0x102B
 ALL-NEXT:            options: has ctor / dtor | contains nested class | has unique name
-ALL-NEXT:   0x102D | LF_FIELDLIST [size = 92, hash = 144673]
+ALL-NEXT:   0x102D | LF_FIELDLIST [size = 92, hash = 0x23521]
 ALL-NEXT:            - LF_ENUMERATE [dll = 1]
 ALL-NEXT:            - LF_ENUMERATE [exe = 2]
 ALL-NEXT:            - LF_ENUMERATE [service = 3]
 ALL-NEXT:            - LF_ENUMERATE [unspecified = 4]
 ALL-NEXT:            - LF_ENUMERATE [EXE = 2]
 ALL-NEXT:            - LF_ENUMERATE [SERVICE = 3]
-ALL-NEXT:   0x102E | LF_ENUM [size = 104, hash = 115151] `__vc_attributes::moduleAttribute::type_e`
+ALL-NEXT:   0x102E | LF_ENUM [size = 104, hash = 0x1C1CF] `__vc_attributes::moduleAttribute::type_e`
 ALL-NEXT:            unique name: `.?AW4type_e@moduleAttribute@__vc_attributes@@`
 ALL-NEXT:            field list: 0x102D, underlying type: 0x0074 (int)
 ALL-NEXT:            options: has unique name | is nested
-ALL-NEXT:   0x102F | LF_STRUCTURE [size = 96, hash = 197306] `__vc_attributes::moduleAttribute`
+ALL-NEXT:   0x102F | LF_STRUCTURE [size = 96, hash = 0x302BA] `__vc_attributes::moduleAttribute`
 ALL-NEXT:            unique name: `.?AUmoduleAttribute@__vc_attributes@@`
 ALL-NEXT:            vtable: <no type>, base list: <no type>, field list: <no type>
 ALL-NEXT:            options: forward ref | has unique name
-ALL-NEXT:   0x1030 | LF_POINTER [size = 12, hash = 256035]
+ALL-NEXT:   0x1030 | LF_POINTER [size = 12, hash = 0x3E823]
 ALL-NEXT:            referent = 0x102F, mode = pointer, opts = const, kind = ptr32
-ALL-NEXT:   0x1031 | LF_MODIFIER [size = 12, hash = 101096]
+ALL-NEXT:   0x1031 | LF_MODIFIER [size = 12, hash = 0x18AE8]
 ALL-NEXT:            referent = 0x0070 (char), modifiers = const
-ALL-NEXT:   0x1032 | LF_POINTER [size = 12, hash = 231280]
+ALL-NEXT:   0x1032 | LF_POINTER [size = 12, hash = 0x38770]
 ALL-NEXT:            referent = 0x1031, mode = pointer, opts = None, kind = ptr32
-ALL-NEXT:   0x1033 | LF_ARGLIST [size = 68, hash = 52156]
+ALL-NEXT:   0x1033 | LF_ARGLIST [size = 68, hash = 0xCBBC]
 ALL-NEXT:            0x102E: `__vc_attributes::moduleAttribute::type_e`
 ALL-NEXT:            0x1032: `const char*`
 ALL-NEXT:            0x1032: `const char*`
@@ -289,25 +289,25 @@ ALL-NEXT:            0x0030 (bool): `bool`
 ALL-NEXT:            0x0030 (bool): `bool`
 ALL-NEXT:            0x1032: `const char*`
 ALL-NEXT:            0x1032: `const char*`
-ALL-NEXT:   0x1034 | LF_MFUNCTION [size = 28, hash = 48854]
+ALL-NEXT:   0x1034 | LF_MFUNCTION [size = 28, hash = 0xBED6]
 ALL-NEXT:            return type = 0x0003 (void), # args = 15, param list = 0x1033
 ALL-NEXT:            class type = 0x102F, this type = 0x1030, this adjust = 0
 ALL-NEXT:            calling conv = thiscall, options = constructor
-ALL-NEXT:   0x1035 | LF_ARGLIST [size = 12, hash = 170035]
+ALL-NEXT:   0x1035 | LF_ARGLIST [size = 12, hash = 0x29833]
 ALL-NEXT:            0x102E: `__vc_attributes::moduleAttribute::type_e`
-ALL-NEXT:   0x1036 | LF_MFUNCTION [size = 28, hash = 177041]
+ALL-NEXT:   0x1036 | LF_MFUNCTION [size = 28, hash = 0x2B391]
 ALL-NEXT:            return type = 0x0003 (void), # args = 1, param list = 0x1035
 ALL-NEXT:            class type = 0x102F, this type = 0x1030, this adjust = 0
 ALL-NEXT:            calling conv = thiscall, options = constructor
-ALL-NEXT:   0x1037 | LF_MFUNCTION [size = 28, hash = 102745]
+ALL-NEXT:   0x1037 | LF_MFUNCTION [size = 28, hash = 0x19159]
 ALL-NEXT:            return type = 0x0003 (void), # args = 0, param list = 0x1000
 ALL-NEXT:            class type = 0x102F, this type = 0x1030, this adjust = 0
 ALL-NEXT:            calling conv = thiscall, options = constructor
-ALL-NEXT:   0x1038 | LF_METHODLIST [size = 28, hash = 16947]
+ALL-NEXT:   0x1038 | LF_METHODLIST [size = 28, hash = 0x4233]
 ALL-NEXT:            - Method [type = 0x1034, vftable offset = -1, attrs = public]
 ALL-NEXT:            - Method [type = 0x1036, vftable offset = -1, attrs = public]
 ALL-NEXT:            - Method [type = 0x1037, vftable offset = -1, attrs = public]
-ALL-NEXT:   0x1039 | LF_FIELDLIST [size = 356, hash = 183703]
+ALL-NEXT:   0x1039 | LF_FIELDLIST [size = 356, hash = 0x2CD97]
 ALL-NEXT:            - LF_NESTTYPE [name = `type_e`, parent = 0x102E]
 ALL-NEXT:            - LF_METHOD [name = `moduleAttribute`, # overloads = 3, overload list = 0x1038]
 ALL-NEXT:            - LF_MEMBER [name = `type`, Type = 0x102E, offset = 0, attrs = public]
@@ -325,11 +325,11 @@ ALL-NEXT:            - LF_MEMBER [name = `hidden`, Type = 0x0030 (bool), offset 
 ALL-NEXT:            - LF_MEMBER [name = `restricted`, Type = 0x0030 (bool), offset = 45, attrs = public]
 ALL-NEXT:            - LF_MEMBER [name = `custom`, Type = 0x1032, offset = 48, attrs = public]
 ALL-NEXT:            - LF_MEMBER [name = `resource_name`, Type = 0x1032, offset = 52, attrs = public]
-ALL-NEXT:   0x103A | LF_STRUCTURE [size = 96, hash = 98548] `__vc_attributes::moduleAttribute`
+ALL-NEXT:   0x103A | LF_STRUCTURE [size = 96, hash = 0x180F4] `__vc_attributes::moduleAttribute`
 ALL-NEXT:            unique name: `.?AUmoduleAttribute@__vc_attributes@@`
 ALL-NEXT:            vtable: <no type>, base list: <no type>, field list: 0x1039
 ALL-NEXT:            options: has ctor / dtor | contains nested class | has unique name
-ALL-NEXT:   0x103B | LF_FIELDLIST [size = 756, hash = 35693]
+ALL-NEXT:   0x103B | LF_FIELDLIST [size = 756, hash = 0x8B6D]
 ALL-NEXT:            - LF_ENUMERATE [eAnyUsage = 0]
 ALL-NEXT:            - LF_ENUMERATE [eCoClassUsage = 1]
 ALL-NEXT:            - LF_ENUMERATE [eCOMInterfaceUsage = 2]
@@ -360,58 +360,58 @@ ALL-NEXT:            - LF_ENUMERATE [eModuleUsage = 16777216]
 ALL-NEXT:            - LF_ENUMERATE [eIllegalUsage = 33554432]
 ALL-NEXT:            - LF_ENUMERATE [eAsynchronousUsage = 67108864]
 ALL-NEXT:            - LF_ENUMERATE [eAnyIDLUsage = 4161535]
-ALL-NEXT:   0x103C | LF_ENUM [size = 140, hash = 171328] `__vc_attributes::helper_attributes::usageAttribute::usage_e`
+ALL-NEXT:   0x103C | LF_ENUM [size = 140, hash = 0x29D40] `__vc_attributes::helper_attributes::usageAttribute::usage_e`
 ALL-NEXT:            unique name: `.?AW4usage_e@usageAttribute@helper_attributes@__vc_attributes@@`
 ALL-NEXT:            field list: 0x103B, underlying type: 0x0074 (int)
 ALL-NEXT:            options: has unique name | is nested
-ALL-NEXT:   0x103D | LF_STRUCTURE [size = 128, hash = 203640] `__vc_attributes::helper_attributes::usageAttribute`
+ALL-NEXT:   0x103D | LF_STRUCTURE [size = 128, hash = 0x31B78] `__vc_attributes::helper_attributes::usageAttribute`
 ALL-NEXT:            unique name: `.?AUusageAttribute@helper_attributes@__vc_attributes@@`
 ALL-NEXT:            vtable: <no type>, base list: <no type>, field list: <no type>
 ALL-NEXT:            options: forward ref | has unique name
-ALL-NEXT:   0x103E | LF_POINTER [size = 12, hash = 139292]
+ALL-NEXT:   0x103E | LF_POINTER [size = 12, hash = 0x2201C]
 ALL-NEXT:            referent = 0x103D, mode = pointer, opts = const, kind = ptr32
-ALL-NEXT:   0x103F | LF_ARGLIST [size = 12, hash = 49018]
+ALL-NEXT:   0x103F | LF_ARGLIST [size = 12, hash = 0xBF7A]
 ALL-NEXT:            0x0075 (unsigned): `unsigned`
-ALL-NEXT:   0x1040 | LF_MFUNCTION [size = 28, hash = 43821]
+ALL-NEXT:   0x1040 | LF_MFUNCTION [size = 28, hash = 0xAB2D]
 ALL-NEXT:            return type = 0x0003 (void), # args = 1, param list = 0x103F
 ALL-NEXT:            class type = 0x103D, this type = 0x103E, this adjust = 0
 ALL-NEXT:            calling conv = thiscall, options = constructor
-ALL-NEXT:   0x1041 | LF_FIELDLIST [size = 60, hash = 202555]
+ALL-NEXT:   0x1041 | LF_FIELDLIST [size = 60, hash = 0x3173B]
 ALL-NEXT:            - LF_NESTTYPE [name = `usage_e`, parent = 0x103C]
 ALL-NEXT:            - LF_ONEMETHOD [name = `usageAttribute`]
 ALL-NEXT:              type = 0x1040, vftable offset = -1, attrs = public
 ALL-NEXT:            - LF_MEMBER [name = `value`, Type = 0x0075 (unsigned), offset = 0, attrs = public]
-ALL-NEXT:   0x1042 | LF_STRUCTURE [size = 128, hash = 165040] `__vc_attributes::helper_attributes::usageAttribute`
+ALL-NEXT:   0x1042 | LF_STRUCTURE [size = 128, hash = 0x284B0] `__vc_attributes::helper_attributes::usageAttribute`
 ALL-NEXT:            unique name: `.?AUusageAttribute@helper_attributes@__vc_attributes@@`
 ALL-NEXT:            vtable: <no type>, base list: <no type>, field list: 0x1041
 ALL-NEXT:            options: has ctor / dtor | contains nested class | has unique name
-ALL-NEXT:   0x1043 | LF_FIELDLIST [size = 68, hash = 215835]
+ALL-NEXT:   0x1043 | LF_FIELDLIST [size = 68, hash = 0x34B1B]
 ALL-NEXT:            - LF_ENUMERATE [eBoolean = 0]
 ALL-NEXT:            - LF_ENUMERATE [eInteger = 1]
 ALL-NEXT:            - LF_ENUMERATE [eFloat = 2]
 ALL-NEXT:            - LF_ENUMERATE [eDouble = 3]
-ALL-NEXT:   0x1044 | LF_ENUM [size = 148, hash = 142625] `__vc_attributes::helper_attributes::v1_alttypeAttribute::type_e`
+ALL-NEXT:   0x1044 | LF_ENUM [size = 148, hash = 0x22D21] `__vc_attributes::helper_attributes::v1_alttypeAttribute::type_e`
 ALL-NEXT:            unique name: `.?AW4type_e@v1_alttypeAttribute@helper_attributes@__vc_attributes@@`
 ALL-NEXT:            field list: 0x1043, underlying type: 0x0074 (int)
 ALL-NEXT:            options: has unique name | is nested
-ALL-NEXT:   0x1045 | LF_STRUCTURE [size = 140, hash = 52534] `__vc_attributes::helper_attributes::v1_alttypeAttribute`
+ALL-NEXT:   0x1045 | LF_STRUCTURE [size = 140, hash = 0xCD36] `__vc_attributes::helper_attributes::v1_alttypeAttribute`
 ALL-NEXT:            unique name: `.?AUv1_alttypeAttribute@helper_attributes@__vc_attributes@@`
 ALL-NEXT:            vtable: <no type>, base list: <no type>, field list: <no type>
 ALL-NEXT:            options: forward ref | has unique name
-ALL-NEXT:   0x1046 | LF_POINTER [size = 12, hash = 44186]
+ALL-NEXT:   0x1046 | LF_POINTER [size = 12, hash = 0xAC9A]
 ALL-NEXT:            referent = 0x1045, mode = pointer, opts = const, kind = ptr32
-ALL-NEXT:   0x1047 | LF_ARGLIST [size = 12, hash = 103930]
+ALL-NEXT:   0x1047 | LF_ARGLIST [size = 12, hash = 0x195FA]
 ALL-NEXT:            0x1044: `__vc_attributes::helper_attributes::v1_alttypeAttribute::type_e`
-ALL-NEXT:   0x1048 | LF_MFUNCTION [size = 28, hash = 110942]
+ALL-NEXT:   0x1048 | LF_MFUNCTION [size = 28, hash = 0x1B15E]
 ALL-NEXT:            return type = 0x0003 (void), # args = 1, param list = 0x1047
 ALL-NEXT:            class type = 0x1045, this type = 0x1046, this adjust = 0
 ALL-NEXT:            calling conv = thiscall, options = constructor
-ALL-NEXT:   0x1049 | LF_FIELDLIST [size = 64, hash = 17991]
+ALL-NEXT:   0x1049 | LF_FIELDLIST [size = 64, hash = 0x4647]
 ALL-NEXT:            - LF_NESTTYPE [name = `type_e`, parent = 0x1044]
 ALL-NEXT:            - LF_ONEMETHOD [name = `v1_alttypeAttribute`]
 ALL-NEXT:              type = 0x1048, vftable offset = -1, attrs = public
 ALL-NEXT:            - LF_MEMBER [name = `type`, Type = 0x1044, offset = 0, attrs = public]
-ALL-NEXT:   0x104A | LF_STRUCTURE [size = 140, hash = 213215] `__vc_attributes::helper_attributes::v1_alttypeAttribute`
+ALL-NEXT:   0x104A | LF_STRUCTURE [size = 140, hash = 0x340DF] `__vc_attributes::helper_attributes::v1_alttypeAttribute`
 ALL-NEXT:            unique name: `.?AUv1_alttypeAttribute@helper_attributes@__vc_attributes@@`
 ALL-NEXT:            vtable: <no type>, base list: <no type>, field list: 0x1049
 ALL-NEXT:            options: has ctor / dtor | contains nested class | has unique name
@@ -421,29 +421,29 @@ ALL:        Hash Adjusters:
 ALL:                           Types (IPI Stream)
 ALL-NEXT: ============================================================
 ALL-NEXT:   Showing 15 records
-ALL-NEXT:   0x1000 | LF_UDT_MOD_SRC_LINE [size = 20, hash = 7186]
+ALL-NEXT:   0x1000 | LF_UDT_MOD_SRC_LINE [size = 20, hash = 0x1C12]
 ALL-NEXT:            udt = 0x100B, mod = 1, file = 1, line = 481
-ALL-NEXT:   0x1001 | LF_UDT_MOD_SRC_LINE [size = 20, hash = 7198]
+ALL-NEXT:   0x1001 | LF_UDT_MOD_SRC_LINE [size = 20, hash = 0x1C1E]
 ALL-NEXT:            udt = 0x1017, mod = 1, file = 1, line = 194
-ALL-NEXT:   0x1002 | LF_UDT_MOD_SRC_LINE [size = 20, hash = 7180]
+ALL-NEXT:   0x1002 | LF_UDT_MOD_SRC_LINE [size = 20, hash = 0x1C0C]
 ALL-NEXT:            udt = 0x1021, mod = 1, file = 1, line = 603
-ALL-NEXT:   0x1003 | LF_UDT_MOD_SRC_LINE [size = 20, hash = 7191]
+ALL-NEXT:   0x1003 | LF_UDT_MOD_SRC_LINE [size = 20, hash = 0x1C17]
 ALL-NEXT:            udt = 0x102C, mod = 1, file = 1, line = 1200
-ALL-NEXT:   0x1004 | LF_UDT_MOD_SRC_LINE [size = 20, hash = 7201]
+ALL-NEXT:   0x1004 | LF_UDT_MOD_SRC_LINE [size = 20, hash = 0x1C21]
 ALL-NEXT:            udt = 0x103A, mod = 1, file = 1, line = 540
-ALL-NEXT:   0x1005 | LF_UDT_MOD_SRC_LINE [size = 20, hash = 7241]
+ALL-NEXT:   0x1005 | LF_UDT_MOD_SRC_LINE [size = 20, hash = 0x1C49]
 ALL-NEXT:            udt = 0x1042, mod = 1, file = 1, line = 108
-ALL-NEXT:   0x1006 | LF_UDT_MOD_SRC_LINE [size = 20, hash = 7249]
+ALL-NEXT:   0x1006 | LF_UDT_MOD_SRC_LINE [size = 20, hash = 0x1C51]
 ALL-NEXT:            udt = 0x104A, mod = 1, file = 1, line = 96
-ALL-NEXT:   0x1007 | LF_STRING_ID [size = 48, hash = 80727] ID: <no type>, String: d:\src\llvm\test\DebugInfo\PDB\Inputs
-ALL-NEXT:   0x1008 | LF_STRING_ID [size = 76, hash = 154177] ID: <no type>, String: C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\BIN\cl.exe
-ALL-NEXT:   0x1009 | LF_STRING_ID [size = 20, hash = 75189] ID: <no type>, String: empty.cpp
-ALL-NEXT:   0x100A | LF_STRING_ID [size = 56, hash = 253662] ID: <no type>, String: d:\src\llvm\test\DebugInfo\PDB\Inputs\vc120.pdb
-ALL-NEXT:   0x100B | LF_STRING_ID [size = 252, hash = 193467] ID: <no type>, String: -Zi -MT -I"C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\INCLUDE" -I"C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\ATLMFC\INCLUDE" -I"C:\Program Files (x86)\Windows Kits\8.1\include\shared" -I"C:\Program Files (x86)\Windows
-ALL-NEXT:   0x100C | LF_SUBSTR_LIST [size = 12, hash = 222705]
+ALL-NEXT:   0x1007 | LF_STRING_ID [size = 48, hash = 0x13B57] ID: <no type>, String: d:\src\llvm\test\DebugInfo\PDB\Inputs
+ALL-NEXT:   0x1008 | LF_STRING_ID [size = 76, hash = 0x25A41] ID: <no type>, String: C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\BIN\cl.exe
+ALL-NEXT:   0x1009 | LF_STRING_ID [size = 20, hash = 0x125B5] ID: <no type>, String: empty.cpp
+ALL-NEXT:   0x100A | LF_STRING_ID [size = 56, hash = 0x3DEDE] ID: <no type>, String: d:\src\llvm\test\DebugInfo\PDB\Inputs\vc120.pdb
+ALL-NEXT:   0x100B | LF_STRING_ID [size = 252, hash = 0x2F3BB] ID: <no type>, String: -Zi -MT -I"C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\INCLUDE" -I"C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\ATLMFC\INCLUDE" -I"C:\Program Files (x86)\Windows Kits\8.1\include\shared" -I"C:\Program Files (x86)\Windows
+ALL-NEXT:   0x100C | LF_SUBSTR_LIST [size = 12, hash = 0x365F1]
 ALL-NEXT:            0x100B: `-Zi -MT -I"C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\INCLUDE" -I"C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\ATLMFC\INCLUDE" -I"C:\Program Files (x86)\Windows Kits\8.1\include\shared" -I"C:\Program Files (x86)\Windows`
-ALL-NEXT:   0x100D | LF_STRING_ID [size = 96, hash = 186099] ID: 0x100C, String:  Kits\8.1\include\um" -I"C:\Program Files (x86)\Windows Kits\8.1\include\winrt" -TP -X
-ALL-NEXT:   0x100E | LF_BUILDINFO [size = 28, hash = 257108]
+ALL-NEXT:   0x100D | LF_STRING_ID [size = 96, hash = 0x2D6F3] ID: 0x100C, String:  Kits\8.1\include\um" -I"C:\Program Files (x86)\Windows Kits\8.1\include\winrt" -TP -X
+ALL-NEXT:   0x100E | LF_BUILDINFO [size = 28, hash = 0x3EC54]
 ALL-NEXT:            0x1007: `d:\src\llvm\test\DebugInfo\PDB\Inputs`
 ALL-NEXT:            0x1008: `C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\BIN\cl.exe`
 ALL-NEXT:            0x1009: `empty.cpp`

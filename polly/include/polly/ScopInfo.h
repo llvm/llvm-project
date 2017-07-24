@@ -1658,6 +1658,9 @@ private:
   /// The context of the SCoP created during SCoP detection.
   ScopDetection::DetectionContext &DC;
 
+  /// OptimizationRemarkEmitter object for displaying diagnostic remarks
+  OptimizationRemarkEmitter &ORE;
+
   /// Isl context.
   ///
   /// We need a shared_ptr with reference counter to delete the context when all
@@ -1822,7 +1825,7 @@ private:
 
   /// Scop constructor; invoked from ScopBuilder::buildScop.
   Scop(Region &R, ScalarEvolution &SE, LoopInfo &LI,
-       ScopDetection::DetectionContext &DC);
+       ScopDetection::DetectionContext &DC, OptimizationRemarkEmitter &ORE);
 
   //@}
 
@@ -2453,10 +2456,12 @@ public:
   /// @param Loc  The location in the source that caused this assumption.
   /// @param Sign Enum to indicate if the assumptions in @p Set are positive
   ///             (needed/assumptions) or negative (invalid/restrictions).
+  /// @param BB   The block in which this assumption was taken. Used to
+  ///             calculate hotness when emitting remark.
   ///
   /// @returns True if the assumption is not trivial.
   bool trackAssumption(AssumptionKind Kind, __isl_keep isl_set *Set,
-                       DebugLoc Loc, AssumptionSign Sign);
+                       DebugLoc Loc, AssumptionSign Sign, BasicBlock *BB);
 
   /// Add assumptions to assumed context.
   ///
@@ -2474,8 +2479,10 @@ public:
   /// @param Loc  The location in the source that caused this assumption.
   /// @param Sign Enum to indicate if the assumptions in @p Set are positive
   ///             (needed/assumptions) or negative (invalid/restrictions).
+  /// @param BB   The block in which this assumption was taken. Used to
+  ///             calculate hotness when emitting remark.
   void addAssumption(AssumptionKind Kind, __isl_take isl_set *Set, DebugLoc Loc,
-                     AssumptionSign Sign);
+                     AssumptionSign Sign, BasicBlock *BB);
 
   /// Record an assumption for later addition to the assumed context.
   ///
@@ -2508,7 +2515,8 @@ public:
   ///
   /// @param Kind The assumption kind describing the underlying cause.
   /// @param Loc  The location in the source that triggered .
-  void invalidate(AssumptionKind Kind, DebugLoc Loc);
+  /// @param BB   The BasicBlock where it was triggered.
+  void invalidate(AssumptionKind Kind, DebugLoc Loc, BasicBlock *BB = nullptr);
 
   /// Get the invalid context for this Scop.
   ///

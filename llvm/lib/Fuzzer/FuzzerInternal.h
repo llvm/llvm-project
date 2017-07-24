@@ -132,7 +132,7 @@ private:
   size_t MaxInputLen = 0;
   size_t MaxMutationLen = 0;
 
-  std::vector<uint32_t> FeatureSetTmp;
+  std::vector<uint32_t> UniqFeatureSetTmp;
 
   // Need to know our own thread.
   static thread_local bool IsMyThread;

@@ -235,7 +235,7 @@ __kmp_wait_template(kmp_info_t *this_thr, C *flag,
     in_pool = !!TCR_4(this_thr->th.th_in_pool);
     if (in_pool != !!this_thr->th.th_active_in_pool) {
       if (in_pool) { // Recently transferred from team to pool
-        KMP_TEST_THEN_INC32(CCAST(kmp_int32 *, &__kmp_thread_pool_active_nth));
+        KMP_TEST_THEN_INC32(&__kmp_thread_pool_active_nth);
         this_thr->th.th_active_in_pool = TRUE;
         /* Here, we cannot assert that:
            KMP_DEBUG_ASSERT(TCR_4(__kmp_thread_pool_active_nth) <=
@@ -245,7 +245,7 @@ __kmp_wait_template(kmp_info_t *this_thr, C *flag,
            inc/dec'd asynchronously by the workers. The two can get out of sync
            for brief periods of time.  */
       } else { // Recently transferred from pool to team
-        KMP_TEST_THEN_DEC32(CCAST(kmp_int32 *, &__kmp_thread_pool_active_nth));
+        KMP_TEST_THEN_DEC32(&__kmp_thread_pool_active_nth);
         KMP_DEBUG_ASSERT(TCR_4(__kmp_thread_pool_active_nth) >= 0);
         this_thr->th.th_active_in_pool = FALSE;
       }
@@ -374,13 +374,13 @@ template <> struct flag_traits<kmp_uint32> {
   static const flag_type t = flag32;
   static inline flag_t tcr(flag_t f) { return TCR_4(f); }
   static inline flag_t test_then_add4(volatile flag_t *f) {
-    return KMP_TEST_THEN_ADD4_32(RCAST(kmp_int32 *, CCAST(flag_t *, f)));
+    return KMP_TEST_THEN_ADD4_32(RCAST(volatile kmp_int32 *, f));
   }
   static inline flag_t test_then_or(volatile flag_t *f, flag_t v) {
-    return KMP_TEST_THEN_OR32(CCAST(flag_t *, f), v);
+    return KMP_TEST_THEN_OR32(f, v);
   }
   static inline flag_t test_then_and(volatile flag_t *f, flag_t v) {
-    return KMP_TEST_THEN_AND32(CCAST(flag_t *, f), v);
+    return KMP_TEST_THEN_AND32(f, v);
   }
 };
 
@@ -389,13 +389,13 @@ template <> struct flag_traits<kmp_uint64> {
   static const flag_type t = flag64;
   static inline flag_t tcr(flag_t f) { return TCR_8(f); }
   static inline flag_t test_then_add4(volatile flag_t *f) {
-    return KMP_TEST_THEN_ADD4_64(RCAST(kmp_int64 *, CCAST(flag_t *, f)));
+    return KMP_TEST_THEN_ADD4_64(RCAST(volatile kmp_int64 *, f));
   }
   static inline flag_t test_then_or(volatile flag_t *f, flag_t v) {
-    return KMP_TEST_THEN_OR64(CCAST(flag_t *, f), v);
+    return KMP_TEST_THEN_OR64(f, v);
   }
   static inline flag_t test_then_and(volatile flag_t *f, flag_t v) {
-    return KMP_TEST_THEN_AND64(CCAST(flag_t *, f), v);
+    return KMP_TEST_THEN_AND64(f, v);
   }
 };
 
@@ -562,7 +562,7 @@ class kmp_flag_oncore : public kmp_flag<kmp_uint64> {
       itt_sync_obj; /**< ITT object that must be passed to new flag location. */
 #endif
   unsigned char &byteref(volatile kmp_uint64 *loc, size_t offset) {
-    return RCAST(unsigned char *, CCAST(kmp_uint64 *, loc))[offset];
+    return (RCAST(unsigned char *, CCAST(kmp_uint64 *, loc)))[offset];
   }
 
 public:
@@ -626,16 +626,14 @@ public:
     } else {
       kmp_uint64 mask = 0;
       byteref(&mask, offset) = 1;
-      KMP_TEST_THEN_OR64(CCAST(kmp_uint64 *, get()), mask);
+      KMP_TEST_THEN_OR64(get(), mask);
     }
   }
   kmp_uint64 set_sleeping() {
-    return KMP_TEST_THEN_OR64(CCAST(kmp_uint64 *, get()),
-                              KMP_BARRIER_SLEEP_STATE);
+    return KMP_TEST_THEN_OR64(get(), KMP_BARRIER_SLEEP_STATE);
   }
   kmp_uint64 unset_sleeping() {
-    return KMP_TEST_THEN_AND64(CCAST(kmp_uint64 *, get()),
-                               ~KMP_BARRIER_SLEEP_STATE);
+    return KMP_TEST_THEN_AND64(get(), ~KMP_BARRIER_SLEEP_STATE);
   }
   bool is_sleeping_val(kmp_uint64 old_loc) {
     return old_loc & KMP_BARRIER_SLEEP_STATE;

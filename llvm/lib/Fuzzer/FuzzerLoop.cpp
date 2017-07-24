@@ -402,22 +402,29 @@ bool Fuzzer::RunOne(const uint8_t *Data, size_t Size, bool MayDeleteFile,
 
   ExecuteCallback(Data, Size);
 
-  FeatureSetTmp.clear();
+  UniqFeatureSetTmp.clear();
+  size_t FoundUniqFeaturesOfII = 0;
   size_t NumUpdatesBefore = Corpus.NumFeatureUpdates();
   TPC.CollectFeatures([&](size_t Feature) {
-    Corpus.AddFeature(Feature, Size, Options.Shrink);
-    if (Options.ReduceInputs)
-      FeatureSetTmp.push_back(Feature);
+    if (Corpus.AddFeature(Feature, Size, Options.Shrink))
+      UniqFeatureSetTmp.push_back(Feature);
+    if (Options.ReduceInputs && II)
+      if (std::binary_search(II->UniqFeatureSet.begin(),
+                             II->UniqFeatureSet.end(), Feature))
+        FoundUniqFeaturesOfII++;
   });
   PrintPulseAndReportSlowInput(Data, Size);
   size_t NumNewFeatures = Corpus.NumFeatureUpdates() - NumUpdatesBefore;
   if (NumNewFeatures) {
     Corpus.AddToCorpus({Data, Data + Size}, NumNewFeatures, MayDeleteFile,
-                       FeatureSetTmp);
+                       UniqFeatureSetTmp);
     CheckExitOnSrcPosOrItem();
     return true;
   }
-  if (II && Corpus.TryToReplace(II, Data, Size, FeatureSetTmp)) {
+  if (II && FoundUniqFeaturesOfII &&
+      FoundUniqFeaturesOfII == II->UniqFeatureSet.size() &&
+      II->U.size() > Size) {
+    Corpus.Replace(II, {Data, Data + Size});
     CheckExitOnSrcPosOrItem();
     return true;
   }

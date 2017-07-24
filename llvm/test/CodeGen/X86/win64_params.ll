@@ -12,7 +12,7 @@ entry:
   ret i32 %add
 }
 
-define x86_64_win64cc i32 @f7(i32 %p1, i32 %p2, i32 %p3, i32 %p4, i32 %p5, i32 %p6) nounwind readnone optsize {
+define win64cc i32 @f7(i32 %p1, i32 %p2, i32 %p3, i32 %p4, i32 %p5, i32 %p6) nounwind readnone optsize {
 entry:
 ; CHECK: movl    48(%rsp), %eax
 ; CHECK: addl    40(%rsp), %eax

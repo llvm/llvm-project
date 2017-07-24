@@ -306,6 +306,17 @@ public:
   bool enableEarlyIfConversion() const override;
 
   std::unique_ptr<PBQPRAConstraint> getCustomPBQPConstraints() const override;
+
+  bool isCallingConvWin64(CallingConv::ID CC) const {
+    switch (CC) {
+    case CallingConv::C:
+      return isTargetWindows();
+    case CallingConv::Win64:
+      return true;
+    default:
+      return false;
+    }
+  }
 };
 } // End llvm namespace
 

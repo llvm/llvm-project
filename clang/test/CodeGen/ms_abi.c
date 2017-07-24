@@ -15,20 +15,20 @@ void f3(void) {
   // FREEBSD-LABEL: define void @f3()
   // WIN64-LABEL: define void @f3()
   f1();
-  // FREEBSD: call x86_64_win64cc void @f1()
+  // FREEBSD: call win64cc void @f1()
   // WIN64: call void @f1()
   f2();
   // FREEBSD: call void @f2()
   // WIN64: call x86_64_sysvcc void @f2()
 }
-// FREEBSD: declare x86_64_win64cc void @f1()
+// FREEBSD: declare win64cc void @f1()
 // FREEBSD: declare void @f2()
 // WIN64: declare void @f1()
 // WIN64: declare x86_64_sysvcc void @f2()
 
 // Win64 ABI varargs
 void __attribute__((ms_abi)) f4(int a, ...) {
-  // FREEBSD-LABEL: define x86_64_win64cc void @f4
+  // FREEBSD-LABEL: define win64cc void @f4
   // WIN64-LABEL: define void @f4
   __builtin_ms_va_list ap;
   __builtin_ms_va_start(ap, a);

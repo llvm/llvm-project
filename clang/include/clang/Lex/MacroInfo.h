@@ -42,14 +42,14 @@ class MacroInfo {
 
   /// \brief The list of arguments for a function-like macro.
   ///
-  /// ArgumentList points to the first of NumArguments pointers.
+  /// ParameterList points to the first of NumParameters pointers.
   ///
   /// This can be empty, for, e.g. "#define X()".  In a C99-style variadic
   /// macro, this includes the \c __VA_ARGS__ identifier on the list.
-  IdentifierInfo **ArgumentList;
+  IdentifierInfo **ParameterList;
 
-  /// \see ArgumentList
-  unsigned NumArguments;
+  /// \see ParameterList
+  unsigned NumParameters;
 
   /// \brief This is the list of tokens that the macro is defined to.
   SmallVector<Token, 8> ReplacementTokens;
@@ -153,37 +153,37 @@ public:
   /// \brief Set the value of the IsWarnIfUnused flag.
   void setIsWarnIfUnused(bool val) { IsWarnIfUnused = val; }
 
-  /// \brief Set the specified list of identifiers as the argument list for
+  /// \brief Set the specified list of identifiers as the parameter list for
   /// this macro.
-  void setArgumentList(ArrayRef<IdentifierInfo *> List,
+  void setParameterList(ArrayRef<IdentifierInfo *> List,
                        llvm::BumpPtrAllocator &PPAllocator) {
-    assert(ArgumentList == nullptr && NumArguments == 0 &&
-           "Argument list already set!");
+    assert(ParameterList == nullptr && NumParameters == 0 &&
+           "Parameter list already set!");
     if (List.empty())
       return;
 
-    NumArguments = List.size();
-    ArgumentList = PPAllocator.Allocate<IdentifierInfo *>(List.size());
-    std::copy(List.begin(), List.end(), ArgumentList);
+    NumParameters = List.size();
+    ParameterList = PPAllocator.Allocate<IdentifierInfo *>(List.size());
+    std::copy(List.begin(), List.end(), ParameterList);
   }
 
-  /// Arguments - The list of arguments for a function-like macro.  This can be
-  /// empty, for, e.g. "#define X()".
-  typedef IdentifierInfo *const *arg_iterator;
-  bool arg_empty() const { return NumArguments == 0; }
-  arg_iterator arg_begin() const { return ArgumentList; }
-  arg_iterator arg_end() const { return ArgumentList + NumArguments; }
-  unsigned getNumArgs() const { return NumArguments; }
-  ArrayRef<const IdentifierInfo *> args() const {
-    return ArrayRef<const IdentifierInfo *>(ArgumentList, NumArguments);
+  /// Parameters - The list of parameters for a function-like macro.  This can 
+  /// be empty, for, e.g. "#define X()".
+  typedef IdentifierInfo *const *param_iterator;
+  bool param_empty() const { return NumParameters == 0; }
+  param_iterator param_begin() const { return ParameterList; }
+  param_iterator param_end() const { return ParameterList + NumParameters; }
+  unsigned getNumParams() const { return NumParameters; }
+  ArrayRef<const IdentifierInfo *> params() const {
+    return ArrayRef<const IdentifierInfo *>(ParameterList, NumParameters);
   }
 
-  /// \brief Return the argument number of the specified identifier,
-  /// or -1 if the identifier is not a formal argument identifier.
-  int getArgumentNum(const IdentifierInfo *Arg) const {
-    for (arg_iterator I = arg_begin(), E = arg_end(); I != E; ++I)
+  /// \brief Return the parameter number of the specified identifier,
+  /// or -1 if the identifier is not a formal parameter identifier.
+  int getParameterNum(const IdentifierInfo *Arg) const {
+    for (param_iterator I = param_begin(), E = param_end(); I != E; ++I)
       if (*I == Arg)
-        return I - arg_begin();
+        return I - param_begin();
     return -1;
   }
 

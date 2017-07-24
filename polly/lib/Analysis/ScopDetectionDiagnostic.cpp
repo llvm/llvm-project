@@ -23,6 +23,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasSetTracker.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/OptimizationDiagnosticInfo.h"
 #include "llvm/Analysis/RegionInfo.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DebugInfo.h"
@@ -121,28 +122,36 @@ void getDebugLocations(const BBPair &P, DebugLoc &Begin, DebugLoc &End) {
   }
 }
 
-void emitRejectionRemarks(const BBPair &P, const RejectLog &Log) {
-  Function &F = *P.first->getParent();
-  LLVMContext &Ctx = F.getContext();
-
+void emitRejectionRemarks(const BBPair &P, const RejectLog &Log,
+                          OptimizationRemarkEmitter &ORE) {
   DebugLoc Begin, End;
   getDebugLocations(P, Begin, End);
 
-  emitOptimizationRemarkMissed(
-      Ctx, DEBUG_TYPE, F, Begin,
-      "The following errors keep this region from being a Scop.");
+  ORE.emit(
+      OptimizationRemarkMissed(DEBUG_TYPE, "RejectionErrors", Begin, P.first)
+      << "The following errors keep this region from being a Scop.");
 
   for (RejectReasonPtr RR : Log) {
+
     if (const DebugLoc &Loc = RR->getDebugLoc())
-      emitOptimizationRemarkMissed(Ctx, DEBUG_TYPE, F, Loc,
-                                   RR->getEndUserMessage());
+      ORE.emit(OptimizationRemarkMissed(DEBUG_TYPE, RR->getRemarkName(), Loc,
+                                        RR->getRemarkBB())
+               << RR->getEndUserMessage());
     else
-      emitOptimizationRemarkMissed(Ctx, DEBUG_TYPE, F, Begin,
-                                   RR->getEndUserMessage());
+      ORE.emit(OptimizationRemarkMissed(DEBUG_TYPE, RR->getRemarkName(), Begin,
+                                        RR->getRemarkBB())
+               << RR->getEndUserMessage());
   }
 
-  emitOptimizationRemarkMissed(Ctx, DEBUG_TYPE, F, End,
-                               "Invalid Scop candidate ends here.");
+  /* Check to see if Region is a top level region, getExit = NULL*/
+  if (P.second)
+    ORE.emit(
+        OptimizationRemarkMissed(DEBUG_TYPE, "InvalidScopEnd", End, P.second)
+        << "Invalid Scop candidate ends here.");
+  else
+    ORE.emit(
+        OptimizationRemarkMissed(DEBUG_TYPE, "InvalidScopEnd", End, P.first)
+        << "Invalid Scop candidate ends here.");
 }
 
 //===----------------------------------------------------------------------===//
@@ -179,6 +188,12 @@ bool ReportCFG::classof(const RejectReason *RR) {
 //===----------------------------------------------------------------------===//
 // ReportInvalidTerminator.
 
+std::string ReportInvalidTerminator::getRemarkName() const {
+  return "InvalidTerminator";
+}
+
+const Value *ReportInvalidTerminator::getRemarkBB() const { return BB; }
+
 std::string ReportInvalidTerminator::getMessage() const {
   return ("Invalid instruction terminates BB: " + BB->getName()).str();
 }
@@ -193,6 +208,12 @@ bool ReportInvalidTerminator::classof(const RejectReason *RR) {
 
 //===----------------------------------------------------------------------===//
 // UnreachableInExit.
+
+std::string ReportUnreachableInExit::getRemarkName() const {
+  return "UnreachableInExit";
+}
+
+const Value *ReportUnreachableInExit::getRemarkBB() const { return BB; }
 
 std::string ReportUnreachableInExit::getMessage() const {
   std::string BBName = BB->getName();
@@ -211,6 +232,14 @@ bool ReportUnreachableInExit::classof(const RejectReason *RR) {
 
 //===----------------------------------------------------------------------===//
 // ReportIrreducibleRegion.
+
+std::string ReportIrreducibleRegion::getRemarkName() const {
+  return "IrreducibleRegion";
+}
+
+const Value *ReportIrreducibleRegion::getRemarkBB() const {
+  return R->getEntry();
+}
 
 std::string ReportIrreducibleRegion::getMessage() const {
   return "Irreducible region encountered: " + R->getNameStr();
@@ -240,6 +269,10 @@ bool ReportAffFunc::classof(const RejectReason *RR) {
 //===----------------------------------------------------------------------===//
 // ReportUndefCond.
 
+std::string ReportUndefCond::getRemarkName() const { return "UndefCond"; }
+
+const Value *ReportUndefCond::getRemarkBB() const { return BB; }
+
 std::string ReportUndefCond::getMessage() const {
   return ("Condition based on 'undef' value in BB: " + BB->getName()).str();
 }
@@ -250,6 +283,10 @@ bool ReportUndefCond::classof(const RejectReason *RR) {
 
 //===----------------------------------------------------------------------===//
 // ReportInvalidCond.
+
+std::string ReportInvalidCond::getRemarkName() const { return "InvalidCond"; }
+
+const Value *ReportInvalidCond::getRemarkBB() const { return BB; }
 
 std::string ReportInvalidCond::getMessage() const {
   return ("Condition in BB '" + BB->getName()).str() +
@@ -263,6 +300,10 @@ bool ReportInvalidCond::classof(const RejectReason *RR) {
 //===----------------------------------------------------------------------===//
 // ReportUndefOperand.
 
+std::string ReportUndefOperand::getRemarkName() const { return "UndefOperand"; }
+
+const Value *ReportUndefOperand::getRemarkBB() const { return BB; }
+
 std::string ReportUndefOperand::getMessage() const {
   return ("undef operand in branch at BB: " + BB->getName()).str();
 }
@@ -273,6 +314,10 @@ bool ReportUndefOperand::classof(const RejectReason *RR) {
 
 //===----------------------------------------------------------------------===//
 // ReportNonAffBranch.
+
+std::string ReportNonAffBranch::getRemarkName() const { return "NonAffBranch"; }
+
+const Value *ReportNonAffBranch::getRemarkBB() const { return BB; }
 
 std::string ReportNonAffBranch::getMessage() const {
   return ("Non affine branch in BB '" + BB->getName()).str() +
@@ -286,6 +331,10 @@ bool ReportNonAffBranch::classof(const RejectReason *RR) {
 //===----------------------------------------------------------------------===//
 // ReportNoBasePtr.
 
+std::string ReportNoBasePtr::getRemarkName() const { return "NoBasePtr"; }
+
+const Value *ReportNoBasePtr::getRemarkBB() const { return Inst->getParent(); }
+
 std::string ReportNoBasePtr::getMessage() const { return "No base pointer"; }
 
 bool ReportNoBasePtr::classof(const RejectReason *RR) {
@@ -294,6 +343,12 @@ bool ReportNoBasePtr::classof(const RejectReason *RR) {
 
 //===----------------------------------------------------------------------===//
 // ReportUndefBasePtr.
+
+std::string ReportUndefBasePtr::getRemarkName() const { return "UndefBasePtr"; }
+
+const Value *ReportUndefBasePtr::getRemarkBB() const {
+  return Inst->getParent();
+}
 
 std::string ReportUndefBasePtr::getMessage() const {
   return "Undefined base pointer";
@@ -305,6 +360,14 @@ bool ReportUndefBasePtr::classof(const RejectReason *RR) {
 
 //===----------------------------------------------------------------------===//
 // ReportVariantBasePtr.
+
+std::string ReportVariantBasePtr::getRemarkName() const {
+  return "VariantBasePtr";
+}
+
+const Value *ReportVariantBasePtr::getRemarkBB() const {
+  return Inst->getParent();
+}
 
 std::string ReportVariantBasePtr::getMessage() const {
   return "Base address not invariant in current region:" + *BaseValue;
@@ -320,6 +383,14 @@ bool ReportVariantBasePtr::classof(const RejectReason *RR) {
 
 //===----------------------------------------------------------------------===//
 // ReportDifferentArrayElementSize
+
+std::string ReportDifferentArrayElementSize::getRemarkName() const {
+  return "DifferentArrayElementSize";
+}
+
+const Value *ReportDifferentArrayElementSize::getRemarkBB() const {
+  return Inst->getParent();
+}
 
 std::string ReportDifferentArrayElementSize::getMessage() const {
   return "Access to one array through data types of different size";
@@ -339,6 +410,14 @@ std::string ReportDifferentArrayElementSize::getEndUserMessage() const {
 
 //===----------------------------------------------------------------------===//
 // ReportNonAffineAccess.
+
+std::string ReportNonAffineAccess::getRemarkName() const {
+  return "NonAffineAccess";
+}
+
+const Value *ReportNonAffineAccess::getRemarkBB() const {
+  return Inst->getParent();
+}
 
 std::string ReportNonAffineAccess::getMessage() const {
   return "Non affine access function: " + *AccessFunction;
@@ -361,6 +440,10 @@ ReportLoopBound::ReportLoopBound(Loop *L, const SCEV *LoopCount)
     : RejectReason(RejectReasonKind::LoopBound), L(L), LoopCount(LoopCount),
       Loc(L->getStartLoc()) {}
 
+std::string ReportLoopBound::getRemarkName() const { return "LoopBound"; }
+
+const Value *ReportLoopBound::getRemarkBB() const { return L->getHeader(); }
+
 std::string ReportLoopBound::getMessage() const {
   return "Non affine loop bound '" + *LoopCount +
          "' in loop: " + L->getHeader()->getName();
@@ -379,6 +462,12 @@ std::string ReportLoopBound::getEndUserMessage() const {
 //===----------------------------------------------------------------------===//
 // ReportLoopHasNoExit.
 
+std::string ReportLoopHasNoExit::getRemarkName() const {
+  return "LoopHasNoExit";
+}
+
+const Value *ReportLoopHasNoExit::getRemarkBB() const { return L->getHeader(); }
+
 std::string ReportLoopHasNoExit::getMessage() const {
   return "Loop " + L->getHeader()->getName() + " has no exit.";
 }
@@ -395,6 +484,14 @@ std::string ReportLoopHasNoExit::getEndUserMessage() const {
 
 //===----------------------------------------------------------------------===//
 // ReportLoopOnlySomeLatches
+
+std::string ReportLoopOnlySomeLatches::getRemarkName() const {
+  return "LoopHasNoExit";
+}
+
+const Value *ReportLoopOnlySomeLatches::getRemarkBB() const {
+  return L->getHeader();
+}
 
 std::string ReportLoopOnlySomeLatches::getMessage() const {
   return "Not all latches of loop " + L->getHeader()->getName() +
@@ -418,6 +515,10 @@ std::string ReportLoopOnlySomeLatches::getEndUserMessage() const {
 ReportFuncCall::ReportFuncCall(Instruction *Inst)
     : RejectReason(RejectReasonKind::FuncCall), Inst(Inst) {}
 
+std::string ReportFuncCall::getRemarkName() const { return "FuncCall"; }
+
+const Value *ReportFuncCall::getRemarkBB() const { return Inst->getParent(); }
+
 std::string ReportFuncCall::getMessage() const {
   return "Call instruction: " + *Inst;
 }
@@ -440,6 +541,14 @@ bool ReportFuncCall::classof(const RejectReason *RR) {
 
 ReportNonSimpleMemoryAccess::ReportNonSimpleMemoryAccess(Instruction *Inst)
     : ReportOther(RejectReasonKind::NonSimpleMemoryAccess), Inst(Inst) {}
+
+std::string ReportNonSimpleMemoryAccess::getRemarkName() const {
+  return "NonSimpleMemoryAccess";
+}
+
+const Value *ReportNonSimpleMemoryAccess::getRemarkBB() const {
+  return Inst->getParent();
+}
 
 std::string ReportNonSimpleMemoryAccess::getMessage() const {
   return "Non-simple memory access: " + *Inst;
@@ -499,6 +608,10 @@ std::string ReportAlias::formatInvalidAlias(std::string Prefix,
   return OS.str();
 }
 
+std::string ReportAlias::getRemarkName() const { return "Alias"; }
+
+const Value *ReportAlias::getRemarkBB() const { return Inst->getParent(); }
+
 std::string ReportAlias::getMessage() const {
   return formatInvalidAlias("Possible aliasing: ");
 }
@@ -517,6 +630,8 @@ bool ReportAlias::classof(const RejectReason *RR) {
 //===----------------------------------------------------------------------===//
 // ReportOther.
 
+std::string ReportOther::getRemarkName() const { return "UnknownRejectReason"; }
+
 std::string ReportOther::getMessage() const { return "Unknown reject reason"; }
 
 ReportOther::ReportOther(const RejectReasonKind K) : RejectReason(K) {}
@@ -530,6 +645,12 @@ bool ReportOther::classof(const RejectReason *RR) {
 // ReportIntToPtr.
 ReportIntToPtr::ReportIntToPtr(Instruction *BaseValue)
     : ReportOther(RejectReasonKind::IntToPtr), BaseValue(BaseValue) {}
+
+std::string ReportIntToPtr::getRemarkName() const { return "IntToPtr"; }
+
+const Value *ReportIntToPtr::getRemarkBB() const {
+  return BaseValue->getParent();
+}
 
 std::string ReportIntToPtr::getMessage() const {
   return "Find bad intToptr prt: " + *BaseValue;
@@ -549,6 +670,10 @@ bool ReportIntToPtr::classof(const RejectReason *RR) {
 ReportAlloca::ReportAlloca(Instruction *Inst)
     : ReportOther(RejectReasonKind::Alloca), Inst(Inst) {}
 
+std::string ReportAlloca::getRemarkName() const { return "Alloca"; }
+
+const Value *ReportAlloca::getRemarkBB() const { return Inst->getParent(); }
+
 std::string ReportAlloca::getMessage() const {
   return "Alloca instruction: " + *Inst;
 }
@@ -567,6 +692,12 @@ bool ReportAlloca::classof(const RejectReason *RR) {
 ReportUnknownInst::ReportUnknownInst(Instruction *Inst)
     : ReportOther(RejectReasonKind::UnknownInst), Inst(Inst) {}
 
+std::string ReportUnknownInst::getRemarkName() const { return "UnknownInst"; }
+
+const Value *ReportUnknownInst::getRemarkBB() const {
+  return Inst->getParent();
+}
+
 std::string ReportUnknownInst::getMessage() const {
   return "Unknown instruction: " + *Inst;
 }
@@ -583,6 +714,10 @@ bool ReportUnknownInst::classof(const RejectReason *RR) {
 // ReportEntry.
 ReportEntry::ReportEntry(BasicBlock *BB)
     : ReportOther(RejectReasonKind::Entry), BB(BB) {}
+
+std::string ReportEntry::getRemarkName() const { return "Entry"; }
+
+const Value *ReportEntry::getRemarkBB() const { return BB; }
 
 std::string ReportEntry::getMessage() const {
   return "Region containing entry block of function is invalid!";
@@ -604,6 +739,10 @@ bool ReportEntry::classof(const RejectReason *RR) {
 // ReportUnprofitable.
 ReportUnprofitable::ReportUnprofitable(Region *R)
     : ReportOther(RejectReasonKind::Unprofitable), R(R) {}
+
+std::string ReportUnprofitable::getRemarkName() const { return "Unprofitable"; }
+
+const Value *ReportUnprofitable::getRemarkBB() const { return R->getEntry(); }
 
 std::string ReportUnprofitable::getMessage() const {
   return "Region can not profitably be optimized!";

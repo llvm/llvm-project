@@ -42,6 +42,9 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
     WorkGroupIDZSystemSGPR(AMDGPU::NoRegister),
     WorkGroupInfoSystemSGPR(AMDGPU::NoRegister),
     PrivateSegmentWaveByteOffsetSystemSGPR(AMDGPU::NoRegister),
+    WorkItemIDXVGPR(AMDGPU::NoRegister),
+    WorkItemIDYVGPR(AMDGPU::NoRegister),
+    WorkItemIDZVGPR(AMDGPU::NoRegister),
     PSInputAddr(0),
     PSInputEnable(0),
     ReturnsVoid(true),
@@ -87,7 +90,6 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
     ScratchWaveOffsetReg = AMDGPU::SGPR4;
     FrameOffsetReg = AMDGPU::SGPR5;
     StackPtrOffsetReg = AMDGPU::SGPR32;
-    return;
   }
 
   CallingConv::ID CC = F->getCallingConv();
@@ -101,16 +103,24 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
 
   if (ST.debuggerEmitPrologue()) {
     // Enable everything.
+    WorkGroupIDX = true;
     WorkGroupIDY = true;
     WorkGroupIDZ = true;
+    WorkItemIDX = true;
     WorkItemIDY = true;
     WorkItemIDZ = true;
   } else {
+    if (F->hasFnAttribute("amdgpu-work-group-id-x"))
+      WorkGroupIDX = true;
+
     if (F->hasFnAttribute("amdgpu-work-group-id-y"))
       WorkGroupIDY = true;
 
     if (F->hasFnAttribute("amdgpu-work-group-id-z"))
       WorkGroupIDZ = true;
+
+    if (F->hasFnAttribute("amdgpu-work-item-id-x"))
+      WorkItemIDX = true;
 
     if (F->hasFnAttribute("amdgpu-work-item-id-y"))
       WorkItemIDY = true;
@@ -119,22 +129,24 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
       WorkItemIDZ = true;
   }
 
-  // X, XY, and XYZ are the only supported combinations, so make sure Y is
-  // enabled if Z is.
-  if (WorkItemIDZ)
-    WorkItemIDY = true;
-
   const MachineFrameInfo &FrameInfo = MF.getFrameInfo();
   bool MaySpill = ST.isVGPRSpillingEnabled(*F);
   bool HasStackObjects = FrameInfo.hasStackObjects() || FrameInfo.hasCalls();
 
-  if (HasStackObjects || MaySpill) {
-    PrivateSegmentWaveByteOffset = true;
+  if (isEntryFunction()) {
+    // X, XY, and XYZ are the only supported combinations, so make sure Y is
+    // enabled if Z is.
+    if (WorkItemIDZ)
+      WorkItemIDY = true;
 
-    // HS and GS always have the scratch wave offset in SGPR5 on GFX9.
-    if (ST.getGeneration() >= AMDGPUSubtarget::GFX9 &&
-        (CC == CallingConv::AMDGPU_HS || CC == CallingConv::AMDGPU_GS))
-      PrivateSegmentWaveByteOffsetSystemSGPR = AMDGPU::SGPR5;
+    if (HasStackObjects || MaySpill) {
+      PrivateSegmentWaveByteOffset = true;
+
+      // HS and GS always have the scratch wave offset in SGPR5 on GFX9.
+      if (ST.getGeneration() >= AMDGPUSubtarget::GFX9 &&
+          (CC == CallingConv::AMDGPU_HS || CC == CallingConv::AMDGPU_GS))
+        PrivateSegmentWaveByteOffsetSystemSGPR = AMDGPU::SGPR5;
+    }
   }
 
   if (ST.isAmdCodeObjectV2(MF)) {
@@ -160,7 +172,8 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
   // We don't need to worry about accessing spills with flat instructions.
   // TODO: On VI where we must use flat for global, we should be able to omit
   // this if it is never used for generic access.
-  if (HasStackObjects && ST.hasFlatAddressSpace() && ST.isAmdHsaOS())
+  if (HasStackObjects && ST.hasFlatAddressSpace() && ST.isAmdHsaOS() &&
+      isEntryFunction())
     FlatScratchInit = true;
 }
 

@@ -579,9 +579,8 @@ static void __kmp_free_task_and_ancestors(kmp_int32 gtid,
 #endif
   KMP_DEBUG_ASSERT(taskdata->td_flags.tasktype == TASK_EXPLICIT);
 
-  kmp_int32 children = KMP_TEST_THEN_DEC32(CCAST(
-                           kmp_int32 *, &taskdata->td_allocated_child_tasks)) -
-                       1;
+  kmp_int32 children =
+      KMP_TEST_THEN_DEC32(&taskdata->td_allocated_child_tasks) - 1;
   KMP_DEBUG_ASSERT(children >= 0);
 
   // Now, go up the ancestor tree to see if any ancestors can now be freed.
@@ -603,9 +602,7 @@ static void __kmp_free_task_and_ancestors(kmp_int32 gtid,
       return;
 
     // Predecrement simulated by "- 1" calculation
-    children = KMP_TEST_THEN_DEC32(
-                   CCAST(kmp_int32 *, &taskdata->td_allocated_child_tasks)) -
-               1;
+    children = KMP_TEST_THEN_DEC32(&taskdata->td_allocated_child_tasks) - 1;
     KMP_DEBUG_ASSERT(children >= 0);
   }
 
@@ -684,8 +681,7 @@ static void __kmp_task_finish(kmp_int32 gtid, kmp_task_t *task,
   if (!(taskdata->td_flags.team_serial || taskdata->td_flags.tasking_ser)) {
     // Predecrement simulated by "- 1" calculation
     children =
-        KMP_TEST_THEN_DEC32(CCAST(
-            kmp_int32 *, &taskdata->td_parent->td_incomplete_child_tasks)) -
+        KMP_TEST_THEN_DEC32(&taskdata->td_parent->td_incomplete_child_tasks) -
         1;
     KMP_DEBUG_ASSERT(children >= 0);
 #if OMP_40_ENABLED
@@ -1110,8 +1106,7 @@ kmp_task_t *__kmp_task_alloc(ident_t *loc_ref, kmp_int32 gtid,
   if (!(taskdata->td_flags.team_serial || taskdata->td_flags.tasking_ser))
 #endif
   {
-    KMP_TEST_THEN_INC32(
-        CCAST(kmp_int32 *, &parent_task->td_incomplete_child_tasks));
+    KMP_TEST_THEN_INC32(&parent_task->td_incomplete_child_tasks);
 #if OMP_40_ENABLED
     if (parent_task->td_taskgroup)
       KMP_TEST_THEN_INC32((kmp_int32 *)(&parent_task->td_taskgroup->count));
@@ -1119,8 +1114,7 @@ kmp_task_t *__kmp_task_alloc(ident_t *loc_ref, kmp_int32 gtid,
     // Only need to keep track of allocated child tasks for explicit tasks since
     // implicit not deallocated
     if (taskdata->td_parent->td_flags.tasktype == TASK_EXPLICIT) {
-      KMP_TEST_THEN_INC32(
-          CCAST(kmp_int32 *, &taskdata->td_parent->td_allocated_child_tasks));
+      KMP_TEST_THEN_INC32(&taskdata->td_parent->td_allocated_child_tasks);
     }
   }
 
@@ -2057,7 +2051,7 @@ static kmp_task_t *__kmp_steal_task(kmp_info_t *victim, kmp_int32 gtid,
     // master victim) might be prematurely released from the barrier!!!
     kmp_int32 count;
 
-    count = KMP_TEST_THEN_INC32(CCAST(kmp_int32 *, unfinished_threads));
+    count = KMP_TEST_THEN_INC32(unfinished_threads);
 
     KA_TRACE(
         20,
@@ -2269,7 +2263,7 @@ static inline int __kmp_execute_tasks_template(
       if (!*thread_finished) {
         kmp_int32 count;
 
-        count = KMP_TEST_THEN_DEC32(CCAST(kmp_int32 *, unfinished_threads)) - 1;
+        count = KMP_TEST_THEN_DEC32(unfinished_threads) - 1;
         KA_TRACE(20, ("__kmp_execute_tasks_template: T#%d dec "
                       "unfinished_threads to %d task_team=%p\n",
                       gtid, count, task_team));
@@ -2964,7 +2958,7 @@ void __kmp_tasking_barrier(kmp_team_t *team, kmp_info_t *thread, int gtid) {
                                   &flag USE_ITT_BUILD_ARG(NULL), 0)) {
 #if USE_ITT_BUILD
     // TODO: What about itt_sync_obj??
-    KMP_FSYNC_SPIN_PREPARE(CCAST(void *, RCAST(volatile void *, spin)));
+    KMP_FSYNC_SPIN_PREPARE(CCAST(kmp_uint32 *, spin));
 #endif /* USE_ITT_BUILD */
 
     if (TCR_4(__kmp_global.g.g_done)) {
@@ -2975,7 +2969,7 @@ void __kmp_tasking_barrier(kmp_team_t *team, kmp_info_t *thread, int gtid) {
     KMP_YIELD(TRUE); // GH: We always yield here
   }
 #if USE_ITT_BUILD
-  KMP_FSYNC_SPIN_ACQUIRED(CCAST(void *, RCAST(volatile void *, spin)));
+  KMP_FSYNC_SPIN_ACQUIRED(CCAST(kmp_uint32 *, spin));
 #endif /* USE_ITT_BUILD */
 }
 
@@ -3099,9 +3093,7 @@ static void __kmp_second_top_half_finish_proxy(kmp_taskdata_t *taskdata) {
 
   // Predecrement simulated by "- 1" calculation
   children =
-      KMP_TEST_THEN_DEC32(
-          CCAST(kmp_int32 *, &taskdata->td_parent->td_incomplete_child_tasks)) -
-      1;
+      KMP_TEST_THEN_DEC32(&taskdata->td_parent->td_incomplete_child_tasks) - 1;
   KMP_DEBUG_ASSERT(children >= 0);
 
   // Remove the imaginary children
@@ -3252,15 +3244,13 @@ kmp_task_t *__kmp_task_dup_alloc(kmp_info_t *thread, kmp_task_t *task_src) {
   // Only need to keep track of child task counts if team parallel and tasking
   // not serialized
   if (!(taskdata->td_flags.team_serial || taskdata->td_flags.tasking_ser)) {
-    KMP_TEST_THEN_INC32(
-        CCAST(kmp_int32 *, &parent_task->td_incomplete_child_tasks));
+    KMP_TEST_THEN_INC32(&parent_task->td_incomplete_child_tasks);
     if (parent_task->td_taskgroup)
       KMP_TEST_THEN_INC32(&parent_task->td_taskgroup->count);
     // Only need to keep track of allocated child tasks for explicit tasks since
     // implicit not deallocated
     if (taskdata->td_parent->td_flags.tasktype == TASK_EXPLICIT)
-      KMP_TEST_THEN_INC32(
-          CCAST(kmp_int32 *, &taskdata->td_parent->td_allocated_child_tasks));
+      KMP_TEST_THEN_INC32(&taskdata->td_parent->td_allocated_child_tasks);
   }
 
   KA_TRACE(20,

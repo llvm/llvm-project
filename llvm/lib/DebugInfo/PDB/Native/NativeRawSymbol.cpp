@@ -323,9 +323,7 @@ PDB_SymType NativeRawSymbol::getSymTag() const {
   return PDB_SymType::None;
 }
 
-PDB_UniqueId NativeRawSymbol::getGuid() const {
-  return PDB_UniqueId{{0}};
-}
+codeview::GUID NativeRawSymbol::getGuid() const { return codeview::GUID{{0}}; }
 
 int32_t NativeRawSymbol::getOffset() const {
   return 0;

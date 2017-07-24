@@ -751,7 +751,7 @@ void TypePrinter::printFunctionAfter(const FunctionType::ExtInfo &Info,
     case CC_IntelOclBicc:
       OS << " __attribute__((intel_ocl_bicc))";
       break;
-    case CC_X86_64Win64:
+    case CC_Win64:
       OS << " __attribute__((ms_abi))";
       break;
     case CC_X86_64SysV:

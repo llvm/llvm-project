@@ -958,7 +958,8 @@ static void computeCalleeSaveRegisterPairs(
 
   unsigned GPRSaveSize = AFI->getVarArgsGPRSize();
   const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
-  if (Subtarget.isTargetWindows())
+  bool IsWin64 = Subtarget.isCallingConvWin64(MF.getFunction()->getCallingConv());
+  if (IsWin64)
     Offset -= alignTo(GPRSaveSize, 16);
 
   for (unsigned i = 0; i < Count; ++i) {

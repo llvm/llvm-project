@@ -125,16 +125,16 @@ PrivateGetDIAValue(IDiaSymbol *Symbol,
   return Result8;
 }
 
-PDB_UniqueId
+codeview::GUID
 PrivateGetDIAValue(IDiaSymbol *Symbol,
                    HRESULT (__stdcall IDiaSymbol::*Method)(GUID *)) {
   GUID Result;
   if (S_OK != (Symbol->*Method)(&Result))
-    return PDB_UniqueId();
+    return codeview::GUID();
 
-  static_assert(sizeof(PDB_UniqueId) == sizeof(GUID),
-                "PDB_UniqueId is the wrong size!");
-  PDB_UniqueId IdResult;
+  static_assert(sizeof(codeview::GUID) == sizeof(GUID),
+                "GUID is the wrong size!");
+  codeview::GUID IdResult;
   ::memcpy(&IdResult, &Result, sizeof(GUID));
   return IdResult;
 }
@@ -746,7 +746,7 @@ PDB_SymType DIARawSymbol::getSymTag() const {
                                                 &IDiaSymbol::get_symTag);
 }
 
-PDB_UniqueId DIARawSymbol::getGuid() const {
+codeview::GUID DIARawSymbol::getGuid() const {
   return PrivateGetDIAValue(Symbol, &IDiaSymbol::get_guid);
 }
 

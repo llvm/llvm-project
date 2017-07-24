@@ -52,6 +52,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AliasSetTracker.h"
+#include "llvm/Analysis/OptimizationDiagnosticInfo.h"
 #include "llvm/Analysis/RegionInfo.h"
 #include "llvm/Pass.h"
 #include <map>
@@ -526,7 +527,8 @@ private:
 
 public:
   ScopDetection(Function &F, const DominatorTree &DT, ScalarEvolution &SE,
-                LoopInfo &LI, RegionInfo &RI, AliasAnalysis &AA);
+                LoopInfo &LI, RegionInfo &RI, AliasAnalysis &AA,
+                OptimizationRemarkEmitter &ORE);
 
   /// Get the RegionInfo stored in this pass.
   ///
@@ -607,6 +609,9 @@ public:
   static ScopDetection::LoopStats
   countBeneficialLoops(Region *R, ScalarEvolution &SE, LoopInfo &LI,
                        unsigned MinProfitableTrips);
+
+  /// OptimizationRemarkEmitter object used to emit diagnostic remarks
+  OptimizationRemarkEmitter &ORE;
 };
 
 struct ScopAnalysis : public AnalysisInfoMixin<ScopAnalysis> {

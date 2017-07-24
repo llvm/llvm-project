@@ -251,6 +251,38 @@ entry:
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Ensure that esan doesn't convert element atomic memory intrinsics to
+; calls.
+
+declare void @llvm.memset.element.unordered.atomic.p0i8.i64(i8* nocapture writeonly, i8, i64, i32) nounwind
+declare void @llvm.memmove.element.unordered.atomic.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i32) nounwind
+declare void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i32) nounwind
+
+define void @elementAtomic_memCpyTest(i8* nocapture %x, i8* nocapture %y) {
+  ; CHECK-LABEL: elementAtomic_memCpyTest
+  ; CHECK-NEXT: tail call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %x, i8* align 1 %y, i64 16, i32 1)
+  ; CHECK-NEXT: ret void
+  tail call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %x, i8* align 1 %y, i64 16, i32 1)
+  ret void
+}
+
+define void @elementAtomic_memMoveTest(i8* nocapture %x, i8* nocapture %y) {
+  ; CHECK-LABEL: elementAtomic_memMoveTest
+  ; CHECK-NEXT:  tail call void @llvm.memmove.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %x, i8* align 1 %y, i64 16, i32 1)
+  ; CHECK-NEXT: ret void
+  tail call void @llvm.memmove.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %x, i8* align 1 %y, i64 16, i32 1)
+  ret void
+}
+
+define void @elementAtomic_memSetTest(i8* nocapture %x) {
+  ; CHECK-LABEL: elementAtomic_memSetTest
+  ; CHECK-NEXT: tail call void @llvm.memset.element.unordered.atomic.p0i8.i64(i8* align 1 %x, i8 77, i64 16, i32 1)
+  ; CHECK-NEXT: ret void
+  tail call void @llvm.memset.element.unordered.atomic.p0i8.i64(i8* align 1 %x, i8 77, i64 16, i32 1)
+  ret void
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Top-level:
 
 ; CHECK: define internal void @esan.module_ctor()

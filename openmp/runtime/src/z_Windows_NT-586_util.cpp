@@ -47,13 +47,14 @@ kmp_int8 __kmp_test_then_and8(volatile kmp_int8 *p, kmp_int8 d) {
   return old_value;
 }
 
-kmp_int32 __kmp_test_then_or32(volatile kmp_int32 *p, kmp_int32 d) {
-  kmp_int32 old_value, new_value;
+kmp_uint32 __kmp_test_then_or32(volatile kmp_uint32 *p, kmp_uint32 d) {
+  kmp_uint32 old_value, new_value;
 
   old_value = TCR_4(*p);
   new_value = old_value | d;
 
-  while (!__kmp_compare_and_store32(p, old_value, new_value)) {
+  while (!__kmp_compare_and_store32((volatile kmp_int32 *)p, old_value,
+                                    new_value)) {
     KMP_CPU_PAUSE();
     old_value = TCR_4(*p);
     new_value = old_value | d;
@@ -61,13 +62,14 @@ kmp_int32 __kmp_test_then_or32(volatile kmp_int32 *p, kmp_int32 d) {
   return old_value;
 }
 
-kmp_int32 __kmp_test_then_and32(volatile kmp_int32 *p, kmp_int32 d) {
-  kmp_int32 old_value, new_value;
+kmp_uint32 __kmp_test_then_and32(volatile kmp_uint32 *p, kmp_uint32 d) {
+  kmp_uint32 old_value, new_value;
 
   old_value = TCR_4(*p);
   new_value = old_value & d;
 
-  while (!__kmp_compare_and_store32(p, old_value, new_value)) {
+  while (!__kmp_compare_and_store32((volatile kmp_int32 *)p, old_value,
+                                    new_value)) {
     KMP_CPU_PAUSE();
     old_value = TCR_4(*p);
     new_value = old_value & d;
@@ -103,12 +105,13 @@ kmp_int64 __kmp_test_then_add64(volatile kmp_int64 *p, kmp_int64 d) {
 }
 #endif /* KMP_ARCH_X86 */
 
-kmp_int64 __kmp_test_then_or64(volatile kmp_int64 *p, kmp_int64 d) {
-  kmp_int64 old_value, new_value;
+kmp_uint64 __kmp_test_then_or64(volatile kmp_uint64 *p, kmp_uint64 d) {
+  kmp_uint64 old_value, new_value;
 
   old_value = TCR_8(*p);
   new_value = old_value | d;
-  while (!__kmp_compare_and_store64(p, old_value, new_value)) {
+  while (!__kmp_compare_and_store64((volatile kmp_int64 *)p, old_value,
+                                    new_value)) {
     KMP_CPU_PAUSE();
     old_value = TCR_8(*p);
     new_value = old_value | d;
@@ -117,12 +120,13 @@ kmp_int64 __kmp_test_then_or64(volatile kmp_int64 *p, kmp_int64 d) {
   return old_value;
 }
 
-kmp_int64 __kmp_test_then_and64(volatile kmp_int64 *p, kmp_int64 d) {
-  kmp_int64 old_value, new_value;
+kmp_uint64 __kmp_test_then_and64(volatile kmp_uint64 *p, kmp_uint64 d) {
+  kmp_uint64 old_value, new_value;
 
   old_value = TCR_8(*p);
   new_value = old_value & d;
-  while (!__kmp_compare_and_store64(p, old_value, new_value)) {
+  while (!__kmp_compare_and_store64((volatile kmp_int64 *)p, old_value,
+                                    new_value)) {
     KMP_CPU_PAUSE();
     old_value = TCR_8(*p);
     new_value = old_value & d;

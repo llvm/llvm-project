@@ -25,9 +25,10 @@ class MinimalTypeDumpVisitor : public codeview::TypeVisitorCallbacks {
 public:
   MinimalTypeDumpVisitor(LinePrinter &P, uint32_t Width, bool RecordBytes,
                          bool Hashes, codeview::LazyRandomTypeCollection &Types,
+                         uint32_t NumHashBuckets,
                          FixedStreamArray<support::ulittle32_t> HashValues)
       : P(P), Width(Width), RecordBytes(RecordBytes), Hashes(Hashes),
-        Types(Types), HashValues(HashValues) {}
+        Types(Types), NumHashBuckets(NumHashBuckets), HashValues(HashValues) {}
 
   Error visitTypeBegin(codeview::CVType &Record,
                        codeview::TypeIndex Index) override;
@@ -53,6 +54,7 @@ private:
   bool RecordBytes = false;
   bool Hashes = false;
   codeview::LazyRandomTypeCollection &Types;
+  uint32_t NumHashBuckets;
   FixedStreamArray<support::ulittle32_t> HashValues;
 };
 } // namespace pdb

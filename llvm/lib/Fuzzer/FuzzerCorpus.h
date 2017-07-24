@@ -34,7 +34,7 @@ struct InputInfo {
   size_t NumExecutedMutations = 0;
   size_t NumSuccessfullMutations = 0;
   bool MayDeleteFile = false;
-  std::vector<uint32_t> FeatureSet;
+  std::vector<uint32_t> UniqFeatureSet;
 };
 
 class InputCorpus {
@@ -79,7 +79,8 @@ class InputCorpus {
     II.U = U;
     II.NumFeatures = NumFeatures;
     II.MayDeleteFile = MayDeleteFile;
-    II.FeatureSet = FeatureSet;
+    II.UniqFeatureSet = FeatureSet;
+    std::sort(II.UniqFeatureSet.begin(), II.UniqFeatureSet.end());
     ComputeSHA1(U.data(), U.size(), II.Sha1);
     Hashes.insert(Sha1ToString(II.Sha1));
     UpdateCorpusDistribution();
@@ -117,25 +118,11 @@ class InputCorpus {
         Printf("%s sz=%zd ", Sha1ToString(II->Sha1).c_str(), II->U.size());
         PrintUnit(II->U);
         Printf(" ");
-        PrintFeatureSet(II->FeatureSet);
+        PrintFeatureSet(II->UniqFeatureSet);
         Printf("\n");
       }
       i++;
     }
-  }
-
-  // If FeatureSet is that same as in II, replace II->U with {Data,Size}.
-  bool TryToReplace(InputInfo *II, const uint8_t *Data, size_t Size,
-                    const std::vector<uint32_t> &FeatureSet) {
-    if (II->U.size() > Size && II->FeatureSet.size() &&
-        II->FeatureSet == FeatureSet) {
-      if (FeatureDebug)
-        Printf("Replace: %zd => %zd\n", II->U.size(), Size);
-      Replace(II, {Data, Data + Size});
-      PrintCorpus();
-      return true;
-    }
-    return false;
   }
 
   void Replace(InputInfo *II, const Unit &U) {
@@ -198,7 +185,7 @@ class InputCorpus {
       Printf("EVICTED %zd\n", Idx);
   }
 
-  void AddFeature(size_t Idx, uint32_t NewSize, bool Shrink) {
+  bool AddFeature(size_t Idx, uint32_t NewSize, bool Shrink) {
     assert(NewSize);
     Idx = Idx % kFeatureSetSize;
     uint32_t OldSize = GetFeature(Idx);
@@ -218,7 +205,9 @@ class InputCorpus {
         Printf("ADD FEATURE %zd sz %d\n", Idx, NewSize);
       SmallestElementPerFeature[Idx] = Inputs.size();
       InputSizesPerFeature[Idx] = NewSize;
+      return true;
     }
+    return false;
   }
 
   size_t NumFeatures() const { return NumAddedFeatures; }

@@ -128,6 +128,11 @@ bool TargetInfo::needsThunk(RelExpr Expr, uint32_t RelocType,
   return false;
 }
 
+bool TargetInfo::inBranchRange(uint32_t RelocType, uint64_t Src,
+                               uint64_t Dst) const {
+  return true;
+}
+
 void TargetInfo::writeIgotPlt(uint8_t *Buf, const SymbolBody &S) const {
   writeGotPlt(Buf, S);
 }

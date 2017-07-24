@@ -6,12 +6,12 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-// For Falkor, we want to avoid HW prefetcher instruction tag collisions that
-// may inhibit the HW prefetching.  This is done in two steps.  Before ISel, we
-// mark strided loads (i.e. those that will likely benefit from prefetching)
-// with metadata.  Then, after opcodes have been finalized, we insert MOVs and
-// re-write loads to prevent unintnentional tag collisions.
-// ===----------------------------------------------------------------------===//
+/// \file For Falkor, we want to avoid HW prefetcher instruction tag collisions
+/// that may inhibit the HW prefetching.  This is done in two steps.  Before
+/// ISel, we mark strided loads (i.e. those that will likely benefit from
+/// prefetching) with metadata.  Then, after opcodes have been finalized, we
+/// insert MOVs and re-write loads to prevent unintnentional tag collisions.
+// ===---------------------------------------------------------------------===//
 
 #include "AArch64.h"
 #include "AArch64InstrInfo.h"
@@ -44,7 +44,7 @@ public:
   bool run();
 
 private:
-  bool runOnLoop(Loop *L);
+  bool runOnLoop(Loop &L);
 
   LoopInfo &LI;
   ScalarEvolution &SE;
@@ -106,28 +106,28 @@ bool FalkorMarkStridedAccessesLegacy::runOnFunction(Function &F) {
 bool FalkorMarkStridedAccesses::run() {
   bool MadeChange = false;
 
-  for (Loop *I : LI)
-    for (auto L = df_begin(I), LE = df_end(I); L != LE; ++L)
-      MadeChange |= runOnLoop(*L);
+  for (Loop *L : LI)
+    for (auto LIt = df_begin(L), LE = df_end(L); LIt != LE; ++LIt)
+      MadeChange |= runOnLoop(**LIt);
 
   return MadeChange;
 }
 
-bool FalkorMarkStridedAccesses::runOnLoop(Loop *L) {
+bool FalkorMarkStridedAccesses::runOnLoop(Loop &L) {
   // Only mark strided loads in the inner-most loop
-  if (!L->empty())
+  if (!L.empty())
     return false;
 
   bool MadeChange = false;
 
-  for (const auto BB : L->blocks()) {
-    for (auto &I : *BB) {
+  for (BasicBlock *BB : L.blocks()) {
+    for (Instruction &I : *BB) {
       LoadInst *LoadI = dyn_cast<LoadInst>(&I);
       if (!LoadI)
         continue;
 
       Value *PtrValue = LoadI->getPointerOperand();
-      if (L->isLoopInvariant(PtrValue))
+      if (L.isLoopInvariant(PtrValue))
         continue;
 
       const SCEV *LSCEV = SE.getSCEV(PtrValue);

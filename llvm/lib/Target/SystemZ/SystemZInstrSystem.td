@@ -126,6 +126,10 @@ let hasSideEffects = 1, Defs = [CC] in
 let Predicates = [FeatureResetReferenceBitsMultiple], hasSideEffects = 1 in
   def RRBM : UnaryRRE<"rrbm", 0xB9AE, null_frag, GR64, GR64>;
 
+// Insert reference bits multiple.
+let Predicates = [FeatureInsertReferenceBitsMultiple], hasSideEffects = 1 in
+  def IRBM : UnaryRRE<"irbm", 0xB9AC, null_frag, GR64, GR64>;
+
 // Perform frame management function.
 let hasSideEffects = 1 in
   def PFMF : SideEffectBinaryMemRRE<"pfmf", 0xB9AF, GR32, GR64>;

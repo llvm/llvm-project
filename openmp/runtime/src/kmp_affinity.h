@@ -618,10 +618,8 @@ public:
 };
 
 static int __kmp_affinity_cmp_Address_labels(const void *a, const void *b) {
-  const Address *aa =
-      (const Address *)&(((AddrUnsPair *)CCAST(void *, a))->first);
-  const Address *bb =
-      (const Address *)&(((AddrUnsPair *)CCAST(void *, b))->first);
+  const Address *aa = &(((const AddrUnsPair *)a)->first);
+  const Address *bb = &(((const AddrUnsPair *)b)->first);
   unsigned depth = aa->depth;
   unsigned i;
   KMP_DEBUG_ASSERT(depth == bb->depth);
