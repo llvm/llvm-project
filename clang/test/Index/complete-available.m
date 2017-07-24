@@ -8,8 +8,8 @@ void atAvailable() {
   }
 }
 
-// RUN: c-index-test -code-completion-at=%s:4:18 %s | FileCheck -check-prefix=CHECK %s
-// RUN: c-index-test -code-completion-at=%s:7:27 %s | FileCheck -check-prefix=CHECK %s
+// RUN: c-index-test -code-completion-at=%s:4:18 %s | FileCheck %s
+// RUN: c-index-test -code-completion-at=%s:7:27 %s | FileCheck %s
 // CHECK: {TypedText iOS} (40)
 // CHECK: {TypedText iOSApplicationExtension} (40)
 // CHECK: {TypedText macOS} (40)

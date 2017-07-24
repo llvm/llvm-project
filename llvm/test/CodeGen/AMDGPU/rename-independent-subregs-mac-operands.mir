@@ -34,7 +34,7 @@ body:             |
   bb.0:
     successors: %bb.2, %bb.1
 
-    %7 = V_CMP_NEQ_F32_e64 0, 0, 0, undef %3, 0, 0, implicit %exec
+    %7 = V_CMP_NEQ_F32_e64 0, 0, 0, undef %3, 0, implicit %exec
     %vcc = COPY killed %7
     S_CBRANCH_VCCZ %bb.2, implicit killed %vcc
 

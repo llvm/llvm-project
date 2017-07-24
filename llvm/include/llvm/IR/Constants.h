@@ -598,6 +598,10 @@ public:
   /// specified element in the low bits of a uint64_t.
   uint64_t getElementAsInteger(unsigned i) const;
 
+  /// If this is a sequential container of integers (of any size), return the
+  /// specified element as an APInt.
+  APInt getElementAsAPInt(unsigned i) const;
+
   /// If this is a sequential container of floating point type, return the
   /// specified element as an APFloat.
   APFloat getElementAsAPFloat(unsigned i) const;
@@ -760,6 +764,10 @@ public:
   /// The specified constant has to be a of a compatible type (i8/i16/
   /// i32/i64/float/double) and must be a ConstantFP or ConstantInt.
   static Constant *getSplat(unsigned NumElts, Constant *Elt);
+
+  /// Returns true if this is a splat constant, meaning that all elements have
+  /// the same value.
+  bool isSplat() const;
 
   /// If this is a splat constant, meaning that all of the elements have the
   /// same value, return that value. Otherwise return NULL.

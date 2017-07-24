@@ -153,9 +153,7 @@ void llvm::LowerARMMachineInstrToMCInst(const MachineInstr *MI, MCInst &OutMI,
     break;
   }
 
-  for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
-    const MachineOperand &MO = MI->getOperand(i);
-
+  for (const MachineOperand &MO : MI->operands()) {
     MCOperand MCOp;
     if (AP.lowerOperand(MO, MCOp)) {
       if (MCOp.isImm() && EncodeImms) {

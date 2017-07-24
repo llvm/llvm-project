@@ -702,6 +702,7 @@ inline const char *ModuleArchToString(ModuleArch arch) {
 }
 
 const uptr kModuleUUIDSize = 16;
+const uptr kMaxSegName = 16;
 
 // Represents a binary loaded into virtual memory (e.g. this can be an
 // executable or a shared object).
@@ -720,7 +721,8 @@ class LoadedModule {
   void set(const char *module_name, uptr base_address, ModuleArch arch,
            u8 uuid[kModuleUUIDSize], bool instrumented);
   void clear();
-  void addAddressRange(uptr beg, uptr end, bool executable, bool writable);
+  void addAddressRange(uptr beg, uptr end, bool executable, bool writable,
+                       const char *name = nullptr);
   bool containsAddress(uptr address) const;
 
   const char *full_name() const { return full_name_; }
@@ -736,13 +738,17 @@ class LoadedModule {
     uptr end;
     bool executable;
     bool writable;
+    char name[kMaxSegName];
 
-    AddressRange(uptr beg, uptr end, bool executable, bool writable)
+    AddressRange(uptr beg, uptr end, bool executable, bool writable,
+                 const char *name)
         : next(nullptr),
           beg(beg),
           end(end),
           executable(executable),
-          writable(writable) {}
+          writable(writable) {
+      internal_strncpy(this->name, (name ? name : ""), ARRAY_SIZE(this->name));
+    }
   };
 
   const IntrusiveList<AddressRange> &ranges() const { return ranges_; }

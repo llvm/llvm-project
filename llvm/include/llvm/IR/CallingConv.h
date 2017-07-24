@@ -143,11 +143,15 @@ namespace CallingConv {
     /// System V ABI, used on most non-Windows systems.
     X86_64_SysV = 78,
 
-    /// \brief The C convention as implemented on Windows/x86-64. This
-    /// convention differs from the more common \c X86_64_SysV convention
-    /// in a number of ways, most notably in that XMM registers used to pass
-    /// arguments are shadowed by GPRs, and vice versa.
-    X86_64_Win64 = 79,
+    /// \brief The C convention as implemented on Windows/x86-64 and
+    /// AArch64. This convention differs from the more common
+    /// \c X86_64_SysV convention in a number of ways, most notably in
+    /// that XMM registers used to pass arguments are shadowed by GPRs,
+    /// and vice versa.
+    /// On AArch64, this is identical to the normal C (AAPCS) calling
+    /// convention for normal functions, but floats are passed in integer
+    /// registers to variadic functions.
+    Win64 = 79,
 
     /// \brief MSVC calling convention that passes vectors and vector aggregates
     /// in SSE registers.

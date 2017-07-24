@@ -11,7 +11,7 @@ define <2 x i64> @test_extrq(<2 x i64> %a0, <16 x i8> %a1) {
 ;
 ; BTVER2-LABEL: test_extrq:
 ; BTVER2:       # BB#0:
-; BTVER2-NEXT:    extrq %xmm1, %xmm0
+; BTVER2-NEXT:    extrq %xmm1, %xmm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
   %1 = tail call <2 x i64> @llvm.x86.sse4a.extrq(<2 x i64> %a0, <16 x i8> %a1)
   ret <2 x i64> %1
@@ -26,7 +26,7 @@ define <2 x i64> @test_extrqi(<2 x i64> %a0) {
 ;
 ; BTVER2-LABEL: test_extrqi:
 ; BTVER2:       # BB#0:
-; BTVER2-NEXT:    extrq $2, $3, %xmm0
+; BTVER2-NEXT:    extrq $2, $3, %xmm0 # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
   %1 = tail call <2 x i64> @llvm.x86.sse4a.extrqi(<2 x i64> %a0, i8 3, i8 2)
   ret <2 x i64> %1
@@ -41,7 +41,7 @@ define <2 x i64> @test_insertq(<2 x i64> %a0, <2 x i64> %a1) {
 ;
 ; BTVER2-LABEL: test_insertq:
 ; BTVER2:       # BB#0:
-; BTVER2-NEXT:    insertq %xmm1, %xmm0
+; BTVER2-NEXT:    insertq %xmm1, %xmm0 # sched: [2:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
   %1 = tail call <2 x i64> @llvm.x86.sse4a.insertq(<2 x i64> %a0, <2 x i64> %a1)
   ret <2 x i64> %1
@@ -56,7 +56,7 @@ define <2 x i64> @test_insertqi(<2 x i64> %a0, <2 x i64> %a1) {
 ;
 ; BTVER2-LABEL: test_insertqi:
 ; BTVER2:       # BB#0:
-; BTVER2-NEXT:    insertq $6, $5, %xmm1, %xmm0
+; BTVER2-NEXT:    insertq $6, $5, %xmm1, %xmm0 # sched: [2:2.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
   %1 = tail call <2 x i64> @llvm.x86.sse4a.insertqi(<2 x i64> %a0, <2 x i64> %a1, i8 5, i8 6)
   ret <2 x i64> %1

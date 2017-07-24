@@ -15,7 +15,11 @@ from multiprocessing import cpu_count, Pool
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=desc)
-    parser.add_argument('yaml_files', nargs='+')
+    parser.add_argument(
+        'yaml_dirs_or_files',
+        nargs='+',
+        help='List of optimization record files or directories searched '
+             'for optimization record files.')
     parser.add_argument(
         '--jobs',
         '-j',
@@ -31,8 +35,14 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     print_progress = not args.no_progress_indicator
+
+    files = optrecord.find_opt_files(args.yaml_dirs_or_files)
+    if not files:
+        parser.error("No *.opt.yaml files found")
+        sys.exit(1)
+
     all_remarks, file_remarks, _ = optrecord.gather_results(
-        args.yaml_files, args.jobs, print_progress)
+        files, args.jobs, print_progress)
     if print_progress:
         print('\n')
 

@@ -36,6 +36,8 @@
 // RUN: %env_asan_opts=allocator_may_return_null=1     %run %t new-nothrow 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-nnNULL
 
+// UNSUPPORTED: win32
+
 #include <assert.h>
 #include <errno.h>
 #include <stdio.h>

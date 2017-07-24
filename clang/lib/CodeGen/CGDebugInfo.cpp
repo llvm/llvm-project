@@ -956,7 +956,7 @@ static unsigned getDwarfCC(CallingConv CC) {
     return llvm::dwarf::DW_CC_BORLAND_pascal;
 
   // FIXME: Create new DW_CC_ codes for these calling conventions.
-  case CC_X86_64Win64:
+  case CC_Win64:
   case CC_X86_64SysV:
   case CC_AAPCS:
   case CC_AAPCS_VFP:

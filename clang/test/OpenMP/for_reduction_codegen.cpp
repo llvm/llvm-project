@@ -701,7 +701,7 @@ int main() {
 
 // CHECK: store i{{[0-9]+}}* [[GTID_ADDR]], i{{[0-9]+}}** [[GTID_ADDR_ADDR:%.+]],
 
-// CHECK: [[ARR_SIZE:%.+]] = mul nuw i64 %{{.+}}, 4
+// CHECK: [[ARR_SIZE:%.+]] = udiv exact i64
 // CHECK: call i8* @llvm.stacksave()
 // CHECK: [[ARR_PRIV:%.+]] = alloca i32, i64 [[ARR_SIZE]],
 

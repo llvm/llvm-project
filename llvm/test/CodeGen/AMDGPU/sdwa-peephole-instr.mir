@@ -332,7 +332,7 @@ body:             |
 
 
 # VI: %vcc = V_CMP_EQ_F32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 6, 4, implicit-def %vcc, implicit %exec
-# VI: %{{[0-9]+}} = V_CMPX_GT_F32_e64 0, 23, 0, killed %{{[0-9]+}}, 0, 0, implicit-def %exec, implicit %exec
+# VI: %{{[0-9]+}} = V_CMPX_GT_F32_e64 0, 23, 0, killed %{{[0-9]+}}, 0, implicit-def %exec, implicit %exec
 # VI: %vcc = V_CMP_LT_I32_sdwa 0, %{{[0-9]+}}, 0, %3, 0, 6, 4, implicit-def %vcc, implicit %exec
 # VI: %{{[0-9]+}} = V_CMPX_EQ_I32_e64 23, killed %{{[0-9]+}}, implicit-def %exec, implicit %exec
 
@@ -345,20 +345,21 @@ body:             |
 
 
 # VI: %vcc = V_CMP_EQ_F32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 1, 6, 4, implicit-def %vcc, implicit %exec
-# VI: %vcc = V_CMPX_GT_F32_e64 0, 23, 0, killed %{{[0-9]+}}, 0, 2, implicit-def %exec, implicit %exec
-# VI: %vcc = V_CMP_EQ_F32_e64 0, %{{[0-9]+}}, 0, killed %{{[0-9]+}}, 1, 2, implicit %exec
+# VI: %vcc = V_CMPX_GT_F32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 6, 4, implicit-def %vcc, implicit-def %exec, implicit %exec
+# VI: %vcc = V_CMP_EQ_F32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 1, 6, 4, implicit-def %vcc, implicit %exec
 # VI: %vcc = V_CMPX_GT_F32_sdwa 1, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 6, 4, implicit-def %vcc, implicit-def %exec, implicit %exec
 # VI: %vcc = V_CMPX_GT_F32_sdwa 0, %{{[0-9]+}}, 1, %{{[0-9]+}}, 0, 6, 4, implicit-def %vcc, implicit-def %exec, implicit %exec
 # VI: %vcc = V_CMPX_GT_F32_sdwa 1, %{{[0-9]+}}, 1, %{{[0-9]+}}, 0, 6, 4, implicit-def %vcc, implicit-def %exec, implicit %exec
-# VI: %vcc = V_CMPX_GT_F32_e64 1, 23, 1, killed %{{[0-9]+}}, 1, 2, implicit-def %exec, implicit %exec
+# VI: %vcc = V_CMPX_GT_F32_sdwa 1, %{{[0-9]+}}, 1, %{{[0-9]+}}, 1, 6, 4, implicit-def %vcc, implicit-def %exec, implicit %exec
 
-# GFX9: %vcc = V_CMP_EQ_F32_e64 0, %{{[0-9]+}}, 0, killed %{{[0-9]+}}, 1, 0, implicit %exec
-# GFX9: %vcc = V_CMPX_GT_F32_e64 0, 23, 0, killed %{{[0-9]+}}, 0, 2, implicit-def %exec, implicit %exec
-# GFX9: %vcc = V_CMP_EQ_F32_e64 0, %{{[0-9]+}}, 0, killed %{{[0-9]+}}, 1, 2, implicit %exec
+# GFX9: %vcc = V_CMP_EQ_F32_e64 0, %{{[0-9]+}}, 0, killed %{{[0-9]+}}, 1, implicit %exec
+# GFX9: %vcc = V_CMPX_GT_F32_sdwa 0, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 6, 4, implicit-def %vcc, implicit-def %exec, implicit %exec
+# GFX9: %vcc = V_CMP_EQ_F32_e64 0, %{{[0-9]+}}, 0, killed %{{[0-9]+}}, 1, implicit %exec
 # GFX9: %vcc = V_CMPX_GT_F32_sdwa 1, %{{[0-9]+}}, 0, %{{[0-9]+}}, 0, 6, 4, implicit-def %vcc, implicit-def %exec, implicit %exec
 # GFX9: %vcc = V_CMPX_GT_F32_sdwa 0, %{{[0-9]+}}, 1, %{{[0-9]+}}, 0, 6, 4, implicit-def %vcc, implicit-def %exec, implicit %exec
 # GFX9: %vcc = V_CMPX_GT_F32_sdwa 1, %{{[0-9]+}}, 1, %{{[0-9]+}}, 0, 6, 4, implicit-def %vcc, implicit-def %exec, implicit %exec
-# GFX9: %vcc = V_CMPX_GT_F32_e64 1, 23, 1, killed %{{[0-9]+}}, 1, 2, implicit-def %exec, implicit %exec
+# GFX9: %vcc = V_CMPX_GT_F32_e64 1, 23, 1, killed %{{[0-9]+}}, 1, implicit-def %exec, implicit %exec
+
 
 
 name:            vopc_instructions
@@ -415,28 +416,28 @@ body:             |
     V_CMPX_EQ_I32_e32 123, killed %13, implicit-def %vcc, implicit-def %exec, implicit %exec
 
     %14 = V_AND_B32_e64 %5, %3, implicit %exec
-    %vcc = V_CMP_EQ_F32_e64 0, %6, 0, killed %14, 0, 0, implicit %exec
+    %vcc = V_CMP_EQ_F32_e64 0, %6, 0, killed %14, 0, implicit %exec
     %15 = V_AND_B32_e64 %5, %3, implicit %exec
-    %18 = V_CMPX_GT_F32_e64 0, 23, 0, killed %15, 0, 0, implicit-def %exec, implicit %exec
+    %18 = V_CMPX_GT_F32_e64 0, 23, 0, killed %15, 0, implicit-def %exec, implicit %exec
     %16 = V_AND_B32_e64 %5, %3, implicit %exec
     %vcc = V_CMP_LT_I32_e64 %6, killed %16, implicit %exec
     %17 = V_AND_B32_e64 %5, %3, implicit %exec
     %19 = V_CMPX_EQ_I32_e64 23, killed %17, implicit-def %exec, implicit %exec
 
     %20 = V_AND_B32_e64 %5, %3, implicit %exec
-    %vcc = V_CMP_EQ_F32_e64 0, %6, 0, killed %20, 1, 0, implicit %exec
+    %vcc = V_CMP_EQ_F32_e64 0, %6, 0, killed %20, 1, implicit %exec
     %21 = V_AND_B32_e64 %5, %3, implicit %exec
-    %vcc = V_CMPX_GT_F32_e64 0, 23, 0, killed %21, 0, 2, implicit-def %exec, implicit %exec
+    %vcc = V_CMPX_GT_F32_e64 0, 23, 0, killed %21, 0, implicit-def %exec, implicit %exec
     %23 = V_AND_B32_e64 %5, %3, implicit %exec
-    %vcc = V_CMP_EQ_F32_e64 0, %6, 0, killed %23, 1, 2, implicit %exec
+    %vcc = V_CMP_EQ_F32_e64 0, %6, 0, killed %23, 1, implicit %exec
     %24 = V_AND_B32_e64 %5, %3, implicit %exec
-    %vcc = V_CMPX_GT_F32_e64 1, 23, 0, killed %24, 0, 0, implicit-def %exec, implicit %exec
+    %vcc = V_CMPX_GT_F32_e64 1, 23, 0, killed %24, 0, implicit-def %exec, implicit %exec
     %25 = V_AND_B32_e64 %5, %3, implicit %exec
-    %vcc = V_CMPX_GT_F32_e64 0, 23, 1, killed %25, 0, 0, implicit-def %exec, implicit %exec
+    %vcc = V_CMPX_GT_F32_e64 0, 23, 1, killed %25, 0, implicit-def %exec, implicit %exec
     %26 = V_AND_B32_e64 %5, %3, implicit %exec
-    %vcc = V_CMPX_GT_F32_e64 1, 23, 1, killed %26, 0, 0, implicit-def %exec, implicit %exec
+    %vcc = V_CMPX_GT_F32_e64 1, 23, 1, killed %26, 0, implicit-def %exec, implicit %exec
     %27 = V_AND_B32_e64 %5, %3, implicit %exec
-    %vcc = V_CMPX_GT_F32_e64 1, 23, 1, killed %27, 1, 2, implicit-def %exec, implicit %exec
+    %vcc = V_CMPX_GT_F32_e64 1, 23, 1, killed %27, 1, implicit-def %exec, implicit %exec
 
 
     %100 = V_MOV_B32_e32 %vcc_lo, implicit %exec

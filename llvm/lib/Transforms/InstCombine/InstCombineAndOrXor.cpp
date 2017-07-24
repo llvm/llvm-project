@@ -1285,13 +1285,9 @@ Instruction *InstCombiner::visitAnd(BinaryOperator &I) {
     return replaceInstUsesWith(I, V);
 
   if (match(Op1, m_One())) {
-    Value *X;
-    // (0 - x) & 1 --> x & 1
-    if (match(Op0, m_Sub(m_Zero(), m_Value(X))))
-      return BinaryOperator::CreateAnd(X, Op1);
-
     // (1 << x) & 1 --> zext(x == 0)
     // (1 >> x) & 1 --> zext(x == 0)
+    Value *X;
     if (match(Op0, m_OneUse(m_LogicalShift(m_One(), m_Value(X))))) {
       Value *IsZero = Builder.CreateICmpEQ(X, ConstantInt::get(I.getType(), 0));
       return new ZExtInst(IsZero, I.getType());
@@ -1413,12 +1409,6 @@ Instruction *InstCombiner::visitAnd(BinaryOperator &I) {
           return BinaryOperator::CreateAnd(A, Builder.CreateNot(B));
       }
     }
-
-    // (A&((~A)|B)) -> A&B
-    if (match(Op0, m_c_Or(m_Not(m_Specific(Op1)), m_Value(A))))
-      return BinaryOperator::CreateAnd(A, Op1);
-    if (match(Op1, m_c_Or(m_Not(m_Specific(Op0)), m_Value(A))))
-      return BinaryOperator::CreateAnd(A, Op0);
 
     // (A ^ B) & ((B ^ C) ^ A) -> (A ^ B) & ~C
     if (match(Op0, m_Xor(m_Value(A), m_Value(B))))
@@ -2016,18 +2006,6 @@ Instruction *InstCombiner::visitOr(BinaryOperator &I) {
   }
 
   Value *A, *B;
-
-  // ((~A & B) | A) -> (A | B)
-  if (match(Op0, m_c_And(m_Not(m_Specific(Op1)), m_Value(A))))
-    return BinaryOperator::CreateOr(A, Op1);
-  if (match(Op1, m_c_And(m_Not(m_Specific(Op0)), m_Value(A))))
-    return BinaryOperator::CreateOr(Op0, A);
-
-  // ((A & B) | ~A) -> (~A | B)
-  // The NOT is guaranteed to be in the RHS by complexity ordering.
-  if (match(Op1, m_Not(m_Value(A))) &&
-      match(Op0, m_c_And(m_Specific(A), m_Value(B))))
-    return BinaryOperator::CreateOr(Op1, B);
 
   // (A & C)|(B & D)
   Value *C = nullptr, *D = nullptr;

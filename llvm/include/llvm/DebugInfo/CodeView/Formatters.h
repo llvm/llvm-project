@@ -12,6 +12,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/DebugInfo/CodeView/GUID.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -31,7 +32,7 @@ public:
   explicit GuidAdapter(ArrayRef<uint8_t> Guid);
   explicit GuidAdapter(StringRef Guid);
 
-  void format(raw_ostream &Stream, StringRef Style) override ;
+  void format(raw_ostream &Stream, StringRef Style) override;
 };
 
 } // end namespace detail
@@ -57,6 +58,13 @@ public:
       if (V.isSimple())
         Stream << " (" << codeview::TypeIndex::simpleTypeName(V) << ")";
     }
+  }
+};
+
+template <> struct format_provider<codeview::GUID> {
+  static void format(const codeview::GUID &V, llvm::raw_ostream &Stream,
+                     StringRef Style) {
+    Stream << V;
   }
 };
 

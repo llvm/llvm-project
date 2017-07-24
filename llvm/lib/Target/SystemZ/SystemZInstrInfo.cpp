@@ -869,6 +869,37 @@ void SystemZInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     return;
   }
 
+  // Move 128-bit floating-point values between VR128 and FP128.
+  if (SystemZ::VR128BitRegClass.contains(DestReg) &&
+      SystemZ::FP128BitRegClass.contains(SrcReg)) {
+    unsigned SrcRegHi =
+      RI.getMatchingSuperReg(RI.getSubReg(SrcReg, SystemZ::subreg_h64),
+                             SystemZ::subreg_r64, &SystemZ::VR128BitRegClass);
+    unsigned SrcRegLo =
+      RI.getMatchingSuperReg(RI.getSubReg(SrcReg, SystemZ::subreg_l64),
+                             SystemZ::subreg_r64, &SystemZ::VR128BitRegClass);
+
+    BuildMI(MBB, MBBI, DL, get(SystemZ::VMRHG), DestReg)
+      .addReg(SrcRegHi, getKillRegState(KillSrc))
+      .addReg(SrcRegLo, getKillRegState(KillSrc));
+    return;
+  }
+  if (SystemZ::FP128BitRegClass.contains(DestReg) &&
+      SystemZ::VR128BitRegClass.contains(SrcReg)) {
+    unsigned DestRegHi =
+      RI.getMatchingSuperReg(RI.getSubReg(DestReg, SystemZ::subreg_h64),
+                             SystemZ::subreg_r64, &SystemZ::VR128BitRegClass);
+    unsigned DestRegLo =
+      RI.getMatchingSuperReg(RI.getSubReg(DestReg, SystemZ::subreg_l64),
+                             SystemZ::subreg_r64, &SystemZ::VR128BitRegClass);
+
+    if (DestRegHi != SrcReg)
+      copyPhysReg(MBB, MBBI, DL, DestRegHi, SrcReg, false);
+    BuildMI(MBB, MBBI, DL, get(SystemZ::VREPG), DestRegLo)
+      .addReg(SrcReg, getKillRegState(KillSrc)).addImm(1);
+    return;
+  }
+
   // Everything else needs only one instruction.
   unsigned Opcode;
   if (SystemZ::GR64BitRegClass.contains(DestReg, SrcReg))
@@ -1434,6 +1465,7 @@ SystemZII::Branch
 SystemZInstrInfo::getBranchInfo(const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
   case SystemZ::BR:
+  case SystemZ::BI:
   case SystemZ::J:
   case SystemZ::JG:
     return SystemZII::Branch(SystemZII::BranchNormal, SystemZ::CCMASK_ANY,

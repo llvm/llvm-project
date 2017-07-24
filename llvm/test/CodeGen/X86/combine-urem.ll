@@ -43,7 +43,7 @@ define <4 x i32> @combine_vec_urem_by_pow2a(<4 x i32> %x) {
 ;
 ; AVX2-LABEL: combine_vec_urem_by_pow2a:
 ; AVX2:       # BB#0:
-; AVX2-NEXT:    vbroadcastss {{.*}}(%rip), %xmm1
+; AVX2-NEXT:    vbroadcastss {{.*#+}} xmm1 = [3,3,3,3]
 ; AVX2-NEXT:    vandps %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
   %1 = urem <4 x i32> %x, <i32 4, i32 4, i32 4, i32 4>
@@ -87,7 +87,7 @@ define <4 x i32> @combine_vec_urem_by_pow2c(<4 x i32> %x, <4 x i32> %y) {
 ;
 ; AVX2-LABEL: combine_vec_urem_by_pow2c:
 ; AVX2:       # BB#0:
-; AVX2-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm2
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [1,1,1,1]
 ; AVX2-NEXT:    vpsllvd %xmm1, %xmm2, %xmm1
 ; AVX2-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
 ; AVX2-NEXT:    vpaddd %xmm2, %xmm1, %xmm1
@@ -146,7 +146,7 @@ define <4 x i32> @combine_vec_urem_by_pow2d(<4 x i32> %x, <4 x i32> %y) {
 ;
 ; AVX2-LABEL: combine_vec_urem_by_pow2d:
 ; AVX2:       # BB#0:
-; AVX2-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm2
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
 ; AVX2-NEXT:    vpsrlvd %xmm1, %xmm2, %xmm1
 ; AVX2-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
 ; AVX2-NEXT:    vpaddd %xmm2, %xmm1, %xmm1
@@ -183,7 +183,7 @@ define <4 x i32> @combine_vec_urem_by_shl_pow2a(<4 x i32> %x, <4 x i32> %y) {
 ;
 ; AVX2-LABEL: combine_vec_urem_by_shl_pow2a:
 ; AVX2:       # BB#0:
-; AVX2-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm2
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [4,4,4,4]
 ; AVX2-NEXT:    vpsllvd %xmm1, %xmm2, %xmm1
 ; AVX2-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
 ; AVX2-NEXT:    vpaddd %xmm2, %xmm1, %xmm1

@@ -1364,79 +1364,6 @@ HexagonTargetLowering::LowerVSELECT(SDValue Op, SelectionDAG &DAG) const {
   return SDValue();
 }
 
-// Handle only specific vector loads.
-SDValue HexagonTargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
-  EVT VT = Op.getValueType();
-  SDLoc DL(Op);
-  LoadSDNode *LoadNode = cast<LoadSDNode>(Op);
-  SDValue Chain = LoadNode->getChain();
-  SDValue Ptr = Op.getOperand(1);
-  SDValue LoweredLoad;
-  SDValue Result;
-  SDValue Base = LoadNode->getBasePtr();
-  ISD::LoadExtType Ext = LoadNode->getExtensionType();
-  unsigned Alignment = LoadNode->getAlignment();
-  SDValue LoadChain;
-
-  if(Ext == ISD::NON_EXTLOAD)
-    Ext = ISD::ZEXTLOAD;
-
-  if (VT == MVT::v4i16) {
-    if (Alignment == 2) {
-      SDValue Loads[4];
-      // Base load.
-      Loads[0] = DAG.getExtLoad(Ext, DL, MVT::i32, Chain, Base,
-                                LoadNode->getPointerInfo(), MVT::i16, Alignment,
-                                LoadNode->getMemOperand()->getFlags());
-      // Base+2 load.
-      SDValue Increment = DAG.getConstant(2, DL, MVT::i32);
-      Ptr = DAG.getNode(ISD::ADD, DL, Base.getValueType(), Base, Increment);
-      Loads[1] = DAG.getExtLoad(Ext, DL, MVT::i32, Chain, Ptr,
-                                LoadNode->getPointerInfo(), MVT::i16, Alignment,
-                                LoadNode->getMemOperand()->getFlags());
-      // SHL 16, then OR base and base+2.
-      SDValue ShiftAmount = DAG.getConstant(16, DL, MVT::i32);
-      SDValue Tmp1 = DAG.getNode(ISD::SHL, DL, MVT::i32, Loads[1], ShiftAmount);
-      SDValue Tmp2 = DAG.getNode(ISD::OR, DL, MVT::i32, Tmp1, Loads[0]);
-      // Base + 4.
-      Increment = DAG.getConstant(4, DL, MVT::i32);
-      Ptr = DAG.getNode(ISD::ADD, DL, Base.getValueType(), Base, Increment);
-      Loads[2] = DAG.getExtLoad(Ext, DL, MVT::i32, Chain, Ptr,
-                                LoadNode->getPointerInfo(), MVT::i16, Alignment,
-                                LoadNode->getMemOperand()->getFlags());
-      // Base + 6.
-      Increment = DAG.getConstant(6, DL, MVT::i32);
-      Ptr = DAG.getNode(ISD::ADD, DL, Base.getValueType(), Base, Increment);
-      Loads[3] = DAG.getExtLoad(Ext, DL, MVT::i32, Chain, Ptr,
-                                LoadNode->getPointerInfo(), MVT::i16, Alignment,
-                                LoadNode->getMemOperand()->getFlags());
-      // SHL 16, then OR base+4 and base+6.
-      Tmp1 = DAG.getNode(ISD::SHL, DL, MVT::i32, Loads[3], ShiftAmount);
-      SDValue Tmp4 = DAG.getNode(ISD::OR, DL, MVT::i32, Tmp1, Loads[2]);
-      // Combine to i64. This could be optimised out later if we can
-      // affect reg allocation of this code.
-      Result = DAG.getNode(HexagonISD::COMBINE, DL, MVT::i64, Tmp4, Tmp2);
-      LoadChain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other,
-                              Loads[0].getValue(1), Loads[1].getValue(1),
-                              Loads[2].getValue(1), Loads[3].getValue(1));
-    } else {
-      // Perform default type expansion.
-      Result = DAG.getLoad(MVT::i64, DL, Chain, Ptr, LoadNode->getPointerInfo(),
-                           LoadNode->getAlignment(),
-                           LoadNode->getMemOperand()->getFlags());
-      LoadChain = Result.getValue(1);
-    }
-  } else
-    llvm_unreachable("Custom lowering unsupported load");
-
-  Result = DAG.getNode(ISD::BITCAST, DL, VT, Result);
-  // Since we pretend to lower a load, we need the original chain
-  // info attached to the result.
-  SDValue Ops[] = { Result, LoadChain };
-
-  return DAG.getMergeValues(Ops, DL);
-}
-
 SDValue
 HexagonTargetLowering::LowerConstantPool(SDValue Op, SelectionDAG &DAG) const {
   EVT ValTy = Op.getValueType();
@@ -1961,17 +1888,11 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
   // Handling of vector operations.
   //
 
-  // Custom lower v4i16 load only. Let v4i16 store to be
-  // promoted for now.
   promoteLdStType(MVT::v4i8,  MVT::i32);
   promoteLdStType(MVT::v2i16, MVT::i32);
   promoteLdStType(MVT::v8i8,  MVT::i64);
+  promoteLdStType(MVT::v4i16, MVT::i64);
   promoteLdStType(MVT::v2i32, MVT::i64);
-
-  setOperationAction(ISD::LOAD,  MVT::v4i16, Custom);
-  setOperationAction(ISD::STORE, MVT::v4i16, Promote);
-  AddPromotedToType(ISD::LOAD,  MVT::v4i16, MVT::i64);
-  AddPromotedToType(ISD::STORE, MVT::v4i16, MVT::i64);
 
   // Set the action for vector operations to "expand", then override it with
   // either "custom" or "legal" for specific cases.
@@ -2970,8 +2891,6 @@ HexagonTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     case ISD::BlockAddress:         return LowerBlockAddress(Op, DAG);
     case ISD::GLOBAL_OFFSET_TABLE:  return LowerGLOBAL_OFFSET_TABLE(Op, DAG);
     case ISD::VASTART:              return LowerVASTART(Op, DAG);
-    // Custom lower some vector loads.
-    case ISD::LOAD:                 return LowerLOAD(Op, DAG);
     case ISD::DYNAMIC_STACKALLOC:   return LowerDYNAMIC_STACKALLOC(Op, DAG);
     case ISD::SETCC:                return LowerSETCC(Op, DAG);
     case ISD::VSELECT:              return LowerVSELECT(Op, DAG);

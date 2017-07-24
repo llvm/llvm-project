@@ -74,7 +74,7 @@ const uint32_t *
 AArch64RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
                                           CallingConv::ID CC) const {
   if (CC == CallingConv::GHC)
-    // This is academic becase all GHC calls are (supposed to be) tail calls
+    // This is academic because all GHC calls are (supposed to be) tail calls
     return CSR_AArch64_NoRegs_RegMask;
   if (CC == CallingConv::AnyReg)
     return CSR_AArch64_AllRegs_RegMask;

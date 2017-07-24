@@ -2250,6 +2250,12 @@ def: Storea_pat<SwapSt<atomic_store_16>, I32, addrgp, PS_storerhabs>;
 def: Storea_pat<SwapSt<atomic_store_32>, I32, addrgp, PS_storeriabs>;
 def: Storea_pat<SwapSt<atomic_store_64>, I64, addrgp, PS_storerdabs>;
 
+// Prefer this pattern to S2_asl_i_p_or for the special case of joining
+// two 32-bit words into a 64-bit word.
+let AddedComplexity = 200 in
+def: Pat<(or (shl (Aext64 I32:$a), (i32 32)), (Zext64 I32:$b)),
+         (A2_combinew I32:$a, I32:$b)>;
+
 def: Pat<(or (or (or (shl (i64 (zext (and I32:$b, (i32 65535)))), (i32 16)),
                      (i64 (zext (i32 (and I32:$a, (i32 65535)))))),
                  (shl (i64 (anyext (and I32:$c, (i32 65535)))), (i32 32))),

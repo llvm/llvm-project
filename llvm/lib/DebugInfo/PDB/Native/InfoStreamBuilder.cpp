@@ -34,7 +34,7 @@ void InfoStreamBuilder::setSignature(uint32_t S) { Sig = S; }
 
 void InfoStreamBuilder::setAge(uint32_t A) { Age = A; }
 
-void InfoStreamBuilder::setGuid(PDB_UniqueId G) { Guid = G; }
+void InfoStreamBuilder::setGuid(GUID G) { Guid = G; }
 
 void InfoStreamBuilder::addFeature(PdbRaw_FeatureSig Sig) {
   Features.push_back(Sig);

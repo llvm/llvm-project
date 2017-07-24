@@ -83,6 +83,9 @@ FunctionPass *createX86WinEHStatePass();
 /// the MachineInstr to MC.
 FunctionPass *createX86ExpandPseudoPass();
 
+/// This pass converts X86 cmov instructions into branch when profitable.
+FunctionPass *createX86CmovConverterPass();
+
 /// Return a Machine IR pass that selectively replaces
 /// certain byte and word instructions by equivalent 32 bit instructions,
 /// in order to eliminate partial register usage, false dependences on

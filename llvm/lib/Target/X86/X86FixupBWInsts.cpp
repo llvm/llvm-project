@@ -22,7 +22,7 @@
 /// instructions and register-to-register moves.  It would
 /// seem like cmov(s) would also be affected, but because of the way cmov is
 /// really implemented by most machines as reading both the destination and
-/// and source regsters, and then "merging" the two based on a condition,
+/// and source registers, and then "merging" the two based on a condition,
 /// it really already should be considered as having a true dependence on the
 /// destination register as well.
 ///

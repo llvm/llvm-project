@@ -510,6 +510,18 @@ StringRef DiagnosticIDs::getWarningOptionForDiag(unsigned DiagID) {
   return StringRef();
 }
 
+std::vector<std::string> DiagnosticIDs::getDiagnosticFlags() {
+  std::vector<std::string> Res;
+  for (size_t I = 1; DiagGroupNames[I] != '\0';) {
+    std::string Diag(DiagGroupNames + I + 1, DiagGroupNames[I]);
+    I += DiagGroupNames[I] + 1;
+    Res.push_back("-W" + Diag);
+    Res.push_back("-Wno" + Diag);
+  }
+
+  return Res;
+}
+
 /// Return \c true if any diagnostics were found in this group, even if they
 /// were filtered out due to having the wrong flavor.
 static bool getDiagnosticsInGroup(diag::Flavor Flavor,

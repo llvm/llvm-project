@@ -25,6 +25,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/AliasSetTracker.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/OptimizationDiagnosticInfo.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Value.h"
@@ -59,7 +60,8 @@ class RejectLog;
 /// Remember to at least track failures (-polly-detect-track-failures).
 /// @param P The region delimiters (entry & exit) we emit remarks for.
 /// @param Log The error log containing all messages being emitted as remark.
-void emitRejectionRemarks(const BBPair &P, const RejectLog &Log);
+void emitRejectionRemarks(const BBPair &P, const RejectLog &Log,
+                          OptimizationRemarkEmitter &ORE);
 
 // Discriminator for LLVM-style RTTI (dyn_cast<> et al.)
 enum class RejectReasonKind {
@@ -85,6 +87,7 @@ enum class RejectReasonKind {
 
   LoopBound,
   LoopHasNoExit,
+  LoopOnlySomeLatches,
 
   FuncCall,
   NonSimpleMemoryAccess,
@@ -121,6 +124,16 @@ public:
   RejectReason(RejectReasonKind K);
 
   virtual ~RejectReason() {}
+
+  /// Generate the remark name to identify this remark.
+  ///
+  /// @return A short string that identifies the error.
+  virtual std::string getRemarkName() const = 0;
+
+  /// Get the Basic Block containing this remark.
+  ///
+  /// @return The Basic Block containing this remark.
+  virtual const Value *getRemarkBB() const = 0;
 
   /// Generate a reasonable diagnostic message describing this error.
   ///
@@ -202,6 +215,8 @@ public:
 
   /// @name RejectReason interface
   //@{
+  virtual std::string getRemarkName() const override;
+  virtual const Value *getRemarkBB() const override;
   virtual std::string getMessage() const override;
   virtual const DebugLoc &getDebugLoc() const override;
   //@}
@@ -224,6 +239,8 @@ public:
 
   /// @name RejectReason interface
   //@{
+  virtual std::string getRemarkName() const override;
+  virtual const Value *getRemarkBB() const override;
   virtual std::string getMessage() const override;
   virtual std::string getEndUserMessage() const override;
   virtual const DebugLoc &getDebugLoc() const override;
@@ -248,6 +265,8 @@ public:
 
   /// @name RejectReason interface
   //@{
+  virtual std::string getRemarkName() const override;
+  virtual const Value *getRemarkBB() const override;
   virtual std::string getMessage() const override;
   virtual std::string getEndUserMessage() const override;
   virtual const DebugLoc &getDebugLoc() const override;
@@ -262,6 +281,7 @@ public:
 class ReportAffFunc : public RejectReason {
   //===--------------------------------------------------------------------===//
 
+protected:
   // The instruction that caused non-affinity to occur.
   const Instruction *Inst;
 
@@ -300,6 +320,8 @@ public:
 
   /// @name RejectReason interface
   //@{
+  virtual std::string getRemarkName() const override;
+  virtual const Value *getRemarkBB() const override;
   virtual std::string getMessage() const override;
   //@}
 };
@@ -325,6 +347,8 @@ public:
 
   /// @name RejectReason interface
   //@{
+  virtual std::string getRemarkName() const override;
+  virtual const Value *getRemarkBB() const override;
   virtual std::string getMessage() const override;
   //@}
 };
@@ -348,6 +372,8 @@ public:
 
   /// @name RejectReason interface
   //@{
+  virtual std::string getRemarkName() const override;
+  virtual const Value *getRemarkBB() const override;
   virtual std::string getMessage() const override;
   //@}
 };
@@ -382,6 +408,8 @@ public:
 
   /// @name RejectReason interface
   //@{
+  virtual std::string getRemarkName() const override;
+  virtual const Value *getRemarkBB() const override;
   virtual std::string getMessage() const override;
   //@}
 };
@@ -401,6 +429,8 @@ public:
 
   /// @name RejectReason interface
   //@{
+  virtual std::string getRemarkName() const override;
+  virtual const Value *getRemarkBB() const override;
   virtual std::string getMessage() const override;
   //@}
 };
@@ -420,6 +450,8 @@ public:
 
   /// @name RejectReason interface
   //@{
+  virtual std::string getRemarkName() const override;
+  virtual const Value *getRemarkBB() const override;
   virtual std::string getMessage() const override;
   //@}
 };
@@ -444,6 +476,8 @@ public:
 
   /// @name RejectReason interface
   //@{
+  virtual std::string getRemarkName() const override;
+  virtual const Value *getRemarkBB() const override;
   virtual std::string getMessage() const override;
   virtual std::string getEndUserMessage() const override;
   //@}
@@ -475,6 +509,8 @@ public:
 
   /// @name RejectReason interface
   //@{
+  virtual std::string getRemarkName() const override;
+  virtual const Value *getRemarkBB() const override;
   virtual std::string getMessage() const override;
   virtual std::string getEndUserMessage() const override;
   //@}
@@ -500,6 +536,8 @@ public:
 
   /// @name RejectReason interface
   //@{
+  virtual std::string getRemarkName() const override;
+  virtual const Value *getRemarkBB() const override;
   virtual std::string getMessage() const override;
   virtual std::string getEndUserMessage() const override;
   //@}
@@ -531,6 +569,8 @@ public:
 
   /// @name RejectReason interface
   //@{
+  virtual std::string getRemarkName() const override;
+  virtual const Value *getRemarkBB() const override;
   virtual std::string getMessage() const override;
   virtual const DebugLoc &getDebugLoc() const override;
   virtual std::string getEndUserMessage() const override;
@@ -559,6 +599,38 @@ public:
 
   /// @name RejectReason interface
   //@{
+  virtual std::string getRemarkName() const override;
+  virtual const Value *getRemarkBB() const override;
+  virtual std::string getMessage() const override;
+  virtual const DebugLoc &getDebugLoc() const override;
+  virtual std::string getEndUserMessage() const override;
+  //@}
+};
+
+//===----------------------------------------------------------------------===//
+/// Captures errors when not all loop latches are part of the scop.
+class ReportLoopOnlySomeLatches : public RejectReason {
+  //===--------------------------------------------------------------------===//
+
+  /// The loop for which not all loop latches are part of the scop.
+  Loop *L;
+
+  const DebugLoc Loc;
+
+public:
+  ReportLoopOnlySomeLatches(Loop *L)
+      : RejectReason(RejectReasonKind::LoopOnlySomeLatches), L(L),
+        Loc(L->getStartLoc()) {}
+
+  /// @name LLVM-RTTI interface
+  //@{
+  static bool classof(const RejectReason *RR);
+  //@}
+
+  /// @name RejectReason interface
+  //@{
+  virtual std::string getRemarkName() const override;
+  virtual const Value *getRemarkBB() const override;
   virtual std::string getMessage() const override;
   virtual const DebugLoc &getDebugLoc() const override;
   virtual std::string getEndUserMessage() const override;
@@ -583,6 +655,8 @@ public:
 
   /// @name RejectReason interface
   //@{
+  virtual std::string getRemarkName() const override;
+  virtual const Value *getRemarkBB() const override;
   virtual std::string getMessage() const override;
   virtual const DebugLoc &getDebugLoc() const override;
   virtual std::string getEndUserMessage() const override;
@@ -621,6 +695,8 @@ public:
 
   /// @name RejectReason interface
   //@{
+  virtual std::string getRemarkName() const override;
+  virtual const Value *getRemarkBB() const override;
   virtual std::string getMessage() const override;
   virtual const DebugLoc &getDebugLoc() const override;
   virtual std::string getEndUserMessage() const override;
@@ -641,6 +717,7 @@ public:
 
   /// @name RejectReason interface
   //@{
+  virtual std::string getRemarkName() const override;
   virtual std::string getMessage() const override;
   //@}
 };
@@ -663,6 +740,8 @@ public:
 
   /// @name RejectReason interface
   //@{
+  virtual std::string getRemarkName() const override;
+  virtual const Value *getRemarkBB() const override;
   virtual std::string getMessage() const override;
   virtual const DebugLoc &getDebugLoc() const override;
   //@}
@@ -684,6 +763,8 @@ public:
 
   /// @name RejectReason interface
   //@{
+  virtual std::string getRemarkName() const override;
+  virtual const Value *getRemarkBB() const override;
   virtual std::string getMessage() const override;
   virtual const DebugLoc &getDebugLoc() const override;
   //@}
@@ -705,6 +786,8 @@ public:
 
   /// @name RejectReason interface
   //@{
+  virtual std::string getRemarkName() const override;
+  virtual const Value *getRemarkBB() const override;
   virtual std::string getMessage() const override;
   virtual const DebugLoc &getDebugLoc() const override;
   //@}
@@ -726,6 +809,8 @@ public:
 
   /// @name RejectReason interface
   //@{
+  virtual std::string getRemarkName() const override;
+  virtual const Value *getRemarkBB() const override;
   virtual std::string getMessage() const override;
   virtual std::string getEndUserMessage() const override;
   virtual const DebugLoc &getDebugLoc() const override;
@@ -748,6 +833,8 @@ public:
 
   /// @name RejectReason interface
   //@{
+  virtual std::string getRemarkName() const override;
+  virtual const Value *getRemarkBB() const override;
   virtual std::string getMessage() const override;
   virtual std::string getEndUserMessage() const override;
   virtual const DebugLoc &getDebugLoc() const override;
@@ -772,6 +859,8 @@ public:
 
   /// @name RejectReason interface
   //@{
+  virtual std::string getRemarkName() const override;
+  virtual const Value *getRemarkBB() const override;
   virtual std::string getMessage() const override;
   virtual const DebugLoc &getDebugLoc() const override;
   virtual std::string getEndUserMessage() const override;

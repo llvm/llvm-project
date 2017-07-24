@@ -379,11 +379,11 @@ TEST_F(LexerTest, DontOverallocateStringifyArgs) {
   auto PP = CreatePP("\"StrArg\", 5, 'C'", ModLoader);
 
   llvm::BumpPtrAllocator Allocator;
-  std::array<IdentifierInfo *, 3> ArgList;
+  std::array<IdentifierInfo *, 3> ParamList;
   MacroInfo *MI = PP->AllocateMacroInfo({});
   MI->setIsFunctionLike();
-  MI->setArgumentList(ArgList, Allocator);
-  EXPECT_EQ(3u, MI->getNumArgs());
+  MI->setParameterList(ParamList, Allocator);
+  EXPECT_EQ(3u, MI->getNumParams());
   EXPECT_TRUE(MI->isFunctionLike());
 
   Token Eof;

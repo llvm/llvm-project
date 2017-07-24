@@ -1091,6 +1091,94 @@ class InstVRIe<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{7-0}   = op{7-0};
 }
 
+class InstVRIf<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstSystemZ<6, outs, ins, asmstr, pattern> {
+  field bits<48> Inst;
+  field bits<48> SoftFail = 0;
+
+  bits<5> V1;
+  bits<5> V2;
+  bits<5> V3;
+  bits<8> I4;
+  bits<4> M5;
+
+  let Inst{47-40} = op{15-8};
+  let Inst{39-36} = V1{3-0};
+  let Inst{35-32} = V2{3-0};
+  let Inst{31-28} = V3{3-0};
+  let Inst{27-24} = 0;
+  let Inst{23-20} = M5;
+  let Inst{19-12} = I4;
+  let Inst{11}    = V1{4};
+  let Inst{10}    = V2{4};
+  let Inst{9}     = V3{4};
+  let Inst{8}     = 0;
+  let Inst{7-0}   = op{7-0};
+}
+
+class InstVRIg<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstSystemZ<6, outs, ins, asmstr, pattern> {
+  field bits<48> Inst;
+  field bits<48> SoftFail = 0;
+
+  bits<5> V1;
+  bits<5> V2;
+  bits<8> I3;
+  bits<8> I4;
+  bits<4> M5;
+
+  let Inst{47-40} = op{15-8};
+  let Inst{39-36} = V1{3-0};
+  let Inst{35-32} = V2{3-0};
+  let Inst{31-24} = I4;
+  let Inst{23-20} = M5;
+  let Inst{19-12} = I3;
+  let Inst{11}    = V1{4};
+  let Inst{10}    = V2{4};
+  let Inst{9-8}   = 0;
+  let Inst{7-0}   = op{7-0};
+}
+
+class InstVRIh<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstSystemZ<6, outs, ins, asmstr, pattern> {
+  field bits<48> Inst;
+  field bits<48> SoftFail = 0;
+
+  bits<5> V1;
+  bits<16> I2;
+  bits<4> I3;
+
+  let Inst{47-40} = op{15-8};
+  let Inst{39-36} = V1{3-0};
+  let Inst{35-32} = 0;
+  let Inst{31-16} = I2;
+  let Inst{15-12} = I3;
+  let Inst{11}    = V1{4};
+  let Inst{10-8}  = 0;
+  let Inst{7-0}   = op{7-0};
+}
+
+class InstVRIi<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstSystemZ<6, outs, ins, asmstr, pattern> {
+  field bits<48> Inst;
+  field bits<48> SoftFail = 0;
+
+  bits<5> V1;
+  bits<4> R2;
+  bits<8> I3;
+  bits<4> M4;
+
+  let Inst{47-40} = op{15-8};
+  let Inst{39-36} = V1{3-0};
+  let Inst{35-32} = R2;
+  let Inst{31-24} = 0;
+  let Inst{23-20} = M4;
+  let Inst{19-12} = I3;
+  let Inst{11}    = V1{4};
+  let Inst{10-8}  = 0;
+  let Inst{7-0}   = op{7-0};
+}
+
 // Depending on the instruction mnemonic, certain bits may be or-ed into
 // the M4 value provided as explicit operand.  These are passed as m4or.
 class InstVRRa<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern,
@@ -1259,6 +1347,67 @@ class InstVRRf<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{7-0}   = op{7-0};
 }
 
+class InstVRRg<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstSystemZ<6, outs, ins, asmstr, pattern> {
+  field bits<48> Inst;
+  field bits<48> SoftFail = 0;
+
+  bits<5> V1;
+
+  let Inst{47-40} = op{15-8};
+  let Inst{39-36} = 0;
+  let Inst{35-32} = V1{3-0};
+  let Inst{31-12} = 0;
+  let Inst{11}    = 0;
+  let Inst{10}    = V1{4};
+  let Inst{9-8}   = 0;
+  let Inst{7-0}   = op{7-0};
+}
+
+class InstVRRh<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstSystemZ<6, outs, ins, asmstr, pattern> {
+  field bits<48> Inst;
+  field bits<48> SoftFail = 0;
+
+  bits<5> V1;
+  bits<5> V2;
+  bits<4> M3;
+
+  let Inst{47-40} = op{15-8};
+  let Inst{39-36} = 0;
+  let Inst{35-32} = V1{3-0};
+  let Inst{31-28} = V2{3-0};
+  let Inst{27-24} = 0;
+  let Inst{23-20} = M3;
+  let Inst{19-12} = 0;
+  let Inst{11}    = 0;
+  let Inst{10}    = V1{4};
+  let Inst{9}     = V2{4};
+  let Inst{8}     = 0;
+  let Inst{7-0}   = op{7-0};
+}
+
+class InstVRRi<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstSystemZ<6, outs, ins, asmstr, pattern> {
+  field bits<48> Inst;
+  field bits<48> SoftFail = 0;
+
+  bits<4> R1;
+  bits<5> V2;
+  bits<4> M3;
+
+  let Inst{47-40} = op{15-8};
+  let Inst{39-36} = R1;
+  let Inst{35-32} = V2{3-0};
+  let Inst{31-24} = 0;
+  let Inst{23-20} = M3;
+  let Inst{19-12} = 0;
+  let Inst{11}    = 0;
+  let Inst{10}    = V2{4};
+  let Inst{9-8}   = 0;
+  let Inst{7-0}   = op{7-0};
+}
+
 class InstVRSa<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
@@ -1321,6 +1470,25 @@ class InstVRSc<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{7-0}   = op{7-0};
 }
 
+class InstVRSd<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstSystemZ<6, outs, ins, asmstr, pattern> {
+  field bits<48> Inst;
+  field bits<48> SoftFail = 0;
+
+  bits<5> V1;
+  bits<16> BD2;
+  bits<4> R3;
+
+  let Inst{47-40} = op{15-8};
+  let Inst{39-36} = 0;
+  let Inst{35-32} = R3;
+  let Inst{31-16} = BD2;
+  let Inst{15-12} = V1{3-0};
+  let Inst{11-9}  = 0;
+  let Inst{8}     = V1{4};
+  let Inst{7-0}   = op{7-0};
+}
+
 class InstVRV<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
@@ -1355,6 +1523,24 @@ class InstVRX<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{15-12} = M3;
   let Inst{11}    = V1{4};
   let Inst{10-8}  = 0;
+  let Inst{7-0}   = op{7-0};
+}
+
+class InstVSI<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstSystemZ<6, outs, ins, asmstr, pattern> {
+  field bits<48> Inst;
+  field bits<48> SoftFail = 0;
+
+  bits<5> V1;
+  bits<16> BD2;
+  bits<8> I3;
+
+  let Inst{47-40} = op{15-8};
+  let Inst{39-32} = I3;
+  let Inst{31-16} = BD2;
+  let Inst{15-12} = V1{3-0};
+  let Inst{11-9}  = 0;
+  let Inst{8}     = V1{4};
   let Inst{7-0}   = op{7-0};
 }
 
@@ -1910,6 +2096,25 @@ class FixedCondBranchRX<CondVariant V, string mnemonic, bits<8> opcode>
   let M1 = V.ccmask;
 }
 
+class CondBranchRXY<string mnemonic, bits<16> opcode>
+  : InstRXYb<opcode, (outs), (ins cond4:$valid, cond4:$M1, bdxaddr20only:$XBD2),
+             !subst("#", "${M1}", mnemonic)#"\t$XBD2", []> {
+  let CCMaskFirst = 1;
+}
+
+class AsmCondBranchRXY<string mnemonic, bits<16> opcode>
+  : InstRXYb<opcode, (outs), (ins imm32zx4:$M1, bdxaddr20only:$XBD2),
+             mnemonic#"\t$M1, $XBD2", []>;
+
+class FixedCondBranchRXY<CondVariant V, string mnemonic, bits<16> opcode,
+                         SDPatternOperator operator = null_frag>
+  : InstRXYb<opcode, (outs), (ins bdxaddr20only:$XBD2),
+             !subst("#", V.suffix, mnemonic)#"\t$XBD2",
+             [(operator (load bdxaddr20only:$XBD2))]> {
+  let isAsmParserOnly = V.alternate;
+  let M1 = V.ccmask;
+}
+
 class CmpBranchRIEa<string mnemonic, bits<16> opcode,
                     RegisterOperand cls, Immediate imm>
   : InstRIEa<opcode, (outs), (ins cls:$R1, imm:$I2, cond4:$M3),
@@ -2268,6 +2473,24 @@ class StoreLengthVRSb<string mnemonic, bits<16> opcode,
              mnemonic#"\t$V1, $R3, $BD2",
              [(operator VR128:$V1, GR32:$R3, bdaddr12only:$BD2)]> {
   let M4 = 0;
+  let mayStore = 1;
+  let AccessBytes = bytes;
+}
+
+class StoreLengthVRSd<string mnemonic, bits<16> opcode,
+                      SDPatternOperator operator, bits<5> bytes>
+  : InstVRSd<opcode, (outs), (ins VR128:$V1, GR32:$R3, bdaddr12only:$BD2),
+             mnemonic#"\t$V1, $R3, $BD2",
+             [(operator VR128:$V1, GR32:$R3, bdaddr12only:$BD2)]> {
+  let mayStore = 1;
+  let AccessBytes = bytes;
+}
+
+class StoreLengthVSI<string mnemonic, bits<16> opcode,
+                     SDPatternOperator operator, bits<5> bytes>
+  : InstVSI<opcode, (outs), (ins VR128:$V1, bdaddr12only:$BD2, imm32zx8:$I3),
+            mnemonic#"\t$V1, $BD2, $I3",
+            [(operator VR128:$V1, imm32zx8:$I3, bdaddr12only:$BD2)]> {
   let mayStore = 1;
   let AccessBytes = bytes;
 }
@@ -2699,6 +2922,11 @@ class SideEffectBinaryRX<string mnemonic, bits<8> opcode,
                          RegisterOperand cls>
   : InstRXa<opcode, (outs), (ins cls:$R1, bdxaddr12only:$XBD2),
             mnemonic##"\t$R1, $XBD2", []>;
+
+class SideEffectBinaryRXY<string mnemonic, bits<16> opcode,
+                          RegisterOperand cls>
+  : InstRXYa<opcode, (outs), (ins cls:$R1, bdxaddr20only:$XBD2),
+             mnemonic##"\t$R1, $XBD2", []>;
 
 class SideEffectBinaryRILPC<string mnemonic, bits<12> opcode,
                             RegisterOperand cls>
@@ -3188,6 +3416,11 @@ class BinaryVRIeFloatGeneric<string mnemonic, bits<16> opcode>
              (ins VR128:$V2, imm32zx12:$I3, imm32zx4:$M4, imm32zx4:$M5),
              mnemonic#"\t$V1, $V2, $I3, $M4, $M5", []>;
 
+class BinaryVRIh<string mnemonic, bits<16> opcode>
+  : InstVRIh<opcode, (outs VR128:$V1),
+             (ins imm32zx16:$I2, imm32zx4:$I3),
+             mnemonic#"\t$V1, $I2, $I3", []>;
+
 class BinaryVRRa<string mnemonic, bits<16> opcode, SDPatternOperator operator,
                  TypedReg tr1, TypedReg tr2, bits<4> type = 0, bits<4> m4 = 0>
   : InstVRRa<opcode, (outs tr1.op:$V1), (ins tr2.op:$V2, imm32zx4:$M5),
@@ -3316,6 +3549,10 @@ class BinaryVRRf<string mnemonic, bits<16> opcode, SDPatternOperator operator,
              mnemonic#"\t$V1, $R2, $R3",
              [(set tr.op:$V1, (tr.vt (operator GR64:$R2, GR64:$R3)))]>;
 
+class BinaryVRRi<string mnemonic, bits<16> opcode, RegisterOperand cls>
+  : InstVRRi<opcode, (outs cls:$R1), (ins VR128:$V2, imm32zx4:$M3),
+             mnemonic#"\t$R1, $V2, $M3", []>;
+
 class BinaryVRSa<string mnemonic, bits<16> opcode, SDPatternOperator operator,
                  TypedReg tr1, TypedReg tr2, bits<4> type>
   : InstVRSa<opcode, (outs tr1.op:$V1), (ins tr2.op:$V3, shift12only:$BD2),
@@ -3352,6 +3589,15 @@ class BinaryVRScGeneric<string mnemonic, bits<16> opcode>
   : InstVRSc<opcode, (outs GR64:$R1),
              (ins VR128:$V3, shift12only:$BD2, imm32zx4: $M4),
              mnemonic#"\t$R1, $V3, $BD2, $M4", []>;
+
+class BinaryVRSd<string mnemonic, bits<16> opcode, SDPatternOperator operator,
+                 bits<5> bytes>
+  : InstVRSd<opcode, (outs VR128:$V1), (ins GR32:$R3, bdaddr12only:$BD2),
+             mnemonic#"\t$V1, $R3, $BD2",
+             [(set VR128:$V1, (operator GR32:$R3, bdaddr12only:$BD2))]> {
+  let mayLoad = 1;
+  let AccessBytes = bytes;
+}
 
 class BinaryVRX<string mnemonic, bits<16> opcode, SDPatternOperator operator,
                 TypedReg tr, bits<5> bytes>
@@ -3396,6 +3642,15 @@ class StoreBinaryRSL<string mnemonic, bits<16> opcode, RegisterOperand cls>
              (ins cls:$R1, bdladdr12onlylen8:$BDL2, imm32zx4:$M3),
              mnemonic#"\t$R1, $BDL2, $M3", []> {
   let mayStore = 1;
+}
+
+class BinaryVSI<string mnemonic, bits<16> opcode, SDPatternOperator operator,
+                bits<5> bytes>
+  : InstVSI<opcode, (outs VR128:$V1), (ins bdaddr12only:$BD2, imm32zx8:$I3),
+            mnemonic#"\t$V1, $BD2, $I3",
+            [(set VR128:$V1, (operator imm32zx8:$I3, bdaddr12only:$BD2))]> {
+  let mayLoad = 1;
+  let AccessBytes = bytes;
 }
 
 class StoreBinaryVRV<string mnemonic, bits<16> opcode, bits<5> bytes,
@@ -3625,6 +3880,12 @@ class CompareVRRaFloatGeneric<string mnemonic, bits<16> opcode>
   let M5 = 0;
 }
 
+class CompareVRRh<string mnemonic, bits<16> opcode>
+  : InstVRRh<opcode, (outs), (ins VR128:$V1, VR128:$V2, imm32zx4:$M3),
+             mnemonic#"\t$V1, $V2, $M3", []> {
+  let isCompare = 1;
+}
+
 class TestRXE<string mnemonic, bits<16> opcode, SDPatternOperator operator,
               RegisterOperand cls>
   : InstRXE<opcode, (outs), (ins cls:$R1, bdxaddr12only:$XBD2),
@@ -3638,6 +3899,10 @@ class TestRSL<string mnemonic, bits<16> opcode>
              mnemonic#"\t$BDL1", []> {
   let mayLoad = 1;
 }
+
+class TestVRRg<string mnemonic, bits<16> opcode>
+  : InstVRRg<opcode, (outs), (ins VR128:$V1),
+             mnemonic#"\t$V1", []>;
 
 class SideEffectTernarySSc<string mnemonic, bits<8> opcode>
   : InstSSc<opcode, (outs), (ins bdladdr12onlylen4:$BDL1,
@@ -3842,6 +4107,11 @@ class TernaryVRId<string mnemonic, bits<16> opcode, SDPatternOperator operator,
   let M5 = type;
 }
 
+class TernaryVRIi<string mnemonic, bits<16> opcode, RegisterOperand cls>
+  : InstVRIi<opcode, (outs VR128:$V1),
+             (ins cls:$R2, imm32zx8:$I3, imm32zx4:$M4),
+             mnemonic#"\t$V1, $R2, $I3, $M4", []>;
+
 class TernaryVRRa<string mnemonic, bits<16> opcode, SDPatternOperator operator,
                   TypedReg tr1, TypedReg tr2, bits<4> type, bits<4> m4or>
   : InstVRRa<opcode, (outs tr1.op:$V1),
@@ -3913,6 +4183,25 @@ class TernaryVRRc<string mnemonic, bits<16> opcode, SDPatternOperator operator,
   let M5 = 0;
   let M6 = 0;
 }
+
+class TernaryVRRcFloat<string mnemonic, bits<16> opcode,
+                       SDPatternOperator operator, TypedReg tr1, TypedReg tr2,
+                       bits<4> type = 0, bits<4> m5 = 0>
+  : InstVRRc<opcode, (outs tr1.op:$V1),
+             (ins tr2.op:$V2, tr2.op:$V3, imm32zx4:$M6),
+             mnemonic#"\t$V1, $V2, $V3, $M6",
+             [(set tr1.op:$V1, (tr1.vt (operator (tr2.vt tr2.op:$V2),
+                                                 (tr2.vt tr2.op:$V3),
+                                                 imm32zx4:$M6)))]> {
+  let M4 = type;
+  let M5 = m5;
+}
+
+class TernaryVRRcFloatGeneric<string mnemonic, bits<16> opcode>
+  : InstVRRc<opcode, (outs VR128:$V1),
+             (ins VR128:$V2, VR128:$V3, imm32zx4:$M4, imm32zx4:$M5,
+                  imm32zx4:$M6),
+             mnemonic#"\t$V1, $V2, $V3, $M4, $M5, $M6", []>;
 
 class TernaryVRRd<string mnemonic, bits<16> opcode, SDPatternOperator operator,
                   TypedReg tr1, TypedReg tr2, bits<4> type = 0>
@@ -4019,19 +4308,37 @@ class QuaternaryVRIdGeneric<string mnemonic, bits<16> opcode>
   let DisableEncoding = "$V1src";
 }
 
+class QuaternaryVRIf<string mnemonic, bits<16> opcode>
+  : InstVRIf<opcode, (outs VR128:$V1),
+             (ins VR128:$V2, VR128:$V3,
+                  imm32zx8:$I4, imm32zx4:$M5),
+             mnemonic#"\t$V1, $V2, $V3, $I4, $M5", []>;
+
+class QuaternaryVRIg<string mnemonic, bits<16> opcode>
+  : InstVRIg<opcode, (outs VR128:$V1),
+             (ins VR128:$V2, imm32zx8:$I3,
+                  imm32zx8:$I4, imm32zx4:$M5),
+             mnemonic#"\t$V1, $V2, $I3, $I4, $M5", []>;
+
 class QuaternaryVRRd<string mnemonic, bits<16> opcode,
                      SDPatternOperator operator, TypedReg tr1, TypedReg tr2,
-                     bits<4> type, SDPatternOperator m6mask, bits<4> m6or>
+                     TypedReg tr3, TypedReg tr4, bits<4> type,
+                     SDPatternOperator m6mask = imm32zx4, bits<4> m6or = 0>
   : InstVRRd<opcode, (outs tr1.op:$V1),
-             (ins tr2.op:$V2, tr2.op:$V3, tr2.op:$V4, m6mask:$M6),
+             (ins tr2.op:$V2, tr3.op:$V3, tr4.op:$V4, m6mask:$M6),
              mnemonic#"\t$V1, $V2, $V3, $V4, $M6",
              [(set tr1.op:$V1, (tr1.vt (operator (tr2.vt tr2.op:$V2),
-                                                 (tr2.vt tr2.op:$V3),
-                                                 (tr2.vt tr2.op:$V4),
+                                                 (tr3.vt tr3.op:$V3),
+                                                 (tr4.vt tr4.op:$V4),
                                                  m6mask:$M6)))],
              m6or> {
   let M5 = type;
 }
+
+class QuaternaryVRRdGeneric<string mnemonic, bits<16> opcode>
+  : InstVRRd<opcode, (outs VR128:$V1),
+             (ins VR128:$V2, VR128:$V3, VR128:$V4, imm32zx4:$M5, imm32zx4:$M6),
+             mnemonic#"\t$V1, $V2, $V3, $V4, $M5, $M6", []>;
 
 // Declare a pair of instructions, one which sets CC and one which doesn't.
 // The CC-setting form ends with "S" and sets the low bit of M6.
@@ -4041,13 +4348,15 @@ multiclass QuaternaryOptVRRdSPair<string mnemonic, bits<16> opcode,
                                 SDPatternOperator operator_cc,
                                 TypedReg tr1, TypedReg tr2, bits<4> type,
                                 bits<4> modifier = 0> {
-  def "" : QuaternaryVRRd<mnemonic, opcode, operator, tr1, tr2, type,
+  def "" : QuaternaryVRRd<mnemonic, opcode, operator,
+                          tr1, tr2, tr2, tr2, type,
                           imm32zx4even, !and (modifier, 14)>;
   def : InstAlias<mnemonic#"\t$V1, $V2, $V3, $V4",
                   (!cast<Instruction>(NAME) tr1.op:$V1, tr2.op:$V2,
                                             tr2.op:$V3, tr2.op:$V4, 0)>;
   let Defs = [CC] in
-    def S : QuaternaryVRRd<mnemonic##"s", opcode, operator_cc, tr1, tr2, type,
+    def S : QuaternaryVRRd<mnemonic##"s", opcode, operator_cc,
+                           tr1, tr2, tr2, tr2, type,
                            imm32zx4even, !add (!and (modifier, 14), 1)>;
   def : InstAlias<mnemonic#"s\t$V1, $V2, $V3, $V4",
                   (!cast<Instruction>(NAME#"S") tr1.op:$V1, tr2.op:$V2,
@@ -4055,10 +4364,7 @@ multiclass QuaternaryOptVRRdSPair<string mnemonic, bits<16> opcode,
 }
 
 multiclass QuaternaryOptVRRdSPairGeneric<string mnemonic, bits<16> opcode> {
-  def "" : InstVRRd<opcode, (outs VR128:$V1),
-                   (ins VR128:$V2, VR128:$V3, VR128:$V4,
-                        imm32zx4:$M5, imm32zx4:$M6),
-                   mnemonic#"\t$V1, $V2, $V3, $V4, $M5, $M6", []>;
+  def "" : QuaternaryVRRdGeneric<mnemonic, opcode>;
   def : InstAlias<mnemonic#"\t$V1, $V2, $V3, $V4, $M5",
                   (!cast<Instruction>(NAME) VR128:$V1, VR128:$V2, VR128:$V3,
                                             VR128:$V4, imm32zx4:$M5, 0)>;
@@ -4366,10 +4672,10 @@ class RotateSelectRIEfPseudo<RegisterOperand cls1, RegisterOperand cls2>
 
 // Implements "$dst = $cc & (8 >> CC) ? $src1 : $src2", where CC is
 // the value of the PSW's 2-bit condition code field.
-class SelectWrapper<RegisterOperand cls>
+class SelectWrapper<ValueType vt, RegisterOperand cls>
   : Pseudo<(outs cls:$dst),
            (ins cls:$src1, cls:$src2, imm32zx4:$valid, imm32zx4:$cc),
-           [(set cls:$dst, (z_select_ccmask cls:$src1, cls:$src2,
+           [(set (vt cls:$dst), (z_select_ccmask cls:$src1, cls:$src2,
                                             imm32zx4:$valid, imm32zx4:$cc))]> {
   let usesCustomInserter = 1;
   // Although the instructions used by these nodes do not in themselves

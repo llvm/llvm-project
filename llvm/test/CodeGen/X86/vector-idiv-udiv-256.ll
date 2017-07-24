@@ -123,7 +123,7 @@ define <8 x i32> @test_div7_8i32(<8 x i32> %a) nounwind {
 ;
 ; AVX2-LABEL: test_div7_8i32:
 ; AVX2:       # BB#0:
-; AVX2-NEXT:    vpbroadcastd {{.*}}(%rip), %ymm1
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [613566757,613566757,613566757,613566757,613566757,613566757,613566757,613566757]
 ; AVX2-NEXT:    vpshufd {{.*#+}} ymm2 = ymm1[1,1,3,3,5,5,7,7]
 ; AVX2-NEXT:    vpshufd {{.*#+}} ymm3 = ymm0[1,1,3,3,5,5,7,7]
 ; AVX2-NEXT:    vpmuludq %ymm2, %ymm3, %ymm2
@@ -392,7 +392,7 @@ define <8 x i32> @test_rem7_8i32(<8 x i32> %a) nounwind {
 ;
 ; AVX2-LABEL: test_rem7_8i32:
 ; AVX2:       # BB#0:
-; AVX2-NEXT:    vpbroadcastd {{.*}}(%rip), %ymm1
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [613566757,613566757,613566757,613566757,613566757,613566757,613566757,613566757]
 ; AVX2-NEXT:    vpshufd {{.*#+}} ymm2 = ymm1[1,1,3,3,5,5,7,7]
 ; AVX2-NEXT:    vpshufd {{.*#+}} ymm3 = ymm0[1,1,3,3,5,5,7,7]
 ; AVX2-NEXT:    vpmuludq %ymm2, %ymm3, %ymm2
@@ -403,7 +403,7 @@ define <8 x i32> @test_rem7_8i32(<8 x i32> %a) nounwind {
 ; AVX2-NEXT:    vpsrld $1, %ymm2, %ymm2
 ; AVX2-NEXT:    vpaddd %ymm1, %ymm2, %ymm1
 ; AVX2-NEXT:    vpsrld $2, %ymm1, %ymm1
-; AVX2-NEXT:    vpbroadcastd {{.*}}(%rip), %ymm2
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} ymm2 = [7,7,7,7,7,7,7,7]
 ; AVX2-NEXT:    vpmulld %ymm2, %ymm1, %ymm1
 ; AVX2-NEXT:    vpsubd %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq

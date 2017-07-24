@@ -1,6 +1,6 @@
 ; RUN: llc < %s -march=avr | FileCheck %s
 
-; CHECKC-LABEL: relax_breq
+; CHECK-LABEL: relax_breq
 ; CHECK: cpi     r{{[0-9]+}}, 0
 ; CHECK: brne    LBB0_1
 ; CHECK: rjmp    LBB0_2
@@ -66,7 +66,7 @@ finished:
   ret i8 3
 }
 
-; CHECKC-LABEL: no_relax_breq
+; CHECK-LABEL: no_relax_breq
 ; CHECK: cpi     r{{[0-9]+}}, 0
 ; CHECK: breq    [[END_BB:LBB[0-9]+_[0-9]+]]
 ; CHECK: nop

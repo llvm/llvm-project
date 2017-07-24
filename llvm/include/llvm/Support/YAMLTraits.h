@@ -1114,6 +1114,10 @@ public:
         void *Ctxt = nullptr,
         SourceMgr::DiagHandlerTy DiagHandler = nullptr,
         void *DiagHandlerCtxt = nullptr);
+  Input(MemoryBufferRef Input,
+        void *Ctxt = nullptr,
+        SourceMgr::DiagHandlerTy DiagHandler = nullptr,
+        void *DiagHandlerCtxt = nullptr);
   ~Input() override;
 
   // Check if there was an syntax or semantic error during parsing.

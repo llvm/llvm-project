@@ -2529,7 +2529,7 @@ StringRef CXXNameMangler::getCallingConvQualifierName(CallingConv CC) {
   case CC_X86ThisCall:
   case CC_X86VectorCall:
   case CC_X86Pascal:
-  case CC_X86_64Win64:
+  case CC_Win64:
   case CC_X86_64SysV:
   case CC_X86RegCall:
   case CC_AAPCS:

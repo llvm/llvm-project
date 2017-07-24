@@ -58,6 +58,7 @@ set(LLVM_TEST_DEPENDS
           llvm-mc
           llvm-mcmarkup
           llvm-modextract
+          llvm-mt
           llvm-nm
           llvm-objdump
           llvm-opt-report

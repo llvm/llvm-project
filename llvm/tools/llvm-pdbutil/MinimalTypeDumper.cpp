@@ -18,6 +18,7 @@
 #include "llvm/DebugInfo/CodeView/Formatters.h"
 #include "llvm/DebugInfo/CodeView/LazyRandomTypeCollection.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
+#include "llvm/DebugInfo/PDB/Native/TpiHashing.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MathExtras.h"
 
@@ -214,10 +215,20 @@ Error MinimalTypeDumpVisitor::visitTypeBegin(CVType &Record, TypeIndex Index) {
                  getLeafTypeName(Record.Type), Record.length());
   } else {
     std::string H;
-    if (Index.toArrayIndex() >= HashValues.size())
+    if (Index.toArrayIndex() >= HashValues.size()) {
       H = "(not present)";
-    else
-      H = utostr(HashValues[Index.toArrayIndex()]);
+    } else {
+      uint32_t Hash = HashValues[Index.toArrayIndex()];
+      Expected<uint32_t> MaybeHash = hashTypeRecord(Record);
+      if (!MaybeHash)
+        return MaybeHash.takeError();
+      uint32_t OurHash = *MaybeHash;
+      OurHash %= NumHashBuckets;
+      if (Hash == OurHash)
+        H = "0x" + utohexstr(Hash);
+      else
+        H = "0x" + utohexstr(Hash) + ", our hash = 0x" + utohexstr(OurHash);
+    }
     P.formatLine("{0} | {1} [size = {2}, hash = {3}]",
                  fmt_align(Index, AlignStyle::Right, Width),
                  getLeafTypeName(Record.Type), Record.length(), H);
@@ -395,8 +406,7 @@ Error MinimalTypeDumpVisitor::visitKnownRecord(CVType &CVR,
 
 Error MinimalTypeDumpVisitor::visitKnownRecord(CVType &CVR,
                                                TypeServer2Record &TS) {
-  P.formatLine("name = {0}, age = {1}, guid = {2}", TS.Name, TS.Age,
-               fmt_guid(TS.Guid));
+  P.formatLine("name = {0}, age = {1}, guid = {2}", TS.Name, TS.Age, TS.Guid);
   return Error::success();
 }
 

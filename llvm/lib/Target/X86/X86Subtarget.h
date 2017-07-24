@@ -597,7 +597,7 @@ public:
     case CallingConv::Intel_OCL_BI:
       return isTargetWin64();
     // This convention allows using the Win64 convention on other targets.
-    case CallingConv::X86_64_Win64:
+    case CallingConv::Win64:
       return true;
     // This convention allows using the SysV convention on Windows targets.
     case CallingConv::X86_64_SysV:

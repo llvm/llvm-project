@@ -119,6 +119,16 @@ LANGSTANDARD(gnucxx1z, "gnu++1z",
              LineComment | CPlusPlus | CPlusPlus11 | CPlusPlus14 | CPlusPlus1z |
              Digraphs | HexFloat | GNUMode)
 
+LANGSTANDARD(cxx2a, "c++2a",
+             CXX, "Working draft for ISO C++ 2020",
+             LineComment | CPlusPlus | CPlusPlus11 | CPlusPlus14 | CPlusPlus1z |
+             CPlusPlus2a | Digraphs | HexFloat)
+
+LANGSTANDARD(gnucxx2a, "gnu++2a",
+             CXX, "Working draft for ISO C++ 2020 with GNU extensions",
+             LineComment | CPlusPlus | CPlusPlus11 | CPlusPlus14 | CPlusPlus1z |
+             CPlusPlus2a | Digraphs | HexFloat | GNUMode)
+
 // OpenCL
 LANGSTANDARD(opencl10, "cl1.0",
              OpenCL, "OpenCL 1.0",

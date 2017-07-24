@@ -376,7 +376,7 @@ define <4 x i32> @srl_trunc_and_v4i64(<4 x i32> %x, <4 x i64> %y) nounwind {
 ; X32:       # BB#0:
 ; X32-NEXT:    vpshufd {{.*#+}} ymm1 = ymm1[0,2,2,3,4,6,6,7]
 ; X32-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[0,2,2,3]
-; X32-NEXT:    vpbroadcastd {{\.LCPI.*}}, %xmm2
+; X32-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [8,8,8,8]
 ; X32-NEXT:    vpand %xmm2, %xmm1, %xmm1
 ; X32-NEXT:    vpsrlvd %xmm1, %xmm0, %xmm0
 ; X32-NEXT:    vzeroupper
@@ -386,7 +386,7 @@ define <4 x i32> @srl_trunc_and_v4i64(<4 x i32> %x, <4 x i64> %y) nounwind {
 ; X64:       # BB#0:
 ; X64-NEXT:    vpshufd {{.*#+}} ymm1 = ymm1[0,2,2,3,4,6,6,7]
 ; X64-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[0,2,2,3]
-; X64-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm2
+; X64-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [8,8,8,8]
 ; X64-NEXT:    vpand %xmm2, %xmm1, %xmm1
 ; X64-NEXT:    vpsrlvd %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vzeroupper
