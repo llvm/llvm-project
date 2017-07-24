@@ -161,6 +161,22 @@ static bool isMultipleCandidateBinOp(BinaryOperatorKind Op) {
   return Op == BO_Add || Op == BO_Sub;
 }
 
+/// Searches for the selected statement in the given CompoundStatement, looking
+/// through things like PseudoObjectExpressions.
+static CompoundStmt::const_body_iterator
+findSelectedStmt(CompoundStmt::body_const_range Statements,
+                 const Stmt *Target) {
+  return llvm::find_if(Statements, [=](const Stmt *S) {
+    if (S == Target)
+      return true;
+    if (const auto *POE = dyn_cast<PseudoObjectExpr>(S)) {
+      if (POE->getSyntacticForm() == Target)
+        return true;
+    }
+    return false;
+  });
+}
+
 /// Returns the first and the last statements that should be extracted from a
 /// compound statement.
 Optional<CompoundStatementRange> getExtractedStatements(const CompoundStmt *CS,
@@ -170,9 +186,10 @@ Optional<CompoundStatementRange> getExtractedStatements(const CompoundStmt *CS,
     return None;
   assert(Begin && End);
   CompoundStatementRange Result;
-  Result.First = std::find(CS->body_begin(), CS->body_end(), Begin);
+  Result.First = findSelectedStmt(CS->body(), Begin);
   assert(Result.First != CS->body_end());
-  Result.Last = std::find(Result.First, CS->body_end(), End);
+  Result.Last = findSelectedStmt(
+      CompoundStmt::body_const_range(Result.First, CS->body_end()), End);
   assert(Result.Last != CS->body_end());
   return Result;
 }

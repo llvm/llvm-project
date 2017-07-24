@@ -45,3 +45,16 @@
 // RUN: not clang-refactor-test initiate -action extract -selected=setter -selected=setter-pref -selected=implicit-setter -selected=implicit-setter-pref %s -fobjc-arc 2>&1 | FileCheck --check-prefix=CHECK-SETTER %s
 
 @end
+
+@interface HasIntProp
+@property (readwrite) int item;
+@end
+
+// AVOID-CRASH: "static void extracted(HasIntProp *f) {\nf.item = !f.item;\n}\n\n"
+// avoid-extraction-crash-begin: +1:42
+void avoidExtractionCrash(HasIntProp *f) {
+  f.item = !f.item;
+// avoid-extraction-crash-end: -1:5
+}
+
+// RUN: clang-refactor-test perform -action extract -selected=avoid-extraction-crash %s -fobjc-arc | FileCheck --check-prefix=AVOID-CRASH %s
