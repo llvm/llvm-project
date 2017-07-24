@@ -13,6 +13,7 @@
 
 #include "polly/ForwardOpTree.h"
 
+#include "polly/ScopBuilder.h"
 #include "polly/ScopInfo.h"
 #include "polly/ScopPass.h"
 #include "polly/Support/GICHelper.h"
@@ -25,6 +26,7 @@ using namespace polly;
 using namespace llvm;
 
 STATISTIC(TotalInstructionsCopied, "Number of copied instructions");
+STATISTIC(TotalReadOnlyCopied, "Number of copied read-only accesses");
 STATISTIC(TotalForwardedTrees, "Number of forwarded operand trees");
 STATISTIC(TotalModifiedStmts,
           "Number of statements with at least one forwarded tree");
@@ -34,9 +36,33 @@ STATISTIC(ScopsModified, "Number of SCoPs with at least one forwarded tree");
 namespace {
 
 /// The state of whether an operand tree was/can be forwarded.
+///
+/// The items apply to an instructions and its operand tree with the instruction
+/// as the root element. If the value in question is not an instruction in the
+/// SCoP, it can be a leaf of an instruction's operand tree.
 enum ForwardingDecision {
+  /// The root instruction or value cannot be forwarded at all.
   FD_CannotForward,
-  FD_CanForward,
+
+  /// The root instruction or value can be forwarded as a leaf of a larger
+  /// operand tree.
+  /// It does not make sense to move the value itself, it would just replace it
+  /// by a use of itself. For instance, a constant "5" used in a statement can
+  /// be forwarded, but it would just replace it by the same constant "5".
+  /// However, it makes sense to move as an operand of
+  ///
+  ///   %add = add 5, 5
+  ///
+  /// where "5" is moved as part of a larger operand tree. "5" would be placed
+  /// (disregarding for a moment that literal constants don't have a location
+  /// and can be used anywhere) into the same statement as %add would.
+  FD_CanForwardLeaf,
+
+  /// The root instruction can be forwarded in a non-trivial way. This requires
+  /// the operand tree root to be an instruction in some statement.
+  FD_CanForwardTree,
+
+  /// Used to indicate that a forwarding has be carried out successfully.
   FD_DidForward,
 };
 
@@ -58,6 +84,9 @@ private:
   /// How many instructions have been copied to other statements.
   int NumInstructionsCopied = 0;
 
+  /// How many read-only accesses have been copied.
+  int NumReadOnlyCopied = 0;
+
   /// How many operand trees have been forwarded.
   int NumForwardedTrees = 0;
 
@@ -70,6 +99,8 @@ private:
   void printStatistics(raw_ostream &OS, int Indent = 0) {
     OS.indent(Indent) << "Statistics {\n";
     OS.indent(Indent + 4) << "Instructions copied: " << NumInstructionsCopied
+                          << '\n';
+    OS.indent(Indent + 4) << "Read-only accesses copied: " << NumReadOnlyCopied
                           << '\n';
     OS.indent(Indent + 4) << "Operand trees forwarded: " << NumForwardedTrees
                           << '\n';
@@ -104,8 +135,8 @@ private:
   ///                   DoIt==true if an operand tree is not known to be
   ///                   forwardable.
   ///
-  /// @return When DoIt==true, return whether the operand tree can be forwarded.
-  ///         When DoIt==false, return FD_DidForward.
+  /// @return If DoIt==false, return whether the operand tree can be forwarded.
+  ///         If DoIt==true, return FD_DidForward.
   ForwardingDecision canForwardTree(ScopStmt *TargetStmt, Value *UseVal,
                                     ScopStmt *UseStmt, Loop *UseLoop,
                                     bool DoIt) {
@@ -124,7 +155,7 @@ private:
       // These can be used anywhere without special considerations.
       if (DoIt)
         return FD_DidForward;
-      return FD_CanForward;
+      return FD_CanForwardLeaf;
 
     case VirtualUse::Synthesizable:
       // Not supported yet.
@@ -132,9 +163,23 @@ private:
       return FD_CannotForward;
 
     case VirtualUse::ReadOnly:
-      // Not supported yet.
-      DEBUG(dbgs() << "    Cannot forward read-only val: " << *UseVal << "\n");
-      return FD_CannotForward;
+      // Note that we cannot return FD_CanForwardTree here. With a operand tree
+      // depth of 0, UseVal is the use in TargetStmt that we try to replace.
+      // With -polly-analyze-read-only-scalars=true we would ensure the
+      // existence of a MemoryAccess (which already exists for a leaf) and be
+      // removed again by tryForwardTree because it's goal is to remove this
+      // scalar MemoryAccess. It interprets FD_CanForwardTree as the permission
+      // to do so.
+      if (!DoIt)
+        return FD_CanForwardLeaf;
+
+      // If we model read-only scalars, we need to create a MemoryAccess for it.
+      if (ModelReadOnlyScalars)
+        TargetStmt->ensureValueRead(UseVal);
+
+      NumReadOnlyCopied++;
+      TotalReadOnlyCopied++;
+      return FD_DidForward;
 
     case VirtualUse::Intra:
     case VirtualUse::Inter:
@@ -142,13 +187,13 @@ private:
 
       // Compatible instructions must satisfy the following conditions:
       // 1. Idempotent (instruction will be copied, not moved; although its
-      // original instance might be removed by simplification)
+      //    original instance might be removed by simplification)
       // 2. Not access memory (There might be memory writes between)
       // 3. Not cause undefined behaviour (we might copy to a location when the
-      // original instruction was no executed; this is currently not possible
-      // because we do not forward PHINodes)
+      //    original instruction was no executed; this is currently not possible
+      //    because we do not forward PHINodes)
       // 4. Not leak memory if executed multiple times (I am looking at you,
-      // malloc!)
+      //    malloc!)
       //
       // Instruction::mayHaveSideEffects is not sufficient because it considers
       // malloc to not have side-effects. llvm::isSafeToSpeculativelyExecute is
@@ -169,7 +214,7 @@ private:
         // instruction using them.
         // TODO: The operand tree is not really a tree, but a DAG. We should be
         // able to handle DAGs without duplication.
-        TargetStmt->prependInstrunction(Inst);
+        TargetStmt->prependInstruction(Inst);
         NumInstructionsCopied++;
         TotalInstructionsCopied++;
       }
@@ -182,7 +227,8 @@ private:
           assert(!DoIt);
           return FD_CannotForward;
 
-        case FD_CanForward:
+        case FD_CanForwardLeaf:
+        case FD_CanForwardTree:
           assert(!DoIt);
           break;
 
@@ -194,7 +240,7 @@ private:
 
       if (DoIt)
         return FD_DidForward;
-      return FD_CanForward;
+      return FD_CanForwardTree;
     }
 
     llvm_unreachable("Case unhandled");
@@ -211,7 +257,7 @@ private:
     ForwardingDecision Assessment =
         canForwardTree(Stmt, RA->getAccessValue(), Stmt, InLoop, false);
     assert(Assessment != FD_DidForward);
-    if (Assessment == FD_CannotForward)
+    if (Assessment != FD_CanForwardTree)
       return false;
 
     ForwardingDecision Execution =

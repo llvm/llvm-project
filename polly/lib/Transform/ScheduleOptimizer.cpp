@@ -745,9 +745,9 @@ static bool containsOnlyMatrMultAcc(__isl_keep isl_map *PartialSchedule,
     auto *MemAccessPtr = *MemA;
     if (MemAccessPtr->isLatestArrayKind() && MemAccessPtr != MMI.WriteToC &&
         !isMatMulNonScalarReadAccess(MemAccessPtr, MMI) &&
-        !(MemAccessPtr->isStrideZero(isl_map_copy(MapI)) &&
-          MemAccessPtr->isStrideZero(isl_map_copy(MapJ)) &&
-          MemAccessPtr->isStrideZero(isl_map_copy(MapK)))) {
+        !(MemAccessPtr->isStrideZero(isl::manage(isl_map_copy(MapI))) &&
+          MemAccessPtr->isStrideZero(isl::manage(isl_map_copy(MapJ))) &&
+          MemAccessPtr->isStrideZero(isl::manage(isl_map_copy(MapK))))) {
       isl_map_free(MapI);
       isl_map_free(MapJ);
       isl_map_free(MapK);

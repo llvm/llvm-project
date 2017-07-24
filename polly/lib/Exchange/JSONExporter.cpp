@@ -480,7 +480,7 @@ bool JSONImporter::importAccesses(Scop &S, Json::Value &JScop,
         NewOutId = isl_map_get_tuple_id(NewAccessMap, isl_dim_out);
         auto *SAI = S.getArrayInfoByName(isl_id_get_name(NewOutId));
         isl_id *OutId = isl_map_get_tuple_id(CurrentAccessMap, isl_dim_out);
-        auto *OutSAI = ScopArrayInfo::getFromId(OutId);
+        auto *OutSAI = ScopArrayInfo::getFromId(isl::manage(OutId));
         if (!SAI || SAI->getElementType() != OutSAI->getElementType()) {
           errs() << "JScop file contains access function with undeclared "
                     "ScopArrayInfo\n";
