@@ -1,4 +1,4 @@
-// RUN: %clangxx -frtti -fsanitize=vptr -g %s -O3 -o %t
+// RUN: %clangxx -frtti -fsanitize=null,vptr -g %s -O3 -o %t
 // RUN: %run %t 2>&1 | FileCheck %s
 
 // REQUIRES: cxxabi
