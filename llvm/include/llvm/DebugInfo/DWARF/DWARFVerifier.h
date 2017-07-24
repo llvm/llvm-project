@@ -73,6 +73,15 @@ class DWARFVerifier {
 
 
   bool verifyUnitContents(DWARFUnit Unit);
+
+  /// Verify that all Die ranges are valid.
+  ///
+  /// This function currently checks for:
+  /// - cases in which lowPC >= highPC
+  ///
+  /// \returns Number of errors that occured during verification.
+  unsigned verifyDieRanges(const DWARFDie &Die);
+
   /// Verifies the attribute's DWARF attribute and its value.
   ///
   /// This function currently checks for:
