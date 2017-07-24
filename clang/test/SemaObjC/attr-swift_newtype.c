@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -verify -fsyntax-only %s
+// RUN: not %clang_cc1 -ast-dump %s | FileCheck %s
 
 typedef int T1 __attribute__((swift_newtype(struct)));
 typedef int T2 __attribute__((swift_newtype(enum)));
@@ -6,6 +7,17 @@ typedef int T2 __attribute__((swift_newtype(enum)));
 typedef int T3 __attribute__((swift_wrapper(struct)));
 typedef int T4 __attribute__((swift_wrapper(enum)));
 
+typedef int T5;
+typedef int T5 __attribute__((swift_wrapper(struct)));
+typedef int T5;
+// CHECK-LABEL: TypedefDecl {{.+}} T5 'int'
+// CHECK-NEXT: BuiltinType {{.+}} 'int'
+// CHECK-NEXT: TypedefDecl {{.+}} T5 'int'
+// CHECK-NEXT: BuiltinType {{.+}} 'int'
+// CHECK-NEXT: SwiftNewtypeAttr {{.+}} NK_Struct
+// CHECK-NEXT: TypedefDecl {{.+}} T5 'int'
+// CHECK-NEXT: BuiltinType {{.+}} 'int'
+// CHECK-NEXT: SwiftNewtypeAttr {{.+}} NK_Struct
 
 typedef int Bad1 __attribute__((swift_newtype(bad))); // expected-warning{{'swift_newtype' attribute argument not supported: 'bad'}}
 typedef int Bad2 __attribute__((swift_newtype())); // expected-error{{argument required after attribute}}
