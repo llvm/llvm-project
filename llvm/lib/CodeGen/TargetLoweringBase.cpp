@@ -97,7 +97,7 @@ static void InitLibcallNames(const char **Names, const Triple &TT) {
     Names[RTLIB::FPROUND_F32_F16] = "__gnu_f2h_ieee";
   }
 
-  if (TT.isGNUEnvironment()) {
+  if (TT.isGNUEnvironment() || TT.isOSFuchsia()) {
     Names[RTLIB::SINCOS_F32] = "sincosf";
     Names[RTLIB::SINCOS_F64] = "sincos";
     Names[RTLIB::SINCOS_F80] = "sincosl";
