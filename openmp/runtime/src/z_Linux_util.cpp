@@ -336,8 +336,8 @@ kmp_int8 __kmp_test_then_and8(volatile kmp_int8 *p, kmp_int8 d) {
   return old_value;
 }
 
-kmp_int32 __kmp_test_then_or32(volatile kmp_int32 *p, kmp_int32 d) {
-  kmp_int32 old_value, new_value;
+kmp_uint32 __kmp_test_then_or32(volatile kmp_uint32 *p, kmp_uint32 d) {
+  kmp_uint32 old_value, new_value;
 
   old_value = TCR_4(*p);
   new_value = old_value | d;
@@ -350,8 +350,8 @@ kmp_int32 __kmp_test_then_or32(volatile kmp_int32 *p, kmp_int32 d) {
   return old_value;
 }
 
-kmp_int32 __kmp_test_then_and32(volatile kmp_int32 *p, kmp_int32 d) {
-  kmp_int32 old_value, new_value;
+kmp_uint32 __kmp_test_then_and32(volatile kmp_uint32 *p, kmp_uint32 d) {
+  kmp_uint32 old_value, new_value;
 
   old_value = TCR_4(*p);
   new_value = old_value & d;
@@ -394,8 +394,8 @@ kmp_int64 __kmp_test_then_add64(volatile kmp_int64 *p, kmp_int64 d) {
 }
 #endif /* KMP_ARCH_X86 */
 
-kmp_int64 __kmp_test_then_or64(volatile kmp_int64 *p, kmp_int64 d) {
-  kmp_int64 old_value, new_value;
+kmp_uint64 __kmp_test_then_or64(volatile kmp_uint64 *p, kmp_uint64 d) {
+  kmp_uint64 old_value, new_value;
 
   old_value = TCR_8(*p);
   new_value = old_value | d;
@@ -407,8 +407,8 @@ kmp_int64 __kmp_test_then_or64(volatile kmp_int64 *p, kmp_int64 d) {
   return old_value;
 }
 
-kmp_int64 __kmp_test_then_and64(volatile kmp_int64 *p, kmp_int64 d) {
-  kmp_int64 old_value, new_value;
+kmp_uint64 __kmp_test_then_and64(volatile kmp_uint64 *p, kmp_uint64 d) {
+  kmp_uint64 old_value, new_value;
 
   old_value = TCR_8(*p);
   new_value = old_value & d;
@@ -1460,8 +1460,7 @@ static inline void __kmp_suspend_template(int th_gtid, C *flag) {
         th->th.th_active = FALSE;
         if (th->th.th_active_in_pool) {
           th->th.th_active_in_pool = FALSE;
-          KMP_TEST_THEN_DEC32(
-              CCAST(kmp_int32 *, &__kmp_thread_pool_active_nth));
+          KMP_TEST_THEN_DEC32(&__kmp_thread_pool_active_nth);
           KMP_DEBUG_ASSERT(TCR_4(__kmp_thread_pool_active_nth) >= 0);
         }
         deactivated = TRUE;
@@ -1517,7 +1516,7 @@ static inline void __kmp_suspend_template(int th_gtid, C *flag) {
     if (deactivated) {
       th->th.th_active = TRUE;
       if (TCR_4(th->th.th_in_pool)) {
-        KMP_TEST_THEN_INC32(CCAST(kmp_int32 *, &__kmp_thread_pool_active_nth));
+        KMP_TEST_THEN_INC32(&__kmp_thread_pool_active_nth);
         th->th.th_active_in_pool = TRUE;
       }
     }

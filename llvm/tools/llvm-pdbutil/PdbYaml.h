@@ -57,7 +57,7 @@ struct PdbInfoStream {
   PdbRaw_ImplVer Version = PdbImplVC70;
   uint32_t Signature = 0;
   uint32_t Age = 1;
-  PDB_UniqueId Guid;
+  codeview::GUID Guid;
   std::vector<PdbRaw_FeatureSig> Features;
   std::vector<NamedStreamMapping> NamedStreams;
 };

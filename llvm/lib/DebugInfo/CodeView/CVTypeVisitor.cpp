@@ -14,7 +14,6 @@
 #include "llvm/DebugInfo/CodeView/TypeCollection.h"
 #include "llvm/DebugInfo/CodeView/TypeDeserializer.h"
 #include "llvm/DebugInfo/CodeView/TypeRecordMapping.h"
-#include "llvm/DebugInfo/CodeView/TypeServerHandler.h"
 #include "llvm/DebugInfo/CodeView/TypeVisitorCallbackPipeline.h"
 #include "llvm/Support/BinaryByteStream.h"
 #include "llvm/Support/BinaryStreamReader.h"
@@ -40,13 +39,6 @@ static Error visitKnownMember(CVMemberRecord &Record,
   if (auto EC = Callbacks.visitKnownMember(Record, KnownRecord))
     return EC;
   return Error::success();
-}
-
-static Expected<TypeServer2Record> deserializeTypeServerRecord(CVType &Record) {
-  TypeServer2Record R(TypeRecordKind::TypeServer2);
-  if (auto EC = TypeDeserializer::deserializeAs(Record, R))
-    return std::move(EC);
-  return R;
 }
 
 static Error visitMemberRecord(CVMemberRecord &Record,
@@ -84,8 +76,6 @@ class CVTypeVisitor {
 public:
   explicit CVTypeVisitor(TypeVisitorCallbacks &Callbacks);
 
-  void addTypeServerHandler(TypeServerHandler &Handler);
-
   Error visitTypeRecord(CVType &Record, TypeIndex Index);
   Error visitTypeRecord(CVType &Record);
 
@@ -98,44 +88,14 @@ public:
   Error visitFieldListMemberStream(BinaryStreamReader &Stream);
 
 private:
-  Expected<bool> handleTypeServer(CVType &Record);
   Error finishVisitation(CVType &Record);
 
   /// The interface to the class that gets notified of each visitation.
   TypeVisitorCallbacks &Callbacks;
-
-  TinyPtrVector<TypeServerHandler *> Handlers;
 };
 
 CVTypeVisitor::CVTypeVisitor(TypeVisitorCallbacks &Callbacks)
     : Callbacks(Callbacks) {}
-
-void CVTypeVisitor::addTypeServerHandler(TypeServerHandler &Handler) {
-  Handlers.push_back(&Handler);
-}
-
-Expected<bool> CVTypeVisitor::handleTypeServer(CVType &Record) {
-  if (Record.Type == TypeLeafKind::LF_TYPESERVER2 && !Handlers.empty()) {
-    auto TS = deserializeTypeServerRecord(Record);
-    if (!TS)
-      return TS.takeError();
-
-    for (auto Handler : Handlers) {
-      auto ExpectedResult = Handler->handle(*TS, Callbacks);
-      // If there was an error, return the error.
-      if (!ExpectedResult)
-        return ExpectedResult.takeError();
-
-      // If the handler processed the record, return success.
-      if (*ExpectedResult)
-        return true;
-
-      // Otherwise keep searching for a handler, eventually falling out and
-      // using the default record handler.
-    }
-  }
-  return false;
-}
 
 Error CVTypeVisitor::finishVisitation(CVType &Record) {
   switch (Record.Type) {
@@ -163,12 +123,6 @@ Error CVTypeVisitor::finishVisitation(CVType &Record) {
 }
 
 Error CVTypeVisitor::visitTypeRecord(CVType &Record, TypeIndex Index) {
-  auto ExpectedResult = handleTypeServer(Record);
-  if (!ExpectedResult)
-    return ExpectedResult.takeError();
-  if (*ExpectedResult)
-    return Error::success();
-
   if (auto EC = Callbacks.visitTypeBegin(Record, Index))
     return EC;
 
@@ -176,12 +130,6 @@ Error CVTypeVisitor::visitTypeRecord(CVType &Record, TypeIndex Index) {
 }
 
 Error CVTypeVisitor::visitTypeRecord(CVType &Record) {
-  auto ExpectedResult = handleTypeServer(Record);
-  if (!ExpectedResult)
-    return ExpectedResult.takeError();
-  if (*ExpectedResult)
-    return Error::success();
-
   if (auto EC = Callbacks.visitTypeBegin(Record))
     return EC;
 
@@ -271,52 +219,37 @@ struct VisitHelper {
 
 Error llvm::codeview::visitTypeRecord(CVType &Record, TypeIndex Index,
                                       TypeVisitorCallbacks &Callbacks,
-                                      VisitorDataSource Source,
-                                      TypeServerHandler *TS) {
+                                      VisitorDataSource Source) {
   VisitHelper V(Callbacks, Source);
-  if (TS)
-    V.Visitor.addTypeServerHandler(*TS);
   return V.Visitor.visitTypeRecord(Record, Index);
 }
 
 Error llvm::codeview::visitTypeRecord(CVType &Record,
                                       TypeVisitorCallbacks &Callbacks,
-                                      VisitorDataSource Source,
-                                      TypeServerHandler *TS) {
+                                      VisitorDataSource Source) {
   VisitHelper V(Callbacks, Source);
-  if (TS)
-    V.Visitor.addTypeServerHandler(*TS);
   return V.Visitor.visitTypeRecord(Record);
 }
 
 Error llvm::codeview::visitTypeStream(const CVTypeArray &Types,
                                       TypeVisitorCallbacks &Callbacks,
-                                      VisitorDataSource Source,
-                                      TypeServerHandler *TS) {
+                                      VisitorDataSource Source) {
   VisitHelper V(Callbacks, Source);
-  if (TS)
-    V.Visitor.addTypeServerHandler(*TS);
   return V.Visitor.visitTypeStream(Types);
 }
 
 Error llvm::codeview::visitTypeStream(CVTypeRange Types,
-                                      TypeVisitorCallbacks &Callbacks,
-                                      TypeServerHandler *TS) {
+                                      TypeVisitorCallbacks &Callbacks) {
   VisitHelper V(Callbacks, VDS_BytesPresent);
-  if (TS)
-    V.Visitor.addTypeServerHandler(*TS);
   return V.Visitor.visitTypeStream(Types);
 }
 
 Error llvm::codeview::visitTypeStream(TypeCollection &Types,
-                                      TypeVisitorCallbacks &Callbacks,
-                                      TypeServerHandler *TS) {
+                                      TypeVisitorCallbacks &Callbacks) {
   // When the internal visitor calls Types.getType(Index) the interface is
   // required to return a CVType with the bytes filled out.  So we can assume
   // that the bytes will be present when individual records are visited.
   VisitHelper V(Callbacks, VDS_BytesPresent);
-  if (TS)
-    V.Visitor.addTypeServerHandler(*TS);
   return V.Visitor.visitTypeStream(Types);
 }
 

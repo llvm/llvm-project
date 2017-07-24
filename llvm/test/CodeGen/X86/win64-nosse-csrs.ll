@@ -20,7 +20,7 @@ entry-block:
 }
 
 ; Function Attrs: nounwind uwtable
-define x86_64_win64cc i64 @peach() unnamed_addr #1 {
+define win64cc i64 @peach() unnamed_addr #1 {
 entry-block:
   %0 = call i64 @banana()
   ret i64 %0

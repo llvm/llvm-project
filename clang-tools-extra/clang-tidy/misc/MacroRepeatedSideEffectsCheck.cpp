@@ -58,8 +58,8 @@ void MacroRepeatedPPCallbacks::MacroExpands(const Token &MacroNameTok,
           }) != MI->tokens().end())
     return;
 
-  for (unsigned ArgNo = 0U; ArgNo < MI->getNumArgs(); ++ArgNo) {
-    const IdentifierInfo *Arg = *(MI->arg_begin() + ArgNo);
+  for (unsigned ArgNo = 0U; ArgNo < MI->getNumParams(); ++ArgNo) {
+    const IdentifierInfo *Arg = *(MI->param_begin() + ArgNo);
     const Token *ResultArgToks = Args->getUnexpArgument(ArgNo);
 
     if (hasSideEffects(ResultArgToks) &&

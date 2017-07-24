@@ -2963,6 +2963,7 @@ public:
     Builder.SetInsertPoint(&*StartBlock->begin());
 
     NodeBuilder.initializeAfterRTH();
+    NodeBuilder.preloadInvariantLoads();
     NodeBuilder.create(Root);
     NodeBuilder.finalize();
 

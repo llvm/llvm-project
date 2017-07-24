@@ -39,7 +39,6 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FormattedStream.h"
-#include "llvm/Transforms/Scalar.h"
 #include <algorithm>
 
 #define DEBUG_TYPE "memoryssa"

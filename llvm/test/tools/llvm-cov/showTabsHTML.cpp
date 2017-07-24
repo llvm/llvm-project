@@ -1,5 +1,5 @@
 // RUN: llvm-profdata merge -o %t.profdata %S/Inputs/showTabsHTML.proftext
-// RUN: llvm-cov show %S/Inputs/showTabsHTML.covmapping -format html -instr-profile %t.profdata -filename-equivalence %s | FileCheck -check-prefix=CHECK %s
+// RUN: llvm-cov show %S/Inputs/showTabsHTML.covmapping -format html -instr-profile %t.profdata -filename-equivalence %s | FileCheck %s
 
 int main(int argc, char ** argv) {
 	(void) "This tab starts at column 0";            // CHECK: &nbsp;&nbsp;(void) &quot;This tab starts at column 0&quot;;

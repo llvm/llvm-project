@@ -181,6 +181,7 @@ def z_select_ccmask     : SDNode<"SystemZISD::SELECT_CCMASK", SDT_ZSelectCCMask,
     		                 [SDNPInGlue]>;
 def z_adjdynalloc       : SDNode<"SystemZISD::ADJDYNALLOC", SDT_ZAdjDynAlloc>;
 def z_popcnt            : SDNode<"SystemZISD::POPCNT", SDTIntUnaryOp>;
+def z_smul_lohi         : SDNode<"SystemZISD::SMUL_LOHI", SDT_ZGR128Binary>;
 def z_umul_lohi         : SDNode<"SystemZISD::UMUL_LOHI", SDT_ZGR128Binary>;
 def z_sdivrem           : SDNode<"SystemZISD::SDIVREM", SDT_ZGR128Binary>;
 def z_udivrem           : SDNode<"SystemZISD::UDIVREM", SDT_ZGR128Binary>;
@@ -549,6 +550,12 @@ def z_fma : PatFrag<(ops node:$src1, node:$src2, node:$src3),
 def z_fms : PatFrag<(ops node:$src1, node:$src2, node:$src3),
                     (fma node:$src2, node:$src3, (fneg node:$src1))>;
 
+// Negative fused multiply-add and multiply-subtract.
+def fnma : PatFrag<(ops node:$src1, node:$src2, node:$src3),
+                   (fneg (fma node:$src1, node:$src2, node:$src3))>;
+def fnms : PatFrag<(ops node:$src1, node:$src2, node:$src3),
+                   (fneg (fms node:$src1, node:$src2, node:$src3))>;
+
 // Floating-point negative absolute.
 def fnabs : PatFrag<(ops node:$ptr), (fneg (fabs node:$ptr))>;
 
@@ -623,6 +630,19 @@ def z_vllezf64 : PatFrag<(ops node:$addr),
                          (z_merge_high
                           (scalar_to_vector (f64 (load node:$addr))),
                           (z_vzero))>;
+
+// Similarly for the high element of a zeroed vector.
+def z_vllezli32 : z_vllez<i32, load, 0>;
+def z_vllezlf32 : PatFrag<(ops node:$addr),
+                          (bitconvert
+                           (z_merge_high
+                            (v2i64
+                             (bitconvert
+                              (z_merge_high
+                               (v4f32 (scalar_to_vector
+                                       (f32 (load node:$addr)))),
+                               (v4f32 (z_vzero))))),
+                            (v2i64 (z_vzero))))>;
 
 // Store one element of a vector.
 class z_vste<ValueType scalartype, SDPatternOperator store>

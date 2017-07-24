@@ -588,7 +588,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(spir_func);
   KEYWORD(intel_ocl_bicc);
   KEYWORD(x86_64_sysvcc);
-  KEYWORD(x86_64_win64cc);
+  KEYWORD(win64cc);
   KEYWORD(x86_regcallcc);
   KEYWORD(webkit_jscc);
   KEYWORD(swiftcc);

@@ -316,7 +316,7 @@ define void @allocamaterialize() {
 
 ; STDERR-NOT: FastISel missed terminator:   ret void
 ; CHECK-LABEL: win64ccfun
-define x86_64_win64cc void @win64ccfun(i32 %i) {
+define win64cc void @win64ccfun(i32 %i) {
 ; CHECK: ret
   ret void
 }

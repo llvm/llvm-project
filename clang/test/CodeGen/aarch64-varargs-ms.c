@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple arm64-windows-msvc -emit-llvm -o - %s | FileCheck --check-prefix=CHECK %s
+// RUN: %clang_cc1 -triple arm64-windows-msvc -emit-llvm -o - %s | FileCheck %s
 
 #include <stdarg.h>
 

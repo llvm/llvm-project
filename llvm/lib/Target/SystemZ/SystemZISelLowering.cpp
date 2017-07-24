@@ -101,7 +101,10 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
     addRegisterClass(MVT::f32, &SystemZ::FP32BitRegClass);
     addRegisterClass(MVT::f64, &SystemZ::FP64BitRegClass);
   }
-  addRegisterClass(MVT::f128, &SystemZ::FP128BitRegClass);
+  if (Subtarget.hasVectorEnhancements1())
+    addRegisterClass(MVT::f128, &SystemZ::VR128BitRegClass);
+  else
+    addRegisterClass(MVT::f128, &SystemZ::FP128BitRegClass);
 
   if (Subtarget.hasVector()) {
     addRegisterClass(MVT::v16i8, &SystemZ::VR128BitRegClass);
@@ -316,7 +319,10 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::AND, VT, Legal);
       setOperationAction(ISD::OR, VT, Legal);
       setOperationAction(ISD::XOR, VT, Legal);
-      setOperationAction(ISD::CTPOP, VT, Custom);
+      if (Subtarget.hasVectorEnhancements1())
+        setOperationAction(ISD::CTPOP, VT, Legal);
+      else
+        setOperationAction(ISD::CTPOP, VT, Custom);
       setOperationAction(ISD::CTTZ, VT, Legal);
       setOperationAction(ISD::CTLZ, VT, Legal);
 
@@ -414,16 +420,72 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FROUND, MVT::v2f64, Legal);
   }
 
+  // The vector enhancements facility 1 has instructions for these.
+  if (Subtarget.hasVectorEnhancements1()) {
+    setOperationAction(ISD::FADD, MVT::v4f32, Legal);
+    setOperationAction(ISD::FNEG, MVT::v4f32, Legal);
+    setOperationAction(ISD::FSUB, MVT::v4f32, Legal);
+    setOperationAction(ISD::FMUL, MVT::v4f32, Legal);
+    setOperationAction(ISD::FMA, MVT::v4f32, Legal);
+    setOperationAction(ISD::FDIV, MVT::v4f32, Legal);
+    setOperationAction(ISD::FABS, MVT::v4f32, Legal);
+    setOperationAction(ISD::FSQRT, MVT::v4f32, Legal);
+    setOperationAction(ISD::FRINT, MVT::v4f32, Legal);
+    setOperationAction(ISD::FNEARBYINT, MVT::v4f32, Legal);
+    setOperationAction(ISD::FFLOOR, MVT::v4f32, Legal);
+    setOperationAction(ISD::FCEIL, MVT::v4f32, Legal);
+    setOperationAction(ISD::FTRUNC, MVT::v4f32, Legal);
+    setOperationAction(ISD::FROUND, MVT::v4f32, Legal);
+
+    setOperationAction(ISD::FMAXNUM, MVT::f64, Legal);
+    setOperationAction(ISD::FMAXNAN, MVT::f64, Legal);
+    setOperationAction(ISD::FMINNUM, MVT::f64, Legal);
+    setOperationAction(ISD::FMINNAN, MVT::f64, Legal);
+
+    setOperationAction(ISD::FMAXNUM, MVT::v2f64, Legal);
+    setOperationAction(ISD::FMAXNAN, MVT::v2f64, Legal);
+    setOperationAction(ISD::FMINNUM, MVT::v2f64, Legal);
+    setOperationAction(ISD::FMINNAN, MVT::v2f64, Legal);
+
+    setOperationAction(ISD::FMAXNUM, MVT::f32, Legal);
+    setOperationAction(ISD::FMAXNAN, MVT::f32, Legal);
+    setOperationAction(ISD::FMINNUM, MVT::f32, Legal);
+    setOperationAction(ISD::FMINNAN, MVT::f32, Legal);
+
+    setOperationAction(ISD::FMAXNUM, MVT::v4f32, Legal);
+    setOperationAction(ISD::FMAXNAN, MVT::v4f32, Legal);
+    setOperationAction(ISD::FMINNUM, MVT::v4f32, Legal);
+    setOperationAction(ISD::FMINNAN, MVT::v4f32, Legal);
+
+    setOperationAction(ISD::FMAXNUM, MVT::f128, Legal);
+    setOperationAction(ISD::FMAXNAN, MVT::f128, Legal);
+    setOperationAction(ISD::FMINNUM, MVT::f128, Legal);
+    setOperationAction(ISD::FMINNAN, MVT::f128, Legal);
+  }
+
   // We have fused multiply-addition for f32 and f64 but not f128.
   setOperationAction(ISD::FMA, MVT::f32,  Legal);
   setOperationAction(ISD::FMA, MVT::f64,  Legal);
-  setOperationAction(ISD::FMA, MVT::f128, Expand);
+  if (Subtarget.hasVectorEnhancements1())
+    setOperationAction(ISD::FMA, MVT::f128, Legal);
+  else
+    setOperationAction(ISD::FMA, MVT::f128, Expand);
+
+  // We don't have a copysign instruction on vector registers.
+  if (Subtarget.hasVectorEnhancements1())
+    setOperationAction(ISD::FCOPYSIGN, MVT::f128, Expand);
 
   // Needed so that we don't try to implement f128 constant loads using
   // a load-and-extend of a f80 constant (in cases where the constant
   // would fit in an f80).
   for (MVT VT : MVT::fp_valuetypes())
     setLoadExtAction(ISD::EXTLOAD, VT, MVT::f80, Expand);
+
+  // We don't have extending load instruction on vector registers.
+  if (Subtarget.hasVectorEnhancements1()) {
+    setLoadExtAction(ISD::EXTLOAD, MVT::f128, MVT::f32, Expand);
+    setLoadExtAction(ISD::EXTLOAD, MVT::f128, MVT::f64, Expand);
+  }
 
   // Floating-point truncation and stores need to be done separately.
   setTruncStoreAction(MVT::f64,  MVT::f32, Expand);
@@ -489,7 +551,7 @@ bool SystemZTargetLowering::isFMAFasterThanFMulAndFAdd(EVT VT) const {
   case MVT::f64:
     return true;
   case MVT::f128:
-    return false;
+    return Subtarget.hasVectorEnhancements1();
   default:
     break;
   }
@@ -1462,21 +1524,25 @@ static bool isIntrinsicWithCC(SDValue Op, unsigned &Opcode, unsigned &CCValid) {
     return true;
 
   case Intrinsic::s390_vfcedbs:
+  case Intrinsic::s390_vfcesbs:
     Opcode = SystemZISD::VFCMPES;
     CCValid = SystemZ::CCMASK_VCMP;
     return true;
 
   case Intrinsic::s390_vfchdbs:
+  case Intrinsic::s390_vfchsbs:
     Opcode = SystemZISD::VFCMPHS;
     CCValid = SystemZ::CCMASK_VCMP;
     return true;
 
   case Intrinsic::s390_vfchedbs:
+  case Intrinsic::s390_vfchesbs:
     Opcode = SystemZISD::VFCMPHES;
     CCValid = SystemZ::CCMASK_VCMP;
     return true;
 
   case Intrinsic::s390_vftcidb:
+  case Intrinsic::s390_vftcisb:
     Opcode = SystemZISD::VFTCI;
     CCValid = SystemZ::CCMASK_VCMP;
     return true;
@@ -2316,11 +2382,15 @@ static SDValue expandV4F32ToV2F64(SelectionDAG &DAG, int Start, const SDLoc &DL,
 
 // Build a comparison of vectors CmpOp0 and CmpOp1 using opcode Opcode,
 // producing a result of type VT.
-static SDValue getVectorCmp(SelectionDAG &DAG, unsigned Opcode, const SDLoc &DL,
-                            EVT VT, SDValue CmpOp0, SDValue CmpOp1) {
-  // There is no hardware support for v4f32, so extend the vector into
-  // two v2f64s and compare those.
-  if (CmpOp0.getValueType() == MVT::v4f32) {
+SDValue SystemZTargetLowering::getVectorCmp(SelectionDAG &DAG, unsigned Opcode,
+                                            const SDLoc &DL, EVT VT,
+                                            SDValue CmpOp0,
+                                            SDValue CmpOp1) const {
+  // There is no hardware support for v4f32 (unless we have the vector
+  // enhancements facility 1), so extend the vector into two v2f64s
+  // and compare those.
+  if (CmpOp0.getValueType() == MVT::v4f32 &&
+      !Subtarget.hasVectorEnhancements1()) {
     SDValue H0 = expandV4F32ToV2F64(DAG, 0, DL, CmpOp0);
     SDValue L0 = expandV4F32ToV2F64(DAG, 2, DL, CmpOp0);
     SDValue H1 = expandV4F32ToV2F64(DAG, 0, DL, CmpOp1);
@@ -2334,9 +2404,11 @@ static SDValue getVectorCmp(SelectionDAG &DAG, unsigned Opcode, const SDLoc &DL,
 
 // Lower a vector comparison of type CC between CmpOp0 and CmpOp1, producing
 // an integer mask of type VT.
-static SDValue lowerVectorSETCC(SelectionDAG &DAG, const SDLoc &DL, EVT VT,
-                                ISD::CondCode CC, SDValue CmpOp0,
-                                SDValue CmpOp1) {
+SDValue SystemZTargetLowering::lowerVectorSETCC(SelectionDAG &DAG,
+                                                const SDLoc &DL, EVT VT,
+                                                ISD::CondCode CC,
+                                                SDValue CmpOp0,
+                                                SDValue CmpOp1) const {
   bool IsFP = CmpOp0.getValueType().isFloatingPoint();
   bool Invert = false;
   SDValue Cmp;
@@ -2960,6 +3032,12 @@ SDValue SystemZTargetLowering::lowerSMUL_LOHI(SDValue Op,
     // We define this so that it can be used for constant division.
     lowerMUL_LOHI32(DAG, DL, ISD::SIGN_EXTEND, Op.getOperand(0),
                     Op.getOperand(1), Ops[1], Ops[0]);
+  else if (Subtarget.hasMiscellaneousExtensions2())
+    // SystemZISD::SMUL_LOHI returns the low result in the odd register and
+    // the high result in the even register.  ISD::SMUL_LOHI is defined to
+    // return the low half first, so the results are in reverse order.
+    lowerGR128Binary(DAG, DL, VT, SystemZISD::SMUL_LOHI,
+                     Op.getOperand(0), Op.getOperand(1), Ops[1], Ops[0]);
   else {
     // Do a full 128-bit multiplication based on SystemZISD::UMUL_LOHI:
     //
@@ -4658,6 +4736,7 @@ const char *SystemZTargetLowering::getTargetNodeName(unsigned Opcode) const {
     OPCODE(SELECT_CCMASK);
     OPCODE(ADJDYNALLOC);
     OPCODE(POPCNT);
+    OPCODE(SMUL_LOHI);
     OPCODE(UMUL_LOHI);
     OPCODE(SDIVREM);
     OPCODE(UDIVREM);
@@ -6118,6 +6197,7 @@ MachineBasicBlock *SystemZTargetLowering::EmitInstrWithCustomInserter(
   case SystemZ::SelectF32:
   case SystemZ::SelectF64:
   case SystemZ::SelectF128:
+  case SystemZ::SelectVR128:
     return emitSelect(MI, MBB, 0);
 
   case SystemZ::CondStore8Mux:

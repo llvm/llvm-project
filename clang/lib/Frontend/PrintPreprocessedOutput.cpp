@@ -38,8 +38,8 @@ static void PrintMacroDefinition(const IdentifierInfo &II, const MacroInfo &MI,
 
   if (MI.isFunctionLike()) {
     OS << '(';
-    if (!MI.arg_empty()) {
-      MacroInfo::arg_iterator AI = MI.arg_begin(), E = MI.arg_end();
+    if (!MI.param_empty()) {
+      MacroInfo::param_iterator AI = MI.param_begin(), E = MI.param_end();
       for (; AI+1 != E; ++AI) {
         OS << (*AI)->getName();
         OS << ',';

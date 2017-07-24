@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i386-linux-gnu  | FileCheck --check-prefix=CHECK %s
+; RUN: llc < %s -mtriple=i386-linux-gnu  | FileCheck %s
 
 declare x86_regcallcc i32 @callee(i32 %a0, i32 %b0, i32 %c0, i32 %d0, i32 %e0);
 

@@ -1813,11 +1813,24 @@ private:
   void ReadMacroName(Token &MacroNameTok, MacroUse IsDefineUndef = MU_Other,
                      bool *ShadowFlag = nullptr);
 
+  /// ReadOptionalMacroParameterListAndBody - This consumes all (i.e. the
+  /// entire line) of the macro's tokens and adds them to MacroInfo, and while
+  /// doing so performs certain validity checks including (but not limited to):
+  ///   - # (stringization) is followed by a macro parameter
+  /// \param MacroNameTok - Token that represents the macro name
+  /// \param ImmediatelyAfterHeaderGuard - Macro follows an #ifdef header guard
+  /// 
+  ///  Either returns a pointer to a MacroInfo object OR emits a diagnostic and
+  ///  returns a nullptr if an invalid sequence of tokens is encountered.
+
+  MacroInfo *ReadOptionalMacroParameterListAndBody(
+      const Token &MacroNameTok, bool ImmediatelyAfterHeaderGuard);
+
   /// The ( starting an argument list of a macro definition has just been read.
-  /// Lex the rest of the arguments and the closing ), updating \p MI with
+  /// Lex the rest of the parameters and the closing ), updating \p MI with
   /// what we learn and saving in \p LastTok the last token read.
   /// Return true if an error occurs parsing the arg list.
-  bool ReadMacroDefinitionArgList(MacroInfo *MI, Token& LastTok);
+  bool ReadMacroParameterList(MacroInfo *MI, Token& LastTok);
 
   /// We just read a \#if or related directive and decided that the
   /// subsequent tokens are in the \#if'd out portion of the
@@ -1878,7 +1891,7 @@ private:
 
   /// After reading "MACRO(", this method is invoked to read all of the formal
   /// arguments specified for the macro invocation.  Returns null on error.
-  MacroArgs *ReadFunctionLikeMacroArgs(Token &MacroName, MacroInfo *MI,
+  MacroArgs *ReadMacroCallArgumentList(Token &MacroName, MacroInfo *MI,
                                        SourceLocation &ExpansionEnd);
 
   /// \brief If an identifier token is read that is to be expanded
