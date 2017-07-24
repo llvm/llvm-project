@@ -13,6 +13,7 @@
 
 #include "polly/ForwardOpTree.h"
 
+#include "polly/ScopBuilder.h"
 #include "polly/ScopInfo.h"
 #include "polly/ScopPass.h"
 #include "polly/Support/GICHelper.h"
@@ -25,6 +26,7 @@ using namespace polly;
 using namespace llvm;
 
 STATISTIC(TotalInstructionsCopied, "Number of copied instructions");
+STATISTIC(TotalReadOnlyCopied, "Number of copied read-only accesses");
 STATISTIC(TotalForwardedTrees, "Number of forwarded operand trees");
 STATISTIC(TotalModifiedStmts,
           "Number of statements with at least one forwarded tree");
@@ -37,6 +39,7 @@ namespace {
 enum ForwardingDecision {
   FD_CannotForward,
   FD_CanForward,
+  FD_CanForwardTree,
   FD_DidForward,
 };
 
@@ -58,6 +61,9 @@ private:
   /// How many instructions have been copied to other statements.
   int NumInstructionsCopied = 0;
 
+  /// How many read-only accesses have been copied.
+  int NumReadOnlyCopied = 0;
+
   /// How many operand trees have been forwarded.
   int NumForwardedTrees = 0;
 
@@ -70,6 +76,8 @@ private:
   void printStatistics(raw_ostream &OS, int Indent = 0) {
     OS.indent(Indent) << "Statistics {\n";
     OS.indent(Indent + 4) << "Instructions copied: " << NumInstructionsCopied
+                          << '\n';
+    OS.indent(Indent + 4) << "Read-only accesses copied: " << NumReadOnlyCopied
                           << '\n';
     OS.indent(Indent + 4) << "Operand trees forwarded: " << NumForwardedTrees
                           << '\n';
@@ -104,8 +112,8 @@ private:
   ///                   DoIt==true if an operand tree is not known to be
   ///                   forwardable.
   ///
-  /// @return When DoIt==true, return whether the operand tree can be forwarded.
-  ///         When DoIt==false, return FD_DidForward.
+  /// @return If DoIt==false, return whether the operand tree can be forwarded.
+  ///         If DoIt==true, return FD_DidForward.
   ForwardingDecision canForwardTree(ScopStmt *TargetStmt, Value *UseVal,
                                     ScopStmt *UseStmt, Loop *UseLoop,
                                     bool DoIt) {
@@ -132,9 +140,16 @@ private:
       return FD_CannotForward;
 
     case VirtualUse::ReadOnly:
-      // Not supported yet.
-      DEBUG(dbgs() << "    Cannot forward read-only val: " << *UseVal << "\n");
-      return FD_CannotForward;
+      if (!DoIt)
+        return FD_CanForward;
+
+      // If we model read-only scalars, we need to create a MemoryAccess for it.
+      if (ModelReadOnlyScalars)
+        TargetStmt->ensureValueRead(UseVal);
+
+      NumReadOnlyCopied++;
+      TotalReadOnlyCopied++;
+      return FD_DidForward;
 
     case VirtualUse::Intra:
     case VirtualUse::Inter:
@@ -169,7 +184,7 @@ private:
         // instruction using them.
         // TODO: The operand tree is not really a tree, but a DAG. We should be
         // able to handle DAGs without duplication.
-        TargetStmt->prependInstrunction(Inst);
+        TargetStmt->prependInstruction(Inst);
         NumInstructionsCopied++;
         TotalInstructionsCopied++;
       }
@@ -183,6 +198,7 @@ private:
           return FD_CannotForward;
 
         case FD_CanForward:
+        case FD_CanForwardTree:
           assert(!DoIt);
           break;
 
@@ -194,7 +210,7 @@ private:
 
       if (DoIt)
         return FD_DidForward;
-      return FD_CanForward;
+      return FD_CanForwardTree;
     }
 
     llvm_unreachable("Case unhandled");
@@ -211,7 +227,7 @@ private:
     ForwardingDecision Assessment =
         canForwardTree(Stmt, RA->getAccessValue(), Stmt, InLoop, false);
     assert(Assessment != FD_DidForward);
-    if (Assessment == FD_CannotForward)
+    if (Assessment != FD_CanForwardTree)
       return false;
 
     ForwardingDecision Execution =

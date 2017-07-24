@@ -1590,7 +1590,7 @@ public:
   }
 
   /// Insert an instruction before all other instructions in this statement.
-  void prependInstrunction(Instruction *Inst) {
+  void prependInstruction(Instruction *Inst) {
     assert(isBlockStmt() && "Only block statements support instruction lists");
     Instructions.insert(Instructions.begin(), Inst);
   }
@@ -1627,6 +1627,18 @@ public:
   /// Print the instructions in ScopStmt.
   ///
   void printInstructions(raw_ostream &OS) const;
+
+  /// Check whether there is a value read access for @p V in this statement, and
+  /// if not, create one.
+  ///
+  /// This allows to add MemoryAccesses after the initial creation of the Scop
+  /// by ScopBuilder.
+  ///
+  /// @return The already existing or newly created MemoryKind::Value READ
+  /// MemoryAccess.
+  ///
+  /// @see ScopBuilder::ensureValueRead(Value*,ScopStmt*)
+  MemoryAccess *ensureValueRead(Value *V);
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the ScopStmt to stderr.

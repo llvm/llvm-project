@@ -2042,6 +2042,22 @@ void ScopStmt::removeSingleMemoryAccess(MemoryAccess *MA) {
   }
 }
 
+MemoryAccess *ScopStmt::ensureValueRead(Value *V) {
+  MemoryAccess *Access = lookupInputAccessOf(V);
+  if (Access)
+    return Access;
+
+  ScopArrayInfo *SAI =
+      Parent.getOrCreateScopArrayInfo(V, V->getType(), {}, MemoryKind::Value);
+  Access = new MemoryAccess(this, nullptr, MemoryAccess::READ, V, V->getType(),
+                            true, {}, {}, V, MemoryKind::Value);
+  Parent.addAccessFunction(Access);
+  Access->buildAccessRelation(SAI);
+  addAccess(Access);
+  Parent.addAccessData(Access);
+  return Access;
+}
+
 raw_ostream &polly::operator<<(raw_ostream &O, const ScopStmt &S) {
   S.print(O, PollyPrintInstructions);
   return O;

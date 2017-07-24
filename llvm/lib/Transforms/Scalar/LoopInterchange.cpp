@@ -66,10 +66,9 @@ struct LoopInterchange;
 
 #ifdef DUMP_DEP_MATRICIES
 void printDepMatrix(CharMatrix &DepMatrix) {
-  for (auto I = DepMatrix.begin(), E = DepMatrix.end(); I != E; ++I) {
-    std::vector<char> Vec = *I;
-    for (auto II = Vec.begin(), EE = Vec.end(); II != EE; ++II)
-      DEBUG(dbgs() << *II << " ");
+  for (auto &Row : DepMatrix) {
+    for (auto D : Row)
+      DEBUG(dbgs() << D << " ");
     DEBUG(dbgs() << "\n");
   }
 }
@@ -81,21 +80,19 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
   ValueVector MemInstr;
 
   // For each block.
-  for (Loop::block_iterator BB = L->block_begin(), BE = L->block_end();
-       BB != BE; ++BB) {
+  for (BasicBlock *BB : L->blocks()) {
     // Scan the BB and collect legal loads and stores.
-    for (BasicBlock::iterator I = (*BB)->begin(), E = (*BB)->end(); I != E;
-         ++I) {
+    for (Instruction &I : *BB) {
       if (!isa<Instruction>(I))
         return false;
-      if (LoadInst *Ld = dyn_cast<LoadInst>(I)) {
+      if (auto *Ld = dyn_cast<LoadInst>(&I)) {
         if (!Ld->isSimple())
           return false;
-        MemInstr.push_back(&*I);
-      } else if (StoreInst *St = dyn_cast<StoreInst>(I)) {
+        MemInstr.push_back(&I);
+      } else if (auto *St = dyn_cast<StoreInst>(&I)) {
         if (!St->isSimple())
           return false;
-        MemInstr.push_back(&*I);
+        MemInstr.push_back(&I);
       }
     }
   }
@@ -664,11 +661,9 @@ bool LoopInterchangeLegality::tightlyNested(Loop *OuterLoop, Loop *InnerLoop) {
   if (!OuterLoopHeaderBI)
     return false;
 
-  for (unsigned i = 0, e = OuterLoopHeaderBI->getNumSuccessors(); i < e; ++i) {
-    if (OuterLoopHeaderBI->getSuccessor(i) != InnerLoopPreHeader &&
-        OuterLoopHeaderBI->getSuccessor(i) != OuterLoopLatch)
+  for (BasicBlock *Succ : OuterLoopHeaderBI->successors())
+    if (Succ != InnerLoopPreHeader && Succ != OuterLoopLatch)
       return false;
-  }
 
   DEBUG(dbgs() << "Checking instructions in Loop header and Loop latch\n");
   // We do not have any basic block in between now make sure the outer header
@@ -750,12 +745,12 @@ static bool containsSafePHI(BasicBlock *Block, bool isOuterLoopExitBlock) {
 static BasicBlock *getLoopLatchExitBlock(BasicBlock *LatchBlock,
                                          BasicBlock *LoopHeader) {
   if (BranchInst *BI = dyn_cast<BranchInst>(LatchBlock->getTerminator())) {
-    unsigned Num = BI->getNumSuccessors();
-    assert(Num == 2);
-    for (unsigned i = 0; i < Num; ++i) {
-      if (BI->getSuccessor(i) == LoopHeader)
+    assert(BI->getNumSuccessors() == 2 &&
+           "Branch leaving loop latch must have 2 successors");
+    for (BasicBlock *Succ : BI->successors()) {
+      if (Succ == LoopHeader)
         continue;
-      return BI->getSuccessor(i);
+      return Succ;
     }
   }
   return nullptr;
@@ -1010,9 +1005,8 @@ bool LoopInterchangeLegality::canInterchangeLoops(unsigned InnerLoopId,
 int LoopInterchangeProfitability::getInstrOrderCost() {
   unsigned GoodOrder, BadOrder;
   BadOrder = GoodOrder = 0;
-  for (auto BI = InnerLoop->block_begin(), BE = InnerLoop->block_end();
-       BI != BE; ++BI) {
-    for (Instruction &Ins : **BI) {
+  for (BasicBlock *BB : InnerLoop->blocks()) {
+    for (Instruction &Ins : *BB) {
       if (const GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(&Ins)) {
         unsigned NumOp = GEP->getNumOperands();
         bool FoundInnerInduction = false;
@@ -1064,12 +1058,11 @@ static bool isProfitableForVectorization(unsigned InnerLoopId,
   // TODO: Improve this heuristic to catch more cases.
   // If the inner loop is loop independent or doesn't carry any dependency it is
   // profitable to move this to outer position.
-  unsigned Row = DepMatrix.size();
-  for (unsigned i = 0; i < Row; ++i) {
-    if (DepMatrix[i][InnerLoopId] != 'S' && DepMatrix[i][InnerLoopId] != 'I')
+  for (auto &Row : DepMatrix) {
+    if (Row[InnerLoopId] != 'S' && Row[InnerLoopId] != 'I')
       return false;
     // TODO: We need to improve this heuristic.
-    if (DepMatrix[i][OuterLoopId] != '=')
+    if (Row[OuterLoopId] != '=')
       return false;
   }
   // If outer loop has dependence and inner loop is loop independent then it is
