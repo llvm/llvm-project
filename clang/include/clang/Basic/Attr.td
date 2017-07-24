@@ -1649,7 +1649,7 @@ def SwiftName : InheritableAttr {
   let Documentation = [Undocumented];
 }
 
-def SwiftNewtype : Attr {
+def SwiftNewtype : InheritableAttr {
   let Spellings = [GNU<"swift_newtype">, GNU<"swift_wrapper">];
   let Subjects = SubjectList<[TypedefName], ErrorDiag, "ExpectedType">;
   let Args = [EnumArgument<"NewtypeKind", "NewtypeKind",
