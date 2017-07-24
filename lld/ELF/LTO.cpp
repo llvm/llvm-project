@@ -73,6 +73,10 @@ static std::unique_ptr<lto::LTO> createLTO() {
   Conf.Options = InitTargetOptionsFromCodeGenFlags();
   Conf.Options.RelaxELFRelocations = true;
 
+  // Always emit a section per function/datum with LTO.
+  Conf.Options.FunctionSections = true;
+  Conf.Options.DataSections = true;
+
   if (Config->Relocatable)
     Conf.RelocModel = None;
   else if (Config->Pic)

@@ -19,10 +19,6 @@ struct DWARFSection {
   StringRef Data;
 };
 
-struct DWARFSectionMap final : public DWARFSection {
-  RelocAddrMap Relocs;
-};
-
 } // end namespace llvm
 
 #endif // LLVM_DEBUGINFO_DWARF_DWARFSECTION_H

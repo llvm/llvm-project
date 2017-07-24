@@ -216,6 +216,7 @@ static std::string formatSourceLanguage(SourceLanguage Lang) {
     RETURN_CASE(SourceLanguage, JScript, "javascript");
     RETURN_CASE(SourceLanguage, MSIL, "msil");
     RETURN_CASE(SourceLanguage, HLSL, "hlsl");
+    RETURN_CASE(SourceLanguage, D, "d");
   }
   return formatUnknownEnum(Lang);
 }

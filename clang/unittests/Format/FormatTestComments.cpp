@@ -855,6 +855,48 @@ TEST_F(FormatTestComments, KeepsLevelOfCommentBeforePPDirective) {
                    "#endif\n"
                    "}"));
 
+  EXPECT_EQ("int f(int i) {\n"
+            "  if (true) {\n"
+            "    i++;\n"
+            "  } else {\n"
+            "    // comment in else\n"
+            "#ifdef A\n"
+            "    j++;\n"
+            "#endif\n"
+            "  }\n"
+            "}",
+            format("int f(int i) {\n"
+                   "  if (true) {\n"
+                   "    i++;\n"
+                   "  } else {\n"
+                   "  // comment in else\n"
+                   "#ifdef A\n"
+                   "    j++;\n"
+                   "#endif\n"
+                   "  }\n"
+                   "}"));
+
+  EXPECT_EQ("int f(int i) {\n"
+            "  if (true) {\n"
+            "    i++;\n"
+            "  } else {\n"
+            "    /* comment in else */\n"
+            "#ifdef A\n"
+            "    j++;\n"
+            "#endif\n"
+            "  }\n"
+            "}",
+            format("int f(int i) {\n"
+                   "  if (true) {\n"
+                   "    i++;\n"
+                   "  } else {\n"
+                   "  /* comment in else */\n"
+                   "#ifdef A\n"
+                   "    j++;\n"
+                   "#endif\n"
+                   "  }\n"
+                   "}"));
+
   // Keep the current level if there is an empty line between the comment and
   // the preprocessor directive.
   EXPECT_EQ("void f() {\n"
@@ -912,8 +954,55 @@ TEST_F(FormatTestComments, KeepsLevelOfCommentBeforePPDirective) {
                    "#endif\n"
                    "}"));
 
+  EXPECT_EQ("int f(int i) {\n"
+            "  if (true) {\n"
+            "    i++;\n"
+            "  } else {\n"
+            "    // comment in else\n"
+            "\n"
+            "#ifdef A\n"
+            "    j++;\n"
+            "#endif\n"
+            "  }\n"
+            "}",
+            format("int f(int i) {\n"
+                   "  if (true) {\n"
+                   "    i++;\n"
+                   "  } else {\n"
+                   "// comment in else\n"
+                   "\n"
+                   "#ifdef A\n"
+                   "    j++;\n"
+                   "#endif\n"
+                   "  }\n"
+                   "}"));
+
+  EXPECT_EQ("int f(int i) {\n"
+            "  if (true) {\n"
+            "    i++;\n"
+            "  } else {\n"
+            "    /* comment in else */\n"
+            "\n"
+            "#ifdef A\n"
+            "    j++;\n"
+            "#endif\n"
+            "  }\n"
+            "}",
+            format("int f(int i) {\n"
+                   "  if (true) {\n"
+                   "    i++;\n"
+                   "  } else {\n"
+                   "/* comment in else */\n"
+                   "\n"
+                   "#ifdef A\n"
+                   "    j++;\n"
+                   "#endif\n"
+                   "  }\n"
+                   "}"));
+
   // Align with the preprocessor directive if the comment was originally aligned
-  // with the preprocessor directive.
+  // with the preprocessor directive and there is no newline between the comment
+  // and the preprocessor directive.
   EXPECT_EQ("void f() {\n"
             "  int i;\n"
             "/* comment */\n"
@@ -944,6 +1033,48 @@ TEST_F(FormatTestComments, KeepsLevelOfCommentBeforePPDirective) {
                    "#ifdef A\n"
                    "  int j;\n"
                    "#endif\n"
+                   "}"));
+
+  EXPECT_EQ("int f(int i) {\n"
+            "  if (true) {\n"
+            "    i++;\n"
+            "  } else {\n"
+            "// comment in else\n"
+            "#ifdef A\n"
+            "    j++;\n"
+            "#endif\n"
+            "  }\n"
+            "}",
+            format("int f(int i) {\n"
+                   "  if (true) {\n"
+                   "    i++;\n"
+                   "  } else {\n"
+                   " // comment in else\n"
+                   " #ifdef A\n"
+                   "    j++;\n"
+                   "#endif\n"
+                   "  }\n"
+                   "}"));
+
+  EXPECT_EQ("int f(int i) {\n"
+            "  if (true) {\n"
+            "    i++;\n"
+            "  } else {\n"
+            "/* comment in else */\n"
+            "#ifdef A\n"
+            "    j++;\n"
+            "#endif\n"
+            "  }\n"
+            "}",
+            format("int f(int i) {\n"
+                   "  if (true) {\n"
+                   "    i++;\n"
+                   "  } else {\n"
+                   " /* comment in else */\n"
+                   " #ifdef A\n"
+                   "    j++;\n"
+                   "#endif\n"
+                   "  }\n"
                    "}"));
 }
 

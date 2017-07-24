@@ -94,6 +94,7 @@ bool DWARFVerifier::verifyUnitContents(DWARFUnit Unit) {
     auto Die = Unit.getDIEAtIndex(I);
     if (Die.getTag() == DW_TAG_null)
       continue;
+    NumUnitErrors += verifyDieRanges(Die);
     for (auto AttrValue : Die.attributes()) {
       NumUnitErrors += verifyDebugInfoAttribute(Die, AttrValue);
       NumUnitErrors += verifyDebugInfoForm(Die, AttrValue);
@@ -207,6 +208,18 @@ bool DWARFVerifier::handleDebugInfo() {
   }
   NumDebugInfoErrors += verifyDebugInfoReferences();
   return (isHeaderChainValid && NumDebugInfoErrors == 0);
+}
+
+unsigned DWARFVerifier::verifyDieRanges(const DWARFDie &Die) {
+  unsigned NumErrors = 0;
+  for (auto Range : Die.getAddressRanges()) {
+    if (Range.LowPC >= Range.HighPC) {
+      ++NumErrors;
+      OS << format("error: Invalid address range [0x%08x - 0x%08x].\n",
+                   Range.LowPC, Range.HighPC);
+    }
+  }
+  return NumErrors;
 }
 
 unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,

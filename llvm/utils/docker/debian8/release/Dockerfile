@@ -12,7 +12,7 @@ FROM launcher.gcr.io/google/debian8:latest
 
 LABEL maintainer "LLVM Developers"
 
-# Install packages for minimal usefull image.
+# Install packages for minimal useful image.
 RUN apt-get update && \
     apt-get install -y --no-install-recommends libstdc++-4.9-dev binutils && \
     rm -rf /var/lib/apt/lists/*

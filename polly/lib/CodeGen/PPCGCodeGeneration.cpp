@@ -1512,7 +1512,7 @@ GPUNodeBuilder::createLaunchParameters(ppcg_kernel *Kernel, Function *F,
       continue;
 
     isl_id *Id = isl_space_get_tuple_id(Prog->array[i].space, isl_dim_set);
-    const ScopArrayInfo *SAI = ScopArrayInfo::getFromId(Id);
+    const ScopArrayInfo *SAI = ScopArrayInfo::getFromId(isl::manage(Id));
 
     ArgSizes[Index] = SAI->getElemSizeInBytes();
 
@@ -1785,7 +1785,7 @@ GPUNodeBuilder::createKernelFunctionDecl(ppcg_kernel *Kernel,
 
     if (gpu_array_is_read_only_scalar(&Prog->array[i])) {
       isl_id *Id = isl_space_get_tuple_id(Prog->array[i].space, isl_dim_set);
-      const ScopArrayInfo *SAI = ScopArrayInfo::getFromId(Id);
+      const ScopArrayInfo *SAI = ScopArrayInfo::getFromId(isl::manage(Id));
       Args.push_back(SAI->getElementType());
       MemoryType.push_back(
           ConstantAsMetadata::get(ConstantInt::get(Builder.getInt32Ty(), 0)));
@@ -1865,7 +1865,8 @@ GPUNodeBuilder::createKernelFunctionDecl(ppcg_kernel *Kernel,
     Arg->setName(Kernel->array[i].array->name);
 
     isl_id *Id = isl_space_get_tuple_id(Prog->array[i].space, isl_dim_set);
-    const ScopArrayInfo *SAI = ScopArrayInfo::getFromId(isl_id_copy(Id));
+    const ScopArrayInfo *SAI =
+        ScopArrayInfo::getFromId(isl::manage(isl_id_copy(Id)));
     Type *EleTy = SAI->getElementType();
     Value *Val = &*Arg;
     SmallVector<const SCEV *, 4> Sizes;
@@ -1996,7 +1997,8 @@ void GPUNodeBuilder::prepareKernelArguments(ppcg_kernel *Kernel, Function *FN) {
       continue;
 
     isl_id *Id = isl_space_get_tuple_id(Prog->array[i].space, isl_dim_set);
-    const ScopArrayInfo *SAI = ScopArrayInfo::getFromId(isl_id_copy(Id));
+    const ScopArrayInfo *SAI =
+        ScopArrayInfo::getFromId(isl::manage(isl_id_copy(Id)));
     isl_id_free(Id);
 
     if (SAI->getNumberOfDimensions() > 0) {
@@ -2029,7 +2031,8 @@ void GPUNodeBuilder::finalizeKernelArguments(ppcg_kernel *Kernel) {
       continue;
 
     isl_id *Id = isl_space_get_tuple_id(Prog->array[i].space, isl_dim_set);
-    const ScopArrayInfo *SAI = ScopArrayInfo::getFromId(isl_id_copy(Id));
+    const ScopArrayInfo *SAI =
+        ScopArrayInfo::getFromId(isl::manage(isl_id_copy(Id)));
     isl_id_free(Id);
 
     if (SAI->getNumberOfDimensions() > 0) {
@@ -2068,7 +2071,7 @@ void GPUNodeBuilder::createKernelVariables(ppcg_kernel *Kernel, Function *FN) {
   for (int i = 0; i < Kernel->n_var; ++i) {
     struct ppcg_kernel_var &Var = Kernel->var[i];
     isl_id *Id = isl_space_get_tuple_id(Var.array->space, isl_dim_set);
-    Type *EleTy = ScopArrayInfo::getFromId(Id)->getElementType();
+    Type *EleTy = ScopArrayInfo::getFromId(isl::manage(Id))->getElementType();
 
     Type *ArrayTy = EleTy;
     SmallVector<const SCEV *, 4> Sizes;
