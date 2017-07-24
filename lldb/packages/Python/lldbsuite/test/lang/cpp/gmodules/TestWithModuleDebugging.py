@@ -9,8 +9,6 @@ class TestWithGmodulesDebugInfo(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @expectedFailureAll(bugnumber="llvm.org/pr33875", oslist=["linux"],
-            compiler="clang", compiler_version=[">", "6.0"])
     @add_test_categories(["gmodules"])
     def test_specialized_typedef_from_pch(self):
         self.build()

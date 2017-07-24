@@ -64,6 +64,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Regex.h"
 #include <set>
 #include <stack>
 
@@ -92,10 +93,10 @@ static cl::opt<bool, true> XPollyProcessUnprofitable(
 
 static cl::list<std::string> OnlyFunctions(
     "polly-only-func",
-    cl::desc("Only run on functions that contain a certain string. "
-             "Multiple strings can be comma separated. "
-             "Scop detection will run on all functions that contain "
-             "any of the strings provided."),
+    cl::desc("Only run on functions that match a regex. "
+             "Multiple regexes can be comma separated. "
+             "Scop detection will run on all functions that match "
+             "ANY of the regexes provided."),
     cl::ZeroOrMore, cl::CommaSeparated, cl::cat(PollyCategory));
 
 static cl::opt<bool>
@@ -274,9 +275,17 @@ void DiagnosticScopFound::print(DiagnosticPrinter &DP) const {
 }
 
 static bool IsFnNameListedInOnlyFunctions(StringRef FnName) {
-  for (auto Name : OnlyFunctions)
-    if (FnName.count(Name) > 0)
+  for (auto RegexStr : OnlyFunctions) {
+    Regex R(RegexStr);
+
+    std::string Err;
+    if (!R.isValid(Err))
+      report_fatal_error(
+          "invalid regex given as input to -polly-only-func. " + Err, true);
+
+    if (R.match(FnName))
       return true;
+  }
   return false;
 }
 //===----------------------------------------------------------------------===//

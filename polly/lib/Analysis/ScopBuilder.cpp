@@ -32,10 +32,12 @@ STATISTIC(RichScopFound, "Number of Scops containing a loop");
 STATISTIC(InfeasibleScops,
           "Number of SCoPs with statically infeasible context.");
 
-static cl::opt<bool> ModelReadOnlyScalars(
+bool polly::ModelReadOnlyScalars;
+static cl::opt<bool, true> XModelReadOnlyScalars(
     "polly-analyze-read-only-scalars",
     cl::desc("Model read-only scalar values in the scop description"),
-    cl::Hidden, cl::ZeroOrMore, cl::init(true), cl::cat(PollyCategory));
+    cl::location(ModelReadOnlyScalars), cl::Hidden, cl::ZeroOrMore,
+    cl::init(true), cl::cat(PollyCategory));
 
 static cl::opt<bool> UnprofitableScalarAccs(
     "polly-unprofitable-scalar-accs",
@@ -778,6 +780,15 @@ void ScopBuilder::ensureValueWrite(Instruction *Inst) {
 }
 
 void ScopBuilder::ensureValueRead(Value *V, ScopStmt *UserStmt) {
+  // TODO: Make ScopStmt::ensureValueRead(Value*) offer the same functionality
+  // to be able to replace this one. Currently, there is a split responsibility.
+  // In a first step, the MemoryAccess is created, but without the
+  // AccessRelation. In the second step by ScopStmt::buildAccessRelations(), the
+  // AccessRelation is created. At least for scalar accesses, there is no new
+  // information available at ScopStmt::buildAccessRelations(), so we could
+  // create the AccessRelation right away. This is what
+  // ScopStmt::ensureValueRead(Value*) does.
+
   auto *Scope = UserStmt->getSurroundingLoop();
   auto VUse = VirtualUse::create(scop.get(), UserStmt, Scope, V, false);
   switch (VUse.getKind()) {

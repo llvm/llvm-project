@@ -43,7 +43,7 @@ bool UriParser::Parse(llvm::StringRef uri, llvm::StringRef &scheme,
       ((path_pos != std::string::npos) ? path_pos : uri.size()) - host_pos);
 
   // Extract hostname
-  if (host_port[0] == '[') {
+  if (!host_port.empty() && host_port[0] == '[') {
     // hostname is enclosed with square brackets.
     pos = host_port.find(']');
     if (pos == std::string::npos)

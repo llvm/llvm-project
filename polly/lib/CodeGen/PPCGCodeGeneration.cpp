@@ -255,7 +255,7 @@ static MustKillsInfo computeMustKillsInfo(const Scop &S) {
 /// This function is a callback for to generate the ast expressions for each
 /// of the scheduled ScopStmts.
 static __isl_give isl_id_to_ast_expr *pollyBuildAstExprForStmt(
-    void *StmtT, isl_ast_build *Build,
+    void *StmtT, __isl_take isl_ast_build *Build_C,
     isl_multi_pw_aff *(*FunctionIndex)(__isl_take isl_multi_pw_aff *MPA,
                                        isl_id *Id, void *User),
     void *UserIndex,
@@ -264,28 +264,30 @@ static __isl_give isl_id_to_ast_expr *pollyBuildAstExprForStmt(
 
   ScopStmt *Stmt = (ScopStmt *)StmtT;
 
-  isl_ctx *Ctx;
-
-  if (!Stmt || !Build)
+  if (!Stmt || !Build_C)
     return NULL;
 
-  Ctx = isl_ast_build_get_ctx(Build);
-  isl_id_to_ast_expr *RefToExpr = isl_id_to_ast_expr_alloc(Ctx, 0);
+  isl::ast_build Build = isl::manage(isl_ast_build_copy(Build_C));
+  isl::ctx Ctx = Build.get_ctx();
+  isl::id_to_ast_expr RefToExpr = isl::id_to_ast_expr::alloc(Ctx, 0);
 
   for (MemoryAccess *Acc : *Stmt) {
-    isl_map *AddrFunc = Acc->getAddressFunction().release();
-    AddrFunc = isl_map_intersect_domain(AddrFunc, Stmt->getDomain());
-    isl_id *RefId = Acc->getId().release();
-    isl_pw_multi_aff *PMA = isl_pw_multi_aff_from_map(AddrFunc);
-    isl_multi_pw_aff *MPA = isl_multi_pw_aff_from_pw_multi_aff(PMA);
-    MPA = isl_multi_pw_aff_coalesce(MPA);
-    MPA = FunctionIndex(MPA, RefId, UserIndex);
-    isl_ast_expr *Access = isl_ast_build_access_from_multi_pw_aff(Build, MPA);
-    Access = FunctionExpr(Access, RefId, UserExpr);
-    RefToExpr = isl_id_to_ast_expr_set(RefToExpr, RefId, Access);
+    isl::map AddrFunc = Acc->getAddressFunction();
+    AddrFunc = AddrFunc.intersect_domain(isl::manage(Stmt->getDomain()));
+
+    isl::id RefId = Acc->getId();
+    isl::pw_multi_aff PMA = isl::pw_multi_aff::from_map(AddrFunc);
+
+    isl::multi_pw_aff MPA = isl::multi_pw_aff(PMA);
+    MPA = MPA.coalesce();
+    MPA = isl::manage(FunctionIndex(MPA.release(), RefId.get(), UserIndex));
+
+    isl::ast_expr Access = Build.access_from(MPA);
+    Access = isl::manage(FunctionExpr(Access.release(), RefId.get(), UserExpr));
+    RefToExpr = RefToExpr.set(RefId, Access);
   }
 
-  return RefToExpr;
+  return RefToExpr.release();
 }
 
 /// Given a LLVM Type, compute its size in bytes,
@@ -1013,25 +1015,28 @@ static bool isPrefix(std::string String, std::string Prefix) {
 }
 
 Value *GPUNodeBuilder::getArraySize(gpu_array_info *Array) {
-  isl_ast_build *Build = isl_ast_build_from_context(S.getContext());
+  isl::ast_build Build =
+      isl::ast_build::from_context(isl::manage(S.getContext()));
   Value *ArraySize = ConstantInt::get(Builder.getInt64Ty(), Array->size);
 
   if (!gpu_array_is_scalar(Array)) {
-    auto OffsetDimZero = isl_multi_pw_aff_get_pw_aff(Array->bound, 0);
-    isl_ast_expr *Res = isl_ast_build_expr_from_pw_aff(Build, OffsetDimZero);
+    isl::multi_pw_aff ArrayBound =
+        isl::manage(isl_multi_pw_aff_copy(Array->bound));
+
+    isl::pw_aff OffsetDimZero = ArrayBound.get_pw_aff(0);
+    isl::ast_expr Res = Build.expr_from(OffsetDimZero);
 
     for (unsigned int i = 1; i < Array->n_index; i++) {
-      isl_pw_aff *Bound_I = isl_multi_pw_aff_get_pw_aff(Array->bound, i);
-      isl_ast_expr *Expr = isl_ast_build_expr_from_pw_aff(Build, Bound_I);
-      Res = isl_ast_expr_mul(Res, Expr);
+      isl::pw_aff Bound_I = ArrayBound.get_pw_aff(i);
+      isl::ast_expr Expr = Build.expr_from(Bound_I);
+      Res = Res.mul(Expr);
     }
 
-    Value *NumElements = ExprBuilder.create(Res);
+    Value *NumElements = ExprBuilder.create(Res.release());
     if (NumElements->getType() != ArraySize->getType())
       NumElements = Builder.CreateSExt(NumElements, ArraySize->getType());
     ArraySize = Builder.CreateMul(ArraySize, NumElements);
   }
-  isl_ast_build_free(Build);
   return ArraySize;
 }
 
@@ -1507,7 +1512,7 @@ GPUNodeBuilder::createLaunchParameters(ppcg_kernel *Kernel, Function *F,
       continue;
 
     isl_id *Id = isl_space_get_tuple_id(Prog->array[i].space, isl_dim_set);
-    const ScopArrayInfo *SAI = ScopArrayInfo::getFromId(Id);
+    const ScopArrayInfo *SAI = ScopArrayInfo::getFromId(isl::manage(Id));
 
     ArgSizes[Index] = SAI->getElemSizeInBytes();
 
@@ -1780,7 +1785,7 @@ GPUNodeBuilder::createKernelFunctionDecl(ppcg_kernel *Kernel,
 
     if (gpu_array_is_read_only_scalar(&Prog->array[i])) {
       isl_id *Id = isl_space_get_tuple_id(Prog->array[i].space, isl_dim_set);
-      const ScopArrayInfo *SAI = ScopArrayInfo::getFromId(Id);
+      const ScopArrayInfo *SAI = ScopArrayInfo::getFromId(isl::manage(Id));
       Args.push_back(SAI->getElementType());
       MemoryType.push_back(
           ConstantAsMetadata::get(ConstantInt::get(Builder.getInt32Ty(), 0)));
@@ -1860,7 +1865,8 @@ GPUNodeBuilder::createKernelFunctionDecl(ppcg_kernel *Kernel,
     Arg->setName(Kernel->array[i].array->name);
 
     isl_id *Id = isl_space_get_tuple_id(Prog->array[i].space, isl_dim_set);
-    const ScopArrayInfo *SAI = ScopArrayInfo::getFromId(isl_id_copy(Id));
+    const ScopArrayInfo *SAI =
+        ScopArrayInfo::getFromId(isl::manage(isl_id_copy(Id)));
     Type *EleTy = SAI->getElementType();
     Value *Val = &*Arg;
     SmallVector<const SCEV *, 4> Sizes;
@@ -1991,7 +1997,8 @@ void GPUNodeBuilder::prepareKernelArguments(ppcg_kernel *Kernel, Function *FN) {
       continue;
 
     isl_id *Id = isl_space_get_tuple_id(Prog->array[i].space, isl_dim_set);
-    const ScopArrayInfo *SAI = ScopArrayInfo::getFromId(isl_id_copy(Id));
+    const ScopArrayInfo *SAI =
+        ScopArrayInfo::getFromId(isl::manage(isl_id_copy(Id)));
     isl_id_free(Id);
 
     if (SAI->getNumberOfDimensions() > 0) {
@@ -2024,7 +2031,8 @@ void GPUNodeBuilder::finalizeKernelArguments(ppcg_kernel *Kernel) {
       continue;
 
     isl_id *Id = isl_space_get_tuple_id(Prog->array[i].space, isl_dim_set);
-    const ScopArrayInfo *SAI = ScopArrayInfo::getFromId(isl_id_copy(Id));
+    const ScopArrayInfo *SAI =
+        ScopArrayInfo::getFromId(isl::manage(isl_id_copy(Id)));
     isl_id_free(Id);
 
     if (SAI->getNumberOfDimensions() > 0) {
@@ -2063,7 +2071,7 @@ void GPUNodeBuilder::createKernelVariables(ppcg_kernel *Kernel, Function *FN) {
   for (int i = 0; i < Kernel->n_var; ++i) {
     struct ppcg_kernel_var &Var = Kernel->var[i];
     isl_id *Id = isl_space_get_tuple_id(Var.array->space, isl_dim_set);
-    Type *EleTy = ScopArrayInfo::getFromId(Id)->getElementType();
+    Type *EleTy = ScopArrayInfo::getFromId(isl::manage(Id))->getElementType();
 
     Type *ArrayTy = EleTy;
     SmallVector<const SCEV *, 4> Sizes;
