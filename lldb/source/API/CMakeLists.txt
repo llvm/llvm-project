@@ -156,19 +156,47 @@ endif()
 target_link_libraries(liblldb PRIVATE ${LLDB_SYSTEM_LIBS})
 
 if(LLDB_BUILD_FRAMEWORK)
-  file(GLOB public_headers ${LLDB_SOURCE_DIR}/include/lldb/API/*.h)
+  file(GLOB public_headers ${LLDB_SOURCE_DIR}/include/lldb/API/*.h
+      ${LLDB_SOURCE_DIR}/include/lldb/lldb-*.h)
+  file(GLOB root_public_headers ${LLDB_SOURCE_DIR}/include/lldb/lldb-*.h)
+
+  foreach(header ${root_public_headers})
+    list(APPEND copy_headers_commands
+         COMMAND ${CMAKE_COMMAND} -E copy ${header} ${LLDB_SOURCE_DIR}/include/lldb/API ${CMAKE_CURRENT_BINARY_DIR}/FrameworkHeaders)
+  endforeach()
+
+  foreach(header ${public_headers} ${root_public_headers})
+    get_filename_component(basename ${header} NAME)
+    list(APPEND framework_headers ${CMAKE_CURRENT_BINARY_DIR}/FrameworkHeaders/${basename})
+  endforeach()
+
+  add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/FrameworkHeaders/LLDB.h
+                    COMMAND ${CMAKE_COMMAND} -E copy_directory ${LLDB_SOURCE_DIR}/include/lldb/API ${CMAKE_CURRENT_BINARY_DIR}/FrameworkHeaders
+                    ${copy_headers_commands}
+                    COMMAND ${LLDB_SOURCE_DIR}/scripts/framework-header-fix.sh ${CMAKE_CURRENT_BINARY_DIR}/FrameworkHeaders ${LLDB_VERSION}
+                    )
+  add_custom_target(lldb-framework-headers DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/FrameworkHeaders/LLDB.h)
+  add_dependencies(liblldb lldb-framework-headers)
+
   set_target_properties(liblldb PROPERTIES
     OUTPUT_NAME LLDB
     FRAMEWORK On
     FRAMEWORK_VERSION ${LLDB_FRAMEWORK_VERSION}
     LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${LLDB_FRAMEWORK_INSTALL_DIR}
-    PUBLIC_HEADER "${public_headers}")
+    PUBLIC_HEADER "${framework_headers}")
 
-  add_custom_command(TARGET liblldb POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:liblldb>/Versions/${LLDB_FRAMEWORK_VERSION}
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${LLDB_SOURCE_DIR}/include/lldb/API $<TARGET_FILE_DIR:liblldb>/Headers
-    COMMAND ${CMAKE_COMMAND} -E create_symlink Versions/Current/Headers ${CMAKE_BINARY_DIR}/${LLDB_FRAMEWORK_INSTALL_DIR}/LLDB.framework/Headers 
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/clang/${LLDB_VERSION} $<TARGET_FILE_DIR:liblldb>/Resources/Clang
-    )
+  if(NOT IOS)
+    add_custom_command(TARGET liblldb POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_BINARY_DIR}/FrameworkHeaders $<TARGET_FILE_DIR:liblldb>/Headers
+      COMMAND ${CMAKE_COMMAND} -E create_symlink Versions/Current/Headers ${CMAKE_BINARY_DIR}/${LLDB_FRAMEWORK_INSTALL_DIR}/LLDB.framework/Headers
+      COMMAND ${CMAKE_COMMAND} -E create_symlink ${LLDB_FRAMEWORK_VERSION} ${CMAKE_BINARY_DIR}/${LLDB_FRAMEWORK_INSTALL_DIR}/LLDB.framework/Versions/Current
+      COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/clang/${LLDB_VERSION} $<TARGET_FILE_DIR:liblldb>/Resources/Clang
+      )
+  else()
+    add_custom_command(TARGET liblldb POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_BINARY_DIR}/FrameworkHeaders $<TARGET_FILE_DIR:liblldb>/Headers
+      )
+  endif()
+
 endif()
 

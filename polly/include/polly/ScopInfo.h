@@ -1391,8 +1391,8 @@ public:
     return getRegion()->contains(L);
   }
 
-  /// Return whether this statement contains @p BB.
-  bool contains(BasicBlock *BB) const {
+  /// Return whether this statement represents @p BB.
+  bool represents(BasicBlock *BB) const {
     if (isCopyStmt())
       return false;
     if (isBlockStmt())
@@ -1404,7 +1404,7 @@ public:
   bool contains(Instruction *Inst) const {
     if (!Inst)
       return false;
-    return contains(Inst->getParent());
+    return represents(Inst->getParent());
   }
 
   /// Return the closest innermost loop that contains this statement, but is not
@@ -1498,7 +1498,6 @@ public:
   /// Return the MemoryAccess that loads a PHINode value, or nullptr if not
   /// existing, respectively not yet added.
   MemoryAccess *lookupPHIReadOf(PHINode *PHI) const {
-    assert(isBlockStmt() || R->getEntry() == PHI->getParent());
     return PHIReads.lookup(PHI);
   }
 

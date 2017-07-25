@@ -1,6 +1,10 @@
 # RUN: yaml2obj %p/Inputs/ret42.yaml > %t.obj
 
+# RUN: rm -f %t.exe.manifest
 # RUN: lld-link /out:%t.exe /entry:main %t.obj
+# RUN: test ! -e %t.exe.manifest
+
+# RUN: lld-link /manifest /out:%t.exe /entry:main %t.obj
 # RUN: FileCheck -check-prefix=MANIFEST %s < %t.exe.manifest
 
 MANIFEST: <?xml version="1.0" standalone="yes"?>
@@ -15,7 +19,7 @@ MANIFEST:     </security>
 MANIFEST:   </trustInfo>
 MANIFEST: </assembly>
 
-# RUN: lld-link /out:%t.exe /entry:main \
+# RUN: lld-link /out:%t.exe /entry:main /manifest \
 # RUN:   /manifestuac:"level='requireAdministrator' uiAccess='true'" %t.obj
 # RUN: FileCheck -check-prefix=UAC %s < %t.exe.manifest
 
@@ -31,6 +35,7 @@ UAC:     </security>
 UAC:   </trustInfo>
 UAC: </assembly>
 
+# /manifestdependency implies /manifest. (/manifestuac doesn't.)
 # RUN: lld-link /out:%t.exe /entry:main \
 # RUN:   /manifestdependency:"foo='bar'" %t.obj
 # RUN: FileCheck -check-prefix=DEPENDENCY %s < %t.exe.manifest
@@ -52,7 +57,7 @@ DEPENDENCY:     </dependentAssembly>
 DEPENDENCY:   </dependency>
 DEPENDENCY: </assembly>
 
-# RUN: lld-link /out:%t.exe /entry:main /manifestuac:no %t.obj
+# RUN: lld-link /manifest /out:%t.exe /entry:main /manifestuac:no %t.obj
 # RUN: FileCheck -check-prefix=NOUAC %s < %t.exe.manifest
 
 NOUAC: <?xml version="1.0" standalone="yes"?>
