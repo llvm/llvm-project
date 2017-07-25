@@ -73,8 +73,8 @@ Lset0 = Lsection_abbrev-Lsection_abbrev ## Offset Into Abbrev. Section
 Lset1 = Lline_table_start0-Lsection_line ## DW_AT_stmt_list
 	.long	Lset1
 	.long	63                      ## DW_AT_comp_dir
-	.quad	Lfunc_end0 + 1          ## DW_AT_low_pc -- error: Invalid address range [0x00000007 - 0x00000006].
-	.quad	Lfunc_end0              ## DW_AT_high_pc
+	.quad	7        				## DW_AT_low_pc -- error: Invalid address range [0x00000007 - 0x00000006].
+	.quad	6             			## DW_AT_high_pc
 	.byte	0                       ## End Of Children Mark
 .subsections_via_symbols
 	.section	__DWARF,__debug_line,regular,debug

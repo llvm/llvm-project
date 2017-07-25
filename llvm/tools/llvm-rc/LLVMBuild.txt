@@ -1,4 +1,4 @@
-;===- ./tools/LLVMBuild.txt ------------------------------------*- Conf -*--===;
+;===- ./tools/llvm-rc/LLVMBuild.txt ----------------------------*- Conf -*--===;
 ;
 ;                     The LLVM Compiler Infrastructure
 ;
@@ -15,42 +15,8 @@
 ;
 ;===------------------------------------------------------------------------===;
 
-[common]
-subdirectories =
- bugpoint
- dsymutil
- llc
- lli
- llvm-ar
- llvm-as
- llvm-bcanalyzer
- llvm-cat
- llvm-cov
- llvm-cvtres
- llvm-diff
- llvm-dis
- llvm-dwarfdump
- llvm-dwp
- llvm-extract
- llvm-jitlistener
- llvm-link
- llvm-lto
- llvm-mc
- llvm-mcmarkup
- llvm-modextract
- llvm-mt
- llvm-nm
- llvm-objdump
- llvm-pdbutil
- llvm-profdata
- llvm-rc
- llvm-rtdyld
- llvm-size
- llvm-split
- opt
- verify-uselistorder
-
 [component_0]
-type = Group
-name = Tools
-parent = $ROOT
+type = Tool
+name = llvm-rc
+parent = Tools
+required_libraries = Option
