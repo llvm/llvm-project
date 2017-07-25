@@ -3969,7 +3969,8 @@ public:
             "Add a debug symbol file to one of the target's current modules by "
             "specifying a path to a debug symbols file, or using the options "
             "to specify a module to download symbols for.",
-            "target symbols add [<symfile>]", eCommandRequiresTarget),
+            "target symbols add <cmd-options> [<symfile>]",
+            eCommandRequiresTarget),
         m_option_group(),
         m_file_option(
             LLDB_OPT_SET_1, false, "shlib", 's',
@@ -4289,18 +4290,22 @@ protected:
       if (uuid_option_set) {
         result.AppendError("specify either one or more paths to symbol files "
                            "or use the --uuid option without arguments");
-      } else if (file_option_set) {
-        result.AppendError("specify either one or more paths to symbol files "
-                           "or use the --file option without arguments");
       } else if (frame_option_set) {
         result.AppendError("specify either one or more paths to symbol files "
                            "or use the --frame option without arguments");
+      } else if (file_option_set && argc > 1) {
+        result.AppendError("specify at most one symbol file path when "
+                           "--shlib option is set");
       } else {
         PlatformSP platform_sp(target->GetPlatform());
 
         for (auto &entry : args.entries()) {
           if (!entry.ref.empty()) {
             module_spec.GetSymbolFileSpec().SetFile(entry.ref, true);
+            if (file_option_set) {
+              module_spec.GetFileSpec() =
+                  m_file_option.GetOptionValue().GetCurrentValue();
+            }
             if (platform_sp) {
               FileSpec symfile_spec;
               if (platform_sp

@@ -43,6 +43,7 @@ subdirectories =
  llvm-objdump
  llvm-pdbutil
  llvm-profdata
+ llvm-rc
  llvm-rtdyld
  llvm-size
  llvm-split

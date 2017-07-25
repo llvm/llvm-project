@@ -916,6 +916,12 @@ ErrorPolicy DWARFContext::defaultErrorHandler(Error E) {
   return ErrorPolicy::Continue;
 }
 
+namespace {
+struct DWARFSectionMap final : public DWARFSection {
+  RelocAddrMap Relocs;
+};
+} // namespace
+
 class DWARFObjInMemory final : public DWARFObject {
   bool IsLittleEndian;
   uint8_t AddressSize;

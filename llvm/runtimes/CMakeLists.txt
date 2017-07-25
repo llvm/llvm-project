@@ -367,9 +367,6 @@ else() # if this is included from LLVM's CMake
 
       if(LLVM_INCLUDE_TESTS)
         list(APPEND test_targets runtimes-test-depends check-runtimes)
-        foreach(component ${SUB_COMPONENTS})
-          list(APPEND SUB_CHECK_TARGETS check-${component})
-        endforeach()
       endif()
 
       llvm_ExternalProject_Add(runtimes

@@ -409,7 +409,7 @@ public:
 
   unsigned getScalarizationOverhead(Type *VecTy, ArrayRef<const Value *> Args) {
     assert (VecTy->isVectorTy());
-    
+
     unsigned Cost = 0;
 
     Cost += getScalarizationOverhead(VecTy, true, false);
@@ -873,7 +873,7 @@ public:
     }
     }
   }
-  
+
   /// Get intrinsic cost based on argument types.
   /// If ScalarizationCostPassed is UINT_MAX, the cost of scalarizing the
   /// arguments and the return value will be computed based on types.
@@ -1096,7 +1096,7 @@ public:
 
   unsigned getAddressComputationCost(Type *Ty, ScalarEvolution *,
                                      const SCEV *) {
-    return 0; 
+    return 0;
   }
 
   /// Try to calculate arithmetic and shuffle op costs for reduction operations.
@@ -1159,7 +1159,7 @@ public:
     }
     // The minimal length of the vector is limited by the real length of vector
     // operations performed on the current platform. That's why several final
-    // reduction opertions are perfomed on the vectors with the same
+    // reduction operations are performed on the vectors with the same
     // architecture-dependent length.
     ShuffleCost += (NumReduxLevels - LongVectorCount) * (IsPairwise + 1) *
                    ConcreteTTI->getShuffleCost(TTI::SK_ExtractSubvector, Ty,

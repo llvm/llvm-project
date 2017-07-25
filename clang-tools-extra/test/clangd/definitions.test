@@ -138,8 +138,8 @@ Content-Length: 204
 Content-Length: 148
 
 {"jsonrpc":"2.0","id":1,"method":"textDocument/definition","params":{"textDocument":{"uri":"file:///main.cpp"},"position":{"line":2,"character":9}}}
-# Go to macro
-# CHECK: {"jsonrpc":"2.0","id":1,"result":[{"uri": "file:///main.cpp", "range": {"start": {"line": 0, "character": 8}, "end": {"line": 0, "character": 18}}}]}
+# Go to macro.
+# CHECK: {"jsonrpc":"2.0","id":1,"result":[{"uri": "file:///{{(C:/)?}}main.cpp", "range": {"start": {"line": 0, "character": 8}, "end": {"line": 0, "character": 18}}}]}
 
 Content-Length: 217
 
@@ -149,7 +149,7 @@ Content-Length: 148
 
 {"jsonrpc":"2.0","id":1,"method":"textDocument/definition","params":{"textDocument":{"uri":"file:///main.cpp"},"position":{"line":1,"character":8}}}
 # Go to macro, re-defined later
-# CHECK: {"jsonrpc":"2.0","id":1,"result":[{"uri": "file:///main.cpp", "range": {"start": {"line": 0, "character": 8}, "end": {"line": 0, "character": 13}}}]}
+# CHECK: {"jsonrpc":"2.0","id":1,"result":[{"uri": "file:///{{(C:/)?}}main.cpp", "range": {"start": {"line": 0, "character": 8}, "end": {"line": 0, "character": 13}}}]}
 
 Content-Length: 148
 

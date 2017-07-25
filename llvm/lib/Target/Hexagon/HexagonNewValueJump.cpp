@@ -173,7 +173,7 @@ static bool commonChecksToProhibitNewValueJump(bool afterRA,
                           MachineBasicBlock::iterator MII) {
 
   // If store in path, bail out.
-  if (MII->getDesc().mayStore())
+  if (MII->mayStore())
     return false;
 
   // if call in path, bail out.
@@ -227,10 +227,13 @@ static bool canCompareBeNewValueJump(const HexagonInstrInfo *QII,
 
     switch (MI.getOpcode()) {
       case Hexagon::C2_cmpeqi:
+      case Hexagon::C4_cmpneqi:
       case Hexagon::C2_cmpgti:
+      case Hexagon::C4_cmpltei:
         Valid = (isUInt<5>(v) || v == -1);
         break;
       case Hexagon::C2_cmpgtui:
+      case Hexagon::C4_cmplteui:
         Valid = isUInt<5>(v);
         break;
       case Hexagon::S2_tstbit_i:
@@ -328,6 +331,13 @@ static unsigned getNewValueJumpOpcode(MachineInstr *MI, int reg,
                      : Hexagon::J4_cmpeqn1_t_jumpnv_nt;
     }
 
+    case Hexagon::C4_cmpneqi:
+      if (reg >= 0)
+        return taken ? Hexagon::J4_cmpeqi_f_jumpnv_t
+                     : Hexagon::J4_cmpeqi_f_jumpnv_nt;
+      return taken ? Hexagon::J4_cmpeqn1_f_jumpnv_t :
+                     Hexagon::J4_cmpeqn1_f_jumpnv_nt;
+
     case Hexagon::C2_cmpgt: {
       if (secondRegNewified)
         return taken ? Hexagon::J4_cmplt_t_jumpnv_t
@@ -377,6 +387,17 @@ static unsigned getNewValueJumpOpcode(MachineInstr *MI, int reg,
       return taken ? Hexagon::J4_cmpgtu_f_jumpnv_t
                    : Hexagon::J4_cmpgtu_f_jumpnv_nt;
 
+    case Hexagon::C4_cmpltei:
+      if (reg >= 0)
+        return taken ? Hexagon::J4_cmpgti_f_jumpnv_t :
+                       Hexagon::J4_cmpgti_f_jumpnv_nt;
+      return taken ? Hexagon::J4_cmpgtn1_f_jumpnv_t :
+                     Hexagon::J4_cmpgtn1_f_jumpnv_nt;
+
+    case Hexagon::C4_cmplteui:
+      return taken ? Hexagon::J4_cmpgtui_f_jumpnv_t :
+                     Hexagon::J4_cmpgtui_f_jumpnv_nt;
+
     default:
        llvm_unreachable("Could not find matching New Value Jump instruction.");
   }
@@ -394,8 +415,11 @@ bool HexagonNewValueJump::isNewValueJumpCandidate(
   case Hexagon::C2_cmpgtu:
   case Hexagon::C2_cmpgtui:
   case Hexagon::C4_cmpneq:
+  case Hexagon::C4_cmpneqi:
   case Hexagon::C4_cmplte:
   case Hexagon::C4_cmplteu:
+  case Hexagon::C4_cmpltei:
+  case Hexagon::C4_cmplteui:
     return true;
 
   default:

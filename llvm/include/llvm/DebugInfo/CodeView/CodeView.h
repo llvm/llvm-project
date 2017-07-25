@@ -158,7 +158,11 @@ enum SourceLanguage : uint8_t {
   Java = 0x0d,
   JScript = 0x0e,
   MSIL = 0x0f,
-  HLSL = 0x10
+  HLSL = 0x10,
+
+  /// The DMD compiler emits 'D' for the CV source language. Microsoft doesn't
+  /// have an enumerator for it yet.
+  D = 'D',
 };
 
 /// These values correspond to the CV_call_e enumeration, and are documented

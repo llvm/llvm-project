@@ -66,6 +66,7 @@ set(LLVM_TEST_DEPENDS
           llvm-pdbutil
           llvm-profdata
           llvm-ranlib
+          llvm-rc
           llvm-readobj
           llvm-readelf
           llvm-rtdyld

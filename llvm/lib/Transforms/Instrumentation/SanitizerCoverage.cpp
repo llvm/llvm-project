@@ -362,6 +362,10 @@ static bool shouldInstrumentBlock(const Function &F, const BasicBlock *BB,
   if (Options.NoPrune || &F.getEntryBlock() == BB)
     return true;
 
+  if (Options.CoverageType == SanitizerCoverageOptions::SCK_Function &&
+      &F.getEntryBlock() != BB)
+    return false;
+
   // Do not instrument full dominators, or full post-dominators with multiple
   // predecessors.
   return !isFullDominator(BB, DT)
@@ -459,20 +463,10 @@ void SanitizerCoverageModule::CreateFunctionLocalArrays(size_t NumGuards,
 bool SanitizerCoverageModule::InjectCoverage(Function &F,
                                              ArrayRef<BasicBlock *> AllBlocks) {
   if (AllBlocks.empty()) return false;
-  switch (Options.CoverageType) {
-  case SanitizerCoverageOptions::SCK_None:
-    return false;
-  case SanitizerCoverageOptions::SCK_Function:
-    CreateFunctionLocalArrays(1, F);
-    InjectCoverageAtBlock(F, F.getEntryBlock(), 0);
-    return true;
-  default: {
-    CreateFunctionLocalArrays(AllBlocks.size(), F);
-    for (size_t i = 0, N = AllBlocks.size(); i < N; i++)
-      InjectCoverageAtBlock(F, *AllBlocks[i], i);
-    return true;
-  }
-  }
+  CreateFunctionLocalArrays(AllBlocks.size(), F);
+  for (size_t i = 0, N = AllBlocks.size(); i < N; i++)
+    InjectCoverageAtBlock(F, *AllBlocks[i], i);
+  return true;
 }
 
 // On every indirect call we call a run-time function

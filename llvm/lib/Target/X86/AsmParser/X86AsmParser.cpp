@@ -944,8 +944,7 @@ bool X86AsmParser::ParseRegister(unsigned &RegNo,
   EndLoc = Tok.getEndLoc();
 
   if (Tok.isNot(AsmToken::Identifier)) {
-    if (isParsingIntelSyntax())
-      return true;
+    if (isParsingIntelSyntax()) return true;
     return Error(StartLoc, "invalid register name",
                  SMRange(StartLoc, EndLoc));
   }
@@ -955,16 +954,6 @@ bool X86AsmParser::ParseRegister(unsigned &RegNo,
   // If the match failed, try the register name as lowercase.
   if (RegNo == 0)
     RegNo = MatchRegisterName(Tok.getString().lower());
-
-  // In MS inline-asm we allow variables to be named as registers, and
-  // give them precedence over actual registers
-  // However - we require the match to be case sensitive
-  if (isParsingInlineAsm() && isParsingIntelSyntax() && RegNo) {
-    StringRef LineBuf(Tok.getIdentifier().data());
-    InlineAsmIdentifierInfo Info;
-    if (SemaCallback->LookupInlineAsmIdentifier(LineBuf, Info, false))
-      return true;
-  }
 
   // The "flags" register cannot be referenced directly.
   // Treat it as an identifier instead.

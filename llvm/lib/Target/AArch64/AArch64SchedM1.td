@@ -135,24 +135,20 @@ def : SchedAlias<WriteSTIdx, M1WriteSX>;
 
 // FP data instructions.
 def : WriteRes<WriteF,    [M1UnitFADD]>  { let Latency = 3; }
-// TODO: FCCMP is much different.
 def : WriteRes<WriteFCmp, [M1UnitNMISC]> { let Latency = 4; }
 def : WriteRes<WriteFDiv, [M1UnitFVAR]>  { let Latency = 15;
                                            let ResourceCycles = [15]; }
 def : WriteRes<WriteFMul, [M1UnitFMAC]>  { let Latency = 4; }
 
 // FP miscellaneous instructions.
-// TODO: Conversion between register files is much different.
 def : WriteRes<WriteFCvt,  [M1UnitFCVT]> { let Latency = 3; }
 def : WriteRes<WriteFImm,  [M1UnitNALU]> { let Latency = 1; }
 def : WriteRes<WriteFCopy, [M1UnitS]>    { let Latency = 4; }
 
 // FP load instructions.
-// TODO: ASIMD loads are much different.
 def : WriteRes<WriteVLD, [M1UnitL]> { let Latency = 5; }
 
 // FP store instructions.
-// TODO: ASIMD stores are much different.
 def : WriteRes<WriteVST, [M1UnitS, M1UnitFST]> { let Latency = 1; }
 
 // ASIMD FP instructions.
@@ -216,6 +212,7 @@ def M1WriteFCVT3   : SchedWriteRes<[M1UnitFCVT]>   { let Latency = 3; }
 def M1WriteFCVT4   : SchedWriteRes<[M1UnitFCVT]>   { let Latency = 4; }
 def M1WriteFMAC4   : SchedWriteRes<[M1UnitFMAC]>   { let Latency = 4; }
 def M1WriteFMAC5   : SchedWriteRes<[M1UnitFMAC]>   { let Latency = 5; }
+// TODO
 def M1WriteFVAR15  : SchedWriteRes<[M1UnitFVAR]>   { let Latency = 15;
                                                      let ResourceCycles = [15]; }
 def M1WriteFVAR23  : SchedWriteRes<[M1UnitFVAR]>   { let Latency = 23;
@@ -275,11 +272,13 @@ def M1WriteVLDK    : SchedWriteRes<[M1UnitL,
 def M1WriteVLDL    : SchedWriteRes<[M1UnitL,
                                     M1UnitNALU,
                                     M1UnitNALU,
+                                    M1UnitL,
                                     M1UnitNALU]>   { let Latency = 7;
                                                      let ResourceCycles = [2]; }
 def M1WriteVLDM    : SchedWriteRes<[M1UnitL,
                                     M1UnitNALU,
                                     M1UnitNALU,
+                                    M1UnitL,
                                     M1UnitNALU,
                                     M1UnitNALU]>   { let Latency = 7;
                                                      let ResourceCycles = [2]; }
