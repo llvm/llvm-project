@@ -155,6 +155,14 @@ int main(int argc, char **argv) {
   // CHECK-NEXT: #pragma omp task default(none) private(argc,b) firstprivate(argv) if(argc > 0) final(a > 0) depend(inout : a,argv[:argc],arr[:a]) priority(23) in_reduction(min: arr1)
   foo();
   // CHECK-NEXT: foo();
+#pragma omp taskgroup task_reduction(min: arr1)
+#pragma omp parallel reduction(+:arr1)
+#pragma omp task in_reduction(min: arr1)
+  // CHECK-NEXT: #pragma omp taskgroup task_reduction(min: arr1)
+  // CHECK-NEXT: #pragma omp parallel reduction(+: arr1)
+  // CHECK-NEXT: #pragma omp task in_reduction(min: arr1)
+  foo();
+  // CHECK-NEXT: foo();
   return tmain<int, 5>(b, &b) + tmain<long, 1>(x, &x);
 }
 

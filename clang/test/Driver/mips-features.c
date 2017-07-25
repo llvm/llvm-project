@@ -50,6 +50,21 @@
 // RUN:   | FileCheck --check-prefix=CHECK-MLOCALSDATADEF %s
 // CHECK-MLOCALSDATADEF-NOT: "-mllvm" "-mlocal-sdata"
 //
+// -mno-abicalls -mgpopt -mextern-sdata
+// RUN: %clang -target mips-linux-gnu -### -c %s -mno-abicalls -mgpopt -mno-extern-sdata -mextern-sdata 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-MEXTERNSDATA %s
+// CHECK-MEXTERNSDATA: "-mllvm" "-mextern-sdata=1"
+//
+// -mno-abicalls -mgpopt -mno-extern-sdata
+// RUN: %clang -target mips-linux-gnu -### -c %s -mno-abicalls -mgpopt -mextern-sdata -mno-extern-sdata 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-MNOEXTERNSDATA %s
+// CHECK-MNOEXTERNSDATA: "-mllvm" "-mextern-sdata=0"
+//
+// -mno-abicalls -mgpopt
+// RUN: %clang -target mips-linux-gnu -### -c %s -mno-abicalls -mgpopt 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-MEXTERNSDATADEF %s
+// CHECK-MEXTERNSDATADEF-NOT: "-mllvm" "-mextern-sdata"
+//
 // -mips16
 // RUN: %clang -target mips-linux-gnu -### -c %s \
 // RUN:     -mno-mips16 -mips16 2>&1 \
