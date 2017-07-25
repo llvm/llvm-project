@@ -586,9 +586,107 @@ bool SystemZTargetLowering::allowsMisalignedMemoryAccesses(EVT VT,
   return true;
 }
 
+// Information about the addressing mode for a memory access.
+struct AddressingMode {
+  // True if a long displacement is supported.
+  bool LongDisplacement;
+
+  // True if use of index register is supported.
+  bool IndexReg;
+  
+  AddressingMode(bool LongDispl, bool IdxReg) :
+    LongDisplacement(LongDispl), IndexReg(IdxReg) {}
+};
+
+// Return the desired addressing mode for a Load which has only one use (in
+// the same block) which is a Store.
+static AddressingMode getLoadStoreAddrMode(bool HasVector,
+                                          Type *Ty) {
+  // With vector support a Load->Store combination may be combined to either
+  // an MVC or vector operations and it seems to work best to allow the
+  // vector addressing mode.
+  if (HasVector)
+    return AddressingMode(false/*LongDispl*/, true/*IdxReg*/);
+
+  // Otherwise only the MVC case is special.
+  bool MVC = Ty->isIntegerTy(8);
+  return AddressingMode(!MVC/*LongDispl*/, !MVC/*IdxReg*/);
+}
+
+// Return the addressing mode which seems most desirable given an LLVM
+// Instruction pointer.
+static AddressingMode
+supportedAddressingMode(Instruction *I, bool HasVector) {
+  if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
+    switch (II->getIntrinsicID()) {
+    default: break;
+    case Intrinsic::memset:
+    case Intrinsic::memmove:
+    case Intrinsic::memcpy:
+      return AddressingMode(false/*LongDispl*/, false/*IdxReg*/);
+    }
+  }
+
+  if (isa<LoadInst>(I) && I->hasOneUse()) {
+    auto *SingleUser = dyn_cast<Instruction>(*I->user_begin());
+    if (SingleUser->getParent() == I->getParent()) {
+      if (isa<ICmpInst>(SingleUser)) {
+        if (auto *C = dyn_cast<ConstantInt>(SingleUser->getOperand(1)))
+          if (isInt<16>(C->getSExtValue()) || isUInt<16>(C->getZExtValue()))
+            // Comparison of memory with 16 bit signed / unsigned immediate
+            return AddressingMode(false/*LongDispl*/, false/*IdxReg*/);
+      } else if (isa<StoreInst>(SingleUser))
+        // Load->Store
+        return getLoadStoreAddrMode(HasVector, I->getType());
+    }
+  } else if (auto *StoreI = dyn_cast<StoreInst>(I)) {
+    if (auto *LoadI = dyn_cast<LoadInst>(StoreI->getValueOperand()))
+      if (LoadI->hasOneUse() && LoadI->getParent() == I->getParent())
+        // Load->Store
+        return getLoadStoreAddrMode(HasVector, LoadI->getType());
+  }
+
+  if (HasVector && (isa<LoadInst>(I) || isa<StoreInst>(I))) {
+
+    // * Use LDE instead of LE/LEY for z13 to avoid partial register
+    //   dependencies (LDE only supports small offsets).
+    // * Utilize the vector registers to hold floating point
+    //   values (vector load / store instructions only support small
+    //   offsets).
+
+    Type *MemAccessTy = (isa<LoadInst>(I) ? I->getType() :
+                         I->getOperand(0)->getType());
+    bool IsFPAccess = MemAccessTy->isFloatingPointTy();
+    bool IsVectorAccess = MemAccessTy->isVectorTy();
+
+    // A store of an extracted vector element will be combined into a VSTE type
+    // instruction.
+    if (!IsVectorAccess && isa<StoreInst>(I)) {
+      Value *DataOp = I->getOperand(0);
+      if (isa<ExtractElementInst>(DataOp))
+        IsVectorAccess = true;
+    }
+
+    // A load which gets inserted into a vector element will be combined into a
+    // VLE type instruction.
+    if (!IsVectorAccess && isa<LoadInst>(I) && I->hasOneUse()) {
+      User *LoadUser = *I->user_begin();
+      if (isa<InsertElementInst>(LoadUser))
+        IsVectorAccess = true;
+    }
+
+    if (IsFPAccess || IsVectorAccess)
+      return AddressingMode(false/*LongDispl*/, true/*IdxReg*/);
+  }
+
+  return AddressingMode(true/*LongDispl*/, true/*IdxReg*/);
+}
+
+// TODO: This method should also check for the displacement when *I is
+// passed. It may also be possible to merge with isFoldableMemAccessOffset()
+// now that both methods get the *I.
 bool SystemZTargetLowering::isLegalAddressingMode(const DataLayout &DL,
-                                                  const AddrMode &AM, Type *Ty,
-                                                  unsigned AS) const {
+            const AddrMode &AM, Type *Ty, unsigned AS, Instruction *I) const {
   // Punt on globals for now, although they can be used in limited
   // RELATIVE LONG cases.
   if (AM.BaseGV)
@@ -598,46 +696,20 @@ bool SystemZTargetLowering::isLegalAddressingMode(const DataLayout &DL,
   if (!isInt<20>(AM.BaseOffs))
     return false;
 
-  // Indexing is OK but no scale factor can be applied.
-  return AM.Scale == 0 || AM.Scale == 1;
+  if (I != nullptr &&
+      !supportedAddressingMode(I, Subtarget.hasVector()).IndexReg)
+    // No indexing allowed.
+    return AM.Scale == 0;
+  else
+    // Indexing is OK but no scale factor can be applied.
+    return AM.Scale == 0 || AM.Scale == 1;
 }
 
+// TODO: Should we check for isInt<20> also?
 bool SystemZTargetLowering::isFoldableMemAccessOffset(Instruction *I,
                                                       int64_t Offset) const {
-  // This only applies to z13.
-  if (!Subtarget.hasVector())
-    return true;
-
-  // * Use LDE instead of LE/LEY to avoid partial register
-  //   dependencies (LDE only supports small offsets).
-  // * Utilize the vector registers to hold floating point
-  //   values (vector load / store instructions only support small
-  //   offsets).
-
-  assert (isa<LoadInst>(I) || isa<StoreInst>(I));
-  Type *MemAccessTy = (isa<LoadInst>(I) ? I->getType() :
-                       I->getOperand(0)->getType());
-  bool IsFPAccess = MemAccessTy->isFloatingPointTy();
-  bool IsVectorAccess = MemAccessTy->isVectorTy();
-
-  // A store of an extracted vector element will be combined into a VSTE type
-  // instruction.
-  if (!IsVectorAccess && isa<StoreInst>(I)) {
-    Value *DataOp = I->getOperand(0);
-    if (isa<ExtractElementInst>(DataOp))
-      IsVectorAccess = true;
-  }
-
-  // A load which gets inserted into a vector element will be combined into a
-  // VLE type instruction.
-  if (!IsVectorAccess && isa<LoadInst>(I) && I->hasOneUse()) {
-    User *LoadUser = *I->user_begin();
-    if (isa<InsertElementInst>(LoadUser))
-      IsVectorAccess = true;
-  }
-
-  if (!isUInt<12>(Offset) && (IsFPAccess || IsVectorAccess))
-    return false;
+  if (!supportedAddressingMode(I, Subtarget.hasVector()).LongDisplacement)
+    return (isUInt<12>(Offset));
 
   return true;
 }

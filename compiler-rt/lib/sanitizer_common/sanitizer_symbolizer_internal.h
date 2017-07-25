@@ -15,6 +15,7 @@
 #define SANITIZER_SYMBOLIZER_INTERNAL_H
 
 #include "sanitizer_symbolizer.h"
+#include "sanitizer_file.h"
 
 namespace __sanitizer {
 

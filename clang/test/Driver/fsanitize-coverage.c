@@ -95,3 +95,15 @@
 // CLANG-CL-COVERAGE-NOT: unknown argument
 // CLANG-CL-COVERAGE: -fsanitize-coverage-type=1
 // CLANG-CL-COVERAGE: -fsanitize=address
+
+// RUN: %clang -target x86_64-linux-gnu -fsanitize=safe-stack -fsanitize-coverage=trace-pc-guard %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-VS-SAFESTACK
+// CHECK-VS-SAFESTACK: -fsanitize=safe-stack
+// CHECK-VS-SAFESTACK-NOT: -fsanitize-coverage-trace-pc-guard
+
+// RUN: %clang -target x86_64-linux-gnu -fsanitize=safe-stack -fsanitize-coverage=trace-pc-guard -fno-sanitize=safe-stack %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-SAFESTACK
+// CHECK-NO-SAFESTACK-NOT: error:
+// CHECK-NO-SAFESTACK-NOT: warning:
+// CHECK-NO-SAFESTACK-NOT: argument unused
+// CHECK-NO-SAFESTACK-NOT: unknown argument
+// CHECK-NO-SAFESTACK-NOT: -fsanitize=safe-stack
+// CHECK-NO-SAFESTACK: -fsanitize-coverage-trace-pc-guard

@@ -281,6 +281,16 @@ bool SanitizerCoverageModule::runOnModule(Module &M) {
   SanCovTraceSwitchFunction =
       checkSanitizerInterfaceFunction(M.getOrInsertFunction(
           SanCovTraceSwitchName, VoidTy, Int64Ty, Int64PtrTy));
+  // Make sure smaller parameters are zero-extended to i64 as required by the
+  // x86_64 ABI.
+  if (TargetTriple.getArch() == Triple::x86_64) {
+    for (int i = 0; i < 3; i++) {
+      SanCovTraceCmpFunction[i]->addParamAttr(0, Attribute::ZExt);
+      SanCovTraceCmpFunction[i]->addParamAttr(1, Attribute::ZExt);
+    }
+    SanCovTraceDivFunction[0]->addParamAttr(0, Attribute::ZExt);
+  }
+
 
   // We insert an empty inline asm after cov callbacks to avoid callback merge.
   EmptyAsm = InlineAsm::get(FunctionType::get(IRB.getVoidTy(), false),
@@ -351,6 +361,10 @@ static bool shouldInstrumentBlock(const Function &F, const BasicBlock *BB,
 
   if (Options.NoPrune || &F.getEntryBlock() == BB)
     return true;
+
+  if (Options.CoverageType == SanitizerCoverageOptions::SCK_Function &&
+      &F.getEntryBlock() != BB)
+    return false;
 
   // Do not instrument full dominators, or full post-dominators with multiple
   // predecessors.
@@ -449,20 +463,10 @@ void SanitizerCoverageModule::CreateFunctionLocalArrays(size_t NumGuards,
 bool SanitizerCoverageModule::InjectCoverage(Function &F,
                                              ArrayRef<BasicBlock *> AllBlocks) {
   if (AllBlocks.empty()) return false;
-  switch (Options.CoverageType) {
-  case SanitizerCoverageOptions::SCK_None:
-    return false;
-  case SanitizerCoverageOptions::SCK_Function:
-    CreateFunctionLocalArrays(1, F);
-    InjectCoverageAtBlock(F, F.getEntryBlock(), 0);
-    return true;
-  default: {
-    CreateFunctionLocalArrays(AllBlocks.size(), F);
-    for (size_t i = 0, N = AllBlocks.size(); i < N; i++)
-      InjectCoverageAtBlock(F, *AllBlocks[i], i);
-    return true;
-  }
-  }
+  CreateFunctionLocalArrays(AllBlocks.size(), F);
+  for (size_t i = 0, N = AllBlocks.size(); i < N; i++)
+    InjectCoverageAtBlock(F, *AllBlocks[i], i);
+  return true;
 }
 
 // On every indirect call we call a run-time function

@@ -16,7 +16,7 @@
 ;===------------------------------------------------------------------------===;
 
 [common]
-subdirectories = llvm-lib
+subdirectories = llvm-dlltool llvm-lib
 
 [component_0]
 type = Group

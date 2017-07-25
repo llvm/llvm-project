@@ -1226,7 +1226,9 @@ dumpSymbolNamesFromObject(SymbolicFile &Obj, bool printName,
     if (DyldInfoOnly || AddDyldInfo ||
         HFlags & MachO::MH_NLIST_OUTOFSYNC_WITH_DYLDINFO) {
       unsigned ExportsAdded = 0;
-      for (const llvm::object::ExportEntry &Entry : MachO->exports()) {
+      Error Err = Error::success();
+      for (const llvm::object::ExportEntry &Entry : MachO->exports(Err,
+                                                                   MachO)) {
         bool found = false;
         bool ReExport = false;
         if (!DyldInfoOnly) {
@@ -1362,6 +1364,8 @@ dumpSymbolNamesFromObject(SymbolicFile &Obj, bool printName,
           }
         }
       }
+      if (Err)
+        error(std::move(Err), MachO->getFileName());
       // Set the symbol names and indirect names for the added symbols.
       if (ExportsAdded) {
         EOS.flush();

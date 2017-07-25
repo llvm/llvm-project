@@ -22,6 +22,7 @@ class DWARFDie;
 class DWARFUnit;
 class DWARFAcceleratorTable;
 class DWARFDataExtractor;
+class DWARFDebugAbbrev;
 
 /// A class that verifies DWARF debug information given a DWARF Context.
 class DWARFVerifier {
@@ -31,9 +32,20 @@ class DWARFVerifier {
   /// can verify each reference points to a valid DIE and not an offset that
   /// lies between to valid DIEs.
   std::map<uint64_t, std::set<uint32_t>> ReferenceToDIEOffsets;
-  uint32_t NumDebugInfoErrors = 0;
   uint32_t NumDebugLineErrors = 0;
   uint32_t NumAppleNamesErrors = 0;
+
+  /// Verifies the abbreviations section.
+  ///
+  /// This function currently checks that:
+  /// --No abbreviation declaration has more than one attributes with the same
+  /// name.
+  ///
+  /// \param Abbrev Pointer to the abbreviations section we are verifying
+  /// Abbrev can be a pointer to either .debug_abbrev or debug_abbrev.dwo.
+  ///
+  /// \returns The number of errors that occured during verification.
+  unsigned verifyAbbrevSection(const DWARFDebugAbbrev *Abbrev);
 
   /// Verifies the header of a unit in the .debug_info section.
   ///
@@ -50,13 +62,25 @@ class DWARFVerifier {
   /// \param Offset A reference to the offset start of the unit. The offset will
   /// be updated to point to the next unit in .debug_info
   /// \param UnitIndex The index of the unit to be verified
+  /// \param UnitType A reference to the type of the unit
   /// \param isUnitDWARF64 A reference to a flag that shows whether the unit is
   /// in 64-bit format.
   ///
   /// \returns true if the header is verified successfully, false otherwise.
   bool verifyUnitHeader(const DWARFDataExtractor DebugInfoData,
-                        uint32_t *Offset, unsigned UnitIndex,
+                        uint32_t *Offset, unsigned UnitIndex, uint8_t &UnitType,
                         bool &isUnitDWARF64);
+
+
+  bool verifyUnitContents(DWARFUnit Unit);
+
+  /// Verify that all Die ranges are valid.
+  ///
+  /// This function currently checks for:
+  /// - cases in which lowPC >= highPC
+  ///
+  /// \returns Number of errors that occured during verification.
+  unsigned verifyDieRanges(const DWARFDie &Die);
 
   /// Verifies the attribute's DWARF attribute and its value.
   ///
@@ -66,7 +90,11 @@ class DWARFVerifier {
   ///
   /// \param Die          The DWARF DIE that owns the attribute value
   /// \param AttrValue    The DWARF attribute value to check
-  void verifyDebugInfoAttribute(const DWARFDie &Die, DWARFAttribute &AttrValue);
+  ///
+  /// \returns NumErrors The number of errors occured during verification of
+  /// attributes' values in a .debug_info section unit
+  unsigned verifyDebugInfoAttribute(const DWARFDie &Die,
+                                    DWARFAttribute &AttrValue);
 
   /// Verifies the attribute's DWARF form.
   ///
@@ -77,7 +105,10 @@ class DWARFVerifier {
   ///
   /// \param Die          The DWARF DIE that owns the attribute value
   /// \param AttrValue    The DWARF attribute value to check
-  void verifyDebugInfoForm(const DWARFDie &Die, DWARFAttribute &AttrValue);
+  ///
+  /// \returns NumErrors The number of errors occured during verification of
+  /// attributes' forms in a .debug_info section unit
+  unsigned verifyDebugInfoForm(const DWARFDie &Die, DWARFAttribute &AttrValue);
 
   /// Verifies the all valid references that were found when iterating through
   /// all of the DIE attributes.
@@ -86,7 +117,10 @@ class DWARFVerifier {
   /// offset matches. This helps to ensure if a DWARF link phase moved things
   /// around, that it doesn't create invalid references by failing to relocate
   /// CU relative and absolute references.
-  void verifyDebugInfoReferences();
+  ///
+  /// \returns NumErrors The number of errors occured during verification of
+  /// references for the .debug_info section
+  unsigned verifyDebugInfoReferences();
 
   /// Verify the the DW_AT_stmt_list encoding and value and ensure that no
   /// compile units that have the same DW_AT_stmt_list value.
@@ -102,14 +136,16 @@ class DWARFVerifier {
 public:
   DWARFVerifier(raw_ostream &S, DWARFContext &D)
       : OS(S), DCtx(D) {}
-  /// Verify the unit header chain in the .debug_info section.
+  /// Verify the information in any of the following sections, if available:
+  /// .debug_abbrev, debug_abbrev.dwo
   ///
-  /// Any errors are reported to the stream that this object was
+  /// Any errors are reported to the stream that was this object was
   /// constructed with.
   ///
-  /// \returns true if the unit header chain verifies successfully, false
-  /// otherwise.
-  bool handleDebugInfoUnitHeaderChain();
+  /// \returns true if .debug_abbrev and .debug_abbrev.dwo verify successfully,
+  /// false otherwise.
+  bool handleDebugAbbrev();
+
   /// Verify the information in the .debug_info section.
   ///
   /// Any errors are reported to the stream that was this object was

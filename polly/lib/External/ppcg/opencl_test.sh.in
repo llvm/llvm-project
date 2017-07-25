@@ -54,6 +54,25 @@ run_tests () {
 run_tests default
 run_tests embed --opencl-embed-kernel-code
 
+for i in $srcdir/examples/*.c; do
+	echo $i
+	name=`basename $i`
+	name="${name%.c}"
+	exe_ref="${OUTDIR}/$name.ref$EXEEXT"
+	gen_ocl="${OUTDIR}/$name.ppcg.c"
+	exe_ocl="${OUTDIR}/$name.ppcg$EXEEXT"
+	output_ref="${OUTDIR}/$name.ref.out"
+	output_ocl="${OUTDIR}/$name.ppcg.out"
+	$CC $CFLAGS $i -o $exe_ref || exit
+	./ppcg$EXEEXT --target=opencl --opencl-no-use-gpu $i -o "$gen_ocl" || \
+		exit
+	$CC $CFLAGS -I "$srcdir" "$srcdir/ocl_utilities.c" -lOpenCL \
+		"$gen_ocl" -o "$exe_ocl" || exit
+	$exe_ref > $output_ref || exit
+	$exe_ocl > $output_ocl || exit
+	cmp $output_ref $output_ocl || exit
+done
+
 if [ $keep = "no" ]; then
 	rm -r "${OUTDIR}"
 fi

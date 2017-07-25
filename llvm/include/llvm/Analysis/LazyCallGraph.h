@@ -971,7 +971,17 @@ public:
   ///
   /// These functions, because they are known to LLVM, can have calls
   /// introduced out of thin air from arbitrary IR.
-  ArrayRef<Function *> getLibFunctions() const { return LibFunctions; }
+  ArrayRef<Function *> getLibFunctions() const {
+    return LibFunctions.getArrayRef();
+  }
+
+  /// Test whether a function is a known and defined library function tracked by
+  /// the call graph.
+  ///
+  /// Because these functions are known to LLVM they are specially modeled in
+  /// the call graph and even when all IR-level references have been removed
+  /// remain active and reachable.
+  bool isLibFunction(Function &F) const { return LibFunctions.count(&F); }
 
   ///@{
   /// \name Pre-SCC Mutation API
@@ -1110,7 +1120,7 @@ private:
   /// Defined functions that are also known library functions which the
   /// optimizer can reason about and therefore might introduce calls to out of
   /// thin air.
-  SmallVector<Function *, 4> LibFunctions;
+  SmallSetVector<Function *, 4> LibFunctions;
 
   /// Helper to insert a new function, with an already looked-up entry in
   /// the NodeMap.

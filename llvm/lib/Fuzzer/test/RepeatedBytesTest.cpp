@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <iostream>
+#include <ostream>
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   assert(Data);
@@ -21,7 +22,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
     MaxA = GT * CurA + (!GT) * MaxA;
   }
   if (MaxA >= 20) {
-    std::cout << "BINGO; Found the target (Max: " << MaxA << "), exiting\n";
+    std::cout << "BINGO; Found the target (Max: " << MaxA << "), exiting\n"
+              << std::flush;
     exit(0);
   }
   return 0;

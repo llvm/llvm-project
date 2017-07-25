@@ -64,6 +64,17 @@ struct FormatStyle;
 /// - replaceWhitespaceBefore, for executing the reflow using a whitespace
 ///   manager.
 ///
+/// For tokens that require the whitespace after the last line to be
+/// reformatted, for example in multiline jsdoc comments that require the
+/// trailing '*/' to be on a line of itself, there are analogous operations
+/// that might be executed after the last line has been reformatted:
+/// - getSplitAfterLastLine, for finding a split after the last line that needs
+///   to be reflown,
+/// - getLineLengthAfterSplitAfterLastLine, for calculating the line length in
+///   columns of the remainder of the token, and
+/// - replaceWhitespaceAfterLastLine, for executing the reflow using a
+///   whitespace manager.
+///
 /// FIXME: The interface seems set in stone, so we might want to just pull the
 /// strategy into the class, instead of controlling it from the outside.
 class BreakableToken {
@@ -143,6 +154,38 @@ public:
                                        unsigned PreviousEndColumn,
                                        unsigned ColumnLimit, Split SplitBefore,
                                        WhitespaceManager &Whitespaces) {}
+
+  /// \brief Returns a whitespace range (offset, length) of the content at
+  /// the last line that needs to be reformatted after the last line has been
+  /// reformatted.
+  ///
+  /// A result having offset == StringRef::npos means that no reformat is
+  /// necessary.
+  virtual Split getSplitAfterLastLine(unsigned TailOffset, unsigned ColumnLimit,
+                                      llvm::Regex &CommentPragmasRegex) const {
+    return Split(StringRef::npos, 0);
+  }
+
+  /// \brief Returns the number of columns required to format the piece token
+  /// after the last line after a reformat of the whitespace range \p
+  /// \p SplitAfterLastLine on the last line has been performed.
+  virtual unsigned
+  getLineLengthAfterSplitAfterLastLine(unsigned TailOffset,
+                                       Split SplitAfterLastLine) const {
+    return getLineLengthAfterSplit(getLineCount() - 1,
+                                   TailOffset + SplitAfterLastLine.first +
+                                       SplitAfterLastLine.second,
+                                   StringRef::npos);
+  }
+
+  /// \brief Replaces the whitespace from \p SplitAfterLastLine on the last line
+  /// after the last line has been formatted by performing a reformatting.
+  virtual void replaceWhitespaceAfterLastLine(unsigned TailOffset,
+                                              Split SplitAfterLastLine,
+                                              WhitespaceManager &Whitespaces) {
+    insertBreak(getLineCount() - 1, TailOffset, SplitAfterLastLine,
+                Whitespaces);
+  }
 
   /// \brief Updates the next token of \p State to the next token after this
   /// one. This can be used when this token manages a set of underlying tokens
@@ -304,6 +347,9 @@ public:
   void replaceWhitespaceBefore(unsigned LineIndex, unsigned PreviousEndColumn,
                                unsigned ColumnLimit, Split SplitBefore,
                                WhitespaceManager &Whitespaces) override;
+  Split getSplitAfterLastLine(unsigned TailOffset, unsigned ColumnLimit,
+                              llvm::Regex &CommentPragmasRegex) const override;
+
   bool mayReflow(unsigned LineIndex,
                  llvm::Regex &CommentPragmasRegex) const override;
 
@@ -348,6 +394,10 @@ private:
   // If this block comment has decorations, this is the column of the start of
   // the decorations.
   unsigned DecorationColumn;
+
+  // If true, make sure that the opening '/**' and the closing '*/' ends on a
+  // line of itself. Styles like jsdoc require this for multiline comments.
+  bool DelimitersOnNewline;
 };
 
 class BreakableLineCommentSection : public BreakableComment {

@@ -85,7 +85,7 @@ void LogThreadStopInfo(Log &log, const ThreadStopInfo &stop_info,
 }
 }
 
-NativeThreadLinux::NativeThreadLinux(NativeProcessLinux *process,
+NativeThreadLinux::NativeThreadLinux(NativeProcessLinux &process,
                                      lldb::tid_t tid)
     : NativeThreadProtocol(process, tid), m_state(StateType::eStateInvalid),
       m_stop_info(), m_reg_context_sp(), m_stop_description() {}
@@ -144,12 +144,8 @@ NativeRegisterContextSP NativeThreadLinux::GetRegisterContext() {
   if (m_reg_context_sp)
     return m_reg_context_sp;
 
-  NativeProcessProtocolSP m_process_sp = m_process_wp.lock();
-  if (!m_process_sp)
-    return NativeRegisterContextSP();
-
   ArchSpec target_arch;
-  if (!m_process_sp->GetArchitecture(target_arch))
+  if (!m_process.GetArchitecture(target_arch))
     return NativeRegisterContextSP();
 
   const uint32_t concrete_frame_idx = 0;
@@ -460,20 +456,10 @@ void NativeThreadLinux::MaybeLogStateChange(lldb::StateType new_state) {
   if (new_state == old_state)
     return;
 
-  NativeProcessProtocolSP m_process_sp = m_process_wp.lock();
-  lldb::pid_t pid =
-      m_process_sp ? m_process_sp->GetID() : LLDB_INVALID_PROCESS_ID;
-
-  // Log it.
-  log->Printf("NativeThreadLinux: thread (pid=%" PRIu64 ", tid=%" PRIu64
-              ") changing from state %s to %s",
-              pid, GetID(), StateAsCString(old_state),
-              StateAsCString(new_state));
+  LLDB_LOG(log, "pid={0}, tid={1}: changing from state {2} to {3}",
+           m_process.GetID(), GetID(), old_state, new_state);
 }
 
 NativeProcessLinux &NativeThreadLinux::GetProcess() {
-  auto process_sp = std::static_pointer_cast<NativeProcessLinux>(
-      NativeThreadProtocol::GetProcess());
-  assert(process_sp);
-  return *process_sp;
+  return static_cast<NativeProcessLinux &>(m_process);
 }

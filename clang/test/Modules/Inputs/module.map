@@ -347,6 +347,12 @@ module DebugObjC {
   header "DebugObjC.h"
 }
 
+module DebugObjCImport {
+  module SubModule {
+    header "DebugObjCImport.h"
+  }
+}
+
 module ImportNameInDir {
   header "ImportNameInDir.h"
   export *

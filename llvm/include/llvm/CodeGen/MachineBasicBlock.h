@@ -748,7 +748,7 @@ private:
 
   // Machine-CFG mutators
 
-  /// Remove Pred as a predecessor of this MachineBasicBlock. Don't do this
+  /// Add Pred as a predecessor of this MachineBasicBlock. Don't do this
   /// unless you know what you're doing, because it doesn't update Pred's
   /// successors list. Use Pred->addSuccessor instead.
   void addPredecessor(MachineBasicBlock *Pred);

@@ -31,7 +31,7 @@ namespace std {
 // TODO(alekseys): throw std::bad_alloc instead of dying on OOM.
 #define OPERATOR_NEW_BODY(nothrow) \
   GET_MALLOC_STACK_TRACE; \
-  void *res = MsanReallocate(&stack, 0, size, sizeof(u64), false);\
+  void *res = msan_malloc(size, &stack);\
   if (!nothrow && UNLIKELY(!res)) DieOnFailure::OnOOM();\
   return res
 

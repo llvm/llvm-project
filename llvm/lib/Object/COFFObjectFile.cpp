@@ -227,8 +227,11 @@ uint32_t COFFObjectFile::getSymbolFlags(DataRefImpl Ref) const {
   if (Symb.isExternal() || Symb.isWeakExternal())
     Result |= SymbolRef::SF_Global;
 
-  if (Symb.isWeakExternal())
+  if (Symb.isWeakExternal()) {
     Result |= SymbolRef::SF_Weak;
+    // We use indirect to allow the archiver to write weak externs
+    Result |= SymbolRef::SF_Indirect;
+  }
 
   if (Symb.getSectionNumber() == COFF::IMAGE_SYM_ABSOLUTE)
     Result |= SymbolRef::SF_Absolute;

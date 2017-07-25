@@ -34,8 +34,9 @@ public:
   Error reload();
 
 private:
-  FixedStreamArray<support::ulittle32_t> HashBuckets;
   FixedStreamArray<PSHashRecord> HashRecords;
+  ArrayRef<uint8_t> HashBitmap;
+  FixedStreamArray<support::ulittle32_t> HashBuckets;
   uint32_t NumBuckets;
   std::unique_ptr<msf::MappedBlockStream> Stream;
 };

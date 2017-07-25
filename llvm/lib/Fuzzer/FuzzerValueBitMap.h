@@ -52,27 +52,7 @@ struct ValueBitMap {
     return Map[WordIdx] & (1UL << BitIdx);
   }
 
-  size_t GetNumBitsSinceLastMerge() const { return NumBits; }
-
-  // Merges 'Other' into 'this', clears 'Other', updates NumBits,
-  // returns true if new bits were added.
-  ATTRIBUTE_TARGET_POPCNT
-  bool MergeFrom(ValueBitMap &Other) {
-    uintptr_t Res = 0;
-    size_t OldNumBits = NumBits;
-    for (size_t i = 0; i < kMapSizeInWords; i++) {
-      auto O = Other.Map[i];
-      auto M = Map[i];
-      if (O) {
-        Map[i] = (M |= O);
-        Other.Map[i] = 0;
-      }
-      if (M)
-        Res += __builtin_popcountll(M);
-    }
-    NumBits = Res;
-    return OldNumBits < NumBits;
-  }
+  size_t SizeInBits() const { return kMapSizeInBits; }
 
   template <class Callback>
   ATTRIBUTE_NO_SANITIZE_ALL
@@ -85,7 +65,6 @@ struct ValueBitMap {
   }
 
  private:
-  size_t NumBits = 0;
   uintptr_t Map[kMapSizeInWords] __attribute__((aligned(512)));
 };
 

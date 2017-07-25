@@ -1,7 +1,7 @@
 ; RUN: not llc < %s -mtriple=thumbv8m.base-none-eabi 2>&1 | FileCheck %s --check-prefix=BASELINE
 ; RUN: llc < %s -mtriple=thumbv8m.main-none-eabi -mattr=+dsp 2>&1 | FileCheck %s --check-prefix=MAINLINE
 
-; BASELINE: LLVM ERROR: Invalid register name "basepri_max_ns".
+; BASELINE: LLVM ERROR: Invalid register name "faultmask_ns".
 
 define i32 @read_mclass_registers() nounwind {
 entry:
@@ -31,7 +31,6 @@ entry:
   ; MAINLINE:   mrs r1, faultmask_ns
   ; MAINLINE:   mrs r1, control_ns
   ; MAINLINE:   mrs r1, sp_ns
-  ; MAINLINE:   mrs r1, basepri_max_ns
 
   %0 = call i32 @llvm.read_register.i32(metadata !0)
   %1 = call i32 @llvm.read_register.i32(metadata !4)
@@ -82,9 +81,7 @@ entry:
   %add23 = add i32 %add22, %23
   %24 = call i32 @llvm.read_register.i32(metadata !36)
   %add24 = add i32 %add23, %24
-  %25 = call i32 @llvm.read_register.i32(metadata !37)
-  %add25 = add i32 %add24, %25
-  ret i32 %add25
+  ret i32 %add24
 }
 
 define void @write_mclass_registers(i32 %x) nounwind {
@@ -127,7 +124,6 @@ entry:
   ; MAINLINE:   msr faultmask_ns, r0
   ; MAINLINE:   msr control_ns, r0
   ; MAINLINE:   msr sp_ns, r0
-  ; MAINLINE:   msr basepri_max_ns, r0
 
   call void @llvm.write_register.i32(metadata !0, i32 %x)
   call void @llvm.write_register.i32(metadata !1, i32 %x)
@@ -166,7 +162,6 @@ entry:
   call void @llvm.write_register.i32(metadata !34, i32 %x)
   call void @llvm.write_register.i32(metadata !35, i32 %x)
   call void @llvm.write_register.i32(metadata !36, i32 %x)
-  call void @llvm.write_register.i32(metadata !37, i32 %x)
   ret void
 }
 
@@ -210,5 +205,4 @@ declare void @llvm.write_register.i32(metadata, i32) nounwind
 !34 = !{!"faultmask_ns"}
 !35 = !{!"control_ns"}
 !36 = !{!"sp_ns"}
-!37 = !{!"basepri_max_ns"}
 

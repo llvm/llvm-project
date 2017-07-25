@@ -35,7 +35,9 @@ using namespace llvm;
 #include "AArch64GenRegisterInfo.inc"
 
 AArch64RegisterInfo::AArch64RegisterInfo(const Triple &TT)
-    : AArch64GenRegisterInfo(AArch64::LR), TT(TT) {}
+    : AArch64GenRegisterInfo(AArch64::LR), TT(TT) {
+  AArch64_MC::initLLVMToCVRegMapping(this);
+}
 
 const MCPhysReg *
 AArch64RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {

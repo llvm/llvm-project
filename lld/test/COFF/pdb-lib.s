@@ -1,3 +1,4 @@
+# REQUIRES: x86
 # RUN: rm -rf %t && mkdir -p %t && cd %t
 # RUN: llvm-mc -filetype=obj -triple=i686-windows-msvc %s -o foo.obj
 # RUN: llc %S/Inputs/bar.ll -filetype=obj -mtriple=i686-windows-msvc -o bar.obj

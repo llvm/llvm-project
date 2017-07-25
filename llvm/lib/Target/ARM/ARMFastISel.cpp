@@ -250,8 +250,7 @@ bool ARMFastISel::DefinesOptionalPredicate(MachineInstr *MI, bool *CPSR) {
     return false;
 
   // Look to see if our OptionalDef is defining CPSR or CCR.
-  for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
-    const MachineOperand &MO = MI->getOperand(i);
+  for (const MachineOperand &MO : MI->operands()) {
     if (!MO.isReg() || !MO.isDef()) continue;
     if (MO.getReg() == ARM::CPSR)
       *CPSR = true;
@@ -267,8 +266,8 @@ bool ARMFastISel::isARMNEONPred(const MachineInstr *MI) {
        AFI->isThumb2Function())
     return MI->isPredicable();
 
-  for (unsigned i = 0, e = MCID.getNumOperands(); i != e; ++i)
-    if (MCID.OpInfo[i].isPredicate())
+  for (const MCOperandInfo &opInfo : MCID.operands())
+    if (opInfo.isPredicate())
       return true;
 
   return false;
@@ -1972,7 +1971,7 @@ bool ARMFastISel::ProcessCallArgs(SmallVectorImpl<Value*> &Args,
         break;
       }
       case CCValAssign::AExt:
-        // Intentional fall-through.  Handle AExt and ZExt.
+      // Intentional fall-through.  Handle AExt and ZExt.
       case CCValAssign::ZExt: {
         MVT DestVT = VA.getLocVT();
         Arg = ARMEmitIntExt(ArgVT, Arg, DestVT, /*isZExt*/true);
@@ -2001,6 +2000,7 @@ bool ARMFastISel::ProcessCallArgs(SmallVectorImpl<Value*> &Args,
       assert(VA.getLocVT() == MVT::f64 &&
              "Custom lowering for v2f64 args not available");
 
+      // FIXME: ArgLocs[++i] may extend beyond ArgLocs.size()
       CCValAssign &NextVA = ArgLocs[++i];
 
       assert(VA.isRegLoc() && NextVA.isRegLoc() &&
@@ -2172,8 +2172,8 @@ bool ARMFastISel::SelectRet(const Instruction *I) {
   MachineInstrBuilder MIB = BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
                                     TII.get(RetOpc));
   AddOptionalDefs(MIB);
-  for (unsigned i = 0, e = RetRegs.size(); i != e; ++i)
-    MIB.addReg(RetRegs[i], RegState::Implicit);
+  for (unsigned R : RetRegs)
+    MIB.addReg(R, RegState::Implicit);
   return true;
 }
 
@@ -2233,8 +2233,7 @@ bool ARMFastISel::ARMEmitLibcall(const Instruction *I, RTLIB::Libcall Call) {
   ArgRegs.reserve(I->getNumOperands());
   ArgVTs.reserve(I->getNumOperands());
   ArgFlags.reserve(I->getNumOperands());
-  for (unsigned i = 0; i < I->getNumOperands(); ++i) {
-    Value *Op = I->getOperand(i);
+  for (Value *Op :  I->operands()) {
     unsigned Arg = getRegForValue(Op);
     if (Arg == 0) return false;
 
@@ -2278,8 +2277,8 @@ bool ARMFastISel::ARMEmitLibcall(const Instruction *I, RTLIB::Libcall Call) {
     MIB.addExternalSymbol(TLI.getLibcallName(Call));
 
   // Add implicit physical register uses to the call.
-  for (unsigned i = 0, e = RegArgs.size(); i != e; ++i)
-    MIB.addReg(RegArgs[i], RegState::Implicit);
+  for (unsigned R : RegArgs)
+    MIB.addReg(R, RegState::Implicit);
 
   // Add a register mask with the call-preserved registers.
   // Proper defs for return values will be added by setPhysRegsDeadExcept().
@@ -2423,8 +2422,8 @@ bool ARMFastISel::SelectCall(const Instruction *I,
     MIB.addExternalSymbol(IntrMemName, 0);
 
   // Add implicit physical register uses to the call.
-  for (unsigned i = 0, e = RegArgs.size(); i != e; ++i)
-    MIB.addReg(RegArgs[i], RegState::Implicit);
+  for (unsigned R : RegArgs)
+    MIB.addReg(R, RegState::Implicit);
 
   // Add a register mask with the call-preserved registers.
   // Proper defs for return values will be added by setPhysRegsDeadExcept().
@@ -2932,13 +2931,12 @@ bool ARMFastISel::tryToFoldLoadIntoMI(MachineInstr *MI, unsigned OpNo,
 
   bool Found = false;
   bool isZExt;
-  for (unsigned i = 0, e = array_lengthof(FoldableLoadExtends);
-       i != e; ++i) {
-    if (FoldableLoadExtends[i].Opc[isThumb2] == MI->getOpcode() &&
-        (uint64_t)FoldableLoadExtends[i].ExpectedImm == Imm &&
-        MVT((MVT::SimpleValueType)FoldableLoadExtends[i].ExpectedVT) == VT) {
+  for (const FoldableLoadExtendsStruct &FLE : FoldableLoadExtends) {
+    if (FLE.Opc[isThumb2] == MI->getOpcode() &&
+        (uint64_t)FLE.ExpectedImm == Imm &&
+        MVT((MVT::SimpleValueType)FLE.ExpectedVT) == VT) {
       Found = true;
-      isZExt = FoldableLoadExtends[i].isZExt;
+      isZExt = FLE.isZExt;
     }
   }
   if (!Found) return false;
@@ -3057,9 +3055,8 @@ bool ARMFastISel::fastLowerArguments() {
   };
 
   const TargetRegisterClass *RC = &ARM::rGPRRegClass;
-  for (Function::const_arg_iterator I = F->arg_begin(), E = F->arg_end();
-       I != E; ++I) {
-    unsigned ArgNo = I->getArgNo();
+  for (const Argument &Arg : F->args()) {
+    unsigned ArgNo = Arg.getArgNo();
     unsigned SrcReg = GPRArgRegs[ArgNo];
     unsigned DstReg = FuncInfo.MF->addLiveIn(SrcReg, RC);
     // FIXME: Unfortunately it's necessary to emit a copy from the livein copy.
@@ -3069,7 +3066,7 @@ bool ARMFastISel::fastLowerArguments() {
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
             TII.get(TargetOpcode::COPY),
             ResultReg).addReg(DstReg, getKillRegState(true));
-    updateValueMap(&*I, ResultReg);
+    updateValueMap(&Arg, ResultReg);
   }
 
   return true;

@@ -3310,6 +3310,45 @@ static const CFGBlock *findBlockForNode(const ExplodedNode *N) {
   return nullptr;
 }
 
+static bool isDominatedByNoReturnBlocks(const ExplodedNode *N) {
+  const CFG &Cfg = N->getCFG();
+
+  const CFGBlock *StartBlk = findBlockForNode(N);
+  if (!StartBlk)
+    return false;
+  if (StartBlk->hasNoReturnElement())
+    return true;
+
+  llvm::SmallVector<const CFGBlock *, 32> DFSWorkList;
+  llvm::SmallPtrSet<const CFGBlock *, 32> Visited;
+
+  DFSWorkList.push_back(StartBlk);
+  while (!DFSWorkList.empty()) {
+    const CFGBlock *Blk = DFSWorkList.back();
+    DFSWorkList.pop_back();
+    Visited.insert(Blk);
+
+    for (const auto &Succ : Blk->succs()) {
+      if (const CFGBlock *SuccBlk = Succ.getReachableBlock()) {
+        if (SuccBlk == &Cfg.getExit()) {
+          // We seem to be leaving the current CFG.
+          // We're no longer sure what happens next.
+          return false;
+        }
+
+        if (!SuccBlk->hasNoReturnElement() && !Visited.count(SuccBlk)) {
+          // If the block has reachable child blocks that aren't no-return,
+          // add them to the worklist.
+          DFSWorkList.push_back(SuccBlk);
+        }
+      }
+    }
+  }
+
+  // Nothing reached the exit. It can only mean one thing: there's no return.
+  return true;
+}
+
 static BugReport *
 FindReportInEquivalenceClass(BugReportEquivClass& EQ,
                              SmallVectorImpl<BugReport*> &bugReports) {
@@ -3366,9 +3405,8 @@ FindReportInEquivalenceClass(BugReportEquivClass& EQ,
     // We may be post-dominated in subsequent blocks, or even
     // inter-procedurally. However, it is not clear if more complicated
     // cases are generally worth suppressing.
-    if (const CFGBlock *B = findBlockForNode(errorNode))
-      if (B->hasNoReturnElement())
-        continue;
+    if (isDominatedByNoReturnBlocks(errorNode))
+      continue;
 
     // At this point we know that 'N' is not a sink and it has at least one
     // successor.  Use a DFS worklist to find a non-sink end-of-path node.

@@ -14,8 +14,10 @@ T tmain(T argc) {
   T *ptr;
   static T a;
 // CHECK: static T a;
-#pragma omp taskloop simd if(taskloop: argc > N) default(shared) untied priority(N) safelen(N) linear(c) aligned(ptr) grainsize(N) reduction(+:g)
-  // CHECK-NEXT: #pragma omp taskloop simd if(taskloop: argc > N) default(shared) untied priority(N) safelen(N) linear(c) aligned(ptr) grainsize(N) reduction(+: g)
+#pragma omp taskgroup task_reduction(+: d)
+#pragma omp taskloop simd if(taskloop: argc > N) default(shared) untied priority(N) safelen(N) linear(c) aligned(ptr) grainsize(N) reduction(+:g) in_reduction(+: d)
+  // CHECK-NEXT: #pragma omp taskgroup task_reduction(+: d)
+  // CHECK-NEXT: #pragma omp taskloop simd if(taskloop: argc > N) default(shared) untied priority(N) safelen(N) linear(c) aligned(ptr) grainsize(N) reduction(+: g) in_reduction(+: d)
   for (int i = 0; i < 2; ++i)
     a = 2;
 // CHECK-NEXT: for (int i = 0; i < 2; ++i)
@@ -54,8 +56,10 @@ int main(int argc, char **argv) {
   int b = argc, c, d, e, f, g;
   static int a;
 // CHECK: static int a;
-#pragma omp taskloop simd if(taskloop: a) default(none) shared(a) final(b) priority(5) safelen(8) linear(b), aligned(argv) num_tasks(argc) reduction(*: g)
-  // CHECK-NEXT: #pragma omp taskloop simd if(taskloop: a) default(none) shared(a) final(b) priority(5) safelen(8) linear(b) aligned(argv) num_tasks(argc) reduction(*: g)
+#pragma omp taskgroup task_reduction(+: d)
+#pragma omp taskloop simd if(taskloop: a) default(none) shared(a) final(b) priority(5) safelen(8) linear(b), aligned(argv) num_tasks(argc) reduction(*: g) in_reduction(+: d)
+  // CHECK-NEXT: #pragma omp taskgroup task_reduction(+: d)
+  // CHECK-NEXT: #pragma omp taskloop simd if(taskloop: a) default(none) shared(a) final(b) priority(5) safelen(8) linear(b) aligned(argv) num_tasks(argc) reduction(*: g) in_reduction(+: d)
   for (int i = 0; i < 2; ++i)
     a = 2;
 // CHECK-NEXT: for (int i = 0; i < 2; ++i)

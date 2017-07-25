@@ -162,7 +162,7 @@ public:
   /// Get the listener that will be used to receive process events.
   ///
   /// If no listener has been set via a call to
-  /// SBLaunchInfo::SetListener(), then an invalid SBListener will be
+  /// SBAttachInfo::SetListener(), then an invalid SBListener will be
   /// returned (SBListener::IsValid() will return false). If a listener
   /// has been set, then the valid listener object will be returned.
   //----------------------------------------------------------------------

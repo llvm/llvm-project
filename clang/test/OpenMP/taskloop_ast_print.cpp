@@ -13,8 +13,10 @@ T tmain(T argc) {
   T b = argc, c, d, e, f, g;
   static T a;
 // CHECK: static T a;
-#pragma omp taskloop if(taskloop: argc > N) default(shared) untied priority(N) grainsize(N) reduction(+:g)
-  // CHECK-NEXT: #pragma omp taskloop if(taskloop: argc > N) default(shared) untied priority(N) grainsize(N) reduction(+: g)
+#pragma omp taskgroup task_reduction(+: d)
+#pragma omp taskloop if(taskloop: argc > N) default(shared) untied priority(N) grainsize(N) reduction(+:g) in_reduction(+: d)
+  // CHECK-NEXT: #pragma omp taskgroup task_reduction(+: d)
+  // CHECK-NEXT: #pragma omp taskloop if(taskloop: argc > N) default(shared) untied priority(N) grainsize(N) reduction(+: g) in_reduction(+: d)
   for (int i = 0; i < 2; ++i)
     a = 2;
 // CHECK-NEXT: for (int i = 0; i < 2; ++i)
@@ -53,8 +55,10 @@ int main(int argc, char **argv) {
   int b = argc, c, d, e, f, g;
   static int a;
 // CHECK: static int a;
-#pragma omp taskloop if(taskloop: a) default(none) shared(a) final(b) priority(5) num_tasks(argc) reduction(*: g)
-  // CHECK-NEXT: #pragma omp taskloop if(taskloop: a) default(none) shared(a) final(b) priority(5) num_tasks(argc) reduction(*: g)
+#pragma omp taskgroup task_reduction(+: d)
+#pragma omp taskloop if(taskloop: a) default(none) shared(a) final(b) priority(5) num_tasks(argc) reduction(*: g) in_reduction(+:d)
+  // CHECK-NEXT: #pragma omp taskgroup task_reduction(+: d)
+  // CHECK-NEXT: #pragma omp taskloop if(taskloop: a) default(none) shared(a) final(b) priority(5) num_tasks(argc) reduction(*: g) in_reduction(+: d)
   for (int i = 0; i < 2; ++i)
     a = 2;
 // CHECK-NEXT: for (int i = 0; i < 2; ++i)

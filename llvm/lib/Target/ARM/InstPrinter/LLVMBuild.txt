@@ -19,5 +19,5 @@
 type = Library
 name = ARMAsmPrinter
 parent = ARM
-required_libraries = MC Support
+required_libraries = MC Support ARMUtils
 add_to_library_groups = ARM

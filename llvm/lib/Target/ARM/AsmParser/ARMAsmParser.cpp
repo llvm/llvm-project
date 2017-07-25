@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ARMFeatures.h"
+#include "Utils/ARMBaseInfo.h"
 #include "MCTargetDesc/ARMAddressingModes.h"
 #include "MCTargetDesc/ARMBaseInfo.h"
 #include "MCTargetDesc/ARMMCExpr.h"
@@ -4089,81 +4090,14 @@ ARMAsmParser::parseMSRMaskOperand(OperandVector &Operands) {
   StringRef Mask = Tok.getString();
 
   if (isMClass()) {
-    // See ARMv6-M 10.1.1
-    std::string Name = Mask.lower();
-    unsigned FlagsVal = StringSwitch<unsigned>(Name)
-      // Note: in the documentation:
-      //  ARM deprecates using MSR APSR without a _<bits> qualifier as an alias
-      //  for MSR APSR_nzcvq.
-      // but we do make it an alias here.  This is so to get the "mask encoding"
-      // bits correct on MSR APSR writes.
-      //
-      // FIXME: Note the 0xc00 "mask encoding" bits version of the registers
-      // should really only be allowed when writing a special register.  Note
-      // they get dropped in the MRS instruction reading a special register as
-      // the SYSm field is only 8 bits.
-      .Case("apsr", 0x800)
-      .Case("apsr_nzcvq", 0x800)
-      .Case("apsr_g", 0x400)
-      .Case("apsr_nzcvqg", 0xc00)
-      .Case("iapsr", 0x801)
-      .Case("iapsr_nzcvq", 0x801)
-      .Case("iapsr_g", 0x401)
-      .Case("iapsr_nzcvqg", 0xc01)
-      .Case("eapsr", 0x802)
-      .Case("eapsr_nzcvq", 0x802)
-      .Case("eapsr_g", 0x402)
-      .Case("eapsr_nzcvqg", 0xc02)
-      .Case("xpsr", 0x803)
-      .Case("xpsr_nzcvq", 0x803)
-      .Case("xpsr_g", 0x403)
-      .Case("xpsr_nzcvqg", 0xc03)
-      .Case("ipsr", 0x805)
-      .Case("epsr", 0x806)
-      .Case("iepsr", 0x807)
-      .Case("msp", 0x808)
-      .Case("psp", 0x809)
-      .Case("primask", 0x810)
-      .Case("basepri", 0x811)
-      .Case("basepri_max", 0x812)
-      .Case("faultmask", 0x813)
-      .Case("control", 0x814)
-      .Case("msplim", 0x80a)
-      .Case("psplim", 0x80b)
-      .Case("msp_ns", 0x888)
-      .Case("psp_ns", 0x889)
-      .Case("msplim_ns", 0x88a)
-      .Case("psplim_ns", 0x88b)
-      .Case("primask_ns", 0x890)
-      .Case("basepri_ns", 0x891)
-      .Case("basepri_max_ns", 0x892)
-      .Case("faultmask_ns", 0x893)
-      .Case("control_ns", 0x894)
-      .Case("sp_ns", 0x898)
-      .Default(~0U);
-
-    if (FlagsVal == ~0U)
+    auto TheReg = ARMSysReg::lookupMClassSysRegByName(Mask.lower());
+    if (!TheReg || !TheReg->hasRequiredFeatures(getSTI().getFeatureBits()))
       return MatchOperand_NoMatch;
 
-    if (!hasDSP() && (FlagsVal & 0x400))
-      // The _g and _nzcvqg versions are only valid if the DSP extension is
-      // available.
-      return MatchOperand_NoMatch;
-
-    if (!hasV7Ops() && FlagsVal >= 0x811 && FlagsVal <= 0x813)
-      // basepri, basepri_max and faultmask only valid for V7m.
-      return MatchOperand_NoMatch;
-
-    if (!has8MSecExt() && (FlagsVal == 0x80a || FlagsVal == 0x80b ||
-                             (FlagsVal > 0x814 && FlagsVal < 0xc00)))
-      return MatchOperand_NoMatch;
-
-    if (!hasV8MMainline() && (FlagsVal == 0x88a || FlagsVal == 0x88b ||
-                              (FlagsVal > 0x890 && FlagsVal <= 0x893)))
-      return MatchOperand_NoMatch;
+    unsigned SYSmvalue = TheReg->Encoding & 0xFFF;
 
     Parser.Lex(); // Eat identifier token.
-    Operands.push_back(ARMOperand::CreateMSRMask(FlagsVal, S));
+    Operands.push_back(ARMOperand::CreateMSRMask(SYSmvalue, S));
     return MatchOperand_Success;
   }
 

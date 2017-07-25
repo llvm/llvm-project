@@ -45,18 +45,23 @@ struct MachinePointerInfo {
   /// Offset - This is an offset from the base Value*.
   int64_t Offset;
 
-  explicit MachinePointerInfo(const Value *v = nullptr, int64_t offset = 0)
-    : V(v), Offset(offset) {}
+  uint8_t StackID;
+
+  explicit MachinePointerInfo(const Value *v = nullptr, int64_t offset = 0,
+                              uint8_t ID = 0)
+    : V(v), Offset(offset), StackID(ID) {}
 
   explicit MachinePointerInfo(const PseudoSourceValue *v,
-                              int64_t offset = 0)
-    : V(v), Offset(offset) {}
+                              int64_t offset = 0,
+                              uint8_t ID = 0)
+    : V(v), Offset(offset), StackID(ID) {}
 
   MachinePointerInfo getWithOffset(int64_t O) const {
     if (V.isNull()) return MachinePointerInfo();
     if (V.is<const Value*>())
-      return MachinePointerInfo(V.get<const Value*>(), Offset+O);
-    return MachinePointerInfo(V.get<const PseudoSourceValue*>(), Offset+O);
+      return MachinePointerInfo(V.get<const Value*>(), Offset+O, StackID);
+    return MachinePointerInfo(V.get<const PseudoSourceValue*>(), Offset+O,
+                              StackID);
   }
 
   /// Return true if memory region [V, V+Offset+Size) is known to be
@@ -82,7 +87,8 @@ struct MachinePointerInfo {
   static MachinePointerInfo getGOT(MachineFunction &MF);
 
   /// Stack pointer relative access.
-  static MachinePointerInfo getStack(MachineFunction &MF, int64_t Offset);
+  static MachinePointerInfo getStack(MachineFunction &MF, int64_t Offset,
+                                     uint8_t ID = 0);
 };
 
 

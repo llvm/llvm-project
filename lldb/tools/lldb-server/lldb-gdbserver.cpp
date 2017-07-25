@@ -67,13 +67,13 @@ typedef process_netbsd::NativeProcessNetBSD::Factory NativeProcessFactory;
 // Dummy implementation to make sure the code compiles
 class NativeProcessFactory : public NativeProcessProtocol::Factory {
 public:
-  llvm::Expected<NativeProcessProtocolSP>
+  llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
   Launch(ProcessLaunchInfo &launch_info,
          NativeProcessProtocol::NativeDelegate &delegate,
          MainLoop &mainloop) const override {
     llvm_unreachable("Not implemented");
   }
-  llvm::Expected<NativeProcessProtocolSP>
+  llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
   Attach(lldb::pid_t pid, NativeProcessProtocol::NativeDelegate &delegate,
          MainLoop &mainloop) const override {
     llvm_unreachable("Not implemented");

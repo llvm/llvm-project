@@ -6,7 +6,7 @@
 ; Loop unswitching shouldn't trivially unswitch the true case of condition %a
 ; in the code here because it leads to an infinite loop. While this doesn't
 ; contain any instructions with side effects, it's still a kind of side effect.
-; It can trivially unswitch on the false cas of condition %a though.
+; It can trivially unswitch on the false case of condition %a though.
 
 ; STATS: 2 loop-unswitch - Number of branches unswitched
 ; STATS: 2 loop-unswitch - Number of unswitches that are trivial
@@ -16,7 +16,7 @@
 ; CHECK-NEXT: br i1 %a, label %entry.split, label %abort0.split
 
 ; CHECK: entry.split:
-; CHECK-NEXT: br i1 %b, label %for.body, label %abort1.split
+; CHECK-NEXT: br i1 %b, label %entry.split.split, label %abort1.split
 
 ; CHECK: for.body:
 ; CHECK-NEXT: br label %for.body

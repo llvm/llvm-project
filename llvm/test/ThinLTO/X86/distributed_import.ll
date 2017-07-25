@@ -4,6 +4,7 @@
 ; the debug metadata for the thin link.
 ; RUN: opt -thinlto-bc %s -thin-link-bitcode-file=%t1.thinlink.bc -o %t1.bc
 ; RUN: opt -thinlto-bc %p/Inputs/distributed_import.ll -thin-link-bitcode-file=%t2.thinlink.bc -o %t2.bc
+; RUN: llvm-bcanalyzer -dump %t1.thinlink.bc | FileCheck --check-prefix=THINLINKBITCODE %s
 
 ; First perform the thin link on the normal bitcode file.
 ; RUN: llvm-lto2 run %t1.bc %t2.bc -o %t.o -save-temps \
@@ -55,6 +56,25 @@ entry:
   call i32 (...) @g()
   ret void
 }
+
+; THINLINKBITCODE-NOT: IDENTIFICATION_BLOCK_ID
+; THINLINKBITCODE-NOT: BLOCKINFO_BLOCK
+; THINLINKBITCODE-NOT: TYPE_BLOCK_ID
+; THINLINKBITCODE-NOT: VSTOFFSET
+; THINLINKBITCODE-NOT: CONSTANTS_BLOCK
+; THINLINKBITCODE-NOT: METADATA_KIND_BLOCK
+; THINLINKBITCODE-NOT: METADATA_BLOCK
+; THINLINKBITCODE-NOT: OPERAND_BUNDLE_TAGS_BLOCK
+; THINLINKBITCODE-NOT: UnknownBlock26
+; THINLINKBITCODE-NOT: FUNCTION_BLOCK
+; THINLINKBITCODE-NOT: VALUE_SYMTAB
+; THINLINKBITCODE: MODULE_BLOCK
+; THINLINKBITCODE: VERSION
+; THINLINKBITCODE: SOURCE_FILENAME
+; THINLINKBITCODE: GLOBALVAL_SUMMARY_BLOCK
+; THINLINKBITCODE: HASH
+; THINLINKBITCODE: SYMTAB_BLOCK
+; THINLINKBITCODE: STRTAB_BLOCK
 
 !llvm.dbg.cu = !{}
 

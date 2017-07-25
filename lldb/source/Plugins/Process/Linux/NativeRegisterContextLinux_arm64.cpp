@@ -873,7 +873,7 @@ Status NativeRegisterContextLinux_arm64::DoReadRegisterValue(
         PTRACE_GETREGSET, m_thread.GetID(), &regset, &ioVec, sizeof regs);
     if (error.Success()) {
       ArchSpec arch;
-      if (m_thread.GetProcess()->GetArchitecture(arch))
+      if (m_thread.GetProcess().GetArchitecture(arch))
         value.SetBytes((void *)(((unsigned char *)(&regs)) + offset), 16,
                        arch.GetByteOrder());
       else
@@ -890,7 +890,7 @@ Status NativeRegisterContextLinux_arm64::DoReadRegisterValue(
         PTRACE_GETREGSET, m_thread.GetID(), &regset, &ioVec, sizeof regs);
     if (error.Success()) {
       ArchSpec arch;
-      if (m_thread.GetProcess()->GetArchitecture(arch))
+      if (m_thread.GetProcess().GetArchitecture(arch))
         value.SetBytes((void *)(((unsigned char *)(regs)) + offset), 8,
                        arch.GetByteOrder());
       else

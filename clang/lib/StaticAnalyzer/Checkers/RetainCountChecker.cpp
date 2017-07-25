@@ -1304,6 +1304,21 @@ RetainSummaryManager::getCFSummaryGetRule(const FunctionDecl *FD) {
                               DoNothing, DoNothing);
 }
 
+/// Returns true if the declaration 'D' is annotated with 'rcAnnotation'.
+static bool hasRCAnnotation(const Decl *D, StringRef rcAnnotation) {
+  for (const auto *Ann : D->specific_attrs<AnnotateAttr>()) {
+    if (Ann->getAnnotation() == rcAnnotation)
+      return true;
+  }
+  return false;
+}
+
+/// Returns true if the function declaration 'FD' contains
+/// 'rc_ownership_trusted_implementation' annotate attribute.
+static bool isTrustedReferenceCountImplementation(const FunctionDecl *FD) {
+  return hasRCAnnotation(FD, "rc_ownership_trusted_implementation");
+}
+
 //===----------------------------------------------------------------------===//
 // Summary creation for Selectors.
 //===----------------------------------------------------------------------===//
@@ -3380,6 +3395,9 @@ bool RetainCountChecker::evalCall(const CallExpr *CE, CheckerContext &C) const {
 
   // See if it's one of the specific functions we know how to eval.
   bool canEval = false;
+  // See if the function has 'rc_ownership_trusted_implementation'
+  // annotate attribute. If it does, we will not inline it.
+  bool hasTrustedImplementationAnnotation = false;
 
   QualType ResultTy = CE->getCallReturnType(C.getASTContext());
   if (ResultTy->isObjCIdType()) {
@@ -3395,6 +3413,11 @@ bool RetainCountChecker::evalCall(const CallExpr *CE, CheckerContext &C) const {
         cocoa::isRefType(ResultTy, "CV", FName)) {
       canEval = isRetain(FD, FName) || isAutorelease(FD, FName) ||
                 isMakeCollectable(FD, FName);
+    } else {
+      if (FD->getDefinition()) {
+        canEval = isTrustedReferenceCountImplementation(FD->getDefinition());
+        hasTrustedImplementationAnnotation = canEval;
+      }
     }
   }
 
@@ -3404,8 +3427,11 @@ bool RetainCountChecker::evalCall(const CallExpr *CE, CheckerContext &C) const {
   // Bind the return value.
   const LocationContext *LCtx = C.getLocationContext();
   SVal RetVal = state->getSVal(CE->getArg(0), LCtx);
-  if (RetVal.isUnknown()) {
-    // If the receiver is unknown, conjure a return value.
+  if (RetVal.isUnknown() ||
+      (hasTrustedImplementationAnnotation && !ResultTy.isNull())) {
+    // If the receiver is unknown or the function has
+    // 'rc_ownership_trusted_implementation' annotate attribute, conjure a
+    // return value.
     SValBuilder &SVB = C.getSValBuilder();
     RetVal = SVB.conjureSymbolVal(nullptr, CE, LCtx, ResultTy, C.blockCount());
   }
@@ -3421,8 +3447,9 @@ bool RetainCountChecker::evalCall(const CallExpr *CE, CheckerContext &C) const {
       Binding = getRefBinding(state, Sym);
 
     // Invalidate the argument region.
-    state = state->invalidateRegions(ArgRegion, CE, C.blockCount(), LCtx,
-                                     /*CausesPointerEscape*/ false);
+    state = state->invalidateRegions(
+        ArgRegion, CE, C.blockCount(), LCtx,
+        /*CausesPointerEscape*/ hasTrustedImplementationAnnotation);
 
     // Restore the refcount status of the argument.
     if (Binding)

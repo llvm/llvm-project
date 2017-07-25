@@ -1,3 +1,4 @@
+; REQUIRES: x86
 ; RUN: rm -fr %T/savetemps
 ; RUN: mkdir %T/savetemps
 ; RUN: llvm-as -o %T/savetemps/savetemps.obj %s

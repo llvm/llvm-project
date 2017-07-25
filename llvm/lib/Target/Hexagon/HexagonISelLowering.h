@@ -231,7 +231,8 @@ namespace HexagonISD {
     /// mode is legal for a load/store of any legal type.
     /// TODO: Handle pre/postinc as well.
     bool isLegalAddressingMode(const DataLayout &DL, const AddrMode &AM,
-                               Type *Ty, unsigned AS) const override;
+                               Type *Ty, unsigned AS,
+                               Instruction *I = nullptr) const override;
     /// Return true if folding a constant offset with the given GlobalAddress
     /// is legal.  It is frequently not legal in PIC relocation models.
     bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;

@@ -70,7 +70,7 @@ SBBreakpoint supports breakpoint location iteration, for example,
         print('breakpoint location load addr: %s' % hex(bl.GetLoadAddress()))
         print('breakpoint location condition: %s' % hex(bl.GetCondition()))
 
-and rich comparion methods which allow the API program to use,
+and rich comparison methods which allow the API program to use,
 
     if aBreakpoint == bBreakpoint:
         ...

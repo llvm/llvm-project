@@ -99,6 +99,7 @@ def ATOMIC_FENCE : SPseudoInstSI<
   [(atomic_fence (i32 imm:$ordering), (i32 imm:$scope))],
   "ATOMIC_FENCE $ordering, $scope"> {
   let hasSideEffects = 1;
+  let maybeAtomic = 1;
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Uses = [EXEC] in {
@@ -1288,20 +1289,75 @@ class FPMed3Pat<ValueType vt,
   (med3Inst $src0_mods, $src0, $src1_mods, $src1, $src2_mods, $src2, DSTCLAMP.NONE, DSTOMOD.NONE)
 >;
 
+class FP16Med3Pat<ValueType vt,
+                Instruction med3Inst> : Pat<
+  (fmaxnum (fminnum_oneuse (VOP3Mods_nnan vt:$src0, i32:$src0_mods),
+                           (VOP3Mods_nnan vt:$src1, i32:$src1_mods)),
+           (fminnum_oneuse (fmaxnum_oneuse (VOP3Mods_nnan vt:$src0, i32:$src0_mods),
+                                           (VOP3Mods_nnan vt:$src1, i32:$src1_mods)),
+                           (vt (VOP3Mods_nnan vt:$src2, i32:$src2_mods)))),
+  (med3Inst $src0_mods, $src0, $src1_mods, $src1, $src2_mods, $src2, DSTCLAMP.NONE)
+>;
+
+class Int16Med3Pat<Instruction med3Inst,
+                   SDPatternOperator max,
+                   SDPatternOperator max_oneuse,
+                   SDPatternOperator min_oneuse,
+                   ValueType vt = i32> : Pat<
+  (max (min_oneuse vt:$src0, vt:$src1),
+       (min_oneuse (max_oneuse vt:$src0, vt:$src1), vt:$src2)),
+  (med3Inst SRCMODS.NONE, $src0, SRCMODS.NONE, $src1, SRCMODS.NONE, $src2, DSTCLAMP.NONE)
+>;
+
 def : FPMed3Pat<f32, V_MED3_F32>;
 
 let Predicates = [isGFX9] in {
-def : FPMed3Pat<f16, V_MED3_F16>;
-def : IntMed3Pat<V_MED3_I16, smax, smax_oneuse, smin_oneuse, i16>;
-def : IntMed3Pat<V_MED3_U16, umax, umax_oneuse, umin_oneuse, i16>;
+def : FP16Med3Pat<f16, V_MED3_F16>;
+def : Int16Med3Pat<V_MED3_I16, smax, smax_oneuse, smin_oneuse, i16>;
+def : Int16Med3Pat<V_MED3_U16, umax, umax_oneuse, umin_oneuse, i16>;
 } // End Predicates = [isGFX9]
 
 //============================================================================//
 // Assembler aliases
 //============================================================================//
 
+multiclass NoCarryAlias<string Inst,
+  Instruction Inst32NC, Instruction Inst64NC,
+  Instruction Inst32CO, Instruction Inst64CO> {
+  def : InstAlias<Inst#" $vdst, $src0, $src1",
+    (Inst32NC VGPR_32:$vdst, VSrc_b32:$src0, VGPR_32:$src1), 1000>,
+    Requires<[HasAddNoCarryInsts]>;
+
+  def : InstAlias<Inst#" $vdst, $src0, $src1",
+    (Inst64NC VGPR_32:$vdst, VCSrc_b32:$src0, VCSrc_b32:$src1), -10>,
+    Requires<[HasAddNoCarryInsts]>;
+
+  def : InstAlias<Inst#" $vdst, vcc, $src0, $src1",
+    (Inst32CO VGPR_32:$vdst, VSrc_b32:$src0, VGPR_32:$src1), 1000>,
+    Requires<[HasAddNoCarryInsts]>;
+
+  def : InstAlias<Inst#" $vdst, $sdst, $src0, $src1",
+    (Inst64CO VGPR_32:$vdst, SReg_64:$sdst, VSrc_b32:$src0, VGPR_32:$src1), -10>,
+    Requires<[HasAddNoCarryInsts]>;
+}
+
+// gfx9 made a mess of add instruction names. The existing add
+// instructions add _co added to the names, and their old names were
+// repurposed to a version without carry out.
+let Predicates = [HasAddNoCarryInsts] in {
+defm : NoCarryAlias<"v_add_u32", V_ADD_U32_e32_vi, V_ADD_U32_e64_vi,
+                                 V_ADD_I32_e32_vi, V_ADD_I32_e64_vi>;
+defm : NoCarryAlias<"v_sub_u32", V_SUB_U32_e32_vi, V_SUB_U32_e64_vi,
+                                 V_SUB_I32_e32_vi, V_SUB_I32_e64_vi>;
+defm : NoCarryAlias<"v_subrev_u32",
+  V_SUBREV_U32_e32_vi, V_SUBREV_U32_e64_vi,
+  V_SUBREV_I32_e32_vi, V_SUBREV_I32_e64_vi>;
+}
+
+let Predicates = [NotHasAddNoCarryInsts] in {
 def : MnemonicAlias<"v_add_u32", "v_add_i32">;
 def : MnemonicAlias<"v_sub_u32", "v_sub_i32">;
 def : MnemonicAlias<"v_subrev_u32", "v_subrev_i32">;
+}
 
 } // End isGCN predicate

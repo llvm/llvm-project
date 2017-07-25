@@ -493,11 +493,11 @@ source code of the program.  Important design points include:
 
 In practice, the ``SourceLocation`` works together with the ``SourceManager``
 class to encode two pieces of information about a location: its spelling
-location and its instantiation location.  For most tokens, these will be the
+location and its expansion location.  For most tokens, these will be the
 same.  However, for a macro expansion (or tokens that came from a ``_Pragma``
 directive) these will describe the location of the characters corresponding to
 the token and the location where the token was used (i.e., the macro
-instantiation point or the location of the ``_Pragma`` itself).
+expansion point or the location of the ``_Pragma`` itself).
 
 The Clang front-end inherently depends on the location of a token being tracked
 correctly.  If it is ever incorrect, the front-end may get confused and die.

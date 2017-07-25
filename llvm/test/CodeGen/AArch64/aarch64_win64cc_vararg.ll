@@ -59,10 +59,12 @@ entry:
 }
 
 ; CHECK-LABEL: f7:
-; CHECK: sub     sp, sp, #16
-; CHECK: add     x8, sp, #8
-; CHECK: add     x0, sp, #8
-; CHECK: stp     x8, x7, [sp], #16
+; CHECK: sub     sp, sp, #32
+; CHECK: add     x8, sp, #24
+; CHECK: str     x7, [sp, #24]
+; CHECK: add     x0, sp, #24
+; CHECK: str     x8, [sp, #8]
+; CHECK: add     sp, sp, #32
 ; CHECK: ret
 define win64cc i8* @f7(i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, ...) nounwind {
 entry:

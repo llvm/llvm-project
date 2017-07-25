@@ -10,10 +10,10 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ; Generate min.iters.check to skip the vector loop and jump to scalar.ph directly when loop iteration number is less than VF * UF.
 ; CHECK-LABEL: foo(
 ; CHECK: %min.iters.check = icmp ult i64 %N, 4
-; CHECK: br i1 %min.iters.check, label %scalar.ph, label %min.iters.checked
+; CHECK: br i1 %min.iters.check, label %scalar.ph, label %vector.ph
 ; UNROLL-LABEL: foo(
 ; UNROLL: %min.iters.check = icmp ult i64 %N, 8
-; UNROLL: br i1 %min.iters.check, label %scalar.ph, label %min.iters.checked
+; UNROLL: br i1 %min.iters.check, label %scalar.ph, label %vector.ph
 
 define void @foo(i64 %N) {
 entry:

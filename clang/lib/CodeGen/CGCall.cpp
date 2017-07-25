@@ -1877,8 +1877,8 @@ void CodeGenModule::ConstructAttributeList(
       // the function.
       const auto *TD = FD->getAttr<TargetAttr>();
       TargetAttr::ParsedTargetAttr ParsedAttr = TD->parse();
-      if (ParsedAttr.second != "")
-        TargetCPU = ParsedAttr.second;
+      if (ParsedAttr.Architecture != "")
+        TargetCPU = ParsedAttr.Architecture;
       if (TargetCPU != "")
         FuncAttrs.addAttribute("target-cpu", TargetCPU);
       if (!Features.empty()) {

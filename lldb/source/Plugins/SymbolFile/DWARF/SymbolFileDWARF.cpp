@@ -497,6 +497,21 @@ uint32_t SymbolFileDWARF::CalculateAbilities() {
     if (section_list == NULL)
       return 0;
 
+    // On non Apple platforms we might have .debug_types debug info that
+    // is created by using "-fdebug-types-section". LLDB currently will try
+    // to load this debug info, but it causes crashes during debugging when
+    // types are missing since it doesn't know how to parse the info in
+    // the .debug_types type units. This causes all complex debug info
+    // types to be unresolved. Because this causes LLDB to crash and since
+    // it really doesn't provide a solid debuggiung experience, we should
+    // disable trying to debug this kind of DWARF until support gets
+    // added or deprecated.
+    if (section_list->FindSectionByName(ConstString(".debug_types"))) {
+      m_obj_file->GetModule()->ReportWarning(
+        "lldb doesn’t support .debug_types debug info");
+      return 0;
+    }
+
     uint64_t debug_abbrev_file_size = 0;
     uint64_t debug_info_file_size = 0;
     uint64_t debug_line_file_size = 0;

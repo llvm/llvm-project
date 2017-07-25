@@ -114,7 +114,7 @@ protected:
   lldb::tid_t m_current_tid = LLDB_INVALID_THREAD_ID;
   lldb::tid_t m_continue_tid = LLDB_INVALID_THREAD_ID;
   std::recursive_mutex m_debugged_process_mutex;
-  NativeProcessProtocolSP m_debugged_process_sp;
+  std::unique_ptr<NativeProcessProtocol> m_debugged_process_up;
 
   Communication m_stdio_communication;
   MainLoop::ReadHandleUP m_stdio_handle_up;

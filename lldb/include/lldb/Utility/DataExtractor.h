@@ -15,6 +15,7 @@
 #include "lldb/lldb-forward.h"      // for DataBufferSP
 #include "lldb/lldb-types.h"
 
+#include <cassert>
 #include <stdint.h>
 #include <string.h>
 

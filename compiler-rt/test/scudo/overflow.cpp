@@ -1,6 +1,6 @@
 // RUN: %clang_scudo %s -o %t
-// RUN:                                  not %run %t malloc     2>&1 | FileCheck %s
-// RUN: SCUDO_OPTIONS=QuarantineSizeMb=1 not %run %t quarantine 2>&1 | FileCheck %s
+// RUN:                                   not %run %t malloc     2>&1 | FileCheck %s
+// RUN: SCUDO_OPTIONS=QuarantineSizeKb=64 not %run %t quarantine 2>&1 | FileCheck %s
 
 // Tests that header corruption of an allocated or quarantined chunk is caught.
 
@@ -29,7 +29,7 @@ int main(int argc, char **argv)
     ((char *)p)[-(offset + 2)] ^= 1;
     // Trigger the quarantine recycle
     for (int i = 0; i < 0x100; i++) {
-      p = malloc(1U << 16);
+      p = malloc(1U << 8);
       free(p);
     }
   }

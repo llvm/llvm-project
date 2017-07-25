@@ -19,7 +19,7 @@ struct EhSectionPiece;
 
 template <class ELFT> size_t readEhRecordSize(InputSectionBase *S, size_t Off);
 template <class ELFT> uint8_t getFdeEncoding(EhSectionPiece *P);
-}
-}
+} // namespace elf
+} // namespace lld
 
 #endif

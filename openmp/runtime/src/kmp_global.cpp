@@ -301,6 +301,7 @@ kmp_int32 __kmp_default_device = 0;
 kmp_tasking_mode_t __kmp_tasking_mode = tskm_task_teams;
 #if OMP_45_ENABLED
 kmp_int32 __kmp_max_task_priority = 0;
+kmp_uint64 __kmp_taskloop_min_tasks = 0;
 #endif
 
 /* This check ensures that the compiler is passing the correct data type for the

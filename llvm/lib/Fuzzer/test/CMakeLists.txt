@@ -86,6 +86,7 @@ set(Tests
   CustomCrossOverTest
   CustomMutatorTest
   CxxStringEqTest
+  DeepRecursionTest
   DivTest
   EmptyTest
   EquivalenceATest
@@ -158,6 +159,7 @@ function(test_export_symbol target symbol)
   endif()
 endfunction()
 
+test_export_symbol(FlagsTest "LLVMFuzzerInitialize")
 test_export_symbol(InitializeTest "LLVMFuzzerInitialize")
 test_export_symbol(BogusInitializeTest "LLVMFuzzerInitialize")
 test_export_symbol(CustomCrossOverTest "LLVMFuzzerCustomCrossOver")
@@ -273,5 +275,5 @@ add_lit_testsuite(check-fuzzer "Running Fuzzer tests"
 # Don't add dependencies on Windows. The linker step would fail on Windows,
 # since cmake will use link.exe for linking and won't include compiler-rt libs.
 if(NOT MSVC)
-  add_dependencies(check-fuzzer FileCheck sancov not)
+  add_dependencies(check-fuzzer FileCheck sancov not llvm-symbolizer)
 endif()

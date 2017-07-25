@@ -953,7 +953,7 @@ NativeRegisterContextLinux_mips64::GetWatchpointHitAddress(uint32_t wp_index) {
     return LLDB_INVALID_ADDRESS;
 
   EmulatorBaton baton(
-      static_cast<NativeProcessLinux *>(m_thread.GetProcess().get()), this);
+      static_cast<NativeProcessLinux *>(&m_thread.GetProcess()), this);
   emulator_ap->SetBaton(&baton);
   emulator_ap->SetReadMemCallback(&ReadMemoryCallback);
   emulator_ap->SetReadRegCallback(&ReadRegisterCallback);
@@ -1034,7 +1034,7 @@ Status NativeRegisterContextLinux_mips64::Read_SR_Config(uint32_t offset,
       PTRACE_GETREGS, m_thread.GetID(), NULL, &regs, sizeof regs);
   if (error.Success()) {
     lldb_private::ArchSpec arch;
-    if (m_thread.GetProcess()->GetArchitecture(arch)) {
+    if (m_thread.GetProcess().GetArchitecture(arch)) {
       void *target_address = ((uint8_t *)&regs) + offset +
                              4 * (arch.GetMachine() == llvm::Triple::mips);
       value.SetUInt(*(uint32_t *)target_address, size);

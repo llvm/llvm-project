@@ -501,13 +501,13 @@ define i32 @i16_loop() nounwind readnone ssp uwtable {
 ; condition and branch directly to the scalar loop.
 
 ; CHECK-LABEL: max_i32_backedgetaken
-; CHECK:  br i1 true, label %scalar.ph, label %min.iters.checked
+; CHECK:  br i1 true, label %scalar.ph, label %vector.ph
 
 ; CHECK: middle.block:
 ; CHECK:  %[[v9:.+]] = extractelement <2 x i32> %bin.rdx, i32 0
 ; CHECK: scalar.ph:
 ; CHECK:  %bc.resume.val = phi i32 [ 0, %middle.block ], [ 0, %[[v0:.+]] ]
-; CHECK:  %bc.merge.rdx = phi i32 [ 1, %[[v0:.+]] ], [ 1, %min.iters.checked ], [ %[[v9]], %middle.block ]
+; CHECK:  %bc.merge.rdx = phi i32 [ 1, %[[v0:.+]] ], [ %[[v9]], %middle.block ]
 
 define i32 @max_i32_backedgetaken() nounwind readnone ssp uwtable {
 

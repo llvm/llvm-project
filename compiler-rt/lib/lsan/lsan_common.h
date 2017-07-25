@@ -226,6 +226,12 @@ IgnoreObjectResult IgnoreObjectLocked(const void *p);
 // Return the linker module, if valid for the platform.
 LoadedModule *GetLinker();
 
+// Return true if LSan has finished leak checking and reported leaks.
+bool HasReportedLeaks();
+
+// Run platform-specific leak handlers.
+void HandleLeaks();
+
 // Wrapper for chunk metadata operations.
 class LsanMetadata {
  public:

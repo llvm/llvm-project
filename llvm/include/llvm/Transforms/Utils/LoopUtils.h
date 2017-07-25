@@ -531,8 +531,10 @@ Value *createTargetReduction(IRBuilder<> &B, const TargetTransformInfo *TTI,
 
 /// Get the intersection (logical and) of all of the potential IR flags
 /// of each scalar operation (VL) that will be converted into a vector (I).
+/// If OpValue is non-null, we only consider operations similar to OpValue
+/// when intersecting.
 /// Flag set: NSW, NUW, exact, and all of fast-math.
-void propagateIRFlags(Value *I, ArrayRef<Value *> VL);
+void propagateIRFlags(Value *I, ArrayRef<Value *> VL, Value *OpValue = nullptr);
 
 } // end namespace llvm
 

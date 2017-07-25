@@ -54,17 +54,14 @@
 
 ; CHECK-NOT: NULL
 ; CHECK: DW_TAG_imported_module
-; This is a bug, it should be in F2 but it inherits the file from its
-; enclosing scope
-; CHECK-NEXT: DW_AT_decl_file{{.*}}stdin
+; CHECK-NEXT: DW_AT_decl_file{{.*}}([[F2:.*]])
 ; CHECK-NEXT: DW_AT_decl_line{{.*}}(15)
 ; CHECK-NEXT: DW_AT_import{{.*}}=> {[[NS2]]})
 ; CHECK: NULL
 ; CHECK-NOT: NULL
 
 ; CHECK: DW_TAG_imported_module
-; Same bug as above, this should be F2
-; CHECK-NEXT: DW_AT_decl_file{{.*}}debug-info-namespace.cpp
+; CHECK-NEXT: DW_AT_decl_file{{.*}}([[F2:.*]])
 ; CHECK-NEXT: DW_AT_decl_line{{.*}}(18)
 ; CHECK-NEXT: DW_AT_import{{.*}}=> {[[NS1]]})
 ; CHECK-NOT: NULL
@@ -320,29 +317,29 @@ attributes #1 = { nounwind readnone }
 !31 = !DIGlobalVariable(name: "i", linkageName: "_ZN1A1B1iE", line: 20, isLocal: false, isDefinition: true, scope: !6, file: !18, type: !13)
 !32 = !DIGlobalVariable(name: "var_fwd", linkageName: "_ZN1A1B7var_fwdE", line: 44, isLocal: false, isDefinition: true, scope: !6, file: !18, type: !13)
 !33 = !{!34, !35, !36, !37, !40, !41, !42, !43, !44, !45, !47, !48, !49, !51, !54, !55, !56}
-!34 = !DIImportedEntity(tag: DW_TAG_imported_module, line: 15, scope: !7, entity: !6)
-!35 = !DIImportedEntity(tag: DW_TAG_imported_module, line: 18, scope: !0, entity: !7)
-!36 = !DIImportedEntity(tag: DW_TAG_imported_declaration, line: 19, name: "E", scope: !0, entity: !7)
-!37 = !DIImportedEntity(tag: DW_TAG_imported_module, line: 23, scope: !38, entity: !6)
+!34 = !DIImportedEntity(tag: DW_TAG_imported_module, file: !5, line: 15, scope: !7, entity: !6)
+!35 = !DIImportedEntity(tag: DW_TAG_imported_module, file: !5, line: 18, scope: !0, entity: !7)
+!36 = !DIImportedEntity(tag: DW_TAG_imported_declaration, file: !5, line: 19, name: "E", scope: !0, entity: !7)
+!37 = !DIImportedEntity(tag: DW_TAG_imported_module, file: !5, line: 23, scope: !38, entity: !6)
 !38 = distinct !DILexicalBlock(line: 22, column: 10, file: !5, scope: !39)
 !39 = distinct !DILexicalBlock(line: 22, column: 7, file: !5, scope: !21)
-!40 = !DIImportedEntity(tag: DW_TAG_imported_module, line: 26, scope: !21, entity: !7)
-!41 = !DIImportedEntity(tag: DW_TAG_imported_declaration, line: 27, scope: !21, entity: !4)
-!42 = !DIImportedEntity(tag: DW_TAG_imported_declaration, line: 28, scope: !21, entity: !8)
-!43 = !DIImportedEntity(tag: DW_TAG_imported_declaration, line: 29, scope: !21, entity: !14)
-!44 = !DIImportedEntity(tag: DW_TAG_imported_declaration, line: 30, scope: !21, entity: !31)
-!45 = !DIImportedEntity(tag: DW_TAG_imported_declaration, line: 31, scope: !21, entity: !46)
+!40 = !DIImportedEntity(tag: DW_TAG_imported_module, file: !5, line: 26, scope: !21, entity: !7)
+!41 = !DIImportedEntity(tag: DW_TAG_imported_declaration, file: !5, line: 27, scope: !21, entity: !4)
+!42 = !DIImportedEntity(tag: DW_TAG_imported_declaration, file: !5, line: 28, scope: !21, entity: !8)
+!43 = !DIImportedEntity(tag: DW_TAG_imported_declaration, file: !5, line: 29, scope: !21, entity: !14)
+!44 = !DIImportedEntity(tag: DW_TAG_imported_declaration, file: !5, line: 30, scope: !21, entity: !31)
+!45 = !DIImportedEntity(tag: DW_TAG_imported_declaration, file: !5, line: 31, scope: !21, entity: !46)
 !46 = !DIDerivedType(tag: DW_TAG_typedef, name: "baz", line: 7, file: !5, scope: !6, baseType: !8)
-!47 = !DIImportedEntity(tag: DW_TAG_imported_declaration, line: 32, name: "X", scope: !21, entity: !7)
-!48 = !DIImportedEntity(tag: DW_TAG_imported_declaration, line: 33, name: "Y", scope: !21, entity: !47)
-!49 = !DIImportedEntity(tag: DW_TAG_imported_declaration, line: 34, scope: !21, entity: !50)
+!47 = !DIImportedEntity(tag: DW_TAG_imported_declaration, file: !5, line: 32, name: "X", scope: !21, entity: !7)
+!48 = !DIImportedEntity(tag: DW_TAG_imported_declaration, file: !5, line: 33, name: "Y", scope: !21, entity: !47)
+!49 = !DIImportedEntity(tag: DW_TAG_imported_declaration, file: !5, line: 34, scope: !21, entity: !50)
 !50 = !DIGlobalVariable(name: "var_decl", linkageName: "_ZN1A1B8var_declE", line: 8, isLocal: false, isDefinition: false, scope: !6, file: !18, type: !13)
-!51 = !DIImportedEntity(tag: DW_TAG_imported_declaration, line: 35, scope: !21, entity: !52)
+!51 = !DIImportedEntity(tag: DW_TAG_imported_declaration, file: !5, line: 35, scope: !21, entity: !52)
 !52 = !DISubprogram(name: "func_decl", linkageName: "_ZN1A1B9func_declEv", line: 9, isLocal: false, isDefinition: false, flags: DIFlagPrototyped, isOptimized: false, file: !5, scope: !6, type: !19, variables: !53)
 !53 = !{} ; previously: invalid DW_TAG_base_type
-!54 = !DIImportedEntity(tag: DW_TAG_imported_declaration, line: 36, scope: !21, entity: !32)
-!55 = !DIImportedEntity(tag: DW_TAG_imported_declaration, line: 37, scope: !21, entity: !26)
-!56 = !DIImportedEntity(tag: DW_TAG_imported_declaration, line: 42, scope: !7, entity: !31)
+!54 = !DIImportedEntity(tag: DW_TAG_imported_declaration, file: !5, line: 36, scope: !21, entity: !32)
+!55 = !DIImportedEntity(tag: DW_TAG_imported_declaration, file: !5, line: 37, scope: !21, entity: !26)
+!56 = !DIImportedEntity(tag: DW_TAG_imported_declaration, file: !5, line: 42, scope: !7, entity: !31)
 !57 = !{i32 2, !"Dwarf Version", i32 2}
 !58 = !{i32 2, !"Debug Info Version", i32 3}
 !59 = !{!"clang version 3.6.0 "}

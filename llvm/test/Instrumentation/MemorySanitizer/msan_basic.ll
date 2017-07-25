@@ -238,6 +238,41 @@ declare void @llvm.memmove.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i32,
 ; CHECK: call i8* @__msan_memmove
 ; CHECK: ret void
 
+;; ------------
+;; Placeholder tests that will fail once element atomic @llvm.mem[cpy|move|set] instrinsics have
+;; been added to the MemIntrinsic class hierarchy. These will act as a reminder to
+;; verify that MSAN handles these intrinsics properly once they have been
+;; added to that class hierarchy.
+declare void @llvm.memset.element.unordered.atomic.p0i8.i64(i8* nocapture writeonly, i8, i64, i32) nounwind
+declare void @llvm.memmove.element.unordered.atomic.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i32) nounwind
+declare void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i32) nounwind
+
+define void @atomic_memcpy(i8* nocapture %x, i8* nocapture %y) nounwind {
+  ; CHECK-LABEL: atomic_memcpy
+  ; CHECK-NEXT: call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %x, i8* align 2 %y, i64 16, i32 1)
+  ; CHECK-NEXT: ret void
+  call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %x, i8* align 2 %y, i64 16, i32 1)
+  ret void
+}
+
+define void @atomic_memmove(i8* nocapture %x, i8* nocapture %y) nounwind {
+  ; CHECK-LABEL: atomic_memmove
+  ; CHECK-NEXT: call void @llvm.memmove.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %x, i8* align 2 %y, i64 16, i32 1)
+  ; CHECK-NEXT: ret void
+  call void @llvm.memmove.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %x, i8* align 2 %y, i64 16, i32 1)
+  ret void
+}
+
+define void @atomic_memset(i8* nocapture %x) nounwind {
+  ; CHECK-LABEL: atomic_memset
+  ; CHECK-NEXT: call void @llvm.memset.element.unordered.atomic.p0i8.i64(i8* align 1 %x, i8 88, i64 16, i32 1)
+  ; CHECK-NEXT: ret void
+  call void @llvm.memset.element.unordered.atomic.p0i8.i64(i8* align 1 %x, i8 88, i64 16, i32 1)
+  ret void
+}
+
+;; ------------
+
 
 ; Check that we propagate shadow for "select"
 

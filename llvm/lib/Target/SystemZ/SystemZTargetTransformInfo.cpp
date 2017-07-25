@@ -292,6 +292,19 @@ void SystemZTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   UP.Force = true;
 }
 
+
+bool SystemZTTIImpl::isLSRCostLess(TargetTransformInfo::LSRCost &C1,
+                                   TargetTransformInfo::LSRCost &C2) {
+  // SystemZ specific: check instruction count (first), and don't care about
+  // ImmCost, since offsets are checked explicitly.
+  return std::tie(C1.Insns, C1.NumRegs, C1.AddRecCost,
+                  C1.NumIVMuls, C1.NumBaseAdds,
+                  C1.ScaleCost, C1.SetupCost) <
+    std::tie(C2.Insns, C2.NumRegs, C2.AddRecCost,
+             C2.NumIVMuls, C2.NumBaseAdds,
+             C2.ScaleCost, C2.SetupCost);
+}
+
 unsigned SystemZTTIImpl::getNumberOfRegisters(bool Vector) {
   if (!Vector)
     // Discount the stack pointer.  Also leave out %r0, since it can't

@@ -47,11 +47,11 @@ void LexicalScopes::reset() {
 
 /// initialize - Scan machine function and constuct lexical scope nest.
 void LexicalScopes::initialize(const MachineFunction &Fn) {
+  reset();
   // Don't attempt any lexical scope creation for a NoDebug compile unit.
   if (Fn.getFunction()->getSubprogram()->getUnit()->getEmissionKind() ==
       DICompileUnit::NoDebug)
     return;
-  reset();
   MF = &Fn;
   SmallVector<InsnRange, 4> MIRanges;
   DenseMap<const MachineInstr *, LexicalScope *> MI2ScopeMap;
@@ -277,7 +277,9 @@ void LexicalScopes::assignInstructionRanges(
 /// DebugLoc.
 void LexicalScopes::getMachineBasicBlocks(
     const DILocation *DL, SmallPtrSetImpl<const MachineBasicBlock *> &MBBs) {
+  assert(MF && "Method called on a uninitialized LexicalScopes object!");
   MBBs.clear();
+
   LexicalScope *Scope = getOrCreateLexicalScope(DL);
   if (!Scope)
     return;
@@ -296,6 +298,7 @@ void LexicalScopes::getMachineBasicBlocks(
 /// dominates - Return true if DebugLoc's lexical scope dominates at least one
 /// machine instruction's lexical scope in a given machine basic block.
 bool LexicalScopes::dominates(const DILocation *DL, MachineBasicBlock *MBB) {
+  assert(MF && "Unexpected uninitialized LexicalScopes object!");
   LexicalScope *Scope = getOrCreateLexicalScope(DL);
   if (!Scope)
     return false;

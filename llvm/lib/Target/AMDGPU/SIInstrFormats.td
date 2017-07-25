@@ -45,7 +45,7 @@ class InstSI <dag outs, dag ins, string asm = "",
   field bit FLAT = 0;
   field bit DS = 0;
 
-   // Pseudo instruction formats.
+  // Pseudo instruction formats.
   field bit VGPRSpill = 0;
   field bit SGPRSpill = 0;
 
@@ -82,6 +82,13 @@ class InstSI <dag outs, dag ins, string asm = "",
   // This bit indicates that this has a floating point result type, so
   // the clamp modifier has floating point semantics.
   field bit FPClamp = 0;
+
+  // This bit indicates that this is a VOP3 opcode which supports op_sel
+  // modifier (gfx9 only).
+  field bit VOP3_OPSEL = 0;
+
+  // Is it possible for this instruction to be atomic?
+  field bit maybeAtomic = 0;
 
   // These need to be kept in sync with the enum in SIInstrFlags.
   let TSFlags{0} = SALU;
@@ -127,6 +134,9 @@ class InstSI <dag outs, dag ins, string asm = "",
   let TSFlags{40} = FixedSize;
   let TSFlags{41} = VOPAsmPrefer32Bit;
   let TSFlags{42} = FPClamp;
+  let TSFlags{43} = VOP3_OPSEL;
+
+  let TSFlags{44} = maybeAtomic;
 
   let SchedRW = [Write32Bit];
 

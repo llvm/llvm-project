@@ -1,3 +1,4 @@
+; REQUIRES: x86
 ; RUN: llvm-as %s -o %t1.o
 ; RUN: llvm-as %S/Inputs/unnamed-addr-drop.ll -o %t2.o
 ; RUN: ld.lld -m elf_x86_64 %t1.o %t2.o -o %t.so -save-temps -shared

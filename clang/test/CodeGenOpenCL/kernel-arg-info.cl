@@ -1,10 +1,24 @@
 // RUN: %clang_cc1 %s -cl-std=CL2.0 -emit-llvm -o - -triple spir-unknown-unknown | FileCheck %s
 // RUN: %clang_cc1 %s -cl-std=CL2.0 -emit-llvm -o - -triple spir-unknown-unknown -cl-kernel-arg-info | FileCheck %s -check-prefix ARGINFO
 
-kernel void foo(__global int * restrict X, const int Y, 
-                volatile int anotherArg, __constant float * restrict Z,
-                __global volatile int * V, __global const int * C) {
-  *X = Y + anotherArg;
+kernel void foo(global int * globalintp, global int * restrict globalintrestrictp,
+                global const int * globalconstintp,
+                global const int * restrict globalconstintrestrictp,
+                constant int * constantintp, constant int * restrict constantintrestrictp,
+                global const volatile int * globalconstvolatileintp,
+                global const volatile int * restrict globalconstvolatileintrestrictp,
+                global volatile int * globalvolatileintp,
+                global volatile int * restrict globalvolatileintrestrictp,
+                local int * localintp, local int * restrict localintrestrictp,
+                local const int * localconstintp,
+                local const int * restrict localconstintrestrictp,
+                local const volatile int * localconstvolatileintp,
+                local const volatile int * restrict localconstvolatileintrestrictp,
+                local volatile int * localvolatileintp,
+                local volatile int * restrict localvolatileintrestrictp,
+                int X, const int constint, const volatile int constvolatileint,
+                volatile int volatileint) {
+  *globalintrestrictp = constint + volatileint;
 }
 // CHECK: define spir_kernel void @foo{{[^!]+}}
 // CHECK: !kernel_arg_addr_space ![[MD11:[0-9]+]]
@@ -61,11 +75,15 @@ kernel void foo5(myImage img1, write_only image1d_t img2) {
 // CHECK-NOT: !kernel_arg_name
 // ARGINFO: !kernel_arg_name ![[MD54:[0-9]+]]
 
-// CHECK: ![[MD11]] = !{i32 1, i32 0, i32 0, i32 2, i32 1, i32 1}
-// CHECK: ![[MD12]] = !{!"none", !"none", !"none", !"none", !"none", !"none"}
-// CHECK: ![[MD13]] = !{!"int*", !"int", !"int", !"float*", !"int*", !"int*"}
-// CHECK: ![[MD14]] = !{!"restrict", !"", !"", !"restrict const", !"volatile", !"const"}
-// ARGINFO: ![[MD15]] = !{!"X", !"Y", !"anotherArg", !"Z", !"V", !"C"}
+typedef char char16 __attribute__((ext_vector_type(16)));
+__kernel void foo6(__global char16 arg[]) {}
+// CHECK: !kernel_arg_type ![[MD61:[0-9]+]]
+
+// CHECK: ![[MD11]] = !{i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 1, i32 1, i32 1, i32 1, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 0, i32 0, i32 0, i32 0}
+// CHECK: ![[MD12]] = !{!"none", !"none", !"none", !"none", !"none", !"none", !"none", !"none", !"none", !"none", !"none", !"none", !"none", !"none", !"none", !"none", !"none", !"none", !"none", !"none", !"none", !"none"}
+// CHECK: ![[MD13]] = !{!"int*", !"int*", !"int*", !"int*", !"int*", !"int*", !"int*", !"int*", !"int*", !"int*", !"int*", !"int*", !"int*", !"int*", !"int*", !"int*", !"int*", !"int*", !"int", !"int", !"int", !"int"}
+// CHECK: ![[MD14]] = !{!"", !"restrict", !"const", !"restrict const", !"const", !"restrict const", !"const volatile", !"restrict const volatile", !"volatile", !"restrict volatile", !"", !"restrict", !"const", !"restrict const", !"const volatile", !"restrict const volatile", !"volatile", !"restrict volatile", !"", !"", !"", !""}
+// ARGINFO: ![[MD15]] = !{!"globalintp", !"globalintrestrictp", !"globalconstintp", !"globalconstintrestrictp", !"constantintp", !"constantintrestrictp", !"globalconstvolatileintp", !"globalconstvolatileintrestrictp", !"globalvolatileintp", !"globalvolatileintrestrictp", !"localintp", !"localintrestrictp", !"localconstintp", !"localconstintrestrictp", !"localconstvolatileintp", !"localconstvolatileintrestrictp", !"localvolatileintp", !"localvolatileintrestrictp", !"X", !"constint", !"constvolatileint", !"volatileint"}
 // CHECK: ![[MD21]] = !{i32 1, i32 1, i32 1, i32 1}
 // CHECK: ![[MD22]] = !{!"read_only", !"read_only", !"write_only", !"read_write"}
 // CHECK: ![[MD23]] = !{!"image1d_t", !"image2d_t", !"image2d_array_t", !"image1d_t"}
@@ -86,4 +104,5 @@ kernel void foo5(myImage img1, write_only image1d_t img2) {
 // CHECK: ![[MD52]] = !{!"myImage", !"image1d_t"}
 // CHECK: ![[MD53]] = !{!"image1d_t", !"image1d_t"}
 // ARGINFO: ![[MD54]] = !{!"img1", !"img2"}
+// CHECK: ![[MD61]] = !{!"char16*"}
 

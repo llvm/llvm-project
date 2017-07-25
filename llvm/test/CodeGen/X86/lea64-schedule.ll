@@ -8,7 +8,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=skylake     | FileCheck %s --check-prefix=CHECK --check-prefix=HASWELL
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=knl         | FileCheck %s --check-prefix=CHECK --check-prefix=HASWELL
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=btver2      | FileCheck %s --check-prefix=CHECK --check-prefix=BTVER2
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=znver1      | FileCheck %s --check-prefix=CHECK --check-prefix=BTVER2
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=znver1      | FileCheck %s --check-prefix=CHECK --check-prefix=ZNVER1
 
 define i64 @test_lea_offset(i64) {
 ; GENERIC-LABEL: test_lea_offset:
@@ -46,6 +46,11 @@ define i64 @test_lea_offset(i64) {
 ; BTVER2:       # BB#0:
 ; BTVER2-NEXT:    leaq -24(%rdi), %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
+;
+; ZNVER1-LABEL: test_lea_offset:
+; ZNVER1:       # BB#0:
+; ZNVER1-NEXT:    leaq -24(%rdi), %rax # sched: [1:0.25]
+; ZNVER1-NEXT:    retq # sched: [5:0.50]
   %2 = add nsw i64 %0, -24
   ret i64 %2
 }
@@ -86,6 +91,11 @@ define i64 @test_lea_offset_big(i64) {
 ; BTVER2:       # BB#0:
 ; BTVER2-NEXT:    leaq 1024(%rdi), %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
+;
+; ZNVER1-LABEL: test_lea_offset_big:
+; ZNVER1:       # BB#0:
+; ZNVER1-NEXT:    leaq 1024(%rdi), %rax # sched: [1:0.25]
+; ZNVER1-NEXT:    retq # sched: [5:0.50]
   %2 = add nsw i64 %0, 1024
   ret i64 %2
 }
@@ -127,6 +137,11 @@ define i64 @test_lea_add(i64, i64) {
 ; BTVER2:       # BB#0:
 ; BTVER2-NEXT:    leaq (%rdi,%rsi), %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
+;
+; ZNVER1-LABEL: test_lea_add:
+; ZNVER1:       # BB#0:
+; ZNVER1-NEXT:    leaq (%rdi,%rsi), %rax # sched: [1:0.25]
+; ZNVER1-NEXT:    retq # sched: [5:0.50]
   %3 = add nsw i64 %1, %0
   ret i64 %3
 }
@@ -169,6 +184,11 @@ define i64 @test_lea_add_offset(i64, i64) {
 ; BTVER2:       # BB#0:
 ; BTVER2-NEXT:    leaq 16(%rdi,%rsi), %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
+;
+; ZNVER1-LABEL: test_lea_add_offset:
+; ZNVER1:       # BB#0:
+; ZNVER1-NEXT:    leaq 16(%rdi,%rsi), %rax # sched: [1:0.25]
+; ZNVER1-NEXT:    retq # sched: [5:0.50]
   %3 = add i64 %0, 16
   %4 = add i64 %3, %1
   ret i64 %4
@@ -214,6 +234,11 @@ define i64 @test_lea_add_offset_big(i64, i64) {
 ; BTVER2:       # BB#0:
 ; BTVER2-NEXT:    leaq -4096(%rdi,%rsi), %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
+;
+; ZNVER1-LABEL: test_lea_add_offset_big:
+; ZNVER1:       # BB#0:
+; ZNVER1-NEXT:    leaq -4096(%rdi,%rsi), %rax # sched: [1:0.25]
+; ZNVER1-NEXT:    retq # sched: [5:0.50]
   %3 = add i64 %0, -4096
   %4 = add i64 %3, %1
   ret i64 %4
@@ -255,6 +280,11 @@ define i64 @test_lea_mul(i64) {
 ; BTVER2:       # BB#0:
 ; BTVER2-NEXT:    leaq (%rdi,%rdi,2), %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
+;
+; ZNVER1-LABEL: test_lea_mul:
+; ZNVER1:       # BB#0:
+; ZNVER1-NEXT:    leaq (%rdi,%rdi,2), %rax # sched: [1:0.25]
+; ZNVER1-NEXT:    retq # sched: [5:0.50]
   %2 = mul nsw i64 %0, 3
   ret i64 %2
 }
@@ -297,6 +327,11 @@ define i64 @test_lea_mul_offset(i64) {
 ; BTVER2:       # BB#0:
 ; BTVER2-NEXT:    leaq -32(%rdi,%rdi,2), %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
+;
+; ZNVER1-LABEL: test_lea_mul_offset:
+; ZNVER1:       # BB#0:
+; ZNVER1-NEXT:    leaq -32(%rdi,%rdi,2), %rax # sched: [1:0.25]
+; ZNVER1-NEXT:    retq # sched: [5:0.50]
   %2 = mul nsw i64 %0, 3
   %3 = add nsw i64 %2, -32
   ret i64 %3
@@ -342,6 +377,11 @@ define i64 @test_lea_mul_offset_big(i64) {
 ; BTVER2:       # BB#0:
 ; BTVER2-NEXT:    leaq 10000(%rdi,%rdi,8), %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
+;
+; ZNVER1-LABEL: test_lea_mul_offset_big:
+; ZNVER1:       # BB#0:
+; ZNVER1-NEXT:    leaq 10000(%rdi,%rdi,8), %rax # sched: [1:0.25]
+; ZNVER1-NEXT:    retq # sched: [5:0.50]
   %2 = mul nsw i64 %0, 9
   %3 = add nsw i64 %2, 10000
   ret i64 %3
@@ -383,6 +423,11 @@ define i64 @test_lea_add_scale(i64, i64) {
 ; BTVER2:       # BB#0:
 ; BTVER2-NEXT:    leaq (%rdi,%rsi,2), %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
+;
+; ZNVER1-LABEL: test_lea_add_scale:
+; ZNVER1:       # BB#0:
+; ZNVER1-NEXT:    leaq (%rdi,%rsi,2), %rax # sched: [1:0.25]
+; ZNVER1-NEXT:    retq # sched: [5:0.50]
   %3 = shl i64 %1, 1
   %4 = add nsw i64 %3, %0
   ret i64 %4
@@ -426,6 +471,11 @@ define i64 @test_lea_add_scale_offset(i64, i64) {
 ; BTVER2:       # BB#0:
 ; BTVER2-NEXT:    leaq 96(%rdi,%rsi,4), %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
+;
+; ZNVER1-LABEL: test_lea_add_scale_offset:
+; ZNVER1:       # BB#0:
+; ZNVER1-NEXT:    leaq 96(%rdi,%rsi,4), %rax # sched: [1:0.25]
+; ZNVER1-NEXT:    retq # sched: [5:0.50]
   %3 = shl i64 %1, 2
   %4 = add i64 %0, 96
   %5 = add i64 %4, %3
@@ -472,6 +522,11 @@ define i64 @test_lea_add_scale_offset_big(i64, i64) {
 ; BTVER2:       # BB#0:
 ; BTVER2-NEXT:    leaq -1200(%rdi,%rsi,8), %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
+;
+; ZNVER1-LABEL: test_lea_add_scale_offset_big:
+; ZNVER1:       # BB#0:
+; ZNVER1-NEXT:    leaq -1200(%rdi,%rsi,8), %rax # sched: [1:0.25]
+; ZNVER1-NEXT:    retq # sched: [5:0.50]
   %3 = shl i64 %1, 3
   %4 = add i64 %0, -1200
   %5 = add i64 %4, %3

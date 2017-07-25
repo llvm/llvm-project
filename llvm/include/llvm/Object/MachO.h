@@ -66,11 +66,13 @@ using dice_iterator = content_iterator<DiceRef>;
 /// ExportEntry encapsulates the current-state-of-the-walk used when doing a
 /// non-recursive walk of the trie data structure.  This allows you to iterate
 /// across all exported symbols using:
-///      for (const llvm::object::ExportEntry &AnExport : Obj->exports()) {
+///      Error Err;
+///      for (const llvm::object::ExportEntry &AnExport : Obj->exports(&Err)) {
 ///      }
+///      if (Err) { report error ...
 class ExportEntry {
 public:
-  ExportEntry(ArrayRef<uint8_t> Trie);
+  ExportEntry(Error *Err, const MachOObjectFile *O, ArrayRef<uint8_t> Trie);
 
   StringRef name() const;
   uint64_t flags() const;
@@ -88,7 +90,7 @@ private:
 
   void moveToFirst();
   void moveToEnd();
-  uint64_t readULEB128(const uint8_t *&p);
+  uint64_t readULEB128(const uint8_t *&p, const char **error);
   void pushDownUntilBottom();
   void pushNode(uint64_t Offset);
 
@@ -107,12 +109,19 @@ private:
     unsigned ParentStringLength = 0;
     bool IsExportNode = false;
   };
+  using NodeList = SmallVector<NodeState, 16>;
+  using node_iterator = NodeList::const_iterator;
 
+  Error *E;
+  const MachOObjectFile *O;
   ArrayRef<uint8_t> Trie;
   SmallString<256> CumulativeString;
-  SmallVector<NodeState, 16> Stack;
-  bool Malformed = false;
+  NodeList Stack;
   bool Done = false;
+
+  iterator_range<node_iterator> nodes() const {
+    return make_range(Stack.begin(), Stack.end());
+  }
 };
 using export_iterator = content_iterator<ExportEntry>;
 
@@ -356,10 +365,14 @@ public:
   iterator_range<load_command_iterator> load_commands() const;
 
   /// For use iterating over all exported symbols.
-  iterator_range<export_iterator> exports() const;
+  iterator_range<export_iterator> exports(Error &Err,
+                                          const MachOObjectFile *O) const;
 
   /// For use examining a trie not in a MachOObjectFile.
-  static iterator_range<export_iterator> exports(ArrayRef<uint8_t> Trie);
+  static iterator_range<export_iterator> exports(Error &Err,
+                                                 ArrayRef<uint8_t> Trie,
+                                                 const MachOObjectFile *O =
+                                                                      nullptr);
 
   /// For use iterating over all rebase table entries.
   iterator_range<rebase_iterator> rebaseTable(Error &Err);
