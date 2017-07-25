@@ -160,8 +160,7 @@ void tools::CrossWindows::Linker::ConstructJob(
   TC.AddFilePathLibArgs(Args, CmdArgs);
   AddLinkerInputs(TC, Inputs, Args, CmdArgs, JA);
 
-  if (D.CCCIsCXX() && !Args.hasArg(options::OPT_nostdlib) &&
-      !Args.hasArg(options::OPT_nodefaultlibs)) {
+  if (TC.ShouldLinkCXXStdlib(Args)) {
     bool StaticCXX = Args.hasArg(options::OPT_static_libstdcxx) &&
                      !Args.hasArg(options::OPT_static);
     if (StaticCXX)
