@@ -215,7 +215,8 @@ unsigned DWARFVerifier::verifyDieRanges(const DWARFDie &Die) {
   for (auto Range : Die.getAddressRanges()) {
     if (Range.LowPC >= Range.HighPC) {
       ++NumErrors;
-      OS << format("error: Invalid address range [0x%08x - 0x%08x].\n",
+      OS << format("error: Invalid address range [0x%08" PRIx64
+                   " - 0x%08" PRIx64 "].\n",
                    Range.LowPC, Range.HighPC);
     }
   }
