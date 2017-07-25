@@ -1766,6 +1766,29 @@ static bool isClassOrMethodDLLImport(const CXXRecordDecl *RD) {
   return false;
 }
 
+/// Does a type definition exist in an imported clang module?
+static bool isDefinedInClangModule(const RecordDecl *RD) {
+  // Only definitions that where imported from an AST file come from a module.
+  if (!RD || !RD->isFromASTFile())
+    return false;
+  // Anonymous entities cannot be addressed. Treat them as not from module.
+  if (!RD->isExternallyVisible() && RD->getName().empty())
+    return false;
+  if (auto *CXXDecl = dyn_cast<CXXRecordDecl>(RD)) {
+    if (!CXXDecl->isCompleteDefinition())
+      return false;
+    auto TemplateKind = CXXDecl->getTemplateSpecializationKind();
+    if (TemplateKind != TSK_Undeclared) {
+      // This is a template, check the origin of the first member.
+      if (CXXDecl->field_begin() == CXXDecl->field_end())
+        return TemplateKind == TSK_ExplicitInstantiationDeclaration;
+      if (!CXXDecl->field_begin()->isFromASTFile())
+        return false;
+    }
+  }
+  return true;
+}
+
 void CGDebugInfo::completeClassData(const RecordDecl *RD) {
   if (auto *CXXRD = dyn_cast<CXXRecordDecl>(RD))
     if (CXXRD->isDynamicClass() &&
@@ -1773,6 +1796,10 @@ void CGDebugInfo::completeClassData(const RecordDecl *RD) {
             llvm::GlobalValue::AvailableExternallyLinkage &&
         !isClassOrMethodDLLImport(CXXRD))
       return;
+
+  if (DebugTypeExtRefs && isDefinedInClangModule(RD->getDefinition()))
+    return;
+
   completeClass(RD);
 }
 
@@ -1797,29 +1824,6 @@ static bool hasExplicitMemberDefinition(CXXRecordDecl::method_iterator I,
           !MD->getMemberSpecializationInfo()->isExplicitSpecialization())
         return true;
   return false;
-}
-
-/// Does a type definition exist in an imported clang module?
-static bool isDefinedInClangModule(const RecordDecl *RD) {
-  // Only definitions that where imported from an AST file come from a module.
-  if (!RD || !RD->isFromASTFile())
-    return false;
-  // Anonymous entities cannot be addressed. Treat them as not from module.
-  if (!RD->isExternallyVisible() && RD->getName().empty())
-    return false;
-  if (auto *CXXDecl = dyn_cast<CXXRecordDecl>(RD)) {
-    if (!CXXDecl->isCompleteDefinition())
-      return false;
-    auto TemplateKind = CXXDecl->getTemplateSpecializationKind();
-    if (TemplateKind != TSK_Undeclared) {
-      // This is a template, check the origin of the first member.
-      if (CXXDecl->field_begin() == CXXDecl->field_end())
-        return TemplateKind == TSK_ExplicitInstantiationDeclaration;
-      if (!CXXDecl->field_begin()->isFromASTFile())
-        return false;
-    }
-  }
-  return true;
 }
 
 static bool shouldOmitDefinition(codegenoptions::DebugInfoKind DebugKind,

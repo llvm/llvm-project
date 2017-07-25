@@ -3310,6 +3310,66 @@ static const CFGBlock *findBlockForNode(const ExplodedNode *N) {
   return nullptr;
 }
 
+static bool isNoReturnBlock(const CFGBlock *Blk) {
+  if (Blk->hasNoReturnElement())
+    return true;
+
+  // FIXME: Throw-expressions are currently generating sinks during analysis:
+  // they're not supported yet, and also often used for actually terminating
+  // the program. So we should treat them as sinks in this analysis as well,
+  // at least for now, but once we have better support for exceptions,
+  // we'd need to carefully handle the case when the throw is being
+  // immediately caught.
+  if (std::any_of(Blk->begin(), Blk->end(), [](const CFGElement &Elm) {
+        if (Optional<CFGStmt> StmtElm = Elm.getAs<CFGStmt>())
+          if (isa<CXXThrowExpr>(StmtElm->getStmt()))
+            return true;
+        return false;
+      }))
+    return true;
+
+  return false;
+}
+
+static bool isDominatedByNoReturnBlocks(const ExplodedNode *N) {
+  const CFG &Cfg = N->getCFG();
+
+  const CFGBlock *StartBlk = findBlockForNode(N);
+  if (!StartBlk)
+    return false;
+  if (isNoReturnBlock(StartBlk))
+    return true;
+
+  llvm::SmallVector<const CFGBlock *, 32> DFSWorkList;
+  llvm::SmallPtrSet<const CFGBlock *, 32> Visited;
+
+  DFSWorkList.push_back(StartBlk);
+  while (!DFSWorkList.empty()) {
+    const CFGBlock *Blk = DFSWorkList.back();
+    DFSWorkList.pop_back();
+    Visited.insert(Blk);
+
+    for (const auto &Succ : Blk->succs()) {
+      if (const CFGBlock *SuccBlk = Succ.getReachableBlock()) {
+        if (SuccBlk == &Cfg.getExit()) {
+          // We seem to be leaving the current CFG.
+          // We're no longer sure what happens next.
+          return false;
+        }
+
+        if (!isNoReturnBlock(SuccBlk) && !Visited.count(SuccBlk)) {
+          // If the block has reachable child blocks that aren't no-return,
+          // add them to the worklist.
+          DFSWorkList.push_back(SuccBlk);
+        }
+      }
+    }
+  }
+
+  // Nothing reached the exit. It can only mean one thing: there's no return.
+  return true;
+}
+
 static BugReport *
 FindReportInEquivalenceClass(BugReportEquivClass& EQ,
                              SmallVectorImpl<BugReport*> &bugReports) {
@@ -3366,9 +3426,8 @@ FindReportInEquivalenceClass(BugReportEquivClass& EQ,
     // We may be post-dominated in subsequent blocks, or even
     // inter-procedurally. However, it is not clear if more complicated
     // cases are generally worth suppressing.
-    if (const CFGBlock *B = findBlockForNode(errorNode))
-      if (B->hasNoReturnElement())
-        continue;
+    if (isDominatedByNoReturnBlocks(errorNode))
+      continue;
 
     // At this point we know that 'N' is not a sink and it has at least one
     // successor.  Use a DFS worklist to find a non-sink end-of-path node.

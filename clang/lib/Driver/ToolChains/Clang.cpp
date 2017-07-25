@@ -1483,6 +1483,8 @@ void Clang::AddMIPSTargetArgs(const ArgList &Args,
 
     Arg *LocalSData = Args.getLastArg(options::OPT_mlocal_sdata,
                                       options::OPT_mno_local_sdata);
+    Arg *ExternSData = Args.getLastArg(options::OPT_mextern_sdata,
+                                      options::OPT_mno_extern_sdata);
     if (LocalSData) {
       CmdArgs.push_back("-mllvm");
       if (LocalSData->getOption().matches(options::OPT_mlocal_sdata)) {
@@ -1493,6 +1495,15 @@ void Clang::AddMIPSTargetArgs(const ArgList &Args,
       LocalSData->claim();
     }
 
+    if (ExternSData) {
+      CmdArgs.push_back("-mllvm");
+      if (ExternSData->getOption().matches(options::OPT_mextern_sdata)) {
+        CmdArgs.push_back("-mextern-sdata=1");
+      } else {
+        CmdArgs.push_back("-mextern-sdata=0");
+      }
+      ExternSData->claim();
+    }
   } else if ((!ABICalls || (!NoABICalls && ABICalls)) && WantGPOpt)
     D.Diag(diag::warn_drv_unsupported_gpopt) << (ABICalls ? 0 : 1);
 
