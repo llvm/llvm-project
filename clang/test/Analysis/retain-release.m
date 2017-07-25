@@ -325,6 +325,9 @@ typedef const struct __CFUUID * CFUUIDRef;
 
 extern
 void *CFPlugInInstanceCreate(CFAllocatorRef allocator, CFUUIDRef factoryUUID, CFUUIDRef typeUUID);
+typedef struct {
+  int ref;
+} isl_basic_map;
 
 //===----------------------------------------------------------------------===//
 // Test cases.
@@ -572,6 +575,14 @@ void f17(int x, CFTypeRef p) {
   default:
     break;
   }
+}
+
+__attribute__((annotate("rc_ownership_returns_retained"))) isl_basic_map *isl_basic_map_cow(__attribute__((annotate("rc_ownership_consumed"))) isl_basic_map *bmap);
+
+// Test custom diagnostics for generalized objects.
+void f18(__attribute__((annotate("rc_ownership_consumed"))) isl_basic_map *bmap) {
+  // After this call, 'bmap' has a +1 reference count.
+  bmap = isl_basic_map_cow(bmap); // expected-warning {{Potential leak of an object}}
 }
 
 // Test basic tracking of ivars associated with 'self'.  For the retain/release

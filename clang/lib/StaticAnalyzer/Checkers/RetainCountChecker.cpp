@@ -1340,6 +1340,8 @@ RetainSummaryManager::getRetEffectFromAnnotations(QualType RetTy,
 
   if (D->hasAttr<CFReturnsRetainedAttr>())
     return RetEffect::MakeOwned(RetEffect::CF);
+  else if (hasRCAnnotation(D, "rc_ownership_returns_retained"))
+    return RetEffect::MakeOwned(RetEffect::Generalized);
 
   if (D->hasAttr<CFReturnsNotRetainedAttr>())
     return RetEffect::MakeNotOwned(RetEffect::CF);
@@ -1363,9 +1365,11 @@ RetainSummaryManager::updateSummaryFromAnnotations(const RetainSummary *&Summ,
     const ParmVarDecl *pd = *pi;
     if (pd->hasAttr<NSConsumedAttr>())
       Template->addArg(AF, parm_idx, DecRefMsg);
-    else if (pd->hasAttr<CFConsumedAttr>())
+    else if (pd->hasAttr<CFConsumedAttr>() ||
+             hasRCAnnotation(pd, "rc_ownership_consumed"))
       Template->addArg(AF, parm_idx, DecRef);
-    else if (pd->hasAttr<CFReturnsRetainedAttr>()) {
+    else if (pd->hasAttr<CFReturnsRetainedAttr>() ||
+             hasRCAnnotation(pd, "rc_ownership_returns_retained")) {
       QualType PointeeTy = pd->getType()->getPointeeType();
       if (!PointeeTy.isNull())
         if (coreFoundation::isCFObjectRef(PointeeTy))
@@ -1999,17 +2003,15 @@ CFRefReportVisitor::VisitNode(const ExplodedNode *N, const ExplodedNode *PrevN,
       }
 
       if (CurrV.getObjKind() == RetEffect::CF) {
-        if (Sym->getType().isNull()) {
-          os << " returns a Core Foundation object with a ";
-        } else {
-          os << " returns a Core Foundation object of type "
-             << Sym->getType().getAsString() << " with a ";
-        }
-      }
-      else {
+        os << " returns a Core Foundation object of type "
+           << Sym->getType().getAsString() << " with a ";
+      } else if (CurrV.getObjKind() == RetEffect::Generalized) {
+        os << " returns an object of type " << Sym->getType().getAsString()
+           << " with a ";
+      } else {
         assert (CurrV.getObjKind() == RetEffect::ObjC);
         QualType T = Sym->getType();
-        if (T.isNull() || !isa<ObjCObjectPointerType>(T)) {
+        if (!isa<ObjCObjectPointerType>(T)) {
           os << " returns an Objective-C object with a ";
         } else {
           const ObjCObjectPointerType *PT = cast<ObjCObjectPointerType>(T);
