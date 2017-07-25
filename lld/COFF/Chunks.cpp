@@ -119,7 +119,7 @@ static uint16_t readMOV(uint8_t *Off) {
   return Imm;
 }
 
-static void applyMOV32T(uint8_t *Off, uint32_t V) {
+void applyMOV32T(uint8_t *Off, uint32_t V) {
   uint16_t ImmW = readMOV(Off);     // read MOVW operand
   uint16_t ImmT = readMOV(Off + 4); // read MOVT operand
   uint32_t Imm = ImmW | (ImmT << 16);
@@ -136,7 +136,7 @@ static void applyBranch20T(uint8_t *Off, int32_t V) {
   or16(Off + 2, (J1 << 13) | (J2 << 11) | ((V >> 1) & 0x7ff));
 }
 
-static void applyBranch24T(uint8_t *Off, int32_t V) {
+void applyBranch24T(uint8_t *Off, int32_t V) {
   if (!isInt<25>(V))
     fatal("relocation out of range");
   uint32_t S = V < 0 ? 1 : 0;
@@ -496,6 +496,7 @@ uint8_t Baserel::getDefaultType() {
   case AMD64:
     return IMAGE_REL_BASED_DIR64;
   case I386:
+  case ARMNT:
     return IMAGE_REL_BASED_HIGHLOW;
   default:
     llvm_unreachable("unknown machine type");
