@@ -644,7 +644,10 @@ void InlineSpiller::reMaterializeAll() {
       continue;
     }
 
-    assert(LIS.hasInterval(Reg) && "Reg with no interval");
+    assert(LIS.hasInterval(Reg) &&
+           (!LIS.getInterval(Reg).empty() || !MRI.reg_nodbg_empty(Reg)) &&
+           "Empty and not used live-range?!");
+
     RegsToSpill[ResultPos++] = Reg;
   }
   RegsToSpill.erase(RegsToSpill.begin() + ResultPos, RegsToSpill.end());

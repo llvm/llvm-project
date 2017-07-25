@@ -2789,13 +2789,13 @@ void ExportEntry::pushNode(uint64_t offset) {
       return;
     }
   }
-  if (Children + 1 >= Trie.end()) {
+  State.ChildCount = *Children;
+  if (State.ChildCount != 0 && Children + 1 >= Trie.end()) {
     *E = malformedError("byte for count of childern in export trie data at "
            "node: 0x" + utohexstr(offset) + " extends past end of trie data");
     moveToEnd();
     return;
   }
-  State.ChildCount = *Children;
   State.Current = Children + 1;
   State.NextChildIndex = 0;
   State.ParentStringLength = CumulativeString.size();
