@@ -567,7 +567,7 @@ public:
   /// This is controlled by the 'unroll-loops' config option.
   bool shouldUnrollLoops();
 
-    /// Returns true if the bug reporter should transparently treat extra note
+  /// Returns true if the bug reporter should transparently treat extra note
   /// diagnostic pieces as event diagnostic pieces. Useful when the diagnostic
   /// consumer doesn't support the extra note pieces.
   ///
