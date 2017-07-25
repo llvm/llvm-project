@@ -37,6 +37,14 @@
 
 using namespace llvm;
 
+static bool checkScale(unsigned Scale, StringRef &ErrMsg) {
+  if (Scale != 1 && Scale != 2 && Scale != 4 && Scale != 8) {
+    ErrMsg = "scale factor in address must be 1, 2, 4 or 8";
+    return true;
+  }
+  return false;
+}
+
 namespace {
 
 static const char OpPrecedence[] = {
@@ -125,8 +133,8 @@ private:
     int64_t popOperand() {
       assert (!PostfixStack.empty() && "Poped an empty stack!");
       ICToken Op = PostfixStack.pop_back_val();
-      assert ((Op.first == IC_IMM || Op.first == IC_REGISTER)
-              && "Expected and immediate or register!");
+      if (!(Op.first == IC_IMM || Op.first == IC_REGISTER))
+        return -1; // The invalid Scale value will be caught later by checkScale
       return Op.second;
     }
     void pushOperand(InfixCalculatorTok Op, int64_t Val = 0) {
@@ -422,7 +430,7 @@ private:
       }
       PrevState = CurrState;
     }
-    void onPlus() {
+    bool onPlus(StringRef &ErrMsg) {
       IntelExprState CurrState = State;
       switch (State) {
       default:
@@ -439,7 +447,10 @@ private:
           if (!BaseReg) {
             BaseReg = TmpReg;
           } else {
-            assert (!IndexReg && "BaseReg/IndexReg already set!");
+            if (IndexReg) {
+              ErrMsg = "BaseReg/IndexReg already set!";
+              return true;
+            }
             IndexReg = TmpReg;
             Scale = 1;
           }
@@ -447,8 +458,9 @@ private:
         break;
       }
       PrevState = CurrState;
+      return false;
     }
-    void onMinus() {
+    bool onMinus(StringRef &ErrMsg) {
       IntelExprState CurrState = State;
       switch (State) {
       default:
@@ -475,7 +487,11 @@ private:
         if (CurrState == IES_REGISTER || CurrState == IES_RPAREN ||
             CurrState == IES_INTEGER  || CurrState == IES_RBRAC)
           IC.pushOperator(IC_MINUS);
-        else
+        else if (PrevState == IES_REGISTER && CurrState == IES_MULTIPLY) {
+          // We have negate operator for Scale: it's illegal
+          ErrMsg = "Scale can't be negative";
+          return true;
+        } else
           IC.pushOperator(IC_NEG);
         if (CurrState == IES_REGISTER && PrevState != IES_MULTIPLY) {
           // If we already have a BaseReg, then assume this is the IndexReg with
@@ -483,7 +499,10 @@ private:
           if (!BaseReg) {
             BaseReg = TmpReg;
           } else {
-            assert (!IndexReg && "BaseReg/IndexReg already set!");
+            if (IndexReg) {
+              ErrMsg = "BaseReg/IndexReg already set!";
+              return true;
+            }
             IndexReg = TmpReg;
             Scale = 1;
           }
@@ -491,6 +510,7 @@ private:
         break;
       }
       PrevState = CurrState;
+      return false;
     }
     void onNot() {
       IntelExprState CurrState = State;
@@ -517,7 +537,8 @@ private:
       }
       PrevState = CurrState;
     }
-    void onRegister(unsigned Reg) {
+
+    bool onRegister(unsigned Reg, StringRef &ErrMsg) {
       IntelExprState CurrState = State;
       switch (State) {
       default:
@@ -532,11 +553,16 @@ private:
       case IES_MULTIPLY:
         // Index Register - Scale * Register
         if (PrevState == IES_INTEGER) {
-          assert (!IndexReg && "IndexReg already set!");
+          if (IndexReg) {
+            ErrMsg = "BaseReg/IndexReg already set!";
+            return true;
+          }
           State = IES_REGISTER;
           IndexReg = Reg;
           // Get the scale and replace the 'Scale * Register' with '0'.
           Scale = IC.popOperand();
+          if (checkScale(Scale, ErrMsg))
+            return true;
           IC.pushOperand(IC_IMM);
           IC.popOperator();
         } else {
@@ -545,6 +571,7 @@ private:
         break;
       }
       PrevState = CurrState;
+      return false;
     }
     void onIdentifierExpr(const MCExpr *SymRef, StringRef SymRefName) {
       PrevState = State;
@@ -583,13 +610,14 @@ private:
         State = IES_INTEGER;
         if (PrevState == IES_REGISTER && CurrState == IES_MULTIPLY) {
           // Index Register - Register * Scale
-          assert (!IndexReg && "IndexReg already set!");
-          IndexReg = TmpReg;
-          Scale = TmpInt;
-          if(Scale != 1 && Scale != 2 && Scale != 4 && Scale != 8) {
-            ErrMsg = "scale factor in address must be 1, 2, 4 or 8";
+          if (IndexReg) {
+            ErrMsg = "BaseReg/IndexReg already set!";
             return true;
           }
+          IndexReg = TmpReg;
+          Scale = TmpInt;
+          if (checkScale(Scale, ErrMsg))
+            return true;
           // Get the scale and replace the 'Register * Scale' with '0'.
           IC.popOperator();
         } else {
@@ -749,7 +777,7 @@ private:
   std::unique_ptr<X86Operand> ParseIntelOffsetOfOperator();
   bool ParseIntelDotOperator(const MCExpr *Disp, const MCExpr *&NewDisp);
   unsigned IdentifyIntelOperator(StringRef Name);
-  unsigned ParseIntelOperator(unsigned OpKind);
+  unsigned ParseIntelOperator(unsigned OpKind, bool AddImmPrefix);
   std::unique_ptr<X86Operand>
   ParseIntelSegmentOverride(unsigned SegReg, SMLoc Start, unsigned Size);
   std::unique_ptr<X86Operand> ParseRoundingModeOp(SMLoc Start, SMLoc End);
@@ -885,8 +913,8 @@ static unsigned MatchRegisterName(StringRef Name);
 
 /// }
 
-static bool CheckBaseRegAndIndexReg(unsigned BaseReg, unsigned IndexReg,
-                                    StringRef &ErrMsg) {
+static bool CheckBaseRegAndIndexRegAndScale(unsigned BaseReg, unsigned IndexReg,
+                                            unsigned Scale, StringRef &ErrMsg) {
   // If we have both a base register and an index register make sure they are
   // both 64-bit or 32-bit registers.
   // To support VSIB, IndexReg can be 128-bit or 256-bit registers.
@@ -925,7 +953,7 @@ static bool CheckBaseRegAndIndexReg(unsigned BaseReg, unsigned IndexReg,
       }
     }
   }
-  return false;
+  return checkScale(Scale, ErrMsg);
 }
 
 bool X86AsmParser::ParseRegister(unsigned &RegNo,
@@ -1223,7 +1251,7 @@ std::unique_ptr<X86Operand> X86AsmParser::CreateMemForInlineAsm(
     InlineAsmIdentifierInfo &Info, bool AllowBetterSizeMatch) {
   // If we found a decl other than a VarDecl, then assume it is a FuncDecl or
   // some other label reference.
-  if (isa<MCSymbolRefExpr>(Disp) && Info.OpDecl && !Info.IsVarDecl) {
+  if (isa<MCSymbolRefExpr>(Disp) && Info.OpDecl && !Info.isVarDecl()) {
     // Insert an explicit size if the user didn't have one.
     if (!Size) {
       Size = getPointerWidth();
@@ -1348,6 +1376,7 @@ bool X86AsmParser::ParseIntelNamedOperator(StringRef Name, IntelExprStateMachine
 bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
   MCAsmParser &Parser = getParser();
   const AsmToken &Tok = Parser.getTok();
+  StringRef ErrMsg;
 
   AsmToken::TokenKind PrevTK = AsmToken::Error;
   bool Done = false;
@@ -1386,7 +1415,8 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
       StringRef Identifier = Tok.getString();
       UpdateLocLex = false;
       if (TK != AsmToken::String && !ParseRegister(TmpReg, IdentLoc, End)) {
-        SM.onRegister(TmpReg);
+        if (SM.onRegister(TmpReg, ErrMsg))
+          return Error(Tok.getLoc(), ErrMsg);
       } else if (ParseIntelNamedOperator(Identifier, SM)) {
         UpdateLocLex = true;
       } else if (!isParsingInlineAsm()) {
@@ -1397,26 +1427,51 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
         if (OpKind == IOK_OFFSET) 
           return Error(IdentLoc, "Dealing OFFSET operator as part of"
             "a compound immediate expression is yet to be supported");
-        int64_t Val = ParseIntelOperator(OpKind);
+        int64_t Val = ParseIntelOperator(OpKind,SM.getAddImmPrefix());
         if (!Val)
           return true;
-        StringRef ErrMsg;
         if (SM.onInteger(Val, ErrMsg))
           return Error(IdentLoc, ErrMsg);
       } else if (Identifier.find('.') != StringRef::npos &&
             PrevTK == AsmToken::RBrac) {
           return false;
       } else {
-        InlineAsmIdentifierInfo &Info = SM.getIdentifierInfo();
+        InlineAsmIdentifierInfo Info;
         if (ParseIntelIdentifier(Val, Identifier, Info,
                                  /*Unevaluated=*/false, End))
           return true;
-        SM.onIdentifierExpr(Val, Identifier);
+        // Check if the parsed identifier was a constant Integer. Here we
+        // assume Val is of type MCConstantExpr only when it is safe to replace
+        // the identifier with its constant value.
+        if (const MCConstantExpr *CE =
+                dyn_cast_or_null<const MCConstantExpr>(Val)) {
+          StringRef ErrMsg;
+          // Pass the enum identifier integer value to the SM calculator.
+          if (SM.onInteger(CE->getValue(), ErrMsg))
+            return Error(IdentLoc, ErrMsg);
+          // Match the behavior of integer tokens when getAddImmPrefix flag is
+          // set.
+          if (SM.getAddImmPrefix()) {
+            assert(isParsingInlineAsm() &&
+                   "Expected to be parsing inline assembly.");
+            // A single rewrite of the integer value is preformed for each enum
+            // identifier. This is only done when we are inside a bracketed
+            // expression.
+            size_t Len = End.getPointer() - IdentLoc.getPointer();
+            InstInfo->AsmRewrites->emplace_back(AOK_Imm, IdentLoc, Len,
+                                                CE->getValue());
+            break;
+          }
+        } else {
+          // Notify the SM a variable identifier was found.
+          InlineAsmIdentifierInfo &SMInfo = SM.getIdentifierInfo();
+          SMInfo = Info;
+          SM.onIdentifierExpr(Val, Identifier);
+        }
       }
       break;
     }
     case AsmToken::Integer: {
-      StringRef ErrMsg;
       if (isParsingInlineAsm() && SM.getAddImmPrefix())
         InstInfo->AsmRewrites->emplace_back(AOK_ImmPrefix, Tok.getLoc());
       // Look for 'b' or 'f' following an Integer as a directional label
@@ -1447,8 +1502,14 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
       }
       break;
     }
-    case AsmToken::Plus:    SM.onPlus(); break;
-    case AsmToken::Minus:   SM.onMinus(); break;
+    case AsmToken::Plus:
+      if (SM.onPlus(ErrMsg))
+        return Error(getTok().getLoc(), ErrMsg);
+      break;
+    case AsmToken::Minus:
+      if (SM.onMinus(ErrMsg))
+        return Error(getTok().getLoc(), ErrMsg);
+      break;
     case AsmToken::Tilde:   SM.onNot(); break;
     case AsmToken::Star:    SM.onStar(); break;
     case AsmToken::Slash:   SM.onDivide(); break;
@@ -1555,7 +1616,7 @@ X86AsmParser::ParseIntelBracExpression(unsigned SegReg, SMLoc Start,
                                    Start, End, Size);
     }
     StringRef ErrMsg;
-    if (CheckBaseRegAndIndexReg(BaseReg, IndexReg, ErrMsg)) {
+    if (CheckBaseRegAndIndexRegAndScale(BaseReg, IndexReg, Scale, ErrMsg)) {
       Error(StartInBrac, ErrMsg);
       return nullptr;
     }
@@ -1599,6 +1660,14 @@ bool X86AsmParser::ParseIntelIdentifier(const MCExpr *&Val,
   assert((End.getPointer() == EndPtr || !Result) &&
          "frontend claimed part of a token?");
 
+  // Check if the search yielded a constant integer (enum identifier).
+  if (Result && Info.isConstEnum()) {
+    // By creating MCConstantExpr we let the user of Val know it is safe
+    // to use as an explicit constant with value = ConstVal.
+    Val = MCConstantExpr::create(Info.ConstIntValue.getSExtValue(),
+                                 getParser().getContext());
+    return false;
+  }
   // If the identifier lookup was unsuccessful, assume that we are dealing with
   // a label.
   if (!Result) {
@@ -1796,7 +1865,7 @@ unsigned X86AsmParser::IdentifyIntelOperator(StringRef Name) {
 /// variable.  A variable's size is the product of its LENGTH and TYPE.  The
 /// TYPE operator returns the size of a C or C++ type or variable. If the
 /// variable is an array, TYPE returns the size of a single element.
-unsigned X86AsmParser::ParseIntelOperator(unsigned OpKind) {
+unsigned X86AsmParser::ParseIntelOperator(unsigned OpKind, bool AddImmPrefix) {
   MCAsmParser &Parser = getParser();
   const AsmToken &Tok = Parser.getTok();
   SMLoc TypeLoc = Tok.getLoc();
@@ -1822,12 +1891,17 @@ unsigned X86AsmParser::ParseIntelOperator(unsigned OpKind) {
   case IOK_SIZE: CVal = Info.Size; break;
   case IOK_TYPE: CVal = Info.Type; break;
   }
-
-  // Rewrite the type operator and the C or C++ type or variable in terms of an
-  // immediate.  E.g. TYPE foo -> $$4
-  unsigned Len = End.getPointer() - TypeLoc.getPointer();
-  InstInfo->AsmRewrites->emplace_back(AOK_Imm, TypeLoc, Len, CVal);
-
+  
+  // Only when in bracketed mode, preform explicit rewrite. This is requierd to
+  // avoid rewrite collision.
+  if (AddImmPrefix) {
+    // Rewrite the type operator and the C or C++ type or variable in terms of
+    // an immediate. e.g. mov eax, [eax + SIZE _foo * $$4] ->
+    // mov eax, [eax + $$1 * $$4].
+    unsigned Len = End.getPointer() - TypeLoc.getPointer();
+    InstInfo->AsmRewrites->emplace_back(AOK_Imm, TypeLoc, Len, CVal);
+  }
+  
   return CVal;
 }
 
@@ -1898,14 +1972,8 @@ std::unique_ptr<X86Operand> X86AsmParser::ParseIntelOperand() {
   if (SM.getSym() && SM.getSym()->getKind() == MCExpr::Constant)
     SM.getSym()->evaluateAsAbsolute(Imm);
 
-  if (StartTok.isNot(AsmToken::Identifier) &&
-      StartTok.isNot(AsmToken::String) && isParsingInlineAsm()) {
+  if (isParsingInlineAsm() && !isSymbol) {
     unsigned Len = Tok.getLoc().getPointer() - Start.getPointer();
-    if (StartTok.getString().size() == Len)
-      // Just add a prefix if this wasn't a complex immediate expression.
-      InstInfo->AsmRewrites->emplace_back(AOK_ImmPrefix, Start);
-    else
-      // Otherwise, rewrite the complex expression as a single immediate.
       InstInfo->AsmRewrites->emplace_back(AOK_Imm, Start, Len, Imm);
   }
 
@@ -2258,7 +2326,7 @@ std::unique_ptr<X86Operand> X86AsmParser::ParseMemOperand(unsigned SegReg,
   }
 
   StringRef ErrMsg;
-  if (CheckBaseRegAndIndexReg(BaseReg, IndexReg, ErrMsg)) {
+  if (CheckBaseRegAndIndexRegAndScale(BaseReg, IndexReg, Scale, ErrMsg)) {
     Error(BaseLoc, ErrMsg);
     return nullptr;
   }

@@ -645,8 +645,8 @@ ExprResult Sema::LookupInlineAsmIdentifier(CXXScopeSpec &SS,
   // Referring to parameters is not allowed in naked functions.
   if (CheckNakedParmReference(Result.get(), *this))
     return ExprError();
-
-  QualType T = Result.get()->getType();
+  Expr *Res = Result.get();
+  QualType T = Res->getType();
 
   if (T->isDependentType()) {
     return Result;
@@ -658,16 +658,26 @@ ExprResult Sema::LookupInlineAsmIdentifier(CXXScopeSpec &SS,
   }
 
   // Otherwise, it needs to be a complete type.
-  if (RequireCompleteExprType(Result.get(), diag::err_asm_incomplete_type)) {
+  if (RequireCompleteExprType(Res, diag::err_asm_incomplete_type)) {
     return ExprError();
   }
 
   fillInlineAsmTypeInfo(Context, T, Info);
 
   // We can work with the expression as long as it's not an r-value.
-  if (!Result.get()->isRValue())
-    Info.IsVarDecl = true;
+  if (!Res->isRValue()) {
+    Info.setKindVariable();
+    return Result;
+  }
 
+  Expr::EvalResult EvlResult;
+  // Try to evaluate the identifier as enum constant, currently we do not allow
+  // other constant integers to be folded.
+  if (isa<clang::EnumType>(T) &&
+    Res->EvaluateAsRValue(EvlResult, getASTContext())) {
+    Info.ConstIntValue = EvlResult.Val.getInt();
+    Info.setKindConstEnum();
+  }
   return Result;
 }
 
@@ -774,7 +784,7 @@ Sema::LookupInlineAsmVarDeclField(Expr *E, StringRef Member,
   fillInlineAsmTypeInfo(Context, Result.get()->getType(), Info);
 
   // Fields are "variables" as far as inline assembly is concerned.
-  Info.IsVarDecl = true;
+  Info.setKindVariable();
 
   return Result;
 }

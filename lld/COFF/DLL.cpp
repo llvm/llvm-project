@@ -319,12 +319,16 @@ public:
   size_t getSize() const override { return Size * 4; }
 
   void writeTo(uint8_t *Buf) const override {
+    uint32_t Bit = 0;
+    // Pointer to thumb code must have the LSB set, so adjust it.
+    if (Config->Machine == ARMNT)
+      Bit = 1;
     for (Export &E : Config->Exports) {
       uint8_t *P = Buf + OutputSectionOff + E.Ordinal * 4;
       if (E.ForwardChunk) {
-        write32le(P, E.ForwardChunk->getRVA());
+        write32le(P, E.ForwardChunk->getRVA() | Bit);
       } else {
-        write32le(P, cast<Defined>(E.Sym)->getRVA());
+        write32le(P, cast<Defined>(E.Sym)->getRVA() | Bit);
       }
     }
   }
