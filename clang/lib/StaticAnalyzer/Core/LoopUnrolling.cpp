@@ -183,8 +183,10 @@ bool isUnrolledLoopBlock(const CFGBlock *Block, ExplodedNode *Pred,
     LBV.setBlocksOfLoop(E.first, M);
     // In case of an inlined function call check if any of its callSiteBlock is
     // marked.
-    while (SearchedBlock && BlockSet.find(SearchedBlock) == BlockSet.end()) {
+    while (BlockSet.find(SearchedBlock) == BlockSet.end() && !StackFrame->inTopFrame()) {
       SearchedBlock = StackFrame->getCallSiteBlock();
+      if(!SearchedBlock)
+        break;
       StackFrame = StackFrame->getParent()->getCurrentStackFrame();
     }
     delete M;
