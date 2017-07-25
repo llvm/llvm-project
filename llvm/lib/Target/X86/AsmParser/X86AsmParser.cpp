@@ -749,7 +749,7 @@ private:
   std::unique_ptr<X86Operand> ParseIntelOffsetOfOperator();
   bool ParseIntelDotOperator(const MCExpr *Disp, const MCExpr *&NewDisp);
   unsigned IdentifyIntelOperator(StringRef Name);
-  unsigned ParseIntelOperator(unsigned OpKind);
+  unsigned ParseIntelOperator(unsigned OpKind, bool AddImmPrefix);
   std::unique_ptr<X86Operand>
   ParseIntelSegmentOverride(unsigned SegReg, SMLoc Start, unsigned Size);
   std::unique_ptr<X86Operand> ParseRoundingModeOp(SMLoc Start, SMLoc End);
@@ -1223,7 +1223,7 @@ std::unique_ptr<X86Operand> X86AsmParser::CreateMemForInlineAsm(
     InlineAsmIdentifierInfo &Info, bool AllowBetterSizeMatch) {
   // If we found a decl other than a VarDecl, then assume it is a FuncDecl or
   // some other label reference.
-  if (isa<MCSymbolRefExpr>(Disp) && Info.OpDecl && !Info.IsVarDecl) {
+  if (isa<MCSymbolRefExpr>(Disp) && Info.OpDecl && !Info.isVarDecl()) {
     // Insert an explicit size if the user didn't have one.
     if (!Size) {
       Size = getPointerWidth();
@@ -1397,7 +1397,7 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
         if (OpKind == IOK_OFFSET) 
           return Error(IdentLoc, "Dealing OFFSET operator as part of"
             "a compound immediate expression is yet to be supported");
-        int64_t Val = ParseIntelOperator(OpKind);
+        int64_t Val = ParseIntelOperator(OpKind,SM.getAddImmPrefix());
         if (!Val)
           return true;
         StringRef ErrMsg;
@@ -1407,11 +1407,38 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
             PrevTK == AsmToken::RBrac) {
           return false;
       } else {
-        InlineAsmIdentifierInfo &Info = SM.getIdentifierInfo();
+        InlineAsmIdentifierInfo Info;
         if (ParseIntelIdentifier(Val, Identifier, Info,
                                  /*Unevaluated=*/false, End))
           return true;
-        SM.onIdentifierExpr(Val, Identifier);
+        // Check if the parsed identifier was a constant Integer. Here we
+        // assume Val is of type MCConstantExpr only when it is safe to replace
+        // the identifier with its constant value.
+        if (const MCConstantExpr *CE =
+                dyn_cast_or_null<const MCConstantExpr>(Val)) {
+          StringRef ErrMsg;
+          // Pass the enum identifier integer value to the SM calculator.
+          if (SM.onInteger(CE->getValue(), ErrMsg))
+            return Error(IdentLoc, ErrMsg);
+          // Match the behavior of integer tokens when getAddImmPrefix flag is
+          // set.
+          if (SM.getAddImmPrefix()) {
+            assert(isParsingInlineAsm() &&
+                   "Expected to be parsing inline assembly.");
+            // A single rewrite of the integer value is preformed for each enum
+            // identifier. This is only done when we are inside a bracketed
+            // expression.
+            size_t Len = End.getPointer() - IdentLoc.getPointer();
+            InstInfo->AsmRewrites->emplace_back(AOK_Imm, IdentLoc, Len,
+                                                CE->getValue());
+            break;
+          }
+        } else {
+          // Notify the SM a variable identifier was found.
+          InlineAsmIdentifierInfo &SMInfo = SM.getIdentifierInfo();
+          SMInfo = Info;
+          SM.onIdentifierExpr(Val, Identifier);
+        }
       }
       break;
     }
@@ -1599,6 +1626,14 @@ bool X86AsmParser::ParseIntelIdentifier(const MCExpr *&Val,
   assert((End.getPointer() == EndPtr || !Result) &&
          "frontend claimed part of a token?");
 
+  // Check if the search yielded a constant integer (enum identifier).
+  if (Result && Info.isConstEnum()) {
+    // By creating MCConstantExpr we let the user of Val know it is safe
+    // to use as an explicit constant with value = ConstVal.
+    Val = MCConstantExpr::create(Info.ConstIntValue.getSExtValue(),
+                                 getParser().getContext());
+    return false;
+  }
   // If the identifier lookup was unsuccessful, assume that we are dealing with
   // a label.
   if (!Result) {
@@ -1796,7 +1831,7 @@ unsigned X86AsmParser::IdentifyIntelOperator(StringRef Name) {
 /// variable.  A variable's size is the product of its LENGTH and TYPE.  The
 /// TYPE operator returns the size of a C or C++ type or variable. If the
 /// variable is an array, TYPE returns the size of a single element.
-unsigned X86AsmParser::ParseIntelOperator(unsigned OpKind) {
+unsigned X86AsmParser::ParseIntelOperator(unsigned OpKind, bool AddImmPrefix) {
   MCAsmParser &Parser = getParser();
   const AsmToken &Tok = Parser.getTok();
   SMLoc TypeLoc = Tok.getLoc();
@@ -1822,12 +1857,17 @@ unsigned X86AsmParser::ParseIntelOperator(unsigned OpKind) {
   case IOK_SIZE: CVal = Info.Size; break;
   case IOK_TYPE: CVal = Info.Type; break;
   }
-
-  // Rewrite the type operator and the C or C++ type or variable in terms of an
-  // immediate.  E.g. TYPE foo -> $$4
-  unsigned Len = End.getPointer() - TypeLoc.getPointer();
-  InstInfo->AsmRewrites->emplace_back(AOK_Imm, TypeLoc, Len, CVal);
-
+  
+  // Only when in bracketed mode, preform explicit rewrite. This is requierd to
+  // avoid rewrite collision.
+  if (AddImmPrefix) {
+    // Rewrite the type operator and the C or C++ type or variable in terms of
+    // an immediate. e.g. mov eax, [eax + SIZE _foo * $$4] ->
+    // mov eax, [eax + $$1 * $$4].
+    unsigned Len = End.getPointer() - TypeLoc.getPointer();
+    InstInfo->AsmRewrites->emplace_back(AOK_Imm, TypeLoc, Len, CVal);
+  }
+  
   return CVal;
 }
 
@@ -1898,14 +1938,8 @@ std::unique_ptr<X86Operand> X86AsmParser::ParseIntelOperand() {
   if (SM.getSym() && SM.getSym()->getKind() == MCExpr::Constant)
     SM.getSym()->evaluateAsAbsolute(Imm);
 
-  if (StartTok.isNot(AsmToken::Identifier) &&
-      StartTok.isNot(AsmToken::String) && isParsingInlineAsm()) {
+  if (isParsingInlineAsm() && !isSymbol) {
     unsigned Len = Tok.getLoc().getPointer() - Start.getPointer();
-    if (StartTok.getString().size() == Len)
-      // Just add a prefix if this wasn't a complex immediate expression.
-      InstInfo->AsmRewrites->emplace_back(AOK_ImmPrefix, Start);
-    else
-      // Otherwise, rewrite the complex expression as a single immediate.
       InstInfo->AsmRewrites->emplace_back(AOK_Imm, Start, Len, Imm);
   }
 

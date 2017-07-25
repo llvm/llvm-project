@@ -562,3 +562,35 @@ int ARMTTIImpl::getInterleavedMemoryOpCost(unsigned Opcode, Type *VecTy,
   return BaseT::getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,
                                            Alignment, AddressSpace);
 }
+
+void ARMTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
+                                         TTI::UnrollingPreferences &UP) {
+  // Only currently enable these preferences for M-Class cores.
+  if (!ST->isMClass() || L->getNumBlocks() != 1)
+    return BasicTTIImplBase::getUnrollingPreferences(L, SE, UP);
+
+  // Disable loop unrolling for Oz and Os.
+  UP.OptSizeThreshold = 0;
+  UP.PartialOptSizeThreshold = 0;
+
+  // Scan the loop: don't unroll loops with calls as this could prevent
+  // inlining.
+  BasicBlock *BB = L->getLoopLatch();
+  for (auto &I : *BB) {
+    if (isa<CallInst>(I) || isa<InvokeInst>(I)) {
+      ImmutableCallSite CS(&I);
+      if (const Function *F = CS.getCalledFunction()) {
+        if (!isLoweredToCall(F))
+          continue;
+      }
+      return;
+    }
+  }
+
+  // Enable partial and runtime unrolling, set the initial threshold based upon
+  // the number of registers available.
+  UP.Partial = true;
+  UP.Runtime = true;
+  UP.Threshold = ST->isThumb1Only() ? 75 : 150;
+  UP.PartialThreshold = ST->isThumb1Only() ? 75 : 150;
+}

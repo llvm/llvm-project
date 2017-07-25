@@ -194,7 +194,6 @@ rare.2:
   br label %fallthrough
 }
 
-
 declare void @slowpath(i32, i32*)
 
 ; Make sure we don't end up in an infinite loop after we fail to sink.
@@ -217,4 +216,38 @@ load.i145:
 
 pl_loop.i.i122:
   br label %pl_loop.i.i122
+}
+
+; Make sure we can sink address computation even
+; if there is a cycle in phi nodes.
+define void @test9(i1 %cond, i64* %base) {
+; CHECK-LABEL: @test9
+entry:
+  %addr = getelementptr inbounds i64, i64* %base, i64 5
+  %casted = bitcast i64* %addr to i32*
+  br label %header
+
+header:
+  %iv = phi i32 [0, %entry], [%iv.inc, %backedge]
+  %casted.loop = phi i32* [%casted, %entry], [%casted.merged, %backedge]
+  br i1 %cond, label %if.then, label %backedge
+
+if.then:
+  call void @foo(i32 %iv)
+  %addr.1 = getelementptr inbounds i64, i64* %base, i64 5
+  %casted.1 = bitcast i64* %addr.1 to i32*
+  br label %backedge
+
+backedge:
+; CHECK-LABEL: backedge:
+; CHECK: getelementptr i8, {{.+}} 40
+  %casted.merged = phi i32* [%casted.loop, %header], [%casted.1, %if.then]
+  %v = load i32, i32* %casted.merged, align 4
+  call void @foo(i32 %v)
+  %iv.inc = add i32 %iv, 1
+  %cmp = icmp slt i32 %iv.inc, 1000
+  br i1 %cmp, label %header, label %exit
+
+exit:
+  ret void
 }

@@ -1188,6 +1188,18 @@ def MicroMips : InheritableAttr, TargetSpecificAttr<TargetMips> {
   let Documentation = [MicroMipsDocs];
 }
 
+def MipsLongCall : InheritableAttr, TargetSpecificAttr<TargetMips> {
+  let Spellings = [GCC<"long_call">, GCC<"far">];
+  let Subjects = SubjectList<[Function]>;
+  let Documentation = [MipsLongCallStyleDocs];
+}
+
+def MipsShortCall : InheritableAttr, TargetSpecificAttr<TargetMips> {
+  let Spellings = [GCC<"short_call">, GCC<"near">];
+  let Subjects = SubjectList<[Function]>;
+  let Documentation = [MipsShortCallStyleDocs];
+}
+
 def Mode : Attr {
   let Spellings = [GCC<"mode">];
   let Subjects = SubjectList<[Var, Enum, TypedefName, Field], ErrorDiag,
@@ -1802,11 +1814,18 @@ def Target : InheritableAttr {
   let Subjects = SubjectList<[Function], ErrorDiag>;
   let Documentation = [TargetDocs];
   let AdditionalMembers = [{
-    typedef std::pair<std::vector<std::string>, StringRef> ParsedTargetAttr;
+    struct ParsedTargetAttr {
+      std::vector<std::string> Features;
+      StringRef Architecture;
+      bool DuplicateArchitecture = false;
+    };
     ParsedTargetAttr parse() const {
+      return parse(getFeaturesStr());
+    }
+    static ParsedTargetAttr parse(StringRef Features) {
       ParsedTargetAttr Ret;
       SmallVector<StringRef, 1> AttrFeatures;
-      getFeaturesStr().split(AttrFeatures, ",");
+      Features.split(AttrFeatures, ",");
 
       // Grab the various features and prepend a "+" to turn on the feature to
       // the backend and add them to our existing set of features.
@@ -1823,12 +1842,15 @@ def Target : InheritableAttr {
 	  continue;
 
         // While we're here iterating check for a different target cpu.
-        if (Feature.startswith("arch="))
-          Ret.second = Feature.split("=").second.trim();
-        else if (Feature.startswith("no-"))
-          Ret.first.push_back("-" + Feature.split("-").second.str());
+        if (Feature.startswith("arch=")) {
+          if (!Ret.Architecture.empty())
+            Ret.DuplicateArchitecture = true;
+          else
+            Ret.Architecture = Feature.split("=").second.trim();
+        } else if (Feature.startswith("no-"))
+          Ret.Features.push_back("-" + Feature.split("-").second.str());
         else
-          Ret.first.push_back("+" + Feature.str());
+          Ret.Features.push_back("+" + Feature.str());
       }
       return Ret;
     }

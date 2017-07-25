@@ -3,7 +3,7 @@
 # we must include the grandparent directory...
 include_directories(${LLDB_SOURCE_DIR}/tools/debugserver/source)
 
-add_library(lldbDebugserverMacOSX_DarwinLog
+add_library(lldbDebugserverDarwin_DarwinLog
   ActivityStore.cpp
   DarwinLogCollector.cpp
   LogFilter.cpp

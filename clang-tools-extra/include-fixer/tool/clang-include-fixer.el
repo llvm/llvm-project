@@ -58,6 +58,7 @@ This string is passed as -input argument to
 (defface clang-include-fixer-highlight '((t :background "green"))
   "Used for highlighting the symbol for which a header file is being added.")
 
+;;;###autoload
 (defun clang-include-fixer ()
   "Invoke the Include Fixer to insert missing C++ headers."
   (interactive)
@@ -66,6 +67,7 @@ This string is passed as -input argument to
   (clang-include-fixer--start #'clang-include-fixer--add-header
                               "-output-headers"))
 
+;;;###autoload
 (defun clang-include-fixer-at-point ()
   "Invoke the Clang include fixer for the symbol at point."
   (interactive)
@@ -74,6 +76,7 @@ This string is passed as -input argument to
       (user-error "No symbol at current location"))
     (clang-include-fixer-from-symbol symbol)))
 
+;;;###autoload
 (defun clang-include-fixer-from-symbol (symbol)
   "Invoke the Clang include fixer for the SYMBOL.
 When called interactively, prompts the user for a symbol."

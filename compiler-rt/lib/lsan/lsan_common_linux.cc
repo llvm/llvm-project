@@ -100,6 +100,13 @@ struct DoStopTheWorldParam {
   void *argument;
 };
 
+// While calling Die() here is undefined behavior and can potentially
+// cause race conditions, it isn't possible to intercept exit on linux,
+// so we have no choice but to call Die() from the atexit handler.
+void HandleLeaks() {
+  if (common_flags()->exitcode) Die();
+}
+
 static int DoStopTheWorldCallback(struct dl_phdr_info *info, size_t size,
                                   void *data) {
   DoStopTheWorldParam *param = reinterpret_cast<DoStopTheWorldParam *>(data);

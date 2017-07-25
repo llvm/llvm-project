@@ -148,9 +148,6 @@ public:
   /// Dynamic loader prefix, if present
   std::string DyldPrefix;
 
-  /// If the standard library is used
-  bool UseStdLib;
-
   /// Driver title to use with help.
   std::string DriverTitle;
 

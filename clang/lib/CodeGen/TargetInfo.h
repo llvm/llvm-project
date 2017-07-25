@@ -15,6 +15,7 @@
 #ifndef LLVM_CLANG_LIB_CODEGEN_TARGETINFO_H
 #define LLVM_CLANG_LIB_CODEGEN_TARGETINFO_H
 
+#include "CodeGenModule.h"
 #include "CGValue.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/LLVM.h"
@@ -34,7 +35,6 @@ class Decl;
 namespace CodeGen {
 class ABIInfo;
 class CallArgList;
-class CodeGenModule;
 class CodeGenFunction;
 class CGFunctionInfo;
 
@@ -55,7 +55,8 @@ public:
   /// setTargetAttributes - Provides a convenient hook to handle extra
   /// target-specific attributes for the given global.
   virtual void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
-                                   CodeGen::CodeGenModule &M) const {}
+                                   CodeGen::CodeGenModule &M,
+                                   ForDefinition_t IsForDefinition) const {}
 
   /// emitTargetMD - Provides a convenient hook to handle extra
   /// target-specific metadata for the given global.

@@ -1,10 +1,18 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -Wformat-nonliteral %s
+// RUN: %clang_cc1 -std=c11 -fsyntax-only -verify -Wformat-nonliteral %s
 
 // Test that -Wformat=0 works:
-// RUN: %clang_cc1 -fsyntax-only -Werror -Wformat=0 %s
+// RUN: %clang_cc1 -std=c11 -fsyntax-only -Werror -Wformat=0 %s
 
 #include <stdarg.h>
-typedef __typeof(sizeof(int)) size_t;
+typedef __SIZE_TYPE__ size_t;
+#define __SSIZE_TYPE__                                                         \
+  __typeof__(_Generic((__SIZE_TYPE__)0,                                        \
+                      unsigned long long int : (long long int)0,               \
+                      unsigned long int : (long int)0,                         \
+                      unsigned int : (int)0,                                   \
+                      unsigned short : (short)0,                               \
+                      unsigned char : (signed char)0))
+typedef __SSIZE_TYPE__ ssize_t;                         
 typedef struct _FILE FILE;
 typedef __WCHAR_TYPE__ wchar_t;
 
@@ -170,6 +178,26 @@ void test_qualifiers(const int *cip, volatile int* vip,
   typedef const int* cip_t;
   scanf("%d", (ip_t)0); // No warning.
   scanf("%d", (cip_t)0); // expected-warning{{format specifies type 'int *' but the argument has type 'cip_t' (aka 'const int *')}}
+}
+
+void test_size_types() {
+  size_t s = 0;
+  scanf("%zu", &s); // No warning.
+
+  double d1 = 0.;
+  scanf("%zu", &d1); // expected-warning-re{{format specifies type 'size_t *' (aka '{{.+}}') but the argument has type 'double *'}}
+
+  ssize_t ss = 0;
+  scanf("%zd", &s); // No warning.
+
+  double d2 = 0.;
+  scanf("%zd", &d2); // expected-warning-re{{format specifies type 'ssize_t *' (aka '{{.+}}') but the argument has type 'double *'}}
+
+  ssize_t sn = 0;
+  scanf("%zn", &sn); // No warning.
+
+  double d3 = 0.;
+  scanf("%zn", &d3); // expected-warning-re{{format specifies type 'ssize_t *' (aka '{{.+}}') but the argument has type 'double *'}}
 }
 
 void check_conditional_literal(char *s, int *i) {

@@ -207,7 +207,11 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
     assert(!isSubRegister(ScratchRSrcReg, ScratchWaveOffsetReg));
   }
 
+  // We have to assume the SP is needed in case there are calls in the function,
+  // which is detected after the function is lowered. If we aren't really going
+  // to need SP, don't bother reserving it.
   unsigned StackPtrReg = MFI->getStackPtrOffsetReg();
+
   if (StackPtrReg != AMDGPU::NoRegister) {
     reserveRegisterTuples(Reserved, StackPtrReg);
     assert(!isSubRegister(ScratchRSrcReg, StackPtrReg));
@@ -468,17 +472,16 @@ static bool buildMUBUFOffsetLoadStore(const SIInstrInfo *TII,
   if (LoadStoreOp == -1)
     return false;
 
-  unsigned Reg = TII->getNamedOperand(*MI, AMDGPU::OpName::vdata)->getReg();
-
+  const MachineOperand *Reg = TII->getNamedOperand(*MI, AMDGPU::OpName::vdata);
   BuildMI(*MBB, MI, DL, TII->get(LoadStoreOp))
-      .addReg(Reg, getDefRegState(!IsStore))
-      .add(*TII->getNamedOperand(*MI, AMDGPU::OpName::srsrc))
-      .add(*TII->getNamedOperand(*MI, AMDGPU::OpName::soffset))
-      .addImm(Offset)
-      .addImm(0) // glc
-      .addImm(0) // slc
-      .addImm(0) // tfe
-      .setMemRefs(MI->memoperands_begin(), MI->memoperands_end());
+    .add(*Reg)
+    .add(*TII->getNamedOperand(*MI, AMDGPU::OpName::srsrc))
+    .add(*TII->getNamedOperand(*MI, AMDGPU::OpName::soffset))
+    .addImm(Offset)
+    .addImm(0) // glc
+    .addImm(0) // slc
+    .addImm(0) // tfe
+    .setMemRefs(MI->memoperands_begin(), MI->memoperands_end());
   return true;
 }
 
@@ -1271,8 +1274,7 @@ const TargetRegisterClass *SIRegisterInfo::getSubRegClass(
     return RC;
 
   // We can assume that each lane corresponds to one 32-bit register.
-  LaneBitmask::Type Mask = getSubRegIndexLaneMask(SubIdx).getAsInteger();
-  unsigned Count = countPopulation(Mask);
+  unsigned Count = getSubRegIndexLaneMask(SubIdx).getNumLanes();
   if (isSGPRClass(RC)) {
     switch (Count) {
     case 1:

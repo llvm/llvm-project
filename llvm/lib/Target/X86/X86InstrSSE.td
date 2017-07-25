@@ -2396,6 +2396,7 @@ let isCodeGenOnly = 1 in {
 multiclass sse12_ord_cmp<bits<8> opc, RegisterClass RC, SDNode OpNode,
                             ValueType vt, X86MemOperand x86memop,
                             PatFrag ld_frag, string OpcodeStr> {
+let hasSideEffects = 0 in {
   def rr: SI<opc, MRMSrcReg, (outs), (ins RC:$src1, RC:$src2),
                      !strconcat(OpcodeStr, "\t{$src2, $src1|$src1, $src2}"),
                      [(set EFLAGS, (OpNode (vt RC:$src1), RC:$src2))],
@@ -2408,6 +2409,7 @@ let mayLoad = 1 in
                                            (ld_frag addr:$src2)))],
                                            IIC_SSE_COMIS_RM>,
           Sched<[WriteFAddLd, ReadAfterLd]>;
+}
 }
 
 // sse12_ord_cmp_int - Intrinsic version of sse12_ord_cmp
@@ -7651,7 +7653,7 @@ def INSERTQ  : I<0x79, MRMSrcReg, (outs VR128:$dst),
 
 // Non-temporal (unaligned) scalar stores.
 let AddedComplexity = 400 in { // Prefer non-temporal versions
-let mayStore = 1, SchedRW = [WriteStore] in {
+let hasSideEffects = 0, mayStore = 1, SchedRW = [WriteStore] in {
 def MOVNTSS : I<0x2B, MRMDestMem, (outs), (ins f32mem:$dst, VR128:$src),
                 "movntss\t{$src, $dst|$dst, $src}", [], IIC_SSE_MOVNT>, XS;
 

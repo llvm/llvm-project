@@ -674,32 +674,37 @@ namespace llvm {
 
     /// Create a descriptor for an imported module.
     /// \param Context The scope this module is imported into
-    /// \param NS The namespace being imported here
-    /// \param Line Line number
+    /// \param NS      The namespace being imported here.
+    /// \param File    File where the declaration is located.
+    /// \param Line    Line number of the declaration.
     DIImportedEntity *createImportedModule(DIScope *Context, DINamespace *NS,
-                                           unsigned Line);
+                                           DIFile *File, unsigned Line);
 
     /// Create a descriptor for an imported module.
-    /// \param Context The scope this module is imported into
-    /// \param NS An aliased namespace
-    /// \param Line Line number
+    /// \param Context The scope this module is imported into.
+    /// \param NS      An aliased namespace.
+    /// \param File    File where the declaration is located.
+    /// \param Line    Line number of the declaration.
     DIImportedEntity *createImportedModule(DIScope *Context,
-                                           DIImportedEntity *NS, unsigned Line);
+                                           DIImportedEntity *NS, DIFile *File,
+                                           unsigned Line);
 
     /// Create a descriptor for an imported module.
-    /// \param Context The scope this module is imported into
-    /// \param M The module being imported here
-    /// \param Line Line number
+    /// \param Context The scope this module is imported into.
+    /// \param M       The module being imported here
+    /// \param File    File where the declaration is located.
+    /// \param Line    Line number of the declaration.
     DIImportedEntity *createImportedModule(DIScope *Context, DIModule *M,
-                                           unsigned Line);
+                                           DIFile *File, unsigned Line);
 
     /// Create a descriptor for an imported function.
-    /// \param Context The scope this module is imported into
-    /// \param Decl The declaration (or definition) of a function, type, or
-    ///             variable
-    /// \param Line Line number
+    /// \param Context The scope this module is imported into.
+    /// \param Decl    The declaration (or definition) of a function, type, or
+    ///                variable.
+    /// \param File    File where the declaration is located.
+    /// \param Line    Line number of the declaration.
     DIImportedEntity *createImportedDeclaration(DIScope *Context, DINode *Decl,
-                                                unsigned Line,
+                                                DIFile *File, unsigned Line,
                                                 StringRef Name = "");
 
     /// Insert a new llvm.dbg.declare intrinsic call.

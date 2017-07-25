@@ -16,9 +16,9 @@
 using namespace lldb;
 using namespace lldb_private;
 
-NativeThreadProtocol::NativeThreadProtocol(NativeProcessProtocol *process,
+NativeThreadProtocol::NativeThreadProtocol(NativeProcessProtocol &process,
                                            lldb::tid_t tid)
-    : m_process_wp(process->shared_from_this()), m_tid(tid) {}
+    : m_process(process), m_tid(tid) {}
 
 Status NativeThreadProtocol::ReadRegister(uint32_t reg,
                                           RegisterValue &reg_value) {
@@ -61,8 +61,4 @@ Status NativeThreadProtocol::RestoreAllRegisters(lldb::DataBufferSP &data_sp) {
   if (!register_context_sp)
     return Status("no register context");
   return register_context_sp->ReadAllRegisterValues(data_sp);
-}
-
-NativeProcessProtocolSP NativeThreadProtocol::GetProcess() {
-  return m_process_wp.lock();
 }

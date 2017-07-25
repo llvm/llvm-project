@@ -103,6 +103,10 @@ else()
       macosx/cfcpp/CFCMutableSet.cpp
       macosx/cfcpp/CFCString.cpp
       )
+    if(IOS)
+      set_property(SOURCE macosx/Host.mm APPEND PROPERTY 
+               COMPILE_DEFINITIONS "NO_XPC_SERVICES=1")
+    endif()
 
 
   elseif (CMAKE_SYSTEM_NAME MATCHES "Linux|Android")

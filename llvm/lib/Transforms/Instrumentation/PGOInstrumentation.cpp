@@ -59,6 +59,7 @@
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/IndirectCallSiteVisitor.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/OptimizationDiagnosticInfo.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Dominators.h"
@@ -545,6 +546,12 @@ void FuncPGOInstrumentation<Edge, BBInfo>::computeCFGHash() {
   FunctionHash = (uint64_t)SIVisitor.getNumOfSelectInsts() << 56 |
                  (uint64_t)ValueSites[IPVK_IndirectCallTarget].size() << 48 |
                  (uint64_t)MST.AllEdges.size() << 32 | JC.getCRC();
+  DEBUG(dbgs() << "Function Hash Computation for " << F.getName() << ":\n"
+               << " CRC = " << JC.getCRC()
+               << ", Selects = " << SIVisitor.getNumOfSelectInsts()
+               << ", Edges = " << MST.AllEdges.size()
+               << ", ICSites = " << ValueSites[IPVK_IndirectCallTarget].size()
+               << ", Hash = " << FunctionHash << "\n";);
 }
 
 // Check if we can safely rename this Comdat function.
@@ -1483,10 +1490,9 @@ void setProfMetadata(Module *M, Instruction *TI, ArrayRef<uint64_t> EdgeCounts,
     OS << " (total count : " << TotalCount << ")";
     OS.flush();
     Function *F = TI->getParent()->getParent();
-    emitOptimizationRemarkAnalysis(
-        F->getContext(), "pgo-use-annot", *F, TI->getDebugLoc(),
-        Twine(BrCondStr) +
-            " is true with probability : " + Twine(BranchProbStr));
+    OptimizationRemarkEmitter ORE(F);
+    ORE.emit(OptimizationRemark(DEBUG_TYPE, "pgo-instrumentation", TI)
+             << BrCondStr << " is true with probability : " << BranchProbStr);
   }
 }
 

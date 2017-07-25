@@ -15,6 +15,7 @@
 #include "lsan_allocator.h"
 
 #include "sanitizer_common/sanitizer_allocator.h"
+#include "sanitizer_common/sanitizer_allocator_checks.h"
 #include "sanitizer_common/sanitizer_allocator_interface.h"
 #include "sanitizer_common/sanitizer_errno.h"
 #include "sanitizer_common/sanitizer_internal_defs.h"
@@ -125,22 +126,16 @@ uptr GetMallocUsableSize(const void *p) {
   return m->requested_size;
 }
 
-inline void *check_ptr(void *ptr) {
-  if (UNLIKELY(!ptr))
-    errno = errno_ENOMEM;
-  return ptr;
-}
-
 void *lsan_memalign(uptr alignment, uptr size, const StackTrace &stack) {
   if (UNLIKELY(!IsPowerOfTwo(alignment))) {
     errno = errno_EINVAL;
     return Allocator::FailureHandler::OnBadRequest();
   }
-  return check_ptr(Allocate(stack, size, alignment, kAlwaysClearMemory));
+  return SetErrnoOnNull(Allocate(stack, size, alignment, kAlwaysClearMemory));
 }
 
 void *lsan_malloc(uptr size, const StackTrace &stack) {
-  return check_ptr(Allocate(stack, size, 1, kAlwaysClearMemory));
+  return SetErrnoOnNull(Allocate(stack, size, 1, kAlwaysClearMemory));
 }
 
 void lsan_free(void *p) {
@@ -148,15 +143,15 @@ void lsan_free(void *p) {
 }
 
 void *lsan_realloc(void *p, uptr size, const StackTrace &stack) {
-  return check_ptr(Reallocate(stack, p, size, 1));
+  return SetErrnoOnNull(Reallocate(stack, p, size, 1));
 }
 
 void *lsan_calloc(uptr nmemb, uptr size, const StackTrace &stack) {
-  return check_ptr(Calloc(nmemb, size, stack));
+  return SetErrnoOnNull(Calloc(nmemb, size, stack));
 }
 
 void *lsan_valloc(uptr size, const StackTrace &stack) {
-  return check_ptr(
+  return SetErrnoOnNull(
       Allocate(stack, size, GetPageSizeCached(), kAlwaysClearMemory));
 }
 

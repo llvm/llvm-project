@@ -30,11 +30,7 @@ lldb::ByteOrder NativeRegisterContextLinux::GetByteOrder() const {
   // read.
   lldb::ByteOrder byte_order = lldb::eByteOrderInvalid;
 
-  NativeProcessProtocolSP process_sp(m_thread.GetProcess());
-  if (!process_sp)
-    return byte_order;
-
-  if (!process_sp->GetByteOrder(byte_order)) {
+  if (!m_thread.GetProcess().GetByteOrder(byte_order)) {
     // FIXME log here
   }
 

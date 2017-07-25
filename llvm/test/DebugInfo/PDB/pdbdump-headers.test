@@ -421,29 +421,29 @@ ALL:        Hash Adjusters:
 ALL:                           Types (IPI Stream)
 ALL-NEXT: ============================================================
 ALL-NEXT:   Showing 15 records
-ALL-NEXT:   0x1000 | LF_UDT_MOD_SRC_LINE [size = 20, hash = 7186]
+ALL-NEXT:   0x1000 | LF_UDT_MOD_SRC_LINE [size = 20, hash = 0x1C12]
 ALL-NEXT:            udt = 0x100B, mod = 1, file = 1, line = 481
-ALL-NEXT:   0x1001 | LF_UDT_MOD_SRC_LINE [size = 20, hash = 7198]
+ALL-NEXT:   0x1001 | LF_UDT_MOD_SRC_LINE [size = 20, hash = 0x1C1E]
 ALL-NEXT:            udt = 0x1017, mod = 1, file = 1, line = 194
-ALL-NEXT:   0x1002 | LF_UDT_MOD_SRC_LINE [size = 20, hash = 7180]
+ALL-NEXT:   0x1002 | LF_UDT_MOD_SRC_LINE [size = 20, hash = 0x1C0C]
 ALL-NEXT:            udt = 0x1021, mod = 1, file = 1, line = 603
-ALL-NEXT:   0x1003 | LF_UDT_MOD_SRC_LINE [size = 20, hash = 7191]
+ALL-NEXT:   0x1003 | LF_UDT_MOD_SRC_LINE [size = 20, hash = 0x1C17]
 ALL-NEXT:            udt = 0x102C, mod = 1, file = 1, line = 1200
-ALL-NEXT:   0x1004 | LF_UDT_MOD_SRC_LINE [size = 20, hash = 7201]
+ALL-NEXT:   0x1004 | LF_UDT_MOD_SRC_LINE [size = 20, hash = 0x1C21]
 ALL-NEXT:            udt = 0x103A, mod = 1, file = 1, line = 540
-ALL-NEXT:   0x1005 | LF_UDT_MOD_SRC_LINE [size = 20, hash = 7241]
+ALL-NEXT:   0x1005 | LF_UDT_MOD_SRC_LINE [size = 20, hash = 0x1C49]
 ALL-NEXT:            udt = 0x1042, mod = 1, file = 1, line = 108
-ALL-NEXT:   0x1006 | LF_UDT_MOD_SRC_LINE [size = 20, hash = 7249]
+ALL-NEXT:   0x1006 | LF_UDT_MOD_SRC_LINE [size = 20, hash = 0x1C51]
 ALL-NEXT:            udt = 0x104A, mod = 1, file = 1, line = 96
-ALL-NEXT:   0x1007 | LF_STRING_ID [size = 48, hash = 80727] ID: <no type>, String: d:\src\llvm\test\DebugInfo\PDB\Inputs
-ALL-NEXT:   0x1008 | LF_STRING_ID [size = 76, hash = 154177] ID: <no type>, String: C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\BIN\cl.exe
-ALL-NEXT:   0x1009 | LF_STRING_ID [size = 20, hash = 75189] ID: <no type>, String: empty.cpp
-ALL-NEXT:   0x100A | LF_STRING_ID [size = 56, hash = 253662] ID: <no type>, String: d:\src\llvm\test\DebugInfo\PDB\Inputs\vc120.pdb
-ALL-NEXT:   0x100B | LF_STRING_ID [size = 252, hash = 193467] ID: <no type>, String: -Zi -MT -I"C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\INCLUDE" -I"C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\ATLMFC\INCLUDE" -I"C:\Program Files (x86)\Windows Kits\8.1\include\shared" -I"C:\Program Files (x86)\Windows
-ALL-NEXT:   0x100C | LF_SUBSTR_LIST [size = 12, hash = 222705]
+ALL-NEXT:   0x1007 | LF_STRING_ID [size = 48, hash = 0x13B57] ID: <no type>, String: d:\src\llvm\test\DebugInfo\PDB\Inputs
+ALL-NEXT:   0x1008 | LF_STRING_ID [size = 76, hash = 0x25A41] ID: <no type>, String: C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\BIN\cl.exe
+ALL-NEXT:   0x1009 | LF_STRING_ID [size = 20, hash = 0x125B5] ID: <no type>, String: empty.cpp
+ALL-NEXT:   0x100A | LF_STRING_ID [size = 56, hash = 0x3DEDE] ID: <no type>, String: d:\src\llvm\test\DebugInfo\PDB\Inputs\vc120.pdb
+ALL-NEXT:   0x100B | LF_STRING_ID [size = 252, hash = 0x2F3BB] ID: <no type>, String: -Zi -MT -I"C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\INCLUDE" -I"C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\ATLMFC\INCLUDE" -I"C:\Program Files (x86)\Windows Kits\8.1\include\shared" -I"C:\Program Files (x86)\Windows
+ALL-NEXT:   0x100C | LF_SUBSTR_LIST [size = 12, hash = 0x365F1]
 ALL-NEXT:            0x100B: `-Zi -MT -I"C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\INCLUDE" -I"C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\ATLMFC\INCLUDE" -I"C:\Program Files (x86)\Windows Kits\8.1\include\shared" -I"C:\Program Files (x86)\Windows`
-ALL-NEXT:   0x100D | LF_STRING_ID [size = 96, hash = 186099] ID: 0x100C, String:  Kits\8.1\include\um" -I"C:\Program Files (x86)\Windows Kits\8.1\include\winrt" -TP -X
-ALL-NEXT:   0x100E | LF_BUILDINFO [size = 28, hash = 257108]
+ALL-NEXT:   0x100D | LF_STRING_ID [size = 96, hash = 0x2D6F3] ID: 0x100C, String:  Kits\8.1\include\um" -I"C:\Program Files (x86)\Windows Kits\8.1\include\winrt" -TP -X
+ALL-NEXT:   0x100E | LF_BUILDINFO [size = 28, hash = 0x3EC54]
 ALL-NEXT:            0x1007: `d:\src\llvm\test\DebugInfo\PDB\Inputs`
 ALL-NEXT:            0x1008: `C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\BIN\cl.exe`
 ALL-NEXT:            0x1009: `empty.cpp`

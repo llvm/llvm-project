@@ -305,9 +305,19 @@ bool SIInstrInfo::getMemOpBaseRegImmOfs(MachineInstr &LdSt, unsigned &BaseReg,
   }
 
   if (isFLAT(LdSt)) {
-    const MachineOperand *AddrReg = getNamedOperand(LdSt, AMDGPU::OpName::vaddr);
-    BaseReg = AddrReg->getReg();
-    Offset = 0;
+    const MachineOperand *VAddr = getNamedOperand(LdSt, AMDGPU::OpName::vaddr);
+    if (VAddr) {
+      // Can't analyze 2 offsets.
+      if (getNamedOperand(LdSt, AMDGPU::OpName::saddr))
+        return false;
+
+      BaseReg = VAddr->getReg();
+    } else {
+      // scratch instructions have either vaddr or saddr.
+      BaseReg = getNamedOperand(LdSt, AMDGPU::OpName::saddr)->getReg();
+    }
+
+    Offset = getNamedOperand(LdSt, AMDGPU::OpName::offset)->getImm();
     return true;
   }
 
@@ -768,6 +778,7 @@ void SIInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
     // needing them, and need to ensure that the reserved registers are
     // correctly handled.
 
+    FrameInfo.setStackID(FrameIndex, 1);
     if (ST.hasScalarStores()) {
       // m0 is used for offset to scalar stores if used to spill.
       Spill.addReg(AMDGPU::M0, RegState::ImplicitDefine | RegState::Dead);
@@ -863,6 +874,7 @@ void SIInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
       MRI.constrainRegClass(DestReg, &AMDGPU::SReg_32_XM0RegClass);
     }
 
+    FrameInfo.setStackID(FrameIndex, 1);
     MachineInstrBuilder Spill = BuildMI(MBB, MI, DL, OpDesc, DestReg)
       .addFrameIndex(FrameIndex) // addr
       .addMemOperand(MMO)

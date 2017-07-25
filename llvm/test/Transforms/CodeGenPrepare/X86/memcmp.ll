@@ -23,9 +23,63 @@ define i32 @cmp2(i8* nocapture readonly %x, i8* nocapture readonly %y)  {
 }
 
 define i32 @cmp3(i8* nocapture readonly %x, i8* nocapture readonly %y)  {
-; ALL-LABEL: @cmp3(
-; ALL-NEXT:    [[CALL:%.*]] = tail call i32 @memcmp(i8* [[X:%.*]], i8* [[Y:%.*]], i64 3)
-; ALL-NEXT:    ret i32 [[CALL]]
+; X32-LABEL: @cmp3(
+; X32-NEXT:  loadbb:
+; X32-NEXT:    [[TMP0:%.*]] = bitcast i8* [[X:%.*]] to i16*
+; X32-NEXT:    [[TMP1:%.*]] = bitcast i8* [[Y:%.*]] to i16*
+; X32-NEXT:    [[TMP2:%.*]] = load i16, i16* [[TMP0]]
+; X32-NEXT:    [[TMP3:%.*]] = load i16, i16* [[TMP1]]
+; X32-NEXT:    [[TMP4:%.*]] = call i16 @llvm.bswap.i16(i16 [[TMP2]])
+; X32-NEXT:    [[TMP5:%.*]] = call i16 @llvm.bswap.i16(i16 [[TMP3]])
+; X32-NEXT:    [[TMP6:%.*]] = zext i16 [[TMP4]] to i32
+; X32-NEXT:    [[TMP7:%.*]] = zext i16 [[TMP5]] to i32
+; X32-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[TMP6]], [[TMP7]]
+; X32-NEXT:    br i1 [[TMP8]], label [[LOADBB1:%.*]], label [[RES_BLOCK:%.*]]
+; X32:       res_block:
+; X32-NEXT:    [[TMP9:%.*]] = icmp ult i32 [[TMP6]], [[TMP7]]
+; X32-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], i32 -1, i32 1
+; X32-NEXT:    br label [[ENDBLOCK:%.*]]
+; X32:       loadbb1:
+; X32-NEXT:    [[TMP11:%.*]] = getelementptr i8, i8* [[X]], i8 2
+; X32-NEXT:    [[TMP12:%.*]] = getelementptr i8, i8* [[Y]], i8 2
+; X32-NEXT:    [[TMP13:%.*]] = load i8, i8* [[TMP11]]
+; X32-NEXT:    [[TMP14:%.*]] = load i8, i8* [[TMP12]]
+; X32-NEXT:    [[TMP15:%.*]] = zext i8 [[TMP13]] to i32
+; X32-NEXT:    [[TMP16:%.*]] = zext i8 [[TMP14]] to i32
+; X32-NEXT:    [[TMP17:%.*]] = sub i32 [[TMP15]], [[TMP16]]
+; X32-NEXT:    br label [[ENDBLOCK]]
+; X32:       endblock:
+; X32-NEXT:    [[PHI_RES:%.*]] = phi i32 [ [[TMP17]], [[LOADBB1]] ], [ [[TMP10]], [[RES_BLOCK]] ]
+; X32-NEXT:    ret i32 [[PHI_RES]]
+;
+; X64-LABEL: @cmp3(
+; X64-NEXT:  loadbb:
+; X64-NEXT:    [[TMP0:%.*]] = bitcast i8* [[X:%.*]] to i16*
+; X64-NEXT:    [[TMP1:%.*]] = bitcast i8* [[Y:%.*]] to i16*
+; X64-NEXT:    [[TMP2:%.*]] = load i16, i16* [[TMP0]]
+; X64-NEXT:    [[TMP3:%.*]] = load i16, i16* [[TMP1]]
+; X64-NEXT:    [[TMP4:%.*]] = call i16 @llvm.bswap.i16(i16 [[TMP2]])
+; X64-NEXT:    [[TMP5:%.*]] = call i16 @llvm.bswap.i16(i16 [[TMP3]])
+; X64-NEXT:    [[TMP6:%.*]] = zext i16 [[TMP4]] to i64
+; X64-NEXT:    [[TMP7:%.*]] = zext i16 [[TMP5]] to i64
+; X64-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[TMP6]], [[TMP7]]
+; X64-NEXT:    br i1 [[TMP8]], label [[LOADBB1:%.*]], label [[RES_BLOCK:%.*]]
+; X64:       res_block:
+; X64-NEXT:    [[TMP9:%.*]] = icmp ult i64 [[TMP6]], [[TMP7]]
+; X64-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], i32 -1, i32 1
+; X64-NEXT:    br label [[ENDBLOCK:%.*]]
+; X64:       loadbb1:
+; X64-NEXT:    [[TMP11:%.*]] = getelementptr i8, i8* [[X]], i8 2
+; X64-NEXT:    [[TMP12:%.*]] = getelementptr i8, i8* [[Y]], i8 2
+; X64-NEXT:    [[TMP13:%.*]] = load i8, i8* [[TMP11]]
+; X64-NEXT:    [[TMP14:%.*]] = load i8, i8* [[TMP12]]
+; X64-NEXT:    [[TMP15:%.*]] = zext i8 [[TMP13]] to i32
+; X64-NEXT:    [[TMP16:%.*]] = zext i8 [[TMP14]] to i32
+; X64-NEXT:    [[TMP17:%.*]] = sub i32 [[TMP15]], [[TMP16]]
+; X64-NEXT:    br label [[ENDBLOCK]]
+; X64:       endblock:
+; X64-NEXT:    [[PHI_RES:%.*]] = phi i32 [ [[TMP17]], [[LOADBB1]] ], [ [[TMP10]], [[RES_BLOCK]] ]
+; X64-NEXT:    ret i32 [[PHI_RES]]
 ;
   %call = tail call i32 @memcmp(i8* %x, i8* %y, i64 3)
   ret i32 %call
@@ -50,27 +104,225 @@ define i32 @cmp4(i8* nocapture readonly %x, i8* nocapture readonly %y)  {
 }
 
 define i32 @cmp5(i8* nocapture readonly %x, i8* nocapture readonly %y)  {
-; ALL-LABEL: @cmp5(
-; ALL-NEXT:    [[CALL:%.*]] = tail call i32 @memcmp(i8* [[X:%.*]], i8* [[Y:%.*]], i64 5)
-; ALL-NEXT:    ret i32 [[CALL]]
+; X32-LABEL: @cmp5(
+; X32-NEXT:  loadbb:
+; X32-NEXT:    [[TMP0:%.*]] = bitcast i8* [[X:%.*]] to i32*
+; X32-NEXT:    [[TMP1:%.*]] = bitcast i8* [[Y:%.*]] to i32*
+; X32-NEXT:    [[TMP2:%.*]] = load i32, i32* [[TMP0]]
+; X32-NEXT:    [[TMP3:%.*]] = load i32, i32* [[TMP1]]
+; X32-NEXT:    [[TMP4:%.*]] = call i32 @llvm.bswap.i32(i32 [[TMP2]])
+; X32-NEXT:    [[TMP5:%.*]] = call i32 @llvm.bswap.i32(i32 [[TMP3]])
+; X32-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP4]], [[TMP5]]
+; X32-NEXT:    br i1 [[TMP6]], label [[LOADBB1:%.*]], label [[RES_BLOCK:%.*]]
+; X32:       res_block:
+; X32-NEXT:    [[TMP7:%.*]] = icmp ult i32 [[TMP4]], [[TMP5]]
+; X32-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], i32 -1, i32 1
+; X32-NEXT:    br label [[ENDBLOCK:%.*]]
+; X32:       loadbb1:
+; X32-NEXT:    [[TMP9:%.*]] = getelementptr i8, i8* [[X]], i8 4
+; X32-NEXT:    [[TMP10:%.*]] = getelementptr i8, i8* [[Y]], i8 4
+; X32-NEXT:    [[TMP11:%.*]] = load i8, i8* [[TMP9]]
+; X32-NEXT:    [[TMP12:%.*]] = load i8, i8* [[TMP10]]
+; X32-NEXT:    [[TMP13:%.*]] = zext i8 [[TMP11]] to i32
+; X32-NEXT:    [[TMP14:%.*]] = zext i8 [[TMP12]] to i32
+; X32-NEXT:    [[TMP15:%.*]] = sub i32 [[TMP13]], [[TMP14]]
+; X32-NEXT:    br label [[ENDBLOCK]]
+; X32:       endblock:
+; X32-NEXT:    [[PHI_RES:%.*]] = phi i32 [ [[TMP15]], [[LOADBB1]] ], [ [[TMP8]], [[RES_BLOCK]] ]
+; X32-NEXT:    ret i32 [[PHI_RES]]
+;
+; X64-LABEL: @cmp5(
+; X64-NEXT:  loadbb:
+; X64-NEXT:    [[TMP0:%.*]] = bitcast i8* [[X:%.*]] to i32*
+; X64-NEXT:    [[TMP1:%.*]] = bitcast i8* [[Y:%.*]] to i32*
+; X64-NEXT:    [[TMP2:%.*]] = load i32, i32* [[TMP0]]
+; X64-NEXT:    [[TMP3:%.*]] = load i32, i32* [[TMP1]]
+; X64-NEXT:    [[TMP4:%.*]] = call i32 @llvm.bswap.i32(i32 [[TMP2]])
+; X64-NEXT:    [[TMP5:%.*]] = call i32 @llvm.bswap.i32(i32 [[TMP3]])
+; X64-NEXT:    [[TMP6:%.*]] = zext i32 [[TMP4]] to i64
+; X64-NEXT:    [[TMP7:%.*]] = zext i32 [[TMP5]] to i64
+; X64-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[TMP6]], [[TMP7]]
+; X64-NEXT:    br i1 [[TMP8]], label [[LOADBB1:%.*]], label [[RES_BLOCK:%.*]]
+; X64:       res_block:
+; X64-NEXT:    [[TMP9:%.*]] = icmp ult i64 [[TMP6]], [[TMP7]]
+; X64-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], i32 -1, i32 1
+; X64-NEXT:    br label [[ENDBLOCK:%.*]]
+; X64:       loadbb1:
+; X64-NEXT:    [[TMP11:%.*]] = getelementptr i8, i8* [[X]], i8 4
+; X64-NEXT:    [[TMP12:%.*]] = getelementptr i8, i8* [[Y]], i8 4
+; X64-NEXT:    [[TMP13:%.*]] = load i8, i8* [[TMP11]]
+; X64-NEXT:    [[TMP14:%.*]] = load i8, i8* [[TMP12]]
+; X64-NEXT:    [[TMP15:%.*]] = zext i8 [[TMP13]] to i32
+; X64-NEXT:    [[TMP16:%.*]] = zext i8 [[TMP14]] to i32
+; X64-NEXT:    [[TMP17:%.*]] = sub i32 [[TMP15]], [[TMP16]]
+; X64-NEXT:    br label [[ENDBLOCK]]
+; X64:       endblock:
+; X64-NEXT:    [[PHI_RES:%.*]] = phi i32 [ [[TMP17]], [[LOADBB1]] ], [ [[TMP10]], [[RES_BLOCK]] ]
+; X64-NEXT:    ret i32 [[PHI_RES]]
 ;
   %call = tail call i32 @memcmp(i8* %x, i8* %y, i64 5)
   ret i32 %call
 }
 
 define i32 @cmp6(i8* nocapture readonly %x, i8* nocapture readonly %y)  {
-; ALL-LABEL: @cmp6(
-; ALL-NEXT:    [[CALL:%.*]] = tail call i32 @memcmp(i8* [[X:%.*]], i8* [[Y:%.*]], i64 6)
-; ALL-NEXT:    ret i32 [[CALL]]
+; X32-LABEL: @cmp6(
+; X32-NEXT:  loadbb:
+; X32-NEXT:    [[TMP0:%.*]] = bitcast i8* [[X:%.*]] to i32*
+; X32-NEXT:    [[TMP1:%.*]] = bitcast i8* [[Y:%.*]] to i32*
+; X32-NEXT:    [[TMP2:%.*]] = load i32, i32* [[TMP0]]
+; X32-NEXT:    [[TMP3:%.*]] = load i32, i32* [[TMP1]]
+; X32-NEXT:    [[TMP4:%.*]] = call i32 @llvm.bswap.i32(i32 [[TMP2]])
+; X32-NEXT:    [[TMP5:%.*]] = call i32 @llvm.bswap.i32(i32 [[TMP3]])
+; X32-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP4]], [[TMP5]]
+; X32-NEXT:    br i1 [[TMP6]], label [[LOADBB1:%.*]], label [[RES_BLOCK:%.*]]
+; X32:       res_block:
+; X32-NEXT:    [[PHI_SRC1:%.*]] = phi i32 [ [[TMP4]], [[LOADBB:%.*]] ], [ [[TMP17:%.*]], [[LOADBB1]] ]
+; X32-NEXT:    [[PHI_SRC2:%.*]] = phi i32 [ [[TMP5]], [[LOADBB]] ], [ [[TMP18:%.*]], [[LOADBB1]] ]
+; X32-NEXT:    [[TMP7:%.*]] = icmp ult i32 [[PHI_SRC1]], [[PHI_SRC2]]
+; X32-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], i32 -1, i32 1
+; X32-NEXT:    br label [[ENDBLOCK:%.*]]
+; X32:       loadbb1:
+; X32-NEXT:    [[TMP9:%.*]] = bitcast i8* [[X]] to i16*
+; X32-NEXT:    [[TMP10:%.*]] = bitcast i8* [[Y]] to i16*
+; X32-NEXT:    [[TMP11:%.*]] = getelementptr i16, i16* [[TMP9]], i16 2
+; X32-NEXT:    [[TMP12:%.*]] = getelementptr i16, i16* [[TMP10]], i16 2
+; X32-NEXT:    [[TMP13:%.*]] = load i16, i16* [[TMP11]]
+; X32-NEXT:    [[TMP14:%.*]] = load i16, i16* [[TMP12]]
+; X32-NEXT:    [[TMP15:%.*]] = call i16 @llvm.bswap.i16(i16 [[TMP13]])
+; X32-NEXT:    [[TMP16:%.*]] = call i16 @llvm.bswap.i16(i16 [[TMP14]])
+; X32-NEXT:    [[TMP17]] = zext i16 [[TMP15]] to i32
+; X32-NEXT:    [[TMP18]] = zext i16 [[TMP16]] to i32
+; X32-NEXT:    [[TMP19:%.*]] = icmp eq i32 [[TMP17]], [[TMP18]]
+; X32-NEXT:    br i1 [[TMP19]], label [[ENDBLOCK]], label [[RES_BLOCK]]
+; X32:       endblock:
+; X32-NEXT:    [[PHI_RES:%.*]] = phi i32 [ 0, [[LOADBB1]] ], [ [[TMP8]], [[RES_BLOCK]] ]
+; X32-NEXT:    ret i32 [[PHI_RES]]
+;
+; X64-LABEL: @cmp6(
+; X64-NEXT:  loadbb:
+; X64-NEXT:    [[TMP0:%.*]] = bitcast i8* [[X:%.*]] to i32*
+; X64-NEXT:    [[TMP1:%.*]] = bitcast i8* [[Y:%.*]] to i32*
+; X64-NEXT:    [[TMP2:%.*]] = load i32, i32* [[TMP0]]
+; X64-NEXT:    [[TMP3:%.*]] = load i32, i32* [[TMP1]]
+; X64-NEXT:    [[TMP4:%.*]] = call i32 @llvm.bswap.i32(i32 [[TMP2]])
+; X64-NEXT:    [[TMP5:%.*]] = call i32 @llvm.bswap.i32(i32 [[TMP3]])
+; X64-NEXT:    [[TMP6:%.*]] = zext i32 [[TMP4]] to i64
+; X64-NEXT:    [[TMP7:%.*]] = zext i32 [[TMP5]] to i64
+; X64-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[TMP6]], [[TMP7]]
+; X64-NEXT:    br i1 [[TMP8]], label [[LOADBB1:%.*]], label [[RES_BLOCK:%.*]]
+; X64:       res_block:
+; X64-NEXT:    [[PHI_SRC1:%.*]] = phi i64 [ [[TMP6]], [[LOADBB:%.*]] ], [ [[TMP19:%.*]], [[LOADBB1]] ]
+; X64-NEXT:    [[PHI_SRC2:%.*]] = phi i64 [ [[TMP7]], [[LOADBB]] ], [ [[TMP20:%.*]], [[LOADBB1]] ]
+; X64-NEXT:    [[TMP9:%.*]] = icmp ult i64 [[PHI_SRC1]], [[PHI_SRC2]]
+; X64-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], i32 -1, i32 1
+; X64-NEXT:    br label [[ENDBLOCK:%.*]]
+; X64:       loadbb1:
+; X64-NEXT:    [[TMP11:%.*]] = bitcast i8* [[X]] to i16*
+; X64-NEXT:    [[TMP12:%.*]] = bitcast i8* [[Y]] to i16*
+; X64-NEXT:    [[TMP13:%.*]] = getelementptr i16, i16* [[TMP11]], i16 2
+; X64-NEXT:    [[TMP14:%.*]] = getelementptr i16, i16* [[TMP12]], i16 2
+; X64-NEXT:    [[TMP15:%.*]] = load i16, i16* [[TMP13]]
+; X64-NEXT:    [[TMP16:%.*]] = load i16, i16* [[TMP14]]
+; X64-NEXT:    [[TMP17:%.*]] = call i16 @llvm.bswap.i16(i16 [[TMP15]])
+; X64-NEXT:    [[TMP18:%.*]] = call i16 @llvm.bswap.i16(i16 [[TMP16]])
+; X64-NEXT:    [[TMP19]] = zext i16 [[TMP17]] to i64
+; X64-NEXT:    [[TMP20]] = zext i16 [[TMP18]] to i64
+; X64-NEXT:    [[TMP21:%.*]] = icmp eq i64 [[TMP19]], [[TMP20]]
+; X64-NEXT:    br i1 [[TMP21]], label [[ENDBLOCK]], label [[RES_BLOCK]]
+; X64:       endblock:
+; X64-NEXT:    [[PHI_RES:%.*]] = phi i32 [ 0, [[LOADBB1]] ], [ [[TMP10]], [[RES_BLOCK]] ]
+; X64-NEXT:    ret i32 [[PHI_RES]]
 ;
   %call = tail call i32 @memcmp(i8* %x, i8* %y, i64 6)
   ret i32 %call
 }
 
 define i32 @cmp7(i8* nocapture readonly %x, i8* nocapture readonly %y)  {
-; ALL-LABEL: @cmp7(
-; ALL-NEXT:    [[CALL:%.*]] = tail call i32 @memcmp(i8* [[X:%.*]], i8* [[Y:%.*]], i64 7)
-; ALL-NEXT:    ret i32 [[CALL]]
+; X32-LABEL: @cmp7(
+; X32-NEXT:  loadbb:
+; X32-NEXT:    [[TMP0:%.*]] = bitcast i8* [[X:%.*]] to i32*
+; X32-NEXT:    [[TMP1:%.*]] = bitcast i8* [[Y:%.*]] to i32*
+; X32-NEXT:    [[TMP2:%.*]] = load i32, i32* [[TMP0]]
+; X32-NEXT:    [[TMP3:%.*]] = load i32, i32* [[TMP1]]
+; X32-NEXT:    [[TMP4:%.*]] = call i32 @llvm.bswap.i32(i32 [[TMP2]])
+; X32-NEXT:    [[TMP5:%.*]] = call i32 @llvm.bswap.i32(i32 [[TMP3]])
+; X32-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP4]], [[TMP5]]
+; X32-NEXT:    br i1 [[TMP6]], label [[LOADBB1:%.*]], label [[RES_BLOCK:%.*]]
+; X32:       res_block:
+; X32-NEXT:    [[PHI_SRC1:%.*]] = phi i32 [ [[TMP4]], [[LOADBB:%.*]] ], [ [[TMP17:%.*]], [[LOADBB1]] ]
+; X32-NEXT:    [[PHI_SRC2:%.*]] = phi i32 [ [[TMP5]], [[LOADBB]] ], [ [[TMP18:%.*]], [[LOADBB1]] ]
+; X32-NEXT:    [[TMP7:%.*]] = icmp ult i32 [[PHI_SRC1]], [[PHI_SRC2]]
+; X32-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], i32 -1, i32 1
+; X32-NEXT:    br label [[ENDBLOCK:%.*]]
+; X32:       loadbb1:
+; X32-NEXT:    [[TMP9:%.*]] = bitcast i8* [[X]] to i16*
+; X32-NEXT:    [[TMP10:%.*]] = bitcast i8* [[Y]] to i16*
+; X32-NEXT:    [[TMP11:%.*]] = getelementptr i16, i16* [[TMP9]], i16 2
+; X32-NEXT:    [[TMP12:%.*]] = getelementptr i16, i16* [[TMP10]], i16 2
+; X32-NEXT:    [[TMP13:%.*]] = load i16, i16* [[TMP11]]
+; X32-NEXT:    [[TMP14:%.*]] = load i16, i16* [[TMP12]]
+; X32-NEXT:    [[TMP15:%.*]] = call i16 @llvm.bswap.i16(i16 [[TMP13]])
+; X32-NEXT:    [[TMP16:%.*]] = call i16 @llvm.bswap.i16(i16 [[TMP14]])
+; X32-NEXT:    [[TMP17]] = zext i16 [[TMP15]] to i32
+; X32-NEXT:    [[TMP18]] = zext i16 [[TMP16]] to i32
+; X32-NEXT:    [[TMP19:%.*]] = icmp eq i32 [[TMP17]], [[TMP18]]
+; X32-NEXT:    br i1 [[TMP19]], label [[LOADBB2:%.*]], label [[RES_BLOCK]]
+; X32:       loadbb2:
+; X32-NEXT:    [[TMP20:%.*]] = getelementptr i8, i8* [[X]], i8 6
+; X32-NEXT:    [[TMP21:%.*]] = getelementptr i8, i8* [[Y]], i8 6
+; X32-NEXT:    [[TMP22:%.*]] = load i8, i8* [[TMP20]]
+; X32-NEXT:    [[TMP23:%.*]] = load i8, i8* [[TMP21]]
+; X32-NEXT:    [[TMP24:%.*]] = zext i8 [[TMP22]] to i32
+; X32-NEXT:    [[TMP25:%.*]] = zext i8 [[TMP23]] to i32
+; X32-NEXT:    [[TMP26:%.*]] = sub i32 [[TMP24]], [[TMP25]]
+; X32-NEXT:    br label [[ENDBLOCK]]
+; X32:       endblock:
+; X32-NEXT:    [[PHI_RES:%.*]] = phi i32 [ [[TMP26]], [[LOADBB2]] ], [ [[TMP8]], [[RES_BLOCK]] ]
+; X32-NEXT:    ret i32 [[PHI_RES]]
+;
+; X64-LABEL: @cmp7(
+; X64-NEXT:  loadbb:
+; X64-NEXT:    [[TMP0:%.*]] = bitcast i8* [[X:%.*]] to i32*
+; X64-NEXT:    [[TMP1:%.*]] = bitcast i8* [[Y:%.*]] to i32*
+; X64-NEXT:    [[TMP2:%.*]] = load i32, i32* [[TMP0]]
+; X64-NEXT:    [[TMP3:%.*]] = load i32, i32* [[TMP1]]
+; X64-NEXT:    [[TMP4:%.*]] = call i32 @llvm.bswap.i32(i32 [[TMP2]])
+; X64-NEXT:    [[TMP5:%.*]] = call i32 @llvm.bswap.i32(i32 [[TMP3]])
+; X64-NEXT:    [[TMP6:%.*]] = zext i32 [[TMP4]] to i64
+; X64-NEXT:    [[TMP7:%.*]] = zext i32 [[TMP5]] to i64
+; X64-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[TMP6]], [[TMP7]]
+; X64-NEXT:    br i1 [[TMP8]], label [[LOADBB1:%.*]], label [[RES_BLOCK:%.*]]
+; X64:       res_block:
+; X64-NEXT:    [[PHI_SRC1:%.*]] = phi i64 [ [[TMP6]], [[LOADBB:%.*]] ], [ [[TMP19:%.*]], [[LOADBB1]] ]
+; X64-NEXT:    [[PHI_SRC2:%.*]] = phi i64 [ [[TMP7]], [[LOADBB]] ], [ [[TMP20:%.*]], [[LOADBB1]] ]
+; X64-NEXT:    [[TMP9:%.*]] = icmp ult i64 [[PHI_SRC1]], [[PHI_SRC2]]
+; X64-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], i32 -1, i32 1
+; X64-NEXT:    br label [[ENDBLOCK:%.*]]
+; X64:       loadbb1:
+; X64-NEXT:    [[TMP11:%.*]] = bitcast i8* [[X]] to i16*
+; X64-NEXT:    [[TMP12:%.*]] = bitcast i8* [[Y]] to i16*
+; X64-NEXT:    [[TMP13:%.*]] = getelementptr i16, i16* [[TMP11]], i16 2
+; X64-NEXT:    [[TMP14:%.*]] = getelementptr i16, i16* [[TMP12]], i16 2
+; X64-NEXT:    [[TMP15:%.*]] = load i16, i16* [[TMP13]]
+; X64-NEXT:    [[TMP16:%.*]] = load i16, i16* [[TMP14]]
+; X64-NEXT:    [[TMP17:%.*]] = call i16 @llvm.bswap.i16(i16 [[TMP15]])
+; X64-NEXT:    [[TMP18:%.*]] = call i16 @llvm.bswap.i16(i16 [[TMP16]])
+; X64-NEXT:    [[TMP19]] = zext i16 [[TMP17]] to i64
+; X64-NEXT:    [[TMP20]] = zext i16 [[TMP18]] to i64
+; X64-NEXT:    [[TMP21:%.*]] = icmp eq i64 [[TMP19]], [[TMP20]]
+; X64-NEXT:    br i1 [[TMP21]], label [[LOADBB2:%.*]], label [[RES_BLOCK]]
+; X64:       loadbb2:
+; X64-NEXT:    [[TMP22:%.*]] = getelementptr i8, i8* [[X]], i8 6
+; X64-NEXT:    [[TMP23:%.*]] = getelementptr i8, i8* [[Y]], i8 6
+; X64-NEXT:    [[TMP24:%.*]] = load i8, i8* [[TMP22]]
+; X64-NEXT:    [[TMP25:%.*]] = load i8, i8* [[TMP23]]
+; X64-NEXT:    [[TMP26:%.*]] = zext i8 [[TMP24]] to i32
+; X64-NEXT:    [[TMP27:%.*]] = zext i8 [[TMP25]] to i32
+; X64-NEXT:    [[TMP28:%.*]] = sub i32 [[TMP26]], [[TMP27]]
+; X64-NEXT:    br label [[ENDBLOCK]]
+; X64:       endblock:
+; X64-NEXT:    [[PHI_RES:%.*]] = phi i32 [ [[TMP28]], [[LOADBB2]] ], [ [[TMP10]], [[RES_BLOCK]] ]
+; X64-NEXT:    ret i32 [[PHI_RES]]
 ;
   %call = tail call i32 @memcmp(i8* %x, i8* %y, i64 7)
   ret i32 %call
@@ -78,8 +330,35 @@ define i32 @cmp7(i8* nocapture readonly %x, i8* nocapture readonly %y)  {
 
 define i32 @cmp8(i8* nocapture readonly %x, i8* nocapture readonly %y)  {
 ; X32-LABEL: @cmp8(
-; X32-NEXT:    [[CALL:%.*]] = tail call i32 @memcmp(i8* [[X:%.*]], i8* [[Y:%.*]], i64 8)
-; X32-NEXT:    ret i32 [[CALL]]
+; X32-NEXT:  loadbb:
+; X32-NEXT:    [[TMP0:%.*]] = bitcast i8* [[X:%.*]] to i32*
+; X32-NEXT:    [[TMP1:%.*]] = bitcast i8* [[Y:%.*]] to i32*
+; X32-NEXT:    [[TMP2:%.*]] = load i32, i32* [[TMP0]]
+; X32-NEXT:    [[TMP3:%.*]] = load i32, i32* [[TMP1]]
+; X32-NEXT:    [[TMP4:%.*]] = call i32 @llvm.bswap.i32(i32 [[TMP2]])
+; X32-NEXT:    [[TMP5:%.*]] = call i32 @llvm.bswap.i32(i32 [[TMP3]])
+; X32-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP4]], [[TMP5]]
+; X32-NEXT:    br i1 [[TMP6]], label [[LOADBB1:%.*]], label [[RES_BLOCK:%.*]]
+; X32:       res_block:
+; X32-NEXT:    [[PHI_SRC1:%.*]] = phi i32 [ [[TMP4]], [[LOADBB:%.*]] ], [ [[TMP15:%.*]], [[LOADBB1]] ]
+; X32-NEXT:    [[PHI_SRC2:%.*]] = phi i32 [ [[TMP5]], [[LOADBB]] ], [ [[TMP16:%.*]], [[LOADBB1]] ]
+; X32-NEXT:    [[TMP7:%.*]] = icmp ult i32 [[PHI_SRC1]], [[PHI_SRC2]]
+; X32-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], i32 -1, i32 1
+; X32-NEXT:    br label [[ENDBLOCK:%.*]]
+; X32:       loadbb1:
+; X32-NEXT:    [[TMP9:%.*]] = bitcast i8* [[X]] to i32*
+; X32-NEXT:    [[TMP10:%.*]] = bitcast i8* [[Y]] to i32*
+; X32-NEXT:    [[TMP11:%.*]] = getelementptr i32, i32* [[TMP9]], i32 1
+; X32-NEXT:    [[TMP12:%.*]] = getelementptr i32, i32* [[TMP10]], i32 1
+; X32-NEXT:    [[TMP13:%.*]] = load i32, i32* [[TMP11]]
+; X32-NEXT:    [[TMP14:%.*]] = load i32, i32* [[TMP12]]
+; X32-NEXT:    [[TMP15]] = call i32 @llvm.bswap.i32(i32 [[TMP13]])
+; X32-NEXT:    [[TMP16]] = call i32 @llvm.bswap.i32(i32 [[TMP14]])
+; X32-NEXT:    [[TMP17:%.*]] = icmp eq i32 [[TMP15]], [[TMP16]]
+; X32-NEXT:    br i1 [[TMP17]], label [[ENDBLOCK]], label [[RES_BLOCK]]
+; X32:       endblock:
+; X32-NEXT:    [[PHI_RES:%.*]] = phi i32 [ 0, [[LOADBB1]] ], [ [[TMP8]], [[RES_BLOCK]] ]
+; X32-NEXT:    ret i32 [[PHI_RES]]
 ;
 ; X64-LABEL: @cmp8(
 ; X64-NEXT:    [[TMP1:%.*]] = bitcast i8* [[X:%.*]] to i64*
@@ -99,72 +378,691 @@ define i32 @cmp8(i8* nocapture readonly %x, i8* nocapture readonly %y)  {
 }
 
 define i32 @cmp9(i8* nocapture readonly %x, i8* nocapture readonly %y)  {
-; ALL-LABEL: @cmp9(
-; ALL-NEXT:    [[CALL:%.*]] = tail call i32 @memcmp(i8* [[X:%.*]], i8* [[Y:%.*]], i64 9)
-; ALL-NEXT:    ret i32 [[CALL]]
+; X32-LABEL: @cmp9(
+; X32-NEXT:  loadbb:
+; X32-NEXT:    [[TMP0:%.*]] = bitcast i8* [[X:%.*]] to i32*
+; X32-NEXT:    [[TMP1:%.*]] = bitcast i8* [[Y:%.*]] to i32*
+; X32-NEXT:    [[TMP2:%.*]] = load i32, i32* [[TMP0]]
+; X32-NEXT:    [[TMP3:%.*]] = load i32, i32* [[TMP1]]
+; X32-NEXT:    [[TMP4:%.*]] = call i32 @llvm.bswap.i32(i32 [[TMP2]])
+; X32-NEXT:    [[TMP5:%.*]] = call i32 @llvm.bswap.i32(i32 [[TMP3]])
+; X32-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP4]], [[TMP5]]
+; X32-NEXT:    br i1 [[TMP6]], label [[LOADBB1:%.*]], label [[RES_BLOCK:%.*]]
+; X32:       res_block:
+; X32-NEXT:    [[PHI_SRC1:%.*]] = phi i32 [ [[TMP4]], [[LOADBB:%.*]] ], [ [[TMP15:%.*]], [[LOADBB1]] ]
+; X32-NEXT:    [[PHI_SRC2:%.*]] = phi i32 [ [[TMP5]], [[LOADBB]] ], [ [[TMP16:%.*]], [[LOADBB1]] ]
+; X32-NEXT:    [[TMP7:%.*]] = icmp ult i32 [[PHI_SRC1]], [[PHI_SRC2]]
+; X32-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], i32 -1, i32 1
+; X32-NEXT:    br label [[ENDBLOCK:%.*]]
+; X32:       loadbb1:
+; X32-NEXT:    [[TMP9:%.*]] = bitcast i8* [[X]] to i32*
+; X32-NEXT:    [[TMP10:%.*]] = bitcast i8* [[Y]] to i32*
+; X32-NEXT:    [[TMP11:%.*]] = getelementptr i32, i32* [[TMP9]], i32 1
+; X32-NEXT:    [[TMP12:%.*]] = getelementptr i32, i32* [[TMP10]], i32 1
+; X32-NEXT:    [[TMP13:%.*]] = load i32, i32* [[TMP11]]
+; X32-NEXT:    [[TMP14:%.*]] = load i32, i32* [[TMP12]]
+; X32-NEXT:    [[TMP15]] = call i32 @llvm.bswap.i32(i32 [[TMP13]])
+; X32-NEXT:    [[TMP16]] = call i32 @llvm.bswap.i32(i32 [[TMP14]])
+; X32-NEXT:    [[TMP17:%.*]] = icmp eq i32 [[TMP15]], [[TMP16]]
+; X32-NEXT:    br i1 [[TMP17]], label [[LOADBB2:%.*]], label [[RES_BLOCK]]
+; X32:       loadbb2:
+; X32-NEXT:    [[TMP18:%.*]] = getelementptr i8, i8* [[X]], i8 8
+; X32-NEXT:    [[TMP19:%.*]] = getelementptr i8, i8* [[Y]], i8 8
+; X32-NEXT:    [[TMP20:%.*]] = load i8, i8* [[TMP18]]
+; X32-NEXT:    [[TMP21:%.*]] = load i8, i8* [[TMP19]]
+; X32-NEXT:    [[TMP22:%.*]] = zext i8 [[TMP20]] to i32
+; X32-NEXT:    [[TMP23:%.*]] = zext i8 [[TMP21]] to i32
+; X32-NEXT:    [[TMP24:%.*]] = sub i32 [[TMP22]], [[TMP23]]
+; X32-NEXT:    br label [[ENDBLOCK]]
+; X32:       endblock:
+; X32-NEXT:    [[PHI_RES:%.*]] = phi i32 [ [[TMP24]], [[LOADBB2]] ], [ [[TMP8]], [[RES_BLOCK]] ]
+; X32-NEXT:    ret i32 [[PHI_RES]]
+;
+; X64-LABEL: @cmp9(
+; X64-NEXT:  loadbb:
+; X64-NEXT:    [[TMP0:%.*]] = bitcast i8* [[X:%.*]] to i64*
+; X64-NEXT:    [[TMP1:%.*]] = bitcast i8* [[Y:%.*]] to i64*
+; X64-NEXT:    [[TMP2:%.*]] = load i64, i64* [[TMP0]]
+; X64-NEXT:    [[TMP3:%.*]] = load i64, i64* [[TMP1]]
+; X64-NEXT:    [[TMP4:%.*]] = call i64 @llvm.bswap.i64(i64 [[TMP2]])
+; X64-NEXT:    [[TMP5:%.*]] = call i64 @llvm.bswap.i64(i64 [[TMP3]])
+; X64-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[TMP4]], [[TMP5]]
+; X64-NEXT:    br i1 [[TMP6]], label [[LOADBB1:%.*]], label [[RES_BLOCK:%.*]]
+; X64:       res_block:
+; X64-NEXT:    [[TMP7:%.*]] = icmp ult i64 [[TMP4]], [[TMP5]]
+; X64-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], i32 -1, i32 1
+; X64-NEXT:    br label [[ENDBLOCK:%.*]]
+; X64:       loadbb1:
+; X64-NEXT:    [[TMP9:%.*]] = getelementptr i8, i8* [[X]], i8 8
+; X64-NEXT:    [[TMP10:%.*]] = getelementptr i8, i8* [[Y]], i8 8
+; X64-NEXT:    [[TMP11:%.*]] = load i8, i8* [[TMP9]]
+; X64-NEXT:    [[TMP12:%.*]] = load i8, i8* [[TMP10]]
+; X64-NEXT:    [[TMP13:%.*]] = zext i8 [[TMP11]] to i32
+; X64-NEXT:    [[TMP14:%.*]] = zext i8 [[TMP12]] to i32
+; X64-NEXT:    [[TMP15:%.*]] = sub i32 [[TMP13]], [[TMP14]]
+; X64-NEXT:    br label [[ENDBLOCK]]
+; X64:       endblock:
+; X64-NEXT:    [[PHI_RES:%.*]] = phi i32 [ [[TMP15]], [[LOADBB1]] ], [ [[TMP8]], [[RES_BLOCK]] ]
+; X64-NEXT:    ret i32 [[PHI_RES]]
 ;
   %call = tail call i32 @memcmp(i8* %x, i8* %y, i64 9)
   ret i32 %call
 }
 
 define i32 @cmp10(i8* nocapture readonly %x, i8* nocapture readonly %y)  {
-; ALL-LABEL: @cmp10(
-; ALL-NEXT:    [[CALL:%.*]] = tail call i32 @memcmp(i8* [[X:%.*]], i8* [[Y:%.*]], i64 10)
-; ALL-NEXT:    ret i32 [[CALL]]
+; X32-LABEL: @cmp10(
+; X32-NEXT:  loadbb:
+; X32-NEXT:    [[TMP0:%.*]] = bitcast i8* [[X:%.*]] to i32*
+; X32-NEXT:    [[TMP1:%.*]] = bitcast i8* [[Y:%.*]] to i32*
+; X32-NEXT:    [[TMP2:%.*]] = load i32, i32* [[TMP0]]
+; X32-NEXT:    [[TMP3:%.*]] = load i32, i32* [[TMP1]]
+; X32-NEXT:    [[TMP4:%.*]] = call i32 @llvm.bswap.i32(i32 [[TMP2]])
+; X32-NEXT:    [[TMP5:%.*]] = call i32 @llvm.bswap.i32(i32 [[TMP3]])
+; X32-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP4]], [[TMP5]]
+; X32-NEXT:    br i1 [[TMP6]], label [[LOADBB1:%.*]], label [[RES_BLOCK:%.*]]
+; X32:       res_block:
+; X32-NEXT:    [[PHI_SRC1:%.*]] = phi i32 [ [[TMP4]], [[LOADBB:%.*]] ], [ [[TMP15:%.*]], [[LOADBB1]] ], [ [[TMP26:%.*]], [[LOADBB2:%.*]] ]
+; X32-NEXT:    [[PHI_SRC2:%.*]] = phi i32 [ [[TMP5]], [[LOADBB]] ], [ [[TMP16:%.*]], [[LOADBB1]] ], [ [[TMP27:%.*]], [[LOADBB2]] ]
+; X32-NEXT:    [[TMP7:%.*]] = icmp ult i32 [[PHI_SRC1]], [[PHI_SRC2]]
+; X32-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], i32 -1, i32 1
+; X32-NEXT:    br label [[ENDBLOCK:%.*]]
+; X32:       loadbb1:
+; X32-NEXT:    [[TMP9:%.*]] = bitcast i8* [[X]] to i32*
+; X32-NEXT:    [[TMP10:%.*]] = bitcast i8* [[Y]] to i32*
+; X32-NEXT:    [[TMP11:%.*]] = getelementptr i32, i32* [[TMP9]], i32 1
+; X32-NEXT:    [[TMP12:%.*]] = getelementptr i32, i32* [[TMP10]], i32 1
+; X32-NEXT:    [[TMP13:%.*]] = load i32, i32* [[TMP11]]
+; X32-NEXT:    [[TMP14:%.*]] = load i32, i32* [[TMP12]]
+; X32-NEXT:    [[TMP15]] = call i32 @llvm.bswap.i32(i32 [[TMP13]])
+; X32-NEXT:    [[TMP16]] = call i32 @llvm.bswap.i32(i32 [[TMP14]])
+; X32-NEXT:    [[TMP17:%.*]] = icmp eq i32 [[TMP15]], [[TMP16]]
+; X32-NEXT:    br i1 [[TMP17]], label [[LOADBB2]], label [[RES_BLOCK]]
+; X32:       loadbb2:
+; X32-NEXT:    [[TMP18:%.*]] = bitcast i8* [[X]] to i16*
+; X32-NEXT:    [[TMP19:%.*]] = bitcast i8* [[Y]] to i16*
+; X32-NEXT:    [[TMP20:%.*]] = getelementptr i16, i16* [[TMP18]], i16 4
+; X32-NEXT:    [[TMP21:%.*]] = getelementptr i16, i16* [[TMP19]], i16 4
+; X32-NEXT:    [[TMP22:%.*]] = load i16, i16* [[TMP20]]
+; X32-NEXT:    [[TMP23:%.*]] = load i16, i16* [[TMP21]]
+; X32-NEXT:    [[TMP24:%.*]] = call i16 @llvm.bswap.i16(i16 [[TMP22]])
+; X32-NEXT:    [[TMP25:%.*]] = call i16 @llvm.bswap.i16(i16 [[TMP23]])
+; X32-NEXT:    [[TMP26]] = zext i16 [[TMP24]] to i32
+; X32-NEXT:    [[TMP27]] = zext i16 [[TMP25]] to i32
+; X32-NEXT:    [[TMP28:%.*]] = icmp eq i32 [[TMP26]], [[TMP27]]
+; X32-NEXT:    br i1 [[TMP28]], label [[ENDBLOCK]], label [[RES_BLOCK]]
+; X32:       endblock:
+; X32-NEXT:    [[PHI_RES:%.*]] = phi i32 [ 0, [[LOADBB2]] ], [ [[TMP8]], [[RES_BLOCK]] ]
+; X32-NEXT:    ret i32 [[PHI_RES]]
+;
+; X64-LABEL: @cmp10(
+; X64-NEXT:  loadbb:
+; X64-NEXT:    [[TMP0:%.*]] = bitcast i8* [[X:%.*]] to i64*
+; X64-NEXT:    [[TMP1:%.*]] = bitcast i8* [[Y:%.*]] to i64*
+; X64-NEXT:    [[TMP2:%.*]] = load i64, i64* [[TMP0]]
+; X64-NEXT:    [[TMP3:%.*]] = load i64, i64* [[TMP1]]
+; X64-NEXT:    [[TMP4:%.*]] = call i64 @llvm.bswap.i64(i64 [[TMP2]])
+; X64-NEXT:    [[TMP5:%.*]] = call i64 @llvm.bswap.i64(i64 [[TMP3]])
+; X64-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[TMP4]], [[TMP5]]
+; X64-NEXT:    br i1 [[TMP6]], label [[LOADBB1:%.*]], label [[RES_BLOCK:%.*]]
+; X64:       res_block:
+; X64-NEXT:    [[PHI_SRC1:%.*]] = phi i64 [ [[TMP4]], [[LOADBB:%.*]] ], [ [[TMP17:%.*]], [[LOADBB1]] ]
+; X64-NEXT:    [[PHI_SRC2:%.*]] = phi i64 [ [[TMP5]], [[LOADBB]] ], [ [[TMP18:%.*]], [[LOADBB1]] ]
+; X64-NEXT:    [[TMP7:%.*]] = icmp ult i64 [[PHI_SRC1]], [[PHI_SRC2]]
+; X64-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], i32 -1, i32 1
+; X64-NEXT:    br label [[ENDBLOCK:%.*]]
+; X64:       loadbb1:
+; X64-NEXT:    [[TMP9:%.*]] = bitcast i8* [[X]] to i16*
+; X64-NEXT:    [[TMP10:%.*]] = bitcast i8* [[Y]] to i16*
+; X64-NEXT:    [[TMP11:%.*]] = getelementptr i16, i16* [[TMP9]], i16 4
+; X64-NEXT:    [[TMP12:%.*]] = getelementptr i16, i16* [[TMP10]], i16 4
+; X64-NEXT:    [[TMP13:%.*]] = load i16, i16* [[TMP11]]
+; X64-NEXT:    [[TMP14:%.*]] = load i16, i16* [[TMP12]]
+; X64-NEXT:    [[TMP15:%.*]] = call i16 @llvm.bswap.i16(i16 [[TMP13]])
+; X64-NEXT:    [[TMP16:%.*]] = call i16 @llvm.bswap.i16(i16 [[TMP14]])
+; X64-NEXT:    [[TMP17]] = zext i16 [[TMP15]] to i64
+; X64-NEXT:    [[TMP18]] = zext i16 [[TMP16]] to i64
+; X64-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[TMP17]], [[TMP18]]
+; X64-NEXT:    br i1 [[TMP19]], label [[ENDBLOCK]], label [[RES_BLOCK]]
+; X64:       endblock:
+; X64-NEXT:    [[PHI_RES:%.*]] = phi i32 [ 0, [[LOADBB1]] ], [ [[TMP8]], [[RES_BLOCK]] ]
+; X64-NEXT:    ret i32 [[PHI_RES]]
 ;
   %call = tail call i32 @memcmp(i8* %x, i8* %y, i64 10)
   ret i32 %call
 }
 
 define i32 @cmp11(i8* nocapture readonly %x, i8* nocapture readonly %y)  {
-; ALL-LABEL: @cmp11(
-; ALL-NEXT:    [[CALL:%.*]] = tail call i32 @memcmp(i8* [[X:%.*]], i8* [[Y:%.*]], i64 11)
-; ALL-NEXT:    ret i32 [[CALL]]
+; X32-LABEL: @cmp11(
+; X32-NEXT:  loadbb:
+; X32-NEXT:    [[TMP0:%.*]] = bitcast i8* [[X:%.*]] to i32*
+; X32-NEXT:    [[TMP1:%.*]] = bitcast i8* [[Y:%.*]] to i32*
+; X32-NEXT:    [[TMP2:%.*]] = load i32, i32* [[TMP0]]
+; X32-NEXT:    [[TMP3:%.*]] = load i32, i32* [[TMP1]]
+; X32-NEXT:    [[TMP4:%.*]] = call i32 @llvm.bswap.i32(i32 [[TMP2]])
+; X32-NEXT:    [[TMP5:%.*]] = call i32 @llvm.bswap.i32(i32 [[TMP3]])
+; X32-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP4]], [[TMP5]]
+; X32-NEXT:    br i1 [[TMP6]], label [[LOADBB1:%.*]], label [[RES_BLOCK:%.*]]
+; X32:       res_block:
+; X32-NEXT:    [[PHI_SRC1:%.*]] = phi i32 [ [[TMP4]], [[LOADBB:%.*]] ], [ [[TMP15:%.*]], [[LOADBB1]] ], [ [[TMP26:%.*]], [[LOADBB2:%.*]] ]
+; X32-NEXT:    [[PHI_SRC2:%.*]] = phi i32 [ [[TMP5]], [[LOADBB]] ], [ [[TMP16:%.*]], [[LOADBB1]] ], [ [[TMP27:%.*]], [[LOADBB2]] ]
+; X32-NEXT:    [[TMP7:%.*]] = icmp ult i32 [[PHI_SRC1]], [[PHI_SRC2]]
+; X32-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], i32 -1, i32 1
+; X32-NEXT:    br label [[ENDBLOCK:%.*]]
+; X32:       loadbb1:
+; X32-NEXT:    [[TMP9:%.*]] = bitcast i8* [[X]] to i32*
+; X32-NEXT:    [[TMP10:%.*]] = bitcast i8* [[Y]] to i32*
+; X32-NEXT:    [[TMP11:%.*]] = getelementptr i32, i32* [[TMP9]], i32 1
+; X32-NEXT:    [[TMP12:%.*]] = getelementptr i32, i32* [[TMP10]], i32 1
+; X32-NEXT:    [[TMP13:%.*]] = load i32, i32* [[TMP11]]
+; X32-NEXT:    [[TMP14:%.*]] = load i32, i32* [[TMP12]]
+; X32-NEXT:    [[TMP15]] = call i32 @llvm.bswap.i32(i32 [[TMP13]])
+; X32-NEXT:    [[TMP16]] = call i32 @llvm.bswap.i32(i32 [[TMP14]])
+; X32-NEXT:    [[TMP17:%.*]] = icmp eq i32 [[TMP15]], [[TMP16]]
+; X32-NEXT:    br i1 [[TMP17]], label [[LOADBB2]], label [[RES_BLOCK]]
+; X32:       loadbb2:
+; X32-NEXT:    [[TMP18:%.*]] = bitcast i8* [[X]] to i16*
+; X32-NEXT:    [[TMP19:%.*]] = bitcast i8* [[Y]] to i16*
+; X32-NEXT:    [[TMP20:%.*]] = getelementptr i16, i16* [[TMP18]], i16 4
+; X32-NEXT:    [[TMP21:%.*]] = getelementptr i16, i16* [[TMP19]], i16 4
+; X32-NEXT:    [[TMP22:%.*]] = load i16, i16* [[TMP20]]
+; X32-NEXT:    [[TMP23:%.*]] = load i16, i16* [[TMP21]]
+; X32-NEXT:    [[TMP24:%.*]] = call i16 @llvm.bswap.i16(i16 [[TMP22]])
+; X32-NEXT:    [[TMP25:%.*]] = call i16 @llvm.bswap.i16(i16 [[TMP23]])
+; X32-NEXT:    [[TMP26]] = zext i16 [[TMP24]] to i32
+; X32-NEXT:    [[TMP27]] = zext i16 [[TMP25]] to i32
+; X32-NEXT:    [[TMP28:%.*]] = icmp eq i32 [[TMP26]], [[TMP27]]
+; X32-NEXT:    br i1 [[TMP28]], label [[LOADBB3:%.*]], label [[RES_BLOCK]]
+; X32:       loadbb3:
+; X32-NEXT:    [[TMP29:%.*]] = getelementptr i8, i8* [[X]], i8 10
+; X32-NEXT:    [[TMP30:%.*]] = getelementptr i8, i8* [[Y]], i8 10
+; X32-NEXT:    [[TMP31:%.*]] = load i8, i8* [[TMP29]]
+; X32-NEXT:    [[TMP32:%.*]] = load i8, i8* [[TMP30]]
+; X32-NEXT:    [[TMP33:%.*]] = zext i8 [[TMP31]] to i32
+; X32-NEXT:    [[TMP34:%.*]] = zext i8 [[TMP32]] to i32
+; X32-NEXT:    [[TMP35:%.*]] = sub i32 [[TMP33]], [[TMP34]]
+; X32-NEXT:    br label [[ENDBLOCK]]
+; X32:       endblock:
+; X32-NEXT:    [[PHI_RES:%.*]] = phi i32 [ [[TMP35]], [[LOADBB3]] ], [ [[TMP8]], [[RES_BLOCK]] ]
+; X32-NEXT:    ret i32 [[PHI_RES]]
+;
+; X64-LABEL: @cmp11(
+; X64-NEXT:  loadbb:
+; X64-NEXT:    [[TMP0:%.*]] = bitcast i8* [[X:%.*]] to i64*
+; X64-NEXT:    [[TMP1:%.*]] = bitcast i8* [[Y:%.*]] to i64*
+; X64-NEXT:    [[TMP2:%.*]] = load i64, i64* [[TMP0]]
+; X64-NEXT:    [[TMP3:%.*]] = load i64, i64* [[TMP1]]
+; X64-NEXT:    [[TMP4:%.*]] = call i64 @llvm.bswap.i64(i64 [[TMP2]])
+; X64-NEXT:    [[TMP5:%.*]] = call i64 @llvm.bswap.i64(i64 [[TMP3]])
+; X64-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[TMP4]], [[TMP5]]
+; X64-NEXT:    br i1 [[TMP6]], label [[LOADBB1:%.*]], label [[RES_BLOCK:%.*]]
+; X64:       res_block:
+; X64-NEXT:    [[PHI_SRC1:%.*]] = phi i64 [ [[TMP4]], [[LOADBB:%.*]] ], [ [[TMP17:%.*]], [[LOADBB1]] ]
+; X64-NEXT:    [[PHI_SRC2:%.*]] = phi i64 [ [[TMP5]], [[LOADBB]] ], [ [[TMP18:%.*]], [[LOADBB1]] ]
+; X64-NEXT:    [[TMP7:%.*]] = icmp ult i64 [[PHI_SRC1]], [[PHI_SRC2]]
+; X64-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], i32 -1, i32 1
+; X64-NEXT:    br label [[ENDBLOCK:%.*]]
+; X64:       loadbb1:
+; X64-NEXT:    [[TMP9:%.*]] = bitcast i8* [[X]] to i16*
+; X64-NEXT:    [[TMP10:%.*]] = bitcast i8* [[Y]] to i16*
+; X64-NEXT:    [[TMP11:%.*]] = getelementptr i16, i16* [[TMP9]], i16 4
+; X64-NEXT:    [[TMP12:%.*]] = getelementptr i16, i16* [[TMP10]], i16 4
+; X64-NEXT:    [[TMP13:%.*]] = load i16, i16* [[TMP11]]
+; X64-NEXT:    [[TMP14:%.*]] = load i16, i16* [[TMP12]]
+; X64-NEXT:    [[TMP15:%.*]] = call i16 @llvm.bswap.i16(i16 [[TMP13]])
+; X64-NEXT:    [[TMP16:%.*]] = call i16 @llvm.bswap.i16(i16 [[TMP14]])
+; X64-NEXT:    [[TMP17]] = zext i16 [[TMP15]] to i64
+; X64-NEXT:    [[TMP18]] = zext i16 [[TMP16]] to i64
+; X64-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[TMP17]], [[TMP18]]
+; X64-NEXT:    br i1 [[TMP19]], label [[LOADBB2:%.*]], label [[RES_BLOCK]]
+; X64:       loadbb2:
+; X64-NEXT:    [[TMP20:%.*]] = getelementptr i8, i8* [[X]], i8 10
+; X64-NEXT:    [[TMP21:%.*]] = getelementptr i8, i8* [[Y]], i8 10
+; X64-NEXT:    [[TMP22:%.*]] = load i8, i8* [[TMP20]]
+; X64-NEXT:    [[TMP23:%.*]] = load i8, i8* [[TMP21]]
+; X64-NEXT:    [[TMP24:%.*]] = zext i8 [[TMP22]] to i32
+; X64-NEXT:    [[TMP25:%.*]] = zext i8 [[TMP23]] to i32
+; X64-NEXT:    [[TMP26:%.*]] = sub i32 [[TMP24]], [[TMP25]]
+; X64-NEXT:    br label [[ENDBLOCK]]
+; X64:       endblock:
+; X64-NEXT:    [[PHI_RES:%.*]] = phi i32 [ [[TMP26]], [[LOADBB2]] ], [ [[TMP8]], [[RES_BLOCK]] ]
+; X64-NEXT:    ret i32 [[PHI_RES]]
 ;
   %call = tail call i32 @memcmp(i8* %x, i8* %y, i64 11)
   ret i32 %call
 }
 
 define i32 @cmp12(i8* nocapture readonly %x, i8* nocapture readonly %y)  {
-; ALL-LABEL: @cmp12(
-; ALL-NEXT:    [[CALL:%.*]] = tail call i32 @memcmp(i8* [[X:%.*]], i8* [[Y:%.*]], i64 12)
-; ALL-NEXT:    ret i32 [[CALL]]
+; X32-LABEL: @cmp12(
+; X32-NEXT:  loadbb:
+; X32-NEXT:    [[TMP0:%.*]] = bitcast i8* [[X:%.*]] to i32*
+; X32-NEXT:    [[TMP1:%.*]] = bitcast i8* [[Y:%.*]] to i32*
+; X32-NEXT:    [[TMP2:%.*]] = load i32, i32* [[TMP0]]
+; X32-NEXT:    [[TMP3:%.*]] = load i32, i32* [[TMP1]]
+; X32-NEXT:    [[TMP4:%.*]] = call i32 @llvm.bswap.i32(i32 [[TMP2]])
+; X32-NEXT:    [[TMP5:%.*]] = call i32 @llvm.bswap.i32(i32 [[TMP3]])
+; X32-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP4]], [[TMP5]]
+; X32-NEXT:    br i1 [[TMP6]], label [[LOADBB1:%.*]], label [[RES_BLOCK:%.*]]
+; X32:       res_block:
+; X32-NEXT:    [[PHI_SRC1:%.*]] = phi i32 [ [[TMP4]], [[LOADBB:%.*]] ], [ [[TMP15:%.*]], [[LOADBB1]] ], [ [[TMP24:%.*]], [[LOADBB2:%.*]] ]
+; X32-NEXT:    [[PHI_SRC2:%.*]] = phi i32 [ [[TMP5]], [[LOADBB]] ], [ [[TMP16:%.*]], [[LOADBB1]] ], [ [[TMP25:%.*]], [[LOADBB2]] ]
+; X32-NEXT:    [[TMP7:%.*]] = icmp ult i32 [[PHI_SRC1]], [[PHI_SRC2]]
+; X32-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], i32 -1, i32 1
+; X32-NEXT:    br label [[ENDBLOCK:%.*]]
+; X32:       loadbb1:
+; X32-NEXT:    [[TMP9:%.*]] = bitcast i8* [[X]] to i32*
+; X32-NEXT:    [[TMP10:%.*]] = bitcast i8* [[Y]] to i32*
+; X32-NEXT:    [[TMP11:%.*]] = getelementptr i32, i32* [[TMP9]], i32 1
+; X32-NEXT:    [[TMP12:%.*]] = getelementptr i32, i32* [[TMP10]], i32 1
+; X32-NEXT:    [[TMP13:%.*]] = load i32, i32* [[TMP11]]
+; X32-NEXT:    [[TMP14:%.*]] = load i32, i32* [[TMP12]]
+; X32-NEXT:    [[TMP15]] = call i32 @llvm.bswap.i32(i32 [[TMP13]])
+; X32-NEXT:    [[TMP16]] = call i32 @llvm.bswap.i32(i32 [[TMP14]])
+; X32-NEXT:    [[TMP17:%.*]] = icmp eq i32 [[TMP15]], [[TMP16]]
+; X32-NEXT:    br i1 [[TMP17]], label [[LOADBB2]], label [[RES_BLOCK]]
+; X32:       loadbb2:
+; X32-NEXT:    [[TMP18:%.*]] = bitcast i8* [[X]] to i32*
+; X32-NEXT:    [[TMP19:%.*]] = bitcast i8* [[Y]] to i32*
+; X32-NEXT:    [[TMP20:%.*]] = getelementptr i32, i32* [[TMP18]], i32 2
+; X32-NEXT:    [[TMP21:%.*]] = getelementptr i32, i32* [[TMP19]], i32 2
+; X32-NEXT:    [[TMP22:%.*]] = load i32, i32* [[TMP20]]
+; X32-NEXT:    [[TMP23:%.*]] = load i32, i32* [[TMP21]]
+; X32-NEXT:    [[TMP24]] = call i32 @llvm.bswap.i32(i32 [[TMP22]])
+; X32-NEXT:    [[TMP25]] = call i32 @llvm.bswap.i32(i32 [[TMP23]])
+; X32-NEXT:    [[TMP26:%.*]] = icmp eq i32 [[TMP24]], [[TMP25]]
+; X32-NEXT:    br i1 [[TMP26]], label [[ENDBLOCK]], label [[RES_BLOCK]]
+; X32:       endblock:
+; X32-NEXT:    [[PHI_RES:%.*]] = phi i32 [ 0, [[LOADBB2]] ], [ [[TMP8]], [[RES_BLOCK]] ]
+; X32-NEXT:    ret i32 [[PHI_RES]]
+;
+; X64-LABEL: @cmp12(
+; X64-NEXT:  loadbb:
+; X64-NEXT:    [[TMP0:%.*]] = bitcast i8* [[X:%.*]] to i64*
+; X64-NEXT:    [[TMP1:%.*]] = bitcast i8* [[Y:%.*]] to i64*
+; X64-NEXT:    [[TMP2:%.*]] = load i64, i64* [[TMP0]]
+; X64-NEXT:    [[TMP3:%.*]] = load i64, i64* [[TMP1]]
+; X64-NEXT:    [[TMP4:%.*]] = call i64 @llvm.bswap.i64(i64 [[TMP2]])
+; X64-NEXT:    [[TMP5:%.*]] = call i64 @llvm.bswap.i64(i64 [[TMP3]])
+; X64-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[TMP4]], [[TMP5]]
+; X64-NEXT:    br i1 [[TMP6]], label [[LOADBB1:%.*]], label [[RES_BLOCK:%.*]]
+; X64:       res_block:
+; X64-NEXT:    [[PHI_SRC1:%.*]] = phi i64 [ [[TMP4]], [[LOADBB:%.*]] ], [ [[TMP17:%.*]], [[LOADBB1]] ]
+; X64-NEXT:    [[PHI_SRC2:%.*]] = phi i64 [ [[TMP5]], [[LOADBB]] ], [ [[TMP18:%.*]], [[LOADBB1]] ]
+; X64-NEXT:    [[TMP7:%.*]] = icmp ult i64 [[PHI_SRC1]], [[PHI_SRC2]]
+; X64-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], i32 -1, i32 1
+; X64-NEXT:    br label [[ENDBLOCK:%.*]]
+; X64:       loadbb1:
+; X64-NEXT:    [[TMP9:%.*]] = bitcast i8* [[X]] to i32*
+; X64-NEXT:    [[TMP10:%.*]] = bitcast i8* [[Y]] to i32*
+; X64-NEXT:    [[TMP11:%.*]] = getelementptr i32, i32* [[TMP9]], i32 2
+; X64-NEXT:    [[TMP12:%.*]] = getelementptr i32, i32* [[TMP10]], i32 2
+; X64-NEXT:    [[TMP13:%.*]] = load i32, i32* [[TMP11]]
+; X64-NEXT:    [[TMP14:%.*]] = load i32, i32* [[TMP12]]
+; X64-NEXT:    [[TMP15:%.*]] = call i32 @llvm.bswap.i32(i32 [[TMP13]])
+; X64-NEXT:    [[TMP16:%.*]] = call i32 @llvm.bswap.i32(i32 [[TMP14]])
+; X64-NEXT:    [[TMP17]] = zext i32 [[TMP15]] to i64
+; X64-NEXT:    [[TMP18]] = zext i32 [[TMP16]] to i64
+; X64-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[TMP17]], [[TMP18]]
+; X64-NEXT:    br i1 [[TMP19]], label [[ENDBLOCK]], label [[RES_BLOCK]]
+; X64:       endblock:
+; X64-NEXT:    [[PHI_RES:%.*]] = phi i32 [ 0, [[LOADBB1]] ], [ [[TMP8]], [[RES_BLOCK]] ]
+; X64-NEXT:    ret i32 [[PHI_RES]]
 ;
   %call = tail call i32 @memcmp(i8* %x, i8* %y, i64 12)
   ret i32 %call
 }
 
 define i32 @cmp13(i8* nocapture readonly %x, i8* nocapture readonly %y)  {
-; ALL-LABEL: @cmp13(
-; ALL-NEXT:    [[CALL:%.*]] = tail call i32 @memcmp(i8* [[X:%.*]], i8* [[Y:%.*]], i64 13)
-; ALL-NEXT:    ret i32 [[CALL]]
+; X32-LABEL: @cmp13(
+; X32-NEXT:  loadbb:
+; X32-NEXT:    [[TMP0:%.*]] = bitcast i8* [[X:%.*]] to i32*
+; X32-NEXT:    [[TMP1:%.*]] = bitcast i8* [[Y:%.*]] to i32*
+; X32-NEXT:    [[TMP2:%.*]] = load i32, i32* [[TMP0]]
+; X32-NEXT:    [[TMP3:%.*]] = load i32, i32* [[TMP1]]
+; X32-NEXT:    [[TMP4:%.*]] = call i32 @llvm.bswap.i32(i32 [[TMP2]])
+; X32-NEXT:    [[TMP5:%.*]] = call i32 @llvm.bswap.i32(i32 [[TMP3]])
+; X32-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP4]], [[TMP5]]
+; X32-NEXT:    br i1 [[TMP6]], label [[LOADBB1:%.*]], label [[RES_BLOCK:%.*]]
+; X32:       res_block:
+; X32-NEXT:    [[PHI_SRC1:%.*]] = phi i32 [ [[TMP4]], [[LOADBB:%.*]] ], [ [[TMP15:%.*]], [[LOADBB1]] ], [ [[TMP24:%.*]], [[LOADBB2:%.*]] ]
+; X32-NEXT:    [[PHI_SRC2:%.*]] = phi i32 [ [[TMP5]], [[LOADBB]] ], [ [[TMP16:%.*]], [[LOADBB1]] ], [ [[TMP25:%.*]], [[LOADBB2]] ]
+; X32-NEXT:    [[TMP7:%.*]] = icmp ult i32 [[PHI_SRC1]], [[PHI_SRC2]]
+; X32-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], i32 -1, i32 1
+; X32-NEXT:    br label [[ENDBLOCK:%.*]]
+; X32:       loadbb1:
+; X32-NEXT:    [[TMP9:%.*]] = bitcast i8* [[X]] to i32*
+; X32-NEXT:    [[TMP10:%.*]] = bitcast i8* [[Y]] to i32*
+; X32-NEXT:    [[TMP11:%.*]] = getelementptr i32, i32* [[TMP9]], i32 1
+; X32-NEXT:    [[TMP12:%.*]] = getelementptr i32, i32* [[TMP10]], i32 1
+; X32-NEXT:    [[TMP13:%.*]] = load i32, i32* [[TMP11]]
+; X32-NEXT:    [[TMP14:%.*]] = load i32, i32* [[TMP12]]
+; X32-NEXT:    [[TMP15]] = call i32 @llvm.bswap.i32(i32 [[TMP13]])
+; X32-NEXT:    [[TMP16]] = call i32 @llvm.bswap.i32(i32 [[TMP14]])
+; X32-NEXT:    [[TMP17:%.*]] = icmp eq i32 [[TMP15]], [[TMP16]]
+; X32-NEXT:    br i1 [[TMP17]], label [[LOADBB2]], label [[RES_BLOCK]]
+; X32:       loadbb2:
+; X32-NEXT:    [[TMP18:%.*]] = bitcast i8* [[X]] to i32*
+; X32-NEXT:    [[TMP19:%.*]] = bitcast i8* [[Y]] to i32*
+; X32-NEXT:    [[TMP20:%.*]] = getelementptr i32, i32* [[TMP18]], i32 2
+; X32-NEXT:    [[TMP21:%.*]] = getelementptr i32, i32* [[TMP19]], i32 2
+; X32-NEXT:    [[TMP22:%.*]] = load i32, i32* [[TMP20]]
+; X32-NEXT:    [[TMP23:%.*]] = load i32, i32* [[TMP21]]
+; X32-NEXT:    [[TMP24]] = call i32 @llvm.bswap.i32(i32 [[TMP22]])
+; X32-NEXT:    [[TMP25]] = call i32 @llvm.bswap.i32(i32 [[TMP23]])
+; X32-NEXT:    [[TMP26:%.*]] = icmp eq i32 [[TMP24]], [[TMP25]]
+; X32-NEXT:    br i1 [[TMP26]], label [[LOADBB3:%.*]], label [[RES_BLOCK]]
+; X32:       loadbb3:
+; X32-NEXT:    [[TMP27:%.*]] = getelementptr i8, i8* [[X]], i8 12
+; X32-NEXT:    [[TMP28:%.*]] = getelementptr i8, i8* [[Y]], i8 12
+; X32-NEXT:    [[TMP29:%.*]] = load i8, i8* [[TMP27]]
+; X32-NEXT:    [[TMP30:%.*]] = load i8, i8* [[TMP28]]
+; X32-NEXT:    [[TMP31:%.*]] = zext i8 [[TMP29]] to i32
+; X32-NEXT:    [[TMP32:%.*]] = zext i8 [[TMP30]] to i32
+; X32-NEXT:    [[TMP33:%.*]] = sub i32 [[TMP31]], [[TMP32]]
+; X32-NEXT:    br label [[ENDBLOCK]]
+; X32:       endblock:
+; X32-NEXT:    [[PHI_RES:%.*]] = phi i32 [ [[TMP33]], [[LOADBB3]] ], [ [[TMP8]], [[RES_BLOCK]] ]
+; X32-NEXT:    ret i32 [[PHI_RES]]
+;
+; X64-LABEL: @cmp13(
+; X64-NEXT:  loadbb:
+; X64-NEXT:    [[TMP0:%.*]] = bitcast i8* [[X:%.*]] to i64*
+; X64-NEXT:    [[TMP1:%.*]] = bitcast i8* [[Y:%.*]] to i64*
+; X64-NEXT:    [[TMP2:%.*]] = load i64, i64* [[TMP0]]
+; X64-NEXT:    [[TMP3:%.*]] = load i64, i64* [[TMP1]]
+; X64-NEXT:    [[TMP4:%.*]] = call i64 @llvm.bswap.i64(i64 [[TMP2]])
+; X64-NEXT:    [[TMP5:%.*]] = call i64 @llvm.bswap.i64(i64 [[TMP3]])
+; X64-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[TMP4]], [[TMP5]]
+; X64-NEXT:    br i1 [[TMP6]], label [[LOADBB1:%.*]], label [[RES_BLOCK:%.*]]
+; X64:       res_block:
+; X64-NEXT:    [[PHI_SRC1:%.*]] = phi i64 [ [[TMP4]], [[LOADBB:%.*]] ], [ [[TMP17:%.*]], [[LOADBB1]] ]
+; X64-NEXT:    [[PHI_SRC2:%.*]] = phi i64 [ [[TMP5]], [[LOADBB]] ], [ [[TMP18:%.*]], [[LOADBB1]] ]
+; X64-NEXT:    [[TMP7:%.*]] = icmp ult i64 [[PHI_SRC1]], [[PHI_SRC2]]
+; X64-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], i32 -1, i32 1
+; X64-NEXT:    br label [[ENDBLOCK:%.*]]
+; X64:       loadbb1:
+; X64-NEXT:    [[TMP9:%.*]] = bitcast i8* [[X]] to i32*
+; X64-NEXT:    [[TMP10:%.*]] = bitcast i8* [[Y]] to i32*
+; X64-NEXT:    [[TMP11:%.*]] = getelementptr i32, i32* [[TMP9]], i32 2
+; X64-NEXT:    [[TMP12:%.*]] = getelementptr i32, i32* [[TMP10]], i32 2
+; X64-NEXT:    [[TMP13:%.*]] = load i32, i32* [[TMP11]]
+; X64-NEXT:    [[TMP14:%.*]] = load i32, i32* [[TMP12]]
+; X64-NEXT:    [[TMP15:%.*]] = call i32 @llvm.bswap.i32(i32 [[TMP13]])
+; X64-NEXT:    [[TMP16:%.*]] = call i32 @llvm.bswap.i32(i32 [[TMP14]])
+; X64-NEXT:    [[TMP17]] = zext i32 [[TMP15]] to i64
+; X64-NEXT:    [[TMP18]] = zext i32 [[TMP16]] to i64
+; X64-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[TMP17]], [[TMP18]]
+; X64-NEXT:    br i1 [[TMP19]], label [[LOADBB2:%.*]], label [[RES_BLOCK]]
+; X64:       loadbb2:
+; X64-NEXT:    [[TMP20:%.*]] = getelementptr i8, i8* [[X]], i8 12
+; X64-NEXT:    [[TMP21:%.*]] = getelementptr i8, i8* [[Y]], i8 12
+; X64-NEXT:    [[TMP22:%.*]] = load i8, i8* [[TMP20]]
+; X64-NEXT:    [[TMP23:%.*]] = load i8, i8* [[TMP21]]
+; X64-NEXT:    [[TMP24:%.*]] = zext i8 [[TMP22]] to i32
+; X64-NEXT:    [[TMP25:%.*]] = zext i8 [[TMP23]] to i32
+; X64-NEXT:    [[TMP26:%.*]] = sub i32 [[TMP24]], [[TMP25]]
+; X64-NEXT:    br label [[ENDBLOCK]]
+; X64:       endblock:
+; X64-NEXT:    [[PHI_RES:%.*]] = phi i32 [ [[TMP26]], [[LOADBB2]] ], [ [[TMP8]], [[RES_BLOCK]] ]
+; X64-NEXT:    ret i32 [[PHI_RES]]
 ;
   %call = tail call i32 @memcmp(i8* %x, i8* %y, i64 13)
   ret i32 %call
 }
 
 define i32 @cmp14(i8* nocapture readonly %x, i8* nocapture readonly %y)  {
-; ALL-LABEL: @cmp14(
-; ALL-NEXT:    [[CALL:%.*]] = tail call i32 @memcmp(i8* [[X:%.*]], i8* [[Y:%.*]], i64 14)
-; ALL-NEXT:    ret i32 [[CALL]]
+; X32-LABEL: @cmp14(
+; X32-NEXT:  loadbb:
+; X32-NEXT:    [[TMP0:%.*]] = bitcast i8* [[X:%.*]] to i32*
+; X32-NEXT:    [[TMP1:%.*]] = bitcast i8* [[Y:%.*]] to i32*
+; X32-NEXT:    [[TMP2:%.*]] = load i32, i32* [[TMP0]]
+; X32-NEXT:    [[TMP3:%.*]] = load i32, i32* [[TMP1]]
+; X32-NEXT:    [[TMP4:%.*]] = call i32 @llvm.bswap.i32(i32 [[TMP2]])
+; X32-NEXT:    [[TMP5:%.*]] = call i32 @llvm.bswap.i32(i32 [[TMP3]])
+; X32-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP4]], [[TMP5]]
+; X32-NEXT:    br i1 [[TMP6]], label [[LOADBB1:%.*]], label [[RES_BLOCK:%.*]]
+; X32:       res_block:
+; X32-NEXT:    [[PHI_SRC1:%.*]] = phi i32 [ [[TMP4]], [[LOADBB:%.*]] ], [ [[TMP15:%.*]], [[LOADBB1]] ], [ [[TMP24:%.*]], [[LOADBB2:%.*]] ], [ [[TMP35:%.*]], [[LOADBB3:%.*]] ]
+; X32-NEXT:    [[PHI_SRC2:%.*]] = phi i32 [ [[TMP5]], [[LOADBB]] ], [ [[TMP16:%.*]], [[LOADBB1]] ], [ [[TMP25:%.*]], [[LOADBB2]] ], [ [[TMP36:%.*]], [[LOADBB3]] ]
+; X32-NEXT:    [[TMP7:%.*]] = icmp ult i32 [[PHI_SRC1]], [[PHI_SRC2]]
+; X32-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], i32 -1, i32 1
+; X32-NEXT:    br label [[ENDBLOCK:%.*]]
+; X32:       loadbb1:
+; X32-NEXT:    [[TMP9:%.*]] = bitcast i8* [[X]] to i32*
+; X32-NEXT:    [[TMP10:%.*]] = bitcast i8* [[Y]] to i32*
+; X32-NEXT:    [[TMP11:%.*]] = getelementptr i32, i32* [[TMP9]], i32 1
+; X32-NEXT:    [[TMP12:%.*]] = getelementptr i32, i32* [[TMP10]], i32 1
+; X32-NEXT:    [[TMP13:%.*]] = load i32, i32* [[TMP11]]
+; X32-NEXT:    [[TMP14:%.*]] = load i32, i32* [[TMP12]]
+; X32-NEXT:    [[TMP15]] = call i32 @llvm.bswap.i32(i32 [[TMP13]])
+; X32-NEXT:    [[TMP16]] = call i32 @llvm.bswap.i32(i32 [[TMP14]])
+; X32-NEXT:    [[TMP17:%.*]] = icmp eq i32 [[TMP15]], [[TMP16]]
+; X32-NEXT:    br i1 [[TMP17]], label [[LOADBB2]], label [[RES_BLOCK]]
+; X32:       loadbb2:
+; X32-NEXT:    [[TMP18:%.*]] = bitcast i8* [[X]] to i32*
+; X32-NEXT:    [[TMP19:%.*]] = bitcast i8* [[Y]] to i32*
+; X32-NEXT:    [[TMP20:%.*]] = getelementptr i32, i32* [[TMP18]], i32 2
+; X32-NEXT:    [[TMP21:%.*]] = getelementptr i32, i32* [[TMP19]], i32 2
+; X32-NEXT:    [[TMP22:%.*]] = load i32, i32* [[TMP20]]
+; X32-NEXT:    [[TMP23:%.*]] = load i32, i32* [[TMP21]]
+; X32-NEXT:    [[TMP24]] = call i32 @llvm.bswap.i32(i32 [[TMP22]])
+; X32-NEXT:    [[TMP25]] = call i32 @llvm.bswap.i32(i32 [[TMP23]])
+; X32-NEXT:    [[TMP26:%.*]] = icmp eq i32 [[TMP24]], [[TMP25]]
+; X32-NEXT:    br i1 [[TMP26]], label [[LOADBB3]], label [[RES_BLOCK]]
+; X32:       loadbb3:
+; X32-NEXT:    [[TMP27:%.*]] = bitcast i8* [[X]] to i16*
+; X32-NEXT:    [[TMP28:%.*]] = bitcast i8* [[Y]] to i16*
+; X32-NEXT:    [[TMP29:%.*]] = getelementptr i16, i16* [[TMP27]], i16 6
+; X32-NEXT:    [[TMP30:%.*]] = getelementptr i16, i16* [[TMP28]], i16 6
+; X32-NEXT:    [[TMP31:%.*]] = load i16, i16* [[TMP29]]
+; X32-NEXT:    [[TMP32:%.*]] = load i16, i16* [[TMP30]]
+; X32-NEXT:    [[TMP33:%.*]] = call i16 @llvm.bswap.i16(i16 [[TMP31]])
+; X32-NEXT:    [[TMP34:%.*]] = call i16 @llvm.bswap.i16(i16 [[TMP32]])
+; X32-NEXT:    [[TMP35]] = zext i16 [[TMP33]] to i32
+; X32-NEXT:    [[TMP36]] = zext i16 [[TMP34]] to i32
+; X32-NEXT:    [[TMP37:%.*]] = icmp eq i32 [[TMP35]], [[TMP36]]
+; X32-NEXT:    br i1 [[TMP37]], label [[ENDBLOCK]], label [[RES_BLOCK]]
+; X32:       endblock:
+; X32-NEXT:    [[PHI_RES:%.*]] = phi i32 [ 0, [[LOADBB3]] ], [ [[TMP8]], [[RES_BLOCK]] ]
+; X32-NEXT:    ret i32 [[PHI_RES]]
+;
+; X64-LABEL: @cmp14(
+; X64-NEXT:  loadbb:
+; X64-NEXT:    [[TMP0:%.*]] = bitcast i8* [[X:%.*]] to i64*
+; X64-NEXT:    [[TMP1:%.*]] = bitcast i8* [[Y:%.*]] to i64*
+; X64-NEXT:    [[TMP2:%.*]] = load i64, i64* [[TMP0]]
+; X64-NEXT:    [[TMP3:%.*]] = load i64, i64* [[TMP1]]
+; X64-NEXT:    [[TMP4:%.*]] = call i64 @llvm.bswap.i64(i64 [[TMP2]])
+; X64-NEXT:    [[TMP5:%.*]] = call i64 @llvm.bswap.i64(i64 [[TMP3]])
+; X64-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[TMP4]], [[TMP5]]
+; X64-NEXT:    br i1 [[TMP6]], label [[LOADBB1:%.*]], label [[RES_BLOCK:%.*]]
+; X64:       res_block:
+; X64-NEXT:    [[PHI_SRC1:%.*]] = phi i64 [ [[TMP4]], [[LOADBB:%.*]] ], [ [[TMP17:%.*]], [[LOADBB1]] ], [ [[TMP28:%.*]], [[LOADBB2:%.*]] ]
+; X64-NEXT:    [[PHI_SRC2:%.*]] = phi i64 [ [[TMP5]], [[LOADBB]] ], [ [[TMP18:%.*]], [[LOADBB1]] ], [ [[TMP29:%.*]], [[LOADBB2]] ]
+; X64-NEXT:    [[TMP7:%.*]] = icmp ult i64 [[PHI_SRC1]], [[PHI_SRC2]]
+; X64-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], i32 -1, i32 1
+; X64-NEXT:    br label [[ENDBLOCK:%.*]]
+; X64:       loadbb1:
+; X64-NEXT:    [[TMP9:%.*]] = bitcast i8* [[X]] to i32*
+; X64-NEXT:    [[TMP10:%.*]] = bitcast i8* [[Y]] to i32*
+; X64-NEXT:    [[TMP11:%.*]] = getelementptr i32, i32* [[TMP9]], i32 2
+; X64-NEXT:    [[TMP12:%.*]] = getelementptr i32, i32* [[TMP10]], i32 2
+; X64-NEXT:    [[TMP13:%.*]] = load i32, i32* [[TMP11]]
+; X64-NEXT:    [[TMP14:%.*]] = load i32, i32* [[TMP12]]
+; X64-NEXT:    [[TMP15:%.*]] = call i32 @llvm.bswap.i32(i32 [[TMP13]])
+; X64-NEXT:    [[TMP16:%.*]] = call i32 @llvm.bswap.i32(i32 [[TMP14]])
+; X64-NEXT:    [[TMP17]] = zext i32 [[TMP15]] to i64
+; X64-NEXT:    [[TMP18]] = zext i32 [[TMP16]] to i64
+; X64-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[TMP17]], [[TMP18]]
+; X64-NEXT:    br i1 [[TMP19]], label [[LOADBB2]], label [[RES_BLOCK]]
+; X64:       loadbb2:
+; X64-NEXT:    [[TMP20:%.*]] = bitcast i8* [[X]] to i16*
+; X64-NEXT:    [[TMP21:%.*]] = bitcast i8* [[Y]] to i16*
+; X64-NEXT:    [[TMP22:%.*]] = getelementptr i16, i16* [[TMP20]], i16 6
+; X64-NEXT:    [[TMP23:%.*]] = getelementptr i16, i16* [[TMP21]], i16 6
+; X64-NEXT:    [[TMP24:%.*]] = load i16, i16* [[TMP22]]
+; X64-NEXT:    [[TMP25:%.*]] = load i16, i16* [[TMP23]]
+; X64-NEXT:    [[TMP26:%.*]] = call i16 @llvm.bswap.i16(i16 [[TMP24]])
+; X64-NEXT:    [[TMP27:%.*]] = call i16 @llvm.bswap.i16(i16 [[TMP25]])
+; X64-NEXT:    [[TMP28]] = zext i16 [[TMP26]] to i64
+; X64-NEXT:    [[TMP29]] = zext i16 [[TMP27]] to i64
+; X64-NEXT:    [[TMP30:%.*]] = icmp eq i64 [[TMP28]], [[TMP29]]
+; X64-NEXT:    br i1 [[TMP30]], label [[ENDBLOCK]], label [[RES_BLOCK]]
+; X64:       endblock:
+; X64-NEXT:    [[PHI_RES:%.*]] = phi i32 [ 0, [[LOADBB2]] ], [ [[TMP8]], [[RES_BLOCK]] ]
+; X64-NEXT:    ret i32 [[PHI_RES]]
 ;
   %call = tail call i32 @memcmp(i8* %x, i8* %y, i64 14)
   ret i32 %call
 }
 
 define i32 @cmp15(i8* nocapture readonly %x, i8* nocapture readonly %y)  {
-; ALL-LABEL: @cmp15(
-; ALL-NEXT:    [[CALL:%.*]] = tail call i32 @memcmp(i8* [[X:%.*]], i8* [[Y:%.*]], i64 15)
-; ALL-NEXT:    ret i32 [[CALL]]
+; X32-LABEL: @cmp15(
+; X32-NEXT:    [[CALL:%.*]] = tail call i32 @memcmp(i8* [[X:%.*]], i8* [[Y:%.*]], i64 15)
+; X32-NEXT:    ret i32 [[CALL]]
+;
+; X64-LABEL: @cmp15(
+; X64-NEXT:  loadbb:
+; X64-NEXT:    [[TMP0:%.*]] = bitcast i8* [[X:%.*]] to i64*
+; X64-NEXT:    [[TMP1:%.*]] = bitcast i8* [[Y:%.*]] to i64*
+; X64-NEXT:    [[TMP2:%.*]] = load i64, i64* [[TMP0]]
+; X64-NEXT:    [[TMP3:%.*]] = load i64, i64* [[TMP1]]
+; X64-NEXT:    [[TMP4:%.*]] = call i64 @llvm.bswap.i64(i64 [[TMP2]])
+; X64-NEXT:    [[TMP5:%.*]] = call i64 @llvm.bswap.i64(i64 [[TMP3]])
+; X64-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[TMP4]], [[TMP5]]
+; X64-NEXT:    br i1 [[TMP6]], label [[LOADBB1:%.*]], label [[RES_BLOCK:%.*]]
+; X64:       res_block:
+; X64-NEXT:    [[PHI_SRC1:%.*]] = phi i64 [ [[TMP4]], [[LOADBB:%.*]] ], [ [[TMP17:%.*]], [[LOADBB1]] ], [ [[TMP28:%.*]], [[LOADBB2:%.*]] ]
+; X64-NEXT:    [[PHI_SRC2:%.*]] = phi i64 [ [[TMP5]], [[LOADBB]] ], [ [[TMP18:%.*]], [[LOADBB1]] ], [ [[TMP29:%.*]], [[LOADBB2]] ]
+; X64-NEXT:    [[TMP7:%.*]] = icmp ult i64 [[PHI_SRC1]], [[PHI_SRC2]]
+; X64-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], i32 -1, i32 1
+; X64-NEXT:    br label [[ENDBLOCK:%.*]]
+; X64:       loadbb1:
+; X64-NEXT:    [[TMP9:%.*]] = bitcast i8* [[X]] to i32*
+; X64-NEXT:    [[TMP10:%.*]] = bitcast i8* [[Y]] to i32*
+; X64-NEXT:    [[TMP11:%.*]] = getelementptr i32, i32* [[TMP9]], i32 2
+; X64-NEXT:    [[TMP12:%.*]] = getelementptr i32, i32* [[TMP10]], i32 2
+; X64-NEXT:    [[TMP13:%.*]] = load i32, i32* [[TMP11]]
+; X64-NEXT:    [[TMP14:%.*]] = load i32, i32* [[TMP12]]
+; X64-NEXT:    [[TMP15:%.*]] = call i32 @llvm.bswap.i32(i32 [[TMP13]])
+; X64-NEXT:    [[TMP16:%.*]] = call i32 @llvm.bswap.i32(i32 [[TMP14]])
+; X64-NEXT:    [[TMP17]] = zext i32 [[TMP15]] to i64
+; X64-NEXT:    [[TMP18]] = zext i32 [[TMP16]] to i64
+; X64-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[TMP17]], [[TMP18]]
+; X64-NEXT:    br i1 [[TMP19]], label [[LOADBB2]], label [[RES_BLOCK]]
+; X64:       loadbb2:
+; X64-NEXT:    [[TMP20:%.*]] = bitcast i8* [[X]] to i16*
+; X64-NEXT:    [[TMP21:%.*]] = bitcast i8* [[Y]] to i16*
+; X64-NEXT:    [[TMP22:%.*]] = getelementptr i16, i16* [[TMP20]], i16 6
+; X64-NEXT:    [[TMP23:%.*]] = getelementptr i16, i16* [[TMP21]], i16 6
+; X64-NEXT:    [[TMP24:%.*]] = load i16, i16* [[TMP22]]
+; X64-NEXT:    [[TMP25:%.*]] = load i16, i16* [[TMP23]]
+; X64-NEXT:    [[TMP26:%.*]] = call i16 @llvm.bswap.i16(i16 [[TMP24]])
+; X64-NEXT:    [[TMP27:%.*]] = call i16 @llvm.bswap.i16(i16 [[TMP25]])
+; X64-NEXT:    [[TMP28]] = zext i16 [[TMP26]] to i64
+; X64-NEXT:    [[TMP29]] = zext i16 [[TMP27]] to i64
+; X64-NEXT:    [[TMP30:%.*]] = icmp eq i64 [[TMP28]], [[TMP29]]
+; X64-NEXT:    br i1 [[TMP30]], label [[LOADBB3:%.*]], label [[RES_BLOCK]]
+; X64:       loadbb3:
+; X64-NEXT:    [[TMP31:%.*]] = getelementptr i8, i8* [[X]], i8 14
+; X64-NEXT:    [[TMP32:%.*]] = getelementptr i8, i8* [[Y]], i8 14
+; X64-NEXT:    [[TMP33:%.*]] = load i8, i8* [[TMP31]]
+; X64-NEXT:    [[TMP34:%.*]] = load i8, i8* [[TMP32]]
+; X64-NEXT:    [[TMP35:%.*]] = zext i8 [[TMP33]] to i32
+; X64-NEXT:    [[TMP36:%.*]] = zext i8 [[TMP34]] to i32
+; X64-NEXT:    [[TMP37:%.*]] = sub i32 [[TMP35]], [[TMP36]]
+; X64-NEXT:    br label [[ENDBLOCK]]
+; X64:       endblock:
+; X64-NEXT:    [[PHI_RES:%.*]] = phi i32 [ [[TMP37]], [[LOADBB3]] ], [ [[TMP8]], [[RES_BLOCK]] ]
+; X64-NEXT:    ret i32 [[PHI_RES]]
 ;
   %call = tail call i32 @memcmp(i8* %x, i8* %y, i64 15)
   ret i32 %call
 }
 
 define i32 @cmp16(i8* nocapture readonly %x, i8* nocapture readonly %y)  {
-; ALL-LABEL: @cmp16(
-; ALL-NEXT:    [[CALL:%.*]] = tail call i32 @memcmp(i8* [[X:%.*]], i8* [[Y:%.*]], i64 16)
-; ALL-NEXT:    ret i32 [[CALL]]
+; X32-LABEL: @cmp16(
+; X32-NEXT:  loadbb:
+; X32-NEXT:    [[TMP0:%.*]] = bitcast i8* [[X:%.*]] to i32*
+; X32-NEXT:    [[TMP1:%.*]] = bitcast i8* [[Y:%.*]] to i32*
+; X32-NEXT:    [[TMP2:%.*]] = load i32, i32* [[TMP0]]
+; X32-NEXT:    [[TMP3:%.*]] = load i32, i32* [[TMP1]]
+; X32-NEXT:    [[TMP4:%.*]] = call i32 @llvm.bswap.i32(i32 [[TMP2]])
+; X32-NEXT:    [[TMP5:%.*]] = call i32 @llvm.bswap.i32(i32 [[TMP3]])
+; X32-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP4]], [[TMP5]]
+; X32-NEXT:    br i1 [[TMP6]], label [[LOADBB1:%.*]], label [[RES_BLOCK:%.*]]
+; X32:       res_block:
+; X32-NEXT:    [[PHI_SRC1:%.*]] = phi i32 [ [[TMP4]], [[LOADBB:%.*]] ], [ [[TMP15:%.*]], [[LOADBB1]] ], [ [[TMP24:%.*]], [[LOADBB2:%.*]] ], [ [[TMP33:%.*]], [[LOADBB3:%.*]] ]
+; X32-NEXT:    [[PHI_SRC2:%.*]] = phi i32 [ [[TMP5]], [[LOADBB]] ], [ [[TMP16:%.*]], [[LOADBB1]] ], [ [[TMP25:%.*]], [[LOADBB2]] ], [ [[TMP34:%.*]], [[LOADBB3]] ]
+; X32-NEXT:    [[TMP7:%.*]] = icmp ult i32 [[PHI_SRC1]], [[PHI_SRC2]]
+; X32-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], i32 -1, i32 1
+; X32-NEXT:    br label [[ENDBLOCK:%.*]]
+; X32:       loadbb1:
+; X32-NEXT:    [[TMP9:%.*]] = bitcast i8* [[X]] to i32*
+; X32-NEXT:    [[TMP10:%.*]] = bitcast i8* [[Y]] to i32*
+; X32-NEXT:    [[TMP11:%.*]] = getelementptr i32, i32* [[TMP9]], i32 1
+; X32-NEXT:    [[TMP12:%.*]] = getelementptr i32, i32* [[TMP10]], i32 1
+; X32-NEXT:    [[TMP13:%.*]] = load i32, i32* [[TMP11]]
+; X32-NEXT:    [[TMP14:%.*]] = load i32, i32* [[TMP12]]
+; X32-NEXT:    [[TMP15]] = call i32 @llvm.bswap.i32(i32 [[TMP13]])
+; X32-NEXT:    [[TMP16]] = call i32 @llvm.bswap.i32(i32 [[TMP14]])
+; X32-NEXT:    [[TMP17:%.*]] = icmp eq i32 [[TMP15]], [[TMP16]]
+; X32-NEXT:    br i1 [[TMP17]], label [[LOADBB2]], label [[RES_BLOCK]]
+; X32:       loadbb2:
+; X32-NEXT:    [[TMP18:%.*]] = bitcast i8* [[X]] to i32*
+; X32-NEXT:    [[TMP19:%.*]] = bitcast i8* [[Y]] to i32*
+; X32-NEXT:    [[TMP20:%.*]] = getelementptr i32, i32* [[TMP18]], i32 2
+; X32-NEXT:    [[TMP21:%.*]] = getelementptr i32, i32* [[TMP19]], i32 2
+; X32-NEXT:    [[TMP22:%.*]] = load i32, i32* [[TMP20]]
+; X32-NEXT:    [[TMP23:%.*]] = load i32, i32* [[TMP21]]
+; X32-NEXT:    [[TMP24]] = call i32 @llvm.bswap.i32(i32 [[TMP22]])
+; X32-NEXT:    [[TMP25]] = call i32 @llvm.bswap.i32(i32 [[TMP23]])
+; X32-NEXT:    [[TMP26:%.*]] = icmp eq i32 [[TMP24]], [[TMP25]]
+; X32-NEXT:    br i1 [[TMP26]], label [[LOADBB3]], label [[RES_BLOCK]]
+; X32:       loadbb3:
+; X32-NEXT:    [[TMP27:%.*]] = bitcast i8* [[X]] to i32*
+; X32-NEXT:    [[TMP28:%.*]] = bitcast i8* [[Y]] to i32*
+; X32-NEXT:    [[TMP29:%.*]] = getelementptr i32, i32* [[TMP27]], i32 3
+; X32-NEXT:    [[TMP30:%.*]] = getelementptr i32, i32* [[TMP28]], i32 3
+; X32-NEXT:    [[TMP31:%.*]] = load i32, i32* [[TMP29]]
+; X32-NEXT:    [[TMP32:%.*]] = load i32, i32* [[TMP30]]
+; X32-NEXT:    [[TMP33]] = call i32 @llvm.bswap.i32(i32 [[TMP31]])
+; X32-NEXT:    [[TMP34]] = call i32 @llvm.bswap.i32(i32 [[TMP32]])
+; X32-NEXT:    [[TMP35:%.*]] = icmp eq i32 [[TMP33]], [[TMP34]]
+; X32-NEXT:    br i1 [[TMP35]], label [[ENDBLOCK]], label [[RES_BLOCK]]
+; X32:       endblock:
+; X32-NEXT:    [[PHI_RES:%.*]] = phi i32 [ 0, [[LOADBB3]] ], [ [[TMP8]], [[RES_BLOCK]] ]
+; X32-NEXT:    ret i32 [[PHI_RES]]
+;
+; X64-LABEL: @cmp16(
+; X64-NEXT:  loadbb:
+; X64-NEXT:    [[TMP0:%.*]] = bitcast i8* [[X:%.*]] to i64*
+; X64-NEXT:    [[TMP1:%.*]] = bitcast i8* [[Y:%.*]] to i64*
+; X64-NEXT:    [[TMP2:%.*]] = load i64, i64* [[TMP0]]
+; X64-NEXT:    [[TMP3:%.*]] = load i64, i64* [[TMP1]]
+; X64-NEXT:    [[TMP4:%.*]] = call i64 @llvm.bswap.i64(i64 [[TMP2]])
+; X64-NEXT:    [[TMP5:%.*]] = call i64 @llvm.bswap.i64(i64 [[TMP3]])
+; X64-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[TMP4]], [[TMP5]]
+; X64-NEXT:    br i1 [[TMP6]], label [[LOADBB1:%.*]], label [[RES_BLOCK:%.*]]
+; X64:       res_block:
+; X64-NEXT:    [[PHI_SRC1:%.*]] = phi i64 [ [[TMP4]], [[LOADBB:%.*]] ], [ [[TMP15:%.*]], [[LOADBB1]] ]
+; X64-NEXT:    [[PHI_SRC2:%.*]] = phi i64 [ [[TMP5]], [[LOADBB]] ], [ [[TMP16:%.*]], [[LOADBB1]] ]
+; X64-NEXT:    [[TMP7:%.*]] = icmp ult i64 [[PHI_SRC1]], [[PHI_SRC2]]
+; X64-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], i32 -1, i32 1
+; X64-NEXT:    br label [[ENDBLOCK:%.*]]
+; X64:       loadbb1:
+; X64-NEXT:    [[TMP9:%.*]] = bitcast i8* [[X]] to i64*
+; X64-NEXT:    [[TMP10:%.*]] = bitcast i8* [[Y]] to i64*
+; X64-NEXT:    [[TMP11:%.*]] = getelementptr i64, i64* [[TMP9]], i64 1
+; X64-NEXT:    [[TMP12:%.*]] = getelementptr i64, i64* [[TMP10]], i64 1
+; X64-NEXT:    [[TMP13:%.*]] = load i64, i64* [[TMP11]]
+; X64-NEXT:    [[TMP14:%.*]] = load i64, i64* [[TMP12]]
+; X64-NEXT:    [[TMP15]] = call i64 @llvm.bswap.i64(i64 [[TMP13]])
+; X64-NEXT:    [[TMP16]] = call i64 @llvm.bswap.i64(i64 [[TMP14]])
+; X64-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[TMP15]], [[TMP16]]
+; X64-NEXT:    br i1 [[TMP17]], label [[ENDBLOCK]], label [[RES_BLOCK]]
+; X64:       endblock:
+; X64-NEXT:    [[PHI_RES:%.*]] = phi i32 [ 0, [[LOADBB1]] ], [ [[TMP8]], [[RES_BLOCK]] ]
+; X64-NEXT:    ret i32 [[PHI_RES]]
 ;
   %call = tail call i32 @memcmp(i8* %x, i8* %y, i64 16)
   ret i32 %call
@@ -190,8 +1088,25 @@ define i32 @cmp_eq2(i8* nocapture readonly %x, i8* nocapture readonly %y)  {
 
 define i32 @cmp_eq3(i8* nocapture readonly %x, i8* nocapture readonly %y)  {
 ; ALL-LABEL: @cmp_eq3(
-; ALL-NEXT:    [[CALL:%.*]] = tail call i32 @memcmp(i8* [[X:%.*]], i8* [[Y:%.*]], i64 3)
-; ALL-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CALL]], 0
+; ALL-NEXT:  loadbb:
+; ALL-NEXT:    [[TMP0:%.*]] = bitcast i8* [[X:%.*]] to i16*
+; ALL-NEXT:    [[TMP1:%.*]] = bitcast i8* [[Y:%.*]] to i16*
+; ALL-NEXT:    [[TMP2:%.*]] = load i16, i16* [[TMP0]]
+; ALL-NEXT:    [[TMP3:%.*]] = load i16, i16* [[TMP1]]
+; ALL-NEXT:    [[TMP4:%.*]] = icmp ne i16 [[TMP2]], [[TMP3]]
+; ALL-NEXT:    br i1 [[TMP4]], label [[RES_BLOCK:%.*]], label [[LOADBB1:%.*]]
+; ALL:       res_block:
+; ALL-NEXT:    br label [[ENDBLOCK:%.*]]
+; ALL:       loadbb1:
+; ALL-NEXT:    [[TMP5:%.*]] = getelementptr i8, i8* [[X]], i8 2
+; ALL-NEXT:    [[TMP6:%.*]] = getelementptr i8, i8* [[Y]], i8 2
+; ALL-NEXT:    [[TMP7:%.*]] = load i8, i8* [[TMP5]]
+; ALL-NEXT:    [[TMP8:%.*]] = load i8, i8* [[TMP6]]
+; ALL-NEXT:    [[TMP9:%.*]] = icmp ne i8 [[TMP7]], [[TMP8]]
+; ALL-NEXT:    br i1 [[TMP9]], label [[RES_BLOCK]], label [[ENDBLOCK]]
+; ALL:       endblock:
+; ALL-NEXT:    [[PHI_RES:%.*]] = phi i32 [ 0, [[LOADBB1]] ], [ 1, [[RES_BLOCK]] ]
+; ALL-NEXT:    [[CMP:%.*]] = icmp eq i32 [[PHI_RES]], 0
 ; ALL-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
 ; ALL-NEXT:    ret i32 [[CONV]]
 ;
@@ -221,8 +1136,25 @@ define i32 @cmp_eq4(i8* nocapture readonly %x, i8* nocapture readonly %y)  {
 
 define i32 @cmp_eq5(i8* nocapture readonly %x, i8* nocapture readonly %y)  {
 ; ALL-LABEL: @cmp_eq5(
-; ALL-NEXT:    [[CALL:%.*]] = tail call i32 @memcmp(i8* [[X:%.*]], i8* [[Y:%.*]], i64 5)
-; ALL-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CALL]], 0
+; ALL-NEXT:  loadbb:
+; ALL-NEXT:    [[TMP0:%.*]] = bitcast i8* [[X:%.*]] to i32*
+; ALL-NEXT:    [[TMP1:%.*]] = bitcast i8* [[Y:%.*]] to i32*
+; ALL-NEXT:    [[TMP2:%.*]] = load i32, i32* [[TMP0]]
+; ALL-NEXT:    [[TMP3:%.*]] = load i32, i32* [[TMP1]]
+; ALL-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP2]], [[TMP3]]
+; ALL-NEXT:    br i1 [[TMP4]], label [[RES_BLOCK:%.*]], label [[LOADBB1:%.*]]
+; ALL:       res_block:
+; ALL-NEXT:    br label [[ENDBLOCK:%.*]]
+; ALL:       loadbb1:
+; ALL-NEXT:    [[TMP5:%.*]] = getelementptr i8, i8* [[X]], i8 4
+; ALL-NEXT:    [[TMP6:%.*]] = getelementptr i8, i8* [[Y]], i8 4
+; ALL-NEXT:    [[TMP7:%.*]] = load i8, i8* [[TMP5]]
+; ALL-NEXT:    [[TMP8:%.*]] = load i8, i8* [[TMP6]]
+; ALL-NEXT:    [[TMP9:%.*]] = icmp ne i8 [[TMP7]], [[TMP8]]
+; ALL-NEXT:    br i1 [[TMP9]], label [[RES_BLOCK]], label [[ENDBLOCK]]
+; ALL:       endblock:
+; ALL-NEXT:    [[PHI_RES:%.*]] = phi i32 [ 0, [[LOADBB1]] ], [ 1, [[RES_BLOCK]] ]
+; ALL-NEXT:    [[CMP:%.*]] = icmp eq i32 [[PHI_RES]], 0
 ; ALL-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
 ; ALL-NEXT:    ret i32 [[CONV]]
 ;
@@ -234,8 +1166,27 @@ define i32 @cmp_eq5(i8* nocapture readonly %x, i8* nocapture readonly %y)  {
 
 define i32 @cmp_eq6(i8* nocapture readonly %x, i8* nocapture readonly %y)  {
 ; ALL-LABEL: @cmp_eq6(
-; ALL-NEXT:    [[CALL:%.*]] = tail call i32 @memcmp(i8* [[X:%.*]], i8* [[Y:%.*]], i64 6)
-; ALL-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CALL]], 0
+; ALL-NEXT:  loadbb:
+; ALL-NEXT:    [[TMP0:%.*]] = bitcast i8* [[X:%.*]] to i32*
+; ALL-NEXT:    [[TMP1:%.*]] = bitcast i8* [[Y:%.*]] to i32*
+; ALL-NEXT:    [[TMP2:%.*]] = load i32, i32* [[TMP0]]
+; ALL-NEXT:    [[TMP3:%.*]] = load i32, i32* [[TMP1]]
+; ALL-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP2]], [[TMP3]]
+; ALL-NEXT:    br i1 [[TMP4]], label [[RES_BLOCK:%.*]], label [[LOADBB1:%.*]]
+; ALL:       res_block:
+; ALL-NEXT:    br label [[ENDBLOCK:%.*]]
+; ALL:       loadbb1:
+; ALL-NEXT:    [[TMP5:%.*]] = bitcast i8* [[X]] to i16*
+; ALL-NEXT:    [[TMP6:%.*]] = bitcast i8* [[Y]] to i16*
+; ALL-NEXT:    [[TMP7:%.*]] = getelementptr i16, i16* [[TMP5]], i16 2
+; ALL-NEXT:    [[TMP8:%.*]] = getelementptr i16, i16* [[TMP6]], i16 2
+; ALL-NEXT:    [[TMP9:%.*]] = load i16, i16* [[TMP7]]
+; ALL-NEXT:    [[TMP10:%.*]] = load i16, i16* [[TMP8]]
+; ALL-NEXT:    [[TMP11:%.*]] = icmp ne i16 [[TMP9]], [[TMP10]]
+; ALL-NEXT:    br i1 [[TMP11]], label [[RES_BLOCK]], label [[ENDBLOCK]]
+; ALL:       endblock:
+; ALL-NEXT:    [[PHI_RES:%.*]] = phi i32 [ 0, [[LOADBB1]] ], [ 1, [[RES_BLOCK]] ]
+; ALL-NEXT:    [[CMP:%.*]] = icmp eq i32 [[PHI_RES]], 0
 ; ALL-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
 ; ALL-NEXT:    ret i32 [[CONV]]
 ;
@@ -247,8 +1198,34 @@ define i32 @cmp_eq6(i8* nocapture readonly %x, i8* nocapture readonly %y)  {
 
 define i32 @cmp_eq7(i8* nocapture readonly %x, i8* nocapture readonly %y)  {
 ; ALL-LABEL: @cmp_eq7(
-; ALL-NEXT:    [[CALL:%.*]] = tail call i32 @memcmp(i8* [[X:%.*]], i8* [[Y:%.*]], i64 7)
-; ALL-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CALL]], 0
+; ALL-NEXT:  loadbb:
+; ALL-NEXT:    [[TMP0:%.*]] = bitcast i8* [[X:%.*]] to i32*
+; ALL-NEXT:    [[TMP1:%.*]] = bitcast i8* [[Y:%.*]] to i32*
+; ALL-NEXT:    [[TMP2:%.*]] = load i32, i32* [[TMP0]]
+; ALL-NEXT:    [[TMP3:%.*]] = load i32, i32* [[TMP1]]
+; ALL-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP2]], [[TMP3]]
+; ALL-NEXT:    br i1 [[TMP4]], label [[RES_BLOCK:%.*]], label [[LOADBB1:%.*]]
+; ALL:       res_block:
+; ALL-NEXT:    br label [[ENDBLOCK:%.*]]
+; ALL:       loadbb1:
+; ALL-NEXT:    [[TMP5:%.*]] = bitcast i8* [[X]] to i16*
+; ALL-NEXT:    [[TMP6:%.*]] = bitcast i8* [[Y]] to i16*
+; ALL-NEXT:    [[TMP7:%.*]] = getelementptr i16, i16* [[TMP5]], i16 2
+; ALL-NEXT:    [[TMP8:%.*]] = getelementptr i16, i16* [[TMP6]], i16 2
+; ALL-NEXT:    [[TMP9:%.*]] = load i16, i16* [[TMP7]]
+; ALL-NEXT:    [[TMP10:%.*]] = load i16, i16* [[TMP8]]
+; ALL-NEXT:    [[TMP11:%.*]] = icmp ne i16 [[TMP9]], [[TMP10]]
+; ALL-NEXT:    br i1 [[TMP11]], label [[RES_BLOCK]], label [[LOADBB2:%.*]]
+; ALL:       loadbb2:
+; ALL-NEXT:    [[TMP12:%.*]] = getelementptr i8, i8* [[X]], i8 6
+; ALL-NEXT:    [[TMP13:%.*]] = getelementptr i8, i8* [[Y]], i8 6
+; ALL-NEXT:    [[TMP14:%.*]] = load i8, i8* [[TMP12]]
+; ALL-NEXT:    [[TMP15:%.*]] = load i8, i8* [[TMP13]]
+; ALL-NEXT:    [[TMP16:%.*]] = icmp ne i8 [[TMP14]], [[TMP15]]
+; ALL-NEXT:    br i1 [[TMP16]], label [[RES_BLOCK]], label [[ENDBLOCK]]
+; ALL:       endblock:
+; ALL-NEXT:    [[PHI_RES:%.*]] = phi i32 [ 0, [[LOADBB2]] ], [ 1, [[RES_BLOCK]] ]
+; ALL-NEXT:    [[CMP:%.*]] = icmp eq i32 [[PHI_RES]], 0
 ; ALL-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
 ; ALL-NEXT:    ret i32 [[CONV]]
 ;
@@ -260,8 +1237,27 @@ define i32 @cmp_eq7(i8* nocapture readonly %x, i8* nocapture readonly %y)  {
 
 define i32 @cmp_eq8(i8* nocapture readonly %x, i8* nocapture readonly %y)  {
 ; X32-LABEL: @cmp_eq8(
-; X32-NEXT:    [[CALL:%.*]] = tail call i32 @memcmp(i8* [[X:%.*]], i8* [[Y:%.*]], i64 8)
-; X32-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CALL]], 0
+; X32-NEXT:  loadbb:
+; X32-NEXT:    [[TMP0:%.*]] = bitcast i8* [[X:%.*]] to i32*
+; X32-NEXT:    [[TMP1:%.*]] = bitcast i8* [[Y:%.*]] to i32*
+; X32-NEXT:    [[TMP2:%.*]] = load i32, i32* [[TMP0]]
+; X32-NEXT:    [[TMP3:%.*]] = load i32, i32* [[TMP1]]
+; X32-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP2]], [[TMP3]]
+; X32-NEXT:    br i1 [[TMP4]], label [[RES_BLOCK:%.*]], label [[LOADBB1:%.*]]
+; X32:       res_block:
+; X32-NEXT:    br label [[ENDBLOCK:%.*]]
+; X32:       loadbb1:
+; X32-NEXT:    [[TMP5:%.*]] = bitcast i8* [[X]] to i32*
+; X32-NEXT:    [[TMP6:%.*]] = bitcast i8* [[Y]] to i32*
+; X32-NEXT:    [[TMP7:%.*]] = getelementptr i32, i32* [[TMP5]], i32 1
+; X32-NEXT:    [[TMP8:%.*]] = getelementptr i32, i32* [[TMP6]], i32 1
+; X32-NEXT:    [[TMP9:%.*]] = load i32, i32* [[TMP7]]
+; X32-NEXT:    [[TMP10:%.*]] = load i32, i32* [[TMP8]]
+; X32-NEXT:    [[TMP11:%.*]] = icmp ne i32 [[TMP9]], [[TMP10]]
+; X32-NEXT:    br i1 [[TMP11]], label [[RES_BLOCK]], label [[ENDBLOCK]]
+; X32:       endblock:
+; X32-NEXT:    [[PHI_RES:%.*]] = phi i32 [ 0, [[LOADBB1]] ], [ 1, [[RES_BLOCK]] ]
+; X32-NEXT:    [[CMP:%.*]] = icmp eq i32 [[PHI_RES]], 0
 ; X32-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
 ; X32-NEXT:    ret i32 [[CONV]]
 ;
@@ -283,11 +1279,60 @@ define i32 @cmp_eq8(i8* nocapture readonly %x, i8* nocapture readonly %y)  {
 }
 
 define i32 @cmp_eq9(i8* nocapture readonly %x, i8* nocapture readonly %y)  {
-; ALL-LABEL: @cmp_eq9(
-; ALL-NEXT:    [[CALL:%.*]] = tail call i32 @memcmp(i8* [[X:%.*]], i8* [[Y:%.*]], i64 9)
-; ALL-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CALL]], 0
-; ALL-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
-; ALL-NEXT:    ret i32 [[CONV]]
+; X32-LABEL: @cmp_eq9(
+; X32-NEXT:  loadbb:
+; X32-NEXT:    [[TMP0:%.*]] = bitcast i8* [[X:%.*]] to i32*
+; X32-NEXT:    [[TMP1:%.*]] = bitcast i8* [[Y:%.*]] to i32*
+; X32-NEXT:    [[TMP2:%.*]] = load i32, i32* [[TMP0]]
+; X32-NEXT:    [[TMP3:%.*]] = load i32, i32* [[TMP1]]
+; X32-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP2]], [[TMP3]]
+; X32-NEXT:    br i1 [[TMP4]], label [[RES_BLOCK:%.*]], label [[LOADBB1:%.*]]
+; X32:       res_block:
+; X32-NEXT:    br label [[ENDBLOCK:%.*]]
+; X32:       loadbb1:
+; X32-NEXT:    [[TMP5:%.*]] = bitcast i8* [[X]] to i32*
+; X32-NEXT:    [[TMP6:%.*]] = bitcast i8* [[Y]] to i32*
+; X32-NEXT:    [[TMP7:%.*]] = getelementptr i32, i32* [[TMP5]], i32 1
+; X32-NEXT:    [[TMP8:%.*]] = getelementptr i32, i32* [[TMP6]], i32 1
+; X32-NEXT:    [[TMP9:%.*]] = load i32, i32* [[TMP7]]
+; X32-NEXT:    [[TMP10:%.*]] = load i32, i32* [[TMP8]]
+; X32-NEXT:    [[TMP11:%.*]] = icmp ne i32 [[TMP9]], [[TMP10]]
+; X32-NEXT:    br i1 [[TMP11]], label [[RES_BLOCK]], label [[LOADBB2:%.*]]
+; X32:       loadbb2:
+; X32-NEXT:    [[TMP12:%.*]] = getelementptr i8, i8* [[X]], i8 8
+; X32-NEXT:    [[TMP13:%.*]] = getelementptr i8, i8* [[Y]], i8 8
+; X32-NEXT:    [[TMP14:%.*]] = load i8, i8* [[TMP12]]
+; X32-NEXT:    [[TMP15:%.*]] = load i8, i8* [[TMP13]]
+; X32-NEXT:    [[TMP16:%.*]] = icmp ne i8 [[TMP14]], [[TMP15]]
+; X32-NEXT:    br i1 [[TMP16]], label [[RES_BLOCK]], label [[ENDBLOCK]]
+; X32:       endblock:
+; X32-NEXT:    [[PHI_RES:%.*]] = phi i32 [ 0, [[LOADBB2]] ], [ 1, [[RES_BLOCK]] ]
+; X32-NEXT:    [[CMP:%.*]] = icmp eq i32 [[PHI_RES]], 0
+; X32-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
+; X32-NEXT:    ret i32 [[CONV]]
+;
+; X64-LABEL: @cmp_eq9(
+; X64-NEXT:  loadbb:
+; X64-NEXT:    [[TMP0:%.*]] = bitcast i8* [[X:%.*]] to i64*
+; X64-NEXT:    [[TMP1:%.*]] = bitcast i8* [[Y:%.*]] to i64*
+; X64-NEXT:    [[TMP2:%.*]] = load i64, i64* [[TMP0]]
+; X64-NEXT:    [[TMP3:%.*]] = load i64, i64* [[TMP1]]
+; X64-NEXT:    [[TMP4:%.*]] = icmp ne i64 [[TMP2]], [[TMP3]]
+; X64-NEXT:    br i1 [[TMP4]], label [[RES_BLOCK:%.*]], label [[LOADBB1:%.*]]
+; X64:       res_block:
+; X64-NEXT:    br label [[ENDBLOCK:%.*]]
+; X64:       loadbb1:
+; X64-NEXT:    [[TMP5:%.*]] = getelementptr i8, i8* [[X]], i8 8
+; X64-NEXT:    [[TMP6:%.*]] = getelementptr i8, i8* [[Y]], i8 8
+; X64-NEXT:    [[TMP7:%.*]] = load i8, i8* [[TMP5]]
+; X64-NEXT:    [[TMP8:%.*]] = load i8, i8* [[TMP6]]
+; X64-NEXT:    [[TMP9:%.*]] = icmp ne i8 [[TMP7]], [[TMP8]]
+; X64-NEXT:    br i1 [[TMP9]], label [[RES_BLOCK]], label [[ENDBLOCK]]
+; X64:       endblock:
+; X64-NEXT:    [[PHI_RES:%.*]] = phi i32 [ 0, [[LOADBB1]] ], [ 1, [[RES_BLOCK]] ]
+; X64-NEXT:    [[CMP:%.*]] = icmp eq i32 [[PHI_RES]], 0
+; X64-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
+; X64-NEXT:    ret i32 [[CONV]]
 ;
   %call = tail call i32 @memcmp(i8* %x, i8* %y, i64 9)
   %cmp = icmp eq i32 %call, 0
@@ -296,11 +1341,64 @@ define i32 @cmp_eq9(i8* nocapture readonly %x, i8* nocapture readonly %y)  {
 }
 
 define i32 @cmp_eq10(i8* nocapture readonly %x, i8* nocapture readonly %y)  {
-; ALL-LABEL: @cmp_eq10(
-; ALL-NEXT:    [[CALL:%.*]] = tail call i32 @memcmp(i8* [[X:%.*]], i8* [[Y:%.*]], i64 10)
-; ALL-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CALL]], 0
-; ALL-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
-; ALL-NEXT:    ret i32 [[CONV]]
+; X32-LABEL: @cmp_eq10(
+; X32-NEXT:  loadbb:
+; X32-NEXT:    [[TMP0:%.*]] = bitcast i8* [[X:%.*]] to i32*
+; X32-NEXT:    [[TMP1:%.*]] = bitcast i8* [[Y:%.*]] to i32*
+; X32-NEXT:    [[TMP2:%.*]] = load i32, i32* [[TMP0]]
+; X32-NEXT:    [[TMP3:%.*]] = load i32, i32* [[TMP1]]
+; X32-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP2]], [[TMP3]]
+; X32-NEXT:    br i1 [[TMP4]], label [[RES_BLOCK:%.*]], label [[LOADBB1:%.*]]
+; X32:       res_block:
+; X32-NEXT:    br label [[ENDBLOCK:%.*]]
+; X32:       loadbb1:
+; X32-NEXT:    [[TMP5:%.*]] = bitcast i8* [[X]] to i32*
+; X32-NEXT:    [[TMP6:%.*]] = bitcast i8* [[Y]] to i32*
+; X32-NEXT:    [[TMP7:%.*]] = getelementptr i32, i32* [[TMP5]], i32 1
+; X32-NEXT:    [[TMP8:%.*]] = getelementptr i32, i32* [[TMP6]], i32 1
+; X32-NEXT:    [[TMP9:%.*]] = load i32, i32* [[TMP7]]
+; X32-NEXT:    [[TMP10:%.*]] = load i32, i32* [[TMP8]]
+; X32-NEXT:    [[TMP11:%.*]] = icmp ne i32 [[TMP9]], [[TMP10]]
+; X32-NEXT:    br i1 [[TMP11]], label [[RES_BLOCK]], label [[LOADBB2:%.*]]
+; X32:       loadbb2:
+; X32-NEXT:    [[TMP12:%.*]] = bitcast i8* [[X]] to i16*
+; X32-NEXT:    [[TMP13:%.*]] = bitcast i8* [[Y]] to i16*
+; X32-NEXT:    [[TMP14:%.*]] = getelementptr i16, i16* [[TMP12]], i16 4
+; X32-NEXT:    [[TMP15:%.*]] = getelementptr i16, i16* [[TMP13]], i16 4
+; X32-NEXT:    [[TMP16:%.*]] = load i16, i16* [[TMP14]]
+; X32-NEXT:    [[TMP17:%.*]] = load i16, i16* [[TMP15]]
+; X32-NEXT:    [[TMP18:%.*]] = icmp ne i16 [[TMP16]], [[TMP17]]
+; X32-NEXT:    br i1 [[TMP18]], label [[RES_BLOCK]], label [[ENDBLOCK]]
+; X32:       endblock:
+; X32-NEXT:    [[PHI_RES:%.*]] = phi i32 [ 0, [[LOADBB2]] ], [ 1, [[RES_BLOCK]] ]
+; X32-NEXT:    [[CMP:%.*]] = icmp eq i32 [[PHI_RES]], 0
+; X32-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
+; X32-NEXT:    ret i32 [[CONV]]
+;
+; X64-LABEL: @cmp_eq10(
+; X64-NEXT:  loadbb:
+; X64-NEXT:    [[TMP0:%.*]] = bitcast i8* [[X:%.*]] to i64*
+; X64-NEXT:    [[TMP1:%.*]] = bitcast i8* [[Y:%.*]] to i64*
+; X64-NEXT:    [[TMP2:%.*]] = load i64, i64* [[TMP0]]
+; X64-NEXT:    [[TMP3:%.*]] = load i64, i64* [[TMP1]]
+; X64-NEXT:    [[TMP4:%.*]] = icmp ne i64 [[TMP2]], [[TMP3]]
+; X64-NEXT:    br i1 [[TMP4]], label [[RES_BLOCK:%.*]], label [[LOADBB1:%.*]]
+; X64:       res_block:
+; X64-NEXT:    br label [[ENDBLOCK:%.*]]
+; X64:       loadbb1:
+; X64-NEXT:    [[TMP5:%.*]] = bitcast i8* [[X]] to i16*
+; X64-NEXT:    [[TMP6:%.*]] = bitcast i8* [[Y]] to i16*
+; X64-NEXT:    [[TMP7:%.*]] = getelementptr i16, i16* [[TMP5]], i16 4
+; X64-NEXT:    [[TMP8:%.*]] = getelementptr i16, i16* [[TMP6]], i16 4
+; X64-NEXT:    [[TMP9:%.*]] = load i16, i16* [[TMP7]]
+; X64-NEXT:    [[TMP10:%.*]] = load i16, i16* [[TMP8]]
+; X64-NEXT:    [[TMP11:%.*]] = icmp ne i16 [[TMP9]], [[TMP10]]
+; X64-NEXT:    br i1 [[TMP11]], label [[RES_BLOCK]], label [[ENDBLOCK]]
+; X64:       endblock:
+; X64-NEXT:    [[PHI_RES:%.*]] = phi i32 [ 0, [[LOADBB1]] ], [ 1, [[RES_BLOCK]] ]
+; X64-NEXT:    [[CMP:%.*]] = icmp eq i32 [[PHI_RES]], 0
+; X64-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
+; X64-NEXT:    ret i32 [[CONV]]
 ;
   %call = tail call i32 @memcmp(i8* %x, i8* %y, i64 10)
   %cmp = icmp eq i32 %call, 0
@@ -309,11 +1407,78 @@ define i32 @cmp_eq10(i8* nocapture readonly %x, i8* nocapture readonly %y)  {
 }
 
 define i32 @cmp_eq11(i8* nocapture readonly %x, i8* nocapture readonly %y)  {
-; ALL-LABEL: @cmp_eq11(
-; ALL-NEXT:    [[CALL:%.*]] = tail call i32 @memcmp(i8* [[X:%.*]], i8* [[Y:%.*]], i64 11)
-; ALL-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CALL]], 0
-; ALL-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
-; ALL-NEXT:    ret i32 [[CONV]]
+; X32-LABEL: @cmp_eq11(
+; X32-NEXT:  loadbb:
+; X32-NEXT:    [[TMP0:%.*]] = bitcast i8* [[X:%.*]] to i32*
+; X32-NEXT:    [[TMP1:%.*]] = bitcast i8* [[Y:%.*]] to i32*
+; X32-NEXT:    [[TMP2:%.*]] = load i32, i32* [[TMP0]]
+; X32-NEXT:    [[TMP3:%.*]] = load i32, i32* [[TMP1]]
+; X32-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP2]], [[TMP3]]
+; X32-NEXT:    br i1 [[TMP4]], label [[RES_BLOCK:%.*]], label [[LOADBB1:%.*]]
+; X32:       res_block:
+; X32-NEXT:    br label [[ENDBLOCK:%.*]]
+; X32:       loadbb1:
+; X32-NEXT:    [[TMP5:%.*]] = bitcast i8* [[X]] to i32*
+; X32-NEXT:    [[TMP6:%.*]] = bitcast i8* [[Y]] to i32*
+; X32-NEXT:    [[TMP7:%.*]] = getelementptr i32, i32* [[TMP5]], i32 1
+; X32-NEXT:    [[TMP8:%.*]] = getelementptr i32, i32* [[TMP6]], i32 1
+; X32-NEXT:    [[TMP9:%.*]] = load i32, i32* [[TMP7]]
+; X32-NEXT:    [[TMP10:%.*]] = load i32, i32* [[TMP8]]
+; X32-NEXT:    [[TMP11:%.*]] = icmp ne i32 [[TMP9]], [[TMP10]]
+; X32-NEXT:    br i1 [[TMP11]], label [[RES_BLOCK]], label [[LOADBB2:%.*]]
+; X32:       loadbb2:
+; X32-NEXT:    [[TMP12:%.*]] = bitcast i8* [[X]] to i16*
+; X32-NEXT:    [[TMP13:%.*]] = bitcast i8* [[Y]] to i16*
+; X32-NEXT:    [[TMP14:%.*]] = getelementptr i16, i16* [[TMP12]], i16 4
+; X32-NEXT:    [[TMP15:%.*]] = getelementptr i16, i16* [[TMP13]], i16 4
+; X32-NEXT:    [[TMP16:%.*]] = load i16, i16* [[TMP14]]
+; X32-NEXT:    [[TMP17:%.*]] = load i16, i16* [[TMP15]]
+; X32-NEXT:    [[TMP18:%.*]] = icmp ne i16 [[TMP16]], [[TMP17]]
+; X32-NEXT:    br i1 [[TMP18]], label [[RES_BLOCK]], label [[LOADBB3:%.*]]
+; X32:       loadbb3:
+; X32-NEXT:    [[TMP19:%.*]] = getelementptr i8, i8* [[X]], i8 10
+; X32-NEXT:    [[TMP20:%.*]] = getelementptr i8, i8* [[Y]], i8 10
+; X32-NEXT:    [[TMP21:%.*]] = load i8, i8* [[TMP19]]
+; X32-NEXT:    [[TMP22:%.*]] = load i8, i8* [[TMP20]]
+; X32-NEXT:    [[TMP23:%.*]] = icmp ne i8 [[TMP21]], [[TMP22]]
+; X32-NEXT:    br i1 [[TMP23]], label [[RES_BLOCK]], label [[ENDBLOCK]]
+; X32:       endblock:
+; X32-NEXT:    [[PHI_RES:%.*]] = phi i32 [ 0, [[LOADBB3]] ], [ 1, [[RES_BLOCK]] ]
+; X32-NEXT:    [[CMP:%.*]] = icmp eq i32 [[PHI_RES]], 0
+; X32-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
+; X32-NEXT:    ret i32 [[CONV]]
+;
+; X64-LABEL: @cmp_eq11(
+; X64-NEXT:  loadbb:
+; X64-NEXT:    [[TMP0:%.*]] = bitcast i8* [[X:%.*]] to i64*
+; X64-NEXT:    [[TMP1:%.*]] = bitcast i8* [[Y:%.*]] to i64*
+; X64-NEXT:    [[TMP2:%.*]] = load i64, i64* [[TMP0]]
+; X64-NEXT:    [[TMP3:%.*]] = load i64, i64* [[TMP1]]
+; X64-NEXT:    [[TMP4:%.*]] = icmp ne i64 [[TMP2]], [[TMP3]]
+; X64-NEXT:    br i1 [[TMP4]], label [[RES_BLOCK:%.*]], label [[LOADBB1:%.*]]
+; X64:       res_block:
+; X64-NEXT:    br label [[ENDBLOCK:%.*]]
+; X64:       loadbb1:
+; X64-NEXT:    [[TMP5:%.*]] = bitcast i8* [[X]] to i16*
+; X64-NEXT:    [[TMP6:%.*]] = bitcast i8* [[Y]] to i16*
+; X64-NEXT:    [[TMP7:%.*]] = getelementptr i16, i16* [[TMP5]], i16 4
+; X64-NEXT:    [[TMP8:%.*]] = getelementptr i16, i16* [[TMP6]], i16 4
+; X64-NEXT:    [[TMP9:%.*]] = load i16, i16* [[TMP7]]
+; X64-NEXT:    [[TMP10:%.*]] = load i16, i16* [[TMP8]]
+; X64-NEXT:    [[TMP11:%.*]] = icmp ne i16 [[TMP9]], [[TMP10]]
+; X64-NEXT:    br i1 [[TMP11]], label [[RES_BLOCK]], label [[LOADBB2:%.*]]
+; X64:       loadbb2:
+; X64-NEXT:    [[TMP12:%.*]] = getelementptr i8, i8* [[X]], i8 10
+; X64-NEXT:    [[TMP13:%.*]] = getelementptr i8, i8* [[Y]], i8 10
+; X64-NEXT:    [[TMP14:%.*]] = load i8, i8* [[TMP12]]
+; X64-NEXT:    [[TMP15:%.*]] = load i8, i8* [[TMP13]]
+; X64-NEXT:    [[TMP16:%.*]] = icmp ne i8 [[TMP14]], [[TMP15]]
+; X64-NEXT:    br i1 [[TMP16]], label [[RES_BLOCK]], label [[ENDBLOCK]]
+; X64:       endblock:
+; X64-NEXT:    [[PHI_RES:%.*]] = phi i32 [ 0, [[LOADBB2]] ], [ 1, [[RES_BLOCK]] ]
+; X64-NEXT:    [[CMP:%.*]] = icmp eq i32 [[PHI_RES]], 0
+; X64-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
+; X64-NEXT:    ret i32 [[CONV]]
 ;
   %call = tail call i32 @memcmp(i8* %x, i8* %y, i64 11)
   %cmp = icmp eq i32 %call, 0
@@ -322,11 +1487,64 @@ define i32 @cmp_eq11(i8* nocapture readonly %x, i8* nocapture readonly %y)  {
 }
 
 define i32 @cmp_eq12(i8* nocapture readonly %x, i8* nocapture readonly %y)  {
-; ALL-LABEL: @cmp_eq12(
-; ALL-NEXT:    [[CALL:%.*]] = tail call i32 @memcmp(i8* [[X:%.*]], i8* [[Y:%.*]], i64 12)
-; ALL-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CALL]], 0
-; ALL-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
-; ALL-NEXT:    ret i32 [[CONV]]
+; X32-LABEL: @cmp_eq12(
+; X32-NEXT:  loadbb:
+; X32-NEXT:    [[TMP0:%.*]] = bitcast i8* [[X:%.*]] to i32*
+; X32-NEXT:    [[TMP1:%.*]] = bitcast i8* [[Y:%.*]] to i32*
+; X32-NEXT:    [[TMP2:%.*]] = load i32, i32* [[TMP0]]
+; X32-NEXT:    [[TMP3:%.*]] = load i32, i32* [[TMP1]]
+; X32-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP2]], [[TMP3]]
+; X32-NEXT:    br i1 [[TMP4]], label [[RES_BLOCK:%.*]], label [[LOADBB1:%.*]]
+; X32:       res_block:
+; X32-NEXT:    br label [[ENDBLOCK:%.*]]
+; X32:       loadbb1:
+; X32-NEXT:    [[TMP5:%.*]] = bitcast i8* [[X]] to i32*
+; X32-NEXT:    [[TMP6:%.*]] = bitcast i8* [[Y]] to i32*
+; X32-NEXT:    [[TMP7:%.*]] = getelementptr i32, i32* [[TMP5]], i32 1
+; X32-NEXT:    [[TMP8:%.*]] = getelementptr i32, i32* [[TMP6]], i32 1
+; X32-NEXT:    [[TMP9:%.*]] = load i32, i32* [[TMP7]]
+; X32-NEXT:    [[TMP10:%.*]] = load i32, i32* [[TMP8]]
+; X32-NEXT:    [[TMP11:%.*]] = icmp ne i32 [[TMP9]], [[TMP10]]
+; X32-NEXT:    br i1 [[TMP11]], label [[RES_BLOCK]], label [[LOADBB2:%.*]]
+; X32:       loadbb2:
+; X32-NEXT:    [[TMP12:%.*]] = bitcast i8* [[X]] to i32*
+; X32-NEXT:    [[TMP13:%.*]] = bitcast i8* [[Y]] to i32*
+; X32-NEXT:    [[TMP14:%.*]] = getelementptr i32, i32* [[TMP12]], i32 2
+; X32-NEXT:    [[TMP15:%.*]] = getelementptr i32, i32* [[TMP13]], i32 2
+; X32-NEXT:    [[TMP16:%.*]] = load i32, i32* [[TMP14]]
+; X32-NEXT:    [[TMP17:%.*]] = load i32, i32* [[TMP15]]
+; X32-NEXT:    [[TMP18:%.*]] = icmp ne i32 [[TMP16]], [[TMP17]]
+; X32-NEXT:    br i1 [[TMP18]], label [[RES_BLOCK]], label [[ENDBLOCK]]
+; X32:       endblock:
+; X32-NEXT:    [[PHI_RES:%.*]] = phi i32 [ 0, [[LOADBB2]] ], [ 1, [[RES_BLOCK]] ]
+; X32-NEXT:    [[CMP:%.*]] = icmp eq i32 [[PHI_RES]], 0
+; X32-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
+; X32-NEXT:    ret i32 [[CONV]]
+;
+; X64-LABEL: @cmp_eq12(
+; X64-NEXT:  loadbb:
+; X64-NEXT:    [[TMP0:%.*]] = bitcast i8* [[X:%.*]] to i64*
+; X64-NEXT:    [[TMP1:%.*]] = bitcast i8* [[Y:%.*]] to i64*
+; X64-NEXT:    [[TMP2:%.*]] = load i64, i64* [[TMP0]]
+; X64-NEXT:    [[TMP3:%.*]] = load i64, i64* [[TMP1]]
+; X64-NEXT:    [[TMP4:%.*]] = icmp ne i64 [[TMP2]], [[TMP3]]
+; X64-NEXT:    br i1 [[TMP4]], label [[RES_BLOCK:%.*]], label [[LOADBB1:%.*]]
+; X64:       res_block:
+; X64-NEXT:    br label [[ENDBLOCK:%.*]]
+; X64:       loadbb1:
+; X64-NEXT:    [[TMP5:%.*]] = bitcast i8* [[X]] to i32*
+; X64-NEXT:    [[TMP6:%.*]] = bitcast i8* [[Y]] to i32*
+; X64-NEXT:    [[TMP7:%.*]] = getelementptr i32, i32* [[TMP5]], i32 2
+; X64-NEXT:    [[TMP8:%.*]] = getelementptr i32, i32* [[TMP6]], i32 2
+; X64-NEXT:    [[TMP9:%.*]] = load i32, i32* [[TMP7]]
+; X64-NEXT:    [[TMP10:%.*]] = load i32, i32* [[TMP8]]
+; X64-NEXT:    [[TMP11:%.*]] = icmp ne i32 [[TMP9]], [[TMP10]]
+; X64-NEXT:    br i1 [[TMP11]], label [[RES_BLOCK]], label [[ENDBLOCK]]
+; X64:       endblock:
+; X64-NEXT:    [[PHI_RES:%.*]] = phi i32 [ 0, [[LOADBB1]] ], [ 1, [[RES_BLOCK]] ]
+; X64-NEXT:    [[CMP:%.*]] = icmp eq i32 [[PHI_RES]], 0
+; X64-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
+; X64-NEXT:    ret i32 [[CONV]]
 ;
   %call = tail call i32 @memcmp(i8* %x, i8* %y, i64 12)
   %cmp = icmp eq i32 %call, 0
@@ -335,11 +1553,78 @@ define i32 @cmp_eq12(i8* nocapture readonly %x, i8* nocapture readonly %y)  {
 }
 
 define i32 @cmp_eq13(i8* nocapture readonly %x, i8* nocapture readonly %y)  {
-; ALL-LABEL: @cmp_eq13(
-; ALL-NEXT:    [[CALL:%.*]] = tail call i32 @memcmp(i8* [[X:%.*]], i8* [[Y:%.*]], i64 13)
-; ALL-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CALL]], 0
-; ALL-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
-; ALL-NEXT:    ret i32 [[CONV]]
+; X32-LABEL: @cmp_eq13(
+; X32-NEXT:  loadbb:
+; X32-NEXT:    [[TMP0:%.*]] = bitcast i8* [[X:%.*]] to i32*
+; X32-NEXT:    [[TMP1:%.*]] = bitcast i8* [[Y:%.*]] to i32*
+; X32-NEXT:    [[TMP2:%.*]] = load i32, i32* [[TMP0]]
+; X32-NEXT:    [[TMP3:%.*]] = load i32, i32* [[TMP1]]
+; X32-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP2]], [[TMP3]]
+; X32-NEXT:    br i1 [[TMP4]], label [[RES_BLOCK:%.*]], label [[LOADBB1:%.*]]
+; X32:       res_block:
+; X32-NEXT:    br label [[ENDBLOCK:%.*]]
+; X32:       loadbb1:
+; X32-NEXT:    [[TMP5:%.*]] = bitcast i8* [[X]] to i32*
+; X32-NEXT:    [[TMP6:%.*]] = bitcast i8* [[Y]] to i32*
+; X32-NEXT:    [[TMP7:%.*]] = getelementptr i32, i32* [[TMP5]], i32 1
+; X32-NEXT:    [[TMP8:%.*]] = getelementptr i32, i32* [[TMP6]], i32 1
+; X32-NEXT:    [[TMP9:%.*]] = load i32, i32* [[TMP7]]
+; X32-NEXT:    [[TMP10:%.*]] = load i32, i32* [[TMP8]]
+; X32-NEXT:    [[TMP11:%.*]] = icmp ne i32 [[TMP9]], [[TMP10]]
+; X32-NEXT:    br i1 [[TMP11]], label [[RES_BLOCK]], label [[LOADBB2:%.*]]
+; X32:       loadbb2:
+; X32-NEXT:    [[TMP12:%.*]] = bitcast i8* [[X]] to i32*
+; X32-NEXT:    [[TMP13:%.*]] = bitcast i8* [[Y]] to i32*
+; X32-NEXT:    [[TMP14:%.*]] = getelementptr i32, i32* [[TMP12]], i32 2
+; X32-NEXT:    [[TMP15:%.*]] = getelementptr i32, i32* [[TMP13]], i32 2
+; X32-NEXT:    [[TMP16:%.*]] = load i32, i32* [[TMP14]]
+; X32-NEXT:    [[TMP17:%.*]] = load i32, i32* [[TMP15]]
+; X32-NEXT:    [[TMP18:%.*]] = icmp ne i32 [[TMP16]], [[TMP17]]
+; X32-NEXT:    br i1 [[TMP18]], label [[RES_BLOCK]], label [[LOADBB3:%.*]]
+; X32:       loadbb3:
+; X32-NEXT:    [[TMP19:%.*]] = getelementptr i8, i8* [[X]], i8 12
+; X32-NEXT:    [[TMP20:%.*]] = getelementptr i8, i8* [[Y]], i8 12
+; X32-NEXT:    [[TMP21:%.*]] = load i8, i8* [[TMP19]]
+; X32-NEXT:    [[TMP22:%.*]] = load i8, i8* [[TMP20]]
+; X32-NEXT:    [[TMP23:%.*]] = icmp ne i8 [[TMP21]], [[TMP22]]
+; X32-NEXT:    br i1 [[TMP23]], label [[RES_BLOCK]], label [[ENDBLOCK]]
+; X32:       endblock:
+; X32-NEXT:    [[PHI_RES:%.*]] = phi i32 [ 0, [[LOADBB3]] ], [ 1, [[RES_BLOCK]] ]
+; X32-NEXT:    [[CMP:%.*]] = icmp eq i32 [[PHI_RES]], 0
+; X32-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
+; X32-NEXT:    ret i32 [[CONV]]
+;
+; X64-LABEL: @cmp_eq13(
+; X64-NEXT:  loadbb:
+; X64-NEXT:    [[TMP0:%.*]] = bitcast i8* [[X:%.*]] to i64*
+; X64-NEXT:    [[TMP1:%.*]] = bitcast i8* [[Y:%.*]] to i64*
+; X64-NEXT:    [[TMP2:%.*]] = load i64, i64* [[TMP0]]
+; X64-NEXT:    [[TMP3:%.*]] = load i64, i64* [[TMP1]]
+; X64-NEXT:    [[TMP4:%.*]] = icmp ne i64 [[TMP2]], [[TMP3]]
+; X64-NEXT:    br i1 [[TMP4]], label [[RES_BLOCK:%.*]], label [[LOADBB1:%.*]]
+; X64:       res_block:
+; X64-NEXT:    br label [[ENDBLOCK:%.*]]
+; X64:       loadbb1:
+; X64-NEXT:    [[TMP5:%.*]] = bitcast i8* [[X]] to i32*
+; X64-NEXT:    [[TMP6:%.*]] = bitcast i8* [[Y]] to i32*
+; X64-NEXT:    [[TMP7:%.*]] = getelementptr i32, i32* [[TMP5]], i32 2
+; X64-NEXT:    [[TMP8:%.*]] = getelementptr i32, i32* [[TMP6]], i32 2
+; X64-NEXT:    [[TMP9:%.*]] = load i32, i32* [[TMP7]]
+; X64-NEXT:    [[TMP10:%.*]] = load i32, i32* [[TMP8]]
+; X64-NEXT:    [[TMP11:%.*]] = icmp ne i32 [[TMP9]], [[TMP10]]
+; X64-NEXT:    br i1 [[TMP11]], label [[RES_BLOCK]], label [[LOADBB2:%.*]]
+; X64:       loadbb2:
+; X64-NEXT:    [[TMP12:%.*]] = getelementptr i8, i8* [[X]], i8 12
+; X64-NEXT:    [[TMP13:%.*]] = getelementptr i8, i8* [[Y]], i8 12
+; X64-NEXT:    [[TMP14:%.*]] = load i8, i8* [[TMP12]]
+; X64-NEXT:    [[TMP15:%.*]] = load i8, i8* [[TMP13]]
+; X64-NEXT:    [[TMP16:%.*]] = icmp ne i8 [[TMP14]], [[TMP15]]
+; X64-NEXT:    br i1 [[TMP16]], label [[RES_BLOCK]], label [[ENDBLOCK]]
+; X64:       endblock:
+; X64-NEXT:    [[PHI_RES:%.*]] = phi i32 [ 0, [[LOADBB2]] ], [ 1, [[RES_BLOCK]] ]
+; X64-NEXT:    [[CMP:%.*]] = icmp eq i32 [[PHI_RES]], 0
+; X64-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
+; X64-NEXT:    ret i32 [[CONV]]
 ;
   %call = tail call i32 @memcmp(i8* %x, i8* %y, i64 13)
   %cmp = icmp eq i32 %call, 0
@@ -348,11 +1633,82 @@ define i32 @cmp_eq13(i8* nocapture readonly %x, i8* nocapture readonly %y)  {
 }
 
 define i32 @cmp_eq14(i8* nocapture readonly %x, i8* nocapture readonly %y)  {
-; ALL-LABEL: @cmp_eq14(
-; ALL-NEXT:    [[CALL:%.*]] = tail call i32 @memcmp(i8* [[X:%.*]], i8* [[Y:%.*]], i64 14)
-; ALL-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CALL]], 0
-; ALL-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
-; ALL-NEXT:    ret i32 [[CONV]]
+; X32-LABEL: @cmp_eq14(
+; X32-NEXT:  loadbb:
+; X32-NEXT:    [[TMP0:%.*]] = bitcast i8* [[X:%.*]] to i32*
+; X32-NEXT:    [[TMP1:%.*]] = bitcast i8* [[Y:%.*]] to i32*
+; X32-NEXT:    [[TMP2:%.*]] = load i32, i32* [[TMP0]]
+; X32-NEXT:    [[TMP3:%.*]] = load i32, i32* [[TMP1]]
+; X32-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP2]], [[TMP3]]
+; X32-NEXT:    br i1 [[TMP4]], label [[RES_BLOCK:%.*]], label [[LOADBB1:%.*]]
+; X32:       res_block:
+; X32-NEXT:    br label [[ENDBLOCK:%.*]]
+; X32:       loadbb1:
+; X32-NEXT:    [[TMP5:%.*]] = bitcast i8* [[X]] to i32*
+; X32-NEXT:    [[TMP6:%.*]] = bitcast i8* [[Y]] to i32*
+; X32-NEXT:    [[TMP7:%.*]] = getelementptr i32, i32* [[TMP5]], i32 1
+; X32-NEXT:    [[TMP8:%.*]] = getelementptr i32, i32* [[TMP6]], i32 1
+; X32-NEXT:    [[TMP9:%.*]] = load i32, i32* [[TMP7]]
+; X32-NEXT:    [[TMP10:%.*]] = load i32, i32* [[TMP8]]
+; X32-NEXT:    [[TMP11:%.*]] = icmp ne i32 [[TMP9]], [[TMP10]]
+; X32-NEXT:    br i1 [[TMP11]], label [[RES_BLOCK]], label [[LOADBB2:%.*]]
+; X32:       loadbb2:
+; X32-NEXT:    [[TMP12:%.*]] = bitcast i8* [[X]] to i32*
+; X32-NEXT:    [[TMP13:%.*]] = bitcast i8* [[Y]] to i32*
+; X32-NEXT:    [[TMP14:%.*]] = getelementptr i32, i32* [[TMP12]], i32 2
+; X32-NEXT:    [[TMP15:%.*]] = getelementptr i32, i32* [[TMP13]], i32 2
+; X32-NEXT:    [[TMP16:%.*]] = load i32, i32* [[TMP14]]
+; X32-NEXT:    [[TMP17:%.*]] = load i32, i32* [[TMP15]]
+; X32-NEXT:    [[TMP18:%.*]] = icmp ne i32 [[TMP16]], [[TMP17]]
+; X32-NEXT:    br i1 [[TMP18]], label [[RES_BLOCK]], label [[LOADBB3:%.*]]
+; X32:       loadbb3:
+; X32-NEXT:    [[TMP19:%.*]] = bitcast i8* [[X]] to i16*
+; X32-NEXT:    [[TMP20:%.*]] = bitcast i8* [[Y]] to i16*
+; X32-NEXT:    [[TMP21:%.*]] = getelementptr i16, i16* [[TMP19]], i16 6
+; X32-NEXT:    [[TMP22:%.*]] = getelementptr i16, i16* [[TMP20]], i16 6
+; X32-NEXT:    [[TMP23:%.*]] = load i16, i16* [[TMP21]]
+; X32-NEXT:    [[TMP24:%.*]] = load i16, i16* [[TMP22]]
+; X32-NEXT:    [[TMP25:%.*]] = icmp ne i16 [[TMP23]], [[TMP24]]
+; X32-NEXT:    br i1 [[TMP25]], label [[RES_BLOCK]], label [[ENDBLOCK]]
+; X32:       endblock:
+; X32-NEXT:    [[PHI_RES:%.*]] = phi i32 [ 0, [[LOADBB3]] ], [ 1, [[RES_BLOCK]] ]
+; X32-NEXT:    [[CMP:%.*]] = icmp eq i32 [[PHI_RES]], 0
+; X32-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
+; X32-NEXT:    ret i32 [[CONV]]
+;
+; X64-LABEL: @cmp_eq14(
+; X64-NEXT:  loadbb:
+; X64-NEXT:    [[TMP0:%.*]] = bitcast i8* [[X:%.*]] to i64*
+; X64-NEXT:    [[TMP1:%.*]] = bitcast i8* [[Y:%.*]] to i64*
+; X64-NEXT:    [[TMP2:%.*]] = load i64, i64* [[TMP0]]
+; X64-NEXT:    [[TMP3:%.*]] = load i64, i64* [[TMP1]]
+; X64-NEXT:    [[TMP4:%.*]] = icmp ne i64 [[TMP2]], [[TMP3]]
+; X64-NEXT:    br i1 [[TMP4]], label [[RES_BLOCK:%.*]], label [[LOADBB1:%.*]]
+; X64:       res_block:
+; X64-NEXT:    br label [[ENDBLOCK:%.*]]
+; X64:       loadbb1:
+; X64-NEXT:    [[TMP5:%.*]] = bitcast i8* [[X]] to i32*
+; X64-NEXT:    [[TMP6:%.*]] = bitcast i8* [[Y]] to i32*
+; X64-NEXT:    [[TMP7:%.*]] = getelementptr i32, i32* [[TMP5]], i32 2
+; X64-NEXT:    [[TMP8:%.*]] = getelementptr i32, i32* [[TMP6]], i32 2
+; X64-NEXT:    [[TMP9:%.*]] = load i32, i32* [[TMP7]]
+; X64-NEXT:    [[TMP10:%.*]] = load i32, i32* [[TMP8]]
+; X64-NEXT:    [[TMP11:%.*]] = icmp ne i32 [[TMP9]], [[TMP10]]
+; X64-NEXT:    br i1 [[TMP11]], label [[RES_BLOCK]], label [[LOADBB2:%.*]]
+; X64:       loadbb2:
+; X64-NEXT:    [[TMP12:%.*]] = bitcast i8* [[X]] to i16*
+; X64-NEXT:    [[TMP13:%.*]] = bitcast i8* [[Y]] to i16*
+; X64-NEXT:    [[TMP14:%.*]] = getelementptr i16, i16* [[TMP12]], i16 6
+; X64-NEXT:    [[TMP15:%.*]] = getelementptr i16, i16* [[TMP13]], i16 6
+; X64-NEXT:    [[TMP16:%.*]] = load i16, i16* [[TMP14]]
+; X64-NEXT:    [[TMP17:%.*]] = load i16, i16* [[TMP15]]
+; X64-NEXT:    [[TMP18:%.*]] = icmp ne i16 [[TMP16]], [[TMP17]]
+; X64-NEXT:    br i1 [[TMP18]], label [[RES_BLOCK]], label [[ENDBLOCK]]
+; X64:       endblock:
+; X64-NEXT:    [[PHI_RES:%.*]] = phi i32 [ 0, [[LOADBB2]] ], [ 1, [[RES_BLOCK]] ]
+; X64-NEXT:    [[CMP:%.*]] = icmp eq i32 [[PHI_RES]], 0
+; X64-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
+; X64-NEXT:    ret i32 [[CONV]]
 ;
   %call = tail call i32 @memcmp(i8* %x, i8* %y, i64 14)
   %cmp = icmp eq i32 %call, 0
@@ -361,11 +1717,52 @@ define i32 @cmp_eq14(i8* nocapture readonly %x, i8* nocapture readonly %y)  {
 }
 
 define i32 @cmp_eq15(i8* nocapture readonly %x, i8* nocapture readonly %y)  {
-; ALL-LABEL: @cmp_eq15(
-; ALL-NEXT:    [[CALL:%.*]] = tail call i32 @memcmp(i8* [[X:%.*]], i8* [[Y:%.*]], i64 15)
-; ALL-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CALL]], 0
-; ALL-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
-; ALL-NEXT:    ret i32 [[CONV]]
+; X32-LABEL: @cmp_eq15(
+; X32-NEXT:    [[CALL:%.*]] = tail call i32 @memcmp(i8* [[X:%.*]], i8* [[Y:%.*]], i64 15)
+; X32-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CALL]], 0
+; X32-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
+; X32-NEXT:    ret i32 [[CONV]]
+;
+; X64-LABEL: @cmp_eq15(
+; X64-NEXT:  loadbb:
+; X64-NEXT:    [[TMP0:%.*]] = bitcast i8* [[X:%.*]] to i64*
+; X64-NEXT:    [[TMP1:%.*]] = bitcast i8* [[Y:%.*]] to i64*
+; X64-NEXT:    [[TMP2:%.*]] = load i64, i64* [[TMP0]]
+; X64-NEXT:    [[TMP3:%.*]] = load i64, i64* [[TMP1]]
+; X64-NEXT:    [[TMP4:%.*]] = icmp ne i64 [[TMP2]], [[TMP3]]
+; X64-NEXT:    br i1 [[TMP4]], label [[RES_BLOCK:%.*]], label [[LOADBB1:%.*]]
+; X64:       res_block:
+; X64-NEXT:    br label [[ENDBLOCK:%.*]]
+; X64:       loadbb1:
+; X64-NEXT:    [[TMP5:%.*]] = bitcast i8* [[X]] to i32*
+; X64-NEXT:    [[TMP6:%.*]] = bitcast i8* [[Y]] to i32*
+; X64-NEXT:    [[TMP7:%.*]] = getelementptr i32, i32* [[TMP5]], i32 2
+; X64-NEXT:    [[TMP8:%.*]] = getelementptr i32, i32* [[TMP6]], i32 2
+; X64-NEXT:    [[TMP9:%.*]] = load i32, i32* [[TMP7]]
+; X64-NEXT:    [[TMP10:%.*]] = load i32, i32* [[TMP8]]
+; X64-NEXT:    [[TMP11:%.*]] = icmp ne i32 [[TMP9]], [[TMP10]]
+; X64-NEXT:    br i1 [[TMP11]], label [[RES_BLOCK]], label [[LOADBB2:%.*]]
+; X64:       loadbb2:
+; X64-NEXT:    [[TMP12:%.*]] = bitcast i8* [[X]] to i16*
+; X64-NEXT:    [[TMP13:%.*]] = bitcast i8* [[Y]] to i16*
+; X64-NEXT:    [[TMP14:%.*]] = getelementptr i16, i16* [[TMP12]], i16 6
+; X64-NEXT:    [[TMP15:%.*]] = getelementptr i16, i16* [[TMP13]], i16 6
+; X64-NEXT:    [[TMP16:%.*]] = load i16, i16* [[TMP14]]
+; X64-NEXT:    [[TMP17:%.*]] = load i16, i16* [[TMP15]]
+; X64-NEXT:    [[TMP18:%.*]] = icmp ne i16 [[TMP16]], [[TMP17]]
+; X64-NEXT:    br i1 [[TMP18]], label [[RES_BLOCK]], label [[LOADBB3:%.*]]
+; X64:       loadbb3:
+; X64-NEXT:    [[TMP19:%.*]] = getelementptr i8, i8* [[X]], i8 14
+; X64-NEXT:    [[TMP20:%.*]] = getelementptr i8, i8* [[Y]], i8 14
+; X64-NEXT:    [[TMP21:%.*]] = load i8, i8* [[TMP19]]
+; X64-NEXT:    [[TMP22:%.*]] = load i8, i8* [[TMP20]]
+; X64-NEXT:    [[TMP23:%.*]] = icmp ne i8 [[TMP21]], [[TMP22]]
+; X64-NEXT:    br i1 [[TMP23]], label [[RES_BLOCK]], label [[ENDBLOCK]]
+; X64:       endblock:
+; X64-NEXT:    [[PHI_RES:%.*]] = phi i32 [ 0, [[LOADBB3]] ], [ 1, [[RES_BLOCK]] ]
+; X64-NEXT:    [[CMP:%.*]] = icmp eq i32 [[PHI_RES]], 0
+; X64-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
+; X64-NEXT:    ret i32 [[CONV]]
 ;
   %call = tail call i32 @memcmp(i8* %x, i8* %y, i64 15)
   %cmp = icmp eq i32 %call, 0
@@ -374,11 +1771,73 @@ define i32 @cmp_eq15(i8* nocapture readonly %x, i8* nocapture readonly %y)  {
 }
 
 define i32 @cmp_eq16(i8* nocapture readonly %x, i8* nocapture readonly %y)  {
-; ALL-LABEL: @cmp_eq16(
-; ALL-NEXT:    [[CALL:%.*]] = tail call i32 @memcmp(i8* [[X:%.*]], i8* [[Y:%.*]], i64 16)
-; ALL-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CALL]], 0
-; ALL-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
-; ALL-NEXT:    ret i32 [[CONV]]
+; X32-LABEL: @cmp_eq16(
+; X32-NEXT:  loadbb:
+; X32-NEXT:    [[TMP0:%.*]] = bitcast i8* [[X:%.*]] to i32*
+; X32-NEXT:    [[TMP1:%.*]] = bitcast i8* [[Y:%.*]] to i32*
+; X32-NEXT:    [[TMP2:%.*]] = load i32, i32* [[TMP0]]
+; X32-NEXT:    [[TMP3:%.*]] = load i32, i32* [[TMP1]]
+; X32-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP2]], [[TMP3]]
+; X32-NEXT:    br i1 [[TMP4]], label [[RES_BLOCK:%.*]], label [[LOADBB1:%.*]]
+; X32:       res_block:
+; X32-NEXT:    br label [[ENDBLOCK:%.*]]
+; X32:       loadbb1:
+; X32-NEXT:    [[TMP5:%.*]] = bitcast i8* [[X]] to i32*
+; X32-NEXT:    [[TMP6:%.*]] = bitcast i8* [[Y]] to i32*
+; X32-NEXT:    [[TMP7:%.*]] = getelementptr i32, i32* [[TMP5]], i32 1
+; X32-NEXT:    [[TMP8:%.*]] = getelementptr i32, i32* [[TMP6]], i32 1
+; X32-NEXT:    [[TMP9:%.*]] = load i32, i32* [[TMP7]]
+; X32-NEXT:    [[TMP10:%.*]] = load i32, i32* [[TMP8]]
+; X32-NEXT:    [[TMP11:%.*]] = icmp ne i32 [[TMP9]], [[TMP10]]
+; X32-NEXT:    br i1 [[TMP11]], label [[RES_BLOCK]], label [[LOADBB2:%.*]]
+; X32:       loadbb2:
+; X32-NEXT:    [[TMP12:%.*]] = bitcast i8* [[X]] to i32*
+; X32-NEXT:    [[TMP13:%.*]] = bitcast i8* [[Y]] to i32*
+; X32-NEXT:    [[TMP14:%.*]] = getelementptr i32, i32* [[TMP12]], i32 2
+; X32-NEXT:    [[TMP15:%.*]] = getelementptr i32, i32* [[TMP13]], i32 2
+; X32-NEXT:    [[TMP16:%.*]] = load i32, i32* [[TMP14]]
+; X32-NEXT:    [[TMP17:%.*]] = load i32, i32* [[TMP15]]
+; X32-NEXT:    [[TMP18:%.*]] = icmp ne i32 [[TMP16]], [[TMP17]]
+; X32-NEXT:    br i1 [[TMP18]], label [[RES_BLOCK]], label [[LOADBB3:%.*]]
+; X32:       loadbb3:
+; X32-NEXT:    [[TMP19:%.*]] = bitcast i8* [[X]] to i32*
+; X32-NEXT:    [[TMP20:%.*]] = bitcast i8* [[Y]] to i32*
+; X32-NEXT:    [[TMP21:%.*]] = getelementptr i32, i32* [[TMP19]], i32 3
+; X32-NEXT:    [[TMP22:%.*]] = getelementptr i32, i32* [[TMP20]], i32 3
+; X32-NEXT:    [[TMP23:%.*]] = load i32, i32* [[TMP21]]
+; X32-NEXT:    [[TMP24:%.*]] = load i32, i32* [[TMP22]]
+; X32-NEXT:    [[TMP25:%.*]] = icmp ne i32 [[TMP23]], [[TMP24]]
+; X32-NEXT:    br i1 [[TMP25]], label [[RES_BLOCK]], label [[ENDBLOCK]]
+; X32:       endblock:
+; X32-NEXT:    [[PHI_RES:%.*]] = phi i32 [ 0, [[LOADBB3]] ], [ 1, [[RES_BLOCK]] ]
+; X32-NEXT:    [[CMP:%.*]] = icmp eq i32 [[PHI_RES]], 0
+; X32-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
+; X32-NEXT:    ret i32 [[CONV]]
+;
+; X64-LABEL: @cmp_eq16(
+; X64-NEXT:  loadbb:
+; X64-NEXT:    [[TMP0:%.*]] = bitcast i8* [[X:%.*]] to i64*
+; X64-NEXT:    [[TMP1:%.*]] = bitcast i8* [[Y:%.*]] to i64*
+; X64-NEXT:    [[TMP2:%.*]] = load i64, i64* [[TMP0]]
+; X64-NEXT:    [[TMP3:%.*]] = load i64, i64* [[TMP1]]
+; X64-NEXT:    [[TMP4:%.*]] = icmp ne i64 [[TMP2]], [[TMP3]]
+; X64-NEXT:    br i1 [[TMP4]], label [[RES_BLOCK:%.*]], label [[LOADBB1:%.*]]
+; X64:       res_block:
+; X64-NEXT:    br label [[ENDBLOCK:%.*]]
+; X64:       loadbb1:
+; X64-NEXT:    [[TMP5:%.*]] = bitcast i8* [[X]] to i64*
+; X64-NEXT:    [[TMP6:%.*]] = bitcast i8* [[Y]] to i64*
+; X64-NEXT:    [[TMP7:%.*]] = getelementptr i64, i64* [[TMP5]], i64 1
+; X64-NEXT:    [[TMP8:%.*]] = getelementptr i64, i64* [[TMP6]], i64 1
+; X64-NEXT:    [[TMP9:%.*]] = load i64, i64* [[TMP7]]
+; X64-NEXT:    [[TMP10:%.*]] = load i64, i64* [[TMP8]]
+; X64-NEXT:    [[TMP11:%.*]] = icmp ne i64 [[TMP9]], [[TMP10]]
+; X64-NEXT:    br i1 [[TMP11]], label [[RES_BLOCK]], label [[ENDBLOCK]]
+; X64:       endblock:
+; X64-NEXT:    [[PHI_RES:%.*]] = phi i32 [ 0, [[LOADBB1]] ], [ 1, [[RES_BLOCK]] ]
+; X64-NEXT:    [[CMP:%.*]] = icmp eq i32 [[PHI_RES]], 0
+; X64-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
+; X64-NEXT:    ret i32 [[CONV]]
 ;
   %call = tail call i32 @memcmp(i8* %x, i8* %y, i64 16)
   %cmp = icmp eq i32 %call, 0

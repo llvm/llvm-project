@@ -104,15 +104,9 @@ Status NativeRegisterContextNetBSD::DoWriteDBR(void *buf) {
 }
 
 NativeProcessNetBSD &NativeRegisterContextNetBSD::GetProcess() {
-  auto process_sp =
-      std::static_pointer_cast<NativeProcessNetBSD>(m_thread.GetProcess());
-  assert(process_sp);
-  return *process_sp;
+  return static_cast<NativeProcessNetBSD &>(m_thread.GetProcess());
 }
 
 ::pid_t NativeRegisterContextNetBSD::GetProcessPid() {
-  NativeProcessNetBSD &process = GetProcess();
-  lldb::pid_t pid = process.GetID();
-
-  return pid;
+  return GetProcess().GetID();
 }

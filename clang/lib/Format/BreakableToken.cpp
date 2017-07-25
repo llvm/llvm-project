@@ -339,7 +339,8 @@ BreakableBlockComment::BreakableBlockComment(
     const FormatToken &Token, unsigned StartColumn,
     unsigned OriginalStartColumn, bool FirstInLine, bool InPPDirective,
     encoding::Encoding Encoding, const FormatStyle &Style)
-    : BreakableComment(Token, StartColumn, InPPDirective, Encoding, Style) {
+    : BreakableComment(Token, StartColumn, InPPDirective, Encoding, Style),
+      DelimitersOnNewline(false) {
   assert(Tok.is(TT_BlockComment) &&
          "block comment section must start with a block comment");
 
@@ -430,8 +431,25 @@ BreakableBlockComment::BreakableBlockComment(
   IndentAtLineBreak =
       std::max<unsigned>(IndentAtLineBreak, Decoration.size());
 
+  // Detect a multiline jsdoc comment and set DelimitersOnNewline in that case.
+  if (Style.Language == FormatStyle::LK_JavaScript ||
+      Style.Language == FormatStyle::LK_Java) {
+    if ((Lines[0] == "*" || Lines[0].startswith("* ")) && Lines.size() > 1) {
+      // This is a multiline jsdoc comment.
+      DelimitersOnNewline = true;
+    } else if (Lines[0].startswith("* ") && Lines.size() == 1) {
+      // Detect a long single-line comment, like:
+      // /** long long long */
+      // Below, '2' is the width of '*/'.
+      unsigned EndColumn = ContentColumn[0] + encoding::columnWidthWithTabs(
+          Lines[0], ContentColumn[0], Style.TabWidth, Encoding) + 2;
+      DelimitersOnNewline = EndColumn > Style.ColumnLimit;
+    }
+  }
+
   DEBUG({
     llvm::dbgs() << "IndentAtLineBreak " << IndentAtLineBreak << "\n";
+    llvm::dbgs() << "DelimitersOnNewline " << DelimitersOnNewline << "\n";
     for (size_t i = 0; i < Lines.size(); ++i) {
       llvm::dbgs() << i << " |" << Content[i] << "| "
                    << "CC=" << ContentColumn[i] << "| "
@@ -580,10 +598,22 @@ unsigned BreakableBlockComment::getLineLengthAfterSplitBefore(
     return getLineLengthAfterSplit(LineIndex, TailOffset, StringRef::npos);
   }
 }
+
 void BreakableBlockComment::replaceWhitespaceBefore(
     unsigned LineIndex, unsigned PreviousEndColumn, unsigned ColumnLimit,
     Split SplitBefore, WhitespaceManager &Whitespaces) {
-  if (LineIndex == 0) return;
+  if (LineIndex == 0) {
+    if (DelimitersOnNewline) {
+        // Since we're breaking af index 1 below, the break position and the
+        // break length are the same.
+        size_t BreakLength = Lines[0].substr(1).find_first_not_of(Blanks);
+        if (BreakLength != StringRef::npos) {
+          insertBreak(LineIndex, 0, Split(1, BreakLength), Whitespaces);
+          DelimitersOnNewline = true;
+        }
+    }
+    return;
+  }
   StringRef TrimmedContent = Content[LineIndex].ltrim(Blanks);
   if (SplitBefore.first != StringRef::npos) {
     // Here we need to reflow.
@@ -649,6 +679,15 @@ void BreakableBlockComment::replaceWhitespaceBefore(
   Whitespaces.replaceWhitespaceInToken(
       tokenAt(LineIndex), WhitespaceOffsetInToken, WhitespaceLength, "", Prefix,
       InPPDirective, /*Newlines=*/1, ContentColumn[LineIndex] - Prefix.size());
+}
+
+BreakableToken::Split BreakableBlockComment::getSplitAfterLastLine(
+    unsigned TailOffset, unsigned ColumnLimit,
+    llvm::Regex &CommentPragmasRegex) const {
+  if (DelimitersOnNewline)
+    return getSplit(Lines.size() - 1, TailOffset, ColumnLimit,
+                    CommentPragmasRegex);
+  return Split(StringRef::npos, 0);
 }
 
 bool BreakableBlockComment::mayReflow(unsigned LineIndex,

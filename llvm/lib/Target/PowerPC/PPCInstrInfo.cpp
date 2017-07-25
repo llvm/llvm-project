@@ -1635,8 +1635,9 @@ bool PPCInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, unsigned SrcReg,
   if (equalityOnly) {
     // We need to check the uses of the condition register in order to reject
     // non-equality comparisons.
-    for (MachineRegisterInfo::use_instr_iterator I =MRI->use_instr_begin(CRReg),
-         IE = MRI->use_instr_end(); I != IE; ++I) {
+    for (MachineRegisterInfo::use_instr_iterator
+         I = MRI->use_instr_begin(CRReg), IE = MRI->use_instr_end();
+         I != IE; ++I) {
       MachineInstr *UseMI = &*I;
       if (UseMI->getOpcode() == PPC::BCC) {
         unsigned Pred = UseMI->getOperand(0).getImm();
@@ -1658,8 +1659,9 @@ bool PPCInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, unsigned SrcReg,
   for (MachineBasicBlock::iterator EL = CmpInstr.getParent()->end(); I != EL;
        ++I) {
     bool FoundUse = false;
-    for (MachineRegisterInfo::use_instr_iterator J =MRI->use_instr_begin(CRReg),
-         JE = MRI->use_instr_end(); J != JE; ++J)
+    for (MachineRegisterInfo::use_instr_iterator
+         J = MRI->use_instr_begin(CRReg), JE = MRI->use_instr_end();
+         J != JE; ++J)
       if (&*J == &*I) {
         FoundUse = true;
         break;

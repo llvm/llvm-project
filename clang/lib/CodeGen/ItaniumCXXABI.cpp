@@ -284,6 +284,14 @@ public:
     // linkage together with vtables when needed.
     if (ForVTable && !Thunk->hasLocalLinkage())
       Thunk->setLinkage(llvm::GlobalValue::AvailableExternallyLinkage);
+
+    // Propagate dllexport storage, to enable the linker to generate import
+    // thunks as necessary (e.g. when a parent class has a key function and a
+    // child class doesn't, and the construction vtable for the parent in the
+    // child needs to reference the parent's thunks).
+    const CXXMethodDecl *MD = cast<CXXMethodDecl>(GD.getDecl());
+    if (MD->hasAttr<DLLExportAttr>())
+      Thunk->setDLLStorageClass(llvm::GlobalValue::DLLExportStorageClass);
   }
 
   llvm::Value *performThisAdjustment(CodeGenFunction &CGF, Address This,

@@ -19,6 +19,7 @@
 #include "scudo_tls.h"
 #include "scudo_utils.h"
 
+#include "sanitizer_common/sanitizer_allocator_checks.h"
 #include "sanitizer_common/sanitizer_allocator_interface.h"
 #include "sanitizer_common/sanitizer_errno.h"
 #include "sanitizer_common/sanitizer_quarantine.h"
@@ -160,8 +161,9 @@ ScudoChunk *getScudoChunk(uptr UserBeg) {
 }
 
 struct AllocatorOptions {
-  u32 QuarantineSizeMb;
+  u32 QuarantineSizeKb;
   u32 ThreadLocalQuarantineSizeKb;
+  u32 QuarantineChunksUpToSize;
   bool MayReturnNull;
   s32 ReleaseToOSIntervalMs;
   bool DeallocationTypeMismatch;
@@ -169,27 +171,17 @@ struct AllocatorOptions {
   bool ZeroContents;
 
   void setFrom(const Flags *f, const CommonFlags *cf);
-  void copyTo(Flags *f, CommonFlags *cf) const;
 };
 
 void AllocatorOptions::setFrom(const Flags *f, const CommonFlags *cf) {
   MayReturnNull = cf->allocator_may_return_null;
   ReleaseToOSIntervalMs = cf->allocator_release_to_os_interval_ms;
-  QuarantineSizeMb = f->QuarantineSizeMb;
+  QuarantineSizeKb = f->QuarantineSizeKb;
   ThreadLocalQuarantineSizeKb = f->ThreadLocalQuarantineSizeKb;
+  QuarantineChunksUpToSize = f->QuarantineChunksUpToSize;
   DeallocationTypeMismatch = f->DeallocationTypeMismatch;
   DeleteSizeMismatch = f->DeleteSizeMismatch;
   ZeroContents = f->ZeroContents;
-}
-
-void AllocatorOptions::copyTo(Flags *f, CommonFlags *cf) const {
-  cf->allocator_may_return_null = MayReturnNull;
-  cf->allocator_release_to_os_interval_ms = ReleaseToOSIntervalMs;
-  f->QuarantineSizeMb = QuarantineSizeMb;
-  f->ThreadLocalQuarantineSizeKb = ThreadLocalQuarantineSizeKb;
-  f->DeallocationTypeMismatch = DeallocationTypeMismatch;
-  f->DeleteSizeMismatch = DeleteSizeMismatch;
-  f->ZeroContents = ZeroContents;
 }
 
 static void initScudoInternal(const AllocatorOptions &Options);
@@ -291,6 +283,8 @@ struct ScudoAllocator {
   ScudoQuarantineCache FallbackQuarantineCache;
   ScudoPrng FallbackPrng;
 
+  u32 QuarantineChunksUpToSize;
+
   bool DeallocationTypeMismatch;
   bool ZeroContents;
   bool DeleteSizeMismatch;
@@ -336,8 +330,9 @@ struct ScudoAllocator {
     SetAllocatorMayReturnNull(Options.MayReturnNull);
     BackendAllocator.init(Options.ReleaseToOSIntervalMs);
     AllocatorQuarantine.Init(
-        static_cast<uptr>(Options.QuarantineSizeMb) << 20,
+        static_cast<uptr>(Options.QuarantineSizeKb) << 10,
         static_cast<uptr>(Options.ThreadLocalQuarantineSizeKb) << 10);
+    QuarantineChunksUpToSize = Options.QuarantineChunksUpToSize;
     GlobalPrng.init();
     Cookie = GlobalPrng.getU64();
     BackendAllocator.initCache(&FallbackAllocatorCache);
@@ -446,18 +441,17 @@ struct ScudoAllocator {
     return UserPtr;
   }
 
-  // Place a chunk in the quarantine. In the event of a zero-sized quarantine,
-  // we directly deallocate the chunk, otherwise the flow would lead to the
-  // chunk being loaded (and checked) twice, and stored (and checksummed) once,
-  // with no additional security value.
+  // Place a chunk in the quarantine or directly deallocate it in the event of
+  // a zero-sized quarantine, or if the size of the chunk is greater than the
+  // quarantine chunk size threshold.
   void quarantineOrDeallocateChunk(ScudoChunk *Chunk, UnpackedHeader *Header,
                                    uptr Size) {
-    bool FromPrimary = Header->FromPrimary;
-    bool BypassQuarantine = (AllocatorQuarantine.GetCacheSize() == 0);
+    const bool BypassQuarantine = (AllocatorQuarantine.GetCacheSize() == 0) ||
+        (Size > QuarantineChunksUpToSize);
     if (BypassQuarantine) {
       Chunk->eraseHeader();
       void *Ptr = Chunk->getAllocBeg(Header);
-      if (FromPrimary) {
+      if (Header->FromPrimary) {
         ScudoThreadContext *ThreadContext = getThreadContextAndLock();
         if (LIKELY(ThreadContext)) {
           getBackendAllocator().deallocatePrimary(
@@ -471,6 +465,12 @@ struct ScudoAllocator {
         getBackendAllocator().deallocateSecondary(Ptr);
       }
     } else {
+      // If a small memory amount was allocated with a larger alignment, we want
+      // to take that into account. Otherwise the Quarantine would be filled
+      // with tiny chunks, taking a lot of VA memory. This is an approximation
+      // of the usable size, that allows us to not call
+      // GetActuallyAllocatedSize.
+      uptr EstimatedSize = Size + (Header->Offset << MinAlignmentLog);
       UnpackedHeader NewHeader = *Header;
       NewHeader.State = ChunkQuarantine;
       Chunk->compareExchangeHeader(&NewHeader, Header);
@@ -479,13 +479,13 @@ struct ScudoAllocator {
         AllocatorQuarantine.Put(getQuarantineCache(ThreadContext),
                                 QuarantineCallback(
                                     getAllocatorCache(ThreadContext)),
-                                Chunk, Size);
+                                Chunk, EstimatedSize);
         ThreadContext->unlock();
       } else {
         SpinMutexLock l(&FallbackMutex);
         AllocatorQuarantine.Put(&FallbackQuarantineCache,
                                 QuarantineCallback(&FallbackAllocatorCache),
-                                Chunk, Size);
+                                Chunk, EstimatedSize);
       }
     }
   }
@@ -503,37 +503,31 @@ struct ScudoAllocator {
                      "aligned at address %p\n", UserPtr);
     }
     ScudoChunk *Chunk = getScudoChunk(UserBeg);
-    UnpackedHeader OldHeader;
-    Chunk->loadHeader(&OldHeader);
-    if (UNLIKELY(OldHeader.State != ChunkAllocated)) {
+    UnpackedHeader Header;
+    Chunk->loadHeader(&Header);
+    if (UNLIKELY(Header.State != ChunkAllocated)) {
       dieWithMessage("ERROR: invalid chunk state when deallocating address "
                      "%p\n", UserPtr);
     }
     if (DeallocationTypeMismatch) {
       // The deallocation type has to match the allocation one.
-      if (OldHeader.AllocType != Type) {
+      if (Header.AllocType != Type) {
         // With the exception of memalign'd Chunks, that can be still be free'd.
-        if (OldHeader.AllocType != FromMemalign || Type != FromMalloc) {
+        if (Header.AllocType != FromMemalign || Type != FromMalloc) {
           dieWithMessage("ERROR: allocation type mismatch on address %p\n",
                          UserPtr);
         }
       }
     }
-    uptr Size = OldHeader.FromPrimary ? OldHeader.SizeOrUnusedBytes :
-        Chunk->getUsableSize(&OldHeader) - OldHeader.SizeOrUnusedBytes;
+    uptr Size = Header.FromPrimary ? Header.SizeOrUnusedBytes :
+        Chunk->getUsableSize(&Header) - Header.SizeOrUnusedBytes;
     if (DeleteSizeMismatch) {
       if (DeleteSize && DeleteSize != Size) {
         dieWithMessage("ERROR: invalid sized delete on chunk at address %p\n",
                        UserPtr);
       }
     }
-
-    // If a small memory amount was allocated with a larger alignment, we want
-    // to take that into account. Otherwise the Quarantine would be filled with
-    // tiny chunks, taking a lot of VA memory. This is an approximation of the
-    // usable size, that allows us to not call GetActuallyAllocatedSize.
-    uptr LiableSize = Size + (OldHeader.Offset << MinAlignment);
-    quarantineOrDeallocateChunk(Chunk, &OldHeader, LiableSize);
+    quarantineOrDeallocateChunk(Chunk, &Header, Size);
   }
 
   // Reallocates a chunk. We can save on a new allocation if the new requested
@@ -574,7 +568,7 @@ struct ScudoAllocator {
       uptr OldSize = OldHeader.FromPrimary ? OldHeader.SizeOrUnusedBytes :
           UsableSize - OldHeader.SizeOrUnusedBytes;
       memcpy(NewPtr, OldPtr, Min(NewSize, OldSize));
-      quarantineOrDeallocateChunk(Chunk, &OldHeader, UsableSize);
+      quarantineOrDeallocateChunk(Chunk, &OldHeader, OldSize);
     }
     return NewPtr;
   }
@@ -638,14 +632,8 @@ void ScudoThreadContext::commitBack() {
   Instance.commitBack(this);
 }
 
-INLINE void *checkPtr(void *Ptr) {
-  if (UNLIKELY(!Ptr))
-    errno = errno_ENOMEM;
-  return Ptr;
-}
-
 void *scudoMalloc(uptr Size, AllocType Type) {
-  return checkPtr(Instance.allocate(Size, MinAlignment, Type));
+  return SetErrnoOnNull(Instance.allocate(Size, MinAlignment, Type));
 }
 
 void scudoFree(void *Ptr, AllocType Type) {
@@ -658,27 +646,28 @@ void scudoSizedFree(void *Ptr, uptr Size, AllocType Type) {
 
 void *scudoRealloc(void *Ptr, uptr Size) {
   if (!Ptr)
-    return checkPtr(Instance.allocate(Size, MinAlignment, FromMalloc));
+    return SetErrnoOnNull(Instance.allocate(Size, MinAlignment, FromMalloc));
   if (Size == 0) {
     Instance.deallocate(Ptr, 0, FromMalloc);
     return nullptr;
   }
-  return checkPtr(Instance.reallocate(Ptr, Size));
+  return SetErrnoOnNull(Instance.reallocate(Ptr, Size));
 }
 
 void *scudoCalloc(uptr NMemB, uptr Size) {
-  return checkPtr(Instance.calloc(NMemB, Size));
+  return SetErrnoOnNull(Instance.calloc(NMemB, Size));
 }
 
 void *scudoValloc(uptr Size) {
-  return checkPtr(Instance.allocate(Size, GetPageSizeCached(), FromMemalign));
+  return SetErrnoOnNull(
+      Instance.allocate(Size, GetPageSizeCached(), FromMemalign));
 }
 
 void *scudoPvalloc(uptr Size) {
   uptr PageSize = GetPageSizeCached();
   // pvalloc(0) should allocate one page.
   Size = Size ? RoundUpTo(Size, PageSize) : PageSize;
-  return checkPtr(Instance.allocate(Size, PageSize, FromMemalign));
+  return SetErrnoOnNull(Instance.allocate(Size, PageSize, FromMemalign));
 }
 
 void *scudoMemalign(uptr Alignment, uptr Size) {
@@ -686,28 +675,27 @@ void *scudoMemalign(uptr Alignment, uptr Size) {
     errno = errno_EINVAL;
     return ScudoAllocator::FailureHandler::OnBadRequest();
   }
-  return checkPtr(Instance.allocate(Size, Alignment, FromMemalign));
+  return SetErrnoOnNull(Instance.allocate(Size, Alignment, FromMemalign));
 }
 
 int scudoPosixMemalign(void **MemPtr, uptr Alignment, uptr Size) {
-  if (UNLIKELY(!IsPowerOfTwo(Alignment) || (Alignment % sizeof(void *)) != 0)) {
+  if (UNLIKELY(!CheckPosixMemalignAlignment(Alignment))) {
     ScudoAllocator::FailureHandler::OnBadRequest();
     return errno_EINVAL;
   }
   void *Ptr = Instance.allocate(Size, Alignment, FromMemalign);
-  if (!Ptr)
+  if (UNLIKELY(!Ptr))
     return errno_ENOMEM;
   *MemPtr = Ptr;
   return 0;
 }
 
 void *scudoAlignedAlloc(uptr Alignment, uptr Size) {
-  // Alignment must be a power of 2, Size must be a multiple of Alignment.
-  if (UNLIKELY(!IsPowerOfTwo(Alignment) || (Size & (Alignment - 1)) != 0)) {
+  if (UNLIKELY(!CheckAlignedAllocAlignmentAndSize(Alignment, Size))) {
     errno = errno_EINVAL;
     return ScudoAllocator::FailureHandler::OnBadRequest();
   }
-  return checkPtr(Instance.allocate(Size, Alignment, FromMalloc));
+  return SetErrnoOnNull(Instance.allocate(Size, Alignment, FromMalloc));
 }
 
 uptr scudoMallocUsableSize(void *Ptr) {

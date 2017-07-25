@@ -123,9 +123,13 @@ private:
   void tryToParseJSFunction();
   void addUnwrappedLine();
   bool eof() const;
-  void nextToken();
+  // LevelDifference is the difference of levels after and before the current
+  // token. For example:
+  // - if the token is '{' and opens a block, LevelDifference is 1.
+  // - if the token is '}' and closes a block, LevelDifference is -1.
+  void nextToken(int LevelDifference = 0);
+  void readToken(int LevelDifference = 0);
   const FormatToken *getPreviousToken();
-  void readToken();
 
   // Decides which comment tokens should be added to the current line and which
   // should be added as comments before the next token.

@@ -13,6 +13,13 @@ import operator
 from collections import defaultdict
 from multiprocessing import cpu_count, Pool
 
+try:
+    from guppy import hpy
+    hp = hpy()
+except ImportError:
+    print("Memory consumption not shown because guppy is not installed")
+    hp = None
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=desc)
     parser.add_argument(
@@ -53,7 +60,12 @@ if __name__ == '__main__':
         byname[r.Pass + "/" + r.Name] += 1
 
     total = len(all_remarks)
-    print("{:24s} {:10d}\n".format("Total number of remarks", total))
+    print("{:24s} {:10d}".format("Total number of remarks", total))
+    if hp:
+        h = hp.heap()
+        print("{:24s} {:10d}".format("Memory per remark",
+                                     h.size / len(all_remarks)))
+    print('\n')
 
     print("Top 10 remarks by pass:")
     for (passname, count) in sorted(bypass.items(), key=operator.itemgetter(1),

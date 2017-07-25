@@ -998,8 +998,9 @@ Instruction *InstCombiner::visitLoadInst(LoadInst &LI) {
     // that this code is not reachable.  We do this instead of inserting
     // an unreachable instruction directly because we cannot modify the
     // CFG.
-    new StoreInst(UndefValue::get(LI.getType()),
-                  Constant::getNullValue(Op->getType()), &LI);
+    StoreInst *SI = new StoreInst(UndefValue::get(LI.getType()),
+                                  Constant::getNullValue(Op->getType()), &LI);
+    SI->setDebugLoc(LI.getDebugLoc());
     return replaceInstUsesWith(LI, UndefValue::get(LI.getType()));
   }
 

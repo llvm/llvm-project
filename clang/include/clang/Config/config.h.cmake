@@ -56,4 +56,9 @@
 /* enable x86 relax relocations by default */
 #cmakedefine01 ENABLE_X86_RELAX_RELOCATIONS
 
+/* Enable each functionality of modules */
+#cmakedefine CLANG_ENABLE_ARCMT
+#cmakedefine CLANG_ENABLE_OBJC_REWRITER
+#cmakedefine CLANG_ENABLE_STATIC_ANALYZER
+
 #endif

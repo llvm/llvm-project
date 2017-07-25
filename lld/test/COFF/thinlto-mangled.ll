@@ -1,3 +1,4 @@
+; REQUIRES: x86
 ; RUN: opt -thinlto-bc %s -o %t.obj
 ; RUN: opt -thinlto-bc %S/Inputs/thinlto-mangled-qux.ll -o %T/thinlto-mangled-qux.obj
 ; RUN: lld-link -out:%t.exe -entry:main %t.obj %T/thinlto-mangled-qux.obj

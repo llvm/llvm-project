@@ -404,7 +404,8 @@ basic_streambuf<_CharT, _Traits>::xsgetn(char_type* __s, streamsize __n)
     {
         if (__ninp_ < __einp_)
         {
-            const streamsize __len = _VSTD::min(__einp_ - __ninp_, __n - __i);
+            const streamsize __len = _VSTD::min(static_cast<streamsize>(INT_MAX),
+                                _VSTD::min(__einp_ - __ninp_, __n - __i));
             traits_type::copy(__s, __ninp_, __len);
             __s +=  __len;
             __i +=  __len;

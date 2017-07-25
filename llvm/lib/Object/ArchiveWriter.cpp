@@ -318,7 +318,8 @@ writeSymbolTable(raw_fd_ostream &Out, object::Archive::Kind Kind,
         continue;
       if (!(Symflags & object::SymbolRef::SF_Global))
         continue;
-      if (Symflags & object::SymbolRef::SF_Undefined)
+      if (Symflags & object::SymbolRef::SF_Undefined &&
+          !(Symflags & object::SymbolRef::SF_Indirect))
         continue;
 
       unsigned NameOffset = NameOS.tell();

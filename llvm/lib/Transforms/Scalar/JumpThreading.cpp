@@ -231,13 +231,15 @@ bool JumpThreadingPass::runImpl(Function &F, TargetLibraryInfo *TLI_,
       // Can't thread an unconditional jump, but if the block is "almost
       // empty", we can replace uses of it with uses of the successor and make
       // this dead.
-      // We should not eliminate the loop header either, because eliminating
-      // a loop header might later prevent LoopSimplify from transforming nested
-      // loops into simplified form.
+      // We should not eliminate the loop header or latch either, because
+      // eliminating a loop header or latch might later prevent LoopSimplify
+      // from transforming nested loops into simplified form. We will rely on
+      // later passes in backend to clean up empty blocks.
       if (BI && BI->isUnconditional() &&
           BB != &BB->getParent()->getEntryBlock() &&
           // If the terminator is the only non-phi instruction, try to nuke it.
-          BB->getFirstNonPHIOrDbg()->isTerminator() && !LoopHeaders.count(BB)) {
+          BB->getFirstNonPHIOrDbg()->isTerminator() && !LoopHeaders.count(BB) &&
+          !LoopHeaders.count(BI->getSuccessor(0))) {
         // FIXME: It is always conservatively correct to drop the info
         // for a block even if it doesn't get erased.  This isn't totally
         // awesome, but it allows us to use AssertingVH to prevent nasty

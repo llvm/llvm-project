@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "sanitizer_stacktrace_printer.h"
+#include "sanitizer_file.h"
 
 namespace __sanitizer {
 

@@ -1,0 +1,52 @@
+# RUN: llc -mtriple=aarch64-linux-gnu -mcpu=falkor -run-pass falkor-hwpf-fix-late -o - %s | FileCheck %s
+--- |
+  @g = external global i32
+
+  define void @hwpf1() { ret void }
+  define void @hwpf2() { ret void }
+...
+---
+# Verify that the tag collision between the loads is resolved.
+# CHECK-LABEL: name: hwpf1
+# CHECK: %[[BASE:[a-z0-9]+]] = ORRXrs %xzr, %x1, 0
+# CHECK: LDRWui %[[BASE]], 0
+# CHECK: LDRWui %x1, 1
+name:            hwpf1
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: %w0, %x1
+
+    %w2 = LDRWui %x1, 0 :: ("aarch64-strided-access" load 4 from @g)
+    %w2 = LDRWui %x1, 1
+
+    %w0 = SUBWri %w0, 1, 0
+    %wzr = SUBSWri %w0, 0, 0, implicit-def %nzcv
+    Bcc 9, %bb.0, implicit %nzcv
+
+  bb.1:
+    RET_ReallyLR
+...
+---
+# Verify that the tag collision between the loads is resolved and written back for post increment addressing.
+# CHECK-LABEL: name: hwpf2
+# CHECK: %[[BASE:[a-z0-9]+]] = ORRXrs %xzr, %x1, 0
+# CHECK: LDRWpost %[[BASE]], 0
+# CHECK: %x1 = ORRXrs %xzr, %[[BASE]], 0
+# CHECK: LDRWui %x1, 1
+name:            hwpf2
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: %w0, %x1
+
+    %x1, %w2 = LDRWpost %x1, 0 :: ("aarch64-strided-access" load 4 from @g)
+    %w2 = LDRWui %x1, 1
+
+    %w0 = SUBWri %w0, 1, 0
+    %wzr = SUBSWri %w0, 0, 0, implicit-def %nzcv
+    Bcc 9, %bb.0, implicit %nzcv
+
+  bb.1:
+    RET_ReallyLR
+...

@@ -52,6 +52,13 @@ struct VirtualBase : virtual Base {
   int vb;
 };
 
+// Incomplete type, assume it is TriviallyCopyable.
+struct NoDef;
+
+void f(NoDef *s) {
+  memset(s, 0, 5);
+}
+
 template <typename T>
 void memset_temp(T *b) {
   memset(b, 0, sizeof(T));

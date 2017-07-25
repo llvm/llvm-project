@@ -2239,7 +2239,7 @@ JoinVals::analyzeValue(unsigned ValNo, JoinVals &Other) {
   const MachineInstr *DefMI = nullptr;
   if (VNI->isPHIDef()) {
     // Conservatively assume that all lanes in a PHI are valid.
-    LaneBitmask Lanes = SubRangeJoin ? LaneBitmask(1)
+    LaneBitmask Lanes = SubRangeJoin ? LaneBitmask::getLane(0)
                                      : TRI->getSubRegIndexLaneMask(SubIdx);
     V.ValidLanes = V.WriteLanes = Lanes;
   } else {
@@ -2247,7 +2247,7 @@ JoinVals::analyzeValue(unsigned ValNo, JoinVals &Other) {
     assert(DefMI != nullptr);
     if (SubRangeJoin) {
       // We don't care about the lanes when joining subregister ranges.
-      V.WriteLanes = V.ValidLanes = LaneBitmask(1);
+      V.WriteLanes = V.ValidLanes = LaneBitmask::getLane(0);
       if (DefMI->isImplicitDef()) {
         V.ValidLanes = LaneBitmask::getNone();
         V.ErasableImplicitDef = true;

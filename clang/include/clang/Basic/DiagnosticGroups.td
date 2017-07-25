@@ -61,6 +61,7 @@ def DoublePromotion : DiagGroup<"double-promotion">;
 def EnumTooLarge : DiagGroup<"enum-too-large">;
 def UnsupportedNan : DiagGroup<"unsupported-nan">;
 def UnsupportedCB : DiagGroup<"unsupported-cb">;
+def UnsupportedGPOpt : DiagGroup<"unsupported-gpopt">;
 def NonLiteralNullConversion : DiagGroup<"non-literal-null-conversion">;
 def NullConversion : DiagGroup<"null-conversion">;
 def ImplicitConversionFloatingPointToBool :
@@ -152,6 +153,8 @@ def GNUFoldingConstant : DiagGroup<"gnu-folding-constant">;
 def FormatExtraArgs : DiagGroup<"format-extra-args">;
 def FormatZeroLength : DiagGroup<"format-zero-length">;
 def CXX1zCompatMangling : DiagGroup<"c++1z-compat-mangling">;
+// Name of this warning in GCC.
+def NoexceptType : DiagGroup<"noexcept-type", [CXX1zCompatMangling]>;
 
 // Warnings for C++1y code which is not compatible with prior C++ standards.
 def CXXPre14Compat : DiagGroup<"c++98-c++11-compat">;

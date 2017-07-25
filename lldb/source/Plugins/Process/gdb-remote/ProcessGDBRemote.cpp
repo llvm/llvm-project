@@ -16,6 +16,7 @@
 #include <netinet/in.h>
 #include <sys/mman.h> // for mmap
 #include <sys/socket.h>
+#include <unistd.h>
 #endif
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -40,6 +41,7 @@
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostThread.h"
+#include "lldb/Host/PosixApi.h"
 #include "lldb/Host/PseudoTerminal.h"
 #include "lldb/Host/StringConvert.h"
 #include "lldb/Host/Symbols.h"

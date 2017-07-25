@@ -129,13 +129,19 @@ struct MustKillsInfo {
   /// Map from kill statement instances to scalars that need to be
   /// killed.
   ///
-  /// We currently only derive kill information for phi nodes, as phi nodes
-  /// allow us to easily derive kill information. PHI nodes are not alive
-  /// outside the scop and can consequently all be "killed". [params] -> {
-  /// [Stmt_phantom[] -> ref_phantom[]] -> phi_ref[] }
+  /// We currently derive kill information for:
+  ///  1. phi nodes. PHI nodes are not alive outside the scop and can
+  ///     consequently all be killed.
+  ///  2. Scalar arrays that are not used outside the Scop. This is
+  ///     checked by `isScalarUsesContainedInScop`.
+  /// [params] -> { [Stmt_phantom[] -> ref_phantom[]] -> scalar_to_kill[] }
   isl::union_map TaggedMustKills;
 
-  MustKillsInfo() : KillsSchedule(nullptr), TaggedMustKills(nullptr){};
+  /// Tagged must kills stripped of the tags.
+  /// [params] -> { Stmt_phantom[]  -> scalar_to_kill[] }
+  isl::union_map MustKills;
+
+  MustKillsInfo() : KillsSchedule(nullptr) {}
 };
 
 /// Check if SAI's uses are entirely contained within Scop S.
@@ -173,10 +179,11 @@ static MustKillsInfo computeMustKillsInfo(const Scop &S) {
   for (ScopArrayInfo *SAI : S.arrays()) {
     if (SAI->isPHIKind() ||
         (SAI->isValueKind() && isScalarUsesContainedInScop(S, SAI)))
-      KillMemIds.push_back(isl::manage(SAI->getBasePtrId()));
+      KillMemIds.push_back(isl::manage(SAI->getBasePtrId().release()));
   }
 
   Info.TaggedMustKills = isl::union_map::empty(isl::space(ParamSpace));
+  Info.MustKills = isl::union_map::empty(isl::space(ParamSpace));
 
   // Initialising KillsSchedule to `isl_set_empty` creates an empty node in the
   // schedule:
@@ -185,40 +192,46 @@ static MustKillsInfo computeMustKillsInfo(const Scop &S) {
   // at the cost of some code complexity.
   Info.KillsSchedule = nullptr;
 
-  for (isl::id &phiId : KillMemIds) {
+  for (isl::id &ToKillId : KillMemIds) {
     isl::id KillStmtId = isl::id::alloc(
-        S.getIslCtx(), std::string("SKill_phantom_").append(phiId.get_name()),
-        nullptr);
+        S.getIslCtx(),
+        std::string("SKill_phantom_").append(ToKillId.get_name()), nullptr);
 
     // NOTE: construction of tagged_must_kill:
     // 2. We need to construct a map:
-    //     [param] -> { [Stmt_phantom[] -> ref_phantom[]] -> phi_ref }
+    //     [param] -> { [Stmt_phantom[] -> ref_phantom[]] -> scalar_to_kill[] }
     // To construct this, we use `isl_map_domain_product` on 2 maps`:
-    // 2a. StmtToPhi:
-    //         [param] -> { Stmt_phantom[] -> phi_ref[] }
-    // 2b. PhantomRefToPhi:
-    //         [param] -> { ref_phantom[] -> phi_ref[] }
+    // 2a. StmtToScalar:
+    //         [param] -> { Stmt_phantom[] -> scalar_to_kill[] }
+    // 2b. PhantomRefToScalar:
+    //         [param] -> { ref_phantom[] -> scalar_to_kill[] }
     //
     // Combining these with `isl_map_domain_product` gives us
     // TaggedMustKill:
-    //     [param] -> { [Stmt[] -> phantom_ref[]] -> memref[] }
+    //     [param] -> { [Stmt[] -> phantom_ref[]] -> scalar_to_kill[] }
 
-    // 2a. [param] -> { S_2[] -> phi_ref[] }
-    isl::map StmtToPhi = isl::map::universe(isl::space(ParamSpace));
-    StmtToPhi = StmtToPhi.set_tuple_id(isl::dim::in, isl::id(KillStmtId));
-    StmtToPhi = StmtToPhi.set_tuple_id(isl::dim::out, isl::id(phiId));
+    // 2a. [param] -> { Stmt[] -> scalar_to_kill[] }
+    isl::map StmtToScalar = isl::map::universe(isl::space(ParamSpace));
+    StmtToScalar = StmtToScalar.set_tuple_id(isl::dim::in, isl::id(KillStmtId));
+    StmtToScalar = StmtToScalar.set_tuple_id(isl::dim::out, isl::id(ToKillId));
 
     isl::id PhantomRefId = isl::id::alloc(
-        S.getIslCtx(), std::string("ref_phantom") + phiId.get_name(), nullptr);
+        S.getIslCtx(), std::string("ref_phantom") + ToKillId.get_name(),
+        nullptr);
 
-    // 2b. [param] -> { phantom_ref[] -> memref[] }
-    isl::map PhantomRefToPhi = isl::map::universe(isl::space(ParamSpace));
-    PhantomRefToPhi = PhantomRefToPhi.set_tuple_id(isl::dim::in, PhantomRefId);
-    PhantomRefToPhi = PhantomRefToPhi.set_tuple_id(isl::dim::out, phiId);
+    // 2b. [param] -> { phantom_ref[] -> scalar_to_kill[] }
+    isl::map PhantomRefToScalar = isl::map::universe(isl::space(ParamSpace));
+    PhantomRefToScalar =
+        PhantomRefToScalar.set_tuple_id(isl::dim::in, PhantomRefId);
+    PhantomRefToScalar =
+        PhantomRefToScalar.set_tuple_id(isl::dim::out, ToKillId);
 
-    // 2. [param] -> { [Stmt[] -> phantom_ref[]] -> memref[] }
-    isl::map TaggedMustKill = StmtToPhi.domain_product(PhantomRefToPhi);
+    // 2. [param] -> { [Stmt[] -> phantom_ref[]] -> scalar_to_kill[] }
+    isl::map TaggedMustKill = StmtToScalar.domain_product(PhantomRefToScalar);
     Info.TaggedMustKills = Info.TaggedMustKills.unite(TaggedMustKill);
+
+    // 2. [param] -> { Stmt[] -> scalar_to_kill[] }
+    Info.MustKills = Info.TaggedMustKills.domain_factor_domain();
 
     // 3. Create the kill schedule of the form:
     //     "[param] -> { Stmt_phantom[] }"
@@ -242,7 +255,7 @@ static MustKillsInfo computeMustKillsInfo(const Scop &S) {
 /// This function is a callback for to generate the ast expressions for each
 /// of the scheduled ScopStmts.
 static __isl_give isl_id_to_ast_expr *pollyBuildAstExprForStmt(
-    void *StmtT, isl_ast_build *Build,
+    void *StmtT, __isl_take isl_ast_build *Build_C,
     isl_multi_pw_aff *(*FunctionIndex)(__isl_take isl_multi_pw_aff *MPA,
                                        isl_id *Id, void *User),
     void *UserIndex,
@@ -251,28 +264,30 @@ static __isl_give isl_id_to_ast_expr *pollyBuildAstExprForStmt(
 
   ScopStmt *Stmt = (ScopStmt *)StmtT;
 
-  isl_ctx *Ctx;
-
-  if (!Stmt || !Build)
+  if (!Stmt || !Build_C)
     return NULL;
 
-  Ctx = isl_ast_build_get_ctx(Build);
-  isl_id_to_ast_expr *RefToExpr = isl_id_to_ast_expr_alloc(Ctx, 0);
+  isl::ast_build Build = isl::manage(isl_ast_build_copy(Build_C));
+  isl::ctx Ctx = Build.get_ctx();
+  isl::id_to_ast_expr RefToExpr = isl::id_to_ast_expr::alloc(Ctx, 0);
 
   for (MemoryAccess *Acc : *Stmt) {
-    isl_map *AddrFunc = Acc->getAddressFunction();
-    AddrFunc = isl_map_intersect_domain(AddrFunc, Stmt->getDomain());
-    isl_id *RefId = Acc->getId();
-    isl_pw_multi_aff *PMA = isl_pw_multi_aff_from_map(AddrFunc);
-    isl_multi_pw_aff *MPA = isl_multi_pw_aff_from_pw_multi_aff(PMA);
-    MPA = isl_multi_pw_aff_coalesce(MPA);
-    MPA = FunctionIndex(MPA, RefId, UserIndex);
-    isl_ast_expr *Access = isl_ast_build_access_from_multi_pw_aff(Build, MPA);
-    Access = FunctionExpr(Access, RefId, UserExpr);
-    RefToExpr = isl_id_to_ast_expr_set(RefToExpr, RefId, Access);
+    isl::map AddrFunc = Acc->getAddressFunction();
+    AddrFunc = AddrFunc.intersect_domain(isl::manage(Stmt->getDomain()));
+
+    isl::id RefId = Acc->getId();
+    isl::pw_multi_aff PMA = isl::pw_multi_aff::from_map(AddrFunc);
+
+    isl::multi_pw_aff MPA = isl::multi_pw_aff(PMA);
+    MPA = MPA.coalesce();
+    MPA = isl::manage(FunctionIndex(MPA.release(), RefId.get(), UserIndex));
+
+    isl::ast_expr Access = Build.access_from(MPA);
+    Access = isl::manage(FunctionExpr(Access.release(), RefId.get(), UserExpr));
+    RefToExpr = RefToExpr.set(RefId, Access);
   }
 
-  return RefToExpr;
+  return RefToExpr.release();
 }
 
 /// Given a LLVM Type, compute its size in bytes,
@@ -531,6 +546,11 @@ private:
   ///
   /// @param The kernel to generate the intrinsic functions for.
   void insertKernelIntrinsics(ppcg_kernel *Kernel);
+
+  /// Insert function calls to retrieve the SPIR group/local ids.
+  ///
+  /// @param The kernel to generate the function calls for.
+  void insertKernelCallsSPIR(ppcg_kernel *Kernel);
 
   /// Setup the creation of functions referenced by the GPU kernel.
   ///
@@ -995,25 +1015,28 @@ static bool isPrefix(std::string String, std::string Prefix) {
 }
 
 Value *GPUNodeBuilder::getArraySize(gpu_array_info *Array) {
-  isl_ast_build *Build = isl_ast_build_from_context(S.getContext());
+  isl::ast_build Build =
+      isl::ast_build::from_context(isl::manage(S.getContext()));
   Value *ArraySize = ConstantInt::get(Builder.getInt64Ty(), Array->size);
 
   if (!gpu_array_is_scalar(Array)) {
-    auto OffsetDimZero = isl_pw_aff_copy(Array->bound[0]);
-    isl_ast_expr *Res = isl_ast_build_expr_from_pw_aff(Build, OffsetDimZero);
+    isl::multi_pw_aff ArrayBound =
+        isl::manage(isl_multi_pw_aff_copy(Array->bound));
+
+    isl::pw_aff OffsetDimZero = ArrayBound.get_pw_aff(0);
+    isl::ast_expr Res = Build.expr_from(OffsetDimZero);
 
     for (unsigned int i = 1; i < Array->n_index; i++) {
-      isl_pw_aff *Bound_I = isl_pw_aff_copy(Array->bound[i]);
-      isl_ast_expr *Expr = isl_ast_build_expr_from_pw_aff(Build, Bound_I);
-      Res = isl_ast_expr_mul(Res, Expr);
+      isl::pw_aff Bound_I = ArrayBound.get_pw_aff(i);
+      isl::ast_expr Expr = Build.expr_from(Bound_I);
+      Res = Res.mul(Expr);
     }
 
-    Value *NumElements = ExprBuilder.create(Res);
+    Value *NumElements = ExprBuilder.create(Res.release());
     if (NumElements->getType() != ArraySize->getType())
       NumElements = Builder.CreateSExt(NumElements, ArraySize->getType());
     ArraySize = Builder.CreateMul(ArraySize, NumElements);
   }
-  isl_ast_build_free(Build);
   return ArraySize;
 }
 
@@ -1043,7 +1066,7 @@ Value *GPUNodeBuilder::getArrayOffset(gpu_array_info *Array) {
 
   for (long i = 0; i < isl_set_dim(Min, isl_dim_set); i++) {
     if (i > 0) {
-      isl_pw_aff *Bound_I = isl_pw_aff_copy(Array->bound[i - 1]);
+      isl_pw_aff *Bound_I = isl_multi_pw_aff_get_pw_aff(Array->bound, i - 1);
       isl_ast_expr *BExpr = isl_ast_build_expr_from_pw_aff(Build, Bound_I);
       Result = isl_ast_expr_mul(Result, BExpr);
     }
@@ -1147,7 +1170,18 @@ void GPUNodeBuilder::createUser(__isl_take isl_ast_node *UserStmt) {
     isl_ast_expr_free(Expr);
     return;
   }
-
+  if (!strcmp(Str, "init_device")) {
+    initializeAfterRTH();
+    isl_ast_node_free(UserStmt);
+    isl_ast_expr_free(Expr);
+    return;
+  }
+  if (!strcmp(Str, "clear_device")) {
+    finalize();
+    isl_ast_node_free(UserStmt);
+    isl_ast_expr_free(Expr);
+    return;
+  }
   if (isPrefix(Str, "to_device")) {
     if (!ManagedMemory)
       createDataTransfer(UserStmt, HOST_TO_DEVICE);
@@ -1230,10 +1264,24 @@ void GPUNodeBuilder::createScopStmt(isl_ast_expr *Expr,
 
 void GPUNodeBuilder::createKernelSync() {
   Module *M = Builder.GetInsertBlock()->getParent()->getParent();
+  const char *SpirName = "__gen_ocl_barrier_global";
 
   Function *Sync;
 
   switch (Arch) {
+  case GPUArch::SPIR64:
+  case GPUArch::SPIR32:
+    Sync = M->getFunction(SpirName);
+
+    // If Sync is not available, declare it.
+    if (!Sync) {
+      GlobalValue::LinkageTypes Linkage = Function::ExternalLinkage;
+      std::vector<Type *> Args;
+      FunctionType *Ty = FunctionType::get(Builder.getVoidTy(), Args, false);
+      Sync = Function::Create(Ty, Linkage, SpirName, M);
+      Sync->setCallingConv(CallingConv::SPIR_FUNC);
+    }
+    break;
   case GPUArch::NVPTX64:
     Sync = Intrinsic::getDeclaration(M, Intrinsic::nvvm_barrier0);
     break;
@@ -1280,8 +1328,12 @@ isl_bool collectReferencesInGPUStmt(__isl_keep isl_ast_node *Node, void *User) {
 static bool isValidFunctionInKernel(llvm::Function *F) {
   assert(F && "F is an invalid pointer");
   // We string compare against the name of the function to allow
-  // all variants of the intrinsic "llvm.sqrt.*"
-  return F->isIntrinsic() && F->getName().startswith("llvm.sqrt");
+  // all variants of the intrinsic "llvm.sqrt.*", "llvm.fabs", and
+  // "llvm.copysign".
+  const StringRef Name = F->getName();
+  return F->isIntrinsic() &&
+         (Name.startswith("llvm.sqrt") || Name.startswith("llvm.fabs") ||
+          Name.startswith("llvm.copysign"));
 }
 
 /// Do not take `Function` as a subtree value.
@@ -1460,7 +1512,7 @@ GPUNodeBuilder::createLaunchParameters(ppcg_kernel *Kernel, Function *F,
       continue;
 
     isl_id *Id = isl_space_get_tuple_id(Prog->array[i].space, isl_dim_set);
-    const ScopArrayInfo *SAI = ScopArrayInfo::getFromId(Id);
+    const ScopArrayInfo *SAI = ScopArrayInfo::getFromId(isl::manage(Id));
 
     ArgSizes[Index] = SAI->getElemSizeInBytes();
 
@@ -1640,7 +1692,8 @@ void GPUNodeBuilder::createKernel(__isl_take isl_ast_node *KernelStmt) {
 
   finalizeKernelArguments(Kernel);
   Function *F = Builder.GetInsertBlock()->getParent();
-  addCUDAAnnotations(F->getParent(), BlockDimX, BlockDimY, BlockDimZ);
+  if (Arch == GPUArch::NVPTX64)
+    addCUDAAnnotations(F->getParent(), BlockDimX, BlockDimY, BlockDimZ);
   clearDominators(F);
   clearScalarEvolution(F);
   clearLoops(F);
@@ -1697,11 +1750,34 @@ static std::string computeNVPTXDataLayout(bool is64Bit) {
   return Ret;
 }
 
+/// Compute the DataLayout string for a SPIR kernel.
+///
+/// @param is64Bit Are we looking for a 64 bit architecture?
+static std::string computeSPIRDataLayout(bool is64Bit) {
+  std::string Ret = "";
+
+  if (!is64Bit) {
+    Ret += "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:"
+           "64-f32:32:32-f64:64:64-v16:16:16-v24:32:32-v32:32:"
+           "32-v48:64:64-v64:64:64-v96:128:128-v128:128:128-v192:"
+           "256:256-v256:256:256-v512:512:512-v1024:1024:1024";
+  } else {
+    Ret += "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:"
+           "64-f32:32:32-f64:64:64-v16:16:16-v24:32:32-v32:32:"
+           "32-v48:64:64-v64:64:64-v96:128:128-v128:128:128-v192:"
+           "256:256-v256:256:256-v512:512:512-v1024:1024:1024";
+  }
+
+  return Ret;
+}
+
 Function *
 GPUNodeBuilder::createKernelFunctionDecl(ppcg_kernel *Kernel,
                                          SetVector<Value *> &SubtreeValues) {
   std::vector<Type *> Args;
   std::string Identifier = getKernelFuncName(Kernel->id);
+
+  std::vector<Metadata *> MemoryType;
 
   for (long i = 0; i < Prog->n_array; i++) {
     if (!ppcg_kernel_requires_array_argument(Kernel, i))
@@ -1709,18 +1785,25 @@ GPUNodeBuilder::createKernelFunctionDecl(ppcg_kernel *Kernel,
 
     if (gpu_array_is_read_only_scalar(&Prog->array[i])) {
       isl_id *Id = isl_space_get_tuple_id(Prog->array[i].space, isl_dim_set);
-      const ScopArrayInfo *SAI = ScopArrayInfo::getFromId(Id);
+      const ScopArrayInfo *SAI = ScopArrayInfo::getFromId(isl::manage(Id));
       Args.push_back(SAI->getElementType());
+      MemoryType.push_back(
+          ConstantAsMetadata::get(ConstantInt::get(Builder.getInt32Ty(), 0)));
     } else {
       static const int UseGlobalMemory = 1;
       Args.push_back(Builder.getInt8PtrTy(UseGlobalMemory));
+      MemoryType.push_back(
+          ConstantAsMetadata::get(ConstantInt::get(Builder.getInt32Ty(), 1)));
     }
   }
 
   int NumHostIters = isl_space_dim(Kernel->space, isl_dim_set);
 
-  for (long i = 0; i < NumHostIters; i++)
+  for (long i = 0; i < NumHostIters; i++) {
     Args.push_back(Builder.getInt64Ty());
+    MemoryType.push_back(
+        ConstantAsMetadata::get(ConstantInt::get(Builder.getInt32Ty(), 0)));
+  }
 
   int NumVars = isl_space_dim(Kernel->space, isl_dim_param);
 
@@ -1729,18 +1812,48 @@ GPUNodeBuilder::createKernelFunctionDecl(ppcg_kernel *Kernel,
     Value *Val = IDToValue[Id];
     isl_id_free(Id);
     Args.push_back(Val->getType());
+    MemoryType.push_back(
+        ConstantAsMetadata::get(ConstantInt::get(Builder.getInt32Ty(), 0)));
   }
 
-  for (auto *V : SubtreeValues)
+  for (auto *V : SubtreeValues) {
     Args.push_back(V->getType());
+    MemoryType.push_back(
+        ConstantAsMetadata::get(ConstantInt::get(Builder.getInt32Ty(), 0)));
+  }
 
   auto *FT = FunctionType::get(Builder.getVoidTy(), Args, false);
   auto *FN = Function::Create(FT, Function::ExternalLinkage, Identifier,
                               GPUModule.get());
 
+  std::vector<Metadata *> EmptyStrings;
+
+  for (unsigned int i = 0; i < MemoryType.size(); i++) {
+    EmptyStrings.push_back(MDString::get(FN->getContext(), ""));
+  }
+
+  if (Arch == GPUArch::SPIR32 || Arch == GPUArch::SPIR64) {
+    FN->setMetadata("kernel_arg_addr_space",
+                    MDNode::get(FN->getContext(), MemoryType));
+    FN->setMetadata("kernel_arg_name",
+                    MDNode::get(FN->getContext(), EmptyStrings));
+    FN->setMetadata("kernel_arg_access_qual",
+                    MDNode::get(FN->getContext(), EmptyStrings));
+    FN->setMetadata("kernel_arg_type",
+                    MDNode::get(FN->getContext(), EmptyStrings));
+    FN->setMetadata("kernel_arg_type_qual",
+                    MDNode::get(FN->getContext(), EmptyStrings));
+    FN->setMetadata("kernel_arg_base_type",
+                    MDNode::get(FN->getContext(), EmptyStrings));
+  }
+
   switch (Arch) {
   case GPUArch::NVPTX64:
     FN->setCallingConv(CallingConv::PTX_Kernel);
+    break;
+  case GPUArch::SPIR32:
+  case GPUArch::SPIR64:
+    FN->setCallingConv(CallingConv::SPIR_KERNEL);
     break;
   }
 
@@ -1752,7 +1865,8 @@ GPUNodeBuilder::createKernelFunctionDecl(ppcg_kernel *Kernel,
     Arg->setName(Kernel->array[i].array->name);
 
     isl_id *Id = isl_space_get_tuple_id(Prog->array[i].space, isl_dim_set);
-    const ScopArrayInfo *SAI = ScopArrayInfo::getFromId(isl_id_copy(Id));
+    const ScopArrayInfo *SAI =
+        ScopArrayInfo::getFromId(isl::manage(isl_id_copy(Id)));
     Type *EleTy = SAI->getElementType();
     Value *Val = &*Arg;
     SmallVector<const SCEV *, 4> Sizes;
@@ -1761,7 +1875,7 @@ GPUNodeBuilder::createKernelFunctionDecl(ppcg_kernel *Kernel,
     Sizes.push_back(nullptr);
     for (long j = 1; j < Kernel->array[i].array->n_index; j++) {
       isl_ast_expr *DimSize = isl_ast_build_expr_from_pw_aff(
-          Build, isl_pw_aff_copy(Kernel->array[i].array->bound[j]));
+          Build, isl_multi_pw_aff_get_pw_aff(Kernel->array[i].array->bound, j));
       auto V = ExprBuilder.create(DimSize);
       Sizes.push_back(SE.getSCEV(V));
     }
@@ -1807,6 +1921,9 @@ void GPUNodeBuilder::insertKernelIntrinsics(ppcg_kernel *Kernel) {
   Intrinsic::ID IntrinsicsTID[3];
 
   switch (Arch) {
+  case GPUArch::SPIR64:
+  case GPUArch::SPIR32:
+    llvm_unreachable("Cannot generate NVVM intrinsics for SPIR");
   case GPUArch::NVPTX64:
     IntrinsicsBID[0] = Intrinsic::nvvm_read_ptx_sreg_ctaid_x;
     IntrinsicsBID[1] = Intrinsic::nvvm_read_ptx_sreg_ctaid_y;
@@ -1838,6 +1955,41 @@ void GPUNodeBuilder::insertKernelIntrinsics(ppcg_kernel *Kernel) {
   }
 }
 
+void GPUNodeBuilder::insertKernelCallsSPIR(ppcg_kernel *Kernel) {
+  const char *GroupName[3] = {"__gen_ocl_get_group_id0",
+                              "__gen_ocl_get_group_id1",
+                              "__gen_ocl_get_group_id2"};
+
+  const char *LocalName[3] = {"__gen_ocl_get_local_id0",
+                              "__gen_ocl_get_local_id1",
+                              "__gen_ocl_get_local_id2"};
+
+  auto createFunc = [this](const char *Name, __isl_take isl_id *Id) mutable {
+    Module *M = Builder.GetInsertBlock()->getParent()->getParent();
+    Function *FN = M->getFunction(Name);
+
+    // If FN is not available, declare it.
+    if (!FN) {
+      GlobalValue::LinkageTypes Linkage = Function::ExternalLinkage;
+      std::vector<Type *> Args;
+      FunctionType *Ty = FunctionType::get(Builder.getInt32Ty(), Args, false);
+      FN = Function::Create(Ty, Linkage, Name, M);
+      FN->setCallingConv(CallingConv::SPIR_FUNC);
+    }
+
+    Value *Val = Builder.CreateCall(FN, {});
+    Val = Builder.CreateIntCast(Val, Builder.getInt64Ty(), false, Name);
+    IDToValue[Id] = Val;
+    KernelIDs.insert(std::unique_ptr<isl_id, IslIdDeleter>(Id));
+  };
+
+  for (int i = 0; i < Kernel->n_grid; ++i)
+    createFunc(GroupName[i], isl_id_list_get_id(Kernel->block_ids, i));
+
+  for (int i = 0; i < Kernel->n_block; ++i)
+    createFunc(LocalName[i], isl_id_list_get_id(Kernel->thread_ids, i));
+}
+
 void GPUNodeBuilder::prepareKernelArguments(ppcg_kernel *Kernel, Function *FN) {
   auto Arg = FN->arg_begin();
   for (long i = 0; i < Kernel->n_array; i++) {
@@ -1845,7 +1997,8 @@ void GPUNodeBuilder::prepareKernelArguments(ppcg_kernel *Kernel, Function *FN) {
       continue;
 
     isl_id *Id = isl_space_get_tuple_id(Prog->array[i].space, isl_dim_set);
-    const ScopArrayInfo *SAI = ScopArrayInfo::getFromId(isl_id_copy(Id));
+    const ScopArrayInfo *SAI =
+        ScopArrayInfo::getFromId(isl::manage(isl_id_copy(Id)));
     isl_id_free(Id);
 
     if (SAI->getNumberOfDimensions() > 0) {
@@ -1878,7 +2031,8 @@ void GPUNodeBuilder::finalizeKernelArguments(ppcg_kernel *Kernel) {
       continue;
 
     isl_id *Id = isl_space_get_tuple_id(Prog->array[i].space, isl_dim_set);
-    const ScopArrayInfo *SAI = ScopArrayInfo::getFromId(isl_id_copy(Id));
+    const ScopArrayInfo *SAI =
+        ScopArrayInfo::getFromId(isl::manage(isl_id_copy(Id)));
     isl_id_free(Id);
 
     if (SAI->getNumberOfDimensions() > 0) {
@@ -1917,7 +2071,7 @@ void GPUNodeBuilder::createKernelVariables(ppcg_kernel *Kernel, Function *FN) {
   for (int i = 0; i < Kernel->n_var; ++i) {
     struct ppcg_kernel_var &Var = Kernel->var[i];
     isl_id *Id = isl_space_get_tuple_id(Var.array->space, isl_dim_set);
-    Type *EleTy = ScopArrayInfo::getFromId(Id)->getElementType();
+    Type *EleTy = ScopArrayInfo::getFromId(isl::manage(Id))->getElementType();
 
     Type *ArrayTy = EleTy;
     SmallVector<const SCEV *, 4> Sizes;
@@ -1976,6 +2130,14 @@ void GPUNodeBuilder::createKernelFunction(
       GPUModule->setTargetTriple(Triple::normalize("nvptx64-nvidia-nvcl"));
     GPUModule->setDataLayout(computeNVPTXDataLayout(true /* is64Bit */));
     break;
+  case GPUArch::SPIR32:
+    GPUModule->setTargetTriple(Triple::normalize("spir-unknown-unknown"));
+    GPUModule->setDataLayout(computeSPIRDataLayout(false /* is64Bit */));
+    break;
+  case GPUArch::SPIR64:
+    GPUModule->setTargetTriple(Triple::normalize("spir64-unknown-unknown"));
+    GPUModule->setDataLayout(computeSPIRDataLayout(true /* is64Bit */));
+    break;
   }
 
   Function *FN = createKernelFunctionDecl(Kernel, SubtreeValues);
@@ -1993,7 +2155,16 @@ void GPUNodeBuilder::createKernelFunction(
 
   prepareKernelArguments(Kernel, FN);
   createKernelVariables(Kernel, FN);
-  insertKernelIntrinsics(Kernel);
+
+  switch (Arch) {
+  case GPUArch::NVPTX64:
+    insertKernelIntrinsics(Kernel);
+    break;
+  case GPUArch::SPIR32:
+  case GPUArch::SPIR64:
+    insertKernelCallsSPIR(Kernel);
+    break;
+  }
 }
 
 std::string GPUNodeBuilder::createKernelASM() {
@@ -2010,6 +2181,13 @@ std::string GPUNodeBuilder::createKernelASM() {
       break;
     }
     break;
+  case GPUArch::SPIR64:
+  case GPUArch::SPIR32:
+    std::string SPIRAssembly;
+    raw_string_ostream IROstream(SPIRAssembly);
+    IROstream << *GPUModule;
+    IROstream.flush();
+    return SPIRAssembly;
   }
 
   std::string ErrMsg;
@@ -2029,6 +2207,9 @@ std::string GPUNodeBuilder::createKernelASM() {
   case GPUArch::NVPTX64:
     subtarget = CudaVersion;
     break;
+  case GPUArch::SPIR32:
+  case GPUArch::SPIR64:
+    llvm_unreachable("No subtarget for SPIR architecture");
   }
 
   std::unique_ptr<TargetMachine> TargetM(GPUTarget->createTargetMachine(
@@ -2056,6 +2237,8 @@ std::string GPUNodeBuilder::finalizeKernelFunction() {
   if (verifyModule(*GPUModule)) {
     DEBUG(dbgs() << "verifyModule failed on module:\n";
           GPUModule->print(dbgs(), nullptr); dbgs() << "\n";);
+    DEBUG(dbgs() << "verifyModule Error:\n";
+          verifyModule(*GPUModule, &dbgs()););
 
     if (FailOnVerifyModuleFailure)
       llvm_unreachable("VerifyModule failed.");
@@ -2067,13 +2250,15 @@ std::string GPUNodeBuilder::finalizeKernelFunction() {
   if (DumpKernelIR)
     outs() << *GPUModule << "\n";
 
-  // Optimize module.
-  llvm::legacy::PassManager OptPasses;
-  PassManagerBuilder PassBuilder;
-  PassBuilder.OptLevel = 3;
-  PassBuilder.SizeLevel = 0;
-  PassBuilder.populateModulePassManager(OptPasses);
-  OptPasses.run(*GPUModule);
+  if (Arch != GPUArch::SPIR32 && Arch != GPUArch::SPIR64) {
+    // Optimize module.
+    llvm::legacy::PassManager OptPasses;
+    PassManagerBuilder PassBuilder;
+    PassBuilder.OptLevel = 3;
+    PassBuilder.SizeLevel = 0;
+    PassBuilder.populateModulePassManager(OptPasses);
+    OptPasses.run(*GPUModule);
+  }
 
   std::string Assembly = createKernelASM();
 
@@ -2122,6 +2307,7 @@ public:
 
     Options->debug = DebugOptions;
 
+    Options->group_chains = false;
     Options->reschedule = true;
     Options->scale_tile_loops = false;
     Options->wrap = false;
@@ -2130,7 +2316,10 @@ public:
     Options->ctx = nullptr;
     Options->sizes = nullptr;
 
+    Options->tile = true;
     Options->tile_size = 32;
+
+    Options->isolate_full_tiles = false;
 
     Options->use_private_memory = PrivateMemory;
     Options->use_shared_memory = SharedMemory;
@@ -2139,8 +2328,14 @@ public:
     Options->target = PPCG_TARGET_CUDA;
     Options->openmp = false;
     Options->linearize_device_arrays = true;
-    Options->live_range_reordering = false;
+    Options->allow_gnu_extensions = false;
 
+    Options->unroll_copy_shared = false;
+    Options->unroll_gpu_tile = false;
+    Options->live_range_reordering = true;
+
+    Options->live_range_reordering = true;
+    Options->hybrid = false;
     Options->opencl_compiler_options = nullptr;
     Options->opencl_use_gpu = false;
     Options->opencl_n_include_file = 0;
@@ -2176,13 +2371,14 @@ public:
     for (auto &Stmt : *S)
       for (auto &Acc : Stmt)
         if (Acc->getType() == AccessTy) {
-          isl_map *Relation = Acc->getAccessRelation();
+          isl_map *Relation = Acc->getAccessRelation().release();
           Relation = isl_map_intersect_domain(Relation, Stmt.getDomain());
 
           isl_space *Space = isl_map_get_space(Relation);
           Space = isl_space_range(Space);
           Space = isl_space_from_range(Space);
-          Space = isl_space_set_tuple_id(Space, isl_dim_in, Acc->getId());
+          Space =
+              isl_space_set_tuple_id(Space, isl_dim_in, Acc->getId().release());
           isl_map *Universe = isl_map_universe(Space);
           Relation = isl_map_domain_product(Relation, Universe);
           Accesses = isl_union_map_add_map(Accesses, Relation);
@@ -2236,7 +2432,7 @@ public:
     }
 
     for (auto &Array : S->arrays()) {
-      auto Id = Array->getBasePtrId();
+      auto Id = Array->getBasePtrId().release();
       Names = isl_id_to_ast_expr_set(Names, Id, isl_ast_expr_copy(Zero));
     }
 
@@ -2255,6 +2451,8 @@ public:
   ///
   /// @returns A new ppcg scop.
   ppcg_scop *createPPCGScop() {
+    MustKillsInfo KillsInfo = computeMustKillsInfo(*S);
+
     auto PPCGScop = (ppcg_scop *)malloc(sizeof(ppcg_scop));
 
     PPCGScop->options = createPPCGOptions();
@@ -2266,7 +2464,8 @@ public:
 
     PPCGScop->context = S->getContext();
     PPCGScop->domain = S->getDomains();
-    PPCGScop->call = nullptr;
+    // TODO: investigate this further. PPCG calls collect_call_domains.
+    PPCGScop->call = isl_union_set_from_set(S->getContext());
     PPCGScop->tagged_reads = getTaggedReads();
     PPCGScop->reads = S->getReads();
     PPCGScop->live_in = nullptr;
@@ -2275,6 +2474,9 @@ public:
     PPCGScop->tagged_must_writes = getTaggedMustWrites();
     PPCGScop->must_writes = S->getMustWrites();
     PPCGScop->live_out = nullptr;
+    PPCGScop->tagged_must_kills = KillsInfo.TaggedMustKills.take();
+    PPCGScop->must_kills = KillsInfo.MustKills.take();
+
     PPCGScop->tagger = nullptr;
     PPCGScop->independence =
         isl_union_map_empty(isl_set_get_space(PPCGScop->context));
@@ -2286,19 +2488,17 @@ public:
     PPCGScop->tagged_dep_order = nullptr;
 
     PPCGScop->schedule = S->getScheduleTree();
-
-    MustKillsInfo KillsInfo = computeMustKillsInfo(*S);
     // If we have something non-trivial to kill, add it to the schedule
     if (KillsInfo.KillsSchedule.get())
       PPCGScop->schedule = isl_schedule_sequence(
           PPCGScop->schedule, KillsInfo.KillsSchedule.take());
-    PPCGScop->tagged_must_kills = KillsInfo.TaggedMustKills.take();
 
     PPCGScop->names = getNames();
     PPCGScop->pet = nullptr;
 
     compute_tagger(PPCGScop);
     compute_dependences(PPCGScop);
+    eliminate_dead_code(PPCGScop);
 
     return PPCGScop;
   }
@@ -2315,16 +2515,16 @@ public:
       auto Access = isl_alloc_type(S->getIslCtx(), struct gpu_stmt_access);
       Access->read = Acc->isRead();
       Access->write = Acc->isWrite();
-      Access->access = Acc->getAccessRelation();
+      Access->access = Acc->getAccessRelation().release();
       isl_space *Space = isl_map_get_space(Access->access);
       Space = isl_space_range(Space);
       Space = isl_space_from_range(Space);
-      Space = isl_space_set_tuple_id(Space, isl_dim_in, Acc->getId());
+      Space = isl_space_set_tuple_id(Space, isl_dim_in, Acc->getId().release());
       isl_map *Universe = isl_map_universe(Space);
       Access->tagged_access =
-          isl_map_domain_product(Acc->getAccessRelation(), Universe);
+          isl_map_domain_product(Acc->getAccessRelation().release(), Universe);
       Access->exact_write = !Acc->isMayWrite();
-      Access->ref_id = Acc->getId();
+      Access->ref_id = Acc->getId().release();
       Access->next = Accesses;
       Access->n_index = Acc->getScopArrayInfo()->getNumberOfDimensions();
       Accesses = Access;
@@ -2383,19 +2583,20 @@ public:
 
     if (isl_union_set_is_empty(AccessUSet)) {
       isl_union_set_free(AccessUSet);
-      return isl_set_empty(Array->getSpace());
+      return isl_set_empty(Array->getSpace().release());
     }
 
     if (Array->getNumberOfDimensions() == 0) {
       isl_union_set_free(AccessUSet);
-      return isl_set_universe(Array->getSpace());
+      return isl_set_universe(Array->getSpace().release());
     }
 
     isl_set *AccessSet =
-        isl_union_set_extract_set(AccessUSet, Array->getSpace());
+        isl_union_set_extract_set(AccessUSet, Array->getSpace().release());
 
     isl_union_set_free(AccessUSet);
-    isl_local_space *LS = isl_local_space_from_space(Array->getSpace());
+    isl_local_space *LS =
+        isl_local_space_from_space(Array->getSpace().release());
 
     isl_pw_aff *Val =
         isl_pw_aff_from_aff(isl_aff_var_on_domain(LS, isl_dim_set, 0));
@@ -2406,12 +2607,12 @@ public:
                                    isl_pw_aff_dim(Val, isl_dim_in));
     OuterMax = isl_pw_aff_add_dims(OuterMax, isl_dim_in,
                                    isl_pw_aff_dim(Val, isl_dim_in));
-    OuterMin =
-        isl_pw_aff_set_tuple_id(OuterMin, isl_dim_in, Array->getBasePtrId());
-    OuterMax =
-        isl_pw_aff_set_tuple_id(OuterMax, isl_dim_in, Array->getBasePtrId());
+    OuterMin = isl_pw_aff_set_tuple_id(OuterMin, isl_dim_in,
+                                       Array->getBasePtrId().release());
+    OuterMax = isl_pw_aff_set_tuple_id(OuterMax, isl_dim_in,
+                                       Array->getBasePtrId().release());
 
-    isl_set *Extent = isl_set_universe(Array->getSpace());
+    isl_set *Extent = isl_set_universe(Array->getSpace().release());
 
     Extent = isl_set_intersect(
         Extent, isl_pw_aff_le_set(OuterMin, isl_pw_aff_copy(Val)));
@@ -2422,7 +2623,7 @@ public:
 
     for (unsigned i = 0; i < NumDims; ++i) {
       isl_pw_aff *PwAff =
-          const_cast<isl_pw_aff *>(Array->getDimensionSizePw(i));
+          const_cast<isl_pw_aff *>(Array->getDimensionSizePw(i).release());
 
       // isl_pw_aff can be NULL for zero dimension. Only in the case of a
       // Fortran array will we have a legitimate dimension.
@@ -2432,7 +2633,8 @@ public:
       }
 
       isl_pw_aff *Val = isl_pw_aff_from_aff(isl_aff_var_on_domain(
-          isl_local_space_from_space(Array->getSpace()), isl_dim_set, i));
+          isl_local_space_from_space(Array->getSpace().release()), isl_dim_set,
+          i));
       PwAff = isl_pw_aff_add_dims(PwAff, isl_dim_in,
                                   isl_pw_aff_dim(Val, isl_dim_in));
       PwAff = isl_pw_aff_set_tuple_id(PwAff, isl_dim_in,
@@ -2453,14 +2655,23 @@ public:
   /// @param PPCGArray The array to compute bounds for.
   /// @param Array The polly array from which to take the information.
   void setArrayBounds(gpu_array_info &PPCGArray, ScopArrayInfo *Array) {
+    isl_pw_aff_list *BoundsList =
+        isl_pw_aff_list_alloc(S->getIslCtx(), PPCGArray.n_index);
+    std::vector<isl::pw_aff> PwAffs;
+
+    isl_space *AlignSpace = S->getParamSpace();
+    AlignSpace = isl_space_add_dims(AlignSpace, isl_dim_set, 1);
+
     if (PPCGArray.n_index > 0) {
       if (isl_set_is_empty(PPCGArray.extent)) {
         isl_set *Dom = isl_set_copy(PPCGArray.extent);
         isl_local_space *LS = isl_local_space_from_space(
             isl_space_params(isl_set_get_space(Dom)));
         isl_set_free(Dom);
-        isl_aff *Zero = isl_aff_zero_on_domain(LS);
-        PPCGArray.bound[0] = isl_pw_aff_from_aff(Zero);
+        isl_pw_aff *Zero = isl_pw_aff_from_aff(isl_aff_zero_on_domain(LS));
+        Zero = isl_pw_aff_align_params(Zero, isl_space_copy(AlignSpace));
+        PwAffs.push_back(isl::manage(isl_pw_aff_copy(Zero)));
+        BoundsList = isl_pw_aff_list_insert(BoundsList, 0, Zero);
       } else {
         isl_set *Dom = isl_set_copy(PPCGArray.extent);
         Dom = isl_set_project_out(Dom, isl_dim_set, 1, PPCGArray.n_index - 1);
@@ -2473,17 +2684,31 @@ public:
         One = isl_aff_add_constant_si(One, 1);
         Bound = isl_pw_aff_add(Bound, isl_pw_aff_alloc(Dom, One));
         Bound = isl_pw_aff_gist(Bound, S->getContext());
-        PPCGArray.bound[0] = Bound;
+        Bound = isl_pw_aff_align_params(Bound, isl_space_copy(AlignSpace));
+        PwAffs.push_back(isl::manage(isl_pw_aff_copy(Bound)));
+        BoundsList = isl_pw_aff_list_insert(BoundsList, 0, Bound);
       }
     }
 
     for (unsigned i = 1; i < PPCGArray.n_index; ++i) {
-      isl_pw_aff *Bound = Array->getDimensionSizePw(i);
+      isl_pw_aff *Bound = Array->getDimensionSizePw(i).release();
       auto LS = isl_pw_aff_get_domain_space(Bound);
       auto Aff = isl_multi_aff_zero(LS);
       Bound = isl_pw_aff_pullback_multi_aff(Bound, Aff);
-      PPCGArray.bound[i] = Bound;
+      Bound = isl_pw_aff_align_params(Bound, isl_space_copy(AlignSpace));
+      PwAffs.push_back(isl::manage(isl_pw_aff_copy(Bound)));
+      BoundsList = isl_pw_aff_list_insert(BoundsList, i, Bound);
     }
+
+    isl_space_free(AlignSpace);
+    isl_space *BoundsSpace = isl_set_get_space(PPCGArray.extent);
+
+    assert(BoundsSpace && "Unable to access space of array.");
+    assert(BoundsList && "Unable to access list of bounds.");
+
+    PPCGArray.bound =
+        isl_multi_pw_aff_from_pw_aff_list(BoundsSpace, BoundsList);
+    assert(PPCGArray.bound && "PPCGArray.bound was not constructed correctly.");
   }
 
   /// Create the arrays for @p PPCGProg.
@@ -2500,14 +2725,12 @@ public:
 
       gpu_array_info &PPCGArray = PPCGProg->array[i];
 
-      PPCGArray.space = Array->getSpace();
+      PPCGArray.space = Array->getSpace().release();
       PPCGArray.type = strdup(TypeName.c_str());
       PPCGArray.size = Array->getElementType()->getPrimitiveSizeInBits() / 8;
       PPCGArray.name = strdup(Array->getName().c_str());
       PPCGArray.extent = nullptr;
       PPCGArray.n_index = Array->getNumberOfDimensions();
-      PPCGArray.bound =
-          isl_alloc_array(S->getIslCtx(), isl_pw_aff *, PPCGArray.n_index);
       PPCGArray.extent = getExtent(Array);
       PPCGArray.n_ref = 0;
       PPCGArray.refs = nullptr;
@@ -2522,6 +2745,7 @@ public:
       PPCGArray.dep_order = nullptr;
       PPCGArray.user = Array;
 
+      PPCGArray.bound = nullptr;
       setArrayBounds(PPCGArray, Array);
       i++;
 
@@ -2536,7 +2760,7 @@ public:
     isl_union_map *Maps = isl_union_map_empty(S->getParamSpace());
 
     for (auto &Array : S->arrays()) {
-      isl_space *Space = Array->getSpace();
+      isl_space *Space = Array->getSpace().release();
       Space = isl_space_map_from_set(Space);
       isl_map *Identity = isl_map_identity(Space);
       Maps = isl_union_map_add_map(Maps, Identity);
@@ -2565,6 +2789,7 @@ public:
         isl_union_map_copy(PPCGScop->tagged_must_kills);
     PPCGProg->to_inner = getArrayIdentity();
     PPCGProg->to_outer = getArrayIdentity();
+    // TODO: verify that this assignment is correct.
     PPCGProg->any_to_outer = nullptr;
 
     // this needs to be set when live range reordering is enabled.
@@ -2878,7 +3103,7 @@ public:
   ///
   /// If this basic block does something with a `Function` other than calling
   /// a function that we support in a kernel, return true.
-  bool containsInvalidKernelFunctionInBllock(const BasicBlock *BB) {
+  bool containsInvalidKernelFunctionInBlock(const BasicBlock *BB) {
     for (const Instruction &Inst : *BB) {
       const CallInst *Call = dyn_cast<CallInst>(&Inst);
       if (Call && isValidFunctionInKernel(Call->getCalledFunction())) {
@@ -2900,13 +3125,13 @@ public:
   bool containsInvalidKernelFunction(const Scop &S) {
     for (auto &Stmt : S) {
       if (Stmt.isBlockStmt()) {
-        if (containsInvalidKernelFunctionInBllock(Stmt.getBasicBlock()))
+        if (containsInvalidKernelFunctionInBlock(Stmt.getBasicBlock()))
           return true;
       } else {
         assert(Stmt.isRegionStmt() &&
                "Stmt was neither block nor region statement");
         for (const BasicBlock *BB : Stmt.getRegion()->blocks())
-          if (containsInvalidKernelFunctionInBllock(BB))
+          if (containsInvalidKernelFunctionInBlock(BB))
             return true;
       }
     }
@@ -2957,15 +3182,16 @@ public:
     Condition = isl_ast_expr_and(Condition, SufficientCompute);
     isl_ast_build_free(Build);
 
+    // preload invariant loads. Note: This should happen before the RTC
+    // because the RTC may depend on values that are invariant load hoisted.
+    NodeBuilder.preloadInvariantLoads();
+
     Value *RTC = NodeBuilder.createRTC(Condition);
     Builder.GetInsertBlock()->getTerminator()->setOperand(0, RTC);
 
     Builder.SetInsertPoint(&*StartBlock->begin());
 
-    NodeBuilder.initializeAfterRTH();
-    NodeBuilder.preloadInvariantLoads();
     NodeBuilder.create(Root);
-    NodeBuilder.finalize();
 
     /// In case a sequential kernel has more surrounding loops as any parallel
     /// kernel, the SCoP is probably mostly sequential. Hence, there is no

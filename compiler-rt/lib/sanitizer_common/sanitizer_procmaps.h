@@ -20,7 +20,7 @@
 
 namespace __sanitizer {
 
-#if SANITIZER_FREEBSD || SANITIZER_LINUX
+#if SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_NETBSD
 struct ProcSelfMapsBuff {
   char *data;
   uptr mmaped_size;
@@ -29,7 +29,7 @@ struct ProcSelfMapsBuff {
 
 // Reads process memory map in an OS-specific way.
 void ReadProcMaps(ProcSelfMapsBuff *proc_maps);
-#endif  // SANITIZER_FREEBSD || SANITIZER_LINUX
+#endif  // SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_NETBSD
 
 // Memory protection masks.
 static const uptr kProtectionRead = 1;
@@ -37,16 +37,15 @@ static const uptr kProtectionWrite = 2;
 static const uptr kProtectionExecute = 4;
 static const uptr kProtectionShared = 8;
 
-class MemoryMappedSegment {
- public:
+struct MemoryMappedSegment {
   MemoryMappedSegment(char *buff = nullptr, uptr size = 0)
       : filename(buff), filename_size(size) {}
   ~MemoryMappedSegment() {}
 
-  bool IsReadable() { return protection & kProtectionRead; }
-  bool IsWritable() { return protection & kProtectionWrite; }
-  bool IsExecutable() { return protection & kProtectionExecute; }
-  bool IsShared() { return protection & kProtectionShared; }
+  bool IsReadable() const { return protection & kProtectionRead; }
+  bool IsWritable() const { return protection & kProtectionWrite; }
+  bool IsExecutable() const { return protection & kProtectionExecute; }
+  bool IsShared() const { return protection & kProtectionShared; }
 
   uptr start;
   uptr end;
@@ -56,22 +55,6 @@ class MemoryMappedSegment {
   uptr protection;
   ModuleArch arch;
   u8 uuid[kModuleUUIDSize];
-
-#if SANITIZER_MAC
-  char name[kMaxSegName];
-
- private:
-  friend class MemoryMappingLayout;
-
-  template <typename Section>
-  void NextSectionLoad(LoadedModule *module);
-  void AddAddressRanges(LoadedModule *module);
-
-  uptr nsects_;
-  char *current_load_cmd_addr_;
-  u32 lc_type_;
-  uptr base_virt_addr_;
-#endif
 };
 
 class MemoryMappingLayout {
@@ -93,7 +76,7 @@ class MemoryMappingLayout {
 
   // FIXME: Hide implementation details for different platforms in
   // platform-specific files.
-# if SANITIZER_FREEBSD || SANITIZER_LINUX
+# if SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_NETBSD
   ProcSelfMapsBuff proc_self_maps_;
   const char *current_;
 

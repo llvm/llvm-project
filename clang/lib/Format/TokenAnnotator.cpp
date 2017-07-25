@@ -2820,7 +2820,7 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
 }
 
 void TokenAnnotator::printDebugInfo(const AnnotatedLine &Line) {
-  llvm::errs() << "AnnotatedTokens:\n";
+  llvm::errs() << "AnnotatedTokens(L=" << Line.Level << "):\n";
   const FormatToken *Tok = Line.First;
   while (Tok) {
     llvm::errs() << " M=" << Tok->MustBreakBefore

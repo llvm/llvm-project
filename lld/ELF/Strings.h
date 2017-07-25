@@ -73,7 +73,7 @@ llvm::Optional<std::string> demangle(StringRef Name);
 inline ArrayRef<uint8_t> toArrayRef(StringRef S) {
   return {(const uint8_t *)S.data(), S.size()};
 }
-}
-}
+} // namespace elf
+} // namespace lld
 
 #endif

@@ -249,7 +249,7 @@ def analyzer_params(args):
     if args.output_format:
         result.append('-analyzer-output={0}'.format(args.output_format))
     if args.analyzer_config:
-        result.append(args.analyzer_config)
+        result.extend(['-analyzer-config', args.analyzer_config])
     if args.verbose >= 4:
         result.append('-analyzer-display-progress')
     if args.plugins:

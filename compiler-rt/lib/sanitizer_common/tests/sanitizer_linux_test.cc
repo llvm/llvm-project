@@ -17,6 +17,7 @@
 #include "sanitizer_common/sanitizer_linux.h"
 
 #include "sanitizer_common/sanitizer_common.h"
+#include "sanitizer_common/sanitizer_file.h"
 #include "gtest/gtest.h"
 
 #include <pthread.h>

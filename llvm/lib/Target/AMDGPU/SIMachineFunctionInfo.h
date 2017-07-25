@@ -382,10 +382,13 @@ public:
   }
 
   void setStackPtrOffsetReg(unsigned Reg) {
-    assert(Reg != AMDGPU::NoRegister && "Should never be unset");
     StackPtrOffsetReg = Reg;
   }
 
+  // Note the unset value for this is AMDGPU::SP_REG rather than
+  // NoRegister. This is mostly a workaround for MIR tests where state that
+  // can't be directly computed from the function is not preserved in serialized
+  // MIR.
   unsigned getStackPtrOffsetReg() const {
     return StackPtrOffsetReg;
   }

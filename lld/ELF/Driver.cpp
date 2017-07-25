@@ -619,6 +619,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->AuxiliaryList = getArgs(Args, OPT_auxiliary);
   Config->Bsymbolic = Args.hasArg(OPT_Bsymbolic);
   Config->BsymbolicFunctions = Args.hasArg(OPT_Bsymbolic_functions);
+  Config->Chroot = Args.getLastArgValue(OPT_chroot);
   Config->CompressDebugSections = getCompressDebugSections(Args);
   Config->DefineCommon = getArg(Args, OPT_define_common, OPT_no_define_common,
                                 !Args.hasArg(OPT_relocatable));
@@ -659,7 +660,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->Rpath = getRpath(Args);
   Config->Relocatable = Args.hasArg(OPT_relocatable);
   Config->SaveTemps = Args.hasArg(OPT_save_temps);
-  Config->SearchPaths = getArgs(Args, OPT_L);
+  Config->SearchPaths = getArgs(Args, OPT_library_path);
   Config->SectionStartMap = getSectionStartMap(Args);
   Config->Shared = Args.hasArg(OPT_shared);
   Config->SingleRoRx = Args.hasArg(OPT_no_rosegment);
@@ -804,14 +805,13 @@ static bool getBinaryOption(StringRef S) {
 
 void LinkerDriver::createFiles(opt::InputArgList &Args) {
   for (auto *Arg : Args) {
-    switch (Arg->getOption().getID()) {
-    case OPT_l:
+    switch (Arg->getOption().getUnaliasedOption().getID()) {
+    case OPT_library:
       addLibrary(Arg->getValue());
       break;
     case OPT_INPUT:
       addFile(Arg->getValue(), /*WithLOption=*/false);
       break;
-    case OPT_alias_script_T:
     case OPT_script:
       if (Optional<MemoryBufferRef> MB = readFile(Arg->getValue()))
         readLinkerScript(*MB);

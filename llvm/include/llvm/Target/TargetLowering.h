@@ -1887,7 +1887,8 @@ public:
   ///
   /// TODO: Remove default argument
   virtual bool isLegalAddressingMode(const DataLayout &DL, const AddrMode &AM,
-                                     Type *Ty, unsigned AddrSpace) const;
+                                     Type *Ty, unsigned AddrSpace,
+                                     Instruction *I = nullptr) const;
 
   /// \brief Return the cost of the scaling factor used in the addressing mode
   /// represented by AM for this target, for a load/store of the specified type.

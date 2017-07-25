@@ -58,6 +58,7 @@ add_library(PollyCore OBJECT
   Transform/ScheduleOptimizer.cpp
   Transform/FlattenSchedule.cpp
   Transform/FlattenAlgo.cpp
+  Transform/ForwardOpTree.cpp
   Transform/DeLICM.cpp
   Transform/Simplify.cpp
   ${POLLY_HEADER_FILES}

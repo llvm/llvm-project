@@ -435,12 +435,9 @@ canSafelyUnrollMultiExitLoop(Loop *L, SmallVectorImpl<BasicBlock *> &OtherExits,
                              BasicBlock *LatchExit, bool PreserveLCSSA,
                              bool UseEpilogRemainder) {
 
-  // Support runtime unrolling for multiple exit blocks and multiple exiting
-  // blocks.
-  if (!UnrollRuntimeMultiExit)
-    return false;
-  // Even if runtime multi exit is enabled, we currently have some correctness
-  // constrains in unrolling a multi-exit loop.
+  // We currently have some correctness constrains in unrolling a multi-exit
+  // loop. Check for these below.
+
   // We rely on LCSSA form being preserved when the exit blocks are transformed.
   if (!PreserveLCSSA)
     return false;
@@ -470,7 +467,22 @@ canSafelyUnrollMultiExitLoop(Loop *L, SmallVectorImpl<BasicBlock *> &OtherExits,
   return true;
 }
 
+/// Returns true if we can profitably unroll the multi-exit loop L. Currently,
+/// we return true only if UnrollRuntimeMultiExit is set to true.
+static bool canProfitablyUnrollMultiExitLoop(
+    Loop *L, SmallVectorImpl<BasicBlock *> &OtherExits, BasicBlock *LatchExit,
+    bool PreserveLCSSA, bool UseEpilogRemainder) {
 
+#if !defined(NDEBUG)
+  SmallVector<BasicBlock *, 8> OtherExitsDummyCheck;
+  assert(canSafelyUnrollMultiExitLoop(L, OtherExitsDummyCheck, LatchExit,
+                                      PreserveLCSSA, UseEpilogRemainder) &&
+         "Should be safe to unroll before checking profitability!");
+#endif
+  // Priority goes to UnrollRuntimeMultiExit if it's supplied.
+  return UnrollRuntimeMultiExit.getNumOccurrences() ? UnrollRuntimeMultiExit
+                                                    : false;
+}
 
 /// Insert code in the prolog/epilog code when unrolling a loop with a
 /// run-time trip-count.
@@ -538,8 +550,11 @@ bool llvm::UnrollRuntimeLoopRemainder(Loop *L, unsigned Count,
          "one of the loop latch successors should be the exit block!");
   // These are exit blocks other than the target of the latch exiting block.
   SmallVector<BasicBlock *, 4> OtherExits;
-  bool isMultiExitUnrollingEnabled = canSafelyUnrollMultiExitLoop(
-      L, OtherExits, LatchExit, PreserveLCSSA, UseEpilogRemainder);
+  bool isMultiExitUnrollingEnabled =
+      canSafelyUnrollMultiExitLoop(L, OtherExits, LatchExit, PreserveLCSSA,
+                                   UseEpilogRemainder) &&
+      canProfitablyUnrollMultiExitLoop(L, OtherExits, LatchExit, PreserveLCSSA,
+                                       UseEpilogRemainder);
   // Support only single exit and exiting block unless multi-exit loop unrolling is enabled.
   if (!isMultiExitUnrollingEnabled &&
       (!L->getExitingBlock() || OtherExits.size())) {

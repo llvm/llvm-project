@@ -149,14 +149,6 @@ void SparcPassConfig::addPreEmitPass(){
   {
     addPass(new InsertNOPLoad());
   }
-  if (this->getSparcTargetMachine().getSubtargetImpl()->fixFSMULD())
-  {
-    addPass(new FixFSMULD());
-  }
-  if (this->getSparcTargetMachine().getSubtargetImpl()->replaceFMULS())
-  {
-    addPass(new ReplaceFMULS());
-  }
   if (this->getSparcTargetMachine().getSubtargetImpl()->detectRoundChange()) {
     addPass(new DetectRoundChange());
   }

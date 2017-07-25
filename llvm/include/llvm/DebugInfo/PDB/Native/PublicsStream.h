@@ -36,6 +36,8 @@ public:
   Expected<const codeview::CVSymbolArray &> getSymbolArray() const;
   iterator_range<codeview::CVSymbolArray::Iterator>
   getSymbols(bool *HadError) const;
+  FixedStreamArray<PSHashRecord> getHashRecords() const { return HashRecords; }
+  ArrayRef<uint8_t> getHashBitmap() const { return HashBitmap; }
   FixedStreamArray<support::ulittle32_t> getHashBuckets() const {
     return HashBuckets;
   }
@@ -56,8 +58,8 @@ private:
 
   std::unique_ptr<msf::MappedBlockStream> Stream;
   uint32_t NumBuckets = 0;
-  ArrayRef<uint8_t> Bitmap;
   FixedStreamArray<PSHashRecord> HashRecords;
+  ArrayRef<uint8_t> HashBitmap;
   FixedStreamArray<support::ulittle32_t> HashBuckets;
   FixedStreamArray<support::ulittle32_t> AddressMap;
   FixedStreamArray<support::ulittle32_t> ThunkMap;

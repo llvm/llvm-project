@@ -338,7 +338,8 @@ public:
   /// Return true if the addressing mode represented by AM is legal for this
   /// target, for a load/store of the specified type.
   bool isLegalAddressingMode(const DataLayout &DL, const AddrMode &AM, Type *Ty,
-                             unsigned AS) const override;
+                             unsigned AS,
+                             Instruction *I = nullptr) const override;
 
   /// \brief Return the cost of the scaling factor used in the addressing
   /// mode represented by AM for this target, for a load/store

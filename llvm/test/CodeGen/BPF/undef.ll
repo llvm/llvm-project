@@ -23,10 +23,9 @@ define i32 @ebpf_filter(%struct.__sk_buff* nocapture readnone %ebpf_packet) #0 s
 ; EL: r1 = 134678021
 ; EB: r1 = 84281096
 ; CHECK: *(u32 *)(r10 - 8) = r1
-; CHECK: r1 = 9
-; CHECK: *(u8 *)(r10 - 4) = r1
-; CHECK: r1 = 10
-; CHECK: *(u8 *)(r10 - 3) = r1
+; EL: r1 = 2569
+; EB: r1 = 2314
+; CHECK: *(u16 *)(r10 - 4) = r1
 ; CHECK: *(u16 *)(r10 + 24) = r2
 ; CHECK: *(u16 *)(r10 + 22) = r2
 ; CHECK: *(u16 *)(r10 + 20) = r2

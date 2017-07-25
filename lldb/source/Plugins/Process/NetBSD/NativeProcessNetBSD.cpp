@@ -64,7 +64,7 @@ static Status EnsureFDFlags(int fd, int flags) {
 // Public Static Methods
 // -----------------------------------------------------------------------------
 
-llvm::Expected<NativeProcessProtocolSP>
+llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
 NativeProcessNetBSD::Factory::Launch(ProcessLaunchInfo &launch_info,
                                      NativeDelegate &native_delegate,
                                      MainLoop &mainloop) const {
@@ -101,24 +101,25 @@ NativeProcessNetBSD::Factory::Launch(ProcessLaunchInfo &launch_info,
   LLDB_LOG(log, "pid = {0:x}, detected architecture {1}", pid,
            arch.GetArchitectureName());
 
-  std::shared_ptr<NativeProcessNetBSD> process_sp(new NativeProcessNetBSD(
+  std::unique_ptr<NativeProcessNetBSD> process_up(new NativeProcessNetBSD(
       pid, launch_info.GetPTY().ReleaseMasterFileDescriptor(), native_delegate,
       arch, mainloop));
 
-  status = process_sp->ReinitializeThreads();
+  status = process_up->ReinitializeThreads();
   if (status.Fail())
     return status.ToError();
 
-  for (const auto &thread_sp : process_sp->m_threads) {
+  for (const auto &thread_sp : process_up->m_threads) {
     static_pointer_cast<NativeThreadNetBSD>(thread_sp)->SetStoppedBySignal(
         SIGSTOP);
   }
-  process_sp->SetState(StateType::eStateStopped);
+  process_up->SetState(StateType::eStateStopped);
 
-  return process_sp;
+  return std::move(process_up);
 }
 
-llvm::Expected<NativeProcessProtocolSP> NativeProcessNetBSD::Factory::Attach(
+llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
+NativeProcessNetBSD::Factory::Attach(
     lldb::pid_t pid, NativeProcessProtocol::NativeDelegate &native_delegate,
     MainLoop &mainloop) const {
   Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PROCESS));
@@ -130,14 +131,14 @@ llvm::Expected<NativeProcessProtocolSP> NativeProcessNetBSD::Factory::Attach(
   if (!status.Success())
     return status.ToError();
 
-  std::shared_ptr<NativeProcessNetBSD> process_sp(
+  std::unique_ptr<NativeProcessNetBSD> process_up(
       new NativeProcessNetBSD(pid, -1, native_delegate, arch, mainloop));
 
-  status = process_sp->Attach();
+  status = process_up->Attach();
   if (!status.Success())
     return status.ToError();
 
-  return process_sp;
+  return std::move(process_up);
 }
 
 // -----------------------------------------------------------------------------
@@ -787,7 +788,7 @@ NativeThreadNetBSDSP NativeProcessNetBSD::AddThread(lldb::tid_t thread_id) {
   if (m_threads.empty())
     SetCurrentThreadID(thread_id);
 
-  auto thread_sp = std::make_shared<NativeThreadNetBSD>(this, thread_id);
+  auto thread_sp = std::make_shared<NativeThreadNetBSD>(*this, thread_id);
   m_threads.push_back(thread_sp);
   return thread_sp;
 }

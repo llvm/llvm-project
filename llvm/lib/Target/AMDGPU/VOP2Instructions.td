@@ -375,6 +375,14 @@ defm V_SUBREV_I32 : VOP2bInst <"v_subrev_i32", VOP2b_I32_I1_I32_I32, null_frag, 
 defm V_ADDC_U32 : VOP2bInst <"v_addc_u32", VOP2b_I32_I1_I32_I32_I1>;
 defm V_SUBB_U32 : VOP2bInst <"v_subb_u32", VOP2b_I32_I1_I32_I32_I1>;
 defm V_SUBBREV_U32 : VOP2bInst <"v_subbrev_u32", VOP2b_I32_I1_I32_I32_I1, null_frag, "v_subb_u32">;
+
+
+let SubtargetPredicate = HasAddNoCarryInsts in {
+defm V_ADD_U32 : VOP2Inst <"v_add_u32", VOP_I32_I32_I32>;
+defm V_SUB_U32 : VOP2Inst <"v_sub_u32", VOP_I32_I32_I32>;
+defm V_SUBREV_U32 : VOP2Inst <"v_subrev_u32", VOP_I32_I32_I32, null_frag, "v_sub_u32">;
+}
+
 } // End isCommutable = 1
 
 // These are special and do not read the exec mask.
@@ -833,3 +841,9 @@ def : SI2_VI3Alias <"v_cvt_pknorm_u16_f32", V_CVT_PKNORM_U16_F32_e64_vi>;
 def : SI2_VI3Alias <"v_cvt_pkrtz_f16_f32", V_CVT_PKRTZ_F16_F32_e64_vi>;
 
 } // End SubtargetPredicate = isVI
+
+let SubtargetPredicate = HasAddNoCarryInsts in {
+defm V_ADD_U32 : VOP2_Real_e32e64_vi <0x34>;
+defm V_SUB_U32 : VOP2_Real_e32e64_vi <0x35>;
+defm V_SUBREV_U32 : VOP2_Real_e32e64_vi <0x36>;
+}

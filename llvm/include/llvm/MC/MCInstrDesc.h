@@ -209,6 +209,15 @@ public:
   /// well.
   unsigned getNumOperands() const { return NumOperands; }
 
+  using const_opInfo_iterator = const MCOperandInfo *;
+
+  const_opInfo_iterator opInfo_begin() const { return OpInfo; }
+  const_opInfo_iterator opInfo_end() const { return OpInfo + NumOperands; }
+
+  iterator_range<const_opInfo_iterator> operands() const {
+    return make_range(opInfo_begin(), opInfo_end());
+  }
+
   /// \brief Return the number of MachineOperands that are register
   /// definitions.  Register definitions always occur at the start of the
   /// machine operand list.  This is the number of "outs" in the .td file,

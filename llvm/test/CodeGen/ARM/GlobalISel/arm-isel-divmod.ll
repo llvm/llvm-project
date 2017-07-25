@@ -87,3 +87,55 @@ define arm_aapcscc i32 @test_urem_i32(i32 %x, i32 %y) {
   %r = urem i32 %x, %y
   ret i32 %r
 }
+
+define arm_aapcscc i16 @test_srem_i16(i16 %x, i16 %y) {
+; CHECK-LABEL: test_srem_i16:
+; CHECK-DAG: sxth r0, r0
+; CHECK-DAG: sxth r1, r1
+; HWDIV: sdiv [[Q:r[0-9]+]], r0, r1
+; HWDIV: mul [[P:r[0-9]+]], [[Q]], r1
+; HWDIV: sub r0, r0, [[P]]
+; SOFT-AEABI: blx __aeabi_idivmod
+; SOFT-DEFAULT: blx __modsi3
+  %r = srem i16 %x, %y
+  ret i16 %r
+}
+
+define arm_aapcscc i16 @test_urem_i16(i16 %x, i16 %y) {
+; CHECK-LABEL: test_urem_i16:
+; CHECK-DAG: uxth r0, r0
+; CHECK-DAG: uxth r1, r1
+; HWDIV: udiv [[Q:r[0-9]+]], r0, r1
+; HWDIV: mul [[P:r[0-9]+]], [[Q]], r1
+; HWDIV: sub r0, r0, [[P]]
+; SOFT-AEABI: blx __aeabi_uidivmod
+; SOFT-DEFAULT: blx __umodsi3
+  %r = urem i16 %x, %y
+  ret i16 %r
+}
+
+define arm_aapcscc i8 @test_srem_i8(i8 %x, i8 %y) {
+; CHECK-LABEL: test_srem_i8:
+; CHECK-DAG: sxtb r0, r0
+; CHECK-DAG: sxtb r1, r1
+; HWDIV: sdiv [[Q:r[0-9]+]], r0, r1
+; HWDIV: mul [[P:r[0-9]+]], [[Q]], r1
+; HWDIV: sub r0, r0, [[P]]
+; SOFT-AEABI: blx __aeabi_idivmod
+; SOFT-DEFAULT: blx __modsi3
+  %r = srem i8 %x, %y
+  ret i8 %r
+}
+
+define arm_aapcscc i8 @test_urem_i8(i8 %x, i8 %y) {
+; CHECK-LABEL: test_urem_i8:
+; CHECK-DAG: uxtb r0, r0
+; CHECK-DAG: uxtb r1, r1
+; HWDIV: udiv [[Q:r[0-9]+]], r0, r1
+; HWDIV: mul [[P:r[0-9]+]], [[Q]], r1
+; HWDIV: sub r0, r0, [[P]]
+; SOFT-AEABI: blx __aeabi_uidivmod
+; SOFT-DEFAULT: blx __umodsi3
+  %r = urem i8 %x, %y
+  ret i8 %r
+}

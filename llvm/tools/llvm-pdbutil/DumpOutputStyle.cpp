@@ -882,6 +882,52 @@ Error DumpOutputStyle::dumpPublics() {
     P.formatLine("Error while processing public symbol records.  {0}",
                  toString(std::move(EC)));
 
+  // Return early if we aren't dumping public hash table and address map info.
+  if (!opts::dump::DumpPublicExtras)
+    return Error::success();
+
+  P.formatLine("Hash Records");
+  {
+    AutoIndent Indent2(P);
+    for (const PSHashRecord &HR : Publics.getHashRecords())
+      P.formatLine("off = {0}, refcnt = {1}", uint32_t(HR.Off),
+                   uint32_t(HR.CRef));
+  }
+
+  // FIXME: Dump the bitmap.
+
+  P.formatLine("Hash Buckets");
+  {
+    AutoIndent Indent2(P);
+    for (uint32_t Hash : Publics.getHashBuckets())
+      P.formatLine("{0:x8}", Hash);
+  }
+
+  P.formatLine("Address Map");
+  {
+    // These are offsets into the publics stream sorted by secidx:secrel.
+    AutoIndent Indent2(P);
+    for (uint32_t Addr : Publics.getAddressMap())
+      P.formatLine("off = {0}", Addr);
+  }
+
+  // The thunk map is optional debug info used for ILT thunks.
+  if (!Publics.getThunkMap().empty()) {
+    P.formatLine("Thunk Map");
+    AutoIndent Indent2(P);
+    for (uint32_t Addr : Publics.getThunkMap())
+      P.formatLine("{0:x8}", Addr);
+  }
+
+  // The section offsets table appears to be empty when incremental linking
+  // isn't in use.
+  if (!Publics.getSectionOffsets().empty()) {
+    P.formatLine("Section Offsets");
+    AutoIndent Indent2(P);
+    for (const SectionOffset &SO : Publics.getSectionOffsets())
+      P.formatLine("{0:x4}:{1:x8}", uint16_t(SO.Isect), uint32_t(SO.Off));
+  }
+
   return Error::success();
 }
 

@@ -688,8 +688,11 @@ public:
       : maxLevels(7), depth(1), uninitialized(not_initialized), resizing(0) {}
 
   void fini() {
-    if (!uninitialized && numPerLevel)
+    if (!uninitialized && numPerLevel) {
       __kmp_free(numPerLevel);
+      numPerLevel = NULL;
+      uninitialized = not_initialized;
+    }
   }
 
   void init(AddrUnsPair *adr2os, int num_addrs) {

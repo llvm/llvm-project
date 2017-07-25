@@ -103,7 +103,7 @@ std::unique_ptr<RandomNumberGenerator> Module::createRNG(const Pass* P) const {
   // store salt metadata from the Module constructor.
   Salt += sys::path::filename(getModuleIdentifier());
 
-  return std::unique_ptr<RandomNumberGenerator>{new RandomNumberGenerator(Salt)};
+  return std::unique_ptr<RandomNumberGenerator>(new RandomNumberGenerator(Salt));
 }
 
 /// getNamedValue - Return the first global value in the module with

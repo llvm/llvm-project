@@ -1,3 +1,4 @@
+; REQUIRES: x86
 ; RUN: llvm-as %s -o %t.o
 
 ; RUN: rm -f %t.yaml

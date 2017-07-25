@@ -151,7 +151,8 @@ public:
                             Type *&/*AccessTy*/) const override;
 
   bool isLegalAddressingMode(const DataLayout &DL, const AddrMode &AM, Type *Ty,
-                             unsigned AS) const override;
+                             unsigned AS,
+                             Instruction *I = nullptr) const override;
 
   bool canMergeStoresTo(unsigned AS, EVT MemVT,
                         const SelectionDAG &DAG) const override;
@@ -232,6 +233,8 @@ public:
   ConstraintType getConstraintType(StringRef Constraint) const override;
   SDValue copyToM0(SelectionDAG &DAG, SDValue Chain, const SDLoc &DL,
                    SDValue V) const;
+
+  void finalizeLowering(MachineFunction &MF) const override;
 };
 
 } // End namespace llvm

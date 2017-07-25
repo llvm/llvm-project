@@ -1295,9 +1295,7 @@ void CodeGenRegBank::computeSubRegLaneMasks() {
       // Moving from a class with no subregisters we just had a single lane:
       // The subregister must be a leaf subregister and only occupies 1 bit.
       // Move the bit from the class without subregisters into that position.
-      static_assert(sizeof(Idx.LaneMask.getAsInteger()) == 4,
-                    "Change Log2_32 to a proper one");
-      unsigned DstBit = Log2_32(Idx.LaneMask.getAsInteger());
+      unsigned DstBit = Idx.LaneMask.getHighestLane();
       assert(Idx.LaneMask == LaneBitmask::getLane(DstBit) &&
              "Must be a leaf subregister");
       MaskRolPair MaskRol = { LaneBitmask::getLane(0), (uint8_t)DstBit };
@@ -1328,9 +1326,7 @@ void CodeGenRegBank::computeSubRegLaneMasks() {
         assert(Composite->getComposites().empty());
 
         // Create Mask+Rotate operation and merge with existing ops if possible.
-        static_assert(sizeof(Composite->LaneMask.getAsInteger()) == 4,
-                      "Change Log2_32 to a proper one");
-        unsigned DstBit = Log2_32(Composite->LaneMask.getAsInteger());
+        unsigned DstBit = Composite->LaneMask.getHighestLane();
         int Shift = DstBit - SrcBit;
         uint8_t RotateLeft = Shift >= 0 ? (uint8_t)Shift
                                         : LaneBitmask::BitWidth + Shift;

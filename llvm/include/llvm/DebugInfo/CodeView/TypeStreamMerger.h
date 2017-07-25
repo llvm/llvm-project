@@ -30,9 +30,6 @@ class TypeTableBuilder;
 /// type stream, that contains the index of the corresponding type record
 /// in the destination stream.
 ///
-/// \param Handler (optional) If non-null, an interface that gets invoked
-/// to handle type server records.
-///
 /// \param Types The collection of types to merge in.
 ///
 /// \returns Error::success() if the operation succeeded, otherwise an
@@ -76,9 +73,6 @@ Error mergeIdRecords(TypeTableBuilder &Dest, ArrayRef<TypeIndex> Types,
 /// \param SourceToDest A vector, indexed by the TypeIndex in the source
 /// id stream, that contains the index of the corresponding id record
 /// in the destination stream.
-///
-/// \param Handler (optional) If non-null, an interface that gets invoked
-/// to handle type server records.
 ///
 /// \param IdsAndTypes The collection of id records to merge in.
 ///

@@ -352,6 +352,11 @@ INTERCEPTOR(int, pthread_join, void *th, void **ret) {
   return res;
 }
 
+INTERCEPTOR(void, _exit, int status) {
+  if (status == 0 && HasReportedLeaks()) status = common_flags()->exitcode;
+  REAL(_exit)(status);
+}
+
 namespace __lsan {
 
 void InitializeInterceptors() {
@@ -371,6 +376,7 @@ void InitializeInterceptors() {
   LSAN_MAYBE_INTERCEPT_MALLOPT;
   INTERCEPT_FUNCTION(pthread_create);
   INTERCEPT_FUNCTION(pthread_join);
+  INTERCEPT_FUNCTION(_exit);
 
   if (pthread_key_create(&g_thread_finalize_key, &thread_finalize)) {
     Report("LeakSanitizer: failed to create thread key.\n");

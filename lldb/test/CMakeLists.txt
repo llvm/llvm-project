@@ -49,8 +49,8 @@ endif()
 
 # Users can override LLDB_TEST_USER_ARGS to specify arbitrary arguments to pass to the script
 set(LLDB_TEST_USER_ARGS
-  "${LLDB_TEST_USER_ARGS_New}"
-  CACHE STRING "Specify additional arguments to pass to test runner. For example: '-C gcc -C clang -A i386 -A x86_64'" FORCE)
+  ""
+  CACHE STRING "Specify additional arguments to pass to test runner. For example: '-C gcc -C clang -A i386 -A x86_64'")
 
 set(LLDB_TEST_COMMON_ARGS
   --arch=${LLDB_TEST_ARCH}
@@ -101,19 +101,19 @@ if(CMAKE_HOST_APPLE)
   list(APPEND LLDB_TEST_COMMON_ARGS --server $<TARGET_FILE:debugserver>)
 endif()
 
+set(LLDB_DOTEST_ARGS ${LLDB_TEST_COMMON_ARGS};${LLDB_TEST_USER_ARGS})
+
 add_python_test_target(check-lldb-single
   ${LLDB_SOURCE_DIR}/test/dotest.py
-  "--no-multiprocess;${LLDB_TEST_COMMON_ARGS};${LLDB_TEST_USER_ARGS}"
-  "Testing LLDB with args: ${LLDB_TEST_COMMON_ARGS};${LLDB_TEST_USER_ARGS}"
+  "--no-multiprocess;${LLDB_DOTEST_ARGS}"
+  "Testing LLDB with args: ${LLDB_DOTEST_ARGS}"
   )
-
-set(LLDB_DOTEST_ARGS -q;${LLDB_TEST_COMMON_ARGS};${LLDB_TEST_USER_ARGS})
 
 # If tests crash cause LLDB to crash, or things are otherwise unstable, or if machine-parsable
 # output is desired (i.e. in continuous integration contexts) check-lldb-single is a better target.
 add_python_test_target(check-lldb
   ${LLDB_SOURCE_DIR}/test/dotest.py
-  "${LLDB_DOTEST_ARGS}"
+  "-q;${LLDB_DOTEST_ARGS}"
   "Testing LLDB (parallel execution, with a separate subprocess per test)"
   )
 

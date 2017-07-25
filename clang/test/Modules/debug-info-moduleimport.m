@@ -10,12 +10,13 @@
 // CHECK: ![[CU:.*]] = distinct !DICompileUnit
 @import DebugObjC;
 // CHECK: !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: ![[CU]],
-// CHECK-SAME:              entity: ![[MODULE:.*]], line: [[@LINE-2]])
+// CHECK-SAME:              entity: ![[MODULE:.*]], file: ![[F:[0-9]+]],
+// CHECK-SAME:              line: [[@LINE-3]])
 // CHECK: ![[MODULE]] = !DIModule(scope: null, name: "DebugObjC",
 // CHECK-SAME:  configMacros: "\22-DGREETING=Hello World\22 \22-UNDEBUG\22",
 // CHECK-SAME:  includePath: "{{.*}}test{{.*}}Modules{{.*}}Inputs",
 // CHECK-SAME:  isysroot: "/tmp/..")
-
+// CHECK: ![[F]] = !DIFile(filename: {{.*}}debug-info-moduleimport.m
 
 // RUN: %clang_cc1 -debug-info-kind=limited -fmodules -fimplicit-module-maps -fmodules-cache-path=%t \
 // RUN:   %s -I %S/Inputs -isysroot /tmp/.. -I %t -emit-llvm -o - \

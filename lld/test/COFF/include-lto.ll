@@ -1,3 +1,4 @@
+; REQUIRES: x86
 ; RUN: llvm-as -o %t.obj %s
 ; RUN: lld-link /dll /out:%t.dll %t.obj
 ; RUN: llvm-objdump -d %t.dll | FileCheck %s

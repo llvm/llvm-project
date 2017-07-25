@@ -345,6 +345,9 @@ possible event codes are:
 ``NEW``
   The fuzzer has created a test input that covers new areas of the code
   under test.  This input will be saved to the primary corpus directory.
+``REDUCE``
+  The fuzzer has found a better (smaller) input that triggers previously
+  discovered features (set ``-reduce_inputs=0`` to disable).
 ``pulse``
   The fuzzer has generated 2\ :sup:`n` inputs (generated periodically to reassure
   the user that the fuzzer is still working).

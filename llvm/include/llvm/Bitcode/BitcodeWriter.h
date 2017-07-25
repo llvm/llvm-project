@@ -84,6 +84,16 @@ namespace llvm {
                      const ModuleSummaryIndex *Index = nullptr,
                      bool GenerateHash = false, ModuleHash *ModHash = nullptr);
 
+    /// Write the specified thin link bitcode file (i.e., the minimized bitcode
+    /// file) to the buffer specified at construction time. The thin link
+    /// bitcode file is used for thin link, and it only contains the necessary
+    /// information for thin link.
+    ///
+    /// ModHash is for use in ThinLTO incremental build, generated while the
+    /// IR bitcode file writing.
+    void writeThinLinkBitcode(const Module *M, const ModuleSummaryIndex &Index,
+                              const ModuleHash &ModHash);
+
     void writeIndex(
         const ModuleSummaryIndex *Index,
         const std::map<std::string, GVSummaryMapTy> *ModuleToSummariesForIndex);
@@ -115,6 +125,17 @@ namespace llvm {
                           const ModuleSummaryIndex *Index = nullptr,
                           bool GenerateHash = false,
                           ModuleHash *ModHash = nullptr);
+
+  /// Write the specified thin link bitcode file (i.e., the minimized bitcode
+  /// file) to the given raw output stream, where it will be written in a new
+  /// bitcode block. The thin link bitcode file is used for thin link, and it
+  /// only contains the necessary information for thin link.
+  ///
+  /// ModHash is for use in ThinLTO incremental build, generated while the IR
+  /// bitcode file writing.
+  void WriteThinLinkBitcodeToFile(const Module *M, raw_ostream &Out,
+                                  const ModuleSummaryIndex &Index,
+                                  const ModuleHash &ModHash);
 
   /// Write the specified module summary index to the given raw output stream,
   /// where it will be written in a new bitcode block. This is used when
