@@ -543,7 +543,7 @@ private:
   /// The invalid domain for an access describes all parameter combinations
   /// under which the statement looks to be executed but is in fact not because
   /// some assumption/restriction makes the access invalid.
-  isl_set *InvalidDomain;
+  isl::set InvalidDomain;
 
   // Properties describing the accessed array.
   // TODO: It might be possible to move them to ScopArrayInfo.
@@ -918,19 +918,15 @@ public:
   isl::pw_aff getPwAff(const SCEV *E);
 
   /// Get the invalid domain for this access.
-  __isl_give isl_set *getInvalidDomain() const {
-    return isl_set_copy(InvalidDomain);
-  }
+  isl::set getInvalidDomain() const { return InvalidDomain; }
 
   /// Get the invalid context for this access.
-  __isl_give isl_set *getInvalidContext() const {
-    return isl_set_params(getInvalidDomain());
-  }
+  isl::set getInvalidContext() const { return getInvalidDomain().params(); }
 
   /// Get the stride of this memory access in the specified Schedule. Schedule
   /// is a map from the statement to a schedule where the innermost dimension is
   /// the dimension of the innermost loop containing the statement.
-  __isl_give isl_set *getStride(__isl_take const isl_map *Schedule) const;
+  isl::set getStride(isl::map Schedule) const;
 
   /// Get the FortranArrayDescriptor corresponding to this memory access if
   /// it exists, and nullptr otherwise.
@@ -939,19 +935,19 @@ public:
   /// Is the stride of the access equal to a certain width? Schedule is a map
   /// from the statement to a schedule where the innermost dimension is the
   /// dimension of the innermost loop containing the statement.
-  bool isStrideX(__isl_take const isl_map *Schedule, int StrideWidth) const;
+  bool isStrideX(isl::map Schedule, int StrideWidth) const;
 
   /// Is consecutive memory accessed for a given statement instance set?
   /// Schedule is a map from the statement to a schedule where the innermost
   /// dimension is the dimension of the innermost loop containing the
   /// statement.
-  bool isStrideOne(__isl_take const isl_map *Schedule) const;
+  bool isStrideOne(isl::map Schedule) const;
 
   /// Is always the same memory accessed for a given statement instance set?
   /// Schedule is a map from the statement to a schedule where the innermost
   /// dimension is the dimension of the innermost loop containing the
   /// statement.
-  bool isStrideZero(__isl_take const isl_map *Schedule) const;
+  bool isStrideZero(isl::map Schedule) const;
 
   /// Return the kind when this access was first detected.
   MemoryKind getOriginalKind() const {
@@ -1395,8 +1391,8 @@ public:
     return getRegion()->contains(L);
   }
 
-  /// Return whether this statement contains @p BB.
-  bool contains(BasicBlock *BB) const {
+  /// Return whether this statement represents @p BB.
+  bool represents(BasicBlock *BB) const {
     if (isCopyStmt())
       return false;
     if (isBlockStmt())
@@ -1408,7 +1404,7 @@ public:
   bool contains(Instruction *Inst) const {
     if (!Inst)
       return false;
-    return contains(Inst->getParent());
+    return represents(Inst->getParent());
   }
 
   /// Return the closest innermost loop that contains this statement, but is not
@@ -1502,7 +1498,6 @@ public:
   /// Return the MemoryAccess that loads a PHINode value, or nullptr if not
   /// existing, respectively not yet added.
   MemoryAccess *lookupPHIReadOf(PHINode *PHI) const {
-    assert(isBlockStmt() || R->getEntry() == PHI->getParent());
     return PHIReads.lookup(PHI);
   }
 

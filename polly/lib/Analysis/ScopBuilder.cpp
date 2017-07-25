@@ -658,7 +658,7 @@ void ScopBuilder::buildAccessFunctions(ScopStmt *Stmt, BasicBlock &BB,
   assert(
       !Stmt == IsExitBlock &&
       "The exit BB is the only one that cannot be represented by a statement");
-  assert(IsExitBlock || Stmt->contains(&BB));
+  assert(IsExitBlock || Stmt->represents(&BB));
 
   // We do not build access functions for error blocks, as they may contain
   // instructions we can not model.

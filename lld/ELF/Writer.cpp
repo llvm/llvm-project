@@ -524,7 +524,7 @@ template <class ELFT> void Writer<ELFT>::addSectionSymbols() {
 //
 // This function returns true if a section needs to be put into a
 // PT_GNU_RELRO segment.
-bool elf::isRelroSection(const OutputSection *Sec) {
+static bool isRelroSection(const OutputSection *Sec) {
   if (!Config->ZRelro)
     return false;
 
@@ -1660,7 +1660,7 @@ template <class ELFT> void Writer<ELFT>::setPhdrs() {
         P.p_paddr = First->getLMA();
     }
     if (P.p_type == PT_LOAD)
-      P.p_align = Config->MaxPageSize;
+      P.p_align = std::max<uint64_t>(P.p_align, Config->MaxPageSize);
     else if (P.p_type == PT_GNU_RELRO) {
       P.p_align = 1;
       // The glibc dynamic loader rounds the size down, so we need to round up

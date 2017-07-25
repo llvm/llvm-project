@@ -639,7 +639,7 @@ static MemoryAccess::ReductionType getReductionType(const BinaryOperator *BinOp,
   }
 }
 
-MemoryAccess::~MemoryAccess() { isl_set_free(InvalidDomain); }
+MemoryAccess::~MemoryAccess() {}
 
 const ScopArrayInfo *MemoryAccess::getOriginalScopArrayInfo() const {
   isl::id ArrayId = getArrayId();
@@ -947,11 +947,10 @@ void MemoryAccess::buildAccessRelation(const ScopArrayInfo *SAI) {
 
   // Initialize the invalid domain which describes all iterations for which the
   // access relation is not modeled correctly.
-  auto *StmtInvalidDomain = getStatement()->getInvalidDomain();
-  InvalidDomain = isl_set_empty(isl_set_get_space(StmtInvalidDomain));
-  isl_set_free(StmtInvalidDomain);
+  isl::set StmtInvalidDomain = isl::manage(getStatement()->getInvalidDomain());
+  InvalidDomain = isl::set::empty(StmtInvalidDomain.get_space());
 
-  isl_ctx *Ctx = Id.get_ctx().release();
+  isl::ctx Ctx = Id.get_ctx();
   isl::id BaseAddrId = SAI->getBasePtrId();
 
   if (getAccessInstruction() && isa<MemIntrinsic>(getAccessInstruction())) {
@@ -1029,9 +1028,9 @@ MemoryAccess::MemoryAccess(ScopStmt *Stmt, AccessType AccType, isl::map AccRel)
 }
 
 void MemoryAccess::realignParams() {
-  auto *Ctx = Statement->getParent()->getContext();
-  InvalidDomain = isl_set_gist_params(InvalidDomain, isl_set_copy(Ctx));
-  AccessRelation = AccessRelation.gist_params(isl::manage(Ctx));
+  isl::set Ctx = isl::manage(Statement->getParent()->getContext());
+  InvalidDomain = InvalidDomain.gist_params(Ctx);
+  AccessRelation = AccessRelation.gist_params(Ctx);
 }
 
 const std::string MemoryAccess::getReductionOperatorStr() const {
@@ -1087,7 +1086,7 @@ isl::pw_aff MemoryAccess::getPwAff(const SCEV *E) {
   isl::set StmtDom = isl::manage(getStatement()->getDomain());
   StmtDom = StmtDom.reset_tuple_id();
   isl::set NewInvalidDom = StmtDom.intersect(isl::manage(PWAC.second));
-  InvalidDomain = isl_set_union(InvalidDomain, NewInvalidDom.release());
+  InvalidDomain = InvalidDomain.unite(NewInvalidDom);
   return isl::manage(PWAC.first);
 }
 
@@ -1103,70 +1102,63 @@ isl::pw_aff MemoryAccess::getPwAff(const SCEV *E) {
 //   set[i0, i1, ..., iX] -> set[o0, o1, ..., oX]
 //     : i0 = o0, i1 = o1, ..., i(X-1) = o(X-1), iX < oX
 //
-static isl_map *getEqualAndLarger(__isl_take isl_space *setDomain) {
-  isl_space *Space = isl_space_map_from_set(setDomain);
-  isl_map *Map = isl_map_universe(Space);
-  unsigned lastDimension = isl_map_dim(Map, isl_dim_in) - 1;
+static isl::map getEqualAndLarger(isl::space SetDomain) {
+  isl::space Space = SetDomain.map_from_set();
+  isl::map Map = isl::map::universe(Space);
+  unsigned lastDimension = Map.dim(isl::dim::in) - 1;
 
   // Set all but the last dimension to be equal for the input and output
   //
   //   input[i0, i1, ..., iX] -> output[o0, o1, ..., oX]
   //     : i0 = o0, i1 = o1, ..., i(X-1) = o(X-1)
   for (unsigned i = 0; i < lastDimension; ++i)
-    Map = isl_map_equate(Map, isl_dim_in, i, isl_dim_out, i);
+    Map = Map.equate(isl::dim::in, i, isl::dim::out, i);
 
   // Set the last dimension of the input to be strict smaller than the
   // last dimension of the output.
   //
   //   input[?,?,?,...,iX] -> output[?,?,?,...,oX] : iX < oX
-  Map = isl_map_order_lt(Map, isl_dim_in, lastDimension, isl_dim_out,
-                         lastDimension);
+  Map = Map.order_lt(isl::dim::in, lastDimension, isl::dim::out, lastDimension);
   return Map;
 }
 
-__isl_give isl_set *
-MemoryAccess::getStride(__isl_take const isl_map *Schedule) const {
-  isl_map *S = const_cast<isl_map *>(Schedule);
-  isl_map *AccessRelation = getAccessRelation().release();
-  isl_space *Space = isl_space_range(isl_map_get_space(S));
-  isl_map *NextScatt = getEqualAndLarger(Space);
+isl::set MemoryAccess::getStride(isl::map Schedule) const {
+  isl::map AccessRelation = getAccessRelation();
+  isl::space Space = Schedule.get_space().range();
+  isl::map NextScatt = getEqualAndLarger(Space);
 
-  S = isl_map_reverse(S);
-  NextScatt = isl_map_lexmin(NextScatt);
+  Schedule = Schedule.reverse();
+  NextScatt = NextScatt.lexmin();
 
-  NextScatt = isl_map_apply_range(NextScatt, isl_map_copy(S));
-  NextScatt = isl_map_apply_range(NextScatt, isl_map_copy(AccessRelation));
-  NextScatt = isl_map_apply_domain(NextScatt, S);
-  NextScatt = isl_map_apply_domain(NextScatt, AccessRelation);
+  NextScatt = NextScatt.apply_range(Schedule);
+  NextScatt = NextScatt.apply_range(AccessRelation);
+  NextScatt = NextScatt.apply_domain(Schedule);
+  NextScatt = NextScatt.apply_domain(AccessRelation);
 
-  isl_set *Deltas = isl_map_deltas(NextScatt);
+  isl::set Deltas = NextScatt.deltas();
   return Deltas;
 }
 
-bool MemoryAccess::isStrideX(__isl_take const isl_map *Schedule,
-                             int StrideWidth) const {
-  isl_set *Stride, *StrideX;
+bool MemoryAccess::isStrideX(isl::map Schedule, int StrideWidth) const {
+  isl::set Stride, StrideX;
   bool IsStrideX;
 
   Stride = getStride(Schedule);
-  StrideX = isl_set_universe(isl_set_get_space(Stride));
-  for (unsigned i = 0; i < isl_set_dim(StrideX, isl_dim_set) - 1; i++)
-    StrideX = isl_set_fix_si(StrideX, isl_dim_set, i, 0);
-  StrideX = isl_set_fix_si(StrideX, isl_dim_set,
-                           isl_set_dim(StrideX, isl_dim_set) - 1, StrideWidth);
-  IsStrideX = isl_set_is_subset(Stride, StrideX);
-
-  isl_set_free(StrideX);
-  isl_set_free(Stride);
+  StrideX = isl::set::universe(Stride.get_space());
+  for (unsigned i = 0; i < StrideX.dim(isl::dim::set) - 1; i++)
+    StrideX = StrideX.fix_si(isl::dim::set, i, 0);
+  StrideX = StrideX.fix_si(isl::dim::set, StrideX.dim(isl::dim::set) - 1,
+                           StrideWidth);
+  IsStrideX = Stride.is_subset(StrideX);
 
   return IsStrideX;
 }
 
-bool MemoryAccess::isStrideZero(__isl_take const isl_map *Schedule) const {
+bool MemoryAccess::isStrideZero(isl::map Schedule) const {
   return isStrideX(Schedule, 0);
 }
 
-bool MemoryAccess::isStrideOne(__isl_take const isl_map *Schedule) const {
+bool MemoryAccess::isStrideOne(isl::map Schedule) const {
   return isStrideX(Schedule, 1);
 }
 
@@ -3965,7 +3957,7 @@ void Scop::addInvariantLoads(ScopStmt &Stmt, InvariantAccessesTy &InvMAs) {
     Type *Ty = LInst->getType();
     const SCEV *PointerSCEV = SE->getSCEV(LInst->getPointerOperand());
 
-    auto *MAInvalidCtx = MA->getInvalidContext();
+    auto *MAInvalidCtx = MA->getInvalidContext().release();
     bool NonHoistableCtxIsEmpty = isl_set_is_empty(NHCtx);
     bool MAInvalidCtxIsEmpty = isl_set_is_empty(MAInvalidCtx);
 

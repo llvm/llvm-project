@@ -1018,11 +1018,11 @@ void VectorBlockGenerator::generateLoad(
   extractScalarValues(Load, VectorMap, ScalarMaps);
 
   Value *NewLoad;
-  if (Access.isStrideZero(isl_map_copy(Schedule)))
+  if (Access.isStrideZero(isl::manage(isl_map_copy(Schedule))))
     NewLoad = generateStrideZeroLoad(Stmt, Load, ScalarMaps[0], NewAccesses);
-  else if (Access.isStrideOne(isl_map_copy(Schedule)))
+  else if (Access.isStrideOne(isl::manage(isl_map_copy(Schedule))))
     NewLoad = generateStrideOneLoad(Stmt, Load, ScalarMaps, NewAccesses);
-  else if (Access.isStrideX(isl_map_copy(Schedule), -1))
+  else if (Access.isStrideX(isl::manage(isl_map_copy(Schedule)), -1))
     NewLoad = generateStrideOneLoad(Stmt, Load, ScalarMaps, NewAccesses, true);
   else
     NewLoad = generateUnknownStrideLoad(Stmt, Load, ScalarMaps, NewAccesses);
@@ -1073,7 +1073,7 @@ void VectorBlockGenerator::copyStore(
   // the data location.
   extractScalarValues(Store, VectorMap, ScalarMaps);
 
-  if (Access.isStrideOne(isl_map_copy(Schedule))) {
+  if (Access.isStrideOne(isl::manage(isl_map_copy(Schedule)))) {
     Type *VectorPtrType = getVectorPtrTy(Pointer, getVectorWidth());
     Value *NewPointer = generateLocationAccessed(Stmt, Store, ScalarMaps[0],
                                                  VLTS[0], NewAccesses);
@@ -1600,7 +1600,7 @@ void RegionGenerator::addOperandToPHI(ScopStmt &Stmt, PHINode *PHI,
   BasicBlock *BBCopyEnd = EndBlockMap[IncomingBB];
   if (!BBCopyStart) {
     assert(!BBCopyEnd);
-    assert(Stmt.contains(IncomingBB) &&
+    assert(Stmt.represents(IncomingBB) &&
            "Bad incoming block for PHI in non-affine region");
     IncompletePHINodeMap[IncomingBB].push_back(std::make_pair(PHI, PHICopy));
     return;
@@ -1612,7 +1612,7 @@ void RegionGenerator::addOperandToPHI(ScopStmt &Stmt, PHINode *PHI,
 
   Value *OpCopy = nullptr;
 
-  if (Stmt.contains(IncomingBB)) {
+  if (Stmt.represents(IncomingBB)) {
     Value *Op = PHI->getIncomingValueForBlock(IncomingBB);
 
     // If the current insert block is different from the PHIs incoming block
